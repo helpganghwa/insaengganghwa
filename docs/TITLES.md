@@ -1,0 +1,83 @@
+# TITLES — 칭호 시스템 설계 정본
+
+> 닉네임 옆 한 줄 표식. 성능 없음(순수 코스메틱), 시스템 지급만(유저 입력 없음).
+> 기존 집행관 표시 영역을 칭호 영역으로 일반화하고, 집행관은 조건부 칭호로 흡수한다.
+
+---
+
+## 1. 칭호 유형
+
+| 유형 | 정의 | 예 | 저장 |
+|---|---|---|---|
+| **영구형** `permanent` | 한 번 달성하면 영원히 사용 가능 | 강화 +99 도달, CBT 참전 | `user_titles` 원장(멱등) |
+| **조건부형** `conditional` | 조건을 만족하는 동안만 사용 가능. 잃으면 자동 미표시 | 구역 집행관, 오늘의 챔피언 | 저장 없음 — 실시간 파생 |
+
+- 대표 칭호는 **1개** — `profiles.representative_title_code`(SCHEMA §profiles 예약 컬럼 활성화).
+- 조건부 칭호를 대표로 걸어둔 채 조건을 잃으면: 컬럼은 유지하되 **표시 시점에 자격 재검증**해
+  미자격이면 숨긴다(자동 해제 UPDATE 없음 — 조건 회복 시 자동 복귀).
+- 동적 라벨: 조건부 칭호는 라벨에 파라미터를 가질 수 있다(집행관 = `{구역명} 집행관`).
+
+## 2. 획득 판정
+
+도전과제(challenges)와 같은 **상태 파생 우선** 원칙:
+
+| 경로 | 방식 | 대상 |
+|---|---|---|
+| 파생형 | 칭호 화면 진입 시 lazy 판정 → 원장 insert(멱등) | 강화 이정표·초월·도감·친구·출석 등 기존 테이블에서 도출 가능한 것 |
+| 사건형 | 해당 크론/액션에서 직접 지급 | 대난투 우승(melee-reveal), 점령 기념(conquest-chronicle) — 순간 사건이라 파생 불가 |
+| 헌정형 | 컷오버 복원 스크립트에서 일괄 지급 | CBT 참전(cbt_carryover 256명 한정, 이후 획득 불가) |
+
+## 3. 표시
+
+- **위치**: 기존 집행관 슬롯 그대로 — `닉네임 → 길드문양 → 길드명 → 칭호` 순서 규칙 유지.
+  표시 지점 6곳: AppHeader · /me · /u/[nickname] · OG 공유 카드 · 자랑 모달 · 채팅.
+- **컴포넌트**: `ExecutorTag` → `TitleTag`로 일반화(집행관은 defs의 한 항목이 됨).
+- **스타일**: 칭호마다 정의 —
+  - `color`: 단색 (기본)
+  - `gradient`: 2색 그라데이션 텍스트
+  - `effect`: 선택 — `flame`(불꽃) · `snow`(눈꽃) · `sparkle`(반짝임) 등 CSS 경량 이펙트.
+    OG 카드(정적 렌더)에서는 이펙트 생략, 색/그라데이션만.
+- 길이 가이드: 한글 **최대 8자**(헤더 390px 폭 — 닉네임이 먼저 말줄임되는 기존 규칙 유지).
+
+## 4. DB
+
+```sql
+create table user_titles (
+  user_id    uuid not null references profiles(id) on delete cascade,
+  server_id  smallint not null,
+  title_code text not null,
+  earned_at  timestamptz not null default now(),
+  primary key (user_id, title_code)          -- 계정 단위 소유(중복 지급 멱등)
+);
+-- server_id는 어느 서버 활동으로 얻었는지 기록용. 소유·표시는 계정 단위(닉네임이 계정 단위).
+alter table profiles add column representative_title_code text;
+```
+
+- 조건부 칭호는 원장에 넣지 않는다(파생이 진실). 원장은 영구형 전용.
+- 정의(defs)는 코드 상수 — 카탈로그 테이블 없음(도전과제 defs.ts 패턴).
+
+## 5. 정의 스키마 (lib/game/titles/defs.ts)
+
+```ts
+type TitleDef = {
+  code: string;
+  kind: 'permanent' | 'conditional';
+  /** 정적 라벨. 동적 라벨(집행관)은 렌더러가 파라미터로 조립. */
+  label: string;
+  /** 획득 조건 설명(칭호 목록 UI). */
+  hint: string;
+  style: { color?: string; gradient?: [string, string]; effect?: 'flame' | 'snow' | 'sparkle' };
+  /** true면 목록에서 미보유 시 실루엣 대신 숨김(헌정·히든). */
+  hidden?: boolean;
+};
+```
+
+## 6. v1 목록 — 검수 후 확정
+
+초안은 검수 폼으로 확정한다(별도). 카테고리: 강화 이정표 / 초월 / 도감 / 레이드 /
+대난투 / 점령전 / 소셜·일상 / CBT 헌정 / 조건부(집행관·챔피언·1위).
+
+## 7. 후속(비-v1)
+
+- 길드 점령 기념 칭호 판매 등 외형 매출(GUILD §매출) — 시스템은 defs 추가만으로 수용.
+- 칭호별 획득자 수 통계·희소도 표기.
