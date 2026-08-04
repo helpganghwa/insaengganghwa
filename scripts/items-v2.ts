@@ -294,7 +294,7 @@ export const V4_ITEMS: ItemV2[] = [
     art: 'a beastmaster outfit — layered tawny animal hides with a clawed shoulder mantle, fur-lined boots and bone-clasped belts, braided leather cords, primal and free, a single garment floating on a plain empty background, no buildings, no scenery, no text',
     wornDesc: 'layered tawny animal hides with a thick fur collar, leather straps crossing the chest and waist, fur-lined boots, wild and light-footed',
     wornDescMale: 'layered tawny animal hides with a thick fur collar, leather straps crossing the chest and waist, fur-lined boots, wild and rugged', lore: '누런 가죽을 겹겹이 두르고 목에는 두툼한 털을 둘렀다. 가슴과 허리를 가로지른 끈마다 손때가 짙다. 산에 갈 때 지킬 것 — 씻지 말 것, 빨지 말 것. 규칙을 어긴 자는 산에서 사람으로 읽힌다.' , keeper: true },
-  // ── 라이브 카탈로그에서 제외 확정(catalog-v4 편성 시 삭제):
+  // ── 라이브 카탈로그에서 제외 완료(2026-08-04 코드·DB·스프라이트 삭제):
   //    frostwarden_coat(설원 파수꾼의 외투) · angel_risen_mantle(부러진 적 있는 날개)
   //    · angel_duskwing_armor(저무는 해의 날개) → 방어구 38-3+5 = 40
   // ── 장신구 4/4 확정 ──

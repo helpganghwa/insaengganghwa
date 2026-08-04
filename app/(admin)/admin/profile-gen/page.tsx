@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
-import { CATALOG_ALL } from '@/lib/game/equipment/catalog';
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { assetUrl } from '@/lib/asset-versions';
 import { listServers } from '@/lib/game/servers';
@@ -18,7 +18,7 @@ import { ServerFilter, parseServerFilter } from '../ServerFilter';
 // 어드민 데이터 + Pixellab 이미지 fetch — 항상 최신.
 export const dynamic = 'force-dynamic';
 
-const NAME_BY_CODE = new Map(CATALOG_ALL.map((c) => [c.key, c.nameKo]));
+const NAME_BY_CODE = new Map(CATALOG_ITEMS.map((c) => [c.key, c.nameKo]));
 const REASON_KO: Record<string, string> = {
   nsfw: '선정성',
   violence: '폭력성',

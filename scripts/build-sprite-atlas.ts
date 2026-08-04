@@ -18,7 +18,7 @@ const CELL = 256; // 3차 소스가 256 네이티브 — 셀도 256으로(다운
 const GUTTER = 8;
 const STRIDE = CELL + GUTTER;
 const COLS = 12;
-const ROWS = 12; // 144셀 — 현재 123종(편성 120 + 편성에서 뺐지만 보유자가 남은 3종) + 여유.
+const ROWS = 10; // 120셀 — 현재 120종(슬롯당 40) 정확히 수용. 추가 편성 시 확장.
 
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');

@@ -14,7 +14,7 @@
  *  - `art`: Pixellab 64×64 생성 키워드(형태·재질·색·분위기). 글로우/등급 제외(GDD §6 — 코드가 강화 글로우 부여).
  *  - 세계관 연결은 느슨하게(~40%): region 이 5권역이면 보스의 땅과 엮임, '자유'면 권역 무관.
  *
- * 현재: 슬롯당 36종(무기/방어구/장신구 = 108), 이후 가변 추가(GDD §10).
+ * 현재: 슬롯당 40종(무기/방어구/장신구 = 120), 이후 가변 추가(GDD §10).
  */
 
 export type CatalogSlot = 'weapon' | 'armor' | 'accessory';
@@ -71,20 +71,12 @@ export interface CatalogItem {
   wornDescMale?: string;
 }
 
-// 카탈로그 단일 source — 3차 60종 + 2차 선정 46종 + 4차 확장 17종 − 방어구 3종 = 120종
-// (슬롯당 40종). (구 108종 catalog-next.ts는 원본 데이터 보존용 — 라이브 채용분은 catalog-v2live로 발췌.)
+// 카탈로그 단일 source — 3차 59종 + 2차 선정 44종 + 4차 확장 17종 = 120종(슬롯당 40).
+// (구 108종 catalog-next.ts는 원본 데이터 보존용 — 라이브 채용분은 catalog-v2live로 발췌.)
+// ⚠ 라이브에서 아이템을 편성에서 뺄 때는 여기서 지우면 안 된다 — 보유 유저의 장비가
+//   그림·이름·로어를 잃는다. 보유 행을 DB에서 정리(또는 active=false)한 뒤에만 지울 것.
 import { CATALOG_V3 } from './catalog-v3';
 import { CATALOG_V2_LIVE } from './catalog-v2live';
 import { CATALOG_V4 } from './catalog-v4';
 
-/** 4차 편성에서 뺀 방어구 3종 — 신규 5종을 넣으며 슬롯을 40으로 맞췄다. */
-const RETIRED = new Set(['frostwarden_coat', 'angel_risen_mantle', 'angel_duskwing_armor']);
-
-/**
- * 과거 편성분까지 포함한 전량. 편성에서 빠져도 **이미 보유한 유저의 장비는 남아 있으므로**
- * 스프라이트·표시명 조회는 이 목록을 봐야 한다(빼면 보유 장비의 그림·이름이 사라진다).
- */
-export const CATALOG_ALL: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE, ...CATALOG_V4];
-
-/** 현재 편성 120종(슬롯당 40) — 시드·드랍·확률공시의 기준. */
-export const CATALOG_ITEMS: CatalogItem[] = CATALOG_ALL.filter((it) => !RETIRED.has(it.key));
+export const CATALOG_ITEMS: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE, ...CATALOG_V4];

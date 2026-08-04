@@ -1,4 +1,5 @@
-// 3차 60종 카탈로그 — 인생강화 1차 운영(목표 120종)의 전반부. 단일 source.
+// 3차 59종 카탈로그 — 인생강화 1차 운영(목표 120종)의 전반부. 단일 source.
+// (2026-08-04: frostwarden_coat는 4차 편성에서 제외·삭제 — 방어구 슬롯 40 맞춤.)
 // 컷오버 시 catalog.ts의 import를 CATALOG_NEXT → CATALOG_V3로 교체(스프라이트 배치 + DB 재시드 동반).
 // 생성: scripts/build-catalog-v3.ts (수정은 anim3-lore.json / pool-data.json / 코드맵에서).
 import type { CatalogItem } from './catalog';
@@ -300,15 +301,6 @@ export const CATALOG_V3: CatalogItem[] = [
     "lore": "「발키리 옷이 왜 이렇게 가벼워?」 「업고 떠나야 하니까.」 「업어? 누굴.」 「전장에서 쓰러진 이들.」 금빛 날개 흉갑에 흰 주름치마, 허리엔 창공빛 푸른 띠. 그 띠가 데려갈 이를 둘러 업는 끈이라, 유난히 길고 부드럽다.",
     "art": "a valkyrie battle-dress in white and gold with light armor plating and a blue sash",
     "wornDesc": "white-and-gold armored dress with a gold winged-bird breastplate, a knee-length white pleated skirt with gold hip plates, silver greaves, and a blue waist sash, valiant and beautiful", "wornDescMale": "white-and-gold battle armor with a gold winged-bird breastplate, a knee-length white pleated war-kilt with gold hip plates and a blue waist sash over armored greaves, valiant and mighty"
-  },
-  {
-    "key": "frostwarden_coat",
-    "slot": "armor",
-    "nameKo": "설원 파수꾼의 외투",
-    "region": "신전",
-    "lore": "강철빛 천에 흰 털을 깃과 소맷부리, 단까지 둘렀다. 은빛 잠금쇠가 가슴을 따라 줄지어 채워지고, 옷자락엔 서리 맺힌 나뭇가지 무늬가 은실로 수놓였다. 북쪽 끝, 사람 하나 없는 설원을 혼자 지키는 자의 옷이다. 눈보라가 외투를 휘감아도 안쪽만은 늘 잔잔히 따뜻하다.",
-    "art": "a frost-warden's long fur-lined coat in steel-blue and silver with a high collar and silver clasps, floor-length flowing coat — stoic and masculine, no trousers, no legs",
-    "wornDesc": "long steel-blue coat with a soft white fur collar, cuffs and hem, four silver buckled straps down the front, and delicate white frost-branch embroidery, elegant and cool", "wornDescMale": "long steel-blue coat with a white fur collar, cuffs and hem, four silver buckled straps down the front, and white frost-branch embroidery, rugged and cold"
   },
   {
     "key": "paladin_holy_armor",

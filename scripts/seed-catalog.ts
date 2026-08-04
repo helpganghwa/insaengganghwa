@@ -37,8 +37,8 @@ async function main() {
       });
     n++;
   }
-  // 편성에서 빠진 코드는 지우지 않고 비활성화한다 — 이미 보유한 유저의 장비가 메타 조인을
-  // 잃지 않으면서 보급 드랍에서만 제외된다(lib/game/catalog.ts는 active=true만 뽑는다).
+  // 안전핀 — 카탈로그에 없는 code가 DB에 남아 있으면 비활성화해 드랍에서 뺀다
+  // (lib/game/catalog.ts는 active=true만 뽑는다). 정상 상태에선 0건.
   const codes = CATALOG_ITEMS.map((c) => c.key);
   const retired = await db
     .update(schema.catalogItems)
