@@ -35,7 +35,9 @@ const EYE_COLORS = [
 const POSES = [
   // 정적 — 차분한 정면 스탠스
   { desc: 'standing tall and composed, the weapon held quietly at one side', weight: 20 },
-  { desc: 'standing with the weight shifted onto one leg in a relaxed contrapposto, the weapon resting at one side', weight: 20 },
+  // 콘트라포스토는 자유손 위치를 명시하지 않으면 LLM이 고전 관습대로 "손은 허리에"로
+  // 완성한다(CBT 실측 66%) — 자유팔을 문구에 못 박는다.
+  { desc: 'standing with the weight shifted onto one leg in a relaxed contrapposto, the weapon resting at one side, the free arm hanging loose and relaxed at the other side', weight: 20 },
   { desc: 'holding the weapon upright in front with both hands resting on it, in a calm and dignified stance', weight: 20 },
   // 정적(추가) — 다른 결의 차분한 정면 포즈(컨셉 친화, 액션감 X)
   { desc: 'holding the weapon horizontally in front with both hands, in a calm and composed at-rest stance', weight: 12 },

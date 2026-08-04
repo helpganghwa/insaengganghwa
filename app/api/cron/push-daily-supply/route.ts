@@ -33,6 +33,7 @@ export async function GET(req: Request) {
   // 출시일 아침 크론을 켜둔 채 11:00 live 전환만 하면 되도록, 게이트를 크론 안에 둔다.
   const mode = await getMaintenanceState().catch(() => null);
   if (mode?.active && mode.mode === 'cbt_ended') {
+    await beatCron('push-daily-supply', 'skip:cbt_ended'); // 게이트 skip도 정상 실행 — dead-man 오알림 방지
     return Response.json({ ok: true, skipped: 'cbt_ended' });
   }
 
