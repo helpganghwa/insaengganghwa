@@ -745,12 +745,61 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "invite_1",
+  kind: "permanent",
+  label: "두 번째 발자국",
+  hidden: false,
+  style: {
+   fx: "pearl"
+  }
+ },
+ {
+  code: "invite_5",
+  kind: "permanent",
+  label: "길잡이",
+  hidden: false,
+  style: {
+   fx: "moonlight"
+  }
+ },
+ {
   code: "invite_20",
   kind: "permanent",
   label: "모병관",
   hidden: false,
   style: {
    fx: "crimsonflow",
+   glow: true
+  }
+ },
+ {
+  code: "invite_50",
+  kind: "permanent",
+  label: "길이 된 사람",
+  hidden: false,
+  style: {
+   fx: "imperial",
+   glow: true
+  }
+ },
+ {
+  code: "school_founder",
+  kind: "permanent",
+  label: "학파의 시조",
+  hidden: true,
+  style: {
+   fx: "inkwash",
+   glow: true
+  }
+ },
+ {
+  code: "sprout_scout",
+  kind: "permanent",
+  label: "떡잎 감별사",
+  hidden: true,
+  style: {
+   fx: "verdantflow",
+   pt: "spark",
    glow: true
   }
  },

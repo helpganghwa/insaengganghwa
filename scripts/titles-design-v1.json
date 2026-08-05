@@ -290,6 +290,22 @@
   },
   "welcome_crowd": {
    "fx": "candle"
+  },
+  "invite_1": {
+   "fx": "pearl"
+  },
+  "invite_5": {
+   "fx": "moonlight"
+  },
+  "invite_50": {
+   "fx": "imperial"
+  },
+  "school_founder": {
+   "fx": "inkwash"
+  },
+  "sprout_scout": {
+   "fx": "verdantflow",
+   "pt": "spark"
   }
  },
  "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)"

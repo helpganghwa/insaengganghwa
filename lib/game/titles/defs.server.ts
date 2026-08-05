@@ -459,9 +459,39 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "중간"
  },
  {
+  code: "invite_1",
+  cat: "소셜",
+  cond: "초대로 1명 가입",
+  diff: "쉬움"
+ },
+ {
+  code: "invite_5",
+  cat: "소셜",
+  cond: "초대로 5명 가입",
+  diff: "중간"
+ },
+ {
   code: "invite_20",
   cat: "소셜",
   cond: "초대로 20명 가입",
+  diff: "어려움"
+ },
+ {
+  code: "invite_50",
+  cat: "소셜",
+  cond: "초대로 50명 가입",
+  diff: "어려움"
+ },
+ {
+  code: "school_founder",
+  cat: "소셜",
+  cond: "초대한 유저 3명이 +100 도달",
+  diff: "어려움"
+ },
+ {
+  code: "sprout_scout",
+  cat: "소셜",
+  cond: "초대한 유저가 대난투 우승",
   diff: "어려움"
  },
  {

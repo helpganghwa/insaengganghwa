@@ -259,6 +259,13 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                join leaderboard_ranks lr on lr.user_id=ra.new_user_id and lr.server_id=${s} and lr.metric='combat'
                where ra.referrer_user_id=${u} and lr.value > coalesce((select value from leaderboard_ranks
                  where server_id=${s} and user_id=${u} and metric='combat'),0)) as ref_over,
+             (select count(*)::int from referral_attributions ra where ra.referrer_user_id=${u}
+               and exists(select 1 from user_equipment ue where ue.user_id=ra.new_user_id
+                 and ue.server_id=${s} and ue.max_enhance_level>=100)) as ref_100,
+             (select count(*)::int from referral_attributions ra where ra.referrer_user_id=${u}
+               and exists(select 1 from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
+                 where mp.user_id=ra.new_user_id and mb.server_id=${s} and mb.status='revealed'
+                   and mp.final_rank=1)) as ref_champ,
              (select count(*)::int from friend_links fl where fl.server_id=${s} and fl.status='accepted'
                and (fl.requester_id=${u} or fl.addressee_id=${u})
                and fl.updated_at <= now() - interval '90 days') as old_friends,
@@ -344,7 +351,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder), grank: n(gx.grank) || 9999,
     chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
-    ref_50: n(s2.ref_50), ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
+    ref_50: n(s2.ref_50), ref_100: n(s2.ref_100), ref_champ: n(s2.ref_champ),
+    ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
     checkin_streak: n(k2.checkin_streak), raid_streak: n(k2.raid_streak), clean20: n(k2.clean20),
     y_melee_win: n(k2.y_melee_win), y_melee_last: n(k2.y_melee_last), y_raid_top: n(k2.y_raid_top), y_open_top: n(k2.y_open_top),
   };
@@ -483,6 +491,12 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   witness: (m) => m.gdays >= 100,
   guild_founder: (m) => m.founder === 1, // 근사 — 최초 가입자=창설자(창설 이벤트 로그 부재)
   welcome_crowd: (m) => m.ref_50 >= 1,
+  // 초대 트리(2026-08-05 확정) — 두 번째 발자국 → 길잡이 → 모병관(기존) → 길이 된 사람
+  invite_1: (m) => m.invites >= 1,
+  invite_5: (m) => m.invites >= 5,
+  invite_50: (m) => m.invites >= 50,
+  school_founder: (m) => m.ref_100 >= 3,
+  sprout_scout: (m) => m.ref_champ >= 1,
   surpassed: (m) => m.ref_over >= 1,
   old_friend: (m) => m.old_friends >= 1,
   sprout_keeper: (m) => m.sprout_friends >= 10,
