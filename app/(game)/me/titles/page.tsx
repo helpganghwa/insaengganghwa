@@ -7,7 +7,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
-import { activeConditionals, discoverTitles } from '@/lib/game/titles/judge';
+import { discoverTitles } from '@/lib/game/titles/judge';
 
 import { TitlesClient, type TitleRow } from './TitlesClient';
 
@@ -23,12 +23,12 @@ export default async function TitlesPage() {
 
   const r = await withTimeout(
     (async () => {
-      await discoverTitles(userId, serverId); // 멱등 — 새 달성분 원장 기록
-      const [ledger, active, rep] = await Promise.all([
+      // 멱등 발견 판정 — active 동봉 반환(지표 수집 1회로 발견+활성 모두 해결)
+      const { active } = await discoverTitles(userId, serverId);
+      const [ledger, rep] = await Promise.all([
         db.execute(sql`
           select title_code, earned_at from user_titles where user_id=${userId}::uuid
         `) as unknown as Promise<{ title_code: string; earned_at: Date }[]>,
-        activeConditionals(userId, serverId),
         db.execute(sql`
           select representative_title_code as code,
                  (select z.name from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}

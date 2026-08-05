@@ -87,6 +87,13 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
       });
     }
 
+    // 3. 헌정 칭호 '선발대'(cbt_2026) — CBT 이월 유저에게만, 지급 1회에 동봉(멱등).
+    await tx.execute(sql`
+      insert into user_titles (user_id, server_id, title_code)
+      values (${userId}::uuid, ${serverId}, 'cbt_2026')
+      on conflict do nothing
+    `);
+
     return true;
   });
 }

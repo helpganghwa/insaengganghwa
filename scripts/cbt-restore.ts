@@ -121,6 +121,12 @@ async function restoreOne(r: CarryRow): Promise<void> {
         insert into characters (user_id, server_id, nickname, diamond, tutorial_step, residence_zone_id)
         values (${r.user_id}, ${serverId}, ${r.nickname}, ${SIGNUP_DIAMOND}, 9, ${rz?.id ?? null})`;
 
+      // 헌정 칭호 '선발대'(TITLES.md) — CBT 이월 유저에게만, 컷오버 시 1회.
+      await tx`
+        insert into user_titles (user_id, server_id, title_code)
+        values (${r.user_id}, ${serverId}, 'cbt_2026')
+        on conflict do nothing`;
+
       for (const slot of ['weapon', 'armor', 'accessory']) {
         await tx`
           insert into user_supply_boxes (user_id, server_id, slot, count)

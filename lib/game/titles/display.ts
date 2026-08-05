@@ -63,8 +63,143 @@ export async function resolveRepTitle(
     return Number(m.w) >= 10 ? repCode : null;
   }
 
-  // 그 외 조건부(랭킹 등) — 판정 붙기 전까지 보수적으로 숨김
+  // 판정 2차 조건부 — 코드별 표적 쿼리 1~2회(전체 지표 수집 없이)
+  if (HEAVY_CONDITIONALS.has(repCode)) {
+    return (await verifyHeavyConditional(repCode, userId, serverId)) ? repCode : null;
+  }
+
+  // 그 외 조건부 — 판정 붙기 전까지 보수적으로 숨김
   return null;
+}
+
+/** 판정 2차 조건부 — 표시 시점 재검증이 표적 쿼리로 가능한 코드. */
+const HEAVY_CONDITIONALS = new Set([
+  'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
+  'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'codex_live',
+  'streak_king', 'march_live', 'smooth_sail',
+  'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
+]);
+
+const RANK_METRIC: Record<string, string> = {
+  rank_combat: 'combat', rank_max: 'max', rank_sum: 'sum', rank_raid: 'raid', rank_melee: 'melee',
+};
+const KST = `at time zone 'Asia/Seoul'`;
+
+/** 코드별 표적 재검증 — 핫패스(헤더)라 쿼리 1~2회 상한. 실패는 숨김으로 강등. */
+async function verifyHeavyConditional(code: string, userId: string, serverId: number): Promise<boolean> {
+  const u = sql`${userId}::uuid`;
+  const s = sql`${serverId}`;
+  try {
+    if (RANK_METRIC[code] || code === 'throne_shadow' || code === 'uncrowned' || code === 'rising_star') {
+      const rows = (await db.execute(sql`
+        select m.metric, (select count(*)+1 from leaderboard_ranks lr
+                 where lr.server_id=${s} and lr.metric=m.metric and lr.value > m.value)::int as pos
+        from leaderboard_ranks m where m.server_id=${s} and m.user_id=${u}
+      `)) as unknown as { metric: string; pos: number }[];
+      const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
+      for (const r of rows) pos[r.metric] = Number(r.pos);
+      const metric = RANK_METRIC[code];
+      if (metric) return pos[metric] === 1;
+      const all = Object.values(pos);
+      if (code === 'throne_shadow') return all.some((p) => p === 2);
+      if (code === 'uncrowned') return all.every((p) => p >= 2 && p <= 3);
+      // rising_star — 가입 30일 이내 + 전투력 100위 이내
+      const [c] = (await db.execute(sql`
+        select extract(day from now() - created_at)::int as days from characters
+        where user_id=${u} and server_id=${s}
+      `)) as unknown as { days: number }[];
+      return Number(c?.days ?? 999) <= 30 && pos.combat! <= 100;
+    }
+    if (code === 'broke_now' || code === 'rich_apex') {
+      const [r] = (await db.execute(sql`
+        select c.diamond::bigint as dia,
+               (select count(*) from characters c2 where c2.server_id=${s} and c2.diamond > c.diamond)::int as better
+        from characters c where c.user_id=${u} and c.server_id=${s}
+      `)) as unknown as { dia: string; better: number }[];
+      if (!r) return false;
+      return code === 'broke_now' ? Number(r.dia) === 0 : Number(r.better) === 0 && Number(r.dia) > 0;
+    }
+    if (code === 'top_patron') {
+      const [r] = (await db.execute(sql`
+        with sums as (select io.user_id, sum(io.amount_krw) t from iap_orders io
+                      where io.status in ('paid','refunded') group by 1)
+        select (exists(select 1 from sums where user_id=${u}))::int as has_pay,
+               (select count(*)::int from sums s2
+                 where s2.t > coalesce((select t from sums where user_id=${u}),0)) as better
+      `)) as unknown as { has_pay: number; better: number }[];
+      return Number(r?.has_pay) === 1 && Number(r?.better) === 0;
+    }
+    if (code === 'guild_top') {
+      const [r] = (await db.execute(sql`
+        select (select count(*) from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as better
+        from guild_members gm join guilds g on g.id=gm.guild_id
+        where gm.user_id=${u} and gm.server_id=${s}
+      `)) as unknown as { better: number }[];
+      return r != null && Number(r.better) === 0;
+    }
+    if (code === 'codex_live') {
+      const [r] = (await db.execute(sql`
+        select (select count(distinct ue.catalog_item_id) from user_equipment ue
+                 join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
+                 where ue.user_id=${u} and ue.server_id=${s})::int as got,
+               (select count(*) from catalog_items where active)::int as total
+      `)) as unknown as { got: number; total: number }[];
+      return Number(r?.total) > 0 && Number(r?.got) >= Number(r?.total);
+    }
+    if (code === 'streak_king' || code === 'march_live') {
+      const src = code === 'streak_king'
+        ? sql`select distinct kst_day::date dd from checkin_claim_logs where user_id=${u} and server_id=${s}`
+        : sql`select distinct (ra.created_at ${sql.raw(KST)})::date dd
+              from raid_attacks ra join raids r on r.id=ra.raid_id
+              where ra.user_id=${u} and r.server_id=${s}`;
+      const [r] = (await db.execute(sql`
+        with d as (${src}),
+             runs as (select dd, dd - (row_number() over (order by dd))::int as g from d),
+             cur as (select count(*)::int len, max(dd) mx from runs
+                     where g = (select g from runs order by dd desc limit 1))
+        select coalesce((select case when mx >= (now() ${sql.raw(KST)})::date - 1 then len else 0 end from cur),0)::int as len
+      `)) as unknown as { len: number }[];
+      return Number(r?.len ?? 0) >= (code === 'streak_king' ? 30 : 7);
+    }
+    if (code === 'smooth_sail') {
+      const [r] = (await db.execute(sql`
+        select (count(*)=20 and count(*) filter (where result='down')=0)::int as ok
+        from (select result from enhancement_logs where user_id=${u} and server_id=${s}
+              order by id desc limit 20) t
+      `)) as unknown as { ok: number }[];
+      return Number(r?.ok) === 1;
+    }
+    if (code === 'melee_champion' || code === 'melee_shame') {
+      const [r] = (await db.execute(sql`
+        select (mp.final_rank=1)::int as win, (mp.final_rank=mb.participant_count)::int as last
+        from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
+        where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed'
+          and mb.battle_date = (now() ${sql.raw(KST)})::date - 1
+      `)) as unknown as { win: number; last: number }[];
+      return code === 'melee_champion' ? Number(r?.win) === 1 : Number(r?.last) === 1;
+    }
+    if (code === 'raid_hero') {
+      const [r] = (await db.execute(sql`
+        select (rk.user_id = ${u})::int as top from (
+          select ra.user_id, sum(ra.damage) dmg from raid_attacks ra join raids r on r.id=ra.raid_id
+          where r.server_id=${s} and (ra.created_at ${sql.raw(KST)})::date = (now() ${sql.raw(KST)})::date - 1
+          group by 1 order by 2 desc, 1 limit 1) rk
+      `)) as unknown as { top: number }[];
+      return Number(r?.top) === 1;
+    }
+    if (code === 'open_king') {
+      const [r] = (await db.execute(sql`
+        select (rk.user_id = ${u})::int as top from (
+          select user_id, count(*) c from supply_open_logs
+          where server_id=${s} and (created_at ${sql.raw(KST)})::date = (now() ${sql.raw(KST)})::date - 1
+          group by 1 order by 2 desc, 1 limit 1) rk
+      `)) as unknown as { top: number }[];
+      return Number(r?.top) === 1;
+    }
+    return false;
+  } catch {
+    return false; // 검증 실패 = 표시만 숨김(치명 아님)
+  }
 }
 
 /** OG(정적 렌더)용 — 이펙트 클래스 대신 대표색 1개로 강등. */
@@ -114,6 +249,7 @@ export async function resolveRepTitlesBatch(
   const out = new Map<string, string | null>();
   const needEquip: { userId: string; code: string }[] = [];
   const needLib: { userId: string; code: string }[] = [];
+  const needHeavy: { userId: string; code: string }[] = [];
 
   for (const e of entries) {
     if (!e.repCode) {
@@ -129,6 +265,8 @@ export async function resolveRepTitlesBatch(
       needEquip.push({ userId: e.userId, code: e.repCode });
     } else if (['lib_holder', 'lib_ten', 'champ_5', 'armory_lord'].includes(e.repCode)) {
       needLib.push({ userId: e.userId, code: e.repCode });
+    } else if (HEAVY_CONDITIONALS.has(e.repCode)) {
+      needHeavy.push({ userId: e.userId, code: e.repCode });
     } else {
       out.set(e.userId, null); // 판정 미구현 조건부 — 보수적 숨김
     }
@@ -183,6 +321,14 @@ export async function resolveRepTitlesBatch(
         : Number(m.w) >= 10;
       out.set(n.userId, ok ? n.code : null);
     }
+  }
+
+  // 판정 2차 조건부 — 드문 케이스라 개별 표적 검증(동시 소수)
+  if (needHeavy.length) {
+    await Promise.all(needHeavy.map(async (n) => {
+      const ok = await verifyHeavyConditional(n.code, n.userId, serverId);
+      out.set(n.userId, ok ? n.code : null);
+    }));
   }
 
   return out;

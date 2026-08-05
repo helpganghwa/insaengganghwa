@@ -25,22 +25,16 @@ const KST = `at time zone 'Asia/Seoul'`;
 
 /** 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로. */
 export const PENDING_CODES = new Set<string>([
-  // 랭킹 스냅샷 연동 필요(조건부 5 + 파생)
-  'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'pentagon', 'rising_star', 'guild_top',
-  // 순간 포착 훅 필요(재화·전투력 변동 시점)
-  'broke_now', 'lucky_777', 'power_77777', 'doremi', 'army_100k', 'rich_apex', 'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'scrooge',
+  // 재화 이력 필요(누적 획득/소비·유지 추적 — 현재 잔액만 있음)
+  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'scrooge',
   // 이력 테이블 부재(현재 상태만 있음)
   'mover_30', 'resident_10', 'homecoming', 'comeback', 'longevity', 'same_face_30', 'one_suit', 'no_guild_30', 'big_family', 'alley_boss', 'local_elite', 'elite_few',
-  // 길드 세부 로그 필요
-  'guild_founder', 'guild_donate', 'witness', 'smooth_sail',
-  // 점령전 참여/수금 로그 연동 필요
+  // 길드 기부 횟수 로그 부재(기여도 포인트만 있음)
+  'guild_donate',
+  // 점령전 참여/수금 로그 연동 필요(conquest_battles finale 구조 확인 후)
   'tax_collector', 'siege_30', 'wall', 'tour_lord', 'assault_100', 'guardian_100', 'ram', 'iron_wall', 'border_patrol',
-  // 채팅 멘션 수신 집계 필요
-  'mention_100', 'night_talk', 'chat_1000',
-  // 결제·구독 외 특수
-  'top_patron', 'surpassed', 'welcome_crowd', 'sprout_keeper', 'old_friend', 'fire_support', 'raid_hero', 'melee_shame', 'melee_champion', 'open_king', 'first_guest',
-  // 기타 보류(명세 확정 후)
-  'pure_way', 'apex_shoot', 'sword_and_pen', 'new_record', 'day_100_party', 'treasure_hunt', 'medal_collector', 'march_live', 'daily_sortie', 'streak_king', 'codex_live',
+  // 특수(교차 판정·시점 훅 필요)
+  'fire_support', 'first_guest', 'pure_way', 'apex_shoot', 'day_100_party', 'daily_sortie',
   // 지역 보스 미출시
   'raid_temple', 'raid_kingdom',
   // 컷오버 지급(헌정)
@@ -77,7 +71,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
 
-  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc] = await Promise.all([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2] = await Promise.all([
     // 강화 로그 집계
     db.execute(sql`
       select count(*)::int as total,
@@ -218,14 +212,111 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where cc.user_id=${u} and cc.server_id=${s} and cc.rank<=3 and ci.slot='weapon') as lib_weapons,
              (select coalesce(extract(epoch from (select max_enhance_reached_at from user_equipment
                where user_id=${u} and server_id=${s} and max_enhance_level>=100 order by max_enhance_reached_at limit 1)
-               - (select created_at from characters where user_id=${u} and server_id=${s}))/86400,999))::int as first100_days
+               - (select created_at from characters where user_id=${u} and server_id=${s}))/86400,999))::int as first100_days,
+             (select count(*)::int from catalog_items where active) as catalog_total
+    `),
+    // 랭킹(판정 2차) — 리더보드 카운터 기준 지표별 내 값·순위. 행 없는 지표는 TS에서 9999 처리.
+    db.execute(sql`
+      select m.metric, m.value::bigint as value,
+             (select count(*)+1 from leaderboard_ranks lr
+               where lr.server_id=${s} and lr.metric=m.metric and lr.value > m.value)::int as pos
+      from leaderboard_ranks m where m.server_id=${s} and m.user_id=${u}
+    `),
+    // 재화·결제 순위(판정 2차) — 다이아 현재값·서버 순위, 누적 결제 순위
+    db.execute(sql`
+      with sums as (select io.user_id, sum(io.amount_krw) t from iap_orders io
+                    where io.status in ('paid','refunded') group by 1)
+      select coalesce(c.diamond::bigint,0) as dia,
+             case when c.user_id is null then 9999
+                  else (select count(*)+1 from characters c2
+                        where c2.server_id=${s} and c2.diamond > c.diamond)::int end as dia_rank,
+             (select count(*)::int from sums s2 where s2.t > coalesce((select t from sums where user_id=${u}),0)) + 1 as pay_rank,
+             (exists(select 1 from sums where user_id=${u}))::int as has_pay
+      from (select 1) one left join characters c on c.user_id=${u} and c.server_id=${s}
+    `),
+    // 길드(판정 2차) — 소속 일수·창설자(최초 가입자)·길드 xp 순위
+    db.execute(sql`
+      select extract(day from now()-gm.joined_at)::int as gdays,
+             (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
+             (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank
+      from guild_members gm join guilds g on g.id=gm.guild_id
+      where gm.user_id=${u} and gm.server_id=${s}
+    `),
+    // 채팅(판정 2차) — 누적·심야·멘션 수신(구 string[] 멘션은 미집계 허용)
+    db.execute(sql`
+      select (select count(*)::int from chat_messages where user_id=${u} and server_id=${s}) as chats,
+             (select count(*)::int from chat_messages where user_id=${u} and server_id=${s}
+               and extract(hour from created_at ${sql.raw(KST)}) < 6) as night_chats,
+             (select count(*)::int from chat_messages cm where cm.server_id=${s} and cm.mentions @>
+               (select jsonb_build_array(jsonb_build_object('c', public_code)) from profiles where id=${u})) as mentions_got
+    `),
+    // 소셜 2차 — 추천 유저 성장·추월, 오래된 친구, 새싹 친구
+    db.execute(sql`
+      select (select count(*)::int from referral_attributions ra where ra.referrer_user_id=${u}
+               and exists(select 1 from user_equipment ue where ue.user_id=ra.new_user_id
+                 and ue.server_id=${s} and ue.max_enhance_level>=50)) as ref_50,
+             (select count(*)::int from referral_attributions ra
+               join leaderboard_ranks lr on lr.user_id=ra.new_user_id and lr.server_id=${s} and lr.metric='combat'
+               where ra.referrer_user_id=${u} and lr.value > coalesce((select value from leaderboard_ranks
+                 where server_id=${s} and user_id=${u} and metric='combat'),0)) as ref_over,
+             (select count(*)::int from friend_links fl where fl.server_id=${s} and fl.status='accepted'
+               and (fl.requester_id=${u} or fl.addressee_id=${u})
+               and fl.updated_at <= now() - interval '90 days') as old_friends,
+             (select count(*)::int from friend_links fl
+               join characters c on c.server_id=${s}
+                 and c.user_id = case when fl.requester_id=${u} then fl.addressee_id else fl.requester_id end
+               where fl.server_id=${s} and fl.status='accepted' and (fl.requester_id=${u} or fl.addressee_id=${u})
+                 and c.created_at >= fl.updated_at - interval '7 days') as sprout_friends
+    `),
+    // 스트릭 2차 — 출석/레이드 현재 연속일(gaps & islands), 최근 20회 무하락, 어제 1위 4종
+    db.execute(sql`
+      with cd as (select distinct kst_day::date dd from checkin_claim_logs where user_id=${u} and server_id=${s}),
+           cruns as (select dd, dd - (row_number() over (order by dd))::int as g from cd),
+           ccur as (select count(*)::int len, max(dd) mx from cruns
+                    where g = (select g from cruns order by dd desc limit 1)),
+           rd as (select distinct (ra.created_at ${sql.raw(KST)})::date dd
+                  from raid_attacks ra join raids r on r.id=ra.raid_id
+                  where ra.user_id=${u} and r.server_id=${s}),
+           rruns as (select dd, dd - (row_number() over (order by dd))::int as g from rd),
+           rcur as (select count(*)::int len, max(dd) mx from rruns
+                    where g = (select g from rruns order by dd desc limit 1)),
+           today as (select (now() ${sql.raw(KST)})::date d)
+      select coalesce((select case when mx >= (select d from today) - 1 then len else 0 end from ccur),0) as checkin_streak,
+             coalesce((select case when mx >= (select d from today) - 1 then len else 0 end from rcur),0) as raid_streak,
+             (select (count(*)=20 and count(*) filter (where result='down')=0)::int
+                from (select result from enhancement_logs where user_id=${u} and server_id=${s}
+                      order by id desc limit 20) t20) as clean20,
+             coalesce((select (mp.final_rank=1)::int from melee_participants mp
+               join melee_battles mb on mb.id=mp.battle_id
+               where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed'
+                 and mb.battle_date = (select d from today) - 1),0) as y_melee_win,
+             coalesce((select (mp.final_rank=mb.participant_count)::int from melee_participants mp
+               join melee_battles mb on mb.id=mp.battle_id
+               where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed'
+                 and mb.battle_date = (select d from today) - 1),0) as y_melee_last,
+             coalesce((select (rk.user_id=${u}::uuid)::int from (
+               select ra.user_id, sum(ra.damage) dmg from raid_attacks ra join raids r on r.id=ra.raid_id
+               where r.server_id=${s} and (ra.created_at ${sql.raw(KST)})::date = (select d from today) - 1
+               group by 1 order by 2 desc, 1 limit 1) rk),0) as y_raid_top,
+             coalesce((select (rk.user_id=${u}::uuid)::int from (
+               select user_id, count(*) c from supply_open_logs
+               where server_id=${s} and (created_at ${sql.raw(KST)})::date = (select d from today) - 1
+               group by 1 order by 2 desc, 1 limit 1) rk),0) as y_open_top
     `),
   ]);
 
   const g = (r: unknown): Record<string, unknown> => ((r as unknown[])[0] ?? {}) as Record<string, unknown>;
   const n = (v: unknown): number => Number(v ?? 0);
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
-    so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc);
+    so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
+    wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2);
+  // 랭킹 — 행 없는 지표는 순위 밖(9999)
+  const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
+  let combatValue = 0;
+  for (const r of ranks as unknown as { metric: string; value: unknown; pos: unknown }[]) {
+    pos[r.metric] = n(r.pos);
+    if (r.metric === 'combat') combatValue = n(r.value);
+  }
 
   return {
     enh_total: n(e.total), enh_ok: n(e.ok), enh_mega: n(e.mega), enh_down: n(e.down), down9: n(e.down9),
@@ -246,6 +337,16 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
+    catalog_total: n(mi.catalog_total),
+    // ── 판정 2차 ──
+    p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!,
+    v_combat: combatValue,
+    dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
+    in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder), grank: n(gx.grank) || 9999,
+    chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
+    ref_50: n(s2.ref_50), ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
+    checkin_streak: n(k2.checkin_streak), raid_streak: n(k2.raid_streak), clean20: n(k2.clean20),
+    y_melee_win: n(k2.y_melee_win), y_melee_last: n(k2.y_melee_last), y_raid_top: n(k2.y_raid_top), y_open_top: n(k2.y_open_top),
   };
 }
 
@@ -365,6 +466,26 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   friday: (m) => m.friday >= 100,
   monday: (m) => m.monday_down >= 10,
   evening_life: (m) => m.evening >= 100,
+  // ── 판정 2차: 랭킹 순간·기록 ──
+  pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10,
+  new_record: (m) => m.p_max === 1,
+  // 재화·전투력 순간값 — 판정 시점(칭호 화면 진입 등)에 그 값이면 발견. 훅 보강은 후속.
+  lucky_777: (m) => m.dia === 777,
+  doremi: (m) => m.dia === 12_345,
+  power_77777: (m) => m.v_combat === 77_777,
+  army_100k: (m) => m.v_combat >= 100_000,
+  sword_and_pen: (m) => m.codex >= 100 && m.v_combat >= 100_000,
+  // 채팅
+  chat_1000: (m) => m.chats >= 1000,
+  night_talk: (m) => m.night_chats >= 100,
+  mention_100: (m) => m.mentions_got >= 100,
+  // 길드·소셜
+  witness: (m) => m.gdays >= 100,
+  guild_founder: (m) => m.founder === 1, // 근사 — 최초 가입자=창설자(창설 이벤트 로그 부재)
+  welcome_crowd: (m) => m.ref_50 >= 1,
+  surpassed: (m) => m.ref_over >= 1,
+  old_friend: (m) => m.old_friends >= 1,
+  sprout_keeper: (m) => m.sprout_friends >= 10,
 };
 
 /** 조건부(상태형) 활성 — 대표 표시·발견 공용. 아이템 발동 + 장비 상태 + 해방 + 집행관. */
@@ -396,6 +517,32 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.champions >= 5) out.add('champ_5');
   if (mm.lib_weapons >= 10) out.add('armory_lord');
 
+  // ── 판정 2차: 랭킹형("~인 동안") ──
+  if (mm.p_combat === 1) out.add('rank_combat');
+  if (mm.p_max === 1) out.add('rank_max');
+  if (mm.p_sum === 1) out.add('rank_sum');
+  if (mm.p_raid === 1) out.add('rank_raid');
+  if (mm.p_melee === 1) out.add('rank_melee');
+  const allPos = [mm.p_max, mm.p_sum, mm.p_combat, mm.p_raid, mm.p_melee];
+  if (allPos.some((p) => p === 2)) out.add('throne_shadow');
+  if (allPos.every((p) => p! >= 2 && p! <= 3)) out.add('uncrowned');
+  if (mm.days <= 30 && mm.p_combat <= 100) out.add('rising_star');
+  // 재화·결제·길드·도감 상태형
+  if (mm.dia === 0) out.add('broke_now');
+  if (mm.dia_rank === 1 && mm.dia > 0) out.add('rich_apex');
+  if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
+  if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
+  if (mm.catalog_total > 0 && mm.codex >= mm.catalog_total) out.add('codex_live');
+  // 유지형 스트릭
+  if (mm.checkin_streak >= 30) out.add('streak_king');
+  if (mm.raid_streak >= 7) out.add('march_live');
+  if (mm.clean20 === 1) out.add('smooth_sail');
+  // 어제 1위형("오늘 하루 동안")
+  if (mm.y_melee_win === 1) out.add('melee_champion');
+  if (mm.y_melee_last === 1) out.add('melee_shame');
+  if (mm.y_raid_top === 1) out.add('raid_hero');
+  if (mm.y_open_top === 1) out.add('open_king');
+
   return out;
 }
 
@@ -403,22 +550,52 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
  * 발견 판정 + 원장 기록(멱등). 칭호 화면 진입 등 lazy 시점에 호출.
  * 반환: 이번에 새로 발견된 code 목록.
  */
-export async function discoverTitles(userId: string, serverId: number): Promise<string[]> {
+export async function discoverTitles(
+  userId: string,
+  serverId: number,
+): Promise<{ found: string[]; active: Set<string> }> {
   const m = await collectMetrics(userId, serverId);
   const achieved = new Set<string>();
   for (const [code, rule] of Object.entries(RULES)) if (rule(m)) achieved.add(code);
-  for (const code of await activeConditionals(userId, serverId, m)) achieved.add(code);
+  const active = await activeConditionals(userId, serverId, m);
+  for (const code of active) achieved.add(code);
 
-  if (!achieved.size) return [];
-  const codes = [...achieved];
-  const rows = (await db.execute(sql`
-    insert into user_titles (user_id, server_id, title_code)
-    select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
-    on conflict (user_id, title_code) do nothing
-    returning title_code
-  `)) as unknown as { title_code: string }[];
-  return rows.map((r) => r.title_code);
+  const inserted: string[] = [];
+  if (achieved.size) {
+    const codes = [...achieved];
+    const rows = (await db.execute(sql`
+      insert into user_titles (user_id, server_id, title_code)
+      select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
+      on conflict (user_id, title_code) do nothing
+      returning title_code
+    `)) as unknown as { title_code: string }[];
+    inserted.push(...rows.map((r) => r.title_code));
+  }
+
+  // 메타 칭호 — 발견 원장 자체가 조건(칭호 50 발견·히든 10 발견). 위 insert 반영 후 집계.
+  const [meta] = (await db.execute(sql`
+    select count(*)::int as total,
+           count(*) filter (where title_code = any(array[${sql.join(HIDDEN_CODES.map((c) => sql`${c}`), sql`, `)}]::text[]))::int as hidden
+    from user_titles where user_id=${userId}::uuid
+  `)) as unknown as { total: number; hidden: number }[];
+  const metaCodes: string[] = [];
+  if (Number(meta?.total ?? 0) >= 50) metaCodes.push('medal_collector');
+  if (Number(meta?.hidden ?? 0) >= 10) metaCodes.push('treasure_hunt');
+  if (metaCodes.length) {
+    const rows = (await db.execute(sql`
+      insert into user_titles (user_id, server_id, title_code)
+      select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(metaCodes.map((c) => sql`${c}`), sql`, `)}]::text[])
+      on conflict (user_id, title_code) do nothing
+      returning title_code
+    `)) as unknown as { title_code: string }[];
+    inserted.push(...rows.map((r) => r.title_code));
+  }
+  // active 동봉 — 칭호 화면이 발견+활성을 한 번의 지표 수집으로 받게(중복 collectMetrics 제거).
+  return { found: inserted, active };
 }
+
+/** 히든 칭호 목록 — 메타 칭호(treasure_hunt) 집계용. defs의 hidden 플래그가 정본. */
+const HIDDEN_CODES: string[] = [...TITLE_BY_CODE.values()].filter((d) => d.hidden).map((d) => d.code);
 
 /** 대표 칭호 자격 — 영구형은 발견만으로, 조건부형은 지금 조건 충족까지. */
 export async function representativeEligible(userId: string, serverId: number, code: string): Promise<boolean> {
