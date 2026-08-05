@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import '@/components/title-fx.css';
 import { ClientErrorReporter } from '@/components/ClientErrorReporter';
 import { KakaoPixel } from '@/components/KakaoPixel';
 
