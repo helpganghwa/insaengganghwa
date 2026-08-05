@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
+import { resolveRepTitle } from '@/lib/game/titles/display';
 import { createCharacterAuto } from '@/lib/game/server-select';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
@@ -35,6 +36,8 @@ export interface LayoutData {
   /** 집행관 구역명·지역 — 집행관이 아니면 null(미표시). 헤더 닉네임 줄 우측 노출(2026-07-22). */
   executorZone: string | null;
   executorZoneRegion: string | null;
+  /** 표시용 대표 칭호 code — 조건부는 경량 재검증 통과분만. null=미표시(titles/display.ts). */
+  repTitle: string | null;
   /** 닉네임 아래 서브라인(2026-07-21 문의 반영) — 전투력·최고강화·합산강화. 로드 실패 시 null(미표시). */
   stats: { combat: number; maxEnhance: number; sumEnhance: number } | null;
 }
@@ -51,6 +54,7 @@ const DEFAULTS: LayoutData = {
   guildEmblemUrl: null,
   executorZone: null,
   executorZoneRegion: null,
+  repTitle: null,
   stats: null,
 };
 
@@ -65,6 +69,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       pgGuard(
         (sql) => sql`
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
+                 p.representative_title_code,
                  g.emblem_url as guild_emblem_url,
                  z.name as executor_zone, z.region::text as executor_zone_region
           from profiles p
@@ -127,6 +132,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           guild_emblem_url?: string | null;
           executor_zone?: string | null;
           executor_zone_region?: string | null;
+          representative_title_code?: string | null;
         }
       | undefined;
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
@@ -171,6 +177,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       guildEmblemUrl: p?.guild_emblem_url ?? null,
       executorZone: p?.executor_zone ?? null,
       executorZoneRegion: p?.executor_zone_region ?? null,
+      repTitle: await resolveRepTitle(p?.representative_title_code ?? null, userId, serverId, p?.executor_zone ?? null),
       stats: (() => {
         const eq = equipRows as { e: number; t: number; mx: number }[];
         return {

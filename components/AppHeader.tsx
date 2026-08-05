@@ -7,7 +7,7 @@ import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
 import { HeaderStatsInitializer, HeaderStatsLine } from '@/components/HeaderStatsContext';
 import { GuildBadge } from '@/components/GuildBadge';
-import { ExecutorTag } from '@/components/ExecutorTag';
+import { TitleTag } from '@/components/TitleTag';
 
 /**
  * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 📬(미수령 dot) · 닉네임 · 💎 다이아.
@@ -23,6 +23,7 @@ export function AppHeaderShell({
   guildEmblemUrl = null,
   executorZone = null,
   executorZoneRegion = null,
+  repTitle = null,
   stats = null,
   statsSlot,
   diamondSlot,
@@ -36,6 +37,7 @@ export function AppHeaderShell({
   guildEmblemUrl?: string | null;
   executorZone?: string | null;
   executorZoneRegion?: string | null;
+  repTitle?: string | null;
   /** 닉네임 아래 서브라인 — 전투력·최고강화·합산강화(2026-07-21 문의 반영). null=미표시(fallback 셸). */
   stats?: { combat: number; maxEnhance: number; sumEnhance: number } | null;
   /** AppHeader(server)가 client HeaderStatsLine 주입 — 자동 강화 중 낙관 갱신 반영(fallback은 정적). */
@@ -82,7 +84,7 @@ export function AppHeaderShell({
             />
             <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
             {/* 집행관(2026-07-22) — shrink-0이라 폭이 모자라면 닉네임이 먼저 말줄임된다. */}
-            <ExecutorTag zone={executorZone} region={executorZoneRegion} className="text-[9px] font-bold" />
+            <TitleTag code={repTitle} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[9px] font-bold" />
           </span>
           {/* 서브라인 — statsSlot(client, 자동 강화 낙관 갱신) 우선, 없으면 정적 렌더(fallback 셸). */}
           {statsSlot ??
@@ -137,6 +139,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         guildEmblemUrl={d.guildEmblemUrl}
         executorZone={d.executorZone}
         executorZoneRegion={d.executorZoneRegion}
+        repTitle={d.repTitle}
         stats={d.stats}
         statsSlot={<HeaderStatsLine />}
         diamondSlot={<HeaderDiamond />}

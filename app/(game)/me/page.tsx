@@ -17,7 +17,8 @@ import { profileHref } from '@/lib/game/profile/href';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { ExecutorTag } from '@/components/ExecutorTag';
+import { TitleTag } from '@/components/TitleTag';
+import { resolveRepTitle } from '@/lib/game/titles/display';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
@@ -55,6 +56,7 @@ export default async function ProfilePage() {
     guild_name: string | null;
     executor_zone: string | null;
     executor_zone_region: string | null;
+    representative_title_code: string | null;
     referral_count: number;
     friend_req_count: number;
     friend_count: number;
@@ -76,6 +78,7 @@ export default async function ProfilePage() {
           c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           z.name as executor_zone, z.region::text as executor_zone_region,
+          p.representative_title_code,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
           -- 메뉴 우측 상태값(2026-08-02) — 프로필은 허브라 '어디로 갈지'를 여기서 정한다.
@@ -109,6 +112,9 @@ export default async function ProfilePage() {
     'me.page',
   ).catch(() => null);
   const row = _r?.[0]?.[0] ?? null;
+  const repTitle = row
+    ? await resolveRepTitle(row.representative_title_code ?? null, userId, serverId, row.executor_zone ?? null)
+    : null;
   const libRanks = _r?.[1] ?? new Map<number, number>();
   const catMap = _r?.[2] ?? new Map();
 
@@ -184,8 +190,8 @@ export default async function ProfilePage() {
             diamond={row?.diamond ?? '0'}
             className="relative z-10 text-white text-sm font-bold"
           />
-          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
-          {row?.executor_zone || row?.guild_name ? (
+          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 칭호(집행관 흡수). */}
+          {repTitle || row?.guild_name ? (
             <div className="flex max-w-full items-center gap-1 text-[11px] text-white/70">
               <GuildBadge
                 emblemUrl={row?.guild_emblem_url ?? null}
@@ -193,10 +199,10 @@ export default async function ProfilePage() {
                 size={14}
                 className="min-w-0 text-[11px] text-white/70"
               />
-              {row?.executor_zone && row?.guild_name ? (
+              {repTitle && row?.guild_name ? (
                 <span className="shrink-0 text-white/30">·</span>
               ) : null}
-              <ExecutorTag zone={row?.executor_zone} region={row?.executor_zone_region} />
+              <TitleTag code={repTitle} executorZone={row?.executor_zone} executorZoneRegion={row?.executor_zone_region} />
             </div>
           ) : null}
         </div>
