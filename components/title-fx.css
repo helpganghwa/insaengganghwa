@@ -1,5 +1,8 @@
 /* 칭호 이펙트·파티클 — titles-design-v1 확정본에서 추출(scripts/gen-title-defs.ts 문서 참조).
    TitleTag 전용. 파티클은 4점·저불투명·느린 주기(절제 원칙). reduced-motion 시 전부 정지. */
+/* @layer components — Tailwind 유틸리티(text-[..px] 등)가 .ttag 기본값(font-size:.9em)을 덮을 수 있게.
+   레이어 없는 전역 CSS는 유틸리티 레이어보다 항상 우선해 호출부 크기 지정이 무시된다(2026-08-05). */
+@layer components{
 .ttag{font-weight:600;font-size:.9em;display:inline}
 .ttag .fx{font-weight:600}
 .fx-goldflow{background:linear-gradient(90deg,#f5d76e,#b8860b,#fff3c4,#b8860b,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
@@ -90,3 +93,4 @@
 @keyframes p-one{0%,72%,100%{opacity:0;transform:rotate(0) scale(.4)}80%,88%{opacity:1;transform:rotate(45deg) scale(1)}}
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
 @media (prefers-reduced-motion: reduce){.ttag [class*='fx-'],.ttag .pt>i{animation:none !important}}
+}

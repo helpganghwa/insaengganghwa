@@ -11,7 +11,6 @@ export type TitleRow = {
   code: string;
   cond: string | null;
   discovered: boolean;
-  earnedAt: string | null;
   activeNow: boolean;
 };
 
@@ -79,7 +78,8 @@ export function TitlesClient({
 
   return (
     <div className="mx-auto w-full max-w-[390px]">
-      {/* 상단 — 대표 미리보기 + 진행 */}
+      {/* 상단 — 대표 미리보기+진행+필터 고정(스크롤은 목록만). main이 스크롤 컨테이너라 top-0. */}
+      <div className="sticky top-0 z-20 bg-zinc-950">
       <div className="border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-2">
@@ -105,6 +105,7 @@ export function TitlesClient({
         <Seg a="발견" b="미발견" val={found} onChange={setFound} />
         <Seg a="활성" b="비활성" val={act} onChange={setAct} />
       </div>
+      </div>
 
       {/* 목록 */}
       <div className="px-4 pb-8">
@@ -125,14 +126,10 @@ export function TitlesClient({
                   )}
                   <span
                     className={`rounded px-1 text-[10px] font-extrabold ${
-                      d.kind === 'tribute'
-                        ? 'bg-amber-900/50 text-amber-300'
-                        : isCond
-                          ? 'bg-purple-900/40 text-purple-300'
-                          : 'bg-sky-900/40 text-sky-300'
+                      isCond ? 'bg-purple-900/40 text-purple-300' : 'bg-sky-900/40 text-sky-300'
                     }`}
                   >
-                    {d.kind === 'tribute' ? '헌정' : isCond ? '조건' : '영구'}
+                    {isCond ? '조건' : '영구'}
                   </span>
                   {r.discovered && isCond && (
                     <span
@@ -144,7 +141,6 @@ export function TitlesClient({
                     </span>
                   )}
                   {isRep && <span className="rounded bg-amber-900/50 px-1 text-[10px] font-extrabold text-amber-300">대표</span>}
-                  {r.earnedAt && <span className="text-[10px] text-emerald-700">{r.earnedAt} 발견</span>}
                 </div>
                 <div className="mt-0.5 text-[11px] text-zinc-500">{r.cond ?? '???'}</div>
               </div>

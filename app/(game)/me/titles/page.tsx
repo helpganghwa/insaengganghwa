@@ -47,15 +47,13 @@ export default async function TitlesPage() {
   const active = r?.active ?? new Set<string>();
 
   const rows: TitleRow[] = TITLE_DEFS.map((d) => {
-    const earnedAt = ledger.get(d.code) ?? null;
-    const discovered = earnedAt !== null;
+    const discovered = ledger.has(d.code);
     const isConditional = d.kind === 'conditional';
     return {
       code: d.code,
       // 발견한 것만 조건 공개 — 미발견은 서버에서부터 내려보내지 않는다(비노출 원칙).
       cond: discovered ? (TITLE_SECRET_BY_CODE.get(d.code)?.cond ?? '') : null,
       discovered,
-      earnedAt: earnedAt ? new Date(earnedAt).toISOString().slice(0, 10) : null,
       activeNow: discovered && (!isConditional || active.has(d.code)),
     };
   });

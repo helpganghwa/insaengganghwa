@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { CHALLENGES } from '@/lib/game/challenges/defs';
 
+import { TITLE_BY_CODE } from './defs';
 import { TITLE_SECRETS } from './defs.server';
 
 /**
@@ -425,10 +426,11 @@ export async function representativeEligible(userId: string, serverId: number, c
     select 1 from user_titles where user_id=${userId}::uuid and title_code=${code} limit 1
   `)) as unknown as unknown[];
   if (!discovered.length) return false;
-  const secret = TITLE_SECRETS.find((t) => t.code === code);
-  if (!secret) return false;
-  const isConditional = secret.cat === '아이템 발동' || secret.cat.startsWith('랭킹') || secret.cat === '조건부' || secret.cat === '해방' || code === 'streak_king';
-  if (!isConditional) return true;
+  // 조건부 여부는 defs의 kind가 정본 — cat 문자열 추정은 영구형 해방(lib_first 등)을
+  // 조건부로 오판해 장착 즉시 롤백되는 버그를 만들었다(2026-08-05).
+  const def = TITLE_BY_CODE.get(code);
+  if (!def) return false;
+  if (def.kind !== 'conditional') return true;
   const act = await activeConditionals(userId, serverId);
   return act.has(code);
 }

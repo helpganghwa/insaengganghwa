@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -29,5 +31,8 @@ export async function setRepresentativeTitleAction(
   await db.execute(sql`
     update profiles set representative_title_code = ${code} where id = ${userId}::uuid
   `);
+  // 헤더(layout)·/me·유저 페이지 등 표시 지점 즉시 반영 — 저빈도 액션이라 layout 전체
+  // 재검증 비용(§11.7) 허용. 없으면 다음 내비게이션까지 이전 칭호가 남는다(2026-08-05).
+  revalidatePath('/', 'layout');
   return { ok: true };
 }
