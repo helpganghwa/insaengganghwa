@@ -26,13 +26,13 @@ const KST = `at time zone 'Asia/Seoul'`;
 /** 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로. */
 export const PENDING_CODES = new Set<string>([
   // 재화 이력 필요(누적 획득/소비·유지 추적 — 현재 잔액만 있음)
-  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'scrooge',
+  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'scrooge', 'bottomless',
   // 이력 테이블 부재(현재 상태만 있음)
   'mover_30', 'resident_10', 'homecoming', 'comeback', 'longevity', 'same_face_30', 'one_suit', 'no_guild_30', 'big_family', 'alley_boss', 'local_elite', 'elite_few',
   // 길드 기부 횟수 로그 부재(기여도 포인트만 있음)
-  'guild_donate',
-  // 점령전 참여/수금 로그 연동 필요(conquest_battles finale 구조 확인 후)
-  'tax_collector', 'siege_30', 'wall', 'tour_lord', 'assault_100', 'guardian_100', 'ram', 'iron_wall', 'border_patrol',
+  'guild_donate', 'pillar',
+  // 점령전 — 집행관 역임 이력 부재(zones는 현재 상태만)
+  'tour_lord',
   // 특수(시점 스냅샷·이력·로그 부재)
   'first_guest', 'apex_shoot', 'david', 'triathlon', 'wandering_smith',
   // 지역 보스 미출시
@@ -71,7 +71,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
 
-  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3] = await Promise.all([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest] = await Promise.all([
     // 강화 로그 집계
     db.execute(sql`
       select count(*)::int as total,
@@ -237,6 +237,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 길드(판정 2차) — 소속 일수·창설자(최초 가입자)·길드 xp 순위
     db.execute(sql`
       select extract(day from now()-gm.joined_at)::int as gdays,
+             (gm.role='leader')::int as gleader,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
              (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank
       from guild_members gm join guilds g on g.id=gm.guild_id
@@ -329,6 +330,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         coalesce((select max(c) from (select count(*) c from l group by ueid) t),0)::int as eq_max_cnt,
         (select exists(select 1 from l group by ueid
            having count(*) filter (where result='down')>=7 and max(to_level)>=100))::int as seven_falls_ok,
+        (select count(*)::int from enhancement_logs
+           where user_id=${u} and server_id=${s} and elapsed_ms <= 60000 and reduced_ms > 0) as lightning_cnt,
+        (select exists(select 1 from enhancement_logs l1
+           where l1.user_id=${u} and l1.server_id=${s} and l1.from_level=1
+             and l1.created_at > (select min(created_at) from enhancement_logs
+               where user_id=${u} and server_id=${s} and to_level>=100)))::int as beginner_ok,
         (select exists(
            with runs as (select rn, result, rn - row_number() over (order by rn) g
                          from (select result, row_number() over (order by id) rn from l) t
@@ -368,7 +375,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
     // 대난투 심화 — 연속 참가일·연속 우승일
     db.execute(sql`
-      with p as (select mb.battle_date dd, mp.final_rank
+      with p as (select mb.battle_date dd, mp.final_rank, mb.participant_count
                  from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
                  where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed')
       select
@@ -378,7 +385,14 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         coalesce((select max(len) from (select count(*) len from (
             select dd - (row_number() over (order by dd))::int g
             from (select distinct dd from p where final_rank=1) d) r
-          group by g) x),0)::int as melee_win_run
+          group by g) x),0)::int as melee_win_run,
+        coalesce((select max(len) from (
+          select count(*) len from (
+            select nth - row_number() over (order by nth) g
+            from (select row_number() over (order by dd) nth,
+                         (final_rank <= greatest(1, (pc+9)/10)) top10
+                  from (select dd, final_rank, participant_count pc from p) q) t where top10) r
+          group by g) x),0)::int as sprint_run
     `),
     // 교차 — 레이드 최장 연속일·친구 합동 레이드·풀코스·가입 100일째 활동
     db.execute(sql`
@@ -396,6 +410,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                and ((fl.requester_id=${u} and fl.addressee_id=ra2.user_id)
                  or (fl.addressee_id=${u} and fl.requester_id=ra2.user_id))
              where ra2.raid_id=ra.raid_id)) as fire_support_cnt,
+        (select count(distinct ra.raid_id)::int from raid_attacks ra join raids r on r.id=ra.raid_id
+           where ra.user_id=${u} and r.server_id=${s}
+             and extract(isodow from ra.created_at ${sql.raw(KST)}) in (6,7)) as weekend_raid_cnt,
         (select exists(
            select 1
            from (select distinct (created_at ${sql.raw(KST)})::date dd from enhancement_logs
@@ -415,6 +432,22 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              or exists(select 1 from checkin_claim_logs cc where cc.user_id=${u} and cc.server_id=${s}
                     and cc.kst_day::date = (c.created_at ${sql.raw(KST)})::date + 99))))::int as day100_ok
     `),
+    // 점령전(판정 4차) — 배치×전투 결과 조인. 전투 없는 날 배치(무공격)는 참여로 안 센다.
+    db.execute(sql`
+      with d as (
+        select gd.role, gd.guild_id, cb.winner_guild_id
+        from guild_battle_deployments gd
+        join conquest_battles cb on cb.zone_id = gd.zone_id
+          and cb.battle_kst_day = gd.battle_kst_day and cb.published_at is not null
+        where gd.user_id=${u} and gd.server_id=${s}
+      )
+      select count(*) filter (where role='attack')::int as cq_attack,
+             count(*) filter (where role='attack' and winner_guild_id=guild_id)::int as cq_attack_win,
+             count(*) filter (where role='defend' and winner_guild_id=guild_id)::int as cq_defend_win,
+             (select count(*)::int from guild_audit_log
+               where server_id=${s} and actor_user_id=${u} and action='tax_collect') as cq_tax
+      from d
+    `),
   ]);
 
   const g = (r: unknown): Record<string, unknown> => ((r as unknown[])[0] ?? {}) as Record<string, unknown>;
@@ -422,7 +455,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
-    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3);
+    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
   let combatValue = 0;
@@ -455,7 +488,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!,
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
-    in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder), grank: n(gx.grank) || 9999,
+    in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
+    gleader: n(gx.gleader), grank: n(gx.grank) || 9999,
     chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
     ref_50: n(s2.ref_50), ref_100: n(s2.ref_100), ref_champ: n(s2.ref_champ),
     ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
@@ -465,11 +499,13 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     enh_day_max: n(e3.enh_day_max), enh_day_run: n(e3.enh_day_run), carefree_cnt: n(e3.carefree_cnt),
     night_day_max: n(e3.night_day_max), insomnia_days: n(e3.insomnia_days), commuter_days: n(e3.commuter_days),
     eq_max_cnt: n(e3.eq_max_cnt), seven_falls_ok: n(e3.seven_falls_ok), phoenix_ok: n(e3.phoenix_ok),
+    lightning_cnt: n(e3.lightning_cnt), beginner_ok: n(e3.beginner_ok),
     flawless_ok: n(fl.flawless_ok), pure_ok: n(fl.pure_ok),
     same_pull_ok: n(s3.same_pull_ok), meals_days: n(s3.meals_days),
-    melee_day_run: n(m3.melee_day_run), melee_win_run: n(m3.melee_win_run),
-    raid_day_run: n(c3.raid_day_run), fire_support_cnt: n(c3.fire_support_cnt),
+    melee_day_run: n(m3.melee_day_run), melee_win_run: n(m3.melee_win_run), sprint_run: n(m3.sprint_run),
+    raid_day_run: n(c3.raid_day_run), fire_support_cnt: n(c3.fire_support_cnt), weekend_raid_cnt: n(c3.weekend_raid_cnt),
     fullcourse_ok: n(c3.fullcourse_ok), day100_ok: n(c3.day100_ok),
+    cq_attack: n(cq.cq_attack), cq_attack_win: n(cq.cq_attack_win), cq_defend_win: n(cq.cq_defend_win), cq_tax: n(cq.cq_tax),
   };
 }
 
@@ -615,6 +651,19 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   pure_way: (m) => m.pure_ok === 1,
   fire_support: (m) => m.fire_support_cnt >= 50,
   day_100_party: (m) => m.day100_ok === 1,
+  // ── 판정 4차: 점령전(배치×전투 결과) ──
+  siege_30: (m) => m.cq_attack >= 30,
+  assault_100: (m) => m.cq_attack >= 100,
+  ram: (m) => m.cq_attack_win >= 30,
+  wall: (m) => m.cq_defend_win >= 10,
+  guardian_100: (m) => m.cq_defend_win >= 100,
+  iron_wall: (m) => m.cq_defend_win >= 30,
+  tax_collector: (m) => m.cq_tax >= 10,
+  // ── 커버리지 감사 보완(2026-08-05) — 판정 경로 누락 5종 ──
+  beginner_mind: (m) => m.beginner_ok === 1,
+  lightning: (m) => m.lightning_cnt >= 30,
+  sprint: (m) => m.sprint_run >= 5,
+  weekend_raid: (m) => m.weekend_raid_cnt >= 100,
   surpassed: (m) => m.ref_over >= 1,
   old_friend: (m) => m.old_friends >= 1,
   sprout_keeper: (m) => m.sprout_friends >= 10,
@@ -664,6 +713,7 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.dia_rank === 1 && mm.dia > 0) out.add('rich_apex');
   if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
   if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
+  if (mm.gleader === 1) out.add('guild_flag');
   if (mm.catalog_total > 0 && mm.codex >= mm.catalog_total) out.add('codex_live');
   // 유지형 스트릭
   if (mm.checkin_streak >= 30) out.add('streak_king');
@@ -682,10 +732,17 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
  * 발견 판정 + 원장 기록(멱등). 칭호 화면 진입 등 lazy 시점에 호출.
  * 반환: 이번에 새로 발견된 code 목록.
  */
+/** 판정 결과 인스턴스 캐시 — 새로고침 연타로 24쿼리 지표 수집이 반복되지 않게(풀러 보호). */
+const judgeCache = new Map<string, { at: number; result: { found: string[]; active: Set<string> } }>();
+const JUDGE_TTL_MS = 30_000;
+
 export async function discoverTitles(
   userId: string,
   serverId: number,
 ): Promise<{ found: string[]; active: Set<string> }> {
+  const ck = `${userId}:${serverId}`;
+  const hit = judgeCache.get(ck);
+  if (hit && Date.now() - hit.at < JUDGE_TTL_MS) return hit.result;
   const m = await collectMetrics(userId, serverId);
   const achieved = new Set<string>();
   for (const [code, rule] of Object.entries(RULES)) if (rule(m)) achieved.add(code);
@@ -723,7 +780,10 @@ export async function discoverTitles(
     inserted.push(...rows.map((r) => r.title_code));
   }
   // active 동봉 — 칭호 화면이 발견+활성을 한 번의 지표 수집으로 받게(중복 collectMetrics 제거).
-  return { found: inserted, active };
+  const result = { found: inserted, active };
+  judgeCache.set(ck, { at: Date.now(), result });
+  if (judgeCache.size > 500) judgeCache.clear(); // 러프한 상한 — 인스턴스 메모리 보호
+  return result;
 }
 
 /** 히든 칭호 목록 — 메타 칭호(treasure_hunt) 집계용. defs의 hidden 플래그가 정본. */

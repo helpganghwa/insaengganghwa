@@ -75,7 +75,7 @@ export async function resolveRepTitle(
 /** 판정 2차 조건부 — 표시 시점 재검증이 표적 쿼리로 가능한 코드. */
 const HEAVY_CONDITIONALS = new Set([
   'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
-  'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'codex_live',
+  'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag', 'codex_live',
   'streak_king', 'march_live', 'smooth_sail',
   'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
 ]);
@@ -136,6 +136,12 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
         where gm.user_id=${u} and gm.server_id=${s}
       `)) as unknown as { better: number }[];
       return r != null && Number(r.better) === 0;
+    }
+    if (code === 'guild_flag') {
+      const r = (await db.execute(sql`
+        select 1 from guild_members where user_id=${u} and server_id=${s} and role='leader' limit 1
+      `)) as unknown as unknown[];
+      return r.length > 0;
     }
     if (code === 'codex_live') {
       const [r] = (await db.execute(sql`
