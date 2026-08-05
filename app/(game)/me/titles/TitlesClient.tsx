@@ -173,7 +173,7 @@ export function TitlesClient({
                     className="text-[13px]"
                   />
                 ) : (
-                  <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{d.label}</span>
+                  <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{d.label.replace('{구역}', '').trim()}</span>
                 )}
               </span>
             </button>
@@ -194,7 +194,7 @@ export function TitlesClient({
                   className="text-[19px]"
                 />
               ) : (
-                <span className="text-[17px] font-semibold text-zinc-500">{selDef.label}</span>
+                <span className="text-[17px] font-semibold text-zinc-500">{selDef.label.replace('{구역}', '').trim()}</span>
               )
             }
             subtitle={

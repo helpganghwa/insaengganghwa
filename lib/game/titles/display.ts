@@ -22,8 +22,8 @@ export async function resolveRepTitle(
   serverId: number,
   executorZone: string | null,
 ): Promise<string | null> {
-  // 대표 미지정이면 기존 UX 유지 — 집행관은 자동 표시(집행관 표시 지점 승계).
-  if (!repCode) return executorZone ? 'zone_executor' : null;
+  // 대표 미지정 = 미표시 — 집행관 자동 표시 폐지(2026-08-05 사용자 확정: 장착 전 자동 장착 없음).
+  if (!repCode) return null;
 
   const def = TITLE_BY_CODE.get(repCode);
   if (!def) return null;
@@ -259,7 +259,7 @@ export async function resolveRepTitlesBatch(
 
   for (const e of entries) {
     if (!e.repCode) {
-      out.set(e.userId, e.executorZone ? 'zone_executor' : null);
+      out.set(e.userId, null); // 자동 표시 없음(2026-08-05)
       continue;
     }
     const def = TITLE_BY_CODE.get(e.repCode);

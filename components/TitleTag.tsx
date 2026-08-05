@@ -60,9 +60,14 @@ export function TitleTag({
   const def = TITLE_BY_CODE.get(code);
   if (!def) return null;
 
-  // 집행관 — 기존 표시 유지(구역명=지역색 + 집행관=인디고, 사용자 확정)
+  // 집행관 — 구역을 알면 기존 표시(구역명=지역색+집행관=인디고), 모르면 정적 '집행관'(목록용).
   if (def.style.executor) {
-    return <ExecutorTag zone={executorZone} region={executorZoneRegion} className={className} />;
+    if (executorZone) return <ExecutorTag zone={executorZone} region={executorZoneRegion} className={className} />;
+    return (
+      <span className={`ttag shrink-0 whitespace-nowrap ${className}`}>
+        <span style={{ color: '#a5b4fc' }}>집행관</span>
+      </span>
+    );
   }
 
   const label = def.label;

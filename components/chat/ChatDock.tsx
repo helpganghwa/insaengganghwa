@@ -538,13 +538,13 @@ export function ChatDock() {
   }, []);
 
   // 대표 칭호 낙관 반영(2026-08-05) — 칭호 화면 장착/해제 시 폴링을 기다리지 않고
-  // 목록에 이미 올라온 내 메시지들의 칭호를 즉시 교체. null이면 집행관 자동 폴백 유지.
+  // 목록에 이미 올라온 내 메시지들의 칭호를 즉시 교체. null=미표시(자동 폴백 없음).
   useEffect(() => {
     if (!me) return;
     const onRep = (e: Event) => {
       const code = (e as CustomEvent<string | null>).detail;
       const patch = (m: ChatMessageDto): ChatMessageDto =>
-        m.userId === me ? { ...m, repTitle: code ?? (m.executorZone ? 'zone_executor' : null) } : m;
+        m.userId === me ? { ...m, repTitle: code } : m;
       setMessages((prev) => prev.map(patch));
       setLatest((prev) => (prev ? patch(prev) : prev));
       if (myFieldsRef.current) myFieldsRef.current = patch(myFieldsRef.current);

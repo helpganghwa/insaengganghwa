@@ -65,7 +65,7 @@ export function BoastModal({
   guildEmblemUrl?: string | null;
   executorZone?: string | null;
   executorZoneRegion?: string | null;
-  /** 대표 칭호 code — 미전달(undefined) 시 집행관 자동 폴백(레거시 호출부 호환). */
+  /** 대표 칭호 code — null/미전달 = 미표시(집행관 자동 폴백 폐지, 2026-08-05). */
   repTitle?: string | null;
   /** 캐릭터의 서버(SERVER.md) — 1이 아니면 공유/OG 링크에 ?s= 전파. */
   serverId?: number;
@@ -282,8 +282,8 @@ export function BoastModal({
               {guildName ? (
                 <span className="truncate text-[10px] text-white/70">{guildName}</span>
               ) : null}
-              {guildName && (repTitle ?? executorZone) ? <span className="shrink-0 text-white/30">·</span> : null}
-              <TitleTag code={repTitle !== undefined ? repTitle : executorZone ? 'zone_executor' : null} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[10px]" />
+              {guildName && repTitle ? <span className="shrink-0 text-white/30">·</span> : null}
+              <TitleTag code={repTitle ?? null} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[10px]" />
             </div>
             <div className="flex items-stretch gap-2">
               {/* 좌(4) — 캐릭터 */}
@@ -429,7 +429,7 @@ export function BoastLauncher({
   guildName?: string | null;
   executorZone?: string | null;
   executorZoneRegion?: string | null;
-  /** 대표 칭호 code — 미전달(undefined) 시 집행관 자동 폴백(레거시 호출부 호환). */
+  /** 대표 칭호 code — null/미전달 = 미표시(집행관 자동 폴백 폐지, 2026-08-05). */
   repTitle?: string | null;
   /** 캐릭터의 서버 — 공유/OG 링크 ?s= 전파(기본 1). */
   serverId?: number;
