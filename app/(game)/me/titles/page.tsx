@@ -4,6 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getActiveServerId } from '@/lib/game/servers';
+import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
 import { activeConditionals, discoverTitles } from '@/lib/game/titles/judge';
@@ -47,13 +48,16 @@ export default async function TitlesPage() {
   const active = r?.active ?? new Set<string>();
 
   const rows: TitleRow[] = TITLE_DEFS.map((d) => {
-    const discovered = ledger.has(d.code);
+    const earnedAt = ledger.get(d.code) ?? null;
+    const discovered = earnedAt !== null;
     const isConditional = d.kind === 'conditional';
     return {
       code: d.code,
       // 발견한 것만 조건 공개 — 미발견은 서버에서부터 내려보내지 않는다(비노출 원칙).
       cond: discovered ? (TITLE_SECRET_BY_CODE.get(d.code)?.cond ?? '') : null,
       discovered,
+      // 발견일 — 목록엔 표시하지 않고 상세 팝업에서만 노출(사용자 확정). KST 표기(§3.8).
+      earnedAt: earnedAt ? kstDateString(new Date(earnedAt)) : null,
       activeNow: discovered && (!isConditional || active.has(d.code)),
     };
   });
