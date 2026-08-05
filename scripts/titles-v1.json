@@ -3067,5 +3067,95 @@
   "cond": "CBT 참전(256명 한정 · 이후 획득 불가)",
   "hidden": true,
   "diff": "한정"
+ },
+ {
+  "code": "fire_and_ice",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "얼음과 불",
+  "cond": "용암을 가둔 대검 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "heaven_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "하늘의 기사",
+  "cond": "창궁검 + 아침빛 예복 + 하얀 깃 날개를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "steam",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "수증기",
+  "cond": "피어나는 삼지창 + 화문 예복 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "frozen_marsh",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "얼어붙은 늪",
+  "cond": "눈꽃 대도 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "savage_noble",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "야만과 문명",
+  "cond": "돌아오는 뼈 + 금장 군복 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "foreign_god",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "이방의 신",
+  "cond": "해오름검 + 깃털 두른 침묵 + 조상의 얼굴을 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "dragon_crown",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "용과 왕관",
+  "cond": "포효하는 용턱 + 백금 사자 갑주 + 별이 박힌 왕관을 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "winter_angel",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "겨울 천사",
+  "cond": "고드름이 자란 장궁 + 세라핌의 갑주 + 설화의 관을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "transfer_student",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "전학생",
+  "cond": "퉤! 하는 대롱 + 왕립 학원 교복 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ash_angel",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "재의 천사",
+  "cond": "재에서 당기는 활 + 사슬과 한쪽 날개 + 재를 막는 눈을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
  }
 ]
