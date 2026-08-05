@@ -5,7 +5,7 @@ import 'server-only';
  * cond는 "발견 후" 공개용 설명 텍스트이자 판정 구현(judge.ts)의 명세.
  * 생성: bun run scripts/gen-title-defs.ts (수동 수정 금지)
  */
-export type TitleSecret = { code: string; cat: string; cond: string; diff: '쉬움' | '중간' | '어려움' | '한정' };
+export type TitleSecret = { code: string; cat: string; cond: string; diff: '쉬움' | '중간' | '어려움' | '한정'; req?: { items: string[]; min: number } };
 
 export const TITLE_SECRETS: TitleSecret[] = [
  {
@@ -612,49 +612,107 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "kintsugi_master",
   cat: "아이템 발동",
   cond: "흑금 대도를 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "general_kintsugi_katana"
+   ],
+   min: 100
+  }
  },
  {
   code: "halfblade_master",
   cat: "아이템 발동",
   cond: "빛과 밤을 가른 대검을 +150 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "fallen_half_blade"
+   ],
+   min: 150
+  }
  },
  {
   code: "starfield_master",
   cat: "아이템 발동",
   cond: "별자리가 흐르는 장검을 +200 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "general_starfield_blade"
+   ],
+   min: 200
+  }
  },
  {
   code: "frog_prince",
   cat: "아이템 발동",
-  cond: "개구리 세트 3종(대롱·탈 망토·충전기)을 모두 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  cond: "퉤! 하는 대롱 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_frog_blowgun",
+    "marsh_frog_hood",
+    "marsh_frog_jar"
+   ],
+   min: 30
+  }
  },
  {
   code: "true_witch",
   cat: "아이템 발동",
-  cond: "마녀 세트 3종(등불·드레스·뾰족 모자)을 모두 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  cond: "마녀의 등불 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_staff",
+    "pumpkin_witch_dress",
+    "pumpkin_witch_hat"
+   ],
+   min: 50
+  }
  },
  {
   code: "winter_itself",
   cat: "아이템 발동",
-  cond: "서리 세트 3종(눈꽃 대도·설산 갑주·설화의 관)을 모두 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  cond: "눈꽃 대도 + 설산 파수의 갑주 + 설화의 관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "temple_frostguard_garb",
+    "temple_snowflake_crown"
+   ],
+   min: 50
+  }
  },
  {
   code: "dawn_knight",
   cat: "아이템 발동",
-  cond: "여명 세트 3종(동트는 맹세·여명의 벽·새벽지기의 표식)을 모두 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  cond: "동트는 맹세 + 여명의 벽 + 새벽지기의 표식을 +50 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_sword",
+    "kingdom_dawnguard_cuirass",
+    "kingdom_dawnguard_ring"
+   ],
+   min: 50
+  }
  },
  {
   code: "dragon_heir",
   cat: "아이템 발동",
-  cond: "용 세트 3종(용턱·비늘갑·뿔관)을 모두 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 화룡의 뿔관을 +100 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd",
+    "dragonknight_scale_armor",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 100
+  }
  },
  {
   code: "crown_touch",
@@ -834,49 +892,106 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "model_student",
   cat: "아이템 발동",
   cond: "왕립 학원 교복 + 금테 둥근 안경을 +10 이상으로 동시 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "academy_student_uniform",
+    "round_gold_glasses"
+   ],
+   min: 10
+  }
  },
  {
   code: "night_noble",
   cat: "아이템 발동",
   cond: "진홍의 가는 검 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "vampire_blood_rapier",
+    "crimson_gothic_dress",
+    "phantom_half_mask"
+   ],
+   min: 50
+  }
  },
  {
   code: "valkyrie",
   cat: "아이템 발동",
   cond: "왕기의 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_banner_spear",
+    "valkyrie_battle_dress",
+    "valkyrie_winged_circlet"
+   ],
+   min: 70
+  }
  },
  {
   code: "grim_envoy",
   cat: "아이템 발동",
   cond: "혼불낫 + 갈까마귀 로브 + 재가 흐르는 모래시계를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "necromancer_raven_robe",
+    "volcano_ember_hourglass"
+   ],
+   min: 70
+  }
  },
  {
   code: "archangel",
   cat: "아이템 발동",
   cond: "해오름검 + 아침빛 예복 + 하얀 깃 날개를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "angel_radiant_gown",
+    "angel_glide_wings"
+   ],
+   min: 70
+  }
  },
  {
   code: "outlaw",
   cat: "아이템 발동",
   cond: "금당초 쌍권총을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "general_twin_flintlocks"
+   ],
+   min: 100
+  }
  },
  {
   code: "sharpshooter",
   cat: "아이템 발동",
   cond: "봄을 겨눈 석궁을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "temple_frostward_bow"
+   ],
+   min: 100
+  }
  },
  {
   code: "gatekeeper",
   cat: "아이템 발동",
   cond: "봉문검을 +150 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "vault_key_greatsword"
+   ],
+   min: 150
+  }
  },
  {
   code: "armory_lord",
@@ -936,103 +1051,216 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "winter_blade",
   cat: "아이템 발동",
   cond: "눈꽃 대도를 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "temple_frost_odachi"
+   ],
+   min: 100
+  }
  },
  {
   code: "volcano_heart",
   cat: "아이템 발동",
   cond: "용암을 가둔 대검을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_emberveined_greatsword"
+   ],
+   min: 100
+  }
  },
  {
   code: "lotus_warrior",
   cat: "아이템 발동",
   cond: "피어나는 삼지창을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident"
+   ],
+   min: 50
+  }
  },
  {
   code: "star_mage",
   cat: "아이템 발동",
   cond: "유성의 지팡이를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_star_wand"
+   ],
+   min: 50
+  }
  },
  {
   code: "thunder_emperor",
   cat: "아이템 발동",
   cond: "벼락을 박은 창을 +150 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "thunder_emperor_spear"
+   ],
+   min: 150
+  }
  },
  {
   code: "one_shot",
   cat: "아이템 발동",
   cond: "상아빛 한 발을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "ivory_flintlock_pistol"
+   ],
+   min: 70
+  }
  },
  {
   code: "blue_sky",
   cat: "아이템 발동",
   cond: "창천검을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier"
+   ],
+   min: 10
+  }
  },
  {
   code: "phoenix_archer",
   cat: "아이템 발동",
   cond: "재에서 당기는 활을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_phoenix_bow"
+   ],
+   min: 70
+  }
  },
  {
   code: "spiral_rider",
   cat: "아이템 발동",
   cond: "나선을 감은 랜스를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "general_spiral_lance"
+   ],
+   min: 50
+  }
  },
  {
   code: "frost_archer",
   cat: "아이템 발동",
   cond: "고드름이 자란 장궁을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_icicle_longbow"
+   ],
+   min: 70
+  }
  },
  {
   code: "shaman",
   cat: "아이템 발동",
   cond: "묻지 않는 지팡이 + 깃털 두른 침묵 + 조상의 얼굴을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_shaman_staff",
+    "orc_shaman_robe",
+    "orc_ancestor_mask"
+   ],
+   min: 30
+  }
  },
  {
   code: "angler",
   cat: "아이템 발동",
   cond: "도롱이 + 반딧불 통발을 +1 이상으로 동시 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "marsh_angler_cape",
+    "marsh_angler_creel"
+   ],
+   min: 1
+  }
  },
  {
   code: "paladin",
   cat: "아이템 발동",
   cond: "성광 갑주 + 백은 날개 투구를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "paladin_holy_armor",
+    "paladin_winged_helm"
+   ],
+   min: 70
+  }
  },
  {
   code: "astrologer",
   cat: "아이템 발동",
   cond: "성좌의 망토 + 대답하지 않는 나침반 + 유성의 지팡이를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "astrologer_starmap_coat",
+    "kingdom_riddle_astrolabe",
+    "angel_star_wand"
+   ],
+   min: 50
+  }
  },
  {
   code: "masquerade",
   cat: "아이템 발동",
   cond: "무도회의 한 수 + 이름 없는 드레스 + 이름을 가린 가면을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "kingdom_masque_gown",
+    "kingdom_masque_mask"
+   ],
+   min: 30
+  }
  },
  {
   code: "headmaster",
   cat: "아이템 발동",
   cond: "학장복 + 금테 둥근 안경을 +10 이상으로 동시 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "academy_professor_robe",
+    "round_gold_glasses"
+   ],
+   min: 10
+  }
  },
  {
   code: "coronation",
   cat: "아이템 발동",
   cond: "왕을 짊어진 대검 + 별을 두른 망토 + 별이 박힌 왕관을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "kingdom_regalia_cloak",
+    "kingdom_regalia_crown"
+   ],
+   min: 100
+  }
  },
  {
   code: "perpetual",
@@ -1110,151 +1338,317 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "frog_sniper",
   cat: "아이템 발동",
   cond: "퉤! 하는 대롱을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "marsh_frog_blowgun"
+   ],
+   min: 10
+  }
  },
  {
   code: "gentleman",
   cat: "아이템 발동",
   cond: "매 머리 지팡이검을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_falcon_cane_sword"
+   ],
+   min: 30
+  }
  },
  {
   code: "cupid",
   cat: "아이템 발동",
   cond: "두근 화살을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_cherub_bow"
+   ],
+   min: 30
+  }
  },
  {
   code: "hunter",
   cat: "아이템 발동",
   cond: "돌아오는 뼈를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang"
+   ],
+   min: 30
+  }
  },
  {
   code: "twin_saber",
   cat: "아이템 발동",
   cond: "청홍 쌍검을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_twin_sabers"
+   ],
+   min: 50
+  }
  },
  {
   code: "standard_bearer",
   cat: "아이템 발동",
   cond: "왕기의 창을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_banner_spear"
+   ],
+   min: 50
+  }
  },
  {
   code: "ash_reaper",
   cat: "아이템 발동",
   cond: "잿불낫을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_scythe"
+   ],
+   min: 50
+  }
  },
  {
   code: "dusk",
   cat: "아이템 발동",
   cond: "노을이 앉는 검을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_duskwing_sword"
+   ],
+   min: 50
+  }
  },
  {
   code: "sky_knight",
   cat: "아이템 발동",
   cond: "창궁검을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword"
+   ],
+   min: 70
+  }
  },
  {
   code: "dragon_slayer",
   cat: "아이템 발동",
   cond: "포효하는 용턱을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd"
+   ],
+   min: 70
+  }
  },
  {
   code: "shadow",
   cat: "아이템 발동",
   cond: "쌍익 단검을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "assassin_twin_daggers"
+   ],
+   min: 70
+  }
  },
  {
   code: "forge_heart",
   cat: "아이템 발동",
   cond: "화심의 망치를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer"
+   ],
+   min: 70
+  }
  },
  {
   code: "grim_reaper",
   cat: "아이템 발동",
   cond: "혼불낫을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "reaper_soul_scythe"
+   ],
+   min: 100
+  }
  },
  {
   code: "necromancer",
   cat: "아이템 발동",
   cond: "초혼의 해골장을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "necromancer_skull_staff"
+   ],
+   min: 100
+  }
  },
  {
   code: "morning_blade",
   cat: "아이템 발동",
   cond: "해오름검을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "celestial_dawn_greatsword"
+   ],
+   min: 100
+  }
  },
  {
   code: "twin_wings",
   cat: "아이템 발동",
   cond: "한 쌍의 깃을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "fallen_pinion_twinblades"
+   ],
+   min: 100
+  }
  },
  {
   code: "fallen_angel",
   cat: "아이템 발동",
   cond: "날개였던 대궁을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "fallen_grace_greatbow"
+   ],
+   min: 100
+  }
  },
  {
   code: "wanderer",
   cat: "아이템 발동",
   cond: "모래바람의 겹옷 + 용비늘 가방 + 돌아오는 뼈를 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "desert_nomad_robes",
+    "volcano_dragonscale_satchel",
+    "orc_hunter_boomerang"
+   ],
+   min: 30
+  }
  },
  {
   code: "little_angel",
   cat: "아이템 발동",
   cond: "두근 화살 + 구름 갑옷 + 철사로 띄운 후광을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_cherub_bow",
+    "angel_cherub_armor",
+    "temple_faux_halo"
+   ],
+   min: 30
+  }
  },
  {
   code: "lily_spirit",
   cat: "아이템 발동",
   cond: "피어나는 삼지창 + 수련이 피는 드레스 + 수련 화관을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "marsh_lily_gown",
+    "swamp_lily_crown"
+   ],
+   min: 50
+  }
  },
  {
   code: "fire_dancer",
   cat: "아이템 발동",
   cond: "춤추는 쌍불꽃 + 불길 케이프 + 흑요 봉황선을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dancer_daggers",
+    "volcano_dancer_cape",
+    "volcano_obsidian_warfan"
+   ],
+   min: 50
+  }
  },
  {
   code: "frost_warden",
   cat: "아이템 발동",
   cond: "봄을 겨눈 석궁 + 설산 파수의 갑주 + 빙정 방패를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frostward_bow",
+    "temple_frostguard_garb",
+    "frost_kite_shield"
+   ],
+   min: 70
+  }
  },
  {
   code: "beast_king",
   cat: "아이템 발동",
   cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "general_beastmaster_hide",
+    "orc_ancestor_bracelet"
+   ],
+   min: 70
+  }
  },
  {
   code: "royal_guard",
   cat: "아이템 발동",
   cond: "창궁검 + 쪽빛 기사복 + 푸른 깃 견장을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "kingdom_azure_outfit",
+    "commander_feather_epaulets"
+   ],
+   min: 70
+  }
  },
  {
   code: "fallen_lord",
   cat: "아이템 발동",
   cond: "빛과 밤을 가른 대검 + 도금이 벗겨진 갑주 + 한 뼘짜리 마왕 날개를 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "fallen_half_blade",
+    "fallen_gilded_ruin_plate",
+    "general_imp_wings"
+   ],
+   min: 100
+  }
  },
  {
   code: "rising_star",
@@ -1338,421 +1732,855 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "seraph",
   cat: "아이템 발동",
   cond: "세라핌의 갑주를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_seraphguard_armor"
+   ],
+   min: 70
+  }
  },
  {
   code: "black_knight",
   cat: "아이템 발동",
   cond: "적금 갑주를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_goldknight_plate"
+   ],
+   min: 50
+  }
  },
  {
   code: "field_marshal",
   cat: "아이템 발동",
   cond: "금장 군복을 +100 이상으로 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "royal_military_coat"
+   ],
+   min: 100
+  }
  },
  {
   code: "snow_priest",
   cat: "아이템 발동",
   cond: "설야 예복을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_breathwoven_vestment"
+   ],
+   min: 50
+  }
  },
  {
   code: "firebird",
   cat: "아이템 발동",
   cond: "불새 깃 드레스를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "phoenix_dancer_dress"
+   ],
+   min: 70
+  }
  },
  {
   code: "forest_keeper",
   cat: "아이템 발동",
   cond: "숲지기의 한 벌을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "forest_ranger_outfit"
+   ],
+   min: 30
+  }
  },
  {
   code: "star_reader",
   cat: "아이템 발동",
   cond: "별을 읽는 외투를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_riddle_coat"
+   ],
+   min: 50
+  }
  },
  {
   code: "penitent",
   cat: "아이템 발동",
   cond: "사슬과 한쪽 날개를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_penitent_drape"
+   ],
+   min: 70
+  }
  },
  {
   code: "bog_warden",
   cat: "아이템 발동",
   cond: "늪빛 흉갑을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_bogwarden_chest"
+   ],
+   min: 50
+  }
  },
  {
   code: "ascetic",
   cat: "아이템 발동",
   cond: "한쪽 어깨 띠를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_monk_sash"
+   ],
+   min: 30
+  }
  },
  {
   code: "lion_knight",
   cat: "아이템 발동",
   cond: "백금 사자 갑주를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_lionguard_plate"
+   ],
+   min: 70
+  }
  },
  {
   code: "herald",
   cat: "아이템 발동",
   cond: "푸른 서약 기사복을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_herald_tabard"
+   ],
+   min: 50
+  }
  },
  {
   code: "bog_witch",
   cat: "아이템 발동",
   cond: "이끼 자란 넝마 드레스를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_bogwitch_rags"
+   ],
+   min: 50
+  }
  },
  {
   code: "self_saint",
   cat: "아이템 발동",
   cond: "자칭 훈장 사제복을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_faux_robe"
+   ],
+   min: 30
+  }
  },
  {
   code: "lava_dancer",
   cat: "아이템 발동",
   cond: "용암으로 짠 드레스를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_gala_gown"
+   ],
+   min: 70
+  }
  },
  {
   code: "vampire",
   cat: "아이템 발동",
   cond: "진홍의 가는 검을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "vampire_blood_rapier"
+   ],
+   min: 70
+  }
  },
  {
   code: "lantern_keeper",
   cat: "아이템 발동",
   cond: "마녀의 등불을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_staff"
+   ],
+   min: 30
+  }
  },
  {
   code: "herbalist",
   cat: "아이템 발동",
   cond: "약초꾼의 버섯 모자를 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "swamp_mushroom_hat"
+   ],
+   min: 10
+  }
  },
  {
   code: "little_devil",
   cat: "아이템 발동",
   cond: "작은 악마의 뿔을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "devil_horn_headband"
+   ],
+   min: 10
+  }
  },
  {
   code: "drunkard",
   cat: "아이템 발동",
   cond: "한 잔의 보람을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "orc_grumble_tankard"
+   ],
+   min: 10
+  }
  },
  {
   code: "feather_style",
   cat: "아이템 발동",
   cond: "백은 깃 머리핀을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "general_wing_hairclip"
+   ],
+   min: 10
+  }
  },
  {
   code: "one_eye",
   cat: "아이템 발동",
   cond: "가려야 보이는 안대를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "general_star_eyepatch"
+   ],
+   min: 30
+  }
  },
  {
   code: "trumpeter",
   cat: "아이템 발동",
   cond: "부르면 모이는 뿔피리를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_bogwarden_horn"
+   ],
+   min: 30
+  }
  },
  {
   code: "drummer",
   cat: "아이템 발동",
   cond: "북이 된 방패를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_drum_shield"
+   ],
+   min: 30
+  }
  },
  {
   code: "court_dancer",
   cat: "아이템 발동",
   cond: "진홍 봉황선을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_fan"
+   ],
+   min: 30
+  }
  },
  {
   code: "tribal_banner",
   cat: "아이템 발동",
   cond: "조상의 깃발을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_shaman_banner"
+   ],
+   min: 30
+  }
  },
  {
   code: "mechanic",
   cat: "아이템 발동",
   cond: "재를 막는 눈을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ashglass_goggles"
+   ],
+   min: 30
+  }
  },
  {
   code: "ice_heart",
   cat: "아이템 발동",
   cond: "식지 않는 심장을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frostward_orb"
+   ],
+   min: 50
+  }
  },
  {
   code: "iron_fist",
   cat: "아이템 발동",
   cond: "맹세를 쥔 손을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_coronation_gauntlets"
+   ],
+   min: 50
+  }
  },
  {
   code: "lion_heart",
   cat: "아이템 발동",
   cond: "사자의 증표를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_coronation_medallion"
+   ],
+   min: 50
+  }
  },
  {
   code: "fur_collar",
   cat: "아이템 발동",
   cond: "설백 목도리를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_fur_stole"
+   ],
+   min: 30
+  }
  },
  {
   code: "incense_keeper",
   cat: "아이템 발동",
   cond: "흔들리는 향로를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_monk_censer"
+   ],
+   min: 30
+  }
  },
  {
   code: "dragon_face",
   cat: "아이템 발동",
   cond: "용면 투구를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "dragonknight_horned_helm"
+   ],
+   min: 70
+  }
  },
  {
   code: "snow_monk",
   cat: "아이템 발동",
   cond: "눈꽃 대도 + 설야 예복 + 흔들리는 향로를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "temple_breathwoven_vestment",
+    "temple_monk_censer"
+   ],
+   min: 50
+  }
  },
  {
   code: "fallen_priest",
   cat: "아이템 발동",
   cond: "초혼의 해골장 + 자칭 훈장 사제복 + 철사로 띄운 후광을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "necromancer_skull_staff",
+    "temple_faux_robe",
+    "temple_faux_halo"
+   ],
+   min: 70
+  }
  },
  {
   code: "volcano_smith",
   cat: "아이템 발동",
   cond: "화심의 망치 + 적금 갑주 + 재를 막는 눈을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer",
+    "kingdom_goldknight_plate",
+    "volcano_ashglass_goggles"
+   ],
+   min: 50
+  }
  },
  {
   code: "thunder_general",
   cat: "아이템 발동",
   cond: "벼락을 박은 창 + 금장 군복 + 푸른 깃 견장을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "thunder_emperor_spear",
+    "royal_military_coat",
+    "commander_feather_epaulets"
+   ],
+   min: 100
+  }
  },
  {
   code: "night_visitor",
   cat: "아이템 발동",
   cond: "쌍익 단검 + 늪빛 흉갑 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "assassin_twin_daggers",
+    "marsh_bogwarden_chest",
+    "phantom_half_mask"
+   ],
+   min: 50
+  }
  },
  {
   code: "honor_student",
   cat: "아이템 발동",
   cond: "왕립 학원 교복을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "academy_student_uniform"
+   ],
+   min: 10
+  }
  },
  {
   code: "fluffy_cloud",
   cat: "아이템 발동",
   cond: "구름 갑옷을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "angel_cherub_armor"
+   ],
+   min: 10
+  }
  },
  {
   code: "frog_person",
   cat: "아이템 발동",
   cond: "개구리 탈 망토를 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "marsh_frog_hood"
+   ],
+   min: 10
+  }
  },
  {
   code: "peddler",
   cat: "아이템 발동",
   cond: "용비늘 가방을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "volcano_dragonscale_satchel"
+   ],
+   min: 10
+  }
  },
  {
   code: "flower_crown",
   cat: "아이템 발동",
   cond: "수련 화관을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "swamp_lily_crown"
+   ],
+   min: 10
+  }
  },
  {
   code: "pointy_hat",
   cat: "아이템 발동",
   cond: "마녀의 뾰족 모자를 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "pumpkin_witch_hat"
+   ],
+   min: 10
+  }
  },
  {
   code: "bookworm",
   cat: "아이템 발동",
   cond: "금테 둥근 안경을 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "round_gold_glasses"
+   ],
+   min: 10
+  }
  },
  {
   code: "firefly",
   cat: "아이템 발동",
   cond: "반딧불 충전기를 +10 이상으로 장착 중인 동안",
-  diff: "쉬움"
+  diff: "쉬움",
+  req: {
+   items: [
+    "marsh_frog_jar"
+   ],
+   min: 10
+  }
  },
  {
   code: "azure_knight",
   cat: "아이템 발동",
   cond: "쪽빛 기사복을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_azure_outfit"
+   ],
+   min: 30
+  }
  },
  {
   code: "pumpkin_glow",
   cat: "아이템 발동",
   cond: "호박등 드레스를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_dress"
+   ],
+   min: 30
+  }
  },
  {
   code: "old_professor",
   cat: "아이템 발동",
   cond: "학장복을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "academy_professor_robe"
+   ],
+   min: 30
+  }
  },
  {
   code: "silence",
   cat: "아이템 발동",
   cond: "깃털 두른 침묵을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_shaman_robe"
+   ],
+   min: 30
+  }
  },
  {
   code: "lily_pad",
   cat: "아이템 발동",
   cond: "수련이 피는 드레스를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_lily_gown"
+   ],
+   min: 30
+  }
  },
  {
   code: "ball_night",
   cat: "아이템 발동",
   cond: "이름 없는 드레스를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_gown"
+   ],
+   min: 30
+  }
  },
  {
   code: "white_feather",
   cat: "아이템 발동",
   cond: "하얀 깃 날개를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_glide_wings"
+   ],
+   min: 30
+  }
  },
  {
   code: "hourglass",
   cat: "아이템 발동",
   cond: "재가 흐르는 모래시계를 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_hourglass"
+   ],
+   min: 30
+  }
  },
  {
   code: "ancestor",
   cat: "아이템 발동",
   cond: "손목에 감은 조상을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_ancestor_bracelet"
+   ],
+   min: 30
+  }
  },
  {
   code: "star_gazer",
   cat: "아이템 발동",
   cond: "대답하지 않는 나침반을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_riddle_astrolabe"
+   ],
+   min: 30
+  }
  },
  {
   code: "nomad_fox",
   cat: "아이템 발동",
   cond: "모래바람의 겹옷을 +30 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "desert_nomad_robes"
+   ],
+   min: 30
+  }
  },
  {
   code: "red_night",
   cat: "아이템 발동",
   cond: "진홍 레이스 드레스를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "crimson_gothic_dress"
+   ],
+   min: 50
+  }
  },
  {
   code: "raven",
   cat: "아이템 발동",
   cond: "갈까마귀 로브를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "necromancer_raven_robe"
+   ],
+   min: 50
+  }
  },
  {
   code: "starlight_cloak",
   cat: "아이템 발동",
   cond: "별을 두른 망토를 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_regalia_cloak"
+   ],
+   min: 50
+  }
  },
  {
   code: "snow_flower",
   cat: "아이템 발동",
   cond: "설화의 관을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_snowflake_crown"
+   ],
+   min: 50
+  }
  },
  {
   code: "fire_dragon",
   cat: "아이템 발동",
   cond: "화룡의 뿔관을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 50
+  }
  },
  {
   code: "obsidian",
   cat: "아이템 발동",
   cond: "흑요 봉황선을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_obsidian_warfan"
+   ],
+   min: 50
+  }
  },
  {
   code: "radiance",
   cat: "아이템 발동",
   cond: "아침빛 예복을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_radiant_gown"
+   ],
+   min: 50
+  }
  },
  {
   code: "ember_silk",
   cat: "아이템 발동",
   cond: "화문 예복을 +50 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_embersilk_dress"
+   ],
+   min: 50
+  }
  },
  {
   code: "battle_wings",
   cat: "아이템 발동",
   cond: "창공의 전투복을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "valkyrie_battle_dress"
+   ],
+   min: 70
+  }
  },
  {
   code: "holy_light",
   cat: "아이템 발동",
   cond: "성광 갑주를 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "paladin_holy_armor"
+   ],
+   min: 70
+  }
  },
  {
   code: "black_dragon",
   cat: "아이템 발동",
   cond: "흑룡의 비늘갑을 +70 이상으로 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "dragonknight_scale_armor"
+   ],
+   min: 70
+  }
  },
  {
   code: "archangel_chief",
   cat: "아이템 발동",
   cond: "해오름검 + 세라핌의 갑주 + 하얀 깃 날개를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "angel_seraphguard_armor",
+    "angel_glide_wings"
+   ],
+   min: 70
+  }
  },
  {
   code: "forest_hermit",
   cat: "아이템 발동",
   cond: "돌아오는 뼈 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "forest_ranger_outfit",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
  },
  {
   code: "carefree",
@@ -1830,67 +2658,155 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "red_ball",
   cat: "아이템 발동",
   cond: "무도회의 한 수 + 진홍 레이스 드레스 + 진홍 봉황선을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "crimson_gothic_dress",
+    "kingdom_court_fan"
+   ],
+   min: 50
+  }
  },
  {
   code: "frost_queen",
   cat: "아이템 발동",
   cond: "고드름이 자란 장궁 + 설야 예복 + 설화의 관을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "temple_icicle_longbow",
+    "temple_breathwoven_vestment",
+    "temple_snowflake_crown"
+   ],
+   min: 100
+  }
  },
  {
   code: "gunslinger",
   cat: "아이템 발동",
   cond: "금당초 쌍권총 + 모래바람의 겹옷 + 재를 막는 눈을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "general_twin_flintlocks",
+    "desert_nomad_robes",
+    "volcano_ashglass_goggles"
+   ],
+   min: 50
+  }
  },
  {
   code: "phantom_thief",
   cat: "아이템 발동",
   cond: "상아빛 한 발 + 별을 읽는 외투 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "ivory_flintlock_pistol",
+    "kingdom_riddle_coat",
+    "phantom_half_mask"
+   ],
+   min: 50
+  }
  },
  {
   code: "star_navigator",
   cat: "아이템 발동",
   cond: "별자리가 흐르는 장검 + 성좌의 망토 + 별이 박힌 왕관을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "general_starfield_blade",
+    "astrologer_starmap_coat",
+    "kingdom_regalia_crown"
+   ],
+   min: 100
+  }
  },
  {
   code: "lancer",
   cat: "아이템 발동",
   cond: "나선을 감은 랜스 + 백금 사자 갑주 + 사자의 증표를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "general_spiral_lance",
+    "kingdom_lionguard_plate",
+    "kingdom_coronation_medallion"
+   ],
+   min: 70
+  }
  },
  {
   code: "forest_witch",
   cat: "아이템 발동",
   cond: "마녀의 등불 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_staff",
+    "swamp_bogwitch_rags",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
  },
  {
   code: "lava_lord",
   cat: "아이템 발동",
   cond: "용암을 가둔 대검 + 화문 예복 + 화룡의 뿔관을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_emberveined_greatsword",
+    "volcano_embersilk_dress",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 100
+  }
  },
  {
   code: "gardener",
   cat: "아이템 발동",
   cond: "피어나는 삼지창 + 숲지기의 한 벌 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "forest_ranger_outfit",
+    "swamp_lily_crown"
+   ],
+   min: 30
+  }
  },
  {
   code: "kings_blade",
   cat: "아이템 발동",
   cond: "왕을 짊어진 대검 + 금장 군복 + 맹세를 쥔 손을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "royal_military_coat",
+    "kingdom_coronation_gauntlets"
+   ],
+   min: 70
+  }
  },
  {
   code: "marksman",
   cat: "아이템 발동",
   cond: "재에서 당기는 활 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_phoenix_bow",
+    "general_beastmaster_hide",
+    "volcano_dragonscale_satchel"
+   ],
+   min: 50
+  }
  },
  {
   code: "elite_few",
@@ -1938,91 +2854,211 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "dawn_prayer",
   cat: "아이템 발동",
   cond: "해오름검 + 설야 예복 + 흔들리는 향로를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "temple_breathwoven_vestment",
+    "temple_monk_censer"
+   ],
+   min: 50
+  }
  },
  {
   code: "phoenix_set",
   cat: "아이템 발동",
   cond: "재에서 당기는 활 + 불새 깃 드레스 + 진홍 봉황선을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_phoenix_bow",
+    "phoenix_dancer_dress",
+    "kingdom_court_fan"
+   ],
+   min: 70
+  }
  },
  {
   code: "abyss_lord",
   cat: "아이템 발동",
   cond: "혼불낫 + 도금이 벗겨진 갑주 + 작은 악마의 뿔을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "fallen_gilded_ruin_plate",
+    "devil_horn_headband"
+   ],
+   min: 100
+  }
  },
  {
   code: "silver_knight",
   cat: "아이템 발동",
   cond: "동트는 맹세 + 세라핌의 갑주 + 백은 날개 투구를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_sword",
+    "angel_seraphguard_armor",
+    "paladin_winged_helm"
+   ],
+   min: 50
+  }
  },
  {
   code: "marsh_patrol",
   cat: "아이템 발동",
   cond: "피어나는 삼지창 + 개구리 탈 망토 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "marsh_frog_hood",
+    "marsh_angler_creel"
+   ],
+   min: 30
+  }
  },
  {
   code: "light_maiden",
   cat: "아이템 발동",
   cond: "유성의 지팡이 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_star_wand",
+    "angel_radiant_gown",
+    "temple_faux_halo"
+   ],
+   min: 50
+  }
  },
  {
   code: "warpath",
   cat: "아이템 발동",
   cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd",
+    "dragonknight_scale_armor",
+    "dragonknight_horned_helm"
+   ],
+   min: 100
+  }
  },
  {
   code: "ice_fishing",
   cat: "아이템 발동",
   cond: "봄을 겨눈 석궁 + 도롱이 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frostward_bow",
+    "marsh_angler_cape",
+    "marsh_angler_creel"
+   ],
+   min: 30
+  }
  },
  {
   code: "festival_night",
   cat: "아이템 발동",
   cond: "춤추는 쌍불꽃 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dancer_daggers",
+    "pumpkin_witch_dress",
+    "pumpkin_witch_hat"
+   ],
+   min: 50
+  }
  },
  {
   code: "night_walk",
   cat: "아이템 발동",
   cond: "흑금 대도 + 갈까마귀 로브 + 가려야 보이는 안대를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "general_kintsugi_katana",
+    "necromancer_raven_robe",
+    "general_star_eyepatch"
+   ],
+   min: 50
+  }
  },
  {
   code: "glacier_knight",
   cat: "아이템 발동",
   cond: "눈꽃 대도 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "temple_frostguard_garb",
+    "frost_kite_shield"
+   ],
+   min: 100
+  }
  },
  {
   code: "hell_gatekeeper",
   cat: "아이템 발동",
   cond: "봉문검 + 도금이 벗겨진 갑주 + 용면 투구를 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "vault_key_greatsword",
+    "fallen_gilded_ruin_plate",
+    "dragonknight_horned_helm"
+   ],
+   min: 100
+  }
  },
  {
   code: "steppe_wind",
   cat: "아이템 발동",
   cond: "돌아오는 뼈 + 모래바람의 겹옷 + 조상의 깃발을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "desert_nomad_robes",
+    "orc_shaman_banner"
+   ],
+   min: 50
+  }
  },
  {
   code: "court_mage",
   cat: "아이템 발동",
   cond: "유성의 지팡이 + 별을 읽는 외투 + 별이 박힌 왕관을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "angel_star_wand",
+    "kingdom_riddle_coat",
+    "kingdom_regalia_crown"
+   ],
+   min: 70
+  }
  },
  {
   code: "ash_judge",
   cat: "아이템 발동",
   cond: "잿불낫 + 화문 예복 + 재가 흐르는 모래시계를 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_scythe",
+    "volcano_embersilk_dress",
+    "volcano_ember_hourglass"
+   ],
+   min: 70
+  }
  },
  {
   code: "treasure_hunt",
@@ -2058,61 +3094,141 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "fire_and_ice",
   cat: "아이템 발동",
   cond: "용암을 가둔 대검 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_emberveined_greatsword",
+    "temple_frostguard_garb",
+    "frost_kite_shield"
+   ],
+   min: 100
+  }
  },
  {
   code: "heaven_knight",
   cat: "아이템 발동",
   cond: "창궁검 + 아침빛 예복 + 하얀 깃 날개를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "angel_radiant_gown",
+    "angel_glide_wings"
+   ],
+   min: 50
+  }
  },
  {
   code: "steam",
   cat: "아이템 발동",
   cond: "피어나는 삼지창 + 화문 예복 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "volcano_embersilk_dress",
+    "volcano_ember_hourglass"
+   ],
+   min: 50
+  }
  },
  {
   code: "frozen_marsh",
   cat: "아이템 발동",
   cond: "눈꽃 대도 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "swamp_bogwitch_rags",
+    "swamp_lily_crown"
+   ],
+   min: 50
+  }
  },
  {
   code: "savage_noble",
   cat: "아이템 발동",
   cond: "돌아오는 뼈 + 금장 군복 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "royal_military_coat",
+    "kingdom_coronation_medallion"
+   ],
+   min: 50
+  }
  },
  {
   code: "foreign_god",
   cat: "아이템 발동",
   cond: "해오름검 + 깃털 두른 침묵 + 조상의 얼굴을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "orc_shaman_robe",
+    "orc_ancestor_mask"
+   ],
+   min: 100
+  }
  },
  {
   code: "dragon_crown",
   cat: "아이템 발동",
   cond: "포효하는 용턱 + 백금 사자 갑주 + 별이 박힌 왕관을 +100 이상으로 동시 장착 중인 동안",
-  diff: "어려움"
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd",
+    "kingdom_lionguard_plate",
+    "kingdom_regalia_crown"
+   ],
+   min: 100
+  }
  },
  {
   code: "winter_angel",
   cat: "아이템 발동",
   cond: "고드름이 자란 장궁 + 세라핌의 갑주 + 설화의 관을 +50 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "temple_icicle_longbow",
+    "angel_seraphguard_armor",
+    "temple_snowflake_crown"
+   ],
+   min: 50
+  }
  },
  {
   code: "transfer_student",
   cat: "아이템 발동",
   cond: "퉤! 하는 대롱 + 왕립 학원 교복 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_frog_blowgun",
+    "academy_student_uniform",
+    "marsh_angler_creel"
+   ],
+   min: 30
+  }
  },
  {
   code: "ash_angel",
   cat: "아이템 발동",
   cond: "재에서 당기는 활 + 사슬과 한쪽 날개 + 재를 막는 눈을 +70 이상으로 동시 장착 중인 동안",
-  diff: "중간"
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_phoenix_bow",
+    "angel_penitent_drape",
+    "volcano_ashglass_goggles"
+   ],
+   min: 70
+  }
  }
 ] as const;
 

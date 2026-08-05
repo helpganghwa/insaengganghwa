@@ -6,6 +6,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
+
 type T = { code: string; cat: string; kind: string; label: string; cond: string; hidden: boolean; diff: string };
 type Design = {
   typography: { size: string; weight: number };
@@ -63,7 +65,24 @@ const pub = titles.map((t) => ({
   style: styleOf(t),
 }));
 
-const srv = titles.map((t) => ({ code: t.code, cat: t.cat, cond: t.cond, diff: t.diff }));
+// 아이템 발동 조건 → 기계 판독 명세(카탈로그 key + 최소 강화). 이름이 안 풀리면 빌드 실패.
+const nameToKey = new Map(CATALOG_ITEMS.map((c) => [c.nameKo, c.key]));
+function parseReq(cond: string): { items: string[]; min: number } | null {
+  const m = cond.match(/^(.+?)[를을] \+(\d+) 이상으로 (?:동시 )?장착 중인 동안$/);
+  if (!m) return null;
+  const items = m[1].split(' + ').map((n) => {
+    const k = nameToKey.get(n.trim());
+    if (!k) throw new Error(`카탈로그에 없는 아이템명: "${n.trim()}" (cond: ${cond})`);
+    return k;
+  });
+  return { items, min: parseInt(m[2], 10) };
+}
+
+const srv = titles.map((t) => {
+  const req = t.cat === '아이템 발동' ? parseReq(t.cond) : null;
+  if (t.cat === '아이템 발동' && !req) throw new Error(`아이템 발동 조건 파싱 실패: ${t.code} — ${t.cond}`);
+  return { code: t.code, cat: t.cat, cond: t.cond, diff: t.diff, ...(req ? { req } : {}) };
+});
 
 mkdirSync(join(ROOT, 'lib/game/titles'), { recursive: true });
 
@@ -100,7 +119,7 @@ writeFileSync(join(ROOT, 'lib/game/titles/defs.server.ts'), `import 'server-only
  * cond는 "발견 후" 공개용 설명 텍스트이자 판정 구현(judge.ts)의 명세.
  * 생성: bun run scripts/gen-title-defs.ts (수동 수정 금지)
  */
-export type TitleSecret = { code: string; cat: string; cond: string; diff: '쉬움' | '중간' | '어려움' | '한정' };
+export type TitleSecret = { code: string; cat: string; cond: string; diff: '쉬움' | '중간' | '어려움' | '한정'; req?: { items: string[]; min: number } };
 
 export const TITLE_SECRETS: TitleSecret[] = ${JSON.stringify(srv, null, 1).replace(/"([a-zA-Z_]\w*)":/g, '$1:')} as const;
 
