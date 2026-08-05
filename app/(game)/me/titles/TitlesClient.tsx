@@ -101,11 +101,13 @@ export function TitlesClient({
     const label = TITLE_BY_CODE.get(code)?.label ?? '';
     setRep(next); // 낙관 반영 — 실패 시 복구
     setSel(null); // 팝업 즉시 닫고 결과는 공용 토스트로(사용자 확정)
+    window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: next })); // 채팅 등 낙관 동기화
     showHeaderToast({ icon: '🏷️', title: next ? '대표 칭호 장착' : '대표 칭호 해제', detail: label });
     startTransition(async () => {
       const res = await setRepresentativeTitleAction(next);
       if (!res.ok) {
         setRep(prevRep);
+        window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: prevRep }));
         showError(next ? '칭호 장착에 실패했어' : '칭호 해제에 실패했어');
       }
     });

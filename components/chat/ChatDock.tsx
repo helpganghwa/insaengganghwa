@@ -537,6 +537,22 @@ export function ChatDock() {
     return () => window.removeEventListener('ig:push-nav', onNav);
   }, []);
 
+  // 대표 칭호 낙관 반영(2026-08-05) — 칭호 화면 장착/해제 시 폴링을 기다리지 않고
+  // 목록에 이미 올라온 내 메시지들의 칭호를 즉시 교체. null이면 집행관 자동 폴백 유지.
+  useEffect(() => {
+    if (!me) return;
+    const onRep = (e: Event) => {
+      const code = (e as CustomEvent<string | null>).detail;
+      const patch = (m: ChatMessageDto): ChatMessageDto =>
+        m.userId === me ? { ...m, repTitle: code ?? (m.executorZone ? 'zone_executor' : null) } : m;
+      setMessages((prev) => prev.map(patch));
+      setLatest((prev) => (prev ? patch(prev) : prev));
+      if (myFieldsRef.current) myFieldsRef.current = patch(myFieldsRef.current);
+    };
+    window.addEventListener('ig:reptitle', onRep);
+    return () => window.removeEventListener('ig:reptitle', onRep);
+  }, [me]);
+
   // 페인트 전 바닥 스크롤 — openPanel 직후 렌더(이전 목록)와 fetch 반영 렌더 모두.
   useLayoutEffect(() => {
     if (!open || !needInitialScrollRef.current || messages.length === 0) return;

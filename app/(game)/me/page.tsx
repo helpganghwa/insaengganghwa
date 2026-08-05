@@ -28,11 +28,11 @@ import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const MENU = [
-  { href: '/friends', icon: '👥', label: '친구' },
   { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
-  { href: '/me/codex', icon: '📖', label: '도감' },
-  { href: '/me/titles', icon: '🏷️', label: '칭호' },
+  { href: '/me/titles', icon: '🎖️', label: '칭호' },
+  { href: '/friends', icon: '👥', label: '친구' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
+  { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
 ];
 
