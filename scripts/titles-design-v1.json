@@ -1,0 +1,287 @@
+{
+ "typography": {
+  "size": "0.9em",
+  "weight": 600
+ },
+ "grade": {
+  "colorByDiff": false,
+  "hardGlow": "0 0 3px @color40%"
+ },
+ "palette": {
+  "랭킹 1위": "#d8b25f",
+  "  조건부": "#b9a7e0",
+  "  해방": "#c9a2f0",
+  "  강화": "#e0a066",
+  "  시간대": "#8fb4d8",
+  "  보급": "#b8a97a",
+  "  초월": "#b39ddb",
+  "  도감": "#94c799",
+  "  레이드": "#d88c8c",
+  "  대난투": "#e08c9c",
+  "  점령전": "#c2b280",
+  "  길드": "#e0b877",
+  "  소셜": "#7fb8e0",
+  "  일상": "#a8a8b0",
+  "  재화": "#cdb04e",
+  "  후원": "#e5c07b",
+  "아이템 발동": "#a5b4fc",
+  "  조합": "#80cbc4",
+  "  헌정": "#f0a860"
+ },
+ "regionKeywords": [
+  {
+   "pattern": "화산|용암|잿불|불새|화룡|재를 막는|흑요|화심|용턱|불꽃|재에서|화문|모래시계",
+   "color": "#ef4444"
+  },
+  {
+   "pattern": "눈꽃|설산|설야|설화|서리|고드름|빙정|얼음|설백|눈보라",
+   "color": "#60a5fa"
+  },
+  {
+   "pattern": "늪|수련|개구리|도롱이|버섯|반딧불|통발|이끼|삼지창",
+   "color": "#22c55e"
+  },
+  {
+   "pattern": "오크|부족|조상|북이 된|돌아오는 뼈|한 잔의 보람|묻지 않는|깃털 두른",
+   "color": "#f97316"
+  },
+  {
+   "pattern": "왕국|왕을|왕기|왕립|사자|여명|서약|금장|학장|학원|창궁|창천|동트는|봉문|별이 박힌|별을 두른|맹세를 쥔|무도회|증표|나침반|매 머리",
+   "color": "#fbbf24"
+  },
+  {
+   "pattern": "천사|날개|구름|후광|해오름|세라핌|아침빛|타락|혼불|해골|갈까마귀|저주|한 쌍의 깃|노을이",
+   "color": "#c084fc"
+  }
+ ],
+ "multiRegion": "static-gradient",
+ "special": {
+  "rank_combat": {
+   "fx": "goldflow"
+  },
+  "rank_max": {
+   "fx": "emberflow"
+  },
+  "rank_sum": {
+   "fx": "steelshine"
+  },
+  "rank_raid": {
+   "fx": "crimsonflow"
+  },
+  "rank_melee": {
+   "fx": "violetflow"
+  },
+  "throne_shadow": {
+   "fx": "silverglow"
+  },
+  "uncrowned": {
+   "fx": "steelshine"
+  },
+  "rich_apex": {
+   "fx": "goldglow"
+  },
+  "top_patron": {
+   "fx": "imperial"
+  },
+  "guild_top": {
+   "fx": "staticazure"
+  },
+  "melee_champion": {
+   "fx": "goldglow"
+  },
+  "cbt_2026": {
+   "fx": "staticember"
+  },
+  "enhance_200": {
+   "fx": "starlight",
+   "pt": "stardust"
+  },
+  "starfield_master": {
+   "fx": "nightstar",
+   "pt": "stardust"
+  },
+  "codex_live": {
+   "fx": "verdantflow"
+  },
+  "armory_lord": {
+   "fx": "chrome"
+  },
+  "pentagon": {
+   "fx": "pentaflow"
+  },
+  "pay_first": {
+   "fx": "goldleaf"
+  },
+  "pay_5": {
+   "fx": "goldsoft"
+  },
+  "pay_20": {
+   "fx": "goldglow"
+  },
+  "pay_50": {
+   "fx": "goldflow"
+  },
+  "pay_200": {
+   "fx": "goldflow",
+   "pt": "stardust"
+  },
+  "warpath": {
+   "fx": "bloodpulse",
+   "pt": "ember"
+  },
+  "hell_gatekeeper": {
+   "fx": "bloodpulse",
+   "pt": "abyss"
+  },
+  "lucky_777": {
+   "fx": "goldsoft"
+  },
+  "medal_collector": {
+   "fx": "royalflow"
+  },
+  "flawless_all": {
+   "fx": "staticgold"
+  },
+  "transcend_deep": {
+   "fx": "violetglow",
+   "pt": "vstar"
+  },
+  "raid_volcano": {
+   "fx": "emberflow",
+   "pt": "ember"
+  },
+  "raid_temple": {
+   "fx": "iceflow",
+   "pt": "snow"
+  },
+  "raid_swamp": {
+   "fx": "slimeflow",
+   "pt": "slime"
+  },
+  "raid_orc": {
+   "fx": "duststatic",
+   "pt": "drum"
+  },
+  "raid_fallen": {
+   "fx": "ashstatic",
+   "pt": "feather"
+  },
+  "raid_kingdom": {
+   "fx": "goldglow",
+   "pt": "stardust"
+  },
+  "volcano_heart": {
+   "fx": "emberflow",
+   "pt": "ember"
+  },
+  "lava_lord": {
+   "fx": "emberflow",
+   "pt": "ember"
+  },
+  "winter_blade": {
+   "fx": "iceflow",
+   "pt": "snow"
+  },
+  "frost_queen": {
+   "fx": "iceflow",
+   "pt": "snow"
+  },
+  "glacier_knight": {
+   "fx": "iceflow",
+   "pt": "snow"
+  },
+  "thunder_emperor": {
+   "fx": "sparkstatic",
+   "pt": "spark"
+  },
+  "thunder_general": {
+   "fx": "sparkstatic",
+   "pt": "spark"
+  },
+  "abyss_lord": {
+   "fx": "abyssglow",
+   "pt": "abyss"
+  },
+  "fallen_lord": {
+   "fx": "abyssglow",
+   "pt": "abyss"
+  },
+  "star_navigator": {
+   "fx": "nightstar",
+   "pt": "stardust"
+  },
+  "codex_120": {
+   "fx": "goldleaf"
+  },
+  "avatar_1000": {
+   "fx": "pearl"
+  },
+  "galaxy": {
+   "fx": "milkyway"
+  },
+  "melee_30_win": {
+   "fx": "crimsonflow"
+  },
+  "melee_3streak": {
+   "fx": "goldglow"
+  },
+  "owl": {
+   "fx": "moonlight"
+  },
+  "dawn_prayer": {
+   "fx": "moonlight"
+  },
+  "insomnia": {
+   "fx": "neon"
+  },
+  "night_walk": {
+   "fx": "obsidian"
+  },
+  "archangel": {
+   "fx": "aurora"
+  },
+  "light_maiden": {
+   "fx": "aurora"
+  },
+  "archangel_chief": {
+   "fx": "aurora"
+  },
+  "enhance_10000": {
+   "fx": "emboss"
+  },
+  "iron_man": {
+   "fx": "emboss"
+  },
+  "dusk": {
+   "fx": "duskfade"
+  },
+  "fallen_angel": {
+   "fx": "duskfade"
+  },
+  "snow_flower": {
+   "fx": "frostedge"
+  },
+  "frost_warden": {
+   "fx": "frostedge"
+  },
+  "halfblade_master": {
+   "fx": "yinyang"
+  },
+  "twin_wings": {
+   "fx": "yinyang"
+  },
+  "red_ball": {
+   "fx": "silk"
+  },
+  "ball_night": {
+   "fx": "silk"
+  },
+  "no_guild_30": {
+   "fx": "breath"
+  },
+  "aging": {
+   "fx": "breath"
+  }
+ },
+ "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)"
+}
