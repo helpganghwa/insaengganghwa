@@ -7,6 +7,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TITLE_BY_CODE, TITLE_DEFS } from '@/lib/game/titles/defs';
 import { setRepresentativeTitleAction } from '@/lib/game/titles/actions';
+import { useResourceToast } from '@/components/ResourceToast';
 
 /** 서버가 내려주는 행 — 조건(cond)·발견일은 발견한 칭호에만 존재(비노출 원칙). */
 export type TitleRow = {
@@ -44,7 +45,7 @@ type CardState = 'rep' | 'active' | 'inactive' | 'locked';
 const CARD_CLS: Record<CardState, string> = {
   rep: 'border-amber-400 shadow-[0_0_0_1px_rgba(251,191,36,0.9),inset_0_0_14px_rgba(216,178,95,0.18)]',
   active: 'border-zinc-600',
-  inactive: 'border-zinc-700/80 opacity-75',
+  inactive: 'border-orange-700/50 opacity-80',
   locked: 'border-dashed border-zinc-800 bg-zinc-950/60 opacity-85',
 };
 const STATE_ORDER: Record<CardState, number> = { rep: 0, active: 1, inactive: 2, locked: 3 };
@@ -66,6 +67,7 @@ export function TitlesClient({
   const [act, setAct] = useState<Tri>(null); // a=활성 b=비활성
   const [sel, setSel] = useState<string | null>(null); // 팝업 대상 code
   const [pending, startTransition] = useTransition();
+  const { showError, showHeaderToast } = useResourceToast();
 
   const discoveredCount = useMemo(() => rows.filter((r) => r.discovered).length, [rows]);
   const byCode = useMemo(() => new Map(rows.map((r) => [r.code, r])), [rows]);
@@ -96,10 +98,16 @@ export function TitlesClient({
   const toggle = (code: string) => {
     const next = rep === code ? null : code;
     const prevRep = rep;
+    const label = TITLE_BY_CODE.get(code)?.label ?? '';
     setRep(next); // 낙관 반영 — 실패 시 복구
+    setSel(null); // 팝업 즉시 닫고 결과는 공용 토스트로(사용자 확정)
+    showHeaderToast({ icon: '🏷️', title: next ? '대표 칭호 장착' : '대표 칭호 해제', detail: label });
     startTransition(async () => {
       const res = await setRepresentativeTitleAction(next);
-      if (!res.ok) setRep(prevRep);
+      if (!res.ok) {
+        setRep(prevRep);
+        showError(next ? '칭호 장착에 실패했어' : '칭호 해제에 실패했어');
+      }
     });
   };
 
