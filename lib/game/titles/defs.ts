@@ -750,7 +750,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "모병관",
   hidden: false,
   style: {
-   color: "#a5b4fc",
+   fx: "crimsonflow",
    glow: true
   }
  },
@@ -1246,7 +1246,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "청출어람",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   fx: "jade",
    glow: true
   }
  },
@@ -1256,7 +1256,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "후견인",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   fx: "candle",
    glow: true
   }
  },

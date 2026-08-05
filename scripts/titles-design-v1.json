@@ -281,6 +281,15 @@
   },
   "aging": {
    "fx": "breath"
+  },
+  "invite_20": {
+   "fx": "crimsonflow"
+  },
+  "surpassed": {
+   "fx": "jade"
+  },
+  "welcome_crowd": {
+   "fx": "candle"
   }
  },
  "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)"
