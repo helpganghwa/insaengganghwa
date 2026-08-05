@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
-import { ExecutorTag } from '@/components/ExecutorTag';
+import { TitleTag } from '@/components/TitleTag';
 import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
 import { profileHref } from '@/lib/game/profile/href';
 import type { WorldEventEntry } from '@/lib/game/world/event';
@@ -45,6 +45,7 @@ type MiniProfile = {
   guildEmblemUrl: string | null;
   executorZone: string | null;
   executorZoneRegion: string | null;
+  repTitle: string | null;
   isMeleeChampion: boolean;
   combat: number;
   maxEnhance: number;
@@ -70,6 +71,7 @@ function sysToMsg(e: WorldEventEntry): ChatMessageDto {
     guildEmblemUrl: null,
     executorZone: null,
     executorZoneRegion: null,
+    repTitle: null,
     isMeleeChampion: false,
     mentions: null,
     sys: e,
@@ -594,6 +596,7 @@ export function ChatDock() {
       guildEmblemUrl: mine?.guildEmblemUrl ?? null,
       executorZone: mine?.executorZone ?? null,
       executorZoneRegion: mine?.executorZoneRegion ?? null,
+      repTitle: mine?.repTitle ?? null,
       isMeleeChampion: mine?.isMeleeChampion ?? false,
       mentions: null,
       body,
@@ -993,10 +996,11 @@ export function ChatDock() {
                             {m.guildName}
                           </span>
                         ) : null}
-                        {/* 집행관(2026-07-22) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
-                        <ExecutorTag
-                          zone={m.executorZone}
-                          region={m.executorZoneRegion}
+                        {/* 칭호(2026-08-05, 집행관 흡수) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
+                        <TitleTag
+                          code={m.repTitle}
+                          executorZone={m.executorZone}
+                          executorZoneRegion={m.executorZoneRegion}
                           className="text-[9.5px]"
                         />
                         <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
@@ -1126,9 +1130,9 @@ export function ChatDock() {
                     {profile.data.isMeleeChampion ? '🏆 ' : ''}
                     {profile.data.nickname}
                   </b>
-                  {profile.data.guildName || profile.data.executorZone ? (
+                  {profile.data.guildName || profile.data.repTitle ? (
                     <span className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] text-zinc-400">
-                      {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
+                      {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 칭호(집행관 흡수). */}
                       {profile.data.guildEmblemUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -1141,10 +1145,14 @@ export function ChatDock() {
                       {profile.data.guildName ? (
                         <span className="truncate">{profile.data.guildName}</span>
                       ) : null}
-                      {profile.data.guildName && profile.data.executorZone ? (
+                      {profile.data.guildName && profile.data.repTitle ? (
                         <span className="shrink-0 text-zinc-600">·</span>
                       ) : null}
-                      <ExecutorTag zone={profile.data.executorZone} region={profile.data.executorZoneRegion} />
+                      <TitleTag
+                        code={profile.data.repTitle}
+                        executorZone={profile.data.executorZone}
+                        executorZoneRegion={profile.data.executorZoneRegion}
+                      />
                     </span>
                   ) : null}
                 </div>

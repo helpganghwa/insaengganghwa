@@ -11,6 +11,7 @@ import { getUserGuildBrief } from '@/lib/game/guild';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { REGION_COLOR } from '@/components/ExecutorTag';
+import { repTitleOgSegs, resolveRepTitle } from '@/lib/game/titles/display';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -67,6 +68,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       id: profiles.id,
       nickname: characters.nickname,
       activeProfileId: characters.activeProfileId,
+      repTitleCode: profiles.representativeTitleCode,
     })
     .from(profiles)
     .innerJoin(
@@ -81,6 +83,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const nickname = prof?.nickname ?? handle;
   // 길드 문양+이름(있으면 닉네임 밑). 실패해도 카드는 생성.
   const guild = prof ? await getUserGuildBrief(prof.id, serverId).catch(() => null) : null;
+  // 대표 칭호 — 표시 시점 경량 재검증(display.ts). 실패해도 카드는 생성.
+  const repTitle = prof
+    ? await resolveRepTitle(prof.repTitleCode ?? null, prof.id, serverId, guild?.executorZone ?? null).catch(() => null)
+    : null;
+  // OG는 정적 렌더 — 이펙트 클래스 대신 대표색 세그먼트로 강등(집행관=기존 2색 유지).
+  const titleSegs = repTitle
+    ? repTitleOgSegs(repTitle, guild?.executorZone ?? null, guild?.executorZoneRegion ?? null, REGION_COLOR)
+    : [];
 
   // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
   // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.
@@ -204,15 +214,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         {guild?.name ? (
           <div style={{ display: 'flex', fontSize: 26, color: 'rgba(255,255,255,0.78)' }}>{guild.name}</div>
         ) : null}
-        {guild?.name && guild?.executorZone ? (
+        {guild?.name && titleSegs.length ? (
           <div style={{ display: 'flex', fontSize: 26, color: 'rgba(255,255,255,0.35)' }}>·</div>
         ) : null}
-        {guild?.executorZone ? (
-          <div style={{ display: 'flex', fontSize: 26 }}>
-            <span style={{ color: REGION_COLOR[guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
-              {guild.executorZone}
-            </span>
-            <span style={{ color: '#a5b4fc' }}>&nbsp;집행관</span>
+        {titleSegs.length ? (
+          <div style={{ display: 'flex', fontSize: 26, fontWeight: 600 }}>
+            {titleSegs.map((seg, i) => (
+              <span key={i} style={{ color: seg.color, whiteSpace: 'pre' }}>{seg.text}</span>
+            ))}
           </div>
         ) : null}
       </div>

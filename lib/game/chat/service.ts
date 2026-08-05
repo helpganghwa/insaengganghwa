@@ -9,6 +9,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { systemMode } from '@/lib/db/schema/ops';
+import { resolveRepTitlesBatch } from '@/lib/game/titles/display';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { parseFaceBox } from '@/components/faceCrop';
 
@@ -38,6 +39,8 @@ export type ChatMessageDto = {
   /** 집행관 구역명·지역(2026-07-22) — 집행관이 아니면 null. 길드명 우측에 표시. */
   executorZone: string | null;
   executorZoneRegion: string | null;
+  /** 표시용 대표 칭호 code(2026-08-05) — 서버에서 활성 재검증 완료본. null=미표시. */
+  repTitle: string | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
   /** 유효 멘션(0128) — 닉+공개코드. 표시 시 @ 제거·강조·프로필 링크. (구 string[] 호환) */
@@ -63,6 +66,7 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
     guildEmblemUrl: null,
     executorZone: null,
     executorZoneRegion: null,
+    repTitle: null,
     isMeleeChampion: false,
     mentions: null,
     sysGuild: entry,
@@ -90,6 +94,7 @@ export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
     guildEmblemUrl: null,
     executorZone: null,
     executorZoneRegion: null,
+    repTitle: null,
     isMeleeChampion: false,
     mentions: null,
     sys: entry,
@@ -165,7 +170,7 @@ export async function isChatEnabled(): Promise<boolean> {
 async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; isMeleeChampion: boolean }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; isMeleeChampion: boolean }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
   const [rows, guilds, champion] = await Promise.all([
@@ -174,6 +179,7 @@ async function displayFields(
         userId: characters.userId,
         nickname: characters.nickname,
         publicCode: profiles.publicCode,
+        repTitleCode: profiles.representativeTitleCode,
         rotations: userProfiles.rotations,
         options: userProfiles.options,
       })
@@ -184,6 +190,16 @@ async function displayFields(
     getGuildBriefsByUsers(uniq, serverId).catch(() => new Map()),
     currentMeleeChampion(serverId).catch(() => null),
   ]);
+  // 대표 칭호 배치 재검증(2쿼리 상한) — 실패해도 채팅은 살린다(전원 미표시 폴백).
+  const repMap = await resolveRepTitlesBatch(
+    rows.map((r) => ({
+      userId: r.userId,
+      repCode: r.repTitleCode ?? null,
+      executorZone:
+        (guilds.get(r.userId) as { executorZone?: string | null } | undefined)?.executorZone ?? null,
+    })),
+    serverId,
+  ).catch(() => new Map<string, string | null>());
   const m = new Map();
   for (const r of rows) {
     const rot = (r.rotations ?? {}) as Record<string, string>;
@@ -197,6 +213,7 @@ async function displayFields(
       executorZone: (guilds.get(r.userId) as { executorZone?: string | null } | undefined)?.executorZone ?? null,
       executorZoneRegion:
         (guilds.get(r.userId) as { executorZoneRegion?: string | null } | undefined)?.executorZoneRegion ?? null,
+      repTitle: repMap.get(r.userId) ?? null,
       isMeleeChampion: r.userId === champion,
     });
   }
@@ -251,6 +268,7 @@ export async function getRecentChat(
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
         executorZone: f?.executorZone ?? null,
         executorZoneRegion: f?.executorZoneRegion ?? null,
+        repTitle: f?.repTitle ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
         mentions: normMentions(r.mentions),
         body: r.body,
@@ -294,6 +312,7 @@ export async function persistAndBroadcast(
     guildEmblemUrl: f?.guildEmblemUrl ?? null,
     executorZone: f?.executorZone ?? null,
     executorZoneRegion: f?.executorZoneRegion ?? null,
+    repTitle: f?.repTitle ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
     mentions: mentions.length ? mentions : null,
     body,

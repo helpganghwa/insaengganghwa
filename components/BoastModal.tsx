@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { GuildBadge } from '@/components/GuildBadge';
-import { ExecutorTag } from '@/components/ExecutorTag';
+import { TitleTag } from '@/components/TitleTag';
 import { useResourceToast } from '@/components/ResourceToast';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
@@ -50,6 +50,7 @@ export function BoastModal({
   guildName = null,
   executorZone = null,
   executorZoneRegion = null,
+  repTitle,
   serverId = 1,
 }: {
   open: boolean;
@@ -64,6 +65,8 @@ export function BoastModal({
   guildEmblemUrl?: string | null;
   executorZone?: string | null;
   executorZoneRegion?: string | null;
+  /** 대표 칭호 code — 미전달(undefined) 시 집행관 자동 폴백(레거시 호출부 호환). */
+  repTitle?: string | null;
   /** 캐릭터의 서버(SERVER.md) — 1이 아니면 공유/OG 링크에 ?s= 전파. */
   serverId?: number;
   guildName?: string | null;
@@ -279,8 +282,8 @@ export function BoastModal({
               {guildName ? (
                 <span className="truncate text-[10px] text-white/70">{guildName}</span>
               ) : null}
-              {guildName && executorZone ? <span className="shrink-0 text-white/30">·</span> : null}
-              <ExecutorTag zone={executorZone} region={executorZoneRegion} className="text-[10px]" />
+              {guildName && (repTitle ?? executorZone) ? <span className="shrink-0 text-white/30">·</span> : null}
+              <TitleTag code={repTitle !== undefined ? repTitle : executorZone ? 'zone_executor' : null} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[10px]" />
             </div>
             <div className="flex items-stretch gap-2">
               {/* 좌(4) — 캐릭터 */}
@@ -411,6 +414,7 @@ export function BoastLauncher({
   guildName = null,
   executorZone = null,
   executorZoneRegion = null,
+  repTitle,
 }: {
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
@@ -425,6 +429,8 @@ export function BoastLauncher({
   guildName?: string | null;
   executorZone?: string | null;
   executorZoneRegion?: string | null;
+  /** 대표 칭호 code — 미전달(undefined) 시 집행관 자동 폴백(레거시 호출부 호환). */
+  repTitle?: string | null;
   /** 캐릭터의 서버 — 공유/OG 링크 ?s= 전파(기본 1). */
   serverId?: number;
 }) {
@@ -463,6 +469,7 @@ export function BoastLauncher({
         guildName={guildName}
         executorZone={executorZone}
         executorZoneRegion={executorZoneRegion}
+        repTitle={repTitle}
         serverId={serverId}
       />
     </>

@@ -292,6 +292,7 @@ export default async function ProfilePage() {
         guildName={row?.guild_name ?? null}
         executorZone={row?.executor_zone ?? null}
         executorZoneRegion={row?.executor_zone_region ?? null}
+        repTitle={repTitle}
         pieces={boastPieces}
       />
 
@@ -311,6 +312,7 @@ export default async function ProfilePage() {
           guildName: row?.guild_name ?? null,
           executorZone: row?.executor_zone ?? null,
           executorZoneRegion: row?.executor_zone_region ?? null,
+          repTitle,
           serverId,
         }}
       />

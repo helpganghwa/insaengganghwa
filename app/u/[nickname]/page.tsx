@@ -24,6 +24,8 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
+import { TitleTag } from '@/components/TitleTag';
+import { resolveRepTitle } from '@/lib/game/titles/display';
 import { BackFab } from '@/components/BackNav';
 
 import { ReportButton } from './ReportButton';
@@ -35,16 +37,6 @@ import { FriendAddButton } from './FriendAddButton';
 export const maxDuration = 60;
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
-
-// 집행관 구역 지역색(세계지도 REGION과 동일). 미매칭이면 인디고 폴백.
-const REGION_COLOR: Record<string, string> = {
-  volcano: '#ef4444',
-  temple: '#60a5fa',
-  swamp: '#22c55e',
-  orc: '#f97316',
-  kingdom: '#fbbf24',
-  angel: '#c084fc',
-};
 
 /**
  * 핸들(공개 코드) → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
@@ -59,6 +51,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       activeProfileId: characters.activeProfileId,
+      representativeTitleCode: profiles.representativeTitleCode,
     })
     .from(profiles)
     .innerJoin(
@@ -184,6 +177,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     maxEnhance,
     champItems,
     guild: await getUserGuildBrief(prof.id, serverId),
+    repTitleCode: prof.representativeTitleCode ?? null,
   };
 });
 
@@ -356,6 +350,13 @@ export default async function PublicProfilePage({
 
   // 친구 관계 — 로그인+타인일 때만. sendRequestAction과 동일 서버(조회자 활성 서버) 기준으로
   // 계산해 버튼 상태와 실제 요청이 어긋나지 않게 한다(친구는 서버별). 실패 시 'none' 폴백.
+  const repTitle = await resolveRepTitle(
+    data.repTitleCode,
+    data.ownerId,
+    serverId,
+    data.guild?.executorZone ?? null,
+  );
+
   let friendRelation: FriendRelation = 'none';
   if (mode === 'other') {
     friendRelation = await getFriendRelation(viewerId!, await getActiveServerId(), data.ownerId).catch(
@@ -389,29 +390,26 @@ export default async function PublicProfilePage({
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
-          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
-          {data.guild && (
+          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 칭호(집행관 흡수). */}
+          {(data.guild || repTitle) && (
             <div className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              {data.guild.emblemUrl && (
+              {data.guild?.emblemUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={data.guild.emblemUrl}
+                  src={data.guild.emblemUrl!}
                   alt=""
                   aria-hidden
                   className="shrink-0 object-contain"
                   style={{ width: 15, height: 15, imageRendering: 'pixelated' }}
                 />
               )}
-              {data.guild.name && <span className="truncate text-white/80">{data.guild.name}</span>}
-              {data.guild.name && data.guild.executorZone && <span className="shrink-0 text-white/40">·</span>}
-              {data.guild.executorZone && (
-                <span className="shrink-0">
-                  <span style={{ color: REGION_COLOR[data.guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
-                    {data.guild.executorZone}
-                  </span>
-                  <span className="text-indigo-300"> 집행관</span>
-                </span>
-              )}
+              {data.guild?.name && <span className="truncate text-white/80">{data.guild.name}</span>}
+              {data.guild?.name && repTitle && <span className="shrink-0 text-white/40">·</span>}
+              <TitleTag
+                code={repTitle}
+                executorZone={data.guild?.executorZone ?? null}
+                executorZoneRegion={data.guild?.executorZoneRegion ?? null}
+              />
             </div>
           )}
         </div>
@@ -552,6 +550,7 @@ export default async function PublicProfilePage({
             guildName={data.guild?.name ?? null}
             executorZone={data.guild?.executorZone ?? null}
             executorZoneRegion={data.guild?.executorZoneRegion ?? null}
+            repTitle={repTitle}
             pieces={data.equipped.map((e) => ({
               slot: e.slot,
               code: e.code,
@@ -575,6 +574,7 @@ export default async function PublicProfilePage({
               guildName={data.guild?.name ?? null}
               executorZone={data.guild?.executorZone ?? null}
               executorZoneRegion={data.guild?.executorZoneRegion ?? null}
+              repTitle={repTitle}
               pieces={data.equipped.map((e) => ({
                 slot: e.slot,
                 code: e.code,

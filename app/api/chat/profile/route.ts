@@ -13,6 +13,7 @@ import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { currentMeleeChampion } from '@/lib/game/chat/service';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
+import { resolveRepTitle } from '@/lib/game/titles/display';
 import { parseFaceBox } from '@/components/faceCrop';
 
 export const runtime = 'nodejs';
@@ -35,6 +36,7 @@ export async function GET(req: Request) {
       .select({
         nickname: characters.nickname,
         publicCode: profiles.publicCode,
+        repTitleCode: profiles.representativeTitleCode,
         rotations: userProfiles.rotations,
         options: userProfiles.options,
       })
@@ -77,6 +79,10 @@ export async function GET(req: Request) {
   const g = guilds.get(uid) as
     | { name?: string; emblemUrl?: string | null; executorZone?: string | null; executorZoneRegion?: string | null }
     | undefined;
+  // 대표 칭호 — 표시 시점 경량 재검증(display.ts). 실패해도 프로필은 살린다.
+  const repTitle = await resolveRepTitle(row.repTitleCode ?? null, uid, serverId, g?.executorZone ?? null).catch(
+    () => null,
+  );
   const combat = equip.reduce((acc, r) => acc + pieceCombatPower(r.e, r.t), 0);
   const maxEnhance = equip.reduce((acc, r) => Math.max(acc, r.mx), 0);
   const sumEnhance = equip.reduce((acc, r) => acc + r.e, 0);
@@ -91,6 +97,7 @@ export async function GET(req: Request) {
     guildEmblemUrl: g?.emblemUrl ?? null,
     executorZone: g?.executorZone ?? null,
     executorZoneRegion: g?.executorZoneRegion ?? null,
+    repTitle,
     isMeleeChampion: uid === champion,
     raidKills: metrics.find((m) => m.metric === 'raid')?.value ?? 0,
     meleeWins: metrics.find((m) => m.metric === 'melee')?.value ?? 0,

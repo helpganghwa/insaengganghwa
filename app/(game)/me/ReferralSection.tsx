@@ -35,6 +35,7 @@ export function ReferralSection({
     guildName: string | null;
     executorZone: string | null;
     executorZoneRegion: string | null;
+    repTitle: string | null;
     serverId: number;
   };
 }) {
@@ -73,6 +74,7 @@ export function ReferralSection({
         guildName={boast.guildName}
         executorZone={boast.executorZone}
         executorZoneRegion={boast.executorZoneRegion}
+        repTitle={boast.repTitle}
         serverId={boast.serverId}
       />
     </>
