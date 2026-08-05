@@ -33,8 +33,8 @@ export const PENDING_CODES = new Set<string>([
   'guild_donate',
   // 점령전 참여/수금 로그 연동 필요(conquest_battles finale 구조 확인 후)
   'tax_collector', 'siege_30', 'wall', 'tour_lord', 'assault_100', 'guardian_100', 'ram', 'iron_wall', 'border_patrol',
-  // 특수(교차 판정·시점 훅 필요)
-  'fire_support', 'first_guest', 'pure_way', 'apex_shoot', 'day_100_party', 'daily_sortie',
+  // 특수(시점 스냅샷·이력·로그 부재)
+  'first_guest', 'apex_shoot', 'david', 'triathlon', 'wandering_smith',
   // 지역 보스 미출시
   'raid_temple', 'raid_kingdom',
   // 컷오버 지급(헌정)
@@ -71,7 +71,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
 
-  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2] = await Promise.all([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3] = await Promise.all([
     // 강화 로그 집계
     db.execute(sql`
       select count(*)::int as total,
@@ -310,13 +310,119 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where server_id=${s} and (created_at ${sql.raw(KST)})::date = (select d from today) - 1
                group by 1 order by 2 desc, 1 limit 1) rk),0) as y_open_top
     `),
+    // 강화 심화(판정 3차) — 일단위 집계·연속일·심야/출퇴근 패턴·장비별 누적
+    db.execute(sql`
+      with l as (select id, user_equipment_id ueid, result, to_level,
+                        (created_at ${sql.raw(KST)})::date dd,
+                        extract(hour from created_at ${sql.raw(KST)})::int hh
+                 from enhancement_logs where user_id=${u} and server_id=${s})
+      select
+        coalesce((select max(c) from (select count(*) c from l group by dd) t),0)::int as enh_day_max,
+        coalesce((select max(len) from (select count(*) len from (
+            select dd - (row_number() over (order by dd))::int g from (select distinct dd from l) d) r
+          group by g) x),0)::int as enh_day_run,
+        (select count(*)::int from enhancement_logs where user_id=${u} and server_id=${s}
+           and elapsed_ms >= duration_ms + 604800000) as carefree_cnt,
+        coalesce((select max(c) from (select count(*) c from l where hh<6 group by dd) t),0)::int as night_day_max,
+        (select count(*)::int from (select dd from l group by dd having bool_and(hh<6)) t) as insomnia_days,
+        (select count(*)::int from (select dd from l group by dd having bool_or(hh=9) and bool_or(hh=18)) t) as commuter_days,
+        coalesce((select max(c) from (select count(*) c from l group by ueid) t),0)::int as eq_max_cnt,
+        (select exists(select 1 from l group by ueid
+           having count(*) filter (where result='down')>=7 and max(to_level)>=100))::int as seven_falls_ok,
+        (select exists(
+           with runs as (select rn, result, rn - row_number() over (order by rn) g
+                         from (select result, row_number() over (order by id) rn from l) t
+                         where result in ('success','mega')),
+                agg as (select min(rn) start_rn, count(*) len from runs group by g)
+           select 1 from agg a
+           join (select result, row_number() over (order by id) rn from l) prev on prev.rn = a.start_rn - 1
+           where prev.result='down' and a.len>=10))::int as phoenix_ok
+    `),
+    // 무하락 90→100(정밀) + 무단축 +50(보석 단축 이력 대조)
+    db.execute(sql`
+      with l as (select id, user_equipment_id ueid, to_level, result, created_at
+                 from enhancement_logs where user_id=${u} and server_id=${s}),
+           f as (select ueid, min(id) fid from l where to_level>=100 group by 1),
+           n as (select l.ueid, max(l.id) lid from l join f on f.ueid=l.ueid
+                 where l.to_level=90 and l.id<=f.fid group by 1),
+           bad as (select distinct l.ueid from l join f on f.ueid=l.ueid join n on n.ueid=l.ueid
+                   where l.id between n.lid and f.fid and l.result='down'),
+           f50 as (select ueid, min(created_at) t50 from l where to_level>=50 group by 1),
+           red as (select ej.user_equipment_id ueid, gtr.created_at
+                   from gem_time_reductions gtr join enhancement_jobs ej on ej.id=gtr.job_id
+                   where gtr.user_id=${u} and gtr.server_id=${s})
+      select (exists(select 1 from f join n on n.ueid=f.ueid
+                left join bad b on b.ueid=f.ueid where b.ueid is null))::int as flawless_ok,
+             (exists(select 1 from f50 where not exists(
+                select 1 from red where red.ueid=f50.ueid and red.created_at <= f50.t50)))::int as pure_ok
+    `),
+    // 보급 심화 — 3연속 동일·하루 3슬롯 일수
+    db.execute(sql`
+      with sl as (select catalog_item_id cid, slot, (created_at ${sql.raw(KST)})::date dd,
+                         lag(catalog_item_id) over (order by id) p1,
+                         lag(catalog_item_id, 2) over (order by id) p2
+                  from supply_open_logs where user_id=${u} and server_id=${s})
+      select (exists(select 1 from sl where cid=p1 and cid=p2))::int as same_pull_ok,
+             (select count(*)::int from (select dd from sl group by dd
+                having count(distinct slot)=3) t) as meals_days
+    `),
+    // 대난투 심화 — 연속 참가일·연속 우승일
+    db.execute(sql`
+      with p as (select mb.battle_date dd, mp.final_rank
+                 from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
+                 where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed')
+      select
+        coalesce((select max(len) from (select count(*) len from (
+            select dd - (row_number() over (order by dd))::int g from (select distinct dd from p) d) r
+          group by g) x),0)::int as melee_day_run,
+        coalesce((select max(len) from (select count(*) len from (
+            select dd - (row_number() over (order by dd))::int g
+            from (select distinct dd from p where final_rank=1) d) r
+          group by g) x),0)::int as melee_win_run
+    `),
+    // 교차 — 레이드 최장 연속일·친구 합동 레이드·풀코스·가입 100일째 활동
+    db.execute(sql`
+      with rd as (select distinct (ra.created_at ${sql.raw(KST)})::date dd
+                  from raid_attacks ra join raids r on r.id=ra.raid_id
+                  where ra.user_id=${u} and r.server_id=${s})
+      select
+        coalesce((select max(len) from (select count(*) len from (
+            select dd - (row_number() over (order by dd))::int g from rd) r group by g) x),0)::int as raid_day_run,
+        (select count(distinct ra.raid_id)::int from raid_attacks ra
+           join raids r on r.id=ra.raid_id
+           where ra.user_id=${u} and r.server_id=${s} and exists(
+             select 1 from raid_attacks ra2
+             join friend_links fl on fl.server_id=${s} and fl.status='accepted'
+               and ((fl.requester_id=${u} and fl.addressee_id=ra2.user_id)
+                 or (fl.addressee_id=${u} and fl.requester_id=ra2.user_id))
+             where ra2.raid_id=ra.raid_id)) as fire_support_cnt,
+        (select exists(
+           select 1
+           from (select distinct (created_at ${sql.raw(KST)})::date dd from enhancement_logs
+                 where user_id=${u} and server_id=${s}) e
+           join (select distinct (created_at ${sql.raw(KST)})::date dd from supply_open_logs
+                 where user_id=${u} and server_id=${s}) sp on sp.dd=e.dd
+           join rd on rd.dd=e.dd
+           join (select distinct mb.battle_date dd from melee_participants mp
+                 join melee_battles mb on mb.id=mp.battle_id
+                 where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed') m on m.dd=e.dd))::int as fullcourse_ok,
+        (select exists(
+           select 1 from characters c where c.user_id=${u} and c.server_id=${s} and (
+             exists(select 1 from enhancement_logs el where el.user_id=${u} and el.server_id=${s}
+                    and (el.created_at ${sql.raw(KST)})::date = (c.created_at ${sql.raw(KST)})::date + 99)
+             or exists(select 1 from supply_open_logs so where so.user_id=${u} and so.server_id=${s}
+                    and (so.created_at ${sql.raw(KST)})::date = (c.created_at ${sql.raw(KST)})::date + 99)
+             or exists(select 1 from checkin_claim_logs cc where cc.user_id=${u} and cc.server_id=${s}
+                    and cc.kst_day::date = (c.created_at ${sql.raw(KST)})::date + 99))))::int as day100_ok
+    `),
   ]);
 
   const g = (r: unknown): Record<string, unknown> => ((r as unknown[])[0] ?? {}) as Record<string, unknown>;
   const n = (v: unknown): number => Number(v ?? 0);
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
-    wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2);
+    wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
+    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
   let combatValue = 0;
@@ -355,6 +461,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
     checkin_streak: n(k2.checkin_streak), raid_streak: n(k2.raid_streak), clean20: n(k2.clean20),
     y_melee_win: n(k2.y_melee_win), y_melee_last: n(k2.y_melee_last), y_raid_top: n(k2.y_raid_top), y_open_top: n(k2.y_open_top),
+    // ── 판정 3차 ──
+    enh_day_max: n(e3.enh_day_max), enh_day_run: n(e3.enh_day_run), carefree_cnt: n(e3.carefree_cnt),
+    night_day_max: n(e3.night_day_max), insomnia_days: n(e3.insomnia_days), commuter_days: n(e3.commuter_days),
+    eq_max_cnt: n(e3.eq_max_cnt), seven_falls_ok: n(e3.seven_falls_ok), phoenix_ok: n(e3.phoenix_ok),
+    flawless_ok: n(fl.flawless_ok), pure_ok: n(fl.pure_ok),
+    same_pull_ok: n(s3.same_pull_ok), meals_days: n(s3.meals_days),
+    melee_day_run: n(m3.melee_day_run), melee_win_run: n(m3.melee_win_run),
+    raid_day_run: n(c3.raid_day_run), fire_support_cnt: n(c3.fire_support_cnt),
+    fullcourse_ok: n(c3.fullcourse_ok), day100_ok: n(c3.day100_ok),
   };
 }
 
@@ -379,24 +494,24 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   hold_20: (m) => m.hold_run >= 20,
   double_joy: (m) => m.mega_run >= 3,
   card_shark: (m) => m.mega_run >= 5,
-  phoenix: (m) => m.win_run >= 10 && m.enh_down >= 1, // 근사 — 하락 경험+10연속 성공(정밀판은 후속)
+  phoenix: (m) => m.phoenix_ok === 1, // 정밀(3차) — 하락 직후 10연속 성공
   blitz: (m) => m.first100_days <= 7,
   five_min: (m) => m.five_min >= 100,
   aging: (m) => m.aging >= 50,
-  carefree: () => false, // 7일 방치 수령 — elapsed 근사 불충분, PENDING과 동급(후속)
-  fire_play: () => false, // 하루 시도 200 — 일단위 집계 추가 후속
-  perpetual: () => false, // 30일 연속 수령 — 연속 일수 집계 후속
-  flawless_100: () => false, // 90→100 무하락 — 장비별 정밀 판정 후속
-  seven_falls: () => false, // 장비별 하락 7 후 100 — 후속
-  one_well: () => false, // 장비별 누적 2000 — 후속
+  carefree: (m) => m.carefree_cnt >= 1,
+  fire_play: (m) => m.enh_day_max >= 200,
+  perpetual: (m) => m.enh_day_run >= 30,
+  flawless_100: (m) => m.flawless_ok === 1,
+  seven_falls: (m) => m.seven_falls_ok === 1,
+  one_well: (m) => m.eq_max_cnt >= 2000,
   // 보급
   supply_binge: (m) => m.supply_day >= 50,
   supply_5000: (m) => m.supply_total >= 5000,
   supply_10000: (m) => m.supply_total >= 10000,
   morning_ration: (m) => m.supply_morning >= 100,
   midnight_snack: (m) => m.supply_midnight >= 50,
-  same_pull: () => false, // 3연속 동일 — 윈도 정밀 후속
-  three_meals: () => false, // 3슬롯×30일 — 후속
+  same_pull: (m) => m.same_pull_ok === 1,
+  three_meals: (m) => m.meals_days >= 30,
   // 초월
   transcend_300: (m) => m.t_total >= 300,
   transcend_1000: (m) => m.t_total >= 1000,
@@ -425,23 +540,22 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   // 대난투
   melee_first_win: (m) => m.m_wins >= 1,
   melee_30_win: (m) => m.m_wins >= 30,
-  melee_3streak: () => false, // 3연속 우승 — 날짜 연속성 후속
+  melee_3streak: (m) => m.melee_win_run >= 3,
   melee_top10: (m) => m.m_top10 >= 50,
   melee_podium: (m) => m.m_podium >= 10,
   melee_30: (m) => m.m_joins >= 30,
   iron_man: (m) => m.m_joins >= 365,
-  month_war: () => false, // 30일 연속 참가 — 후속
+  month_war: (m) => m.melee_day_run >= 30,
   melee_comet: (m) => m.m_comet >= 1,
   melee_last: (m) => m.m_last >= 1,
   kong_line: (m) => m.m_second >= 2,
   paper_thin: (m) => m.m_second_last >= 1,
   king_return: (m) => m.m_win_gap7 >= 1,
-  david: () => false, // 하위 50% 대비 — 백분위 후속
-  melee_week: () => false,
+  // david — 대난투 시점의 전투력 백분위 스냅샷 필요 → PENDING
   // 레이드
   raid_strike: (m) => m.r_max_dmg >= 5_000_000,
   raid_365: (m) => m.r_joins >= 365,
-  raid_100days: () => false, // 연속 100일 — 후속
+  raid_100days: (m) => m.raid_day_run >= 100,
   vanguard: (m) => m.r_vanguard >= 30,
   night_watch: (m) => m.r_night >= 50,
   raid_volcano: (m) => m.r_volcano >= 100,
@@ -457,17 +571,17 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   two_mirrors: (m) => m.av_genders >= 2,
   same_combo: (m) => m.av_combo >= 10,
   disguise: (m) => m.av_combos >= 30,
-  wandering_smith: () => false, // 6지역 거주 이력 — 후속
+  // wandering_smith — 거주 이력 테이블 부재 → PENDING
   // 해방
   lib_first: (m) => m.liberated >= 1,
   // 조합
   completionist: (m) => m.challenge_claims >= CHALLENGES.length,
-  full_course: () => false, // 하루 4콘텐츠 — 교차 일자 조인 후속
-  triathlon: () => false,
+  full_course: (m) => m.fullcourse_ok === 1,
+  // triathlon — 점령전 참여 로그 연동 필요 → PENDING
   flawless_all: (m) => m.challenge_claims >= CHALLENGES.length && m.codex >= 120 && m.max_lv >= 100,
-  insomnia: () => false, // 0~6시만 수령한 날 7일 — 후속
-  all_nighter: () => false,
-  commuter: () => false,
+  insomnia: (m) => m.insomnia_days >= 7,
+  all_nighter: (m) => m.night_day_max >= 10,
+  commuter: (m) => m.commuter_days >= 30,
   owl: (m) => m.owl >= 30,
   early_bird: (m) => m.early >= 30,
   weekend: (m) => m.weekend >= 100,
@@ -497,6 +611,10 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   invite_50: (m) => m.invites >= 50,
   school_founder: (m) => m.ref_100 >= 3,
   sprout_scout: (m) => m.ref_champ >= 1,
+  // ── 판정 3차: 특수 ──
+  pure_way: (m) => m.pure_ok === 1,
+  fire_support: (m) => m.fire_support_cnt >= 50,
+  day_100_party: (m) => m.day100_ok === 1,
   surpassed: (m) => m.ref_over >= 1,
   old_friend: (m) => m.old_friends >= 1,
   sprout_keeper: (m) => m.sprout_friends >= 10,
