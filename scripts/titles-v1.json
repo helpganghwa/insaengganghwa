@@ -1,0 +1,3071 @@
+[
+ {
+  "code": "rank_combat",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "가장 높은 망치",
+  "cond": "전투력 랭킹 1위인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rank_max",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "불의 정점",
+  "cond": "최고 강화 랭킹 1위인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rank_sum",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "강철의 군주",
+  "cond": "합산 강화 랭킹 1위인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rank_raid",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "토벌대장",
+  "cond": "레이드 랭킹 1위인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rank_melee",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "투기장의 왕",
+  "cond": "대난투 랭킹 1위인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "zone_executor",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "{구역} 집행관",
+  "cond": "구역 집행관으로 배치되어 있는 동안",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "melee_champion",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "왕좌의 온기",
+  "cond": "어제 대난투 1위 — 오늘 하루 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_shame",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "와신상담",
+  "cond": "어제 대난투 꼴찌 — 오늘 하루 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "raid_hero",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "간밤의 영웅",
+  "cond": "어제 레이드 데미지 1위 — 오늘 하루 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rich_apex",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "황금 왕좌",
+  "cond": "현재 서버 다이아 보유량 1위인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "guild_top",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "명가",
+  "cond": "길드 랭킹 1위 길드 소속인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "guild_flag",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "수장",
+  "cond": "길드장인 동안",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "broke_now",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "빈털터리",
+  "cond": "다이아 보유량이 정확히 0인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "codex_live",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "만물박사",
+  "cond": "도감 완성 상태를 유지하는 동안(신규 아이템 추가 시 자동 상실)",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "star_holder",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "별의 주인",
+  "cond": "+200 이상 장비를 장착 중인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "full_armed",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "완전 무장",
+  "cond": "3슬롯 전부 +100 이상 장착 중인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "lib_first",
+  "cat": "해방",
+  "kind": "영구",
+  "label": "사슬을 끊은 자",
+  "cond": "첫 해방 달성(아이템 강화랭킹 3위 이내)",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "lib_holder",
+  "cat": "해방",
+  "kind": "조건부",
+  "label": "해방자",
+  "cond": "해방 아이템 3개 이상 보유 중인 동안",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "lib_ten",
+  "cat": "해방",
+  "kind": "조건부",
+  "label": "지배자",
+  "cond": "해방 아이템 10개 이상 보유 중인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "champ_5",
+  "cat": "해방",
+  "kind": "조건부",
+  "label": "정복자",
+  "cond": "아이템 챔피언(1위) 5개 이상 보유 중인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "enhance_100",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "백 번째 불꽃",
+  "cond": "+100 도달",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "enhance_200",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "별에 닿은 망치",
+  "cond": "+200 도달",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "win_streak",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "승승장구",
+  "cond": "강화 성공 10연속",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "down_streak",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "그런 날이 있다",
+  "cond": "강화 하락 5연속",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "down_10",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "바닥 밑에 바닥",
+  "cond": "강화 하락 10연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "hold_streak",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "요지부동",
+  "cond": "강화 유지 10연속",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "hold_20",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "만년설",
+  "cond": "강화 유지 20연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "phoenix",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "오뚝이",
+  "cond": "강화 하락 직후 연속 성공 10회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "double_joy",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "겹경사",
+  "cond": "강화 대성공 3연속",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lucky_hammer",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "행운의 망치",
+  "cond": "강화 대성공 누적 100회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "down_curse",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "저주받은 손",
+  "cond": "강화 하락 누적 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "enhance_10000",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "무쇠팔",
+  "cond": "강화 누적 10,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "one_well",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "한 우물",
+  "cond": "한 장비에만 강화 누적 2,000회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "five_min",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "화로 곁의 파수꾼",
+  "cond": "강화 완료 후 5분 안에 수령 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "aging",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "잊혀진 불씨",
+  "cond": "강화 완료 후 24시간 넘게 두었다 수령 50회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "balance_master",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "삼위일체",
+  "cond": "3슬롯 강화 레벨이 완전히 동일(+50 이상)한 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "owl",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "올빼미",
+  "cond": "새벽 3~5시 강화 수령 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "early_bird",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "아침형 인간",
+  "cond": "아침 5~7시 강화 수령 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "weekend",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "주말 출근",
+  "cond": "주말에 강화 수령 누적 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "monday",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "월요병",
+  "cond": "월요일에 강화 하락 10회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "friday",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "불타는 금요일",
+  "cond": "금요일 밤(20~24시) 강화 수령 100회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "supply_binge",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "수확의 날",
+  "cond": "하루에 보급상자 50개 개봉",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "supply_5000",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "보급왕",
+  "cond": "보급상자 누적 5,000개 개봉",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "supply_10000",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "만물상",
+  "cond": "보급상자 누적 10,000개 개봉",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "same_pull",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "데자뷔",
+  "cond": "같은 아이템을 3연속 개봉",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "transcend_300",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "경계 너머",
+  "cond": "초월 누적 300회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "transcend_1000",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "초월자",
+  "cond": "초월 누적 1,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "transcend_deep",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "별을 넘는 자",
+  "cond": "한 장비를 초월 30단계까지",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "star_rain",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "쏟아지는 별",
+  "cond": "하루에 초월 100회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "codex_120",
+  "cat": "도감",
+  "kind": "영구",
+  "label": "마지막 페이지",
+  "cond": "도감 120종 전부 수집",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_strike",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "산을 가른 일격",
+  "cond": "레이드 단일 공격으로 5,000,000 데미지",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_365",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "끝없는 원정",
+  "cond": "레이드 참여 365회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_volcano",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "불을 삼킨 자",
+  "cond": "화산 보스 처치 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_temple",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "서리 사냥꾼",
+  "cond": "신전 보스 처치 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_swamp",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "늪의 공포",
+  "cond": "늪지대 보스 처치 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_orc",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "부락의 악몽",
+  "cond": "오크 부락 보스 처치 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_fallen",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "날개 사냥꾼",
+  "cond": "타락천사 보스 처치 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_kingdom",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "왕국의 방패",
+  "cond": "왕국 보스 처치 참여 100회 — 왕국 레이드 출시 시 활성",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_first_win",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "투신",
+  "cond": "대난투 우승(서버당 하루 1명)",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_30_win",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "패왕",
+  "cond": "대난투 우승 30회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_3streak",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "왕조",
+  "cond": "대난투 우승 3연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_top10",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "백전노장",
+  "cond": "대난투 상위 10% 50회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_podium",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "정상권",
+  "cond": "대난투 3위 이내 10회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_30",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "역전의 용사",
+  "cond": "대난투 참가 30회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "melee_comet",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "혜성",
+  "cond": "첫 10회 참가 안에 우승",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "melee_last",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "꼴찌의 품격",
+  "cond": "대난투 꼴찌 1회",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "kong_line",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "2인자",
+  "cond": "대난투 2위 2회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "tax_collector",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "징수관",
+  "cond": "집행관 수금 10회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "siege_30",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "공성의 선봉",
+  "cond": "점령전 공격 참여 누적 30회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "wall",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "성벽",
+  "cond": "점령전 방어 성공 참여 10회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "tour_lord",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "순회 영주",
+  "cond": "서로 다른 구역 3곳에서 집행관 역임",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "guild_founder",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "첫 깃발",
+  "cond": "길드를 창설",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "guild_donate",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "아낌없는 손",
+  "cond": "길드 기부 누적 100회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "no_guild_30",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "무소속",
+  "cond": "길드 없이 7일",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "friends_30",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "마당발",
+  "cond": "친구 30명",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "invite_20",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "모병관",
+  "cond": "초대로 20명 가입",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "chat_1000",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "수다쟁이",
+  "cond": "채팅 누적 1,000회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "mention_100",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "모두가 찾는 이름",
+  "cond": "채팅에서 멘션 100회 받음",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "checkin_30",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "개근상",
+  "cond": "출석 누적 30일",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "checkin_365",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "사계절의 망치",
+  "cond": "출석 누적 365일",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "mail_1000",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "우편함 지기",
+  "cond": "우편 수령 누적 1,000통",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "resident_10",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "지박령",
+  "cond": "한 구역에 거주 10일",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "mover_30",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "역마살",
+  "cond": "거주 이동 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "time_gold",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "시간은 금",
+  "cond": "다이아 시간 단축 누적 30일치",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lucky_777",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "럭키 세븐",
+  "cond": "다이아 보유량이 정확히 777인 순간",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "power_77777",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "칠칠칠칠칠",
+  "cond": "전투력이 정확히 77,777인 순간",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "dragon_hoard",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "자린고비",
+  "cond": "다이아 10만 이상을 10일 내내 유지(무지출)",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "pay_first",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "첫 후원",
+  "cond": "첫 결제",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "pay_5",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "기사 후원자",
+  "cond": "누적 결제 5만원",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "pay_20",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "영주 후원자",
+  "cond": "누적 결제 20만원",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "pay_50",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "왕실 후원자",
+  "cond": "누적 결제 50만원",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "pay_200",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "왕국의 기둥",
+  "cond": "누적 결제 200만원",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "two_mirrors",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "두 개의 거울",
+  "cond": "남/여 아바타 모두 생성",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "same_face_30",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "한결같은 얼굴",
+  "cond": "한 아바타를 30일 동안 유지",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "same_combo",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "필연",
+  "cond": "같은 장비 조합으로 아바타 10회 생성",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "avatar_50",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "왕실 의상실",
+  "cond": "아바타 50개 보유",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "avatar_1000",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "천의 얼굴",
+  "cond": "아바타 생성 1,000회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "full_course",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "대륙 일주",
+  "cond": "하루에 강화 수령·보급 개봉·레이드·대난투 전부 참여",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "pentagon",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "오관왕",
+  "cond": "랭킹 5종 모두 10위 이내에 드는 순간",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "apex_shoot",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "전성기",
+  "cond": "+100 이상 장비 3개를 장착하고 아바타 생성",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "kintsugi_master",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "흑금의 주인",
+  "cond": "흑금 대도를 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "halfblade_master",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "빛과 밤의 주인",
+  "cond": "빛과 밤을 가른 대검을 +150 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "starfield_master",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별자리를 쥔 손",
+  "cond": "별자리가 흐르는 장검을 +200 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "frog_prince",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "개구리 왕자",
+  "cond": "개구리 세트 3종(대롱·탈 망토·충전기)을 모두 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "true_witch",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "진짜 마녀",
+  "cond": "마녀 세트 3종(등불·드레스·뾰족 모자)을 모두 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "winter_itself",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "겨울의 화신",
+  "cond": "서리 세트 3종(눈꽃 대도·설산 갑주·설화의 관)을 모두 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "dawn_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "여명의 기사",
+  "cond": "여명 세트 3종(동트는 맹세·여명의 벽·새벽지기의 표식)을 모두 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "dragon_heir",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "용의 후예",
+  "cond": "용 세트 3종(용턱·비늘갑·뿔관)을 모두 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "crown_touch",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "화룡점정",
+  "cond": "+100 도달을 대성공으로 장식",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "lightning",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "번갯불",
+  "cond": "강화 시작 1분 안에 보석으로 즉시 완성 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "pure_way",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "정공법",
+  "cond": "보석 단축 없이 +50 도달",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "enhance_1000",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "천리길",
+  "cond": "강화 누적 1,000회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "beginner_mind",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "초심",
+  "cond": "+100 도달 후 +1 장비를 강화",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "blitz",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "속전속결",
+  "cond": "가입 7일 안에 +100 도달",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "fire_play",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "불장난",
+  "cond": "하루에 강화 시도 200회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "curse_of_9",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "9의 저주",
+  "cond": "9로 끝나는 레벨(+9·+19·+29…)에서 하락 10회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "eclipse",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "별의 끝",
+  "cond": "한 장비를 초월 50단계까지",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "galaxy",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "은하수",
+  "cond": "초월 누적 3,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "vanguard",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "선봉장",
+  "cond": "레이드에서 첫 번째로 공격 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "continent_sweep",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "대륙 토벌",
+  "cond": "6개 지역 보스를 각 10회씩 처치 참여",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "iron_man",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "철인",
+  "cond": "대난투 참가 365회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "sprint",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "질주",
+  "cond": "대난투 상위 10% 5연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "ram",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "공성추",
+  "cond": "점령전 공격 승리 참여 30회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "iron_wall",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "철옹성",
+  "cond": "점령전 방어 성공 참여 30회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "witness",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "터줏대감",
+  "cond": "한 길드에 소속 100일",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "homecoming",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "귀향",
+  "cond": "길드 탈퇴 후 같은 길드에 재가입",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "pillar",
+  "cat": "길드",
+  "kind": "영구",
+  "label": "대들보",
+  "cond": "길드 기부 누적 365회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "surpassed",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "청출어람",
+  "cond": "내가 초대한 유저의 전투력이 나를 넘어섬",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "welcome_crowd",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "후견인",
+  "cond": "내가 초대한 유저가 +50 도달",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "night_talk",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "밤의 수다",
+  "cond": "새벽(0~5시) 채팅 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "comeback",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "휴가 복귀",
+  "cond": "7일 이상 미접속 후 복귀",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "time_capsule",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "연륜",
+  "cond": "가입 365일 경과",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "bottomless",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "큰손",
+  "cond": "하루에 다이아 10,000 소비",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "billionaire",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "백만장자",
+  "cond": "다이아 누적 획득 1,000,000",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "rebirth",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "환골탈태",
+  "cond": "아바타 생성 100회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "one_suit",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "단벌 신사",
+  "cond": "한 아바타를 100일 유지",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "disguise",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "변장술사",
+  "cond": "서로 다른 장비 조합 30가지로 아바타 생성",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "model_student",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "모범생",
+  "cond": "왕립 학원 교복 + 금테 둥근 안경을 +10 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "night_noble",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "밤의 귀족",
+  "cond": "진홍의 가는 검 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "valkyrie",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "발키리",
+  "cond": "왕기의 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "grim_envoy",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "명부의 사자",
+  "cond": "혼불낫 + 갈까마귀 로브 + 재가 흐르는 모래시계를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "archangel",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "대천사",
+  "cond": "해오름검 + 아침빛 예복 + 하얀 깃 날개를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "outlaw",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "무법자",
+  "cond": "금당초 쌍권총을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "sharpshooter",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "명사수",
+  "cond": "봄을 겨눈 석궁을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "gatekeeper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "문지기",
+  "cond": "봉문검을 +150 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "armory_lord",
+  "cat": "해방",
+  "kind": "조건부",
+  "label": "병기고의 주인",
+  "cond": "무기 10종 이상 해방 보유 중인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "throne_shadow",
+  "cat": "랭킹 1위",
+  "kind": "조건부",
+  "label": "왕좌의 그림자",
+  "cond": "아무 랭킹이든 2위인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "sword_and_pen",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "문무겸비",
+  "cond": "도감 100종 + 전투력 100,000 동시 달성",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "enhance_150",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "성층권",
+  "cond": "+150 도달",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "morning_ration",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "아침 배급",
+  "cond": "오전 9시 전 상자 개봉 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "three_meals",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "삼시세끼",
+  "cond": "하루에 무기·방어구·장신구 상자를 각각 개봉 — 30일 달성",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "assault_100",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "돌격대장",
+  "cond": "점령전 공격 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "guardian_100",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "수호신",
+  "cond": "점령전 방어 성공 참여 100회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_100days",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "백일 원정",
+  "cond": "100일 연속 레이드 참여",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "winter_blade",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "겨울 검객",
+  "cond": "눈꽃 대도를 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "volcano_heart",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화산의 심장",
+  "cond": "용암을 가둔 대검을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "lotus_warrior",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "연꽃 무사",
+  "cond": "피어나는 삼지창을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "star_mage",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별의 마술사",
+  "cond": "유성의 지팡이를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "thunder_emperor",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "뇌제",
+  "cond": "벼락을 박은 창을 +150 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "one_shot",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "단 한 발",
+  "cond": "상아빛 한 발을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "blue_sky",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "창천",
+  "cond": "창천검을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "phoenix_archer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "불사조",
+  "cond": "재에서 당기는 활을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "spiral_rider",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "나선의 기수",
+  "cond": "나선을 감은 랜스를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "frost_archer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "혹한의 궁수",
+  "cond": "고드름이 자란 장궁을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "shaman",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "주술사",
+  "cond": "묻지 않는 지팡이 + 깃털 두른 침묵 + 조상의 얼굴을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "angler",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "강태공",
+  "cond": "도롱이 + 반딧불 통발을 +1 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "paladin",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "성기사",
+  "cond": "성광 갑주 + 백은 날개 투구를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "astrologer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "점성술사",
+  "cond": "성좌의 망토 + 대답하지 않는 나침반 + 유성의 지팡이를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "masquerade",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "가면무도회",
+  "cond": "무도회의 한 수 + 이름 없는 드레스 + 이름을 가린 가면을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "headmaster",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "학장",
+  "cond": "학장복 + 금테 둥근 안경을 +10 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "coronation",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "대관식",
+  "cond": "왕을 짊어진 대검 + 별을 두른 망토 + 별이 박힌 왕관을 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "perpetual",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "꺼지지 않는 불",
+  "cond": "30일 연속 매일 강화 수령",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "new_record",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "신기록",
+  "cond": "서버 최고 강화 기록 경신",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "cliff_edge",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "절벽 끝에서",
+  "cond": "+199에서 하락",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "flawless_100",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "백발백중",
+  "cond": "+90에서 +100까지 하락 없이 도달",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "midnight_snack",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "야식",
+  "cond": "자정~새벽 2시 상자 개봉 50회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "meteor_shower",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "유성우",
+  "cond": "하루에 초월 30회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "month_war",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "불굴",
+  "cond": "30일 연속 대난투 참가",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "fire_support",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "지원 사격",
+  "cond": "친구와 같은 레이드에 참여 50회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "initiation",
+  "cat": "아바타",
+  "kind": "영구",
+  "label": "신고식",
+  "cond": "가입 3일 안에 첫 아바타 생성",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "dust_to_mountain",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "티끌 모아 태산",
+  "cond": "무료 다이아 누적 100,000 수급",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "old_friend",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "죽마고우",
+  "cond": "한 친구와 친구 관계 90일 유지",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "streak_king",
+  "cat": "일상",
+  "kind": "조건부",
+  "label": "개근왕",
+  "cond": "30일 연속 출석을 유지 중인 동안",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "frog_sniper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "개구리 저격수",
+  "cond": "퉤! 하는 대롱을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "gentleman",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "신사",
+  "cond": "매 머리 지팡이검을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "cupid",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "큐피드",
+  "cond": "두근 화살을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "hunter",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "사냥꾼",
+  "cond": "돌아오는 뼈를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "twin_saber",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "쌍검객",
+  "cond": "청홍 쌍검을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "standard_bearer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "기수",
+  "cond": "왕기의 창을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ash_reaper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "재의 수확자",
+  "cond": "잿불낫을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "dusk",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "황혼",
+  "cond": "노을이 앉는 검을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "sky_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "창공의 기사",
+  "cond": "창궁검을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "dragon_slayer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "용살자",
+  "cond": "포효하는 용턱을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "shadow",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "그림자",
+  "cond": "쌍익 단검을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "forge_heart",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화심",
+  "cond": "화심의 망치를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "grim_reaper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "사신",
+  "cond": "혼불낫을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "necromancer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "강령술사",
+  "cond": "초혼의 해골장을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "morning_blade",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "아침의 검",
+  "cond": "해오름검을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "twin_wings",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "쌍익",
+  "cond": "한 쌍의 깃을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "fallen_angel",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "추락 천사",
+  "cond": "날개였던 대궁을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "wanderer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "유랑자",
+  "cond": "모래바람의 겹옷 + 용비늘 가방 + 돌아오는 뼈를 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "little_angel",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "꼬마 천사",
+  "cond": "두근 화살 + 구름 갑옷 + 철사로 띄운 후광을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lily_spirit",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "수련의 정령",
+  "cond": "피어나는 삼지창 + 수련이 피는 드레스 + 수련 화관을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fire_dancer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "불의 무희",
+  "cond": "춤추는 쌍불꽃 + 불길 케이프 + 흑요 봉황선을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "frost_warden",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "서리 파수꾼",
+  "cond": "봄을 겨눈 석궁 + 설산 파수의 갑주 + 빙정 방패를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "beast_king",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "야수의 왕",
+  "cond": "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "royal_guard",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "근위대장",
+  "cond": "창궁검 + 쪽빛 기사복 + 푸른 깃 견장을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fallen_lord",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "몰락한 군주",
+  "cond": "빛과 밤을 가른 대검 + 도금이 벗겨진 갑주 + 한 뼘짜리 마왕 날개를 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "rising_star",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "신흥 강자",
+  "cond": "가입 30일 이내 + 전투력 100위 이내인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "big_family",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "대가족",
+  "cond": "길드 인원이 만석인 동안",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "top_patron",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "재상",
+  "cond": "서버 누적 결제액 1위인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "doremi",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "도레미",
+  "cond": "다이아 보유량이 정확히 12,345인 순간",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "army_100k",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "만부부당",
+  "cond": "전투력 100,000 달성",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "seven_falls",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "칠전팔기",
+  "cond": "한 장비가 하락 누적 7회를 딛고 +100 도달",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "reincarnation",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "환생",
+  "cond": "+199에서 하락한 장비를 다시 +200까지",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "insomnia",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "불면증",
+  "cond": "새벽 0~6시에만 강화 수령한 날 7일",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "night_watch",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "야간 경비",
+  "cond": "새벽 0~6시 레이드 공격 50회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "weekend_raid",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "주말 원정대",
+  "cond": "주말 레이드 참여 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "king_return",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "왕의 귀환",
+  "cond": "우승 후 7일 넘게 지나 다시 우승",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "big_eater",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "우편 홍수",
+  "cond": "하루에 우편 50통 수령",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "triathlon",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "철인 3종",
+  "cond": "하루에 레이드·대난투·점령전 전부 참여",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "seraph",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "세라핌",
+  "cond": "세라핌의 갑주를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "black_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "흑기사",
+  "cond": "적금 갑주를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "field_marshal",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "대원수",
+  "cond": "금장 군복을 +100 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "snow_priest",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "설야의 사제",
+  "cond": "설야 예복을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "firebird",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "불새",
+  "cond": "불새 깃 드레스를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "forest_keeper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "숲지기",
+  "cond": "숲지기의 한 벌을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "star_reader",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별을 읽는 자",
+  "cond": "별을 읽는 외투를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "penitent",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "속죄자",
+  "cond": "사슬과 한쪽 날개를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "bog_warden",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "늪의 파수꾼",
+  "cond": "늪빛 흉갑을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ascetic",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "수행자",
+  "cond": "한쪽 어깨 띠를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lion_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "사자 기사",
+  "cond": "백금 사자 갑주를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "herald",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "전령",
+  "cond": "푸른 서약 기사복을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "bog_witch",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "늪마녀",
+  "cond": "이끼 자란 넝마 드레스를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "self_saint",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "자칭 성자",
+  "cond": "자칭 훈장 사제복을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lava_dancer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화염 무도",
+  "cond": "용암으로 짠 드레스를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "vampire",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "흡혈귀",
+  "cond": "진홍의 가는 검을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lantern_keeper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "등불지기",
+  "cond": "마녀의 등불을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "herbalist",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "약초꾼",
+  "cond": "약초꾼의 버섯 모자를 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "little_devil",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "꼬마 악마",
+  "cond": "작은 악마의 뿔을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "drunkard",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "술고래",
+  "cond": "한 잔의 보람을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "feather_style",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "깃털 단장",
+  "cond": "백은 깃 머리핀을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "one_eye",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "외눈 검객",
+  "cond": "가려야 보이는 안대를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "trumpeter",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "나팔수",
+  "cond": "부르면 모이는 뿔피리를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "drummer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "북재비",
+  "cond": "북이 된 방패를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "court_dancer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "궁중 무희",
+  "cond": "진홍 봉황선을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "tribal_banner",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "부족의 기수",
+  "cond": "조상의 깃발을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "mechanic",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "정비공",
+  "cond": "재를 막는 눈을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ice_heart",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "얼음 심장",
+  "cond": "식지 않는 심장을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "iron_fist",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "강철 주먹",
+  "cond": "맹세를 쥔 손을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lion_heart",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "사자의 심장",
+  "cond": "사자의 증표를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fur_collar",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "설백",
+  "cond": "설백 목도리를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "incense_keeper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "향지기",
+  "cond": "흔들리는 향로를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "dragon_face",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "용의 얼굴",
+  "cond": "용면 투구를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "snow_monk",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "설산 수도승",
+  "cond": "눈꽃 대도 + 설야 예복 + 흔들리는 향로를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fallen_priest",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "타락 사제",
+  "cond": "초혼의 해골장 + 자칭 훈장 사제복 + 철사로 띄운 후광을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "volcano_smith",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화산 대장장이",
+  "cond": "화심의 망치 + 적금 갑주 + 재를 막는 눈을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "thunder_general",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "뇌운의 장군",
+  "cond": "벼락을 박은 창 + 금장 군복 + 푸른 깃 견장을 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "night_visitor",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "밤손님",
+  "cond": "쌍익 단검 + 늪빛 흉갑 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "honor_student",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "우등생",
+  "cond": "왕립 학원 교복을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "fluffy_cloud",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "뭉게구름",
+  "cond": "구름 갑옷을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "frog_person",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "개구리 인간",
+  "cond": "개구리 탈 망토를 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "peddler",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "보부상",
+  "cond": "용비늘 가방을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "flower_crown",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화관",
+  "cond": "수련 화관을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "pointy_hat",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "뾰족 모자",
+  "cond": "마녀의 뾰족 모자를 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "bookworm",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "책벌레",
+  "cond": "금테 둥근 안경을 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "firefly",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "반딧불",
+  "cond": "반딧불 충전기를 +10 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "쉬움"
+ },
+ {
+  "code": "azure_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "쪽빛 기사",
+  "cond": "쪽빛 기사복을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "pumpkin_glow",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "호박등",
+  "cond": "호박등 드레스를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "old_professor",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "노교수",
+  "cond": "학장복을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "silence",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "침묵",
+  "cond": "깃털 두른 침묵을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lily_pad",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "수련잎",
+  "cond": "수련이 피는 드레스를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ball_night",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "무도회의 밤",
+  "cond": "이름 없는 드레스를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "white_feather",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "하얀 깃",
+  "cond": "하얀 깃 날개를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "hourglass",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "모래시계",
+  "cond": "재가 흐르는 모래시계를 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ancestor",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "조상님",
+  "cond": "손목에 감은 조상을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "star_gazer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별점",
+  "cond": "대답하지 않는 나침반을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "nomad_fox",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "사막 여우",
+  "cond": "모래바람의 겹옷을 +30 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "red_night",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "붉은 밤",
+  "cond": "진홍 레이스 드레스를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "raven",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "갈까마귀",
+  "cond": "갈까마귀 로브를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "starlight_cloak",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별빛 망토",
+  "cond": "별을 두른 망토를 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "snow_flower",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "설화",
+  "cond": "설화의 관을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fire_dragon",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화룡",
+  "cond": "화룡의 뿔관을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "obsidian",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "흑요",
+  "cond": "흑요 봉황선을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "radiance",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "광휘",
+  "cond": "아침빛 예복을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ember_silk",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "화문",
+  "cond": "화문 예복을 +50 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "battle_wings",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "전장의 날개",
+  "cond": "창공의 전투복을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "holy_light",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "성광",
+  "cond": "성광 갑주를 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "black_dragon",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "흑룡",
+  "cond": "흑룡의 비늘갑을 +70 이상으로 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "archangel_chief",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "천사장",
+  "cond": "해오름검 + 세라핌의 갑주 + 하얀 깃 날개를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "forest_hermit",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "숲의 은둔자",
+  "cond": "돌아오는 뼈 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "carefree",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "천하태평",
+  "cond": "강화 완료 후 7일 넘게 두었다 수령",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "fast_courier",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "신속 배달",
+  "cond": "우편 도착 5분 안에 수령 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "all_in",
+  "cat": "재화",
+  "kind": "영구",
+  "label": "올인",
+  "cond": "하루에 다이아 100,000 이상 소비",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "completionist",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "완주",
+  "cond": "도전과제 전 항목 완료",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "evening_life",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "황금 시간대",
+  "cond": "저녁 6~9시 강화 수령 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "commuter",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "출퇴근",
+  "cond": "오전 9시대와 오후 6시대에 모두 강화 수령한 날 30일",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "day_100_party",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "백일잔치",
+  "cond": "가입 100일째 되는 날 접속",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "sprout_keeper",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "새싹 지킴이",
+  "cond": "가입 7일 이내 신규 유저와 친구 맺기 10명",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "open_king",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "개봉왕",
+  "cond": "어제 보급상자 최다 개봉자 — 오늘 하루 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "march_live",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "진군",
+  "cond": "7일 연속 레이드 참여를 유지 중인 동안",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "smooth_sail",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "순풍",
+  "cond": "최근 강화 20회 연속 하락 없음을 유지 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "alley_boss",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "골목대장",
+  "cond": "거주 구역 주민 중 전투력 1위인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "red_ball",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "붉은 무도회",
+  "cond": "무도회의 한 수 + 진홍 레이스 드레스 + 진홍 봉황선을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "frost_queen",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "서리 여왕",
+  "cond": "고드름이 자란 장궁 + 설야 예복 + 설화의 관을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "gunslinger",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "황야의 총잡이",
+  "cond": "금당초 쌍권총 + 모래바람의 겹옷 + 재를 막는 눈을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "phantom_thief",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "괴도",
+  "cond": "상아빛 한 발 + 별을 읽는 외투 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "star_navigator",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "별의 항해사",
+  "cond": "별자리가 흐르는 장검 + 성좌의 망토 + 별이 박힌 왕관을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lancer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "창기병",
+  "cond": "나선을 감은 랜스 + 백금 사자 갑주 + 사자의 증표를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "forest_witch",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "숲의 마녀",
+  "cond": "마녀의 등불 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "lava_lord",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "용암 군주",
+  "cond": "용암을 가둔 대검 + 화문 예복 + 화룡의 뿔관을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "gardener",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "정원사",
+  "cond": "피어나는 삼지창 + 숲지기의 한 벌 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "kings_blade",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "왕의 검",
+  "cond": "왕을 짊어진 대검 + 금장 군복 + 맹세를 쥔 손을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "marksman",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "명포수",
+  "cond": "재에서 당기는 활 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "elite_few",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "소수정예",
+  "cond": "인원 5명 이하 길드가 길드 랭킹 10위 이내인 동안",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "david",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "다윗",
+  "cond": "전투력 서버 하위 50%로 대난투 3위 이내",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "all_nighter",
+  "cat": "시간대",
+  "kind": "영구",
+  "label": "밤샘 작업",
+  "cond": "한 밤(0~6시)에 강화 수령 10회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "flawless_all",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "대업",
+  "cond": "도전과제 전부 + 도감 완성 + 강화 +100 동시 보유",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "longevity",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "살아있는 역사",
+  "cond": "접속일 누적 500일",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "paper_thin",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "종이 한 장",
+  "cond": "대난투에서 뒤에서 2등",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "card_shark",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "타짜",
+  "cond": "강화 대성공 5연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "dawn_prayer",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "새벽 기도",
+  "cond": "해오름검 + 설야 예복 + 흔들리는 향로를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "phoenix_set",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "봉황",
+  "cond": "재에서 당기는 활 + 불새 깃 드레스 + 진홍 봉황선을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "abyss_lord",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "심연의 군주",
+  "cond": "혼불낫 + 도금이 벗겨진 갑주 + 작은 악마의 뿔을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "silver_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "백은 기사",
+  "cond": "동트는 맹세 + 세라핌의 갑주 + 백은 날개 투구를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "marsh_patrol",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "습지 순찰대",
+  "cond": "피어나는 삼지창 + 개구리 탈 망토 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "light_maiden",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "빛의 무녀",
+  "cond": "유성의 지팡이 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "warpath",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "패도",
+  "cond": "포효하는 용턱 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "ice_fishing",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "얼음낚시",
+  "cond": "봄을 겨눈 석궁 + 도롱이 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "festival_night",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "축제의 밤",
+  "cond": "춤추는 쌍불꽃 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "night_walk",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "야행",
+  "cond": "흑금 대도 + 갈까마귀 로브 + 가려야 보이는 안대를 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "glacier_knight",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "빙하 기사",
+  "cond": "눈꽃 대도 + 설산 파수의 갑주 + 빙정 방패를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "hell_gatekeeper",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "지옥의 문지기",
+  "cond": "봉문검 + 도금이 벗겨진 갑주 + 용면 투구를 +100 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "steppe_wind",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "초원의 바람",
+  "cond": "돌아오는 뼈 + 모래바람의 겹옷 + 조상의 깃발을 +50 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "court_mage",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "궁정 마법사",
+  "cond": "유성의 지팡이 + 별을 읽는 외투 + 별이 박힌 왕관을 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "ash_judge",
+  "cat": "아이템 발동",
+  "kind": "조건부",
+  "label": "재의 심판자",
+  "cond": "잿불낫 + 화문 예복 + 재가 흐르는 모래시계를 +70 이상으로 동시 장착 중인 동안",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "treasure_hunt",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "보물찾기",
+  "cond": "히든 칭호 10개 발견",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "medal_collector",
+  "cat": "조합",
+  "kind": "영구",
+  "label": "훈장 수집가",
+  "cond": "칭호 50개 발견",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "wandering_smith",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "방랑 대장장이",
+  "cond": "6개 지역 모두 거주해 봄",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "uncrowned",
+  "cat": "조건부",
+  "kind": "조건부",
+  "label": "무관의 제왕",
+  "cond": "랭킹 5종 모두 2~3위(1위는 없이)인 동안",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "cbt_2026",
+  "cat": "헌정",
+  "kind": "헌정",
+  "label": "선발대",
+  "cond": "CBT 참전(256명 한정 · 이후 획득 불가)",
+  "hidden": true,
+  "diff": "한정"
+ }
+]
