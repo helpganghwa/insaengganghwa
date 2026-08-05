@@ -30,6 +30,7 @@ const MENU = [
   { href: '/friends', icon: '👥', label: '친구' },
   { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
   { href: '/me/codex', icon: '📖', label: '도감' },
+  { href: '/me/titles', icon: '🏷️', label: '칭호' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
 ];
