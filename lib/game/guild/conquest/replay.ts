@@ -49,7 +49,23 @@ export type ConquestReplay = {
   beforeOwner: Record<number, string | null>;
 };
 
+// 리플레이 5분 인스턴스 캐시(2026-08-06) — 지나간 날의 확정 데이터(전투·중립화 이력 기반,
+// 정산 후 불변)를 /guild/map 진입마다 상관 서브쿼리로 재계산하던 것을 흡수. '최신 공개일'
+// 키도 자정 플립·23시 공개 반영이 최대 5분 지연될 뿐이라 수용(연대기 텍스트는 별도 경로).
+const replayCache = new Map<string, { at: number; v: ConquestReplay | null }>();
+const REPLAY_TTL_MS = 300_000;
+
 export async function getConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
+  const ck = `${serverId}:${forKstDay?.slice(0, 10) ?? 'latest'}`;
+  const hit = replayCache.get(ck);
+  if (hit && Date.now() - hit.at < REPLAY_TTL_MS) return hit.v;
+  const v = await computeConquestReplay(serverId, forKstDay);
+  if (replayCache.size > 200) replayCache.clear();
+  replayCache.set(ck, { at: Date.now(), v });
+  return v;
+}
+
+async function computeConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
   // 기본: 연대기와 동일한 '최신 공개일'(읽기 게이트 kst_day < 오늘 KST와 정합).
   // forKstDay 지정 시 그 날짜로 — 공개 전 검수(어드민 미리보기, 2026-07-16) 전용.
   let kstDay: string;

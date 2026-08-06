@@ -176,20 +176,35 @@ export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat',
  * 기존(4왕복)에 비해 소폭 늘지만, 탭을 누를 때마다 발생하던 페이지 전체 재요청
  * (layout 재렌더 포함)이 사라진다(2026-07-31).
  */
-export async function getLeaderboardAllPayload(
-  serverId: number,
-  userId: string,
-): Promise<Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>> {
-  const [tops, mineAll] = await Promise.all([
-    Promise.all(LEADERBOARD_METRICS.map((m) => safeTop(m, serverId, TOP))),
-    safeMyRanksAll(serverId, userId),
-  ]);
+// 서버별 공통분(Top100×5 + 프로필 장식) 60s 캐시(2026-08-06) — 전 유저 동일 데이터인데
+// 매 진입 6왕복이 나갔다. RankingTop3Card의 검증된 패턴 재사용. 유저별로 남는 건 내 순위 1왕복.
+const sharedTopsCache = new Map<
+  number,
+  { at: number; tops: LeaderboardEntry[][]; byUser: Map<string, LeaderboardEntry> }
+>();
+const SHARED_TOPS_TTL_MS = 60_000;
 
+async function loadSharedTops(serverId: number) {
+  const hit = sharedTopsCache.get(serverId);
+  if (hit && Date.now() - hit.at < SHARED_TOPS_TTL_MS) return hit;
+  const tops = await Promise.all(LEADERBOARD_METRICS.map((m) => safeTop(m, serverId, TOP)));
   // 프로필·길드는 5지표 합집합에 대해 1회만 — 지표 간 인물이 겹쳐 중복 조회가 크다.
   const seen = new Map<string, LeaderboardEntry>();
   for (const list of tops) for (const e of list) if (!seen.has(e.userId)) seen.set(e.userId, e);
   const decorated = await attachProfiles(serverId, [...seen.values()]);
-  const byUser = new Map(decorated.map((e) => [e.userId, e]));
+  const entry = { at: Date.now(), tops, byUser: new Map(decorated.map((e) => [e.userId, e])) };
+  sharedTopsCache.set(serverId, entry);
+  return entry;
+}
+
+export async function getLeaderboardAllPayload(
+  serverId: number,
+  userId: string,
+): Promise<Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>> {
+  const [{ tops, byUser }, mineAll] = await Promise.all([
+    loadSharedTops(serverId),
+    safeMyRanksAll(serverId, userId),
+  ]);
 
   const out = {} as Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>;
   LEADERBOARD_METRICS.forEach((m, i) => {

@@ -29,6 +29,10 @@ import {
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
+// 정적화 시도·기각(2026-08-06 감사): revalidate=600을 넣어도 루트 generateViewport가
+// headers()(폴더블 Sec-CH-UA-Model 판별)를 읽어 **전 라우트가 구조적으로 동적**이라 무효
+// (빌드 산출 ƒ 확인). 뷰포트 시스템은 검증된 설계라 유지 — 데이터는 getActiveCatalog 600s
+// 캐시가 이미 DB 왕복을 막고 있어 함수 기동 비용만 남는다.
 export const dynamic = 'force-dynamic';
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = {

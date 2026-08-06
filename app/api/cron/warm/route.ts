@@ -34,10 +34,12 @@ export async function GET(req: Request) {
   }
 
   // 2. 페이지 함수 런타임 warm — 자기 도메인 공개 경로 self-fetch.
+  // 5분에 1회만(2026-08-06) — 매분 2페이지 self-fetch는 월 ~86K 함수호출 순오버헤드였고,
+  // Fluid는 인스턴스 재사용이라 5분 간격이면 웜 유지에 충분. 크론 자체(dead-man 감시)는 매분 유지.
   try {
     const host = req.headers.get('host');
     const proto = req.headers.get('x-forwarded-proto') ?? 'https';
-    if (host) {
+    if (host && new Date().getUTCMinutes() % 5 === 0) {
       const base = `${proto}://${host}`;
       // 5s 타임아웃 — 페이지 hang이 warm 함수(maxDuration 20s)를 죽여 beatCron 미도달 →
       // "cron 전멸" 오보고로 번지는 것을 차단(페이지 지연은 fetch 결과 'err'로만 기록).

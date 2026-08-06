@@ -17,8 +17,18 @@ const nextConfig: NextConfig = {
     // 프로필 생성(v3 compose)이 런타임에 장비 스프라이트 PNG를 readFileSync(vision 입력)로 읽는다.
     // 주 발주 경로는 /me/create의 after()가 즉시 실행하는 drainQueue이고, cron/profile-poll은 백스톱.
     // 두 함수 번들 모두에 스프라이트를 강제 포함해야 비전 입력이 텍스트로 조용히 degrade되지 않는다.
-    '/api/cron/profile-poll': ['./public/sprites/**/*.png'],
-    '/me/create': ['./public/sprites/**/*.png'],
+    // 슬롯 3디렉토리만(2026-08-06) — sprites/** 전체는 빌드 입력물(anim3-raw·pool 등 ~21MB)까지
+    // 함수 번들에 실어 33.7MB였다. compose-v3가 읽는 건 SPRITE_MANIFEST 경로(weapon/armor/accessory)뿐.
+    '/api/cron/profile-poll': [
+      './public/sprites/weapon/*.png',
+      './public/sprites/armor/*.png',
+      './public/sprites/accessory/*.png',
+    ],
+    '/me/create': [
+      './public/sprites/weapon/*.png',
+      './public/sprites/armor/*.png',
+      './public/sprites/accessory/*.png',
+    ],
   },
   async headers() {
     return [
@@ -56,6 +66,37 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/:icon(icon\\.png|icon-192\\.png|icon-512\\.png)',
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      // 정적 자산 장기 캐시 누락분(2026-08-06 감사) — 파일명 불변 자산만. ⚠ '/og/:path*' 전체로
+      // 걸면 동적 OG 라우트(/og/[shareCode])까지 7일 캐시돼 프로필 갱신이 안 보인다 — 정적
+      // 파일 패턴만 좁게 지정한다.
+      {
+        source: '/og/raid/:path*', // 카카오 레이드 초대 카드(사전 합성 PNG) — 크롤러 반복 요청
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/og/:file(og-\\d+\\.png)',
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/icons/:path*', // PWA 스플래시 4장(~1MB) 포함
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/kakao/:path*',
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/fx/:path*',
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/rating/:path*', // 게임물 등급 심볼
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
+        source: '/:file(login-hero\\.webp|og\\.webp|cbt-ended\\.webp)',
         headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
       },
     ];

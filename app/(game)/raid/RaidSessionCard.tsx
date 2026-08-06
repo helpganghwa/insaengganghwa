@@ -478,7 +478,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       // 보스 카피 — raidId 해시로 결정론 선택(동일 레이드는 일관된 문구).
       const copy = pickRaidShareCopy(v.bossCode, Number(v.raidId));
       // 미리 합성된 정적 OG(1200×630, public/og/raid/<boss>.png) — 동적 OG route 불필요.
-      const imageUrl = `${origin}/og/raid/${v.bossCode}.png?v=${v.raidId}`;
+      // 버스터 제거(2026-08-06) — 보스별 정적 PNG라 내용이 불변. ?v=raidId는 레이드마다
+      // 카톡 크롤러·CDN 캐시 키를 쪼개 같은 이미지를 반복 다운로드하게 만들 뿐이었다.
+      const imageUrl = `${origin}/og/raid/${v.bossCode}.png`;
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
