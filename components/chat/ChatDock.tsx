@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import Link from 'next/link';
@@ -17,7 +17,9 @@ import { worldEventMessage } from '@/app/(game)/world-message';
 import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
 
-import { sendChat, reportChat, setChatBlockAction } from './actions';
+import type { SendChatResult } from '@/lib/game/chat/send';
+
+import { reportChat, setChatBlockAction } from './actions';
 
 /**
  * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
@@ -82,6 +84,193 @@ function sysToMsg(e: WorldEventEntry): ChatMessageDto {
   };
 }
 
+/** 행 내부 링크 클릭 → 뒤로가기 시 패널 복원 마크(마운트 복원 로직이 1회 소비). */
+function markRestoreIfLink(e: ReactMouseEvent) {
+  if ((e.target as HTMLElement).closest('a')) {
+    try {
+      sessionStorage.setItem(RESTORE_KEY, 'panel');
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 강조, 닉 클릭 시 프로필 상세.
+// 무효 @토큰은 입력한 그대로 일반 텍스트. 색은 절제(내 닉만 약간 진하게).
+function renderBody(
+  body: string,
+  mentions: ChatMention[] | null,
+  meNickname: string | null,
+  serverId: number,
+) {
+  return body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
+    const nick = part.startsWith('@') ? part.slice(1) : null;
+    const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
+    if (nick && hit) {
+      const cls =
+        meNickname && nick === meNickname
+          ? 'font-bold text-amber-600 dark:text-amber-400'
+          : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
+      if (hit.c) {
+        return (
+          <Link prefetch={false} key={i} href={profileHref(hit.c, serverId)} className={`${cls} hover:underline`}>
+            {nick}
+          </Link>
+        );
+      }
+      return (
+        <span key={i} className={cls}>
+          {nick}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
+function avatarBox(m: { avatar: string | null; faceBox: FaceBox | null }, size: string) {
+  return (
+    <span className={`${size} shrink-0 overflow-hidden`}>
+      {m.avatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={m.avatar}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full"
+          style={faceCropStyle(m.faceBox)}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * 메시지 행(2026-08-06 memo 분리) — 기존엔 인라인 map이라 한 글자 입력·쿨다운 1초 틱마다
+ * 최대 150행이 전부 재렌더됐다(전수조사 렉 1위). props가 전부 안정 참조·원시값이라 memo가
+ * 실효: 목록은 append 위주(기존 항목 참조 유지), 콜백은 useCallback.
+ * content-visibility:auto — 뷰포트 밖 행은 페인트·칭호 무한 애니메이션 프레임까지 스킵(렉 4위),
+ * contain-intrinsic-size로 스크롤 높이는 근사 유지. 미지원 브라우저는 무시(동작 동일).
+ */
+const ChatRow = memo(function ChatRow({
+  m,
+  prevMsg,
+  me,
+  meNickname,
+  serverId,
+  onProfile,
+  onReport,
+}: {
+  m: ChatMessageDto;
+  prevMsg: ChatMessageDto | undefined;
+  me: string | null;
+  meNickname: string | null;
+  serverId: number;
+  onProfile: (userId: string) => void;
+  onReport: (m: ChatMessageDto) => void;
+}) {
+  // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
+  if (m.sys || m.sysGuild) {
+    return (
+      <div
+        // 닉네임 링크로 프로필에 갔다 돌아오면 패널을 다시 연다(마운트 복원 소비).
+        onClickCapture={markRestoreIfLink}
+        className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500 [content-visibility:auto] [contain-intrinsic-size:auto_22px]"
+      >
+        {m.sys ? worldEventMessage(m.sys, { link: true }) : guildLogMessage(m.sysGuild!)}
+      </div>
+    );
+  }
+  const mine = m.userId === me;
+  const pending = m.id.startsWith('tmp-');
+  // 같은 유저 1분 내 연속 발언 — 아바타·닉 생략, 본문만 이어붙임(시스템 라인 사이는 미묶음).
+  const grouped =
+    !!prevMsg &&
+    !prevMsg.sys &&
+    !prevMsg.sysGuild &&
+    prevMsg.userId === m.userId &&
+    new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
+  const onBodyClick = (e: ReactMouseEvent) => {
+    if ((e.target as HTMLElement).closest('a')) return;
+    if (!mine && !pending) onReport(m);
+  };
+  if (grouped) {
+    return (
+      <div
+        className={`flex items-start gap-2 px-1.5 py-[2px] [content-visibility:auto] [contain-intrinsic-size:auto_24px] ${
+          mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+        } ${pending ? 'opacity-50' : ''}`}
+      >
+        <p
+          onClickCapture={markRestoreIfLink}
+          onClick={onBodyClick}
+          className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+        >
+          {renderBody(m.body, m.mentions, meNickname, serverId)}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`flex items-start gap-2 px-1.5 py-[5px] [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${
+        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+      } ${pending ? 'opacity-50' : ''}`}
+    >
+      <button type="button" onClick={() => onProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
+        {avatarBox(m, 'block h-6 w-6')}
+      </button>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-1.5 leading-none">
+          <button
+            type="button"
+            onClick={() => onProfile(m.userId)}
+            className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
+          >
+            {m.isMeleeChampion ? '🏆' : ''}
+            {m.nickname}
+          </button>
+          {m.guildEmblemUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.guildEmblemUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-3 w-3 shrink-0 self-center object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : null}
+          {m.guildName ? (
+            <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
+          ) : null}
+          {/* 칭호(2026-08-05, 집행관 흡수) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
+          <TitleTag
+            code={m.repTitle}
+            executorZone={m.executorZone}
+            executorZoneRegion={m.executorZoneRegion}
+            className="text-[9.5px]"
+          />
+          <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
+            {TIME_FMT.format(new Date(m.createdAt))}
+          </span>
+        </div>
+        {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
+        <p
+          onClickCapture={markRestoreIfLink}
+          onClick={onBodyClick}
+          className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+        >
+          {renderBody(m.body, m.mentions, meNickname, serverId)}
+        </p>
+      </div>
+    </div>
+  );
+});
+
 export function ChatDock() {
   const router = useRouter();
   const pathname = usePathname();
@@ -123,6 +312,8 @@ export function ChatDock() {
   const listRef = useRef<HTMLDivElement | null>(null);
   // 폴링의 증분(after) 기준점 — 상태를 effect 의존성에 넣지 않고 최신 목록을 읽기 위한 ref.
   const messagesRef = useRef<ChatMessageDto[]>([]);
+  // applyNew(장수명 콜백)에서 내 broadcast를 식별하기 위한 미러 — 상태 me와 동기화.
+  const meRef = useRef<string | null>(null);
   const serverIdRef = useRef(1);
   const tabRef = useRef<Tab>('all');
   tabRef.current = tab;
@@ -144,7 +335,8 @@ export function ChatDock() {
   useEffect(() => {
     collapsedRef.current = collapsed;
     messagesRef.current = messages;
-  }, [collapsed, messages]);
+    meRef.current = me;
+  }, [collapsed, messages, me]);
 
   // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 접힘 상태도 초기 복원.
   // useLayoutEffect — useEffect는 페인트 뒤라 접어둔 유저에게 매 이동마다 펼침→접힘이
@@ -226,7 +418,14 @@ export function ChatDock() {
       // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(100)가 정합 보정.
       setMessages((prev) => {
         if (prev.some((p) => p.id === m.id)) return prev;
-        const next = [...prev, m];
+        // 내 broadcast가 전송 응답보다 먼저 도착하는 창 — 같은 본문의 temp를 즉시 대체해
+        // "내 메시지가 잠깐 2개" 현상 제거(감사 버그). 응답 측은 이미 실메시지 존재 시 temp만 지움.
+        let base = prev;
+        if (meRef.current && m.userId === meRef.current) {
+          const ti = prev.findIndex((p) => p.id.startsWith('tmp-') && p.body === m.body);
+          if (ti >= 0) base = prev.filter((_, idx) => idx !== ti);
+        }
+        const next = [...base, m];
         return next.length > 150 ? next.slice(-150) : next;
       });
       if (openRef.current) {
@@ -422,7 +621,7 @@ export function ChatDock() {
   // 비활성 탭 선적재 — 길드 소속이 확인되면 길드 버퍼를 미리 채워 첫 전환도 즉시.
   useEffect(() => {
     if (!myGuild || bufRef.current.guild.messages.length > 0) return;
-    void fetch('/api/chat/recent?limit=50&channel=guild', { cache: 'no-store' })
+    void fetch('/api/chat/recent?limit=50&channel=guild&lite=1', { cache: 'no-store' })
       .then(async (r) => (r.ok ? ((await r.json()) as { messages?: ChatMessageDto[] }) : null))
       .then((d) => {
         if (!d?.messages || tabRef.current === 'guild') return;
@@ -533,7 +732,11 @@ export function ChatDock() {
     needInitialScrollRef.current = true;
     void fetchRecent(100).then((r) => {
       if (r) {
-        needInitialScrollRef.current = true; // fetch 반영 렌더도 페인트 전 바닥 고정.
+        // fetch 반영 렌더도 페인트 전 바닥 고정 — 단, 응답이 오는 사이 유저가 위로 스크롤해
+        // 읽는 중이면 위치를 뺏지 않는다(감사 버그: 늦은 응답의 스크롤 강탈).
+        const el = listRef.current;
+        if (!el || el.scrollHeight - el.scrollTop - el.clientHeight < 120)
+          needInitialScrollRef.current = true;
         setMessages((prev) => [...r.messages, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
       }
     });
@@ -556,7 +759,10 @@ export function ChatDock() {
     needInitialScrollRef.current = true;
     void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((r) => {
       if (!r) return;
-      needInitialScrollRef.current = true;
+      // 탭 전환 응답 — 그 사이 위로 스크롤해 읽는 중이면 바닥 고정을 생략(스크롤 강탈 방지).
+      const el = listRef.current;
+      if (!el || el.scrollHeight - el.scrollTop - el.clientHeight < 120)
+        needInitialScrollRef.current = true;
       setMessages((prev) => [...r.messages, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
       const lastUser = [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild);
       if (lastUser) setLatest(lastUser);
@@ -706,10 +912,20 @@ export function ChatDock() {
       } else {
         const b = bufRef.current[sentTab];
         b.messages = b.messages.filter((m) => m.id !== tempId);
+        // 탭을 바꾼 뒤 실패 — 입력 문장을 버리지 않되, 새로 치는 중이면 덮지 않는다(감사 버그).
+        setInput((cur) => cur || body);
         setCooldown(0);
       }
     };
-    void sendChat(body, sentTab)
+    // 전송은 서버 액션 대신 라우트(2026-08-06) — 액션은 응답에 layout 재렌더(RSC)가 동봉되어
+    // 최고 빈도 쓰기에 부적합했다. 채팅 UI는 낙관 렌더가 담당하므로 순수 JSON이면 충분.
+    void fetch('/api/chat/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body, channel: sentTab }),
+      cache: 'no-store',
+    })
+      .then(async (res) => (await res.json()) as SendChatResult)
       .then((r) => {
         if (r.status === 'error') {
           rollback();
@@ -739,7 +955,8 @@ export function ChatDock() {
   };
 
   // 로딩 팝업 없이 — 데이터가 다 오면 그때 연다(2026-07-21 피드백 3).
-  const openProfile = (userId: string) => {
+  // useCallback — ChatRow(memo) prop으로 내려가므로 참조가 흔들리면 memo가 무효.
+  const openProfile = useCallback((userId: string) => {
     setPopupFlash(null);
     void fetch(`/api/chat/profile?uid=${userId}`, { cache: 'no-store' })
       .then(async (res) => (res.ok ? ((await res.json()) as MiniProfile) : null))
@@ -749,7 +966,8 @@ export function ChatDock() {
       .catch(() => {
         /* 무시 — 팝업 미노출 */
       });
-  };
+  }, []);
+  const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
 
   // 차단 토글(0126, 서버 저장) — 낙관 반영 후 서버 확정, 실패 시 복원.
   const toggleBlock = (userId: string, nickname: string) => {
@@ -808,51 +1026,6 @@ export function ChatDock() {
 
   const visibleMessages = messages.filter((m) => !blocked.has(m.userId));
   const visibleLatest = latest && !blocked.has(latest.userId) ? latest : null;
-
-  // 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 강조, 닉 클릭 시 프로필 상세.
-  // 무효 @토큰은 입력한 그대로 일반 텍스트. 색은 절제(내 닉만 약간 진하게).
-  const renderBody = (body: string, mentions: ChatMention[] | null) =>
-    body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
-      const nick = part.startsWith('@') ? part.slice(1) : null;
-      const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
-      if (nick && hit) {
-        const cls =
-          meNickname && nick === meNickname
-            ? 'font-bold text-amber-600 dark:text-amber-400'
-            : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
-        if (hit.c) {
-          return (
-            <Link prefetch={false} key={i} href={profileHref(hit.c, serverIdRef.current)} className={`${cls} hover:underline`}>
-              {nick}
-            </Link>
-          );
-        }
-        return (
-          <span key={i} className={cls}>
-            {nick}
-          </span>
-        );
-      }
-      return part;
-    });
-
-  const avatarBox = (m: { avatar: string | null; faceBox: FaceBox | null }, size: string) => (
-    <span className={`${size} shrink-0 overflow-hidden`}>
-      {m.avatar ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={m.avatar}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full"
-          style={faceCropStyle(m.faceBox)}
-        />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
-      )}
-    </span>
-  );
 
   return (
     <>
@@ -997,142 +1170,18 @@ export function ChatDock() {
                 </div>
               ) : null}
               {(tab !== 'guild' || myGuild) &&
-                visibleMessages.map((m, i) => {
-                // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
-                if (m.sys || m.sysGuild) {
-                  return (
-                    <div
-                      key={m.id}
-                      // 닉네임 링크로 프로필에 갔다 돌아오면 패널을 다시 연다(마운트 복원 소비).
-                      onClickCapture={(e) => {
-                        if ((e.target as HTMLElement).closest('a')) {
-                          try {
-                            sessionStorage.setItem(RESTORE_KEY, 'panel');
-                          } catch {
-                            /* ignore */
-                          }
-                        }
-                      }}
-                      className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500"
-                    >
-                      {m.sys ? worldEventMessage(m.sys, { link: true }) : guildLogMessage(m.sysGuild!)}
-                    </div>
-                  );
-                }
-                const mine = m.userId === me;
-                const pending = m.id.startsWith('tmp-');
-                // 같은 유저 1분 내 연속 발언 — 아바타·닉 생략, 본문만 이어붙임(시스템 라인 사이는 미묶음).
-                const prev = visibleMessages[i - 1];
-                const grouped =
-                  !!prev &&
-                  !prev.sys &&
-                  !prev.sysGuild &&
-                  prev.userId === m.userId &&
-                  new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 60_000;
-                if (grouped) {
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex items-start gap-2 px-1.5 py-[2px] ${
-                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-                      } ${pending ? 'opacity-50' : ''}`}
-                    >
-                      <p
-                        onClickCapture={(e) => {
-                          if ((e.target as HTMLElement).closest('a')) {
-                            try {
-                              sessionStorage.setItem(RESTORE_KEY, 'panel');
-                            } catch {
-                              /* ignore */
-                            }
-                          }
-                        }}
-                        onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('a')) return;
-                          if (!mine && !pending) setReportTarget(m);
-                        }}
-                        className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-                      >
-                        {renderBody(m.body, m.mentions)}
-                      </p>
-                    </div>
-                  );
-                }
-                return (
-                  <div
+                visibleMessages.map((m, i) => (
+                  <ChatRow
                     key={m.id}
-                    className={`flex items-start gap-2 px-1.5 py-[5px] ${
-                      mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-                    } ${pending ? 'opacity-50' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => openProfile(m.userId)}
-                      aria-label={`${m.nickname} 정보`}
-                      className="mt-[3px]"
-                    >
-                      {avatarBox(m, 'block h-6 w-6')}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1.5 leading-none">
-                        <button
-                          type="button"
-                          onClick={() => openProfile(m.userId)}
-                          className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
-                        >
-                          {m.isMeleeChampion ? '🏆' : ''}
-                          {m.nickname}
-                        </button>
-                        {m.guildEmblemUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.guildEmblemUrl}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            className="h-3 w-3 shrink-0 self-center object-contain"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                        ) : null}
-                        {m.guildName ? (
-                          <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">
-                            {m.guildName}
-                          </span>
-                        ) : null}
-                        {/* 칭호(2026-08-05, 집행관 흡수) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
-                        <TitleTag
-                          code={m.repTitle}
-                          executorZone={m.executorZone}
-                          executorZoneRegion={m.executorZoneRegion}
-                          className="text-[9.5px]"
-                        />
-                        <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                          {TIME_FMT.format(new Date(m.createdAt))}
-                        </span>
-                      </div>
-                      {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
-                      <p
-                        onClickCapture={(e) => {
-                          if ((e.target as HTMLElement).closest('a')) {
-                            try {
-                              sessionStorage.setItem(RESTORE_KEY, 'panel');
-                            } catch {
-                              /* ignore */
-                            }
-                          }
-                        }}
-                        onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('a')) return;
-                          if (!mine && !pending) setReportTarget(m);
-                        }}
-                        className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-                      >
-                        {renderBody(m.body, m.mentions)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                    m={m}
+                    prevMsg={visibleMessages[i - 1]}
+                    me={me}
+                    meNickname={meNickname}
+                    serverId={sid ?? 1}
+                    onProfile={openProfile}
+                    onReport={onReport}
+                  />
+                ))}
             </div>
 
             {unseenBelow ? (

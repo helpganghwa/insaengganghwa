@@ -227,7 +227,7 @@ async function displayFields(
  * TTL 1회로 눌러준다. 전송 시 해당 채널 키를 무효화(같은 인스턴스), 다른 인스턴스는
  * TTL(≤5s)만큼만 늦게 본다 — 폴링 주기(15s)보다 짧아 체감 없음.
  */
-const recentCache = new Map<string, { at: number; msgs: ChatMessageDto[] }>();
+const recentCache = new Map<string, { at: number; lim: number; msgs: ChatMessageDto[] }>();
 const RECENT_TTL_WORLD_MS = 5_000;
 const RECENT_TTL_GUILD_MS = 10_000;
 const recentKey = (serverId: number, guildId: bigint | null) =>
@@ -246,8 +246,10 @@ export async function getRecentChat(
   // 캐시 히트 — lite(limit=1)도 전체 목록 캐시가 있으면 그 꼬리를 잘라 쓴다(0쿼리).
   const ck = recentKey(serverId, guildId);
   const ttl = guildId ? RECENT_TTL_GUILD_MS : RECENT_TTL_WORLD_MS;
+  // lim — 캐시를 채운 요청의 limit. 더 큰 limit 요청에는 히트로 답하지 않는다
+  // (50건 선적재 캐시가 100건 요청을 잘라먹는 오염 방지 — 미스로 흘려 새로 채움).
   const hit = recentCache.get(ck);
-  if (hit && Date.now() - hit.at < ttl) {
+  if (hit && Date.now() - hit.at < ttl && hit.lim >= limit) {
     return limit >= hit.msgs.length ? hit.msgs : hit.msgs.slice(-limit);
   }
   // 채널 필터 — 전체(guildId null)는 guild_id is null만, 길드는 해당 guild_id만.
@@ -300,7 +302,7 @@ export async function getRecentChat(
       } satisfies ChatMessageDto;
     });
   if (sysFeed.length === 0) {
-    if (limit > 1) recentCache.set(ck, { at: Date.now(), msgs });
+    if (limit > 1) recentCache.set(ck, { at: Date.now(), lim: limit, msgs });
     return msgs;
   }
   // 채팅 표시 구간(가장 오래된 메시지 이후) 이벤트만 — 채팅이 없으면 최근 15건.
@@ -315,7 +317,7 @@ export async function getRecentChat(
     a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
   );
   // 전체 조회만 캐시 — lite(limit=1)는 피드가 빠져 있어 캐시로 쓰면 안 된다.
-  if (limit > 1) recentCache.set(ck, { at: Date.now(), msgs: merged });
+  if (limit > 1) recentCache.set(ck, { at: Date.now(), lim: limit, msgs: merged });
   return merged;
 }
 
