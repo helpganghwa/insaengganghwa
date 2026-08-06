@@ -245,6 +245,8 @@ export function LeaderboardBoard({
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={e.profileImg}
+                              loading="lazy"
+                              decoding="async"
                               alt=""
                               aria-hidden
                               className="h-full w-full object-contain"

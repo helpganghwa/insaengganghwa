@@ -377,6 +377,8 @@ function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: 
             src={r.avatar}
             alt=""
             aria-hidden
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full"
             style={meleeFaceCropStyle(r.faceBox)}
           />

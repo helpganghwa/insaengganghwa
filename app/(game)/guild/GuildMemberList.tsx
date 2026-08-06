@@ -135,6 +135,8 @@ const MemberRow = memo(function MemberRow({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={m.avatar}
+              loading="lazy"
+              decoding="async"
               alt=""
               aria-hidden
               className="h-full w-full object-contain"

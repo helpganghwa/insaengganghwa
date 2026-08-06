@@ -190,6 +190,8 @@ export function JoinRequestBoard({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={r.avatar}
+                        loading="lazy"
+                        decoding="async"
                         alt=""
                         aria-hidden
                         className="h-full w-full object-contain"

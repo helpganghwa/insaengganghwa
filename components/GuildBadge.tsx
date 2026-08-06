@@ -49,6 +49,8 @@ export function GuildBadge({
       src={emblemUrl}
       alt=""
       aria-hidden
+      loading="lazy"
+      decoding="async"
       className="shrink-0 object-contain"
       style={{ width: size, height: size, imageRendering: 'pixelated' }}
     />
@@ -67,6 +69,8 @@ export function GuildBadge({
               src={emblemUrl}
               alt=""
               aria-hidden
+              loading="lazy"
+              decoding="async"
               className="object-contain"
               style={{ width: size, height: size, imageRendering: 'pixelated' }}
             />
