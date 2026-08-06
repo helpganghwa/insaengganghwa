@@ -116,27 +116,48 @@ export function GuildHome({
 
   // 결성 직후 문양은 after()로 비동기 생성 → 완성될 때까지 폴링해 픽업한다.
   // 이전엔 4초 뒤 1회뿐이라 실제 소요(10~40초)를 못 따라가 거의 항상 헛방이었다(2026-08-06).
-  const emblemPollsRef = useRef(0);
+  // 폴링 횟수를 state로 둔다 — ref는 렌더를 안 깨워 '소진 후 실패 표시'로 못 넘어간다.
+  const [emblemPolls, setEmblemPolls] = useState(0);
+  // 재시도 직후 낙관 표시 — 서버 상태(revalidate)가 돌아오기 전에도 즉시 '만드는 중'.
+  const [retryOptimistic, setRetryOptimistic] = useState(false);
+  const MAX_EMBLEM_POLLS = 24; // 5초 × 24 = 2분
   useEffect(() => {
-    if (guild.emblemUrl || guild.emblemStatus !== 'pending') return;
-    if (emblemPollsRef.current >= 12) return; // 5초 × 12 = 60초 상한
+    if (guild.emblemUrl) return;
+    if (guild.emblemStatus !== 'pending' && !retryOptimistic) return;
+    if (emblemPolls >= MAX_EMBLEM_POLLS) return;
     const t = setTimeout(() => {
-      emblemPollsRef.current += 1;
+      setEmblemPolls((n) => n + 1);
       router.refresh();
     }, 5000);
     return () => clearTimeout(t);
-  }, [guild.emblemUrl, guild.emblemStatus, router]);
+  }, [guild.emblemUrl, guild.emblemStatus, retryOptimistic, emblemPolls, router]);
 
-  const emblemPending = !guild.emblemUrl && guild.emblemStatus === 'pending';
-  const emblemFailed = !guild.emblemUrl && guild.emblemStatus === 'failed';
+  // 서버가 결과를 확정하면(문양 생김·failed 전환) 낙관 플래그를 내린다.
+  useEffect(() => {
+    if (guild.emblemUrl || guild.emblemStatus === 'failed') setRetryOptimistic(false);
+  }, [guild.emblemUrl, guild.emblemStatus]);
+
+  // 생성 중 표시는 폴링이 남아 있는 동안만 — 소진되면(예: 함수가 잘려 pending이 굳음)
+  // 스켈레톤에 갇히지 않고 실패 표시로 내려 다시 시도할 수 있게 한다.
+  const emblemPollsLeft = emblemPolls < MAX_EMBLEM_POLLS;
+  const emblemPending =
+    !guild.emblemUrl && (guild.emblemStatus === 'pending' || retryOptimistic) && emblemPollsLeft;
+  // status가 done인데 문양이 없는 경우(선택값 없는 레거시 길드 등)는 실패가 아니다 —
+  // 재시도할 원본이 없어 버튼이 죽은 링크가 된다. 조용히 기본 방패만 보여준다.
+  const emblemFailed = !guild.emblemUrl && !emblemPending && guild.emblemStatus !== 'done';
 
   // 수동 재시도 — 실패 상태에서만 노출. 성공하면 서버 액션의 revalidate로 문양이 바로 붙는다.
-  const [retrying, startRetry] = useTransition();
+  const [, startRetry] = useTransition();
   const retryEmblem = () => {
+    setRetryOptimistic(true); // 즉시 '만드는 중'으로 — 액션 응답을 기다리지 않는다
+    setEmblemPolls(0);
     startRetry(async () => {
       const r = await retryGuildEmblemAction();
-      if (r.status === 'success') showHeaderToast({ title: '문양을 만들었어요' });
-      else showError('문양 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      if (r.status === 'success') showHeaderToast({ title: '문양을 만들고 있어요' });
+      else {
+        setRetryOptimistic(false);
+        showError('문양 만들기를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      }
     });
   };
 
@@ -241,11 +262,6 @@ export function GuildHome({
             ) : emblemPending ? null : (
               <span className="text-2xl opacity-60">🛡️</span>
             )}
-            {emblemFailed && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-400 text-[10px] font-black text-zinc-900">
-                !
-              </span>
-            )}
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-bold">{guild.name}</h2>
@@ -273,10 +289,9 @@ export function GuildHome({
                   <button
                     type="button"
                     onClick={retryEmblem}
-                    disabled={retrying}
-                    className="rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                    className="rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
                   >
-                    {retrying ? '만드는 중…' : '다시 만들기'}
+                    다시 만들기
                   </button>
                 </div>
               ))}

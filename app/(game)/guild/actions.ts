@@ -125,18 +125,25 @@ export async function retryGuildEmblemAction() {
     return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   }
 
-  await markEmblemStatus(m.guildId, 'pending');
-  try {
-    await generateAndStoreEmblem({ guildId: m.guildId, selection });
-    revalidatePath('/guild');
-    revalidatePath('/', 'layout');
-    return { status: 'success' } as const;
-  } catch (e) {
-    console.error('[guild.emblem.retry]', e);
-    await markEmblemStatus(m.guildId, 'failed', e);
-    revalidatePath('/guild');
-    return { status: 'error', code: 'EMBLEM_FAILED' } as const;
-  }
+  // ⚠ 생성을 액션 안에서 await하지 않는다(2026-08-06). 서버 액션은 직렬 처리라
+  // 10~40초짜리 생성을 붙잡고 있으면 그동안 라우터 내비게이션이 통째로 멈춘다(무한 로딩 제보).
+  // 상태만 pending으로 찍고 즉시 반환 → 화면은 바로 '만드는 중'으로 바뀌고 폴링이 결과를 픽업한다.
+  // 이 콜백이 함수 예산에 잘려도 상태가 pending으로 남아 재시도 크론이 그대로 이어받는다.
+  const guildId = m.guildId;
+  await markEmblemStatus(guildId, 'pending');
+  after(async () => {
+    try {
+      await generateAndStoreEmblem({ guildId, selection });
+      revalidatePath('/guild');
+      revalidatePath('/', 'layout');
+    } catch (e) {
+      console.error('[guild.emblem.retry]', e);
+      await markEmblemStatus(guildId, 'failed', e);
+      revalidatePath('/guild');
+    }
+  });
+  revalidatePath('/guild');
+  return { status: 'success' } as const;
 }
 
 // 헤더 문양은 (game) 공유 레이아웃(URL '/')에 있음 — page 리밸리데이트론 안 바뀜.
