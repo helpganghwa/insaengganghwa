@@ -11,7 +11,14 @@
  */
 
 export type WeaponKind = {
-  /** 최종 프롬프트에 반드시 등장해야 하는 영문 종류 명사. */
+  /**
+   * 최종 프롬프트에 반드시 등장해야 하는 영문 종류 명사.
+   *
+   * ⚠ 괄호 보충은 **어휘가 모호할 때 범주를 알려주는 용도로만** 쓴다(odachi·blowgun·cane sword
+   * 처럼 단어만으로는 무엇인지 모르는 경우). 재질·형태 형용사를 넣으면 아이템 고유의 실루엣을
+   * 지운다 — 'metal-bladed'를 넣었더니 날개꼴 칼이 평범한 칼이 됐다(2026-08-06 제보).
+   * 형태를 꼭 지켜야 하는 아이템은 형태를 **명사 안에 긍정형으로** 남긴다.
+   */
   noun: string;
   /** 양손에 하나씩 드는 한 쌍 — '지팡이처럼 짚기' 류 한 자루 포즈와 상충한다. */
   pair?: boolean;
@@ -53,9 +60,9 @@ const BY_KEY: Record<string, WeaponKind> = {
   necromancer_skull_staff: { noun: 'staff (a long magic rod)' },
   orc_shaman_staff: { noun: 'staff (a long magic rod)' },
   // ── 쌍무기 ──
-  kingdom_court_twin_sabers: { noun: 'twin sabers (a matched pair of curved swords)', pair: true },
-  assassin_twin_daggers: { noun: 'twin daggers (a matched pair of knives)', pair: true },
-  volcano_dancer_daggers: { noun: 'twin daggers (a matched pair of knives)', pair: true },
+  kingdom_court_twin_sabers: { noun: 'twin sabers', pair: true }, // 실물은 곧은 날 — '굽은' 보충은 모순이라 제거
+  assassin_twin_daggers: { noun: 'twin daggers', pair: true },
+  volcano_dancer_daggers: { noun: 'twin daggers', pair: true },
   // 날개꼴 칼 — 스프라이트가 깃털 날개로 읽혀 생성기가 등에 날개를 그렸다. 종류(검)는 못 박되
   // **형태(깃털 날개꼴 칼날)는 명사 안에 남긴다** — 'metal-bladed'만 강조했더니 평범한 칼로
   // 변해 아이템 정체성이 사라졌다(2026-08-06 제보).
@@ -76,14 +83,14 @@ const BY_KEY: Record<string, WeaponKind> = {
 const BY_SUFFIX: Record<string, WeaponKind> = {
   rapier: { noun: 'rapier (a slender one-handed sword)' },
   saber: { noun: 'saber (a curved one-handed sword)' },
-  sabers: { noun: 'twin sabers (a matched pair of curved swords)', pair: true },
+  sabers: { noun: 'twin sabers', pair: true },
   sword: { noun: 'longsword' },
   blade: { noun: 'longsword' },
   katana: { noun: 'katana (a curved Japanese sword)' },
   odachi: { noun: 'odachi (a very long two-handed Japanese sword)' },
   greatsword: { noun: 'greatsword' },
-  twinblades: { noun: 'twin swords (a matched pair of one-handed swords)', pair: true },
-  daggers: { noun: 'twin daggers (a matched pair of knives)', pair: true },
+  twinblades: { noun: 'twin swords', pair: true },
+  daggers: { noun: 'twin daggers', pair: true },
   trident: { noun: 'trident (a three-pronged polearm)' },
   halberd: { noun: 'halberd (a polearm)' },
   spear: { noun: 'spear (a polearm)' },
