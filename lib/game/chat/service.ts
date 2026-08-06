@@ -190,7 +190,8 @@ async function displayFields(
     getGuildBriefsByUsers(uniq, serverId).catch(() => new Map()),
     currentMeleeChampion(serverId).catch(() => null),
   ]);
-  // 대표 칭호 배치 재검증(2쿼리 상한) — 실패해도 채팅은 살린다(전원 미표시 폴백).
+  // 대표 칭호 배치 재검증 — 장비/해방형은 배치 2쿼리, heavy 조건부는 60초 캐시 경유(display.ts).
+  // 실패해도 채팅은 살린다(전원 미표시 폴백).
   const repMap = await resolveRepTitlesBatch(
     rows.map((r) => ({
       userId: r.userId,

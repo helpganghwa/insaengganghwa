@@ -63,9 +63,9 @@ export async function resolveRepTitle(
     return Number(m.w) >= 10 ? repCode : null;
   }
 
-  // 판정 2차 조건부 — 코드별 표적 쿼리 1~2회(전체 지표 수집 없이)
+  // 판정 2차 조건부 — 코드별 표적 쿼리 1~2회(60초 캐시 경유 — 채팅·헤더 반복 호출 흡수)
   if (HEAVY_CONDITIONALS.has(repCode)) {
-    return (await verifyHeavyConditional(repCode, userId, serverId)) ? repCode : null;
+    return (await verifyHeavyConditionalCached(repCode, userId, serverId)) ? repCode : null;
   }
 
   // 그 외 조건부 — 판정 붙기 전까지 보수적으로 숨김
@@ -84,6 +84,25 @@ const RANK_METRIC: Record<string, string> = {
   rank_combat: 'combat', rank_max: 'max', rank_sum: 'sum', rank_raid: 'raid', rank_melee: 'melee',
 };
 const KST = `at time zone 'Asia/Seoul'`;
+
+/**
+ * heavy 검증 결과 TTL 캐시(2026-08-06) — 채팅 폴링이 이 검증을 유저별로 반복 호출해
+ * "배치 2쿼리 상한"이라는 가정이 깨졌다(채팅 감사: top_patron 착용자 1명이 있으면 전 유저의
+ * 폴링마다 결제 테이블 전체 집계). 60초 캐시로 폴링 반복분을 흡수한다 — 유저가 느끼는 차이는
+ * 조건을 잃은 칭호가 채팅에서 최대 ~1분 늦게 사라지는 것뿐(어제1위형은 자정 만료라 무의미).
+ */
+const heavyCache = new Map<string, { at: number; ok: boolean }>();
+const HEAVY_TTL_MS = 60_000;
+
+async function verifyHeavyConditionalCached(code: string, userId: string, serverId: number): Promise<boolean> {
+  const k = `${userId}:${serverId}:${code}`;
+  const hit = heavyCache.get(k);
+  if (hit && Date.now() - hit.at < HEAVY_TTL_MS) return hit.ok;
+  const ok = await verifyHeavyConditional(code, userId, serverId);
+  heavyCache.set(k, { at: Date.now(), ok });
+  if (heavyCache.size > 2000) heavyCache.clear(); // 러프한 상한 — 인스턴스 메모리 보호
+  return ok;
+}
 
 /** 코드별 표적 재검증 — 핫패스(헤더)라 쿼리 1~2회 상한. 실패는 숨김으로 강등. */
 async function verifyHeavyConditional(code: string, userId: string, serverId: number): Promise<boolean> {
@@ -329,12 +348,16 @@ export async function resolveRepTitlesBatch(
     }
   }
 
-  // 판정 2차 조건부 — 드문 케이스라 개별 표적 검증(동시 소수)
+  // 판정 2차 조건부 — 60초 캐시 경유. 캐시 히트면 0쿼리라 채팅 폴링(15초)의 반복 검증이
+  // 유저·코드당 분당 1회로 눌린다. 미스가 겹쳐도 동시 검증 수를 제한해 풀(max 8)을 지킨다.
   if (needHeavy.length) {
-    await Promise.all(needHeavy.map(async (n) => {
-      const ok = await verifyHeavyConditional(n.code, n.userId, serverId);
-      out.set(n.userId, ok ? n.code : null);
-    }));
+    const LIMIT = 4;
+    for (let i = 0; i < needHeavy.length; i += LIMIT) {
+      await Promise.all(needHeavy.slice(i, i + LIMIT).map(async (n) => {
+        const ok = await verifyHeavyConditionalCached(n.code, n.userId, serverId);
+        out.set(n.userId, ok ? n.code : null);
+      }));
+    }
   }
 
   return out;
