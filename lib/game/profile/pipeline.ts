@@ -64,6 +64,13 @@ function serviceClient(): SupabaseClient {
 
 // ─── 상수 ───
 
+/**
+ * 머리 높이 상한(전신 대비) — 이 값 이상이면 인체 비율 붕괴로 리젝(전액 환불 후 재생성 유도).
+ * 0.19 ≈ 5.3등신. 실측 분포(n=580): 중앙 0.155(6.5등신) · p90 0.17 · 0.19 이상 2.9%.
+ * 목표(7~7.5등신)에 못 미치는 6등신대는 통과시킨다 — 생성기의 기본 성향이라 전부 거르면
+ * 리젝률이 13%까지 오르고 그만큼 생성 비용이 두 배로 나간다.
+ */
+const HEAD_RATIO_MAX = 0.19;
 const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 const STORAGE_BUCKET = 'profiles';
 
@@ -221,8 +228,14 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       // 검수기(ai-review)는 안전+해부학 모더레이터라 프레이밍/잘림을 판정하지 않는다.
       const [bgOpaque, cropResult] = await Promise.all([anyBackgroundOpaque([png]), detectFullBodyCrop(png)]);
       const cropped = cropResult.cropped;
+      // ③ 인체 비율 붕괴(2026-08-06) — 프롬프트는 7~7.5등신을 요구하는데 생성기가 5등신 이하로
+      // 뽑는 경우가 있다(실측: 중앙 6.5등신, 상위 3%가 5.3등신 이하). 검수기는 "비율로는 실패시키지
+      // 말라"는 안전 모더레이터라 이 결함을 통과시키므로, 검수기가 남긴 머리 박스 높이로 수치 판정한다.
+      // 임계 0.19 = 약 5.3등신 — 취향 차이가 아니라 명백히 무너진 경우만 거른다(리젝=전액 환불).
+      const headH = review.verdict.head?.h ?? null;
+      const badRatio = headH !== null && headH >= HEAD_RATIO_MAX;
 
-      if (review.verdict.pass && !bgOpaque && !cropped) {
+      if (review.verdict.pass && !bgOpaque && !cropped && !badRatio) {
         // south 1장만 storage 미러 → rotations={south} (회전 미사용).
         const supabase = serviceClient();
         const path = `${job.userId}/${job.characterId}/south.png`;
@@ -241,6 +254,8 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
           verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || '배경이 투명하지 않습니다(불투명 배경 검출).' };
         if (cropped)
           verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || '전신이 아닌 잘린 캐릭터입니다(하반신이 프레임에서 잘림).' };
+        if (badRatio)
+          verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || `인체 비율이 무너졌습니다(머리 높이 ${(headH! * 100).toFixed(0)}% — 약 ${(1 / headH!).toFixed(1)}등신).` };
         await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, verdict);
         rejected += 1;
       }
