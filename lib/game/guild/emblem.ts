@@ -58,7 +58,8 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
     const shapeNote = isShieldShape(s.shapeId)
       ? ''
       : `\nIMPORTANT: this shape is NOT a shield. The entire emblem's outer silhouette MUST be ${shape}. Never draw a shield/escutcheon/heater shield.`;
-    const res = await anthropic().messages.create({
+    const res = await anthropic().messages.create(
+      {
       model: EMBLEM_PROMPT_MODEL,
       max_tokens: 220,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
@@ -75,7 +76,10 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
             `Write the one-line heraldic pixel guild emblem prompt.`,
         },
       ],
-    });
+      },
+      // 타임아웃 미지정 시 SDK 기본이 10분 — 프롬프트 생성이 늘어지면 그 자체로 예산을 태운다.
+      { timeout: 12_000, maxRetries: 1 },
+    );
     const block = res.content.find((b) => b.type === 'text');
     const text = block && 'text' in block ? block.text.trim().replace(/^["']|["']$/g, '') : '';
     if (text.length < 20) return buildEmblemPrompt(s); // 너무 짧음 → 폴백
@@ -185,12 +189,20 @@ async function generateEmblemPng(prompt: string, shieldLike = true, startKeyIdx 
     'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature' +
     (shieldLike ? '' : ', shield, heater shield, round shield, escutcheon, shield shape');
   let lastErr = 'unknown';
+  // 전체 예산(2026-08-06) — 결성/재시도 경로는 (game) maxDuration 60s를 공유한다. 예산을 넘기면
+  // 함수가 통째로 kill돼 catch도 못 돌고 상태가 pending으로 굳는다(스테이징 실측). 스스로 빠져나와
+  // 'failed'로 남기면 유저에게 즉시 드러나고 재시도 크론도 이어받는다.
+  const deadline = Date.now() + 40_000;
   for (let attempt = 0; attempt < 4; attempt++) {
+    if (Date.now() > deadline) {
+      lastErr = `time budget exceeded (${lastErr})`;
+      break;
+    }
     const keyIdx = ((startKeyIdx - 1 + attempt) % 2) + 1; // 시작키에서 시도마다 1↔2 교대
     const key = pixellabKeyByIdx(keyIdx);
     // 행 방지 — Pixellab 무응답/쿼터초과 시 25초 후 abort(과거 300초 함수 타임아웃 유발). 빠른 실패→폴백.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 25_000);
+    const timer = setTimeout(() => ctrl.abort(), 15_000); // 예산 40s 안에서 2~3회 시도 가능하게 단축
     let res: Response;
     try {
       res = await fetch(PIXFLUX_URL, {
@@ -339,7 +351,12 @@ export async function markEmblemStatus(
   const msg = status === 'failed' ? String(error instanceof Error ? error.message : (error ?? '')).slice(0, 300) : null;
   await db
     .update(guilds)
-    .set({ emblemStatus: status, emblemError: msg })
+    .set({
+      emblemStatus: status,
+      emblemError: msg,
+      // pending 시작 시각을 남긴다 — 이게 없으면 굳은 pending을 '생성 중'과 구분할 수 없다.
+      emblemPendingAt: status === 'pending' ? new Date() : null,
+    })
     .where(eq(guilds.id, guildId))
     .catch(() => {}); // 상태 기록 실패가 본 흐름을 막지 않는다.
 }

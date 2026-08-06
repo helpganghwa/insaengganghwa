@@ -57,6 +57,8 @@ type GuildView = {
   emblemColor: string | null;
   /** 문양 생성 상태(0150) — 'pending' 생성 중 · 'failed' 실패 · 'done' 완료. */
   emblemStatus: string;
+  /** 생성 시작 시각(ms) — 굳은 pending 판정용. null=시작 기록 없음. */
+  emblemPendingAt: number | null;
   /** 자동 재시도(12회) 소진 — 조합을 바꿔야 풀린다. */
   emblemExhausted: boolean;
 };
@@ -116,6 +118,13 @@ export function GuildHome({
 
   // 결성 직후 문양은 after()로 비동기 생성 → 완성될 때까지 폴링해 픽업한다.
   // 이전엔 4초 뒤 1회뿐이라 실제 소요(10~40초)를 못 따라가 거의 항상 헛방이었다(2026-08-06).
+  // 시작한 지 3분 넘은 pending은 굳은 것으로 본다(함수가 잘려 catch가 못 돈 경우).
+  // 시각 기준이 없으면 새로고침마다 폴링이 리셋돼 '생성 중'이 영원히 반복된다.
+  const emblemStale =
+    guild.emblemStatus === 'pending' &&
+    guild.emblemPendingAt !== null &&
+    Date.now() - guild.emblemPendingAt > 180_000;
+
   // 폴링 횟수를 state로 둔다 — ref는 렌더를 안 깨워 '소진 후 실패 표시'로 못 넘어간다.
   const [emblemPolls, setEmblemPolls] = useState(0);
   // 재시도 직후 낙관 표시 — 서버 상태(revalidate)가 돌아오기 전에도 즉시 '만드는 중'.
@@ -124,13 +133,14 @@ export function GuildHome({
   useEffect(() => {
     if (guild.emblemUrl) return;
     if (guild.emblemStatus !== 'pending' && !retryOptimistic) return;
+    if (emblemStale && !retryOptimistic) return; // 굳은 pending은 폴링해도 안 바뀐다
     if (emblemPolls >= MAX_EMBLEM_POLLS) return;
     const t = setTimeout(() => {
       setEmblemPolls((n) => n + 1);
       router.refresh();
     }, 5000);
     return () => clearTimeout(t);
-  }, [guild.emblemUrl, guild.emblemStatus, retryOptimistic, emblemPolls, router]);
+  }, [guild.emblemUrl, guild.emblemStatus, emblemStale, retryOptimistic, emblemPolls, router]);
 
   // 서버가 결과를 확정하면(문양 생김·failed 전환) 낙관 플래그를 내린다.
   useEffect(() => {
@@ -141,7 +151,9 @@ export function GuildHome({
   // 스켈레톤에 갇히지 않고 실패 표시로 내려 다시 시도할 수 있게 한다.
   const emblemPollsLeft = emblemPolls < MAX_EMBLEM_POLLS;
   const emblemPending =
-    !guild.emblemUrl && (guild.emblemStatus === 'pending' || retryOptimistic) && emblemPollsLeft;
+    !guild.emblemUrl &&
+    (retryOptimistic || (guild.emblemStatus === 'pending' && !emblemStale)) &&
+    emblemPollsLeft;
   // status가 done인데 문양이 없는 경우(선택값 없는 레거시 길드 등)는 실패가 아니다 —
   // 재시도할 원본이 없어 버튼이 죽은 링크가 된다. 조용히 기본 방패만 보여준다.
   const emblemFailed = !guild.emblemUrl && !emblemPending && guild.emblemStatus !== 'done';

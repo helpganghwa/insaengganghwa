@@ -62,7 +62,11 @@ export async function GET(req: Request) {
     // 시도 카운트를 생성 전에 선증가 — 생성 도중 함수가 죽어도 같은 길드로 무한 루프하지 않는다.
     await db
       .update(guilds)
-      .set({ emblemAttempts: sql`${guilds.emblemAttempts} + 1`, emblemStatus: 'pending' })
+      .set({
+        emblemAttempts: sql`${guilds.emblemAttempts} + 1`,
+        emblemStatus: 'pending',
+        emblemPendingAt: new Date(),
+      })
       .where(sql`${guilds.id} = ${g.id}`);
 
     try {

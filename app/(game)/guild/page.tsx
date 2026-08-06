@@ -131,6 +131,8 @@ export default async function GuildPage() {
           emblemUrl: guild.emblemUrl,
           emblemColor: guild.emblemColor,
           emblemStatus: guild.emblemStatus,
+          // 생성 시작 시각(ms) — 굳은 pending을 클라이언트가 실패로 강등하는 근거.
+          emblemPendingAt: guild.emblemPendingAt ? guild.emblemPendingAt.getTime() : null,
           // 자동 재시도 소진 여부 — 소진 시 안내를 '다른 조합 고르기'로 바꾼다.
           emblemExhausted: guild.emblemAttempts >= 12,
         }}

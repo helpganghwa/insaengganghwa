@@ -66,6 +66,8 @@ export const guilds = pgTable('guilds', {
   emblemStatus: text('emblem_status').notNull().default('done'),
   /** 마지막 실패 사유(운영 진단용, 유저에겐 요약만 노출). */
   emblemError: text('emblem_error'),
+  /** 생성 시작 시각(0151) — pending이 굳었는지 판정. 오래된 pending은 실패로 본다. */
+  emblemPendingAt: timestamp('emblem_pending_at', { withTimezone: true }),
   /** 길드 공지 ≤200자(길드장/부길드장만 편집, 멤버 전용 노출). */
   notice: text('notice'),
   /** 길드 소개(공개) — 목록 팝업 노출용. 길드장/부길드장 편집. null=미설정. */
