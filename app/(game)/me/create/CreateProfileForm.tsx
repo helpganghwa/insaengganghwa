@@ -66,13 +66,14 @@ export function CreateProfileForm({
 
   // 진행/대기 중 서버 상태 재조회(대기→시작→완료 반영). 완료되면 queue=null로 정지.
   // 경량 폴링(2026-08-06) — 이전엔 30초마다 풀 refresh(페이지+layout 재렌더 ~10회/생성).
-  // 상태 라우트(1쿼리)만 찍고 **상태가 바뀐 틱에만** 풀 refresh 1회. 앱을 내려놓고 기다리는
-  // 흔한 시나리오를 위해 백그라운드 탭은 스킵(복귀 시 다음 틱이 잡는다).
+  // 상태 라우트(1쿼리)만 찍고 **상태가 바뀐 틱에만** 풀 refresh 1회. 백그라운드 탭은 스킵,
+  // 복귀 시엔 즉시 1회 확인(5초 스로틀) — "생성 됐나?" 하고 돌아온 유저가 30초를 안 기다리게.
   useEffect(() => {
     if (queue === null) return;
     const cur = queue.status;
-    const id = setInterval(() => {
-      if (document.hidden) return;
+    let lastCheckAt = 0;
+    const check = () => {
+      lastCheckAt = Date.now();
       void fetch('/api/profile/queue-status', { cache: 'no-store' })
         .then(async (r) => (r.ok ? ((await r.json()) as { status: string | null }) : null))
         .then((s) => {
@@ -81,8 +82,18 @@ export function CreateProfileForm({
         .catch(() => {
           /* 네트워크 실패 — 다음 틱 재시도 */
         });
+    };
+    const id = setInterval(() => {
+      if (!document.hidden) check();
     }, 30_000);
-    return () => clearInterval(id);
+    const onVisible = () => {
+      if (!document.hidden && Date.now() - lastCheckAt > 5_000) check();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [queue, router]);
 
   const balance = BigInt(diamond);
