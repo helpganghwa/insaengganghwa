@@ -16,7 +16,11 @@ export async function GET() {
     { dpl },
     {
       headers: {
-        'cache-control': 'no-store, no-cache, must-revalidate',
+        // dpl은 배포 시에만 바뀌는 전역 단일 값 — CDN 30초 캐시로 전 유저 폴링이
+        // 분당 origin 2회로 수렴(2026-08-06 감사: 동접 1천 기준 월 1,700만 함수호출 절감).
+        // 브라우저는 max-age=0으로 매번 엣지에 확인(감지 지연은 s-maxage 30초뿐 —
+        // 클라 폴링 주기 5분보다 훨씬 작아 체감 없음).
+        'cache-control': 'public, max-age=0, s-maxage=30, stale-while-revalidate=60',
       },
     },
   );

@@ -129,8 +129,10 @@ export function BoastModal({
     if (open) setImgErr(false);
   }, [open, imageUrl]);
 
-  // 'N명이 인생 강화중' 카운트 — 모달 마운트 시 1회. (캐시 60s라 가볍게)
+  // 'N명이 인생 강화중' 카운트 — **열릴 때만** 조회(2026-08-06). 이전엔 deps []라 닫힌
+  // 모달도 /me·/u 페이지 로드마다 서버액션 왕복을 만들었다(액션 응답엔 RSC 재렌더까지 동봉).
   useEffect(() => {
+    if (!open) return;
     let cancelled = false;
     (async () => {
       try {
@@ -143,7 +145,7 @@ export function BoastModal({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [open]);
 
   if (!open || !portalReady) return null;
 
@@ -193,10 +195,10 @@ export function BoastModal({
       return;
     }
     const origin = window.location.origin;
-    // v=random은 카톡 캐시 우회(매 공유마다 다른 OG — 서버 OG는 sprite·배경 랜덤 합성).
-    const v = Math.random().toString(36).slice(2, 10);
-    const params = new URLSearchParams({ v, s: String(serverId) });
-    const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
+    // 모달이 계산한 imageUrl(v 포함)을 그대로 재사용(2026-08-06) — 이전엔 여기서 새 난수를
+    // 뽑아 공유 1회에 서로 다른 OG PNG 2장을 함수에서 생성했다. 같은 URL을 쓰면 숨은
+    // 프리로드 img가 데운 CDN 캐시(s-maxage 1h)를 카톡 크롤러가 그대로 히트한다.
+    // "매 공유 다른 OG"는 모달을 열 때마다 v가 새로 뽑히므로 유지된다.
     // '인생강화 시작' — /s/[code]?start=1 → /go(인앱브라우저 탈출) → 외부 브라우저에서 /s?go=1이
     // pending_referral 쿠키 세팅(추천 귀속) 후 /login. 인앱에서 쿠키를 세팅하면 탈출 시 다른
     // 브라우저로 안 넘어가 유실되므로, 쿠키 세팅을 탈출 후(외부 브라우저)로 미룬다.

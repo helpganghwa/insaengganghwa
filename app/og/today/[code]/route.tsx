@@ -158,6 +158,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      // 엣지 캐시 1h + SWR 1d — 미리보기가 데운 CDN 항목을 카톡 크롤러가 재사용(형제
+      // /og/[shareCode]와 동일 정책, 2026-08-06 감사에서 이 라우트만 누락 발견).
+      headers: { 'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+    },
   );
 }

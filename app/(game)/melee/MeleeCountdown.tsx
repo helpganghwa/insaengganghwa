@@ -59,13 +59,21 @@ export function MeleeCountdown({
   const REVEAL_GRACE_MS = 6 * 60_000;
 
   // 새로고침: ① 발표시각 지났는데 미발표(reveal 틱 반영) ② 배틀 미생성 + 산출시각 지남(run이
-  // 9:55까지 5분 재시도라 늦게 생성된 배틀 반영). 둘 다 10초 폴링으로 화면 자동 갱신.
+  // 9:55까지 5분 재시도라 늦게 생성된 배틀 반영). 폴링으로 화면 자동 갱신.
+  // ⚠ deps에 now(1초 클럭)를 넣으면 안 됨 — 매초 cleanup→재설정되어 타이머가 영원히 안
+  // 터진다(2026-08-06 감사에서 발견: 발표 후 화면이 수동 새로고침 전까지 갇혀 있었음).
+  // boolean으로 접어 전이 시에만 effect가 돌게 한다.
+  const shouldPoll = now >= revealAt || (!hasBattle && now >= runAt);
   useEffect(() => {
-    const shouldPoll = now >= revealAt || (!hasBattle && now >= runAt);
     if (!shouldPoll) return;
-    const t = setTimeout(() => router.refresh(), 10_000);
-    return () => clearTimeout(t);
-  }, [now, revealAt, runAt, hasBattle, router]);
+    // 지터(10~15초) — 발표 시각(10:00)에 전 서버 유저의 폴링이 동시에 살아나는 herd 방지.
+    // 백그라운드 탭은 스킵(복귀하면 다음 틱이 잡는다).
+    const delay = 10_000 + Math.random() * 5_000;
+    const t = setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, delay);
+    return () => clearInterval(t);
+  }, [shouldPoll, router]);
 
   // 난투·전달은 같은 1시간 카운트다운(10:00 발표 기준), 라벨만 9:45 경계로 변경.
   let label: string;

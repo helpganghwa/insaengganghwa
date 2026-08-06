@@ -15,7 +15,11 @@ import { useEffect } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
-const POLL_INTERVAL_MS = 60_000;
+// 5분(2026-08-06, 감사 후 60초→5분) — 배포 감지는 긴급성이 낮고, 전 유저 상시 루프라
+// 주기가 곧 함수 호출량. /api/health가 CDN 30초 캐시를 얹어 origin 부하는 추가로 상수화.
+const POLL_INTERVAL_MS = 300_000;
+// 포그라운드 복귀 재확인 스로틀 — 앱 전환을 빠르게 오가는 유저의 연타 방지(채팅 폴링과 동일 패턴).
+const VISIBILITY_THROTTLE_MS = 30_000;
 const UPDATED_FLAG = 'ig:auto-updated';
 const RELOAD_TS = 'ig:last-auto-reload';
 // 롤링 배포 중 인스턴스별 dpl이 엇갈리면(핑퐁) 무한 새로고침 위험 → 브라우저당 쿨다운 1회.
@@ -37,8 +41,10 @@ export function VersionUpdateToast() {
   useEffect(() => {
     let firstDpl: string | null = null;
     let reloaded = false;
+    let lastCheckAt = 0;
 
     async function check() {
+      lastCheckAt = Date.now();
       try {
         const r = await fetch('/api/health', { cache: 'no-store' });
         if (!r.ok) return;
@@ -67,11 +73,15 @@ export function VersionUpdateToast() {
     }
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') check();
+      if (document.visibilityState === 'visible' && Date.now() - lastCheckAt > VISIBILITY_THROTTLE_MS)
+        check();
     };
 
     check();
-    const id = setInterval(check, POLL_INTERVAL_MS);
+    // 백그라운드 탭은 스킵 — 복귀 시 onVisibility가 따라잡는다(채팅 폴링과 동일 패턴).
+    const id = setInterval(() => {
+      if (!document.hidden) check();
+    }, POLL_INTERVAL_MS);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       clearInterval(id);
