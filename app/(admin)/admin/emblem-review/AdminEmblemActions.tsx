@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { adminConfirmEmblem, adminRefundEmblemEscrow, adminRejectEmblem } from './actions';
+import { adminConfirmEmblem, adminRefundEmblemEscrow, adminRegenerateEmblem, adminRejectEmblem } from './actions';
 
 /** 검토 통과(무조치) + 리젝+환불 — 아바타 검수와 동일 결정 축. 리젝만 2탭 컨펌. */
 export function EmblemDecisionButtons({ emblemId }: { emblemId: string }) {
@@ -79,6 +79,31 @@ export function RefundEscrowButton({ escrowId, amount }: { escrowId: string; amo
         {pending ? '처리중…' : confirm ? '다시 눌러 확정' : `💎${amount} 환불`}
       </button>
       {msg ? <span className="text-[10px] text-red-400">{msg}</span> : null}
+    </span>
+  );
+}
+
+/** 문양 재생성(관리자) — 무문양 길드에 저장된 선택값으로 즉시 생성 + 자동 재시도 카운터 리셋. */
+export function RegenerateEmblemButton({ guildId }: { guildId: string }) {
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            setMsg(null);
+            const r = await adminRegenerateEmblem(guildId).catch(() => ({ ok: false, msg: '전송 실패' }));
+            setMsg(r.ok ? '생성 완료' : (r.msg ?? '실패'));
+          })
+        }
+        className="rounded-md bg-sky-600 px-2 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+      >
+        {pending ? '생성중…' : '문양 재생성'}
+      </button>
+      {msg ? <span className="text-[10px] text-zinc-400">{msg}</span> : null}
     </span>
   );
 }

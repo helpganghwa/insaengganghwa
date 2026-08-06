@@ -221,7 +221,17 @@ async function generateEmblemPng(prompt: string, shieldLike = true, startKeyIdx 
       lastErr = `429 rate limit (key${keyIdx})`;
       continue; // 다음 시도는 교대된 키로 — 한쪽 키 포화 시 다른 키로 우회.
     }
-    if (!res.ok) throw new Error(`pixflux HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    // 5xx는 일시 장애로 보고 재시도(2026-08-06) — 이전엔 한 번의 502로 4회 루프를 못 돌고
+    // 전체가 즉시 실패했다. 4xx(인증·크레딧·잘못된 요청)는 재시도해도 같으므로 즉시 중단.
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 200);
+      if (res.status >= 500 && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 700 * 2 ** attempt));
+        lastErr = `HTTP ${res.status} (key${keyIdx})`;
+        continue;
+      }
+      throw new Error(`pixflux HTTP ${res.status}: ${body}`);
+    }
     const j = (await res.json()) as { image?: { base64?: string } };
     const b64 = j.image?.base64;
     if (!b64) throw new Error('pixflux no base64');
@@ -299,12 +309,39 @@ export async function generateAndStoreEmblem(input: {
   selection: EmblemSelection;
 }): Promise<{ emblemUrl: string }> {
   const { emblemUrl, color, prompt } = await generateEmblemAsset(input.guildId, input.selection);
-  const [row] = await db
-    .insert(guildEmblems)
-    .values({ guildId: input.guildId, emblemUrl, emblemColor: color, selection: input.selection, genPrompt: prompt })
-    .returning({ id: guildEmblems.id });
-  await setGuildActiveEmblem(input.guildId, { id: row!.id, emblemUrl, emblemColor: color });
+  // 저장 + 활성 지정을 한 트랜잭션으로(2026-08-06) — 분리돼 있을 때 활성화만 실패하면
+  // 유저는 무문양인데 기록은 남아 '첫 문양 무료'(기록 0건) 조건이 깨졌다(3,000💎 요구).
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(guildEmblems)
+      .values({ guildId: input.guildId, emblemUrl, emblemColor: color, selection: input.selection, genPrompt: prompt })
+      .returning({ id: guildEmblems.id });
+    await tx
+      .update(guilds)
+      .set({
+        activeEmblemId: row!.id,
+        emblemUrl,
+        emblemColor: color,
+        emblemStatus: 'done',
+        emblemError: null,
+      })
+      .where(eq(guilds.id, input.guildId));
+  });
   return { emblemUrl };
+}
+
+/** 문양 생성 상태 기록 — 실패 사유는 운영 진단용(유저에겐 요약 문구만 보여준다). */
+export async function markEmblemStatus(
+  guildId: bigint,
+  status: 'pending' | 'failed',
+  error?: unknown,
+): Promise<void> {
+  const msg = status === 'failed' ? String(error instanceof Error ? error.message : (error ?? '')).slice(0, 300) : null;
+  await db
+    .update(guilds)
+    .set({ emblemStatus: status, emblemError: msg })
+    .where(eq(guilds.id, guildId))
+    .catch(() => {}); // 상태 기록 실패가 본 흐름을 막지 않는다.
 }
 
 /** 길드 보관 문양 목록(활성 표시 포함) — 설정 화면용. 최신순. */

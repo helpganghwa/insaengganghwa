@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, desc, eq, gte, isNull, lte } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lte, ne } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { safeBigInt } from '@/lib/util/id';
@@ -9,6 +9,8 @@ import { db } from '@/lib/db/client';
 import { guilds, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
+import { generateAndStoreEmblem, markEmblemStatus } from '@/lib/game/guild/emblem';
+import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 /**
  * 길드 문양 검수 액션(0131) — 아바타 검수(profile-gen)와 동일한 결정 모델.
@@ -62,11 +64,23 @@ export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean
       .returning({ id: guildEmblems.id });
     if (claimed.length === 0) return null;
 
-    // 활성 문양이었다면 비정규화 미러 해제 — 지도·리스트 표시 즉시 무문양.
+    // 활성 문양이었다면 보관 문양 중 최신본으로 승계, 없으면 미러 해제(무문양).
+    // 승계 없이 null만 두면 재시도 크론이 대상으로 잡아 **리젝한 길드에 새 문양을 무료로
+    // 자동 생성**해 준다(2026-08-06 감사). 승계하면 그 경로가 닫힌다.
     if (g && g.activeEmblemId != null && g.activeEmblemId === eid) {
+      const [next] = await tx
+        .select({ id: guildEmblems.id, url: guildEmblems.emblemUrl, color: guildEmblems.emblemColor })
+        .from(guildEmblems)
+        .where(and(eq(guildEmblems.guildId, g.id), isNull(guildEmblems.removedAt), ne(guildEmblems.id, eid)))
+        .orderBy(desc(guildEmblems.createdAt))
+        .limit(1);
       await tx
         .update(guilds)
-        .set({ activeEmblemId: null, emblemUrl: null, emblemColor: null })
+        .set(
+          next
+            ? { activeEmblemId: next.id, emblemUrl: next.url, emblemColor: next.color, emblemStatus: 'done' }
+            : { activeEmblemId: null, emblemUrl: null, emblemColor: null, emblemStatus: 'failed' },
+        )
         .where(eq(guilds.id, g.id));
     }
 
@@ -179,4 +193,39 @@ export async function adminRefundEmblemEscrow(escrowId: string): Promise<{ ok: b
   if (!ok) return { ok: false, msg: '환불 가능한 상태가 아닙니다(이미 환불됐거나 미완료 예치).' };
   revalidatePath('/admin/emblem-review');
   return { ok: true };
+}
+
+/**
+ * 관리자 문양 재생성(2026-08-06) — 문양이 없는 길드에 저장된 선택값으로 즉시 다시 생성한다.
+ * 유저 재시도가 막혔거나(권한자 부재·자동 재시도 소진) 운영이 직접 풀어줘야 할 때 쓴다.
+ * 재시도 카운터도 0으로 되돌려 자동 재시도가 다시 붙게 한다(리셋 경로가 여기뿐이다).
+ */
+export async function adminRegenerateEmblem(guildId: string): Promise<{ ok: boolean; msg?: string }> {
+  await requireAdmin();
+  const gid = safeBigInt(guildId);
+  if (gid === null) return { ok: false, msg: '잘못된 길드 ID입니다.' };
+  const [g] = await db
+    .select({ id: guilds.id, selection: guilds.emblemSelection, activeId: guilds.activeEmblemId })
+    .from(guilds)
+    .where(eq(guilds.id, gid))
+    .limit(1);
+  if (!g) return { ok: false, msg: '길드를 찾을 수 없습니다.' };
+  if (g.activeId != null) return { ok: false, msg: '이미 활성 문양이 있습니다. 리젝 후 시도하세요.' };
+  const selection = g.selection as EmblemSelection | null;
+  if (!selection || !isValidEmblemSelection(selection)) {
+    return { ok: false, msg: '저장된 문양 선택값이 없거나 형식이 맞지 않습니다.' };
+  }
+
+  await db.update(guilds).set({ emblemAttempts: 0, emblemStatus: 'pending' }).where(eq(guilds.id, gid));
+  try {
+    await generateAndStoreEmblem({ guildId: gid, selection });
+    revalidatePath('/admin/emblem-review');
+    revalidatePath('/guild');
+    revalidatePath('/', 'layout');
+    return { ok: true };
+  } catch (e) {
+    await markEmblemStatus(gid, 'failed', e);
+    revalidatePath('/admin/emblem-review');
+    return { ok: false, msg: `생성 실패: ${(e as Error).message.slice(0, 120)}` };
+  }
 }

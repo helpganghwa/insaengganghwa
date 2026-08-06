@@ -19,7 +19,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 
-import { donateAction, leaveGuildAction } from './actions';
+import { donateAction, leaveGuildAction, retryGuildEmblemAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { type RichMember } from './GuildMemberList';
 import { GuildLogFeed } from './GuildLogFeed';
@@ -55,6 +55,10 @@ type GuildView = {
   capacity: number;
   emblemUrl: string | null;
   emblemColor: string | null;
+  /** 문양 생성 상태(0150) — 'pending' 생성 중 · 'failed' 실패 · 'done' 완료. */
+  emblemStatus: string;
+  /** 자동 재시도(12회) 소진 — 조합을 바꿔야 풀린다. */
+  emblemExhausted: boolean;
 };
 
 export function GuildHome({
@@ -110,16 +114,31 @@ export function GuildHome({
     effectiveUsed < GUILD_DONATIONS_PER_DAY ? (GUILD_DONATION_TIERS[effectiveUsed] ?? null) : null;
   const displayXp = guild.xp + optXp;
 
-  // 결성 직후 문양은 after()로 비동기 생성(~수초) → 폴백 표시 중이면 1회 자동 새로고침해 픽업.
-  const emblemPolledRef = useRef(false);
+  // 결성 직후 문양은 after()로 비동기 생성 → 완성될 때까지 폴링해 픽업한다.
+  // 이전엔 4초 뒤 1회뿐이라 실제 소요(10~40초)를 못 따라가 거의 항상 헛방이었다(2026-08-06).
+  const emblemPollsRef = useRef(0);
   useEffect(() => {
-    if (guild.emblemUrl || emblemPolledRef.current) return;
+    if (guild.emblemUrl || guild.emblemStatus !== 'pending') return;
+    if (emblemPollsRef.current >= 12) return; // 5초 × 12 = 60초 상한
     const t = setTimeout(() => {
-      emblemPolledRef.current = true;
+      emblemPollsRef.current += 1;
       router.refresh();
-    }, 4000);
+    }, 5000);
     return () => clearTimeout(t);
-  }, [guild.emblemUrl, router]);
+  }, [guild.emblemUrl, guild.emblemStatus, router]);
+
+  const emblemPending = !guild.emblemUrl && guild.emblemStatus === 'pending';
+  const emblemFailed = !guild.emblemUrl && guild.emblemStatus === 'failed';
+
+  // 수동 재시도 — 실패 상태에서만 노출. 성공하면 서버 액션의 revalidate로 문양이 바로 붙는다.
+  const [retrying, startRetry] = useTransition();
+  const retryEmblem = () => {
+    startRetry(async () => {
+      const r = await retryGuildEmblemAction();
+      if (r.status === 'success') showHeaderToast({ title: '문양을 만들었어요' });
+      else showError('문양 만들기에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    });
+  };
 
   // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 남은 초(3s/2s/1s)를 라벨에 표기.
   useEffect(() => {
@@ -204,7 +223,13 @@ export function GuildHome({
       <div>
       <section className="rounded-t-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+          {/* 문양 슬롯 — 상태를 슬롯 자체로 드러낸다(B안 확정 2026-08-06):
+              생성 중=스켈레톤 · 실패=점선+느낌표 · 완료=문양. */}
+          <div
+            className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${
+              emblemFailed ? 'border border-dashed border-orange-500/55 bg-orange-500/[0.07]' : ''
+            } ${emblemPending ? 'animate-pulse bg-zinc-200 dark:bg-zinc-800' : ''}`}
+          >
             {guild.emblemUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -213,15 +238,48 @@ export function GuildHome({
                 className="h-full w-full object-contain"
                 style={{ imageRendering: 'pixelated' }}
               />
-            ) : (
-              <span className="text-2xl">🛡️</span>
+            ) : emblemPending ? null : (
+              <span className="text-2xl opacity-60">🛡️</span>
+            )}
+            {emblemFailed && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-400 text-[10px] font-black text-zinc-900">
+                !
+              </span>
             )}
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-bold">{guild.name}</h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              멤버 {guild.memberCount}/{guild.capacity}
-            </p>
+            {emblemPending ? (
+              <p className="mt-0.5 text-[11px] text-zinc-500">문양 만드는 중…</p>
+            ) : (
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                멤버 {guild.memberCount}/{guild.capacity}
+              </p>
+            )}
+            {emblemFailed &&
+              (guild.emblemExhausted ? (
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-orange-500">
+                  <span>다른 조합이 필요해요</span>
+                  <Link
+                    href="/guild/emblem"
+                    className="rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900"
+                  >
+                    고르러 가기
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-orange-500">
+                  <span>문양 만들기 실패</span>
+                  <button
+                    type="button"
+                    onClick={retryEmblem}
+                    disabled={retrying}
+                    className="rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                  >
+                    {retrying ? '만드는 중…' : '다시 만들기'}
+                  </button>
+                </div>
+              ))}
           </div>
           {/* 오픈채팅 — 설정 시 상단 정보에 그대로 노출(외부 링크). 나머지 메뉴는 하단 그리드로 이동. */}
           <GuildOpenchatButton url={guild.openchatUrl} />

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lt, sql, type SQL } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
@@ -8,7 +8,7 @@ import { EMBLEM_SHAPES, EMBLEM_TONES, EMBLEM_KEYWORDS, type EmblemSelection } fr
 
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
-import { EmblemDecisionButtons, RefundEscrowButton } from './AdminEmblemActions';
+import { EmblemDecisionButtons, RefundEscrowButton, RegenerateEmblemButton } from './AdminEmblemActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +76,26 @@ export default async function AdminEmblemReviewPage({
     .orderBy(desc(guildEmblems.createdAt))
     .limit(200);
 
+  // 문양 없는 길드(2026-08-06) — 생성 실패/진행 중을 운영이 바로 보고 재생성할 수 있게.
+  // 날짜 필터와 무관하게 '지금 문양이 없는' 전수를 보여준다(과거 실패가 묻히지 않게).
+  const noEmblemWhere: SQL[] = [isNull(guilds.activeEmblemId)];
+  if (srvFilter != null) noEmblemWhere.push(eq(guilds.serverId, srvFilter));
+  const noEmblem = await db
+    .select({
+      id: guilds.id,
+      name: guilds.name,
+      serverId: guilds.serverId,
+      status: guilds.emblemStatus,
+      attempts: guilds.emblemAttempts,
+      error: guilds.emblemError,
+      hasSelection: sql<boolean>`(${guilds.emblemSelection} is not null)`,
+      createdAt: guilds.createdAt,
+    })
+    .from(guilds)
+    .where(and(...noEmblemWhere))
+    .orderBy(desc(guilds.createdAt))
+    .limit(50);
+
   const escWhere: SQL[] = [gte(guildEmblemEscrows.createdAt, start), lt(guildEmblemEscrows.createdAt, end)];
   if (srvFilter != null) escWhere.push(eq(guildEmblemEscrows.serverId, srvFilter));
   const escrows = await db
@@ -121,6 +141,47 @@ export default async function AdminEmblemReviewPage({
         </div>
       </div>
       <ServerFilter servers={servers} current={srvFilter} basePath="/admin/emblem-review" params={{ date: day }} />
+
+      <section>
+        <h2 className="mb-2 text-sm font-bold text-zinc-300">문양 없는 길드 ({noEmblem.length})</h2>
+        {noEmblem.length === 0 ? (
+          <p className="rounded-lg bg-zinc-900 px-3 py-4 text-center text-xs text-zinc-500">
+            모든 길드에 문양이 있습니다.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {noEmblem.map((g) => (
+              <li
+                key={String(g.id)}
+                className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-xs"
+              >
+                <span className="font-bold">{g.name}</span>
+                <span className="text-[10px] text-zinc-500">S{g.serverId}</span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                    g.status === 'pending'
+                      ? 'bg-sky-500/15 text-sky-400'
+                      : 'bg-orange-500/15 text-orange-400'
+                  }`}
+                >
+                  {g.status === 'pending' ? '생성 중' : '실패'} · {g.attempts}회
+                </span>
+                {!g.hasSelection ? (
+                  <span className="text-[10px] text-zinc-500">선택값 없음(재생성 불가)</span>
+                ) : null}
+                {g.error ? (
+                  <span className="min-w-0 flex-1 truncate text-[10px] text-zinc-500" title={g.error}>
+                    {g.error}
+                  </span>
+                ) : null}
+                <span className="ml-auto">
+                  {g.hasSelection ? <RegenerateEmblemButton guildId={String(g.id)} /> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h2 className="mb-2 text-sm font-bold text-zinc-300">생성 문양 ({emblems.length})</h2>

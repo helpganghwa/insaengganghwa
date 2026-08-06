@@ -7,17 +7,22 @@
  * - emblem-only: name 미전달 → 문양만(emblemUrl 있을 때만). 랭킹·레이드·친구·헤더용.
  * - with-name: name 전달 → 문양 + 이름. 내정보/공개프로필/자랑카드/친구용.
  *
- * ⚠ 문양 없을 때(미소속·생성중 포함)는 🛡️ 등 폴백 없이 영역을 비운다(문양 슬롯 미렌더).
+ * 문양이 아직 없을 때(생성 중·실패)는 길드 색으로 채운 **기본 방패 실루엣**을 그린다(2026-08-06).
+ * 이전엔 빈 칸이라 생성 실패한 길드가 다른 화면에서 '길드 없는 사람'처럼 보였다.
+ * 미소속(name도 없음)은 그대로 미렌더 — 폴백은 '길드는 있는데 문양만 없는' 경우에만.
  */
 export function GuildBadge({
   emblemUrl,
   name = null,
+  emblemColor = null,
   size = 16,
   className = '',
   pinEmblemRight = false,
 }: {
   emblemUrl: string | null;
   name?: string | null;
+  /** 문양 미완 시 폴백 방패 색 — 길드 대표색. 없으면 인디고. */
+  emblemColor?: string | null;
   size?: number;
   className?: string;
   /** true=이름을 중앙정렬하고 문양을 이름 **왼쪽**에 절대배치(문양이 이름 중심을 밀지 않음).
@@ -25,6 +30,19 @@ export function GuildBadge({
   pinEmblemRight?: boolean;
 }) {
   if (!emblemUrl && !name) return null;
+  /** 문양 미완 폴백 — 길드 색(없으면 인디고) 방패 실루엣. 실제 문양과 헷갈리지 않게 채도를 낮춘다. */
+  const fallback = (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      aria-hidden
+      className="shrink-0 opacity-70"
+      style={{ color: emblemColor ?? '#a5b4fc' }}
+    >
+      <path d="M8 1.2 2.6 3.1v5.2c0 3 2.3 5.4 5.4 6.5 3.1-1.1 5.4-3.5 5.4-6.5V3.1L8 1.2Z" fill="currentColor" />
+    </svg>
+  );
   const img = emblemUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -34,22 +52,28 @@ export function GuildBadge({
       className="shrink-0 object-contain"
       style={{ width: size, height: size, imageRendering: 'pixelated' }}
     />
+  ) : name ? (
+    fallback
   ) : null;
 
   // 이름 중앙정렬 + 문양은 이름 왼쪽 절대배치(문양이 이름 중심을 밀지 않음).
   if (pinEmblemRight && name) {
     return (
       <span className={`relative inline-flex max-w-full items-center ${className}`}>
-        {emblemUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={emblemUrl}
-            alt=""
-            aria-hidden
-            className="absolute right-full top-1/2 mr-1 -translate-y-1/2 object-contain"
-            style={{ width: size, height: size, imageRendering: 'pixelated' }}
-          />
-        ) : null}
+        <span className="absolute right-full top-1/2 mr-1 -translate-y-1/2">
+          {emblemUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={emblemUrl}
+              alt=""
+              aria-hidden
+              className="object-contain"
+              style={{ width: size, height: size, imageRendering: 'pixelated' }}
+            />
+          ) : (
+            fallback
+          )}
+        </span>
         <span className="truncate">{name}</span>
       </span>
     );

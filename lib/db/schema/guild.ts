@@ -62,6 +62,10 @@ export const guilds = pgTable('guilds', {
   emblemSelection: jsonb('emblem_selection'),
   /** 문양 cron 재시도 횟수 — 상한 도달 시 수동 개입 대상(무한 pixflux 과금 방지). */
   emblemAttempts: integer('emblem_attempts').notNull().default(0),
+  /** 문양 생성 상태(0150) — 'pending' 생성 중 · 'failed' 마지막 시도 실패 · 'done' 활성 문양 있음. */
+  emblemStatus: text('emblem_status').notNull().default('done'),
+  /** 마지막 실패 사유(운영 진단용, 유저에겐 요약만 노출). */
+  emblemError: text('emblem_error'),
   /** 길드 공지 ≤200자(길드장/부길드장만 편집, 멤버 전용 노출). */
   notice: text('notice'),
   /** 길드 소개(공개) — 목록 팝업 노출용. 길드장/부길드장 편집. null=미설정. */

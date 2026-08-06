@@ -130,6 +130,9 @@ export default async function GuildPage() {
           capacity: guild.capacity,
           emblemUrl: guild.emblemUrl,
           emblemColor: guild.emblemColor,
+          emblemStatus: guild.emblemStatus,
+          // 자동 재시도 소진 여부 — 소진 시 안내를 '다른 조합 고르기'로 바꾼다.
+          emblemExhausted: guild.emblemAttempts >= 12,
         }}
         members={members}
         log={log}
