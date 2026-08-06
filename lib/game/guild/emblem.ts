@@ -122,18 +122,80 @@ const OPAQUE_ALPHA = 24; // 이 alpha 초과면 불투명 픽셀로 카운트
 // 그리고 속을 비운 산출물이 종종 나옴(라이브 #13·#21: 0.59~0.64, 정상 0.91~1.0). 행별
 // [첫..끝 불투명] 스팬 대비 불투명 비율이라 방패/원형/마름모 등 외곽 모양과 무관.
 const MIN_INTERIOR_FILL = 0.8;
-/** 마지막 시도용 완화 하한 — 속 빈 결함(테두리만)은 여전히 걸러지되, 조합 의존 영구 실패를 푼다. */
-const RELAXED_INTERIOR_FILL = 0.55;
+
+/** #rrggbb → [r,g,b]. 파싱 실패 시 null. */
+function hexRgb(hex: string | null): [number, number, number] | null {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return null;
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/**
+ * 내부 구멍을 주컬러로 메운다(2026-08-06) — "주컬러 솔리드 필드"가 프롬프트 필수 요구인데도
+ * 생성기가 테두리+모티프만 그리고 속을 비워 배경이 투명하게 보이는 산출물이 나온다
+ * (스테이징 gggggg 실측: 금색 용+금색 링, 크림슨 필드 전무·채움율 0.635).
+ *
+ * 바깥 투명(테두리에서 도달 가능)과 내부 구멍을 구분해야 실루엣을 망치지 않는다 —
+ * 이미지 가장자리에서 투명 픽셀만 타고 flood fill해 '바깥'을 표시하고, 표시되지 않은
+ * 투명 픽셀만 주컬러로 채운다. 원형·마름모·깃발 등 어떤 외곽 모양에도 안전하다.
+ */
+async function fillInteriorHoles(png: Buffer, colorHex: string | null): Promise<Buffer> {
+  const rgb = hexRgb(colorHex);
+  if (!rgb) return png;
+  try {
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width: w, height: h, channels: ch } = info;
+    const alphaAt = (i: number) => data[i * ch + 3]!;
+    const outside = new Uint8Array(w * h);
+    const queue: number[] = [];
+    const push = (i: number) => {
+      if (!outside[i] && alphaAt(i) <= OPAQUE_ALPHA) {
+        outside[i] = 1;
+        queue.push(i);
+      }
+    };
+    for (let x = 0; x < w; x++) {
+      push(x);
+      push((h - 1) * w + x);
+    }
+    for (let y = 0; y < h; y++) {
+      push(y * w);
+      push(y * w + w - 1);
+    }
+    for (let qi = 0; qi < queue.length; qi++) {
+      const i = queue[qi]!;
+      const x = i % w;
+      const y = (i / w) | 0;
+      if (x > 0) push(i - 1);
+      if (x < w - 1) push(i + 1);
+      if (y > 0) push(i - w);
+      if (y < h - 1) push(i + w);
+    }
+    let filled = 0;
+    for (let i = 0; i < w * h; i++) {
+      if (outside[i] || alphaAt(i) > OPAQUE_ALPHA) continue;
+      const o = i * ch;
+      data[o] = rgb[0];
+      data[o + 1] = rgb[1];
+      data[o + 2] = rgb[2];
+      data[o + 3] = 255;
+      filled++;
+    }
+    if (filled === 0) return png;
+    console.log(`[guild.emblem] 내부 구멍 ${filled}px를 주컬러(${colorHex})로 채움`);
+    return await sharp(data, { raw: { width: w, height: h, channels: ch as 4 } })
+      .png()
+      .toBuffer();
+  } catch {
+    return png; // 후처리 실패는 원본으로 진행(생성 자체를 막지 않는다)
+  }
+}
 
 /**
  * 불투명 비율 + 내부 채움율이 정상 범위인지(빈/꽉참·속빈 결함 검출). 디코드 실패도 결함.
- *
- * `relax`(2026-08-06) — 마지막 시도에서는 채움율 기준을 낮춘다. 특정 선택 조합(원형 등)이
- * 계속 0.8을 못 넘겨 **같은 조합으로는 영원히 실패**하는 사례가 나왔다(스테이징 gggggg:
- * 'pixflux retries exhausted: low quality'로 4회 전멸). 속 빈 결함을 거르는 목적은
- * 0.55에서도 충족되므로, 완벽하지 않은 문양이라도 주는 편이 무문양보다 낫다.
+ * 검사 전에 fillInteriorHoles가 속 빈 구멍을 메우므로, 여기 걸리는 건 진짜 결함이다.
  */
-async function emblemQualityOk(png: Buffer, relax = false): Promise<boolean> {
+async function emblemQualityOk(png: Buffer): Promise<boolean> {
   try {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width, height, channels } = info;
@@ -161,7 +223,7 @@ async function emblemQualityOk(png: Buffer, relax = false): Promise<boolean> {
       }
       span += last - first + 1;
     }
-    return span > 0 && inSpan / span >= (relax ? RELAXED_INTERIOR_FILL : MIN_INTERIOR_FILL);
+    return span > 0 && inSpan / span >= MIN_INTERIOR_FILL;
   } catch {
     return false;
   }
@@ -197,6 +259,8 @@ async function generateEmblemPng(
   shieldLike = true,
   startKeyIdx = 1,
   budgetMs = 150_000,
+  /** 주컬러 — 속 빈 산출물의 내부를 이 색으로 메워 '필드 없음'을 구조적으로 없앤다. */
+  mainHex: string | null = null,
 ): Promise<Buffer> {
   if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
   const negative =
@@ -264,14 +328,15 @@ async function generateEmblemPng(
     if (!isPng(buf)) throw new Error('pixflux returned non-PNG');
     // 경량 품질 가드 — 빈/깨진·꽉찬 결함이면 재생성(무료 1회·재생성 모두 결함 저장 회피).
     // 마지막 시도는 완화 기준 — 여기서도 버리면 그 조합은 영구 무문양이 된다.
-    const lastTry = attempt === 3 || Date.now() > deadline - 20_000;
-    if (!(await emblemQualityOk(buf, lastTry))) {
+    // 속 빈 결함은 먼저 고친다 — 주컬러 필드를 채운 뒤 품질 검사(고칠 수 있는 결함으로
+    // 재시도를 태우지 않는다). 그래도 미달이면 진짜 결함(빈/깨진·꽉참)이라 재생성한다.
+    const fixed = await fillInteriorHoles(buf, mainHex);
+    if (!(await emblemQualityOk(fixed))) {
       lastErr = 'low quality (empty/full)';
-      console.warn(`[guild.emblem] 품질 미달 재생성 (attempt ${attempt}${lastTry ? ', relaxed' : ''})`);
+      console.warn(`[guild.emblem] 품질 미달 재생성 (attempt ${attempt})`);
       continue;
     }
-    if (lastTry) console.warn('[guild.emblem] 완화 기준으로 통과 — 조합 재검토 대상');
-    return buf;
+    return fixed;
   }
   throw new Error(`pixflux retries exhausted: ${lastErr}`);
 }
@@ -316,7 +381,7 @@ async function generateEmblemAsset(
   // 방패로 회귀시키는 게 주원인(라이브 검증). 결정적 템플릿(heraldry 단어 없음)으로 직행.
   const prompt = shieldLike ? await buildEmblemPromptAI(selection) : buildEmblemPrompt(selection);
   // 라운드로빈 시작 키 = 길드 id 패리티(아바타와 동일 키풀). 이후 재시도는 generateEmblemPng가 교대.
-  const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId), budgetMs);
+  const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId), budgetMs, color);
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color, prompt };
