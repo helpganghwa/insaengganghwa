@@ -416,6 +416,7 @@ export async function reportChatMessage(
       .where(eq(chatReports.messageId, messageId));
     if (n >= 3) {
       await db.update(chatMessages).set({ hiddenAt: new Date() }).where(eq(chatMessages.id, messageId));
+      invalidateRecentCache(msg.serverId, msg.guildId); // 숨긴 메시지가 캐시에 TTL만큼 남는 것 방지
       await broadcastChat(msg.serverId, 'hide', { id: String(messageId) }, msg.guildId);
     }
   }

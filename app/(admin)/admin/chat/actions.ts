@@ -8,7 +8,7 @@ import { db } from '@/lib/db/client';
 import { chatMessages } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { broadcastChat } from '@/lib/game/chat/realtime';
-import { resetChatEnabledCache } from '@/lib/game/chat/service';
+import { invalidateRecentCache, resetChatEnabledCache } from '@/lib/game/chat/service';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
 
@@ -22,6 +22,8 @@ export async function setChatHiddenAction(messageId: string, hidden: boolean): P
     .where(eq(chatMessages.id, id))
     .returning({ serverId: chatMessages.serverId, guildId: chatMessages.guildId });
   if (!row) return { status: 'error', message: '메시지가 없습니다.' };
+  // 숨김·해제 모두 목록 캐시 무효화 — 해제는 브로드캐스트가 없어 다음 폴링이 복원 경로.
+  invalidateRecentCache(row.serverId, row.guildId);
   if (hidden) await broadcastChat(row.serverId, 'hide', { id: messageId }, row.guildId);
   revalidatePath('/admin/chat');
   return { status: 'success' };

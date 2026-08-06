@@ -652,7 +652,9 @@ export function ChatDock() {
       const after = wasOpen
         ? ([...messagesRef.current].reverse().find((m) => !m.id.startsWith('tmp-'))?.id ?? null)
         : null;
-      void fetchRecent(wasOpen ? 100 : 1, undefined, !wasOpen, after).then((r) => {
+      // 폴링은 열림/닫힘 모두 lite — 차단목록·닉네임·토픽 부속 쿼리는 열기/탭 전환의
+      // 전체 조회가 담당(값이 바뀌는 이벤트가 그때뿐). 월드 lite+캐시 히트 = DB 0쿼리.
+      void fetchRecent(wasOpen ? 100 : 1, undefined, true, after).then((r) => {
         if (!r) return;
         const ms = r.messages;
         if (wasOpen) {

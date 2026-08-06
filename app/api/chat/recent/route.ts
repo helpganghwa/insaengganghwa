@@ -47,11 +47,14 @@ export async function GET(req: Request) {
     return { mode: 'delta' as const, messages: msgs.slice(i + 1) };
   };
 
+  // 폴링(열림 포함)은 전부 lite — 차단목록·닉네임·토픽은 열기/탭 전환의 전체 조회가 담당.
+  // 월드 채널 lite + 캐시 히트 = DB 0쿼리(길드는 소속 검증 1쿼리만 — 보안상 생략 불가).
   if (url.searchParams.get('lite') === '1') {
     const guild = channel === 'guild' ? await getMyGuildChannel(userId, serverId) : null;
     const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
-    const messages = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
-    return NextResponse.json({ messages });
+    const full = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+    const { mode, messages } = slice(full);
+    return NextResponse.json({ mode, messages });
   }
 
   const [blocked, [meChar], guild] = await Promise.all([
