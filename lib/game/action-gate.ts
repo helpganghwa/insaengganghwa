@@ -2,13 +2,8 @@ import 'server-only';
 
 import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
-import { getBanState } from '@/lib/game/account/ban';
+import { getBanStateCached } from '@/lib/game/account/ban';
 import { getMaintenanceState } from '@/lib/game/system-mode';
-
-// ban 짧은 캐시(per-user, 15s) — 변이 액션마다 profiles 조회를 줄임(핫패스 §11.4). 레이아웃이
-// 페이지 렌더 시 즉시 BanScreen으로 차단하므로, 액션 레벨 차단은 ≤15s 지연 허용.
-const banCache = new Map<string, { banned: boolean; at: number }>();
-const BAN_TTL = 15_000;
 
 /**
  * 변이 서버 액션 공통 게이트 — 정지(우선)/점검이면 차단 코드, 아니면 null. userId는 내부에서
@@ -22,17 +17,10 @@ const BAN_TTL = 15_000;
 export async function actionBlock(): Promise<'BANNED' | 'MAINTENANCE' | null> {
   const userId = await getSessionUserId();
   if (userId) {
-    const cached = banCache.get(userId);
-    const now = Date.now();
-    let banned: boolean;
-    if (cached && now - cached.at < BAN_TTL) {
-      banned = cached.banned;
-    } else {
-      banned = await getBanState(userId)
-        .then((s) => s.banned)
-        .catch(() => false);
-      banCache.set(userId, { banned, at: now });
-    }
+    // ban 캐시(15s)는 레이아웃과 공유 — lib/game/account/ban.ts getBanStateCached(2026-08-06).
+    const banned = await getBanStateCached(userId)
+      .then((s) => s.banned)
+      .catch(() => false);
     if (banned) return 'BANNED';
   }
   const maint = await getMaintenanceState().catch(() => null);

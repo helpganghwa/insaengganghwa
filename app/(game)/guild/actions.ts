@@ -412,6 +412,7 @@ export async function collectTaxAction(zoneId: number) {
   try {
     const r = await collectZoneTax({ userId: u, zoneId });
     revalidatePath('/guild');
+    revalidatePath('/guild/map'); // 수금 버튼이 있는 화면 — 응답 재렌더로 수금 상태 반영(클라 refresh 제거)
     return { status: 'success', executorGain: r.executorGain.toString(), guildGain: r.guildGain.toString() } as const;
   } catch (e) {
     return fail(e, 'collect');

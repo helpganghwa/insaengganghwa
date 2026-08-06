@@ -144,7 +144,16 @@ export function GuildHome({
     if (emblemPolls >= MAX_EMBLEM_POLLS) return;
     const t = setTimeout(() => {
       setEmblemPolls((n) => n + 1);
-      router.refresh();
+      // 경량 상태 폴링(2026-08-06) — 이전엔 5초마다 router.refresh()로 /guild 전체(6쿼리)
+      // +layout(7쿼리)을 재렌더했다. 상태 라우트(1쿼리)만 찍고, 확정됐을 때 풀 refresh 1회.
+      void fetch('/api/guild/emblem/status', { cache: 'no-store' })
+        .then(async (r) => (r.ok ? ((await r.json()) as { url: string | null; status: string }) : null))
+        .then((s) => {
+          if (s && (s.url || s.status === 'failed')) router.refresh();
+        })
+        .catch(() => {
+          /* 네트워크 실패 — 다음 틱 재시도 */
+        });
     }, 5000);
     return () => clearTimeout(t);
   }, [guild.emblemUrl, guild.emblemStatus, emblemStale, retryOptimistic, emblemPolls, router]);

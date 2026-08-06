@@ -543,7 +543,8 @@ export function EnhanceSlotCard({
         setOptimisticDone(false);
         adjustDiamond(debit); // 롤백
         showError(r.message);
-      } else router.refresh();
+      }
+      // 성공 시 refresh 불필요(§11.7) — 액션의 revalidateAll이 새 completeAt을 응답 RSC로 실어 온다.
     });
   };
 
@@ -559,9 +560,8 @@ export function EnhanceSlotCard({
         if (r.status === 'error') {
           setOptimisticCancelled(false);
           showError(r.message);
-        } else {
-          router.refresh();
         }
+        // 성공 시 refresh 불필요(§11.7) — 액션의 revalidateAll 재렌더가 잡 제거를 실어 온다.
       })
       .catch(() => {
         // 전송 실패(오프라인 등) — 서버엔 잡이 살아있는데 placeholder로 굳으면 슬롯이 죽는다.

@@ -65,9 +65,8 @@ const DEFAULTS: LayoutData = {
 export async function loadLayoutData(userId: string, serverId: number): Promise<LayoutData> {
   try {
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
-    const [profileRows, mailRows, enhRows, friendReqRows, equipRows] = await Promise.all([
-      pgGuard(
-        (sql) => sql`
+    const profileP = pgGuard(
+      (sql) => sql`
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
                  p.representative_title_code,
                  g.emblem_url as guild_emblem_url,
@@ -80,9 +79,24 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           left join zones z on z.executor_user_id = p.id and z.server_id = ${serverId}
           where p.id = ${userId}::uuid
           limit 1`,
-        4000,
-        'layout.profile',
-      ),
+      4000,
+      'layout.profile',
+    );
+    // 칭호 해석을 프로필 쿼리에 체이닝 — 5쿼리 배치가 다 끝난 뒤 직렬 왕복으로 붙던 것을
+    // 나머지 4쿼리와 겹치게(2026-08-06 감사: layout 고정비 1왕복 절감).
+    const repTitleP = profileP.then((rows) => {
+      const p0 = rows[0] as
+        | { representative_title_code?: string | null; executor_zone?: string | null }
+        | undefined;
+      return resolveRepTitle(
+        p0?.representative_title_code ?? null,
+        userId,
+        serverId,
+        p0?.executor_zone ?? null,
+      );
+    });
+    const [profileRows, mailRows, enhRows, friendReqRows, equipRows, repTitle] = await Promise.all([
+      profileP,
       pgGuard(
         (sql) => sql`
           select 1 from mailbox
@@ -121,6 +135,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
         4000,
         'layout.stats',
       ),
+      repTitleP,
     ]);
     const p = profileRows[0] as
       | {
@@ -177,7 +192,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       guildEmblemUrl: p?.guild_emblem_url ?? null,
       executorZone: p?.executor_zone ?? null,
       executorZoneRegion: p?.executor_zone_region ?? null,
-      repTitle: await resolveRepTitle(p?.representative_title_code ?? null, userId, serverId, p?.executor_zone ?? null),
+      repTitle,
       stats: (() => {
         const eq = equipRows as { e: number; t: number; mx: number }[];
         return {

@@ -1,19 +1,21 @@
-'use server';
-
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
- * 접속 하트비트 — 클라 쿠키 게이트(2분)가 통과시킬 때만 호출됨(대부분 요청은 호출 0).
- * 서버측에도 안전 스로틀(WHERE) — 쿠키 변조/중복 호출 시에도 110s 이내면 no-op(0행).
- * best-effort: 실패해도 무시(접속표시는 부가 정보).
+ * 접속 하트비트(2026-08-06) — 서버 액션(heartbeatAction)에서 이전. 액션은 응답에 현재
+ * 페이지+layout 전체 RSC 재렌더가 동봉되어, 순수 presence 목적에 2분마다 7~9쿼리가
+ * 붙었다(전수 감사 P1). 조건부 UPDATE 2회면 끝나는 작업이라 204 라우트가 정합.
+ * 클라 쿠키 게이트(2분)가 통과시킬 때만 호출됨 — 서버측에도 110s WHERE 이중 스로틀.
  */
-export async function heartbeatAction(): Promise<void> {
+export async function POST() {
   const userId = await getSessionUserId();
-  if (!userId) return;
+  if (!userId) return new Response(null, { status: 204 });
   const serverId = await getActiveServerId();
   await db
     .execute(
@@ -29,4 +31,5 @@ export async function heartbeatAction(): Promise<void> {
           where id = ${userId} and last_server_id is distinct from ${serverId}`,
     )
     .catch(() => {});
+  return new Response(null, { status: 204 });
 }

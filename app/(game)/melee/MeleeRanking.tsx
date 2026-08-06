@@ -10,7 +10,30 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { SpriteLoadingOverlay } from '@/components/SpriteLoading';
 import type { MeleeRankMode, MeleeRankRow } from '@/lib/game/melee/ranking';
 
-import { meleeRankingAction } from './actions';
+/**
+ * 순위 페이지 조회 — GET /api/melee/ranking(2026-08-06, 서버 액션에서 이전).
+ * 액션은 호출마다 /melee 페이지+layout 전체 재렌더가 응답에 동봉되어(무한 스크롤 1회 ≈ 15쿼리)
+ * 조회용으로 부적합했다. 응답 형태는 액션과 동일하게 유지.
+ */
+async function meleeRankingAction(input: {
+  battleId: string;
+  mode: MeleeRankMode;
+  afterRank?: number;
+  beforeRank?: number;
+  aroundRank?: number;
+}): Promise<{ status: 'success'; rows: MeleeRankRow[]; myRank: number | null } | { status: 'error' }> {
+  try {
+    const p = new URLSearchParams({ battleId: input.battleId, mode: input.mode });
+    if (input.afterRank != null) p.set('after', String(input.afterRank));
+    if (input.beforeRank != null) p.set('before', String(input.beforeRank));
+    if (input.aroundRank != null) p.set('around', String(input.aroundRank));
+    const res = await fetch(`/api/melee/ranking?${p.toString()}`, { cache: 'no-store' });
+    if (!res.ok) return { status: 'error' };
+    return (await res.json()) as { status: 'success'; rows: MeleeRankRow[]; myRank: number | null };
+  } catch {
+    return { status: 'error' };
+  }
+}
 
 // '내 주변'은 뺐다 — 우측 '내 순위 N위' 버튼이 같은 일을 하고, 탭까지 두면 중복이다.
 const MODES: [MeleeRankMode, string][] = [

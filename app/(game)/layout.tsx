@@ -6,7 +6,7 @@ import { after } from 'next/server';
 import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getMaintenanceState } from '@/lib/game/system-mode';
-import { getBanState } from '@/lib/game/account/ban';
+import { getBanStateCached } from '@/lib/game/account/ban';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { MaintenanceScreen } from './MaintenanceScreen';
 import { BanScreen } from './BanScreen';
@@ -89,7 +89,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   }
 
   // 계정 정지 게이트 — banned면 게임 대신 정지화면(사유·기간 노출). 조회 실패는 fail-open(통과).
-  const ban = await withTimeout(getBanState(userId), 1500, 'layout.ban').catch(() => null);
+  // 15s 캐시(action-gate와 공유) — 매 내비·액션마다 나가던 profiles 왕복 제거(2026-08-06).
+  const ban = await withTimeout(getBanStateCached(userId), 1500, 'layout.ban').catch(() => null);
   if (ban?.banned) return <BanScreen state={ban} />;
 
   // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 비차단.

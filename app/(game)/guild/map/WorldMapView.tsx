@@ -551,7 +551,7 @@ export function WorldMapView({
       optimisticAdjust(BigInt(r.executorGain));
       showHeaderToast({ title: `세금 수금 완료 ${Number(total).toLocaleString('ko-KR')}💎` });
       setCollectOpen(null);
-      router.refresh();
+      // refresh 불필요(§11.7) — 액션 revalidate 재렌더가 수금 상태를 실어 온다(/guild/map 10+쿼리 2배 방지).
     });
   };
 

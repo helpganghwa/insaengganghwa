@@ -2,7 +2,6 @@
 import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import {
@@ -153,7 +152,6 @@ function useCountdown(expireAtIso: string): { text: string; over: boolean; urgen
 }
 
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
-  const router = useRouter();
   const { showError, showHeaderToast } = useResourceToast();
   const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
 
@@ -204,7 +202,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         return;
       }
       showHeaderToast({ title: approve ? '참가 수락' : '요청 거절' });
-      router.refresh();
+      // refresh 불필요(§11.7) — 액션 rev()의 재렌더가 응답에 실려 온다.
     })();
   };
   const visibleReqs = v.pendingRequests.filter((r) => !handledReqs.has(r.userId));
@@ -231,7 +229,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         setRequestedLocal(false);
         setOptJoined(true);
         showHeaderToast({ title: '레이드 참여' });
-        router.refresh(); // 서버 권위 동기화(참가자 목록 등) — UI는 이미 전환됨
+        // refresh 불필요(§11.7) — 참가자 목록 등은 액션 rev() 재렌더가 실어 온다.
       } else {
         // 예상(free)과 달리 수락형 — 요청 대기로 정정.
         setOptJoined(false);
@@ -452,7 +450,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         ];
         if (rewards.length > 0) showHeaderToast({ title: '레이드 보상', rewards });
       }
-      setTimeout(() => router.refresh(), 600);
+      // refresh 불필요(§11.7) — 액션 rev() 재렌더가 보상 수령 상태를 실어 온다.
     })();
   };
 

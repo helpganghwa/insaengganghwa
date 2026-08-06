@@ -2,8 +2,6 @@
 
 import { useEffect } from 'react';
 
-import { heartbeatAction } from '@/app/(game)/presence-actions';
-
 /**
  * 접속 하트비트(쿠키 게이트) — 인증 레이아웃에 1회 마운트.
  * 쿠키 `ls_hb`(max-age 120s)가 살아있으면 아무 것도 안 함(대부분 페이지 로드 = DB 접근 0).
@@ -19,8 +17,10 @@ export function PresenceHeartbeat() {
       const alive = document.cookie.split('; ').some((c) => c.startsWith(`${COOKIE}=`));
       if (alive) return;
       // 게이트 먼저 닫고(중복 핑 방지) 호출 — 접속표시는 best-effort라 실패 시 다음 만료 때 재시도.
+      // 라우트 호출(2026-08-06) — 서버 액션은 응답에 페이지+layout RSC 재렌더가 동봉되어
+      // 순수 presence에 2분마다 7~9쿼리가 붙었다. keepalive로 이탈 직전 핑도 전송 보장.
       document.cookie = `${COOKIE}=1; max-age=${TTL}; path=/; samesite=lax`;
-      void heartbeatAction().catch(() => {}); // best-effort — reject 삼킴(다음 만료 때 재시도)
+      void fetch('/api/presence', { method: 'POST', keepalive: true }).catch(() => {});
     };
     ping();
     const onVis = () => {

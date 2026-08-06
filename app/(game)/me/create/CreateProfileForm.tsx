@@ -72,10 +72,24 @@ export function CreateProfileForm({
     return () => clearInterval(id);
   }, [queue, submitted]);
 
-  // 진행/대기 중이면 30초마다 서버 상태 재조회(대기→시작→완료 반영). 완료되면 queue=null로 정지.
+  // 진행/대기 중 서버 상태 재조회(대기→시작→완료 반영). 완료되면 queue=null로 정지.
+  // 경량 폴링(2026-08-06) — 이전엔 30초마다 풀 refresh(페이지+layout 재렌더 ~10회/생성).
+  // 상태 라우트(1쿼리)만 찍고 **상태가 바뀐 틱에만** 풀 refresh 1회. 앱을 내려놓고 기다리는
+  // 흔한 시나리오를 위해 백그라운드 탭은 스킵(복귀 시 다음 틱이 잡는다).
   useEffect(() => {
     if (queue === null) return;
-    const id = setInterval(() => router.refresh(), 30_000);
+    const cur = queue.status;
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      void fetch('/api/profile/queue-status', { cache: 'no-store' })
+        .then(async (r) => (r.ok ? ((await r.json()) as { status: string | null }) : null))
+        .then((s) => {
+          if (s && s.status !== cur) router.refresh();
+        })
+        .catch(() => {
+          /* 네트워크 실패 — 다음 틱 재시도 */
+        });
+    }, 30_000);
     return () => clearInterval(id);
   }, [queue, router]);
 

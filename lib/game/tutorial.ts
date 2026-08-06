@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { and, count, eq, inArray, isNotNull, type SQL } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
@@ -34,8 +35,10 @@ async function rowCount(table: PgTable, where: SQL | undefined): Promise<number>
   return Number(r?.c ?? 0);
 }
 
-/** 튜토리얼 진입 상태(1회). intro=팝업, active=진행(재개 단계 포함), done=없음. 실패 시 done. */
-export async function getTutorialState(userId: string, serverId: number): Promise<TutorialState> {
+/** 튜토리얼 진입 상태(1회). intro=팝업, active=진행(재개 단계 포함), done=없음. 실패 시 done.
+ * React cache — layout(TutorialCoach)과 홈 페이지가 같은 요청에서 각각 호출하던 중복 쿼리를
+ * 요청 스코프에서 1회로 합침(2026-08-06 감사). */
+export const getTutorialState = cache(async function getTutorialState(userId: string, serverId: number): Promise<TutorialState> {
   try {
     const [p] = await db
       .select({ s: characters.tutorialStep, createdAt: characters.createdAt })
@@ -97,7 +100,7 @@ export async function getTutorialState(userId: string, serverId: number): Promis
   } catch {
     return { phase: 'done', step: null };
   }
-}
+});
 
 /** 인트로 '시작' — ACTIVE로 전환(코치 시작). */
 export async function startTutorial(userId: string, serverId: number): Promise<void> {

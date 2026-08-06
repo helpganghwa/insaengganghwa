@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
@@ -213,7 +212,6 @@ export function DeployBoard({
   members: Member[];
   zones: Zone[];
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [members, setMembers] = useState(initialMembers);
@@ -449,7 +447,7 @@ export function DeployBoard({
           return showError(guildErrMsg(r.code));
         }
         showHeaderToast({ title: `${p.zoneName}(으)로 거주지 이동` });
-        router.refresh();
+        // refresh 불필요(§11.7) — 액션 revalidate 재렌더가 거주지 상태를 실어 온다.
       });
       return;
     }
@@ -467,7 +465,7 @@ export function DeployBoard({
       showHeaderToast({
         title: `${role === 'attack' ? '공격' : '수비'} 배치${p.move ? ' · 거주지 이동' : ''}`,
       });
-      router.refresh(); // 거주지·쿨타임은 서버 상태 — 다음 판단이 어긋나지 않게 동기화
+      // refresh 불필요(§11.7) — 거주지·쿨타임은 액션 revalidate 재렌더가 실어 온다.
     });
   };
 
