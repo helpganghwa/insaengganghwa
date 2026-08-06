@@ -291,7 +291,7 @@ export function GuildHome({
       <section className="rounded-t-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-2.5">
           {/* 문양 슬롯 — 상태를 슬롯 자체로 드러낸다(B안 확정 2026-08-06):
-              생성 중=스켈레톤 · 실패=점선+느낌표 · 완료=문양. */}
+              생성 중=스켈레톤 · 실패=점선 테두리 · 완료=문양. 슬롯 크기(48px)는 세 상태 동일. */}
           <div
             className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl ${
               emblemFailed ? 'border border-dashed border-orange-500/55 bg-orange-500/[0.07]' : ''
@@ -311,39 +311,49 @@ export function GuildHome({
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-bold">{guild.name}</h2>
-            {emblemPending ? (
-              <p className="mt-0.5 text-[11px] text-zinc-500">
-                문양 만드는 중…
-                {emblemElapsed !== null && <span className="ml-1 tabular-nums">{emblemElapsed}초</span>}
-              </p>
-            ) : (
-              <p className="mt-0.5 text-[11px] text-zinc-500">
+            {/* 메타 한 줄 — 생성 중·완료·실패가 모두 같은 높이를 쓰도록 멤버 수는 항상 남기고
+                문양 상태만 뒤에 덧붙인다(상태마다 줄 수가 달라 레이아웃이 튀던 문제, 2026-08-06). */}
+            <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-zinc-500">
+              <span className="shrink-0">
                 멤버 {guild.memberCount}/{guild.capacity}
-              </p>
-            )}
-            {emblemFailed &&
-              (guild.emblemExhausted ? (
-                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-orange-500">
-                  <span>다른 조합이 필요해요</span>
-                  <Link
-                    href="/guild/emblem"
-                    className="rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900"
-                  >
-                    고르러 가기
-                  </Link>
-                </div>
-              ) : (
-                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-orange-500">
-                  <span>문양 만들기 실패</span>
-                  <button
-                    type="button"
-                    onClick={kickEmblem}
-                    className="rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-                  >
-                    다시 만들기
-                  </button>
-                </div>
-              ))}
+              </span>
+              {emblemPending && (
+                <>
+                  <span className="shrink-0 text-zinc-400 dark:text-zinc-600">·</span>
+                  <span className="truncate">
+                    문양 만드는 중…
+                    {emblemElapsed !== null && <span className="ml-1 tabular-nums">{emblemElapsed}초</span>}
+                  </span>
+                </>
+              )}
+              {emblemFailed && (
+                <>
+                  <span className="shrink-0 text-zinc-400 dark:text-zinc-600">·</span>
+                  {guild.emblemExhausted ? (
+                    <>
+                      <span className="shrink-0 text-orange-500">조합 변경 필요</span>
+                      <Link
+                        href="/guild/emblem"
+                        className="shrink-0 rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-zinc-900"
+                      >
+                        고르러 가기
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <span className="shrink-0 text-orange-500">문양 실패</span>
+                      <button
+                        type="button"
+                        onClick={kickEmblem}
+                        className="shrink-0 rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+                      >
+                        다시 만들기
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           {/* 오픈채팅 — 설정 시 상단 정보에 그대로 노출(외부 링크). 나머지 메뉴는 하단 그리드로 이동. */}
           <GuildOpenchatButton url={guild.openchatUrl} />
