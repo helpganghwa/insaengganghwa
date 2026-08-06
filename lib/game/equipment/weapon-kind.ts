@@ -66,7 +66,7 @@ const BY_KEY: Record<string, WeaponKind> = {
   // 날개꼴 칼 — 스프라이트가 깃털 날개로 읽혀 생성기가 등에 날개를 그렸다. 종류(검)는 못 박되
   // **형태(깃털 날개꼴 칼날)는 명사 안에 남긴다** — 'metal-bladed'만 강조했더니 평범한 칼로
   // 변해 아이템 정체성이 사라졌다(2026-08-06 제보).
-  fallen_pinion_twinblades: { noun: 'twin swords whose blades are shaped like long feathered wings', pair: true },
+  fallen_pinion_twinblades: { noun: 'twin swords, each blade a long feathered wing of metal', pair: true },
   // ── 원거리 ──
   temple_frostward_bow: { noun: 'crossbow (a horizontal stock with a trigger)', ranged: true }, // 키는 bow지만 석궁
   angel_cherub_bow: { noun: 'archery bow', ranged: true },
