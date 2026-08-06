@@ -50,7 +50,7 @@ const BY_KEY: Record<string, WeaponKind> = {
   volcano_dragonjaw_halberd: { noun: 'halberd (a polearm)' },
   kingdom_banner_spear: { noun: 'spear (a polearm)' },
   thunder_emperor_spear: { noun: 'spear (a polearm)' },
-  general_spiral_lance: { noun: 'lance (a polearm)' },
+  general_spiral_lance: { noun: 'jousting lance (one long tapering cone)' },
   volcano_ember_scythe: { noun: 'scythe (a polearm)' },
   reaper_soul_scythe: { noun: 'scythe (a polearm)' },
   // ── 둔기·지팡이 ──
@@ -72,7 +72,7 @@ const BY_KEY: Record<string, WeaponKind> = {
   angel_cherub_bow: { noun: 'archery bow', ranged: true },
   volcano_phoenix_bow: { noun: 'archery bow', ranged: true },
   temple_icicle_longbow: { noun: 'longbow', ranged: true },
-  fallen_grace_greatbow: { noun: 'greatbow (a very large archery bow)', ranged: true },
+  fallen_grace_greatbow: { noun: 'greatbow whose two limbs are feathered wings', ranged: true },
   ivory_flintlock_pistol: { noun: 'flintlock pistol', ranged: true },
   general_twin_flintlocks: { noun: 'twin flintlock pistols', pair: true, ranged: true },
   marsh_frog_blowgun: { noun: 'blowgun (a long tube)', ranged: true },
