@@ -21,6 +21,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 import { BackFab } from '@/components/BackNav';
+import { Ticker } from '@/components/Ticker';
 
 import {
   attackRaidAction,
@@ -135,25 +136,60 @@ const SLOT_EMOJI: Record<SupplySlot, string> = {
   accessory: '💍',
 };
 
-function useCountdown(expireAtIso: string): { text: string; over: boolean; urgent: boolean } {
-  const [now, setNow] = useState(() => Date.now());
+/** 만료 시각에 정확히 1회만 리렌더 — 1초 인터벌로 카드 전체를 매초 그리던 것 대체(2026-08-06). */
+function useDeadline(iso: string): boolean {
+  const [over, setOver] = useState(false);
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const ms = new Date(expireAtIso).getTime() - now;
-  if (ms <= 0) return { text: '정산 대기', over: true, urgent: false };
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  const s = Math.floor((ms % 60_000) / 1000);
-  // 1시간 미만은 m:ss, 이상은 h:mm.
-  const text = h > 0 ? `${h}:${String(m).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
-  return { text, over: false, urgent: ms < 60_000 };
+    const ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) {
+      setOver(true);
+      return;
+    }
+    setOver(false);
+    const t = setTimeout(() => setOver(true), ms + 250);
+    return () => clearTimeout(t);
+  }, [iso]);
+  return over;
+}
+
+/** 남은 시간 배지 — 1초 클럭을 이 잎(leaf)에 격리(카드 본체는 매초 리렌더되지 않는다). */
+function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled: boolean }) {
+  return (
+    <Ticker>
+      {(now) => {
+        const ms = new Date(expireAtIso).getTime() - now;
+        const over = ms <= 0;
+        const urgent = !settled && !over && ms < 60_000;
+        const h = Math.floor(ms / 3_600_000);
+        const m = Math.floor((ms % 3_600_000) / 60_000);
+        const sec = Math.floor((ms % 60_000) / 1000);
+        // 1시간 미만은 m:ss, 이상은 h:mm.
+        const text = over
+          ? '정산 대기'
+          : h > 0
+            ? `${h}:${String(m).padStart(2, '0')}`
+            : `${m}:${String(sec).padStart(2, '0')}`;
+        return (
+          <div
+            className={`rounded-full px-2.5 py-1 font-mono text-sm font-bold backdrop-blur ${
+              settled
+                ? 'bg-black/40 text-zinc-300'
+                : urgent
+                  ? 'animate-pulse-soft bg-red-500/80 text-white'
+                  : 'bg-black/40 text-amber-200'
+            }`}
+          >
+            {settled ? '종료' : `⏳ ${text}`}
+          </div>
+        );
+      }}
+    </Ticker>
+  );
 }
 
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const { showError, showHeaderToast } = useResourceToast();
-  const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
+  const over = useDeadline(v.expireAtIso); // 로직용(공격 가능 여부) — 표시는 CountdownBadge가 담당
 
   const boss = RAID_BOSSES[v.bossCode];
   const settled = v.status === 'settled';
@@ -553,17 +589,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
             ) : null}
           </div>
-          <div
-            className={`rounded-full px-2.5 py-1 font-mono text-sm font-bold backdrop-blur ${
-              settled
-                ? 'bg-black/40 text-zinc-300'
-                : urgent
-                  ? 'animate-pulse-soft bg-red-500/80 text-white'
-                  : 'bg-black/40 text-amber-200'
-            }`}
-          >
-            {settled ? '종료' : `⏳ ${countdown}`}
-          </div>
+          <CountdownBadge expireAtIso={v.expireAtIso} settled={settled} />
         </div>
       </div>
 

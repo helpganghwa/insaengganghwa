@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+
+import { Ticker } from '@/components/Ticker';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -128,10 +130,6 @@ export function GuildHome({
     guild.emblemPendingAt !== null &&
     Date.now() - guild.emblemPendingAt > 240_000;
 
-  // 생성 경과 초 — '만드는 중'이 멈춘 것처럼 보이지 않게 진행을 숫자로 보여준다(2026-08-06).
-  // Date.now()를 렌더에서 읽으면 하이드레이션이 어긋나므로 effect에서만 읽는다.
-  const [emblemElapsed, setEmblemElapsed] = useState<number | null>(null);
-
   // 폴링 횟수를 state로 둔다 — ref는 렌더를 안 깨워 '소진 후 실패 표시'로 못 넘어간다.
   const [emblemPolls, setEmblemPolls] = useState(0);
   // 재시도 직후 낙관 표시 — 서버 상태(revalidate)가 돌아오기 전에도 즉시 '만드는 중'.
@@ -173,19 +171,6 @@ export function GuildHome({
   // status가 done인데 문양이 없는 경우(선택값 없는 레거시 길드 등)는 실패가 아니다 —
   // 재시도할 원본이 없어 버튼이 죽은 링크가 된다. 조용히 기본 방패만 보여준다.
   const emblemFailed = !guild.emblemUrl && !emblemPending && guild.emblemStatus !== 'done';
-
-  // 수동 재시도 — 실패 상태에서만 노출. 성공하면 서버 액션의 revalidate로 문양이 바로 붙는다.
-  useEffect(() => {
-    if (guild.emblemUrl || guild.emblemStatus !== 'pending') {
-      setEmblemElapsed(null);
-      return;
-    }
-    const base = guild.emblemPendingAt ?? Date.now();
-    const tick = () => setEmblemElapsed(Math.max(0, Math.round((Date.now() - base) / 1000)));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [guild.emblemUrl, guild.emblemStatus, guild.emblemPendingAt]);
 
   /**
    * 문양 생성 킥 — 전용 라우트(180초 예산)를 fetch로 쏜다. 서버 액션이 아니라 fetch인 이유:
@@ -331,7 +316,16 @@ export function GuildHome({
                   <span className="shrink-0 text-zinc-400 dark:text-zinc-600">·</span>
                   <span className="truncate">
                     문양 만드는 중…
-                    {emblemElapsed !== null && <span className="ml-1 tabular-nums">{emblemElapsed}초</span>}
+                    {/* 경과 초 — 1초 클럭은 Ticker(표시 지점)에 격리(길드 홈 매초 리렌더 방지). */}
+                    {guild.emblemStatus === 'pending' && (
+                      <Ticker>
+                        {(tnow) => (
+                          <span className="ml-1 tabular-nums">
+                            {Math.max(0, Math.round((tnow - (guild.emblemPendingAt ?? tnow)) / 1000))}초
+                          </span>
+                        )}
+                      </Ticker>
+                    )}
                   </span>
                 </>
               )}

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
 
+import { Ticker } from '@/components/Ticker';
+
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -210,14 +212,9 @@ export function WorldMapView({
   const [readyAt, setReadyAt] = useState<number | null>(
     residenceProp?.readyAtIso ? Date.parse(residenceProp.readyAtIso) : null,
   );
-  const [now, setNow] = useState(() => Date.now());
-  const remainMs = readyAt ? Math.max(0, readyAt - now) : 0;
-  useEffect(() => {
-    if (!readyAt) return;
-    setNow(Date.now()); // 이동 직후 남은 시간이 한 박자 늦게 뜨지 않도록 즉시 1회
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [readyAt]);
+  // 1초 클럭 분리(2026-08-06) — 종전엔 여기 setInterval이 쿨타임 내내 **지도 전체**를 매초
+  // 리렌더했다. 이제 초 단위 표시는 Ticker(표시 지점)로 내리고, 핸들러는 클릭 시점에 계산한다.
+  const residenceRemainNow = () => (readyAt ? Math.max(0, readyAt - Date.now()) : 0);
   // 이동 확인 팝업 — 'release'=배치/집행관 해제 경고, 'gem'=쿨타임 보석 지불. 값=대상 구역 id.
   const [moveAsk, setMoveAsk] = useState<{ kind: 'release' | 'gem'; zoneId: number } | null>(null);
   const [moveConfirm, setMoveConfirm] = useState(false); // 보석 지불 3초 인-버튼 컨펌
@@ -330,15 +327,8 @@ export function WorldMapView({
   const [collectOpen, setCollectOpen] = useState<number | null>(null);
   const [collectNow, setCollectNow] = useState(0); // 모달 열 때 캡처한 시각(쿨다운 계산, 렌더 순수성)
   const [collectConfirm, setCollectConfirm] = useState(false);
-  // 팝업 세금 카드의 수금 타이머 — 초 단위 갱신(구역 팝업 열렸을 때만). 세금 안내 모달 상태도 함께.
-  const [nowMs, setNowMs] = useState(0);
+  // 세금 카드의 수금 타이머는 Ticker(표시 지점)가 자체 보유 — 팝업 열림 중 지도 매초 리렌더 제거.
   const [rateInfoOpen, setRateInfoOpen] = useState(false);
-  useLayoutEffect(() => {
-    if (selectedId == null) return;
-    setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [selectedId]);
   const [collectLeft, setCollectLeft] = useState(0);
   useEffect(() => {
     if (!collectConfirm) return;
@@ -481,7 +471,7 @@ export function WorldMapView({
    * 서버 한 트랜잭션으로 함께 처리한다 — 해제만 되고 이동은 실패하거나, 보석만 빠지는 경우가 없다.
    */
   const moveResidence = (zoneId: number, opts: { release?: boolean; paySpeedUp?: boolean } = {}) => {
-    const cost = opts.paySpeedUp ? residenceSpeedUpCost(remainMs) : 0;
+    const cost = opts.paySpeedUp ? residenceSpeedUpCost(residenceRemainNow()) : 0;
     const prev = residence;
     const prevReady = readyAt;
     const prevLock = moveLock;
@@ -508,7 +498,7 @@ export function WorldMapView({
 
   /** 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도 클릭). */
   const speedUpOnly = () => {
-    const cost = residenceSpeedUpCost(remainMs);
+    const cost = residenceSpeedUpCost(residenceRemainNow());
     setMoveAsk(null);
     setMoveConfirm(false);
     const prevReady = readyAt;
@@ -531,7 +521,7 @@ export function WorldMapView({
    * 시간이 먼저인 이유: 대기시간이 남아 있으면 해제 여부를 물어봐야 소용이 없다.
    */
   const askMove = (zoneId: number) => {
-    if (remainMs > 0) {
+    if (residenceRemainNow() > 0) {
       setMoveLeft(3);
       setMoveConfirm(false);
       return setMoveAsk({ kind: 'gem', zoneId });
@@ -1058,17 +1048,24 @@ export function WorldMapView({
                     <span className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-center text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
                       이동 불가
                     </span>
-                  ) : remainMs > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => askMove(selected.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
-                    >
-                      {fmtRemain(remainMs)} 후
-                      <br />
-                      또는 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
-                    </button>
+                  ) : residenceRemainNow() > 0 ? (
+                    <Ticker>
+                      {() => {
+                        const rem = residenceRemainNow();
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => askMove(selected.id)}
+                            disabled={pending}
+                            className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
+                          >
+                            {fmtRemain(rem)} 후
+                            <br />
+                            또는 💎{residenceSpeedUpCost(rem).toLocaleString('ko-KR')}
+                          </button>
+                        );
+                      }}
+                    </Ticker>
                   ) : (
                     <button
                       type="button"
@@ -1211,7 +1208,8 @@ export function WorldMapView({
                   </div>
 
                   {selected.ownerGuildId != null ? (
-                    (() => {
+                    <Ticker>
+                    {(nowMs) => {
                       // 서버(collect.ts)는 captured_at·last_tax 쿨다운을 **둘 다** 검사하므로, 실제
                       // 게이트는 둘 중 더 최근(늦은) 시각이다. lastTaxAt ?? capturedAt로 하나만 보면
                       // 재점령 직후(captured_at이 더 최근)에 '수금 가능' 오표시 → 수금 시 서버가 거부.
@@ -1270,7 +1268,8 @@ export function WorldMapView({
                             ))}
                         </div>
                       );
-                    })()
+                    }}
+                    </Ticker>
                   ) : (
                     <div className="mt-2 text-center text-[11px] font-medium text-zinc-500">점령 후 세금을 수금하세요</div>
                   )}
@@ -1434,7 +1433,9 @@ export function WorldMapView({
               subtitle={
                 <>
                   남은{' '}
-                  <b className="font-bold text-zinc-600 dark:text-zinc-300">{fmtRemain(remainMs)}</b>
+                  <b className="font-bold text-zinc-600 dark:text-zinc-300">
+                    <Ticker>{() => fmtRemain(residenceRemainNow())}</Ticker>
+                  </b>
                 </>
               }
               footer={
@@ -1463,7 +1464,9 @@ export function WorldMapView({
                       />
                     )}
                     <span className="relative">
-                      단축 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                      <Ticker>
+                        {() => <>단축 💎{residenceSpeedUpCost(residenceRemainNow()).toLocaleString('ko-KR')}</>}
+                      </Ticker>
                       {moveConfirm ? ` ${moveLeft}s` : ''}
                     </span>
                   </button>
@@ -1484,7 +1487,9 @@ export function WorldMapView({
               </p>
               <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
                 <p className="font-mono text-[20px] font-black text-sky-500">
-                  {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
+                  <Ticker>
+                    {() => <>{residenceSpeedUpCost(residenceRemainNow()).toLocaleString('ko-KR')}💎</>}
+                  </Ticker>
                 </p>
               </div>
             </ModalLayout>

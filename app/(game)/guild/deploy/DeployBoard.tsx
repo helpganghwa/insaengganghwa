@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
+import { Ticker } from '@/components/Ticker';
+
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -228,19 +230,14 @@ export function DeployBoard({
     }
     return set;
   }, [adjacency, homeZoneId]);
-  const [nowMs, setNowMs] = useState(0);
   /** 이동 대기시간 단축 팝업 — 세계지도 이동과 같은 순서(단축 먼저, 배치는 다시 누르기). */
   const [speedUpAsk, setSpeedUpAsk] = useState(false);
   /** 단축 성공 후 남은 시간을 즉시 0으로 — 서버 갱신을 기다리지 않는다. */
   const [readyCleared, setReadyCleared] = useState(false);
   const readyAt = residence?.readyAtIso ? Date.parse(residence.readyAtIso) : null;
-  const moveRemainMs = readyCleared ? 0 : readyAt && nowMs ? Math.max(0, readyAt - nowMs) : 0;
-  useEffect(() => {
-    if (!readyAt) return;
-    setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [readyAt]);
+  // 1초 클럭 분리(2026-08-06) — 종전엔 setInterval이 쿨타임 내내 보드 전체를 매초 리렌더.
+  // 초 단위 표시는 Ticker(표시 지점)가 보유, 핸들러는 호출 시점에 계산.
+  const moveRemainNow = () => (readyCleared ? 0 : readyAt ? Math.max(0, readyAt - Date.now()) : 0);
   /** 배치 확인 팝업 — 이동·해제·배치를 한 번에 안내하고 한 번에 실행한다. */
   const [plan, setPlan] = useState<{
     zoneId: number;
@@ -359,7 +356,7 @@ export function DeployBoard({
       : me.depZoneId
         ? `${me.depZoneName} ${me.depRole === 'attack' ? '공격' : '수비'} 배치`
         : null;
-    const gem = needsMove ? residenceSpeedUpCost(moveRemainMs) : 0;
+    const gem = needsMove ? residenceSpeedUpCost(moveRemainNow()) : 0;
     setPlanLeft(3);
     setPlanConfirm(false);
     setPlan({
@@ -395,7 +392,7 @@ export function DeployBoard({
       zoneName: selected.name,
       role: null,
       move: true,
-      gem: residenceSpeedUpCost(moveRemainMs),
+      gem: residenceSpeedUpCost(moveRemainNow()),
       release,
     });
   };
@@ -973,7 +970,7 @@ export function DeployBoard({
               <>
                 남은{' '}
                 <b className="font-bold text-zinc-600 dark:text-zinc-300">
-                  {fmtRemain(moveRemainMs)}
+                  <Ticker>{() => fmtRemain(moveRemainNow())}</Ticker>
                 </b>
               </>
             }
@@ -1076,7 +1073,7 @@ export function DeployBoard({
                     style={{ flex: 1 }}
                     className="rounded-xl bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
                   >
-                    {fmtRemain(moveRemainMs)} 후 {plan.role == null ? '이동' : '배치'}
+                    <Ticker>{() => <>{fmtRemain(moveRemainNow())} 후</>}</Ticker> {plan.role == null ? '이동' : '배치'}
                     <br />
                     또는 💎{plan.gem.toLocaleString('ko-KR')}
                   </button>
@@ -1127,7 +1124,9 @@ export function DeployBoard({
                   <span className="text-zinc-400">·</span>
                   <span className="text-zinc-600 dark:text-zinc-300">
                     이동 대기시간{' '}
-                    <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(moveRemainMs)}</b>을{' '}
+                    <b className="font-bold text-zinc-700 dark:text-zinc-200">
+                      <Ticker>{() => fmtRemain(moveRemainNow())}</Ticker>
+                    </b>을{' '}
                     <b className="font-mono font-bold text-sky-500">{plan.gem.toLocaleString('ko-KR')}💎</b>로
                     단축합니다.
                   </span>

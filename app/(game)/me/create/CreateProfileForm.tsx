@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { Ticker } from '@/components/Ticker';
+
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { useDiamond } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -60,17 +62,7 @@ export function CreateProfileForm({
   /** 생성 확인 팝업 — 종전엔 3초 재탭 컨펌이라 안내를 넣을 자리가 없었다(2026-08-02). */
   const [confirm, setConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false); // 낙관: 제출 직후 ⏳ 즉시 표시
-  const [nowMs, setNowMs] = useState<number | null>(null); // 진행시간용 라이브 클럭(마운트 후 세팅 — 하이드레이션 안전)
   const [pending, startTransition] = useTransition();
-
-  // 생성 진행/대기 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
-  useEffect(() => {
-    if (queue === null && !submitted) return;
-    const tick = () => setNowMs(Date.now());
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [queue, submitted]);
 
   // 진행/대기 중 서버 상태 재조회(대기→시작→완료 반영). 완료되면 queue=null로 정지.
   // 경량 폴링(2026-08-06) — 이전엔 30초마다 풀 refresh(페이지+layout 재렌더 ~10회/생성).
@@ -135,14 +127,6 @@ export function CreateProfileForm({
     const waiting = queue?.waiting ?? false;
     const statusText = queue ? (STATUS_LABEL[queue.status] ?? '처리 중') : '요청 중';
     const startedAt = queue?.createdAt ? Date.parse(queue.createdAt) : NaN;
-    const elapsedSec =
-      !Number.isNaN(startedAt) && nowMs != null ? Math.max(0, Math.floor((nowMs - startedAt) / 1000)) : null;
-    const elapsedText =
-      elapsedSec == null
-        ? null
-        : elapsedSec < 60
-          ? `${elapsedSec}초`
-          : `${Math.floor(elapsedSec / 60)}분 ${elapsedSec % 60}초`;
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center dark:border-amber-700/50 dark:bg-amber-950/30">
         <div className="text-2xl">{waiting ? '🕐' : '⏳'}</div>
@@ -154,10 +138,19 @@ export function CreateProfileForm({
             대기 {queue.position}번째 · 예상 약 {queue.etaMinutes}분
           </div>
         ) : (
-          elapsedText && (
-            <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-300">
-              경과 {elapsedText}
-            </div>
+          !Number.isNaN(startedAt) && (
+            // 경과 시간 — 1초 클럭은 Ticker(표시 지점)에 격리(폼 전체 매초 리렌더 방지).
+            <Ticker>
+              {(tnow) => {
+                const sec = Math.max(0, Math.floor((tnow - startedAt) / 1000));
+                const txt = sec < 60 ? `${sec}초` : `${Math.floor(sec / 60)}분 ${sec % 60}초`;
+                return (
+                  <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+                    경과 {txt}
+                  </div>
+                );
+              }}
+            </Ticker>
           )
         )}
         <p className="mt-1 text-xs text-zinc-500">
