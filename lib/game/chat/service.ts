@@ -353,11 +353,20 @@ export async function persistAndBroadcast(
     createdAt: row!.createdAt.toISOString(),
   };
   invalidateRecentCache(serverId, guildId); // 같은 인스턴스의 폴링이 곧바로 새 메시지를 보게
+  // 미니바 준실시간(2026-08-06) — 월드 채널만, 서버당 15초에 최대 1건을 미니 토픽에 동봉.
+  // 스로틀 특성상 한산할 때의 첫 메시지는 즉시 통과(체감 실시간), 폭주 시엔 15초 코얼레싱으로
+  // fan-out 비용 상한 고정. 인스턴스별 독립 스로틀이라 최악 인스턴스 수만큼 중복 — 허용.
+  const alsoMini = !guildId && Date.now() - (miniLastAt.get(serverId) ?? 0) >= MINI_THROTTLE_MS;
+  if (alsoMini) miniLastAt.set(serverId, Date.now());
   // after() 사용 금지(2026-07-21 롤백) — 프로덕션에서 응답 후 콜백이 드롭돼 브로드캐스트가
   // 발사되지 않는 정황(실시간 미전달). 낙관 UI라 전송자 체감 지연 없음 — await로 보장.
-  await broadcastChat(serverId, 'new', dto, guildId);
+  await broadcastChat(serverId, 'new', dto, guildId, { alsoMini });
   return dto;
 }
+
+// 미니 토픽 스로틀(서버별) — persistAndBroadcast 참조.
+const miniLastAt = new Map<number, number>();
+const MINI_THROTTLE_MS = 15_000;
 
 /** 연속 도배(같은 말 즉시 반복) 차단 구간 — 직전 동일 메시지가 이 시간 내일 때만 중복으로 본다. */
 const CHAT_DUP_WINDOW_MS = 60_000;

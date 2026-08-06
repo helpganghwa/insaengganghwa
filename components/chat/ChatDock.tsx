@@ -582,7 +582,8 @@ export function ChatDock() {
 
   // Realtime 구독 — **패널이 열린 동안만**(2026-08-06, 동접 1천 대비). 닫힌 유저까지 상시
   // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
-  // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 60초 폴링(lite)으로 충분히 신선.
+  // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 코얼레싱 미니 토픽(아래 effect)+60초
+  // 폴링 안전망이 담당.
   // 열림 중엔 전체+내 길드 두 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
   useEffect(() => {
     if (sid === null || !open) return;
@@ -610,6 +611,25 @@ export function ChatDock() {
       for (const c of chans) void sb.removeChannel(c);
     };
   }, [sid, guildTopic, open, routeIncoming]);
+
+  // 미니바 준실시간(2026-08-06 확정) — **닫힘(비접힘) 동안만** 코얼레싱 미니 토픽 구독.
+  // 서버가 15초당 최대 1건(월드 최신 메시지)만 발사해 fan-out 비용 상한 고정 — 한산할 때의
+  // 첫 메시지는 스로틀을 즉시 통과하므로 체감상 실시간. 60초 lite 폴링은 유실(스로틀로 묶인
+  // 건·hide·WS 사망) 보정 안전망으로 유지. 토픽 문자열은 서버 chatMiniTopic과 동기.
+  useEffect(() => {
+    if (sid === null || open || collapsed) return;
+    const sb = supabaseBrowser();
+    if (!sb) return;
+    const ch = sb
+      .channel(`chat-mini:s${sid}`)
+      .on('broadcast', { event: 'new' }, ({ payload }) =>
+        routeIncoming('all', payload as ChatMessageDto),
+      )
+      .subscribe();
+    return () => {
+      void sb.removeChannel(ch);
+    };
+  }, [sid, open, collapsed, routeIncoming]);
 
   // 길드 탈퇴/해산 감지 — 길드 버퍼·미니바 잔존 제거.
   useEffect(() => {

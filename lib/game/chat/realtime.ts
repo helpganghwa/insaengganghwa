@@ -16,16 +16,29 @@ export function chatTopic(serverId: number, guildId?: bigint | null): string {
   return `chat:s${serverId}:g${guildId}:${token}`;
 }
 
+/**
+ * 미니바 준실시간 토픽(2026-08-06 확정) — 닫힘(비접힘) 클라 전용. 월드 채널 한정,
+ * 서버가 15초당 최대 1건만 발사(service.ts 스로틀)해 fan-out 비용 상한이 고정된다.
+ * ⚠ 클라(ChatDock)가 같은 문자열을 인라인 조립 — 형식 변경 시 양쪽 동기화.
+ */
+export function chatMiniTopic(serverId: number): string {
+  return `chat-mini:s${serverId}`;
+}
+
 export async function broadcastChat(
   serverId: number,
   event: 'new' | 'hide' | 'sys',
   payload: unknown,
   guildId?: bigint | null,
+  opts?: { alsoMini?: boolean },
 ): Promise<void> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return;
   try {
+    // 미니 토픽은 같은 요청에 동봉 — 별도 HTTP 왕복 없이(전송 지연 불변) fan-out 대상만 추가.
+    const messages = [{ topic: chatTopic(serverId, guildId), event, payload, private: false }];
+    if (opts?.alsoMini) messages.push({ topic: chatMiniTopic(serverId), event, payload, private: false });
     await fetch(`${url}/realtime/v1/api/broadcast`, {
       method: 'POST',
       headers: {
@@ -33,9 +46,7 @@ export async function broadcastChat(
         apikey: key,
         Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({
-        messages: [{ topic: chatTopic(serverId, guildId), event, payload, private: false }],
-      }),
+      body: JSON.stringify({ messages }),
       // 채팅 전송 응답을 브로드캐스트 지연에 묶지 않음 — 짧은 타임아웃.
       signal: AbortSignal.timeout(2500),
     });
