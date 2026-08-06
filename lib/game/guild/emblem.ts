@@ -122,9 +122,18 @@ const OPAQUE_ALPHA = 24; // 이 alpha 초과면 불투명 픽셀로 카운트
 // 그리고 속을 비운 산출물이 종종 나옴(라이브 #13·#21: 0.59~0.64, 정상 0.91~1.0). 행별
 // [첫..끝 불투명] 스팬 대비 불투명 비율이라 방패/원형/마름모 등 외곽 모양과 무관.
 const MIN_INTERIOR_FILL = 0.8;
+/** 마지막 시도용 완화 하한 — 속 빈 결함(테두리만)은 여전히 걸러지되, 조합 의존 영구 실패를 푼다. */
+const RELAXED_INTERIOR_FILL = 0.55;
 
-/** 불투명 비율 + 내부 채움율이 정상 범위인지(빈/꽉참·속빈 결함 검출). 디코드 실패도 결함. */
-async function emblemQualityOk(png: Buffer): Promise<boolean> {
+/**
+ * 불투명 비율 + 내부 채움율이 정상 범위인지(빈/꽉참·속빈 결함 검출). 디코드 실패도 결함.
+ *
+ * `relax`(2026-08-06) — 마지막 시도에서는 채움율 기준을 낮춘다. 특정 선택 조합(원형 등)이
+ * 계속 0.8을 못 넘겨 **같은 조합으로는 영원히 실패**하는 사례가 나왔다(스테이징 gggggg:
+ * 'pixflux retries exhausted: low quality'로 4회 전멸). 속 빈 결함을 거르는 목적은
+ * 0.55에서도 충족되므로, 완벽하지 않은 문양이라도 주는 편이 무문양보다 낫다.
+ */
+async function emblemQualityOk(png: Buffer, relax = false): Promise<boolean> {
   try {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width, height, channels } = info;
@@ -152,7 +161,7 @@ async function emblemQualityOk(png: Buffer): Promise<boolean> {
       }
       span += last - first + 1;
     }
-    return span > 0 && inSpan / span >= MIN_INTERIOR_FILL;
+    return span > 0 && inSpan / span >= (relax ? RELAXED_INTERIOR_FILL : MIN_INTERIOR_FILL);
   } catch {
     return false;
   }
@@ -254,11 +263,14 @@ async function generateEmblemPng(
     const buf = Buffer.from(b64, 'base64');
     if (!isPng(buf)) throw new Error('pixflux returned non-PNG');
     // 경량 품질 가드 — 빈/깨진·꽉찬 결함이면 재생성(무료 1회·재생성 모두 결함 저장 회피).
-    if (!(await emblemQualityOk(buf))) {
+    // 마지막 시도는 완화 기준 — 여기서도 버리면 그 조합은 영구 무문양이 된다.
+    const lastTry = attempt === 3 || Date.now() > deadline - 20_000;
+    if (!(await emblemQualityOk(buf, lastTry))) {
       lastErr = 'low quality (empty/full)';
-      console.warn(`[guild.emblem] 품질 미달 재생성 (attempt ${attempt})`);
+      console.warn(`[guild.emblem] 품질 미달 재생성 (attempt ${attempt}${lastTry ? ', relaxed' : ''})`);
       continue;
     }
+    if (lastTry) console.warn('[guild.emblem] 완화 기준으로 통과 — 조합 재검토 대상');
     return buf;
   }
   throw new Error(`pixflux retries exhausted: ${lastErr}`);
@@ -610,7 +622,7 @@ export async function deleteEmblem(input: { userId: string; serverId: number; em
  * 비어 있거나 staleMs를 넘겼을 때만 now()로 갱신하며 소유권을 가져간다(조건부 UPDATE = 원자적).
  * @returns true = 내가 생성한다 · false = 다른 호출이 진행 중
  */
-export async function claimEmblemGeneration(guildId: bigint, staleMs = 180_000): Promise<boolean> {
+export async function claimEmblemGeneration(guildId: bigint, staleMs = 240_000): Promise<boolean> {
   const rows = (await db.execute(sql`
     update guilds
        set emblem_status = 'pending', emblem_pending_at = now()

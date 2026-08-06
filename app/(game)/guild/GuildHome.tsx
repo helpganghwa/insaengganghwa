@@ -121,12 +121,16 @@ export function GuildHome({
 
   // 결성 직후 문양은 after()로 비동기 생성 → 완성될 때까지 폴링해 픽업한다.
   // 이전엔 4초 뒤 1회뿐이라 실제 소요(10~40초)를 못 따라가 거의 항상 헛방이었다(2026-08-06).
-  // 시작한 지 3분 넘은 pending은 굳은 것으로 본다(함수가 잘려 catch가 못 돈 경우).
-  // 시각 기준이 없으면 새로고침마다 폴링이 리셋돼 '생성 중'이 영원히 반복된다.
+  // 시작한 지 4분 넘은 pending은 굳은 것으로 본다(함수가 잘려 catch가 못 돈 경우).
+  // 생성 예산(150초)보다 넉넉히 잡아야 정상 생성 중에 '실패'로 뒤집히지 않는다.
   const emblemStale =
     guild.emblemStatus === 'pending' &&
     guild.emblemPendingAt !== null &&
-    Date.now() - guild.emblemPendingAt > 180_000;
+    Date.now() - guild.emblemPendingAt > 240_000;
+
+  // 생성 경과 초 — '만드는 중'이 멈춘 것처럼 보이지 않게 진행을 숫자로 보여준다(2026-08-06).
+  // Date.now()를 렌더에서 읽으면 하이드레이션이 어긋나므로 effect에서만 읽는다.
+  const [emblemElapsed, setEmblemElapsed] = useState<number | null>(null);
 
   // 폴링 횟수를 state로 둔다 — ref는 렌더를 안 깨워 '소진 후 실패 표시'로 못 넘어간다.
   const [emblemPolls, setEmblemPolls] = useState(0);
@@ -162,6 +166,18 @@ export function GuildHome({
   const emblemFailed = !guild.emblemUrl && !emblemPending && guild.emblemStatus !== 'done';
 
   // 수동 재시도 — 실패 상태에서만 노출. 성공하면 서버 액션의 revalidate로 문양이 바로 붙는다.
+  useEffect(() => {
+    if (guild.emblemUrl || guild.emblemStatus !== 'pending') {
+      setEmblemElapsed(null);
+      return;
+    }
+    const base = guild.emblemPendingAt ?? Date.now();
+    const tick = () => setEmblemElapsed(Math.max(0, Math.round((Date.now() - base) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [guild.emblemUrl, guild.emblemStatus, guild.emblemPendingAt]);
+
   /**
    * 문양 생성 킥 — 전용 라우트(180초 예산)를 fetch로 쏜다. 서버 액션이 아니라 fetch인 이유:
    * 액션은 직렬 처리라 20~97초짜리 생성이 라우터 내비게이션을 막는다(무한 로딩 제보).
@@ -296,7 +312,10 @@ export function GuildHome({
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-bold">{guild.name}</h2>
             {emblemPending ? (
-              <p className="mt-0.5 text-[11px] text-zinc-500">문양 만드는 중…</p>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                문양 만드는 중…
+                {emblemElapsed !== null && <span className="ml-1 tabular-nums">{emblemElapsed}초</span>}
+              </p>
             ) : (
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 멤버 {guild.memberCount}/{guild.capacity}
