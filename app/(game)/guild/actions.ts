@@ -383,6 +383,7 @@ export async function setResidenceAction(
   try {
     const r = await setResidence(u, await getActiveServerId(), zoneId, opts);
     revalidatePath('/guild');
+    revalidatePath('/guild/deploy'); // 거주지 상태를 쓰는 배치 화면 — 클라 refresh 제거(2026-08-06) 커버
     return { status: 'success', ...r } as const;
   } catch (e) {
     return fail(e, 'residence');
@@ -398,6 +399,7 @@ export async function speedUpResidenceAction() {
   try {
     const r = await speedUpResidenceMove(u, await getActiveServerId());
     revalidatePath('/guild');
+    revalidatePath('/guild/deploy'); // 거주지 상태를 쓰는 배치 화면 — 클라 refresh 제거(2026-08-06) 커버
     return { status: 'success', spent: r.spent } as const;
   } catch (e) {
     return fail(e, 'residence.speedup');
@@ -475,6 +477,7 @@ export async function deployAction(
     });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
+    revalidatePath('/guild/deploy'); // 배치 화면 — 클라 refresh 제거(2026-08-06)에 따른 명시 커버
     return { status: 'success', ...r } as const;
   } catch (e) {
     return fail(e, 'deploy');
