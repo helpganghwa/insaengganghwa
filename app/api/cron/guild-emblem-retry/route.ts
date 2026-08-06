@@ -15,7 +15,12 @@ import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { guilds } from '@/lib/db/schema/guild';
-import { generateAndStoreEmblem, markEmblemStatus, reconcileStuckEmblemEscrows } from '@/lib/game/guild/emblem';
+import {
+  claimEmblemGeneration,
+  generateAndStoreEmblem,
+  markEmblemStatus,
+  reconcileStuckEmblemEscrows,
+} from '@/lib/game/guild/emblem';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
@@ -59,18 +64,21 @@ export async function GET(req: Request) {
 
   let ok = 0;
   for (const g of targets) {
+    // 진행 중인 생성(유저가 방금 킥한 것 등)과 겹치지 않게 클레임을 먼저 잡는다.
+    if (!(await claimEmblemGeneration(g.id))) continue;
     // 시도 카운트를 생성 전에 선증가 — 생성 도중 함수가 죽어도 같은 길드로 무한 루프하지 않는다.
     await db
       .update(guilds)
-      .set({
-        emblemAttempts: sql`${guilds.emblemAttempts} + 1`,
-        emblemStatus: 'pending',
-        emblemPendingAt: new Date(),
-      })
+      .set({ emblemAttempts: sql`${guilds.emblemAttempts} + 1` })
       .where(sql`${guilds.id} = ${g.id}`);
 
     try {
-      await generateAndStoreEmblem({ guildId: g.id, selection: g.selection as EmblemSelection });
+      // 크론은 maxDuration 180 — 생성에 120초를 주고 나머지는 나머지 길드·마무리에 남긴다.
+      await generateAndStoreEmblem({
+        guildId: g.id,
+        selection: g.selection as EmblemSelection,
+        budgetMs: 120_000,
+      });
       ok++;
       console.log(`[guild-emblem-retry] guild ${g.id} 문양 생성 성공 (attempt ${g.attempts + 1})`);
     } catch (e) {

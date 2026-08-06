@@ -218,7 +218,8 @@ export async function adminRegenerateEmblem(guildId: string): Promise<{ ok: bool
 
   await db.update(guilds).set({ emblemAttempts: 0, emblemStatus: 'pending' }).where(eq(guilds.id, gid));
   try {
-    await generateAndStoreEmblem({ guildId: gid, selection });
+    // 어드민 액션도 라우트 예산 안에서 돌아야 한다 — 보수적으로 45초.
+    await generateAndStoreEmblem({ guildId: gid, selection, budgetMs: 45_000 });
     revalidatePath('/admin/emblem-review');
     revalidatePath('/guild');
     revalidatePath('/', 'layout');

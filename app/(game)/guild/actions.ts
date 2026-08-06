@@ -77,73 +77,16 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
       emblemColor: mainColor(emblem.mainToneId),
       emblemSelection: emblem, // 최초 생성 실패 시 cron 재시도 원본
     });
-    // 문양 생성(Pixellab ~수초)은 응답 이후로 미뤄 결성을 즉시 반환(낙관적 UX).
-    // best-effort — 실패해도 길드는 유지(재시도 크론·수동 재시도로 커버). 완료 시 /guild 무효화.
-    // ⚠ 이 콜백은 (game) 라우트의 maxDuration(60s)을 공유한다 — Pixellab이 느리면 통째로
-    //   kill돼 catch조차 못 돈다. 그래서 상태를 **먼저** pending으로 찍어두고(실패해도
-    //   'failed'로 남는 게 아니라 pending으로 남아 크론이 이어받는다) 생성에 들어간다.
+    // 문양 생성은 여기서 돌리지 않는다(2026-08-06) — 실측 소요 20~97초인데 (game) 라우트의
+    // maxDuration은 60초라 정상 생성까지 kill되고 상태가 pending으로 굳었다. 상태만 pending으로
+    // 찍고, 실제 생성은 180초 예산의 전용 라우트(/api/guild/emblem/generate)가 맡는다 —
+    // 길드 홈이 도착 즉시 킥하고, 그마저 놓치면 재시도 크론이 이어받는다.
     await markEmblemStatus(guildId, 'pending');
-    after(async () => {
-      try {
-        await generateAndStoreEmblem({ guildId, selection: emblem });
-        revalidatePath('/guild');
-        revalidatePath('/', 'layout'); // 헤더(공유 레이아웃) 문양 반영
-      } catch (ge) {
-        console.error('[guild.create.emblem]', ge);
-        await markEmblemStatus(guildId, 'failed', ge);
-        revalidatePath('/guild');
-      }
-    });
     revalidatePath('/guild');
     return { status: 'success', guildId: guildId.toString() } as const;
   } catch (e) {
     return fail(e, 'create');
   }
-}
-
-/**
- * 문양 생성 수동 재시도(2026-08-06) — 실패 상태의 길드에서 유저가 즉시 다시 시도한다.
- * 자동 재시도(크론)를 기다리지 않게 하는 경로. 저장된 selection을 그대로 쓰므로 무료다
- * (다른 조합으로 만들려면 문양 화면의 유료 재생성).
- */
-export async function retryGuildEmblemAction() {
-  const u = await getSessionUserId();
-  if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
-  const m = await getGuildPermState(u, await getActiveServerId());
-  if (!m) return { status: 'error', code: 'NOT_MEMBER' } as const;
-  if (!hasGuildPerm(m.role, m.permissions, 'emblem')) return { status: 'error', code: 'NO_PERM' } as const;
-
-  const g = await getGuild(m.guildId);
-  if (!g) return { status: 'error', code: 'NOT_FOUND' } as const;
-  // 이미 문양이 있으면 재생성이 아니라 '유료 재생성'의 영역 — 여기서는 거절한다.
-  if (g.activeEmblemId) return { status: 'error', code: 'ALREADY_HAS_EMBLEM' } as const;
-  // 저장된 selection은 결성 시 검증을 통과한 값 — 스키마 변경 대비로 다시 확인한다.
-  const selection = g.emblemSelection as EmblemSelection | null;
-  if (!selection || !isValidEmblemSelection(selection)) {
-    return { status: 'error', code: 'EMBLEM_INVALID' } as const;
-  }
-
-  // ⚠ 생성을 액션 안에서 await하지 않는다(2026-08-06). 서버 액션은 직렬 처리라
-  // 10~40초짜리 생성을 붙잡고 있으면 그동안 라우터 내비게이션이 통째로 멈춘다(무한 로딩 제보).
-  // 상태만 pending으로 찍고 즉시 반환 → 화면은 바로 '만드는 중'으로 바뀌고 폴링이 결과를 픽업한다.
-  // 이 콜백이 함수 예산에 잘려도 상태가 pending으로 남아 재시도 크론이 그대로 이어받는다.
-  const guildId = m.guildId;
-  await markEmblemStatus(guildId, 'pending');
-  after(async () => {
-    try {
-      await generateAndStoreEmblem({ guildId, selection });
-      revalidatePath('/guild');
-      revalidatePath('/', 'layout');
-    } catch (e) {
-      console.error('[guild.emblem.retry]', e);
-      await markEmblemStatus(guildId, 'failed', e);
-      revalidatePath('/guild');
-    }
-  });
-  revalidatePath('/guild');
-  return { status: 'success' } as const;
 }
 
 // 헤더 문양은 (game) 공유 레이아웃(URL '/')에 있음 — page 리밸리데이트론 안 바뀜.

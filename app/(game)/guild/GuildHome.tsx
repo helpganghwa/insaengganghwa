@@ -19,7 +19,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 
-import { donateAction, leaveGuildAction, retryGuildEmblemAction } from './actions';
+import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { type RichMember } from './GuildMemberList';
 import { GuildLogFeed } from './GuildLogFeed';
@@ -101,6 +101,9 @@ export function GuildHome({
     setOptXp(0);
   }
   const isOfficer = myRole === 'leader' || myRole === 'vice';
+  // 문양 생성 권한 — 서버(라우트)가 정본으로 재검증하지만, 권한 없는 유저에게 무의미한
+  // 킥·버튼을 노출하지 않기 위한 화면 가드. 부길드장의 세부 권한은 서버가 최종 판정한다.
+  const canEmblem = isOfficer;
   // 권한별 표시 타일(길드 관리=임원만). 전부 가로 꽉 찬 와이드 배너로 세로 나열.
   const visibleMenu = GUILD_MENU.filter((m) => !m.officerOnly || isOfficer);
   /** 깃발 아래 한 줄 — 수치가 없는 항목은 빈 문자열(줄만 비운다). */
@@ -159,19 +162,34 @@ export function GuildHome({
   const emblemFailed = !guild.emblemUrl && !emblemPending && guild.emblemStatus !== 'done';
 
   // 수동 재시도 — 실패 상태에서만 노출. 성공하면 서버 액션의 revalidate로 문양이 바로 붙는다.
-  const [, startRetry] = useTransition();
-  const retryEmblem = () => {
-    setRetryOptimistic(true); // 즉시 '만드는 중'으로 — 액션 응답을 기다리지 않는다
+  /**
+   * 문양 생성 킥 — 전용 라우트(180초 예산)를 fetch로 쏜다. 서버 액션이 아니라 fetch인 이유:
+   * 액션은 직렬 처리라 20~97초짜리 생성이 라우터 내비게이션을 막는다(무한 로딩 제보).
+   * 응답을 기다리는 동안에도 화면은 폴링으로 갱신되고, 유저는 자유롭게 이동할 수 있다.
+   * 중복 발사는 서버의 생성 클레임이 막으므로 여기서는 낙관적으로 쏜다.
+   */
+  const kickEmblem = () => {
+    setRetryOptimistic(true); // 즉시 '만드는 중'으로
     setEmblemPolls(0);
-    startRetry(async () => {
-      const r = await retryGuildEmblemAction();
-      if (r.status === 'success') showHeaderToast({ title: '문양을 만들고 있어요' });
-      else {
-        setRetryOptimistic(false);
-        showError('문양 만들기를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
-      }
-    });
+    void fetch('/api/guild/emblem/generate', { method: 'POST' })
+      .then((r) => {
+        if (!r.ok && r.status !== 429) showError('문양 만들기에 실패했어요. 다시 시도해 주세요.');
+        router.refresh();
+      })
+      .catch(() => {
+        /* 네트워크 실패는 폴링·크론이 커버 — 화면은 그대로 '만드는 중' */
+      });
   };
+
+  // 결성 직후·굳은 pending 진입 시 자동 킥 — 결성 액션은 상태만 찍고 생성은 이 라우트가 한다.
+  const kickedRef = useRef(false);
+  useEffect(() => {
+    if (kickedRef.current || guild.emblemUrl) return;
+    if (guild.emblemStatus !== 'pending' || !canEmblem) return;
+    kickedRef.current = true;
+    kickEmblem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guild.emblemUrl, guild.emblemStatus, canEmblem]);
 
   // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 남은 초(3s/2s/1s)를 라벨에 표기.
   useEffect(() => {
@@ -300,7 +318,7 @@ export function GuildHome({
                   <span>문양 만들기 실패</span>
                   <button
                     type="button"
-                    onClick={retryEmblem}
+                    onClick={kickEmblem}
                     className="rounded-md border border-zinc-300 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
                   >
                     다시 만들기

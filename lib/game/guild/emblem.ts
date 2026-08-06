@@ -183,16 +183,20 @@ async function fitEmblemToFrame(png: Buffer, size = 128, pad = 6): Promise<Buffe
 // startKeyIdx: 라운드로빈 시작 키(1|2). pixflux는 동기 단발 호출이라 아바타와 달리 키 일관성
 // 제약이 없어(폴링 없음) 재시도마다 키를 교대한다 — 부하 분산 + 한쪽 키 429 시 다른 키로 failover.
 // key2 미설정이면 pixellabKeyByIdx가 항상 key1 반환(단일 키 환경 무영향).
-async function generateEmblemPng(prompt: string, shieldLike = true, startKeyIdx = 1): Promise<Buffer> {
+async function generateEmblemPng(
+  prompt: string,
+  shieldLike = true,
+  startKeyIdx = 1,
+  budgetMs = 150_000,
+): Promise<Buffer> {
   if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
   const negative =
     'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature' +
     (shieldLike ? '' : ', shield, heater shield, round shield, escutcheon, shield shape');
   let lastErr = 'unknown';
-  // 전체 예산(2026-08-06) — 결성/재시도 경로는 (game) maxDuration 60s를 공유한다. 예산을 넘기면
-  // 함수가 통째로 kill돼 catch도 못 돌고 상태가 pending으로 굳는다(스테이징 실측). 스스로 빠져나와
-  // 'failed'로 남기면 유저에게 즉시 드러나고 재시도 크론도 이어받는다.
-  const deadline = Date.now() + 40_000;
+  // 전체 예산 — 넘기면 함수가 kill되기 전에 스스로 빠져나와 'failed'로 남는다(kill되면 catch도
+  // 못 돌아 pending으로 굳는다). 실측 성공 소요는 20~97초라 예산은 그 위에 둬야 한다(2026-08-06).
+  const deadline = Date.now() + budgetMs;
   for (let attempt = 0; attempt < 4; attempt++) {
     if (Date.now() > deadline) {
       lastErr = `time budget exceeded (${lastErr})`;
@@ -202,7 +206,7 @@ async function generateEmblemPng(prompt: string, shieldLike = true, startKeyIdx 
     const key = pixellabKeyByIdx(keyIdx);
     // 행 방지 — Pixellab 무응답/쿼터초과 시 25초 후 abort(과거 300초 함수 타임아웃 유발). 빠른 실패→폴백.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15_000); // 예산 40s 안에서 2~3회 시도 가능하게 단축
+    const timer = setTimeout(() => ctrl.abort(), 30_000); // 무응답 행 방지. 예산(기본 150s) 안에서 4회 시도 가능
     let res: Response;
     try {
       res = await fetch(PIXFLUX_URL, {
@@ -291,6 +295,8 @@ async function setGuildActiveEmblem(
 async function generateEmblemAsset(
   guildId: bigint,
   selection: EmblemSelection,
+  /** 이 호출에 허용된 총 시간 — 라우트의 maxDuration보다 넉넉히 작게 준다. */
+  budgetMs = 150_000,
 ): Promise<{ emblemUrl: string; color: string | null; prompt: string }> {
   const color = mainColor(selection.mainToneId);
   const shieldLike = isShieldShape(selection.shapeId);
@@ -298,7 +304,7 @@ async function generateEmblemAsset(
   // 방패로 회귀시키는 게 주원인(라이브 검증). 결정적 템플릿(heraldry 단어 없음)으로 직행.
   const prompt = shieldLike ? await buildEmblemPromptAI(selection) : buildEmblemPrompt(selection);
   // 라운드로빈 시작 키 = 길드 id 패리티(아바타와 동일 키풀). 이후 재시도는 generateEmblemPng가 교대.
-  const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId));
+  const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId), budgetMs);
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color, prompt };
@@ -319,8 +325,14 @@ function storageKeyFromUrl(url: string | null): string | null {
 export async function generateAndStoreEmblem(input: {
   guildId: bigint;
   selection: EmblemSelection;
+  /** 호출 경로의 시간 예산(기본 150s = 전용 라우트 180s 기준). */
+  budgetMs?: number;
 }): Promise<{ emblemUrl: string }> {
-  const { emblemUrl, color, prompt } = await generateEmblemAsset(input.guildId, input.selection);
+  const { emblemUrl, color, prompt } = await generateEmblemAsset(
+    input.guildId,
+    input.selection,
+    input.budgetMs,
+  );
   // 저장 + 활성 지정을 한 트랜잭션으로(2026-08-06) — 분리돼 있을 때 활성화만 실패하면
   // 유저는 무문양인데 기록은 남아 '첫 문양 무료'(기록 0건) 조건이 깨졌다(3,000💎 요구).
   await db.transaction(async (tx) => {
@@ -590,4 +602,22 @@ export async function deleteEmblem(input: { userId: string; serverId: number; em
   // 스토리지 파일 정리(best-effort) — url에서 키 추출(경로=uuid).
   const key = storageKeyFromUrl(target.emblemUrl);
   if (key) await serviceClient().storage.from(BUCKET).remove([key]).catch(() => {});
+}
+
+/**
+ * 생성 권한 클레임(2026-08-06) — 같은 길드에 대해 동시에 두 번 생성하지 않게 한다.
+ * 클라이언트 킥·재시도 크론·관리자 버튼이 모두 이 관문을 지난다. pending 시각을 락으로 쓴다:
+ * 비어 있거나 staleMs를 넘겼을 때만 now()로 갱신하며 소유권을 가져간다(조건부 UPDATE = 원자적).
+ * @returns true = 내가 생성한다 · false = 다른 호출이 진행 중
+ */
+export async function claimEmblemGeneration(guildId: bigint, staleMs = 180_000): Promise<boolean> {
+  const rows = (await db.execute(sql`
+    update guilds
+       set emblem_status = 'pending', emblem_pending_at = now()
+     where id = ${guildId}
+       and active_emblem_id is null
+       and (emblem_pending_at is null or emblem_pending_at < now() - ${sql.raw(`interval '${Math.round(staleMs / 1000)} seconds'`)})
+    returning id
+  `)) as unknown as unknown[];
+  return rows.length > 0;
 }
