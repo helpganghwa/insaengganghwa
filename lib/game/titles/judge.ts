@@ -26,15 +26,15 @@ const KST = `at time zone 'Asia/Seoul'`;
 /** 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로. */
 export const PENDING_CODES = new Set<string>([
   // 재화 이력 필요(누적 획득/소비·유지 추적 — 현재 잔액만 있음)
-  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'scrooge', 'bottomless',
+  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'bottomless',
   // 이력 테이블 부재(현재 상태만 있음)
-  'mover_30', 'resident_10', 'homecoming', 'comeback', 'longevity', 'same_face_30', 'one_suit', 'no_guild_30', 'big_family', 'alley_boss', 'local_elite', 'elite_few',
+  'mover_30', 'resident_10', 'homecoming', 'comeback', 'longevity', 'same_face_30', 'one_suit', 'no_guild_30', 'big_family', 'alley_boss', 'elite_few',
   // 길드 기부 횟수 로그 부재(기여도 포인트만 있음)
   'guild_donate', 'pillar',
   // 점령전 — 집행관 역임 이력 부재(zones는 현재 상태만)
   'tour_lord',
   // 특수(시점 스냅샷·이력·로그 부재)
-  'first_guest', 'apex_shoot', 'david', 'triathlon', 'wandering_smith',
+  'apex_shoot', 'david', 'triathlon', 'wandering_smith',
   // 지역 보스 미출시
   'raid_temple', 'raid_kingdom',
   // 컷오버 지급(헌정)

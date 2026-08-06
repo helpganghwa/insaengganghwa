@@ -18,6 +18,7 @@ import { profileHref } from '@/lib/game/profile/href';
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { TitleTag } from '@/components/TitleTag';
+import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
@@ -62,6 +63,7 @@ export default async function ProfilePage() {
     friend_count: number;
     codex_got: number;
     codex_total: number;
+    titles_found: number;
     equipment: {
       catalogItemId: number;
       enhanceLevel: number;
@@ -90,6 +92,7 @@ export default async function ProfilePage() {
             join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
             where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}) as codex_got,
           (select count(*)::int from catalog_items where active) as codex_total,
+          (select count(*)::int from user_titles where user_id = ${userId}::uuid) as titles_found,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
@@ -134,6 +137,7 @@ export default async function ProfilePage() {
   const friendCount = row?.friend_count ?? 0;
   const codexGot = row?.codex_got ?? 0;
   const codexTotal = row?.codex_total ?? 0;
+  const titlesFound = row?.titles_found ?? 0;
   /**
    * 메뉴 우측 상태값 — 프로필은 허브라 '어디로 갈지'를 여기서 정한다. 라벨만 있으면 매번
    * 들어가 봐야 알 수 있었다(2026-08-02). 랭킹은 지표가 5종이라 한 값으로 못 줄여 제외.
@@ -142,6 +146,7 @@ export default async function ProfilePage() {
     '/friends': friendCount > 0 ? `${friendCount}명` : null,
     '/me/profiles': `${myProfiles.length} / ${PROFILE_MAX}`,
     '/me/codex': codexTotal > 0 ? `${codexGot} / ${codexTotal}` : null,
+    '/me/titles': `${titlesFound} / ${TITLE_DEFS.length}`,
     '/leaderboard': null,
     '/me/settings': null,
   };
