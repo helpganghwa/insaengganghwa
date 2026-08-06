@@ -15,6 +15,7 @@ import { currentMeleeChampion } from '@/lib/game/chat/service';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { parseFaceBox } from '@/components/faceCrop';
+import { memoryRateLimited } from '@/lib/memory-ratelimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const me = await getSessionUserId();
   if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (memoryRateLimited(`chatProfile:${me}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  }
   const uid = new URL(req.url).searchParams.get('uid');
   if (!uid || !/^[0-9a-f-]{36}$/i.test(uid)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   const serverId = await getActiveServerId();

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, ne, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -16,6 +17,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  // 조회 리밋(인메모리) — 250ms 디바운스 기준 정상 타이핑은 분당 수 회, 40이면 스크래핑만 걸린다.
+  if (memoryRateLimited(`chatMention:${userId}`, 40, 60_000)) {
+    return NextResponse.json({ nicknames: [] }, { status: 429 });
+  }
   const q = new URL(req.url).searchParams.get('q')?.trim() ?? '';
   if (q.length < 1 || q.length > 12) return NextResponse.json({ nicknames: [] });
   const serverId = await getActiveServerId();

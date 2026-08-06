@@ -31,6 +31,8 @@ import { sendChat, reportChat, setChatBlockAction } from './actions';
 
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
+// 시각 포맷터 — 모듈 상수 1개. 행 렌더마다 Intl 인스턴스를 만들면(150행×키 입력) 입력 지연의 직접 요인.
+const TIME_FMT = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' });
 const COLLAPSE_KEY = 'ig:chat-collapsed';
 // '프로필 보기' 이동 후 뒤로가기 복원 — 값=MiniProfile JSON(세션 한정, 마운트 시 1회 소비).
 const RESTORE_KEY = 'ig:chat-restore';
@@ -117,8 +119,10 @@ export function ChatDock() {
   const [searchCands, setSearchCands] = useState<string[]>([]);
 
   const openRef = useRef(false);
-  const wsOkRef = useRef(false);
+  const collapsedRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  // 폴링의 증분(after) 기준점 — 상태를 effect 의존성에 넣지 않고 최신 목록을 읽기 위한 ref.
+  const messagesRef = useRef<ChatMessageDto[]>([]);
   const serverIdRef = useRef(1);
   const tabRef = useRef<Tab>('all');
   tabRef.current = tab;
@@ -133,7 +137,14 @@ export function ChatDock() {
   const tempSeqRef = useRef(0);
   // 패널 오픈 직후 첫 렌더를 페인트 전에 바닥으로 — 위가 보였다가 내려가는 깜빡임 방지.
   const needInitialScrollRef = useRef(false);
+  // onScroll rAF 스로틀 — scrollHeight 읽기는 강제 리플로우라 프레임당 1회로 제한.
+  const scrollRafRef = useRef(0);
   openRef.current = open;
+  // 폴링 타이머(장수명 클로저)가 읽는 미러 refs — 렌더 중 대입 대신 effect로 동기화(lint-clean).
+  useEffect(() => {
+    collapsedRef.current = collapsed;
+    messagesRef.current = messages;
+  }, [collapsed, messages]);
 
   // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 접힘 상태도 초기 복원.
   // useLayoutEffect — useEffect는 페인트 뒤라 접어둔 유저에게 매 이동마다 펼침→접힘이
@@ -196,11 +207,12 @@ export function ChatDock() {
   const prevLatestIdRef = useRef<string | null>(null);
   useEffect(() => {
     const id = latest && !blocked.has(latest.userId) ? latest.id : null;
-    if (id && prevLatestIdRef.current && id !== prevLatestIdRef.current && collapsed) {
+    // !open — 푸시 딥링크 등으로 접힌 채 패널이 열린 경우, 보고 있는 메시지에 배지 점등 방지.
+    if (id && prevLatestIdRef.current && id !== prevLatestIdRef.current && collapsed && !open) {
       setCollapsedUnseen(true);
     }
     if (id) prevLatestIdRef.current = id;
-  }, [latest, collapsed, blocked]);
+  }, [latest, collapsed, blocked, open]);
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = listRef.current;
@@ -236,10 +248,14 @@ export function ChatDock() {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
+    let prevKb = 0;
     const update = () => {
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setKbOffset(Math.round(kb));
-      if (kb > 0) requestAnimationFrame(() => scrollToBottom());
+      // 키보드가 '열리는 전이'에만 바닥 고정 — 열린 채 유지 중엔 스크롤을 뺏지 않는다
+      // (visualViewport는 스크롤 중에도 발화해, 매번 바닥으로 끌면 위로 못 읽는다).
+      if (kb > 0 && prevKb === 0) requestAnimationFrame(() => scrollToBottom());
+      prevKb = kb;
     };
     update();
     vv.addEventListener('resize', update);
@@ -254,17 +270,28 @@ export function ChatDock() {
   const fetchRecent = useCallback(
     // lite=닫힌 미니바 상시 폴링용 경량 조회(메시지만) — 서버가 차단목록·닉네임·길드 조회를
     // 생략하므로(DB 절감) 채널·차단 등 부속 상태는 초기/전체 조회 값을 유지한다.
-    async (limit: number, forTab?: Tab, lite?: boolean): Promise<ChatMessageDto[] | null> => {
+    // after=증분 폴링(2026-08-06): 마지막으로 본 항목 id 이후만 델타로 받는다(평시 응답 0~3건).
+    // 서버가 after를 못 찾으면 full로 응답 — 반환 mode로 구분해 append/치환을 가른다.
+    async (
+      limit: number,
+      forTab?: Tab,
+      lite?: boolean,
+      after?: string | null,
+    ): Promise<{ mode: 'full' | 'delta'; messages: ChatMessageDto[] } | null> => {
       const t = forTab ?? tabRef.current;
       try {
-        const res = await fetch(`/api/chat/recent?limit=${limit}&channel=${t}${lite ? '&lite=1' : ''}`, {
-          cache: 'no-store',
-        });
+        const res = await fetch(
+          `/api/chat/recent?limit=${limit}&channel=${t}${lite ? '&lite=1' : ''}${
+            after ? `&after=${encodeURIComponent(after)}` : ''
+          }`,
+          { cache: 'no-store' },
+        );
         if (!res.ok) return null;
         const data = (await res.json()) as {
           disabled?: boolean;
           channel?: string;
           me?: string;
+          mode?: 'full' | 'delta';
           messages: ChatMessageDto[];
           meNickname?: string | null;
           guild?: { id: string; name: string } | null;
@@ -289,14 +316,26 @@ export function ChatDock() {
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
         // lite 응답엔 guild/guildChannel/blocked가 아예 없음 — 기존 상태 유지(null 덮어쓰기 금지).
+        // 값이 같으면 이전 참조/상태 유지 — 15초마다 "변화 없어도 전체 리렌더"를 막는다.
         if (!lite) {
-          setMyGuild(data.guild ?? null);
+          setMyGuild((prev) =>
+            prev?.id === data.guild?.id && prev?.name === data.guild?.name
+              ? prev
+              : (data.guild ?? null),
+          );
           setGuildTopic(data.guildChannel ?? null);
         }
-        if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
+        if (data.blocked) {
+          const next = new Map(data.blocked.map((b) => [b.id, b.nickname]));
+          setBlocked((prev) =>
+            prev.size === next.size && [...next].every(([k, v]) => prev.get(k) === v)
+              ? prev
+              : next,
+          );
+        }
         const mine = data.messages.filter((m) => m.userId === data.me).pop();
         if (mine) myFieldsRef.current = mine;
-        return data.messages;
+        return { mode: data.mode ?? 'full', messages: data.messages };
       } catch {
         return null;
       }
@@ -306,8 +345,8 @@ export function ChatDock() {
 
   // 초기 로드 — 최근 1개(미니바).
   useEffect(() => {
-    void fetchRecent(1).then((ms) => {
-      const lastUser = ms ? [...ms].reverse().find((m) => !m.sys && !m.sysGuild) : null;
+    void fetchRecent(1).then((r) => {
+      const lastUser = r ? [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild) : null;
       if (lastUser) setLatest(lastUser);
     });
   }, [fetchRecent]);
@@ -328,8 +367,8 @@ export function ChatDock() {
     [applyNew],
   );
 
-  // Realtime 구독 — 전체+내 길드 두 채널을 **항상 동시에** 구독(탭 전환 시 재구독 없음 → 전환 즉시).
-  // 서버 전환(sid 변경)일 때만 버퍼·미니바 초기화 후 재구독.
+  // 서버 전환(sid 변경) 감지 — 버퍼·미니바 초기화. 구독 여부와 무관하게 실행되어야 해서
+  // 구독 effect와 분리(닫힌 채 서버를 옮겨도 옛 서버 메시지가 남지 않도록).
   const prevSidRef = useRef<number | null>(null);
   useEffect(() => {
     if (sid === null) return;
@@ -340,6 +379,14 @@ export function ChatDock() {
       bufRef.current = { all: { messages: [], latest: null }, guild: { messages: [], latest: null } };
     }
     prevSidRef.current = sid;
+  }, [sid]);
+
+  // Realtime 구독 — **패널이 열린 동안만**(2026-08-06, 동접 1천 대비). 닫힌 유저까지 상시
+  // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
+  // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 60초 폴링(lite)으로 충분히 신선.
+  // 열림 중엔 전체+내 길드 두 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
+  useEffect(() => {
+    if (sid === null || !open) return;
     const sb = supabaseBrowser();
     if (!sb) return;
     const mk = (topic: string, t: Tab) =>
@@ -356,17 +403,14 @@ export function ChatDock() {
             if (b.latest?.id === id) b.latest = null;
           }
         })
-        .subscribe((status) => {
-          wsOkRef.current = status === 'SUBSCRIBED';
-        });
+        .subscribe();
     const chans = [mk(`chat:s${sid}`, 'all')];
     // 길드 토픽은 서버가 소속 검증 후 내려준 값만 사용(HMAC 토큰 포함 — 클라 조립 금지).
     if (guildTopic) chans.push(mk(guildTopic, 'guild'));
     return () => {
-      wsOkRef.current = false;
       for (const c of chans) void sb.removeChannel(c);
     };
-  }, [sid, guildTopic, routeIncoming]);
+  }, [sid, guildTopic, open, routeIncoming]);
 
   // 길드 탈퇴/해산 감지 — 길드 버퍼·미니바 잔존 제거.
   useEffect(() => {
@@ -390,28 +434,56 @@ export function ChatDock() {
       });
   }, [myGuild?.id]);
 
-  // 폴링 — Realtime(WS) 백업(2026-07-21): WS가 SUBSCRIBED여도 서버측 송신 실패 등으로
-  // 조용히 끊긴 상태를 커버(미니바·목록 복구). 열림=100, 닫힘=1(lite: 1건·부속 조회 생략).
-  // 비용 최소화(2026-07-24): ① 백그라운드 탭이면 이번 주기 스킵(다시 보일 때 즉시 따라잡기)
-  //   — WS는 백그라운드에서도 수신하므로 안전. ② WS 정상+닫힘이면 60초(순수 안전망), 그 외
-  //   (열림 또는 WS 끊김)엔 15초(적극 백업). refs라 주기는 매 tick 최신값으로 재평가된다.
+  // 폴링 — Realtime(WS) 백업 + 닫힘 미니바의 유일한 수신 경로(2026-08-06: WS는 열림 시에만).
+  // 열림=100(after 증분 — 평시 델타 0~3건), 닫힘=1(lite: 1건·부속 조회 생략).
+  // 비용 최소화: ① 백그라운드 탭이면 이번 주기 스킵(다시 보일 때 즉시 따라잡기)
+  //   ② 주기는 열림 15초 / 닫힘 60초 / 접힘 180초. WS 상태는 주기에 반영하지 않는다 —
+  //   과거엔 WS 끊김 시 전원이 15초로 가속했는데, 그게 Realtime 장애를 DB 폭주로 번지게
+  //   하는 캐스케이드였다(감사 #3). refs라 주기는 매 tick 최신값으로 재평가된다.
   useEffect(() => {
     if (enabled === false) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let stopped = false;
+    let lastPollAt = 0;
     const poll = () => {
-      void fetchRecent(openRef.current ? 100 : 1, undefined, !openRef.current).then((ms) => {
-        if (!ms) return;
-        if (openRef.current)
-          setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
-        else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
+      lastPollAt = Date.now();
+      // 요청 시점의 열림 상태로 처리 분기 — 응답 도착 사이에 열림/닫힘이 바뀌면(레이스)
+      // 닫힘용 1건 응답이 열린 목록을 통째로 덮던 버그(감사 버그 #1)의 수정.
+      const wasOpen = openRef.current;
+      const after = wasOpen
+        ? ([...messagesRef.current].reverse().find((m) => !m.id.startsWith('tmp-'))?.id ?? null)
+        : null;
+      void fetchRecent(wasOpen ? 100 : 1, undefined, !wasOpen, after).then((r) => {
+        if (!r) return;
+        const ms = r.messages;
+        if (wasOpen) {
+          if (!openRef.current) return; // 닫힌 뒤 도착한 열림용 응답 — 폐기(다음 열림 fetch가 정합)
+          if (r.mode === 'delta') {
+            // 증분 — 기존 목록 유지 + 새 항목만 append(WS로 먼저 받은 건 중복 제거).
+            // 치환이 아니라서 WS 수신분이 폴링에 지워지는 문제(감사 버그)도 함께 사라진다.
+            if (ms.length > 0) {
+              setMessages((prev) => {
+                const add = ms.filter((m) => !prev.some((p) => p.id === m.id));
+                if (add.length === 0) return prev;
+                const next = [...prev, ...add];
+                return next.length > 150 ? next.slice(-150) : next;
+              });
+              const el = listRef.current;
+              if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120)
+                requestAnimationFrame(() => scrollToBottom(true));
+              else setUnseenBelow(true);
+            }
+          } else {
+            setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
+          }
+        } else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
         const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
         if (lastUser) setLatest(lastUser);
       });
     };
     const schedule = () => {
       if (stopped) return;
-      const delay = openRef.current || !wsOkRef.current ? 15000 : 60000;
+      const delay = openRef.current ? 15000 : collapsedRef.current ? 180000 : 60000;
       timer = setTimeout(() => {
         if (!document.hidden) poll(); // 백그라운드 탭은 스킵 — visibilitychange가 복귀 시 따라잡음
         schedule();
@@ -419,7 +491,9 @@ export function ChatDock() {
     };
     schedule();
     const onVisible = () => {
-      if (!document.hidden) poll(); // 포그라운드 복귀 즉시 1회 따라잡기
+      // 포그라운드 복귀 따라잡기 — 5초 디바운스: 앱 전환을 빠르게 오가는 유저가
+      // 복귀마다 즉시 폴링을 쏘면 아침 복귀 시간대에 순간 폭주(감사 시나리오 F).
+      if (!document.hidden && Date.now() - lastPollAt > 5_000) poll();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -427,7 +501,7 @@ export function ChatDock() {
       if (timer) clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [enabled, fetchRecent, applyNew]);
+  }, [enabled, fetchRecent, applyNew, scrollToBottom]);
 
   // 쿨다운 카운트다운.
   useEffect(() => {
@@ -457,10 +531,10 @@ export function ChatDock() {
     setOpen(true);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
-    void fetchRecent(100).then((ms) => {
-      if (ms) {
+    void fetchRecent(100).then((r) => {
+      if (r) {
         needInitialScrollRef.current = true; // fetch 반영 렌더도 페인트 전 바닥 고정.
-        setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
+        setMessages((prev) => [...r.messages, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
       }
     });
   };
@@ -480,11 +554,11 @@ export function ChatDock() {
     setLatest(cached.latest);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
-    void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((ms) => {
-      if (!ms) return;
+    void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((r) => {
+      if (!r) return;
       needInitialScrollRef.current = true;
-      setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
-      const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
+      setMessages((prev) => [...r.messages, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
+      const lastUser = [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild);
       if (lastUser) setLatest(lastUser);
     });
   };
@@ -766,7 +840,14 @@ export function ChatDock() {
     <span className={`${size} shrink-0 overflow-hidden`}>
       {m.avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={m.avatar} alt="" className="h-full w-full" style={faceCropStyle(m.faceBox)} />
+        <img
+          src={m.avatar}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full"
+          style={faceCropStyle(m.faceBox)}
+        />
       ) : (
         <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
       )}
@@ -884,9 +965,13 @@ export function ChatDock() {
             <div
               ref={listRef}
               onScroll={() => {
-                const el = listRef.current;
-                if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120)
-                  setUnseenBelow(false);
+                if (scrollRafRef.current) return;
+                scrollRafRef.current = requestAnimationFrame(() => {
+                  scrollRafRef.current = 0;
+                  const el = listRef.current;
+                  if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120)
+                    setUnseenBelow(false);
+                });
               }}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
             >
@@ -1003,6 +1088,8 @@ export function ChatDock() {
                           <img
                             src={m.guildEmblemUrl}
                             alt=""
+                            loading="lazy"
+                            decoding="async"
                             className="h-3 w-3 shrink-0 self-center object-contain"
                             style={{ imageRendering: 'pixelated' }}
                           />
@@ -1020,10 +1107,7 @@ export function ChatDock() {
                           className="text-[9.5px]"
                         />
                         <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {TIME_FMT.format(new Date(m.createdAt))}
                         </span>
                       </div>
                       {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}

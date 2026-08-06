@@ -221,12 +221,35 @@ async function displayFields(
   return m;
 }
 
+/**
+ * 채널 목록 인스턴스 캐시(2026-08-06, 동접 1천 대비) — 같은 서버·채널의 전체 목록은
+ * 유저와 무관하게 동일하므로 폴링(15초)마다 유저 수만큼 반복되던 조회를 인스턴스당
+ * TTL 1회로 눌러준다. 전송 시 해당 채널 키를 무효화(같은 인스턴스), 다른 인스턴스는
+ * TTL(≤5s)만큼만 늦게 본다 — 폴링 주기(15s)보다 짧아 체감 없음.
+ */
+const recentCache = new Map<string, { at: number; msgs: ChatMessageDto[] }>();
+const RECENT_TTL_WORLD_MS = 5_000;
+const RECENT_TTL_GUILD_MS = 10_000;
+const recentKey = (serverId: number, guildId: bigint | null) =>
+  guildId ? `g${serverId}:${guildId}` : `s${serverId}`;
+
+export function invalidateRecentCache(serverId: number, guildId: bigint | null = null): void {
+  recentCache.delete(recentKey(serverId, guildId));
+}
+
 /** 최근 메시지(오래된 → 최신 순, 숨김 제외). */
 export async function getRecentChat(
   serverId: number,
   limit = 100,
   guildId: bigint | null = null,
 ): Promise<ChatMessageDto[]> {
+  // 캐시 히트 — lite(limit=1)도 전체 목록 캐시가 있으면 그 꼬리를 잘라 쓴다(0쿼리).
+  const ck = recentKey(serverId, guildId);
+  const ttl = guildId ? RECENT_TTL_GUILD_MS : RECENT_TTL_WORLD_MS;
+  const hit = recentCache.get(ck);
+  if (hit && Date.now() - hit.at < ttl) {
+    return limit >= hit.msgs.length ? hit.msgs : hit.msgs.slice(-limit);
+  }
   // 채널 필터 — 전체(guildId null)는 guild_id is null만, 길드는 해당 guild_id만.
   const channelCond = guildId
     ? eq(chatMessages.guildId, guildId)
@@ -276,7 +299,10 @@ export async function getRecentChat(
         createdAt: r.createdAt.toISOString(),
       } satisfies ChatMessageDto;
     });
-  if (sysFeed.length === 0) return msgs;
+  if (sysFeed.length === 0) {
+    if (limit > 1) recentCache.set(ck, { at: Date.now(), msgs });
+    return msgs;
+  }
   // 채팅 표시 구간(가장 오래된 메시지 이후) 이벤트만 — 채팅이 없으면 최근 15건.
   const oldest = msgs[0]?.createdAt;
   const toDto = guildId ? guildLogToChatDto : sysToChatDto;
@@ -285,7 +311,12 @@ export async function getRecentChat(
     .slice(0, oldest ? undefined : 15)
     // @ts-expect-error 두 피드 타입은 toDto가 guildId로 정확히 대응(런타임 안전).
     .map(toDto);
-  return [...msgs, ...sys].sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
+  const merged = [...msgs, ...sys].sort((a, b) =>
+    a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+  );
+  // 전체 조회만 캐시 — lite(limit=1)는 피드가 빠져 있어 캐시로 쓰면 안 된다.
+  if (limit > 1) recentCache.set(ck, { at: Date.now(), msgs: merged });
+  return merged;
 }
 
 /** 저장 + 브로드캐스트 — 본문은 이미 필터·검증 완료본. 반환 DTO는 낙관 렌더에도 사용. */
@@ -319,6 +350,7 @@ export async function persistAndBroadcast(
     body,
     createdAt: row!.createdAt.toISOString(),
   };
+  invalidateRecentCache(serverId, guildId); // 같은 인스턴스의 폴링이 곧바로 새 메시지를 보게
   // after() 사용 금지(2026-07-21 롤백) — 프로덕션에서 응답 후 콜백이 드롭돼 브로드캐스트가
   // 발사되지 않는 정황(실시간 미전달). 낙관 UI라 전송자 체감 지연 없음 — await로 보장.
   await broadcastChat(serverId, 'new', dto, guildId);
@@ -428,17 +460,65 @@ export async function setChatBlock(
   return 'blocked';
 }
 
-/** 보존 정리(크론) — 7일 초과 또는 서버당 최근 1,000개 초과분 삭제. */
+/**
+ * 보존 정리(크론) — 7일 초과 또는 채널당 최근 1,000개 초과분 삭제.
+ * 배치+시간예산(2026-08-06) — 이전엔 전 테이블 window 정렬 단일 DELETE라 테이블이 크면
+ * statement_timeout에 걸리고, 실패가 조용해 다음 날 더 확실히 실패하는 루프였다(채팅 감사).
+ * mailbox 정리와 같은 방어를 적용하고 실패는 소리 내어 로그한다.
+ */
 export async function cleanupChat(): Promise<number> {
-  const r = await db.execute(sql`
-    delete from chat_messages
-    where created_at < now() - interval '7 days'
-       or id in (
-         select id from (
-           select id, row_number() over (partition by server_id, coalesce(guild_id, 0) order by id desc) rn
-           from chat_messages
-         ) t where t.rn > 1000
-       )
-  `);
-  return (r as unknown as { count?: number }).count ?? 0;
+  const BATCH = 5000;
+  const TIME_BUDGET_MS = 30_000;
+  const t0 = Date.now();
+  let total = 0;
+  try {
+    // 1) 채널별 보존 컷오프(1,000번째 최신 id) — id 인덱스만 훑는 소량 결과.
+    const cuts = (await db.execute(sql`
+      select server_id, coalesce(guild_id, 0) as gid, min(id) as keep_min from (
+        select server_id, guild_id, id,
+               row_number() over (partition by server_id, coalesce(guild_id, 0) order by id desc) rn
+        from chat_messages
+      ) t where rn <= 1000 group by 1, 2
+    `)) as unknown as { server_id: number; gid: string; keep_min: string }[];
+
+    // 2) 7일 초과분 — 5,000개씩, 예산 안에서.
+    while (Date.now() - t0 < TIME_BUDGET_MS) {
+      const r = (await db.execute(sql`
+        delete from chat_messages where id in (
+          select id from chat_messages
+          where created_at < now() - interval '7 days'
+          limit ${BATCH}
+        )
+      `)) as unknown as { count?: number };
+      const aged = r.count ?? 0;
+      total += aged;
+      if (aged < BATCH) break;
+    }
+    for (const c of cuts) {
+      if (Date.now() - t0 >= TIME_BUDGET_MS) {
+        console.warn(`[chat.cleanup] 시간 예산 소진 — 다음 실행에서 계속 (지금까지 ${total}건)`);
+        break;
+      }
+      // 채널당 초과분 — keep_min 미만을 배치로.
+      for (;;) {
+        const r = (await db.execute(sql`
+          delete from chat_messages where id in (
+            select id from chat_messages
+            where server_id = ${c.server_id}
+              and coalesce(guild_id, 0) = ${BigInt(c.gid)}
+              and id < ${BigInt(c.keep_min)}
+            limit ${BATCH}
+          )
+        `)) as unknown as { count?: number };
+        const n = r.count ?? 0;
+        total += n;
+        if (n < BATCH || Date.now() - t0 >= TIME_BUDGET_MS) break;
+      }
+    }
+    return total;
+  } catch (e) {
+    // 실패를 조용히 삼키지 않는다 — 크론 응답은 정상이어도 로그로 드러나게.
+    console.error('[chat.cleanup] 실패', (e as Error).message);
+    return -1;
+  }
 }

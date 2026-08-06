@@ -7,6 +7,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getChatBlocks, getMyGuildChannel, getRecentChat, isChatEnabled } from '@/lib/game/chat/service';
+import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { chatTopic } from '@/lib/game/chat/realtime';
 
 export const runtime = 'nodejs';
@@ -20,6 +21,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  // 조회 리밋(인메모리, 2026-08-06) — 정상 클라는 분당 최대 ~8회(15s 폴링+탭 전환).
+  // 30/분이면 실사용에 안 걸리고 스크래핑·폭주만 막는다. 감사: 조회 3라우트 리밋 0 지적.
+  if (memoryRateLimited(`chatRecent:${userId}`, 30, 60_000)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  }
   if (!(await isChatEnabled())) return NextResponse.json({ disabled: true, messages: [] });
   const url = new URL(req.url);
   const limitRaw = Number(url.searchParams.get('limit'));
@@ -30,6 +36,17 @@ export async function GET(req: Request) {
   // 경량 모드(2026-07-21) — 닫힌 미니바의 15초 상시 폴링용. 차단목록·닉네임·(전체 채널이면)
   // 길드 조회를 생략해 폴링당 DB 왕복을 최소화(세션당 하루 수천 회 × 전 세션 누적 절감).
   // 차단 필터·채널 토픽은 클라이언트가 초기/전체 조회에서 받은 상태를 유지한다.
+  // 증분 폴링(2026-08-06, 동접 1천 대비) — 클라가 마지막으로 본 항목 id를 after로 보내면
+  // 그 이후 항목만 돌려준다(평시 0~3건, ~1-2KB). after 항목이 목록에 없으면(오래 자리 비움·
+  // 정리됨) 전체를 돌려주고 mode='full'로 알린다 — 클라는 델타면 append, full이면 치환.
+  const after = url.searchParams.get('after');
+  const slice = (msgs: { id: string }[]) => {
+    if (!after) return { mode: 'full' as const, messages: msgs };
+    const i = msgs.findIndex((m) => m.id === after);
+    if (i < 0) return { mode: 'full' as const, messages: msgs };
+    return { mode: 'delta' as const, messages: msgs.slice(i + 1) };
+  };
+
   if (url.searchParams.get('lite') === '1') {
     const guild = channel === 'guild' ? await getMyGuildChannel(userId, serverId) : null;
     const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
@@ -49,7 +66,8 @@ export async function GET(req: Request) {
 
   const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
   // 길드 탭인데 미가입 → 메시지 없이 가입 안내만(UI가 처리).
-  const messages = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+  const full = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+  const { mode, messages } = slice(full);
 
   return NextResponse.json({
     channel: chatTopic(serverId, guildId),
@@ -58,6 +76,7 @@ export async function GET(req: Request) {
     me: userId,
     meNickname: meChar?.nickname ?? null,
     guild: guild ? { id: guild.guildId, name: guild.guildName } : null,
+    mode,
     messages,
     blocked,
   });
