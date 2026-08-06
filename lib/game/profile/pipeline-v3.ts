@@ -12,6 +12,7 @@ import { PROFILE_GEN_PER_KEY } from '@/lib/game/balance';
 
 import { composeV3Description } from './compose-v3';
 import { pickRandomAppearance, type Appearance } from './appearance-v3';
+import { weaponKindOf } from '@/lib/game/equipment/weapon-kind';
 import { markFailedAndRefund } from './pipeline';
 import { pixellabKeyByIdx, pixellabKeyCount, profileGenConcurrency } from './pixellab-keys';
 import type { ProfileGender } from './refs';
@@ -66,7 +67,7 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
   const keyIdx = input.keyIdx ?? 1;
   const key = pixellabKeyByIdx(keyIdx);
 
-  const appearance = input.appearance ?? pickRandomAppearance(input.gender);
+  const appearance = input.appearance ?? pickRandomAppearance(input.gender, weaponKindOf(input.weaponKey));
   const description = await composeV3Description({
     gender: input.gender,
     appearance,
