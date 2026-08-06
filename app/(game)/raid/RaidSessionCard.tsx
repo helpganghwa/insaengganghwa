@@ -138,7 +138,9 @@ const SLOT_EMOJI: Record<SupplySlot, string> = {
 
 /** 만료 시각에 정확히 1회만 리렌더 — 1초 인터벌로 카드 전체를 매초 그리던 것 대체(2026-08-06). */
 function useDeadline(iso: string): boolean {
-  const [over, setOver] = useState(false);
+  // 초기값을 즉시 계산 — false 고정이면 만료 지난 카드가 첫 프레임에 공격 가능으로 보인다
+  // (종전 useCountdown도 mount 시점 즉시 판정이었음 — 동일 의미 유지).
+  const [over, setOver] = useState(() => Date.now() >= new Date(iso).getTime());
   useEffect(() => {
     const ms = new Date(iso).getTime() - Date.now();
     if (ms <= 0) {

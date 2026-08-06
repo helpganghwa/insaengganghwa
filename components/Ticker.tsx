@@ -1,6 +1,9 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+
+// SSR에선 useLayoutEffect가 no-op 경고를 내므로 서버는 useEffect로 대체(값은 어차피 null 유지).
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
  * 1초 시계 격리 컴포넌트(2026-08-06) — 카운트다운·경과시간 "표시 지점"에만 배치해,
@@ -18,7 +21,10 @@ export function Ticker({
   children: (now: number) => ReactNode;
 }) {
   const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
+  // useLayoutEffect — 첫 세팅을 페인트 전에 커밋해 "빈 자리 → 한 프레임 뒤 팝인"(모달 높이
+  // 점프)을 방지(리뷰 지적: 구 세금 타이머가 의도적으로 layoutEffect였음). 인터벌 갱신은
+  // 페인트 후여도 무방하지만 훅 하나로 묶는다.
+  useIsoLayoutEffect(() => {
     setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), intervalMs);
     return () => clearInterval(t);

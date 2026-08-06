@@ -1048,11 +1048,13 @@ export function WorldMapView({
                     <span className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-center text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
                       이동 불가
                     </span>
-                  ) : residenceRemainNow() > 0 ? (
+                  ) : (
+                    // 분기까지 Ticker 안에서 — 팝업을 열어둔 채 쿨타임이 0이 되는 순간
+                    // 단축 안내가 '이동' 버튼으로 즉시 전환된다(분기가 부모 렌더에 갇히지 않게).
                     <Ticker>
                       {() => {
                         const rem = residenceRemainNow();
-                        return (
+                        return rem > 0 ? (
                           <button
                             type="button"
                             onClick={() => askMove(selected.id)}
@@ -1063,18 +1065,18 @@ export function WorldMapView({
                             <br />
                             또는 💎{residenceSpeedUpCost(rem).toLocaleString('ko-KR')}
                           </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => askMove(selected.id)}
+                            disabled={pending}
+                            className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                          >
+                            이동
+                          </button>
                         );
                       }}
                     </Ticker>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => askMove(selected.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                    >
-                      이동
-                    </button>
                   )
                 ))}
               <button

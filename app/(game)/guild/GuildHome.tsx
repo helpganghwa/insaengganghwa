@@ -88,6 +88,9 @@ export function GuildHome({
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
+  // 문양 경과초 기준시각 폴백 — pendingAt이 null인 레거시 pending에서도 마운트 시점부터
+  // 카운트업(리뷰 지적: tnow 폴백은 매초 0초로 고정됨). 클라 전용 값(Ticker 안에서만 사용).
+  const [emblemElapsedBase] = useState(() => Date.now());
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -321,7 +324,7 @@ export function GuildHome({
                       <Ticker>
                         {(tnow) => (
                           <span className="ml-1 tabular-nums">
-                            {Math.max(0, Math.round((tnow - (guild.emblemPendingAt ?? tnow)) / 1000))}초
+                            {Math.max(0, Math.round((tnow - (guild.emblemPendingAt ?? emblemElapsedBase)) / 1000))}초
                           </span>
                         )}
                       </Ticker>
