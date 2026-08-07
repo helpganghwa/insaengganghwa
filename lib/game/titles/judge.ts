@@ -148,7 +148,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     db.execute(sql`
       select (select count(*)::int from friend_links where status='accepted' and server_id=${s}
                 and (requester_id=${u} or addressee_id=${u})) as friends,
-             (select count(*)::int from referral_attributions where referrer_user_id=${u}) as invites
+             -- CBT 초대 실적 합산(2026-08-07 확정) — 컷오버는 referral_attributions를 이월하지
+             -- 않지만(보상만 우편 재지급), 초대는 진행도가 아닌 '전파 기여'라 칭호 실적으로 인정.
+             -- 단순 카운트 칭호(invite_1/5/20/50)만 해당 — 조건부(ref_50/100/champ/over)는
+             -- 초대받은 유저의 정식 서버 진행도 기준이라 합산하지 않는다(설계 의도).
+             (select count(*)::int from referral_attributions where referrer_user_id=${u})
+               + coalesce((select invite_count from cbt_carryover where user_id=${u}), 0) as invites
     `),
     // 결제·시간 단축
     db.execute(sql`
