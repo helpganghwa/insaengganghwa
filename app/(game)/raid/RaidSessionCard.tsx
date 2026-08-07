@@ -22,6 +22,7 @@ import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 import { BackFab } from '@/components/BackNav';
 import { Ticker } from '@/components/Ticker';
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
 
 import {
   attackRaidAction,
@@ -278,9 +279,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   };
 
   // 보석 공격 — 1탭 시 3초 컨펌(카운트+로어), 그 안에 2탭하면 실행.
-  const [gemConfirm, setGemConfirm] = useState(false);
-  const [gemLeft, setGemLeft] = useState(0);
-  const [gemLore, setGemLore] = useState<string | null>(null);
+  // 보석 컨펌 카운트는 ConfirmButton(버튼 내부 state)이 보유(2026-08-07 렌더 감사) —
+  // 이전엔 3초 컨펌 동안 카드 전체(히어로 img+참여자 목록 ≈250노드)가 매초 리렌더됐다.
+  // 로어는 무장 시점 1회 선택 — ref라 리렌더 없이 armed 렌더 함수가 읽는다.
+  const gemLoreRef = useRef<string>('');
   // 공격 연출 — 로어 오버레이 + 쿨다운(연속 클릭 차단).
   const [attacking, setAttacking] = useState(false);
   const [attackLore, setAttackLore] = useState<string | null>(null);
@@ -294,29 +296,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const rewardClaimed = Boolean(v.myReward?.claimed) || claimedOpt;
   // 방금 클릭해 수령(서버 확정 전) — 글로우+도장 1회 연출 트리거. 새로고침 후엔 정적.
   const justClaimed = claimedOpt && !Boolean(v.myReward?.claimed);
-
-  // 보석 컨펌 3초 카운트 + 로어 선택(강화 패턴).
-  useEffect(() => {
-    if (!gemConfirm) {
-      setGemLeft(0);
-      setGemLore(null);
-      return;
-    }
-    const cost = raidExtraAttackCost(v.myExtraAttacks + 1);
-    setGemLeft(3);
-    setGemLore(pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`));
-    const id = setInterval(() => {
-      setGemLeft((s) => {
-        if (s <= 1) {
-          setGemConfirm(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gemConfirm]);
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -433,14 +412,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     );
   };
 
+  /** 보석 공격 실행 — 무장/카운트는 ConfirmButton이 담당(2차 탭에서만 호출됨). */
   const handleGemAttack = () => {
     if (attacking) return;
-    if (!gemConfirm) {
-      haptic.tap();
-      setGemConfirm(true); // useEffect가 3초 카운트 + 로어 설정
-      return;
-    }
-    setGemConfirm(false);
     // 멱등키(0109) — 전송 실패(NETWORK) 재시도는 같은 키를 재사용해 서버가 이중 차감을
     // 막는다. 성공·비즈니스 거절(서버가 차감 안 함)은 키 폐기 → 다음 클릭은 새 키.
     gemKeyRef.current ??= crypto.randomUUID();
@@ -704,20 +678,23 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               </div>
             ) : !over && left <= 0 ? (
               <div className="relative">
-                <button
-                  type="button"
-                  onClick={handleGemAttack}
+                <ConfirmButton
+                  onArm={() => {
+                    haptic.tap();
+                    const cost = raidExtraAttackCost(v.myExtraAttacks + 1);
+                    gemLoreRef.current = pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`);
+                  }}
+                  onConfirm={handleGemAttack}
                   disabled={attacking}
-                  className={`${ACTION_SLOT} border-2 text-xs font-bold leading-snug active:scale-95 disabled:opacity-60 ${
-                    gemConfirm
-                      ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-100'
-                      : 'border-amber-400 bg-amber-400/10 text-amber-300'
-                  }`}
+                  className={`${ACTION_SLOT} border-2 text-xs font-bold leading-snug active:scale-95 disabled:opacity-60 border-amber-400 bg-amber-400/10 text-amber-300`}
+                  armedClassName={`${ACTION_SLOT} animate-pulse-soft border-2 text-xs font-bold leading-snug active:scale-95 disabled:opacity-60 border-red-400 bg-red-500/20 text-red-100`}
                 >
-                  {gemConfirm
-                    ? `${gemLore ?? ''} (${gemLeft})`
-                    : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`}
-                </button>
+                  {(armed, left) =>
+                    armed
+                      ? `${gemLoreRef.current} (${left})`
+                      : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`
+                  }
+                </ConfirmButton>
                 {attackLore ? (
                   <div className="absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
                     <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">

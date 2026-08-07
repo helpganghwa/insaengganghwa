@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Ticker } from '@/components/Ticker';
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -91,8 +92,6 @@ export function GuildHome({
   // 문양 경과초 기준시각 폴백 — pendingAt이 null인 레거시 pending에서도 마운트 시점부터
   // 카운트업(리뷰 지적: tnow 폴백은 매초 0초로 고정됨). 클라 전용 값(Ticker 안에서만 사용).
   const [emblemElapsedBase] = useState(() => Date.now());
-  const [confirm, setConfirm] = useState(false);
-  const [confirmLeft, setConfirmLeft] = useState(0);
   const [leaveOpen, setLeaveOpen] = useState(false);
   // 기부 낙관적 상태 — 즉시 반영('기부중' 미노출), 실패 시 롤백.
   const [optDonations, setOptDonations] = useState(0);
@@ -205,19 +204,6 @@ export function GuildHome({
   }, [guild.emblemUrl, guild.emblemStatus, canEmblem]);
 
   // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 남은 초(3s/2s/1s)를 라벨에 표기.
-  useEffect(() => {
-    if (!confirm) return;
-    const id = setInterval(() => {
-      setConfirmLeft((s) => {
-        if (s <= 1) {
-          setConfirm(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [confirm]);
 
   // 낙관적 기부 — 경험치바·다이아·단계를 즉시 반영하고 서버는 백그라운드 처리. 실패 시 롤백.
   const runDonate = (tier: { cost: number; xp: number }) => {
@@ -236,17 +222,8 @@ export function GuildHome({
     });
   };
 
-  const onDonate = () => {
-    if (pending || !nextTier) return;
-    if (nextTier.cost === 0) return runDonate(nextTier); // 1회차 무료 — 즉시
-    if (!confirm) {
-      setConfirmLeft(3);
-      setConfirm(true);
-      return;
-    }
-    setConfirm(false);
-    runDonate(nextTier);
-  };
+  // 기부 컨펌 카운트는 ConfirmButton(버튼 내부 state)이 보유(2026-08-07 렌더 감사) —
+  // 이전엔 3초 컨펌 동안 길드 홈 전체(566줄)가 매초 리렌더됐다. 무료 1회차는 즉시 실행.
 
   const leave = () => {
     setLeaveOpen(false);
@@ -393,35 +370,38 @@ export function GuildHome({
               const done = i < effectiveUsed;
               const isNext = i === effectiveUsed;
               const costLabel = t.cost === 0 ? '무료' : `${t.cost}💎`;
-              const label = done
-                ? '완료'
-                : isNext && confirm
-                  ? `${i + 1}단계 ${costLabel} ${confirmLeft}s`
-                  : `${i + 1}단계 ${costLabel}`;
+              // 활성(다음 단계) + 유료 — 3초 인-버튼 재확인(카운트는 버튼 내부 state).
+              if (isNext && t.cost > 0) {
+                return (
+                  <ConfirmButton
+                    key={i}
+                    onConfirm={() => runDonate(t)}
+                    disabled={pending}
+                    className="flex items-center justify-center rounded-lg py-1.5 text-[11px] font-bold transition-colors bg-amber-600 text-white"
+                    armedClassName="flex items-center justify-center rounded-lg py-1.5 text-[11px] font-bold transition-colors bg-amber-700 text-white"
+                    pulseClassName="bg-amber-500"
+                  >
+                    {(armed, left) =>
+                      armed ? `${i + 1}단계 ${costLabel} ${left}s` : `${i + 1}단계 ${costLabel}`
+                    }
+                  </ConfirmButton>
+                );
+              }
               return (
                 <button
                   key={i}
                   type="button"
-                  onClick={isNext ? onDonate : undefined}
+                  onClick={isNext ? () => runDonate(t) : undefined}
                   disabled={!isNext || pending}
                   className={`relative isolate flex items-center justify-center overflow-hidden rounded-lg py-1.5 text-[11px] font-bold transition-colors ${
                     done
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                       : isNext
-                        ? confirm
-                          ? 'bg-amber-700 text-white'
-                          : 'bg-amber-600 text-white'
+                        ? 'bg-amber-600 text-white'
                         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                   }`}
                 >
-                  {isNext && confirm ? (
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 bg-amber-500"
-                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                    />
-                  ) : null}
-                  <span className="relative">{label}</span>
+                  <span className="relative">{done ? '완료' : `${i + 1}단계 ${costLabel}`}</span>
                 </button>
               );
             })}
