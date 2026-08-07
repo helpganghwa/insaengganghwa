@@ -4,7 +4,7 @@ import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'reac
 import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
@@ -200,7 +200,7 @@ export function MailList({
 
   const combinedBase = useMemo(() => [...items, ...extraItems], [items, extraItems]);
   const [displayItems, setOptimisticItems] = useOptimistic(combinedBase);
-  const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { showError, showHeaderToast } = useResourceToast();
   const nowMs = Date.now();
 

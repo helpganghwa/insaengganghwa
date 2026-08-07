@@ -20,8 +20,8 @@ import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
-import { useDiamond } from '@/components/DiamondContext';
-import { useHeaderStats } from '@/components/HeaderStatsContext';
+import { useDiamondActions } from '@/components/DiamondContext';
+import { useHeaderStatsActions } from '@/components/HeaderStatsContext';
 import { sounds } from '@/lib/game/sound';
 
 import { EnhanceFX, CountAnim, type FxKind } from './EnhanceFX';
@@ -217,8 +217,8 @@ export function EnhanceSlotCard({
   const activeJob = jobOverride ?? propJob;
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
-  const { optimisticAdjust: adjustDiamond } = useDiamond();
-  const { applyEnhanceDelta } = useHeaderStats();
+  const { optimisticAdjust: adjustDiamond } = useDiamondActions();
+  const { applyEnhanceDelta } = useHeaderStatsActions();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);

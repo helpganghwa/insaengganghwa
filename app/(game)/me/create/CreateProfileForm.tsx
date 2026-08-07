@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Ticker } from '@/components/Ticker';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
@@ -56,7 +56,7 @@ export function CreateProfileForm({
   queue: ProfileQueueInfo | null;
 }) {
   const router = useRouter();
-  const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { showHeaderToast, showError } = useResourceToast();
   const [gender, setGender] = useState<'female' | 'male'>('female');
   /** 생성 확인 팝업 — 종전엔 3초 재탭 컨펌이라 안내를 넣을 자리가 없었다(2026-08-02). */

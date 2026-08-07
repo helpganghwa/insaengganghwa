@@ -8,7 +8,7 @@ import type { BattlePassView, BattlePassSegmentView } from '@/lib/game/battlepas
 import type { BattlePassType } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -261,7 +261,7 @@ export function BattlePassClient({
   const [paying, setPaying] = useState(false);
   const returnHandled = useRef(false);
   const { showHeaderToast } = useResourceToast();
-  const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const [identityPrompt, setIdentityPrompt] = useState(false); // 본인인증 필요 모달
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityErr, setIdentityErr] = useState<string | null>(null);

@@ -7,7 +7,7 @@ import { Ticker } from '@/components/Ticker';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
@@ -215,7 +215,7 @@ export function DeployBoard({
   zones: Zone[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const [members, setMembers] = useState(initialMembers);
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
   const [selectedId, setSelectedId] = useState<number | null>(residence?.zoneId ?? null);

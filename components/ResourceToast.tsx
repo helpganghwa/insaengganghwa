@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { MyRanks } from '@/lib/game/leaderboard/queries';
@@ -187,16 +187,15 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   const rankingToasts = toasts.filter((t): t is RankingToast => t.kind === 'ranking');
   const headerToasts = toasts.filter((t): t is HeaderToast => t.kind === 'header');
 
+  // value 안정화(2026-08-07 렌더 감사) — 콜백 5개는 전부 useCallback으로 이미 안정인데
+  // 매 렌더 새 객체에 담겨, 토스트 발행·소멸(각 1렌더)마다 구독 32곳(페이지 최상위 클라
+  // 트리 포함)이 통째로 리렌더됐다. useMemo로 마운트 후 영구 불변.
+  const api = useMemo(
+    () => ({ showError, showRanking, beginEnhanceOverlay, endEnhanceOverlay, showHeaderToast }),
+    [showError, showRanking, beginEnhanceOverlay, endEnhanceOverlay, showHeaderToast],
+  );
   return (
-    <ToastContext.Provider
-      value={{
-        showError,
-        showRanking,
-        beginEnhanceOverlay,
-        endEnhanceOverlay,
-        showHeaderToast,
-      }}
-    >
+    <ToastContext.Provider value={api}>
       {children}
       {mounted &&
         createPortal(

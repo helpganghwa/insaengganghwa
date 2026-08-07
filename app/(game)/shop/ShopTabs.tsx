@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondValue, useDiamondActions } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -305,7 +305,8 @@ export function ShopTabs({
 }) {
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
-  const { diamond, optimisticAdjust } = useDiamond();
+  const diamond = useDiamondValue();
+  const { optimisticAdjust } = useDiamondActions();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [paying, setPaying] = useState(false);
   const [free, setFree] = useState(initialFree);

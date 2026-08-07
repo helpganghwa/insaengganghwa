@@ -7,7 +7,7 @@ import { Ticker } from '@/components/Ticker';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import {
   GUILD_REJOIN_LOCK_HOURS,
   GUILD_DONATIONS_PER_DAY,
@@ -86,7 +86,7 @@ export function GuildHome({
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const [pending, start] = useTransition();
   // 문양 경과초 기준시각 폴백 — pendingAt이 null인 레거시 pending에서도 마운트 시점부터
   // 카운트업(리뷰 지적: tnow 폴백은 매초 0초로 고정됨). 클라 전용 값(Ticker 안에서만 사용).

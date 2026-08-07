@@ -8,7 +8,7 @@ import { Ticker } from '@/components/Ticker';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
@@ -205,7 +205,7 @@ export function WorldMapView({
   embedded?: boolean;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceProp?.zoneId ?? null);
   // 이동 쿨타임 — 서버가 준 ready 시각을 클라에서 1초 틱으로 카운트다운(보석 단축 시 즉시 해제).

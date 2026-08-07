@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   MAX_GUILD_EMBLEMS,
@@ -43,7 +43,7 @@ export function EmblemBoard({
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const [pending, start] = useTransition();
 
   const [list, setList] = useState(emblems);

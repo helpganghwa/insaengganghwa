@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import {
   GUILD_CREATE_COST_DIAMOND,
   GUILD_NAME_MAX_LEN,
@@ -24,7 +24,7 @@ const COST = GUILD_CREATE_COST_DIAMOND.toLocaleString('ko-KR');
 export function CreateGuildForm() {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);

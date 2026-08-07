@@ -7,7 +7,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
 import {
   CHALLENGE_GROUPS,
@@ -54,7 +54,7 @@ export function ChallengesClient({
   hidePaid: boolean;
 }) {
   const { showError, showHeaderToast } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { optimisticAdjust } = useDiamondActions();
   const [claimed, setClaimed] = useState<Set<string>>(() => new Set(claimedInit));
   const [completeClaimed, setCompleteClaimed] = useState(completeClaimedInit);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import { useDiamond } from '@/components/DiamondContext';
+import { useDiamondValue } from '@/components/DiamondContext';
 
 /**
  * 헤더 다이아 표시 — useDiamond로 context 값 구독.
@@ -10,7 +10,7 @@ import { useDiamond } from '@/components/DiamondContext';
  * router.refresh() 후 DiamondInitializer가 setBase로 서버 정확값 sync.
  */
 export function HeaderDiamond() {
-  const { diamond } = useDiamond();
+  const diamond = useDiamondValue();
   return (
     <Link prefetch={false}
       href="/shop?tab=charge"
