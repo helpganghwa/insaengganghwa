@@ -40,8 +40,15 @@ async function latestChannelIds(
           : sql`(select max(id)::text from chat_messages
                   where server_id = ${serverId} and guild_id = ${gid})`
       } as guild_id,
-      (select max(id)::text from whisper_messages
-        where server_id = ${serverId} and to_user_id = ${userId}::uuid and hidden_at is null) as whisper_id
+      (select max(id)::text from whisper_messages m
+        where m.server_id = ${serverId} and m.to_user_id = ${userId}::uuid and m.hidden_at is null
+          -- 차단 양방향 제외(감사 §4) — 목록·미읽음과 같은 술어여야 한다. 안 맞추면 차단한
+          -- 상대의 메시지가 노티점만 켜고, 목록엔 안 보여 끌 방법이 없는 점이 된다.
+          and not exists (
+            select 1 from chat_blocks b
+            where (b.user_id = ${userId}::uuid and b.blocked_user_id = m.from_user_id)
+               or (b.user_id = m.from_user_id and b.blocked_user_id = ${userId}::uuid)
+          )) as whisper_id
   `)) as unknown as { all_id: string | null; guild_id: string | null; whisper_id: string | null }[];
   return { all: row?.all_id ?? null, guild: row?.guild_id ?? null, whisper: row?.whisper_id ?? null };
 }

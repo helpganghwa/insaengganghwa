@@ -27,7 +27,8 @@ export async function GET(req: Request) {
   const beforeRaw = url.searchParams.get('before');
   let beforeId: bigint | undefined;
   if (beforeRaw) {
-    if (!/^\d{1,19}$/.test(beforeRaw)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+    // 18자리 상한 — 19자리는 int8 최댓값을 넘길 수 있고, 그러면 bigint 캐스트가 던져 500이 된다.
+    if (!/^\d{1,18}$/.test(beforeRaw)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
     beforeId = BigInt(beforeRaw);
   }
 

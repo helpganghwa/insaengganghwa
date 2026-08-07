@@ -165,7 +165,7 @@ export async function sendWhisperCore(peerUserId: string, raw: string): Promise<
 
   // 독립 검증 병렬화(CLAUDE §11.4) — 상대 존재 확인까지 같은 왕복에 묶는다. 게이트 탈락 시
   // 레이트 토큰이 소모되는 부작용은 무해(어차피 전송 불가 상태)로 수용 — 전체 채팅과 동일.
-  const [enabled, [p], cooldownHit, burstHit, blockRows, [peerChar]] = await Promise.all([
+  const [enabled, [p], cooldownHit, burstHit, blockRows, charRows] = await Promise.all([
     isChatEnabled(),
     db
       .select({ mutedUntil: profiles.chatMutedUntil })
@@ -183,15 +183,19 @@ export async function sendWhisperCore(peerUserId: string, raw: string): Promise<
           and(eq(chatBlocks.userId, peer), eq(chatBlocks.blockedUserId, userId)),
         ),
       ),
+    // 나·상대의 그 서버 캐릭터를 한 번에 — 왕복을 늘리지 않고 양쪽 소속을 확인한다.
     db
       .select({ userId: characters.userId })
       .from(characters)
-      .where(and(eq(characters.userId, peer), eq(characters.serverId, serverId)))
-      .limit(1),
+      .where(and(inArray(characters.userId, [peer, userId]), eq(characters.serverId, serverId))),
   ]);
 
   // 서버 경계(SERVER.md §1) — 귓속말은 같은 논리 서버 안에서만.
-  if (!peerChar) return { status: 'error', message: '이 서버에 없는 유저예요.' };
+  // 발신자 소속도 확인한다(감사 §2) — 활성 서버는 쿠키라 조작 가능해서, 내 캐릭터가 없는 서버를
+  // 가리킨 채 그 서버 유저에게 1:1로 말을 걸 수 있었다(닉네임 없는 유령 발신자로 표시됐다).
+  const chars = new Set(charRows.map((c) => c.userId.toLowerCase()));
+  if (!chars.has(me)) return { status: 'error', message: '이 서버에 캐릭터가 없어요.' };
+  if (!chars.has(peer)) return { status: 'error', message: '이 서버에 없는 유저예요.' };
   if (!enabled) return { status: 'error', message: '채팅이 잠시 닫혀 있습니다.' };
   // 채팅 금지(운영 제재)는 귓속말에도 그대로 적용 — 제재 우회 통로가 되지 않게.
   if (p?.mutedUntil && p.mutedUntil > new Date()) {
@@ -324,6 +328,9 @@ export async function listWhisperThreads(
         and (from_user_id = ${userId}::uuid or to_user_id = ${userId}::uuid)
       order by least(from_user_id, to_user_id), greatest(from_user_id, to_user_id), id desc
     )
+    -- 차단 양방향 제외(2026-08-07 감사 §4) — 목록에서 거르는 일을 클라에만 맡기면, 서버가
+    -- 세는 미읽음 합계와 화면에 보이는 목록이 어긋난다. 차단한 상대의 미읽음이 배지·노티점을
+    -- 켜는데 정작 그 대화는 목록에 없어, 유저가 끌 방법이 없는 알림이 영구히 남았다.
     select p.id::text        as last_id,
            p.peer::text      as peer,
            p.body            as body,
@@ -341,6 +348,11 @@ export async function listWhisperThreads(
     left join whisper_reads r
       on r.user_id = ${userId}::uuid and r.server_id = ${serverId} and r.peer_user_id = p.peer
     where p.id > coalesce(r.hidden_before_id, 0)
+      and not exists (
+        select 1 from chat_blocks b
+        where (b.user_id = ${userId}::uuid and b.blocked_user_id = p.peer)
+           or (b.user_id = p.peer and b.blocked_user_id = ${userId}::uuid)
+      )
     order by p.id desc
     limit ${WHISPER_THREADS_LIMIT}
   `)) as unknown as ThreadRow[];
@@ -494,7 +506,11 @@ export async function cleanupWhispers(): Promise<number> {
                  partition by server_id, least(from_user_id, to_user_id), greatest(from_user_id, to_user_id)
                  order by id desc) rn
         from whisper_messages
-      ) t where rn <= ${WHISPER_KEEP_PER_PAIR} group by 1, 2, 3
+      -- rn = N(감사 §6): rn <= N이면 메시지가 N건 미만인 쌍까지 전부 결과에 들어와,
+      -- 삭제할 게 없는 쌍마다 DELETE 왕복이 한 번씩 발생한다. 채널이 수십 개인 전체·길드 채팅과
+      -- 달리 귓속말의 파티션은 '유저 쌍'이라 수만 개가 되어 예산이 통째로 소진된다.
+      -- rn = N이면 N건을 넘긴 쌍만 1행씩 나오고, 그 행의 id가 곧 보존 컷오프다.
+      ) t where rn = ${WHISPER_KEEP_PER_PAIR} group by 1, 2, 3
     `)) as unknown as { server_id: number; a: string; b: string; keep_min: string }[];
 
     // 2) 30일 초과분 — 5,000개씩, 예산 안에서(whisper_created_idx).
@@ -503,6 +519,9 @@ export async function cleanupWhispers(): Promise<number> {
         delete from whisper_messages where id in (
           select id from whisper_messages
           where created_at < now() - (${WHISPER_RETENTION_DAYS} || ' days')::interval
+            -- 신고된 메시지는 보존(감사 §7) — 귓속말은 자동 숨김 임계가 없어 처리가 전적으로
+            -- 사람의 검수에 달려 있는데, 보존 만료가 신고 기록째로 증거를 지워버렸다.
+            and not exists (select 1 from whisper_reports r where r.message_id = whisper_messages.id)
           limit ${BATCH}
         )
       `)) as unknown as { count?: number };
@@ -524,6 +543,7 @@ export async function cleanupWhispers(): Promise<number> {
               and least(from_user_id, to_user_id) = ${c.a}::uuid
               and greatest(from_user_id, to_user_id) = ${c.b}::uuid
               and id < ${BigInt(c.keep_min)}
+              and not exists (select 1 from whisper_reports r where r.message_id = whisper_messages.id)
             limit ${BATCH}
           )
         `)) as unknown as { count?: number };

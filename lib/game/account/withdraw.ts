@@ -95,6 +95,11 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from ad_views where user_id = ${uid}`);
     await tx.execute(sql`delete from push_pending where user_id = ${uid}`);
     await tx.execute(sql`delete from push_subscriptions where user_id = ${uid}`);
+    // 귓속말(0155) — profiles 행이 결제 앵커로 남아 CASCADE가 발동하지 않으므로 명시 삭제한다.
+    // 사적 통신이라 공개 채널(chat_messages, 7일 보존)과 달리 탈퇴 즉시 파기가 맞다. 상대 화면의
+    // 대화도 함께 사라지지만, 떠난 사람의 사담을 남기는 쪽이 더 나쁜 선택이다.
+    await tx.execute(sql`delete from whisper_reads where user_id = ${uid} or peer_user_id = ${uid}`);
+    await tx.execute(sql`delete from whisper_messages where from_user_id = ${uid} or to_user_id = ${uid}`);
 
     // 리더보드·개인 기록 — 캐릭터가 사라지면 보드의 값도 유령이 된다(0103·v2 증분화 후속).
     await tx.execute(sql`delete from leaderboard_ranks where user_id = ${uid}`);

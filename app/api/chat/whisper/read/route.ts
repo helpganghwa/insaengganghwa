@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     peer = (typeof b.peerUserId === 'string' ? b.peerUserId : '').trim().toLowerCase();
     leave = b.leave === true;
     const raw = typeof b.lastId === 'string' || typeof b.lastId === 'number' ? String(b.lastId) : '';
-    if (/^\d{1,19}$/.test(raw)) lastId = BigInt(raw);
+    if (/^\d{1,18}$/.test(raw)) lastId = BigInt(raw);
   } catch {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }

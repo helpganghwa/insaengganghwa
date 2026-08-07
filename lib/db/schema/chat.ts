@@ -94,6 +94,8 @@ export const whisperMessages = pgTable(
     ),
     // 수신함 — 미니바 노티점(최신 1행)·미읽음 계산.
     index('whisper_to_idx').on(t.serverId, t.toUserId, sql`${t.id} desc`),
+    // 발신함(0157) — 대화 목록은 from·to 양쪽으로 내 대화를 모으므로 짝이 있어야 전량 스캔을 면한다.
+    index('whisper_from_idx').on(t.serverId, t.fromUserId, sql`${t.id} desc`),
     // 보존 정리(30일) 스캔용.
     index('whisper_created_idx').on(t.createdAt),
   ],
