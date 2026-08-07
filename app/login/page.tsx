@@ -59,7 +59,8 @@ export default async function LoginPage({
   const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
-  const reviewLogin = test === 'true';
+  // 스테이징(preview)은 항상 노출 — PWA는 주소창이 없어 ?test=true를 붙일 수 없다(검수 동선).
+  const reviewLogin = test === 'true' || process.env.VERCEL_ENV === 'preview';
   // CBT 종료 모드(0144) — 일반 화면은 로그인 수단 없이 종료 안내·카운트다운만.
   // ?test=true는 ID/PW(심사) + 카카오(어드민 전용 — 콜백에서 검증)를 함께 노출.
   const maint = await getMaintenanceState().catch(() => null);
