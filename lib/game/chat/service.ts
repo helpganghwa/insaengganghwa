@@ -76,7 +76,7 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
 }
 
 /** 저장된 mentions(구=string[], 신={n,c}[]) → ChatMention[] 정규화. */
-function normMentions(v: unknown): ChatMention[] | null {
+export function normMentions(v: unknown): ChatMention[] | null {
   if (!Array.isArray(v) || v.length === 0) return null;
   return v.map((e) => (typeof e === 'string' ? { n: e, c: null } : (e as ChatMention)));
 }
@@ -166,8 +166,8 @@ export async function isChatEnabled(): Promise<boolean> {
   return v;
 }
 
-/** 유저 표시 필드 일괄 해석 — 닉/코드/아바타/길드. */
-async function displayFields(
+/** 유저 표시 필드 일괄 해석 — 닉/코드/아바타/길드. 귓속말(0155)도 같은 해석을 공유. */
+export async function displayFields(
   userIds: string[],
   serverId: number,
 ): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; isMeleeChampion: boolean }>> {

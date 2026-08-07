@@ -3,15 +3,13 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
-import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
-import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
-import { profileHref } from '@/lib/game/profile/href';
+import type { ChatMessageDto } from '@/lib/game/chat/service';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { worldEventMessage } from '@/app/(game)/world-message';
 import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
@@ -20,15 +18,30 @@ import { sendRequestAction } from '@/app/(game)/friends/actions';
 import type { SendChatResult } from '@/lib/game/chat/send';
 
 import { reportChat, setChatBlockAction } from './actions';
+import { avatarBox, renderMentionBody as renderBody } from './mentionBody';
+import {
+  WhisperPane,
+  type WhisperMessageDto,
+  type WhisperOpenTarget,
+  type WhisperThread,
+  type WhisperThreadsRes,
+} from './WhisperPane';
 
 /**
  * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
  *  - GNB 바로 위 fixed 반투명 미니바(최근 1개 메시지) → 탭하면 헤더·GNB 사이를 덮는 불투명 패널
+ *  - 탭 = 전체 / 길드 / 귓속말(1:1 — 본문은 WhisperPane, 이 파일은 열림·탭·구독만 관리)
  *  - 수신: Supabase Realtime broadcast 구독, 실패 시 15초 폴링 폴백
- *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화·친구추가·신고·차단), 신고도 팝업 확인
+ *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화·귓속말·친구추가·신고·차단), 신고도 팝업 확인
  *  - 차단은 로컬(기기) 필터 — localStorage 목록, 서버 부담 0
  *  - 미니바 높이는 --chat-dock-h로 발행(main 하단 패딩), --gt-h(가이드 티커) 합산 오프셋
  *  - 라우트 이동 시 패널 자동 최소화
+ *
+ * 외부 진입 이벤트(2026-08-07)
+ *  - `ig:whisper-open` — CustomEvent<{ peerUserId: string }>. 도크가 전역(레이아웃)에 있어
+ *    친구 목록 등 다른 화면에서 직접 조작할 수 없으므로, 이 이벤트로 "도크 열기 + 귓속말 탭 +
+ *    해당 상대 스레드"를 요청한다. 발신처: app/(game)/friends/FriendsTabs.tsx.
+ *  - 푸시 딥링크 `?chat=whisper&peer={publicCode}` — 기존 `?chat=all|guild`의 확장.
  */
 
 const COOLDOWN_S = 5;
@@ -38,6 +51,13 @@ const TIME_FMT = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-
 const COLLAPSE_KEY = 'ig:chat-collapsed';
 // '프로필 보기' 이동 후 뒤로가기 복원 — 값=MiniProfile JSON(세션 한정, 마운트 시 1회 소비).
 const RESTORE_KEY = 'ig:chat-restore';
+// 미니바 노티점 — 채널별로 "마지막으로 확인한 메시지 id". 서버 latestIds와 다르면 점을 켠다.
+const SEEN_KEY = 'ig:chat-seen';
+/** 친구 목록 → 귓속말 진입 이벤트명. detail = { peerUserId }. */
+export const WHISPER_OPEN_EVENT = 'ig:whisper-open';
+
+type LatestIds = { all: string | null; guild: string | null; whisper: string | null };
+const EMPTY_IDS: LatestIds = { all: null, guild: null, whisper: null };
 
 type MiniProfile = {
   userId: string;
@@ -60,7 +80,9 @@ type MiniProfile = {
   isMe: boolean;
 };
 
-type Tab = 'all' | 'guild';
+/** 헤더 탭. 귓속말은 별도 데이터 경로라 버퍼·폴링이 다루는 채널 탭(ChatTab)과 구분한다. */
+type Tab = 'all' | 'guild' | 'whisper';
+type ChatTab = 'all' | 'guild';
 
 /** 월드 이벤트 broadcast('sys') → 시스템 라인 의사 메시지. */
 function sysToMsg(e: WorldEventEntry): ChatMessageDto {
@@ -93,59 +115,6 @@ function markRestoreIfLink(e: ReactMouseEvent) {
       /* ignore */
     }
   }
-}
-
-// 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 강조, 닉 클릭 시 프로필 상세.
-// 무효 @토큰은 입력한 그대로 일반 텍스트. 색은 절제(내 닉만 약간 진하게).
-function renderBody(
-  body: string,
-  mentions: ChatMention[] | null,
-  meNickname: string | null,
-  serverId: number,
-) {
-  return body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
-    const nick = part.startsWith('@') ? part.slice(1) : null;
-    const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
-    if (nick && hit) {
-      const cls =
-        meNickname && nick === meNickname
-          ? 'font-bold text-amber-600 dark:text-amber-400'
-          : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
-      if (hit.c) {
-        return (
-          <Link prefetch={false} key={i} href={profileHref(hit.c, serverId)} className={`${cls} hover:underline`}>
-            {nick}
-          </Link>
-        );
-      }
-      return (
-        <span key={i} className={cls}>
-          {nick}
-        </span>
-      );
-    }
-    return part;
-  });
-}
-
-function avatarBox(m: { avatar: string | null; faceBox: FaceBox | null }, size: string) {
-  return (
-    <span className={`${size} shrink-0 overflow-hidden`}>
-      {m.avatar ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={m.avatar}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full"
-          style={faceCropStyle(m.faceBox)}
-        />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
-      )}
-    </span>
-  );
 }
 
 /**
@@ -306,6 +275,14 @@ export function ChatDock() {
   const [meNickname, setMeNickname] = useState<string | null>(null);
   // 멘션 자동완성 — 서버 전체 닉네임 prefix 검색 결과(250ms 디바운스).
   const [searchCands, setSearchCands] = useState<string[]>([]);
+  // ── 귓속말 —— 내용은 WhisperPane, 여기선 구독 토픽·미읽음 배지·진입 요청만 든다.
+  const [whisperTopic, setWhisperTopic] = useState<string | null>(null);
+  const [whisperSeed, setWhisperSeed] = useState<WhisperThread[] | null>(null);
+  // null = 아직 모름(조회 전). 0이면 "다 읽음"으로 확정 — 노티점 흡수 판단에 쓴다.
+  const [whisperUnread, setWhisperUnread] = useState<number | null>(null);
+  const [whisperOpen, setWhisperOpen] = useState<WhisperOpenTarget | null>(null);
+  // 미니바 노티점 — 서버가 준 채널별 최신 id와 로컬 seen 비교.
+  const [notiDot, setNotiDot] = useState(false);
 
   const openRef = useRef(false);
   const collapsedRef = useRef(false);
@@ -316,13 +293,25 @@ export function ChatDock() {
   // applyNew(장수명 콜백)에서 내 broadcast를 식별하기 위한 미러 — 상태 me와 동기화.
   const meRef = useRef<string | null>(null);
   const serverIdRef = useRef(1);
-  const tabRef = useRef<Tab>('all');
-  tabRef.current = tab;
-  // 탭별 버퍼(전환 즉시 표시용) — 활성 탭은 messages/latest 상태가 원본, 비활성 탭은 여기.
-  const bufRef = useRef<Record<Tab, { messages: ChatMessageDto[]; latest: ChatMessageDto | null }>>({
-    all: { messages: [], latest: null },
-    guild: { messages: [], latest: null },
+  // 채널 탭 미러 — 귓속말 탭 중에도 직전 채널을 유지한다(목록·폴링·버퍼는 계속 그 채널 기준).
+  const tabRef = useRef<ChatTab>('all');
+  if (tab !== 'whisper') tabRef.current = tab;
+  // 헤더에서 보고 있는 탭(귓속말 포함) — 장수명 콜백이 읽는 미러(아래 effect로 동기화).
+  const viewTabRef = useRef<Tab>('all');
+  // 탭별 버퍼(전환 즉시 표시용) — 활성 탭은 messages 상태가 원본, 비활성 탭은 여기.
+  const bufRef = useRef<Record<ChatTab, { messages: ChatMessageDto[] }>>({
+    all: { messages: [] },
+    guild: { messages: [] },
   });
+  // 미니바 노티점용 — 서버 최신 id / 로컬 확인 id. 값 변화가 렌더를 부르지 않도록 ref.
+  const latestIdsRef = useRef<LatestIds>(EMPTY_IDS);
+  const seenRef = useRef<LatestIds>(EMPTY_IDS);
+  // 저장된 seen이 없는 첫 방문 — 첫 응답의 최신 id를 그대로 확인 처리(설치 직후 점 방지).
+  const seenPrimedRef = useRef(false);
+  const whisperUnreadRef = useRef<number | null>(null);
+  const myGuildIdRef = useRef<string | null>(null);
+  // 실시간 귓속말 싱크 — WhisperPane이 마운트된 동안만 등록된다(반환 true=활성 스레드가 소비).
+  const whisperSinkRef = useRef<((m: WhisperMessageDto) => boolean) | null>(null);
   const [sid, setSid] = useState<number | null>(null);
   // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
   const myFieldsRef = useRef<ChatMessageDto | null>(null);
@@ -337,7 +326,9 @@ export function ChatDock() {
     collapsedRef.current = collapsed;
     messagesRef.current = messages;
     meRef.current = me;
-  }, [collapsed, messages, me]);
+    viewTabRef.current = tab;
+    whisperUnreadRef.current = whisperUnread;
+  }, [collapsed, messages, me, tab, whisperUnread]);
 
   // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 접힘 상태도 초기 복원.
   // useLayoutEffect — useEffect는 페인트 뒤라 접어둔 유저에게 매 이동마다 펼침→접힘이
@@ -353,7 +344,69 @@ export function ChatDock() {
     } catch {
       /* ignore */
     }
+    try {
+      const raw = localStorage.getItem(SEEN_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as Partial<LatestIds>;
+        seenRef.current = {
+          all: typeof d.all === 'string' ? d.all : null,
+          guild: typeof d.guild === 'string' ? d.guild : null,
+          whisper: typeof d.whisper === 'string' ? d.whisper : null,
+        };
+        seenPrimedRef.current = true;
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  // ── 미니바 노티점 —— 서버 latestIds vs 로컬 seen. 어느 채널이든 새 것이면 점.
+  // 귓속말은 '내용·발신자'를 미니바에 절대 노출하지 않으므로 점만 켠다(프라이버시).
+  const recomputeDot = useCallback(() => {
+    const ids = latestIdsRef.current;
+    const s = seenRef.current;
+    setNotiDot(
+      (!!ids.all && ids.all !== s.all) ||
+        (!!ids.guild && ids.guild !== s.guild) ||
+        (!!ids.whisper && ids.whisper !== s.whisper),
+    );
+  }, []);
+  const setSeen = useCallback(
+    (ch: keyof LatestIds, id: string | null) => {
+      if (!id || id.startsWith('tmp-') || seenRef.current[ch] === id) return;
+      seenRef.current = { ...seenRef.current, [ch]: id };
+      try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify(seenRef.current));
+      } catch {
+        /* ignore */
+      }
+      recomputeDot();
+    },
+    [recomputeDot],
+  );
+  /** 지금 보고 있는 채널(+다 읽은 귓속말)은 서버 최신 id를 그대로 확인 처리한다. */
+  const absorbSeen = useCallback(() => {
+    const ids = latestIdsRef.current;
+    // 첫 방문 — 기록이 없으면 "이미 다 본 상태"에서 시작한다(서버 id가 하나라도 온 뒤에).
+    if (!seenPrimedRef.current) {
+      if (!ids.all && !ids.guild && !ids.whisper) return;
+      seenPrimedRef.current = true;
+      seenRef.current = { ...ids };
+      try {
+        localStorage.setItem(SEEN_KEY, JSON.stringify(seenRef.current));
+      } catch {
+        /* ignore */
+      }
+      setNotiDot(false);
+      return;
+    }
+    if (openRef.current) {
+      if (viewTabRef.current === 'all') setSeen('all', ids.all);
+      else if (viewTabRef.current === 'guild') setSeen('guild', ids.guild);
+    }
+    if (whisperUnreadRef.current === 0) setSeen('whisper', ids.whisper);
+    recomputeDot();
+  }, [recomputeDot, setSeen]);
 
   const toggleCollapsed = () => {
     setCollapsedUnseen(false);
@@ -414,7 +467,6 @@ export function ChatDock() {
 
   const applyNew = useCallback(
     (m: ChatMessageDto) => {
-      if (!m.sys && !m.sysGuild) setLatest(m); // 시스템 라인은 미니바(마지막 채팅)에서 제외.
       // 닫힘 중에도 목록 버퍼를 채움 — 패널을 열 때 과거 목록이 먼저 보였다가 교체되는
       // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(100)가 정합 보정.
       setMessages((prev) => {
@@ -474,16 +526,21 @@ export function ChatDock() {
     // 서버가 after를 못 찾으면 full로 응답 — 반환 mode로 구분해 append/치환을 가른다.
     async (
       limit: number,
-      forTab?: Tab,
+      forTab?: ChatTab,
       lite?: boolean,
       after?: string | null,
+      // 요청 채널을 호출처가 명시하고 결과도 채널 기준으로 라우팅하는 경우(닫힘 미니바의
+      // 전체 채널 고정 폴링) — 활성 탭 가드를 건너뛴다.
+      anyTab?: boolean,
     ): Promise<{ mode: 'full' | 'delta'; messages: ChatMessageDto[] } | null> => {
       const t = forTab ?? tabRef.current;
       try {
+        // gid — 서버가 길드 채널 최신 id(latestIds.guild)를 계산할 때만 쓴다(모르면 생략).
+        const gid = myGuildIdRef.current;
         const res = await fetch(
           `/api/chat/recent?limit=${limit}&channel=${t}${lite ? '&lite=1' : ''}${
             after ? `&after=${encodeURIComponent(after)}` : ''
-          }`,
+          }${lite && gid ? `&gid=${encodeURIComponent(gid)}` : ''}`,
           { cache: 'no-store' },
         );
         if (!res.ok) return null;
@@ -497,14 +554,24 @@ export function ChatDock() {
           guild?: { id: string; name: string } | null;
           guildChannel?: string | null;
           blocked?: { id: string; nickname: string }[];
+          latestIds?: LatestIds;
         };
         if (data.disabled) {
           setEnabled(false);
           return null;
         }
         setEnabled(true);
+        // 미니바 노티점 — 채널별 최신 id는 탭과 무관하게 항상 흡수한다.
+        if (data.latestIds) {
+          latestIdsRef.current = {
+            all: data.latestIds.all ?? null,
+            guild: data.latestIds.guild ?? latestIdsRef.current.guild,
+            whisper: data.latestIds.whisper ?? null,
+          };
+          absorbSeen();
+        }
         // 응답이 도착한 시점의 활성 탭과 요청 탭이 다르면(빠른 전환) 채널·목록 반영 스킵.
-        if (t !== tabRef.current) return null;
+        if (!anyTab && t !== tabRef.current) return null;
         if (data.channel) {
           setChannel(data.channel);
           const sidNum = Number(data.channel.split(':s')[1]);
@@ -540,20 +607,24 @@ export function ChatDock() {
         return null;
       }
     },
-    [],
+    [absorbSeen],
   );
 
-  // 초기 로드 — 최근 1개(미니바).
+  // 초기 로드 — 최근 1개(미니바 = 항상 전체 채널).
   useEffect(() => {
-    void fetchRecent(1).then((r) => {
+    void fetchRecent(1, 'all', false, null, true).then((r) => {
       const lastUser = r ? [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild) : null;
       if (lastUser) setLatest(lastUser);
     });
   }, [fetchRecent]);
 
   // 수신 라우팅 — 활성 탭이면 화면(applyNew), 비활성 탭이면 버퍼에만 적재(전환 즉시 표시).
+  // 미니바는 탭과 무관하게 전체 채널만 보여주므로 latest는 'all'에서만 갱신한다.
   const routeIncoming = useCallback(
-    (t: Tab, m: ChatMessageDto) => {
+    (t: ChatTab, m: ChatMessageDto) => {
+      if (t === 'all' && !m.sys && !m.sysGuild) setLatest(m);
+      // 보고 있는 채널이면 그 자리에서 확인 처리(다음 폴링의 latestIds와 같은 id).
+      if (openRef.current && viewTabRef.current === t) setSeen(t, m.id);
       if (t === tabRef.current) {
         applyNew(m);
         return;
@@ -562,9 +633,8 @@ export function ChatDock() {
       if (!b.messages.some((x) => x.id === m.id)) {
         b.messages = [...b.messages, m].slice(-150);
       }
-      if (!m.sys && !m.sysGuild) b.latest = m;
     },
-    [applyNew],
+    [applyNew, setSeen],
   );
 
   // 서버 전환(sid 변경) 감지 — 버퍼·미니바 초기화. 구독 여부와 무관하게 실행되어야 해서
@@ -576,7 +646,7 @@ export function ChatDock() {
       setMessages([]);
       setLatest(null);
       myFieldsRef.current = null;
-      bufRef.current = { all: { messages: [], latest: null }, guild: { messages: [], latest: null } };
+      bufRef.current = { all: { messages: [] }, guild: { messages: [] } };
     }
     prevSidRef.current = sid;
   }, [sid]);
@@ -585,12 +655,12 @@ export function ChatDock() {
   // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
   // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 코얼레싱 미니 토픽(아래 effect)+60초
   // 폴링 안전망이 담당.
-  // 열림 중엔 전체+내 길드 두 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
+  // 열림 중엔 전체+내 길드+내 귓속말 수신함 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
   useEffect(() => {
     if (enabled !== true || sid === null || !open) return;
     const sb = supabaseBrowser();
     if (!sb) return;
-    const mk = (topic: string, t: Tab) =>
+    const mk = (topic: string, t: ChatTab) =>
       sb
         .channel(topic)
         .on('broadcast', { event: 'new' }, ({ payload }) => routeIncoming(t, payload as ChatMessageDto))
@@ -601,17 +671,33 @@ export function ChatDock() {
           setLatest((prev) => (prev?.id === id ? null : prev));
           for (const b of Object.values(bufRef.current)) {
             b.messages = b.messages.filter((m) => m.id !== id);
-            if (b.latest?.id === id) b.latest = null;
           }
         })
         .subscribe();
     const chans = [mk(`chat:s${sid}`, 'all')];
     // 길드 토픽은 서버가 소속 검증 후 내려준 값만 사용(HMAC 토큰 포함 — 클라 조립 금지).
     if (guildTopic) chans.push(mk(guildTopic, 'guild'));
+    // 귓속말 수신함 토픽도 서버 발급값만(threads 응답). 패널이 열려 있으면 다른 탭에 있어도
+    // 구독은 유지 — WhisperPane이 없으면(=다른 탭) 탭 점만 켠다.
+    if (whisperTopic) {
+      chans.push(
+        sb
+          .channel(whisperTopic)
+          .on('broadcast', { event: 'new' }, ({ payload }) => {
+            const m = payload as WhisperMessageDto;
+            const consumed = whisperSinkRef.current?.(m) ?? false;
+            // 지금 그 스레드를 보고 있으면(consumed) 미읽음이 아니다.
+            if (!consumed && m.fromUserId !== meRef.current) {
+              setWhisperUnread((n) => (n ?? 0) + 1);
+            }
+          })
+          .subscribe(),
+      );
+    }
     return () => {
       for (const c of chans) void sb.removeChannel(c);
     };
-  }, [enabled, sid, guildTopic, open, routeIncoming]);
+  }, [enabled, sid, guildTopic, whisperTopic, open, routeIncoming]);
 
   // 미니바 준실시간(2026-08-06 확정) — **닫힘(비접힘) 동안만** 코얼레싱 미니 토픽 구독.
   // 서버가 15초당 최대 1건(월드 최신 메시지)만 발사해 fan-out 비용 상한 고정 — 한산할 때의
@@ -634,11 +720,11 @@ export function ChatDock() {
     };
   }, [enabled, sid, open, collapsed, routeIncoming]);
 
-  // 길드 탈퇴/해산 감지 — 길드 버퍼·미니바 잔존 제거.
+  // 길드 탈퇴/해산 감지 — 길드 버퍼 잔존 제거.
   useEffect(() => {
+    myGuildIdRef.current = myGuild?.id ?? null;
     if (myGuild) return;
-    bufRef.current.guild = { messages: [], latest: null };
-    if (tabRef.current === 'guild') setLatest(null);
+    bufRef.current.guild = { messages: [] };
   }, [myGuild]);
 
   // 비활성 탭 선적재 — 길드 소속이 확인되면 길드 버퍼를 미리 채워 첫 전환도 즉시.
@@ -648,13 +734,41 @@ export function ChatDock() {
       .then(async (r) => (r.ok ? ((await r.json()) as { messages?: ChatMessageDto[] }) : null))
       .then((d) => {
         if (!d?.messages || tabRef.current === 'guild') return;
-        const lastUser = [...d.messages].reverse().find((m) => !m.sys && !m.sysGuild) ?? null;
-        bufRef.current.guild = { messages: d.messages, latest: lastUser };
+        bufRef.current.guild = { messages: d.messages };
       })
       .catch(() => {
         /* 무시 — 전환 시 재조회 */
       });
   }, [myGuild?.id]);
+
+  // 귓속말 목록 선조회 — 패널을 열 때 1회. 실시간 토픽(서버 발급)과 탭 미읽음 점의 원천이다.
+  // 귓속말 탭을 열지 않아도 배지가 맞아야 하므로 도크가 직접 받는다(WhisperPane은 자기 마운트
+  // 시점에 다시 받아 onThreads로 최신값을 되돌려준다).
+  const whisperFetchedRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      whisperFetchedRef.current = false;
+      return;
+    }
+    if (enabled !== true || whisperFetchedRef.current) return;
+    whisperFetchedRef.current = true;
+    void fetch('/api/chat/whisper/threads', { cache: 'no-store' })
+      .then(async (r) => (r.ok ? ((await r.json()) as WhisperThreadsRes) : null))
+      .then((d) => {
+        if (!d) return;
+        setWhisperTopic(d.topic ?? null);
+        setWhisperSeed(d.threads ?? []);
+        setWhisperUnread((d.threads ?? []).reduce((s, t) => s + (t.unread || 0), 0));
+      })
+      .catch(() => {
+        /* 무시 — 귓속말 탭 진입 시 재조회 */
+      });
+  }, [open, enabled]);
+
+  // 미읽음이 0으로 확정되면 서버 최신 귓속말 id를 확인 처리(미니바 점 해제).
+  useEffect(() => {
+    absorbSeen();
+  }, [whisperUnread, tab, open, absorbSeen]);
 
   // 폴링 — Realtime(WS) 백업 + 닫힘 미니바의 유일한 수신 경로(2026-08-06: WS는 열림 시에만).
   // 열림=100(after 증분 — 평시 델타 0~3건), 닫힘=1(lite: 1건·부속 조회 생략).
@@ -675,9 +789,11 @@ export function ChatDock() {
       const after = wasOpen
         ? ([...messagesRef.current].reverse().find((m) => !m.id.startsWith('tmp-'))?.id ?? null)
         : null;
+      // 닫힘 폴링은 **항상 전체 채널** — 미니바가 탭과 무관하게 전체 최신만 보여주기 때문.
+      // 결과는 routeIncoming('all')로 흘려 활성 탭이 길드여도 목록이 섞이지 않는다.
       // 폴링은 열림/닫힘 모두 lite — 차단목록·닉네임·토픽 부속 쿼리는 열기/탭 전환의
       // 전체 조회가 담당(값이 바뀌는 이벤트가 그때뿐). 월드 lite+캐시 히트 = DB 0쿼리.
-      void fetchRecent(wasOpen ? 100 : 1, undefined, true, after).then((r) => {
+      void fetchRecent(wasOpen ? 100 : 1, wasOpen ? undefined : 'all', true, after, !wasOpen).then((r) => {
         if (!r) return;
         const ms = r.messages;
         if (wasOpen) {
@@ -700,9 +816,12 @@ export function ChatDock() {
           } else {
             setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
           }
-        } else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
-        const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
-        if (lastUser) setLatest(lastUser);
+          // 열림 폴링은 활성 채널 탭 기준 — 미니바(전체 최신)는 전체 탭일 때만 갱신.
+          if (tabRef.current === 'all') {
+            const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
+            if (lastUser) setLatest(lastUser);
+          }
+        } else if (ms.length > 0) routeIncoming('all', ms[ms.length - 1]!);
       });
     };
     const schedule = () => {
@@ -725,7 +844,7 @@ export function ChatDock() {
       if (timer) clearTimeout(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [enabled, fetchRecent, applyNew, scrollToBottom]);
+  }, [enabled, fetchRecent, routeIncoming, scrollToBottom]);
 
   // 쿨다운 카운트다운.
   useEffect(() => {
@@ -767,19 +886,24 @@ export function ChatDock() {
     });
   };
 
-  // 탭 전환(전체/길드) — 캐시 버퍼를 즉시 표시(렉 없음), 백그라운드 재조회로 정합 보정.
-  // 구독은 두 채널 상시 유지라 재구독 비용도 없음.
+  // 탭 전환 — 캐시 버퍼를 즉시 표시(렉 없음), 백그라운드 재조회로 정합 보정.
+  // 구독은 세 채널 상시 유지라 재구독 비용도 없음.
+  // 귓속말은 채널 탭(전체/길드)의 목록·버퍼를 건드리지 않는다 — 되돌아오면 보던 그대로.
   const switchTab = (next: Tab, limitOverride?: number) => {
     if (next === tab) return;
-    // 현재 탭 상태를 버퍼로 저장 후 다음 탭 버퍼를 즉시 로드.
-    bufRef.current[tab] = { messages, latest };
-    const cached = bufRef.current[next];
+    if (next === 'whisper') {
+      setTab(next);
+      setUnseenBelow(false);
+      return;
+    }
+    const cur = tabRef.current;
+    if (next !== cur) {
+      // 현재 채널 탭 상태를 버퍼로 저장 후 다음 탭 버퍼를 즉시 로드.
+      bufRef.current[cur] = { messages };
+      tabRef.current = next;
+      setMessages(bufRef.current[next].messages);
+    }
     setTab(next);
-    tabRef.current = next;
-    setMessages(cached.messages);
-    // 탭 전환에 의한 latest 교체는 '새 메시지'가 아님 — 접힘 점 배지 오탐 방지.
-    prevLatestIdRef.current = cached.latest && !blocked.has(cached.latest.userId) ? cached.latest.id : null;
-    setLatest(cached.latest);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
     void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((r) => {
@@ -789,33 +913,68 @@ export function ChatDock() {
       if (!el || el.scrollHeight - el.scrollTop - el.clientHeight < 120)
         needInitialScrollRef.current = true;
       setMessages((prev) => [...r.messages, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
-      const lastUser = [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild);
-      if (lastUser) setLatest(lastUser);
+      if (next === 'all') {
+        const lastUser = [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild);
+        if (lastUser) setLatest(lastUser);
+      }
+      setSeen(next, [...r.messages].reverse().find((m) => !m.id.startsWith('tmp-'))?.id ?? null);
     });
   };
 
-  // 푸시 클릭 목적지(?chat=all|guild) — 채팅창을 해당 탭으로 오픈. 처리 후 쿼리 제거.
+  // 푸시 클릭 목적지(?chat=all|guild|whisper[&peer=publicCode]) — 채팅창을 해당 탭으로 오픈.
+  // 처리 후 쿼리 제거.
   const openFromPushRef = useRef<(url: string) => void>(() => {});
   openFromPushRef.current = (url: string) => {
     let chat: string | null = null;
+    let peer: string | null = null;
     try {
-      chat = new URL(url, location.origin).searchParams.get('chat');
+      const sp = new URL(url, location.origin).searchParams;
+      chat = sp.get('chat');
+      peer = sp.get('peer');
     } catch {
       return;
     }
-    if (chat !== 'all' && chat !== 'guild') return;
-    if (chat !== tabRef.current) switchTab(chat, 100);
+    if (chat !== 'all' && chat !== 'guild' && chat !== 'whisper') return;
+    if (chat === 'whisper') {
+      switchTab('whisper');
+      // peer는 공개코드 — userId 해석은 WhisperPane이 목록 매칭/검색으로 처리한다.
+      if (peer) setWhisperOpen({ publicCode: peer });
+    } else if (chat !== tabRef.current || tab === 'whisper') {
+      switchTab(chat, 100);
+    }
     openPanel();
     try {
       const u = new URL(location.href);
-      if (u.searchParams.has('chat')) {
+      if (u.searchParams.has('chat') || u.searchParams.has('peer')) {
         u.searchParams.delete('chat');
+        u.searchParams.delete('peer');
         history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
       }
     } catch {
       /* ignore */
     }
   };
+
+  /**
+   * 친구 목록 등 외부 화면 → 귓속말 진입. 도크가 전역(레이아웃)이라 직접 조작이 불가해
+   * window CustomEvent로 신호받는다. detail = { peerUserId }.
+   */
+  // 최신 클로저 미러 — 리스너는 마운트 1회만 건다(위 openFromPushRef와 동일 패턴).
+  const openWhisperRef = useRef<(peerUserId: string) => void>(() => {});
+  openWhisperRef.current = (peerUserId: string) => {
+    switchTab('whisper');
+    setWhisperOpen({ userId: peerUserId });
+    setCollapsedUnseen(false);
+    if (!open) openPanel();
+  };
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const d = (e as CustomEvent<{ peerUserId?: string }>).detail;
+      if (d?.peerUserId) openWhisperRef.current(d.peerUserId);
+    };
+    window.addEventListener(WHISPER_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(WHISPER_OPEN_EVENT, onOpen);
+  }, []);
   // GNB 탭 → 패널 최소화. **같은 경로 재탭만** 즉시 닫는다(내비게이션 없음 = pathname
   // effect가 못 닫는 케이스). 실제 이동은 pathname 전환 layout effect가 새 페이지 페인트와
   // 동시에 닫음 — 먼저 닫으면 옛 페이지가 내비 지연 동안 그대로 보여 어지러웠다(2026-07-22).
@@ -962,8 +1121,9 @@ export function ChatDock() {
           return;
         }
         myFieldsRef.current = r.message;
+        // 미니바는 전체 채널만 — 길드 발언은 미니바를 바꾸지 않는다.
+        if (sentTab === 'all') setLatest(r.message);
         if (sentTab === tabRef.current) {
-          setLatest(r.message);
           setMessages((prev) => {
             const rest = prev.filter((m) => m.id !== tempId);
             // 내 broadcast가 먼저 도착해 이미 실 메시지가 있으면 temp만 제거.
@@ -973,8 +1133,8 @@ export function ChatDock() {
           const b = bufRef.current[sentTab];
           const rest = b.messages.filter((m) => m.id !== tempId);
           b.messages = rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
-          b.latest = r.message;
         }
+        setSeen(sentTab, r.message.id);
       })
       .catch(() => {
         rollback();
@@ -997,6 +1157,20 @@ export function ChatDock() {
       });
   }, []);
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
+
+  // ── WhisperPane 연결 콜백 —— 전부 안정 참조(패널 내부 effect 재실행 방지).
+  const handleWhisperThreads = useCallback((res: WhisperThreadsRes) => {
+    setWhisperTopic(res.topic ?? null);
+    setWhisperSeed(res.threads ?? []);
+  }, []);
+  const handleWhisperUnread = useCallback((n: number) => setWhisperUnread(n), []);
+  const registerWhisperSink = useCallback(
+    (fn: ((m: WhisperMessageDto) => boolean) | null) => {
+      whisperSinkRef.current = fn;
+    },
+    [],
+  );
+  const consumeWhisperOpen = useCallback(() => setWhisperOpen(null), []);
 
   // 차단 토글(0126, 서버 저장) — 낙관 반영 후 서버 확정, 실패 시 복원.
   const toggleBlock = (userId: string, nickname: string) => {
@@ -1076,7 +1250,7 @@ export function ChatDock() {
                 <span aria-hidden className="text-[12px]">
                   💬
                 </span>
-                {collapsedUnseen ? (
+                {collapsedUnseen || notiDot ? (
                   <span
                     aria-hidden
                     className="absolute top-0 right-0 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
@@ -1084,7 +1258,9 @@ export function ChatDock() {
                 ) : null}
               </button>
             ) : (
-              <div className="pointer-events-auto flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pr-3 pl-1.5 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
+              // 펼침 — 미니바 본문은 **탭과 무관하게 항상 전체 채널 최신 1건**.
+              // 귓속말은 내용·발신자를 여기 절대 노출하지 않고, 새 소식은 우상단 점으로만 알린다.
+              <div className="pointer-events-auto relative flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pr-3 pl-1.5 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
                 <button
                   type="button"
                   onClick={toggleCollapsed}
@@ -1113,11 +1289,15 @@ export function ChatDock() {
                       {visibleLatest.body}
                     </span>
                   ) : (
-                    <span className="flex-1 truncate text-[11px] text-zinc-400">
-                      {tab === 'guild' ? '길드 채팅' : '전체 채팅'}
-                    </span>
+                    <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
                   )}
                 </button>
+                {notiDot ? (
+                  <span
+                    aria-hidden
+                    className="absolute -top-px -right-px h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
+                  />
+                ) : null}
               </div>
             )}
           </div>
@@ -1137,7 +1317,7 @@ export function ChatDock() {
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
             <header className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
               <div className="flex items-center gap-4">
-                {(['all', 'guild'] as const).map((tk) => (
+                {(['all', 'guild', 'whisper'] as const).map((tk) => (
                   <button
                     key={tk}
                     type="button"
@@ -1148,7 +1328,13 @@ export function ChatDock() {
                         : 'font-medium text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
                     }`}
                   >
-                    {tk === 'all' ? '전체' : '길드'}
+                    {tk === 'all' ? '전체' : tk === 'guild' ? '길드' : '귓속말'}
+                    {tk === 'whisper' && (whisperUnread ?? 0) > 0 ? (
+                      <span
+                        aria-hidden
+                        className="absolute -top-px -right-[7px] h-[5px] w-[5px] rounded-full bg-amber-500"
+                      />
+                    ) : null}
                     {tab === tk ? (
                       <span className="absolute -bottom-[7px] left-0 right-0 h-[2px] rounded-full bg-zinc-900 dark:bg-zinc-50" />
                     ) : null}
@@ -1164,6 +1350,24 @@ export function ChatDock() {
               </button>
             </header>
 
+            {tab === 'whisper' ? (
+              <WhisperPane
+                me={me}
+                meNickname={meNickname}
+                serverId={sid ?? 1}
+                seed={whisperSeed}
+                blocked={blocked}
+                openTarget={whisperOpen}
+                onOpenTargetConsumed={consumeWhisperOpen}
+                onThreads={handleWhisperThreads}
+                onUnread={handleWhisperUnread}
+                registerSink={registerWhisperSink}
+                onProfile={openProfile}
+                onToggleBlock={toggleBlock}
+                onClose={() => setOpen(false)}
+              />
+            ) : (
+              <>
             <div
               ref={listRef}
               onScroll={() => {
@@ -1288,171 +1492,178 @@ export function ChatDock() {
               </div>
             </div>
             )}
+              </>
+            )}
           </div>
         </div>
       ) : null}
 
-      {/* 미니 프로필 팝업 */}
+      {/* 미니 프로필 팝업 — 공통 3단(제목 / 카드 / 버튼). 카드는 자랑 카드식 2분할
+          (왼쪽 전신 아바타, 오른쪽 스탯)이라 자체 배경을 가지므로 bare로 둔다. */}
       {profile ? (
-        <ModalShell
-          onClose={() => setProfile(null)}
-          label="유저 정보"
-          className="w-full max-w-[340px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
-        >
-          <div>
-            {
-              /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
-              <div className="bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
-                {/* 닉네임·길드 — 프로필 페이지처럼 상단 가운데 별도 영역(닉 가림 방지) */}
-                <div className="flex flex-col items-center text-center">
-                  <b className="max-w-full truncate text-[15px] leading-tight">
-                    {profile.data.isMeleeChampion ? '🏆 ' : ''}
-                    {profile.data.nickname}
-                  </b>
-                  {profile.data.guildName || profile.data.repTitle ? (
-                    <span className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] text-zinc-400">
-                      {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 칭호(집행관 흡수). */}
-                      {profile.data.guildEmblemUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={profile.data.guildEmblemUrl}
-                          alt=""
-                          className="h-3.5 w-3.5 shrink-0 object-contain"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      ) : null}
-                      {profile.data.guildName ? (
-                        <span className="truncate">{profile.data.guildName}</span>
-                      ) : null}
-                      {profile.data.guildName && profile.data.repTitle ? (
-                        <span className="shrink-0 text-zinc-600">·</span>
-                      ) : null}
-                      <TitleTag
-                        code={profile.data.repTitle}
-                        executorZone={profile.data.executorZone}
-                        executorZoneRegion={profile.data.executorZoneRegion}
-                      />
-                    </span>
+        <ModalShell onClose={() => setProfile(null)} label="유저 정보">
+          <ModalLayout
+            bare
+            title={
+              <span className="block max-w-full truncate">
+                {profile.data.isMeleeChampion ? '🏆 ' : ''}
+                {profile.data.nickname}
+              </span>
+            }
+            subtitle={
+              profile.data.guildName || profile.data.repTitle ? (
+                <span className="flex items-center justify-center gap-1">
+                  {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 칭호(집행관 흡수). */}
+                  {profile.data.guildEmblemUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.data.guildEmblemUrl}
+                      alt=""
+                      className="h-3.5 w-3.5 shrink-0 object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
                   ) : null}
-                </div>
-                {/* 버튼 2개/4개와 무관하게 높이 고정 — 아바타 위치·크기 불변.
-                    아바타는 object-cover로 세로를 꽉 채움(캔버스 좌우 여백은 크롭) */}
-                <div className="mt-2 flex h-[184px] items-stretch gap-2.5">
-                  {/* 크롭 없음 — 세로를 꽉 채우되 폭은 열 밖으로 넘쳐도 보이게(visible),
-                      클립은 팝업 카드의 overflow-hidden(라운드)에서만 발생 */}
-                  <div className="relative w-[150px] shrink-0">
-                    {profile.data.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={profile.data.avatar}
-                        alt=""
-                        className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-6xl">
-                        👤
-                      </span>
-                    )}
+                  {profile.data.guildName ? (
+                    <span className="truncate">{profile.data.guildName}</span>
+                  ) : null}
+                  {profile.data.guildName && profile.data.repTitle ? (
+                    <span className="shrink-0 text-zinc-400">·</span>
+                  ) : null}
+                  <TitleTag
+                    code={profile.data.repTitle}
+                    executorZone={profile.data.executorZone}
+                    executorZoneRegion={profile.data.executorZoneRegion}
+                  />
+                </span>
+              ) : undefined
+            }
+            footer={
+              <div className="flex w-full flex-col gap-2">
+                {!profile.data.isMe ? (
+                  <div className="flex gap-2">
+                    {/* 주 동작 — 유저를 만났을 때 가장 하고 싶은 행동이 말 걸기다. */}
+                    <ModalButton
+                      tone="primary"
+                      grow={2}
+                      onClick={() => {
+                        const uid = profile.data.userId;
+                        setProfile(null);
+                        switchTab('whisper');
+                        setWhisperOpen({ userId: uid });
+                      }}
+                    >
+                      귓속말
+                    </ModalButton>
+                    <ModalButton
+                      tone="neutral"
+                      disabled={profile.data.friendStatus !== null}
+                      onClick={() => {
+                        void sendRequestAction(profile.data!.userId).then((r) => {
+                          setPopupFlash(
+                            r.status === 'success' ? '친구 요청을 보냈어요' : '요청에 실패했어요',
+                          );
+                          if (r.status === 'success')
+                            setProfile((prev) =>
+                              prev?.data
+                                ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } }
+                                : prev,
+                            );
+                        });
+                      }}
+                    >
+                      {profile.data.friendStatus === 'accepted'
+                        ? '친구 ✓'
+                        : profile.data.friendStatus === 'pending'
+                          ? '요청됨'
+                          : '친구 추가'}
+                    </ModalButton>
                   </div>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="space-y-1">
-                      {(
-                        [
-                          ['전투력', profile.data.combat.toLocaleString()],
-                          ['최고 강화', `+${profile.data.maxEnhance}`],
-                          ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
-                          ['레이드 처치', profile.data.raidKills.toLocaleString()],
-                          ['대난투', profile.data.meleeWins.toLocaleString()],
-                        ] as const
-                      ).map(([label, v]) => (
-                        <div key={label} className="flex items-baseline justify-between gap-2">
-                          <span className="text-[10px] text-zinc-400">{label}</span>
-                          <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {popupFlash ? (
-                      <p className="mt-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">
-                        {popupFlash}
-                      </p>
-                    ) : null}
-                    {/* 액션 — isMe 여부와 무관하게 빈 칸 없이 채워지는 2열 */}
-                    <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
-                      {!profile.data.isMe ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={profile.data.friendStatus !== null}
-                            onClick={() => {
-                              void sendRequestAction(profile.data!.userId).then((r) => {
-                                setPopupFlash(
-                                  r.status === 'success'
-                                    ? '친구 요청을 보냈어요'
-                                    : '요청에 실패했어요',
-                                );
-                                if (r.status === 'success')
-                                  setProfile((prev) =>
-                                    prev?.data
-                                      ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } }
-                                      : prev,
-                                  );
-                              });
-                            }}
-                            className="rounded-lg bg-amber-500 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-50"
-                          >
-                            {profile.data.friendStatus === 'accepted'
-                              ? '친구 ✓'
-                              : profile.data.friendStatus === 'pending'
-                                ? '요청됨'
-                                : '친구 추가'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              toggleBlock(profile.data!.userId, profile.data!.nickname);
-                              setPopupFlash(
-                                blocked.has(profile.data!.userId)
-                                  ? '차단을 해제했어요'
-                                  : '이 기기에서 메시지를 숨겨요',
-                              );
-                            }}
-                            className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                          >
-                            {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
-                          </button>
-                        </>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!profile.data?.publicCode) return;
-                          try {
-                            // 뒤로가기 복원 — 프로필 데이터째 저장해 재조회 없이 즉시 복원.
-                            sessionStorage.setItem(RESTORE_KEY, JSON.stringify(profile.data));
-                          } catch {
-                            /* ignore */
-                          }
-                          // 팝업을 닫지 않고 이동 — 페이지 전환과 함께 자연스럽게 사라짐.
-                          router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
-                        }}
-                        className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold dark:bg-zinc-800"
-                      >
-                        프로필 보기
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfile(null)}
-                        className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                      >
-                        닫기
-                      </button>
-                    </div>
-                  </div>
+                ) : null}
+                <div className="flex gap-2">
+                  {!profile.data.isMe ? (
+                    <ModalButton
+                      tone="neutral"
+                      onClick={() => {
+                        toggleBlock(profile.data!.userId, profile.data!.nickname);
+                        setPopupFlash(
+                          blocked.has(profile.data!.userId)
+                            ? '차단을 해제했어요'
+                            : '이 기기에서 메시지를 숨겨요',
+                        );
+                      }}
+                    >
+                      {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
+                    </ModalButton>
+                  ) : null}
+                  <ModalButton
+                    tone="neutral"
+                    onClick={() => {
+                      if (!profile.data?.publicCode) return;
+                      try {
+                        // 뒤로가기 복원 — 프로필 데이터째 저장해 재조회 없이 즉시 복원.
+                        sessionStorage.setItem(RESTORE_KEY, JSON.stringify(profile.data));
+                      } catch {
+                        /* ignore */
+                      }
+                      // 팝업을 닫지 않고 이동 — 페이지 전환과 함께 자연스럽게 사라짐.
+                      router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
+                    }}
+                  >
+                    프로필 보기
+                  </ModalButton>
+                  <ModalButton tone="ghost" onClick={() => setProfile(null)}>
+                    닫기
+                  </ModalButton>
                 </div>
               </div>
             }
-          </div>
+          >
+            <div className="bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+              {/* 버튼 수와 무관하게 높이 고정 — 아바타 위치·크기 불변. */}
+              <div className="flex h-[168px] items-stretch gap-2.5">
+                {/* 크롭 없음 — 세로를 꽉 채우되 폭은 열 밖으로 넘쳐도 보이게(visible),
+                    클립은 카드의 overflow-hidden(라운드)에서만 발생 */}
+                <div className="relative w-[140px] shrink-0">
+                  {profile.data.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.data.avatar}
+                      alt=""
+                      className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-6xl">
+                      👤
+                    </span>
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <div className="space-y-1">
+                    {(
+                      [
+                        ['전투력', profile.data.combat.toLocaleString()],
+                        ['최고 강화', `+${profile.data.maxEnhance}`],
+                        ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
+                        ['레이드 처치', profile.data.raidKills.toLocaleString()],
+                        ['대난투', profile.data.meleeWins.toLocaleString()],
+                      ] as const
+                    ).map(([label, v]) => (
+                      <div key={label} className="flex items-baseline justify-between gap-2">
+                        <span className="text-[10px] text-zinc-400">{label}</span>
+                        <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {popupFlash ? (
+                    <p className="mt-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">
+                      {popupFlash}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
 

@@ -39,6 +39,9 @@ const EXCLUDE = new Set([
   'chat_messages',
   'chat_reports',
   'chat_blocks',
+  // 귓속말(0155) — 1:1 사담은 채팅보다 민감. 스테이징에 복사하지 않는다.
+  'whisper_messages',
+  'whisper_reads',
   'profile_reports',
   'identity_verifications',
   // 결제·정산 — 실거래 기록. 테스트에 불필요하고 오해를 부른다.

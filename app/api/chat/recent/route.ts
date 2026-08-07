@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -12,6 +12,39 @@ import { chatTopic } from '@/lib/game/chat/realtime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** 채널별 최신 항목 id(문자열 직렬화 — bigint는 JSON에 실을 수 없다). null=그 채널에 항목 없음. */
+type LatestIds = { all: string | null; guild: string | null; whisper: string | null };
+
+/**
+ * 미니바 노티점(0155) — 전체/길드/귓속말의 '가장 최근 항목 id'를 한 문(스칼라 서브셀렉트 3개)으로.
+ * 왕복을 1회로 고정한다(각 채널 인덱스의 max 스캔이라 비용은 사실상 상수).
+ *
+ * gid(길드 id)는 클라가 준 값을 검증 없이 쓴다 — 이 응답이 노출하는 것은 id 하나뿐이라
+ * 본문·소속 어느 것도 새지 않는다. 실제 길드 메시지 조회 경로(getMyGuildChannel)는 그대로
+ * 소속 검증을 거치므로, 여기 검증 1쿼리는 폴링 비용만 늘리고 얻는 게 없다.
+ */
+async function latestChannelIds(
+  userId: string,
+  serverId: number,
+  gidRaw: string | null,
+): Promise<LatestIds> {
+  const gid = gidRaw && /^\d{1,19}$/.test(gidRaw) ? BigInt(gidRaw) : null;
+  const [row] = (await db.execute(sql`
+    select
+      (select max(id)::text from chat_messages
+        where server_id = ${serverId} and guild_id is null) as all_id,
+      ${
+        gid === null
+          ? sql`null::text`
+          : sql`(select max(id)::text from chat_messages
+                  where server_id = ${serverId} and guild_id = ${gid})`
+      } as guild_id,
+      (select max(id)::text from whisper_messages
+        where server_id = ${serverId} and to_user_id = ${userId}::uuid and hidden_at is null) as whisper_id
+  `)) as unknown as { all_id: string | null; guild_id: string | null; whisper_id: string | null }[];
+  return { all: row?.all_id ?? null, guild: row?.guild_id ?? null, whisper: row?.whisper_id ?? null };
+}
 
 /**
  * 최근 채팅 조회(0125) — ChatDock 초기 로드·폴링 폴백 공용.
@@ -52,9 +85,12 @@ export async function GET(req: Request) {
   if (url.searchParams.get('lite') === '1') {
     const guild = channel === 'guild' ? await getMyGuildChannel(userId, serverId) : null;
     const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
-    const full = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+    const [full, latestIds] = await Promise.all([
+      channel === 'guild' && !guild ? Promise.resolve([]) : getRecentChat(serverId, limit, guildId),
+      latestChannelIds(userId, serverId, url.searchParams.get('gid')),
+    ]);
     const { mode, messages } = slice(full);
-    return NextResponse.json({ mode, messages });
+    return NextResponse.json({ mode, messages, latestIds });
   }
 
   const [blocked, [meChar], guild] = await Promise.all([

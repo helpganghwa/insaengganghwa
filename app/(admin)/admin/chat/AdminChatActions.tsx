@@ -3,7 +3,12 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { setChatHiddenAction, muteChatUserAction, setChatEnabledAction } from './actions';
+import {
+  setChatHiddenAction,
+  setWhisperHiddenAction,
+  muteChatUserAction,
+  setChatEnabledAction,
+} from './actions';
 
 /** 어드민 채팅 조작 버튼(0125) — 숨김/해제·채팅 금지·킬스위치. */
 
@@ -30,7 +35,22 @@ export function ChatToggle({ enabled }: { enabled: boolean }) {
   );
 }
 
-export function MessageActions({ messageId, hidden, userId }: { messageId: string; hidden: boolean; userId: string }) {
+/**
+ * 메시지 행 조작 — 숨김/해제 + 발신자 채팅 금지.
+ * kind는 숨김이 어느 테이블을 대상으로 하는지만 가른다(chat_messages / whisper_messages).
+ * 채팅 금지는 계정 단위(profiles.chat_muted_until)라 두 경우 모두 같은 액션을 쓴다.
+ */
+export function MessageActions({
+  messageId,
+  hidden,
+  userId,
+  kind = 'chat',
+}: {
+  messageId: string;
+  hidden: boolean;
+  userId: string;
+  kind?: 'chat' | 'whisper';
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -40,12 +60,16 @@ export function MessageActions({ messageId, hidden, userId }: { messageId: strin
       setMsg(r.status === 'success' ? null : (r.message ?? '실패'));
       router.refresh();
     });
+  const toggleHidden = () =>
+    kind === 'whisper'
+      ? setWhisperHiddenAction(messageId, !hidden)
+      : setChatHiddenAction(messageId, !hidden);
   return (
     <span className="flex items-center gap-1.5">
       <button
         type="button"
         disabled={pending}
-        onClick={() => run(() => setChatHiddenAction(messageId, !hidden))}
+        onClick={() => run(toggleHidden)}
         className="rounded bg-zinc-700 px-2 py-1 text-[10px] font-bold text-white disabled:opacity-50"
       >
         {hidden ? '해제' : '숨김'}

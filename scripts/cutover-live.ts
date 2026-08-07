@@ -71,6 +71,7 @@ const WIPE_TABLES = [
   //  · admin_scheduled_mails: CBT용 예약 우편이 오픈 후 발송되는 사고 방지.
   //  · user_daily_stats: 일자별 개인 집계.
   'chat_reports', 'chat_blocks', 'chat_messages',
+  'whisper_reads', 'whisper_messages', // 귓속말(0155) — 1:1 대화·읽음 포인터도 유저 데이터
   'challenge_claims', 'challenge_events',
   'guild_emblem_escrows',
   'admin_scheduled_mails',

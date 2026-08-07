@@ -1,88 +1,94 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import Link from 'next/link';
 
-import { db } from '@/lib/db/client';
-import { chatMessages } from '@/lib/db/schema/chat';
-import { guilds } from '@/lib/db/schema/guild';
-import { characters } from '@/lib/db/schema/server';
-import { profiles } from '@/lib/db/schema/profiles';
+import { listServers } from '@/lib/game/servers';
 import { isChatEnabled } from '@/lib/game/chat/service';
 
-import { ChatToggle, MessageActions } from './AdminChatActions';
+import { ServerFilter, parseServerFilter } from '../ServerFilter';
+import { ChatToggle } from './AdminChatActions';
+import { GuildTab } from './GuildTab';
+import { WhisperTab } from './WhisperTab';
+import { WorldTab } from './WorldTab';
+import {
+  CHAT_BASE_PATH,
+  CHAT_TABS,
+  chatHref,
+  parseBigIntParam,
+  parseChatTab,
+  parsePage,
+  parseUuidParam,
+  type ChatSearchParams,
+} from './shared';
 
+/**
+ * 채팅 통합 검수(0125 → 0155 확장) — 일반(전체)·길드·귓속말 3탭.
+ * 세 채널 모두 "원본 열람 + 숨김 토글 + 발신자 제재"가 같은 화면에서 끝나야 신고 대응이 빠르다.
+ * 진입 가드는 (admin)/layout.
+ */
 export const dynamic = 'force-dynamic';
 
-function fmt(d: Date): string {
-  return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+export default async function AdminChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<ChatSearchParams>;
+}) {
+  const params = await searchParams;
+  const tab = parseChatTab(params.tab);
+  const serverId = parseServerFilter(params.srv);
+  const q = params.q?.trim() ?? '';
+  const page = parsePage(params.p);
+  const guildId = parseBigIntParam(params.gid);
+  const userId = parseUuidParam(params.uid);
+  const peerId = parseUuidParam(params.peer);
 
-/** 전체 채팅 운영(0125) — 최근 메시지·신고 수·숨김/금지·킬스위치. 진입 가드는 (admin)/layout. */
-export default async function AdminChatPage() {
-  const enabled = await isChatEnabled();
-  const rows = await db
-    .select({
-      id: chatMessages.id,
-      serverId: chatMessages.serverId,
-      userId: chatMessages.userId,
-      body: chatMessages.body,
-      guildId: chatMessages.guildId,
-      guildName: guilds.name,
-      hiddenAt: chatMessages.hiddenAt,
-      createdAt: chatMessages.createdAt,
-      nickname: characters.nickname,
-      mutedUntil: profiles.chatMutedUntil,
-      reports: sql<number>`(select count(*)::int from chat_reports r where r.message_id = ${chatMessages.id})`,
-    })
-    .from(chatMessages)
-    .leftJoin(characters, sql`${characters.userId} = ${chatMessages.userId} and ${characters.serverId} = ${chatMessages.serverId}`)
-    .leftJoin(profiles, eq(profiles.id, chatMessages.userId))
-    .leftJoin(guilds, eq(guilds.id, chatMessages.guildId))
-    .orderBy(desc(chatMessages.id))
-    .limit(200);
+  const [enabled, servers] = await Promise.all([isChatEnabled(), listServers()]);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-[760px] space-y-3 px-4 py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">
-          채팅 운영(전체·길드) <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
+          채팅 검수 <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
         </h1>
         <ChatToggle enabled={enabled} />
       </div>
 
-      <div className="space-y-1.5">
-        {rows.length === 0 ? <p className="text-sm text-zinc-500">메시지가 없습니다.</p> : null}
-        {rows.map((m) => (
-          <div
-            key={String(m.id)}
-            className={`rounded-lg border px-3 py-2 text-[12px] ${
-              m.hiddenAt
-                ? 'border-red-900/40 bg-red-950/20 opacity-70'
-                : 'border-zinc-800 bg-zinc-900/40'
+      <div className="flex items-center gap-1.5">
+        {CHAT_TABS.map((t) => (
+          <Link
+            prefetch={false}
+            key={t.id}
+            // 탭 전환은 서버 필터만 유지 — 검색어·페이지·열람 대상은 탭마다 의미가 달라 초기화.
+            href={chatHref({ srv: params.srv }, { tab: t.id })}
+            className={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+              tab === t.id ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-800 text-zinc-300'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <b>{m.nickname ?? '(탈퇴)'}</b>
-              <span className="text-zinc-500">s{m.serverId}</span>
-              {m.guildId ? (
-                <span className="rounded bg-indigo-900/60 px-1.5 text-[10px] font-bold text-indigo-300">
-                  길드 {m.guildName ?? m.guildId.toString()}
-                </span>
-              ) : null}
-              <span className="text-zinc-500">{fmt(m.createdAt)}</span>
-              {Number(m.reports) > 0 ? (
-                <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {m.reports}</span>
-              ) : null}
-              {m.hiddenAt ? <span className="text-[10px] text-red-400">숨김</span> : null}
-              {m.mutedUntil && m.mutedUntil > new Date() ? (
-                <span className="text-[10px] text-amber-400">채팅금지중</span>
-              ) : null}
-              <span className="ml-auto">
-                <MessageActions messageId={String(m.id)} hidden={Boolean(m.hiddenAt)} userId={m.userId} />
-              </span>
-            </div>
-            <p className="mt-1 break-words text-zinc-200">{m.body}</p>
-          </div>
+            {t.label}
+          </Link>
         ))}
       </div>
+
+      <ServerFilter
+        basePath={CHAT_BASE_PATH}
+        servers={servers}
+        current={serverId}
+        // p는 넘기지 않는다 — 서버를 바꾸면 목록이 달라지므로 1쪽부터.
+        params={{ tab, q: params.q, gid: params.gid, uid: params.uid, peer: params.peer }}
+      />
+
+      {tab === 'world' ? (
+        <WorldTab params={params} serverId={serverId} q={q} page={page} />
+      ) : tab === 'guild' ? (
+        <GuildTab params={params} serverId={serverId} q={q} page={page} guildId={guildId} />
+      ) : (
+        <WhisperTab
+          params={params}
+          serverId={serverId}
+          q={q}
+          page={page}
+          userId={userId}
+          peerId={peerId}
+        />
+      )}
     </div>
   );
 }

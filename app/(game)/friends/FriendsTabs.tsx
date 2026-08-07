@@ -13,6 +13,7 @@ import { Avatar } from './Avatar';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { Tabs, type TabItem } from '@/components/ui/Tabs';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { WHISPER_OPEN_EVENT } from '@/components/chat/ChatDock';
 
 import {
   searchAction,
@@ -28,6 +29,10 @@ import type { FriendUser, FriendRelation } from '@/lib/game/friends';
  * 낙관적 UI: 목록을 로컬 상태로 두고 액션 즉시 반영, 실패 시 복원(로컬 상태가 권위).
  * 외부 배지(바텀네비/me)는 서버 액션의 revalidate가 (game)/layout을 재렌더하며 갱신하므로
  * 성공 경로 router.refresh()는 불필요(중복 GET RSC 제거, CLAUDE §11.7). 2026-07-23.
+ *
+ * 귓속말 진입(2026-08-07) — 채팅 도크는 (game)/layout에 전역으로 떠 있어 이 화면에서 직접
+ * 조작할 수 없다. window CustomEvent `ig:whisper-open`(detail = { peerUserId })를 쏘면
+ * ChatDock이 받아 도크를 열고 귓속말 탭의 해당 스레드로 전환한다.
  */
 type Tab = 'list' | 'requests' | 'find';
 type SearchRow = FriendUser & { relation: FriendRelation };
@@ -92,6 +97,24 @@ function Row({
 
 const btn =
   'rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition active:scale-95 disabled:opacity-50';
+
+/** 친구 행 우측 말풍선 — 도크(전역)에 귓속말 진입을 요청한다. */
+function WhisperButton({ userId }: { userId: string }) {
+  return (
+    <button
+      type="button"
+      aria-label="귓속말 보내기"
+      onClick={() =>
+        window.dispatchEvent(
+          new CustomEvent(WHISPER_OPEN_EVENT, { detail: { peerUserId: userId } }),
+        )
+      }
+      className={`${btn} bg-amber-500 px-2 text-white`}
+    >
+      <span aria-hidden>💬</span>
+    </button>
+  );
+}
 
 export function FriendsTabs({
   friends: initFriends,
@@ -278,14 +301,17 @@ export function FriendsTabs({
                   onOpen={() => openProfile(u)}
                   showSeen
                   right={
-                    <button
-                      type="button"
-                      disabled={searching}
-                      onClick={() => setUnfriendAsk(u)}
-                      className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
-                    >
-                      삭제
-                    </button>
+                    <>
+                      <WhisperButton userId={u.userId} />
+                      <button
+                        type="button"
+                        disabled={searching}
+                        onClick={() => setUnfriendAsk(u)}
+                        className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
+                      >
+                        삭제
+                      </button>
+                    </>
                   }
                 />
               ))}

@@ -25,6 +25,48 @@ export function chatMiniTopic(serverId: number): string {
   return `chat-mini:s${serverId}`;
 }
 
+/**
+ * 귓속말 수신 토픽(0155) — 유저 1명당 1토픽. 대화 상대가 늘어도 구독은 하나.
+ *
+ * ⚠ **서버 발급 전용 · 클라 조립 금지**. broadcast는 public 채널이라 토픽명을 알면 누구나
+ * 구독할 수 있고 userId는 프로필 응답 등으로 알려진 값이다. 서버만 계산 가능한 HMAC을 붙이고,
+ * 세션 검증을 통과한 /api/chat/whisper/threads 응답으로만 전달한다(1:1 대화 도청 차단).
+ * 키 회전 시 토픽이 바뀌지만 클라는 응답값을 쓰므로 무해.
+ */
+export function whisperTopic(serverId: number, userId: string): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'dev';
+  const token = createHmac('sha256', secret).update(`whisper:${serverId}:${userId}`).digest('hex').slice(0, 12);
+  return `chat:s${serverId}:w:${token}`;
+}
+
+/**
+ * 귓속말 브로드캐스트 — 수신자·발신자 토픽을 한 HTTP 요청(messages 배열)으로 묶어 왕복 1회.
+ * 발신자 토픽에도 보내는 이유: 같은 계정의 다른 기기가 내가 보낸 메시지를 즉시 받게(멀티기기 동기화).
+ */
+export async function broadcastWhisper(topics: string[], payload: unknown): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key || topics.length === 0) return;
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        messages: topics.map((topic) => ({ topic, event: 'new', payload, private: false })),
+      }),
+      // 전송 응답을 브로드캐스트 지연에 묶지 않음 — 짧은 타임아웃(채팅과 동일).
+      signal: AbortSignal.timeout(2500),
+    });
+  } catch (e) {
+    // best-effort — 수신 측 폴링 폴백이 커버. 실패는 로그로 가시화.
+    console.warn('[whisper.broadcast] 실패', (e as Error).message);
+  }
+}
+
 export async function broadcastChat(
   serverId: number,
   event: 'new' | 'hide' | 'sys',

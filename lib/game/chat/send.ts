@@ -13,7 +13,12 @@ import { guildMembers } from '@/lib/db/schema/guild';
 import { chatBlocks } from '@/lib/db/schema/chat';
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
-import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
+import {
+  chatBodyErrorMessage,
+  checkAndFilterChatBody,
+  extractMentionCandidates,
+  formatMuteRemaining,
+} from '@/lib/game/chat/filter';
 import {
   getMyGuildChannel,
   isChatEnabled,
@@ -42,17 +47,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
 
   // 본문 필터 먼저(동기·무비용) — 필터 탈락 입력이 쿨다운 토큰을 소모하지 않게.
   const check = checkAndFilterChatBody(raw);
-  if (!check.ok) {
-    const msg =
-      check.reason === 'URL'
-        ? '링크는 보낼 수 없어요.'
-        : check.reason === 'BADWORD'
-          ? '부적절한 표현이 포함되어 있어 보낼 수 없어요.'
-          : check.reason === 'TOO_LONG'
-            ? `${CHAT_MAX_LEN}자까지 보낼 수 있어요.`
-            : '내용을 입력해 주세요.';
-    return { status: 'error', message: msg };
-  }
+  if (!check.ok) return { status: 'error', message: chatBodyErrorMessage(check.reason) };
   const body = check.body;
 
   const serverId = await getActiveServerId(); // 쿠키 — 왕복 없음.
@@ -79,13 +74,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   if (!enabled) return { status: 'error', message: '채팅이 잠시 닫혀 있습니다.' };
   // 채팅 금지(운영 제재) — 만료 지나면 자동 해제 간주. 남은 기간 안내(피드백 2026-07-21).
   if (p?.mutedUntil && p.mutedUntil > new Date()) {
-    const ms = p.mutedUntil.getTime() - Date.now();
-    const left =
-      ms >= 86_400_000
-        ? `${Math.ceil(ms / 86_400_000)}일`
-        : ms >= 3_600_000
-          ? `${Math.ceil(ms / 3_600_000)}시간`
-          : `${Math.max(1, Math.ceil(ms / 60_000))}분`;
+    const left = formatMuteRemaining(p.mutedUntil.getTime() - Date.now());
     return { status: 'error', message: `채팅 이용이 제한된 상태입니다. (해제까지 약 ${left})` };
   }
   if (cooldownHit) return { status: 'error', message: '잠시 후 다시 보낼 수 있어요. (5초)' };
@@ -94,8 +83,8 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
 
   // @멘션(0128) — 실제 유저 닉과 일치하는 것만 유효. 저장(표시 시 @ 제거·강조) + 푸시(최대 3명).
   let mentionTargets: { uid: string; nickname: string; code: string | null }[] = [];
-  if (body.includes('@')) {
-    const cands = [...new Set([...body.matchAll(/@([^\s@]{1,12})/g)].map((m) => m[1]!))].slice(0, 5);
+  {
+    const cands = extractMentionCandidates(body);
     if (cands.length > 0) {
       try {
         const rows = await db

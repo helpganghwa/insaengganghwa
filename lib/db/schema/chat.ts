@@ -61,4 +61,60 @@ export const chatBlocks = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.blockedUserId] })],
 );
 
+/**
+ * 귓속말(0155, 2026-08-07) — 1:1 대화. 대화방 테이블 없음: (server_id, 유저쌍)이 곧 대화.
+ * 서버별 완전 분리. 보존 30일 + 대화당 500건(cleanupChat). 차단은 chat_blocks 재사용.
+ */
+export const whisperMessages = pgTable(
+  'whisper_messages',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    serverId: smallint('server_id').notNull(),
+    fromUserId: uuid('from_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    toUserId: uuid('to_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 필터 통과 본문 — 전체 채팅과 동일 100자 상한(코드 검증). */
+    body: text('body').notNull(),
+    /** 유효 멘션 [{n,c}] — 채팅과 동일 구조. 푸시는 상대가 멘션됐을 때만(설계 D1). */
+    mentions: jsonb('mentions'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /** 모더레이션 숨김(어드민 검수) — null=노출. */
+    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+  },
+  (t) => [
+    // 쌍 정규화 — 방향 무관 한 대화를 한 인덱스로.
+    index('whisper_pair_idx').on(
+      t.serverId,
+      sql`least(${t.fromUserId}, ${t.toUserId})`,
+      sql`greatest(${t.fromUserId}, ${t.toUserId})`,
+      sql`${t.id} desc`,
+    ),
+    // 수신함 — 미니바 노티점(최신 1행)·미읽음 계산.
+    index('whisper_to_idx').on(t.serverId, t.toUserId, sql`${t.id} desc`),
+    // 보존 정리(30일) 스캔용.
+    index('whisper_created_idx').on(t.createdAt),
+  ],
+);
+
+/** 읽음 포인터 + '대화 나가기'(내 쪽만 숨김 — 상대 기록·어드민 열람 유지). */
+export const whisperReads = pgTable(
+  'whisper_reads',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    peerUserId: uuid('peer_user_id').notNull(),
+    lastReadId: bigint('last_read_id', { mode: 'bigint' }).notNull().default(0n),
+    /** 나가기 시점의 최신 메시지 id — 이 id 이하는 내 목록·스레드에서 제외. */
+    hiddenBeforeId: bigint('hidden_before_id', { mode: 'bigint' }).notNull().default(0n),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.peerUserId] })],
+);
+
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type WhisperMessage = typeof whisperMessages.$inferSelect;
