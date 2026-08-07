@@ -68,7 +68,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       id: profiles.id,
       nickname: characters.nickname,
       activeProfileId: characters.activeProfileId,
-      repTitleCode: profiles.representativeTitleCode,
+      repTitleCode: characters.representativeTitleCode, // 서버별(0152)
     })
     .from(profiles)
     .innerJoin(

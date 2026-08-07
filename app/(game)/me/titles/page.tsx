@@ -27,7 +27,7 @@ export default async function TitlesPage() {
       const { active } = await discoverTitles(userId, serverId);
       const [ledger, rep] = await Promise.all([
         db.execute(sql`
-          select title_code, earned_at from user_titles where user_id=${userId}::uuid
+          select title_code, earned_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
         `) as unknown as Promise<{ title_code: string; earned_at: Date }[]>,
         db.execute(sql`
           select representative_title_code as code,
@@ -35,7 +35,7 @@ export default async function TitlesPage() {
                   order by z.captured_at desc nulls last limit 1) as zone,
                  (select z.region::text from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
                   order by z.captured_at desc nulls last limit 1) as zone_region
-          from profiles where id=${userId}::uuid
+          from characters where user_id=${userId}::uuid and server_id=${serverId}
         `) as unknown as Promise<{ code: string | null; zone: string | null; zone_region: string | null }[]>,
       ]);
       return { ledger, active, rep: rep[0] };

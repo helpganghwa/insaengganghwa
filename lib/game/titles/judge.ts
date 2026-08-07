@@ -760,7 +760,7 @@ export async function discoverTitles(
     const rows = (await db.execute(sql`
       insert into user_titles (user_id, server_id, title_code)
       select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
-      on conflict (user_id, title_code) do nothing
+      on conflict (user_id, server_id, title_code) do nothing
       returning title_code
     `)) as unknown as { title_code: string }[];
     inserted.push(...rows.map((r) => r.title_code));
@@ -770,7 +770,7 @@ export async function discoverTitles(
   const [meta] = (await db.execute(sql`
     select count(*)::int as total,
            count(*) filter (where title_code = any(array[${sql.join(HIDDEN_CODES.map((c) => sql`${c}`), sql`, `)}]::text[]))::int as hidden
-    from user_titles where user_id=${userId}::uuid
+    from user_titles where user_id=${userId}::uuid and server_id=${serverId}
   `)) as unknown as { total: number; hidden: number }[];
   const metaCodes: string[] = [];
   if (Number(meta?.total ?? 0) >= 50) metaCodes.push('medal_collector');
@@ -779,7 +779,7 @@ export async function discoverTitles(
     const rows = (await db.execute(sql`
       insert into user_titles (user_id, server_id, title_code)
       select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(metaCodes.map((c) => sql`${c}`), sql`, `)}]::text[])
-      on conflict (user_id, title_code) do nothing
+      on conflict (user_id, server_id, title_code) do nothing
       returning title_code
     `)) as unknown as { title_code: string }[];
     inserted.push(...rows.map((r) => r.title_code));
@@ -797,7 +797,7 @@ const HIDDEN_CODES: string[] = [...TITLE_BY_CODE.values()].filter((d) => d.hidde
 /** 대표 칭호 자격 — 영구형은 발견만으로, 조건부형은 지금 조건 충족까지. */
 export async function representativeEligible(userId: string, serverId: number, code: string): Promise<boolean> {
   const discovered = (await db.execute(sql`
-    select 1 from user_titles where user_id=${userId}::uuid and title_code=${code} limit 1
+    select 1 from user_titles where user_id=${userId}::uuid and server_id=${serverId} and title_code=${code} limit 1
   `)) as unknown as unknown[];
   if (!discovered.length) return false;
   // 조건부 여부는 defs의 kind가 정본 — cat 문자열 추정은 영구형 해방(lib_first 등)을

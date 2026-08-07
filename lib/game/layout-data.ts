@@ -68,7 +68,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const profileP = pgGuard(
       (sql) => sql`
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
-                 p.representative_title_code,
+                 c.representative_title_code,
                  g.emblem_url as guild_emblem_url,
                  z.name as executor_zone, z.region::text as executor_zone_region
           from profiles p

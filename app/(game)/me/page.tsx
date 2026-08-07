@@ -80,7 +80,7 @@ export default async function ProfilePage() {
           c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           z.name as executor_zone, z.region::text as executor_zone_region,
-          p.representative_title_code,
+          c.representative_title_code,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
           -- 메뉴 우측 상태값(2026-08-02) — 프로필은 허브라 '어디로 갈지'를 여기서 정한다.
@@ -92,7 +92,7 @@ export default async function ProfilePage() {
             join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
             where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}) as codex_got,
           (select count(*)::int from catalog_items where active) as codex_total,
-          (select count(*)::int from user_titles where user_id = ${userId}::uuid) as titles_found,
+          (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}) as titles_found,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))

@@ -179,7 +179,7 @@ async function displayFields(
         userId: characters.userId,
         nickname: characters.nickname,
         publicCode: profiles.publicCode,
-        repTitleCode: profiles.representativeTitleCode,
+        repTitleCode: characters.representativeTitleCode, // 서버별(0152)
         rotations: userProfiles.rotations,
         options: userProfiles.options,
       })

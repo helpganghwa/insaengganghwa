@@ -51,7 +51,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       activeProfileId: characters.activeProfileId,
-      representativeTitleCode: profiles.representativeTitleCode,
+      representativeTitleCode: characters.representativeTitleCode, // 서버별(0152)
     })
     .from(profiles)
     .innerJoin(

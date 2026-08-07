@@ -55,6 +55,8 @@ export const characters = pgTable(
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */
     activeProfileId: uuid('active_profile_id'),
+    /** 대표 칭호(서버별, 2026-08-07 칭호 서버별화 — 0152). null=미장착. */
+    representativeTitleCode: text('representative_title_code'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -47,6 +47,7 @@ export const profiles = pgTable('profiles', {
   /** 채팅 멘션(@닉네임) 푸시(0127) — 설정 > 알림에서 끄기 가능. */
   pushChatMention: boolean('push_chat_mention').notNull().default(true),
   /** 대표 칭호 code(0149, TITLES.md §4) — null=미장착. 조건부는 표시 시점 재검증. */
+  /** @deprecated 칭호 서버별화(0152)로 characters.representative_title_code로 이관 — 읽기/쓰기 금지, 추후 드랍. */
   representativeTitleCode: text('representative_title_code'),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
   pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('batched'),
