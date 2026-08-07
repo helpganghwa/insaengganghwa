@@ -652,6 +652,15 @@ export function ChatDock() {
     [applyNew, setSeen],
   );
 
+  /** hide broadcast(운영자 숨김) 반영 — 화면·미니바·양쪽 버퍼에서 제거. 전체/길드 구독 공용. */
+  const removeMessage = useCallback((id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+    setLatest((prev) => (prev?.id === id ? null : prev));
+    for (const b of Object.values(bufRef.current)) {
+      b.messages = b.messages.filter((m) => m.id !== id);
+    }
+  }, []);
+
   // 서버 전환(sid 변경) 감지 — 버퍼·미니바 초기화. 구독 여부와 무관하게 실행되어야 해서
   // 구독 effect와 분리(닫힌 채 서버를 옮겨도 옛 서버 메시지가 남지 않도록).
   const prevSidRef = useRef<number | null>(null);
@@ -668,46 +677,84 @@ export function ChatDock() {
     prevSidRef.current = sid;
   }, [sid, rememberGid]);
 
-  // Realtime 구독 — **패널이 열린 동안만**(2026-08-06, 동접 1천 대비). 닫힌 유저까지 상시
-  // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
-  // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 코얼레싱 미니 토픽(아래 effect)+60초
-  // 폴링 안전망이 담당.
-  // 열림 중엔 전체+내 길드 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
-  // 귓속말 토픽은 여기 없다 — 열림/닫힘 공통 1개 구독으로 분리했다(아래 상시 구독 effect).
+  // 전체(월드) 채널 Realtime 구독 — **패널이 열린 동안만**(2026-08-06, 동접 1천 대비).
+  // 이 채널만 열림 전용인 이유는 fan-out 폭이다: broadcast 1건이 그 서버 접속자 **전원**에게
+  // 복제되므로, 닫힌 유저까지 상시 구독시키면 동시 연결(Pro 한도 500)과 메시지 쿼터가
+  // 접속자 수에 비례해 터진다. 닫힘 미니바는 코얼레싱 미니 토픽(아래 effect)+60초 폴링이 담당.
+  // 길드·귓속말 토픽은 여기 없다 — 둘 다 열림/닫힘 공통 상시 구독으로 분리했다(아래 두 effect).
   useEffect(() => {
     if (enabled !== true || sid === null || !open) return;
     const sb = supabaseBrowser();
     if (!sb) return;
-    const mk = (topic: string, t: ChatTab) =>
-      sb
-        .channel(topic)
-        .on('broadcast', { event: 'new' }, ({ payload }) => routeIncoming(t, payload as ChatMessageDto))
-        .on('broadcast', { event: 'sys' }, ({ payload }) => routeIncoming(t, sysToMsg(payload as WorldEventEntry)))
-        .on('broadcast', { event: 'hide' }, ({ payload }) => {
-          const id = (payload as { id: string }).id;
-          setMessages((prev) => prev.filter((m) => m.id !== id));
-          setLatest((prev) => (prev?.id === id ? null : prev));
-          for (const b of Object.values(bufRef.current)) {
-            b.messages = b.messages.filter((m) => m.id !== id);
-          }
-        })
-        .subscribe();
-    const chans = [mk(`chat:s${sid}`, 'all')];
-    // 길드 토픽은 서버가 소속 검증 후 내려준 값만 사용(HMAC 토큰 포함 — 클라 조립 금지).
-    if (guildTopic) chans.push(mk(guildTopic, 'guild'));
+    const ch = sb
+      .channel(`chat:s${sid}`)
+      .on('broadcast', { event: 'new' }, ({ payload }) =>
+        routeIncoming('all', payload as ChatMessageDto),
+      )
+      .on('broadcast', { event: 'sys' }, ({ payload }) =>
+        routeIncoming('all', sysToMsg(payload as WorldEventEntry)),
+      )
+      .on('broadcast', { event: 'hide' }, ({ payload }) =>
+        removeMessage((payload as { id: string }).id),
+      )
+      .subscribe();
     return () => {
-      for (const c of chans) void sb.removeChannel(c);
+      void sb.removeChannel(ch);
     };
-  }, [enabled, sid, guildTopic, open, routeIncoming]);
+  }, [enabled, sid, open, routeIncoming, removeMessage]);
 
   /**
-   * 귓속말 수신 토픽 — **도크 열림/닫힘과 무관하게 상시 1개 구독**(전체/길드와 비대칭).
+   * 길드 채널 — **도크 열림/닫힘과 무관하게 상시 구독**(2026-08-07, 노티점 3채널 통일).
    *
-   * 비대칭의 이유는 fan-out 폭이다: 전체·길드 broadcast 1건은 그 채널을 보고 있는 **전원**에게
-   * 복제되므로 닫힌 유저까지 상시 구독시키면 동시 연결·메시지 쿼터가 접속자 수에 비례해 터진다
-   * (그래서 닫힘은 코얼레싱 미니 토픽 + 폴링). 귓속말은 1:1이라 한 건의 수신자가 1명뿐이고,
-   * 연결도 유저당 1개라 상시 구독의 추가 비용이 사실상 없다. 대신 얻는 것은 닫힌 상태에서도
-   * 새 귓속말이 오는 즉시 켜지는 노티점이다(폴링 주기 60~180초를 기다리지 않는다).
+   * 예전엔 열림 중에만 구독하고 닫힘은 60~180초 lite 폴링에 맡겼다. 그래서 전체(미니 토픽)·
+   * 귓속말(상시 구독)은 닫힌 채로도 점이 즉시 켜지는데 길드만 최대 3분 늦었다. 비용은 상시로
+   * 돌려도 사실상 늘지 않는다: 이미 열려 있는 같은 WS 연결에 토픽 하나를 더 얹는 것이라
+   * **동시 연결 수가 불변**이고, fan-out 대상도 그 길드원(수십 명)뿐이라 전 접속자에게 퍼지는
+   * 월드 채널과는 자릿수가 다르다.
+   *
+   * 토픽은 서버가 소속 검증 후 내려준 값만 쓴다(HMAC 토큰 포함 — 클라 조립 금지). 값 자체에
+   * 서버·길드 id가 박혀 있어, 탈퇴·해산으로 전체 조회가 null을 주면 이 effect가 통째로 해제된다.
+   * 받는 이벤트는 'new'·'hide' 둘뿐이다 — 월드 이벤트('sys')는 guildId 없이 발사돼 월드 토픽으로만
+   * 가고, 길드 활동 로그는 broadcast 없이 조회 시 합성되므로 여기 핸들러가 필요 없다.
+   */
+  useEffect(() => {
+    if (enabled !== true || !guildTopic) return;
+    const sb = supabaseBrowser();
+    if (!sb) return;
+    const ch = sb
+      .channel(guildTopic)
+      .on('broadcast', { event: 'new' }, ({ payload }) => {
+        const m = payload as ChatMessageDto;
+        // 서버 latestIds.guild와 같은 id 공간(chat_messages.id) — 폴링을 기다리지 않고 앞당긴다.
+        // 열림 중에도 갱신해야 아래 routeIncoming의 확인 처리(setSeen)와 짝이 맞는다. 안 맞으면
+        // 길드 탭을 보고 있는데 점이 켜졌다가 다음 폴링에 꺼지는 깜빡임이 난다.
+        latestIdsRef.current = { ...latestIdsRef.current, guild: m.id };
+        // 열림 경로는 기존 그대로(보고 있으면 화면+확인 처리, 아니면 버퍼). 닫힘 중에도 같은
+        // 함수를 태워 버퍼를 채운다 — 도크를 열 때 옛 목록이 먼저 보였다가 교체되는 플래시를
+        // 없애기 위해서다(applyNew 주석과 같은 이유, 전체 채널의 닫힘 경로도 동일). 닫힘 중엔
+        // openRef가 false라 seen은 전진하지 않고, 목록은 PAGE로 잘려 메모리도 상한이 있다.
+        routeIncoming('guild', m);
+        // 내 발신분은 점 대상 아님(다른 기기에서 보낸 내 메시지가 수신되는 경우). 여기서 seen까지
+        // 전진시키지는 않는다 — 앞서 도착한 남의 메시지를 '본 것'으로 삼켜 점을 끄면 알림 유실이다.
+        if (m.userId !== meRef.current) recomputeDot();
+      })
+      .on('broadcast', { event: 'hide' }, ({ payload }) =>
+        removeMessage((payload as { id: string }).id),
+      )
+      .subscribe();
+    return () => {
+      void sb.removeChannel(ch);
+    };
+  }, [enabled, guildTopic, routeIncoming, recomputeDot, removeMessage]);
+
+  /**
+   * 귓속말 수신 토픽 — **도크 열림/닫힘과 무관하게 상시 1개 구독**(길드와 같은 규칙, 전체와 비대칭).
+   *
+   * 남은 비대칭은 월드(전체) 채널 하나뿐이고 이유는 fan-out 폭이다: 전체 broadcast 1건은 그 서버
+   * 접속자 **전원**에게 복제되므로 닫힌 유저까지 상시 구독시키면 동시 연결·메시지 쿼터가 접속자
+   * 수에 비례해 터진다(그래서 닫힘은 코얼레싱 미니 토픽 + 폴링). 귓속말은 1:1이라 한 건의
+   * 수신자가 1명뿐이고, 연결도 유저당 1개라 상시 구독의 추가 비용이 사실상 없다. 대신 얻는 것은
+   * 닫힌 상태에서도 새 귓속말이 오는 즉시 켜지는 노티점이다(폴링 주기 60~180초를 기다리지 않는다).
    *
    * 토픽은 서버 발급값만 쓴다(threads 응답 topic == recent 응답 whisperChannel, 같은 함수).
    * 미니바에는 내용·발신자를 절대 올리지 않는다 — 점만 켠다(프라이버시).
