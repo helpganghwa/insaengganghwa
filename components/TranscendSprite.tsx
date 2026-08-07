@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 import {
   atlasBgStyle,
@@ -300,7 +300,9 @@ function TranscendStatic({
   );
 }
 
-export function TranscendSprite(props: Props) {
+// memo(2026-08-07 렌더 감사) — 도감 그리드·강화 카드(1초 클럭)·픽커 등 대량/고빈도 렌더 트리에
+// 들어가는데 props가 전부 원시값이라 memo가 그대로 실효. 내부 캔버스 애니는 자체 rAF라 무관.
+export const TranscendSprite = memo(function TranscendSprite(props: Props) {
   const { code, level, slot, isChampion = false, championRank, size = 64, animate = true, className, frameless = false } = props;
   const st = transcendStyle(level);
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
@@ -312,7 +314,7 @@ export function TranscendSprite(props: Props) {
     return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
   return <TranscendCanvas {...props} />;
-}
+});
 
 function TranscendCanvas({
   code,

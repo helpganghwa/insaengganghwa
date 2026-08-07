@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 /**
@@ -46,7 +47,8 @@ function StarTrioOrnate({ color, accent, subOne }: { color: string; accent: stri
   );
 }
 
-export function RarityFrame({ level, className }: { level: number; className?: string }) {
+// memo(2026-08-07 렌더 감사) — 강화 카드 1초 클럭 트리 안에서 코너 SVG 4개가 매초 재조정되던 것 차단.
+export const RarityFrame = memo(function RarityFrame({ level, className }: { level: number; className?: string }) {
   const st = transcendStyle(level);
   if (!st.hasFrame) return null;
   const [r, g, b] = st.colorRgb;
@@ -83,7 +85,7 @@ export function RarityFrame({ level, className }: { level: number; className?: s
       ))}
     </div>
   );
-}
+});
 
 /** 카드 보더에 적용할 inline style — hasFrame이면 등급색, 아니면 빈 객체. */
 export function rarityBorderStyle(level: number): React.CSSProperties {

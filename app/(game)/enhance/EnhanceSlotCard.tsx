@@ -25,6 +25,7 @@ import { useHeaderStatsActions } from '@/components/HeaderStatsContext';
 import { sounds } from '@/lib/game/sound';
 
 import { EnhanceFX, CountAnim, type FxKind } from './EnhanceFX';
+import { AutoSettingsModal, type AutoConfig } from './AutoSettingsModal';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
 
@@ -243,13 +244,7 @@ export function EnhanceSlotCard({
     count: null,
     down: false,
   });
-  const [autoOpen, setAutoOpen] = useState(false); // 설정 모달
-  const [autoBudget, setAutoBudget] = useState('5000');
-  const [autoUseTarget, setAutoUseTarget] = useState(true);
-  const [autoTarget, setAutoTarget] = useState('');
-  const [autoUseCount, setAutoUseCount] = useState(false);
-  const [autoCount, setAutoCount] = useState('50');
-  const [autoDownStop, setAutoDownStop] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false); // 설정 모달(입력 state는 AutoSettingsModal 소유)
   // 진행 중엔 실제 강화 FX(playResult)를 재생하고, 그 위에 자동 강화 오버레이(좌우 2단)를 덮는다.
   // startMs·정지조건을 통계에 담아 렌더에서 계산(ref를 렌더에서 읽지 않도록).
   type AutoStats = {
@@ -644,11 +639,11 @@ export function EnhanceSlotCard({
     }
     finishAuto(snap(), '멈춤'); // 루프 탈출(멈춤/이탈)
   };
-  const startAuto = () => {
+  const startAuto = (cfg: AutoConfig) => {
     if (pending || attempting || flash || autoResult || activeJob.jobId.startsWith('optimistic-')) return;
     const bal = Number(diamond) || 0;
     if (bal < 1) { showError('보유 다이아가 없어 자동 강화를 시작할 수 없어요.'); return; }
-    let b = parseInt(autoBudget, 10) || 0;
+    let b = cfg.budget;
     if (b < 1) { showError('다이아 예산을 입력하세요.'); return; }
     // 예산은 보유량을 넘지 못함(넘겨도 서버 walletTrySpend가 insufficient로 안전 정지하지만 UX상 캡).
     // 시작 후 다른 이유로 보유가 예산 밑으로 줄어도 서버가 'insufficient' → 정상 정지.
@@ -656,26 +651,12 @@ export function EnhanceSlotCard({
     autoRunRef.current = true;
     autoJobRef.current = activeJob.jobId;
     autoBudgetRef.current = b;
-    autoCfgRef.current = {
-      target: autoUseTarget ? parseInt(autoTarget, 10) || null : null,
-      count: autoUseCount ? parseInt(autoCount, 10) || null : null,
-      down: autoDownStop,
-    };
+    autoCfgRef.current = { target: cfg.target, count: cfg.count, down: cfg.down };
     setAutoOpen(false);
     setAutoResult(null);
     setAutoStopConfirm(false);
     setAutoRunning(true);
     void runAutoLoop();
-  };
-  // 목표 레벨/횟수 ± 조정(스텝 1) — 목표는 현재 강화수치 초과로, 횟수는 1 이상으로 클램프.
-  const bumpTarget = (delta: number) => {
-    const minLv = activeJob.fromLevel + 1;
-    const cur = parseInt(autoTarget, 10) || minLv;
-    setAutoTarget(String(Math.max(minLv, cur + delta)));
-  };
-  const bumpCount = (delta: number) => {
-    const cur = parseInt(autoCount, 10) || 1;
-    setAutoCount(String(Math.max(1, cur + delta)));
   };
   // 이탈/언마운트 = 자동 정지(루프만 중단). pagehide=탭 닫힘/이동, cleanup=SPA 언마운트.
   useEffect(() => {
@@ -868,9 +849,7 @@ export function EnhanceSlotCard({
               onClick={(e) => {
                 e.stopPropagation();
                 if (activeJob.jobId.startsWith('optimistic-')) return;
-                setAutoTarget(String(activeJob.fromLevel + 10));
-                setAutoBudget(String(Math.min(5000, Number(diamond) || 0))); // 기본 예산 = min(5000, 보유)
-                setAutoOpen(true);
+                setAutoOpen(true); // 기본 예산·목표 재설정은 AutoSettingsModal의 open effect가 담당
               }}
               className="h-6 w-[54px] rounded-md border border-zinc-600 bg-zinc-800/60 text-[9px] font-bold text-zinc-200 disabled:opacity-40"
             >
@@ -1022,149 +1001,17 @@ export function EnhanceSlotCard({
       </div>
 
       {/* 자동 강화 설정 모달 — 공용 ModalShell(사용자 피드백 4). */}
-      {autoOpen ? (
-        <ModalShell
-          onClose={() => setAutoOpen(false)}
-          onSubmit={startAuto}
-          label="자동 강화 설정"
-        >
-          <ModalLayout
-            title="자동 강화 설정"
-            subtitle={
-              <>
-                <span className="font-bold text-zinc-600 dark:text-zinc-300">{activeJob.name}</span>{' '}
-                <span className="font-bold text-amber-500">+{activeJob.fromLevel}</span>
-                {activeJob.transcendLevel > 0 ? (
-                  <>
-                    <span className="mx-1 text-zinc-400">·</span>
-                    <span
-                      className="font-bold"
-                      style={{
-                        color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
-                      }}
-                    >
-                      ✦{activeJob.transcendLevel}
-                    </span>
-                  </>
-                ) : null}
-                <br />
-                💎로 시간을 단축하며 자동 반복 · 예산 소진이나 조건 달성 시 정지
-              </>
-            }
-            maxBodyClass="max-h-[58vh]"
-            footer={
-              <>
-                <button
-                  type="button"
-                  onClick={() => setAutoOpen(false)}
-                  style={{ flex: 1 }}
-                  className="rounded-xl border border-zinc-300 py-2.5 text-[13px] font-bold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={startAuto}
-                  style={{ flex: 2 }}
-                  className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]"
-                >
-                  자동 시작
-                </button>
-              </>
-            }
-          >
-          {/* 예산 — 필수(체크박스 없음). 라벨 정렬용 체크박스폭 스페이서. 값은 입력창 직접 입력 +
-              오른쪽 '최대' 버튼(보유 전액). ± 버튼은 목표/횟수 항목에만(사용자 피드백 2). */}
-          <div className="flex items-center gap-2 py-2.5">
-            <span aria-hidden className="h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-zinc-200">다이아 예산</div>
-              <div className="text-[10px] text-zinc-500">
-                소진 시 정지 · 보유 {(Number(diamond) || 0).toLocaleString()}💎
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <ZoomSafeInput
-                wrapClassName="h-8 w-[72px]"
-                value={autoBudget}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9]/g, '');
-                  const bal = Number(diamond) || 0;
-                  setAutoBudget(v === '' ? '' : String(Math.min(parseInt(v, 10), bal))); // 보유 초과 입력 즉시 캡
-                }}
-                inputMode="numeric"
-                className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100"
-              />
-              <button
-                type="button"
-                onClick={() => setAutoBudget(String(Number(diamond) || 0))}
-                className="flex h-8 shrink-0 items-center justify-center rounded-md border border-zinc-700 bg-black/40 px-2 text-[10px] font-bold text-zinc-300 active:scale-95"
-              >
-                최대
-              </button>
-            </div>
-          </div>
-          {/* 목표 레벨 — 선택. 체크박스 토글은 라벨(체크박스+텍스트)까지만, 오른쪽 입력/±은 제외. */}
-          <div className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-            <label className="flex min-w-0 flex-1 items-center gap-2">
-              <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 shrink-0 accent-amber-500" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
-                <div className="text-[10px] text-zinc-500">선택 · 도달 시 정지</div>
-              </div>
-            </label>
-            <div className="flex shrink-0 items-center gap-1">
-              <button type="button" onClick={() => bumpTarget(-1)} disabled={!autoUseTarget} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="목표 레벨 1 감소">−</button>
-              <ZoomSafeInput
-                wrapClassName="h-8 w-[56px]"
-                value={autoTarget}
-                onChange={(e) => setAutoTarget(e.target.value.replace(/[^0-9]/g, ''))}
-                inputMode="numeric"
-                disabled={!autoUseTarget}
-                className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-center font-mono text-zinc-100 disabled:opacity-40"
-              />
-              <button type="button" onClick={() => bumpTarget(1)} disabled={!autoUseTarget} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="목표 레벨 1 증가">+</button>
-            </div>
-          </div>
-          {/* 횟수 — 선택. 체크박스 토글은 라벨(체크박스+텍스트)까지만, 오른쪽 입력/±은 제외. */}
-          <div className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-            <label className="flex min-w-0 flex-1 items-center gap-2">
-              <input type="checkbox" checked={autoUseCount} onChange={(e) => setAutoUseCount(e.target.checked)} className="h-4 w-4 shrink-0 accent-amber-500" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-zinc-200">횟수 제한</div>
-                <div className="text-[10px] text-zinc-500">선택 · N회 후 정지</div>
-              </div>
-            </label>
-            <div className="flex shrink-0 items-center gap-1">
-              <button type="button" onClick={() => bumpCount(-1)} disabled={!autoUseCount} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="횟수 1 감소">−</button>
-              <ZoomSafeInput
-                wrapClassName="h-8 w-[56px]"
-                value={autoCount}
-                onChange={(e) => setAutoCount(e.target.value.replace(/[^0-9]/g, ''))}
-                inputMode="numeric"
-                disabled={!autoUseCount}
-                className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-center font-mono text-zinc-100 disabled:opacity-40"
-              />
-              <button type="button" onClick={() => bumpCount(1)} disabled={!autoUseCount} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="횟수 1 증가">+</button>
-            </div>
-          </div>
-          {/* 하락 시 정지 — 선택 */}
-          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-            <input type="checkbox" checked={autoDownStop} onChange={(e) => setAutoDownStop(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-zinc-200">하락 시 정지</div>
-              <div className="text-[10px] text-zinc-500">선택 · 위험구간 안전장치</div>
-            </div>
-          </label>
-          {/* 이탈 시 정지 안내 — 자동 강화는 이 화면에서만 동작(백그라운드 대행 없음). */}
-          <p className="mt-2 rounded-lg border border-zinc-800 bg-black/20 px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">
-            화면을 벗어나거나 앱을 종료하면 자동 강화가 멈춥니다. 진행 중엔 화면이 꺼지지 않도록 유지됩니다.
-          </p>
-          </ModalLayout>
-        </ModalShell>
-      ) : null}
+      <AutoSettingsModal
+        open={autoOpen}
+        name={activeJob.name}
+        fromLevel={activeJob.fromLevel}
+        transcendLevel={activeJob.transcendLevel}
+        diamond={diamond}
+        onClose={() => setAutoOpen(false)}
+        onStart={startAuto}
+      />
 
-      {/* 강화 취소(해제) 확인 모달 — 코너 X → 이 모달 → doCancel(사용자 피드백 1). */}
+      {/* 강화 취소(해제) 확인 모달      {/* 강화 취소(해제) 확인 모달 — 코너 X → 이 모달 → doCancel(사용자 피드백 1). */}
       {cancelOpen ? (
         <ModalShell onClose={() => setCancelOpen(false)} onSubmit={doCancel} label="강화 취소 확인">
           <ModalLayout

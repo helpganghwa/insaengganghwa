@@ -31,7 +31,9 @@ interface Props {
  *  - from === to (hold): 좌우 약한 흔들림(±1.5px), 숫자 변화 없음
  * export — 자동 강화 오버레이 좌측 +N도 동일 이펙트 재사용(EnhanceSlotCard).
  */
-export function CountAnim({
+// memo(2026-08-07 렌더 감사) — 부모 카드가 1초 게이지로 매초 리렌더되는 동안 자릿수
+// 롤링(motion.span×자릿수 + useTransform 훅들)이 매초 재실행되던 것 차단. props 전부 원시값.
+export const CountAnim = memo(function CountAnim({
   from,
   to,
   className,
@@ -78,7 +80,7 @@ export function CountAnim({
       />
     </span>
   );
-}
+});
 
 /**
  * 카운터/별/원/충격파 공통 영역 — 카드 상단 ~24px 구간(텍스트 상단끝과 카드 상단끝 중앙).

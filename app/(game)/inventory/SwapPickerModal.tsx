@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+
+import { Ticker } from '@/components/Ticker';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -59,13 +61,7 @@ export function SwapPickerModal({
   const [pending, startTransition] = useTransition();
   /** 교체 확인 대상 — 고르는 즉시 취소하지 않고 한 번 되묻는다. */
   const [swapAsk, setSwapAsk] = useState<ActiveJob | null>(null);
-  const [nowMs, setNowMs] = useState(0);
-
-  useEffect(() => {
-    setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // 1초 클럭은 표시 지점 Ticker가 보유(2026-08-07) — 이전엔 모달 전체가 매초 리렌더.
 
   useEffect(() => {
     let cancelled = false;
@@ -155,7 +151,7 @@ export function SwapPickerModal({
               {swapAsk.enhanceLevel} 강화를 취소하고 새 장비를 등록합니다.
             </p>
             <p className="mt-2 text-[11.5px] font-bold text-amber-600 dark:text-amber-300/90">
-              쌓인 시간 {elapsedLabel(swapAsk.startedAtIso, nowMs)}이 사라집니다.
+              쌓인 시간 <Ticker>{(now) => elapsedLabel(swapAsk.startedAtIso, now)}</Ticker>이 사라집니다.
             </p>
           </div>
         ) : (
@@ -183,7 +179,7 @@ export function SwapPickerModal({
                     </div>
                   </div>
                   <div className="shrink-0 text-right font-mono text-[10px] text-amber-300">
-                    ⏳ {elapsedLabel(j.startedAtIso, nowMs)} 진행
+                    ⏳ <Ticker>{(now) => elapsedLabel(j.startedAtIso, now)}</Ticker> 진행
                   </div>
                 </button>
               </li>
