@@ -53,36 +53,52 @@ function randomBlacksmithNick(): string {
   return `대장장이${n}`;
 }
 
-/** 닉네임 신고 처리 — '대장장이N'으로 강제 변경 + 변경비 지급 + 신고 정리. */
+/**
+ * 닉네임 신고 처리 — '대장장이N'으로 강제 변경 + 변경비 지급 + 신고 정리.
+ * 제재는 계정 단위(SERVER.md 경계규칙 2, 감사 B4) — 신고된 서버만 바꾸면 위반 닉네임이
+ * 타 서버 캐릭터에 그대로 남으므로 이 계정의 **전 서버 캐릭터**를 초기화한다.
+ * 닉네임은 전 서버 전역 유일이라 충돌 체크도 전역, 새 닉도 서버마다 서로 다르게 뽑는다.
+ * 변경비 우편은 초기화된 서버마다 각각 — 서버별 지갑이라 그 서버에서 재변경할 비용.
+ */
 export async function resetReportedNickname(profileId: string): Promise<Result> {
   await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
-    // 서버 내 유니크 — 충돌 회피 재시도.
-    let nick = randomBlacksmithNick();
-    for (let i = 0; i < 5; i++) {
-      const [dup] = await tx
-        .select({ uid: characters.userId })
-        .from(characters)
-        .where(and(eq(characters.serverId, owner.serverId), eq(characters.nickname, nick)))
-        .limit(1);
-      if (!dup) break;
-      nick = randomBlacksmithNick();
+    const chars = await tx
+      .select({ serverId: characters.serverId })
+      .from(characters)
+      .where(eq(characters.userId, owner.userId));
+    const used = new Set<string>();
+    for (const c of chars) {
+      // 전역 유니크 — 충돌 회피 재시도(같은 트랜잭션 내 배정분은 used로 회피).
+      let nick = randomBlacksmithNick();
+      for (let i = 0; i < 5; i++) {
+        if (!used.has(nick)) {
+          const [dup] = await tx
+            .select({ uid: characters.userId })
+            .from(characters)
+            .where(eq(characters.nickname, nick))
+            .limit(1);
+          if (!dup) break;
+        }
+        nick = randomBlacksmithNick();
+      }
+      used.add(nick);
+      await tx
+        .update(characters)
+        .set({ nickname: nick })
+        .where(and(eq(characters.userId, owner.userId), eq(characters.serverId, c.serverId)));
+      await mail(
+        tx,
+        owner.userId,
+        c.serverId,
+        'reward',
+        '닉네임 초기화 안내',
+        `운영정책 위반으로 닉네임이 "${nick}"(으)로 초기화되었습니다. 닉네임 변경 비용을 지급해 드리니 적절한 닉네임으로 변경해 주세요.`,
+        NICKNAME_CHANGE_COST_DIAMOND,
+      );
     }
-    await tx
-      .update(characters)
-      .set({ nickname: nick })
-      .where(and(eq(characters.userId, owner.userId), eq(characters.serverId, owner.serverId)));
-    await mail(
-      tx,
-      owner.userId,
-      owner.serverId,
-      'reward',
-      '닉네임 초기화 안내',
-      `운영정책 위반으로 닉네임이 "${nick}"(으)로 초기화되었습니다. 닉네임 변경 비용을 지급해 드리니 적절한 닉네임으로 변경해 주세요.`,
-      NICKNAME_CHANGE_COST_DIAMOND,
-    );
     await clearReports(tx, profileId);
     revalidatePath('/admin/reports');
     return { status: 'success' };

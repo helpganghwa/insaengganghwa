@@ -32,7 +32,7 @@ const CLAIM_BATCH = 500;
 const SEND_CHUNK = 200;
 const TIME_BUDGET_MS = 90_000;
 
-type FlushRow = { user_id: string; items: unknown[] };
+type FlushRow = { user_id: string; server_id: number | null; items: unknown[] };
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
@@ -41,6 +41,15 @@ export async function GET(req: Request) {
   let candidates = 0;
   let sent = 0;
   let failed = 0;
+
+  // 실효 대기 정리(0154) — 유저가 윈도 중 서버를 옮기면 아래 클레임의 활성 서버 일치 조건을
+  // 다시 못 만나 행이 영구 잔류한다. '준비완료'는 유통기한 짧은 알림이라 하루 지난 묶음은
+  // 조용히 버린다(그 서버로 돌아오면 어차피 화면에서 확인).
+  await db.execute(sql`
+    delete from push_pending
+    where category = 'enhance'::push_category
+      and first_at < now() - interval '24 hours'
+  `);
 
   for (;;) {
     // DELETE … RETURNING — row를 먼저 빼낸 뒤 발송. 누적 버그(2026-05-30) 방지:
@@ -57,6 +66,8 @@ export async function GET(req: Request) {
           from push_pending pp2
           join profiles p2 on p2.id = pp2.user_id
           where pp2.category = 'enhance'::push_category
+            -- 경계규칙 1(0154): 이벤트 서버가 활성 서버일 때만 발송. null=구행 호환(통과).
+            and (pp2.server_id is null or pp2.server_id = p2.last_server_id)
             and (
               (p2.push_enhance_mode = 'batched'    and pp2.first_at + interval '30 minutes' <= now())
               or
@@ -65,7 +76,7 @@ export async function GET(req: Request) {
           order by pp2.first_at
           limit ${CLAIM_BATCH}
         )
-      returning pp.user_id::text user_id, pp.items
+      returning pp.user_id::text user_id, pp.server_id, pp.items
     `)) as unknown as FlushRow[];
 
     candidates += rows.length;

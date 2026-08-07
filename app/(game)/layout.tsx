@@ -194,7 +194,12 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         </Suspense>
         {/* 신규 튜토리얼 코치마크 — 상태를 promise로 전달(Suspense 미사용 → 항상 마운트,
             인트로/진행 상태 리셋 방지). 비차단(클라가 effect로 해소). */}
-        <TutorialCoach statePromise={getActiveServerId().then((sid) => getTutorialState(userId, sid))} />
+        <TutorialCoach
+          statePromise={getActiveServerId().then(async (sid) => ({
+            ...(await getTutorialState(userId, sid)),
+            serverId: sid,
+          }))}
+        />
       </div>
     </HeaderStatsProvider>
     </DiamondProvider>

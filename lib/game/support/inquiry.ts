@@ -7,7 +7,7 @@ import { supportInquiries } from '@/lib/db/schema/support';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
-import { sendPushToUser } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import { createSupabaseServiceClient } from '@/lib/auth/supabase-server';
 
 import { INQUIRY_LABEL, ANSWER_MAX, BODY_MAX, type InquiryType } from './types';
@@ -194,13 +194,16 @@ export async function answerInquiry(input: {
       // 보상 첨부 시 수령형 우편(payload 기반 — MailList hasPayload) — 없으면 안내문만.
       payload: reward ?? {},
     });
-    return { userId: inq.userId };
+    return { userId: inq.userId, serverId: inq.serverId };
   });
 
   if (!done) return { ok: false, reason: 'ALREADY_OR_NOT_FOUND' };
 
   // 앱 푸시(트랜잭션 밖, best-effort — 실패해도 우편은 이미 전달됨).
+  // 경계규칙 1 — 문의한 서버가 활성 서버인 유저에게만(우편은 그 서버 우편함에 이미 있음).
   try {
+    const [target] = await filterByActiveServer([done.userId], done.serverId);
+    if (!target) return { ok: true };
     await sendPushToUser(done.userId, {
       title: '문의 답변 도착',
       body: '고객센터 답변이 우편함에 도착했어요.',

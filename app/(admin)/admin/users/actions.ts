@@ -87,6 +87,9 @@ export async function compensateCancelDamageAction(userId: string): Promise<Resu
 
   const compensated = await db.transaction(async (tx) => {
     // 조건부 클레임 — 미보상 취소 잡만 마킹하며 집계. 동시/반복 클릭은 0행 → 재지급 없음.
+    // 서버별 그룹 지급(2026-08-07 서버분리 감사 A2) — 이전엔 전 서버 손실을 합산해 단일
+    // 서버(last_server_id) 우편으로 지급하고 반대 서버 잡도 보상완료 마킹돼 영구 소실됐다.
+    // 손실이 발생한 서버의 지갑으로 각각 지급(다이아=서버별 지갑, SERVER.md §0).
     const jobs = await tx
       .update(enhancementJobs)
       .set({ cancelCompensatedAt: sql`now()` })
@@ -97,27 +100,35 @@ export async function compensateCancelDamageAction(userId: string): Promise<Resu
           isNull(enhancementJobs.cancelCompensatedAt),
         ),
       )
-      .returning({ startedAt: enhancementJobs.startedAt, cancelledAt: enhancementJobs.cancelledAt });
-    const lostMs = jobs.reduce(
-      (s, j) => s + (j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0),
-      0,
-    );
-    const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
+      .returning({
+        serverId: enhancementJobs.serverId,
+        startedAt: enhancementJobs.startedAt,
+        cancelledAt: enhancementJobs.cancelledAt,
+      });
+    const lostByServer = new Map<number, number>();
+    for (const j of jobs) {
+      const ms = j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0;
+      lostByServer.set(j.serverId, (lostByServer.get(j.serverId) ?? 0) + ms);
+    }
     // 보상 0(=손실 0ms 잡뿐)이면 우편 없이 종료 — drizzle tx에서 return은 **커밋**이므로
     // 마킹은 남는다. 의도된 동작: 손실 0 잡은 '보상 완료(0)'가 정확한 상태고, 마킹을 되돌리면
     // 매 실행 재스캔된다(2026-07-07 전수감사: 기존 '롤백' 주석은 오기 — 롤백은 throw만 가능).
-    if (diamond <= 0) return 0;
-
-    await tx.insert(mailbox).values({
-      userId,
-      serverId: p.sid ?? 1,
-      type: 'reward',
-      title: '강화 진행 보상',
-      body: `강화 취소로 손실된 진행 시간(약 ${Math.round(lostMs / 60_000)}분)에 대한 보상입니다. 불편을 드려 죄송합니다.`,
-      senderLabel: '운영팀',
-      payload: { diamond },
-    });
-    return diamond;
+    let total = 0;
+    for (const [sid, lostMs] of lostByServer) {
+      const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
+      if (diamond <= 0) continue;
+      await tx.insert(mailbox).values({
+        userId,
+        serverId: sid,
+        type: 'reward',
+        title: '강화 진행 보상',
+        body: `강화 취소로 손실된 진행 시간(약 ${Math.round(lostMs / 60_000)}분)에 대한 보상입니다. 불편을 드려 죄송합니다.`,
+        senderLabel: '운영팀',
+        payload: { diamond },
+      });
+      total += diamond;
+    }
+    return total;
   });
   if (compensated <= 0) return { status: 'error', code: 'NOTHING_TO_COMPENSATE' };
   revalidatePath('/admin/users');

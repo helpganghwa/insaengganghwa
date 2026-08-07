@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 import { characters } from '@/lib/db/schema/server';
-import { sendPushToUsers } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUsers } from '@/lib/push/send';
 
 import { GUILD_PERM } from './permissions';
 
@@ -43,12 +43,16 @@ export async function notifyJoinRequest(input: {
     .where(
       and(
         eq(guildMembers.guildId, input.guildId),
+        eq(guildMembers.serverId, input.serverId),
         sql`(${guildMembers.role} = 'leader' or (${guildMembers.role} = 'vice' and (${guildMembers.permissions} & ${GUILD_PERM.joinReview}) <> 0))`,
       ),
     );
   if (rows.length === 0) return;
+  // 경계규칙 1 — 길드 서버가 활성(last_server_id)인 수신자에게만(타 서버 접속 중 오알림 억제).
+  const targets = await filterByActiveServer(rows.map((r) => r.userId), input.serverId);
+  if (targets.length === 0) return;
   await sendPushToUsers(
-    rows.map((r) => r.userId),
+    targets,
     {
       title: '길드 가입 신청',
       body: `${nickname}님이 가입을 신청했습니다.`,
@@ -63,9 +67,13 @@ export async function notifyJoinRequest(input: {
 /** 승인·거절 → 신청자에게. 거절은 사유를 말하지 않는다(길드 재량이고 분쟁 소재가 된다). */
 export async function notifyJoinDecision(input: {
   userId: string;
+  serverId: number;
   guildId: bigint;
   approved: boolean;
 }): Promise<void> {
+  // 경계규칙 1 — 길드 서버가 활성 서버인 신청자에게만.
+  const [target] = await filterByActiveServer([input.userId], input.serverId);
+  if (!target) return;
   const [g] = await db
     .select({ name: guilds.name })
     .from(guilds)

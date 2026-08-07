@@ -80,7 +80,7 @@ export async function GET(req: Request) {
           // 소유 변동(점령·중립화) 반영 — 독점 세금 보너스 배율 재계산(B안, 하루 1회). 강화 누적은 저장값만 읽음.
           await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
           // 공개(소유권 플립)·중립화 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
-          if (rev.revealed > 0 || neutral.neutralized > 0) revalidateTag('world-feed', 'max');
+          if (rev.revealed > 0 || neutral.neutralized > 0) revalidateTag(`world-feed:s${sid}`, 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           const carry = await carryOverDefenders(sid, day).catch(() => ({ carried: 0 }));
           results.push({

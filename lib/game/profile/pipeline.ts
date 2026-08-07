@@ -23,7 +23,7 @@ import { walletAdd } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
-import { sendPushToUser } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
 import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
@@ -34,12 +34,22 @@ import { detectFaceBox, reconcileFaceBox, type FaceBox } from './face-box';
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
   userId: string,
+  serverId: number,
   title: string,
   body: string,
   url = '/me',
 ): Promise<void> {
   try {
-    await sendPushToUser(userId, { category: 'profile', title, body, url, tag: 'profile' });
+    // 경계규칙 1 — 잡의 서버가 활성(last_server_id)인 유저에게만.
+    const [target] = await filterByActiveServer([userId], serverId);
+    if (!target) return;
+    await sendPushToUser(userId, {
+      category: 'profile',
+      title,
+      body,
+      url,
+      tag: 'profile',
+    });
   } catch (e) {
     console.error('[profile-poll] push failed:', (e as Error).message);
   }
@@ -346,7 +356,7 @@ async function acceptJob(
       payload: {},
     });
   });
-  await safePush(userId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!', '/me/profiles');
+  await safePush(userId, serverId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!', '/me/profiles');
 }
 
 /**
@@ -482,7 +492,7 @@ async function rejectJob(
     return true;
   });
   if (did) {
-    await safePush(userId, '아바타 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
+    await safePush(userId, serverId, '아바타 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
   }
 }
 
@@ -532,6 +542,6 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
     return true;
   });
   if (did) {
-    await safePush(userId, '아바타 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
+    await safePush(userId, job.serverId, '아바타 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
   }
 }

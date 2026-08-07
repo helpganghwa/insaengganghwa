@@ -11,6 +11,7 @@ import {
   text,
   jsonb,
   bigserial,
+  smallint,
   timestamp,
   primaryKey,
   index,
@@ -72,6 +73,9 @@ export const pushPending = pgTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     category: pushCategoryEnum('category').notNull(),
+    /** 이벤트 서버(0154, SERVER.md 경계규칙 1) — flush가 활성 서버 일치를 재확인하는 근거.
+     *  nullable: 마이그레이션 이전 잔여 행 호환(flush는 null을 통과시킨다). */
+    serverId: smallint('server_id'),
     /** 누적 항목 배열 (강화: [{ fromLevel, toLevel, outcome }]). */
     items: jsonb('items').notNull().default(sql`'[]'::jsonb`),
     /** 첫 누적 시각 — flush 트리거(`first_at + interval '30 min' <= now()`). */

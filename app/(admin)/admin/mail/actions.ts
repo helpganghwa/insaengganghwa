@@ -232,7 +232,7 @@ export async function broadcastMailAction(opts: {
               : sql`${profiles.withdrawnAt} is null`,
           );
         await sendPushToUsers(ids.map((r) => r.id), {
-          title: targetServerId != null ? `[${targetServerId}서버] 운영자 우편 도착` : '운영자 우편 도착',
+          title: '운영자 우편 도착',
           body: (opts.title || '').slice(0, 60),
           url: '/mail',
           category: 'admin',

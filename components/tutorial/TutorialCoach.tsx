@@ -64,6 +64,9 @@ const STEP_TOTAL = 4;
 const STEP_ORDER: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
 const idxOf = (s: TutorialStep | null) => (s ? STEP_ORDER.indexOf(s) : -1);
 const LS_STEP = 'tut_step';
+/** 진행 단계가 어느 서버 것인지 병기(감사 B3) — 키명 'tut_step'은 유지해야 한다
+ *  (ChatDock·PushPermissionPrompt가 bare 존재 여부로 튜토리얼 중을 판별). */
+const LS_SRV = 'tut_step_srv';
 const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
@@ -83,7 +86,11 @@ function roundRectPath(x: number, y: number, w: number, h: number, r: number): s
   );
 }
 
-export function TutorialCoach({ statePromise }: { statePromise: Promise<TutorialState> }) {
+export function TutorialCoach({
+  statePromise,
+}: {
+  statePromise: Promise<TutorialState & { serverId: number }>;
+}) {
   const pathname = usePathname();
   const [, startAction] = useTransition();
 
@@ -114,8 +121,24 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       .then((s) => {
         if (!alive) return;
         setPhase(s.phase);
-        // localStorage가 비어 있고 active면 서버 파생 step으로 재개(이후엔 로컬 우선).
-        if (s.phase === 'active' && s.step) setLocalStep((cur) => cur ?? s.step);
+        // 서버 불일치 무효화(감사 B3) — tut_step은 계정·서버 구분 없는 브라우저 키라, 서버 1의
+        // 진행 단계가 서버 2 새 캐릭터의 튜토리얼을 중간부터 재개시킨다. 불일치면 로컬을 버리고
+        // 서버 파생 step으로 리셋(레거시: srv 기록 없던 값은 현 서버 것으로 간주).
+        let srvMismatch = false;
+        try {
+          const prevSrv = localStorage.getItem(LS_SRV);
+          srvMismatch = prevSrv != null && prevSrv !== String(s.serverId);
+          localStorage.setItem(LS_SRV, String(s.serverId));
+        } catch {
+          /* noop */
+        }
+        if (srvMismatch) {
+          persist(null);
+          setLocalStep(s.phase === 'active' ? s.step : null);
+        } else if (s.phase === 'active' && s.step) {
+          // localStorage가 비어 있고 active면 서버 파생 step으로 재개(이후엔 로컬 우선).
+          setLocalStep((cur) => cur ?? s.step);
+        }
         // DONE 계정은 잔존 tut_step 제거 — 같은 브라우저에 ACTIVE 계정이 로그인했을 때
         // 남의 진행 단계가 서버 파생값을 이기는 교차 오염 방지(레거시 오염 자가 정리 포함).
         if (s.phase === 'done') persist(null);

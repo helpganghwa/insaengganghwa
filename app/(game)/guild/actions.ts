@@ -176,14 +176,16 @@ export async function approveJoinAction(requestUserId: string) {
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
+    const sid = await getActiveServerId();
     const r = await approveJoinRequest({
       actorUserId: u,
-      serverId: await getActiveServerId(),
+      serverId: sid,
       requestUserId,
     });
     after(async () => {
       await notifyJoinDecision({
         userId: requestUserId,
+        serverId: sid,
         guildId: r.guildId,
         approved: true,
       }).catch(() => undefined);
@@ -201,14 +203,16 @@ export async function rejectJoinAction(requestUserId: string) {
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
+    const sid = await getActiveServerId();
     const r = await rejectJoinRequest({
       actorUserId: u,
-      serverId: await getActiveServerId(),
+      serverId: sid,
       requestUserId,
     });
     after(async () => {
       await notifyJoinDecision({
         userId: requestUserId,
+        serverId: sid,
         guildId: r.guildId,
         approved: false,
       }).catch(() => undefined);

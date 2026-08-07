@@ -36,6 +36,7 @@ export default async function RaidDetail({
     const [r] = await db
       .select({
         id: raids.id,
+        serverId: raids.serverId,
         bossCode: raids.bossCode,
         phase1Hp: raids.phase1Hp,
         shareCode: raids.shareCode,
@@ -112,7 +113,9 @@ export default async function RaidDetail({
 
   const serverId = await getActiveServerId();
   // 참가자 길드 문양 일괄(닉네임 옆 노출용) — 실패해도 레이드는 표시.
-  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId), serverId).catch(
+  // 레이드의 서버 기준(감사 B5) — 관전자(활성 서버가 다를 수 있음) 기준이면 참가자 길드가
+  // 안 뜨거나 동명 유저의 타 서버 길드 문양이 잘못 붙는다.
+  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId), raid.serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
 

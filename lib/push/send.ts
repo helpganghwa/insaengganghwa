@@ -65,6 +65,25 @@ export type PushPayload = {
 export type SendResult = { ok: number; gone: number; failed: number };
 
 /**
+ * SERVER.md 경계규칙 1 헬퍼 — 발송 라이브러리는 serverId를 받지 않으므로(범용 유지),
+ * 서버 귀속 이벤트의 호출부가 이 필터를 거친 뒤 send를 부른다.
+ * 유저 노출 텍스트에 서버 표기는 하지 않는다(운영자 화면에서만 서버 구분 — 2026-08-07 결정).
+ *
+ * 이벤트 서버가 활성 서버(last_server_id)인 유저만 남긴다 — 타 서버 접속 중 오알림 억제.
+ */
+export async function filterByActiveServer(
+  userIds: string[],
+  serverId: number,
+): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const rows = await db
+    .select({ id: profiles.id })
+    .from(profiles)
+    .where(and(inArray(profiles.id, userIds), eq(profiles.lastServerId, serverId)));
+  return rows.map((r) => r.id);
+}
+
+/**
  * 카테고리별 토글 컬럼 매핑. supply(일일 보급)·melee(대난투)·guild(길드 운영)는 상시 발송이라 미포함 —
  * 토글 컬럼이 없는 카테고리는 게이팅 없이 항상 발송(설정에서도 제외, 2026-06-04).
  */

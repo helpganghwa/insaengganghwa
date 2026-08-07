@@ -19,6 +19,7 @@ import {
   date,
   index,
   primaryKey,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -90,7 +91,12 @@ export const meleeBattles = pgTable('melee_battles', {
   trophyAttempts: integer('trophy_attempts').notNull().default(0),
   /** 마지막 트로피 상태 전이 시각 — 'generating' 타임아웃 판정용. */
   trophyUpdatedAt: timestamp('trophy_updated_at', { withTimezone: true }),
-});
+}, (t) => [
+  // ⚠ 스키마 드리프트 보수(2026-08-07 서버분리 감사 A3) — DB엔 0059부터 존재하고
+  // melee/run.ts의 onConflictDoNothing 멱등(하루 1배틀)이 의존하는 유니크. 선언이 없으면
+  // db:generate가 DROP을 만들어 melee-run 크론(5회 발화)이 배틀을 중복 생성할 수 있다.
+  uniqueIndex('melee_battles_server_date_uq').on(t.serverId, t.battleDate),
+]);
 
 /** §13.2 melee_participants — 참가자×배틀 1행(로스터=결과 통합). */
 export const meleeParticipants = pgTable(

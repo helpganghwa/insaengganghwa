@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { sendPushToUser } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 
 import { RAID_BOSSES, type RaidBoss } from './bosses';
 
@@ -22,6 +22,11 @@ export async function notifyRaidInvite(input: {
   bossCode: string;
   shareCode: string;
 }): Promise<void> {
+  // 경계규칙 1 — 초대 서버가 활성(last_server_id)인 유저에게만. 초대 자체는 푸시 없이도
+  // 레이드 화면 '초대받은 레이드' 섹션에 남으므로 미발송이 정보 유실은 아니다.
+  const [target] = await filterByActiveServer([input.inviteeUserId], input.serverId);
+  if (!target) return;
+
   const [host] = await db
     .select({ nickname: characters.nickname })
     .from(characters)

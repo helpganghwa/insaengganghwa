@@ -10,6 +10,8 @@ import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 // 없는 계정이 생기고, 콜백은 재실행되지 않아 유저 스스로 복구할 방법이 없다(재로그인뿐).
 // 셸 데이터 로드에서 감지(left join이라 nickname null == 캐릭터 부재) 시 1회 생성 후 재조회.
 // 인스턴스당 유저별 재시도 간격을 두어 지속 실패 시 요청마다 생성 tx가 반복되는 것을 막는다.
+// 키에 serverId 포함 — 신서버 첫 진입도 캐릭터 부재로 이 경로를 타는데, 유저 단독 키면
+// 서버 1 복구 직후 서버 2 진입이 스로틀에 걸려 5분간 생성이 막힌다(감사 B2).
 const healAttemptAt = new Map<string, number>();
 const HEAL_RETRY_MS = 5 * 60 * 1000;
 
@@ -153,9 +155,10 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
     // 재귀는 1단으로 끝난다: 스로틀 맵이 직후 재시도를 차단하고, 성공 경로는 nickname이 채워진다.
     if (profileRows.length > 0 && p?.nickname == null) {
-      const last = healAttemptAt.get(userId) ?? 0;
+      const healKey = `${userId}:${serverId}`;
+      const last = healAttemptAt.get(healKey) ?? 0;
       if (Date.now() - last > HEAL_RETRY_MS) {
-        healAttemptAt.set(userId, Date.now());
+        healAttemptAt.set(healKey, Date.now());
         try {
           await createCharacterAuto({ userId, serverId });
           console.warn('[layout] half-account healed — character created', { userId, serverId });

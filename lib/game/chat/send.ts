@@ -11,7 +11,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { guildMembers } from '@/lib/db/schema/guild';
 import { chatBlocks } from '@/lib/db/schema/chat';
-import { sendPushToUser } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
@@ -148,6 +148,18 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
       mentionTargets = mentionTargets.filter((t) => !blockerSet.has(t.uid));
     } catch {
       // 차단 조회 실패 — 푸시 스킵보다 발송이 낫다고 보고 진행.
+    }
+  }
+  if (mentionTargets.length > 0) {
+    // 경계규칙 1 — 이 채널의 서버가 활성(last_server_id)인 유저에게만. 다른 서버에서 플레이
+    // 중인 유저에게 타 서버 채팅 멘션 푸시는 오알림이다(조회 실패 시엔 발송이 낫다고 보고 진행).
+    try {
+      const active = new Set(
+        await filterByActiveServer(mentionTargets.map((t) => t.uid), serverId),
+      );
+      mentionTargets = mentionTargets.filter((t) => active.has(t.uid));
+    } catch {
+      /* keep unfiltered */
     }
   }
   if (mentionTargets.length > 0) {

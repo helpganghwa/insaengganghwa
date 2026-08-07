@@ -63,7 +63,9 @@ export async function logWorldEvent(
     // 이벤트는 저빈도(마일스톤 지점만)라 무효화 비용 무시 가능, limit별 엔트리 전부 동시 갱신.
     try {
       // Next 16 시그니처 — 2번째 인자 = cacheLife 프로필('max' = 구버전 즉시 만료 동작).
-      revalidateTag('world-feed', 'max');
+      // 서버 태그만 무효화(감사 B7) — 전역 'world-feed'를 치면 서버 1의 사건이 전 서버 피드
+      // 캐시를 깨서 서버 수만큼 재조회가 번진다. 전역 태그는 어드민 수동 revalidate 전용.
+      revalidateTag(`world-feed:s${serverId}`, 'max');
     } catch {
       /* 요청 컨텍스트 밖(스크립트 등) — 캐시 무효화만 생략 */
     }
@@ -103,11 +105,23 @@ export async function logWorldEvent(
 /**
  * 홈 월드 피드 — server_id 최신순 limit건 + actor 닉/코드 일괄 해소.
  * §11.5 — 전 유저가 홈마다 같은 피드를 읽으므로 30초 캐시(피드 지연 ≤30s 허용, 인자별 키).
+ * 태그는 서버별(`world-feed:s{N}`) 래퍼로 부착(감사 B7) — unstable_cache 태그는 래퍼 생성
+ * 시점 고정이라 서버별 무효화를 하려면 서버마다 래퍼가 필요하다(인스턴스 로컬 메모).
+ * 전역 'world-feed' 태그는 어드민 수동 revalidate(전 서버 일괄) 호환용으로 병기.
  */
-export const getWorldFeed = unstable_cache(getWorldFeedUncached, ['world-feed-v1'], {
-  revalidate: 30,
-  tags: ['world-feed'],
-});
+const feedCacheByServer = new Map<number, typeof getWorldFeedUncached>();
+
+export function getWorldFeed(serverId: number, limit = 40): Promise<WorldEventEntry[]> {
+  let fn = feedCacheByServer.get(serverId);
+  if (!fn) {
+    fn = unstable_cache(getWorldFeedUncached, ['world-feed-v1', `s${serverId}`], {
+      revalidate: 30,
+      tags: ['world-feed', `world-feed:s${serverId}`],
+    });
+    feedCacheByServer.set(serverId, fn);
+  }
+  return fn(serverId, limit);
+}
 
 async function getWorldFeedUncached(serverId: number, limit = 40): Promise<WorldEventEntry[]> {
   const rows = await db

@@ -32,6 +32,7 @@ const TIME_BUDGET_MS = 40_000;
 type ReadyRow = {
   job_id: string;
   user_id: string;
+  server_id: number;
   from_level: number;
   target_level: number;
   item_ko: string;
@@ -69,10 +70,11 @@ export async function GET(req: Request) {
       update enhancement_jobs
       set push_sent = true
       where id in (select id from target)
-      returning id, user_id, from_level, target_level, user_equipment_id, slot, slot_lane
+      returning id, user_id, server_id, from_level, target_level, user_equipment_id, slot, slot_lane
     )
     select u.id::text as job_id,
            u.user_id::text as user_id,
+           u.server_id,
            u.from_level,
            u.target_level,
            u.slot::text as slot,
@@ -88,7 +90,7 @@ export async function GET(req: Request) {
   // 마킹은 이미 끝났음 — 발송 실패해도 재시도 안 함(폭격 방지).
   for (const r of claimed) {
     try {
-      await appendEnhanceReady(r.user_id, {
+      await appendEnhanceReady(r.user_id, r.server_id, {
         jobId: r.job_id,
         fromLevel: r.from_level,
         targetLevel: r.target_level,
