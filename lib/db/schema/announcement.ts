@@ -31,6 +31,8 @@ export const announcements = pgTable(
     title: text('title').notNull(),
     /** 마크다운 본문 — 어드민 신뢰 입력. */
     body: text('body').notNull(),
+    /** 대상 서버(2026-08-07, 0153) — null=전서버, 값=해당 서버에만 노출. */
+    serverId: smallint('server_id'),
     /** 목록 상단 고정. */
     pinned: boolean('pinned').notNull().default(false),
     /** 발행 여부(초안 가능). false면 유저 비노출. */

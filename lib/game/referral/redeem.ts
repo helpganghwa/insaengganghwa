@@ -47,6 +47,8 @@ export async function attributeReferralFromShare(
   newUserId: string,
   shareCode: string,
   clickedAtMs?: number,
+  /** 링크 생성 서버(2026-08-07 결정) — 보상 지급 서버. 미전달(레거시 쿠키)이면 추천인 활성 서버. */
+  linkServerId?: number,
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
@@ -109,11 +111,16 @@ export async function attributeReferralFromShare(
 
     // mailbox row — referrer가 명시적 수령. claim 시 다이아 + 슬롯별 상자 가산.
     // 상자는 3슬롯 균등 분배 — 상수에서 파생(payload 하드코딩 드리프트 방지).
-    // 보상 메일은 추천인의 활성 서버 우편함으로(SERVER.md 경계규칙 4).
+    // 보상 메일은 **링크가 생성된 서버** 우편함으로(SERVER.md 경계규칙 4, 2026-08-07 확정) —
+    // 신규 유저가 어느 서버로 가입하든 링크 서버에 지급. 레거시 쿠키(서버 미전달)만 활성 서버 폴백.
+    const rewardServerId =
+      Number.isInteger(linkServerId) && (linkServerId as number) >= 1 && (linkServerId as number) <= 32767
+        ? (linkServerId as number)
+        : referrer.lastServerId;
     const invitePerSlot = INVITE_BOX_PER_REFERRAL / 3;
     await tx.insert(mailbox).values({
       userId: referrer.id,
-      serverId: referrer.lastServerId,
+      serverId: rewardServerId,
       type: 'reward',
       title: '친구 초대 보상',
       body: `${newUserNickname}님이 내 카카오톡 공유로 가입했어요. 보상을 받아주세요!`,

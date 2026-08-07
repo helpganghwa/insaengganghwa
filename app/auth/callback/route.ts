@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { createSupabaseServerClient } from '@/lib/auth/supabase-server';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import {
   canEnterServer,
   createCharacterAuto,
@@ -15,6 +16,7 @@ import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import {
   PENDING_REFERRAL_COOKIE,
+  PENDING_REFERRAL_SRV_COOKIE,
   PENDING_REFERRAL_AT_COOKIE,
 } from '@/lib/game/referral/auto-attribute';
 
@@ -96,6 +98,19 @@ export async function GET(request: NextRequest) {
           };
           let sid: number | null = asSid(request.cookies.get('login_srv')?.value);
           if (!sid) {
+            // 신규 유저(어느 서버에도 캐릭터 없음)는 초대/공유 링크의 서버 의도(pending_server)를
+            // 우선한다(2026-08-07 결정) — 가입 트리거(0067)가 last_server_id를 최신 open으로
+            // 선점해 종전 순서로는 pending_server가 영원히 도달 불가(dead branch)였고, 초대
+            // 링크로 가입해도 초대자와 다른 서버에 배정됐다. 기존 유저는 종전대로 자기 서버
+            // 복원(초대 링크를 눌러도 오배정 방지 — 따라가려면 셀렉터에서 직접 선택).
+            const [hasChar] = await db
+              .select({ uid: characters.userId })
+              .from(characters)
+              .where(eq(characters.userId, userId))
+              .limit(1);
+            if (!hasChar) sid = asSid(request.cookies.get('pending_server')?.value);
+          }
+          if (!sid) {
             const [p] = await db
               .select({ sid: profiles.lastServerId })
               .from(profiles)
@@ -103,7 +118,6 @@ export async function GET(request: NextRequest) {
               .limit(1);
             sid = p?.sid ?? null;
           }
-          if (!sid) sid = asSid(request.cookies.get('pending_server')?.value);
           if (!sid) sid = await latestOpenServerId();
           // 그 서버에 캐릭터가 없으면 생성(가입 보너스 + 기본 아바타 + 거주지 포함).
           // 가입 트리거(0067)는 더 이상 캐릭터를 만들지 않으므로, 신규 가입·새 서버 합류 모두
@@ -144,10 +158,12 @@ export async function GET(request: NextRequest) {
             if (isNewSignup) {
               const atRaw = request.cookies.get(PENDING_REFERRAL_AT_COOKIE)?.value;
               const clickedAtMs = atRaw && /^\d+$/.test(atRaw) ? Number(atRaw) : undefined;
+              const srvRaw = request.cookies.get(PENDING_REFERRAL_SRV_COOKIE)?.value;
+              const linkServerId = srvRaw && /^\d+$/.test(srvRaw) ? Number(srvRaw) : undefined;
               // after — 리다이렉트 지연 0, 응답 후 보장 실행(보상 누락 방지). 쿠키는 유지해
               // (game) layout 멱등 백스톱이 드문 after 실패 시 재시도하게 둔다.
               after(() =>
-                attributeReferralFromShare(userId, refCode, clickedAtMs).catch((e) =>
+                attributeReferralFromShare(userId, refCode, clickedAtMs, linkServerId).catch((e) =>
                   console.warn('[auth.callback] referral attribute failed', (e as Error).message),
                 ),
               );
@@ -155,6 +171,7 @@ export async function GET(request: NextRequest) {
               // 기존 유저가 링크를 탄 경우 — 귀속 없음. 쿠키 소비(백스톱 무의미한 재시도 제거).
               res.cookies.set(PENDING_REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
               res.cookies.set(PENDING_REFERRAL_AT_COOKIE, '', { path: '/', maxAge: 0 });
+              res.cookies.set(PENDING_REFERRAL_SRV_COOKIE, '', { path: '/', maxAge: 0 });
             }
           } catch (e) {
             console.warn('[auth.callback] referral skipped', (e as Error).message);

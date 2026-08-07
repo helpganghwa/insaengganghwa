@@ -18,6 +18,8 @@ type SaveInput = {
   body: string;
   pinned: boolean;
   publish: boolean;
+  /** 대상 서버(2026-08-07) — null/미지정=전서버. */
+  serverId?: number | null;
   /** 투표(선택) — null/미지정이면 투표 없음. */
   poll?: AnnouncementPoll | null;
 };
@@ -55,6 +57,10 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
   if (!body) return { status: 'error', message: '내용을 입력하세요.' };
   const poll = normalizePoll(input.poll);
   if (typeof poll === 'string') return { status: 'error', message: poll };
+  const serverId =
+    Number.isInteger(input.serverId) && (input.serverId as number) >= 1 && (input.serverId as number) <= 32767
+      ? (input.serverId as number)
+      : null; // null=전서버
 
   if (input.id) {
     const aid = safeBigInt(input.id);
@@ -65,6 +71,7 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
         category,
         title,
         body,
+        serverId,
         pinned: input.pinned,
         published: input.publish,
         poll,
@@ -80,6 +87,7 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
       category,
       title,
       body,
+      serverId,
       pinned: input.pinned,
       published: input.publish,
       poll,

@@ -6,6 +6,7 @@ import { characters } from '@/lib/db/schema/server';
 import { adminMailLogs, adminScheduledMails } from '@/lib/db/schema/mailbox';
 
 import { AdminMailClient } from './AdminMailClient';
+import { openServerIds } from '@/lib/game/server-list';
 
 /** payload(jsonb) → 짧은 첨부 요약. */
 function payloadSummary(payload: unknown): string {
@@ -77,7 +78,7 @@ export default async function AdminMailPage() {
 
   return (
     <>
-      <AdminMailClient scheduled={scheduled} />
+      <AdminMailClient scheduled={scheduled} serverIds={await openServerIds()} />
 
       <section className="mx-auto max-w-md px-4 pb-12 text-sm">
         <h2 className="mb-2 mt-1 text-xs font-bold text-zinc-500">최근 발송 ({logs.length})</h2>

@@ -10,6 +10,8 @@ import { attributeReferralFromShare, ReferralError } from './redeem';
 export const PENDING_REFERRAL_COOKIE = 'pending_referral';
 /** 링크 클릭 시각(epoch ms) 쿠키 — 신규 가입 판정용(클릭 이후 생성된 계정만 귀속). */
 export const PENDING_REFERRAL_AT_COOKIE = 'pending_referral_at';
+/** 링크가 생성된 서버(2026-08-07 결정) — 추천 보상은 가입 서버와 무관하게 이 서버 지갑에 지급. */
+export const PENDING_REFERRAL_SRV_COOKIE = 'pending_referral_srv';
 
 /**
  * (game) 레이아웃 진입 시 호출 — 공유 링크 **가입 전환** 귀속(멱등).
@@ -28,6 +30,7 @@ export async function processPendingReferral(
   userId: string,
   shareCode: string,
   clickedAtMs?: number,
+  linkServerId?: number,
 ): Promise<void> {
   if (!shareCode) return;
   try {
@@ -39,7 +42,7 @@ export async function processPendingReferral(
       .limit(1);
     if (existing) return;
 
-    await attributeReferralFromShare(userId, shareCode, clickedAtMs);
+    await attributeReferralFromShare(userId, shareCode, clickedAtMs, linkServerId);
   } catch (e) {
     // ReferralError(SELF_REFERRAL/ALREADY_REDEEMED 등)는 정상 흐름 — 조용히. 그 외만 기록.
     if (!(e instanceof ReferralError)) console.error('[processPendingReferral]', e);

@@ -18,6 +18,7 @@ function toView(r: typeof announcements.$inferSelect): AnnouncementView {
     title: r.title,
     body: r.body,
     pinned: r.pinned,
+    serverId: r.serverId ?? null,
     publishedAtIso: r.publishedAt ? r.publishedAt.toISOString() : null,
     poll: r.poll ?? null,
   };
@@ -28,16 +29,22 @@ function toView(r: typeof announcements.$inferSelect): AnnouncementView {
  * §11.5 — 홈 로드마다 조회되는 준불변 데이터라 30초 캐시(공지 발행 지연 ≤30s 허용).
  */
 export const listPublishedAnnouncements = unstable_cache(
-  async (limit = 30): Promise<AnnouncementView[]> => {
+  // serverId(2026-08-07 서버별 공지) — 전서버(null) 공지 + 해당 서버 공지만.
+  // unstable_cache는 인자를 캐시 키에 포함하므로 서버별로 격리 캐시된다.
+  async (limit = 30, serverId?: number): Promise<AnnouncementView[]> => {
+    const serverCond =
+      serverId != null
+        ? sql`(${announcements.serverId} is null or ${announcements.serverId} = ${serverId})`
+        : sql`true`;
     const rows = await db
       .select()
       .from(announcements)
-      .where(eq(announcements.published, true))
+      .where(and(eq(announcements.published, true), serverCond))
       .orderBy(desc(announcements.publishedAt), desc(announcements.id))
       .limit(limit);
     return rows.map(toView);
   },
-  ['published-announcements-v1'],
+  ['published-announcements-v2'],
   { revalidate: 30, tags: ['announcements'] },
 );
 

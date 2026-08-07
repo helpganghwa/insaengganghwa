@@ -1,4 +1,5 @@
 import { listAllAnnouncements } from '@/lib/game/announcement';
+import { openServerIds } from '@/lib/game/server-list';
 
 import { AnnouncementsAdmin } from './AnnouncementsAdmin';
 
@@ -6,11 +7,11 @@ import { AnnouncementsAdmin } from './AnnouncementsAdmin';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminAnnouncementsPage() {
-  const items = await listAllAnnouncements(100);
+  const [items, serverIds] = await Promise.all([listAllAnnouncements(100), openServerIds()]);
   return (
     <div className="px-4 py-4">
       <h1 className="mb-3 text-base font-bold">공지사항</h1>
-      <AnnouncementsAdmin items={items} />
+      <AnnouncementsAdmin items={items} serverIds={serverIds} />
     </div>
   );
 }

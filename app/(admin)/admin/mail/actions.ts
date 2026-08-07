@@ -148,6 +148,9 @@ export async function broadcastMailAction(opts: {
   idemKey?: string;
   /** 앱 알림(웹푸시)도 발송 — admin 카테고리, 구독자만 실제 수신(2026-07-14 선택 옵션). */
   push?: boolean;
+  /** 대상 서버(2026-08-07) — null/미지정=전서버. 지정 시 해당 서버 캐릭터 보유자에게만
+   * 그 서버 우편함으로 지급, 푸시도 활성 서버(last_server_id) 일치자만(경계규칙 1). */
+  serverId?: number | null;
 }): Promise<OkBroadcast | ErrorState> {
   try {
     const adminId = await requireAdmin();
@@ -158,6 +161,10 @@ export async function broadcastMailAction(opts: {
       opts.idemKey && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opts.idemKey)
         ? opts.idemKey
         : null;
+    const targetServerId =
+      Number.isInteger(opts.serverId) && (opts.serverId as number) >= 1 && (opts.serverId as number) <= 32767
+        ? (opts.serverId as number)
+        : null; // null=전서버
     let inserted = 0;
     let duplicate = false;
     // 단일 트랜잭션 + **단일 INSERT…SELECT**(감사 P1) — 전 유저를 앱으로 끌어와 청크 루프로
@@ -172,7 +179,7 @@ export async function broadcastMailAction(opts: {
           adminId,
           mode: 'broadcast',
           recipientCount: 0,
-          targetLabel: '전체',
+          targetLabel: targetServerId != null ? `전체(${targetServerId}서버)` : '전체(전서버)',
           title,
           body,
           payload,
@@ -184,13 +191,26 @@ export async function broadcastMailAction(opts: {
         duplicate = true;
         return;
       }
-      const rows = (await tx.execute(sql`
+      // 서버 지정(2026-08-07) — 해당 서버 캐릭터 보유자에게 그 서버 우편함으로.
+      // 전서버(기본)는 종전대로 전 유저의 활성 서버(last_server_id) 우편함으로.
+      const rows = (await tx.execute(
+        targetServerId != null
+          ? sql`
+        insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
+        select p.id, ${targetServerId}, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
+        from profiles p
+        where p.withdrawn_at is null
+          and exists(select 1 from characters c where c.user_id = p.id and c.server_id = ${targetServerId})
+        returning id
+      `
+          : sql`
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from profiles p
         where p.withdrawn_at is null
         returning id
-      `)) as unknown as { id: string }[];
+      `,
+      )) as unknown as { id: string }[];
       inserted = rows.length;
       await tx
         .update(adminMailLogs)
@@ -202,12 +222,17 @@ export async function broadcastMailAction(opts: {
     // 앱 알림(선택) — 우편 커밋 후 best-effort. 구독 테이블 기준으로 대상 추림(80명 루프 회피).
     if (opts.push) {
       try {
+        // 서버 지정 시 활성 서버 일치자만(경계규칙 1 — 타 서버 접속자에게 미발송) + 본문 서버 표기.
         const ids = await db
           .select({ id: profiles.id })
           .from(profiles)
-          .where(sql`${profiles.withdrawnAt} is null`);
+          .where(
+            targetServerId != null
+              ? sql`${profiles.withdrawnAt} is null and ${profiles.lastServerId} = ${targetServerId}`
+              : sql`${profiles.withdrawnAt} is null`,
+          );
         await sendPushToUsers(ids.map((r) => r.id), {
-          title: '운영자 우편 도착',
+          title: targetServerId != null ? `[${targetServerId}서버] 운영자 우편 도착` : '운영자 우편 도착',
           body: (opts.title || '').slice(0, 60),
           url: '/mail',
           category: 'admin',

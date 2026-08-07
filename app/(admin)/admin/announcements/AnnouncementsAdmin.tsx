@@ -17,13 +17,14 @@ import { AnnouncementPreview } from './AnnouncementPreview';
 type Draft = {
   id?: string;
   category: string;
+  serverId: number | null;
   title: string;
   body: string;
   pinned: boolean;
   poll: AnnouncementPoll | null;
 };
 
-const EMPTY: Draft = { category: 'notice', title: '', body: '', pinned: false, poll: null };
+const EMPTY: Draft = { category: 'notice', serverId: null, title: '', body: '', pinned: false, poll: null };
 const genId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID().slice(0, 8)
@@ -37,7 +38,7 @@ const isoToLocal = (iso?: string | null) => {
 };
 const localToIso = (local: string) => (local ? new Date(local).toISOString() : null);
 
-export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
+export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementView[]; serverIds: number[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState<Draft>(EMPTY);
@@ -61,6 +62,7 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
     setDraft({
       id: a.id,
       category: a.category,
+      serverId: a.serverId ?? null,
       title: a.title,
       body: a.body,
       pinned: a.pinned,
@@ -131,6 +133,21 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
             {ANNOUNCEMENT_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {ANNOUNCEMENT_CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </select>
+          {/* 대상 서버(2026-08-07) — 전서버 또는 특정 서버에만 노출. */}
+          <select
+            value={draft.serverId == null ? 'all' : String(draft.serverId)}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, serverId: e.target.value === 'all' ? null : Number(e.target.value) }))
+            }
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs"
+          >
+            <option value="all">전서버</option>
+            {serverIds.map((sid) => (
+              <option key={sid} value={String(sid)}>
+                {sid}서버
               </option>
             ))}
           </select>

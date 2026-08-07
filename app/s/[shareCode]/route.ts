@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
-import { PENDING_REFERRAL_COOKIE, PENDING_REFERRAL_AT_COOKIE } from '@/lib/game/referral/auto-attribute';
+import { PENDING_REFERRAL_COOKIE, PENDING_REFERRAL_AT_COOKIE, PENDING_REFERRAL_SRV_COOKIE } from '@/lib/game/referral/auto-attribute';
 
 /**
  * 짧은 공유 링크 — WIREFRAMES §10.
@@ -83,6 +83,9 @@ export async function GET(
   if (sParam && /^\d+$/.test(sParam)) {
     // 공유된 서버를 로그인 기본 선택으로.
     res.cookies.set('pending_server', sParam, { sameSite: 'lax', path: '/', maxAge: SEVEN_DAYS });
+    // 링크 생성 서버 박제(2026-08-07 결정) — 추천 보상은 신규 유저가 어느 서버로 가입하든
+    // 이 서버(링크를 공유한 시점의 서버) 지갑에 지급한다(SERVER.md 경계규칙 4).
+    res.cookies.set(PENDING_REFERRAL_SRV_COOKIE, sParam, { sameSite: 'lax', path: '/', maxAge: SEVEN_DAYS });
   }
   res.cookies.set(PENDING_REFERRAL_COOKIE, shareCode, {
     path: '/',

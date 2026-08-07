@@ -162,6 +162,8 @@ export const profileGenerationJobs = pgTable(
     index('profile_gen_user_created_idx').on(t.userId, t.createdAt.desc()),
     // 유저당 활성 큐 1건 — DB 레벨 보장(PROFILE §3.2). 종단(accepted/rejected_ai/failed)이 아닌
     // 모든 상태 = 활성(0095). starting 포함.
+    // 의도적 계정 단위(2026-08-07 확정, 서버분리 감사 A4) — Pixellab 생성은 전 서버가 공유하는
+    // 외부 자원(key1·key2)이라 캡도 계정 전역 1건. 생성량 증가 시 key3·key4 증설로 대응(서버별 완화 아님).
     uniqueIndex('profile_gen_one_active_per_user')
       .on(t.userId)
       .where(sql`${t.status} NOT IN ('accepted', 'rejected_ai', 'failed')`),

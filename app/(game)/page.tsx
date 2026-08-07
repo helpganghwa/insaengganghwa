@@ -321,7 +321,7 @@ export default async function HomePage() {
   const [worldFeed, announcements, tutState, chgStatus, todayStats] = userId
     ? await Promise.all([
         withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
-        withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => []),
+        withTimeout(listPublishedAnnouncements(30, serverId), 2000, 'home.ann').catch(() => []),
         // 튜토리얼 미완료 유저에겐 공지 강제 팝업을 억제(온보딩 우선) — 신규 유저가 공지에 가려
         // 튜토리얼을 못 보던 문제(2026-07-13 CBT 피드백). 실패 시 done으로 폴백(팝업 정상 노출).
         withTimeout(getTutorialState(userId, serverId), 1500, 'home.tut').catch(

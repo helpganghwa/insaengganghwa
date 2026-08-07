@@ -22,8 +22,10 @@ type Mode = 'one' | 'broadcast';
  */
 export function AdminMailClient({
   scheduled,
+  serverIds,
 }: {
   scheduled: { id: string; title: string; scheduledAtKst: string; push: boolean }[];
+  serverIds: number[];
 }) {
   const bcKeyRef = useRef<string | null>(null);
   const [mode, setMode] = useState<Mode>('one');
@@ -33,6 +35,8 @@ export function AdminMailClient({
   const [body, setBody] = useState('');
   const [diamond, setDiamond] = useState('');
   const [pushOn, setPushOn] = useState(true); // 앱 알림 동반 발송(admin 카테고리, 구독자만 수신)
+  // 전체 발송 대상 서버(2026-08-07) — 'all'=전서버(종전 동작), 숫자=해당 서버만.
+  const [targetServer, setTargetServer] = useState<'all' | number>('all');
   const [scheduleAt, setScheduleAt] = useState(''); // 예약 전송(KST datetime-local) — 빈값=즉시(0123)
   const [bw, setBw] = useState('');
   const [ba, setBa] = useState('');
@@ -110,6 +114,11 @@ export function AdminMailClient({
           return;
         }
         if (scheduleAt) {
+          // 예약 전송은 서버 지정 미지원(0123 스키마) — 잘못된 기대 방지 가드.
+          if (targetServer !== 'all') {
+            setFlash({ ok: false, msg: '예약 전송은 전서버만 지원합니다 — 서버 지정은 즉시 발송으로 진행하세요.' });
+            return;
+          }
           // 예약 전송(0123) — 즉시 발송 대신 예약 등록, 크론이 도래 시 발송.
           const r = await scheduleBroadcastAction({ title, body, payload, push: pushOn, scheduledAtKst: scheduleAt });
           if (r.status === 'error') setFlash({ ok: false, msg: r.message });
@@ -122,7 +131,14 @@ export function AdminMailClient({
         }
         // 멱등키(0110) — 전송 실패 재시도는 같은 키 재사용(전 유저 이중 발송 방지).
         bcKeyRef.current ??= crypto.randomUUID();
-        const r = await broadcastMailAction({ title, body, payload, idemKey: bcKeyRef.current, push: pushOn });
+        const r = await broadcastMailAction({
+          title,
+          body,
+          payload,
+          idemKey: bcKeyRef.current,
+          push: pushOn,
+          serverId: targetServer === 'all' ? null : targetServer,
+        });
         if (r.status === 'success') bcKeyRef.current = null;
         if (r.status === 'error') setFlash({ ok: false, msg: r.message });
         else {
@@ -177,12 +193,34 @@ export function AdminMailClient({
           </div>
         </section>
       ) : (
-        <section className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          ⚠ 전체 발송: 현재 가입자{' '}
-          <strong className="tabular-nums">
-            {bcastCount === null ? '조회 중…' : `${bcastCount.toLocaleString()}명`}
-          </strong>
-          에게 같은 우편을 발송합니다. 청크 500/배치.
+        <section className="mb-3 space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <div>
+            ⚠ 전체 발송: 현재 가입자{' '}
+            <strong className="tabular-nums">
+              {bcastCount === null ? '조회 중…' : `${bcastCount.toLocaleString()}명`}
+            </strong>
+            에게 같은 우편을 발송합니다. 청크 500/배치.
+          </div>
+          {/* 대상 서버(2026-08-07) — 전서버(활성 서버 우편함) 또는 특정 서버(그 서버 캐릭터 보유자만,
+              푸시도 활성 서버 일치자만 + [N서버] 표기). ⚠ 예약 전송은 전서버 고정. */}
+          <label className="flex items-center gap-1.5">
+            대상 서버
+            <select
+              value={targetServer === 'all' ? 'all' : String(targetServer)}
+              onChange={(e) => setTargetServer(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="rounded border border-amber-400 bg-transparent px-1.5 py-0.5 dark:border-amber-700"
+            >
+              <option value="all">전서버</option>
+              {serverIds.map((sid) => (
+                <option key={sid} value={String(sid)}>
+                  {sid}서버
+                </option>
+              ))}
+            </select>
+            {targetServer !== 'all' && scheduleAt ? (
+              <span className="font-bold text-red-600 dark:text-red-400">예약 전송은 전서버만 지원 — 즉시 발송으로 진행하세요</span>
+            ) : null}
+          </label>
         </section>
       )}
 

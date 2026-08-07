@@ -17,6 +17,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import {
   processPendingReferral,
   PENDING_REFERRAL_COOKIE,
+  PENDING_REFERRAL_SRV_COOKIE,
   PENDING_REFERRAL_AT_COOKIE,
 } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
@@ -136,9 +137,11 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     // 클릭 시각(신규 가입 판정용) — 레거시 쿠키엔 없을 수 있어 옵셔널.
     const atRaw = cookieStore.get(PENDING_REFERRAL_AT_COOKIE)?.value;
     const clickedAtMs = atRaw && /^\d+$/.test(atRaw) ? Number(atRaw) : undefined;
+    const srvRaw = cookieStore.get(PENDING_REFERRAL_SRV_COOKIE)?.value;
+    const linkServerId = srvRaw && /^\d+$/.test(srvRaw) ? Number(srvRaw) : undefined;
     after(async () => {
       try {
-        await processPendingReferral(userId, referralCode, clickedAtMs);
+        await processPendingReferral(userId, referralCode, clickedAtMs, linkServerId);
       } catch (e) {
         console.warn('[layout] referral error', e);
       }

@@ -51,6 +51,8 @@ export type AnnouncementView = {
   title: string;
   body: string;
   pinned: boolean;
+  /** 대상 서버(2026-08-07) — null=전서버. */
+  serverId: number | null;
   publishedAtIso: string | null;
   /** 투표(없으면 null). 유저에겐 집계 미노출 — 보기·마감만. */
   poll: AnnouncementPoll | null;
