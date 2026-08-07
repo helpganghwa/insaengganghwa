@@ -21,6 +21,33 @@ import { avatarBox, renderMentionBody as renderBody } from './mentionBody';
 
 // 시각 포맷터 — 모듈 상수 1개. 행 렌더마다 Intl 인스턴스를 만들면(150행×키 입력) 입력 지연의 직접 요인.
 const TIME_FMT = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' });
+const DATE_FMT = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+
+/**
+ * 날짜 구분선 — 전체·길드·귓속말 **공용**(2026-08-07). 행과 같은 파일에 두는 이유는
+ * 목록을 그리는 쪽이 늘 행과 짝으로 쓰기 때문이다(채널마다 다른 선이 생기지 않도록).
+ */
+export function ChatDateDivider({ label }: { label: string }) {
+  return (
+    <div className="my-2 flex items-center gap-2">
+      <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+      <span className="shrink-0 text-[9.5px] text-zinc-400 dark:text-zinc-500">{label}</span>
+      <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+    </div>
+  );
+}
+
+/**
+ * 앞 항목과 날짜가 바뀌었으면 표시 문자열, 같은 날이면 null. 목록의 첫 항목은 항상 표시.
+ * 판정 대상엔 시스템 라인도 포함한다 — 빼면 "시스템 라인 하나 건너 같은 날짜 선이 또"
+ * 나오거나, 날이 바뀐 지점이 시스템 라인이면 선이 통째로 사라진다.
+ */
+export function chatDateLabel(createdAt: string, prevCreatedAt?: string): string | null {
+  const d = new Date(createdAt);
+  if (!Number.isFinite(d.getTime())) return null;
+  if (prevCreatedAt && new Date(prevCreatedAt).toDateString() === d.toDateString()) return null;
+  return DATE_FMT.format(d);
+}
 
 /**
  * '프로필 보기'/멘션 링크로 나갔다 뒤로가기로 돌아왔을 때의 패널 복원 마크(세션 한정, 1회 소비).

@@ -200,8 +200,12 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
       {mounted &&
         createPortal(
           <>
-            {/* 헤더(h-12=48px) 위 슬라이드 바 — 모달(z-[100]) 위로 z-[150]. */}
-            <div className="pointer-events-none fixed inset-x-0 top-0 z-[150] overflow-hidden">
+            {/* 헤더(h-12=48px) 위 슬라이드 바 — 모달(z-[100]) 위로 z-[150].
+                top=--inst-h: 설치 띠지가 있으면 헤더가 그만큼 내려가 있다(없으면 0px). */}
+            <div
+              className="pointer-events-none fixed inset-x-0 z-[150] overflow-hidden"
+              style={{ top: 'var(--inst-h, 0px)' }}
+            >
               {rankingToasts.map((t) => (
                 <RankingBar key={t.id} entry={t} />
               ))}
@@ -340,10 +344,12 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
   }, [id, onDismiss]);
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[150]"
+      className="pointer-events-none fixed inset-x-0 z-[150]"
       role="status"
       aria-live="polite"
       style={{
+        // 설치 띠지 높이만큼 내려 헤더와 정확히 겹친다(띠지 없으면 0px).
+        top: 'var(--inst-h, 0px)',
         animation: exit
           ? `winner-up ${HEADER_TOAST_EXIT_MS}ms cubic-bezier(0.22,1,0.36,1) forwards`
           : `winner-drop ${HEADER_TOAST_EXIT_MS}ms cubic-bezier(0.22,1,0.36,1) both`,

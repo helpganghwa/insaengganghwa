@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAppInstall } from './useAppInstall';
 import { InstallGuideModal } from './InstallGuideModal';
@@ -13,12 +13,17 @@ import { InstallGuideModal } from './InstallGuideModal';
  *    · iOS Safari = 홈 화면 추가 안내
  *    · iOS 비-Safari(Chrome/인앱) = Safari로 열기(설치는 Safari에서만 가능)
  *    · 안드 인앱 웹뷰 = Chrome으로 열기
+ *
+ * 높이 발행(2026-08-07) — 이 띠지는 AppHeader **위 일반 흐름**에 들어가 아래 것들을 통째로
+ * 밀어낸다. 화면에 fixed로 붙는 요소(채팅 패널·헤더 토스트)는 그만큼을 스스로 비켜서야 하므로
+ * 실측 높이를 `--inst-h`로 문서 루트에 올린다(미노출·닫힘=변수 없음 → 사용처의 기본값 0px).
  */
 const DISMISS_KEY = 'install_strip_dismiss_at';
 const DISMISS_MS = 5 * 24 * 60 * 60 * 1000; // 5일
 
 export function InstallStrip() {
   const { state, install } = useAppInstall();
+  const barRef = useRef<HTMLDivElement | null>(null);
   const [guide, setGuide] = useState<'ios' | 'android' | null>(null);
   const [hidden, setHidden] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -37,7 +42,28 @@ export function InstallStrip() {
     state.kind === 'ios-other' ||
     state.kind === 'android' ||
     state.kind === 'inapp';
-  if (hidden || !showable) return null;
+  const shown = !hidden && showable;
+
+  // ResizeObserver — 회전·폭 변화로 문구가 두 줄이 되면 높이도 바뀐다(고정값 하드코딩 금지).
+  useEffect(() => {
+    const root = document.documentElement;
+    const el = barRef.current;
+    if (!el) {
+      root.style.removeProperty('--inst-h');
+      return;
+    }
+    const publish = () =>
+      root.style.setProperty('--inst-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty('--inst-h');
+    };
+  }, [shown]);
+
+  if (!shown) return null;
 
   const { label, cta } =
     state.kind === 'ios-other'
@@ -64,7 +90,10 @@ export function InstallStrip() {
   return (
     <>
       {/* 차분한 블랙톤 시스템 바 — 다크 셸에 녹는 중립 톤 + 미세 보더. 무채색 통일. */}
-      <div className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.06] bg-zinc-950/90 px-3.5 pt-[env(safe-area-inset-top)] backdrop-blur-sm">
+      <div
+        ref={barRef}
+        className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.06] bg-zinc-950/90 px-3.5 pt-[env(safe-area-inset-top)] backdrop-blur-sm"
+      >
         <div className="flex min-w-0 flex-1 items-center gap-2 py-2">
           <span className="shrink-0 text-[13px] leading-none opacity-80">📲</span>
           <span className="truncate text-[12px] text-zinc-300">{label}</span>

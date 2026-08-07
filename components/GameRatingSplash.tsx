@@ -72,7 +72,9 @@ export function GameRatingSplash() {
   // 표준 헤더 토스트(ResourceToast HeaderBar)와 동일 3층 구조 — safe-area 아래 h-12 콘텐츠로
   // AppHeader와 정확히 겹쳐 보더가 1개로 보이게(top-0 단독이면 헤더 보더가 삐져나와 2줄로 보임).
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[150]">
+    // top=--inst-h — 설치 띠지가 떠 있으면 헤더가 그만큼 내려가 있다. 0으로 두면 이 바가
+    // 헤더가 아니라 띠지를 덮어 두 줄이 어긋나 보인다(띠지 없으면 0px = 기존과 동일).
+    <div className="pointer-events-none fixed inset-x-0 z-[150]" style={{ top: 'var(--inst-h, 0px)' }}>
       <div
         className={`mx-auto max-w-[390px] border-b border-zinc-700/60 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
           entered ? 'translate-y-0' : '-translate-y-full'

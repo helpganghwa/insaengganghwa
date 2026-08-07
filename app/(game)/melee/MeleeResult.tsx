@@ -348,8 +348,10 @@ function FightStage({
       {isFinal && winnerShow && typeof document !== 'undefined'
         ? createPortal(
             <div
-              className="pointer-events-none fixed inset-x-0 top-0 z-[60]"
+              className="pointer-events-none fixed inset-x-0 z-[60]"
               style={{
+                // 설치 띠지가 있으면 헤더가 그만큼 내려가 있다(없으면 0px) — 헤더 자리에 정확히.
+                top: 'var(--inst-h, 0px)',
                 animation: winnerExit
                   ? 'winner-up 0.45s cubic-bezier(0.22,1,0.36,1) forwards'
                   : 'winner-drop 0.45s cubic-bezier(0.22,1,0.36,1) both',

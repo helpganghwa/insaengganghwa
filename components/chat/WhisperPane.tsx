@@ -11,7 +11,7 @@ import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
 import { searchAction } from '@/app/(game)/friends/actions';
 
 import { reportWhisper } from './actions';
-import { ChatRow } from './ChatRow';
+import { ChatDateDivider, ChatRow, chatDateLabel } from './ChatRow';
 import { avatarBox } from './mentionBody';
 
 /**
@@ -71,11 +71,6 @@ export type WhisperThreadsRes = { threads: WhisperThread[]; topic: string };
 export type WhisperOpenTarget = { userId: string } | { publicCode: string };
 
 const BODY_MAX = 100;
-const DATE_FMT = new Intl.DateTimeFormat('ko-KR', {
-  month: 'long',
-  day: 'numeric',
-  weekday: 'short',
-});
 
 /** 아직 신원을 모르는 상대(친구 목록·딥링크 직행) — messages 응답의 peer가 곧 덮어쓴다. */
 const UNKNOWN: WhisperDisplay = {
@@ -174,6 +169,7 @@ export function WhisperPane({
   const [resolving, setResolving] = useState(false);
   // 입력창 멘션 자동완성 — 전체 채팅과 동일하게 mention-search 재사용.
   const [mentionCands, setMentionCands] = useState<string[]>([]);
+  // ⋯ 메뉴 — 자체 드롭다운이 아니라 공용 팝업(2026-08-07). 각 항목은 아래 ask 확인 팝업으로 이어진다.
   const [menuOpen, setMenuOpen] = useState(false);
   const [ask, setAsk] = useState<'block' | 'leave' | null>(null);
   // 신고 확인 팝업 대상 — 전체 채팅과 같은 '메시지 단위' 신고(본문 탭 진입).
@@ -582,12 +578,10 @@ export function WhisperPane({
     const meFields: WhisperDisplay = self ?? { ...UNKNOWN, nickname: meNickname ?? '나' };
     const peerFields: WhisperDisplay = active ? pickDisplay(active) : UNKNOWN;
     const out: { dto: ChatMessageDto; prev: ChatMessageDto | undefined; date: string | null }[] = [];
-    let prevDay = '';
+    let prevAt: string | undefined;
     let prevDto: ChatMessageDto | undefined;
     for (const m of msgs) {
-      const d = new Date(m.createdAt);
-      const day = d.toDateString();
-      const newDay = day !== prevDay;
+      const date = chatDateLabel(m.createdAt, prevAt);
       const dto: ChatMessageDto = {
         id: m.id,
         userId: m.fromUserId,
@@ -597,9 +591,9 @@ export function WhisperPane({
         createdAt: m.createdAt,
       };
       // 날짜 구분선을 사이에 두고는 묶지 않는다 — 구분선 아래 첫 줄은 항상 발신자를 보여준다.
-      out.push({ dto, prev: newDay ? undefined : prevDto, date: newDay ? DATE_FMT.format(d) : null });
+      out.push({ dto, prev: date ? undefined : prevDto, date });
       prevDto = dto;
-      prevDay = day;
+      prevAt = m.createdAt;
     }
     return out;
   }, [msgs, me, meNickname, self, active]);
@@ -728,9 +722,7 @@ export function WhisperPane({
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* z-30 — ⋯ 메뉴와 그 바깥 닫기 레이어가 아래 메시지 목록 위에 그려지도록 헤더가
-            스택 컨텍스트를 만든다(없으면 목록 영역 탭이 메뉴를 닫지 못한다). */}
-        <header className="relative z-30 flex shrink-0 items-center gap-1.5 border-b border-zinc-100 px-1.5 py-1.5 dark:border-zinc-800/70">
+        <header className="flex shrink-0 items-center gap-1.5 border-b border-zinc-100 px-1.5 py-1.5 dark:border-zinc-800/70">
           <button
             type="button"
             onClick={backToList}
@@ -776,38 +768,12 @@ export function WhisperPane({
           </button>
           <button
             type="button"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => setMenuOpen(true)}
             aria-label="대화 메뉴"
             className="h-7 w-7 shrink-0 rounded-full text-[15px] leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"
           >
             ⋯
           </button>
-          {menuOpen ? (
-            <>
-              {/* 바깥 탭 닫기 — 패널 안쪽만 덮는 투명 레이어(모달이 아니므로 셸은 쓰지 않는다) */}
-              <span className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden />
-              <div className="absolute top-[38px] right-1.5 z-20 w-[124px] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                {(
-                  [
-                    ['block', blocked.has(active.userId) ? '차단 해제' : '차단'],
-                    ['leave', '대화 나가기'],
-                  ] as const
-                ).map(([k, label]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setAsk(k);
-                    }}
-                    className="block w-full px-3 py-2 text-left text-[12px] font-semibold active:bg-zinc-50 dark:active:bg-zinc-800/60"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
         </header>
 
         <div
@@ -824,15 +790,7 @@ export function WhisperPane({
           ) : null}
           {rows.map((r) => (
             <div key={r.dto.id}>
-              {r.date ? (
-                <div className="my-2 flex items-center gap-2">
-                  <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                  <span className="shrink-0 text-[9.5px] text-zinc-400 dark:text-zinc-500">
-                    {r.date}
-                  </span>
-                  <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                </div>
-              ) : null}
+              {r.date ? <ChatDateDivider label={r.date} /> : null}
               <ChatRow
                 m={r.dto}
                 prevMsg={r.prev}
@@ -905,6 +863,47 @@ export function WhisperPane({
           </div>
         </div>
       </div>
+
+      {/* ⋯ 대화 메뉴 — 공용 팝업(셸+레이아웃). 예전엔 헤더 아래 자체 드롭다운이었는데, 앱의
+          다른 메뉴가 전부 팝업이라 이 하나만 다른 규칙이었다(바깥 탭 닫기 레이어도 자체 구현).
+          선택하면 기존 확인 팝업(ask)으로 이어져 실행은 한 곳에 남는다. */}
+      {menuOpen ? (
+        <ModalShell onClose={() => setMenuOpen(false)} label="대화 메뉴">
+          <ModalLayout
+            title={active.nickname}
+            footer={
+              // 세로 스택 — 셋 다 대등한 선택지라 가로로 나누면 글자가 눌린다.
+              <div className="flex w-full flex-col gap-2">
+                <ModalButton
+                  tone="neutral"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAsk('block');
+                  }}
+                >
+                  {blocked.has(active.userId) ? '차단 해제' : '차단'}
+                </ModalButton>
+                <ModalButton
+                  tone="neutral"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAsk('leave');
+                  }}
+                >
+                  대화 나가기
+                </ModalButton>
+                <ModalButton tone="ghost" onClick={() => setMenuOpen(false)}>
+                  취소
+                </ModalButton>
+              </div>
+            }
+          >
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              차단하면 상대의 메시지가 보이지 않고, 나가면 이 대화만 목록에서 사라져요.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
 
       {/* 신고 확인 — 전체 채팅 신고 팝업과 같은 구성(제목·상대·본문 카드·[취소][차단][신고]).
           귓속말엔 신고 누적 자동 숨김이 없다(신고 가능자가 상대 1명뿐이라 어뷰징 지렛대가 된다). */}

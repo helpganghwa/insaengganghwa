@@ -106,7 +106,12 @@ export async function GET(req: Request) {
 
   const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
   // 길드 탭인데 미가입 → 메시지 없이 가입 안내만(UI가 처리).
-  const full = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+  // latestIds를 전체 조회에도 동봉(2026-08-07) — lite 폴링(60초)만 실으면 새로고침 직후
+  // 첫 폴링까지 노티점 판정 자체가 불가능한 공백이 생긴다. 길드 id는 여기서 이미 해소됨.
+  const [full, latestIds] = await Promise.all([
+    channel === 'guild' && !guild ? Promise.resolve([]) : getRecentChat(serverId, limit, guildId),
+    latestChannelIds(userId, serverId, guild ? guild.guildId : null),
+  ]);
   const { mode, messages } = slice(full);
 
   return NextResponse.json({
@@ -119,5 +124,6 @@ export async function GET(req: Request) {
     mode,
     messages,
     blocked,
+    latestIds,
   });
 }

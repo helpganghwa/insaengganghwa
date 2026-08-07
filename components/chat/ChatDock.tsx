@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { usePathname, useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ import { sendRequestAction } from '@/app/(game)/friends/actions';
 import type { SendChatResult } from '@/lib/game/chat/send';
 
 import { reportChat, setChatBlockAction } from './actions';
-import { ChatRow, RESTORE_KEY } from './ChatRow';
+import { ChatDateDivider, ChatRow, chatDateLabel, RESTORE_KEY } from './ChatRow';
 import {
   WhisperPane,
   type WhisperMessageDto,
@@ -35,6 +35,8 @@ import {
  *  - 신고는 메시지 본문 탭 → 확인 팝업(유저 단위 신고 버튼 없음 — 대상이 모호해진다)
  *  - 차단은 로컬(기기) 필터 — localStorage 목록, 서버 부담 0
  *  - 미니바 높이는 --chat-dock-h로 발행(main 하단 패딩), --gt-h(가이드 티커) 합산 오프셋
+ *  - 패널 위/아래 기준선은 --inst-h(설치 띠지)·--gt-h를 더해 계산 — 상단 고정물이 늘면 여기부터
+ *  - 소프트 키보드가 열린 동안은 이 계산을 쓰지 않고 비주얼 뷰포트에 직접 고정(아래 effect)
  *  - 라우트 이동 시 패널 자동 최소화
  *
  * 외부 진입 이벤트(2026-08-07)
@@ -49,6 +51,48 @@ const DOCK_H = '42px';
 const COLLAPSE_KEY = 'ig:chat-collapsed';
 // 미니바 노티점 — 채널별로 "마지막으로 확인한 메시지 id". 서버 latestIds와 다르면 점을 켠다.
 const SEEN_KEY = 'ig:chat-seen';
+/**
+ * 길드 채널 id 캐시({ sid, gid }) — lite 폴링이 길드 최신 id를 받으려면 gid가 필요한데,
+ * lite 응답엔 소속 정보가 없다. 서버별로 저장해 새로고침 직후·닫힌 상태에서도 길드 점이 뜨게.
+ * sid가 다르면(서버 이동) 즉시 버린다.
+ */
+const GID_KEY = 'ig:chat-gid';
+
+/**
+ * 패널 박스 — 키보드가 닫혀 있을 때의 위/아래 기준선.
+ * top: 헤더(h-12) 아래. 설치 띠지(InstallStrip)는 헤더 **위 일반 흐름**이라 그 높이(--inst-h)만큼
+ *      헤더가 내려가 있다 — 안 더하면 패널 탭 영역이 헤더(z-30) 뒤로 숨는다(2026-08-07).
+ * bottom: GNB(h-14) + 가이드 티커 위.
+ */
+const PANEL_TOP = 'calc(3rem + var(--inst-h, 0px) + env(safe-area-inset-top))';
+const PANEL_BOTTOM = 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))';
+/**
+ * 키보드로 인정하는 최소 축소량(px) — iOS는 URL바가 펼쳐진 상태에서도 레이아웃 뷰포트가
+ * 비주얼 뷰포트보다 100 남짓 크다(상·하 브라우저 크롬). 소프트 키보드는 250 이상이라
+ * 150이면 둘을 확실히 가른다. 낮게 잡으면 키보드도 없는데 패널이 전체 화면을 덮는다.
+ */
+const KB_MIN = 150;
+
+/** 키보드 열림 동안의 패널 기하 — 비주얼 뷰포트를 그대로 옮겨 담는다. */
+type KbBox = { h: number; top: number };
+
+/**
+ * 패널 박스 반영 — 렌더(style prop)와 vv 이벤트(직접 조작)가 **같은 값**을 쓰도록 한 곳에서 만든다.
+ * 네 속성을 두 모드 모두에서 명시하는 이유: 한쪽에만 쓰면 모드 전환 때 이전 값이 남는다.
+ */
+function panelBoxStyle(box: KbBox | null): React.CSSProperties {
+  return box
+    ? { top: 0, bottom: 'auto', height: box.h, transform: `translateY(${box.top}px)` }
+    : { top: PANEL_TOP, bottom: PANEL_BOTTOM, height: 'auto', transform: 'none' };
+}
+function applyPanelBox(el: HTMLDivElement | null, box: KbBox | null) {
+  if (!el) return;
+  const s = panelBoxStyle(box);
+  el.style.top = typeof s.top === 'number' ? `${s.top}px` : (s.top as string);
+  el.style.bottom = s.bottom as string;
+  el.style.height = typeof s.height === 'number' ? `${s.height}px` : (s.height as string);
+  el.style.transform = s.transform as string;
+}
 /**
  * 화면 표시 상한(2026-08-07) — 최신 200건 고정. 위로 더 불러오기(페이지네이션)는 두지 않는다:
  * prepend + 스크롤 위치 보존은 버그 표면이 넓고, 채널 보존이 1,000건·7일이라 200이면
@@ -137,10 +181,8 @@ export function ChatDock() {
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
   // 위로 읽는 중 도착한 새 메시지 — "↓ 새 메시지" 칩. 바닥 근처로 오면 자동 해제.
   const [unseenBelow, setUnseenBelow] = useState(false);
-  // iOS 소프트 키보드가 가리는 높이(px) — visualViewport로 측정, 패널 bottom 보정.
-  const [kbOffset, setKbOffset] = useState(0);
-  // 레이아웃 뷰포트 안에서 비주얼 뷰포트가 밀려난 양(px) — iOS 팬 보정(아래 effect 주석).
-  const [vvTop, setVvTop] = useState(0);
+  // 소프트 키보드가 열린 동안의 패널 기하(null=키보드 없음 → 기존 CSS 경로).
+  const [kbBox, setKbBox] = useState<KbBox | null>(null);
   // 멘션 하이라이트용 내 닉네임.
   const [meNickname, setMeNickname] = useState<string | null>(null);
   // 멘션 자동완성 — 서버 전체 닉네임 prefix 검색 결과(250ms 디바운스).
@@ -158,6 +200,8 @@ export function ChatDock() {
   const collapsedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  // 패널 박스 — 키보드 기하를 리렌더 없이 즉시 반영해야 해서 노드를 직접 든다.
+  const panelRef = useRef<HTMLDivElement | null>(null);
   // 폴링의 증분(after) 기준점 — 상태를 effect 의존성에 넣지 않고 최신 목록을 읽기 위한 ref.
   const messagesRef = useRef<ChatMessageDto[]>([]);
   // applyNew(장수명 콜백)에서 내 broadcast를 식별하기 위한 미러 — 상태 me와 동기화.
@@ -180,6 +224,8 @@ export function ChatDock() {
   const seenPrimedRef = useRef(false);
   const whisperUnreadRef = useRef<number | null>(null);
   const myGuildIdRef = useRef<string | null>(null);
+  // 길드 채널 id 로컬 캐시(서버별) — 아래 rememberGid/GID_KEY 주석 참조.
+  const gidCacheRef = useRef<{ sid: number; gid: string } | null>(null);
   // 실시간 귓속말 싱크 — WhisperPane이 마운트된 동안만 등록된다(반환 true=활성 스레드가 소비).
   const whisperSinkRef = useRef<((m: WhisperMessageDto) => boolean) | null>(null);
   const [sid, setSid] = useState<number | null>(null);
@@ -228,10 +274,59 @@ export function ChatDock() {
     } catch {
       /* ignore */
     }
+    try {
+      const raw = localStorage.getItem(GID_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as { sid?: unknown; gid?: unknown };
+        if (typeof d.sid === 'number' && typeof d.gid === 'string') {
+          gidCacheRef.current = { sid: d.sid, gid: d.gid };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
-  // ── 미니바 노티점 —— 서버 latestIds vs 로컬 seen. 어느 채널이든 새 것이면 점.
-  // 귓속말은 '내용·발신자'를 미니바에 절대 노출하지 않으므로 점만 켠다(프라이버시).
+  /**
+   * 길드 채널 id 캐시 갱신 — 전체 조회(비-lite) 응답에서만 부른다. null이면 삭제(탈퇴·해산).
+   * 클라 저장이지만 새는 정보가 없다: 서버는 이 gid로 `그 서버 × 그 길드`의 최신 메시지 id
+   * **하나**만 계산하고(본문·소속 미노출), 실제 길드 메시지 조회는 그대로 소속 검증을 거친다.
+   */
+  const rememberGid = useCallback((gid: string | null) => {
+    if (!gid) {
+      gidCacheRef.current = null;
+      try {
+        localStorage.removeItem(GID_KEY);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    const next = { sid: serverIdRef.current, gid };
+    const cur = gidCacheRef.current;
+    if (cur && cur.sid === next.sid && cur.gid === next.gid) return;
+    gidCacheRef.current = next;
+    try {
+      localStorage.setItem(GID_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  /**
+   * ── 미니바 노티점 —— 서버 latestIds vs 로컬 seen. 어느 채널이든 새 것이면 점.
+   * 귓속말은 '내용·발신자'를 미니바에 절대 노출하지 않으므로 점만 켠다(프라이버시).
+   *
+   * 의도: 미니바 **본문은 항상 전체 채널**, **점은 전체/길드/귓속말 공통 1개**. 그래서 세 채널이
+   * 각각 점을 켤 수 있어야 한다 — 확인 경로:
+   *  · 전체  — lite 폴링이 `latestIds.all`을 항상 준다 → seen.all과 다르면 점.
+   *  · 길드  — lite 응답엔 소속 정보가 없어 서버가 `gid` 파라미터로만 길드 최신 id를 계산한다.
+   *            gid는 전체 조회로 배운 값(myGuildIdRef) 또는 로컬 캐시(gidCacheRef)에서 나온다.
+   *            둘 다 비면 `latestIds.guild`가 null로 와서 **점이 영영 안 켜진다**(2026-08-07 버그A).
+   *  · 귓속말 — `latestIds.whisper`(내 수신함 최신 id) ≠ seen.whisper.
+   * seen은 "실제로 그 채널을 본 순간"에만 전진한다(아래 absorbSeen) — 닫힌 상태에서 전진시키면
+   * 새 메시지를 본 적도 없이 삼켜 점이 안 켜진다.
+   */
   const recomputeDot = useCallback(() => {
     const ids = latestIdsRef.current;
     const s = seenRef.current;
@@ -254,7 +349,7 @@ export function ChatDock() {
     },
     [recomputeDot],
   );
-  /** 지금 보고 있는 채널(+다 읽은 귓속말)은 서버 최신 id를 그대로 확인 처리한다. */
+  /** 지금 **보고 있는** 채널만 서버 최신 id를 확인 처리한다(닫힌 상태에선 어느 채널도 전진 없음). */
   const absorbSeen = useCallback(() => {
     const ids = latestIdsRef.current;
     // 첫 방문 — 기록이 없으면 "이미 다 본 상태"에서 시작한다(서버 id가 하나라도 온 뒤에).
@@ -273,8 +368,13 @@ export function ChatDock() {
     if (openRef.current) {
       if (viewTabRef.current === 'all') setSeen('all', ids.all);
       else if (viewTabRef.current === 'guild') setSeen('guild', ids.guild);
+      // 귓속말 흡수는 **패널 열림 + WhisperPane 마운트 중**(=귓속말 탭)에만 — 그때만 threads가
+      // 신선해 unread 0을 믿을 수 있다. 닫힌 상태에서도 돌렸더니, 마지막으로 알던 unread가
+      // 0이면 새 귓속말의 최신 id를 '본 것'으로 삼켜 점이 영영 안 켜졌다(2026-08-07 버그B).
+      if (viewTabRef.current === 'whisper' && whisperUnreadRef.current === 0) {
+        setSeen('whisper', ids.whisper);
+      }
     }
-    if (whisperUnreadRef.current === 0) setSeen('whisper', ids.whisper);
     recomputeDot();
   }, [recomputeDot, setSeen]);
 
@@ -365,44 +465,63 @@ export function ChatDock() {
   );
 
   /**
-   * iOS 키보드 겹침 보정 — 레이아웃 뷰포트는 안 줄고 visualViewport만 줄어드는 환경(iOS)에서
-   * 가려진 높이만큼 패널을 올린다. 레이아웃까지 같이 줄어드는 환경(Android)은 차이가 0이라 무해.
+   * 키보드 기하 — **계산식 보정이 아니라 비주얼 뷰포트 직결**(2026-08-07 재구조).
    *
-   * offsetTop을 함께 재는 이유(2026-08-07 귓속말 검색바 제보) — iOS는 포커스된 필드를 보이게
-   * 만들 때 두 수단 중 하나를 고른다: ① 비주얼 뷰포트를 그대로 두거나(offsetTop=0),
-   * ② 레이아웃 뷰포트 안에서 비주얼 뷰포트를 아래로 **팬**한다(offsetTop>0).
-   * kbOffset은 "레이아웃 바닥에서 키보드 윗변까지의 거리"라 ②에서는 정상적으로 0에 가까워지는데,
-   * 패널 bottom이 `max(kbOffset, GNB오프셋)`이라 GNB 바닥값이 이겨 패널이 키보드에 붙지 못하고
-   * 그 틈으로 GNB와 페이지 배경이 드러났다. 동시에 top은 레이아웃 기준이라 팬한 만큼 화면 위로
-   * 밀려 나가, 정작 타이핑 중인 검색바가 화면 밖으로 사라졌다.
-   * 채팅 입력창(패널 하단)에서 안 터진 이유는 첫 resize에 패널 bottom이 먼저 올라가 필드가
-   * 이미 보이는 상태가 되고, 그래서 iOS가 ②를 고를 일이 없기 때문이다(=offsetTop 0 유지).
+   * 예전엔 top/bottom을 `max(키보드높이, GNB오프셋)` 같은 식으로 밀었다. 이론상 맞는 식인데
+   * 실기기 iOS에선 어긋난다 — 키보드 등장 애니메이션·URL바 접힘·"포커스된 필드를 보이게 하려고
+   * 레이아웃 뷰포트 안에서 비주얼 뷰포트를 아래로 팬하는" 동작이 서로 다른 프레임에 들어와,
+   * 어느 한 프레임에서는 패널이 키보드에 못 붙거나(그 틈으로 GNB·배경 노출) 화면 위로 밀려
+   * 나갔다(타이핑 중인 검색바가 사라짐). 식이 참조하는 값이 프레임마다 정합하지 않는 게 원인이라
+   * 항을 더 붙이는 방식으로는 끝이 안 난다.
    *
-   * 그래서 아래 렌더에서 top·bottom을 offsetTop만큼 되돌린다. offsetTop=0이면 두 식은 기존
-   * 식과 **완전히 같은 값**이라 지금 잘 동작하는 경로(채팅 입력창)는 그대로다.
+   * 그래서 키보드가 열린 동안은 패널 박스를 비주얼 뷰포트 **그 자체**로 만든다:
+   * top 0 · height = vv.height · translateY(vv.offsetTop). 화면(비주얼 뷰포트) 전체를 덮으므로
+   * 헤더·GNB가 비칠 틈이 구조적으로 없고, 내부가 flex라 입력줄은 늘 키보드 바로 위다.
+   * 키보드가 닫히면(kb=0) 기존 CSS 경로(PANEL_TOP/PANEL_BOTTOM)로 그대로 돌아간다 —
+   * 두 모드 분기라 무키보드 동작은 완전히 보존된다.
+   *
+   * 반영은 ref+style 직접 조작이 먼저(리딩 에지), setState는 같은 값을 뒤따른다 — 등장
+   * 애니메이션 중에는 React 리렌더 한 틱만 늦어도 그 프레임에 배경이 보인다.
    */
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
     if (!vv) return;
-    let prevKb = 0;
+    let raf = 0;
+    let prevOn = false;
     const update = () => {
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKbOffset(Math.round(kb));
-      setVvTop(Math.round(Math.max(0, vv.offsetTop)));
+      // 레이아웃 뷰포트 대비 축소량으로 판정 — 팬(offsetTop>0) 중에도 값이 흔들리지 않는다.
+      const on = window.innerHeight - vv.height > KB_MIN;
+      const box: KbBox | null = on
+        ? { h: Math.round(vv.height), top: Math.round(Math.max(0, vv.offsetTop)) }
+        : null;
+      applyPanelBox(panelRef.current, box);
+      setKbBox((prev) => {
+        if (!box) return prev === null ? prev : null;
+        return prev && prev.h === box.h && prev.top === box.top ? prev : box;
+      });
       // 키보드가 '열리는 전이'에만 바닥 고정 — 열린 채 유지 중엔 스크롤을 뺏지 않는다
       // (visualViewport는 스크롤 중에도 발화해, 매번 바닥으로 끌면 위로 못 읽는다).
-      if (kb > 0 && prevKb === 0) requestAnimationFrame(() => scrollToBottom());
-      prevKb = kb;
+      if (on && !prevOn) requestAnimationFrame(() => scrollToBottom());
+      prevOn = on;
+    };
+    // rAF 스로틀(리딩 에지) — 이벤트 즉시 1회 반영하고, 같은 프레임의 나머지는 프레임 끝 1회로 묶는다.
+    const onVv = () => {
+      update();
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
     };
     update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
+    vv.addEventListener('resize', onVv);
+    vv.addEventListener('scroll', onVv);
     return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-      setKbOffset(0);
-      setVvTop(0);
+      if (raf) cancelAnimationFrame(raf);
+      vv.removeEventListener('resize', onVv);
+      vv.removeEventListener('scroll', onVv);
+      setKbBox(null);
     };
   }, [open, scrollToBottom]);
 
@@ -423,7 +542,9 @@ export function ChatDock() {
       const t = forTab ?? tabRef.current;
       try {
         // gid — 서버가 길드 채널 최신 id(latestIds.guild)를 계산할 때만 쓴다(모르면 생략).
-        const gid = myGuildIdRef.current;
+        // 로컬 캐시 폴백 — 전체 조회 전(새로고침 직후 닫힌 상태)엔 소속을 아직 모른다.
+        // 서버가 다른 캐시는 sid 확인 시점에 지워지고, 남아도 `server_id`가 안 맞아 null이 온다.
+        const gid = myGuildIdRef.current ?? gidCacheRef.current?.gid ?? null;
         const res = await fetch(
           `/api/chat/recent?limit=${limit}&channel=${t}${lite ? '&lite=1' : ''}${
             after ? `&after=${encodeURIComponent(after)}` : ''
@@ -478,6 +599,8 @@ export function ChatDock() {
               : (data.guild ?? null),
           );
           setGuildTopic(data.guildChannel ?? null);
+          // 소속을 확인한 유일한 지점 — 캐시도 여기서만 쓰고 지운다(탈퇴·해산이면 null → 삭제).
+          rememberGid(data.guild?.id ?? null);
         }
         if (data.blocked) {
           const next = new Map(data.blocked.map((b) => [b.id, b.nickname]));
@@ -494,7 +617,7 @@ export function ChatDock() {
         return null;
       }
     },
-    [absorbSeen],
+    [absorbSeen, rememberGid],
   );
 
   // 초기 로드 — 최근 1개(미니바 = 항상 전체 채널).
@@ -529,6 +652,8 @@ export function ChatDock() {
   const prevSidRef = useRef<number | null>(null);
   useEffect(() => {
     if (sid === null) return;
+    // 다른 서버에서 저장한 길드 id는 여기서 버린다(남겨두면 잘못된 채널의 최신 id를 묻게 된다).
+    if (gidCacheRef.current && gidCacheRef.current.sid !== sid) rememberGid(null);
     if (prevSidRef.current !== null && prevSidRef.current !== sid) {
       setMessages([]);
       setLatest(null);
@@ -536,7 +661,7 @@ export function ChatDock() {
       bufRef.current = { all: { messages: [] }, guild: { messages: [] } };
     }
     prevSidRef.current = sid;
-  }, [sid]);
+  }, [sid, rememberGid]);
 
   // Realtime 구독 — **패널이 열린 동안만**(2026-08-06, 동접 1천 대비). 닫힌 유저까지 상시
   // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
@@ -652,7 +777,8 @@ export function ChatDock() {
       });
   }, [open, enabled]);
 
-  // 미읽음이 0으로 확정되면 서버 최신 귓속말 id를 확인 처리(미니바 점 해제).
+  // 귓속말 탭에서 미읽음이 0으로 확정되는 순간 최신 id를 확인 처리(미니바 점 해제).
+  // 탭·열림도 의존성 — 귓속말 탭으로 들어온 그 순간에도 판정이 돌아야 한다.
   useEffect(() => {
     absorbSeen();
   }, [whisperUnread, tab, open, absorbSeen]);
@@ -1139,7 +1265,7 @@ export function ChatDock() {
                 <span aria-hidden className="relative text-[12px]">
                   💬
                   {collapsedUnseen || notiDot ? (
-                    <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
+                    <span className="absolute -top-[3px] -left-[3px] h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
                   ) : null}
                 </span>
               </button>
@@ -1156,7 +1282,7 @@ export function ChatDock() {
                   <span aria-hidden className="relative">
                     💬
                     {notiDot ? (
-                      <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
+                      <span className="absolute -top-[3px] -left-[3px] h-1.5 w-1.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
                     ) : null}
                   </span>
                 </button>
@@ -1191,17 +1317,10 @@ export function ChatDock() {
 
       {/* 전체 패널 — 헤더·GNB 사이를 덮는 불투명 오버레이 */}
       {open ? (
-        <div
-          className="fixed inset-x-0 z-20"
-          style={{
-            // 비주얼 뷰포트가 팬된 만큼(vvTop) 위·아래 기준선을 함께 옮겨 패널이 화면에 붙어 있게.
-            // vvTop=0이면 두 식 모두 기존 식과 같은 값이다(위 effect 주석).
-            top: `max(${vvTop}px, calc(3rem + env(safe-area-inset-top)))`,
-            // 키보드가 열리면(kbOffset>0) GNB 오프셋 대신 키보드 위로 — max()로 큰 쪽 채택.
-            // 팬 중에는 GNB도 함께 밀려 있으므로 바닥값에서 vvTop을 뺀다(안 빼면 그 틈이 노출).
-            bottom: `max(${kbOffset}px, calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px) - ${vvTop}px))`,
-          }}
-        >
+        // z-40 — 키보드 모드에서 패널이 화면 전체를 덮는데, 헤더(z-30)·GNB(z-30)가 그 위로
+        // 그려지면 덮은 의미가 없다(모달 z-50 아래는 유지). 무키보드 모드에선 겹치는 구간
+        // 자체가 없어 z만 올라간다.
+        <div ref={panelRef} className="fixed inset-x-0 z-40" style={panelBoxStyle(kbBox)}>
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
             <header className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
               <div className="flex items-center gap-4">
@@ -1290,19 +1409,27 @@ export function ChatDock() {
                   </button>
                 </div>
               ) : null}
+              {/* 날짜 구분선 — 귓속말 스레드와 같은 컴포넌트·같은 규칙(시스템 라인도 날짜 계산에
+                  포함). 구분선을 사이에 두면 연속 발언 묶음도 끊는다(prevMsg 생략). */}
               {(tab !== 'guild' || myGuild) &&
-                visibleMessages.map((m, i) => (
-                  <ChatRow
-                    key={m.id}
-                    m={m}
-                    prevMsg={visibleMessages[i - 1]}
-                    me={me}
-                    meNickname={meNickname}
-                    serverId={sid ?? 1}
-                    onProfile={openProfile}
-                    onReport={onReport}
-                  />
-                ))}
+                visibleMessages.map((m, i) => {
+                  const prev = visibleMessages[i - 1];
+                  const date = chatDateLabel(m.createdAt, prev?.createdAt);
+                  return (
+                    <Fragment key={m.id}>
+                      {date ? <ChatDateDivider label={date} /> : null}
+                      <ChatRow
+                        m={m}
+                        prevMsg={date ? undefined : prev}
+                        me={me}
+                        meNickname={meNickname}
+                        serverId={sid ?? 1}
+                        onProfile={openProfile}
+                        onReport={onReport}
+                      />
+                    </Fragment>
+                  );
+                })}
             </div>
 
             {unseenBelow ? (
