@@ -557,12 +557,9 @@ export function DeployBoard({
     return m;
   }, [members]);
 
-  // 노드 라벨 — 3초마다 인원↔전투력 토글.
-  const [showPower, setShowPower] = useState(false);
-  useEffect(() => {
-    const t = setInterval(() => setShowPower((v) => !v), 3000);
-    return () => clearInterval(t);
-  }, []);
+  // 노드 라벨 인원↔전투력 토글 — 클럭은 라벨 Ticker(표시 지점)가 보유(2026-08-07 렌더 감사:
+  // 이전엔 여기 setInterval이 화면 켜둔 내내 3초마다 보드 전체를 리렌더). 절대시각 파생
+  // (floor(now/3000)%2)이라 라벨 인스턴스 여러 개가 서로 동기.
 
   // 전투 윈도 잠금(KST 23:00~익일 01:00) — 라이브 시계로 판정. Date.now()는 UTC epoch라 단말 표준시 무관.
   // 서버 isConquestLockWindow(23시 정산 + 00시 공개·소유권 이전)와 동일 공식이어야 UI/서버가 일치.
@@ -701,7 +698,11 @@ export function DeployBoard({
               {/* 배치 요약 라벨 — 우리 배치가 있으면 인원↔전투력 토글(노드 하단) */}
               {dep && (
                 <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/75 px-1 text-[7px] font-bold leading-[1.4] text-white shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
+                  <Ticker intervalMs={3000}>
+                    {(now) =>
+                      Math.floor(now / 3000) % 2 === 1 ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`
+                    }
+                  </Ticker>
                 </span>
               )}
               <MapPins home={isHome} selected={isSel} />

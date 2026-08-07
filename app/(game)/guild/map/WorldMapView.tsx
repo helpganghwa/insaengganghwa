@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { Ticker } from '@/components/Ticker';
 
@@ -169,6 +169,260 @@ function fmtRemain(ms: number): string {
   return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
 }
 
+
+/**
+ * 지도 본체(2026-08-07 렌더 감사) — memo 분리. 이전엔 selectedId·팝업·연대기 탭·컨펌 카운트 등
+ * UI state 하나만 바뀌어도 노드 50개+간선 SVG 3패스+문양 img가 통째로 재조정됐다.
+ * props는 전부 RSC props·useMemo 배열·원시값·state setter(안정 참조)라 추가 안정화 없이 memo 실효.
+ * ⚠ 시간 파생 렌더를 여기로 들여오지 말 것 — memo에 갇혀 시간 전이가 끊긴다(이번 주 회귀 패턴).
+ *   쿨타임·수금 타이머는 팝업 쪽 Ticker 소관.
+ */
+type EdgeSeg = { a: number; b: number; x1: number; y1: number; x2: number; y2: number };
+const WorldMap = memo(function WorldMap({
+  mapSrc,
+  edges,
+  zones,
+  selectedId,
+  residence,
+  replayActive,
+  replayOwners,
+  replayingTab,
+  replay,
+  replayYesterday,
+  nodeShowGuild,
+  embedded,
+  showConquest,
+  onShowConquest,
+  onSelect,
+  setReplayLayer,
+}: {
+  mapSrc: string;
+  edges: EdgeSeg[];
+  zones: Zone[];
+  selectedId: number | null;
+  residence: number | null;
+  replayActive: boolean;
+  replayOwners: Record<number, string | null> | null;
+  replayingTab: 'today' | 'yesterday' | null;
+  replay: ConquestReplay | null;
+  replayYesterday: ConquestReplay | null;
+  nodeShowGuild: boolean;
+  embedded: boolean;
+  showConquest: boolean;
+  onShowConquest: (v: boolean) => void;
+  onSelect: (zoneId: number) => void;
+  setReplayLayer: (el: HTMLDivElement | null) => void;
+}) {
+  return (
+    <>
+      {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
+      {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
+          위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
+      <div
+        className={`relative isolate aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950 ${
+          // z-10 — 뒤따르는 연대기 섹션(정적, DOM 후순위)이 고정된 지도 위로 덮는 것을 막는다.
+          //  채팅 패널(z-20 fixed)·헤더(z-30)보다는 아래라 기존 스태킹은 그대로.
+          replayActive ? 'sticky top-0 z-10' : ''
+        }`}
+      >
+        {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
+        <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={mapSrc}
+          alt="월드맵"
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과.
+            어두운 외곽선 + 따뜻한 앰버 본선(밝은·어두운 지형 모두에서 또렷). 선택 구역의 길은 강조. */}
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        >
+          {(() => {
+            const isSel = (e: { a: number; b: number }) =>
+              selectedId != null && (e.a === selectedId || e.b === selectedId);
+            // 이동 가능한 길 — 내 거주지에 인접한 간선만 또렷하게(점령지 배치 화면과 같은 방식).
+            // 거주지가 없으면(최초 정착 전) 전부 또렷.
+            const isWalk = (e: { a: number; b: number }) =>
+              residence == null || e.a === residence || e.b === residence;
+            return (
+              <>
+                {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
+                {edges.map((e) => (
+                  <line
+                    key={`h${e.a}-${e.b}`}
+                    x1={e.x1}
+                    y1={e.y1}
+                    x2={e.x2}
+                    y2={e.y2}
+                    stroke="#000000"
+                    strokeOpacity={isWalk(e) ? 0.42 : 0.26}
+                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 1 : 0.75}
+                    strokeLinecap="round"
+                  />
+                ))}
+                {/* 2) 본선 — 비선택(따뜻한 앰버, 중간 강도) */}
+                {edges
+                  .filter((e) => !isSel(e))
+                  .map((e) => (
+                    <line
+                      key={`m${e.a}-${e.b}`}
+                      x1={e.x1}
+                      y1={e.y1}
+                      x2={e.x2}
+                      y2={e.y2}
+                      stroke={isWalk(e) ? '#fde047' : '#cbd5e1'}
+                      strokeOpacity={isWalk(e) ? 0.95 : 0.45}
+                      strokeWidth={isWalk(e) ? 0.72 : 0.5}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                {/* 3) 선택 구역 길 — 강조(맨 위) */}
+                {edges
+                  .filter(isSel)
+                  .map((e) => (
+                    <line
+                      key={`s${e.a}-${e.b}`}
+                      x1={e.x1}
+                      y1={e.y1}
+                      x2={e.x2}
+                      y2={e.y2}
+                      stroke="#fde047"
+                      strokeOpacity={0.92}
+                      strokeWidth={0.85}
+                      strokeLinecap="round"
+                    />
+                  ))}
+              </>
+            );
+          })()}
+        </svg>
+        {/* 우하단 탭 — 세계지도 / 점령현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
+            세계지도=노드 구역명·하단 역사, 점령현황=노드 점령 길드명·하단 점령 현황.
+            embedded(세계지도 탭)에서는 노드=구역명·하단=점령현황 고정이라 이 탭을 숨긴다. */}
+        {!embedded && (
+          <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
+            {(
+              [
+                ['history', '세계지도'],
+                ['conquest', '점령현황'],
+              ] as const
+            ).map(([k, label]) => {
+              const active = (k === 'conquest') === showConquest;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => onShowConquest(k === 'conquest')}
+                  aria-pressed={active}
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                    active ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {zones.map((z) => {
+          // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
+          const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
+          const owned = rOwner !== undefined ? rOwner != null : z.ownerGuildId != null;
+          const activeReplay = replayingTab === 'yesterday' ? replayYesterday : replay;
+          const emblemUrl =
+            rOwner !== undefined
+              ? rOwner != null
+                ? (activeReplay?.guilds[rOwner]?.emblemUrl ?? null)
+                : null
+              : z.ownerEmblemUrl;
+          const emblemColor =
+            rOwner !== undefined
+              ? rOwner != null
+                ? (activeReplay?.guilds[rOwner]?.color ?? null)
+                : null
+              : z.ownerEmblemColor;
+          const isResidence = z.id === residence;
+          const color = REGION[z.region].color;
+          return (
+            <button
+              key={z.id}
+              type="button"
+              onClick={() => onSelect(z.id)}
+              aria-label={z.name}
+              // p-2: 시각 노드(17px)는 그대로 두고 투명 패딩으로 터치 히트영역 확대(~33px, 오탭 완화).
+              className="absolute -translate-x-1/2 -translate-y-1/2 p-2"
+              style={{
+                left: `${z.mapX}%`,
+                top: `${z.mapY}%`,
+                zIndex: isResidence ? 20 : owned ? 10 : 1,
+              }}
+            >
+              <span
+                className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
+                style={{
+                  // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
+                  // 중립: 어두운 배경 + 흐린 지역색.
+                  backgroundColor: owned
+                    ? emblemColor
+                      ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
+                      : 'transparent'
+                    : 'rgba(10,12,20,0.45)',
+                  boxShadow: owned ? `0 0 4px ${color}88` : 'none',
+                  outline: `1px solid ${color}${owned ? '' : '88'}`,
+                  // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
+                  outlineOffset: 0,
+                }}
+              >
+                {/* 점령 길드 문양(있으면) — 리플레이 중엔 override 소유 길드의 문양 */}
+                {owned && emblemUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={emblemUrl}
+                    alt=""
+                    aria-hidden
+                    className="h-full w-full object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                ) : null}
+              </span>
+              {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
+              {isResidence && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
+                  <span className="block animate-marker-bob">
+                    <span
+                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
+                      style={{
+                        background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
+                        borderRadius: '50% 50% 50% 0',
+                        transform: 'rotate(-45deg)',
+                      }}
+                    >
+                      <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+                    </span>
+                  </span>
+                </span>
+              )}
+              {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
+              {(nodeShowGuild ? z.ownerGuildName : z.name) && (
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                  style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
+                >
+                  {nodeShowGuild ? z.ownerGuildName : z.name}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+});
 
 export function WorldMapView({
   mapSrc,
@@ -549,211 +803,24 @@ export function WorldMapView({
     // shrink-0 필수 — 명시적 min-h-full은 flex 자동 최소치(min-content)를 대체해, main의
     // 수축이 루트를 콘텐츠보다 작게 줄이고 본문이 박스 밖으로 넘친다(채팅바 가림 원인).
     <div className="flex min-h-full shrink-0 flex-col">
-      {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
-      {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
-          위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
-      <div
-        className={`relative isolate aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950 ${
-          // z-10 — 뒤따르는 연대기 섹션(정적, DOM 후순위)이 고정된 지도 위로 덮는 것을 막는다.
-          //  채팅 패널(z-20 fixed)·헤더(z-30)보다는 아래라 기존 스태킹은 그대로.
-          replayActive ? 'sticky top-0 z-10' : ''
-        }`}
-      >
-        {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
-        <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={mapSrc}
-          alt="월드맵"
-          draggable={false}
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ imageRendering: 'pixelated' }}
-        />
-        {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과.
-            어두운 외곽선 + 따뜻한 앰버 본선(밝은·어두운 지형 모두에서 또렷). 선택 구역의 길은 강조. */}
-        <svg
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-        >
-          {(() => {
-            const isSel = (e: { a: number; b: number }) =>
-              selectedId != null && (e.a === selectedId || e.b === selectedId);
-            // 이동 가능한 길 — 내 거주지에 인접한 간선만 또렷하게(점령지 배치 화면과 같은 방식).
-            // 거주지가 없으면(최초 정착 전) 전부 또렷.
-            const isWalk = (e: { a: number; b: number }) =>
-              residence == null || e.a === residence || e.b === residence;
-            return (
-              <>
-                {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
-                {edges.map((e) => (
-                  <line
-                    key={`h${e.a}-${e.b}`}
-                    x1={e.x1}
-                    y1={e.y1}
-                    x2={e.x2}
-                    y2={e.y2}
-                    stroke="#000000"
-                    strokeOpacity={isWalk(e) ? 0.42 : 0.26}
-                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 1 : 0.75}
-                    strokeLinecap="round"
-                  />
-                ))}
-                {/* 2) 본선 — 비선택(따뜻한 앰버, 중간 강도) */}
-                {edges
-                  .filter((e) => !isSel(e))
-                  .map((e) => (
-                    <line
-                      key={`m${e.a}-${e.b}`}
-                      x1={e.x1}
-                      y1={e.y1}
-                      x2={e.x2}
-                      y2={e.y2}
-                      stroke={isWalk(e) ? '#fde047' : '#cbd5e1'}
-                      strokeOpacity={isWalk(e) ? 0.95 : 0.45}
-                      strokeWidth={isWalk(e) ? 0.72 : 0.5}
-                      strokeLinecap="round"
-                    />
-                  ))}
-                {/* 3) 선택 구역 길 — 강조(맨 위) */}
-                {edges
-                  .filter(isSel)
-                  .map((e) => (
-                    <line
-                      key={`s${e.a}-${e.b}`}
-                      x1={e.x1}
-                      y1={e.y1}
-                      x2={e.x2}
-                      y2={e.y2}
-                      stroke="#fde047"
-                      strokeOpacity={0.92}
-                      strokeWidth={0.85}
-                      strokeLinecap="round"
-                    />
-                  ))}
-              </>
-            );
-          })()}
-        </svg>
-        {/* 우하단 탭 — 세계지도 / 점령현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
-            세계지도=노드 구역명·하단 역사, 점령현황=노드 점령 길드명·하단 점령 현황.
-            embedded(세계지도 탭)에서는 노드=구역명·하단=점령현황 고정이라 이 탭을 숨긴다. */}
-        {!embedded && (
-          <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
-            {(
-              [
-                ['history', '세계지도'],
-                ['conquest', '점령현황'],
-              ] as const
-            ).map(([k, label]) => {
-              const active = (k === 'conquest') === showConquest;
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setShowConquest(k === 'conquest')}
-                  aria-pressed={active}
-                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
-                    active ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {zones.map((z) => {
-          // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
-          const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
-          const owned = rOwner !== undefined ? rOwner != null : z.ownerGuildId != null;
-          const activeReplay = replayingTab === 'yesterday' ? replayYesterday : replay;
-          const emblemUrl =
-            rOwner !== undefined
-              ? rOwner != null
-                ? (activeReplay?.guilds[rOwner]?.emblemUrl ?? null)
-                : null
-              : z.ownerEmblemUrl;
-          const emblemColor =
-            rOwner !== undefined
-              ? rOwner != null
-                ? (activeReplay?.guilds[rOwner]?.color ?? null)
-                : null
-              : z.ownerEmblemColor;
-          const isResidence = z.id === residence;
-          const color = REGION[z.region].color;
-          return (
-            <button
-              key={z.id}
-              type="button"
-              onClick={() => setSelectedId(z.id)}
-              aria-label={z.name}
-              // p-2: 시각 노드(17px)는 그대로 두고 투명 패딩으로 터치 히트영역 확대(~33px, 오탭 완화).
-              className="absolute -translate-x-1/2 -translate-y-1/2 p-2"
-              style={{
-                left: `${z.mapX}%`,
-                top: `${z.mapY}%`,
-                zIndex: isResidence ? 20 : owned ? 10 : 1,
-              }}
-            >
-              <span
-                className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
-                style={{
-                  // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
-                  // 중립: 어두운 배경 + 흐린 지역색.
-                  backgroundColor: owned
-                    ? emblemColor
-                      ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
-                      : 'transparent'
-                    : 'rgba(10,12,20,0.45)',
-                  boxShadow: owned ? `0 0 4px ${color}88` : 'none',
-                  outline: `1px solid ${color}${owned ? '' : '88'}`,
-                  // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
-                  outlineOffset: 0,
-                }}
-              >
-                {/* 점령 길드 문양(있으면) — 리플레이 중엔 override 소유 길드의 문양 */}
-                {owned && emblemUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={emblemUrl}
-                    alt=""
-                    aria-hidden
-                    className="h-full w-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                ) : null}
-              </span>
-              {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
-              {isResidence && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
-                  <span className="block animate-marker-bob">
-                    <span
-                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
-                      style={{
-                        background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
-                        borderRadius: '50% 50% 50% 0',
-                        transform: 'rotate(-45deg)',
-                      }}
-                    >
-                      <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-                    </span>
-                  </span>
-                </span>
-              )}
-              {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
-              {(nodeShowGuild ? z.ownerGuildName : z.name) && (
-                <span
-                  className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                  style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
-                >
-                  {nodeShowGuild ? z.ownerGuildName : z.name}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <WorldMap
+        mapSrc={mapSrc}
+        edges={edges}
+        zones={zones}
+        selectedId={selectedId}
+        residence={residence}
+        replayActive={replayActive}
+        replayOwners={replayOwners}
+        replayingTab={replayingTab}
+        replay={replay}
+        replayYesterday={replayYesterday}
+        nodeShowGuild={nodeShowGuild}
+        embedded={embedded}
+        showConquest={showConquest}
+        onShowConquest={setShowConquest}
+        onSelect={setSelectedId}
+        setReplayLayer={setReplayLayer}
+      />
 
       {/* 거주지 미설정 코치 — 보통 가입 시 랜덤 배정되나, 미설정 상태면 설정을 유도(세금 기여 동선). */}
       {residence == null && (
