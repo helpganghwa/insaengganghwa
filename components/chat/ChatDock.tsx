@@ -561,6 +561,7 @@ export function ChatDock() {
           meNickname?: string | null;
           guild?: { id: string; name: string } | null;
           guildChannel?: string | null;
+          whisperChannel?: string | null;
           blocked?: { id: string; nickname: string }[];
           latestIds?: LatestIds;
         };
@@ -599,6 +600,10 @@ export function ChatDock() {
               : (data.guild ?? null),
           );
           setGuildTopic(data.guildChannel ?? null);
+          // 귓속말 수신 토픽 — threads 응답의 topic과 같은 값이라 하나의 상태로 합쳐 관리한다.
+          // 값이 없을 때 null로 덮지 않는 이유: 이미 threads가 준 토픽이 있으면 그게 정답이고,
+          // 여기서 지우면 상시 구독이 잠깐 끊긴다.
+          setWhisperTopic((prev) => data.whisperChannel ?? prev);
           // 소속을 확인한 유일한 지점 — 캐시도 여기서만 쓰고 지운다(탈퇴·해산이면 null → 삭제).
           rememberGid(data.guild?.id ?? null);
         }
@@ -667,7 +672,8 @@ export function ChatDock() {
   // 구독하면 동시 연결이 접속자 수만큼 쌓이고(Pro 한도 500), broadcast 1건이 전원에게
   // fan-out되어 메시지 쿼터를 태운다. 닫힘 미니바는 코얼레싱 미니 토픽(아래 effect)+60초
   // 폴링 안전망이 담당.
-  // 열림 중엔 전체+내 길드+내 귓속말 수신함 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
+  // 열림 중엔 전체+내 길드 채널 동시 구독(탭 전환 시 재구독 없음 → 전환 즉시).
+  // 귓속말 토픽은 여기 없다 — 열림/닫힘 공통 1개 구독으로 분리했다(아래 상시 구독 effect).
   useEffect(() => {
     if (enabled !== true || sid === null || !open) return;
     const sb = supabaseBrowser();
@@ -689,27 +695,48 @@ export function ChatDock() {
     const chans = [mk(`chat:s${sid}`, 'all')];
     // 길드 토픽은 서버가 소속 검증 후 내려준 값만 사용(HMAC 토큰 포함 — 클라 조립 금지).
     if (guildTopic) chans.push(mk(guildTopic, 'guild'));
-    // 귓속말 수신함 토픽도 서버 발급값만(threads 응답). 패널이 열려 있으면 다른 탭에 있어도
-    // 구독은 유지 — WhisperPane이 없으면(=다른 탭) 탭 점만 켠다.
-    if (whisperTopic) {
-      chans.push(
-        sb
-          .channel(whisperTopic)
-          .on('broadcast', { event: 'new' }, ({ payload }) => {
-            const m = payload as WhisperMessageDto;
-            const consumed = whisperSinkRef.current?.(m) ?? false;
-            // 지금 그 스레드를 보고 있으면(consumed) 미읽음이 아니다.
-            if (!consumed && m.fromUserId !== meRef.current) {
-              setWhisperUnread((n) => (n ?? 0) + 1);
-            }
-          })
-          .subscribe(),
-      );
-    }
     return () => {
       for (const c of chans) void sb.removeChannel(c);
     };
-  }, [enabled, sid, guildTopic, whisperTopic, open, routeIncoming]);
+  }, [enabled, sid, guildTopic, open, routeIncoming]);
+
+  /**
+   * 귓속말 수신 토픽 — **도크 열림/닫힘과 무관하게 상시 1개 구독**(전체/길드와 비대칭).
+   *
+   * 비대칭의 이유는 fan-out 폭이다: 전체·길드 broadcast 1건은 그 채널을 보고 있는 **전원**에게
+   * 복제되므로 닫힌 유저까지 상시 구독시키면 동시 연결·메시지 쿼터가 접속자 수에 비례해 터진다
+   * (그래서 닫힘은 코얼레싱 미니 토픽 + 폴링). 귓속말은 1:1이라 한 건의 수신자가 1명뿐이고,
+   * 연결도 유저당 1개라 상시 구독의 추가 비용이 사실상 없다. 대신 얻는 것은 닫힌 상태에서도
+   * 새 귓속말이 오는 즉시 켜지는 노티점이다(폴링 주기 60~180초를 기다리지 않는다).
+   *
+   * 토픽은 서버 발급값만 쓴다(threads 응답 topic == recent 응답 whisperChannel, 같은 함수).
+   * 미니바에는 내용·발신자를 절대 올리지 않는다 — 점만 켠다(프라이버시).
+   */
+  useEffect(() => {
+    if (enabled !== true || !whisperTopic) return;
+    const sb = supabaseBrowser();
+    if (!sb) return;
+    const ch = sb
+      .channel(whisperTopic)
+      .on('broadcast', { event: 'new' }, ({ payload }) => {
+        const m = payload as WhisperMessageDto;
+        // 패널이 열려 있으면 기존 sink 경로가 우선 — 지금 그 스레드를 보고 있으면 즉시 소비한다
+        // (WhisperPane 미마운트 = 닫힘·다른 탭이면 sink가 없어 false).
+        const consumed = whisperSinkRef.current?.(m) ?? false;
+        // 내가 보낸 메시지(멀티기기 동기화 수신)는 점도 미읽음도 아니다.
+        if (m.fromUserId === meRef.current) return;
+        if (!consumed) setWhisperUnread((n) => (n ?? 0) + 1);
+        if (m.toUserId !== meRef.current) return;
+        latestIdsRef.current = { ...latestIdsRef.current, whisper: m.id };
+        // 소비했으면 그 자리에서 확인 처리(점 억제) — 채널 탭의 routeIncoming과 같은 규칙.
+        if (consumed) setSeen('whisper', m.id);
+        else recomputeDot();
+      })
+      .subscribe();
+    return () => {
+      void sb.removeChannel(ch);
+    };
+  }, [enabled, whisperTopic, recomputeDot, setSeen]);
 
   // 미니바 준실시간(2026-08-06 확정) — **닫힘(비접힘) 동안만** 코얼레싱 미니 토픽 구독.
   // 서버가 15초당 최대 1건(월드 최신 메시지)만 발사해 fan-out 비용 상한 고정 — 한산할 때의
@@ -753,9 +780,10 @@ export function ChatDock() {
       });
   }, [myGuild?.id]);
 
-  // 귓속말 목록 선조회 — 패널을 열 때 1회. 실시간 토픽(서버 발급)과 탭 미읽음 점의 원천이다.
-  // 귓속말 탭을 열지 않아도 배지가 맞아야 하므로 도크가 직접 받는다(WhisperPane은 자기 마운트
-  // 시점에 다시 받아 onThreads로 최신값을 되돌려준다).
+  // 귓속말 목록 선조회 — 패널을 열 때 1회. 탭 미읽음 배지의 원천이다(귓속말 탭을 열지 않아도
+  // 배지가 맞아야 하므로 도크가 직접 받는다 — WhisperPane은 자기 마운트 시점에 다시 받아
+  // onThreads로 최신값을 되돌려준다). 실시간 토픽은 마운트 직후 전체 조회(whisperChannel)가
+  // 이미 채워둔 값과 같다 — 같은 상태에 덮어써도 참조가 같아 재구독이 일어나지 않는다.
   const whisperFetchedRef = useRef(false);
   useEffect(() => {
     if (!open) {
@@ -768,7 +796,7 @@ export function ChatDock() {
       .then(async (r) => (r.ok ? ((await r.json()) as WhisperThreadsRes) : null))
       .then((d) => {
         if (!d) return;
-        setWhisperTopic(d.topic ?? null);
+        setWhisperTopic((prev) => d.topic ?? prev);
         setWhisperSeed(d.threads ?? []);
         setWhisperUnread((d.threads ?? []).reduce((s, t) => s + (t.unread || 0), 0));
       })
@@ -1173,7 +1201,9 @@ export function ChatDock() {
 
   // ── WhisperPane 연결 콜백 —— 전부 안정 참조(패널 내부 effect 재실행 방지).
   const handleWhisperThreads = useCallback((res: WhisperThreadsRes) => {
-    setWhisperTopic(res.topic ?? null);
+    // 토픽은 recent(whisperChannel)·threads(topic)가 같은 값을 주는 단일 상태 — 빈 응답이
+    // 상시 구독을 끊지 않도록 없을 때만 이전 값을 유지한다.
+    setWhisperTopic((prev) => res.topic ?? prev);
     setWhisperSeed(res.threads ?? []);
   }, []);
   const handleWhisperUnread = useCallback((n: number) => setWhisperUnread(n), []);

@@ -11,8 +11,9 @@ export const dynamic = 'force-dynamic';
 
 /**
  * 귓속말 대화 목록(0155) — GET /api/chat/whisper/threads.
- * 실시간 토픽은 **여기서만 발급**한다(realtime.whisperTopic 주석) — 세션 검증을 통과한 응답으로만
- * 전달해 남의 귓속말 토픽 구독을 막는다. 클라가 문자열을 조립하면 그 방어가 무너진다.
+ * 실시간 토픽은 **서버가 세션 검증을 마친 응답으로만 발급**한다(realtime.whisperTopic 주석) —
+ * 여기와 /api/chat/recent(whisperChannel)가 같은 함수로 같은 값을 준다. 클라가 문자열을
+ * 조립하면 남의 귓속말 토픽을 구독할 수 있어 그 방어가 무너진다.
  */
 export async function GET() {
   const userId = await getSessionUserId();

@@ -8,7 +8,7 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getChatBlocks, getMyGuildChannel, getRecentChat, isChatEnabled } from '@/lib/game/chat/service';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
-import { chatTopic } from '@/lib/game/chat/realtime';
+import { chatTopic, whisperTopic } from '@/lib/game/chat/realtime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -118,6 +118,10 @@ export async function GET(req: Request) {
     channel: chatTopic(serverId, guildId),
     // 길드 실시간 토픽(HMAC 토큰 포함) — 소속 검증된 응답으로만 전달(비길드원 도청 차단).
     guildChannel: guild ? chatTopic(serverId, BigInt(guild.guildId)) : null,
+    // 내 귓속말 수신 토픽(HMAC 토큰 포함) — 같은 원칙(세션 검증된 응답으로만 전달). threads
+    // 응답의 topic과 같은 값이다. 클라가 도크를 열지 않아도(=threads를 부르기 전에도) 수신
+    // 토픽을 구독해 노티점을 실시간으로 켤 수 있도록, 마운트 시 도는 이 전체 조회에 동봉한다.
+    whisperChannel: whisperTopic(serverId, userId),
     me: userId,
     meNickname: meChar?.nickname ?? null,
     guild: guild ? { id: guild.guildId, name: guild.guildName } : null,

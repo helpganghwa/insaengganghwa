@@ -163,7 +163,7 @@ export function WhisperPane({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // 목록 상단 유저 검색(새 귓속말) — mention-search 후보(닉네임만).
+  // 목록 하단 유저 검색(새 귓속말) — mention-search 후보(닉네임만).
   const [q, setQ] = useState('');
   const [cands, setCands] = useState<string[]>([]);
   const [resolving, setResolving] = useState(false);
@@ -410,7 +410,7 @@ export function WhisperPane({
     return () => registerSink(null);
   }, [registerSink, sink]);
 
-  // ── 목록 검색바(새 귓속말) — 250ms 디바운스 prefix 검색.
+  // ── 목록 검색줄(새 귓속말) — 250ms 디바운스 prefix 검색.
   useEffect(() => {
     const term = q.trim();
     if (term.length < 1) {
@@ -599,53 +599,21 @@ export function WhisperPane({
   }, [msgs, me, meNickname, self, active]);
 
   const visibleThreads = threads.filter((t) => !blocked.has(t.peerUserId));
+  // 검색 후보 — 입력을 지우면 즉시 감춘다(디바운스가 취소되기 전 잔상 방지).
+  const searchList = q.trim() ? cands : [];
 
   // ─────────────────────────────────────────── 목록
   if (!active) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* 검색바는 가로 전체 — 닫기는 도크 하단(스레드 입력줄)에만 둔다(2026-08-07 피드백). */}
-        <div className="shrink-0 px-2.5 pt-2 pb-1">
-          <ZoomSafeInput
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            maxLength={12}
-            placeholder="닉네임 검색 · 새 귓속말"
-            wrapClassName="h-8 w-full"
-            className="rounded-full border border-zinc-200 bg-zinc-50 px-3.5 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
-          />
-          {error ? (
-            <p className="mt-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
-          ) : null}
-          {q.trim() && cands.length > 0 ? (
-            <ul className="mt-1 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-              {cands.map((n) => (
-                <li key={n}>
-                  <button
-                    type="button"
-                    disabled={resolving}
-                    onClick={() => openByTerm(n, (u) => u.nickname === n)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] font-semibold active:bg-zinc-50 disabled:opacity-50 dark:active:bg-zinc-800/60"
-                  >
-                    <span className="truncate">{n}</span>
-                    <span className="ml-auto shrink-0 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                      귓속말
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pt-2 pb-2">
           {listLoading ? (
             <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
           ) : visibleThreads.length === 0 ? (
             <p className="px-6 py-10 text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
               아직 주고받은 귓속말이 없어요.
               <br />
-              위에서 닉네임을 검색해 말을 걸어보세요.
+              아래에서 닉네임을 검색해 말을 걸어보세요.
             </p>
           ) : (
             <ul>
@@ -713,6 +681,55 @@ export function WhisperPane({
               ))}
             </ul>
           )}
+        </div>
+
+        {/* 검색줄 — 전체·길드 탭의 하단 채팅 입력줄과 같은 구성·자리·스타일(알약 입력 + [닫기]).
+            상단에 뒀을 땐 이 탭만 입력 자리가 달라 손이 헤맸고, 하단이면 키보드 동작도 다른
+            입력줄들과 자동으로 같아진다. 후보는 입력줄 **위**에 칩으로 — 멘션 자동완성과 동일. */}
+        <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
+          {error ? (
+            <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
+          ) : null}
+          {searchList.length > 0 ? (
+            <div className="mb-1 flex flex-wrap gap-1">
+              {searchList.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  // 포커스를 뺏지 않아 후보를 골라도 키보드가 유지된다(멘션 칩과 같은 규칙).
+                  // disabled 속성은 pointerdown을 삼켜 입력창 포커스가 풀리므로 aria로 대체.
+                  onPointerDown={(e) => e.preventDefault()}
+                  aria-disabled={resolving}
+                  onClick={() => {
+                    if (!resolving) openByTerm(n, (u) => u.nickname === n);
+                  }}
+                  className={`rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 ${
+                    resolving ? 'opacity-40' : ''
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="flex items-center gap-1.5">
+            <ZoomSafeInput
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              maxLength={12}
+              placeholder="닉네임 검색 · 새 귓속말"
+              wrapClassName="h-9 min-w-0 flex-1"
+              className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="채팅 닫기"
+              className="h-9 w-[54px] shrink-0 rounded-full bg-zinc-100 text-[12.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
     );
