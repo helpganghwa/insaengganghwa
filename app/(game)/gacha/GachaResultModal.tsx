@@ -2,7 +2,7 @@
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout } from '@/components/ModalLayout';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useMemo, useEffect, useRef, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -20,7 +20,8 @@ import type { OpenedItem } from './actions';
  * 초월 연출(transcended>0): 단계마다 ① 부르르 떨림 → ② ✦수치가 한 단계 오르며 테두리/별/색이
  * 새 등급으로 전환(같은 10레벨 색 구간이면 테두리는 그대로). 빛 효과는 사용하지 않음.
  */
-function ResultCard({
+// memo(2026-08-07) — sortedResults useMemo로 r 참조가 안정된 뒤에야 유효(위 주석 참조).
+const ResultCard = memo(function ResultCard({
   r,
   slot,
   big,
@@ -122,7 +123,7 @@ function ResultCard({
       </span>
     </button>
   );
-}
+});
 
 export function GachaResultModal({
   slot,
@@ -145,22 +146,35 @@ export function GachaResultModal({
   onClose: () => void;
 }) {
   // ② 같은 종류는 하나로 묶기 — 박스 순서상 마지막 엔트리가 최종 상태(누적), transcended 합산·count.
-  const groupedMap = new Map<number, OpenedItem & { count: number }>();
-  for (const r of results) {
-    const g = groupedMap.get(r.catalogItemId);
-    groupedMap.set(r.catalogItemId, {
-      ...r, // 최종(transcendLevel/Progress/championRank)은 최신 엔트리
-      count: (g?.count ?? 0) + 1,
-      transcended: (g?.transcended ?? 0) + r.transcended,
-      isNew: (g?.isNew ?? false) || r.isNew,
-      loreTeaser: g?.loreTeaser ?? r.loreTeaser,
-    });
-  }
-  // ③ 초월 수치 내림차순 → 동률이면 다음 초월에 가까운(진행도 비율) 순.
-  const sortedResults = [...groupedMap.values()].sort(
-    (a, b) =>
-      b.transcendLevel - a.transcendLevel ||
-      b.transcendProgress / (b.transcendLevel + 1) - a.transcendProgress / (a.transcendLevel + 1),
+  // useMemo(2026-08-07 렌더 감사) — 로어 토글·자동반복 체크 등 모든 리렌더마다 재계산돼
+  // 새 객체 배열이 만들어지고, 그 참조 때문에 ResultCard memo가 무효였다(순서: 안정화 → memo).
+  const sortedResults = useMemo(() => {
+    const groupedMap = new Map<number, OpenedItem & { count: number }>();
+    for (const r of results) {
+      const g = groupedMap.get(r.catalogItemId);
+      groupedMap.set(r.catalogItemId, {
+        ...r, // 최종(transcendLevel/Progress/championRank)은 최신 엔트리
+        count: (g?.count ?? 0) + 1,
+        transcended: (g?.transcended ?? 0) + r.transcended,
+        isNew: (g?.isNew ?? false) || r.isNew,
+        loreTeaser: g?.loreTeaser ?? r.loreTeaser,
+      });
+    }
+    // ③ 초월 수치 내림차순 → 동률이면 다음 초월에 가까운(진행도 비율) 순.
+    return [...groupedMap.values()].sort(
+      (a, b) =>
+        b.transcendLevel - a.transcendLevel ||
+        b.transcendProgress / (b.transcendLevel + 1) - a.transcendProgress / (a.transcendLevel + 1),
+    );
+  }, [results]);
+  // 카드별 토글 콜백 — sortedResults와 함께만 재생성(로어 열림 state에 비의존 = 카드 memo 유지).
+  const loreToggles = useMemo(
+    () =>
+      sortedResults.map((r, i) => () => {
+        if (!r.isNew) return;
+        setOpenLoreIdx((cur) => (cur === i ? null : i));
+      }),
+    [sortedResults],
   );
   const single = results.length === 1 ? results[0]! : null;
   const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
@@ -289,15 +303,7 @@ export function GachaResultModal({
               {/* 3열 — 4열은 정보를 담기에 좁다(2026-07-29 피드백). 컨텐츠만 스크롤되므로 줄 수는 무관. */}
               <div className="grid grid-cols-3 gap-1.5">
                 {sortedResults.map((r, i) => (
-                  <ResultCard
-                    key={i}
-                    r={r}
-                    slot={slot}
-                    onClick={() => {
-                      if (!r.isNew) return;
-                      setOpenLoreIdx(openLoreIdx === i ? null : i);
-                    }}
-                  />
+                  <ResultCard key={i} r={r} slot={slot} onClick={loreToggles[i]} />
                 ))}
                 {/* 10칸 자리채움(2026-07-16 고객 문의) — 중복 묶음으로 카드 수가 1~10 가변이라
                     줄 수가 바뀌며 하단 버튼이 이동. 실카드와 동일 규격(그리드 폭 × aspect-square

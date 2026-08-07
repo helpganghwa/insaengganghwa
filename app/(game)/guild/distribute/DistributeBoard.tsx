@@ -96,11 +96,16 @@ export function DistributeBoard({
   const remaining = pool - total;
   const over = total > pool;
 
-  /** 분배 대상(금액 > 0) + 기여가 있는 사람은 항상 노출 — 나머지는 접는다. */
-  const shown = members.filter(
-    (m) => amtOf(m.userId) > 0 || m.contribution > 0 || m.userId in override,
-  );
-  const hidden = members.filter((m) => !shown.includes(m));
+  /** 분배 대상(금액 > 0) + 기여가 있는 사람은 항상 노출 — 나머지는 접는다.
+   * Set 판정(2026-08-07 렌더 감사) — 종전 `!shown.includes(m)`는 O(n²)라 대형 길드에서
+   * 금액 키 입력마다(리렌더마다) 인원² 비교가 돌았다. */
+  const { shown, hidden } = useMemo(() => {
+    const s = members.filter(
+      (m) => (amounts[m.userId] ?? 0) > 0 || m.contribution > 0 || m.userId in override,
+    );
+    const set = new Set(s.map((m) => m.userId));
+    return { shown: s, hidden: members.filter((m) => !set.has(m.userId)) };
+  }, [members, amounts, override]);
   const visible = expandZero ? members : shown;
 
   const setAmt = (userId: string, raw: string) => {

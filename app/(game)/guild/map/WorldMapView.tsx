@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
 
 import { Ticker } from '@/components/Ticker';
 
@@ -64,7 +64,9 @@ type Zone = {
  *   칩/밑줄로 구분(색이 아닌 형태로 강조).
  * zoneColor: 구역 이름 → 색(zones 기반). 미매칭이면 null(기본 색 유지). 지역 카테고리는 마커 없이 일반 텍스트.
  */
-function ChronicleText({
+// memo(2026-08-07 렌더 감사) — 부모 UI state 변경마다 연대기 전문을 정규식 재파싱하던 것 차단.
+// 콜백 3종(zoneColor·onGuild·onZone)은 부모에서 useCallback으로 안정화됨(전제).
+const ChronicleText = memo(function ChronicleText({
   text,
   zoneColor,
   zoneNameById,
@@ -149,7 +151,7 @@ function ChronicleText({
   }
   if (last < text.length) out.push(<span key={key++}>{text.slice(last)}</span>);
   return <>{out}</>;
-}
+});
 
 // 지역 라벨·색 — 공용 메타(길드 팝업 칩과 동일 출처).
 const REGION = REGION_META;
@@ -607,7 +609,8 @@ export function WorldMapView({
     for (const z of zones) m.set(z.name, REGION[z.region].color);
     return m;
   }, [zones]);
-  const zoneColor = (name: string) => zoneColorMap.get(name) ?? null;
+  // useCallback 3종(2026-08-07) — ChronicleText memo의 전제(불안정 참조면 memo 100% 무효).
+  const zoneColor = useCallback((name: string) => zoneColorMap.get(name) ?? null, [zoneColorMap]);
 
   // 연대기 구역명 클릭 → 구역 상세 모달(이름→id). 이름은 50구역 고정이라 항상 매칭.
   const zoneIdByName = useMemo(() => {
@@ -621,10 +624,13 @@ export function WorldMapView({
     for (const z of zones) m.set(z.id, z.name);
     return m;
   }, [zones]);
-  const openZoneByName = (name: string) => {
-    const id = zoneIdByName.get(name);
-    if (id != null) setSelectedId(id);
-  };
+  const openZoneByName = useCallback(
+    (name: string) => {
+      const id = zoneIdByName.get(name);
+      if (id != null) setSelectedId(id);
+    },
+    [zoneIdByName],
+  );
   // 연대기 길드명 클릭 → 길드 상세 팝업. 마커의 불변 길드id로 조회(0141) — 이름 폴백은 레거시 마커용.
   type GuildPopup = {
     guildId: number;
@@ -640,13 +646,13 @@ export function WorldMapView({
     zones: { name: string; region: Region }[];
   };
   const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
-  const openGuild = (name: string, guildId?: number) => {
+  const openGuild = useCallback((name: string, guildId?: number) => {
     getGuildSummaryAction(name, guildId)
       .then((r) => {
         if (r.status === 'success' && r.guild) setGuildPopup(r.guild);
       })
       .catch(() => {});
-  };
+  }, []);
   // 길드 팝업 복원(2026-07-21) — 길드장 프로필 이동 후 뒤로가기 시 팝업 재오픈(구역 팝업과 동일 패턴).
   // useLayoutEffect — 페인트 전 복원(구역 팝업과 동일, 2026-07-22).
   useLayoutEffect(() => {

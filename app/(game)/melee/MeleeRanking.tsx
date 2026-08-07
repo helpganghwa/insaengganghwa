@@ -151,6 +151,13 @@ export function useMeleeRanking({
   const paged = mode !== 'guild';
   const hasUp = paged && first != null && first > 1;
   const hasDown = paged && last != null && last < participantCount;
+  // ref 미러(2026-08-07 렌더 감사) — loadMore가 first/last를 deps로 가지면 append마다 새
+  // 함수 → up/down 재생성 → Sentinel의 IntersectionObserver가 매 페이지마다 재설치됐다.
+  // 커서·경계는 ref로 읽어 loadMore를 영구 안정화(관찰자 1회 설치 유지).
+  const cursorRef = useRef({ first, last, hasUp, hasDown, mode, battleId });
+  useEffect(() => {
+    cursorRef.current = { first, last, hasUp, hasDown, mode, battleId };
+  }, [first, last, hasUp, hasDown, mode, battleId]);
 
   useEffect(() => {
     if (!enabled || loadedFor.current === mode) return;
@@ -232,33 +239,39 @@ export function useMeleeRanking({
   }, [enabled, battleId, mode]);
 
   /** 아래/위 이어붙이기 — 위 방향은 prepend 후 scrollTop을 늘어난 높이만큼 보정. */
-  const loadMore = useCallback(
-    (dir: 'up' | 'down') => {
-      if (loadingRef.current) return;
-      if (dir === 'up' ? !hasUp : !hasDown) return;
-      loadingRef.current = true;
-      startTransition(async () => {
-        const r = await meleeRankingAction({
-          battleId,
-          mode,
-          ...(dir === 'up' ? { beforeRank: first! } : { afterRank: last! }),
-        });
-        loadingRef.current = false;
-        if (r.status !== 'success' || r.rows.length === 0) return;
-        const el = scrollRef.current;
-        if (dir === 'up' && el && first != null) {
-          // 커밋 직전(=아직 옛 DOM)에 기준 행의 현재 위치를 잡아둔다. 높이 차분 대신 실제 행을
-          // 앵커로 쓰는 이유: 위쪽 센티넬이 사라지는 등 다른 높이 변화가 섞여도 어긋나지 않는다.
-          const node = el.querySelector<HTMLElement>(`[data-rank="${first}"]`);
-          anchor.current = node
-            ? { rank: first, top: node.offsetTop, scrollTop: el.scrollTop }
-            : null;
-        }
-        setRows((prev) => (dir === 'up' ? [...r.rows, ...prev] : [...prev, ...r.rows]));
+  const loadMore = useCallback((dir: 'up' | 'down') => {
+    if (loadingRef.current) return;
+    const c = cursorRef.current; // 호출 시점 최신 커서(ref) — deps 없이 안정
+    if (dir === 'up' ? !c.hasUp : !c.hasDown) return;
+    loadingRef.current = true;
+    startTransition(async () => {
+      const r = await meleeRankingAction({
+        battleId: c.battleId,
+        mode: c.mode,
+        ...(dir === 'up' ? { beforeRank: c.first! } : { afterRank: c.last! }),
       });
-    },
-    [battleId, mode, first, last, hasUp, hasDown],
-  );
+      loadingRef.current = false;
+      if (r.status !== 'success' || r.rows.length === 0) return;
+      const el = scrollRef.current;
+      if (dir === 'up' && el && c.first != null) {
+        // 커밋 직전(=아직 옛 DOM)에 기준 행의 현재 위치를 잡아둔다. 높이 차분 대신 실제 행을
+        // 앵커로 쓰는 이유: 위쪽 센티넬이 사라지는 등 다른 높이 변화가 섞여도 어긋나지 않는다.
+        const node = el.querySelector<HTMLElement>(`[data-rank="${c.first}"]`);
+        anchor.current = node
+          ? { rank: c.first, top: node.offsetTop, scrollTop: el.scrollTop }
+          : null;
+      }
+      // rank 중복 가드 — cursorRef가 effect 갱신이라 극단 타이밍(커밋↔effect 사이 IO 발화)에
+      // 같은 페이지를 한 번 더 받아올 수 있다. 중복이면 no-op(키 충돌·행 중복 방지).
+      setRows((prev) => {
+        const seen = new Set(prev.map((x) => x.rank));
+        const add = r.rows.filter((x) => !seen.has(x.rank));
+        if (add.length === 0) return prev;
+        return dir === 'up' ? [...add, ...prev] : [...prev, ...add];
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectMode = (m: MeleeRankMode) => {
     const q = new URLSearchParams(search.toString());
