@@ -185,6 +185,8 @@ export function ChatDock() {
   const [kbBox, setKbBox] = useState<KbBox | null>(null);
   // 멘션 하이라이트용 내 닉네임.
   const [meNickname, setMeNickname] = useState<string | null>(null);
+  // 멘션 '나 지목' 판정용 불변 코드(이름 감사 H2) — 닉 문자열 비교는 닉 재사용 시 오귀속.
+  const [meCode, setMeCode] = useState<string | null>(null);
   // 멘션 자동완성 — 서버 전체 닉네임 prefix 검색 결과(250ms 디바운스).
   const [searchCands, setSearchCands] = useState<string[]>([]);
   // ── 귓속말 —— 내용은 WhisperPane, 여기선 구독 토픽·미읽음 배지·진입 요청만 든다.
@@ -559,6 +561,7 @@ export function ChatDock() {
           mode?: 'full' | 'delta';
           messages: ChatMessageDto[];
           meNickname?: string | null;
+          mePublicCode?: string | null;
           guild?: { id: string; name: string } | null;
           guildChannel?: string | null;
           whisperChannel?: string | null;
@@ -591,6 +594,7 @@ export function ChatDock() {
         }
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
+        if (data.mePublicCode) setMeCode(data.mePublicCode);
         // lite 응답엔 guild/guildChannel/blocked가 아예 없음 — 기존 상태 유지(null 덮어쓰기 금지).
         // 값이 같으면 이전 참조/상태 유지 — 15초마다 "변화 없어도 전체 리렌더"를 막는다.
         if (!lite) {
@@ -1438,6 +1442,7 @@ export function ChatDock() {
               <WhisperPane
                 me={me}
                 meNickname={meNickname}
+                meCode={meCode}
                 serverId={sid ?? 1}
                 seed={whisperSeed}
                 blocked={blocked}
@@ -1499,7 +1504,7 @@ export function ChatDock() {
                         m={m}
                         prevMsg={date ? undefined : prev}
                         me={me}
-                        meNickname={meNickname}
+                        meCode={meCode}
                         serverId={sid ?? 1}
                         onProfile={openProfile}
                         onReport={onReport}

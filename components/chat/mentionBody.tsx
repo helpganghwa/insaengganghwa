@@ -17,15 +17,17 @@ import type { ChatMention } from '@/lib/game/chat/service';
 export function renderMentionBody(
   body: string,
   mentions: ChatMention[] | null,
-  meNickname: string | null,
+  meCode: string | null,
   serverId: number,
 ) {
   return body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
     const nick = part.startsWith('@') ? part.slice(1) : null;
     const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
     if (nick && hit) {
+      // '나를 지목한 멘션' 판정은 불변 코드로(2026-08-07 이름 감사 H2). 닉 문자열로 비교하면
+      // 남이 쓰던 닉을 물려받은 순간, 그 사람을 부른 과거 멘션이 전부 내 것으로 강조된다.
       const cls =
-        meNickname && nick === meNickname
+        meCode && hit.c === meCode
           ? 'font-bold text-amber-600 dark:text-amber-400'
           : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
       if (hit.c) {

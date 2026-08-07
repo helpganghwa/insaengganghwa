@@ -6,6 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
+import { profiles } from '@/lib/db/schema/profiles';
 import { getChatBlocks, getMyGuildChannel, getRecentChat, isChatEnabled } from '@/lib/game/chat/service';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { chatTopic, whisperTopic } from '@/lib/game/chat/realtime';
@@ -103,9 +104,13 @@ export async function GET(req: Request) {
 
   const [blocked, [meChar], guild] = await Promise.all([
     getChatBlocks(userId, serverId),
+    // 내 표시 정보 — 닉과 함께 publicCode도(멘션 '나 지목' 판정을 닉 문자열이 아니라 불변 코드로
+    // 하기 위해, 2026-08-07 이름 감사 H2). 닉으로 비교하면 내가 남이 쓰던 닉을 물려받았을 때
+    // 그 사람을 부른 과거 멘션이 전부 '나를 부른 것'으로 강조된다.
     db
-      .select({ nickname: characters.nickname })
+      .select({ nickname: characters.nickname, publicCode: profiles.publicCode })
       .from(characters)
+      .innerJoin(profiles, eq(profiles.id, characters.userId))
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
     getMyGuildChannel(userId, serverId),
@@ -131,6 +136,7 @@ export async function GET(req: Request) {
     whisperChannel: whisperTopic(serverId, userId),
     me: userId,
     meNickname: meChar?.nickname ?? null,
+    mePublicCode: meChar?.publicCode ?? null,
     guild: guild ? { id: guild.guildId, name: guild.guildName } : null,
     mode,
     messages,

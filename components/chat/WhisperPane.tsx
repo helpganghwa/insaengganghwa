@@ -124,6 +124,7 @@ function threadPeer(t: WhisperThread): WhisperPeer {
 export function WhisperPane({
   me,
   meNickname,
+  meCode,
   serverId,
   seed,
   blocked,
@@ -139,6 +140,8 @@ export function WhisperPane({
   /** 내 userId — 내 행 판정(전체 채팅과 동일하게 배경 강조만 다르다). */
   me: string | null;
   meNickname: string | null;
+  /** 멘션 '나 지목' 판정용 불변 코드 — 닉 재사용 오귀속 방지(이름 감사 H2). */
+  meCode: string | null;
   serverId: number;
   /** 도크가 패널 열림 시 미리 받아둔 목록 — 첫 프레임 공백 방지(그래도 마운트 시 재조회). */
   seed: WhisperThread[] | null;
@@ -812,7 +815,7 @@ export function WhisperPane({
                 m={r.dto}
                 prevMsg={r.prev}
                 me={me}
-                meNickname={meNickname}
+                meCode={meCode}
                 serverId={serverId}
                 onProfile={onProfile}
                 onReport={onReport}

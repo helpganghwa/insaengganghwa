@@ -75,7 +75,7 @@ export const ChatRow = memo(function ChatRow({
   m,
   prevMsg,
   me,
-  meNickname,
+  meCode,
   serverId,
   onProfile,
   onReport,
@@ -83,7 +83,7 @@ export const ChatRow = memo(function ChatRow({
   m: ChatMessageDto;
   prevMsg: ChatMessageDto | undefined;
   me: string | null;
-  meNickname: string | null;
+  meCode: string | null;
   serverId: number;
   onProfile: (userId: string) => void;
   onReport: (m: ChatMessageDto) => void;
@@ -125,7 +125,7 @@ export const ChatRow = memo(function ChatRow({
           onClick={onBodyClick}
           className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
         >
-          {renderBody(m.body, m.mentions, meNickname, serverId)}
+          {renderBody(m.body, m.mentions, meCode, serverId)}
         </p>
       </div>
     );
@@ -180,7 +180,7 @@ export const ChatRow = memo(function ChatRow({
           onClick={onBodyClick}
           className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
         >
-          {renderBody(m.body, m.mentions, meNickname, serverId)}
+          {renderBody(m.body, m.mentions, meCode, serverId)}
         </p>
       </div>
     </div>
