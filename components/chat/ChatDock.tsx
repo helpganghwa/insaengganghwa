@@ -309,6 +309,7 @@ export function ChatDock() {
 
   const openRef = useRef(false);
   const collapsedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   // 폴링의 증분(after) 기준점 — 상태를 effect 의존성에 넣지 않고 최신 목록을 읽기 위한 ref.
   const messagesRef = useRef<ChatMessageDto[]>([]);
@@ -925,6 +926,10 @@ export function ChatDock() {
     setMessages((prev) => [...prev, temp]);
     setInput('');
     setCooldown(COOLDOWN_S);
+    // 재포커스(2026-08-07 제보) — 한글 IME 조합 중 전송하면 setInput('')이 조합 세션을 깨며
+    // 간헐적으로 입력창이 blur돼 키보드가 닫혔다. 제스처 콜스택 안의 focus()는 iOS에서도
+    // 키보드를 유지시킨다(이미 포커스면 no-op). 연속 전송 UX의 핵심.
+    inputRef.current?.focus();
     requestAnimationFrame(() => scrollToBottom(true));
     // 응답 도착 전에 탭을 바꿀 수 있음 — 확정/롤백은 '전송한 탭'에만 반영(활성이면 상태, 아니면 버퍼).
     const sentTab = tabRef.current;
@@ -1243,6 +1248,7 @@ export function ChatDock() {
               ) : null}
               <div className="flex items-center gap-1.5">
                 <ZoomSafeInput
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
