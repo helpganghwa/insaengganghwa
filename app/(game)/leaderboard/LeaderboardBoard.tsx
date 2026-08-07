@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import Link from 'next/link';
 
 import { GuildBadge } from '@/components/GuildBadge';
@@ -52,6 +52,55 @@ export type LeaderboardPayloads = Record<
  * 초기 탭은 `?tab=`(RankingDeck 등 깊은 링크)을 따르되, 이후 전환은 URL을 건드리지
  * 않는다 — 쿼리를 바꾸면 라우트가 커밋되며 페이지를 다시 받게 되기 때문(2026-07-31).
  */
+/**
+ * 헤더(ⓘ 산정 기준 토글 포함) — infoOpen state를 이 컴포넌트가 소유(2026-08-07 렌더 감사).
+ * 이전엔 ⓘ 토글마다 Top3 아트+최대 100행 목록 전체가 리렌더됐다. props(metric·mine)는
+ * metric 전환 시에만 바뀌므로 memo가 실효.
+ */
+const BoardHeader = memo(function BoardHeader({
+  metric,
+  mine,
+}: {
+  metric: LeaderboardMetric;
+  mine: LeaderboardPayloads[LeaderboardMetric]['mine'];
+}) {
+  const [infoOpen, setInfoOpen] = useState(false);
+  return (
+    <div className="px-4 pb-3 pt-3">
+      {/* 내 순위는 헤더 우측 한 곳에서만 — 종전엔 상단 카드와 목록 하이라이트로 두 번 나오면서
+          세로 90px을 썼다. 산정 기준은 상시 두 줄을 먹던 캡션 대신 ⓘ로 접었다(2026-08-02). */}
+      <PageHeader
+        title="랭킹"
+        fallback="/me"
+        kicker={
+          <span className="inline-flex items-baseline gap-1">
+            {LABEL[metric]}
+            <button
+              type="button"
+              onClick={() => setInfoOpen((v) => !v)}
+              aria-label="산정 기준"
+              aria-expanded={infoOpen}
+              className="relative inline-flex h-[13px] w-[13px] translate-y-px items-center justify-center rounded-full border border-zinc-400 text-[9px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2 after:content-[''] dark:border-zinc-600"
+            >
+              i
+            </button>
+          </span>
+        }
+        right={
+          <span className="font-mono text-[12.5px] font-bold tabular-nums text-amber-500">
+            {mine ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}` : '기록 없음'}
+          </span>
+        }
+      />
+      {infoOpen ? (
+        <p className="mt-2 rounded-lg bg-zinc-100 px-3 py-2 text-[11px] leading-relaxed text-zinc-500 dark:bg-zinc-900">
+          {CRITERIA[metric]}
+        </p>
+      ) : null}
+    </div>
+  );
+});
+
 export function LeaderboardBoard({
   initial,
   payloads,
@@ -64,43 +113,11 @@ export function LeaderboardBoard({
   userId: string;
 }) {
   const [metric, setMetric] = useState<LeaderboardMetric>(initial);
-  const [infoOpen, setInfoOpen] = useState(false);
   const { top, mine } = payloads[metric];
 
   return (
     <>
-      <div className="px-4 pb-3 pt-3">
-        {/* 내 순위는 헤더 우측 한 곳에서만 — 종전엔 상단 카드와 목록 하이라이트로 두 번 나오면서
-            세로 90px을 썼다. 산정 기준은 상시 두 줄을 먹던 캡션 대신 ⓘ로 접었다(2026-08-02). */}
-        <PageHeader
-          title="랭킹"
-          fallback="/me"
-          kicker={
-            <span className="inline-flex items-baseline gap-1">
-              {LABEL[metric]}
-              <button
-                type="button"
-                onClick={() => setInfoOpen((v) => !v)}
-                aria-label="산정 기준"
-                aria-expanded={infoOpen}
-                className="relative inline-flex h-[13px] w-[13px] translate-y-px items-center justify-center rounded-full border border-zinc-400 text-[9px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2 after:content-[''] dark:border-zinc-600"
-              >
-                i
-              </button>
-            </span>
-          }
-          right={
-            <span className="font-mono text-[12.5px] font-bold tabular-nums text-amber-500">
-              {mine ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}` : '기록 없음'}
-            </span>
-          }
-        />
-        {infoOpen ? (
-          <p className="mt-2 rounded-lg bg-zinc-100 px-3 py-2 text-[11px] leading-relaxed text-zinc-500 dark:bg-zinc-900">
-            {CRITERIA[metric]}
-          </p>
-        ) : null}
-      </div>
+      <BoardHeader metric={metric} mine={mine} />
       <div className="space-y-4 px-4 pb-4">
       <LeaderboardTabs active={metric} onChange={setMetric} />
 

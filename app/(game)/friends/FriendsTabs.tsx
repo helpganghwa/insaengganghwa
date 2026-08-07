@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { profileHref } from '@/lib/game/profile/href';
 
@@ -120,9 +120,14 @@ export function FriendsTabs({
 
   // 접속 최신순 — 친구의 주 용도가 레이드 초대·같이 하기라 '지금 있는 사람'이 위에 와야 한다.
   // 기록이 없으면 뒤로(2026-08-02).
-  const sortedFriends = [...friends].sort(
-    (a, b) =>
-      (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) - (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
+  // useMemo(2026-08-07 렌더 감사) — 이전엔 검색 타이핑·토스트 등 모든 리렌더마다 재정렬(Date.parse×2n).
+  const sortedFriends = useMemo(
+    () =>
+      [...friends].sort(
+        (a, b) =>
+          (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) - (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
+      ),
+    [friends],
   );
   /** 최근 5분 내 활동 = 접속 중(헤더 표시용). 렌더 중 Date.now()는 하이드레이션 불일치
       위험이 있어(경계에 걸친 친구가 있으면 SSR과 클라 텍스트가 갈린다) 마운트 후 계산한다. */

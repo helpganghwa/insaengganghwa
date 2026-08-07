@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 
@@ -364,7 +364,9 @@ function rankAccent(rank: number, isMe: boolean): { text: string; line: string }
 }
 
 /** 순위 한 줄 — FINAL 카드와 같은 방식(우측 얼굴 확대 + 좌→우 그라데이션). 높이 고정(스크롤 복원). */
-function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: number }) {
+// memo(2026-08-07 렌더 감사) — 무한스크롤 append마다 누적 전 행이 재렌더되던 것 차단.
+// setRows가 [...prev, ...new]라 기존 r 객체 identity 유지 + isMe/serverId 원시값 → 안정화 불필요.
+const Row = memo(function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: number }) {
   const gold = r.rank === 1;
   const medal = r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : null;
   const accent = rankAccent(r.rank, isMe);
@@ -458,7 +460,7 @@ function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: 
       </div>
     </li>
   );
-}
+});
 
 /** 센티넬 — 뷰포트에 들어오면 해당 방향 로드(무한 스크롤). */
 function Sentinel({

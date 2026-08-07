@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
@@ -16,7 +16,9 @@ export type { MeleeHistoryRow };
  * 보상 테이블 + 역대 우승자 — 탭 전환. MELEE §6.
  * showBanner=false: 상단 아레나 배너 생략(대기/진행중 화면에 무대 아래로 임베드 시).
  */
-export function MeleeInfo({
+// memo(2026-08-07 렌더 감사) — MeleeCountdown의 1초 시계가 보상표·역대 우승자 전체를 매초
+// 재렌더시키던 것 차단. props는 RSC 배열(history)+원시값이라 안정. 시간 파생 렌더 없음(검증).
+export const MeleeInfo = memo(function MeleeInfo({
   history,
   initialTab = 'reward',
   showBanner = true,
@@ -171,4 +173,4 @@ export function MeleeInfo({
       {body}
     </div>
   );
-}
+});

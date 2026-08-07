@@ -1,7 +1,7 @@
 'use client';
 import { profileHref } from '@/lib/game/profile/href';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -761,6 +761,9 @@ export function MeleeResult({
     tgtRank?: number;
     fight: Fight;
   };
+  // 파생 로그 useMemo(2026-08-07 렌더 감사) — 무한스크롤 append·탭 전환마다 수천 이벤트를
+  // 재순회하던 것 차단. deps는 전부 RSC props/원시값이라 identity 안정.
+  const { logData, myFiltered, myFallback } = useMemo(() => {
   // 누적 공격/방어 횟수(리플레이 윈도 내 시간순). 미절단이면 절대값, 절단이면 윈도 기준.
   const atkSeqMap = new Map<number, number>();
   const defSeqMap = new Map<number, number>();
@@ -826,7 +829,8 @@ export function MeleeResult({
     }),
   );
   const myMax = myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
-  let myHp = myMax ?? 0;
+  // 객체 프로퍼티 변이 — 클로저 변수 재할당은 react-hooks 규칙이 useMemo 안이라도 막는다.
+  const myHpBox = { v: myMax ?? 0 };
   const myAtkSeqMap = new Map<string, number>();
   const myDefSeqMap = new Map<string, number>();
   const myFallback: Row[] = myEvents.map((e, i) => {
@@ -844,7 +848,7 @@ export function MeleeResult({
     // 프로필 링크는 항상 publicCode 기반(닉은 변경·서버별이라 불안정). href.ts 원칙 일관.
     const oppHref = hrefOf(oppMeta?.code ?? null);
     const meHref = hrefOf(myPublicCode);
-    const atkHpNow = role === 0 ? (myMax != null ? myHp : undefined) : undefined;
+    const atkHpNow = role === 0 ? (myMax != null ? myHpBox.v : undefined) : undefined;
     const row: Row = {
       key: i,
       round,
@@ -873,9 +877,14 @@ export function MeleeResult({
         survivors: aliveByRound.get(round),
       },
     };
-    if (role === 1) myHp = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
+    if (role === 1) myHpBox.v = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
     return row;
   });
+
+  return { logData, myFiltered, myFallback };
+    // aliveByRound·roster* 등은 위 RSC props에서 파생 — 원본 deps로 충분.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finale, roster, finaleStart, myEvents, myNickname, myCp]);
 
   const myData = myFiltered.length > 0 ? myFiltered : myFallback;
   const rows = tab === 'log' ? logData : myData;
