@@ -14,6 +14,7 @@ import {
   listWhisperMessages,
   listWhisperThreads,
   markWhisperRead,
+  reportWhisperMessage,
   whisperPreviewBody,
   type WhisperDb,
 } from '@/lib/game/chat/whisper';
@@ -95,6 +96,16 @@ async function pickPeer(tx: WhisperDb): Promise<string | null> {
   const rows = (await tx.execute(sql`
     select user_id::text uid from characters
     where server_id = ${SERVER_ID} and user_id <> ${TEST_USER_ID}::uuid
+    order by user_id limit 1
+  `)) as unknown as { uid: string }[];
+  return rows[0]?.uid ?? null;
+}
+
+/** 대화와 무관한 제3자 하나 — 신고 참가자 검증용. 없으면 null(케이스 스킵). */
+async function pickThird(tx: WhisperDb, peer: string): Promise<string | null> {
+  const rows = (await tx.execute(sql`
+    select user_id::text uid from characters
+    where server_id = ${SERVER_ID} and user_id not in (${TEST_USER_ID}::uuid, ${peer}::uuid)
     order by user_id limit 1
   `)) as unknown as { uid: string }[];
   return rows[0]?.uid ?? null;
@@ -235,6 +246,35 @@ describe.skipIf(skip)('귓속말 — 대화 가시성 DB 회귀', () => {
       // 나간 지점 이전은 되살아나지 않는다(상대 기록·어드민 열람만 유지).
       const msgs = await listWhisperMessages(TEST_USER_ID, SERVER_ID, peer, undefined, tx);
       expect(msgs.map((m) => m.id)).toEqual([String(fresh)]);
+    });
+  });
+
+  it('신고: 그 대화의 참가자만 — 제3자·내 메시지·없는 id는 전부 not_found', async () => {
+    await inRollback(async (tx) => {
+      const peer = await pickPeer(tx);
+      if (!peer) return;
+      await isolatePair(tx, peer);
+
+      const fromPeer = await insertWhisper(tx, peer, TEST_USER_ID, '상대가 보낸 메시지');
+      const fromMe = await insertWhisper(tx, TEST_USER_ID, peer, '내가 보낸 메시지');
+
+      expect(await reportWhisperMessage(TEST_USER_ID, fromPeer, tx)).toBe('ok');
+      // 같은 사람의 재신고는 멱등(onConflictDoNothing) — 건수가 늘지 않는다.
+      expect(await reportWhisperMessage(TEST_USER_ID, fromPeer, tx)).toBe('ok');
+      const rows = (await tx.execute(sql`
+        select count(*)::int as n from whisper_reports where message_id = ${fromPeer}
+      `)) as unknown as { n: number }[];
+      expect(rows[0]!.n).toBe(1);
+
+      // 내 메시지는 신고 경로 자체가 없다(전체 채팅과 동일).
+      expect(await reportWhisperMessage(TEST_USER_ID, fromMe, tx)).toBe('not_found');
+      // 존재하지 않는 id — 열거해도 아무것도 알 수 없다.
+      expect(await reportWhisperMessage(TEST_USER_ID, 9_000_000_000_000_000_000n, tx)).toBe(
+        'not_found',
+      );
+      // 제3자는 '없음'과 같은 응답 — 남의 1:1 대화 존재 여부가 새지 않게.
+      const third = await pickThird(tx, peer);
+      if (third) expect(await reportWhisperMessage(third, fromPeer, tx)).toBe('not_found');
     });
   });
 

@@ -99,6 +99,26 @@ export const whisperMessages = pgTable(
   ],
 );
 
+/**
+ * 귓속말 메시지 신고 — 전체/길드와 동일하게 본문 탭 = 메시지 단위 신고.
+ * chat_reports는 FK가 chat_messages라 재사용이 불가능해 동형 테이블로 분리했다.
+ * ⚠ 자동 숨김 임계 없음 — 1:1은 신고 가능자가 상대 1명뿐이라 3건 임계가 성립하지 않고,
+ * 1건 자동 숨김은 곧 어뷰징 지렛대가 된다. 처리는 어드민 검수(신고 수 노출)에서만.
+ */
+export const whisperReports = pgTable(
+  'whisper_reports',
+  {
+    messageId: bigint('message_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => whisperMessages.id, { onDelete: 'cascade' }),
+    reporterUserId: uuid('reporter_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.reporterUserId] })],
+);
+
 /** 읽음 포인터 + '대화 나가기'(내 쪽만 숨김 — 상대 기록·어드민 열람 유지). */
 export const whisperReads = pgTable(
   'whisper_reads',

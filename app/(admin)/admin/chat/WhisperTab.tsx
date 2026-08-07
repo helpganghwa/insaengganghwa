@@ -186,6 +186,7 @@ async function WhisperThread({
               createdAt={m.createdAt}
               hiddenAt={m.hiddenAt}
               serverId={m.serverId}
+              reports={m.reports}
               identities={identities}
             />
           ))}

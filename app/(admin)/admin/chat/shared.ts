@@ -20,8 +20,8 @@ export interface ChatSearchParams {
 }
 
 export const CHAT_BASE_PATH = '/admin/chat';
-/** 한 화면 표시 건수 — 목록·스레드 공통(오프셋 페이지네이션). */
-export const CHAT_PAGE_SIZE = 50;
+/** 한 화면 표시 건수 — 목록·스레드 공통(오프셋 페이지네이션, 검수는 건수 제한 없음). */
+export const CHAT_PAGE_SIZE = 100;
 
 export const CHAT_TABS: { id: ChatTab; label: string }[] = [
   { id: 'world', label: '일반' },

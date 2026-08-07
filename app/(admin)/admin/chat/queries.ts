@@ -301,6 +301,7 @@ export interface AdminWhisperRow {
   body: string;
   hiddenAt: Date | null;
   createdAt: Date;
+  reports: number;
 }
 
 /**
@@ -323,6 +324,8 @@ export async function listWhisperThread(opts: {
       body: whisperMessages.body,
       hiddenAt: whisperMessages.hiddenAt,
       createdAt: whisperMessages.createdAt,
+      // 귓속말은 자동 숨김 임계가 없다 — 신고는 이 숫자로만 드러나고 처리는 검수자 판단.
+      reports: sql<number>`(select count(*)::int from whisper_reports r where r.message_id = ${whisperMessages.id})`,
     })
     .from(whisperMessages)
     .where(

@@ -4,6 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { reportChatMessage, setChatBlock } from '@/lib/game/chat/service';
+import { reportWhisperMessage } from '@/lib/game/chat/whisper';
 
 /**
  * 월드 채팅 액션(0125) — 신고·차단(저빈도만). 전송은 POST /api/chat/send로 분리(2026-08-06) —
@@ -36,6 +37,28 @@ export async function reportChat(messageId: string): Promise<{ status: 'ok' | 'e
   }
   const serverId = await getActiveServerId();
   const r = await reportChatMessage(userId, id, serverId);
+  if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
+  return { status: 'ok' };
+}
+
+/**
+ * 귓속말 메시지 신고 — 전체 채팅과 같은 진입(본문 탭)·같은 응답 문구.
+ * 별도 액션인 이유: 신고 테이블이 다르고(chat_reports는 FK가 chat_messages), 가시성 검증이
+ * '같은 서버·같은 길드'가 아니라 '그 대화의 참가자'라 판정 자체가 다르다.
+ */
+export async function reportWhisper(
+  messageId: string,
+): Promise<{ status: 'ok' | 'error'; message?: string }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'report')) return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  let id: bigint;
+  try {
+    id = BigInt(messageId);
+  } catch {
+    return { status: 'error', message: '잘못된 요청입니다.' };
+  }
+  const r = await reportWhisperMessage(userId, id);
   if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
   return { status: 'ok' };
 }

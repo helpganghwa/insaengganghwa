@@ -48,7 +48,7 @@ async function latestChannelIds(
 
 /**
  * 최근 채팅 조회(0125) — ChatDock 초기 로드·폴링 폴백 공용.
- * GET /api/chat/recent?limit=1|100&channel=all|guild — 세션 필수(스크래핑 방지).
+ * GET /api/chat/recent?limit=1|200&channel=all|guild — 세션 필수(스크래핑 방지).
  * 길드 채널은 소속 검증 후에만 조회(미가입=길드 메시지 미노출). disabled면 UI가 도크 숨김.
  */
 export async function GET(req: Request) {
@@ -62,7 +62,8 @@ export async function GET(req: Request) {
   if (!(await isChatEnabled())) return NextResponse.json({ disabled: true, messages: [] });
   const url = new URL(req.url);
   const limitRaw = Number(url.searchParams.get('limit'));
-  const limit = Number.isInteger(limitRaw) && limitRaw >= 1 && limitRaw <= 100 ? limitRaw : 100;
+  // 상한 200 — 유저 화면은 '최신 200건 고정'(페이지네이션 없음)이라 한 번에 받는 최대치가 200.
+  const limit = Number.isInteger(limitRaw) && limitRaw >= 1 && limitRaw <= 200 ? limitRaw : 200;
   const channel = url.searchParams.get('channel') === 'guild' ? 'guild' : 'all';
   const serverId = await getActiveServerId();
 

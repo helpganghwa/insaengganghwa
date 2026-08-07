@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { usePathname, useRouter } from 'next/navigation';
@@ -11,14 +11,12 @@ import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
 import type { ChatMessageDto } from '@/lib/game/chat/service';
 import type { WorldEventEntry } from '@/lib/game/world/event';
-import { worldEventMessage } from '@/app/(game)/world-message';
-import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
 
 import type { SendChatResult } from '@/lib/game/chat/send';
 
 import { reportChat, setChatBlockAction } from './actions';
-import { avatarBox, renderMentionBody as renderBody } from './mentionBody';
+import { ChatRow, RESTORE_KEY } from './ChatRow';
 import {
   WhisperPane,
   type WhisperMessageDto,
@@ -31,8 +29,10 @@ import {
  * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
  *  - GNB 바로 위 fixed 반투명 미니바(최근 1개 메시지) → 탭하면 헤더·GNB 사이를 덮는 불투명 패널
  *  - 탭 = 전체 / 길드 / 귓속말(1:1 — 본문은 WhisperPane, 이 파일은 열림·탭·구독만 관리)
+ *  - 메시지 행은 세 탭 공용(components/chat/ChatRow.tsx)
  *  - 수신: Supabase Realtime broadcast 구독, 실패 시 15초 폴링 폴백
- *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화·귓속말·친구추가·신고·차단), 신고도 팝업 확인
+ *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화 / 귓속말·친구추가·차단 · 프로필·닫기)
+ *  - 신고는 메시지 본문 탭 → 확인 팝업(유저 단위 신고 버튼 없음 — 대상이 모호해진다)
  *  - 차단은 로컬(기기) 필터 — localStorage 목록, 서버 부담 0
  *  - 미니바 높이는 --chat-dock-h로 발행(main 하단 패딩), --gt-h(가이드 티커) 합산 오프셋
  *  - 라우트 이동 시 패널 자동 최소화
@@ -46,13 +46,15 @@ import {
 
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
-// 시각 포맷터 — 모듈 상수 1개. 행 렌더마다 Intl 인스턴스를 만들면(150행×키 입력) 입력 지연의 직접 요인.
-const TIME_FMT = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' });
 const COLLAPSE_KEY = 'ig:chat-collapsed';
-// '프로필 보기' 이동 후 뒤로가기 복원 — 값=MiniProfile JSON(세션 한정, 마운트 시 1회 소비).
-const RESTORE_KEY = 'ig:chat-restore';
 // 미니바 노티점 — 채널별로 "마지막으로 확인한 메시지 id". 서버 latestIds와 다르면 점을 켠다.
 const SEEN_KEY = 'ig:chat-seen';
+/**
+ * 화면 표시 상한(2026-08-07) — 최신 200건 고정. 위로 더 불러오기(페이지네이션)는 두지 않는다:
+ * prepend + 스크롤 위치 보존은 버그 표면이 넓고, 채널 보존이 1,000건·7일이라 200이면
+ * 실사용 체감상 '대화가 끊기지 않는' 구간을 덮는다.
+ */
+const PAGE = 200;
 /** 친구 목록 → 귓속말 진입 이벤트명. detail = { peerUserId }. */
 export const WHISPER_OPEN_EVENT = 'ig:whisper-open';
 
@@ -106,140 +108,6 @@ function sysToMsg(e: WorldEventEntry): ChatMessageDto {
   };
 }
 
-/** 행 내부 링크 클릭 → 뒤로가기 시 패널 복원 마크(마운트 복원 로직이 1회 소비). */
-function markRestoreIfLink(e: ReactMouseEvent) {
-  if ((e.target as HTMLElement).closest('a')) {
-    try {
-      sessionStorage.setItem(RESTORE_KEY, 'panel');
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-/**
- * 메시지 행(2026-08-06 memo 분리) — 기존엔 인라인 map이라 한 글자 입력·쿨다운 1초 틱마다
- * 최대 150행이 전부 재렌더됐다(전수조사 렉 1위). props가 전부 안정 참조·원시값이라 memo가
- * 실효: 목록은 append 위주(기존 항목 참조 유지), 콜백은 useCallback.
- * content-visibility:auto — 뷰포트 밖 행은 페인트·칭호 무한 애니메이션 프레임까지 스킵(렉 4위),
- * contain-intrinsic-size로 스크롤 높이는 근사 유지. 미지원 브라우저는 무시(동작 동일).
- */
-const ChatRow = memo(function ChatRow({
-  m,
-  prevMsg,
-  me,
-  meNickname,
-  serverId,
-  onProfile,
-  onReport,
-}: {
-  m: ChatMessageDto;
-  prevMsg: ChatMessageDto | undefined;
-  me: string | null;
-  meNickname: string | null;
-  serverId: number;
-  onProfile: (userId: string) => void;
-  onReport: (m: ChatMessageDto) => void;
-}) {
-  // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
-  if (m.sys || m.sysGuild) {
-    return (
-      <div
-        // 닉네임 링크로 프로필에 갔다 돌아오면 패널을 다시 연다(마운트 복원 소비).
-        onClickCapture={markRestoreIfLink}
-        className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500 [content-visibility:auto] [contain-intrinsic-size:auto_22px]"
-      >
-        {m.sys ? worldEventMessage(m.sys, { link: true }) : guildLogMessage(m.sysGuild!)}
-      </div>
-    );
-  }
-  const mine = m.userId === me;
-  const pending = m.id.startsWith('tmp-');
-  // 같은 유저 1분 내 연속 발언 — 아바타·닉 생략, 본문만 이어붙임(시스템 라인 사이는 미묶음).
-  const grouped =
-    !!prevMsg &&
-    !prevMsg.sys &&
-    !prevMsg.sysGuild &&
-    prevMsg.userId === m.userId &&
-    new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
-  const onBodyClick = (e: ReactMouseEvent) => {
-    if ((e.target as HTMLElement).closest('a')) return;
-    if (!mine && !pending) onReport(m);
-  };
-  if (grouped) {
-    return (
-      <div
-        className={`flex items-start gap-2 px-1.5 py-[2px] [content-visibility:auto] [contain-intrinsic-size:auto_24px] ${
-          mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-        } ${pending ? 'opacity-50' : ''}`}
-      >
-        <p
-          onClickCapture={markRestoreIfLink}
-          onClick={onBodyClick}
-          className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-        >
-          {renderBody(m.body, m.mentions, meNickname, serverId)}
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div
-      className={`flex items-start gap-2 px-1.5 py-[5px] [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${
-        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-      } ${pending ? 'opacity-50' : ''}`}
-    >
-      <button type="button" onClick={() => onProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
-        {avatarBox(m, 'block h-6 w-6')}
-      </button>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5 leading-none">
-          <button
-            type="button"
-            onClick={() => onProfile(m.userId)}
-            className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
-          >
-            {m.isMeleeChampion ? '🏆' : ''}
-            {m.nickname}
-          </button>
-          {m.guildEmblemUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={m.guildEmblemUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="h-3 w-3 shrink-0 self-center object-contain"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          ) : null}
-          {m.guildName ? (
-            <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
-          ) : null}
-          {/* 칭호(2026-08-05, 집행관 흡수) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
-          <TitleTag
-            code={m.repTitle}
-            executorZone={m.executorZone}
-            executorZoneRegion={m.executorZoneRegion}
-            className="text-[9.5px]"
-          />
-          <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-            {TIME_FMT.format(new Date(m.createdAt))}
-          </span>
-        </div>
-        {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
-        <p
-          onClickCapture={markRestoreIfLink}
-          onClick={onBodyClick}
-          className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-        >
-          {renderBody(m.body, m.mentions, meNickname, serverId)}
-        </p>
-      </div>
-    </div>
-  );
-});
-
 export function ChatDock() {
   const router = useRouter();
   const pathname = usePathname();
@@ -271,6 +139,8 @@ export function ChatDock() {
   const [unseenBelow, setUnseenBelow] = useState(false);
   // iOS 소프트 키보드가 가리는 높이(px) — visualViewport로 측정, 패널 bottom 보정.
   const [kbOffset, setKbOffset] = useState(0);
+  // 레이아웃 뷰포트 안에서 비주얼 뷰포트가 밀려난 양(px) — iOS 팬 보정(아래 effect 주석).
+  const [vvTop, setVvTop] = useState(0);
   // 멘션 하이라이트용 내 닉네임.
   const [meNickname, setMeNickname] = useState<string | null>(null);
   // 멘션 자동완성 — 서버 전체 닉네임 prefix 검색 결과(250ms 디바운스).
@@ -468,7 +338,7 @@ export function ChatDock() {
   const applyNew = useCallback(
     (m: ChatMessageDto) => {
       // 닫힘 중에도 목록 버퍼를 채움 — 패널을 열 때 과거 목록이 먼저 보였다가 교체되는
-      // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(100)가 정합 보정.
+      // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(PAGE)가 정합 보정.
       setMessages((prev) => {
         if (prev.some((p) => p.id === m.id)) return prev;
         // 내 broadcast가 전송 응답보다 먼저 도착하는 창 — 같은 본문의 temp를 즉시 대체해
@@ -479,7 +349,7 @@ export function ChatDock() {
           if (ti >= 0) base = prev.filter((_, idx) => idx !== ti);
         }
         const next = [...base, m];
-        return next.length > 150 ? next.slice(-150) : next;
+        return next.length > PAGE ? next.slice(-PAGE) : next;
       });
       if (openRef.current) {
         // 바닥 근처에서만 자동 스크롤(위로 읽는 중이면 유지 + "↓ 새 메시지" 칩).
@@ -494,8 +364,23 @@ export function ChatDock() {
     [scrollToBottom],
   );
 
-  // iOS 키보드 겹침 보정 — 레이아웃 뷰포트는 안 줄고 visualViewport만 줄어드는 환경(iOS)에서
-  // 가려진 높이만큼 패널을 올린다. 레이아웃까지 같이 줄어드는 환경(Android)은 차이가 0이라 무해.
+  /**
+   * iOS 키보드 겹침 보정 — 레이아웃 뷰포트는 안 줄고 visualViewport만 줄어드는 환경(iOS)에서
+   * 가려진 높이만큼 패널을 올린다. 레이아웃까지 같이 줄어드는 환경(Android)은 차이가 0이라 무해.
+   *
+   * offsetTop을 함께 재는 이유(2026-08-07 귓속말 검색바 제보) — iOS는 포커스된 필드를 보이게
+   * 만들 때 두 수단 중 하나를 고른다: ① 비주얼 뷰포트를 그대로 두거나(offsetTop=0),
+   * ② 레이아웃 뷰포트 안에서 비주얼 뷰포트를 아래로 **팬**한다(offsetTop>0).
+   * kbOffset은 "레이아웃 바닥에서 키보드 윗변까지의 거리"라 ②에서는 정상적으로 0에 가까워지는데,
+   * 패널 bottom이 `max(kbOffset, GNB오프셋)`이라 GNB 바닥값이 이겨 패널이 키보드에 붙지 못하고
+   * 그 틈으로 GNB와 페이지 배경이 드러났다. 동시에 top은 레이아웃 기준이라 팬한 만큼 화면 위로
+   * 밀려 나가, 정작 타이핑 중인 검색바가 화면 밖으로 사라졌다.
+   * 채팅 입력창(패널 하단)에서 안 터진 이유는 첫 resize에 패널 bottom이 먼저 올라가 필드가
+   * 이미 보이는 상태가 되고, 그래서 iOS가 ②를 고를 일이 없기 때문이다(=offsetTop 0 유지).
+   *
+   * 그래서 아래 렌더에서 top·bottom을 offsetTop만큼 되돌린다. offsetTop=0이면 두 식은 기존
+   * 식과 **완전히 같은 값**이라 지금 잘 동작하는 경로(채팅 입력창)는 그대로다.
+   */
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
@@ -504,6 +389,7 @@ export function ChatDock() {
     const update = () => {
       const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       setKbOffset(Math.round(kb));
+      setVvTop(Math.round(Math.max(0, vv.offsetTop)));
       // 키보드가 '열리는 전이'에만 바닥 고정 — 열린 채 유지 중엔 스크롤을 뺏지 않는다
       // (visualViewport는 스크롤 중에도 발화해, 매번 바닥으로 끌면 위로 못 읽는다).
       if (kb > 0 && prevKb === 0) requestAnimationFrame(() => scrollToBottom());
@@ -516,6 +402,7 @@ export function ChatDock() {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       setKbOffset(0);
+      setVvTop(0);
     };
   }, [open, scrollToBottom]);
 
@@ -631,7 +518,7 @@ export function ChatDock() {
       }
       const b = bufRef.current[t];
       if (!b.messages.some((x) => x.id === m.id)) {
-        b.messages = [...b.messages, m].slice(-150);
+        b.messages = [...b.messages, m].slice(-PAGE);
       }
     },
     [applyNew, setSeen],
@@ -771,7 +658,7 @@ export function ChatDock() {
   }, [whisperUnread, tab, open, absorbSeen]);
 
   // 폴링 — Realtime(WS) 백업 + 닫힘 미니바의 유일한 수신 경로(2026-08-06: WS는 열림 시에만).
-  // 열림=100(after 증분 — 평시 델타 0~3건), 닫힘=1(lite: 1건·부속 조회 생략).
+  // 열림=PAGE(after 증분 — 평시 델타 0~3건), 닫힘=1(lite: 1건·부속 조회 생략).
   // 비용 최소화: ① 백그라운드 탭이면 이번 주기 스킵(다시 보일 때 즉시 따라잡기)
   //   ② 주기는 열림 15초 / 닫힘 60초 / 접힘 180초. WS 상태는 주기에 반영하지 않는다 —
   //   과거엔 WS 끊김 시 전원이 15초로 가속했는데, 그게 Realtime 장애를 DB 폭주로 번지게
@@ -793,7 +680,7 @@ export function ChatDock() {
       // 결과는 routeIncoming('all')로 흘려 활성 탭이 길드여도 목록이 섞이지 않는다.
       // 폴링은 열림/닫힘 모두 lite — 차단목록·닉네임·토픽 부속 쿼리는 열기/탭 전환의
       // 전체 조회가 담당(값이 바뀌는 이벤트가 그때뿐). 월드 lite+캐시 히트 = DB 0쿼리.
-      void fetchRecent(wasOpen ? 100 : 1, wasOpen ? undefined : 'all', true, after, !wasOpen).then((r) => {
+      void fetchRecent(wasOpen ? PAGE : 1, wasOpen ? undefined : 'all', true, after, !wasOpen).then((r) => {
         if (!r) return;
         const ms = r.messages;
         if (wasOpen) {
@@ -806,7 +693,7 @@ export function ChatDock() {
                 const add = ms.filter((m) => !prev.some((p) => p.id === m.id));
                 if (add.length === 0) return prev;
                 const next = [...prev, ...add];
-                return next.length > 150 ? next.slice(-150) : next;
+                return next.length > PAGE ? next.slice(-PAGE) : next;
               });
               const el = listRef.current;
               if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120)
@@ -874,7 +761,7 @@ export function ChatDock() {
     setOpen(true);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
-    void fetchRecent(100).then((r) => {
+    void fetchRecent(PAGE).then((r) => {
       if (r) {
         // fetch 반영 렌더도 페인트 전 바닥 고정 — 단, 응답이 오는 사이 유저가 위로 스크롤해
         // 읽는 중이면 위치를 뺏지 않는다(감사 버그: 늦은 응답의 스크롤 강탈).
@@ -906,7 +793,7 @@ export function ChatDock() {
     setTab(next);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
-    void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((r) => {
+    void fetchRecent(limitOverride ?? (open ? PAGE : 1), next).then((r) => {
       if (!r) return;
       // 탭 전환 응답 — 그 사이 위로 스크롤해 읽는 중이면 바닥 고정을 생략(스크롤 강탈 방지).
       const el = listRef.current;
@@ -940,7 +827,7 @@ export function ChatDock() {
       // peer는 공개코드 — userId 해석은 WhisperPane이 목록 매칭/검색으로 처리한다.
       if (peer) setWhisperOpen({ publicCode: peer });
     } else if (chat !== tabRef.current || tab === 'whisper') {
-      switchTab(chat, 100);
+      switchTab(chat, PAGE);
     }
     openPanel();
     try {
@@ -1245,17 +1132,16 @@ export function ChatDock() {
                 type="button"
                 onClick={toggleCollapsed}
                 aria-label="채팅 펼치기"
-                className="pointer-events-auto relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
+                className="pointer-events-auto flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
               >
-                <span aria-hidden className="text-[12px]">
+                {/* 점은 항상 말풍선 아이콘의 왼쪽 위 — 접힘/펼침에서 같은 자리에 보이도록
+                    바(가변 폭)가 아니라 아이콘을 기준으로 단다(2026-08-07 피드백). */}
+                <span aria-hidden className="relative text-[12px]">
                   💬
+                  {collapsedUnseen || notiDot ? (
+                    <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
+                  ) : null}
                 </span>
-                {collapsedUnseen || notiDot ? (
-                  <span
-                    aria-hidden
-                    className="absolute top-0 right-0 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
-                  />
-                ) : null}
               </button>
             ) : (
               // 펼침 — 미니바 본문은 **탭과 무관하게 항상 전체 채널 최신 1건**.
@@ -1267,7 +1153,12 @@ export function ChatDock() {
                   aria-label="채팅 접기"
                   className="flex h-full shrink-0 items-center px-1.5 text-[12px]"
                 >
-                  <span aria-hidden>💬</span>
+                  <span aria-hidden className="relative">
+                    💬
+                    {notiDot ? (
+                      <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900" />
+                    ) : null}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1292,12 +1183,6 @@ export function ChatDock() {
                     <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
                   )}
                 </button>
-                {notiDot ? (
-                  <span
-                    aria-hidden
-                    className="absolute -top-px -right-px h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
-                  />
-                ) : null}
               </div>
             )}
           </div>
@@ -1309,9 +1194,12 @@ export function ChatDock() {
         <div
           className="fixed inset-x-0 z-20"
           style={{
-            top: 'calc(3rem + env(safe-area-inset-top))',
+            // 비주얼 뷰포트가 팬된 만큼(vvTop) 위·아래 기준선을 함께 옮겨 패널이 화면에 붙어 있게.
+            // vvTop=0이면 두 식 모두 기존 식과 같은 값이다(위 effect 주석).
+            top: `max(${vvTop}px, calc(3rem + env(safe-area-inset-top)))`,
             // 키보드가 열리면(kbOffset>0) GNB 오프셋 대신 키보드 위로 — max()로 큰 쪽 채택.
-            bottom: `max(${kbOffset}px, calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px)))`,
+            // 팬 중에는 GNB도 함께 밀려 있으므로 바닥값에서 vvTop을 뺀다(안 빼면 그 틈이 노출).
+            bottom: `max(${kbOffset}px, calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px) - ${vvTop}px))`,
           }}
         >
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
@@ -1538,13 +1426,16 @@ export function ChatDock() {
               ) : undefined
             }
             footer={
+              // 2단(3/2) — 윗줄은 '상대에게 하는 일'(귓속말·친구·차단), 아랫줄은 '이 팝업에서
+              // 나가는 길'(프로필·닫기). 내 프로필이면 윗줄이 통째로 의미가 없어 사라진다.
+              // 신고 버튼은 두지 않는다 — 신고는 '어떤 메시지'가 대상이라 본문 탭이 유일한 진입이고,
+              // 유저 단위 신고 버튼을 옆에 두면 대상이 모호해진다(전체·길드·귓속말 공통 규칙).
               <div className="flex w-full flex-col gap-2">
                 {!profile.data.isMe ? (
                   <div className="flex gap-2">
                     {/* 주 동작 — 유저를 만났을 때 가장 하고 싶은 행동이 말 걸기다. */}
                     <ModalButton
                       tone="primary"
-                      grow={2}
                       onClick={() => {
                         const uid = profile.data.userId;
                         setProfile(null);
@@ -1577,10 +1468,6 @@ export function ChatDock() {
                           ? '요청됨'
                           : '친구 추가'}
                     </ModalButton>
-                  </div>
-                ) : null}
-                <div className="flex gap-2">
-                  {!profile.data.isMe ? (
                     <ModalButton
                       tone="neutral"
                       onClick={() => {
@@ -1594,7 +1481,9 @@ export function ChatDock() {
                     >
                       {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
                     </ModalButton>
-                  ) : null}
+                  </div>
+                ) : null}
+                <div className="flex gap-2">
                   <ModalButton
                     tone="neutral"
                     onClick={() => {

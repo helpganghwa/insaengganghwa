@@ -67,6 +67,7 @@ export function WhisperMessageRow({
   createdAt,
   hiddenAt,
   serverId,
+  reports,
   identities,
 }: {
   id: bigint;
@@ -76,6 +77,7 @@ export function WhisperMessageRow({
   createdAt: Date;
   hiddenAt: Date | null;
   serverId: number;
+  reports: number;
   identities: Map<string, AdminIdentity>;
 }) {
   const from = identities.get(fromUserId) ?? null;
@@ -88,6 +90,9 @@ export function WhisperMessageRow({
         <span className="text-zinc-400">{to?.nickname ?? '(탈퇴/미생성)'}</span>
         <ServerBadge serverId={serverId} />
         <span className="text-zinc-500">{fmtKst(createdAt)}</span>
+        {reports > 0 ? (
+          <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {reports}</span>
+        ) : null}
         {hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
         {isMuted(from?.mutedUntil ?? null) ? (
           <span className="text-[10px] text-amber-400">채팅금지중</span>

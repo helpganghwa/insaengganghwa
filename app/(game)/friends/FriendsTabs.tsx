@@ -98,7 +98,11 @@ function Row({
 const btn =
   'rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition active:scale-95 disabled:opacity-50';
 
-/** 친구 행 우측 말풍선 — 도크(전역)에 귓속말 진입을 요청한다. */
+/**
+ * 친구 행 우측 말풍선 — 도크(전역)에 귓속말 진입을 요청한다.
+ * 채움 없는 고스트 아이콘: 이 줄의 주 동작은 프로필 열기(행 전체 탭)라, 색을 채우면 귓속말이
+ * 행마다 튀어 목록의 리듬을 깬다. 대신 -my-1과 넉넉한 패딩으로 눌림 영역만 넓힌다(행 높이 불변).
+ */
 function WhisperButton({ userId }: { userId: string }) {
   return (
     <button
@@ -109,7 +113,7 @@ function WhisperButton({ userId }: { userId: string }) {
           new CustomEvent(WHISPER_OPEN_EVENT, { detail: { peerUserId: userId } }),
         )
       }
-      className={`${btn} bg-amber-500 px-2 text-white`}
+      className="-my-1 flex h-10 w-9 items-center justify-center rounded-lg text-[15px] text-zinc-400 transition active:scale-95 active:text-zinc-600 dark:text-zinc-500 dark:active:text-zinc-300"
     >
       <span aria-hidden>💬</span>
     </button>

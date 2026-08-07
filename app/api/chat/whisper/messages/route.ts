@@ -4,7 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { displayFields } from '@/lib/game/chat/service';
-import { isUserIdShape, listWhisperMessages } from '@/lib/game/chat/whisper';
+import { isUserIdShape, listWhisperMessages, whisperDisplay } from '@/lib/game/chat/whisper';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,21 +32,16 @@ export async function GET(req: Request) {
   }
 
   const serverId = await getActiveServerId();
+  // 상대와 나를 **한 번의 displayFields**로 — 스레드가 전체 채팅과 같은 행(아바타·길드 문양·
+  // 길드명·칭호)을 그리려면 내 표시 필드도 필요하다. 두 명을 따로 부르면 왕복만 늘어난다.
   const [messages, fields] = await Promise.all([
     listWhisperMessages(userId, serverId, peer, beforeId),
-    displayFields([peer], serverId),
+    displayFields([userId, peer], serverId),
   ]);
-  const f = fields.get(peer);
   return NextResponse.json({
     messages,
-    peer: {
-      userId: peer,
-      // 상대가 이 서버에 캐릭터가 없어도(서버 이전·탈퇴) 대화 자체는 열람 가능 — 닉만 폴백.
-      nickname: f?.nickname ?? '유저',
-      publicCode: f?.publicCode ?? null,
-      avatar: f?.avatar ?? null,
-      faceBox: f?.faceBox ?? null,
-      guildName: f?.guildName ?? null,
-    },
+    // 상대가 이 서버에 캐릭터가 없어도(서버 이전·탈퇴) 대화 자체는 열람 가능 — 닉만 폴백.
+    peer: { userId: peer, ...whisperDisplay(fields.get(peer)) },
+    self: { userId, ...whisperDisplay(fields.get(userId)) },
   });
 }

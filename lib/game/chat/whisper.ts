@@ -9,7 +9,7 @@ import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { chatBlocks, whisperMessages, whisperReads } from '@/lib/db/schema/chat';
+import { chatBlocks, whisperMessages, whisperReads, whisperReports } from '@/lib/db/schema/chat';
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import {
   chatBodyErrorMessage,
@@ -43,13 +43,42 @@ export type WhisperMessageDto = {
   createdAt: string; // ISO
 };
 
-export type WhisperThread = {
-  peerUserId: string;
+/**
+ * 한 유저의 표시 필드 묶음 — 전체/길드 채팅 행(ChatMessageDto)이 쓰는 것과 같은 집합이다.
+ * 귓속말 목록·스레드를 같은 행 컴포넌트로 그리려면 길드 문양·집행관 구역·대표 칭호까지
+ * 함께 내려가야 한다(닉+아바타만으로는 채팅 행을 재현할 수 없다).
+ */
+export type WhisperDisplay = {
   nickname: string;
   publicCode: string | null;
   avatar: string | null;
   faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
+  guildEmblemUrl: string | null;
+  executorZone: string | null;
+  executorZoneRegion: string | null;
+  repTitle: string | null;
+  isMeleeChampion: boolean;
+};
+
+/** displayFields 한 칸 → 표시 묶음. 그 서버에 캐릭터가 없으면(서버 이전·탈퇴) 닉만 폴백. */
+export function whisperDisplay(f: WhisperDisplay | undefined): WhisperDisplay {
+  return {
+    nickname: f?.nickname ?? '유저',
+    publicCode: f?.publicCode ?? null,
+    avatar: f?.avatar ?? null,
+    faceBox: f?.faceBox ?? null,
+    guildName: f?.guildName ?? null,
+    guildEmblemUrl: f?.guildEmblemUrl ?? null,
+    executorZone: f?.executorZone ?? null,
+    executorZoneRegion: f?.executorZoneRegion ?? null,
+    repTitle: f?.repTitle ?? null,
+    isMeleeChampion: f?.isMeleeChampion ?? false,
+  };
+}
+
+export type WhisperThread = WhisperDisplay & {
+  peerUserId: string;
   lastBody: string;
   lastFromMe: boolean;
   lastAt: string; // ISO
@@ -62,10 +91,13 @@ export type SendWhisperResult =
 
 /** 숨김(모더레이션) 메시지가 목록 미리보기에 노출될 때의 대체 문구. */
 export const WHISPER_HIDDEN_BODY = '(숨김 처리된 메시지)';
-/** 스레드 한 페이지 — 채팅 도크와 같은 감각의 스크롤 단위. */
-export const WHISPER_PAGE_SIZE = 50;
-/** 대화 목록 상한 — 무한 누적 방지(오래된 대화는 30일 보존 정리로 자연 소멸). */
-export const WHISPER_THREADS_LIMIT = 50;
+/**
+ * 스레드 표시 상한 — 최신 200건 고정. 유저 화면에 페이지네이션은 두지 않는다(위로 더 불러오기의
+ * 스크롤 위치 보존은 버그 표면이 넓고, 대화당 보존이 500건이라 200이면 실사용 전량에 가깝다).
+ */
+export const WHISPER_PAGE_SIZE = 200;
+/** 대화 목록 상한 — 최신 200개 고정(오래된 대화는 30일 보존 정리로 자연 소멸). */
+export const WHISPER_THREADS_LIMIT = 200;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -316,15 +348,9 @@ export async function listWhisperThreads(
 
   const fields = await displayFields(rows.map((r) => r.peer), serverId);
   return rows.map((r) => {
-    const f = fields.get(r.peer);
     return {
       peerUserId: r.peer,
-      // 상대가 이 서버에 캐릭터가 없는 경우(서버 이전·탈퇴) — 대화는 남기고 닉만 폴백.
-      nickname: f?.nickname ?? '유저',
-      publicCode: f?.publicCode ?? null,
-      avatar: f?.avatar ?? null,
-      faceBox: f?.faceBox ?? null,
-      guildName: f?.guildName ?? null,
+      ...whisperDisplay(fields.get(r.peer)),
       lastBody: whisperPreviewBody(r.body, r.hidden),
       lastFromMe: r.from_me,
       lastAt: r.created_at,
@@ -391,6 +417,34 @@ export async function markWhisperRead(
       set last_read_id = greatest(whisper_reads.last_read_id, excluded.last_read_id),
           updated_at = now()
   `);
+}
+
+/**
+ * 메시지 신고 — 전체 채팅과 같은 진입(본문 탭). 신고자가 **그 대화의 참가자**인지 검증한다:
+ * messageId는 순차라 열거가 가능하고, 남의 1:1 대화를 신고 대상으로 삼는 순간 대화 존재
+ * 여부가 새어 나간다(reportChatMessage의 가시성 검증과 같은 철학).
+ *
+ * ⚠ 자동 숨김 임계 없음 — 1:1은 신고 가능자가 상대 1명뿐이라 '3건 누적' 자체가 성립하지 않고,
+ * 1건 자동 숨김을 두면 신고 버튼이 곧 상대 메시지 삭제 버튼이 된다. 숨김은 어드민 검수에서만.
+ */
+export async function reportWhisperMessage(
+  reporterUserId: string,
+  messageId: bigint,
+  dbx: WhisperDb = db,
+): Promise<'ok' | 'not_found'> {
+  const [msg] = await dbx
+    .select({ from: whisperMessages.fromUserId, to: whisperMessages.toUserId })
+    .from(whisperMessages)
+    .where(eq(whisperMessages.id, messageId))
+    .limit(1);
+  if (!msg) return 'not_found';
+  const me = reporterUserId.toLowerCase();
+  // 참가자가 아니면 '없음'과 같은 응답 — 열거로 남의 대화 존재를 확인할 수 없게.
+  if (msg.from.toLowerCase() !== me && msg.to.toLowerCase() !== me) return 'not_found';
+  // 내 메시지는 신고 대상이 아니다(전체 채팅도 내 메시지엔 신고 경로가 없다).
+  if (msg.from.toLowerCase() === me) return 'not_found';
+  await dbx.insert(whisperReports).values({ messageId, reporterUserId }).onConflictDoNothing();
+  return 'ok';
 }
 
 /**

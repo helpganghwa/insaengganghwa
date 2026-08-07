@@ -1,18 +1,25 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { TitleTag } from '@/components/TitleTag';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import type { FaceBox } from '@/components/faceCrop';
-import type { ChatMention } from '@/lib/game/chat/service';
+import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
 import { searchAction } from '@/app/(game)/friends/actions';
 
-import { avatarBox, renderMentionBody } from './mentionBody';
+import { reportWhisper } from './actions';
+import { ChatRow } from './ChatRow';
+import { avatarBox } from './mentionBody';
 
 /**
  * 귓속말(1:1) 패널 — 채팅 도크의 '귓속말' 탭 본문. 목록 ↔ 스레드 2단을 내부 상태로 전환한다.
+ *
+ * 스레드 본문은 전체·길드와 **같은 행 컴포넌트**(ChatRow)로 그린다 — 말풍선 좌/우 대신 아바타·
+ * 닉네임·길드 문양·길드명·칭호가 붙은 같은 줄이라, 같은 사람이 채널마다 다르게 보이지 않는다.
+ * 신고 진입도 같다: 본문 탭 → 확인 팝업(내 메시지 제외).
  *
  * 도크와의 분담: 도크는 열림/탭/실시간 구독만, 내용은 전부 여기. 도크가 threads 응답의
  * topic으로 구독한 'new' 이벤트는 registerSink로 등록한 함수로 흘러들어온다(반환 true =
@@ -20,7 +27,7 @@ import { avatarBox, renderMentionBody } from './mentionBody';
  *
  * 소비 API
  *  - GET  /api/chat/whisper/threads                      → { threads, topic }
- *  - GET  /api/chat/whisper/messages?peer=&before=       → { messages(오래된→최신 50), peer }
+ *  - GET  /api/chat/whisper/messages?peer=               → { messages(오래된→최신 200), peer, self }
  *  - POST /api/chat/whisper/send   { peerUserId, body }  → { status, message }
  *  - POST /api/chat/whisper/read   { peerUserId, lastId } | { peerUserId, leave: true }
  */
@@ -34,22 +41,24 @@ export type WhisperMessageDto = {
   createdAt: string;
 };
 
-export type WhisperPeer = {
-  userId: string;
+/** 채팅 행이 쓰는 표시 필드 묶음 — 서버 whisperDisplay()와 1:1(길드 문양·집행관·칭호 포함). */
+export type WhisperDisplay = {
   nickname: string;
   publicCode: string | null;
   avatar: string | null;
   faceBox: FaceBox | null;
   guildName: string | null;
+  guildEmblemUrl: string | null;
+  executorZone: string | null;
+  executorZoneRegion: string | null;
+  repTitle: string | null;
+  isMeleeChampion: boolean;
 };
 
-export type WhisperThread = {
+export type WhisperPeer = WhisperDisplay & { userId: string };
+
+export type WhisperThread = WhisperDisplay & {
   peerUserId: string;
-  nickname: string;
-  publicCode: string | null;
-  avatar: string | null;
-  faceBox: FaceBox | null;
-  guildName: string | null;
   lastBody: string;
   lastFromMe: boolean;
   lastAt: string;
@@ -61,14 +70,42 @@ export type WhisperThreadsRes = { threads: WhisperThread[]; topic: string };
 /** 외부 진입(친구 목록 버튼·푸시 딥링크) — 둘 중 아는 식별자로 스레드를 연다. */
 export type WhisperOpenTarget = { userId: string } | { publicCode: string };
 
-const PAGE = 50;
 const BODY_MAX = 100;
-const TIME_FMT = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' });
 const DATE_FMT = new Intl.DateTimeFormat('ko-KR', {
   month: 'long',
   day: 'numeric',
   weekday: 'short',
 });
+
+/** 아직 신원을 모르는 상대(친구 목록·딥링크 직행) — messages 응답의 peer가 곧 덮어쓴다. */
+const UNKNOWN: WhisperDisplay = {
+  nickname: '…',
+  publicCode: null,
+  avatar: null,
+  faceBox: null,
+  guildName: null,
+  guildEmblemUrl: null,
+  executorZone: null,
+  executorZoneRegion: null,
+  repTitle: null,
+  isMeleeChampion: false,
+};
+
+/** 표시 필드만 추려낸다 — 목록 행·상대 정보·낙관 삽입이 같은 묶음을 돌려쓰게. */
+function pickDisplay(d: WhisperDisplay): WhisperDisplay {
+  return {
+    nickname: d.nickname,
+    publicCode: d.publicCode,
+    avatar: d.avatar,
+    faceBox: d.faceBox,
+    guildName: d.guildName,
+    guildEmblemUrl: d.guildEmblemUrl,
+    executorZone: d.executorZone,
+    executorZoneRegion: d.executorZoneRegion,
+    repTitle: d.repTitle,
+    isMeleeChampion: d.isMeleeChampion,
+  };
+}
 
 /** 목록 우측 상대시각 — 방금 / N분 / N시간 / 어제 / M.D. */
 function relTime(iso: string): string {
@@ -86,14 +123,7 @@ function relTime(iso: string): string {
 }
 
 function threadPeer(t: WhisperThread): WhisperPeer {
-  return {
-    userId: t.peerUserId,
-    nickname: t.nickname,
-    publicCode: t.publicCode,
-    avatar: t.avatar,
-    faceBox: t.faceBox,
-    guildName: t.guildName,
-  };
+  return { userId: t.peerUserId, ...pickDisplay(t) };
 }
 
 export function WhisperPane({
@@ -111,7 +141,7 @@ export function WhisperPane({
   onToggleBlock,
   onClose,
 }: {
-  /** 내 userId — 말풍선 좌/우 판정. */
+  /** 내 userId — 내 행 판정(전체 채팅과 동일하게 배경 강조만 다르다). */
   me: string | null;
   meNickname: string | null;
   serverId: number;
@@ -131,10 +161,10 @@ export function WhisperPane({
   const [threads, setThreads] = useState<WhisperThread[]>(seed ?? []);
   const [listLoading, setListLoading] = useState(seed === null);
   const [active, setActive] = useState<WhisperPeer | null>(null);
+  /** 내 표시 필드 — 스레드의 내 행도 채팅과 같은 모양으로 그리려면 필요(messages 응답이 준다). */
+  const [self, setSelf] = useState<WhisperDisplay | null>(null);
   const [msgs, setMsgs] = useState<WhisperMessageDto[]>([]);
   const [msgsLoading, setMsgsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +175,9 @@ export function WhisperPane({
   // 입력창 멘션 자동완성 — 전체 채팅과 동일하게 mention-search 재사용.
   const [mentionCands, setMentionCands] = useState<string[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [ask, setAsk] = useState<'report' | 'block' | 'leave' | null>(null);
+  const [ask, setAsk] = useState<'block' | 'leave' | null>(null);
+  // 신고 확인 팝업 대상 — 전체 채팅과 같은 '메시지 단위' 신고(본문 탭 진입).
+  const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -154,8 +186,6 @@ export function WhisperPane({
   const activeRef = useRef<WhisperPeer | null>(null);
   const threadsRef = useRef<WhisperThread[]>(seed ?? []);
   const tempSeqRef = useRef(0);
-  // 스크롤 복원 — 위로 더 불러오면 이전 높이 차이만큼 되돌려 화면이 튀지 않게.
-  const restoreRef = useRef<{ h: number; top: number } | null>(null);
   const needBottomRef = useRef(false);
 
   // 미러 동기화는 다른 effect보다 먼저 선언 — 같은 커밋에서 먼저 실행되어야 한다.
@@ -233,7 +263,7 @@ export function WhisperPane({
     onUnread(threads.reduce((s, t) => s + (t.unread || 0), 0));
   }, [threads, onUnread]);
 
-  // ── 스레드 열기.
+  // ── 스레드 열기. 한 번의 조회로 최신 200건 — 위로 더 불러오기는 두지 않는다(대화당 보존 500건).
   const openThread = useCallback(
     (peer: WhisperPeer) => {
       flushRead();
@@ -244,21 +274,26 @@ export function WhisperPane({
       setInput('');
       setMentionCands([]);
       setError(null);
-      setHasMore(false);
       setMsgsLoading(true);
       needBottomRef.current = true;
       void fetch(`/api/chat/whisper/messages?peer=${encodeURIComponent(peer.userId)}`, {
         cache: 'no-store',
       })
         .then(async (r) =>
-          r.ok ? ((await r.json()) as { messages: WhisperMessageDto[]; peer?: WhisperPeer }) : null,
+          r.ok
+            ? ((await r.json()) as {
+                messages: WhisperMessageDto[];
+                peer?: WhisperPeer;
+                self?: WhisperDisplay;
+              })
+            : null,
         )
         .then((d) => {
           if (!d || activeRef.current?.userId !== peer.userId) return;
           setMsgs(d.messages);
-          setHasMore(d.messages.length >= PAGE);
           // 서버가 준 상대 정보로 헤더 보정(친구 목록·딥링크 진입은 닉/아바타를 모를 수 있다).
           if (d.peer) setActive((cur) => (cur?.userId === d.peer!.userId ? d.peer! : cur));
+          if (d.self) setSelf(d.self);
           needBottomRef.current = true;
           const last = [...d.messages].reverse().find((m) => !m.id.startsWith('tmp-'));
           if (last) queueRead(peer.userId, last.id);
@@ -299,13 +334,16 @@ export function WhisperPane({
           }
           setQ('');
           setCands([]);
+          // 칭호·집행관은 친구 검색이 모르는 값 — messages 응답의 peer가 곧 채운다.
           openThread({
+            ...UNKNOWN,
             userId: hit.userId,
             nickname: hit.nickname,
             publicCode: hit.publicCode,
             avatar: hit.profileSouth,
             faceBox: hit.faceBox ?? null,
             guildName: hit.guildName ?? null,
+            guildEmblemUrl: hit.guildEmblemUrl ?? null,
           });
         })
         .catch(() => flashError('유저를 찾지 못했어요.'))
@@ -321,18 +359,7 @@ export function WhisperPane({
     if ('userId' in openTarget) {
       const t = threadsRef.current.find((x) => x.peerUserId === openTarget.userId);
       // 첫 대화라 목록에 없으면 messages 응답의 peer가 헤더를 채운다.
-      openThread(
-        t
-          ? threadPeer(t)
-          : {
-              userId: openTarget.userId,
-              nickname: '…',
-              publicCode: null,
-              avatar: null,
-              faceBox: null,
-              guildName: null,
-            },
-      );
+      openThread(t ? threadPeer(t) : { ...UNKNOWN, userId: openTarget.userId });
       return;
     }
     const code = openTarget.publicCode;
@@ -435,54 +462,17 @@ export function WhisperPane({
     inputRef.current?.focus();
   };
 
-  // ── 이전 대화 더 보기(위로 스크롤).
-  const loadMore = useCallback(() => {
-    const el = listRef.current;
-    const peer = activeRef.current;
-    if (!el || !peer || loadingMore || !hasMore) return;
-    const oldest = msgs.find((m) => !m.id.startsWith('tmp-'));
-    if (!oldest) return;
-    setLoadingMore(true);
-    const h = el.scrollHeight;
-    const top = el.scrollTop;
-    void fetch(
-      `/api/chat/whisper/messages?peer=${encodeURIComponent(peer.userId)}&before=${encodeURIComponent(oldest.id)}`,
-      { cache: 'no-store' },
-    )
-      .then(async (r) => (r.ok ? ((await r.json()) as { messages: WhisperMessageDto[] }) : null))
-      .then((d) => {
-        if (!d || activeRef.current?.userId !== peer.userId) return;
-        if (d.messages.length === 0) {
-          setHasMore(false);
-          return;
-        }
-        setHasMore(d.messages.length >= PAGE);
-        restoreRef.current = { h, top };
-        setMsgs((prev) => [...d.messages.filter((m) => !prev.some((p) => p.id === m.id)), ...prev]);
-      })
-      .catch(() => {
-        /* 무시 — 다시 스크롤하면 재시도 */
-      })
-      .finally(() => setLoadingMore(false));
-  }, [hasMore, loadingMore, msgs]);
-
-  // 스크롤 위치 — 더 불러오면 위치 복원, 새로 열거나 보낼 때는 바닥. 페인트 전에 처리.
+  // 스크롤 위치 — 새로 열거나 보낼 때 바닥. 페인트 전에 처리(위가 보였다 내려가는 깜빡임 방지).
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    const r = restoreRef.current;
-    if (r) {
-      restoreRef.current = null;
-      el.scrollTop = el.scrollHeight - r.h + r.top;
-      return;
-    }
     if (needBottomRef.current && msgs.length > 0) {
       needBottomRef.current = false;
       el.scrollTop = el.scrollHeight;
     }
   }, [msgs]);
 
-  // ── 전송(낙관 렌더) — 즉시 말풍선, 실패하면 회수 + 입력 복원.
+  // ── 전송(낙관 렌더) — 즉시 내 행을 띄우고, 실패하면 회수 + 입력 복원.
   const submit = () => {
     const peer = active;
     const body = input.trim();
@@ -533,20 +523,7 @@ export function WhisperPane({
             lastAt: r.message.createdAt,
             unread: 0,
           };
-          if (i < 0) {
-            return [
-              {
-                peerUserId: peer.userId,
-                nickname: peer.nickname,
-                publicCode: peer.publicCode,
-                avatar: peer.avatar,
-                faceBox: peer.faceBox,
-                guildName: peer.guildName,
-                ...patch,
-              },
-              ...prev,
-            ];
-          }
+          if (i < 0) return [{ peerUserId: peer.userId, ...pickDisplay(peer), ...patch }, ...prev];
           const next = [...prev];
           const [t] = next.splice(i, 1);
           return [{ ...t!, ...patch }, ...next];
@@ -560,7 +537,7 @@ export function WhisperPane({
       .finally(() => setSending(false));
   };
 
-  // ── ⋯ 메뉴 실행.
+  // ── ⋯ 메뉴 실행. 신고는 여기 없다 — 대상이 '대화'가 아니라 '메시지'라 본문 탭이 유일한 진입.
   const doBlock = () => {
     const peer = active;
     setAsk(null);
@@ -586,31 +563,63 @@ export function WhisperPane({
     backToList();
   };
 
+  // ── 신고 — 전체 채팅과 같은 액션 형태·같은 문구.
+  const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
+  const confirmReport = () => {
+    const m = reportTarget;
+    if (!m) return;
+    setReportTarget(null);
+    void reportWhisper(m.id).then((r) => {
+      flashError(r.status === 'ok' ? '신고가 접수되었습니다.' : (r.message ?? '신고에 실패했습니다.'));
+    });
+  };
+
+  /**
+   * 귓속말 메시지 → 채팅 행 DTO. 발신자에 따라 표시 필드를 골라 붙인다(내 것은 self).
+   * useMemo — ChatRow는 memo라 매 입력마다 새 객체를 만들면 목록 전체가 재렌더된다.
+   */
+  const rows = useMemo(() => {
+    const meFields: WhisperDisplay = self ?? { ...UNKNOWN, nickname: meNickname ?? '나' };
+    const peerFields: WhisperDisplay = active ? pickDisplay(active) : UNKNOWN;
+    const out: { dto: ChatMessageDto; prev: ChatMessageDto | undefined; date: string | null }[] = [];
+    let prevDay = '';
+    let prevDto: ChatMessageDto | undefined;
+    for (const m of msgs) {
+      const d = new Date(m.createdAt);
+      const day = d.toDateString();
+      const newDay = day !== prevDay;
+      const dto: ChatMessageDto = {
+        id: m.id,
+        userId: m.fromUserId,
+        ...(m.fromUserId === me ? meFields : peerFields),
+        mentions: m.mentions,
+        body: m.body,
+        createdAt: m.createdAt,
+      };
+      // 날짜 구분선을 사이에 두고는 묶지 않는다 — 구분선 아래 첫 줄은 항상 발신자를 보여준다.
+      out.push({ dto, prev: newDay ? undefined : prevDto, date: newDay ? DATE_FMT.format(d) : null });
+      prevDto = dto;
+      prevDay = day;
+    }
+    return out;
+  }, [msgs, me, meNickname, self, active]);
+
   const visibleThreads = threads.filter((t) => !blocked.has(t.peerUserId));
 
   // ─────────────────────────────────────────── 목록
   if (!active) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
+        {/* 검색바는 가로 전체 — 닫기는 도크 하단(스레드 입력줄)에만 둔다(2026-08-07 피드백). */}
         <div className="shrink-0 px-2.5 pt-2 pb-1">
-          <div className="flex items-center gap-1.5">
-            <ZoomSafeInput
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              maxLength={12}
-              placeholder="닉네임 검색 · 새 귓속말"
-              wrapClassName="h-8 min-w-0 flex-1"
-              className="rounded-full border border-zinc-200 bg-zinc-50 px-3.5 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
-            />
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="채팅 닫기"
-              className="h-8 w-[46px] shrink-0 rounded-full bg-zinc-100 text-[11.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              닫기
-            </button>
-          </div>
+          <ZoomSafeInput
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            maxLength={12}
+            placeholder="닉네임 검색 · 새 귓속말"
+            wrapClassName="h-8 w-full"
+            className="rounded-full border border-zinc-200 bg-zinc-50 px-3.5 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+          />
           {error ? (
             <p className="mt-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
           ) : null}
@@ -655,13 +664,34 @@ export function WhisperPane({
                   >
                     {avatarBox(t, 'block h-9 w-9')}
                     <span className="min-w-0 flex-1">
+                      {/* 표기 순서는 채팅 행과 동일: 닉네임 → 길드 문양 → 길드명 → 칭호. */}
                       <span className="flex items-baseline gap-1.5">
-                        <b className="truncate text-[12.5px]">{t.nickname}</b>
+                        <b className="truncate text-[12.5px]">
+                          {t.isMeleeChampion ? '🏆' : ''}
+                          {t.nickname}
+                        </b>
+                        {t.guildEmblemUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={t.guildEmblemUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="h-3 w-3 shrink-0 self-center object-contain"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                        ) : null}
                         {t.guildName ? (
                           <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">
                             {t.guildName}
                           </span>
                         ) : null}
+                        <TitleTag
+                          code={t.repTitle}
+                          executorZone={t.executorZone}
+                          executorZoneRegion={t.executorZoneRegion}
+                          className="text-[9.5px]"
+                        />
                         <span className="ml-auto shrink-0 text-[9.5px] text-zinc-300 dark:text-zinc-600">
                           {relTime(t.lastAt)}
                         </span>
@@ -716,12 +746,32 @@ export function WhisperPane({
           >
             {avatarBox(active, 'block h-7 w-7')}
             <span className="flex min-w-0 items-baseline gap-1.5">
-              <b className="truncate text-[12.5px]">{active.nickname}</b>
+              <b className="truncate text-[12.5px]">
+                {active.isMeleeChampion ? '🏆' : ''}
+                {active.nickname}
+              </b>
+              {active.guildEmblemUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={active.guildEmblemUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-3 w-3 shrink-0 self-center object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : null}
               {active.guildName ? (
                 <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">
                   {active.guildName}
                 </span>
               ) : null}
+              <TitleTag
+                code={active.repTitle}
+                executorZone={active.executorZone}
+                executorZoneRegion={active.executorZoneRegion}
+                className="text-[9.5px]"
+              />
             </span>
           </button>
           <button
@@ -739,7 +789,6 @@ export function WhisperPane({
               <div className="absolute top-[38px] right-1.5 z-20 w-[124px] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                 {(
                   [
-                    ['report', '신고'],
                     ['block', blocked.has(active.userId) ? '차단 해제' : '차단'],
                     ['leave', '대화 나가기'],
                   ] as const
@@ -763,67 +812,38 @@ export function WhisperPane({
 
         <div
           ref={listRef}
-          onScroll={() => {
-            const el = listRef.current;
-            if (el && el.scrollTop < 40) loadMore();
-          }}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
         >
           {msgsLoading && msgs.length === 0 ? (
             <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
-          ) : null}
-          {loadingMore ? (
-            <p className="py-1.5 text-center text-[10px] text-zinc-400">이전 대화 불러오는 중…</p>
           ) : null}
           {!msgsLoading && msgs.length === 0 ? (
             <p className="py-10 text-center text-[12px] leading-relaxed text-zinc-400">
               첫 귓속말을 보내보세요.
             </p>
           ) : null}
-          {msgs.map((m, i) => {
-            const mine = m.fromUserId === me;
-            const pending = m.id.startsWith('tmp-');
-            const prev = msgs[i - 1];
-            const showDate =
-              !prev ||
-              new Date(prev.createdAt).toDateString() !== new Date(m.createdAt).toDateString();
-            return (
-              <div key={m.id}>
-                {showDate ? (
-                  <div className="my-2 flex items-center gap-2">
-                    <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                    <span className="shrink-0 text-[9.5px] text-zinc-400 dark:text-zinc-500">
-                      {DATE_FMT.format(new Date(m.createdAt))}
-                    </span>
-                    <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                  </div>
-                ) : null}
-                <div
-                  className={`flex items-end gap-1 py-[2px] ${mine ? 'justify-end' : 'justify-start'}`}
-                >
-                  {mine ? (
-                    <span className="shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                      {TIME_FMT.format(new Date(m.createdAt))}
-                    </span>
-                  ) : null}
-                  <p
-                    className={`max-w-[74%] rounded-2xl px-3 py-1.5 text-[12.5px] leading-[1.45] break-words ${
-                      mine
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200'
-                    } ${pending ? 'opacity-50' : ''}`}
-                  >
-                    {renderMentionBody(m.body, m.mentions, meNickname, serverId, { invert: mine })}
-                  </p>
-                  {!mine ? (
-                    <span className="shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                      {TIME_FMT.format(new Date(m.createdAt))}
-                    </span>
-                  ) : null}
+          {rows.map((r) => (
+            <div key={r.dto.id}>
+              {r.date ? (
+                <div className="my-2 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+                  <span className="shrink-0 text-[9.5px] text-zinc-400 dark:text-zinc-500">
+                    {r.date}
+                  </span>
+                  <span className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
                 </div>
-              </div>
-            );
-          })}
+              ) : null}
+              <ChatRow
+                m={r.dto}
+                prevMsg={r.prev}
+                me={me}
+                meNickname={meNickname}
+                serverId={serverId}
+                onProfile={onProfile}
+                onReport={onReport}
+              />
+            </div>
+          ))}
         </div>
 
         <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
@@ -886,30 +906,50 @@ export function WhisperPane({
         </div>
       </div>
 
-      {/* 신고 — v1은 안내만. 기존 reportChat은 chat_messages(bigint id) 전용이라 귓속말
-          메시지 id로는 호출 자체가 성립하지 않는다(엉뚱한 메시지 신고 위험). 귓속말 신고
-          백엔드가 생기면 여기서 바로 호출하도록 교체할 것. */}
-      {ask === 'report' ? (
-        <ModalShell onClose={() => setAsk(null)} label="귓속말 신고">
+      {/* 신고 확인 — 전체 채팅 신고 팝업과 같은 구성(제목·상대·본문 카드·[취소][차단][신고]).
+          귓속말엔 신고 누적 자동 숨김이 없다(신고 가능자가 상대 1명뿐이라 어뷰징 지렛대가 된다). */}
+      {reportTarget ? (
+        <ModalShell
+          onClose={() => setReportTarget(null)}
+          onSubmit={confirmReport}
+          label="메시지 신고"
+        >
           <ModalLayout
-            title="이 대화를 신고할까요?"
+            title="이 메시지를 신고할까요?"
             subtitle={
-              <span className="font-bold text-zinc-600 dark:text-zinc-300">{active.nickname}</span>
+              <span className="font-bold text-zinc-600 dark:text-zinc-300">
+                {reportTarget.nickname}
+              </span>
             }
             footer={
               <>
-                <ModalButton tone="ghost" onClick={() => setAsk(null)}>
+                <ModalButton tone="ghost" onClick={() => setReportTarget(null)}>
                   취소
                 </ModalButton>
-                <ModalButton tone="danger" onClick={() => setAsk('block')}>
-                  차단하기
+                <ModalButton
+                  tone="neutral"
+                  onClick={() => {
+                    const m = reportTarget;
+                    if (!m) return;
+                    setReportTarget(null);
+                    onToggleBlock(m.userId, m.nickname);
+                    backToList();
+                    flashError('차단했어요. 차단 목록에서 해제할 수 있어요.');
+                  }}
+                >
+                  차단
+                </ModalButton>
+                <ModalButton tone="danger" onClick={confirmReport}>
+                  신고
                 </ModalButton>
               </>
             }
           >
-            <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              귓속말은 아직 앱 안에서 바로 신고할 수 없어요. 먼저 차단해 대화를 끊고, 설정 &gt;
-              문의하기로 내용을 알려주세요. 확인 후 조치합니다.
+            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {reportTarget.body.slice(0, 60)}
+            </p>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
+              접수된 신고는 운영자가 대화 원본을 확인해 조치합니다.
             </p>
           </ModalLayout>
         </ModalShell>

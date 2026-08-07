@@ -7,29 +7,25 @@ import { profileHref } from '@/lib/game/profile/href';
 import type { ChatMention } from '@/lib/game/chat/service';
 
 /**
- * 채팅 본문·썸네일 공용 렌더(전체/길드 행 + 귓속말 말풍선).
- * 두 화면이 같은 멘션 표기·같은 얼굴 크롭을 쓰도록 한 곳에 둔다.
+ * 채팅 본문·썸네일 공용 렌더 — 전체·길드·귓속말이 같은 멘션 표기와 같은 얼굴 크롭을 쓴다.
  */
 
 /**
  * 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 강조, 닉 클릭 시 프로필 상세.
  * 무효 @토큰은 입력한 그대로 일반 텍스트. 색은 절제(내 닉만 약간 진하게).
- * invert = 진한 배경(내 귓속말 말풍선) 위 — amber 글자가 묻히므로 흰 글자 밑줄로 바꾼다.
  */
 export function renderMentionBody(
   body: string,
   mentions: ChatMention[] | null,
   meNickname: string | null,
   serverId: number,
-  opts?: { invert?: boolean },
 ) {
   return body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
     const nick = part.startsWith('@') ? part.slice(1) : null;
     const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
     if (nick && hit) {
-      const cls = opts?.invert
-        ? 'font-bold text-white underline underline-offset-2'
-        : meNickname && nick === meNickname
+      const cls =
+        meNickname && nick === meNickname
           ? 'font-bold text-amber-600 dark:text-amber-400'
           : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
       if (hit.c) {
