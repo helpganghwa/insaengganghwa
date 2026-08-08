@@ -96,59 +96,36 @@ RPG도 후보지만 단일 선택이라 검색 노출에 유리한 쪽을 고른
 
 ---
 
-## 14~16. 이미지 — 규격과 생성 프롬프트
+## 14~16. 이미지 — 로그인 히어로에서 제작(확정)
 
-| 항목 | 규격 | 쓰이는 곳 |
-|---|---|---|
-| 대표 이미지_01 | **624×360** (≈16:9) | '함께 할만한 게임' 카드 · 라운지 검색 이미지 |
-| 대표 이미지_02 | **300×300** (1:1) | 게임 대표 이미지 |
-| 대표 이미지_03 | **300×400** (3:4) | 치지직 카테고리 이미지 |
+세 장 모두 **기존 로그인 히어로(`public/login-hero.webp`, 1080×617)를 크롭·리사이즈**해서
+만든다. 새로 생성하지 않는 이유: 이미 게임의 정체성(대장간·모루·무한대 궤적의 검·로고)이
+담긴 완성본이고, 생성 이미지로는 이 톤과 한글 로고를 재현할 수 없다.
 
-브랜드 톤: 배경 `#17110c`(짙은 갈색빛 검정), 액센트 `#f59e0b`(앰버), 픽셀아트.
+| 항목 | 규격 | 구도 | 쓰이는 곳 |
+|---|---|---|---|
+| 대표 이미지_01 | 624×360 | 원본 거의 그대로(좌우 6px 크롭) | '함께 할만한 게임' 카드 · 라운지 검색 |
+| 대표 이미지_02 | 300×300 | 중앙 정사각 — 로고~바닥 전체 | 게임 대표 이미지 |
+| 대표 이미지_03 | 300×400 | 중앙 세로 — 로고·검·모루 세로 배치 | 치지직 카테고리 |
 
-> **글자는 생성하지 않는다.** 모델이 한글을 정확히 못 쓴다. 그림만 만들고 "인생강화" 로고는
-> 이후에 얹는다. 각 프롬프트에 로고 자리(빈 어둠)를 확보해 뒀다.
-> **크기는 비율로 생성한 뒤 정확한 픽셀로 리사이즈**한다(모델이 임의 크기를 정확히 못 낸다).
+산출물: `~/Desktop/네이버-게임등록-이미지/` (01~03 PNG)
 
-### 14. 624×360 — 가로 키비주얼
+### 재생성 명령
 
-```
-Pixel art key visual, 16:9 wide. A dark blacksmith forge at night. On a heavy iron anvil rests
-a longsword floating an inch above the surface, its blade glowing molten amber from within.
-Golden sparks drift upward and dissolve into darkness. On the back wall hang a shield and a
-ring, dimly lit. Deep brown-black background (#17110c); warm amber light (#f59e0b) is the only
-light source, pooling on the anvil and falling off into shadow toward the edges.
-Crisp square pixels, hard edges, limited palette of about 24 colors, no anti-aliasing.
-Restrained and elegant composition with generous empty darkness on the left third for a logo.
-Cinematic, moody, high contrast.
+원본을 손대지 않고 언제든 다시 뽑을 수 있다. `public/` 에서 실행:
+
+```bash
+OUT=~/Desktop/네이버-게임등록-이미지 && mkdir -p "$OUT"
+ffmpeg -y -i login-hero.webp -vf "crop=1069:617:6:0,scale=624:360:flags=lanczos" "$OUT/01_대표이미지_624x360.png"
+ffmpeg -y -i login-hero.webp -vf "crop=617:617:232:0,scale=300:300:flags=lanczos"  "$OUT/02_대표이미지_300x300.png"
+ffmpeg -y -i login-hero.webp -vf "crop=463:617:309:0,scale=300:400:flags=lanczos"  "$OUT/03_대표이미지_300x400.png"
 ```
 
-### 15. 300×300 — 정사각 대표 이미지
+축소는 lanczos를 쓴다. 픽셀아트라 nearest가 원칙 같지만, 0.58배처럼 정수배가 아닌 축소에서는
+픽셀 격자가 불규칙하게 깨져 오히려 지저분해진다(실제 비교 후 lanczos 채택).
 
-```
-App icon, 1:1 square, pixel art. A single upright longsword centered on a deep brown-black
-background (#17110c), blade glowing amber (#f59e0b) with a bright core. Three small golden
-sparks orbit the blade. Crisp square pixels, hard edges, limited palette, no anti-aliasing.
-Bold silhouette that stays legible when scaled down to 64 pixels. Centered, symmetrical,
-generous margin, no text. Clean and premium.
-```
+### 히어로를 바꿀 경우
 
-### 16. 300×400 — 세로 카테고리 이미지
-
-```
-Pixel art vertical poster, 3:4. A tall dark forge chamber. In the lower third an anvil with a
-glowing amber longsword hovering above it; in the upper darkness, faint outlines of armor and
-a ring hang on chains. Embers rise through the full height of the frame. Deep brown-black
-(#17110c) with amber (#f59e0b) light. Crisp square pixels, limited palette, no anti-aliasing.
-Vertical flow of light from bottom to top, with empty dark space at the top for a logo.
-```
-
-### 생성·후처리 팁
-
-- 한 번에 완성하려 하지 말고 큰 그림을 먼저 잡은 뒤 "make the amber light warmer",
-  "more empty space on the left" 같은 짧은 지시로 다듬는다.
-- 픽셀이 흐릿하게 나오면 `crisp square pixels, no anti-aliasing, limited palette`를 프롬프트
-  앞쪽으로 옮긴다.
-- 리사이즈는 **니어리스트 네이버(nearest neighbor)** 로 해야 픽셀이 뭉개지지 않는다.
-  예: `sips -z 360 624 in.png --out out.png` 대신 이미지 편집기에서 보간 없음으로 축소.
-- 세 장의 톤(밝기·앰버 채도)을 서로 맞춘다. 검색 결과에 나란히 노출된다.
+로고 위치가 상단 중앙, 검이 정중앙이라는 전제로 크롭 좌표가 잡혀 있다. 히어로를 교체하면
+좌표를 다시 잡아야 한다 — 300×300은 `(1080-617)/2`, 300×400은 `(1080-463)/2`처럼 **가운데
+정렬**로 계산하면 대개 맞는다.
