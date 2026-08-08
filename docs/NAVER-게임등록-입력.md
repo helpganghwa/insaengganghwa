@@ -1,211 +1,154 @@
-# 네이버 게임 등록 신청 — 입력 내용
+# [네이버 게임] 게임 정보 등록 폼 — 입력 내용
 
 신청 폼: `https://docs.google.com/forms/d/e/1FAIpQLSfK8mk-QlZAW9pIFVxHDnimJx1oUcjsIudDUAvLRP-A_2fCOA/viewform`
-(로그인 필요 폼이라 항목을 직접 읽지 못했다. 아래는 게임 등록 신청에 통상 요구되는 항목을
-빠짐없이 채운 자료집 — 실제 폼에 있는 항목만 골라 복붙한다.)
+용도: 네이버 통합검색 노출 + 게임라운지 자동 생성. 문의 `dl_ngamesearch_update@navercorp.com`
+
+> 폼 유의사항: **게임사/배급사만 신청 가능**(일반 개인 불가). 우리는 사업자등록·통신판매업
+> 신고를 마친 상호 '인생강화'로 신청하므로 해당된다. 필수 항목 미기재 시 등록 불가.
 
 ---
 
-## 1. 신청자·사업자 정보
+## 전체 항목 (폼 순서 그대로 · ★=필수)
 
-| 항목 | 값 |
-|---|---|
-| 상호(회사명) | 인생강화 |
-| 대표자 | 서해남 |
-| 사업자등록번호 | 479-13-03130 |
-| 통신판매업 신고번호 | 제2026-울산중구-0155호 |
-| 사업장 주소 | 울산광역시 중구 신기1길 43 |
-| 담당자명 | 서해남 (대표) |
-| 담당자 연락처 | 070-4571-6987 |
-| 담당자 이메일 | help@ganghwa.app |
-
----
-
-## 2. 게임 기본 정보
-
-| 항목 | 값 |
-|---|---|
-| 게임명(국문) | 인생강화 |
-| 게임명(영문) | Insaeng Ganghwa |
-| 개발사 | 인생강화 |
-| 배급사(퍼블리셔) | 인생강화 (자체 서비스) |
-| 장르 | 방치형 RPG / 강화 RPG (세부: 시간 기반 방치형 + 수집·육성) |
-| 플랫폼 | 모바일 웹 (PWA, 설치형 앱 지원) · PC 브라우저 호환 |
-| 서비스 형태 | 웹 브라우저 기반 온라인 게임 (앱 마켓 미출시, 설치 불필요) |
-| 출시일 | 2026년 8월 24일(월) 11:00 정식 오픈 |
-| 서비스 상태 | 정식 서비스 (CBT 종료, 정식 오픈 예정/완료) |
-| 이용 요금 | 무료 (부분 유료 · 인앱결제) |
-| 지원 언어 | 한국어 |
-| 공식 URL | https://ganghwa.app |
-| 플레이 링크 | https://ganghwa.app (브라우저 접속 즉시 플레이) |
-| 로그인 방식 | 카카오 계정 |
-
-### 등급 정보
-
-| 항목 | 값 |
-|---|---|
-| 이용등급 | 전체이용가 |
-| 등급분류기관 | 게임물관리위원회 |
-| 등급분류번호 | 제 GC-CC-NP-260724-001 호 |
-| 등급분류일 | 2026년 7월 24일 |
-| 내용정보 | 폭력성 |
+| # | 항목 | 입력값 |
+|---|---|---|
+| 1 ★ | 신청자 소속회사, 직책 | `인생강화, 대표` |
+| 2 ★ | 신청자 메일 주소 | `help@ganghwa.app` |
+| 3 ★ | 게임명 | `인생강화` |
+| 4 ★ | 게임 영문명 | `Insaeng Ganghwa` |
+| 5 ★ | 제작사 | `인생강화` |
+| 6 | 제작사 홈페이지 URL | `https://ganghwa.app` |
+| 7 ★ | 배급사 | `인생강화` |
+| 8 | 배급사 홈페이지 URL | `https://ganghwa.app` |
+| 9 ★ | 게임 출시일 | `2026-08-24` |
+| 10 ★ | 게임 지원 언어 | ☑ 한국어 |
+| 11 ★ | 이용등급 | ◉ 전체 이용가 |
+| 12 ★ | 장르 (단일 선택) | ◉ 방치형 |
+| 13 ★ | 플랫폼 | ☑ 기타 → `모바일 웹 · PC 웹브라우저 (설치 불필요, PWA 지원)` |
+| 14 ★ | 게임 대표 이미지_01 | 624×360 파일 업로드 (§이미지) |
+| 15 ★ | 게임 대표 이미지_02 | 300×300 파일 업로드 |
+| 16 ★ | 게임 대표 이미지_03 | 300×400 파일 업로드 |
+| 17 ★ | 게임 소개글 | §소개글 본문 복붙 |
+| 18~21 | [Mobile] 구글플레이·앱스토어·갤럭시·원스토어 URL | 공란 (앱 마켓 미출시) |
+| 22~25 | [PC] STEAM·에픽·스토브·다이렉트게임즈 | 공란 |
+| 26 | 공식사이트 | `https://ganghwa.app` |
+| 27 | 공식영상 URL (네이버TV) | 공란 |
+| 28 | 네이버 TV | 공란 |
+| 29 | 치지직 | 공란 |
+| 30 | Youtube | 공란 |
+| 31 | 페이스북 URL | 공란 |
+| 32 | 트위터 URL | 공란 |
+| 33 | 인스타그램 URL | 공란 |
+| 34 ★ | 공식라운지 신청 여부 | ◉ 신청합니다 (권장 — §판단 참고) |
+| 35 ★ | 개인정보 수집 및 이용 동의 | ◉ 동의합니다 |
 
 ---
 
-## 3. 게임 소개 문구 (길이별)
+## 판단이 필요한 항목 (근거)
 
-### 한 줄 소개 (20~30자)
+### 13. 플랫폼 — '기타'로 처리하는 이유
+선택지가 앱 마켓·콘솔 중심(Android/iOS/PC(WINDOW)…)이라 우리처럼 **마켓 없이 브라우저로 바로
+접속하는 게임**에 맞는 항목이 없다. Android/iOS를 체크하면 폼 안내상 마켓 URL을 요구받는데
+우리는 마켓에 없어 공란이 되고, 이 불일치가 반려 사유가 될 수 있다. '기타'에 웹 게임임을
+명시하는 편이 정확하고 심사도 빠르다.
 
+기타 입력값:
 ```
-기다릴수록 성공 확률이 오르는 방치형 강화 RPG
-```
-
-대안:
-```
-강화는 인생이다 — 시간이 확률이 되는 강화 RPG
-```
-
-### 짧은 소개 (100자 내외)
-
-```
-장비를 강화 대기열에 걸어두고 기다리면 성공 확률이 차오릅니다. 접속하지 않아도 시간은 흐르고,
-돌아와서 결과를 확인하는 방치형 강화 RPG입니다. 설치 없이 웹에서 바로 플레이할 수 있습니다.
+모바일 웹 · PC 웹브라우저 (설치 불필요, PWA 지원)
 ```
 
-### 상세 소개 (400~500자)
+### 12. 장르 — '방치형' 단일 선택
+RPG도 후보지만 단일 선택이라 검색 노출에 유리한 쪽을 고른다. '방치형'이 게임의 실제 특징
+(대기 시간이 성공 확률이 되는 구조)과 직결되고, 경쟁 키워드도 RPG보다 좁다. 게임 소개글
+첫 문장에 "방치형 강화 RPG"를 넣어 RPG 키워드도 함께 잡는다.
+
+### 4. 게임 영문명 — 라운지 도메인으로 쓰인다
+폼 안내에 "게임명과 상이한 경우 임의 처리될 수 있음"이라 했으므로 한글명을 그대로 로마자로
+옮긴 `Insaeng Ganghwa`로 둔다. `Ganghwa`처럼 줄이면 게임명과 달라 임의 변경될 수 있다.
+
+### 34. 공식라운지 — 신청 권장
+사전예약, 네이버 DA 광고 지원, 이벤트 비용 협찬을 **무료로** 지원한다고 명시돼 있다. 1인
+개발이라 홍보 예산·채널이 얇은 상황에서 얻는 게 크다. 신청 시 별도 폼(`https://forms.gle/uC3yUVhX53dPPnCw8`)을
+추가로 작성해야 하고 라운지 운영 부담이 생기지만, 정보 등록 이후에 신청해도 되므로
+지금은 '신청합니다'를 고르고 여력이 될 때 신청서를 넣으면 된다.
+
+---
+
+## 17. 게임 소개글 (복붙용)
+
+네이버 검색 결과와 라운지 소개글에 그대로 노출된다.
 
 ```
-인생강화는 '기다림'이 곧 확률이 되는 방치형 강화 RPG입니다.
+인생강화는 기다림이 곧 확률이 되는 방치형 강화 RPG입니다.
 
 무기·방어구·장신구를 강화 대기열에 올려두면 시간이 지날수록 성공 확률이 올라갑니다. 게임을
 꺼두어도 타이머는 계속 흐르기 때문에, 하루에 몇 분만 접속해 결과를 확인하고 다음 강화를
 거는 방식으로 즐길 수 있습니다. 강화 수치가 쌓이면 초월 단계로 넘어가 장비의 외형과 등급이
 바뀝니다.
 
-혼자만의 성장에서 끝나지 않습니다. 다른 이용자와 함께 보스를 잡는 레이드, 매일 자동으로
+혼자만의 성장으로 끝나지 않습니다. 다른 이용자와 함께 보스를 잡는 레이드, 매일 자동으로
 치러지는 대난투, 길드를 만들어 구역을 두고 다투는 점령전이 준비되어 있습니다. 전체 채팅과
 귓속말로 다른 이용자와 대화할 수 있고, 픽셀아트로 생성되는 나만의 아바타를 꾸밀 수 있습니다.
 
-설치가 필요 없는 웹 게임이라 접속 즉시 시작할 수 있으며, 홈 화면에 추가하면 앱처럼 사용할
-수 있습니다. 기본 플레이는 무료입니다.
-```
-
-### 핵심 특징 (불릿형이 필요할 때)
-
-```
-· 시간이 확률이 되는 강화 — 기다린 만큼 성공률이 오르고, 접속하지 않아도 진행됩니다
-· 끝이 없는 성장 — 강화 수치가 쌓이면 초월 단계로 이어지며 장비 외형이 달라집니다
-· 함께하는 콘텐츠 — 레이드·대난투·길드 점령전
-· 나만의 픽셀 아바타 — 장비를 반영한 아바타를 생성하고 꾸밉니다
-· 설치 불필요 — 브라우저에서 바로 플레이, 홈 화면에 추가하면 앱처럼 사용
+설치가 필요 없는 웹 게임이라 주소를 여는 즉시 시작할 수 있고, 홈 화면에 추가하면 앱처럼
+사용할 수 있습니다. 기본 플레이는 무료입니다.
 ```
 
 ---
 
-## 4. 키워드·해시태그
+## 14~16. 이미지 — 규격과 생성 프롬프트
 
-```
-방치형RPG, 강화게임, 강화RPG, 웹게임, 한국식강화, idle게임, 픽셀아트, 레이드, 길드
-```
-
----
-
-## 5. 이미지 첨부 규격 (통상 요구 사항)
-
-| 용도 | 권장 규격 | 비고 |
+| 항목 | 규격 | 쓰이는 곳 |
 |---|---|---|
-| 게임 아이콘/로고 | 512×512 또는 1024×1024 (1:1) | 앱 아이콘과 동일 톤 |
-| 대표 이미지(썸네일) | 1920×1080 (16:9) | 목록·상단 배너용 |
-| 스크린샷 | 실제 플레이 화면 3~5장 | 강화 화면·레이드·아바타·길드 지도 |
+| 대표 이미지_01 | **624×360** (≈16:9) | '함께 할만한 게임' 카드 · 라운지 검색 이미지 |
+| 대표 이미지_02 | **300×300** (1:1) | 게임 대표 이미지 |
+| 대표 이미지_03 | **300×400** (3:4) | 치지직 카테고리 이미지 |
 
-> 스크린샷은 생성 이미지보다 **실제 게임 화면 캡처**가 원칙이다(심사·이용자 신뢰 모두).
-> 생성 이미지는 로고·키비주얼 같은 홍보용에만 쓴다.
+브랜드 톤: 배경 `#17110c`(짙은 갈색빛 검정), 액센트 `#f59e0b`(앰버), 픽셀아트.
 
----
+> **글자는 생성하지 않는다.** 모델이 한글을 정확히 못 쓴다. 그림만 만들고 "인생강화" 로고는
+> 이후에 얹는다. 각 프롬프트에 로고 자리(빈 어둠)를 확보해 뒀다.
+> **크기는 비율로 생성한 뒤 정확한 픽셀로 리사이즈**한다(모델이 임의 크기를 정확히 못 낸다).
 
-## 6. 기타 문항 대비 답변
-
-**미성년자 보호 조치**
-```
-회원가입 시 카카오 계정 인증을 거치며, 유료 결제 이용자는 본인인증(KG이니시스 통합인증)을
-진행합니다. 미성년 이용자는 월 결제 한도 7만 원이 적용되고, 채팅에는 금칙어 필터와
-신고·제재 기능을 운영합니다.
-```
-
-**확률형 아이템 정보 공개**
-```
-보급 상자와 강화 성공 확률을 게임 내 확률 공시 페이지(https://ganghwa.app/probability)에
-상시 공개하고 있으며, 확률 변경 시 사전 공지와 기록을 남깁니다.
-```
-
-**결제 수단**
-```
-포트원(PortOne) 결제 연동 — 신용카드, 카카오페이, 토스페이 등
-```
-
-**고객 지원**
-```
-게임 내 문의하기 기능(1:1 문의) 및 help@ganghwa.app
-```
-
----
-
-## 7. 이미지 생성 프롬프트 (나노바나나)
-
-브랜드 톤: 배경 `#17110c`(짙은 갈색빛 검정), 액센트 `#f59e0b`(앰버/황금), 픽셀아트.
-
-> **글자는 넣지 않는다.** 생성 모델은 한글을 정확히 못 쓴다. 이미지는 그림만 만들고
-> "인생강화" 로고 텍스트는 이후에 얹는다.
-
-### 7-1. 대표 이미지 — 픽셀아트 (16:9, 게임 톤 일치)
+### 14. 624×360 — 가로 키비주얼
 
 ```
-Pixel art key visual, 16:9. A dark blacksmith forge at night. On a heavy iron anvil rests a
-longsword floating an inch above the surface, its blade glowing molten amber from within.
-Golden sparks drift upward and dissolve into darkness. Hanging on the back wall: a shield and
-a ring, dimly lit. Deep brown-black background (#17110c), warm amber light (#f59e0b) as the
-only light source, pooling on the anvil and fading into shadow at the edges.
-Crisp square pixels, hard edges, limited palette of about 24 colors, no anti-aliasing,
-no gradients on the pixels themselves. Restrained and elegant composition, generous empty
-darkness on the left third for later logo placement. Cinematic, moody, high contrast.
+Pixel art key visual, 16:9 wide. A dark blacksmith forge at night. On a heavy iron anvil rests
+a longsword floating an inch above the surface, its blade glowing molten amber from within.
+Golden sparks drift upward and dissolve into darkness. On the back wall hang a shield and a
+ring, dimly lit. Deep brown-black background (#17110c); warm amber light (#f59e0b) is the only
+light source, pooling on the anvil and falling off into shadow toward the edges.
+Crisp square pixels, hard edges, limited palette of about 24 colors, no anti-aliasing.
+Restrained and elegant composition with generous empty darkness on the left third for a logo.
+Cinematic, moody, high contrast.
 ```
 
-### 7-2. 대표 이미지 — 일러스트 (16:9, 홍보용으로 시선을 더 끄는 쪽)
+### 15. 300×300 — 정사각 대표 이미지
 
 ```
-Digital illustration key visual, 16:9. A lone blacksmith's anvil in a vast dark hall, a
-longsword suspended above it wreathed in slow-burning amber light. Molten runes trace the
-blade. Embers rise and fade. The hall recedes into deep shadow; a single shaft of warm light
-falls from above. Palette limited to deep brown-black (#17110c), amber and gold (#f59e0b),
-and a whisper of cool steel grey. Painterly, refined, restrained — elegant rather than busy.
-Wide empty darkness on the left for logo placement. Dramatic chiaroscuro lighting,
-high detail on the sword, soft falloff everywhere else.
-```
-
-### 7-3. 아이콘/로고 심볼 (1:1, 512×512 이상)
-
-```
-App icon, 1:1, pixel art. A single upright longsword centered on a deep brown-black
+App icon, 1:1 square, pixel art. A single upright longsword centered on a deep brown-black
 background (#17110c), blade glowing amber (#f59e0b) with a bright core. Three small golden
 sparks orbit the blade. Crisp square pixels, hard edges, limited palette, no anti-aliasing.
-Bold silhouette that stays legible at 64×64. Centered, symmetrical, generous margin,
-no text. Clean and premium.
+Bold silhouette that stays legible when scaled down to 64 pixels. Centered, symmetrical,
+generous margin, no text. Clean and premium.
 ```
 
-### 7-4. 세로 배너 (필요 시, 9:16 또는 3:4)
+### 16. 300×400 — 세로 카테고리 이미지
 
 ```
-Pixel art vertical banner, 9:16. A tall dark forge chamber. In the lower third an anvil with
-a glowing amber longsword above it; in the upper darkness, faint outlines of armor and a ring
-hang on chains. Embers rise the full height of the frame. Deep brown-black (#17110c) with
-amber (#f59e0b) light. Crisp square pixels, limited palette, no anti-aliasing.
-Vertical flow of light from bottom to top, empty dark space at the top for a logo.
+Pixel art vertical poster, 3:4. A tall dark forge chamber. In the lower third an anvil with a
+glowing amber longsword hovering above it; in the upper darkness, faint outlines of armor and
+a ring hang on chains. Embers rise through the full height of the frame. Deep brown-black
+(#17110c) with amber (#f59e0b) light. Crisp square pixels, limited palette, no anti-aliasing.
+Vertical flow of light from bottom to top, with empty dark space at the top for a logo.
 ```
 
-### 생성 팁
+### 생성·후처리 팁
 
-- 한 번에 완성하려 하지 말고 **7-1 또는 7-2로 큰 그림을 잡은 뒤**, 마음에 드는 컷에
-  "make the amber light warmer", "more empty space on the left" 처럼 짧게 지시해 다듬는다.
-- 픽셀아트가 흐릿하게 나오면 `crisp square pixels, no anti-aliasing, limited palette`를
-  프롬프트 앞쪽으로 옮긴다.
-- 스크린샷 자리는 생성 이미지로 채우지 않는다 — 실제 플레이 화면을 캡처한다.
+- 한 번에 완성하려 하지 말고 큰 그림을 먼저 잡은 뒤 "make the amber light warmer",
+  "more empty space on the left" 같은 짧은 지시로 다듬는다.
+- 픽셀이 흐릿하게 나오면 `crisp square pixels, no anti-aliasing, limited palette`를 프롬프트
+  앞쪽으로 옮긴다.
+- 리사이즈는 **니어리스트 네이버(nearest neighbor)** 로 해야 픽셀이 뭉개지지 않는다.
+  예: `sips -z 360 624 in.png --out out.png` 대신 이미지 편집기에서 보간 없음으로 축소.
+- 세 장의 톤(밝기·앰버 채도)을 서로 맞춘다. 검색 결과에 나란히 노출된다.
