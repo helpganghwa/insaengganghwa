@@ -113,6 +113,11 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
 
   const pickImage = async (file: File) => {
     setErr(null);
+    // 선검사 — 서버 상한과 같은 값. 초과 파일을 업로드했다가 되돌려받는 왕복을 없앤다.
+    if (file.size > 3 * 1024 * 1024) {
+      setErr('이미지는 3MB 이하만 첨부할 수 있어요.');
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -121,7 +126,7 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
       if (r.status === 'success') insertImage(r.url);
       else setErr(r.message);
     } catch {
-      setErr('업로드에 실패했어요. 파일 크기(5MB 이하)를 확인해 주세요.');
+      setErr('업로드에 실패했어요. 파일 크기(3MB 이하)를 확인해 주세요.');
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = ''; // 같은 파일 재선택 허용
@@ -245,7 +250,7 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
             {uploading ? '업로드 중…' : '🖼 이미지 첨부'}
           </button>
           <span className="text-[11px] text-zinc-400">
-            PNG/JPEG/WebP/GIF · 5MB 이하 · 본문 커서 위치에 삽입
+            PNG/JPEG/WebP/GIF · 3MB 이하 · 본문 커서 위치에 삽입
           </span>
         </div>
         <label className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-300">

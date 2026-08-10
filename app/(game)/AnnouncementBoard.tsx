@@ -14,7 +14,10 @@ import {
 } from '@/lib/game/announcement-shared';
 import { votePollAction } from './announcement-poll-actions';
 
-const SEEN_KEY = 'annSeenId';
+// 안읽음 기준 = '가장 최근 발행 시각'(ISO). id를 쓰면 예약 발행에서 새 글을 놓친다 —
+// 미리 만들어 둔 공지(작은 id)가 나중에 발행되면 그 사이 다른 공지를 읽은 유저의 seen(큰 id)이
+// 이미 앞서 있어 팝업·빨간 점이 뜨지 않는다(감사 F4). 발행 시각은 언제나 단조 증가한다.
+const SEEN_KEY = 'annSeenAt';
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '';
@@ -246,13 +249,13 @@ export function AnnouncementBoard({
       .catch(() => setVotes((v) => ({ ...v, [key]: prev ?? '' })));
   };
   const voteForOf = (annId: string) => (q: number) => votes[`${annId}:${q}`] || undefined;
-  // 초기값은 클라에서 localStorage로(SSR=0). 의존 UI는 mounted 후에만 노출 → 하이드레이션 안전.
-  const [seenId, setSeenId] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
+  // 초기값은 클라에서 localStorage로(SSR=''). 의존 UI는 mounted 후에만 노출 → 하이드레이션 안전.
+  const [seenAt, setSeenAt] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
     try {
-      return Number(localStorage.getItem(SEEN_KEY) || 0);
+      return localStorage.getItem(SEEN_KEY) || '';
     } catch {
-      return 0;
+      return '';
     }
   });
   const [listOpen, setListOpen] = useState(false);
@@ -265,16 +268,18 @@ export function AnnouncementBoard({
   }, []);
 
   const latest = items[0] ?? null; // 발행 최신순 → 가장 새 글
-  const hasNew = !!latest && Number(latest.id) > seenId;
+  // 목록이 발행 최신순이라 items[0]이 최댓값이지만, 고정(pinned) 정렬이 섞여도 안전하도록 최댓값을 직접 구한다.
+  const latestAt = items.reduce((mx, a) => (a.publishedAtIso && a.publishedAtIso > mx ? a.publishedAtIso : mx), '');
+  const hasNew = !!latestAt && latestAt > seenAt;
   const gateOpen = mounted && hasNew && !gateDismissed && !listOpen && !holdPopup;
   // 고정 우선(목록) — stable sort라 같은 그룹 내 발행 최신순 유지.
   const sorted = [...items].sort((a, b) => Number(b.pinned) - Number(a.pinned));
 
   const markSeen = () => {
-    if (!latest) return;
-    setSeenId(Number(latest.id));
+    if (!latestAt) return;
+    setSeenAt(latestAt);
     try {
-      localStorage.setItem(SEEN_KEY, latest.id);
+      localStorage.setItem(SEEN_KEY, latestAt);
     } catch {
       /* noop */
     }
