@@ -18,6 +18,7 @@ import {
   BP_TIER_STEP,
 } from '@/lib/game/balance';
 import { getMaxReached } from '@/lib/game/codex/max-reached';
+import { reclaimBoxesTotal } from '@/lib/game/supply/reclaim';
 
 /**
  * 배틀패스 — BALANCE §9 / SCHEMA §14. 성장 패스(만료 없음). 진행도 = 계정 최고 도달.
@@ -521,7 +522,10 @@ export async function bpSegmentClaimedAny(
 }
 
 /**
- * 배틀패스 구간 환불 회수(tx) — 구간 row 삭제(프리미엄 재잠금) + 받았던 프리미엄 보상 회수(0 클램프).
+ * 배틀패스 구간 환불 회수(tx) — 구간 row 삭제(프리미엄 재잠금) + 받았던 프리미엄 보상 회수.
+ * 다이아는 0 클램프, 상자는 **슬롯 합계** 기준(reclaimBoxesTotal) — 환불 사전판정이 합계로 충분
+ * 여부를 보므로 회수도 같은 기준이어야 판정과 실제 회수가 어긋나지 않는다(supply/reclaim.ts 참조).
+ * 지급(grantReward)은 단계별 개별 분배·나머지 슬롯 난수라 애초에 역분배로는 되돌릴 수도 없다.
  * 미수령(claimedTiers 빈) 구간이면 회수액 0 → row 삭제만(재구매 가능). 결제 환불 tx에서 호출.
  */
 export async function reclaimBpSegment(
@@ -556,21 +560,7 @@ export async function reclaimBpSegment(
         .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${total})` })
         .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
     } else {
-      const dist = splitBoxes(total);
-      for (const slot of SLOTS) {
-        if (dist[slot] > 0) {
-          await tx
-            .update(userSupplyBoxes)
-            .set({ count: sql`GREATEST(0, ${userSupplyBoxes.count} - ${dist[slot]})` })
-            .where(
-              and(
-                eq(userSupplyBoxes.userId, userId),
-                eq(userSupplyBoxes.serverId, serverId),
-                eq(userSupplyBoxes.slot, slot),
-              ),
-            );
-        }
-      }
+      await reclaimBoxesTotal(tx, userId, serverId, total);
     }
   }
 }

@@ -37,6 +37,22 @@ async function boxCount(tx: Tx, slot: string): Promise<bigint> {
   return BigInt(r[0]?.c ?? '0');
 }
 
+async function setBoxCount(tx: Tx, slot: string, n: number): Promise<void> {
+  await tx.execute(sql`
+    insert into user_supply_boxes (user_id, server_id, slot, count)
+    values (${TEST_USER_ID}::uuid, ${SID}, ${slot}::slot, ${n})
+    on conflict (user_id, server_id, slot) do update set count = excluded.count
+  `);
+}
+
+async function boxTotal(tx: Tx): Promise<bigint> {
+  return (
+    (await boxCount(tx, 'weapon')) +
+    (await boxCount(tx, 'armor')) +
+    (await boxCount(tx, 'accessory'))
+  );
+}
+
 afterAll(async () => {
   await endTestDb();
 });
@@ -102,6 +118,40 @@ describe.skipIf(skip)('shop/grant — 상품 지급/회수', () => {
       }
       await reclaimProductGrant(tx, TEST_USER_ID, SID, 'starter');
       expect(await getWalletDiamond(tx, TEST_USER_ID, SID)).toBe(0n);
+    });
+  });
+
+  it('reclaim 상자: 한 슬롯이 0이어도 슬롯 합계가 정확히 지급량만큼 감소', async () => {
+    await inRollback(async (tx) => {
+      // m3(258상자) 구매 후 유저가 weapon 상자를 전부 열어버린 분포 —
+      // 슬롯별 역분배(86/86/86)로 회수하면 weapon에서 86개가 조용히 누락된다.
+      await setBoxCount(tx, 'weapon', 0);
+      await setBoxCount(tx, 'armor', 200);
+      await setBoxCount(tx, 'accessory', 200);
+      const g = await applyProductGrant(tx, TEST_USER_ID, SID, 'm3');
+      expect(g).toMatchObject({ boxes: 258 });
+      await setBoxCount(tx, 'weapon', 0);
+      const before = await boxTotal(tx);
+
+      await reclaimProductGrant(tx, TEST_USER_ID, SID, 'm3');
+
+      expect(await boxTotal(tx)).toBe(before - 258n);
+      expect(await boxCount(tx, 'weapon')).toBe(0n); // 음수 없음
+    });
+  });
+
+  it('reclaim 상자: 보유 합계 부족이면 있는 만큼만 회수·음수 없음', async () => {
+    await inRollback(async (tx) => {
+      await setBoxCount(tx, 'weapon', 0);
+      await setBoxCount(tx, 'armor', 10);
+      await setBoxCount(tx, 'accessory', 5);
+
+      await reclaimProductGrant(tx, TEST_USER_ID, SID, 'm3'); // 258 회수 시도 / 보유 15
+
+      expect(await boxCount(tx, 'weapon')).toBe(0n);
+      expect(await boxCount(tx, 'armor')).toBe(0n);
+      expect(await boxCount(tx, 'accessory')).toBe(0n);
+      expect(await boxTotal(tx)).toBe(0n);
     });
   });
 

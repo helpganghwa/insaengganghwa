@@ -9,6 +9,7 @@ import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
+import { reclaimBoxesTotal } from '@/lib/game/supply/reclaim';
 
 
 import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
@@ -153,8 +154,10 @@ export async function applyProductGrant(
 
 /**
  * 상품 지급 회수(환불 시) — applyProductGrant의 역연산. 결제 취소 트랜잭션 안에서 호출.
- *  - 다이아·상자: GREATEST(0, …) 0 클램프 회수. **이미 소비한 분은 회수 불가(v1 정책: 손실 처리)**.
+ *  - 다이아: GREATEST(0, …) 0 클램프 회수. **이미 소비한 분은 회수 불가(v1 정책: 손실 처리)**.
  *    음수 잔액은 UI·차감 불변식을 깨므로 의도적으로 만들지 않는다(악용 방지는 추후 정책으로).
+ *  - 상자: **슬롯 합계** 기준 회수(reclaimBoxesTotal). 환불 사전판정이 합계로 충분 여부를 보므로
+ *    슬롯별 역분배로 회수하면 판정은 통과하고 회수만 조용히 줄어든다(supply/reclaim.ts 참조).
  *  - 프리미엄: 미래 일일 드립 중단(shop_purchases 행 삭제) + **미수령** 프리미엄 우편 회수(claimedAt null).
  *    이미 수령(지갑 반영)한 분은 자동 회수하지 않는다(운영 수동) — 중복 회수 방지.
  */
@@ -197,24 +200,7 @@ export async function reclaimProductGrant(
       .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${BigInt(g.diamond)})` })
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
   }
-  if (g.boxes > 0) {
-    const dist = splitBoxes(g.boxes);
-    for (const slot of SUPPLY_SLOTS) {
-      const n = dist[slot] ?? 0;
-      if (n > 0) {
-        await tx
-          .update(userSupplyBoxes)
-          .set({ count: sql`GREATEST(0, ${userSupplyBoxes.count} - ${BigInt(n)})` })
-          .where(
-            and(
-              eq(userSupplyBoxes.userId, userId),
-              eq(userSupplyBoxes.serverId, serverId),
-              eq(userSupplyBoxes.slot, slot),
-            ),
-          );
-      }
-    }
-  }
+  if (g.boxes > 0) await reclaimBoxesTotal(tx, userId, serverId, g.boxes);
 
   // 주기 상품(일일/주간/월간)이면 구매 마크 삭제 → 환불 후 같은 주기에 재구매 가능(disabled 해제).
   // ⚠ 인생 특가('once', period 없음)는 의도적으로 마크를 남긴다 — 환불해도 특가 기회는
