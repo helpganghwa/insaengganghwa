@@ -9,6 +9,7 @@ import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
+import { recordDiamondLedger } from '@/lib/game/ledger';
 import {
   NICKNAME_MIN_LEN,
   NICKNAME_MAX_LEN,
@@ -161,6 +162,14 @@ export async function createCharacter(input: {
       if (e instanceof Error && /nickname/i.test(e.message)) throw new CharacterError('NICKNAME_TAKEN');
       throw e;
     }
+    // 가입 보너스는 지갑을 **만드는** INSERT라 walletAdd(=UPDATE + 원장)를 탈 수 없다.
+    // 원장을 직접 남기지 않으면 이 경로만 유입 집계에서 통째로 빠진다.
+    await recordDiamondLedger(tx, {
+      userId: input.userId,
+      serverId: input.serverId,
+      delta: BigInt(SIGNUP_DIAMOND),
+      reason: 'signup',
+    });
 
     for (const slot of ['weapon', 'armor', 'accessory'] as const) {
       await tx

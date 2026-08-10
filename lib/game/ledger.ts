@@ -19,6 +19,12 @@ export type LedgerReason =
   | 'mail_claim'
   /** 출석 보상(완주 보너스 포함). */
   | 'checkin'
+  /**
+   * 캐릭터 생성 보너스(신규 가입 · 새 서버 합류).
+   * ⚠ 이 경로만 walletAdd를 못 쓴다 — 지갑을 만드는 INSERT 자체라 갱신할 행이 아직 없다.
+   * 그래서 server-select.ts가 recordDiamondLedger를 직접 부른다(같은 tx).
+   */
+  | 'signup'
   /** 도전 과제 개별 보상. */
   | 'challenge'
   /** 도전 과제 전체 완료 보너스. */
