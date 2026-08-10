@@ -20,6 +20,7 @@ function toView(r: typeof announcements.$inferSelect): AnnouncementView {
     pinned: r.pinned,
     serverId: r.serverId ?? null,
     publishedAtIso: r.publishedAt ? r.publishedAt.toISOString() : null,
+    scheduledAtIso: r.scheduledAt ? r.scheduledAt.toISOString() : null,
     poll: r.poll ?? null,
   };
 }

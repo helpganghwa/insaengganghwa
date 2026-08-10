@@ -54,6 +54,8 @@ export type AnnouncementView = {
   /** 대상 서버(2026-08-07) — null=전서버. */
   serverId: number | null;
   publishedAtIso: string | null;
+  /** 예약 발행 시각(0158) — 미발행 + 값 있음이면 크론이 그 시각에 발행. 발행되면 null. */
+  scheduledAtIso: string | null;
   /** 투표(없으면 null). 유저에겐 집계 미노출 — 보기·마감만. */
   poll: AnnouncementPoll | null;
 };

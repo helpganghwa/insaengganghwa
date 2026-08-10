@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { isoToKstLocalInput } from '@/lib/kst';
 import {
   ANNOUNCEMENT_CATEGORIES,
   ANNOUNCEMENT_CATEGORY_LABEL,
@@ -11,7 +12,12 @@ import {
 } from '@/lib/game/announcement-shared';
 import type { PollResults } from '@/lib/game/announcement';
 
-import { saveAnnouncementAction, deleteAnnouncementAction, getPollResultsAction } from './actions';
+import {
+  saveAnnouncementAction,
+  deleteAnnouncementAction,
+  getPollResultsAction,
+  uploadAnnouncementImageAction,
+} from './actions';
 import { AnnouncementPreview } from './AnnouncementPreview';
 
 type Draft = {
@@ -22,9 +28,19 @@ type Draft = {
   body: string;
   pinned: boolean;
   poll: AnnouncementPoll | null;
+  /** 예약 발행 — `YYYY-MM-DDTHH:mm`(KST 벽시계), ''=예약 없음. */
+  scheduledAt: string;
 };
 
-const EMPTY: Draft = { category: 'notice', serverId: null, title: '', body: '', pinned: false, poll: null };
+const EMPTY: Draft = {
+  category: 'notice',
+  serverId: null,
+  title: '',
+  body: '',
+  pinned: false,
+  poll: null,
+  scheduledAt: '',
+};
 const genId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID().slice(0, 8)
@@ -37,6 +53,12 @@ const isoToLocal = (iso?: string | null) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 const localToIso = (local: string) => (local ? new Date(local).toISOString() : null);
+/** 예약 배지 표기 — `8/24 11:00`(KST). 입력·표시 모두 KST 고정(§3.8). */
+const kstBadge = (iso: string) => {
+  const [date, time] = isoToKstLocalInput(iso).split('T');
+  const [, m, d] = date!.split('-');
+  return `${Number(m)}/${Number(d)} ${time}`;
+};
 
 export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementView[]; serverIds: number[] }) {
   const router = useRouter();
@@ -67,7 +89,44 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
       body: a.body,
       pinned: a.pinned,
       poll: a.poll,
+      scheduledAt: a.scheduledAtIso ? isoToKstLocalInput(a.scheduledAtIso) : '',
     });
+
+  // ── 이미지 첨부 ── 업로드 후 본문 커서 위치에 `![](URL)` 한 줄 삽입.
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const insertImage = (url: string) => {
+    const md = `![](${url})`;
+    setDraft((d) => {
+      const el = bodyRef.current;
+      // 커서 위치 삽입(없으면 끝) — 이미지는 블록 문법이라 앞뒤 줄바꿈을 보장한다.
+      const pos = el ? el.selectionStart : d.body.length;
+      const before = d.body.slice(0, pos);
+      const after = d.body.slice(pos);
+      const lead = before && !before.endsWith('\n') ? '\n' : '';
+      const tail = after && !after.startsWith('\n') ? '\n' : '';
+      return { ...d, body: `${before}${lead}${md}\n${tail}${after}` };
+    });
+  };
+
+  const pickImage = async (file: File) => {
+    setErr(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const r = await uploadAnnouncementImageAction(fd);
+      if (r.status === 'success') insertImage(r.url);
+      else setErr(r.message);
+    } catch {
+      setErr('업로드에 실패했어요. 파일 크기(5MB 이하)를 확인해 주세요.');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = ''; // 같은 파일 재선택 허용
+    }
+  };
 
   // ── 투표 빌더 헬퍼 ──
   const setPoll = (fn: (p: AnnouncementPoll) => AnnouncementPoll) =>
@@ -159,12 +218,36 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
           />
         </div>
         <textarea
+          ref={bodyRef}
           value={draft.body}
           onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
-          placeholder="내용 (마크다운: ## 제목, - 목록, **굵게**, | 표 |)"
+          placeholder="내용 (마크다운: ## 제목, - 목록, **굵게**, | 표 |, ![](이미지))"
           rows={8}
           className={`${input} w-full resize-y font-mono text-base`}
         />
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void pickImage(f);
+            }}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || pending}
+            className="rounded-lg border border-zinc-300 px-2.5 py-1 text-[12px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            {uploading ? '업로드 중…' : '🖼 이미지 첨부'}
+          </button>
+          <span className="text-[11px] text-zinc-400">
+            PNG/JPEG/WebP/GIF · 5MB 이하 · 본문 커서 위치에 삽입
+          </span>
+        </div>
         <label className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-300">
           <input
             type="checkbox"
@@ -173,6 +256,33 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
           />
           상단 고정
         </label>
+
+        {/* 예약 발행(0158) — 입력·표시 모두 KST. 도래하면 5분 주기 크론이 발행으로 전환. */}
+        <div className="rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
+          <label className="flex flex-wrap items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-300">
+            ⏰ 예약 발행 시각(KST)
+            <input
+              type="datetime-local"
+              value={draft.scheduledAt}
+              onChange={(e) => setDraft((d) => ({ ...d, scheduledAt: e.target.value }))}
+              className={`${input} text-[13px]`}
+            />
+            {draft.scheduledAt && (
+              <button
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, scheduledAt: '' }))}
+                className="text-[11px] text-zinc-400 underline"
+              >
+                예약 해제
+              </button>
+            )}
+          </label>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+            {draft.scheduledAt
+              ? '예약이 설정되어 있습니다 — 아래 「초안 저장」으로 저장하세요. 그 시각(±5분)에 크론이 자동 발행합니다. 지금 「발행」을 누르면 예약은 취소되고 즉시 발행됩니다.'
+              : '비워두면 예약 없음(직접 「발행」해야 노출). 예약과 즉시 발행은 함께 쓸 수 없습니다.'}
+          </p>
+        </div>
 
         {/* 투표(선택) — 결과·투표자는 관리자만 열람(유저는 투표만). */}
         <div className="rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
@@ -319,6 +429,15 @@ export function AnnouncementsAdmin({ items, serverIds }: { items: AnnouncementVi
                     {a.poll && <span className="mr-1" title="투표 있음">🗳️</span>}
                     {a.title}
                   </span>
+                  {/* 예약 대기 배지 — 발행 전 상태를 목록에서 바로 구분(초안 vs 예약). */}
+                  {a.scheduledAtIso && !a.publishedAtIso && (
+                    <span
+                      className="shrink-0 rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-600 dark:text-sky-400"
+                      title="예약 발행 대기(KST)"
+                    >
+                      예약 {kstBadge(a.scheduledAtIso)}
+                    </span>
+                  )}
                   <span
                     className={`shrink-0 text-[10px] font-bold ${a.publishedAtIso ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}
                   >

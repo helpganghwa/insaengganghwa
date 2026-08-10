@@ -2,7 +2,41 @@ import type { ReactNode } from 'react';
 
 // 신뢰된 내부 문자열(법적 고지 등) 전용 미니 마크다운 렌더러.
 // ⚠ 사용자 입력엔 쓰지 말 것(XSS 미고려). 지원: ## / ###, 단락, - 목록, 1. 순서목록,
-// | 표 |, > 인용, ---, **굵게**.
+// | 표 |, > 인용, ---, **굵게**, ![alt](url) 이미지.
+//
+// 이미지는 **블록 전용**(한 줄 전체가 이미지 문법일 때만) — 문장 중간 인라인 이미지는
+// 지원하지 않는다(공지 첨부는 항상 한 줄 삽입이라 인라인 파서를 늘릴 이유가 없다).
+
+/** 우리 Supabase Storage origin — 이미지 허용 출처(빌드 시 인라인, 서버·클라 동일). */
+const STORAGE_ORIGIN = (() => {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+})();
+
+const IMAGE_LINE = /^!\[([^\]]*)\]\((\S+)\)$/;
+
+/**
+ * 블록 이미지 파싱 — 우리 Storage 절대 URL만 이미지로 렌더한다.
+ * 어드민 신뢰 입력이지만 외부 URL을 그대로 실으면 추적 픽셀이 유저 화면에 박히고,
+ * 남의 서버가 죽으면 공지에 깨진 이미지가 영구히 남는다. 화이트리스트 밖(외부 도메인·
+ * `javascript:` 등)은 이미지로 만들지 않고 원문 텍스트 그대로 흘려보낸다.
+ */
+function parseImage(line: string): { alt: string; url: string } | null {
+  const m = IMAGE_LINE.exec(line);
+  if (!m || !STORAGE_ORIGIN) return null;
+  try {
+    // origin 비교라 `javascript:`·`data:` 스킴은 origin이 'null'이 되어 자동 탈락.
+    if (new URL(m[2]!).origin !== STORAGE_ORIGIN) return null;
+  } catch {
+    return null; // 상대경로·깨진 URL
+  }
+  return { alt: m[1]!, url: m[2]! };
+}
 
 function inline(text: string, key: string): ReactNode {
   return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
@@ -30,6 +64,22 @@ export function MarkdownView({ source }: { source: string }) {
     }
     if (t === '---') {
       blocks.push(<hr key={k()} className="my-4 border-zinc-200 dark:border-zinc-800" />);
+      i++;
+      continue;
+    }
+    const img = parseImage(t);
+    if (img) {
+      blocks.push(
+        // 픽셀아트 프로젝트라 next/image 미사용(CLAUDE §5.2) — Storage 원본을 그대로 띄운다.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={k()}
+          src={img.url}
+          alt={img.alt}
+          loading="lazy"
+          className="my-2.5 h-auto max-w-full rounded-lg"
+        />,
+      );
       i++;
       continue;
     }
@@ -161,7 +211,8 @@ export function MarkdownView({ source }: { source: string }) {
         lt.startsWith('- ') ||
         lt.startsWith('|') ||
         lt.startsWith('> ') ||
-        /^\d+\.\s/.test(lt)
+        /^\d+\.\s/.test(lt) ||
+        parseImage(lt) // 허용 이미지만 경계 — 화이트리스트 밖 이미지 문법은 단락 텍스트로 남는다
       )
         break;
       para.push(lt);

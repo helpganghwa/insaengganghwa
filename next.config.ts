@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
   // import.meta.dirname을 undefined로 받아 path TypeError 발생. Next 16에서
   // turbopack은 default이며 root는 자동 추론으로 충분.
   allowedDevOrigins: ['localhost', '127.0.0.1'],
+  experimental: {
+    // 공지 이미지 첨부(어드민)가 서버 액션 기본 바디 상한 1MB에 걸려 실패한다. 스크린샷 PNG는
+    // 2~3MB가 흔해 상한을 올리지 않으면 기능이 사실상 못 쓴다.
+    // 4mb인 이유: Vercel 함수 요청 바디 한도가 4.5MB라 그보다 크게 잡아봐야 플랫폼이 먼저
+    // 끊는다 — 선언값이 도달 불가면 안내 문구와 실제 동작이 어긋난다(첨부 상한은 3MB로 둔다).
+    serverActions: { bodySizeLimit: '4mb' },
+  },
   // 프로필 생성 cron(v3 compose)이 런타임에 장비 스프라이트 PNG를 readFileSync(vision 입력)로
   // 읽으므로, 해당 서버리스 함수 번들에 public 스프라이트를 강제 포함(미포함 시 비전이 조용히
   // 텍스트로 degrade됨). 정적 분석으로는 추적 안 되는 동적 경로라 명시 포함 필요.

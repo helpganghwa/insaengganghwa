@@ -39,6 +39,11 @@ export const announcements = pgTable(
     published: boolean('published').notNull().default(false),
     /** 최초 발행 시각 — 노출/정렬 기준(재편집해도 유지). */
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    /**
+     * 예약 발행 시각(0158) — published=false + 이 값 도래 시 크론이 발행으로 전환.
+     * 발행되면 null로 비운다(재실행 중복 처리·발행 후 예약 잔존 혼란 제거).
+     */
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     /** 투표(선택) — {question, options[], closesAtIso?}. 결과는 관리자만, 유저는 투표만. null=투표 없음. */
     poll: jsonb('poll').$type<AnnouncementPoll>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

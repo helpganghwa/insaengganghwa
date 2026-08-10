@@ -42,3 +42,21 @@ export function kstMonthString(at: Date = new Date()): string {
 export function daysSinceIso(iso: string, at: Date = new Date()): number {
   return Math.floor((at.getTime() - Date.parse(iso)) / 86_400_000);
 }
+
+/**
+ * ISO → `YYYY-MM-DDTHH:mm` (KST 벽시계) — `<input type="datetime-local">` value용.
+ * datetime-local은 **브라우저 로컬 시간**을 다루므로, 운영자 PC가 KST가 아니어도
+ * 항상 KST로 보이고 KST로 저장되도록 여기서 오프셋을 명시 고정한다(§3.8).
+ */
+export function isoToKstLocalInput(iso: string): string {
+  const k = new Date(Date.parse(iso) + KST_OFFSET_MS);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${k.getUTCFullYear()}-${p(k.getUTCMonth() + 1)}-${p(k.getUTCDate())}T${p(k.getUTCHours())}:${p(k.getUTCMinutes())}`;
+}
+
+/** `YYYY-MM-DDTHH:mm`(KST 벽시계) → ISO(UTC). 형식이 어긋나면 null. */
+export function kstLocalInputToIso(local: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(local)) return null;
+  const t = Date.parse(`${local.length === 16 ? `${local}:00` : local}+09:00`);
+  return Number.isNaN(t) ? null : new Date(t).toISOString();
+}
