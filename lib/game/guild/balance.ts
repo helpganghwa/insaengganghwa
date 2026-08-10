@@ -4,10 +4,18 @@
  */
 
 // ── 결성 / 정체성 (§1, §1.6) ──
-/** 길드 결성 비용(💎). 빈 길드 양산 억제 + 다이아 sink. */
-export const GUILD_CREATE_COST_DIAMOND = 5_000;
-/** 문양 생성 비용(💎). 결성 시 1회 무료, 이후 새 문양 생성마다 과금(외형 BM). */
-export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 3_000;
+/**
+ * 길드 결성 비용(💎). 빈 길드 양산 억제 + 다이아 sink.
+ * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 5,000→3,000 — 점령전 전체가 길드 수에
+ * 종속되는데 실비도 반복 구매도 없어, 내려서 잃을 것이 없는 항목이다.
+ */
+export const GUILD_CREATE_COST_DIAMOND = 3_000;
+/**
+ * 문양 생성 비용(💎). 결성 시 1회 무료, 이후 새 문양 생성마다 과금(외형 BM).
+ * 3,000→1,500(같은 리밸런싱). ⚠ 아바타 생성과 함께 외부 유료 API를 호출하는 지출처 —
+ * 실비(~$0.02)보다 동시 생성 슬롯 소모가 병목이다.
+ */
+export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 1_500;
 /** 길드당 보관 가능한 문양 최대 수(최소 1). 아바타 다중 프로필 패턴. */
 export const MAX_GUILD_EMBLEMS = 5;
 export const GUILD_NAME_MIN_LEN = 2;

@@ -318,7 +318,13 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 // §5. 레이드 (플레이어 호스팅 co-op)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const RAID_OPEN_COST_DIAMOND = 300;
+/**
+ * 개설비 — 개설자만 낸다(참가자는 무료로 기본 공격 10회). 개설자 한 명이 최대 9명의 플레이
+ * 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가 돌지 않는다.
+ * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200. 그래도 CBT 실질가의 1.37배라
+ * 레이드 빈도·상자 유입은 CBT보다 낮아진다(레이드는 단일 최대 상자 유입원).
+ */
+export const RAID_OPEN_COST_DIAMOND = 200;
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
@@ -387,14 +393,18 @@ export const NICKNAME_CHANGE_COST_DIAMOND = 300;
 
 /**
  * §6.6 캐릭터 프로필 생성 — Pixellab v2 Pro + Claude vision 자동 검토 비용 포함.
- * 정상 1500 다이아(≈1일치 시간). AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
- * 첫 아바타(아직 성공한 커스텀 아바타가 0개)는 50% 할인(750) — 신규를 플래그십 기능에 훅킹.
+ * 1,000 다이아. AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
+ * 첫 아바타(아직 성공한 커스텀 아바타가 0개)는 50% 할인(500) — 신규를 플래그십 기능에 훅킹.
  * 거절·환불은 성공이 아니라 할인 미소진(다음 시도도 할인가).
+ *
+ * ⚠ 여기와 길드 문양만 **외부 유료 API를 호출하는** 지출처다. 가격을 내리면 요청 수가 늘어
+ * 실비뿐 아니라 **동시 생성 슬롯(키당 상한)**을 먹는다. 큐가 막히면 생성 실패 → 환불 급증으로
+ * 이어지므로, 인하 시 처리량을 함께 본다(2026-08-10 유입 리밸런싱에 맞춰 1,500→1,000).
  */
-export const PROFILE_GENERATION_DIAMOND = 1_500;
+export const PROFILE_GENERATION_DIAMOND = 1_000;
 
 /** 첫 아바타 50% 할인가(첫 성공 전까지 적용). */
-export const PROFILE_FIRST_GEN_DIAMOND = 750;
+export const PROFILE_FIRST_GEN_DIAMOND = 500;
 
 /** 생성 가격 — 성공한 커스텀 아바타 보유 여부로 첫생성 할인 여부 결정. 서버 권위. */
 export function profileGenPrice(hasCustomAvatar: boolean): number {
