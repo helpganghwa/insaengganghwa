@@ -44,7 +44,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function applyPayload(tx: Tx, userId: string, serverId: number, p: MailPayload, acc: ClaimResult) {
   const d = toInt(p.diamond);
   if (d > 0) {
-    await walletAdd(tx, userId, serverId, d);
+    await walletAdd(tx, userId, serverId, d, 'mail_claim');
     acc.diamond += d;
   }
   for (const slot of SUPPLY_SLOTS) {
@@ -142,7 +142,7 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
     });
 
     if (total.diamond > 0) {
-      await walletAdd(tx, userId, input.serverId, total.diamond);
+      await walletAdd(tx, userId, input.serverId, total.diamond, 'mail_claim');
     }
     for (const slot of SUPPLY_SLOTS) {
       const n = total.boxes[slot];

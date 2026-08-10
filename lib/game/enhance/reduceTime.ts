@@ -48,7 +48,7 @@ export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeRes
 
     // 지갑 차감 — 조건부 UPDATE(부족 시 미차감·false). 실패 경로는 tx 롤백으로 원복.
     // 차감은 잡이 속한 서버 지갑(잡 행 파생) — 활성 서버 위조 요청 무해화.
-    const paid = await walletTrySpend(tx, userId, job.serverId, spendDiamonds);
+    const paid = await walletTrySpend(tx, userId, job.serverId, spendDiamonds, 'enhance_reduce');
     if (!paid) throw new EnhanceError('INSUFFICIENT_DIAMOND');
 
     const requestedMs = spendDiamonds * GEM_TO_MS;

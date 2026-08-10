@@ -124,7 +124,7 @@ export function openRaid(input: {
     await bumpDailyOrThrow(tx, userId, input.serverId);
 
     // 개설비 차감 — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
-    const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND);
+    const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND, 'raid_open');
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
     const phase1Hp =

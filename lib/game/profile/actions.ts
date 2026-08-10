@@ -102,7 +102,7 @@ export async function createProfileJob(
 
   return db.transaction(async (tx) => {
     // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.
-    const paid = await walletTrySpend(tx, userId, serverId, cost);
+    const paid = await walletTrySpend(tx, userId, serverId, cost, 'avatar_create');
     if (!paid) {
       throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
     }

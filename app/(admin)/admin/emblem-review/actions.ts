@@ -112,7 +112,7 @@ export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean
         .where(and(eq(guildEmblemEscrows.id, esc.id), eq(guildEmblemEscrows.status, 'completed')))
         .returning({ id: guildEmblemEscrows.id });
       if (moved.length > 0) {
-        await walletAdd(tx, esc.userId, esc.serverId, esc.amount);
+        await walletAdd(tx, esc.userId, esc.serverId, esc.amount, 'emblem_refund');
         amount = esc.amount;
         await tx.insert(mailbox).values({
           userId: esc.userId,
@@ -176,7 +176,7 @@ export async function adminRefundEmblemEscrow(escrowId: string): Promise<{ ok: b
       });
     const r = rows[0];
     if (!r) return false;
-    await walletAdd(tx, r.userId, r.serverId, r.amount);
+    await walletAdd(tx, r.userId, r.serverId, r.amount, 'emblem_refund');
     await tx.insert(mailbox).values({
       userId: r.userId,
       serverId: r.serverId,

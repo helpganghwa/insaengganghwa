@@ -116,7 +116,7 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
     acc.diamond += completeBonus;
 
     if (acc.diamond > 0) {
-      await walletAdd(tx, userId, input.serverId, acc.diamond);
+      await walletAdd(tx, userId, input.serverId, acc.diamond, 'checkin');
     }
     // 보급 상자 — 슬롯별 upsert를 단일 multi-row로(감사 S5, 왕복 최대 3→1).
     const boxVals = SUPPLY_SLOTS.filter((s) => acc.boxes[s] > 0).map((s) => ({

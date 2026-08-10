@@ -96,7 +96,7 @@ export const paymentAlerts = pgTable(
   'payment_alerts',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-    /** 사고 유형 — PAID_NOT_GRANTED / REFUND_RECLAIM_FAILED / AMOUNT_MISMATCH / WEBHOOK_VERIFY_FAILED / MINOR_LIMIT_EXCEEDED / ORPHAN_PENDING / COMPLETE_EXCEPTION / PARTIAL_CANCELLED. */
+    /** 사고 유형 — PAID_NOT_GRANTED / REFUND_RECLAIM_FAILED / REFUND_CLAWBACK_SHORT / AMOUNT_MISMATCH / WEBHOOK_VERIFY_FAILED / MINOR_LIMIT_EXCEEDED / ORPHAN_PENDING / COMPLETE_EXCEPTION / PARTIAL_CANCELLED. */
     kind: text('kind').notNull(),
     /** critical / high / warn. */
     severity: text('severity').notNull(),

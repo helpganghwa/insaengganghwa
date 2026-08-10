@@ -38,7 +38,7 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
   it('walletAdd: 잔액이 정확히 amount만큼 증가', async () => {
     await inRollback(async (tx) => {
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 500);
+      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 500, 'mail_claim');
       const after = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
       expect(after).toBe(before + 500n);
     });
@@ -46,9 +46,9 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
 
   it('walletTrySpend: 잔액 이내면 차감 후 true', async () => {
     await inRollback(async (tx) => {
-      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 1000); // 확정 잔액 확보
+      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 1000, 'mail_claim'); // 확정 잔액 확보
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, 300);
+      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, 300, 'mail_claim');
       expect(ok).toBe(true);
       const after = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
       expect(after).toBe(before - 300n);
@@ -58,7 +58,7 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
   it('walletTrySpend: 잔액 초과면 false·차감 없음(원자성)', async () => {
     await inRollback(async (tx) => {
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before + 1n);
+      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before + 1n, 'mail_claim');
       expect(ok).toBe(false);
       const after = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
       expect(after).toBe(before); // 조건부 UPDATE라 미차감
@@ -68,7 +68,7 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
   it('walletTrySpend: 정확히 잔액 전액이면 성공(경계, after=0)', async () => {
     await inRollback(async (tx) => {
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before);
+      const ok = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before, 'mail_claim');
       expect(ok).toBe(true);
       const after = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
       expect(after).toBe(0n);
@@ -77,10 +77,10 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
 
   it('walletTrySpend 두 번: 잔액이 한 번만 차감(이중지출 방지)', async () => {
     await inRollback(async (tx) => {
-      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 100);
+      await walletAdd(tx, TEST_USER_ID, SERVER_ID, 100, 'mail_claim');
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      const first = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before);
-      const second = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, 1); // 이미 0 → 실패
+      const first = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, before, 'mail_claim');
+      const second = await walletTrySpend(tx, TEST_USER_ID, SERVER_ID, 1, 'mail_claim'); // 이미 0 → 실패
       expect(first).toBe(true);
       expect(second).toBe(false);
       expect(await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID)).toBe(0n);
@@ -90,7 +90,7 @@ describe.skipIf(skip)('wallet — 자원 원자 프리미티브', () => {
   it('walletAdd: 캐릭터 부재 서버면 WALLET_CHARACTER_MISSING throw(조용한 유실 방지)', async () => {
     await expect(
       testDb.transaction(async (tx) => {
-        await walletAdd(tx as WalletDb, TEST_USER_ID, NO_CHAR_SERVER, 1);
+        await walletAdd(tx as WalletDb, TEST_USER_ID, NO_CHAR_SERVER, 1, 'mail_claim');
       }),
     ).rejects.toThrow(/WALLET_CHARACTER_MISSING/);
   });

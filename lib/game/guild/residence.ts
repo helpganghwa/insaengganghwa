@@ -191,7 +191,7 @@ export async function setResidenceTx(
     if (remain > 0) {
       if (!opts.paySpeedUp) throw new GuildError('RESIDENCE_COOLDOWN');
       spent = residenceSpeedUpCost(remain);
-      const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent));
+      const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent), 'residence_cooldown');
       if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     }
 
@@ -231,7 +231,7 @@ export async function speedUpResidenceMove(
     const remain = me.readyAt ? me.readyAt.getTime() - Date.now() : 0;
     if (remain <= 0) return { spent: 0 }; // 이미 가능 — 결제 없이 성공 처리
     const spent = residenceSpeedUpCost(remain);
-    const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent));
+    const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent), 'residence_cooldown');
     if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     await tx
       .update(characters)

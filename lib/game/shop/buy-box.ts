@@ -60,7 +60,7 @@ export async function buyBox(
     if (row?.periodKey === cur) throw new BuyBoxError('ALREADY_PURCHASED');
 
     // 2) 💎 차감(잔액 충분할 때만 — 조건부 update, 서버별 지갑).
-    const paid = await walletTrySpend(tx, userId, serverId, g.cost);
+    const paid = await walletTrySpend(tx, userId, serverId, g.cost, 'shop_box');
     if (!paid) throw new BuyBoxError('INSUFFICIENT_DIAMOND');
 
     // 3) 박스 지급(슬롯 분배).

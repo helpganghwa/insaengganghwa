@@ -44,7 +44,7 @@ export async function claimChallenge(
         .onConflictDoNothing()
         .returning({ id: challengeClaims.challengeId });
       if (ins.length === 0) return { ok: false as const, reason: 'ALREADY' as const };
-      await walletAdd(tx, userId, serverId, COMPLETE_BONUS.diamond);
+      await walletAdd(tx, userId, serverId, COMPLETE_BONUS.diamond, 'challenge_bonus');
       // 보급상자 지급 — 슬롯별 upsert(가입 보너스와 동일 계열).
       for (const [slot, n] of Object.entries(COMPLETE_BONUS.boxes)) {
         await tx.execute(sql`
@@ -76,7 +76,7 @@ export async function claimChallenge(
       .onConflictDoNothing()
       .returning({ id: challengeClaims.challengeId });
     if (ins.length === 0) return { ok: false as const, reason: 'ALREADY' as const };
-    await walletAdd(tx, userId, serverId, def.diamond);
+    await walletAdd(tx, userId, serverId, def.diamond, 'challenge', challengeId);
     if (boxes) {
       for (const [slot, n] of Object.entries(boxes)) {
         await tx.execute(sql`
@@ -132,7 +132,7 @@ export async function claimAllChallenges(
 
     const diamond = claimedDefs.reduce((a, c) => a + c.diamond, 0);
     const boxPerSlot = claimedDefs.reduce((a, c) => a + perSlot(c), 0);
-    await walletAdd(tx, userId, serverId, diamond);
+    await walletAdd(tx, userId, serverId, diamond, 'challenge');
     if (boxPerSlot > 0) {
       for (const slot of ['weapon', 'armor', 'accessory'] as const) {
         await tx.execute(sql`

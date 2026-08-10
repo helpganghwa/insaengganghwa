@@ -98,7 +98,7 @@ export function claimFree(userId: string, serverId: number, slot: FreeSlot): Pro
     if (row?.periodKey === cur) throw new ShopFreeError('ALREADY_CLAIMED');
 
     if (reward.diamond > 0) {
-      await walletAdd(tx, userId, serverId, reward.diamond);
+      await walletAdd(tx, userId, serverId, reward.diamond, 'shop_free');
     }
     if (reward.boxes > 0) {
       const dist = splitBoxes(reward.boxes);

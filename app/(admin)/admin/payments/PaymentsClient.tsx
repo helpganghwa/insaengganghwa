@@ -54,6 +54,7 @@ const ERR_MSG: Record<string, string> = {
   NOT_CANCELLED: '포트원에서 취소되지 않았습니다(결제 유지 중) — 콘솔 상태 확인',
   AMOUNT_MISMATCH: '금액 불일치',
   BAD_ID: '잘못된 주문',
+  FORCE_REASON_REQUIRED: '강제 환불은 사유가 필요합니다',
   UNKNOWN: '오류가 발생했습니다',
 };
 
@@ -80,6 +81,8 @@ export function PaymentsClient({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // 회수 부족으로 막힌 건 — 2단계 확인(체크 + 사유)을 통과해야 강제 환불이 열린다.
+  const [blocked, setBlocked] = useState<{ id: string; reason: string; ack: boolean } | null>(null);
   const [, startTransition] = useTransition();
 
   const copyTxn = (txn: string) => {
@@ -96,24 +99,52 @@ export function PaymentsClient({
   const isRefundable = (o: OrderRow) => o.status === 'paid' && !(o.bp && o.bpClaimed);
   const refundable = orders.filter(isRefundable).length;
 
-  const onRefund = (o: OrderRow) => {
+  const run = (o: OrderRow, force?: { reason: string }) => {
     if (pendingId) return;
-    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자) 회수가 진행됩니다.`))
-      return;
     setPendingId(o.id);
     setMsg(null);
     startTransition(async () => {
-      const r = await refundOrderAction(o.id);
+      const r = force
+        ? await refundOrderAction(o.id, { force: true, forceReason: force.reason })
+        : await refundOrderAction(o.id);
       setPendingId(null);
       if (r.status === 'success') {
+        setBlocked(null);
         setOrders((prev) =>
           prev.map((x) => (x.id === o.id ? { ...x, status: 'refunded' as const } : x)),
         );
-        setMsg(r.already ? '이미 환불된 건입니다.' : '환불 완료 — 재화를 회수했습니다.');
+        setMsg(
+          r.already
+            ? '이미 환불된 건입니다.'
+            : (r.message ?? '환불 완료 — 재화를 회수했습니다.'),
+        );
+      } else if (r.code === 'CLAWBACK_INSUFFICIENT') {
+        // 포트원 취소 전에 막힌 상태 — 결제는 그대로 유지된다. 강제 진행은 아래 패널에서만.
+        setBlocked({ id: o.id, reason: '', ack: false });
+        setMsg(`환불 차단: ${r.message}`);
       } else {
         setMsg(`환불 실패: ${ERR_MSG[r.code] ?? r.code}`);
       }
     });
+  };
+
+  const onRefund = (o: OrderRow) => {
+    if (pendingId) return;
+    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자) 회수가 진행됩니다.\n회수할 재화가 부족하면 취소 전에 차단됩니다.`))
+      return;
+    setBlocked(null);
+    run(o);
+  };
+
+  const onForce = (o: OrderRow) => {
+    if (!blocked || blocked.id !== o.id || !blocked.ack || blocked.reason.trim().length < 2) return;
+    if (
+      !window.confirm(
+        `약관 예외로 강제 환불합니다.\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n회수 못 한 재화는 유저에게 남습니다(손실 처리). 사유는 감사 로그에 기록됩니다.`,
+      )
+    )
+      return;
+    run(o, { reason: blocked.reason });
   };
 
   return (
@@ -190,8 +221,9 @@ export function PaymentsClient({
             return (
               <li
                 key={o.id}
-                className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5"
+                className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2.5"
               >
+                <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-bold">{o.nickname ?? '(알수없음)'}</span>
@@ -240,6 +272,53 @@ export function PaymentsClient({
                       {pendingId === o.id ? '환불 중…' : '환불'}
                     </button>
                   )
+                ) : null}
+                </div>
+                {/* 회수 부족 차단 — 강제 진행은 체크 + 사유 입력(2단계)을 통과해야 열린다. */}
+                {blocked?.id === o.id ? (
+                  <div className="mt-2 space-y-2 rounded-lg border border-amber-700/50 bg-amber-950/30 p-2.5">
+                    <p className="text-[11px] leading-relaxed text-amber-200">
+                      회수할 재화가 부족해 포트원 취소를 하지 않았습니다(결제 유지 중). 약관상 이미
+                      사용한 재화는 청약철회가 제한됩니다 — 그래도 진행하려면 사유를 남기세요.
+                    </p>
+                    <label className="flex items-center gap-2 text-[11px] text-amber-200">
+                      <input
+                        type="checkbox"
+                        checked={blocked.ack}
+                        onChange={(e) =>
+                          setBlocked((b) => (b ? { ...b, ack: e.target.checked } : b))
+                        }
+                        className="size-3.5 accent-amber-500"
+                      />
+                      약관 예외로 강제 환불 — 회수 못 한 재화는 유저에게 남습니다
+                    </label>
+                    <input
+                      type="text"
+                      value={blocked.reason}
+                      onChange={(e) => setBlocked((b) => (b ? { ...b, reason: e.target.value } : b))}
+                      placeholder="강제 사유(감사 로그에 기록)"
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onForce(o)}
+                        disabled={
+                          pendingId !== null || !blocked.ack || blocked.reason.trim().length < 2
+                        }
+                        className="rounded-lg border border-red-700/60 bg-red-900/40 px-3 py-1.5 text-xs font-bold text-red-200 disabled:opacity-40"
+                      >
+                        {pendingId === o.id ? '환불 중…' : '강제 환불'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBlocked(null)}
+                        className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-bold text-zinc-300"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
               </li>
             );

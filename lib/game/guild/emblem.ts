@@ -525,7 +525,7 @@ async function refundEmblemEscrow(escrowId: bigint): Promise<void> {
       .update(guildEmblemEscrows)
       .set({ status: 'refunded', resolvedAt: sql`now()` })
       .where(eq(guildEmblemEscrows.id, escrowId));
-    await walletAdd(tx, esc.userId, esc.serverId, esc.amount); // 지갑 즉시 반환
+    await walletAdd(tx, esc.userId, esc.serverId, esc.amount, 'emblem_refund'); // 지갑 즉시 반환
     // 우편은 순수 통지(payload 빈값) — 다이아는 이미 walletAdd로 반환됨(중복 지급 금지).
     await tx.insert(mailbox).values({
       userId: esc.userId,
@@ -576,7 +576,7 @@ export async function generateEmblem(input: {
       .from(guildEmblems)
       .where(and(eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)));
     if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-    const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
+    const paid = await walletTrySpend(tx, input.userId, input.serverId, cost, 'guild_emblem');
     if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     const [row] = await tx
       .insert(guildEmblemEscrows)

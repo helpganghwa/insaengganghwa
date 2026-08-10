@@ -64,7 +64,7 @@ export async function createGuild(input: {
     if (dup) throw new GuildError('NAME_TAKEN');
 
     // 💎 차감(조건부, 서버별 지갑).
-    const paid = await walletTrySpend(tx, input.userId, input.serverId, GUILD_CREATE_COST_DIAMOND);
+    const paid = await walletTrySpend(tx, input.userId, input.serverId, GUILD_CREATE_COST_DIAMOND, 'guild_create');
     if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
 
     // 길드 + 리더 멤버.

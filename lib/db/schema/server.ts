@@ -8,6 +8,7 @@ import {
   primaryKey,
   index,
   bigint,
+  bigserial,
   integer,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -67,5 +68,34 @@ export const characters = pgTable(
     // 친구 검색 nickname ILIKE '%term%' 부분일치용 trigram GIN(감사 F3-mail, manual 0088).
     // UNIQUE btree는 양끝 와일드카드엔 무용 → seq scan이던 것을 인덱스 스캔으로.
     index('characters_nickname_trgm_gin').using('gin', sql`${t.nickname} gin_trgm_ops`),
+  ],
+);
+
+/**
+ * 다이아 증감 원장(manual 0159) — characters.diamond가 어디서 들어오고 나갔는지 사후 추적.
+ * 사고(익스플로잇·오지급) 시 부당 취득분 산정과 분쟁 대응("언제 무엇으로 얼마")의 근거.
+ * 기록은 lib/game/wallet.ts 헬퍼 내부에서만 — 지갑 변경과 같은 트랜잭션이라 롤백 시 함께 사라진다.
+ * 보존 180일(mail-expire 크론이 정리) — 장기 집계는 별도 일별 스냅샷 몫.
+ */
+export const diamondLedger = pgTable(
+  'diamond_ledger',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    /** 양수=유입, 음수=소모. 지갑에 **실제 반영된** 값만(차감 실패·0은 기록하지 않는다). */
+    delta: bigint('delta', { mode: 'bigint' }).notNull(),
+    /** 사유 코드 — lib/game/ledger.ts의 LedgerReason과 1:1. */
+    reason: text('reason').notNull(),
+    /** 추적 키(주문번호·우편 id·레이드 id 등) — 사고 시 원인 행위를 되짚는 실마리. */
+    ref: text('ref'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('diamond_ledger_user_idx').on(t.userId, t.id.desc()),
+    index('diamond_ledger_reason_idx').on(t.reason, t.createdAt.desc()),
+    index('diamond_ledger_created_idx').on(t.createdAt),
   ],
 );

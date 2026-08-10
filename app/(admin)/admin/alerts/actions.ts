@@ -37,6 +37,8 @@ export async function resolveAlertAction(alertId: string) {
  *  PAID_NOT_GRANTED / COMPLETE_EXCEPTION → completePurchase (재지급)
  *  REFUND_RECLAIM_FAILED                 → refundPurchase  (재회수)
  * 성공 시 해당 알림 resolved 처리.
+ * ⚠ REFUND_CLAWBACK_SHORT는 재시도 대상이 아니다 — 기계적 실패가 아니라 "이미 소비함"이라
+ *   다시 돌려도 회수액이 같고, 이미 refunded라 ok=true로 돌아와 사고가 거짓 해결된다.
  */
 export async function retryAlertAction(alertId: string) {
   await requireAdmin();

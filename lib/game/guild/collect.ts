@@ -58,7 +58,7 @@ export function collectZoneTax(input: {
     const guildGain = tax - executorGain;
 
     // 집행관 몫은 존이 속한 서버 지갑으로(활성 서버 무관).
-    await walletAdd(tx, input.userId, z.serverId, executorGain);
+    await walletAdd(tx, input.userId, z.serverId, executorGain, 'guild_tax');
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} + ${guildGain}` })

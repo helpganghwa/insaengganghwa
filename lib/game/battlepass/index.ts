@@ -63,10 +63,12 @@ async function grantReward(
   serverId: number,
   type: BattlePassType,
   amount: number,
+  /** 원장 사유 — 무료/프리미엄 트랙 구분은 호출부만 알 수 있어 인자로 받는다. */
+  reason: 'battlepass_free' | 'battlepass_premium',
 ): Promise<void> {
   if (amount <= 0) return;
   if (type === 'enhance') {
-    await walletAdd(tx, userId, serverId, amount);
+    await walletAdd(tx, userId, serverId, amount, reason);
     return;
   }
   const dist = splitBoxes(amount);
@@ -238,7 +240,7 @@ export function claimFree(
         }
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, serverId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted, 'battlepass_free');
     const merged = sorted([...claimed, ...newly]);
     await tx
       .insert(battlePassState)
@@ -271,7 +273,7 @@ export function claimFreeTier(
     if (lv < 1 || lv % BP_TIER_STEP[type] !== 0 || lv > maxReached || claimed.has(lv))
       throw new BattlePassErr('NOTHING_TO_CLAIM');
     const granted = bpTierReward(type, lv, false);
-    await grantReward(tx, userId, serverId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted, 'battlepass_free');
     const merged = sorted([...claimed, lv]);
     await tx
       .insert(battlePassState)
@@ -329,7 +331,7 @@ export function claimPremium(
         );
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, serverId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted, 'battlepass_premium');
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
   });
 }
@@ -364,7 +366,7 @@ export function claimPremiumTier(
     if (lv % BP_TIER_STEP[type] !== 0 || lv < startLevel || lv > cap || claimed.has(lv))
       throw new BattlePassErr('NOTHING_TO_CLAIM');
     const granted = bpTierReward(type, lv, true);
-    await grantReward(tx, userId, serverId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted, 'battlepass_premium');
     const merged = sorted([...seg.tiers, lv]);
     await tx
       .update(battlePassSegments)
@@ -433,7 +435,9 @@ export function claimSegment(
       }
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, serverId, type, granted);
+    // 프리미엄 구간 구매로 촉발된 소급 정산이라 프리미엄으로 기록한다 —
+    // granted에는 미수령 무료분도 합산돼 있어 원장에서 트랙이 분리되지 않는다(집계 시 주의).
+    await grantReward(tx, userId, serverId, type, granted, 'battlepass_premium');
 
     if (freeNew.length > 0) {
       const merged = sorted([...freeClaimed, ...freeNew]);

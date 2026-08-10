@@ -34,7 +34,7 @@ function splitBoxes(n: number): Record<string, number> {
 /** 다이아 → 지갑 가산, 상자 → 슬롯별 보유량 가산. 즉시 반영(비-우편). */
 async function creditGrant(tx: Tx, userId: string, serverId: number, g: Grant): Promise<void> {
   if (g.diamond > 0) {
-    await walletAdd(tx, userId, serverId, g.diamond);
+    await walletAdd(tx, userId, serverId, g.diamond, 'iap');
   }
   if (g.boxes > 0) {
     const dist = splitBoxes(g.boxes);

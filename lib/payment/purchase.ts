@@ -370,7 +370,16 @@ export async function completePurchase(
     // 지급 — 배틀패스 구간 해금(소급 포함) vs 상점 상품. bp는 이미 보유면 null(멱등 무해).
     const bp = parseBpProduct(order.productCode);
     if (bp) {
-      await applyBpSegmentPurchase(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+      // 반환이 null = 이미 보유한 구간(PK 충돌). 상점 특가와 **같은 마커**를 세워야 한다:
+      // 중복 결제는 결제창을 두 번 여는 것만으로 성립하고(중복 방지 조회가 보는 구간 행은
+      // 결제 완료 시점에 생겨, 주문 생성~완료 사이가 통째로 열린 창이다), 마커가 없으면
+      // 그 주문을 환불할 때 reclaimBpSegment가 **다른 주문이 산 구간과 수령한 보상**을
+      // 회수한다(2026-07-07에 상점 경로만 고치고 배틀패스 분기를 빠뜨린 결함).
+      const seg = await applyBpSegmentPurchase(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+      if (seg === null) {
+        dupSkipped = true;
+        await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+      }
     } else {
       const g = await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
       if (g.skipped) {
@@ -388,7 +397,7 @@ export async function completePurchase(
       paymentId,
       orderId: order.id,
       detail:
-        `인생 특가 중복 결제 감지(서버 ${order.serverId}) — 두 번째 지급 차단·grant_skipped 마킹. ` +
+        `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 두 번째 지급 차단·grant_skipped 마킹. ` +
         `중복 결제분은 환불해도 기존 지급분이 회수되지 않으니 안심하고 환불 처리.`,
     });
   }

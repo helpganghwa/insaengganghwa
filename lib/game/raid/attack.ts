@@ -170,7 +170,7 @@ export function buyExtraAttack(input: {
 
     // 결제 서버 = 레이드 서버(트랜잭션 내 조회값). 쿠키 파생 input.serverId를 쓰면 결제 서버를
     // 조작할 수 있어(감사 LOW, 다중서버) raid.serverId로 통일 — CP·보상과 동일 서버로 잠금.
-    const paid = await walletTrySpend(tx, userId, raid.serverId, cost);
+    const paid = await walletTrySpend(tx, userId, raid.serverId, cost, 'raid_extra_attack');
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
     await tx
@@ -264,7 +264,7 @@ export async function gemAttackRaid(input: {
     // 보석 결제(추가 공격 1회분) — for update로 다이아 조건부 차감. 결제 서버 = raid.serverId.
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
-    const paid = await walletTrySpend(tx, userId, raid.serverId, cost);
+    const paid = await walletTrySpend(tx, userId, raid.serverId, cost, 'raid_extra_attack');
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;

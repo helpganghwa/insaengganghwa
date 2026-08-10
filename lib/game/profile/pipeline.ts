@@ -478,7 +478,7 @@ async function rejectJob(
     if (claimed.length === 0) return false;
 
     // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
-    await walletAdd(tx, userId, serverId, escrow);
+    await walletAdd(tx, userId, serverId, escrow, 'avatar_refund');
 
     await tx.insert(mailbox).values({
       userId,
@@ -528,7 +528,7 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       .returning({ id: profileGenerationJobs.id });
     if (claimed.length === 0) return false;
 
-    await walletAdd(tx, userId, job.serverId, job.escrow);
+    await walletAdd(tx, userId, job.serverId, job.escrow, 'avatar_refund');
 
     await tx.insert(mailbox).values({
       userId,

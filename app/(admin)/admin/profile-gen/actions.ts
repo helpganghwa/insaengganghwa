@@ -69,7 +69,7 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
         ),
       );
     await tx.delete(userProfiles).where(eq(userProfiles.id, profileId));
-    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow);
+    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
     await tx.insert(mailbox).values({
       userId: job.userId,
       serverId: job.serverId,
@@ -122,7 +122,7 @@ export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg
       )
       .returning({ id: profileGenerationJobs.id });
     if (rows.length === 0) return false;
-    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow);
+    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
     await tx.insert(mailbox).values({
       userId: job.userId,
       serverId: job.serverId,

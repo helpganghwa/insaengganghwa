@@ -49,7 +49,7 @@ export function donateToGuild(input: {
     const { cost, xp } = tier;
 
     if (cost > 0) {
-      const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
+      const paid = await walletTrySpend(tx, input.userId, input.serverId, cost, 'guild_donate');
       if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     }
 

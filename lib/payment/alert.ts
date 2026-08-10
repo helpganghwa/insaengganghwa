@@ -17,7 +17,8 @@ import { sendPushToUsers } from '@/lib/push/send';
  */
 export type PaymentAlertKind =
   | 'PAID_NOT_GRANTED' // 致命: PG는 PAID인데 지급 실패(재지급도 실패)
-  | 'REFUND_RECLAIM_FAILED' // 高: PG는 CANCELLED인데 회수 실패
+  | 'REFUND_RECLAIM_FAILED' // 高: PG는 CANCELLED인데 회수 실패(기계적 실패 — 재시도로 치유 가능)
+  | 'REFUND_CLAWBACK_SHORT' // 高: 회수는 돌았으나 유저가 이미 소비 — 부족분 미회수(재시도 무의미, 운영 판단)
   | 'AMOUNT_MISMATCH' // 中: 금액 위변조 의심(지급 차단됨)
   | 'WEBHOOK_VERIFY_FAILED' // 致命: 웹훅 서명 검증 실패(시크릿/설정 사고)
   | 'MINOR_LIMIT_EXCEEDED' // 高(법규): 미성년 월 한도 초과
@@ -32,6 +33,7 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   PAID_NOT_GRANTED: 'critical',
   WEBHOOK_VERIFY_FAILED: 'critical',
   REFUND_RECLAIM_FAILED: 'high',
+  REFUND_CLAWBACK_SHORT: 'high',
   MINOR_LIMIT_EXCEEDED: 'high',
   COMPLETE_EXCEPTION: 'high',
   AMOUNT_MISMATCH: 'warn',
