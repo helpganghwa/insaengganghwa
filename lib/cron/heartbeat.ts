@@ -28,6 +28,8 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   'push-flush': 20 * MIN, // 5분
   'settle-raid': 20 * MIN, // 5분 — 레이드 정산
   'payment-recon': 40 * MIN, // 10분 — 결제 백스톱(최중요)
+  'scheduled-mail': 20 * MIN, // 5분 — 예약 우편 + 예약 공지 발행(0158). 정지=예약한 시각에
+  //   공지가 안 나간다(오픈 공지를 여기 맡기므로 무성 실패가 곧 오픈 사고, 2026-08-10 등재)
   'guild-leader-handover': 26 * HOUR, // 매일 KST12시 — 잠수 길드장 위임/자동해산(2026-07-28 등재)
   'push-daily-supply': 17 * HOUR, // UTC15~23:30 창(창 밖 최대공백 ~15.5h)
   'melee-run': 25 * HOUR, // UTC0 창 — 대난투 개최

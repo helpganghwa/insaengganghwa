@@ -11,6 +11,7 @@ import { revalidateTag } from 'next/cache';
 import { sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
@@ -92,6 +93,7 @@ export async function GET(req: Request) {
       console.error('[scheduled-mail] announcement publish', e);
     }
 
+    await beatCron('scheduled-mail', `mail=${sent} ann=${announcementsPublished}`);
     return Response.json({ ok: true, dispatched: due.length, mailed: sent, announcementsPublished });
   } catch (e) {
     console.error('[scheduled-mail]', e);
