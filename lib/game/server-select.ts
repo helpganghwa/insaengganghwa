@@ -23,7 +23,7 @@ import {
  * 가입 보너스·기본 아바타·거주지의 **단일 출처**(0067 이후 트리거는 계정 행만 만들고 캐릭터/
  * 보너스를 만들지 않음 — 신규 가입·새 서버 합류 모두 이 함수가 고른 서버에 1개 생성).
  */
-const SIGNUP_DIAMOND = 1000 * TEST_REWARD_MULTIPLIER;
+const SIGNUP_DIAMOND = 500 * TEST_REWARD_MULTIPLIER;
 const SIGNUP_BOX_PER_SLOT = 10 * TEST_REWARD_MULTIPLIER;
 /** 기본 아바타(대장장이 남/여) — 트리거와 동일 정적 에셋. */
 const DEFAULT_AVATARS = [

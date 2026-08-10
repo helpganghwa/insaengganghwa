@@ -308,28 +308,37 @@ describe('배틀패스 — 구간·보상·가격', () => {
     expect(bpSegmentEndLevel('transcend', 1)).toBe(20);
   });
   it('bpTierReward: 마일스톤 1개당 보상(강화·초월 동일 ×(c+1) 선형)', () => {
-    // 강화는 10단위 마일스톤에 ×10 몰아줌 — c0 무료 100 / 프리미엄 500, c1 1000, c2 1500(선형)
-    expect(bpTierReward('enhance', 50, false)).toBe(100);
+    // 강화는 10단위 마일스톤에 ×10 몰아줌 — c0 무료 50 / 프리미엄 500, c1 1000, c2 1500(선형)
+    expect(bpTierReward('enhance', 50, false)).toBe(50);
     expect(bpTierReward('enhance', 50, true)).toBe(500);
     expect(bpTierReward('enhance', 150, true)).toBe(1000);
     expect(bpTierReward('enhance', 250, true)).toBe(1500);
-    // 초월은 매 단계(step1) 그대로 — c0 10/50, c1 20/100, c2 30/150
-    expect(bpTierReward('transcend', 5, false)).toBe(10);
-    expect(bpTierReward('transcend', 5, true)).toBe(50);
-    expect(bpTierReward('transcend', 15, true)).toBe(100);
-    expect(bpTierReward('transcend', 25, true)).toBe(150);
+    // 초월은 매 단계(step1) 그대로 — 기준값이 3의 배수(무료 9 / 프리미엄 51)라 c0 9/51, c1 18/102
+    expect(bpTierReward('transcend', 5, false)).toBe(9);
+    expect(bpTierReward('transcend', 5, true)).toBe(51);
+    expect(bpTierReward('transcend', 15, true)).toBe(102);
+    expect(bpTierReward('transcend', 25, true)).toBe(153);
   });
   it('bpRangeReward: 구간 경계 넘는 합산', () => {
-    // 강화 c0 전체(1~100) 무료 = 100×10 = 1000, 프리미엄 = 5000
-    expect(bpRangeReward('enhance', 0, 100, false)).toBe(1000);
+    // 강화 c0 전체(1~100) 무료 = 50×10 = 500, 프리미엄 = 5000
+    expect(bpRangeReward('enhance', 0, 100, false)).toBe(500);
     expect(bpRangeReward('enhance', 0, 100, true)).toBe(5000);
     // c1 전체(101~200) 프리미엄 = 100×100 = 10000
     expect(bpRangeReward('enhance', 100, 200, true)).toBe(10000);
     // 경계 가로지름: 1~150 프리미엄 = c0(5000) + c1 50단계×100(5000) = 10000
     expect(bpRangeReward('enhance', 0, 150, true)).toBe(10000);
-    // 초월 c0(1~10) 프리미엄 = 10×50 = 500
-    expect(bpRangeReward('transcend', 0, 10, true)).toBe(500);
+    // 초월 c0(1~10) 프리미엄 = 10×51 = 510
+    expect(bpRangeReward('transcend', 0, 10, true)).toBe(510);
     expect(bpRangeReward('enhance', 50, 50, true)).toBe(0); // 빈 범위
+  });
+  it('초월 패스 보상은 전 구간 3의 배수 — 보급상자 3슬롯 균등 분배 제약', () => {
+    // ×(c+1)·×step은 3의 배수성을 보존하지 않으므로 **기준값 자체가** 3의 배수여야 한다.
+    // 강화·초월이 기준값을 공유하던 시절 초월이 10·20·30…이 되어 구간 셋 중 둘에서 깨졌다.
+    for (let c = 0; c < 8; c++) {
+      const level = c * 10 + 5; // 구간 c 안의 아무 단계
+      expect(bpTierReward('transcend', level, false) % 3).toBe(0);
+      expect(bpTierReward('transcend', level, true) % 3).toBe(0);
+    }
   });
   it('bpSegmentPriceKrw: 강화·초월 동일 선형 9900+c×10000, 상한 59,900', () => {
     // 강화·초월 같은 선형 — c0~c5: 9900/19900/29900/39900/49900/59900
@@ -348,7 +357,12 @@ describe('배틀패스 — 구간·보상·가격', () => {
 });
 
 // ── 대난투 구간 테이블(2026-07-22 개편) — 경계·단조·3배수 검증 ──
-import { MELEE_REWARD_TIERS, meleeTierForRank, meleePointsForRank } from '@/lib/game/balance';
+import {
+  MELEE_REWARD_TIERS,
+  meleeTierForRank,
+  meleePointsForRank,
+  meleeRewardForRank,
+} from '@/lib/game/balance';
 
 describe('melee tiers (2026-07-22)', () => {
   it('절대 순위 경계 매칭(N=220 — 퍼센타일 비활성 구간)', () => {
@@ -395,5 +409,44 @@ describe('melee tiers (2026-07-22)', () => {
       prevB = t.boxes;
       prevP = t.points;
     }
+  });
+
+  it('다이아 컷오프: 하위 절반은 규모와 무관하게 0 — 상자·포인트는 그대로', () => {
+    // 소규모 서버가 핵심. 참가자 100명이면 전원이 절대순위 구간(1~200위)에 걸려
+    // '상위 70%'·'그 외'(다이아 0) 구간이 **매칭 자체가 안 된다** → 컷오프가 없으면 51위도 250💎.
+    expect(meleeTierForRank(51, 100).diamond).toBe(250); // 표상으로는 받는 구간
+    expect(meleeRewardForRank(51, 100).diamond).toBe(0); // 실제 지급은 컷오프로 0
+    expect(meleeRewardForRank(50, 100).diamond).toBe(300); // 상위 50%(=50위)까지는 지급
+    // 상자·포인트는 컷오프와 무관 — 참가 보상 성격 유지.
+    expect(meleeRewardForRank(51, 100).boxes).toBeGreaterThan(0);
+    expect(meleePointsForRank(51, 100)).toBeGreaterThan(0);
+
+    // 대형 서버에서도 경계는 동일하게 ceil(n×0.5).
+    expect(meleeRewardForRank(500, 1000).diamond).toBeGreaterThan(0);
+    expect(meleeRewardForRank(501, 1000).diamond).toBe(0);
+
+    // 1위는 어떤 규모에서도 만액.
+    for (const n of [10, 100, 1000, 10000]) expect(meleeRewardForRank(1, n).diamond).toBe(1000);
+  });
+});
+
+// ── 보급상자 3배수 불변식 — 무기/방어구/장신구 균등 분배 전제(splitBoxes) ──
+describe('보급상자 지급량은 전 경로에서 3의 배수', () => {
+  it('상점 무료 수령 · 현금 상품 · 상자팩', async () => {
+    const { FREE_REWARDS } = await import('@/lib/game/shop/free');
+    const { CASH, BOX } = await import('@/lib/game/shop/catalog');
+    for (const r of Object.values(FREE_REWARDS)) expect(r.boxes % 3).toBe(0);
+    for (const group of Object.values(CASH)) for (const p of group) expect(p.boxes % 3).toBe(0);
+    for (const b of Object.values(BOX)) expect(b.boxes % 3).toBe(0);
+  });
+
+  it('도전 과제 개별 · 전체 완료 보너스 · 추천인', async () => {
+    const { CHALLENGES, COMPLETE_BONUS } = await import('@/lib/game/challenges/defs');
+    const { INVITE_BOX_PER_REFERRAL } = await import('@/lib/game/referral/stats');
+    for (const c of CHALLENGES) if (c.boxes != null) expect(c.boxes % 3).toBe(0);
+    // 완료 보너스는 슬롯별 지정이라 균등 자체가 보장되지만 합계도 3의 배수여야 한다.
+    const bonus = COMPLETE_BONUS.boxes;
+    expect((bonus.weapon + bonus.armor + bonus.accessory) % 3).toBe(0);
+    expect(INVITE_BOX_PER_REFERRAL % 3).toBe(0);
   });
 });

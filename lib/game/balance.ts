@@ -435,45 +435,46 @@ export type CheckinReward =
 
 /**
  * §7.1 출석 캘린더 보상 — 1-index(1~28). BALANCE.md §7.1 표와 1:1.
- * 평일 6일 순환(무기→💎300→방어구→💎300→장신구→💎300) + 7일째마다 마일스톤 4종 순환
- * (보급세트 30 → 💎2,000 → 보급세트 60 → 💎3,000).
+ * 평일 6일 순환(무기→💎100→방어구→💎100→장신구→💎100) + 7일째마다 마일스톤 4종 순환
+ * (보급세트 30 → 💎500 → 보급세트 60 → 💎1,000).
+ * 상자 칸(보급권)은 불변 — 무과금 반복 유입 조정은 **다이아 칸만** 인하한다(장비 수급 곡선 보존).
  */
 export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
   { kind: 'supply', slot: 'weapon', count: 10 }, // 1
-  { kind: 'diamond', amount: 300 }, // 2
+  { kind: 'diamond', amount: 100 }, // 2
   { kind: 'supply', slot: 'armor', count: 10 }, // 3
-  { kind: 'diamond', amount: 300 }, // 4
+  { kind: 'diamond', amount: 100 }, // 4
   { kind: 'supply', slot: 'accessory', count: 10 }, // 5
-  { kind: 'diamond', amount: 300 }, // 6
+  { kind: 'diamond', amount: 100 }, // 6
   { kind: 'supply_set', perSlot: 10 }, // 7 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 8
-  { kind: 'diamond', amount: 300 }, // 9
+  { kind: 'diamond', amount: 100 }, // 9
   { kind: 'supply', slot: 'armor', count: 10 }, // 10
-  { kind: 'diamond', amount: 300 }, // 11
+  { kind: 'diamond', amount: 100 }, // 11
   { kind: 'supply', slot: 'accessory', count: 10 }, // 12
-  { kind: 'diamond', amount: 300 }, // 13
-  { kind: 'diamond', amount: 2000 }, // 14 ★
+  { kind: 'diamond', amount: 100 }, // 13
+  { kind: 'diamond', amount: 500 }, // 14 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 15
-  { kind: 'diamond', amount: 300 }, // 16
+  { kind: 'diamond', amount: 100 }, // 16
   { kind: 'supply', slot: 'armor', count: 10 }, // 17
-  { kind: 'diamond', amount: 300 }, // 18
+  { kind: 'diamond', amount: 100 }, // 18
   { kind: 'supply', slot: 'accessory', count: 10 }, // 19
-  { kind: 'diamond', amount: 300 }, // 20
+  { kind: 'diamond', amount: 100 }, // 20
   { kind: 'supply_set', perSlot: 20 }, // 21 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 22
-  { kind: 'diamond', amount: 300 }, // 23
+  { kind: 'diamond', amount: 100 }, // 23
   { kind: 'supply', slot: 'armor', count: 10 }, // 24
-  { kind: 'diamond', amount: 300 }, // 25
+  { kind: 'diamond', amount: 100 }, // 25
   { kind: 'supply', slot: 'accessory', count: 10 }, // 26
-  { kind: 'diamond', amount: 300 }, // 27
-  { kind: 'diamond', amount: 3000 }, // 28 ★
+  { kind: 'diamond', amount: 100 }, // 27
+  { kind: 'diamond', amount: 1000 }, // 28 ★
 ] as const;
 
 /**
  * §7.2 완주 보너스 — 28번째 칸 수령(한 바퀴 완주) 시 그 칸 보상에 **더해 별도 1회** 지급.
- * "완주 보상이 칸 보상과 중복인지" 혼동 해소(2026-07-22 사용자 확정): 28일째 = 칸 💎3,000 + 보너스 💎2,000.
+ * "완주 보상이 칸 보상과 중복인지" 혼동 해소(2026-07-22 사용자 확정): 28일째 = 칸 💎1,000 + 보너스 💎1,000.
  */
-export const CHECKIN_COMPLETE_BONUS_DIAMOND = 2000;
+export const CHECKIN_COMPLETE_BONUS_DIAMOND = 1000;
 
 /** §7.1 7일째 마일스톤 칸(1-index)인지 — UI 강조용. */
 export function isCheckinMilestone(cycleDay1Indexed: number): boolean {
@@ -525,7 +526,7 @@ export type MeleeReward = { diamond: number; boxes: number };
 
 /**
  * 대난투 구간 테이블(2026-07-22 개편) — 보상 + 랭킹 포인트의 단일 진실 원천.
- * 설계: 1위만 특별(2위의 ~1.7배), 이후 완만한 균등 곡선(순위 스트레스 최소화 — 경쟁
+ * 설계: 1위만 특별(2위의 2배), 이후 완만한 균등 곡선(순위 스트레스 최소화 — 경쟁
  * 동기는 포인트가 담당: 1위 20 vs 2위 10). 절대 순위 구간(1~200) 우선, 퍼센타일은
  * 참가자 667명+부터 실효(그 전엔 절대 구간이 선매칭). 상자는 3의 배수(distributeBoxes).
  * 랭킹 = 감쇠 포인트(leaderboard metric 'melee', 반감기 14일) — 우승 횟수는 통계·마일스톤으로 유지.
@@ -542,18 +543,30 @@ export type MeleeTier = {
 
 export const MELEE_REWARD_TIERS: readonly MeleeTier[] = [
   { label: '1위', diamond: 1000, boxes: 60, points: 20, maxRank: 1 },
-  { label: '2위', diamond: 600, boxes: 30, points: 10, maxRank: 2 },
-  { label: '3위', diamond: 550, boxes: 27, points: 9, maxRank: 3 },
-  { label: '4~10위', diamond: 500, boxes: 27, points: 8, maxRank: 10 },
-  { label: '11~25위', diamond: 450, boxes: 24, points: 7, maxRank: 25 },
-  { label: '26~50위', diamond: 400, boxes: 21, points: 6, maxRank: 50 },
-  { label: '51~100위', diamond: 350, boxes: 18, points: 5, maxRank: 100 },
-  { label: '101~200위', diamond: 300, boxes: 15, points: 4, maxRank: 200 },
-  { label: '상위 30%', diamond: 250, boxes: 12, points: 3, pct: 0.3 },
-  { label: '상위 50%', diamond: 200, boxes: 9, points: 2, pct: 0.5 },
-  { label: '상위 70%', diamond: 170, boxes: 9, points: 1, pct: 0.7 },
-  { label: '그 외', diamond: 150, boxes: 6, points: 0 },
+  { label: '2위', diamond: 500, boxes: 45, points: 10, maxRank: 2 },
+  { label: '3위', diamond: 500, boxes: 36, points: 9, maxRank: 3 },
+  { label: '4~10위', diamond: 450, boxes: 27, points: 8, maxRank: 10 },
+  { label: '11~25위', diamond: 400, boxes: 24, points: 7, maxRank: 25 },
+  { label: '26~50위', diamond: 300, boxes: 21, points: 6, maxRank: 50 },
+  { label: '51~100위', diamond: 250, boxes: 18, points: 5, maxRank: 100 },
+  { label: '101~200위', diamond: 200, boxes: 15, points: 4, maxRank: 200 },
+  { label: '상위 30%', diamond: 120, boxes: 15, points: 3, pct: 0.3 },
+  { label: '상위 50%', diamond: 80, boxes: 12, points: 2, pct: 0.5 },
+  { label: '상위 70%', diamond: 0, boxes: 12, points: 1, pct: 0.7 },
+  { label: '그 외', diamond: 0, boxes: 9, points: 0 },
 ];
+
+/**
+ * 다이아 지급 백분위 컷오프 — 상위 이 비율까지만 다이아를 받는다(상자·포인트는 무관).
+ *
+ * **왜 필요한가**: 위 표는 절대순위 구간(1~200위)을 퍼센타일 구간보다 **먼저** 매칭한다.
+ * 그래서 참가자가 200명 이하인 서버에서는 '상위 70%'·'그 외'(=다이아 0) 구간이 **아예
+ * 매칭되지 않아** 전원이 절대순위 구간에 걸려 **모두 다이아를 받는다** — 100명 서버 평균
+ * 311💎 = 1,000명 서버(≈86💎)의 3.6배. 서버 규모가 작을수록 1인당 유입이 폭증하는 역설.
+ * 컷오프는 구간 매칭과 독립적으로 "하위 절반은 다이아 0"을 강제해 규모 무관하게 유입을 고정한다.
+ * 상자는 게이트와 무관하게 지급한다(초월 연료 = 성장 곡선이라 참가 보상 성격 유지).
+ */
+export const MELEE_DIAMOND_PCT_CUTOFF = 0.5;
 
 /** 등수(1-base) + 총 참가자 N → 구간(배타 — 스캔 순서 첫 매칭). */
 export function meleeTierForRank(rank: number, n: number): MeleeTier {
@@ -566,7 +579,8 @@ export function meleeTierForRank(rank: number, n: number): MeleeTier {
 
 export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   const t = meleeTierForRank(rank, n);
-  return { diamond: t.diamond, boxes: t.boxes };
+  const diamond = rank > Math.ceil(n * MELEE_DIAMOND_PCT_CUTOFF) ? 0 : t.diamond;
+  return { diamond, boxes: t.boxes };
 }
 
 /** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee'). */
@@ -621,13 +635,25 @@ export function bpSegmentEndLevel(type: BattlePassType, segmentIndex: number): n
 }
 
 /**
- * §9.1 **마일스톤 1개당** 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화·초월 동일 ×(c+1) 선형
+ * §9.1 마일스톤 1개당 기준값 — 패스 종류별로 분리한다.
+ *
+ * 강화 트랙은 보상이 **다이아**라 아무 값이나 쓸 수 있지만, 초월 트랙은 보상이 **보급상자**라
+ * 3슬롯 균등 분배 제약(전 지급처 상자는 3의 배수) 아래 놓인다. 두 트랙이 기준값을 공유하던
+ * 시절(무료 10 / 프리미엄 50)에는 초월 보상이 10·20·30… / 50·100·150…이 되어 구간 셋 중 둘에서
+ * 3의 배수를 위반했다(×(c+1) 스케일이 3의 배수성을 보존하지 않음). 초월 기준값을 **3의 배수**
+ * (무료 9 / 프리미엄 51)로 잡으면 ×(c+1)·×step 이후에도 전 구간이 3으로 나누어떨어진다.
+ */
+const BP_BASE_FREE: Record<BattlePassType, number> = { enhance: 5, transcend: 9 };
+const BP_BASE_PREMIUM: Record<BattlePassType, number> = { enhance: 50, transcend: 51 };
+
+/**
+ * §9.1 **마일스톤 1개당** 보상량. 구간 스케일: 강화·초월 동일 ×(c+1) 선형
  * (가격이 선형이라 보상도 선형 — 구간별 다이아/원 ≈ 일정). 간격(step)만큼 ×해서 마일스톤에 몰아줌
  * (구간 총량 보존). 강화 = 다이아, 초월 = 보급상자. (c=구간)
  */
 export function bpTierReward(type: BattlePassType, level: number, premium: boolean): number {
   const c = bpSegmentIndex(type, level);
-  const base = premium ? 50 : 10;
+  const base = premium ? BP_BASE_PREMIUM[type] : BP_BASE_FREE[type];
   const perLevel = base * (c + 1);
   return perLevel * BP_TIER_STEP[type];
 }

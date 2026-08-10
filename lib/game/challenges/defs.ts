@@ -83,7 +83,7 @@ export function activeChallenges(hidePaid: boolean): ChallengeDef[] {
 export const COMPLETE_BONUS = {
   id: 'complete',
   label: '모든 도전 과제 완료!',
-  diamond: 2000,
+  diamond: 1000,
   boxes: { weapon: 25, armor: 25, accessory: 25 },
 } as const;
 
