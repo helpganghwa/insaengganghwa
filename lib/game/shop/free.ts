@@ -7,22 +7,19 @@ import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopFreeClaims } from '@/lib/db/schema/shop';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from './free-rewards';
 import { periodKey as resetKey } from './period';
 
 /**
  * 상점 무료 수령 — 슬롯별 주기(KST) 멱등. 결제 불필요.
  *  - daily(매일) / weekly(매주, 월요일 시작) / monthly(매월) / signup(가입 1회)
  * 보상 수치는 시작값(경제 시뮬 후 조정). 무료 = 상점 방문 유인용 소형 보상.
+ *
+ * 수치는 free-rewards.ts에 있다 — 이 파일은 `server-only`라 상점 화면이 읽을 수 없어
+ * 표시용 미러가 생겼고 실지급과 어긋났다(2026-08-11). 기존 import 경로가 깨지지 않게 재수출한다.
  */
-export type FreeSlot = 'daily' | 'weekly' | 'monthly' | 'signup';
-export const FREE_SLOTS: FreeSlot[] = ['daily', 'weekly', 'monthly', 'signup'];
-
-export const FREE_REWARDS: Record<FreeSlot, { diamond: number; boxes: number }> = {
-  daily: { diamond: 0, boxes: 3 },
-  weekly: { diamond: 0, boxes: 30 },
-  monthly: { diamond: 0, boxes: 150 },
-  signup: { diamond: 2000, boxes: 0 },
-};
+export { FREE_REWARDS, FREE_SLOTS };
+export type { FreeSlot };
 
 /** 현재 주기 키(KST). 같은 키 = 이미 받은 주기. signup=once, 그 외는 공용 주기키. */
 function periodKey(slot: FreeSlot): string {

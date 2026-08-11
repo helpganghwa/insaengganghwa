@@ -3,8 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { walletAdd } from '@/lib/game/wallet';
-import { characters } from '@/lib/db/schema/server';
+import { walletAdd, walletReclaim } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { battlePassState, battlePassSegments } from '@/lib/db/schema/battlepass';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -534,6 +533,8 @@ export async function reclaimBpSegment(
   serverId: number,
   type: BattlePassType,
   segmentIndex: number,
+  /** 원장 추적 키 — 어느 주문의 회수인지(`order:<iap_orders.id>`). */
+  ref?: string,
 ): Promise<void> {
   const cond = and(
     eq(battlePassSegments.userId, userId),
@@ -555,10 +556,11 @@ export async function reclaimBpSegment(
 
   if (total > 0) {
     if (type === 'enhance') {
-      await tx
-        .update(characters)
-        .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${total})` })
-        .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+      // 지갑 헬퍼 경유(2026-08-11) — raw UPDATE는 잔액만 되돌리고 diamond_ledger를 건너뛰었다.
+      // 원장이 가장 필요한 순간이 환불 분쟁 조사인데 정확히 그 회수 기록만 비어 있었다
+      // (지급 battlepass_premium(+)만 남고 회수(−)는 흔적 없음). 0 클램프·캐릭터 부재 시 0
+      // 반환은 walletReclaim이 동일하게 보장하고, 실제 회수액만 원장에 남는다.
+      await walletReclaim(tx, userId, serverId, total, 'refund_clawback', ref);
     } else {
       await reclaimBoxesTotal(tx, userId, serverId, total);
     }

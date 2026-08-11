@@ -3,8 +3,7 @@ import 'server-only';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { walletAdd } from '@/lib/game/wallet';
-import { characters } from '@/lib/db/schema/server';
+import { walletAdd, walletReclaim } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { mailbox } from '@/lib/db/schema/mailbox';
@@ -154,7 +153,7 @@ export async function applyProductGrant(
 
 /**
  * 상품 지급 회수(환불 시) — applyProductGrant의 역연산. 결제 취소 트랜잭션 안에서 호출.
- *  - 다이아: GREATEST(0, …) 0 클램프 회수. **이미 소비한 분은 회수 불가(v1 정책: 손실 처리)**.
+ *  - 다이아: walletReclaim(0 클램프 회수). **이미 소비한 분은 회수 불가(v1 정책: 손실 처리)**.
  *    음수 잔액은 UI·차감 불변식을 깨므로 의도적으로 만들지 않는다(악용 방지는 추후 정책으로).
  *  - 상자: **슬롯 합계** 기준 회수(reclaimBoxesTotal). 환불 사전판정이 합계로 충분 여부를 보므로
  *    슬롯별 역분배로 회수하면 판정은 통과하고 회수만 조용히 줄어든다(supply/reclaim.ts 참조).
@@ -166,6 +165,8 @@ export async function reclaimProductGrant(
   userId: string,
   serverId: number,
   productId: string,
+  /** 원장 추적 키 — 어느 주문의 회수인지(`order:<iap_orders.id>`). */
+  ref?: string,
 ): Promise<void> {
   if (productId === PREMIUM.id) {
     await tx
@@ -194,11 +195,12 @@ export async function reclaimProductGrant(
   if (!g) return;
 
   if (g.diamond > 0) {
-    // 캐릭터 행 없으면 0행 갱신(회수할 것 없음) — walletAdd와 달리 throw하지 않는다.
-    await tx
-      .update(characters)
-      .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${BigInt(g.diamond)})` })
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    // 지갑 헬퍼 경유(2026-08-11) — 예전엔 여기서 raw UPDATE로 잔액만 깎아 diamond_ledger에
+    // 회수 기록이 남지 않았다. 원장이 가장 필요한 순간이 "얼마를 지급했고 얼마를 되찾았나"를
+    // 따지는 환불 분쟁인데, 하필 그 구간만 비어 있어 지급(iap +)만 남고 회수(−)는 증발했다.
+    // walletReclaim은 0 클램프·캐릭터 행 부재 시 무해한 0 반환까지 기존 동작과 동일하고,
+    // 실제 회수액만 원장에 남긴다(명목액을 남기면 못 받은 몫까지 회수된 것으로 보인다).
+    await walletReclaim(tx, userId, serverId, g.diamond, 'refund_clawback', ref);
   }
   if (g.boxes > 0) await reclaimBoxesTotal(tx, userId, serverId, g.boxes);
 

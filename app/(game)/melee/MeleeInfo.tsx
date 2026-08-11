@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import Link from 'next/link';
 
-import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
+import { MELEE_DIAMOND_PCT_CUTOFF, MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
@@ -45,29 +45,39 @@ export const MeleeInfo = memo(function MeleeInfo({
   const body = (
     <>
       {tab === 'reward' ? (
-        <div className="isolate mx-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-          <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
-            <span>순위</span>
-            <span className="w-16 text-right text-sm">💎</span>
-            <span className="w-12 text-right text-sm">📦</span>
-            <span className="w-12 text-right">포인트</span>
+        <>
+          <div className="isolate mx-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
+              <span>순위</span>
+              <span className="w-16 text-right text-sm">💎</span>
+              <span className="w-12 text-right text-sm">📦</span>
+              <span className="w-12 text-right">포인트</span>
+            </div>
+            <ul>
+              {MELEE_REWARD_TIERS.map((t) => (
+                <li
+                  key={t.label}
+                  className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-zinc-900/60 px-3 py-2.5 text-[12px] last:border-b-0"
+                >
+                  <span className="font-bold text-white">{t.label}</span>
+                  <span className="w-16 text-right font-mono text-sky-300">
+                    {t.diamond > 0 ? t.diamond.toLocaleString() : '—'}
+                  </span>
+                  <span className="w-12 text-right font-mono text-amber-300">{t.boxes}</span>
+                  <span className="w-12 text-right font-mono text-violet-300">{t.points > 0 ? `+${t.points}` : '—'}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul>
-            {MELEE_REWARD_TIERS.map((t) => (
-              <li
-                key={t.label}
-                className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-zinc-900/60 px-3 py-2.5 text-[12px] last:border-b-0"
-              >
-                <span className="font-bold text-white">{t.label}</span>
-                <span className="w-16 text-right font-mono text-sky-300">
-                  {t.diamond > 0 ? t.diamond.toLocaleString() : '—'}
-                </span>
-                <span className="w-12 text-right font-mono text-amber-300">{t.boxes}</span>
-                <span className="w-12 text-right font-mono text-violet-300">{t.points > 0 ? `+${t.points}` : '—'}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+          {/* 다이아 컷오프 각주 — 표는 절대순위 구간(1~200위)만 보여주는데 실제 지급은
+              MELEE_DIAMOND_PCT_CUTOFF에서 한 번 더 잘린다. 참가자가 적은 서버(오픈 직후·신서버)에선
+              표의 '51~100위 250💎'가 그대로 0이 되는 구간이라, 표만 보면 실지급보다 크게 읽힌다.
+              퍼센트는 상수에서 계산한다(하드코딩하면 상수와 다시 어긋난다). */}
+          <p className="mx-4 mt-2 text-[11px] leading-relaxed text-zinc-500">
+            💎는 참가자 상위 {Math.round(MELEE_DIAMOND_PCT_CUTOFF * 100)}%까지만 받아요 — 그 아래
+            순위는 표에 적힌 💎 없이 📦와 포인트만 들어와요.
+          </p>
+        </>
       ) : history.length === 0 ? (
         <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
           아직 발표된 대난투가 없어요.

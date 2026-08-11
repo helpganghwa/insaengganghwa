@@ -216,10 +216,13 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
             ? await readHoldings(tx, order.userId, order.serverId, true)
             : { diamond: 0, boxes: 0 };
         const preview = toPreview(need, have);
+        // 원장 ref는 주문 단위로 — 분쟁 조사는 "이 주문이 준 것과 되찾은 것"을 맞춰보는 일이라
+        // 지급(iap)·회수(refund_clawback)가 같은 키로 묶여야 한다. iap_refunds.order_id와 동일 축.
+        const ref = `order:${order.id}`;
         if (bp) {
-          await reclaimBpSegment(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+          await reclaimBpSegment(tx, order.userId, order.serverId, bp.type, bp.segmentIndex, ref);
         } else {
-          await reclaimProductGrant(tx, order.userId, order.serverId, order.productCode);
+          await reclaimProductGrant(tx, order.userId, order.serverId, order.productCode, ref);
         }
         // 실제로 전액 회수됐을 때만 done — 부족분이 있으면 미회수 채권으로 남긴다(감사 C2).
         clawbackDone = preview.sufficient;

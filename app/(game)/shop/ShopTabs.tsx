@@ -24,7 +24,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 
 import { payFailTitle, runCheckout } from './checkout';
-import type { FreeSlot } from '@/lib/game/shop/free';
+import { FREE_REWARDS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
 /**
@@ -41,15 +41,19 @@ const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
   { key: 'charge', label: '충전', free: 'signup' },
 ];
 
-const FREE_DISPLAY: Record<
-  FreeSlot,
-  { period: string; reward: string; diamond: number; boxes: number }
-> = {
-  daily: { period: '매일', reward: '📦 3개', diamond: 0, boxes: 3 },
-  weekly: { period: '매주', reward: '📦 30개', diamond: 0, boxes: 30 },
-  monthly: { period: '매월', reward: '📦 150개', diamond: 0, boxes: 150 },
-  signup: { period: '', reward: '💎 5,000', diamond: 5000, boxes: 0 },
-};
+/**
+ * 무료 수령 카드에 적히는 보상 문구 — 포맷만 UI 관심사고 **숫자는 전부 FREE_REWARDS 파생**이다.
+ * 여기에 수치를 다시 적어 두면 지급액이 바뀌어도 표시가 따라가지 않는다: 가입 선물이 실제
+ * 💎2,000인데 💎5,000으로 걸려 있었고, 낙관적 헤더 가산·수령 토스트도 같은 값을 써서 유저가
+ * 잠깐 +5,000을 본 뒤 2,000을 받았다(2026-08-11). 상용 서비스라 표시광고에 걸리는 값이다.
+ */
+function freeRewardText(slot: FreeSlot): string {
+  const r = FREE_REWARDS[slot];
+  const parts: string[] = [];
+  if (r.diamond > 0) parts.push(`💎 ${r.diamond.toLocaleString('ko-KR')}`);
+  if (r.boxes > 0) parts.push(`📦 ${r.boxes}개`);
+  return parts.join(' · ');
+}
 
 // 카드·기간별 한 줄 설명(플레이버). 기간(일일/주간/월간) × 카드 종류마다 다르게.
 type ShopPeriod = 'daily' | 'weekly' | 'monthly';
@@ -588,7 +592,7 @@ export function ShopTabs({
 
   const claimFreeSlot = (slot: FreeSlot) => {
     if (claiming || !free[slot]) return;
-    const d = FREE_DISPLAY[slot];
+    const d = FREE_REWARDS[slot];
     setClaiming(slot);
     setFree((f) => ({ ...f, [slot]: false }));
     if (d.diamond) optimisticAdjust(BigInt(d.diamond));
@@ -698,7 +702,7 @@ export function ShopTabs({
               accent="emerald"
               title="무료"
               desc={FREE_DESC[tab]}
-              detail={FREE_DISPLAY[tab].reward}
+              detail={freeRewardText(tab)}
               grayscale={!free[tab]}
               onClick={() => {
                 if (claiming) return;
@@ -749,7 +753,7 @@ export function ShopTabs({
               bg="dia-free"
               accent="emerald"
               compact
-              title={FREE_DISPLAY.signup.reward}
+              title={freeRewardText('signup')}
               desc={FREE_DESC.signup}
               detail=""
               price="무료"

@@ -5,6 +5,13 @@ import Link from 'next/link';
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout } from '@/components/ModalLayout';
+import { COMPLETE_BONUS } from '@/lib/game/challenges/defs';
+
+// 완주 보너스 수치는 defs.ts에서만 읽는다 — 여기 적어 두었던 값(💎5,000+📦150)이 실지급
+// (💎1,000+📦75)과 어긋난 채 신규 유저의 첫 화면에 걸려 있었다(2026-08-11). defs.ts는
+// server-only가 아니라 클라에서 바로 읽힌다(도전 과제 목록 화면도 같은 방식으로 파생).
+const BONUS_BOXES =
+  COMPLETE_BONUS.boxes.weapon + COMPLETE_BONUS.boxes.armor + COMPLETE_BONUS.boxes.accessory;
 
 /**
  * 튜토리얼 마무리 팝업 — 첫 강화 완료 후 1회.
@@ -61,7 +68,10 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
           </span>
           <span className="mt-0.5 block text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
             과제를 하나씩 달성할 때마다 다이아 보상 — 전부 완료하면{' '}
-            <b className="text-amber-600 dark:text-amber-400">💎 5,000 + 📦 150</b> 보너스까지!
+            <b className="text-amber-600 dark:text-amber-400">
+              💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} + 📦 {BONUS_BOXES}
+            </b>{' '}
+            보너스까지!
           </span>
         </Link>
       </ModalLayout>
