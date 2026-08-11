@@ -226,17 +226,23 @@ async function logPersonalMilestones(
     .map((r) => ({ userId: r.userId, value: r.value, mile: milestoneOf(metric, r.value) }))
     .filter((r) => r.mile > 0);
   if (eligible.length === 0) return;
-  const marks = await db
-    .select({ userId: userMilestones.userId, milestone: userMilestones.milestone })
-    .from(userMilestones)
-    .where(
-      and(
-        eq(userMilestones.serverId, serverId),
-        eq(userMilestones.metric, metric),
-        inArray(userMilestones.userId, eligible.map((r) => r.userId)),
-      ),
-    );
-  const markBy = new Map(marks.map((m) => [m.userId, Number(m.milestone)]));
+  // 1000개씩 청크 — 임계를 넘은 유저는 되돌아가지 않아 단조 증가하고, 그 인원이 곧 파라미터 수다
+  // (Postgres 바인드 상한 65,535에서 하드 실패, 그 전에도 만 단위부터 급격히 느려진다).
+  const ids = eligible.map((r) => r.userId);
+  const markBy = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += 1000) {
+    const marks = await db
+      .select({ userId: userMilestones.userId, milestone: userMilestones.milestone })
+      .from(userMilestones)
+      .where(
+        and(
+          eq(userMilestones.serverId, serverId),
+          eq(userMilestones.metric, metric),
+          inArray(userMilestones.userId, ids.slice(i, i + 1000)),
+        ),
+      );
+    for (const m of marks) markBy.set(m.userId, Number(m.milestone));
+  }
   for (const r of eligible) {
     if (r.mile <= (markBy.get(r.userId) ?? 0)) continue; // 빠른 스킵(대부분)
     // 실제 클레임은 증분 경로(incremental.ts)와 공유하는 원자 조건부 upsert(v2) —
