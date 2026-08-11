@@ -3,6 +3,7 @@ import 'server-only';
 import { and, desc, eq, gt, inArray, notInArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { raids, raidInvites, raidParticipants } from '@/lib/db/schema/raid';
 import { characters } from '@/lib/db/schema/server';
 import { friendLinks } from '@/lib/db/schema/friends';
@@ -246,7 +247,7 @@ export async function inviteToRaid(input: {
     await db.insert(raidInvites).values({ raidId, inviterUserId: hostUserId, inviteeUserId });
   } catch (e) {
     // 23505 = 중복 초대. 이미 보낸 것이므로 성공으로 흡수(멱등) — 화면은 '초대함'을 보인다.
-    if ((e as { code?: string }).code !== '23505') throw e;
+    if (!isUniqueViolation(e)) throw e;
   }
   return {
     ok: true,

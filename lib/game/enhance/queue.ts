@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { baseSuccessRateBp, downRateBp, enhanceDurationMs } from '@/lib/game/balance';
@@ -43,16 +44,12 @@ export type QueueEnhanceResult = {
   fromLevel: number;
   targetLevel: number;
   baseRateBp: number;
+  /** 등록 시점 downRate 스냅샷 — 표시(클라)가 판정(resolve)과 같은 값을 쓰게 실어 보낸다. */
+  downRateBp: number;
 };
 
 // drizzle 트랜잭션 핸들 타입(내부 공유용 — queue/swap이 같은 tx에서 재사용).
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-function isUniqueViolation(e: unknown): boolean {
-  if (typeof e !== 'object' || e === null) return false;
-  const o = e as { code?: string; message?: string };
-  return o.code === '23505' || (o.message?.includes('unique') ?? false);
-}
 
 /** 큐 등록 코어 — queue/swap이 동일 tx 내에서 공유. */
 export async function queueEnhanceInTx(
@@ -144,6 +141,7 @@ export async function queueEnhanceInTx(
       fromLevel,
       targetLevel,
       baseRateBp,
+      downRateBp: downBp,
     };
   } catch (e) {
     if (isUniqueViolation(e)) throw new EnhanceError('SLOT_BUSY'); // partial unique 최후 방어

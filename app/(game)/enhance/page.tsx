@@ -39,6 +39,7 @@ export default async function EnhancePage() {
       fromLevel: number;
       targetLevel: number;
       baseRateBp: number;
+      downRateBp: number | null;
       startedAtIso: string;
       completeAtIso: string;
       transcendLevel: number;
@@ -66,6 +67,7 @@ export default async function EnhancePage() {
               'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
               'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,
               'targetLevel', ej.target_level, 'baseRateBp', ej.base_rate_bp,
+              'downRateBp', ej.down_rate_bp,
               'startedAtIso', ej.started_at, 'completeAtIso', ej.complete_at,
               'transcendLevel', ue.transcend_level, 'catalogItemId', ue.catalog_item_id,
               'code', ci.code, 'name', ci.name))
@@ -143,6 +145,7 @@ export default async function EnhancePage() {
                   transcendLevel: j.transcendLevel,
                   championRank: libRanks.get(j.catalogItemId) ?? null,
                   baseRateBp: j.baseRateBp,
+                  downRateBp: j.downRateBp,
                   startedAtIso: j.startedAtIso,
                   completeAtIso: j.completeAtIso,
                 }

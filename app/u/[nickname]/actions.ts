@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 
@@ -73,7 +74,8 @@ export async function reportProfile(
         .where(eq(userProfiles.id, profileId));
     });
   } catch (e) {
-    if ((e as { code?: string }).code === '23505') {
+    // 같은 사유 중복 신고(UNIQUE) — drizzle 래퍼 때문에 e.code로는 못 잡는다(lib/db/errors 참조).
+    if (isUniqueViolation(e)) {
       return { status: 'error', message: '이미 같은 사유로 신고한 프로필입니다.' };
     }
     throw e;

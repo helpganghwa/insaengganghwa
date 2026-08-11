@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 
 /** 장착 — SCHEMA §2.2. 슬롯당 1개(부분 UNIQUE): 같은 슬롯 기존 장착은 해제 후 교체. */
@@ -13,16 +14,11 @@ export class EquipError extends Error {
   }
 }
 
-/** Postgres unique_violation(23505) 판별 — 슬롯 UNIQUE(ue_user_slot_uq) 동시 장착 최후 방어. */
-function isUniqueViolation(e: unknown): boolean {
-  return typeof e === 'object' && e !== null && 'code' in e && (e as { code?: string }).code === '23505';
-}
-
 export async function equipItem(userId: string, userEquipmentId: bigint): Promise<void> {
   try {
     await equipItemTx(userId, userEquipmentId);
   } catch (e) {
-    // 동시 장착 레이스 — 다른 요청이 같은 슬롯을 먼저 점유(부분 UNIQUE 충돌). 재시도 여지 안내.
+    // 동시 장착 레이스 — 다른 요청이 같은 슬롯을 먼저 점유(부분 UNIQUE ue_user_slot_uq 충돌). 재시도 여지 안내.
     if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
     throw e;
   }

@@ -5,6 +5,7 @@ import { useOptimistic } from 'react';
 import type { Slot } from '@/lib/db/schema/equipment';
 import {
   baseSuccessRateBp,
+  downRateBp,
   enhanceDurationMs,
 } from '@/lib/game/balance';
 
@@ -33,7 +34,8 @@ export function SlotLane({
 
   function startOptimistic(c: EnhanceCandidate) {
     // 가짜 ActiveJob — 서버 응답 대신 클라이언트가 BALANCE 식으로 추정.
-    // baseRateBp/duration은 결정론적(level 함수)이라 정확값. jobId만 'optimistic'.
+    // baseRateBp/downRateBp/duration은 결정론적(level 함수)이라 정확값. jobId만 'optimistic'.
+    // 아직 서버에 없는 잡이라 지금 상수 = 곧 찍힐 스냅샷과 동일(등록 순간이므로 소급 문제 없음).
     const now = Date.now();
     const fromLevel = c.enhanceLevel;
     const duration = enhanceDurationMs(fromLevel);
@@ -47,6 +49,7 @@ export function SlotLane({
       transcendLevel: c.transcendLevel,
       championRank: c.championRank,
       baseRateBp: baseSuccessRateBp(fromLevel),
+      downRateBp: downRateBp(fromLevel),
       startedAtIso: new Date(now).toISOString(),
       completeAtIso: new Date(now + duration).toISOString(),
     };

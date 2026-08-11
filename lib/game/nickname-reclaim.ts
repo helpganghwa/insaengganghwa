@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { suggestNickname } from '@/lib/game/server-select';
@@ -79,8 +80,7 @@ export async function reclaimInactiveNicknames(): Promise<{ reclaimed: number; f
           });
         } catch (e) {
           // 유니크 충돌(23505)만 재추첨, 그 외는 건 실패로.
-          const code = (e as { code?: string })?.code;
-          if (code !== '23505') throw e;
+          if (!isUniqueViolation(e)) throw e;
         }
       }
       if (outcome === 'reclaimed') reclaimed++;

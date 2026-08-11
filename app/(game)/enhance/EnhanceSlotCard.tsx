@@ -39,6 +39,8 @@ export type ActiveJob = {
   transcendLevel: number;
   championRank: number | null;
   baseRateBp: number;
+  /** 등록 시점 downRate 스냅샷(bp). null=스냅샷 이전 레거시 잡 — 코드 상수로 폴백. */
+  downRateBp: number | null;
   startedAtIso: string;
   completeAtIso: string;
 };
@@ -357,7 +359,10 @@ export function EnhanceSlotCard({
 
   // 4분기 outcome 확률(BALANCE §1.2) — 사이클 내 ℓ 기준. down은 시간 무관 고정.
   // UI '성공'은 +1·+2 모두 포함(success + mega) — 시간 꽉 차면 '최대'(baseRate)와 일치.
-  const fixedDownBp = downRateBp(activeJob.fromLevel);
+  // 하락률은 **잡의 스냅샷 우선**(resolve와 동일한 폴백) — 코드 상수를 재계산하면 하락률을
+  // 조정한 순간 진행 중 잡의 표시가 판정과 달라진다(진행 중 큐 소급 금지, CLAUDE §6.3).
+  // 폴백은 스냅샷 이전 레거시 잡(down_rate_bp null) 방어라 제거 금지.
+  const fixedDownBp = activeJob.downRateBp ?? downRateBp(activeJob.fromLevel);
   const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, elapsedMs, totalMs);
   const effBp = probs.success + probs.mega;
   const isRiskZone = fixedDownBp > 0;
@@ -373,6 +378,7 @@ export function EnhanceSlotCard({
     fromLevel: number;
     targetLevel: number;
     baseRateBp: number;
+    downRateBp: number | null;
     startedAtIso: string;
     completeAtIso: string;
   };
@@ -385,6 +391,7 @@ export function EnhanceSlotCard({
       fromLevel: nj.fromLevel,
       targetLevel: nj.targetLevel,
       baseRateBp: nj.baseRateBp,
+      downRateBp: nj.downRateBp ?? null,
       startedAtIso: nj.startedAtIso,
       completeAtIso: nj.completeAtIso,
     });

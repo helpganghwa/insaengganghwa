@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   // 자동 재등록된 다음 잡(있으면) — 같은 장비의 현재 running 잡. 클라가 이 정보로 게이지를
   // 즉시 리셋(응답 유실 후 옛 잡 100% 잔류·재수령 방지, 2026-07-23 Eclipse 제보 근본 수정).
   const nextRows = (await db.execute(sql`
-    select j.id::text as job_id, j.from_level, j.target_level, j.base_rate_bp,
+    select j.id::text as job_id, j.from_level, j.target_level, j.base_rate_bp, j.down_rate_bp,
            j.started_at, j.complete_at
     from enhancement_jobs j
     where j.user_id = ${userId}::uuid and j.user_equipment_id = ${job.ueid}::bigint
@@ -62,6 +62,7 @@ export async function GET(req: Request) {
     from_level: number;
     target_level: number;
     base_rate_bp: number;
+    down_rate_bp: number | null;
     started_at: string;
     complete_at: string;
   }[];
@@ -72,6 +73,9 @@ export async function GET(req: Request) {
         fromLevel: nx.from_level,
         targetLevel: nx.target_level,
         baseRateBp: nx.base_rate_bp,
+        // 하락률도 잡 스냅샷으로 — 클라가 코드 상수를 재계산하면 하락률 조정 후 진행 중 잡의
+        // 표시가 판정(resolve)과 어긋난다(진행 중 큐 소급 금지, CLAUDE §6.3). null=레거시 잡.
+        downRateBp: nx.down_rate_bp,
         startedAtIso: new Date(nx.started_at).toISOString(),
         completeAtIso: new Date(nx.complete_at).toISOString(),
       }

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { identityVerifications } from '@/lib/db/schema/payment';
 import { profiles } from '@/lib/db/schema/profiles';
 
@@ -116,7 +117,7 @@ export async function verifyAndStoreIdentity(
     });
   } catch (e) {
     // 23505 = unique_violation(이미 소비된 인증 건).
-    if ((e as { code?: string }).code === '23505') {
+    if (isUniqueViolation(e)) {
       return {
         ok: false,
         code: 'ALREADY_USED',

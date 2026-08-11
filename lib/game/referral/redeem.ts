@@ -3,6 +3,7 @@ import 'server-only';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
@@ -103,7 +104,7 @@ export async function attributeReferralFromShare(
     } catch (e) {
       // UNIQUE(new_user_id) 위반(23505)만 '이미 사용'으로 — 일시 DB 오류를 ALREADY_REDEEMED로
       // 오인해 정당한 추천 보상이 조용히 유실되던 문제 방지(감사 LOW). 그 외는 rethrow.
-      if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === '23505') {
+      if (isUniqueViolation(e)) {
         throw new ReferralError('ALREADY_REDEEMED');
       }
       throw e;

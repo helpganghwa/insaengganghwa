@@ -114,8 +114,7 @@ describe.skipIf(skip)('강화 동시성 가드 — DB 통합', () => {
     expect(ok.length).toBeGreaterThanOrEqual(1);
     expect(ok.length).toBeLessThanOrEqual(2);
     // 패자는 앱 가드(SLOT_BUSY)거나 최소한 부분 유니크(23505)에 막혀야 한다.
-    // ⚠ 현재는 후자만 나온다 — queue.ts의 isUniqueViolation이 drizzle 래퍼(cause에 PostgresError)를
-    // 못 벗겨 SLOT_BUSY 매핑이 불발하고 원본 쿼리 에러가 그대로 올라온다(2026-08-11 확인).
+    // 둘 다 허용하는 이유 = 어느 가드가 먼저 걸리는지는 스케줄에 달렸기 때문(둘 다 정상 차단).
     for (const r of rs.filter((x) => x.status === 'rejected')) {
       expect(['SLOT_BUSY', '23505']).toContain(rejectReason(r));
     }

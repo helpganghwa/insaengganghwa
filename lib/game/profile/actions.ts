@@ -19,6 +19,7 @@ import { and, count, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
@@ -124,8 +125,7 @@ export async function createProfileJob(
         .returning({ id: profileGenerationJobs.id });
       return { jobId: String(job!.id), estimatedMinutes: 6 };
     } catch (e) {
-      const code = (e as { code?: string }).code;
-      if (code === '23505') {
+      if (isUniqueViolation(e)) {
         throw new CreateProfileJobError('PROFILE_GEN_IN_PROGRESS');
       }
       throw e;

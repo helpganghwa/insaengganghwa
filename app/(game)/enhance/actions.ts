@@ -117,6 +117,9 @@ export type NextJobDto = {
   fromLevel: number;
   targetLevel: number;
   baseRateBp: number;
+  /** 등록 시점 downRate 스냅샷(bp). null=스냅샷 이전 레거시 잡 — 클라가 코드 상수로 폴백.
+   *  클라가 상수를 재계산하면 하락률 조정 후 진행 중 잡의 표시가 판정과 어긋난다(CLAUDE §6.3). */
+  downRateBp: number | null;
   startedAtIso: string;
   completeAtIso: string;
 };
@@ -163,6 +166,7 @@ export async function finalizeEnhance(jobId: string): Promise<
         fromLevel: nq.fromLevel,
         targetLevel: nq.targetLevel,
         baseRateBp: nq.baseRateBp,
+        downRateBp: nq.downRateBp,
         completeAtIso: nq.completeAt.toISOString(),
         startedAtIso: new Date(nq.completeAt.getTime() - nq.durationMs).toISOString(),
       };
@@ -263,6 +267,7 @@ export async function autoEnhanceStepAction(
         fromLevel: nq.fromLevel,
         targetLevel: nq.targetLevel,
         baseRateBp: nq.baseRateBp,
+        downRateBp: nq.downRateBp,
         completeAtIso: nq.completeAt.toISOString(),
         startedAtIso: new Date(nq.completeAt.getTime() - nq.durationMs).toISOString(),
       };
