@@ -265,6 +265,9 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         select zone_id from guild_battle_deployments
         where server_id = ${serverId} and battle_kst_day = ${kstDay}
       )
+      -- 그 전투일 시작 뒤 점령분 제외 — neutralizeAbandonedZones의 가드와 같은 기준을 유지해야
+      -- 사전생성 연대기가 실제로 일어나지 않을 '방치 상실'을 예고하지 않는다 (2026-08-11).
+      and (z.captured_at is null or (z.captured_at at time zone 'Asia/Seoul')::date < ${kstDay}::date)
   `)) as unknown as { gname: string; zname: string }[];
   const neutralMap = new Map<string, Set<string>>();
   const addNeutral = (guildName: string, zone: string) => {

@@ -30,6 +30,7 @@ function isoToKstLocal(iso: string | null): string {
 const RERUN_ERROR: Record<string, string> = {
   BAD_DAY: '날짜 형식이 올바르지 않다 (YYYY-MM-DD).',
   FUTURE_DAY: '미래 날짜는 재정산할 수 없다.',
+  TOO_OLD_DAY: '오늘과 어제만 재정산할 수 있다.',
   BAD_SERVER: '운영 중인 서버가 아니다.',
 };
 
@@ -54,6 +55,12 @@ export function MaintenanceClient({
   // 점령전 재정산 — 23시 cron이 실패한 날의 유일한 복구 수단.
   const [rrServer, setRrServer] = useState(serverIds[0] ?? 1);
   const [rrDay, setRrDay] = useState(todayKst);
+  // 선택 하한 = 어제(KST) — 서버의 TOO_OLD_DAY와 같은 범위를 입력에서도 막는다(정오 기준 산술, DST 무관).
+  const rrMinDay = (() => {
+    const d = new Date(`${todayKst}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
   const [rrPending, rrStart] = useTransition();
   const [rrMsg, setRrMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -208,6 +215,7 @@ export function MaintenanceClient({
             <input
               type="date"
               value={rrDay}
+              min={rrMinDay}
               max={todayKst}
               onChange={(e) => setRrDay(e.target.value)}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base"

@@ -85,6 +85,14 @@ export async function rerunConquestAction(
   }
   // 오늘은 허용 — 23시 정산이 실패한 당일 재시도가 주 용도. 미래만 차단.
   if (battleDay > kstDateString(new Date())) return { status: 'error', code: 'FUTURE_DAY' };
+  // 과거 깊이도 **어제까지**로 닫는다 (2026-08-11). 기존 행은 onConflictDoNothing으로 보존되니 무해하지만,
+  // 그날 전투 기록이 **없던** 구역에는 새 행이 생긴다 — 그 행을 자정 백스톱(published_at is null and
+  // battle_kst_day <= kstDay)이 그대로 공개해 **현재 소유권을 오래된 승자로 되감을** 수 있다. 게다가
+  // 배치는 그 날짜 값인데 전투력은 **현재** 값으로 계산돼 당시 결과와도 다르다. 위 문서화된 용도
+  // (23시 정산이 실패한 당일 재시도)는 오늘·어제면 충분해, 닫아도 복구 수단을 해치지 않는다.
+  if (battleDay < kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000))) {
+    return { status: 'error', code: 'TOO_OLD_DAY' };
+  }
 
   const openIds = await openServerIds();
   if (!openIds.includes(serverId)) return { status: 'error', code: 'BAD_SERVER' };

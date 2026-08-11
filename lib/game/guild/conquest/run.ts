@@ -179,6 +179,13 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *  인자 날짜의 배치를 대조하므로 두 시점이 어긋나면 오작동한다 — 갓 점령한 구역은 집행관이 공석
  *  (revealConquest가 null로 둔다)이고 과거 날짜에 배치가 있을 리 없어, 세 조건을 모두 만족해
  *  전투 없이 중립화된다. 백필 경로에서 이 함수를 호출하지 않는 이유(conquest-chronicle 참조).
+ *
+ * ⚠ 그런데 호출부의 `day === kstDay` 게이트는 **1일 지연까지만** 막는다 (2026-08-11). 공개가 이틀
+ *  연속 실패하면 D+2 자정에 pendingRows=[D, D+1]을 순서대로 도는데, 먼저 D를 공개해 구역이 새 길드로
+ *  넘어가고(집행관 공석) 이어지는 D+1은 `day === kstDay`라 게이트를 그냥 통과한다. 새 소유자는 D 결과가
+ *  미공개라 D+1에 배치할 수 없었으므로 그 구역이 세 조건을 또 만족한다 — 전투 없이 중립화되고 연대기에
+ *  '방치 상실'로 잘못 기록된다. 그래서 게이트와 별개로 victims에 **"그 전투일 시작 뒤 점령" 제외**
+ *  가드를 둔다: 그날 소유자가 아니었으면 그날 배치할 기회 자체가 없었으니 방치가 아니다.
  */
 export async function neutralizeAbandonedZones(
   serverId: number,
@@ -196,6 +203,9 @@ export async function neutralizeAbandonedZones(
           select zone_id from guild_battle_deployments
           where server_id = ${serverId} and battle_kst_day = ${battleDay}
         )
+        -- 그 전투일이 시작된 뒤에 점령된 구역은 제외(위 ⚠ 2일 지연 시나리오). captured_at이 null이면
+        -- 대상으로 남긴다 — 오래 소유했는데 배치가 없으면 그건 실제 방치다.
+        and (z.captured_at is null or (z.captured_at at time zone 'Asia/Seoul')::date < ${battleDay}::date)
     `)) as unknown as { id: number; owner: string; name: string; gname: string }[];
     if (victims.length === 0) return { neutralized: 0 };
     await tx
@@ -328,7 +338,18 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     if (r.winner && r.winner !== r.prev) {
       await tx
         .update(zones)
-        .set({ ownerGuildId: BigInt(r.winner), executorUserId: null, capturedAt: new Date(), lastTaxCollectedAt: null })
+        // taxBonus 1은 **최종값이 아니라 바닥값**이다 (2026-08-11). 점령 후 올바른 배율은 새 소유
+        // 길드의 보유 구역 수에 달려 직후 recalcTaxBonus만 계산할 수 있고, 그건 같은 틱에서 곧 이어진다.
+        // 여기서 굳이 리셋하는 목적은 **옛 소유자의 배율을 물고 있는 창을 없애는 것**이다 — recalc는
+        // best-effort(catch)라 실패하면 새 소유자가 옛 소유자 배율로 하루 더 과세되어 부당 이득(또는
+        // 손해)이 난다. 1로 떨어뜨려 두면 그 실패가 최소값으로만 귀결된다(중립화 경로와 동일한 이유).
+        .set({
+          ownerGuildId: BigInt(r.winner),
+          executorUserId: null,
+          capturedAt: new Date(),
+          lastTaxCollectedAt: null,
+          taxBonus: 1,
+        })
         .where(eq(zones.id, r.zid));
     }
     revealed++;
