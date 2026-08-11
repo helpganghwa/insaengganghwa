@@ -8,6 +8,7 @@
  * 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { openServerIds } from '@/lib/game/server-list';
 import { runRankingLeaders, runGuildLeaders } from '@/lib/game/world/event';
 
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    if (ok) await beatCron('rank-leader'); // 성공일 때만 — '실행됐으나 실패'를 dead-man이 감지
     return Response.json({ ok, results, kind: 'rank-leader' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[rank-leader]', e);

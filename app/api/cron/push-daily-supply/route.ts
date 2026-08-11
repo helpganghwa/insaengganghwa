@@ -1,10 +1,12 @@
 /**
- * 일일 보급 충전 푸시 — KST 00:00에 push_supply 토글 ON 구독자 전원 발송.
+ * 일일 보급 충전 푸시 — KST 00:05 발송(스케줄 "5,35 15-23 * * *", :35는 시간 예산 초과분을
+ * 이어받는 폴백).
  *
  * 실제 보급 mailbox 적재는 ensureDailyMail이 사용자 layout 진입 시 lazy 처리(기존 멱등).
  * 본 cron은 "도착 알림"만 — 푸시 받고 사용자가 게임 진입하면 그때 mail이 생성됨.
  *
- * 대상: 푸시 구독이 있는 모든 유저 중 push_supply=true인 사용자.
+ * 대상: 푸시 구독이 있는 유저 전원. 토글 게이팅 없음 — supply는 send.ts TOGGLE_COLUMN에
+ * 의도적으로 미포함이라(상시 발송 카테고리) 유저가 끌 수 있는 스위치 자체가 없다.
  * 동시 broadcast 큰 트래픽은 chunk 발송으로 보호.
  */
 import { sql } from 'drizzle-orm';

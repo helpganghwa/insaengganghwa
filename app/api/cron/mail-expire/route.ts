@@ -25,6 +25,7 @@
 import { sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { cleanupChat } from '@/lib/game/chat/service';
 import { cleanupWhispers } from '@/lib/game/chat/whisper';
@@ -94,6 +95,7 @@ export async function GET(req: Request) {
   `)) as unknown as { user_id: string }[];
   const joinRequestsExpired = joinReqRows.length;
 
+  await beatCron('mail-expire', `mail=${deleted} events=${eventsDeleted}`);
   return Response.json({
     ok: true,
     kind: 'mail-expire',
