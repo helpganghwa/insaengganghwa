@@ -7,6 +7,7 @@ import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 import { listServers } from '@/lib/game/servers';
 
 import { AdminReportActions } from './AdminReportActions';
+import { AdminGuildRename } from './AdminGuildRename';
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
 
@@ -194,6 +195,10 @@ export default async function AdminReportsPage({
           );
         })
       )}
+
+      {/* 길드는 신고 대상이 아니라 위 목록에 안 잡힌다 — 이름 조치는 여기서만 가능. */}
+      <h2 className="pt-4 text-lg font-bold">🏰 길드 이름 변경</h2>
+      <AdminGuildRename />
     </div>
   );
 }

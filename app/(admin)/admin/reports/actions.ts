@@ -9,7 +9,12 @@ import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { guilds } from '@/lib/db/schema/guild';
+import { adminActions } from '@/lib/db/schema/ops';
 import { NICKNAME_CHANGE_COST_DIAMOND, PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
+import { GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } from '@/lib/game/guild/balance';
+import { GUILD_NAME_CHAR_REGEX, normalizeGuildName } from '@/lib/game/guild/create';
+import { containsProfanity } from '@/lib/game/moderation/profanity';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Result = { status: 'success' } | { status: 'error'; code: string };
@@ -221,6 +226,85 @@ export async function unbanReportedUser(profileId: string): Promise<Result> {
       .where(eq(profiles.id, owner.userId));
     revalidatePath('/admin/reports');
     return { status: 'success' };
+  });
+}
+
+type RenameGuildResult =
+  | { status: 'success'; guildId: string; from: string; to: string; mailed: boolean }
+  | { status: 'error'; code: string };
+
+/**
+ * 길드 이름 변경(운영자 전용) — 부적절한 길드명 대응 유일 경로.
+ * 길드명은 유저가 바꿀 수 없고(결성 시 확정) 월드맵·랭킹·연대기·채팅·우편에 계속 노출되므로,
+ * 운영 통보(우편) → 길드장 희망 이름 접수(문의) → 여기서 적용의 마지막 단계.
+ *
+ * 검증은 결성(lib/game/guild/create.ts)과 **같은 규칙**을 그대로 재사용한다 — 운영자가 넣은 이름이
+ * 유저가 만들 수 있는 이름의 집합을 벗어나면 안 되기 때문(정본 하나 유지).
+ * newName이 비면 `길드{id}`로 초기화 — 희망 이름을 받기 전 즉시 노출을 끊어야 하는 경우.
+ */
+export async function renameGuildAction(input: {
+  currentName: string;
+  newName: string;
+  sendMail: boolean;
+  mailTitle: string;
+  mailBody: string;
+}): Promise<RenameGuildResult> {
+  const adminUserId = await requireAdmin();
+
+  const current = normalizeGuildName(input.currentName);
+  if (!current) return { status: 'error', code: 'NO_CURRENT_NAME' };
+  const title = input.mailTitle.trim();
+  const body = input.mailBody.trim();
+  // 이름은 바뀌었는데 빈 우편만 나가는 상태를 막으려 변경 전에 검사한다.
+  if (input.sendMail && (!title || !body)) return { status: 'error', code: 'MAIL_EMPTY' };
+
+  return db.transaction(async (tx): Promise<RenameGuildResult> => {
+    const [g] = await tx
+      .select({ id: guilds.id, name: guilds.name, serverId: guilds.serverId, leaderUserId: guilds.leaderUserId })
+      .from(guilds)
+      .where(eq(guilds.name, current))
+      .for('update');
+    if (!g) return { status: 'error', code: 'GUILD_NOT_FOUND' };
+
+    const requested = normalizeGuildName(input.newName);
+    // 초기화 이름은 한글+숫자라 문자셋을 만족한다(길이·비속어 검사 대상 아님).
+    const next = requested || `길드${g.id.toString()}`;
+    if (requested) {
+      if (next.length < GUILD_NAME_MIN_LEN || next.length > GUILD_NAME_MAX_LEN) {
+        return { status: 'error', code: 'NAME_INVALID' };
+      }
+      if (!GUILD_NAME_CHAR_REGEX.test(next)) return { status: 'error', code: 'NAME_CHARSET' };
+      if (containsProfanity(next)) return { status: 'error', code: 'PROFANITY' };
+    }
+    if (next === g.name) return { status: 'error', code: 'SAME_NAME' };
+
+    // guilds.name은 전역 unique — 사전 체크로 친절한 코드를 돌려주고, 제약이 최종 방어.
+    const [dup] = await tx.select({ id: guilds.id }).from(guilds).where(eq(guilds.name, next)).limit(1);
+    if (dup && dup.id !== g.id) return { status: 'error', code: 'NAME_TAKEN' };
+
+    await tx.update(guilds).set({ name: next }).where(eq(guilds.id, g.id));
+
+    if (input.sendMail) {
+      // 길드장에게만 — 이름 조정 사유·재신청 안내를 받아야 하는 유일한 당사자.
+      await mail(tx, g.leaderUserId, g.serverId, 'notice', title, body);
+    }
+
+    await tx.insert(adminActions).values({
+      adminUserId,
+      action: 'guild.rename',
+      targetType: 'guild',
+      targetId: g.id.toString(),
+      payload: { from: g.name, to: next, mailed: input.sendMail },
+    });
+
+    revalidatePath('/admin/reports');
+    return {
+      status: 'success',
+      guildId: g.id.toString(),
+      from: g.name,
+      to: next,
+      mailed: input.sendMail,
+    };
   });
 }
 

@@ -15,7 +15,7 @@ import { GuildError } from './errors';
 import { logWorldEvent } from '@/lib/game/world/event';
 
 /** 허용 문자: 한글 완성형·영문·숫자만. 공백·특수문자·이모지·자모 차단(닉네임과 동일 정책). */
-const GUILD_NAME_CHAR_REGEX = /^[A-Za-z0-9가-힣]+$/;
+export const GUILD_NAME_CHAR_REGEX = /^[A-Za-z0-9가-힣]+$/;
 
 /** 앞뒤 공백 제거(내부 공백은 문자셋 검증에서 차단). */
 export function normalizeGuildName(raw: string): string {
