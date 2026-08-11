@@ -75,8 +75,23 @@ export async function GET(req: Request) {
           // generate는 skip('already')로 끝난다 — 이 틱의 실작업은 플립·우편뿐(LLM 없음, 수초).
           // 사전 생성이 실패한 날만 여기서 백필(LLM 생성)된다.
           const rev = await revealConquest(sid, day);
-          // 공개(소유권 플립) 직후, 완전 방치(공격·수비·집행관 0) 소유 구역 중립화(B안). 재실행 안전(멱등).
-          const neutral = await neutralizeAbandonedZones(sid, day).catch(() => ({ neutralized: 0 }));
+          // 공개(소유권 플립) 직후, 완전 방치(공격·수비·집행관 0) 소유 구역 중립화(B안).
+          //
+          // ⚠ **어제(kstDay)에만** 실행한다. 이 판정은 `zones`의 **현재** 소유·집행관과 인자로 받은
+          // **그 날짜의** 배치를 대조하므로, 지나간 날짜로 돌리면 두 시점이 섞인다. 특히 위험한 건
+          // 연대기 구멍 백필(holes)이다 — 이미 공개된 날이라 revealConquest는 아무것도 하지 않는데
+          // 중립화만 과거 날짜로 돌고, `revealConquest`가 점령 시 집행관을 공석(null)으로 두므로
+          // **갓 점령한 구역이 세 조건을 모두 만족해 전투 없이 중립화된다**(같은 틱 안에서 점령 →
+          // 즉시 상실, 연대기에는 '방치 상실'로 잘못 기록). days는 [지연분…, kstDay, 구멍…] 순서라
+          // 구멍 처리가 kstDay 공개 **뒤에** 오는 것도 이 시나리오를 만든다.
+          //
+          // 지연 공개분(pendingRows)은 시간순 재생이라 그 자리에서는 정합하지만, 건너뛰어도 손실이
+          // 없다 — 그날 방치였던 구역이 kstDay에도 방치면 아래 kstDay 판정이 잡고, 그 사이 수비가
+          // 붙었다면 애초에 뺏을 이유가 없다. 즉 이 게이트는 자가 치유된다.
+          const neutral =
+            day === kstDay
+              ? await neutralizeAbandonedZones(sid, day).catch(() => ({ neutralized: 0 }))
+              : { neutralized: 0 };
           // 소유 변동(점령·중립화) 반영 — 독점 세금 보너스 배율 재계산(B안, 하루 1회). 강화 누적은 저장값만 읽음.
           await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
           // 공개(소유권 플립)·중립화 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.

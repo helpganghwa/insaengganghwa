@@ -18,7 +18,7 @@ import { simulateConquest, type ConquestUnit } from './simulate';
  * 전투력 스냅샷·승자 산출은 23:00에 확정하되, **소유권 적용·우편은 하지 않는다**(지연 공개).
  * 결과는 conquest_battles에 published_at=NULL로 저장만 → 24:00 revealConquest가 공개·발표.
  * (대난투 computed→revealed 선례와 동형: 산출=정시, 노출=발표 시각.)
- *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×2 방어).
+ *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 방어, ×CONQUEST_EXECUTOR_POWER_MULT).
  *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → finale 저장.
  *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + onConflictDoNothing.
  *  - battleDay는 호출자(cron 라우트)가 KST 오늘 날짜로 결정(클라 불신·결정론).
@@ -113,7 +113,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         effCp: Math.max(1, Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false))),
       });
     }
-    // 집행관 자동 방어(×2) — 배치행 없이 포함(중복 방지).
+    // 집행관 자동 방어(×CONQUEST_EXECUTOR_POWER_MULT) — 배치행 없이 포함(중복 방지).
     if (z.executor && z.owner_guild_id && !seen.has(z.executor)) {
       units.push({
         userId: z.executor,
@@ -159,6 +159,11 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *  - 수비0+공격O = 무혈 점령(전투로 처리) / 수비O(배치·집행관 자동방어) = 소유 유지 → 이 둘은 제외.
  *  - 세금(tax_diamond/points)은 유지(다음 점령자에게 약탈 이전), 소유·집행관·captured_at만 해제.
  *  - 공개(소유권 플립) 직후 호출 — 뺏긴 구역은 공격 배치가 있어 대상 아님.
+ *
+ * ⚠ **방금 공개한 전투일로만 호출할 것**(지나간 날짜 금지). 판정이 `zones`의 **현재** 소유·집행관과
+ *  인자 날짜의 배치를 대조하므로 두 시점이 어긋나면 오작동한다 — 갓 점령한 구역은 집행관이 공석
+ *  (revealConquest가 null로 둔다)이고 과거 날짜에 배치가 있을 리 없어, 세 조건을 모두 만족해
+ *  전투 없이 중립화된다. 백필 경로에서 이 함수를 호출하지 않는 이유(conquest-chronicle 참조).
  */
 export async function neutralizeAbandonedZones(
   serverId: number,
@@ -207,7 +212,7 @@ export async function neutralizeAbandonedZones(
 /**
  * 점령전 공개 직후(자정) 수비 배치 이월 — GUILD §5.8. 어제(battleDay) 수비 배치 중
  * **여전히 길드가 소유한 구역 + 아직 그 길드 소속**인 유저만 다음 전투일로 재생성(role=defend).
- * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 ×2 방어).
+ * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 방어 지속).
  * 재실행 안전 — carryDay에 배치가 이미 있으면(이월 완료 or 유저가 이미 배치 시작) 건너뜀.
  */
 export async function carryOverDefenders(

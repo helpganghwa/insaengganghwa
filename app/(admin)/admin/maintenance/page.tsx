@@ -1,15 +1,17 @@
+import { openServerIds } from '@/lib/game/server-list';
 import { getMaintenanceState } from '@/lib/game/system-mode';
+import { kstDateString } from '@/lib/kst';
 
 import { MaintenanceClient } from './MaintenanceClient';
 
 /**
- * 관리자 서버 점검 제어 — 점검/긴급정지 토글(시간지정·무기한). (admin) 레이아웃이 게이트.
+ * 관리자 서버 점검 제어 — 점검/긴급정지 토글(시간지정·무기한) + 점령전 재정산. (admin) 레이아웃이 게이트.
  * 점검 중에도 isAdmin은 게임 접근 가능, 로그인 페이지는 항상 접속 가능.
  */
 export const dynamic = 'force-dynamic';
 
 export default async function AdminMaintenancePage() {
-  const s = await getMaintenanceState();
+  const [s, serverIds] = await Promise.all([getMaintenanceState(), openServerIds()]);
   return (
     <div className="mx-auto w-full max-w-[480px] space-y-4 px-4 py-6 text-zinc-100">
       <div>
@@ -26,6 +28,8 @@ export default async function AdminMaintenancePage() {
           untilIso: s.until ? s.until.toISOString() : null,
           note: s.note,
         }}
+        serverIds={serverIds}
+        todayKst={kstDateString(new Date())}
       />
     </div>
   );

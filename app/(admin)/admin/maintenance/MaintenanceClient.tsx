@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { setMaintenanceAction } from './actions';
+import { rerunConquestAction, setMaintenanceAction } from './actions';
 
 type Current = {
   mode: string;
@@ -27,7 +27,22 @@ function isoToKstLocal(iso: string | null): string {
   return kst.toISOString().slice(0, 16);
 }
 
-export function MaintenanceClient({ current }: { current: Current }) {
+const RERUN_ERROR: Record<string, string> = {
+  BAD_DAY: '날짜 형식이 올바르지 않다 (YYYY-MM-DD).',
+  FUTURE_DAY: '미래 날짜는 재정산할 수 없다.',
+  BAD_SERVER: '운영 중인 서버가 아니다.',
+};
+
+export function MaintenanceClient({
+  current,
+  serverIds,
+  todayKst,
+}: {
+  current: Current;
+  serverIds: number[];
+  /** 서버 컴포넌트가 계산한 오늘(KST) — 클라 시계로 초기화하면 자정 경계에서 하이드레이션 불일치. */
+  todayKst: string;
+}) {
   const [mode, setMode] = useState(current.mode);
   const [fromVal, setFromVal] = useState(isoToKstLocal(current.fromIso)); // 비우면 즉시 시작
   const [indefinite, setIndefinite] = useState(current.untilIso === null);
@@ -36,11 +51,39 @@ export function MaintenanceClient({ current }: { current: Current }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
+  // 점령전 재정산 — 23시 cron이 실패한 날의 유일한 복구 수단.
+  const [rrServer, setRrServer] = useState(serverIds[0] ?? 1);
+  const [rrDay, setRrDay] = useState(todayKst);
+  const [rrPending, rrStart] = useTransition();
+  const [rrMsg, setRrMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   const apply = () => {
     setMsg(null);
     start(async () => {
       const r = await setMaintenanceAction(mode, fromVal, indefinite ? '' : until, note);
       setMsg(r.status === 'success' ? '적용됨 ✓ (타 인스턴스는 최대 20초 내 반영)' : `실패: ${r.code}`);
+    });
+  };
+
+  const rerun = () => {
+    setRrMsg(null);
+    rrStart(async () => {
+      try {
+        const r = await rerunConquestAction(rrServer, rrDay);
+        if (r.status === 'error') {
+          setRrMsg({ ok: false, text: RERUN_ERROR[r.code] ?? `실패: ${r.code}` });
+          return;
+        }
+        setRrMsg({
+          ok: true,
+          text:
+            `${r.resolved}개 구역 재정산` +
+            (r.already > 0 ? ` (기존 ${r.already}개는 유지)` : '') +
+            (r.resolved === 0 && r.already === 0 ? ' — 그날 공격 배치가 없었다' : ''),
+        });
+      } catch (e) {
+        setRrMsg({ ok: false, text: `실패: ${(e as Error).message}` });
+      }
     });
   };
 
@@ -135,6 +178,56 @@ export function MaintenanceClient({ current }: { current: Current }) {
         {pending ? '적용 중…' : mode === 'live' ? '점검 해제(정상 전환)' : '점검 적용'}
       </button>
       {msg && <p className="text-center text-xs text-zinc-400">{msg}</p>}
+
+      {/* 점령전 재정산 — 23시 정산 cron이 실패한 날 복구 */}
+      <div className="space-y-3 rounded-xl border border-zinc-800 p-3">
+        <div>
+          <h2 className="text-sm font-bold text-zinc-200">점령전 재정산</h2>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+            23시 정산이 실패해 전투 기록이 없는 날을 다시 산출한다. 이미 산출된 구역은 덮어쓰지 않고
+            그대로 둔다. 공개(소유권 이전·결과 우편)는 자정 크론이 처리하므로 여기서는 산출만 한다.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <div className="w-28">
+            <div className="mb-1 text-xs text-zinc-500">서버</div>
+            <select
+              value={String(rrServer)}
+              onChange={(e) => setRrServer(Number(e.target.value))}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base"
+            >
+              {serverIds.map((sid) => (
+                <option key={sid} value={String(sid)}>
+                  {sid}서버
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <div className="mb-1 text-xs text-zinc-500">전투일 (KST)</div>
+            <input
+              type="date"
+              value={rrDay}
+              max={todayKst}
+              onChange={(e) => setRrDay(e.target.value)}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base"
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={rerun}
+          disabled={rrPending}
+          className="w-full rounded-xl border border-amber-700/60 bg-amber-900/30 py-3 text-sm font-bold text-amber-200 disabled:opacity-50"
+        >
+          {rrPending ? '재정산 중…' : '재정산 실행'}
+        </button>
+        {rrMsg && (
+          <p className={`text-center text-xs ${rrMsg.ok ? 'text-zinc-400' : 'text-red-300'}`}>
+            {rrMsg.text}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
