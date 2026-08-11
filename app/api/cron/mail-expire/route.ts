@@ -33,7 +33,12 @@ import { GUILD_JOIN_REQUEST_TTL_DAYS } from '@/lib/game/guild/balance';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+// 300s — 이 라우트가 선언한 예산의 합보다 커야 한다(2026-08-11). 우편 90s + cleanupChat 30s +
+// cleanupWhispers 30s = 150s인데 상한이 120s였다. 각 단계는 자기 예산 안에서 끝나도 합이 상한을
+// 넘으면 함수가 강제 종료되고, beatCron이 마지막 문이라 **정리는 부분적으로 됐는데 beat만 안 찍혀**
+// dead-man이 오탐한다. 게다가 아래 주석이 경고하는 '실패→적체→다음 날 더 큰 삭제' 루프에 걸리면
+// 매일 반복된다. 일일 크론이라 상한을 늘리는 비용은 없다(다른 일일 크론도 300).
+export const maxDuration = 300;
 
 // 배치 삭제(감사 P1) — 일일 보급·대난투 우편은 유저당 매일 2건+라 무제한 단문 DELETE는
 // 유저 수 비례로 statement_timeout(2분)에 걸리고, 실패→적체→다음 날 더 큰 DELETE의
