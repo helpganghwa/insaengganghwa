@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
+import { isConquestLocked } from './conquest/schedule';
 import { GuildError } from './errors';
 import { recalcTaxBonus } from './tax';
 
@@ -14,6 +15,12 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /**
  * 길드 보유 구역 중립화 + 길드 삭제(멤버 cascade) — GUILD §1 해산.
  * 보유 구역: 소유·집행관·점령시각 해제(중립화). 세금 풀은 길드 삭제로 소멸.
+ *
+ * ⚠ 점령전 잠금 창(23:00~00:59)에 부르지 말 것 — 그 사이엔 23시에 산출된 미공개 전투가 떠 있고,
+ *  길드가 삭제되면 `conquest_battles.winner_guild_id`가 FK(on delete set null)로 NULL이 된다.
+ *  자정 공개는 winner가 null이면 소유권을 넘기지 않고 이전 소유자를 '방어 성공'으로 분류하므로,
+ *  **실제로 패배한 길드가 방어에 성공했다는 우편을 받고** 리플레이(finale)와 결과가 어긋난다.
+ *  자발 해산(disbandGuild)은 아래에서 창을 막는다. 자동 해산 cron은 KST 12시라 창 밖이다.
  */
 export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise<void> {
   // 해산 흔적(2026-07-16) — 월드 피드 + 점령전 연대기 재료. 길드 행이 삭제되면 이름·구역을
@@ -44,8 +51,11 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
   if (g?.serverId != null) await recalcTaxBonus(g.serverId, tx);
 }
 
-/** 길드장 자발 해산 — GUILD §1. 길드장만 가능. */
+/** 길드장 자발 해산 — GUILD §1. 길드장만 가능. 정산·공개 창(23:00~00:59)에는 금지. */
 export function disbandGuild(input: { userId: string; serverId: number }): Promise<void> {
+  // 배치·집행관 지정·거주 이동과 같은 잠금(schedule.isConquestLocked). 창 안에서 해산하면
+  // 미공개 전투의 승자가 사라져 결과가 뒤틀린다(위 neutralizeAndDeleteGuild 주석 참조).
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS');
   return db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })

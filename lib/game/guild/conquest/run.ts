@@ -49,9 +49,18 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
   // ⚠ Drizzle는 JS 배열 `${arr}`를 `($1,$2,…)` 튜플로 펼친다 — `= any(${arr})`는
   // `any(($1,$2,…))`가 되어 무효(any는 배열 인자). `in ${arr}` = `in ($1,$2,…)`로 써야 함.
   // (이 경로는 공격 배치가 있는 날만 실행돼 첫 경합일에야 노출된 잠복 버그였음.)
+  // 집행관은 **현재 소유 길드 소속일 때만** 참전시킨다(방어선). 배치는 위에서 guild_members
+  // 조인으로 이미 재검증하고 세금 수금(collect.ts)도 소속을 재검증하는데, 집행관의 자동 방어만
+  // 검증이 없었다 — 이탈 정리(clearConquestRoleOnExit)가 어느 경로에서든 누락되면 비길드원이
+  // 옛 길드에 ×1.5 자동 방어를 계속 제공하게 된다. 소속이 아니면 executor를 null로 떨어뜨린다.
   const zoneRows = (await db.execute(sql`
-    select z.id, z.name, z.owner_guild_id::text owner_guild_id, z.executor_user_id::text executor, og.name owner_name
-    from zones z left join guilds og on og.id = z.owner_guild_id
+    select z.id, z.name, z.owner_guild_id::text owner_guild_id,
+           case when em.user_id is not null then z.executor_user_id::text end executor,
+           og.name owner_name
+    from zones z
+    left join guilds og on og.id = z.owner_guild_id
+    left join guild_members em
+      on em.user_id = z.executor_user_id and em.server_id = z.server_id and em.guild_id = z.owner_guild_id
     where z.id in ${contestedArr}
   `)) as unknown as ZoneRow[];
   const zoneInfo = new Map(zoneRows.map((z) => [z.id, z]));
