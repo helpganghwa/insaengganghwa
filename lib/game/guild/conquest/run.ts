@@ -194,7 +194,10 @@ export async function neutralizeAbandonedZones(
     if (victims.length === 0) return { neutralized: 0 };
     await tx
       .update(zones)
-      .set({ ownerGuildId: null, executorUserId: null, capturedAt: null })
+      // taxBonus는 소유가 풀린 순간 1이어야 한다(중립 구역 배율 없음). 호출 직후 recalcTaxBonus가
+      // 전 구역을 다시 계산하지만 그건 best-effort(catch)라, 실패하면 중립 구역이 옛 소유 길드의
+      // 배율로 하루 더 과세된다 — 해산 경로(neutralizeAndDeleteGuild)와 동일하게 여기서도 리셋.
+      .set({ ownerGuildId: null, executorUserId: null, capturedAt: null, taxBonus: 1 })
       .where(inArray(zones.id, victims.map((v) => v.id)));
     // 역사 재료 — 이전 소유 길드별 상실 구역을 world_event로 기록(연대기 전용, 월드 피드 제외 타입).
     // zones는 이미 null이라 이 스냅샷이 '누가 무엇을 방치로 잃었나'의 유일한 소스(chronicle이 읽음).

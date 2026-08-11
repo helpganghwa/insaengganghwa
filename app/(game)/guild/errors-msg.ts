@@ -24,7 +24,7 @@ const MAP: Record<string, string> = {
   RESIDENCE_LOCKED_DEPLOY: '점령전에 배치된 동안에는 이동할 수 없습니다. 배치를 해제해주세요.',
   RESIDENCE_LOCKED_EXECUTOR: '집행관은 맡은 구역을 떠날 수 없습니다. 길드장에게 해제를 요청해주세요.',
   NOT_EXECUTOR: '해당 구역의 집행관이 아닙니다.',
-  COLLECT_COOLDOWN: '아직 수금 할 수 없습니다.',
+  COLLECT_COOLDOWN: '아직 수금할 수 없습니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',
   NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
   DISTRIBUTE_OVER_POOL: '분배 총액이 세금을 초과합니다.',
