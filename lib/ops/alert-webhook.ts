@@ -1,6 +1,21 @@
 import 'server-only';
 
 /**
+ * 테스트 실행 여부 — 경보 **발신 지점**(raisePaymentAlert·raiseOpsAlert)이 이걸로 채널을 끊는다.
+ *
+ * DB 통합 테스트가 AMOUNT_MISMATCH 같은 사고 경로를 일부러 태우는데, `.env.local`의 웹훅 URL을
+ * Vitest가 자동 로드해 **운영 디스코드로 진짜 알림이 갔다**(2026-08-11 확인 — test_mismatch_* 주문이
+ * 경보 채널에 쌓였다). 경보 채널은 '진짜 사고만 울린다'는 신뢰가 곧 가치라, 테스트 소음이 섞이면
+ * 실제 사고를 흘려보게 된다.
+ *
+ * ⚠ 이 가드는 발신 지점에만 둔다 — postAlertWebhook 자체에 넣으면 이 함수의 계약 테스트가
+ * 전부 무력화된다(fetch 호출·상태 로깅을 검증할 수 없게 된다).
+ */
+export function isTestRun(): boolean {
+  return !!process.env.VITEST || process.env.NODE_ENV === 'test';
+}
+
+/**
  * 결제·운영 경보 공용 웹훅 발송(디스코드/슬랙). `PAYMENT_ALERT_WEBHOOK_URL` 미설정이면 no-op —
  * 채널을 안 붙였다고 경보 자체가 실패하면 안 되므로 조용히 건너뛴다(어드민 앱푸시는 별도 채널).
  *

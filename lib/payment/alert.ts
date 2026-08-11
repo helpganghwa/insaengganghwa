@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
-import { postAlertWebhook } from '@/lib/ops/alert-webhook';
+import { isTestRun, postAlertWebhook } from '@/lib/ops/alert-webhook';
 
 /**
  * 결제 사고 알림 — PAYMENT-SAFETY.md.
@@ -88,7 +88,9 @@ export async function raisePaymentAlert(
     console.error('[payment-alert] persist failed', e);
   }
 
-  if (created) {
+  // 테스트 실행은 채널로 내보내지 않는다(2026-08-11) — 기록(위 insert)은 그대로 둬 멱등·중복발송
+  // 로직은 계속 검증되고, 운영 디스코드·어드민 푸시만 끊는다(isTestRun 주석 참조).
+  if (created && !isTestRun()) {
     // 두 즉시 채널 — 어드민 앱푸시(주 채널) + 선택 webhook. 둘 다 best-effort.
     await Promise.allSettled([
       notifyAdmins(kind, severity, opts.detail),

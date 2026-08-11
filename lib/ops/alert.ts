@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
-import { postAlertWebhook } from '@/lib/ops/alert-webhook';
+import { isTestRun, postAlertWebhook } from '@/lib/ops/alert-webhook';
 
 /**
  * 운영 알림 — 결제 외 운영 사고(크론 정지 등)를 어드민에게 즉시 통지.
@@ -14,6 +14,8 @@ import { postAlertWebhook } from '@/lib/ops/alert-webhook';
  * 즉시 채널만 — 크론 정지는 상태(cron_heartbeats)로 이미 영속되므로 별도 알림 로그 불필요.
  */
 export async function raiseOpsAlert(title: string, detail: string): Promise<void> {
+  // 테스트 실행은 채널로 내보내지 않는다(2026-08-11) — 결제 경보와 같은 이유(isTestRun 주석 참조).
+  if (isTestRun()) return;
   await Promise.allSettled([notifyAdmins(title, detail), notifyWebhook(title, detail)]);
 }
 
