@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
+import { postAlertWebhook } from '@/lib/ops/alert-webhook';
 
 /**
  * 결제 사고 알림 — PAYMENT-SAFETY.md.
@@ -130,19 +131,10 @@ async function notifyWebhook(
   paymentId: string,
   detail: string,
 ): Promise<void> {
-  const url = process.env.PAYMENT_ALERT_WEBHOOK_URL;
-  if (!url) return;
-  try {
-    const content = `${SEV_EMOJI[severity]} **결제 사고 [${severity}]** \`${kind}\`${
-      paymentId ? ` (\`${paymentId}\`)` : ''
-    }\n${detail}`;
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      // Discord/Slack 모두 content 필드 수용(Slack은 text도 함께).
-      body: JSON.stringify({ content, text: content }),
-    });
-  } catch (e) {
-    console.error('[payment-alert] webhook notify failed', e);
-  }
+  const content = `${SEV_EMOJI[severity]} **결제 사고 [${severity}]** \`${kind}\`${
+    paymentId ? ` (\`${paymentId}\`)` : ''
+  }\n${detail}`;
+  // 멘션은 critical·high에만 — warn(지급이 이미 차단된 금액 불일치, 결제 미성사 고아 pending)은
+  // 즉시 조치 대상이 아니라 새벽에 깨울 이유가 없다. 남용하면 진짜 사고 때 무시하게 된다.
+  await postAlertWebhook(content, { mention: severity !== 'warn' });
 }

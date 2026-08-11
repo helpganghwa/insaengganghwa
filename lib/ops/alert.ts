@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
+import { postAlertWebhook } from '@/lib/ops/alert-webhook';
 
 /**
  * 운영 알림 — 결제 외 운영 사고(크론 정지 등)를 어드민에게 즉시 통지.
@@ -30,16 +31,7 @@ async function notifyAdmins(title: string, detail: string): Promise<void> {
 }
 
 async function notifyWebhook(title: string, detail: string): Promise<void> {
-  const url = process.env.PAYMENT_ALERT_WEBHOOK_URL;
-  if (!url) return;
-  try {
-    const content = `🛠 **운영 알림** ${title}\n${detail}`;
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content, text: content }),
-    });
-  } catch (e) {
-    console.error('[ops-alert] webhook notify failed', e);
-  }
+  // 운영 경보는 심각도 구분이 없다 — 현재 유일한 발화가 크론 정지이고, 그건 항상 조치 대상이다
+  // (payment-recon이 멈추면 결제 백스톱 자체가 죽는다). 그래서 언제나 멘션한다.
+  await postAlertWebhook(`🛠 **운영 알림** ${title}\n${detail}`, { mention: true });
 }
