@@ -18,12 +18,23 @@ export async function postAlertWebhook(content: string, opts: { mention: boolean
   const tag = opts.mention ? (process.env.PAYMENT_ALERT_WEBHOOK_MENTION ?? '').trim() : '';
   const body = tag ? `${tag} ${content}` : content;
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       // Discord는 content, Slack은 text를 읽는다 — 둘 다 실어 어느 채널이든 그대로 붙는다.
       body: JSON.stringify({ content: body, text: body }),
     });
+    // fetch는 4xx/5xx에 던지지 않는다 — 웹훅을 지우거나 채널을 옮기면 404가 조용히 돌아올 뿐이라
+    // 상태를 직접 봐야 '경보 채널이 죽은' 것을 안다. 안 보면 사고가 터질 때까지 아무도 모른다
+    // (2026-08-11). 실패해도 던지지 않는 계약은 유지 — 죽은 채널이 경보 본작업을 깨면 안 된다.
+    if (!res.ok) {
+      // 본문 읽기 자체가 던질 수 있어(스트림 파손 등) 진단 정보 때문에 계약이 깨지지 않게 감싼다.
+      const detail = await res
+        .text()
+        .then((t) => t.slice(0, 200))
+        .catch(() => '');
+      console.error('[alert-webhook] notify failed — HTTP', res.status, detail);
+    }
   } catch (e) {
     console.error('[alert-webhook] notify failed', e);
   }

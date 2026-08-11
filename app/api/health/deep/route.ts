@@ -12,7 +12,9 @@
  * /api/health(dpl만, 클라가 1분 폴링)와 분리 — 여긴 외부 모니터만 저빈도 호출(DB 질의 포함).
  * 공개(시크릿 불필요) — 노출 정보는 비민감(정지 cron 이름·DB 지연)만.
  *
- * 200 {ok:true, staleCrons?}  : 앱/DB 정상(개별 정지 크론은 staleCrons에 정보로)
+ * 200 {ok:true, staleCrons?, cronCheck?} : 앱/DB 정상(개별 정지 크론은 staleCrons에 정보로,
+ *                               하트비트 조회 자체가 실패하면 cronCheck:'error' — 감시가 깨진
+ *                               상태가 완전 정상과 구분되지 않는 것을 막는다)
  * 503 {ok:false, reason}      : DB 다운 또는 warm 정지(cron-system-down)
  * 한 번도 안 돈 cron(lastSuccessAt=null)은 출시 초 오탐 방지로 제외.
  */
@@ -42,11 +44,14 @@ export async function GET() {
 
   // 2) cron 사망 — 한 번 돈 뒤 정지한 것만(never-run은 출시 초 오탐이라 제외).
   let dead: string[] = [];
+  let cronCheckFailed = false;
   try {
     const stale = await getStaleCrons(Date.now());
     dead = stale.filter((s) => s.lastSuccessAt != null).map((s) => s.name);
   } catch {
-    // 하트비트 조회 실패 — DB는 살아있으니(위 통과) cron 판정만 스킵(오탐 방지).
+    // 하트비트 조회 실패 — DB는 살아있으니(위 통과) cron 판정만 스킵(503 오탐 방지). 다만 조용히
+    // 넘기면 '감시가 깨진 상태'와 완전 정상이 응답에서 구분되지 않아, 아래 body로만 드러낸다.
+    cronCheckFailed = true;
   }
   // ⚠ '다운'(503)은 **앱/DB 불능 또는 warm 워치독 본체 정지(=총체적 cron 정지)**만 — 외부 모니터가
   // "사이트 다운"으로 알려야 하는 진짜 사건. warm은 매분 도는 최신뢰 카나리라 정지=cron 시스템 붕괴.
@@ -60,7 +65,14 @@ export async function GET() {
   }
 
   return Response.json(
-    { ok: true, db: 'up', dbMs, ...(dead.length > 0 ? { staleCrons: dead } : {}) },
+    {
+      ok: true,
+      db: 'up',
+      dbMs,
+      ...(dead.length > 0 ? { staleCrons: dead } : {}),
+      // 실패일 때만 넣는다 — 정상 응답 형태를 그대로 두어 기존 모니터 파싱을 깨지 않는다.
+      ...(cronCheckFailed ? { cronCheck: 'error' } : {}),
+    },
     { status: 200, headers: NO_STORE },
   );
 }

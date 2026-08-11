@@ -70,4 +70,13 @@ describe('경보 웹훅 계약', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(postAlertWebhook('본문', { mention: true })).resolves.toBeUndefined();
   });
+
+  it('404 응답 — 던지지 않되 상태 코드를 로그로 남긴다(웹훅 삭제·채널 이동을 무성으로 넘기지 않음)', async () => {
+    process.env.PAYMENT_ALERT_WEBHOOK_URL = 'https://example.invalid/hook';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('unknown webhook', { status: 404 }));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(postAlertWebhook('본문', { mention: true })).resolves.toBeUndefined();
+    expect(err).toHaveBeenCalled();
+    expect(err.mock.calls[0]!.join(' ')).toContain('404');
+  });
 });

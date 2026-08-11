@@ -56,6 +56,10 @@ export async function GET(req: Request) {
   // 3. 크론 dead-man 워치독 — 매분 도는 warm이 다른 크론의 정지(허용 간격 초과)를 감지해
   //    아직 알리지 않은 것만 어드민 푸시/웹훅. warm 자신이 죽으면(=총체적 크론 정지) 여기서
   //    못 알리므로, 외부 uptime 모니터가 최종 백스톱(대시보드도 방문 시 표시).
+  //    ⚠ 워치독이 던지면 여기서 삼켜지는데(응답 본문은 아무도 안 읽는다) warm은 자기 자신의
+  //    워치독이라 감시 두 층이 동시에 조용히 '정상'으로 보인다. 그래서 결과를 beat detail에
+  //    실어 어드민 대시보드·cron_heartbeats 조회에서 '감시가 깨졌다'가 보이게 한다.
+  let watchdog: string;
   try {
     const stale = await getStaleCrons(Date.now());
     const fresh = stale.filter((s) => !s.alerted);
@@ -67,10 +71,14 @@ export async function GET(req: Request) {
       await markStaleAlerted(fresh.map((s) => s.name));
     }
     out.stale = stale.map((s) => s.name);
+    watchdog = `stale=${stale.length}${fresh.length > 0 ? ` alerted=${fresh.length}` : ''}`;
   } catch (e) {
     out.stale = (e as Error).message;
+    watchdog = `watchdog:ERR ${(e as Error).message.slice(0, 120)}`;
   }
 
-  await beatCron('warm');
+  // beat 호출은 조건 없이 유지 — warm이 beat를 멈추면 /api/health/deep이 503(cron-system-down)을
+  // 내는데, 워치독 함수 하나가 깨진 것과 크론 시스템 전체 정지는 다른 사건이다(오알림 방지).
+  await beatCron('warm', watchdog);
   return Response.json({ ms: Date.now() - t0, ...out });
 }
