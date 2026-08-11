@@ -6,10 +6,10 @@ import { Redis } from '@upstash/redis';
 /**
  * 게임 변이 액션 어뷰징 방어 — Upstash Redis 슬라이딩 윈도우 (CLAUDE §1).
  *
- * **Fail-open**: Upstash env 미설정 / Redis 장애 시 차단하지 않고 통과(가용성
- * 우선 — 결과·자원 무결성은 서버 RNG·원자 트랜잭션·멱등이 이미 보장; 레이트리밋은
- * 봇 플러드 감속용 추가 방어선). 활성화하려면 Vercel/`.env.local`에
- * `UPSTASH_REDIS_REST_URL`·`UPSTASH_REDIS_REST_TOKEN` 주입(.env.example 참조).
+ * **강등(fail-degraded)**: Upstash env 미설정 / Redis 장애 시 인메모리 창으로 내려간다
+ * (제한 자체는 유지 — 결과·자원 무결성은 서버 RNG·원자 트랜잭션·멱등이 이미 보장하지만,
+ * 채팅 도배는 레이트리밋 말고 막을 수단이 없다). 정확한 계정 단위 상한을 쓰려면
+ * Vercel/`.env.local`에 `UPSTASH_REDIS_REST_URL`·`UPSTASH_REDIS_REST_TOKEN` 주입(.env.example 참조).
  *
  * 식별자 = userId(계정 단위). 윈도우는 정상 빠른 플레이는 통과, 봇 연타만 차단.
  */
@@ -137,24 +137,35 @@ function limiter(bucket: RlBucket): Ratelimit | null {
 }
 
 let warned = false;
+/** Redis 장애 경고 스로틀 — 장애가 지속되면 호출마다 찍혀 로그가 폭주한다(1분 1회로 충분). */
+let lastRedisWarnAt = 0;
+const REDIS_WARN_INTERVAL_MS = 60_000;
 
-/** true = 차단(한도 초과). env 미설정·장애 시 false(fail-open). */
+/** true = 차단(한도 초과). env 미설정·Redis 장애 시 인메모리 창으로 강등(제한은 유지). */
 export async function rateLimited(userId: string, bucket: RlBucket): Promise<boolean> {
   // 고빈도 게임 버킷 — 인메모리 창(Upstash 커맨드 미소비, 네트워크 왕복 0).
   if (!REDIS_BUCKETS.has(bucket)) return memLimited(userId, bucket);
   const rl = limiter(bucket);
+  // Redis 부재·장애 시 fail-open 대신 인메모리 강등(2026-08-11) — 예전엔 false를 돌려줘
+  // chatSend/chatBurst/whisperSend/whisperBurst 같은 Redis 전용 버킷의 제한이 통째로 0이 됐고,
+  // 채팅 도배를 막을 다른 수단이 없었다. 인메모리는 인스턴스별 창이라 Redis보다 느슨할 뿐
+  // (limit/window는 동일) 과차단 위험은 없다 — 무력화가 아니라 강등이다.
   if (!rl) {
     if (!warned) {
       warned = true;
-      console.warn('[ratelimit] Upstash env 미설정 — fail-open(비활성). .env 주입 필요');
+      console.warn('[ratelimit] Upstash env 미설정 — 인메모리 창으로 강등. .env 주입 필요');
     }
-    return false;
+    return memLimited(userId, bucket);
   }
   try {
     const { success } = await rl.limit(userId);
     return !success;
   } catch (e) {
-    console.warn('[ratelimit] fail-open (Redis 오류)', e);
-    return false;
+    const now = Date.now();
+    if (now - lastRedisWarnAt >= REDIS_WARN_INTERVAL_MS) {
+      lastRedisWarnAt = now;
+      console.warn('[ratelimit] Redis 오류 — 인메모리 창으로 강등', e);
+    }
+    return memLimited(userId, bucket);
   }
 }

@@ -60,7 +60,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   }
   // 독립 검증 병렬화 — 순차 5왕복 → 1왕복 시간. 킬스위치/뮤트 탈락 시 레이트 토큰이
   // 소모되는 부작용은 무해(어차피 전송 불가 상태)로 수용.
-  const [enabled, [p], cooldownHit, burstHit, duplicate] = await Promise.all([
+  const [enabled, [p], cooldownHit, burstHit, duplicate, myChar] = await Promise.all([
     isChatEnabled(),
     db
       .select({ mutedUntil: profiles.chatMutedUntil })
@@ -70,7 +70,18 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
     rateLimited(userId, 'chatSend'),
     rateLimited(userId, 'chatBurst'),
     isDuplicateOfLast(userId, serverId, body, guildId),
+    // 내 캐릭터 존재 확인 — 같은 왕복에 묶어 지연을 늘리지 않는다.
+    db
+      .select({ userId: characters.userId })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .limit(1),
   ]);
+  // 서버 경계(SERVER.md §1) — 활성 서버는 클라가 통제하는 쿠키고 chat_messages.server_id엔 FK도
+  // 없어서, 귓속말·길드는 이미 소속을 보는데 전체 채널만 뚫려 있었다(쿠키만 바꾸면 소속 아닌
+  // 서버의 월드 채팅에 글이 써졌다). createCharacter가 open 아닌 서버를 거부하므로 캐릭터 존재가
+  // '실재하고 개방된 서버'를 전이적으로 보장한다 — servers 조회 없이 이 검사 하나면 충분.
+  if (myChar.length === 0) return { status: 'error', message: '이 서버에서는 채팅할 수 없어요.' };
   if (!enabled) return { status: 'error', message: '채팅이 잠시 닫혀 있습니다.' };
   // 채팅 금지(운영 제재) — 만료 지나면 자동 해제 간주. 남은 기간 안내(피드백 2026-07-21).
   if (p?.mutedUntil && p.mutedUntil > new Date()) {
