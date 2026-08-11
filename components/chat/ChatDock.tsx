@@ -33,7 +33,9 @@ import {
  *  - 수신: Supabase Realtime broadcast 구독, 실패 시 15초 폴링 폴백
  *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화 / 귓속말·친구추가·차단 · 프로필·닫기)
  *  - 신고는 메시지 본문 탭 → 확인 팝업(유저 단위 신고 버튼 없음 — 대상이 모호해진다)
- *  - 차단은 로컬(기기) 필터 — localStorage 목록, 서버 부담 0
+ *  - 차단은 서버 저장(chat_blocks) — 계정 귀속·서버(월드) 무관이라 기기를 바꿔도 유지된다.
+ *    ⚠ 이 줄은 한때 '로컬(기기) 필터'라고 적혀 있었고, 그 오해가 그대로 유저 토스트 문구
+ *    ('이 기기에서 메시지를 숨겨요')로 새어 나갔다(2026-08-11 정정).
  *  - 미니바 높이는 --chat-dock-h로 발행(main 하단 패딩), --gt-h(가이드 티커) 합산 오프셋
  *  - 패널 위/아래 기준선은 --inst-h(설치 띠지)·--gt-h를 더해 계산 — 상단 고정물이 늘면 여기부터
  *  - 소프트 키보드가 열린 동안은 이 계산을 쓰지 않고 비주얼 뷰포트에 직접 고정(아래 effect)
@@ -1650,6 +1652,9 @@ export function ChatDock() {
                     {/* 주 동작 — 유저를 만났을 때 가장 하고 싶은 행동이 말 걸기다. */}
                     <ModalButton
                       tone="primary"
+                      // 차단 중이면 비활성(2026-08-11) — 서버가 스레드를 비워 내려주므로 눌러봐야
+                      // 빈 대화가 열려 이유를 알 수 없다. 옆의 '차단 해제'가 함께 보여 맥락이 된다.
+                      disabled={blocked.has(profile.data.userId)}
                       onClick={() => {
                         const uid = profile.data.userId;
                         setProfile(null);
@@ -1689,7 +1694,7 @@ export function ChatDock() {
                         setPopupFlash(
                           blocked.has(profile.data!.userId)
                             ? '차단을 해제했어요'
-                            : '이 기기에서 메시지를 숨겨요',
+                            : '이 유저의 채팅·귓속말이 안 보여요',
                         );
                       }}
                     >

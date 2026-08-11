@@ -395,6 +395,15 @@ export async function listWhisperMessages(
     where ${pairCond(serverId, userId, peerUserId)}
       and hidden_at is null
       and id > ${hiddenBeforeSub(userId, serverId, peerUserId)}
+      -- 차단 양방향 제외(2026-08-11) — 목록·미읽음과 같은 술어여야 한다. 목록만 거르고 여기를
+      -- 빼둔 탓에, 차단해도 프로필의 '귓속말'로 스레드를 열면 차단 이후 온 메시지까지 그대로
+      -- 보였다(전송은 sendWhisperCore가 막는데 읽기만 뚫린 상태). 차단 중이면 빈 스레드가 정상 —
+      -- 대화가 목록에서 사라지는 것과 같은 결과여야 한다.
+      and not exists (
+        select 1 from chat_blocks b
+        where (b.user_id = ${userId}::uuid and b.blocked_user_id = ${peerUserId}::uuid)
+           or (b.user_id = ${peerUserId}::uuid and b.blocked_user_id = ${userId}::uuid)
+      )
       ${beforeId === undefined ? sql`` : sql`and id < ${beforeId}::bigint`}
     order by id desc
     limit ${WHISPER_PAGE_SIZE}
