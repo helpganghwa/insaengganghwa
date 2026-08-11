@@ -17,20 +17,24 @@ export async function GuildTab({
   q,
   page,
   guildId,
+  reportedOnly,
 }: {
   params: ChatSearchParams;
   serverId: number | null;
   q: string;
   page: number;
   guildId: bigint | null;
+  reportedOnly: boolean;
 }) {
-  if (guildId != null) return <GuildChannel params={params} page={page} guildId={guildId} />;
+  if (guildId != null) {
+    return <GuildChannel params={params} page={page} guildId={guildId} reportedOnly={reportedOnly} />;
+  }
 
   const guildRows = await listGuildChannels(serverId, q);
   return (
     <div className="space-y-2">
       <ChatSearchForm
-        keep={{ tab: 'guild', srv: params.srv }}
+        keep={{ tab: 'guild', srv: params.srv, rep: params.rep }}
         q={q}
         placeholder="길드명(부분일치)"
         resetHref={chatHref(params, { q: null, p: null })}
@@ -68,10 +72,12 @@ async function GuildChannel({
   params,
   page,
   guildId,
+  reportedOnly,
 }: {
   params: ChatSearchParams;
   page: number;
   guildId: bigint;
+  reportedOnly: boolean;
 }) {
   const guild = await getGuildBrief(guildId);
   if (!guild) {
@@ -87,6 +93,7 @@ async function GuildChannel({
     serverId: guild.serverId,
     guildId,
     q: '',
+    reportedOnly,
     offset: page * CHAT_PAGE_SIZE,
     limit: CHAT_PAGE_SIZE,
   });
@@ -99,9 +106,12 @@ async function GuildChannel({
         <span className="text-indigo-300">길드 채널</span>
         <b className="text-zinc-100">{guild.name}</b>
         <ServerBadge serverId={guild.serverId} />
+        {reportedOnly ? <span className="ml-auto text-[10px] text-red-400">신고된 것만 · 신고 많은 순</span> : null}
       </div>
       {rows.length === 0 ? (
-        <p className="py-10 text-center text-sm text-zinc-500">메시지가 없습니다.</p>
+        <p className="py-10 text-center text-sm text-zinc-500">
+          {reportedOnly ? '신고된 메시지가 없습니다.' : '메시지가 없습니다.'}
+        </p>
       ) : (
         <div className="space-y-1.5">
           {rows.map((m) => (

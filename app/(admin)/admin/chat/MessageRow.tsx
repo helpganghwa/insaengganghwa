@@ -69,6 +69,7 @@ export function WhisperMessageRow({
   serverId,
   reports,
   identities,
+  threadHref,
 }: {
   id: bigint;
   fromUserId: string;
@@ -79,6 +80,8 @@ export function WhisperMessageRow({
   serverId: number;
   reports: number;
   identities: Map<string, AdminIdentity>;
+  /** 스레드 밖(신고 목록)에서 렌더될 때만 — 앞뒤 맥락을 보려면 대화로 들어갈 수 있어야 한다. */
+  threadHref?: string;
 }) {
   const from = identities.get(fromUserId) ?? null;
   const to = identities.get(toUserId) ?? null;
@@ -96,6 +99,15 @@ export function WhisperMessageRow({
         {hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
         {isMuted(from?.mutedUntil ?? null) ? (
           <span className="text-[10px] text-amber-400">채팅금지중</span>
+        ) : null}
+        {threadHref ? (
+          <Link
+            prefetch={false}
+            href={threadHref}
+            className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-300"
+          >
+            스레드
+          </Link>
         ) : null}
         <span className="ml-auto">
           <MessageActions

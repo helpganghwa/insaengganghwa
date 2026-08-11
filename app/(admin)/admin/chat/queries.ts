@@ -38,14 +38,18 @@ export interface AdminChatRow {
  * 채널(전체 또는 특정 길드) 메시지 — 최신순, 숨김 포함.
  * guildId=null → 전체 채팅(guild_id is null), 값 → 해당 길드 채널.
  * q는 닉네임·본문 부분일치 + 유저코드 정확일치.
+ * reportedOnly=true면 신고된 것만 신고 많은 순 — 시간순으로는 신고를 찾을 수 없기 때문.
  */
 export async function listChannelMessages(opts: {
   serverId: number | null;
   guildId: bigint | null;
   q: string;
+  reportedOnly: boolean;
   offset: number;
   limit: number;
 }): Promise<Page<AdminChatRow>> {
+  // 표시용 수치와 정렬 기준이 같은 식이라 한 번만 만들어 둘 다에 쓴다.
+  const reportCount = sql<number>`(select count(*)::int from chat_reports r where r.message_id = ${chatMessages.id})`;
   const conds: (SQL | undefined)[] = [
     opts.guildId == null ? isNull(chatMessages.guildId) : eq(chatMessages.guildId, opts.guildId),
   ];
@@ -59,6 +63,10 @@ export async function listChannelMessages(opts: {
         ilike(profiles.publicCode, code),
       ),
     );
+  }
+  // 존재 여부만 물어 count 집계 없이 거른다(정렬에서만 실제 수를 센다).
+  if (opts.reportedOnly) {
+    conds.push(sql`exists (select 1 from chat_reports r where r.message_id = ${chatMessages.id})`);
   }
 
   const rows = await db
@@ -74,7 +82,7 @@ export async function listChannelMessages(opts: {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       mutedUntil: profiles.chatMutedUntil,
-      reports: sql<number>`(select count(*)::int from chat_reports r where r.message_id = ${chatMessages.id})`,
+      reports: reportCount,
     })
     .from(chatMessages)
     // 닉네임은 해당 서버 캐릭터 기준(계정이 아니라 서버별 이름).
@@ -85,7 +93,7 @@ export async function listChannelMessages(opts: {
     .leftJoin(profiles, eq(profiles.id, chatMessages.userId))
     .leftJoin(guilds, eq(guilds.id, chatMessages.guildId))
     .where(and(...conds))
-    .orderBy(desc(chatMessages.id))
+    .orderBy(...(opts.reportedOnly ? [desc(reportCount), desc(chatMessages.id)] : [desc(chatMessages.id)]))
     // limit+1 — 다음 페이지 존재 여부를 count 쿼리 없이 판정.
     .limit(opts.limit + 1)
     .offset(opts.offset);
@@ -336,6 +344,42 @@ export async function listWhisperThread(opts: {
       ),
     )
     .orderBy(desc(whisperMessages.id))
+    .limit(opts.limit + 1)
+    .offset(opts.offset);
+  return { rows: rows.slice(0, opts.limit), hasMore: rows.length > opts.limit };
+}
+
+/**
+ * 신고된 귓속말 전량(서버 스코프 내) — 신고 많은 순.
+ * 귓속말은 자동 숨김 임계가 없어(schema/chat.ts) 신고가 어디에도 드러나지 않고, 스레드 열람은
+ * 대상 유저를 이미 알아야 시작된다. 즉 "누구인지 모른 채" 신고에 닿는 유일한 경로라
+ * uid/peer 드릴다운과 무관하게 whisper_reports를 기준으로 훑는다.
+ */
+export async function listReportedWhispers(opts: {
+  serverId: number | null;
+  offset: number;
+  limit: number;
+}): Promise<Page<AdminWhisperRow>> {
+  const reportCount = sql<number>`(select count(*)::int from whisper_reports r where r.message_id = ${whisperMessages.id})`;
+  const conds: (SQL | undefined)[] = [
+    sql`exists (select 1 from whisper_reports r where r.message_id = ${whisperMessages.id})`,
+  ];
+  if (opts.serverId != null) conds.push(eq(whisperMessages.serverId, opts.serverId));
+
+  const rows = await db
+    .select({
+      id: whisperMessages.id,
+      serverId: whisperMessages.serverId,
+      fromUserId: whisperMessages.fromUserId,
+      toUserId: whisperMessages.toUserId,
+      body: whisperMessages.body,
+      hiddenAt: whisperMessages.hiddenAt,
+      createdAt: whisperMessages.createdAt,
+      reports: reportCount,
+    })
+    .from(whisperMessages)
+    .where(and(...conds))
+    .orderBy(desc(reportCount), desc(whisperMessages.id))
     .limit(opts.limit + 1)
     .offset(opts.offset);
   return { rows: rows.slice(0, opts.limit), hasMore: rows.length > opts.limit };

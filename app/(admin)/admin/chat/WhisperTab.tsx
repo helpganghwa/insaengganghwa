@@ -7,9 +7,11 @@ import { Pager } from './Pager';
 import {
   getIdentities,
   getUserBrief,
+  listReportedWhispers,
   listWhisperPeers,
   listWhisperThread,
   searchCharacters,
+  type AdminIdentity,
   type AdminUserBrief,
 } from './queries';
 import { CHAT_PAGE_SIZE, chatHref, fmtKst, isMuted, pagerHrefs, type ChatSearchParams } from './shared';
@@ -26,6 +28,7 @@ export async function WhisperTab({
   page,
   userId,
   peerId,
+  reportedOnly,
 }: {
   params: ChatSearchParams;
   serverId: number | null;
@@ -33,7 +36,11 @@ export async function WhisperTab({
   page: number;
   userId: string | null;
   peerId: string | null;
+  reportedOnly: boolean;
 }) {
+  // 신고 필터는 uid/peer 드릴다운보다 우선한다 — 검수 대상을 이미 알고 있어야 열리는 구조라,
+  // "누구인지 모른 채" 신고에 닿으려면 선택된 대상을 무시하고 전량을 보여줘야 한다.
+  if (reportedOnly) return <ReportedWhispers params={params} serverId={serverId} page={page} />;
   if (userId && peerId) {
     return <WhisperThread params={params} serverId={serverId} page={page} userId={userId} peerId={peerId} />;
   }
@@ -75,6 +82,77 @@ export async function WhisperTab({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+const NO_IDENTITIES: Map<string, AdminIdentity> = new Map();
+
+/**
+ * 신고된 귓속말 전량 — 신고 많은 순. 귓속말 탭의 유일한 "역방향" 입구다(유저 → 대화가 아니라
+ * 신고 → 대화). 각 행에서 스레드로 들어가 앞뒤 맥락을 보게 한다.
+ */
+async function ReportedWhispers({
+  params,
+  serverId,
+  page,
+}: {
+  params: ChatSearchParams;
+  serverId: number | null;
+  page: number;
+}) {
+  const { rows, hasMore } = await listReportedWhispers({
+    serverId,
+    offset: page * CHAT_PAGE_SIZE,
+    limit: CHAT_PAGE_SIZE,
+  });
+  // 닉네임은 서버별이라 서버 스코프가 '전체'면 행마다 소속 서버의 신원이 필요하다.
+  // 조회는 이 페이지에 실제로 등장한 서버 수만큼만 늘어난다.
+  const userIds = [...new Set(rows.flatMap((r) => [r.fromUserId, r.toUserId]))];
+  const identityByServer = new Map(
+    await Promise.all(
+      [...new Set(rows.map((r) => r.serverId))].map(
+        async (sid) => [sid, await getIdentities(userIds, sid)] as const,
+      ),
+    ),
+  );
+  const { prevHref, nextHref } = pagerHrefs(params, page, hasMore);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2 text-[12px]">
+        <span className="text-red-300">신고된 귓속말</span>
+        <span className="ml-auto text-[10px] text-zinc-500">신고 많은 순 · 숨김 포함 원본</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="py-10 text-center text-sm text-zinc-500">신고된 귓속말이 없습니다.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((m) => (
+            <WhisperMessageRow
+              key={String(m.id)}
+              id={m.id}
+              fromUserId={m.fromUserId}
+              toUserId={m.toUserId}
+              body={m.body}
+              createdAt={m.createdAt}
+              hiddenAt={m.hiddenAt}
+              serverId={m.serverId}
+              reports={m.reports}
+              identities={identityByServer.get(m.serverId) ?? NO_IDENTITIES}
+              // 스레드는 (서버, 유저쌍)으로 열린다 — 신고 필터를 끄지 않으면 여기로 다시 돌아온다.
+              threadHref={chatHref(params, {
+                uid: m.fromUserId,
+                peer: m.toUserId,
+                srv: m.serverId,
+                rep: null,
+                p: null,
+              })}
+            />
+          ))}
+        </div>
+      )}
+      <Pager page={page} prevHref={prevHref} nextHref={nextHref} />
     </div>
   );
 }

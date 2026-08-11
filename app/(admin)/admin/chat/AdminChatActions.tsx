@@ -78,8 +78,10 @@ export function MessageActions({
         type="button"
         disabled={pending}
         onClick={() => {
-          if (!window.confirm('이 유저를 7일간 채팅 금지할까요?')) return;
-          run(() => muteChatUserAction(userId, 7));
+          // 사유는 감사 로그의 "왜" — 이게 비면 이의 제기에 답할 수 없다. 취소(null)면 중단.
+          const reason = window.prompt('이 유저를 7일간 채팅 금지합니다. 사유를 입력하세요.');
+          if (reason === null) return;
+          run(() => muteChatUserAction(userId, 7, reason));
         }}
         className="rounded bg-amber-700 px-2 py-1 text-[10px] font-bold text-white disabled:opacity-50"
       >

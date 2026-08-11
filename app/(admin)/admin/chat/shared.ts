@@ -17,6 +17,8 @@ export interface ChatSearchParams {
   uid?: string;
   /** 귓속말 탭 — 대화 상대(있으면 스레드 열람). */
   peer?: string;
+  /** 신고 필터 — '1'이면 신고된 메시지만(정렬도 신고 많은 순). */
+  rep?: string;
 }
 
 export const CHAT_BASE_PATH = '/admin/chat';
@@ -47,6 +49,15 @@ export function parseBigIntParam(v: string | undefined): bigint | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * ?rep=1 → 신고된 메시지만. 켬/끔 두 상태뿐이라 '1' 외의 값은 전부 끔으로 본다.
+ * 신고는 어드민에게 알림이 가지 않아, 이 필터가 신고를 찾는 유일한 경로다(특히 귓속말은
+ * 자동 숨김도 없어 검수에 전적으로 의존한다 — schema/chat.ts whisper_reports 주석).
+ */
+export function parseReportedOnly(v: string | undefined): boolean {
+  return v === '1';
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

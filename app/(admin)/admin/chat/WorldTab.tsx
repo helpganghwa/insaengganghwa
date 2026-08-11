@@ -10,16 +10,19 @@ export async function WorldTab({
   serverId,
   q,
   page,
+  reportedOnly,
 }: {
   params: ChatSearchParams;
   serverId: number | null;
   q: string;
   page: number;
+  reportedOnly: boolean;
 }) {
   const { rows, hasMore } = await listChannelMessages({
     serverId,
     guildId: null,
     q,
+    reportedOnly,
     offset: page * CHAT_PAGE_SIZE,
     limit: CHAT_PAGE_SIZE,
   });
@@ -28,13 +31,15 @@ export async function WorldTab({
   return (
     <div className="space-y-2">
       <ChatSearchForm
-        keep={{ tab: 'world', srv: params.srv }}
+        keep={{ tab: 'world', srv: params.srv, rep: params.rep }}
         q={q}
         placeholder="닉네임 · 본문 · 유저코드(#UY1GToa9)"
         resetHref={chatHref(params, { q: null, p: null })}
       />
       {rows.length === 0 ? (
-        <p className="py-10 text-center text-sm text-zinc-500">메시지가 없습니다.</p>
+        <p className="py-10 text-center text-sm text-zinc-500">
+          {reportedOnly ? '신고된 메시지가 없습니다.' : '메시지가 없습니다.'}
+        </p>
       ) : (
         <div className="space-y-1.5">
           {rows.map((m) => (
