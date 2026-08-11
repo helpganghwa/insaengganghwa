@@ -219,8 +219,10 @@ export async function openSupplyBoxes(input: {
         }
       }
     }
-  } catch {
-    // 업적 기록 실패 무시.
+  } catch (e) {
+    // 업적 기록 실패는 개봉 자체를 막지 않는다. 다만 이 블록엔 이정표 보상 우편이 들어 있고
+    // 게이트(max_transcend_level)는 이미 갱신된 뒤라, 조용히 넘기면 보상이 영구 유실된다(2026-08-11).
+    console.error(`[supply.open] 초월 업적·이정표 처리 실패 user=${userId} server=${serverId}`, e);
   }
 
   // 리더보드 증분 갱신(v2) — 신규 획득·자동초월이 combat을 바꾼다(트랜잭션 밖 best-effort).

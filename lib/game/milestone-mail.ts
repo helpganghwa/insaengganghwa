@@ -143,7 +143,16 @@ function composeBody(metric: MilestoneMailMetric, m: number): string {
   }
 }
 
-/** 이정표 보상 우편 발송 — 호출부가 1회 발화를 보장(워터마크/개인최초 게이트). */
+/**
+ * 이정표 보상 우편 발송 — 호출부가 1회 발화를 보장(워터마크/개인최초 게이트).
+ *
+ * ⚠ 실패는 **영구 유실**이다(2026-08-11). 강화·초월 이정표는 게이트가 영속 상태
+ * (`max_enhance_level`/`max_transcend_level`)에서 파생되는데 그 상태는 이 호출 **전에** 갱신되므로,
+ * 여기서 실패하면 게이트만 소진되고 보상은 사라진다 — 재시도 경로가 없다(sum·combat·raid는
+ * user_milestones 워터마크 + 시간별 스냅샷 캐치업이 받치지만 이 둘은 그 밖이다).
+ * 그래서 삼키되 **반드시 로그로 남긴다** — 수동 보상에 필요한 값(누구·어느 서버·무슨 이정표)을
+ * 다 실어야 로그만 보고 복구할 수 있다.
+ */
 export async function sendMilestoneMail(
   userId: string,
   serverId: number,
@@ -166,7 +175,11 @@ export async function sendMilestoneMail(
       senderLabel: SENDER,
       payload,
     });
-  } catch {
-    // best-effort — 우편 실패가 본 액션을 막지 않는다.
+  } catch (e) {
+    // best-effort — 우편 실패가 본 액션을 막지 않는다. 다만 조용히 넘기면 유실을 알 방법이 없다.
+    console.error(
+      `[milestone-mail] 지급 실패 — 수동 보상 필요 user=${userId} server=${serverId} metric=${metric} milestone=${milestone}`,
+      e,
+    );
   }
 }

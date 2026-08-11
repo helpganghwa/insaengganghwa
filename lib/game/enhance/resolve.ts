@@ -237,8 +237,14 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
         // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최초 게이트가 1회 보장).
         await sendMilestoneMail(String(job.user_id), Number(job.job_server_id), 'enhance', milestone);
       }
-    } catch {
-      // 업적 기록 실패 무시.
+    } catch (e) {
+      // 업적 기록 실패는 강화 정산 자체를 막지 않는다. 다만 이 블록엔 이정표 보상 우편이 들어 있고
+      // 게이트(max_enhance_level)는 RT2에서 이미 갱신된 뒤라, 조용히 넘기면 보상이 영구 유실된다
+      // (2026-08-11). 수동 보상에 필요한 값을 남긴다.
+      console.error(
+        `[enhance.resolve] 업적·이정표 처리 실패 job=${jid} user=${String(job.user_id)} level=${toLevel}`,
+        e,
+      );
     }
   }
 
