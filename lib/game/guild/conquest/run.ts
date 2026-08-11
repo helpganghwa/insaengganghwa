@@ -37,6 +37,12 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
     join guild_members m
       on m.user_id = d.user_id and m.server_id = d.server_id and m.guild_id = d.guild_id
     where d.battle_kst_day = ${battleDay} and d.server_id = ${serverId}
+    -- 결정론의 전제 — simulateConquest는 units 배열이 고정일 때만 시드로 재현된다. ORDER BY가
+    -- 없으면 Postgres가 행 순서를 보장하지 않아 같은 시드로도 승자가 달라진다(재현·감사 불가,
+    -- 어드민 재정산도 이 경로를 탄다). 대난투(melee/run.ts)도 같은 이유로 user_id로 정렬한다.
+    -- 겸사겸사 타겟 선택 편향도 줄인다: 타겟은 '랜덤 위치에서 다른 길드가 나올 때까지 전방 스캔'
+    -- 이라 배열이 길드별로 뭉쳐 있으면 그 무리 뒤 유닛이 더 자주 맞는다. uuid 정렬은 길드와 무상관.
+    order by d.zone_id, d.user_id
   `)) as unknown as DepRow[];
 
   // 경합 구역 = 공격 배치가 있는 구역만.

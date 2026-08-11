@@ -27,7 +27,7 @@ export type ConquestUnit = {
   /** 팀 태그(같은 길드끼리 비공격). */
   guildId: string;
   guildName: string;
-  /** 역할 배수까지 적용된 유효 전투력(집행관2·수비1.2·공격1.0). */
+  /** 역할 배수까지 적용된 유효 전투력(집행관1.5·수비1.2·공격1.0 — guild/balance.conquestPowerMult). */
   effCp: number;
 };
 
