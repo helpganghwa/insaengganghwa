@@ -134,26 +134,39 @@ export async function sendPushToUsers(
   if (userIds.length === 0) return { ok: 0, gone: 0, failed: 0 };
   const togglesCol = TOGGLE_COLUMN[payload.category];
 
+  // ⚠ 대상 조회는 **1000개씩 청크**한다 — 대난투/일일보급처럼 서버 전원에게 보내는 경로에서
+  // userIds가 곧 바인드 파라미터 수가 되어, Postgres 상한(65,535)에서 하드 실패하고 그 전에도
+  // 만 단위부터 급격히 느려진다. 발송 자체는 아래 dispatch가 이미 150개씩 청크 병렬로 처리한다.
+  const IN_CHUNK = 1000;
+
   // 토글 컬럼 있는 카테고리는 ON 유저만 추림. 없는 카테고리(supply/melee)는 전체 대상.
   let targetIds = userIds;
   if (togglesCol) {
-    const enabled = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .where(and(inArray(profiles.id, userIds), eq(togglesCol, true)));
+    const enabled: string[] = [];
+    for (let i = 0; i < userIds.length; i += IN_CHUNK) {
+      const rows = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(and(inArray(profiles.id, userIds.slice(i, i + IN_CHUNK)), eq(togglesCol, true)));
+      for (const r of rows) enabled.push(r.id);
+    }
     if (enabled.length === 0) return { ok: 0, gone: 0, failed: 0 };
-    targetIds = enabled.map((e) => e.id);
+    targetIds = enabled;
   }
 
-  const subs = await db
-    .select({
-      id: pushSubscriptions.id,
-      endpoint: pushSubscriptions.endpoint,
-      p256dh: pushSubscriptions.p256dh,
-      auth: pushSubscriptions.auth,
-    })
-    .from(pushSubscriptions)
-    .where(inArray(pushSubscriptions.userId, targetIds));
+  const subs: SubRow[] = [];
+  for (let i = 0; i < targetIds.length; i += IN_CHUNK) {
+    const rows = await db
+      .select({
+        id: pushSubscriptions.id,
+        endpoint: pushSubscriptions.endpoint,
+        p256dh: pushSubscriptions.p256dh,
+        auth: pushSubscriptions.auth,
+      })
+      .from(pushSubscriptions)
+      .where(inArray(pushSubscriptions.userId, targetIds.slice(i, i + IN_CHUNK)));
+    for (const r of rows) subs.push(r);
+  }
   return await dispatch(subs, payload);
 }
 

@@ -84,11 +84,16 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   if (withCp.length === 0) return { ran: false };
 
   const ids = withCp.map((x) => x.uid);
-  const nickRows = await db
-    .select({ uid: characters.userId, nick: characters.nickname })
-    .from(characters)
-    .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids)));
-  const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
+  // 1000개씩 청크 — 전 참가자 대상 조회라 인원이 곧 파라미터 수다(Postgres 바인드 상한 65,535에서
+  // 하드 실패, 그 전에도 만 단위부터 급격히 느려진다). 아래 아바타 조회·참가자 행 삽입과 동일 패턴.
+  const nickOf = new Map<string, string>();
+  for (let i = 0; i < ids.length; i += 1000) {
+    const rows = await db
+      .select({ uid: characters.userId, nick: characters.nickname })
+      .from(characters)
+      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids.slice(i, i + 1000))));
+    for (const r of rows) nickOf.set(r.uid, r.nick);
+  }
 
   const participants: MeleeParticipantInput[] = withCp.map((x) => ({
     userId: x.uid,
