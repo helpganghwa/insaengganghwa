@@ -424,13 +424,18 @@ export function ChatDock() {
   // 접힘 중 새 메시지 감지 — 최초 로드(prev null)는 제외, 차단 유저 메시지도 제외.
   const prevLatestIdRef = useRef<string | null>(null);
   useEffect(() => {
-    const id = latest && !blocked.has(latest.userId) ? latest.id : null;
+    const m = latest && !blocked.has(latest.userId) ? latest : null;
+    const id = m?.id ?? null;
+    // 내가 쓴 글은 점을 켜지 않는다(2026-08-11) — 보낸 직후 도크를 닫으면 latest 갱신과 open=false가
+    // 한 렌더에 묶여, 자기 발언이 '못 본 새 메시지'로 잡혔다. 길드 실시간 경로엔 이미 같은 가드가
+    // 있고(m.userId !== meRef.current) 미니 토픽 경로엔 없어, 판정 지점인 여기 한 곳에서 막는다.
+    // prev는 내 글에도 전진시킨다 — 안 그러면 다음에 온 남의 글이 옛 id와 비교돼 판정이 어긋난다.
     // !open — 푸시 딥링크 등으로 접힌 채 패널이 열린 경우, 보고 있는 메시지에 배지 점등 방지.
-    if (id && prevLatestIdRef.current && id !== prevLatestIdRef.current && collapsed && !open) {
+    if (id && prevLatestIdRef.current && id !== prevLatestIdRef.current && collapsed && !open && m!.userId !== me) {
       setCollapsedUnseen(true);
     }
     if (id) prevLatestIdRef.current = id;
-  }, [latest, collapsed, blocked, open]);
+  }, [latest, collapsed, blocked, open, me]);
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = listRef.current;
