@@ -13,6 +13,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { guilds } from '@/lib/db/schema/guild';
 import {
@@ -59,6 +60,7 @@ export async function GET(req: Request) {
     .limit(BATCH);
 
   if (targets.length === 0) {
+    await beatCron('guild-emblem-retry'); // 대상 없음도 정상 실행 — 에스크로 reconcile은 돌았다
     return Response.json({ ok: true, retried: 0, escrowRefunded, kind: 'guild-emblem-retry' });
   }
 
@@ -97,6 +99,7 @@ export async function GET(req: Request) {
     revalidatePath('/guild');
     revalidatePath('/', 'layout'); // 헤더 문양 반영
   }
+  await beatCron('guild-emblem-retry');
   return Response.json({ ok: true, retried: targets.length, success: ok, escrowRefunded });
 }
 

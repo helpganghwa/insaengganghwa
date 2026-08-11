@@ -7,6 +7,7 @@
  * :11 오프셋(:00 혼잡·:07 rank-leader 회피). 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { openServerIds } from '@/lib/game/server-list';
 import { rebuildLeaderboardSnapshot, rebuildCodexChampions } from '@/lib/game/leaderboard/snapshot';
 
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    if (ok) await beatCron('leaderboard-snapshot'); // 성공일 때만 — '실행됐으나 실패'를 dead-man이 감지
     return Response.json({ ok, results, kind: 'leaderboard-snapshot' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[leaderboard-snapshot]', e);

@@ -36,6 +36,12 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   'melee-reveal': 25 * HOUR, // UTC1 창 — 대난투 발표(보상 우편·푸시). 정지=결과 영구 미공개(감사 R5)
   'conquest-run': 25 * HOUR, // UTC14 창 — 점령전 정산
   'conquest-chronicle': 25 * HOUR, // UTC15 창 — 점령 공개(소유권 플립·보상 우편). 정지=공개 지연(감사 R5)
+  // 10분 — 문양 최초 생성 재시도 + **유료 재생성 에스크로 환불**(reconcileStuckEmblemEscrows).
+  //   헤더 주석이 재시도만 말하지만 본문 첫 줄이 예치 반환이라, 정지 = 유저 다이아가 무기한 묶임.
+  'guild-emblem-retry': 40 * MIN, // (2026-08-11 등재)
+  // 매시 — 리더보드 드리프트 교정의 **유일한 경로**. 실시간 값은 best-effort 증분이 만들고
+  //   이 크론이 전체 재계산으로 맞춘다(대난투 포인트 누락·밴/탈퇴 잔재). 정지 = 랭킹이 영구히 어긋남.
+  'leaderboard-snapshot': 3 * HOUR, // (2026-08-11 등재)
 };
 
 /**
