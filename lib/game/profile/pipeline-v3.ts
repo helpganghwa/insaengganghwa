@@ -14,6 +14,7 @@ import { composeV3Description } from './compose-v3';
 import { pickRandomAppearance, type Appearance } from './appearance-v3';
 import { weaponKindOf } from '@/lib/game/equipment/weapon-kind';
 import { markFailedAndRefund } from './pipeline';
+import { generationAgeMin } from './gen-age';
 import { pixellabKeyByIdx, pixellabKeyCount, profileGenConcurrency } from './pixellab-keys';
 import type { ProfileGender } from './refs';
 
@@ -35,6 +36,13 @@ const V3_SIZE = 256;
  * 즉시 타임아웃되는 결함이 있었다(2026-08-12 감사).
  */
 const QUEUED_TIMEOUT_MIN = 60;
+
+/**
+ * starting 상태 상한(분, **발주 시각** 기준 — gen-age.ts). 이 상태는 createCharacterV3 한 번,
+ * 즉 Claude 합성 + Pixellab POST가 끝나기를 기다리는 구간이라 정상이면 수십 초다. 5분은 그 호출이
+ * 매달린(hang) 경우만 걸리는 넉넉한 값. 큐 대기(QUEUED_TIMEOUT_MIN)와 기준·대상이 모두 다르다.
+ */
+const STARTING_TIMEOUT_MIN = 5;
 
 export interface CreateV3Input {
   gender: ProfileGender;
@@ -229,7 +237,12 @@ async function launchJob(job: ClaimedJob): Promise<{ ok: boolean; reason?: strin
       armor: wornOf(eqs.armorKey),
       accessory: wornOf(eqs.accessoryKey),
     });
-    await db
+    // ⚠ starting일 때만 전이 — 이 파이프라인의 다른 전이와 같은 claim-first다. 조건 없이 덮어쓰면
+    // **환불된 잡이 되살아난다**: 정체 스윕은 락 밖에서 돌고 이 발주도 락 밖이라, 발주 중(위
+    // createCharacterV3는 Claude 합성까지 포함해 수십 초 걸린다)에 스윕이 이 잡을 failed+환불
+    // 처리할 수 있다. 그 뒤 downloading으로 되돌려 놓으면 acceptJob이 정상 통과시켜 유저가
+    // 다이아를 돌려받고 아바타까지 받는다.
+    const applied = await db
       .update(profileGenerationJobs)
       .set({
         status: 'downloading',
@@ -239,7 +252,16 @@ async function launchJob(job: ClaimedJob): Promise<{ ok: boolean; reason?: strin
         descriptionPrompt: out.description,
         options: { ...(job.options as Record<string, unknown>), v3Appearance: out.appearance, pixellabKeyIdx: out.keyIdx },
       })
-      .where(eq(profileGenerationJobs.id, job.id));
+      .where(and(eq(profileGenerationJobs.id, job.id), eq(profileGenerationJobs.status, 'starting')))
+      .returning({ id: profileGenerationJobs.id });
+    if (applied.length === 0) {
+      // 이미 종단(스윕이 환불 완료) — 되살리지 않는다. 환불은 그쪽이 이미 했으므로 여기선 하지 않는다.
+      // Pixellab 캐릭터는 과금된 채 고아로 남으므로 추적할 수 있게 남긴다.
+      console.error(
+        `[profile-v3] launch raced sweep — job ${job.id} already terminal, orphan pixellab character ${out.characterId}`,
+      );
+      return { ok: false, reason: 'raced-sweep' };
+    }
     return { ok: true };
   } catch (e) {
     const reason = (e as Error).message;
@@ -262,7 +284,7 @@ export async function drainQueue(): Promise<{ launched: number; failed: number; 
   //    타임아웃 초과 시 fail+환불. starting은 슬롯·유저락을 잡으므로 방치 시 큐 정체.
   const now = Date.now();
   const stale = await db
-    .select({ id: profileGenerationJobs.id, userId: profileGenerationJobs.userId, status: profileGenerationJobs.status, createdAt: profileGenerationJobs.createdAt })
+    .select({ id: profileGenerationJobs.id, userId: profileGenerationJobs.userId, status: profileGenerationJobs.status, createdAt: profileGenerationJobs.createdAt, options: profileGenerationJobs.options })
     .from(profileGenerationJobs)
     .where(
       and(
@@ -272,6 +294,12 @@ export async function drainQueue(): Promise<{ launched: number; failed: number; 
     );
   let swept = 0;
   for (const s of stale) {
+    // starting은 **발주에 걸린 시간**만 재야 한다 — created_at으로 재면 큐에서 오래 기다린 잡이
+    // 배정되자마자 스윕 대상이 되어, 정상 발주 중인 잡을 환불 처리한다(위 launchJob의 claim-first가
+    // 되살아남은 막지만, 애초에 그 경합을 만들지 않는 편이 낫다 — Pixellab 과금이 버려진다).
+    if (s.status === 'starting' && generationAgeMin(s.options, s.createdAt, now) < STARTING_TIMEOUT_MIN) {
+      continue;
+    }
     await markFailedAndRefund(s.id, s.userId, `${s.status} timeout/stall`);
     swept += 1;
   }

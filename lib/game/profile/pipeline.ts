@@ -13,7 +13,7 @@
  */
 import 'server-only';
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -404,7 +404,20 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
     ? { ...(job.options as Record<string, unknown>), faceBox }
     : job.options;
 
-  await db.transaction(async (tx) => {
+  const granted = await db.transaction(async (tx) => {
+    // 조건부 클레임 먼저(회수 경로와 동일 패턴) — 위 게이트(:377)는 비잠금 read인 데다 그 뒤로
+    // 외부 I/O 4단계(Pixellab 조회·다운로드·Storage 업로드·얼굴 검출)가 있어 창이 넓다. 동시
+    // 두 요청이 둘 다 통과하면 user_profiles에 두 행이 생기고(커스텀 아바타엔 유니크가 없다 —
+    // uq_default_avatar_per_char는 기본 아바타 전용), 뒤엣것이 user_profile_id를 덮어써 앞엣것은
+    // 어떤 잡에도 안 묶인 고아가 된다(회수로도 못 지운다).
+    // backfill이 같은 tx라, 진 쪽은 커밋된 non-null을 보고 0행이 된다.
+    const claimed = await tx
+      .update(profileGenerationJobs)
+      .set({ adminDecision: 'grant', adminReviewedAt: new Date() })
+      .where(and(eq(profileGenerationJobs.id, jobId), isNull(profileGenerationJobs.userProfileId)))
+      .returning({ id: profileGenerationJobs.id });
+    if (claimed.length === 0) return false;
+
     const [profile] = await tx
       .insert(userProfiles)
       .values({
@@ -422,7 +435,7 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
     // 상태(rejected_ai 등)는 분쟁 이력 보존을 위해 유지 — 지급 사실은 adminDecision으로 기록.
     await tx
       .update(profileGenerationJobs)
-      .set({ userProfileId: profile!.id, adminDecision: 'grant', adminReviewedAt: new Date() })
+      .set({ userProfileId: profile!.id })
       .where(eq(profileGenerationJobs.id, jobId));
 
     // 첫 프로필이면 자동 active.
@@ -446,8 +459,10 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
       senderLabel: '운영자',
       payload: {},
     });
+    return true;
   });
   // 운영자 결정은 우편으로만 통지 — 푸시 없음(사용자 결정).
+  if (!granted) return { ok: false, msg: '이미 아바타가 지급되어 있습니다(동시 요청).' };
   return { ok: true };
 }
 
