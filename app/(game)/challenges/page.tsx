@@ -7,7 +7,7 @@ import { ChallengesClient } from './ChallengesClient';
 
 /**
  * 도전 과제 — 일회성 온보딩 리워드(0118). 달성 판정은 상태 파생 단일 SQL(status.ts),
- * 수령·연출은 클라(ChallengesClient). 상점 무료 3종은 CBT 동안 자동 숨김.
+ * 수령·연출은 클라(ChallengesClient). 상점 무료 3종은 CBT 동안 잠김(노출·수령 불가).
  */
 export const dynamic = 'force-dynamic';
 

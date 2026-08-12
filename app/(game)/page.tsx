@@ -16,7 +16,7 @@ import { getTutorialState } from '@/lib/game/tutorial';
 import { getChallengeStatus } from '@/lib/game/challenges/status';
 import { getTodayTicker } from '@/lib/game/today/stats';
 import { TodayTicker } from './TodayTicker';
-import { activeChallenges, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
+import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -360,10 +360,10 @@ export default async function HomePage() {
       {/* 도전 과제 배너 — 일회성 온보딩 리워드(0118). 캐러셀 배너와 동일 규격(h-16),
           랭킹 바로 아래(2026-07-15 위치·크기 확정). 수령 가능 시 앰버 글로우. */}
       {(() => {
-        const actives = activeChallenges(hidePaid);
-        const total = actives.length;
-        const totalDiamond = actives.reduce((a, c) => a + c.diamond, 0) + COMPLETE_BONUS.diamond;
-        const claimedN = chgStatus ? actives.filter((c) => chgStatus.claimed.has(c.id)).length : 0;
+        // 진행도·총 보상은 항상 전 과제 기준 — 완주 판정 분모와 동일해야 배너 숫자가 거짓말을 안 한다.
+        const total = CHALLENGES.length;
+        const totalDiamond = CHALLENGES.reduce((a, c) => a + c.diamond, 0) + COMPLETE_BONUS.diamond;
+        const claimedN = chgStatus ? CHALLENGES.filter((c) => chgStatus.claimed.has(c.id)).length : 0;
         const claimable = chgStatus?.claimable ?? 0;
         const allDone = chgStatus?.completeClaimed ?? false;
         if (allDone) return null; // 전부 정복(보너스까지 수령) — 배너 은퇴

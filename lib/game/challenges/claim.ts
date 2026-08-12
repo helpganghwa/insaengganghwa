@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { challengeClaims } from '@/lib/db/schema/challenges';
 import { walletAdd } from '@/lib/game/wallet';
 
-import { COMPLETE_BONUS, activeChallenges } from './defs';
+import { CHALLENGES, COMPLETE_BONUS, claimableChallenges } from './defs';
 import { doneCondSql } from './status';
 
 /**
@@ -30,7 +30,8 @@ export async function claimChallenge(
                  where user_id=${userId}::uuid and server_id=${serverId}
                    and challenge_id <> ${COMPLETE_BONUS.id}) as n
       `)) as unknown as { n: number }[];
-      if ((r?.n ?? 0) < activeChallenges(hidePaid).length)
+      // 분모는 항상 전 과제 — 잠김(상점)으로 줄이면 상점이 열리기 전에 보너스가 소진된다(2026-08-12).
+      if ((r?.n ?? 0) < CHALLENGES.length)
         return { ok: false as const, reason: 'NOT_DONE' as const };
       const ins = await tx
         .insert(challengeClaims)
@@ -58,7 +59,8 @@ export async function claimChallenge(
   }
 
   // ── 일반 과제 ──
-  const def = activeChallenges(hidePaid).find((c) => c.id === challengeId);
+  // 잠김 과제는 목록에 보이지만 수령은 서버에서 거절(UNKNOWN_ID).
+  const def = claimableChallenges(hidePaid).find((c) => c.id === challengeId);
   if (!def) return { ok: false, reason: 'UNKNOWN_ID' };
 
   // 상자 추가 보상(선별 과제) — 총량은 3의 배수, 3슬롯 균등.
@@ -100,7 +102,7 @@ export async function claimAllChallenges(
   serverId: number,
   hidePaid: boolean,
 ): Promise<{ count: number; diamond: number; boxes: { weapon: number; armor: number; accessory: number } | null }> {
-  const list = activeChallenges(hidePaid);
+  const list = claimableChallenges(hidePaid);
   return db.transaction(async (tx) => {
     const cols = list.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
     const [row] = (await tx.execute(sql`

@@ -10,9 +10,10 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
 import {
+  CHALLENGES,
   CHALLENGE_GROUPS,
   COMPLETE_BONUS,
-  activeChallenges,
+  isChallengeLocked,
   type ChallengeDef,
   type ChallengeGroup,
 } from '@/lib/game/challenges/defs';
@@ -24,7 +25,15 @@ import { claimChallengeAction, claimAllChallengesAction } from './actions';
  * 컴팩트 1줄 행 + CSS 그룹 헤더(이미지는 홈 배너만 — 2026-07-15 피드백). 미달성 과제는
  * '가이드' 팝업으로 달성 방법을 안내하고 하단에 상황 맞는 버튼(바로가기/앱 설치)을 노출.
  * 수령은 낙관 UI(즉시 체크 + 헤더 다이아 반영, 실패 롤백).
+ * 잠김 과제(결제 닫힘 = 상점 과제)도 목록에 남긴다 — 분모가 항상 전 과제라, 안 보이면
+ * 완주가 왜 안 열리는지 알 수 없다(2026-08-12).
  */
+
+/** 과제가 있는 그룹만(정의 순서 유지) — 목록은 잠김 포함 전 과제 고정. */
+const GROUPS = CHALLENGE_GROUPS.filter((g) => CHALLENGES.some((c) => c.group === g.id));
+
+/** 잠김 과제 안내 — 상점이 닫혀 있어 달성 자체가 불가(가이드 본문 대체). */
+const LOCKED_GUIDE = '상점이 아직 열리지 않았어요. 열리면 바로 도전할 수 있어요.';
 
 /** 그룹 CSS 틴트 — 이미지 없이 색으로 구분(컴팩트·가독성). */
 const GROUP_TINT: Record<ChallengeGroup, string> = {
@@ -61,16 +70,18 @@ export function ChallengesClient({
   const [guideFor, setGuideFor] = useState<ChallengeDef | null>(null);
   const [, start] = useTransition();
 
-  const list = useMemo(() => activeChallenges(hidePaid), [hidePaid]);
-  const groups = useMemo(
-    () => CHALLENGE_GROUPS.filter((g) => list.some((c) => c.group === g.id)),
-    [list],
+  const locked = useMemo(
+    () => new Set(CHALLENGES.filter((c) => isChallengeLocked(c, hidePaid)).map((c) => c.id)),
+    [hidePaid],
   );
 
-  const claimedCount = list.filter((c) => claimed.has(c.id)).length;
-  const claimableCount = list.filter((c) => done[c.id] && !claimed.has(c.id)).length;
-  const completeReady = claimedCount === list.length && !completeClaimed;
-  const progress = Math.round((claimedCount / list.length) * 100);
+  const total = CHALLENGES.length;
+  const claimedCount = CHALLENGES.filter((c) => claimed.has(c.id)).length;
+  const claimableCount = CHALLENGES.filter(
+    (c) => !locked.has(c.id) && done[c.id] && !claimed.has(c.id),
+  ).length;
+  const completeReady = claimedCount === total && !completeClaimed;
+  const progress = Math.round((claimedCount / total) * 100);
 
   const claim = (id: string, diamond: number) => {
     if (pendingIds.has(id)) return;
@@ -111,7 +122,9 @@ export function ChallengesClient({
   // 일괄 수령 — 달성 & 미수령 전량(완료 보너스 제외, 단일 트랜잭션). 낙관 처리 동일.
   const claimAll = () => {
     if (pendingIds.has('__all__')) return;
-    const targets = list.filter((c) => done[c.id] && !claimed.has(c.id) && !pendingIds.has(c.id));
+    const targets = CHALLENGES.filter(
+      (c) => !locked.has(c.id) && done[c.id] && !claimed.has(c.id) && !pendingIds.has(c.id),
+    );
     if (targets.length === 0) return;
     const totalDiamond = targets.reduce((a, c) => a + c.diamond, 0);
     setPendingIds((p) => new Set(p).add('__all__'));
@@ -151,7 +164,7 @@ export function ChallengesClient({
         fallback="/me"
         right={
           <span className="text-[12px] tabular-nums text-zinc-500">
-            {claimedCount}/{list.length}
+            {claimedCount}/{total}
           </span>
         }
       />
@@ -194,10 +207,16 @@ export function ChallengesClient({
             </button>
           ) : (
             <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-              {claimedCount}/{list.length}
+              {claimedCount}/{total}
             </span>
           )}
         </div>
+        {/* 완주가 막힌 이유 — 잠김 과제가 남으면 분모를 채울 수 없다(숨기지 않는 이유). */}
+        {locked.size > 0 && !completeClaimed ? (
+          <p className="mt-1.5 text-[11px] text-zinc-500">
+            🔒 상점 과제 {locked.size}개가 잠겨 있어요
+          </p>
+        ) : null}
       </div>
 
       {claimableCount > 0 ? (
@@ -218,7 +237,7 @@ export function ChallengesClient({
 
       {/* ── 그룹별 과제 목록 — CSS 헤더 + 컴팩트 1줄 행 ── */}
       <div className="mt-2 space-y-2.5">
-        {groups.map((g) => (
+        {GROUPS.map((g) => (
           <section
             key={g.id}
             className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800"
@@ -227,18 +246,24 @@ export function ChallengesClient({
               <span>{g.icon}</span>
               {g.label}
             </div>
-            {list
-              .filter((c) => c.group === g.id)
-              .map((c) => (
-                <Row
-                  key={c.id}
-                  def={c}
-                  state={claimed.has(c.id) ? 'claimed' : done[c.id] ? 'ready' : 'todo'}
-                  pending={pendingIds.has(c.id)}
-                  onClaim={() => claim(c.id, c.diamond)}
-                  onGuide={() => setGuideFor(c)}
-                />
-              ))}
+            {CHALLENGES.filter((c) => c.group === g.id).map((c) => (
+              <Row
+                key={c.id}
+                def={c}
+                state={
+                  claimed.has(c.id)
+                    ? 'claimed'
+                    : locked.has(c.id)
+                      ? 'locked'
+                      : done[c.id]
+                        ? 'ready'
+                        : 'todo'
+                }
+                pending={pendingIds.has(c.id)}
+                onClaim={() => claim(c.id, c.diamond)}
+                onGuide={() => setGuideFor(c)}
+              />
+            ))}
           </section>
         ))}
       </div>
@@ -260,6 +285,11 @@ export function ChallengesClient({
                 <div className="isolate flex-1 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
                   <InstallAppButton />
                 </div>
+              ) : locked.has(guideFor.id) ? (
+                // 잠김 — 바로가기(상점)는 닫혀 있어 눌러도 '준비 중' 화면이라 노출하지 않는다.
+                <ModalButton tone="neutral" onClick={() => setGuideFor(null)}>
+                  닫기
+                </ModalButton>
               ) : (
                 <>
                   <ModalButton tone="neutral" onClick={() => setGuideFor(null)}>
@@ -277,7 +307,7 @@ export function ChallengesClient({
             }
           >
             <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              {guideFor.guide}
+              {locked.has(guideFor.id) ? LOCKED_GUIDE : guideFor.guide}
             </p>
           </ModalLayout>
         </ModalShell>
@@ -294,7 +324,7 @@ function Row({
   onGuide,
 }: {
   def: ChallengeDef;
-  state: 'claimed' | 'ready' | 'todo';
+  state: 'claimed' | 'ready' | 'todo' | 'locked';
   pending: boolean;
   onClaim: () => void;
   onGuide: () => void;
@@ -319,7 +349,9 @@ function Row({
         className={`min-w-0 flex-1 truncate text-[13px] ${
           state === 'claimed'
             ? 'text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-600'
-            : 'font-medium'
+            : state === 'locked'
+              ? 'text-zinc-400 dark:text-zinc-500'
+              : 'font-medium'
         }`}
       >
         {def.label}
@@ -345,6 +377,15 @@ function Row({
           className="flex h-6 w-14 shrink-0 items-center justify-center rounded-md border border-zinc-200 text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
         >
           가이드
+        </button>
+      ) : state === 'locked' ? (
+        // 잠김도 눌러 이유를 볼 수 있게 — 버튼을 죽이면 왜 못 하는지 알 길이 없다.
+        <button
+          type="button"
+          onClick={onGuide}
+          className="flex h-6 w-14 shrink-0 items-center justify-center rounded-md border border-dashed border-zinc-200 text-[11px] font-semibold text-zinc-400 active:scale-95 dark:border-zinc-700 dark:text-zinc-500"
+        >
+          🔒 잠김
         </button>
       ) : (
         <span className="flex h-6 w-14 shrink-0 items-center justify-center text-[11px] font-bold text-emerald-500">✓</span>

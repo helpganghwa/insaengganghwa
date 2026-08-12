@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 
-import { COMPLETE_BONUS, activeChallenges } from './defs';
+import { CHALLENGES, COMPLETE_BONUS, isChallengeLocked } from './defs';
 
 /**
  * 도전 과제 달성 판정 — **상태 파생 단일 SQL 1왕복**(CLAUDE §11.4). 각 과제는 기존
@@ -18,7 +18,7 @@ export type ChallengeStatus = {
   claimed: Set<string>;
   /** 수령 가능 수(달성 & 미수령, complete 보너스 포함). */
   claimable: number;
-  /** 전체 완료 보너스 수령 가능 여부(27종 전부 수령 & 보너스 미수령). */
+  /** 전체 완료 보너스 수령 가능 여부(전 과제 수령 & 보너스 미수령). */
   completeReady: boolean;
   completeClaimed: boolean;
 };
@@ -104,8 +104,10 @@ export async function getChallengeStatus(
   serverId: number,
   hidePaid: boolean,
 ): Promise<ChallengeStatus> {
-  const list = activeChallenges(hidePaid);
-  const cols = list.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
+  // 잠김 과제는 달성 자체가 불가 → 판정 SQL에서 제외하고 done=false 고정(왕복 낭비 방지).
+  // 목록·완주 분모는 항상 CHALLENGES 전체(잠김도 노출 — defs.isChallengeLocked 참조).
+  const gated = CHALLENGES.filter((c) => !isChallengeLocked(c, hidePaid));
+  const cols = gated.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
   const rows = (await db.execute(sql`
     select ${sql.join(cols, sql`, `)},
       (select coalesce(json_agg(challenge_id), '[]'::json)
@@ -114,14 +116,14 @@ export async function getChallengeStatus(
   const row = rows[0]!;
 
   const done: Record<string, boolean> = {};
-  for (const c of list) done[c.id] = !!row[c.id];
+  for (const c of CHALLENGES) done[c.id] = !isChallengeLocked(c, hidePaid) && !!row[c.id];
   const claimed = new Set<string>(row.claimed ?? []);
 
-  const allClaimed = list.every((c) => claimed.has(c.id));
+  const allClaimed = CHALLENGES.every((c) => claimed.has(c.id));
   const completeClaimed = claimed.has(COMPLETE_BONUS.id);
   const completeReady = allClaimed && !completeClaimed;
   const claimable =
-    list.filter((c) => done[c.id] && !claimed.has(c.id)).length + (completeReady ? 1 : 0);
+    CHALLENGES.filter((c) => done[c.id] && !claimed.has(c.id)).length + (completeReady ? 1 : 0);
 
   return { done, claimed, claimable, completeReady, completeClaimed };
 }

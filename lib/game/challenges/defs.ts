@@ -6,7 +6,7 @@
  * (💎17,700)으로 남아 있었고, 그 값이 튜토리얼 완료 팝업에 그대로 베껴져 실지급보다 큰
  * 보상이 신규 유저에게 광고됐다(2026-08-11). 화면에 쓸 숫자는 반드시 상수에서 파생시킬 것.
  * 📦는 루프 시동 길목·고가치 행동 4종에만(초월·앱·알림·아바타 생성) — 완료 보너스 임팩트 보존.
- * 상점 무료 3종은 CBT(결제 숨김) 동안 자동 숨김 — 정식 오픈 시 자동 등장(activeChallenges).
+ * 상점 무료 3종은 CBT(결제 숨김) 동안 '잠김' — 목록에는 보이되 수령 불가(isChallengeLocked).
  * 달성 판정 SQL은 status.ts(상태 파생), 예외 5종은 challenge_events 마킹.
  */
 export type ChallengeGroup =
@@ -75,14 +75,21 @@ export const CHALLENGES: ChallengeDef[] = [
 ];
 
 /**
- * 현재 노출·달성 대상 과제 — CBT(결제 숨김 = 상점 전체 '준비 중') 동안 shop 그룹 제외.
- * 컴플리트 보너스 판정도 이 목록 기준(숨긴 과제가 완주를 막지 않게).
+ * 잠김 과제 — CBT(결제 숨김 = 상점 전체 '준비 중') 동안 shop 그룹은 달성 자체가 불가능하다.
+ * 숨기지 않고 잠그는 이유(2026-08-12): 숨기면 완주 판정 분모가 줄어 상점이 열리기 전에 완주
+ * 보너스가 소진되고, 이후 등장하는 상점 과제 3종은 영원히 보너스 없이 남는다. 목록에 잠김으로
+ * 노출해야 유저가 "왜 완주가 안 열리는지"를 알 수 있다.
  */
-export function activeChallenges(hidePaid: boolean): ChallengeDef[] {
-  return hidePaid ? CHALLENGES.filter((c) => c.group !== 'shop') : CHALLENGES;
+export function isChallengeLocked(c: ChallengeDef, hidePaid: boolean): boolean {
+  return hidePaid && c.group === 'shop';
 }
 
-/** 전체 완료 보너스 — 전 과제 수령 시. */
+/** 수령 대상 과제 — 잠김 제외(서버 권위 판정용). 표시 목록은 항상 CHALLENGES 전체. */
+export function claimableChallenges(hidePaid: boolean): ChallengeDef[] {
+  return hidePaid ? CHALLENGES.filter((c) => !isChallengeLocked(c, hidePaid)) : CHALLENGES;
+}
+
+/** 전체 완료 보너스 — 전 과제(CHALLENGES 전체) 수령 시. 분모는 잠김 여부와 무관하게 고정. */
 export const COMPLETE_BONUS = {
   id: 'complete',
   label: '모든 도전 과제 완료!',
