@@ -7,6 +7,8 @@ import { unstable_cache } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
+import { isUniqueViolation } from '@/lib/db/errors';
+import { applyNicknameChange } from '@/lib/game/nickname-change';
 import { profiles } from '@/lib/db/schema/profiles';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { validateNickname } from '@/lib/game/nickname';
@@ -27,8 +29,8 @@ export interface NicknameChangeErr {
 }
 
 /**
- * 닉네임 변경 — **첫 변경 무료, 이후 매번 1000 다이아 차감**.
- *  - 단일 SQL CTE: 닉네임 중복 체크 → 다이아·count 조건부 차감/증가 → nickname update
+  * 닉네임 변경 — **첫 변경 무료, 이후 매번 NICKNAME_CHANGE_COST_DIAMOND 차감**.
+ *  - 단일 트랜잭션: 행 잠금 → 비용 산정 → walletTrySpend(원장 기록) → nickname update
  *  - 비용은 호출 시점의 `nickname_changed_count`로 판정 (0이면 무료, ≥1이면 차감)
  *  - 동시 호출/race: UPDATE …WHERE diamond >= cost AND nickname unique 위반 시 트랜잭션 rollback
  */
@@ -57,53 +59,31 @@ export async function changeNicknameAction(
   }
 
   try {
-    // 단일 트랜잭션 — 첫 변경(count=0)이면 free, 아니면 1000 차감.
-    // RETURNING으로 결과 산출. 다이아 부족 또는 닉네임 중복 시 row 0 → 에러.
-    // 권위 = characters(닉네임·카운트·지갑 한 UPDATE) — SERVER.md §5.
-    const rows = (await db.execute(sql`
-      with curr as (
-        select c.user_id, c.diamond, c.nickname_changed_count as cnt
-        from characters c
-        where c.user_id = ${userId}::uuid and c.server_id = ${serverId}
-        for update
-      ),
-      cost as (
-        select case when cnt = 0 then 0 else ${NICKNAME_CHANGE_COST_DIAMOND} end as c
-        from curr
-      ),
-      upd as (
-        update characters ch
-        set nickname = ${next},
-            nickname_changed_count = ch.nickname_changed_count + 1,
-            diamond = ch.diamond - (select c from cost)
-        from curr, cost
-        where ch.user_id = curr.user_id and ch.server_id = ${serverId}
-          and curr.diamond >= cost.c
-        returning ch.nickname_changed_count as cnt, ch.diamond, cost.c as charged
-      )
-      select cnt, diamond::text as diamond, charged from upd
-    `)) as unknown as { cnt: number; diamond: string; charged: number }[];
+    // 본문은 lib/game/nickname-change.ts — 세션 없이도 테스트가 같은 코드를 돌릴 수 있게 뺐다.
+    const outcome = await db.transaction((tx) => applyNicknameChange(tx, userId, serverId, next));
 
-    if (rows.length === 0) {
-      // 다이아 부족
+    if (!outcome.ok && outcome.reason === 'INSUFFICIENT') {
       return {
         status: 'error',
         code: 'INSUFFICIENT_DIAMOND',
         message: `다이아가 부족합니다 (필요 ${NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')})`,
       };
     }
+    if (!outcome.ok) {
+      return { status: 'error', code: 'INVALID', message: '변경에 실패했습니다.' };
+    }
     revalidatePath('/me');
     revalidatePath('/me/settings');
-    const r = rows[0]!;
     return {
       status: 'success',
-      changedCount: r.cnt,
-      diamondLeft: r.diamond,
-      charged: r.charged,
+      changedCount: outcome.changedCount,
+      diamondLeft: outcome.diamondLeft,
+      charged: outcome.charged,
     };
   } catch (e) {
-    // UNIQUE 위반 — 닉네임 중복
-    if (e instanceof Error && /nickname/i.test(e.message)) {
+    // UNIQUE 위반 — 닉네임 중복. 이 경로에서 23505를 낼 수 있는 제약은 characters_nickname_uq뿐이다.
+    // (drizzle 0.45가 pg 에러를 감싸 e.code가 비므로 cause를 따라가는 헬퍼로 판정한다.)
+    if (isUniqueViolation(e)) {
       return { status: 'error', code: 'TAKEN', message: '이미 사용 중인 닉네임입니다.' };
     }
     console.error('[changeNickname]', e);
