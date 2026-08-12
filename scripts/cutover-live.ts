@@ -8,6 +8,8 @@
 import { config } from 'dotenv';
 import postgres from 'postgres';
 
+import { ghostTables, unclassifiedTables } from './cutover-tables';
+
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
@@ -43,7 +45,7 @@ const WIPE_TABLES = [
   'transcend_logs',
   'supply_open_logs', 'user_supply_boxes',
   'user_equipment',
-  'raid_attacks', 'raid_rewards', 'raid_participants', 'raid_join_requests', 'raid_daily_counts', 'raids',
+  'raid_attacks', 'raid_rewards', 'raid_participants', 'raid_join_requests', 'raid_invites', 'raid_daily_counts', 'raids',
   'melee_participants', 'melee_battles',
   'guild_audit_log', 'world_chronicle', 'guild_tax_distributions', 'conquest_battles',
   'guild_battle_deployments', 'guild_leave_log', 'guild_join_requests', 'guild_members',
@@ -71,11 +73,19 @@ const WIPE_TABLES = [
   //  · admin_scheduled_mails: CBT용 예약 우편이 오픈 후 발송되는 사고 방지.
   //  · user_daily_stats: 일자별 개인 집계.
   'chat_reports', 'chat_blocks', 'chat_messages',
-  'whisper_reads', 'whisper_messages', // 귓속말(0155) — 1:1 대화·읽음 포인터도 유저 데이터
+  'whisper_reads', 'whisper_reports', 'whisper_messages', // 귓속말(0155) — 1:1 대화·읽음 포인터·신고도 유저 데이터
   'challenge_claims', 'challenge_events',
   'guild_emblem_escrows',
   'admin_scheduled_mails',
   'user_daily_stats',
+  // 2026-08-12 감사 보강 — 07-31 대조 **이후에** 생긴 테이블이라 목록에서 빠져 있었다.
+  //  · user_titles(0149·0152): 칭호 발견 원장. 진행도는 전부 지워지는데 이것만 남으면 진행도 0인
+  //    계정이 발견형·업적형 칭호를 그대로 달고 출시를 맞는다(조건부만 표시 시점에 재검증된다).
+  //  · diamond_ledger(0159): 다이아 증감 원장. 잔액·진행이 사라진 뒤 지급 기록만 남으면 원장이
+  //    대조 근거로서의 의미를 잃는다.
+  //  · announcement_poll_votes: 공지(보존)의 자식이라 CASCADE로도 안 지워진다 — CBT 투표 결과가
+  //    출시 후 공지에 그대로 남는다.
+  'user_titles', 'diamond_ledger', 'announcement_poll_votes',
   'characters', // active_profile_id → user_profiles 참조라 아바타 3종보다 먼저
   'profile_reports', 'profile_generation_jobs', 'user_profiles',
 ];
@@ -84,9 +94,13 @@ const WIPE_TABLES = [
 //  - profiles: cbt_carryover가 CASCADE FK로 매달려 있고(0096), handle_new_user 트리거는
 //    auth.users INSERT에만 발화해 profiles만 지우면 계정이 영영 재생성되지 않는다.
 //  - cbt_carryover / (storage) cbt-keepsake: 이월 보상 원장 — wipe 생존이 존재 이유.
+//  - cron_heartbeats: 크론 dead-man 원장. 지우면 전 크론이 '한 번도 성공한 적 없음'으로 읽혀
+//    출시 직후 워치독이 전부 정지로 오탐한다.
+//  - schema_migrations: 마이그레이션 적용 원장. 지우면 재적용 판정이 무너진다.
 const PROTECTED = [
   'profiles', 'cbt_carryover', 'servers', 'zones', 'zone_adjacency',
   'probability_snapshots', 'system_mode', 'announcements', 'push_subscriptions', 'catalog_items',
+  'cron_heartbeats', 'schema_migrations',
 ];
 
 const sql = postgres(URL, { prepare: false, max: 1 });
@@ -104,6 +118,21 @@ async function main() {
 
   // 가드 1~3 — 드라이런에서는 경고만(현황 파악용), --confirm에서는 하나라도 걸리면 중단.
   const guardFails: string[] = [];
+
+  // 가드 0.5 — 분류 누락. public 테이블은 전부 삭제 또는 보존으로 분류돼 있어야 한다.
+  // 수작업 대조는 잊힌다: 2026-07-31에 같은 누락을 전수 대조로 보강했는데 12일 만에 재발했다
+  // (user_titles·diamond_ledger가 그 뒤에 생겨 컷오버를 살아남을 상태였다). 새 테이블을 만든
+  // 사람이 그 자리에서 결정하도록 스크립트가 막는다.
+  const unclassified = await unclassifiedTables(sql, WIPE_TABLES, PROTECTED);
+  if (unclassified.length > 0) {
+    guardFails.push(
+      `미분류 테이블 ${unclassified.length}종 — WIPE_TABLES/PROTECTED 중 하나에 넣을 것: ${unclassified.join(', ')}`,
+    );
+  }
+  const ghosts = await ghostTables(sql, WIPE_TABLES, PROTECTED);
+  if (ghosts.length > 0) {
+    guardFails.push(`목록에만 있고 DB엔 없는 테이블 ${ghosts.length}종(오타·드랍 잔재): ${ghosts.join(', ')}`);
+  }
 
   // 이월 스냅샷 선행(cbt-snapshot --confirm). 미지급(granted_at null) 행이 있어야 정상.
   const [{ c: carry }] = await sql.unsafe(
