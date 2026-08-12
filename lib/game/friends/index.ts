@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { and, or, eq, ne, ilike, inArray, sql } from 'drizzle-orm';
+import { and, or, eq, ne, ilike, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { friendLinks } from '@/lib/db/schema/friends';
+import { chatBlocks } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -26,6 +27,10 @@ export class FriendError extends Error {
       | 'CAP_REACHED'
       /** 상대의 친구 목록이 가득 참 — 내 상한과 구분해야 유저가 할 행동이 달라진다. */
       | 'PEER_CAP_REACHED'
+      /** 내가 차단한 상대 — 내 행동이므로 그대로 알려준다. */
+      | 'BLOCKED_BY_ME'
+      /** 차단 관계라 보낼 수 없음(상대가 나를 차단한 경우 포함) — **누가 차단했는지는 밝히지 않는다.** */
+      | 'BLOCKED'
       | 'NO_REQUEST',
   ) {
     super(code);
@@ -33,7 +38,8 @@ export class FriendError extends Error {
   }
 }
 
-export type FriendRelation = 'none' | 'friend' | 'incoming' | 'outgoing';
+/** 'blocked' = **내가** 차단한 상대. 상대가 나를 차단한 경우는 'none'으로 보여 노출하지 않는다. */
+export type FriendRelation = 'none' | 'friend' | 'incoming' | 'outgoing' | 'blocked';
 export interface FriendUser {
   userId: string;
   nickname: string;
@@ -105,6 +111,10 @@ export async function searchUsers(
     .where(
       and(
         ne(profiles.id, meId),
+        // 정지 계정 제외 — 본인은 actionBlock으로 아무것도 못 하므로 친구가 돼도 무력한데,
+        // 검색에 뜨면 상대의 친구 슬롯만 쓰고 목록에 남는다. 탈퇴 계정은 characters가 지워져
+        // innerJoin에서 이미 빠진다(별도 필터 불필요).
+        isNull(profiles.bannedAt),
         or(ilike(characters.nickname, `%${safe}%`), eq(profiles.publicCode, q)),
       ),
     )
@@ -134,18 +144,54 @@ export async function searchUsers(
     if (l.status === 'accepted') rel.set(other, 'friend');
     else rel.set(other, l.requesterId === meId ? 'outgoing' : 'incoming');
   }
+  // 내가 차단한 상대는 'blocked'로 덮어써 추가 버튼 대신 상태를 보여준다 — 눌러 봐야 실패한다.
+  // 반대 방향(상대가 나를 차단)은 덮어쓰지 않는다. 표시가 달라지면 차단 사실이 드러난다.
+  const myBlocks = await db
+    .select({ blocked: chatBlocks.blockedUserId })
+    .from(chatBlocks)
+    .where(and(eq(chatBlocks.userId, meId), inArray(chatBlocks.blockedUserId, ids)));
+  for (const b of myBlocks) rel.set(b.blocked, 'blocked');
   // 길드(문양+이름) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
   const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
-  return rows.map(({ faceBoxRaw, ...r }) => ({
-    ...r,
-    lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null,
-    faceBox: parseFaceBox(faceBoxRaw),
-    relation: rel.get(r.userId) ?? 'none',
-    guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
-    guildName: guildMap.get(r.userId)?.name ?? null,
-  }));
+  return rows.map(({ faceBoxRaw, ...r }) => {
+    const relation = rel.get(r.userId) ?? 'none';
+    return {
+      ...r,
+      // 마지막 접속은 **친구에게만** 보인다. 닉네임만 알면 누구나 조회할 수 있으면
+      // 상대의 생활 패턴이 그대로 드러난다(스토킹 벡터). 친구 목록(getFriends)에서는 그대로 노출.
+      lastSeenAt: relation === 'friend' && r.lastSeenAt ? r.lastSeenAt.toISOString() : null,
+      faceBox: parseFaceBox(faceBoxRaw),
+      relation,
+      guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
+      guildName: guildMap.get(r.userId)?.name ?? null,
+    };
+  });
+}
+
+/**
+ * 두 사람 사이의 차단 상태 — 채팅에서 만든 chat_blocks를 친구에도 적용한다(2026-08-12).
+ *
+ * 차단은 원래 채팅·귓속말 전용이었다. 그래서 채팅에서 차단한 상대가 친구 요청을 계속 보내
+ * 받은 요청 탭에 닉네임·아바타로 올라왔고, 거절하면 행이 지워져 즉시 재요청할 수 있었다.
+ * 푸시는 없어 피해가 크진 않지만, 유저가 "차단"에 기대하는 것은 연락 차단이다.
+ *
+ * 방향을 구분해 돌려준다 — 내가 건 차단은 알려도 되지만, **상대가 나를 차단한 사실은
+ * 알려주면 안 된다**(차단 사실 자체가 노출되면 차단의 의미가 반감된다).
+ * chat_blocks는 계정 단위(server_id 없음)라 서버와 무관하게 적용된다.
+ */
+async function blockState(meId: string, otherId: string): Promise<{ byMe: boolean; byPeer: boolean }> {
+  const rows = await db
+    .select({ owner: chatBlocks.userId })
+    .from(chatBlocks)
+    .where(
+      or(
+        and(eq(chatBlocks.userId, meId), eq(chatBlocks.blockedUserId, otherId)),
+        and(eq(chatBlocks.userId, otherId), eq(chatBlocks.blockedUserId, meId)),
+      ),
+    );
+  return { byMe: rows.some((r) => r.owner === meId), byPeer: rows.some((r) => r.owner === otherId) };
 }
 
 type FriendTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -215,6 +261,10 @@ export async function sendRequest(
     .where(and(eq(characters.userId, targetId), eq(characters.serverId, serverId)))
     .limit(1);
   if (!t) throw new FriendError('NOT_FOUND');
+  // 차단 검사는 트랜잭션 밖 — 읽기 한 번이고, 막히면 어차피 아무것도 안 쓴다.
+  const blocked = await blockState(meId, targetId);
+  if (blocked.byMe) throw new FriendError('BLOCKED_BY_ME');
+  if (blocked.byPeer) throw new FriendError('BLOCKED');
   return db.transaction(async (tx) => {
     // 상호 동시 요청 레이스 방지 — PK가 방향성(requester,addressee)이라 A→B·B→A가 서로 다른
     // 행이 되어 아직 없는 역방향을 FOR UPDATE로 못 잠근다. 정렬된 쌍으로 트랜잭션 advisory 락을
@@ -391,6 +441,9 @@ export async function getFriendRelation(
   otherId: string,
 ): Promise<FriendRelation> {
   if (meId === otherId) return 'none';
+  // 내가 차단한 상대면 친구 관계보다 앞선다 — 추가 버튼 대신 상태를 보여야 눌러 봐야 실패하는
+  // 일이 없다. 반대 방향(상대가 나를 차단)은 'none'으로 남겨 차단 사실을 드러내지 않는다.
+  if ((await blockState(meId, otherId)).byMe) return 'blocked';
   const [l] = await db
     .select({ requesterId: friendLinks.requesterId, status: friendLinks.status })
     .from(friendLinks)

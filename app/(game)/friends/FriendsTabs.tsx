@@ -44,6 +44,9 @@ const ERR: Record<string, string> = {
   ALREADY_REQUESTED: '이미 요청했습니다',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
+  BLOCKED_BY_ME: '차단한 유저예요. 차단을 해제한 뒤 요청할 수 있어요',
+  // 상대가 나를 차단한 경우 — 차단 사실을 드러내지 않도록 중립적으로.
+  BLOCKED: '지금은 친구 요청을 보낼 수 없어요',
   NO_REQUEST: '요청이 없어요',
   UNAUTHENTICATED: '로그인이 필요합니다',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요',
@@ -425,6 +428,8 @@ export function FriendsTabs({
                     right={
                       u.relation === 'friend' ? (
                         <span className="text-[12px] font-bold text-emerald-500">친구</span>
+                      ) : u.relation === 'blocked' ? (
+                        <span className="text-[12px] font-medium text-zinc-500">차단함</span>
                       ) : u.relation === 'outgoing' ? (
                         <span className="text-[12px] font-medium text-zinc-400">요청됨</span>
                       ) : u.relation === 'incoming' ? (

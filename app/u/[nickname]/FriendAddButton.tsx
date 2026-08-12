@@ -9,6 +9,9 @@ const ERR_MSG: Record<string, string> = {
   RATE_LIMITED: '잠시 후 다시 시도해주세요',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30명)',
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
+  BLOCKED_BY_ME: '차단한 유저예요. 차단을 해제한 뒤 요청할 수 있어요',
+  // 상대가 나를 차단한 경우 — 차단 사실을 드러내지 않도록 중립적으로.
+  BLOCKED: '지금은 친구 요청을 보낼 수 없어요',
   NOT_FOUND: '유저를 찾을 수 없습니다',
   SELF: '자기 자신에게는 보낼 수 없습니다',
   UNAUTHENTICATED: '로그인이 필요합니다',
@@ -50,6 +53,14 @@ export function FriendAddButton({
       setRelation(r.result === 'accepted' ? 'friend' : 'outgoing');
     });
   };
+
+  if (relation === 'blocked') {
+    return (
+      <div className="flex w-full items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 text-sm font-semibold text-zinc-500">
+        차단한 유저
+      </div>
+    );
+  }
 
   if (relation === 'outgoing') {
     return (
