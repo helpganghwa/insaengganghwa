@@ -6,6 +6,7 @@ vi.mock('@/lib/payment/portone', () => ({ getPortonePayment: vi.fn() }));
 import { getPortonePayment } from '@/lib/payment/portone';
 import { refundPurchase } from '@/lib/payment/refund';
 import { pgErrorCode } from '@/lib/db/errors';
+import { kstMonthString } from '@/lib/kst';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -27,6 +28,7 @@ const PRODUCT = `bp_enhance_${SEGMENT_INDEX}`;
 const AMOUNT_KRW = 0;
 
 const PAYMENT_ID = `test_lockorder_${process.pid}`;
+const PAYMENT_ID_MONTHLY = `test_lockorder_${process.pid}_m`;
 
 const one = <T>(rows: unknown) => (rows as T[])[0]!;
 
@@ -93,7 +95,13 @@ async function cleanup(baselineDiamond: bigint | null, ledgerFrom: bigint | null
   await testDb.execute(sql`
     delete from mailbox
     where user_id = ${TEST_USER_ID}::uuid and type = 'notice' and title = '결제 환불 안내'`);
-  await testDb.execute(sql`delete from payment_alerts where payment_id = ${PAYMENT_ID}`);
+  await testDb.execute(
+    sql`delete from payment_alerts where payment_id in (${PAYMENT_ID}, ${PAYMENT_ID_MONTHLY})`,
+  );
+  // 월누적은 이 파일이 심은 행만 지운다 — 테스트 계정엔 원래 없다(실측). 결제액 0이라 값도 안 변한다.
+  await testDb.execute(
+    sql`delete from monthly_purchase_limits where user_id = ${TEST_USER_ID}::uuid and total_krw = 0`,
+  );
   if (baselineDiamond !== null) {
     await testDb.execute(sql`
       update characters set diamond = ${baselineDiamond.toString()}::bigint
@@ -205,5 +213,87 @@ describe.skipIf(skip)('환불 잠금 순서 — 배틀패스 구간을 character
         and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}`);
     expect(one<{ n: number }>(seg).n).toBe(0); // 구간 권리 회수(재잠금)
     expect(await readDiamond()).toBe(baselineDiamond! - RECLAIM_DIAMOND); // 500💎 지급분 전액 회수
+  }, 30_000);
+
+  /**
+   * 지급(completePurchase)은 iap_orders 다음으로 monthly_purchase_limits를 잠그고 **그 뒤에**
+   * 재화(battlepass_segments·characters)를 건드린다. 환불이 재화를 먼저 잠그면 두 트랜잭션의
+   * 순서가 정확히 반대가 되는데, iap_orders는 **서로 다른 주문 행**이라 직렬화해 주지 못한다 —
+   * 같은 유저가 결제하는 동안 다른 주문이 환불되면(웹훅·recon·어드민) 40P01이다.
+   */
+  it('월누적 행이 잠긴 동안 환불은 재화 테이블을 아직 잠그지 않는다', async () => {
+    const kstMonth = kstMonthString();
+    // 월누적 행이 없으면 환불의 UPDATE가 0행이라 잠금 자체가 안 생긴다 — 결제 이력이 있는
+    // 유저에겐 항상 있는 행이므로(completePurchase가 upsert) 여기서도 만들어 둔다.
+    await testDb.execute(sql`
+      insert into monthly_purchase_limits (user_id, kst_month, total_krw)
+      values (${TEST_USER_ID}::uuid, ${kstMonth}, 0::bigint)
+      on conflict (user_id, kst_month) do nothing`);
+    // 앞 테스트의 환불이 구간을 지웠으므로 다시 심는다(회수 대상이 있어야 재화를 잠근다).
+    await testDb.execute(sql`
+      insert into battlepass_segments (user_id, server_id, pass_type, segment_index, premium_claimed_tiers)
+      values (${TEST_USER_ID}::uuid, ${SERVER_ID}, 'enhance', ${SEGMENT_INDEX}, ${tiersJson}::jsonb)
+      on conflict (user_id, server_id, pass_type, segment_index)
+      do update set premium_claimed_tiers = ${tiersJson}::jsonb`);
+    await testDb.execute(sql`
+      insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, paid_at)
+      values (${SERVER_ID}, ${TEST_USER_ID}::uuid, ${PAYMENT_ID_MONTHLY}, ${PRODUCT}, ${AMOUNT_KRW}::bigint, 0::bigint, 'paid', now())`);
+    mockGet.mockResolvedValue({
+      status: 'CANCELLED',
+      amountTotal: AMOUNT_KRW,
+      currency: 'KRW',
+      paymentId: PAYMENT_ID_MONTHLY,
+    } as Awaited<ReturnType<typeof getPortonePayment>>);
+
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let onParked!: (pid: number) => void;
+    const parkedPid = new Promise<number>((r) => {
+      onParked = r;
+    });
+
+    const parked = testDb.transaction(async (ptx) => {
+      const p = await ptx.execute(sql`select pg_backend_pid()::int pid`);
+      await ptx.execute(sql`
+        select 1 from monthly_purchase_limits
+        where user_id = ${TEST_USER_ID}::uuid and kst_month = ${kstMonth}
+        for update`);
+      onParked(one<{ pid: number }>(p).pid);
+      await gate;
+    });
+    const blockerPid = await parkedPid;
+
+    const refunding = refundPurchase(PAYMENT_ID_MONTHLY).catch((e: unknown) => e);
+    let settled: unknown;
+    try {
+      expect(await waitUntilBlockedBy(blockerPid)).toBe(true);
+
+      // 핵심 단정 — 월누적에서 막혀 있는 지금 구간 행이 자유로우면 순서가 지급과 같다는 뜻이다.
+      // 뒤집혀 있으면 회수가 먼저 돌아 이미 잠겨 있고 55P03이 난다.
+      let probeCode: string | undefined;
+      try {
+        await testDb.execute(sql`
+          select 1 from battlepass_segments
+          where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
+            and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}
+          for update nowait`);
+      } catch (e) {
+        probeCode = pgErrorCode(e);
+      }
+      expect(probeCode).toBeUndefined();
+    } finally {
+      release();
+      await parked.catch(() => {});
+      settled = await refunding;
+    }
+
+    expect(settled).toEqual({ ok: true, already: false });
+    const seg = await testDb.execute(sql`
+      select count(*)::int n from battlepass_segments
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
+        and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}`);
+    expect(one<{ n: number }>(seg).n).toBe(0);
   }, 30_000);
 });

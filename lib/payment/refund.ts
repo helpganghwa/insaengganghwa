@@ -211,6 +211,23 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
     await tx.update(iapOrders).set({ status: 'refunded' }).where(eq(iapOrders.id, order.id));
 
     if (wasPaid) {
+      // 미성년 월 한도 누적 되돌리기(0 클램프).
+      //
+      // ⚠ 회수보다 **먼저** 와야 한다 — 지급(completePurchase)이 iap_orders 다음으로 이 행을 잠그고
+      // 그 뒤에 재화(segments·characters)를 건드린다. 환불이 재화를 먼저 잠그면 두 트랜잭션의 순서가
+      // 정확히 반대가 되고, iap_orders는 **서로 다른 주문 행**이라 직렬화해 주지 못한다. 같은 유저가
+      // 결제하는 동안 다른 주문이 환불되면(웹훅·recon·어드민) 40P01이 난다.
+      // 전역 순서: iap_orders → monthly_purchase_limits → battlepass_segments → characters → user_supply_boxes.
+      await tx
+        .update(monthlyPurchaseLimits)
+        .set({ totalKrw: sql`GREATEST(0, ${monthlyPurchaseLimits.totalKrw} - ${order.amountKrw})` })
+        .where(
+          and(
+            eq(monthlyPurchaseLimits.userId, order.userId),
+            eq(monthlyPurchaseLimits.kstMonth, paidMonth),
+          ),
+        );
+
       // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
       // ⚠ grant_skipped 주문(특가 중복·미성년 보류 — 지급 없이 paid)은 회수를 건너뛴다:
       // 회수하면 "다른 주문이 지급한" 재화를 몰수한다(2026-07-07 전수감사 高-1).
@@ -241,17 +258,6 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
         clawbackDone = preview.sufficient;
         if (!preview.sufficient) shortPreview = preview;
       }
-      // 미성년 월 한도 누적 되돌리기(0 클램프).
-      await tx
-        .update(monthlyPurchaseLimits)
-        .set({ totalKrw: sql`GREATEST(0, ${monthlyPurchaseLimits.totalKrw} - ${order.amountKrw})` })
-        .where(
-          and(
-            eq(monthlyPurchaseLimits.userId, order.userId),
-            eq(monthlyPurchaseLimits.kstMonth, paidMonth),
-          ),
-        );
-
       // 환불 안내 우편(notice, 보상 없음). 웹훅·어드민 환불 공통.
       await tx.insert(mailbox).values({
         userId: order.userId,
