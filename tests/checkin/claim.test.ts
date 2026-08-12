@@ -1,6 +1,7 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { claimCheckin } from '@/lib/game/checkin';
+import { SUPPLY_SLOTS } from '@/lib/game/balance';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -13,8 +14,60 @@ const SERVER_ID = 1; // user_checkin_state/checkin_claim_logs는 (user_id, serve
  * 0013_checkin_v1.sql 적용된 환경에서만 의미 — 미적용 시 테이블 not exist로 fail.
  *
  * 매 테스트마다 state row를 초기화(dp=0, last=null)해 클린 시작.
+ *
+ * 수령은 **실제로 자원을 지급한다**(D28 = 칸 1,000💎 + 완주 보너스 1,000💎, D1/D7 = 상자).
+ * state만 되감으면 공유 계정에 지급분이 그대로 쌓이므로(실행마다 +2,000💎·상자 50장 실측,
+ * 2026-08-12) 지갑·상자·원장도 **실행 전 스냅샷으로 복원**한다. 증가분을 계산해 빼는 방식은
+ * 중간 실패로 계산이 어긋나면 그대로 잔재가 되지만, 스냅샷 복원은 어긋날 여지가 없다.
  */
 describe.skipIf(skip)('claimCheckin — DB 통합', () => {
+  let baselineDiamond = 0n;
+  let baselineBoxes: { slot: string; count: string }[] = [];
+  let baselineLedgerId = 0n;
+
+  async function snapshotResources() {
+    const d = (await testDb.execute(sql`
+      select diamond::text d from characters
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`)) as unknown as {
+      d: string;
+    }[];
+    baselineDiamond = BigInt(d[0]?.d ?? '0');
+    baselineBoxes = (await testDb.execute(sql`
+      select slot::text slot, count::text count from user_supply_boxes
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`)) as unknown as {
+      slot: string;
+      count: string;
+    }[];
+    const l = (await testDb.execute(sql`
+      select coalesce(max(id), 0)::text m from diamond_ledger
+      where user_id = ${TEST_USER_ID}::uuid`)) as unknown as { m: string }[];
+    baselineLedgerId = BigInt(l[0]!.m);
+  }
+
+  /** 지급분 원복 — 지갑·상자는 스냅샷 값으로, 원장은 이 파일이 만든 checkin 행만 삭제. */
+  async function restoreResources() {
+    await testDb.execute(sql`
+      update characters set diamond = ${baselineDiamond.toString()}::bigint
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
+    for (const b of baselineBoxes) {
+      await testDb.execute(sql`
+        update user_supply_boxes set count = ${b.count}::bigint
+        where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID} and slot = ${b.slot}::slot`);
+    }
+    // 스냅샷에 없던 슬롯 행 = 이번 수령이 새로 만든 것 → 통째로 제거.
+    const kept = new Set(baselineBoxes.map((b) => b.slot));
+    for (const slot of SUPPLY_SLOTS) {
+      if (kept.has(slot)) continue;
+      await testDb.execute(sql`
+        delete from user_supply_boxes
+        where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID} and slot = ${slot}::slot`);
+    }
+    await testDb.execute(sql`
+      delete from diamond_ledger
+      where user_id = ${TEST_USER_ID}::uuid and id > ${baselineLedgerId.toString()}::bigint
+        and reason = 'checkin'`);
+  }
+
   async function resetState() {
     // 1차 가드: state. 2차 가드: 오늘 KST 로그 row 제거(UNIQUE 위반 회피).
     await testDb.execute(sql`
@@ -31,13 +84,23 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
     `);
   }
 
+  beforeAll(async () => {
+    await snapshotResources();
+  });
+
   beforeEach(async () => {
     await resetState();
+  });
+
+  afterEach(async () => {
+    // 케이스마다 즉시 원복 — 도중에 실패해도 잔재가 한 케이스분을 넘지 않는다.
+    await restoreResources();
   });
 
   afterAll(async () => {
     // 마지막에도 깨끗하게.
     await resetState();
+    await restoreResources();
     await endTestDb();
   });
 
