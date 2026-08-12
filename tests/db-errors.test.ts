@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { isUniqueViolation, pgErrorCode } from '@/lib/db/errors';
+import { isUniqueViolation, pgConstraintName, pgErrorCode } from '@/lib/db/errors';
 
 import { endTestDb, sql, testDb } from './db';
 
@@ -63,5 +63,43 @@ describe('pgErrorCode / isUniqueViolation', () => {
     expect(pgErrorCode(new Error('boom'))).toBeUndefined();
     expect(pgErrorCode(null)).toBeUndefined();
     expect(pgErrorCode('23505')).toBeUndefined(); // 문자열 자체는 에러가 아님
+  });
+
+  /**
+   * 한 문장이 여러 유니크 제약에 걸릴 수 있을 때(가입 캐릭터 INSERT: 닉 유니크 vs PK)
+   * 어느 쪽인지 구분하는 추출기 — server-select.ts가 더블서밋(ALREADY_EXISTS)과
+   * 닉 충돌(NICKNAME_TAKEN)을 가르는 근거다.
+   */
+  it('위반된 제약 이름을 래퍼 너머에서 찾는다 — 이름이 다르면 다르게 나온다', async () => {
+    const grab = async (dupSql: ReturnType<typeof sql>): Promise<unknown> => {
+      try {
+        await testDb.transaction(async (tx) => {
+          await tx.execute(sql`
+            create temp table cn_probe (
+              a int constraint cn_probe_a_uq unique,
+              b int constraint cn_probe_b_uq unique
+            ) on commit drop`);
+          await tx.execute(sql`insert into cn_probe (a, b) values (1, 1)`);
+          await tx.execute(dupSql);
+        });
+        return undefined;
+      } catch (e) {
+        return e;
+      }
+    };
+    const eA = await grab(sql`insert into cn_probe (a, b) values (1, 2)`); // a 충돌
+    const eB = await grab(sql`insert into cn_probe (a, b) values (2, 1)`); // b 충돌
+    expect(isUniqueViolation(eA)).toBe(true);
+    expect(isUniqueViolation(eB)).toBe(true);
+    expect(pgConstraintName(eA)).toBe('cn_probe_a_uq');
+    expect(pgConstraintName(eB)).toBe('cn_probe_b_uq');
+  });
+
+  it('constraint가 없는 에러는 undefined — 커넥션 에러의 문자열 code에 안 속는다', () => {
+    // ECONNREFUSED류도 code가 문자열이라(실측), code 있는 노드에서 멈추는 구현이면 여기서 깨진다.
+    const conn = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+    expect(pgConstraintName(conn)).toBeUndefined();
+    expect(pgConstraintName(new Error('boom'))).toBeUndefined();
+    expect(pgConstraintName(null)).toBeUndefined();
   });
 });

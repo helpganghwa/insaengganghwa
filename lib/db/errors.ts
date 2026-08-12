@@ -29,3 +29,23 @@ export function pgErrorCode(e: unknown): string | undefined {
 export function isUniqueViolation(e: unknown): boolean {
   return pgErrorCode(e) === '23505';
 }
+
+/**
+ * cause 체인에서 위반된 제약 이름(constraint_name) — postgres.js PostgresError의 snake_case 필드.
+ *
+ * 한 문장이 서로 다른 유니크 제약 여러 개에 걸릴 수 있을 때(예: characters INSERT는
+ * characters_nickname_uq와 characters_pkey 둘 다 23505를 낸다) 어느 쪽인지 구분하는 용도.
+ *
+ * ⚠ code가 아니라 **constraint_name이 있는 노드**를 찾는다 — 커넥션 계층 에러도 문자열 code
+ * ("ECONNREFUSED")를 가져서(2026-08-12 실측), code 기준으로 멈추면 엉뚱한 노드에서 끝난다.
+ */
+export function pgConstraintName(e: unknown): string | undefined {
+  let cur: unknown = e;
+  for (let i = 0; i < MAX_CAUSE_DEPTH && cur != null; i += 1) {
+    if (typeof cur !== 'object') return undefined;
+    const o = cur as { constraint_name?: unknown; cause?: unknown };
+    if (typeof o.constraint_name === 'string') return o.constraint_name;
+    cur = o.cause;
+  }
+  return undefined;
+}
