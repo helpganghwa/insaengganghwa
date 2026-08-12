@@ -18,7 +18,15 @@ export const FRIEND_CAP = 30;
 
 export class FriendError extends Error {
   constructor(
-    public code: 'SELF' | 'NOT_FOUND' | 'ALREADY_FRIEND' | 'ALREADY_REQUESTED' | 'CAP_REACHED' | 'NO_REQUEST',
+    public code:
+      | 'SELF'
+      | 'NOT_FOUND'
+      | 'ALREADY_FRIEND'
+      | 'ALREADY_REQUESTED'
+      | 'CAP_REACHED'
+      /** 상대의 친구 목록이 가득 참 — 내 상한과 구분해야 유저가 할 행동이 달라진다. */
+      | 'PEER_CAP_REACHED'
+      | 'NO_REQUEST',
   ) {
     super(code);
     this.name = 'FriendError';
@@ -140,8 +148,42 @@ export async function searchUsers(
   }));
 }
 
+type FriendTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * 링크가 accepted로 바뀌기 직전 **양쪽** 상한을 본다.
+ *
+ * 예전엔 호출자(meId) 쪽만 봤다. 그런데 상한은 요청 시점이 아니라 **수락 시점**에 소모되므로,
+ * 29명일 때 요청 5건을 뿌려 두고 전부 수락받으면 34명이 된다 — 악의도 필요 없는 자연 경로다
+ * (CBT 실측 최대 28명으로 이미 상한에 근접했다). 자동수락(sendRequest)·수락(respondRequest)
+ * 두 경로 모두 상대 쪽이 검사에서 빠져 있었다.
+ *
+ * 호출자에게는 CAP_REACHED, 상대가 가득 찬 경우엔 PEER_CAP_REACHED로 구분해 돌려준다 —
+ * "내가 정리해야 하는가 / 상대가 정리해야 하는가"가 유저에게 완전히 다른 행동이다.
+ */
+async function assertBothUnderCap(
+  tx: FriendTx,
+  meId: string,
+  peerId: string,
+  serverId: number,
+): Promise<void> {
+  if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+  if ((await countAcceptedTx(tx, peerId, serverId)) >= FRIEND_CAP) throw new FriendError('PEER_CAP_REACHED');
+}
+
+/**
+ * 상한 검사를 직렬화하는 유저별 advisory 락 — **정렬 순**으로 잡아 교착을 만들지 않는다.
+ * 쌍 락만으로는 부족하다: 그건 같은 쌍의 중복 행만 막고, 서로 **다른 쌍**의 동시 수락이
+ * 같은 유저의 카운트를 함께 읽어 둘 다 통과하는 것은 못 막는다.
+ */
+async function lockPairUsers(tx: FriendTx, a: string, b: string, serverId: number): Promise<void> {
+  const [lo, hi] = a < b ? [a, b] : [b, a];
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('friend_user:' || ${lo} || ':' || ${String(serverId)}, 0))`);
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('friend_user:' || ${hi} || ':' || ${String(serverId)}, 0))`);
+}
+
 async function countAcceptedTx(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: FriendTx,
   userId: string,
   serverId: number,
 ): Promise<number> {
@@ -180,6 +222,8 @@ export async function sendRequest(
     const lo = meId < targetId ? meId : targetId;
     const hi = meId < targetId ? targetId : meId;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lo} || ${hi} || ${String(serverId)}, 0))`);
+    // 쌍 락은 같은 쌍의 중복만 막는다 — 상한은 **다른 쌍**의 동시 수락과도 경합하므로 유저 락도 잡는다.
+    await lockPairUsers(tx, meId, targetId, serverId);
     const [existing] = await tx
       .select()
       .from(friendLinks)
@@ -196,8 +240,8 @@ export async function sendRequest(
     if (existing) {
       if (existing.status === 'accepted') throw new FriendError('ALREADY_FRIEND');
       if (existing.requesterId === meId) throw new FriendError('ALREADY_REQUESTED');
-      // 상대가 내게 보낸 요청 → 수락 성립.
-      if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+      // 상대가 내게 보낸 요청 → 수락 성립. 링크가 accepted가 되므로 **양쪽** 상한을 본다.
+      await assertBothUnderCap(tx, meId, targetId, serverId);
       await tx
         .update(friendLinks)
         .set({ status: 'accepted', updatedAt: new Date() })
@@ -226,6 +270,8 @@ export async function respondRequest(
   action: 'accept' | 'decline',
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    // 수락이 상한을 소모하므로 sendRequest와 같은 유저 락을 잡는다(정렬 순 — 교착 없음).
+    await lockPairUsers(tx, meId, requesterId, serverId);
     const [row] = await tx
       .select()
       .from(friendLinks)
@@ -251,7 +297,7 @@ export async function respondRequest(
       );
       return;
     }
-    if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+    await assertBothUnderCap(tx, meId, requesterId, serverId);
     await tx
       .update(friendLinks)
       .set({ status: 'accepted', updatedAt: new Date() })

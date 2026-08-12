@@ -43,6 +43,7 @@ const ERR: Record<string, string> = {
   ALREADY_FRIEND: '이미 친구입니다',
   ALREADY_REQUESTED: '이미 요청했습니다',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
+  PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
   NO_REQUEST: '요청이 없어요',
   UNAUTHENTICATED: '로그인이 필요합니다',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요',

@@ -8,6 +8,7 @@ import type { FriendRelation } from '@/lib/game/friends';
 const ERR_MSG: Record<string, string> = {
   RATE_LIMITED: '잠시 후 다시 시도해주세요',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30명)',
+  PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
   NOT_FOUND: '유저를 찾을 수 없습니다',
   SELF: '자기 자신에게는 보낼 수 없습니다',
   UNAUTHENTICATED: '로그인이 필요합니다',
