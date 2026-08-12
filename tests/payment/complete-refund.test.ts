@@ -46,6 +46,12 @@ async function readDiamond(): Promise<bigint> {
   )) as unknown as { d: string }[];
   return BigInt(r[0]?.d ?? '0');
 }
+async function ledgerMaxId(): Promise<bigint> {
+  const r = (await testDb.execute(
+    sql`select coalesce(max(id), 0)::text m from diamond_ledger where user_id = ${TEST_USER_ID}::uuid`,
+  )) as unknown as { m: string }[];
+  return BigInt(r[0]!.m);
+}
 async function readStatus(id: bigint): Promise<string> {
   const r = (await testDb.execute(
     sql`select status::text s from iap_orders where id = ${id.toString()}::bigint`,
@@ -53,9 +59,13 @@ async function readStatus(id: bigint): Promise<string> {
   return r[0]!.s;
 }
 
+// 이 파일이 원장에 남기는 사유 — 지급(iap)·환불 회수(refund_clawback). 다른 스위트는 쓰지 않는다.
+const LEDGER_REASONS = `('iap', 'refund_clawback')`;
+
 describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통합', () => {
   let testStart: Date;
   let baselineDiamond = 0n;
+  let baselineLedgerId = 0n;
 
   beforeAll(() => {
     testStart = new Date();
@@ -63,6 +73,7 @@ describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통�
 
   beforeEach(async () => {
     baselineDiamond = await readDiamond();
+    baselineLedgerId = await ledgerMaxId();
   });
 
   afterEach(async () => {
@@ -89,6 +100,13 @@ describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통�
     await testDb.execute(
       sql`update characters set diamond = ${baselineDiamond.toString()}::bigint where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`,
     );
+    // 잔액만 되돌리면 원장에는 대응 없는 지급/회수 행이 실행마다 3건씩 남는다 — 원장은 지급과
+    // 회수를 대조하는 감사 근거라 잔액과 어긋나는 행이 쌓이면 그 목적이 무너진다.
+    // 워터마크 이후 + 이 파일이 쓰는 사유로 좁혀 **자기가 만든 행만** 지운다.
+    await testDb.execute(sql`
+      delete from diamond_ledger
+      where user_id = ${TEST_USER_ID}::uuid and id > ${baselineLedgerId.toString()}::bigint
+        and reason in ${sql.raw(LEDGER_REASONS)}`);
   });
 
   afterAll(async () => {

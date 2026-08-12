@@ -33,10 +33,19 @@ async function readDiamond(): Promise<bigint> {
   return BigInt(r[0]?.d ?? '0');
 }
 
+async function ledgerMaxId(): Promise<bigint> {
+  const r = (await testDb.execute(
+    sql`select coalesce(max(id), 0)::text m from diamond_ledger where user_id = ${TEST_USER_ID}::uuid`,
+  )) as unknown as { m: string }[];
+  return BigInt(r[0]!.m);
+}
+
 let baselineDiamond: bigint;
+let baselineLedgerId: bigint;
 
 beforeEach(async () => {
   baselineDiamond = await readDiamond();
+  baselineLedgerId = await ledgerMaxId();
 });
 afterEach(async () => {
   await testDb.execute(sql`delete from mail_claim_logs where user_id = ${TEST_USER_ID}::uuid`);
@@ -46,6 +55,12 @@ afterEach(async () => {
   await testDb.execute(
     sql`update characters set diamond = ${baselineDiamond.toString()}::bigint where user_id = ${TEST_USER_ID}::uuid and server_id = ${SID}`,
   );
+  // 잔액만 되돌리면 대응 없는 지급 행이 실행마다 4건씩 원장에 남는다 — 감사(지급↔회수 대조)
+  // 목적을 흐리므로 워터마크 이후 + 이 파일이 쓰는 사유(mail_claim)로 좁혀 자기 행만 지운다.
+  await testDb.execute(sql`
+    delete from diamond_ledger
+    where user_id = ${TEST_USER_ID}::uuid and id > ${baselineLedgerId.toString()}::bigint
+      and reason = 'mail_claim'`);
 });
 afterAll(async () => {
   await endTestDb();

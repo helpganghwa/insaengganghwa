@@ -148,7 +148,8 @@ describe.skipIf(skip)('강화 동시성 가드 — DB 통합', () => {
     // 잔액이 모자란 계정에서도 돌도록 필요한 만큼만 채우고 finally에서 원복(영구 변동 0).
     const toppedUp = before0 < BigInt(COST) ? BigInt(COST) - before0 : 0n;
     if (toppedUp > 0n) await addDiamond(toppedUp);
-    const before = before0 + toppedUp;
+    // 아래 단정이 **이 테스트가 태운 분**만 보게 하는 워터마크(레이스 직전 기준점).
+    const gemFrom = await gemMaxId();
 
     let spent = 0n;
     try {
@@ -168,7 +169,25 @@ describe.skipIf(skip)('강화 동시성 가드 — DB 통합', () => {
       if (reduceOk) expect(reduced.value.reducedMs).toBe(COST * GEM_TO_MS);
 
       // 다이아 정합 — 단축이 이겼을 때만 정확히 COST 차감.
-      expect(await readDiamond()).toBe(before - spent);
+      //
+      // 지갑 **절대 잔액은 보지 않는다**: characters.diamond는 공유 테스트 계정의 단일 행이라
+      // before를 읽은 뒤 이 단정까지의 창에 외부 변동이 하나만 끼어도 실측이 흔들린다
+      // (원장 없는 raw UPDATE로 들어오면 사후 식별조차 안 된다).
+      // 대신 **차감과 같은 트랜잭션**에서만 생기는 gem_time_reductions를 워터마크 이후로 센다.
+      // 이 경로는 diamond_ledger 제외 사유(enhance_reduce, lib/game/ledger.ts LEDGER_SKIP_REASONS)
+      // 라서 원장 역할을 이 테이블이 대신한다. walletTrySpend가 false면 tx 전체가 롤백돼 행도
+      // 남지 않으므로 "행 있음 ⟺ gems_spent만큼 실제 차감"이 성립한다
+      // (walletTrySpend 자체의 차감 산술은 tests/wallet.test.ts가 롤백 격리로 따로 지킨다).
+      const gemSince = (await testDb.execute(sql`
+        select count(*)::int c, coalesce(sum(gems_spent), 0)::text s
+        from gem_time_reductions
+        where user_id = ${TEST_USER_ID}::uuid and id > ${gemFrom.toString()}::bigint`)) as unknown as {
+        c: number;
+        s: string;
+      }[];
+      expect(Number(gemSince[0]?.c)).toBe(reduceOk ? 1 : 0); // 이중 과금은 2건으로 드러난다
+      expect(BigInt(gemSince[0]?.s ?? '0')).toBe(spent);
+
       const gem = (await testDb.execute(sql`
         select count(*)::int c, coalesce(sum(gems_spent), 0)::text s
         from gem_time_reductions where job_id = ${jobId.toString()}::bigint`)) as unknown as {
@@ -177,6 +196,12 @@ describe.skipIf(skip)('강화 동시성 가드 — DB 통합', () => {
       }[];
       expect(Number(gem[0]?.c)).toBe(reduceOk ? 1 : 0);
       expect(BigInt(gem[0]?.s ?? '0')).toBe(spent);
+
+      // 태운 만큼 잡도 당겨졌는지 — 같은 tx의 나머지 절반. 차감만 되고 시간이 그대로면 순수 손해다.
+      const job = (await testDb.execute(sql`
+        select total_reduced_ms::text r from enhancement_jobs
+        where id = ${jobId.toString()}::bigint`)) as unknown as { r: string }[];
+      expect(BigInt(job[0]!.r)).toBe(spent * BigInt(GEM_TO_MS));
     } finally {
       // 소모분 환급 + 채운 분 회수 — 공유 계정 잔액을 영구히 바꾸지 않는다.
       if (spent !== 0n || toppedUp !== 0n) await addDiamond(spent - toppedUp);
@@ -217,6 +242,14 @@ describe.skipIf(skip)('강화 동시성 가드 — DB 통합', () => {
       d: string;
     }[];
     return BigInt(r[0]?.d ?? '0');
+  }
+
+  /** 워터마크 기준점 — 이 값 이후 행만 "이번 레이스가 만든 것". */
+  async function gemMaxId(): Promise<bigint> {
+    const r = (await testDb.execute(sql`
+      select coalesce(max(id), 0)::text m from gem_time_reductions
+      where user_id = ${TEST_USER_ID}::uuid`)) as unknown as { m: string }[];
+    return BigInt(r[0]!.m);
   }
 
   /** 잔액 보정 전용(원장 미기록) — enhance_reduce 자체가 원장 제외 사유라 정합이 어긋나지 않는다. */
