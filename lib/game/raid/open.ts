@@ -118,10 +118,17 @@ export function openRaid(input: {
     : RAID_WINDOW_MS;
 
   return db.transaction(async (tx) => {
+    // ⚠ 순서 주의 — 동시 상한 검사는 반드시 bumpDailyOrThrow **뒤에** 온다(2026-08-11).
+    // activeRaidCount는 잠금 없는 count라 앞에 두면 동시 요청이 전부 같은 값을 읽고 통과한다
+    // (일일 상한은 그 갭 락 문제를 선행 upsert로 이미 막아뒀는데 이쪽만 남아 있었다).
+    // bumpDailyOrThrow가 유저별 행을 FOR UPDATE로 잠그므로, 그 뒤에서 세면 락 대기 후
+    // 커밋된 값을 본다(READ COMMITTED). 검사 실패 시 증가분은 같은 트랜잭션이라 롤백된다.
+    // 잔여 — activeRaidCount는 서버 무관 전수인데 일일 행은 서버별이라, 서로 다른 서버로
+    // 동시 요청하면 직렬화되지 않는다(현재 1서버라 미발현).
+    await bumpDailyOrThrow(tx, userId, input.serverId);
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
-    await bumpDailyOrThrow(tx, userId, input.serverId);
 
     // 개설비 차감 — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
     const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND, 'raid_open');
