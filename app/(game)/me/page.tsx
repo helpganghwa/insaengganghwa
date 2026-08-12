@@ -83,7 +83,11 @@ export default async function ProfilePage() {
           z.name as executor_zone, z.region::text as executor_zone_region,
           c.representative_title_code,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
-          (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
+          -- 차단 관계 제외 — 목록(getRequests)과 같은 기준. 다르면 숫자 배지만 남는 유령이 된다.
+          (select count(*)::int from friend_links f where f.status = 'pending' and f.addressee_id = ${userId}::uuid and f.server_id = ${serverId}
+             and not exists (select 1 from chat_blocks b
+               where (b.user_id = ${userId}::uuid and b.blocked_user_id = f.requester_id)
+                  or (b.user_id = f.requester_id and b.blocked_user_id = ${userId}::uuid))) as friend_req_count,
           -- 메뉴 우측 상태값(2026-08-02) — 프로필은 허브라 '어디로 갈지'를 여기서 정한다.
           -- 이미 도는 단일 쿼리에 서브쿼리로 얹어 왕복은 늘리지 않는다(CLAUDE §11.4).
           (select count(*)::int from friend_links

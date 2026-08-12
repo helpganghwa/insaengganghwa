@@ -121,8 +121,13 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       // 친구 받은 요청 존재 여부.
       pgGuard(
         (sql) => sql`
-          select 1 from friend_links
-          where addressee_id = ${userId}::uuid and server_id = ${serverId} and status = 'pending'
+          select 1 from friend_links f
+          where f.addressee_id = ${userId}::uuid and f.server_id = ${serverId} and f.status = 'pending'
+            -- 차단 관계 제외 — 요청 목록(getRequests)이 같은 기준으로 거르므로, 배지만 세면
+            -- "점은 켜지는데 목록은 빈" 유령 배지가 된다(2026-08-12 전수 재검수).
+            and not exists (select 1 from chat_blocks b
+              where (b.user_id = ${userId}::uuid and b.blocked_user_id = f.requester_id)
+                 or (b.user_id = f.requester_id and b.blocked_user_id = ${userId}::uuid))
           limit 1`,
         4000,
         'layout.friendreq',
