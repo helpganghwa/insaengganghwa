@@ -47,16 +47,25 @@ const num = (n: number) => n.toLocaleString('ko-KR');
  *    이미 수령한 우편분은 의도적으로 자동 회수 대상이 아니다(운영 수동, grant.ts 참조).
  *  - 배틀패스 구간: 회수 대상이 '구간 권리'(row 삭제)라 결제액·지급액이 곧 회수액이 아니다.
  *    실제로 회수되는 재화는 **이미 수령한 프리미엄 마일스톤 보상**뿐 — 미수령 구간이면 0.
+ *
+ * lock=true(환불 tx 안)면 배틀패스 구간 행을 FOR UPDATE로 잠근다 — 아래 두 가지를 동시에 해결한다.
+ *  ① 교착 회피: 수령 경로(claimSegment·claimPremiumTier…)는 **구간 → 캐릭터** 순으로 잠근다.
+ *     환불이 readHoldings(characters)를 먼저 잠그고 reclaimBpSegment에서 구간을 잠그면 정확히
+ *     역순이라, 같은 유저에게 환불과 수령이 겹치는 순간 한쪽이 40P01(deadlock_detected)로 죽는다. 여기서 먼저
+ *     잠그면 환불도 **구간 → 캐릭터**가 되어 순환이 사라진다.
+ *  ② 회수액 정합: 잠그지 않으면 이 시점의 tiers로 need를 계산하고 reclaimBpSegment는 그 뒤
+ *     새로 읽은 tiers로 회수해, 그 사이 수령이 커밋되면 부족분 판정(preview)이 실제와 어긋난다.
  */
 async function clawbackNeed(
   exec: Reader,
   userId: string,
   serverId: number,
   productCode: string,
+  lock: boolean,
 ): Promise<{ diamond: number; boxes: number }> {
   const bp = parseBpProduct(productCode);
   if (bp) {
-    const [seg] = await exec
+    const segQ = exec
       .select({ tiers: battlePassSegments.premiumClaimedTiers })
       .from(battlePassSegments)
       .where(
@@ -68,6 +77,7 @@ async function clawbackNeed(
         ),
       )
       .limit(1);
+    const [seg] = lock ? await segQ.for('update') : await segQ;
     if (!seg) return { diamond: 0, boxes: 0 }; // 미구매/이미 환불 — 회수할 것 없음.
     let total = 0;
     for (const tl of seg.tiers) total += bpTierReward(bp.type, tl, true);
@@ -99,6 +109,7 @@ async function readHoldings(
     .from(userSupplyBoxes)
     .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.serverId, serverId)));
   // 잠금 순서는 회수가 쓰는 순서(characters → user_supply_boxes)와 동일 — 교착 회피.
+  // ⚠ 배틀패스 구간 행은 이 함수 **이전에** 잠겨 있어야 한다(clawbackNeed lock=true 주석 ①).
   const [ch] = lock ? await charQ.for('update') : await charQ;
   const boxes = lock ? await boxQ.for('update') : await boxQ;
   return {
@@ -131,7 +142,7 @@ export async function previewClawback(
   productCode: string,
 ): Promise<ClawbackPreview> {
   const [need, have] = await Promise.all([
-    clawbackNeed(db, userId, serverId, productCode),
+    clawbackNeed(db, userId, serverId, productCode, false), // 사전조회 — tx 밖이라 잠그지 않는다.
     readHoldings(db, userId, serverId, false),
   ]);
   return toPreview(need, have);
@@ -210,7 +221,9 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
       } else {
         // 회수 직전 잔액을 잠그고 부족분을 산정 — 회수는 0 클램프라 사후엔 얼마가 모자랐는지 알 수 없다.
         // 회수 대상이 없는 상품(프리미엄·미수령 배틀패스)은 잔액을 볼 필요도 잠글 필요도 없다.
-        const need = await clawbackNeed(tx, order.userId, order.serverId, order.productCode);
+        // lock=true — 배틀패스 구간이면 여기서 구간 행을 잠근다. 수령 경로와 잠금 순서를
+        // 맞추기 위해 **readHoldings보다 먼저** 와야 한다(clawbackNeed 주석 ①).
+        const need = await clawbackNeed(tx, order.userId, order.serverId, order.productCode, true);
         const have =
           need.diamond > 0 || need.boxes > 0
             ? await readHoldings(tx, order.userId, order.serverId, true)
