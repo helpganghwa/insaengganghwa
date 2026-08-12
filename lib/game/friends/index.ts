@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, or, eq, ne, ilike, inArray, isNull, sql } from 'drizzle-orm';
+import { and, or, eq, ne, ilike, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { friendLinks } from '@/lib/db/schema/friends';
@@ -111,10 +111,13 @@ export async function searchUsers(
     .where(
       and(
         ne(profiles.id, meId),
-        // 정지 계정 제외 — 본인은 actionBlock으로 아무것도 못 하므로 친구가 돼도 무력한데,
+        // **활성** 정지만 제외 — 본인은 actionBlock으로 아무것도 못 하므로 친구가 돼도 무력한데,
         // 검색에 뜨면 상대의 친구 슬롯만 쓰고 목록에 남는다. 탈퇴 계정은 characters가 지워져
         // innerJoin에서 이미 빠진다(별도 필터 불필요).
-        isNull(profiles.bannedAt),
+        // ⚠ banned_at만 보면 안 된다 — 기간 정지는 만료돼도 banned_at이 남고 판정만 동적으로
+        // 풀린다(ban.ts). 3일 정지가 끝나 정상 플레이 중인 유저가 검색에서 영영 사라진다.
+        // 판정 기준은 리더보드(snapshot.ts)와 동일하게 맞춘다.
+        or(isNull(profiles.bannedAt), lte(profiles.banUntil, sql`now()`)),
         or(ilike(characters.nickname, `%${safe}%`), eq(profiles.publicCode, q)),
       ),
     )
@@ -428,7 +431,10 @@ export async function getRequests(
     profilesByIds(incomingIds, serverId),
     profilesByIds(outgoingIds, serverId),
   ]);
-  return { incoming, outgoing };
+  // 요청 목록의 상대는 **아직 친구가 아니다** — 검색에서 마지막 접속을 가려 놓고 여기서 그대로
+  // 내보내면 "요청 보내고 보낸 탭 읽기"로 우회된다(2026-08-12 재검증). 같은 기준을 적용한다.
+  const hideSeen = (u: FriendUser): FriendUser => ({ ...u, lastSeenAt: null });
+  return { incoming: incoming.map(hideSeen), outgoing: outgoing.map(hideSeen) };
 }
 
 /**

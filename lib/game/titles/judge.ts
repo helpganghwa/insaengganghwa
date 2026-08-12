@@ -201,16 +201,28 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
      * 무료 수급은 유료 유입(iap·유료 패스 보상)과 **환불 반환**을 뺀 것. 환불은 되돌려받은
      * 것이지 새로 수급한 게 아니라 '티끌 모아 태산'의 취지에 맞지 않는다.
      *
+     * ⚠ 소비 쪽에서도 refund_clawback(결제 환불 시 지급분 회수)을 뺀다. 이건 유저가 쓴 게 아니라
+     * 우리가 되가져간 것이다. 빼지 않으면 "10만원 패키지 결제 후 환불"만으로 실소비 0인 계정에
+     * 올인(하루 10만 소비)이 붙는다 — 실제로 스테이징 테스트 계정의 일일 최대 소비 11,100이
+     * 전액 이 회수분이었다(2026-08-12 재검증에서 발견).
+     *
+     * ⚠ 아직 원장에 안 남는 지출이 하나 더 있다 — 닉네임 변경(첫 변경 무료, 이후 300💎)이
+     * 지갑 헬퍼를 거치지 않고 raw UPDATE로 깎는다. 그만큼 소비가 과소 집계된다(별건으로 남김).
+     *
      * from 절 없이 스칼라 서브쿼리만 쓴다 — 원장 행이 0인 신규 유저도 한 행을 돌려받아야 한다.
      */
     db.execute(sql`
       select
-        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0),0)::bigint as dia_gained,
+        -- 환불 반환(avatar_refund·emblem_refund)은 '획득'이 아니다 — 아바타 생성→거절 루프로
+        -- 누적 획득을 부풀릴 수 있어 dia_free와 같은 기준으로 뺀다.
+        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
+                    and reason not in ('avatar_refund','emblem_refund')),0)::bigint as dia_gained,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                     and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')),0)::bigint as dia_free,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                     and created_at >= now() - interval '10 days'),0)::bigint as gained10,
         coalesce((select sum(-delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
+                    and reason <> 'refund_clawback'
                     and created_at >= now() - interval '10 days'),0)::bigint as spent10,
         coalesce((select sum(gems_spent) from gem_time_reductions where user_id=${u} and server_id=${s}
                     and created_at >= now() - interval '10 days'),0)::bigint as gem10,
@@ -218,6 +230,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
           select sum(v) as t from (
             select (created_at ${sql.raw(KST)})::date as d, -delta as v
               from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
+                and reason <> 'refund_clawback'
             union all
             select (created_at ${sql.raw(KST)})::date, gems_spent
               from gem_time_reductions where user_id=${u} and server_id=${s}
@@ -232,8 +245,11 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             and j.action = 'join' and j.created_at > l.created_at
           where l.action = 'leave' and l.actor_user_id = ${u} and l.server_id = ${s}
         ))::int as homecoming,
-        coalesce(extract(epoch from (now() - (select max(created_at) from guild_audit_log
-          where actor_user_id = ${u} and server_id = ${s} and action = 'leave'))) / 86400, -1)::float as since_leave,
+        -- 마지막 이탈 시각은 guild_leave_log가 정본 — guild_audit_log의 action='leave'는
+        -- actor 기준이라 **추방(kick, actor=추방자)과 해산 피해자가 빠진다**. 그 경우 -1로 읽혀
+        -- 캐릭터 생성일 폴백을 타고 "길드 없이 7일"이 즉시 성립했다(2026-08-12 재검증).
+        coalesce(extract(epoch from (now() - (select max(left_at) from guild_leave_log
+          where user_id = ${u} and server_id = ${s}))) / 86400, -1)::float as since_leave,
         -- 골목대장 — 내 거주 구역 주민 중 전투력 1위인 동안. 거주지가 없으면 대상 아님.
         (exists(
           select 1 from characters me
