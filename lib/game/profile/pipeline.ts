@@ -97,6 +97,17 @@ const STORAGE_BUCKET = 'profiles';
  */
 const PROFILE_GEN_TIMEOUT_MIN = 20;
 
+/**
+ * 폴링 한 번의 벽시계 예산(ms). 크론 maxDuration 90초를 drainQueue(35초)와 나눠 쓴다.
+ * 한 건이 다운로드 + vision 검토 + sharp + 업로드 + 트랜잭션이라 완성 잡이 몰리면 5건만으로도
+ * 이 예산을 넘긴다. 절단은 무해하다 — 남은 잡은 downloading으로 남아 다음 tick(2분)이 잇고,
+ * 검토 결과는 이미 잡에 기록돼 재호출이 무료다.
+ *
+ * ⚠ drainQueue의 예산과 같은 한계 — 검사가 **각 건 시작 전**에만 이뤄져 진행 중이던 한 건만큼은
+ * 넘칠 수 있다. 정확한 상한이 아니라 무한정 돌지 않게 하는 장치다.
+ */
+const POLL_BUDGET_MS = 45_000;
+
 /** PNG 매직 넘버(89 50 4E 47) 검증 — pixellab이 404 JSON/빈 파일을 줄 때 깨진 업로드 방지. */
 function isPng(buf: Buffer): boolean {
   return (
@@ -133,8 +144,13 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
   rejected: number;
   failed: number;
   stillProcessing: number;
+  /** 예산에 걸려 남은 잡을 다음 tick으로 넘겼는지 — 조용한 절단이 되지 않도록 응답에 싣는다. */
+  budgetHit: boolean;
 }> {
   if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
+
+  const started = Date.now();
+  let budgetHit = false;
 
   const due = await db
     .select({
@@ -161,6 +177,11 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
   let stillProcessing = 0;
 
   for (const job of due) {
+    // 예산 초과 — 남은 잡은 downloading으로 남아 다음 tick이 잇는다(검토 결과가 이미 기록돼 재개가 싸다).
+    if (Date.now() - started > POLL_BUDGET_MS) {
+      budgetHit = true;
+      break;
+    }
     if (!job.characterId) {
       await markFailedAndRefund(job.id, job.userId, 'Pixellab character_id missing');
       failed += 1;
@@ -305,7 +326,12 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     }
   }
 
-  return { polled: due.length, accepted, rejected, failed, stillProcessing };
+  if (budgetHit) {
+    console.warn(
+      `[profile-poll] budget hit after ${Date.now() - started}ms — polled=${accepted + rejected + failed + stillProcessing}/${due.length}, 나머지는 다음 tick`,
+    );
+  }
+  return { polled: due.length, accepted, rejected, failed, stillProcessing, budgetHit };
 }
 
 // ─── helpers ───

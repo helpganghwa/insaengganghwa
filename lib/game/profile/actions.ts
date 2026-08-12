@@ -102,14 +102,16 @@ export async function createProfileJob(
   const cost = profileGenPrice(await hasGeneratedCustomAvatar(userId, serverId));
 
   return db.transaction(async (tx) => {
-    // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.
-    const paid = await walletTrySpend(tx, userId, serverId, cost, 'avatar_create');
-    if (!paid) {
-      throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
-    }
-
-    // 4. Job INSERT — UNIQUE 부분 인덱스(profile_gen_one_active_per_user)가
-    //    유저당 활성 큐 1건 보장. 위반 시 Postgres 23505.
+    // 3. Job INSERT — UNIQUE 부분 인덱스(profile_gen_one_active_per_user)가
+    //    (유저, 서버)당 활성 큐 1건 보장. 위반 시 Postgres 23505.
+    //
+    // ⚠ 차감보다 **먼저** 넣는다. 원장 ref를 `job:<id>`로 남기려면 그 시점에 id가 있어야 하고,
+    // 분쟁 조사는 "이 생성이 받아간 것과 되돌려준 것"을 맞춰보는 일이라 차감과 환불(4경로 전부
+    // 이미 job:<id>를 남긴다)이 같은 축으로 묶여야 한다.
+    // 원자성은 그대로다 — 어느 쪽이 실패해도 트랜잭션 전체가 롤백된다. 오히려 동시 요청에
+    // 더 낫다: 예전 순서는 둘 다 차감한 뒤 뒤엣것이 23505로 롤백됐는데, 이제 뒤엣것은
+    // 유니크 인덱스에서 막혀 **차감 자체를 하지 않는다**.
+    let jobId: bigint;
     try {
       const [job] = await tx
         .insert(profileGenerationJobs)
@@ -123,12 +125,19 @@ export async function createProfileJob(
           status: 'queued',
         })
         .returning({ id: profileGenerationJobs.id });
-      return { jobId: String(job!.id), estimatedMinutes: 6 };
+      jobId = job!.id;
     } catch (e) {
       if (isUniqueViolation(e)) {
         throw new CreateProfileJobError('PROFILE_GEN_IN_PROGRESS');
       }
       throw e;
     }
+
+    // 4. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감 → 위 INSERT까지 롤백.
+    const paid = await walletTrySpend(tx, userId, serverId, cost, 'avatar_create', `job:${jobId}`);
+    if (!paid) {
+      throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
+    }
+    return { jobId: String(jobId), estimatedMinutes: 6 };
   });
 }

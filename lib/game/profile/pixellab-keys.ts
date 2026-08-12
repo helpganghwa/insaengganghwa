@@ -6,11 +6,24 @@ import 'server-only';
 
 import { PROFILE_GEN_PER_KEY } from '@/lib/game/balance';
 
-/** 키 인덱스(1|2) → 실제 키. idx 2가 미설정이면 key1로 폴백(항상 안전). */
+/**
+ * 키 인덱스(1|2) → 실제 키. idx 2가 미설정이면 key1로 폴백한다.
+ *
+ * ⚠ 폴백은 **새 발주엔 안전하지만 진행 중인 잡엔 안전하지 않다.** 캐릭터는 생성한 키의 계정에
+ * 귀속돼 다른 키로 조회하면 404가 나고, 폴링은 그것을 '캐릭터 없음'으로 읽어 환불 처리한다 —
+ * Pixellab 과금은 이미 끝난 뒤다. key2로 발주된 잡이 떠 있는 상태에서 env를 내리고 재배포하면
+ * 조용히 벌어지므로(Vercel은 env를 배포 시점에 스냅샷한다) 반드시 흔적을 남긴다.
+ * 던지지는 않는다 — 이 함수는 폴링 배치 루프 안에서 불려, 던지면 무관한 잡까지 같이 멈춘다.
+ */
 export function pixellabKeyByIdx(idx: number): string {
   const k1 = process.env.PIXELLAB_API_KEY;
   const k2 = process.env.PIXELLAB_API_KEY_2;
-  if (idx === 2 && k2) return k2;
+  if (idx === 2) {
+    if (k2) return k2;
+    console.error(
+      '[pixellab-keys] key2로 발주된 잡인데 PIXELLAB_API_KEY_2가 없다 — key1 폴백(404→환불 위험). env를 되돌리고 재배포할 것.',
+    );
+  }
   if (!k1) throw new Error('PIXELLAB_API_KEY missing');
   return k1;
 }
