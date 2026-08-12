@@ -542,10 +542,16 @@ export async function reclaimBpSegment(
     eq(battlePassSegments.passType, type),
     eq(battlePassSegments.segmentIndex, segmentIndex),
   );
+  // FOR UPDATE — 수령 5경로(claimFree·claimFreeTier·claimPremium·claimPremiumTier·claimSegment)는
+  // 전부 이 행을 잠그는데 환불만 잠그지 않고 읽고 있었다(2026-08-12). 그 사이 수령이 커밋되면
+  // 회수는 **읽은 시점의** tiers로 계산하고 삭제는 새로 받은 단계까지 지워, 유저가 한 단계분
+  // 보상을 그대로 갖는다(과소 회수). 어드민 경로는 수령분이 있으면 애초에 차단하므로 실제 창은
+  // "미수령 구간을 환불하는 중에 유저가 마침 수령"뿐이지만, 돈이 움직이는 경로라 맞춰 둔다.
   const [seg] = await tx
     .select({ tiers: battlePassSegments.premiumClaimedTiers })
     .from(battlePassSegments)
     .where(cond)
+    .for('update')
     .limit(1);
   if (!seg) return; // 미구매/이미 환불.
 
