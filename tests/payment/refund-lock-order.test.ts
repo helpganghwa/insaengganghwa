@@ -47,23 +47,33 @@ async function ledgerMaxId(): Promise<bigint> {
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * 환불 트랜잭션이 battlepass_segments 잠금에서 실제로 **대기 중**이 될 때까지 기다린다.
+ * 환불 트랜잭션이 파킹 백엔드가 쥔 잠금에서 실제로 **대기 중**이 될 때까지 기다린다.
  * 고정 sleep으로 찍으면 아직 그 지점에 도달하지 못한 경우와 구분되지 않아, 잠금 대기 자체를 본다.
+ *
+ * 판정을 pg_blocking_pids로 좁힌 이유: 공유 스테이징이라 "battlepass_segments를 건드리며 Lock을
+ * 기다리는 백엔드"만 보면 **무관한 남의 대기**를 우리 환불로 오인할 수 있다. 오인이 환불이
+ * characters에 닿기 전에 일어나면 회귀가 있어도 프로브가 먼저 통과해 조용히 미검출된다.
+ * "우리 파킹 트랜잭션이 막고 있는 백엔드"로 물으면 그 창이 사라진다.
  */
-async function waitUntilBlockedOnSegments(timeoutMs = 10_000): Promise<boolean> {
+async function waitUntilBlockedBy(blockerPid: number, timeoutMs = 10_000): Promise<boolean> {
   const t0 = Date.now();
   while (Date.now() - t0 < timeoutMs) {
     const r = await testDb.execute(sql`
       select count(*)::int n from pg_stat_activity
-      where pid <> pg_backend_pid()
-        and wait_event_type = 'Lock' and query ilike '%battlepass_segments%'`);
+      where pid <> pg_backend_pid() and ${blockerPid} = any(pg_blocking_pids(pid))`);
     if (one<{ n: number }>(r).n > 0) return true;
     await wait(50);
   }
   return false;
 }
 
-async function cleanup(baselineDiamond: bigint, ledgerFrom: bigint) {
+/**
+ * ⚠ baseline이 **null이면 그 복원은 건너뛴다.** vitest는 beforeAll이 던지거나 타임아웃해도
+ * afterAll을 실행한다(실측). 초기값을 0n으로 두면 준비 단계가 풀러 지연으로 넘어졌을 때
+ * "잔액을 0으로 덮어쓰고 원장을 전삭제하는" 정리가 돌아, 공유 테스트 계정을 파괴한다.
+ * 이 프로젝트에 실재하는 beforeAll 타임아웃 플레이크와 정확히 겹치는 조건이다.
+ */
+async function cleanup(baselineDiamond: bigint | null, ledgerFrom: bigint | null) {
   // 접두어로 쓸어 담는다 — 이 파일이 만드는 주문은 전부 test_lockorder_*라, 죽은 실행이 남긴
   // 것까지 같이 정리된다(주문 id를 못 잡은 경우 대비).
   await testDb.execute(sql`
@@ -74,17 +84,21 @@ async function cleanup(baselineDiamond: bigint, ledgerFrom: bigint) {
     delete from battlepass_segments
     where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
       and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}`);
-  await testDb.execute(sql`
-    delete from diamond_ledger
-    where user_id = ${TEST_USER_ID}::uuid and id > ${ledgerFrom.toString()}::bigint
-      and reason = 'refund_clawback'`);
+  if (ledgerFrom !== null) {
+    await testDb.execute(sql`
+      delete from diamond_ledger
+      where user_id = ${TEST_USER_ID}::uuid and id > ${ledgerFrom.toString()}::bigint
+        and reason = 'refund_clawback'`);
+  }
   await testDb.execute(sql`
     delete from mailbox
     where user_id = ${TEST_USER_ID}::uuid and type = 'notice' and title = '결제 환불 안내'`);
   await testDb.execute(sql`delete from payment_alerts where payment_id = ${PAYMENT_ID}`);
-  await testDb.execute(sql`
-    update characters set diamond = ${baselineDiamond.toString()}::bigint
-    where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
+  if (baselineDiamond !== null) {
+    await testDb.execute(sql`
+      update characters set diamond = ${baselineDiamond.toString()}::bigint
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
+  }
 }
 
 /**
@@ -99,17 +113,17 @@ async function cleanup(baselineDiamond: bigint, ledgerFrom: bigint) {
  * FOR UPDATE NOWAIT로 즉시 판정한다. 순서가 뒤집혀 있으면 이 시점에 characters는 이미 잠겨 있다.
  */
 describe.skipIf(skip)('환불 잠금 순서 — 배틀패스 구간을 characters보다 먼저 잠근다', () => {
-  let baselineDiamond = 0n;
-  let ledgerFrom = 0n;
+  let baselineDiamond: bigint | null = null;
+  let ledgerFrom: bigint | null = null;
 
   beforeAll(async () => {
-    baselineDiamond = await readDiamond();
+    const d = await readDiamond();
+    // 잔액이 회수분보다 적으면 REFUND_CLAWBACK_SHORT로 갈라져, 이 테스트가 보려는 잠금 순서가
+    // 아니라 부족분 처리를 재게 된다. 얹어서 맞추지 않고 **전제**로 둔다 — 얹으면 프로세스가
+    // 강제 종료됐을 때 그 증분이 계정에 그대로 남는다.
+    if (d < RECLAIM_DIAMOND) throw new Error(`테스트 계정 다이아 부족: ${d} < ${RECLAIM_DIAMOND}`);
+    baselineDiamond = d;
     ledgerFrom = await ledgerMaxId();
-    // 회수분(500💎)을 미리 얹어 둔다 — 부족하면 REFUND_CLAWBACK_SHORT 경로로 갈라져
-    // 이 테스트가 보려는 잠금 순서가 아니라 부족분 처리를 재는 테스트가 된다.
-    await testDb.execute(sql`
-      update characters set diamond = diamond + ${RECLAIM_DIAMOND.toString()}::bigint
-      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
     await testDb.execute(sql`
       insert into battlepass_segments (user_id, server_id, pass_type, segment_index, premium_claimed_tiers)
       values (${TEST_USER_ID}::uuid, ${SERVER_ID}, 'enhance', ${SEGMENT_INDEX}, ${tiersJson}::jsonb)
@@ -138,16 +152,24 @@ describe.skipIf(skip)('환불 잠금 순서 — 배틀패스 구간을 character
     const gate = new Promise<void>((r) => {
       release = r;
     });
+    let onParked!: (pid: number) => void;
+    const parkedPid = new Promise<number>((r) => {
+      onParked = r;
+    });
 
-    // 구간 행을 밖에서 붙잡아 환불을 그 지점에 세운다.
+    // 구간 행을 밖에서 붙잡아 환불을 그 지점에 세운다. 자기 backend pid를 먼저 뽑아 두는 건
+    // 아래 프로브가 "이 백엔드에 막힌 놈"만 세기 위함이다(waitUntilBlockedBy 주석 참조).
     const parked = testDb.transaction(async (ptx) => {
+      const p = await ptx.execute(sql`select pg_backend_pid()::int pid`);
       await ptx.execute(sql`
         select 1 from battlepass_segments
         where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
           and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}
         for update`);
+      onParked(one<{ pid: number }>(p).pid);
       await gate;
     });
+    const blockerPid = await parkedPid;
 
     // .catch로 미리 감싸 reject를 삼킨다 — 아래 finally에서 **반드시 정착까지 기다리기** 위함이다.
     // 단정이 던지면 이 프라미스를 기다리지 않은 채 afterAll 정리가 먼저 돌아, 뒤늦게 커밋된
@@ -155,7 +177,7 @@ describe.skipIf(skip)('환불 잠금 순서 — 배틀패스 구간을 character
     const refunding = refundPurchase(PAYMENT_ID).catch((e: unknown) => e);
     let settled: unknown;
     try {
-      expect(await waitUntilBlockedOnSegments()).toBe(true);
+      expect(await waitUntilBlockedBy(blockerPid)).toBe(true);
 
       // 핵심 단정 — 이 시점에 characters가 자유로우면 환불이 구간을 먼저 잠갔다는 뜻이다.
       // 순서가 뒤집혀 있으면 이미 잠겨 있어 55P03(lock_not_available)이 난다.
@@ -182,6 +204,6 @@ describe.skipIf(skip)('환불 잠금 순서 — 배틀패스 구간을 character
       where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
         and pass_type = 'enhance' and segment_index = ${SEGMENT_INDEX}`);
     expect(one<{ n: number }>(seg).n).toBe(0); // 구간 권리 회수(재잠금)
-    expect(await readDiamond()).toBe(baselineDiamond); // 500💎 지급분 전액 회수
+    expect(await readDiamond()).toBe(baselineDiamond! - RECLAIM_DIAMOND); // 500💎 지급분 전액 회수
   }, 30_000);
 });
