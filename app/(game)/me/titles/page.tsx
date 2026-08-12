@@ -7,14 +7,18 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
-import { discoverTitles } from '@/lib/game/titles/judge';
+import { discoverTitles, isHiddenPendingTitle } from '@/lib/game/titles/judge';
 
 import { TitlesClient, type TitleRow } from './TitlesClient';
 
 /**
- * 칭호 목록 — 노출 정책(TITLES.md §3.5): 전 칭호의 **이름은 항상 공개**, 조건은
- * **발견한 것만** 서버가 내려준다. 미발견 조건은 payload에 아예 싣지 않는다.
+ * 칭호 목록 — 노출 정책(TITLES.md §3.5): 칭호의 **이름은 공개**, 조건은 **발견한 것만**
+ * 서버가 내려준다. 미발견 조건은 payload에 아예 싣지 않는다.
  * 진입 시 lazy 발견 판정(discoverTitles) — 도전과제와 같은 상태 파생 철학.
+ *
+ * 예외 하나 — 판정이 아직 없는 칭호(PENDING)는 미보유 시 이름도 내리지 않는다. 얻을 수 없는
+ * 것을 "아직 못 얻은 것"과 같은 모습으로 두면 분모만 채우고 게이지가 닿지 않는다(judge.ts
+ * isHiddenPendingTitle). 판정이 붙는 순간 그대로 목록에 나타난다.
  */
 export default async function TitlesPage() {
   const userId = await getSessionUserId();
@@ -47,7 +51,12 @@ export default async function TitlesPage() {
   const ledger = new Map((r?.ledger ?? []).map((l) => [l.title_code, l.earned_at]));
   const active = r?.active ?? new Set<string>();
 
-  const rows: TitleRow[] = TITLE_DEFS.map((d) => {
+  // 판정이 아직 없는 칭호(PENDING)는 **보유하지 않았다면** 목록에서 뺀다 — 목록에 있으면
+  // "아직 못 얻은 것"과 구분되지 않은 채 분모에 들어가, 발견 게이지가 채워질 수 없게 된다.
+  // 보유분(선발대 등)은 그대로 보인다(isHiddenPendingTitle 주석).
+  const rows: TitleRow[] = TITLE_DEFS.filter(
+    (d) => !isHiddenPendingTitle(d.code, ledger.has(d.code)),
+  ).map((d) => {
     const earnedAt = ledger.get(d.code) ?? null;
     const discovered = earnedAt !== null;
     const isConditional = d.kind === 'conditional';

@@ -41,6 +41,29 @@ export const PENDING_CODES = new Set<string>([
   'cbt_2026',
 ]);
 
+/**
+ * 이 칭호를 목록·분모에서 감출지 — 판정이 없는데 아직 보유하지도 않은 것.
+ *
+ * PENDING은 "못 얻는 것"인데 목록에선 "아직 못 얻은 것"과 구별되지 않는다(조건 비공개가 원칙이라
+ * 둘 다 조건이 가려진 채 이름만 보인다). 그 상태로 분모에 들어가 있어 발견 게이지가 최대
+ * 330/356(92.7%)에서 멈췄다 — 채울 수 없는 완성도 표시라 없는 조건을 파게 된다.
+ *
+ * 보유분은 감추지 않는다. cbt_2026(선발대)은 판정이 아니라 컷오버 지급이라 CBT 참전자는 이미
+ * 갖고 있고, 감추면 **보유한 칭호가 목록에서 사라진다**. 지역 보스가 출시되거나 이력 테이블이
+ * 붙어 판정이 생기면 PENDING에서 빠지고 그대로 목록에 나타난다.
+ */
+export function isHiddenPendingTitle(code: string, owned: boolean): boolean {
+  return !owned && PENDING_CODES.has(code);
+}
+
+/**
+ * 이 유저에게 보이는 칭호 총수(= 발견 게이지의 분모).
+ * 판정 가능한 것 전부 + 보유한 PENDING. 유저마다 다를 수 있지만 **항상 도달 가능한** 값이다.
+ */
+export function visibleTitleTotal(ownedPendingCount: number): number {
+  return TITLE_BY_CODE.size - PENDING_CODES.size + ownedPendingCount;
+}
+
 type Metrics = Record<string, number>;
 
 const CATALOG_KEY_BY_ID = new Map<number, string>(); // catalog_items.id → key (지연 로드)
