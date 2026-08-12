@@ -26,6 +26,33 @@ export class WithdrawError extends Error {
   }
 }
 
+/**
+ * 탈퇴가 **의도적으로 남기는** 테이블 — tests/withdraw-coverage.test.ts가 이 목록과 삭제문을
+ * 합쳐 public 전 테이블을 덮는지 검사한다. 새 테이블은 삭제문을 추가하거나 여기 사유와 함께
+ * 등재해야 한다(컷오버 가드와 같은 원리 — 수동 목록 누락이 두 스크립트에서 반복돼 절차화).
+ */
+export const WITHDRAW_PRESERVED: Record<string, string> = {
+  profiles: '결제 기록 보존 앵커(iap FK) — withdrawn_at 마킹만',
+  iap_orders: '전자상거래법 5년 보존', iap_refunds: '전자상거래법 5년 보존',
+  identity_verifications: '법정 보존(청소년보호 판정 원장)', monthly_purchase_limits: '미성년 한도 원장',
+  diamond_ledger: '재화 감사 원장 — 결제 분쟁 추적 축(iap_orders와 동축). 칭호 재화 지표는 현 캐릭터 생성 이후로 스코프(judge.ts)',
+  referral_attributions: '1인 1회 잠금 — 지우면 탈퇴·재가입으로 추천 보상 무한 재지급(2026-07-22 주석)',
+  support_inquiries: '분쟁 추적(본문 보존·이미지만 파기 — 함수 내 update)',
+  guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
+  admin_mail_logs: '운영 발송 감사', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
+  chat_messages: '공개 채널 7일 보존 정책(크론 정리) — 귓속말만 즉시 파기(0155 주석)',
+  chat_reports: 'chat_messages 정리 주기와 동행', chat_blocks: '차단 목록 유지 — 재가입 시에도 차단 관계 보수적 유지',
+  whisper_reports: 'whisper_messages 명시 삭제의 CASCADE로 소멸 — 직접 삭제 불필요',
+  conquest_battles: '월드 역사(길드 단위)', world_chronicle: '월드 역사', world_events: '월드 역사',
+  guild_tax_distributions: '길드 단위 기록', guilds: '길드 엔티티(리더 탈퇴는 위임/해산 선행)',
+  guild_emblems: '길드 자산', guild_emblem_escrows: '길드 자산(에스크로)',
+  ranking_leaders: '메트릭당 1행(현 1위) — 시간당 크론이 재계산해 자가치유',
+  cbt_carryover: '이월 보상 원장 — wipe 생존이 존재 이유', probability_snapshots: '법정 확률 공시',
+  announcements: '전역', admin_scheduled_mails: '전역(운영 예약)', daily_supply_broadcasts: '전역 방송 기록',
+  catalog_items: '전역', servers: '전역', zones: '전역', zone_adjacency: '전역',
+  system_mode: '전역', cron_heartbeats: '크론 dead-man 원장', schema_migrations: '마이그레이션 원장',
+};
+
 export async function withdrawAccount(userId: string): Promise<void> {
   // 길드장이면 탈퇴 불가(위임/해산 먼저) — guilds.leader_user_id는 NO ACTION FK.
   const [led] = await db
@@ -40,6 +67,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
   await db.transaction(async (tx) => {
     // FK 자식 → 부모 순서. 대부분 profiles FK라 상호 독립이나, 명시 의존만 순서 보장.
     // 레이드: 자식(공격/참가/보상/요청/카운트) 먼저, 그다음 호스트 레이드(잔여 자식 cascade).
+    // 내가 초대받은 행(남의 레이드 소속)은 raids CASCADE가 못 지운다 — 명시 삭제(2026-08-13 감사).
+    await tx.execute(sql`delete from raid_invites where invitee_user_id = ${uid} or inviter_user_id = ${uid}`);
     await tx.execute(sql`delete from raid_attacks where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_participants where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
@@ -103,8 +132,24 @@ export async function withdrawAccount(userId: string): Promise<void> {
 
     // 리더보드·개인 기록 — 캐릭터가 사라지면 보드의 값도 유령이 된다(0103·v2 증분화 후속).
     await tx.execute(sql`delete from leaderboard_ranks where user_id = ${uid}`);
+    // 도감 챔피언 — 탈퇴 유저가 랭크 슬롯을 계속 점유하면 유령 챔피언이 된다(leaderboard와 동일 취지).
+    // 빈 슬롯은 다음 해방 갱신이 채운다.
+    await tx.execute(sql`delete from codex_champions where user_id = ${uid}`);
     await tx.execute(sql`delete from user_milestones where user_id = ${uid}`);
     await tx.execute(sql`delete from user_daily_stats where user_id = ${uid}`);
+
+    // ── 2026-08-13 감사 보강 — 컷오버(0782e935)와 같은 수동 목록 누락이 여기에도 있었다.
+    //  · challenge_claims/events: PK가 (user, server, id)라 잔존 시 **재가입 유저의 도전과제
+    //    보상이 전부 "이미 수령"으로 막힌다** — '새 시작' 원칙의 직접 위반(실피해).
+    //  · user_titles(0149): 진행도는 전부 지워지는데 칭호 발견만 남으면 진행 0 계정이
+    //    업적 칭호를 달고 시작한다(컷오버에서 잡은 것과 동일 클래스).
+    //  · announcement_poll_votes: 유저 데이터 — profiles가 보존 앵커라 CASCADE가 안 탄다.
+    //  ⚠ 새 테이블을 만들면 tests/withdraw-coverage.test.ts가 분류를 강제한다(잔존이 옳으면
+    //    WITHDRAW_PRESERVED에 사유와 함께 등재).
+    await tx.execute(sql`delete from challenge_claims where user_id = ${uid}`);
+    await tx.execute(sql`delete from challenge_events where user_id = ${uid}`);
+    await tx.execute(sql`delete from user_titles where user_id = ${uid}`);
+    await tx.execute(sql`delete from announcement_poll_votes where user_id = ${uid}`);
 
     // 아바타(프로필 생성잡 → 활성프로필 SET NULL → 프로필) + 캐릭터(닉네임).
     await tx.execute(sql`delete from profile_generation_jobs where user_id = ${uid}`);

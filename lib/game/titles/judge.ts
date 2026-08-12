@@ -212,13 +212,22 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
      * from 절 없이 스칼라 서브쿼리만 쓴다 — 원장 행이 0인 신규 유저도 한 행을 돌려받아야 한다.
      */
     db.execute(sql`
+      -- 현 캐릭터 생성 이후로 한정(2026-08-13) — diamond_ledger는 탈퇴 후에도 보존되는 결제
+      -- 감사 원장이라(withdraw.ts WITHDRAW_PRESERVED), 스코프 없이는 탈퇴·재가입 유저가
+      -- 전생 획득으로 백만장자를 즉시 재발견한다. '재가입=새 시작' 원칙에 맞춘다.
+      with birth as (
+        select coalesce((select created_at from characters
+          where user_id=${u} and server_id=${s}), '-infinity'::timestamptz) as t0
+      )
       select
         -- 환불 반환(avatar_refund·emblem_refund)은 '획득'이 아니다 — 아바타 생성→거절 루프로
         -- 누적 획득을 부풀릴 수 있어 dia_free와 같은 기준으로 뺀다.
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and reason not in ('avatar_refund','emblem_refund')),0)::bigint as dia_gained,
+                    and reason not in ('avatar_refund','emblem_refund')
+                    and created_at >= (select t0 from birth)),0)::bigint as dia_gained,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')),0)::bigint as dia_free,
+                    and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')
+                    and created_at >= (select t0 from birth)),0)::bigint as dia_free,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                     and created_at >= now() - interval '10 days'),0)::bigint as gained10,
         coalesce((select sum(-delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
@@ -231,6 +240,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             select (created_at ${sql.raw(KST)})::date as d, -delta as v
               from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
                 and reason <> 'refund_clawback'
+                and created_at >= (select t0 from birth)
             union all
             select (created_at ${sql.raw(KST)})::date, gems_spent
               from gem_time_reductions where user_id=${u} and server_id=${s}
@@ -244,6 +254,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             select (created_at ${sql.raw(KST)})::date, -delta
               from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                 and reason in ('avatar_refund','emblem_refund')
+                and created_at >= (select t0 from birth)
           ) x group by d) y),0)::bigint as spend_day_max
     `),
     /** 길드 이력 — guild_audit_log의 join/leave는 actor_user_id 기준(가입·탈퇴 주체). */
