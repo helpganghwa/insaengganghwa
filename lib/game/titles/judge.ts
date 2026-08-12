@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { CHALLENGES } from '@/lib/game/challenges/defs';
+import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
 import { TITLE_SECRETS } from './defs.server';
@@ -23,21 +24,27 @@ import { TITLE_SECRETS } from './defs.server';
 
 const KST = `at time zone 'Asia/Seoul'`;
 
-/** 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로. */
+/**
+ * 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로.
+ *
+ * 2026-08-12 재분류로 14종이 빠졌다. 원인은 "판정을 안 짰다"가 아니라 근거 테이블이 없었던
+ * 것인데, diamond_ledger(0159)·guild_audit_log가 그 사이 생겨 전제가 바뀌었다. 남은 12종은
+ * 여전히 근거가 없거나(이력 테이블 부재) 콘텐츠가 안 나왔거나 지급형이다.
+ */
 export const PENDING_CODES = new Set<string>([
-  // 재화 이력 필요(누적 획득/소비·유지 추적 — 현재 잔액만 있음)
-  'dragon_hoard', 'all_in', 'billionaire', 'dust_to_mountain', 'bottomless',
-  // 이력 테이블 부재(현재 상태만 있음)
-  'mover_30', 'resident_10', 'homecoming', 'comeback', 'longevity', 'same_face_30', 'one_suit', 'no_guild_30', 'big_family', 'alley_boss', 'elite_few',
-  // 길드 기부 횟수 로그 부재(기여도 포인트만 있음)
+  // 이력 테이블 부재 — 거주 이동 기록·아바타 교체 기록이 없다(현재 상태만 남는다).
+  'mover_30', 'resident_10', 'same_face_30', 'one_suit', 'wandering_smith',
+  // 길드 기부 **횟수** 로그 부재 — contribution_points(누적 점수)와 daily_donation_count(오늘치)만
+  // 있고 guild_audit_log에도 기부 action이 없다(join/leave/kick/tax_* 등만).
   'guild_donate', 'pillar',
-  // 점령전 — 집행관 역임 이력 부재(zones는 현재 상태만)
+  // 점령전 — 집행관 역임 이력 부재(zones는 현재 집행관만, conquest_battles는 승리 길드만)
   'tour_lord',
-  // 특수(시점 스냅샷·이력·로그 부재)
-  'apex_shoot', 'david', 'triathlon', 'wandering_smith',
-  // 지역 보스 미출시
+  // 아바타 생성 시점 장비 강화레벨 부재 — profile_generation_jobs.equipment_snapshot은
+  // {weaponKey, armorKey, accessoryKey}뿐이라 "+100 이상 3개"를 사후에 알 수 없다.
+  'apex_shoot',
+  // 지역 보스 미출시 — 판정은 raids.boss_code로 지금도 쓸 수 있고, 콘텐츠만 없다.
   'raid_temple', 'raid_kingdom',
-  // 컷오버 지급(헌정)
+  // 컷오버 지급(헌정) — 판정이 아니라 cbt-restore/ensureCbtCarryover가 직접 넣는다.
   'cbt_2026',
 ]);
 
@@ -94,7 +101,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
 
-  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest] = await Promise.all([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, lg, gh, f3] = await Promise.all([
     // 강화 로그 집계
     db.execute(sql`
       select count(*)::int as total,
@@ -184,6 +191,88 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from iap_orders where user_id=${u} and status in ('paid','refunded')) as pay_cnt,
              coalesce((select sum(reduced_ms)::bigint from gem_time_reductions where user_id=${u} and server_id=${s}),0) as reduced_ms
     `),
+    /**
+     * 다이아 이력 — diamond_ledger(0159) 도입으로 판정이 가능해진 재화 계열(2026-08-12).
+     *
+     * ⚠ 소비 합계는 **원장만으로는 틀린다**. 강화 시간단축(enhance_reduce)은 하루 60건 규모라
+     * 의도적으로 원장에서 빠져 있고(ledger.ts LEDGER_SKIP_REASONS) 같은 정보가
+     * gem_time_reductions에 남는다 — 두 소스를 합쳐야 실제 소비액이 된다.
+     *
+     * 무료 수급은 유료 유입(iap·유료 패스 보상)과 **환불 반환**을 뺀 것. 환불은 되돌려받은
+     * 것이지 새로 수급한 게 아니라 '티끌 모아 태산'의 취지에 맞지 않는다.
+     *
+     * from 절 없이 스칼라 서브쿼리만 쓴다 — 원장 행이 0인 신규 유저도 한 행을 돌려받아야 한다.
+     */
+    db.execute(sql`
+      select
+        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0),0)::bigint as dia_gained,
+        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
+                    and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')),0)::bigint as dia_free,
+        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
+                    and created_at >= now() - interval '10 days'),0)::bigint as gained10,
+        coalesce((select sum(-delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
+                    and created_at >= now() - interval '10 days'),0)::bigint as spent10,
+        coalesce((select sum(gems_spent) from gem_time_reductions where user_id=${u} and server_id=${s}
+                    and created_at >= now() - interval '10 days'),0)::bigint as gem10,
+        coalesce((select max(t) from (
+          select sum(v) as t from (
+            select (created_at ${sql.raw(KST)})::date as d, -delta as v
+              from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
+            union all
+            select (created_at ${sql.raw(KST)})::date, gems_spent
+              from gem_time_reductions where user_id=${u} and server_id=${s}
+          ) x group by d) y),0)::bigint as spend_day_max
+    `),
+    /** 길드 이력 — guild_audit_log의 join/leave는 actor_user_id 기준(가입·탈퇴 주체). */
+    db.execute(sql`
+      select
+        (exists(
+          select 1 from guild_audit_log l
+          join guild_audit_log j on j.guild_id = l.guild_id and j.actor_user_id = l.actor_user_id
+            and j.action = 'join' and j.created_at > l.created_at
+          where l.action = 'leave' and l.actor_user_id = ${u} and l.server_id = ${s}
+        ))::int as homecoming,
+        coalesce(extract(epoch from (now() - (select max(created_at) from guild_audit_log
+          where actor_user_id = ${u} and server_id = ${s} and action = 'leave'))) / 86400, -1)::float as since_leave,
+        -- 골목대장 — 내 거주 구역 주민 중 전투력 1위인 동안. 거주지가 없으면 대상 아님.
+        (exists(
+          select 1 from characters me
+          where me.user_id = ${u} and me.server_id = ${s} and me.residence_zone_id is not null
+            and exists(select 1 from leaderboard_ranks lm
+                       where lm.user_id = me.user_id and lm.server_id = ${s} and lm.metric = 'combat')
+            and not exists(
+              select 1 from characters c2
+              join leaderboard_ranks l2 on l2.user_id = c2.user_id and l2.server_id = ${s} and l2.metric = 'combat'
+              where c2.server_id = ${s} and c2.residence_zone_id = me.residence_zone_id
+                and l2.value > (select value from leaderboard_ranks
+                                where user_id = me.user_id and server_id = ${s} and metric = 'combat'))
+        ))::int as alley_boss
+    `),
+    /** 다윗(대난투 하위 CP로 3위 이내)·철인 3종(하루에 레이드·대난투·점령전 모두). */
+    db.execute(sql`
+      select
+        (exists(
+          select 1 from melee_participants p
+          join melee_battles b on b.id = p.battle_id and b.server_id = ${s}
+          where p.user_id = ${u} and p.final_rank <= 3
+            and (select count(*) from melee_participants q
+                   where q.battle_id = p.battle_id and q.cp_snapshot < p.cp_snapshot) * 2
+                < (select count(*) from melee_participants r where r.battle_id = p.battle_id)
+        ))::int as david,
+        (exists(
+          select 1 from (
+            select (rp.joined_at ${sql.raw(KST)})::date as d
+              from raid_participants rp join raids r on r.id = rp.raid_id and r.server_id = ${s}
+              where rp.user_id = ${u}
+            intersect
+            select b.battle_date from melee_participants mp
+              join melee_battles b on b.id = mp.battle_id and b.server_id = ${s}
+              where mp.user_id = ${u}
+            intersect
+            select battle_kst_day from guild_battle_deployments where user_id = ${u} and server_id = ${s}
+          ) t
+        ))::int as triathlon
+    `),
     // 대난투
     db.execute(sql`
       with p as (
@@ -267,7 +356,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       select extract(day from now()-gm.joined_at)::int as gdays,
              (gm.role='leader')::int as gleader,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
-             (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank
+             (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank,
+             (select count(*) from guild_members g4 where g4.guild_id=g.id and g4.server_id=${s})::int as gsize,
+             g.level::int as glevel
       from guild_members gm join guilds g on g.id=gm.guild_id
       where gm.user_id=${u} and gm.server_id=${s}
     `),
@@ -483,7 +574,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
-    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest);
+    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest),
+    lgr = g(lg), ghs = g(gh), ft = g(f3);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
   let combatValue = 0;
@@ -517,7 +609,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
-    gleader: n(gx.gleader), grank: n(gx.grank) || 9999,
+    gleader: n(gx.gleader), grank: n(gx.grank) || 9999, gsize: n(gx.gsize), glevel: n(gx.glevel),
     chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
     ref_50: n(s2.ref_50), ref_100: n(s2.ref_100), ref_champ: n(s2.ref_champ),
     ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
@@ -534,6 +626,14 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     raid_day_run: n(c3.raid_day_run), fire_support_cnt: n(c3.fire_support_cnt), weekend_raid_cnt: n(c3.weekend_raid_cnt),
     fullcourse_ok: n(c3.fullcourse_ok), day100_ok: n(c3.day100_ok),
     cq_attack: n(cq.cq_attack), cq_attack_win: n(cq.cq_attack_win), cq_defend_win: n(cq.cq_defend_win), cq_tax: n(cq.cq_tax),
+    // ── 판정 4차(2026-08-12) — diamond_ledger·guild_audit_log 도입으로 열린 지표 ──
+    dia_gained: n(lgr.dia_gained), dia_free: n(lgr.dia_free), spend_day_max: n(lgr.spend_day_max),
+    // 자린고비 — 10일간 **지출이 0**이면 잔액은 단조 증가하므로 "10일 전 잔액 = 현재 − 10일 획득".
+    // 그 값이 10만 이상이면 10일 내내 10만을 넘겨 유지했다는 뜻이 된다(근사가 아니라 등식).
+    hoard_ok:
+      n(lgr.spent10) + n(lgr.gem10) === 0 && n(wa.dia) - n(lgr.gained10) >= 100_000 ? 1 : 0,
+    homecoming: n(ghs.homecoming), since_leave: Number(ghs.since_leave ?? -1), alley_boss: n(ghs.alley_boss),
+    david: n(ft.david), triathlon: n(ft.triathlon),
   };
 }
 
@@ -695,6 +795,20 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   surpassed: (m) => m.ref_over >= 1,
   old_friend: (m) => m.old_friends >= 1,
   sprout_keeper: (m) => m.sprout_friends >= 10,
+  // ── PENDING 해소(2026-08-12) — diamond_ledger·guild_audit_log 도입으로 근거가 생긴 것들 ──
+  billionaire: (m) => m.dia_gained >= 1_000_000,
+  dust_to_mountain: (m) => m.dia_free >= 100_000,
+  all_in: (m) => m.spend_day_max >= 100_000,
+  bottomless: (m) => m.spend_day_max >= 10_000,
+  dragon_hoard: (m) => m.hoard_ok === 1,
+  homecoming: (m) => m.homecoming >= 1,
+  // 조건 문구가 정본 — 코드명은 no_guild_30이지만 공개 조건은 "길드 없이 7일"이다(defs.server).
+  // 가입 이력이 없는 유저는 캐릭터 생성일로 센다(since_leave < 0 = 탈퇴한 적 없음).
+  no_guild_30: (m) => m.in_guild === 0 && (m.since_leave >= 7 || (m.since_leave < 0 && m.days >= 7)),
+  david: (m) => m.david >= 1,
+  triathlon: (m) => m.triathlon >= 1,
+  // 출석 수령 누적 = 접속일 근사. 접속 자체를 세는 원장이 없고, 출석은 하루 1회라 상한이 같다.
+  longevity: (m) => m.checkin >= 500,
 };
 
 /** 조건부(상태형) 활성 — 대표 표시·발견 공용. 아이템 발동 + 장비 상태 + 해방 + 집행관. */
@@ -752,6 +866,12 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.y_melee_last === 1) out.add('melee_shame');
   if (mm.y_raid_top === 1) out.add('raid_hero');
   if (mm.y_open_top === 1) out.add('open_king');
+  // ── PENDING 해소(2026-08-12) — 현재 상태만으로 판정되는 "~인 동안" 3종 ──
+  // ⚠ 조건부는 발견 판정과 **대표 표시 재검증**이 둘 다 있어야 한다. display.ts의
+  //   HEAVY_CONDITIONALS에 같이 넣지 않으면 발견은 되는데 대표로 달면 조용히 숨겨진다.
+  if (mm.in_guild === 1 && mm.gsize >= guildCapacity(mm.glevel)) out.add('big_family');
+  if (mm.in_guild === 1 && mm.gsize <= 5 && mm.grank <= 10) out.add('elite_few');
+  if (mm.alley_boss === 1) out.add('alley_boss');
 
   return out;
 }

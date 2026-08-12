@@ -135,6 +135,23 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
         });
     }
 
+    // 4-0) '휴가 복귀' 칭호 — 상태 파생으로는 못 잡는 유일한 칭호라 여기서 기록한다.
+    // 조건은 "7일 이상 미접속 후 복귀"인데, 그 공백은 lastClaimedKstDay를 오늘로 덮어쓰는
+    // 순간 사라진다(칭호 화면 판정은 덮어쓴 뒤에 도는 게 보통이라 영영 못 본다).
+    // 지급이 아니라 발견 기록이므로 실패해도 출석 보상을 막지 않는다.
+    if (state.lastClaimedKstDay) {
+      const gapDays = Math.floor(
+        (Date.parse(`${kstToday}T00:00:00Z`) - Date.parse(`${state.lastClaimedKstDay}T00:00:00Z`)) / 86_400_000,
+      );
+      if (gapDays >= 7) {
+        await tx.execute(sql`
+          insert into user_titles (user_id, server_id, title_code)
+          values (${userId}::uuid, ${serverId}, 'comeback')
+          on conflict (user_id, server_id, title_code) do nothing
+        `);
+      }
+    }
+
     // 4) state advance + claim log.
     const nextDp = advanceCheckinDayProgress(state.dayProgress);
     const newTotal = (state.totalClaimedCount ?? 0n) + 1n;
