@@ -190,12 +190,18 @@ export function decideJoinRequest(input: {
         .from(raidParticipants)
         .where(eq(raidParticipants.raidId, raidId));
       if (n >= RAID_MAX_PARTICIPANTS) throw new RaidError('RAID_FULL');
+      // 일일 한도는 '요청 시점'이 아니라 '승인 시점'에 요청자 기준으로 차감(승인일 KST 윈도).
+      // 의도적: 실제 참가가 확정될 때만 1회 소모. 요청만 하고 거절/방치되면 한도 미차감.
+      //
+      // ⚠ 순서 주의 — 동시 상한 검사는 이 뒤에 온다(open.ts·join.ts와 같은 이유, 2026-08-12).
+      // 위 raids FOR UPDATE는 **이 레이드**의 정원만 지킨다. 요청자의 레이드 **간** 카운트는
+      // 서로 다른 호스트가 각자 다른 레이드에서 동시에 수락하면 락이 안 겹쳐 그대로 통과한다
+      // (실측: pending 5건 동시 승인 → 5명 전원 참가, 상한 3 돌파). requesterUserId 기준으로
+      // 유저별 행을 잠그는 bumpDailyOrThrow 뒤에서 세야 직렬화된다.
+      await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
       if ((await activeRaidCount(tx, requesterUserId)) >= RAID_MAX_CONCURRENT_PER_USER) {
         throw new RaidError('CONCURRENT_LIMIT');
       }
-      // 일일 한도는 '요청 시점'이 아니라 '승인 시점'에 요청자 기준으로 차감(승인일 KST 윈도).
-      // 의도적: 실제 참가가 확정될 때만 1회 소모. 요청만 하고 거절/방치되면 한도 미차감.
-      await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
       await tx.insert(raidParticipants).values({ raidId, userId: requesterUserId });
     }
     await tx

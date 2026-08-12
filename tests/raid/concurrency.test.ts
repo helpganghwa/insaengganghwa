@@ -374,7 +374,9 @@ describe.skipIf(skip)('레이드 동시성 가드 — DB 통합', () => {
     }
   });
 
-  it('공격 트랜잭션이 만료를 걸친 경우: 정산은 그 공격 데미지를 포함한다', async () => {
+  // 타임아웃 15s — 파킹 대기(최대 3s)+슬립이 겹치면 기본 5s에 근접한다. 넘기면 본문이
+  // 백그라운드로 계속 돌아 afterEach 정리와 경합해 고아 행이 남는다(2026-08-12).
+  it('공격 트랜잭션이 만료를 걸친 경우: 정산은 그 공격 데미지를 포함한다', { timeout: 15_000 }, async () => {
     const expireAt = new Date(Date.now() + 1_200);
     const raidId = await makeRaid({ phase1Hp: HP_TINY, expireAt });
 
