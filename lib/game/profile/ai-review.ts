@@ -26,7 +26,8 @@ const HeadBoxSchema = z.object({
 });
 export type HeadBox = z.infer<typeof HeadBoxSchema>;
 
-const ReviewVerdictSchema = z.object({
+/** 잡에 저장해 둔 verdict를 되읽을 때도 이 스키마로 검증한다(pipeline 재시도 경로). */
+export const ReviewVerdictSchema = z.object({
   pass: z.boolean(),
   reasons: z.array(z.enum(REVIEW_REASONS)).default([]),
   notes: z.string().default(''),

@@ -44,6 +44,17 @@ const QUEUED_TIMEOUT_MIN = 60;
  */
 const STARTING_TIMEOUT_MIN = 5;
 
+/**
+ * drainQueue 한 번의 벽시계 예산(ms). 크론(profile-poll)의 maxDuration 90초를 drain과
+ * pollAndProcessDownloading(5건)이 나눠 쓴다 — 폴링 쪽이 건당 다운로드·vision·업로드로 더 무거워
+ * 절반 이상을 남긴다.
+ *
+ * ⚠ 검사는 **각 건 시작 전**에만 하므로 실제 소요는 예산 + 진행 중이던 한 건만큼 넘칠 수 있다.
+ * 정확한 상한이 아니라 "무한정 돌지 않게" 하는 장치다. 남은 큐는 다음 tick(2분)이 이어받고,
+ * 넘긴 사실은 budgetHit으로 응답에 실린다.
+ */
+const DRAIN_BUDGET_MS = 35_000;
+
 export interface CreateV3Input {
   gender: ProfileGender;
   /** 카탈로그 키(이미지·로어 로드용) — compose가 비전+로어로 사용. */
@@ -277,8 +288,18 @@ async function launchJob(job: ClaimedJob): Promise<{ ok: boolean; reason?: strin
  *  2. 클레임+발주 루프 — claimSlot(락)으로 slot 선점 후 launchJob(락 밖). null이면 종료.
  * advisory lock이 동시 호출(다중 submit·cron 겹침)을 직렬화해 CONCURRENCY 하드 캡 보장.
  */
-export async function drainQueue(): Promise<{ launched: number; failed: number; swept: number }> {
+export async function drainQueue(): Promise<{
+  launched: number;
+  failed: number;
+  swept: number;
+  /** 예산에 걸려 남은 일을 다음 tick으로 넘겼는지 — 조용한 절단이 되지 않도록 응답에 싣는다. */
+  budgetHit: boolean;
+}> {
   if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
+
+  const started = Date.now();
+  const overBudget = () => Date.now() - started > DRAIN_BUDGET_MS;
+  let budgetHit = false;
 
   // 1. 정체 스윕 — queued(픽업 전 hang)·starting(발주 중 crash로 downloading 전이 실패)이
   //    타임아웃 초과 시 fail+환불. starting은 슬롯·유저락을 잡으므로 방치 시 큐 정체.
@@ -294,6 +315,11 @@ export async function drainQueue(): Promise<{ launched: number; failed: number; 
     );
   let swept = 0;
   for (const s of stale) {
+    // 스윕 한 건이 트랜잭션 + 우편 + 푸시라, 정체가 쌓여 있으면 여기서 예산을 다 태울 수 있다.
+    if (overBudget()) {
+      budgetHit = true;
+      break;
+    }
     // starting은 **발주에 걸린 시간**만 재야 한다 — created_at으로 재면 큐에서 오래 기다린 잡이
     // 배정되자마자 스윕 대상이 되어, 정상 발주 중인 잡을 환불 처리한다(위 launchJob의 claim-first가
     // 되살아남은 막지만, 애초에 그 경합을 만들지 않는 편이 낫다 — Pixellab 과금이 버려진다).
@@ -309,11 +335,23 @@ export async function drainQueue(): Promise<{ launched: number; failed: number; 
   let failed = 0;
   const maxLaunch = profileGenConcurrency();
   for (let i = 0; i < maxLaunch; i++) {
+    // 발주 한 건이 Claude 합성(이미지 3장 vision) + Pixellab POST라 수십 초가 걸린다.
+    // 상한(키당 4 × 키수)까지 무조건 돌면 크론 maxDuration을 넘겨 함수가 잘리고, 그 순간
+    // POST가 이미 나간 잡은 과금된 채 고아가 된다. 남은 큐는 다음 tick(2분)이 이어받는다.
+    if (overBudget()) {
+      budgetHit = true;
+      break;
+    }
     const job = await claimSlot();
     if (!job) break; // 여유 없음 or 큐 빔
     const r = await launchJob(job);
     if (r.ok) launched += 1;
     else failed += 1;
   }
-  return { launched, failed, swept };
+  if (budgetHit) {
+    console.warn(
+      `[profile-v3] drain budget hit after ${Date.now() - started}ms — swept=${swept} launched=${launched}, 나머지는 다음 tick`,
+    );
+  }
+  return { launched, failed, swept, budgetHit };
 }

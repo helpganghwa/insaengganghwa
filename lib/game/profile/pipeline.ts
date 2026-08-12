@@ -25,7 +25,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 
-import { reviewProfile, type ReviewVerdict } from './ai-review';
+import { reviewProfile, ReviewVerdictSchema, type ReviewVerdict } from './ai-review';
 import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
 import { detectFullBodyCrop } from './crop-check';
@@ -148,6 +148,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       diamondEscrow: profileGenerationJobs.diamondEscrow,
       serverId: profileGenerationJobs.serverId,
       createdAt: profileGenerationJobs.createdAt,
+      aiVerdict: profileGenerationJobs.aiVerdict,
     })
     .from(profileGenerationJobs)
     .where(eq(profileGenerationJobs.status, 'downloading'))
@@ -235,10 +236,30 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         continue;
       }
 
-      const review = await reviewProfile({
-        images: [{ direction: 'south', png }],
-        descriptionPrompt: job.description,
-      });
+      // 유상 vision 재호출 차단 — 아래 저장·전이(Storage 업로드·DB tx)가 던지면 catch가 이 잡을
+      // downloading으로 남겨 2분 뒤 여기로 다시 온다. 그때마다 검토를 다시 부르면 같은 이미지에
+      // 20분 예산 안에서 열 번까지 과금된다. 받아 둔 판정이 있으면 그대로 쓴다.
+      // (배경 불투명·잘림·비율 같은 로컬 판정은 png로 매번 다시 계산 — 무료다.)
+      const cachedVerdict = ReviewVerdictSchema.safeParse(job.aiVerdict);
+      let reviewed: ReviewVerdict;
+      if (cachedVerdict.success) {
+        reviewed = cachedVerdict.data;
+      } else {
+        reviewed = (
+          await reviewProfile({
+            images: [{ direction: 'south', png }],
+            descriptionPrompt: job.description,
+          })
+        ).verdict;
+        // 분기보다 **먼저** 기록해야 재시도가 주워 쓸 수 있다. downloading일 때만 —
+        // 그 사이 종단으로 갔다면 남의 결과를 덮어쓰지 않는다.
+        await db
+          .update(profileGenerationJobs)
+          .set({ aiVerdict: reviewed })
+          .where(
+            and(eq(profileGenerationJobs.id, job.id), eq(profileGenerationJobs.status, 'downloading')),
+          );
+      }
 
       // 결정론 선차단 — AI 비전이 못 잡는 두 결함을 alpha로 직접 검사:
       //  ① 불투명 배경(no_background 실패)  ② 전신 잘림(하반신이 프레임 밖으로 잘림).
@@ -249,10 +270,10 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       // 뽑는 경우가 있다(실측: 중앙 6.5등신, 상위 3%가 5.3등신 이하). 검수기는 "비율로는 실패시키지
       // 말라"는 안전 모더레이터라 이 결함을 통과시키므로, 검수기가 남긴 머리 박스 높이로 수치 판정한다.
       // 임계는 잡음을 감안해 보수적으로(HEAD_RATIO_MAX 주석 참조) — 리젝=전액 환불.
-      const headH = review.verdict.head?.h ?? null;
+      const headH = reviewed.head?.h ?? null;
       const badRatio = headH !== null && headH >= HEAD_RATIO_MAX;
 
-      if (review.verdict.pass && !bgOpaque && !cropped && !badRatio) {
+      if (reviewed.pass && !bgOpaque && !cropped && !badRatio) {
         // south 1장만 storage 미러 → rotations={south} (회전 미사용).
         const supabase = serviceClient();
         const path = `${job.userId}/${job.characterId}/south.png`;
@@ -262,11 +283,11 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         if (up.error) throw new Error(`storage upload south: ${up.error.message}`);
         const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl };
         // 얼굴 크롭 박스 — 실루엣 감지·AI 머리 박스 교차검증 + cx 런 스냅(2026-07-21 쩌내·SEB).
-        const faceBox = await reconcileFaceBox(png, await detectFaceBox(png), review.verdict.head ?? null);
-        await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict, faceBox);
+        const faceBox = await reconcileFaceBox(png, await detectFaceBox(png), reviewed.head ?? null);
+        await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, reviewed, faceBox);
         accepted += 1;
       } else {
-        let verdict: ReviewVerdict = review.verdict;
+        let verdict: ReviewVerdict = reviewed;
         if (bgOpaque)
           verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || '배경이 투명하지 않습니다(불투명 배경 검출).' };
         if (cropped)
