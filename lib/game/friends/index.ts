@@ -322,6 +322,30 @@ export async function respondRequest(
   requesterId: string,
   action: 'accept' | 'decline',
 ): Promise<void> {
+  // 차단 검사 — 요청(sendRequest)만 막고 여기를 비우면 "요청 → 차단 → 상대가 수락"으로
+  // 차단 관계인 채 친구가 성립한다(2026-08-12 독립 검증에서 발견된 형제 경로).
+  if (action === 'accept') {
+    const blocked = await blockState(meId, requesterId);
+    // 내가 차단한 상대의 요청 — 내 행동이므로 그대로 알려준다(받은 목록에서도 걸러지지만,
+    // 목록 캐시·직접 호출 대비 서버에서 한 번 더 막는다).
+    if (blocked.byMe) throw new FriendError('BLOCKED_BY_ME');
+    // 요청을 보낸 뒤 나를 차단한 상대 — 그 요청은 사실상 철회된 것이다. 조용히 지우고
+    // "요청이 없어요"로 답해 차단 사실을 드러내지 않는다(BLOCKED 같은 전용 코드는 그 자체가
+    // 시그널이 된다). 삭제는 멱등이라 레이스에도 무해하다.
+    if (blocked.byPeer) {
+      await db
+        .delete(friendLinks)
+        .where(
+          and(
+            eq(friendLinks.serverId, serverId),
+            eq(friendLinks.requesterId, requesterId),
+            eq(friendLinks.addresseeId, meId),
+            eq(friendLinks.status, 'pending'),
+          ),
+        );
+      throw new FriendError('NO_REQUEST');
+    }
+  }
   await db.transaction(async (tx) => {
     // 수락이 상한을 소모하므로 sendRequest와 같은 유저 락을 잡는다(정렬 순 — 교착 없음).
     await lockPairUsers(tx, meId, requesterId, serverId);
@@ -427,9 +451,26 @@ export async function getRequests(
     );
   const incomingIds = rows.filter((r) => r.addresseeId === meId).map((r) => r.requesterId);
   const outgoingIds = rows.filter((r) => r.requesterId === meId).map((r) => r.addresseeId);
+  // 차단 관계의 pending은 목록에서 뺀다 — 방향 무관. 내가 차단한 상대의 요청은 보일 이유가
+  // 없고, 나를 차단한 상대와의 요청은 어차피 성립 불가다(수락 시 위 가드가 정리한다).
+  // 요청은 취소로도 사라지는 것이라 목록 부재가 차단 시그널이 되지는 않는다.
+  const others = [...new Set([...incomingIds, ...outgoingIds])];
+  const blockedWith = new Set<string>();
+  if (others.length > 0) {
+    const rows2 = await db
+      .select({ a: chatBlocks.userId, b: chatBlocks.blockedUserId })
+      .from(chatBlocks)
+      .where(
+        or(
+          and(eq(chatBlocks.userId, meId), inArray(chatBlocks.blockedUserId, others)),
+          and(inArray(chatBlocks.userId, others), eq(chatBlocks.blockedUserId, meId)),
+        ),
+      );
+    for (const r of rows2) blockedWith.add(r.a === meId ? r.b : r.a);
+  }
   const [incoming, outgoing] = await Promise.all([
-    profilesByIds(incomingIds, serverId),
-    profilesByIds(outgoingIds, serverId),
+    profilesByIds(incomingIds.filter((i) => !blockedWith.has(i)), serverId),
+    profilesByIds(outgoingIds.filter((i) => !blockedWith.has(i)), serverId),
   ]);
   // 요청 목록의 상대는 **아직 친구가 아니다** — 검색에서 마지막 접속을 가려 놓고 여기서 그대로
   // 내보내면 "요청 보내고 보낸 탭 읽기"로 우회된다(2026-08-12 재검증). 같은 기준을 적용한다.
