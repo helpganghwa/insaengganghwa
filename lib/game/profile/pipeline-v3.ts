@@ -25,9 +25,14 @@ const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 const V3_SIZE = 256;
 
 /**
- * queued 상태 상한(분, createdAt 기준). downloading의 PROFILE_GEN_TIMEOUT_MIN(20분)과 대칭(감사 P2).
+ * queued 상태 상한(분, createdAt 기준) — **줄 서 있는 시간**의 예산이다(감사 P2).
  * createCharacterV3가 hang(throw 아님)하면 oldest queued가 매 tick 재픽업되며 큐 전체를
  * head-of-line 차단 + 활성잡 unique로 그 유저 영구락·escrow 동결. 1시간 초과 시 fail+환불해 큐 진행.
+ *
+ * ⚠ downloading의 PROFILE_GEN_TIMEOUT_MIN(20분)과 **대칭이 아니다** — 그쪽은 발주 시각부터 재는
+ * 생성 소요 예산이라 기준 시각도 재는 대상도 다르다(gen-age.ts). 예전 주석이 둘을 대칭이라
+ * 적어 둔 탓에 downloading이 created_at으로 재고 있었고, 큐 대기가 20분을 넘기면 발주 직후
+ * 즉시 타임아웃되는 결함이 있었다(2026-08-12 감사).
  */
 const QUEUED_TIMEOUT_MIN = 60;
 
@@ -183,7 +188,9 @@ async function claimSlot(): Promise<ClaimedJob | null> {
     const newOptions = {
       ...(job.options as Record<string, unknown>),
       pixellabKeyIdx: target,
-      pixellabClaimedAt: Date.now(), // 교대 배정의 "마지막 배정" 판정 기준
+      // 교대 배정의 "마지막 배정" 판정 기준 **이자** downloading 타임아웃의 기산점(gen-age.ts).
+      // 지우거나 이름을 바꾸면 타임아웃이 created_at 폴백으로 돌아가 큐 대기를 다시 잠식한다.
+      pixellabClaimedAt: Date.now(),
     };
     const claimed = await tx
       .update(profileGenerationJobs)

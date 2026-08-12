@@ -30,6 +30,7 @@ import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
 import { detectFullBodyCrop } from './crop-check';
 import { detectFaceBox, reconcileFaceBox, type FaceBox } from './face-box';
+import { generationAgeMin } from './gen-age';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -89,9 +90,10 @@ const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 const STORAGE_BUCKET = 'profiles';
 
 /**
- * downloading 상태 상한(분). createdAt 기준. pixellab pro 평균 ~6분, 큐 지연 포함 여유.
- * 초과 시 rotation 완성 여부와 무관하게 fail+환불 — rotation_urls는 떴지만 실제 파일이
- * 영원히 404인 부분 실패(검증된 케이스)까지 잡기 위해 length 조건과 분리.
+ * downloading 상태 상한(분). **발주 시각 기준**(gen-age.ts — 큐 대기는 별도 예산이다).
+ * pixellab pro 평균 ~6분이라 3배 여유. 초과 시 rotation 완성 여부와 무관하게 fail+환불 —
+ * rotation_urls는 떴지만 실제 파일이 영원히 404인 부분 실패(검증된 케이스)까지 잡기 위해
+ * length 조건과 분리.
  */
 const PROFILE_GEN_TIMEOUT_MIN = 20;
 
@@ -167,7 +169,8 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     // Timeout 가드 — 반드시 fetch/분기보다 **앞**. charRes가 지속 5xx/429거나 throw(네트워크)여도
     // 아래에 도달 못해 escrow(다이아)가 영구 동결되고 활성 UNIQUE로 재생성까지 막히던 회귀 차단.
     // rotation_urls는 떴으나 실파일이 영원히 404인 부분 실패까지 포함해 20분 초과 잡을 환불·정리.
-    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
+    // ⚠ 기준은 created_at이 아니라 **발주 시각**이다 — 큐 대기가 이 예산을 잠식하면 안 된다(gen-age.ts).
+    const ageMin = generationAgeMin(job.options, job.createdAt, Date.now());
     if (ageMin > PROFILE_GEN_TIMEOUT_MIN) {
       await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`);
       failed += 1;
@@ -478,7 +481,9 @@ async function rejectJob(
     if (claimed.length === 0) return false;
 
     // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
-    await walletAdd(tx, userId, serverId, escrow, 'avatar_refund');
+    // ref는 잡 단위로 — 분쟁 조사는 '이 생성이 받아간 것과 되돌려준 것'을 맞춰보는 일이라
+    // 차감(avatar_create)·환불(avatar_refund)이 같은 축으로 묶여야 한다(어드민 회수 경로와 동일 형식).
+    await walletAdd(tx, userId, serverId, escrow, 'avatar_refund', `job:${jobId}`);
 
     await tx.insert(mailbox).values({
       userId,
@@ -528,7 +533,7 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       .returning({ id: profileGenerationJobs.id });
     if (claimed.length === 0) return false;
 
-    await walletAdd(tx, userId, job.serverId, job.escrow, 'avatar_refund');
+    await walletAdd(tx, userId, job.serverId, job.escrow, 'avatar_refund', `job:${jobId}`);
 
     await tx.insert(mailbox).values({
       userId,

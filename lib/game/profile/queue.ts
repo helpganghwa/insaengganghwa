@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { PROFILE_GEN_SLOT_MINUTES } from '@/lib/game/balance';
 import { profileGenConcurrency } from './pixellab-keys';
+import { generationAgeMin } from './gen-age';
 
 export type ProfileQueueInfo = {
   /** 내 활성 잡 상태. */
@@ -60,7 +61,11 @@ export async function getMyProfileQueueInfo(
   serverId: number,
 ): Promise<ProfileQueueInfo | null> {
   const [job] = await db
-    .select({ status: profileGenerationJobs.status, createdAt: profileGenerationJobs.createdAt })
+    .select({
+      status: profileGenerationJobs.status,
+      createdAt: profileGenerationJobs.createdAt,
+      options: profileGenerationJobs.options,
+    })
     .from(profileGenerationJobs)
     .where(
       and(
@@ -75,12 +80,14 @@ export async function getMyProfileQueueInfo(
   // 쿼리가 ACTIVE로 필터해 실제론 활성 4종 중 하나(TS는 enum 전체로 봄 → 좁힘).
   const status = job.status as ProfileQueueInfo['status'];
   const createdAt = job.createdAt ?? new Date();
-  const elapsedMin = Math.max(0, (Date.now() - createdAt.getTime()) / 60_000);
 
   // 생성 중 — 남은 생성시간(최소 1분). ai_reviewing은 거의 완료라 1분.
+  // 경과는 **발주 시각**부터 센다(gen-age.ts) — created_at부터 세면 큐에서 기다린 시간이 얹혀
+  // 갓 시작한 잡에도 "1분 남음"이 뜬다(대기 25분이면 실제로는 8분 가까이 남았는데도).
   if (status !== 'queued') {
+    const genMin = Math.max(0, generationAgeMin(job.options, createdAt, Date.now()));
     const remain =
-      status === 'ai_reviewing' ? 1 : Math.max(1, Math.ceil(PROFILE_GEN_SLOT_MINUTES - elapsedMin));
+      status === 'ai_reviewing' ? 1 : Math.max(1, Math.ceil(PROFILE_GEN_SLOT_MINUTES - genMin));
     return { status, createdAt: createdAt.toISOString(), position: 0, etaMinutes: remain, waiting: false };
   }
 
