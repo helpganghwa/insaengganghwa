@@ -214,6 +214,18 @@ async function autoDisband(serverId: number, g: GuildRow): Promise<boolean> {
       action: 'disband',
       detail: { auto: true, reason: 'leader_inactive_no_successor' },
     });
+    // 멤버별 여파 행(target_user_id) — 자발 해산(disband.ts)과 같은 이유·같은 형식. 이 행이
+    // "이 유저가 언제 길드를 잃었는가"의 유일한 사후 근거다(칭호 '무소속' 기산점, judge.ts).
+    for (const mem of members) {
+      await logGuildAudit(tx, {
+        serverId,
+        guildId,
+        actorUserId: null,
+        action: 'disband',
+        targetUserId: mem.userId,
+        detail: { auto: true },
+      });
+    }
     if (members.length > 0) {
       await tx.insert(mailbox).values(
         members.map((m) => ({

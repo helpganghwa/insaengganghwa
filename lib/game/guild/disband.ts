@@ -82,6 +82,24 @@ export function disbandGuild(input: { userId: string; serverId: number }): Promi
       actorUserId: input.userId,
       action: 'disband',
     });
+    // 멤버별 여파 행(target_user_id) — "이 유저가 언제 길드를 잃었는가"의 유일한 사후 근거다.
+    // 해산은 멤버 행을 CASCADE로 지워 흔적이 없고, guild_leave_log에 넣는 선택은 안 된다 —
+    // 그 테이블은 24h 재가입 잠금의 근거라 리더의 결정으로 쫓겨난 무고한 멤버까지 잠근다.
+    // 칭호 '무소속'(길드 없이 7일)이 이 행과 leave_log의 최댓값을 기산점으로 쓴다(judge.ts).
+    // 이 행이 없으면 해산 멤버는 이력 없음으로 읽혀 캐릭터 생성일 폴백으로 즉시 지급된다.
+    const members = await tx
+      .select({ userId: guildMembers.userId })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.guildId, m.guildId), eq(guildMembers.serverId, input.serverId)));
+    for (const mem of members) {
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: m.guildId,
+        actorUserId: input.userId,
+        action: 'disband',
+        targetUserId: mem.userId,
+      });
+    }
     await neutralizeAndDeleteGuild(tx, m.guildId);
   });
 }

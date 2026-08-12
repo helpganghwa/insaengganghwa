@@ -138,7 +138,15 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
     // 4-0) '휴가 복귀' 칭호 — 상태 파생으로는 못 잡는 유일한 칭호라 여기서 기록한다.
     // 조건은 "7일 이상 미접속 후 복귀"인데, 그 공백은 lastClaimedKstDay를 오늘로 덮어쓰는
     // 순간 사라진다(칭호 화면 판정은 덮어쓴 뒤에 도는 게 보통이라 영영 못 본다).
-    // 지급이 아니라 발견 기록이므로 실패해도 출석 보상을 막지 않는다.
+    //
+    // 의도적으로 같은 트랜잭션 안에 둔다(try/catch 없이). 이 insert가 던지면 출석 수령까지
+    // 함께 롤백되지만, 그게 오히려 자가치유다 — lastClaimedKstDay가 안 덮이므로 공백 증거가
+    // 남아 다음 수령 시도에서 다시 기록된다. tx 밖으로 빼면 반대로 수령은 커밋되고 기록만
+    // 실패해 공백 증거가 사라진다(영구 유실). 실제로 던질 경로도 사실상 없다 — 중복은
+    // on conflict가 삼키고 FK는 profiles(수령 주체라 반드시 존재)뿐이다.
+    //
+    // ⚠ 근사임을 밝혀 둔다: 재는 것은 '출석 미수령 7일'이지 '미접속 7일'이 아니다. 매일
+    // 접속하며 출석만 7일 안 받으면 오지급이지만, 출석 팝업이 자동으로 뜨는 구조라 실확률은 낮다.
     if (state.lastClaimedKstDay) {
       const gapDays = Math.floor(
         (Date.parse(`${kstToday}T00:00:00Z`) - Date.parse(`${state.lastClaimedKstDay}T00:00:00Z`)) / 86_400_000,

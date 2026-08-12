@@ -234,6 +234,16 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             union all
             select (created_at ${sql.raw(KST)})::date, gems_spent
               from gem_time_reductions where user_id=${u} and server_id=${s}
+            union all
+            -- 예치 환불(아바타 생성 거절·문양 실패)은 같은 날의 예치 지출을 상쇄한다 — 안 빼면
+            -- 하루 10건 거절만으로 실소비 0인 계정에 큰손(1만 소비)이 선다(2026-08-12 재재검증).
+            -- 잔여 오차: 환불이 자정을 넘거나(생성 ~8분이라 하루 최대 1건) 운영자가 며칠 뒤
+            -- 환불하면 지출일이 상쇄 없이 남는다. 전자는 최대 1건(≤1,500)이라 단독으로 임계에
+            -- 못 미치고, 후자는 운영자 개입이 전제라 허용한다. 상쇄만 있는 날은 합이 음수가
+            -- 되는데 max가 무시하므로 무해하다.
+            select (created_at ${sql.raw(KST)})::date, -delta
+              from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
+                and reason in ('avatar_refund','emblem_refund')
           ) x group by d) y),0)::bigint as spend_day_max
     `),
     /** 길드 이력 — guild_audit_log의 join/leave는 actor_user_id 기준(가입·탈퇴 주체). */
@@ -245,11 +255,16 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             and j.action = 'join' and j.created_at > l.created_at
           where l.action = 'leave' and l.actor_user_id = ${u} and l.server_id = ${s}
         ))::int as homecoming,
-        -- 마지막 이탈 시각은 guild_leave_log가 정본 — guild_audit_log의 action='leave'는
-        -- actor 기준이라 **추방(kick, actor=추방자)과 해산 피해자가 빠진다**. 그 경우 -1로 읽혀
-        -- 캐릭터 생성일 폴백을 타고 "길드 없이 7일"이 즉시 성립했다(2026-08-12 재검증).
-        coalesce(extract(epoch from (now() - (select max(left_at) from guild_leave_log
-          where user_id = ${u} and server_id = ${s}))) / 86400, -1)::float as since_leave,
+        -- 마지막 이탈 시각 = 자진 탈퇴·추방(guild_leave_log) ∪ 해산 여파(audit disband, target=me)의
+        -- 최댓값. leave_log 하나로는 안 된다 — audit의 'leave'는 actor 기준이라 추방·해산 피해자가
+        -- 빠지고(2026-08-12 재검증), leave_log는 추방까지는 담지만 **해산 멤버는 CASCADE로 지워져
+        -- 어디에도 없었다**(재재검증에서 발견 → disband.ts가 멤버별 audit 행을 남기도록 보강).
+        -- 해산 멤버를 leave_log에 넣는 선택은 안 된다 — 그 테이블은 24h 재가입 잠금의 근거다.
+        coalesce(extract(epoch from (now() - greatest(
+          (select max(left_at) from guild_leave_log where user_id = ${u} and server_id = ${s}),
+          (select max(created_at) from guild_audit_log
+             where target_user_id = ${u} and server_id = ${s} and action = 'disband')
+        ))) / 86400, -1)::float as since_leave,
         -- 골목대장 — 내 거주 구역 주민 중 전투력 1위인 동안. 거주지가 없으면 대상 아님.
         (exists(
           select 1 from characters me
