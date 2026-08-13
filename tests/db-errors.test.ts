@@ -96,10 +96,21 @@ describe('pgErrorCode / isUniqueViolation', () => {
   });
 
   it('constraint가 없는 에러는 undefined — 커넥션 에러의 문자열 code에 안 속는다', () => {
-    // ECONNREFUSED류도 code가 문자열이라(실측), code 있는 노드에서 멈추는 구현이면 여기서 깨진다.
     const conn = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
     expect(pgConstraintName(conn)).toBeUndefined();
     expect(pgConstraintName(new Error('boom'))).toBeUndefined();
     expect(pgConstraintName(null)).toBeUndefined();
+  });
+
+  it('바깥 노드에 문자열 code만 있어도 안쪽 constraint를 찾는다', () => {
+    // "code 있는 노드에서 멈추고 그 노드의 constraint를 읽는" 구현 변이를 죽이는 케이스 —
+    // 위 케이스만으로는 그 변이가 살아남는다(재검증 실측). 래퍼가 자체 문자열 code를 갖고
+    // 진짜 constraint는 cause의 PostgresError에 있는 형태를 직접 만든다.
+    const inner = Object.assign(new Error('duplicate key'), {
+      code: '23505',
+      constraint_name: 'probe_uq',
+    });
+    const outer = Object.assign(new Error('wrapped'), { code: 'WRAPPED', cause: inner });
+    expect(pgConstraintName(outer)).toBe('probe_uq');
   });
 });
