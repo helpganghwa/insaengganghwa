@@ -118,5 +118,85 @@
   "angel_orb_scepter": {
     "key": "key1",
     "objectId": "d8fb6b7b-05cb-4817-a414-c642b0bfbd7c"
+  },
+  "orc_kanabo_greatclub": {
+    "key": "key1",
+    "objectId": "a21b735a-4d68-4ee5-8498-4e7ac54b2404"
+  },
+  "swamp_anchor_maul": {
+    "key": "key1",
+    "objectId": "78fba66f-2a6d-4f11-b7a2-8f849d44e35e"
+  },
+  "temple_moonspade": {
+    "key": "key1",
+    "objectId": "77b20f95-38d8-4182-b824-5b269d96741b"
+  },
+  "angel_executioner_sword": {
+    "key": "key1",
+    "objectId": "88459dd5-adb4-47e1-b0b8-64accd6862d3"
+  },
+  "volcano_drill_lance": {
+    "key": "key1",
+    "objectId": "f90916f5-3993-47bf-be0f-f18db5d12b2f"
+  },
+  "rune_warpick": {
+    "key": "key1",
+    "objectId": "bf67046e-bdb8-4f66-9817-1c4949c02b7d"
+  },
+  "kingdom_royal_musket": {
+    "key": "key1",
+    "objectId": "e1e9659c-8ffb-49f0-8a6d-5fd64bcd11c5"
+  },
+  "angel_grand_cross": {
+    "key": "key1",
+    "objectId": "6b9539ae-6511-4cfe-828b-d0e94ba52473"
+  },
+  "kingdom_ballista_javelin": {
+    "key": "key1",
+    "objectId": "578c7e29-0db8-4bf8-8d9f-2e398503810c"
+  },
+  "westvolcano_dragonhorn_trident": {
+    "key": "key1",
+    "objectId": "887f8fbc-ff5c-4344-a847-b1c3eacbf4a0"
+  },
+  "rune_greatsaw": {
+    "key": "key1",
+    "objectId": "17a5d670-a5c1-43d1-a734-22c69c972fec"
+  },
+  "kingdom_lion_towershield": {
+    "key": "key1",
+    "objectId": "403423b6-c396-4516-b708-f42161b13f9f"
+  },
+  "temple_hymn_lyre": {
+    "key": "key1",
+    "objectId": "86580418-8074-4dbd-bc59-2198de9477e6"
+  },
+  "rune_ink_brush": {
+    "key": "key1",
+    "objectId": "61130e06-7eb0-4b06-a886-826daa1640a0"
+  },
+  "swamp_bouquet_blade": {
+    "key": "key1",
+    "objectId": "e1c915af-52f6-4e36-86a1-6111ef6c46af"
+  },
+  "kingdom_pendulum_chain": {
+    "key": "key1",
+    "objectId": "13945929-5ebc-4a01-92c5-97856ab4fa8b"
+  },
+  "swamp_will_lantern": {
+    "key": "key1",
+    "objectId": "023b0acd-96c7-4c18-afd7-5aac40fd5068"
+  },
+  "angel_violin_blade": {
+    "key": "key1",
+    "objectId": "ecfca9d3-09bc-4e20-90b8-bbfe9c0bb062"
+  },
+  "temple_gatekey_blade": {
+    "key": "key1",
+    "objectId": "842bcd1a-65db-445d-b9e6-e1fc78e71b88"
+  },
+  "angel_candelabra_blade": {
+    "key": "key1",
+    "objectId": "cabd2805-6423-47f3-b7e7-fad9b42bb16f"
   }
 }

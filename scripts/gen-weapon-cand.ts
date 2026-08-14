@@ -353,6 +353,211 @@ const CANDIDATES: Cand[] = [
       'small feathered wings at the collar, a tasseled cord below, ' +
       'regal and dreamy, clearly a short scepter weapon, no text, large, diagonal',
   },
+
+  // ══ 3차 20종(동일 비율 웅장 12 · 코스튬 8) ═══════════════════════════════════
+  // ── 웅장 12 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'orc_kanabo_greatclub',
+    nameKo: '낭아 철봉',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a studded kanabo war club — a long tapering iron bar densely covered in blunt pyramid studs, ' +
+      'a flared banded base and a leather-wound grip with a hanging iron ring, ' +
+      'crushing and imposing, clearly a studded iron war club weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_anchor_maul',
+    nameKo: '침몰의 닻',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a ship anchor wielded as a weapon — a huge rusted iron anchor with two hooked flukes and a heavy ring, ' +
+      'strands of green weed and a short length of wet chain clinging to the shank, ' +
+      'ponderous and grim, clearly an anchor weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_moonspade',
+    nameKo: '월아산',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a crescent moon spade — a long polearm with a wide upturned crescent blade at one end ' +
+      'and a flat spade blade at the other, engraved brass fittings on a dark red shaft, ' +
+      'disciplined and grand, clearly a monk crescent spade polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_executioner_sword',
+    nameKo: '집행의 검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'an executioner sword — a very wide straight blade ending in a blunt squared tip, no point, ' +
+      'a short simple crossguard, a long two-handed grip bound in black leather with a ring pommel, ' +
+      'severe and commanding, clearly an executioner sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_drill_lance',
+    nameKo: '천공 창',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a drill lance — a massive conical spiral drill head of dark steel with glowing orange grooves, ' +
+      'a reinforced collar of bolted plates, a thick armored shaft with a hand guard, ' +
+      'mechanical and overwhelming, clearly a drill lance weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_warpick',
+    nameKo: '룬 곡괭이',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a rune war pick — a long curved beak-like spike of blue-grey steel with a small hammer poll opposite, ' +
+      'faint glowing runes etched along the spine, a wrapped haft with a stone counterweight, ' +
+      'piercing and ancient, clearly a war pick weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_royal_musket',
+    nameKo: '근위 장총',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a royal long musket — a slender long-barreled firearm with a polished walnut stock, ' +
+      'engraved gold scrollwork on the lock and a lion crest, a slim ramrod under the barrel, ' +
+      'ornate and stately, clearly a long musket firearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_grand_cross',
+    nameKo: '대십자',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a grand cross weapon — a towering white-stone cross with gilded edges and a sharpened lower stem, ' +
+      'a stained-glass rose window at the crossing glowing softly, ' +
+      'monumental and solemn, clearly a large cross-shaped weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_ballista_javelin',
+    nameKo: '공성 투창',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a siege ballista javelin — an oversized bolt-like spear with a heavy four-sided steel head, ' +
+      'three stiff bronze fins near the butt, a banded blue-lacquered shaft, ' +
+      'weighty and precise, clearly a giant javelin spear weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_dragonhorn_trident',
+    nameKo: '용각 삼지창',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a dragonhorn trident — three curved horn prongs of blackened bone tipped with molten red edges, ' +
+      'a scaled bronze socket, a long dark shaft wrapped in red cord, ' +
+      'ferocious and splendid, clearly a trident polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_greatsaw',
+    nameKo: '룬 대톱',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a rune greatsaw — a long rectangular saw blade with deep triangular teeth along one edge, ' +
+      'pale runes glowing between the teeth, a bolted spine and a two-handed wrapped grip, ' +
+      'brutal and arcane, clearly a giant saw blade weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_lion_towershield',
+    nameKo: '사자 대방패',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a lion tower shield — a tall rounded rectangular shield faced in deep blue with a gold rampant lion, ' +
+      'a studded steel rim and a sharpened lower edge, ' +
+      'stalwart and regal, clearly a tower shield weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 8 ────────────────────────────────────────────────────────────────
+  {
+    key: 'temple_hymn_lyre',
+    nameKo: '성가 리라',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a hymn lyre — a small golden lyre with two curved arms and taut shining strings, ' +
+      'a carved soundbox and a short ribbon at the yoke, faint motes of light near the strings, ' +
+      'graceful and serene, clearly a lyre harp weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_ink_brush',
+    nameKo: '먹빛 붓',
+    region: '고대 룬 산맥',
+    group: '코스튬',
+    art:
+      'an ink brush weapon — a long slim calligraphy brush with a lacquered black shaft and a jade ferrule, ' +
+      'its soft tapered tip heavy with glowing indigo ink, a single drop falling, ' +
+      'scholarly and elegant, clearly a calligraphy brush weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_bouquet_blade',
+    nameKo: '꽃다발 검',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a bouquet blade — a slim sword whose guard blooms into a small gathered bouquet of pale marsh flowers, ' +
+      'a wrapped paper collar and a soft green ribbon, a bright narrow blade above, ' +
+      'sweet and striking, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_pendulum_chain',
+    nameKo: '회중 추',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a pocket-watch pendulum weapon — a polished gold pocket watch with an open engraved lid ' +
+      'and a faceted crystal weight below, hanging from a short taut chain held at the top, ' +
+      'hypnotic and dainty, clearly a pendulum pocket-watch weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_will_lantern',
+    nameKo: '도깨비 등롱',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a wisp lantern — a small hexagonal iron-framed lantern with pale green glass panes, ' +
+      'a drifting blue flame inside, a curved carrying hook at the top and a short tassel, ' +
+      'eerie and charming, clearly a hand lantern weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_violin_blade',
+    nameKo: '현음 검',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a violin blade — a slim sword shaped from a lacquered violin body, its neck extending into a ' +
+      'bright narrow blade, f-holes and four fine strings along the flat, a scrolled pommel, ' +
+      'lyrical and refined, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_gatekey_blade',
+    nameKo: '성문 열쇠검',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a gate key blade — a sword shaped like an ornate key, its blade a slim shaft ending in ' +
+      'squared key teeth, a large filigreed bow ring as the pommel, warm brass and ivory, ' +
+      'quaint and ornate, clearly a key-shaped sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_candelabra_blade',
+    nameKo: '촛대검',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a candelabra blade — a slender silver sword whose crossguard branches into three small arms ' +
+      'holding lit white candles with soft flames, thin wax drips along the branches, ' +
+      'gothic-free and tender, clearly a single slim sword weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
