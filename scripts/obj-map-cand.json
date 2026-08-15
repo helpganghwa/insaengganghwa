@@ -198,5 +198,85 @@
   "angel_candelabra_blade": {
     "key": "key1",
     "objectId": "cabd2805-6423-47f3-b7e7-fad9b42bb16f"
+  },
+  "orc_greatclaw_gauntlet": {
+    "key": "key1",
+    "objectId": "88e53a12-148d-4c73-a854-280520e7c454"
+  },
+  "westvolcano_hand_cannon": {
+    "key": "key1",
+    "objectId": "bb150b6c-3c27-4455-a172-7353eeb3d55f"
+  },
+  "angel_grand_stake": {
+    "key": "key1",
+    "objectId": "8504e890-5bd4-4a73-9c3e-af0a929a71fd"
+  },
+  "rune_masons_chisel": {
+    "key": "key1",
+    "objectId": "e8e36af1-3b6a-46fd-b985-eee9d0582b6b"
+  },
+  "temple_judgment_scales": {
+    "key": "key1",
+    "objectId": "b2fb103c-7d7a-4e73-8af9-2bb0c0d15a39"
+  },
+  "temple_censer_chain": {
+    "key": "key1",
+    "objectId": "2b641ab8-462e-4b8c-872b-f60b47a648ce"
+  },
+  "kingdom_blunderbuss": {
+    "key": "key1",
+    "objectId": "a0e435be-829b-417b-a995-5ab64a10a135"
+  },
+  "angel_coffin_blade": {
+    "key": "key1",
+    "objectId": "74ba669c-2c0a-4f1b-831c-eadb150f6c97"
+  },
+  "swamp_jawbone_blade": {
+    "key": "key1",
+    "objectId": "6fc41052-7077-402b-8940-6cb6c8db6ef6"
+  },
+  "kingdom_repeating_crossbow": {
+    "key": "key1",
+    "objectId": "b692920b-0d80-4829-aa1e-efc91927e942"
+  },
+  "volcano_molten_ladle": {
+    "key": "key1",
+    "objectId": "685ed45b-8c88-469d-ae25-a0b79f0185a7"
+  },
+  "orc_meat_hook": {
+    "key": "key1",
+    "objectId": "7b34416b-312a-4914-a25f-87518d707e6d"
+  },
+  "kingdom_musicbox_blade": {
+    "key": "key1",
+    "objectId": "ac8d57f1-f2f3-40e6-ab99-5d2315ee37bf"
+  },
+  "kingdom_ribbon_rod": {
+    "key": "key1",
+    "objectId": "af49711b-f6f2-4a93-9dec-83e690b723d3"
+  },
+  "temple_holywater_flask": {
+    "key": "key1",
+    "objectId": "b4bc6e4c-ef89-439a-b6a9-52b3dda22f64"
+  },
+  "rune_compass_blade": {
+    "key": "key1",
+    "objectId": "0a33d1ca-b67f-452f-97f9-d75bcf26c16d"
+  },
+  "rune_hourglass_rod": {
+    "key": "key1",
+    "objectId": "d97642f1-7146-4313-b3e1-d7cb41b22145"
+  },
+  "swamp_sewing_needle": {
+    "key": "key1",
+    "objectId": "6fff444a-5753-4373-a9a7-1d46d36a3521"
+  },
+  "swamp_conch_horn": {
+    "key": "key1",
+    "objectId": "6e71ca4e-e1e0-40e9-ab58-bfcd90c2738d"
+  },
+  "angel_birdcage_lantern": {
+    "key": "key1",
+    "objectId": "69f70eb7-8296-40bf-8a55-55226cdaad7a"
   }
 }

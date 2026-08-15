@@ -558,6 +558,211 @@ const CANDIDATES: Cand[] = [
       'holding lit white candles with soft flames, thin wax drips along the branches, ' +
       'gothic-free and tender, clearly a single slim sword weapon, no text, large, diagonal',
   },
+
+  // ══ 4차 20종(동일 비율 웅장 12 · 코스튬 8) ═══════════════════════════════════
+  // ── 웅장 12 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'orc_greatclaw_gauntlet',
+    nameKo: '맹수의 발톱',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a great claw gauntlet — a single heavy armored gauntlet with three long curved steel talons ' +
+      'extending past the knuckles, riveted plates and a hide-bound wrist strap, ' +
+      'savage and striking, clearly a clawed gauntlet weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_hand_cannon',
+    nameKo: '용포',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a hand cannon — a short thick bronze barrel flaring at the muzzle, cast with a dragon head ' +
+      'around the mouth, iron reinforcing bands and a stout wooden stock, faint smoke at the bore, ' +
+      'thunderous and ornate, clearly a hand cannon firearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_grand_stake',
+    nameKo: '형벌의 말뚝',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a grand execution stake — a tall tapered iron spike with a squared hammered head, ' +
+      'gold judgment script running down one face, a short chain ring near the top, ' +
+      'stark and imposing, clearly a giant iron stake weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_masons_chisel',
+    nameKo: '석공의 대정',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      "a mason's great chisel — an enormous flat-bladed chisel of pale steel with a wide beveled edge, " +
+      'glowing runes cut into the shank, a mushroomed struck head and a stone-set collar, ' +
+      'blunt and monumental, clearly a giant chisel weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_judgment_scales',
+    nameKo: '심판의 저울',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a judgment scales weapon — a tall gold balance with a beam and two hanging dishes, ' +
+      'the central column sharpened into a blade below, fine chains and a jeweled fulcrum, ' +
+      'solemn and ornate, clearly a balance scales weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_censer_chain',
+    nameKo: '사슬 향로',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a chained censer — a large pierced brass incense burner on a short taut chain held at the top, ' +
+      'warm smoke curling from the vents, a domed lid with a small finial, ' +
+      'ritual and grand, clearly a chained censer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_blunderbuss',
+    nameKo: '나팔총',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a blunderbuss — a short firearm with a wide flaring bell muzzle, a curved walnut stock ' +
+      'inlaid with brass rosettes, an engraved lockplate and a brass trigger guard, ' +
+      'bold and decorative, clearly a blunderbuss firearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_coffin_blade',
+    nameKo: '관검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a coffin blade — a colossal slab-like sword shaped as a sealed hexagonal coffin lid, ' +
+      'pale wood banded in gold with a small engraved plate, one long edge honed sharp, ' +
+      'sombre and overwhelming, clearly a giant slab sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_jawbone_blade',
+    nameKo: '턱뼈 검',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a jawbone blade — a long curved crocodile jawbone still set with rows of yellowed teeth, ' +
+      'bound with wet cord at the base into a grip, faint green algae in the seams, ' +
+      'primal and fearsome, clearly a bone jaw blade weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_repeating_crossbow',
+    nameKo: '연노',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a repeating crossbow — a compact crossbow with a tall box magazine over the stock ' +
+      'and a lever arm behind it, lacquered blue wood with gold fittings and a steel prod, ' +
+      'clever and refined, clearly a repeating crossbow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_molten_ladle',
+    nameKo: '용선 국자',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a foundry ladle weapon — a deep round iron crucible bowl brimming with glowing molten metal ' +
+      'on a very long reinforced handle, heat shimmer and drips at the lip, ' +
+      'industrial and fierce, clearly a giant foundry ladle weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_meat_hook',
+    nameKo: '도살 갈고리',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a butcher great hook — one massive curved iron hook with a wickedly tapered point, ' +
+      'a thick banded shaft and a rope-wound grip, rust and nicks along the curve, ' +
+      'crude and menacing, clearly a giant hook weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 8 ────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_musicbox_blade',
+    nameKo: '오르골 검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a music box blade — a small lacquered music box with its lid open showing a turning cylinder, ' +
+      'a slim silver blade rising from the box like a raised lid, a tiny gold crank on the side, ' +
+      'whimsical and precious, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_ribbon_rod',
+    nameKo: '리본 무봉',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a ribbon rod — a very slim polished baton with a gold cap, trailing one long silk ribbon ' +
+      'that loops in a wide smooth spiral, a small gem at the swivel, ' +
+      'airy and graceful, clearly a ribbon baton weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_holywater_flask',
+    nameKo: '성수 유리병',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a holy water flask — a rounded clear glass vessel of glowing pale water with a gold filigree ' +
+      'cradle and stopper, a short chain loop at the neck, soft light through the glass, ' +
+      'clean and devout, clearly a glass flask weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_compass_blade',
+    nameKo: '나침 검',
+    region: '고대 룬 산맥',
+    group: '코스튬',
+    art:
+      'a compass blade — a slim sword whose guard is an open brass compass with a spinning needle ' +
+      'over an engraved rose dial, faint blue runes on the narrow blade above, ' +
+      'adventurous and elegant, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_hourglass_rod',
+    nameKo: '모래시계 지팡이',
+    region: '고대 룬 산맥',
+    group: '코스튬',
+    art:
+      'an hourglass rod — a short slim rod topped by a small brass-framed hourglass ' +
+      'with glowing violet sand mid-fall, a thin filigree cage around the glass, ' +
+      'mysterious and delicate, clearly a short hourglass rod weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_sewing_needle',
+    nameKo: '대바늘',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a giant sewing needle — an oversized polished steel needle with a long slim body, ' +
+      'a wide eye near the top threaded with one green silk strand trailing behind, ' +
+      'quirky and sharp, clearly a giant needle weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_conch_horn',
+    nameKo: '소라 고둥',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a conch horn — a large spiral shell of cream and rose with a polished pearl interior, ' +
+      'a gold mouthpiece fitted at the tip and a woven teal cord, faint water droplets on the ridges, ' +
+      'oceanic and pretty, clearly a conch shell horn weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_birdcage_lantern',
+    nameKo: '새장',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a birdcage weapon — a small domed gold birdcage with slender bars and an open door, ' +
+      'a glowing white feather drifting inside, a ring handle at the crown and a ribbon tie, ' +
+      'wistful and ornate, clearly a birdcage weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
