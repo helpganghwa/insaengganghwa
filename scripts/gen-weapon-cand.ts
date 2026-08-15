@@ -981,6 +981,118 @@ const CANDIDATES: Cand[] = [
       'scattered white stars drifting inside the translucent blade, a small silver crescent guard, ' +
       'dreamy and wondrous, clearly a single slim sword weapon, no text, large, diagonal',
   },
+
+  // ══ 7차 10종 — 또 다른 축: 한국 전통 공예 ════════════════════════════════════
+  // 앞선 90종이 전부 서양 판타지 톤이라 대비가 크다. 단청 채색·옻칠·자개 상감·
+  // 매듭술·전통 신수로 표면과 장식을 통일한다. 생성기가 못 알아듣는 고유명사
+  // (단청·자개 등) 대신 보이는 것으로 풀어 쓴다 — 색·문양·재질.
+  // ── 웅장 6 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_dancheong_sabre',
+    nameKo: '단청 환도',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'an east asian curved sabre — a gently curved bright blade, a round pierced brass guard, ' +
+      'a scabbard-style collar painted in red green and cobalt interlocking geometric temple patterns, ' +
+      'a braided knot tassel at the pommel, ornate and vivid, clearly a single curved sabre weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_chongtong',
+    nameKo: '승자총통',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'an old east asian hand cannon — a stout ribbed bronze tube with raised bamboo-like bands, ' +
+      'a widened muzzle and a short wooden tail handle, engraved cloud scrollwork, faint smoke, ' +
+      'antique and formidable, clearly a bronze hand cannon firearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_beopgo_drum',
+    nameKo: '법고',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a large temple war drum on a short pole — a barrel drum with a taut pale hide head, ' +
+      'a body painted in red green and gold lotus scroll patterns with brass studs around the rim, ' +
+      'a lacquered striking mallet resting against it, resonant and grand, clearly a drum weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'rune_horn_bow',
+    nameKo: '흑각궁',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a small deeply recurved horn bow — dark polished horn limbs curling sharply back at both tips, ' +
+      'wrapped in birch bark with pale sinew binding and a taut string, faint runes along the grip, ' +
+      'compact and elegant, clearly a recurve bow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_haetae_greatsword',
+    nameKo: '해태 대검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a broad ceremonial greatsword — a wide straight blade etched with cloud bands, its guard cast ' +
+      'as a maned lion-like guardian beast head with a single horn and bulging eyes, ' +
+      'gold and jade fittings, a red knot cord below, austere and majestic, clearly a greatsword weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'volcano_bulgasari_club',
+    nameKo: '불가사리 곤',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a heavy iron war club shaped as a bristling beast — a thick tapering shaft crusted with ' +
+      'overlapping iron scales and short spines, a snarling beast head cast at the striking end, ' +
+      'glowing red between the scales, monstrous and heavy, clearly an iron war club weapon, ' +
+      'no text, large, diagonal',
+  },
+
+  // ── 코스튬 4 ───────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_gayageum_zither',
+    nameKo: '가야금',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a long east asian zither — a slender curved paulownia board with twelve silk strings ' +
+      'over small movable bridges, a mother-of-pearl inlaid crane at one end, a red knot tassel, ' +
+      'refined and serene, clearly a long zither instrument weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_long_pipe',
+    nameKo: '장죽',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a very long smoking pipe — a slim bamboo stem with brass ferrules, a small ornate bowl ' +
+      'at one end trailing a thin curl of pale smoke, a jade mouthpiece and a short silk cord, ' +
+      'louche and stylish, clearly a long pipe weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_gong_cymbal',
+    nameKo: '꽹과리',
+    region: '오크 부락',
+    group: '코스튬',
+    art:
+      'a small hand gong — a shallow round brass disc with a hammered dimpled face and a rolled rim, ' +
+      'a knotted cord grip behind it and a short padded beater, faint ring lines in the air, ' +
+      'brash and festive, clearly a hand gong weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_ornament_knife',
+    nameKo: '은장도',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a small ornamental silver knife — a slim blade half drawn from a slender engraved silver sheath ' +
+      'inlaid with tiny coral and jade, a long plaited knot tassel hanging from the ring, ' +
+      'dainty and precious, clearly a small ornamental knife weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */

@@ -358,5 +358,45 @@
   "angel_nebula_blade": {
     "key": "key1",
     "objectId": "58a830ac-7540-469b-b212-b970517e23c0"
+  },
+  "kingdom_dancheong_sabre": {
+    "key": "key1",
+    "objectId": "aa1f3932-dca3-4868-84f4-e597fa264ce5"
+  },
+  "westvolcano_chongtong": {
+    "key": "key1",
+    "objectId": "93f1a07a-1416-4fea-934d-9206f81adbf7"
+  },
+  "temple_beopgo_drum": {
+    "key": "key1",
+    "objectId": "6449873a-1eb2-47aa-9ef7-308dda728dd3"
+  },
+  "rune_horn_bow": {
+    "key": "key1",
+    "objectId": "0836667b-d3c8-4a52-8e3e-bbf263854e0e"
+  },
+  "angel_haetae_greatsword": {
+    "key": "key1",
+    "objectId": "9cbb7119-de2c-485d-8132-da13fe052c02"
+  },
+  "volcano_bulgasari_club": {
+    "key": "key1",
+    "objectId": "190d4136-895e-4279-a01a-45d986f118c6"
+  },
+  "kingdom_gayageum_zither": {
+    "key": "key1",
+    "objectId": "56b62dde-fa6d-4ea7-a577-aac359e8f201"
+  },
+  "swamp_long_pipe": {
+    "key": "key1",
+    "objectId": "90653046-58eb-467b-9ec7-06ad47fd256d"
+  },
+  "orc_gong_cymbal": {
+    "key": "key1",
+    "objectId": "192dccee-c2de-40e7-8887-db35cf556da2"
+  },
+  "angel_ornament_knife": {
+    "key": "key1",
+    "objectId": "49257756-8b3f-4075-bf98-58dda6ffaa57"
   }
 }
