@@ -143,8 +143,9 @@ const CANDIDATES: Cand[] = [
     nameKo: '레이스 양산검',
     region: '타락천사',
     group: '코스튬',
+    // 재생성(2차): 깃털 트리밍 제거 — 깃털은 아바타 생성기가 날개로 오독한 전례가 있다.
     art:
-      'a lace parasol blade — an opened white lace parasol with fine gold ribbing and a scalloped feathered trim, ' +
+      'a lace parasol blade — an opened white lace parasol with fine gold ribbing and a clean scalloped hem, ' +
       'its slender shaft ending in a polished silver blade tip, a looped ribbon handle, ' +
       'elegant and charming, clearly a parasol-shaped weapon, no text, large, diagonal',
   },
@@ -762,6 +763,94 @@ const CANDIDATES: Cand[] = [
       'a birdcage weapon — a small domed gold birdcage with slender bars and an open door, ' +
       'a glowing white feather drifting inside, a ring handle at the crown and a ribbon tie, ' +
       'wistful and ornate, clearly a birdcage weapon, no text, large, diagonal',
+  },
+
+  // ══ 5차 8종 ═════════════════════════════════════════════════════════════════
+  // 사용자가 고른 3종(성전 철퇴·육환 석장·보주 홀)이 모두 '자루 + 화려한 상단 헤드'
+  // 계열이라 그 형태를 지역만 바꿔 변주한다 — 실루엣이 단순하고 한 손에 들기 좋아
+  // 아바타 생성에도 유리한 축이다.
+  // ── 웅장 5 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_crown_scepter',
+    nameKo: '대관 홀',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a coronation scepter — a long gold rod crowned by a small jeweled crown of arches ' +
+      'closing over a deep blue gem, fluted banding down the shaft and a blue silk cord, ' +
+      'sovereign and splendid, clearly a scepter weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_astral_scepter',
+    nameKo: '성좌 홀',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'an astral scepter — a tall dark rod topped by nested brass armillary rings turning around ' +
+      'a small white star, faint constellation lines glowing between them, a stone-set collar, ' +
+      'cosmic and stately, clearly a scepter weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_serpent_staff',
+    nameKo: '뱀 석장',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a serpent staff — a tall gnarled staff with a green scaled serpent coiled up its length, ' +
+      'the head rearing at the top with jade eyes and open fangs, damp bark and a cord grip, ' +
+      'sinuous and menacing, clearly a serpent-headed staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_dragonhead_staff',
+    nameKo: '용두 석장',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a dragonhead staff — a heavy dark staff crowned by a cast bronze dragon head with jaws parted ' +
+      'around a glowing molten orb, scaled banding down the shaft and a red cord below, ' +
+      'fierce and magnificent, clearly a dragon-headed staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_totem_staff',
+    nameKo: '토템 석장',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a totem staff — a thick rough timber staff topped by a carved wooden beast face with bared teeth, ' +
+      'painted red and ochre, hung with small bones and feathers-free leather strips, ' +
+      'tribal and imposing, clearly a carved totem staff weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 3 ───────────────────────────────────────────────────────────────
+  {
+    key: 'temple_crescent_wand',
+    nameKo: '초승 완드',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a crescent wand — a short pale rod topped by a slim silver crescent moon holding one small ' +
+      'clear gem in its curve, a thin ribbon at the collar, soft pale light along the crescent, ' +
+      'serene and pretty, clearly a short magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_rose_scepter',
+    nameKo: '장미 홀',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a rose scepter — a slim gold rod crowned by a blooming glass rose with translucent pink petals, ' +
+      'two small enamel leaves at the collar and a short tassel, ' +
+      'refined and lovely, clearly a short scepter weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_halo_wand',
+    nameKo: '후광 완드',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a halo wand — a short white rod topped by a thin floating gold ring haloed in soft light, ' +
+      'a small gem suspended at the ring center, a pale ribbon trailing from the collar, ' +
+      'radiant and delicate, clearly a short magic wand weapon, no text, large, diagonal',
   },
 ];
 

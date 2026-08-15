@@ -37,7 +37,7 @@
   },
   "angel_lace_parasol": {
     "key": "key1",
-    "objectId": "b28aaf57-d740-436a-9471-652a73527591"
+    "objectId": "6cb278f0-0f24-4683-b6e9-dcc0c00d66c8"
   },
   "orc_bloodtusk_greataxe": {
     "key": "key1",
@@ -53,7 +53,7 @@
   },
   "temple_ringstaff_khakkhara": {
     "key": "key1",
-    "objectId": "14f1a069-b48d-4d12-b534-ac1e6f89eb26"
+    "objectId": "c80acdd3-ea78-4f9d-acd6-e1a3b12ab160"
   },
   "rune_obelisk_club": {
     "key": "key1",
@@ -278,5 +278,37 @@
   "angel_birdcage_lantern": {
     "key": "key1",
     "objectId": "69f70eb7-8296-40bf-8a55-55226cdaad7a"
+  },
+  "kingdom_crown_scepter": {
+    "key": "key1",
+    "objectId": "eeb1a861-547f-4932-a131-05ba396c6cf0"
+  },
+  "rune_astral_scepter": {
+    "key": "key1",
+    "objectId": "783b56ed-14f2-43fc-a8b8-1b268f861291"
+  },
+  "swamp_serpent_staff": {
+    "key": "key1",
+    "objectId": "9317d924-d2f9-4707-a1c9-e1aadd24fc5b"
+  },
+  "westvolcano_dragonhead_staff": {
+    "key": "key1",
+    "objectId": "610427c4-8ddd-4fa6-945a-1a9019840d3d"
+  },
+  "orc_totem_staff": {
+    "key": "key1",
+    "objectId": "c22ece71-2786-4406-a959-9129f2e46270"
+  },
+  "temple_crescent_wand": {
+    "key": "key1",
+    "objectId": "da615ec9-f995-482e-bee4-4c69603d0135"
+  },
+  "kingdom_rose_scepter": {
+    "key": "key1",
+    "objectId": "f5530f98-3270-47d8-ab34-1f0fa1db20fa"
+  },
+  "angel_halo_wand": {
+    "key": "key1",
+    "objectId": "018328c2-17e2-485a-b083-261bd0e72e3e"
   }
 }
