@@ -143,9 +143,8 @@ const CANDIDATES: Cand[] = [
     nameKo: '레이스 양산검',
     region: '타락천사',
     group: '코스튬',
-    // 재생성(2차): 깃털 트리밍 제거 — 깃털은 아바타 생성기가 날개로 오독한 전례가 있다.
     art:
-      'a lace parasol blade — an opened white lace parasol with fine gold ribbing and a clean scalloped hem, ' +
+      'a lace parasol blade — an opened white lace parasol with fine gold ribbing and a scalloped feathered trim, ' +
       'its slender shaft ending in a polished silver blade tip, a looped ribbon handle, ' +
       'elegant and charming, clearly a parasol-shaped weapon, no text, large, diagonal',
   },
@@ -765,6 +764,29 @@ const CANDIDATES: Cand[] = [
       'wistful and ornate, clearly a birdcage weapon, no text, large, diagonal',
   },
 
+  // ══ 재굴림본 2종 — 원본은 위에 그대로 두고 다른 결과를 나란히 본다 ═══════════
+  {
+    key: 'temple_ringstaff_khakkhara_v2',
+    nameKo: '육환 석장 (재굴림)',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a ringed pilgrim khakkhara staff — a tall pale wooden shaft crowned by a golden pagoda finial ' +
+      'hung with six loose jingling rings, a silk knot below the head, ' +
+      'sacred and stately, clearly a ringed monk staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_lace_parasol_v2',
+    nameKo: '레이스 양산검 (재굴림)',
+    region: '타락천사',
+    group: '코스튬',
+    // 깃털 트리밍 제거 — 깃털은 아바타 생성기가 날개로 오독한 전례가 있다.
+    art:
+      'a lace parasol blade — an opened white lace parasol with fine gold ribbing and a clean scalloped hem, ' +
+      'its slender shaft ending in a polished silver blade tip, a looped ribbon handle, ' +
+      'elegant and charming, clearly a parasol-shaped weapon, no text, large, diagonal',
+  },
+
   // ══ 5차 8종 ═════════════════════════════════════════════════════════════════
   // 사용자가 고른 3종(성전 철퇴·육환 석장·보주 홀)이 모두 '자루 + 화려한 상단 헤드'
   // 계열이라 그 형태를 지역만 바꿔 변주한다 — 실루엣이 단순하고 한 손에 들기 좋아
@@ -851,6 +873,113 @@ const CANDIDATES: Cand[] = [
       'a halo wand — a short white rod topped by a thin floating gold ring haloed in soft light, ' +
       'a small gem suspended at the ring center, a pale ribbon trailing from the collar, ' +
       'radiant and delicate, clearly a short magic wand weapon, no text, large, diagonal',
+  },
+
+  // ══ 6차 10종 — 다른 축: 무기 자체가 원소·재질로 빚어진 컨셉 ═══════════════════
+  // 앞선 78종은 '무엇으로 생긴 무기'였다면 이쪽은 '무엇으로 만들어진 무기'다.
+  // 날 전체가 얼음·불꽃·번개·물·유리·수정으로 이뤄져 재질이 실루엣을 만든다.
+  // ── 웅장 6 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'rune_glacier_greatsword',
+    nameKo: '빙하 대검',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a greatsword carved entirely from glacier ice — a wide translucent pale-blue blade with deep ' +
+      'internal fractures catching light, frosted edges and a rime-crusted grip of frozen rope, ' +
+      'cold and breathtaking, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_flame_blade',
+    nameKo: '화염 검',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a sword whose blade is living flame — a blackened iron hilt from which a tall tapering blade ' +
+      'of bright orange fire rises, its edges licking into sparks, heat shimmer around it, ' +
+      'blazing and vivid, clearly a single sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_lightning_spear',
+    nameKo: '뇌전 창',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a spear whose head is condensed lightning — a gold-banded shaft topped by a jagged bolt of ' +
+      'white-blue electricity forming a spearhead, small arcs jumping around the collar, ' +
+      'electric and brilliant, clearly a spear polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_thornvine_blade',
+    nameKo: '가시덩굴 검',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a sword grown from living thorn vines — a long blade woven from tight green woody vines ' +
+      'with sharp thorns along both edges, small pale buds near the guard, a bark-wrapped grip, ' +
+      'wild and alive, clearly a single sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_shrapnel_cleaver',
+    nameKo: '파편 도',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a broad blade fused from scrap iron shards — jagged plates and broken blade fragments ' +
+      'welded into one heavy chopping edge, glowing weld seams between them, a chain-wrapped grip, ' +
+      'ragged and forceful, clearly a broad chopping sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_radiance_greatsword',
+    nameKo: '광휘 대검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a greatsword made of solid light — a broad blade of luminous white-gold with a soft glowing ' +
+      'aura and faint motes rising from it, a slim ring guard, a grip of woven light, ' +
+      'radiant and pure, clearly a greatsword weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 4 ───────────────────────────────────────────────────────────────
+  {
+    key: 'temple_stainedglass_blade',
+    nameKo: '유리화 검',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a slim sword whose blade is stained glass — panes of rose, amber and blue held in fine lead ' +
+      'came forming one clear blade, light passing through in colored beams, a brass collar, ' +
+      'luminous and lovely, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_waterflow_blade',
+    nameKo: '유수 검',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a sword whose blade is flowing water — a smooth curving ribbon of clear blue water rising ' +
+      'from a silver hilt, droplets breaking off along its length, a shell-shaped guard, ' +
+      'fluid and refreshing, clearly a single curved sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_crystal_butterfly',
+    nameKo: '수정 나비검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a blade formed by one large crystal butterfly — its two faceted wings folded together into ' +
+      'a slim translucent blade, thin antennae curling at the guard, a pearl grip, ' +
+      'iridescent and delicate, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_nebula_blade',
+    nameKo: '성운 검',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a slim sword whose blade is a slice of night sky — deep indigo and violet nebula clouds with ' +
+      'scattered white stars drifting inside the translucent blade, a small silver crescent guard, ' +
+      'dreamy and wondrous, clearly a single slim sword weapon, no text, large, diagonal',
   },
 ];
 

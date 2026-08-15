@@ -37,7 +37,7 @@
   },
   "angel_lace_parasol": {
     "key": "key1",
-    "objectId": "6cb278f0-0f24-4683-b6e9-dcc0c00d66c8"
+    "objectId": "b28aaf57-d740-436a-9471-652a73527591"
   },
   "orc_bloodtusk_greataxe": {
     "key": "key1",
@@ -53,7 +53,7 @@
   },
   "temple_ringstaff_khakkhara": {
     "key": "key1",
-    "objectId": "c80acdd3-ea78-4f9d-acd6-e1a3b12ab160"
+    "objectId": "14f1a069-b48d-4d12-b534-ac1e6f89eb26"
   },
   "rune_obelisk_club": {
     "key": "key1",
@@ -310,5 +310,53 @@
   "angel_halo_wand": {
     "key": "key1",
     "objectId": "018328c2-17e2-485a-b083-261bd0e72e3e"
+  },
+  "temple_ringstaff_khakkhara_v2": {
+    "key": "key1",
+    "objectId": "c80acdd3-ea78-4f9d-acd6-e1a3b12ab160"
+  },
+  "angel_lace_parasol_v2": {
+    "key": "key1",
+    "objectId": "6cb278f0-0f24-4683-b6e9-dcc0c00d66c8"
+  },
+  "rune_glacier_greatsword": {
+    "key": "key1",
+    "objectId": "1e309a22-4440-440e-9e96-4fcc4f1e4b97"
+  },
+  "volcano_flame_blade": {
+    "key": "key1",
+    "objectId": "261ded78-eed9-42e1-acdc-da0d8640ddbd"
+  },
+  "kingdom_lightning_spear": {
+    "key": "key1",
+    "objectId": "511c3329-ee92-42dc-bf0a-ee5919693ab8"
+  },
+  "swamp_thornvine_blade": {
+    "key": "key1",
+    "objectId": "375cc9f0-15e3-4db9-876f-3a2586eebf48"
+  },
+  "orc_shrapnel_cleaver": {
+    "key": "key1",
+    "objectId": "0c83192b-11e4-4685-a352-556c6f3ab670"
+  },
+  "angel_radiance_greatsword": {
+    "key": "key1",
+    "objectId": "6a055b64-3901-46bc-aada-8ebe09f38cf4"
+  },
+  "temple_stainedglass_blade": {
+    "key": "key1",
+    "objectId": "e9bcd004-3584-47c5-99fe-c2ff420058db"
+  },
+  "swamp_waterflow_blade": {
+    "key": "key1",
+    "objectId": "d532ca27-bbaf-42e0-bdec-3f055d364fd0"
+  },
+  "kingdom_crystal_butterfly": {
+    "key": "key1",
+    "objectId": "8743d051-dfbe-482e-82dc-bfd3c5eb3c0d"
+  },
+  "angel_nebula_blade": {
+    "key": "key1",
+    "objectId": "58a830ac-7540-469b-b212-b970517e23c0"
   }
 }
