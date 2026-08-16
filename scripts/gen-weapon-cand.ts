@@ -42,7 +42,24 @@ const TAIL =
   'a beautiful clean fantasy anime RPG gacha-game weapon, bright and stylish, not gothic, ' +
   'a single isolated object on a plain flat empty background, large, pixel art';
 
-type Cand = { key: string; nameKo: string; region: string; group: '웅장' | '코스튬'; art: string };
+/**
+ * v3 세대 꼬리표 — 사용자가 선호로 지목한 아이템들(뱀파이어 세검·네크로맨서 해골장·
+ * 호박 마녀 등불)이 실제로 쓴 것. 위 TAIL의 `bright and stylish, not gothic`이
+ * 그 톤을 정면으로 금지하는 문구라, 어두운 계열 아키타입에는 이쪽을 쓴다.
+ */
+const TAIL_V3 =
+  'a beautiful clean gacha game weapon, ' +
+  'a single isolated object on a plain flat empty background, large, pixel art';
+
+type Cand = {
+  key: string;
+  nameKo: string;
+  region: string;
+  group: '웅장' | '코스튬';
+  art: string;
+  /** 미지정 시 TAIL. 톤이 TAIL과 충돌하는 축에서만 TAIL_V3로 덮는다. */
+  tail?: string;
+};
 
 const CANDIDATES: Cand[] = [
   // ── 6종: 지역색 · 화려하고 웅장 ─────────────────────────────────────────────
@@ -1623,6 +1640,46 @@ const CANDIDATES: Cand[] = [
       'a short scepter whose head is many small ornate crowns added one atop another over generations, ' +
       'each a different metal, precious and ornate, clearly a scepter weapon, no text, large, diagonal',
   },
+
+  // ══ 13차 10종 — 캐릭터 아키타입 ══════════════════════════════════════════════
+  // 사용자가 선호로 지목한 7종(뱀파이어 세검·네크로맨서 해골장·호박 마녀 등불·
+  // 케루빔 활·금당초 쌍권총·서리 대도·노을 검)의 공통점을 그대로 따른다.
+  //
+  //  ① 전부 region '일반' — 지역 무기가 아니라 **캐릭터 무기**다. 무기보다
+  //     소유자가 먼저 있고("a vampire noble's rapier") 무기는 그 사람의 물건이다.
+  //     1~12차는 전부 지역·재질·형태로 시작해 '누가 드는 무기인지'가 없었다.
+  //  ② art 구조: <소유자>'s <무기> with <상징물 1~2개>, <2색 배합 명시> — <무드 2~3>
+  //  ③ 꼬리표는 TAIL_V3. 기본 TAIL의 'not gothic'이 이 축의 절반을 금지한다.
+  { key: 'alchemist_flask_sword', nameKo: '연금술사의 검', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "an alchemist's slim sword with a glass flask set into the guard and green elixir bubbling inside, " +
+      'brass and emerald with pale glass — curious, clever and elegant' },
+  { key: 'pirate_compass_cutlass', nameKo: '선장의 커틀러스', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a pirate captain's broad curved cutlass with a brass compass set in the pommel and a knotted rope guard, " +
+      'weathered brass and sea-blue — dashing, salt-worn and bold' },
+  { key: 'foxshrine_bell_blade', nameKo: '여우 무녀의 방울검', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a fox shrine maiden's slender blade hung with small gold bells and a paper charm, a fox-mask guard, " +
+      'vermilion and gold — graceful, uncanny and lovely' },
+  { key: 'clockwork_gear_sword', nameKo: '시계공의 태엽검', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a clockmaker's sword with exposed turning brass gears along the spine and a mainspring coiled at the guard, " +
+      'brass and ivory white — intricate, precise and handsome' },
+  { key: 'plague_doctor_cane', nameKo: '역병 의사의 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a plague doctor's tall cane staff topped with a beaked bird mask and a smoking censer of herbs, " +
+      'bone-white and dark leather with dull silver — eerie, clinical and striking' },
+  { key: 'werewolf_fang_greataxe', nameKo: '늑대인간의 대부', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a werewolf's brutal greataxe, its head a great curved fang set in a claw-shaped mount, torn leather binding, " +
+      'iron grey and blood red — savage, feral and imposing' },
+  { key: 'reaper_soul_scythe', nameKo: '사신의 낫', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a reaper's great scythe with a long black shaft, a pale bone crossjoint and an hourglass charm swinging below, " +
+      'black and bone white with cold blue soulfire — solemn, ominous and magnificent' },
+  { key: 'siren_coral_trident', nameKo: '세이렌의 삼지창', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a siren queen's trident grown from branching coral with pearls nested in the prongs and a trailing net of kelp, " +
+      'coral pink and pearl white — otherworldly, beautiful and regal' },
+  { key: 'druid_antler_staff', nameKo: '드루이드의 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a druid's tall staff crowned with branching stag antlers, moss and a single amber stone held in the fork, " +
+      'moss green and warm amber — ancient, gentle and grand' },
+  { key: 'frostqueen_crown_scepter', nameKo: '눈의 여왕의 홀', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a frost queen's scepter crowned with a jagged crown of clear ice and a snowflake filigree collar, " +
+      'ice blue and silver white — cold, imperious and breathtaking' },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
@@ -1670,7 +1727,7 @@ async function genOne(c: Cand): Promise<'ok' | 'skip' | 'fail'> {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}` },
         body: JSON.stringify({
-          description: `${c.art}, ${TAIL}`,
+          description: `${c.art}, ${c.tail ?? TAIL}`,
           size: SIZE,
           view: 'sidescroller', // 측면 아이콘 — 기존 120종과 동일
         }),

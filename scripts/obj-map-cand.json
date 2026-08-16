@@ -598,5 +598,45 @@
   "temple_strata_scepter": {
     "key": "key1",
     "objectId": "8c5d0594-f7ae-4c66-beaf-b187a2f12ec3"
+  },
+  "alchemist_flask_sword": {
+    "key": "key1",
+    "objectId": "e818fae4-4060-45b9-81fb-988ebc9afbf8"
+  },
+  "pirate_compass_cutlass": {
+    "key": "key1",
+    "objectId": "71e05f05-b268-4f55-a82f-8c0661b0610a"
+  },
+  "foxshrine_bell_blade": {
+    "key": "key1",
+    "objectId": "98203ee1-6909-4bec-85fb-932071e4f064"
+  },
+  "clockwork_gear_sword": {
+    "key": "key1",
+    "objectId": "2fbe804a-259f-404d-b40e-a2d1398ab9e2"
+  },
+  "plague_doctor_cane": {
+    "key": "key1",
+    "objectId": "89dbec48-aea0-43a1-92bd-e5f3bbf0f29c"
+  },
+  "werewolf_fang_greataxe": {
+    "key": "key1",
+    "objectId": "56eac869-206d-4672-a7ea-8271b0dabee1"
+  },
+  "reaper_soul_scythe": {
+    "key": "key1",
+    "objectId": "441dba8e-e5be-420d-bf79-eb7abf9099e0"
+  },
+  "siren_coral_trident": {
+    "key": "key1",
+    "objectId": "4b63d5c5-bbd2-443a-833a-12c9c158d543"
+  },
+  "druid_antler_staff": {
+    "key": "key1",
+    "objectId": "e040d2db-a397-4d9d-b453-a419d8f9d360"
+  },
+  "frostqueen_crown_scepter": {
+    "key": "key1",
+    "objectId": "8efbac11-40b1-4c32-a7a0-1952dc3f5441"
   }
 }
