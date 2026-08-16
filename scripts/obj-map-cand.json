@@ -398,5 +398,45 @@
   "angel_ornament_knife": {
     "key": "key1",
     "objectId": "49257756-8b3f-4075-bf98-58dda6ffaa57"
+  },
+  "rune_ringstaff_monolith": {
+    "key": "key1",
+    "objectId": "fd3cbd95-84c4-4cc5-9dd1-a5100ce59a8f"
+  },
+  "kingdom_court_parasol": {
+    "key": "key1",
+    "objectId": "bc39220e-6038-42a4-a592-81bd22557d46"
+  },
+  "kingdom_oath_longsword": {
+    "key": "key1",
+    "objectId": "c37071b5-546a-43db-85b4-8d7b88a038c0"
+  },
+  "volcano_dragonfire_greatsword": {
+    "key": "key1",
+    "objectId": "b41779bc-432a-44f0-b1d3-ccf147e28a27"
+  },
+  "rune_archmage_staff": {
+    "key": "key1",
+    "objectId": "8a528c0c-2ce4-4f52-8dcf-b8329c922b96"
+  },
+  "angel_seraph_lance": {
+    "key": "key1",
+    "objectId": "f45b5f81-5268-422f-87ff-304cd6c70d53"
+  },
+  "swamp_venom_scimitar": {
+    "key": "key1",
+    "objectId": "f10f3d19-7ea0-49f2-90e9-b8da15fd6aeb"
+  },
+  "orc_warlord_greataxe": {
+    "key": "key1",
+    "objectId": "b0bfca68-cb3a-4c40-a601-4773c605c557"
+  },
+  "westvolcano_drake_longbow": {
+    "key": "key1",
+    "objectId": "cdf447a6-8049-4929-8bd3-08c2701f3a6b"
+  },
+  "temple_frost_rapier": {
+    "key": "key1",
+    "objectId": "f83d4b13-57fb-4913-829f-c715715b5b15"
   }
 }

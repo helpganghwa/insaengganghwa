@@ -1093,6 +1093,114 @@ const CANDIDATES: Cand[] = [
       'inlaid with tiny coral and jade, a long plaited knot tassel hanging from the ring, ' +
       'dainty and precious, clearly a small ornamental knife weapon, no text, large, diagonal',
   },
+
+  // ══ 8차 10종 ═════════════════════════════════════════════════════════════════
+  // 앞 배치가 기물·악기 쪽으로 흘러 무기다움이 옅어졌다. 여기서는 정통 판타지
+  // 게임 무기의 인상으로 되돌린다 — 검·창·도끼·활·지팡이. 반응이 좋았던 석장과
+  // 양산검은 지역을 바꿔 한 종씩 변주한다.
+  // ── 석장 · 양산검 변주 2 ───────────────────────────────────────────────────
+  {
+    key: 'rune_ringstaff_monolith',
+    nameKo: '룬환 석장',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a runed ring staff — a tall dark stone shaft crowned by three stacked stone rings that hover ' +
+      'apart from each other, pale runes glowing along their inner edges, a carved collar below, ' +
+      'ancient and imposing, clearly a ringed staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_court_parasol',
+    nameKo: '궁정 양산검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a court parasol blade — an opened deep blue silk parasol embroidered with gold thread, ' +
+      'a scalloped hem hung with small gold beads, its slender shaft ending in a polished blade tip, ' +
+      'stately and charming, clearly a parasol-shaped weapon, no text, large, diagonal',
+  },
+
+  // ── 정통 판타지 무기 8 ─────────────────────────────────────────────────────
+  {
+    key: 'kingdom_oath_longsword',
+    nameKo: '서약의 성검',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a holy longsword — a straight mirror-bright blade with a glowing blue rune channel down its ' +
+      'center, a broad gold crossguard swept upward at the tips, a deep sapphire set in the pommel, ' +
+      'noble and radiant, clearly a longsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_dragonfire_greatsword',
+    nameKo: '용염 대검',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a dragonfire greatsword — a massive blade of blackened scaled steel split by glowing molten ' +
+      'fissures, a heavy guard cast as spread dragon claws, a smouldering wrapped grip, ' +
+      'ferocious and magnificent, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_archmage_staff',
+    nameKo: '비전 지팡이',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'an archmage staff — a tall pale shaft crowned by a large faceted violet crystal held in ' +
+      'open silver claws, thin glowing rings of arcane script turning slowly around it, ' +
+      'scholarly and powerful, clearly a magic staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_seraph_lance',
+    nameKo: '치천 성창',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a seraph lance — a long slender white-gold lance with a fluted conical vamplate, ' +
+      'a narrow spiral head trailing soft golden light, faint halo rings along the shaft, ' +
+      'divine and elegant, clearly a lance polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_venom_scimitar',
+    nameKo: '독아 곡검',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a venom scimitar — a deeply curved blade of dark green steel with a serrated inner edge, ' +
+      'luminous emerald venom beading along it, a fanged guard and a scaled leather grip, ' +
+      'sinister and striking, clearly a curved scimitar sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_warlord_greataxe',
+    nameKo: '파괴자 대부',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a warlord greataxe — one enormous crescent axe head of pitted dark iron with red runes ' +
+      'burning along the edge, a spiked counterweight and a thick haft bound in studded leather, ' +
+      'brutal and commanding, clearly a greataxe weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_drake_longbow',
+    nameKo: '화룡 대궁',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a drake longbow — a tall bow carved from pale dragon bone with clawed tips and bronze fittings, ' +
+      'its string a taut line of ember light, faint heat rising along the limbs, ' +
+      'fearsome and graceful, clearly a longbow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_frost_rapier',
+    nameKo: '서릿결 세검',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a frost rapier — a very slender needle-like blade of pale blue steel rimed with fine frost, ' +
+      'an ornate swept silver basket hilt shaped from snowflake filigree, a white grip, ' +
+      'crisp and refined, clearly a rapier sword weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
