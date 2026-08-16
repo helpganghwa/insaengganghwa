@@ -1415,6 +1415,106 @@ const CANDIDATES: Cand[] = [
       'the pommel on a short fine chain, nothing else adorning it, ' +
       'spare and sentimental, clearly a longsword weapon, no text, large, diagonal',
   },
+
+  // ══ 11차 10종 — 화려·아름다움·웅장 ═══════════════════════════════════════════
+  // 10차는 포인트를 살리려 나머지를 눌렀더니 화려함까지 죽었고, 8·9차는 반대로
+  // 디테일을 나열해 생성기 재량을 없앴다. items-v2에서 검증된 규칙으로 돌아간다 —
+  // 핵심 형태와 컨셉 한 줄만 주고 장식은 "화려하게"로 맡길수록 결과가 좋다.
+  // 프롬프트를 짧게 유지하는 것이 이 배치의 핵심이다.
+  // ── 웅장 6 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_coronation_greatsword',
+    nameKo: '대관 대검',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a coronation greatsword — a broad ceremonial blade of the royal house, gold and deep sapphire, ' +
+      'magnificently ornate, breathtaking and regal, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_dawn_spear',
+    nameKo: '여명의 창',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a dawn spear — a tall temple spear crowned in sunrise gold, warm light spilling down the shaft, ' +
+      'gloriously ornate, radiant and beautiful, clearly a spear polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_mandorla_greatsword',
+    nameKo: '광배 대검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a mandorla greatsword — a white and gold blade standing before a great radiant halo disc, ' +
+      'richly decorated, divine and awe-inspiring, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_phoenix_sabre',
+    nameKo: '불사조 곡도',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a phoenix sabre — a long curved blade wreathed in rising crimson and gold fire, ' +
+      'lavishly ornate, blazing and beautiful, clearly a curved sabre sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_constellation_longbow',
+    nameKo: '성좌 대궁',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a constellation longbow — a tall bow inlaid with silver star maps, faint starlight along its limbs, ' +
+      'exquisitely ornate, serene and majestic, clearly a longbow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_dragonscale_greataxe',
+    nameKo: '용린 대부',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a dragonscale greataxe — a huge axe sheathed in iridescent dragon scales, gold fittings, ' +
+      'opulently ornate, fearsome and splendid, clearly a greataxe weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 4 ───────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_rosewindow_rapier',
+    nameKo: '장미창 세검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a rose window rapier — a slender blade whose guard is a jewel-toned cathedral rose window, ' +
+      'delicately ornate, luminous and beautiful, clearly a rapier sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_brocade_fan',
+    nameKo: '금란 합죽선',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a brocade war fan — an opened folding fan of gold-woven silk with lacquered ribs, ' +
+      'sumptuously ornate, graceful and beautiful, clearly a folding war fan weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_cathedral_parasol',
+    nameKo: '대성당 양산',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a cathedral parasol blade — an opened parasol canopied in stained glass panes, ' +
+      'a slim blade at its tip, gorgeously ornate, jewel-bright and beautiful, ' +
+      'clearly a parasol-shaped weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_nacre_scimitar',
+    nameKo: '진주모 곡검',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a nacre scimitar — a curved blade shimmering with mother-of-pearl iridescence, pale and rose, ' +
+      'finely ornate, elegant and beautiful, clearly a curved scimitar sword weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */

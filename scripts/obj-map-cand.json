@@ -518,5 +518,45 @@
   "kingdom_oathring_sword": {
     "key": "key1",
     "objectId": "eddeb5f8-2c99-4b4e-ae1a-0ae44e597dea"
+  },
+  "kingdom_coronation_greatsword": {
+    "key": "key1",
+    "objectId": "d438c804-e25e-4b2b-80cb-e0440760ccb7"
+  },
+  "temple_dawn_spear": {
+    "key": "key1",
+    "objectId": "ee80635f-3305-4895-8ef3-1d354ba8f1f6"
+  },
+  "angel_mandorla_greatsword": {
+    "key": "key1",
+    "objectId": "e115df13-01c0-4c1c-ba94-8303f7cd2e03"
+  },
+  "volcano_phoenix_sabre": {
+    "key": "key1",
+    "objectId": "c9bcc3de-f1a1-49da-a240-dda9c18ed895"
+  },
+  "rune_constellation_longbow": {
+    "key": "key1",
+    "objectId": "9c554708-b4db-4a90-918d-228bc7d05c38"
+  },
+  "westvolcano_dragonscale_greataxe": {
+    "key": "key1",
+    "objectId": "cf6bf681-1837-44a3-9c27-b23601ab9301"
+  },
+  "kingdom_rosewindow_rapier": {
+    "key": "key1",
+    "objectId": "4333b994-6a22-4de6-951b-fff4a3d82c33"
+  },
+  "temple_brocade_fan": {
+    "key": "key1",
+    "objectId": "149142a6-009a-4b8a-a333-6b71704d3354"
+  },
+  "angel_cathedral_parasol": {
+    "key": "key1",
+    "objectId": "1048a83e-e750-4ea0-b614-38f9cfd5dd9a"
+  },
+  "swamp_nacre_scimitar": {
+    "key": "key1",
+    "objectId": "510be625-9911-4b22-a566-f3d58992b01f"
   }
 }
