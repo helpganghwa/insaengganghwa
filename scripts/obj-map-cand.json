@@ -558,5 +558,45 @@
   "swamp_nacre_scimitar": {
     "key": "key1",
     "objectId": "510be625-9911-4b22-a566-f3d58992b01f"
+  },
+  "kingdom_manyblade_greatsword": {
+    "key": "key1",
+    "objectId": "973ca959-e34f-48df-857c-15bec90d2581"
+  },
+  "volcano_foldsteel_odachi": {
+    "key": "key1",
+    "objectId": "01037607-7da6-4ff2-a01c-1c7798b5e691"
+  },
+  "orc_layered_greataxe": {
+    "key": "key1",
+    "objectId": "3c1dd51d-3187-4960-89c2-3943efaa8c6e"
+  },
+  "temple_kintsugi_mace": {
+    "key": "key1",
+    "objectId": "5f4812dc-9dd0-4ff1-b42a-1bdda5fb5c85"
+  },
+  "angel_shard_lance": {
+    "key": "key1",
+    "objectId": "8f950aef-e8ae-4366-bb4d-59a1bb8f9a9e"
+  },
+  "rune_grown_greatsword": {
+    "key": "key1",
+    "objectId": "6db4153d-b2d7-4267-8a86-416eea3fd43b"
+  },
+  "swamp_regrown_staff": {
+    "key": "key1",
+    "objectId": "af6a5e5e-dbf2-4dd9-959f-9285777b9e77"
+  },
+  "kingdom_goldwound_rapier": {
+    "key": "key1",
+    "objectId": "9ab82cfe-0d81-412a-9e84-5f8af3ae1d3e"
+  },
+  "angel_rewound_bow": {
+    "key": "key1",
+    "objectId": "f314c2ae-8b56-4012-830e-a3336dbb9aa3"
+  },
+  "temple_strata_scepter": {
+    "key": "key1",
+    "objectId": "8c5d0594-f7ae-4c66-beaf-b187a2f12ec3"
   }
 }

@@ -1515,6 +1515,114 @@ const CANDIDATES: Cand[] = [
       'a nacre scimitar — a curved blade shimmering with mother-of-pearl iridescence, pale and rose, ' +
       'finely ornate, elegant and beautiful, clearly a curved scimitar sword weapon, no text, large, diagonal',
   },
+
+  // ══ 12차 10종 — 강화의 흔적 ══════════════════════════════════════════════════
+  // 8~11차가 연달아 빗나간 원인은 형용사가 아니라 축이었다. 기존 40종이 이미
+  // '아름답고 화려한 판타지 가챠 무기'라 화려하게 만들수록 그 무리에 섞이고,
+  // 특이하게 만들면 무기가 아니라 소품이 됐다.
+  //
+  // 이 게임에만 있는 축은 강화다. 확정 정본인 킨츠기 카타나가 살아남은 이유도
+  // 화려해서가 아니라 '부러졌다 금으로 이어붙여진' 무기이기 때문이다 — 강화
+  // 게임의 무기가 강화의 흔적을 몸에 지녔다. 기존 40종에 이 축은 킨츠기 하나뿐이라
+  // 차별점도 분명하다. 겹쳐 벼린 층·이어붙인 조각·덧댄 판·되감은 자루로 푼다.
+  // 프롬프트는 11차처럼 짧게 — 구조 아이디어 하나만 주고 장식은 맡긴다.
+  // ── 웅장 6 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_manyblade_greatsword',
+    nameKo: '백검 대검',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a greatsword forged from many broken swords fused into one blade, every seam still visible ' +
+      'and filled with bright gold, magnificently ornate, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'volcano_foldsteel_odachi',
+    nameKo: '접쇠 대태도',
+    region: '화산',
+    group: '웅장',
+    art:
+      'a very long odachi whose steel shows hundreds of folded layers rippling down the blade like ' +
+      'flowing grain, glowing faintly between the folds, splendid, clearly a long katana sword weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'orc_layered_greataxe',
+    nameKo: '겹판 대부',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a greataxe whose head is built from iron plates hammered on one over another over years, ' +
+      'stacked in visible stepped layers, rugged and imposing, clearly a greataxe weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'temple_kintsugi_mace',
+    nameKo: '금계 철퇴',
+    region: '신전',
+    group: '웅장',
+    art:
+      'a temple mace whose heavy head was once shattered and rejoined, molten gold branching through ' +
+      'every crack, sacred and magnificent, clearly a mace weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_shard_lance',
+    nameKo: '파편 성창',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a lance broken into many pieces and held together in mid-air by threads of golden light, ' +
+      'the shards hovering slightly apart, divine and breathtaking, clearly a lance polearm weapon, ' +
+      'no text, large, diagonal',
+  },
+  {
+    key: 'rune_grown_greatsword',
+    nameKo: '결정 대검',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a greatsword whose original steel blade is half swallowed by violet crystal grown outward ' +
+      'from it, the crystal now longer than the steel, majestic, clearly a greatsword weapon, ' +
+      'no text, large, diagonal',
+  },
+
+  // ── 코스튬 4 ───────────────────────────────────────────────────────────────
+  {
+    key: 'swamp_regrown_staff',
+    nameKo: '되살아난 지팡이',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a slim wooden staff snapped in the middle, a fresh green branch grown across the break ' +
+      'and flowering there, gentle and beautiful, clearly a wooden staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_goldwound_rapier',
+    nameKo: '금선 세검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a slender rapier whose blade carries many old nicks and cracks, every one filled in with ' +
+      'fine gold, elegant and beautiful, clearly a rapier sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_rewound_bow',
+    nameKo: '되감은 활',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a slim bow once broken at the grip, bound back together with thousands of turns of gold thread ' +
+      'swelling at the mend, graceful and lovely, clearly a bow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_strata_scepter',
+    nameKo: '층계 홀',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a short scepter whose head is many small ornate crowns added one atop another over generations, ' +
+      'each a different metal, precious and ornate, clearly a scepter weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
