@@ -438,5 +438,45 @@
   "temple_frost_rapier": {
     "key": "key1",
     "objectId": "f83d4b13-57fb-4913-829f-c715715b5b15"
+  },
+  "volcano_lacquer_wakizashi": {
+    "key": "key1",
+    "objectId": "5bb4426a-9bf3-4c1a-8d0c-3b7dec9226a4"
+  },
+  "kingdom_card_fan": {
+    "key": "key1",
+    "objectId": "e1f4277e-e7cd-46e9-aa54-73686d4e084d"
+  },
+  "rune_chess_queen_scepter": {
+    "key": "key1",
+    "objectId": "61ae9e43-10a7-4cba-ad3c-97ea0a038f6f"
+  },
+  "swamp_rose_sickle": {
+    "key": "key1",
+    "objectId": "dd9f0069-7252-4450-9b70-039916759d79"
+  },
+  "temple_talisman_blade": {
+    "key": "key1",
+    "objectId": "a779e27e-ddbd-4ad9-9b81-512a28f935af"
+  },
+  "angel_organpipe_blade": {
+    "key": "key1",
+    "objectId": "878a617b-dbe9-430e-9e5e-5d7bf7e2bf6f"
+  },
+  "orc_tomahawk": {
+    "key": "key1",
+    "objectId": "0ee9a68c-f72c-4b64-b8e0-215530a48550"
+  },
+  "kingdom_lace_claw": {
+    "key": "key1",
+    "objectId": "40bbd51b-af85-46eb-b021-d6639f8bbee3"
+  },
+  "rune_arcane_cube": {
+    "key": "key1",
+    "objectId": "c39259ce-b9d6-479a-914a-de71533793f0"
+  },
+  "angel_masquerade_blade": {
+    "key": "key1",
+    "objectId": "09ba62a7-7faf-48f7-90b0-53172676dcf2"
   }
 }

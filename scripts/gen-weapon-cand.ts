@@ -1201,6 +1201,111 @@ const CANDIDATES: Cand[] = [
       'an ornate swept silver basket hilt shaped from snowflake filigree, a white grip, ' +
       'crisp and refined, clearly a rapier sword weapon, no text, large, diagonal',
   },
+
+  // ══ 9차 10종 — 전부 코스튬, '멋있는' 축 ══════════════════════════════════════
+  // 기존 코스튬이 완드·리본·꽃다발처럼 귀여움 쪽에 몰려 있었다. 여기서는 같은
+  // 코스튬 축을 시크·날렵 쪽으로 민다 — 검정·은·보석의 절제된 배색, 가늘고
+  // 딱 떨어지는 실루엣. 아바타가 들었을 때 그림이 되는 쪽.
+  {
+    key: 'volcano_lacquer_wakizashi',
+    nameKo: '흑칠 소태도',
+    region: '화산',
+    group: '코스튬',
+    art:
+      'a short lacquered sidearm sword — a slim bright blade half drawn from a glossy black lacquer ' +
+      'scabbard, a small square iron guard and a red silk cord wound tight at the grip, ' +
+      'sleek and cool, clearly a short single sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_card_fan',
+    nameKo: '카드 부채',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a fan of playing cards held as one weapon — a spread arc of stiff black and gold cards ' +
+      'with razor-thin gilded edges, bound at the base by a slim silver clasp, ' +
+      'slick and theatrical, clearly a fanned card weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_chess_queen_scepter',
+    nameKo: '퀸 홀',
+    region: '고대 룬 산맥',
+    group: '코스튬',
+    art:
+      'a chess queen scepter — a tall polished obsidian chess queen piece mounted on a slim silver rod, ' +
+      'its coronet set with small white gems, faint runes at the base, ' +
+      'poised and severe, clearly a scepter weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_rose_sickle',
+    nameKo: '흑장미 낫',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a small hand sickle — a tight silver crescent blade on a short dark handle, ' +
+      'one deep crimson rose bound at the collar with black cord, thorns along the stem, ' +
+      'sharp and alluring, clearly a small sickle weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_talisman_blade',
+    nameKo: '부적검',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a talisman sword — a straight matte grey blade with three narrow paper talisman slips ' +
+      'stuck along it fluttering slightly, a plain dark grip and a simple ring guard, ' +
+      'austere and striking, clearly a single straight sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_organpipe_blade',
+    nameKo: '파이프 검',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'an organ pipe blade — a slim sword whose blade is a tight bundle of graduated silver pipes ' +
+      'fused into one edge, a small brass stop knob at the guard, soft light between the pipes, ' +
+      'stately and unusual, clearly a single slim sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_tomahawk',
+    nameKo: '손도끼',
+    region: '오크 부락',
+    group: '코스튬',
+    art:
+      'a light throwing hatchet — a compact crescent steel head on a short straight haft, ' +
+      'the haft wrapped in dark cord with one carved bone bead, clean bright edge, ' +
+      'lean and rakish, clearly a small hatchet axe weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_lace_claw',
+    nameKo: '레이스 클로',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a lace glove claw — a fitted black lace glove ending in three slim polished silver talons ' +
+      'over the fingertips, a pearl button at the wrist and fine chain across the back of the hand, ' +
+      'chic and dangerous, clearly a clawed glove weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_arcane_cube',
+    nameKo: '비전 정육면체',
+    region: '고대 룬 산맥',
+    group: '코스튬',
+    art:
+      'an arcane cube — a small floating black cube with its faces split open along glowing violet ' +
+      'seams, thin silver plates hovering slightly apart from the core, ' +
+      'enigmatic and sharp, clearly a floating cube weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_masquerade_blade',
+    nameKo: '가면검',
+    region: '타락천사',
+    group: '코스튬',
+    art:
+      'a masquerade sword — a slender bright blade whose guard is a white porcelain half mask ' +
+      'with gilded eye rims, a black satin ribbon trailing from one side, a slim dark grip, ' +
+      'mysterious and elegant, clearly a single slim sword weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
