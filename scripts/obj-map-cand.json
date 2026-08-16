@@ -478,5 +478,45 @@
   "angel_masquerade_blade": {
     "key": "key1",
     "objectId": "09ba62a7-7faf-48f7-90b0-53172676dcf2"
+  },
+  "kingdom_flamberge": {
+    "key": "key1",
+    "objectId": "3e08f101-abc3-4dbe-8435-47b67552d91b"
+  },
+  "rune_geode_spear": {
+    "key": "key1",
+    "objectId": "33ca6861-12fe-444c-ada6-b5d59b3d06a2"
+  },
+  "swamp_antler_bow": {
+    "key": "key1",
+    "objectId": "d367dbc1-c5c9-43f9-8441-c5ee0386bf8c"
+  },
+  "angel_sealed_greatsword": {
+    "key": "key1",
+    "objectId": "a54d619e-39e2-4a82-836d-5898acf6004e"
+  },
+  "westvolcano_sand_greatsword": {
+    "key": "key1",
+    "objectId": "3c88d28f-721a-4cbd-8021-6a623ea685c2"
+  },
+  "orc_scepter_axe": {
+    "key": "key1",
+    "objectId": "62ecac49-9747-40ce-b3ea-a52864d7e12a"
+  },
+  "volcano_petal_katana": {
+    "key": "key1",
+    "objectId": "7e9d73da-4b45-45be-960e-4dc9f5c484cb"
+  },
+  "swamp_ivy_rapier": {
+    "key": "key1",
+    "objectId": "7218adb5-7dce-4992-9fa3-6d48e6115ca4"
+  },
+  "temple_ice_sheath_dagger": {
+    "key": "key1",
+    "objectId": "9c7e79a7-7b65-4c89-ad65-34a0188a4d90"
+  },
+  "kingdom_oathring_sword": {
+    "key": "key1",
+    "objectId": "eddeb5f8-2c99-4b4e-ae1a-0ae44e597dea"
   }
 }

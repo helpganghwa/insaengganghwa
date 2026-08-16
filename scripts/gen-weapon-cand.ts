@@ -1306,6 +1306,115 @@ const CANDIDATES: Cand[] = [
       'with gilded eye rims, a black satin ribbon trailing from one side, a slim dark grip, ' +
       'mysterious and elegant, clearly a single slim sword weapon, no text, large, diagonal',
   },
+
+  // ══ 10차 10종 — 평범한 무기 + 포인트 하나 ════════════════════════════════════
+  // 8차는 판타지 클리셰(빛나는 룬·용암 균열·부유 수정)를 쌓기만 해 인상이 없었고,
+  // 9차는 물건 자체가 기이해 무기가 아니라 소품이 됐다. 확정 정본인 킨츠기 카타나가
+  // '평범한 카타나 + 부러졌다 금으로 이어붙임' 하나로 성립하는 구조라 그 문법을 쓴다.
+  // 형태는 누구나 아는 무기 그대로 두고, 기억에 남는 요소는 딱 하나만 얹는다.
+  // ── 웅장 6 ─────────────────────────────────────────────────────────────────
+  {
+    key: 'kingdom_flamberge',
+    nameKo: '물결 대검',
+    region: '왕국',
+    group: '웅장',
+    art:
+      'a two-handed greatsword whose long steel blade waves in smooth undulating curves from guard ' +
+      'to tip like a frozen ripple, plain steel crossguard and leather grip, ' +
+      'restrained and striking, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'rune_geode_spear',
+    nameKo: '원석 창',
+    region: '고대 룬 산맥',
+    group: '웅장',
+    art:
+      'a long spear with a plain dark wooden shaft, its head a single rough uncut amethyst geode ' +
+      'lashed on with cord, raw violet crystals bristling where the stone is broken open, ' +
+      'crude and beautiful, clearly a spear polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_antler_bow',
+    nameKo: '사슴뿔 활',
+    region: '늪지대',
+    group: '웅장',
+    art:
+      'a hunting bow whose two limbs are a matched pair of pale branching stag antlers, ' +
+      'joined at a simple wrapped grip with a taut dark string, ' +
+      'quiet and wild, clearly a bow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'angel_sealed_greatsword',
+    nameKo: '봉인 대검',
+    region: '타락천사',
+    group: '웅장',
+    art:
+      'a plain broad greatsword of grey steel with three heavy old padlocks clasped shut across ' +
+      'the flat of the blade, their shackles biting into the metal, a worn wrapped grip, ' +
+      'grim and arresting, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'westvolcano_sand_greatsword',
+    nameKo: '모래 대검',
+    region: '서쪽 화산',
+    group: '웅장',
+    art:
+      'a straight greatsword of dark steel whose upper half is dissolving into streaming pale sand, ' +
+      'grains peeling off the edge and drifting away, the lower half still solid, ' +
+      'melancholy and dramatic, clearly a greatsword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'orc_scepter_axe',
+    nameKo: '부러진 홀 도끼',
+    region: '오크 부락',
+    group: '웅장',
+    art:
+      'a heavy iron war axe whose haft is a looted royal gold scepter snapped short, ' +
+      'its jeweled finial still on the butt end, the crude axe head lashed on with rawhide, ' +
+      'insolent and brutal, clearly a war axe weapon, no text, large, diagonal',
+  },
+
+  // ── 코스튬 4 ───────────────────────────────────────────────────────────────
+  {
+    key: 'volcano_petal_katana',
+    nameKo: '벚꽃 태도',
+    region: '화산',
+    group: '코스튬',
+    art:
+      'a slim katana in a plain matte black scabbard, a few pale pink cherry blossom petals ' +
+      'caught against the lacquer near the mouth, simple dark cord wrap on the hilt, ' +
+      'quiet and lovely, clearly a katana sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'swamp_ivy_rapier',
+    nameKo: '담쟁이 세검',
+    region: '늪지대',
+    group: '코스튬',
+    art:
+      'a slender rapier with a simple swept steel guard, one living ivy vine spiralling up the blade ' +
+      'from the hilt with small green leaves, the bright edge still clear above it, ' +
+      'gentle and elegant, clearly a rapier sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'temple_ice_sheath_dagger',
+    nameKo: '얼음집 단검',
+    region: '신전',
+    group: '코스튬',
+    art:
+      'a plain silver dagger half drawn from a sheath made of clear ice, ' +
+      'the ice beaded with meltwater and one drop falling from its tip, a simple white grip, ' +
+      'cool and delicate, clearly a single dagger weapon, no text, large, diagonal',
+  },
+  {
+    key: 'kingdom_oathring_sword',
+    nameKo: '서약 반지 검',
+    region: '왕국',
+    group: '코스튬',
+    art:
+      'a slim plain longsword with a narrow steel crossguard, a single gold ring hanging from ' +
+      'the pommel on a short fine chain, nothing else adorning it, ' +
+      'spare and sentimental, clearly a longsword weapon, no text, large, diagonal',
+  },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
