@@ -85,6 +85,14 @@ const ROUNDS: Record<string, Round> = {
       'oni_slayer_odachi',
     ],
   },
+  // 4차 재검증: 설산 파수의 갑주(은청 판금) + 사자의 증표(목걸이 메달).
+  // 은청 바탕이라 '전체적으로 붉은' 대태도가 튄다. 메달은 목에 걸려 손·머리를 안 쓴다.
+  '4': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test-4',
+    armorKey: 'temple_frostguard_garb',
+    accessoryKey: 'kingdom_coronation_medallion',
+    only: ['angel_orb_scepter', 'oni_slayer_odachi'],
+  },
 };
 
 const ROUND = ROUNDS[process.env.ROUND ?? '1'];

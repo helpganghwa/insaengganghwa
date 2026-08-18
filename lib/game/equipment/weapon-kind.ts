@@ -88,8 +88,9 @@ const BY_KEY: Record<string, WeaponKind> = {
   //   양산은 배경이고 무기는 자루 끝의 창날이라, 명사 안에 그 창날을 남긴다.
   angel_lace_parasol: { noun: 'parasol blade (a parasol whose shaft ends in a spear blade)' },
   temple_ringstaff_khakkhara: { noun: 'khakkhara (a tall ringed monk staff)' },
-  // 작게 나와야 하는 물건인데 크게 그려졌다(2026-08-18) — 명사에 'small one-handed'를 남긴다.
-  angel_orb_scepter: { noun: 'short scepter (a small ornate one-handed rod)' },
+  // scepter라고 하면 계속 장대처럼 길어진다(2026-08-18 2회 실측) — 종류를 wand로 바꾼다.
+  // 기존 angel_star_wand가 같은 명사로 짧게 잘 나온다.
+  angel_orb_scepter: { noun: 'wand (a short magic rod)' },
   volcano_flame_blade: { noun: 'sword' },
   swamp_antler_bow: { noun: 'archery bow', ranged: true },
   westvolcano_dragonscale_greataxe: { noun: 'greataxe' },
