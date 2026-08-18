@@ -718,5 +718,45 @@
   "falconer_talon_glaive": {
     "key": "key1",
     "objectId": "53daeb57-329b-46cd-860f-84f7cc2c415d"
+  },
+  "shrine_priestess_odachi": {
+    "key": "key1",
+    "objectId": "5aa29b22-0986-422b-8ebc-78a9bae0bfd0"
+  },
+  "shogun_gold_odachi": {
+    "key": "key1",
+    "objectId": "fd4b688f-d201-4277-a5f6-d4c93dc2a96b"
+  },
+  "sakura_duelist_odachi": {
+    "key": "key1",
+    "objectId": "2619c4e4-5b32-42d7-9d98-172d1ed7f72e"
+  },
+  "wanderer_rust_odachi": {
+    "key": "key1",
+    "objectId": "2342f715-5076-4ff6-b2da-da79e6248d95"
+  },
+  "thunder_god_odachi": {
+    "key": "key1",
+    "objectId": "62048180-dcf1-4779-b5bf-315720c95d5e"
+  },
+  "druid_autumn_staff": {
+    "key": "key1",
+    "objectId": "dbb3e353-44b0-4ddd-8dee-5143df3aeb30"
+  },
+  "druid_winter_staff": {
+    "key": "key1",
+    "objectId": "f21f84a9-169f-4698-81cc-38648b2e6c36"
+  },
+  "druid_thorn_staff": {
+    "key": "key1",
+    "objectId": "d5d342a3-a87d-4847-b3f9-4226fbe19a2f"
+  },
+  "druid_stone_staff": {
+    "key": "key1",
+    "objectId": "d80ff849-8cf0-4085-b4fd-b019bc0d2269"
+  },
+  "druid_sunwheel_staff": {
+    "key": "key1",
+    "objectId": "b4263ac5-9bac-477b-9bce-0d82abd5c3dd"
   }
 }

@@ -1754,6 +1754,43 @@ const CANDIDATES: Cand[] = [
   { key: 'falconer_talon_glaive', nameKo: '매부리의 언월도', region: '일반', group: '웅장', tail: TAIL_V3,
     art: "a royal falconer's glaive with a talon-curved blade, a leather hawking glove wrapped at the grip and one loose feather at the collar, " +
       'russet brown and pale silver — noble, keen and elegant' },
+
+  // ══ 16차 10종 — 태도 5 · 드루이드 지팡이 5 ═══════════════════════════════════
+  // 사용자 지정. 문법 동일(소유자 + 상징물 + 2색 배합 — 무드, TAIL_V3).
+  // 같은 종류 안에서 소유자와 계절·정서를 갈라 실루엣이 겹치지 않게 한다.
+  // ── 태도 5 ─────────────────────────────────────────────────────────────────
+  { key: 'shrine_priestess_odachi', nameKo: '무녀의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a shrine priestess's long odachi with a braided sacred rope and folded paper streamers tied below the tsuba, " +
+      'snow white and vermilion — solemn, pure and beautiful' },
+  { key: 'shogun_gold_odachi', nameKo: '장군의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a warlord shogun's ceremonial odachi with a gold family crest on the tsuba and a heavy silk cord at the pommel, " +
+      'deep lacquer black and imperial gold — commanding, opulent and magnificent' },
+  { key: 'sakura_duelist_odachi', nameKo: '벚꽃 검객의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a young duelist's slender odachi, cherry petals caught along the blade and a pale pink cord wound down the hilt, " +
+      'silver white and blossom pink — graceful, fleeting and lovely' },
+  { key: 'wanderer_rust_odachi', nameKo: '떠돌이의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a nameless wanderer's battered odachi, its long blade nicked and spotted with rust, the wrapping frayed to bare tang, " +
+      'rusted brown and dull grey — weary, defiant and quietly striking' },
+  { key: 'thunder_god_odachi', nameKo: '뇌신의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a thunder god's enormous odachi wreathed in crackling arcs, small drum charms swinging from the pommel cord, " +
+      'storm violet and white lightning — divine, furious and breathtaking' },
+
+  // ── 드루이드 지팡이 5 ──────────────────────────────────────────────────────
+  { key: 'druid_autumn_staff', nameKo: '가을 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "an autumn druid's staff crowned with a burst of red and gold leaves, acorns and a small woven wreath below, " +
+      'maple red and warm amber — mellow, abundant and beautiful' },
+  { key: 'druid_winter_staff', nameKo: '겨울 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a winter druid's bare-branched staff rimed with frost, red holly berries and a single sleeping owl perched at the crown, " +
+      'frost white and deep evergreen — hushed, austere and lovely' },
+  { key: 'druid_thorn_staff', nameKo: '가시 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a wild druid's staff of twisting bramble bound in thorned briar with one deep red rose opening at the crown, " +
+      'bramble black and blood rose red — untamed, dangerous and beautiful' },
+  { key: 'druid_stone_staff', nameKo: '고인돌 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "an old stone druid's staff, a carved standing stone floating in its forked crown wrapped in ancient moss and cord, " +
+      'granite grey and lichen green — primeval, weighty and grand' },
+  { key: 'druid_sunwheel_staff', nameKo: '해바퀴 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a sun druid's staff crowned with a woven wheat sunwheel and hanging harvest ribbons, warm light at its heart, " +
+      'wheat gold and sky blue — bright, festive and magnificent' },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */
