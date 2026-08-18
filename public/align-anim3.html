@@ -1,44 +1,4 @@
-// 수동 프레임 정렬(평행이동) 리뷰 폼 → public/align-anim3.html
-// 각 아이템의 애니 스트립(anim3/<id>.webp)을 프레임으로 쪼개, 프레임별 dx,dy를
-// 사용자가 방향키로 보정하며 루프 프리뷰로 확인 → 보정값 JSON 내보내기.
-// 적용은 scripts/apply-align.ts가 스트립에 평행이동만 가해 재합성(스크립트=위치보정만 원칙).
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-
-const ROOT = process.cwd();
-const sel = JSON.parse(readFileSync(join(ROOT, 'scripts/final-sel.json'), 'utf8')) as Record<string, string[]>;
-const lore = JSON.parse(readFileSync(join(ROOT, 'scripts/anim3-lore.json'), 'utf8')) as Record<string, { name?: string }>;
-const pool = new Map((JSON.parse(readFileSync(join(ROOT, 'scripts/pool-data.json'), 'utf8')) as { id: string; label: string }[]).map((p) => [p.id, p.label]));
-const man = existsSync(join(ROOT, 'public/sprites/anim3.json'))
-  ? JSON.parse(readFileSync(join(ROOT, 'public/sprites/anim3.json'), 'utf8')) as { cell: number; items: Record<string, { frames: number }> }
-  : { cell: 256, items: {} };
-
-const items: { id: string; name: string; slot: string; frames: number }[] = [];
-for (const slot of ['weapon', 'armor', 'accessory']) {
-  for (const uid of sel[slot] ?? []) {
-    if (!uid.startsWith('v3:')) continue;
-    const id = uid.slice(3);
-    const f = man.items[id]?.frames ?? 0;
-    if (!f) continue;
-    items.push({ id, name: lore[id]?.name ?? pool.get(id) ?? id, slot, frames: f });
-  }
-}
-
-// 교체 후보(미채택) — final-sel.json에 없으니 별도로 붙인다. 채택 시 final-sel로 옮기면
-// 이 블록은 자연히 무의미해진다(같은 id가 위에서 이미 들어오므로 중복 방지).
-const candPath = join(ROOT, 'scripts/obj-map-cand.json');
-if (existsSync(candPath)) {
-  const cand = JSON.parse(readFileSync(candPath, 'utf8')) as Record<string, unknown>;
-  const seen = new Set(items.map((i) => i.id));
-  for (const id of Object.keys(cand)) {
-    const f = man.items[id]?.frames ?? 0;
-    if (!f || seen.has(id)) continue;
-    items.push({ id, name: id, slot: 'weapon', frames: f });
-  }
-}
-
-const CELL = man.cell ?? 256;
-const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>3차 애니 수동 정렬</title>
 <style>
@@ -84,7 +44,7 @@ textarea{width:100%;height:120px;background:#0f0f14;color:#9ad;border:1px solid 
 </header>
 <div class="wrap">
   <div class="col">
-    <div class="stage"><canvas id="stage" width="${CELL}" height="${CELL}" style="width:${CELL * 1.6}px;height:${CELL * 1.6}px"></canvas></div>
+    <div class="stage"><canvas id="stage" width="256" height="256" style="width:409.6px;height:409.6px"></canvas></div>
     <div class="row"><b id="nm"></b> <span class="tag" id="slot"></span> <span class="muted" id="fcnt"></span></div>
   </div>
   <div class="col">
@@ -110,8 +70,8 @@ textarea{width:100%;height:120px;background:#0f0f14;color:#9ad;border:1px solid 
   </div>
 </div>
 <script>
-const ITEMS=${JSON.stringify(items)};
-const CELL=${CELL};
+const ITEMS=[{"id":"seed-kingdom_ribbon_rapier","name":"창천검","slot":"weapon","frames":9},{"id":"seed-kingdom_court_twin_sabers","name":"청홍 쌍검","slot":"weapon","frames":9},{"id":"seed-kingdom_winged_coronation_sword","name":"창궁검","slot":"weapon","frames":9},{"id":"seed-kingdom_falcon_cane_sword","name":"매 머리 지팡이검","slot":"weapon","frames":9},{"id":"seed-temple_frost_odachi","name":"눈꽃 대도","slot":"weapon","frames":9},{"id":"seed-volcano_emberveined_greatsword","name":"용암을 가둔 대검","slot":"weapon","frames":9},{"id":"seed-swamp_lotus_trident","name":"피어나는 삼지창","slot":"weapon","frames":9},{"id":"seed-angel_star_wand","name":"유성의 지팡이","slot":"weapon","frames":9},{"id":"seed-volcano_dragonjaw_halberd","name":"포효하는 용턱","slot":"weapon","frames":9},{"id":"w-pumpkin-witch-staff-95","name":"마녀의 등불","slot":"weapon","frames":9},{"id":"seed-kingdom_banner_spear","name":"왕기의 창","slot":"weapon","frames":9},{"id":"seed-volcano_ember_scythe","name":"잿불낫","slot":"weapon","frames":9},{"id":"w-vampire-rapier-114","name":"선혈의 가는 검","slot":"weapon","frames":9},{"id":"w-reaper-scythe-120","name":"혼불낫","slot":"weapon","frames":9},{"id":"w-necromancer-staff-126","name":"초혼의 해골장","slot":"weapon","frames":9},{"id":"w-assassin-twin-daggers-156","name":"쌍익 단검","slot":"weapon","frames":9},{"id":"w-ornate-flintlock-pistol-162","name":"상아빛 한 발","slot":"weapon","frames":9},{"id":"w-celestial-greatsword-153","name":"해오름검","slot":"weapon","frames":9},{"id":"seed-volcano_forgeheart_warhammer","name":"화심의 망치","slot":"weapon","frames":9},{"id":"w-thunder-spear-191","name":"벼락을 박은 창","slot":"weapon","frames":9},{"id":"w--57","name":"봉문검","slot":"weapon","frames":9},{"id":"seed-angel_radiant_gown","name":"아침빛 예복","slot":"armor","frames":9},{"id":"seed-kingdom_azure_outfit","name":"쪽빛 기사복","slot":"armor","frames":9},{"id":"seed-angel_seraphguard_armor","name":"세라핌의 갑주","slot":"armor","frames":9},{"id":"seed-kingdom_goldknight_plate","name":"적금 갑주","slot":"armor","frames":9},{"id":"seed-temple_frostguard_garb","name":"설산 파수의 갑주","slot":"armor","frames":9},{"id":"seed-temple_breathwoven_vestment","name":"설야 예복","slot":"armor","frames":9},{"id":"a-pumpkin-witch-outfit-96","name":"호박등 드레스","slot":"armor","frames":9},{"id":"a-necromancer-robe-127","name":"갈까마귀 로브","slot":"armor","frames":9},{"id":"a-test-gothic-lolita-150","name":"진홍 레이스 드레스","slot":"armor","frames":9},{"id":"a-test-military-coat-151","name":"금장 군복","slot":"armor","frames":9},{"id":"seed-volcano_embersilk_dress","name":"화문 예복","slot":"armor","frames":9},{"id":"a-valkyrie-battle-dress-176","name":"창공의 전투복","slot":"armor","frames":9},{"id":"a-frost-warden-coat-179","name":"설원 파수꾼의 외투","slot":"armor","frames":9},{"id":"a-paladin-armor-180","name":"성광 갑주","slot":"armor","frames":9},{"id":"a-dragon-knight-armor-186","name":"흑룡의 비늘갑","slot":"armor","frames":9},{"id":"a-phoenix-dancer-dress-183","name":"불새 깃 드레스","slot":"armor","frames":9},{"id":"a-astrologer-outfit-103","name":"성좌의 망토","slot":"armor","frames":9},{"id":"a-desert-nomad-robes-231","name":"모래바람의 겹옷","slot":"armor","frames":9},{"id":"a-academy-professor-robe-234","name":"학장복","slot":"armor","frames":9},{"id":"a-academy-student-uniform-233","name":"왕립 학원 교복","slot":"armor","frames":9},{"id":"a-forest-ranger-outfit-240","name":"숲지기의 한 벌","slot":"armor","frames":9},{"id":"seed-temple_snowflake_crown","name":"설화의 관","slot":"accessory","frames":9},{"id":"seed-temple_fur_stole","name":"설백 목도리","slot":"accessory","frames":9},{"id":"seed-volcano_dragonscale_satchel","name":"용비늘 가방","slot":"accessory","frames":9},{"id":"seed-volcano_dragonhorn_circlet","name":"화룡의 뿔관","slot":"accessory","frames":9},{"id":"seed-volcano_obsidian_warfan","name":"흑요 봉황선","slot":"accessory","frames":9},{"id":"seed-swamp_mushroom_hat","name":"약초꾼의 버섯 모자","slot":"accessory","frames":9},{"id":"seed-swamp_lily_crown","name":"수련 화관","slot":"accessory","frames":9},{"id":"seed-angel_glide_wings","name":"하얀 깃 날개","slot":"accessory","frames":9},{"id":"seed-kingdom_court_fan","name":"진홍 봉황선","slot":"accessory","frames":9},{"id":"a-commander-epaulets-93","name":"푸른 깃 견장","slot":"accessory","frames":9},{"id":"a-pumpkin-witch-hat-97","name":"마녀의 뾰족 모자","slot":"accessory","frames":9},{"id":"a-phantom-half-mask-125","name":"상아 반가면","slot":"accessory","frames":9},{"id":"a-valkyrie-winged-circlet-179","name":"발키리의 날개 서클릿","slot":"accessory","frames":9},{"id":"a-devil-horns-winged-149","name":"작은 악마의 뿔","slot":"accessory","frames":9},{"id":"a-dragon-horned-helm-187","name":"용면 투구","slot":"accessory","frames":9},{"id":"a-paladin-winged-helm-181","name":"백은 날개 투구","slot":"accessory","frames":9},{"id":"a-frost-kite-shield-82","name":"빙정 방패","slot":"accessory","frames":9},{"id":"a-round-glasses-245","name":"금테 둥근 안경","slot":"accessory","frames":9},{"id":"temple_ringstaff_khakkhara","name":"temple_ringstaff_khakkhara","slot":"weapon","frames":9},{"id":"volcano_flame_blade","name":"volcano_flame_blade","slot":"weapon","frames":9},{"id":"swamp_antler_bow","name":"swamp_antler_bow","slot":"weapon","frames":9},{"id":"druid_antler_staff","name":"druid_antler_staff","slot":"weapon","frames":9},{"id":"oni_slayer_odachi","name":"oni_slayer_odachi","slot":"weapon","frames":9},{"id":"druid_thorn_staff","name":"druid_thorn_staff","slot":"weapon","frames":9}];
+const CELL=256;
 const LSK='align3';
 let store=JSON.parse(localStorage.getItem(LSK)||'{}');
 let idx=0, sel=0, playing=true, tick=0, raf=0, lastT=0, speed=160;
@@ -183,7 +143,4 @@ window.addEventListener('keydown',e=>{
   if(e.key===' '){e.preventDefault();playing=!playing;}
 });
 render(); drawStage();
-</script></body></html>`;
-
-writeFileSync(join(ROOT, 'public/align-anim3.html'), html);
-console.log(`[align-anim3] ${items.length}종 → public/align-anim3.html`);
+</script></body></html>
