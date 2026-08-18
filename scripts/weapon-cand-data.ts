@@ -67,9 +67,10 @@ export const CAND_DATA: CandData[] = [
       'tall pale wooden staff topped with an ornate gold finial of curling scrollwork hung with ' +
       'loose gold rings, a red silk knot tassel tied below the head',
     lore:
-      '석장 수칙. 이 지팡이는 짚는 것이지 겨누는 것이 아니다. ' +
-      '자루 끝에 걸린 여섯 고리는 저마다 지켜야 할 하나씩을 뜻하니, 그중 하나라도 잃은 자는 산문 밖으로 나서지 말라. ' +
-      '잃은 고리는 아무도 다시 달아 주지 않는다. 스스로 찾아 끼워 넣은 자만이 다시 길에 오른다.',
+      '원래는 고리가 아홉이었다고 한다. 순례를 처음 나선 승려가 셋을 길에 두고 왔는데, ' +
+      '하나는 끊긴 다리를 잇는 데 썼고 하나는 굶은 아이의 밥값이 됐다. ' +
+      '나머지 하나는 어디에 썼는지 끝내 말하지 않았다. ' +
+      '흰 자루 끝에 남은 여섯이 지금도 걸음마다 짤랑이고, 빈자리 셋은 채우지 않는 것이 법이 됐다.',
   },
   {
     key: 'angel_orb_scepter',
@@ -110,10 +111,10 @@ export const CAND_DATA: CandData[] = [
       'a hunting bow (a weapon) held in one hand, its two limbs a matched pair of pale branching ' +
       'stag antlers joined at a cord-wrapped grip, a taut dark bowstring drawn between the tips',
     lore:
-      '자네, 이 활을 처음 잡으면 십중팔구 시위부터 찾을 걸세. ' +
-      '헌데 뿔가지가 사방으로 뻗어 있어 어디에 걸어야 할지 도무지 감이 안 오거든. ' +
-      '그럴 땐 활을 눕혀 놓고 잠깐 기다려 보게. 뿔이 자란 쪽으로 손이 저절로 따라가니까. ' +
-      '억지로 걸어 놓으면 그 활은 평생 자네 말을 안 듣네.',
+      '이 활은 아버지가 쓰던 것이고, 아버지는 그 뿔의 주인을 직접 봤다고 했다. ' +
+      '열두 갈래로 뻗은 큰 놈이었는데 끝내 시위를 놓지 않고 돌아왔단다. ' +
+      '대신 이듬해 같은 자리에 떨어져 있던 뿔을 주워 활대를 맸다. ' +
+      '나는 아직 열두 갈래짜리를 만나 본 적이 없다.',
   },
   {
     key: 'westvolcano_dragonscale_greataxe',
@@ -207,8 +208,9 @@ export const CAND_DATA: CandData[] = [
       'twisted black bramble staff bristling with thorns along its length, ' +
       'a deep red rose blooming at its crown',
     lore:
-      '「그 장미, 누가 심은 거예요?」 「심은 게 아니라 자란 거지. 가시부터.」 ' +
-      '검은 덤불이 여러 겹으로 꼬여 자루가 되고, 그 끝에 가서야 진홍 한 송이가 겨우 피었다. ' +
-      '아래를 다 지나야 위가 나온다는 뜻이라고, 늙은 드루이드는 찢긴 손바닥을 펴 보이며 말했다.',
+      '땅에 오래 세워 두지 말라는 게 늪 사람들의 지론이다. ' +
+      '죽은 나무처럼 보여도 검은 덤불은 아직 살아 있어서, 반나절만 꽂아 두면 밑동에서 실뿌리가 내린다고들 한다. ' +
+      '뽑을 때 뚝뚝 끊기는 소리가 나면 이미 늦은 것이고, ' +
+      '그 자리엔 이듬해 가시덤불이 한 무더기 올라온다.',
   },
 ];

@@ -6,7 +6,7 @@
 //  POST /objects/{oid}/animations {animation_description, mode:'v3', frame_count:14}
 //   → submissions[0].background_job_id → GET /background-jobs/{id} 폴링
 //   → last_response.images[] = {width,height,base64=raw RGBA} → sharp raw→PNG
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
@@ -31,6 +31,17 @@ const v4 = existsSync(v4Path)
   ? (JSON.parse(readFileSync(v4Path, 'utf8')) as Record<string, { key: string; objectId: string }>)
   : {};
 for (const [k, v] of Object.entries(v4)) map[k] = v.objectId;
+// 교체 후보(미채택) — v4와 같은 { key, objectId } 형태. 채택 시 obj-map-v4로 옮긴다.
+// anim3.json은 검수용 매니페스트일 뿐이고 게임은 itemanim.json(코드맵 기반)을 읽으므로,
+// 카탈로그에 없는 후보가 여기 들어가도 게임에 노출되지 않는다.
+const candPath = join(ROOT, 'scripts/obj-map-cand.json');
+const cand = existsSync(candPath)
+  ? (JSON.parse(readFileSync(candPath, 'utf8')) as Record<string, { key: string; objectId: string }>)
+  : {};
+for (const [k, v] of Object.entries(cand)) {
+  map[k] = v.objectId;
+  v4[k] = v; // tokenFor가 키 라벨을 여기서 찾는다 — 후보는 전부 key1로 만들었다.
+}
 /** 이 아이템의 객체를 만든 계정 토큰. */
 function tokenFor(pid: string): string {
   const label = v4[pid]?.key;
@@ -106,20 +117,30 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
     if (!oid || !action) { fail.push(`${pid}(맵/액션없음)`); return; }
     // resume: 이미 raw+매니페스트 있으면 건너뜀(재생성 토큰 절약)
     if (!force && manifest.items[pid] && existsSync(join(framesDir, pid, '0.png'))) { ok++; process.stderr.write(`· skip ${pid} (${++done}/${targets.length})\n`); return; }
-    const TOK = tokenFor(pid);
-    const jobId = await postAnim(oid, action, TOK);
-    if (!jobId) { fail.push(`${pid}(POST)`); return; }
-    const images = await pollJob(jobId, TOK);
-    if (!images || !images.length) { fail.push(`${pid}(폴링)`); return; }
-    const dir = join(framesDir, pid); mkdirSync(dir, { recursive: true });
-    let fi = 0;
-    for (const im of images) {
-      const expected = im.width * im.height * 4;
-      const raw = Buffer.from(im.base64, 'base64');
-      const png = raw.length === expected
-        ? await sharp(raw, { raw: { width: im.width, height: im.height, channels: 4 } }).png().toBuffer()
-        : await sharp(raw).png().toBuffer(); // 혹시 PNG로 올 경우 대비
-      writeFileSync(join(dir, `${fi}.png`), png); fi++;
+    const dir = join(framesDir, pid);
+    // ⚠ raw는 있는데 매니페스트가 없는 상태 = 후처리 단계에서 죽은 흔적이다(2026-08-19 실측:
+    //   원본 스프라이트 경로를 못 찾아 fixOne이 throw). 이때 재발주하면 같은 프레임을 **두 번 결제**한다.
+    //   raw가 남아 있으면 POST를 건너뛰고 후처리부터 이어서 한다.
+    let fi = existsSync(join(dir, '0.png'))
+      ? readdirSync(dir).filter((f) => f.endsWith('.png')).length
+      : 0;
+    if (fi > 0) {
+      process.stderr.write(`· resume ${pid} (raw ${fi}프레임 재사용 — 재발주 없음)\n`);
+    } else {
+      const TOK = tokenFor(pid);
+      const jobId = await postAnim(oid, action, TOK);
+      if (!jobId) { fail.push(`${pid}(POST)`); return; }
+      const images = await pollJob(jobId, TOK);
+      if (!images || !images.length) { fail.push(`${pid}(폴링)`); return; }
+      mkdirSync(dir, { recursive: true });
+      for (const im of images) {
+        const expected = im.width * im.height * 4;
+        const raw = Buffer.from(im.base64, 'base64');
+        const png = raw.length === expected
+          ? await sharp(raw, { raw: { width: im.width, height: im.height, channels: 4 } }).png().toBuffer()
+          : await sharp(raw).png().toBuffer(); // 혹시 PNG로 올 경우 대비
+        writeFileSync(join(dir, `${fi}.png`), png); fi++;
+      }
     }
     if (A.stripFloor?.includes(pid)) for (let i = 0; i < fi; i++) await stripFloorLine(join(dir, `${i}.png`));
     await fixOne(pid, true, floorFor(pid), ampFor(pid), lockFor(pid), lockBodyFor(pid)); // 정렬+(per-item floor/amp) 후처리 → 스트립 webp 작성

@@ -65,7 +65,8 @@ function shift(fr: Buffer, sx: number, sy: number): Buffer {
 function basePath(pid: string): string {
   const pool = join(ROOT, 'public/sprites/pool', `${pid}.png`);
   if (existsSync(pool)) return pool;
-  for (const slot of ['weapon', 'armor', 'accessory']) {
+  // weapon-cand = 교체 후보(미채택). 채택 시 weapon/으로 옮겨지면 위 경로로 잡힌다.
+  for (const slot of ['weapon', 'armor', 'accessory', 'weapon-cand']) {
     const p = join(ROOT, 'public/sprites', slot, `${pid}.png`);
     if (existsSync(p)) return p;
   }
