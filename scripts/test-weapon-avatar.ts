@@ -27,20 +27,55 @@ import { pixellabKeyByIdx } from '../lib/game/profile/pixellab-keys';
 import type { ProfileGender } from '../lib/game/profile/refs';
 import { CAND_DATA } from './weapon-cand-data';
 
-const OUT_DIR = '/Users/ryu/Desktop/weapon-avatar-test';
 const PIX = 'https://api.pixellab.ai/v2';
 const KEY_IDX = 1; // key1 고정(후보 스프라이트를 만든 키와 동일).
 
 /**
- * 무기만 변수로 두기 위해 나머지 두 슬롯은 14종 내내 고정한다.
- *  · 교복: 짙은 남색 · 실루엣이 컴팩트 · 양손 자유 · 남성 정본 보유 → 금/은/흰/붉은 무기
- *    어느 쪽과도 대비가 산다.
- *  · 안경: 얼굴에만 걸린다 → 무기와 손을 다투지 않는다.
- * ⚠ 손을 쓰는 장신구(향로·방패·부채·잔)와 날개류는 배제했다 — 전자는 무기와 손을 다투고,
- *   후자는 우리가 감시하려는 등 날개 아티팩트를 스스로 만들어 낸다.
+ * 회차. 무기만 변수로 두려고 방어구·장신구는 회차 안에서 전 종 고정하고,
+ * 재검증은 그 두 슬롯을 바꿔 같은 무기를 다시 본다 — 결과가 나빴던 게 무기 탓인지
+ * 복장이 밀어낸 탓인지는 옷을 갈아입혀 보기 전에는 갈리지 않는다.
+ *
+ * ⚠ 두 슬롯 선정 기준(회차 불문): 손을 쓰는 장신구(향로·방패·부채·잔)와 날개류는 배제한다 —
+ *   전자는 무기와 손을 다투고, 후자는 우리가 감시하려는 등 날개 아티팩트를 스스로 만들어 낸다.
  */
-const ARMOR_KEY = 'academy_student_uniform';
-const ACCESSORY_KEY = 'round_gold_glasses';
+type Round = {
+  dir: string;
+  armorKey: string;
+  accessoryKey: string;
+  /** 지정 시 이 무기만 — 재검증 회차용. */
+  only?: string[];
+};
+
+const ROUNDS: Record<string, Round> = {
+  // 1차: 짙은 남색 교복(컴팩트) + 금테 안경(얼굴).
+  '1': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test',
+    armorKey: 'academy_student_uniform',
+    accessoryKey: 'round_gold_glasses',
+  },
+  // 2차 재검증: 판금 갑주(짙은 강철·청동, 1차와 톤·실루엣이 완전히 다름) + 안대(얼굴).
+  '2': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test-2',
+    armorKey: 'kingdom_goldknight_plate',
+    accessoryKey: 'general_star_eyepatch',
+    only: [
+      'angel_lace_parasol',
+      'temple_ringstaff_khakkhara',
+      'angel_orb_scepter',
+      'volcano_flame_blade',
+      'swamp_antler_bow',
+      'westvolcano_dragonscale_greataxe',
+      'plague_doctor_cane',
+      'druid_antler_staff',
+      'oni_slayer_odachi',
+      'druid_thorn_staff',
+    ],
+  },
+};
+
+const ROUND = ROUNDS[process.env.ROUND ?? '1'];
+if (!ROUND) throw new Error(`알 수 없는 ROUND: ${process.env.ROUND}`);
+const { dir: OUT_DIR, armorKey: ARMOR_KEY, accessoryKey: ACCESSORY_KEY } = ROUND;
 
 const CONCURRENCY = 4; // balance.ts PROFILE_GEN_PER_KEY와 동일 — 키 1개 기준 프로덕션 동시성.
 const POLL_INTERVAL_MS = 10_000;
@@ -134,12 +169,20 @@ async function main(): Promise<void> {
   injectCandidates();
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const tasks: Task[] = CAND_DATA.flatMap((cand) => [
+  const targets = ROUND.only
+    ? ROUND.only.map((k) => {
+        const c = CAND_DATA.find((x) => x.key === k);
+        if (!c) throw new Error(`only에 없는 키: ${k}`); // 오타가 조용히 누락되면 안 된다.
+        return c;
+      })
+    : CAND_DATA;
+
+  const tasks: Task[] = targets.flatMap((cand) => [
     { cand, gender: 'female' as ProfileGender },
     { cand, gender: 'male' as ProfileGender },
   ]);
 
-  console.log(`무기 ${CAND_DATA.length}종 × 남녀 = ${tasks.length}건 · 동시 ${CONCURRENCY} · key${KEY_IDX}`);
+  console.log(`무기 ${targets.length}종 × 남녀 = ${tasks.length}건 · 동시 ${CONCURRENCY} · key${KEY_IDX}`);
   console.log(`방어구 ${ARMOR_KEY} · 장신구 ${ACCESSORY_KEY} 고정 · AI 검수 생략`);
   console.log(`→ ${OUT_DIR}\n`);
 
