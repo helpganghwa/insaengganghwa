@@ -101,6 +101,14 @@ const ROUNDS: Record<string, Round> = {
     accessoryKey: 'kingdom_coronation_medallion',
     only: ['angel_orb_scepter', 'oni_slayer_odachi'],
   },
+  // 6차: 모래바람의 겹옷(따뜻한 베이지) + 수련 화관. 검붉은 대태도가 튀는 바탕이고,
+  // 화관은 머리에만 얹혀 손을 안 쓴다.
+  '6': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test-6',
+    armorKey: 'desert_nomad_robes',
+    accessoryKey: 'swamp_lily_crown',
+    only: ['angel_orb_scepter', 'oni_slayer_odachi'],
+  },
 };
 
 const ROUND = ROUNDS[process.env.ROUND ?? '1'];

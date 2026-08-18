@@ -77,10 +77,13 @@ export const CAND_DATA: CandData[] = [
     // 4차: 길게 쓸수록 장대가 됐다(3회 실측). 짧은 완드로 잘 나오는 angel_star_wand의
     // 문장 길이·구조를 그대로 따라 간결하게 줄인다 — 묘사가 길면 물건도 커진다.
     // ⚠ "각지지 않은"처럼 없는 것을 명명하면 생성기가 그것을 그린다 — 긍정형으로만 쓴다.
+    // 6차: 짧게만 쓰니 디테일이 빈약해졌다. 길이 어휘는 유지한 채 스프라이트에 실제로
+    // 있는 장식(당초 세공·분홍 보석·금빛 날개·술)을 되살린다.
     wornDesc:
-      'a very short slim gold wand, small enough to hold in one hand, topped with a small smooth ' +
-      'round pearl-white orb, one thin gold ring tilted around the orb, ' +
-      'small gold wings and a tasseled cord at its base',
+      'a short ornate gold wand held in one hand — its shaft chased with fine gold scrollwork and ' +
+      'set with small pink gems, a pair of small spread gold wings at the collar with two short ' +
+      'gold-tasseled cords beneath, and at the top a smooth round pearl-white orb encircled by ' +
+      'one thin tilted gold ring',
     lore:
       '금 자루 위에 맑은 보주가 떠 있고, 얇은 고리 하나가 비스듬히 감돈다. ' +
       '고리는 한 번도 멈춘 적이 없다. 들고 있으면 손목이 자꾸 그 속도를 따라간다.',
@@ -175,10 +178,16 @@ export const CAND_DATA: CandData[] = [
     // ⚠ 뿔·부적은 뺀다(사용자 지정) — 3차에서 뿔을 두 번 쓰자 얼굴이 뿔에 밀려 뭉개졌다.
     // ⚠ 로어도 compose에 함께 넘어간다 — wornDesc에서만 빼면 로어에 남은 뿔·부적이
     //   그대로 그려진다(4차 실측). 두 곳을 같이 손봐야 한다.
+    // 6차: 5차에서 칼집처럼 읽혔다. 프롬프트에 검집은 한 번도 없었고 원인은 두 가지 —
+    // ① 'matte black'이 금속이 아니라 칠한 나무로 읽힌다 → black steel + 밝은 날끝 선.
+    // ② 합성기가 스스로 붙인 붉은 술이 사게오(칼집 끈) 신호가 된다 → 자루 끝을 미리 명시해
+    //    술이 발명될 자리를 채운다.
+    // ⚠ "검집 없이"라고 쓰지 않는다 — 없는 것을 명명하면 생성기가 그것을 그린다.
     wornDesc:
-      'a very long odachi that reads red overall — a matte black blade veined with burning crimson ' +
-      'flame patterns and a glowing red-orange cutting edge, the iron guard cast as a snarling red ' +
-      'oni demon face, a red cord-wrapped hilt',
+      'a very long odachi held with its bare blade drawn — black steel veined with burning crimson ' +
+      'flame patterns, its sharpened edge a bright glowing red-orange line running the full length, ' +
+      'the iron guard cast as a snarling red oni demon face, ' +
+      'a red cord-wrapped hilt ending in a plain dark pommel',
     lore:
       '검은 날 위로 진홍 불꽃이 흐르고, 코등이에는 성난 도깨비 얼굴이 붉게 앉았다. ' +
       '칼을 뽑으면 그 얼굴이 먼저 웃는다. 베고 나면 다시 무표정으로 돌아간다.',
