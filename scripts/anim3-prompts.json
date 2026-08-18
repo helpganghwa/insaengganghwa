@@ -167,10 +167,10 @@
   "general_wing_hairclip": "the silver hair clip stays completely fixed; the two white feathers bend and settle slowly and naturally as if in a gentle continuous breeze, smooth unhurried motion with no jitter or snapping",
   "temple_ringstaff_khakkhara": "the pilgrim staff stays completely fixed and motionless; only the loose gold rings at its head sway and chime gently while a warm gold light breathes through the finial",
   "volcano_flame_blade": "the dark iron hilt stays completely fixed and motionless while the blade of living flame flickers and licks upward, orange sparks rising and heat-shimmer breathing around it",
-  "swamp_antler_bow": "the antler bow stays completely fixed and rigid; only a few pale fireflies drift slowly between the antler tines while a thin wisp of marsh mist curls past the wrapped grip",
+  "swamp_antler_bow": "the antler bow is completely fixed, rigid and motionless — it does not move, rotate, sway or shift at all; only a soft pale light travels slowly up along the bone antlers from the grip to the tips and fades",
   "druid_antler_staff": "the antler staff stays completely fixed and motionless; only the amber stone in its fork glows warmer and dimmer while the green moss and vine leaves stir softly",
-  "oni_slayer_odachi": "the odachi stays completely fixed and rigid; the crimson flame pattern along the black blade glows slowly brighter and dimmer like breathing embers, a faint heat shimmer rising, the oni face's eyes holding a steady low red light",
-  "druid_thorn_staff": "the bramble staff stays completely fixed and motionless; only the deep red rose at its crown slowly unfurls petal by petal into full bloom while small new thorns sprout along the shaft"
+  "oni_slayer_odachi": "the odachi is completely fixed, rigid and motionless — the blade does not move, rotate, sway or shift at all; only the crimson flame pattern along the black blade glows slowly brighter and dimmer like breathing embers, and the oni face's eyes hold a steady low red light",
+  "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom"
  },
  "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",
  "fixAmp": {},
