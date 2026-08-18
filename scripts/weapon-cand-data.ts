@@ -67,9 +67,9 @@ export const CAND_DATA: CandData[] = [
       'tall pale wooden staff topped with an ornate gold finial of curling scrollwork hung with ' +
       'loose gold rings, a red silk knot tassel tied below the head',
     lore:
-      '흰 나무 자루 끝에 금빛 당초를 감은 머리가 얹히고, 그 아래 헐거운 금 고리 여섯이 걸려 있다. ' +
-      '한 걸음마다 고리가 부딪혀 맑게 짤랑이면, 풀숲의 작은 것들이 그 소리를 먼저 듣고 길을 비킨다. ' +
-      '순례승들은 이 소리를 앞세우지 않으면 한 걸음도 떼지 않았다고 한다.',
+      '석장 수칙. 이 지팡이는 짚는 것이지 겨누는 것이 아니다. ' +
+      '자루 끝에 걸린 여섯 고리는 저마다 지켜야 할 하나씩을 뜻하니, 그중 하나라도 잃은 자는 산문 밖으로 나서지 말라. ' +
+      '잃은 고리는 아무도 다시 달아 주지 않는다. 스스로 찾아 끼워 넣은 자만이 다시 길에 오른다.',
   },
   {
     key: 'angel_orb_scepter',
@@ -100,7 +100,7 @@ export const CAND_DATA: CandData[] = [
     lore:
       '검은 무쇠 코등이 위로 날이 통째로 주황 불꽃이다. 손잡이는 서늘한데 눈앞은 쉼 없이 일렁이고, ' +
       '벤 자리는 갈라지기 전에 먼저 그을린다. 칼집이 들어갈 자리가 없어 벽에 세워 둘 수도, 허리에 찰 수도 없다. ' +
-      '그래서 이 검의 주인은 언제나 무언가를 손에 든 사람으로 기억된다.',
+      '그래서 이 검의 주인은 언제나 검을 손에 든 사람으로 기억된다.',
   },
   {
     key: 'swamp_antler_bow',
@@ -110,9 +110,10 @@ export const CAND_DATA: CandData[] = [
       'a hunting bow (a weapon) held in one hand, its two limbs a matched pair of pale branching ' +
       'stag antlers joined at a cord-wrapped grip, a taut dark bowstring drawn between the tips',
     lore:
-      '활대 두 짝이 사슴뿔 그대로다. 가지 끝마다 잔가지가 뻗어 있어 시위 걸 자리를 찾는 데만 한참이 걸리고, ' +
-      '걸고 나서도 손을 몇 번은 고쳐 잡아야 한다. 늪의 사냥꾼들은 그 굼뜬 시간을 싫어하지 않았다. ' +
-      '뿔의 주인에게 인사하는 시간이라고, 서로 그렇게 말했다더라.',
+      '자네, 이 활을 처음 잡으면 십중팔구 시위부터 찾을 걸세. ' +
+      '헌데 뿔가지가 사방으로 뻗어 있어 어디에 걸어야 할지 도무지 감이 안 오거든. ' +
+      '그럴 땐 활을 눕혀 놓고 잠깐 기다려 보게. 뿔이 자란 쪽으로 손이 저절로 따라가니까. ' +
+      '억지로 걸어 놓으면 그 활은 평생 자네 말을 안 듣네.',
   },
   {
     key: 'westvolcano_dragonscale_greataxe',
@@ -206,8 +207,8 @@ export const CAND_DATA: CandData[] = [
       'twisted black bramble staff bristling with thorns along its length, ' +
       'a deep red rose blooming at its crown',
     lore:
-      '검은 덤불이 여러 겹으로 꼬여 자루가 되고, 그 위로 잔가시가 빈틈없이 돋았다. ' +
-      '꼭대기에는 진홍 장미 한 송이가 활짝 피어 있는데, 자루를 쥔 자리마다 손바닥이 찢겨 피가 배어 나온다. ' +
-      '그래도 이 지팡이를 집어 든 사람들은 하나같이 가시가 아니라 꽃 쪽만 보고 있었다.',
+      '「그 장미, 누가 심은 거예요?」 「심은 게 아니라 자란 거지. 가시부터.」 ' +
+      '검은 덤불이 여러 겹으로 꼬여 자루가 되고, 그 끝에 가서야 진홍 한 송이가 겨우 피었다. ' +
+      '아래를 다 지나야 위가 나온다는 뜻이라고, 늙은 드루이드는 찢긴 손바닥을 펴 보이며 말했다.',
   },
 ];
