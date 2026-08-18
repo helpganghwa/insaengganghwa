@@ -66,10 +66,9 @@ export const FINAL_6: FinalItem[] = [
     nameProposal: '귀참의 대태도',
     nameWhy: '현행 이름 유지(사용자 확정)',
     anim:
-      "the odachi is completely fixed, rigid and motionless — the blade does not move, rotate, sway" +
-      " or shift at all; a deep crimson aura pulses and breathes outward around the whole sword wit" +
-      "h faint ember motes drifting up through it, while the flame pattern on the black blade glows" +
-      " softly within"
+      "an odachi frozen exactly in place — the sword itself is identical in every frame, a still im" +
+      "age that never moves, rotates, sways or shifts; the only thing that changes is a deep crimso" +
+      "n aura brightening and dimming around it with faint ember motes rising through it"
   },
   {
     key: 'druid_thorn_staff',

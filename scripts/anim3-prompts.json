@@ -169,7 +169,7 @@
   "volcano_flame_blade": "the dark iron hilt stays completely fixed and motionless while the blade of living flame flickers and licks upward, orange sparks rising and heat-shimmer breathing around it",
   "swamp_antler_bow": "the antler bow is completely fixed, rigid and motionless — it does not move, rotate, sway or shift at all; only a soft pale light travels slowly up along the bone antlers from the grip to the tips and fades",
   "druid_antler_staff": "the antler staff stays completely fixed and motionless; only the amber stone in its fork glows warmer and dimmer while the green moss and vine leaves stir softly",
-  "oni_slayer_odachi": "the odachi is completely fixed, rigid and motionless — the blade does not move, rotate, sway or shift at all; a deep crimson aura pulses and breathes outward around the whole sword with faint ember motes drifting up through it, while the flame pattern on the black blade glows softly within",
+  "oni_slayer_odachi": "an odachi frozen exactly in place — the sword itself is identical in every frame, a still image that never moves, rotates, sways or shifts; the only thing that changes is a deep crimson aura brightening and dimming around it with faint ember motes rising through it",
   "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom"
  },
  "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",
