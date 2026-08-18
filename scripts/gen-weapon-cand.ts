@@ -1715,6 +1715,45 @@ const CANDIDATES: Cand[] = [
   { key: 'timethief_pocketwatch_blade', nameKo: '시간 도둑의 검', region: '일반', group: '코스튬', tail: TAIL_V3,
     art: "a time thief's slim blade with a cracked pocket watch fused into the guard, its loose gears frozen in the air beside it, " +
       'tarnished silver and pale violet — enigmatic, clever and striking' },
+
+  // ══ 15차 10종 — 캐릭터 아키타입 3 ════════════════════════════════════════════
+  // 사용자 지정: 태도(오다치) 2종 + 드루이드 지팡이 2종 + 새 아키타입 6종.
+  // 문법은 13·14차와 동일(소유자 + 상징물 + 2색 배합 — 무드, TAIL_V3).
+  // ── 태도 2 ─────────────────────────────────────────────────────────────────
+  { key: 'ronin_moonlit_odachi', nameKo: '낭인의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a wandering ronin's very long odachi, a worn straw-woven scabbard cord and a chipped tsuba, moonlight along the blade, " +
+      'weathered indigo and pale steel — solitary, worn and beautiful' },
+  { key: 'oni_slayer_odachi', nameKo: '귀참의 대태도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "an oni slayer's massive odachi with a broken demon horn lashed to the hilt and a torn charm paper on the blade, " +
+      'lacquer black and hot vermilion — ferocious, heavy and magnificent' },
+
+  // ── 드루이드 지팡이 2 ──────────────────────────────────────────────────────
+  { key: 'druid_bloom_staff', nameKo: '꽃피는 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a spring druid's staff, its living wood bursting into white blossom at the crown with a robin's nest tucked in the fork, " +
+      'fresh green and blossom white — gentle, alive and lovely' },
+  { key: 'druid_swamp_staff', nameKo: '늪 드루이드 지팡이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a swamp druid's crooked staff wound with hanging moss and lily pads, a firefly lantern gourd tied below the crown, " +
+      'bog green and dim gold — mysterious, earthy and beautiful' },
+
+  // ── 새 아키타입 6 ──────────────────────────────────────────────────────────
+  { key: 'tombraider_torch_pick', nameKo: '도굴꾼의 곡괭이', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a tomb raider's war pick with a burning torch head strapped along the haft and a coil of rope at the grip, " +
+      'dusty bronze and ember orange — adventurous, rugged and striking' },
+  { key: 'dancer_veil_chakram', nameKo: '무희의 원륜', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a temple dancer's spinning chakram ring hung with silk veils and tiny ankle bells along its rim, " +
+      'saffron gold and rose silk — graceful, festive and beautiful' },
+  { key: 'blacksmith_forge_hammer', nameKo: '대장장이의 망치', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a master blacksmith's forge hammer, its face still glowing from the anvil with tongs and a leather apron strap wrapped at the haft, " +
+      'soot black and forge orange — sturdy, honest and imposing' },
+  { key: 'lighthouse_keeper_gaff', nameKo: '등대지기의 갈고리', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a lighthouse keeper's long gaff hook with a caged lamp burning at its head and barnacles crusting the shaft, " +
+      'sea-worn iron and warm lamp yellow — lonely, steadfast and beautiful' },
+  { key: 'jester_bell_flail', nameKo: '광대의 방울 철퇴', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a court jester's flail whose head is a grinning bell-capped fool's marotte on a short chain, " +
+      'harlequin purple and gold — playful, wicked and stylish' },
+  { key: 'falconer_talon_glaive', nameKo: '매부리의 언월도', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a royal falconer's glaive with a talon-curved blade, a leather hawking glove wrapped at the grip and one loose feather at the collar, " +
+      'russet brown and pale silver — noble, keen and elegant' },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */

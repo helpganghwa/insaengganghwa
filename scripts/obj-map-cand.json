@@ -678,5 +678,45 @@
   "timethief_pocketwatch_blade": {
     "key": "key1",
     "objectId": "9f463f2d-8dea-4ae6-8b1e-8476bfc1b4b6"
+  },
+  "ronin_moonlit_odachi": {
+    "key": "key1",
+    "objectId": "693ac96b-cb20-4267-a406-f9fa73203b4e"
+  },
+  "oni_slayer_odachi": {
+    "key": "key1",
+    "objectId": "006bd551-94a7-412d-93b1-296f2c1c16e3"
+  },
+  "druid_bloom_staff": {
+    "key": "key1",
+    "objectId": "fb07f89e-1011-4bb7-ab85-f51a979365ae"
+  },
+  "druid_swamp_staff": {
+    "key": "key1",
+    "objectId": "0c51481a-cd10-47bd-8a63-70066097f529"
+  },
+  "tombraider_torch_pick": {
+    "key": "key1",
+    "objectId": "48c0d0d8-6872-4c4d-9959-bff2d7908215"
+  },
+  "dancer_veil_chakram": {
+    "key": "key1",
+    "objectId": "a9541fa8-619d-4338-a642-9ef4ce55d178"
+  },
+  "blacksmith_forge_hammer": {
+    "key": "key1",
+    "objectId": "1da2f750-daa8-44ff-86a7-457c0b4082ea"
+  },
+  "lighthouse_keeper_gaff": {
+    "key": "key1",
+    "objectId": "73ba3167-8c3c-4f63-b448-a560f0c43b37"
+  },
+  "jester_bell_flail": {
+    "key": "key1",
+    "objectId": "7e20bc4a-f787-4497-bee3-2e74c63a1538"
+  },
+  "falconer_talon_glaive": {
+    "key": "key1",
+    "objectId": "53daeb57-329b-46cd-860f-84f7cc2c415d"
   }
 }
