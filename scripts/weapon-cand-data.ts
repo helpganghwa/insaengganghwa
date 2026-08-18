@@ -67,8 +67,9 @@ export const CAND_DATA: CandData[] = [
       'tall pale wooden staff topped with an ornate gold finial of curling scrollwork hung with ' +
       'loose gold rings, a red silk knot tassel tied below the head',
     lore:
-      '흰 나무 지팡이 끝에 금 고리 여섯이 헐겁게 걸려 한 걸음마다 짤랑인다. ' +
-      '그 소리를 들으면 길 위의 작은 것들이 먼저 비켜난다. 밟지 않으려고 일부러 내는 소리다.',
+      '흰 나무 자루 끝에 금빛 당초를 감은 머리가 얹히고, 그 아래 헐거운 금 고리 여섯이 걸려 있다. ' +
+      '한 걸음마다 고리가 부딪혀 맑게 짤랑이면, 풀숲의 작은 것들이 그 소리를 먼저 듣고 길을 비킨다. ' +
+      '순례승들은 이 소리를 앞세우지 않으면 한 걸음도 떼지 않았다고 한다.',
   },
   {
     key: 'angel_orb_scepter',
@@ -85,8 +86,9 @@ export const CAND_DATA: CandData[] = [
       'gold-tasseled cords beneath, and at the top a smooth round pearl-white orb encircled by ' +
       'one thin tilted gold ring',
     lore:
-      '금 자루 위에 맑은 보주가 떠 있고, 얇은 고리 하나가 비스듬히 감돈다. ' +
-      '고리는 한 번도 멈춘 적이 없다. 들고 있으면 손목이 자꾸 그 속도를 따라간다.',
+      '금 자루에 잔 당초를 새기고 분홍 보석을 박았다. ' +
+      '그 위로 작은 날개 한 쌍이 받쳐 든 진주빛 보주가 떠 있고, 얇은 고리 하나가 비스듬히 기운 채 쉬지 않고 둘레를 돈다. ' +
+      '오래 들고 있으면 손목이 저도 모르게 그 속도를 따라 돈다더라.',
   },
   {
     key: 'volcano_flame_blade',
@@ -96,8 +98,9 @@ export const CAND_DATA: CandData[] = [
       'sword with a dark ornate iron crossguard and a short wrapped grip, ' +
       'its blade a tall tapering body of bright orange flame with licking edges',
     lore:
-      '자루만 무쇠이고 날은 통째로 불꽃이다. 손잡이는 서늘한데 눈앞은 계속 일렁인다. ' +
-      '칼집이 없어 벽에 세워 둘 수도 없다. 그래서 주인은 늘 무언가를 든 사람으로 기억된다.',
+      '검은 무쇠 코등이 위로 날이 통째로 주황 불꽃이다. 손잡이는 서늘한데 눈앞은 쉼 없이 일렁이고, ' +
+      '벤 자리는 갈라지기 전에 먼저 그을린다. 칼집이 들어갈 자리가 없어 벽에 세워 둘 수도, 허리에 찰 수도 없다. ' +
+      '그래서 이 검의 주인은 언제나 무언가를 손에 든 사람으로 기억된다.',
   },
   {
     key: 'swamp_antler_bow',
@@ -107,8 +110,9 @@ export const CAND_DATA: CandData[] = [
       'a hunting bow (a weapon) held in one hand, its two limbs a matched pair of pale branching ' +
       'stag antlers joined at a cord-wrapped grip, a taut dark bowstring drawn between the tips',
     lore:
-      '활대 두 짝이 사슴뿔 그대로다. 가지 끝마다 잔가지가 살아 있어 시위 걸 자리를 찾는 데 한참 걸린다. ' +
-      '늪의 사냥꾼은 그 시간을 좋아했다. 뿔의 주인에게 인사하는 시간이라고 했다.',
+      '활대 두 짝이 사슴뿔 그대로다. 가지 끝마다 잔가지가 뻗어 있어 시위 걸 자리를 찾는 데만 한참이 걸리고, ' +
+      '걸고 나서도 손을 몇 번은 고쳐 잡아야 한다. 늪의 사냥꾼들은 그 굼뜬 시간을 싫어하지 않았다. ' +
+      '뿔의 주인에게 인사하는 시간이라고, 서로 그렇게 말했다더라.',
   },
   {
     key: 'westvolcano_dragonscale_greataxe',
@@ -156,8 +160,9 @@ export const CAND_DATA: CandData[] = [
       'tall twisted dark-wood staff whose crown forks into branching stag antlers, ' +
       'a glowing amber stone cradled in the fork, green moss and vines wound down the shaft',
     lore:
-      '뒤틀린 나무가 위에서 사슴뿔로 갈라지고 그 사이에 호박석이 얹혔다. ' +
-      '돌 안에는 아주 오래된 여름이 갇혀 있다. 겨울에 들면 손끝부터 먼저 따뜻해진다.',
+      '뒤틀린 나무가 위로 갈수록 사슴뿔처럼 갈라지고, 그 갈래 한가운데 호박석 한 덩이가 얹혀 있다. ' +
+      '돌 안에는 아주 오래된 여름이 통째로 갇혀, 겨울 숲에서 이걸 짚으면 손끝부터 먼저 데워진다. ' +
+      '자루를 감은 이끼가 사철 푸른 것도 그 온기 때문이라고 한다.',
   },
   {
     key: 'puppeteer_thread_claw',
@@ -189,8 +194,9 @@ export const CAND_DATA: CandData[] = [
       'the iron guard cast as a snarling red oni demon face, ' +
       'a red cord-wrapped hilt ending in a plain dark pommel',
     lore:
-      '검은 날 위로 진홍 불꽃이 흐르고, 코등이에는 성난 도깨비 얼굴이 붉게 앉았다. ' +
-      '칼을 뽑으면 그 얼굴이 먼저 웃는다. 베고 나면 다시 무표정으로 돌아간다.',
+      '검은 강철 날에 진홍 불꽃 문양이 흐르고, 날끝은 한 줄로 붉게 달아올라 있다. ' +
+      '코등이는 성난 도깨비 얼굴을 그대로 부어 만든 것인데, 칼을 뽑는 순간 그 얼굴이 먼저 이를 드러내며 웃는다. ' +
+      '베고 나면 언제 그랬냐는 듯 다시 무표정으로 돌아간다.',
   },
   {
     key: 'druid_thorn_staff',
@@ -200,7 +206,8 @@ export const CAND_DATA: CandData[] = [
       'twisted black bramble staff bristling with thorns along its length, ' +
       'a deep red rose blooming at its crown',
     lore:
-      '검은 덤불이 꼬여 지팡이가 되고 온몸에 가시가 돋았다. 꼭대기엔 진홍 장미 한 송이가 피어 있다. ' +
-      '쥐는 자리마다 피가 난다. 그래도 다들 위쪽만 보고 손을 뻗는다.',
+      '검은 덤불이 여러 겹으로 꼬여 자루가 되고, 그 위로 잔가시가 빈틈없이 돋았다. ' +
+      '꼭대기에는 진홍 장미 한 송이가 활짝 피어 있는데, 자루를 쥔 자리마다 손바닥이 찢겨 피가 배어 나온다. ' +
+      '그래도 이 지팡이를 집어 든 사람들은 하나같이 가시가 아니라 꽃 쪽만 보고 있었다.',
   },
 ];
