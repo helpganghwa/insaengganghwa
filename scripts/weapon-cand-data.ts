@@ -78,8 +78,9 @@ export const CAND_DATA: CandData[] = [
     // 문장 길이·구조를 그대로 따라 간결하게 줄인다 — 묘사가 길면 물건도 커진다.
     // ⚠ "각지지 않은"처럼 없는 것을 명명하면 생성기가 그것을 그린다 — 긍정형으로만 쓴다.
     wornDesc:
-      'slim short gold wand topped with a small smooth round pearl-white orb, ' +
-      'one thin gold ring tilted around the orb, small gold wings and a tasseled cord at its base',
+      'a very short slim gold wand, small enough to hold in one hand, topped with a small smooth ' +
+      'round pearl-white orb, one thin gold ring tilted around the orb, ' +
+      'small gold wings and a tasseled cord at its base',
     lore:
       '금 자루 위에 맑은 보주가 떠 있고, 얇은 고리 하나가 비스듬히 감돈다. ' +
       '고리는 한 번도 멈춘 적이 없다. 들고 있으면 손목이 자꾸 그 속도를 따라간다.',
@@ -170,16 +171,17 @@ export const CAND_DATA: CandData[] = [
     key: 'oni_slayer_odachi',
     nameKo: '귀참의 대태도',
     region: '일반',
-    // 4차: 오니 얼굴·검은 날·불꽃 문양·전체적으로 붉은 인상 네 가지에만 집중한다.
-    // ⚠ 뿔은 뺀다(사용자 지정) — 3차에서 뿔을 두 번 쓰자 얼굴이 뿔에 밀려 뭉개졌다.
-    //   부적·폼멜 같은 곁가지도 덜어내 문장의 무게를 네 가지에 몰아준다.
+    // 4·5차: 오니 얼굴·검은 날·불꽃 문양·전체적으로 붉은 인상 네 가지에만 집중한다.
+    // ⚠ 뿔·부적은 뺀다(사용자 지정) — 3차에서 뿔을 두 번 쓰자 얼굴이 뿔에 밀려 뭉개졌다.
+    // ⚠ 로어도 compose에 함께 넘어간다 — wornDesc에서만 빼면 로어에 남은 뿔·부적이
+    //   그대로 그려진다(4차 실측). 두 곳을 같이 손봐야 한다.
     wornDesc:
       'a very long odachi that reads red overall — a matte black blade veined with burning crimson ' +
       'flame patterns and a glowing red-orange cutting edge, the iron guard cast as a snarling red ' +
       'oni demon face, a red cord-wrapped hilt',
     lore:
-      '검은 날 가장자리가 진홍으로 달아오르고, 자루엔 부러진 뿔 하나가 묶였다. ' +
-      '코등이에서 부적이 찢긴 채 흔들린다. 뿔의 주인은 아직 이름이 남아 있다.',
+      '검은 날 위로 진홍 불꽃이 흐르고, 코등이에는 성난 도깨비 얼굴이 붉게 앉았다. ' +
+      '칼을 뽑으면 그 얼굴이 먼저 웃는다. 베고 나면 다시 무표정으로 돌아간다.',
   },
   {
     key: 'druid_thorn_staff',

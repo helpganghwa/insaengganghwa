@@ -93,6 +93,14 @@ const ROUNDS: Record<string, Round> = {
     accessoryKey: 'kingdom_coronation_medallion',
     only: ['angel_orb_scepter', 'oni_slayer_odachi'],
   },
+  // 5차: 이번에 바꾼 것은 묘사뿐이라(완드 '짧다' 강조, 대태도 부적 제거) 복장은
+  // 4차와 같게 둔다 — 옷까지 같이 바꾸면 달라진 결과가 어느 쪽 덕인지 못 가린다.
+  '5': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test-5',
+    armorKey: 'temple_frostguard_garb',
+    accessoryKey: 'kingdom_coronation_medallion',
+    only: ['angel_orb_scepter', 'oni_slayer_odachi'],
+  },
 };
 
 const ROUND = ROUNDS[process.env.ROUND ?? '1'];
