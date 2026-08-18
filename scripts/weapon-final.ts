@@ -67,8 +67,9 @@ export const FINAL_6: FinalItem[] = [
     nameWhy: '현행 이름 유지(사용자 확정)',
     anim:
       "the odachi is completely fixed, rigid and motionless — the blade does not move, rotate, sway" +
-      " or shift at all; only the crimson flame pattern along the black blade glows slowly brighter" +
-      " and dimmer like breathing embers, and the oni face's eyes hold a steady low red light"
+      " or shift at all; a deep crimson aura pulses and breathes outward around the whole sword wit" +
+      "h faint ember motes drifting up through it, while the flame pattern on the black blade glows" +
+      " softly within"
   },
   {
     key: 'druid_thorn_staff',

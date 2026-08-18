@@ -6,7 +6,7 @@
 //  POST /objects/{oid}/animations {animation_description, mode:'v3', frame_count:14}
 //   → submissions[0].background_job_id → GET /background-jobs/{id} 폴링
 //   → last_response.images[] = {width,height,base64=raw RGBA} → sharp raw→PNG
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
@@ -124,7 +124,13 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
     // ⚠ --force는 이 재사용을 건너뛰어야 한다 — 안 그러면 프롬프트를 바꿔도 옛 프레임을
     //   그대로 후처리해 아무것도 안 바뀐다. 재발주 전에 옛 프레임을 지운다(프레임 수가
     //   줄면 잔여 파일이 스트립에 섞인다).
-    if (force && existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+    //   지우지 말고 한 세대만 보관한다 — 재굴림 결과가 더 나쁠 때 되돌릴 수 있어야 한다
+    //   (2026-08-19: 지워 버려서 더 안정적이던 이전 굴림을 잃었다).
+    if (force && existsSync(dir)) {
+      const prev = `${dir}__prev`;
+      if (existsSync(prev)) rmSync(prev, { recursive: true, force: true });
+      renameSync(dir, prev);
+    }
     let fi = existsSync(join(dir, '0.png'))
       ? readdirSync(dir).filter((f) => f.endsWith('.png')).length
       : 0;

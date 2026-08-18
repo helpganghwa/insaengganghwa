@@ -208,8 +208,9 @@ export const CAND_DATA: CandData[] = [
       'twisted black bramble staff bristling with thorns along its length, ' +
       'a deep red rose blooming at its crown',
     lore:
-      '늪 마을 어귀에 한동안 세워져 있던 걸 누가 빨래 장대로 썼다가 낭패를 봤다. ' +
-      '널어 둔 옷이란 옷은 죄 가시에 걸려 찢어졌고, 걷으러 올라간 손도 성치 않았다. ' +
-      '그 뒤로는 아무도 손대지 않는데, 정작 꼭대기 장미는 그해에 제일 크게 피었다더라.',
+      '어머니께. 지난봄에 말씀하신 그 지팡이를 결국 구했습니다. ' +
+      '검은 덤불을 여러 겹 꼬아 만든 자루라 아직 손바닥이 성치 않고, ' +
+      '꼭대기 장미는 듣던 것보다 훨씬 붉습니다. ' +
+      '다음 장에 오르기 전에 한 번 들러 보여 드리겠습니다. 그때까지는 놓지 않겠습니다.',
   },
 ];
