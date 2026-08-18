@@ -1680,6 +1680,41 @@ const CANDIDATES: Cand[] = [
   { key: 'frostqueen_crown_scepter', nameKo: '눈의 여왕의 홀', region: '일반', group: '웅장', tail: TAIL_V3,
     art: "a frost queen's scepter crowned with a jagged crown of clear ice and a snowflake filigree collar, " +
       'ice blue and silver white — cold, imperious and breathtaking' },
+
+  // ══ 14차 10종 — 캐릭터 아키타입 2 ════════════════════════════════════════════
+  // 13차와 같은 문법(소유자 + 상징물 + 2색 배합 — 무드, TAIL_V3), 아키타입과 무기
+  // 종류를 모두 바꾼다. 13차에 없던 종류만 쓴다 — 단검·활·채찍·클로·망치·창·
+  // 부채·총·검·회중시계.
+  { key: 'vampirehunter_silver_stake', nameKo: '사냥꾼의 은말뚝', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a vampire hunter's silver stake dagger with a cross-shaped guard and a vial of holy water strapped to the grip, " +
+      'silver and dark leather with crimson cord — grim, righteous and sharp' },
+  { key: 'puppeteer_thread_claw', nameKo: '인형사의 실', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a puppeteer's control cross with taut razor threads hanging from it and a tiny jointed doll dangling below, " +
+      'lacquered black and blood red — sinister, delicate and captivating' },
+  { key: 'astrologer_orrery_bow', nameKo: '점성술사의 활', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "an astrologer's bow whose limbs are nested turning orrery rings with a small sun at the grip, a starlight string, " +
+      'midnight blue and antique gold — cosmic, scholarly and beautiful' },
+  { key: 'gravekeeper_lantern_hammer', nameKo: '묘지기의 망치', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a gravekeeper's heavy hammer, its head a weathered stone tomb marker with a small candle lantern hung from the haft, " +
+      'moss grey and dim amber — somber, weighty and quietly beautiful' },
+  { key: 'circus_ringmaster_whip', nameKo: '단장의 채찍', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a circus ringmaster's coiled whip with a striped baton handle, a gold tassel and a tiny brass bell at the tip, " +
+      'crimson and gold — theatrical, dashing and stylish' },
+  { key: 'dragonknight_wyrm_lance', nameKo: '용기사의 창', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a dragon knight's long lance with a wyrm-head vamplate and a membranous wing fin flaring behind the head, " +
+      'deep purple and burnished gold — heroic, fierce and magnificent' },
+  { key: 'crowwitch_feather_fan', nameKo: '까마귀 마녀의 부채', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a crow witch's folding fan of glossy black feathers with a silver eye charm at the pivot, " +
+      'raven black and cold silver — mysterious, elegant and alluring' },
+  { key: 'gunslinger_revolver', nameKo: '무법자의 리볼버', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "an outlaw gunslinger's revolver with a pearl grip, a spent shell caught mid-eject and a leather holster strap, " +
+      'gunmetal blue and cream pearl — cool, roguish and handsome' },
+  { key: 'gladiator_arena_sword', nameKo: '검투사의 검', region: '일반', group: '웅장', tail: TAIL_V3,
+    art: "a champion gladiator's short broad sword with a laurel wreath cast around the guard and a torn arena ribbon on the grip, " +
+      'bronze and sand beige with old blood red — proud, battered and glorious' },
+  { key: 'timethief_pocketwatch_blade', nameKo: '시간 도둑의 검', region: '일반', group: '코스튬', tail: TAIL_V3,
+    art: "a time thief's slim blade with a cracked pocket watch fused into the guard, its loose gears frozen in the air beside it, " +
+      'tarnished silver and pale violet — enigmatic, clever and striking' },
 ];
 
 /** 생성한 객체 id 기록 — 애니는 만든 키로만 가능하므로 키 라벨을 함께 남긴다. */

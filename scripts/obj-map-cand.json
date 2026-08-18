@@ -638,5 +638,45 @@
   "frostqueen_crown_scepter": {
     "key": "key1",
     "objectId": "8efbac11-40b1-4c32-a7a0-1952dc3f5441"
+  },
+  "vampirehunter_silver_stake": {
+    "key": "key1",
+    "objectId": "8a223ebb-9cab-4ce2-8da3-6b56385cf6a0"
+  },
+  "puppeteer_thread_claw": {
+    "key": "key1",
+    "objectId": "022b2f6e-d0ca-409f-b6ba-130432bf23cf"
+  },
+  "astrologer_orrery_bow": {
+    "key": "key1",
+    "objectId": "05569cd1-2efb-4968-bfed-92fe4226e20e"
+  },
+  "gravekeeper_lantern_hammer": {
+    "key": "key1",
+    "objectId": "b3364b06-0514-4083-98b8-e59a7228ad6d"
+  },
+  "circus_ringmaster_whip": {
+    "key": "key1",
+    "objectId": "9a095277-f9de-4cc7-952a-55eba5dfabfc"
+  },
+  "dragonknight_wyrm_lance": {
+    "key": "key1",
+    "objectId": "af7853a3-88fc-4122-8a67-139ed934ece9"
+  },
+  "crowwitch_feather_fan": {
+    "key": "key1",
+    "objectId": "07498d15-8979-4de1-b04f-91e6c58aa0f5"
+  },
+  "gunslinger_revolver": {
+    "key": "key1",
+    "objectId": "40f76be2-d786-4da7-af8c-bf9a953d54c8"
+  },
+  "gladiator_arena_sword": {
+    "key": "key1",
+    "objectId": "ba5cf2c6-4552-4a97-a2bc-953f15d9963c"
+  },
+  "timethief_pocketwatch_blade": {
+    "key": "key1",
+    "objectId": "9f463f2d-8dea-4ae6-8b1e-8476bfc1b4b6"
   }
 }
