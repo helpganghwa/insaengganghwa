@@ -71,6 +71,20 @@ const ROUNDS: Record<string, Round> = {
       'druid_thorn_staff',
     ],
   },
+  // 3차 재검증: 숲지기 한 벌(중간 톤 녹·갈, 후드 반망토) + 고글(이마).
+  // 1차 남색 교복·2차 판금과 톤·실루엣이 또 다르다. 이 회차의 주 변수는 복장이 아니라
+  // 정밀화한 wornDesc다 — 4종 모두 "무엇이 안 보였는지"가 지목돼 그 지점만 고쳐 썼다.
+  '3': {
+    dir: '/Users/ryu/Desktop/weapon-avatar-test-3',
+    armorKey: 'forest_ranger_outfit',
+    accessoryKey: 'volcano_ashglass_goggles',
+    only: [
+      'angel_lace_parasol',
+      'angel_orb_scepter',
+      'westvolcano_dragonscale_greataxe',
+      'oni_slayer_odachi',
+    ],
+  },
 };
 
 const ROUND = ROUNDS[process.env.ROUND ?? '1'];

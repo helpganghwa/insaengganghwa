@@ -49,10 +49,12 @@ export const CAND_DATA: CandData[] = [
     key: 'angel_lace_parasol',
     nameKo: '레이스 양산검',
     region: '타락천사',
+    // 3차 정밀화: 1·2차에서 "그냥 우산"으로 읽혔다 — 창날을 문장의 주인공으로 올리고
+    // 양산 캐노피를 그 뒤에 붙인다. 길이·잎사귀꼴을 명시해 장식용 뾰족끝이 되지 않게 한다.
     wornDesc:
-      'an opened white lace parasol (a weapon) held in one hand, fine gold ribbing over the canopy ' +
-      'and a scalloped white frilled hem, a slim gold shaft ending in a polished silver blade point, ' +
-      'a looped ribbon strap at the handle',
+      'a long leaf-shaped silver spear blade at the end of a slim gold shaft, the shaft rising ' +
+      'into an opened round white lace parasol canopy with thin gold ribs and a scalloped frilled ' +
+      'hem, a small gold finial at the very top, a looped white ribbon strap tied just above the blade',
     lore:
       '흰 레이스 위로 금실 살이 지나가고, 손잡이 반대편은 은빛으로 벼려져 있다. ' +
       '접는 순간 그늘이 사라지고 날이 선다. 펼치면 다시 숙녀의 한가한 오후가 된다.',
@@ -72,9 +74,13 @@ export const CAND_DATA: CandData[] = [
     key: 'angel_orb_scepter',
     nameKo: '보주 홀',
     region: '타락천사',
+    // 3차 정밀화: ① 크기 — 1·2차에서 지팡이만큼 커졌다. 짧고 한 손에 쥐는 물건임을 앞세운다.
+    // ② 형태 — 구슬이 각진 수정으로 나왔다. '매끈한 둥근 구슬'을 반복해 못 박는다.
+    // ⚠ "각지지 않은"처럼 없는 것을 명명하면 생성기가 그것을 그린다 — 긍정형으로만 쓴다.
     wornDesc:
-      'gold scepter topped with a large pale crystal orb encircled by a thin tilted halo ring, ' +
-      'small gold wing-shaped ornaments at the collar, a jeweled shaft and two short tasseled cords',
+      'a short gold scepter no longer than a forearm, held in one hand, topped with one small ' +
+      'smooth round pearl-white orb like a polished bead, a single thin gold ring tilted around ' +
+      'the orb, a jeweled gold collar below it with small gold wing ornaments and two short tasseled cords',
     lore:
       '금 자루 위에 맑은 보주가 떠 있고, 얇은 고리 하나가 비스듬히 감돈다. ' +
       '고리는 한 번도 멈춘 적이 없다. 들고 있으면 손목이 자꾸 그 속도를 따라간다.',
@@ -105,10 +111,13 @@ export const CAND_DATA: CandData[] = [
     key: 'westvolcano_dragonscale_greataxe',
     nameKo: '용린 대부',
     region: '서쪽 화산',
+    // 3차 정밀화: 두 날이 서로 다르다는 게 이 도끼의 전부인데 1·2차에서 양쪽 다 비늘로
+    // 뭉개졌다. 한 문장에 붙여 쓰면 재질이 번지므로 날을 따로 떼어 대비시킨다.
     wornDesc:
-      'large double-bitted axe, one crescent blade sheathed in teal iridescent dragon scales and ' +
-      'the other polished steel, an ornate gold collar set with a red gem, ' +
-      'teal scaled haft with gold bands and a flared gold butt',
+      'a large two-handed greataxe whose two crescent blades are deliberately unlike each other — ' +
+      'the upper blade sheathed in teal iridescent dragon scales, the lower blade bare polished ' +
+      'silver steel with no scales — joined by an ornate gold collar set with one round red gem, ' +
+      'a teal scaled haft banded in gold with a flared gold cap at the butt',
     lore:
       '한쪽 날은 청록 비늘로 덮이고 반대쪽은 맨 강철이다. 금 세공 가운데 붉은 보석이 박혔다. ' +
       '비늘 쪽으로 베면 소리가 없고 강철 쪽은 요란하다. 어느 쪽을 쓰는지가 그날의 기분을 말해 준다.',
@@ -162,9 +171,13 @@ export const CAND_DATA: CandData[] = [
     key: 'oni_slayer_odachi',
     nameKo: '귀참의 대태도',
     region: '일반',
+    // 3차 정밀화: 악마 형상이 안 보인다는 지적 — 코등이를 '뿔 달린 도깨비 얼굴'로 명시한다.
+    // 날도 통째로 붉어졌던 터라, 검은 바탕에 진홍 불꽃 문양이 흐르는 구조로 다시 쓴다.
     wornDesc:
-      'long odachi with a black blade edged in glowing crimson, a dark horned guard, ' +
-      'a red-wrapped hilt, torn paper charms hanging from the collar',
+      'a very long odachi, its matte black blade veined with burning crimson flame patterns and a ' +
+      'glowing orange cutting edge, the iron guard cast as a snarling horned demon face with two ' +
+      'jutting horns, a red cord-wrapped hilt with a red ring pommel, ' +
+      'and two torn white paper charms hanging from the guard',
     lore:
       '검은 날 가장자리가 진홍으로 달아오르고, 자루엔 부러진 뿔 하나가 묶였다. ' +
       '코등이에서 부적이 찢긴 채 흔들린다. 뿔의 주인은 아직 이름이 남아 있다.',

@@ -84,9 +84,12 @@ const BY_KEY: Record<string, WeaponKind> = {
   // 괄호로 범주를 못 박는다(위 ⚠ 규칙: 재질·형태 형용사는 넣지 않는다).
   kingdom_lionheart_axe: { noun: 'battle axe' },
   temple_sanctus_mace: { noun: 'mace' },
-  angel_lace_parasol: { noun: 'parasol (an opened umbrella held in one hand)' },
+  // ⚠ 'umbrella'라고 쓰면 생성기가 우산만 그리고 무기로 안 읽는다(2026-08-18 실측).
+  //   양산은 배경이고 무기는 자루 끝의 창날이라, 명사 안에 그 창날을 남긴다.
+  angel_lace_parasol: { noun: 'parasol blade (a parasol whose shaft ends in a spear blade)' },
   temple_ringstaff_khakkhara: { noun: 'khakkhara (a tall ringed monk staff)' },
-  angel_orb_scepter: { noun: 'scepter (a short ornate rod)' },
+  // 작게 나와야 하는 물건인데 크게 그려졌다(2026-08-18) — 명사에 'small one-handed'를 남긴다.
+  angel_orb_scepter: { noun: 'short scepter (a small ornate one-handed rod)' },
   volcano_flame_blade: { noun: 'sword' },
   swamp_antler_bow: { noun: 'archery bow', ranged: true },
   westvolcano_dragonscale_greataxe: { noun: 'greataxe' },
