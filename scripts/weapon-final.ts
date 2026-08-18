@@ -47,8 +47,8 @@ export const FINAL_6: FinalItem[] = [
     nameProposal: '사슴뿔 활',
     nameWhy: '활대 두 짝이 사슴뿔 그대로다 — 현행 이름 유지(사용자 확정)',
     anim:
-      'the antler bow stays completely fixed and rigid; only the dark bowstring hums and vibrates ' +
-      'once while a faint pale-green glow breathes along the bone antlers',
+      'the antler bow stays completely fixed and rigid; only a few pale fireflies drift slowly betw' +
+      'een the antler tines while a thin wisp of marsh mist curls past the wrapped grip'
   },
   {
     key: 'druid_antler_staff',
@@ -65,8 +65,9 @@ export const FINAL_6: FinalItem[] = [
     nameProposal: '귀참의 대태도',
     nameWhy: '현행 이름 유지(사용자 확정)',
     anim:
-      'the odachi stays completely fixed and rigid; only the crimson flame patterns flow and ' +
-      "brighten along the black blade while the oni face's eyes flare red",
+      'the odachi stays completely fixed and rigid; the crimson flame pattern along the black blade' +
+      ' glows slowly brighter and dimmer like breathing embers, a faint heat shimmer rising, the on' +
+      'i face\'s eyes holding a steady low red light'
   },
   {
     key: 'druid_thorn_staff',
@@ -74,7 +75,7 @@ export const FINAL_6: FinalItem[] = [
     nameProposal: '장미 핀 가시 지팡이',
     nameWhy: '쥔 자리마다 손바닥이 찢기는데도 다들 가시가 아니라 꽃 쪽만 본다',
     anim:
-      'the bramble staff stays completely fixed and motionless; only the deep red rose at its ' +
-      'crown breathes open and closed while a faint crimson glow pulses among the thorns',
+      'the bramble staff stays completely fixed and motionless; only the deep red rose at its crown' +
+      ' slowly unfurls petal by petal into full bloom while small new thorns sprout along the shaft'
   },
 ];

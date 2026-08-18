@@ -6,7 +6,7 @@
 //  POST /objects/{oid}/animations {animation_description, mode:'v3', frame_count:14}
 //   → submissions[0].background_job_id → GET /background-jobs/{id} 폴링
 //   → last_response.images[] = {width,height,base64=raw RGBA} → sharp raw→PNG
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
@@ -121,6 +121,10 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
     // ⚠ raw는 있는데 매니페스트가 없는 상태 = 후처리 단계에서 죽은 흔적이다(2026-08-19 실측:
     //   원본 스프라이트 경로를 못 찾아 fixOne이 throw). 이때 재발주하면 같은 프레임을 **두 번 결제**한다.
     //   raw가 남아 있으면 POST를 건너뛰고 후처리부터 이어서 한다.
+    // ⚠ --force는 이 재사용을 건너뛰어야 한다 — 안 그러면 프롬프트를 바꿔도 옛 프레임을
+    //   그대로 후처리해 아무것도 안 바뀐다. 재발주 전에 옛 프레임을 지운다(프레임 수가
+    //   줄면 잔여 파일이 스트립에 섞인다).
+    if (force && existsSync(dir)) rmSync(dir, { recursive: true, force: true });
     let fi = existsSync(join(dir, '0.png'))
       ? readdirSync(dir).filter((f) => f.endsWith('.png')).length
       : 0;
