@@ -77,6 +77,25 @@ const BY_KEY: Record<string, WeaponKind> = {
   general_twin_flintlocks: { noun: 'twin flintlock pistols', pair: true, ranged: true },
   marsh_frog_blowgun: { noun: 'blowgun (a long tube)', ranged: true },
   orc_hunter_boomerang: { noun: 'boomerang (a curved throwing blade held in one hand)' },
+
+  // ── 교체 후보 14종(아바타 생성 검증 중) ──
+  // 아직 카탈로그 미등재라 프로덕션에서는 조회되지 않는다 — 검증 스크립트가 쓰고,
+  // 채택 시 그대로 정본이 된다. 양산·활·조종대처럼 실루엣이 무기로 안 읽히는 것은
+  // 괄호로 범주를 못 박는다(위 ⚠ 규칙: 재질·형태 형용사는 넣지 않는다).
+  kingdom_lionheart_axe: { noun: 'battle axe' },
+  temple_sanctus_mace: { noun: 'mace' },
+  angel_lace_parasol: { noun: 'parasol (an opened umbrella held in one hand)' },
+  temple_ringstaff_khakkhara: { noun: 'khakkhara (a tall ringed monk staff)' },
+  angel_orb_scepter: { noun: 'scepter (a short ornate rod)' },
+  volcano_flame_blade: { noun: 'sword' },
+  swamp_antler_bow: { noun: 'archery bow', ranged: true },
+  westvolcano_dragonscale_greataxe: { noun: 'greataxe' },
+  kingdom_goldwound_rapier: { noun: 'rapier (a slender one-handed sword)' },
+  plague_doctor_cane: { noun: 'cane staff (a tall walking-stick staff)' },
+  druid_antler_staff: { noun: 'staff (a long magic rod)' },
+  puppeteer_thread_claw: { noun: 'puppet control bar (a cross-shaped handle with hanging threads)' },
+  oni_slayer_odachi: { noun: 'odachi (a very long two-handed Japanese sword)' },
+  druid_thorn_staff: { noun: 'staff (a long magic rod)' },
 };
 
 /** 접미사 폴백 — 사전 누락분이 종류 없이 나가지 않게 한다. */
