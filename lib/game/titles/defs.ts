@@ -147,16 +147,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "codex_live",
-  kind: "conditional",
-  label: "만물박사",
-  hidden: false,
-  style: {
-   fx: "verdantflow",
-   glow: true
-  }
- },
- {
   code: "star_holder",
   kind: "conditional",
   label: "별의 주인",

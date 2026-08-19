@@ -87,12 +87,6 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "쉬움"
  },
  {
-  code: "codex_live",
-  cat: "조건부",
-  cond: "도감 완성 상태를 유지하는 동안(신규 아이템 추가 시 자동 상실)",
-  diff: "어려움"
- },
- {
   code: "star_holder",
   cat: "조건부",
   cond: "+200 이상 장비를 장착 중인 동안",

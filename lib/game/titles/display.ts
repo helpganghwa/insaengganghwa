@@ -76,7 +76,7 @@ export async function resolveRepTitle(
 /** 판정 2차 조건부 — 표시 시점 재검증이 표적 쿼리로 가능한 코드. */
 const HEAVY_CONDITIONALS = new Set([
   'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
-  'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag', 'codex_live',
+  'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag',
   'streak_king', 'march_live', 'smooth_sail',
   'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
   // PENDING 해소(2026-08-12) — judge.activeConditionals에 추가한 "~인 동안" 3종.
@@ -196,15 +196,6 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
         select 1 from guild_members where user_id=${u} and server_id=${s} and role='leader' limit 1
       `)) as unknown as unknown[];
       return r.length > 0;
-    }
-    if (code === 'codex_live') {
-      const [r] = (await db.execute(sql`
-        select (select count(distinct ue.catalog_item_id) from user_equipment ue
-                 join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
-                 where ue.user_id=${u} and ue.server_id=${s})::int as got,
-               (select count(*) from catalog_items where active)::int as total
-      `)) as unknown as { got: number; total: number }[];
-      return Number(r?.total) > 0 && Number(r?.got) >= Number(r?.total);
     }
     if (code === 'streak_king' || code === 'march_live') {
       const src = code === 'streak_king'

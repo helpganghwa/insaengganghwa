@@ -117,15 +117,6 @@
   "diff": "쉬움"
  },
  {
-  "code": "codex_live",
-  "cat": "조건부",
-  "kind": "조건부",
-  "label": "만물박사",
-  "cond": "도감 완성 상태를 유지하는 동안(신규 아이템 추가 시 자동 상실)",
-  "hidden": false,
-  "diff": "어려움"
- },
- {
   "code": "star_holder",
   "cat": "조건부",
   "kind": "조건부",

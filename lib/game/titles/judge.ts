@@ -898,7 +898,6 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
   if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
   if (mm.gleader === 1) out.add('guild_flag');
-  if (mm.catalog_total > 0 && mm.codex >= mm.catalog_total) out.add('codex_live');
   // 유지형 스트릭
   if (mm.checkin_streak >= 30) out.add('streak_king');
   if (mm.raid_streak >= 7) out.add('march_live');
