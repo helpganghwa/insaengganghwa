@@ -78,5 +78,6 @@ export interface CatalogItem {
 import { CATALOG_V3 } from './catalog-v3';
 import { CATALOG_V2_LIVE } from './catalog-v2live';
 import { CATALOG_V4 } from './catalog-v4';
+import { CATALOG_V5 } from './catalog-v5';
 
-export const CATALOG_ITEMS: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE, ...CATALOG_V4];
+export const CATALOG_ITEMS: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE, ...CATALOG_V4, ...CATALOG_V5];

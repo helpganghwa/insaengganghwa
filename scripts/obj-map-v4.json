@@ -66,5 +66,29 @@
   "general_wing_hairclip": {
     "key": "key1",
     "objectId": "c24a26ce-aa93-4130-a0c3-51fd2ce610af"
+  },
+  "temple_ringstaff_khakkhara": {
+    "key": "key1",
+    "objectId": "14f1a069-b48d-4d12-b534-ac1e6f89eb26"
+  },
+  "volcano_flame_blade": {
+    "key": "key1",
+    "objectId": "261ded78-eed9-42e1-acdc-da0d8640ddbd"
+  },
+  "swamp_antler_bow": {
+    "key": "key1",
+    "objectId": "d367dbc1-c5c9-43f9-8441-c5ee0386bf8c"
+  },
+  "druid_antler_staff": {
+    "key": "key1",
+    "objectId": "e040d2db-a397-4d9d-b453-a419d8f9d360"
+  },
+  "oni_slayer_odachi": {
+    "key": "key1",
+    "objectId": "006bd551-94a7-412d-93b1-296f2c1c16e3"
+  },
+  "druid_thorn_staff": {
+    "key": "key1",
+    "objectId": "d5d342a3-a87d-4847-b3f9-4226fbe19a2f"
   }
 }

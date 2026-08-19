@@ -1041,16 +1041,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "halfblade_master",
-  kind: "conditional",
-  label: "빛과 밤의 주인",
-  hidden: true,
-  style: {
-   fx: "yinyang",
-   glow: true
-  }
- },
- {
   code: "starfield_master",
   kind: "conditional",
   label: "별자리를 쥔 손",
@@ -1448,26 +1438,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "sharpshooter",
-  kind: "conditional",
-  label: "명사수",
-  hidden: true,
-  style: {
-   color: "#a5b4fc",
-   glow: true
-  }
- },
- {
-  code: "gatekeeper",
-  kind: "conditional",
-  label: "문지기",
-  hidden: true,
-  style: {
-   color: "#fbbf24",
-   glow: true
-  }
- },
- {
   code: "armory_lord",
   kind: "conditional",
   label: "병기고의 주인",
@@ -1632,24 +1602,6 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   style: {
    color: "#ef4444"
-  }
- },
- {
-  code: "spiral_rider",
-  kind: "conditional",
-  label: "나선의 기수",
-  hidden: true,
-  style: {
-   color: "#a5b4fc"
-  }
- },
- {
-  code: "frost_archer",
-  kind: "conditional",
-  label: "혹한의 궁수",
-  hidden: true,
-  style: {
-   color: "#60a5fa"
   }
  },
  {
@@ -1977,16 +1929,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "fallen_angel",
-  kind: "conditional",
-  label: "추락 천사",
-  hidden: true,
-  style: {
-   fx: "duskfade",
-   glow: true
-  }
- },
- {
   code: "wanderer",
   kind: "conditional",
   label: "유랑자",
@@ -2023,15 +1965,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "frost_warden",
-  kind: "conditional",
-  label: "서리 파수꾼",
-  hidden: true,
-  style: {
-   fx: "frostedge"
-  }
- },
- {
   code: "beast_king",
   kind: "conditional",
   label: "야수의 왕",
@@ -2047,17 +1980,6 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   style: {
    color: "#fbbf24"
-  }
- },
- {
-  code: "fallen_lord",
-  kind: "conditional",
-  label: "몰락한 군주",
-  hidden: true,
-  style: {
-   fx: "abyssglow",
-   pt: "abyss",
-   glow: true
   }
  },
  {
@@ -2939,17 +2861,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "frost_queen",
-  kind: "conditional",
-  label: "서리 여왕",
-  hidden: true,
-  style: {
-   fx: "iceflow",
-   pt: "snow",
-   glow: true
-  }
- },
- {
   code: "gunslinger",
   kind: "conditional",
   label: "황야의 총잡이",
@@ -2976,15 +2887,6 @@ export const TITLE_DEFS: TitleDef[] = [
    fx: "nightstar",
    pt: "stardust",
    glow: true
-  }
- },
- {
-  code: "lancer",
-  kind: "conditional",
-  label: "창기병",
-  hidden: true,
-  style: {
-   color: "#fbbf24"
   }
  },
  {
@@ -3173,15 +3075,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "ice_fishing",
-  kind: "conditional",
-  label: "얼음낚시",
-  hidden: true,
-  style: {
-   color: "#22c55e"
-  }
- },
- {
   code: "festival_night",
   kind: "conditional",
   label: "축제의 밤",
@@ -3207,17 +3100,6 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "iceflow",
    pt: "snow",
-   glow: true
-  }
- },
- {
-  code: "hell_gatekeeper",
-  kind: "conditional",
-  label: "지옥의 문지기",
-  hidden: true,
-  style: {
-   fx: "bloodpulse",
-   pt: "abyss",
    glow: true
   }
  },
@@ -3386,18 +3268,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "winter_angel",
-  kind: "conditional",
-  label: "겨울 천사",
-  hidden: true,
-  style: {
-   gradient: [
-    "#60a5fa",
-    "#c084fc"
-   ]
-  }
- },
- {
   code: "transfer_student",
   kind: "conditional",
   label: "전학생",
@@ -3419,6 +3289,129 @@ export const TITLE_DEFS: TitleDef[] = [
     "#ef4444",
     "#c084fc"
    ]
+  }
+ },
+ {
+  code: "ringing_pilgrim",
+  kind: "conditional",
+  label: "길을 비우는 걸음",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "temple_procession",
+  kind: "conditional",
+  label: "행렬의 선두",
+  hidden: true,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "never_sheathed",
+  kind: "conditional",
+  label: "칼집 없는 자",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "ember_ball",
+  kind: "conditional",
+  label: "잿불 무도",
+  hidden: true,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "forge_hand",
+  kind: "conditional",
+  label: "불을 다루는 손",
+  hidden: true,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "antler_hunter",
+  kind: "conditional",
+  label: "뿔의 사냥꾼",
+  hidden: true,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "marsh_tracker",
+  kind: "conditional",
+  label: "늪을 읽는 자",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "summer_keeper",
+  kind: "conditional",
+  label: "여름을 든 자",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "green_circle",
+  kind: "conditional",
+  label: "푸른 원",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "oni_slayer",
+  kind: "conditional",
+  label: "귀참",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "red_edge",
+  kind: "conditional",
+  label: "붉은 날",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "mask_and_blade",
+  kind: "conditional",
+  label: "가면과 칼",
+  hidden: true,
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "thorn_bearer",
+  kind: "conditional",
+  label: "가시를 쥔 자",
+  hidden: true,
+  style: {
+   color: "#a5b4fc"
   }
  }
 ] as const;
