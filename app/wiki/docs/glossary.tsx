@@ -2,7 +2,6 @@ import {
   CYCLE_LEN,
   GEM_TO_MS,
   MEGA_OF_SUCCESS_BP,
-  MELEE_POINT_HALF_LIFE_DAYS,
   RAID_DAILY_CAP,
   RAID_MAX_PARTICIPANTS,
   RAID_PHASE_DROP_BOXES,
@@ -61,8 +60,8 @@ export default function Doc() {
           [
             '대성공',
             <>
-              두 단계를 한 번에 올리는 결과. 성공분 가운데 {bpPct(MEGA_OF_SUCCESS_BP)}가 이쪽으로
-              갈라진다. 확률 공시에는 메가로 적힌다.
+              두 단계를 한 번에 올리는 결과. 성공 중 {bpPct(MEGA_OF_SUCCESS_BP)}는 대성공이 된다.
+              확률 공시에는 메가로 적힌다.
             </>,
           ],
           ['유지', '레벨이 그대로. 시간이 덜 찬 상태에서 강화하면 가장 흔한 결과다.'],
@@ -110,8 +109,8 @@ export default function Doc() {
             </>,
           ],
           [
-            '편성',
-            '지금 상자에서 나올 수 있는 아이템. 상자는 부위가 맞는 편성 아이템 중 하나를 균등하게 뽑는다. 편성에서 빠져도 이미 가진 장비는 그대로 남는다.',
+            '활성 아이템',
+            '지금 상자에서 나올 수 있는 아이템. 확률 공시에 쓰는 말이고, 상자는 부위가 맞는 활성 아이템 중 하나를 균등하게 뽑는다. 여기서 빠져도 이미 가진 장비는 그대로 남는다.',
           ],
           [
             '다이아',
@@ -142,8 +141,8 @@ export default function Doc() {
           [
             '페이즈',
             <>
-              보스 체력의 한 마디. 하나 넘길 때마다 한 번이라도 때린 사람 전원이 보급 상자{' '}
-              {fmtInt(RAID_PHASE_DROP_BOXES)}개를 받고, 다음 마디 체력은 ×{RAID_PHASE_HP_MULT}가
+              보스 체력의 한 구간. 페이즈 하나를 넘길 때마다 한 번이라도 때린 사람 전원이 보급 상자{' '}
+              {fmtInt(RAID_PHASE_DROP_BOXES)}개를 받고, 다음 페이즈 체력은 ×{RAID_PHASE_HP_MULT}가
               된다.
             </>,
           ],
@@ -153,10 +152,7 @@ export default function Doc() {
           ],
           [
             '포인트',
-            <>
-              대난투 등수로 쌓이는 랭킹 점수. 얻은 뒤 {fmtInt(MELEE_POINT_HALF_LIFE_DAYS)}일마다
-              반영 가치가 절반으로 줄어든다. 통산 누적치는 따로 남는다.
-            </>,
+            '대난투 등수로 쌓이는 랭킹 점수. 시간이 지나면 조금씩 줄어들어 최근 성적이 더 크게 반영된다. 통산 누적치는 따로 남는다.',
           ],
         ]}
       />

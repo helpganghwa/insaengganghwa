@@ -45,26 +45,22 @@ export default function Doc() {
         시간만 주기를 넘길 때마다 두 배가 된다.
       </P>
       <P>
-        첫 시도는 {fmtMs(enhanceDurationMs(0))}다. 올라갈수록 길어져서 한 주기 끝인 +
-        {fmtInt(CYCLE_LEN - 1)}은 한 번에 {fmtMs(enhanceDurationMs(CYCLE_LEN - 1))} 걸리고, 매번
-        끝까지 기다렸다 강화하면 +{fmtInt(CYCLE_LEN - 1)}까지 보통{' '}
-        {fmtMs(CUMULATIVE_REACH_ANCHORS_MS[99])}이다.
+        강화 시간은 처음에는 {fmtMs(enhanceDurationMs(0))}로 시작하는데 갈수록 길어진다. +
+        {fmtInt(CYCLE_LEN - 1)} 직전에는 한 번에 {fmtMs(enhanceDurationMs(CYCLE_LEN - 1))}까지
+        늘어난다. 매번 다 기다렸다 강화한다고 치면 +{fmtInt(CYCLE_LEN - 1)}까지 대략{' '}
+        {fmtMs(CUMULATIVE_REACH_ANCHORS_MS[99])} 걸린다.
       </P>
       <Warn>다이아로 시간을 줄인 강화를 취소하면 쓴 다이아는 돌려받지 못한다.</Warn>
 
       <H2 id="start">초반 진행</H2>
       <P>
-        가입하면 홈에 튜토리얼이 뜬다. 시작을 고르면 눌러야 할 자리에 하나씩 표시가 붙는다.
-        보급소에서 상자 열기, 인벤토리에서 장착, 같은 화면에서 강화 누르기 순서다.
+        처음 들어가면 튜토리얼이 상자 열기부터 장착, 첫 강화까지 순서대로 잡아준다. 따라가면 금방
+        끝나고, 중간에 나갔다 들어와도 하던 데서 이어진다. 건너뛰어도 불이익은 없다.
       </P>
       <P>
-        마지막 강화 슬롯은 첫 탭이 확인이라 한 번 더 눌러야 강화가 시작된다. 앱을 닫았다 들어와도
-        하던 자리에서 이어지고, 건너뛰기를 누르면 다시 뜨지 않는다.
-      </P>
-      <P>
-        튜토리얼이 끝나면 홈 배너에 도전 과제 {fmtInt(CHALLENGES.length)}종이 남는다. 길드 가입,
-        레이드 소환, 점령전 배치처럼 한 번씩 해 보는 목록이고, 항목마다 다이아와 보급 상자를
-        수령한다.
+        튜토리얼 다음은 도전 과제 {fmtInt(CHALLENGES.length)}종이다. 길드 가입, 레이드 소환, 점령전
+        배치처럼 콘텐츠를 한 번씩 해 보는 목록인데, 하나 깰 때마다 다이아와 보급 상자가 나온다.
+        초반 다이아는 대부분 여기서 나온다고 보면 된다.
       </P>
 
       <H2 id="daily">일일 콘텐츠</H2>
@@ -148,7 +144,7 @@ export default function Doc() {
           ],
           [
             <><DocLink slug="avatar">아바타와 프로필</DocLink></>,
-            '착용 장비를 반영한 캐릭터 그림을 만들어 프로필과 공유 카드에 쓴다.',
+            '착용 장비를 반영한 캐릭터 그림을 만들어 프로필과 자랑 카드에 쓴다.',
           ],
           [
             <><DocLink slug="moderation">신고와 제재</DocLink></>,

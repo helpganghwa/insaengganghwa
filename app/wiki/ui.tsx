@@ -28,11 +28,11 @@ export function H2({ id, children }: { id: string; children: ReactNode }) {
 }
 
 export function P({ children }: { children: ReactNode }) {
-  return <p className="mt-3 text-[14px] leading-[1.85]">{children}</p>;
+  return <p className="mt-3 text-[14px] leading-[1.85] break-keep">{children}</p>;
 }
 
 export function UL({ children }: { children: ReactNode }) {
-  return <ul className="mt-3 space-y-1.5 text-[14px] leading-[1.8]">{children}</ul>;
+  return <ul className="mt-3 space-y-1.5 text-[14px] leading-[1.8] break-keep">{children}</ul>;
 }
 
 export function LI({ children }: { children: ReactNode }) {
@@ -44,7 +44,9 @@ export function LI({ children }: { children: ReactNode }) {
 /** 보조 설명 — 본문 흐름에서 한 발 물러난 회색 상자. */
 export function Note({ children }: { children: ReactNode }) {
   return (
-    <div className={`mt-4 rounded-md border px-3.5 py-3 text-[13px] leading-[1.8] ${PAPER.card}`}>
+    <div
+      className={`mt-4 rounded-md border px-3.5 py-3 text-[13px] leading-[1.8] break-keep ${PAPER.card}`}
+    >
       <span className={PAPER.muted}>{children}</span>
     </div>
   );
@@ -53,7 +55,7 @@ export function Note({ children }: { children: ReactNode }) {
 /** 주의 — 손해로 이어지는 규칙(되돌릴 수 없음·차감·제재)에만 쓴다. */
 export function Warn({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-4 rounded-md border border-[#d9a38a] bg-[#fbeee6] px-3.5 py-3 text-[13px] leading-[1.8] text-[#7c3a18]">
+    <div className="mt-4 rounded-md border border-[#d9a38a] bg-[#fbeee6] px-3.5 py-3 text-[13px] leading-[1.8] break-keep text-[#7c3a18]">
       {children}
     </div>
   );
@@ -69,7 +71,7 @@ export function Tbl({
 }) {
   return (
     <div className="mt-4 overflow-x-auto">
-      <table className="w-full min-w-[380px] border-collapse text-[13px]">
+      <table className="w-full min-w-[380px] border-collapse text-[13px] break-keep">
         <thead>
           <tr className={`border-b ${PAPER.border}`}>
             {head.map((h, i) => (
@@ -83,7 +85,13 @@ export function Tbl({
           {rows.map((row, ri) => (
             <tr key={ri} className={`border-b ${PAPER.border}`}>
               {row.map((cell, ci) => (
-                <td key={ci} className="px-2.5 py-2 align-top leading-[1.7]">
+                <td
+                  key={ci}
+                  // 짧은 값(레벨·시각·항목명)은 중간에서 꺾이면 표가 지저분해진다 — 통째로 유지.
+                  className={`px-2.5 py-2 align-top leading-[1.7]${
+                    typeof cell === 'string' && cell.length <= 10 ? ' whitespace-nowrap' : ''
+                  }`}
+                >
                   {cell}
                 </td>
               ))}

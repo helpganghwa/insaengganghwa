@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { WIKI_DOC_BY_SLUG, WIKI_DOCS, type WikiSection } from '../registry';
+import { WIKI_DOC_BY_SLUG, WIKI_DOCS } from '../registry';
 import { WikiShell } from '../Shell';
 import { TocSpy } from '../TocSpy';
 import { PAPER, SERIF } from '../theme';
@@ -65,27 +65,6 @@ function jsonLd(doc: { slug: string; cat: string; title: string; summary: string
   ]).replace(/</g, '\\u003c');
 }
 
-/** 모바일·태블릿용 목차 — 우측 단이 숨는 폭에서 본문 위에 접어 둔다. */
-function MobileToc({ sections }: { sections: readonly WikiSection[] }) {
-  if (sections.length === 0) return null;
-  return (
-    <details className={`mt-5 rounded-md border lg:hidden ${PAPER.card}`}>
-      <summary className="cursor-pointer list-none px-3 py-2 text-[12.5px] font-semibold">
-        이 문서
-      </summary>
-      <ul className={`space-y-1 border-t px-3 py-2 text-[12.5px] ${PAPER.border}`}>
-        {sections.map((s) => (
-          <li key={s.id}>
-            <a href={`#${s.id}`} className="block py-0.5">
-              {s.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
-
 export default async function WikiDocPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const doc = WIKI_DOC_BY_SLUG.get(slug);
@@ -112,8 +91,6 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
         {meta.title}
       </h1>
       <p className={`mt-1.5 text-[13px] leading-relaxed ${PAPER.muted}`}>{meta.summary}</p>
-
-      <MobileToc sections={meta.sections} />
 
       <article className="mt-6">
         <Body />
