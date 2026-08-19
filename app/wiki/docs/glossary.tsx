@@ -42,7 +42,7 @@ export default function Doc() {
         rows={[
           [
             <><DocLink slug="enhance">강화</DocLink></>,
-            '장비 한 점을 한 단계 올리는 시도. 걸어 두면 완료 시각까지 확률이 차오르고, 카드를 눌러 수령할 때 서버가 결과를 굴린다. 재료도 비용도 들지 않는다.',
+            '장비 한 점을 한 단계 올리는 시도. 걸어 두면 완료 시각까지 확률이 차오르고, 카드를 눌러 수령할 때 결과가 나온다. 재료도 비용도 들지 않는다.',
           ],
           [
             '사이클',
@@ -234,7 +234,7 @@ export default function Doc() {
         ]}
       />
       <P>
-        말의 뜻만으로 부족하면 얼개를 먼저 훑는 편이 빠르다.{' '}
+        말의 뜻만으로 부족하면 전체 흐름을 먼저 보는 편이 빠르다.{' '}
         <DocLink slug="about">인생강화란</DocLink>이 전체 구조를 다루고, 가장 많이 쓰는 판정은{' '}
         <DocLink slug="enhance">강화</DocLink>와 <DocLink slug="transcend">초월</DocLink>에 나뉘어
         있다.

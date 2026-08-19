@@ -16,7 +16,7 @@ export default function WikiIndexPage() {
         인생강화 위키
       </h1>
       <p className={`mt-2 text-[13.5px] leading-relaxed ${PAPER.muted}`}>
-        게임 규칙 정본. 강화부터 길드까지 한곳에 모았다.
+        강화부터 길드까지, 게임 규칙을 한곳에 모았다.
       </p>
 
       <div className="mt-8 space-y-8">

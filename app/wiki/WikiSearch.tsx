@@ -74,14 +74,15 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
       {mounted && open ? (
         createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 px-4 pt-[12vh]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
           onClick={close}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-label="문서 검색"
-            className={`w-full max-w-[520px] overflow-hidden rounded-lg border shadow-xl ${PAPER.card}`}
+            // 포털이 body(게임 다크 테마) 아래라 글자색을 명시하지 않으면 흰 글씨가 상속된다.
+            className={`w-full max-w-[520px] overflow-hidden rounded-lg border text-[#2a251e] shadow-xl ${PAPER.card}`}
             onClick={(e) => e.stopPropagation()}
           >
             <input

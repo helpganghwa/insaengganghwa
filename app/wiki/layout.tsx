@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   // absolute — 루트 template('%s — 인생강화')이 위키 첫 화면 제목에 겹치는 것을 끊는다.
   // template은 하위 문서에만 적용된다("강화 — 인생강화 위키").
   title: { absolute: '인생강화 위키', template: '%s — 인생강화 위키' },
-  description: '인생강화 공식 위키 — 강화·초월·보급·레이드·길드·계정 규칙 정본.',
+  description: '인생강화 공식 위키 — 강화·초월·보급·레이드·길드·계정 규칙을 한곳에 모았다.',
 };
 
 export default function WikiLayout({ children }: { children: ReactNode }) {
@@ -51,23 +51,6 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
 
       {children}
 
-      <footer className={`border-t ${PAPER.border}`}>
-        <div
-          className={`mx-auto flex w-full max-w-[1180px] flex-wrap gap-x-3 gap-y-1 px-4 py-5 text-[11px] md:px-6 ${PAPER.muted}`}
-        >
-          <span>인생강화 위키</span>
-          <a href="/probability" className="underline">
-            확률 공시
-          </a>
-          <a href="/faq" className="underline">
-            자주 묻는 질문
-          </a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/" className="underline">
-            게임으로
-          </a>
-        </div>
-      </footer>
     </div>
   );
 }
