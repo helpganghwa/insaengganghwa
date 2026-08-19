@@ -53,7 +53,7 @@ export function Note({ children }: { children: ReactNode }) {
 /** 주의 — 손해로 이어지는 규칙(되돌릴 수 없음·차감·제재)에만 쓴다. */
 export function Warn({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-4 rounded-md border border-[#d9a38a] bg-[#fbeee6] px-3.5 py-3 text-[13px] leading-[1.8] text-[#7c3a18] dark:border-[#5a3524] dark:bg-[#2a1b13] dark:text-[#f0bb98]">
+    <div className="mt-4 rounded-md border border-[#d9a38a] bg-[#fbeee6] px-3.5 py-3 text-[13px] leading-[1.8] text-[#7c3a18]">
       {children}
     </div>
   );
