@@ -8,6 +8,8 @@ import { SVGRenderer } from 'echarts/renderers';
 
 import type { DailyEnhancePoint, DatedRankPoint } from '@/lib/game/today/stats';
 
+import { rankAxisRange } from './rank-axis';
+
 echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, SVGRenderer]);
 
 const dayKo = (d: string) => '일월화수목금토'[new Date(`${d}T12:00:00Z`).getUTCDay()];
@@ -96,8 +98,10 @@ export function SingleRankChart({ points, color, name }: { points: DatedRankPoin
       },
       xAxis: { type: 'category', data: dates, boundaryGap: false, ...AXIS },
       yAxis: {
-        type: 'value', inverse: true, min: 1, minInterval: 1,
-        axisLabel: { ...AXIS.axisLabel, formatter: '#{value}' },
+        // 범위·간격 직접 고정 — 이유는 rank-axis.ts 주석(1등 라벨 소실·0.5등 발생).
+        type: 'value', inverse: true, ...rankAxisRange(points.map((p) => p.rank)),
+        // 축 양 끝 라벨 자동 숨김을 끈다 — 1등이 지워지면 순위 축의 의미가 없다.
+        axisLabel: { ...AXIS.axisLabel, formatter: '#{value}', showMinLabel: true, showMaxLabel: true },
         splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } },
       },
       series: [{

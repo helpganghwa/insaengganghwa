@@ -8,6 +8,8 @@ import { SVGRenderer } from 'echarts/renderers';
 
 import type { RankPoint } from '@/lib/game/today/stats';
 
+import { rankAxisRange } from './rank-axis';
+
 echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, SVGRenderer]);
 
 /**
@@ -67,9 +69,10 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
       yAxis: {
         type: 'value',
         inverse: true, // 1위가 위
-        min: 1,
-        minInterval: 1,
-        axisLabel: { color: '#78716c', fontSize: 9, formatter: '#{value}' },
+        // 범위·간격을 직접 고정한다 — 이유는 rank-axis.ts 주석(1등 라벨 소실·0.5등 발생).
+        ...rankAxisRange(points.flatMap((p) => SERIES.map((s) => p[s.key]))),
+        // 축 양 끝 라벨은 기본이 자동 숨김이라 1등이 지워진다 — 순위 축에선 그게 가장 중요한 값이다.
+        axisLabel: { color: '#78716c', fontSize: 9, formatter: '#{value}', showMinLabel: true, showMaxLabel: true },
         splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } },
       },
       series: SERIES.map((sr) => ({
