@@ -1,5 +1,4 @@
 import {
-  CUMULATIVE_REACH_ANCHORS_MS,
   CYCLE_LEN,
   CYCLE_TIME_BASE,
   GEM_TO_MS,
@@ -12,7 +11,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt, fmtMs } from '../fmt';
-import { DocLink, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'enhance',
@@ -31,70 +30,65 @@ export const meta: WikiDocMeta = {
 /** 표 표본 지점 — 안전 구간 경계는 상수에서, 나머지는 곡선이 꺾이는 자리를 골랐다. */
 const SAMPLE_LEVELS = [0, 10, 30, SAFE_MAX_LEVEL, SAFE_MAX_LEVEL + 1, 75, CYCLE_LEN - 1];
 
-const REACH_ANCHORS = Object.entries(CUMULATIVE_REACH_ANCHORS_MS) as [string, number][];
-
 export default function Doc() {
   return (
     <>
       <H2 id="flow">진행</H2>
-      <P>강화는 무료다. 시작해 두고 기다렸다가 카드를 눌러 강화하면 결과가 나온다.</P>
       <UL>
-        <LI>확률은 기다린 시간에 비례한다. 절반만 기다리고 강화하면 공시 확률의 절반.</LI>
-        <LI>게이지가 다 차면 공시 확률 그대로. 그 뒤로는 며칠을 놔둬도 같다.</LI>
-        <LI>일찍 강화해도 손해는 없다. 확률만 낮을 뿐.</LI>
-        <LI>강화 칸은 부위당 2개, 세 부위 합쳐 6개.</LI>
-        <LI>장착하지 않은 장비도 강화할 수 있다.</LI>
-        <LI>결과가 나오면 다음 단계 강화가 바로 다시 시작된다.</LI>
+        <LI>강화는 무료. 시작해 두고 기다렸다가 카드를 누르면 결과가 나온다.</LI>
+        <LI>
+          확률은 기다린 시간에 비례. 절반 기다리면 공시 확률
+          <Fn n={1} />의 절반, 다 차면 그대로.
+        </LI>
+        <LI>일찍 강화해도 확률만 낮을 뿐 손해는 없다.</LI>
+        <LI>
+          강화 칸은 <DocLink slug="equipment" hash="slots">부위</DocLink>당 2개, 총 6개.{' '}
+          <DocLink slug="equipment" hash="equip">장착</DocLink> 안 한 장비도 강화 가능.
+        </LI>
+        <LI>결과가 나오면 다음 단계 강화가 바로 이어진다.</LI>
       </UL>
-      <Note>
-        걸리는 시간과 확률은 시작할 때 값으로 고정. 도중에 밸런스가 바뀌어도 진행 중인 시도는
-        그대로 간다.
-      </Note>
 
       <H2 id="result">결과 판정</H2>
       <UL>
-        <LI>결과는 성공 · 유지 · 하락 셋 중 하나.</LI>
+        <LI>결과는 성공 · 유지 · 하락.</LI>
         <LI>
-          성공의 {bpPct(MEGA_OF_SUCCESS_BP)}는 대성공이 되어 두 단계 오른다. 화면의 성공률은
-          대성공까지 합친 값.
+          성공의 {bpPct(MEGA_OF_SUCCESS_BP)}는 대성공
+          <Fn n={2} />으로 두 단계 상승. 화면의 성공률은 대성공까지 합친 값.
         </LI>
-        <LI>+{fmtInt(SAFE_MAX_LEVEL)}까지는 하락이 없다. 실패해도 유지.</LI>
+        <LI>+{fmtInt(SAFE_MAX_LEVEL)}까지는 안전 구간. 실패해도 유지.</LI>
         <LI>
-          그 위부터는 단계마다 하락 확률이 고정으로 붙는다. 오래 기다리면 유지가 성공으로 바뀌는
-          것이지 하락이 줄어드는 게 아니다.
+          그 위부터 단계별 하락 확률이 붙는다. 하락은 기다린 시간과 무관하게 고정.
+          <Fn n={3} />
         </LI>
+        <LI>그래서 안전 구간을 넘긴 뒤에는 게이지를 다 채우고 강화하는 것이 정석이다.</LI>
         <LI>
-          떨어져도 한 번에 한 단계. 그 주기의 +{fmtInt(SAFE_MAX_LEVEL)} 밑으로는 안 내려간다.
+          떨어져도 한 번에 한 단계, 그 주기의 +{fmtInt(SAFE_MAX_LEVEL)} 아래로는 안 내려간다.
         </LI>
-        <LI>장비가 부서지거나 사라지는 일은 없다.</LI>
       </UL>
-      <Warn>하락을 막아 주는 보호권 같은 아이템은 없다.</Warn>
 
       <H2 id="cycle">주기</H2>
       <UL>
-        <LI>+{fmtInt(CYCLE_LEN)}마다 한 주기. 확률표는 주기마다 똑같이 반복된다.</LI>
+        <LI>+{fmtInt(CYCLE_LEN)}마다 한 주기. 확률표는 주기마다 반복된다.</LI>
         <LI>
-          +{fmtInt(CYCLE_LEN + SAFE_MAX_LEVEL)}의 성공률은 +{fmtInt(SAFE_MAX_LEVEL)}과 같다.
-        </LI>
-        <LI>
-          대신 시간이 주기마다 {fmtInt(CYCLE_TIME_BASE)}배로 뛴다. 첫 주기{' '}
-          {fmtMs(enhanceDurationMs(CYCLE_LEN - 1))} 걸리던 자리가 다음 주기에는{' '}
+          시간은 주기마다 {fmtInt(CYCLE_TIME_BASE)}배. +{fmtInt(CYCLE_LEN - 1)}에서{' '}
+          {fmtMs(enhanceDurationMs(CYCLE_LEN - 1))} 걸리던 자리가 다음 주기엔{' '}
           {fmtMs(enhanceDurationMs(2 * CYCLE_LEN - 1))}.
         </LI>
-        <LI>주기 수에 상한은 없다.</LI>
       </UL>
 
       <H2 id="gem">다이아 단축</H2>
       <UL>
-        <LI>다이아 1개 = 남은 시간 {fmtMs(GEM_TO_MS)} 단축. 필요한 만큼만 차감된다.</LI>
-        <LI>단축해도 확률 계산은 똑같다. 전부 줄이면 최대 확률로 바로 강화할 수 있다.</LI>
-        <LI>환산 비율은 시작 시점 값으로 고정.</LI>
         <LI>
-          자동 강화를 켜면 단축 → 강화 → 재등록을 정해 둔 예산까지 반복한다. 화면을 열어 둔 동안만
-          돈다.
+          <DocLink slug="glossary" hash="goods">다이아</DocLink> 1개 = 남은 시간 {fmtMs(GEM_TO_MS)}{' '}
+          단축. 필요한 만큼만 차감.
+        </LI>
+        <LI>전부 줄이면 최대 확률로 바로 강화할 수 있다.</LI>
+        <LI>
+          자동 강화는 단축 → 강화 → 재등록을 정해 둔 예산까지 반복.
+          <Fn n={4} />
         </LI>
       </UL>
-      <Warn>취소하면 기다린 시간과 넣은 다이아는 돌려받지 못한다.</Warn>
+      <Warn>취소하면 기다린 시간과 넣은 다이아를 날린다.</Warn>
 
       <H2 id="numbers">수치</H2>
       <Tbl
@@ -107,10 +101,17 @@ export default function Doc() {
         ])}
       />
       <Note>첫 주기 기준. 주기가 오르면 시간만 배로 늘고 확률은 그대로다.</Note>
-      <P>매번 끝까지 기다려 강화할 때 각 지점까지 걸리는 시간.</P>
-      <Tbl
-        head={['도달', '누적 시간']}
-        rows={REACH_ANCHORS.map(([lv, ms]) => [`+${lv}`, fmtMs(ms)])}
+
+      <FnList
+        notes={[
+          <>
+            게임 안 <a href="/probability" className="underline">확률 공시</a>에 단계별로 적힌 값.
+            위키의 수치도 같은 값을 그대로 가져온다.
+          </>,
+          '확률 공시에는 메가로 적힌다.',
+          '오래 기다리면 유지가 성공으로 바뀔 뿐, 하락 확률은 그대로다.',
+          '화면을 열어 둔 동안만 돈다.',
+        ]}
       />
       <P>
         같이 보면 좋은 문서: <DocLink slug="transcend">초월</DocLink>,{' '}

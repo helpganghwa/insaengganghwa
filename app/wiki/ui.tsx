@@ -103,10 +103,49 @@ export function Tbl({
   );
 }
 
-/** 문서 간 링크 — 위키 안쪽 이동만. slug는 registry에 등록된 값이어야 한다. */
-export function DocLink({ slug, children }: { slug: string; children: ReactNode }) {
+/**
+ * 각주 참조 — 본문 단어 뒤에 붙는 [n]. 나무위키식: 본문은 짧게, 예외·부연은 각주로.
+ * n은 문서 안 FnList 순번과 1:1. JS 없이 앵커 점프로만 동작한다.
+ */
+export function Fn({ n }: { n: number }) {
   return (
-    <Link href={`/wiki/${slug}`} className={`underline ${PAPER.link}`}>
+    <sup id={`rfn-${n}`} className="scroll-mt-20 text-[11px]">
+      <a href={`#fn-${n}`} className={`no-underline ${PAPER.link}`}>
+        [{n}]
+      </a>
+    </sup>
+  );
+}
+
+/** 각주 목록 — 문서 맨 아래(같이 보면 좋은 문서 위). notes[i]가 각주 [i+1]이 된다. */
+export function FnList({ notes }: { notes: readonly ReactNode[] }) {
+  if (notes.length === 0) return null;
+  return (
+    <ol className={`mt-8 border-t pt-3 text-[12.5px] leading-[1.8] break-keep ${PAPER.border}`}>
+      {notes.map((note, i) => (
+        <li key={i} id={`fn-${i + 1}`} className="mt-1 flex scroll-mt-20 gap-1.5">
+          <a href={`#rfn-${i + 1}`} className={`shrink-0 no-underline ${PAPER.link}`}>
+            [{i + 1}]
+          </a>
+          <span className={PAPER.muted}>{note}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** 문서 간 링크 — 위키 안쪽 이동만. slug는 registry에 등록된 값, hash는 대상 문서의 H2 id. */
+export function DocLink({
+  slug,
+  hash,
+  children,
+}: {
+  slug: string;
+  hash?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link href={`/wiki/${slug}${hash ? `#${hash}` : ''}`} className={`underline ${PAPER.link}`}>
       {children}
     </Link>
   );

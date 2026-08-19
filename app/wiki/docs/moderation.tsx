@@ -2,7 +2,7 @@ import { NICKNAME_CHANGE_COST_DIAMOND, PROFILE_GENERATION_DIAMOND } from '@/lib/
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Ext, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Ext, Fn, FnList, H2, LI, P, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'moderation',
@@ -24,8 +24,8 @@ export default function Doc() {
     <>
       <H2 id="report">신고 경로</H2>
       <P>
-        신고는 대상이 있는 자리에서 한다. 유저를 통째로 신고하는 버튼은 없다. 프로필은 프로필
-        화면에서, 채팅은 그 메시지에서 넣는다.
+        신고는 대상이 있는 자리에서 한다. <DocLink slug="avatar">프로필</DocLink>은 프로필 화면에서,
+        채팅은 그 메시지에서.
       </P>
       <Tbl
         head={['대상', '위치', '고르는 것']}
@@ -35,25 +35,23 @@ export default function Doc() {
           ['귓속말', '상대 메시지 본문을 눌러 나오는 확인 창', '사유 선택 없음'],
         ]}
       />
-      <P>버그 악용이나 기타로 신고할 때는 내용을 간단히 적는다.</P>
 
       <H2 id="rules">신고 규칙</H2>
       <UL>
-        <LI>내 프로필과 내 메시지는 신고할 수 없다.</LI>
+        <LI>버그 악용과 기타로 신고할 때는 내용을 적는다.</LI>
         <LI>같은 프로필을 같은 사유로 두 번 신고할 수 없다. 사유가 다르면 따로 접수된다.</LI>
-        <LI>볼 수 없는 메시지는 신고할 수 없다. 길드 채팅은 길드원만, 귓속말은 그 대화의 두 사람만 넣는다.</LI>
-        <LI>짧은 시간에 여러 건을 넣으면 잠시 막힌다.</LI>
       </UL>
-      <Note>내가 신고했다는 사실은 상대에게 알려지지 않는다.</Note>
 
       <H2 id="process">처리 절차</H2>
-      <P>신고를 넣으면 운영자가 확인하고 사유에 맞는 조치를 한다.</P>
-      <P>
-        전체·길드 채팅은 한 메시지에 신고가 쌓이면 자동으로 숨겨진다. 귓속말은 숨겨지지 않는다.
-      </P>
+      <UL>
+        <LI>신고를 넣으면 운영자가 확인한다.</LI>
+        <LI>
+          조치는 사유에 맞춰 걸린다. 위반한 것만 되돌린다.
+          <Fn n={1} />
+        </LI>
+      </UL>
 
       <H2 id="sanction">제재 종류</H2>
-      <P>제재는 사유에 맞춰 걸린다. 위반한 것만 되돌린다.</P>
       <Tbl
         head={['제재', '내용']}
         rows={[
@@ -62,14 +60,16 @@ export default function Doc() {
             '닉네임 초기화',
             <>
               닉네임을 임시 이름으로 바꾸고, 다시 정하라고 변경 비용{' '}
-              {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)} 다이아를 우편으로 준다.
+              {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)}{' '}
+              <DocLink slug="glossary" hash="goods">다이아</DocLink>를 우편으로 준다.
+              <Fn n={2} />
             </>,
           ],
           [
             '아바타 초기화',
             <>
-              문제가 된 아바타를 지우고 기본 아바타로 되돌린다. 생성 비용{' '}
-              {fmtInt(PROFILE_GENERATION_DIAMOND)} 다이아를 우편으로 준다.
+              문제가 된 <DocLink slug="avatar" hash="create">아바타</DocLink>를 지우고 기본 아바타로
+              되돌린다. 생성 비용 {fmtInt(PROFILE_GENERATION_DIAMOND)} 다이아를 우편으로 준다.
             </>,
           ],
           ['채팅 금지', '정해진 기간 동안 전체 채팅과 귓속말을 보낼 수 없다. 읽기는 된다.'],
@@ -78,38 +78,57 @@ export default function Doc() {
         ]}
       />
       <Warn>
-        제재는 계정에 걸린다. 닉네임 초기화와 채팅 금지, 계정 정지는 서버를 가리지 않고 그 계정의
-        모든 캐릭터에 적용된다. 정지 중에는 강화와 레이드를 비롯한 모든 조작이 막히고, 기한이 지나면
-        자동으로 풀린다.
+        제재는 계정에 걸린다. 닉네임 초기화와 채팅 금지, 계정 정지는{' '}
+        <DocLink slug="glossary" hash="account">서버</DocLink>를 가리지 않고 그 계정의 모든 캐릭터에
+        적용되고, 정지 중에는 <DocLink slug="enhance">강화</DocLink>와{' '}
+        <DocLink slug="raid">레이드</DocLink>를 비롯한 모든 조작이 막힌다.
       </Warn>
-      <P>
-        길드 이름은 결성할 때 정하고 나면 길드장도 못 바꾼다. 부적절한 이름은 운영에서 우편으로
-        알려 오고, 문의로 새 이름을 넣으면 바꿔 준다.
-      </P>
+      <UL>
+        <LI>
+          <DocLink slug="guild" hash="create">길드</DocLink> 이름은 결성할 때 정하고 나면 길드장도 못
+          바꾼다.
+          <Fn n={3} />
+        </LI>
+      </UL>
 
       <H2 id="block">차단</H2>
-      <P>
-        차단은 그 사람을 내 화면에서 지우는 기능이다. 운영에 접수되지 않고 제재로도 이어지지 않는다.
-      </P>
       <UL>
+        <LI>
+          차단은 그 사람을 내 화면에서 지우는 기능이다. 차단해도 운영에 접수되지 않고 제재로도
+          이어지지 않는다.
+        </LI>
         <LI>채팅에서 닉네임을 눌러 나오는 미니 프로필에서 차단한다.</LI>
-        <LI>차단하면 그 사람의 채팅이 내 목록에서 사라지고, 서로 귓속말을 주고받을 수 없다.</LI>
-        <LI>아직 수락하지 않은 친구 요청은 양쪽 모두 정리된다.</LI>
-        <LI>차단은 계정에 저장된다. 기기를 바꾸거나 다른 서버로 가도 유지된다.</LI>
-        <LI>차단 목록에서 언제든 푼다. 한 번에 담는 인원에는 상한이 있다.</LI>
+        <LI>
+          차단하면 그 사람의 채팅이 내 목록에서 사라지고, 서로 귓속말을 주고받을 수 없다.
+          <Fn n={4} />
+        </LI>
+        <LI>차단은 계정 단위로 걸린다. 차단 목록에서 언제든 푼다.</LI>
+        <LI>규정 위반까지는 아니고 나와 안 맞는 정도라면, 신고보다 차단이 빠르다.</LI>
       </UL>
 
       <H2 id="support">문의</H2>
-      <P>
-        문의는 설정의 고객센터 문의에서 넣는다. 결제·환불, 버그·오류, 계정·로그인, 건의·기타 가운데
-        유형을 고르고 내용을 적으며, 화면 사진도 올릴 수 있다. 답변은 우편함으로 오고 도착하면
-        알림이 뜬다.
-      </P>
-      <P>
-        제재에 이의가 있어도 같은 창구로 넣는다. 계정이 정지돼 게임에 들어갈 수 없을 때는 정지
-        화면에 적힌 <Ext href="mailto:help@ganghwa.app">help@ganghwa.app</Ext>으로 보낸다.
-      </P>
+      <UL>
+        <LI>문의는 설정의 고객센터 문의에서 넣는다.</LI>
+        <LI>유형은 결제·환불, 버그·오류, 계정·로그인, 건의·기타. 내용과 함께 화면 사진도 올린다.</LI>
+        <LI>답변은 우편함으로 오고 도착하면 알림이 뜬다.</LI>
+        <LI>제재에 이의가 있어도 같은 창구로 넣는다.</LI>
+        <LI>
+          계정이 정지돼 게임에 들어갈 수 없을 때는 정지 화면에 적힌{' '}
+          <Ext href="mailto:help@ganghwa.app">help@ganghwa.app</Ext>으로 보낸다.
+        </LI>
+      </UL>
 
+      <FnList
+        notes={[
+          '닉네임이 걸리면 닉네임만, 아바타가 걸리면 아바타만 되돌린다.',
+          <>
+            우편으로 오는 {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)} 다이아 = 변경 비용{' '}
+            {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)} 다이아. 새 이름값은 이걸로 치른다.
+          </>,
+          '부적절한 이름은 운영에서 우편으로 알려 오고, 문의로 새 이름을 넣으면 바꿔 준다.',
+          '아직 수락하지 않은 친구 요청은 양쪽 모두 정리된다.',
+        ]}
+      />
       <P>
         같이 보면 좋은 문서: <DocLink slug="avatar">아바타와 프로필</DocLink>,{' '}
         <DocLink slug="guild">길드 기본</DocLink>, <DocLink slug="about">인생강화란</DocLink>.
