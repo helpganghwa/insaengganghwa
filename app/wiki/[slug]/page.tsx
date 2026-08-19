@@ -26,7 +26,43 @@ export async function generateMetadata({
     title: doc.meta.title,
     description: doc.meta.summary,
     alternates: { canonical: `/wiki/${slug}` },
+    openGraph: {
+      title: `${doc.meta.title} — 인생강화 위키`,
+      description: doc.meta.summary,
+      url: `/wiki/${slug}`,
+      type: 'article',
+      siteName: '인생강화',
+    },
   };
+}
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
+
+/**
+ * 구조화 데이터(AEO·GEO) — 검색·답변 엔진이 문서를 "게임 규칙 문서"로 인용할 근거.
+ * TechArticle + 빵부스러기. 수치는 본문이 상수에서 렌더하므로 여기 넣지 않는다.
+ */
+function jsonLd(doc: { slug: string; cat: string; title: string; summary: string }): string {
+  return JSON.stringify([
+    {
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: `${doc.title} — 인생강화 위키`,
+      description: doc.summary,
+      inLanguage: 'ko',
+      mainEntityOfPage: `${SITE}/wiki/${doc.slug}`,
+      publisher: { '@type': 'Organization', name: '인생강화', url: SITE },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '위키', item: `${SITE}/wiki` },
+        { '@type': 'ListItem', position: 2, name: doc.cat },
+        { '@type': 'ListItem', position: 3, name: doc.title, item: `${SITE}/wiki/${doc.slug}` },
+      ],
+    },
+  ]).replace(/</g, '\\u003c');
 }
 
 /** 모바일·태블릿용 목차 — 우측 단이 숨는 폭에서 본문 위에 접어 둔다. */
@@ -68,6 +104,11 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
         <span>{meta.title}</span>
       </nav>
 
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: jsonLd(meta) }}
+      />
       <h1 style={SERIF} className="mt-1.5 text-[25px] font-bold">
         {meta.title}
       </h1>

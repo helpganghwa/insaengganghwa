@@ -12,7 +12,21 @@
 
 ## 문서
 
-- [공식 위키](https://ganghwa.app/wiki): 강화·초월·보급·레이드·길드·계정 규칙 정본 (분류별 문서)
+- [공식 위키](https://ganghwa.app/wiki): 강화·초월·보급·레이드·길드·계정 규칙 문서 (아래 개별 문서)
+  - [용어 사전](https://ganghwa.app/wiki/glossary): 게임과 위키에서 쓰는 말을 한곳에 모았다.
+  - [인생강화란](https://ganghwa.app/wiki/about): 기다릴수록 확률이 오르는 방치형 강화 RPG. 처음이라면 여기부터.
+  - [강화](https://ganghwa.app/wiki/enhance): 기다린 시간에 비례하는 확률, 성공·유지·하락 판정.
+  - [보급](https://ganghwa.app/wiki/supply): 보급 상자로 장비를 얻는 경로와 확률.
+  - [장비와 장착](https://ganghwa.app/wiki/equipment): 슬롯 구성과 장착 규칙, 보유 장비의 쓰임.
+  - [전투력](https://ganghwa.app/wiki/combat-power): 전투력이 매겨지는 방식과 올리는 길.
+  - [초월](https://ganghwa.app/wiki/transcend): 같은 장비를 다시 얻으면 오르는 단계와 보너스.
+  - [레이드](https://ganghwa.app/wiki/raid): 보스 공략 — 개설·공격 횟수·페이즈·보상.
+  - [길드 권한](https://ganghwa.app/wiki/guild-roles): 직책과 부길드장 개별 권한, 위임과 추방, 장기 미접속 자동 교체.
+  - [길드 기본](https://ganghwa.app/wiki/guild): 결성과 가입, 기부로 오르는 레벨과 정원, 나갈 때 걸리는 잠금.
+  - [점령전](https://ganghwa.app/wiki/conquest): 하루 한 번 벌어지는 구역 다툼과 집행관, 세금, 방치로 잃는 땅.
+  - [신고와 제재](https://ganghwa.app/wiki/moderation): 신고 경로와 처리 절차, 제재 종류, 차단과 문의.
+  - [아바타와 프로필](https://ganghwa.app/wiki/avatar): 아바타를 만드는 절차와 비용, 검토·환불 규칙, 대표 설정.
+  - [칭호](https://ganghwa.app/wiki/titles): 칭호의 발견과 활성 판정, 대표 칭호를 다는 규칙.
 - [자주 묻는 질문](https://ganghwa.app/faq): 게임 소개·강화 규칙·전투력 계산·계정 이전 등 12문항
 - [확률 공시](https://ganghwa.app/probability): 강화·초월·보급 전 확률과 수식 (게임산업법 준수 공시)
 - [상품 안내](https://ganghwa.app/pricing): 유료 상품 구성과 가격
