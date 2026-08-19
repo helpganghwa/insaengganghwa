@@ -97,11 +97,38 @@ async function equippedMap(userId: string, serverId: number): Promise<Map<string
 }
 
 /** 지표 수집 — 병렬 소수 왕복. 없는 값은 0. */
+
+/**
+ * 지표 쿼리 결과가 제자리에 왔는지 확인 — 대표 컬럼 유무만 본다.
+ *
+ * collectMetrics는 27개 쿼리를 **위치로** 구조분해한다. 중간에 하나를 끼워 넣고 이름을 끝에
+ * 붙이면 그 뒤가 전부 밀리는데, 잘못 온 결과에는 그 컬럼이 없어서 n()이 0을 돌려주고
+ * 판정이 **조용히** 틀린다(랭킹 1위인데 비활성, 다이아 90만인데 '빈털터리' 활성).
+ * 여기서 큰 소리로 깨뜨려 배포 전에 잡는다.
+ */
+function assertMetricShape(r: { ranks: unknown; wallet: unknown; misc: unknown; levels: unknown }): void {
+  const first = (v: unknown): Record<string, unknown> => ((v as unknown[])[0] ?? {}) as Record<string, unknown>;
+  const bad: string[] = [];
+  // ranks는 행이 없을 수 있다(랭킹 미등재) — 있을 때만 모양을 본다.
+  const rk = first(r.ranks);
+  if (Object.keys(rk).length && !('metric' in rk)) bad.push('ranks');
+  if (!('dia' in first(r.wallet))) bad.push('wallet');
+  if (!('days' in first(r.misc))) bad.push('misc');
+  if (!('codex' in first(r.levels))) bad.push('levels');
+  if (bad.length) {
+    throw new Error(`[titles] 지표 자리 어긋남: ${bad.join(', ')} — collectMetrics 구조분해 순서가 쿼리 배열과 다르다`);
+  }
+}
+
 async function collectMetrics(userId: string, serverId: number): Promise<Metrics> {
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
 
-  const [enh, streaks, levels, supply, transcend, daily, social, money, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, lg, gh, f3] = await Promise.all([
+  // ⚠ 이름 순서는 아래 배열 **순서와 1:1**이다. 중간에 쿼리를 끼워 넣고 이름을 끝에 붙이면
+  //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
+  //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
+  //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest] = await Promise.all([
     // 강화 로그 집계
     db.execute(sql`
       select count(*)::int as total,
@@ -611,6 +638,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
   ]);
 
+  // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
+  // 순서가 밀리면 값이 조용히 0/9999가 되어 칭호가 말없이 오판정된다(2026-08-19 사고).
+  assertMetricShape({ ranks, wallet, misc, levels });
   const g = (r: unknown): Record<string, unknown> => ((r as unknown[])[0] ?? {}) as Record<string, unknown>;
   const n = (v: unknown): number => Number(v ?? 0);
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
