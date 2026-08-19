@@ -59,7 +59,7 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
   return (
     <WikiShell activeSlug={meta.slug} toc={<TocSpy sections={meta.sections} />}>
       <nav aria-label="탐색 경로" className={`text-[11.5px] ${PAPER.muted}`}>
-        <Link prefetch={false} href="/wiki" className="hover:underline">
+        <Link href="/wiki" className="hover:underline">
           위키
         </Link>
         <span aria-hidden> › </span>

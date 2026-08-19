@@ -98,7 +98,7 @@ export function Tbl({
 /** 문서 간 링크 — 위키 안쪽 이동만. slug는 registry에 등록된 값이어야 한다. */
 export function DocLink({ slug, children }: { slug: string; children: ReactNode }) {
   return (
-    <Link prefetch={false} href={`/wiki/${slug}`} className={`underline ${PAPER.link}`}>
+    <Link href={`/wiki/${slug}`} className={`underline ${PAPER.link}`}>
       {children}
     </Link>
   );

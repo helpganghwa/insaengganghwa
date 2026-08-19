@@ -24,7 +24,6 @@ function DocNav({ activeSlug }: { activeSlug?: string }) {
               {docs.map((d) => (
                 <li key={d.slug}>
                   <Link
-                    prefetch={false}
                     href={`/wiki/${d.slug}`}
                     aria-current={d.slug === activeSlug ? 'page' : undefined}
                     className={`block rounded px-2 py-1.5 ${PAPER.hover} ${
@@ -65,7 +64,7 @@ export function WikiShell({
 
       <div className="md:grid md:grid-cols-[12rem_minmax(0,1fr)] md:gap-8 lg:grid-cols-[12rem_minmax(0,1fr)_11rem]">
         <aside className="hidden md:block">
-          <div className="sticky top-[4.5rem] max-h-[calc(100dvh-6rem)] overflow-y-auto">
+          <div className="sticky top-[4.75rem] max-h-[calc(100dvh-5.75rem)] overflow-y-auto">
             <DocNav activeSlug={activeSlug} />
           </div>
         </aside>
@@ -74,7 +73,7 @@ export function WikiShell({
 
         {toc ? (
           <aside className="hidden lg:block">
-            <div className="sticky top-[4.5rem] max-h-[calc(100dvh-6rem)] overflow-y-auto">
+            <div className="sticky top-[4.75rem] max-h-[calc(100dvh-5.75rem)] overflow-y-auto">
               {toc}
             </div>
           </aside>

@@ -31,7 +31,7 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
     <div className={`min-h-dvh ${PAPER.page}`}>
       <header className={`sticky top-0 z-30 border-b backdrop-blur ${PAPER.bar}`}>
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-4 md:px-6">
-          <Link prefetch={false} href="/wiki" style={SERIF} className="text-[17px] font-bold">
+          <Link href="/wiki" style={SERIF} className="text-[17px] font-bold">
             인생강화 위키
           </Link>
           <div className="flex items-center gap-2">

@@ -32,7 +32,6 @@ export default function WikiIndexPage() {
                 {docs.map((d) => (
                   <li key={d.slug}>
                     <Link
-                      prefetch={false}
                       href={`/wiki/${d.slug}`}
                       className={`block h-full rounded-md border px-3.5 py-3 ${PAPER.card} ${PAPER.hover}`}
                     >

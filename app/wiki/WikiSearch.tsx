@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 
 import type { WikiDocLink } from './registry';
@@ -48,6 +49,10 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
     return pool.slice(0, MAX_RESULTS);
   }, [docs, q]);
 
+  // 포털 대상(document.body)은 클라이언트에만 있다 — SSR 첫 렌더에서는 그리지 않는다.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   function close() {
     setOpen(false);
     setQ('');
@@ -64,7 +69,10 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
         <span className={`ml-1.5 hidden md:inline ${PAPER.muted}`}>/</span>
       </button>
 
-      {open ? (
+      {/* body 포털 — 헤더의 backdrop-blur가 fixed의 기준을 자기 박스로 바꿔
+          dim이 뷰포트를 못 덮는다(2026-08-19 스테이징 실측). 포털이면 무관하다. */}
+      {mounted && open ? (
+        createPortal(
         <div
           className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 px-4 pt-[12vh]"
           onClick={close}
@@ -90,7 +98,6 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
                 {hits.map((d) => (
                   <li key={d.slug}>
                     <Link
-                      prefetch={false}
                       href={`/wiki/${d.slug}`}
                       onClick={close}
                       className={`block px-4 py-2.5 ${PAPER.hover}`}
@@ -106,7 +113,8 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
               </ul>
             )}
           </div>
-        </div>
+        </div>,
+        document.body)
       ) : null}
     </>
   );
