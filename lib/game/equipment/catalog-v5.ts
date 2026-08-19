@@ -57,9 +57,9 @@ export const CATALOG_V5: CatalogItem[] = [
     "nameKo": "귀참의 대태도",
     "region": "일반",
     "tone": "화려",
-    "lore": "검은 강철 날에 진홍 불꽃 문양이 흐르고, 날끝은 한 줄로 붉게 달아올라 있다. 코등이는 성난 도깨비 얼굴을 그대로 부어 만든 것인데, 칼을 뽑는 순간 그 얼굴이 먼저 이를 드러내며 웃는다. 베고 나면 언제 그랬냐는 듯 다시 무표정으로 돌아간다.",
+    "lore": "검은 강철 날에 진홍 불꽃 문양이 흐르고, 날끝은 한 줄로 붉게 달아올라 있다. 코등이는 성난 도깨비 얼굴을 그대로 부어 만든 것인데, 벨 상대를 마주하면 그 얼굴이 먼저 이를 드러내며 웃는다. 베고 나면 언제 그랬냐는 듯 다시 무표정으로 돌아간다.",
     "art": "an oni slayer's massive odachi with a broken demon horn lashed to the hilt and a torn charm paper on the blade, lacquer black and hot vermilion — ferocious, heavy and magnificent",
-    "wornDesc": "a very long odachi held with its bare blade drawn — black steel veined with burning crimson flame patterns, its sharpened edge a bright glowing red-orange line running the full length, the iron guard cast as a snarling red oni demon face, a red cord-wrapped hilt ending in a plain dark pommel"
+    "wornDesc": "a very long odachi with a black steel blade veined with burning crimson flame patterns, its sharpened edge a bright glowing red-orange line running the full length, the iron guard cast as a snarling red oni demon face, a red cord-wrapped hilt ending in a plain dark pommel"
   },
   {
     "key": "druid_thorn_staff",
