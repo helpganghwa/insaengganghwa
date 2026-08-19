@@ -50,7 +50,9 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
   }, [docs, q]);
 
   // 포털 대상(document.body)은 클라이언트에만 있다 — SSR 첫 렌더에서는 그리지 않는다.
+  // hydration 불일치를 피하려면 마운트 후 한 번의 재렌더가 필수라 이 경고는 감수한다.
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   function close() {

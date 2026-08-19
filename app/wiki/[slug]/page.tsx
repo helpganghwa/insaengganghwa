@@ -106,7 +106,6 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
 
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: jsonLd(meta) }}
       />
       <h1 style={SERIF} className="mt-1.5 text-[25px] font-bold">
