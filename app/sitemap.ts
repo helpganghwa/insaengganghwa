@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
+import { WIKI_DOCS } from './wiki/registry';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
 
@@ -22,6 +23,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${SITE}/login`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     { url: `${SITE}/faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${SITE}/wiki`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    // 위키 문서 — 규칙 검색 유입(롱테일). 목록은 registry가 단일 원천이라 문서 추가 시 자동 반영.
+    ...WIKI_DOCS.map((d) => ({
+      url: `${SITE}/wiki/${d.meta.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    })),
     { url: `${SITE}/probability`, lastModified: now, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${SITE}/pricing`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     ...(['terms', 'privacy', 'refund', 'youth'] as const).map((d) => ({

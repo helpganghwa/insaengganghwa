@@ -12,6 +12,7 @@
 
 ## 문서
 
+- [공식 위키](https://ganghwa.app/wiki): 강화·초월·보급·레이드·길드·계정 규칙 정본 (분류별 문서)
 - [자주 묻는 질문](https://ganghwa.app/faq): 게임 소개·강화 규칙·전투력 계산·계정 이전 등 12문항
 - [확률 공시](https://ganghwa.app/probability): 강화·초월·보급 전 확률과 수식 (게임산업법 준수 공시)
 - [상품 안내](https://ganghwa.app/pricing): 유료 상품 구성과 가격

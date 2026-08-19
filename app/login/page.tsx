@@ -168,6 +168,16 @@ export default async function LoginPage({
         </p>
         )}
 
+        {/* 게임 가이드 — 로그인 전에 규칙을 볼 수 있는 입구. next/link를 쓰지 않는 이유:
+            위키는 viewport를 device-width로 재정의하므로, 소프트 내비게이션으로 넘어가면
+            게임의 고정 390 스케일과 섞인다(통짜 이동으로 문서를 새로 연다). */}
+        <p className="mt-2.5 text-[11px] text-zinc-500">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/wiki" className="underline">
+            게임 가이드(위키)
+          </a>
+        </p>
+
         {/* 로그인 실패 안내 — 버튼·폼 바로 아래(하단에 있으면 실패 사유를 못 보고 재시도한다). */}
         {error ? (
           error === 'cancelled' ? (
