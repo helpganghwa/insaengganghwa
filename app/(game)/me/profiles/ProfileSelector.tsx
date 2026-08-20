@@ -81,7 +81,8 @@ export function ProfileSelector({
       }
       setDeletedIds((s) => new Set(s).add(selectedId));
       setSelectedId(remaining[0]!.id);
-      router.refresh();
+      // refresh 제거(2026-08-20, §11.7) — deleteProfile revalidatePath('/me/profiles')
+      // 응답 재렌더가 커버(낙관 제거 + prop 갱신).
     });
   };
 

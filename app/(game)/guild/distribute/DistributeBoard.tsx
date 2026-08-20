@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
@@ -58,7 +57,6 @@ export function DistributeBoard({
   pool: string;
   members: DistributeMember[];
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
   const [pending, start] = useTransition();
@@ -143,7 +141,8 @@ export function DistributeBoard({
       }
       showHeaderToast({ title: `${payload.length}명에게 분배 완료` });
       setOverride({});
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — distributeTaxManualAction
+      // revalidatePath('/guild/distribute')가 응답 재렌더로 커버.
     });
   };
 

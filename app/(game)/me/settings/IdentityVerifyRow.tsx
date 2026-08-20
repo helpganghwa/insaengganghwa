@@ -2,7 +2,6 @@
 
 import * as PortOne from '@portone/browser-sdk/v2';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { verifyIdentityAction } from './identity-actions';
 
@@ -20,7 +19,6 @@ export function IdentityVerifyRow({
   storeId?: string;
   channelKey?: string;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(verified);
@@ -41,7 +39,7 @@ export function IdentityVerifyRow({
         setBusy(false);
         if (r.ok) {
           setDone(true);
-          router.refresh();
+          // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
         } else setErr(r.message);
       })
       .catch(() => {
@@ -49,7 +47,7 @@ export function IdentityVerifyRow({
         setBusy(false);
         setErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
       });
-  }, [router]);
+  }, []);
 
   const start = async () => {
     if (!storeId || !channelKey) return;
@@ -76,7 +74,7 @@ export function IdentityVerifyRow({
       setBusy(false);
       if (r.ok) {
         setDone(true);
-        router.refresh();
+        // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
       } else setErr(r.message);
     } catch (e) {
       setBusy(false);

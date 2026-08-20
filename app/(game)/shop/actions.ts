@@ -70,6 +70,7 @@ export async function verifyPurchaseAction(paymentId: string) {
     if (!r.ok) return { status: 'error', code: r.code } as const;
     revalidatePath('/shop');
     revalidatePath('/');
+    revalidatePath('/battlepass'); // 성장패스 결제도 이 액션 경유 — 클라 refresh 제거(2026-08-20) 커버
     return { status: 'success', already: r.already } as const;
   } catch (e) {
     console.error('[shop.verifyPurchase]', e);

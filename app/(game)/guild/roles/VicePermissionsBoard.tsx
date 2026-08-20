@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -39,7 +38,6 @@ export function VicePermissionsBoard({
   /** 진입 시 열어둘 대상(?u=) — 길드원 화면 ⋯에서 특정 인물로 들어올 때. */
   initialSelected?: string | null;
 }) {
-  const router = useRouter();
   // 성공 토스트는 쓰지 않는다 — 토글이 즉시 움직이는 것이 곧 피드백이다. 실패만 알린다.
   const { showError } = useResourceToast();
   const [pending, start] = useTransition();
@@ -67,7 +65,8 @@ export function VicePermissionsBoard({
         showError(r ? guildErrMsg(r.code) : '전송에 실패했어요. 다시 시도해 주세요.');
         return;
       }
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — 낙관 setPerms + 액션
+      // revalidatePath('/guild/roles') 응답 재렌더 커버.
     });
   };
 

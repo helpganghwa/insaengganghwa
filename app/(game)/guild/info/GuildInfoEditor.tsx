@@ -75,10 +75,14 @@ export function GuildInfoEditor({
       });
       if (failed.length > 0) {
         showError(`${failed.join(' · ')} 저장에 실패했어요.`);
+        // 실패 경로만 refresh(§11.7 예외) — 마지막 액션이 실패하면 앞선 성공분의 응답
+        // 재렌더가 반영되지 않았을 수 있어 서버 상태로 재동기화한다.
+        router.refresh();
       } else {
         showHeaderToast({ title: '길드 정보 저장' });
+        // 전부 성공 시 refresh 불필요(2026-08-20, §11.7) — 마지막 액션의
+        // revalidatePath('/guild/info') 응답 재렌더가 커버.
       }
-      router.refresh();
     });
   };
 

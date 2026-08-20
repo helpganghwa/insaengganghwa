@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { profileHref } from '@/lib/game/profile/href';
@@ -212,7 +211,6 @@ export function GuildMemberList({
   /** kick 권한(0142) — 내보내기 항목 노출. */
   canKick?: boolean;
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [pending, start] = useTransition();
   const [sort, setSort] = useState<SortKey>('contribution');
@@ -264,7 +262,8 @@ export function GuildMemberList({
         return;
       }
       showHeaderToast({ title: okTitle });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — setVice/kick/transfer 액션의
+      // revalidatePath('/guild/members')가 응답 재렌더로 커버.
     });
   };
 

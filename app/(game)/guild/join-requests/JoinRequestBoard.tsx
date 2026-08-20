@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { profileHref } from '@/lib/game/profile/href';
@@ -58,7 +57,6 @@ export function JoinRequestBoard({
   capacity: number;
   requests: Request[];
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [pending, start] = useTransition();
   const [policy, setPolicy] = useState<GuildJoinPolicy>(initialPolicy);
@@ -80,7 +78,8 @@ export function JoinRequestBoard({
         return;
       }
       showHeaderToast({ title: `${r.nickname}님이 길드에 합류했습니다` });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — 액션 revalidatePath('/guild/join-requests')가
+      // 응답 재렌더로 커버(낙관 제거 + prop 갱신).
     });
   };
 
@@ -95,7 +94,7 @@ export function JoinRequestBoard({
         return;
       }
       showHeaderToast({ title: '신청을 거절했습니다' });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — 위 승인과 동일 근거.
     });
   };
 
@@ -111,7 +110,7 @@ export function JoinRequestBoard({
         return;
       }
       showHeaderToast({ title: next === 'approval' ? '승인제로 변경' : '자유 가입으로 변경' });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — 낙관 setPolicy + 액션 revalidate 커버.
     });
   };
 

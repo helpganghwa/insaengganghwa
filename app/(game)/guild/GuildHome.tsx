@@ -231,7 +231,8 @@ export function GuildHome({
       const r = await leaveGuildAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       showHeaderToast({ title: r.disbanded ? '길드 해산됨' : '길드 탈퇴' });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — leaveGuildAction revalidatePath('/guild')가
+      // 응답 재렌더로 브라우즈 화면 전환까지 커버.
     });
   };
 

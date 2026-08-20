@@ -350,7 +350,8 @@ export function ShopTabs({
       setIdentityBusy(false);
       if (r.ok) {
         setIdentityPrompt(false);
-        router.refresh(); // 인증 반영 후 다시 구매 시 통과.
+        // refresh 제거(2026-08-20, §11.7) — verifyIdentityAction revalidatePath('/shop')
+        // 응답 재렌더가 커버. 재구매 통과 판정은 서버가 다시 한다.
       } else setIdentityErr(r.message);
     } catch (e) {
       setIdentityBusy(false);
@@ -375,7 +376,7 @@ export function ShopTabs({
         setIdentityBusy(false);
         if (r.ok) {
           setIdentityPrompt(false);
-          router.refresh();
+          // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/shop') 응답 재렌더 커버.
         } else {
           setIdentityErr(r.message);
           setIdentityPrompt(true);
@@ -426,7 +427,8 @@ export function ShopTabs({
           () => ({ status: 'error', code: 'NETWORK' }) as const,
         );
         if (v.status === 'success') {
-          router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
+          // refresh 제거(2026-08-20, §11.7) — verifyPurchaseAction revalidatePath('/shop','/')
+          // 응답 재렌더가 다이아·상자·프리미엄 갱신을 커버.
           showHeaderToast({ title: '구매 완료' });
         } else if (v.code === 'NETWORK') {
           // 돈은 나갔는데 결과가 안 보이는 상황 — 사라지는 토스트로 알리면 놓치고 문의로 온다.
@@ -513,7 +515,8 @@ export function ShopTabs({
       if (r.ok) {
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
         if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
-        router.refresh(); // 다이아·보유 상자 등 서버 권위 상태 재동기화.
+        // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
+        // revalidatePath('/shop','/') 응답 재렌더가 커버.
         showHeaderToast({ title: '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.

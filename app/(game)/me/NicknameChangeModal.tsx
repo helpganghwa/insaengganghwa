@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { NICKNAME_MAX_LEN, NICKNAME_MIN_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
@@ -31,7 +30,6 @@ export function NicknameChangeModal({
   /** 보유 다이아(bigint string). 비용 안내·검증용. */
   diamond: string;
 }) {
-  const router = useRouter();
   const { showHeaderToast } = useResourceToast();
   const [next, setNext] = useState(currentNickname);
   const [err, setErr] = useState<string | null>(null);
@@ -63,7 +61,8 @@ export function NicknameChangeModal({
       }
       onClose();
       showHeaderToast({ title: '닉네임 변경', detail: next.trim() });
-      router.refresh();
+      // refresh 제거(2026-08-20, §11.7) — changeNicknameAction revalidatePath('/me','/me/settings')
+      // 응답 재렌더가 layout 헤더까지 커버.
     });
   };
 

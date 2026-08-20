@@ -22,5 +22,8 @@ export async function verifyIdentityAction(
   const r = await verifyAndStoreIdentity(userId, identityVerificationId);
   if (!r.ok) return { ok: false, message: r.message };
   revalidatePath('/me/settings');
+  // 인증 유도 모달이 뜨는 결제 화면 2곳 — 클라 refresh 제거(2026-08-20) 명시 커버
+  revalidatePath('/shop');
+  revalidatePath('/battlepass');
   return { ok: true, isAdult: r.isAdult };
 }

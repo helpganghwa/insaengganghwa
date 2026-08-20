@@ -191,6 +191,7 @@ export async function approveJoinAction(requestUserId: string) {
       }).catch(() => undefined);
     });
     revalidatePath('/guild');
+    revalidatePath('/guild/join-requests'); // 신청 목록 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'approveJoin');
@@ -218,6 +219,7 @@ export async function rejectJoinAction(requestUserId: string) {
       }).catch(() => undefined);
     });
     revalidatePath('/guild');
+    revalidatePath('/guild/join-requests'); // 신청 목록 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'rejectJoin');
@@ -235,6 +237,7 @@ export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
   try {
     await setJoinPolicy({ userId: u, serverId: await getActiveServerId(), policy });
     revalidatePath('/guild');
+    revalidatePath('/guild/join-requests'); // 정책 토글 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setJoinPolicy');
@@ -251,6 +254,7 @@ export async function setGuildNoticeAction(notice: string) {
     await setGuildNotice({ userId: u, serverId: await getActiveServerId(), notice });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/info'); // 편집 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setGuildNotice');
@@ -267,6 +271,7 @@ export async function setGuildIntroAction(intro: string) {
     await setGuildIntro({ userId: u, serverId: await getActiveServerId(), intro });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/info'); // 편집 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setGuildIntro');
@@ -283,6 +288,7 @@ export async function setGuildOpenchatAction(url: string) {
     await setGuildOpenchat({ userId: u, serverId: await getActiveServerId(), url });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/info'); // 편집 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setGuildOpenchat');
@@ -312,6 +318,7 @@ export async function setViceAction(targetUserId: string, makeVice: boolean) {
     await setViceRole({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId, makeVice });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/members'); // 길드원 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setVice');
@@ -327,6 +334,7 @@ export async function kickMemberAction(targetUserId: string) {
     await kickMember({ actorUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/members'); // 길드원 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'kick');
@@ -342,6 +350,7 @@ export async function transferLeadershipAction(targetUserId: string) {
     await transferLeadership({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
+    revalidatePath('/guild/members'); // 길드원 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'transfer');
@@ -593,6 +602,7 @@ export async function setVicePermissionsAction(targetUserId: string, permissions
     });
     revalidatePath('/guild/settings');
     revalidatePath('/guild');
+    revalidatePath('/guild/roles'); // 권한 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setVicePermissions');

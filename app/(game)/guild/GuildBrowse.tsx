@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -43,7 +42,6 @@ export function GuildBrowse({
   defaultGuilds: GuildRow[];
   myRequestGuildId: string | null;
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [tab, setTab] = useState<Tab>('recommend');
   const [q, setQ] = useState('');
@@ -63,7 +61,8 @@ export function GuildBrowse({
       const r = await joinGuildAction(id);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       showHeaderToast({ title: r.joined ? '길드 가입 완료' : '가입 신청 완료' });
-      router.refresh();
+      // router.refresh() 제거(2026-08-20, §11.7) — joinGuildAction revalidatePath('/guild')가
+      // 응답 재렌더로 이미 화면 전환(가입 시 GuildHome)까지 커버.
     });
   };
 

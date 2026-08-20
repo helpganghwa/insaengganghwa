@@ -293,7 +293,8 @@ export function BattlePassClient({
       setIdentityBusy(false);
       if (r.ok) {
         setIdentityPrompt(false);
-        router.refresh(); // 인증 반영 후 다시 구매 시 통과.
+        // refresh 제거(2026-08-20, §11.7) — verifyIdentityAction revalidatePath('/battlepass')
+        // 응답 재렌더가 커버. 재구매 통과 판정은 서버가 다시 한다.
       } else setIdentityErr(r.message);
     } catch (e) {
       setIdentityBusy(false);
@@ -318,7 +319,7 @@ export function BattlePassClient({
         setIdentityBusy(false);
         if (r.ok) {
           setIdentityPrompt(false);
-          router.refresh();
+          // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/battlepass') 응답 재렌더 커버.
         } else {
           setIdentityErr(r.message);
           setIdentityPrompt(true);
@@ -351,7 +352,8 @@ export function BattlePassClient({
           () => ({ status: 'error', code: 'NETWORK' }) as const,
         );
         if (v.status === 'success') {
-          router.refresh();
+          // refresh 제거(2026-08-20, §11.7) — verifyPurchaseAction revalidatePath('/battlepass')
+          // 응답 재렌더가 프리미엄 해금 갱신을 커버.
           showHeaderToast({ title: '성장패스 구매 완료' });
         } else if (v.code === 'NETWORK') {
           setError('결제 확인 지연 — 지급은 잠시 후 자동 반영됩니다.');
@@ -376,7 +378,8 @@ export function BattlePassClient({
       );
       setPaying(false);
       if (r.ok) {
-        router.refresh();
+        // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
+        // revalidatePath('/battlepass') 응답 재렌더가 커버.
         showHeaderToast({ title: '성장패스 구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.
