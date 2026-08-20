@@ -42,6 +42,12 @@ export interface LayoutData {
   repTitle: string | null;
   /** 닉네임 아래 서브라인(2026-07-21 문의 반영) — 전투력·최고강화·합산강화. 로드 실패 시 null(미표시). */
   stats: { combat: number; maxEnhance: number; sumEnhance: number } | null;
+  /**
+   * 튜토리얼 시드(2026-08-20 감사 A5) — profile 쿼리가 이미 읽는 characters 행에서 편승해
+   * TutorialCoach(getTutorialState)가 재쿼리 없이 판정하게 한다. 캐릭터 부재·로드 실패 시 null
+   * (getTutorialState의 실패 폴백과 동일하게 done 처리됨).
+   */
+  tutorialSeed: { step: number; createdAt: string } | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -58,6 +64,7 @@ const DEFAULTS: LayoutData = {
   executorZoneRegion: null,
   repTitle: null,
   stats: null,
+  tutorialSeed: null,
 };
 
 /**
@@ -71,8 +78,15 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       (sql) => sql`
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
                  c.representative_title_code,
+                 c.tutorial_step, c.created_at as char_created_at,
                  g.emblem_url as guild_emblem_url,
-                 z.name as executor_zone, z.region::text as executor_zone_region
+                 z.name as executor_zone, z.region::text as executor_zone_region,
+                 -- 헤더 서브라인 스탯 재료(감사 A5) — 별도 layout.stats 왕복을 스칼라 서브쿼리로
+                 -- 편승(단행 profile 쿼리라 1회 실행). 전투력 산식(pieceCombatPower)은 JS 유지
+                 -- (SQL 이중화 금지 — 채팅 프로필 팝업과 동일 소스·동일 산식).
+                 (select coalesce(jsonb_agg(jsonb_build_array(ue.enhance_level, ue.transcend_level, ue.max_enhance_level)), '[]'::jsonb)
+                    from user_equipment ue
+                   where ue.user_id = p.id and ue.server_id = ${serverId}) as equip_stats
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
@@ -97,7 +111,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
         p0?.executor_zone ?? null,
       );
     });
-    const [profileRows, mailRows, enhRows, friendReqRows, equipRows, repTitle] = await Promise.all([
+    const [profileRows, mailRows, enhRows, friendReqRows, repTitle] = await Promise.all([
       profileP,
       pgGuard(
         (sql) => sql`
@@ -132,16 +146,6 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
         4000,
         'layout.friendreq',
       ),
-      // 헤더 서브라인 스탯 — 전투력은 조각별 수식(pieceCombatPower)이라 행을 가져와 JS 합산
-      // (채팅 프로필 팝업과 동일 산식·동일 소스 = 수치 일치).
-      pgGuard(
-        (sql) => sql`
-          select enhance_level as e, transcend_level as t, max_enhance_level as mx
-          from user_equipment
-          where user_id = ${userId}::uuid and server_id = ${serverId}`,
-        4000,
-        'layout.stats',
-      ),
       repTitleP,
     ]);
     const p = profileRows[0] as
@@ -155,6 +159,9 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           executor_zone?: string | null;
           executor_zone_region?: string | null;
           representative_title_code?: string | null;
+          tutorial_step?: number | string | null;
+          char_created_at?: string | Date | null;
+          equip_stats?: unknown;
         }
       | undefined;
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
@@ -202,13 +209,22 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       executorZoneRegion: p?.executor_zone_region ?? null,
       repTitle,
       stats: (() => {
-        const eq = equipRows as { e: number; t: number; mx: number }[];
+        // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
+        let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;
+        if (typeof raw === 'string') {
+          try { raw = JSON.parse(raw) as [number, number, number][]; } catch { raw = null; }
+        }
+        const eq = Array.isArray(raw) ? raw : [];
         return {
-          combat: eq.reduce((acc, r) => acc + pieceCombatPower(r.e, r.t), 0),
-          maxEnhance: eq.reduce((acc, r) => Math.max(acc, r.mx), 0),
-          sumEnhance: eq.reduce((acc, r) => acc + r.e, 0),
+          combat: eq.reduce((acc, [e, t]) => acc + pieceCombatPower(e, t), 0),
+          maxEnhance: eq.reduce((acc, [, , mx]) => Math.max(acc, mx), 0),
+          sumEnhance: eq.reduce((acc, [e]) => acc + e, 0),
         };
       })(),
+      tutorialSeed:
+        p?.tutorial_step != null && p?.char_created_at != null
+          ? { step: Number(p.tutorial_step), createdAt: new Date(p.char_created_at).toISOString() }
+          : null,
     };
   } catch (e) {
     console.warn('[layout] data load failed — defaults', (e as Error).message);

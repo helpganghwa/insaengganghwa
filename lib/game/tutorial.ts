@@ -35,15 +35,32 @@ async function rowCount(table: PgTable, where: SQL | undefined): Promise<number>
   return Number(r?.c ?? 0);
 }
 
+/** layout profile 쿼리에서 편승해 온 characters 행 조각(감사 A5) — null=캐릭터 부재. */
+export type TutorialSeed = { step: number; createdAt: string } | null;
+
 /** 튜토리얼 진입 상태(1회). intro=팝업, active=진행(재개 단계 포함), done=없음. 실패 시 done.
  * React cache — layout(TutorialCoach)과 홈 페이지가 같은 요청에서 각각 호출하던 중복 쿼리를
- * 요청 스코프에서 1회로 합침(2026-08-06 감사). */
-export const getTutorialState = cache(async function getTutorialState(userId: string, serverId: number): Promise<TutorialState> {
+ * 요청 스코프에서 1회로 합침(2026-08-06 감사).
+ * seed(감사 A5): layout 경로는 profile 쿼리가 이미 읽은 characters 행을 넘겨 재쿼리를 생략한다
+ * (undefined=미제공 → 자체 조회, null=캐릭터 부재 → done). 홈 페이지는 시드 없이 호출해도
+ * 인덱스 1쿼리뿐이라 그대로 둔다. */
+export const getTutorialState = cache(async function getTutorialState(
+  userId: string,
+  serverId: number,
+  seed?: TutorialSeed,
+): Promise<TutorialState> {
   try {
-    const [p] = await db
-      .select({ s: characters.tutorialStep, createdAt: characters.createdAt })
-      .from(characters)
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    const p =
+      seed !== undefined
+        ? seed === null
+          ? undefined
+          : { s: seed.step, createdAt: seed.createdAt }
+        : (
+            await db
+              .select({ s: characters.tutorialStep, createdAt: characters.createdAt })
+              .from(characters)
+              .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+          )[0];
     if (!p) return { phase: 'done', step: null };
     if (p.s !== TUTORIAL_INTRO && p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
 
@@ -54,7 +71,19 @@ export const getTutorialState = cache(async function getTutorialState(userId: st
       return { phase: 'done', step: null };
     }
     if (p.s === TUTORIAL_INTRO) return { phase: 'intro', step: null };
+    return await deriveActiveState(userId, serverId);
+  } catch {
+    return { phase: 'done', step: null };
+  }
+});
 
+/** ACTIVE 단계 파생 — layout(seed 경로)과 홈(무시드 경로)이 같은 요청에서 겹칠 때
+ * 4쿼리 파생이 두 번 돌지 않게 요청 스코프 cache로 분리(감사 A5). */
+const deriveActiveState = cache(async function deriveActiveState(
+  userId: string,
+  serverId: number,
+): Promise<TutorialState> {
+  try {
     // active — localStorage가 비었을 때의 재개 단계만 파생(클라가 우선).
     const [eqC, equippedC, jobC, logC] = await Promise.all([
       rowCount(

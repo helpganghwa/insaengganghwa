@@ -193,12 +193,13 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>
         {/* 신규 튜토리얼 코치마크 — 상태를 promise로 전달(Suspense 미사용 → 항상 마운트,
-            인트로/진행 상태 리셋 방지). 비차단(클라가 effect로 해소). */}
+            인트로/진행 상태 리셋 방지). 비차단(클라가 effect로 해소).
+            layoutData 체이닝(감사 A5) — profile 쿼리가 편승해 온 tutorialSeed로 재쿼리 생략. */}
         <TutorialCoach
-          statePromise={getActiveServerId().then(async (sid) => ({
-            ...(await getTutorialState(userId, sid)),
-            serverId: sid,
-          }))}
+          statePromise={layoutData.then(async (d) => {
+            const sid = await getActiveServerId();
+            return { ...(await getTutorialState(userId, sid, d.tutorialSeed)), serverId: sid };
+          })}
         />
       </div>
     </HeaderStatsProvider>
