@@ -58,7 +58,7 @@ export default function Doc() {
         </LI>
         <LI>
           {fmtInt(CONQUEST_BATTLE_KST_HOUR)}시부터 {fmtInt(UNLOCK_HOUR)}시까지는 배치와 배치 해제,
-          집행관 지정이 제한된다. 배치나 집행관이 있는 상태의 거주지 이동도 함께 제한된다.
+          집행관 지정이 제한된다. 배치나 집행관이 있는 상태면 거주지 이동도 함께 제한된다.
         </LI>
       </UL>
 

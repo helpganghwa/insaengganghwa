@@ -10,7 +10,6 @@ import * as raid from './docs/raid';
 import * as guild from './docs/guild';
 import * as guildRoles from './docs/guild-roles';
 import * as conquest from './docs/conquest';
-import * as moderation from './docs/moderation';
 import * as avatar from './docs/avatar';
 import * as titles from './docs/titles';
 
@@ -53,7 +52,6 @@ const MODULES = [
   guild,
   guildRoles,
   conquest,
-  moderation,
   avatar,
   titles,
 ];

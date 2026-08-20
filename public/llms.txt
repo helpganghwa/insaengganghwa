@@ -23,7 +23,6 @@
   - [길드 권한](https://ganghwa.app/wiki/guild-roles): 직책과 부길드장 개별 권한, 위임과 추방, 장기 미접속 자동 교체.
   - [길드 기본](https://ganghwa.app/wiki/guild): 결성과 가입, 기부로 오르는 레벨과 정원, 나갈 때 걸리는 잠금.
   - [점령전](https://ganghwa.app/wiki/conquest): 하루 한 번 벌어지는 구역 다툼과 집행관, 세금, 방치로 잃는 땅.
-  - [신고와 제재](https://ganghwa.app/wiki/moderation): 신고 경로와 처리 절차, 제재 종류, 차단과 문의.
   - [아바타와 프로필](https://ganghwa.app/wiki/avatar): 아바타를 만드는 절차와 비용, 검토·환불 규칙, 대표 설정.
   - [칭호](https://ganghwa.app/wiki/titles): 칭호의 발견과 활성 판정, 대표 칭호를 다는 규칙.
 - [자주 묻는 질문](https://ganghwa.app/faq): 게임 소개·강화 규칙·전투력 계산·계정 이전 등 12문항
