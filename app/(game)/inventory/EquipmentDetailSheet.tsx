@@ -49,12 +49,15 @@ function BtnBg({ src, label }: { src: string; label: string }) {
 
 export function EquipmentDetailSheet({
   item,
+  lore = null,
   nickname: _nickname,
   onClose,
   onOptimisticStartEnhance,
   onOptimisticEquip,
 }: {
   item: InvItem;
+  /** 로어 전문 — 열람 시 lazy 조회분(감사 C). 부모가 패칭 완료 후 시트를 연다. */
+  lore?: string | null;
   nickname: string;
   onClose: () => void;
   /** 강화 시작 직후 busy=true 낙관 반영(페이지 이동 직전). */
@@ -235,9 +238,9 @@ export function EquipmentDetailSheet({
         </section>
 
         {/* ── 로어(스토리) ── */}
-        {item.lore ? (
+        {lore ? (
           <p className="mt-2.5 whitespace-pre-line rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            {item.lore}
+            {lore}
           </p>
         ) : null}
 

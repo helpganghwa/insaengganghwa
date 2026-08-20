@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -261,6 +261,32 @@ export function AnnouncementBoard({
   const [listOpen, setListOpen] = useState(false);
   const [detail, setDetail] = useState<AnnouncementView | null>(null);
   const [gateDismissed, setGateDismissed] = useState(false);
+  // 본문 lazy(감사 C) — 목록은 요약(body='')으로 오고, 상세는 **패칭 완료 후** 연다
+  // (빈 모달/스켈레톤 → 채움 금지: 레이아웃 시프트 방지, 2026-08-20 사용자 지시).
+  // 받은 본문은 세션 내 재열람 대비 캐시.
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
+  const bodyCacheRef = useRef<Map<string, string>>(new Map());
+  const openDetail = (a: AnnouncementView) => {
+    if (a.body) {
+      setDetail(a);
+      return;
+    }
+    const cached = bodyCacheRef.current.get(a.id);
+    if (cached !== undefined) {
+      setDetail({ ...a, body: cached });
+      return;
+    }
+    setDetailLoadingId(a.id);
+    void fetch(`/api/announcement/body?id=${a.id}`, { cache: 'no-store' })
+      .then(async (r) => (r.ok ? ((await r.json()) as { body: string }) : null))
+      .then((d) => {
+        setDetailLoadingId(null);
+        if (d == null) return; // 실패 — 목록에 그대로(재탭 재시도)
+        bodyCacheRef.current.set(a.id, d.body);
+        setDetail({ ...a, body: d.body });
+      })
+      .catch(() => setDetailLoadingId(null));
+  };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -363,8 +389,11 @@ export function AnnouncementBoard({
                 <li key={a.id}>
                   <button
                     type="button"
-                    onClick={() => setDetail(a)}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left active:bg-zinc-50 dark:active:bg-zinc-900"
+                    onClick={() => openDetail(a)}
+                    disabled={detailLoadingId !== null}
+                    className={`flex w-full items-center gap-2 px-4 py-2.5 text-left active:bg-zinc-50 dark:active:bg-zinc-900 ${
+                      detailLoadingId === a.id ? 'opacity-60' : ''
+                    }`}
                   >
                     <CatBadge category={a.category} />
                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium">

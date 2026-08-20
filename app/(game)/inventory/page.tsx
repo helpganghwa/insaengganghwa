@@ -8,7 +8,6 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
-import { loreByCode } from '@/lib/game/equipment/lore';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
 
@@ -87,7 +86,7 @@ export default async function InventoryPage({
         acquiredAtMs: r.acquiredAtMs,
         busy: busy.has(r.id),
         championRank: libRanks.get(r.catalogItemId) ?? null,
-        lore: loreByCode(cat.code),
+        // lore 제거(감사 C) — 상세 시트 열람 시 /api/equipment/lore lazy 조회.
       },
     ];
   });

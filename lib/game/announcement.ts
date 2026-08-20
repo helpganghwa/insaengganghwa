@@ -49,6 +49,44 @@ export const listPublishedAnnouncements = unstable_cache(
   { revalidate: 30, tags: ['announcements'] },
 );
 
+/**
+ * 홈 전용 요약 — 목록은 제목만 쓰고 본문은 상세 열람 시 lazy 조회(감사 C 오버패칭:
+ * 본문 30건 ~45KB가 매 홈 렌더에 실렸다). 진입 시 강제 팝업이 즉시 렌더하는 **최신 1건만**
+ * body 포함, 나머지는 '' — 상세는 /api/announcement/body가 30s 캐시로 제공.
+ * poll은 별도 컬럼이라 요약에도 온전히 실린다(홈 pollAnnIds·투표 하이라이트 무영향).
+ */
+export const listPublishedAnnouncementSummaries = unstable_cache(
+  async (limit = 30, serverId?: number): Promise<AnnouncementView[]> => {
+    const serverCond =
+      serverId != null
+        ? sql`(${announcements.serverId} is null or ${announcements.serverId} = ${serverId})`
+        : sql`true`;
+    const rows = await db
+      .select()
+      .from(announcements)
+      .where(and(eq(announcements.published, true), serverCond))
+      .orderBy(desc(announcements.publishedAt), desc(announcements.id))
+      .limit(limit);
+    return rows.map((r, i) => ({ ...toView(r), body: i === 0 ? r.body : '' }));
+  },
+  ['published-announcement-summaries-v1'],
+  { revalidate: 30, tags: ['announcements'] },
+);
+
+/** 상세 본문 lazy 조회 — 발행된 공지만. 요약(listPublishedAnnouncementSummaries)과 짝. */
+export const getPublishedAnnouncementBody = unstable_cache(
+  async (id: bigint): Promise<string | null> => {
+    const [r] = await db
+      .select({ body: announcements.body, published: announcements.published })
+      .from(announcements)
+      .where(eq(announcements.id, id))
+      .limit(1);
+    return r?.published ? r.body : null;
+  },
+  ['announcement-body-v1'],
+  { revalidate: 30, tags: ['announcements'] },
+);
+
 /** 어드민 — 전체(초안 포함) 최신순. */
 export async function listAllAnnouncements(limit = 100): Promise<AnnouncementView[]> {
   const rows = await db.select().from(announcements).orderBy(desc(announcements.id)).limit(limit);

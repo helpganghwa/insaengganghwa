@@ -25,7 +25,6 @@ export type InvItem = {
   busy: boolean;
   /** 해방 등수(강화랭킹 1~3위) — 후광 색용. null=해방 아님. */
   championRank: number | null;
-  lore: string | null;
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -48,6 +47,27 @@ export function InventoryGrid({
   // 기본은 기존과 동일한 강화순(암묵 정렬이 라벨로 드러나는 효과 겸함).
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
+  // 로어 lazy(감사 C) — RSC로 전 종 로어(45~60KB)를 싣지 않고 시트 열람 시 1건 조회.
+  // **패칭 완료 후 시트 오픈**(빈 영역/시프트 금지, 2026-08-20 사용자 지시) + 코드별 캐시.
+  const [loreByOpenCode, setLoreByOpenCode] = useState<Record<string, string | null>>({});
+  const openSheet = (id: string) => {
+    const item = displayItems.find((i) => i.id === id);
+    if (!item || item.code in loreByOpenCode) {
+      setOpenId(id);
+      return;
+    }
+    void fetch(`/api/equipment/lore?code=${encodeURIComponent(item.code)}`)
+      .then(async (r) => (r.ok ? ((await r.json()) as { lore: string | null }) : null))
+      .then((d) => {
+        // 실패해도 시트는 연다(로어만 미표시) — 조회 지연으로 상세가 막히는 것이 더 큰 손실.
+        setLoreByOpenCode((m) => ({ ...m, [item.code]: d?.lore ?? null }));
+        setOpenId(id);
+      })
+      .catch(() => {
+        setLoreByOpenCode((m) => ({ ...m, [item.code]: null }));
+        setOpenId(id);
+      });
+  };
   const [, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
   // 즉시 화면 반영. 서버 응답 후 revalidate로 prop이 새로 들어오면 자동 fallback(§11.7).
@@ -145,19 +165,20 @@ export function InventoryGrid({
       {equipped.length > 0 ? (
         <Section title={`장착 중 (${equipped.length})`}>
           {equipped.map((it) => (
-            <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={setOpenId} />
+            <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={openSheet} />
           ))}
         </Section>
       ) : null}
       <Section title={`보유 (${owned.length})`}>
         {owned.map((it) => (
-          <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={setOpenId} />
+          <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={openSheet} />
         ))}
       </Section>
 
       {openItem ? (
         <EquipmentDetailSheet
           item={openItem}
+          lore={loreByOpenCode[openItem.code] ?? null}
           nickname={nickname}
           onClose={() => setOpenId(null)}
           onOptimisticEquip={(id) => {
