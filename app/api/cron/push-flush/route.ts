@@ -15,7 +15,7 @@ import { sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
-import { sendPushToUser } from '@/lib/push/send';
+import { getEnabledPushSubscriptions, sendPushToSubscriptions } from '@/lib/push/send';
 import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
@@ -81,6 +81,15 @@ export async function GET(req: Request) {
 
     candidates += rows.length;
 
+    // 토글·구독 일괄 선조회(감사 A2) — 이전엔 sendPushToUser가 유저마다 토글 1쿼리 + 구독
+    // 1쿼리를 날려 배치 500명 = DB 1,000왕복이었다. 토글 재확인은 여기서 유지해야 한다 —
+    // 클레임 SQL은 모드·활성 서버만 보고, 적재→flush 사이 30~60분 윈도 중 유저가
+    // push_enhance를 끌 수 있어 발송 직전 확인이 마지막 게이트다.
+    const subsByUser = await getEnabledPushSubscriptions(
+      rows.map((r) => r.user_id),
+      'enhance',
+    );
+
     for (let i = 0; i < rows.length; i += SEND_CHUNK) {
       await Promise.all(
         rows.slice(i, i + SEND_CHUNK).map(async (r) => {
@@ -90,7 +99,7 @@ export async function GET(req: Request) {
           const title = n === 1 ? '강화 준비 완료' : `강화 ${n}건 준비 완료`;
           const body = describeBatch(items);
           try {
-            const res = await sendPushToUser(r.user_id, {
+            const res = await sendPushToSubscriptions(subsByUser.get(r.user_id) ?? [], {
               title,
               body,
               url: '/enhance',

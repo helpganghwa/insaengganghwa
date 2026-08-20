@@ -98,12 +98,20 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
 /**
  * 1유저에게 push 발송. 디바이스 N개 구독 시 전부 발송.
  * 카테고리 토글 OFF면 no-op(0/0/0 반환). 토글 없는 카테고리(supply/melee)는 항상 발송.
+ *
+ * skipToggleCheck: 호출부가 **같은 요청 안에서 방금** 토글을 검증한 경우에만 true —
+ * 강화 준비 cron의 클레임 SQL이 push_enhance=true를 조인 조건으로 이미 확인한 경로.
+ * 검증과 발송 사이에 시간 간격이 있는 경로(push-flush의 묶음 윈도 등)에서는 쓰면 안 된다.
  */
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<SendResult> {
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload,
+  opts?: { skipToggleCheck?: boolean },
+): Promise<SendResult> {
   configure();
   // 토글 체크 (1 query) — 토글 컬럼 있는 카테고리만.
   const togglesCol = TOGGLE_COLUMN[payload.category];
-  if (togglesCol) {
+  if (togglesCol && !opts?.skipToggleCheck) {
     const [p] = await db
       .select({ enabled: togglesCol })
       .from(profiles)
@@ -171,6 +179,68 @@ export async function sendPushToUsers(
 }
 
 type SubRow = { id: bigint; endpoint: string; p256dh: string; auth: string };
+export type PushSubscriptionRow = SubRow;
+
+/**
+ * 토글 ON 유저의 구독을 일괄 선조회 — push-flush처럼 유저별 본문이 달라 broadcast
+ * (sendPushToUsers)를 못 쓰는 경로용. 유저당 2쿼리(토글+구독) N+1을 배치당 2쿼리로 줄인다.
+ * 토글 OFF·무구독 유저는 맵에서 빠진다(호출부는 get() ?? []로 no-op 처리).
+ */
+export async function getEnabledPushSubscriptions(
+  userIds: string[],
+  category: PushPayload['category'],
+): Promise<Map<string, SubRow[]>> {
+  const byUser = new Map<string, SubRow[]>();
+  if (userIds.length === 0) return byUser;
+  const IN_CHUNK = 1000; // 바인드 파라미터 상한 보호(sendPushToUsers와 동일 규칙)
+
+  const togglesCol = TOGGLE_COLUMN[category];
+  let targetIds = userIds;
+  if (togglesCol) {
+    const enabled: string[] = [];
+    for (let i = 0; i < userIds.length; i += IN_CHUNK) {
+      const rows = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(and(inArray(profiles.id, userIds.slice(i, i + IN_CHUNK)), eq(togglesCol, true)));
+      for (const r of rows) enabled.push(r.id);
+    }
+    if (enabled.length === 0) return byUser;
+    targetIds = enabled;
+  }
+
+  for (let i = 0; i < targetIds.length; i += IN_CHUNK) {
+    const rows = await db
+      .select({
+        userId: pushSubscriptions.userId,
+        id: pushSubscriptions.id,
+        endpoint: pushSubscriptions.endpoint,
+        p256dh: pushSubscriptions.p256dh,
+        auth: pushSubscriptions.auth,
+      })
+      .from(pushSubscriptions)
+      .where(inArray(pushSubscriptions.userId, targetIds.slice(i, i + IN_CHUNK)));
+    for (const { userId, ...sub } of rows) {
+      if (!userId) continue; // 스키마상 nullable(비로그인 구독)이나 IN 필터상 도달 불가 — 타입 가드
+      const list = byUser.get(userId);
+      if (list) list.push(sub);
+      else byUser.set(userId, [sub]);
+    }
+  }
+  return byUser;
+}
+
+/**
+ * 사전 조회된 구독으로 발송만 수행 — getEnabledPushSubscriptions와 짝. 토글 검증은
+ * 선조회가 끝냈다는 전제이므로 다른 경로에서 단독으로 쓰면 안 된다(게이팅 우회).
+ */
+export async function sendPushToSubscriptions(
+  subs: SubRow[],
+  payload: PushPayload,
+): Promise<SendResult> {
+  configure();
+  return dispatch(subs, payload);
+}
 
 async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResult> {
   if (subs.length === 0) return { ok: 0, gone: 0, failed: 0 };

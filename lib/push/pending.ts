@@ -1,18 +1,17 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUser } from '@/lib/push/send';
 
 /**
  * 강화 '준비 완료'(=complete_at 도달, 최대확률) 알림 적재/발송.
  *
  * 트리거: /api/cron/push-enhance-ready (매분) — push_sent=false 잡 발견 시 호출.
- * 모드 분기:
- *  - instant (기본): sendPushToUser 즉시 호출 — 슬롯별 즉시 알림(OS tag 묶음)
- *  - batched: push_pending 적재 → push-flush cron이 30분 윈도 후 묶음 발송
+ * 모드 분기(push_enhance_mode, 기본 batched):
+ *  - instant: sendPushToUser 즉시 호출 — 슬롯별 즉시 알림(OS tag 묶음)
+ *  - batched/batched_1h: push_pending 적재 → push-flush cron이 30분/60분 윈도 후 묶음 발송
  *
  * 게임 트랜잭션 외부, best-effort. 발송 후 cron이 enhancement_jobs.push_sent=true 마크.
  */
@@ -37,23 +36,26 @@ export async function appendEnhanceReady(
   userId: string,
   serverId: number,
   item: EnhanceReadyItem,
+  /**
+   * 유저의 push_enhance_mode — 유일한 호출처(push-enhance-ready cron)의 클레임 SQL이
+   * profiles 조인으로 함께 가져온다(과거엔 여기서 잡마다 1쿼리 재조회했음). 클레임 SQL이
+   * push_enhance=true도 같은 조인에서 검증하므로 instant 발송의 토글 재확인도 생략한다.
+   */
+  mode: 'instant' | 'batched' | 'batched_1h',
 ): Promise<void> {
-  const [p] = await db
-    .select({ mode: profiles.pushEnhanceMode })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  const mode = p?.mode ?? 'batched'; // 컬럼 default(batched)와 동일 폴백 — 표시/동작 불일치 방지
-
   if (mode === 'instant') {
     const { title, body } = describeOne(item);
-    await sendPushToUser(userId, {
-      title,
-      body,
-      url: '/enhance',
-      tag: 'enhance',
-      category: 'enhance',
-    });
+    await sendPushToUser(
+      userId,
+      {
+        title,
+        body,
+        url: '/enhance',
+        tag: 'enhance',
+        category: 'enhance',
+      },
+      { skipToggleCheck: true },
+    );
     return;
   }
 

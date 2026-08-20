@@ -38,6 +38,7 @@ type ReadyRow = {
   item_ko: string;
   slot: 'weapon' | 'armor' | 'accessory';
   slot_lane: number;
+  push_mode: 'instant' | 'batched' | 'batched_1h';
 };
 
 export async function GET(req: Request) {
@@ -79,10 +80,13 @@ export async function GET(req: Request) {
            u.target_level,
            u.slot::text as slot,
            u.slot_lane as slot_lane,
-           ci.name as item_ko
+           ci.name as item_ko,
+           p.push_enhance_mode::text as push_mode
     from updated u
     join user_equipment ue on ue.id = u.user_equipment_id
     join catalog_items ci on ci.id = ue.catalog_item_id
+    -- 발송 모드를 클레임과 같은 왕복으로 — appendEnhanceReady가 잡마다 재조회하던 1쿼리 제거
+    join profiles p on p.id = u.user_id
   `)) as unknown as ReadyRow[];
 
   totalClaimed += claimed.length;
@@ -90,14 +94,19 @@ export async function GET(req: Request) {
   // 마킹은 이미 끝났음 — 발송 실패해도 재시도 안 함(폭격 방지).
   for (const r of claimed) {
     try {
-      await appendEnhanceReady(r.user_id, r.server_id, {
-        jobId: r.job_id,
-        fromLevel: r.from_level,
-        targetLevel: r.target_level,
-        itemKo: r.item_ko,
-        slot: r.slot,
-        slotLane: r.slot_lane,
-      });
+      await appendEnhanceReady(
+        r.user_id,
+        r.server_id,
+        {
+          jobId: r.job_id,
+          fromLevel: r.from_level,
+          targetLevel: r.target_level,
+          itemKo: r.item_ko,
+          slot: r.slot,
+          slotLane: r.slot_lane,
+        },
+        r.push_mode,
+      );
       sent++;
     } catch (e) {
       failed++;
