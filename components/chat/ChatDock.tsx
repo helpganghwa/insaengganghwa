@@ -345,6 +345,18 @@ export function ChatDock() {
    * seen은 "실제로 그 채널을 본 순간"에만 전진한다(아래 absorbSeen) — 닫힌 상태에서 전진시키면
    * 새 메시지를 본 적도 없이 삼켜 점이 안 켜진다.
    */
+  /** 채널 최신 id 전진 전용 병합 — 채팅 id는 단조 증가 bigint 문자열이라, 나중에 도착한
+   *  구(舊) 폴링 응답이 latestIds를 되돌려 "내가 방금 보낸 메시지에 노티 점"이 켜지는
+   *  경합을 막는다(2026-08-20 사용자 제보). 비숫자 id(sys 라인)는 종전대로 채택. */
+  const newerId = (cur: string | null, next: string | null): string | null => {
+    if (!next) return cur;
+    if (!cur) return next;
+    try {
+      return BigInt(next) >= BigInt(cur) ? next : cur;
+    } catch {
+      return next;
+    }
+  };
   const recomputeDot = useCallback(() => {
     const ids = latestIdsRef.current;
     const s = seenRef.current;
@@ -605,9 +617,9 @@ export function ChatDock() {
         // 미니바 노티점 — 채널별 최신 id는 탭과 무관하게 항상 흡수한다.
         if (data.latestIds) {
           latestIdsRef.current = {
-            all: data.latestIds.all ?? null,
-            guild: data.latestIds.guild ?? latestIdsRef.current.guild,
-            whisper: data.latestIds.whisper ?? null,
+            all: newerId(latestIdsRef.current.all, data.latestIds.all ?? null),
+            guild: newerId(latestIdsRef.current.guild, data.latestIds.guild ?? null),
+            whisper: newerId(latestIdsRef.current.whisper, data.latestIds.whisper ?? null),
           };
           absorbSeen();
         }
@@ -761,7 +773,7 @@ export function ChatDock() {
         // 서버 latestIds.guild와 같은 id 공간(chat_messages.id) — 폴링을 기다리지 않고 앞당긴다.
         // 열림 중에도 갱신해야 아래 routeIncoming의 확인 처리(setSeen)와 짝이 맞는다. 안 맞으면
         // 길드 탭을 보고 있는데 점이 켜졌다가 다음 폴링에 꺼지는 깜빡임이 난다.
-        latestIdsRef.current = { ...latestIdsRef.current, guild: m.id };
+        latestIdsRef.current = { ...latestIdsRef.current, guild: newerId(latestIdsRef.current.guild, m.id) };
         // 열림 경로는 기존 그대로(보고 있으면 화면+확인 처리, 아니면 버퍼). 닫힘 중에도 같은
         // 함수를 태워 버퍼를 채운다 — 도크를 열 때 옛 목록이 먼저 보였다가 교체되는 플래시를
         // 없애기 위해서다(applyNew 주석과 같은 이유, 전체 채널의 닫힘 경로도 동일). 닫힘 중엔
@@ -807,7 +819,7 @@ export function ChatDock() {
         if (m.fromUserId === meRef.current) return;
         if (!consumed) setWhisperUnread((n) => (n ?? 0) + 1);
         if (m.toUserId !== meRef.current) return;
-        latestIdsRef.current = { ...latestIdsRef.current, whisper: m.id };
+        latestIdsRef.current = { ...latestIdsRef.current, whisper: newerId(latestIdsRef.current.whisper, m.id) };
         // 소비했으면 그 자리에서 확인 처리(점 억제) — 채널 탭의 routeIncoming과 같은 규칙.
         if (consumed) setSeen('whisper', m.id);
         else recomputeDot();
@@ -1283,6 +1295,12 @@ export function ChatDock() {
           const rest = b.messages.filter((m) => m.id !== tempId);
           b.messages = rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
         }
+        // 내 전송분을 채널 최신으로도 마킹 — 구 폴링 응답이 늦게 도착해도 newerId 후퇴 방지와
+        // 함께 latestIds=seen이 유지되어 내 메시지로는 노티 점이 켜지지 않는다.
+        latestIdsRef.current = {
+          ...latestIdsRef.current,
+          [sentTab]: newerId(latestIdsRef.current[sentTab], r.message.id),
+        };
         setSeen(sentTab, r.message.id);
       })
       .catch(() => {
