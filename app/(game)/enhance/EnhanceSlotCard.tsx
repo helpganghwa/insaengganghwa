@@ -11,6 +11,7 @@ import {
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { Ticker } from '@/components/Ticker';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -223,7 +224,9 @@ export function EnhanceSlotCard({
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { applyEnhanceDelta } = useHeaderStatsActions();
   const [pending, startTransition] = useTransition();
-  const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
+  // 매초 리렌더 제거(2026-08-20 감사 B) — 초 단위 표시(게이지·확률·남은시간·단축비용·경과)는
+  // 전부 Ticker 자식으로 격리하고, 카드 본체는 '최대 확률 도달' 전이(timeUp) 1회만 리렌더한다.
+  const [timeUp, setTimeUp] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0); // 확인 카운트다운(초). 0=비활성/만료.
   const [flash, setFlash] = useState<Outcome | null>(null);
@@ -261,11 +264,19 @@ export function EnhanceSlotCard({
   const [autoStopLeft, setAutoStopLeft] = useState(0);
   const [cancelOpen, setCancelOpen] = useState(false); // 취소(강화 해제) 확인 모달
 
+  // timeUp 전이 — 매초 폴링 대신 완료 시각에 맞춘 setTimeout 1개(잡 교체 시 리셋).
   useEffect(() => {
-    setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+    const end = new Date(activeJob.completeAtIso).getTime();
+    const left = end - Date.now();
+    if (left <= 0) {
+      setTimeUp(true);
+      return;
+    }
+    setTimeUp(false);
+    // +50ms 여유 — 타이머 조기 발화로 ready 직전에 멈추는 경계 제거.
+    const t = setTimeout(() => setTimeUp(true), left + 50);
+    return () => clearTimeout(t);
+  }, [activeJob.completeAtIso]);
   useEffect(() => {
     setOptimisticDone(false);
     setConfirm(false);
@@ -352,24 +363,23 @@ export function EnhanceSlotCard({
   const endMs = new Date(activeJob.completeAtIso).getTime();
   const totalMs = Math.max(1, endMs - startMs);
   const done = optimisticDone;
-  const elapsedMs = done ? totalMs : Math.max(0, Math.min(totalMs, nowMs - startMs));
-  const progress = done ? 1 : nowMs === 0 ? 0 : elapsedMs / totalMs;
-  const remainingMs = done ? 0 : Math.max(0, endMs - nowMs);
-  const ready = progress >= 1;
+  const ready = timeUp || done;
 
   // 4분기 outcome 확률(BALANCE §1.2) — 사이클 내 ℓ 기준. down은 시간 무관 고정.
-  // UI '성공'은 +1·+2 모두 포함(success + mega) — 시간 꽉 차면 '최대'(baseRate)와 일치.
   // 하락률은 **잡의 스냅샷 우선**(resolve와 동일한 폴백) — 코드 상수를 재계산하면 하락률을
   // 조정한 순간 진행 중 잡의 표시가 판정과 달라진다(진행 중 큐 소급 금지, CLAUDE §6.3).
   // 폴백은 스냅샷 이전 레거시 잡(down_rate_bp null) 방어라 제거 금지.
+  // 시간 의존 계산(경과·확률·남은시간·단축비용)은 Ticker 자식 렌더 시점에 수행 — 카드 본체 무관.
   const fixedDownBp = activeJob.downRateBp ?? downRateBp(activeJob.fromLevel);
-  const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, elapsedMs, totalMs);
-  const effBp = probs.success + probs.mega;
   const isRiskZone = fixedDownBp > 0;
-  const downPct = probs.down / 100;
-
-  const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
-  const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
+  const calcElapsed = (now: number) => (done ? totalMs : Math.max(0, Math.min(totalMs, now - startMs)));
+  const calcRemaining = (now: number) => (done ? 0 : Math.max(0, endMs - now));
+  // 단축 비용 — 표시(Ticker)와 실행(doReduce)이 같은 계산을 시점만 달리해 쓴다. 서버가
+  // min(요청, 잔여시간 환산 최대)로 캡하므로(reduceTime.ts) 시점 오차는 초과 지불로 이어지지 않는다.
+  const calcInstantCost = (now: number) => {
+    const rem = calcRemaining(now);
+    return rem > 0 ? diamondToFinishMs(rem) : 0;
+  };
 
   // 자동 재등록된 다음 잡을 즉시 반영 — 불변 필드(장비 정체성)는 현재 카드에서 유지, 변동 필드만 교체.
   // router.refresh 도착 전이라도 게이지가 새 잡 기준(0%)으로 바로 리셋된다.
@@ -517,6 +527,9 @@ export function EnhanceSlotCard({
   };
 
   const doReduce = () => {
+    // 클릭 시점 재계산(감사 B) — 매초 state 대신 실행 순간의 실제 잔여시간 기준(더 정확).
+    const instantCost = calcInstantCost(Date.now());
+    const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
     // 등록 확정 전(낙관적 잡)엔 보석 단축 불가 — 임시 id가 서버 BigInt로 새어 크래시하던 것 방지.
     if (pending || !instantCost || !canAfford || activeJob.jobId.startsWith('optimistic-')) return;
     // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
@@ -741,7 +754,7 @@ export function EnhanceSlotCard({
         role="button"
         data-tut={confirm ? 'enhance-confirm' : 'enhance-attempt'}
         tabIndex={pending ? -1 : 0}
-        aria-label={`강화 시도 — 현재 성공률 ${(effBp / 100).toFixed(1)}%`}
+        aria-label="강화 시도"
         onClick={() => {
           if (pending || flash || otherActionConfirm || autoRunning || autoResult) return; // 컨펌·자동 진행/결과 중엔 시도 영역 잠금
           // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
@@ -761,13 +774,20 @@ export function EnhanceSlotCard({
       >
         {/* 진행 게이지 — 하단 바. 색: <50% 빨강 / 50~<100% 주황 / 100% 초록.
             transition은 페이지 진입·새 잡 도착 직후엔 끔(즉시 표시), 이후 매초 채워질
-            때 · 보석 단축 시만 켬(animGauge). */}
-        <div
-          className={`absolute bottom-[-1px] left-0 h-1 ${
-            animGauge ? 'transition-[width] duration-700' : ''
-          } ${ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'}`}
-          style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
-        />
+            때 · 보석 단축 시만 켬(animGauge). Ticker 격리 — 매초 이 바만 다시 그린다. */}
+        <Ticker>
+          {(now) => {
+            const progress = ready ? 1 : calcElapsed(now) / totalMs;
+            return (
+              <div
+                className={`absolute bottom-[-1px] left-0 h-1 ${
+                  animGauge ? 'transition-[width] duration-700' : ''
+                } ${ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'}`}
+                style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
+              />
+            );
+          }}
+        </Ticker>
         <div className="relative z-10 flex h-full items-center gap-3 px-3">
           <span
             className={`relative flex h-16 w-16 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border bg-black/40 ${
@@ -799,56 +819,76 @@ export function EnhanceSlotCard({
                 ✦{activeJob.transcendLevel}
               </span>
             </div>
-            {/* 2줄: 확률 — 짧으니 잘릴 일 없음. */}
-            <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">
-              <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
-              <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(1)}%</span>
-              {isRiskZone ? (
-                <span className="text-amber-300">하락 {downPct.toFixed(1)}%</span>
-              ) : null}
-            </div>
-            {/* 3줄: 강화 단계(+N→+M) + 시간 안내. 강화 단계는 진한 톤으로 강조. */}
-            <div className="flex gap-2 text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
-              <span className="font-semibold text-zinc-200">
-                +{activeJob.fromLevel}→+{activeJob.targetLevel}
-              </span>
-              <span>
-                {attempting
-                  ? '처리 중…'
-                  : ready
-                    ? '강화 가능 (최대 확률)'
-                    : `최대 확률까지 ${fmtRemaining(remainingMs)}`}
-              </span>
-            </div>
+            {/* 2·3줄: 확률·남은시간 — 매초 갱신 지점이라 Ticker 격리(카드 본체 리렌더 없음). */}
+            <Ticker>
+              {(now) => {
+                const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, calcElapsed(now), totalMs);
+                const effBp = probs.success + probs.mega;
+                const remainingMs = calcRemaining(now);
+                return (
+                  <>
+                    <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">
+                      <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
+                      <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(1)}%</span>
+                      {isRiskZone ? (
+                        <span className="text-amber-300">하락 {(probs.down / 100).toFixed(1)}%</span>
+                      ) : null}
+                    </div>
+                    <div className="flex gap-2 text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
+                      <span className="font-semibold text-zinc-200">
+                        +{activeJob.fromLevel}→+{activeJob.targetLevel}
+                      </span>
+                      <span>
+                        {attempting
+                          ? '처리 중…'
+                          : ready
+                            ? '강화 가능 (최대 확률)'
+                            : `최대 확률까지 ${fmtRemaining(remainingMs)}`}
+                      </span>
+                    </div>
+                  </>
+                );
+              }}
+            </Ticker>
           </div>
           <div className="flex shrink-0 flex-col gap-1">
-            <button
-              type="button"
-              disabled={
-                pending ||
-                !instantCost ||
-                !canAfford ||
-                confirm ||
-                attempting ||
-                !!flash ||
-                autoRunning
-              }
-              onClick={(e) => {
-                e.stopPropagation();
-                doReduce();
+            {/* 단축 버튼 — 비용(💎N)이 매초 줄어드는 표시 지점이라 Ticker 격리. 실행 비용은
+                doReduce가 클릭 시점에 재계산(서버 캡 有)하므로 표시값과 무관하게 안전. */}
+            <Ticker>
+              {(now) => {
+                const instantCost = calcInstantCost(now);
+                const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
+                return (
+                  <button
+                    type="button"
+                    disabled={
+                      pending ||
+                      !instantCost ||
+                      !canAfford ||
+                      confirm ||
+                      attempting ||
+                      !!flash ||
+                      autoRunning
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      doReduce();
+                    }}
+                    className={`h-6 w-[54px] rounded-md border text-[9px] font-bold tabular-nums disabled:opacity-40 ${
+                      confirmReduce
+                        ? 'animate-pulse border-amber-300 bg-amber-500 text-white'
+                        : 'border-zinc-600 bg-zinc-800/60 text-amber-200'
+                    }`}
+                  >
+                    {confirmReduce
+                      ? `확인 ${confirmReduceLeft}s`
+                      : instantCost
+                        ? `💎${instantCost}`
+                        : '완료'}
+                  </button>
+                );
               }}
-              className={`h-6 w-[54px] rounded-md border text-[9px] font-bold tabular-nums disabled:opacity-40 ${
-                confirmReduce
-                  ? 'animate-pulse border-amber-300 bg-amber-500 text-white'
-                  : 'border-zinc-600 bg-zinc-800/60 text-amber-200'
-              }`}
-            >
-              {confirmReduce
-                ? `확인 ${confirmReduceLeft}s`
-                : instantCost
-                  ? `💎${instantCost}`
-                  : '완료'}
-            </button>
+            </Ticker>
             {/* 자동 — 강조 없이 단축 버튼과 동일 UI(사용자 피드백 2). */}
             <button
               type="button"
@@ -963,7 +1003,8 @@ export function EnhanceSlotCard({
                 )}
               </span>
               <span className="text-[8.5px] text-zinc-400 tabular-nums">
-                시작 +{autoStats.startLv} · {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
+                시작 +{autoStats.startLv} ·{' '}
+                <Ticker>{(now) => fmtDuration(Math.max(0, now - autoStats.startMs))}</Ticker>
               </span>
             </div>
             {/* 우: 조건·결과 칩 */}
