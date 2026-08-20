@@ -847,13 +847,27 @@ export function ChatDock() {
   }, [myGuild]);
 
   // 비활성 탭 선적재 — 길드 소속이 확인되면 길드 버퍼를 미리 채워 첫 전환도 즉시.
+  // ⚠ 정규화 응답(users/messages) 조립 필수(배포 전 검수 검출) — 조립 없이 담으면 첫 전환에
+  //   닉네임·아바타 빈 행이 노출되고 멘션 자동완성이 undefined.startsWith로 크래시한다.
   useEffect(() => {
     if (!myGuild || bufRef.current.guild.messages.length > 0) return;
     void fetch('/api/chat/recent?limit=50&channel=guild&lite=1', { cache: 'no-store' })
-      .then(async (r) => (r.ok ? ((await r.json()) as { messages?: ChatMessageDto[] }) : null))
+      .then(async (r) =>
+        r.ok
+          ? ((await r.json()) as {
+              messages?: Omit<ChatMessageDto, keyof ChatUserMeta>[];
+              users?: Record<string, ChatUserMeta>;
+            })
+          : null,
+      )
       .then((d) => {
         if (!d?.messages || tabRef.current === 'guild') return;
-        bufRef.current.guild = { messages: d.messages };
+        bufRef.current.guild = {
+          messages: d.messages.map((m) => ({
+            ...(d.users?.[m.userId] ?? EMPTY_CHAT_USER_META),
+            ...m,
+          })),
+        };
       })
       .catch(() => {
         /* 무시 — 전환 시 재조회 */

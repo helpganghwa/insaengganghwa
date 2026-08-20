@@ -73,13 +73,16 @@ export const listPublishedAnnouncementSummaries = unstable_cache(
   { revalidate: 30, tags: ['announcements'] },
 );
 
-/** 상세 본문 lazy 조회 — 발행된 공지만. 요약(listPublishedAnnouncementSummaries)과 짝. */
+/** 상세 본문 lazy 조회 — 발행된 공지만. 요약(listPublishedAnnouncementSummaries)과 짝.
+ * ⚠ id는 string으로 받는다 — unstable_cache가 인자를 JSON.stringify로 키화하는데
+ * BigInt는 직렬화 불가로 **항상 throw**한다(배포 전 검수에서 검출). 캐스팅은 내부에서. */
 export const getPublishedAnnouncementBody = unstable_cache(
-  async (id: bigint): Promise<string | null> => {
+  async (id: string): Promise<string | null> => {
+    if (!/^\d{1,18}$/.test(id)) return null;
     const [r] = await db
       .select({ body: announcements.body, published: announcements.published })
       .from(announcements)
-      .where(eq(announcements.id, id))
+      .where(eq(announcements.id, BigInt(id)))
       .limit(1);
     return r?.published ? r.body : null;
   },

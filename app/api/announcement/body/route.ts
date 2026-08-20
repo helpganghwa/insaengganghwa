@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const idRaw = new URL(req.url).searchParams.get('id') ?? '';
   if (!/^\d{1,18}$/.test(idRaw)) return new Response('bad request', { status: 400 });
-  const body = await getPublishedAnnouncementBody(BigInt(idRaw)).catch(() => null);
+  // string 그대로 전달 — BigInt 인자는 unstable_cache 키 직렬화에서 throw(함수 주석 참조).
+  const body = await getPublishedAnnouncementBody(idRaw).catch(() => null);
   if (body === null) return new Response('not found', { status: 404 });
   return Response.json(
     { body },
