@@ -9,7 +9,21 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
-import type { ChatMessageDto } from '@/lib/game/chat/service';
+import type { ChatMessageDto, ChatUserMeta } from '@/lib/game/chat/service';
+
+/** 정규화 응답 조립용 빈 메타 — 시스템 라인/미등재 유저(종전 sys DTO의 빈 값과 동일). */
+const EMPTY_CHAT_USER_META: ChatUserMeta = {
+  nickname: '',
+  publicCode: null,
+  avatar: null,
+  faceBox: null,
+  guildName: null,
+  guildEmblemUrl: null,
+  executorZone: null,
+  executorZoneRegion: null,
+  repTitle: null,
+  isMeleeChampion: false,
+};
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
 
@@ -566,7 +580,9 @@ export function ChatDock() {
           channel?: string;
           me?: string;
           mode?: 'full' | 'delta';
-          messages: ChatMessageDto[];
+          /** 정규화 응답(감사 C) — 발신자 메타는 users에 1회, messages는 참조만. */
+          messages: (Omit<ChatMessageDto, keyof ChatUserMeta>)[];
+          users?: Record<string, ChatUserMeta>;
           meNickname?: string | null;
           mePublicCode?: string | null;
           guild?: { id: string; name: string } | null;
@@ -579,6 +595,12 @@ export function ChatDock() {
           setEnabled(false);
           return null;
         }
+        // 조립 — 이후 모든 코드(버퍼·라우팅·렌더)는 종전 그대로 완전한 DTO를 본다.
+        // 시스템 라인·미등재 유저는 빈 메타(종전 sys DTO와 동일 형태).
+        const assembled: ChatMessageDto[] = (data.messages ?? []).map((m) => ({
+          ...(data.users?.[m.userId] ?? EMPTY_CHAT_USER_META),
+          ...m,
+        }));
         setEnabled(true);
         // 미니바 노티점 — 채널별 최신 id는 탭과 무관하게 항상 흡수한다.
         if (data.latestIds) {
@@ -626,9 +648,9 @@ export function ChatDock() {
               : next,
           );
         }
-        const mine = data.messages.filter((m) => m.userId === data.me).pop();
+        const mine = assembled.filter((m) => m.userId === data.me).pop();
         if (mine) myFieldsRef.current = mine;
-        return { mode: data.mode ?? 'full', messages: data.messages };
+        return { mode: data.mode ?? 'full', messages: assembled };
       } catch {
         return null;
       }

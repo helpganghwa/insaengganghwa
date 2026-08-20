@@ -7,7 +7,14 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
-import { getChatBlocks, getMyGuildChannel, getRecentChat, isChatEnabled } from '@/lib/game/chat/service';
+import {
+  getChatBlocks,
+  getMyGuildChannel,
+  getRecentChat,
+  isChatEnabled,
+  type ChatMessageDto,
+  type ChatUserMeta,
+} from '@/lib/game/chat/service';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { chatTopic, whisperTopic } from '@/lib/game/chat/realtime';
 
@@ -89,6 +96,29 @@ export async function GET(req: Request) {
     return { mode: 'delta' as const, messages: msgs.slice(i + 1) };
   };
 
+  // 응답 정규화(감사 C 오버패칭) — 행마다 발신자 메타 10필드를 인라인하면 200건에서
+  // 85~90%가 중복이다(활성 발언자 10~20명). users(발신자별 1회) + messages(참조)로
+  // 분리해 전송 −50~60%. 클라 조립은 fetchRecent 단일 지점(ChatDock)이 담당.
+  // 시스템 라인(sys/sysGuild)은 유저 필드가 원래 빈 값이라 users에 싣지 않는다.
+  const normalize = (msgs: ChatMessageDto[]) => {
+    const users: Record<string, ChatUserMeta> = {};
+    const slim = msgs.map((m) => {
+      const {
+        nickname, publicCode, avatar, faceBox, guildName, guildEmblemUrl,
+        executorZone, executorZoneRegion, repTitle, isMeleeChampion,
+        ...rest
+      } = m;
+      if (m.userId && !m.sys && !m.sysGuild && !users[m.userId]) {
+        users[m.userId] = {
+          nickname, publicCode, avatar, faceBox, guildName, guildEmblemUrl,
+          executorZone, executorZoneRegion, repTitle, isMeleeChampion,
+        };
+      }
+      return rest;
+    });
+    return { users, messages: slim };
+  };
+
   // 폴링(열림 포함)은 전부 lite — 차단목록·닉네임·토픽은 열기/탭 전환의 전체 조회가 담당.
   // 월드 채널 lite + 캐시 히트 = DB 0쿼리(길드는 소속 검증 1쿼리만 — 보안상 생략 불가).
   if (url.searchParams.get('lite') === '1') {
@@ -99,7 +129,7 @@ export async function GET(req: Request) {
       latestChannelIds(userId, serverId, url.searchParams.get('gid')),
     ]);
     const { mode, messages } = slice(full);
-    return NextResponse.json({ mode, messages, latestIds });
+    return NextResponse.json({ mode, ...normalize(messages as ChatMessageDto[]), latestIds });
   }
 
   const [blocked, [meChar], guild] = await Promise.all([
@@ -139,7 +169,7 @@ export async function GET(req: Request) {
     mePublicCode: meChar?.publicCode ?? null,
     guild: guild ? { id: guild.guildId, name: guild.guildName } : null,
     mode,
-    messages,
+    ...normalize(messages as ChatMessageDto[]),
     blocked,
     latestIds,
   });

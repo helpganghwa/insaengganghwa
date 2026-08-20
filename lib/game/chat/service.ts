@@ -26,6 +26,21 @@ import { broadcastChat } from './realtime';
 
 export type ChatMention = { n: string; c: string | null };
 
+/** 발신자 표시 메타 — /api/chat/recent 정규화 응답의 users 값(감사 C). DTO에서 분리. */
+export type ChatUserMeta = Pick<
+  ChatMessageDto,
+  | 'nickname'
+  | 'publicCode'
+  | 'avatar'
+  | 'faceBox'
+  | 'guildName'
+  | 'guildEmblemUrl'
+  | 'executorZone'
+  | 'executorZoneRegion'
+  | 'repTitle'
+  | 'isMeleeChampion'
+>;
+
 export type ChatMessageDto = {
   id: string;
   userId: string;
