@@ -79,15 +79,10 @@ export default function Doc() {
 
       <H2 id="rank">랭킹</H2>
       <UL>
-        <LI>랭킹 지표는 최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 다섯 가지.</LI>
-        <LI>최고 강화: 보유 장비 가운데 가장 높은 강화 수치 하나.</LI>
-        <LI>합산 강화: 보유 장비의 강화 수치를 전부 더한 값.</LI>
-        <LI>전투력: 총 전투력.</LI>
         <LI>
-          <DocLink slug="raid" hash="phase">레이드</DocLink>: 페이즈를 돌파한 레이드에 공격으로
-          참여한 횟수.
+          랭킹 지표는 최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 다섯 가지. 지표별 기준은{' '}
+          <DocLink slug="ranking" hash="metric">랭킹</DocLink> 문서에 있다.
         </LI>
-        <LI>대난투: 대난투 포인트.</LI>
         <LI>
           순위표는{' '}
           서버마다 따로.

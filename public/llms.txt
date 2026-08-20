@@ -25,6 +25,13 @@
   - [점령전](https://ganghwa.app/wiki/conquest): 하루 한 번 벌어지는 구역 다툼과 집행관, 세금, 방치로 잃는 땅.
   - [아바타와 프로필](https://ganghwa.app/wiki/avatar): 아바타를 만드는 절차와 비용, 검토·환불 규칙, 대표 설정.
   - [칭호](https://ganghwa.app/wiki/titles): 칭호의 발견과 활성 판정, 대표 칭호를 다는 규칙.
+  - [출석](https://ganghwa.app/wiki/checkin): 하루 한 칸씩 받는 28칸 보상, 연속 접속 없이도 이어진다.
+  - [다이아](https://ganghwa.app/wiki/diamond): 서버별 재화의 획득처와 사용처, 시간 단축 환산.
+  - [대난투](https://ganghwa.app/wiki/melee): 매일 아침 전원 자동 참가 난투, 등수 보상과 포인트.
+  - [랭킹](https://ganghwa.app/wiki/ranking): 다섯 지표 서버별 순위와 갱신 방식.
+  - [도감과 해방](https://ganghwa.app/wiki/codex): 수집 현황과 아이템별 강화 순위, 해방 표시.
+  - [친구와 초대](https://ganghwa.app/wiki/friends): 친구 추가·상한, 초대 링크 보상과 귀속 조건.
+  - [상점](https://ganghwa.app/wiki/shop): 무료 수령 주기, 주머니·패키지·충전, 본인인증과 환불.
 - [자주 묻는 질문](https://ganghwa.app/faq): 게임 소개·강화 규칙·전투력 계산·계정 이전 등 12문항
 - [확률 공시](https://ganghwa.app/probability): 강화·초월·보급 전 확률과 수식 (게임산업법 준수 공시)
 - [상품 안내](https://ganghwa.app/pricing): 유료 상품 구성과 가격

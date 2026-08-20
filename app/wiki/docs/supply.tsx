@@ -71,20 +71,23 @@ export default function Doc() {
       <H2 id="sources">획득처</H2>
       <UL>
         <LI>일일 보급: 매일 자정에 우편함으로 지급되며, 수령해야 들어온다.</LI>
-        <LI>출석: 날짜 칸 가운데 상자 획득 날.</LI>
+        <LI>
+          <DocLink slug="checkin">출석</DocLink>: 날짜 칸 가운데 상자 획득 날.
+        </LI>
         <LI>도전 과제: 달성 보상 중 상자가 지급되는 항목.</LI>
         <LI>
-          상점: 기간별 무료 수령,{' '}
-          다이아로 사는 주머니, 유료 상품.
+          <DocLink slug="shop">상점</DocLink>: 기간별 무료 수령, 다이아로 사는 주머니, 유료 상품.
         </LI>
         <LI>
           <DocLink slug="raid">레이드</DocLink>: 페이즈를 돌파할 때마다 참여자 전원에게 지급된다.
         </LI>
         <LI>
-          대난투: 순위 보상.
+          <DocLink slug="melee">대난투</DocLink>: 순위 보상.
         </LI>
         <LI>성장패스: 초월 패스의 단계 보상.</LI>
-        <LI>친구 초대와 기록 달성 우편.</LI>
+        <LI>
+          <DocLink slug="friends">친구 초대</DocLink>와 기록 달성 우편.
+        </LI>
       </UL>
 
       <FnList

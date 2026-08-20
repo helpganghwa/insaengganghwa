@@ -1,16 +1,23 @@
 import type { ComponentType } from 'react';
 
 import * as about from './docs/about';
+import * as checkin from './docs/checkin';
+import * as diamond from './docs/diamond';
 import * as enhance from './docs/enhance';
 import * as transcend from './docs/transcend';
 import * as supply from './docs/supply';
 import * as equipment from './docs/equipment';
 import * as combatPower from './docs/combat-power';
+import * as codex from './docs/codex';
 import * as raid from './docs/raid';
+import * as melee from './docs/melee';
+import * as ranking from './docs/ranking';
 import * as guild from './docs/guild';
 import * as guildRoles from './docs/guild-roles';
 import * as conquest from './docs/conquest';
+import * as friends from './docs/friends';
 import * as avatar from './docs/avatar';
+import * as shop from './docs/shop';
 import * as titles from './docs/titles';
 
 /** 좌측 목록의 묶음 순서 — 배열 순서가 곧 화면 순서다. */
@@ -43,17 +50,24 @@ export type WikiDocLink = Pick<WikiDocMeta, 'slug' | 'cat' | 'title' | 'summary'
 // 문서가 조용히 누락돼도 빌드가 알려주지 않는다.
 const MODULES = [
   about,
+  checkin,
+  diamond,
   enhance,
   transcend,
   supply,
   equipment,
   combatPower,
+  codex,
   raid,
+  melee,
+  ranking,
   guild,
   guildRoles,
   conquest,
-  avatar,
+  friends,
   titles,
+  avatar,
+  shop,
 ];
 
 export const WIKI_DOCS: readonly WikiDoc[] = MODULES.map((m) => ({

@@ -11,8 +11,15 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
+import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
 import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
-import { paidProduct, shopGrant, productPeriod, FIRST_SPECIAL, PREMIUM } from '@/lib/game/shop/catalog';
+import {
+  paidProduct,
+  shopGrant,
+  productPeriod,
+  FIRST_SPECIAL,
+  PREMIUM,
+} from '@/lib/game/shop/catalog';
 import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
@@ -43,8 +50,8 @@ function bpOrderName(type: BattlePassType, segmentIndex: number): string {
   return `성장 ${type === 'enhance' ? '강화' : '초월'} 패스 ${segmentIndex + 1}구간`;
 }
 
-/** 미성년 월 결제 한도(원) — REGULATORY. 본인인증으로 미성년 확정된 계정만 적용. */
-const MINOR_MONTHLY_LIMIT_KRW = 70_000;
+// 미성년 월 결제 한도(원) — REGULATORY. 값은 lib/legal/content.ts(순수 모듈)에 두고
+// 검증과 이용자 안내가 같은 상수를 읽는다.
 // 단일 주문 금액 상한(감사 F3-pay) — 비정상 큰 segmentIndex로 enhance 가격식 2^c가 폭주한 주문을
 // 차단하는 sanity 캡. 도달 가능 구간(enhance seg9=5.1M, transcend는 선형)은 전부 통과, 그 위는
 // 도달에 수십년 + 비현실적 금액이라 무해. (실 IAP 단일 결제가 이 값 넘을 일 없음)
@@ -72,8 +79,7 @@ export class PurchaseError extends Error {
  */
 export function portoneConfig(): { storeId: string; channelKey: string } | null {
   const storeId = process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
-  const channelKey =
-    process.env.PORTONE_CHANNEL_KEY || process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+  const channelKey = process.env.PORTONE_CHANNEL_KEY || process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
   if (!storeId || !channelKey) return null;
   return { storeId, channelKey };
 }
@@ -240,7 +246,9 @@ export async function createOrder(
     .limit(1);
   const baseName = ch?.nickname?.trim() || '구매자';
   const customerName = ch?.code ? `${baseName}(${ch.code})` : baseName;
-  const customerEmail = reviewer ? 'help@ganghwa.app' : ((await getSessionEmail()) ?? 'help@ganghwa.app');
+  const customerEmail = reviewer
+    ? 'help@ganghwa.app'
+    : ((await getSessionEmail()) ?? 'help@ganghwa.app');
   // 본인인증 번호(0143) 우선 — 미인증·심사 계정은 사업자 연락처(카드 승인에 대조되지 않음,
   // PG발 연락이 회사로 오는 것은 1인 운영 CS 일원화로 수용).
   const customerPhone = (!reviewer && ch?.verifiedPhone) || BIZ_PHONE;
@@ -303,7 +311,8 @@ export async function completePurchase(
     .limit(1);
   if (!order) return { ok: false, code: 'ORDER_NOT_FOUND' };
   // 소유권 게이트(클라 경로만) — 불일치면 존재 비노출 위해 ORDER_NOT_FOUND. PG조회·알림 이전에 차단.
-  if (expectedUserId && order.userId !== expectedUserId) return { ok: false, code: 'ORDER_NOT_FOUND' };
+  if (expectedUserId && order.userId !== expectedUserId)
+    return { ok: false, code: 'ORDER_NOT_FOUND' };
   if (order.status === 'paid') return { ok: true, already: true };
 
   // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
@@ -355,9 +364,7 @@ export async function completePurchase(
       // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
       // 없어 isReviewerAccount()를 못 쓰므로 user_id로 판별한다.
       const reviewer = await isReviewerUserId(order.userId);
-      const { isMinor } = reviewer
-        ? { isMinor: false }
-        : await minorStatus(order.userId, kstMonth);
+      const { isMinor } = reviewer ? { isMinor: false } : await minorStatus(order.userId, kstMonth);
       if (isMinor) {
         minorExceeded = true;
         // 지급 없이 paid — 회수 스킵 마커(0108). 없으면 환불 회수가 과거 다른 주문의
@@ -375,7 +382,13 @@ export async function completePurchase(
       // 결제 완료 시점에 생겨, 주문 생성~완료 사이가 통째로 열린 창이다), 마커가 없으면
       // 그 주문을 환불할 때 reclaimBpSegment가 **다른 주문이 산 구간과 수령한 보상**을
       // 회수한다(2026-07-07에 상점 경로만 고치고 배틀패스 분기를 빠뜨린 결함).
-      const seg = await applyBpSegmentPurchase(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+      const seg = await applyBpSegmentPurchase(
+        tx,
+        order.userId,
+        order.serverId,
+        bp.type,
+        bp.segmentIndex,
+      );
       if (seg === null) {
         dupSkipped = true;
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));

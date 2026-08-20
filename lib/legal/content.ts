@@ -28,6 +28,13 @@ export const GAME_RATING = {
   contentInfo: [{ label: '폭력성', icon: '/rating/violence-v3.png' }],
 } as const;
 
+/**
+ * 미성년 월 결제 한도(원) — REGULATORY. 본인인증으로 미성년이 확정된 계정에만 적용한다.
+ * 결제 검증(lib/payment/purchase.ts)과 이용자 안내(위키 상점 문서)가 같은 값을 읽어야 하므로
+ * 순수 모듈인 여기에 둔다 — 안내 쪽에 숫자를 다시 적으면 한도가 바뀔 때 표시만 옛 값으로 남는다.
+ */
+export const MINOR_MONTHLY_LIMIT_KRW = 70_000;
+
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {

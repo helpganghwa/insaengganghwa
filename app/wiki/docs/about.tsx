@@ -59,7 +59,7 @@ export default function Doc() {
         <LI>
           다음은 도전 과제 {fmtInt(CHALLENGES.length)}종.
           <Fn n={3} /> 보상으로{' '}
-          다이아와{' '}
+          <DocLink slug="diamond">다이아</DocLink>와{' '}
           <DocLink slug="supply" hash="boxes">
             보급 상자
           </DocLink>
@@ -182,6 +182,48 @@ export default function Doc() {
               <DocLink slug="avatar">아바타와 프로필</DocLink>
             </>,
             '착용 장비를 반영한 아바타를 생성한다.',
+          ],
+          [
+            <>
+              <DocLink slug="melee">대난투</DocLink>
+            </>,
+            '매일 아침 전원이 자동 참가하는 난투. 등수대로 보상이 지급된다.',
+          ],
+          [
+            <>
+              <DocLink slug="checkin">출석</DocLink>
+            </>,
+            '하루 한 칸씩 보상을 받는다.',
+          ],
+          [
+            <>
+              <DocLink slug="diamond">다이아</DocLink>
+            </>,
+            '유료 재화. 얻는 곳과 쓰는 곳.',
+          ],
+          [
+            <>
+              <DocLink slug="shop">상점</DocLink>
+            </>,
+            '무료 수령과 상자 구매, 다이아 충전.',
+          ],
+          [
+            <>
+              <DocLink slug="ranking">랭킹</DocLink>
+            </>,
+            '다섯 지표로 서버 안에서 순위를 겨룬다.',
+          ],
+          [
+            <>
+              <DocLink slug="codex">도감과 해방</DocLink>
+            </>,
+            '모은 장비와 아이템별 강화 순위.',
+          ],
+          [
+            <>
+              <DocLink slug="friends">친구와 초대</DocLink>
+            </>,
+            '친구 추가와 초대 보상.',
           ],
         ]}
       />
