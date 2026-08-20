@@ -23,8 +23,9 @@ export const TRANSCEND_TUNING = {
   animPeriodMs: 2400,
   /** 1주기당 통과 횟수 — 1회만(반복 사이 텀). */
   shineSpeed: 1.0,
-  /** 프레임 간격 ms (애니 캔버스 소수라 ~50fps 여유 — 두꺼운 띠도 매끄럽게) */
-  fpsIntervalMs: 20,
+  /** 프레임 간격 ms — ~30fps(감사 B: 50fps→30fps). 펄스 주기 2400ms·광택 스윕이 완만해
+   * 육안 무차이, 캔버스 다수(도감·인벤) 동시 재생 시 CPU만 절반. */
+  fpsIntervalMs: 33,
   /** II(2단계)에서 코너 문양을 얼마나 키워 겹치는가 (기본 프레임 1.32× 대비) */
   cornerScale: 2.3,
   /** 리컬러 화이트포인트 — 밝은 등급 washout 방지용 캡 (I / II) */

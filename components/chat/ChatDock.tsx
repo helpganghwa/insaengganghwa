@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { usePathname, useRouter } from 'next/navigation';
@@ -1296,20 +1296,25 @@ export function ChatDock() {
   };
 
   // 멘션 자동완성 — 입력 끝의 @접두에 대해 최근 발언자 닉 후보(최대 5).
+  // useMemo(감사 B) — 종전엔 글자마다 messages 전체 reverse+filter가 재실행됐다.
+  // @ 미입력 시 regex 1회 후 조기 반환이라 input을 deps에 둬도 저렴하다.
   const mentionToken = /@([^\s@]{0,12})$/.exec(input);
-  const mentionCands = mentionToken
-    ? [
-        ...new Set([
-          // 최근 발언자(즉시) 우선, 서버 전체 검색(디바운스) 결과로 보강.
-          ...[...messages]
-            .reverse()
-            .filter((m) => !m.sys && m.userId && m.userId !== me)
-            .map((m) => m.nickname)
-            .filter((n) => n.startsWith(mentionToken[1] ?? '')),
-          ...searchCands,
-        ]),
-      ].slice(0, 5)
-    : [];
+  const mentionCands = useMemo(() => {
+    const token = /@([^\s@]{0,12})$/.exec(input);
+    if (!token) return [] as string[];
+    const prefix = token[1] ?? '';
+    return [
+      ...new Set([
+        // 최근 발언자(즉시) 우선, 서버 전체 검색(디바운스) 결과로 보강.
+        ...[...messages]
+          .reverse()
+          .filter((m) => !m.sys && m.userId && m.userId !== me)
+          .map((m) => m.nickname)
+          .filter((n) => n.startsWith(prefix)),
+        ...searchCands,
+      ]),
+    ].slice(0, 5);
+  }, [input, messages, me, searchCands]);
   const applyMention = (nick: string) => {
     if (!mentionToken) return;
     setInput(input.slice(0, mentionToken.index) + '@' + nick + ' ');
@@ -1326,9 +1331,25 @@ export function ChatDock() {
     });
   };
 
+  // 목록 파생 useMemo(감사 B) — 종전엔 매 렌더(글자 입력 포함)마다 150건 filter +
+  // 행당 chatDateLabel(Date 4개)이 재실행됐다. 참조가 안정되면 ChatRow memo도 실효.
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => !blocked.has(m.userId)),
+    [messages, blocked],
+  );
+  const listRows = useMemo(
+    () =>
+      visibleMessages.map((m, i) => {
+        const prev = visibleMessages[i - 1];
+        const date = chatDateLabel(m.createdAt, prev?.createdAt);
+        // 날짜 구분선을 사이에 두면 연속 발언 묶음도 끊는다(prevMsg 생략) — 종전 인라인 규칙 유지.
+        return { m, prev: date ? undefined : prev, date };
+      }),
+    [visibleMessages],
+  );
+
   if (!visible) return null;
 
-  const visibleMessages = messages.filter((m) => !blocked.has(m.userId));
   const visibleLatest = latest && !blocked.has(latest.userId) ? latest : null;
 
   return (
@@ -1501,24 +1522,20 @@ export function ChatDock() {
               {/* 날짜 구분선 — 귓속말 스레드와 같은 컴포넌트·같은 규칙(시스템 라인도 날짜 계산에
                   포함). 구분선을 사이에 두면 연속 발언 묶음도 끊는다(prevMsg 생략). */}
               {(tab !== 'guild' || myGuild) &&
-                visibleMessages.map((m, i) => {
-                  const prev = visibleMessages[i - 1];
-                  const date = chatDateLabel(m.createdAt, prev?.createdAt);
-                  return (
-                    <Fragment key={m.id}>
-                      {date ? <ChatDateDivider label={date} /> : null}
-                      <ChatRow
-                        m={m}
-                        prevMsg={date ? undefined : prev}
-                        me={me}
-                        meCode={meCode}
-                        serverId={sid ?? 1}
-                        onProfile={openProfile}
-                        onReport={onReport}
-                      />
-                    </Fragment>
-                  );
-                })}
+                listRows.map(({ m, prev, date }) => (
+                  <Fragment key={m.id}>
+                    {date ? <ChatDateDivider label={date} /> : null}
+                    <ChatRow
+                      m={m}
+                      prevMsg={prev}
+                      me={me}
+                      meCode={meCode}
+                      serverId={sid ?? 1}
+                      onProfile={openProfile}
+                      onReport={onReport}
+                    />
+                  </Fragment>
+                ))}
             </div>
 
             {unseenBelow ? (

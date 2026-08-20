@@ -363,7 +363,12 @@ function TranscendCanvas({
     const showShine = rank === 1;
     const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
     const showRadiant = rankColor != null;
-    const dynamic = animate && (showShine || showRadiant);
+    // prefers-reduced-motion(감사 B) — 다른 애니 4곳과 동일 가드. 펄스/광택/프레임 재생을
+    // 멈추고 정적 1프레임(draw(0.2) — 후광 고정 알파 포함)으로 폴백.
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const dynamic = animate && !reduceMotion && (showShine || showRadiant);
     // 해방 아이템 + 애니 보유 → 본체를 애니 프레임으로 재생(후광/광택/프레임은 idle 기반 유지).
     const useAnim = dynamic && rank != null && hasItemAnim(code);
     const nFrames = useAnim ? itemAnimFrames(code) : 0;
@@ -422,6 +427,7 @@ function TranscendCanvas({
     let brightCv: HTMLCanvasElement | null = null; // glare용 밝아진 sprite(챔피언)
     let frontCv: HTMLCanvasElement | null = null; // 프레임 + 사방 별
     let radiantCv: HTMLCanvasElement | null = null; // 챔피언 발광(블러, 1회)
+    const radiantFrameCache = new Map<number, HTMLCanvasElement>(); // 애니 프레임별 후광(≤9)
     const [shineCv, shineX] = mkCanvas(); // 광택 스윕 재사용 스크래치
 
     const buildStatic = (atlasImg: HTMLImageElement) => {
@@ -503,7 +509,17 @@ function TranscendCanvas({
           curFrame = fi;
           animSpriteX.clearRect(0, 0, FS, FS);
           animSpriteX.drawImage(stripImg, fi * animCell, 0, animCell, animCell, SP, SP, SW, SW);
-          if (showRadiant && rankColor) radiantCv = makeRadiant(animSpriteCv, rankColor);
+          if (showRadiant && rankColor) {
+            // 프레임별 후광 캐시(감사 B) — 종전엔 프레임 전환마다 3겹 shadowBlur 재합성.
+            // 프레임 수(≤9) 고정이라 첫 사이클 이후 재합성 0. makeRadiant는 호출 시점의
+            // 스크래치 내용을 복사하므로 캐시 안전.
+            const cached = radiantFrameCache.get(fi);
+            if (cached) radiantCv = cached;
+            else {
+              radiantCv = makeRadiant(animSpriteCv, rankColor);
+              radiantFrameCache.set(fi, radiantCv);
+            }
+          }
         }
         baseSprite = animSpriteCv;
       }
