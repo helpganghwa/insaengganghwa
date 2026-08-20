@@ -969,10 +969,23 @@ export function ChatDock() {
     return () => clearTimeout(t);
   }, [input]);
 
+  // full 조회 스로틀(감사 C) — 개폐·탭 전환 연타가 200건 full 조회를 채널당 3초에 1회로
+  // 제한한다. 종전엔 전체↔길드 교대 연타 ~12초에 리밋(30/분)을 소진해 429가 정상 15초
+  // 폴링까지 차단, 수신이 최대 1분 정지했다. 스킵돼도 버퍼가 즉시 표시를 담당하고(UX 손실 0)
+  // 정합은 15초 증분 폴링이 보정한다. 증분 폴링·초기 1건 로드는 스로틀 대상 아님.
+  const fullFetchAtRef = useRef<Record<'all' | 'guild', number>>({ all: 0, guild: 0 });
+  const throttledFullFetch = useCallback((channelTab: 'all' | 'guild'): boolean => {
+    const now = Date.now();
+    if (now - fullFetchAtRef.current[channelTab] < 3000) return false;
+    fullFetchAtRef.current[channelTab] = now;
+    return true;
+  }, []);
+
   const openPanel = () => {
     setOpen(true);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
+    if (!throttledFullFetch(tabRef.current)) return;
     void fetchRecent(PAGE).then((r) => {
       if (r) {
         // fetch 반영 렌더도 페인트 전 바닥 고정 — 단, 응답이 오는 사이 유저가 위로 스크롤해
@@ -1005,6 +1018,7 @@ export function ChatDock() {
     setTab(next);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
+    if (!throttledFullFetch(next)) return; // 연타 스킵 — 버퍼 즉시 표시 + 폴링 보정(위 주석)
     void fetchRecent(limitOverride ?? (open ? PAGE : 1), next).then((r) => {
       if (!r) return;
       // 탭 전환 응답 — 그 사이 위로 스크롤해 읽는 중이면 바닥 고정을 생략(스크롤 강탈 방지).
