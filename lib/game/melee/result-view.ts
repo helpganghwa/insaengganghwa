@@ -133,11 +133,18 @@ export async function buildMeleeResultView(
     guildName: guildFor(r.uid)?.name ?? null,
     guildEmblemUrl: guildFor(r.uid)?.emblemUrl ?? null,
   }));
-  // 전투 재생 — 전원 그 회차 스냅샷 아바타(현재 아바타가 아니라 당시 모습). 챔피언도 동일.
-  const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
-  const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
-  // 닉네임 밑 길드명·문양(점령전 재생과 동일). 스냅샷 우선, 미소속/조회실패는 null.
-  const rosterGuilds = finale.roster.map((r) => guildFor(r.userId));
+  // 전투 재생 로스터(감사 C 오버패칭) — 종전엔 아바타·코드·길드가 roster와 평행한 별도
+  // 배열 3종으로 나가 참가자 정보가 4곳에 흩어졌다. 요소에 병합해 1곳으로, userId(uuid)는
+  // 클라가 쓰지 않아 전송에서 제거(events가 인덱스 참조라 식별 불필요).
+  // 아바타는 그 회차 스냅샷 우선(현재 모습 아님 — 과거 회차 고정), 길드도 스냅샷만 신뢰.
+  const replayRoster = finale.roster.map((r, i) => ({
+    nickname: r.nickname,
+    cp: r.cp,
+    rank: r.rank,
+    avatar: avatarOf.get(r.userId) ?? dft(i),
+    code: codeOf.get(r.userId) ?? null,
+    guild: guildFor(r.userId),
+  }));
 
   const [meRow] = await withTimeout(
     db
@@ -191,9 +198,6 @@ export async function buildMeleeResultView(
     myPublicCode: meRow?.code ?? null,
     myCp: meRow ? Number(meRow.cp) : 0,
     totalRounds: battle.totalRounds,
-    finale,
-    rosterAvatars,
-    rosterCodes,
-    rosterGuilds,
+    finale: { roster: replayRoster, events: finale.events },
   };
 }

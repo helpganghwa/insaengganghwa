@@ -59,12 +59,19 @@ export type MeleeResultView = {
   /** 내 공개 코드 — 내 전투 리플레이에서 내 아바타 → 프로필 상세. */
   myPublicCode: string | null;
   myCp: number;
-  finale: MeleeFinale;
-  rosterAvatars: (string | null)[];
-  /** finale 로스터 로컬 인덱스별 공개 코드(아바타 클릭 링크용). */
-  rosterCodes: (string | null)[];
-  /** finale 로스터 로컬 인덱스별 길드(닉네임 밑 표시) — 미소속 null. */
-  rosterGuilds: ({ name: string; emblemUrl: string | null } | null)[];
+  /** 리플레이 로스터 — 서버가 아바타·코드·길드를 요소에 병합해 내린다(감사 C: 평행 배열
+   *  3종 폐지). events는 로스터 인덱스 참조라 userId는 전송하지 않는다. */
+  finale: {
+    roster: {
+      nickname: string;
+      cp: number;
+      rank: number;
+      avatar: string | null;
+      code: string | null;
+      guild: { name: string; emblemUrl: string | null } | null;
+    }[];
+    events: MeleeFinale['events'];
+  };
 };
 
 type Fight = {
@@ -714,9 +721,6 @@ export function MeleeResult({
     myAvatar,
     myPublicCode,
     myCp,
-    rosterAvatars,
-    rosterCodes,
-    rosterGuilds,
   } = view;
   /** publicCode로 프로필 상세 경로. 없으면 null(링크 없음 — 닉네임 폴백 금지). */
   const hrefOf = (handle: string | null | undefined) =>
@@ -798,15 +802,15 @@ export function MeleeResult({
       fight: {
         round,
         atkName: atk,
-        atkAvatar: rosterAvatars[e[0]] ?? null,
-        atkHref: hrefOf(rosterCodes[e[0]]),
-        atkGuild: rosterGuilds[e[0]] ?? null,
+        atkAvatar: roster[e[0]]?.avatar ?? null,
+        atkHref: hrefOf(roster[e[0]]?.code),
+        atkGuild: roster[e[0]]?.guild ?? null,
         atkHp,
         atkMaxHp,
         tgtName: tgt,
-        tgtAvatar: rosterAvatars[e[1]] ?? null,
-        tgtHref: hrefOf(rosterCodes[e[1]]),
-        tgtGuild: rosterGuilds[e[1]] ?? null,
+        tgtAvatar: roster[e[1]]?.avatar ?? null,
+        tgtHref: hrefOf(roster[e[1]]?.code),
+        tgtGuild: roster[e[1]]?.guild ?? null,
         dmg: e[2],
         hpAfter: e[3],
         tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
@@ -824,12 +828,7 @@ export function MeleeResult({
   // 폴백 — finale 윈도 밖(초대규모 절단 시 내 라운드가 윈도 밖)이면 per-user myEvents로 복원.
   //  닉네임→로스터 메타(아바타·코드)로 상대 프로필 복원 + 내 HP 추적(공격 시 잔여 HP 표시).
   const byNick = new Map<string, { avatar: string | null; code: string | null }>();
-  finale.roster.forEach((r, i) =>
-    byNick.set(r.nickname, {
-      avatar: rosterAvatars[i] ?? null,
-      code: rosterCodes[i] ?? null,
-    }),
-  );
+  finale.roster.forEach((r) => byNick.set(r.nickname, { avatar: r.avatar, code: r.code }));
   const myMax = myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
   // 객체 프로퍼티 변이 — 클로저 변수 재할당은 react-hooks 규칙이 useMemo 안이라도 막는다.
   const myHpBox = { v: myMax ?? 0 };
