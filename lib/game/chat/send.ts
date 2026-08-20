@@ -5,7 +5,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { actionBlock } from '@/lib/game/action-gate';
-import { rateLimited } from '@/lib/ratelimit';
+import { dualWindowLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
@@ -60,15 +60,15 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   }
   // 독립 검증 병렬화 — 순차 5왕복 → 1왕복 시간. 킬스위치/뮤트 탈락 시 레이트 토큰이
   // 소모되는 부작용은 무해(어차피 전송 불가 상태)로 수용.
-  const [enabled, [p], cooldownHit, burstHit, duplicate, myChar] = await Promise.all([
+  const [enabled, [p], sendGate, duplicate, myChar] = await Promise.all([
     isChatEnabled(),
     db
       .select({ mutedUntil: profiles.chatMutedUntil })
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
-    rateLimited(userId, 'chatSend'),
-    rateLimited(userId, 'chatBurst'),
+    // 쿨다운(5s)+도배(60s) 이중 창을 EVAL 1회로(감사 C: Upstash 커맨드 2→1). 한도 동일.
+    dualWindowLimited(userId, 'chatSend', 'chatBurst'),
     isDuplicateOfLast(userId, serverId, body, guildId),
     // 내 캐릭터 존재 확인 — 같은 왕복에 묶어 지연을 늘리지 않는다.
     db
@@ -88,8 +88,8 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
     const left = formatMuteRemaining(p.mutedUntil.getTime() - Date.now());
     return { status: 'error', message: `채팅 이용이 제한된 상태입니다. (해제까지 약 ${left})` };
   }
-  if (cooldownHit) return { status: 'error', message: '잠시 후 다시 보낼 수 있어요. (5초)' };
-  if (burstHit) return { status: 'error', message: '메시지를 너무 자주 보내고 있어요. 잠시 쉬어주세요.' };
+  if (sendGate === 'cooldown') return { status: 'error', message: '잠시 후 다시 보낼 수 있어요. (5초)' };
+  if (sendGate === 'burst') return { status: 'error', message: '메시지를 너무 자주 보내고 있어요. 잠시 쉬어주세요.' };
   if (duplicate) return { status: 'error', message: '같은 내용을 연속으로 보낼 수 없어요.' };
 
   // @멘션(0128) — 실제 유저 닉과 일치하는 것만 유효. 저장(표시 시 @ 제거·강조) + 푸시(최대 3명).

@@ -141,6 +141,68 @@ let warned = false;
 let lastRedisWarnAt = 0;
 const REDIS_WARN_INTERVAL_MS = 60_000;
 
+/** WINDOWS의 '5 s' 형 창 표기 → ms. */
+function windowMs(win: string): number {
+  return Number(win.replace(/\s*s$/, '')) * 1000;
+}
+
+/**
+ * 이중 창 단일 판정(감사 C) — 쿨다운·도배 두 버킷을 EVAL 1회로 원자 검사한다.
+ * 종전엔 채팅 전송마다 rateLimited 2회 = Upstash 커맨드 2배(무료 한도 경계 DAU ~800).
+ * zset 정밀 슬라이딩 창이며 한도 의미(limit/window)는 WINDOWS 상수를 그대로 쓴다.
+ * **둘 다 통과할 때만 토큰을 기록** — 종전(독립 소모: 쿨다운 탈락에도 burst 토큰 소모)보다
+ * 판정이 더 정확해질 뿐 느슨해지지 않는다. Redis 부재·장애는 기존과 동일하게 인메모리
+ * 두 창으로 강등(제한 유지).
+ */
+const DUAL_WINDOW_LUA = `
+local now = tonumber(ARGV[1])
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - tonumber(ARGV[2]))
+redis.call('ZREMRANGEBYSCORE', KEYS[2], 0, now - tonumber(ARGV[4]))
+if redis.call('ZCARD', KEYS[1]) >= tonumber(ARGV[3]) then return 1 end
+if redis.call('ZCARD', KEYS[2]) >= tonumber(ARGV[5]) then return 2 end
+redis.call('ZADD', KEYS[1], now, ARGV[6])
+redis.call('ZADD', KEYS[2], now, ARGV[6])
+redis.call('PEXPIRE', KEYS[1], tonumber(ARGV[2]))
+redis.call('PEXPIRE', KEYS[2], tonumber(ARGV[4]))
+return 0
+`;
+
+export async function dualWindowLimited(
+  userId: string,
+  cooldownBucket: RlBucket,
+  burstBucket: RlBucket,
+): Promise<'ok' | 'cooldown' | 'burst'> {
+  const [cdLimit, cdWin] = WINDOWS[cooldownBucket];
+  const [bLimit, bWin] = WINDOWS[burstBucket];
+  const fallback = async (): Promise<'ok' | 'cooldown' | 'burst'> => {
+    if (memLimited(userId, cooldownBucket)) return 'cooldown';
+    if (memLimited(userId, burstBucket)) return 'burst';
+    return 'ok';
+  };
+  if (!redis) {
+    if (!warned) {
+      warned = true;
+      console.warn('[ratelimit] Upstash env 미설정 — 인메모리 창으로 강등. .env 주입 필요');
+    }
+    return fallback();
+  }
+  try {
+    const r = (await redis.eval(
+      DUAL_WINDOW_LUA,
+      [`rl:${cooldownBucket}:{${userId}}`, `rl:${burstBucket}:{${userId}}`],
+      [Date.now(), windowMs(cdWin), cdLimit, windowMs(bWin), bLimit, crypto.randomUUID()],
+    )) as number;
+    return r === 1 ? 'cooldown' : r === 2 ? 'burst' : 'ok';
+  } catch (e) {
+    const now = Date.now();
+    if (now - lastRedisWarnAt >= REDIS_WARN_INTERVAL_MS) {
+      lastRedisWarnAt = now;
+      console.warn('[ratelimit] Redis 장애 — 인메모리 창 강등', (e as Error).message);
+    }
+    return fallback();
+  }
+}
+
 /** true = 차단(한도 초과). env 미설정·Redis 장애 시 인메모리 창으로 강등(제한은 유지). */
 export async function rateLimited(userId: string, bucket: RlBucket): Promise<boolean> {
   // 고빈도 게임 버킷 — 인메모리 창(Upstash 커맨드 미소비, 네트워크 왕복 0).
