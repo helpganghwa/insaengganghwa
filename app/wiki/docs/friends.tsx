@@ -3,7 +3,7 @@ import { INVITE_BOX_PER_REFERRAL, INVITE_DIAMOND_PER_REFERRAL } from '@/lib/game
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, P, UL } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'friends',
@@ -91,11 +91,6 @@ export default function Doc() {
           '친구 초대 알림을 켜 두면 초대한 사람이 가입하는 즉시 알림으로 알려 준다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="raid">레이드</DocLink>,{' '}
-        <DocLink slug="guild">길드</DocLink>,{' '}
-        <DocLink slug="avatar">아바타와 프로필</DocLink>.
-      </P>
     </>
   );
 }

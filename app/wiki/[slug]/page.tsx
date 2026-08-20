@@ -83,10 +83,7 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
         <span>{meta.title}</span>
       </nav>
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd(meta) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(meta) }} />
       {/* 부제(summary)는 검색·목록·OG에만 쓰고 본문 머리에는 표시하지 않는다(사용자 확정). */}
       <h1 style={SERIF} className="mt-1.5 text-[25px] font-bold">
         {meta.title}
@@ -95,6 +92,41 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
       <article className="mt-6">
         <Body />
       </article>
+
+      <PrevNext slug={meta.slug} />
     </WikiShell>
+  );
+}
+
+/** 문서 하단 이전/다음 — 순서는 registry 등록 순(= 좌측 목록 순). */
+function PrevNext({ slug }: { slug: string }) {
+  const i = WIKI_DOCS.findIndex((d) => d.meta.slug === slug);
+  const prev = i > 0 ? WIKI_DOCS[i - 1]!.meta : null;
+  const next = i < WIKI_DOCS.length - 1 ? WIKI_DOCS[i + 1]!.meta : null;
+  return (
+    <nav aria-label="이전/다음 문서" className={`mt-10 flex gap-2 border-t pt-4 ${PAPER.border}`}>
+      {prev ? (
+        <Link
+          href={`/wiki/${prev.slug}`}
+          className={`flex-1 rounded-md border px-3.5 py-2.5 ${PAPER.card} ${PAPER.hover}`}
+        >
+          <span className={`block text-[11px] ${PAPER.muted}`}>‹ 이전</span>
+          <span className="mt-0.5 block text-[13.5px] font-semibold break-keep">{prev.title}</span>
+        </Link>
+      ) : (
+        <div className="flex-1" />
+      )}
+      {next ? (
+        <Link
+          href={`/wiki/${next.slug}`}
+          className={`flex-1 rounded-md border px-3.5 py-2.5 text-right ${PAPER.card} ${PAPER.hover}`}
+        >
+          <span className={`block text-[11px] ${PAPER.muted}`}>다음 ›</span>
+          <span className="mt-0.5 block text-[13.5px] font-semibold break-keep">{next.title}</span>
+        </Link>
+      ) : (
+        <div className="flex-1" />
+      )}
+    </nav>
   );
 }

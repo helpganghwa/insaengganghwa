@@ -14,7 +14,13 @@ import { WikiSearch } from './WikiSearch';
 
 // 루트(app/layout.tsx)는 게임 셸 전제로 고정 `width=390`을 내보낸다. 위키는 PC 3단 문서
 // 화면이라 그 스케일이 맞지 않아 여기서 되돌린다(가장 깊은 세그먼트의 viewport가 이긴다).
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+// themeColor도 위키 종이 배경(PAPER.page)에 맞춰 재정의 — 루트의 다크 값이 브라우저
+// 크롬(주소창)에 남으면 종이 화면 위가 검게 뜬다.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#f5f0e6',
+};
 
 // 문서는 상수·정적 데이터만 읽는다 — 요청 경로에 DB도 동적 API도 없다.
 export const dynamic = 'force-static';
@@ -50,7 +56,6 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
       </header>
 
       {children}
-
     </div>
   );
 }

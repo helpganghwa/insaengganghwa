@@ -128,10 +128,6 @@ export default function Doc() {
           '길드장이 다시 접속하면 경고는 지워지고 처음부터 다시 카운트된다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="guild">길드 기본</DocLink>,{' '}
-        <DocLink slug="conquest">점령전</DocLink>.
-      </P>
     </>
   );
 }

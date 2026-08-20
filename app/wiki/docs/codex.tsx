@@ -1,5 +1,5 @@
 import type { WikiDocMeta } from '../registry';
-import { DocLink, Fn, FnList, H2, LI, P, UL } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'codex',
@@ -65,10 +65,6 @@ export default function Doc() {
       </UL>
 
       <FnList notes={['정지된 계정은 순위에서 빠진다.']} />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="supply">보급</DocLink>,{' '}
-        <DocLink slug="enhance">강화</DocLink>, <DocLink slug="titles">칭호</DocLink>.
-      </P>
     </>
   );
 }

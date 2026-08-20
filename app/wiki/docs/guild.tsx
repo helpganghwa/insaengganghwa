@@ -17,7 +17,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'guild',
@@ -162,10 +162,6 @@ export default function Doc() {
           '혼자 남은 길드장이 탈퇴하면 그대로 해산된다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="guild-roles">길드 권한</DocLink>,{' '}
-        <DocLink slug="conquest">점령전</DocLink>, <DocLink slug="raid">레이드</DocLink>.
-      </P>
     </>
   );
 }

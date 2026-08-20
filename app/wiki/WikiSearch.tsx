@@ -73,52 +73,64 @@ export function WikiSearch({ docs }: { docs: readonly WikiDocLink[] }) {
 
       {/* body 포털 — 헤더의 backdrop-blur가 fixed의 기준을 자기 박스로 바꿔
           dim이 뷰포트를 못 덮는다(2026-08-19 스테이징 실측). 포털이면 무관하다. */}
-      {mounted && open ? (
-        createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
-          onClick={close}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="문서 검색"
-            // 포털이 body(게임 다크 테마) 아래라 글자색을 명시하지 않으면 흰 글씨가 상속된다.
-            className={`w-full max-w-[520px] overflow-hidden rounded-lg border text-[#2a251e] shadow-xl ${PAPER.card}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              ref={inputRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="문서 검색"
-              className={`w-full border-b bg-transparent px-4 py-3 text-[14px] outline-none ${PAPER.border}`}
-            />
-            {hits.length === 0 ? (
-              <p className={`px-4 py-6 text-center text-[13px] ${PAPER.muted}`}>결과가 없다.</p>
-            ) : (
-              <ul className="max-h-[52vh] overflow-y-auto py-1">
-                {hits.map((d) => (
-                  <li key={d.slug}>
-                    <Link
-                      href={`/wiki/${d.slug}`}
-                      onClick={close}
-                      className={`block px-4 py-2.5 ${PAPER.hover}`}
-                    >
-                      <span className="text-[13.5px] font-semibold">{d.title}</span>
-                      <span className={`ml-2 text-[11px] ${PAPER.muted}`}>{d.cat}</span>
-                      <span className={`mt-0.5 block text-[12px] leading-snug ${PAPER.muted}`}>
-                        {d.summary}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>,
-        document.body)
-      ) : null}
+      {mounted && open
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
+              onClick={close}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="문서 검색"
+                // 포털이 body(게임 다크 테마) 아래라 글자색을 명시하지 않으면 흰 글씨가 상속된다.
+                className={`w-full max-w-[520px] overflow-hidden rounded-lg border text-[#2a251e] shadow-xl ${PAPER.card}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* iOS 포커스 자동 확대 방지 — 폰트는 16px로 두고 transform으로 14px처럼 보이게
+                (components/ui/ZoomSafeField와 같은 기법: 필드를 1/scale로 키워 절대배치 후 축소). */}
+                <div className={`relative h-[46px] overflow-hidden border-b ${PAPER.border}`}>
+                  <input
+                    ref={inputRef}
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="문서 검색"
+                    style={{
+                      fontSize: 16,
+                      width: '114.286%',
+                      height: '114.286%',
+                      transform: 'scale(0.875)',
+                      transformOrigin: '0 0',
+                    }}
+                    className="absolute top-0 left-0 bg-transparent px-4 outline-none"
+                  />
+                </div>
+                {hits.length === 0 ? (
+                  <p className={`px-4 py-6 text-center text-[13px] ${PAPER.muted}`}>결과가 없다.</p>
+                ) : (
+                  <ul className="max-h-[52vh] overflow-y-auto py-1">
+                    {hits.map((d) => (
+                      <li key={d.slug}>
+                        <Link
+                          href={`/wiki/${d.slug}`}
+                          onClick={close}
+                          className={`block px-4 py-2.5 ${PAPER.hover}`}
+                        >
+                          <span className="text-[13.5px] font-semibold">{d.title}</span>
+                          <span className={`ml-2 text-[11px] ${PAPER.muted}`}>{d.cat}</span>
+                          <span className={`mt-0.5 block text-[12px] leading-snug ${PAPER.muted}`}>
+                            {d.summary}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

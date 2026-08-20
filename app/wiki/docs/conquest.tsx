@@ -16,7 +16,7 @@ import { REGION_META } from '@/lib/game/guild/region-meta';
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt, fmtMs } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Note, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'conquest',
@@ -198,11 +198,6 @@ export default function Doc() {
           '전체 역사는 큰 사건이 없는 날은 기록되지 않는다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="guild">길드 기본</DocLink>,{' '}
-        <DocLink slug="guild-roles">길드 권한</DocLink>,{' '}
-        <DocLink slug="combat-power">전투력</DocLink>.
-      </P>
     </>
   );
 }

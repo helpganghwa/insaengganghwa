@@ -1,5 +1,5 @@
 import type { WikiDocMeta } from '../registry';
-import { DocLink, Ext, Fn, FnList, H2, LI, P, UL } from '../ui';
+import { DocLink, Ext, Fn, FnList, H2, LI, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'equipment',
@@ -76,10 +76,6 @@ export default function Doc() {
           </>,
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="supply">보급</DocLink>,{' '}
-        <DocLink slug="combat-power">전투력</DocLink>, <DocLink slug="avatar">아바타</DocLink>.
-      </P>
     </>
   );
 }

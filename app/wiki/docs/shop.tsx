@@ -3,7 +3,7 @@ import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-re
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'shop',
@@ -115,10 +115,6 @@ export default function Doc() {
         <LI>이용 중에는 배너에 남은 일수가 뜨고, 기간이 끝나면 다시 살 수 있다.</LI>
       </UL>
 
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="diamond">다이아</DocLink>,{' '}
-        <DocLink slug="supply">보급</DocLink>, <DocLink slug="avatar">아바타와 프로필</DocLink>.
-      </P>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import type { WikiDocMeta } from '../registry';
-import { DocLink, Fn, FnList, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'ranking',
@@ -95,10 +95,6 @@ export default function Doc() {
           '카드를 좌우로 넘기면 지표가 바뀌고, 제목을 누르면 그 지표의 랭킹 화면으로 넘어간다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="combat-power">전투력</DocLink>,{' '}
-        <DocLink slug="melee">대난투</DocLink>, <DocLink slug="raid">레이드</DocLink>.
-      </P>
     </>
   );
 }

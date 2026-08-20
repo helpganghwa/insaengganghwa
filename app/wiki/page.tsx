@@ -28,17 +28,15 @@ export default function WikiIndexPage() {
               <h2 style={SERIF} className={`border-b pb-1.5 text-[17px] font-bold ${PAPER.border}`}>
                 {cat}
               </h2>
-              <ul className="mt-3 grid gap-2 md:grid-cols-2">
+              {/* 제목만 노출(설명 제거, 사용자 확정) — 카드가 짧아져 모바일에서도 2열. */}
+              <ul className="mt-3 grid grid-cols-2 gap-2">
                 {docs.map((d) => (
                   <li key={d.slug}>
                     <Link
                       href={`/wiki/${d.slug}`}
                       className={`block h-full rounded-md border px-3.5 py-3 ${PAPER.card} ${PAPER.hover}`}
                     >
-                      <span className="text-[14px] font-semibold">{d.title}</span>
-                      <span className={`mt-1 block text-[12.5px] leading-relaxed ${PAPER.muted}`}>
-                        {d.summary}
-                      </span>
+                      <span className="text-[14px] font-semibold break-keep">{d.title}</span>
                     </Link>
                   </li>
                 ))}

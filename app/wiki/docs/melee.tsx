@@ -8,7 +8,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Note, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'melee',
@@ -130,10 +130,6 @@ export default function Doc() {
       </UL>
 
       <FnList notes={['장비가 하나도 없어 전투력이 0이면 그 회차 참가자에서 제외된다.']} />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="combat-power">전투력</DocLink>,{' '}
-        <DocLink slug="ranking">랭킹</DocLink>, <DocLink slug="supply">보급</DocLink>.
-      </P>
     </>
   );
 }

@@ -11,7 +11,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt, fmtMs } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Note, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'enhance',
@@ -114,10 +114,6 @@ export default function Doc() {
           '화면을 열어 둔 동안만 돈다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="transcend">초월</DocLink>,{' '}
-        <DocLink slug="combat-power">전투력</DocLink>.
-      </P>
     </>
   );
 }

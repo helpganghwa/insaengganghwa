@@ -1,5 +1,5 @@
 import type { WikiDocMeta } from '../registry';
-import { DocLink, Ext, Fn, FnList, H2, LI, P, UL } from '../ui';
+import { DocLink, Ext, Fn, FnList, H2, LI, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'supply',
@@ -95,10 +95,6 @@ export default function Doc() {
           '획득한 장비와 스토리, 아이템의 강화 순위를 볼 수 있는 곳.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="transcend">초월</DocLink>,{' '}
-        <DocLink slug="equipment">장비와 장착</DocLink>.
-      </P>
     </>
   );
 }

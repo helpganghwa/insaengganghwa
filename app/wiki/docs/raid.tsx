@@ -15,7 +15,7 @@ import { RAID_BOSS_CODES } from '@/lib/game/raid/bosses';
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt, fmtMs } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Note, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'raid',
@@ -155,10 +155,6 @@ export default function Doc() {
           '레이드가 끝났어도 정산 전이면 한 칸을 차지한다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="combat-power">전투력</DocLink>,{' '}
-        <DocLink slug="supply">보급</DocLink>, <DocLink slug="guild">길드</DocLink>.
-      </P>
     </>
   );
 }

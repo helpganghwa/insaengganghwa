@@ -3,7 +3,7 @@ import { RESIDENCE_SPEEDUP_GEM_PER_MIN } from '@/lib/game/guild/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt, fmtMs } from '../fmt';
-import { DocLink, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'diamond',
@@ -110,10 +110,6 @@ export default function Doc() {
         <LI>남은 시간이 1분 이하여도 1분치를 사용한다.</LI>
       </UL>
 
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="shop">상점</DocLink>,{' '}
-        <DocLink slug="enhance">강화</DocLink>.
-      </P>
     </>
   );
 }

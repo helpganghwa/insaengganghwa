@@ -7,7 +7,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'transcend',
@@ -117,10 +117,6 @@ export default function Doc() {
           '색은 10단계 단위로 바뀌고, 같은 색 안에서도 +1~+5와 +6~+10 구간은 테두리 장식이 다르다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="supply">보급</DocLink>,{' '}
-        <DocLink slug="combat-power">전투력</DocLink>, <DocLink slug="enhance">강화</DocLink>.
-      </P>
     </>
   );
 }

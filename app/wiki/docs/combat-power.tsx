@@ -2,7 +2,7 @@ import { CYCLE_LEN, MAX_TRANSCEND, enhanceBasePower, pieceCombatPower } from '@/
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Ext, Fn, FnList, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, Ext, Fn, FnList, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'combat-power',
@@ -100,10 +100,6 @@ export default function Doc() {
           </>,
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="enhance">강화</DocLink>,{' '}
-        <DocLink slug="transcend">초월</DocLink>, <DocLink slug="equipment">장비와 장착</DocLink>.
-      </P>
     </>
   );
 }

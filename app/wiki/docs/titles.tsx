@@ -2,7 +2,7 @@ import { TITLE_DEFS } from '@/lib/game/titles/defs';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, H2, LI, P, Tbl, UL } from '../ui';
+import { DocLink, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'titles',
@@ -68,10 +68,6 @@ export default function Doc() {
         </LI>
       </UL>
 
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="avatar">아바타와 프로필</DocLink>,{' '}
-        <DocLink slug="conquest">점령전</DocLink>, <DocLink slug="enhance">강화</DocLink>.
-      </P>
     </>
   );
 }

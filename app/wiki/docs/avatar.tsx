@@ -7,7 +7,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, P, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'avatar',
@@ -104,10 +104,6 @@ export default function Doc() {
           '대표로 지정해 둔 아바타를 지우면 남은 아바타 중 가장 최근 아바타가 대표가 된다.',
         ]}
       />
-      <P>
-        같이 보면 좋은 문서: <DocLink slug="equipment">장비와 장착</DocLink>,{' '}
-        <DocLink slug="titles">칭호</DocLink>.
-      </P>
     </>
   );
 }

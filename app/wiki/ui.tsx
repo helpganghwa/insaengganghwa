@@ -92,9 +92,8 @@ export function Tbl({
                   key={ci}
                   // 짧은 값(레벨·시각·항목명)은 중간에서 꺾이면 표가 지저분해진다 — 통째로 유지.
                   className={`px-2.5 py-2 align-top leading-[1.7]${
-                    (firstColNowrap && ci === 0) ||
-                    (typeof cell === 'string' && cell.length <= 10)
-                      ? ' whitespace-nowrap'
+                    (firstColNowrap && ci === 0) || (typeof cell === 'string' && cell.length <= 10)
+                      ? 'whitespace-nowrap'
                       : ''
                   }`}
                 >
