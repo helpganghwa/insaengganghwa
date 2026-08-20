@@ -24,7 +24,8 @@ export default async function LeaderboardPage({
   if (!userId) return null;
   const initial = parse((await searchParams).tab);
   const serverId = await getActiveServerId();
-  const payloads = await getLeaderboardAllPayload(serverId, userId);
+  // 초기 탭만 100행, 나머지 20행(감사 C) — 전환 시 /api/leaderboard/top이 패칭 완료 후 채움.
+  const payloads = await getLeaderboardAllPayload(serverId, userId, initial);
 
   return (
     <LeaderboardBoard

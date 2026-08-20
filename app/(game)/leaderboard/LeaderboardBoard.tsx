@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import { GuildBadge } from '@/components/GuildBadge';
@@ -113,13 +113,37 @@ export function LeaderboardBoard({
   userId: string;
 }) {
   const [metric, setMetric] = useState<LeaderboardMetric>(initial);
-  const { top, mine } = payloads[metric];
+  // 탭 lazy(감사 C) — 초기 탭 외에는 20행 미리보기만 실려 온다. 전환 시 100행을 **패칭
+  // 완료 후 전환**(빈 목록/시프트 금지 — 2026-08-20 사용자 지시). 실패 시 20행 폴백 전환.
+  const [fullTops, setFullTops] = useState<Partial<Record<LeaderboardMetric, LeaderboardEntry[]>>>({});
+  const pendingRef = useRef(false);
+  const switchMetric = (m: LeaderboardMetric) => {
+    if (m === metric || pendingRef.current) return;
+    if (m === initial || fullTops[m]) {
+      setMetric(m);
+      return;
+    }
+    pendingRef.current = true;
+    void fetch(`/api/leaderboard/top?metric=${m}`, { cache: 'no-store' })
+      .then(async (r) => (r.ok ? ((await r.json()) as { top: LeaderboardEntry[] }) : null))
+      .then((d) => {
+        pendingRef.current = false;
+        if (d && d.top.length > 0) setFullTops((f) => ({ ...f, [m]: d.top }));
+        setMetric(m); // 실패해도 전환 — 20행 미리보기가 폴백
+      })
+      .catch(() => {
+        pendingRef.current = false;
+        setMetric(m);
+      });
+  };
+  const { top: baseTop, mine } = payloads[metric];
+  const top = fullTops[metric] ?? baseTop;
 
   return (
     <>
       <BoardHeader metric={metric} mine={mine} />
       <div className="space-y-4 px-4 pb-4">
-      <LeaderboardTabs active={metric} onChange={setMetric} />
+      <LeaderboardTabs active={metric} onChange={switchMetric} />
 
       {top.length === 0 ? (
         <section className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-10 text-center text-sm text-zinc-400">

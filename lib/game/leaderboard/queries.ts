@@ -194,9 +194,28 @@ async function loadSharedTops(serverId: number) {
   return entry;
 }
 
+/** 비활성 탭 미리 싣는 행 수(감사 C) — 전환은 /api/leaderboard/top이 100행을 채운다. */
+export const LEADERBOARD_PREVIEW = 20;
+
+// 순위·값은 지표별 원본을 유지하고 표시 정보만 덧입힌다(합집합 항목은 지표마다 rank가 다르다).
+function decorateTop(
+  top: LeaderboardEntry[],
+  byUser: Map<string, LeaderboardEntry>,
+): LeaderboardEntry[] {
+  return top.map((e) => {
+    const d = byUser.get(e.userId);
+    return d
+      ? { ...e, profileImg: d.profileImg, guildEmblemUrl: d.guildEmblemUrl, guildName: d.guildName }
+      : e;
+  });
+}
+
 export async function getLeaderboardAllPayload(
   serverId: number,
   userId: string,
+  /** 지정 시(감사 C 오버패칭) 이 지표만 100행, 나머지는 PREVIEW(20)행 — 500행 → 180행.
+   *  미지정은 종전 그대로 전 지표 100행(다른 호출처 호환). */
+  initialMetric?: LeaderboardMetric,
 ): Promise<Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>> {
   const [{ tops, byUser }, mineAll] = await Promise.all([
     loadSharedTops(serverId),
@@ -205,18 +224,24 @@ export async function getLeaderboardAllPayload(
 
   const out = {} as Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>;
   LEADERBOARD_METRICS.forEach((m, i) => {
+    const full = decorateTop(tops[i]!, byUser);
     out[m] = {
-      // 순위·값은 지표별 원본을 유지하고 표시 정보만 덧입힌다(합집합 항목은 지표마다 rank가 다르다).
-      top: tops[i].map((e) => {
-        const d = byUser.get(e.userId);
-        return d
-          ? { ...e, profileImg: d.profileImg, guildEmblemUrl: d.guildEmblemUrl, guildName: d.guildName }
-          : e;
-      }),
+      top: initialMetric == null || m === initialMetric ? full : full.slice(0, LEADERBOARD_PREVIEW),
       mine: mineAll[m],
     };
   });
   return out;
+}
+
+/** 단일 지표 Top100 — 탭 전환 lazy 조회(/api/leaderboard/top). loadSharedTops 60s 캐시 공유. */
+export async function getLeaderboardTop(
+  serverId: number,
+  metric: LeaderboardMetric,
+): Promise<LeaderboardEntry[]> {
+  const { tops, byUser } = await loadSharedTops(serverId);
+  const i = LEADERBOARD_METRICS.indexOf(metric);
+  if (i < 0) return [];
+  return decorateTop(tops[i]!, byUser);
 }
 
 /** 내 순위 5지표 — 값(내 행)과 순위(값 초과 개수+1)를 지표별 1행으로 한 번에. */
