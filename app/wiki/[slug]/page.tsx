@@ -87,10 +87,10 @@ export default async function WikiDocPage({ params }: { params: Promise<{ slug: 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(meta) }}
       />
+      {/* 부제(summary)는 검색·목록·OG에만 쓰고 본문 머리에는 표시하지 않는다(사용자 확정). */}
       <h1 style={SERIF} className="mt-1.5 text-[25px] font-bold">
         {meta.title}
       </h1>
-      <p className={`mt-1.5 text-[13px] leading-relaxed ${PAPER.muted}`}>{meta.summary}</p>
 
       <article className="mt-6">
         <Body />

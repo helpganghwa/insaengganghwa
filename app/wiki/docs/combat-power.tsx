@@ -77,7 +77,7 @@ export default function Doc() {
         <LI>
           <DocLink slug="guild">길드</DocLink>: 길드원 목록과 길드 순위에 함께 표시된다.
         </LI>
-        <LI>공개 프로필과 자랑 카드에 총 전투력이 표시된다.</LI>
+        <LI>공개 프로필과 공유 카드에 총 전투력이 표시된다.</LI>
       </UL>
 
       <H2 id="rank">랭킹</H2>

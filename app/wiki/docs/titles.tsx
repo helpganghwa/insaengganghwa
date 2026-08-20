@@ -85,7 +85,7 @@ export default function Doc() {
         <LI>목록에서 활성 칭호를 골라 장착하고, 해제도 같은 자리에서 한다.</LI>
         <LI>
           대표로 지정한 칭호는 헤더와 <DocLink slug="avatar" hash="manage">프로필</DocLink>, 채팅,
-          자랑 카드에 표시된다.
+          공유 카드에 표시된다.
           <Fn n={2} />
         </LI>
       </UL>
