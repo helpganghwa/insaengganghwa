@@ -9,7 +9,7 @@ export type {
   QueueEnhanceResult,
   EnhanceErrorCode,
 } from './queue';
-export { resolveEnhance } from './resolve';
+export { resolveEnhance, applyEnhancePostEffects } from './resolve';
 export type { ResolveInput, ResolveResult, ResolveOutcome } from './resolve';
 export { reduceEnhanceTime } from './reduceTime';
 export type { ReduceTimeInput, ReduceTimeResult } from './reduceTime';

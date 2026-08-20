@@ -15,6 +15,7 @@ import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipmen
 import {
   queueEnhance,
   resolveEnhance,
+  applyEnhancePostEffects,
   reduceEnhanceTime,
   cancelEnhance,
   swapEnhance,
@@ -127,7 +128,10 @@ export type NextJobDto = {
 export async function finalizeEnhance(jobId: string): Promise<
   | {
       status: 'success';
-      result: Omit<ResolveResult, 'jobId' | 'userEquipmentId' | 'slotLane'>;
+      result: Omit<
+        ResolveResult,
+        'jobId' | 'userEquipmentId' | 'slotLane' | 'userId' | 'serverId' | 'catalogItemId'
+      >;
       requeued: boolean;
       /** 재등록 성공 시 다음 잡 정보(없으면 null — MAX 도달 등). */
       nextJob: NextJobDto | null;
@@ -174,10 +178,14 @@ export async function finalizeEnhance(jobId: string): Promise<
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
     // 강화 직후 — 본인 새 stat 직접 fetch + 캐시 sorted bisect(토스트 after).
+    // 사후처리(applyEnhancePostEffects)보다 먼저 읽지만 본인 장비를 직접 재계산하므로 무관.
     const ranksAfter = await getMyRanksAfter(userId, serverId);
     // 묶음 알림에서 이미 처리된 잡 제거 — best-effort·응답 결과 무관이라 after()로 응답 후 실행
     // (핫패스에서 UPDATE+DELETE 2왕복 제거, 2026-07-27). 다음 cron이 빈 묶음 발송 안 함.
     after(() => cleanupPushPendingJob(userId, jobId));
+    // 리더보드·세금·도감·업적 사후처리 — 전부 best-effort(주석·cron 백스톱 동일)인데 응답을
+    // 막고 있던 최대 16왕복을 응답 뒤로(2026-08-20 감사). 이정표 유실 로깅은 함수 안에 유지.
+    after(() => applyEnhancePostEffects(r));
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
     revalidatePath('/enhance');
     revalidatePath('/inventory');
@@ -257,6 +265,8 @@ export async function autoEnhanceStepAction(
     // 묶음 알림 대기열에서 이 잡 제거(finalize와 동일) — 오래 방치돼 '준비완료' push_pending에
     // 적재된 잡을 자동이 정산한 경우, 30분 뒤 스테일 푸시가 나가는 것 방지. best-effort·응답 후.
     after(() => cleanupPushPendingJob(userId, jobId));
+    // 사후처리도 응답 뒤로 — 자동 강화는 2.6s 페이스 반복이라 스텝당 왕복 절감 효과가 가장 크다.
+    after(() => applyEnhancePostEffects(r));
 
     let nextJob: NextJobDto | null = null;
     try {

@@ -162,9 +162,6 @@ async function rankByValue(
     );
   return { value: myValue, rank: (c?.n ?? 0) + 1 };
 }
-const safeRankByValue = (m: LeaderboardMetric, sid: number, uid: string, v: number) =>
-  withTimeout(rankByValue(m, sid, uid, v), TIMEOUT_MS, `leaderboard.after.${m}`).catch(() => null);
-
 export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee'];
 
 /**
@@ -263,14 +260,11 @@ export async function getRankingTop(
 
 export type MyRanks = { max: MyRankSnap; sum: MyRankSnap; combat: MyRankSnap };
 
-/** 강화 직전 — 스냅샷의 본인 3 메트릭 순위(PK 단일행 ×3). */
+/** 강화 직전 — 스냅샷의 본인 3 메트릭 순위. myRanksAll 단일 쿼리 재사용(6왕복→1, 2026-08-20).
+ *  의미 동일: 값=내 스냅샷 행, 순위=count(value>내값)+1, 행 없으면 null. */
 export async function getMyRanks(userId: string, serverId: number): Promise<MyRanks> {
-  const [max, sum, combat] = await Promise.all([
-    safeMyRank('max', serverId, userId),
-    safeMyRank('sum', serverId, userId),
-    safeMyRank('combat', serverId, userId),
-  ]);
-  return { max, sum, combat };
+  const all = await safeMyRanksAll(serverId, userId);
+  return { max: all.max, sum: all.sum, combat: all.combat };
 }
 
 /** 프로필 상세용 — 레이드 처치·대난투 우승 본인 순위. */
@@ -300,10 +294,36 @@ export async function getMyRanksAfter(userId: string, serverId: number): Promise
   const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
   const myCombat = Math.round(combatPowerFromOwned(eqRows));
 
-  const [max, sum, combat] = await Promise.all([
-    myMax > 0 ? safeRankByValue('max', serverId, userId, myMax) : Promise.resolve(null),
-    mySum > 0 ? safeRankByValue('sum', serverId, userId, mySum) : Promise.resolve(null),
-    eqRows.length > 0 ? safeRankByValue('combat', serverId, userId, myCombat) : Promise.resolve(null),
-  ]);
-  return { max, sum, combat };
+  // 3메트릭 순위 count를 VALUES 조인 단일 쿼리로 — 병렬 3왕복→1(2026-08-20).
+  // metric은 text 컬럼이라 캐스팅 없이 (server_id, metric, value) 인덱스 count 유지.
+  const wanted: [LeaderboardMetric, number][] = [];
+  if (myMax > 0) wanted.push(['max', myMax]);
+  if (mySum > 0) wanted.push(['sum', mySum]);
+  if (eqRows.length > 0) wanted.push(['combat', myCombat]);
+  const out: MyRanks = { max: null, sum: null, combat: null };
+  if (wanted.length === 0) return out;
+
+  try {
+    const valuesSql = sql.join(
+      wanted.map(([m, v]) => sql`(${m}, ${v}::bigint)`),
+      sql`, `,
+    );
+    const rows = (await withTimeout(
+      db.execute(sql`
+        select m.metric, m.val,
+               (select count(*) from leaderboard_ranks o
+                 where o.server_id = ${serverId} and o.metric = m.metric and o.value > m.val)::int as ahead
+        from (values ${valuesSql}) as m(metric, val)
+      `),
+      TIMEOUT_MS,
+      'leaderboard.after',
+    )) as unknown as { metric: string; val: string | number; ahead: number }[];
+    for (const r of rows) {
+      const m = r.metric as 'max' | 'sum' | 'combat';
+      out[m] = { value: Number(r.val), rank: (r.ahead ?? 0) + 1 };
+    }
+  } catch {
+    // 기존 per-metric catch(null)와 동일한 강등 — 토스트만 생략된다.
+  }
+  return out;
 }

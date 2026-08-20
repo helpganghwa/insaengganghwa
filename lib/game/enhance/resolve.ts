@@ -53,6 +53,10 @@ export type ResolveResult = {
   effectiveRateBp: number;
   /** 정산된 잡의 lane(1|2) — 재등록 시 같은 lane 유지용(preferredLane). */
   slotLane: number;
+  /** 사후처리(applyEnhancePostEffects)용 — 잡 행에서 확정된 값(클라 응답에는 싣지 않는다). */
+  userId: string;
+  serverId: number;
+  catalogItemId: number;
 };
 
 function rollBp(): number {
@@ -178,75 +182,11 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
 
   // 푸시 알림은 '결과 시점' 아닌 'complete_at 도달 시점'(=최대확률)에 cron이 처리(2026-05-26).
   // resolveEnhance는 결과 트랜잭션만 담당, 알림 책임 없음.
-
-  // 리더보드 증분 갱신(v2) — 레벨이 변했을 때만(성공·메가·하락). 유저 1명 스코프 재계산.
-  // best-effort: 실패는 시간별 전체 재계산(cron)이 교정 — 강화 결과엔 영향 없음.
-  if (toLevel !== fromLevel) {
-    try {
-      await refreshEnhanceMetrics(String(job.user_id), Number(job.job_server_id));
-    } catch {
-      // cron 백스톱.
-    }
-  }
-
-  // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.
-  // **강화 원자 트랜잭션과 분리(best-effort)**: 실패해도 강화 정산엔 영향 없음.
-  if (toLevel > fromLevel) {
-    try {
-      await accrueResidenceTax(String(job.user_id), Number(job.job_server_id), toLevel);
-    } catch {
-      // 세금 누적 실패는 무시(강화 결과 보존).
-    }
-    // 해방(아이템 챔피언) 즉시 반영 — 이 아이템 파티션만 부분 재계산(보유자 소수라 저비용).
-    // 6/26 스냅샷화로 사라졌던 "내 강화 즉시 선반영" 체감 복원. 실패해도 15분 cron이 백스톱.
-    try {
-      await rebuildCodexChampionsForItem(Number(job.job_server_id), catalogItemId);
-    } catch {
-      // 부분 재계산 실패 무시(cron 백스톱).
-    }
-  }
-
-  // 강화 업적 — 개인 최초 달성 기준(초월과 동일, 2026-07-15): 새 100단위 경계가 본인 전 장비를
-  // 통틀어 처음일 때만 길드/월드 피드에 발표. 아이템별 반복(+100 재달성)은 피드 스팸이라 제거.
-  // mega(+2)로 100을 건너뛰어도 경계 통과로 포착.
-  if (
-    (outcome === 'success' || outcome === 'mega') &&
-    Math.floor(toLevel / 100) > Math.floor(fromLevel / 100)
-  ) {
-    try {
-      // 이 장비 행은 이미 toLevel로 갱신됨 — 이전 개인 최고 = (다른 장비 최고) vs fromLevel.
-      const [best] = (await db.execute(sql`
-        select coalesce(max(enhance_level), 0)::int as m
-        from user_equipment
-        where user_id = ${String(job.user_id)}::uuid and server_id = ${Number(job.job_server_id)}
-          and catalog_item_id <> ${catalogItemId}
-      `)) as unknown as { m: number }[];
-      const prevBest = Math.max(best?.m ?? 0, fromLevel);
-      if (Math.floor(toLevel / 100) > Math.floor(prevBest / 100)) {
-        const milestone = Math.floor(toLevel / 100) * 100;
-        const [ci] = (await db.execute(
-          sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
-        )) as unknown as { name: string }[];
-        await logMemberAchievement(String(job.user_id), Number(job.job_server_id), {
-          action: 'achv_enhance',
-          detail: { item: ci?.name ?? '장비', level: milestone },
-        });
-        await logWorldEvent(Number(job.job_server_id), 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
-          actorUserId: String(job.user_id),
-        });
-        // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최초 게이트가 1회 보장).
-        await sendMilestoneMail(String(job.user_id), Number(job.job_server_id), 'enhance', milestone);
-      }
-    } catch (e) {
-      // 업적 기록 실패는 강화 정산 자체를 막지 않는다. 다만 이 블록엔 이정표 보상 우편이 들어 있고
-      // 게이트(max_enhance_level)는 RT2에서 이미 갱신된 뒤라, 조용히 넘기면 보상이 영구 유실된다
-      // (2026-08-11). 수동 보상에 필요한 값을 남긴다.
-      console.error(
-        `[enhance.resolve] 업적·이정표 처리 실패 job=${jid} user=${String(job.user_id)} level=${toLevel}`,
-        e,
-      );
-    }
-  }
+  //
+  // 리더보드·세금·도감·업적 사후처리는 applyEnhancePostEffects로 분리(2026-08-20 감사) —
+  // 전부 "커밋 후 best-effort"인데 응답 경로에서 await되어 강화 수령 p95를 16왕복 키우고
+  // 있었다. 호출부(서버 액션)가 after()로 응답 뒤에 실행한다. resolveEnhance 안에서
+  // after()를 부르지 않는 이유: Vitest가 이 함수를 직접 호출한다(요청 컨텍스트 밖 throw).
 
   return {
     jobId,
@@ -256,5 +196,82 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     toLevel,
     effectiveRateBp: effBp,
     slotLane: Number(job.slot_lane),
+    userId: String(job.user_id),
+    serverId: Number(job.job_server_id),
+    catalogItemId,
   };
+}
+
+/**
+ * 강화 정산 사후처리 — 전부 best-effort(실패해도 강화 결과 불변, cron 백스톱).
+ * 호출: 서버 액션이 응답 후 after(() => applyEnhancePostEffects(r))로. 순서 의존 없음.
+ * 토스트 순위(getMyRanksAfter)는 본인 장비를 직접 재계산하므로 이 지연과 무관하다.
+ */
+export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
+  const { userId, serverId, catalogItemId, fromLevel, toLevel, outcome } = r;
+
+  // 리더보드 증분 갱신(v2) — 레벨이 변했을 때만(성공·메가·하락). 유저 1명 스코프 재계산.
+  if (toLevel !== fromLevel) {
+    try {
+      await refreshEnhanceMetrics(userId, serverId);
+    } catch {
+      // cron 백스톱.
+    }
+  }
+
+  // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.
+  if (toLevel > fromLevel) {
+    try {
+      await accrueResidenceTax(userId, serverId, toLevel);
+    } catch {
+      // 세금 누적 실패는 무시(강화 결과 보존).
+    }
+    // 해방(아이템 챔피언) 즉시 반영 — 이 아이템 파티션만 부분 재계산(보유자 소수라 저비용).
+    try {
+      await rebuildCodexChampionsForItem(serverId, catalogItemId);
+    } catch {
+      // 부분 재계산 실패 무시(cron 백스톱).
+    }
+  }
+
+  // 강화 업적 — 개인 최초 달성 기준(초월과 동일, 2026-07-15): 새 100단위 경계가 본인 전 장비를
+  // 통틀어 처음일 때만 길드/월드 피드에 발표. mega(+2)로 100을 건너뛰어도 경계 통과로 포착.
+  if (
+    (outcome === 'success' || outcome === 'mega') &&
+    Math.floor(toLevel / 100) > Math.floor(fromLevel / 100)
+  ) {
+    try {
+      // 이 장비 행은 이미 toLevel로 갱신됨 — 이전 개인 최고 = (다른 장비 최고) vs fromLevel.
+      const [best] = (await db.execute(sql`
+        select coalesce(max(enhance_level), 0)::int as m
+        from user_equipment
+        where user_id = ${userId}::uuid and server_id = ${serverId}
+          and catalog_item_id <> ${catalogItemId}
+      `)) as unknown as { m: number }[];
+      const prevBest = Math.max(best?.m ?? 0, fromLevel);
+      if (Math.floor(toLevel / 100) > Math.floor(prevBest / 100)) {
+        const milestone = Math.floor(toLevel / 100) * 100;
+        const [ci] = (await db.execute(
+          sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
+        )) as unknown as { name: string }[];
+        await logMemberAchievement(userId, serverId, {
+          action: 'achv_enhance',
+          detail: { item: ci?.name ?? '장비', level: milestone },
+        });
+        await logWorldEvent(serverId, 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
+          actorUserId: userId,
+        });
+        // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최초 게이트가 1회 보장).
+        await sendMilestoneMail(userId, serverId, 'enhance', milestone);
+      }
+    } catch (e) {
+      // 업적 기록 실패는 강화 정산 자체를 막지 않는다. 다만 이 블록엔 이정표 보상 우편이 들어 있고
+      // 게이트(max_enhance_level)는 RT2에서 이미 갱신된 뒤라, 조용히 넘기면 보상이 영구 유실된다
+      // (2026-08-11). 수동 보상에 필요한 값을 남긴다.
+      console.error(
+        `[enhance.resolve] 업적·이정표 처리 실패 job=${String(r.jobId)} user=${userId} level=${toLevel}`,
+        e,
+      );
+    }
+  }
 }

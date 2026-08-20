@@ -114,9 +114,16 @@ export async function refreshEnhanceMetrics(userId: string, serverId: number): P
     const myMax = rows.reduce((a, r) => Math.max(a, r.enhanceLevel), 0);
     const mySum = rows.reduce((a, r) => a + r.enhanceLevel, 0);
     const myCombat = Math.round(combatPowerFromOwned(rows));
-    await upsertValue(tx, userId, serverId, 'max', myMax);
-    await upsertValue(tx, userId, serverId, 'sum', mySum);
-    await upsertValue(tx, userId, serverId, 'combat', myCombat);
+    // 3메트릭을 다중행 upsert 1문으로 — 락 보유 중 왕복 3→1(2026-08-20 감사).
+    await tx.execute(sql`
+      insert into leaderboard_ranks (server_id, metric, user_id, value, rank)
+      values (${serverId}, 'max', ${userId}::uuid, ${myMax}, 0),
+             (${serverId}, 'sum', ${userId}::uuid, ${mySum}, 0),
+             (${serverId}, 'combat', ${userId}::uuid, ${myCombat}, 0)
+      on conflict (server_id, metric, user_id) do update
+        set value = excluded.value, updated_at = now()
+        where leaderboard_ranks.value is distinct from excluded.value
+    `);
     return { mySum, myCombat };
   });
   if (!done) return;
