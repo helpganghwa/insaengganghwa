@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   // import.meta.dirname을 undefined로 받아 path TypeError 발생. Next 16에서
   // turbopack은 default이며 root는 자동 추론으로 충분.
   allowedDevOrigins: ['localhost', '127.0.0.1'],
+  // React Compiler(1.0) — 자동 메모이제이션. CLAUDE.md 스택 표기를 실제로 이행(2026-08-20
+  // 성능 감사에서 미적용 발견). 규칙 위반 컴포넌트는 컴파일러가 건너뛰므로 기존 수동
+  // memo/useMemo와 공존하며, 수동 메모는 계속 유지한다(제거 금지 — 컴파일 스킵 대비).
+  reactCompiler: true,
   experimental: {
     // 공지 이미지 첨부(어드민)가 서버 액션 기본 바디 상한 1MB에 걸려 실패한다. 스크린샷 PNG는
     // 2~3MB가 흔해 상한을 올리지 않으면 기능이 사실상 못 쓴다.
