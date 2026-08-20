@@ -118,4 +118,47 @@ describe.skipIf(skip)('openSupplyBoxes — DB 통합', () => {
     expect(Number(eq[0]?.tl)).toBe(1);
     expect(Number(eq[0]?.tp)).toBe(0);
   });
+
+  it('10연 같은 아이템 — 신규 후 배치 내 재획득의 연쇄 초월·순서·로그(다중행 경로)', async () => {
+    // 배치 시뮬레이션 검증(2026-08-20 N+1 제거 회귀 방지): 신규(1) + 중복 9.
+    // 선형 임계(T→T+1 = T+1개): 획득2→T1, 획득4→T2, 획득7→T3, 이후 진행도 3 잔류.
+    const { id, index } = await unownedCatalog();
+    involved.add(id);
+    await setBox(10);
+
+    const res = await openSupplyBoxes({
+      userId: TEST_USER_ID, serverId: SERVER_ID, slot: SLOT, count: 10, rng: () => index,
+    });
+    expect(res.length).toBe(10);
+    expect(res[0]?.isNew).toBe(true);
+    expect(res.slice(1).every((r) => r.isNew === false)).toBe(true);
+    expect(res[1]?.transcended).toBe(1); // 획득2 → T1
+    expect(res[3]?.transcended).toBe(1); // 획득4 → T2
+    expect(res[6]?.transcended).toBe(1); // 획득7 → T3
+    expect(res[9]?.transcendLevel).toBe(3);
+    expect(res[9]?.transcendProgress).toBe(3);
+
+    const eq = (await testDb.execute(sql`
+      select transcend_level tl, transcend_progress tp, max_transcend_level mx, max_transcend_reached_at mra
+      from user_equipment where user_id=${TEST_USER_ID}::uuid and catalog_item_id=${id}`)) as unknown as
+      { tl: number; tp: number; mx: number; mra: string | null }[];
+    expect(Number(eq[0]?.tl)).toBe(3);
+    expect(Number(eq[0]?.tp)).toBe(3);
+    expect(Number(eq[0]?.mx)).toBe(3);
+    expect(eq[0]?.mra).not.toBeNull();
+
+    const openLogs = (await testDb.execute(sql`
+      select is_new from supply_open_logs where user_id=${TEST_USER_ID}::uuid and catalog_item_id=${id} order by id`)) as unknown as { is_new: boolean }[];
+    expect(openLogs.length).toBe(10);
+    expect(openLogs.filter((l) => l.is_new).length).toBe(1);
+
+    const tLogs = (await testDb.execute(sql`
+      select from_t, to_t from transcend_logs where user_id=${TEST_USER_ID}::uuid and catalog_item_id=${id} order by from_t`)) as unknown as { from_t: number; to_t: number }[];
+    expect(tLogs.map((l) => [Number(l.from_t), Number(l.to_t)])).toEqual([[0, 1], [1, 2], [2, 3]]);
+
+    const box = (await testDb.execute(sql`
+      select count::text c from user_supply_boxes
+      where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID} and slot=${SLOT}::slot`)) as unknown as { c: string }[];
+    expect(box[0]?.c).toBe('0');
+  });
 });
