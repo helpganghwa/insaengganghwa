@@ -29,9 +29,9 @@ export function PublicFooter() {
             {label}
           </Link>
         ))}
-        {/* 위키는 viewport를 재정의하므로 통짜 <a>로 이동(소프트 내비는 루트 미재렌더). */}
+        {/* 위키는 viewport를 재정의하므로 통짜 <a> + 새 창(PWA에서도 브라우저로). */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/wiki" className="shrink-0 hover:underline">
+        <a href="/wiki" target="_blank" rel="noopener noreferrer" className="shrink-0 hover:underline">
           위키
         </a>
       </nav>

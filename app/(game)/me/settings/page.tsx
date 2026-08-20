@@ -200,11 +200,16 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function SettingLink({ href, label, hard }: { href: string; label: string; hard?: boolean }) {
-  // hard: 위키처럼 viewport를 재정의하는 페이지는 소프트 내비가 루트를 재렌더하지
-  // 않아 통짜 <a>로 이동해야 한다(app/wiki/ui.tsx Ext와 같은 이유).
+  // hard: 위키처럼 viewport를 재정의하는 페이지는 통짜 <a> + 새 창으로 연다 —
+  // 소프트 내비는 루트를 재렌더하지 않고, PWA에서도 게임 창을 벗어나 브라우저로 열려야 한다.
   if (hard) {
     return (
-      <a href={href} className="flex items-center px-3 py-2.5">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center px-3 py-2.5"
+      >
         <span className="text-sm">{label}</span>
       </a>
     );
