@@ -2,7 +2,7 @@ import { CYCLE_LEN, MAX_TRANSCEND, enhanceBasePower, pieceCombatPower } from '@/
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Ext, Fn, FnList, H2, LI, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Ext, Fn, FnList, H2, LI, P, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'combat-power',
@@ -12,7 +12,7 @@ export const meta: WikiDocMeta = {
   sections: [
     { id: 'piece', label: '계산' },
     { id: 'total', label: '총 전투력' },
-    { id: 'where', label: '활용' },
+    { id: 'where', label: '적용' },
     { id: 'rank', label: '랭킹' },
   ],
 };
@@ -58,24 +58,21 @@ export default function Doc() {
           <DocLink slug="equipment" hash="equip">
             장착
           </DocLink>
-          과 무관하며, 겉모습을 바꿔도 숫자는 그대로다.
+          과 무관.
         </LI>
       </UL>
-      <Warn>강화에서 하락하면 총 전투력도 그 자리에서 함께 내려간다.</Warn>
 
-      <H2 id="where">활용</H2>
+      <H2 id="where">적용</H2>
       <UL>
         <LI>
-          <DocLink slug="raid">레이드</DocLink>: 한 번 공격의 데미지가 총 전투력으로 정해진다.
+          <DocLink slug="raid">레이드</DocLink>: 한 번 공격의 데미지가 총 전투력 기반으로 정해진다.
+        </LI>
+        <LI>대난투: 체력과 공격력이 총 전투력 기반으로 정해진다.</LI>
+        <LI>
+          <DocLink slug="conquest">점령전</DocLink>: 참여자 전투력이 구역 총 전투력에 반영된다.
         </LI>
         <LI>
-          대난투: 시작 체력과 공격력이 모두 총 전투력으로 정해진다.
-        </LI>
-        <LI>
-          <DocLink slug="conquest">점령전</DocLink>: 참여자 전투력이 구역 판정에 반영된다.
-        </LI>
-        <LI>
-          <DocLink slug="guild">길드</DocLink>: 길드원 목록과 길드 순위에 함께 표시된다.
+          <DocLink slug="guild">길드</DocLink>: 길드원 목록과 길드 전투력 순위에 함께 표시된다.
         </LI>
         <LI>공개 프로필과 공유 카드에 총 전투력이 표시된다.</LI>
       </UL>
@@ -84,12 +81,15 @@ export default function Doc() {
       <UL>
         <LI>최고 강화: 보유 장비 가운데 가장 높은 강화 수치 하나.</LI>
         <LI>합산 강화: 보유 장비의 강화 수치를 전부 더한 값.</LI>
-        <LI>전투력: 위에서 계산한 총 전투력.</LI>
+        <LI>전투력: 총 전투력.</LI>
         <LI>
           순위표는{' '}
           서버마다 따로.
         </LI>
-        <LI>최고 강화는 한 장비에 집중하는 쪽이, 합산 강화는 장비 수를 늘리는 쪽이 빠르다.</LI>
+        <LI>
+          최고 강화는 한 장비에 집중하는 쪽이, 합산 강화는 여러 장비를 고르게 강화하는 쪽이
+          유리하다.
+        </LI>
       </UL>
 
       <FnList
