@@ -1,0 +1,12 @@
+# 배포 제외(감사 A6, 2026-08-20) — 스프라이트 파이프라인 중간 산출물로 런타임·CDN 참조 0.
+# 포함 시 미참조 자산 ~16MB가 공개 URL로 배포된다.
+# ⚠ 유지해야 하는 것들(제외 금지):
+#  - sprites/weapon·armor·accessory: next.config outputFileTracingIncludes(프로필 vision 입력)
+#  - sprites/itemanim: 런타임(item-anim.ts) 참조
+#  - sprites/pool·anim3, _compare, catalog-compare.html, review-anim3.html:
+#    어드민 검수 iframe(/admin/catalog-review·/admin/anim-review)이 실참조 — 제외 시 검수 화면 파손.
+#    완전 비공개화하려면 도구를 admin 라우트로 이전 후 제외할 것.
+public/sprites/anim3-raw
+public/sprites/weapon-cand
+public/align-anim3.html
+public/item-review.html
