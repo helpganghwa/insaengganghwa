@@ -9,7 +9,7 @@ import {
   GUILD_NAME_MAX_LEN,
   GUILD_NAME_MIN_LEN,
   GUILD_REJOIN_LOCK_HOURS,
-  GUILD_XP_PER_LEVEL_STEP,
+
   MAX_GUILD_EMBLEMS,
   guildCapacity,
   guildXpToNext,
@@ -17,7 +17,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, Note, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, P, Tbl, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'guild',
@@ -76,7 +76,7 @@ export default function Doc() {
         <LI>
           문양은 결성할 때 한 장이 무료이며, 이후로는 만들 때마다{' '}
           {fmtInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)}다이아가 들고 {fmtInt(MAX_GUILD_EMBLEMS)}장까지
-          보관한다.
+          보관할 수 있다.
         </LI>
       </UL>
 
@@ -87,25 +87,23 @@ export default function Doc() {
           승인제면 신청이 등록된 뒤{' '}
           <DocLink slug="guild-roles" hash="perms">가입 관리 권한</DocLink>자가 승인하거나 거절한다.
         </LI>
-        <LI>어느 쪽이든 정원이 차 있으면 가입할 수 없다.</LI>
+        <LI>자유 가입·승인제 모두 정원이 차 있으면 가입할 수 없다.</LI>
         <LI>
-          신청은 한 번에 한 곳만 유지된다. 다른 길드에 신청하면 앞의 신청은 새 신청으로 대체된다.
+          신청은 한 번에 한 곳만 유지된다. 다른 길드에 신청하면 앞의 신청은 자동으로 취소된다.
           <Fn n={2} />
         </LI>
       </UL>
 
       <H2 id="donate">기부</H2>
       <UL>
-        <LI>기부는 하루 {fmtInt(GUILD_DONATIONS_PER_DAY)}번이며, 한국 시간 자정에 초기화된다.</LI>
+        <LI>기부는 하루 {fmtInt(GUILD_DONATIONS_PER_DAY)}번이며, 자정에 초기화된다.</LI>
         <LI>단계가 올라갈수록 비용이 오른다({DONATION_COSTS}).</LI>
         <LI>
           획득하는 경험치는 단계와 상관없이 {fmtInt(GUILD_DONATION_TIERS[0].xp)}으로 같다.
         </LI>
-        <LI>무료 단계만 매일 기부해도 레벨은 오른다.</LI>
-        <LI>기부 한 번은 길드 경험치와 개인 기여도에 같은 값으로 쌓인다.</LI>
+        <LI>기부는 길드 경험치와 개인 기여도에 같은 값으로 쌓인다.</LI>
         <LI>
-          기여도는 길드 안에 누적으로 남아{' '}
-          <DocLink slug="conquest" hash="tax">세금</DocLink> 분배와{' '}
+          기여도는{' '}
           <DocLink slug="guild-roles" hash="handover">길드장 자동 위임</DocLink>에서 기준이 된다.
         </LI>
       </UL>
@@ -113,23 +111,22 @@ export default function Doc() {
       <H2 id="level">레벨과 정원</H2>
       <UL>
         <LI>
-          레벨은 기부로만 오르며, 다음 레벨까지 필요한 경험치가 {fmtInt(GUILD_XP_PER_LEVEL_STEP)}씩
-          늘어나 뒤로 갈수록 한 레벨이 길어진다.
+          레벨은 기부로만 오르며, 다음 레벨까지 필요한 경험치가 단계마다 늘어나 뒤로 갈수록
+          레벨업이 어려워진다.
         </LI>
         <LI>
-          정원은 {fmtInt(GUILD_BASE_CAPACITY)}명에서 시작해 레벨 하나당 한 자리씩 늘고{' '}
-          {fmtInt(GUILD_MAX_CAPACITY)}명에서 멈춘다.
+          정원은 {fmtInt(GUILD_BASE_CAPACITY)}명에서 시작해 레벨 하나당 한 자리씩 늘고 최대{' '}
+          {fmtInt(GUILD_MAX_CAPACITY)}명까지 늘어난다.
           <Fn n={3} />
         </LI>
       </UL>
       <Tbl head={['레벨', '정원', '누적 기부 경험치']} rows={CAP_ROWS} />
-      <Note>기부는 길드원이 각자 하며, 인원이 많을수록 하루에 쌓이는 경험치도 커진다.</Note>
 
       <H2 id="leave">탈퇴</H2>
       <UL>
         <LI>
           길드원은 언제든 탈퇴할 수 있으며, 탈퇴하는 순간 맡고 있던{' '}
-          <DocLink slug="conquest" hash="executor">집행관</DocLink> 자리와 넣어둔{' '}
+          <DocLink slug="conquest" hash="executor">집행관</DocLink>과{' '}
           <DocLink slug="conquest" hash="deploy">배치</DocLink>가 함께 풀린다.
         </LI>
         <LI>탈퇴하면 그 길드에 쌓은 기여도는 사라지며, 다시 가입해도 0에서 시작한다.</LI>
@@ -139,27 +136,28 @@ export default function Doc() {
         </LI>
       </UL>
       <Warn>
-        탈퇴하거나 추방당하면 그 서버에서 {fmtInt(GUILD_REJOIN_LOCK_HOURS)}시간 동안 어떤 길드에도
-        가입하지 못한다. 원래 길드로 돌아가는 것도 막힌다.
+        탈퇴하거나 추방당하면 해당 서버에서 {fmtInt(GUILD_REJOIN_LOCK_HOURS)}시간 동안 어떤
+        길드에도 가입하지 못하며, 원래 길드로 돌아가는 것도{' '}
+        {fmtInt(GUILD_REJOIN_LOCK_HOURS)}시간 동안 막힌다.
       </Warn>
 
       <H2 id="disband">해산</H2>
       <UL>
-        <LI>해산은 길드장만 한다.</LI>
+        <LI>해산은 길드장만 가능하다.</LI>
         <LI>
-          길드장이 오래 접속하지 않고 위임받을 사람도 없으면 길드가 해산된다. 조건은{' '}
-          <DocLink slug="guild-roles" hash="handover">자동 위임</DocLink>에 있다.
+          길드장이 오래 접속하지 않고 위임받을 사람도 없으면 길드가 자동으로 해산된다. 조건은{' '}
+          <DocLink slug="guild-roles" hash="handover">자동 위임</DocLink>에서 확인할 수 있다.
         </LI>
       </UL>
       <Warn>
         해산하면 보유 <DocLink slug="conquest" hash="abandon">구역</DocLink>이 전부 중립으로 풀리고
-        모아둔 세금은 사라진다. 문양과 길드 기록도 함께 지워지고 되돌릴 방법은 없다.
+        길드에 모아둔 세금은 사라지며 복구할 수 없다.
       </Warn>
 
       <FnList
         notes={[
           '이름은 전 서버를 통틀어 하나이며, 다른 서버에 같은 이름이 있으면 사용할 수 없다.',
-          `등록한 신청은 ${fmtInt(GUILD_JOIN_REQUEST_TTL_DAYS)}일이 지나면 사라진다.`,
+          `등록한 신청은 ${fmtInt(GUILD_JOIN_REQUEST_TTL_DAYS)}일이 지나면 자동으로 사라진다.`,
           '정원이 멈춘 뒤에도 레벨은 계속 오르고, 길드 순위의 기준으로 남는다.',
           '혼자 남은 길드장이 탈퇴하면 그대로 해산된다.',
         ]}
