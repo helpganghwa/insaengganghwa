@@ -65,9 +65,12 @@ export function Warn({ children }: { children: ReactNode }) {
 export function Tbl({
   head,
   rows,
+  firstColNowrap,
 }: {
   head: readonly ReactNode[];
   rows: readonly (readonly ReactNode[])[];
+  /** 첫 열이 짧은 표제(용어·항목명)일 때 — 줄바꿈 없이 통째로 유지한다. */
+  firstColNowrap?: boolean;
 }) {
   return (
     <div className="mt-4 overflow-x-auto">
@@ -89,7 +92,10 @@ export function Tbl({
                   key={ci}
                   // 짧은 값(레벨·시각·항목명)은 중간에서 꺾이면 표가 지저분해진다 — 통째로 유지.
                   className={`px-2.5 py-2 align-top leading-[1.7]${
-                    typeof cell === 'string' && cell.length <= 10 ? ' whitespace-nowrap' : ''
+                    (firstColNowrap && ci === 0) ||
+                    (typeof cell === 'string' && cell.length <= 10)
+                      ? ' whitespace-nowrap'
+                      : ''
                   }`}
                 >
                   {cell}
@@ -103,19 +109,8 @@ export function Tbl({
   );
 }
 
-/**
- * 각주 참조 — 본문 단어 뒤에 붙는 [n]. 나무위키식: 본문은 짧게, 예외·부연은 각주로.
- * n은 문서 안 FnList 순번과 1:1. JS 없이 앵커 점프로만 동작한다.
- */
-export function Fn({ n }: { n: number }) {
-  return (
-    <sup id={`rfn-${n}`} className="scroll-mt-20 text-[11px]">
-      <a href={`#fn-${n}`} className={`no-underline ${PAPER.link}`}>
-        [{n}]
-      </a>
-    </sup>
-  );
-}
+// 각주 참조 [n] — 호버 툴팁이 필요해 유일하게 클라이언트 컴포넌트다(./Fn.tsx).
+export { Fn } from './Fn';
 
 /** 각주 목록 — 문서 맨 아래(같이 보면 좋은 문서 위). notes[i]가 각주 [i+1]이 된다. */
 export function FnList({ notes }: { notes: readonly ReactNode[] }) {

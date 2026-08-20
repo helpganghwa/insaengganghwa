@@ -36,7 +36,7 @@ export default function Doc() {
   return (
     <>
       <H2 id="growth">성장</H2>
-      <Tbl
+      <Tbl firstColNowrap
         head={['말', '뜻']}
         rows={[
           [
@@ -124,7 +124,7 @@ export default function Doc() {
       />
 
       <H2 id="goods">보급과 재화</H2>
-      <Tbl
+      <Tbl firstColNowrap
         head={['말', '뜻']}
         rows={[
           [
@@ -186,7 +186,7 @@ export default function Doc() {
       />
 
       <H2 id="compete">경쟁</H2>
-      <Tbl
+      <Tbl firstColNowrap
         head={['말', '뜻']}
         rows={[
           [
@@ -224,7 +224,7 @@ export default function Doc() {
       />
 
       <H2 id="guild">길드</H2>
-      <Tbl
+      <Tbl firstColNowrap
         head={['말', '뜻']}
         rows={[
           [
@@ -281,7 +281,7 @@ export default function Doc() {
       </P>
 
       <H2 id="account">계정</H2>
-      <Tbl
+      <Tbl firstColNowrap
         head={['말', '뜻']}
         rows={[
           [
