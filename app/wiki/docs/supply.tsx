@@ -42,9 +42,7 @@ export default function Doc() {
       <UL>
         <LI>
           상자를 열면 그 부위의{' '}
-          <DocLink slug="glossary" hash="goods">
-            활성 아이템
-          </DocLink>{' '}
+          활성 아이템{' '}
           가운데 하나를 획득한다.
         </LI>
         <LI>
@@ -77,19 +75,13 @@ export default function Doc() {
         <LI>도전 과제: 달성 보상으로 상자가 지급되는 항목이 있다.</LI>
         <LI>
           상점: 기간별 무료 수령,{' '}
-          <DocLink slug="glossary" hash="goods">
-            다이아
-          </DocLink>
-          로 사는 주머니, 유료 상품.
+          다이아로 사는 주머니, 유료 상품.
         </LI>
         <LI>
           <DocLink slug="raid">레이드</DocLink>: 페이즈를 넘길 때마다 참여자 전원에게 지급된다.
         </LI>
         <LI>
-          <DocLink slug="glossary" hash="compete">
-            대난투
-          </DocLink>
-          : 순위 보상.
+          대난투: 순위 보상.
         </LI>
         <LI>성장패스: 초월 패스의 단계 보상.</LI>
         <LI>친구 초대와 기록 달성 우편.</LI>

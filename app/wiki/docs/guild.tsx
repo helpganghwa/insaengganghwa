@@ -64,7 +64,7 @@ export default function Doc() {
       <UL>
         <LI>
           결성 비용은 {fmtInt(GUILD_CREATE_COST_DIAMOND)}
-          <DocLink slug="glossary" hash="goods">다이아</DocLink>이며, 만든 사람이 길드장이 되고 가입
+          다이아이며, 만든 사람이 길드장이 되고 가입
           방식은 승인제로 시작한다.
         </LI>
         <LI>한 서버에 소속할 수 있는 길드는 하나이므로, 이미 가입한 상태에서는 새로 만들지 못한다.</LI>

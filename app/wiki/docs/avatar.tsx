@@ -40,7 +40,7 @@ export default function Doc() {
         <LI>생성은 한 번에 한 건이며, 앞의 것이 끝나야 다음을 요청할 수 있다.</LI>
         <LI>완성된 아바타는 알림과 우편으로 지급된다.</LI>
         <LI>
-          아바타는 <DocLink slug="glossary" hash="account">서버</DocLink>마다 따로 쌓이며, 다른
+          아바타는 서버마다 따로 쌓이며, 다른
           서버에서 만든 아바타는 이 서버에서 쓸 수 없다.
         </LI>
       </UL>
@@ -48,7 +48,7 @@ export default function Doc() {
       <H2 id="cost">비용</H2>
       <UL>
         <LI>
-          생성은 <DocLink slug="glossary" hash="goods">다이아</DocLink>{' '}
+          생성은 다이아{' '}
           {fmtInt(PROFILE_GENERATION_DIAMOND)}개. 한 번도 성공한 적이 없으면 첫 생성만{' '}
           {fmtInt(PROFILE_FIRST_GEN_DIAMOND)}개.
         </LI>

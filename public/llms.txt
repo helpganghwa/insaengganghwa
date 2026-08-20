@@ -13,7 +13,6 @@
 ## 문서
 
 - [공식 위키](https://ganghwa.app/wiki): 강화·초월·보급·레이드·길드·계정 규칙 문서 (아래 개별 문서)
-  - [용어 사전](https://ganghwa.app/wiki/glossary): 게임과 위키에서 쓰는 말을 한곳에 모았다.
   - [인생강화란](https://ganghwa.app/wiki/about): 기다릴수록 확률이 오르는 방치형 강화 RPG. 처음이라면 여기부터.
   - [강화](https://ganghwa.app/wiki/enhance): 기다린 시간에 비례하는 확률, 성공·유지·하락 판정.
   - [보급](https://ganghwa.app/wiki/supply): 보급 상자로 장비를 얻는 경로와 확률.

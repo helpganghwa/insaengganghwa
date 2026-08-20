@@ -61,7 +61,7 @@ export default function Doc() {
             <>
               닉네임이 임시 이름으로 바뀌고, 새 이름을 정하도록 변경 비용{' '}
               {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)}{' '}
-              <DocLink slug="glossary" hash="goods">다이아</DocLink>가 우편으로 지급된다.
+              다이아가 우편으로 지급된다.
             </>,
           ],
           [
@@ -78,7 +78,7 @@ export default function Doc() {
       />
       <Warn>
         제재는 계정에 걸린다. 닉네임 초기화와 채팅 금지, 계정 정지는{' '}
-        <DocLink slug="glossary" hash="account">서버</DocLink>를 가리지 않고 그 계정의 모든 캐릭터에
+        서버를 가리지 않고 그 계정의 모든 캐릭터에
         적용되고, 정지 중에는 <DocLink slug="enhance">강화</DocLink>와{' '}
         <DocLink slug="raid">레이드</DocLink>를 비롯한 모든 조작이 막힌다.
       </Warn>

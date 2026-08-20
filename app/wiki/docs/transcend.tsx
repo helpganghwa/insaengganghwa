@@ -52,10 +52,7 @@ export default function Doc() {
       <UL>
         <LI>
           T단계로 올라가려면 그 장비의{' '}
-          <DocLink slug="glossary" hash="growth">
-            중복
-          </DocLink>
-          이 T개이며, 단계마다 하나씩 늘어난다.
+          중복이 T개이며, 단계마다 하나씩 늘어난다.
         </LI>
         <LI>초반 단계는 필요한 개수가 적어 상자 몇 개로도 금방 올라간다.</LI>
       </UL>

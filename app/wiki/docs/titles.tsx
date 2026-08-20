@@ -37,7 +37,7 @@ export default function Doc() {
         </LI>
         <LI>사거나 만들 수는 없고, 조건을 만족하면 획득한다.</LI>
         <LI>
-          칭호는 <DocLink slug="glossary" hash="account">서버</DocLink>마다 따로 모으며, 한 서버에서
+          칭호는 서버마다 따로 모으며, 한 서버에서
           발견한 칭호는 그 서버 캐릭터에만 적용된다.
         </LI>
       </UL>

@@ -49,7 +49,7 @@ export default function Doc() {
       <UL>
         <LI>
           보스를 고르고 {fmtInt(RAID_OPEN_COST_DIAMOND)}{' '}
-          <DocLink slug="glossary" hash="goods">다이아</DocLink>를 소비하면 소환되며, 소환한 사람이
+          다이아를 소비하면 소환되며, 소환한 사람이
           방장이자 첫 참가자가 된다.
           <Fn n={1} />
         </LI>

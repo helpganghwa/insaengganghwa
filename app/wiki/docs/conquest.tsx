@@ -74,7 +74,7 @@ export default function Doc() {
         <LI>
           한 번 옮기면 {fmtMs(RESIDENCE_MOVE_COOLDOWN_MIN * 60_000)} 동안 다시 이동할 수 없으며,
           남은 시간은 분당 {fmtInt(RESIDENCE_SPEEDUP_GEM_PER_MIN)}
-          <DocLink slug="glossary" hash="goods">다이아</DocLink>로 줄일 수 있다.
+          다이아로 줄일 수 있다.
         </LI>
         <LI>강화 세금은 거주지에 쌓이며, 거주지를 옮기면 세금이 쌓이는 곳도 바뀐다.</LI>
         <LI>

@@ -69,10 +69,7 @@ export default function Doc() {
           <DocLink slug="raid">레이드</DocLink>: 한 번 공격의 데미지가 총 전투력으로 정해진다.
         </LI>
         <LI>
-          <DocLink slug="glossary" hash="compete">
-            대난투
-          </DocLink>
-          : 시작 체력과 공격력이 모두 총 전투력으로 정해진다.
+          대난투: 시작 체력과 공격력이 모두 총 전투력으로 정해진다.
         </LI>
         <LI>
           <DocLink slug="conquest">점령전</DocLink>: 참여자 전투력이 구역 판정에 반영된다.
@@ -90,10 +87,7 @@ export default function Doc() {
         <LI>전투력: 위에서 계산한 총 전투력.</LI>
         <LI>
           순위표는{' '}
-          <DocLink slug="glossary" hash="account">
-            서버
-          </DocLink>
-          마다 따로.
+          서버마다 따로.
         </LI>
         <LI>최고 강화는 한 장비에 집중하는 쪽이, 합산 강화는 장비 수를 늘리는 쪽이 빠르다.</LI>
       </UL>

@@ -39,10 +39,7 @@ export default function Doc() {
         <LI>보유 장비는 종류마다 하나.</LI>
         <LI>
           같은 장비를 다시 획득하면 개수가 늘지 않고 그 장비의{' '}
-          <DocLink slug="glossary" hash="growth">
-            중복
-          </DocLink>
-          으로 쌓인다.
+          중복으로 쌓인다.
         </LI>
       </UL>
 

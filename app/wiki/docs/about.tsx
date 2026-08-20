@@ -40,7 +40,7 @@ export default function Doc() {
         이며, 확률은 주기마다 똑같이 반복되고 한 번 시도에 드는 시간만 주기를 넘길 때마다 두 배가
         된다.
       </P>
-      <Warn>다이아로 시간을 줄인 강화를 취소하면 쓴 다이아는 돌려받지 못한다.</Warn>
+      <Warn>다이아로 시간을 줄인 강화 슬롯을 해제하면 쓴 다이아는 돌려받지 못한다.</Warn>
 
       <H2 id="start">초반 진행</H2>
       <UL>
@@ -59,10 +59,7 @@ export default function Doc() {
         <LI>
           다음은 도전 과제 {fmtInt(CHALLENGES.length)}종.
           <Fn n={3} /> 보상으로{' '}
-          <DocLink slug="glossary" hash="goods">
-            다이아
-          </DocLink>
-          와{' '}
+          다이아와{' '}
           <DocLink slug="supply" hash="boxes">
             보급 상자
           </DocLink>
