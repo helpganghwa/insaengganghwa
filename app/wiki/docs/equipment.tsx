@@ -28,8 +28,8 @@ export default function Doc() {
           도 이 구분을 그대로 따라간다.
         </LI>
         <LI>
-          세기를 가르는 것은 <DocLink slug="enhance">강화</DocLink> 수치와{' '}
-          <DocLink slug="transcend">초월</DocLink> 단계뿐. 같은 수치면 어느 아이템이든 같다.
+          전투력을 정하는 것은 <DocLink slug="enhance">강화</DocLink> 수치와{' '}
+          <DocLink slug="transcend">초월</DocLink> 단계뿐이며, 같은 수치면 어느 아이템이든 같다.
           <Fn n={1} />
         </LI>
       </UL>
@@ -38,11 +38,11 @@ export default function Doc() {
       <UL>
         <LI>보유 장비는 종류마다 하나.</LI>
         <LI>
-          같은 장비가 또 나오면 개수가 늘지 않고 그 장비의{' '}
+          같은 장비를 다시 획득하면 개수가 늘지 않고 그 장비의{' '}
           <DocLink slug="glossary" hash="growth">
             중복
           </DocLink>
-          으로 들어간다.
+          으로 쌓인다.
         </LI>
       </UL>
 
@@ -50,14 +50,13 @@ export default function Doc() {
       <UL>
         <LI>부위마다 하나씩 장착한다.</LI>
         <LI>
-          같은 부위에 다른 장비를 걸면 먼저 있던 것은 인벤토리로 돌아간다.
+          같은 부위에 다른 장비를 장착하면 기존 장비는 인벤토리로 돌아간다.
           <Fn n={2} />
         </LI>
         <LI>
-          장착이 정하는 것은 겉모습. 프로필과 <DocLink slug="avatar">아바타</DocLink>, 자랑 카드
-          <Fn n={3} />에 나오는 세트가 지금 장착한 셋이다.
+          장착이 정하는 것은 겉모습이며, 프로필과 <DocLink slug="avatar">아바타</DocLink>, 자랑 카드
+          <Fn n={3} />에 표시되는 세트가 지금 장착한 셋이다.
         </LI>
-        <LI>세기가 걸린 선택이 아니니 장착은 취향대로 고르면 된다.</LI>
       </UL>
 
       <H2 id="keep">미장착 장비</H2>
@@ -66,11 +65,11 @@ export default function Doc() {
           <DocLink slug="combat-power" hash="total">
             전투력
           </DocLink>
-          은 보유 기준으로 합산한다. 장착하지 않은 장비도 총합에 들어간다.
+          은 보유 기준으로 합산하며, 장착하지 않은 장비도 총합에 들어간다.
         </LI>
-        <LI>강화는 장착 여부와 상관없이 아무 장비에나 건다.</LI>
-        <LI>상자에서 중복으로 나오면 장착하지 않은 장비도 초월이 오른다.</LI>
-        <LI>그래서 강화 칸은 장착을 따지지 말고 여섯 칸을 채워 돌리는 쪽이 총합에 낫다.</LI>
+        <LI>장착하지 않은 장비도 강화할 수 있다.</LI>
+        <LI>상자에서 중복을 획득하면 장착하지 않은 장비도 초월이 오른다.</LI>
+        <LI>그래서 강화 칸은 장착과 상관없이 여섯 칸을 채워 두는 것이 좋다.</LI>
       </UL>
 
       <H2 id="retired">상자 제외</H2>
@@ -79,14 +78,14 @@ export default function Doc() {
           상자에서 빠진 아이템은 그 뒤로 보급에서 나오지 않는다.
           <Fn n={4} />
         </LI>
-        <LI>중복이 더 들어올 길이 없어서 그 장비의 초월은 그 자리에서 멈춘다.</LI>
+        <LI>중복을 더 획득할 수 없어 그 장비의 초월은 그 자리에서 멈춘다.</LI>
       </UL>
 
       <FnList
         notes={[
           '아이템을 가르는 것은 그림과 이름, 도감에 붙은 이야기다.',
           '해제만 하고 부위를 비워 둘 수도 있다.',
-          '장비 세 칸과 총 전투력을 담아 밖으로 내보내는 공유 이미지.',
+          '장비 세 칸과 총 전투력을 담은 공유 이미지.',
           <>
             <Ext href="/probability#supply">확률 공시</Ext>의 활성 아이템 목록에서도 빠진다.
           </>,

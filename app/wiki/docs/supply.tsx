@@ -27,7 +27,7 @@ export default function Doc() {
           </DocLink>
           별로 나뉜다. 무기·방어구·장신구 셋.
         </LI>
-        <LI>무기 상자에서는 무기만 나온다. 나머지 둘도 마찬가지.</LI>
+        <LI>무기 상자에서는 무기만 나오며, 나머지 둘도 마찬가지다.</LI>
       </UL>
 
       <H2 id="open">열기</H2>
@@ -45,23 +45,23 @@ export default function Doc() {
           <DocLink slug="glossary" hash="goods">
             활성 아이템
           </DocLink>{' '}
-          가운데 하나가 나온다.
+          가운데 하나를 획득한다.
         </LI>
         <LI>
           아이템마다 확률이 같다. 1을 활성 종수로 나눈 값.
           <Fn n={2} />
         </LI>
         <LI>
-          지금 종수와 아이템 목록은 <Ext href="/probability#supply">확률 공시</Ext>에서 본다.
+          지금 종수와 아이템 목록은 <Ext href="/probability#supply">확률 공시</Ext>에서 확인한다.
         </LI>
-        <LI>종수가 적은 부위일수록 같은 아이템이 자주 겹쳐 초월이 빨리 오른다.</LI>
+        <LI>종수가 적은 부위일수록 같은 아이템이 자주 중복되어 초월이 빨리 오른다.</LI>
       </UL>
 
       <H2 id="result">결과</H2>
       <UL>
         <LI>
-          처음 나온 아이템은 그 자리에서 보유 장비가 되고 도감
-          <Fn n={3} />이 열린다.
+          처음 획득한 아이템은 그 자리에서 보유 장비가 되고 도감
+          <Fn n={3} />에 등록된다.
         </LI>
         <LI>
           <DocLink slug="enhance">강화</DocLink> 수치와{' '}
@@ -72,9 +72,9 @@ export default function Doc() {
 
       <H2 id="sources">획득처</H2>
       <UL>
-        <LI>일일 보급: 매일 한국 시간 자정에 우편함으로 온다. 수령해야 들어온다.</LI>
+        <LI>일일 보급: 매일 한국 시간 자정에 우편함으로 지급되며, 수령해야 들어온다.</LI>
         <LI>출석: 날짜 칸 가운데 일부가 상자.</LI>
-        <LI>도전 과제: 달성 보상에 상자가 걸린 항목이 있다.</LI>
+        <LI>도전 과제: 달성 보상으로 상자가 지급되는 항목이 있다.</LI>
         <LI>
           상점: 기간별 무료 수령,{' '}
           <DocLink slug="glossary" hash="goods">
@@ -83,7 +83,7 @@ export default function Doc() {
           로 사는 주머니, 유료 상품.
         </LI>
         <LI>
-          <DocLink slug="raid">레이드</DocLink>: 페이즈를 하나 깰 때마다 참여자 전원이 받는다.
+          <DocLink slug="raid">레이드</DocLink>: 페이즈를 넘길 때마다 참여자 전원에게 지급된다.
         </LI>
         <LI>
           <DocLink slug="glossary" hash="compete">
@@ -93,7 +93,6 @@ export default function Doc() {
         </LI>
         <LI>성장패스: 초월 패스의 단계 보상.</LI>
         <LI>친구 초대와 기록 달성 우편.</LI>
-        <LI>무료로 들어오는 일일 보급과 출석만 꼬박 챙겨도 상자는 매일 쌓인다.</LI>
       </UL>
 
       <FnList

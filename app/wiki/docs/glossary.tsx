@@ -196,14 +196,14 @@ export default function Doc() {
               </DocLink>
             </>,
             <>
-              다이아를 내고 보스를 불러 최대 {fmtInt(RAID_MAX_PARTICIPANTS)}명이 함께 때리는 판.
+              다이아를 내고 보스를 소환해 최대 {fmtInt(RAID_MAX_PARTICIPANTS)}명이 함께 공격하는 판.
               비용은 개설자만 내고, 개설과 참가를 합쳐 하루 {fmtInt(RAID_DAILY_CAP)}회다.
             </>,
           ],
           [
             '페이즈',
             <>
-              보스 체력의 한 구간. 넘길 때마다 한 번이라도 때린 사람 전원이 보급 상자{' '}
+              보스 체력의 한 구간. 넘길 때마다 한 번이라도 공격한 사람 전원에게 보급 상자{' '}
               {fmtInt(RAID_PHASE_DROP_BOXES)}개를 받고, 다음 페이즈 체력은 ×{RAID_PHASE_HP_MULT}가
               된다.
             </>,

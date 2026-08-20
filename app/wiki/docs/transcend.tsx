@@ -35,12 +35,12 @@ export default function Doc() {
     <>
       <H2 id="auto">개요</H2>
       <UL>
-        <LI>초월은 같은 장비를 또 얻으면 오른다.</LI>
+        <LI>초월은 같은 장비를 중복 획득하면 오른다.</LI>
         <LI>
           <DocLink slug="supply" hash="boxes">
             보급 상자
           </DocLink>
-          에서 이미 가진 장비가 나오면 진행도가 하나 쌓인다.
+          에서 이미 가진 장비를 획득하면 진행도가 하나 쌓인다.
         </LI>
         <LI>
           필요한 개수를 채우는 순간 바로 단계가 오른다.
@@ -55,12 +55,9 @@ export default function Doc() {
           <DocLink slug="glossary" hash="growth">
             중복
           </DocLink>
-          이 T개. 단계마다 하나씩 늘어난다.
+          이 T개이며, 단계마다 하나씩 늘어난다.
         </LI>
-        <LI>
-          초반 단계는 계단이 낮아 상자 몇 개로도 금방 올라간다.
-          <Fn n={2} />
-        </LI>
+        <LI>초반 단계는 필요한 개수가 적어 상자 몇 개로도 금방 올라간다.</LI>
       </UL>
       <Tbl
         head={['단계', '이 단계에 필요', '처음부터 누적', '전투력 보너스']}
@@ -79,34 +76,34 @@ export default function Doc() {
           <DocLink slug="combat-power" hash="piece">
             전투력
           </DocLink>
-          에 배수로 붙는다.
+          에 배수로 적용된다.
         </LI>
         <LI>
           <DocLink slug="enhance">강화</DocLink>가 높은 장비일수록 같은 단계에서 더 크게 오른다.
         </LI>
         <LI>
-          T{fmtInt(MAX_TRANSCEND)} 보너스는 +{bpPct(transcendBonusBp(MAX_TRANSCEND))}. 그 장비의
-          전투력이 두 배.
-          <Fn n={3} />
+          T{fmtInt(MAX_TRANSCEND)} 보너스는 +{bpPct(transcendBonusBp(MAX_TRANSCEND))}로, 그 장비의
+          전투력이 두 배가 된다.
+          <Fn n={2} />
         </LI>
-        <LI>배수인 만큼, 강화를 밀어 둔 주력 장비부터 채우는 쪽이 총 전투력에는 낫다.</LI>
+        <LI>강화 수치가 높은 장비부터 초월을 올리는 것이 총 전투력에 좋다.</LI>
       </UL>
 
       <H2 id="cap">상한</H2>
       <UL>
         <LI>
-          단계에 상한은 없다. 중복이 들어오는 만큼 계속 오른다.
-          <Fn n={4} />
+          단계에 상한은 없으며, 중복이 들어오는 만큼 계속 오른다.
+          <Fn n={3} />
         </LI>
       </UL>
 
       <H2 id="with-enhance">강화와의 관계</H2>
       <UL>
-        <LI>강화 수치와 초월 단계는 곱으로 겹친다.</LI>
-        <LI>강화에서 하락이 떠도 초월 단계는 그대로다.</LI>
+        <LI>강화 수치와 초월 단계는 곱으로 적용된다.</LI>
+        <LI>강화에서 하락해도 초월 단계는 그대로다.</LI>
         <LI>
-          개인 최고 초월은 따로 남는다. 성장패스
-          <Fn n={5} /> 단계와 기록 달성 우편이 이 기록을 본다.
+          개인 최고 초월은 따로 기록되며, 성장패스
+          <Fn n={4} /> 단계와 기록 달성 우편이 이 기록을 기준으로 한다.
         </LI>
       </UL>
 
@@ -114,19 +111,14 @@ export default function Doc() {
       <UL>
         <LI>
           단계가 붙은 장비에는 테두리가 생기고, 일정 단계마다 색이 바뀐다.
-          <Fn n={6} />
+          <Fn n={5} />
         </LI>
-        <LI>지금 단계는 장비 상세에서 본다.</LI>
+        <LI>지금 단계는 장비 상세에서 확인한다.</LI>
       </UL>
 
       <FnList
         notes={[
           '한꺼번에 열면 두 단계 이상 오르기도 한다. 채우고 남은 중복은 다음 단계 몫으로 넘어간다.',
-          <>
-            T1·T2·T3에 각각 {fmtInt(transcendFodderForStep(1))}·{fmtInt(transcendFodderForStep(2))}·
-            {fmtInt(transcendFodderForStep(3))}개, 합쳐서 {fmtInt(transcendFodderCumulative(3))}개다.
-            T{fmtInt(MAX_TRANSCEND)}까지는 누적 {fmtInt(transcendFodderCumulative(MAX_TRANSCEND))}개.
-          </>,
           <>
             거기까지는 단계마다 증가폭이 조금씩 커지고, 그 위로는 한 단계에{' '}
             {bpPct(BONUS_PER_STEP_ABOVE)}포인트씩 붙는다.

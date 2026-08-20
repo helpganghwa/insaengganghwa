@@ -23,7 +23,7 @@ export const meta: WikiDocMeta = {
   slug: 'guild',
   cat: '길드',
   title: '길드 기본',
-  summary: '결성과 가입, 기부로 오르는 레벨과 정원, 나가면 걸리는 잠금.',
+  summary: '결성과 가입, 기부로 오르는 레벨과 정원, 탈퇴 시 걸리는 잠금.',
   sections: [
     { id: 'create', label: '결성' },
     { id: 'join', label: '가입' },
@@ -64,16 +64,17 @@ export default function Doc() {
       <UL>
         <LI>
           결성 비용은 {fmtInt(GUILD_CREATE_COST_DIAMOND)}
-          <DocLink slug="glossary" hash="goods">다이아</DocLink>. 만든 사람이 길드장이 되고 가입
+          <DocLink slug="glossary" hash="goods">다이아</DocLink>이며, 만든 사람이 길드장이 되고 가입
           방식은 승인제로 시작한다.
         </LI>
-        <LI>한 서버에 소속할 수 있는 길드는 하나라, 어디든 들어가 있으면 새로 만들지 못한다.</LI>
+        <LI>한 서버에 소속할 수 있는 길드는 하나이므로, 이미 가입한 상태에서는 새로 만들지 못한다.</LI>
         <LI>
-          이름은 {fmtInt(GUILD_NAME_MIN_LEN)}~{fmtInt(GUILD_NAME_MAX_LEN)}자, 한글·영문·숫자만 쓴다.
+          이름은 {fmtInt(GUILD_NAME_MIN_LEN)}~{fmtInt(GUILD_NAME_MAX_LEN)}자, 한글·영문·숫자만
+          사용한다.
           <Fn n={1} />
         </LI>
         <LI>
-          문양은 결성할 때 한 장이 무료. 이후로는 만들 때마다{' '}
+          문양은 결성할 때 한 장이 무료이며, 이후로는 만들 때마다{' '}
           {fmtInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)}다이아가 들고 {fmtInt(MAX_GUILD_EMBLEMS)}장까지
           보관한다.
         </LI>
@@ -81,27 +82,26 @@ export default function Doc() {
 
       <H2 id="join">가입</H2>
       <UL>
-        <LI>가입 방식은 자유 가입과 승인제 둘이다. 자유 가입이면 누르는 즉시 들어간다.</LI>
+        <LI>가입 방식은 자유 가입과 승인제 둘이며, 자유 가입이면 신청 즉시 가입된다.</LI>
         <LI>
-          승인제면 신청이 걸린 뒤{' '}
+          승인제면 신청이 등록된 뒤{' '}
           <DocLink slug="guild-roles" hash="perms">가입 관리 권한</DocLink>자가 승인하거나 거절한다.
         </LI>
-        <LI>어느 쪽이든 정원이 차 있으면 못 들어간다.</LI>
+        <LI>어느 쪽이든 정원이 차 있으면 가입할 수 없다.</LI>
         <LI>
-          신청은 한 번에 한 곳만 걸린다. 다른 길드에 신청하면 앞의 신청이 그리로 옮겨 간다.
+          신청은 한 번에 한 곳만 유지된다. 다른 길드에 신청하면 앞의 신청은 새 신청으로 대체된다.
           <Fn n={2} />
         </LI>
       </UL>
 
       <H2 id="donate">기부</H2>
       <UL>
-        <LI>기부는 하루 {fmtInt(GUILD_DONATIONS_PER_DAY)}번, 한국 시간 자정에 다시 찬다.</LI>
+        <LI>기부는 하루 {fmtInt(GUILD_DONATIONS_PER_DAY)}번이며, 한국 시간 자정에 초기화된다.</LI>
         <LI>단계가 올라갈수록 비용이 오른다({DONATION_COSTS}).</LI>
         <LI>
-          얻는 경험치는 단계와 상관없이 {fmtInt(GUILD_DONATION_TIERS[0].xp)}으로 같다. 뒤 단계는 같은
-          것을 비싸게 사는 셈.
+          획득하는 경험치는 단계와 상관없이 {fmtInt(GUILD_DONATION_TIERS[0].xp)}으로 같다.
         </LI>
-        <LI>그래서 다이아를 아끼는 길드원은 무료 단계만 매일 넣는다. 그것만으로도 레벨은 오른다.</LI>
+        <LI>무료 단계만 매일 기부해도 레벨은 오른다.</LI>
         <LI>기부 한 번은 길드 경험치와 개인 기여도에 같은 값으로 쌓인다.</LI>
         <LI>
           기여도는 길드 안에 누적으로 남아{' '}
@@ -113,7 +113,7 @@ export default function Doc() {
       <H2 id="level">레벨과 정원</H2>
       <UL>
         <LI>
-          레벨은 기부로만 오른다. 다음 레벨까지 필요한 경험치가 {fmtInt(GUILD_XP_PER_LEVEL_STEP)}씩
+          레벨은 기부로만 오르며, 다음 레벨까지 필요한 경험치가 {fmtInt(GUILD_XP_PER_LEVEL_STEP)}씩
           늘어나 뒤로 갈수록 한 레벨이 길어진다.
         </LI>
         <LI>
@@ -123,25 +123,24 @@ export default function Doc() {
         </LI>
       </UL>
       <Tbl head={['레벨', '정원', '누적 기부 경험치']} rows={CAP_ROWS} />
-      <Note>기부는 길드원이 각자 넣는다. 사람이 많을수록 하루에 들어오는 경험치도 커진다.</Note>
+      <Note>기부는 길드원이 각자 하며, 인원이 많을수록 하루에 쌓이는 경험치도 커진다.</Note>
 
       <H2 id="leave">탈퇴</H2>
       <UL>
         <LI>
-          길드원은 언제든 나간다. 나가는 순간 맡고 있던{' '}
+          길드원은 언제든 탈퇴할 수 있으며, 탈퇴하는 순간 맡고 있던{' '}
           <DocLink slug="conquest" hash="executor">집행관</DocLink> 자리와 넣어둔{' '}
           <DocLink slug="conquest" hash="deploy">배치</DocLink>가 함께 풀린다.
         </LI>
-        <LI>나가면 그 길드에 쌓아둔 기여도는 사라진다. 다시 들어와도 0에서 시작한다.</LI>
+        <LI>탈퇴하면 그 길드에 쌓은 기여도는 사라지며, 다시 가입해도 0에서 시작한다.</LI>
         <LI>
-          길드장은 위임하거나 해산해야 나간다.
+          길드장은 위임하거나 해산해야 탈퇴할 수 있다.
           <Fn n={4} />
         </LI>
-        <LI>옮길 생각이면 갈 곳을 먼저 정하고 나오는 것이 낫다. 나온 뒤에는 잠금이 풀릴 때까지 못 들어간다.</LI>
       </UL>
       <Warn>
         탈퇴하거나 추방당하면 그 서버에서 {fmtInt(GUILD_REJOIN_LOCK_HOURS)}시간 동안 어떤 길드에도
-        들어가지 못한다. 원래 길드로 돌아가는 것도 막힌다.
+        가입하지 못한다. 원래 길드로 돌아가는 것도 막힌다.
       </Warn>
 
       <H2 id="disband">해산</H2>
@@ -159,8 +158,8 @@ export default function Doc() {
 
       <FnList
         notes={[
-          '이름은 전 서버를 통틀어 하나다. 다른 서버에 같은 이름이 있으면 막힌다.',
-          `걸어둔 신청은 ${fmtInt(GUILD_JOIN_REQUEST_TTL_DAYS)}일이 지나면 사라진다.`,
+          '이름은 전 서버를 통틀어 하나이며, 다른 서버에 같은 이름이 있으면 사용할 수 없다.',
+          `등록한 신청은 ${fmtInt(GUILD_JOIN_REQUEST_TTL_DAYS)}일이 지나면 사라진다.`,
           '정원이 멈춘 뒤에도 레벨은 계속 오르고, 길드 순위의 기준으로 남는다.',
           '혼자 남은 길드장이 탈퇴하면 그대로 해산된다.',
         ]}
