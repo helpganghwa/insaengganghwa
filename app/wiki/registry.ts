@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 
 import * as about from './docs/about';
-import * as checkin from './docs/checkin';
 import * as diamond from './docs/diamond';
 import * as enhance from './docs/enhance';
 import * as transcend from './docs/transcend';
@@ -50,7 +49,6 @@ export type WikiDocLink = Pick<WikiDocMeta, 'slug' | 'cat' | 'title' | 'summary'
 // 문서가 조용히 누락돼도 빌드가 알려주지 않는다.
 const MODULES = [
   about,
-  checkin,
   diamond,
   enhance,
   transcend,

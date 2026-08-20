@@ -191,12 +191,6 @@ export default function Doc() {
           ],
           [
             <>
-              <DocLink slug="checkin">출석</DocLink>
-            </>,
-            '하루 한 칸씩 보상을 받는다.',
-          ],
-          [
-            <>
               <DocLink slug="diamond">다이아</DocLink>
             </>,
             '유료 재화. 얻는 곳과 쓰는 곳.',
