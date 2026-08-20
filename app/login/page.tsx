@@ -172,8 +172,7 @@ export default async function LoginPage({
             위키는 viewport를 device-width로 재정의하므로, 소프트 내비게이션으로 넘어가면
             게임의 고정 390 스케일과 섞인다(통짜 이동으로 문서를 새로 연다). */}
         <p className="mt-2.5 text-[11px] text-zinc-500">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/wiki" className="underline">
+          <a href="/wiki" target="_blank" rel="noopener noreferrer" className="underline">
             게임 가이드(위키)
           </a>
         </p>
