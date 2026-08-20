@@ -10,7 +10,7 @@ import { GUILD_PERM_META, GUILD_PERM_ORDER } from '@/lib/game/guild/permissions'
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
-import { DocLink, Fn, FnList, H2, LI, P, Tbl, UL, Warn } from '../ui';
+import { DocLink, Fn, FnList, H2, LI, P, UL, Warn } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'guild-roles',
@@ -26,16 +26,8 @@ export const meta: WikiDocMeta = {
   ],
 };
 
-/** 코드에 desc가 없는 권한의 위키용 설명 — 화면에서 확인 가능한 기능 서술만. */
-const WIKI_PERM_DESC: Partial<Record<(typeof GUILD_PERM_ORDER)[number], string>> = {
-  notice: '길드 공지사항',
-  openchat: '카카오톡 오픈채팅 링크 버튼',
-};
-
-/** 권한 표 — 코드의 권한 목록을 그대로 옮긴다. */
-const PERM_ROWS = GUILD_PERM_ORDER.map(
-  (key) => [GUILD_PERM_META[key].label, GUILD_PERM_META[key].desc ?? WIKI_PERM_DESC[key] ?? ''] as const,
-);
+/** 권한 이름 목록 — 코드의 권한 목록을 그대로 옮긴다(설명 없이 이름만). */
+const PERM_LABELS: string[] = GUILD_PERM_ORDER.map((key) => GUILD_PERM_META[key].label);
 
 export default function Doc() {
   return (
@@ -57,7 +49,11 @@ export default function Doc() {
           가능하다.
         </LI>
       </UL>
-      <Tbl head={['권한', '내용']} rows={PERM_ROWS} />
+      <UL>
+        {PERM_LABELS.map((label: string) => (
+          <LI key={label}>{label}</LI>
+        ))}
+      </UL>
       <UL>
         <LI>
           {GUILD_PERM_META.deploy.label}는 다른 길드원의{' '}
