@@ -29,6 +29,10 @@ export function PublicFooter() {
             {label}
           </Link>
         ))}
+        {/* 위키는 viewport를 재정의하므로 통짜 <a>로 이동(소프트 내비는 루트 미재렌더). */}
+        <a href="/wiki" className="shrink-0 hover:underline">
+          위키
+        </a>
       </nav>
       {/* 가격 목록은 DOM에만(sr-only) — 크롤러·스크린리더 인식용, 화면 미표시.
           /pricing 접근은 상단 nav '상품안내' 링크로 충분(중복 제거). */}

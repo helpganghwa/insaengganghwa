@@ -145,6 +145,8 @@ export default async function SettingsPage() {
         <Divider />
         <SettingLink href="/legal/youth" label="청소년보호정책" />
         <Divider />
+        <SettingLink href="/wiki" label="공식 위키" hard />
+        <Divider />
         <SettingLink href="/probability" label="확률 공시" />
         <Divider />
         <SupportModal
@@ -197,7 +199,16 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function SettingLink({ href, label }: { href: string; label: string }) {
+function SettingLink({ href, label, hard }: { href: string; label: string; hard?: boolean }) {
+  // hard: 위키처럼 viewport를 재정의하는 페이지는 소프트 내비가 루트를 재렌더하지
+  // 않아 통짜 <a>로 이동해야 한다(app/wiki/ui.tsx Ext와 같은 이유).
+  if (hard) {
+    return (
+      <a href={href} className="flex items-center px-3 py-2.5">
+        <span className="text-sm">{label}</span>
+      </a>
+    );
+  }
   return (
     <Link prefetch={false} href={href} className="flex items-center px-3 py-2.5">
       <span className="text-sm">{label}</span>
