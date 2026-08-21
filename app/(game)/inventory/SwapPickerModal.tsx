@@ -151,7 +151,7 @@ export function SwapPickerModal({
               {swapAsk.enhanceLevel} 강화를 취소하고 새 장비를 등록합니다.
             </p>
             <p className="mt-2 text-[11.5px] font-bold text-amber-600 dark:text-amber-300/90">
-              쌓인 시간 <Ticker>{(now) => elapsedLabel(swapAsk.startedAtIso, now)}</Ticker>이 사라집니다.
+              쌓인 시간 <Ticker>{(now) => elapsedLabel(swapAsk.startedAtIso, now)}</Ticker>이 사라지고, 시간 단축에 쓴 다이아는 돌려받을 수 없습니다.
             </p>
           </div>
         ) : (

@@ -6,7 +6,6 @@ import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { CbtEndedNotice } from './CbtEndedNotice';
 // ⚠ lib/launch에서 직접 import — CbtEndedNotice('use client') 경유 시 서버에서 값이
@@ -230,16 +229,9 @@ export default async function LoginPage({
         </section>
         )}
 
-        {/* 서브듀드 — CBT 기간 데이터 초기화 사전 고지(작게·저대비, 문구는 원문 유지). 정식 오픈(env off) 시 자동 미노출. */}
-        {isCbtPaidHidden() && !cbtEnded ? (
-          <div className="mt-4 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[11px] leading-relaxed text-zinc-500">
-            <p className="font-semibold text-zinc-400">비공개 테스트(CBT) 안내</p>
-            <p className="mt-1">
-              지금은 CBT 기간으로, 테스트 종료 시 게임 데이터가 초기화될 수 있습니다. 테스트에 참여해 주신
-              분들께는 정식 오픈 때 감사 보상이 지급됩니다.
-            </p>
-          </div>
-        ) : null}
+        {/* CBT 데이터 초기화 사전 고지는 제거(2026-08-21 전수 대조) — 이 블록이 PAYMENTS_OPEN에
+            결합돼 있어, 카드사 심사 대기로 결제만 닫아둔 정식 오픈 화면에 CBT 문구가 노출됐다.
+            CBT는 종료·정식 전환이 확정이므로 문구 자체를 소거(결제 게이팅은 isCbtPaidHidden 유지). */}
       </main>
       )}
       <PublicFooter />

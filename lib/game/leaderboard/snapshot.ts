@@ -76,7 +76,9 @@ async function combatRows(serverId: number): Promise<Row[]> {
     if (rows.length < BATCH) break;
     after = rows[rows.length - 1]!.id;
   }
-  return out;
+  // 전투력 0(장비 없음)은 랭킹 미등재 — 다른 지표(melee 등)와 동일 정책(전수 감사 2026-08-21:
+  // 복원 250명이 장비 0으로 전원 동점 1위가 되어 오픈 첫 랭킹 화면이 "1위·전투력 0" 250줄이 됐다).
+  return out.filter((r) => r.value > 0);
 }
 
 async function raidRows(serverId: number): Promise<Row[]> {

@@ -77,6 +77,10 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raids where host_user_id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
+    // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.
+    // 남기면 그 구역은 executor_user_id≠null이라 방치 중립화에서 영구 면제(B안 유지비용 우회)
+    // + 지도에 닉네임 없는 유령 집행관.
+    await tx.execute(sql`update zones set executor_user_id = null where executor_user_id = ${uid}`);
     await tx.execute(sql`delete from guild_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_battle_deployments where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_leave_log where user_id = ${uid}`);

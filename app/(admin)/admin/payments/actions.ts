@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
@@ -15,6 +15,7 @@ import {
   refundPurchase,
 } from '@/lib/payment/refund';
 import { parseBpProduct } from '@/lib/payment/purchase';
+import { PREMIUM } from '@/lib/game/shop/catalog';
 import { bpSegmentClaimedAny } from '@/lib/game/battlepass';
 
 /**
@@ -71,6 +72,18 @@ export async function refundOrderAction(
     (await bpSegmentClaimedAny(order.userId, order.serverId, bp.type, bp.segmentIndex))
   ) {
     return { status: 'error', code: 'BP_NOT_REFUNDABLE' } as const;
+  }
+  // 성장 프리미엄도 동일 원칙(전수 감사 2026-08-21) — clawbackNeed가 PREMIUM을 0으로 봐
+  // 즉시분+일일 드립을 다 수령한 뒤 환불해도 게이트가 무조건 통과했다(최대 10,000💎+480상자
+  // 무상 취득 + iap_refunds에 "전액 회수"라는 허위 기록). 프리미엄 우편을 1건이라도
+  // 수령했으면 어드민 환불 불가 — BP와 같은 규칙. 수령분 실회수는 오픈 후 정공 수정.
+  if (order.product === PREMIUM.id && !order.grantSkipped) {
+    const claimed = (await db.execute(sql`
+      select 1 from mailbox where user_id = ${order.userId}::uuid
+        and server_id = ${order.serverId}
+        and sender_label = '성장 프리미엄' and claimed_at is not null limit 1
+    `)) as unknown as unknown[];
+    if (claimed.length > 0) return { status: 'error', code: 'BP_NOT_REFUNDABLE' } as const;
   }
 
   // 회수 사전 검사 — 부족하면 포트원 취소도 하지 않는다(되돌릴 수 없는 순서).

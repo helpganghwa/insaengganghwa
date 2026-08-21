@@ -87,7 +87,18 @@ function Countdown() {
   const done = p?.done === true;
   useEffect(() => {
     if (!done) return;
-    const t = setTimeout(() => location.reload(), 4000);
+    // 지터+백오프(전수 감사 2026-08-21) — ① 고정 4초는 종료 화면을 띄워둔 전 클라이언트를
+    // 같은 초에 리로드시켜 풀(max 8)을 스스로 포화시킨다 → 0~20s 랜덤 분산. ② 시계가 빠른
+    // 기기는 서버가 아직 preOpen이라 리로드 루프가 된다 → 회차당 30s씩 추가 대기.
+    let n = 0;
+    try {
+      n = Number(sessionStorage.getItem('ig:open-reload') ?? '0');
+      sessionStorage.setItem('ig:open-reload', String(n + 1));
+    } catch {
+      /* 시크릿 모드 등 — 지터만으로 동작 */
+    }
+    const delay = 4000 + Math.random() * 20_000 + Math.min(n, 10) * 30_000;
+    const t = setTimeout(() => location.reload(), delay);
     return () => clearTimeout(t);
   }, [done]);
   const cell = (v: number | null, label: string) => (

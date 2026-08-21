@@ -27,7 +27,6 @@ import {
   RAID_PHASE_DROP_BOXES,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
-import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
 // 정적화 시도·기각(2026-08-06 감사): revalidate=600을 넣어도 루트 generateViewport가
 // headers()(폴더블 Sec-CH-UA-Model 판별)를 읽어 **전 라우트가 구조적으로 동적**이라 무효
@@ -51,7 +50,9 @@ const pct = (bp: number) => {
   return Number.isInteger(v) ? `${v}%` : `${v.toFixed(2)}%`;
 };
 
-const ENH_SAMPLES = [0, 9, 10, 15, 20, 30, 40, 51, 52, 60, 75, 90, 99, 100, 152, 199, 200];
+// 전 단계 공시(전수 감사 2026-08-21) — 표본 공시는 앵커 사이 보간 규칙을 유저가 산출할 수
+// 없어 §33 취지에 미달한다. 순수 상수 렌더라 비용 0(사이클 반복 구간은 0~99 + 대표 사이클).
+const ENH_SAMPLES = Array.from({ length: 201 }, (_, i) => i);
 const TRANSCEND_SAMPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 15, 20];
 const CP_SAMPLES = [0, 10, 30, 51, 99];
 const PHASE_SAMPLES = [1, 2, 3, 4, 5];
@@ -73,9 +74,9 @@ export default async function ProbabilityPage() {
     for (const k of Object.keys(bySlot) as (keyof typeof bySlot)[])
       bySlot[k].sort((a, b) => a.localeCompare(b, 'ko'));
   } catch {
-    for (const c of CATALOG_ITEMS) bySlot[c.slot].push(c.nameKo);
-    for (const k of Object.keys(bySlot) as (keyof typeof bySlot)[])
-      bySlot[k].sort((a, b) => a.localeCompare(b, 'ko'));
+    // 폴백으로 숫자를 공시하지 않는다(전수 감사 2026-08-21) — 코드 배열은 DB active 집합과
+    // 다를 수 있어(무기 교체 등) 틀린 확률(1/40 vs 실제 1/34)을 조용히 공시하게 된다.
+    // 빈 상태로 두면 아래 렌더가 "일시적으로 표시할 수 없음"으로 안내한다.
   }
   // 각 아이템 당첨 확률 = 1/N → bp = 10000/N.
   const supplyProbBp = (n: number) => (n > 0 ? Math.round((10000 / n) * 100) / 100 : 0);
@@ -177,6 +178,12 @@ export default async function ProbabilityPage() {
           아직 없는 아이템이면 새로 <b>획득(도감 해금)</b>되고, 이미 있는 아이템이면 그 아이템의{' '}
           <b>초월 진행도</b>로 쌓입니다. 상자 열기에는 이 균등 추첨 외에 숨은 추가 확률이 없습니다.
         </P>
+        {bySlot.weapon.length === 0 && (
+          <P>
+            아이템 목록을 일시적으로 표시할 수 없습니다. 잠시 후 새로고침해 주세요 — 실제 개봉
+            판정은 이 페이지와 무관하게 정상 동작합니다.
+          </P>
+        )}
         {(['weapon', 'armor', 'accessory'] as const).map((s) => {
           const items = bySlot[s];
           const p = pct(supplyProbBp(items.length));
@@ -234,7 +241,7 @@ export default async function ProbabilityPage() {
         </Table>
         <P>
           추가 공격 비용은 10번마다 한 칸씩 오릅니다({raidExtraAttackCost(1)} × ⌈횟수÷10⌉ 다이아).
-          보상은 페이즈를 하나 깰 때마다 참여자 <b>전원</b>에게 보급 상자 {RAID_PHASE_DROP_BOXES}개
+          보상은 페이즈를 하나 깰 때마다 <b>1회 이상 공격한</b> 참여자 전원에게 보급 상자 {RAID_PHASE_DROP_BOXES}개
           — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
         </P>
       </Sec>

@@ -2,7 +2,7 @@
 
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
-import { and, count, desc, eq, ne } from 'drizzle-orm';
+import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -75,6 +75,14 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
+
+  // 신고 누적 아바타는 본인 삭제 불가(전수 감사 2026-08-21) — profile_reports가 이 행에
+  // CASCADE로 매달려 있어, 삭제가 곧 신고 증거 인멸 + 어드민 신고 큐 이탈이었다.
+  // 신고 처리(운영)가 끝나면 report_count가 0으로 리셋되어 다시 삭제할 수 있다.
+  const [reported] = (await db.execute(sql`
+    select 1 from user_profiles where id = ${profileId}::uuid and report_count > 0 limit 1
+  `)) as unknown as unknown[];
+  if (reported) return { status: 'error', message: '신고 처리 중인 아바타는 삭제할 수 없습니다.' };
 
   // 최소 1개 보유(같은 서버 내) — 마지막 프로필은 삭제 불가.
   const [target] = await db

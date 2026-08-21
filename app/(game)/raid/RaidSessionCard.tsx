@@ -594,7 +594,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         {settled ? (
           v.myReward == null ? (
             <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
-              참여 보상이 없어요 (공격 0회).
+              {/* 보상 행 없음 = 공격 0회 또는 페이즈 미돌파(0페이즈는 행 미생성 — 2026-08-21). */}
+              참여 보상이 없어요 — 공격을 하지 않았거나 돌파한 페이즈가 없어요.
             </div>
           ) : (
             <div

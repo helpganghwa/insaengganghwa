@@ -64,11 +64,15 @@ export async function settleRaid(
     const phasesCleared = raidPhasesCleared(Number(raid.phase1Hp), Number(total));
     const drops = aggregatePhaseDrops(raidId, phasesCleared);
 
-    // 1회 이상 공격한 참여자 전원 동일 보상.
-    const winners = await tx
-      .select({ userId: raidParticipants.userId })
-      .from(raidParticipants)
-      .where(and(eq(raidParticipants.raidId, raidId), gte(raidParticipants.attacksUsed, 1)));
+    // 1회 이상 공격한 참여자 전원 동일 보상. 0페이즈(미돌파)는 보상 행 자체를 만들지 않는다
+    // (전수 감사 2026-08-21) — 빈 payload 행이 홈 뱃지("보상 있음")를 켜고 열면 아무것도
+    // 없는 헛걸음을 만들었다. 오픈 첫날 소인원 레이드에서 다수 발생하는 경로.
+    const winners = phasesCleared >= 1
+      ? await tx
+          .select({ userId: raidParticipants.userId })
+          .from(raidParticipants)
+          .where(and(eq(raidParticipants.raidId, raidId), gte(raidParticipants.attacksUsed, 1)))
+      : [];
 
     for (const w of winners) {
       await tx

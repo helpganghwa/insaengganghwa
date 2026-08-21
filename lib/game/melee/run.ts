@@ -81,7 +81,9 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     if (rows.length < BATCH) break;
     after = rows[rows.length - 1]!.uid;
   }
-  if (withCp.length === 0) return { ran: false };
+  // 2명 미만이면 불성립 — 혼자인 회차가 무전투 1위로 1위 보상 전액(1,000💎+상자 60)을
+  // 가져가는 워크오버 차단(전수 감사 2026-08-21, 신서버 초기 실발현 경로).
+  if (withCp.length < 2) return { ran: false };
 
   const ids = withCp.map((x) => x.uid);
   // 1000개씩 청크 — 전 참가자 대상 조회라 인원이 곧 파라미터 수다(Postgres 바인드 상한 65,535에서

@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { meleeParticipants } from '@/lib/db/schema/melee';
+import { meleeParticipants, meleeBattles } from '@/lib/db/schema/melee';
 import { guildMembers } from '@/lib/db/schema/guild';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -64,6 +64,17 @@ export async function getMeleeRanking(input: {
   aroundRank?: number;
 }): Promise<{ rows: MeleeRankRow[]; myRank: number | null }> {
   const { battleId, serverId, viewerUserId, mode } = input;
+
+  // 발표 게이트(전수 감사 2026-08-21) — computed 상태(09시 산출~10시 발표 사이)의 결과가
+  // 이 API로 전부 유출됐다(MELEE.md §"발표 전 조회 차단" 위반). 타 서버 배틀도 거부.
+  const [battle] = await db
+    .select({ status: meleeBattles.status, serverId: meleeBattles.serverId })
+    .from(meleeBattles)
+    .where(eq(meleeBattles.id, battleId))
+    .limit(1);
+  if (!battle || battle.status !== 'revealed' || battle.serverId !== serverId) {
+    return { rows: [], myRank: null };
+  }
 
   const [meRow] = await db
     .select({ rank: meleeParticipants.finalRank })

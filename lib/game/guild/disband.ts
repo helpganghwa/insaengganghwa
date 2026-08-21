@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, guildLeaveLog, zones } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
@@ -100,6 +100,10 @@ export function disbandGuild(input: { userId: string; serverId: number }): Promi
         targetUserId: mem.userId,
       });
     }
+    // 해산을 **결정한 길드장 본인**에게는 24h 재가입 잠금을 남긴다(전수 감사 2026-08-21) —
+    // 솔로 길드장이 "탈퇴" 대신 "해산"을 누르면 잠금 0으로 즉시 갈아타던 우회 차단.
+    // 일반 멤버는 본인 의사가 아니므로 위 disband audit 행만(잠금 없음 — 기존 의도 유지).
+    await tx.insert(guildLeaveLog).values({ userId: input.userId, serverId: input.serverId });
     await neutralizeAndDeleteGuild(tx, m.guildId);
   });
 }

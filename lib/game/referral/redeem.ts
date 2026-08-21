@@ -81,6 +81,12 @@ export async function attributeReferralFromShare(
     if (clickedAtMs == null) return null;
     const createdMs = acct.createdAt.getTime();
     if (createdMs < clickedAtMs - SIGNUP_SKEW_MS) return null; // 기존 유저 — 보상 없음.
+    // 서버 권위 신규 판정(전수 감사 2026-08-21) — 두 쿠키 모두 httpOnly=false라 클릭 시각은
+    // 조작 가능한 참고값일 뿐이다(pending_referral_at=0을 심으면 위 검사가 무력). 계정 생성이
+    // 서버 시계 기준 최근일 때만 신규로 인정 — 기존 계정(특히 미귀속 상태의 CBT 복원 251명)이
+    // 쿠키 조작으로 임의 추천인에게 1,000💎을 만들어주는 우회 차단.
+    const NEW_SIGNUP_WINDOW_MS = 24 * 3600 * 1000;
+    if (Date.now() - createdMs > NEW_SIGNUP_WINDOW_MS) return null;
 
     // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
     // 추천인과 같은 규칙 — 다중 서버 캐릭터가 있으면 마지막 활성 서버 닉을 우선(표시용).

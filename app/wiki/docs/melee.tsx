@@ -1,4 +1,5 @@
 import {
+  MELEE_DIAMOND_PCT_CUTOFF,
   MELEE_DMG_MAX,
   MELEE_DMG_MIN,
   MELEE_HP_MULT,
@@ -100,6 +101,10 @@ export default function Doc() {
           t.points > 0 ? `+${fmtInt(t.points)}` : '—',
         ])}
       />
+      <Warn>
+        다이아는 참가자 상위 {Math.round(MELEE_DIAMOND_PCT_CUTOFF * 100)}%까지만 지급된다 — 그
+        아래 순위는 표의 다이아 없이 상자와 포인트만 받는다.
+      </Warn>
       <Warn>보상 우편은 기한이 지나면 사라진다. 받지 않은 보상은 그대로 없어진다.</Warn>
 
       <H2 id="point">포인트</H2>

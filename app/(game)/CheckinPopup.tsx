@@ -341,6 +341,10 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
   return (
     <div
+      // role=dialog — a11y + 튜토리얼 클릭 차단기의 다이얼로그 예외(적대 검수 2026-08-21:
+      // 없으면 튜토리얼 스텝 중 이 팝업이 뜰 때 받기/닫기가 전부 차단돼 신규 유저 소프트락).
+      role="dialog"
+      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
       onClick={fxOn ? closePopup : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
     >

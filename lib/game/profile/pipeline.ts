@@ -183,7 +183,10 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       break;
     }
     if (!job.characterId) {
-      await markFailedAndRefund(job.id, job.userId, 'Pixellab character_id missing');
+      // 한 건의 환불 실패가 폴링 배치 전체를 죽이지 않게 격리(전수 감사 2026-08-21).
+      await markFailedAndRefund(job.id, job.userId, 'Pixellab character_id missing').catch((e) =>
+        console.error('[profile-poll] refund failed', String(job.id), e),
+      );
       failed += 1;
       continue;
     }
@@ -194,7 +197,9 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     // ⚠ 기준은 created_at이 아니라 **발주 시각**이다 — 큐 대기가 이 예산을 잠식하면 안 된다(gen-age.ts).
     const ageMin = generationAgeMin(job.options, job.createdAt, Date.now());
     if (ageMin > PROFILE_GEN_TIMEOUT_MIN) {
-      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`);
+      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`).catch(
+        (e) => console.error('[profile-poll] refund failed', String(job.id), e),
+      );
       failed += 1;
       continue;
     }
@@ -217,7 +222,9 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     }
     if (!charRes.ok) {
       if (charRes.status === 404) {
-        await markFailedAndRefund(job.id, job.userId, `Pixellab character not found (${charRes.status})`);
+        await markFailedAndRefund(job.id, job.userId, `Pixellab character not found (${charRes.status})`).catch(
+          (e) => console.error('[profile-poll] refund failed', String(job.id), e),
+        );
         failed += 1;
       } else {
         stillProcessing += 1;

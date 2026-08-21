@@ -12,6 +12,7 @@ import { shopPurchases } from '@/lib/db/schema/shop';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
 import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
+import { bpSegmentIndex } from '@/lib/game/balance';
 import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
 import {
   paidProduct,
@@ -166,6 +167,15 @@ export async function createOrder(
       throw new PurchaseError('UNKNOWN_PRODUCT');
     }
     orderName = bpOrderName(bp.type, bp.segmentIndex);
+    // 도달 가능 상한(전수 감사 2026-08-21) — 가격이 c5부터 평탄(59,900 캡)이라 가격 검증만으로는
+    // bp_enhance_9999 같은 미도달 구간도 통과했다(UI는 topSegment까지만 노출하나 서버 액션 직접
+    // 호출로 우회 가능 — 쓸 수 없는 구간 판매는 CS/분쟁 직결). UI와 동일 기준(bpSegmentIndex).
+    const [reach] = (await db.execute(sql`
+      select coalesce(max(${bp.type === 'enhance' ? sql.raw('max_enhance_level') : sql.raw('max_transcend_level')}), 0)::int as lv
+      from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId}
+    `)) as unknown as { lv: number }[];
+    const topSegment = (reach?.lv ?? 0) >= 1 ? bpSegmentIndex(bp.type, Number(reach?.lv ?? 0)) : 0;
+    if (bp.segmentIndex > topSegment) throw new PurchaseError('UNKNOWN_PRODUCT');
     // 이미 산 구간이면 차단(구간 row 존재 = 구매됨).
     const [owned] = await db
       .select({ idx: battlePassSegments.segmentIndex })

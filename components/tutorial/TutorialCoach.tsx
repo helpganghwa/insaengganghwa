@@ -211,6 +211,11 @@ export function TutorialCoach({
       for (const c of STEP_TARGETS[effective]) {
         const el = document.querySelector(c.sel);
         if (el) {
+          // 비활성 대상은 후보에서 제외(전수 감사 2026-08-21) — disabled 버튼을 하이라이트하면
+          // 클릭이 안 되는데 차단기가 나머지를 막아 소프트락이 된다. 다음 후보(폴백)로 넘어간다.
+          if ((el as HTMLButtonElement).disabled === true || el.getAttribute('aria-disabled') === 'true') {
+            continue;
+          }
           const r = el.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) {
             if (lastSel.current !== c.sel) {
@@ -255,6 +260,10 @@ export function TutorialCoach({
       const t = e.target as Element | null;
       if (!t || typeof t.closest !== 'function') return;
       if (t.closest('[data-tut-ui]')) return;
+      // 열린 다이얼로그(시트) 내부 클릭은 항상 허용(전수 감사 2026-08-21) — 장착·강화 단계에서
+      // 앵커가 시트 뒤 그리드로 폴백되면 시트의 '닫기'까지 차단돼 탈출구가 '그만두기'뿐인
+      // 소프트락이 됐다. 시트 안에서는 하이라이트가 유도만 하고 강제하지 않는다.
+      if (t.closest('[role="dialog"]')) return;
       const sel = lastSel.current;
       if (!sel) return;
       if (t.closest(sel)) return;

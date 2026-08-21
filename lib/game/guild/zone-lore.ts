@@ -65,3 +65,13 @@ export const ZONE_LORE: Record<number, string> = {
   49: '무너진 기둥 사이로 금빛이 흐르는 복도',
   50: '타락 천사가 마지막으로 무릎 꿇었다는 제단',
 };
+
+/**
+ * 서버 무관 로어 조회(전수 감사 2026-08-21) — 신서버 zones는 open-server.ts가 1서버 템플릿을
+ * id 순서 그대로 max(id)+1부터 복제하므로(51~100, 101~150 …), 50개 블록 단위 정규화로
+ * 원본 id(1~50)에 매핑한다. 종전 직접 인덱싱은 2서버 전 구역 설명이 빈칸이었다.
+ */
+export const ZONE_TEMPLATE_SIZE = 50;
+export function zoneLoreOf(zoneId: number): string | undefined {
+  return ZONE_LORE[((zoneId - 1) % ZONE_TEMPLATE_SIZE) + 1];
+}

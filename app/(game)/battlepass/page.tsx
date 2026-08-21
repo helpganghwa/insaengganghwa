@@ -63,7 +63,9 @@ export default async function BattlePassPage({
     <BattlePassClient
       enhance={data[0]}
       transcend={data[1]}
-      payEnabled={portoneConfig() !== null}
+      // 상점(shop/page.tsx)과 동일 이중 게이트 — 상위 분기(:27)가 바뀌어도 결제 UI가
+      // 단독으로 열리지 않게(전수 감사 2026-08-21). 어드민은 심사·점검용으로 항상 열림.
+      payEnabled={portoneConfig() !== null && (isAdmin || !(await shouldHidePaidContent()))}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
       returnMessage={sp.message ?? null}

@@ -56,6 +56,10 @@ export async function getItemTop10(catalogItemId: number, serverId: number): Pro
         eq(userEquipment.serverId, serverId),
         eq(userEquipment.catalogItemId, catalogItemId),
         sql`${userEquipment.maxEnhanceLevel} > 0`,
+        // 정지 계정 제외(전수 감사 2026-08-21) — 해방(codex_champions 스냅샷)은 밴 필터가
+        // 있는데 표시 Top10만 없어 "표시 2위 ≠ 해방 2위"로 어긋났다. snapshot.ts와 동일 술어.
+        sql`not exists (select 1 from profiles pb where pb.id = ${userEquipment.userId}
+              and pb.banned_at is not null and (pb.ban_until is null or pb.ban_until > now()))`,
       ),
     )
     .orderBy(

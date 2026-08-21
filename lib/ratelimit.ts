@@ -86,6 +86,7 @@ const REDIS_BUCKETS: ReadonlySet<RlBucket> = new Set<RlBucket>([
   'nickname',
   'chatSend', // 전서버 공개 채팅 — 정확한 쿨다운 필요
   'chatBurst',
+  'friend', // 친구 요청 살포 방어(전수 감사 2026-08-21) — 인메모리 창은 인스턴스 수만큼 완화됨
   'whisperSend', // 귓속말 — 채팅과 동일 취급(인스턴스별 창이면 쿨다운이 사실상 무력)
   'whisperBurst',
   'clientError', // 무인증 공개 엔드포인트

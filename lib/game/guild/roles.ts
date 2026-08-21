@@ -158,5 +158,14 @@ export function setVicePermissions(input: {
       .where(
         and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)),
       );
+    // docstring이 약속한 감사 로그(분쟁 근거) — 선언만 있고 write가 비어 있었다(전수 감사 2026-08-21).
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: leader.guildId,
+      actorUserId: input.leaderUserId,
+      action: 'set_perm',
+      targetUserId: input.targetUserId,
+      detail: { before: target.permissions, after: next },
+    });
   });
 }

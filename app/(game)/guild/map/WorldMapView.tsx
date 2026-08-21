@@ -28,7 +28,7 @@ import {
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
-import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
+import { zoneLoreOf } from '@/lib/game/guild/zone-lore';
 import { REGION_META, REGION_ORDER, type Region } from '@/lib/game/guild/region-meta';
 import { CHRONICLE_TOKEN_RE, displayName, fixLeadingJosa } from './chronicle-tokens';
 import { ChronicleReplayPanel } from './ChronicleReplay';
@@ -1190,7 +1190,7 @@ export function WorldMapView({
                     {selected.name}
                   </h2>
                   <p className="truncate text-[10px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
-                    {ZONE_LORE[selected.id]}
+                    {zoneLoreOf(selected.id)}
                   </p>
                 </div>
               </div>

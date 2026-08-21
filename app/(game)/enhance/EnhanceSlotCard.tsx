@@ -1085,7 +1085,7 @@ export function EnhanceSlotCard({
               진행 중인 강화를 해제합니다.
             </p>
             <p className="mt-1.5 text-[11.5px] leading-relaxed text-amber-600 dark:text-amber-300/90">
-              지금까지 쌓인 강화 시간이 초기화됩니다.
+              지금까지 쌓인 강화 시간이 초기화되고, 시간 단축에 쓴 다이아는 돌려받을 수 없습니다.
             </p>
           </ModalLayout>
         </ModalShell>

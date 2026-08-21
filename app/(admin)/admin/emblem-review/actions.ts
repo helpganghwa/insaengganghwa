@@ -79,7 +79,10 @@ export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean
         .set(
           next
             ? { activeEmblemId: next.id, emblemUrl: next.url, emblemColor: next.color, emblemStatus: 'done' }
-            : { activeEmblemId: null, emblemUrl: null, emblemColor: null, emblemStatus: 'failed' },
+            : // selection도 함께 비운다(전수 감사 2026-08-21) — 남기면 재시도 크론 대상 조건
+              // (activeEmblemId null && selection not null)에 걸려 같은 조합으로 무료 재생성
+              // → 같은 이유로 재리젝되는 루프. 길드장이 새 조합을 직접 고르게 한다(안내 우편 정합).
+              { activeEmblemId: null, emblemUrl: null, emblemColor: null, emblemStatus: 'failed', emblemSelection: null },
         )
         .where(eq(guilds.id, g.id));
     }

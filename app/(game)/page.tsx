@@ -346,8 +346,10 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* 출석 자동 팝업(2026-07-22, /checkin 대체) — 튜토리얼 중엔 억제(코치마크 우선). */}
-      {userId && !tutorialActive ? (
+      {/* 출석 자동 팝업(2026-07-22, /checkin 대체) — 인트로 모달과 겹칠 때만 억제.
+          종전엔 튜토리얼 전 구간(active) 억제라, 중도 이탈 계정이 자동 만료(3일)까지 출석
+          수령 자체가 불가했다(전수 감사 2026-08-21 — 출석 진입점이 이 팝업뿐). */}
+      {userId && tutState.phase !== 'intro' ? (
         <CheckinPopupGate unclaimed={hasUnclaimedCheckin} dayProgress={checkinDayProgress} />
       ) : null}
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}

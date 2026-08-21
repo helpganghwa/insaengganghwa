@@ -53,7 +53,11 @@ await sql.begin(async (tx) => {
   await tx`delete from guild_join_requests`;
   await tx`delete from guild_leave_log`;
   await tx`delete from guild_members`;
-  await tx`update zones set owner_guild_id = null where owner_guild_id is not null`;
+  // zones는 점령 상태 전체 리셋(전수 감사 2026-08-21) — lib/reset-test-data와 동기.
+  await tx`update zones set owner_guild_id = null, executor_user_id = null, tax_points = 0,
+    tax_diamond = 0, last_tax_collected_at = null, captured_at = null, tax_bonus = 1
+    where owner_guild_id is not null or executor_user_id is not null
+       or tax_points <> 0 or tax_diamond <> 0 or tax_bonus <> 1 or captured_at is not null`;
   await tx`delete from guild_emblems`;
   await tx`delete from guilds`;
   await tx`delete from world_chronicle`;
@@ -68,6 +72,10 @@ await sql.begin(async (tx) => {
   await tx`delete from raids`;
   await tx`delete from melee_participants`;
   await tx`delete from melee_battles`;
+  await tx`delete from ranking_leaders`;
+  await tx`delete from support_inquiries`;
+  await tx`delete from client_errors`;
+  await tx`delete from admin_mail_logs`;
   await tx`delete from profile_reports where reporter_user_id in ${tx(ids)} or profile_id in (select id from user_profiles where user_id in ${tx(ids)})`;
   await tx`delete from mail_claim_logs where user_id in ${tx(ids)}`;
   await tx`delete from mailbox where user_id in ${tx(ids)}`;

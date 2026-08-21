@@ -44,7 +44,15 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from guild_join_requests`);
     await tx.execute(sql`delete from guild_leave_log`);
     await tx.execute(sql`delete from guild_members`);
-    await tx.execute(sql`update zones set owner_guild_id = null where owner_guild_id is not null`);
+    // zones는 소유만이 아니라 **점령 상태 전체**를 리셋(전수 감사 2026-08-21) — owner만 지우면
+    // 테스트 계정 UUID가 박힌 유령 집행관(방치 중립화 영구 면제), 테스트 세수(tax_diamond —
+    // 오픈 후 첫 점령자에게 무상 이전), stale 세율(tax_bonus)이 오픈 월드에 남는다.
+    // cutover-live.ts의 리셋 컬럼과 동일 목록.
+    await tx.execute(sql`
+      update zones set owner_guild_id = null, executor_user_id = null, tax_points = 0,
+        tax_diamond = 0, last_tax_collected_at = null, captured_at = null, tax_bonus = 1
+      where owner_guild_id is not null or executor_user_id is not null
+         or tax_points <> 0 or tax_diamond <> 0 or tax_bonus <> 1 or captured_at is not null`);
     await tx.execute(sql`delete from guild_emblems`);
     await tx.execute(sql`delete from guilds`);
     await tx.execute(sql`delete from world_chronicle`);
@@ -59,6 +67,13 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from raids`);
     await tx.execute(sql`delete from melee_participants`);
     await tx.execute(sql`delete from melee_battles`);
+    // 운영 잔재(전수 감사 2026-08-21) — ranking_leaders(직전 1위 스냅샷: 남으면 오픈 전
+    // 10:22 rank-leader 틱이 "1위 교체" 월드 이벤트를 허위 기록), support_inquiries(어드민
+    // 배지 오탐), client_errors·admin_mail_logs(테스트 로그).
+    await tx.execute(sql`delete from ranking_leaders`);
+    await tx.execute(sql`delete from support_inquiries`);
+    await tx.execute(sql`delete from client_errors`);
+    await tx.execute(sql`delete from admin_mail_logs`);
 
     // 유저 단위 게임 데이터 — withdrawAccount와 동일 시퀀스(계정·구독·referral 제외).
     // 복원 유저 251명의 데이터(캐릭터·우편·칭호)는 보호해야 하므로 반드시 대상 한정.

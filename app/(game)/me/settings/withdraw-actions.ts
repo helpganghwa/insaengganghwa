@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUserId } from '@/lib/auth/session';
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/auth/supabase-server';
 import { withdrawAccount, WithdrawError } from '@/lib/game/account/withdraw';
+import { actionBlock } from '@/lib/game/action-gate';
 
 /** 카카오 연결해제(best-effort) — 실패해도 탈퇴는 진행. KAKAO_ADMIN_KEY 필요. */
 async function kakaoUnlink(userId: string): Promise<void> {
@@ -58,6 +59,11 @@ async function anonymizeAuthUser(userId: string): Promise<void> {
 export async function withdrawAction(): Promise<{ status: 'error'; code: string } | never> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', code: 'UNAUTHENTICATED' };
+  // 제재·점검 중 탈퇴 차단(전수 감사 2026-08-21) — 레이아웃(BanScreen)은 서버 액션 직접
+  // POST를 못 막는다. 정지 유저가 탈퇴하면 user_profiles CASCADE로 신고 증거(profile_reports)가
+  // 전멸하고 문제 닉네임이 즉시 해방된다 — 제재 심사 중 데이터 파기 금지.
+  const blocked = await actionBlock();
+  if (blocked) return { status: 'error', code: blocked };
 
   try {
     await withdrawAccount(userId);

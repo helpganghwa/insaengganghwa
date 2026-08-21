@@ -1,5 +1,6 @@
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
+import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
@@ -99,6 +100,9 @@ export default function Doc() {
         firstColNowrap
         rows={DIAMONDS.map((d) => [fmtInt(d.total), won(d.krw)])}
       />
+      <UL>
+        <LI>만 19세 미만은 월 {won(MINOR_MONTHLY_LIMIT_KRW)}까지 결제할 수 있다.</LI>
+      </UL>
 
       <H2 id="limited">한정 상품</H2>
       <UL>

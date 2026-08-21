@@ -3,7 +3,7 @@
 // 폴링/다운로드/미러링은 pipeline.ts의 rotation_urls 처리를 재사용(v3도 동일 GET 사용).
 import 'server-only';
 
-import { and, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
@@ -308,9 +308,16 @@ export async function drainQueue(): Promise<{
     .select({ id: profileGenerationJobs.id, userId: profileGenerationJobs.userId, status: profileGenerationJobs.status, createdAt: profileGenerationJobs.createdAt, options: profileGenerationJobs.options })
     .from(profileGenerationJobs)
     .where(
-      and(
-        inArray(profileGenerationJobs.status, ['queued', 'starting']),
-        lt(profileGenerationJobs.createdAt, new Date(now - QUEUED_TIMEOUT_MIN * 60_000)),
+      // queued만 60분 창으로 거른다 — starting을 created_at으로 거르면 "생성 3분 만에 클레임돼
+      // hang한 잡"이 60분까지 스윕 대상에 못 들어와 5분 타임아웃이 사실상 죽는다(전수 감사
+      // 2026-08-21: 그동안 다이아 동결 + 활성잡 UNIQUE로 재생성 차단 + 슬롯 점유).
+      // starting의 나이 판정은 아래 generationAgeMin(STARTING_TIMEOUT_MIN)이 전담한다.
+      or(
+        and(
+          eq(profileGenerationJobs.status, 'queued'),
+          lt(profileGenerationJobs.createdAt, new Date(now - QUEUED_TIMEOUT_MIN * 60_000)),
+        ),
+        eq(profileGenerationJobs.status, 'starting'),
       ),
     );
   let swept = 0;
@@ -326,8 +333,13 @@ export async function drainQueue(): Promise<{
     if (s.status === 'starting' && generationAgeMin(s.options, s.createdAt, now) < STARTING_TIMEOUT_MIN) {
       continue;
     }
-    await markFailedAndRefund(s.id, s.userId, `${s.status} timeout/stall`);
-    swept += 1;
+    // 한 건의 실패(지갑 부재 등)가 스윕 루프 전체 — 나아가 발주까지 — 죽이지 않게 격리.
+    try {
+      await markFailedAndRefund(s.id, s.userId, `${s.status} timeout/stall`);
+      swept += 1;
+    } catch (e) {
+      console.error('[profile-v3] sweep refund failed', String(s.id), e);
+    }
   }
 
   // 2. 여유 슬롯만큼 발주(최대 전체 상한회 — 클레임이 null이면 조기 종료).

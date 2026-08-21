@@ -107,18 +107,29 @@ export async function getChallengeStatus(
   // 잠김 과제는 달성 자체가 불가 → 판정 SQL에서 제외하고 done=false 고정(왕복 낭비 방지).
   // 목록·완주 분모는 항상 CHALLENGES 전체(잠김도 노출 — defs.isChallengeLocked 참조).
   const gated = CHALLENGES.filter((c) => !isChallengeLocked(c, hidePaid));
-  const cols = gated.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
-  const rows = (await db.execute(sql`
-    select ${sql.join(cols, sql`, `)},
-      (select coalesce(json_agg(challenge_id), '[]'::json)
-         from challenge_claims where user_id=${userId}::uuid and server_id=${serverId}) as claimed
-  `)) as unknown as (Record<string, boolean> & { claimed: string[] })[];
-  const row = rows[0]!;
+  // 수령 목록을 먼저 읽고 **미수령 과제만** 판정한다(전수 감사 2026-08-21) — 종전엔 홈 진입마다
+  // 이미 수령한 과제까지 28개 EXISTS를 전부 돌렸다. 정착 유저일수록 비용이 0에 수렴한다.
+  const claimedRows = (await db.execute(sql`
+    select challenge_id from challenge_claims where user_id=${userId}::uuid and server_id=${serverId}
+  `)) as unknown as { challenge_id: string }[];
+  const claimed = new Set<string>(claimedRows.map((r) => r.challenge_id));
+  const pending = gated.filter((c) => !claimed.has(c.id));
+  let row: Record<string, boolean> = {};
+  if (pending.length > 0) {
+    const cols = pending.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
+    const rows = (await db.execute(sql`
+      select ${sql.join(cols, sql`, `)}
+    `)) as unknown as Record<string, boolean>[];
+    row = rows[0] ?? {};
+  }
 
   const done: Record<string, boolean> = {};
-  for (const c of CHALLENGES) done[c.id] = !isChallengeLocked(c, hidePaid) && !!row[c.id];
-  const claimed = new Set<string>(row.claimed ?? []);
+  for (const c of CHALLENGES) {
+    done[c.id] = !isChallengeLocked(c, hidePaid) && (claimed.has(c.id) || !!row[c.id]);
+  }
 
+  // 완주 분모는 항상 전 과제 — claim.ts의 2026-08-12 확정과 동일(잠김으로 줄이면 상점이
+  // 열리기 전에 보너스가 소진된다). 결제 미개방 기간엔 완주 보너스가 대기 상태로 남는 게 의도.
   const allClaimed = CHALLENGES.every((c) => claimed.has(c.id));
   const completeClaimed = claimed.has(COMPLETE_BONUS.id);
   const completeReady = allClaimed && !completeClaimed;
@@ -128,12 +139,3 @@ export async function getChallengeStatus(
   return { done, claimed, claimable, completeReady, completeClaimed };
 }
 
-/** 홈 카드 뱃지용 — 수령 가능 수만(가벼운 동일 쿼리 재사용). */
-export async function countClaimableChallenges(
-  userId: string,
-  serverId: number,
-  hidePaid: boolean,
-): Promise<number> {
-  const s = await getChallengeStatus(userId, serverId, hidePaid);
-  return s.claimable;
-}

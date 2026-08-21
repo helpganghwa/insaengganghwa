@@ -308,6 +308,13 @@ export async function sendRequest(
       return { status: 'accepted' };
     }
     if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+    // 발신 pending 상한(전수 감사 2026-08-21) — 종전엔 무제한이라 한 계정이 요청을 대량
+    // 살포해 타 유저의 요청 탭을 매몰시킬 수 있었다(수락 상한만 있었음).
+    const [pend] = (await tx.execute(sql`
+      select count(*)::int as n from friend_links
+      where server_id = ${serverId} and requester_id = ${meId}::uuid and status = 'pending'
+    `)) as unknown as { n: number }[];
+    if (Number(pend?.n ?? 0) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
     await tx
       .insert(friendLinks)
       .values({ requesterId: meId, serverId, addresseeId: targetId, status: 'pending' });
@@ -448,7 +455,9 @@ export async function getRequests(
         eq(friendLinks.status, 'pending'),
         or(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, meId)),
       ),
-    );
+    )
+    // 수신함 폭주 방어(전수 감사 2026-08-21) — 무제한 조회는 요청 살포 어뷰징의 증폭기였다.
+    .limit(100);
   const incomingIds = rows.filter((r) => r.addresseeId === meId).map((r) => r.requesterId);
   const outgoingIds = rows.filter((r) => r.requesterId === meId).map((r) => r.addresseeId);
   // 차단 관계의 pending은 목록에서 뺀다 — 방향 무관. 내가 차단한 상대의 요청은 보일 이유가

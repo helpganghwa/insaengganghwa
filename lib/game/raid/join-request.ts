@@ -54,11 +54,38 @@ export async function joinOrRequestRaid(input: {
   if (scope === 'link') return requestJoinRaid({ userId, shareCode });
 
   const [raid] = await db
-    .select({ friendShare: raids.friendShare, guildShare: raids.guildShare })
+    .select({
+      friendShare: raids.friendShare,
+      guildShare: raids.guildShare,
+      hostUserId: raids.hostUserId,
+      serverId: raids.serverId,
+    })
     .from(raids)
     .where(eq(raids.shareCode, shareCode))
     .limit(1);
   if (!raid) throw new RaidError('RAID_NOT_FOUND');
+  // scope는 클라 입력 — 실제 관계를 서버에서 검증(전수 감사 2026-08-21). 종전엔 공유링크
+  // 소지자가 scope=friend를 보내 free 판정을 타면서 호스트의 '수락' 설정을 우회했다
+  // (0045 주석 "링크 유출 대비"의 정면 우회). 관계가 없으면 링크 경로(요청)로 강등.
+  let related = false;
+  if (scope === 'friend') {
+    const r = (await db.execute(sql`
+      select 1 from friend_links where server_id = ${raid.serverId} and status = 'accepted'
+        and ((requester_id = ${raid.hostUserId}::uuid and addressee_id = ${userId}::uuid)
+          or (requester_id = ${userId}::uuid and addressee_id = ${raid.hostUserId}::uuid))
+      limit 1
+    `)) as unknown as unknown[];
+    related = r.length > 0;
+  } else {
+    const r = (await db.execute(sql`
+      select 1 from guild_members a join guild_members b on b.guild_id = a.guild_id
+      where a.server_id = ${raid.serverId} and b.server_id = ${raid.serverId}
+        and a.user_id = ${raid.hostUserId}::uuid and b.user_id = ${userId}::uuid
+      limit 1
+    `)) as unknown as unknown[];
+    related = r.length > 0;
+  }
+  if (!related) return requestJoinRaid({ userId, shareCode });
   const mode = scope === 'friend' ? raid.friendShare : raid.guildShare;
   if (mode === 'free') {
     const r = await joinRaid({ userId, shareCode });
