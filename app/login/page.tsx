@@ -8,7 +8,7 @@ import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { getMaintenanceState } from '@/lib/game/system-mode';
-import { CbtEndedNotice } from './CbtEndedNotice';
+import { CbtEndedNotice, OPEN_AT_ISO } from './CbtEndedNotice';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
@@ -64,7 +64,12 @@ export default async function LoginPage({
   // CBT 종료 모드(0144) — 일반 화면은 로그인 수단 없이 종료 안내·카운트다운만.
   // ?test=true는 ID/PW(심사) + 카카오(어드민 전용 — 콜백에서 검증)를 함께 노출.
   const maint = await getMaintenanceState().catch(() => null);
-  const cbtEnded = maint?.active === true && maint.mode === 'cbt_ended';
+  // 시간 게이트(무인 오픈, 2026-08-21) — 서버는 8/24 10:30에 자동 live가 되지만(완충 30분),
+  // 화면은 OPEN_AT_ISO(11:00) 전까지 종료 화면을 유지해 "11시 정각 오픈" 약속을 지킨다.
+  // 카운트다운 0에서 CbtEndedNotice가 자동 새로고침 → 이 조건이 false가 되며 로그인 화면 착지.
+  // 오픈 이후에는 영구 false라 잔여 영향 없음. ?test=true 우회는 기존 분기 그대로.
+  const preOpen = Date.now() < Date.parse(OPEN_AT_ISO);
+  const cbtEnded = (maint?.active === true && maint.mode === 'cbt_ended') || preOpen;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">

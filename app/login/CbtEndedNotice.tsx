@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { BgmPlayer } from '@/components/audio/BgmPlayer';
 
@@ -46,6 +46,28 @@ function diffParts(target: number, now: number) {
   };
 }
 
+/**
+ * 이스터에그(테스트 진입, 2026-08-21) — '8월 24일'을 10초 안에 10번 탭하면 심사·어드민
+ * 로그인 화면(/login?test=true)으로 이동. 기존 심사 진입 경로 재사용이라 새 인증 표면 없음
+ * (test=true는 원래 공개 무해 — ID/PW를 알아야만 로그인 가능). 시각 피드백은 일부러 없다.
+ */
+function SecretDate() {
+  const tapsRef = useRef<number[]>([]);
+  const onTap = () => {
+    const now = Date.now();
+    tapsRef.current = [...tapsRef.current.filter((t) => now - t < 10_000), now];
+    if (tapsRef.current.length >= 10) {
+      tapsRef.current = [];
+      location.href = '/login?test=true';
+    }
+  };
+  return (
+    <b className="select-none font-bold text-zinc-200" onClick={onTap}>
+      8월 24일
+    </b>
+  );
+}
+
 function Countdown() {
   // 하이드레이션 안전 — 서버/첫 클라 렌더는 자리표시자, 마운트 후 1초 틱.
   const [now, setNow] = useState<number | null>(null);
@@ -56,6 +78,15 @@ function Countdown() {
   }, []);
   const target = Date.parse(OPEN_AT_ISO);
   const p = now == null ? null : diffParts(target, now);
+  // 무인 오픈(2026-08-21) — 카운트다운 0 도달 시 자동 새로고침. 서버는 10:30부터 live라
+  // 새로고침이 확정적으로 로그인 화면에 착지한다(page.tsx 시간 게이트가 11:00에 풀림).
+  // 클라 시계가 서버보다 빨라 아직 종료 화면이면 다음 done 틱이 다시 시도(자연 수렴).
+  const done = p?.done === true;
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => location.reload(), 4000);
+    return () => clearTimeout(t);
+  }, [done]);
   const cell = (v: number | null, label: string) => (
     <div
       className="flex-1 rounded-xl border border-amber-500/35 bg-[#17110c]/70 py-3 backdrop-blur-[2px]"
@@ -73,7 +104,7 @@ function Countdown() {
   if (p?.done) {
     return (
       <p className="rounded-xl bg-amber-500/15 py-3 text-[14px] font-bold text-amber-300">
-        곧 문이 열립니다 — 잠시 후 다시 접속해 주세요.
+        문이 열립니다 — 잠시만 기다려 주세요…
       </p>
     );
   }
@@ -165,7 +196,7 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           </span>
           <span className="block break-keep">한 달의 대륙을 데웠습니다.</span>
           <span className="mt-2 block break-keep">
-            이제 잠시 불을 끄고, <b className="font-bold text-zinc-200">8월 24일</b>에 다시
+            이제 잠시 불을 끄고, <SecretDate />에 다시
             만나요.
           </span>
         </div>
