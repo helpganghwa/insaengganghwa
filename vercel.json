@@ -94,6 +94,10 @@
     {
       "path": "/api/cron/scheduled-mail",
       "schedule": "2-57/5 * * * *"
+    },
+    {
+      "path": "/api/cron/preopen-cleanup",
+      "schedule": "15 1 24 8 *"
     }
   ]
 }

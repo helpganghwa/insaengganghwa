@@ -50,10 +50,10 @@ async function defaultServerId(open: { id: number; status: string }[]): Promise<
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; test?: string }>;
+  searchParams: Promise<{ error?: string; test?: string; preview?: string }>;
 }) {
   if (await getSessionUserId()) redirect('/'); // 로컬 JWT 검증 (CLAUDE §11.1)
-  const { error, test } = await searchParams;
+  const { error, test, preview } = await searchParams;
   // 서버 선택(SERVER.md §3) — 접속 가능한 서버가 1개라도 있으면 셀렉터 노출(0개일 때만 숨김).
   // 변경은 로그아웃 후 여기서.
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
@@ -72,7 +72,13 @@ export default async function LoginPage({
   // 카운트다운 0에서 CbtEndedNotice가 자동 새로고침 → 이 조건이 false가 되며 로그인 화면 착지.
   // 오픈 이후에는 영구 false라 잔여 영향 없음. ?test=true 우회는 기존 분기 그대로.
   const preOpen = Date.now() < Date.parse(OPEN_AT_ISO);
-  const cbtEnded = (maint?.active === true && maint.mode === 'cbt_ended') || preOpen;
+  // 정식 오픈 화면 미리보기(2026-08-21) — 이스터에그('8월 24일' 10탭) 전용 진입로.
+  // 시간·모드 게이트를 화면에서만 우회해 오픈 후와 동일한 일반 로그인 화면을 렌더한다.
+  // 봉인 중 로그인 시도는 콜백(cbt_ended 게이트)이 차단하므로 화면 노출만으로 무해하고,
+  // 8/24 10:30 서버 오픈 후에는 실제 로그인까지 되는 조기 점검 통로가 된다.
+  const openPreview = preview === 'open';
+  const cbtEnded =
+    !openPreview && ((maint?.active === true && maint.mode === 'cbt_ended') || preOpen);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">

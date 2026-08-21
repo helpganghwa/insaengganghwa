@@ -50,9 +50,9 @@ function diffParts(target: number, now: number) {
 }
 
 /**
- * 이스터에그(테스트 진입, 2026-08-21) — '8월 24일'을 10초 안에 10번 탭하면 심사·어드민
- * 로그인 화면(/login?test=true)으로 이동. 기존 심사 진입 경로 재사용이라 새 인증 표면 없음
- * (test=true는 원래 공개 무해 — ID/PW를 알아야만 로그인 가능). 시각 피드백은 일부러 없다.
+ * 이스터에그(2026-08-21) — '8월 24일'을 10초 안에 10번 탭하면 정식 오픈과 동일한
+ * 일반 로그인 화면 미리보기(/login?preview=open)로 이동. 봉인 중 로그인은 콜백이
+ * 차단하므로 화면 노출만으로 무해(오픈 후 조기 점검 통로 겸용). 시각 피드백은 일부러 없다.
  */
 function SecretDate() {
   const tapsRef = useRef<number[]>([]);
@@ -61,7 +61,7 @@ function SecretDate() {
     tapsRef.current = [...tapsRef.current.filter((t) => now - t < 10_000), now];
     if (tapsRef.current.length >= 10) {
       tapsRef.current = [];
-      location.href = '/login?test=true';
+      location.href = '/login?preview=open';
     }
   };
   return (
