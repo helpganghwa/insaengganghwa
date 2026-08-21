@@ -3403,6 +3403,940 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    color: "#a5b4fc"
   }
+ },
+ {
+  code: "first_bitter",
+  kind: "permanent",
+  label: "첫 쓴맛",
+  hidden: true,
+  style: {
+   color: "#e0a066"
+  }
+ },
+ {
+  code: "late_bloomer",
+  kind: "permanent",
+  label: "늦게 핀 꽃",
+  hidden: true,
+  style: {
+   color: "#a8a8b0"
+  }
+ },
+ {
+  code: "combo_001",
+  kind: "conditional",
+  label: "뇌신 강림",
+  hidden: false,
+  style: {
+   color: "#c084fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_002",
+  kind: "conditional",
+  label: "별에 묻는 길",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_003",
+  kind: "conditional",
+  label: "한겨울 산책",
+  hidden: false,
+  style: {
+   color: "#60a5fa"
+  }
+ },
+ {
+  code: "combo_004",
+  kind: "conditional",
+  label: "용암 한 벌",
+  hidden: false,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_005",
+  kind: "conditional",
+  label: "그림자 손님",
+  hidden: true,
+  style: {
+   color: "#c084fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_006",
+  kind: "conditional",
+  label: "숲의 식구",
+  hidden: false,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_007",
+  kind: "conditional",
+  label: "옥좌의 창",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_008",
+  kind: "conditional",
+  label: "온전한 비행",
+  hidden: true,
+  style: {
+   color: "#c084fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_009",
+  kind: "conditional",
+  label: "조상님 총출동",
+  hidden: true,
+  style: {
+   gradient: [
+    "#f97316",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_010",
+  kind: "conditional",
+  label: "장마 준비 끝",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_011",
+  kind: "conditional",
+  label: "한밤의 무도회",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_012",
+  kind: "conditional",
+  label: "재의 시간",
+  hidden: true,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_013",
+  kind: "conditional",
+  label: "종신 교수",
+  hidden: true,
+  style: {
+   gradient: [
+    "#f97316",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_014",
+  kind: "conditional",
+  label: "심쿵 저격수",
+  hidden: true,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_015",
+  kind: "conditional",
+  label: "침묵의 한 발",
+  hidden: false,
+  style: {
+   color: "#f97316",
+   glow: true
+  }
+ },
+ {
+  code: "combo_016",
+  kind: "conditional",
+  label: "미라클 모닝",
+  hidden: true,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_017",
+  kind: "conditional",
+  label: "숲 속 괴담",
+  hidden: true,
+  style: {
+   gradient: [
+    "#22c55e",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_018",
+  kind: "conditional",
+  label: "몰락한 왕좌",
+  hidden: true,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_019",
+  kind: "conditional",
+  label: "불꽃 댄서",
+  hidden: false,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_020",
+  kind: "conditional",
+  label: "청홍의 균형",
+  hidden: false,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_021",
+  kind: "conditional",
+  label: "매의 눈",
+  hidden: false,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_022",
+  kind: "conditional",
+  label: "우중 순례",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_023",
+  kind: "conditional",
+  label: "용의 행상인",
+  hidden: true,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_024",
+  kind: "conditional",
+  label: "가시 속 장미",
+  hidden: false,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_025",
+  kind: "conditional",
+  label: "하루의 끝",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_026",
+  kind: "conditional",
+  label: "식지 않는 불",
+  hidden: false,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_027",
+  kind: "conditional",
+  label: "쪽빛 일색",
+  hidden: false,
+  style: {
+   gradient: [
+    "#60a5fa",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_028",
+  kind: "conditional",
+  label: "구름 위 산책",
+  hidden: true,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_029",
+  kind: "conditional",
+  label: "쏟아지는 밤",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_030",
+  kind: "conditional",
+  label: "까마귀 마녀",
+  hidden: true,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_031",
+  kind: "conditional",
+  label: "진홍 일색",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_032",
+  kind: "conditional",
+  label: "늪의 그림자",
+  hidden: true,
+  style: {
+   color: "#22c55e",
+   glow: true
+  }
+ },
+ {
+  code: "combo_033",
+  kind: "conditional",
+  label: "금빛 일색",
+  hidden: false,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_034",
+  kind: "conditional",
+  label: "칠흑 일색",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_035",
+  kind: "conditional",
+  label: "개구리 사냥",
+  hidden: true,
+  style: {
+   gradient: [
+    "#22c55e",
+    "#f97316"
+   ]
+  }
+ },
+ {
+  code: "combo_036",
+  kind: "conditional",
+  label: "재의 궁수",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_037",
+  kind: "conditional",
+  label: "맹세의 아침",
+  hidden: false,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_038",
+  kind: "conditional",
+  label: "서약의 기사",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_039",
+  kind: "conditional",
+  label: "설원의 저격수",
+  hidden: true,
+  style: {
+   color: "#60a5fa",
+   glow: true
+  }
+ },
+ {
+  code: "combo_040",
+  kind: "conditional",
+  label: "연못의 주인",
+  hidden: false,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_041",
+  kind: "conditional",
+  label: "숲의 현자",
+  hidden: false,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_042",
+  kind: "conditional",
+  label: "수상한 사제",
+  hidden: true,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_043",
+  kind: "conditional",
+  label: "사막의 낭인",
+  hidden: false,
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "combo_044",
+  kind: "conditional",
+  label: "충성의 무게",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_045",
+  kind: "conditional",
+  label: "저녁놀",
+  hidden: false,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_046",
+  kind: "conditional",
+  label: "첫 왈츠",
+  hidden: true,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_047",
+  kind: "conditional",
+  label: "불꽃 놀이",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_048",
+  kind: "conditional",
+  label: "하늘 수비대",
+  hidden: false,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ],
+   glow: true
+  }
+ },
+ {
+  code: "combo_049",
+  kind: "conditional",
+  label: "견습 마왕",
+  hidden: true,
+  style: {
+   color: "#c084fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_050",
+  kind: "conditional",
+  label: "빛의 기사",
+  hidden: false,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ],
+   glow: true
+  }
+ },
+ {
+  code: "combo_051",
+  kind: "conditional",
+  label: "천문학 개론",
+  hidden: true,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_052",
+  kind: "conditional",
+  label: "길잡이 매",
+  hidden: false,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_053",
+  kind: "conditional",
+  label: "선봉의 깃발",
+  hidden: false,
+  style: {
+   gradient: [
+    "#f97316",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_054",
+  kind: "conditional",
+  label: "첫눈 마중",
+  hidden: false,
+  style: {
+   color: "#60a5fa"
+  }
+ },
+ {
+  code: "combo_055",
+  kind: "conditional",
+  label: "빛나는 아침",
+  hidden: false,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_056",
+  kind: "conditional",
+  label: "늪의 문지기",
+  hidden: false,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_057",
+  kind: "conditional",
+  label: "용의 대장간",
+  hidden: false,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_058",
+  kind: "conditional",
+  label: "우레 기병",
+  hidden: false,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_059",
+  kind: "conditional",
+  label: "모래폭풍 사수",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_060",
+  kind: "conditional",
+  label: "떠돌이 상인",
+  hidden: true,
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "combo_061",
+  kind: "conditional",
+  label: "늪의 주술사",
+  hidden: true,
+  style: {
+   gradient: [
+    "#22c55e",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_062",
+  kind: "conditional",
+  label: "왕국의 새벽",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_063",
+  kind: "conditional",
+  label: "푸른 맹세",
+  hidden: false,
+  style: {
+   gradient: [
+    "#60a5fa",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_064",
+  kind: "conditional",
+  label: "잿바람",
+  hidden: true,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_065",
+  kind: "conditional",
+  label: "새벽 사냥꾼",
+  hidden: false,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_066",
+  kind: "conditional",
+  label: "재건의 망치",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_067",
+  kind: "conditional",
+  label: "가면의 검무",
+  hidden: false,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_068",
+  kind: "conditional",
+  label: "수석 사수",
+  hidden: true,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_069",
+  kind: "conditional",
+  label: "성전의 창",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_070",
+  kind: "conditional",
+  label: "백작의 오후",
+  hidden: true,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_071",
+  kind: "conditional",
+  label: "스러진 시간",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#f97316",
+    "#c084fc"
+   ],
+   glow: true
+  }
+ },
+ {
+  code: "combo_072",
+  kind: "conditional",
+  label: "세 번의 맹세",
+  hidden: false,
+  style: {
+   color: "#fbbf24",
+   glow: true
+  }
+ },
+ {
+  code: "combo_073",
+  kind: "conditional",
+  label: "새들의 회의",
+  hidden: true,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ]
+  }
+ },
+ {
+  code: "combo_074",
+  kind: "conditional",
+  label: "꽃길만 걷자",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_075",
+  kind: "conditional",
+  label: "새벽 별지기",
+  hidden: false,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_076",
+  kind: "conditional",
+  label: "셀프 대관식",
+  hidden: true,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_077",
+  kind: "conditional",
+  label: "촌캉스",
+  hidden: true,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_078",
+  kind: "conditional",
+  label: "작은 악당",
+  hidden: true,
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_079",
+  kind: "conditional",
+  label: "온몸이 불꽃",
+  hidden: false,
+  style: {
+   color: "#ef4444",
+   glow: true
+  }
+ },
+ {
+  code: "combo_080",
+  kind: "conditional",
+  label: "붉은 근위대",
+  hidden: false,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_081",
+  kind: "conditional",
+  label: "초원의 부름",
+  hidden: false,
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "combo_082",
+  kind: "conditional",
+  label: "군악대장",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#f97316",
+    "#fbbf24"
+   ]
+  }
+ },
+ {
+  code: "combo_083",
+  kind: "conditional",
+  label: "심안",
+  hidden: true,
+  style: {
+   gradient: [
+    "#f97316",
+    "#c084fc"
+   ],
+   glow: true
+  }
+ },
+ {
+  code: "combo_084",
+  kind: "conditional",
+  label: "조상님 어깨너머",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#f97316"
+   ]
+  }
+ },
+ {
+  code: "combo_085",
+  kind: "conditional",
+  label: "새참의 맛",
+  hidden: true,
+  style: {
+   gradient: [
+    "#ef4444",
+    "#22c55e",
+    "#f97316"
+   ]
+  }
+ },
+ {
+  code: "combo_086",
+  kind: "conditional",
+  label: "빛 수집가",
+  hidden: false,
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_087",
+  kind: "conditional",
+  label: "쌍검비무",
+  hidden: false,
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "combo_088",
+  kind: "conditional",
+  label: "이름 없는 총성",
+  hidden: true,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_089",
+  kind: "conditional",
+  label: "뇌룡 기수",
+  hidden: false,
+  style: {
+   color: "#a5b4fc",
+   glow: true
+  }
+ },
+ {
+  code: "combo_090",
+  kind: "conditional",
+  label: "동트기 전",
+  hidden: false,
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_091",
+  kind: "conditional",
+  label: "은빛 아침",
+  hidden: false,
+  style: {
+   gradient: [
+    "#fbbf24",
+    "#c084fc"
+   ]
+  }
  }
 ] as const;
 

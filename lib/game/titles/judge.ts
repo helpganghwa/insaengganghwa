@@ -911,6 +911,9 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   triathlon: (m) => m.triathlon >= 1,
   // 출석 수령 누적 = 접속일 근사. 접속 자체를 세는 원장이 없고, 출석은 하루 1회라 상한이 같다.
   longevity: (m) => m.checkin >= 500,
+  // ── 2차 증설(2026-08-21, 신규 93종 중 영구 2 — 조합 91은 아이템 발동 자동 판정) ──
+  first_bitter: (m) => m.enh_down >= 1,
+  late_bloomer: (m) => m.lv100_cnt >= 1 && m.first100_days >= 100,
 };
 
 /** 조건부(상태형) 활성 — 대표 표시·발견 공용. 아이템 발동 + 장비 상태 + 해방 + 집행관. */

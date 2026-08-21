@@ -3253,6 +3253,1291 @@ export const TITLE_SECRETS: TitleSecret[] = [
    ],
    min: 70
   }
+ },
+ {
+  code: "first_bitter",
+  cat: "강화",
+  cond: "처음으로 하락을 맛봄",
+  diff: "쉬움"
+ },
+ {
+  code: "late_bloomer",
+  cat: "일상",
+  cond: "가입 100일이 지나 처음으로 +100 도달",
+  diff: "중간"
+ },
+ {
+  code: "combo_001",
+  cat: "아이템 발동",
+  cond: "벼락을 박은 창 + 구름 갑옷 + 철사로 띄운 후광을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "thunder_emperor_spear",
+    "angel_cherub_armor",
+    "temple_faux_halo"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_002",
+  cat: "아이템 발동",
+  cond: "별자리가 흐르는 장검 + 별을 두른 망토 + 대답하지 않는 나침반을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "general_starfield_blade",
+    "kingdom_regalia_cloak",
+    "kingdom_riddle_astrolabe"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_003",
+  cat: "아이템 발동",
+  cond: "눈꽃 대도 + 설백 목도리를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "temple_fur_stole"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_004",
+  cat: "아이템 발동",
+  cond: "용암을 가둔 대검 + 용암으로 짠 드레스 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_emberveined_greatsword",
+    "volcano_gala_gown",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_005",
+  cat: "아이템 발동",
+  cond: "귀참의 대태도 + 갈까마귀 로브 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "oni_slayer_odachi",
+    "necromancer_raven_robe",
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_006",
+  cat: "아이템 발동",
+  cond: "사슴뿔 활 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_antler_bow",
+    "forest_ranger_outfit",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_007",
+  cat: "아이템 발동",
+  cond: "왕기의 창 + 백금 사자 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_banner_spear",
+    "kingdom_lionguard_plate",
+    "kingdom_regalia_crown"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_008",
+  cat: "아이템 발동",
+  cond: "한 쌍의 깃 + 사슬과 한쪽 날개 + 하얀 깃 날개를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "fallen_pinion_twinblades",
+    "angel_penitent_drape",
+    "angel_glide_wings"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_009",
+  cat: "아이템 발동",
+  cond: "초혼의 해골장 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "necromancer_skull_staff",
+    "general_beastmaster_hide",
+    "orc_ancestor_bracelet"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_010",
+  cat: "아이템 발동",
+  cond: "퉤! 하는 대롱 + 도롱이 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_frog_blowgun",
+    "marsh_angler_cape",
+    "marsh_angler_creel"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_011",
+  cat: "아이템 발동",
+  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "crimson_gothic_dress",
+    "phantom_half_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_012",
+  cat: "아이템 발동",
+  cond: "잿불낫 + 불길 케이프 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_ember_scythe",
+    "volcano_dancer_cape",
+    "volcano_ember_hourglass"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_013",
+  cat: "아이템 발동",
+  cond: "묻지 않는 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_shaman_staff",
+    "academy_professor_robe",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_014",
+  cat: "아이템 발동",
+  cond: "두근 화살 + 진홍 레이스 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_cherub_bow",
+    "crimson_gothic_dress",
+    "general_wing_hairclip"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_015",
+  cat: "아이템 발동",
+  cond: "상아빛 한 발 + 깃털 두른 침묵 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "ivory_flintlock_pistol",
+    "orc_shaman_robe",
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_016",
+  cat: "아이템 발동",
+  cond: "해오름검 + 아침빛 예복 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "angel_radiant_gown",
+    "kingdom_dawnguard_ring"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_017",
+  cat: "아이템 발동",
+  cond: "혼불낫 + 이끼 자란 넝마 드레스 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "swamp_bogwitch_rags",
+    "temple_monk_censer"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_018",
+  cat: "아이템 발동",
+  cond: "왕을 짊어진 대검 + 도금이 벗겨진 갑주 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "fallen_gilded_ruin_plate",
+    "kingdom_coronation_medallion"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_019",
+  cat: "아이템 발동",
+  cond: "춤추는 쌍불꽃 + 불새 깃 드레스 + 식지 않는 심장을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dancer_daggers",
+    "phoenix_dancer_dress",
+    "temple_frostward_orb"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_020",
+  cat: "아이템 발동",
+  cond: "청홍 쌍검 + 쪽빛 기사복 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_twin_sabers",
+    "kingdom_azure_outfit",
+    "kingdom_court_fan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_021",
+  cat: "아이템 발동",
+  cond: "매 머리 지팡이검 + 창공의 전투복 + 푸른 깃 견장을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_falcon_cane_sword",
+    "valkyrie_battle_dress",
+    "commander_feather_epaulets"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_022",
+  cat: "아이템 발동",
+  cond: "육환 석장 + 도롱이 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_ringstaff_khakkhara",
+    "marsh_angler_cape",
+    "temple_monk_censer"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_023",
+  cat: "아이템 발동",
+  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용비늘 가방을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd",
+    "dragonknight_scale_armor",
+    "volcano_dragonscale_satchel"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_024",
+  cat: "아이템 발동",
+  cond: "장미 핀 가시 지팡이 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "druid_thorn_staff",
+    "kingdom_masque_gown",
+    "general_wing_hairclip"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_025",
+  cat: "아이템 발동",
+  cond: "노을이 앉는 검 + 별을 읽는 외투 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_duskwing_sword",
+    "kingdom_riddle_coat",
+    "volcano_ember_hourglass"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_026",
+  cat: "아이템 발동",
+  cond: "화심의 망치 + 적금 갑주 + 식지 않는 심장을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer",
+    "kingdom_goldknight_plate",
+    "temple_frostward_orb"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_027",
+  cat: "아이템 발동",
+  cond: "창천검 + 쪽빛 기사복 + 빙정 방패를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier",
+    "kingdom_azure_outfit",
+    "frost_kite_shield"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_028",
+  cat: "아이템 발동",
+  cond: "창궁검 + 구름 갑옷 + 하얀 깃 날개를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "angel_cherub_armor",
+    "angel_glide_wings"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_029",
+  cat: "아이템 발동",
+  cond: "유성의 지팡이 + 별을 두른 망토 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "angel_star_wand",
+    "kingdom_regalia_cloak",
+    "kingdom_regalia_crown"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_030",
+  cat: "아이템 발동",
+  cond: "마녀의 등불 + 갈까마귀 로브 + 마녀의 뾰족 모자를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_staff",
+    "necromancer_raven_robe",
+    "pumpkin_witch_hat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_031",
+  cat: "아이템 발동",
+  cond: "진홍의 가는 검 + 불새 깃 드레스 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "vampire_blood_rapier",
+    "phoenix_dancer_dress",
+    "kingdom_court_fan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_032",
+  cat: "아이템 발동",
+  cond: "쌍익 단검 + 늪빛 흉갑 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "assassin_twin_daggers",
+    "marsh_bogwarden_chest",
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_033",
+  cat: "아이템 발동",
+  cond: "금당초 쌍권총 + 금장 군복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_twin_flintlocks",
+    "royal_military_coat",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_034",
+  cat: "아이템 발동",
+  cond: "흑금 대도 + 흑룡의 비늘갑 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_kintsugi_katana",
+    "dragonknight_scale_armor",
+    "volcano_obsidian_warfan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_035",
+  cat: "아이템 발동",
+  cond: "돌아오는 뼈 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "marsh_frog_hood",
+    "marsh_frog_jar"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_036",
+  cat: "아이템 발동",
+  cond: "재에서 당기는 활 + 화문 예복 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_phoenix_bow",
+    "volcano_embersilk_dress",
+    "volcano_ember_hourglass"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_037",
+  cat: "아이템 발동",
+  cond: "동트는 맹세 + 아침빛 예복 + 하얀 깃 날개를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_sword",
+    "angel_radiant_gown",
+    "angel_glide_wings"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_038",
+  cat: "아이템 발동",
+  cond: "왕기의 창 + 푸른 서약 기사복 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_banner_spear",
+    "kingdom_herald_tabard",
+    "kingdom_coronation_medallion"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_039",
+  cat: "아이템 발동",
+  cond: "상아빛 한 발 + 설산 파수의 갑주 + 설백 목도리를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "ivory_flintlock_pistol",
+    "temple_frostguard_garb",
+    "temple_fur_stole"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_040",
+  cat: "아이템 발동",
+  cond: "피어나는 삼지창 + 수련이 피는 드레스 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "marsh_lily_gown",
+    "marsh_angler_creel"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_041",
+  cat: "아이템 발동",
+  cond: "드루이드의 지팡이 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "druid_antler_staff",
+    "swamp_bogwitch_rags",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_042",
+  cat: "아이템 발동",
+  cond: "초혼의 해골장 + 자칭 훈장 사제복 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "necromancer_skull_staff",
+    "temple_faux_robe",
+    "temple_monk_censer"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_043",
+  cat: "아이템 발동",
+  cond: "귀참의 대태도 + 모래바람의 겹옷 + 조상의 깃발을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "oni_slayer_odachi",
+    "desert_nomad_robes",
+    "orc_shaman_banner"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_044",
+  cat: "아이템 발동",
+  cond: "왕을 짊어진 대검 + 백금 사자 갑주 + 맹세를 쥔 손을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "kingdom_lionguard_plate",
+    "kingdom_coronation_gauntlets"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_045",
+  cat: "아이템 발동",
+  cond: "노을이 앉는 검 + 불길 케이프 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_duskwing_sword",
+    "volcano_dancer_cape",
+    "kingdom_court_fan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_046",
+  cat: "아이템 발동",
+  cond: "무도회의 한 수 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "kingdom_masque_gown",
+    "general_wing_hairclip"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_047",
+  cat: "아이템 발동",
+  cond: "춤추는 쌍불꽃 + 화문 예복 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dancer_daggers",
+    "volcano_embersilk_dress",
+    "volcano_obsidian_warfan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_048",
+  cat: "아이템 발동",
+  cond: "창궁검 + 세라핌의 갑주 + 발키리의 날개 서클릿을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "angel_seraphguard_armor",
+    "valkyrie_winged_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_049",
+  cat: "아이템 발동",
+  cond: "혼불낫 + 갈까마귀 로브 + 한 뼘짜리 마왕 날개를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "necromancer_raven_robe",
+    "general_imp_wings"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_050",
+  cat: "아이템 발동",
+  cond: "창천검 + 성광 갑주 + 백은 날개 투구를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier",
+    "paladin_holy_armor",
+    "paladin_winged_helm"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_051",
+  cat: "아이템 발동",
+  cond: "유성의 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_star_wand",
+    "academy_professor_robe",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_052",
+  cat: "아이템 발동",
+  cond: "매 머리 지팡이검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_falcon_cane_sword",
+    "kingdom_riddle_coat",
+    "kingdom_riddle_astrolabe"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_053",
+  cat: "아이템 발동",
+  cond: "왕기의 창 + 금장 군복 + 조상의 깃발을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_banner_spear",
+    "royal_military_coat",
+    "orc_shaman_banner"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_054",
+  cat: "아이템 발동",
+  cond: "눈꽃 대도 + 설야 예복 + 설화의 관을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "temple_breathwoven_vestment",
+    "temple_snowflake_crown"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_055",
+  cat: "아이템 발동",
+  cond: "해오름검 + 세라핌의 갑주 + 철사로 띄운 후광을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "celestial_dawn_greatsword",
+    "angel_seraphguard_armor",
+    "temple_faux_halo"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_056",
+  cat: "아이템 발동",
+  cond: "피어나는 삼지창 + 늪빛 흉갑 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "marsh_bogwarden_chest",
+    "swamp_lily_crown"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_057",
+  cat: "아이템 발동",
+  cond: "용암을 가둔 대검 + 흑룡의 비늘갑 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_emberveined_greatsword",
+    "dragonknight_scale_armor",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_058",
+  cat: "아이템 발동",
+  cond: "벼락을 박은 창 + 창공의 전투복 + 푸른 깃 견장을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "thunder_emperor_spear",
+    "valkyrie_battle_dress",
+    "commander_feather_epaulets"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_059",
+  cat: "아이템 발동",
+  cond: "상아빛 한 발 + 모래바람의 겹옷 + 재를 막는 눈을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "ivory_flintlock_pistol",
+    "desert_nomad_robes",
+    "volcano_ashglass_goggles"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_060",
+  cat: "아이템 발동",
+  cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "general_beastmaster_hide",
+    "volcano_dragonscale_satchel"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_061",
+  cat: "아이템 발동",
+  cond: "초혼의 해골장 + 개구리 탈 망토 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "necromancer_skull_staff",
+    "marsh_frog_hood",
+    "temple_monk_censer"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_062",
+  cat: "아이템 발동",
+  cond: "왕을 짊어진 대검 + 여명의 벽 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "kingdom_dawnguard_cuirass",
+    "kingdom_coronation_medallion"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_063",
+  cat: "아이템 발동",
+  cond: "창궁검 + 푸른 서약 기사복 + 빙정 방패를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "kingdom_herald_tabard",
+    "frost_kite_shield"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_064",
+  cat: "아이템 발동",
+  cond: "잿불낫 + 용암으로 짠 드레스 + 재를 막는 눈을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_scythe",
+    "volcano_gala_gown",
+    "volcano_ashglass_goggles"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_065",
+  cat: "아이템 발동",
+  cond: "사슴뿔 활 + 구름 갑옷 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_antler_bow",
+    "angel_cherub_armor",
+    "kingdom_dawnguard_ring"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_066",
+  cat: "아이템 발동",
+  cond: "화심의 망치 + 도금이 벗겨진 갑주 + 맹세를 쥔 손을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer",
+    "fallen_gilded_ruin_plate",
+    "kingdom_coronation_gauntlets"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_067",
+  cat: "아이템 발동",
+  cond: "진홍의 가는 검 + 이름 없는 드레스 + 상아 반가면을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "vampire_blood_rapier",
+    "kingdom_masque_gown",
+    "phantom_half_mask"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_068",
+  cat: "아이템 발동",
+  cond: "금당초 쌍권총 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_twin_flintlocks",
+    "academy_student_uniform",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_069",
+  cat: "아이템 발동",
+  cond: "왕기의 창 + 성광 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_banner_spear",
+    "paladin_holy_armor",
+    "kingdom_regalia_crown"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_070",
+  cat: "아이템 발동",
+  cond: "상아빛 한 발 + 백금 사자 갑주 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "ivory_flintlock_pistol",
+    "kingdom_lionguard_plate",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_071",
+  cat: "아이템 발동",
+  cond: "혼불낫 + 깃털 두른 침묵 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "orc_shaman_robe",
+    "volcano_ember_hourglass"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_072",
+  cat: "아이템 발동",
+  cond: "동트는 맹세 + 푸른 서약 기사복 + 맹세를 쥔 손을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_dawnguard_sword",
+    "kingdom_herald_tabard",
+    "kingdom_coronation_gauntlets"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_073",
+  cat: "아이템 발동",
+  cond: "매 머리 지팡이검 + 갈까마귀 로브 + 푸른 깃 견장을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_falcon_cane_sword",
+    "necromancer_raven_robe",
+    "commander_feather_epaulets"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_074",
+  cat: "아이템 발동",
+  cond: "장미 핀 가시 지팡이 + 진홍 레이스 드레스 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "druid_thorn_staff",
+    "crimson_gothic_dress",
+    "swamp_lily_crown"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_075",
+  cat: "아이템 발동",
+  cond: "별자리가 흐르는 장검 + 성좌의 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_starfield_blade",
+    "astrologer_starmap_coat",
+    "kingdom_dawnguard_ring"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_076",
+  cat: "아이템 발동",
+  cond: "왕을 짊어진 대검 + 왕립 학원 교복 + 별이 박힌 왕관을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_coronation_mace",
+    "academy_student_uniform",
+    "kingdom_regalia_crown"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_077",
+  cat: "아이템 발동",
+  cond: "퉤! 하는 대롱 + 냄새를 덮는 가죽옷 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_frog_blowgun",
+    "general_beastmaster_hide",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_078",
+  cat: "아이템 발동",
+  cond: "쌍익 단검 + 사슬과 한쪽 날개 + 작은 악마의 뿔을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "assassin_twin_daggers",
+    "angel_penitent_drape",
+    "devil_horn_headband"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_079",
+  cat: "아이템 발동",
+  cond: "놓을 곳 없는 화염검 + 불길 케이프 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_flame_blade",
+    "volcano_dancer_cape",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_080",
+  cat: "아이템 발동",
+  cond: "진홍의 가는 검 + 금장 군복 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "vampire_blood_rapier",
+    "royal_military_coat",
+    "kingdom_court_fan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_081",
+  cat: "아이템 발동",
+  cond: "사슴뿔 활 + 모래바람의 겹옷 + 부르면 모이는 뿔피리를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_antler_bow",
+    "desert_nomad_robes",
+    "marsh_bogwarden_horn"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_082",
+  cat: "아이템 발동",
+  cond: "화심의 망치 + 금장 군복 + 북이 된 방패를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer",
+    "royal_military_coat",
+    "orc_drum_shield"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_083",
+  cat: "아이템 발동",
+  cond: "초혼의 해골장 + 깃털 두른 침묵 + 가려야 보이는 안대를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "necromancer_skull_staff",
+    "orc_shaman_robe",
+    "general_star_eyepatch"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_084",
+  cat: "아이템 발동",
+  cond: "화심의 망치 + 한쪽 어깨 띠 + 조상의 얼굴을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_forgeheart_warhammer",
+    "temple_monk_sash",
+    "orc_ancestor_mask"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_085",
+  cat: "아이템 발동",
+  cond: "잿불낫 + 도롱이 + 한 잔의 보람을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_scythe",
+    "marsh_angler_cape",
+    "orc_grumble_tankard"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_086",
+  cat: "아이템 발동",
+  cond: "유성의 지팡이 + 별을 읽는 외투 + 반딧불 충전기를 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_star_wand",
+    "kingdom_riddle_coat",
+    "marsh_frog_jar"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_087",
+  cat: "아이템 발동",
+  cond: "청홍 쌍검 + 창공의 전투복 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_twin_sabers",
+    "valkyrie_battle_dress",
+    "volcano_obsidian_warfan"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_088",
+  cat: "아이템 발동",
+  cond: "금당초 쌍권총 + 이름 없는 드레스 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "general_twin_flintlocks",
+    "kingdom_masque_gown",
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_089",
+  cat: "아이템 발동",
+  cond: "벼락을 박은 창 + 흑룡의 비늘갑 + 용면 투구를 +50 이상으로 동시 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "thunder_emperor_spear",
+    "dragonknight_scale_armor",
+    "dragonknight_horned_helm"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_090",
+  cat: "아이템 발동",
+  cond: "창천검 + 별을 두른 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier",
+    "kingdom_regalia_cloak",
+    "kingdom_dawnguard_ring"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "combo_091",
+  cat: "아이템 발동",
+  cond: "창궁검 + 아침빛 예복 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_winged_coronation_sword",
+    "angel_radiant_gown",
+    "general_wing_hairclip"
+   ],
+   min: 30
+  }
  }
 ] as const;
 
