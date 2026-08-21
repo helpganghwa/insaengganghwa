@@ -291,7 +291,7 @@
   "code": "five_min",
   "cat": "강화",
   "kind": "영구",
-  "label": "화로 곁의 파수꾼",
+  "label": "화로의 파수꾼",
   "cond": "대기 5분 이내의 강화를 100회 수령",
   "hidden": true,
   "diff": "중간"
@@ -732,7 +732,7 @@
   "code": "mention_100",
   "cat": "소셜",
   "kind": "영구",
-  "label": "모두가 찾는 이름",
+  "label": "불리는 이름",
   "cond": "채팅에서 멘션 100회 받음",
   "hidden": true,
   "diff": "중간"
@@ -2127,7 +2127,7 @@
   "code": "drunkard",
   "cat": "아이템 발동",
   "kind": "조건부",
-  "label": "술고래",
+  "label": "가득 찬 잔",
   "cond": "한 잔의 보람을 +10 이상으로 장착 중인 동안",
   "hidden": true,
   "diff": "쉬움"
@@ -2829,7 +2829,7 @@
   "code": "card_shark",
   "cat": "강화",
   "kind": "영구",
-  "label": "타짜",
+  "label": "신들린 손",
   "cond": "강화 대성공 5연속",
   "hidden": true,
   "diff": "어려움"
@@ -3081,7 +3081,7 @@
   "code": "ringing_pilgrim",
   "cat": "아이템 발동",
   "kind": "조건부",
-  "label": "길을 비우는 걸음",
+  "label": "길 비우는 소리",
   "cond": "육환 석장을 +100 이상으로 장착 중인 동안",
   "hidden": true,
   "diff": "어려움"

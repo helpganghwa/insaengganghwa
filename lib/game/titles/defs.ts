@@ -330,7 +330,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "five_min",
   kind: "permanent",
-  label: "화로 곁의 파수꾼",
+  label: "화로의 파수꾼",
   hidden: true,
   style: {
    color: "#e0a066"
@@ -805,7 +805,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "mention_100",
   kind: "permanent",
-  label: "모두가 찾는 이름",
+  label: "불리는 이름",
   hidden: true,
   style: {
    color: "#7fb8e0"
@@ -2271,7 +2271,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "drunkard",
   kind: "conditional",
-  label: "술고래",
+  label: "가득 찬 잔",
   hidden: true,
   style: {
    color: "#f97316"
@@ -2987,7 +2987,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "card_shark",
   kind: "permanent",
-  label: "타짜",
+  label: "신들린 손",
   hidden: true,
   style: {
    color: "#e0a066",
@@ -3284,7 +3284,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "ringing_pilgrim",
   kind: "conditional",
-  label: "길을 비우는 걸음",
+  label: "길 비우는 소리",
   hidden: true,
   style: {
    color: "#a5b4fc",
