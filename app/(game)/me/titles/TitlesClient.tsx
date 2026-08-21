@@ -88,12 +88,13 @@ export function TitlesClient({
 
   // 카테고리 헤더 sticky 오프셋 — 상단 고정부(대표+필터) 높이를 실측해 그 바로 아래 붙인다.
   // 필터 칩이 줄바꿈되면 높이가 변하므로 하드코딩 불가(ResizeObserver로 추적).
+  // offsetHeight(정수 반올림)는 실높이가 소수면 헤더가 어긋나 미세 틈이 생긴다 — rect 실값 사용.
   const headRef = useRef<HTMLDivElement>(null);
   const [headH, setHeadH] = useState(0);
   useEffect(() => {
     const el = headRef.current;
     if (!el) return;
-    const sync = () => setHeadH(el.offsetHeight);
+    const sync = () => setHeadH(el.getBoundingClientRect().height);
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
@@ -282,8 +283,9 @@ export function TitlesClient({
           </div>
         </div>
 
-        {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합) */}
-        <div className="flex flex-wrap gap-1.5 border-b border-zinc-800 px-4 py-2">
+        {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합).
+            하단 보더 없음 — 바로 아래 섹션 헤더의 상단 보더와 만나 2px로 보이던 것 제거(피드백). */}
+        <div className="flex flex-wrap gap-1.5 px-4 py-2">
           <Seg a="조건" b="영구" val={kind} onChange={setKind} />
           <Seg a="발견" b="미발견" val={found} onChange={setFound} />
           <Seg a="활성" b="비활성" val={act} onChange={setAct} />
