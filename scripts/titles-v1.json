@@ -732,7 +732,7 @@
   "code": "mention_100",
   "cat": "소셜",
   "kind": "영구",
-  "label": "불리는 이름",
+  "label": "대륙의 스타",
   "cond": "채팅에서 멘션 100회 받음",
   "hidden": true,
   "diff": "중간"

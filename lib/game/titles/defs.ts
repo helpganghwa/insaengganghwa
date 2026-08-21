@@ -805,7 +805,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "mention_100",
   kind: "permanent",
-  label: "불리는 이름",
+  label: "대륙의 스타",
   hidden: true,
   style: {
    color: "#7fb8e0"
