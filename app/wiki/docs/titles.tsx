@@ -1,4 +1,5 @@
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
+import { PENDING_CODES } from '@/lib/game/titles/pending';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
@@ -17,8 +18,11 @@ export const meta: WikiDocMeta = {
   ],
 };
 
-const TOTAL = TITLE_DEFS.length;
-const CONDITIONAL = TITLE_DEFS.filter((d) => d.kind === 'conditional').length;
+// 노출 기준 총수 — 판정 준비 중(PENDING)이라 목록에 안 보이는 칭호는 분모에서 뺀다(감사 L7:
+// 목록과 세는 수가 어긋나면 유저가 "빠진 칭호"를 찾아 헤맨다). 헌정 등 보유자 한정 노출은 +α.
+const VISIBLE = TITLE_DEFS.filter((d) => !PENDING_CODES.has(d.code));
+const TOTAL = VISIBLE.length;
+const CONDITIONAL = VISIBLE.filter((d) => d.kind === 'conditional').length;
 
 export default function Doc() {
   return (

@@ -137,12 +137,18 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
     }
     if (code === 'no_guild_30') {
       // 무소속(2026-08-21 조건부 전환) — 판정(judge.ts)과 동일 의미: 현재 미소속이고
-      // 마지막 탈퇴(guild_leave_logs, append-only) 후 7일 경과. 탈퇴 기록이 없으면
+      // 마지막 이탈 후 7일 경과. 이탈 시각 = 자진 탈퇴·추방(guild_leave_log) ∪ 해산 여파
+      // (guild_audit_log disband, target=me)의 최댓값 — judge와 동일 기준(감사 M3: leave_log만
+      // 보면 해산 피해자가 캐릭터 생성일 폴백으로 떨어져 judge와 갈렸다). 이탈 기록이 없으면
       // 가입(캐릭터 생성) 후 7일. 길드 가입/생성 시 in_guild=1로 즉시 비활성.
       const [r] = (await db.execute(sql`
         select (exists(select 1 from guild_members gm where gm.user_id=${u} and gm.server_id=${s}))::int as in_guild,
-               extract(day from now() - (select max(left_at) from guild_leave_log gl
-                 where gl.user_id=${u} and gl.server_id=${s}))::int as since_leave,
+               extract(day from now() - greatest(
+                 (select max(left_at) from guild_leave_log gl
+                   where gl.user_id=${u} and gl.server_id=${s}),
+                 (select max(created_at) from guild_audit_log ga
+                   where ga.target_user_id=${u} and ga.server_id=${s} and ga.action='disband')
+               ))::int as since_leave,
                extract(day from now() - (select created_at from characters c
                  where c.user_id=${u} and c.server_id=${s}))::int as days
       `)) as unknown as { in_guild: number; since_leave: number | null; days: number | null }[];

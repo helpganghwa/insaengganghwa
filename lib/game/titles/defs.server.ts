@@ -203,7 +203,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "five_min",
   cat: "강화",
-  cond: "강화 완료 후 5분 안에 수령 100회",
+  cond: "대기 5분 이내의 강화를 100회 수령",
   diff: "중간"
  },
  {
@@ -299,7 +299,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "codex_120",
   cat: "도감",
-  cond: "도감 120종 전부 수집",
+  cond: "도감의 모든 장비 수집",
   diff: "어려움"
  },
  {
@@ -347,7 +347,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "raid_kingdom",
   cat: "레이드",
-  cond: "왕국 보스 처치 참여 100회 — 왕국 레이드 출시 시 활성",
+  cond: "왕국 보스 처치 참여 100회",
   diff: "어려움"
  },
  {
@@ -795,7 +795,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "continent_sweep",
   cat: "레이드",
-  cond: "6개 지역 보스를 각 10회씩 처치 참여",
+  cond: "4개 지역 보스를 각 10회씩 처치 참여",
   diff: "어려움"
  },
  {
@@ -855,7 +855,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "night_talk",
   cat: "소셜",
-  cond: "새벽(0~5시) 채팅 100회",
+  cond: "새벽(0~6시) 채팅 100회",
   diff: "중간"
  },
  {
@@ -1589,7 +1589,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "top_patron",
   cat: "조건부",
-  cond: "서버 누적 결제액 1위인 동안",
+  cond: "누적 후원액 1위인 동안",
   diff: "어려움"
  },
  {
@@ -2713,7 +2713,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "david",
   cat: "대난투",
-  cond: "전투력 서버 하위 50%로 대난투 3위 이내",
+  cond: "전투력이 참가자 하위 절반인 채로 대난투 3위 이내",
   diff: "어려움"
  },
  {
@@ -2943,7 +2943,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "wandering_smith",
   cat: "일상",
-  cond: "6개 지역 모두 거주해 봄",
+  cond: "모든 지역에 거주해 봄",
   diff: "어려움"
  },
  {

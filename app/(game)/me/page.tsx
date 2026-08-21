@@ -124,8 +124,11 @@ export default async function ProfilePage() {
     'me.page',
   ).catch(() => null);
   const row = _r?.[0]?.[0] ?? null;
+  // 칭호 검증 실패는 표시만 포기 — 여기서 던지면 /me 전체가 error.tsx로 떨어진다(칭호 감사 5-b).
   const repTitle = row
-    ? await resolveRepTitle(row.representative_title_code ?? null, userId, serverId, row.executor_zone ?? null)
+    ? await resolveRepTitle(row.representative_title_code ?? null, userId, serverId, row.executor_zone ?? null).catch(
+        () => null,
+      )
     : null;
   const libRanks = _r?.[1] ?? new Map<number, number>();
   const catMap = _r?.[2] ?? new Map();

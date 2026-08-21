@@ -100,17 +100,21 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     );
     // 칭호 해석을 프로필 쿼리에 체이닝 — 5쿼리 배치가 다 끝난 뒤 직렬 왕복으로 붙던 것을
     // 나머지 4쿼리와 겹치게(2026-08-06 감사: layout 고정비 1왕복 절감).
-    const repTitleP = profileP.then((rows) => {
-      const p0 = rows[0] as
-        | { representative_title_code?: string | null; executor_zone?: string | null }
-        | undefined;
-      return resolveRepTitle(
-        p0?.representative_title_code ?? null,
-        userId,
-        serverId,
-        p0?.executor_zone ?? null,
-      );
-    });
+    const repTitleP = profileP
+      .then((rows) => {
+        const p0 = rows[0] as
+          | { representative_title_code?: string | null; executor_zone?: string | null }
+          | undefined;
+        return resolveRepTitle(
+          p0?.representative_title_code ?? null,
+          userId,
+          serverId,
+          p0?.executor_zone ?? null,
+        );
+      })
+      // 장식(칭호) 검증 실패가 배치 전체를 reject시켜 헤더가 통째로 DEFAULTS(닉 '플레이어'·
+      // 다이아 0)로 강등되면 안 된다 — 칭호만 조용히 숨긴다(칭호 감사 5-a).
+      .catch(() => null);
     const [profileRows, mailRows, enhRows, friendReqRows, repTitle] = await Promise.all([
       profileP,
       pgGuard(

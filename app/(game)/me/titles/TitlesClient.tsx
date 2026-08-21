@@ -75,7 +75,9 @@ export function TitlesClient({
   const stateOf = (code: string): CardState => {
     const r = byCode.get(code);
     if (!r?.discovered) return 'locked';
-    if (code === rep) return 'rep';
+    // 대표라도 조건을 잃었으면 '비활성'이 진실 — 헤더·채팅에선 이미 숨는데 여기만 금테면
+    // "달려 있는데 왜 안 보이나"가 된다(감사 1-c).
+    if (code === rep) return r.activeNow ? 'rep' : 'inactive';
     return r.activeNow ? 'active' : 'inactive';
   };
 
@@ -88,7 +90,8 @@ export function TitlesClient({
         const isCond = d.kind === 'conditional';
         if (kind && (kind === 'a') !== isCond) return false;
         if (found && (found === 'a') !== r.discovered) return false;
-        if (act && (act === 'a') !== r.activeNow) return false;
+        // 활성/비활성은 **발견분의 상태** — 미발견(잠김)을 '비활성'에 섞지 않는다(감사 1-a).
+        if (act && (!r.discovered || (act === 'a') !== r.activeNow)) return false;
         return true;
       }).sort((a, b) => STATE_ORDER[stateOf(a.code)] - STATE_ORDER[stateOf(b.code)]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,14 +105,16 @@ export function TitlesClient({
     setRep(next); // 낙관 반영 — 실패 시 복구
     setSel(null); // 팝업 즉시 닫고 결과는 공용 토스트로(사용자 확정)
     window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: next })); // 채팅 등 낙관 동기화
-    showHeaderToast({ title: next ? '칭호 장착' : '칭호 해제', detail: label });
     startTransition(async () => {
       const res = await setRepresentativeTitleAction(next);
       if (!res.ok) {
         setRep(prevRep);
         window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: prevRep }));
         showError(next ? '칭호 장착에 실패했어' : '칭호 해제에 실패했어');
+        return;
       }
+      // 성공 토스트는 응답 확인 후 — 선발사하면 실패 시 "장착"·"실패"가 연달아 떠 모순(감사 1-g).
+      showHeaderToast({ title: next ? '칭호 장착' : '칭호 해제', detail: label });
     });
   };
 
@@ -125,7 +130,12 @@ export function TitlesClient({
             <div className="flex min-w-0 items-center gap-2">
               <span className="text-sm font-extrabold text-white">대표 칭호</span>
               {rep ? (
-                <TitleTag code={rep} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-sm" />
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <TitleTag code={rep} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-sm" />
+                  {byCode.get(rep)?.activeNow === false && (
+                    <span className="shrink-0 rounded bg-orange-950/60 px-1 text-[10px] font-bold text-orange-300">비활성</span>
+                  )}
+                </span>
               ) : (
                 <span className="text-xs text-zinc-500">없음</span>
               )}
@@ -147,7 +157,9 @@ export function TitlesClient({
         </div>
       </div>
 
-      {/* 도감 그리드 — 2열 카드. 상태는 테두리로, 조건·장착은 카드 탭 → 공통 팝업. */}
+      {/* 도감 그리드 — 2열 카드. 상태는 테두리로, 조건·장착은 카드 탭 → 공통 팝업.
+          content-visibility:auto — 355장에서 오프스크린 카드의 fx 애니·파티클 리페인트 정지(감사 1-d),
+          intrinsic-block-size로 스크롤바 점프 방지. */}
       <div className="grid grid-cols-2 gap-2 px-3 py-3 pb-8">
         {list.map((d) => {
           const st = stateOf(d.code);
@@ -156,7 +168,7 @@ export function TitlesClient({
               key={d.code}
               type="button"
               onClick={() => setSel(d.code)}
-              className={`relative flex min-h-[58px] items-center justify-center overflow-hidden rounded-xl border bg-zinc-900 px-2 py-2.5 ${CARD_CLS[st]}`}
+              className={`relative flex min-h-[58px] items-center justify-center overflow-hidden rounded-xl border bg-zinc-900 px-2 py-2.5 [content-visibility:auto] [contain-intrinsic-block-size:58px] ${CARD_CLS[st]}`}
             >
               {st === 'rep' && (
                 <span className="absolute left-1.5 top-1 text-[9px] font-extrabold text-amber-400">대표</span>
@@ -201,10 +213,14 @@ export function TitlesClient({
               <span className="inline-flex items-center gap-1.5">
                 <span
                   className={`rounded px-1 text-[10px] font-extrabold ${
-                    selDef.kind === 'conditional' ? 'bg-purple-900/40 text-purple-300' : 'bg-sky-900/40 text-sky-300'
+                    selDef.kind === 'conditional'
+                      ? 'bg-purple-900/40 text-purple-300'
+                      : selDef.kind === 'tribute'
+                        ? 'bg-amber-900/40 text-amber-300'
+                        : 'bg-sky-900/40 text-sky-300'
                   }`}
                 >
-                  {selDef.kind === 'conditional' ? '조건' : '영구'}
+                  {selDef.kind === 'conditional' ? '조건' : selDef.kind === 'tribute' ? '헌정' : '영구'}
                 </span>
                 {selRow.discovered && selDef.kind === 'conditional' && (
                   <span
@@ -222,7 +238,8 @@ export function TitlesClient({
                 <ModalButton tone="ghost" onClick={() => setSel(null)}>
                   닫기
                 </ModalButton>
-                {selRow.activeNow && (
+                {/* 해제는 활성 여부와 무관하게 가능해야 한다 — 조건을 잃은 대표를 못 벗는 잠금 방지(감사 1-b). */}
+                {(selRow.activeNow || rep === sel) && (
                   <ModalButton tone={rep === sel ? 'neutral' : 'primary'} disabled={pending} onClick={() => toggle(sel)}>
                     {rep === sel ? '해제' : '장착'}
                   </ModalButton>
@@ -231,7 +248,7 @@ export function TitlesClient({
             }
           >
             <div className="space-y-2 text-center">
-              <div className="text-[12.5px] leading-relaxed text-zinc-300">{selRow.cond ?? '???'}</div>
+              <div className="text-[12.5px] leading-relaxed text-zinc-300">{selRow.cond || '???'}</div>
               <div className="text-[11px] text-zinc-500">
                 {selRow.earnedAt ? `${selRow.earnedAt} 발견` : '미발견'}
               </div>

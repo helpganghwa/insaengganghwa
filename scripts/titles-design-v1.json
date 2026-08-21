@@ -9,24 +9,25 @@
  },
  "palette": {
   "랭킹 1위": "#d8b25f",
-  "  조건부": "#b9a7e0",
-  "  해방": "#c9a2f0",
-  "  강화": "#e0a066",
-  "  시간대": "#8fb4d8",
-  "  보급": "#b8a97a",
-  "  초월": "#b39ddb",
-  "  도감": "#94c799",
-  "  레이드": "#d88c8c",
-  "  대난투": "#e08c9c",
-  "  점령전": "#c2b280",
-  "  길드": "#e0b877",
-  "  소셜": "#7fb8e0",
-  "  일상": "#a8a8b0",
-  "  재화": "#cdb04e",
-  "  후원": "#e5c07b",
+  "조건부": "#b9a7e0",
+  "해방": "#c9a2f0",
+  "강화": "#e0a066",
+  "시간대": "#8fb4d8",
+  "보급": "#b8a97a",
+  "초월": "#b39ddb",
+  "도감": "#94c799",
+  "레이드": "#d88c8c",
+  "대난투": "#e08c9c",
+  "점령전": "#c2b280",
+  "길드": "#e0b877",
+  "소셜": "#7fb8e0",
+  "일상": "#a8a8b0",
+  "재화": "#cdb04e",
+  "후원": "#e5c07b",
   "아이템 발동": "#a5b4fc",
-  "  조합": "#80cbc4",
-  "  헌정": "#f0a860"
+  "조합": "#80cbc4",
+  "아바타": "#d8a0c8",
+  "헌정": "#f0a860"
  },
  "regionKeywords": [
   {
@@ -100,9 +101,6 @@
    "fx": "nightstar",
    "pt": "stardust"
   },
-  "codex_live": {
-   "fx": "verdantflow"
-  },
   "armory_lord": {
    "fx": "chrome"
   },
@@ -128,10 +126,6 @@
   "warpath": {
    "fx": "bloodpulse",
    "pt": "ember"
-  },
-  "hell_gatekeeper": {
-   "fx": "bloodpulse",
-   "pt": "abyss"
   },
   "lucky_777": {
    "fx": "goldsoft"
@@ -182,10 +176,6 @@
    "fx": "iceflow",
    "pt": "snow"
   },
-  "frost_queen": {
-   "fx": "iceflow",
-   "pt": "snow"
-  },
   "glacier_knight": {
    "fx": "iceflow",
    "pt": "snow"
@@ -199,10 +189,6 @@
    "pt": "spark"
   },
   "abyss_lord": {
-   "fx": "abyssglow",
-   "pt": "abyss"
-  },
-  "fallen_lord": {
    "fx": "abyssglow",
    "pt": "abyss"
   },
@@ -255,17 +241,8 @@
   "dusk": {
    "fx": "duskfade"
   },
-  "fallen_angel": {
-   "fx": "duskfade"
-  },
   "snow_flower": {
    "fx": "frostedge"
-  },
-  "frost_warden": {
-   "fx": "frostedge"
-  },
-  "halfblade_master": {
-   "fx": "yinyang"
   },
   "twin_wings": {
    "fx": "yinyang"

@@ -27,26 +27,50 @@ export default async function TitlesPage() {
 
   const r = await withTimeout(
     (async () => {
-      // 멱등 발견 판정 — active 동봉 반환(지표 수집 1회로 발견+활성 모두 해결)
+      // 대표·집행관 조회는 판정과 무의존 — 판정 배치와 병렬로 겹친다(칭호 감사 4-b).
+      // ⚠ drizzle db.execute는 lazy(then 시점 실행)라 IIFE로 **즉시 발사**해야 실제로 겹친다
+      // (적대 검수 1: 변수만 만들면 await 시점 직렬 실행). eager화했으므로 catch 동봉 필수.
+      const repP = (async () => {
+        try {
+          return (await db.execute(sql`
+            select representative_title_code as code,
+                   (select z.name from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
+                    order by z.captured_at desc nulls last limit 1) as zone,
+                   (select z.region::text from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
+                    order by z.captured_at desc nulls last limit 1) as zone_region
+            from characters where user_id=${userId}::uuid and server_id=${serverId}
+          `)) as unknown as { code: string | null; zone: string | null; zone_region: string | null }[];
+        } catch {
+          return [];
+        }
+      })();
+      // 멱등 발견 판정 — active 동봉 반환(지표 수집 1회로 발견+활성 모두 해결).
+      // 원장 조회는 판정 **다음**이어야 한다(이번 발견분이 실려야 함).
       const { active } = await discoverTitles(userId, serverId);
-      const [ledger, rep] = await Promise.all([
-        db.execute(sql`
-          select title_code, earned_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
-        `) as unknown as Promise<{ title_code: string; earned_at: Date }[]>,
-        db.execute(sql`
-          select representative_title_code as code,
-                 (select z.name from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
-                  order by z.captured_at desc nulls last limit 1) as zone,
-                 (select z.region::text from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
-                  order by z.captured_at desc nulls last limit 1) as zone_region
-          from characters where user_id=${userId}::uuid and server_id=${serverId}
-        `) as unknown as Promise<{ code: string | null; zone: string | null; zone_region: string | null }[]>,
-      ]);
+      const ledger = (await db.execute(sql`
+        select title_code, earned_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
+      `)) as unknown as { title_code: string; earned_at: Date }[];
+      const rep = await repP;
       return { ledger, active, rep: rep[0] };
     })(),
-    5000,
+    8000,
     'titles.page',
   ).catch(() => null);
+
+  // 판정 실패(타임아웃 등) — 종전엔 빈 원장으로 계속 렌더해 **보유 칭호가 전부 사라진 화면**으로
+  // 보였다(감사 M7: 실패가 데이터 상실로 읽힘). 실패는 실패라고 말하고 재진입을 안내한다.
+  if (r === null) {
+    return (
+      <div className="px-5 py-16 text-center">
+        <p className="text-[15px] font-bold text-zinc-200">칭호 정보를 불러오지 못했습니다</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-zinc-400">
+          일시적인 지연입니다. 보유한 칭호는 그대로 있으니
+          <br />
+          잠시 후 다시 열어 주세요.
+        </p>
+      </div>
+    );
+  }
 
   const ledger = new Map((r?.ledger ?? []).map((l) => [l.title_code, l.earned_at]));
   const active = r?.active ?? new Set<string>();

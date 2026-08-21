@@ -350,12 +350,13 @@ export default async function PublicProfilePage({
 
   // 친구 관계 — 로그인+타인일 때만. sendRequestAction과 동일 서버(조회자 활성 서버) 기준으로
   // 계산해 버튼 상태와 실제 요청이 어긋나지 않게 한다(친구는 서버별). 실패 시 'none' 폴백.
+  // 칭호 검증 실패는 표시만 포기 — 비로그인도 여는 공개 페이지가 장식 때문에 죽으면 안 된다(칭호 감사 5-c).
   const repTitle = await resolveRepTitle(
     data.repTitleCode,
     data.ownerId,
     serverId,
     data.guild?.executorZone ?? null,
-  );
+  ).catch(() => null);
 
   let friendRelation: FriendRelation = 'none';
   if (mode === 'other') {
