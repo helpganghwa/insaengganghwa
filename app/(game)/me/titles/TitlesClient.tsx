@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { TitleTag } from '@/components/TitleTag';
 import { ModalShell } from '@/components/ModalShell';
@@ -75,6 +75,20 @@ export function TitlesClient({
   const [pending, startTransition] = useTransition();
   // ☆ 토글 전용 — 대표 장착의 pending(팝업 버튼 비활성)과 분리(적대 검수 7).
   const [, startFavTransition] = useTransition();
+
+  // 카테고리 헤더 sticky 오프셋 — 상단 고정부(대표+필터) 높이를 실측해 그 바로 아래 붙인다.
+  // 필터 칩이 줄바꿈되면 높이가 변하므로 하드코딩 불가(ResizeObserver로 추적).
+  const headRef = useRef<HTMLDivElement>(null);
+  const [headH, setHeadH] = useState(0);
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el) return;
+    const sync = () => setHeadH(el.offsetHeight);
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const { showError, showHeaderToast } = useResourceToast();
 
   const discoveredCount = useMemo(() => rows.filter((r) => r.discovered).length, [rows]);
@@ -109,11 +123,11 @@ export function TitlesClient({
     const sortRows = (arr: TitleDef[]) =>
       arr.sort((a, b) => STATE_ORDER[stateOf(a.code)] - STATE_ORDER[stateOf(b.code)] || a.label.localeCompare(b.label, 'ko'));
     const visible = TITLE_DEFS.filter(passesFilters);
-    // ★ 섹션은 **발견분만** 호이스트 — 즐겨찾기 후 미발견이 된 코드(운영 회수 등)가 잠금 행으로
-    // 최상단에 박히는 것 방지(적대 검수 2). 그런 행은 제 카테고리에 잠금으로 남는다.
+    // ★ 섹션은 **중복 표시**(2026-08-21 피드백) — 즐겨찾기해도 원 카테고리 섹션에 그대로 남고
+    // ★ 섹션에 한 번 더 노출된다(호이스트 아님). 발견분만 — 즐겨찾기 후 미발견이 된 코드(운영
+    // 회수 등)가 잠금 행으로 최상단에 박히는 것 방지(적대 검수 2).
     const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
-    const hoisted = new Set(favList.map((d) => d.code));
-    const rest = visible.filter((d) => !hoisted.has(d.code));
+    const rest = visible;
     const byCat = new Map<string, TitleDef[]>();
     for (const d of rest) {
       const arr = byCat.get(d.cat) ?? [];
@@ -217,8 +231,13 @@ export function TitlesClient({
     );
   };
 
+  // 분류 구분도 필터 하단에 sticky(2026-08-21 피드백 2) — 스크롤 중 현재 카테고리가 항상 보인다.
+  // 반투명이면 지나가는 행이 비쳐 보이므로 불투명 배경 필수.
   const catHead = (label: string, right: string, star = false) => (
-    <div className="flex items-center justify-between border-y border-zinc-800 bg-zinc-900/80 px-3.5 py-1">
+    <div
+      className="sticky z-10 flex items-center justify-between border-y border-zinc-800 bg-zinc-900 px-3.5 py-1"
+      style={{ top: headH }}
+    >
       <span className="text-[10.5px] font-bold text-zinc-300">
         {star && <span className="mr-1 text-amber-400">★</span>}
         {label}
@@ -230,7 +249,7 @@ export function TitlesClient({
   return (
     <div className="mx-auto w-full max-w-[390px]">
       {/* 상단 — 대표+카운트(게이지 제거, 트랙 D)+필터 고정(스크롤은 목록만). main이 스크롤 컨테이너라 top-0. */}
-      <div className="sticky top-0 z-20 bg-zinc-950">
+      <div ref={headRef} className="sticky top-0 z-20 bg-zinc-950">
         <div className="border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
@@ -272,11 +291,13 @@ export function TitlesClient({
 
       {/* 목록 — 카테고리 섹션 + 1열 밀도 행(트랙 D 확정안). ★ 섹션이 최상단(상위 노출·중복 없음). */}
       <div className="pb-8">
+        {/* 섹션별 래퍼 div 필수 — sticky 헤더가 자기 섹션 범위에서만 붙고 다음 헤더에 밀려나는
+            표준 push-out 동작은 헤더가 각자의 부모 안에 있을 때만 성립한다. */}
         {groups.favList.length > 0 && (
-          <>
+          <div>
             {catHead('즐겨찾기', String(groups.favList.length), true)}
             {groups.favList.map(renderRow)}
-          </>
+          </div>
         )}
         {groups.cats.map((g) => (
           <div key={g.key}>
