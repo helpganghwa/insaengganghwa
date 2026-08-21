@@ -158,7 +158,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
           insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
           values (${r.user_id}, ${serverId}, 'reward', 'CBT 참여 특별 보상', ${
             `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
-            `CBT에서 쌓아 올리신 합산 강화 ${r.total_enhance.toLocaleString('ko-KR')}의 기록을 담아 감사 다이아를 보내드립니다.`
+            `CBT에서 쌓아 올리신 기록을 담아 감사 다이아를 보내드립니다.`
           }, '인생강화',
                   ${tx.json({ diamond: r.thanks_diamond })}, ${sql.unsafe(MAIL_EXPIRE)})`;
       }

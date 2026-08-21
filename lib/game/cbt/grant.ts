@@ -81,7 +81,8 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
         title: 'CBT 참여 특별 보상',
         body:
           `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
-          `CBT에서 쌓아 올리신 합산 강화 ${row.totalEnhance.toLocaleString('ko-KR')}의 기록을 담아 감사 다이아를 보내드립니다.`,
+          // 산정 수치(합산강화)는 본문에 노출하지 않는다(2026-08-21) — 산정 방식 문의 유발.
+          `CBT에서 쌓아 올리신 기록을 담아 감사 다이아를 보내드립니다.`,
         senderLabel: '인생강화',
         payload: { diamond: row.thanksDiamond },
       });
