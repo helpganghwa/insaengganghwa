@@ -186,7 +186,8 @@ export function TitlesClient({
     // 스냅샷 복원은 병행 토글(B)을 함께 지워 서버와 어긋난다(적대 검수 3).
     setFavs((cur) => (has ? cur.filter((c) => c !== code) : cur.includes(code) ? cur : [...cur, code]));
     startFavTransition(async () => {
-      const res = await toggleFavoriteTitleAction(code);
+      // throw(네트워크 단절 등)도 실패와 동일 롤백 — !ok 분기만 있으면 낙관 상태가 남는다(통합 검수 7).
+      const res = await toggleFavoriteTitleAction(code).catch(() => ({ ok: false as const, error: 'NETWORK' }));
       if (!res.ok) {
         setFavs((cur) => (has ? (cur.includes(code) ? cur : [...cur, code]) : cur.filter((c) => c !== code)));
         showError(res.error === 'FAVORITES_FULL' ? `즐겨찾기는 ${FAVORITE_CAP}개까지 담을 수 있어` : '즐겨찾기 변경에 실패했어');
@@ -203,7 +204,7 @@ export function TitlesClient({
     return (
       <div
         key={d.code}
-        className={`flex items-center gap-2 border-b border-zinc-900 py-1.5 pl-3.5 pr-2 [content-visibility:auto] [contain-intrinsic-block-size:34px] ${
+        className={`flex items-center gap-2 border-b border-zinc-900 py-1.5 pl-3.5 pr-2 [content-visibility:auto] [contain-intrinsic-block-size:35px] ${
           st === 'rep' ? 'bg-amber-400/[0.04]' : ''
         }`}
       >
@@ -302,7 +303,7 @@ export function TitlesClient({
         </div>
       </div>
 
-      {/* 목록 — 카테고리 섹션 + 1열 밀도 행(트랙 D 확정안). ★ 섹션이 최상단(상위 노출·중복 없음). */}
+      {/* 목록 — 대분류 섹션 + 1열 밀도 행(트랙 D 확정안). ★ 섹션이 최상단(중복 표시 — 원 섹션에도 남음). */}
       <div className="pb-8">
         {/* 섹션별 래퍼 div 필수 — sticky 헤더가 자기 섹션 범위에서만 붙고 다음 헤더에 밀려나는
             표준 push-out 동작은 헤더가 각자의 부모 안에 있을 때만 성립한다. */}

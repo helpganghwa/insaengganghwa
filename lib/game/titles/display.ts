@@ -286,6 +286,13 @@ const FX_OG: Record<string, string> = {
   inkwash: '#b8bec8', candle: '#f0c890', firstlight: '#e8cf9a', jade: '#8fd4ae', rimlight: '#f0e2b0',
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
+  // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
+  bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
+  roseflow: '#e8a0c0', blushbreath: '#e8a0c0', tideflow: '#7fd0c8', tidewave: '#7fd0c8',
+  forgeshine: '#e0a878', cinderflow: '#d4674a', duelbeat: '#e05252', duelflow: '#e05252',
+  coinshine: '#d4af37', gildedflow: '#cdb04e', lunarflow: '#cfd8e8', veilflow: '#b9a7e0',
+  driftfall: '#b9c2cc', linenflow: '#c8beb0', warbanner: '#c86a5a', verdigris: '#7fae9e',
+  stardrift: '#c8b8f0', astralflow: '#b39ddb', freedomglint: '#c9a2f0', azureflow: '#6ea8e0',
 };
 
 export type OgTitleSeg = { text: string; color: string };

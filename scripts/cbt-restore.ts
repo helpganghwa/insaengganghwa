@@ -115,11 +115,15 @@ async function restoreOne(r: CarryRow): Promise<void> {
       if (claimed.length === 0) throw new Error(`ALREADY_GRANTED:${r.nickname}`);
 
       // 1. 캐릭터 — CBT 닉 그대로, 거주지 랜덤, 튜토리얼 스킵(베테랑).
+      // 칭호 이력 컬럼(0166)도 정상 생성 경로(server-select)와 동일하게 초기화 — 안 채우면
+      // 복원 유저의 지박령/방랑/아바타 유지 판정이 이사·교체 전까지 영구 0이 된다(통합 검수 1).
       const [rz] = await tx`
-        select id from zones where server_id = ${serverId} order by random() limit 1`;
+        select id, region from zones where server_id = ${serverId} order by random() limit 1`;
       await tx`
-        insert into characters (user_id, server_id, nickname, diamond, tutorial_step, residence_zone_id)
-        values (${r.user_id}, ${serverId}, ${r.nickname}, ${SIGNUP_DIAMOND}, 9, ${rz?.id ?? null})`;
+        insert into characters (user_id, server_id, nickname, diamond, tutorial_step, residence_zone_id,
+                                residence_since, visited_regions, active_profile_since)
+        values (${r.user_id}, ${serverId}, ${r.nickname}, ${SIGNUP_DIAMOND}, 9, ${rz?.id ?? null},
+                now(), ${tx.json(rz?.region ? [String(rz.region)] : [])}, now())`;
 
       for (const slot of ['weapon', 'armor', 'accessory']) {
         await tx`

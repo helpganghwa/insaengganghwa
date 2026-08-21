@@ -10,8 +10,10 @@
 .fx-crimsonflow{background:linear-gradient(90deg,#e05252,#e5c07b,#c22e2e,#e5c07b,#e05252);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-violetflow{background:linear-gradient(90deg,#b98ef0,#e5c07b,#8d5bd4,#e5c07b,#b98ef0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 /* 해방 — 보랏빛 흐름(violetflow) 외 1변주(별점 반짝) */
-.fx-freedomglint{color:#c9a2f0;position:relative;text-shadow:0 0 3px rgba(185,142,240,.35)}
-.fx-freedomglint::after{content:'✦';position:absolute;top:-.45em;right:-.75em;font-size:.55em;color:#f0e0ff;opacity:0;animation:glint 3.4s ease-in-out infinite}
+/* 별점은 스팬 패딩 **안쪽**에 — 목록 행의 overflow-hidden 래퍼가 스팬 밖 요소를 잘라
+   변주의 정체성(✦)이 도감에서 안 보이던 것 방지(통합 검수 5). */
+.fx-freedomglint{color:#c9a2f0;position:relative;padding-right:.95em;text-shadow:0 0 3px rgba(185,142,240,.35)}
+.fx-freedomglint::after{content:'✦';position:absolute;top:-.08em;right:.1em;font-size:.55em;color:#f0e0ff;opacity:0;animation:glint 3.4s ease-in-out infinite}
 .fx-royalflow{background:linear-gradient(90deg,#e5c07b,#c22e2e,#f5d76e,#c22e2e,#e5c07b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
 .fx-azureflow{background:linear-gradient(90deg,#6ea8e0,#e5c07b,#3d7ec2,#e5c07b,#6ea8e0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-verdantflow{background:linear-gradient(90deg,#7fce8a,#e5c07b,#4caf60,#e5c07b,#7fce8a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
@@ -66,7 +68,6 @@
 @keyframes p-aby{0%,40%,100%{opacity:0;transform:translateY(1px) scale(.6)}48%{opacity:.45;transform:translateY(-2px) scale(.95)}66%{opacity:.25;transform:translateY(-5px) scale(1.15)}74%{opacity:0;transform:translateY(-6px) scale(1.25)}}
 .fx-imperial{background:linear-gradient(90deg,#f5d76e 0%,#fff3c4 18%,#d8b25f 38%,#a01c2e 52%,#f0c060 68%,#fff3c4 84%,#f5d76e 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(229,192,123,.5))}
 .fx-staticazure{color:#6ea8e0}
-.fx-staticember{color:#f0a860}
 .fx-staticgold{color:#e5c07b}
 .fx-milkyway{background:linear-gradient(100deg,#c8d8f0,#f0f6ff,#9ab4e0,#e8f0ff,#c8d8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(200,216,240,.35))}
 .pt-vstar>i{width:4px;height:4px;background:linear-gradient(0deg,transparent 43%,rgba(201,162,240,.8) 43% 57%,transparent 57%),linear-gradient(90deg,transparent 43%,rgba(230,210,255,.7) 43% 57%,transparent 57%);top:-2px;animation:p-std 4.6s ease-in-out infinite}

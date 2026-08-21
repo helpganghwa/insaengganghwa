@@ -51,7 +51,11 @@
 ```sql
 servers    (id smallint PK, name, status open|full|closed, opened_at)
 characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_id,
-            tutorial_step, created_at, PK(user_id, server_id))
+            tutorial_step, created_at, PK(user_id, server_id),
+            -- 칭호 이력·즐겨찾기(0166·0169) — 판정(judge.ts)과 ★ 섹션의 근거
+            residence_since, residence_move_count, visited_regions jsonb,
+            active_profile_since, guild_donation_count, executor_zone_history jsonb,
+            favorite_titles jsonb)
 ```
 
 - **characters** = 서버별 스칼라 상태의 보관처(`profiles`의 서버 종속 컬럼이 단계 이관됨).

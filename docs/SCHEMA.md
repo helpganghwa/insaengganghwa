@@ -105,6 +105,7 @@
 | `result` | enum(`success`,`hold`,`down`,`mega`) | 성공+1 / 메가+2 / 유지 / −1 하락 (파괴 없음) |
 | `base_rate_bp`·`effective_rate_bp` | int | 공시값 / 실제(base×경과÷총, BALANCE §1.2) |
 | `elapsed_ms`·`duration_ms`·`reduced_ms` | bigint | |
+| `overdue_ms` | bigint null | 만기 후 방치 시간(0166) — 잊혀진 불씨·천하태평 판정 근거. elapsed와 달리 총 소요로 클램프하지 않음 |
 | `rng_seed`·`rolled` | text/int | 사후 검증(클라 변조 불가) |
 | `created_at` | timestamptz | = 완료 판정 시각 |
 

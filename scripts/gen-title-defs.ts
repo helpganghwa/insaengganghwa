@@ -131,9 +131,15 @@ const pub = titles.map((t) => ({
   const fxCss = readFileSync(join(ROOT, 'components/title-fx.css'), 'utf8');
   const haveFx = new Set([...fxCss.matchAll(/\.fx-(\w+)[{:]/g)].map((m) => m[1]));
   const havePt = new Set([...fxCss.matchAll(/\.pt-(\w+)>i/g)].map((m) => m[1]));
+  // OG 강등 맵(display.ts FX_OG)도 대조 — 누락 시 공유 카드가 기본 인디고로 조용히 강등된다
+  // (2026-08-21 통합 검수: 트랙 C 신규 23종 전부 누락돼 있던 실사고).
+  const displaySrc = readFileSync(join(ROOT, 'lib/game/titles/display.ts'), 'utf8');
+  const ogBlock = displaySrc.slice(displaySrc.indexOf('const FX_OG'), displaySrc.indexOf('};', displaySrc.indexOf('const FX_OG')));
+  const haveOg = new Set([...ogBlock.matchAll(/(\w+): '#/g)].map((m) => m[1]));
   for (const t of pub) {
     if (t.style.fx && !haveFx.has(t.style.fx)) throw new Error(`title-fx.css에 없는 fx: ${t.style.fx} (${t.code})`);
     if (t.style.pt && !havePt.has(t.style.pt)) throw new Error(`title-fx.css에 없는 pt: ${t.style.pt} (${t.code})`);
+    if (t.style.fx && !haveOg.has(t.style.fx)) throw new Error(`display.ts FX_OG에 없는 fx: ${t.style.fx} (${t.code})`);
   }
 }
 

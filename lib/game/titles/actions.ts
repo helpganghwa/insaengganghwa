@@ -75,7 +75,10 @@ export async function toggleFavoriteTitleAction(
     if (!has) {
       if (!TITLE_BY_CODE.has(code)) return { ok: false as const, error: 'UNKNOWN_TITLE' };
       if (!row.discovered) return { ok: false as const, error: 'NOT_DISCOVERED' };
-      if (favs.length >= FAVORITE_CAP) return { ok: false as const, error: 'FAVORITES_FULL' };
+      // 상한은 **유효 코드만** 센다 — 회수된 칭호의 유령 코드가 슬롯을 점유하면 UI에 행이
+      // 없어 해제 수단도 없이 상한이 잠긴다(통합 검수 3). 유령은 아래 정리 필터가 지운다.
+      if (favs.filter((c) => TITLE_BY_CODE.has(c)).length >= FAVORITE_CAP)
+        return { ok: false as const, error: 'FAVORITES_FULL' };
     }
     // 쓰는 김에 유령 코드 자가 정리 — 어떤 토글이든 한 번 지나가면 stale이 사라진다.
     // (추가되는 code는 위에서 실재 검증됨 — 이 필터가 삼키지 않는다.)
