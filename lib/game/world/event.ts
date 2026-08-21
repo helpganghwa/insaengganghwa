@@ -176,19 +176,35 @@ const LEADER_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'me
  */
 export async function runRankingLeaders(serverId: number): Promise<number> {
   const prev = await db
-    .select({ metric: rankingLeaders.metric, userId: rankingLeaders.userId })
+    .select({ metric: rankingLeaders.metric, userId: rankingLeaders.userId, value: rankingLeaders.value })
     .from(rankingLeaders)
     .where(eq(rankingLeaders.serverId, serverId));
-  const prevMap = new Map(prev.map((p) => [p.metric, p.userId]));
+  const prevMap = new Map(prev.map((p) => [p.metric, p]));
 
   let logged = 0;
   for (const metric of LEADER_METRICS) {
     const [leader] = await getRankingTop(metric, serverId, 1);
     if (!leader) continue;
     const before = prevMap.get(metric);
-    if (before === leader.userId) continue; // 동일 1위 — 스킵.
-    // 첫 관측(시드 없음)은 기록 없이 시드만 — 초기 일괄 스팸 방지.
-    if (before !== undefined) {
+    const changed = before !== undefined && before.userId !== leader.userId;
+    const lv = BigInt(leader.value);
+
+    // 칭호 '신기록'(0167) — 유저 교체가 아니라 **값 경신** 기준. 교체만 보면 1위 탈퇴 승계
+    // (더 낮은 값)·동률 추월(uuid 타이브레이크)에 오지급되고, 1위 스스로의 경신(가장 정당한
+    // 주체)은 영영 못 받는다. 값 null(첫 관측·컬럼 도입 전 시드)은 기록만 하고 지급하지
+    // 않는다 — 오픈 직후 일괄 지급 방지. best-effort(실패해도 피드/시드는 진행).
+    if (metric === 'max' && before?.value != null && lv > before.value) {
+      await db
+        .execute(
+          sql`insert into user_titles (user_id, server_id, title_code)
+              values (${leader.userId}::uuid, ${serverId}, 'new_record')
+              on conflict do nothing`,
+        )
+        .catch((e) => console.warn('[rank-leader] new_record grant failed', e));
+    }
+
+    // 1위 교체 피드 — 첫 관측(시드 없음)은 기록 없이 시드만(초기 일괄 스팸 방지).
+    if (changed) {
       await logWorldEvent(
         serverId,
         'rank_leader',
@@ -199,13 +215,19 @@ export async function runRankingLeaders(serverId: number): Promise<number> {
       await logMemberAchievement(leader.userId, serverId, { action: 'achv_rank_leader', detail: { metric } });
       logged += 1;
     }
-    await db
-      .insert(rankingLeaders)
-      .values({ serverId, metric, userId: leader.userId })
-      .onConflictDoUpdate({
-        target: [rankingLeaders.serverId, rankingLeaders.metric],
-        set: { userId: leader.userId, updatedAt: sql`now()` },
-      });
+
+    // 저장 값은 max 지표만 고수위(high-water) 유지 — 1위 탈퇴로 현 1위 값이 내려가도 "서버
+    // 역대 최고"는 남는다(다음 경신은 역대치를 넘어야 함). 나머지 지표 값은 참고용 현재값.
+    const storedValue = metric === 'max' && before?.value != null && before.value > lv ? before.value : lv;
+    if (before === undefined || changed || before.value !== storedValue) {
+      await db
+        .insert(rankingLeaders)
+        .values({ serverId, metric, userId: leader.userId, value: storedValue })
+        .onConflictDoUpdate({
+          target: [rankingLeaders.serverId, rankingLeaders.metric],
+          set: { userId: leader.userId, value: storedValue, updatedAt: sql`now()` },
+        });
+    }
   }
   return logged;
 }

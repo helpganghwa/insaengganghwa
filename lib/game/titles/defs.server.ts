@@ -101,7 +101,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lib_first",
   cat: "해방",
-  cond: "첫 해방 달성(아이템 강화랭킹 3위 이내)",
+  cond: "첫 해방 달성",
   diff: "중간"
  },
  {
@@ -551,7 +551,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dragon_hoard",
   cat: "재화",
-  cond: "다이아 10만 이상을 10일 내내 유지(무지출)",
+  cond: "다이아 10만 이상을 10일 내내 유지",
   diff: "어려움"
  },
  {
@@ -2955,7 +2955,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "cbt_2026",
   cat: "헌정",
-  cond: "CBT 참전(256명 한정 · 이후 획득 불가)",
+  cond: "CBT 참가",
   diff: "한정"
  },
  {

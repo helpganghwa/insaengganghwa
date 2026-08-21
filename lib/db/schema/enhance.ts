@@ -97,6 +97,8 @@ export const enhancementLogs = pgTable('enhancement_logs', {
   baseRateBp: integer('base_rate_bp').notNull(),
   effectiveRateBp: integer('effective_rate_bp').notNull(),
   elapsedMs: bigint('elapsed_ms', { mode: 'bigint' }).notNull(),
+  /** 만기 후 방치 시간(0166) — 수령 시 now-complete_at. elapsed는 만기 클램프라 여기서만 잡힌다(잊혀진 불씨·천하태평). */
+  overdueMs: bigint('overdue_ms', { mode: 'bigint' }),
   durationMs: bigint('duration_ms', { mode: 'bigint' }).notNull(),
   reducedMs: bigint('reduced_ms', { mode: 'bigint' }).notNull().default(sql`0`),
   /** 사후 검증용(클라 변조 불가). */

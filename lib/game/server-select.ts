@@ -134,7 +134,7 @@ export async function createCharacter(input: {
 
     // 거주지 랜덤 배정(GUILD §5.5 — 생성 시점) — 그 서버의 구역 중 하나.
     const [rz] = await tx
-      .select({ id: zones.id })
+      .select({ id: zones.id, region: zones.region })
       .from(zones)
       .where(eq(zones.serverId, input.serverId))
       .orderBy(sql`random()`)
@@ -157,6 +157,10 @@ export async function createCharacter(input: {
         diamond: BigInt(SIGNUP_DIAMOND),
         tutorialStep: isFresh ? 1 : 9,
         residenceZoneId: rz?.id ?? null,
+        // 칭호 이력(0166) — 거주·대표 아바타 유지 시작 = 생성 시각, 첫 지역 방문 기록.
+        residenceSince: rz ? new Date() : null,
+        visitedRegions: rz ? [rz.region] : [],
+        activeProfileSince: new Date(),
         lastSeenAt: new Date(),
       });
     } catch (e) {

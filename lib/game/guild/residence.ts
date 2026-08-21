@@ -195,6 +195,12 @@ export async function setResidenceTx(
       if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     }
 
+    // 이사 대상 구역의 지역 — 방랑 대장장이(방문 지역 누적) 이력용.
+    const [tz] = await tx
+      .select({ region: zones.region })
+      .from(zones)
+      .where(eq(zones.id, zoneId))
+      .limit(1);
     await tx
       .update(characters)
       .set({
@@ -204,6 +210,15 @@ export async function setResidenceTx(
           before == null
             ? null
             : sql`now() + ${`${RESIDENCE_MOVE_COOLDOWN_MIN} minutes`}::interval`,
+        // 칭호 이력(0166) — 거주 시작 리셋 + 이사 횟수(최초 정착 제외) + 방문 지역 누적(중복 없음).
+        residenceSince: sql`now()`,
+        residenceMoveCount:
+          before == null
+            ? sql`${characters.residenceMoveCount}`
+            : sql`${characters.residenceMoveCount} + 1`,
+        visitedRegions: sql`case when ${characters.visitedRegions} ? ${tz?.region ?? ''}
+          then ${characters.visitedRegions}
+          else ${characters.visitedRegions} || to_jsonb(${tz?.region ?? ''}::text) end`,
       })
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
 
@@ -268,7 +283,7 @@ export async function ensureResidence(tx: Tx, userId: string, serverId: number):
     .for('update');
   if (p?.zoneId) return p.zoneId;
   const [z] = await tx
-    .select({ id: zones.id })
+    .select({ id: zones.id, region: zones.region })
     .from(zones)
     .where(eq(zones.serverId, serverId))
     .orderBy(sql`random()`)
@@ -276,7 +291,14 @@ export async function ensureResidence(tx: Tx, userId: string, serverId: number):
   if (!z) return null;
   await tx
     .update(characters)
-    .set({ residenceZoneId: z.id })
+    .set({
+      residenceZoneId: z.id,
+      // 칭호 이력(0166) — 최초 배정도 거주 시작·방문 지역에는 기록(이사 횟수는 제외).
+      residenceSince: sql`now()`,
+      visitedRegions: sql`case when ${characters.visitedRegions} ? ${z.region}
+        then ${characters.visitedRegions}
+        else ${characters.visitedRegions} || to_jsonb(${z.region}::text) end`,
+    })
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
   return z.id;
 }

@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
+import { characters } from '@/lib/db/schema/server';
 import { kstDateString } from '@/lib/kst';
 
 import { GUILD_DONATION_TIERS, GUILD_DONATIONS_PER_DAY, guildXpToNext } from './balance';
@@ -62,6 +63,12 @@ export function donateToGuild(input: {
         lastDonationKstDay: today,
       })
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)));
+
+    // 칭호 이력(0166) — 기부 누적 횟수는 캐릭터에 귀속(탈퇴로 멤버 행이 지워져도 보존).
+    await tx
+      .update(characters)
+      .set({ guildDonationCount: sql`${characters.guildDonationCount} + 1` })
+      .where(and(eq(characters.userId, input.userId), eq(characters.serverId, input.serverId)));
 
     // 길드 XP + 레벨업.
     const [g] = await tx

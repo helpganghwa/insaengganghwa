@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/guild';
 
 import { GuildError } from '../errors';
@@ -95,6 +96,15 @@ export async function setZoneExecutor(input: {
     if (other) throw new GuildError('TARGET_ALREADY_EXECUTOR');
 
     await tx.update(zones).set({ executorUserId: input.targetUserId }).where(eq(zones.id, input.zoneId));
+    // 칭호 이력(0166) — 역임 구역 누적(중복 없음). tour_lord(서로 다른 3구역 역임) 판정 근거.
+    await tx
+      .update(characters)
+      .set({
+        executorZoneHistory: sql`case when ${characters.executorZoneHistory} ? ${String(input.zoneId)}
+          then ${characters.executorZoneHistory}
+          else ${characters.executorZoneHistory} || to_jsonb(${String(input.zoneId)}::text) end`,
+      })
+      .where(and(eq(characters.userId, input.targetUserId), eq(characters.serverId, serverId)));
 
     // 집행관은 자동 방어 — 다음 전투의 일반 배치 제거(슬롯 점유 일원화).
     await tx

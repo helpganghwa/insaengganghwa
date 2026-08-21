@@ -15,7 +15,7 @@
  */
 import 'server-only';
 
-import { and, count, eq, isNotNull } from 'drizzle-orm';
+import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
@@ -102,6 +102,14 @@ export async function createProfileJob(
   const cost = profileGenPrice(await hasGeneratedCustomAvatar(userId, serverId));
 
   return db.transaction(async (tx) => {
+    // 칭호 '전성기의 초상'(0166 해소) — 생성 **시점**의 장착 상태를 스냅샷. 생성이 수락돼
+    // 실제 아바타가 만들어질 때 지급된다(파이프라인 accept에서 플래그 확인).
+    const apexRows = (await tx.execute(sql`
+      select count(*)::int as n from user_equipment
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+        and equipped_slot is not null and enhance_level >= 100
+    `)) as unknown as { n: number }[];
+    const apexAtCreation = Number(apexRows[0]?.n ?? 0) >= 3;
     // 3. Job INSERT — UNIQUE 부분 인덱스(profile_gen_one_active_per_user)가
     //    (유저, 서버)당 활성 큐 1건 보장. 위반 시 Postgres 23505.
     //
@@ -119,7 +127,7 @@ export async function createProfileJob(
           serverId,
           userId,
           descriptionPrompt: description,
-          options: opts,
+          options: apexAtCreation ? { ...opts, apexAtCreation: true } : opts,
           equipmentSnapshot,
           diamondEscrow: BigInt(cost),
           status: 'queued',

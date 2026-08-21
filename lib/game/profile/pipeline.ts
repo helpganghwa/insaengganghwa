@@ -356,9 +356,10 @@ async function acceptJob(
   faceBox: FaceBox | null,
 ): Promise<void> {
   // 얼굴 크롭 박스(원본 south 결정론 검출)를 options.faceBox로 동봉 — 헤더/친구 썸네일 정밀 크롭.
-  const optionsWithFace = faceBox
-    ? { ...(options as Record<string, unknown>), faceBox }
-    : options;
+  // apexAtCreation은 잡 전용 판정 플래그 — 프로필 options(공개 직렬화 대상)에는 싣지 않는다
+  // (히든 칭호 트리거 노출 방지). 지급 판정은 아래에서 잡 options로 한다.
+  const { apexAtCreation: _apex, ...baseOptions } = (options ?? {}) as Record<string, unknown>;
+  const optionsWithFace = faceBox ? { ...baseOptions, faceBox } : baseOptions;
   await db.transaction(async (tx) => {
     // 조건부 클레임 먼저(감사 #2) — downloading인 경우만 accepted로 전이. 0행이면 다른 워커가
     // 이미 처리한 것(P1 불변식 위반 시) → 프로필 중복생성 방지로 즉시 종료. userProfileId는
@@ -391,10 +392,21 @@ async function acceptJob(
       .set({ userProfileId: profile!.id })
       .where(eq(profileGenerationJobs.id, jobId));
 
-    // 첫 프로필이면 자동 active — escrow 차감 서버의 캐릭터에.
+    // 칭호 '전성기의 초상'(0166 해소) — 생성 시점 +100×3 장착 플래그(createProfileJob 스냅샷)가
+    // 있으면 수락 순간 지급. 거절·실패는 "생성"이 아니므로 미지급 — cond와 1:1.
+    if ((options as Record<string, unknown> | null)?.apexAtCreation === true) {
+      await tx.execute(sql`
+        insert into user_titles (user_id, server_id, title_code)
+        values (${userId}::uuid, ${serverId}, 'apex_shoot')
+        on conflict do nothing
+      `);
+    }
+
+    // 첫 프로필이면 자동 active — escrow 차감 서버의 캐릭터에. 대표가 바뀌는 것이므로
+    // 유지 시작(0166, 한결같은 얼굴 판정)도 함께 리셋.
     await tx
       .update(characters)
-      .set({ activeProfileId: profile!.id })
+      .set({ activeProfileId: profile!.id, activeProfileSince: sql`now()` })
       .where(
         and(
           eq(characters.userId, userId),
@@ -454,9 +466,9 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   if (sup.error) return { ok: false, msg: `이미지 미러링 실패: ${sup.error.message}` };
   const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl };
   const faceBox = await reconcileFaceBox(spng, await detectFaceBox(spng), null);
-  const adminOptions = faceBox
-    ? { ...(job.options as Record<string, unknown>), faceBox }
-    : job.options;
+  // apexAtCreation은 잡 전용 판정 플래그 — 프로필 options에는 싣지 않는다(acceptJob과 동일).
+  const { apexAtCreation: _apex, ...adminBase } = (job.options ?? {}) as Record<string, unknown>;
+  const adminOptions = faceBox ? { ...adminBase, faceBox } : adminBase;
 
   const granted = await db.transaction(async (tx) => {
     // 조건부 클레임 먼저(회수 경로와 동일 패턴) — 위 게이트(:377)는 비잠금 read인 데다 그 뒤로
@@ -492,10 +504,19 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
       .set({ userProfileId: profile!.id })
       .where(eq(profileGenerationJobs.id, jobId));
 
-    // 첫 프로필이면 자동 active.
+    // 칭호 '전성기의 초상' — 어드민 구제 지급도 "생성 성공"이므로 동일 적용(잡 스냅샷 기준).
+    if ((job.options as Record<string, unknown> | null)?.apexAtCreation === true) {
+      await tx.execute(sql`
+        insert into user_titles (user_id, server_id, title_code)
+        values (${job.userId}::uuid, ${job.serverId}, 'apex_shoot')
+        on conflict do nothing
+      `);
+    }
+
+    // 첫 프로필이면 자동 active. 대표 변경이므로 유지 시작(0166)도 리셋.
     await tx
       .update(characters)
-      .set({ activeProfileId: profile!.id })
+      .set({ activeProfileId: profile!.id, activeProfileSince: sql`now()` })
       .where(
         and(
           eq(characters.userId, job.userId),

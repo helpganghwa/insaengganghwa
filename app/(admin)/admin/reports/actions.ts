@@ -140,7 +140,8 @@ export async function resetReportedAvatar(profileId: string): Promise<Result> {
       .limit(1);
     await tx
       .update(characters)
-      .set({ activeProfileId: def?.id ?? null })
+      // 대표가 실제로 바뀌므로 유지 시작(0166, 한결같은 얼굴 판정)도 리셋.
+      .set({ activeProfileId: def?.id ?? null, activeProfileSince: sql`now()` })
       // serverId 명시(감사 P-A3) — activeProfileId가 UUID 유니크라 실무상 안전하나, 모더레이션
       // 경로의 잠재 오타깃 방지로 서버 스코프 고정.
       .where(

@@ -152,7 +152,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              count(*) filter (where extract(isodow from created_at ${sql.raw(KST)})=1 and result='down')::int as monday_down,
              count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) between 18 and 20)::int as evening,
              -- 실대기 5분 이내(자연 단시간 + 보석 단축 포함) — cond "대기 5분 이내의 강화"와 1:1(감사 H3)
-             count(*) filter (where elapsed_ms <= 300000)::int as five_min_cnt
+             count(*) filter (where elapsed_ms <= 300000)::int as five_min_cnt,
+             -- 만기 후 방치 수령(0166 overdue_ms) — 컬럼 도입(2026-08-21) 이후 수령분만 집계(과거 행은 null)
+             count(*) filter (where overdue_ms >= 86400000)::int as aging_cnt,
+             count(*) filter (where overdue_ms >= 604800000)::int as carefree_cnt
       from enhancement_logs where user_id=${u} and server_id=${s}
     `),
     // 연속(스트릭) — gaps & islands. 결과별 최장 연속 + 하락 직후 성공 연속.
@@ -266,13 +269,6 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                     and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')
                     and created_at >= (select t0 from birth)),0)::bigint as dia_free,
-        coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and created_at >= now() - interval '10 days'),0)::bigint as gained10,
-        coalesce((select sum(-delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta < 0
-                    and reason <> 'refund_clawback'
-                    and created_at >= now() - interval '10 days'),0)::bigint as spent10,
-        coalesce((select sum(gems_spent) from gem_time_reductions where user_id=${u} and server_id=${s}
-                    and created_at >= now() - interval '10 days'),0)::bigint as gem10,
         coalesce((select max(t) from (
           select sum(v) as t from (
             select (created_at ${sql.raw(KST)})::date as d, -delta as v
@@ -293,7 +289,24 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
               from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
                 and reason in ('avatar_refund','emblem_refund')
                 and created_at >= (select t0 from birth)
-          ) x group by d) y),0)::bigint as spend_day_max
+          ) x group by d) y),0)::bigint as spend_day_max,
+        -- 10일 창 **최저 잔액** 복원(자린고비, 2026-08-21 문구 개정 "지출 있어도 유지 인정") —
+        -- 어느 시점의 잔액 = 현재 잔액 − (그 시점 이후 델타 합). 창 내 최저 잔액 = 현재 −
+        -- max(최근 k건 델타 누적합, k=1..N). k=0(변동 없음 = 현재 잔액)은 TS에서 max(…, 0).
+        -- 원장(0159)은 enhance_reduce를 기록하지 않으므로(LEDGER_SKIP_REASONS) 그 지출은
+        -- gem_time_reductions에서 음수 델타로 합류시켜야 등식이 성립한다 — 빼먹으면 복원
+        -- 잔액이 실제보다 낮아져 단축을 쓰는 유저가 구조적으로 오탈락한다(적대 검수 3).
+        coalesce((select max(w.s) from (
+          select sum(delta) over (order by created_at desc, seq desc
+            rows between unbounded preceding and current row) as s
+          from (
+            select delta, created_at, id as seq from diamond_ledger
+              where user_id=${u} and server_id=${s} and created_at >= now() - interval '10 days'
+            union all
+            select -gems_spent, created_at, id from gem_time_reductions
+              where user_id=${u} and server_id=${s} and created_at >= now() - interval '10 days'
+          ) ev
+        ) w),0)::bigint as led_peak10
     `),
     /** 길드 이력 — guild_audit_log의 join/leave는 actor_user_id 기준(가입·탈퇴 주체). */
     () => db.execute(sql`
@@ -427,7 +440,19 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select coalesce(extract(epoch from (select max_enhance_reached_at from user_equipment
                where user_id=${u} and server_id=${s} and max_enhance_level>=100 order by max_enhance_reached_at limit 1)
                - (select created_at from characters where user_id=${u} and server_id=${s}))/86400,999))::int as first100_days,
-             (select count(*)::int from catalog_items where active) as catalog_total
+             (select count(*)::int from catalog_items where active) as catalog_total,
+             -- 거주·아바타·기부·집행관 이력(0166) — 캐릭터 행 1개에서 한 번에.
+             -- 거주/아바타 경과는 대상이 실제로 있을 때만(백필이 created_at을 채워 두므로 게이트 필수).
+             coalesce((select case when residence_zone_id is not null
+               then extract(day from now() - residence_since)::int else 0 end
+               from characters where user_id=${u} and server_id=${s}),0) as res_days,
+             coalesce((select residence_move_count from characters where user_id=${u} and server_id=${s}),0) as res_moves,
+             coalesce((select jsonb_array_length(visited_regions) from characters where user_id=${u} and server_id=${s}),0) as regions_lived,
+             coalesce((select case when active_profile_id is not null
+               then extract(day from now() - active_profile_since)::int else 0 end
+               from characters where user_id=${u} and server_id=${s}),0) as avatar_days,
+             coalesce((select guild_donation_count from characters where user_id=${u} and server_id=${s}),0) as donate_cnt,
+             coalesce((select jsonb_array_length(executor_zone_history) from characters where user_id=${u} and server_id=${s}),0) as exec_zones
     `),
     // 랭킹(판정 2차) — 리더보드 카운터 기준 지표별 내 값·순위. 행 없는 지표는 TS에서 9999 처리.
     () => db.execute(sql`
@@ -705,6 +730,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
+    // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
+    res_days: n(mi.res_days), res_moves: n(mi.res_moves), regions_lived: n(mi.regions_lived),
+    avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
+    aging_cnt: n(e.aging_cnt), carefree_cnt: n(e.carefree_cnt),
     // ── 판정 2차 ──
     p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!,
     v_combat: combatValue,
@@ -729,10 +758,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     cq_attack: n(cq.cq_attack), cq_attack_win: n(cq.cq_attack_win), cq_defend_win: n(cq.cq_defend_win), cq_tax: n(cq.cq_tax),
     // ── 판정 4차(2026-08-12) — diamond_ledger·guild_audit_log 도입으로 열린 지표 ──
     dia_gained: n(lgr.dia_gained), dia_free: n(lgr.dia_free), spend_day_max: n(lgr.spend_day_max),
-    // 자린고비 — 10일간 **지출이 0**이면 잔액은 단조 증가하므로 "10일 전 잔액 = 현재 − 10일 획득".
-    // 그 값이 10만 이상이면 10일 내내 10만을 넘겨 유지했다는 뜻이 된다(근사가 아니라 등식).
+    // 자린고비(2026-08-21 개정) — "10일 내내 10만 유지"를 지출 허용으로: 원장으로 10일 창의
+    // 최저 잔액을 복원(led_peak10 주석 참조). 창이 통째로 존재하려면 가입 10일 이상이어야 한다.
     hoard_ok:
-      n(lgr.spent10) + n(lgr.gem10) === 0 && n(wa.dia) - n(lgr.gained10) >= 100_000 ? 1 : 0,
+      n(mi.days) >= 10 && n(wa.dia) - Math.max(n(lgr.led_peak10), 0) >= 100_000 ? 1 : 0,
     homecoming: n(ghs.homecoming), since_leave: Number(ghs.since_leave ?? -1), alley_boss: n(ghs.alley_boss),
     david: n(ft.david), triathlon: n(ft.triathlon),
   };
@@ -762,7 +791,9 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   phoenix: (m) => m.phoenix_ok === 1, // 정밀(3차) — 하락 직후 10연속 성공
   blitz: (m) => m.first100_days <= 7,
   five_min: (m) => m.five_min >= 100,
-  // aging·carefree — 만기 후 방치가 로그에 없어 판정 불가 → PENDING(감사 H2)
+  // 만기 후 방치 수령 — enhancement_logs.overdue_ms(0166, resolve.ts가 수령 시점에 기록)
+  aging: (m) => m.aging_cnt >= 50,
+  carefree: (m) => m.carefree_cnt >= 1,
   fire_play: (m) => m.enh_day_max >= 200,
   perpetual: (m) => m.enh_day_run >= 30,
   flawless_100: (m) => m.flawless_ok === 1,
@@ -838,7 +869,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   two_mirrors: (m) => m.av_genders >= 2,
   same_combo: (m) => m.av_combo >= 10,
   disguise: (m) => m.av_combos >= 30,
-  // wandering_smith — 거주 이력 테이블 부재 → PENDING
+  wandering_smith: (m) => m.regions_lived >= 6, // characters.visited_regions(0166) — 6개 지역 전부
   // 해방
   lib_first: (m) => m.liberated >= 1,
   // 조합
@@ -856,8 +887,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   evening_life: (m) => m.evening >= 100,
   // ── 판정 2차: 랭킹 순간·기록 ──
   pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10,
-  // new_record — "현재 1위"는 rank_max(조건부)와 동일 술어라 cond의 "경신"이 아니었다
-  // → 경신 이력 로그가 생길 때까지 PENDING(콘텐츠 감사 7: 오픈 첫 주 영구 남발 방지).
+  // new_record — 판정이 아니라 이벤트 훅: rank-leader 크론(world/event.ts)이 max 1위
+  // **교체**를 관측한 순간 지급(첫 관측 시드는 제외 — 오픈 직후 남발 방지). EVENT_HOOK_CODES.
   // 재화·전투력 순간값 — 판정 시점(칭호 화면 진입 등)에 그 값이면 발견. 훅 보강은 후속.
   lucky_777: (m) => m.dia === 777,
   doremi: (m) => m.dia === 12_345,
@@ -868,8 +899,17 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   chat_1000: (m) => m.chats >= 1000,
   night_talk: (m) => m.night_chats >= 100,
   mention_100: (m) => m.mentions_got >= 100,
+  // 거주·집행관 — characters 이력 컬럼(0166)
+  resident_10: (m) => m.res_days >= 10,
+  mover_30: (m) => m.res_moves >= 30,
+  tour_lord: (m) => m.exec_zones >= 3,
+  // 아바타 유지 — 대표가 실제로 바뀔 때만 since 갱신(같은 아바타 재클릭 무시)
+  same_face_30: (m) => m.avatar_days >= 30,
+  one_suit: (m) => m.avatar_days >= 100,
   // 길드·소셜
   witness: (m) => m.gdays >= 100,
+  guild_donate: (m) => m.donate_cnt >= 100,
+  pillar: (m) => m.donate_cnt >= 365,
   guild_founder: (m) => m.founder === 1, // 근사 — 최초 가입자=창설자(창설 이벤트 로그 부재)
   welcome_crowd: (m) => m.ref_50 >= 1,
   // 초대 트리(2026-08-05 확정) — 두 번째 발자국 → 길잡이 → 모병관(기존) → 길이 된 사람

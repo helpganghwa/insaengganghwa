@@ -55,7 +55,13 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
 
   await db
     .update(characters)
-    .set({ activeProfileId: profileId })
+    .set({
+      activeProfileId: profileId,
+      // 칭호 이력(0166) — 대표가 **실제로 바뀔 때만** 유지 시작 리셋(같은 아바타 재클릭은 무시).
+      // UPDATE의 우변 컬럼 참조는 변경 전 값이라 이 비교가 정확하다.
+      activeProfileSince: sql`case when ${characters.activeProfileId} is distinct from ${profileId}::uuid
+        then now() else ${characters.activeProfileSince} end`,
+    })
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
   // 도전 과제(0118) — 아바타 변경 마킹(멱등·best-effort).
   await markChallengeEvent(db, userId, serverId, 'avatar_change');
@@ -121,7 +127,7 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
       .limit(1);
     await tx
       .update(characters)
-      .set({ activeProfileId: next?.id ?? null })
+      .set({ activeProfileId: next?.id ?? null, activeProfileSince: sql`now()` })
       .where(and(eq(characters.userId, userId), eq(characters.activeProfileId, profileId)));
     await tx
       .delete(userProfiles)

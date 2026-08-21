@@ -113,6 +113,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const endMs = Math.floor(Number(job.complete_epoch) * 1000);
   const totalMs = Math.max(1, endMs - startMs);
   const elapsedMs = Math.min(totalMs, Math.max(0, now - startMs));
+  // 만기 후 방치 시간(0166) — elapsed는 만기 클램프라 방치가 안 남는다. 통산 단련 시간
+  // 통계(Σ elapsed)의 "방치 제외" 의미는 유지하고, 방치는 이 별도 컬럼에만 기록한다.
+  const overdueMs = Math.max(0, now - endMs);
   // BALANCE §1.2 — 3분기 outcome: success(시간 비례) / down(고정) / hold(잔여).
   // baseRate·downRate 모두 등록 시 스냅샷(소급 금지, CLAUDE §6.3). 스냅샷 이전 in-flight 잡은
   // down_rate_bp가 null이라 코드 상수로 폴백(점진 마이그레이션).
@@ -166,10 +169,10 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     lg as (
       insert into enhancement_logs
         (user_id, server_id, user_equipment_id, catalog_item_id, from_level, to_level, result,
-         base_rate_bp, effective_rate_bp, elapsed_ms, duration_ms, reduced_ms, rolled)
+         base_rate_bp, effective_rate_bp, elapsed_ms, duration_ms, reduced_ms, rolled, overdue_ms)
       select j.user_id, j.server_id, j.user_equipment_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
              ${outcome}::enhance_result, ${baseRateBp}, ${effBp}, ${elapsedMs}::bigint,
-             ${durationMs}::bigint, ${reducedMs}::bigint, ${rolled}
+             ${durationMs}::bigint, ${reducedMs}::bigint, ${rolled}, ${overdueMs}::bigint
       from j
       returning id
     )

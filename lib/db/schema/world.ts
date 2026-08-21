@@ -48,6 +48,8 @@ export const rankingLeaders = pgTable(
     serverId: smallint('server_id').notNull(),
     metric: text('metric').notNull(),
     userId: uuid('user_id').notNull(),
+    /** 1위의 지표 값(0167) — 신기록 칭호의 "값 경신" 판정 근거. null=컬럼 도입 전 시드. */
+    value: bigint('value', { mode: 'bigint' }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.metric] })],
