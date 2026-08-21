@@ -31,36 +31,37 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     const ids = sql.join(targets.map((t) => sql`${t.id}::uuid`), sql`, `);
     const uid = sql`in (${ids})`;
 
-    // 대상이 길드장인 테스트 길드 — 통째 정리(cutover-live WIPE 순서 준수, guild_id 한정).
-    const guilds = (await tx.execute(sql`
-      select id from guilds where leader_user_id ${uid}
-    `)) as unknown as { id: string }[];
-    if (guilds.length > 0) {
-      const gids = sql`in (${sql.join(guilds.map((g) => sql`${g.id}::bigint`), sql`, `)})`;
-      await tx.execute(sql`delete from guild_emblem_escrows where guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_audit_log where guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_tax_distributions where guild_id ${gids}`);
-      await tx.execute(sql`delete from conquest_battles where attacker_guild_id ${gids} or defender_guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_battle_deployments where guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_join_requests where guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_members where guild_id ${gids}`);
-      await tx.execute(sql`update zones set owner_guild_id = null where owner_guild_id ${gids}`);
-      await tx.execute(sql`delete from guild_emblems where guild_id ${gids}`);
-      await tx.execute(sql`delete from guilds where id ${gids}`);
-    }
+    // ── 공유 테이블 전체 삭제 — 2차 wipe(2026-08-21) 이후 생성분은 전부 테스트 파생이다.
+    // 복원(cbt-restore)은 characters·user_titles·user_supply_boxes·user_profiles·mailbox만
+    // 만들므로 아래 테이블들과 무교차: 봉인 기간의 길드·레이드·대난투·점령전·채팅·월드
+    // 피드·연대기는 테스트 계정만 만들 수 있었다(일반 카카오 콜백 차단).
+    const [guildCount] = (await tx.execute(sql`select count(*)::int n from guilds`)) as unknown as { n: number }[];
+    await tx.execute(sql`delete from guild_emblem_escrows`);
+    await tx.execute(sql`delete from guild_audit_log`);
+    await tx.execute(sql`delete from guild_tax_distributions`);
+    await tx.execute(sql`delete from conquest_battles`);
+    await tx.execute(sql`delete from guild_battle_deployments`);
+    await tx.execute(sql`delete from guild_join_requests`);
+    await tx.execute(sql`delete from guild_leave_log`);
+    await tx.execute(sql`delete from guild_members`);
+    await tx.execute(sql`update zones set owner_guild_id = null where owner_guild_id is not null`);
+    await tx.execute(sql`delete from guild_emblems`);
+    await tx.execute(sql`delete from guilds`);
+    await tx.execute(sql`delete from world_chronicle`);
+    await tx.execute(sql`delete from world_events`);
+    await tx.execute(sql`delete from chat_messages`);
+    await tx.execute(sql`delete from raid_invites`);
+    await tx.execute(sql`delete from raid_attacks`);
+    await tx.execute(sql`delete from raid_rewards`);
+    await tx.execute(sql`delete from raid_participants`);
+    await tx.execute(sql`delete from raid_join_requests`);
+    await tx.execute(sql`delete from raid_daily_counts`);
+    await tx.execute(sql`delete from raids`);
+    await tx.execute(sql`delete from melee_participants`);
+    await tx.execute(sql`delete from melee_battles`);
 
     // 유저 단위 게임 데이터 — withdrawAccount와 동일 시퀀스(계정·구독·referral 제외).
-    await tx.execute(sql`delete from raid_invites where invitee_user_id ${uid} or inviter_user_id ${uid}`);
-    await tx.execute(sql`delete from raid_attacks where user_id ${uid}`);
-    await tx.execute(sql`delete from raid_participants where user_id ${uid}`);
-    await tx.execute(sql`delete from raid_rewards where user_id ${uid}`);
-    await tx.execute(sql`delete from raid_join_requests where user_id ${uid}`);
-    await tx.execute(sql`delete from raid_daily_counts where user_id ${uid}`);
-    await tx.execute(sql`delete from raids where host_user_id ${uid}`);
-    await tx.execute(sql`delete from guild_join_requests where user_id ${uid}`);
-    await tx.execute(sql`delete from guild_battle_deployments where user_id ${uid}`);
-    await tx.execute(sql`delete from guild_leave_log where user_id ${uid}`);
-    await tx.execute(sql`delete from guild_members where user_id ${uid}`);
+    // 복원 유저 251명의 데이터(캐릭터·우편·칭호)는 보호해야 하므로 반드시 대상 한정.
     await tx.execute(sql`delete from profile_reports where reporter_user_id ${uid} or profile_id in (select id from user_profiles where user_id ${uid})`);
     await tx.execute(sql`delete from mail_claim_logs where user_id ${uid}`);
     await tx.execute(sql`delete from mailbox where user_id ${uid}`);
@@ -79,15 +80,15 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from premium_daily_grants where user_id ${uid}`);
     await tx.execute(sql`delete from shop_free_claims where user_id ${uid}`);
     await tx.execute(sql`delete from shop_purchases where user_id ${uid}`);
-    await tx.execute(sql`delete from melee_participants where user_id ${uid}`);
-    await tx.execute(sql`update melee_battles set champion_user_id = null where champion_user_id ${uid}`);
     await tx.execute(sql`delete from friend_links where requester_id ${uid} or addressee_id ${uid}`);
     await tx.execute(sql`delete from shares where user_id ${uid}`);
     await tx.execute(sql`delete from ad_views where user_id ${uid}`);
     await tx.execute(sql`delete from push_pending where user_id ${uid}`);
     await tx.execute(sql`delete from whisper_reads where user_id ${uid} or peer_user_id ${uid}`);
     await tx.execute(sql`delete from whisper_messages where from_user_id ${uid} or to_user_id ${uid}`);
-    await tx.execute(sql`delete from chat_messages where user_id ${uid}`);
+    await tx.execute(sql`delete from chat_blocks where user_id ${uid} or blocked_user_id ${uid}`);
+    await tx.execute(sql`delete from chat_reports where reporter_user_id ${uid}`);
+    await tx.execute(sql`delete from diamond_ledger where user_id ${uid}`);
     await tx.execute(sql`delete from leaderboard_ranks where user_id ${uid}`);
     await tx.execute(sql`delete from codex_champions where user_id ${uid}`);
     await tx.execute(sql`delete from user_milestones where user_id ${uid}`);
@@ -100,6 +101,6 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from user_profiles where user_id ${uid}`);
     await tx.execute(sql`delete from characters where user_id ${uid}`);
 
-    return { users: targets.length, guilds: guilds.length };
+    return { users: targets.length, guilds: Number(guildCount?.n ?? 0) };
   });
 }

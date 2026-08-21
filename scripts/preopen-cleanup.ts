@@ -44,31 +44,30 @@ if (!confirm) {
 // 목록을 항상 동기화할 것.
 const ids = targets.map((t) => t.id);
 await sql.begin(async (tx) => {
-  const gs = (await tx`select id from guilds where leader_user_id in ${tx(ids)}`) as { id: string }[];
-  if (gs.length > 0) {
-    const gids = gs.map((g) => g.id);
-    await tx`delete from guild_emblem_escrows where guild_id in ${tx(gids)}`;
-    await tx`delete from guild_audit_log where guild_id in ${tx(gids)}`;
-    await tx`delete from guild_tax_distributions where guild_id in ${tx(gids)}`;
-    await tx`delete from conquest_battles where attacker_guild_id in ${tx(gids)} or defender_guild_id in ${tx(gids)}`;
-    await tx`delete from guild_battle_deployments where guild_id in ${tx(gids)}`;
-    await tx`delete from guild_join_requests where guild_id in ${tx(gids)}`;
-    await tx`delete from guild_members where guild_id in ${tx(gids)}`;
-    await tx`update zones set owner_guild_id = null where owner_guild_id in ${tx(gids)}`;
-    await tx`delete from guild_emblems where guild_id in ${tx(gids)}`;
-    await tx`delete from guilds where id in ${tx(gids)}`;
-  }
-  await tx`delete from raid_invites where invitee_user_id in ${tx(ids)} or inviter_user_id in ${tx(ids)}`;
-  await tx`delete from raid_attacks where user_id in ${tx(ids)}`;
-  await tx`delete from raid_participants where user_id in ${tx(ids)}`;
-  await tx`delete from raid_rewards where user_id in ${tx(ids)}`;
-  await tx`delete from raid_join_requests where user_id in ${tx(ids)}`;
-  await tx`delete from raid_daily_counts where user_id in ${tx(ids)}`;
-  await tx`delete from raids where host_user_id in ${tx(ids)}`;
-  await tx`delete from guild_join_requests where user_id in ${tx(ids)}`;
-  await tx`delete from guild_battle_deployments where user_id in ${tx(ids)}`;
-  await tx`delete from guild_leave_log where user_id in ${tx(ids)}`;
-  await tx`delete from guild_members where user_id in ${tx(ids)}`;
+  // 공유 테이블 전체 삭제 — 2차 wipe 이후 생성분은 전부 테스트 파생(lib/reset-test-data와 동기).
+  await tx`delete from guild_emblem_escrows`;
+  await tx`delete from guild_audit_log`;
+  await tx`delete from guild_tax_distributions`;
+  await tx`delete from conquest_battles`;
+  await tx`delete from guild_battle_deployments`;
+  await tx`delete from guild_join_requests`;
+  await tx`delete from guild_leave_log`;
+  await tx`delete from guild_members`;
+  await tx`update zones set owner_guild_id = null where owner_guild_id is not null`;
+  await tx`delete from guild_emblems`;
+  await tx`delete from guilds`;
+  await tx`delete from world_chronicle`;
+  await tx`delete from world_events`;
+  await tx`delete from chat_messages`;
+  await tx`delete from raid_invites`;
+  await tx`delete from raid_attacks`;
+  await tx`delete from raid_rewards`;
+  await tx`delete from raid_participants`;
+  await tx`delete from raid_join_requests`;
+  await tx`delete from raid_daily_counts`;
+  await tx`delete from raids`;
+  await tx`delete from melee_participants`;
+  await tx`delete from melee_battles`;
   await tx`delete from profile_reports where reporter_user_id in ${tx(ids)} or profile_id in (select id from user_profiles where user_id in ${tx(ids)})`;
   await tx`delete from mail_claim_logs where user_id in ${tx(ids)}`;
   await tx`delete from mailbox where user_id in ${tx(ids)}`;
@@ -87,15 +86,15 @@ await sql.begin(async (tx) => {
   await tx`delete from premium_daily_grants where user_id in ${tx(ids)}`;
   await tx`delete from shop_free_claims where user_id in ${tx(ids)}`;
   await tx`delete from shop_purchases where user_id in ${tx(ids)}`;
-  await tx`delete from melee_participants where user_id in ${tx(ids)}`;
-  await tx`update melee_battles set champion_user_id = null where champion_user_id in ${tx(ids)}`;
   await tx`delete from friend_links where requester_id in ${tx(ids)} or addressee_id in ${tx(ids)}`;
   await tx`delete from shares where user_id in ${tx(ids)}`;
   await tx`delete from ad_views where user_id in ${tx(ids)}`;
   await tx`delete from push_pending where user_id in ${tx(ids)}`;
   await tx`delete from whisper_reads where user_id in ${tx(ids)} or peer_user_id in ${tx(ids)}`;
   await tx`delete from whisper_messages where from_user_id in ${tx(ids)} or to_user_id in ${tx(ids)}`;
-  await tx`delete from chat_messages where user_id in ${tx(ids)}`;
+  await tx`delete from chat_blocks where user_id in ${tx(ids)} or blocked_user_id in ${tx(ids)}`;
+  await tx`delete from chat_reports where reporter_user_id in ${tx(ids)}`;
+  await tx`delete from diamond_ledger where user_id in ${tx(ids)}`;
   await tx`delete from leaderboard_ranks where user_id in ${tx(ids)}`;
   await tx`delete from codex_champions where user_id in ${tx(ids)}`;
   await tx`delete from user_milestones where user_id in ${tx(ids)}`;
