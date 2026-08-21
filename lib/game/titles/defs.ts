@@ -718,7 +718,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "no_guild_30",
-  kind: "permanent",
+  kind: "conditional",
   label: "무소속",
   hidden: true,
   style: {

@@ -650,9 +650,9 @@
  {
   "code": "no_guild_30",
   "cat": "길드",
-  "kind": "영구",
+  "kind": "조건부",
   "label": "무소속",
-  "cond": "길드 없이 7일",
+  "cond": "길드 없이 7일 (길드 가입 시 해제)",
   "hidden": true,
   "diff": "쉬움"
  },

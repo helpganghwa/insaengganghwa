@@ -443,7 +443,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "no_guild_30",
   cat: "길드",
-  cond: "길드 없이 7일",
+  cond: "길드 없이 7일 (길드 가입 시 해제)",
   diff: "쉬움"
  },
  {

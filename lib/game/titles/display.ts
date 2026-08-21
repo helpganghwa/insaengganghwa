@@ -77,6 +77,7 @@ export async function resolveRepTitle(
 const HEAVY_CONDITIONALS = new Set([
   'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
   'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag',
+  'no_guild_30', // 무소속(2026-08-21 조건부 전환) — 가입 시 즉시 해제·탈퇴 7일 후 재활성
   'streak_king', 'march_live', 'smooth_sail',
   'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
   // PENDING 해소(2026-08-12) — judge.activeConditionals에 추가한 "~인 동안" 3종.
@@ -133,6 +134,20 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
         where user_id=${u} and server_id=${s}
       `)) as unknown as { days: number }[];
       return Number(c?.days ?? 999) <= 30 && pos.combat! <= 100;
+    }
+    if (code === 'no_guild_30') {
+      // 무소속(2026-08-21 조건부 전환) — 판정(judge.ts)과 동일 의미: 현재 미소속이고
+      // 마지막 탈퇴(guild_leave_logs, append-only) 후 7일 경과. 탈퇴 기록이 없으면
+      // 가입(캐릭터 생성) 후 7일. 길드 가입/생성 시 in_guild=1로 즉시 비활성.
+      const [r] = (await db.execute(sql`
+        select (exists(select 1 from guild_members gm where gm.user_id=${u} and gm.server_id=${s}))::int as in_guild,
+               extract(day from now() - (select max(left_at) from guild_leave_log gl
+                 where gl.user_id=${u} and gl.server_id=${s}))::int as since_leave,
+               extract(day from now() - (select created_at from characters c
+                 where c.user_id=${u} and c.server_id=${s}))::int as days
+      `)) as unknown as { in_guild: number; since_leave: number | null; days: number | null }[];
+      if (!r || Number(r.in_guild) === 1) return false;
+      return r.since_leave != null ? Number(r.since_leave) >= 7 : Number(r.days ?? 0) >= 7;
     }
     if (code === 'broke_now' || code === 'rich_apex') {
       const [r] = (await db.execute(sql`

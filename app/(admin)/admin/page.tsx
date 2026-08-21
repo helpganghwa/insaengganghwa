@@ -159,18 +159,6 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '클라이언트 에러',
     desc: '사용자 기기 전역 에러 수집(그룹화·발생횟수). 해결 처리',
   },
-  {
-    href: '/admin/catalog-review',
-    icon: '🗂️',
-    title: '아이템 카탈로그 비교·검수',
-    desc: '1차(150)·2차(108)·3차(56) 통합 비교·선택 (슬롯/세대 필터, 모바일)',
-  },
-  {
-    href: '/admin/anim-review',
-    icon: '🎬',
-    title: '3차 애니·스토리 검수',
-    desc: '최종 61종 정적/애니/이름/스토리 검수 (스토리·애니·프롬프트 리젝)',
-  },
 ];
 
 export default async function AdminHubPage() {
