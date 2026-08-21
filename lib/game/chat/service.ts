@@ -485,20 +485,16 @@ export async function setChatBlock(
     .where(eq(chatBlocks.userId, userId));
   if (n >= CHAT_BLOCK_CAP) return 'CAP';
   await db.insert(chatBlocks).values({ userId, blockedUserId }).onConflictDoNothing();
-  // 두 사람 사이의 pending 친구 요청을 양방향 정리(2026-08-12) — 차단이 친구 요청까지 막게 된
-  // 이상(friends/index.ts), 남은 pending은 어느 쪽도 볼 수 없고 수락도 안 되는 유령 행이다.
-  // 특히 요청 카운터(레이아웃 배지·프로필 허브)는 행 존재로 세므로, 안 지우면 "요청 배지는
-  // 켜지는데 목록은 빈" 상태가 영구히 남는다. accepted(이미 친구)는 건드리지 않는다 —
-  // 차단 시 친구를 끊을지는 별개 제품 결정(미정). chat_blocks가 계정 단위라 전 서버 정리.
+  // 두 사람 사이의 친구 관계를 **상태 무관** 양방향 정리 — pending은 유령 행(배지만 켜짐)
+  // 방지(2026-08-12), accepted는 차단 시 친구 자동 해제(2026-08-21 사용자 확정). 관계를
+  // 남기면 차단해도 레이드 초대 푸시가 오고 접속 시각(lastSeenAt)이 계속 보였다(전수 감사).
+  // 차단을 풀어도 친구는 복구되지 않는다 — 다시 친구가 되려면 재신청. 계정 단위라 전 서버 정리.
   await db
     .delete(friendLinks)
     .where(
-      and(
-        eq(friendLinks.status, 'pending'),
-        or(
-          and(eq(friendLinks.requesterId, userId), eq(friendLinks.addresseeId, blockedUserId)),
-          and(eq(friendLinks.requesterId, blockedUserId), eq(friendLinks.addresseeId, userId)),
-        ),
+      or(
+        and(eq(friendLinks.requesterId, userId), eq(friendLinks.addresseeId, blockedUserId)),
+        and(eq(friendLinks.requesterId, blockedUserId), eq(friendLinks.addresseeId, userId)),
       ),
     );
   return 'blocked';
