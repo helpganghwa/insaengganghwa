@@ -5,8 +5,8 @@ import { useMemo, useState, useTransition } from 'react';
 import { TitleTag } from '@/components/TitleTag';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { TITLE_BY_CODE, TITLE_DEFS } from '@/lib/game/titles/defs';
-import { setRepresentativeTitleAction } from '@/lib/game/titles/actions';
+import { TITLE_BY_CODE, TITLE_DEFS, type TitleDef } from '@/lib/game/titles/defs';
+import { setRepresentativeTitleAction, toggleFavoriteTitleAction } from '@/lib/game/titles/actions';
 import { useResourceToast } from '@/components/ResourceToast';
 
 /** 서버가 내려주는 행 — 조건(cond)·발견일은 발견한 칭호에만 존재(비노출 원칙). */
@@ -40,39 +40,48 @@ function Seg({ a, b, val, onChange }: { a: string; b: string; val: Tri; onChange
   );
 }
 
-/** 카드 상태 — 테두리가 상태를 말한다(도감 그리드 확정안): 금=대표·점선=미발견·주황 꼬리=비활성. */
-type CardState = 'rep' | 'active' | 'inactive' | 'locked';
-const CARD_CLS: Record<CardState, string> = {
-  rep: 'border-amber-400 shadow-[0_0_0_1px_rgba(251,191,36,0.9),inset_0_0_14px_rgba(216,178,95,0.18)]',
-  active: 'border-zinc-600',
-  inactive: 'border-orange-700/50 opacity-80',
-  locked: 'border-dashed border-zinc-800 bg-zinc-950/60 opacity-85',
-};
-const STATE_ORDER: Record<CardState, number> = { rep: 0, active: 1, inactive: 2, locked: 3 };
+/** 행 상태 — 대표/활성/비활성/잠금(미발견). 정렬·배지의 근거. */
+type RowState = 'rep' | 'active' | 'inactive' | 'locked';
+const STATE_ORDER: Record<RowState, number> = { rep: 0, active: 1, inactive: 2, locked: 3 };
+
+/** 카테고리 표시 순서 — 아이템 발동(최다)은 마지막. */
+const CAT_ORDER = ['강화', '초월', '보급', '도감', '해방', '레이드', '대난투', '점령전', '길드', '소셜', '일상', '시간대', '재화', '후원', '아바타', '조합', '랭킹 1위', '조건부', '헌정', '아이템 발동'];
+/** 내부 카테고리명 → 유저 표시명. */
+const CAT_LABEL: Record<string, string> = { '아이템 발동': '장비 착용' };
+
+/** 즐겨찾기 상한 — 서버(actions.ts FAVORITE_CAP)와 동일. */
+const FAVORITE_CAP = 10;
 
 export function TitlesClient({
   rows,
   representative,
+  favorites,
   executorZone,
   executorZoneRegion,
 }: {
   rows: TitleRow[];
   representative: string | null;
+  favorites: string[];
   executorZone: string | null;
   executorZoneRegion: string | null;
 }) {
   const [rep, setRep] = useState(representative);
+  const [favs, setFavs] = useState<string[]>(favorites);
   const [kind, setKind] = useState<Tri>(null); // a=조건 b=영구
   const [found, setFound] = useState<Tri>(null); // a=발견 b=미발견
   const [act, setAct] = useState<Tri>(null); // a=활성 b=비활성
+  const [favOnly, setFavOnly] = useState(false);
   const [sel, setSel] = useState<string | null>(null); // 팝업 대상 code
   const [pending, startTransition] = useTransition();
+  // ☆ 토글 전용 — 대표 장착의 pending(팝업 버튼 비활성)과 분리(적대 검수 7).
+  const [, startFavTransition] = useTransition();
   const { showError, showHeaderToast } = useResourceToast();
 
   const discoveredCount = useMemo(() => rows.filter((r) => r.discovered).length, [rows]);
   const byCode = useMemo(() => new Map(rows.map((r) => [r.code, r])), [rows]);
+  const favSet = useMemo(() => new Set(favs), [favs]);
 
-  const stateOf = (code: string): CardState => {
+  const stateOf = (code: string): RowState => {
     const r = byCode.get(code);
     if (!r?.discovered) return 'locked';
     // 대표라도 조건을 잃었으면 '비활성'이 진실 — 헤더·채팅에선 이미 숨는데 여기만 금테면
@@ -81,22 +90,45 @@ export function TitlesClient({
     return r.activeNow ? 'active' : 'inactive';
   };
 
-  // 정렬: 내 컬렉션 먼저(대표→활성→비활성), 미발견은 뒤 — 도감 확정안.
-  const list = useMemo(
-    () =>
-      TITLE_DEFS.filter((d) => {
-        const r = byCode.get(d.code);
-        if (!r) return false;
-        const isCond = d.kind === 'conditional';
-        if (kind && (kind === 'a') !== isCond) return false;
-        if (found && (found === 'a') !== r.discovered) return false;
-        // 활성/비활성은 **발견분의 상태** — 미발견(잠김)을 '비활성'에 섞지 않는다(감사 1-a).
-        if (act && (!r.discovered || (act === 'a') !== r.activeNow)) return false;
-        return true;
-      }).sort((a, b) => STATE_ORDER[stateOf(a.code)] - STATE_ORDER[stateOf(b.code)]),
+  const passesFilters = (d: TitleDef): boolean => {
+    const r = byCode.get(d.code);
+    if (!r) return false;
+    const isCond = d.kind === 'conditional';
+    if (kind && (kind === 'a') !== isCond) return false;
+    if (found && (found === 'a') !== r.discovered) return false;
+    // 활성/비활성은 **발견분의 상태** — 미발견(잠김)을 '비활성'에 섞지 않는다(감사 1-a).
+    if (act && (!r.discovered || (act === 'a') !== r.activeNow)) return false;
+    // ★ 즐겨찾기 필터 — 기존 필터와 AND 조합(트랙 D).
+    if (favOnly && !favSet.has(d.code)) return false;
+    return true;
+  };
+
+  // 그룹 구성(트랙 D 확정안) — 최상단 ★ 섹션(즐겨찾기 상위 노출·카테고리에서 제외) 후
+  // 카테고리 섹션. 섹션 내 정렬은 상태(대표→활성→비활성→잠금) 순.
+  const groups = useMemo(() => {
+    const sortRows = (arr: TitleDef[]) =>
+      arr.sort((a, b) => STATE_ORDER[stateOf(a.code)] - STATE_ORDER[stateOf(b.code)] || a.label.localeCompare(b.label, 'ko'));
+    const visible = TITLE_DEFS.filter(passesFilters);
+    // ★ 섹션은 **발견분만** 호이스트 — 즐겨찾기 후 미발견이 된 코드(운영 회수 등)가 잠금 행으로
+    // 최상단에 박히는 것 방지(적대 검수 2). 그런 행은 제 카테고리에 잠금으로 남는다.
+    const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
+    const hoisted = new Set(favList.map((d) => d.code));
+    const rest = visible.filter((d) => !hoisted.has(d.code));
+    const byCat = new Map<string, TitleDef[]>();
+    for (const d of rest) {
+      const arr = byCat.get(d.cat) ?? [];
+      arr.push(d);
+      byCat.set(d.cat, arr);
+    }
+    const cats = CAT_ORDER.filter((c) => byCat.has(c)).map((c) => {
+      // 진행도는 필터와 무관한 실측(그 카테고리 전체 기준) — 필터로 줄어든 숫자는 진행도가 아니다.
+      const all = TITLE_DEFS.filter((d) => d.cat === c && byCode.has(d.code));
+      const disc = all.filter((d) => byCode.get(d.code)!.discovered).length;
+      return { key: c, label: CAT_LABEL[c] ?? c, progress: `${disc}/${all.length}`, items: sortRows(byCat.get(c)!) };
+    });
+    return { favList, cats };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [byCode, kind, found, act, rep],
-  );
+  }, [byCode, kind, found, act, favOnly, favSet, rep]);
 
   const toggle = (code: string) => {
     const next = rep === code ? null : code;
@@ -118,12 +150,86 @@ export function TitlesClient({
     });
   };
 
+  const toggleFav = (code: string) => {
+    const has = favSet.has(code);
+    if (!has && favs.length >= FAVORITE_CAP) {
+      showError(`즐겨찾기는 ${FAVORITE_CAP}개까지 담을 수 있어`);
+      return;
+    }
+    // 낙관은 **함수형**으로 해당 코드만 넣고/빼고, 실패 롤백도 해당 코드만 되돌린다 —
+    // 스냅샷 복원은 병행 토글(B)을 함께 지워 서버와 어긋난다(적대 검수 3).
+    setFavs((cur) => (has ? cur.filter((c) => c !== code) : cur.includes(code) ? cur : [...cur, code]));
+    startFavTransition(async () => {
+      const res = await toggleFavoriteTitleAction(code);
+      if (!res.ok) {
+        setFavs((cur) => (has ? (cur.includes(code) ? cur : [...cur, code]) : cur.filter((c) => c !== code)));
+        showError(res.error === 'FAVORITES_FULL' ? `즐겨찾기는 ${FAVORITE_CAP}개까지 담을 수 있어` : '즐겨찾기 변경에 실패했어');
+      }
+    });
+  };
+
   const selRow = sel ? byCode.get(sel) : null;
   const selDef = sel ? TITLE_BY_CODE.get(sel) : null;
 
+  const renderRow = (d: TitleDef) => {
+    const r = byCode.get(d.code)!;
+    const st = stateOf(d.code);
+    return (
+      <div
+        key={d.code}
+        className={`flex items-center gap-2 border-b border-zinc-900 py-1.5 pl-3.5 pr-2 [content-visibility:auto] [contain-intrinsic-block-size:34px] ${
+          st === 'rep' ? 'bg-amber-400/[0.04]' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setSel(d.code)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+            {r.discovered ? (
+              <TitleTag code={d.code} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[13px]" />
+            ) : (
+              <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{d.label.replace('{구역}', '').trim()}</span>
+            )}
+          </span>
+          {st === 'rep' && (
+            <span className="shrink-0 rounded border border-amber-400/50 px-1 text-[9px] font-extrabold text-amber-400">대표</span>
+          )}
+          {st === 'inactive' && <span className="shrink-0 text-[9px] font-bold text-orange-400">비활성</span>}
+        </button>
+        {/* ☆ 토글 — 발견분 + (미발견이어도) 이미 즐겨찾기된 행. 후자는 해제 수단 보존용
+            (즐겨찾기 후 회수된 칭호가 해제 불가로 잠기는 것 방지 — 적대 검수 2). */}
+        {r.discovered || favSet.has(d.code) ? (
+          <button
+            type="button"
+            aria-label={favSet.has(d.code) ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+            aria-pressed={favSet.has(d.code)}
+            onClick={() => toggleFav(d.code)}
+            className={`shrink-0 px-1.5 py-1 text-[14px] leading-none ${favSet.has(d.code) ? 'text-amber-400' : 'text-zinc-700'}`}
+          >
+            {favSet.has(d.code) ? '★' : '☆'}
+          </button>
+        ) : (
+          <span className="w-[25px] shrink-0" />
+        )}
+      </div>
+    );
+  };
+
+  const catHead = (label: string, right: string, star = false) => (
+    <div className="flex items-center justify-between border-y border-zinc-800 bg-zinc-900/80 px-3.5 py-1">
+      <span className="text-[10.5px] font-bold text-zinc-300">
+        {star && <span className="mr-1 text-amber-400">★</span>}
+        {label}
+      </span>
+      <span className="text-[10px] text-zinc-600">{right}</span>
+    </div>
+  );
+
   return (
     <div className="mx-auto w-full max-w-[390px]">
-      {/* 상단 — 대표 미리보기+진행+필터 고정(스크롤은 그리드만). main이 스크롤 컨테이너라 top-0. */}
+      {/* 상단 — 대표+카운트(게이지 제거, 트랙 D)+필터 고정(스크롤은 목록만). main이 스크롤 컨테이너라 top-0. */}
       <div className="sticky top-0 z-20 bg-zinc-950">
         <div className="border-b border-zinc-800 bg-zinc-900/60 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -144,53 +250,47 @@ export function TitlesClient({
               발견 {discoveredCount}/{rows.length}
             </span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded bg-zinc-800">
-            <div className="h-full bg-amber-400" style={{ width: `${(discoveredCount / rows.length) * 100}%` }} />
-          </div>
         </div>
 
-        {/* 필터 — 토글 세그먼트 3조(해제=전체) */}
+        {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합) */}
         <div className="flex flex-wrap gap-1.5 border-b border-zinc-800 px-4 py-2">
           <Seg a="조건" b="영구" val={kind} onChange={setKind} />
           <Seg a="발견" b="미발견" val={found} onChange={setFound} />
           <Seg a="활성" b="비활성" val={act} onChange={setAct} />
+          <button
+            type="button"
+            aria-pressed={favOnly}
+            onClick={() => setFavOnly((v) => !v)}
+            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-0.5 text-[11px] ${
+              favOnly ? 'border-amber-400 bg-amber-400 font-bold text-zinc-900' : 'border-zinc-700 text-zinc-400'
+            }`}
+          >
+            ★ 즐겨찾기
+          </button>
         </div>
       </div>
 
-      {/* 도감 그리드 — 2열 카드. 상태는 테두리로, 조건·장착은 카드 탭 → 공통 팝업.
-          content-visibility:auto — 355장에서 오프스크린 카드의 fx 애니·파티클 리페인트 정지(감사 1-d),
-          intrinsic-block-size로 스크롤바 점프 방지. */}
-      <div className="grid grid-cols-2 gap-2 px-3 py-3 pb-8">
-        {list.map((d) => {
-          const st = stateOf(d.code);
-          return (
-            <button
-              key={d.code}
-              type="button"
-              onClick={() => setSel(d.code)}
-              className={`relative flex min-h-[58px] items-center justify-center overflow-hidden rounded-xl border bg-zinc-900 px-2 py-2.5 [content-visibility:auto] [contain-intrinsic-block-size:58px] ${CARD_CLS[st]}`}
-            >
-              {st === 'rep' && (
-                <span className="absolute left-1.5 top-1 text-[9px] font-extrabold text-amber-400">대표</span>
-              )}
-              {st === 'inactive' && (
-                <span className="absolute right-1.5 top-1 text-[9px] font-bold text-orange-400">비활성</span>
-              )}
-              <span className="max-w-full overflow-hidden text-ellipsis">
-                {byCode.get(d.code)?.discovered ? (
-                  <TitleTag
-                    code={d.code}
-                    executorZone={executorZone}
-                    executorZoneRegion={executorZoneRegion}
-                    className="text-[13px]"
-                  />
-                ) : (
-                  <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{d.label.replace('{구역}', '').trim()}</span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+      {/* 목록 — 카테고리 섹션 + 1열 밀도 행(트랙 D 확정안). ★ 섹션이 최상단(상위 노출·중복 없음). */}
+      <div className="pb-8">
+        {groups.favList.length > 0 && (
+          <>
+            {catHead('즐겨찾기', String(groups.favList.length), true)}
+            {groups.favList.map(renderRow)}
+          </>
+        )}
+        {groups.cats.map((g) => (
+          <div key={g.key}>
+            {catHead(g.label, g.progress)}
+            {g.items.map(renderRow)}
+          </div>
+        ))}
+        {groups.favList.length === 0 && groups.cats.length === 0 && (
+          <p className="px-4 py-10 text-center text-[12px] text-zinc-500">
+            {favOnly && favs.length === 0
+              ? '즐겨찾기한 칭호가 없어요 — 목록에서 ☆을 눌러 담아 보세요.'
+              : '조건에 맞는 칭호가 없어요.'}
+          </p>
+        )}
       </div>
 
       {/* 상세 — 공통 팝업(ModalShell+ModalLayout). 발견일은 여기서만 노출(목록엔 없음, 사용자 확정). */}

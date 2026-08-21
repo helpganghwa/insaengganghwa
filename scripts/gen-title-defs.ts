@@ -119,6 +119,9 @@ const pub = titles.map((t) => ({
   kind: t.kind === '조건부' ? 'conditional' : t.kind === '헌정' ? 'tribute' : 'permanent',
   label: t.label,
   hidden: t.hidden,
+  // 카테고리(그룹 표시용, 트랙 D) — cond와 달리 공개해도 획득 경로가 드러나지 않는다
+  // (이름이 이미 공개인 것과 같은 수준의 힌트).
+  cat: t.cat,
   style: styleOf(t),
 }));
 
@@ -174,7 +177,7 @@ export type TitleStyle = {
   executor?: boolean;
 };
 
-export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; style: TitleStyle };
+export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
 
 export const TITLE_DEFS: TitleDef[] = ${JSON.stringify(pub, null, 1).replace(/"([a-zA-Z_]\w*)":/g, '$1:')} as const;
 

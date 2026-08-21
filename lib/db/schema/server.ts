@@ -66,6 +66,8 @@ export const characters = pgTable(
     guildDonationCount: integer('guild_donation_count').notNull().default(0),
     /** 집행관 역임 구역 id 목록(tour_lord) — 임명 시 중복 없이 누적. */
     executorZoneHistory: jsonb('executor_zone_history').notNull().default(sql`'[]'::jsonb`),
+    /** 칭호 즐겨찾기(0169) — code 문자열 배열(중복 없음·상한 10, 토글 액션이 강제). */
+    favoriteTitles: jsonb('favorite_titles').notNull().default(sql`'[]'::jsonb`),
     /** 마지막 활동(캐릭터별) — 친구 표시·길드장 7일 자동위임 판정. */
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */

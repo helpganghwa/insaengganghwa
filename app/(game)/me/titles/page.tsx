@@ -34,12 +34,13 @@ export default async function TitlesPage() {
         try {
           return (await db.execute(sql`
             select representative_title_code as code,
+                   favorite_titles as favs,
                    (select z.name from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
                     order by z.captured_at desc nulls last limit 1) as zone,
                    (select z.region::text from zones z where z.executor_user_id=${userId}::uuid and z.server_id=${serverId}
                     order by z.captured_at desc nulls last limit 1) as zone_region
             from characters where user_id=${userId}::uuid and server_id=${serverId}
-          `)) as unknown as { code: string | null; zone: string | null; zone_region: string | null }[];
+          `)) as unknown as { code: string | null; favs: string[] | null; zone: string | null; zone_region: string | null }[];
         } catch {
           return [];
         }
@@ -99,6 +100,7 @@ export default async function TitlesPage() {
     <TitlesClient
       rows={rows}
       representative={r?.rep?.code ?? null}
+      favorites={Array.isArray(r?.rep?.favs) ? r.rep.favs : []}
       executorZone={r?.rep?.zone ?? null}
       executorZoneRegion={r?.rep?.zone_region ?? null}
     />

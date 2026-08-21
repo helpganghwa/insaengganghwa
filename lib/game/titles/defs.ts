@@ -17,7 +17,7 @@ export type TitleStyle = {
   executor?: boolean;
 };
 
-export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; style: TitleStyle };
+export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
 
 export const TITLE_DEFS: TitleDef[] = [
  {
@@ -25,6 +25,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가장 높은 망치",
   hidden: false,
+  cat: "랭킹 1위",
   style: {
    fx: "goldflow",
    glow: true
@@ -35,6 +36,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불의 정점",
   hidden: false,
+  cat: "랭킹 1위",
   style: {
    fx: "emberflow",
    glow: true
@@ -45,6 +47,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "강철의 군주",
   hidden: false,
+  cat: "랭킹 1위",
   style: {
    fx: "steelshine",
    glow: true
@@ -55,6 +58,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "토벌대장",
   hidden: false,
+  cat: "랭킹 1위",
   style: {
    fx: "crimsonflow",
    glow: true
@@ -65,6 +69,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "투기장의 왕",
   hidden: false,
+  cat: "랭킹 1위",
   style: {
    fx: "violetflow",
    glow: true
@@ -75,6 +80,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "{구역} 집행관",
   hidden: false,
+  cat: "조건부",
   style: {
    executor: true
   }
@@ -84,6 +90,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "왕좌의 온기",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "goldglow",
    glow: true
@@ -94,6 +101,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "와신상담",
   hidden: true,
+  cat: "조건부",
   style: {
    color: "#cec6e0"
   }
@@ -103,6 +111,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "간밤의 영웅",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "moonlight"
   }
@@ -112,6 +121,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "황금 왕좌",
   hidden: true,
+  cat: "조건부",
   style: {
    fx: "goldglow",
    glow: true
@@ -122,6 +132,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "명가",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "staticazure",
    glow: true
@@ -132,6 +143,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수장",
   hidden: false,
+  cat: "조건부",
   style: {
    color: "#cec6e0"
   }
@@ -141,6 +153,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빈털터리",
   hidden: true,
+  cat: "조건부",
   style: {
    color: "#cec6e0"
   }
@@ -150,6 +163,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별의 주인",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "veilflow"
   }
@@ -159,6 +173,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "완전 무장",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "veilflow"
   }
@@ -168,6 +183,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "사슬을 끊은 자",
   hidden: false,
+  cat: "해방",
   style: {
    color: "#c9a2f0"
   }
@@ -177,6 +193,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "해방자",
   hidden: false,
+  cat: "해방",
   style: {
    color: "#c9a2f0"
   }
@@ -186,6 +203,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "지배자",
   hidden: false,
+  cat: "해방",
   style: {
    fx: "freedomglint"
   }
@@ -195,6 +213,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "정복자",
   hidden: false,
+  cat: "해방",
   style: {
    fx: "violetflow"
   }
@@ -204,6 +223,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백 번째 불꽃",
   hidden: false,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -213,6 +233,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "별에 닿은 망치",
   hidden: false,
+  cat: "강화",
   style: {
    fx: "starlight",
    pt: "stardust",
@@ -224,6 +245,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "승승장구",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -233,6 +255,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "그런 날이 있다",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -242,6 +265,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "바닥 밑에 바닥",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "forgeshine"
   }
@@ -251,6 +275,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "요지부동",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -260,6 +285,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "만년설",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "flame"
   }
@@ -269,6 +295,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "오뚝이",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -278,6 +305,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "겹경사",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -287,6 +315,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "행운의 망치",
   hidden: false,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -296,6 +325,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "저주받은 손",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -305,6 +335,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "무쇠팔",
   hidden: false,
+  cat: "강화",
   style: {
    fx: "emboss",
    glow: true
@@ -315,6 +346,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "한 우물",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "forgeshine"
   }
@@ -324,6 +356,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "화로의 파수꾼",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -333,6 +366,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "잊혀진 불씨",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "breath"
   }
@@ -342,6 +376,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "삼위일체",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "moonlight"
   }
@@ -351,6 +386,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "올빼미",
   hidden: true,
+  cat: "시간대",
   style: {
    fx: "moonlight"
   }
@@ -360,6 +396,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "아침형 인간",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -369,6 +406,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "주말 출근",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -378,6 +416,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "월요병",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -387,6 +426,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "불타는 금요일",
   hidden: true,
+  cat: "시간대",
   style: {
    fx: "nightstar"
   }
@@ -396,6 +436,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "수확의 날",
   hidden: false,
+  cat: "보급",
   style: {
    color: "#b8a97a"
   }
@@ -405,6 +446,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "보급왕",
   hidden: false,
+  cat: "보급",
   style: {
    fx: "honeydrip"
   }
@@ -414,6 +456,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "만물상",
   hidden: false,
+  cat: "보급",
   style: {
    fx: "honeyflow"
   }
@@ -423,6 +466,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "데자뷔",
   hidden: true,
+  cat: "보급",
   style: {
    color: "#b9b198"
   }
@@ -432,6 +476,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "경계 너머",
   hidden: false,
+  cat: "초월",
   style: {
    color: "#b39ddb"
   }
@@ -441,6 +486,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "초월자",
   hidden: false,
+  cat: "초월",
   style: {
    fx: "stardrift"
   }
@@ -450,6 +496,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "별을 넘는 자",
   hidden: false,
+  cat: "초월",
   style: {
    fx: "violetglow",
    pt: "vstar",
@@ -461,6 +508,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "쏟아지는 별",
   hidden: true,
+  cat: "초월",
   style: {
    fx: "astralflow"
   }
@@ -470,6 +518,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "마지막 페이지",
   hidden: false,
+  cat: "도감",
   style: {
    fx: "goldleaf",
    glow: true
@@ -480,6 +529,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "산을 가른 일격",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "warbanner"
   }
@@ -489,6 +539,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "끝없는 원정",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "crimsonflow"
   }
@@ -498,6 +549,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "불을 삼킨 자",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "emberflow",
    pt: "ember",
@@ -509,6 +561,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "서리 사냥꾼",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "iceflow",
    pt: "snow",
@@ -520,6 +573,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "늪의 공포",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "slimeflow",
    pt: "slime",
@@ -531,6 +585,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "부락의 악몽",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "duststatic",
    pt: "drum",
@@ -542,6 +597,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "날개 사냥꾼",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "ashstatic",
    pt: "feather",
@@ -553,6 +609,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕국의 방패",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "goldglow",
    pt: "stardust",
@@ -564,6 +621,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "투신",
   hidden: false,
+  cat: "대난투",
   style: {
    fx: "duelbeat"
   }
@@ -573,6 +631,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "패왕",
   hidden: false,
+  cat: "대난투",
   style: {
    fx: "crimsonflow",
    glow: true
@@ -583,6 +642,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕조",
   hidden: true,
+  cat: "대난투",
   style: {
    fx: "goldglow",
    glow: true
@@ -593,6 +653,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백전노장",
   hidden: false,
+  cat: "대난투",
   style: {
    fx: "duelflow"
   }
@@ -602,6 +663,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "정상권",
   hidden: false,
+  cat: "대난투",
   style: {
    fx: "bloodpulse"
   }
@@ -611,6 +673,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "역전의 용사",
   hidden: false,
+  cat: "대난투",
   style: {
    color: "#e08c9c"
   }
@@ -620,6 +683,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "혜성",
   hidden: true,
+  cat: "대난투",
   style: {
    color: "#e08c9c"
   }
@@ -629,6 +693,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "꼴찌의 품격",
   hidden: true,
+  cat: "대난투",
   style: {
    color: "#dab1b9"
   }
@@ -638,6 +703,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "2인자",
   hidden: true,
+  cat: "대난투",
   style: {
    color: "#e08c9c"
   }
@@ -647,6 +713,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "징수관",
   hidden: false,
+  cat: "점령전",
   style: {
    color: "#c2b280"
   }
@@ -656,6 +723,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "공성의 선봉",
   hidden: false,
+  cat: "점령전",
   style: {
    color: "#c2b280"
   }
@@ -665,6 +733,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "성벽",
   hidden: false,
+  cat: "점령전",
   style: {
    color: "#c2b280"
   }
@@ -674,6 +743,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "순회 영주",
   hidden: true,
+  cat: "점령전",
   style: {
    fx: "verdigris"
   }
@@ -683,6 +753,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "첫 깃발",
   hidden: false,
+  cat: "길드",
   style: {
    color: "#d5c1a0"
   }
@@ -692,6 +763,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "아낌없는 손",
   hidden: false,
+  cat: "길드",
   style: {
    color: "#e0b877"
   }
@@ -701,6 +773,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "무소속",
   hidden: true,
+  cat: "길드",
   style: {
    fx: "breath"
   }
@@ -710,6 +783,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "마당발",
   hidden: false,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -719,6 +793,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "두 번째 발자국",
   hidden: false,
+  cat: "소셜",
   style: {
    fx: "pearl"
   }
@@ -728,6 +803,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "길잡이",
   hidden: false,
+  cat: "소셜",
   style: {
    fx: "moonlight"
   }
@@ -737,6 +813,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "모병관",
   hidden: false,
+  cat: "소셜",
   style: {
    fx: "crimsonflow",
    glow: true
@@ -747,6 +824,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "길이 된 사람",
   hidden: false,
+  cat: "소셜",
   style: {
    fx: "imperial",
    glow: true
@@ -757,6 +835,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "학파의 시조",
   hidden: true,
+  cat: "소셜",
   style: {
    fx: "inkwash",
    glow: true
@@ -767,6 +846,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "떡잎 감별사",
   hidden: true,
+  cat: "소셜",
   style: {
    fx: "verdantflow",
    pt: "spark",
@@ -778,6 +858,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "수다쟁이",
   hidden: true,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -787,6 +868,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "대륙의 스타",
   hidden: true,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -796,6 +878,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "개근상",
   hidden: false,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -805,6 +888,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "사계절의 망치",
   hidden: true,
+  cat: "일상",
   style: {
    fx: "mistdrift"
   }
@@ -814,6 +898,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "우편함 지기",
   hidden: false,
+  cat: "일상",
   style: {
    fx: "driftfall"
   }
@@ -823,6 +908,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "지박령",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#b9b9bd"
   }
@@ -832,6 +918,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "역마살",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -841,6 +928,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "시간은 금",
   hidden: true,
+  cat: "재화",
   style: {
    color: "#cdb04e"
   }
@@ -850,6 +938,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "럭키 세븐",
   hidden: true,
+  cat: "재화",
   style: {
    fx: "goldsoft"
   }
@@ -859,6 +948,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "칠칠한 대장장이",
   hidden: true,
+  cat: "재화",
   style: {
    fx: "gildedflow"
   }
@@ -868,6 +958,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "자린고비",
   hidden: true,
+  cat: "재화",
   style: {
    fx: "goldglow"
   }
@@ -877,6 +968,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "첫 후원",
   hidden: false,
+  cat: "후원",
   style: {
    fx: "goldleaf"
   }
@@ -886,6 +978,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "기사 후원자",
   hidden: false,
+  cat: "후원",
   style: {
    fx: "goldsoft"
   }
@@ -895,6 +988,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "영주 후원자",
   hidden: false,
+  cat: "후원",
   style: {
    fx: "goldglow"
   }
@@ -904,6 +998,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕실 후원자",
   hidden: false,
+  cat: "후원",
   style: {
    fx: "goldflow",
    glow: true
@@ -914,6 +1009,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕국의 기둥",
   hidden: false,
+  cat: "후원",
   style: {
    fx: "goldflow",
    pt: "stardust",
@@ -925,6 +1021,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "두 개의 거울",
   hidden: true,
+  cat: "아바타",
   style: {
    color: "#d9bed1"
   }
@@ -934,6 +1031,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "한결같은 얼굴",
   hidden: true,
+  cat: "아바타",
   style: {
    color: "#d8a0c8"
   }
@@ -943,6 +1041,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "필연",
   hidden: true,
+  cat: "아바타",
   style: {
    color: "#d8a0c8"
   }
@@ -952,6 +1051,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕실 의상실",
   hidden: false,
+  cat: "아바타",
   style: {
    fx: "roseflow"
   }
@@ -961,6 +1061,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "천의 얼굴",
   hidden: true,
+  cat: "아바타",
   style: {
    fx: "pearl",
    glow: true
@@ -971,6 +1072,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "알찬 하루",
   hidden: true,
+  cat: "조합",
   style: {
    color: "#a2c8c4"
   }
@@ -980,6 +1082,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "오관왕",
   hidden: true,
+  cat: "조합",
   style: {
    fx: "pentaflow",
    glow: true
@@ -990,6 +1093,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "전성기의 초상",
   hidden: true,
+  cat: "조합",
   style: {
    fx: "tideflow"
   }
@@ -999,6 +1103,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "흑금의 주인",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -1009,6 +1114,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별자리를 쥔 손",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "nightstar",
    pt: "stardust",
@@ -1020,6 +1126,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개구리 왕자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -1029,6 +1136,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "진짜 마녀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1038,6 +1146,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "겨울의 화신",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -1047,6 +1156,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "여명의 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1056,6 +1166,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용의 후예",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -1066,6 +1177,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "화룡점정",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "emberflow"
   }
@@ -1075,6 +1187,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "번갯불",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1084,6 +1197,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "정공법",
   hidden: false,
+  cat: "강화",
   style: {
    fx: "cinderflow"
   }
@@ -1093,6 +1207,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "천리길",
   hidden: false,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1102,6 +1217,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "초심",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "emberflow"
   }
@@ -1111,6 +1227,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "속전속결",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "forgeshine"
   }
@@ -1120,6 +1237,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "불장난",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1129,6 +1247,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "9의 저주",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1138,6 +1257,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "별의 끝",
   hidden: false,
+  cat: "초월",
   style: {
    fx: "starlight"
   }
@@ -1147,6 +1267,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "은하수",
   hidden: false,
+  cat: "초월",
   style: {
    fx: "milkyway",
    glow: true
@@ -1157,6 +1278,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "선봉장",
   hidden: true,
+  cat: "레이드",
   style: {
    color: "#d88c8c"
   }
@@ -1166,6 +1288,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "대륙 토벌",
   hidden: false,
+  cat: "레이드",
   style: {
    fx: "crimsonflow"
   }
@@ -1175,6 +1298,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "철인",
   hidden: false,
+  cat: "대난투",
   style: {
    fx: "emboss",
    glow: true
@@ -1185,6 +1309,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "질주",
   hidden: true,
+  cat: "대난투",
   style: {
    fx: "bloodpulse"
   }
@@ -1194,6 +1319,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "공성추",
   hidden: false,
+  cat: "점령전",
   style: {
    color: "#c2b280"
   }
@@ -1203,6 +1329,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "철옹성",
   hidden: false,
+  cat: "점령전",
   style: {
    fx: "bronzeshine"
   }
@@ -1212,6 +1339,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "터줏대감",
   hidden: false,
+  cat: "길드",
   style: {
    color: "#e0b877"
   }
@@ -1221,6 +1349,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "귀향",
   hidden: true,
+  cat: "길드",
   style: {
    color: "#d5c1a0"
   }
@@ -1230,6 +1359,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "대들보",
   hidden: false,
+  cat: "길드",
   style: {
    fx: "royalflow"
   }
@@ -1239,6 +1369,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "청출어람",
   hidden: true,
+  cat: "소셜",
   style: {
    fx: "jade",
    glow: true
@@ -1249,6 +1380,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "후견인",
   hidden: true,
+  cat: "소셜",
   style: {
    fx: "candle",
    glow: true
@@ -1259,6 +1391,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "밤의 수다",
   hidden: true,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -1268,6 +1401,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "휴가 복귀",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#b9b9bd"
   }
@@ -1277,6 +1411,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "연륜",
   hidden: false,
+  cat: "일상",
   style: {
    fx: "mistdrift"
   }
@@ -1286,6 +1421,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "큰손",
   hidden: true,
+  cat: "재화",
   style: {
    color: "#cdb04e"
   }
@@ -1295,6 +1431,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백만장자",
   hidden: false,
+  cat: "재화",
   style: {
    fx: "gildedflow"
   }
@@ -1304,6 +1441,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "환골탈태",
   hidden: true,
+  cat: "아바타",
   style: {
    fx: "blushbreath"
   }
@@ -1313,6 +1451,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "단벌 신사",
   hidden: true,
+  cat: "아바타",
   style: {
    fx: "roseflow"
   }
@@ -1322,6 +1461,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "변장술사",
   hidden: false,
+  cat: "아바타",
   style: {
    fx: "blushbreath"
   }
@@ -1331,6 +1471,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "모범생",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#d8b865"
   }
@@ -1340,6 +1481,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "밤의 귀족",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1349,6 +1491,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "발키리",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -1361,6 +1504,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "명부의 사자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -1373,6 +1517,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "대천사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "aurora"
   }
@@ -1382,6 +1527,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "무법자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -1392,6 +1538,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "병기고의 주인",
   hidden: false,
+  cat: "해방",
   style: {
    fx: "chrome",
    glow: true
@@ -1402,6 +1549,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "왕좌의 그림자",
   hidden: true,
+  cat: "랭킹 1위",
   style: {
    fx: "silverglow",
    glow: true
@@ -1412,6 +1560,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "문무겸비",
   hidden: false,
+  cat: "조합",
   style: {
    fx: "tidewave"
   }
@@ -1421,6 +1570,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "성층권",
   hidden: false,
+  cat: "강화",
   style: {
    fx: "cinderflow"
   }
@@ -1430,6 +1580,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "아침 배급",
   hidden: true,
+  cat: "보급",
   style: {
    color: "#b8a97a"
   }
@@ -1439,6 +1590,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "삼시세끼",
   hidden: true,
+  cat: "보급",
   style: {
    fx: "honeyflow"
   }
@@ -1448,6 +1600,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "돌격대장",
   hidden: false,
+  cat: "점령전",
   style: {
    fx: "bronzeshine"
   }
@@ -1457,6 +1610,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "수호신",
   hidden: false,
+  cat: "점령전",
   style: {
    fx: "verdigris"
   }
@@ -1466,6 +1620,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백일 원정",
   hidden: true,
+  cat: "레이드",
   style: {
    fx: "warbanner"
   }
@@ -1475,6 +1630,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "겨울 검객",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "iceflow",
    pt: "snow",
@@ -1486,6 +1642,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화산의 심장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "emberflow",
    pt: "ember",
@@ -1497,6 +1654,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "연꽃 무사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -1506,6 +1664,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별의 마술사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1515,6 +1674,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뇌제",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "sparkstatic",
    pt: "spark",
@@ -1526,6 +1686,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "단 한 발",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1535,6 +1696,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "창천",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#d8b865"
   }
@@ -1544,6 +1706,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불사조",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -1553,6 +1716,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "주술사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -1562,6 +1726,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "강태공",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#4cb974"
   }
@@ -1571,6 +1736,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "성기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -1580,6 +1746,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "점성술사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1589,6 +1756,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가면무도회",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1598,6 +1766,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "학장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#d8b865"
   }
@@ -1607,6 +1776,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "대관식",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -1617,6 +1787,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "꺼지지 않는 불",
   hidden: false,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1626,6 +1797,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "신기록",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "emberflow"
   }
@@ -1635,6 +1807,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "절벽 끝에서",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "flame"
   }
@@ -1644,6 +1817,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백발백중",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -1653,6 +1827,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "야식",
   hidden: true,
+  cat: "보급",
   style: {
    color: "#b8a97a"
   }
@@ -1662,6 +1837,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "유성우",
   hidden: true,
+  cat: "초월",
   style: {
    color: "#b39ddb"
   }
@@ -1671,6 +1847,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "불굴",
   hidden: true,
+  cat: "대난투",
   style: {
    fx: "duelbeat"
   }
@@ -1680,6 +1857,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "지원 사격",
   hidden: true,
+  cat: "레이드",
   style: {
    color: "#d88c8c"
   }
@@ -1689,6 +1867,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "신고식",
   hidden: false,
+  cat: "아바타",
   style: {
    color: "#d9bed1"
   }
@@ -1698,6 +1877,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "티끌 모아 태산",
   hidden: false,
+  cat: "재화",
   style: {
    fx: "coinshine"
   }
@@ -1707,6 +1887,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "죽마고우",
   hidden: true,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -1716,6 +1897,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개근왕",
   hidden: false,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -1725,6 +1907,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개구리 저격수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -1734,6 +1917,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "신사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1743,6 +1927,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "큐피드",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1752,6 +1937,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사냥꾼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -1761,6 +1947,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쌍검객",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1770,6 +1957,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "기수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1779,6 +1967,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재의 수확자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -1788,6 +1977,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "황혼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "duskfade"
   }
@@ -1797,6 +1987,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "창공의 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1806,6 +1997,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용살자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -1815,6 +2007,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "그림자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -1824,6 +2017,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화심",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -1833,6 +2027,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사신",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -1843,6 +2038,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "강령술사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -1853,6 +2049,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "아침의 검",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -1863,6 +2060,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쌍익",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "yinyang",
    glow: true
@@ -1873,6 +2071,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "유랑자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -1882,6 +2081,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "꼬마 천사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -1891,6 +2091,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수련의 정령",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -1900,6 +2101,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불의 무희",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -1909,6 +2111,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "야수의 왕",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -1918,6 +2121,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "근위대장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -1927,6 +2131,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "신흥 강자",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "lunarflow"
   }
@@ -1936,6 +2141,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "대가족",
   hidden: false,
+  cat: "조건부",
   style: {
    color: "#b9a7e0"
   }
@@ -1945,6 +2151,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재상",
   hidden: true,
+  cat: "조건부",
   style: {
    fx: "imperial",
    glow: true
@@ -1955,6 +2162,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "도레미",
   hidden: true,
+  cat: "재화",
   style: {
    color: "#cdb04e"
   }
@@ -1964,6 +2172,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "만부부당",
   hidden: false,
+  cat: "재화",
   style: {
    fx: "coinshine"
   }
@@ -1973,6 +2182,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "칠전팔기",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "emberflow"
   }
@@ -1982,6 +2192,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "환생",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "flame"
   }
@@ -1991,6 +2202,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "불면증",
   hidden: true,
+  cat: "시간대",
   style: {
    fx: "neon",
    glow: true
@@ -2001,6 +2213,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "야간 경비",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -2010,6 +2223,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "주말 원정대",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -2019,6 +2233,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "왕의 귀환",
   hidden: true,
+  cat: "대난투",
   style: {
    fx: "duelflow"
   }
@@ -2028,6 +2243,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "우편 홍수",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -2037,6 +2253,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "철인 3종",
   hidden: true,
+  cat: "조합",
   style: {
    color: "#80cbc4"
   }
@@ -2046,6 +2263,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "세라핌",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2055,6 +2273,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "흑기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2064,6 +2283,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "대원수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -2074,6 +2294,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "설야의 사제",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -2083,6 +2304,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불새",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2092,6 +2314,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲지기",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2101,6 +2324,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별을 읽는 자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2110,6 +2334,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "속죄자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2119,6 +2344,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪의 파수꾼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2128,6 +2354,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수행자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2137,6 +2364,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사자 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2146,6 +2374,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "전령",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2155,6 +2384,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪마녀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2164,6 +2394,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "자칭 성자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2173,6 +2404,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화염 무도",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2182,6 +2414,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "흡혈귀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2191,6 +2424,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "등불지기",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2200,6 +2434,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "약초꾼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#4cb974"
   }
@@ -2209,6 +2444,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "꼬마 악마",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -2218,6 +2454,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가득 찬 잔",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#d48c59"
   }
@@ -2227,6 +2464,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "깃털 단장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -2236,6 +2474,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "외눈 검객",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2245,6 +2484,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "나팔수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2254,6 +2494,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "북재비",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -2263,6 +2504,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "궁중 무희",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2272,6 +2514,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "부족의 기수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -2281,6 +2524,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "정비공",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2290,6 +2534,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "얼음 심장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2299,6 +2544,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "강철 주먹",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2308,6 +2554,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사자의 심장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2317,6 +2564,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "설백",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -2326,6 +2574,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "향지기",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2335,6 +2584,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용의 얼굴",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2344,6 +2594,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "설산 수도승",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -2353,6 +2604,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "타락 사제",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2362,6 +2614,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화산 대장장이",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2371,6 +2624,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뇌운의 장군",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "sparkstatic",
    pt: "spark",
@@ -2382,6 +2636,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "밤손님",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2391,6 +2646,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "우등생",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#d8b865"
   }
@@ -2400,6 +2656,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뭉게구름",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#cfb3eb"
   }
@@ -2409,6 +2666,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개구리 인간",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#4cb974"
   }
@@ -2418,6 +2676,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "보부상",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -2427,6 +2686,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화관",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#4cb974"
   }
@@ -2436,6 +2696,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뾰족 모자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -2445,6 +2706,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "책벌레",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ced4f2"
   }
@@ -2454,6 +2716,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "반딧불",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#4cb974"
   }
@@ -2463,6 +2726,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쪽빛 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2472,6 +2736,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "호박등",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2481,6 +2746,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "노교수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2490,6 +2756,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "침묵",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -2499,6 +2766,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수련잎",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2508,6 +2776,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "무도회의 밤",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "silk"
   }
@@ -2517,6 +2786,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "하얀 깃",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2526,6 +2796,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "모래시계",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2535,6 +2806,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "조상님",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -2544,6 +2816,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별점",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2553,6 +2826,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사막 여우",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2562,6 +2836,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "붉은 밤",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2571,6 +2846,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "갈까마귀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2580,6 +2856,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별빛 망토",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2589,6 +2866,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "설화",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "frostedge"
   }
@@ -2598,6 +2876,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화룡",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2607,6 +2886,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "흑요",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2616,6 +2896,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "광휘",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -2625,6 +2906,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "화문",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2634,6 +2916,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "전장의 날개",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2643,6 +2926,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "성광",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2652,6 +2936,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "흑룡",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2661,6 +2946,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "천사장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "aurora"
   }
@@ -2670,6 +2956,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲의 은둔자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#22c55e",
@@ -2682,6 +2969,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "천하태평",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#e0a066"
   }
@@ -2691,6 +2979,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "신속 배달",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -2700,6 +2989,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "올인",
   hidden: true,
+  cat: "재화",
   style: {
    fx: "goldglow"
   }
@@ -2709,6 +2999,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "완주",
   hidden: false,
+  cat: "조합",
   style: {
    color: "#80cbc4"
   }
@@ -2718,6 +3009,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "황금 시간대",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -2727,6 +3019,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "출퇴근",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -2736,6 +3029,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "백일잔치",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -2745,6 +3039,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "새싹 지킴이",
   hidden: true,
+  cat: "소셜",
   style: {
    color: "#7fb8e0"
   }
@@ -2754,6 +3049,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개봉왕",
   hidden: true,
+  cat: "조건부",
   style: {
    color: "#b9a7e0"
   }
@@ -2763,6 +3059,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "진군",
   hidden: false,
+  cat: "조건부",
   style: {
    color: "#b9a7e0"
   }
@@ -2772,6 +3069,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "순풍",
   hidden: true,
+  cat: "조건부",
   style: {
    color: "#b9a7e0"
   }
@@ -2781,6 +3079,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "골목대장",
   hidden: true,
+  cat: "조건부",
   style: {
    color: "#b9a7e0"
   }
@@ -2790,6 +3089,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "붉은 무도회",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "silk"
   }
@@ -2799,6 +3099,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "황야의 총잡이",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2808,6 +3109,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "괴도",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -2817,6 +3119,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별의 항해사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "nightstar",
    pt: "stardust",
@@ -2828,6 +3131,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲의 마녀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2837,6 +3141,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용암 군주",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "emberflow",
    pt: "ember",
@@ -2848,6 +3153,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "정원사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2857,6 +3163,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "왕의 검",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -2866,6 +3173,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "명포수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2875,6 +3183,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "소수정예",
   hidden: false,
+  cat: "조건부",
   style: {
    fx: "lunarflow"
   }
@@ -2884,6 +3193,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "다윗",
   hidden: true,
+  cat: "대난투",
   style: {
    fx: "bloodpulse"
   }
@@ -2893,6 +3203,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "밤샘 작업",
   hidden: true,
+  cat: "시간대",
   style: {
    color: "#8fb4d8"
   }
@@ -2902,6 +3213,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "대업",
   hidden: false,
+  cat: "조합",
   style: {
    fx: "staticgold",
    glow: true
@@ -2912,6 +3224,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "살아있는 역사",
   hidden: true,
+  cat: "일상",
   style: {
    fx: "linenflow"
   }
@@ -2921,6 +3234,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "종이 한 장",
   hidden: true,
+  cat: "대난투",
   style: {
    color: "#e08c9c"
   }
@@ -2930,6 +3244,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "신들린 손",
   hidden: true,
+  cat: "강화",
   style: {
    fx: "cinderflow"
   }
@@ -2939,6 +3254,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "새벽 기도",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "moonlight"
   }
@@ -2948,6 +3264,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "봉황",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -2957,6 +3274,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "심연의 군주",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "abyssglow",
    pt: "abyss",
@@ -2968,6 +3286,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "백은 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -2980,6 +3299,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "습지 순찰대",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -2989,6 +3309,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빛의 무녀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "aurora"
   }
@@ -2998,6 +3319,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "패도",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "bloodpulse",
    pt: "ember",
@@ -3009,6 +3331,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "축제의 밤",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3018,6 +3341,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "야행",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "obsidian"
   }
@@ -3027,6 +3351,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빙하 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    fx: "iceflow",
    pt: "snow",
@@ -3038,6 +3363,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "초원의 바람",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -3047,6 +3373,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "궁정 마법사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3056,6 +3383,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재의 심판자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3065,6 +3393,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "보물찾기",
   hidden: true,
+  cat: "조합",
   style: {
    fx: "tideflow"
   }
@@ -3074,6 +3403,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "훈장 수집가",
   hidden: false,
+  cat: "조합",
   style: {
    fx: "royalflow",
    glow: true
@@ -3084,6 +3414,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "방랑 대장장이",
   hidden: true,
+  cat: "일상",
   style: {
    fx: "linenflow"
   }
@@ -3093,6 +3424,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "무관의 제왕",
   hidden: true,
+  cat: "조건부",
   style: {
    fx: "steelshine",
    glow: true
@@ -3103,6 +3435,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "얼음과 불",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -3116,6 +3449,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "하늘의 기사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -3128,6 +3462,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수증기",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -3140,6 +3475,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "얼어붙은 늪",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#60a5fa",
@@ -3152,6 +3488,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "야만과 문명",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -3164,6 +3501,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "이방의 신",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -3177,6 +3515,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용과 왕관",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -3190,6 +3529,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "전학생",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#22c55e",
@@ -3202,6 +3542,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재의 천사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -3214,6 +3555,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "길 비우는 소리",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3224,6 +3566,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "행렬의 선두",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3233,6 +3576,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "칼집 없는 자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3243,6 +3587,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "잿불 무도",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3253,6 +3598,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불을 다루는 손",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3262,6 +3608,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뿔의 사냥꾼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3271,6 +3618,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪을 읽는 자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3280,6 +3628,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "여름을 든 자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3290,6 +3639,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "푸른 원",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3299,6 +3649,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "귀참",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3309,6 +3660,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "붉은 날",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3319,6 +3671,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가면과 칼",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -3328,6 +3681,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가시를 쥔 자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3337,6 +3691,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "첫 쓴맛",
   hidden: true,
+  cat: "강화",
   style: {
    color: "#d2b193"
   }
@@ -3346,6 +3701,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "늦게 핀 꽃",
   hidden: true,
+  cat: "일상",
   style: {
    color: "#a8a8b0"
   }
@@ -3355,6 +3711,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뇌신 강림",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -3365,6 +3722,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "별에 묻는 길",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3375,6 +3733,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "한겨울 산책",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -3384,6 +3743,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용암 한 벌",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3394,6 +3754,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "그림자 손님",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -3404,6 +3765,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲의 식구",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3413,6 +3775,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "옥좌의 창",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3423,6 +3786,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "온전한 비행",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -3433,6 +3797,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "조상님 총출동",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -3445,6 +3810,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "장마 준비 끝",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3454,6 +3820,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "한밤의 무도회",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3464,6 +3831,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재의 시간",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3474,6 +3842,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "종신 교수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -3486,6 +3855,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "심쿵 저격수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3495,6 +3865,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "침묵의 한 발",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff6c06",
    glow: true
@@ -3505,6 +3876,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "미라클 모닝",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -3514,6 +3886,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲 속 괴담",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#22c55e",
@@ -3526,6 +3899,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "몰락한 왕좌",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3536,6 +3910,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불꽃 댄서",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3546,6 +3921,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "청홍의 균형",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3555,6 +3931,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "매의 눈",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3564,6 +3941,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "우중 순례",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3573,6 +3951,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용의 행상인",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3583,6 +3962,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가시 속 장미",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -3592,6 +3972,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "하루의 끝",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -3604,6 +3985,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "식지 않는 불",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3614,6 +3996,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쪽빛 일색",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#60a5fa",
@@ -3626,6 +4009,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "구름 위 산책",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -3638,6 +4022,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쏟아지는 밤",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3648,6 +4033,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "까마귀 마녀",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -3657,6 +4043,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "진홍 일색",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3666,6 +4053,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪의 그림자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#00dd51",
    glow: true
@@ -3676,6 +4064,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "금빛 일색",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3685,6 +4074,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "칠흑 일색",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3694,6 +4084,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "개구리 사냥",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#22c55e",
@@ -3706,6 +4097,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재의 궁수",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3715,6 +4107,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "맹세의 아침",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -3727,6 +4120,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "서약의 기사",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3737,6 +4131,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "설원의 저격수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#519fff",
    glow: true
@@ -3747,6 +4142,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "연못의 주인",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3756,6 +4152,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "숲의 현자",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3765,6 +4162,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수상한 사제",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -3774,6 +4172,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "사막의 낭인",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -3783,6 +4182,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "충성의 무게",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3793,6 +4193,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "저녁놀",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -3802,6 +4203,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "첫 왈츠",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3811,6 +4213,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "불꽃 놀이",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3820,6 +4223,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "하늘 수비대",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -3833,6 +4237,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "견습 마왕",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#bb77ff",
    glow: true
@@ -3843,6 +4248,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빛의 기사",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -3856,6 +4262,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "천문학 개론",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3865,6 +4272,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "길잡이 매",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -3874,6 +4282,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "선봉의 깃발",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -3886,6 +4295,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "첫눈 마중",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#60a5fa"
   }
@@ -3895,6 +4305,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빛나는 아침",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -3904,6 +4315,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪의 문지기",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -3913,6 +4325,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "용의 대장간",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -3923,6 +4336,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "우레 기병",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -3933,6 +4347,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "모래폭풍 사수",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3942,6 +4357,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "떠돌이 상인",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#f97316"
   }
@@ -3951,6 +4367,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "늪의 주술사",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#22c55e",
@@ -3963,6 +4380,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "왕국의 새벽",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -3973,6 +4391,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "푸른 맹세",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#60a5fa",
@@ -3985,6 +4404,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "잿바람",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -3994,6 +4414,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "새벽 사냥꾼",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -4003,6 +4424,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "재건의 망치",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -4015,6 +4437,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "가면의 검무",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -4024,6 +4447,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "수석 사수",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -4033,6 +4457,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "성전의 창",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -4043,6 +4468,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "백작의 오후",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -4052,6 +4478,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "스러진 시간",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -4066,6 +4493,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "세 번의 맹세",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ffbe16",
    glow: true
@@ -4076,6 +4504,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "새들의 회의",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
@@ -4088,6 +4517,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "꽃길만 걷자",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -4097,6 +4527,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "새벽 별지기",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -4106,6 +4537,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "셀프 대관식",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -4115,6 +4547,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "촌캉스",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -4124,6 +4557,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "작은 악당",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#c084fc"
   }
@@ -4133,6 +4567,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "온몸이 불꽃",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ff2a2a",
    glow: true
@@ -4143,6 +4578,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "붉은 근위대",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -4152,6 +4588,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "초원의 부름",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#a5b4fc"
   }
@@ -4161,6 +4598,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "군악대장",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -4174,6 +4612,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "심안",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#f97316",
@@ -4187,6 +4626,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "조상님 어깨너머",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -4199,6 +4639,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "새참의 맛",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#ef4444",
@@ -4212,6 +4653,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "빛 수집가",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#22c55e"
   }
@@ -4221,6 +4663,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "쌍검비무",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#ef4444"
   }
@@ -4230,6 +4673,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "이름 없는 총성",
   hidden: true,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -4240,6 +4684,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "뇌룡 기수",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#98aaff",
    glow: true
@@ -4250,6 +4695,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "동트기 전",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    color: "#fbbf24"
   }
@@ -4259,6 +4705,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "conditional",
   label: "은빛 아침",
   hidden: false,
+  cat: "아이템 발동",
   style: {
    gradient: [
     "#fbbf24",
