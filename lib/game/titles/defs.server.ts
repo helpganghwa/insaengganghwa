@@ -564,7 +564,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "pay_5",
   cat: "후원",
   cond: "누적 결제 5만원",
-  diff: "쉬움"
+  diff: "중간"
  },
  {
   code: "pay_20",
@@ -795,7 +795,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "continent_sweep",
   cat: "레이드",
-  cond: "4개 지역 보스를 각 10회씩 처치 참여",
+  cond: "6개 지역 보스를 각 10회씩 처치 참여",
   diff: "어려움"
  },
  {
@@ -819,7 +819,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "iron_wall",
   cat: "점령전",
-  cond: "점령전 방어 성공 참여 30회",
+  cond: "점령전 방어전 승리를 30회 함께함",
   diff: "어려움"
  },
  {
@@ -1026,7 +1026,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "guardian_100",
   cat: "점령전",
-  cond: "점령전 방어 성공 참여 100회",
+  cond: "점령전 방어 성공 100회를 지켜냄",
   diff: "어려움"
  },
  {
@@ -2943,7 +2943,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "wandering_smith",
   cat: "일상",
-  cond: "모든 지역에 거주해 봄",
+  cond: "6개 지역 모두 거주해 봄",
   diff: "어려움"
  },
  {

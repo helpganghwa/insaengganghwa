@@ -879,7 +879,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "power_77777",
   kind: "permanent",
-  label: "칠칠칠칠칠",
+  label: "칠칠한 대장장이",
   hidden: true,
   style: {
    color: "#cdb04e",
@@ -994,7 +994,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "full_course",
   kind: "permanent",
-  label: "대륙 일주",
+  label: "알찬 하루",
   hidden: true,
   style: {
    color: "#80cbc4"
@@ -1013,7 +1013,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "apex_shoot",
   kind: "permanent",
-  label: "전성기",
+  label: "전성기의 초상",
   hidden: true,
   style: {
    color: "#80cbc4",

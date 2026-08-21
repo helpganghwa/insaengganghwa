@@ -398,16 +398,23 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       from raid_attacks ra join raids r on r.id=ra.raid_id
       where ra.user_id=${u} and r.server_id=${s}
     `),
-    // 아바타
+    // 아바타 — "생성 N회" 계열은 **누적 이력**(profile_generation_jobs, 수락분) 기준.
+    // 종전 user_profiles(현재 보유) 기준은 ① cond("생성")와 불일치 ② 삭제 시 카운트 후퇴
+    // ③ 보유 캡 98과 충돌해 rebirth(100)·avatar_1000이 영구 불가였다(2026-08-21 사용자 지적).
+    // 보유 기준 칭호(avatar_50 "50개 보유")만 owned로 분리.
     () => db.execute(sql`
-      select count(*)::int as cnt,
-             count(distinct options->>'gender')::int as genders,
-             coalesce(max(combo),0)::int as combo_max,
-             count(distinct equipment_snapshot::text)::int as combos
-      from (select options, equipment_snapshot,
-                   count(*) over (partition by equipment_snapshot::text) combo
-            from user_profiles where user_id=${u} and server_id=${s}
-              and coalesce((options->>'isDefault')::boolean,false) is false) t
+      select (select count(*)::int from profile_generation_jobs
+               where user_id=${u} and server_id=${s} and status='accepted') as cnt,
+             (select count(distinct options->>'gender')::int from profile_generation_jobs
+               where user_id=${u} and server_id=${s} and status='accepted') as genders,
+             coalesce((select max(c) from (select count(*) c from profile_generation_jobs
+               where user_id=${u} and server_id=${s} and status='accepted'
+               group by equipment_snapshot::text) t),0)::int as combo_max,
+             (select count(distinct equipment_snapshot::text)::int from profile_generation_jobs
+               where user_id=${u} and server_id=${s} and status='accepted') as combos,
+             (select count(*)::int from user_profiles
+               where user_id=${u} and server_id=${s}
+                 and coalesce((options->>'isDefault')::boolean,false) is false) as owned
     `),
     // 기타 — 가입 경과·도전과제·해방
     () => db.execute(sql`
@@ -694,6 +701,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     r_joins: n(ra.joins), r_max_dmg: n(ra.max_dmg), r_vanguard: n(ra.vanguard), r_night: n(ra.night),
     r_volcano: n(ra.r_volcano), r_swamp: n(ra.r_swamp), r_orc: n(ra.r_orc), r_fallen: n(ra.r_fallen),
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
+    av_owned: n(av.owned),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
@@ -819,12 +827,14 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   raid_swamp: (m) => m.r_swamp >= 100,
   raid_orc: (m) => m.r_orc >= 100,
   raid_fallen: (m) => m.r_fallen >= 100,
-  continent_sweep: (m) => Math.min(m.r_volcano, m.r_swamp, m.r_orc, m.r_fallen) >= 10, // 현행 4지역 기준
+  // continent_sweep — 조건 "6개 지역" 세계관 유지(사용자 확정) → 신전·왕국 출시까지 PENDING.
+  //   복원 시: 전 보스 참여 min >= 10 (r_volcano·r_swamp·r_orc·r_fallen + 신규 2종).
   // 아바타
   initiation: (m) => m.av_cnt >= 1 && m.days <= 3,
   rebirth: (m) => m.av_cnt >= 100,
   avatar_1000: (m) => m.av_cnt >= 1000,
-  avatar_50: (m) => m.av_cnt >= 50,
+  avatar_50: (m) => m.av_owned >= 50, // 유일한 "보유" 기준 — cond가 '50개 보유'
+
   two_mirrors: (m) => m.av_genders >= 2,
   same_combo: (m) => m.av_combo >= 10,
   disguise: (m) => m.av_combos >= 30,
@@ -846,7 +856,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   evening_life: (m) => m.evening >= 100,
   // ── 판정 2차: 랭킹 순간·기록 ──
   pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10,
-  new_record: (m) => m.p_max === 1,
+  // new_record — "현재 1위"는 rank_max(조건부)와 동일 술어라 cond의 "경신"이 아니었다
+  // → 경신 이력 로그가 생길 때까지 PENDING(콘텐츠 감사 7: 오픈 첫 주 영구 남발 방지).
   // 재화·전투력 순간값 — 판정 시점(칭호 화면 진입 등)에 그 값이면 발견. 훅 보강은 후속.
   lucky_777: (m) => m.dia === 777,
   doremi: (m) => m.dia === 12_345,

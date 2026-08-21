@@ -20,8 +20,15 @@ export const PENDING_CODES = new Set<string>([
   'apex_shoot',
   // 지역 보스 미출시 — 판정은 raids.boss_code로 지금도 쓸 수 있고, 콘텐츠만 없다.
   'raid_temple', 'raid_kingdom',
+  // 대륙 토벌 — 조건이 "6개 지역"(세계관 확정, 2026-08-21 사용자: 현행 4지역으로 낮추지
+  // 않음)이라 신전·왕국 보스 출시 전엔 성립 불가. 출시 시 판정(전 보스 min>=10) 복원.
+  'continent_sweep',
   // 컷오버 지급(헌정) — 판정이 아니라 cbt-restore/ensureCbtCarryover가 직접 넣는다.
   'cbt_2026',
+  // 신기록 — 판정이 "현재 1위"(rank_max 조건부와 동일 술어)라 cond의 "경신"이 아니었다.
+  // 오픈 첫 주 1위를 스친 다수에게 영구 남발되고 이후 신규는 사실상 불가(콘텐츠 감사 7).
+  // 서버 역대 최고 경신 이벤트 로그가 붙으면 복원.
+  'new_record',
   // "완료 후 방치" 측정 불가 — resolve.ts가 elapsed_ms를 총 소요시간으로 클램프해
   // (통산 단련 시간 통계의 "만기 후 방치 제외" 의미와 결합) 만기 이후 경과가 어디에도
   // 안 남는다. 판정식(elapsed >= duration + N)은 수학적으로 영원히 거짓이었다(감사 H2).
