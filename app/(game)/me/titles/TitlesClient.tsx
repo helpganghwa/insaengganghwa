@@ -44,10 +44,20 @@ function Seg({ a, b, val, onChange }: { a: string; b: string; val: Tri; onChange
 type RowState = 'rep' | 'active' | 'inactive' | 'locked';
 const STATE_ORDER: Record<RowState, number> = { rep: 0, active: 1, inactive: 2, locked: 3 };
 
-/** 카테고리 표시 순서 — 아이템 발동(최다)은 마지막. */
-const CAT_ORDER = ['강화', '초월', '보급', '도감', '해방', '레이드', '대난투', '점령전', '길드', '소셜', '일상', '시간대', '재화', '후원', '아바타', '조합', '랭킹 1위', '조건부', '헌정', '아이템 발동'];
-/** 내부 카테고리명 → 유저 표시명. */
-const CAT_LABEL: Record<string, string> = { '아이템 발동': '장비 착용' };
+/** 대분류 8묶음(2026-08-21 사용자 확정, 분류 기준 2) — 내부 cat을 활동 축으로 묶어 표시. */
+const GROUP_ORDER = ['성장', '전투', '사회', '생활', '재화', '기록', '아바타', '장비'];
+const CAT_GROUP: Record<string, string> = {
+  강화: '성장', 초월: '성장', 보급: '성장', 도감: '성장', 해방: '성장',
+  레이드: '전투', 대난투: '전투', 점령전: '전투',
+  길드: '사회', 소셜: '사회',
+  일상: '생활', 시간대: '생활',
+  재화: '재화', 후원: '재화',
+  '랭킹 1위': '기록', 조건부: '기록',
+  아바타: '아바타',
+  조합: '장비', '아이템 발동': '장비',
+};
+/** 매핑에 없는 신규 cat은 자기 이름 그대로 뒤에 붙는다 — 조용한 증발 방지. */
+const groupOf = (cat: string): string => CAT_GROUP[cat] ?? cat;
 
 /** 즐겨찾기 상한 — 서버(actions.ts FAVORITE_CAP)와 동일. */
 const FAVORITE_CAP = 10;
@@ -127,18 +137,19 @@ export function TitlesClient({
     // ★ 섹션에 한 번 더 노출된다(호이스트 아님). 발견분만 — 즐겨찾기 후 미발견이 된 코드(운영
     // 회수 등)가 잠금 행으로 최상단에 박히는 것 방지(적대 검수 2).
     const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
-    const rest = visible;
-    const byCat = new Map<string, TitleDef[]>();
-    for (const d of rest) {
-      const arr = byCat.get(d.cat) ?? [];
+    const byGroup = new Map<string, TitleDef[]>();
+    for (const d of visible) {
+      const g = groupOf(d.cat);
+      const arr = byGroup.get(g) ?? [];
       arr.push(d);
-      byCat.set(d.cat, arr);
+      byGroup.set(g, arr);
     }
-    const cats = CAT_ORDER.filter((c) => byCat.has(c)).map((c) => {
-      // 진행도는 필터와 무관한 실측(그 카테고리 전체 기준) — 필터로 줄어든 숫자는 진행도가 아니다.
-      const all = TITLE_DEFS.filter((d) => d.cat === c && byCode.has(d.code));
+    const order = [...GROUP_ORDER, ...[...byGroup.keys()].filter((g) => !GROUP_ORDER.includes(g))];
+    const cats = order.filter((g) => byGroup.has(g)).map((g) => {
+      // 진행도는 필터와 무관한 실측(그 대분류 전체 기준) — 필터로 줄어든 숫자는 진행도가 아니다.
+      const all = TITLE_DEFS.filter((d) => groupOf(d.cat) === g && byCode.has(d.code));
       const disc = all.filter((d) => byCode.get(d.code)!.discovered).length;
-      return { key: c, label: CAT_LABEL[c] ?? c, progress: `${disc}/${all.length}`, items: sortRows(byCat.get(c)!) };
+      return { key: g, label: g, progress: `${disc}/${all.length}`, items: sortRows(byGroup.get(g)!) };
     });
     return { favList, cats };
     // eslint-disable-next-line react-hooks/exhaustive-deps
