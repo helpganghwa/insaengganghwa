@@ -21,17 +21,25 @@ function Particles() {
 function styleAttr(s: TitleStyle): React.CSSProperties | undefined {
   if (s.fx) return undefined; // 이펙트는 클래스가 전담
   if (s.gradient?.length) {
-    const grad: React.CSSProperties = {
+    if (s.glow) {
+      // 어려움 조합(트랙 C) — 정적 글로우 대신 **흐르는** 지역색 그라데이션. 색을 주기
+      // 패턴(첫 색 반복)으로 닫고 90deg·300%라 공용 flow 키프레임과 무결점 순환한다.
+      return {
+        background: `linear-gradient(90deg,${[...s.gradient, s.gradient[0]!].join(',')})`,
+        backgroundSize: '300% 100%',
+        WebkitBackgroundClip: 'text',
+        backgroundClip: 'text',
+        color: 'transparent',
+        animation: 'flow 7s linear infinite',
+        filter: `drop-shadow(0 0 2px ${rgba(s.gradient[0]!, 0.45)})`,
+      };
+    }
+    return {
       background: `linear-gradient(100deg,${s.gradient.join(',')})`,
       WebkitBackgroundClip: 'text',
       backgroundClip: 'text',
       color: 'transparent',
     };
-    if (s.glow) {
-      const c = s.gradient[0]!;
-      grad.filter = `drop-shadow(0 0 2px ${rgba(c, 0.45)})`;
-    }
-    return grad;
   }
   const out: React.CSSProperties = { color: s.color ?? '#a5b4fc' };
   if (s.glow && s.color) out.textShadow = `0 0 3px ${rgba(s.color, 0.4)}`;

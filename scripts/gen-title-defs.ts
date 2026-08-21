@@ -14,6 +14,8 @@ type Design = {
   palette: Record<string, string>;
   regionKeywords: { pattern: string; color: string }[];
   special: Record<string, { fx: string; pt?: string }>;
+  /** 어려움·한정 카테고리 시그니처 fx 패밀리(트랙 C) — special이 없는 칭호에 코드 해시로 순환 배정. */
+  hardFx: Record<string, string[]>;
 };
 
 const ROOT = process.cwd();
@@ -44,6 +46,52 @@ type Style = {
   executor?: boolean;
 };
 
+// ── 팔레트 2차원화(트랙 C) — 카테고리 기본색을 난이도로 변주 ──
+// 쉬움=저채도 소프트 / 중간=본색 / 어려움·한정=고채도 비비드(+글로우). 같은 카테고리 안에서도
+// 난이도가 색으로 읽히고, 20색 팔레트가 사실상 3배로 벌어진다(수동 배정 없이 결정론 파생).
+function hexToHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function hslToHex(h: number, s: number, l: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+function diffVariant(hex: string, diff: string): string {
+  const [h, s, l] = hexToHsl(hex);
+  if (diff === '쉬움') return hslToHex(h, Math.max(0, s * 0.62), Math.min(1, l + 0.06));
+  if (diff === '어려움' || diff === '한정') return hslToHex(h, Math.min(1, s * 1.35 + 0.06), Math.max(0, l - 0.02));
+  return hex; // 중간 = 본색
+}
+
+// 카테고리 내 시그니처 대상(어려움·한정, special·아이템 발동 제외)의 코드 정렬 순번.
+const hardRanks = new Map<string, number>();
+{
+  const byCat = new Map<string, string[]>();
+  for (const t of titles) {
+    if ((t.diff === '어려움' || t.diff === '한정') && !design.special[t.code] && t.cat !== '아이템 발동' && t.code !== 'zone_executor') {
+      const arr = byCat.get(t.cat) ?? [];
+      arr.push(t.code);
+      byCat.set(t.cat, arr);
+    }
+  }
+  for (const arr of byCat.values()) {
+    arr.sort();
+    arr.forEach((code, i) => hardRanks.set(code, i));
+  }
+}
+const hardRank = (t: T): number => hardRanks.get(t.code) ?? 0;
+
 function styleOf(t: T): Style {
   if (t.code === 'zone_executor') return { executor: true };
   const hard = t.diff === '어려움' || t.diff === '한정';
@@ -52,9 +100,18 @@ function styleOf(t: T): Style {
   if (t.cat === '아이템 발동') {
     const cs = itemColors(t.cond);
     if (cs.length >= 2) return { gradient: cs, ...(hard ? { glow: true } : {}) };
-    if (cs.length === 1) return { color: cs[0], ...(hard ? { glow: true } : {}) };
+    if (cs.length === 1) return { color: diffVariant(cs[0]!, t.diff), ...(hard ? { glow: true } : {}) };
   }
-  return { color: design.palette[t.cat] ?? '#a5b4fc', ...(hard ? { glow: true } : {}) };
+  // 어려움·한정 — 카테고리 시그니처 fx 패밀리(트랙 C). "글로우만"의 단조를 카테고리별 고유
+  // 모션으로. 같은 카테고리 안에서는 코드 정렬 순번 라운드로빈 — 변주가 정확히 고르게 퍼진다
+  // (해시는 4종 이하 소규모 패밀리에서 한쪽으로 뭉치는 것을 확인, 순번제로 교체).
+  // 칭호 증감 시 배정이 밀릴 수 있으나 시그니처 계층은 카테고리 정체성(색군)이 같아 허용.
+  if (hard) {
+    const fam = design.hardFx[t.cat];
+    if (fam?.length) return { fx: fam[hardRank(t) % fam.length] };
+  }
+  const base = design.palette[t.cat] ?? '#a5b4fc';
+  return { color: diffVariant(base, t.diff), ...(hard ? { glow: true } : {}) };
 }
 
 const pub = titles.map((t) => ({
@@ -64,6 +121,18 @@ const pub = titles.map((t) => ({
   hidden: t.hidden,
   style: styleOf(t),
 }));
+
+// fx/pt 실재 검증 — defs가 참조하는 클래스가 title-fx.css에 없으면 그 칭호는 무스타일로
+// 조용히 깨진다(2026-08-21 트랙 C에서 신규 4종 누락 실사고). 생성 시점에 빌드 실패로 승격.
+{
+  const fxCss = readFileSync(join(ROOT, 'components/title-fx.css'), 'utf8');
+  const haveFx = new Set([...fxCss.matchAll(/\.fx-(\w+)[{:]/g)].map((m) => m[1]));
+  const havePt = new Set([...fxCss.matchAll(/\.pt-(\w+)>i/g)].map((m) => m[1]));
+  for (const t of pub) {
+    if (t.style.fx && !haveFx.has(t.style.fx)) throw new Error(`title-fx.css에 없는 fx: ${t.style.fx} (${t.code})`);
+    if (t.style.pt && !havePt.has(t.style.pt)) throw new Error(`title-fx.css에 없는 pt: ${t.style.pt} (${t.code})`);
+  }
+}
 
 // 아이템 발동 조건 → 기계 판독 명세(카탈로그 key + 최소 강화). 이름이 안 풀리면 빌드 실패.
 const nameToKey = new Map(CATALOG_ITEMS.map((c) => [c.nameKo, c.key]));

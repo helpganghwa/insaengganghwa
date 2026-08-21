@@ -9,20 +9,19 @@
 .fx-emberflow{background:linear-gradient(90deg,#ff9d4d,#e5c07b,#ff6b35,#e5c07b,#ff9d4d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
 .fx-crimsonflow{background:linear-gradient(90deg,#e05252,#e5c07b,#c22e2e,#e5c07b,#e05252);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-violetflow{background:linear-gradient(90deg,#b98ef0,#e5c07b,#8d5bd4,#e5c07b,#b98ef0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 해방 — 보랏빛 흐름(violetflow) 외 1변주(별점 반짝) */
+.fx-freedomglint{color:#c9a2f0;position:relative;text-shadow:0 0 3px rgba(185,142,240,.35)}
+.fx-freedomglint::after{content:'✦';position:absolute;top:-.45em;right:-.75em;font-size:.55em;color:#f0e0ff;opacity:0;animation:glint 3.4s ease-in-out infinite}
 .fx-royalflow{background:linear-gradient(90deg,#e5c07b,#c22e2e,#f5d76e,#c22e2e,#e5c07b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
 .fx-azureflow{background:linear-gradient(90deg,#6ea8e0,#e5c07b,#3d7ec2,#e5c07b,#6ea8e0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-verdantflow{background:linear-gradient(90deg,#7fce8a,#e5c07b,#4caf60,#e5c07b,#7fce8a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-nightstar{background:linear-gradient(90deg,#7c8ff0,#f5d76e,#4a5ac2,#f5d76e,#7c8ff0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
-.fx-pentaflow{background:linear-gradient(90deg,#e05252,#e5a04d,#e5d24d,#5cbf6e,#5c9fd8,#a97be0,#e05252);background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite}
-.fx-steelshine{background:linear-gradient(105deg,#9aa3ad 40%,#f2f6fa 50%,#9aa3ad 60%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
-.fx-goldglow{color:#e5c07b;animation:glowg 2.2s ease-in-out infinite}
-@keyframes glowg{0%,100%{text-shadow:0 0 3px rgba(229,192,123,.35)}50%{text-shadow:0 0 6px rgba(229,192,123,.95)}}
-.fx-silverglow{color:#c8ccd8;animation:glows 2.4s ease-in-out infinite}
-@keyframes glows{0%,100%{text-shadow:0 0 3px rgba(200,204,216,.3)}50%{text-shadow:0 0 5px rgba(220,226,240,.85)}}
-.fx-violetglow{color:#c9a2f0;animation:glowv 2.4s ease-in-out infinite}
-@keyframes glowv{0%,100%{text-shadow:0 0 3px rgba(201,162,240,.35)}50%{text-shadow:0 0 6px rgba(201,162,240,.9)}}
-.fx-bloodpulse{color:#e05252;animation:glowb 1.9s ease-in-out infinite}
-@keyframes glowb{0%,100%{text-shadow:0 0 3px rgba(160,30,30,.4)}50%{text-shadow:0 0 6px rgba(224,60,60,.95)}}
+.fx-pentaflow{background:linear-gradient(90deg,#e05252,#e5a04d,#e5d24d,#5cbf6e,#5c9fd8,#a97be0,#e05252);background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow4 7s linear infinite}
+.fx-steelshine{background:linear-gradient(90deg,#9aa3ad 42%,#f2f6fa 50%,#9aa3ad 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+.fx-goldglow{color:#e5c07b;text-shadow:0 0 5px rgba(229,192,123,.5);animation:pulsebr 2.8s ease-in-out infinite}
+.fx-silverglow{color:#c8ccd8;text-shadow:0 0 4px rgba(210,216,232,.45);animation:pulsebr 3s ease-in-out infinite}
+.fx-violetglow{color:#c9a2f0;text-shadow:0 0 5px rgba(201,162,240,.5);animation:pulsebr 3s ease-in-out infinite}
+.fx-bloodpulse{color:#e05252;text-shadow:0 0 5px rgba(200,45,45,.55);animation:pulsebr 2.4s ease-in-out infinite}
 .fx-flame{background:linear-gradient(0deg,#ff6b35,#f5d76e 55%,#fff3c4);-webkit-background-clip:text;background-clip:text;color:transparent;animation:flick 1.6s ease-in-out infinite}
 @keyframes flick{0%,100%{filter:brightness(1);text-shadow:0 0 6px rgba(255,120,40,.45)}50%{filter:brightness(1.28);text-shadow:0 0 7px rgba(255,150,60,.85)}}
 .fx-goldtwinkle{color:#f5d76e;animation:twk 1.4s steps(2,end) infinite}
@@ -30,13 +29,21 @@
 .fx-starlight{color:#f0e6c8;animation:stl 2.6s ease-in-out infinite}
 @keyframes stl{0%,100%{text-shadow:-2px -1px 3px rgba(245,215,110,.5),2px 1px 2px rgba(140,160,255,.3)}50%{text-shadow:2px -1px 3px rgba(140,160,255,.5),-2px 1px 2px rgba(245,215,110,.3)}}
 @keyframes flow{to{background-position:-300% 0}}
+@keyframes flow4{to{background-position:-400% 0}}
+/* 펄스 공용 — text-shadow 반경 대신 brightness(합성기 합성)로: 모바일 끊김 제거 */
+@keyframes pulsebr{0%,100%{filter:brightness(.9)}50%{filter:brightness(1.22)}}
+/* 세로 흐름 — flow의 상하판(주기 그라데이션·300%라 무결점 순환) */
+@keyframes flowy{to{background-position:0 -300%}}
+/* 두근 — transform은 합성기 합성. inline엔 transform이 안 먹혀 클래스에 inline-block 필수 */
+@keyframes hbeat{0%,52%,100%{transform:scale(1)}60%{transform:scale(1.055)}68%{transform:scale(1)}76%{transform:scale(1.04)}84%{transform:scale(1)}}
+@keyframes brfade{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes glint{0%,68%,100%{opacity:0;transform:scale(.4) rotate(0deg)}76%,88%{opacity:1;transform:scale(1) rotate(45deg)}}
 .fx-iceflow{background:linear-gradient(90deg,#bfe3ff,#7fb8e0,#eaf6ff,#7fb8e0,#bfe3ff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-slimeflow{background:linear-gradient(90deg,#8fce6e,#4f9a3f,#c9e8a0,#4f9a3f,#8fce6e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-duststatic{color:#d0a878}
 .fx-ashstatic{color:#b8aec8}
-.fx-sparkstatic{color:#ffe066;animation:glowg 1.6s ease-in-out infinite}
-.fx-abyssglow{color:#9a7bd4;animation:glowa 2.4s ease-in-out infinite}
-@keyframes glowa{0%,100%{text-shadow:0 0 4px rgba(90,50,140,.5)}50%{text-shadow:0 0 6px rgba(120,70,190,.9)}}
+.fx-sparkstatic{color:#ffe066;text-shadow:0 0 4px rgba(255,224,102,.5);animation:pulsebr 2s ease-in-out infinite}
+.fx-abyssglow{color:#9a7bd4;text-shadow:0 0 5px rgba(105,60,165,.6);animation:pulsebr 3s ease-in-out infinite}
 .pt{position:relative;display:inline-block}
 .pt>i{position:absolute;pointer-events:none;opacity:0;filter:blur(.4px)}
 .pt-ember>i{width:3px;height:3px;background:radial-gradient(circle at 35% 65%,rgba(255,243,196,.9) 0%,rgba(255,176,102,.8) 50%,rgba(255,107,53,.6) 85%);border-radius:50% 50% 50% 0;bottom:0;animation:p-emb 4.2s ease-out infinite}
@@ -57,7 +64,7 @@
 @keyframes p-drm{0%,100%{opacity:0;transform:scale(.3)}5%{opacity:.75;transform:scale(.45)}26%{opacity:0;transform:scale(1.35)}32%{opacity:.55;transform:scale(.45)}52%{opacity:0;transform:scale(1.25)}}
 .pt-abyss>i{width:5px;height:4px;background:radial-gradient(ellipse at 50% 60%,rgba(140,80,200,.35) 0%,rgba(70,35,120,.18) 70%,transparent 100%);filter:blur(1.4px);bottom:-1px;border-radius:60% 70% 55% 65%;animation:p-aby 5s ease-out infinite}
 @keyframes p-aby{0%,40%,100%{opacity:0;transform:translateY(1px) scale(.6)}48%{opacity:.45;transform:translateY(-2px) scale(.95)}66%{opacity:.25;transform:translateY(-5px) scale(1.15)}74%{opacity:0;transform:translateY(-6px) scale(1.25)}}
-.fx-imperial{background:linear-gradient(95deg,#f5d76e 0%,#fff3c4 18%,#d8b25f 38%,#a01c2e 52%,#f0c060 68%,#fff3c4 84%,#f5d76e 100%);background-size:280% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(229,192,123,.5))}
+.fx-imperial{background:linear-gradient(90deg,#f5d76e 0%,#fff3c4 18%,#d8b25f 38%,#a01c2e 52%,#f0c060 68%,#fff3c4 84%,#f5d76e 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(229,192,123,.5))}
 .fx-staticazure{color:#6ea8e0}
 .fx-staticember{color:#f0a860}
 .fx-staticgold{color:#e5c07b}
@@ -65,10 +72,10 @@
 .pt-vstar>i{width:4px;height:4px;background:linear-gradient(0deg,transparent 43%,rgba(201,162,240,.8) 43% 57%,transparent 57%),linear-gradient(90deg,transparent 43%,rgba(230,210,255,.7) 43% 57%,transparent 57%);top:-2px;animation:p-std 4.6s ease-in-out infinite}
 .fx-neon{color:#8beaf8;animation:neonf 3.2s linear infinite}
 @keyframes neonf{0%,18%,22%,100%{text-shadow:0 0 2px rgba(42,212,240,.45),0 0 5px rgba(42,212,240,.25)}19%,21%{text-shadow:none;opacity:.65}50%{text-shadow:0 0 3px rgba(42,212,240,.55),0 0 6px rgba(42,212,240,.3)}}
-.fx-aurora{background:linear-gradient(100deg,#5fefb8,#5fb0f0,#c084fc,#f0a0d0,#5fefb8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 5px rgba(140,220,210,.45))}
+.fx-aurora{background:linear-gradient(90deg,#5fefb8,#5fb0f0,#c084fc,#f0a0d0,#5fefb8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 5px rgba(140,220,210,.45))}
 .fx-emboss{color:#d4dae4;text-shadow:0 1.5px 1px rgba(255,255,255,.5),0 -1.5px 2px rgba(0,0,0,.95),0 0 4px rgba(180,195,215,.3)}
 .fx-goldleaf{background:linear-gradient(115deg,#e9c96a 0%,#c9a23e 22%,#f2dc8e 40%,#bb943a 58%,#e9c96a 78%,#d4ad4c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 0 rgba(70,50,0,.4))}
-.fx-pearl{background:linear-gradient(120deg,#d8c8f0,#f0e6d0,#b8d4f0,#f0d0e0,#d8c8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite;filter:drop-shadow(0 0 3px rgba(220,210,245,.45))}
+.fx-pearl{background:linear-gradient(90deg,#d8c8f0,#f0e6d0,#b8d4f0,#f0d0e0,#d8c8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite;filter:drop-shadow(0 0 3px rgba(220,210,245,.45))}
 .fx-inkwash{background:linear-gradient(180deg,#d8dde6 0%,#98a0ac 60%,#6a7280 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .fx-candle{color:#f0c890;animation:cndl 4.5s ease-in-out infinite}
 @keyframes cndl{0%,100%{text-shadow:-1px 0 5px rgba(255,180,90,.55)}33%{text-shadow:1px 0 6px rgba(255,190,100,.65)}66%{text-shadow:0 -1px 5px rgba(255,170,80,.5)}}
@@ -77,20 +84,53 @@
 .fx-jade{background:linear-gradient(160deg,#bfe8d0 10%,#7cc4a0 45%,#a8dcc0 60%,#5ea886 90%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(150,220,190,.3))}
 .fx-obsidian{color:#5c5670;text-shadow:0 -1px 0 rgba(235,240,255,.55),0 1px 2px rgba(0,0,0,.9)}
 .fx-rimlight{background:linear-gradient(180deg,#fff6dc 0%,#f0e2b0 18%,#b8a878 45%,#8a7f60 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.fx-goldsoft{color:#e5c07b;animation:goldsb 4.4s ease-in-out infinite}
-@keyframes goldsb{0%,100%{text-shadow:0 0 2px rgba(229,192,123,.25)}50%{text-shadow:0 0 5px rgba(229,192,123,.65)}}
-.fx-moonlight{color:#cfd8e8;animation:moonb 4.6s ease-in-out infinite}
-@keyframes moonb{0%,100%{text-shadow:0 0 2px rgba(200,215,240,.25)}50%{text-shadow:0 0 6px rgba(210,225,250,.7)}}
+.fx-goldsoft{color:#e5c07b;text-shadow:0 0 4px rgba(229,192,123,.4);animation:pulsebr 4.4s ease-in-out infinite}
+.fx-moonlight{color:#cfd8e8;text-shadow:0 0 4px rgba(205,220,245,.45);animation:pulsebr 4.6s ease-in-out infinite}
 .fx-duskfade{animation:duskc 6s ease-in-out infinite}
 @keyframes duskc{0%,100%{color:#f0a860}50%{color:#b98ef0}}
 .fx-frostedge{background:linear-gradient(180deg,#eceaef 40%,#bfe3ff 70%,#e8f6ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 1px 2px rgba(140,200,240,.25)}
 .fx-yinyang{background:linear-gradient(180deg,#f5d76e 48%,#8d80c0 52%,#5f5590 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(245,215,110,.45))}
 .fx-chrome{background:linear-gradient(180deg,#ffffff 5%,#9fb0c4 42%,#f6fbff 50%,#4e5a6a 58%,#dfe9f2 95%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(190,210,235,.4))}
-.fx-silk{background:linear-gradient(105deg,#9a3448 42%,#e8a0b0 50%,#9a3448 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+.fx-silk{background:linear-gradient(90deg,#9a3448 42%,#e8a0b0 50%,#9a3448 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-breath{color:#b9c2cc;animation:brth 4s ease-in-out infinite}
 @keyframes brth{0%,100%{opacity:.55}50%{opacity:1}}
 .pt-onestar>i{width:5px;height:5px;background:linear-gradient(0deg,transparent 41%,#f5d76e 41% 59%,transparent 59%),linear-gradient(90deg,transparent 41%,#fff3c4 41% 59%,transparent 59%);top:-4px;right:-6px;left:auto !important;filter:drop-shadow(0 0 1.5px rgba(245,215,110,.9));animation:p-one 3.2s ease-in-out infinite}
 @keyframes p-one{0%,72%,100%{opacity:0;transform:rotate(0) scale(.4)}80%,88%{opacity:1;transform:rotate(45deg) scale(1)}}
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
-@media (prefers-reduced-motion: reduce){.ttag [class*='fx-'],.ttag .pt>i{animation:none !important}}
+/* ── 카테고리 시그니처(트랙 C) — 어려움·한정 자동 배정분. 카테고리별 패밀리(색 램프·모션 변주),
+   같은 카테고리 안에서 코드 해시로 순환 배정. 기존 flow 계열과 같은 절제 톤. ── */
+.fx-bronzeshine{background:linear-gradient(90deg,#b08d57 42%,#f0d9a8 50%,#b08d57 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+.fx-honeyflow{background:linear-gradient(90deg,#e8c26a,#c89138,#f7e3ae,#c89138,#e8c26a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 보급 — 꿀빛 흐름(honeyflow) 외 1변주(세로 꿀 드립) */
+.fx-honeydrip{background:linear-gradient(0deg,#e8c26a,#c89138,#f7e3ae,#c89138,#e8c26a);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 6.5s linear infinite}
+.fx-mistdrift{background:linear-gradient(90deg,#b9c2cc,#8f98a5,#dde4ea,#8f98a5,#b9c2cc);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite}
+.fx-roseflow{background:linear-gradient(90deg,#e8a0c0,#c06090,#f5d0e0,#c06090,#e8a0c0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 아바타 — 장미 흐름(roseflow) 외 1변주(장미 숨결) */
+.fx-blushbreath{color:#e8a0c0;text-shadow:0 0 4px rgba(220,120,170,.4);animation:brfade 4.2s ease-in-out infinite}
+.fx-tideflow{background:linear-gradient(90deg,#7fd0c8,#3fa096,#c0ece6,#3fa096,#7fd0c8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 조합 — 청록 흐름(tideflow) 외 1변주(세로 물결) */
+.fx-tidewave{background:linear-gradient(0deg,#7fd0c8,#3fa096,#c0ece6,#3fa096,#7fd0c8);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 7s linear infinite}
+/* 강화 — 잉걸불 흐름(emberflow) 외 3변주 */
+.fx-forgeshine{background:linear-gradient(90deg,#c98a5a 42%,#ffe0b8 50%,#c98a5a 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+.fx-cinderflow{background:linear-gradient(90deg,#d4674a,#8a2f1e,#f0b090,#8a2f1e,#d4674a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+/* 대난투 — 혈맥 펄스(bloodpulse) 외 2변주(진홍 흐름·두근 스케일) */
+.fx-duelbeat{color:#e05252;text-shadow:0 0 4px rgba(200,45,45,.45);display:inline-block;animation:hbeat 2.6s ease-in-out infinite}
+.fx-duelflow{background:linear-gradient(90deg,#e05252,#7a1f1f,#ffb0a0,#7a1f1f,#e05252);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 재화 — 금빛 펄스(goldglow) 외 2변주 */
+.fx-coinshine{background:linear-gradient(90deg,#d4af37 42%,#fff2c8 50%,#d4af37 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+.fx-gildedflow{background:linear-gradient(90deg,#cdb04e,#8f7a1e,#fff0b0,#8f7a1e,#cdb04e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 조건부 — 달빛 펄스(moonlight) 외 2변주 */
+.fx-lunarflow{background:linear-gradient(90deg,#cfd8e8,#8fa3c8,#ffffff,#8fa3c8,#cfd8e8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite}
+.fx-veilflow{background:linear-gradient(90deg,#b9a7e0,#7a6aa8,#e8e0f8,#7a6aa8,#b9a7e0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+/* 일상 — 안개 흐름(mistdrift) 외 2변주(리넨 흐름·세로 낙하) */
+.fx-driftfall{background:linear-gradient(0deg,#b9c2cc,#8f98a5,#dde4ea,#8f98a5,#b9c2cc);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 8s linear infinite}
+.fx-linenflow{background:linear-gradient(90deg,#c8beb0,#948a78,#efe8dc,#948a78,#c8beb0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite}
+/* 레이드 — 진홍 흐름(crimsonflow) 외 1변주 */
+.fx-warbanner{background:linear-gradient(90deg,#b84a4a 42%,#ffd0a8 50%,#b84a4a 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 점령전 — 청동 광택(bronzeshine) 외 1변주(녹청) */
+.fx-verdigris{background:linear-gradient(90deg,#7fae9e,#4a7a6a,#c8e8d8,#4a7a6a,#7fae9e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+/* 초월 — 별빛(starlight) 외 2변주(성운 흐름·무지개빛 표류) */
+.fx-stardrift{background:linear-gradient(90deg,#c8b8f0,#f0e6d0,#9d8ce0,#e8d8f8,#c8b8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(180,160,230,.4))}
+.fx-astralflow{background:linear-gradient(90deg,#b39ddb,#7a5fc0,#e8e0ff,#7a5fc0,#b39ddb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag .pt>i{animation:none !important}}
 }

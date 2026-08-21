@@ -282,5 +282,80 @@
    "pt": "spark"
   }
  },
- "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)"
+ "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
+ "hardFx": {
+  "랭킹 1위": [
+   "goldflow"
+  ],
+  "조건부": [
+   "moonlight",
+   "lunarflow",
+   "veilflow"
+  ],
+  "해방": [
+   "violetflow",
+   "freedomglint"
+  ],
+  "강화": [
+   "emberflow",
+   "forgeshine",
+   "cinderflow",
+   "flame"
+  ],
+  "시간대": [
+   "nightstar"
+  ],
+  "보급": [
+   "honeyflow",
+   "honeydrip"
+  ],
+  "초월": [
+   "starlight",
+   "astralflow",
+   "stardrift"
+  ],
+  "도감": [
+   "verdantflow"
+  ],
+  "레이드": [
+   "crimsonflow",
+   "warbanner"
+  ],
+  "대난투": [
+   "bloodpulse",
+   "duelflow",
+   "duelbeat"
+  ],
+  "점령전": [
+   "bronzeshine",
+   "verdigris"
+  ],
+  "길드": [
+   "royalflow"
+  ],
+  "소셜": [
+   "azureflow"
+  ],
+  "일상": [
+   "mistdrift",
+   "linenflow",
+   "driftfall"
+  ],
+  "재화": [
+   "goldglow",
+   "coinshine",
+   "gildedflow"
+  ],
+  "후원": [
+   "goldsoft"
+  ],
+  "아바타": [
+   "roseflow",
+   "blushbreath"
+  ],
+  "조합": [
+   "tideflow",
+   "tidewave"
+  ]
+ }
 }

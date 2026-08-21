@@ -95,7 +95,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "와신상담",
   hidden: true,
   style: {
-   color: "#b9a7e0"
+   color: "#cec6e0"
   }
  },
  {
@@ -104,8 +104,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "간밤의 영웅",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "moonlight"
   }
  },
  {
@@ -134,7 +133,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "수장",
   hidden: false,
   style: {
-   color: "#b9a7e0"
+   color: "#cec6e0"
   }
  },
  {
@@ -143,7 +142,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "빈털터리",
   hidden: true,
   style: {
-   color: "#b9a7e0"
+   color: "#cec6e0"
   }
  },
  {
@@ -152,8 +151,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "별의 주인",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "veilflow"
   }
  },
  {
@@ -162,8 +160,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "완전 무장",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "veilflow"
   }
  },
  {
@@ -190,8 +187,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "지배자",
   hidden: false,
   style: {
-   color: "#c9a2f0",
-   glow: true
+   fx: "freedomglint"
   }
  },
  {
@@ -200,8 +196,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "정복자",
   hidden: false,
   style: {
-   color: "#c9a2f0",
-   glow: true
+   fx: "violetflow"
   }
  },
  {
@@ -248,8 +243,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "바닥 밑에 바닥",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "forgeshine"
   }
  },
  {
@@ -267,8 +261,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "만년설",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "flame"
   }
  },
  {
@@ -323,8 +316,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "한 우물",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "forgeshine"
   }
  },
  {
@@ -351,8 +343,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "삼위일체",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "moonlight"
   }
  },
  {
@@ -397,8 +388,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "불타는 금요일",
   hidden: true,
   style: {
-   color: "#8fb4d8",
-   glow: true
+   fx: "nightstar"
   }
  },
  {
@@ -416,8 +406,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "보급왕",
   hidden: false,
   style: {
-   color: "#b8a97a",
-   glow: true
+   fx: "honeydrip"
   }
  },
  {
@@ -426,8 +415,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "만물상",
   hidden: false,
   style: {
-   color: "#b8a97a",
-   glow: true
+   fx: "honeyflow"
   }
  },
  {
@@ -436,7 +424,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "데자뷔",
   hidden: true,
   style: {
-   color: "#b8a97a"
+   color: "#b9b198"
   }
  },
  {
@@ -454,8 +442,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "초월자",
   hidden: false,
   style: {
-   color: "#b39ddb",
-   glow: true
+   fx: "stardrift"
   }
  },
  {
@@ -475,8 +462,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "쏟아지는 별",
   hidden: true,
   style: {
-   color: "#b39ddb",
-   glow: true
+   fx: "astralflow"
   }
  },
  {
@@ -495,8 +481,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "산을 가른 일격",
   hidden: false,
   style: {
-   color: "#d88c8c",
-   glow: true
+   fx: "warbanner"
   }
  },
  {
@@ -505,8 +490,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "끝없는 원정",
   hidden: false,
   style: {
-   color: "#d88c8c",
-   glow: true
+   fx: "crimsonflow"
   }
  },
  {
@@ -581,8 +565,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "투신",
   hidden: false,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "duelbeat"
   }
  },
  {
@@ -611,8 +594,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "백전노장",
   hidden: false,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "duelflow"
   }
  },
  {
@@ -621,8 +603,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "정상권",
   hidden: false,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "bloodpulse"
   }
  },
  {
@@ -649,7 +630,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "꼴찌의 품격",
   hidden: true,
   style: {
-   color: "#e08c9c"
+   color: "#dab1b9"
   }
  },
  {
@@ -694,8 +675,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "순회 영주",
   hidden: true,
   style: {
-   color: "#c2b280",
-   glow: true
+   fx: "verdigris"
   }
  },
  {
@@ -704,7 +684,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "첫 깃발",
   hidden: false,
   style: {
-   color: "#e0b877"
+   color: "#d5c1a0"
   }
  },
  {
@@ -826,8 +806,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "사계절의 망치",
   hidden: true,
   style: {
-   color: "#a8a8b0",
-   glow: true
+   fx: "mistdrift"
   }
  },
  {
@@ -836,8 +815,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "우편함 지기",
   hidden: false,
   style: {
-   color: "#a8a8b0",
-   glow: true
+   fx: "driftfall"
   }
  },
  {
@@ -846,7 +824,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "지박령",
   hidden: true,
   style: {
-   color: "#a8a8b0"
+   color: "#b9b9bd"
   }
  },
  {
@@ -882,8 +860,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "칠칠한 대장장이",
   hidden: true,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "gildedflow"
   }
  },
  {
@@ -892,8 +869,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "자린고비",
   hidden: true,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "goldglow"
   }
  },
  {
@@ -950,7 +926,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "두 개의 거울",
   hidden: true,
   style: {
-   color: "#d8a0c8"
+   color: "#d9bed1"
   }
  },
  {
@@ -977,8 +953,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "왕실 의상실",
   hidden: false,
   style: {
-   color: "#d8a0c8",
-   glow: true
+   fx: "roseflow"
   }
  },
  {
@@ -997,7 +972,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "알찬 하루",
   hidden: true,
   style: {
-   color: "#80cbc4"
+   color: "#a2c8c4"
   }
  },
  {
@@ -1016,8 +991,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "전성기의 초상",
   hidden: true,
   style: {
-   color: "#80cbc4",
-   glow: true
+   fx: "tideflow"
   }
  },
  {
@@ -1026,7 +1000,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "흑금의 주인",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -1083,7 +1057,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "용의 후예",
   hidden: true,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -1093,8 +1067,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "화룡점정",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "emberflow"
   }
  },
  {
@@ -1112,8 +1085,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "정공법",
   hidden: false,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "cinderflow"
   }
  },
  {
@@ -1131,8 +1103,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "초심",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "emberflow"
   }
  },
  {
@@ -1141,8 +1112,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "속전속결",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "forgeshine"
   }
  },
  {
@@ -1169,8 +1139,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "별의 끝",
   hidden: false,
   style: {
-   color: "#b39ddb",
-   glow: true
+   fx: "starlight"
   }
  },
  {
@@ -1198,8 +1167,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "대륙 토벌",
   hidden: false,
   style: {
-   color: "#d88c8c",
-   glow: true
+   fx: "crimsonflow"
   }
  },
  {
@@ -1218,8 +1186,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "질주",
   hidden: true,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "bloodpulse"
   }
  },
  {
@@ -1237,8 +1204,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "철옹성",
   hidden: false,
   style: {
-   color: "#c2b280",
-   glow: true
+   fx: "bronzeshine"
   }
  },
  {
@@ -1256,7 +1222,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "귀향",
   hidden: true,
   style: {
-   color: "#e0b877"
+   color: "#d5c1a0"
   }
  },
  {
@@ -1265,8 +1231,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "대들보",
   hidden: false,
   style: {
-   color: "#e0b877",
-   glow: true
+   fx: "royalflow"
   }
  },
  {
@@ -1304,7 +1269,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "휴가 복귀",
   hidden: true,
   style: {
-   color: "#a8a8b0"
+   color: "#b9b9bd"
   }
  },
  {
@@ -1313,8 +1278,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "연륜",
   hidden: false,
   style: {
-   color: "#a8a8b0",
-   glow: true
+   fx: "mistdrift"
   }
  },
  {
@@ -1332,8 +1296,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "백만장자",
   hidden: false,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "gildedflow"
   }
  },
  {
@@ -1342,8 +1305,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "환골탈태",
   hidden: true,
   style: {
-   color: "#d8a0c8",
-   glow: true
+   fx: "blushbreath"
   }
  },
  {
@@ -1352,8 +1314,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "단벌 신사",
   hidden: true,
   style: {
-   color: "#d8a0c8",
-   glow: true
+   fx: "roseflow"
   }
  },
  {
@@ -1362,8 +1323,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "변장술사",
   hidden: false,
   style: {
-   color: "#d8a0c8",
-   glow: true
+   fx: "blushbreath"
   }
  },
  {
@@ -1372,7 +1332,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "모범생",
   hidden: true,
   style: {
-   color: "#fbbf24"
+   color: "#d8b865"
   }
  },
  {
@@ -1423,7 +1383,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "무법자",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -1453,8 +1413,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "문무겸비",
   hidden: false,
   style: {
-   color: "#80cbc4",
-   glow: true
+   fx: "tidewave"
   }
  },
  {
@@ -1463,8 +1422,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "성층권",
   hidden: false,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "cinderflow"
   }
  },
  {
@@ -1482,8 +1440,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "삼시세끼",
   hidden: true,
   style: {
-   color: "#b8a97a",
-   glow: true
+   fx: "honeyflow"
   }
  },
  {
@@ -1492,8 +1449,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "돌격대장",
   hidden: false,
   style: {
-   color: "#c2b280",
-   glow: true
+   fx: "bronzeshine"
   }
  },
  {
@@ -1502,8 +1458,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "수호신",
   hidden: false,
   style: {
-   color: "#c2b280",
-   glow: true
+   fx: "verdigris"
   }
  },
  {
@@ -1512,8 +1467,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "백일 원정",
   hidden: true,
   style: {
-   color: "#d88c8c",
-   glow: true
+   fx: "warbanner"
   }
  },
  {
@@ -1582,7 +1536,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "창천",
   hidden: true,
   style: {
-   color: "#fbbf24"
+   color: "#d8b865"
   }
  },
  {
@@ -1609,7 +1563,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "강태공",
   hidden: true,
   style: {
-   color: "#22c55e"
+   color: "#4cb974"
   }
  },
  {
@@ -1645,7 +1599,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "학장",
   hidden: true,
   style: {
-   color: "#fbbf24"
+   color: "#d8b865"
   }
  },
  {
@@ -1654,7 +1608,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "대관식",
   hidden: true,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -1673,8 +1627,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "신기록",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "emberflow"
   }
  },
  {
@@ -1683,8 +1636,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "절벽 끝에서",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "flame"
   }
  },
  {
@@ -1720,8 +1672,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "불굴",
   hidden: true,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "duelbeat"
   }
  },
  {
@@ -1739,7 +1690,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "신고식",
   hidden: false,
   style: {
-   color: "#d8a0c8"
+   color: "#d9bed1"
   }
  },
  {
@@ -1748,8 +1699,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "티끌 모아 태산",
   hidden: false,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "coinshine"
   }
  },
  {
@@ -1776,7 +1726,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "개구리 저격수",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -1884,7 +1834,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "사신",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -1894,7 +1844,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "강령술사",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -1904,7 +1854,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "아침의 검",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -1978,8 +1928,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "신흥 강자",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "lunarflow"
   }
  },
  {
@@ -2016,8 +1965,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "만부부당",
   hidden: false,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "coinshine"
   }
  },
  {
@@ -2026,8 +1974,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "칠전팔기",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "emberflow"
   }
  },
  {
@@ -2036,8 +1983,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "환생",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "flame"
   }
  },
  {
@@ -2074,8 +2020,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "왕의 귀환",
   hidden: true,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "duelflow"
   }
  },
  {
@@ -2120,7 +2065,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "대원수",
   hidden: true,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -2256,7 +2201,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "약초꾼",
   hidden: true,
   style: {
-   color: "#22c55e"
+   color: "#4cb974"
   }
  },
  {
@@ -2265,7 +2210,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "꼬마 악마",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -2274,7 +2219,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "가득 찬 잔",
   hidden: true,
   style: {
-   color: "#f97316"
+   color: "#d48c59"
   }
  },
  {
@@ -2283,7 +2228,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "깃털 단장",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -2447,7 +2392,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "우등생",
   hidden: true,
   style: {
-   color: "#fbbf24"
+   color: "#d8b865"
   }
  },
  {
@@ -2456,7 +2401,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "뭉게구름",
   hidden: true,
   style: {
-   color: "#c084fc"
+   color: "#cfb3eb"
   }
  },
  {
@@ -2465,7 +2410,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "개구리 인간",
   hidden: true,
   style: {
-   color: "#22c55e"
+   color: "#4cb974"
   }
  },
  {
@@ -2474,7 +2419,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "보부상",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -2483,7 +2428,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "화관",
   hidden: true,
   style: {
-   color: "#22c55e"
+   color: "#4cb974"
   }
  },
  {
@@ -2492,7 +2437,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "뾰족 모자",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -2501,7 +2446,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "책벌레",
   hidden: true,
   style: {
-   color: "#a5b4fc"
+   color: "#ced4f2"
   }
  },
  {
@@ -2510,7 +2455,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "반딧불",
   hidden: true,
   style: {
-   color: "#22c55e"
+   color: "#4cb974"
   }
  },
  {
@@ -2756,8 +2701,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "올인",
   hidden: true,
   style: {
-   color: "#cdb04e",
-   glow: true
+   fx: "goldglow"
   }
  },
  {
@@ -2932,8 +2876,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "소수정예",
   hidden: false,
   style: {
-   color: "#b9a7e0",
-   glow: true
+   fx: "lunarflow"
   }
  },
  {
@@ -2942,8 +2885,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "다윗",
   hidden: true,
   style: {
-   color: "#e08c9c",
-   glow: true
+   fx: "bloodpulse"
   }
  },
  {
@@ -2971,8 +2913,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "살아있는 역사",
   hidden: true,
   style: {
-   color: "#a8a8b0",
-   glow: true
+   fx: "linenflow"
   }
  },
  {
@@ -2990,8 +2931,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "신들린 손",
   hidden: true,
   style: {
-   color: "#e0a066",
-   glow: true
+   fx: "cinderflow"
   }
  },
  {
@@ -3126,8 +3066,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "보물찾기",
   hidden: true,
   style: {
-   color: "#80cbc4",
-   glow: true
+   fx: "tideflow"
   }
  },
  {
@@ -3146,8 +3085,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "방랑 대장장이",
   hidden: true,
   style: {
-   color: "#a8a8b0",
-   glow: true
+   fx: "linenflow"
   }
  },
  {
@@ -3277,7 +3215,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "길 비우는 소리",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -3296,7 +3234,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "칼집 없는 자",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -3306,7 +3244,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "잿불 무도",
   hidden: true,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3343,7 +3281,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "여름을 든 자",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -3362,7 +3300,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "귀참",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -3372,7 +3310,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "붉은 날",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -3400,7 +3338,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "첫 쓴맛",
   hidden: true,
   style: {
-   color: "#e0a066"
+   color: "#d2b193"
   }
  },
  {
@@ -3418,7 +3356,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "뇌신 강림",
   hidden: false,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -3428,7 +3366,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "별에 묻는 길",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3447,7 +3385,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "용암 한 벌",
   hidden: false,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3457,7 +3395,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "그림자 손님",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -3476,7 +3414,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "옥좌의 창",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3486,7 +3424,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "온전한 비행",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -3517,7 +3455,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "한밤의 무도회",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3527,7 +3465,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "재의 시간",
   hidden: true,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3558,7 +3496,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "침묵의 한 발",
   hidden: false,
   style: {
-   color: "#f97316",
+   color: "#ff6c06",
    glow: true
   }
  },
@@ -3589,7 +3527,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "몰락한 왕좌",
   hidden: true,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3599,7 +3537,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "불꽃 댄서",
   hidden: false,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3636,7 +3574,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "용의 행상인",
   hidden: true,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3667,7 +3605,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "식지 않는 불",
   hidden: false,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3701,7 +3639,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "쏟아지는 밤",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3729,7 +3667,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "늪의 그림자",
   hidden: true,
   style: {
-   color: "#22c55e",
+   color: "#00dd51",
    glow: true
   }
  },
@@ -3790,7 +3728,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "서약의 기사",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3800,7 +3738,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "설원의 저격수",
   hidden: true,
   style: {
-   color: "#60a5fa",
+   color: "#519fff",
    glow: true
   }
  },
@@ -3846,7 +3784,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "충성의 무게",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -3896,7 +3834,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "견습 마왕",
   hidden: true,
   style: {
-   color: "#c084fc",
+   color: "#bb77ff",
    glow: true
   }
  },
@@ -3976,7 +3914,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "용의 대장간",
   hidden: false,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -3986,7 +3924,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "우레 기병",
   hidden: false,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -4026,7 +3964,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "왕국의 새벽",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -4096,7 +4034,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "성전의 창",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -4129,7 +4067,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "세 번의 맹세",
   hidden: false,
   style: {
-   color: "#fbbf24",
+   color: "#ffbe16",
    glow: true
   }
  },
@@ -4196,7 +4134,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "온몸이 불꽃",
   hidden: false,
   style: {
-   color: "#ef4444",
+   color: "#ff2a2a",
    glow: true
   }
  },
@@ -4293,7 +4231,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "이름 없는 총성",
   hidden: true,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
@@ -4303,7 +4241,7 @@ export const TITLE_DEFS: TitleDef[] = [
   label: "뇌룡 기수",
   hidden: false,
   style: {
-   color: "#a5b4fc",
+   color: "#98aaff",
    glow: true
   }
  },
