@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { WikiLink } from '@/components/WikiLink';
 import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
@@ -202,16 +203,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function SettingLink({ href, label, hard }: { href: string; label: string; hard?: boolean }) {
   // hard: 위키처럼 viewport를 재정의하는 페이지는 통짜 <a> + 새 창으로 연다 —
   // 소프트 내비는 루트를 재렌더하지 않고, PWA에서도 게임 창을 벗어나 브라우저로 열려야 한다.
+  // PWA(standalone)에선 WikiLink가 cross-origin으로 열어 브라우저 뷰를 강제 분리한다.
   if (hard) {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center px-3 py-2.5"
-      >
+      <WikiLink className="flex items-center px-3 py-2.5">
         <span className="text-sm">{label}</span>
-      </a>
+      </WikiLink>
     );
   }
   return (

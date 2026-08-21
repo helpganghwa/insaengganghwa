@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { WikiLink } from '@/components/WikiLink';
 
 import { BUSINESS_INFO } from '@/lib/legal/content';
 import { DIAMONDS } from '@/lib/game/shop/catalog';
@@ -29,11 +30,9 @@ export function PublicFooter() {
             {label}
           </Link>
         ))}
-        {/* 위키는 viewport를 재정의하므로 통짜 <a> + 새 창(PWA에서도 브라우저로). */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/wiki" target="_blank" rel="noopener noreferrer" className="shrink-0 hover:underline">
-          위키
-        </a>
+        {/* 위키는 viewport를 재정의하므로 통짜 <a> + 새 창. PWA에선 cross-origin으로
+            열어 브라우저 뷰 강제 분리(WikiLink — 스코프 내 _blank가 앱 안에서 열리는 버그 대응). */}
+        <WikiLink className="shrink-0 hover:underline">위키</WikiLink>
       </nav>
       {/* 가격 목록은 DOM에만(sr-only) — 크롤러·스크린리더 인식용, 화면 미표시.
           /pricing 접근은 상단 nav '상품안내' 링크로 충분(중복 제거). */}

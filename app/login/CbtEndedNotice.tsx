@@ -16,7 +16,10 @@ import { OpenDateChangeModal } from './OpenDateChangeModal';
  */
 
 /** 정식 오픈 시각(KST) — 카운트다운 목표. 오픈 일정이 바뀌면 여기만 고친다. */
-export const OPEN_AT_ISO = '2026-08-24T11:00:00+09:00';
+// 오픈 시각 정본은 lib/launch.ts — 서버는 반드시 lib/launch에서 직접 import할 것
+// ('use client'인 이 파일 경유 시 서버에서 클라이언트 참조로 평가돼 NaN — 2026-08-21 사고).
+import { OPEN_AT_ISO } from '@/lib/launch';
+export { OPEN_AT_ISO };
 const OPEN_LABEL = '8월 24일 오전 11시';
 
 /**

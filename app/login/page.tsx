@@ -8,7 +8,10 @@ import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { getMaintenanceState } from '@/lib/game/system-mode';
-import { CbtEndedNotice, OPEN_AT_ISO } from './CbtEndedNotice';
+import { CbtEndedNotice } from './CbtEndedNotice';
+// ⚠ lib/launch에서 직접 import — CbtEndedNotice('use client') 경유 시 서버에서 값이
+// 클라이언트 참조로 평가돼 Date.parse가 NaN(시간 게이트 무력화, 2026-08-21 검증에서 검출).
+import { OPEN_AT_ISO } from '@/lib/launch';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
