@@ -146,7 +146,7 @@ async function notifyEmblemExhausted(guildId: bigint): Promise<void> {
       `'${g.name}' 길드의 문양 만들기가 계속 실패했어요.\n` +
       `지금 고른 모양·색 조합으로는 잘 만들어지지 않는 경우가 있어요.\n` +
       `길드 > 문양 만들기에서 다른 조합으로 다시 시도해 주세요. 첫 문양은 그대로 무료예요.`,
-    senderLabel: '시스템',
+    senderLabel: '인생강화',
     payload: {},
   });
 }

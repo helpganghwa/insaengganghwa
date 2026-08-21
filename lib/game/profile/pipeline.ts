@@ -402,7 +402,7 @@ async function acceptJob(
       type: 'profile_accepted',
       title: '아바타 생성 완료',
       body: '새 아바타가 목록에 추가되었습니다. 아바타 목록에서 확인해 보세요.',
-      senderLabel: '시스템',
+      senderLabel: '인생강화',
       payload: {},
     });
   });
@@ -553,7 +553,7 @@ async function rejectJob(
       type: 'profile_rejected_ai',
       title: '아바타 검토 미통과',
       body: userBody,
-      senderLabel: '시스템',
+      senderLabel: '인생강화',
       payload: {},
     });
     return true;
@@ -603,7 +603,7 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       type: 'profile_failed',
       title: '아바타 생성 시스템 오류',
       body: '생성 도중 시스템 오류가 발생해 다이아가 전액 환불되었습니다.\n다시 시도해 주세요.',
-      senderLabel: '시스템',
+      senderLabel: '인생강화',
       payload: {},
     });
     return true;

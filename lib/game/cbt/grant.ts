@@ -64,7 +64,7 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
           `CBT를 함께해 주셔서 감사합니다!\n` +
           `CBT 기간에 초대한 ${row.inviteCount}명의 보상을 그대로 다시 담아 드렸어요.\n` +
           `정식 서비스에서도 초대 보상은 새로 적립됩니다.`,
-        senderLabel: '시스템',
+        senderLabel: '인생강화',
         payload: {
           diamond: row.inviteDiamond,
           boxes: { weapon: perSlot, armor: perSlot, accessory: perSlot },
@@ -82,7 +82,7 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
         body:
           `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
           `CBT에서 쌓아 올리신 합산 강화 ${row.totalEnhance.toLocaleString('ko-KR')}의 기록을 담아 감사 다이아를 보내드립니다.`,
-        senderLabel: '시스템',
+        senderLabel: '인생강화',
         payload: { diamond: row.thanksDiamond },
       });
     }

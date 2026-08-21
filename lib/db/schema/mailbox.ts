@@ -71,7 +71,7 @@ export const mailbox = pgTable(
     /** 본문(긴 설명·markdown 가능). 빈 string 허용. */
     body: text('body').notNull().default(''),
     /** UI 노출용 발신자 라벨 — '운영자' / '시스템' / '챔피언 시스템' 등. */
-    senderLabel: text('sender_label').notNull().default('시스템'),
+    senderLabel: text('sender_label').notNull().default('인생강화'),
     /** 다이아/보급상자(slot)/아이템/문구 등 — 타입별 payload(v1: 다이아+상자). */
     payload: jsonb('payload').notNull(),
     /** 수령 시각(null = 미수령). claim transition의 멱등 키. */

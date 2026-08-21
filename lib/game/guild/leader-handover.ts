@@ -82,7 +82,7 @@ async function warnLeader(serverId: number, g: GuildRow): Promise<boolean> {
       type: 'guild',
       title: '길드장 자동 위임 경고',
       body: `장기 미접속이 이어지고 있습니다. ${GUILD_LEADER_HANDOVER_DAYS}일 이상 접속하지 않으면 길드장 직책이 활성 길드원에게 자동으로 위임되며(길드에는 멤버로 남습니다), 위임받을 활성 길드원이 없으면 길드가 자동 해산됩니다. 길드를 계속 이끌려면 접속해 주세요.`,
-      senderLabel: '시스템',
+      senderLabel: '인생강화',
       payload: {},
     });
     return true;
@@ -153,7 +153,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
         type: 'guild' as const,
         title: '길드장 위임',
         body: '전 길드장의 장기 미접속으로 길드장 직책을 위임받았습니다. 길드 운영을 이어가 주세요.',
-        senderLabel: '시스템',
+        senderLabel: '인생강화',
         payload: {},
       },
       {
@@ -162,7 +162,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
         type: 'guild' as const,
         title: '길드장 자동 위임',
         body: `장기 미접속으로 길드장 직책이 ${s.nickname ?? '활성 길드원'}에게 자동 위임되었습니다. 길드에는 멤버로 남아 있습니다.`,
-        senderLabel: '시스템',
+        senderLabel: '인생강화',
         payload: {},
       },
     ]);
@@ -234,7 +234,7 @@ async function autoDisband(serverId: number, g: GuildRow): Promise<boolean> {
           type: 'guild' as const,
           title: '길드 자동 해산',
           body: `길드 '${gRow?.name ?? ''}'이(가) 길드장의 장기 미접속과 활동 길드원 부재로 자동 해산되었습니다. 새 길드에 가입하거나 직접 창설할 수 있습니다.`,
-          senderLabel: '시스템',
+          senderLabel: '인생강화',
           payload: {},
         })),
       );

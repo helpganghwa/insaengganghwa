@@ -125,7 +125,7 @@ export async function attributeReferralFromShare(
       type: 'reward',
       title: '친구 초대 보상',
       body: `${newUserNickname}님이 내 카카오톡 공유로 가입했어요. 보상을 받아주세요!`,
-      senderLabel: '시스템',
+      senderLabel: '인생강화',
       payload: {
         diamond: INVITE_DIAMOND_PER_REFERRAL,
         boxes: { weapon: invitePerSlot, armor: invitePerSlot, accessory: invitePerSlot },

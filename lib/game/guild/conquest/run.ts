@@ -402,7 +402,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
           type: 'conquest' as const,
           title: '점령전 결과',
           body,
-          senderLabel: '시스템',
+          senderLabel: '인생강화',
           payload: {},
         };
       })

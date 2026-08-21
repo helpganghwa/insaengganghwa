@@ -71,7 +71,7 @@ export async function reclaimInactiveNicknames(): Promise<{ reclaimed: number; f
               type: 'notice',
               title: '오래 자리를 비워 닉네임이 초기화되었어요',
               body: `${INACTIVE_DAYS}일 이상 접속하지 않아 닉네임 '${t.nickname}'이(가) '${fresh}'(으)로 초기화되었어요. 돌아오셨다면 닉네임 변경 1회를 무료로 쓸 수 있어요.`,
-              senderLabel: '시스템',
+              senderLabel: '인생강화',
               payload: {},
               expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
             });

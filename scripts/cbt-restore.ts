@@ -159,7 +159,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
           values (${r.user_id}, ${serverId}, 'reward', 'CBT 참여 특별 보상', ${
             `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
             `CBT에서 쌓아 올리신 합산 강화 ${r.total_enhance.toLocaleString('ko-KR')}의 기록을 담아 감사 다이아를 보내드립니다.`
-          }, '시스템',
+          }, '인생강화',
                   ${tx.json({ diamond: r.thanks_diamond })}, ${sql.unsafe(MAIL_EXPIRE)})`;
       }
       if (r.invite_count > 0 && (r.invite_diamond > 0 || r.invite_boxes > 0)) {
@@ -171,7 +171,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
                     `CBT를 함께해 주셔서 감사합니다!\n` +
                     `CBT 기간에 초대한 ${r.invite_count}명의 보상을 그대로 다시 담아 드렸어요.\n` +
                     `정식 서비스에서도 초대 보상은 새로 적립됩니다.`
-                  }, '시스템',
+                  }, '인생강화',
                   ${tx.json({ diamond: r.invite_diamond, boxes: { weapon: perSlot, armor: perSlot, accessory: perSlot } })},
                   ${sql.unsafe(MAIL_EXPIRE)})`;
       }
@@ -180,7 +180,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
         values (${r.user_id}, ${serverId}, 'admin', '정식 오픈을 환영합니다', ${
           `${r.nickname}님, 다시 만나서 반가워요!\n` +
           `쓰시던 닉네임 그대로 준비해 두었습니다.`
-        }, '시스템', ${tx.json({})}, ${sql.unsafe(MAIL_EXPIRE)})`;
+        }, '인생강화', ${tx.json({})}, ${sql.unsafe(MAIL_EXPIRE)})`;
 
       // 4. 계정 포인터 — 마지막 서버·탈퇴 마킹 해제. (지급 완료 마킹은 0에서 선클레임.)
       await tx`
