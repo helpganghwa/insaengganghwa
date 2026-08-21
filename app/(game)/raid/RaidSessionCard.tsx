@@ -74,7 +74,7 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 // 상태 전환 시 레이아웃 시프트 제거. 색·타이포는 각 상태가 덧붙임.
 const ACTION_SLOT = 'flex h-12 w-full items-center justify-center rounded-full px-4 transition';
 
-// 공격 연출 로어 — 보스 5종별 커스텀. 매 공격 랜덤, 버튼 위 오버레이로 연속 클릭 차단.
+// 공격 연출 로어 — 보스 6종별 커스텀. 매 공격 랜덤, 버튼 위 오버레이로 연속 클릭 차단.
 const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
   slime_king: [
     '일격에 점액이 사방으로 튄다',
@@ -105,6 +105,12 @@ const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
     '저주받은 검과 칼날이 부딪친다',
     '타락한 신성을 한 겹 벗겨낸다',
     '추락한 날개에 일격이 스민다',
+  ],
+  gold_griffin: [
+    '황금 깃털이 한 움큼 흩날린다',
+    '발톱과 칼날이 불꽃을 튀기며 맞선다',
+    '문장의 짐승이 처음으로 물러선다',
+    '일격이 금빛 갑주 틈을 파고든다',
   ],
 };
 // 보석 공격 컨펌 로어 — {n}=보석 비용.

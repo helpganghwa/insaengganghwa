@@ -9,14 +9,10 @@ import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const BOSSES = [
-  'slime_king',
-  'orc_chief',
-  'stone_golem',
-  'dragon_west',
-  'fallen_angel',
-] as const;
-type Boss = (typeof BOSSES)[number];
+import { RAID_BOSS_CODES, type RaidBoss } from '../lib/game/raid/bosses';
+
+const BOSSES = RAID_BOSS_CODES; // 보스 정본과 동기 — 신보스 추가 시 여기 누락으로 OG 404 나던 것 방지.
+type Boss = RaidBoss;
 
 const OUT_W = 1200;
 const OUT_H = 630;
@@ -29,6 +25,7 @@ const BG_GRADIENTS: Record<Boss, [string, string, string]> = {
   stone_golem:  ['#57534E', '#292524', '#1C1917'], // stone-600 / stone-800 / zinc-900
   dragon_west:  ['#7C2D12', '#7F1D1D', '#09090B'], // orange-900 / red-900 / zinc-950
   fallen_angel: ['#2E1065', '#581C87', '#09090B'], // violet-950 / purple-900 / zinc-950
+  gold_griffin: ['#78350F', '#713F12', '#09090B'], // amber-900 / yellow-900 / zinc-950
 };
 
 const ROOT = process.cwd();

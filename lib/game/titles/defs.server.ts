@@ -2953,12 +2953,6 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "어려움"
  },
  {
-  code: "cbt_2026",
-  cat: "헌정",
-  cond: "CBT 참가",
-  diff: "한정"
- },
- {
   code: "fire_and_ice",
   cat: "아이템 발동",
   cond: "용암을 가둔 대검 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 장착 중인 동안",

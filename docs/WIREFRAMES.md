@@ -339,7 +339,7 @@ grow `raid/page.tsx` · `RaidSlots` · `RaidSessionCard` · `[sessionId]/page.ts
 ```
 
 - grow 구조 동일: 3슬롯(open이 앞에서 채움, 나머지 ＋개설), 일일 `N/cap`(소진 시 개설 버튼 비활성), 종료 목록
-- 개설 = **BossPickModal**: 보스 5종 그리드 → 선택 시 보스 스프라이트·**스토리**(grow `bosses.story`) → `💎 1,000 지불하고 개설`(BALANCE §5.1) → `/raid/{id}` 이동. "6시간 레이드를 엽니다" 문구 그대로
+- 개설 = **BossPickModal**: 보스 6종 그리드 → 선택 시 보스 스프라이트·**스토리**(grow `bosses.story`) → `💎 1,000 지불하고 개설`(BALANCE §5.1) → `/raid/{id}` 이동. "6시간 레이드를 엽니다" 문구 그대로
 - 종료 목록 보상 표기: grow `+보급권 N` → **`+보급 상자 N`**
 - 진행 슬롯의 "내 순위"(totalDamage) = **표시용만**(보상 가중 아님, GDD §3.5)
 

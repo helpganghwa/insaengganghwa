@@ -77,7 +77,7 @@ export default async function TitlesPage() {
 
   // 판정이 아직 없는 칭호(PENDING)는 **보유하지 않았다면** 목록에서 뺀다 — 목록에 있으면
   // "아직 못 얻은 것"과 구분되지 않은 채 분모에 들어가, 발견 게이지가 채워질 수 없게 된다.
-  // 보유분(선발대 등)은 그대로 보인다(isHiddenPendingTitle 주석).
+  // 이벤트 훅 등으로 이미 보유한 분은 그대로 보인다(isHiddenPendingTitle 주석).
   const rows: TitleRow[] = TITLE_DEFS.filter(
     (d) => !isHiddenPendingTitle(d.code, ledger.has(d.code)),
   ).map((d) => {

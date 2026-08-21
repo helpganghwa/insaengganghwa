@@ -34,9 +34,8 @@ import { PENDING_CODES } from './pending';
  * 둘 다 조건이 가려진 채 이름만 보인다). 그 상태로 분모에 들어가 있어 발견 게이지가 최대
  * 330/356(92.7%)에서 멈췄다 — 채울 수 없는 완성도 표시라 없는 조건을 파게 된다.
  *
- * 보유분은 감추지 않는다. cbt_2026(선발대)은 판정이 아니라 컷오버 지급이라 CBT 참전자는 이미
- * 갖고 있고, 감추면 **보유한 칭호가 목록에서 사라진다**. 지역 보스가 출시되거나 이력 테이블이
- * 붙어 판정이 생기면 PENDING에서 빠지고 그대로 목록에 나타난다.
+ * 보유분은 감추지 않는다 — 이벤트 훅 지급 등으로 이미 보유한 칭호를 감추면 **보유한 칭호가
+ * 목록에서 사라진다**. 판정이 생기면 PENDING에서 빠지고 그대로 목록에 나타난다.
  */
 export function isHiddenPendingTitle(code: string, owned: boolean): boolean {
   return !owned && PENDING_CODES.has(code);
@@ -407,7 +406,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              count(distinct ra.raid_id) filter (where r.boss_code='dragon_west')::int as r_volcano,
              count(distinct ra.raid_id) filter (where r.boss_code='slime_king')::int as r_swamp,
              count(distinct ra.raid_id) filter (where r.boss_code='orc_chief')::int as r_orc,
-             count(distinct ra.raid_id) filter (where r.boss_code='fallen_angel')::int as r_fallen
+             count(distinct ra.raid_id) filter (where r.boss_code='fallen_angel')::int as r_fallen,
+             count(distinct ra.raid_id) filter (where r.boss_code='stone_golem')::int as r_temple,
+             count(distinct ra.raid_id) filter (where r.boss_code='gold_griffin')::int as r_kingdom
       from raid_attacks ra join raids r on r.id=ra.raid_id
       where ra.user_id=${u} and r.server_id=${s}
     `),
@@ -725,6 +726,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     m_top10: n(me.top10), m_last: n(me.last_place), m_second_last: n(me.second_last), m_comet: n(me.comet), m_win_gap7: n(me.win_gap7),
     r_joins: n(ra.joins), r_max_dmg: n(ra.max_dmg), r_vanguard: n(ra.vanguard), r_night: n(ra.night),
     r_volcano: n(ra.r_volcano), r_swamp: n(ra.r_swamp), r_orc: n(ra.r_orc), r_fallen: n(ra.r_fallen),
+    r_temple: n(ra.r_temple), r_kingdom: n(ra.r_kingdom),
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
     av_owned: n(av.owned),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
@@ -858,8 +860,10 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   raid_swamp: (m) => m.r_swamp >= 100,
   raid_orc: (m) => m.r_orc >= 100,
   raid_fallen: (m) => m.r_fallen >= 100,
-  // continent_sweep — 조건 "6개 지역" 세계관 유지(사용자 확정) → 신전·왕국 출시까지 PENDING.
-  //   복원 시: 전 보스 참여 min >= 10 (r_volcano·r_swamp·r_orc·r_fallen + 신규 2종).
+  raid_temple: (m) => m.r_temple >= 100, // 신전 보스 = stone_golem(초기 지역 칭호 4종에서 매핑 누락)
+  raid_kingdom: (m) => m.r_kingdom >= 100, // 왕국 보스 = gold_griffin(0168)
+  continent_sweep: (m) =>
+    Math.min(m.r_volcano, m.r_swamp, m.r_orc, m.r_fallen, m.r_temple, m.r_kingdom) >= 10,
   // 아바타
   initiation: (m) => m.av_cnt >= 1 && m.days <= 3,
   rebirth: (m) => m.av_cnt >= 100,

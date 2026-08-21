@@ -24,6 +24,7 @@ export const BOSS_BG_CLASS: Record<RaidBoss, string> = {
   stone_golem: 'from-stone-600 via-stone-800 to-zinc-900',
   dragon_west: 'from-orange-900 via-red-900 to-zinc-950',
   fallen_angel: 'from-violet-950 via-purple-900 to-zinc-950',
+  gold_griffin: 'from-amber-900 via-yellow-900 to-zinc-950',
 };
 
 export function getBossBgClass(code: string): string {
@@ -40,6 +41,7 @@ const BOSS_SHADOW: Record<RaidBoss, string> = {
   stone_golem:  '0 0 16px rgba(168, 162, 158, 0.25)',  // stone
   dragon_west:  '0 0 16px rgba(249, 115, 22, 0.28)',   // orange
   fallen_angel: '0 0 16px rgba(168, 85, 247, 0.25)',   // violet
+  gold_griffin: '0 0 16px rgba(251, 191, 36, 0.28)',   // amber
 };
 
 export function getBossShadow(code: string): string {
@@ -74,6 +76,11 @@ export const BOSS_SPRITES: Record<RaidBoss, BossSpriteEntry> = {
     static: '/sprites/boss/fallen_angel.png',
     apng: '/sprites/boss/fallen_angel__anim.png',
     bg: '/sprites/boss/bg/fallen_angel.png',
+  },
+  gold_griffin: {
+    static: '/sprites/boss/gold_griffin.png',
+    apng: '/sprites/boss/gold_griffin__anim.png',
+    bg: '/sprites/boss/bg/gold_griffin.png',
   },
 };
 

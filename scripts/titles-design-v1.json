@@ -90,9 +90,6 @@
   "melee_champion": {
    "fx": "goldglow"
   },
-  "cbt_2026": {
-   "fx": "staticember"
-  },
   "enhance_200": {
    "fx": "starlight",
    "pt": "stardust"

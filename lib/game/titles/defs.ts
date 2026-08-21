@@ -3161,16 +3161,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "cbt_2026",
-  kind: "tribute",
-  label: "선발대",
-  hidden: true,
-  style: {
-   fx: "staticember",
-   glow: true
-  }
- },
- {
   code: "fire_and_ice",
   kind: "conditional",
   label: "얼음과 불",

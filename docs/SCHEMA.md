@@ -177,7 +177,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 |------|------|------|
 | `id` | bigserial PK | |
 | `host_user_id` | uuid FK→profiles | |
-| `boss_code` | enum(`slime_king`,`orc_chief`,`stone_golem`,`dragon_west`,`fallen_angel`) | 난이도 동일 |
+| `boss_code` | enum(`slime_king`,`orc_chief`,`stone_golem`,`dragon_west`,`fallen_angel`,`gold_griffin`) | 난이도 동일 |
 | `phase1_hp` | bigint NOT NULL | 생성 시 `U(8000,12000)` 고정. phase n = `phase1·1.5^(n-1)` |
 | `share_code` | text UNIQUE NOT NULL | 카톡 공유 링크 |
 | `opened_at` | timestamptz default now() | |

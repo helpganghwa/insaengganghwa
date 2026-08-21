@@ -2988,15 +2988,6 @@
   "diff": "어려움"
  },
  {
-  "code": "cbt_2026",
-  "cat": "헌정",
-  "kind": "헌정",
-  "label": "선발대",
-  "cond": "CBT 참가",
-  "hidden": true,
-  "diff": "한정"
- },
- {
   "code": "fire_and_ice",
   "cat": "아이템 발동",
   "kind": "조건부",
