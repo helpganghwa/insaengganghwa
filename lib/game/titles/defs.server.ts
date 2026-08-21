@@ -317,37 +317,37 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "raid_volcano",
   cat: "레이드",
-  cond: "화산 보스 처치 참여 100회",
+  cond: "화산 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
   code: "raid_temple",
   cat: "레이드",
-  cond: "신전 보스 처치 참여 100회",
+  cond: "신전 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
   code: "raid_swamp",
   cat: "레이드",
-  cond: "늪지대 보스 처치 참여 100회",
+  cond: "늪지대 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
   code: "raid_orc",
   cat: "레이드",
-  cond: "오크 부락 보스 처치 참여 100회",
+  cond: "오크 부락 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
   code: "raid_fallen",
   cat: "레이드",
-  cond: "타락천사 보스 처치 참여 100회",
+  cond: "타락천사 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
   code: "raid_kingdom",
   cat: "레이드",
-  cond: "왕국 보스 처치 참여 100회",
+  cond: "왕국 보스 레이드 참여 100회",
   diff: "어려움"
  },
  {
@@ -795,7 +795,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "continent_sweep",
   cat: "레이드",
-  cond: "6개 지역 보스를 각 10회씩 처치 참여",
+  cond: "6개 지역 보스 레이드에 각 10회씩 참여",
   diff: "어려움"
  },
  {

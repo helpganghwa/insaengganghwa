@@ -16,15 +16,12 @@ import { LocalToggle } from './SettingsControls';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { NicknameRow } from './NicknameRow';
 import { CodeRow } from './CodeRow';
-import { InstallAppButton } from './InstallAppButton';
 import { PushSettings } from './PushSettings';
 import { SupportModal } from './SupportModal';
 import { WithdrawButton } from './WithdrawButton';
 import { IdentityVerifyRow } from './IdentityVerifyRow';
 
-const APP_VERSION = '0.1.0'; // 출시 전 v0
-
-/** 설정 — WIREFRAMES §9. 화면/알림/계정/약관/로그아웃. */
+/** 설정 — WIREFRAMES §9. 알림/서버/계정/가이드/약관/로그아웃. */
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
@@ -137,6 +134,10 @@ export default async function SettingsPage() {
         )}
       </Section>
 
+      <Section title="가이드">
+        <SettingLink href="/wiki" label="공식 위키" hard />
+      </Section>
+
       <Section title="약관 / 문의">
         <SettingLink href="/legal/terms" label="이용약관" />
         <Divider />
@@ -146,8 +147,6 @@ export default async function SettingsPage() {
         <Divider />
         <SettingLink href="/legal/youth" label="청소년보호정책" />
         <Divider />
-        <SettingLink href="/wiki" label="공식 위키" hard />
-        <Divider />
         <SettingLink href="/probability" label="확률 공시" />
         <Divider />
         <SupportModal
@@ -155,14 +154,6 @@ export default async function SettingsPage() {
           publicCode={p?.publicCode ?? '------'}
           serverName={serverName}
         />
-      </Section>
-
-      <Section title="앱 정보">
-        <Row label="버전">
-          <span className="text-sm text-zinc-500">insaengganghwa v{APP_VERSION}</span>
-        </Row>
-        <Divider />
-        <InstallAppButton />
       </Section>
 
       <form action={signOut}>
