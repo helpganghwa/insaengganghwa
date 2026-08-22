@@ -463,8 +463,7 @@ export function WorldMapView({
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
-  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 이동 팝업 위에 뜨므로 stacked.
-  const gate = useDiamondGate({ stacked: true });
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceProp?.zoneId ?? null);
   // 이동 쿨타임 — 서버가 준 ready 시각을 클라에서 1초 틱으로 카운트다운(보석 단축 시 즉시 해제).
@@ -752,7 +751,7 @@ export function WorldMapView({
         setMoveLock(prevLock);
         if (cost > 0) optimisticAdjust(BigInt(cost));
         // 부족(레이스)은 충전 유도 팝업(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost || undefined, { stacked: false }); return; } // 이동 팝업은 이미 닫힘
+        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost || undefined); return; }
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({
@@ -775,7 +774,7 @@ export function WorldMapView({
         setReadyAt(prevReady);
         optimisticAdjust(BigInt(cost));
         // 부족(레이스)은 충전 유도 팝업(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost, { stacked: false }); return; } // 이동 팝업은 이미 닫힘
+        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost); return; }
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });

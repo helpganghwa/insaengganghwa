@@ -17,14 +17,11 @@ import { useDiamondActions, useDiamondValue } from '@/components/DiamondContext'
  */
 export function DiamondShortfallModal({
   need,
-  stacked = false,
   onClose,
   onCharge,
 }: {
   /** 필요 다이아 — null이면 수치 없는 일반 안내(자동 강화 시작 등 필요액이 가변인 곳). */
   need: bigint | null;
-  /** 다른 팝업 위에 뜰 때(닉변·아바타 확인 팝업 등) — ModalShell stacked 위임. */
-  stacked?: boolean;
   onClose: () => void;
   /** 기본은 /shop?tab=charge 라우팅. 상점 내부처럼 탭 전환으로 처리할 곳만 override. */
   onCharge?: () => void;
@@ -35,16 +32,10 @@ export function DiamondShortfallModal({
   const lack = need !== null && need > have ? need - have : 0n;
   const fmt = (v: bigint) => Number(v).toLocaleString('ko-KR');
   return (
-    // 불투명 패널 필수 — stacked 배경(bg-black/25)이 옅어 패널이 없으면 아래 모달 텍스트와
-    // 겹쳐 보인다(2026-08-22 스크린샷 제보). 제목·버튼까지 패널 안에 담고 내부 카드는 bare로.
-    <ModalShell
-      onClose={onClose}
-      label="다이아 부족 안내"
-      stacked={stacked}
-      className="w-full max-w-[300px] rounded-2xl border border-zinc-700/70 bg-zinc-950 p-4 shadow-2xl"
-    >
+    // 공통 팝업 표준형 그대로(사용자 확정) — 중첩 시 겹침은 ModalShell이 항상 온전한 dim을
+    // 깔면서 해소된다(뒤에 뜬 팝업의 dim이 이전 팝업을 덮는다).
+    <ModalShell onClose={onClose} label="다이아 부족 안내">
       <ModalLayout
-        bare
         icon={<span className="text-3xl">💎</span>}
         title="다이아가 부족합니다"
         subtitle={
@@ -91,16 +82,15 @@ export function DiamondShortfallModal({
  *   {gate.modal}                              // JSX에 동봉
  * 서버가 INSUFFICIENT를 반환한 레이스에는 gate.open(cost)로 같은 팝업을 띄운다.
  */
-export function useDiamondGate(opts?: { stacked?: boolean; onCharge?: () => void }): {
+export function useDiamondGate(opts?: { onCharge?: () => void }): {
   /** 충분하면 true. 부족하면 팝업을 열고 false. 잔액 미주입(초기 로드 창)이면 true —
       0 오탐으로 충분한 유저에게 부족 팝업을 띄우지 않는다(서버가 최종 판정, 적대 검수). */
   ensure: (cost: bigint | number) => boolean;
-  /** 사전 체크 없이 팝업만(서버 거절 응답·가변 비용 안내). cost 생략 시 수치 없는 안내.
-      두 번째 인자로 stacked를 호출 단위 override — 호스트 팝업이 이미 닫힌 레이스 경로 등. */
-  open: (cost?: bigint | number, o?: { stacked?: boolean }) => void;
+  /** 사전 체크 없이 팝업만(서버 거절 응답·가변 비용 안내). cost 생략 시 수치 없는 안내. */
+  open: (cost?: bigint | number) => void;
   modal: ReactNode;
 } {
-  const [st, setSt] = useState<{ need: bigint | null; stacked: boolean } | null>(null);
+  const [st, setSt] = useState<{ need: bigint | null } | null>(null);
   const { get } = useDiamondActions();
   const toBig = (cost: bigint | number) =>
     typeof cost === 'bigint' ? cost : BigInt(Math.max(0, Math.ceil(cost)));
@@ -108,13 +98,12 @@ export function useDiamondGate(opts?: { stacked?: boolean; onCharge?: () => void
     const cur = get();
     const c = toBig(cost);
     if (cur === null || cur >= c) return true;
-    setSt({ need: c, stacked: opts?.stacked ?? false });
+    setSt({ need: c });
     return false;
   };
-  const open = (cost?: bigint | number, o?: { stacked?: boolean }) =>
-    setSt({ need: cost === undefined ? null : toBig(cost), stacked: o?.stacked ?? opts?.stacked ?? false });
+  const open = (cost?: bigint | number) => setSt({ need: cost === undefined ? null : toBig(cost) });
   const modal = st ? (
-    <DiamondShortfallModal need={st.need} stacked={st.stacked} onCharge={opts?.onCharge} onClose={() => setSt(null)} />
+    <DiamondShortfallModal need={st.need} onCharge={opts?.onCharge} onClose={() => setSt(null)} />
   ) : null;
   return { ensure, open, modal };
 }

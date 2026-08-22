@@ -273,8 +273,7 @@ export function RaidSlots({
   }, [confirm]);
 
   const cells = Array.from({ length: slots }, (_, i) => cellsIn[i] ?? null);
-  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 소환 팝업 위에 뜨므로 stacked.
-  const gate = useDiamondGate({ stacked: true });
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {

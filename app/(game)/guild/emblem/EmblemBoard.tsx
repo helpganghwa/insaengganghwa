@@ -45,8 +45,7 @@ export function EmblemBoard({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
-  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 생성 팝업 위에 뜨므로 stacked.
-  const gate = useDiamondGate({ stacked: true });
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const [pending, start] = useTransition();
 
   const [list, setList] = useState(emblems);
@@ -170,7 +169,7 @@ export function EmblemBoard({
         }
         setGenPending(false);
         // 부족(레이스)은 충전 유도 팝업(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(GUILD_EMBLEM_REROLL_COST_DIAMOND, { stacked: false }); // 생성 팝업은 이미 닫힘
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(GUILD_EMBLEM_REROLL_COST_DIAMOND);
         else showError(guildErrMsg(r.code ?? 'UNKNOWN'));
       } else {
         setNotice({

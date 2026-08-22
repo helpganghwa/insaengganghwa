@@ -32,8 +32,7 @@ export function NicknameChangeModal({
   diamond: string;
 }) {
   const { showHeaderToast } = useResourceToast();
-  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 이 모달 위에 뜨므로 stacked.
-  const gate = useDiamondGate({ stacked: true });
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const [next, setNext] = useState(currentNickname);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

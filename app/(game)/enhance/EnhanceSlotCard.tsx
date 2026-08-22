@@ -669,7 +669,7 @@ export function EnhanceSlotCard({
   const startAuto = (cfg: AutoConfig) => {
     if (pending || attempting || flash || autoResult || activeJob.jobId.startsWith('optimistic-')) return;
     const bal = Number(diamond) || 0;
-    if (bal < 1) { gate.open(undefined, { stacked: true }); return; } // 잔액 0 — 자동 설정 모달 위(stacked)
+    if (bal < 1) { gate.open(); return; } // 잔액 0 — 충전 유도 팝업
     let b = cfg.budget;
     if (b < 1) { showError('다이아 예산을 입력하세요.'); return; }
     // 예산은 보유량을 넘지 못함(넘겨도 서버 walletTrySpend가 insufficient로 안전 정지하지만 UX상 캡).

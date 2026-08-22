@@ -42,6 +42,8 @@ export function ModalShell({
    * 다른 모달 **위에** 겹쳐 뜨는 경우(주로 확인 팝업). 아래 모달이 이미 배경을 어둡게·
    * 흐리게 하고 있으므로 여기서 또 깔면 두 겹이 되어 과하게 어두워진다. 살짝만 덧댄다.
    */
+  /** (중첩 표시용 잔여 플래그 — 백드롭은 항상 온전한 dim. 2026-08-22 사용자 확정: 나중에 뜬
+      공통 팝업이 dim 레이어를 포함해 이전 팝업 위에 쌓인다.) */
   stacked?: boolean;
   /**
    * 위에 다른 모달이 겹친 동안 **뒤로 물러난** 상태. 축소·반투명으로 내려앉아 위 팝업과
@@ -96,9 +98,7 @@ export function ModalShell({
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex justify-center ${alignCls} p-4 ${
-        stacked ? 'bg-black/25' : 'bg-black/60 backdrop-blur-sm'
-      }`}
+      className={`fixed inset-0 z-50 flex justify-center ${alignCls} bg-black/60 p-4 backdrop-blur-sm`}
       onClick={onClose}
     >
       <div
