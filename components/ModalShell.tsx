@@ -108,7 +108,9 @@ export function ModalShell({
         aria-label={label}
         aria-hidden={receded || undefined}
         tabIndex={-1}
-        className={`outline-none transition-[transform,opacity,filter] duration-150 ${
+        // break-keep: 한국어 어절 중간 꺾임 방지 / [text-wrap:pretty]: 마지막 한 글자만
+        // 다음 줄로 넘어가는 고아 줄 방지(상속) / overflow-wrap: 긴 영문·URL은 강제 개행.
+        className={`break-keep outline-none transition-[transform,opacity,filter] duration-150 [overflow-wrap:anywhere] [text-wrap:pretty] ${
           receded ? 'pointer-events-none scale-[0.94] opacity-35 blur-[1px]' : ''
         } ${className}`}
         onClick={(e) => e.stopPropagation()}

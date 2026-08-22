@@ -84,7 +84,7 @@ export function ModalLayout({
         <div ref={headRef} className="px-1 text-center">
           {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
           {title ? (
-            <h2 className={`text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
+            <h2 className={`text-balance text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
           ) : null}
           {subtitle ? (
             <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">{subtitle}</p>
