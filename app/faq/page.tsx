@@ -111,7 +111,7 @@ export default function FaqPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-white text-zinc-900 dark:bg-black dark:text-zinc-50">
+    <div className="pc-column-edge mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-white text-zinc-900 dark:bg-black dark:text-zinc-50">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -114,7 +114,7 @@ export async function recentPayResultAction(): Promise<{
   if (!u) return { paid: null, verifiedAtIso: null };
   const [rows, prof] = await Promise.all([
     db.execute(sql`
-      select payment_id, product_code, paid_at from iap_orders
+      select portone_order_id as payment_id, product_code, paid_at from iap_orders
       where user_id = ${u}::uuid and status = 'paid' and paid_at > now() - interval '15 minutes'
       order by paid_at desc limit 1
     `) as unknown as Promise<{ payment_id: string; product_code: string; paid_at: Date }[]>,

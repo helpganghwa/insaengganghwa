@@ -157,7 +157,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       {/* 앱 셸 — fixed inset-0로 시각 뷰포트에 정확히 고정(안드 크롬 h-dvh+중첩스크롤
           높이 모호성 제거). 가로는 max-w-390 + mx-auto(width:auto)로 중앙 — w-full(width:100%)을
           주면 left/right-0과 over-constraint돼 좌측 정렬되므로 넣지 않는다(큰 화면 letterbox). */}
-      <div className="fixed inset-0 mx-auto flex max-w-[390px] flex-col shadow-sm">
+      <div className="fixed inset-0 mx-auto flex max-w-[390px] flex-col pc-column-edge">
         <SpritePreloader />
         <SfxUnlock />
         {/* 배경음 — 설정('ig:bgm') 기본 OFF라 켠 기기에서만 소리가 난다. */}

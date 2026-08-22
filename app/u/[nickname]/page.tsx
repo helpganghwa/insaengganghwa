@@ -366,7 +366,7 @@ export default async function PublicProfilePage({
   }
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
+    <main className="pc-column-edge mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
       {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
       <section className="relative h-[250px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {/* GNB 없는 페이지라 뒤로가기 필수(PWA·PC 갇힘 방지) — 닉네임은 중앙이라 좌상단과 충돌 없음. */}

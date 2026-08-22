@@ -82,7 +82,7 @@ export default async function ProbabilityPage() {
   const supplyProbBp = (n: number) => (n > 0 ? Math.round((10000 / n) * 100) / 100 : 0);
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
+    <main className="pc-column-edge mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <BackBar title="확률 공시" />
       <header className="mb-4">
         <h1 className="text-lg font-extrabold">확률 공시</h1>

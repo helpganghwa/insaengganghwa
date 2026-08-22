@@ -398,3 +398,12 @@ html {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* PC 컬럼 경계(2026-08-22 사용자 요청) — 넓은 화면에서 390px 콘텐츠 기둥과 좌우 여백의
+   구분감. box-shadow라 레이아웃 무영향 — 모바일(뷰포트=390)에선 화면 밖이라 보이지 않는다.
+   헤어라인 링(zinc-700대) + 부드러운 낙하 그림자. */
+.pc-column-edge {
+  box-shadow:
+    0 0 0 1px rgb(63 63 70 / 0.5),
+    0 0 44px rgb(0 0 0 / 0.55);
+}

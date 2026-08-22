@@ -71,7 +71,7 @@ export function GoClient() {
 
   if (env === 'checking' || env === 'normal') {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col items-center justify-center gap-3 bg-[#17110c] px-6 text-zinc-200">
+      <main className="pc-column-edge mx-auto flex min-h-dvh w-full max-w-[390px] flex-col items-center justify-center gap-3 bg-[#17110c] px-6 text-zinc-200">
         <div className="animate-pulse text-4xl">⚒️</div>
         <p className="text-[14px] font-bold">인생강화로 이동 중...</p>
         <a href={target} className="text-[13px] text-zinc-500 underline">
@@ -85,7 +85,7 @@ export function GoClient() {
     'w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3.5 text-[15px] font-extrabold text-amber-950 shadow-[0_0_24px_rgba(245,158,11,0.25)] transition active:scale-[0.99]';
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-[#17110c] pb-10 text-zinc-200">
+    <main className="pc-column-edge mx-auto min-h-dvh w-full max-w-[390px] bg-[#17110c] pb-10 text-zinc-200">
       {/* 히어로 — 로그인과 동일한 타이틀 아트(하단 #17110c 페이드 베이킹) */}
       <div
         role="img"

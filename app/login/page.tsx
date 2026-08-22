@@ -80,7 +80,7 @@ export default async function LoginPage({
     !openPreview && ((maint?.active === true && maint.mode === 'cbt_ended') || preOpen);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
+    <div className="pc-column-edge mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
       {/* 풀블리드 히어로 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경). 하단이 #17110c로
           페이드(베이킹)돼 아래 콘텐츠와 seamless. 파일 없으면 다크 플레이스홀더. */}
       {cbtEnded && !reviewLogin ? null : (
