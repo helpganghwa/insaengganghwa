@@ -12,6 +12,7 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ResultNoticeModal } from '@/components/ResultNoticeModal';
+import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotice';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import * as PortOne from '@portone/browser-sdk/v2';
 import { payFailTitle, runCheckout } from '@/app/(game)/shop/checkout';
@@ -260,6 +261,16 @@ export function BattlePassClient({
   const [error, setError] = useState<string | null>(null);
   // 결제·인증 결과 팝업(2026-08-22 사용자 확정) — 복귀 직후 토스트는 놓치기 쉽다.
   const [notice, setNotice] = useState<{ icon?: string; title: string; body?: string } | null>(null);
+  // PWA 복귀 결과 팝업(2026-08-22) — 외부 탭 결제/인증 후 파라미터 없이 돌아오는 환경 대응.
+  usePayResumeNotice({
+    onPaid: ({ productCode }) =>
+      setNotice(
+        productCode.startsWith('bp_')
+          ? { icon: '🎖️', title: '성장패스 구매 완료', body: '프리미엄 보상이 해금되었습니다. 지나온 구간 보상도 함께 받을 수 있어요.' }
+          : { title: '구매 완료', body: '지급이 완료되었습니다. 상점에서 확인해 보세요.' },
+      ),
+    onVerified: () => setNotice({ icon: '✅', title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }),
+  });
   const [claimedKeys, setClaimedKeys] = useState<Set<string>>(new Set());
   const [paying, setPaying] = useState(false);
   const returnHandled = useRef(false);
@@ -298,6 +309,7 @@ export function BattlePassClient({
         setIdentityPrompt(false);
         // refresh 제거(2026-08-20, §11.7) — verifyIdentityAction revalidatePath('/battlepass')
         // 응답 재렌더가 커버. 재구매 통과 판정은 서버가 다시 한다.
+        ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
         setNotice({ icon: '✅', title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
       } else setIdentityErr(r.message);
     } catch (e) {
@@ -324,6 +336,7 @@ export function BattlePassClient({
         if (r.ok) {
           setIdentityPrompt(false);
           // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/battlepass') 응답 재렌더 커버.
+          ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
           setNotice({ icon: '✅', title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
         } else {
           setIdentityErr(r.message);
@@ -352,6 +365,8 @@ export function BattlePassClient({
       return;
     }
     if (returnPaymentId) {
+      // 선-ack — 웹훅 선지급 시 복귀 정산 훅과의 이중 팝업 방지.
+      ackPayResult('pay', returnPaymentId);
       void (async () => {
         const v = await verifyPurchaseAction(returnPaymentId).catch(
           () => ({ status: 'error', code: 'NETWORK' }) as const,
@@ -385,6 +400,7 @@ export function BattlePassClient({
       if (r.ok) {
         // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
         // revalidatePath('/battlepass') 응답 재렌더가 커버.
+        ackPayResult('pay', r.paymentId); // 복귀 정산 훅과 이중 표시 방지
         setNotice({ icon: '🎖️', title: '성장패스 구매 완료', body: '프리미엄 보상이 해금되었습니다. 지나온 구간 보상도 함께 받을 수 있어요.' }); // 결과 팝업(2026-08-22)
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.

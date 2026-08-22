@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -94,4 +98,34 @@ export async function buyBoxAction(productId: string) {
     console.error('[shop.buyBox]', e);
     return { status: 'error', code: 'UNKNOWN' } as const;
   }
+}
+
+/**
+ * 복귀 정산 조회(2026-08-22) — PWA(홈 화면 앱)에선 결제·인증창이 외부 브라우저 탭에서 열려
+ * 리다이렉트 파라미터가 앱 컨텍스트로 돌아오지 않는다(지급은 웹훅이 처리해 잔액만 바뀜).
+ * 복귀(visibilitychange) 시 이 액션으로 최근 15분 내 결과를 조회해 결과 팝업을 띄운다.
+ * 클라는 localStorage ack(paymentId/verifiedAt)로 중복 표시를 막는다.
+ */
+export async function recentPayResultAction(): Promise<{
+  paid: { paymentId: string; productCode: string; paidAtIso: string } | null;
+  verifiedAtIso: string | null;
+}> {
+  const u = await getSessionUserId();
+  if (!u) return { paid: null, verifiedAtIso: null };
+  const [rows, prof] = await Promise.all([
+    db.execute(sql`
+      select payment_id, product_code, paid_at from iap_orders
+      where user_id = ${u}::uuid and status = 'paid' and paid_at > now() - interval '15 minutes'
+      order by paid_at desc limit 1
+    `) as unknown as Promise<{ payment_id: string; product_code: string; paid_at: Date }[]>,
+    db.execute(sql`
+      select identity_verified_at from profiles
+      where id = ${u}::uuid and identity_verified_at > now() - interval '15 minutes'
+    `) as unknown as Promise<{ identity_verified_at: Date }[]>,
+  ]);
+  const paid = rows[0]
+    ? { paymentId: rows[0].payment_id, productCode: rows[0].product_code, paidAtIso: new Date(rows[0].paid_at).toISOString() }
+    : null;
+  const verifiedAtIso = prof[0] ? new Date(prof[0].identity_verified_at).toISOString() : null;
+  return { paid, verifiedAtIso };
 }

@@ -4,6 +4,7 @@ import * as PortOne from '@portone/browser-sdk/v2';
 import { useEffect, useState } from 'react';
 
 import { ResultNoticeModal } from '@/components/ResultNoticeModal';
+import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotice';
 import { verifyIdentityAction } from './identity-actions';
 
 /**
@@ -23,6 +24,15 @@ export function IdentityVerifyRow({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(verified);
+  // 결과 팝업(2026-08-22 사용자 확정) — 리다이렉트 복귀 후 '완료' 텍스트 전환만으론 놓친다.
+  const [notice, setNotice] = useState(false);
+  // PWA 복귀(외부 탭 인증) 대응 — 파라미터 없이 돌아와도 서버 조회로 완료 팝업.
+  usePayResumeNotice({
+    onVerified: () => {
+      setDone(true);
+      setNotice(true);
+    },
+  });
 
   // 모바일 리다이렉트 복귀 — URL의 identityVerificationId를 검증한다.
   useEffect(() => {
@@ -40,6 +50,7 @@ export function IdentityVerifyRow({
         setBusy(false);
         if (r.ok) {
           setDone(true);
+          ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
           setNotice(true); // 결과 팝업(2026-08-22)
           // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
         } else setErr(r.message);
@@ -50,9 +61,6 @@ export function IdentityVerifyRow({
         setErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
       });
   }, []);
-
-  // 결과 팝업(2026-08-22 사용자 확정) — 리다이렉트 복귀 후 '완료' 텍스트 전환만으론 놓친다.
-  const [notice, setNotice] = useState(false);
 
   const start = async () => {
     if (!storeId || !channelKey) return;
@@ -79,6 +87,7 @@ export function IdentityVerifyRow({
       setBusy(false);
       if (r.ok) {
         setDone(true);
+        ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
         setNotice(true); // 결과 팝업(2026-08-22)
         // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
       } else setErr(r.message);

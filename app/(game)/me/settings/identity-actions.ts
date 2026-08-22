@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { verifyAndStoreIdentity } from '@/lib/payment/identity';
@@ -12,7 +16,7 @@ import { verifyAndStoreIdentity } from '@/lib/payment/identity';
  */
 export async function verifyIdentityAction(
   identityVerificationId: string,
-): Promise<{ ok: true; isAdult: boolean } | { ok: false; message: string }> {
+): Promise<{ ok: true; isAdult: boolean; verifiedAtIso: string } | { ok: false; message: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false, message: '로그인이 필요합니다.' };
   if (await rateLimited(userId, 'identity'))
@@ -25,5 +29,10 @@ export async function verifyIdentityAction(
   // 인증 유도 모달이 뜨는 결제 화면 2곳 — 클라 refresh 제거(2026-08-20) 명시 커버
   revalidatePath('/shop');
   revalidatePath('/battlepass');
-  return { ok: true, isAdult: r.isAdult };
+  // 저장된 시각을 그대로 반환 — 복귀 정산(recentPayResultAction)의 ack 키와 일치해야
+  // 인라인 성공 팝업과 복귀 팝업이 이중으로 뜨지 않는다(2026-08-22).
+  const ts = (await db.execute(sql`
+    select identity_verified_at from profiles where id = ${userId}::uuid
+  `)) as unknown as { identity_verified_at: Date | null }[];
+  return { ok: true, isAdult: r.isAdult, verifiedAtIso: ts[0]?.identity_verified_at ? new Date(ts[0].identity_verified_at).toISOString() : new Date().toISOString() };
 }

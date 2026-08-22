@@ -8,7 +8,7 @@ import { createOrderAction, verifyPurchaseAction } from './actions';
  *  어느 경로든 최종 지급 권위는 서버(웹훅 + verify) — 이 함수 반환은 UX 표시용.
  */
 export type CheckoutResult =
-  | { ok: true; already: boolean }
+  | { ok: true; already: boolean; paymentId: string }
   | { ok: false; reason: 'cancel' | 'create' | 'verify'; code?: string }
   /** 결제창이 실패로 닫힘(카드 거절·한도·심사 전 미승인 등) — 사유를 유저에게 보여줘야 한다. */
   | { ok: false; reason: 'window'; message: string };
@@ -63,5 +63,5 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
   // 호출부가 "결제 확인 지연" 안내를 하게 한다.
   if (!v) return { ok: false, reason: 'verify', code: 'NETWORK' };
   if (v.status !== 'success') return { ok: false, reason: 'verify', code: v.code };
-  return { ok: true, already: v.already };
+  return { ok: true, already: v.already, paymentId };
 }

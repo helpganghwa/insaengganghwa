@@ -8,6 +8,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamondValue, useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
+import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotice';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -314,6 +315,21 @@ export function ShopTabs({
   const { optimisticAdjust } = useDiamondActions();
   // 상자 구매 부족 → 충전 유도 팝업(2026-08-22). 상점 내부라 라우팅 대신 충전 탭 전환
   // (같은 컴포넌트가 마운트 유지라 ?tab= 딥링크로는 탭이 안 바뀐다).
+  const [payNotice, setPayNotice] = useState<{
+    title: string;
+    body?: string;
+    support?: boolean;
+  } | null>(null);
+  // PWA 복귀 결과 팝업(2026-08-22) — 외부 탭 결제/인증 후 파라미터 없이 돌아오는 환경 대응.
+  usePayResumeNotice({
+    onPaid: ({ productCode }) =>
+      setPayNotice(
+        productCode.startsWith('bp_')
+          ? { title: '성장패스 구매 완료', body: '프리미엄 보상이 해금되었습니다. 성장패스에서 확인해 보세요.' }
+          : { title: '구매 완료', body: '지급이 완료되었습니다. 상단 다이아와 상점 화면에서 확인해 보세요.' },
+      ),
+    onVerified: () => setPayNotice({ title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }),
+  });
   const boxGate = useDiamondGate({ onCharge: () => setTab('charge') });
   const [tab, setTab] = useState<Tab>(initialTab);
   const [paying, setPaying] = useState(false);
@@ -356,6 +372,7 @@ export function ShopTabs({
         setIdentityPrompt(false);
         // refresh 제거(2026-08-20, §11.7) — verifyIdentityAction revalidatePath('/shop')
         // 응답 재렌더가 커버. 재구매 통과 판정은 서버가 다시 한다.
+        ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
         setPayNotice({ title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
       } else setIdentityErr(r.message);
     } catch (e) {
@@ -382,6 +399,7 @@ export function ShopTabs({
         if (r.ok) {
           setIdentityPrompt(false);
           // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/shop') 응답 재렌더 커버.
+          ackPayResult('idv', r.verifiedAtIso); // 복귀 정산 훅과 이중 표시 방지
           setPayNotice({ title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
         } else {
           setIdentityErr(r.message);
@@ -417,6 +435,8 @@ export function ShopTabs({
     if (!returnPaymentId && !returnCode) return;
     returnHandled.current = true;
     window.history.replaceState(null, '', '/shop'); // 쿼리 정리(결제 파라미터 제거)
+    // 선-ack — 웹훅이 이미 지급을 끝낸 경우 복귀 정산 훅이 같은 결제를 또 팝업하는 레이스 방지.
+    if (returnPaymentId) ackPayResult('pay', returnPaymentId);
     if (returnCode) {
       // 실패/취소 — 취소는 조용히, 그 외만 안내. PG 사유(returnMessage)가 오면 그대로 보여준다
       // (예: '승인되지 않은 가맹점'). 일반 문구로 덮으면 PC와 달리 모바일만 원인을 알 수 없다.
@@ -465,11 +485,6 @@ export function ShopTabs({
   }, []);
 
   /** 결제 관련 안내 — 재화가 걸린 메시지는 사라지지 않는 팝업으로 남긴다. */
-  const [payNotice, setPayNotice] = useState<{
-    title: string;
-    body?: string;
-    support?: boolean;
-  } | null>(null);
 
   const soon = () => showHeaderToast({ title: '준비 중입니다' });
   const isLimited = (id: string) => id === FIRST_SPECIAL.id || productPeriod(id) !== null;
@@ -530,6 +545,7 @@ export function ShopTabs({
         if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
         // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
         // revalidatePath('/shop','/') 응답 재렌더가 커버.
+        ackPayResult('pay', r.paymentId); // 복귀 정산 훅과 이중 표시 방지
         setPayNotice({ title: '구매 완료', body: '지급이 완료되었습니다. 상단 다이아와 상점 화면에서 확인해 보세요.' }); // 결과 팝업(2026-08-22)
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
