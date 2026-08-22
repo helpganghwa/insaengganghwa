@@ -35,8 +35,16 @@ export function DiamondShortfallModal({
   const lack = need !== null && need > have ? need - have : 0n;
   const fmt = (v: bigint) => Number(v).toLocaleString('ko-KR');
   return (
-    <ModalShell onClose={onClose} label="다이아 부족 안내" stacked={stacked}>
+    // 불투명 패널 필수 — stacked 배경(bg-black/25)이 옅어 패널이 없으면 아래 모달 텍스트와
+    // 겹쳐 보인다(2026-08-22 스크린샷 제보). 제목·버튼까지 패널 안에 담고 내부 카드는 bare로.
+    <ModalShell
+      onClose={onClose}
+      label="다이아 부족 안내"
+      stacked={stacked}
+      className="w-full max-w-[300px] rounded-2xl border border-zinc-700/70 bg-zinc-950 p-4 shadow-2xl"
+    >
       <ModalLayout
+        bare
         icon={<span className="text-3xl">💎</span>}
         title="다이아가 부족합니다"
         subtitle={
