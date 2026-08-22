@@ -116,11 +116,13 @@ export async function recentPayResultAction(): Promise<{
     db.execute(sql`
       select portone_order_id as payment_id, product_code, paid_at from iap_orders
       where user_id = ${u}::uuid and status = 'paid' and paid_at > now() - interval '15 minutes'
+        and client_notified_at is null
       order by paid_at desc limit 1
     `) as unknown as Promise<{ payment_id: string; product_code: string; paid_at: Date }[]>,
     db.execute(sql`
       select identity_verified_at from profiles
       where id = ${u}::uuid and identity_verified_at > now() - interval '15 minutes'
+        and (identity_notified_at is null or identity_notified_at < identity_verified_at)
     `) as unknown as Promise<{ identity_verified_at: Date }[]>,
   ]);
   const paid = rows[0]
@@ -128,4 +130,24 @@ export async function recentPayResultAction(): Promise<{
     : null;
   const verifiedAtIso = prof[0] ? new Date(prof[0].identity_verified_at).toISOString() : null;
   return { paid, verifiedAtIso };
+}
+
+/**
+ * 결과 안내 확인(ack) — 팝업을 표시한 순간 서버에 기록해 **계정 단위 1회**만 안내한다(0170).
+ * localStorage ack는 같은 컨텍스트의 즉시 중복만 막고, 컨텍스트 간(PWA·모바일웹·PC)은 이것이 막는다.
+ */
+export async function ackPayNoticeAction(input: { paymentId?: string; identity?: boolean }): Promise<void> {
+  const u = await getSessionUserId();
+  if (!u) return;
+  if (input.paymentId) {
+    await db.execute(sql`
+      update iap_orders set client_notified_at = now()
+      where user_id = ${u}::uuid and portone_order_id = ${input.paymentId} and client_notified_at is null
+    `).catch(() => {});
+  }
+  if (input.identity) {
+    await db.execute(sql`
+      update profiles set identity_notified_at = now() where id = ${u}::uuid
+    `).catch(() => {});
+  }
 }

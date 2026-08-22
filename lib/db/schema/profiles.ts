@@ -29,6 +29,8 @@ export const profiles = pgTable('profiles', {
   /** 단일 프리미엄 재화(=보석, BALANCE §6.1). int32 회피 위해 bigint. */
   isAdult: boolean('is_adult').notNull().default(false),
   identityVerifiedAt: timestamp('identity_verified_at', { withTimezone: true }),
+  /** 본인인증 결과 팝업 확인 시각(0170) — 계정 단위 1회 안내. */
+  identityNotifiedAt: timestamp('identity_notified_at', { withTimezone: true }),
   /** 해시만 — 원본 미저장 (REGULATORY). */
   birthYearHash: text('birth_year_hash'),
   /** 본인인증에서 검증된 휴대폰(숫자만, 0143) — 결제 customer.phoneNumber용. 탈퇴 시 파기. */

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import { recentPayResultAction } from '@/app/(game)/shop/actions';
+import { recentPayResultAction, ackPayNoticeAction } from '@/app/(game)/shop/actions';
 
 /**
  * PWA 복귀 결과 팝업 훅(2026-08-22) — 홈 화면 앱에선 결제·본인인증창이 외부 브라우저 탭에서
@@ -26,6 +26,9 @@ export function ackPayResult(kind: 'pay' | 'idv', v: string): void {
   } catch {
     /* noop */
   }
+  // 서버 ack(0170) — 계정 단위 1회 안내. localStorage는 같은 컨텍스트 즉시 중복만 막고,
+  // PWA·모바일웹·PC 컨텍스트 간 중복은 서버 기록이 막는다(2026-08-22 제보). fire-and-forget.
+  void ackPayNoticeAction(kind === 'pay' ? { paymentId: v } : { identity: true }).catch(() => {});
 }
 
 export function usePayResumeNotice(handlers: {

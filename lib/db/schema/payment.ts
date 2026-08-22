@@ -50,6 +50,8 @@ export const iapOrders = pgTable(
     /** 지급 없이 paid 된 주문(특가 중복·미성년 보류, 0108) — 환불 시 재화 회수 스킵 근거. */
     grantSkipped: boolean('grant_skipped').notNull().default(false),
     paidAt: timestamp('paid_at', { withTimezone: true }),
+    /** 결과 팝업 확인 시각(0170) — 계정 단위 1회 안내(컨텍스트별 localStorage 중복 방지). */
+    clientNotifiedAt: timestamp('client_notified_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
