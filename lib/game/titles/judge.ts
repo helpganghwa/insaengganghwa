@@ -226,9 +226,11 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
     // 결제·시간 단축 — 결제(iap_orders)는 서버 무관 **계정 단위**가 의도(결제 테이블에 server_id
     // 없음). pay_*·top_patron 조건 문구도 서버를 언급하지 않는다(감사 M4에서 문구 쪽을 정렬).
+    // 환불 제외(2026-08-22 사용자 확정) — 결제→환불 반복으로 실비용 0에 후원 칭호·결제
+    // 랭킹을 만드는 어뷰징 차단. 기획득 영구 칭호는 원장 원칙상 잔존(어뷰저는 운영 제재).
     () => db.execute(sql`
-      select coalesce((select sum(amount_krw)::bigint from iap_orders where user_id=${u} and status in ('paid','refunded')),0) as pay_sum,
-             (select count(*)::int from iap_orders where user_id=${u} and status in ('paid','refunded')) as pay_cnt,
+      select coalesce((select sum(amount_krw)::bigint from iap_orders where user_id=${u} and status = 'paid'),0) as pay_sum,
+             (select count(*)::int from iap_orders where user_id=${u} and status = 'paid') as pay_cnt,
              coalesce((select sum(reduced_ms)::bigint from gem_time_reductions where user_id=${u} and server_id=${s}),0) as reduced_ms
     `),
     /**
@@ -465,7 +467,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 재화·결제 순위(판정 2차) — 다이아 현재값·서버 순위, 누적 결제 순위
     () => db.execute(sql`
       with sums as (select io.user_id, sum(io.amount_krw) t from iap_orders io
-                    where io.status in ('paid','refunded') group by 1)
+                    where io.status = 'paid' group by 1) -- 환불 제외(2026-08-22)
       select coalesce(c.diamond::bigint,0) as dia,
              case when c.user_id is null then 9999
                   else (select count(*)+1 from characters c2

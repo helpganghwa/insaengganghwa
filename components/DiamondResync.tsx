@@ -26,7 +26,12 @@ export function DiamondResync() {
         .catch(() => {}); // 실패는 침묵 — 다음 복귀 때 재시도
     };
     document.addEventListener('visibilitychange', sync);
-    return () => document.removeEventListener('visibilitychange', sync);
+    // 나란히 띄운 PC 창은 포커스만 오가고 visible 전환이 없다 — focus로도 동기화(같은 스로틀).
+    window.addEventListener('focus', sync);
+    return () => {
+      document.removeEventListener('visibilitychange', sync);
+      window.removeEventListener('focus', sync);
+    };
     // setBase는 영구 안정 참조.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
