@@ -356,6 +356,7 @@ export function ShopTabs({
         setIdentityPrompt(false);
         // refresh 제거(2026-08-20, §11.7) — verifyIdentityAction revalidatePath('/shop')
         // 응답 재렌더가 커버. 재구매 통과 판정은 서버가 다시 한다.
+        setPayNotice({ title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
       } else setIdentityErr(r.message);
     } catch (e) {
       setIdentityBusy(false);
@@ -381,6 +382,7 @@ export function ShopTabs({
         if (r.ok) {
           setIdentityPrompt(false);
           // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/shop') 응답 재렌더 커버.
+          setPayNotice({ title: '본인인증 완료', body: '인증이 정상 처리되었어요. 이제 결제를 진행할 수 있습니다.' }); // 결과 팝업(2026-08-22)
         } else {
           setIdentityErr(r.message);
           setIdentityPrompt(true);
@@ -419,7 +421,8 @@ export function ShopTabs({
       // 실패/취소 — 취소는 조용히, 그 외만 안내. PG 사유(returnMessage)가 오면 그대로 보여준다
       // (예: '승인되지 않은 가맹점'). 일반 문구로 덮으면 PC와 달리 모바일만 원인을 알 수 없다.
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
-        showHeaderToast({ title: payFailTitle(returnMessage) });
+        // 결과 팝업(2026-08-22 사용자 확정) — 복귀 직후 토스트는 리렌더와 겹쳐 놓친다.
+        setPayNotice({ title: payFailTitle(returnMessage) });
       }
       return;
     }
@@ -433,7 +436,13 @@ export function ShopTabs({
         if (v.status === 'success') {
           // refresh 제거(2026-08-20, §11.7) — verifyPurchaseAction revalidatePath('/shop','/')
           // 응답 재렌더가 다이아·상자·프리미엄 갱신을 커버.
-          showHeaderToast({ title: '구매 완료' });
+          // 결과 팝업(2026-08-22 사용자 확정) — 사라지는 토스트 대신 명시적으로 닫는 안내.
+          setPayNotice({
+            title: '구매 완료',
+            body: v.already
+              ? '이미 지급이 완료된 결제예요.'
+              : '지급이 완료되었습니다. 상단 다이아와 상점 화면에서 확인해 보세요.',
+          });
         } else if (v.code === 'NETWORK') {
           // 돈은 나갔는데 결과가 안 보이는 상황 — 사라지는 토스트로 알리면 놓치고 문의로 온다.
           setPayNotice({
@@ -458,7 +467,7 @@ export function ShopTabs({
   /** 결제 관련 안내 — 재화가 걸린 메시지는 사라지지 않는 팝업으로 남긴다. */
   const [payNotice, setPayNotice] = useState<{
     title: string;
-    body: string;
+    body?: string;
     support?: boolean;
   } | null>(null);
 
@@ -521,7 +530,7 @@ export function ShopTabs({
         if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
         // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
         // revalidatePath('/shop','/') 응답 재렌더가 커버.
-        showHeaderToast({ title: '구매 완료' });
+        setPayNotice({ title: '구매 완료', body: '지급이 완료되었습니다. 상단 다이아와 상점 화면에서 확인해 보세요.' }); // 결과 팝업(2026-08-22)
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
       } else if (r.reason === 'window') {

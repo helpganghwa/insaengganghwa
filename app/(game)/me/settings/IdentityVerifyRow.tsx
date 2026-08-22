@@ -3,6 +3,7 @@
 import * as PortOne from '@portone/browser-sdk/v2';
 import { useEffect, useState } from 'react';
 
+import { ResultNoticeModal } from '@/components/ResultNoticeModal';
 import { verifyIdentityAction } from './identity-actions';
 
 /**
@@ -39,6 +40,7 @@ export function IdentityVerifyRow({
         setBusy(false);
         if (r.ok) {
           setDone(true);
+          setNotice(true); // 결과 팝업(2026-08-22)
           // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
         } else setErr(r.message);
       })
@@ -48,6 +50,9 @@ export function IdentityVerifyRow({
         setErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
       });
   }, []);
+
+  // 결과 팝업(2026-08-22 사용자 확정) — 리다이렉트 복귀 후 '완료' 텍스트 전환만으론 놓친다.
+  const [notice, setNotice] = useState(false);
 
   const start = async () => {
     if (!storeId || !channelKey) return;
@@ -74,6 +79,7 @@ export function IdentityVerifyRow({
       setBusy(false);
       if (r.ok) {
         setDone(true);
+        setNotice(true); // 결과 팝업(2026-08-22)
         // refresh 제거(2026-08-20, §11.7) — 액션 revalidatePath('/me/settings') 응답 재렌더 커버.
       } else setErr(r.message);
     } catch (e) {
@@ -82,7 +88,20 @@ export function IdentityVerifyRow({
     }
   };
 
-  if (done) return <span className="text-sm text-emerald-600">완료</span>;
+  if (done)
+    return (
+      <>
+        <span className="text-sm text-emerald-600">완료</span>
+        {notice ? (
+          <ResultNoticeModal
+            icon="✅"
+            title="본인인증 완료"
+            body="인증이 정상 처리되었습니다."
+            onClose={() => setNotice(false)}
+          />
+        ) : null}
+      </>
+    );
   if (!storeId || !channelKey)
     return <span className="text-sm text-zinc-500">준비 중</span>;
 
