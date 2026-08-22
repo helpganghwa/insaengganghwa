@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -199,6 +200,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ClientErrorReporter />
         {/* 카카오 비즈보드 픽셀 — 광고 전환(방문·회원가입·로그인). 트랙 ID 미설정이면 no-op. */}
         <KakaoPixel />
+        {/* Google Ads 태그(gtag.js) — 광고 전환 측정(AW-18402269363, 2026-08-22 캠페인 등록). */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=AW-18402269363" strategy="afterInteractive" />
+        <Script id="gtag-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-18402269363');
+        `}</Script>
       </body>
     </html>
   );
