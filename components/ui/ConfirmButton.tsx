@@ -21,8 +21,9 @@ export function ConfirmButton({
   children,
 }: {
   onConfirm: () => void;
-  /** 무장되는 순간 1회(무장 시점 랜덤 문구 선택 등). */
-  onArm?: () => void;
+  /** 무장되는 순간 1회(무장 시점 랜덤 문구 선택 등). false 반환 시 무장 자체를 취소 —
+      다이아 부족 사전 체크가 컨펌 진입을 막고 팝업을 띄우는 용도(2026-08-22). */
+  onArm?: () => void | boolean;
   disabled?: boolean;
   seconds?: number;
   className: string;
@@ -48,7 +49,7 @@ export function ConfirmButton({
           setLeft(0);
           onConfirm();
         } else {
-          onArm?.();
+          if (onArm?.() === false) return;
           setLeft(seconds);
         }
       }}

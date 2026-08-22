@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamondValue, useDiamondActions } from '@/components/DiamondContext';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -311,6 +312,9 @@ export function ShopTabs({
   const { showHeaderToast } = useResourceToast();
   const diamond = useDiamondValue();
   const { optimisticAdjust } = useDiamondActions();
+  // 상자 구매 부족 → 충전 유도 팝업(2026-08-22). 상점 내부라 라우팅 대신 충전 탭 전환
+  // (같은 컴포넌트가 마운트 유지라 ?tab= 딥링크로는 탭이 안 바뀐다).
+  const boxGate = useDiamondGate({ onCharge: () => setTab('charge') });
   const [tab, setTab] = useState<Tab>(initialTab);
   const [paying, setPaying] = useState(false);
   const [free, setFree] = useState(initialFree);
@@ -563,7 +567,7 @@ export function ShopTabs({
       return;
     }
     if (diamond < BigInt(cost)) {
-      showHeaderToast({ icon: '💎', title: '다이아가 부족합니다' });
+      boxGate.open(cost); // 토스트 → 충전 유도 팝업(2026-08-22, 이미 충전 화면과 같은 탭 셸)
       return;
     }
     optimisticAdjust(-BigInt(cost));
@@ -582,12 +586,8 @@ export function ShopTabs({
             n.delete(productId);
             return n;
           }); // 복원
-          showHeaderToast({
-            icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : undefined,
-            title:
-              commonErrTitle(r.code) ??
-              (r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패'),
-          });
+          if (r.code === 'INSUFFICIENT_DIAMOND') boxGate.open(cost); // 레이스 — 팝업 재사용
+          else showHeaderToast({ title: commonErrTitle(r.code) ?? '구매 실패' });
         }
       }
     });
@@ -853,6 +853,7 @@ export function ShopTabs({
           </ModalLayout>
         </ModalShell>
       ) : null}
+      {boxGate.modal}
     </div>
   );
 }

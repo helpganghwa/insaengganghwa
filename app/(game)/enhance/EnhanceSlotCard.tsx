@@ -17,11 +17,11 @@ import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
 import { useDiamondActions } from '@/components/DiamondContext';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { useHeaderStatsActions } from '@/components/HeaderStatsContext';
 import { sounds } from '@/lib/game/sound';
 
@@ -222,6 +222,7 @@ export function EnhanceSlotCard({
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(단축·자동 공용)
   const { applyEnhanceDelta } = useHeaderStatsActions();
   const [pending, startTransition] = useTransition();
   // 매초 리렌더 제거(2026-08-20 감사 B) — 초 단위 표시(게이지·확률·남은시간·단축비용·경과)는
@@ -529,9 +530,13 @@ export function EnhanceSlotCard({
   const doReduce = () => {
     // 클릭 시점 재계산(감사 B) — 매초 state 대신 실행 순간의 실제 잔여시간 기준(더 정확).
     const instantCost = calcInstantCost(Date.now());
-    const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
     // 등록 확정 전(낙관적 잡)엔 보석 단축 불가 — 임시 id가 서버 BigInt로 새어 크래시하던 것 방지.
-    if (pending || !instantCost || !canAfford || activeJob.jobId.startsWith('optimistic-')) return;
+    if (pending || !instantCost || activeJob.jobId.startsWith('optimistic-')) return;
+    // 부족은 disabled가 아니라 충전 유도 팝업(2026-08-22 결제 유도 개편) — 컨펌 진입 전 차단.
+    if (!gate.ensure(instantCost)) {
+      setConfirmReduce(false);
+      return;
+    }
     // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
     if (!confirmReduce) {
       setConfirmReduce(true);
@@ -557,7 +562,9 @@ export function EnhanceSlotCard({
       if (r.status === 'error') {
         setOptimisticDone(false);
         adjustDiamond(debit); // 롤백
-        showError(r.message);
+        // 부족(레이스 — 다른 곳에서 소비)은 토스트 대신 같은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(instantCost);
+        else showError(r.message);
       }
       // 성공 시 refresh 불필요(§11.7) — 액션의 revalidateAll이 새 completeAt을 응답 RSC로 실어 온다.
     });
@@ -662,7 +669,7 @@ export function EnhanceSlotCard({
   const startAuto = (cfg: AutoConfig) => {
     if (pending || attempting || flash || autoResult || activeJob.jobId.startsWith('optimistic-')) return;
     const bal = Number(diamond) || 0;
-    if (bal < 1) { showError('보유 다이아가 없어 자동 강화를 시작할 수 없어요.'); return; }
+    if (bal < 1) { gate.open(undefined, { stacked: true }); return; } // 잔액 0 — 자동 설정 모달 위(stacked)
     let b = cfg.budget;
     if (b < 1) { showError('다이아 예산을 입력하세요.'); return; }
     // 예산은 보유량을 넘지 못함(넘겨도 서버 walletTrySpend가 insufficient로 안전 정지하지만 UX상 캡).
@@ -857,14 +864,13 @@ export function EnhanceSlotCard({
             <Ticker>
               {(now) => {
                 const instantCost = calcInstantCost(now);
-                const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
+                // 부족해도 활성 유지(비용 표기 그대로) — 탭 시 doReduce의 게이트가 충전 팝업(2026-08-22).
                 return (
                   <button
                     type="button"
                     disabled={
                       pending ||
                       !instantCost ||
-                      !canAfford ||
                       confirm ||
                       attempting ||
                       !!flash ||
@@ -1090,6 +1096,7 @@ export function EnhanceSlotCard({
           </ModalLayout>
         </ModalShell>
       ) : null}
+      {gate.modal}
     </div>
   );
 }

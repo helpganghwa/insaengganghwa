@@ -7,6 +7,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { NICKNAME_MAX_LEN, NICKNAME_MIN_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { changeNicknameAction } from './actions';
@@ -31,6 +32,8 @@ export function NicknameChangeModal({
   diamond: string;
 }) {
   const { showHeaderToast } = useResourceToast();
+  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 이 모달 위에 뜨므로 stacked.
+  const gate = useDiamondGate({ stacked: true });
   const [next, setNext] = useState(currentNickname);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,18 +48,21 @@ export function NicknameChangeModal({
   if (!open) return null;
   const isFree = changedCount === 0;
   const cost = isFree ? 0 : NICKNAME_CHANGE_COST_DIAMOND;
-  const canAfford = BigInt(diamond || '0') >= BigInt(cost);
   const unchanged = next.trim() === currentNickname.trim();
   const validation = validateNickname(next);
-  const canSubmit = !pending && !unchanged && validation.ok && canAfford;
+  // 부족은 더 이상 비활성 사유가 아님 — 변경 클릭 시 충전 유도 팝업(2026-08-22).
+  const canSubmit = !pending && !unchanged && validation.ok;
   const usedLen = nicknameLen(next.trim());
 
   const submit = () => {
     if (!canSubmit) return;
+    if (cost > 0 && !gate.ensure(cost)) return; // 부족 → 충전 유도 팝업(stacked)
     startTransition(async () => {
       const r = await changeNicknameAction(next);
       if (r.status === 'error') {
-        setErr(r.message);
+        // 부족(레이스)은 팝업, 그 외는 기존 인라인 에러 유지.
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(cost);
+        else setErr(r.message);
         return;
       }
       onClose();
@@ -68,7 +74,8 @@ export function NicknameChangeModal({
 
   // body로 portal — 설정 Section의 isolate(stacking context) 밖으로 빼내 헤더/하단바(z-30) 위에 표시.
   return (
-    <ModalShell onClose={onClose} onSubmit={() => canSubmit && submit()} label="닉네임 변경">
+    <>
+      <ModalShell onClose={onClose} onSubmit={() => canSubmit && submit()} label="닉네임 변경">
       <ModalLayout
         title="닉네임 변경"
         subtitle={
@@ -120,14 +127,12 @@ export function NicknameChangeModal({
           <p className="mt-2 rounded bg-red-50 px-2 py-1.5 text-[11px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
             {err}
           </p>
-        ) : !canAfford && !isFree ? (
-          <p className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-            다이아가 부족합니다 (필요 {NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')})
-          </p>
         ) : null}
 
       </div>
       </ModalLayout>
-    </ModalShell>
+      </ModalShell>
+      {gate.modal}
+    </>
   );
 }

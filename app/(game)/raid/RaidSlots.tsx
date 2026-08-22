@@ -10,6 +10,7 @@ import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -272,12 +273,16 @@ export function RaidSlots({
   }, [confirm]);
 
   const cells = Array.from({ length: slots }, (_, i) => cellsIn[i] ?? null);
+  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 소환 팝업 위에 뜨므로 stacked.
+  const gate = useDiamondGate({ stacked: true });
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {
       const r = await openRaidAction(code, friendShare, guildShare, durationMs);
       if (r.status === 'error') {
-        showError(r.message);
+        // 부족(레이스)은 충전 유도 팝업, 그 외는 기존 토스트(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(RAID_OPEN_COST_DIAMOND);
+        else showError(r.message);
         return;
       }
       // 팝업은 닫지 않고 상세로 이동 — 페이지 전환 시 자연 unmount(전환 중 깜빡임 방지).
@@ -452,6 +457,9 @@ export function RaidSlots({
                     onClick={() => {
                       if (pending) return;
                       // 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 소환(다이아 지불).
+                      // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22) — 3초 컨펌까지
+                      // 갔다가 실패하는 헛걸음 제거.
+                      if (!gate.ensure(RAID_OPEN_COST_DIAMOND)) return;
                       if (!confirm) {
                         setConfirm(true);
                         setConfirmLeft(3);
@@ -529,6 +537,7 @@ export function RaidSlots({
           </ModalLayout>
         </ModalShell>
       ) : null}
+      {gate.modal}
     </>
   );
 }

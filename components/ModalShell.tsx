@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+// 열린 셸의 전역 스택 — Esc/Enter는 **최상단 모달만** 반응한다. 종전엔 셸마다 document
+// keydown을 달아 stacked 팝업(다이아 부족 등)이 떠 있을 때 Esc 한 번에 호스트 팝업까지
+// 같이 닫혔다(입력 중 닉네임 소실 등, 2026-08-22 적대 검수). 마운트 순서 = 시각적 층위
+// (body 포털 뒤 마운트가 위)라 스택 말단 = 최상단.
+const openShells: symbol[] = [];
+
 /**
  * 접근성 모달 셸 — 백드롭(클릭 시 닫힘) + 패널(role=dialog·aria-modal·Esc·마운트 시 포커스).
  *
@@ -53,9 +59,22 @@ export function ModalShell({
   useEffect(() => {
     if (mounted) panelRef.current?.focus();
   }, [mounted]);
+  // 셸 스택 등록 — 키 핸들러의 최상단 판정 근거.
+  const shellId = useRef<symbol | null>(null);
+  if (shellId.current === null) shellId.current = Symbol('modal-shell');
+  useEffect(() => {
+    const id = shellId.current!;
+    openShells.push(id);
+    return () => {
+      const i = openShells.indexOf(id);
+      if (i >= 0) openShells.splice(i, 1);
+    };
+  }, []);
   // Esc 닫기 / Enter 확정 — onClose·onSubmit 최신값만 반영(포커스 재설정과 분리).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 최상단 셸만 키에 반응 — 중첩(stacked) 상태에서 아래 모달의 동시 반응 차단.
+      if (openShells[openShells.length - 1] !== shellId.current) return;
       if (e.key === 'Escape') {
         onClose();
         return;

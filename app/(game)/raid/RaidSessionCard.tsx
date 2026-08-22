@@ -16,6 +16,7 @@ import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { RaidInviteSheet } from './RaidInviteSheet';
 import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
@@ -198,6 +199,8 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
 
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const { showError, showHeaderToast } = useResourceToast();
+  // 다이아 부족 → 충전 유도 팝업(2026-08-22) — 보석 공격 컨펌 진입 사전 체크 + 서버 거절 재사용.
+  const gate = useDiamondGate();
   const over = useDeadline(v.expireAtIso); // 로직용(공격 가능 여부) — 표시는 CountdownBadge가 담당
 
   const boss = RAID_BOSSES[v.bossCode];
@@ -384,7 +387,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       });
       if (r.status !== 'success') {
         onFail?.();
-        showError(r.message);
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22) — 보석 공격 경로만 이 코드를 반환한다.
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(raidExtraAttackCost(v.myExtraAttacks + 1));
+        else showError(r.message);
         setAttacking(false);
         setAttackLore(null);
         return;
@@ -687,8 +692,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               <div className="relative">
                 <ConfirmButton
                   onArm={() => {
-                    haptic.tap();
                     const cost = raidExtraAttackCost(v.myExtraAttacks + 1);
+                    // 부족이면 무장하지 않고 충전 유도 팝업(2026-08-22).
+                    if (!gate.ensure(cost)) return false;
+                    haptic.tap();
                     gemLoreRef.current = pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`);
                   }}
                   onConfirm={handleGemAttack}
@@ -837,6 +844,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           onKakaoShare={handleKakaoShare}
         />
       ) : null}
+      {gate.modal}
     </section>
   );
 }

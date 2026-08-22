@@ -8,6 +8,7 @@ import { Ticker } from '@/components/Ticker';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamondGate } from '@/components/DiamondGate';
 import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -58,6 +59,7 @@ export function CreateProfileForm({
   const router = useRouter();
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { showHeaderToast, showError } = useResourceToast();
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const [gender, setGender] = useState<'female' | 'male'>('female');
   /** 생성 확인 팝업 — 종전엔 3초 재탭 컨펌이라 안내를 넣을 자리가 없었다(2026-08-02). */
   const [confirm, setConfirm] = useState(false);
@@ -100,15 +102,19 @@ export function CreateProfileForm({
   const allEquipped = equipped.every((e) => e.code);
   const enough = balance >= BigInt(price);
   const inProgress = queue !== null;
-  const disabled = pending || inProgress || !allEquipped || !enough;
+  // 부족(enough)은 더 이상 disabled 사유가 아님 — 클릭 시 충전 유도 팝업(2026-08-22).
+  const disabled = pending || inProgress || !allEquipped;
 
   const onClick = () => {
     if (disabled) return;
     // 요청 전 선검사 — 보유 상한 초과 시 즉시 안내(서버 왕복·confirm 없이).
+    // ⚠ 상한 검사가 부족 게이트보다 먼저 — 생성 자체가 불가능한 유저를 충전으로 유도하지
+    // 않는다(적대 검수).
     if (profileCount >= PROFILE_MAX) {
       showError(`프로필은 최대 ${PROFILE_MAX}개까지 보유할 수 있어요`);
       return;
     }
+    if (!gate.ensure(price)) return; // 부족 → 충전 유도 팝업
     setConfirm(true);
   };
 
@@ -125,7 +131,9 @@ export function CreateProfileForm({
       if (r.status === 'error') {
         adjustDiamond(BigInt(price));
         setSubmitted(false);
-        showError(r.message);
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22), 그 외 기존 토스트.
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(price);
+        else showError(r.message);
         return;
       }
       showHeaderToast({ title: '아바타 생성 중', detail: '약 10분 내외 소요' });
@@ -277,13 +285,7 @@ export function CreateProfileForm({
             : 'bg-violet-600 text-white'
         }`}
       >
-        {pending
-          ? '요청 중…'
-          : !allEquipped
-            ? '장비 3종 장착 필요'
-            : !enough
-              ? '다이아 부족'
-              : '아바타 생성'}
+        {pending ? '요청 중…' : !allEquipped ? '장비 3종 장착 필요' : '아바타 생성'}
       </button>
 
       {/* 확인 팝업 — 차감·소요시간·환불 조건을 한자리에서 알리고 확정받는다. */}
@@ -326,6 +328,7 @@ export function CreateProfileForm({
           </ModalLayout>
         </ModalShell>
       ) : null}
+      {gate.modal}
     </div>
   );
 }

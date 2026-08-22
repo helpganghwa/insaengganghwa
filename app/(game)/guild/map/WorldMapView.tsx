@@ -9,6 +9,7 @@ import { Ticker } from '@/components/Ticker';
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
@@ -462,6 +463,8 @@ export function WorldMapView({
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
+  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 이동 팝업 위에 뜨므로 stacked.
+  const gate = useDiamondGate({ stacked: true });
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceProp?.zoneId ?? null);
   // 이동 쿨타임 — 서버가 준 ready 시각을 클라에서 1초 틱으로 카운트다운(보석 단축 시 즉시 해제).
@@ -748,6 +751,8 @@ export function WorldMapView({
         setReadyAt(prevReady);
         setMoveLock(prevLock);
         if (cost > 0) optimisticAdjust(BigInt(cost));
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost || undefined, { stacked: false }); return; } // 이동 팝업은 이미 닫힘
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({
@@ -769,6 +774,8 @@ export function WorldMapView({
       if (r.status !== 'success') {
         setReadyAt(prevReady);
         optimisticAdjust(BigInt(cost));
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost, { stacked: false }); return; } // 이동 팝업은 이미 닫힘
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
@@ -1519,6 +1526,8 @@ export function WorldMapView({
                     type="button"
                     onClick={() => {
                       // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
+                      // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22).
+                      if (!gate.ensure(residenceSpeedUpCost(residenceRemainNow()))) return;
                       if (moveConfirm) {
                         speedUpOnly();
                       } else {
@@ -1784,6 +1793,7 @@ export function WorldMapView({
           </ModalLayout>
         </ModalShell>
       )}
+      {gate.modal}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
+import { useDiamondGate } from '@/components/DiamondGate';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   MAX_GUILD_EMBLEMS,
@@ -44,6 +45,8 @@ export function EmblemBoard({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
+  // 다이아 부족 → 충전 유도 팝업(2026-08-22). 생성 팝업 위에 뜨므로 stacked.
+  const gate = useDiamondGate({ stacked: true });
   const [pending, start] = useTransition();
 
   const [list, setList] = useState(emblems);
@@ -127,6 +130,9 @@ export function EmblemBoard({
 
   /** 생성 — 라우트 핸들러 fetch(서버 액션 트랜지션 밖)라 생성 중에도 앱이 안 멈춘다. */
   const generate = async () => {
+    // 부족이면 생성 팝업 유지한 채 충전 유도 팝업(stacked, 2026-08-22). 첫 생성 무료는 통과.
+    const wasFreePre = list.length === 0;
+    if (!wasFreePre && !gate.ensure(GUILD_EMBLEM_REROLL_COST_DIAMOND)) return;
     setGenOpen(false);
     const at = Date.now();
     setGenStartMs(at);
@@ -163,7 +169,9 @@ export function EmblemBoard({
           /* noop */
         }
         setGenPending(false);
-        showError(guildErrMsg(r.code ?? 'UNKNOWN'));
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(GUILD_EMBLEM_REROLL_COST_DIAMOND, { stacked: false }); // 생성 팝업은 이미 닫힘
+        else showError(guildErrMsg(r.code ?? 'UNKNOWN'));
       } else {
         setNotice({
           title: '생성이 지연되고 있어요',
@@ -452,6 +460,7 @@ export function EmblemBoard({
           </ModalLayout>
         </ModalShell>
       ) : null}
+      {gate.modal}
     </div>
   );
 }

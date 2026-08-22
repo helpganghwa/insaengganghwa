@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamondGate } from '@/components/DiamondGate';
 import { useDiamondActions } from '@/components/DiamondContext';
 import {
   GUILD_CREATE_COST_DIAMOND,
@@ -24,6 +25,7 @@ const COST = GUILD_CREATE_COST_DIAMOND.toLocaleString('ko-KR');
 export function CreateGuildForm() {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const { optimisticAdjust } = useDiamondActions();
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const [confirm, setConfirm] = useState(false);
@@ -53,6 +55,8 @@ export function CreateGuildForm() {
     if (pending) return;
     const cleaned = clean(inputRef.current?.value ?? '');
     if (!cleaned) return showError('길드 이름을 입력하세요.');
+    // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22).
+    if (!gate.ensure(GUILD_CREATE_COST_DIAMOND)) return;
     if (!confirm) {
       setConfirmLeft(CONFIRM_SECONDS);
       setConfirm(true);
@@ -64,6 +68,8 @@ export function CreateGuildForm() {
       const r = await createGuildAction(cleaned, emblem);
       if (r.status !== 'success') {
         optimisticAdjust(BigInt(GUILD_CREATE_COST_DIAMOND));
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(GUILD_CREATE_COST_DIAMOND); return; }
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: '길드 생성 완료' });
@@ -129,6 +135,7 @@ export function CreateGuildForm() {
               : `${COST}💎 · 길드 생성`}
         </span>
       </button>
+      {gate.modal}
     </div>
   );
 }

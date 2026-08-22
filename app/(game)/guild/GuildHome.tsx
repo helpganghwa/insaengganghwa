@@ -9,6 +9,7 @@ import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
+import { useDiamondGate } from '@/components/DiamondGate';
 import {
   GUILD_REJOIN_LOCK_HOURS,
   GUILD_DONATIONS_PER_DAY,
@@ -88,6 +89,7 @@ export function GuildHome({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
+  const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(기부, 2026-08-22)
   const [pending, start] = useTransition();
   // 문양 경과초 기준시각 폴백 — pendingAt이 null인 레거시 pending에서도 마운트 시점부터
   // 카운트업(리뷰 지적: tnow 폴백은 매초 0초로 고정됨). 클라 전용 값(Ticker 안에서만 사용).
@@ -217,7 +219,9 @@ export function GuildHome({
         setOptDonations((n) => Math.max(0, n - 1));
         setOptXp((x) => Math.max(0, x - tier.xp));
         if (tier.cost > 0) optimisticAdjust(BigInt(tier.cost));
-        showError(guildErrMsg(r.code));
+        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(tier.cost);
+        else showError(guildErrMsg(r.code));
       }
     });
   };
@@ -376,6 +380,7 @@ export function GuildHome({
                 return (
                   <ConfirmButton
                     key={i}
+                    onArm={() => (gate.ensure(t.cost) ? undefined : false)}
                     onConfirm={() => runDonate(t)}
                     disabled={pending}
                     className="flex items-center justify-center rounded-lg py-1.5 text-[11px] font-bold transition-colors bg-amber-600 text-white"
@@ -542,6 +547,7 @@ export function GuildHome({
             </ModalShell>
           );
         })()}
+      {gate.modal}
     </div>
   );
 }
