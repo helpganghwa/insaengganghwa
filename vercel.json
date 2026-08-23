@@ -97,7 +97,7 @@
     },
     {
       "path": "/api/cron/preopen-cleanup",
-      "schedule": "18,28 1 24 8 *"
+      "schedule": "0,10 1 24 8 *"
     }
   ]
 }
