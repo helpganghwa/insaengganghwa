@@ -18,8 +18,8 @@ import { avatarBox, renderMentionBody as renderBody } from './mentionBody';
  *
  * ⚠ content-visibility:auto 금지(2026-08-24) — 지연 페인트가 모바일 모멘텀 스크롤을 못
  * 따라가 위로 쓸어올릴 때 빈 화면 노출 + 자리높이 보정 점프가 났다(실기기 녹화 확인).
- * 200행 전체를 오픈 시 1회 페인트하는 쪽이 낫고, 원래 목적이던 "화면 밖 칭호 무한
- * 애니메이션 정지"는 TitleTag still(정적 모드)로 대체한다.
+ * 200행 전체를 오픈 시 1회 페인트하는 쪽이 낫고, 원래 목적이던 "칭호 무한 애니메이션의
+ * 스크롤 프레임 경합 방지"는 스크롤 중에만 일시정지하는 useScrollFxPause로 대체한다.
  */
 
 // 시각 포맷터 — 모듈 상수 1개. 행 렌더마다 Intl 인스턴스를 만들면(150행×키 입력) 입력 지연의 직접 요인.
@@ -166,12 +166,12 @@ export const ChatRow = memo(function ChatRow({
             <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
           ) : null}
           {/* 칭호(2026-08-05, 집행관 흡수) — 길드명 우측. shrink-0이라 닉/길드명이 먼저 말줄임된다. */}
+          {/* fx는 상시 재생 — 스크롤 중에만 useScrollFxPause(.chat-scrolling)가 일시정지. */}
           <TitleTag
             code={m.repTitle}
             executorZone={m.executorZone}
             executorZoneRegion={m.executorZoneRegion}
             className="text-[9.5px]"
-            still
           />
           <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
             {TIME_FMT.format(new Date(m.createdAt))}

@@ -12,6 +12,7 @@ import { searchAction } from '@/app/(game)/friends/actions';
 
 import { reportWhisper } from './actions';
 import { ChatDateDivider, ChatRow, chatDateLabel } from './ChatRow';
+import { useScrollFxPause } from './useScrollFxPause';
 import { avatarBox } from './mentionBody';
 
 /**
@@ -180,6 +181,8 @@ export function WhisperPane({
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // 스크롤 중 칭호 fx 일시정지(.chat-scrolling) — ChatDock 목록과 동일 처리.
+  const fxPause = useScrollFxPause();
   // 장수명 콜백(실시간 싱크·fetch 응답)이 읽는 미러 — 렌더 중 대입 대신 effect로 동기화.
   const meRef = useRef<string | null>(me);
   const activeRef = useRef<WhisperPeer | null>(null);
@@ -798,6 +801,7 @@ export function WhisperPane({
 
         <div
           ref={listRef}
+          onScroll={() => fxPause(listRef.current)}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
         >
           {msgsLoading && msgs.length === 0 ? (

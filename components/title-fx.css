@@ -138,4 +138,8 @@
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
 .ttag-still span,.ttag-still span::before,.ttag-still span::after{animation:none !important}
 .ttag-still .pt>i{display:none}
+/* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
+   애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
+   longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i{animation-play-state:paused !important}
 }

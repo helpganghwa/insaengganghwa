@@ -31,6 +31,7 @@ import type { SendChatResult } from '@/lib/game/chat/send';
 
 import { reportChat, setChatBlockAction } from './actions';
 import { ChatDateDivider, ChatRow, chatDateLabel, RESTORE_KEY } from './ChatRow';
+import { useScrollFxPause } from './useScrollFxPause';
 import {
   WhisperPane,
   type WhisperMessageDto,
@@ -254,6 +255,8 @@ export function ChatDock() {
   const needInitialScrollRef = useRef(false);
   // onScroll rAF 스로틀 — scrollHeight 읽기는 강제 리플로우라 프레임당 1회로 제한.
   const scrollRafRef = useRef(0);
+  // 스크롤 중 칭호 fx 일시정지(.chat-scrolling 토글) — 리렌더 없는 직접 DOM.
+  const fxPause = useScrollFxPause();
   openRef.current = open;
   // 폴링 타이머(장수명 클로저)가 읽는 미러 refs — 렌더 중 대입 대신 effect로 동기화(lint-clean).
   useEffect(() => {
@@ -1574,6 +1577,7 @@ export function ChatDock() {
             <div
               ref={listRef}
               onScroll={() => {
+                fxPause(listRef.current);
                 if (scrollRafRef.current) return;
                 scrollRafRef.current = requestAnimationFrame(() => {
                   scrollRafRef.current = 0;
