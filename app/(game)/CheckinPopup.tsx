@@ -46,8 +46,10 @@ const QUOTES = [
   '“인내심이 곧 전투력이다.”',
 ];
 
-/** 홈 상주 게이트 — 미수령 시 팝업 + KST 자정 롤오버 감지(타이머·탭 복귀 → refresh). */
-export function CheckinPopupGate({ unclaimed, dayProgress }: { unclaimed: boolean; dayProgress: number }) {
+/** 홈 상주 게이트 — 미수령 시 팝업 + KST 자정 롤오버 감지(타이머·탭 복귀 → refresh).
+ * hold: 튜토리얼 진행 중 억제(2026-08-24 긴급) — 팝업이 코치마크를 덮어 신규 유저가
+ * 진행 불가였다. 완료 후 홈 재렌더에서 자연 노출(출석은 자정까지 유효라 손해 없음). */
+export function CheckinPopupGate({ unclaimed, dayProgress, hold = false }: { unclaimed: boolean; dayProgress: number; hold?: boolean }) {
   const router = useRouter();
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -71,7 +73,7 @@ export function CheckinPopupGate({ unclaimed, dayProgress }: { unclaimed: boolea
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [router]);
-  if (!unclaimed) return null;
+  if (!unclaimed || hold) return null;
   return <CheckinPopup dayProgress={dayProgress} />;
 }
 

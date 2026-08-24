@@ -350,7 +350,7 @@ export default async function HomePage() {
           종전엔 튜토리얼 전 구간(active) 억제라, 중도 이탈 계정이 자동 만료(3일)까지 출석
           수령 자체가 불가했다(전수 감사 2026-08-21 — 출석 진입점이 이 팝업뿐). */}
       {userId && tutState.phase !== 'intro' ? (
-        <CheckinPopupGate unclaimed={hasUnclaimedCheckin} dayProgress={checkinDayProgress} />
+        <CheckinPopupGate unclaimed={hasUnclaimedCheckin} dayProgress={checkinDayProgress} hold={tutorialActive} />
       ) : null}
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
       <div className="flex flex-col gap-3 px-4 py-4">
