@@ -142,7 +142,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         repTitle={d.repTitle}
         stats={d.stats}
         statsSlot={<HeaderStatsLine />}
-        diamondSlot={<HeaderDiamond />}
+        diamondSlot={<HeaderDiamond ssr={d.diamond} />}
       />
     </>
   );
