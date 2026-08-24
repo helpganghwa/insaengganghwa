@@ -109,6 +109,11 @@ export const ChatRow = memo(function ChatRow({
     !prevMsg.sysGuild &&
     prevMsg.userId === m.userId &&
     new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
+  // contain-intrinsic-size를 본문 길이 기반 근사로(모바일 위 스크롤 버벅임, 2026-08-24) —
+  // 고정 44px는 2줄 이상 메시지에서 실제 높이와 크게 어긋나, 위로 스크롤하며 행이 실체화될
+  // 때마다 "추정→실측" 보정으로 스크롤 위치가 점프했다(덜컥거림의 본체). 본문 폭 ~326px에
+  // 12.5px 한글 ≈ 한 줄 26자, 줄 높이 ≈ 18px로 근사 — 오차가 ±1줄 이내로 줄어든다.
+  const bodyLines = Math.max(1, Math.ceil(m.body.length / 26));
   const onBodyClick = (e: ReactMouseEvent) => {
     if ((e.target as HTMLElement).closest('a')) return;
     if (!mine && !pending) onReport(m);
@@ -116,9 +121,10 @@ export const ChatRow = memo(function ChatRow({
   if (grouped) {
     return (
       <div
-        className={`flex items-start gap-2 px-1.5 py-[2px] [content-visibility:auto] [contain-intrinsic-size:auto_24px] ${
+        className={`flex items-start gap-2 px-1.5 py-[2px] [content-visibility:auto] ${
           mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
         } ${pending ? 'opacity-50' : ''}`}
+        style={{ containIntrinsicSize: `auto ${4 + bodyLines * 18}px` }}
       >
         <p
           onClickCapture={markRestoreIfLink}
@@ -132,9 +138,10 @@ export const ChatRow = memo(function ChatRow({
   }
   return (
     <div
-      className={`flex items-start gap-2 px-1.5 py-[5px] [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${
+      className={`flex items-start gap-2 px-1.5 py-[5px] [content-visibility:auto] ${
         mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
       } ${pending ? 'opacity-50' : ''}`}
+      style={{ containIntrinsicSize: `auto ${24 + bodyLines * 18}px` }}
     >
       <button type="button" onClick={() => onProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
         {avatarBox(m, 'block h-6 w-6')}

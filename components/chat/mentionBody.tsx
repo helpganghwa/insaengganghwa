@@ -52,7 +52,13 @@ export function renderMentionBody(
   });
 }
 
-/** 유저 썸네일 — 정면 아바타 + faceBox 얼굴 크롭. size는 레이아웃 클래스(h-6 w-6 등). */
+/**
+ * 유저 썸네일 — 정면 아바타 + faceBox 얼굴 크롭. size는 레이아웃 클래스(h-6 w-6 등).
+ * loading="lazy" 금지(모바일 위 스크롤 버벅임, 2026-08-24) — 행이 content-visibility로
+ * 지연 페인트되는 구조라, lazy까지 겹치면 위로 스크롤해 행이 실체화되는 순간에 네트워크
+ * 로드+디코드+픽셀 확대 래스터가 한꺼번에 몰렸다. 즉시 로드(대부분 브라우저 캐시 적중)
+ * + decoding="async"로 디코드만 비동기 유지.
+ */
 export function avatarBox(m: { avatar: string | null; faceBox: FaceBox | null }, size: string) {
   return (
     <span className={`${size} shrink-0 overflow-hidden`}>
@@ -61,7 +67,6 @@ export function avatarBox(m: { avatar: string | null; faceBox: FaceBox | null },
         <img
           src={m.avatar}
           alt=""
-          loading="lazy"
           decoding="async"
           className="h-full w-full"
           style={faceCropStyle(m.faceBox)}
