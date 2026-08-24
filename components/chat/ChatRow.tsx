@@ -15,8 +15,11 @@ import { avatarBox, renderMentionBody as renderBody } from './mentionBody';
  * 행에만 있는 정보가 1:1 대화에서 통째로 사라졌다. 행을 공유하면 그 비대칭이 구조적으로 없다.
  *
  * 표기 규칙(2026-07-23): 닉네임 → 길드 문양 → 길드명 → 칭호(집행관 흡수) → 시각.
- * content-visibility:auto — 뷰포트 밖 행은 페인트·칭호 무한 애니메이션 프레임까지 스킵,
- * contain-intrinsic-size로 스크롤 높이는 근사 유지(미지원 브라우저는 무시, 동작 동일).
+ *
+ * ⚠ content-visibility:auto 금지(2026-08-24) — 지연 페인트가 모바일 모멘텀 스크롤을 못
+ * 따라가 위로 쓸어올릴 때 빈 화면 노출 + 자리높이 보정 점프가 났다(실기기 녹화 확인).
+ * 200행 전체를 오픈 시 1회 페인트하는 쪽이 낫고, 원래 목적이던 "화면 밖 칭호 무한
+ * 애니메이션 정지"는 TitleTag still(정적 모드)로 대체한다.
  */
 
 // 시각 포맷터 — 모듈 상수 1개. 행 렌더마다 Intl 인스턴스를 만들면(150행×키 입력) 입력 지연의 직접 요인.
@@ -94,7 +97,7 @@ export const ChatRow = memo(function ChatRow({
       <div
         // 닉네임 링크로 프로필에 갔다 돌아오면 패널을 다시 연다(마운트 복원 소비).
         onClickCapture={markRestoreIfLink}
-        className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500 [content-visibility:auto] [contain-intrinsic-size:auto_22px]"
+        className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500"
       >
         {m.sys ? worldEventMessage(m.sys, { link: true }) : guildLogMessage(m.sysGuild!)}
       </div>
@@ -109,11 +112,6 @@ export const ChatRow = memo(function ChatRow({
     !prevMsg.sysGuild &&
     prevMsg.userId === m.userId &&
     new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
-  // contain-intrinsic-size를 본문 길이 기반 근사로(모바일 위 스크롤 버벅임, 2026-08-24) —
-  // 고정 44px는 2줄 이상 메시지에서 실제 높이와 크게 어긋나, 위로 스크롤하며 행이 실체화될
-  // 때마다 "추정→실측" 보정으로 스크롤 위치가 점프했다(덜컥거림의 본체). 본문 폭 ~326px에
-  // 12.5px 한글 ≈ 한 줄 26자, 줄 높이 ≈ 18px로 근사 — 오차가 ±1줄 이내로 줄어든다.
-  const bodyLines = Math.max(1, Math.ceil(m.body.length / 26));
   const onBodyClick = (e: ReactMouseEvent) => {
     if ((e.target as HTMLElement).closest('a')) return;
     if (!mine && !pending) onReport(m);
@@ -121,10 +119,9 @@ export const ChatRow = memo(function ChatRow({
   if (grouped) {
     return (
       <div
-        className={`flex items-start gap-2 px-1.5 py-[2px] [content-visibility:auto] ${
+        className={`flex items-start gap-2 px-1.5 py-[2px] ${
           mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
         } ${pending ? 'opacity-50' : ''}`}
-        style={{ containIntrinsicSize: `auto ${4 + bodyLines * 18}px` }}
       >
         <p
           onClickCapture={markRestoreIfLink}
@@ -138,10 +135,9 @@ export const ChatRow = memo(function ChatRow({
   }
   return (
     <div
-      className={`flex items-start gap-2 px-1.5 py-[5px] [content-visibility:auto] ${
+      className={`flex items-start gap-2 px-1.5 py-[5px] ${
         mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
       } ${pending ? 'opacity-50' : ''}`}
-      style={{ containIntrinsicSize: `auto ${24 + bodyLines * 18}px` }}
     >
       <button type="button" onClick={() => onProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
         {avatarBox(m, 'block h-6 w-6')}
@@ -161,7 +157,6 @@ export const ChatRow = memo(function ChatRow({
             <img
               src={m.guildEmblemUrl}
               alt=""
-              loading="lazy"
               decoding="async"
               className="h-3 w-3 shrink-0 self-center object-contain"
               style={{ imageRendering: 'pixelated' }}
@@ -176,6 +171,7 @@ export const ChatRow = memo(function ChatRow({
             executorZone={m.executorZone}
             executorZoneRegion={m.executorZoneRegion}
             className="text-[9.5px]"
+            still
           />
           <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
             {TIME_FMT.format(new Date(m.createdAt))}

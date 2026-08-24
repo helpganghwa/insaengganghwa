@@ -56,6 +56,7 @@ export function TitleTag({
   executorZone,
   executorZoneRegion,
   className = '',
+  still = false,
 }: {
   /** 대표 칭호 code — null/미자격이면 호출부가 렌더 생략(활성 검증은 서버 몫). */
   code: string | null | undefined;
@@ -63,16 +64,19 @@ export function TitleTag({
   executorZone?: string | null;
   executorZoneRegion?: string | null;
   className?: string;
+  /** 정적 모드 — 색은 유지하고 무한 애니메이션만 정지(채팅 행 등 대량 목록, title-fx.css .ttag-still). */
+  still?: boolean;
 }) {
   if (!code) return null;
   const def = TITLE_BY_CODE.get(code);
   if (!def) return null;
+  const stillCls = still ? ' ttag-still' : '';
 
   // 집행관 — 구역을 알면 기존 표시(구역명=지역색+집행관=인디고), 모르면 정적 '집행관'(목록용).
   if (def.style.executor) {
     if (executorZone) return <ExecutorTag zone={executorZone} region={executorZoneRegion} className={className} />;
     return (
-      <span className={`ttag shrink-0 whitespace-nowrap ${className}`}>
+      <span className={`ttag shrink-0 whitespace-nowrap ${className}${stillCls}`}>
         <span style={{ color: '#a5b4fc' }}>집행관</span>
       </span>
     );
@@ -86,7 +90,7 @@ export function TitleTag({
   );
 
   return (
-    <span className={`ttag shrink-0 whitespace-nowrap ${className}`}>
+    <span className={`ttag shrink-0 whitespace-nowrap ${className}${stillCls}`}>
       {def.style.pt ? (
         <span className={`pt pt-${def.style.pt}`}>
           {inner}

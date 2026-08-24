@@ -134,4 +134,8 @@
 .fx-stardrift{background:linear-gradient(90deg,#c8b8f0,#f0e6d0,#9d8ce0,#e8d8f8,#c8b8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(180,160,230,.4))}
 .fx-astralflow{background:linear-gradient(90deg,#b39ddb,#7a5fc0,#e8e0ff,#7a5fc0,#b39ddb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
 @media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag .pt>i{animation:none !important}}
+/* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
+   색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
+.ttag-still span,.ttag-still span::before,.ttag-still span::after{animation:none !important}
+.ttag-still .pt>i{display:none}
 }
