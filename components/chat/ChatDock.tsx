@@ -552,10 +552,28 @@ export function ChatDock() {
     update();
     vv.addEventListener('resize', onVv);
     vv.addEventListener('scroll', onVv);
+    // 안전망(2026-08-24 오픈일 제보) — iOS PWA에서 키보드가 닫혀도 vv 이벤트가 유실되면
+    // 패널이 키보드 박스(top:0+축소 높이)에 갇혀 화면 절반이 잘린 채 남는다. 키보드 상태가
+    // 바뀌었을 법한 모든 계기(창 리사이즈·앱 복귀·입력 blur 후 dismissal 애니 종료)에 재판정.
+    // update()는 멱등이라 과호출 무해.
+    const onVis = () => {
+      if (document.visibilityState === 'visible') onVv();
+    };
+    const onFocusOut = () => {
+      setTimeout(update, 250);
+      setTimeout(update, 600); // dismissal 애니가 긴 기기 보정
+    };
+    window.addEventListener('resize', onVv);
+    document.addEventListener('visibilitychange', onVis);
+    const panelEl = panelRef.current;
+    panelEl?.addEventListener('focusout', onFocusOut);
     return () => {
       if (raf) cancelAnimationFrame(raf);
       vv.removeEventListener('resize', onVv);
       vv.removeEventListener('scroll', onVv);
+      window.removeEventListener('resize', onVv);
+      document.removeEventListener('visibilitychange', onVis);
+      panelEl?.removeEventListener('focusout', onFocusOut);
       setKbBox(null);
     };
   }, [open, scrollToBottom]);
