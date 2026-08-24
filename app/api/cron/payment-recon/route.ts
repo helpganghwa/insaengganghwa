@@ -24,10 +24,13 @@ import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+// B 스캔 최대 200건 × 포트원 순차 조회(평시 수백 ms, 건당 타임아웃 8s)라 60s로는 부족할 수 있다.
+export const maxDuration = 300;
 
 const ORPHAN_PENDING_LIMIT = 50;
-const REFUND_SCAN_LIMIT = 50;
+// 50 → 200(2026-08-24): 오픈일 3일 paid가 50을 넘어 캡 상시 도달 — 캡에 걸리면 최신 결제의
+// 환불 백스톱이 밀린다(asc 기아 방지 정렬의 대가). 매출 성장분 헤드룸 포함 상향.
+const REFUND_SCAN_LIMIT = 200;
 // 이탈 pending 종결 기준 — 카드 단독 구성(가상계좌 미사용)이라 결제창 세션은 길어야 수십 분.
 // 6h면 충분히 보수적이면서 어드민 결제내역에 죽은 '대기'가 하루 종일 쌓이지 않는다(2026-07-31).
 const PENDING_EXPIRE_MS = 6 * 60 * 60 * 1000;
