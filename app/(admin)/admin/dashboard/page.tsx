@@ -93,7 +93,7 @@ async function loadDashboard() {
         (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
            from iap_orders where status = 'paid' and paid_at >= ${dayStart}::timestamptz) as sales_today,
         (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
-           from iap_orders where status in ('paid', 'refunded') and paid_at >= ${monthStart}::timestamptz) as sales_month,
+           from iap_orders where status = 'paid' and paid_at >= ${monthStart}::timestamptz) as sales_month, -- 환불 제외(2026-08-24) — 오늘 매출과 기준 통일, 환불 건수는 별도 표기
         (select count(*)::int from iap_refunds where created_at >= ${monthStart}::timestamptz) as refunds_month,
         (select count(*)::int from enhancement_jobs where status = 'running') as running_jobs,
         (select count(*)::int from raids where opened_at >= ${dayStart}::timestamptz) as raids_today,
