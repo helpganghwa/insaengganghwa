@@ -93,6 +93,11 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 {target}님을 {hl('부길드장', C.indigo)}으로 임명했습니다</>;
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
+    // set_perm은 activity-log 쿼리에서 피드 제외(내부 설정) — 혹시 노출돼도 원시 코드 대신 문구.
+    case 'set_perm':
+      return <>{actor}님이 {target}님의 {hl('부길드장 권한', C.indigo)}을 변경했습니다</>;
+    case 'disband':
+      return <>{actor}님이 길드를 해산했습니다</>;
     case 'set_join_policy':
       return <>{actor}님이 가입 방식을 변경했습니다</>;
     case 'notice_edit':

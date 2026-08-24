@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guildAuditLog } from '@/lib/db/schema/guild';
@@ -23,6 +23,7 @@ export type GuildLogEntry = {
 /**
  * 길드 활동 로그 — guild_audit_log를 최신순으로 limit건. 행위자/대상 닉네임을 한 번에 해소.
  * 해산(disband)은 길드가 사라져 노출될 일이 없으므로 별도 제외 불필요.
+ * set_perm(부길드장 권한 변경)은 감사 기록만 남기고 피드에는 숨긴다 — 유저에겐 의미 없는 내부 설정.
  */
 export async function getGuildActivityLog(
   guildId: bigint,
@@ -39,7 +40,7 @@ export async function getGuildActivityLog(
       createdAt: guildAuditLog.createdAt,
     })
     .from(guildAuditLog)
-    .where(eq(guildAuditLog.guildId, guildId))
+    .where(and(eq(guildAuditLog.guildId, guildId), ne(guildAuditLog.action, 'set_perm')))
     .orderBy(desc(guildAuditLog.createdAt))
     .limit(limit);
 
