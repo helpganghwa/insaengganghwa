@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import Link from 'next/link';
 
-import { MELEE_DIAMOND_PCT_CUTOFF, MELEE_REWARD_TIERS } from '@/lib/game/balance';
+import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
@@ -69,14 +69,8 @@ export const MeleeInfo = memo(function MeleeInfo({
               ))}
             </ul>
           </div>
-          {/* 다이아 컷오프 각주 — 표는 절대순위 구간(1~200위)만 보여주는데 실제 지급은
-              MELEE_DIAMOND_PCT_CUTOFF에서 한 번 더 잘린다. 참가자가 적은 서버(오픈 직후·신서버)에선
-              표의 '51~100위 250💎'가 그대로 0이 되는 구간이라, 표만 보면 실지급보다 크게 읽힌다.
-              퍼센트는 상수에서 계산한다(하드코딩하면 상수와 다시 어긋난다). */}
-          <p className="mx-4 mt-2 text-[11px] leading-relaxed text-zinc-500">
-            💎는 참가자 상위 {Math.round(MELEE_DIAMOND_PCT_CUTOFF * 100)}%까지만 받아요 — 그 아래
-            순위는 표에 적힌 💎 없이 📦와 포인트만 들어와요.
-          </p>
+          {/* 다이아 상위 50% 컷오프(MELEE_DIAMOND_PCT_CUTOFF) 각주는 사용자 결정으로 미표시
+              (2026-08-24) — 실지급 컷은 그대로이며 상세 안내는 위키 대난투 문서가 담당. */}
         </>
       ) : history.length === 0 ? (
         <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
