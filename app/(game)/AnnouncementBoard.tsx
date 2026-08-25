@@ -419,6 +419,7 @@ export function AnnouncementBoard({
             title={latest.title}
             subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">새 공지</span>}
             maxBodyClass="max-h-[60vh]"
+            bodyPad="sm"
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setGateDismissed(true)}>
