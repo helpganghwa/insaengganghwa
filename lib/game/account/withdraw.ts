@@ -94,6 +94,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // 우편(수령로그 → 우편), 출석(로그 → 상태), 배틀패스(구간 → 상태).
     await tx.execute(sql`delete from mail_claim_logs where user_id = ${uid}`);
     await tx.execute(sql`delete from mailbox where user_id = ${uid}`);
+    // 파견(0172) — 미션·상태 전부 유저 귀속 데이터.
+    await tx.execute(sql`delete from expeditions where user_id = ${uid}`);
+    await tx.execute(sql`delete from expedition_state where user_id = ${uid}`);
     await tx.execute(sql`delete from checkin_claim_logs where user_id = ${uid}`);
     await tx.execute(sql`delete from user_checkin_state where user_id = ${uid}`);
     await tx.execute(sql`delete from battlepass_segments where user_id = ${uid}`);
