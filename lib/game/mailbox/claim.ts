@@ -72,7 +72,7 @@ export function claimMail(input: { userId: string; serverId: number; mailId: big
   const { userId, mailId } = input;
   return db.transaction(async (tx) => {
     const [m] = await tx
-      .select({ id: mailbox.id, serverId: mailbox.serverId, payload: mailbox.payload })
+      .select({ id: mailbox.id, serverId: mailbox.serverId, payload: mailbox.payload, createdAt: mailbox.createdAt })
       .from(mailbox)
       .where(
         and(
@@ -97,6 +97,8 @@ export function claimMail(input: { userId: string; serverId: number; mailId: big
       serverId: m.serverId,
       diamondGranted: BigInt(acc.diamond),
       boxesGranted: acc.boxes,
+      // 신속 배달부 판정 박제(0171) — 우편 삭제 후에도 로그만으로 판정 가능해야 한다.
+      fastClaim: Date.now() - m.createdAt.getTime() <= 5 * 60_000,
     });
     return acc;
   });
@@ -106,7 +108,7 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
   const { userId } = input;
   return db.transaction(async (tx) => {
     const rows = await tx
-      .select({ id: mailbox.id, payload: mailbox.payload })
+      .select({ id: mailbox.id, payload: mailbox.payload, createdAt: mailbox.createdAt })
       .from(mailbox)
       .where(
         and(
@@ -138,7 +140,15 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
       total.boxes.weapon += b.weapon;
       total.boxes.armor += b.armor;
       total.boxes.accessory += b.accessory;
-      return { mailId: m.id, userId, serverId: input.serverId, diamondGranted: BigInt(d), boxesGranted: b };
+      return {
+        mailId: m.id,
+        userId,
+        serverId: input.serverId,
+        diamondGranted: BigInt(d),
+        boxesGranted: b,
+        // 신속 배달부 판정 박제(0171) — claimMail과 동일 기준(생성 5분 내).
+        fastClaim: claimedAt.getTime() - m.createdAt.getTime() <= 5 * 60_000,
+      };
     });
 
     if (total.diamond > 0) {

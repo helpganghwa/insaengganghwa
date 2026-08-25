@@ -327,12 +327,14 @@ async function guildZoneChips(serverId: number, guildIds: bigint[]): Promise<Map
 export type GuildRankSort = 'combat' | 'level' | 'zones';
 
 // 정렬 기준별 비교자 — 동률은 전투력 → 레벨 순으로 안정화(순위 흔들림 방지).
+// level 탭의 1차 동률은 잔여 XP — 명가(guild_top) 판정의 (level, xp) 사전식과 화면을
+// 통일(2026-08-25 칭호 감사 발견 4: 레벨 동률 시 UI 1위와 칭호 보유 길드가 갈렸다).
 const RANKING_COMPARATORS: Record<
   GuildRankSort,
-  (a: { combat: number; level: number; zones: unknown[] }, b: { combat: number; level: number; zones: unknown[] }) => number
+  (a: { combat: number; level: number; xp: number; zones: unknown[] }, b: { combat: number; level: number; xp: number; zones: unknown[] }) => number
 > = {
   combat: (a, b) => b.combat - a.combat || b.level - a.level,
-  level: (a, b) => b.level - a.level || b.combat - a.combat,
+  level: (a, b) => b.level - a.level || b.xp - a.xp || b.combat - a.combat,
   zones: (a, b) => b.zones.length - a.zones.length || b.combat - a.combat || b.level - a.level,
 };
 
@@ -355,6 +357,7 @@ async function buildGuildRankingBase(serverId: number) {
       id: guilds.id,
       name: guilds.name,
       level: guilds.level,
+      xp: guilds.xp,
       emblemUrl: guilds.emblemUrl,
       emblemColor: guilds.emblemColor,
       intro: guilds.intro,
@@ -374,6 +377,7 @@ async function buildGuildRankingBase(serverId: number) {
     const s = stats.get(r.id.toString());
     return {
       ...r,
+      xp: Number(r.xp), // bigint → number(comparator 산술·직렬화 안전 — 잔여 XP라 정밀도 무관)
       memberCount: s?.memberCount ?? 0,
       combat: s?.combat ?? 0,
       zones: zoneChips.get(r.id.toString()) ?? [],
@@ -481,6 +485,7 @@ export async function getGuildSummaryRef(
       id: guilds.id,
       name: guilds.name,
       level: guilds.level,
+      xp: guilds.xp,
       emblemUrl: guilds.emblemUrl,
       intro: guilds.intro,
       joinPolicy: guilds.joinPolicy,

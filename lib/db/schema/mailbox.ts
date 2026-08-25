@@ -113,6 +113,9 @@ export const mailClaimLogs = pgTable('mail_claim_logs', {
   diamondGranted: bigint('diamond_granted', { mode: 'bigint' }).notNull().default(sql`0`),
   /** 슬롯별 박스 지급(jsonb: { weapon?, armor?, accessory? }). 모두 0이면 '{}'. */
   boxesGranted: jsonb('boxes_granted').notNull().default(sql`'{}'::jsonb`),
+  /** 우편 생성 5분 내 수령 여부 — claim 시 박제(0171). 신속 배달부 판정 정본(우편이 30일 후
+   *  삭제돼도 진행도 보존 — join 재계산 금지, 2026-08-25 칭호 감사). */
+  fastClaim: boolean('fast_claim').notNull().default(false),
   claimedAt: timestamp('claimed_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
