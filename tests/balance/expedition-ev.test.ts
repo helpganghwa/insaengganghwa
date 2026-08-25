@@ -16,6 +16,13 @@ import {
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   EXPEDITION_BOX_MAIN_SLOT,
+  EXPEDITION_DIFFICULTY_DIST_BP,
+  EXPEDITION_DIFFICULTIES,
+  EXPEDITION_DIFFICULTY_HOURS,
+  EXPEDITION_SLOT_UNLOCKS,
+  EXPEDITION_REFRESH_FREE_PER_DAY,
+  EXPEDITION_REFRESH_COST,
+  expeditionDifficultyDist,
   expeditionXpToNext,
 } from '@/lib/game/balance';
 
@@ -85,5 +92,38 @@ describe('expedition balance invariants', () => {
   it('시너지·상한 정합 — 일반은 지역 일치의 절반, 일일 시작 6회', () => {
     expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
     expect(EXPEDITION_DAILY_STARTS).toBe(6);
+  });
+
+  it('난이도 분포 — 구간별 합 100%, 고난이도 출현이 레벨에 단조 증가, 원정은 Lv.5부터', () => {
+    for (const b of EXPEDITION_DIFFICULTY_DIST_BP) {
+      const sum = EXPEDITION_DIFFICULTIES.reduce((a, d) => a + b.dist[d], 0);
+      expect(sum).toBe(10000);
+    }
+    // minLevel 내림차순 정렬 가정(첫 매치 사용) — 어긋나면 구간 선택이 무너진다.
+    for (let i = 1; i < EXPEDITION_DIFFICULTY_DIST_BP.length; i++) {
+      expect(EXPEDITION_DIFFICULTY_DIST_BP[i]!.minLevel).toBeLessThan(EXPEDITION_DIFFICULTY_DIST_BP[i - 1]!.minLevel);
+    }
+    // 기대 시간 스케일(성장 체감)이 레벨 구간에 단조 증가.
+    const evScale = (lv: number) => {
+      const d = expeditionDifficultyDist(lv);
+      return EXPEDITION_DIFFICULTIES.reduce(
+        (a, k) => a + (d[k] / 10000) * EXPEDITION_DURATION_SCALE[EXPEDITION_DIFFICULTY_HOURS[k] as 4 | 8 | 12 | 24],
+        0,
+      );
+    };
+    expect(evScale(5)).toBeGreaterThan(evScale(0));
+    expect(evScale(15)).toBeGreaterThan(evScale(5));
+    expect(evScale(30)).toBeGreaterThan(evScale(15));
+    expect(expeditionDifficultyDist(0).grand).toBe(0);
+    expect(expeditionDifficultyDist(5).grand).toBeGreaterThan(0);
+  });
+
+  it('슬롯 해금·새로고침 — 확정 수치(Lv5/1000·Lv15/2000, 무료 3회·20💎)', () => {
+    expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
+      { slot: 2, level: 5, diamond: 1000 },
+      { slot: 3, level: 15, diamond: 2000 },
+    ]);
+    expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
+    expect(EXPEDITION_REFRESH_COST).toBe(20);
   });
 });

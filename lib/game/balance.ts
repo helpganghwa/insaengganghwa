@@ -723,18 +723,55 @@ export const EXPEDITION_REGIONS: readonly ExpeditionRegion[] = [
   'swamp', 'orc', 'kingdom', 'temple', 'volcano', 'angel',
 ] as const;
 
-/** 시간 옵션(h). */
-export const EXPEDITION_DURATIONS_H = [1, 4, 8, 12, 24] as const;
+/** 난이도 4종 = 시간 통합(A′) — 미션 롤이 (지역 × 난이도)로 뜬다. 1h 옵션은 폐지. */
+export type ExpeditionDifficulty = 'easy' | 'normal' | 'hard' | 'grand';
+export const EXPEDITION_DIFFICULTIES: readonly ExpeditionDifficulty[] = ['easy', 'normal', 'hard', 'grand'] as const;
+export const EXPEDITION_DIFFICULTY_HOURS: Record<ExpeditionDifficulty, number> = {
+  easy: 4, normal: 8, hard: 12, grand: 24,
+};
+export const EXPEDITION_DIFFICULTY_LABEL: Record<ExpeditionDifficulty, string> = {
+  easy: '쉬움', normal: '보통', hard: '어려움', grand: '원정',
+};
+export const EXPEDITION_DURATIONS_H = [4, 8, 12, 24] as const;
 export type ExpeditionDurationH = (typeof EXPEDITION_DURATIONS_H)[number];
 
 /**
- * 본상 수량 스케일 — 8h=×1.0 기준. 시간당 효율이 장시간일수록 소폭 우위
+ * 본상 수량 스케일 — 보통(8h)=×1.0 기준. 시간당 효율이 장시간일수록 소폭 우위
  * (8h 0.125/h → 12h 0.133/h → 24h 0.142/h) — "하루 한 번" 유저 배려.
- * 슬롯당 하루 최대 유닛: 24h=3.4 vs 12h×2=3.2 vs 8h×2=2.0(시작 상한 6회 내).
+ * 슬롯당 하루 최대 유닛: 원정 24h=3.4 vs 어려움×2=3.2 vs 보통×2=2.0(시작 상한 6회 내).
  */
 export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
-  1: 0.15, 4: 0.55, 8: 1.0, 12: 1.6, 24: 3.4,
+  4: 0.55, 8: 1.0, 12: 1.6, 24: 3.4,
 };
+
+/**
+ * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
+ * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
+ * 원정(24h)은 Lv.5부터 등장 — 신규가 첫날 24h에 슬롯이 잠기는 경험 방지.
+ */
+export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
+  minLevel: number;
+  dist: Record<ExpeditionDifficulty, number>;
+}[] = [
+  { minLevel: 30, dist: { easy: 1500, normal: 3000, hard: 3000, grand: 2500 } },
+  { minLevel: 15, dist: { easy: 2500, normal: 3500, hard: 2500, grand: 1500 } },
+  { minLevel: 5, dist: { easy: 3500, normal: 3500, hard: 2000, grand: 1000 } },
+  { minLevel: 0, dist: { easy: 5000, normal: 3500, hard: 1500, grand: 0 } },
+] as const;
+export function expeditionDifficultyDist(level: number): Record<ExpeditionDifficulty, number> {
+  for (const b of EXPEDITION_DIFFICULTY_DIST_BP) if (level >= b.minLevel) return b.dist;
+  return EXPEDITION_DIFFICULTY_DIST_BP[EXPEDITION_DIFFICULTY_DIST_BP.length - 1]!.dist;
+}
+
+/** 슬롯 해금(A′) — 기본 1칸, 이후 레벨 무료 오픈 또는 다이아 즉시 구매(이중 해금, sink). */
+export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; level: number; diamond: number }[] = [
+  { slot: 2, level: 5, diamond: 1000 },
+  { slot: 3, level: 15, diamond: 2000 },
+] as const;
+
+/** 미션 새로고침 — 슬롯 단위 리롤(보상까지). 무료 소진 후 다이아(sink). */
+export const EXPEDITION_REFRESH_FREE_PER_DAY = 3;
+export const EXPEDITION_REFRESH_COST = 20;
 
 /**
  * 지역별 상자 슬롯 가중 — 주력 슬롯 60%, 나머지 두 슬롯 20%씩(합 100%).
@@ -760,7 +797,7 @@ export const EXPEDITION_BASE_AMOUNTS = {
   both: { boxMin: 3, boxMax: 4, diaMin: 20, diaMax: 48 },
 } as const;
 
-/** 대성공 — 수령 시 10% 확률로 본상(상자·다이아) 수량 2배. 이용권(희귀 롤)에는 미적용. */
+/** 대성공 — **수령 시** 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
 export const EXPEDITION_CRIT_BP = 1000;
 export const EXPEDITION_CRIT_MULT = 2;
 
