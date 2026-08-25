@@ -1,0 +1,93 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  EXPEDITION_BASE_AMOUNTS,
+  EXPEDITION_BOX_MAIN_BP,
+  EXPEDITION_CRIT_BP,
+  EXPEDITION_CRIT_MULT,
+  EXPEDITION_DAILY_STARTS,
+  EXPEDITION_DURATIONS_H,
+  EXPEDITION_DURATION_SCALE,
+  EXPEDITION_LEVEL_BONUS_BP_PER,
+  EXPEDITION_LEVEL_MAX,
+  EXPEDITION_MAIN_ROLL_BP,
+  EXPEDITION_RARE_BP,
+  EXPEDITION_RARE_SHORT_SCALE_BP,
+  EXPEDITION_REGIONS,
+  EXPEDITION_SLOTS,
+  EXPEDITION_SYNERGY_GENERAL_BP,
+  EXPEDITION_SYNERGY_MATCH_BP,
+  EXPEDITION_BOX_MAIN_SLOT,
+  expeditionXpToNext,
+} from '@/lib/game/balance';
+
+/** 파견 상수 불변식 + 경제 가드(BALANCE §11.4) — 수치 변경 시 문서·공시와 함께 갱신. */
+describe('expedition balance invariants', () => {
+  it('본상 3분기 확률 합 = 100%', () => {
+    const { boxOnly, diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
+    expect(boxOnly + diamondOnly + both).toBe(10000);
+  });
+
+  it('상자 슬롯 가중 — 주력 60% + 잔여 20%×2 = 100%, 전 지역 매핑 존재', () => {
+    expect(EXPEDITION_BOX_MAIN_BP + (10000 - EXPEDITION_BOX_MAIN_BP)).toBe(10000);
+    expect((10000 - EXPEDITION_BOX_MAIN_BP) % 2).toBe(0);
+    for (const r of EXPEDITION_REGIONS) expect(EXPEDITION_BOX_MAIN_SLOT[r]).toBeTruthy();
+  });
+
+  it('시간 옵션 정합 — 스케일 단조 증가 + 일일 최대 유닛은 24h 루트(시작 6회 상한 하)', () => {
+    const keys = Object.keys(EXPEDITION_DURATION_SCALE).map(Number).sort((a, b) => a - b);
+    expect(keys).toEqual([...EXPEDITION_DURATIONS_H]);
+    // 파견 1건당 스케일은 시간에 단조 증가(짧은 옵션이 유리해지는 역전 금지).
+    const scales = EXPEDITION_DURATIONS_H.map((h) => EXPEDITION_DURATION_SCALE[h]);
+    for (let i = 1; i < scales.length; i++) expect(scales[i]!).toBeGreaterThan(scales[i - 1]!);
+    // 하루 최대 유닛 루트 = 24h×3슬롯(시작 3회) — 12h×6회·8h×6회보다 크거나 같아야
+    // "하루 한 번" 유저가 손해 보지 않는다(경제 가드도 이 값 기준).
+    const day24 = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
+    expect(day24).toBeGreaterThanOrEqual(EXPEDITION_DAILY_STARTS * EXPEDITION_DURATION_SCALE[12]);
+    expect(day24).toBeGreaterThanOrEqual(EXPEDITION_DAILY_STARTS * EXPEDITION_DURATION_SCALE[8]);
+  });
+
+  it('수량 범위 정합(min ≤ max)', () => {
+    const a = EXPEDITION_BASE_AMOUNTS;
+    expect(a.boxOnly.boxMin).toBeLessThanOrEqual(a.boxOnly.boxMax);
+    expect(a.diamondOnly.diaMin).toBeLessThanOrEqual(a.diamondOnly.diaMax);
+    expect(a.both.boxMin).toBeLessThanOrEqual(a.both.boxMax);
+    expect(a.both.diaMin).toBeLessThanOrEqual(a.both.diaMax);
+  });
+
+  it('레벨 곡선 — 단조 증가, Lv.50 누적 XP가 문서 수치(≈4,563)와 일치', () => {
+    let cum = 0;
+    let prev = 0;
+    for (let lv = 0; lv < EXPEDITION_LEVEL_MAX; lv++) {
+      const need = expeditionXpToNext(lv);
+      expect(need).toBeGreaterThanOrEqual(prev);
+      prev = need;
+      cum += need;
+    }
+    expect(cum).toBe(4550); // 30×50 + Σ⌊2.5ℓ⌋(ℓ=0..49) = 4,550
+  });
+
+  it('경제 가드 — 출시 시점(배율 0) 하루 최대 다이아 기대 ≤ 90💎', () => {
+    const { diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
+    const a = EXPEDITION_BASE_AMOUNTS;
+    const evDia =
+      (diamondOnly / 10000) * ((a.diamondOnly.diaMin + a.diamondOnly.diaMax) / 2) +
+      (both / 10000) * ((a.both.diaMin + a.both.diaMax) / 2);
+    const critMult = 1 + (EXPEDITION_CRIT_BP / 10000) * (EXPEDITION_CRIT_MULT - 1);
+    // 하루 최대 유닛 — 시작 6회·슬롯 3 제약 아래 스케일 합 최대(24h×3슬롯).
+    const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
+    const launchDaily = evDia * critMult * maxDailyUnits;
+    expect(launchDaily).toBeLessThanOrEqual(90);
+    // 이론 최대(Lv.50 + 지역 시너지 +30%)는 문서 기재값(~141💎) 범위 확인 — 시즌 리밸런싱 전제.
+    const maxMult = 1 + (EXPEDITION_LEVEL_MAX * EXPEDITION_LEVEL_BONUS_BP_PER + 3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000;
+    expect(launchDaily * maxMult).toBeLessThanOrEqual(150);
+  });
+
+  it('희귀 롤 — 확률·단타 배율 범위, 일반 시너지는 지역 일치의 절반', () => {
+    expect(EXPEDITION_RARE_BP.raidSummon).toBeLessThanOrEqual(500);
+    expect(EXPEDITION_RARE_BP.avatarGen).toBeLessThanOrEqual(100);
+    expect(EXPEDITION_RARE_SHORT_SCALE_BP).toBeLessThan(10000);
+    expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
+    expect(EXPEDITION_DAILY_STARTS).toBe(6);
+  });
+});

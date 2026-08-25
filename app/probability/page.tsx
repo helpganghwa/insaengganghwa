@@ -25,6 +25,19 @@ import {
   RAID_DAMAGE_VARIANCE,
   RAID_DAMAGE_K,
   RAID_PHASE_DROP_BOXES,
+  EXPEDITION_MAIN_ROLL_BP,
+  EXPEDITION_BASE_AMOUNTS,
+  EXPEDITION_RARE_BP,
+  EXPEDITION_RARE_SHORT_SCALE_BP,
+  EXPEDITION_CRIT_BP,
+  EXPEDITION_CRIT_MULT,
+  EXPEDITION_BOX_MAIN_BP,
+  EXPEDITION_DURATIONS_H,
+  EXPEDITION_DURATION_SCALE,
+  EXPEDITION_LEVEL_MAX,
+  EXPEDITION_LEVEL_BONUS_BP_PER,
+  EXPEDITION_SYNERGY_MATCH_BP,
+  EXPEDITION_SYNERGY_GENERAL_BP,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 
@@ -243,6 +256,61 @@ export default async function ProbabilityPage() {
           추가 공격 비용은 10번마다 한 칸씩 오릅니다({raidExtraAttackCost(1)} × ⌈횟수÷10⌉ 다이아).
           보상은 페이즈를 하나 깰 때마다 <b>1회 이상 공격한</b> 참여자 전원에게 보급 상자 {RAID_PHASE_DROP_BOXES}개
           — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
+        </P>
+      </Sec>
+
+      {/* 파견(v1) — EXPEDITION_* 상수와 1:1(§33). 레벨·시너지 배율은 수량 기대값에만 적용되고
+          아래 표기 확률(분기·희귀 롤)은 변하지 않는다 — 문구로 명시. */}
+      <Sec n="6" title="파견" id="expedition">
+        <P>
+          파견 완료 수령 시 <b>본상 1회</b>(아래 셋 중 하나 확정)와 <b>희귀 보상 2종</b>(각각 독립
+          판정)을 서버에서 추첨합니다. 수량은 8시간 파견 기준이며, 파견 시간에 비례해 커집니다(
+          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}).
+        </P>
+        <Table head={['본상', '확률', '수량(8h 기준)']}>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>보급 상자만</Td>
+            <Td>{pct(EXPEDITION_MAIN_ROLL_BP.boxOnly)}</Td>
+            <Td>{EXPEDITION_BASE_AMOUNTS.boxOnly.boxMin}~{EXPEDITION_BASE_AMOUNTS.boxOnly.boxMax}개</Td>
+          </tr>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>다이아만</Td>
+            <Td>{pct(EXPEDITION_MAIN_ROLL_BP.diamondOnly)}</Td>
+            <Td>{EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMin}~{EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMax}</Td>
+          </tr>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>상자 + 다이아</Td>
+            <Td>{pct(EXPEDITION_MAIN_ROLL_BP.both)}</Td>
+            <Td>
+              상자 {EXPEDITION_BASE_AMOUNTS.both.boxMin}~{EXPEDITION_BASE_AMOUNTS.both.boxMax}개 + 다이아{' '}
+              {EXPEDITION_BASE_AMOUNTS.both.diaMin}~{EXPEDITION_BASE_AMOUNTS.both.diaMax}
+            </Td>
+          </tr>
+        </Table>
+        <P>
+          수량은 표기 범위에서 고르게 정해집니다. 상자 종류는 파견지마다 주력 슬롯이{' '}
+          {pct(EXPEDITION_BOX_MAIN_BP)}, 나머지 두 슬롯이 각 {pct((10000 - EXPEDITION_BOX_MAIN_BP) / 2)}
+          입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 본상 수량이{' '}
+          {EXPEDITION_CRIT_MULT}배가 됩니다(아래 이용권에는 적용되지 않습니다).
+        </P>
+        <Table head={['희귀 보상(독립 판정)', '확률', '수량']}>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>레이드 소환권</Td>
+            <Td>{pct(EXPEDITION_RARE_BP.raidSummon)}</Td>
+            <Td>1장</Td>
+          </tr>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>아바타 생성권</Td>
+            <Td>{pct(EXPEDITION_RARE_BP.avatarGen)}</Td>
+            <Td>1장</Td>
+          </tr>
+        </Table>
+        <P>
+          1시간 파견의 희귀 보상 확률은 표기의 {EXPEDITION_RARE_SHORT_SCALE_BP / 100}%로
+          낮아집니다(4시간 이상은 표기 그대로). 파견 레벨(최대 Lv.{EXPEDITION_LEVEL_MAX}, 레벨당 +
+          {EXPEDITION_LEVEL_BONUS_BP_PER / 100}%)과 아바타 지역 시너지(일치 장비당 +
+          {EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +{EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는{' '}
+          <b>상자·다이아 수량 기대값에만</b> 적용되며, 위 표의 확률 자체는 변하지 않습니다.
         </P>
       </Sec>
 

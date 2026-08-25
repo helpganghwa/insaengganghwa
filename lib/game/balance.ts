@@ -707,3 +707,76 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
   const c = Math.max(0, Math.floor(segmentIndex));
   return Math.min(9900 + c * 10000, BP_SEGMENT_PRICE_CAP_KRW);
 }
+
+/* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
+/* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
+
+/** 동시 파견 슬롯 수(유저×서버). */
+export const EXPEDITION_SLOTS = 3;
+
+/** 일일 시작(투입) 상한 — 시작 트랜잭션에서 차감, 취소해도 미반환(EXPEDITION §1). */
+export const EXPEDITION_DAILY_STARTS = 6;
+
+/** 파견지 6종 — zones.region 코드 재사용(전부 즉시 개방, 게이트 없음). */
+export type ExpeditionRegion = 'swamp' | 'orc' | 'kingdom' | 'temple' | 'volcano' | 'angel';
+export const EXPEDITION_REGIONS: readonly ExpeditionRegion[] = [
+  'swamp', 'orc', 'kingdom', 'temple', 'volcano', 'angel',
+] as const;
+
+/** 시간 옵션(h). */
+export const EXPEDITION_DURATIONS_H = [1, 4, 8, 12, 24] as const;
+export type ExpeditionDurationH = (typeof EXPEDITION_DURATIONS_H)[number];
+
+/**
+ * 본상 수량 스케일 — 8h=×1.0 기준. 시간당 효율이 장시간일수록 소폭 우위
+ * (8h 0.125/h → 12h 0.133/h → 24h 0.142/h) — "하루 한 번" 유저 배려.
+ * 슬롯당 하루 최대 유닛: 24h=3.4 vs 12h×2=3.2 vs 8h×2=2.0(시작 상한 6회 내).
+ */
+export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
+  1: 0.15, 4: 0.55, 8: 1.0, 12: 1.6, 24: 3.4,
+};
+
+/**
+ * 지역별 상자 슬롯 가중 — 주력 슬롯 60%, 나머지 두 슬롯 20%씩(합 100%).
+ * 게이트 폐지 후 지역 선택의 의미 축 ①(축 ②는 아바타 시너지).
+ */
+export const EXPEDITION_BOX_MAIN_SLOT: Record<ExpeditionRegion, 'weapon' | 'armor' | 'accessory'> = {
+  swamp: 'armor', orc: 'weapon', kingdom: 'accessory',
+  temple: 'accessory', volcano: 'weapon', angel: 'armor',
+};
+export const EXPEDITION_BOX_MAIN_BP = 6000; // 주력 슬롯 확률(bp) — 나머지는 (10000-6000)/2씩
+
+/** 본상 3분기(bp, 합 10000) — 수령 시 1회 롤, 셋 중 하나 확정. */
+export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both: 2500 } as const;
+
+/** 본상 수량(8h 기준·배율 적용 전) — min~max 균등. */
+export const EXPEDITION_BASE_AMOUNTS = {
+  boxOnly: { boxMin: 4, boxMax: 6 },
+  diamondOnly: { diaMin: 12, diaMax: 28 },
+  both: { boxMin: 3, boxMax: 4, diaMin: 8, diaMax: 16 },
+} as const;
+
+/** 희귀 롤(본상과 독립, 각각 별도 판정, bp). 수량은 항상 1(배율 미적용). */
+export const EXPEDITION_RARE_BP = { raidSummon: 300, avatarGen: 70 } as const;
+/** 4h 미만(=1h) 파견의 희귀 롤 확률 배율(bp of 10000) — 초단타 시행 횟수 어뷰징 완화. */
+export const EXPEDITION_RARE_SHORT_SCALE_BP = 3000;
+
+/** 대성공 — 수령 시 10% 확률로 본상(상자·다이아) 수량 2배. 이용권(희귀 롤)에는 미적용. */
+export const EXPEDITION_CRIT_BP = 1000;
+export const EXPEDITION_CRIT_MULT = 2;
+
+/** 파견 레벨 — 완료 XP = 시간(h). 레벨당 본상 기대값 +1%(상한 Lv.50=+50%). 이용권 미적용. */
+export const EXPEDITION_LEVEL_MAX = 50;
+export const EXPEDITION_LEVEL_BONUS_BP_PER = 100;
+/** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(일 60XP 풀가동 기준 ~76일). */
+export function expeditionXpToNext(level: number): number {
+  return 30 + Math.floor((level * 5) / 2);
+}
+
+/**
+ * 아바타 지역 시너지(본상 기대값 배율, bp) — 활성 아바타 장비 스냅샷 3종 기준.
+ * 지역 일치 개당 +10%(최대 +30%) / "일반" 장비는 어느 파견지든 개당 +5%(최대 +15%).
+ * 불일치 감소 없음. 시간 단축이 아닌 보상업인 이유는 EXPEDITION §3.2.
+ */
+export const EXPEDITION_SYNERGY_MATCH_BP = 1000;
+export const EXPEDITION_SYNERGY_GENERAL_BP = 500;
