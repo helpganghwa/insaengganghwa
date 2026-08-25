@@ -529,6 +529,12 @@ export function ChatDock() {
     if (!vv) return;
     let raf = 0;
     let prevOn = false;
+    // 워치독(2026-08-25 iOS PWA 재발 제보) — 키보드 모드인 **동안만** 350ms 재판정.
+    // 이벤트 안전망(vv/resize/visibility/focusout)은 "닫힘 계기"를 다 열거해야 하는데,
+    // iOS는 입력 요소가 언마운트되며 닫히면 focusout이 안 오고 vv resize도 유실될 수 있어
+    // 열거가 끝나지 않는다. 폴링은 계기와 무관하게 상태 자체를 보므로 유실 계급이 없다.
+    // 무키보드 평시엔 인터벌이 아예 없어 비용 0.
+    let watchdog: ReturnType<typeof setInterval> | null = null;
     const update = () => {
       // 레이아웃 뷰포트 대비 축소량으로 판정 — 팬(offsetTop>0) 중에도 값이 흔들리지 않는다.
       const on = window.innerHeight - vv.height > KB_MIN;
@@ -540,6 +546,11 @@ export function ChatDock() {
         if (!box) return prev === null ? prev : null;
         return prev && prev.h === box.h && prev.top === box.top ? prev : box;
       });
+      if (on && !watchdog) watchdog = setInterval(update, 350);
+      if (!on && watchdog) {
+        clearInterval(watchdog);
+        watchdog = null;
+      }
       // 키보드가 '열리는 전이'에만 바닥 고정 — 열린 채 유지 중엔 스크롤을 뺏지 않는다
       // (visualViewport는 스크롤 중에도 발화해, 매번 바닥으로 끌면 위로 못 읽는다).
       if (on && !prevOn) requestAnimationFrame(() => scrollToBottom());
@@ -574,6 +585,7 @@ export function ChatDock() {
     panelEl?.addEventListener('focusout', onFocusOut);
     return () => {
       if (raf) cancelAnimationFrame(raf);
+      if (watchdog) clearInterval(watchdog);
       vv.removeEventListener('resize', onVv);
       vv.removeEventListener('scroll', onVv);
       window.removeEventListener('resize', onVv);

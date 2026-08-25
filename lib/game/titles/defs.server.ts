@@ -71,7 +71,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "guild_top",
   cat: "조건부",
-  cond: "길드 랭킹 1위 길드 소속인 동안",
+  cond: "길드 레벨 랭킹 1위 길드 소속인 동안",
   diff: "어려움"
  },
  {

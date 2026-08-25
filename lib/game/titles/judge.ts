@@ -210,8 +210,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       select coalesce((select total_claimed_count from user_checkin_state where user_id=${u} and server_id=${s}),0)::int as checkin,
              (select count(*)::int from mail_claim_logs where user_id=${u} and server_id=${s}) as mail,
              coalesce((select max(cnt) from (select count(*) cnt from mail_claim_logs where user_id=${u} and server_id=${s} group by date(claimed_at ${sql.raw(KST)})) d),0)::int as mail_day,
-             (select count(*)::int from mail_claim_logs l join mailbox m on m.id=l.mail_id
-               where l.user_id=${u} and l.claimed_at <= m.created_at + interval '5 minutes') as mail_fast
+             -- fast_claim은 수령 시점 박제(0171) — 우편 30일 삭제로 join이 끊겨도 진행도 보존
+             -- + 서버 필터(둘 다 2026-08-25 칭호 감사 발견 1).
+             (select count(*)::int from mail_claim_logs
+               where user_id=${u} and server_id=${s} and fast_claim) as mail_fast
     `),
     // 소셜
     () => db.execute(sql`
@@ -347,7 +349,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       select
         (exists(
           select 1 from melee_participants p
-          join melee_battles b on b.id = p.battle_id and b.server_id = ${s}
+          -- revealed 필터 — computed 단계(23:00~24:00/09~10시) 결과 유출 방지(감사 2026-08-25 발견 5).
+          join melee_battles b on b.id = p.battle_id and b.server_id = ${s} and b.status = 'revealed'
           where p.user_id = ${u} and p.final_rank <= 3
             and (select count(*) from melee_participants q
                    where q.battle_id = p.battle_id and q.cp_snapshot < p.cp_snapshot) * 2
@@ -430,7 +433,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where user_id=${u} and server_id=${s} and status='accepted') as combos,
              (select count(*)::int from user_profiles
                where user_id=${u} and server_id=${s}
-                 and coalesce((options->>'isDefault')::boolean,false) is false) as owned
+                 and coalesce((options->>'isDefault')::boolean,false) is false) as owned,
+             -- 입문식 — "가입 3일 안에"는 **이력** 판정(감사 2026-08-25 발견 3: 현재 경과일 게이트는
+             -- 4일차 이후 첫 칭호 화면 진입 시 영구 미발견). 수락(지급)된 잡의 생성 시각 기준.
+             (select exists(select 1 from profile_generation_jobs j
+                where j.user_id=${u} and j.server_id=${s} and j.user_profile_id is not null
+                  and j.created_at <= (select p.created_at from profiles p where p.id=${u}::uuid) + interval '3 days'))::int as first3
     `),
     // 기타 — 가입 경과·도전과제·해방
     () => db.execute(sql`
@@ -440,8 +448,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from codex_champions where user_id=${u} and server_id=${s} and rank=1) as champions,
              (select count(*)::int from codex_champions cc join catalog_items ci on ci.id=cc.catalog_item_id
                where cc.user_id=${u} and cc.server_id=${s} and cc.rank<=3 and ci.slot='weapon') as lib_weapons,
-             (select coalesce(extract(epoch from (select max_enhance_reached_at from user_equipment
-               where user_id=${u} and server_id=${s} and max_enhance_level>=100 order by max_enhance_reached_at limit 1)
+             -- +100 "최초 도달" 시각은 enhancement_logs가 정본 — max_enhance_reached_at은 신기록마다
+             -- 갱신되는 파생값이라 blitz 영구 미획득·late_bloomer 오활성을 냈다(감사 2026-08-25 발견 2).
+             (select coalesce(extract(epoch from (select min(created_at) from enhancement_logs
+               where user_id=${u} and server_id=${s} and to_level>=100)
                - (select created_at from characters where user_id=${u} and server_id=${s}))/86400,999))::int as first100_days,
              (select count(*)::int from catalog_items where active) as catalog_total,
              -- 거주·아바타·기부·집행관 이력(0166) — 캐릭터 행 1개에서 한 번에.
@@ -481,7 +491,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       select extract(day from now()-gm.joined_at)::int as gdays,
              (gm.role='leader')::int as gleader,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
-             (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank,
+             -- 길드 순위 = (level, xp) 사전식 — guilds.xp는 레벨업 시 임계 차감된 "잔여 XP"라
+             -- 단독 비교 시 갓 레벨업한 상위 길드가 밀린다(2026-08-25 명가 오활성 버그).
+             (select count(*)+1 from guilds g3 where g3.server_id=${s}
+                and (g3.level > g.level or (g3.level = g.level and g3.xp > g.xp)))::int as grank,
              (select count(*) from guild_members g4 where g4.guild_id=g.id and g4.server_id=${s})::int as gsize,
              g.level::int as glevel
       from guild_members gm join guilds g on g.id=gm.guild_id
@@ -559,7 +572,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
     // 강화 심화(판정 3차) — 일단위 집계·연속일·심야/출퇴근 패턴·장비별 누적
     () => db.execute(sql`
-      with l as (select id, user_equipment_id ueid, result, to_level,
+      with l as (select id, user_equipment_id ueid, result, to_level, from_level fl, created_at ca,
                         (created_at ${sql.raw(KST)})::date dd,
                         extract(hour from created_at ${sql.raw(KST)})::int hh
                  from enhancement_logs where user_id=${u} and server_id=${s})
@@ -572,8 +585,18 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         (select count(*)::int from (select dd from l group by dd having bool_and(hh<6)) t) as insomnia_days,
         (select count(*)::int from (select dd from l group by dd having bool_or(hh=9) and bool_or(hh=18)) t) as commuter_days,
         coalesce((select max(c) from (select count(*) c from l group by ueid) t),0)::int as eq_max_cnt,
-        (select exists(select 1 from l group by ueid
-           having count(*) filter (where result='down')>=7 and max(to_level)>=100))::int as seven_falls_ok,
+        -- 칠전팔기 — "딛고" = +100 **최초 도달 이전**의 하락 7회(같은 장비). 도달 후 하락은
+        -- 미포함(감사 2026-08-25 발견 6 — 순서 미강제로 문구보다 관대했음).
+        (select exists(
+           select 1 from (select ueid, min(ca) filter (where to_level>=100) f100 from l group by ueid) t
+           where t.f100 is not null
+             and (select count(*) from l d where d.ueid=t.ueid and d.result='down' and d.ca < t.f100) >= 7
+         ))::int as seven_falls_ok,
+        -- 환생 — "+199에서 하락한 **그 장비**를 다시 +200까지"(같은 장비·순서 강제, 감사 2026-08-25 발견 6).
+        (select exists(
+           select 1 from l d where d.fl=199 and d.result='down'
+             and exists(select 1 from l u2 where u2.ueid=d.ueid and u2.to_level>=200 and u2.ca > d.ca)
+         ))::int as reinc_ok,
         (select count(*)::int from enhancement_logs
            where user_id=${u} and server_id=${s} and elapsed_ms <= 60000 and reduced_ms > 0) as lightning_cnt,
         (select exists(select 1 from enhancement_logs l1
@@ -730,7 +753,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     r_volcano: n(ra.r_volcano), r_swamp: n(ra.r_swamp), r_orc: n(ra.r_orc), r_fallen: n(ra.r_fallen),
     r_temple: n(ra.r_temple), r_kingdom: n(ra.r_kingdom),
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
-    av_owned: n(av.owned),
+    av_owned: n(av.owned), av_first3: n(av.first3),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
@@ -752,7 +775,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // ── 판정 3차 ──
     enh_day_max: n(e3.enh_day_max), enh_day_run: n(e3.enh_day_run),
     night_day_max: n(e3.night_day_max), insomnia_days: n(e3.insomnia_days), commuter_days: n(e3.commuter_days),
-    eq_max_cnt: n(e3.eq_max_cnt), seven_falls_ok: n(e3.seven_falls_ok), phoenix_ok: n(e3.phoenix_ok),
+    eq_max_cnt: n(e3.eq_max_cnt), seven_falls_ok: n(e3.seven_falls_ok), reinc_ok: n(e3.reinc_ok), phoenix_ok: n(e3.phoenix_ok),
     lightning_cnt: n(e3.lightning_cnt), beginner_ok: n(e3.beginner_ok),
     flawless_ok: n(fl.flawless_ok), pure_ok: n(fl.pure_ok),
     same_pull_ok: n(s3.same_pull_ok), meals_days: n(s3.meals_days),
@@ -783,7 +806,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   down_curse: (m) => m.enh_down >= 100,
   curse_of_9: (m) => m.down9 >= 10,
   cliff_edge: (m) => m.cliff >= 1,
-  reincarnation: (m) => m.cliff >= 1 && m.max_lv >= 200,
+  reincarnation: (m) => m.reinc_ok === 1, // 같은 장비·순서 강제(감사 2026-08-25)
   crown_touch: (m) => m.crown >= 1,
   win_streak: (m) => m.win_run >= 10,
   down_streak: (m) => m.down_run >= 5,
@@ -867,7 +890,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   continent_sweep: (m) =>
     Math.min(m.r_volcano, m.r_swamp, m.r_orc, m.r_fallen, m.r_temple, m.r_kingdom) >= 10,
   // 아바타
-  initiation: (m) => m.av_cnt >= 1 && m.days <= 3,
+  initiation: (m) => m.av_first3 === 1, // 이력 판정(감사 2026-08-25)
   rebirth: (m) => m.av_cnt >= 100,
   avatar_1000: (m) => m.av_cnt >= 1000,
   avatar_50: (m) => m.av_owned >= 50, // 유일한 "보유" 기준 — cond가 '50개 보유'
