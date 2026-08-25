@@ -53,7 +53,9 @@ export type PushPayload = {
     | 'melee'
     | 'chat_mention'
     | 'guild'
-    | 'admin';
+    | 'admin'
+    /** 파견 귀환(2026-08-25) — 토글 없음(상시): 유저가 직접 보낸 원정의 완료 통지, 일 최대 6건. */
+    | 'expedition';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
    * 무음 교체해 "알림이 안 온다"고 느껴지던 문제 방지(2026-06-01). tag가 항상

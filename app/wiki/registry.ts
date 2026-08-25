@@ -16,6 +16,7 @@ import * as guildRoles from './docs/guild-roles';
 import * as conquest from './docs/conquest';
 import * as friends from './docs/friends';
 import * as avatar from './docs/avatar';
+import * as expedition from './docs/expedition';
 import * as shop from './docs/shop';
 import * as titles from './docs/titles';
 
@@ -65,6 +66,7 @@ const MODULES = [
   friends,
   titles,
   avatar,
+  expedition,
   shop,
 ];
 

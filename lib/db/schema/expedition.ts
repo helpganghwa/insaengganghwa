@@ -80,6 +80,8 @@ export const expeditions = pgTable(
     reducedMs: bigint('reduced_ms', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 수령 시 대성공(10%, ×2) 판정 결과 — 수령 전 null. */
     crit: boolean('crit'),
+    /** 귀환 푸시 발송 마킹(0173) — cron 원자 클레임(push-enhance-ready 패턴). */
+    pushSent: boolean('push_sent').notNull().default(false),
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
   },
   (t) => [

@@ -28,6 +28,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/push-expedition-ready",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/settle-raid",
       "schedule": "*/5 * * * *"
     },

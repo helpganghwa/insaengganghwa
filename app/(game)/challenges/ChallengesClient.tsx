@@ -48,6 +48,7 @@ const GROUP_TINT: Record<ChallengeGroup, string> = {
   raid: 'bg-red-500/10 text-red-600 dark:text-red-400',
   world: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
   avatar: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  expedition: 'bg-green-600/10 text-green-700 dark:text-green-400',
   shop: 'bg-lime-500/10 text-lime-600 dark:text-lime-400',
 };
 

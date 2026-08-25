@@ -74,6 +74,14 @@ const MENU = [
     scale: 1,
   },
   {
+    href: '/expedition',
+    label: '파견',
+    desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
+    bg: '/sprites/hub/expedition.png', // 에셋 생성 전 — tint 폴백(P5 에셋 승인 후 채움)
+    tint: '#1f2a16',
+    scale: 1,
+  },
+  {
     href: '/gacha',
     label: '보급',
     desc: '랜덤 장비 획득',
@@ -131,6 +139,8 @@ export default async function HomePage() {
   //  발표 전: 진행 전("오늘 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 9시 개시';
+  let expeditionDesc = '원정대를 보내보세요';
+  let expeditionHot = false;
   let raidJoinable = 0;
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
@@ -209,6 +219,13 @@ export default async function HomePage() {
                               and gm1.server_id = r.server_id))
                        )) end)
               as raid_joinable,
+            -- 파견: 수령 대기(귀환 완료)·진행 중 카운트 — 카드 동적 문구용.
+            (select count(*)::int from expeditions
+               where user_id = ${userId}::uuid and server_id = ${serverId}
+                 and status = 'running' and complete_at <= now()) as exp_claimable,
+            (select count(*)::int from expeditions
+               where user_id = ${userId}::uuid and server_id = ${serverId}
+                 and status = 'running' and complete_at > now()) as exp_running,
             -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
             case
               when n.kst::time < time '09:00' then 'before'
@@ -259,6 +276,8 @@ export default async function HomePage() {
         mail_unclaimed: number;
         raid_unclaimed: number;
         raid_joinable: number;
+        exp_claimable: number;
+        exp_running: number;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
         melee_champ: string | null;
@@ -280,6 +299,15 @@ export default async function HomePage() {
         counts['/mail'] = row.mail_unclaimed ?? 0;
         counts['/raid'] = row.raid_unclaimed ?? 0;
         raidJoinable = row.raid_joinable ?? 0;
+        const expClaimable = row.exp_claimable ?? 0;
+        const expRunning = row.exp_running ?? 0;
+        if (expClaimable > 0) {
+          expeditionDesc = `보상 수령 대기 ${expClaimable}건`;
+          expeditionHot = true;
+          counts['/expedition'] = expClaimable;
+        } else if (expRunning > 0) {
+          expeditionDesc = `${expRunning}팀 파견 중`;
+        }
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())
@@ -425,10 +453,13 @@ export default async function HomePage() {
           const desc =
             m.href === '/melee'
               ? meleeDesc
-              : m.href === '/raid' && raidJoinable > 0
-                ? `참여 가능 레이드 ${raidJoinable}`
-                : m.desc;
-          const descHot = m.href === '/raid' && raidJoinable > 0; // 참여 가능 — desc 강조색
+              : m.href === '/expedition'
+                ? expeditionDesc
+                : m.href === '/raid' && raidJoinable > 0
+                  ? `참여 가능 레이드 ${raidJoinable}`
+                  : m.desc;
+          const descHot =
+            (m.href === '/raid' && raidJoinable > 0) || (m.href === '/expedition' && expeditionHot); // 강조색
           return (
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}

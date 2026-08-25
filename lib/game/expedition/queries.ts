@@ -1,0 +1,159 @@
+import 'server-only';
+
+import { sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { kstDateString } from '@/lib/kst';
+import {
+  EXPEDITION_DAILY_STARTS,
+  EXPEDITION_REFRESH_COST,
+  EXPEDITION_REFRESH_FREE_PER_DAY,
+  EXPEDITION_SLOT_UNLOCKS,
+  EXPEDITION_SLOTS,
+  expeditionXpToNext,
+  type ExpeditionDifficulty,
+  type ExpeditionRegion,
+} from '@/lib/game/balance';
+import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward } from './engine';
+
+/** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
+export type ExpeditionBoardSlot = {
+  slot: number;
+  state: 'locked' | 'offer' | 'running';
+  /** locked 전용 — 해금 조건. */
+  unlock?: { level: number; diamond: number };
+  /** offer/running 공통 — 미션 내용(오퍼=기본 보상, 진행=최종 확정 보상). */
+  region?: ExpeditionRegion;
+  difficulty?: ExpeditionDifficulty;
+  hours?: number;
+  reward?: ExpeditionReward;
+  /** running 전용. */
+  completeAtIso?: string;
+  synergyBp?: number;
+  avatarId?: string | null;
+  avatarFace?: string | null;
+};
+
+export type ExpeditionAvatar = {
+  id: string;
+  face: string | null;
+  isActive: boolean;
+  isDefault: boolean;
+  regions: (ExpeditionRegion | 'general')[];
+  busy: boolean;
+};
+
+export type ExpeditionBoard = {
+  level: number;
+  xp: number;
+  xpNext: number;
+  bonusBp: number;
+  startsLeft: number;
+  freeRefreshLeft: number;
+  refreshCost: number;
+  slots: ExpeditionBoardSlot[];
+  avatars: ExpeditionAvatar[];
+};
+
+/** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
+export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
+  const today = kstDateString();
+  const [stateRows, active, avatarRows, activeProfile] = await Promise.all([
+    db.execute(sql`
+      select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
+             refresh_kst_day::text, refresh_today
+      from expedition_state where user_id = ${userId}::uuid and server_id = ${serverId}
+    `) as unknown as Promise<
+      {
+        level: number; xp: string; slots_purchased: number;
+        starts_kst_day: string | null; starts_today: number;
+        refresh_kst_day: string | null; refresh_today: number;
+      }[]
+    >,
+    db.execute(sql`
+      select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
+             complete_at, synergy_bp, avatar_profile_id::text
+      from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
+      order by slot
+    `) as unknown as Promise<
+      {
+        slot: number; status: 'offer' | 'running'; region: ExpeditionRegion;
+        difficulty: ExpeditionDifficulty; duration_ms: string;
+        reward: ExpeditionReward; final_reward: ExpeditionReward | null;
+        complete_at: string | Date | null; synergy_bp: number; avatar_profile_id: string | null;
+      }[]
+    >,
+    db.execute(sql`
+      select up.id::text, up.rotations->>'face' as face, up.rotations->>'south' as south,
+             up.equipment_snapshot,
+             coalesce((up.options->>'isDefault')::boolean, false) as is_default,
+             exists(select 1 from expeditions e where e.avatar_profile_id = up.id and e.status = 'running') as busy
+      from user_profiles up
+      where up.user_id = ${userId}::uuid and up.server_id = ${serverId}
+      order by is_default desc, up.created_at desc
+    `) as unknown as Promise<
+      { id: string; face: string | null; south: string | null; equipment_snapshot: unknown; is_default: boolean; busy: boolean }[]
+    >,
+    db.execute(sql`
+      select active_profile_id::text as id from characters
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+    `) as unknown as Promise<{ id: string | null }[]>,
+  ]);
+  const st = stateRows[0] ?? {
+    level: 0, xp: '0', slots_purchased: 1,
+    starts_kst_day: null, starts_today: 0, refresh_kst_day: null, refresh_today: 0,
+  };
+  const eff = effectiveSlots(st.level, st.slots_purchased);
+  const activeId = activeProfile[0]?.id ?? null;
+  const faceById = new Map(avatarRows.map((a) => [a.id, a.face ?? a.south]));
+
+  const slots: ExpeditionBoardSlot[] = [];
+  for (let slot = 1; slot <= EXPEDITION_SLOTS; slot++) {
+    if (slot > eff) {
+      const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot)!;
+      slots.push({ slot, state: 'locked', unlock: { level: def.level, diamond: def.diamond } });
+      continue;
+    }
+    const row = active.find((r) => r.slot === slot);
+    if (!row) continue; // ensureOffers 선행 시 없을 수 없으나 방어(다음 렌더에서 채워짐)
+    const hours = Math.round(Number(row.duration_ms) / 3_600_000);
+    if (row.status === 'offer') {
+      slots.push({ slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward });
+    } else {
+      slots.push({
+        slot,
+        state: 'running',
+        region: row.region,
+        difficulty: row.difficulty,
+        hours,
+        reward: row.final_reward ?? row.reward,
+        completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
+        synergyBp: row.synergy_bp,
+        avatarId: row.avatar_profile_id,
+        avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
+      });
+    }
+  }
+
+  const startsToday = st.starts_kst_day === today ? st.starts_today : 0;
+  const refreshToday = st.refresh_kst_day === today ? st.refresh_today : 0;
+  return {
+    level: st.level,
+    xp: Number(st.xp),
+    xpNext: expeditionXpToNext(st.level),
+    bonusBp: levelBonusBp(st.level),
+    startsLeft: Math.max(0, EXPEDITION_DAILY_STARTS - startsToday),
+    freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
+    refreshCost: EXPEDITION_REFRESH_COST,
+    slots,
+    avatars: avatarRows.map((a) => ({
+      id: a.id,
+      face: a.face ?? a.south,
+      isActive: a.id === activeId,
+      isDefault: a.is_default,
+      regions: snapshotExpeditionRegions(a.equipment_snapshot),
+      busy: a.busy,
+    })),
+  };
+}

@@ -74,6 +74,13 @@ export function doneCondSql(id: string, userId: string, serverId: number) {
       return sql`exists(select 1 from raid_rewards rr join raids r on r.id=rr.raid_id where rr.user_id=${u} and r.server_id=${s} and rr.claimed_at is not null)`;
     case 'melee_join':
       return sql`exists(select 1 from melee_participants mp join melee_battles mb on mb.id=mp.battle_id where mp.user_id=${u} and mb.server_id=${s})`;
+    case 'exp_first_start':
+      // 시작 이력(취소 포함 — 보낸 행위 자체 인정, avatar_create '시도 인정'과 동일 원칙).
+      return sql`exists(select 1 from expeditions where user_id=${u} and server_id=${s} and status in ('running','claimed','cancelled'))`;
+    case 'exp_first_claim':
+      return sql`exists(select 1 from expeditions where user_id=${u} and server_id=${s} and status='claimed')`;
+    case 'exp_claim_10':
+      return sql`(select count(*) from expeditions where user_id=${u} and server_id=${s} and status='claimed') >= 10`;
     case 'avatar_create':
       // 생성 시도(잡 존재) 기준 — 결과가 거절·실패(환불)여도 체험은 했으므로 인정(유저 친화).
       return sql`exists(select 1 from profile_generation_jobs where user_id=${u} and server_id=${s})`;

@@ -131,6 +131,18 @@ const CATALOG_TO_EXPEDITION: Partial<Record<CatalogRegion, ExpeditionRegion | 'g
 };
 const REGION_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.region]));
 
+/** 스냅샷의 장비 지역 목록(UI 배지·클라 시너지 계산용) — 미매핑은 제외. */
+export function snapshotExpeditionRegions(snapshot: unknown): (ExpeditionRegion | 'general')[] {
+  if (!snapshot || typeof snapshot !== 'object') return [];
+  const keys = Object.values(snapshot as Record<string, unknown>).filter(
+    (v): v is string => typeof v === 'string',
+  );
+  return keys
+    .slice(0, 3)
+    .map((k) => CATALOG_TO_EXPEDITION[REGION_BY_KEY.get(k) as CatalogRegion])
+    .filter((v): v is ExpeditionRegion | 'general' => !!v);
+}
+
 /** 아바타 equipmentSnapshot(카탈로그 key 3종) → 미션 지역 시너지(bp). */
 export function synergyBpForSnapshot(
   snapshot: unknown,
