@@ -106,7 +106,11 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
   };
   const eff = effectiveSlots(st.level, st.slots_purchased);
   const activeId = activeProfile[0]?.id ?? null;
-  const faceById = new Map(avatarRows.map((a) => [a.id, a.face ?? a.south]));
+  // 얼굴 썸네일 우선 — 기본 스프라이트는 public 정적 face.png로 매핑(채팅 displayFields와 동일 규칙).
+  const faceOf = (a: { face: string | null; south: string | null }) =>
+    a.face ??
+    (a.south?.startsWith('/sprites/default/') ? a.south.replace('south.png', 'face.png') : a.south);
+  const faceById = new Map(avatarRows.map((a) => [a.id, faceOf(a)]));
 
   const slots: ExpeditionBoardSlot[] = [];
   for (let slot = 1; slot <= EXPEDITION_SLOTS; slot++) {
@@ -149,7 +153,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     slots,
     avatars: avatarRows.map((a) => ({
       id: a.id,
-      face: a.face ?? a.south,
+      face: faceOf(a),
       isActive: a.id === activeId,
       isDefault: a.is_default,
       regions: snapshotExpeditionRegions(a.equipment_snapshot),
