@@ -9,11 +9,9 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
   EXPEDITION_DAILY_STARTS,
-  EXPEDITION_DIFFICULTY_LABEL,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   GEM_TO_MS,
-  type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
 import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
@@ -37,19 +35,14 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
-const REGION_UI: Record<ExpeditionRegion, { emoji: string; label: string }> = {
-  swamp: { emoji: '🏞️', label: '슬라임 늪' },
-  orc: { emoji: '🪓', label: '오크 부락' },
-  kingdom: { emoji: '🏰', label: '왕국' },
-  temple: { emoji: '⛩️', label: '잊힌 신전' },
-  volcano: { emoji: '🌋', label: '드래곤 화산' },
-  angel: { emoji: '🪽', label: '타락 천사 부유섬' },
-};
-const DIFF_CLS: Record<ExpeditionDifficulty, string> = {
-  easy: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40',
-  normal: 'bg-sky-500/15 text-sky-400 border-sky-500/40',
-  hard: 'bg-orange-500/15 text-orange-400 border-orange-500/40',
-  grand: 'bg-red-500/15 text-red-400 border-red-500/40',
+/** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
+const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
+  swamp: { color: '#22c55e', label: '슬라임 늪' },
+  orc: { color: '#f97316', label: '오크 부락' },
+  kingdom: { color: '#fbbf24', label: '왕국' },
+  temple: { color: '#60a5fa', label: '잊힌 신전' },
+  volcano: { color: '#ef4444', label: '드래곤 화산' },
+  angel: { color: '#c084fc', label: '타락 천사 부유섬' },
 };
 
 function fmtRemain(ms: number): string {
@@ -64,10 +57,14 @@ function RewardLine({ r, strong }: { r: ExpeditionReward; strong?: boolean }) {
   const parts: string[] = [];
   if (r.boxes) {
     const total = r.boxes.weapon + r.boxes.armor + r.boxes.accessory;
-    if (total > 0) parts.push(`📦 ${total}개`);
+    if (total > 0) parts.push(`상자 ${total}개`);
   }
   if (r.diamond) parts.push(`💎 ${r.diamond.toLocaleString('ko-KR')}`);
-  return <b className={strong ? 'text-amber-400' : 'text-zinc-200'}>{parts.join(' + ')}</b>;
+  return (
+    <b className={strong ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-800 dark:text-zinc-200'}>
+      {parts.join(' + ')}
+    </b>
+  );
 }
 
 function boxDetail(r: ExpeditionReward): string {
@@ -97,6 +94,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [assignFor, setAssignFor] = useState<ExpeditionBoardSlot | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [cancelFor, setCancelFor] = useState<number | null>(null);
+  const [purchaseFor, setPurchaseFor] = useState<ExpeditionBoardSlot | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -242,6 +240,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   };
 
   const doPurchase = (s: ExpeditionBoardSlot) => {
+    setPurchaseFor(null);
     const cost = s.unlock?.diamond ?? 0;
     if (!gate.ensure(cost)) return;
     optimisticAdjust(BigInt(-cost));
@@ -293,7 +292,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           onCancel={() => setCancelFor(s.slot)}
           onCompleteNow={() => doCompleteNow(s)}
           onClaim={() => doClaim(s)}
-          onPurchase={() => doPurchase(s)}
+          onPurchase={() => setPurchaseFor(s)}
         />
       ))}
 
@@ -301,8 +300,12 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       {assignFor?.region ? (
         <ModalShell onClose={() => setAssignFor(null)} label="원정대원 선택">
           <ModalLayout
-            title={`${REGION_UI[assignFor.region].emoji} ${REGION_UI[assignFor.region].label}`}
-            subtitle={`${EXPEDITION_DIFFICULTY_LABEL[assignFor.difficulty!]} · ${assignFor.hours}시간 — 원정대원을 고르세요`}
+            title={
+              <span style={{ color: REGION_UI[assignFor.region].color }}>
+                {REGION_UI[assignFor.region].label}
+              </span>
+            }
+            subtitle={`${assignFor.hours}시간 파견 — 원정대원을 고르세요`}
             bodyPad="sm"
             footer={
               <>
@@ -346,7 +349,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                       )}
                     </span>
                     <span className={`mt-1 block text-[9px] font-bold ${syn > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
-                      {a.busy ? '⏳ 파견 중' : syn > 0 ? `🎨 +${syn / 100}%` : '+0%'}
+                      {a.busy ? '파견 중' : syn > 0 ? `시너지 +${syn / 100}%` : '+0%'}
                     </span>
                     {a.isActive ? (
                       <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span>
@@ -362,12 +365,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                   r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp)}
                   strong
                 />
-                <span className="ml-1 text-[10px] text-zinc-400">(시작 시 확정)</span>
               </p>
             ) : null}
-            <p className="px-2 pt-1 pb-1 text-center text-[10px] text-zinc-400 dark:text-zinc-500">
-              파견 취소 시 보상은 없고 오늘 횟수는 돌아오지 않아요
-            </p>
           </ModalLayout>
         </ModalShell>
       ) : null}
@@ -389,7 +388,30 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             }
           >
             <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              보상을 받을 수 없고, 사용한 오늘 파견 횟수는 돌아오지 않아요.
+              보상 없이 파견이 종료돼요.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+
+      {/* 슬롯 바로 열기 — 다이아 소모 컨펌(UI 피드백 3) */}
+      {purchaseFor ? (
+        <ModalShell onClose={() => setPurchaseFor(null)} label="슬롯 열기">
+          <ModalLayout
+            title={`슬롯 ${purchaseFor.slot} 바로 열기`}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setPurchaseFor(null)}>
+                  닫기
+                </ModalButton>
+                <ModalButton tone="contrast" onClick={() => doPurchase(purchaseFor)}>
+                  💎 {purchaseFor.unlock?.diamond.toLocaleString('ko-KR')} 사용
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              파견 Lv.{purchaseFor.unlock?.level} 달성을 기다리지 않고 지금 바로 엽니다.
             </p>
           </ModalLayout>
         </ModalShell>
@@ -399,8 +421,12 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       {claimPopup ? (
         <ModalShell onClose={() => setClaimPopup(null)} label="파견 귀환">
           <ModalLayout
-            title={claimPopup.crit ? '✨ 대성공!' : '파견 귀환'}
-            subtitle={`${REGION_UI[claimPopup.region].emoji} ${REGION_UI[claimPopup.region].label}`}
+            title={claimPopup.crit ? '대성공!' : '파견 귀환'}
+            subtitle={
+              <span style={{ color: REGION_UI[claimPopup.region].color }}>
+                {REGION_UI[claimPopup.region].label}
+              </span>
+            }
             footer={
               <ModalButton tone="contrast" onClick={() => setClaimPopup(null)}>
                 확인
@@ -412,7 +438,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <RewardLine r={claimPopup.reward} strong={claimPopup.crit} />
               </p>
               {claimPopup.reward.boxes ? (
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{boxDetail(claimPopup.reward)} — 보급소에서 개봉</p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{boxDetail(claimPopup.reward)}</p>
               ) : null}
               {claimPopup.crit ? (
                 <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">대성공으로 수량이 2배가 됐어요!</p>
@@ -467,7 +493,7 @@ function SlotCard({
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 p-3 text-center dark:border-zinc-700">
         <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
-          🔒 슬롯 {s.slot} — <b className="text-zinc-500 dark:text-zinc-400">파견 Lv.{s.unlock?.level}</b> 달성 시 무료 오픈
+          슬롯 {s.slot} — <b className="text-zinc-500 dark:text-zinc-400">파견 Lv.{s.unlock?.level}</b> 달성 시 무료 오픈
         </p>
         <button
           type="button"
@@ -481,16 +507,18 @@ function SlotCard({
   }
 
   const region = s.region ? REGION_UI[s.region] : null;
-  const diffCls = s.difficulty ? DIFF_CLS[s.difficulty] : '';
 
   return (
-    <div className={`rounded-xl border p-3 ${pending ? 'opacity-70' : ''} border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60`}>
+    <div
+      className={`rounded-xl border border-l-4 p-3 ${pending ? 'opacity-70' : ''} border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60`}
+      style={region ? { borderLeftColor: region.color } : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-[13px] font-extrabold">
-          {region ? `${region.emoji} ${region.label}` : '…'}
-          {s.difficulty ? (
-            <span className={`ml-1.5 rounded-md border px-1.5 py-0.5 align-[2px] text-[9px] font-black ${diffCls}`}>
-              {EXPEDITION_DIFFICULTY_LABEL[s.difficulty]} · {s.hours}h
+          {region ? <span style={{ color: region.color }}>{region.label}</span> : '…'}
+          {s.hours ? (
+            <span className="ml-1.5 rounded-md bg-zinc-100 px-1.5 py-0.5 align-[2px] text-[9px] font-black text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+              {s.hours}시간
             </span>
           ) : null}
         </p>
@@ -499,10 +527,9 @@ function SlotCard({
             type="button"
             onClick={onRefresh}
             disabled={pending}
-            aria-label="미션 새로고침"
-            className="shrink-0 rounded-lg bg-zinc-100 px-2.5 py-1 text-[12px] active:scale-95 dark:bg-zinc-800"
+            className="shrink-0 rounded-lg bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-600 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300"
           >
-            🔄
+            새로고침
           </button>
         ) : (
           <Ticker>
@@ -511,7 +538,7 @@ function SlotCard({
               return remain <= 0 ? (
                 <span className="shrink-0 text-[12px] font-extrabold text-emerald-500">귀환 완료!</span>
               ) : (
-                <span className="shrink-0 text-[12px] font-extrabold tabular-nums text-amber-600 dark:text-amber-400">⏳ {fmtRemain(remain)}</span>
+                <span className="shrink-0 text-[12px] font-extrabold tabular-nums text-amber-600 dark:text-amber-400">{fmtRemain(remain)}</span>
               );
             }}
           </Ticker>
@@ -521,11 +548,10 @@ function SlotCard({
       <p className="mt-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
         {s.reward ? (
           <>
-            {s.state === 'offer' ? '확정 보상 ' : '보상 '}
-            <RewardLine r={s.reward} />
-            {s.state === 'offer' ? <span className="ml-1 text-zinc-400 dark:text-zinc-500">· 시너지·레벨 보너스는 배정 시 가산</span> : null}
+            보상 <RewardLine r={s.reward} />
+            <span className="ml-1.5">· 경험치 +{s.hours}</span>
             {s.state === 'running' && (s.synergyBp ?? 0) > 0 ? (
-              <span className="ml-1 font-bold text-amber-600 dark:text-amber-400">🎨 +{(s.synergyBp ?? 0) / 100}%</span>
+              <span className="ml-1.5 font-bold text-amber-600 dark:text-amber-400">시너지 +{(s.synergyBp ?? 0) / 100}%</span>
             ) : null}
           </>
         ) : (

@@ -4,7 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { ensureOffers } from '@/lib/game/expedition/service';
 import { getExpeditionBoard } from '@/lib/game/expedition/queries';
-import { BackBar } from '@/components/BackNav';
+import { BackTitle } from '@/components/BackNav';
 
 import { ExpeditionBoardView } from './ExpeditionBoard';
 
@@ -19,7 +19,7 @@ export default async function ExpeditionPage() {
   const board = await getExpeditionBoard(userId, serverId);
   return (
     <main className="flex-1 overflow-y-auto px-3 pt-2 pb-6">
-      <BackBar title="파견" />
+      <BackTitle title="파견" className="mb-2" />
       <ExpeditionBoardView initial={board} />
     </main>
   );
