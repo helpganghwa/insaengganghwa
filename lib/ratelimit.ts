@@ -16,6 +16,7 @@ import { Redis } from '@upstash/redis';
 export type RlBucket =
   | 'enhance'
   | 'enhanceCancel'
+  | 'expedition'
   | 'gacha'
   | 'inventory'
   | 'raid'
@@ -40,6 +41,8 @@ export type RlBucket =
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
+  expedition: [20, '10 s'], // 보드 재동기 포함 전 액션 공용 — 정상 플레이 여유, 연타 봇 차단
+
   // 취소 전용 — 슬롯 전멸 사건(2026-07-06) 재발 가드(버그성 취소 루프 감속).
   // [8,'60s']는 슬라이딩 60초에 직전 취소 이력이 남아 6슬롯 연속 취소가 4~5번째에서
   // 막혔음(2026-07-13 CBT 피드백). 정상 상한 = 6슬롯 취소→재등록→재취소 회전까지

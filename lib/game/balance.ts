@@ -783,7 +783,7 @@ export const EXPEDITION_BOX_MAIN_SLOT: Record<ExpeditionRegion, 'weapon' | 'armo
 };
 export const EXPEDITION_BOX_MAIN_BP = 6000; // 주력 슬롯 확률(bp) — 나머지는 (10000-6000)/2씩
 
-/** 본상 3분기(bp, 합 10000) — 수령 시 1회 롤, 셋 중 하나 확정. */
+/** 본상 3분기(bp, 합 10000) — **미션 생성(오퍼) 시** 1회 롤·카드에 확정 표기(A′). 수령 롤은 대성공뿐. */
 export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both: 2500 } as const;
 
 /**

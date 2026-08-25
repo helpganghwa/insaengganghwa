@@ -8,6 +8,7 @@ import { Ticker } from '@/components/Ticker';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
+  EXPEDITION_DAILY_STARTS,
   EXPEDITION_DIFFICULTY_LABEL,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
@@ -113,15 +114,21 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     setTimeout(() => setError(null), 2500);
   };
 
-  /** 액션 공통 — 실패 시 서버 보드 재동기(낙관 예측 롤백). */
+  /** 액션 공통 — 실패 시 서버 보드 재동기 + undo(다이아 낙관 선반영 역보정, 적대 검수 4). */
   const run = useCallback(
-    (slot: number | null, optimistic: (b: ExpeditionBoard) => ExpeditionBoard, act: () => Promise<{ ok: boolean; code?: string; board?: ExpeditionBoard }>) => {
+    (
+      slot: number | null,
+      optimistic: (b: ExpeditionBoard) => ExpeditionBoard,
+      act: () => Promise<{ ok: boolean; code?: string; board?: ExpeditionBoard }>,
+      undo?: () => void,
+    ) => {
       setPendingSlot(slot);
       setBoard(optimistic);
       startTransition(async () => {
         const r = await act();
         if (r.ok && r.board) setBoard(r.board);
         else {
+          undo?.();
           if (!r.ok && r.code) showError(r.code);
           const fresh = await expeditionBoardAction();
           if (fresh.ok) setBoard(fresh.board);
@@ -145,6 +152,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         slots: b.slots.map((x) => (x.slot === s.slot ? { ...x, reward: undefined } : x)),
       }),
       () => refreshOfferAction(s.slot),
+      paid ? () => optimisticAdjust(BigInt(board.refreshCost)) : undefined,
     );
   };
 
@@ -189,6 +197,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         slots: b.slots.map((x) => (x.slot === s.slot ? { ...x, completeAtIso: new Date().toISOString() } : x)),
       }),
       () => completeNowExpeditionAction(s.slot),
+      cost > 0 ? () => optimisticAdjust(BigInt(cost)) : undefined,
     );
   };
 
@@ -209,15 +218,21 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   };
 
   const doClaim = (s: ExpeditionBoardSlot) => {
-    // 다이아는 비크리 기준 낙관 선반영 — 대성공이면 응답 보드가 위로 수렴(추가분은 팝업으로 체감).
-    if (s.reward?.diamond) optimisticAdjust(BigInt(s.reward.diamond));
+    // 다이아는 비크리 기준 낙관 선반영 — 대성공이면 크리 추가분을 응답 후 가산, 실패면 역보정
+    // (적대 검수 4: 클라 시계가 빨라 NOT_READY가 나면 선반영이 표시 드리프트로 남던 문제).
+    const preAdd = s.reward?.diamond ?? 0;
+    if (preAdd > 0) optimisticAdjust(BigInt(preAdd));
     setPendingSlot(s.slot);
     startTransition(async () => {
       const r: ClaimActionResult = await claimExpeditionAction(s.slot);
       if (r.ok) {
+        // 크리·시작가 차이 보정 — 실지급(r.reward)과 선반영(preAdd)의 차액만 추가 반영.
+        const diff = (r.reward.diamond ?? 0) - preAdd;
+        if (diff !== 0) optimisticAdjust(BigInt(diff));
         setBoard(r.board);
         setClaimPopup({ crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region! });
       } else {
+        if (preAdd > 0) optimisticAdjust(BigInt(-preAdd));
         showError(r.code);
         const fresh = await expeditionBoardAction();
         if (fresh.ok) setBoard(fresh.board);
@@ -230,7 +245,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     const cost = s.unlock?.diamond ?? 0;
     if (!gate.ensure(cost)) return;
     optimisticAdjust(BigInt(-cost));
-    run(null, (b) => b, () => purchaseExpeditionSlotAction(s.slot));
+    run(null, (b) => b, () => purchaseExpeditionSlotAction(s.slot), () => optimisticAdjust(BigInt(cost)));
   };
 
   const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
@@ -245,7 +260,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-bold">보상 +{board.bonusBp / 100}%</span>
           </span>
           <span>
-            오늘 파견 <b className="text-amber-600 dark:text-amber-400">{6 - board.startsLeft}</b>/6
+            오늘 파견 <b className="text-amber-600 dark:text-amber-400">{EXPEDITION_DAILY_STARTS - board.startsLeft}</b>/{EXPEDITION_DAILY_STARTS}
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -299,7 +314,9 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                   disabled={!selectedAvatar || board.startsLeft <= 0}
                   onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}
                 >
-                  {board.startsLeft <= 0 ? '오늘 횟수 소진' : `파견 보내기 (오늘 ${6 - board.startsLeft}/6)`}
+                  {board.startsLeft <= 0
+                    ? '오늘 횟수 소진'
+                    : `파견 보내기 (오늘 ${EXPEDITION_DAILY_STARTS - board.startsLeft}/${EXPEDITION_DAILY_STARTS})`}
                 </ModalButton>
               </>
             }

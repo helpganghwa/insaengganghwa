@@ -1,6 +1,7 @@
 'use server';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { getActiveServerId } from '@/lib/game/servers';
 import {
   cancelExpedition,
@@ -27,6 +28,8 @@ export type ClaimActionResult = ({ ok: true; board: ExpeditionBoard } & ClaimRes
 async function ctx(): Promise<{ userId: string; serverId: number } | null> {
   const userId = await getSessionUserId();
   if (!userId) return null;
+  // 전 액션 공용 창(EXPEDITION §6 — 적대 검수 3) — 정상 플레이는 통과, 연타 봇만 차단.
+  if (await rateLimited(userId, 'expedition')) return null;
   return { userId, serverId: await getActiveServerId() };
 }
 

@@ -228,12 +228,17 @@ export function startExpedition(
   });
 }
 
-/** 취소 — running → cancelled. 보상 없음·일일 횟수 미반환(사용자 확정). */
+/**
+ * 취소 — running → cancelled. 보상 없음·일일 횟수 미반환(사용자 확정).
+ * 완료(귀환) 후에는 취소 불가(적대 검수 5) — 즉시완료 지불·확정 보상을 실수로 태우는
+ * 자해 경로 차단(UI는 이미 숨기지만 클라 시계 오차·직접 호출 방어).
+ */
 export function cancelExpedition(userId: string, serverId: number, slot: number): Promise<void> {
   return db.transaction(async (tx) => {
     const res = (await tx.execute(sql`
       update expeditions set status = 'cancelled'
-      where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status = 'running'
+      where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot}
+        and status = 'running' and complete_at > now()
       returning id
     `)) as unknown as unknown[];
     if (res.length === 0) throw new ExpeditionError('NOT_RUNNING');

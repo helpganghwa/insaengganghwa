@@ -36,6 +36,11 @@ import {
   EXPEDITION_LEVEL_BONUS_BP_PER,
   EXPEDITION_SYNERGY_MATCH_BP,
   EXPEDITION_SYNERGY_GENERAL_BP,
+  EXPEDITION_DIFFICULTY_DIST_BP,
+  EXPEDITION_DIFFICULTY_LABEL,
+  EXPEDITION_DIFFICULTY_HOURS,
+  EXPEDITION_DIFFICULTIES,
+  EXPEDITION_REGIONS,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 
@@ -257,12 +262,13 @@ export default async function ProbabilityPage() {
         </P>
       </Sec>
 
-      {/* 파견(v1) — EXPEDITION_* 상수와 1:1(§33). 레벨·시너지 배율은 수량 기대값에만 적용되고
-          아래 표기 확률(분기)은 변하지 않는다 — 문구로 명시. 이용권 보상은 v1.5 보류(2026-08-25). */}
+      {/* 파견(v1) — EXPEDITION_* 상수와 1:1(§33). 판정 시점(오퍼 생성 롤·수령은 대성공만)과
+          난이도 출현 분포까지 공시(적대 검수 2026-08-25 발견 1·2 반영). */}
       <Sec n="6" title="파견" id="expedition">
         <P>
-          파견 완료 수령 시 아래 셋 중 하나가 확정으로 추첨됩니다(서버 추첨). 수량은 8시간 파견
-          기준이며, 파견 시간에 비례해 커집니다(
+          파견 보상은 <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어
+          카드에 그대로 표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 수량은
+          보통(8시간) 기준이며 난이도(시간)에 비례해 커집니다(
           {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}).
         </P>
         <Table head={['본상', '확률', '수량(8h 기준)']}>
@@ -292,10 +298,30 @@ export default async function ProbabilityPage() {
           {EXPEDITION_CRIT_MULT}배가 됩니다.
         </P>
         <P>
+          미션의 지역은 {EXPEDITION_REGIONS.length}곳 중 균등 추첨되고, 난이도 출현 확률은 파견
+          레벨 구간에 따라 다릅니다. 새로고침(무료 소진 후 유료)은 지역·난이도·보상을 전부 다시
+          추첨합니다.
+        </P>
+        <Table head={['파견 레벨', ...EXPEDITION_DIFFICULTIES.map((d) => `${EXPEDITION_DIFFICULTY_LABEL[d]}(${EXPEDITION_DIFFICULTY_HOURS[d]}h)`)]}>
+          {[...EXPEDITION_DIFFICULTY_DIST_BP]
+            .sort((a, b) => a.minLevel - b.minLevel)
+            .map((b, i, arr) => (
+              <tr key={b.minLevel} className="border-t border-zinc-100 dark:border-zinc-900">
+                <Td>
+                  Lv.{b.minLevel}
+                  {i + 1 < arr.length ? `~${arr[i + 1]!.minLevel - 1}` : '+'}
+                </Td>
+                {EXPEDITION_DIFFICULTIES.map((d) => (
+                  <Td key={d}>{pct(b.dist[d])}</Td>
+                ))}
+              </tr>
+            ))}
+        </Table>
+        <P>
           파견 레벨(최대 Lv.{EXPEDITION_LEVEL_MAX}, 레벨당 +{EXPEDITION_LEVEL_BONUS_BP_PER / 100}%)과
           아바타 지역 시너지(일치 장비당 +{EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +
-          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는 <b>상자·다이아 수량 기대값에만</b> 적용되며, 위
-          표의 확률 자체는 변하지 않습니다.
+          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는 <b>상자·다이아 수량에만</b> 적용되며, 위 표의
+          확률 자체는 변하지 않습니다.
         </P>
       </Sec>
 
