@@ -47,6 +47,7 @@ export type WhisperDisplay = {
   nickname: string;
   publicCode: string | null;
   avatar: string | null;
+  faceThumb: string | null;
   faceBox: FaceBox | null;
   guildName: string | null;
   guildEmblemUrl: string | null;
@@ -78,6 +79,7 @@ const UNKNOWN: WhisperDisplay = {
   nickname: '…',
   publicCode: null,
   avatar: null,
+  faceThumb: null,
   faceBox: null,
   guildName: null,
   guildEmblemUrl: null,
@@ -93,6 +95,7 @@ function pickDisplay(d: WhisperDisplay): WhisperDisplay {
     nickname: d.nickname,
     publicCode: d.publicCode,
     avatar: d.avatar,
+    faceThumb: d.faceThumb,
     faceBox: d.faceBox,
     guildName: d.guildName,
     guildEmblemUrl: d.guildEmblemUrl,

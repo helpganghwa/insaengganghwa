@@ -59,10 +59,24 @@ export function renderMentionBody(
  * 로드+디코드+픽셀 확대 래스터가 한꺼번에 몰렸다. 즉시 로드(대부분 브라우저 캐시 적중)
  * + decoding="async"로 디코드만 비동기 유지.
  */
-export function avatarBox(m: { avatar: string | null; faceBox: FaceBox | null }, size: string) {
+export function avatarBox(
+  m: { avatar: string | null; faceBox: FaceBox | null; faceThumb?: string | null },
+  size: string,
+) {
+  // 서버 사전 생성 썸네일(face-thumb.ts) 우선 — 확대 크롭 없이 그대로 표시(iOS 흐림 해결).
+  // 없으면(구 데이터·생성 실패) 원본 CSS 확대 크롭 폴백.
   return (
     <span className={`${size} shrink-0 overflow-hidden`}>
-      {m.avatar ? (
+      {m.faceThumb ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={m.faceThumb}
+          alt=""
+          decoding="async"
+          className="h-full w-full"
+          style={{ imageRendering: 'pixelated' }}
+        />
+      ) : m.avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={m.avatar}

@@ -52,6 +52,7 @@ export type WhisperDisplay = {
   nickname: string;
   publicCode: string | null;
   avatar: string | null;
+  faceThumb: string | null;
   faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
   guildEmblemUrl: string | null;
@@ -67,6 +68,7 @@ export function whisperDisplay(f: WhisperDisplay | undefined): WhisperDisplay {
     nickname: f?.nickname ?? '유저',
     publicCode: f?.publicCode ?? null,
     avatar: f?.avatar ?? null,
+    faceThumb: f?.faceThumb ?? null,
     faceBox: f?.faceBox ?? null,
     guildName: f?.guildName ?? null,
     guildEmblemUrl: f?.guildEmblemUrl ?? null,

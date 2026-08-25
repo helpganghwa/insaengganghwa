@@ -32,6 +32,7 @@ export type ChatUserMeta = Pick<
   | 'nickname'
   | 'publicCode'
   | 'avatar'
+  | 'faceThumb'
   | 'faceBox'
   | 'guildName'
   | 'guildEmblemUrl'
@@ -48,7 +49,9 @@ export type ChatMessageDto = {
   publicCode: string | null;
   /** 정면 아바타 URL(작은 썸네일용) — null=기본 아이콘. */
   avatar: string | null;
-  /** 얼굴 크롭 박스(검수 산출) — 헤더/친구 썸네일과 동일 크롭. */
+  /** 서버 사전 생성 얼굴 썸네일(face-thumb.ts) — 있으면 클라 확대 크롭 없이 그대로 표시(선명). */
+  faceThumb: string | null;
+  /** 얼굴 크롭 박스(검수 산출) — faceThumb 없을 때의 CSS 크롭 폴백. */
   faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
   guildEmblemUrl: string | null;
@@ -77,6 +80,7 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
     nickname: '',
     publicCode: null,
     avatar: null,
+    faceThumb: null,
     faceBox: null,
     guildName: null,
     guildEmblemUrl: null,
@@ -105,6 +109,7 @@ export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
     nickname: '',
     publicCode: null,
     avatar: null,
+    faceThumb: null,
     faceBox: null,
     guildName: null,
     guildEmblemUrl: null,
@@ -186,7 +191,7 @@ export async function isChatEnabled(): Promise<boolean> {
 export async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; isMeleeChampion: boolean }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceThumb: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; isMeleeChampion: boolean }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
   const [rows, guilds, champion] = await Promise.all([
@@ -220,10 +225,15 @@ export async function displayFields(
   const m = new Map();
   for (const r of rows) {
     const rot = (r.rotations ?? {}) as Record<string, string>;
+    const south = rot.south ?? Object.values(rot)[0] ?? null;
     m.set(r.userId, {
       nickname: r.nickname,
       publicCode: r.publicCode,
-      avatar: rot.south ?? Object.values(rot)[0] ?? null,
+      avatar: south,
+      // 커스텀=생성 시 저장된 face.png, 기본 스프라이트=public의 정적 face.png(스크립트 산출).
+      faceThumb:
+        rot.face ??
+        (south?.startsWith('/sprites/default/') ? south.replace('south.png', 'face.png') : null),
       faceBox: parseFaceBox((r.options as Record<string, unknown> | null)?.faceBox),
       guildName: (guilds.get(r.userId) as { name?: string } | undefined)?.name ?? null,
       guildEmblemUrl: (guilds.get(r.userId) as { emblemUrl?: string | null } | undefined)?.emblemUrl ?? null,
@@ -305,6 +315,7 @@ export async function getRecentChat(
         nickname: f?.nickname ?? '대장장이',
         publicCode: f?.publicCode ?? null,
         avatar: f?.avatar ?? null,
+        faceThumb: f?.faceThumb ?? null,
         faceBox: f?.faceBox ?? null,
         guildName: f?.guildName ?? null,
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
@@ -357,6 +368,7 @@ export async function persistAndBroadcast(
     nickname: f?.nickname ?? '대장장이',
     publicCode: f?.publicCode ?? null,
     avatar: f?.avatar ?? null,
+    faceThumb: f?.faceThumb ?? null,
     faceBox: f?.faceBox ?? null,
     guildName: f?.guildName ?? null,
     guildEmblemUrl: f?.guildEmblemUrl ?? null,

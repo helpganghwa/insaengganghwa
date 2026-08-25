@@ -104,13 +104,13 @@ export async function GET(req: Request) {
     const users: Record<string, ChatUserMeta> = {};
     const slim = msgs.map((m) => {
       const {
-        nickname, publicCode, avatar, faceBox, guildName, guildEmblemUrl,
+        nickname, publicCode, avatar, faceThumb, faceBox, guildName, guildEmblemUrl,
         executorZone, executorZoneRegion, repTitle, isMeleeChampion,
         ...rest
       } = m;
       if (m.userId && !m.sys && !m.sysGuild && !users[m.userId]) {
         users[m.userId] = {
-          nickname, publicCode, avatar, faceBox, guildName, guildEmblemUrl,
+          nickname, publicCode, avatar, faceThumb, faceBox, guildName, guildEmblemUrl,
           executorZone, executorZoneRegion, repTitle, isMeleeChampion,
         };
       }

@@ -30,6 +30,7 @@ import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
 import { detectFullBodyCrop } from './crop-check';
 import { detectFaceBox, reconcileFaceBox, type FaceBox } from './face-box';
+import { renderFaceThumb } from './face-thumb';
 import { generationAgeMin } from './gen-age';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
@@ -309,9 +310,21 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
           .from(STORAGE_BUCKET)
           .upload(path, png, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
         if (up.error) throw new Error(`storage upload south: ${up.error.message}`);
-        const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl };
+        const rotations: Record<string, string> = {
+          south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl,
+        };
         // 얼굴 크롭 박스 — 실루엣 감지·AI 머리 박스 교차검증 + cx 런 스냅(2026-07-21 쩌내·SEB).
         const faceBox = await reconcileFaceBox(png, await detectFaceBox(png), reviewed.head ?? null);
+        // 얼굴 썸네일 사전 생성(face-thumb.ts) — 실패해도 지급은 진행(클라가 CSS 크롭 폴백).
+        try {
+          const fpath = `${job.userId}/${job.characterId}/face.png`;
+          const fup = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(fpath, await renderFaceThumb(png, faceBox), { contentType: 'image/png', upsert: true, cacheControl: '604800' });
+          if (!fup.error) rotations.face = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fpath).data.publicUrl;
+        } catch (fe) {
+          console.warn('[profile-poll] face thumb 생성 실패(폴백 크롭 유지)', String(job.id), fe);
+        }
         await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, reviewed, faceBox);
         accepted += 1;
       } else {
@@ -464,8 +477,20 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   const spath = `${job.userId}/${job.pixellabCharacterId}/south.png`;
   const sup = await supabase.storage.from(STORAGE_BUCKET).upload(spath, spng, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
   if (sup.error) return { ok: false, msg: `이미지 미러링 실패: ${sup.error.message}` };
-  const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl };
+  const rotations: Record<string, string> = {
+    south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl,
+  };
   const faceBox = await reconcileFaceBox(spng, await detectFaceBox(spng), null);
+  // 얼굴 썸네일 — accept 경로와 동일(실패는 무시, 클라 CSS 크롭 폴백).
+  try {
+    const fpath = `${job.userId}/${job.pixellabCharacterId}/face.png`;
+    const fup = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(fpath, await renderFaceThumb(spng, faceBox), { contentType: 'image/png', upsert: true, cacheControl: '604800' });
+    if (!fup.error) rotations.face = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fpath).data.publicUrl;
+  } catch (fe) {
+    console.warn('[admin-grant] face thumb 생성 실패(폴백 크롭 유지)', String(jobId), fe);
+  }
   // apexAtCreation은 잡 전용 판정 플래그 — 프로필 options에는 싣지 않는다(acceptJob과 동일).
   const { apexAtCreation: _apex, ...adminBase } = (job.options ?? {}) as Record<string, unknown>;
   const adminOptions = faceBox ? { ...adminBase, faceBox } : adminBase;
