@@ -749,17 +749,16 @@ export const EXPEDITION_BOX_MAIN_BP = 6000; // 주력 슬롯 확률(bp) — 나�
 /** 본상 3분기(bp, 합 10000) — 수령 시 1회 롤, 셋 중 하나 확정. */
 export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both: 2500 } as const;
 
-/** 본상 수량(8h 기준·배율 적용 전) — min~max 균등. */
+/**
+ * 본상 수량(8h 기준·배율 적용 전) — min~max 균등.
+ * 다이아는 출시 기준 하루 최대 기대 ≈500💎(사용자 확정 2026-08-25 — 파견을 주 수급처로).
+ * 이론 최대(Lv.50+풀시너지)는 ~900💎/일 — 도달 시점 시즌 리밸런싱 전제(BALANCE §11.4).
+ */
 export const EXPEDITION_BASE_AMOUNTS = {
   boxOnly: { boxMin: 4, boxMax: 6 },
-  diamondOnly: { diaMin: 12, diaMax: 28 },
-  both: { boxMin: 3, boxMax: 4, diaMin: 8, diaMax: 16 },
+  diamondOnly: { diaMin: 120, diaMax: 240 },
+  both: { boxMin: 3, boxMax: 4, diaMin: 20, diaMax: 48 },
 } as const;
-
-/** 희귀 롤(본상과 독립, 각각 별도 판정, bp). 수량은 항상 1(배율 미적용). */
-export const EXPEDITION_RARE_BP = { raidSummon: 300, avatarGen: 70 } as const;
-/** 4h 미만(=1h) 파견의 희귀 롤 확률 배율(bp of 10000) — 초단타 시행 횟수 어뷰징 완화. */
-export const EXPEDITION_RARE_SHORT_SCALE_BP = 3000;
 
 /** 대성공 — 수령 시 10% 확률로 본상(상자·다이아) 수량 2배. 이용권(희귀 롤)에는 미적용. */
 export const EXPEDITION_CRIT_BP = 1000;

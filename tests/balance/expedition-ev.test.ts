@@ -11,8 +11,6 @@ import {
   EXPEDITION_LEVEL_BONUS_BP_PER,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
-  EXPEDITION_RARE_BP,
-  EXPEDITION_RARE_SHORT_SCALE_BP,
   EXPEDITION_REGIONS,
   EXPEDITION_SLOTS,
   EXPEDITION_SYNERGY_GENERAL_BP,
@@ -67,7 +65,7 @@ describe('expedition balance invariants', () => {
     expect(cum).toBe(4550); // 30×50 + Σ⌊2.5ℓ⌋(ℓ=0..49) = 4,550
   });
 
-  it('경제 가드 — 출시 시점(배율 0) 하루 최대 다이아 기대 ≤ 90💎', () => {
+  it('경제 가드 — 출시 시점(배율 0) 하루 최대 다이아 기대 ≈ 500💎(±2%)', () => {
     const { diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
     const a = EXPEDITION_BASE_AMOUNTS;
     const evDia =
@@ -77,16 +75,14 @@ describe('expedition balance invariants', () => {
     // 하루 최대 유닛 — 시작 6회·슬롯 3 제약 아래 스케일 합 최대(24h×3슬롯).
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
     const launchDaily = evDia * critMult * maxDailyUnits;
-    expect(launchDaily).toBeLessThanOrEqual(90);
-    // 이론 최대(Lv.50 + 지역 시너지 +30%)는 문서 기재값(~141💎) 범위 확인 — 시즌 리밸런싱 전제.
+    expect(launchDaily).toBeGreaterThanOrEqual(490);
+    expect(launchDaily).toBeLessThanOrEqual(510);
+    // 이론 최대(Lv.50 + 지역 시너지 +30%) — 시즌 리밸런싱 전제 상한(BALANCE §11.4).
     const maxMult = 1 + (EXPEDITION_LEVEL_MAX * EXPEDITION_LEVEL_BONUS_BP_PER + 3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000;
-    expect(launchDaily * maxMult).toBeLessThanOrEqual(150);
+    expect(launchDaily * maxMult).toBeLessThanOrEqual(920);
   });
 
-  it('희귀 롤 — 확률·단타 배율 범위, 일반 시너지는 지역 일치의 절반', () => {
-    expect(EXPEDITION_RARE_BP.raidSummon).toBeLessThanOrEqual(500);
-    expect(EXPEDITION_RARE_BP.avatarGen).toBeLessThanOrEqual(100);
-    expect(EXPEDITION_RARE_SHORT_SCALE_BP).toBeLessThan(10000);
+  it('시너지·상한 정합 — 일반은 지역 일치의 절반, 일일 시작 6회', () => {
     expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
     expect(EXPEDITION_DAILY_STARTS).toBe(6);
   });

@@ -27,8 +27,6 @@ import {
   RAID_PHASE_DROP_BOXES,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_BASE_AMOUNTS,
-  EXPEDITION_RARE_BP,
-  EXPEDITION_RARE_SHORT_SCALE_BP,
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_MULT,
   EXPEDITION_BOX_MAIN_BP,
@@ -260,11 +258,11 @@ export default async function ProbabilityPage() {
       </Sec>
 
       {/* 파견(v1) — EXPEDITION_* 상수와 1:1(§33). 레벨·시너지 배율은 수량 기대값에만 적용되고
-          아래 표기 확률(분기·희귀 롤)은 변하지 않는다 — 문구로 명시. */}
+          아래 표기 확률(분기)은 변하지 않는다 — 문구로 명시. 이용권 보상은 v1.5 보류(2026-08-25). */}
       <Sec n="6" title="파견" id="expedition">
         <P>
-          파견 완료 수령 시 <b>본상 1회</b>(아래 셋 중 하나 확정)와 <b>희귀 보상 2종</b>(각각 독립
-          판정)을 서버에서 추첨합니다. 수량은 8시간 파견 기준이며, 파견 시간에 비례해 커집니다(
+          파견 완료 수령 시 아래 셋 중 하나가 확정으로 추첨됩니다(서버 추첨). 수량은 8시간 파견
+          기준이며, 파견 시간에 비례해 커집니다(
           {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}).
         </P>
         <Table head={['본상', '확률', '수량(8h 기준)']}>
@@ -290,27 +288,14 @@ export default async function ProbabilityPage() {
         <P>
           수량은 표기 범위에서 고르게 정해집니다. 상자 종류는 파견지마다 주력 슬롯이{' '}
           {pct(EXPEDITION_BOX_MAIN_BP)}, 나머지 두 슬롯이 각 {pct((10000 - EXPEDITION_BOX_MAIN_BP) / 2)}
-          입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 본상 수량이{' '}
-          {EXPEDITION_CRIT_MULT}배가 됩니다(아래 이용권에는 적용되지 않습니다).
+          입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 수량이{' '}
+          {EXPEDITION_CRIT_MULT}배가 됩니다.
         </P>
-        <Table head={['희귀 보상(독립 판정)', '확률', '수량']}>
-          <tr className="border-t border-zinc-100 dark:border-zinc-900">
-            <Td>레이드 소환권</Td>
-            <Td>{pct(EXPEDITION_RARE_BP.raidSummon)}</Td>
-            <Td>1장</Td>
-          </tr>
-          <tr className="border-t border-zinc-100 dark:border-zinc-900">
-            <Td>아바타 생성권</Td>
-            <Td>{pct(EXPEDITION_RARE_BP.avatarGen)}</Td>
-            <Td>1장</Td>
-          </tr>
-        </Table>
         <P>
-          1시간 파견의 희귀 보상 확률은 표기의 {EXPEDITION_RARE_SHORT_SCALE_BP / 100}%로
-          낮아집니다(4시간 이상은 표기 그대로). 파견 레벨(최대 Lv.{EXPEDITION_LEVEL_MAX}, 레벨당 +
-          {EXPEDITION_LEVEL_BONUS_BP_PER / 100}%)과 아바타 지역 시너지(일치 장비당 +
-          {EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +{EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는{' '}
-          <b>상자·다이아 수량 기대값에만</b> 적용되며, 위 표의 확률 자체는 변하지 않습니다.
+          파견 레벨(최대 Lv.{EXPEDITION_LEVEL_MAX}, 레벨당 +{EXPEDITION_LEVEL_BONUS_BP_PER / 100}%)과
+          아바타 지역 시너지(일치 장비당 +{EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +
+          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는 <b>상자·다이아 수량 기대값에만</b> 적용되며, 위
+          표의 확률 자체는 변하지 않습니다.
         </P>
       </Sec>
 
