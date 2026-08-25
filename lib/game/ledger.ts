@@ -64,6 +64,14 @@ export type LedgerReason =
   | 'guild_donate'
   /** 거주지 이동 쿨타임 단축. */
   | 'residence_cooldown'
+  /** 파견 보상 다이아(수령). ref=expedition id. */
+  | 'expedition'
+  /** 파견 미션 새로고침(무료 소진 후). */
+  | 'expedition_refresh'
+  /** 파견 슬롯 다이아 구매(레벨 무료 해금의 선구매). */
+  | 'expedition_slot'
+  /** 파견 시간 단축 — 강화 단축과 동일하게 **원장 미기록**(LEDGER_SKIP_REASONS). */
+  | 'expedition_reduce'
   /** 결제 환불에 따른 지급분 회수 — 잔액 부족 시 0까지만 회수하므로 실제 회수액만 기록. */
   | 'refund_clawback';
 
@@ -77,7 +85,7 @@ export type LedgerReason =
  *
  * ⚠ 따라서 **원장 합계 ≠ 지갑 잔액**이다. 강화 단축 소모를 집계하려면 enhancement_logs를 봐야 한다.
  */
-const LEDGER_SKIP_REASONS = new Set<LedgerReason>(['enhance_reduce']);
+const LEDGER_SKIP_REASONS = new Set<LedgerReason>(['enhance_reduce', 'expedition_reduce']);
 
 export type LedgerEntry = {
   userId: string;
