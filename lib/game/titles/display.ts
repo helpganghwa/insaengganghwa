@@ -176,7 +176,9 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
     }
     if (code === 'guild_top') {
       const [r] = (await db.execute(sql`
-        select (select count(*) from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as better
+        -- (level, xp) 사전식 — guilds.xp는 잔여 XP라 단독 비교 금지(judge.ts grank와 동일 규칙).
+        select (select count(*) from guilds g3 where g3.server_id=${s}
+                  and (g3.level > g.level or (g3.level = g.level and g3.xp > g.xp)))::int as better
         from guild_members gm join guilds g on g.id=gm.guild_id
         where gm.user_id=${u} and gm.server_id=${s}
       `)) as unknown as { better: number }[];
@@ -186,7 +188,8 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       const [r] = (await db.execute(sql`
         select (select count(*) from guild_members g4 where g4.guild_id=g.id and g4.server_id=${s})::int as gsize,
                g.level::int as glevel,
-               (select count(*) from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as better
+               (select count(*) from guilds g3 where g3.server_id=${s}
+                  and (g3.level > g.level or (g3.level = g.level and g3.xp > g.xp)))::int as better
         from guild_members gm join guilds g on g.id=gm.guild_id
         where gm.user_id=${u} and gm.server_id=${s}
       `)) as unknown as { gsize: number; glevel: number; better: number }[];

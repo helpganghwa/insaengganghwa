@@ -481,7 +481,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       select extract(day from now()-gm.joined_at)::int as gdays,
              (gm.role='leader')::int as gleader,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
-             (select count(*)+1 from guilds g3 where g3.server_id=${s} and g3.xp > g.xp)::int as grank,
+             -- 길드 순위 = (level, xp) 사전식 — guilds.xp는 레벨업 시 임계 차감된 "잔여 XP"라
+             -- 단독 비교 시 갓 레벨업한 상위 길드가 밀린다(2026-08-25 명가 오활성 버그).
+             (select count(*)+1 from guilds g3 where g3.server_id=${s}
+                and (g3.level > g.level or (g3.level = g.level and g3.xp > g.xp)))::int as grank,
              (select count(*) from guild_members g4 where g4.guild_id=g.id and g4.server_id=${s})::int as gsize,
              g.level::int as glevel
       from guild_members gm join guilds g on g.id=gm.guild_id
