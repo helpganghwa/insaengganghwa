@@ -35,6 +35,14 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
+/** 시간 라벨 색 — 길수록 뜨겁게(4h 초록→24h 빨강, 난이도색 계승 — 사용자 확정). */
+const HOUR_CLS: Record<number, string> = {
+  4: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  8: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+  12: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
+  24: 'bg-red-500/15 text-red-600 dark:text-red-400',
+};
+
 /** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
 const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
   swamp: { color: '#22c55e', label: '슬라임 늪' },
@@ -274,8 +282,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </div>
       </div>
 
+      {/* 에러 — 목록을 밀지 않는 하단 고정 토스트(레이아웃 시프트 0 규칙) */}
       {error ? (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-center text-[11.5px] font-bold text-red-500">{error}</div>
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-6">
+          <span className="rounded-full bg-red-600/95 px-4 py-2 text-[11.5px] font-bold text-white shadow-lg">{error}</span>
+        </div>
       ) : null}
 
       {/* 슬롯 */}
@@ -324,49 +335,55 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               </>
             }
           >
-            <div className="grid grid-cols-4 gap-2 p-1">
-              {board.avatars.map((a) => {
-                const syn = synergyOf(a.regions, assignFor.region!);
-                const sel = selectedAvatar === a.id;
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    disabled={a.busy}
-                    onClick={() => setSelectedAvatar(a.id)}
-                    className={`relative rounded-xl border p-1.5 text-center transition ${
-                      sel
-                        ? 'border-amber-500 bg-amber-500/10'
-                        : 'border-zinc-200 dark:border-zinc-800'
-                    } ${a.busy ? 'opacity-40' : 'active:scale-95'}`}
-                  >
-                    <span className="mx-auto block h-12 w-12 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                      {a.face ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.face} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-lg">👤</span>
-                      )}
-                    </span>
-                    <span className={`mt-1 block text-[9px] font-bold ${syn > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
-                      {a.busy ? '파견 중' : syn > 0 ? `시너지 +${syn / 100}%` : '+0%'}
-                    </span>
-                    {a.isActive ? (
-                      <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span>
-                    ) : null}
-                  </button>
-                );
-              })}
+            {/* 고정 높이 그리드(내부 스크롤) — 아바타 수와 무관하게 팝업 높이 불변(레이아웃 시프트 0). */}
+            <div className="h-[184px] overflow-y-auto rounded-xl border border-zinc-100 p-1.5 dark:border-zinc-800/60">
+              <div className="grid grid-cols-4 gap-2">
+                {board.avatars.map((a) => {
+                  const syn = synergyOf(a.regions, assignFor.region!);
+                  const sel = selectedAvatar === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      disabled={a.busy}
+                      onClick={() => setSelectedAvatar(a.id)}
+                      className={`relative rounded-xl border p-1.5 text-center transition ${
+                        sel
+                          ? 'border-amber-500 bg-amber-500/10'
+                          : 'border-zinc-200 dark:border-zinc-800'
+                      } ${a.busy ? 'opacity-40' : 'active:scale-95'}`}
+                    >
+                      <span className="mx-auto block h-12 w-12 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                        {a.face ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.face} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
+                        ) : null}
+                      </span>
+                      <span className={`mt-1 block text-[9px] font-bold ${syn > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
+                        {a.busy ? '파견 중' : syn > 0 ? `시너지 +${syn / 100}%` : '+0%'}
+                      </span>
+                      {a.isActive ? (
+                        <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {selectedAvatar && assignFor.reward ? (
-              <p className="px-2 pt-1 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
-                최종 보상 미리보기:{' '}
-                <RewardLine
-                  r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp)}
-                  strong
-                />
-              </p>
-            ) : null}
+            {/* 미리보기 — 선택 전에도 자리 확보(고정 높이, 레이아웃 시프트 0). */}
+            <p className="flex h-9 items-center justify-center px-2 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+              {selectedAvatar && assignFor.reward ? (
+                <>
+                  최종 보상{' '}
+                  <RewardLine
+                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp)}
+                    strong
+                  />
+                </>
+              ) : (
+                '원정대원을 선택하세요'
+              )}
+            </p>
           </ModalLayout>
         </ModalShell>
       ) : null}
@@ -433,20 +450,21 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               </ModalButton>
             }
           >
-            <div className="space-y-2 text-center">
+            {/* 보상 영역 고정 높이 — 상자/다이아/둘 다·대성공 어느 조합이든 동일(레이아웃 시프트 0). */}
+            <div className="flex h-[104px] flex-col items-center justify-center gap-1 text-center">
               <p className={`text-lg font-extrabold ${claimPopup.crit ? 'text-amber-500' : ''}`}>
                 <RewardLine r={claimPopup.reward} strong={claimPopup.crit} />
               </p>
-              {claimPopup.reward.boxes ? (
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{boxDetail(claimPopup.reward)}</p>
-              ) : null}
-              {claimPopup.crit ? (
-                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">대성공으로 수량이 2배가 됐어요!</p>
-              ) : null}
+              <p className="h-4 text-[11px] text-zinc-500 dark:text-zinc-400">
+                {claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : ''}
+              </p>
+              <p className="h-4 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                {claimPopup.crit ? '대성공으로 수량이 2배가 됐어요!' : ''}
+              </p>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                 파견 XP +{claimPopup.xpGained}
                 {claimPopup.levelUp ? (
-                  <b className="ml-1 text-amber-600 dark:text-amber-400">— Lv.{claimPopup.level} 달성! 보상 +{claimPopup.level}%</b>
+                  <b className="ml-1 text-amber-600 dark:text-amber-400">— Lv.{claimPopup.level} 달성!</b>
                 ) : null}
               </p>
             </div>
@@ -489,16 +507,18 @@ function SlotCard({
   onClaim: () => void;
   onPurchase: () => void;
 }) {
+  // B안(아바타 히어로) — 전 상태 h-[112px] 고정: 좌측 히어로(지역색 그라데이션+아바타 프레임),
+  // 우측 본문(제목/보상/버튼행). 상태 전환은 각 영역의 내용 교체만 — 레이아웃 시프트 0.
   if (s.state === 'locked') {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 p-3 text-center dark:border-zinc-700">
+      <div className="flex h-[112px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
         <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
           슬롯 {s.slot} — <b className="text-zinc-500 dark:text-zinc-400">파견 Lv.{s.unlock?.level}</b> 달성 시 무료 오픈
         </p>
         <button
           type="button"
           onClick={onPurchase}
-          className="mt-2 rounded-lg bg-zinc-100 px-4 py-1.5 text-[11.5px] font-bold text-zinc-600 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300"
+          className="h-[30px] rounded-lg bg-zinc-100 px-4 text-[11.5px] font-bold text-zinc-600 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300"
         >
           💎 {s.unlock?.diamond.toLocaleString('ko-KR')}으로 바로 열기
         </button>
@@ -507,117 +527,134 @@ function SlotCard({
   }
 
   const region = s.region ? REGION_UI[s.region] : null;
+  const heroLabel = s.state === 'offer' ? '미배정' : null;
 
   return (
     <div
-      className={`rounded-xl border border-l-4 p-3 ${pending ? 'opacity-70' : ''} border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60`}
-      style={region ? { borderLeftColor: region.color } : undefined}
+      className={`flex h-[112px] overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60 ${pending ? 'opacity-70' : ''}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 text-[13px] font-extrabold">
-          {region ? <span style={{ color: region.color }}>{region.label}</span> : '…'}
+      {/* 히어로 — 지역색 그라데이션 + 아바타 프레임(미배정=점선 빈 프레임, 사람 이모지 없음). */}
+      <div
+        className="flex w-[76px] shrink-0 flex-col items-center justify-center gap-1.5"
+        style={{
+          background: region
+            ? `linear-gradient(160deg, ${region.color}2e, transparent 70%)`
+            : undefined,
+        }}
+      >
+        <span
+          className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border bg-zinc-100 dark:bg-zinc-900 ${
+            s.state === 'offer' ? 'border-dashed' : ''
+          }`}
+          style={{ borderColor: region ? `${region.color}66` : undefined }}
+        >
+          {s.state !== 'offer' && s.avatarFace ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={s.avatarFace} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
+          ) : null}
+        </span>
+        <span className="h-3 text-[8.5px] font-bold text-zinc-400 dark:text-zinc-500">{heroLabel ?? ''}</span>
+      </div>
+
+      {/* 본문 — 3영역(제목행/정보행/버튼행) 높이 고정. */}
+      <div className="flex min-w-0 flex-1 flex-col px-3 py-2.5">
+        <div className="flex h-5 items-center gap-1.5">
+          <span className="truncate text-[13px] font-extrabold" style={region ? { color: region.color } : undefined}>
+            {region?.label ?? '…'}
+          </span>
           {s.hours ? (
-            <span className="ml-1.5 rounded-md bg-zinc-100 px-1.5 py-0.5 align-[2px] text-[9px] font-black text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black ${HOUR_CLS[s.hours] ?? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'}`}>
               {s.hours}시간
             </span>
           ) : null}
-        </p>
-        {s.state === 'offer' ? (
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={pending}
-            className="shrink-0 rounded-lg bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-600 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300"
-          >
-            새로고침
-          </button>
-        ) : (
-          <Ticker>
-            {(now) => {
-              const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
-              return remain <= 0 ? (
-                <span className="shrink-0 text-[12px] font-extrabold text-emerald-500">귀환 완료!</span>
-              ) : (
-                <span className="shrink-0 text-[12px] font-extrabold tabular-nums text-amber-600 dark:text-amber-400">{fmtRemain(remain)}</span>
-              );
-            }}
-          </Ticker>
-        )}
-      </div>
-
-      <p className="mt-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
-        {s.reward ? (
-          <>
-            보상 <RewardLine r={s.reward} />
-            <span className="ml-1.5">· 경험치 +{s.hours}</span>
-            {s.state === 'running' && (s.synergyBp ?? 0) > 0 ? (
-              <span className="ml-1.5 font-bold text-amber-600 dark:text-amber-400">시너지 +{(s.synergyBp ?? 0) / 100}%</span>
+          <span className="ml-auto shrink-0">
+            {s.state === 'running' ? (
+              <Ticker>
+                {(now) => {
+                  const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
+                  return remain <= 0 ? (
+                    <span className="text-[12px] font-extrabold text-emerald-500">귀환 완료</span>
+                  ) : (
+                    <span className="text-[12px] font-extrabold tabular-nums text-amber-600 dark:text-amber-400">{fmtRemain(remain)}</span>
+                  );
+                }}
+              </Ticker>
             ) : null}
-          </>
-        ) : (
-          '새 미션 찾는 중…'
-        )}
-      </p>
-
-      {s.state === 'offer' ? (
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950/60">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-200 text-base dark:bg-zinc-800">👤</span>
-          <span className="text-[11px] text-zinc-400">아바타를 배정하세요</span>
-          <button
-            type="button"
-            onClick={onAssign}
-            disabled={pending}
-            className="ml-auto rounded-lg bg-amber-500 px-3.5 py-1.5 text-[11.5px] font-extrabold text-amber-950 active:scale-95"
-          >
-            배정
-          </button>
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-200 dark:bg-zinc-800">
-            {s.avatarFace ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={s.avatarFace} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
-            ) : (
-              '👤'
-            )}
           </span>
-          <Ticker>
-            {(now) => {
-              const done = s.completeAtIso ? Date.parse(s.completeAtIso) - now <= 0 : false;
-              return done ? (
-                <button
-                  type="button"
-                  onClick={onClaim}
-                  disabled={pending}
-                  className="ml-auto flex-1 rounded-lg bg-emerald-600 py-2 text-[12px] font-extrabold text-white active:scale-[0.98]"
-                >
-                  보상 수령
-                </button>
-              ) : (
-                <span className="ml-auto flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={pending}
-                    className="rounded-lg bg-zinc-100 px-3 py-1.5 text-[11px] font-bold text-zinc-500 active:scale-95 dark:bg-zinc-800 dark:text-zinc-400"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCompleteNow}
-                    disabled={pending}
-                    className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-extrabold text-amber-950 active:scale-95"
-                  >
-                    💎 {Math.max(1, Math.ceil(Math.max(0, (s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0)) / GEM_TO_MS)).toLocaleString('ko-KR')}로 즉시 완료
-                  </button>
-                </span>
-              );
-            }}
-          </Ticker>
         </div>
-      )}
+
+        <p className="flex h-5 flex-1 items-center truncate text-[10.5px] text-zinc-500 dark:text-zinc-400">
+          {s.reward ? (
+            <>
+              보상 <RewardLine r={s.reward} />
+              <span className="ml-1.5 shrink-0">· 경험치 +{s.hours}</span>
+              {s.state === 'running' && (s.synergyBp ?? 0) > 0 ? (
+                <span className="ml-1.5 shrink-0 font-bold text-amber-600 dark:text-amber-400">시너지 +{(s.synergyBp ?? 0) / 100}%</span>
+              ) : null}
+            </>
+          ) : (
+            '새 미션 찾는 중…'
+          )}
+        </p>
+
+        <div className="flex h-[30px] gap-1.5">
+          {s.state === 'offer' ? (
+            <>
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={pending}
+                className="flex-1 rounded-lg bg-zinc-100 text-[11px] font-bold text-zinc-600 active:scale-[0.98] dark:bg-zinc-800 dark:text-zinc-300"
+              >
+                새로고침
+              </button>
+              <button
+                type="button"
+                onClick={onAssign}
+                disabled={pending}
+                className="flex-1 rounded-lg bg-amber-500 text-[11.5px] font-extrabold text-amber-950 active:scale-[0.98]"
+              >
+                배정
+              </button>
+            </>
+          ) : (
+            <Ticker>
+              {(now) => {
+                const done = s.completeAtIso ? Date.parse(s.completeAtIso) - now <= 0 : false;
+                return done ? (
+                  <button
+                    type="button"
+                    onClick={onClaim}
+                    disabled={pending}
+                    className="flex-1 rounded-lg bg-emerald-600 text-[12px] font-extrabold text-white active:scale-[0.98]"
+                  >
+                    보상 수령
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onCancel}
+                      disabled={pending}
+                      className="rounded-lg bg-zinc-100 px-3 text-[11px] font-bold text-zinc-500 active:scale-95 dark:bg-zinc-800 dark:text-zinc-400"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCompleteNow}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-amber-500 text-[11px] font-extrabold text-amber-950 active:scale-[0.98]"
+                    >
+                      💎 {Math.max(1, Math.ceil(Math.max(0, (s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0)) / GEM_TO_MS)).toLocaleString('ko-KR')}로 즉시 완료
+                    </button>
+                  </>
+                );
+              }}
+            </Ticker>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
