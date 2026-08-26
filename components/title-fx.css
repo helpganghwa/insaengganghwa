@@ -98,6 +98,12 @@
 .pt-onestar>i{width:5px;height:5px;background:linear-gradient(0deg,transparent 41%,#f5d76e 41% 59%,transparent 59%),linear-gradient(90deg,transparent 41%,#fff3c4 41% 59%,transparent 59%);top:-4px;right:-6px;left:auto !important;filter:drop-shadow(0 0 1.5px rgba(245,215,110,.9));animation:p-one 3.2s ease-in-out infinite}
 @keyframes p-one{0%,72%,100%{opacity:0;transform:rotate(0) scale(.4)}80%,88%{opacity:1;transform:rotate(45deg) scale(1)}}
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
+/* ── 후원 최상위 2단계(2026-08-26) — 화로의 수호자(500만)·영원의 불꽃(1,000만).
+   goldflow 계열의 절제 톤은 유지하되 온도를 올린다: forgeheart = 잉걸불→금빛 흐름 + 은은한 열기 펄스,
+   eternalflame = 세로로 타오르는 불꽃(흰 심지) + 느린 일렁임. 파티클은 각각 ember·spark 재사용. */
+.fx-forgeheart{background:linear-gradient(90deg,#ff8a3d,#ffd27a,#ff5a1f,#ffe8b0,#ff8a3d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,heat 3.2s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(255,140,60,.45))}
+@keyframes heat{0%,100%{filter:drop-shadow(0 0 3px rgba(255,140,60,.4)) brightness(.95)}50%{filter:drop-shadow(0 0 5px rgba(255,170,80,.7)) brightness(1.18)}}
+.fx-eternalflame{background:linear-gradient(0deg,#ff6b35 0%,#ffb347 30%,#fff3c4 55%,#ffffff 68%,#ffd27a 82%,#ff8a3d 100%);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 4.5s linear infinite,flick 1.8s ease-in-out infinite}
 /* ── 카테고리 시그니처(트랙 C) — 어려움·한정 자동 배정분. 카테고리별 패밀리(색 램프·모션 변주),
    같은 카테고리 안에서 코드 해시로 순환 배정. 기존 flow 계열과 같은 절제 톤. ── */
 .fx-bronzeshine{background:linear-gradient(90deg,#b08d57 42%,#f0d9a8 50%,#b08d57 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}

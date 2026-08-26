@@ -585,6 +585,18 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "어려움"
  },
  {
+  code: "pay_500",
+  cat: "후원",
+  cond: "누적 결제 500만원",
+  diff: "어려움"
+ },
+ {
+  code: "pay_1000",
+  cat: "후원",
+  cond: "누적 결제 1,000만원",
+  diff: "어려움"
+ },
+ {
   code: "two_mirrors",
   cat: "아바타",
   cond: "남/여 아바타 모두 생성",

@@ -1017,6 +1017,30 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "pay_500",
+  kind: "permanent",
+  label: "화로의 수호자",
+  hidden: false,
+  cat: "후원",
+  style: {
+   fx: "forgeheart",
+   pt: "ember",
+   glow: true
+  }
+ },
+ {
+  code: "pay_1000",
+  kind: "permanent",
+  label: "영원의 불꽃",
+  hidden: false,
+  cat: "후원",
+  style: {
+   fx: "eternalflame",
+   pt: "spark",
+   glow: true
+  }
+ },
+ {
   code: "two_mirrors",
   kind: "permanent",
   label: "두 개의 거울",

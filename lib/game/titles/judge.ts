@@ -861,6 +861,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   pay_20: (m) => m.pay_sum >= 200_000,
   pay_50: (m) => m.pay_sum >= 500_000,
   pay_200: (m) => m.pay_sum >= 2_000_000,
+  pay_500: (m) => m.pay_sum >= 5_000_000,
+  pay_1000: (m) => m.pay_sum >= 10_000_000,
   // 대난투
   melee_first_win: (m) => m.m_wins >= 1,
   melee_30_win: (m) => m.m_wins >= 30,

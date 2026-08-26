@@ -293,6 +293,7 @@ const FX_OG: Record<string, string> = {
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
   roseflow: '#e8a0c0', blushbreath: '#e8a0c0', tideflow: '#7fd0c8', tidewave: '#7fd0c8',
   forgeshine: '#e0a878', cinderflow: '#d4674a', duelbeat: '#e05252', duelflow: '#e05252',
+  forgeheart: '#ffb347', eternalflame: '#ffd27a',
   coinshine: '#d4af37', gildedflow: '#cdb04e', lunarflow: '#cfd8e8', veilflow: '#b9a7e0',
   driftfall: '#b9c2cc', linenflow: '#c8beb0', warbanner: '#c86a5a', verdigris: '#7fae9e',
   stardrift: '#c8b8f0', astralflow: '#b39ddb', freedomglint: '#c9a2f0', azureflow: '#6ea8e0',
