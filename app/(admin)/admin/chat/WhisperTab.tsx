@@ -137,6 +137,7 @@ async function ReportedWhispers({
               body={m.body}
               createdAt={m.createdAt}
               hiddenAt={m.hiddenAt}
+              deletedAt={m.deletedAt}
               serverId={m.serverId}
               reports={m.reports}
               identities={identityByServer.get(m.serverId) ?? NO_IDENTITIES}
@@ -263,6 +264,7 @@ async function WhisperThread({
               body={m.body}
               createdAt={m.createdAt}
               hiddenAt={m.hiddenAt}
+              deletedAt={m.deletedAt}
               serverId={m.serverId}
               reports={m.reports}
               identities={identities}

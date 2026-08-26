@@ -17,7 +17,13 @@ import {
   extractMentionCandidates,
   formatMuteRemaining,
 } from '@/lib/game/chat/filter';
-import { displayFields, isChatEnabled, normMentions, type ChatMention } from '@/lib/game/chat/service';
+import {
+  CHAT_DELETED_BODY,
+  displayFields,
+  isChatEnabled,
+  normMentions,
+  type ChatMention,
+} from '@/lib/game/chat/service';
 import { broadcastWhisper, whisperTopic } from '@/lib/game/chat/realtime';
 
 /**
@@ -41,6 +47,8 @@ export type WhisperMessageDto = {
   body: string;
   mentions: ChatMention[] | null;
   createdAt: string; // ISO
+  /** 본인 삭제(0177) — true면 body는 자리표시(CHAT_DELETED_BODY). */
+  deleted?: boolean;
 };
 
 /**
@@ -305,6 +313,7 @@ type ThreadRow = {
   peer: string;
   body: string;
   hidden: boolean;
+  deleted: boolean;
   from_me: boolean;
   created_at: string; // ISO(SQL에서 생성 — isoCol)
   unread: number;
@@ -322,7 +331,7 @@ export async function listWhisperThreads(
   const rows = (await dbx.execute(sql`
     with pairs as (
       select distinct on (least(from_user_id, to_user_id), greatest(from_user_id, to_user_id))
-             id, body, hidden_at, created_at,
+             id, body, hidden_at, deleted_at, created_at,
              (from_user_id = ${userId}::uuid) as from_me,
              (case when from_user_id = ${userId}::uuid then to_user_id else from_user_id end) as peer
       from whisper_messages
@@ -337,6 +346,7 @@ export async function listWhisperThreads(
            p.peer::text      as peer,
            p.body            as body,
            (p.hidden_at is not null) as hidden,
+           (p.deleted_at is not null) as deleted,
            p.from_me         as from_me,
            ${isoCol(sql.raw('p.created_at'))} as created_at,
            (select count(*)::int from whisper_messages m
@@ -365,7 +375,7 @@ export async function listWhisperThreads(
     return {
       peerUserId: r.peer,
       ...whisperDisplay(fields.get(r.peer)),
-      lastBody: whisperPreviewBody(r.body, r.hidden),
+      lastBody: r.deleted ? CHAT_DELETED_BODY : whisperPreviewBody(r.body, r.hidden),
       lastFromMe: r.from_me,
       lastAt: r.created_at,
       unread: r.unread,
@@ -380,6 +390,7 @@ type MessageRow = {
   body: string;
   mentions: unknown;
   created_at: string; // ISO(SQL에서 생성 — isoCol)
+  deleted: boolean;
 };
 
 /** 한 대화의 메시지 — beforeId 미만 최신 50건을 오래된 → 최신 순으로. */
@@ -392,7 +403,8 @@ export async function listWhisperMessages(
 ): Promise<WhisperMessageDto[]> {
   const rows = (await dbx.execute(sql`
     select id::text as id, from_user_id::text as from_user_id, to_user_id::text as to_user_id,
-           body, mentions, ${isoCol(sql.raw('created_at'))} as created_at
+           body, mentions, ${isoCol(sql.raw('created_at'))} as created_at,
+           (deleted_at is not null) as deleted
     from whisper_messages
     where ${pairCond(serverId, userId, peerUserId)}
       and hidden_at is null
@@ -414,10 +426,43 @@ export async function listWhisperMessages(
     id: r.id,
     fromUserId: r.from_user_id,
     toUserId: r.to_user_id,
-    body: r.body,
-    mentions: normMentions(r.mentions),
+    // 삭제분(0177) — 원문·멘션 비노출, 자리표시만.
+    body: r.deleted ? CHAT_DELETED_BODY : r.body,
+    mentions: r.deleted ? null : normMentions(r.mentions),
     createdAt: r.created_at,
+    ...(r.deleted ? { deleted: true } : {}),
   }));
+}
+
+/**
+ * 본인 귓속말 삭제(0177) — 양쪽 화면 모두 자리표시로 바뀐다(상대 기록도 원문은 DB 보존).
+ * 발신자 본인만. 운영 숨김분은 불가. 멱등. 양쪽 토픽에 'delete' 브로드캐스트.
+ */
+export async function deleteOwnWhisperMessage(
+  userId: string,
+  messageId: bigint,
+  dbx: WhisperDb = db,
+): Promise<'ok' | 'not_found'> {
+  const [msg] = await dbx
+    .select({
+      serverId: whisperMessages.serverId,
+      from: whisperMessages.fromUserId,
+      to: whisperMessages.toUserId,
+      hiddenAt: whisperMessages.hiddenAt,
+      deletedAt: whisperMessages.deletedAt,
+    })
+    .from(whisperMessages)
+    .where(eq(whisperMessages.id, messageId))
+    .limit(1);
+  if (!msg || msg.from.toLowerCase() !== userId.toLowerCase() || msg.hiddenAt) return 'not_found';
+  if (msg.deletedAt) return 'ok';
+  await dbx.update(whisperMessages).set({ deletedAt: new Date() }).where(eq(whisperMessages.id, messageId));
+  await broadcastWhisper(
+    [whisperTopic(msg.serverId, msg.to), whisperTopic(msg.serverId, msg.from)],
+    { id: String(messageId), fromUserId: msg.from, toUserId: msg.to },
+    'delete',
+  );
+  return 'ok';
 }
 
 /**

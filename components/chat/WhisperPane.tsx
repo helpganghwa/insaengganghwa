@@ -7,10 +7,10 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TitleTag } from '@/components/TitleTag';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import type { FaceBox } from '@/components/faceCrop';
-import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
+import { CHAT_DELETED_BODY, type ChatMention, type ChatMessageDto } from '@/lib/game/chat/service';
 import { searchAction } from '@/app/(game)/friends/actions';
 
-import { reportWhisper } from './actions';
+import { deleteWhisper, reportWhisper } from './actions';
 import { ChatDateDivider, ChatRow, chatDateLabel } from './ChatRow';
 import { useScrollFxPause } from './useScrollFxPause';
 import { avatarBox } from './mentionBody';
@@ -40,6 +40,8 @@ export type WhisperMessageDto = {
   body: string;
   mentions: ChatMention[] | null;
   createdAt: string;
+  /** 본인 삭제(0177) — 서버 DTO와 동일. */
+  deleted?: boolean;
 };
 
 /** 채팅 행이 쓰는 표시 필드 묶음 — 서버 whisperDisplay()와 1:1(길드 문양·집행관·칭호 포함). */
@@ -137,6 +139,7 @@ export function WhisperPane({
   onThreads,
   onUnread,
   registerSink,
+  registerDeleteSink,
   onProfile,
   onToggleBlock,
   onClose,
@@ -156,6 +159,8 @@ export function WhisperPane({
   onThreads: (res: WhisperThreadsRes) => void;
   onUnread: (n: number) => void;
   registerSink: (fn: ((m: WhisperMessageDto) => boolean) | null) => void;
+  /** 본인 삭제 'delete' 이벤트 싱크(0177) — 열린 스레드의 해당 행을 자리표시로. */
+  registerDeleteSink: (fn: ((id: string) => void) | null) => void;
   onProfile: (userId: string) => void;
   onToggleBlock: (userId: string, nickname: string) => void;
   onClose: () => void;
@@ -181,6 +186,7 @@ export function WhisperPane({
   const [ask, setAsk] = useState<'block' | 'leave' | null>(null);
   // 신고 확인 팝업 대상 — 전체 채팅과 같은 '메시지 단위' 신고(본문 탭 진입).
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessageDto | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -419,6 +425,25 @@ export function WhisperPane({
     return () => registerSink(null);
   }, [registerSink, sink]);
 
+  // 본인 삭제(0177) — 실시간/낙관 공통 반영. 목록 미리보기는 재조회로 맞춘다(마지막 메시지였을 때).
+  const applyDeleted = useCallback(
+    (id: string) => {
+      setMsgs((prev) =>
+        prev.some((m) => m.id === id)
+          ? prev.map((m) =>
+              m.id === id && !m.deleted ? { ...m, body: CHAT_DELETED_BODY, mentions: null, deleted: true } : m,
+            )
+          : prev,
+      );
+      void loadThreads();
+    },
+    [loadThreads],
+  );
+  useEffect(() => {
+    registerDeleteSink(applyDeleted);
+    return () => registerDeleteSink(null);
+  }, [registerDeleteSink, applyDeleted]);
+
   // ── 목록 검색줄(새 귓속말) — 250ms 디바운스 prefix 검색.
   useEffect(() => {
     const term = q.trim();
@@ -570,6 +595,16 @@ export function WhisperPane({
 
   // ── 신고 — 전체 채팅과 같은 액션 형태·같은 문구.
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
+  const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
+  const confirmDelete = () => {
+    const m = deleteTarget;
+    if (!m) return;
+    setDeleteTarget(null);
+    applyDeleted(m.id);
+    void deleteWhisper(m.id).then((r) => {
+      if (r.status !== 'ok') flashError(r.message ?? '삭제에 실패했습니다.');
+    });
+  };
   const confirmReport = () => {
     const m = reportTarget;
     if (!m) return;
@@ -598,6 +633,7 @@ export function WhisperPane({
         mentions: m.mentions,
         body: m.body,
         createdAt: m.createdAt,
+        ...(m.deleted ? { deleted: true } : {}),
       };
       // 날짜 구분선을 사이에 두고는 묶지 않는다 — 구분선 아래 첫 줄은 항상 발신자를 보여준다.
       out.push({ dto, prev: date ? undefined : prevDto, date });
@@ -826,6 +862,7 @@ export function WhisperPane({
                 serverId={serverId}
                 onProfile={onProfile}
                 onReport={onReport}
+                onDelete={onDelete}
               />
             </div>
           ))}
@@ -927,6 +964,32 @@ export function WhisperPane({
           >
             <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
               차단하면 상대의 메시지가 보이지 않고, 나가면 이 대화만 목록에서 사라져요.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+
+      {/* 본인 메시지 삭제 확인(0177) — 전체 채팅과 같은 구성. */}
+      {deleteTarget ? (
+        <ModalShell onClose={() => setDeleteTarget(null)} onSubmit={confirmDelete} label="메시지 삭제">
+          <ModalLayout
+            title="이 메시지를 삭제할까요?"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setDeleteTarget(null)}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="danger" onClick={confirmDelete}>
+                  삭제
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {deleteTarget.body.slice(0, 60)}
+            </p>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
+              상대 화면에도 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다.
             </p>
           </ModalLayout>
         </ModalShell>

@@ -9,7 +9,7 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
-import type { ChatMessageDto, ChatUserMeta } from '@/lib/game/chat/service';
+import { CHAT_DELETED_BODY, type ChatMessageDto, type ChatUserMeta } from '@/lib/game/chat/service';
 
 /** 정규화 응답 조립용 빈 메타 — 시스템 라인/미등재 유저(종전 sys DTO의 빈 값과 동일). */
 const EMPTY_CHAT_USER_META: ChatUserMeta = {
@@ -30,7 +30,7 @@ import { sendRequestAction } from '@/app/(game)/friends/actions';
 
 import type { SendChatResult } from '@/lib/game/chat/send';
 
-import { reportChat, setChatBlockAction } from './actions';
+import { deleteChat, reportChat, setChatBlockAction } from './actions';
 import { ChatDateDivider, ChatRow, chatDateLabel, RESTORE_KEY } from './ChatRow';
 import { useScrollFxPause } from './useScrollFxPause';
 import {
@@ -208,6 +208,7 @@ export function ChatDock() {
   // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ChatMessageDto | null>(null);
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
   // 위로 읽는 중 도착한 새 메시지 — "↓ 새 메시지" 칩. 바닥 근처로 오면 자동 해제.
   const [unseenBelow, setUnseenBelow] = useState(false);
@@ -260,6 +261,8 @@ export function ChatDock() {
   const gidCacheRef = useRef<{ sid: number; gid: string } | null>(null);
   // 실시간 귓속말 싱크 — WhisperPane이 마운트된 동안만 등록된다(반환 true=활성 스레드가 소비).
   const whisperSinkRef = useRef<((m: WhisperMessageDto) => boolean) | null>(null);
+  // 귓속말 삭제 싱크(0177) — 'delete' 이벤트를 WhisperPane에 전달(마운트 중에만).
+  const whisperDeleteSinkRef = useRef<((id: string) => void) | null>(null);
   const [sid, setSid] = useState<number | null>(null);
   // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
   const myFieldsRef = useRef<ChatMessageDto | null>(null);
@@ -772,6 +775,17 @@ export function ChatDock() {
     }
   }, []);
 
+  /** delete broadcast(본인 삭제, 0177) 반영 — 행은 남기고 본문만 자리표시로. 화면·미니바·버퍼 공통. */
+  const markDeleted = useCallback((id: string) => {
+    const mark = (m: ChatMessageDto): ChatMessageDto =>
+      m.id === id && !m.deleted ? { ...m, body: CHAT_DELETED_BODY, mentions: null, deleted: true } : m;
+    setMessages((prev) => (prev.some((m) => m.id === id) ? prev.map(mark) : prev));
+    setLatest((prev) => (prev?.id === id ? mark(prev) : prev));
+    for (const b of Object.values(bufRef.current)) {
+      if (b.messages.some((m) => m.id === id)) b.messages = b.messages.map(mark);
+    }
+  }, []);
+
   // 서버 전환(sid 변경) 감지 — 버퍼·미니바 초기화. 구독 여부와 무관하게 실행되어야 해서
   // 구독 effect와 분리(닫힌 채 서버를 옮겨도 옛 서버 메시지가 남지 않도록).
   const prevSidRef = useRef<number | null>(null);
@@ -808,11 +822,14 @@ export function ChatDock() {
       .on('broadcast', { event: 'hide' }, ({ payload }) =>
         removeMessage((payload as { id: string }).id),
       )
+      .on('broadcast', { event: 'delete' }, ({ payload }) =>
+        markDeleted((payload as { id: string }).id),
+      )
       .subscribe();
     return () => {
       void sb.removeChannel(ch);
     };
-  }, [enabled, sid, open, routeIncoming, removeMessage]);
+  }, [enabled, sid, open, routeIncoming, removeMessage, markDeleted]);
 
   /**
    * 길드 채널 — **도크 열림/닫힘과 무관하게 상시 구독**(2026-08-07, 노티점 3채널 통일).
@@ -852,11 +869,14 @@ export function ChatDock() {
       .on('broadcast', { event: 'hide' }, ({ payload }) =>
         removeMessage((payload as { id: string }).id),
       )
+      .on('broadcast', { event: 'delete' }, ({ payload }) =>
+        markDeleted((payload as { id: string }).id),
+      )
       .subscribe();
     return () => {
       void sb.removeChannel(ch);
     };
-  }, [enabled, guildTopic, routeIncoming, recomputeDot, removeMessage]);
+  }, [enabled, guildTopic, routeIncoming, recomputeDot, removeMessage, markDeleted]);
 
   /**
    * 귓속말 수신 토픽 — **도크 열림/닫힘과 무관하게 상시 1개 구독**(길드와 같은 규칙, 전체와 비대칭).
@@ -890,6 +910,10 @@ export function ChatDock() {
         if (consumed) setSeen('whisper', m.id);
         else recomputeDot();
       })
+      // 본인 삭제(0177) — 열린 스레드가 있으면 자리표시로 교체(닫힘·다른 탭이면 다음 조회가 반영).
+      .on('broadcast', { event: 'delete' }, ({ payload }) =>
+        whisperDeleteSinkRef.current?.((payload as { id: string }).id),
+      )
       .subscribe();
     return () => {
       void sb.removeChannel(ch);
@@ -911,11 +935,14 @@ export function ChatDock() {
       .on('broadcast', { event: 'new' }, ({ payload }) =>
         routeIncoming('all', payload as ChatMessageDto),
       )
+      .on('broadcast', { event: 'delete' }, ({ payload }) =>
+        markDeleted((payload as { id: string }).id),
+      )
       .subscribe();
     return () => {
       void sb.removeChannel(ch);
     };
-  }, [enabled, sid, open, collapsed, routeIncoming]);
+  }, [enabled, sid, open, collapsed, routeIncoming, markDeleted]);
 
   // 길드 탈퇴/해산 감지 — 길드 버퍼 잔존 제거.
   useEffect(() => {
@@ -1391,6 +1418,7 @@ export function ChatDock() {
       });
   }, []);
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
+  const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
 
   // ── WhisperPane 연결 콜백 —— 전부 안정 참조(패널 내부 effect 재실행 방지).
   const handleWhisperThreads = useCallback((res: WhisperThreadsRes) => {
@@ -1406,6 +1434,9 @@ export function ChatDock() {
     },
     [],
   );
+  const registerWhisperDeleteSink = useCallback((fn: ((id: string) => void) | null) => {
+    whisperDeleteSinkRef.current = fn;
+  }, []);
   const consumeWhisperOpen = useCallback(() => setWhisperOpen(null), []);
 
   // 차단 토글(0126, 서버 저장) — 낙관 반영 후 서버 확정, 실패 시 복원.
@@ -1453,6 +1484,18 @@ export function ChatDock() {
   const applyMention = (nick: string) => {
     if (!mentionToken) return;
     setInput(input.slice(0, mentionToken.index) + '@' + nick + ' ');
+  };
+
+  // 본인 삭제(0177) — 낙관 교체 후 서버 확정. 실패 시 서버 상태가 진실이라 되돌리지 않고
+  // 문구만 띄운다(다음 폴링/재조회가 원문을 복구 — 드문 경로).
+  const confirmDelete = () => {
+    const m = deleteTarget;
+    if (!m) return;
+    setDeleteTarget(null);
+    markDeleted(m.id);
+    void deleteChat(m.id).then((r) => {
+      if (r.status !== 'ok') flashError(r.message ?? '삭제에 실패했습니다.');
+    });
   };
 
   const confirmReport = () => {
@@ -1614,6 +1657,7 @@ export function ChatDock() {
                 onThreads={handleWhisperThreads}
                 onUnread={handleWhisperUnread}
                 registerSink={registerWhisperSink}
+                registerDeleteSink={registerWhisperDeleteSink}
                 onProfile={openProfile}
                 onToggleBlock={toggleBlock}
                 onClose={() => setOpen(false)}
@@ -1669,6 +1713,7 @@ export function ChatDock() {
                       serverId={sid ?? 1}
                       onProfile={openProfile}
                       onReport={onReport}
+                      onDelete={onDelete}
                     />
                   </Fragment>
                 ))}
@@ -1962,6 +2007,32 @@ export function ChatDock() {
                 ))}
               </ul>
             )}
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+
+      {/* 본인 메시지 삭제 확인 팝업(0177) */}
+      {deleteTarget ? (
+        <ModalShell onClose={() => setDeleteTarget(null)} onSubmit={confirmDelete} label="메시지 삭제">
+          <ModalLayout
+            title="이 메시지를 삭제할까요?"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setDeleteTarget(null)}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="danger" onClick={confirmDelete}>
+                  삭제
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {deleteTarget.body.slice(0, 60)}
+            </p>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
+              삭제하면 그 자리에 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다.
+            </p>
           </ModalLayout>
         </ModalShell>
       ) : null}

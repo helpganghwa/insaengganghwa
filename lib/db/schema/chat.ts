@@ -24,6 +24,8 @@ export const chatMessages = pgTable(
     guildId: bigint('guild_id', { mode: 'bigint' }),
     /** 모더레이션 숨김(신고 3건 자동 또는 어드민) — null=노출. */
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+    /** 본인 삭제(0177) — 행은 노출되되 본문이 자리표시로 대체. 원문 보존(어드민 검수용). */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -83,6 +85,8 @@ export const whisperMessages = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     /** 모더레이션 숨김(어드민 검수) — null=노출. */
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+    /** 본인 삭제(0177) — 양쪽 화면에 자리표시, 원문 보존. */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [
     // 쌍 정규화 — 방향 무관 한 대화를 한 인덱스로.

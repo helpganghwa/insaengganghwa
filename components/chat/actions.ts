@@ -3,8 +3,8 @@
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
-import { reportChatMessage, setChatBlock } from '@/lib/game/chat/service';
-import { reportWhisperMessage } from '@/lib/game/chat/whisper';
+import { deleteOwnChatMessage, reportChatMessage, setChatBlock } from '@/lib/game/chat/service';
+import { deleteOwnWhisperMessage, reportWhisperMessage } from '@/lib/game/chat/whisper';
 
 /**
  * 월드 채팅 액션(0125) — 신고·차단(저빈도만). 전송은 POST /api/chat/send로 분리(2026-08-06) —
@@ -37,6 +37,42 @@ export async function reportChat(messageId: string): Promise<{ status: 'ok' | 'e
   }
   const serverId = await getActiveServerId();
   const r = await reportChatMessage(userId, id, serverId);
+  if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
+  return { status: 'ok' };
+}
+
+/**
+ * 본인 메시지 삭제(0177) — 본문 탭(내 메시지) → 확인 팝업. 서버가 본인·서버·숨김 여부를 검증.
+ * 레이트리밋은 신고와 같은 키(저빈도 쓰기, 연타 방어).
+ */
+export async function deleteChat(messageId: string): Promise<{ status: 'ok' | 'error'; message?: string }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'report')) return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  let id: bigint;
+  try {
+    id = BigInt(messageId);
+  } catch {
+    return { status: 'error', message: '잘못된 요청입니다.' };
+  }
+  const serverId = await getActiveServerId();
+  const r = await deleteOwnChatMessage(userId, id, serverId);
+  if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
+  return { status: 'ok' };
+}
+
+/** 본인 귓속말 삭제(0177) — 양쪽 화면 자리표시. */
+export async function deleteWhisper(messageId: string): Promise<{ status: 'ok' | 'error'; message?: string }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'report')) return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  let id: bigint;
+  try {
+    id = BigInt(messageId);
+  } catch {
+    return { status: 'error', message: '잘못된 요청입니다.' };
+  }
+  const r = await deleteOwnWhisperMessage(userId, id);
   if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
   return { status: 'ok' };
 }

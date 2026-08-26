@@ -49,6 +49,7 @@ export function ChatMessageRow({ row, showGuild = true }: { row: AdminChatRow; s
           <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {row.reports}</span>
         ) : null}
         {row.hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
+        {row.deletedAt ? <span className="text-[10px] font-bold text-zinc-400">본인삭제</span> : null}
         {isMuted(row.mutedUntil) ? <span className="text-[10px] text-amber-400">채팅금지중</span> : null}
         <span className="ml-auto">
           <MessageActions messageId={String(row.id)} hidden={Boolean(row.hiddenAt)} userId={row.userId} />
@@ -66,6 +67,7 @@ export function WhisperMessageRow({
   body,
   createdAt,
   hiddenAt,
+  deletedAt = null,
   serverId,
   reports,
   identities,
@@ -77,6 +79,7 @@ export function WhisperMessageRow({
   body: string;
   createdAt: Date;
   hiddenAt: Date | null;
+  deletedAt?: Date | null;
   serverId: number;
   reports: number;
   identities: Map<string, AdminIdentity>;
@@ -97,6 +100,7 @@ export function WhisperMessageRow({
           <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {reports}</span>
         ) : null}
         {hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
+        {deletedAt ? <span className="text-[10px] font-bold text-zinc-400">본인삭제</span> : null}
         {isMuted(from?.mutedUntil ?? null) ? (
           <span className="text-[10px] text-amber-400">채팅금지중</span>
         ) : null}
