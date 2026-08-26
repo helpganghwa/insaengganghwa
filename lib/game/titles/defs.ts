@@ -970,7 +970,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldleaf"
+   fx: "patronleaf",
+   pt: "coin"
   }
  },
  {
@@ -980,7 +981,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldsoft"
+   fx: "goldsheen",
+   pt: "coin"
   }
  },
  {
@@ -990,7 +992,9 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldglow"
+   fx: "sovereignflow",
+   pt: "goldstar",
+   glow: true
   }
  },
  {
@@ -1000,7 +1004,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldflow",
+   fx: "royalseal",
+   pt: "royalstar",
    glow: true
   }
  },
@@ -1011,8 +1016,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldflow",
-   pt: "stardust",
+   fx: "imperialcrown",
+   pt: "crownstar",
    glow: true
   }
  },
@@ -1024,7 +1029,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "후원",
   style: {
    fx: "forgeheart",
-   pt: "ember",
+   pt: "emberrich",
    glow: true
   }
  },
@@ -1036,7 +1041,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "후원",
   style: {
    fx: "eternalflame",
-   pt: "spark",
+   pt: "flarestar",
    glow: true
   }
  },
