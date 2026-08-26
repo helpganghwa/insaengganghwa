@@ -864,6 +864,24 @@
   "diff": "어려움"
  },
  {
+  "code": "pay_500",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "화로의 수호자",
+  "cond": "누적 결제 500만원",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "pay_1000",
+  "cat": "후원",
+  "kind": "영구",
+  "label": "영원의 불꽃",
+  "cond": "누적 결제 1,000만원",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
   "code": "two_mirrors",
   "cat": "아바타",
   "kind": "영구",
@@ -4020,6 +4038,168 @@
   "label": "은빛 아침",
   "cond": "창궁검 + 아침빛 예복 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
   "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "enhance_5000",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "쇠를 아는 손",
+  "cond": "누적 강화 5,000회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "enhance_50000",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "망치와 한 몸",
+  "cond": "누적 강화 50,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "hold_50",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "뿌리 깊은 손",
+  "cond": "강화 유지 50연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "mega_streak_7",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "칠성의 가호",
+  "cond": "대성공 7연속",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "enhance_300",
+  "cat": "강화",
+  "kind": "영구",
+  "label": "삼백의 벽",
+  "cond": "장비 하나를 +300까지",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "supply_1000",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "상자 천 개",
+  "cond": "누적 보급 상자 1,000개 개봉",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "supply_30000",
+  "cat": "보급",
+  "kind": "영구",
+  "label": "창고지기",
+  "cond": "누적 보급 상자 30,000개 개봉",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "transcend_100",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "첫 별무리",
+  "cond": "누적 초월 100회",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "transcend_deep_10",
+  "cat": "초월",
+  "kind": "영구",
+  "label": "열 개의 문",
+  "cond": "장비 하나를 초월 10까지",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "raid_1000",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "천 번의 종소리",
+  "cond": "레이드 참여 1,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "raid_strike_20m",
+  "cat": "레이드",
+  "kind": "영구",
+  "label": "용을 꿰뚫은 일격",
+  "cond": "레이드 단일 공격 2,000만 피해",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_100_win",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "백승의 검",
+  "cond": "대난투 100승",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "melee_podium_50",
+  "cat": "대난투",
+  "kind": "영구",
+  "label": "메달 수집가",
+  "cond": "대난투 시상대(1~3위) 50회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "cq_defend_300",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "천년 파수꾼",
+  "cond": "점령전 수비 승리 300회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "cq_tax_100",
+  "cat": "점령전",
+  "kind": "영구",
+  "label": "곳간의 열쇠",
+  "cond": "점령지 세금 수금 100회",
+  "hidden": true,
+  "diff": "어려움"
+ },
+ {
+  "code": "chat_10000",
+  "cat": "소셜",
+  "kind": "영구",
+  "label": "대장간의 목소리",
+  "cond": "채팅 10,000회",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "checkin_100",
+  "cat": "일상",
+  "kind": "영구",
+  "label": "백일의 등불",
+  "cond": "출석 100일",
+  "hidden": true,
+  "diff": "중간"
+ },
+ {
+  "code": "codex_half",
+  "cat": "도감",
+  "kind": "영구",
+  "label": "반쪽 도감",
+  "cond": "도감 절반 수집",
+  "hidden": true,
   "diff": "중간"
  }
 ]

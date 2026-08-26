@@ -37,6 +37,7 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   identity_verifications: '법정 보존(청소년보호 판정 원장)', monthly_purchase_limits: '미성년 한도 원장',
   diamond_ledger: '재화 감사 원장 — 결제 분쟁 추적 축(iap_orders와 동축). 칭호 재화 지표는 현 캐릭터 생성 이후로 스코프(judge.ts)',
   referral_attributions: '1인 1회 잠금 — 지우면 탈퇴·재가입으로 추천 보상 무한 재지급(2026-07-22 주석)',
+  patron_milestone_grants: '후원 구간 보상 원장(0175) — iap_orders와 동축 보존. 지우면 재가입 시 누적 결제 구간이 다시 지급됨',
   support_inquiries: '분쟁 추적(본문 보존·이미지만 파기 — 함수 내 update)',
   guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
   admin_mail_logs: '운영 발송 감사', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',

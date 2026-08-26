@@ -71,7 +71,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "guild_top",
   cat: "조건부",
-  cond: "길드 레벨 랭킹 1위 길드 소속인 동안",
+  cond: "길드 랭킹 1위 길드 소속인 동안",
   diff: "어려움"
  },
  {
@@ -4544,6 +4544,114 @@ export const TITLE_SECRETS: TitleSecret[] = [
    ],
    min: 30
   }
+ },
+ {
+  code: "enhance_5000",
+  cat: "강화",
+  cond: "누적 강화 5,000회",
+  diff: "중간"
+ },
+ {
+  code: "enhance_50000",
+  cat: "강화",
+  cond: "누적 강화 50,000회",
+  diff: "어려움"
+ },
+ {
+  code: "hold_50",
+  cat: "강화",
+  cond: "강화 유지 50연속",
+  diff: "어려움"
+ },
+ {
+  code: "mega_streak_7",
+  cat: "강화",
+  cond: "대성공 7연속",
+  diff: "어려움"
+ },
+ {
+  code: "enhance_300",
+  cat: "강화",
+  cond: "장비 하나를 +300까지",
+  diff: "어려움"
+ },
+ {
+  code: "supply_1000",
+  cat: "보급",
+  cond: "누적 보급 상자 1,000개 개봉",
+  diff: "중간"
+ },
+ {
+  code: "supply_30000",
+  cat: "보급",
+  cond: "누적 보급 상자 30,000개 개봉",
+  diff: "어려움"
+ },
+ {
+  code: "transcend_100",
+  cat: "초월",
+  cond: "누적 초월 100회",
+  diff: "중간"
+ },
+ {
+  code: "transcend_deep_10",
+  cat: "초월",
+  cond: "장비 하나를 초월 10까지",
+  diff: "중간"
+ },
+ {
+  code: "raid_1000",
+  cat: "레이드",
+  cond: "레이드 참여 1,000회",
+  diff: "어려움"
+ },
+ {
+  code: "raid_strike_20m",
+  cat: "레이드",
+  cond: "레이드 단일 공격 2,000만 피해",
+  diff: "어려움"
+ },
+ {
+  code: "melee_100_win",
+  cat: "대난투",
+  cond: "대난투 100승",
+  diff: "어려움"
+ },
+ {
+  code: "melee_podium_50",
+  cat: "대난투",
+  cond: "대난투 시상대(1~3위) 50회",
+  diff: "어려움"
+ },
+ {
+  code: "cq_defend_300",
+  cat: "점령전",
+  cond: "점령전 수비 승리 300회",
+  diff: "어려움"
+ },
+ {
+  code: "cq_tax_100",
+  cat: "점령전",
+  cond: "점령지 세금 수금 100회",
+  diff: "어려움"
+ },
+ {
+  code: "chat_10000",
+  cat: "소셜",
+  cond: "채팅 10,000회",
+  diff: "어려움"
+ },
+ {
+  code: "checkin_100",
+  cat: "일상",
+  cond: "출석 100일",
+  diff: "중간"
+ },
+ {
+  code: "codex_half",
+  cat: "도감",
+  cond: "도감 절반 수집",
+  diff: "중간"
  }
 ] as const;
 

@@ -985,6 +985,25 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   // ── 2차 증설(2026-08-21, 신규 93종 중 영구 2 — 조합 91은 아이템 발동 자동 판정) ──
   first_bitter: (m) => m.enh_down >= 1,
   late_bloomer: (m) => m.lv100_cnt >= 1 && m.first100_days >= 100,
+  // ── 2026-08-27 업데이트 신규 18종 — 기존 지표의 미사용 구간 ──
+  enhance_5000: (m) => m.enh_total >= 5000,
+  enhance_50000: (m) => m.enh_total >= 50000,
+  hold_50: (m) => m.hold_run >= 50,
+  mega_streak_7: (m) => m.mega_run >= 7,
+  enhance_300: (m) => m.max_lv >= 300,
+  supply_1000: (m) => m.supply_total >= 1000,
+  supply_30000: (m) => m.supply_total >= 30000,
+  transcend_100: (m) => m.t_total >= 100,
+  transcend_deep_10: (m) => m.max_t >= 10,
+  raid_1000: (m) => m.r_joins >= 1000,
+  raid_strike_20m: (m) => m.r_max_dmg >= 20_000_000,
+  melee_100_win: (m) => m.m_wins >= 100,
+  melee_podium_50: (m) => m.m_podium >= 50,
+  cq_defend_300: (m) => m.cq_defend_win >= 300,
+  cq_tax_100: (m) => m.cq_tax >= 100,
+  chat_10000: (m) => m.chats >= 10000,
+  checkin_100: (m) => m.checkin >= 100,
+  codex_half: (m) => m.catalog_total > 0 && m.codex * 2 >= m.catalog_total,
 };
 
 /** 조건부(상태형) 활성 — 대표 표시·발견 공용. 아이템 발동 + 장비 상태 + 해방 + 집행관. */

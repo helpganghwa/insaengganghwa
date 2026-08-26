@@ -105,20 +105,25 @@
    "fx": "pentaflow"
   },
   "pay_first": {
-   "fx": "goldleaf"
+   "fx": "patron1"
   },
   "pay_5": {
-   "fx": "goldsoft"
+   "fx": "patron2"
   },
   "pay_20": {
-   "fx": "goldglow"
+   "fx": "patron3",
+   "pt": "pstar",
+   "pc": 1
   },
   "pay_50": {
-   "fx": "goldflow"
+   "fx": "patron4",
+   "pt": "pstar",
+   "pc": 2
   },
   "pay_200": {
-   "fx": "goldflow",
-   "pt": "stardust"
+   "fx": "patron5",
+   "pt": "pstar",
+   "pc": 3
   },
   "warpath": {
    "fx": "bloodpulse",
@@ -280,6 +285,18 @@
   "sprout_scout": {
    "fx": "verdantflow",
    "pt": "spark"
+  },
+  "pay_500": {
+   "fx": "patron6",
+   "pt": "pstar",
+   "pc": 4,
+   "split": true
+  },
+  "pay_1000": {
+   "fx": "patron7",
+   "pt": "pember",
+   "pc": 6,
+   "split": true
   }
  },
  "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

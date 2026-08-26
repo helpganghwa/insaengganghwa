@@ -11,6 +11,10 @@ export type TitleStyle = {
   /** 특별 이펙트(fx-*) / 파티클(pt-*) — components/title-fx.css. */
   fx?: string;
   pt?: string;
+  /** 파티클 개수(기본 4). */
+  pc?: number;
+  /** 글자 단위 렌더 — 문자별 애니메이션. */
+  split?: boolean;
   /** 어려움·한정 공통 은은한 발광. */
   glow?: boolean;
   /** 집행관 — ExecutorTag 렌더 위임. */
@@ -287,7 +291,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "flame"
+   fx: "forgeshine"
   }
  },
  {
@@ -448,7 +452,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeydrip"
+   fx: "honeyflow"
   }
  },
  {
@@ -531,7 +535,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "레이드",
   style: {
-   fx: "warbanner"
+   fx: "crimsonflow"
   }
  },
  {
@@ -541,7 +545,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "레이드",
   style: {
-   fx: "crimsonflow"
+   fx: "warbanner"
   }
  },
  {
@@ -623,7 +627,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "duelbeat"
+   fx: "bloodpulse"
   }
  },
  {
@@ -655,7 +659,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "duelflow"
+   fx: "bloodpulse"
   }
  },
  {
@@ -665,7 +669,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "bloodpulse"
+   fx: "duelflow"
   }
  },
  {
@@ -970,8 +974,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "patronleaf",
-   pt: "coin"
+   fx: "patron1"
   }
  },
  {
@@ -981,8 +984,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "goldsheen",
-   pt: "coin"
+   fx: "patron2"
   }
  },
  {
@@ -992,9 +994,9 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "sovereignflow",
-   pt: "goldstar",
-   glow: true
+   fx: "patron3",
+   pt: "pstar",
+   pc: 1
   }
  },
  {
@@ -1004,8 +1006,9 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "royalseal",
-   pt: "royalstar",
+   fx: "patron4",
+   pt: "pstar",
+   pc: 2,
    glow: true
   }
  },
@@ -1016,8 +1019,9 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "imperialcrown",
-   pt: "crownstar",
+   fx: "patron5",
+   pt: "pstar",
+   pc: 3,
    glow: true
   }
  },
@@ -1028,8 +1032,10 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "forgeheart",
-   pt: "emberrich",
+   fx: "patron6",
+   pt: "pstar",
+   pc: 4,
+   split: true,
    glow: true
   }
  },
@@ -1040,8 +1046,10 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "후원",
   style: {
-   fx: "eternalflame",
-   pt: "flarestar",
+   fx: "patron7",
+   pt: "pember",
+   pc: 6,
+   split: true,
    glow: true
   }
  },
@@ -1340,7 +1348,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "대난투",
   style: {
-   fx: "bloodpulse"
+   fx: "duelbeat"
   }
  },
  {
@@ -1621,7 +1629,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeydrip"
   }
  },
  {
@@ -1651,7 +1659,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "레이드",
   style: {
-   fx: "warbanner"
+   fx: "crimsonflow"
   }
  },
  {
@@ -1878,7 +1886,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "대난투",
   style: {
-   fx: "duelbeat"
+   fx: "duelflow"
   }
  },
  {
@@ -4740,6 +4748,186 @@ export const TITLE_DEFS: TitleDef[] = [
     "#fbbf24",
     "#c084fc"
    ]
+  }
+ },
+ {
+  code: "enhance_5000",
+  kind: "permanent",
+  label: "쇠를 아는 손",
+  hidden: true,
+  cat: "강화",
+  style: {
+   color: "#e0a066"
+  }
+ },
+ {
+  code: "enhance_50000",
+  kind: "permanent",
+  label: "망치와 한 몸",
+  hidden: false,
+  cat: "강화",
+  style: {
+   fx: "emberflow"
+  }
+ },
+ {
+  code: "hold_50",
+  kind: "permanent",
+  label: "뿌리 깊은 손",
+  hidden: true,
+  cat: "강화",
+  style: {
+   fx: "cinderflow"
+  }
+ },
+ {
+  code: "mega_streak_7",
+  kind: "permanent",
+  label: "칠성의 가호",
+  hidden: true,
+  cat: "강화",
+  style: {
+   fx: "flame"
+  }
+ },
+ {
+  code: "enhance_300",
+  kind: "permanent",
+  label: "삼백의 벽",
+  hidden: false,
+  cat: "강화",
+  style: {
+   fx: "flame"
+  }
+ },
+ {
+  code: "supply_1000",
+  kind: "permanent",
+  label: "상자 천 개",
+  hidden: true,
+  cat: "보급",
+  style: {
+   color: "#b8a97a"
+  }
+ },
+ {
+  code: "supply_30000",
+  kind: "permanent",
+  label: "창고지기",
+  hidden: false,
+  cat: "보급",
+  style: {
+   fx: "honeydrip"
+  }
+ },
+ {
+  code: "transcend_100",
+  kind: "permanent",
+  label: "첫 별무리",
+  hidden: true,
+  cat: "초월",
+  style: {
+   color: "#b39ddb"
+  }
+ },
+ {
+  code: "transcend_deep_10",
+  kind: "permanent",
+  label: "열 개의 문",
+  hidden: true,
+  cat: "초월",
+  style: {
+   color: "#b39ddb"
+  }
+ },
+ {
+  code: "raid_1000",
+  kind: "permanent",
+  label: "천 번의 종소리",
+  hidden: false,
+  cat: "레이드",
+  style: {
+   fx: "warbanner"
+  }
+ },
+ {
+  code: "raid_strike_20m",
+  kind: "permanent",
+  label: "용을 꿰뚫은 일격",
+  hidden: true,
+  cat: "레이드",
+  style: {
+   fx: "warbanner"
+  }
+ },
+ {
+  code: "melee_100_win",
+  kind: "permanent",
+  label: "백승의 검",
+  hidden: false,
+  cat: "대난투",
+  style: {
+   fx: "duelbeat"
+  }
+ },
+ {
+  code: "melee_podium_50",
+  kind: "permanent",
+  label: "메달 수집가",
+  hidden: true,
+  cat: "대난투",
+  style: {
+   fx: "duelbeat"
+  }
+ },
+ {
+  code: "cq_defend_300",
+  kind: "permanent",
+  label: "천년 파수꾼",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "verdigris"
+  }
+ },
+ {
+  code: "cq_tax_100",
+  kind: "permanent",
+  label: "곳간의 열쇠",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   fx: "bronzeshine"
+  }
+ },
+ {
+  code: "chat_10000",
+  kind: "permanent",
+  label: "대장간의 목소리",
+  hidden: false,
+  cat: "소셜",
+  style: {
+   fx: "azureflow"
+  }
+ },
+ {
+  code: "checkin_100",
+  kind: "permanent",
+  label: "백일의 등불",
+  hidden: true,
+  cat: "일상",
+  style: {
+   color: "#a8a8b0"
+  }
+ },
+ {
+  code: "codex_half",
+  kind: "permanent",
+  label: "반쪽 도감",
+  hidden: true,
+  cat: "도감",
+  style: {
+   color: "#94c799"
   }
  }
 ] as const;

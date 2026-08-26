@@ -296,6 +296,7 @@ const FX_OG: Record<string, string> = {
   forgeheart: '#ffb347', eternalflame: '#ffd27a',
   goldsheen: '#e5c07b', sovereignflow: '#f5d76e',
   patronleaf: '#e0b860', royalseal: '#f5d76e', imperialcrown: '#f0c060',
+  patron1: '#efe6d2', patron2: '#ecdcb4', patron3: '#e9c96a', patron4: '#e8b04a', patron5: '#f05a3a', patron6: '#f05a3a', patron7: '#a8203a',
   coinshine: '#d4af37', gildedflow: '#cdb04e', lunarflow: '#cfd8e8', veilflow: '#b9a7e0',
   driftfall: '#b9c2cc', linenflow: '#c8beb0', warbanner: '#c86a5a', verdigris: '#7fae9e',
   stardrift: '#c8b8f0', astralflow: '#b39ddb', freedomglint: '#c9a2f0', azureflow: '#6ea8e0',

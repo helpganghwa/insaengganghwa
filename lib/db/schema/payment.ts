@@ -17,6 +17,7 @@ import {
   primaryKey,
   index,
   uniqueIndex,
+  integer,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -134,3 +135,19 @@ export const identityVerifications = pgTable('identity_verifications', {
   isAdult: boolean('is_adult').notNull(),
   verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * 0175 후원 구간 보상 지급 원장 — (user_id, milestone_krw) 1회. 구간·보상 정의는 lib/game/patron/milestones.ts.
+ * 웹훅 중복·recon 재실행·소급 스크립트 재실행 전부 이 PK가 막는다. 환불로 하회해도 회수 없음.
+ */
+export const patronMilestoneGrants = pgTable(
+  'patron_milestone_grants',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    milestoneKrw: integer('milestone_krw').notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.milestoneKrw] })],
+);

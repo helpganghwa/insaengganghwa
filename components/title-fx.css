@@ -98,40 +98,48 @@
 .pt-onestar>i{width:5px;height:5px;background:linear-gradient(0deg,transparent 41%,#f5d76e 41% 59%,transparent 59%),linear-gradient(90deg,transparent 41%,#fff3c4 41% 59%,transparent 59%);top:-4px;right:-6px;left:auto !important;filter:drop-shadow(0 0 1.5px rgba(245,215,110,.9));animation:p-one 3.2s ease-in-out infinite}
 @keyframes p-one{0%,72%,100%{opacity:0;transform:rotate(0) scale(.4)}80%,88%{opacity:1;transform:rotate(45deg) scale(1)}}
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
-/* ── 후원 시그니처(2026-08-26) — 결제 칭호 7종 전용. 절제 원칙의 예외 카테고리: 파티클을 점 대신
-   금빛 별 글리프(✦)·금화·왕관으로 그리고, 50만↑는 후광(::before)이 텍스트 뒤에 깔린다. 단계가 오를수록
-   글리프 크기·후광·왕관이 누적된다. 보더·배경 없음(사용자 결정 2026-08-26) — 텍스트·글리프·후광만. 파티클은 여전히 4점, reduced-motion·정적 모드 규칙 동일. */
-/* 후원 전용 — 다른 카테고리와 fx를 공유하지 않는다(한정 배지). */
-.fx-patronleaf{background:linear-gradient(115deg,#e9c96a 0%,#c9a23e 22%,#fff3c4 40%,#bb943a 58%,#e9c96a 78%,#d4ad4c 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 9s linear infinite;filter:drop-shadow(0 1px 0 rgba(70,50,0,.45))}
-.fx-royalseal{background:linear-gradient(90deg,#f5d76e,#fffaf0,#d4a017,#fff0c0,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 4s linear infinite,pulsebr 3s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(245,215,110,.65))}
-.fx-imperialcrown{background:linear-gradient(90deg,#f5d76e 0%,#fff8e1 16%,#d8b25f 34%,#b2182b 50%,#f0c060 66%,#fff8e1 84%,#f5d76e 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite,pulsebr 3.2s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(245,200,120,.6))}
-.fx-goldsheen{background:linear-gradient(90deg,#d9b45a 40%,#fff6d5 50%,#d9b45a 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 4.5s linear infinite;filter:drop-shadow(0 0 2px rgba(229,192,123,.45))}
-.fx-sovereignflow{background:linear-gradient(90deg,#f5d76e,#fff8e1,#c9962a,#ffe9a8,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,pulsebr 3.4s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(245,215,110,.55))}
-/* 금화 — 작은 금 원반이 떠오르며 하이라이트가 스친다(첫 후원·기사) */
-.pt-coin>i{width:4px;height:4px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6d5 0%,#f0c95a 40%,#b8860b 100%);box-shadow:0 0 2px rgba(245,215,110,.8);bottom:-2px;filter:none;animation:p-coin 4.4s ease-out infinite}
-@keyframes p-coin{0%,40%,100%{opacity:0;transform:translateY(0) scale(.5)}47%{opacity:.9;transform:translateY(-2px) scale(1)}62%{opacity:.6;transform:translateY(-6px) scale(.9)}72%{opacity:0;transform:translateY(-9px) scale(.6)}}
-/* 금빛 별 — ✦ 글리프가 위아래에서 교대로 반짝(영주·왕실) */
-.pt-goldstar>i,.pt-royalstar>i,.pt-crownstar>i,.pt-flarestar>i{width:auto;height:auto;font-style:normal;line-height:1;filter:none;top:-.4em;font-size:.6em;color:#fff3c4;text-shadow:0 0 3px rgba(245,215,110,.95),0 0 6px rgba(245,215,110,.5);animation:p-gstar 3.8s ease-in-out infinite}
-.pt-goldstar>i::before,.pt-royalstar>i::before,.pt-crownstar>i::before,.pt-flarestar>i::before{content:'✦'}
-.pt-goldstar>i:nth-child(even),.pt-royalstar>i:nth-child(even),.pt-crownstar>i:nth-child(even),.pt-flarestar>i:nth-child(even){top:auto;bottom:-.35em;font-size:.48em}
-@keyframes p-gstar{0%,58%,100%{opacity:0;transform:scale(.3) rotate(0deg)}66%,80%{opacity:1;transform:scale(1) rotate(45deg)}88%{opacity:0;transform:scale(.4) rotate(90deg)}}
-/* 후광 — 텍스트 뒤 금빛 광원(왕실↑). 텍스트가 위에 오도록 fx span을 relative로 */
-.pt-royalstar,.pt-crownstar,.pt-emberrich,.pt-flarestar{isolation:isolate}
-.pt-royalstar>.fx,.pt-crownstar>.fx,.pt-emberrich>.fx,.pt-flarestar>.fx{position:relative;z-index:1}
-.pt-royalstar::before,.pt-crownstar::before{content:'';position:absolute;inset:-.15em -.35em;border-radius:1em;background:radial-gradient(ellipse at 50% 55%,rgba(245,215,110,.28) 0%,rgba(245,215,110,.1) 45%,transparent 72%);filter:blur(2px);animation:aura 3.6s ease-in-out infinite;pointer-events:none}
-@keyframes aura{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
-/* 왕관 글리프 제거(2026-08-26 사용자 결정 — 폰트 의존 품질). 상위 장식은 세트 확정 후 CSS 도형으로. */
-/* 잉걸불 상급 — 더 크고 밝은 불씨 + 열기 후광(화로의 수호자) */
-.pt-emberrich>i{width:4px;height:4px;background:radial-gradient(circle at 35% 65%,#fff3c4 0%,#ffb066 45%,#ff6b35 85%);border-radius:50% 50% 50% 0;bottom:-1px;box-shadow:0 0 3px rgba(255,140,60,.9);filter:none;animation:p-emb 3.6s ease-out infinite}
-.pt-emberrich::before,.pt-flarestar::before{content:'';position:absolute;inset:-.15em -.35em;border-radius:1em;background:radial-gradient(ellipse at 50% 60%,rgba(255,150,60,.3) 0%,rgba(255,110,40,.12) 45%,transparent 72%);filter:blur(2.5px);animation:aura 3s ease-in-out infinite;pointer-events:none}
-/* 불꽃 별 — 흰 금 별 글리프 + 화염 후광 + 왕관(영원의 불꽃): 별 색만 백열로 */
-.pt-flarestar>i{color:#ffffff;text-shadow:0 0 3px rgba(255,240,200,1),0 0 7px rgba(255,160,70,.8)}
-/* ── 후원 최상위 2단계(2026-08-26) — 화로의 수호자(500만)·영원의 불꽃(1,000만).
-   goldflow 계열의 절제 톤은 유지하되 온도를 올린다: forgeheart = 잉걸불→금빛 흐름 + 은은한 열기 펄스,
-   eternalflame = 세로로 타오르는 불꽃(흰 심지) + 느린 일렁임. 파티클은 각각 ember·spark 재사용. */
-.fx-forgeheart{background:linear-gradient(90deg,#ff8a3d,#ffd27a,#ff5a1f,#ffe8b0,#ff8a3d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,heat 3.2s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(255,140,60,.45))}
-@keyframes heat{0%,100%{filter:drop-shadow(0 0 3px rgba(255,140,60,.4)) brightness(.95)}50%{filter:drop-shadow(0 0 5px rgba(255,170,80,.7)) brightness(1.18)}}
-.fx-eternalflame{background:linear-gradient(0deg,#ff6b35 0%,#ffb347 30%,#fff3c4 55%,#ffffff 68%,#ffd27a 82%,#ff8a3d 100%);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 4.5s linear infinite,flick 1.8s ease-in-out infinite}
+/* ── 후원 칭호(결제) 최종(2026-08-26 확정) — 다른 카테고리와 어휘를 공유하지 않는 한정 시그니처.
+   구조: 명조 서체(--font-serif-kr) + 자간 + 금박 압출 · 램프 상아(1·2)→황금(3·4)→홍염(5·6)→와인(7) ·
+   단계마다 레이어 누적(정적→광택→흐름·별→글로우→후광→호흡·별→와인 호흡·잉걸불) ·
+   상위 2단계(6·7)는 글자 단위 '호흡'(split) · 파티클은 글자 뒤 등간격 지점에서 바깥으로 퍼짐(pc=1·2·3·4·6).
+   ⚠ 성능: 애니메이션은 flow(background-position)·brightness·transform·opacity 위주, 호흡의 text-shadow는 6·7단계만. */
+.fx-patron1,.fx-patron2,.fx-patron3,.fx-patron4,.fx-patron5,.fx-patron6,.fx-patron7{font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700;letter-spacing:.05em}
+/* 1~5: 그라데이션 클립 + 압출 그림자(drop-shadow, 정적) */
+.fx-patron1,.fx-patron2,.fx-patron3,.fx-patron4,.fx-patron5{background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.fx-patron1{background-image:linear-gradient(115deg,#efe6d2,#fffaf0,#e0d4bc,#fffaf0,#efe6d2);filter:drop-shadow(0 1px 0 #8a6a1a)}
+.fx-patron2{background-image:linear-gradient(115deg,#ecdcb4,#fff6dc,#d8c494,#fff6dc,#ecdcb4);animation:flowp 9s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 1px rgba(0,0,0,.35))}
+.fx-patron3{background-image:linear-gradient(115deg,#e9c96a,#fff3c4,#c9a23e,#ffe9a8,#e9c96a);animation:flowp 7s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 2px rgba(245,215,110,.4))}
+.fx-patron4{background-image:linear-gradient(115deg,#e8b04a,#ffe0a0,#c0801a,#ffd890,#e8b04a);animation:flowp 6s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 3px rgba(232,176,74,.5))}
+.fx-patron5{background-image:linear-gradient(115deg,#f05a3a,#ffb090,#c0301a,#ffc0a0,#f05a3a);animation:flowp 5s linear infinite,pulsebr 3.2s ease-in-out infinite;filter:drop-shadow(0 1px 0 #6b2008) drop-shadow(0 2px 0 #3a1004) drop-shadow(0 3px 1px rgba(0,0,0,.4)) drop-shadow(0 0 4px rgba(240,90,58,.6))}
+@keyframes flowp{to{background-position:-250% 0}}
+/* 6·7: 글자 단위 호흡(split) — 홀·짝 글자가 번갈아 부풀며 발광. 색은 단계 변수 */
+.fx-patron6,.fx-patron7{color:var(--jc)}
+.fx-patron6{--jc:#f05a3a;--jh:#ffd0b0;--jg:rgba(255,120,60,.9);--ex:#5a1a08}
+.fx-patron7{--jc:#a8203a;--jh:#ffc0cc;--jg:rgba(255,90,120,1);--ex:#3a0612}
+.fx-patron6 b,.fx-patron7 b{display:inline-block;font-weight:700;color:var(--jc);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35);animation:pbloom 3s ease-in-out infinite}
+.fx-patron6 b:nth-child(even),.fx-patron7 b:nth-child(even){animation-delay:1.5s}
+.fx-patron7 b{animation-name:pbloom7}
+@keyframes pbloom{0%,100%{color:var(--jc);transform:scale(1);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35)}50%{color:var(--jh);transform:scale(1.05);text-shadow:0 1px 0 var(--ex),0 0 8px var(--jh),0 0 18px var(--jg)}}
+@keyframes pbloom7{0%,100%{color:var(--jc);transform:scale(1);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35)}50%{color:var(--jh);transform:scale(1.08);text-shadow:0 1px 0 var(--ex),0 0 8px var(--jh),0 0 18px var(--jg)}}
+/* 파티클 — 글자 뒤(z 0)에서 바깥으로 퍼짐. 위치·방향·위상은 TitleTag가 인라인(--x/--dx/--dy/animation-delay)으로 분배 */
+.pt-pstar>i,.pt-pember>i{top:50%;bottom:auto;left:var(--x);margin:-2px 0 0 -2px;z-index:0;filter:none;animation:pspread 4.8s cubic-bezier(.2,.6,.3,1) infinite}
+.pt-pstar>.fx,.pt-pember>.fx{position:relative;z-index:1}
+@keyframes pspread{0%{opacity:0;transform:translate(0,0) scale(.3) rotate(0)}6%{opacity:1;transform:translate(calc(var(--dx)*.06),calc(var(--dy)*.06)) scale(.8) rotate(10deg)}45%{opacity:.95;transform:translate(calc(var(--dx)*.5),calc(var(--dy)*.5)) scale(1.15) rotate(50deg)}70%{opacity:.7;transform:translate(calc(var(--dx)*.8),calc(var(--dy)*.8)) scale(1) rotate(80deg)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.6) rotate(110deg)}}
+.pt-pstar>i{width:auto;height:auto;font-style:normal;line-height:1;font-size:.42em;color:var(--pc,#fff8e1);text-shadow:0 0 2px var(--pc,#fff8e1),0 0 5px rgba(245,215,110,.5);margin:-.22em 0 0 -.22em}
+.pt-pstar>i::before{content:'✦'}
+.pt-pember>i{width:3.5px;height:3.5px;background:radial-gradient(circle at 35% 65%,#fff3c4,#ff6b8a 45%,#7a1030 85%);border-radius:50% 50% 50% 0;box-shadow:0 0 4px #ff6b8a;margin:-1.75px 0 0 -1.75px;filter:brightness(1.1)}
+/* 별 색 = 단계 램프(20만 백 → 50만 금 → 200만 주홍 → 500만 적) */
+.fx-patron3~i{--pc:#ffffff}.fx-patron4~i{--pc:#ffe9a8}.fx-patron5~i{--pc:#ffb070}.fx-patron6~i{--pc:#ff7a6a}
+.pt-pstar>i:nth-child(n+2),.pt-pember>i:nth-child(n+2){}
+/* 후광 — 50만 희미 → 200만 → 500만 → 1,000만(외광 추가). fx 형제 선택으로 단계 판별 */
+.pt-pstar::before,.pt-pember::before{content:'';position:absolute;inset:-.15em -.38em;border-radius:1em;background:radial-gradient(ellipse at 50% 58%,var(--ac),transparent 72%);filter:blur(3px);animation:paura 3.4s ease-in-out infinite;pointer-events:none}
+.pt-pstar:has(.fx-patron3)::before{display:none}
+.pt-pstar:has(.fx-patron4){--ac:rgba(232,176,74,.3);--ao:.35}.pt-pstar:has(.fx-patron4)::before{inset:-.1em -.3em}
+.pt-pstar:has(.fx-patron5){--ac:rgba(240,90,58,.32);--ao:.6}
+.pt-pstar:has(.fx-patron6){--ac:rgba(240,90,58,.36);--ao:.85}.pt-pstar:has(.fx-patron6)::before{inset:-.2em -.45em;animation-duration:2.6s}
+.pt-pember{--ac:rgba(168,32,58,.42);--ao:1.1}.pt-pember::before{inset:-.25em -.55em;animation-duration:2.2s}
+.pt-pember::after{content:'';position:absolute;inset:-.5em -.9em;border-radius:2em;background:radial-gradient(ellipse at 50% 50%,var(--ac),transparent 65%);opacity:.2;filter:blur(7px);animation:paura 3.4s ease-in-out infinite reverse;pointer-events:none;z-index:0}
+@keyframes paura{0%,100%{opacity:calc(var(--ao,1)*.4);transform:scale(.96)}50%{opacity:calc(var(--ao,1)*.75);transform:scale(1.04)}}
 /* ── 카테고리 시그니처(트랙 C) — 어려움·한정 자동 배정분. 카테고리별 패밀리(색 램프·모션 변주),
    같은 카테고리 안에서 코드 해시로 순환 배정. 기존 flow 계열과 같은 절제 톤. ── */
 .fx-bronzeshine{background:linear-gradient(90deg,#b08d57 42%,#f0d9a8 50%,#b08d57 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
@@ -167,10 +175,10 @@
 /* 초월 — 별빛(starlight) 외 2변주(성운 흐름·무지개빛 표류) */
 .fx-stardrift{background:linear-gradient(90deg,#c8b8f0,#f0e6d0,#9d8ce0,#e8d8f8,#c8b8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(180,160,230,.4))}
 .fx-astralflow{background:linear-gradient(90deg,#b39ddb,#7a5fc0,#e8e0ff,#7a5fc0,#b39ddb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
-@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag .pt>i{animation:none !important}}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
-.ttag-still span,.ttag-still span::before,.ttag-still span::after{animation:none !important}
+.ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
 .ttag-still .pt>i{display:none}
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.

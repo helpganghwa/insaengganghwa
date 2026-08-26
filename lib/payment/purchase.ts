@@ -24,6 +24,7 @@ import {
 import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
+import { grantPatronMilestones } from '@/lib/game/patron/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
@@ -410,6 +411,15 @@ export async function completePurchase(
         dupSkipped = true;
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
       }
+    }
+
+    // 후원 구간 보상(0175) — 이 주문까지의 누적 paid 합으로 미지급 구간 우편. 멱등 원장이라 재실행 안전.
+    // best-effort: 우편 지급 실패가 결제 완료(paid 전이·상품 지급)를 되돌리면 안 된다 — 로그만 남기고
+    // 소급 스크립트(scripts/patron-backfill.ts)로 회복한다.
+    try {
+      await grantPatronMilestones(tx, order.userId, order.serverId);
+    } catch (e) {
+      console.error(`[patron] 구간 보상 지급 실패 user=${order.userId} order=${order.id}`, e);
     }
   });
 
