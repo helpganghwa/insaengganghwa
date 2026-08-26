@@ -17,6 +17,7 @@ export function TodayShareBox({
   mode = 'today',
   nickname,
   publicCode,
+  inviteCode,
   serverId,
   statsLine,
 }: {
@@ -24,6 +25,8 @@ export function TodayShareBox({
   mode?: 'today' | 'all';
   nickname: string;
   publicCode: string;
+  /** 익명 초대 코드(0174) — 링크 복사는 /i/<code>로 통일(본인 컨텍스트). */
+  inviteCode: string;
   serverId: number;
   statsLine: string;
 }) {
@@ -128,9 +131,10 @@ export function TodayShareBox({
   };
 
   const doCopy = async () => {
+    const copyUrl = `${window.location.origin}/i/${encodeURIComponent(inviteCode)}?s=${serverId}`;
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      showHeaderToast({ title: '링크를 복사했어요' });
+      await navigator.clipboard.writeText(copyUrl);
+      showHeaderToast({ title: '초대 링크를 복사했어요' });
     } catch {
       showHeaderToast({ title: '복사에 실패했어요' });
     }
@@ -171,7 +175,7 @@ export function TodayShareBox({
                 footer={
                   <>
                     <ModalButton tone="ghost" onClick={doCopy}>
-                      🔗 링크 복사
+                      🔗 링크 복사 (익명)
                     </ModalButton>
                     <button
                       type="button"

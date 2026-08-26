@@ -50,6 +50,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       id: profiles.id,
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
+      inviteCode: profiles.inviteCode,
       activeProfileId: characters.activeProfileId,
       representativeTitleCode: characters.representativeTitleCode, // 서버별(0152)
     })
@@ -168,6 +169,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
   return {
     nickname: prof.nickname,
     publicCode: prof.publicCode,
+    inviteCode: prof.inviteCode,
     ownerId: prof.id,
     profileId,
     charImg,
@@ -545,6 +547,7 @@ export default async function PublicProfilePage({
             serverId={serverId}
             nickname={data.nickname}
             publicCode={data.publicCode}
+            inviteCode={data.inviteCode}
             total={data.total}
             profileImg={data.charImg}
             guildEmblemUrl={data.guild?.emblemUrl ?? null}

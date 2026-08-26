@@ -306,6 +306,7 @@ export default async function ProfilePage() {
         serverId={serverId}
         nickname={nickname}
         publicCode={publicCode}
+        inviteCode={inviteCode}
         total={total}
         profileImg={activeProfile ? dirImg(activeProfile) : null}
         guildEmblemUrl={row?.guild_emblem_url ?? null}

@@ -417,6 +417,7 @@ export function BoastModal({
 export function BoastLauncher({
   nickname,
   publicCode,
+  inviteCode = null,
   pieces,
   total,
   profileImg,
@@ -432,6 +433,8 @@ export function BoastLauncher({
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
   publicCode: string;
+  /** 익명 초대 코드(0174) — 본인 컨텍스트면 전달, 링크 복사가 /i/<code>로 통일된다. */
+  inviteCode?: string | null;
   pieces: BoastPiece[];
   total: number;
   profileImg?: string | null;
@@ -476,6 +479,7 @@ export function BoastLauncher({
         onClose={() => setOpen(false)}
         nickname={nickname}
         publicCode={publicCode}
+        inviteCode={inviteCode}
         set={{ pieces, total }}
         profileImg={profileImg ?? null}
         guildEmblemUrl={guildEmblemUrl}
