@@ -291,7 +291,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "forgeshine"
+   fx: "emberflow"
   }
  },
  {
@@ -352,7 +352,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "forgeshine"
+   fx: "emberflow"
   }
  },
  {
@@ -627,7 +627,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "bloodpulse"
+   fx: "duelflow"
   }
  },
  {
@@ -659,7 +659,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "bloodpulse"
+   fx: "duelflow"
   }
  },
  {
@@ -669,7 +669,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "대난투",
   style: {
-   fx: "duelflow"
+   fx: "bloodpulse"
   }
  },
  {
@@ -1236,7 +1236,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "강화",
   style: {
-   fx: "cinderflow"
+   fx: "forgeshine"
   }
  },
  {
@@ -1348,7 +1348,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "대난투",
   style: {
-   fx: "duelbeat"
+   fx: "duelflow"
   }
  },
  {
@@ -1836,7 +1836,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "emberflow"
+   fx: "flame"
   }
  },
  {
@@ -1886,7 +1886,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "대난투",
   style: {
-   fx: "duelflow"
+   fx: "bloodpulse"
   }
  },
  {
@@ -2221,7 +2221,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "emberflow"
+   fx: "flame"
   }
  },
  {
@@ -2231,7 +2231,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "flame"
+   fx: "cinderflow"
   }
  },
  {
@@ -4767,7 +4767,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "강화",
   style: {
-   fx: "emberflow"
+   fx: "flame"
   }
  },
  {
@@ -4777,7 +4777,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "cinderflow"
+   fx: "forgeshine"
   }
  },
  {
@@ -4787,27 +4787,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "강화",
   style: {
-   fx: "flame"
-  }
- },
- {
-  code: "enhance_300",
-  kind: "permanent",
-  label: "삼백의 벽",
-  hidden: false,
-  cat: "강화",
-  style: {
-   fx: "flame"
-  }
- },
- {
-  code: "supply_1000",
-  kind: "permanent",
-  label: "상자 천 개",
-  hidden: true,
-  cat: "보급",
-  style: {
-   color: "#b8a97a"
+   fx: "cinderflow"
   }
  },
  {
@@ -4818,26 +4798,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "보급",
   style: {
    fx: "honeydrip"
-  }
- },
- {
-  code: "transcend_100",
-  kind: "permanent",
-  label: "첫 별무리",
-  hidden: true,
-  cat: "초월",
-  style: {
-   color: "#b39ddb"
-  }
- },
- {
-  code: "transcend_deep_10",
-  kind: "permanent",
-  label: "열 개의 문",
-  hidden: true,
-  cat: "초월",
-  style: {
-   color: "#b39ddb"
   }
  },
  {
@@ -4853,21 +4813,11 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "raid_strike_20m",
   kind: "permanent",
-  label: "용을 꿰뚫은 일격",
+  label: "꿰뚫는 일격",
   hidden: true,
   cat: "레이드",
   style: {
    fx: "warbanner"
-  }
- },
- {
-  code: "melee_100_win",
-  kind: "permanent",
-  label: "백승의 검",
-  hidden: false,
-  cat: "대난투",
-  style: {
-   fx: "duelbeat"
   }
  },
  {
@@ -4877,7 +4827,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "대난투",
   style: {
-   fx: "duelbeat"
+   fx: "duelflow"
   }
  },
  {
@@ -4921,13 +4871,85 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "codex_half",
-  kind: "permanent",
-  label: "반쪽 도감",
+  code: "combo_icehearth",
+  kind: "conditional",
+  label: "얼음 화로",
   hidden: true,
-  cat: "도감",
+  cat: "아이템 발동",
   style: {
-   color: "#94c799"
+   color: "#60a5fa"
+  }
+ },
+ {
+  code: "combo_gradball",
+  kind: "conditional",
+  label: "졸업 무도회",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "combo_marshfire",
+  kind: "conditional",
+  label: "습지의 불꽃",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "combo_galaxyknight",
+  kind: "conditional",
+  label: "은하 기사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#bb77ff",
+   glow: true
+  }
+ },
+ {
+  code: "combo_plaindrum",
+  kind: "conditional",
+  label: "초원의 북소리",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "combo_fallenwing",
+  kind: "conditional",
+  label: "몰락한 날개",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#bb77ff",
+   glow: true
+  }
+ },
+ {
+  code: "combo_sunsetpilgrim",
+  kind: "conditional",
+  label: "노을 순례",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "combo_royalduel",
+  kind: "conditional",
+  label: "왕실 검객",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
   }
  }
 ] as const;
