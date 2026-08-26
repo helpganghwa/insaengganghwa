@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
 import {
+  CHAT_DELETED_BODY,
   CHAT_MAX_LEN,
   chatBodyErrorMessage,
   checkAndFilterChatBody,
   extractMentionCandidates,
   formatMuteRemaining,
 } from '@/lib/game/chat/filter';
-import { CHAT_DELETED_BODY } from '@/lib/game/chat/service';
 import {
   WHISPER_HIDDEN_BODY,
   deleteOwnWhisperMessage,

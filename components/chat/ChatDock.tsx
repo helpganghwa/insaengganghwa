@@ -9,7 +9,8 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
-import { CHAT_DELETED_BODY, type ChatMessageDto, type ChatUserMeta } from '@/lib/game/chat/service';
+import type { ChatMessageDto, ChatUserMeta } from '@/lib/game/chat/service';
+import { CHAT_DELETED_BODY } from '@/lib/game/chat/filter';
 
 /** 정규화 응답 조립용 빈 메타 — 시스템 라인/미등재 유저(종전 sys DTO의 빈 값과 동일). */
 const EMPTY_CHAT_USER_META: ChatUserMeta = {

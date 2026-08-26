@@ -7,7 +7,8 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TitleTag } from '@/components/TitleTag';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import type { FaceBox } from '@/components/faceCrop';
-import { CHAT_DELETED_BODY, type ChatMention, type ChatMessageDto } from '@/lib/game/chat/service';
+import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
+import { CHAT_DELETED_BODY } from '@/lib/game/chat/filter';
 import { searchAction } from '@/app/(game)/friends/actions';
 
 import { deleteWhisper, reportWhisper } from './actions';

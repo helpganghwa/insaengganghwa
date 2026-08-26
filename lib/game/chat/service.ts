@@ -17,7 +17,10 @@ import { parseFaceBox } from '@/components/faceCrop';
 import { getWorldFeed, type WorldEventEntry } from '@/lib/game/world/event';
 import { getGuildActivityLog, type GuildLogEntry } from '@/lib/game/guild/activity-log';
 
+import { CHAT_DELETED_BODY } from './filter';
 import { broadcastChat } from './realtime';
+
+export { CHAT_DELETED_BODY };
 
 /**
  * 월드 채팅 서비스(0125) — 전송·조회·신고. 전송은 Server Action에서 검증(세션·리밋·필터) 후 호출.
@@ -74,8 +77,6 @@ export type ChatMessageDto = {
   deleted?: boolean;
 };
 
-/** 본인 삭제 메시지의 자리표시 본문 — 서버가 치환해 내려보내고(원문은 DB 보존) 클라 낙관 교체에도 쓴다. */
-export const CHAT_DELETED_BODY = '삭제된 메시지입니다.';
 
 /** 길드 활동 로그 → 채팅 시스템 라인 DTO. */
 export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
