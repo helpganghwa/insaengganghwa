@@ -15,7 +15,7 @@ import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
-import { getPortonePayment } from '@/lib/payment/portone';
+import { getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { raisePaymentAlert } from '@/lib/payment/alert';
@@ -28,9 +28,10 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const ORPHAN_PENDING_LIMIT = 50;
-// 50 → 200(2026-08-24): 오픈일 3일 paid가 50을 넘어 캡 상시 도달 — 캡에 걸리면 최신 결제의
-// 환불 백스톱이 밀린다(asc 기아 방지 정렬의 대가). 매출 성장분 헤드룸 포함 상향.
-const REFUND_SCAN_LIMIT = 200;
+// 50 → 200(2026-08-24) → 600(2026-08-26): 3일 paid가 200을 넘어 캡 상시 도달 — 캡에 걸리면
+// 최신 결제의 환불 백스톱이 밀린다(asc 기아 방지 정렬의 대가). 600 = 하루 200건 × 3일,
+// 건당 ~0.3s 순차 조회라 캡까지 가도 ~3분(maxDuration 300s 안).
+const REFUND_SCAN_LIMIT = 600;
 // 이탈 pending 종결 기준 — 카드 단독 구성(가상계좌 미사용)이라 결제창 세션은 길어야 수십 분.
 // 6h면 충분히 보수적이면서 어드민 결제내역에 죽은 '대기'가 하루 종일 쌓이지 않는다(2026-07-31).
 const PENDING_EXPIRE_MS = 6 * 60 * 60 * 1000;
@@ -52,6 +53,20 @@ export async function GET(req: Request) {
   let healed = 0;
   let stillPending = 0;
   let expired = 0;
+  // 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구 점유해 진짜
+  // 유실 주문이 기아. 방금 PG 미결제를 확인한 주문만, 조건부(pending)로 전이해 웹훅과 경합해도
+  // 안전. 만료 후 늦은 결제는 completePurchase가 expired→paid를 허용해 지급 유실 없음.
+  const expireIfStale = async (o: (typeof pending)[number]) => {
+    if (o.createdAt.getTime() >= Date.now() - PENDING_EXPIRE_MS) {
+      stillPending++; // PG도 미결제 — 이탈한 주문(6h 내, 정상). 기록만.
+      return;
+    }
+    await db
+      .update(iapOrders)
+      .set({ status: 'expired' })
+      .where(and(eq(iapOrders.id, o.id), eq(iapOrders.status, 'pending')));
+    expired++;
+  };
   for (const o of pending) {
     try {
       const pay = await getPortonePayment(o.pid);
@@ -64,20 +79,16 @@ export async function GET(req: Request) {
             orderId: o.id,
             detail: `PG는 PAID인데 재지급 실패(code=${r.code}). 즉시 수동 확인 필요.`,
           });
-      } else if (o.createdAt.getTime() < Date.now() - PENDING_EXPIRE_MS) {
-        // 24h+ 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구
-        // 점유해 진짜 유실 주문이 기아. 방금 PG 미결제를 확인한 주문만, 조건부(pending)로
-        // 전이해 웹훅과 경합해도 안전. 만료 후 늦은 결제는 completePurchase가
-        // expired→paid를 허용해 지급 유실 없음.
-        await db
-          .update(iapOrders)
-          .set({ status: 'expired' })
-          .where(and(eq(iapOrders.id, o.id), eq(iapOrders.status, 'pending')));
-        expired++;
       } else {
-        stillPending++; // PG도 미결제 — 이탈한 주문(24h 내, 정상). 기록만.
+        await expireIfStale(o);
       }
     } catch (e) {
+      // 404 = 결제창만 열고 PG 결제 시도가 없던 주문 — "미결제 확정"이라 만료 대상.
+      // (2026-08-26 발견: 일반 throw로 묶여 있어 이런 pending이 영구 잔류했다.)
+      if (e instanceof PortonePaymentNotFoundError) {
+        await expireIfStale(o).catch((e2) => console.error('[payment-recon] A expire failed', o.pid, e2));
+        continue;
+      }
       console.error('[payment-recon] A pending check failed', o.pid, e);
     }
   }
