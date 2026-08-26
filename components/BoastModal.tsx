@@ -52,12 +52,18 @@ export function BoastModal({
   executorZoneRegion = null,
   repTitle,
   serverId = 1,
+  inviteCode = null,
 }: {
   open: boolean;
   onClose: () => void;
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
   publicCode: string;
+  /**
+   * 익명 초대 코드(0174) — 전달되면 '링크 복사'만 /i/<code>(역추적 불가·프로필 미착지)를
+   * 복사한다. 카카오 공유는 컨텍스트 무관 기존 /s 유지(자랑 카드 어필이 목적).
+   */
+  inviteCode?: string | null;
   set?: { pieces: BoastPiece[]; total: number };
   /** 미리보기에 그릴 활성 프로필 캐릭터 이미지(me/page profileImg). null이면 폴백. */
   profileImg?: string | null;
@@ -167,22 +173,27 @@ export function BoastModal({
     };
   };
   const doCopyLink = async () => {
-    if (!shareUrl) return;
+    // 초대 컨텍스트(inviteCode)면 익명 초대 링크 — 공개 코드 비노출·가입 동선 직행.
+    const copyUrl = inviteCode
+      ? `${window.location.origin}/i/${encodeURIComponent(inviteCode)}?s=${serverId}`
+      : shareUrl;
+    if (!copyUrl) return;
+    const toastTitle = inviteCode ? '초대 링크를 복사했어요' : '링크를 복사했어요';
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      showHeaderToast({ title: '링크를 복사했어요' });
+      await navigator.clipboard.writeText(copyUrl);
+      showHeaderToast({ title: toastTitle });
     } catch {
       // 비보안 컨텍스트·권한 거부 폴백 — 임시 textarea + execCommand.
       try {
         const ta = document.createElement('textarea');
-        ta.value = shareUrl;
+        ta.value = copyUrl;
         ta.style.position = 'fixed';
         ta.style.opacity = '0';
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        showHeaderToast({ title: '링크를 복사했어요' });
+        showHeaderToast({ title: toastTitle });
       } catch {
         showHeaderToast({ title: '복사에 실패했어요' });
       }
@@ -259,7 +270,7 @@ export function BoastModal({
         footer={
           <>
             <ModalButton tone="ghost" onClick={doCopyLink}>
-              🔗 링크 복사
+              {inviteCode ? '🔗 링크 복사 (익명)' : '🔗 링크 복사'}
             </ModalButton>
             <button
               type="button"

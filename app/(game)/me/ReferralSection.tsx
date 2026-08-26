@@ -28,6 +28,8 @@ export function ReferralSection({
   boast: {
     nickname: string;
     publicCode: string;
+    /** 익명 초대 코드(0174) — 링크 복사 전용 /i/<code>. */
+    inviteCode: string;
     pieces: BoastPiece[];
     total: number;
     profileImg: string | null;
@@ -68,6 +70,7 @@ export function ReferralSection({
         onClose={() => setOpen(false)}
         nickname={boast.nickname}
         publicCode={boast.publicCode}
+        inviteCode={boast.inviteCode}
         set={{ pieces: boast.pieces, total: boast.total }}
         profileImg={boast.profileImg}
         guildEmblemUrl={boast.guildEmblemUrl}

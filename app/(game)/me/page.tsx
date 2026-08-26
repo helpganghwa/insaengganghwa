@@ -49,6 +49,7 @@ export default async function ProfilePage() {
   type MeRow = {
     nickname: string | null;
     public_code: string | null;
+    invite_code: string | null;
     is_admin: boolean | null;
     diamond: string | null;
     nickname_changed_count: number | null;
@@ -77,7 +78,7 @@ export default async function ProfilePage() {
     Promise.all([
       db.execute(sql`
         select
-          c.nickname, p.public_code, p.is_admin, c.diamond::text as diamond,
+          c.nickname, p.public_code, p.invite_code, p.is_admin, c.diamond::text as diamond,
           c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           z.name as executor_zone, z.region::text as executor_zone_region,
@@ -169,6 +170,7 @@ export default async function ProfilePage() {
 
   const nickname = row?.nickname ?? '플레이어';
   const publicCode = row?.public_code ?? '';
+  const inviteCode = row?.invite_code ?? '';
   const total = combatPowerFromOwned(allEquipment);
   // 캐시 메타로 착용 아이템에 slot/code/name 결합.
   const equipped = equippedRaw.flatMap((e) => {
@@ -323,6 +325,7 @@ export default async function ProfilePage() {
         boast={{
           nickname,
           publicCode,
+          inviteCode,
           pieces: boastPieces,
           total,
           profileImg: activeProfile ? dirImg(activeProfile) : null,

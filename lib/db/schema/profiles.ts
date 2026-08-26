@@ -26,6 +26,11 @@ export const profiles = pgTable('profiles', {
    * DB에서 가입 시 DEFAULT gen_public_code()로 자동 부여(마이그레이션 0021). 절대 변경 안 함.
    */
   publicCode: text('public_code').notNull().unique(),
+  /**
+   * 익명 초대 코드(0174) — 친구 초대 '링크 복사' 전용(/i/<code>). public_code와 무관한
+   * 랜덤 8자라 링크에서 유저 역추적 불가. 카카오 공유(/s)는 공개 코드 유지.
+   */
+  inviteCode: text('invite_code').notNull().unique(),
   /** 단일 프리미엄 재화(=보석, BALANCE §6.1). int32 회피 위해 bigint. */
   isAdult: boolean('is_adult').notNull().default(false),
   identityVerifiedAt: timestamp('identity_verified_at', { withTimezone: true }),
