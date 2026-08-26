@@ -120,10 +120,7 @@
 .pt-royalstar>.fx,.pt-crownstar>.fx,.pt-emberrich>.fx,.pt-flarestar>.fx{position:relative;z-index:1}
 .pt-royalstar::before,.pt-crownstar::before{content:'';position:absolute;inset:-.15em -.35em;border-radius:1em;background:radial-gradient(ellipse at 50% 55%,rgba(245,215,110,.28) 0%,rgba(245,215,110,.1) 45%,transparent 72%);filter:blur(2px);animation:aura 3.6s ease-in-out infinite;pointer-events:none}
 @keyframes aura{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
-/* 왕관 — 우상단 작은 ♛ 글리프(왕국의 기둥↑) */
-.pt-crownstar,.pt-flarestar{padding-right:.9em}
-.pt-crownstar::after,.pt-flarestar::after{content:'♛';position:absolute;top:-.55em;right:0;font-size:.62em;line-height:1;color:#ffe9a8;text-shadow:0 0 3px rgba(245,215,110,.9),0 1px 0 rgba(120,80,0,.6);animation:crown 4.2s ease-in-out infinite;pointer-events:none;z-index:2}
-@keyframes crown{0%,100%{filter:brightness(.9);transform:translateY(0)}50%{filter:brightness(1.35);transform:translateY(-1px)}}
+/* 왕관 글리프 제거(2026-08-26 사용자 결정 — 폰트 의존 품질). 상위 장식은 세트 확정 후 CSS 도형으로. */
 /* 잉걸불 상급 — 더 크고 밝은 불씨 + 열기 후광(화로의 수호자) */
 .pt-emberrich>i{width:4px;height:4px;background:radial-gradient(circle at 35% 65%,#fff3c4 0%,#ffb066 45%,#ff6b35 85%);border-radius:50% 50% 50% 0;bottom:-1px;box-shadow:0 0 3px rgba(255,140,60,.9);filter:none;animation:p-emb 3.6s ease-out infinite}
 .pt-emberrich::before,.pt-flarestar::before{content:'';position:absolute;inset:-.15em -.35em;border-radius:1em;background:radial-gradient(ellipse at 50% 60%,rgba(255,150,60,.3) 0%,rgba(255,110,40,.12) 45%,transparent 72%);filter:blur(2.5px);animation:aura 3s ease-in-out infinite;pointer-events:none}
