@@ -95,6 +95,17 @@ const KB_MIN = 150;
 type KbBox = { h: number; top: number };
 
 /**
+ * 같은 가로폭에서 관측된 최대 visualViewport.height — 키보드 판정의 제2 기준선. 회전(폭 변화) 시 리셋.
+ * 키보드가 떠 있으면 반드시 이 값보다 작아지므로 innerHeight 의미와 무관하게 안정적이다.
+ */
+let vvMax = { w: 0, h: 0 };
+function noteVvMax(vv: VisualViewport): number {
+  if (Math.abs(vv.width - vvMax.w) > 1) vvMax = { w: vv.width, h: vv.height };
+  else if (vv.height > vvMax.h) vvMax.h = vv.height;
+  return vvMax.h;
+}
+
+/**
  * 패널 박스 반영 — 렌더(style prop)와 vv 이벤트(직접 조작)가 **같은 값**을 쓰도록 한 곳에서 만든다.
  * 네 속성을 두 모드 모두에서 명시하는 이유: 한쪽에만 쓰면 모드 전환 때 이전 값이 남는다.
  */
@@ -523,6 +534,16 @@ export function ChatDock() {
    * 반영은 ref+style 직접 조작이 먼저(리딩 에지), setState는 같은 값을 뒤따른다 — 등장
    * 애니메이션 중에는 React 리렌더 한 틱만 늦어도 그 프레임에 배경이 보인다.
    */
+  // 기준선 누적은 독이 닫혀 있어도(미니바만 있는 평시) 계속 — 열림 시점에 이미 키보드가 떠 있어도 판정 가능.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const note = () => noteVvMax(vv);
+    note();
+    vv.addEventListener('resize', note);
+    return () => vv.removeEventListener('resize', note);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
@@ -535,9 +556,19 @@ export function ChatDock() {
     // 열거가 끝나지 않는다. 폴링은 계기와 무관하게 상태 자체를 보므로 유실 계급이 없다.
     // 무키보드 평시엔 인터벌이 아예 없어 비용 0.
     let watchdog: ReturnType<typeof setInterval> | null = null;
+    // 키보드 판정 기준선 = 같은 가로폭에서 관측된 **최대 vv.height**(2026-08-26 타이핑 중 패널 이탈 제보).
+    // `innerHeight - vv.height`만 쓰면 iOS PWA에서 틀린다 — 키보드 등장 직후엔 innerHeight가 그대로라
+    // 판정이 서지만, 안착 후 iOS가 innerHeight를 vv.height까지 줄여 보고하면(고정 요소 배치는 여전히
+    // 전체 높이 기준) 차이가 0이 되어 워치독이 "키보드 없음"으로 되돌린다 → 패널이 평시 박스
+    // (PANEL_TOP~GNB 위)로 복귀하고, iOS가 입력줄을 보이려 화면을 최대로 팬한 상태라 헤더는 화면
+    // 위로 사라지고 GNB·빈 목록만 남는다(제보 스크린샷). 최대 vv.height는 키보드가 있으면 반드시
+    // 줄어드는 값이라 innerHeight 의미와 무관하게 안정적. 두 판정을 OR로 묶어 기존 경로도 보존.
+    // 기준선은 모듈 스코프(noteVvMax) — 독이 닫힌 채 마운트된 동안에도 누적해, 미니바 입력으로
+    // 키보드가 이미 뜬 채 열리는 경로에서도 '키보드 없는 높이'를 안다.
     const update = () => {
+      const vvMaxH = noteVvMax(vv);
       // 레이아웃 뷰포트 대비 축소량으로 판정 — 팬(offsetTop>0) 중에도 값이 흔들리지 않는다.
-      const on = window.innerHeight - vv.height > KB_MIN;
+      const on = window.innerHeight - vv.height > KB_MIN || vvMaxH - vv.height > KB_MIN;
       const box: KbBox | null = on
         ? { h: Math.round(vv.height), top: Math.round(Math.max(0, vv.offsetTop)) }
         : null;
