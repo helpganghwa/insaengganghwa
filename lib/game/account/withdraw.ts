@@ -108,6 +108,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from supply_open_logs where user_id = ${uid}`);
     await tx.execute(sql`delete from user_supply_boxes where user_id = ${uid}`);
     await tx.execute(sql`delete from user_equipment where user_id = ${uid}`);
+    await tx.execute(sql`delete from equipment_change_logs where user_id = ${uid}`);
 
     // 상점/보급 지급 기록(주기 멱등용 — 재가입 시 새 시작이라 제거).
     await tx.execute(sql`delete from daily_supply_grants where user_id = ${uid}`);
