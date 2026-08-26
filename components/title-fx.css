@@ -100,17 +100,13 @@
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
 /* ── 후원 시그니처(2026-08-26) — 결제 칭호 7종 전용. 절제 원칙의 예외 카테고리: 파티클을 점 대신
    금빛 별 글리프(✦)·금화·왕관으로 그리고, 50만↑는 후광(::before)이 텍스트 뒤에 깔린다. 단계가 오를수록
-   글리프 크기·후광·왕관이 누적된다. 파티클은 여전히 4점, reduced-motion·정적 모드 규칙 동일. */
+   글리프 크기·후광·왕관이 누적된다. 보더·배경 없음(사용자 결정 2026-08-26) — 텍스트·글리프·후광만. 파티클은 여전히 4점, reduced-motion·정적 모드 규칙 동일. */
 /* 후원 전용 — 다른 카테고리와 fx를 공유하지 않는다(한정 배지). */
 .fx-patronleaf{background:linear-gradient(115deg,#e9c96a 0%,#c9a23e 22%,#fff3c4 40%,#bb943a 58%,#e9c96a 78%,#d4ad4c 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 9s linear infinite;filter:drop-shadow(0 1px 0 rgba(70,50,0,.45))}
 .fx-royalseal{background:linear-gradient(90deg,#f5d76e,#fffaf0,#d4a017,#fff0c0,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 4s linear infinite,pulsebr 3s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(245,215,110,.65))}
 .fx-imperialcrown{background:linear-gradient(90deg,#f5d76e 0%,#fff8e1 16%,#d8b25f 34%,#b2182b 50%,#f0c060 66%,#fff8e1 84%,#f5d76e 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite,pulsebr 3.2s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(245,200,120,.6))}
 .fx-goldsheen{background:linear-gradient(90deg,#d9b45a 40%,#fff6d5 50%,#d9b45a 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 4.5s linear infinite;filter:drop-shadow(0 0 2px rgba(229,192,123,.45))}
 .fx-sovereignflow{background:linear-gradient(90deg,#f5d76e,#fff8e1,#c9962a,#ffe9a8,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,pulsebr 3.4s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(245,215,110,.55))}
-/* 시그니처 배지 — 후원 칭호는 전부 얇은 금테 배지 안에 그려진다(한정 표식). 상위 2단계는 온기 있는 테두리. */
-.pt-coin,.pt-goldstar,.pt-royalstar,.pt-crownstar,.pt-emberrich,.pt-flarestar{padding:.02em .42em;border-radius:.75em;border:1px solid rgba(245,215,110,.42);background:linear-gradient(180deg,rgba(245,215,110,.13),rgba(90,60,0,.12));box-shadow:inset 0 0 6px rgba(245,215,110,.12)}
-.pt-royalstar,.pt-crownstar{border-color:rgba(255,236,170,.6);box-shadow:inset 0 0 8px rgba(245,215,110,.2),0 0 4px rgba(245,215,110,.25)}
-.pt-emberrich,.pt-flarestar{border-color:rgba(255,170,90,.6);background:linear-gradient(180deg,rgba(255,160,70,.14),rgba(120,40,0,.14));box-shadow:inset 0 0 8px rgba(255,150,60,.22),0 0 5px rgba(255,140,60,.3)}
 /* 금화 — 작은 금 원반이 떠오르며 하이라이트가 스친다(첫 후원·기사) */
 .pt-coin>i{width:4px;height:4px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6d5 0%,#f0c95a 40%,#b8860b 100%);box-shadow:0 0 2px rgba(245,215,110,.8);bottom:-2px;filter:none;animation:p-coin 4.4s ease-out infinite}
 @keyframes p-coin{0%,40%,100%{opacity:0;transform:translateY(0) scale(.5)}47%{opacity:.9;transform:translateY(-2px) scale(1)}62%{opacity:.6;transform:translateY(-6px) scale(.9)}72%{opacity:0;transform:translateY(-9px) scale(.6)}}
@@ -125,7 +121,7 @@
 .pt-royalstar::before,.pt-crownstar::before{content:'';position:absolute;inset:-.15em -.35em;border-radius:1em;background:radial-gradient(ellipse at 50% 55%,rgba(245,215,110,.28) 0%,rgba(245,215,110,.1) 45%,transparent 72%);filter:blur(2px);animation:aura 3.6s ease-in-out infinite;pointer-events:none}
 @keyframes aura{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
 /* 왕관 — 우상단 작은 ♛ 글리프(왕국의 기둥↑) */
-.pt-crownstar,.pt-flarestar{padding-right:1.1em}
+.pt-crownstar,.pt-flarestar{padding-right:.9em}
 .pt-crownstar::after,.pt-flarestar::after{content:'♛';position:absolute;top:-.55em;right:0;font-size:.62em;line-height:1;color:#ffe9a8;text-shadow:0 0 3px rgba(245,215,110,.9),0 1px 0 rgba(120,80,0,.6);animation:crown 4.2s ease-in-out infinite;pointer-events:none;z-index:2}
 @keyframes crown{0%,100%{filter:brightness(.9);transform:translateY(0)}50%{filter:brightness(1.35);transform:translateY(-1px)}}
 /* 잉걸불 상급 — 더 크고 밝은 불씨 + 열기 후광(화로의 수호자) */
