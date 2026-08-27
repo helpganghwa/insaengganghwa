@@ -598,26 +598,15 @@ export function WhisperPane({
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
   // 삭제 쿨다운(0177) — 전체 채팅과 같은 5초(서버 chatDelete 리밋과 짝).
   const [deleteCooldown, setDeleteCooldown] = useState(0);
-  const deleteCooldownRef = useRef(0);
   useEffect(() => {
-    deleteCooldownRef.current = deleteCooldown;
     if (deleteCooldown <= 0) return;
     const t = setTimeout(() => setDeleteCooldown((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [deleteCooldown]);
-  const onDelete = useCallback(
-    (m: ChatMessageDto) => {
-      if (deleteCooldownRef.current > 0) {
-        flashError(`${deleteCooldownRef.current}초 후에 삭제할 수 있어요.`);
-        return;
-      }
-      setDeleteTarget(m);
-    },
-    [flashError],
-  );
+  const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
   const confirmDelete = () => {
     const m = deleteTarget;
-    if (!m) return;
+    if (!m || deleteCooldown > 0) return; // 쿨다운 중엔 팝업의 '삭제 Ns' 버튼이 비활성(Enter도 무시)
     setDeleteTarget(null);
     setDeleteCooldown(5);
     applyDeleted(m.id);
@@ -999,8 +988,8 @@ export function WhisperPane({
                 <ModalButton tone="ghost" onClick={() => setDeleteTarget(null)}>
                   취소
                 </ModalButton>
-                <ModalButton tone="danger" onClick={confirmDelete}>
-                  삭제
+                <ModalButton tone="danger" onClick={confirmDelete} disabled={deleteCooldown > 0}>
+                  {deleteCooldown > 0 ? `삭제 ${deleteCooldown}s` : '삭제'}
                 </ModalButton>
               </>
             }
@@ -1009,7 +998,7 @@ export function WhisperPane({
               {deleteTarget.body.slice(0, 60)}
             </p>
             <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
-              상대 화면에도 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다.
+              상대 화면에도 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다. 삭제는 5초에 한 번 가능합니다.
             </p>
           </ModalLayout>
         </ModalShell>

@@ -1422,23 +1422,12 @@ export function ChatDock() {
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
   // 삭제 쿨다운(0177) — 전송과 같은 5초. 서버 chatDelete 리밋과 짝(클라는 안내용 카운트다운).
   const [deleteCooldown, setDeleteCooldown] = useState(0);
-  const deleteCooldownRef = useRef(0);
   useEffect(() => {
-    deleteCooldownRef.current = deleteCooldown;
     if (deleteCooldown <= 0) return;
     const t = setTimeout(() => setDeleteCooldown((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [deleteCooldown]);
-  const onDelete = useCallback(
-    (m: ChatMessageDto) => {
-      if (deleteCooldownRef.current > 0) {
-        flashError(`${deleteCooldownRef.current}초 후에 삭제할 수 있어요.`);
-        return;
-      }
-      setDeleteTarget(m);
-    },
-    [flashError],
-  );
+  const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
 
   // ── WhisperPane 연결 콜백 —— 전부 안정 참조(패널 내부 effect 재실행 방지).
   const handleWhisperThreads = useCallback((res: WhisperThreadsRes) => {
@@ -1510,7 +1499,7 @@ export function ChatDock() {
   // 문구만 띄운다(다음 폴링/재조회가 원문을 복구 — 드문 경로).
   const confirmDelete = () => {
     const m = deleteTarget;
-    if (!m) return;
+    if (!m || deleteCooldown > 0) return; // 쿨다운 중엔 팝업의 '삭제 Ns' 버튼이 비활성(Enter도 무시)
     setDeleteTarget(null);
     setDeleteCooldown(COOLDOWN_S);
     markDeleted(m.id);
@@ -2042,8 +2031,8 @@ export function ChatDock() {
                 <ModalButton tone="ghost" onClick={() => setDeleteTarget(null)}>
                   취소
                 </ModalButton>
-                <ModalButton tone="danger" onClick={confirmDelete}>
-                  삭제
+                <ModalButton tone="danger" onClick={confirmDelete} disabled={deleteCooldown > 0}>
+                  {deleteCooldown > 0 ? `삭제 ${deleteCooldown}s` : '삭제'}
                 </ModalButton>
               </>
             }
@@ -2052,7 +2041,7 @@ export function ChatDock() {
               {deleteTarget.body.slice(0, 60)}
             </p>
             <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
-              삭제하면 그 자리에 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다.
+              삭제하면 그 자리에 &quot;{CHAT_DELETED_BODY}&quot;만 남고 되돌릴 수 없습니다. 삭제는 5초에 한 번 가능합니다.
             </p>
           </ModalLayout>
         </ModalShell>
