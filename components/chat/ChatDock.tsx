@@ -1345,8 +1345,15 @@ export function ChatDock() {
     // 재포커스(2026-08-07 제보) — 한글 IME 조합 중 전송하면 setInput('')이 조합 세션을 깨며
     // 간헐적으로 입력창이 blur돼 키보드가 닫혔다. 제스처 콜스택 안의 focus()는 iOS에서도
     // 키보드를 유지시킨다(이미 포커스면 no-op). 연속 전송 UX의 핵심.
-    inputRef.current?.focus();
-    requestAnimationFrame(() => scrollToBottom(true));
+    // 이미 포커스면 호출하지 않는다(2026-08-27) — iOS는 focus() 재호출에도 '보이게 하기' 스크롤을
+    // 걸어 키보드 모드의 목록 레이어가 비어 보이는 현상(전송 직후 빈 화면 제보)에 관여한다.
+    if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    // 키보드 모드에선 smooth 대신 즉시 스크롤 + 키보드 애니 뒤 재동기(2026-08-27 제보) — iOS에서
+    // 키보드 열린 overflow 컨테이너의 smooth 프로그램 스크롤이 컴포지터 갱신을 놓쳐 터치 전까지
+    // 내용이 비어 보였다. 평시(키보드 없음)는 기존 smooth 유지.
+    const kbOpen = kbBox !== null;
+    requestAnimationFrame(() => scrollToBottom(!kbOpen));
+    if (kbOpen) setTimeout(() => scrollToBottom(false), 350);
     // 응답 도착 전에 탭을 바꿀 수 있음 — 확정/롤백은 '전송한 탭'에만 반영(활성이면 상태, 아니면 버퍼).
     const sentTab = tabRef.current;
     const rollback = () => {
