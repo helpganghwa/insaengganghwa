@@ -43,12 +43,12 @@ export async function reportChat(messageId: string): Promise<{ status: 'ok' | 'e
 
 /**
  * 본인 메시지 삭제(0177) — 본문 탭(내 메시지) → 확인 팝업. 서버가 본인·서버·숨김 여부를 검증.
- * 레이트리밋은 신고와 같은 키(저빈도 쓰기, 연타 방어).
+ * 레이트리밋 chatDelete(5초 1회) — 전송 쿨다운과 동일 리듬(클라 카운트다운과 짝).
  */
 export async function deleteChat(messageId: string): Promise<{ status: 'ok' | 'error'; message?: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
-  if (await rateLimited(userId, 'report')) return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  if (await rateLimited(userId, 'chatDelete')) return { status: 'error', message: '삭제는 5초에 한 번 가능합니다.' };
   let id: bigint;
   try {
     id = BigInt(messageId);
@@ -65,7 +65,7 @@ export async function deleteChat(messageId: string): Promise<{ status: 'ok' | 'e
 export async function deleteWhisper(messageId: string): Promise<{ status: 'ok' | 'error'; message?: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
-  if (await rateLimited(userId, 'report')) return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  if (await rateLimited(userId, 'chatDelete')) return { status: 'error', message: '삭제는 5초에 한 번 가능합니다.' };
   let id: bigint;
   try {
     id = BigInt(messageId);

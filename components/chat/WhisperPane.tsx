@@ -596,11 +596,30 @@ export function WhisperPane({
 
   // ── 신고 — 전체 채팅과 같은 액션 형태·같은 문구.
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
-  const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
+  // 삭제 쿨다운(0177) — 전체 채팅과 같은 5초(서버 chatDelete 리밋과 짝).
+  const [deleteCooldown, setDeleteCooldown] = useState(0);
+  const deleteCooldownRef = useRef(0);
+  useEffect(() => {
+    deleteCooldownRef.current = deleteCooldown;
+    if (deleteCooldown <= 0) return;
+    const t = setTimeout(() => setDeleteCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [deleteCooldown]);
+  const onDelete = useCallback(
+    (m: ChatMessageDto) => {
+      if (deleteCooldownRef.current > 0) {
+        flashError(`${deleteCooldownRef.current}초 후에 삭제할 수 있어요.`);
+        return;
+      }
+      setDeleteTarget(m);
+    },
+    [flashError],
+  );
   const confirmDelete = () => {
     const m = deleteTarget;
     if (!m) return;
     setDeleteTarget(null);
+    setDeleteCooldown(5);
     applyDeleted(m.id);
     void deleteWhisper(m.id).then((r) => {
       if (r.status !== 'ok') flashError(r.message ?? '삭제에 실패했습니다.');
