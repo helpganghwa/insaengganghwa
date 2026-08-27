@@ -88,8 +88,8 @@ describe('expedition engine — 시너지·배율', () => {
     expect(c.boxes!.weapon).toBe(8);
   });
   it('레벨 보너스 상한 Lv.50', () => {
-    expect(levelBonusBp(7)).toBe(700);
-    expect(levelBonusBp(99)).toBe(5000);
+    expect(levelBonusBp(7)).toBe(350);
+    expect(levelBonusBp(99)).toBe(2500); // Lv.50 상한 × 50bp(2026-08-27 C안)
   });
 });
 

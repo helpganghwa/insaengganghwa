@@ -802,11 +802,11 @@ export const EXPEDITION_BASE_AMOUNTS = {
 /* ── 성장축 ③ 아바타 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 권장치·최소치 없음, 상한 없음) ── */
 /**
  * 배율은 **배정 아바타의 강화 합(AS)** 만으로 정한다 — AS = 생성에 쓴 장비 3종의 현재 enhance_level 합.
- * M(AS) = 1 + COEF × (AS/1000)^EXP, 상한 없음. 100→×1.19 · 300→×1.51 · 666→×2.04 · 1,000→×2.50 · 2,000→×3.80.
+ * M(AS) = 1 + COEF × (AS/1000)^EXP, 상한 없음(C안 2026-08-27). 100→×1.35 · 300→×1.84 · 666→×2.59 · 1,000→×3.20 · 2,000→×4.83.
  * 조절 손잡이는 COEF 하나(실측 후). bp 정수 반환(레벨·시너지와 합산).
  */
-export const EXPEDITION_AS_MULT_COEF = 1.5;
-export const EXPEDITION_AS_MULT_EXP = 0.9;
+export const EXPEDITION_AS_MULT_COEF = 2.2;
+export const EXPEDITION_AS_MULT_EXP = 0.8;
 export function expeditionAsBonusBp(avatarSum: number): number {
   if (avatarSum <= 0) return 0;
   return Math.round(EXPEDITION_AS_MULT_COEF * Math.pow(avatarSum / 1000, EXPEDITION_AS_MULT_EXP) * 10000);
@@ -816,9 +816,9 @@ export function expeditionAsBonusBp(avatarSum: number): number {
 export const EXPEDITION_CRIT_BP = 1000;
 export const EXPEDITION_CRIT_MULT = 2;
 
-/** 파견 레벨 — 완료 XP = 시간(h). 레벨당 본상 기대값 +1%(상한 Lv.50=+50%). 이용권 미적용. */
+/** 파견 레벨 — 완료 XP = 시간(h). 레벨당 본상 기대값 +0.5%(상한 Lv.50=+25%). 이용권 미적용. */
 export const EXPEDITION_LEVEL_MAX = 50;
-export const EXPEDITION_LEVEL_BONUS_BP_PER = 100;
+export const EXPEDITION_LEVEL_BONUS_BP_PER = 50; // 2026-08-27 100→50(Lv.50=+25%) — 배율 주축은 아바타 강화 합(§3.3)
 /** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(일 60XP 풀가동 기준 ~76일). */
 export function expeditionXpToNext(level: number): number {
   return 30 + Math.floor((level * 5) / 2);
