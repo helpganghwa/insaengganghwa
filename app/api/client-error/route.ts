@@ -17,7 +17,20 @@ export const dynamic = 'force-dynamic';
 const IGNORE_PATTERNS = [
   /MOBILE is not defined/,
   /Can't find variable: MOBILE/,
+  // 2026-08-27 양성 패턴 3종 추가(오픈 후 미해결 목록의 대부분) — 전부 우리 코드 밖·유저 영향 0.
+  // ① 카카오/삼성 인앱 웹뷰의 성능 로거(iabjs://navigation_performance_logger_android)가 웹뷰
+  //    종료 순간 던지는 브리지 오류. 스택으로도 거른다(아래 IGNORE_STACK).
+  /Error invoking postMessage/,
+  // ② iOS 인앱 브라우저가 /go에 주입하는 브리지 스크립트 — 우리 코드에 webkit.messageHandlers 참조 없음.
+  /window\.webkit\.messageHandlers/,
+  // ③ 이동 중 네트워크 단절로 청크·스크립트가 잘린 케이스(ChunkLoadError·잘린 스크립트의 SyntaxError·
+  //    바운더리 'network error'). 재발·확산 없이 1회성이고 새로고침으로 해소. 배포 직후 폭주는
+  //    Vercel 로그로 보는 편이 정확하다.
+  /Failed to load chunk|ChunkLoadError/,
+  /^(Uncaught )?SyntaxError: Unexpected (end of input|token)/,
+  /^network error$/,
 ];
+const IGNORE_STACK = [/iabjs:\/\//];
 
 export async function POST(req: Request) {
   // 무인증 공개 엔드포인트 — IP 기반 레이트리밋으로 count 인플레이션·DB 쓰기 증폭 남용 방어.
@@ -41,6 +54,7 @@ export async function POST(req: Request) {
     const message = (b.message ?? '').slice(0, 500);
     if (!message) return new Response(null, { status: 204 });
     if (IGNORE_PATTERNS.some((p) => p.test(message))) return new Response(null, { status: 204 });
+    if (typeof b.stack === 'string' && IGNORE_STACK.some((p) => p.test(b.stack!))) return new Response(null, { status: 204 });
     // 적재·그룹화·상한은 공용 헬퍼(서버 throw 집계와 동일 경로).
     await recordError({ kind: b.kind ?? 'error', message, url: b.url, ua: b.ua, stack: b.stack });
   } catch {
