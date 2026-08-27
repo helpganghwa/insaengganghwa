@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { headers } from 'next/headers';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Noto_Serif_KR } from 'next/font/google';
 import './globals.css';
 import '@/components/title-fx.css';
 import { ClientErrorReporter } from '@/components/ClientErrorReporter';
@@ -15,6 +15,16 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+});
+
+// 후원 칭호 전용 명조(2026-08-26) — 결제 칭호만 세리프로 렌더해 다른 칭호와 서체부터 구분한다.
+// preload 안 함(첫 화면 필수 아님) · 한글은 Google이 unicode-range로 분할 제공해 실제 다운로드는 사용 글리프 블록만.
+const serifKr = Noto_Serif_KR({
+  variable: '--font-serif-kr',
+  weight: '700',
+  subsets: ['latin'],
+  preload: false,
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -187,7 +197,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="ko"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {/* 구조화 데이터(JSON-LD) — 검색 리치 결과용. */}

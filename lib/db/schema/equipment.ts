@@ -106,5 +106,25 @@ export const userEquipment = pgTable(
   ],
 );
 
+/**
+ * 장착/해제 이력(0176) — 운영 조사 전용(아바타 생성 스냅샷 시각과 교체 시각 대조).
+ * 게임 판정에는 쓰지 않는다. from/to 중 null = 빈 슬롯.
+ */
+export const equipmentChangeLogs = pgTable(
+  'equipment_change_logs',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: integer('server_id').notNull(),
+    slot: slotEnum('slot').notNull(),
+    fromCatalogItemId: integer('from_catalog_item_id'),
+    toCatalogItemId: integer('to_catalog_item_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('ecl_user_time_idx').on(t.userId, t.createdAt)],
+);
+
 export type CatalogItem = typeof catalogItems.$inferSelect;
 export type UserEquipment = typeof userEquipment.$inferSelect;

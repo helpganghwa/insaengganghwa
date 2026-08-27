@@ -12,7 +12,7 @@ import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 import { shopPurchases } from '@/lib/db/schema/shop';
 
-import { FIRST_SPECIAL, productPeriod } from './catalog';
+import { FIRST_SPECIAL, PREMIUM, productPeriod } from './catalog';
 import { periodKey } from './period';
 
 
@@ -49,6 +49,11 @@ export async function getPurchaseStatus(userId: string, serverId: number): Promi
     .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.serverId, serverId)));
   const out: string[] = [];
   for (const r of rows) {
+    // 성장 프리미엄은 달력월이 아니라 **드립 잔여일(getPremiumRemainingDays)** 로만 판정한다 —
+    // 서버 차단(purchase.ts)·카드 표시("N일 남음")가 그 기준인데 여기서 monthly periodKey로
+    // 집합에 넣으면 1일 구매 → 31일 만료처럼 같은 달 안에 끝나는 경우 UI(tapPaid)가
+    // "이미 구매완료"로 재구매를 막아 서버와 어긋난다(2026-08-26 점검).
+    if (r.productId === PREMIUM.id) continue;
     const p = productPeriod(r.productId);
     if (p && r.periodKey === periodKey(p)) out.push(r.productId);
   }

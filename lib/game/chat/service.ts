@@ -17,7 +17,10 @@ import { parseFaceBox } from '@/components/faceCrop';
 import { getWorldFeed, type WorldEventEntry } from '@/lib/game/world/event';
 import { getGuildActivityLog, type GuildLogEntry } from '@/lib/game/guild/activity-log';
 
+import { CHAT_DELETED_BODY } from './filter';
 import { broadcastChat } from './realtime';
+
+export { CHAT_DELETED_BODY };
 
 /**
  * 월드 채팅 서비스(0125) — 전송·조회·신고. 전송은 Server Action에서 검증(세션·리밋·필터) 후 호출.
@@ -70,7 +73,10 @@ export type ChatMessageDto = {
   sysGuild?: GuildLogEntry;
   body: string;
   createdAt: string; // ISO
+  /** 본인 삭제(0177) — true면 body는 CHAT_DELETED_BODY 자리표시. 탭·멘션·신고 비활성. */
+  deleted?: boolean;
 };
+
 
 /** 길드 활동 로그 → 채팅 시스템 라인 DTO. */
 export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
@@ -290,6 +296,7 @@ export async function getRecentChat(
         body: chatMessages.body,
         mentions: chatMessages.mentions,
         createdAt: chatMessages.createdAt,
+        deletedAt: chatMessages.deletedAt,
       })
       .from(chatMessages)
       .where(and(eq(chatMessages.serverId, serverId), channelCond, sql`${chatMessages.hiddenAt} is null`))
@@ -323,9 +330,11 @@ export async function getRecentChat(
         executorZoneRegion: f?.executorZoneRegion ?? null,
         repTitle: f?.repTitle ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
-        mentions: normMentions(r.mentions),
-        body: r.body,
+        // 삭제분(0177) — 원문·멘션은 내려보내지 않는다(자리표시만).
+        mentions: r.deletedAt ? null : normMentions(r.mentions),
+        body: r.deletedAt ? CHAT_DELETED_BODY : r.body,
         createdAt: r.createdAt.toISOString(),
+        ...(r.deletedAt ? { deleted: true } : {}),
       } satisfies ChatMessageDto;
     });
   if (sysFeed.length === 0) {
@@ -457,6 +466,39 @@ export async function reportChatMessage(
       await broadcastChat(msg.serverId, 'hide', { id: String(messageId) }, msg.guildId);
     }
   }
+  return 'ok';
+}
+
+/**
+ * 본인 메시지 삭제(0177) — 본문을 자리표시로 바꾸고 행은 남긴다(맥락 보존). 시간 제한 없음.
+ *  - 본인·같은 서버만(가시성 검증은 신고와 같은 철학 — 열거로 남의 메시지를 건드릴 수 없게).
+ *  - 운영 숨김(hidden_at)된 메시지는 삭제 불가('not_found') — 운영 기록이 우선.
+ *  - 멱등: 이미 삭제된 메시지는 'ok'(재브로드캐스트 없음).
+ *  - 채널 캐시 무효화 + 'delete' 브로드캐스트(전체는 미니 토픽 동봉 — 닫힌 미니바의 최신 미리보기도 교체).
+ */
+export async function deleteOwnChatMessage(
+  userId: string,
+  messageId: bigint,
+  serverId: number,
+): Promise<'ok' | 'not_found'> {
+  const [msg] = await db
+    .select({
+      serverId: chatMessages.serverId,
+      guildId: chatMessages.guildId,
+      userId: chatMessages.userId,
+      hiddenAt: chatMessages.hiddenAt,
+      deletedAt: chatMessages.deletedAt,
+    })
+    .from(chatMessages)
+    .where(eq(chatMessages.id, messageId))
+    .limit(1);
+  if (!msg || msg.userId !== userId || msg.serverId !== serverId || msg.hiddenAt) return 'not_found';
+  if (msg.deletedAt) return 'ok';
+  await db.update(chatMessages).set({ deletedAt: new Date() }).where(eq(chatMessages.id, messageId));
+  invalidateRecentCache(msg.serverId, msg.guildId);
+  await broadcastChat(msg.serverId, 'delete', { id: String(messageId) }, msg.guildId, {
+    alsoMini: !msg.guildId,
+  });
   return 'ok';
 }
 

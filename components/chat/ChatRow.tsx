@@ -82,6 +82,7 @@ export const ChatRow = memo(function ChatRow({
   serverId,
   onProfile,
   onReport,
+  onDelete,
 }: {
   m: ChatMessageDto;
   prevMsg: ChatMessageDto | undefined;
@@ -90,6 +91,8 @@ export const ChatRow = memo(function ChatRow({
   serverId: number;
   onProfile: (userId: string) => void;
   onReport: (m: ChatMessageDto) => void;
+  /** 내 메시지 본문 탭 → 삭제 확인(0177). 없으면 내 메시지 탭은 무동작. */
+  onDelete?: (m: ChatMessageDto) => void;
 }) {
   // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
   if (m.sys || m.sysGuild) {
@@ -112,10 +115,18 @@ export const ChatRow = memo(function ChatRow({
     !prevMsg.sysGuild &&
     prevMsg.userId === m.userId &&
     new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
+  // 본문 탭 — 남의 메시지=신고, 내 메시지=삭제(0177). 삭제된 자리표시·전송 중은 무동작.
   const onBodyClick = (e: ReactMouseEvent) => {
     if ((e.target as HTMLElement).closest('a')) return;
-    if (!mine && !pending) onReport(m);
+    if (m.deleted || pending) return;
+    if (mine) onDelete?.(m);
+    else onReport(m);
   };
+  // 삭제 자리표시 — 회색 이탤릭, 멘션 렌더 없음.
+  const BODY_CLS = m.deleted
+    ? 'italic text-zinc-400 dark:text-zinc-500'
+    : 'text-zinc-800 dark:text-zinc-200';
+  const body = m.deleted ? m.body : renderBody(m.body, m.mentions, meCode, serverId);
   if (grouped) {
     return (
       <div
@@ -126,9 +137,9 @@ export const ChatRow = memo(function ChatRow({
         <p
           onClickCapture={markRestoreIfLink}
           onClick={onBodyClick}
-          className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+          className={`min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
         >
-          {renderBody(m.body, m.mentions, meCode, serverId)}
+          {body}
         </p>
       </div>
     );
@@ -177,13 +188,13 @@ export const ChatRow = memo(function ChatRow({
             {TIME_FMT.format(new Date(m.createdAt))}
           </span>
         </div>
-        {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
+        {/* 본문 탭 = 남의 메시지 신고 팝업 / 내 메시지 삭제 팝업(별도 버튼 없음) */}
         <p
           onClickCapture={markRestoreIfLink}
           onClick={onBodyClick}
-          className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+          className={`mt-[3px] text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
         >
-          {renderBody(m.body, m.mentions, meCode, serverId)}
+          {body}
         </p>
       </div>
     </div>

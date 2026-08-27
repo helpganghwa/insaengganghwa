@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
 import {
+  CHAT_DELETED_BODY,
   CHAT_MAX_LEN,
   chatBodyErrorMessage,
   checkAndFilterChatBody,
@@ -9,6 +10,7 @@ import {
 } from '@/lib/game/chat/filter';
 import {
   WHISPER_HIDDEN_BODY,
+  deleteOwnWhisperMessage,
   isUserIdShape,
   leaveWhisper,
   listWhisperMessages,
@@ -292,6 +294,45 @@ describe.skipIf(skip)('귓속말 — 대화 가시성 DB 회귀', () => {
       expect(t?.lastBody).toBe(WHISPER_HIDDEN_BODY);
       // 숨김은 미읽음에 세지 않는다.
       expect(t?.unread).toBe(1);
+    });
+  });
+
+  it('본인 삭제(0177): 발신자만, 자리표시로 치환·멱등, 숨김분·상대 메시지는 불가', async () => {
+    await inRollback(async (tx) => {
+      const peer = await pickPeer(tx);
+      if (!peer) return;
+      await isolatePair(tx, peer);
+
+      const mine = await insertWhisper(tx, TEST_USER_ID, peer, '지울 메시지', false, [{ n: '상대', c: null }]);
+      const fromPeer = await insertWhisper(tx, peer, TEST_USER_ID, '상대 메시지');
+      const mineHidden = await insertWhisper(tx, TEST_USER_ID, peer, '운영 숨김', true);
+
+      expect(await deleteOwnWhisperMessage(TEST_USER_ID, mine, tx)).toBe('ok');
+      expect(await deleteOwnWhisperMessage(TEST_USER_ID, mine, tx)).toBe('ok'); // 멱등
+      expect(await deleteOwnWhisperMessage(TEST_USER_ID, fromPeer, tx)).toBe('not_found'); // 남의 것
+      expect(await deleteOwnWhisperMessage(TEST_USER_ID, mineHidden, tx)).toBe('not_found'); // 운영 숨김 우선
+      expect(await deleteOwnWhisperMessage(peer, mine, tx)).toBe('not_found'); // 수신자도 불가
+
+      // 원문 보존 + 조회는 자리표시(멘션 비노출) — 양쪽 화면 동일.
+      const raw = (await tx.execute(sql`select body, deleted_at from whisper_messages where id = ${mine}`)) as unknown as {
+        body: string;
+        deleted_at: string | null;
+      }[];
+      expect(raw[0]!.body).toBe('지울 메시지');
+      expect(raw[0]!.deleted_at).not.toBeNull();
+      for (const viewer of [TEST_USER_ID, peer]) {
+        const msgs = await listWhisperMessages(viewer, SERVER_ID, peer === viewer ? TEST_USER_ID : peer, undefined, tx);
+        const m = msgs.find((x) => x.id === String(mine));
+        expect(m?.body).toBe(CHAT_DELETED_BODY);
+        expect(m?.deleted).toBe(true);
+        expect(m?.mentions).toBeNull();
+      }
+      // 목록 미리보기 — 최신이 삭제분이면 자리표시.
+      await insertWhisper(tx, TEST_USER_ID, peer, '마지막');
+      const lastId = (await tx.execute(sql`select max(id)::text id from whisper_messages where from_user_id = ${TEST_USER_ID}::uuid and to_user_id = ${peer}::uuid`)) as unknown as { id: string }[];
+      expect(await deleteOwnWhisperMessage(TEST_USER_ID, BigInt(lastId[0]!.id), tx)).toBe('ok');
+      const t = (await listWhisperThreads(TEST_USER_ID, SERVER_ID, tx)).find((x) => x.peerUserId === peer);
+      expect(t?.lastBody).toBe(CHAT_DELETED_BODY);
     });
   });
 });

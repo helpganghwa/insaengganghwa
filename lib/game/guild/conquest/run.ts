@@ -205,7 +205,11 @@ export async function neutralizeAbandonedZones(
         )
         -- 그 전투일이 시작된 뒤에 점령된 구역은 제외(위 ⚠ 2일 지연 시나리오). captured_at이 null이면
         -- 대상으로 남긴다 — 오래 소유했는데 배치가 없으면 그건 실제 방치다.
-        and (z.captured_at is null or (z.captured_at at time zone 'Asia/Seoul')::date < ${battleDay}::date)
+        -- 기준은 전투일 06:00(KST): 정상 공개(당일 00:55 플립)분은 당일 종일 배치 기회가 있었으므로
+        -- 당일부터 방치 판정 대상이고, 지연 공개(다음날 00:55 이후 플립)분만 제외된다 (2026-08-25 —
+        -- 날짜 단위 비교는 정상 흐름에서도 점령 익일 무조건 면제라는 부수효과가 있었다).
+        and (z.captured_at is null
+             or (z.captured_at at time zone 'Asia/Seoul') < ${battleDay}::date::timestamp + interval '6 hours')
     `)) as unknown as { id: number; owner: string; name: string; gname: string }[];
     if (victims.length === 0) return { neutralized: 0 };
     await tx

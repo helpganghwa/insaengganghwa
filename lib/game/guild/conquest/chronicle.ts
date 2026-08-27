@@ -267,7 +267,9 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
       )
       -- 그 전투일 시작 뒤 점령분 제외 — neutralizeAbandonedZones의 가드와 같은 기준을 유지해야
       -- 사전생성 연대기가 실제로 일어나지 않을 '방치 상실'을 예고하지 않는다 (2026-08-11).
-      and (z.captured_at is null or (z.captured_at at time zone 'Asia/Seoul')::date < ${kstDay}::date)
+      -- 기준 06:00(KST) — run.ts와 동일(2026-08-25): 당일 00:55 정상 플립분은 당일부터 판정.
+      and (z.captured_at is null
+           or (z.captured_at at time zone 'Asia/Seoul') < ${kstDay}::date::timestamp + interval '6 hours')
   `)) as unknown as { gname: string; zname: string }[];
   const neutralMap = new Map<string, Set<string>>();
   const addNeutral = (guildName: string, zone: string) => {

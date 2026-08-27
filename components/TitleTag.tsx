@@ -7,12 +7,56 @@
 import { TITLE_BY_CODE, type TitleStyle } from '@/lib/game/titles/defs';
 import { ExecutorTag } from './ExecutorTag';
 
-/** 파티클 4점 — 위상을 넓게 흩어 동시에 1~2개만 보이게(디자인 확정값). */
+/** 파티클 — 기본 4점(위상을 넓게 흩어 동시에 1~2개만 보이게, 디자인 확정값). */
 function Particles() {
   return (
     <>
       {[0, 1, 2, 3].map((i) => (
         <i key={i} style={{ left: `${12 + i * 24}%`, animationDelay: `${(i * 1.35).toFixed(2)}s` }} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * 퍼짐 파티클(후원 칭호, style.pc) — 글자 위 등간격 지점(8~92%)에서 생성돼 바깥으로 퍼진다.
+ * 방향은 가장자리일수록 멀리·위아래 교대, 위상차는 주기(4.8s)/개수로 균등 — 개수가 몇이든
+ * 항상 1~2개가 살아 있고 0%=100%(원점·투명)라 루프 이음새가 없다(2026-08-26 확정).
+ */
+function SpreadParticles({ count }: { count: number }) {
+  const items = [];
+  for (let k = 0; k < count; k++) {
+    const x = count > 1 ? 8 + (84 * k) / (count - 1) : 42;
+    const side = x < 50 ? -1 : 1;
+    const up = k % 2 === 0 ? -1 : 1;
+    const dx = side * (0.5 + (1.5 * Math.abs(x - 50)) / 50);
+    const dy = up * (1.1 + (0.5 * (k % 3)) / 2);
+    const delay = -((4.8 * k) / count);
+    items.push(
+      <i
+        key={k}
+        style={
+          {
+            '--x': `${x.toFixed(0)}%`,
+            '--dx': `${dx.toFixed(2)}em`,
+            '--dy': `${dy.toFixed(2)}em`,
+            animationDelay: `${delay.toFixed(2)}s`,
+          } as React.CSSProperties
+        }
+      />,
+    );
+  }
+  return <>{items}</>;
+}
+
+/** 글자 단위 분리(style.split) — 문자별 애니메이션(후원 상위 2단계 '호흡'). 공백은 nbsp로 폭 유지. */
+function SplitLabel({ label }: { label: string }) {
+  return (
+    <>
+      {[...label].map((ch, i) => (
+        <b key={i} style={{ '--i': i } as React.CSSProperties}>
+          {ch === ' ' ? '\u00a0' : ch}
+        </b>
       ))}
     </>
   );
@@ -84,7 +128,9 @@ export function TitleTag({
 
   const label = def.label;
   const inner = def.style.fx ? (
-    <span className={`fx fx-${def.style.fx}`}>{label}</span>
+    <span className={`fx fx-${def.style.fx}`}>
+      {def.style.split ? <SplitLabel label={label} /> : label}
+    </span>
   ) : (
     <span style={styleAttr(def.style)}>{label}</span>
   );
@@ -94,7 +140,7 @@ export function TitleTag({
       {def.style.pt ? (
         <span className={`pt pt-${def.style.pt}`}>
           {inner}
-          <Particles />
+          {def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
         </span>
       ) : (
         inner

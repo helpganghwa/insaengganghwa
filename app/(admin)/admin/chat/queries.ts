@@ -27,6 +27,8 @@ export interface AdminChatRow {
   guildId: bigint | null;
   guildName: string | null;
   hiddenAt: Date | null;
+  /** 본인 삭제(0177) — 유저 화면엔 자리표시, 여기선 원문 + '삭제' 배지. */
+  deletedAt: Date | null;
   createdAt: Date;
   nickname: string | null;
   publicCode: string | null;
@@ -78,6 +80,7 @@ export async function listChannelMessages(opts: {
       guildId: chatMessages.guildId,
       guildName: guilds.name,
       hiddenAt: chatMessages.hiddenAt,
+      deletedAt: chatMessages.deletedAt,
       createdAt: chatMessages.createdAt,
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
@@ -308,6 +311,7 @@ export interface AdminWhisperRow {
   toUserId: string;
   body: string;
   hiddenAt: Date | null;
+  deletedAt: Date | null;
   createdAt: Date;
   reports: number;
 }
@@ -331,6 +335,7 @@ export async function listWhisperThread(opts: {
       toUserId: whisperMessages.toUserId,
       body: whisperMessages.body,
       hiddenAt: whisperMessages.hiddenAt,
+      deletedAt: whisperMessages.deletedAt,
       createdAt: whisperMessages.createdAt,
       // 귓속말은 자동 숨김 임계가 없다 — 신고는 이 숫자로만 드러나고 처리는 검수자 판단.
       reports: sql<number>`(select count(*)::int from whisper_reports r where r.message_id = ${whisperMessages.id})`,
@@ -374,6 +379,7 @@ export async function listReportedWhispers(opts: {
       toUserId: whisperMessages.toUserId,
       body: whisperMessages.body,
       hiddenAt: whisperMessages.hiddenAt,
+      deletedAt: whisperMessages.deletedAt,
       createdAt: whisperMessages.createdAt,
       reports: reportCount,
     })

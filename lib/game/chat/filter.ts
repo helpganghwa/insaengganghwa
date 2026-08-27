@@ -30,6 +30,9 @@ export type ChatBodyCheck =
 
 export const CHAT_MAX_LEN = 100;
 
+/** 본인 삭제(0177) 자리표시 본문 — 서버 치환·클라 낙관 교체 공용. 순수 모듈(클라 번들 안전). */
+export const CHAT_DELETED_BODY = '삭제된 메시지입니다.';
+
 /** 검증 + 정제 — 실패 사유 반환(액션이 사용자 메시지로 변환). */
 export function checkAndFilterChatBody(raw: string): ChatBodyCheck {
   const body = raw.replace(/\s+/g, ' ').trim();

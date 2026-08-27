@@ -36,6 +36,7 @@ export type RlBucket =
   | 'clientError'
   | 'chatSend'
   | 'chatBurst'
+  | 'chatDelete'
   | 'whisperSend'
   | 'whisperBurst';
 
@@ -68,6 +69,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   clientError: [30, '60 s'], // 무인증 공개 에러 수집 — IP당 분당 30(에러 버스트 허용+남용 방어)
   chatSend: [1, '5 s'], // 월드 채팅 쿨다운(0125) — 5초당 1회
   chatBurst: [12, '60 s'], // 월드 채팅 분당 상한 — 도배 방어
+  chatDelete: [1, '5 s'], // 본인 메시지 삭제(0177) — 전송과 같은 5초 쿨다운(연속 삭제 도배·브로드캐스트 폭주 방어)
   // 귓속말(0155) — 1:1이라 전체 채팅보다 짧은 쿨다운(대화 리듬 유지). 도배 피해 범위가
   // 상대 1명이고 차단·나가기로 유저가 직접 끊을 수 있어 분당 상한은 넉넉히.
   whisperSend: [1, '2 s'],
@@ -89,6 +91,7 @@ const REDIS_BUCKETS: ReadonlySet<RlBucket> = new Set<RlBucket>([
   'nickname',
   'chatSend', // 전서버 공개 채팅 — 정확한 쿨다운 필요
   'chatBurst',
+  'chatDelete',
   'friend', // 친구 요청 살포 방어(전수 감사 2026-08-21) — 인메모리 창은 인스턴스 수만큼 완화됨
   'whisperSend', // 귓속말 — 채팅과 동일 취급(인스턴스별 창이면 쿨다운이 사실상 무력)
   'whisperBurst',

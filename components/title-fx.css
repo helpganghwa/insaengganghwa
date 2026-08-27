@@ -98,6 +98,48 @@
 .pt-onestar>i{width:5px;height:5px;background:linear-gradient(0deg,transparent 41%,#f5d76e 41% 59%,transparent 59%),linear-gradient(90deg,transparent 41%,#fff3c4 41% 59%,transparent 59%);top:-4px;right:-6px;left:auto !important;filter:drop-shadow(0 0 1.5px rgba(245,215,110,.9));animation:p-one 3.2s ease-in-out infinite}
 @keyframes p-one{0%,72%,100%{opacity:0;transform:rotate(0) scale(.4)}80%,88%{opacity:1;transform:rotate(45deg) scale(1)}}
 .fx-reflect{color:#8fd4c8;-webkit-box-reflect:below -3px linear-gradient(transparent 55%,rgba(255,255,255,.22))}
+/* ── 후원 칭호(결제) 최종(2026-08-26 확정) — 다른 카테고리와 어휘를 공유하지 않는 한정 시그니처.
+   구조: 명조 서체(--font-serif-kr) + 자간 + 금박 압출 · 램프 상아(1·2)→황금(3·4)→홍염(5·6)→와인(7) ·
+   단계마다 레이어 누적(정적→광택→흐름·별→글로우→후광→호흡·별→와인 호흡·잉걸불) ·
+   상위 2단계(6·7)는 글자 단위 '호흡'(split) · 파티클은 글자 뒤 등간격 지점에서 바깥으로 퍼짐(pc=1·2·3·4·6).
+   ⚠ 성능: 애니메이션은 flow(background-position)·brightness·transform·opacity 위주, 호흡의 text-shadow는 6·7단계만. */
+.fx-patron1,.fx-patron2,.fx-patron3,.fx-patron4,.fx-patron5,.fx-patron6,.fx-patron7{font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700;letter-spacing:.05em}
+/* 1~5: 그라데이션 클립 + 압출 그림자(drop-shadow, 정적) */
+.fx-patron1,.fx-patron2,.fx-patron3,.fx-patron4,.fx-patron5{background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.fx-patron1{background-image:linear-gradient(115deg,#efe6d2,#fffaf0,#e0d4bc,#fffaf0,#efe6d2);filter:drop-shadow(0 1px 0 #8a6a1a)}
+.fx-patron2{background-image:linear-gradient(115deg,#ecdcb4,#fff6dc,#d8c494,#fff6dc,#ecdcb4);animation:flowp 9s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 1px rgba(0,0,0,.35))}
+.fx-patron3{background-image:linear-gradient(115deg,#e9c96a,#fff3c4,#c9a23e,#ffe9a8,#e9c96a);animation:flowp 7s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 2px rgba(245,215,110,.4))}
+.fx-patron4{background-image:linear-gradient(115deg,#e8b04a,#ffe0a0,#c0801a,#ffd890,#e8b04a);animation:flowp 6s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 3px rgba(232,176,74,.5))}
+.fx-patron5{background-image:linear-gradient(115deg,#f05a3a,#ffb090,#c0301a,#ffc0a0,#f05a3a);animation:flowp 5s linear infinite,pulsebr 3.2s ease-in-out infinite;filter:drop-shadow(0 1px 0 #6b2008) drop-shadow(0 2px 0 #3a1004) drop-shadow(0 3px 1px rgba(0,0,0,.4)) drop-shadow(0 0 4px rgba(240,90,58,.6))}
+@keyframes flowp{to{background-position:-250% 0}}
+/* 6·7: 글자 단위 호흡(split) — 홀·짝 글자가 번갈아 부풀며 발광. 색은 단계 변수 */
+.fx-patron6,.fx-patron7{color:var(--jc)}
+.fx-patron6{--jc:#f05a3a;--jh:#ffd0b0;--jg:rgba(255,120,60,.9);--ex:#5a1a08}
+.fx-patron7{--jc:#a8203a;--jh:#ffc0cc;--jg:rgba(255,90,120,1);--ex:#3a0612}
+.fx-patron6 b,.fx-patron7 b{display:inline-block;font-weight:700;color:var(--jc);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35);animation:pbloom 3s ease-in-out infinite}
+.fx-patron6 b:nth-child(even),.fx-patron7 b:nth-child(even){animation-delay:1.5s}
+.fx-patron7 b{animation-name:pbloom7}
+@keyframes pbloom{0%,100%{color:var(--jc);transform:scale(1);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35)}50%{color:var(--jh);transform:scale(1.05);text-shadow:0 1px 0 var(--ex),0 0 8px var(--jh),0 0 18px var(--jg)}}
+@keyframes pbloom7{0%,100%{color:var(--jc);transform:scale(1);text-shadow:0 1px 0 var(--ex),0 2px 1px rgba(0,0,0,.35)}50%{color:var(--jh);transform:scale(1.08);text-shadow:0 1px 0 var(--ex),0 0 8px var(--jh),0 0 18px var(--jg)}}
+/* 파티클 — 글자 뒤(z 0)에서 바깥으로 퍼짐. 위치·방향·위상은 TitleTag가 인라인(--x/--dx/--dy/animation-delay)으로 분배 */
+.pt-pstar>i,.pt-pember>i{top:50%;bottom:auto;left:var(--x);margin:-2px 0 0 -2px;z-index:0;filter:none;animation:pspread 4.8s cubic-bezier(.2,.6,.3,1) infinite}
+.pt-pstar>.fx,.pt-pember>.fx{position:relative;z-index:1}
+@keyframes pspread{0%{opacity:0;transform:translate(0,0) scale(.3) rotate(0)}6%{opacity:1;transform:translate(calc(var(--dx)*.06),calc(var(--dy)*.06)) scale(.8) rotate(10deg)}45%{opacity:.95;transform:translate(calc(var(--dx)*.5),calc(var(--dy)*.5)) scale(1.15) rotate(50deg)}70%{opacity:.7;transform:translate(calc(var(--dx)*.8),calc(var(--dy)*.8)) scale(1) rotate(80deg)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.6) rotate(110deg)}}
+.pt-pstar>i{width:auto;height:auto;font-style:normal;line-height:1;font-size:.42em;color:var(--pc,#fff8e1);text-shadow:0 0 2px var(--pc,#fff8e1),0 0 5px rgba(245,215,110,.5);margin:-.22em 0 0 -.22em}
+.pt-pstar>i::before{content:'✦'}
+.pt-pember>i{width:3.5px;height:3.5px;background:radial-gradient(circle at 35% 65%,#fff3c4,#ff6b8a 45%,#7a1030 85%);border-radius:50% 50% 50% 0;box-shadow:0 0 4px #ff6b8a;margin:-1.75px 0 0 -1.75px;filter:brightness(1.1)}
+/* 별 색 = 단계 램프(20만 백 → 50만 금 → 200만 주홍 → 500만 적) */
+.fx-patron3~i{--pc:#ffffff}.fx-patron4~i{--pc:#ffe9a8}.fx-patron5~i{--pc:#ffb070}.fx-patron6~i{--pc:#ff7a6a}
+.pt-pstar>i:nth-child(n+2),.pt-pember>i:nth-child(n+2){}
+/* 후광 — 50만 희미 → 200만 → 500만 → 1,000만(외광 추가). fx 형제 선택으로 단계 판별 */
+.pt-pstar::before,.pt-pember::before{content:'';position:absolute;inset:-.15em -.38em;border-radius:1em;background:radial-gradient(ellipse at 50% 58%,var(--ac),transparent 72%);filter:blur(3px);animation:paura 3.4s ease-in-out infinite;pointer-events:none}
+.pt-pstar:has(.fx-patron3)::before{display:none}
+.pt-pstar:has(.fx-patron4){--ac:rgba(232,176,74,.3);--ao:.35}.pt-pstar:has(.fx-patron4)::before{inset:-.1em -.3em}
+.pt-pstar:has(.fx-patron5){--ac:rgba(240,90,58,.32);--ao:.6}
+.pt-pstar:has(.fx-patron6){--ac:rgba(240,90,58,.36);--ao:.85}.pt-pstar:has(.fx-patron6)::before{inset:-.2em -.45em;animation-duration:2.6s}
+.pt-pember{--ac:rgba(168,32,58,.42);--ao:1.1}.pt-pember::before{inset:-.25em -.55em;animation-duration:2.2s}
+.pt-pember::after{content:'';position:absolute;inset:-.5em -.9em;border-radius:2em;background:radial-gradient(ellipse at 50% 50%,var(--ac),transparent 65%);opacity:.2;filter:blur(7px);animation:paura 3.4s ease-in-out infinite reverse;pointer-events:none;z-index:0}
+@keyframes paura{0%,100%{opacity:calc(var(--ao,1)*.4);transform:scale(.96)}50%{opacity:calc(var(--ao,1)*.75);transform:scale(1.04)}}
 /* ── 카테고리 시그니처(트랙 C) — 어려움·한정 자동 배정분. 카테고리별 패밀리(색 램프·모션 변주),
    같은 카테고리 안에서 코드 해시로 순환 배정. 기존 flow 계열과 같은 절제 톤. ── */
 .fx-bronzeshine{background:linear-gradient(90deg,#b08d57 42%,#f0d9a8 50%,#b08d57 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
@@ -133,10 +175,10 @@
 /* 초월 — 별빛(starlight) 외 2변주(성운 흐름·무지개빛 표류) */
 .fx-stardrift{background:linear-gradient(90deg,#c8b8f0,#f0e6d0,#9d8ce0,#e8d8f8,#c8b8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(180,160,230,.4))}
 .fx-astralflow{background:linear-gradient(90deg,#b39ddb,#7a5fc0,#e8e0ff,#7a5fc0,#b39ddb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
-@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag .pt>i{animation:none !important}}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
-.ttag-still span,.ttag-still span::before,.ttag-still span::after{animation:none !important}
+.ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
 .ttag-still .pt>i{display:none}
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.

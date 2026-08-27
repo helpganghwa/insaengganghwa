@@ -71,7 +71,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "guild_top",
   cat: "조건부",
-  cond: "길드 레벨 랭킹 1위 길드 소속인 동안",
+  cond: "길드 랭킹 1위 길드 소속인 동안",
   diff: "어려움"
  },
  {
@@ -582,6 +582,18 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "pay_200",
   cat: "후원",
   cond: "누적 결제 200만원",
+  diff: "어려움"
+ },
+ {
+  code: "pay_500",
+  cat: "후원",
+  cond: "누적 결제 500만원",
+  diff: "어려움"
+ },
+ {
+  code: "pay_1000",
+  cat: "후원",
+  cond: "누적 결제 1,000만원",
   diff: "어려움"
  },
  {
@@ -4531,6 +4543,190 @@ export const TITLE_SECRETS: TitleSecret[] = [
     "general_wing_hairclip"
    ],
    min: 30
+  }
+ },
+ {
+  code: "enhance_5000",
+  cat: "강화",
+  cond: "누적 강화 5,000회",
+  diff: "중간"
+ },
+ {
+  code: "enhance_50000",
+  cat: "강화",
+  cond: "누적 강화 50,000회",
+  diff: "어려움"
+ },
+ {
+  code: "hold_50",
+  cat: "강화",
+  cond: "강화 유지 50연속",
+  diff: "어려움"
+ },
+ {
+  code: "mega_streak_7",
+  cat: "강화",
+  cond: "대성공 7연속",
+  diff: "어려움"
+ },
+ {
+  code: "supply_30000",
+  cat: "보급",
+  cond: "누적 보급 상자 30,000개 개봉",
+  diff: "어려움"
+ },
+ {
+  code: "raid_1000",
+  cat: "레이드",
+  cond: "레이드 참여 1,000회",
+  diff: "어려움"
+ },
+ {
+  code: "raid_strike_20m",
+  cat: "레이드",
+  cond: "레이드 단일 공격 2,000만 피해",
+  diff: "어려움"
+ },
+ {
+  code: "melee_podium_50",
+  cat: "대난투",
+  cond: "대난투 시상대(1~3위) 50회",
+  diff: "어려움"
+ },
+ {
+  code: "cq_defend_300",
+  cat: "점령전",
+  cond: "점령전 수비 승리 300회",
+  diff: "어려움"
+ },
+ {
+  code: "cq_tax_100",
+  cat: "점령전",
+  cond: "점령지 세금 수금 100회",
+  diff: "어려움"
+ },
+ {
+  code: "chat_10000",
+  cat: "소셜",
+  cond: "채팅 10,000회",
+  diff: "어려움"
+ },
+ {
+  code: "checkin_100",
+  cat: "일상",
+  cond: "출석 100일",
+  diff: "중간"
+ },
+ {
+  code: "combo_icehearth",
+  cat: "아이템 발동",
+  cond: "눈꽃 대도 + 적금 갑주 + 식지 않는 심장을 +70 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frost_odachi",
+    "kingdom_goldknight_plate",
+    "temple_frostward_orb"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "combo_gradball",
+  cat: "아이템 발동",
+  cond: "무도회의 한 수 + 왕립 학원 교복 + 백은 깃 머리핀을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "academy_student_uniform",
+    "general_wing_hairclip"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_marshfire",
+  cat: "아이템 발동",
+  cond: "놓을 곳 없는 화염검 + 늪빛 흉갑 + 반딧불 충전기를 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_flame_blade",
+    "marsh_bogwarden_chest",
+    "marsh_frog_jar"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_galaxyknight",
+  cat: "아이템 발동",
+  cond: "별자리가 흐르는 장검 + 성광 갑주 + 백은 날개 투구를 +100 이상으로 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "general_starfield_blade",
+    "paladin_holy_armor",
+    "paladin_winged_helm"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "combo_plaindrum",
+  cat: "아이템 발동",
+  cond: "사슴뿔 활 + 깃털 두른 침묵 + 북이 된 방패를 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_antler_bow",
+    "orc_shaman_robe",
+    "orc_drum_shield"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_fallenwing",
+  cat: "아이템 발동",
+  cond: "혼불낫 + 도금이 벗겨진 갑주 + 한 뼘짜리 마왕 날개를 +100 이상으로 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "fallen_gilded_ruin_plate",
+    "general_imp_wings"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "combo_sunsetpilgrim",
+  cat: "아이템 발동",
+  cond: "노을이 앉는 검 + 자칭 훈장 사제복 + 흔들리는 향로를 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_duskwing_sword",
+    "temple_faux_robe",
+    "temple_monk_censer"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "combo_royalduel",
+  cat: "아이템 발동",
+  cond: "청홍 쌍검 + 금장 군복 + 사자의 증표를 +70 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_twin_sabers",
+    "royal_military_coat",
+    "kingdom_coronation_medallion"
+   ],
+   min: 70
   }
  }
 ] as const;

@@ -13,7 +13,7 @@ type Design = {
   typography: { size: string; weight: number };
   palette: Record<string, string>;
   regionKeywords: { pattern: string; color: string }[];
-  special: Record<string, { fx: string; pt?: string }>;
+  special: Record<string, { fx: string; pt?: string; pc?: number; split?: boolean }>;
   /** 어려움·한정 카테고리 시그니처 fx 패밀리(트랙 C) — special이 없는 칭호에 코드 해시로 순환 배정. */
   hardFx: Record<string, string[]>;
 };
@@ -40,6 +40,10 @@ type Style = {
   fx?: string;
   /** 파티클 종류(title-fx.css의 pt-*). */
   pt?: string;
+  /** 파티클 개수(기본 4) — 후원 칭호처럼 단계별 밀도가 다를 때. */
+  pc?: number;
+  /** 글자 단위 렌더(<b>로 분리) — 문자별 애니메이션(후원 상위 2단계). */
+  split?: boolean;
   /** 어려움·한정 공통 — 은은한 발광. */
   glow?: boolean;
   /** 집행관 — 기존 ExecutorTag 렌더(구역명=지역색+집행관 인디고)로 위임. */
@@ -96,7 +100,7 @@ function styleOf(t: T): Style {
   if (t.code === 'zone_executor') return { executor: true };
   const hard = t.diff === '어려움' || t.diff === '한정';
   const sp = design.special[t.code];
-  if (sp) return { fx: sp.fx, ...(sp.pt ? { pt: sp.pt } : {}), ...(hard ? { glow: true } : {}) };
+  if (sp) return { fx: sp.fx, ...(sp.pt ? { pt: sp.pt } : {}), ...(sp.pc ? { pc: sp.pc } : {}), ...(sp.split ? { split: true } : {}), ...(hard ? { glow: true } : {}) };
   if (t.cat === '아이템 발동') {
     const cs = itemColors(t.cond);
     if (cs.length >= 2) return { gradient: cs, ...(hard ? { glow: true } : {}) };
@@ -177,6 +181,10 @@ export type TitleStyle = {
   /** 특별 이펙트(fx-*) / 파티클(pt-*) — components/title-fx.css. */
   fx?: string;
   pt?: string;
+  /** 파티클 개수(기본 4). */
+  pc?: number;
+  /** 글자 단위 렌더 — 문자별 애니메이션. */
+  split?: boolean;
   /** 어려움·한정 공통 은은한 발광. */
   glow?: boolean;
   /** 집행관 — ExecutorTag 렌더 위임. */

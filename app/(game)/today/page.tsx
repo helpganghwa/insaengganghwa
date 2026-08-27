@@ -90,7 +90,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const tab = p === 'all' ? 'all' : 'today';
 
   const [me] = await db
-    .select({ nickname: characters.nickname, publicCode: profiles.publicCode, createdAt: characters.createdAt })
+    .select({ nickname: characters.nickname, publicCode: profiles.publicCode, inviteCode: profiles.inviteCode, createdAt: characters.createdAt })
     .from(characters)
     .innerJoin(profiles, eq(profiles.id, characters.userId))
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
@@ -137,17 +137,17 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       />
 
       {tab === 'today' ? (
-        <TodayTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} />
+        <TodayTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} inviteCode={me?.inviteCode ?? ''} />
       ) : (
-        <AllTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} />
+        <AllTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} inviteCode={me?.inviteCode ?? ''} />
       )}
     </div>
   );
 }
 
 async function TodayTab({
-  userId, serverId, nickname, publicCode,
-}: { userId: string; serverId: number; nickname: string; publicCode: string }) {
+  userId, serverId, nickname, publicCode, inviteCode,
+}: { userId: string; serverId: number; nickname: string; publicCode: string; inviteCode: string }) {
   const d = await withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null);
   if (!d) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
@@ -230,6 +230,7 @@ async function TodayTab({
       <TodayShareBox
         nickname={nickname}
         publicCode={publicCode}
+        inviteCode={inviteCode}
         serverId={serverId}
         statsLine={`오늘 ${d.combatDelta && d.combatDelta > 0 ? `전투력 ▲${fmt(d.combatDelta)} · ` : ''}강화 ${d.success}회 성공`}
       />
@@ -238,8 +239,8 @@ async function TodayTab({
 }
 
 async function AllTab({
-  userId, serverId, nickname, publicCode,
-}: { userId: string; serverId: number; nickname: string; publicCode: string }) {
+  userId, serverId, nickname, publicCode, inviteCode,
+}: { userId: string; serverId: number; nickname: string; publicCode: string; inviteCode: string }) {
   const [s, history, extras] = await Promise.all([
     withTimeout(getLifetimeStats(userId, serverId), 3500, 'today.all').catch(() => null),
     withTimeout(getRankHistory(userId, serverId), 2000, 'today.rankhist').catch(() => [] as RankPoint[]),
@@ -395,6 +396,7 @@ async function AllTab({
         mode="all"
         nickname={nickname}
         publicCode={publicCode}
+        inviteCode={inviteCode}
         serverId={serverId}
         statsLine={`인생강화 ${s.joinedDays}일째 · 통산 강화 ${fmt(s.attempts)}회 · 전투력 ${fmt(s.combat)}`}
       />

@@ -43,7 +43,11 @@ export function whisperTopic(serverId: number, userId: string): string {
  * 귓속말 브로드캐스트 — 수신자·발신자 토픽을 한 HTTP 요청(messages 배열)으로 묶어 왕복 1회.
  * 발신자 토픽에도 보내는 이유: 같은 계정의 다른 기기가 내가 보낸 메시지를 즉시 받게(멀티기기 동기화).
  */
-export async function broadcastWhisper(topics: string[], payload: unknown): Promise<void> {
+export async function broadcastWhisper(
+  topics: string[],
+  payload: unknown,
+  event: 'new' | 'delete' = 'new',
+): Promise<void> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key || topics.length === 0) return;
@@ -56,7 +60,7 @@ export async function broadcastWhisper(topics: string[], payload: unknown): Prom
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        messages: topics.map((topic) => ({ topic, event: 'new', payload, private: false })),
+        messages: topics.map((topic) => ({ topic, event, payload, private: false })),
       }),
       // 전송 응답을 브로드캐스트 지연에 묶지 않음 — 짧은 타임아웃(채팅과 동일).
       signal: AbortSignal.timeout(2500),
@@ -69,7 +73,7 @@ export async function broadcastWhisper(topics: string[], payload: unknown): Prom
 
 export async function broadcastChat(
   serverId: number,
-  event: 'new' | 'hide' | 'sys',
+  event: 'new' | 'hide' | 'delete' | 'sys',
   payload: unknown,
   guildId?: bigint | null,
   opts?: { alsoMini?: boolean },

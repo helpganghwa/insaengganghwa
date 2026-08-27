@@ -55,9 +55,17 @@ export async function cancelPortonePayment(paymentId: string, reason: string): P
   }
 }
 
+/** 포트원에 해당 paymentId가 없음(404) — 결제 시도가 PG까지 가지 않은 주문. */
+export class PortonePaymentNotFoundError extends Error {
+  constructor(public paymentId: string) {
+    super(`portone getPayment 404: ${paymentId}`);
+    this.name = 'PortonePaymentNotFoundError';
+  }
+}
+
 /**
- * 결제 단건 조회. 미존재(404)·미결제는 null이 아니라 status로 구분 — 호출부가 PAID 검증.
- * 네트워크/HTTP 오류는 throw(웹훅 재시도·액션 에러로 노출).
+ * 결제 단건 조회. 미결제는 status로 구분 — 호출부가 PAID 검증. 미존재(404)는
+ * PortonePaymentNotFoundError, 그 외 네트워크/HTTP 오류는 일반 throw(웹훅 재시도·액션 에러로 노출).
  */
 export async function getPortonePayment(paymentId: string): Promise<PortonePayment> {
   const res = await fetch(`${API_BASE}/payments/${encodeURIComponent(paymentId)}`, {
@@ -68,6 +76,9 @@ export async function getPortonePayment(paymentId: string): Promise<PortonePayme
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    // 404 = 결제창을 열기만 하고 PG에 결제 시도 자체가 없던 주문. 일반 HTTP 오류와 구분해
+    // recon이 "미결제 확정"으로 만료시킬 수 있게 한다(구분 없이 throw하면 죽은 pending이 영구 잔류).
+    if (res.status === 404) throw new PortonePaymentNotFoundError(paymentId);
     throw new Error(`portone getPayment ${res.status}: ${body.slice(0, 300)}`);
   }
   const data = (await res.json()) as {
