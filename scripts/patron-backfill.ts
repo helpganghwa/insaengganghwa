@@ -17,7 +17,7 @@ const { reachedMilestones, formatKrwMan } = await import('../lib/game/patron/mil
 const payers = (await db.execute(sql`
   select o.user_id, sum(o.amount_krw)::bigint as paid,
          (select string_agg(distinct c.nickname, '/') from characters c where c.user_id = o.user_id) as nick,
-         (select c.last_server_id from profiles p join characters c on c.user_id = p.id where p.id = o.user_id limit 1) as server_id,
+         (select p.last_server_id from profiles p where p.id = o.user_id) as server_id,
          (select count(*)::int from patron_milestone_grants g where g.user_id = o.user_id) as already
   from iap_orders o where o.status = 'paid' group by o.user_id order by paid desc
 `)) as unknown as { user_id: string; paid: string; nick: string | null; server_id: number | null; already: number }[];
