@@ -4,17 +4,16 @@
 // 하루 유닛 = Lv0: 1슬롯·일 2.5회·Lv0 난이도 분포 / Lv30+: 3슬롯·24h 원정 ×3(=10.2유닛, 일 최대).
 import {
   EXPEDITION_BASE_AMOUNTS,
-  EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_DURATION_SCALE,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_SLOTS,
   expeditionAsBonusBp,
+  expeditionCritBp,
   expeditionDifficultyDist,
   type ExpeditionDurationH,
 } from '../lib/game/balance';
-import { levelBonusBp } from '../lib/game/expedition/engine';
 
 function arg(name: string, def: number[]): number[] {
   const i = process.argv.indexOf(`--${name}`);
@@ -28,7 +27,8 @@ const A = EXPEDITION_BASE_AMOUNTS;
 const P = EXPEDITION_MAIN_ROLL_BP;
 const evDia = (P.diamondOnly / 1e4) * ((A.diamondOnly.diaMin + A.diamondOnly.diaMax) / 2) + (P.both / 1e4) * ((A.both.diaMin + A.both.diaMax) / 2);
 const evBox = (P.boxOnly / 1e4) * ((A.boxOnly.boxMin + A.boxOnly.boxMax) / 2) + (P.both / 1e4) * ((A.both.boxMin + A.both.boxMax) / 2);
-const crit = 1 + (EXPEDITION_CRIT_BP / 1e4) * (EXPEDITION_CRIT_MULT - 1);
+const critOf = (lv: number) => 1 + (expeditionCritBp(lv) / 1e4) * (EXPEDITION_CRIT_MULT - 1);
+const crit = critOf(0);
 const evScale = (lv: number) => {
   const d = expeditionDifficultyDist(lv);
   return (Object.keys(d) as (keyof typeof d)[]).reduce(
@@ -47,9 +47,9 @@ for (const as of AS_LIST) {
   const m = 1 + expeditionAsBonusBp(as) / 1e4;
   const cells = LEVELS.flatMap((lv) =>
     SYNS.map((s) => {
-      const total = 1 + (levelBonusBp(lv) + s + expeditionAsBonusBp(as)) / 1e4;
+      const total = 1 + (s + expeditionAsBonusBp(as)) / 1e4; // 레벨 배율 없음 — 레벨은 대성공 확률로만
       const u = dailyUnits(lv);
-      return `💎${Math.round(evDia * crit * u * total)}·📦${Math.round(evBox * crit * u * total)}`;
+      return `💎${Math.round(evDia * critOf(lv) * u * total)}·📦${Math.round(evBox * critOf(lv) * u * total)}`;
     }),
   );
   console.log([String(as).padEnd(6), `×${m.toFixed(2)}`.padEnd(6), ...cells.map((c) => c.padStart(16))].join(' '));

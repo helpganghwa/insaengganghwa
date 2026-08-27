@@ -812,13 +812,20 @@ export function expeditionAsBonusBp(avatarSum: number): number {
   return Math.round(EXPEDITION_AS_MULT_COEF * Math.pow(avatarSum / 1000, EXPEDITION_AS_MULT_EXP) * 10000);
 }
 
-/** 대성공 — **수령 시** 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
+/** 대성공 — **수령 시** 기본 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
 export const EXPEDITION_CRIT_BP = 1000;
+/**
+ * 파견 레벨 → 대성공 확률 가산(2026-08-27 권장안): 레벨당 +0.1%p, Lv.50 = 15%. 레벨은 보상 배율에서 빠지고
+ * (배율 축 = 아바타 강화 합·지역 시너지 둘뿐) 슬롯 해금·난이도 출현·대성공 확률만 맡는다. 기대값 영향 ≤ +4.5%.
+ */
+export const EXPEDITION_CRIT_BP_PER_LEVEL = 10;
+export function expeditionCritBp(level: number): number {
+  return EXPEDITION_CRIT_BP + Math.min(Math.max(0, level), EXPEDITION_LEVEL_MAX) * EXPEDITION_CRIT_BP_PER_LEVEL;
+}
 export const EXPEDITION_CRIT_MULT = 2;
 
-/** 파견 레벨 — 완료 XP = 시간(h). 레벨당 본상 기대값 +0.5%(상한 Lv.50=+25%). 이용권 미적용. */
+/** 파견 레벨 — 완료 XP = 시간(h). 상한 Lv.50. 보상 배율 없음(2026-08-27) — 슬롯 해금·난이도 출현·대성공 확률 전용. */
 export const EXPEDITION_LEVEL_MAX = 50;
-export const EXPEDITION_LEVEL_BONUS_BP_PER = 50; // 2026-08-27 100→50(Lv.50=+25%) — 배율 주축은 아바타 강화 합(§3.3)
 /** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(일 60XP 풀가동 기준 ~76일). */
 export function expeditionXpToNext(level: number): number {
   return 30 + Math.floor((level * 5) / 2);

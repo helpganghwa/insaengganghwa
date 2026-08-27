@@ -8,7 +8,6 @@ import { kstDateString } from '@/lib/kst';
 import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
 import {
   EXPEDITION_DAILY_STARTS,
-  EXPEDITION_CRIT_BP,
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
@@ -20,7 +19,7 @@ import {
   applyMultiplier,
   cryptoRng10k,
   effectiveSlots,
-  levelBonusBp,
+  critBp,
   asBonusBp,
   avatarEnhanceSum,
   rollMission,
@@ -233,9 +232,9 @@ export function startExpedition(
     const { byId } = await loadAvatarSums(tx, userId, serverId);
     const avatarSum = byId.get(avatarProfileId) ?? 0;
     const synergy = synergyBpForSnapshot(av.equipment_snapshot, offer.region as never);
-    const lvBonus = levelBonusBp(st.level);
     const reqBonus = asBonusBp(avatarSum);
-    const finalReward = applyMultiplier(offer.reward, synergy + lvBonus + reqBonus);
+    // 레벨 배율 없음(2026-08-27) — level_bonus_bp는 0 고정(컬럼은 이력 호환으로 유지).
+    const finalReward = applyMultiplier(offer.reward, synergy + reqBonus);
 
     // 카운터 선차감(같은 tx — 실패 시 롤백으로 원복).
     await tx.execute(sql`
@@ -248,7 +247,7 @@ export function startExpedition(
       const [row] = (await tx.execute(sql`
         update expeditions
         set status = 'running', avatar_profile_id = ${avatarProfileId}::uuid,
-            synergy_bp = ${synergy}, level_bonus_bp = ${lvBonus}, req_bonus_bp = ${reqBonus},
+            synergy_bp = ${synergy}, level_bonus_bp = 0, req_bonus_bp = ${reqBonus},
             final_reward = ${JSON.stringify(finalReward)}::jsonb,
             started_at = now(),
             complete_at = now() + (duration_ms || ' milliseconds')::interval
@@ -341,7 +340,7 @@ export function claimExpedition(
     if (!row) throw new ExpeditionError('NOT_RUNNING');
     if (!row.ready) throw new ExpeditionError('NOT_READY');
 
-    const crit = rng() < EXPEDITION_CRIT_BP;
+    const crit = rng() < critBp(st.level); // 레벨당 +0.1%p(Lv.50=15%)
     const reward = crit ? applyCrit(row.final_reward) : row.final_reward;
 
     // 조건부 전이 먼저 — 0행이면 다른 요청이 이미 수령(지급 없이 종료).

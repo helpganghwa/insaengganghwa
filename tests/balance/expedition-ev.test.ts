@@ -8,7 +8,8 @@ import {
   EXPEDITION_DAILY_STARTS,
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
-  EXPEDITION_LEVEL_BONUS_BP_PER,
+  EXPEDITION_CRIT_BP_PER_LEVEL,
+  expeditionCritBp,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
@@ -89,9 +90,11 @@ describe('expedition balance invariants', () => {
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
     expect(launchDaily * as1000).toBeGreaterThanOrEqual(945);
     expect(launchDaily * as1000).toBeLessThanOrEqual(975);
-    // 레벨·시너지 만렙(축 ①②)만 얹은 상한 — 축 ③ 제외 시 종전 가드(920) 대비 여유.
-    const maxMult = 1 + (EXPEDITION_LEVEL_MAX * EXPEDITION_LEVEL_BONUS_BP_PER + 3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000;
+    // 시너지 만렙 + Lv.50 대성공(15%)만 얹은 상한 — 축 ③ 제외 시 종전 가드(920) 대비 여유.
+    const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX) / 10000) * (EXPEDITION_CRIT_MULT - 1);
+    const maxMult = (1 + (3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000) * (critMax / critMult);
     expect(launchDaily * maxMult).toBeLessThanOrEqual(560);
+    expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
   });
 
   it('시너지·상한 정합 — 일반은 지역 일치의 절반, 일일 시작 6회', () => {

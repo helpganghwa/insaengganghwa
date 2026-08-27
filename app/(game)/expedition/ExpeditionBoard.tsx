@@ -269,7 +269,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
           <span>
             파견 <b className="text-zinc-800 dark:text-zinc-100">Lv.{board.level}</b>
-            <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-bold">보상 +{board.bonusBp / 100}%</span>
+            <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-bold">대성공 {(board.critBp / 100).toFixed(1)}%</span>
           </span>
           <span>
             오늘 파견 <b className="text-amber-600 dark:text-amber-400">{EXPEDITION_DAILY_STARTS - board.startsLeft}</b>/{EXPEDITION_DAILY_STARTS}
@@ -383,7 +383,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <>
                   최종 보상{' '}
                   <RewardLine
-                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp + enhanceBonusOf(board.avatars.find((a) => a.id === selectedAvatar)?.enhanceSum ?? 0))}
+                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + enhanceBonusOf(board.avatars.find((a) => a.id === selectedAvatar)?.enhanceSum ?? 0))}
                     strong
                   />
                 </>

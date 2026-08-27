@@ -5,7 +5,7 @@ import {
   applyExpeditionXp,
   applyMultiplier,
   effectiveSlots,
-  levelBonusBp,
+  critBp,
   rollBoxSlots,
   rollMission,
   synergyBpForSnapshot,
@@ -87,9 +87,10 @@ describe('expedition engine — 시너지·배율', () => {
     expect(c.diamond).toBe(254);
     expect(c.boxes!.weapon).toBe(8);
   });
-  it('레벨 보너스 상한 Lv.50', () => {
-    expect(levelBonusBp(7)).toBe(350);
-    expect(levelBonusBp(99)).toBe(2500); // Lv.50 상한 × 50bp(2026-08-27 C안)
+  it('파견 레벨 → 대성공 확률 — 10% + 0.1%p/Lv, 상한 Lv.50=15%', () => {
+    expect(critBp(0)).toBe(1000);
+    expect(critBp(7)).toBe(1070);
+    expect(critBp(99)).toBe(1500);
   });
 });
 

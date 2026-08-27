@@ -33,7 +33,8 @@ import {
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
   EXPEDITION_LEVEL_MAX,
-  EXPEDITION_LEVEL_BONUS_BP_PER,
+  EXPEDITION_CRIT_BP_PER_LEVEL,
+  expeditionCritBp,
   EXPEDITION_SYNERGY_MATCH_BP,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_DIFFICULTY_DIST_BP,
@@ -298,7 +299,8 @@ export default async function ProbabilityPage() {
           수량은 표기 범위에서 고르게 정해집니다. 상자 종류는 파견지마다 주력 슬롯이{' '}
           {pct(EXPEDITION_BOX_MAIN_BP)}, 나머지 두 슬롯이 각 {pct((10000 - EXPEDITION_BOX_MAIN_BP) / 2)}
           입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 수량이{' '}
-          {EXPEDITION_CRIT_MULT}배가 됩니다.
+          {EXPEDITION_CRIT_MULT}배가 됩니다. 대성공 확률은 파견 레벨당 +{EXPEDITION_CRIT_BP_PER_LEVEL / 100}%p 올라
+          최대 Lv.{EXPEDITION_LEVEL_MAX}에서 {pct(expeditionCritBp(EXPEDITION_LEVEL_MAX))}입니다.
         </P>
         <P>
           미션의 지역은 {EXPEDITION_REGIONS.length}곳 중 균등 추첨되고, 난이도 출현 확률은 파견
@@ -321,10 +323,9 @@ export default async function ProbabilityPage() {
             ))}
         </Table>
         <P>
-          파견 레벨(최대 Lv.{EXPEDITION_LEVEL_MAX}, 레벨당 +{EXPEDITION_LEVEL_BONUS_BP_PER / 100}%)과
           아바타 지역 시너지(일치 장비당 +{EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +
-          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는 <b>상자·다이아 수량에만</b> 적용되며, 위 표의
-          확률 자체는 변하지 않습니다.
+          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)와 아래 아바타 강화 합 배율은 <b>상자·다이아 수량에만</b>
+          적용되며, 위 표의 확률 자체는 변하지 않습니다. 파견 레벨은 수량 배율에 관여하지 않습니다.
         </P>
         <P>
           <b>아바타 강화 합</b>: 보상 배율은 파견에 보낸 아바타의 &ldquo;강화 합&rdquo;(아바타를 만들 때 입힌

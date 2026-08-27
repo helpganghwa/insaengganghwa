@@ -14,7 +14,7 @@ import {
   type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
-import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum } from './engine';
+import { critBp, effectiveSlots, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum } from './engine';
 
 /** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
 export type ExpeditionBoardSlot = {
@@ -51,7 +51,8 @@ export type ExpeditionBoard = {
   level: number;
   xp: number;
   xpNext: number;
-  bonusBp: number;
+  /** 현재 레벨의 대성공 확률(bp) — 헤더 표시. */
+  critBp: number;
   /** 보유 아바타 강화 합 최댓값 — 안내용. */
   baseSum: number;
   startsLeft: number;
@@ -162,7 +163,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     level: st.level,
     xp: Number(st.xp),
     xpNext: expeditionXpToNext(st.level),
-    bonusBp: levelBonusBp(st.level),
+    critBp: critBp(st.level),
     baseSum,
     startsLeft: Math.max(0, EXPEDITION_DAILY_STARTS - startsToday),
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),

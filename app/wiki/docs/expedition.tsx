@@ -2,7 +2,7 @@ import {
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DAILY_STARTS,
-  EXPEDITION_LEVEL_BONUS_BP_PER,
+  EXPEDITION_CRIT_BP_PER_LEVEL,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
@@ -89,8 +89,8 @@ export default function Doc() {
       <H2 id="level">파견 레벨과 슬롯</H2>
       <UL>
         <LI>
-          파견을 완료하면 시간만큼 XP를 얻는다(예: 8시간 미션 = 8 XP). 레벨당 보상 +
-          {bpPct(EXPEDITION_LEVEL_BONUS_BP_PER)}, 최대 Lv.{EXPEDITION_LEVEL_MAX}.
+          파견을 완료하면 시간만큼 XP를 얻는다(예: 8시간 미션 = 8 XP). 최대 Lv.{EXPEDITION_LEVEL_MAX}. 레벨은
+          보상 수량을 올리지 않는다 — 대신 레벨당 대성공 확률이 +{bpPct(EXPEDITION_CRIT_BP_PER_LEVEL)}p 오른다.
         </LI>
         <LI>레벨이 오르면 더 어려운(=더 긴·더 후한) 미션이 자주 등장한다.</LI>
       </UL>

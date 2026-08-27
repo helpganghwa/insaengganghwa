@@ -11,7 +11,6 @@ import {
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_DURATION_SCALE,
-  EXPEDITION_LEVEL_BONUS_BP_PER,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
@@ -20,6 +19,7 @@ import {
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   expeditionAsBonusBp,
+  expeditionCritBp,
   expeditionDifficultyDist,
   expeditionXpToNext,
   type ExpeditionDifficulty,
@@ -181,9 +181,9 @@ export function synergyBpForSnapshot(
   return bp;
 }
 
-/** 레벨 보너스(bp) — 상한 Lv.50. */
-export function levelBonusBp(level: number): number {
-  return Math.min(level, EXPEDITION_LEVEL_MAX) * EXPEDITION_LEVEL_BONUS_BP_PER;
+/** 파견 레벨 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */
+export function critBp(level: number): number {
+  return expeditionCritBp(level);
 }
 
 /** 배율 적용(시작 시 최종 확정) — 상자·다이아 수량에만. floor가 아닌 round(공시 문구와 정합). */
