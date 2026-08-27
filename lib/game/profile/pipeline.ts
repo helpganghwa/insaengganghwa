@@ -63,7 +63,7 @@ async function safePush(
  * RLS 우회 + cookies 의존 X.
  */
 let _serviceClient: SupabaseClient | null = null;
-function serviceClient(): SupabaseClient {
+export function serviceClient(): SupabaseClient {
   if (_serviceClient) return _serviceClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -88,7 +88,7 @@ function serviceClient(): SupabaseClient {
  */
 const HEAD_RATIO_MAX = 0.21;
 const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
-const STORAGE_BUCKET = 'profiles';
+export const STORAGE_BUCKET = 'profiles';
 
 /**
  * downloading 상태 상한(분). **발주 시각 기준**(gen-age.ts — 큐 대기는 별도 예산이다).

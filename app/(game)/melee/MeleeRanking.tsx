@@ -39,6 +39,7 @@ async function meleeRankingAction(input: {
 const MODES: [MeleeRankMode, string][] = [
   ['all', '전체'],
   ['guild', '우리 길드'],
+  ['friends', '친구'],
 ];
 
 /** 컨트롤 행 높이 — 전투 탭의 속도/전체재생 행과 동일하게 고정(탭 전환 시 시프트 방지). */
@@ -113,7 +114,8 @@ export function useMeleeRanking({
   const pathname = usePathname();
   const search = useSearchParams();
   const subParam = search.get('sub');
-  const mode: MeleeRankMode = subParam === 'guild' ? 'guild' : 'all';
+  const mode: MeleeRankMode =
+    subParam === 'guild' ? 'guild' : subParam === 'friends' ? 'friends' : 'all';
 
   const [rows, setRows] = useState<MeleeRankRow[]>(initial.rows);
   const [myRank, setMyRank] = useState<number | null>(initial.myRank);
@@ -147,8 +149,8 @@ export function useMeleeRanking({
 
   const first = rows[0]?.rank ?? null;
   const last = rows[rows.length - 1]?.rank ?? null;
-  // 길드 탭은 등수가 불연속(필터 결과)이라 무한 스크롤 대상이 아니다.
-  const paged = mode !== 'guild';
+  // 길드·친구 탭은 등수가 불연속(필터 결과)이라 무한 스크롤 대상이 아니다.
+  const paged = mode === 'all';
   const hasUp = paged && first != null && first > 1;
   const hasDown = paged && last != null && last < participantCount;
   // ref 미러(2026-08-07 렌더 감사) — loadMore가 first/last를 deps로 가지면 append마다 새
@@ -546,7 +548,11 @@ export function MeleeRankList({
             ))}
             {rows.length === 0 ? (
               <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
-                {mode === 'guild' ? '같은 길드 참가자가 없어요.' : '순위 정보가 없어요.'}
+                {mode === 'guild'
+                  ? '같은 길드 참가자가 없어요.'
+                  : mode === 'friends'
+                    ? '참가한 친구가 없어요.'
+                    : '순위 정보가 없어요.'}
               </li>
             ) : null}
             {hasDown ? (

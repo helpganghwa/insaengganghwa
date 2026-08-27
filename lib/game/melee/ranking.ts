@@ -8,6 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { meleeParticipants, meleeBattles } from '@/lib/db/schema/melee';
 import { guildMembers } from '@/lib/db/schema/guild';
+import { getFriendIds } from '@/lib/game/friends';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 import { withTimeout } from '@/lib/db/with-timeout';
 
@@ -33,7 +34,7 @@ export type MeleeRankRow = {
   eliminatedRound: number | null;
 };
 
-export type MeleeRankMode = 'all' | 'guild';
+export type MeleeRankMode = 'all' | 'guild' | 'friends';
 export const MELEE_RANK_PAGE = 30;
 /** 내 순위 점프의 초기 창(위아래 각각). 화면을 채우고 양방향 스크롤 여지를 남긴다. */
 export const MELEE_RANK_WINDOW = 12;
@@ -46,6 +47,7 @@ const FACEBOX = sql<unknown>`${userProfiles.options} -> 'faceBox'`;
  * 대난투 전체 순위 — 등수 오름차순 keyset 페이지네이션(인덱스 melee_part_rank_idx 활용).
  *  - all   : 1위부터(또는 afterRank 이후). aroundRank가 오면 그 등수 앞뒤 window
  *  - guild : 내 길드원만(현재 길드 기준 — 스냅샷 길드가 아닌 "지금 같은 길드"인 사람들)
+ *  - friends : 나 + 현재 친구(수락된 친구 링크 기준, 2026-08-28)
  *
  * 표시값은 전부 **회차 스냅샷**(participants)이다 — 닉·아바타·길드. 현재 값으로 폴백하면 개명·
  * 아바타 변경·길드 이동이 과거 회차에 새어 들어가, 같은 화면의 전투 재생(finale.roster 스냅샷)과
@@ -118,6 +120,13 @@ export async function getMeleeRanking(input: {
     if (ids.length === 0) return { rows: [], myRank };
     conds.push(inArray(meleeParticipants.userId, ids));
     limit = 200; // 길드 인원은 유계 — 한 번에 로드(무한 스크롤 대상 아님).
+  }
+
+  if (mode === 'friends') {
+    // 나 + 수락된 친구 — 길드 탭과 같은 "지금 관계" 기준, 유계라 한 번에 로드.
+    const ids = [viewerUserId, ...(await getFriendIds(viewerUserId, serverId))];
+    conds.push(inArray(meleeParticipants.userId, ids));
+    limit = 200;
   }
 
   const rows = await withTimeout(

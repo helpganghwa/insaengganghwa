@@ -24,7 +24,8 @@ export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
   const battleIdRaw = q.get('battleId') ?? '';
   if (!/^\d+$/.test(battleIdRaw)) return NextResponse.json({ status: 'error' }, { status: 400 });
-  const mode: MeleeRankMode = q.get('mode') === 'guild' ? 'guild' : 'all';
+  const m = q.get('mode');
+  const mode: MeleeRankMode = m === 'guild' ? 'guild' : m === 'friends' ? 'friends' : 'all';
   const num = (k: string) => {
     const v = Number(q.get(k));
     return Number.isInteger(v) && v > 0 ? v : undefined;
