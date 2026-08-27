@@ -5,17 +5,12 @@
 
 ---
 
-## 1. 기술 스택
+## 1. 기술 스택 — 결정 기록
+
+> 라이브러리 목록은 `package.json`이 정본. 아래는 코드만으로 알 수 없는 선택 이유만 남긴다.
 
 | 영역 | 선택 | 이유 |
 |------|------|------|
-| **프레임워크** | Next.js 16 (App Router) | Cache Components, React Compiler 1.0, Turbopack 안정 |
-| **런타임** | React 19.2 | Next 16 동봉 |
-| **언어** | TypeScript (strict) | 타입 안전성 5년 운영 필수 |
-| **패키지 매니저** | **Bun** | npm 대비 빠름, native lockfile |
-| **스타일** | Tailwind CSS v4 + shadcn/ui | 픽셀아트와 분리, 디자인 토큰 |
-| **DB** | Supabase (Postgres, Seoul/Tokyo) | 1인 운영 친화, RLS |
-| **ORM** | Drizzle | 마이그레이션 안정성, TS 타입 자동 |
 | **인증** | Kakao OAuth (Supabase Auth) | 한국 유저 대상 단독 인증 |
 | **결제** | 포트원 + KMC/PASS 본인인증 | 카카오페이/토스/카드 |
 | **영수증** | PG(포트원/이니시스) 결제모듈 | 결제창 이메일 입력 → PG 매출전표 발송으로 영수증 의무 갈음(자체 발송 없음) |
@@ -25,67 +20,8 @@
 | **배포** | Vercel (Edge + Cron) | 빠른 배포, KST Cron |
 | **광고** | AdMob Web (1차) | 보상형 광고 |
 | **레이트리밋** | Upstash Redis | 강화/보석 API 어뷰징 방어 |
-| **테스트** | Vitest | 밸런스 시뮬레이션 + 단위 |
 
 > 변경 시 ROADMAP.md + 본 문서 동시 업데이트.
-
----
-
-## 2. 디렉터리 구조 (계획)
-
-```
-insaengganghwa/
-├── docs/                    # 기획/행정/스키마 문서 (개발 전 필독)
-│   ├── IDEA.md
-│   ├── GDD.md              # 게임 디자인
-│   ├── BALANCE.md          # 수식/확률 — 코드와 1:1 매칭 필수
-│   ├── SCHEMA.md           # DB 스키마
-│   ├── WIREFRAMES.md       # 화면 구조
-│   ├── REGULATORY.md       # 법규/등급분류
-│   ├── ROADMAP.md          # 개발 일정
-│   ├── AUTOMATION.md       # 1인 운영 자동화 (예정)
-│   ├── ISSUES.md           # 발견 이슈 트래커 (예정)
-│   └── CHANGELOG.md        # (출시 후)
-├── app/                     # Next.js App Router 라우트
-│   ├── (game)/             # 인증 필요 라우트 그룹
-│   ├── (public)/           # 비로그인 가능 라우트
-│   ├── (admin)/            # 운영자 전용
-│   ├── api/                # Route Handlers (서버 권위 API) + webhooks
-│   ├── og/[shareCode]/     # ImageResponse — 동적 OG
-│   └── layout.tsx
-├── components/
-│   ├── ui/                 # shadcn 기본 컴포넌트
-│   ├── game/               # 강화소/보급소 등 게임 도메인
-│   └── pixel/              # 픽셀아트 렌더링
-├── lib/
-│   ├── db/
-│   │   ├── schema/         # Drizzle 스키마 (도메인별 분할)
-│   │   ├── client.ts       # 서버 전용 클라이언트
-│   │   └── migrations/
-│   ├── game/
-│   │   ├── enhance/        # 강화 로직 (시간/확률/RNG)
-│   │   ├── gacha/
-│   │   ├── raid/
-│   │   └── balance.ts      # BALANCE.md 공식 — 단일 진실 원천
-│   ├── auth/               # Kakao OAuth + 본인인증
-│   ├── payment/            # 포트원 + IAP
-│   ├── ads/                # AdMob 검증
-│   ├── kst.ts              # KST 변환 헬퍼
-│   └── server-only.ts      # 서버 전용 import 가드
-├── tests/
-│   ├── balance/            # Vitest 시뮬레이션
-│   └── transactions/       # 강화 큐 트랜잭션
-├── public/
-│   └── sprites/            # 픽셀아트
-├── scripts/                # DB seed, balance 시뮬 CLI
-├── .env.example
-├── drizzle.config.ts
-├── next.config.ts
-├── tsconfig.json
-├── package.json
-├── bun.lock
-└── CLAUDE.md               # 본 문서
-```
 
 ---
 
@@ -165,40 +101,12 @@ const dailyReset = kstStartOfDay(now);
 
 ---
 
-## 4. 자주 사용하는 명령어
+## 4. 명령어 — 표준과 다른 것만
 
-```bash
-# 패키지 매니저 — Bun 사용 (npm 사용 시 lockfile 충돌)
-bun install
-bun add <package>
-bun remove <package>
-
-# 개발 서버 (Turbopack 기본) — 포트 5174
-bun dev
-
-# 빌드 + 프로덕션
-bun run build
-bun run start
-
-# 타입 체크
-bun run typecheck
-
-# 린트 (ESLint)
-bun run lint
-bun run lint:fix
-
-# Drizzle
-bun run db:generate    # 스키마 → 마이그레이션 SQL 생성
-bun run db:migrate     # 마이그레이션 적용
-bun run db:studio      # GUI 인스펙터
-
-# 테스트 — 러너는 package.json "test": "vitest run" (Bun 네이티브 `bun test`는 server-only stub 미적용으로 일부 fail)
-bun run test             # Vitest 전체
-bun run test balance     # 밸런스 시뮬레이션만
-
-# 시드 / 시뮬
-bun run scripts/seed-catalog.ts
-```
+- 패키지 매니저는 **Bun**(`bun install/add/remove`) — npm을 쓰면 lockfile이 충돌한다.
+- 개발 서버 `bun dev`는 **포트 5174**.
+- 테스트 러너는 package.json `"test": "vitest run"` — Bun 네이티브 `bun test`는 server-only stub이 적용되지 않아 일부가 실패한다. `bun run test balance`처럼 이름으로 필터.
+- 카탈로그 시드: `bun run scripts/seed-catalog.ts`. 수동 SQL 적용: `bun run scripts/apply-migration.ts <file> [PROD_DATABASE_URL]`.
 
 ---
 
@@ -206,11 +114,8 @@ bun run scripts/seed-catalog.ts
 
 ### 5.1 TypeScript
 
-- `strict: true` 필수
-- `any` 사용 금지 (불가피하면 `unknown` 후 type guard)
-- Drizzle 스키마는 도메인별 파일 분할 (`schema/equipment.ts`, `schema/economy.ts` 등)
-- DB 컬럼은 snake_case, TS는 camelCase — Drizzle이 자동 변환
-- `bigint` 사용 — 자원 수치는 `int32` 한계 회피
+- DB 컬럼은 snake_case, TS는 camelCase — Drizzle이 자동 변환(raw SQL에서는 snake_case를 직접 쓴다)
+- 자원 수치는 `bigint` — `int32` 한계 회피
 
 ### 5.2 React / Next.js
 
@@ -220,12 +125,6 @@ bun run scripts/seed-catalog.ts
 - 불변/준불변 데이터는 명시적 캐시로 요청 경로 DB 제거 — **현재 구현 = `unstable_cache`**(§11.5). 자동 캐시 의존 X. ⚠ Cache Components(`use cache`)는 **미도입**(`next.config`에 `cacheComponents` 플래그 없음 → 지시어 써도 무효)
 - **고정 390 스케일**: 출력 메타는 정확히 `<meta name="viewport" content="width=390">` (initial-scale 없음). `app/layout.tsx`의 `export const viewport = { themeColor, width: 390, initialScale: undefined }`로 지정. ⚠ **`initialScale: undefined` 절대 제거 금지** — Next는 viewport export를 기본값 `{width:'device-width',initialScale:1}`과 스프레드 병합 후 non-null 필드만 직렬화하므로, `{width:390}`만 두면 기본값 `initialScale:1`이 살아남아 출력이 `width=390, initial-scale=1`이 되고 **375서 15px 가로 스크롤 재발**(검증됨). `initialScale: undefined`가 기본값 1을 덮어써 출력에서 제거됨 — 이것이 metadata API로 순수 width=390을 내는 유일한 방법(리터럴 `<meta>`는 Next 자동 주입분과 **중복**되어 불가, 검증됨). `width=390`만 있으면 브라우저가 initial-scale=기기폭/390 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, **모든 화면 동일 비율·좌우 여백0·가로 스크롤0**). 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area). 모든 화면을 390 컬럼으로 구현. ⚠ `initial-scale`/`maximum-scale`/`user-scalable=no` 중 하나라도 들어가면 자동 핏 무력화 — 스케일 잠금 금지(핀치줌 허용 감수). ⚠ **html/body에 `overflow-x`(overflow-x-hidden 등) 절대 금지** — overflow가 한 축만 걸리면 타축이 visible→auto로 계산돼 body가 스크롤 컨테이너가 되고 AppHeader(`sticky top-0`)·BottomNav(`sticky bottom-0`) 고정이 풀림(검증됨). width=390라 가로 오버플로 자체가 없어 가드 불필요; 특정 요소가 390 초과 시 그 요소를 수정. WIREFRAMES §0 참조
 
-### 5.3 컴포넌트
-
-- 한 파일 한 컴포넌트 (관련 보조 컴포넌트는 같은 파일 OK)
-- Props는 `interface` (확장 가능), 내부 타입은 `type`
-- 컴포넌트명 PascalCase, 파일명도 PascalCase (`EnhanceSlot.tsx`)
-
 ### 5.4 게임 로직
 
 - `lib/game/balance.ts`는 절대 변하지 않는 단일 진실 원천. 모든 확률/시간 수치는 여기서만 가져옴.
@@ -234,14 +133,7 @@ bun run scripts/seed-catalog.ts
 
 ### 5.5 주석
 
-- "왜 (Why)"만 적음. "무엇 (What)"은 코드가 설명.
-- 법적/사행성/안티치트 관련 결정은 반드시 주석 (`// 게임산업법 §33 — 공시 일치 검증`).
-
-### 5.6 에러 처리
-
-- 사용자 입력: zod 스키마 검증
-- 내부 호출: 타입으로 보장, 런타임 검증 생략
-- 에러 코드는 `SCREAMING_SNAKE_CASE` 상수 (`'SLOT_BUSY'`, `'NOT_READY'`, `'INSUFFICIENT_FODDER'`)
+- "왜 (Why)"만 적음. 법적/사행성/안티치트 관련 결정은 반드시 주석 (`// 게임산업법 §33 — 공시 일치 검증`).
 
 ---
 
@@ -323,19 +215,8 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 - 프로덕션 배포: `master-dev` → `master` push → **ganghwa.app 자동 반영**.
 - 커밋: Conventional Commits. `master`는 검증 끝난 변경만(직접 작업 금지, master-dev 경유).
 
-### Vercel 연결
-- **Production Branch = `master`** (대시보드 → Settings → Build and Deployment / Environments) → `ganghwa.app` 자동 매핑.
-- **배포 확인 주소** — 스테이징 `https://insaengganghwa-git-master-dev-insaengganghwa.vercel.app/api/health`, 프로덕션 `https://ganghwa.app/api/health`. 응답 `dpl` 값이 바뀌면 새 빌드가 반영된 것.
-  ⚠ 팀 슬러그는 **`insaengganghwa`**다(`helpganghwas-projects` 아님). 조합을 틀리면 `DEPLOYMENT_NOT_FOUND`가 떠서 **빌드 실패와 구분되지 않는다** — push 성공만 보고 배포됐다고 판단하지 말 것(2026-07-30).
-- `master-dev`·기타 = preview(자동 URL). `master-dev` 안정 URL = 스테이징.
-- 환경변수: Vercel Production/Preview 분리 입력, 로컬 `.env.local`과 별개.
-- **git committer 이메일 필수**: 프로젝트 `gitForkProtection` 활성 상태 — push되는 HEAD 커밋의 committer가 GitHub 사용자와 연결되지 않으면 Vercel이 빌드를 `BLOCKED`(빌드 로그 0줄) 처리한다. repo 소유 GitHub User `helpganghwa`(id 296071338)의 noreply 이메일 `296071338+helpganghwa@users.noreply.github.com` 사용(검증 불필요·항상 연결). 신규 클론 시 `git config user.email` 동일 설정.
-
-### 8.1 Supabase 환경 분리 (선택)
-master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
-- **옵션 A (권장·저비용)**: Supabase 프로젝트를 **prod/staging 2개**(둘 다 서울 ap-northeast-2) 생성 → Vercel **Production env = prod DB**, **Preview env = staging DB**. master(도메인)=prod, master-dev=staging 자연 분리. 유료 기능 불필요, Drizzle 마이그레이션만 각 DB에 적용.
-- **옵션 B**: Supabase **Branching**(Pro 플랜 유료, GitHub 연동 — 브랜치별 DB 자동 생성/마이그레이션). 자동화 강하나 비용·복잡도 ↑.
-- **현재 상태**: 단일 Supabase(서울)로 마이그레이션 완료. 결정 전까지 단일 유지(스테이징=프로덕션 데이터 공유 — 실유저 전 허용 가능 리스크).
+### Vercel 연결·배포 확인
+배포 확인 URL, `DEPLOYMENT_NOT_FOUND` 함정, committer 이메일 요건, Supabase prod/staging 분리는 **`deploy-check` 스킬**(`.claude/skills/deploy-check/SKILL.md`)에 있다 — master-dev/master push 후 dpl 확인 시 호출.
 
 ---
 
