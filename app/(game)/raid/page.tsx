@@ -185,7 +185,8 @@ export default async function RaidPage() {
           participantCount: sql<number>`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id})::int`,
         })
         .from(raids)
-        .innerJoin(
+        // leftJoin(2026-08-27) — 호스트가 탈퇴해도 레이드는 계속 진행된다(표시만 "탈퇴한 대장장이").
+        .leftJoin(
           characters,
           and(eq(characters.userId, raids.hostUserId), eq(characters.serverId, raids.serverId)),
         )
@@ -213,7 +214,7 @@ export default async function RaidPage() {
         shareCode: r.shareCode,
         expireAtIso: r.expireAt.toISOString(),
         phasesCleared: r.phasesCleared,
-        hostNickname: r.hostNickname,
+        hostNickname: r.hostNickname ?? '탈퇴한 대장장이',
         participantCount: r.participantCount,
         requested: myPendingReqIds.has(r.id.toString()),
         via: 'friend' as const,
@@ -228,12 +229,12 @@ export default async function RaidPage() {
       db.execute(sql`
         select r.id::text as id, r.boss_code as boss_code, r.share_code as share_code,
                r.expire_at as expire_at, r.phases_cleared as phases_cleared,
-               hc.nickname as host_nickname, r.guild_share as guild_share,
+               coalesce(hc.nickname, '탈퇴한 대장장이') as host_nickname, r.guild_share as guild_share,
                (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
         from raids r
         join guild_members hg on hg.user_id = r.host_user_id and hg.server_id = r.server_id
         join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid and mg.server_id = ${serverId}
-        join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
+        left join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
         where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
           and (select count(*) from raid_participants rp2 where rp2.raid_id = r.id) < ${RAID_MAX_PARTICIPANTS}
         limit 20

@@ -95,7 +95,8 @@ export default async function RaidDetail({
       .from(raidParticipants)
       .innerJoin(profiles, eq(profiles.id, raidParticipants.userId))
       .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
-      .innerJoin(
+      // leftJoin(2026-08-27) — 탈퇴자는 characters가 없어도 참가 기록은 남는다(피해 합이 페이즈 원천).
+      .leftJoin(
         characters,
         and(eq(characters.userId, raidParticipants.userId), eq(characters.serverId, raids.serverId)),
       )
@@ -107,7 +108,7 @@ export default async function RaidDetail({
     totalDamage: bigint;
     attacksUsed: number;
     extraAttacks: number;
-    nickname: string;
+    nickname: string | null;
     publicCode: string;
   }[]);
 
@@ -198,7 +199,7 @@ export default async function RaidDetail({
     myReward,
     participants: parts
       .map((p) => ({
-        nickname: p.nickname,
+        nickname: p.nickname ?? '탈퇴한 대장장이',
         publicCode: p.publicCode,
         totalDamage: Number(p.totalDamage),
         isMe: p.userId === userId,
