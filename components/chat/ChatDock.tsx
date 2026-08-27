@@ -485,9 +485,20 @@ export function ChatDock() {
     if (id) prevLatestIdRef.current = id;
   }, [latest, collapsed, blocked, open, me]);
 
+  // 키보드 모드 미러(2026-08-27) — 렌더 밖(rAF·타이머·수신 콜백)에서 현재 모드를 읽기 위한 ref.
+  const kbOpenRef = useRef(false);
   const scrollToBottom = useCallback((smooth = false) => {
     const el = listRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    if (!el) return;
+    // 키보드 모드에선 smooth 금지(2026-08-27 제보) — iOS에서 transform된 fixed 패널 안의 overflow
+    // 컨테이너에 smooth 프로그램 스크롤이 겹치면(전송·수신·폴링 3경로가 연달아 호출) 컴포지터가
+    // 목록 레이어를 갱신하지 못해 터치 전까지 빈 화면으로 보였다. 즉시 스크롤 + 레이아웃 강제.
+    if (kbOpenRef.current) {
+      el.scrollTop = el.scrollHeight;
+      void el.offsetHeight;
+      return;
+    }
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   }, []);
 
   const applyNew = useCallback(
@@ -577,6 +588,7 @@ export function ChatDock() {
         ? { h: Math.round(vv.height), top: Math.round(Math.max(0, vv.offsetTop)) }
         : null;
       applyPanelBox(panelRef.current, box);
+      kbOpenRef.current = on;
       setKbBox((prev) => {
         if (!box) return prev === null ? prev : null;
         return prev && prev.h === box.h && prev.top === box.top ? prev : box;
@@ -626,6 +638,7 @@ export function ChatDock() {
       window.removeEventListener('resize', onVv);
       document.removeEventListener('visibilitychange', onVis);
       panelEl?.removeEventListener('focusout', onFocusOut);
+      kbOpenRef.current = false;
       setKbBox(null);
     };
   }, [open, scrollToBottom]);
@@ -1351,9 +1364,8 @@ export function ChatDock() {
     // 키보드 모드에선 smooth 대신 즉시 스크롤 + 키보드 애니 뒤 재동기(2026-08-27 제보) — iOS에서
     // 키보드 열린 overflow 컨테이너의 smooth 프로그램 스크롤이 컴포지터 갱신을 놓쳐 터치 전까지
     // 내용이 비어 보였다. 평시(키보드 없음)는 기존 smooth 유지.
-    const kbOpen = kbBox !== null;
-    requestAnimationFrame(() => scrollToBottom(!kbOpen));
-    if (kbOpen) setTimeout(() => scrollToBottom(false), 350);
+    requestAnimationFrame(() => scrollToBottom(true)); // 키보드 모드면 scrollToBottom이 즉시 스크롤로 강제
+    if (kbBox !== null) setTimeout(() => scrollToBottom(false), 350);
     // 응답 도착 전에 탭을 바꿀 수 있음 — 확정/롤백은 '전송한 탭'에만 반영(활성이면 상태, 아니면 버퍼).
     const sentTab = tabRef.current;
     const rollback = () => {
