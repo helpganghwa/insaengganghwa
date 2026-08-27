@@ -799,7 +799,7 @@ export const EXPEDITION_BASE_AMOUNTS = {
   both: { boxMin: 2, boxMax: 3, diaMin: 12, diaMax: 29 },
 } as const;
 
-/* ── 성장축 ③ 아바타 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 최소치 없음, 상한 없음) ── */
+/* ── 성장축 ③ 아바타 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 권장치·최소치 없음, 상한 없음) ── */
 /**
  * 배율은 **배정 아바타의 강화 합(AS)** 만으로 정한다 — AS = 생성에 쓴 장비 3종의 현재 enhance_level 합.
  * M(AS) = 1 + COEF × (AS/1000)^EXP, 상한 없음. 100→×1.19 · 300→×1.51 · 666→×2.04 · 1,000→×2.50 · 2,000→×3.80.
@@ -811,17 +811,6 @@ export function expeditionAsBonusBp(avatarSum: number): number {
   if (avatarSum <= 0) return 0;
   return Math.round(EXPEDITION_AS_MULT_COEF * Math.pow(avatarSum / 1000, EXPEDITION_AS_MULT_EXP) * 10000);
 }
-/**
- * 미션 **권장 강화 합** R — 최소치가 아니라 목표치. 배정 아바타 AS ≥ R이면 달성 보너스(+15%).
- *  - 유저 기준치 B = 보유 아바타 AS의 최댓값. R = round₁₀(B × k), k 균등(bp). 1번 슬롯은 k ≤ 0.7.
- *  - B < REQ_MIN_BASE면 R = 0(권장치 없음 = 달성 보너스 없음). 상한 없음.
- *  - 미달이어도 배정 가능·페널티 없음(시너지와 같은 "감소 없음" 원칙).
- */
-export const EXPEDITION_REQ_K_BP: readonly number[] = [5000, 7000, 9000, 11000] as const;
-export const EXPEDITION_REQ_K_BP_SLOT1: readonly number[] = [5000, 7000] as const;
-export const EXPEDITION_REQ_MIN_BASE = 30;
-export const EXPEDITION_REQ_STEP = 10;
-export const EXPEDITION_REQ_MET_BONUS_BP = 1500;
 
 /** 대성공 — **수령 시** 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
 export const EXPEDITION_CRIT_BP = 1000;

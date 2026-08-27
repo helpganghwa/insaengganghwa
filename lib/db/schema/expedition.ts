@@ -71,9 +71,7 @@ export const expeditions = pgTable(
     /** 시작 시점 확정 배율 스냅샷(bp) — 분쟁·검증용(배정 아바타 장비 기준·§3.2). */
     synergyBp: integer('synergy_bp').notNull().default(0),
     levelBonusBp: integer('level_bonus_bp').notNull().default(0),
-    /** 권장 강화 합(§3.3, 0178) — 오퍼 롤 시 확정. 배정 아바타 강화 합 ≥ 이 값이면 달성 보너스(최소치 아님). */
-    requiredSum: integer('required_sum').notNull().default(0),
-    /** 강화 배율 스냅샷(bp) = 아바타 강화 합 곡선 M(AS) + 권장 달성 보너스 — 시작 시 확정(balance.expeditionAsBonusBp). */
+    /** 아바타 강화 합 배율 스냅샷(bp, §3.3, 0178) = M(AS)−1 — 시작 시 확정(balance.expeditionAsBonusBp). */
     reqBonusBp: integer('req_bonus_bp').notNull().default(0),
     /** 시작 시점 최종 확정 보상(배율 적용) — 수령은 이 값 지급 + 대성공 판정만. */
     finalReward: jsonb('final_reward'),

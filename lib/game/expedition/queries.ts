@@ -30,8 +30,7 @@ export type ExpeditionBoardSlot = {
   /** running 전용. */
   completeAtIso?: string;
   synergyBp?: number;
-  /** 권장 강화 합(§3.3) — offer: 달성 보너스 목표치, running: 스냅샷. reqBonusBp = 강화 합 배율+달성 보너스(running). */
-  requiredSum?: number;
+  /** running 전용 — 배정 아바타 강화 합 배율 스냅샷(bp, §3.3). */
   reqBonusBp?: number;
   avatarId?: string | null;
   avatarFace?: string | null;
@@ -53,7 +52,7 @@ export type ExpeditionBoard = {
   xp: number;
   xpNext: number;
   bonusBp: number;
-  /** 유저 기준치 B(보유 아바타 강화 합 최댓값) — 안내용. */
+  /** 보유 아바타 강화 합 최댓값 — 안내용. */
   baseSum: number;
   startsLeft: number;
   freeRefreshLeft: number;
@@ -79,7 +78,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     >,
     db.execute(sql`
       select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
-             complete_at, synergy_bp, required_sum, req_bonus_bp, avatar_profile_id::text
+             complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       order by slot
@@ -88,7 +87,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         slot: number; status: 'offer' | 'running'; region: ExpeditionRegion;
         difficulty: ExpeditionDifficulty; duration_ms: string;
         reward: ExpeditionReward; final_reward: ExpeditionReward | null;
-        complete_at: string | Date | null; synergy_bp: number; required_sum: number; req_bonus_bp: number;
+        complete_at: string | Date | null; synergy_bp: number; req_bonus_bp: number;
         avatar_profile_id: string | null;
       }[]
     >,
@@ -139,10 +138,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     if (!row) continue; // ensureOffers 선행 시 없을 수 없으나 방어(다음 렌더에서 채워짐)
     const hours = Math.round(Number(row.duration_ms) / 3_600_000);
     if (row.status === 'offer') {
-      slots.push({
-        slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward,
-        requiredSum: row.required_sum,
-      });
+      slots.push({ slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward });
     } else {
       slots.push({
         slot,
@@ -153,7 +149,6 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         reward: row.final_reward ?? row.reward,
         completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
         synergyBp: row.synergy_bp,
-        requiredSum: row.required_sum,
         reqBonusBp: row.req_bonus_bp,
         avatarId: row.avatar_profile_id,
         avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
