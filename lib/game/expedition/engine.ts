@@ -23,7 +23,8 @@ import {
   EXPEDITION_SLOTS,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
-  expeditionReqBonusBp,
+  EXPEDITION_REQ_MET_BONUS_BP,
+  expeditionAsBonusBp,
   expeditionDifficultyDist,
   expeditionXpToNext,
   type ExpeditionDifficulty,
@@ -48,12 +49,12 @@ export type ExpeditionMission = {
   difficulty: ExpeditionDifficulty;
   durationMs: number;
   reward: ExpeditionReward;
-  /** 필요 강화 합 R(§3.3) — 배정 아바타 강화 합이 이 값 이상이어야 시작 가능. 0=제한 없음. */
+  /** 권장 강화 합 R(§3.3) — 배정 아바타 강화 합 ≥ R이면 달성 보너스. 0=권장치 없음. 최소치 아님. */
   requiredSum: number;
 };
 
 /**
- * 필요 강화 합 롤(§3.3) — 유저 기준치 B(보유 아바타 강화 합 최댓값)에 k 균등. 1번 슬롯은 k≤0.7.
+ * 권장 강화 합 롤(§3.3) — 유저 기준치 B(보유 아바타 강화 합 최댓값)에 k 균등. 1번 슬롯은 k≤0.7.
  * B < 30이면 0. 10 단위 반올림. 상한 없음.
  */
 export function rollRequiredSum(rng: Rng10k, baseSum: number, slot: number): number {
@@ -77,9 +78,14 @@ export function avatarEnhanceSum(snapshot: unknown, levelByKey: ReadonlyMap<stri
   return sum;
 }
 
-/** 필요 강화 합 보너스(bp) — balance의 M(R) 정본을 그대로 노출(엔진 경유 단일 진입). */
-export function reqBonusBp(requiredSum: number): number {
-  return expeditionReqBonusBp(requiredSum);
+/** 아바타 강화 합 배율(bp) — balance의 M(AS) 정본(엔진 경유 단일 진입). */
+export function asBonusBp(avatarSum: number): number {
+  return expeditionAsBonusBp(avatarSum);
+}
+
+/** 권장 강화 합 달성 보너스(bp) — R>0이고 AS ≥ R일 때만. 미달 페널티 없음. */
+export function reqMetBonusBp(avatarSum: number, requiredSum: number): number {
+  return requiredSum > 0 && avatarSum >= requiredSum ? EXPEDITION_REQ_MET_BONUS_BP : 0;
 }
 
 const HOUR_MS = 3_600_000;

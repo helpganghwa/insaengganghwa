@@ -21,8 +21,9 @@ import {
   cryptoRng10k,
   effectiveSlots,
   levelBonusBp,
+  asBonusBp,
   avatarEnhanceSum,
-  reqBonusBp,
+  reqMetBonusBp,
   rollMission,
   synergyBpForSnapshot,
   type ExpeditionReward,
@@ -49,7 +50,6 @@ export type ExpeditionErrorCode =
   | 'START_LIMIT'
   | 'SLOT_LOCKED'
   | 'SLOT_ALREADY_OPEN'
-  | 'REQ_NOT_MET'
   | 'INSUFFICIENT_DIAMOND';
 export class ExpeditionError extends Error {
   constructor(public code: ExpeditionErrorCode) {
@@ -233,15 +233,14 @@ export function startExpedition(
     `)) as unknown as { equipment_snapshot: unknown }[];
     if (!av) throw new ExpeditionError('AVATAR_NOT_FOUND');
 
-    // 필요 강화 합(§3.3) — 배정 아바타 AS ≥ R. 시작 시점에만 검사(진행 중 하락은 무관).
+    // 아바타 강화 합(§3.3) — 배율은 배정 아바타 AS 곡선 + 권장치 달성 보너스. 최소치·페널티 없음.
+    // 시작 시점 AS로 스냅샷(진행 중 하락은 무관).
     const requiredSum = Number(offer.required_sum ?? 0);
-    if (requiredSum > 0) {
-      const { byId } = await loadAvatarSums(tx, userId, serverId);
-      if ((byId.get(avatarProfileId) ?? 0) < requiredSum) throw new ExpeditionError('REQ_NOT_MET');
-    }
+    const { byId } = await loadAvatarSums(tx, userId, serverId);
+    const avatarSum = byId.get(avatarProfileId) ?? 0;
     const synergy = synergyBpForSnapshot(av.equipment_snapshot, offer.region as never);
     const lvBonus = levelBonusBp(st.level);
-    const reqBonus = reqBonusBp(requiredSum);
+    const reqBonus = asBonusBp(avatarSum) + reqMetBonusBp(avatarSum, requiredSum);
     const finalReward = applyMultiplier(offer.reward, synergy + lvBonus + reqBonus);
 
     // 카운터 선차감(같은 tx — 실패 시 롤백으로 원복).

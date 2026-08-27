@@ -12,7 +12,7 @@ import {
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   GEM_TO_MS,
-  type ExpeditionRegion, expeditionReqBonusBp } from '@/lib/game/balance';
+  type ExpeditionRegion, expeditionAsBonusBp, EXPEDITION_REQ_MET_BONUS_BP } from '@/lib/game/balance';
 import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
@@ -81,6 +81,11 @@ function boxDetail(r: ExpeditionReward): string {
   if (r.boxes.armor) p.push(`방어구 ${r.boxes.armor}`);
   if (r.boxes.accessory) p.push(`장신구 ${r.boxes.accessory}`);
   return p.join(' · ');
+}
+
+/** 클라 강화 배율 미리보기 — engine.asBonusBp + reqMetBonusBp와 동일 산식(표시 전용, 권위는 서버). */
+function enhanceBonusOf(avatarSum: number, requiredSum: number): number {
+  return expeditionAsBonusBp(avatarSum) + (requiredSum > 0 && avatarSum >= requiredSum ? EXPEDITION_REQ_MET_BONUS_BP : 0);
 }
 
 /** 클라 시너지 미리보기 — 서버 판정(engine)과 동일 산식(배정 시트 표시용, 권위는 서버). */
@@ -178,7 +183,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 state: 'running',
                 completeAtIso: new Date(Date.now() + (s.hours ?? 0) * 3_600_000).toISOString(),
                 synergyBp: syn,
-                reqBonusBp: expeditionReqBonusBp(s.requiredSum ?? 0),
+                reqBonusBp: enhanceBonusOf(av?.enhanceSum ?? 0, s.requiredSum ?? 0),
                 avatarId,
                 avatarFace: av?.face ?? null,
               }
@@ -298,7 +303,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           onRefresh={() => doRefresh(s)}
           onAssign={() => {
             setAssignFor(s);
-            setSelectedAvatar(board.avatars.find((a) => !a.busy && a.enhanceSum >= (s.requiredSum ?? 0))?.id ?? null);
+            // 기본 선택 = 배정 가능한 아바타 중 강화 합 최대(배율 최대) — 권장치 달성 여부는 배율에 이미 반영.
+            setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
           }}
           onCancel={() => setCancelFor(s.slot)}
           onCompleteNow={() => doCompleteNow(s)}
@@ -318,7 +324,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             }
             subtitle={
               (assignFor.requiredSum ?? 0) > 0
-                ? `${assignFor.hours}시간 파견 · 필요 강화 합 ${assignFor.requiredSum} (보상 ×${(1 + expeditionReqBonusBp(assignFor.requiredSum!) / 10000).toFixed(2)})`
+                ? `${assignFor.hours}시간 파견 · 권장 강화 합 ${assignFor.requiredSum} (달성 시 +${EXPEDITION_REQ_MET_BONUS_BP / 100}%)`
                 : `${assignFor.hours}시간 파견 — 원정대원을 고르세요`
             }
             bodyPad="sm"
@@ -345,19 +351,20 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 {board.avatars.map((a) => {
                   const syn = synergyOf(a.regions, assignFor.region!);
                   const req = assignFor.requiredSum ?? 0;
-                  const short = a.enhanceSum < req; // 필요 강화 합 미달(§3.3) — 서버도 같은 판정(REQ_NOT_MET)
+                  const met = req > 0 && a.enhanceSum >= req; // 권장 강화 합 달성(§3.3) — 미달도 배정 가능
+                  const mult = 1 + (enhanceBonusOf(a.enhanceSum, req) + syn) / 10000;
                   const sel = selectedAvatar === a.id;
                   return (
                     <button
                       key={a.id}
                       type="button"
-                      disabled={a.busy || short}
+                      disabled={a.busy}
                       onClick={() => setSelectedAvatar(a.id)}
                       className={`relative rounded-xl border p-1.5 text-center transition ${
                         sel
                           ? 'border-amber-500 bg-amber-500/10'
                           : 'border-zinc-200 dark:border-zinc-800'
-                      } ${a.busy || short ? 'opacity-40' : 'active:scale-95'}`}
+                      } ${a.busy ? 'opacity-40' : 'active:scale-95'}`}
                     >
                       <span className="mx-auto block h-12 w-12 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
                         {a.face ? (
@@ -366,8 +373,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                         ) : null}
                       </span>
                       <span className={`mt-1 block text-[9px] font-bold ${syn > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
-                        {a.busy ? '파견 중' : short ? `강화 합 ${a.enhanceSum}/${req}` : syn > 0 ? `시너지 +${syn / 100}%` : `강화 합 ${a.enhanceSum}`}
+                        {a.busy ? '파견 중' : `강화 합 ${a.enhanceSum} · ×${mult.toFixed(2)}`}
                       </span>
+                      {!a.busy && met ? (
+                        <span className="absolute top-1 left-1 rounded bg-sky-600/90 px-1 text-[8px] font-bold text-white">권장 달성</span>
+                      ) : null}
                       {a.isActive ? (
                         <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span>
                       ) : null}
@@ -382,7 +392,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <>
                   최종 보상{' '}
                   <RewardLine
-                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp + expeditionReqBonusBp(assignFor.requiredSum ?? 0))}
+                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + board.bonusBp + enhanceBonusOf(board.avatars.find((a) => a.id === selectedAvatar)?.enhanceSum ?? 0, assignFor.requiredSum ?? 0))}
                     strong
                   />
                 </>
@@ -595,7 +605,7 @@ function SlotCard({
               보상 <RewardLine r={s.reward} />
               <span className="ml-1.5 shrink-0">· 경험치 +{s.hours}</span>
               {s.state === 'offer' && (s.requiredSum ?? 0) > 0 ? (
-                <span className="ml-1.5 shrink-0 font-bold text-sky-600 dark:text-sky-400">필요 강화 합 {s.requiredSum} · ×{(1 + (s.reqBonusBp ?? 0) / 10000).toFixed(2)}</span>
+                <span className="ml-1.5 shrink-0 font-bold text-sky-600 dark:text-sky-400">권장 강화 합 {s.requiredSum} · 달성 +{EXPEDITION_REQ_MET_BONUS_BP / 100}%</span>
               ) : null}
               {s.state === 'running' && (s.reqBonusBp ?? 0) > 0 ? (
                 <span className="ml-1.5 shrink-0 font-bold text-sky-600 dark:text-sky-400">강화 +{((s.reqBonusBp ?? 0) / 100).toFixed(0)}%</span>

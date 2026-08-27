@@ -14,7 +14,7 @@ import {
   type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
-import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum, reqBonusBp } from './engine';
+import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum } from './engine';
 
 /** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
 export type ExpeditionBoardSlot = {
@@ -30,7 +30,7 @@ export type ExpeditionBoardSlot = {
   /** running 전용. */
   completeAtIso?: string;
   synergyBp?: number;
-  /** 필요 강화 합(§3.3) — offer: 배정 조건·예상 배율, running: 스냅샷. */
+  /** 권장 강화 합(§3.3) — offer: 달성 보너스 목표치, running: 스냅샷. reqBonusBp = 강화 합 배율+달성 보너스(running). */
   requiredSum?: number;
   reqBonusBp?: number;
   avatarId?: string | null;
@@ -44,7 +44,7 @@ export type ExpeditionAvatar = {
   isDefault: boolean;
   regions: (ExpeditionRegion | 'general')[];
   busy: boolean;
-  /** 아바타 강화 합(§3.3) — 배정 가능 판정·표시. */
+  /** 아바타 강화 합(§3.3) — 배율·권장 달성 표시. */
   enhanceSum: number;
 };
 
@@ -141,7 +141,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     if (row.status === 'offer') {
       slots.push({
         slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward,
-        requiredSum: row.required_sum, reqBonusBp: reqBonusBp(row.required_sum),
+        requiredSum: row.required_sum,
       });
     } else {
       slots.push({
