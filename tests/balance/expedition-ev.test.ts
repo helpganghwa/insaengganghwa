@@ -23,6 +23,7 @@ import {
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_REFRESH_COST,
   expeditionDifficultyDist,
+  expeditionReqBonusBp,
   expeditionXpToNext,
 } from '@/lib/game/balance';
 
@@ -72,7 +73,7 @@ describe('expedition balance invariants', () => {
     expect(cum).toBe(4550); // 30×50 + Σ⌊2.5ℓ⌋(ℓ=0..49) = 4,550
   });
 
-  it('경제 가드 — 출시 시점(배율 0) 하루 최대 다이아 기대 ≈ 500💎(±2%)', () => {
+  it('경제 가드 — 무강화 기준(배율 0) 하루 최대 다이아 기대 ≈ 300💎(±3%) · 축 ③ 합 1,000이면 ≈ 570💎', () => {
     const { diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
     const a = EXPEDITION_BASE_AMOUNTS;
     const evDia =
@@ -82,11 +83,15 @@ describe('expedition balance invariants', () => {
     // 하루 최대 유닛 — 시작 6회·슬롯 3 제약 아래 스케일 합 최대(24h×3슬롯).
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
     const launchDaily = evDia * critMult * maxDailyUnits;
-    expect(launchDaily).toBeGreaterThanOrEqual(490);
-    expect(launchDaily).toBeLessThanOrEqual(510);
-    // 이론 최대(Lv.50 + 지역 시너지 +30%) — 시즌 리밸런싱 전제 상한(BALANCE §11.4).
+    expect(launchDaily).toBeGreaterThanOrEqual(291);
+    expect(launchDaily).toBeLessThanOrEqual(309);
+    // 축 ③(필요 강화 합, 상한 없음) — 합 1,000 유저는 ×1.90 → 종전 500💎 기준의 ~114%.
+    const req1000 = 1 + expeditionReqBonusBp(1000) / 10000;
+    expect(launchDaily * req1000).toBeGreaterThanOrEqual(555);
+    expect(launchDaily * req1000).toBeLessThanOrEqual(585);
+    // 레벨·시너지 만렙(축 ①②)만 얹은 상한 — 축 ③ 제외 시 종전 가드(920) 대비 여유.
     const maxMult = 1 + (EXPEDITION_LEVEL_MAX * EXPEDITION_LEVEL_BONUS_BP_PER + 3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000;
-    expect(launchDaily * maxMult).toBeLessThanOrEqual(920);
+    expect(launchDaily * maxMult).toBeLessThanOrEqual(560);
   });
 
   it('시너지·상한 정합 — 일반은 지역 일치의 절반, 일일 시작 6회', () => {

@@ -14,7 +14,7 @@ import {
   type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
-import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward } from './engine';
+import { effectiveSlots, levelBonusBp, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum, reqBonusBp } from './engine';
 
 /** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
 export type ExpeditionBoardSlot = {
@@ -30,6 +30,9 @@ export type ExpeditionBoardSlot = {
   /** running 전용. */
   completeAtIso?: string;
   synergyBp?: number;
+  /** 필요 강화 합(§3.3) — offer: 배정 조건·예상 배율, running: 스냅샷. */
+  requiredSum?: number;
+  reqBonusBp?: number;
   avatarId?: string | null;
   avatarFace?: string | null;
 };
@@ -41,6 +44,8 @@ export type ExpeditionAvatar = {
   isDefault: boolean;
   regions: (ExpeditionRegion | 'general')[];
   busy: boolean;
+  /** 아바타 강화 합(§3.3) — 배정 가능 판정·표시. */
+  enhanceSum: number;
 };
 
 export type ExpeditionBoard = {
@@ -48,6 +53,8 @@ export type ExpeditionBoard = {
   xp: number;
   xpNext: number;
   bonusBp: number;
+  /** 유저 기준치 B(보유 아바타 강화 합 최댓값) — 안내용. */
+  baseSum: number;
   startsLeft: number;
   freeRefreshLeft: number;
   refreshCost: number;
@@ -58,7 +65,7 @@ export type ExpeditionBoard = {
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows] = await Promise.all([
     db.execute(sql`
       select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
              refresh_kst_day::text, refresh_today
@@ -72,7 +79,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     >,
     db.execute(sql`
       select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
-             complete_at, synergy_bp, avatar_profile_id::text
+             complete_at, synergy_bp, required_sum, req_bonus_bp, avatar_profile_id::text
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       order by slot
@@ -81,7 +88,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         slot: number; status: 'offer' | 'running'; region: ExpeditionRegion;
         difficulty: ExpeditionDifficulty; duration_ms: string;
         reward: ExpeditionReward; final_reward: ExpeditionReward | null;
-        complete_at: string | Date | null; synergy_bp: number; avatar_profile_id: string | null;
+        complete_at: string | Date | null; synergy_bp: number; required_sum: number; req_bonus_bp: number;
+        avatar_profile_id: string | null;
       }[]
     >,
     db.execute(sql`
@@ -99,7 +107,15 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       select active_profile_id::text as id from characters
       where user_id = ${userId}::uuid and server_id = ${serverId}
     `) as unknown as Promise<{ id: string | null }[]>,
+    db.execute(sql`
+      select ci.code as key, ue.enhance_level as lv
+      from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+      where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}
+    `) as unknown as Promise<{ key: string; lv: number }[]>,
   ]);
+  const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
+  const sumOf = (snapshot: unknown) => avatarEnhanceSum(snapshot, levelByKey);
+  const baseSum = avatarRows.reduce((m, a) => Math.max(m, sumOf(a.equipment_snapshot)), 0);
   const st = stateRows[0] ?? {
     level: 0, xp: '0', slots_purchased: 1,
     starts_kst_day: null, starts_today: 0, refresh_kst_day: null, refresh_today: 0,
@@ -123,7 +139,10 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     if (!row) continue; // ensureOffers 선행 시 없을 수 없으나 방어(다음 렌더에서 채워짐)
     const hours = Math.round(Number(row.duration_ms) / 3_600_000);
     if (row.status === 'offer') {
-      slots.push({ slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward });
+      slots.push({
+        slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward,
+        requiredSum: row.required_sum, reqBonusBp: reqBonusBp(row.required_sum),
+      });
     } else {
       slots.push({
         slot,
@@ -134,6 +153,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         reward: row.final_reward ?? row.reward,
         completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
         synergyBp: row.synergy_bp,
+        requiredSum: row.required_sum,
+        reqBonusBp: row.req_bonus_bp,
         avatarId: row.avatar_profile_id,
         avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
       });
@@ -147,6 +168,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     xp: Number(st.xp),
     xpNext: expeditionXpToNext(st.level),
     bonusBp: levelBonusBp(st.level),
+    baseSum,
     startsLeft: Math.max(0, EXPEDITION_DAILY_STARTS - startsToday),
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
     refreshCost: EXPEDITION_REFRESH_COST,
@@ -158,6 +180,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       isDefault: a.is_default,
       regions: snapshotExpeditionRegions(a.equipment_snapshot),
       busy: a.busy,
+      enhanceSum: sumOf(a.equipment_snapshot),
     })),
   };
 }

@@ -47,10 +47,10 @@ describe('expedition engine — 미션 롤', () => {
   });
 
   it('다이아 분기 — grand(×3.4) 스케일 적용', () => {
-    // 난이도 roll 9999(grand, Lv30) → 본상 roll 5500..7499 = diamondOnly → 수량 min(120)
+    // 난이도 roll 9999(grand, Lv30) → 본상 roll 5500..7499 = diamondOnly → 수량 min(72, 2026-08-27 ×0.6)
     const m = rollMission(seq([0, 9999, 5500, 0]), 30);
     expect(m.reward.kind).toBe('dia');
-    expect(m.reward.diamond).toBe(Math.round(120 * 3.4));
+    expect(m.reward.diamond).toBe(Math.round(72 * 3.4));
   });
 
   it('상자 슬롯 가중 — 주력 슬롯이 우세(대수 검증)', () => {

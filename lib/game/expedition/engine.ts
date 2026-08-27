@@ -15,10 +15,15 @@ import {
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
+  EXPEDITION_REQ_K_BP,
+  EXPEDITION_REQ_K_BP_SLOT1,
+  EXPEDITION_REQ_MIN_BASE,
+  EXPEDITION_REQ_STEP,
   EXPEDITION_SLOT_UNLOCKS,
   EXPEDITION_SLOTS,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
+  expeditionReqBonusBp,
   expeditionDifficultyDist,
   expeditionXpToNext,
   type ExpeditionDifficulty,
@@ -43,7 +48,39 @@ export type ExpeditionMission = {
   difficulty: ExpeditionDifficulty;
   durationMs: number;
   reward: ExpeditionReward;
+  /** 필요 강화 합 R(§3.3) — 배정 아바타 강화 합이 이 값 이상이어야 시작 가능. 0=제한 없음. */
+  requiredSum: number;
 };
+
+/**
+ * 필요 강화 합 롤(§3.3) — 유저 기준치 B(보유 아바타 강화 합 최댓값)에 k 균등. 1번 슬롯은 k≤0.7.
+ * B < 30이면 0. 10 단위 반올림. 상한 없음.
+ */
+export function rollRequiredSum(rng: Rng10k, baseSum: number, slot: number): number {
+  if (baseSum < EXPEDITION_REQ_MIN_BASE) return 0;
+  const ks = slot === 1 ? EXPEDITION_REQ_K_BP_SLOT1 : EXPEDITION_REQ_K_BP;
+  const k = ks[rng() % ks.length]!;
+  return Math.round((baseSum * k) / 10000 / EXPEDITION_REQ_STEP) * EXPEDITION_REQ_STEP;
+}
+
+/**
+ * 아바타 강화 합(AS) — 생성 스냅샷(카탈로그 key 3종)에 대응하는 내 장비의 **현재** enhance_level 합.
+ * 스냅샷 없음(기본 아바타)·미보유 key는 0. 카탈로그당 1레코드라 key→레벨 1:1.
+ */
+export function avatarEnhanceSum(snapshot: unknown, levelByKey: ReadonlyMap<string, number>): number {
+  if (!snapshot || typeof snapshot !== 'object') return 0;
+  const keys = Object.values(snapshot as Record<string, unknown>).filter(
+    (v): v is string => typeof v === 'string',
+  );
+  let sum = 0;
+  for (const k of keys.slice(0, 3)) sum += levelByKey.get(k) ?? 0;
+  return sum;
+}
+
+/** 필요 강화 합 보너스(bp) — balance의 M(R) 정본을 그대로 노출(엔진 경유 단일 진입). */
+export function reqBonusBp(requiredSum: number): number {
+  return expeditionReqBonusBp(requiredSum);
+}
 
 const HOUR_MS = 3_600_000;
 
@@ -93,7 +130,13 @@ function scaled(base: number, scale: number): number {
  * 미션 오퍼 롤(A′) — 지역 균등 × 난이도(파견 레벨 구간 분포) × 본상 사전 확정.
  * 대성공은 여기서 롤하지 않는다(수령 시 판정 — 2026-08-25 확정).
  */
-export function rollMission(rng: Rng10k, level: number): ExpeditionMission {
+export function rollMission(
+  rng: Rng10k,
+  level: number,
+  /** 유저 기준치 B(§3.3). 생략·0이면 필요 강화 합 0(레거시 호출·테스트). */
+  baseSum = 0,
+  slot = 1,
+): ExpeditionMission {
   const region = EXPEDITION_REGIONS[rng() % EXPEDITION_REGIONS.length]!;
   const difficulty = pickWeighted(rng, expeditionDifficultyDist(level));
   const hours = EXPEDITION_DIFFICULTY_HOURS[difficulty] as ExpeditionDurationH;
@@ -114,7 +157,8 @@ export function rollMission(rng: Rng10k, level: number): ExpeditionMission {
       diamond: scaled(uniformInt(rng, a.both.diaMin, a.both.diaMax), scale),
     };
   }
-  return { region, difficulty, durationMs: hours * HOUR_MS, reward };
+  const requiredSum = rollRequiredSum(rng, baseSum, slot);
+  return { region, difficulty, durationMs: hours * HOUR_MS, reward, requiredSum };
 }
 
 /* ── 시너지(§3.2) — 배정 아바타 장비 스냅샷 기준 ── */

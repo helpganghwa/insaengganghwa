@@ -792,10 +792,36 @@ export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both:
  * 이론 최대(Lv.50+풀시너지)는 ~900💎/일 — 도달 시점 시즌 리밸런싱 전제(BALANCE §11.4).
  */
 export const EXPEDITION_BASE_AMOUNTS = {
-  boxOnly: { boxMin: 4, boxMax: 6 },
-  diamondOnly: { diaMin: 120, diaMax: 240 },
-  both: { boxMin: 3, boxMax: 4, diaMin: 20, diaMax: 48 },
+  // 2026-08-27 ×0.6 재조정 — 성장축 ③(필요 강화 합, 상한 없음)이 얹히므로 기본값을 낮춘다.
+  // 무강화 유저 ≈ 종전의 60%, 합 1,000 ≈ 114%, 합 2,000 ≈ 155%(EXPEDITION §3.3).
+  boxOnly: { boxMin: 3, boxMax: 4 },
+  diamondOnly: { diaMin: 72, diaMax: 144 },
+  both: { boxMin: 2, boxMax: 3, diaMin: 12, diaMax: 29 },
 } as const;
+
+/* ── 성장축 ③ 필요 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 상한 없음) ── */
+/**
+ * 미션마다 시간과 독립으로 "필요 강화 합" R을 롤한다. 배정 아바타의 **아바타 강화 합**(AS =
+ * 생성에 쓴 장비 3종의 현재 enhance_level 합)이 R 이상이어야 시작 가능. R이 높을수록 보상 배율↑.
+ *  - 유저 기준치 B = 보유 아바타 AS의 최댓값(요구를 만족할 아바타가 최소 하나 존재하도록).
+ *  - R = round₁₀(B × k), k는 아래 집합 균등(bp). 1번 슬롯은 항상 k ≤ 0.7(저강 아바타도 배정 가능).
+ *  - B < REQ_MIN_BASE면 R = 0(신규 보호). 상한 없음 — B가 곧 상한.
+ */
+export const EXPEDITION_REQ_K_BP: readonly number[] = [5000, 7000, 9000, 11000] as const;
+export const EXPEDITION_REQ_K_BP_SLOT1: readonly number[] = [5000, 7000] as const;
+export const EXPEDITION_REQ_MIN_BASE = 30;
+export const EXPEDITION_REQ_STEP = 10;
+/**
+ * 필요 강화 합 배율 M(R) = 1 + COEF × (R/1000)^EXP — 상한 없는 완만한 거듭제곱(선형보다 후반 인플레 억제).
+ * R 100→×1.14 · 300→×1.34 · 600→×1.60 · 1,000→×1.90 · 2,000→×2.57 · 3,000→×3.17.
+ * 유일한 조절 손잡이는 COEF(실측 후 재조정). bp 정수로 반환(다른 축과 합산).
+ */
+export const EXPEDITION_REQ_MULT_COEF = 0.9;
+export const EXPEDITION_REQ_MULT_EXP = 0.8;
+export function expeditionReqBonusBp(requiredSum: number): number {
+  if (requiredSum <= 0) return 0;
+  return Math.round(EXPEDITION_REQ_MULT_COEF * Math.pow(requiredSum / 1000, EXPEDITION_REQ_MULT_EXP) * 10000);
+}
 
 /** 대성공 — **수령 시** 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
 export const EXPEDITION_CRIT_BP = 1000;

@@ -41,6 +41,12 @@ import {
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_DIFFICULTIES,
   EXPEDITION_REGIONS,
+  EXPEDITION_REQ_K_BP,
+  EXPEDITION_REQ_K_BP_SLOT1,
+  EXPEDITION_REQ_MIN_BASE,
+  EXPEDITION_REQ_MULT_COEF,
+  EXPEDITION_REQ_MULT_EXP,
+  expeditionReqBonusBp,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 
@@ -322,6 +328,16 @@ export default async function ProbabilityPage() {
           아바타 지역 시너지(일치 장비당 +{EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +
           {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)는 <b>상자·다이아 수량에만</b> 적용되며, 위 표의
           확률 자체는 변하지 않습니다.
+        </P>
+        <P>
+          <b>필요 강화 합</b>: 미션마다 시간과 별개로 필요 강화 합이 정해집니다. 기준은 보유 아바타 중
+          가장 높은 &ldquo;아바타 강화 합&rdquo;(아바타를 만들 때 입힌 장비 세 개의 현재 강화 레벨 합)이며,
+          그 값의 {EXPEDITION_REQ_K_BP.map((k) => `${k / 100}%`).join(' · ')} 중 하나가 같은 확률로
+          정해집니다(1번 슬롯은 {EXPEDITION_REQ_K_BP_SLOT1.map((k) => `${k / 100}%`).join(' · ')}만,
+          기준 {EXPEDITION_REQ_MIN_BASE} 미만이면 0). 필요 강화 합 R의 보상 배율은
+          1 + {EXPEDITION_REQ_MULT_COEF} × (R ÷ 1,000)^{EXPEDITION_REQ_MULT_EXP}로 상한 없이 완만하게
+          오르며(예: 300 → ×{(1 + expeditionReqBonusBp(300) / 10000).toFixed(2)}, 1,000 → ×
+          {(1 + expeditionReqBonusBp(1000) / 10000).toFixed(2)}), 이 역시 <b>수량에만</b> 적용됩니다.
         </P>
       </Sec>
 

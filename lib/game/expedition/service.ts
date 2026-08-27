@@ -21,6 +21,8 @@ import {
   cryptoRng10k,
   effectiveSlots,
   levelBonusBp,
+  avatarEnhanceSum,
+  reqBonusBp,
   rollMission,
   synergyBpForSnapshot,
   type ExpeditionReward,
@@ -47,6 +49,7 @@ export type ExpeditionErrorCode =
   | 'START_LIMIT'
   | 'SLOT_LOCKED'
   | 'SLOT_ALREADY_OPEN'
+  | 'REQ_NOT_MET'
   | 'INSUFFICIENT_DIAMOND';
 export class ExpeditionError extends Error {
   constructor(public code: ExpeditionErrorCode) {
@@ -89,6 +92,38 @@ const todayCount = (day: string | null, count: number, today: string) =>
  * 오퍼 보정(lazy) — 화면 진입 시 호출: 실효 슬롯마다 활성 행이 없으면 롤해서 채우고,
  * 자정이 지난 offer는 재롤(전체 교체). running/claimed는 건드리지 않는다. 멱등.
  */
+
+/**
+ * 아바타 강화 합(§3.3) — 보유 아바타별 AS(생성 스냅샷 3종의 현재 enhance_level 합)와 유저 기준치 B(최댓값).
+ * 오퍼 롤(R 산출)·시작 검증이 같은 산식을 쓰도록 한 곳에서 계산한다. 기본 아바타·미보유 key는 0.
+ */
+async function loadAvatarSums(
+  tx: Tx,
+  userId: string,
+  serverId: number,
+): Promise<{ byId: Map<string, number>; base: number }> {
+  const [avs, lv] = await Promise.all([
+    tx.execute(sql`
+      select id::text, equipment_snapshot from user_profiles
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+    `) as unknown as Promise<{ id: string; equipment_snapshot: unknown }[]>,
+    tx.execute(sql`
+      select ci.code as key, ue.enhance_level as lv
+      from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+      where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}
+    `) as unknown as Promise<{ key: string; lv: number }[]>,
+  ]);
+  const levelByKey = new Map(lv.map((r) => [r.key, Number(r.lv)]));
+  const byId = new Map<string, number>();
+  let base = 0;
+  for (const a of avs) {
+    const sum = avatarEnhanceSum(a.equipment_snapshot, levelByKey);
+    byId.set(a.id, sum);
+    if (sum > base) base = sum;
+  }
+  return { byId, base };
+}
+
 export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cryptoRng10k) {
   return db.transaction(async (tx) => {
     const st = await lockState(tx, userId, serverId);
@@ -100,23 +135,25 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       for update
     `)) as unknown as { id: string; slot: number; status: string; rolled_kst: string }[];
+    const { base } = await loadAvatarSums(tx, userId, serverId);
 
     for (let slot = 1; slot <= slots; slot++) {
       const row = active.find((r) => r.slot === slot);
       if (!row) {
-        const m = rollMission(rng, st.level);
+        const m = rollMission(rng, st.level, base, slot);
         // 경합 안전 — 부분 유니크(one_active)와 do nothing: 동시 진입 시 한쪽만 삽입된다.
         await tx.execute(sql`
-          insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward)
-          values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${m.difficulty}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb)
+          insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward, required_sum)
+          values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${m.difficulty}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb, ${m.requiredSum})
           on conflict do nothing
         `);
       } else if (row.status === 'offer' && row.rolled_kst !== today) {
         // 자정 전체 교체 — 미배정 오퍼만.
-        const m = rollMission(rng, st.level);
+        const m = rollMission(rng, st.level, base, slot);
         await tx.execute(sql`
           update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
-                 duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
+                 duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb,
+                 required_sum = ${m.requiredSum}, rolled_at = now()
           where id = ${BigInt(row.id)} and status = 'offer'
         `);
       }
@@ -153,10 +190,12 @@ export function refreshOffer(
       if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
     }
 
-    const m = rollMission(rng, st.level);
+    const { base } = await loadAvatarSums(tx, userId, serverId);
+    const m = rollMission(rng, st.level, base, slot);
     await tx.execute(sql`
       update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
-             duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
+             duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb,
+             required_sum = ${m.requiredSum}, rolled_at = now()
       where id = ${BigInt(offer.id)} and status = 'offer'
     `);
     const usedAfter = used < EXPEDITION_REFRESH_FREE_PER_DAY ? used + 1 : used;
@@ -173,7 +212,7 @@ export function startExpedition(
   serverId: number,
   slot: number,
   avatarProfileId: string,
-): Promise<{ completeAtIso: string; finalReward: ExpeditionReward; synergyBp: number }> {
+): Promise<{ completeAtIso: string; finalReward: ExpeditionReward; synergyBp: number; reqBonusBp: number }> {
   return db.transaction(async (tx) => {
     const st = await lockState(tx, userId, serverId);
     const today = kstDateString();
@@ -181,10 +220,10 @@ export function startExpedition(
     if (starts >= EXPEDITION_DAILY_STARTS) throw new ExpeditionError('START_LIMIT');
 
     const [offer] = (await tx.execute(sql`
-      select id::text, region, duration_ms::text, reward from expeditions
+      select id::text, region, duration_ms::text, reward, required_sum from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status = 'offer'
       for update
-    `)) as unknown as { id: string; region: string; duration_ms: string; reward: ExpeditionReward }[];
+    `)) as unknown as { id: string; region: string; duration_ms: string; reward: ExpeditionReward; required_sum: number }[];
     if (!offer) throw new ExpeditionError('NO_OFFER');
 
     // 아바타 소유 검증 + 장비 스냅샷(시너지 재료). 기본 아바타(isDefault)도 허용(시너지 0).
@@ -194,9 +233,16 @@ export function startExpedition(
     `)) as unknown as { equipment_snapshot: unknown }[];
     if (!av) throw new ExpeditionError('AVATAR_NOT_FOUND');
 
+    // 필요 강화 합(§3.3) — 배정 아바타 AS ≥ R. 시작 시점에만 검사(진행 중 하락은 무관).
+    const requiredSum = Number(offer.required_sum ?? 0);
+    if (requiredSum > 0) {
+      const { byId } = await loadAvatarSums(tx, userId, serverId);
+      if ((byId.get(avatarProfileId) ?? 0) < requiredSum) throw new ExpeditionError('REQ_NOT_MET');
+    }
     const synergy = synergyBpForSnapshot(av.equipment_snapshot, offer.region as never);
     const lvBonus = levelBonusBp(st.level);
-    const finalReward = applyMultiplier(offer.reward, synergy + lvBonus);
+    const reqBonus = reqBonusBp(requiredSum);
+    const finalReward = applyMultiplier(offer.reward, synergy + lvBonus + reqBonus);
 
     // 카운터 선차감(같은 tx — 실패 시 롤백으로 원복).
     await tx.execute(sql`
@@ -209,7 +255,7 @@ export function startExpedition(
       const [row] = (await tx.execute(sql`
         update expeditions
         set status = 'running', avatar_profile_id = ${avatarProfileId}::uuid,
-            synergy_bp = ${synergy}, level_bonus_bp = ${lvBonus},
+            synergy_bp = ${synergy}, level_bonus_bp = ${lvBonus}, req_bonus_bp = ${reqBonus},
             final_reward = ${JSON.stringify(finalReward)}::jsonb,
             started_at = now(),
             complete_at = now() + (duration_ms || ' milliseconds')::interval
@@ -224,7 +270,7 @@ export function startExpedition(
       if (isUniqueViolation(e)) throw new ExpeditionError('AVATAR_BUSY');
       throw e;
     }
-    return { completeAtIso, finalReward, synergyBp: synergy };
+    return { completeAtIso, finalReward, synergyBp: synergy, reqBonusBp: reqBonus };
   });
 }
 
