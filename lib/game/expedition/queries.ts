@@ -47,6 +47,16 @@ export type ExpeditionAvatar = {
   enhanceSum: number;
 };
 
+/** 파견 대성공 로그 한 줄(파견 페이지 하단 전용). */
+export type ExpeditionCritLog = {
+  nickname: string;
+  region: ExpeditionRegion;
+  hours: number;
+  diamond: number;
+  boxes: number;
+  atIso: string;
+};
+
 export type ExpeditionBoard = {
   level: number;
   xp: number;
@@ -60,12 +70,14 @@ export type ExpeditionBoard = {
   refreshCost: number;
   slots: ExpeditionBoardSlot[];
   avatars: ExpeditionAvatar[];
+  /** 서버 최근 대성공 10건 — 월드·길드 피드에는 미노출. */
+  critLog: ExpeditionCritLog[];
 };
 
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile, levelRows] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows, critRows] = await Promise.all([
     db.execute(sql`
       select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
              refresh_kst_day::text, refresh_today
@@ -112,6 +124,14 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
       where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}
     `) as unknown as Promise<{ key: string; lv: number }[]>,
+    db.execute(sql`
+      select coalesce(c.nickname, '대장장이') as nickname, e.detail, e.created_at
+      from world_events e
+      left join characters c on c.user_id = e.actor_user_id and c.server_id = e.server_id
+      where e.server_id = ${serverId} and e.type = 'expedition_crit'
+      order by e.created_at desc, e.id desc
+      limit 10
+    `) as unknown as Promise<{ nickname: string; detail: { region: ExpeditionRegion; hours: number; diamond: number; boxes: number }; created_at: string | Date }[]>,
   ]);
   const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
   const sumOf = (snapshot: unknown) => avatarEnhanceSum(snapshot, levelByKey);
@@ -169,6 +189,14 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
     refreshCost: EXPEDITION_REFRESH_COST,
     slots,
+    critLog: critRows.map((r) => ({
+      nickname: r.nickname,
+      region: r.detail.region,
+      hours: Number(r.detail.hours ?? 0),
+      diamond: Number(r.detail.diamond ?? 0),
+      boxes: Number(r.detail.boxes ?? 0),
+      atIso: new Date(r.created_at).toISOString(),
+    })),
     avatars: avatarRows.map((a) => ({
       id: a.id,
       face: faceOf(a),

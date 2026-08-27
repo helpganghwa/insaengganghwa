@@ -2,7 +2,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   claimExpedition,
-  completeNowExpedition,
   ensureOffers,
   refreshOffer,
   startExpedition,
@@ -187,7 +186,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     // 슬롯 2 확보(레벨 픽스처) 후 두 슬롯에 같은 아바타.
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     await testDb.execute(sql`
-      update expedition_state set level = 5 where user_id = ${uid}::uuid and server_id = ${SID}
+      update expedition_state set level = 10 where user_id = ${uid}::uuid and server_id = ${SID}
     `);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
@@ -195,13 +194,4 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await expect(startExpedition(uid, SID, 2, avatarId)).rejects.toMatchObject({ code: 'AVATAR_BUSY' });
   });
 
-  it('즉시 완료 — 남은 시간 환산 차감 후 수령 가능', async () => {
-    await ensureOffers(uid, SID, DIA_OFFER_RNG());
-    await startExpedition(uid, SID, 1, avatarId);
-    const { cost } = await completeNowExpedition(uid, SID, 1);
-    expect(cost).toBeGreaterThan(0); // 4h ≈ 240💎(1분=1💎)
-    const c = await claimExpedition(uid, SID, 1, seq([0])); // crit
-    expect(c.crit).toBe(true);
-    expect(c.reward.diamond! % 2).toBe(0); // ×2 — 시너지 반영 최종가의 짝수 배
-  });
 });

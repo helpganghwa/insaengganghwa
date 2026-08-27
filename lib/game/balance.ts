@@ -765,8 +765,8 @@ export function expeditionDifficultyDist(level: number): Record<ExpeditionDiffic
 
 /** 슬롯 해금(A′) — 기본 1칸, 이후 레벨 무료 오픈 또는 다이아 즉시 구매(이중 해금, sink). */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; level: number; diamond: number }[] = [
-  { slot: 2, level: 5, diamond: 1000 },
-  { slot: 3, level: 15, diamond: 2000 },
+  { slot: 2, level: 10, diamond: 1000 }, // 2026-08-27 5→10(≈2~4주): 다이아 해금이 실질 경로가 되도록
+  { slot: 3, level: 30, diamond: 2000 }, // 15→30(≈2개월)
 ] as const;
 
 /** 미션 새로고침 — 슬롯 단위 리롤(보상까지). 무료 소진 후 다이아(sink). */

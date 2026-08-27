@@ -107,8 +107,9 @@ describe('expedition engine — 레벨/슬롯', () => {
   });
   it('실효 슬롯 = max(구매, 레벨 해금) · 상한 3', () => {
     expect(effectiveSlots(0, 1)).toBe(1);
-    expect(effectiveSlots(5, 1)).toBe(2);
-    expect(effectiveSlots(15, 1)).toBe(3);
+    expect(effectiveSlots(9, 1)).toBe(1);
+    expect(effectiveSlots(10, 1)).toBe(2);
+    expect(effectiveSlots(30, 1)).toBe(3);
     expect(effectiveSlots(0, 3)).toBe(3);
     expect(effectiveSlots(50, 99)).toBe(3);
   });

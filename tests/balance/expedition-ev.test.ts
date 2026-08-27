@@ -126,10 +126,10 @@ describe('expedition balance invariants', () => {
     expect(expeditionDifficultyDist(5).grand).toBeGreaterThan(0);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(Lv5/1000·Lv15/2000, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(Lv10/1000·Lv30/2000, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
-      { slot: 2, level: 5, diamond: 1000 },
-      { slot: 3, level: 15, diamond: 2000 },
+      { slot: 2, level: 10, diamond: 1000 },
+      { slot: 3, level: 30, diamond: 2000 },
     ]);
     expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
     expect(EXPEDITION_REFRESH_COST).toBe(20);

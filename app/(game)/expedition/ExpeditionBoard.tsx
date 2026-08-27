@@ -11,7 +11,6 @@ import {
   EXPEDITION_DAILY_STARTS,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
-  GEM_TO_MS,
   type ExpeditionRegion, expeditionAsBonusBp } from '@/lib/game/balance';
 import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
@@ -19,7 +18,6 @@ import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 import {
   cancelExpeditionAction,
   claimExpeditionAction,
-  completeNowExpeditionAction,
   expeditionBoardAction,
   purchaseExpeditionSlotAction,
   refreshOfferAction,
@@ -30,7 +28,7 @@ import {
 /**
  * 파견 보드(클라) — 낙관적 UI 우선(사용자 지시 2026-08-25):
  *  - 모든 변이는 로컬 예측을 즉시 그리고, 액션 응답의 board(서버 정본)로 수렴한다(§11.7 nextJob 패턴).
- *  - 다이아 소모(유료 리롤·즉시완료·슬롯 구매)는 useDiamondGate.ensure 사전 체크 + optimisticAdjust.
+ *  - 다이아 소모(유료 리롤·슬롯 구매)는 useDiamondGate.ensure 사전 체크 + optimisticAdjust.
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
@@ -195,23 +193,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     );
   };
 
-  const doCompleteNow = (s: ExpeditionBoardSlot) => {
-    // eslint-disable-next-line react-hooks/purity -- 클릭 핸들러 실행 시점 계산(렌더 아님) — 비용은 서버가 재계산·캡
-    const remain = s.completeAtIso ? Math.max(0, Date.parse(s.completeAtIso) - Date.now()) : 0;
-    const cost = remain <= 0 ? 0 : Math.max(1, Math.ceil(remain / GEM_TO_MS));
-    if (cost > 0 && !gate.ensure(cost)) return;
-    if (cost > 0) optimisticAdjust(BigInt(-cost));
-    run(
-      s.slot,
-      (b) => ({
-        ...b,
-        slots: b.slots.map((x) => (x.slot === s.slot ? { ...x, completeAtIso: new Date().toISOString() } : x)),
-      }),
-      () => completeNowExpeditionAction(s.slot),
-      cost > 0 ? () => optimisticAdjust(BigInt(cost)) : undefined,
-    );
-  };
-
   const doCancel = (slot: number) => {
     setCancelFor(null);
     run(
@@ -307,11 +288,33 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
           }}
           onCancel={() => setCancelFor(s.slot)}
-          onCompleteNow={() => doCompleteNow(s)}
           onClaim={() => doClaim(s)}
           onPurchase={() => setPurchaseFor(s)}
         />
       ))}
+
+      {/* 대성공 로그(2026-08-27) — 서버 최근 10건, 파견 페이지 전용(월드·길드 피드 미노출). 자랑·강화 동기. */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+        <p className="mb-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-200">최근 대성공</p>
+        {board.critLog.length === 0 ? (
+          <p className="text-[11px] text-zinc-400">아직 대성공 기록이 없습니다.</p>
+        ) : (
+          <ul className="space-y-1">
+            {board.critLog.map((l, i) => (
+              <li key={`${l.atIso}-${i}`} className="flex items-baseline gap-1.5 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">
+                <span className="min-w-0 flex-1 truncate">
+                  <b className="text-zinc-800 dark:text-zinc-100">{l.nickname}</b>님이{' '}
+                  <span style={{ color: REGION_UI[l.region]?.color }}>{REGION_UI[l.region]?.label ?? l.region}</span> {l.hours}h 파견을{' '}
+                  <b className="text-amber-600 dark:text-amber-400">대성공</b>
+                  {l.diamond > 0 ? ` 💎${l.diamond.toLocaleString('ko-KR')}` : ''}
+                  {l.boxes > 0 ? ` 📦${l.boxes}` : ''}
+                </span>
+                <span className="shrink-0 text-[9.5px] text-zinc-400">{new Date(l.atIso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* 아바타 배정 시트 */}
       {assignFor?.region ? (
@@ -501,7 +504,6 @@ function SlotCard({
   onRefresh,
   onAssign,
   onCancel,
-  onCompleteNow,
   onClaim,
   onPurchase,
 }: {
@@ -510,7 +512,6 @@ function SlotCard({
   onRefresh: () => void;
   onAssign: () => void;
   onCancel: () => void;
-  onCompleteNow: () => void;
   onClaim: () => void;
   onPurchase: () => void;
 }) {
@@ -641,24 +642,14 @@ function SlotCard({
                     보상 수령
                   </button>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={onCancel}
-                      disabled={pending}
-                      className="rounded-lg bg-zinc-100 px-3 text-[11px] font-bold text-zinc-500 active:scale-95 dark:bg-zinc-800 dark:text-zinc-400"
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onCompleteNow}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-amber-500 text-[11px] font-extrabold text-amber-950 active:scale-[0.98]"
-                    >
-                      💎 {Math.max(1, Math.ceil(Math.max(0, (s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0)) / GEM_TO_MS)).toLocaleString('ko-KR')}로 즉시 완료
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    disabled={pending}
+                    className="flex-1 rounded-lg bg-zinc-100 text-[11px] font-bold text-zinc-500 active:scale-[0.98] dark:bg-zinc-800 dark:text-zinc-400"
+                  >
+                    파견 취소
+                  </button>
                 );
               }}
             </Ticker>

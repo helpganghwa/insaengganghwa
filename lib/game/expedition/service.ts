@@ -11,7 +11,6 @@ import {
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
-  GEM_TO_MS,
 } from '@/lib/game/balance';
 import {
   applyCrit,
@@ -268,7 +267,7 @@ export function startExpedition(
 
 /**
  * 취소 — running → cancelled. 보상 없음·일일 횟수 미반환(사용자 확정).
- * 완료(귀환) 후에는 취소 불가(적대 검수 5) — 즉시완료 지불·확정 보상을 실수로 태우는
+ * 완료(귀환) 후에는 취소 불가(적대 검수 5) — 확정 보상을 실수로 태우는
  * 자해 경로 차단(UI는 이미 숨기지만 클라 시계 오차·직접 호출 방어).
  */
 export function cancelExpedition(userId: string, serverId: number, slot: number): Promise<void> {
@@ -280,34 +279,6 @@ export function cancelExpedition(userId: string, serverId: number, slot: number)
       returning id
     `)) as unknown as unknown[];
     if (res.length === 0) throw new ExpeditionError('NOT_RUNNING');
-  });
-}
-
-/** 즉시 완료 — 남은 시간 전량 다이아 환산(강화와 동일 GEM_TO_MS, 원장 미기록 사유). */
-export function completeNowExpedition(
-  userId: string,
-  serverId: number,
-  slot: number,
-): Promise<{ cost: number }> {
-  return db.transaction(async (tx) => {
-    const [row] = (await tx.execute(sql`
-      select id::text, greatest(0, extract(epoch from (complete_at - now())) * 1000)::bigint::text as remain_ms
-      from expeditions
-      where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status = 'running'
-      for update
-    `)) as unknown as { id: string; remain_ms: string }[];
-    if (!row) throw new ExpeditionError('NOT_RUNNING');
-    const remain = Number(row.remain_ms);
-    const cost = remain <= 0 ? 0 : Math.max(1, Math.ceil(remain / GEM_TO_MS));
-    if (cost > 0) {
-      const paid = await walletTrySpend(tx, userId, serverId, cost, 'expedition_reduce');
-      if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
-      await tx.execute(sql`
-        update expeditions set complete_at = now(), reduced_ms = reduced_ms + ${remain}
-        where id = ${BigInt(row.id)} and status = 'running'
-      `);
-    }
-    return { cost };
   });
 }
 
@@ -332,11 +303,11 @@ export function claimExpedition(
   return db.transaction(async (tx) => {
     const st = await lockState(tx, userId, serverId);
     const [row] = (await tx.execute(sql`
-      select id::text, duration_ms::text, final_reward, complete_at <= now() as ready
+      select id::text, region, duration_ms::text, final_reward, complete_at <= now() as ready
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status = 'running'
       for update
-    `)) as unknown as { id: string; duration_ms: string; final_reward: ExpeditionReward; ready: boolean }[];
+    `)) as unknown as { id: string; region: string; duration_ms: string; final_reward: ExpeditionReward; ready: boolean }[];
     if (!row) throw new ExpeditionError('NOT_RUNNING');
     if (!row.ready) throw new ExpeditionError('NOT_READY');
 
@@ -368,6 +339,15 @@ export function claimExpedition(
     }
 
     const xpGained = Math.round(Number(row.duration_ms) / 3_600_000);
+    // 대성공 로그(2026-08-27) — 파견 페이지 하단 전용 사건. 월드 피드·채팅·연대기는 type으로 제외한다.
+    if (crit) {
+      const boxes = reward.boxes ? reward.boxes.weapon + reward.boxes.armor + reward.boxes.accessory : 0;
+      await tx.execute(sql`
+        insert into world_events (server_id, type, actor_user_id, detail)
+        values (${serverId}, 'expedition_crit', ${userId}::uuid,
+                ${JSON.stringify({ region: row.region, hours: xpGained, diamond: reward.diamond ?? 0, boxes })}::jsonb)
+      `);
+    }
     const next = applyExpeditionXp(st.level, BigInt(st.xp), xpGained);
     await tx.execute(sql`
       update expedition_state set level = ${next.level}, xp = ${next.xp}

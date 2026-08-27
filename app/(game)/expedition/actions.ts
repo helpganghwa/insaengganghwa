@@ -6,7 +6,6 @@ import { getActiveServerId } from '@/lib/game/servers';
 import {
   cancelExpedition,
   claimExpedition,
-  completeNowExpedition,
   ensureOffers,
   ExpeditionError,
   purchaseSlot,
@@ -81,19 +80,6 @@ export async function cancelExpeditionAction(slot: number): Promise<BoardResult>
     await cancelExpedition(c.userId, c.serverId, slot);
     await ensureOffers(c.userId, c.serverId);
     return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
-  } catch (e) {
-    return failOf(e);
-  }
-}
-
-export async function completeNowExpeditionAction(
-  slot: number,
-): Promise<({ ok: true; board: ExpeditionBoard; cost: number }) | Fail> {
-  const c = await ctx();
-  if (!c) return { ok: false, code: 'AUTH' };
-  try {
-    const { cost } = await completeNowExpedition(c.userId, c.serverId, slot);
-    return { ok: true, cost, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);
   }
