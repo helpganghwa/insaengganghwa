@@ -39,6 +39,8 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   referral_attributions: '1인 1회 잠금 — 지우면 탈퇴·재가입으로 추천 보상 무한 재지급(2026-07-22 주석)',
   patron_milestone_grants: '후원 구간 보상 원장(0175) — iap_orders와 동축 보존. 지우면 재가입 시 누적 결제 구간이 다시 지급됨',
   support_inquiries: '분쟁 추적(본문 보존·이미지만 파기 — 함수 내 update)',
+  raids: '레이드 엔티티 — 호스트 탈퇴 후에도 참가자를 위해 진행·정산 유지(2026-08-27). 호스트 표시는 characters 부재로 "탈퇴한 대장장이"',
+  raid_participants: '참가·피해 기록 — 페이즈 판정 원천(total_damage 합). PII 없음', raid_attacks: '공격 로그 — 피해 이력·감사. PII 없음',
   guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
   admin_mail_logs: '운영 발송 감사', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
   chat_messages: '공개 채널 7일 보존 정책(크론 정리) — 귓속말만 즉시 파기(0155 주석)',
@@ -67,15 +69,15 @@ export async function withdrawAccount(userId: string): Promise<void> {
 
   await db.transaction(async (tx) => {
     // FK 자식 → 부모 순서. 대부분 profiles FK라 상호 독립이나, 명시 의존만 순서 보장.
-    // 레이드: 자식(공격/참가/보상/요청/카운트) 먼저, 그다음 호스트 레이드(잔여 자식 cascade).
-    // 내가 초대받은 행(남의 레이드 소속)은 raids CASCADE가 못 지운다 — 명시 삭제(2026-08-13 감사).
+    // 레이드(2026-08-27 개편): raids·raid_participants·raid_attacks는 **지우지 않는다**. 페이즈 판정이
+    // 참가자 total_damage 합이라 호스트/참가자 기록을 지우면 진행 중 레이드의 체력이 되돌아가고, 호스트
+    // 레이드를 지우면 cascade로 다른 참가자의 참여·보상까지 증발했다(8/27 실측: 탈퇴 3건으로 7명이
+    // 일일 횟수만 소모·보상 0). 이 행들엔 PII가 없고 닉네임은 characters에서 해석되므로 캐릭터 삭제 후
+    // 화면에는 "탈퇴한 대장장이"로 남는다(채팅과 같은 규칙). 본인 귀속 파생 행(초대·보상·요청·카운트)만 정리.
     await tx.execute(sql`delete from raid_invites where invitee_user_id = ${uid} or inviter_user_id = ${uid}`);
-    await tx.execute(sql`delete from raid_attacks where user_id = ${uid}`);
-    await tx.execute(sql`delete from raid_participants where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);
-    await tx.execute(sql`delete from raids where host_user_id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
     // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.
