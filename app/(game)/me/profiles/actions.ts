@@ -6,6 +6,7 @@ import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
+import { flipProfileImage } from '@/lib/game/profile/flip';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -66,6 +67,23 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   // 도전 과제(0118) — 아바타 변경 마킹(멱등·best-effort).
   await markChallengeEvent(db, userId, serverId, 'avatar_change');
 
+  revalidatePath('/me');
+  revalidatePath('/me/profiles');
+  return { status: 'ok' };
+}
+
+/** 아바타 좌우 반전(본인) — 반전 PNG 저장·URL 교체(flip.ts). 재탭은 원본으로 복귀. */
+export async function flipProfile(profileId: string): Promise<ActionState> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  const serverId = await getActiveServerId();
+  const r = await flipProfileImage(userId, profileId, serverId);
+  if (r === 'NOT_FOUND') return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
+  if (r === 'FAILED') return { status: 'error', message: '반전에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
   revalidatePath('/me');
   revalidatePath('/me/profiles');
   return { status: 'ok' };

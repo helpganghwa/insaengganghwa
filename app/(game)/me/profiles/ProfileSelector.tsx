@@ -8,7 +8,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveProfile, deleteProfile } from './actions';
+import { setActiveProfile, deleteProfile, flipProfile } from './actions';
 
 type ProfileItem = {
   id: string;
@@ -67,6 +67,17 @@ export function ProfileSelector({
     });
   };
 
+  // 좌우 반전 — 서버가 반전 PNG로 URL을 바꾸고 revalidate 응답으로 prop이 갱신된다(§11.7).
+  const doFlip = () => {
+    if (pending) return;
+    startTransition(async () => {
+      const r = await flipProfile(selectedId);
+      if (r.status === 'error') return showError(r.message);
+      haptic.success();
+      showHeaderToast({ title: '아바타 좌우 반전' });
+    });
+  };
+
   const doDelete = () => {
     if (pending) return;
     setDeleteAsk(false);
@@ -90,6 +101,16 @@ export function ProfileSelector({
     <div className="space-y-4">
       {/* 선택된 캐릭터 정면 프리뷰(회전 미사용). */}
       <div className="relative rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+        {/* 좌우 반전 — 프리뷰 좌상단 코너(삭제와 대칭). */}
+        <button
+          type="button"
+          onClick={doFlip}
+          disabled={pending}
+          aria-label="선택한 아바타 좌우 반전"
+          className="absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-zinc-100 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
+        >
+          {pending ? '처리 중…' : '좌우 반전'}
+        </button>
         {/* 삭제 — 프리뷰 컨테이너 우상단 코너. 3s 재탭 컨펌(마지막 1개 숨김). */}
         {list.length > 1 ? (
           <button
