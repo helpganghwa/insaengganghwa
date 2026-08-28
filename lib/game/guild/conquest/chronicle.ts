@@ -339,6 +339,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 등수(1위·2위·순위·선두 등) 표현을 쓰지 않는다. 판도는 '가장 세력이 큰', '가장 넓은 영토를 지닌', '가장 강력한' 같은 질적 표현으로 서술한다.
 - 이름은 종류별 마커로 감싼다(강조용). 마커 안에는 이름 토큰만 넣고, 조사·'전역'·'일대' 같은 수식어는 마커 밖에 둔다.
   마커는 여는 중괄호 1개 + 닫는 중괄호 1개로 끝낸다(겹쳐 쓰지 말 것: {z|왕성}} 금지, {z|왕성} 만):
+  - 마커 안에 숫자 id를 쓰지 말 것({z|이름|18} 금지) — id는 시스템이 붙인다. 지난 기록에 id가 보여도 따라 쓰지 마라.
   - 길드 이름 → {g|이름}
   - 인물(사용자) 이름 → {u|이름}
   - 개별 구역 이름 → {z|이름}   (예: {z|왕성}, {z|대성당}, {z|성문})
@@ -874,8 +875,10 @@ export async function generateAndStoreChronicle(
   // 이름만으로는 옛 기록이 동명의 다른 길드를 가리킨다. 3필드는 재적용해도 무해(정규식이 비껴감).
   // 현존하지 않는 길드(해산)는 id 0 — '이 이름은 이미 사라진 길드'를 못 박는 센티널이다.
   // 2필드로 남기면 나중에 같은 이름의 길드가 생겼을 때 옛 기록이 그쪽으로 링크된다.
+  // ⚠ 모델이 id까지 붙여 출력하는 경우({g|이름|18})가 있어(2026-08-28 '독안개 골'에 얼어붙은 샘 id) 기존 id는 무시하고
+  // 이름 기준으로 항상 다시 매긴다 — 이 함수는 오늘 본문·헤드라인(모델 출력)에만 적용된다.
   const enrichGuildMarkers = (s: string): string =>
-    s.replace(/\{g\|([^}|]+)\}/g, (_mm, n: string) => {
+    s.replace(/\{g\|([^}|]+)(?:\|\d+)?\}/g, (_mm, n: string) => {
       const name = n.trim();
       return `{g|${name}|${guildRefByName.get(name)?.id ?? 0}}`;
     });
@@ -883,10 +886,11 @@ export async function generateAndStoreChronicle(
   // 기록의 이름이 지도와 어긋나고, 리플레이 연출 트리거(구역명 매칭)도 함께 끊긴다. id를 달아
   // 표시는 현재 이름으로 해소하고 트리거는 id로 건다. 미해결(삭제된 구역)은 이름만 남긴다.
   const enrichZoneMarkers = (s: string): string =>
-    s.replace(/\{z\|([^}|]+)\}/g, (mm, n: string) => {
+    s.replace(/\{z\|([^}|]+)(?:\|\d+)?\}/g, (mm, n: string) => {
       const name = n.trim();
       const id = idByName.get(name);
-      return id != null ? `{z|${name}|${id}}` : mm;
+      // 모델이 붙인 id는 신뢰하지 않는다 — 이름으로 해소되면 그 id, 안 되면 이름만 남긴다.
+      return id != null ? `{z|${name}|${id}}` : `{z|${name}}`;
     });
   const enrichMarkers = (s: string) => enrichZoneMarkers(enrichGuildMarkers(enrichUserMarkers(s)));
 
