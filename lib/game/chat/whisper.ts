@@ -419,7 +419,9 @@ export async function listWhisperMessages(
            or (b.user_id = ${peerUserId}::uuid and b.blocked_user_id = ${userId}::uuid)
       )
       ${beforeId === undefined ? sql`` : sql`and id < ${beforeId}::bigint`}
-    order by id desc
+    -- ⚠ 테이블 컬럼으로 한정(2026-08-28 사고): select에 id::text as id 별칭이 있어 "order by id"가 출력 컬럼(텍스트)을
+    -- 잡아 문자열 정렬("6" > "210")이 됐다 — id가 세 자리로 넘어간 날부터 스레드 순서가 뒤섞임.
+    order by whisper_messages.id desc
     limit ${WHISPER_PAGE_SIZE}
   `)) as unknown as MessageRow[];
   return rows.reverse().map((r) => ({
