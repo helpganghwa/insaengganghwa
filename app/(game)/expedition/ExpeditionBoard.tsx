@@ -555,7 +555,7 @@ function CardBody({
           <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
             {ui.label}
           </b>
-          <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-extrabold text-white">
+          <span className="text-[10px] font-extrabold text-white drop-shadow">
             {HOUR_MOON[hours] ?? '🌑'} {hours}시간
           </span>
         </div>
