@@ -31,14 +31,8 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
-/** 시간 라벨 — 시간별 고유색(지역색과 비충돌). */
-const HOUR_CLS: Record<number, string> = {
-  // 시간별로 다른 색 — 지역색(초록·주황·노랑·파랑·빨강·보라)과 겹치지 않는 4색(2026-08-28): 흰·청록·분홍·반전.
-  4: 'bg-white/20 text-zinc-100',
-  8: 'bg-cyan-400/25 text-cyan-200',
-  12: 'bg-pink-400/25 text-pink-200',
-  24: 'bg-white text-zinc-900',
-};
+/** 시간 표시 — 달 아이콘(🌘→🌕)으로 길이를 표현(M6, 2026-08-28). 색은 흰색 단일이라 지역색과 충돌 없음. */
+const HOUR_MOON: Record<number, string> = { 4: '🌘', 8: '🌗', 12: '🌖', 24: '🌕' };
 
 /** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
 const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
@@ -533,7 +527,6 @@ function CardBody({
   children?: React.ReactNode;
 }) {
   const ui = REGION_UI[region];
-  const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
   const avH = compact ? 64 : 86;
   const monH = compact ? 48 : 62;
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
@@ -555,7 +548,9 @@ function CardBody({
           <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
             {ui.label}
           </b>
-          <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+          <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-extrabold text-white">
+            {HOUR_MOON[hours] ?? '🌑'} {hours}시간
+          </span>
         </div>
       )}
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
