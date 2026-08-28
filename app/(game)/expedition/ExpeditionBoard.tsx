@@ -13,7 +13,13 @@ import {
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
-  type ExpeditionRegion, expeditionAsBonusBp } from '@/lib/game/balance';
+  type ExpeditionRegion, expeditionAsBonusBp,
+  EXPEDITION_DIFFICULTIES,
+  EXPEDITION_DIFFICULTY_DIST_BP,
+  EXPEDITION_DIFFICULTY_HOURS,
+  EXPEDITION_LEVEL_MAX,
+  EXPEDITION_CRIT_MULT,
+  expeditionCritBp, } from '@/lib/game/balance';
 import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
@@ -31,6 +37,11 @@ import {
  *  - 다이아 소모(유료 리롤·슬롯 구매)는 useDiamondGate.ensure 사전 체크 + optimisticAdjust.
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
+
+/** 레벨 구간표 — EXPEDITION_DIFFICULTY_DIST_BP(minLevel 내림차순)를 오름차순 구간 [min, max]로. */
+const LEVEL_BANDS = [...EXPEDITION_DIFFICULTY_DIST_BP]
+  .sort((a, b) => a.minLevel - b.minLevel)
+  .map((b, i, arr) => ({ min: b.minLevel, max: i + 1 < arr.length ? arr[i + 1]!.minLevel - 1 : EXPEDITION_LEVEL_MAX, dist: b.dist }));
 
 /** 시간 표시 — 달 아이콘(🌘→🌕)으로 길이를 표현(M6, 2026-08-28). 색은 흰색 단일이라 지역색과 충돌 없음. */
 const HOUR_MOON: Record<number, string> = { 4: '🌘', 8: '🌗', 12: '🌖', 24: '🌕' };
@@ -132,6 +143,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   );
 
   const [refreshAsk, setRefreshAsk] = useState(false);
+  const [levelInfo, setLevelInfo] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   /** 전체 새로고침(2026-08-28) — 미배정 슬롯 전부 리롤, 진행 중 제외. 횟수 1회 차감. */
   const doRefreshAll = () => {
@@ -242,27 +254,27 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
   return (
     <div className="space-y-2.5">
-      {/* 헤더 — 스탯 칩 4 + XP 바(2026-08-28 UI 개편) */}
-      <div className="grid grid-cols-4 gap-1.5">
-        {[
-          ['Lv', String(board.level)],
-          ['대성공', `${(board.critBp / 100).toFixed(1)}%`],
-          ['합산 강화', board.enhanceSum.toLocaleString('ko-KR')],
-        ].map(([k, v]) => (
-          <div key={k} className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
-            <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{k}</span>
-            <b className="text-[13px] leading-tight text-zinc-800 dark:text-zinc-50">{v}</b>
-          </div>
-        ))}
-        {/* 새로고침 — 미배정 슬롯 전체 리롤 버튼(진행 중 제외). 무료 잔여/비용 표기. */}
+      {/* 헤더(H1, 2026-08-28) — 한 줄: Lv 알약(탭→레벨별 확률 표 팝업) · 대성공 · 새로고침 버튼 + XP 바. 합산 강화 칩은 제거(잠금 카드에 표시). */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setLevelInfo(true)}
+          className="flex h-8 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 text-[11.5px] text-zinc-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        >
+          파견 <b className="text-zinc-900 dark:text-zinc-50">Lv.{board.level}</b>
+          <span className="ml-0.5 text-zinc-400">›</span>
+        </button>
+        <span className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700" />
+        <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+          대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
+        </span>
         <button
           type="button"
           onClick={() => setRefreshAsk(true)}
           disabled={pendingSlot !== null || !board.slots.some((x) => x.state === 'offer')}
-          className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-amber-300 bg-amber-50 active:scale-95 disabled:opacity-40 dark:border-amber-500/40 dark:bg-amber-500/10"
+          className="ml-auto h-8 rounded-xl border border-amber-300 bg-amber-50 px-3 text-[10.5px] font-bold text-amber-800 active:scale-95 disabled:opacity-40 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
         >
-          <span className="text-[9px] text-amber-700 dark:text-amber-300">새로고침</span>
-          <b className="text-[13px] leading-tight text-amber-800 dark:text-amber-200">{board.freeRefreshLeft > 0 ? `무료 ${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}</b>
+          새로고침 <b>{board.freeRefreshLeft > 0 ? `무료 ${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}</b>
         </button>
       </div>
       <div className="flex items-center gap-2 px-0.5">
@@ -271,7 +283,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </div>
         <span className="text-[10px] text-zinc-400 dark:text-zinc-500">다음 레벨 {Math.max(0, board.xpNext - board.xp)} XP</span>
       </div>
-
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
@@ -388,6 +399,60 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
+
+      {/* 레벨별 확률 표(H1) — 공시 상수(EXPEDITION_DIFFICULTY_DIST_BP·expeditionCritBp)와 1:1 */}
+      {levelInfo ? (
+        <ModalShell onClose={() => setLevelInfo(false)} label="파견 레벨">
+          <ModalLayout
+            title={`파견 Lv.${board.level}`}
+            subtitle="레벨별 대성공 확률 · 파견 시간 출현 확률"
+            bodyPad="sm"
+            footer={
+              <ModalButton tone="contrast" onClick={() => setLevelInfo(false)}>
+                닫기
+              </ModalButton>
+            }
+          >
+            <table className="w-full border-collapse text-center text-[10.5px]">
+              <thead>
+                <tr className="text-zinc-400">
+                  <th className="border-b border-zinc-200 py-1 text-left font-semibold dark:border-zinc-800">파견 레벨</th>
+                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">대성공</th>
+                  {EXPEDITION_DIFFICULTIES.map((d) => (
+                    <th key={d} className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">
+                      {HOUR_MOON[EXPEDITION_DIFFICULTY_HOURS[d]]} {EXPEDITION_DIFFICULTY_HOURS[d]}h
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {LEVEL_BANDS.map((b) => {
+                  const now = board.level >= b.min && board.level <= b.max;
+                  return (
+                    <tr key={b.min} className={now ? 'bg-amber-500/10 text-amber-700 dark:text-amber-200' : 'text-zinc-700 dark:text-zinc-300'}>
+                      <td className="py-1.5 text-left font-bold">
+                        {b.max >= EXPEDITION_LEVEL_MAX ? `${b.min}+` : `${b.min}~${b.max}`}
+                        {now ? <span className="ml-1 text-[9px] font-extrabold text-amber-600 dark:text-amber-400">현재</span> : null}
+                      </td>
+                      <td className="py-1.5">
+                        {(expeditionCritBp(b.min) / 100).toFixed(1)}~{(expeditionCritBp(b.max) / 100).toFixed(1)}%
+                      </td>
+                      {EXPEDITION_DIFFICULTIES.map((d) => (
+                        <td key={d} className="py-1.5">
+                          {Math.round(b.dist[d] / 100)}%
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-2 text-center text-[10.5px] text-zinc-500 dark:text-zinc-400">
+              대성공은 보상을 {EXPEDITION_CRIT_MULT}배 지급합니다. 긴 파견일수록 보상이 큽니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
 
       {/* 전체 새로고침 확인 */}
       {refreshAsk ? (
