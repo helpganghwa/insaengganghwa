@@ -3,6 +3,7 @@
 import { useCallback, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { useResourceToast } from '@/components/ResourceToast';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { useDiamondActions } from '@/components/DiamondContext';
@@ -47,12 +48,13 @@ const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
   angel: { color: '#c084fc', label: '타락 천사 부유섬' },
 };
 
+/** 남은 시간 — 강화 카드(fmtRemaining)와 같은 표기: "5시간 12분 48초" / "12분 48초" / "48초". */
 function fmtRemain(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
+  const s = Math.max(0, Math.ceil(ms / 1000));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+  return h > 0 ? `${h}시간 ${m}분 ${sec}초` : m > 0 ? `${m}분 ${sec}초` : `${sec}초`;
 }
 
 function RewardLine({ r, strong }: { r: ExpeditionReward; strong?: boolean }) {
@@ -102,19 +104,19 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const assignFor = assignSlot === null ? null : (board.slots.find((x) => x.slot === assignSlot) ?? null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const { optimisticAdjust } = useDiamondActions();
   const gate = useDiamondGate();
 
+  const toast = useResourceToast();
+  // 공용 헤더 토스트(ResourceToast) — 페이지 전용 토스트 금지(2026-08-28).
   const showError = (code: string) => {
     const msg: Record<string, string> = {
       AVATAR_BUSY: '이미 파견 중인 아바타예요',
       INSUFFICIENT_DIAMOND: '다이아가 부족해요',
       NOT_READY: '아직 귀환하지 않았어요',
     };
-    setError(msg[code] ?? '잠시 후 다시 시도해주세요');
-    setTimeout(() => setError(null), 2500);
+    toast.showError(msg[code] ?? '잠시 후 다시 시도해주세요');
   };
 
   /** 액션 공통 — 실패 시 서버 보드 재동기 + undo(다이아 낙관 선반영 역보정, 적대 검수 4). */
@@ -223,8 +225,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const onCardTap = (s: ExpeditionBoardSlot) => {
     if (pendingSlot === s.slot) return;
     if (s.state === 'locked') {
-      setError(`합산 강화 ${(s.unlock?.enhanceSum ?? 0).toLocaleString('ko-KR')} 달성 시 열려요`);
-      setTimeout(() => setError(null), 2000);
+      toast.showHeaderToast({ title: `합산 강화 ${(s.unlock?.enhanceSum ?? 0).toLocaleString('ko-KR')} 달성 시 열려요` });
       return;
     }
     if (s.state === 'offer') {
@@ -261,12 +262,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <span className="text-[10px] text-zinc-400 dark:text-zinc-500">다음 레벨 {Math.max(0, board.xpNext - board.xp)} XP</span>
       </div>
 
-      {/* 에러 — 목록을 밀지 않는 하단 고정 토스트(레이아웃 시프트 0 규칙) */}
-      {error ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-6">
-          <span className="rounded-full bg-red-600/95 px-4 py-2 text-[11.5px] font-bold text-white shadow-lg">{error}</span>
-        </div>
-      ) : null}
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
@@ -447,8 +442,8 @@ function CardBody({
 }) {
   const ui = REGION_UI[region];
   const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
-  const avH = compact ? 56 : 72;
-  const monH = compact ? 40 : 52;
+  const avH = compact ? 60 : 80;
+  const monH = compact ? 44 : 56;
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
   return (
     <div
@@ -461,17 +456,17 @@ function CardBody({
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
-      {/* 헤더 24px — 중앙 지역명 · 시간 칩 */}
-      <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
+      {/* 헤더 — 지역명(좌우 중앙) + 그 아래 시간(작게) */}
+      <div className="relative flex h-[30px] flex-col items-center justify-center px-2.5 leading-none">
         <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
-        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+        <span className={`mt-0.5 rounded px-1 text-[9px] font-black leading-[12px] ${hc}`}>{hours}시간</span>
       </div>
-      {/* 본문 — 좌 [배율 배지 위 + 전신] / 중앙 [보상 크게 + 상태 작게] / 우 [XP 배지 위 + 몬스터] */}
-      <div className={`relative -mt-2 flex items-center justify-between px-2.5 ${compact ? 'h-[80px]' : 'h-[88px]'}`}>
-        <span className={`flex flex-none flex-col items-center justify-center gap-1 ${compact ? 'w-16' : 'w-[86px]'}`}>
-          <span className={`h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-sky-400 ${bonusText ? '' : 'invisible'}`}>
+      {/* 본문 — 좌 [배율(텍스트) 위 + 전신] / 중앙 [보상 크게 · 카드 정중앙 + 상태 작게] / 우 [XP(텍스트) 위 + 몬스터] */}
+      <div className={`relative -mt-[14px] flex items-center justify-between px-2.5 ${compact ? 'h-[84px]' : 'h-[92px]'}`}>
+        <span className={`flex flex-none flex-col items-center justify-center gap-0.5 ${compact ? 'w-16' : 'w-[86px]'}`}>
+          <span className={`h-[14px] text-[10px] font-black leading-[14px] text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>
             {bonusText ?? '—'}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -483,12 +478,13 @@ function CardBody({
             style={{ height: avH, width: 'auto', imageRendering: 'pixelated' }}
           />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
+        {/* 보상 줄(h-7)의 중심이 카드 세로 정중앙(56px)에 오도록 — 헤더 겹침 보정 후 블록 상단 패딩으로 맞춘다. */}
+        <div className={`flex min-w-0 flex-1 flex-col items-center justify-center text-center ${compact ? 'pt-[14px]' : 'pt-[18px]'}`}>
           <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
           <span className={`block h-[18px] w-full truncate text-[11px] font-bold leading-[18px] drop-shadow ${statusCls ?? 'text-zinc-200'}`}>{status}</span>
         </div>
-        <span className={`flex flex-none flex-col items-center justify-center gap-1 ${compact ? 'w-16' : 'w-[86px]'}`}>
-          <span className="h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-zinc-200">+{hours} XP</span>
+        <span className={`flex flex-none flex-col items-center justify-center gap-0.5 ${compact ? 'w-16' : 'w-[86px]'}`}>
+          <span className="h-[14px] text-[10px] font-black leading-[14px] text-zinc-200 drop-shadow">+{hours} XP</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
@@ -523,15 +519,15 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
       >
         {/* dim 레이어 — 보더 영역까지 덮도록 -inset-px(2026-08-28) */}
         <div className="pointer-events-none absolute -inset-px rounded-xl bg-black/60" />
-        <div className="relative flex h-6 items-center justify-center px-2.5">
+        <div className="relative flex h-[30px] items-center justify-center px-2.5">
           <b className="text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
         </div>
-        <div className="relative -mt-2.5 flex h-[88px] items-center justify-between px-2.5">
+        <div className="relative -mt-[14px] flex h-[92px] items-center justify-between px-2.5">
           <span className="flex w-[86px] justify-center text-[22px]">🔒</span>
           <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
-            <b className="block h-[26px] text-[17px] font-black leading-[26px] text-white">{need.toLocaleString('ko-KR')}</b>
-            <span className="block h-5 text-[13px] font-extrabold leading-5 text-white">합산 강화 달성 시 오픈</span>
-            <span className="block h-4 text-[11px] font-bold leading-4 text-zinc-200">현재 {enhanceSum.toLocaleString('ko-KR')}</span>
+            <b className="block h-6 text-[15px] font-black leading-6 text-white">{need.toLocaleString('ko-KR')}</b>
+            <span className="block h-4 text-[11px] font-extrabold leading-4 text-zinc-100">합산 강화 달성 시 오픈</span>
+            <span className="block h-3.5 text-[9.5px] font-bold leading-[14px] text-zinc-300">현재 {enhanceSum.toLocaleString('ko-KR')}</span>
           </div>
           <div className="flex w-[86px] flex-col items-center gap-1">
             <div className="h-1 w-[70px] overflow-hidden rounded-full bg-zinc-700">
