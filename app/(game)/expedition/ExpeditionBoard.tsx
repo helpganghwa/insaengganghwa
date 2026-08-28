@@ -30,12 +30,13 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
-/** 시간 라벨 색 — 길수록 뜨겁게(4h 초록→24h 빨강, 난이도색 계승 — 사용자 확정). */
+/** 시간 라벨 — 길수록 진하게(무채색 농도). */
 const HOUR_CLS: Record<number, string> = {
-  4: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  8: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
-  12: 'bg-orange-500/15 text-orange-600 dark:text-orange-400',
-  24: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  // 지역색(초록/주황/노랑/파랑/빨강/보라)과 겹치지 않도록 무채색 농도로 난이도 표현(2026-08-28).
+  4: 'bg-white/15 text-zinc-200',
+  8: 'bg-white/30 text-white',
+  12: 'bg-white/55 text-zinc-900',
+  24: 'bg-white text-zinc-900',
 };
 
 /** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
@@ -493,8 +494,9 @@ function CardBody({
           />
         </span>
       </span>
-      {/* 중앙 — 보상 크게(카드 정중앙) + 그 아래 상태(작게, 조금 더 아래) */}
-      <div className={`relative mx-auto flex flex-col items-center justify-center text-center ${compact ? 'h-[80px] w-[calc(100%-148px)] pt-[12px]' : 'h-[88px] w-[calc(100%-192px)] pt-[16px]'}`}>
+      {/* 중앙 — 카드 전체 기준 정중앙: 블록(보상 28 + 간격 4 + 상태 16 = 48)을 카드에 수직 중앙 정렬하고
+          상단 패딩 20으로 보상 줄 중심(=14+20)이 블록 중심(=34)에 오게 → 보상이 정확히 카드 세로 중앙. */}
+      <div className={`absolute inset-y-0 flex flex-col items-center justify-center text-center pt-[20px] ${compact ? 'left-[74px] right-[74px]' : 'left-[96px] right-[96px]'}`}>
         <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
         <span className={`mt-1 block h-4 w-full truncate text-[10px] font-bold leading-4 drop-shadow ${statusCls ?? 'text-white'}`}>{status}</span>
       </div>
@@ -562,7 +564,7 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
                 hours={hours}
                 avatarSouth={s.avatarSouth ?? null}
                 reward={s.reward}
-                status={done ? '파견 완료' : <span className="tabular-nums">완료까지 {fmtRemain(remain)}</span>}
+                status={done ? '파견 완료' : <span className="tabular-nums">파견 완료까지 {fmtRemain(remain)}</span>}
                 statusCls={done ? 'text-emerald-400' : 'text-white'}
                 bonusText={`×${(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`}
                 progress={progress}
