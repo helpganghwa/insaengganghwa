@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useState, useTransition, useEffect } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -67,14 +67,6 @@ function fmtRemain(ms: number): string {
 }
 
 
-function boxDetail(r: ExpeditionReward): string {
-  if (!r.boxes) return '';
-  const p: string[] = [];
-  if (r.boxes.weapon) p.push(`무기 ${r.boxes.weapon}`);
-  if (r.boxes.armor) p.push(`방어구 ${r.boxes.armor}`);
-  if (r.boxes.accessory) p.push(`장신구 ${r.boxes.accessory}`);
-  return p.join(' · ');
-}
 
 /** 클라 강화 배율 미리보기 — engine.asBonusBp와 동일 산식(표시 전용, 권위는 서버). */
 function enhanceBonusOf(avatarSum: number): number {
@@ -482,14 +474,14 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
-      {/* 수령 팝업(E2, 2026-08-28) — 귀환 미니 카드(같은 그림) + 보상·XP 2칸. 대성공은 서버 판정이라 응답 후 표시 */}
+      {/* 수령 팝업(C3, 2026-08-28) — 부위별 상자 칸 + 💎 칸 + XP 칸이 순서대로 튀어나오며 숫자가 올라간다. 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (
         <ModalShell onClose={() => setClaimPopup(null)} label="파견 귀환">
           <ModalLayout
             title={claimPopup.crit ? '✨ 대성공!' : '파견 귀환'}
             subtitle={
               <>
-                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 원정대가 돌아왔습니다
+                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> · {claimPopup.hours}시간 원정대가 돌아왔습니다
               </>
             }
             bodyPad="sm"
@@ -499,30 +491,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               </ModalButton>
             }
           >
-            <CardBody
-              region={claimPopup.region}
-              hours={claimPopup.hours}
-              avatarSouth={claimPopup.avatarSouth}
-              reward={claimPopup.reward}
-              status={claimPopup.crit ? '대성공 · 보상 2배' : '파견 완료'}
-              statusCls={claimPopup.crit ? 'text-amber-300' : 'text-emerald-400'}
-              bonusText={claimPopup.bonusText}
-              progress={1}
-              compact
-              hideHeader
-            />
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="flex h-[58px] flex-col items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <b className="text-[17px] text-zinc-900 dark:text-zinc-50">{rewardShort(claimPopup.reward) || '—'}</b>
-                <span className="h-4 text-[10px] text-zinc-500 dark:text-zinc-400">{claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : '다이아 지급'}</span>
-              </div>
-              <div className="flex h-[58px] flex-col items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <b className="text-[17px] text-zinc-900 dark:text-zinc-50">+{claimPopup.xpGained} XP</b>
-                <span className={`h-4 text-[10px] ${claimPopup.levelUp ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                  {claimPopup.levelUp ? `파견 Lv.${claimPopup.level} 달성!` : `파견 Lv.${claimPopup.level}`}
-                </span>
-              </div>
-            </div>
+            <ClaimItems popup={claimPopup} />
           </ModalLayout>
         </ModalShell>
       ) : null}
@@ -677,6 +646,76 @@ function CardBody({
         <div className={`absolute bottom-0 left-0 h-1 ${gaugeCls}`} style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }} />
       ) : null}
       {children}
+    </div>
+  );
+}
+
+/** 숫자 카운트업(0.6s, easeOut) — prefers-reduced-motion이면 즉시 최종값. */
+const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function useCountUp(target: number, delayMs: number): number {
+  const [v, setV] = useState(() => (prefersReducedMotion() ? target : 0));
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    let raf = 0;
+    let start = 0;
+    const dur = 600;
+    const t0 = setTimeout(() => {
+      const step = (t: number) => {
+        if (!start) start = t;
+        const k = Math.min(1, (t - start) / dur);
+        const e = 1 - Math.pow(1 - k, 3);
+        setV(Math.round(target * e));
+        if (k < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, delayMs);
+    return () => {
+      clearTimeout(t0);
+      cancelAnimationFrame(raf);
+    };
+  }, [target, delayMs]);
+  return v;
+}
+
+function ClaimCell({ icon, value, label, delayMs, gold, prefix = '×' }: { icon: string; value: number; label: string; delayMs: number; gold?: boolean; prefix?: string }) {
+  const n = useCountUp(value, delayMs);
+  return (
+    <div
+      className={`exp-pop flex h-[78px] flex-col items-center justify-center gap-0.5 rounded-xl border ${
+        gold ? 'border-amber-400/70 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
+      }`}
+      style={{ animationDelay: `${delayMs}ms` }}
+    >
+      <span className={`text-[22px] leading-none ${gold ? 'text-amber-400' : ''}`}>{icon}</span>
+      <b className={`text-[14px] tabular-nums leading-tight ${gold ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-900 dark:text-zinc-50'}`}>
+        {prefix}{n.toLocaleString('ko-KR')}
+      </b>
+      <span className={`text-[9.5px] leading-tight ${gold ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'}`}>{label}</span>
+    </div>
+  );
+}
+
+/** C3 — 받은 것만 칸으로: 상자(부위별, 0은 생략) · 💎 · XP. 대성공 안내는 칸 아래 한 줄(고정 높이). */
+function ClaimItems({ popup }: { popup: ClaimPopup }) {
+  const cells: { icon: string; value: number; label: string; gold?: boolean; prefix?: string }[] = [];
+  const b = popup.reward.boxes;
+  if (b?.weapon) cells.push({ icon: '📦', value: b.weapon, label: '무기' });
+  if (b?.armor) cells.push({ icon: '📦', value: b.armor, label: '방어구' });
+  if (b?.accessory) cells.push({ icon: '📦', value: b.accessory, label: '장신구' });
+  if (popup.reward.diamond) cells.push({ icon: '💎', value: popup.reward.diamond, label: '다이아', prefix: '' });
+  cells.push({ icon: '✦', value: popup.xpGained, label: popup.levelUp ? `Lv.${popup.level} 달성!` : `파견 Lv.${popup.level}`, gold: popup.levelUp, prefix: '+' });
+  const cols = Math.min(5, Math.max(2, cells.length));
+  return (
+    <div>
+      <style>{`@keyframes exp-pop{0%{opacity:0;transform:scale(.6) translateY(6px)}60%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}.exp-pop{opacity:0;animation:exp-pop .42s cubic-bezier(.2,.9,.3,1.2) forwards}@media(prefers-reduced-motion:reduce){.exp-pop{opacity:1;animation:none}}`}</style>
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        {cells.map((c, i) => (
+          <ClaimCell key={`${c.label}-${i}`} icon={c.icon} value={c.value} label={c.label} delayMs={120 + i * 110} gold={c.gold} prefix={c.prefix} />
+        ))}
+      </div>
+      <p className={`mt-2 h-4 text-center text-[11px] font-bold ${popup.crit ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'}`}>
+        {popup.crit ? '대성공으로 수량이 2배가 됐어요' : '·'}
+      </p>
     </div>
   );
 }
