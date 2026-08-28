@@ -410,10 +410,10 @@ const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
 const GHOST_SRC = '/sprites/default/male/south.png';
 
 /**
- * 카드 본문(2026-08-28 UI 개편 v10) — 112px = 헤더 24(중앙 지역명 · 시간) + 본문 88(정중앙 정렬).
- * 좌: 배율 배지(위) + 원정대원 전신 72px(미배정은 실루엣·배지 자리 유지) / 중앙: 보상 크게(19px) + 상태 작게
- * (파견 대기 · 타이머 · 파견 완료, 11px) — 고정 높이라 상태 전환 시 시프트 0 / 우: XP 배지(위) + 지역 몬스터 52px(반전).
- * 하단 보더에 진행 게이지(강화 카드 문법). 취소 기능 없음.
+ * 카드 본문(2026-08-28 UI 개편 v12) — 112px. 헤더 24(중앙 지역명 · 시간 칩). 좌·우 열은 절대 배치로 카드 전체
+ * 높이를 쓴다(헤더 침범 허용): 첫 24px에 배율(×1.55)/XP 텍스트를 헤더 라인에 맞추고, 아래 공간에 전신 아바타
+ * 86px / 몬스터 62px. 중앙: 보상 크게(19px, 카드 정중앙) + "완료까지 N시간 N분 N초"(흰색 10px, 조금 아래).
+ * 전부 고정 높이 — 상태 전환 시 시프트 0. 하단 보더 진행 게이지(강화 문법). 취소 기능 없음.
  */
 function CardBody({
   region,
@@ -445,8 +445,8 @@ function CardBody({
 }) {
   const ui = REGION_UI[region];
   const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
-  const avH = compact ? 60 : 80;
-  const monH = compact ? 44 : 56;
+  const avH = compact ? 64 : 86;
+  const monH = compact ? 48 : 62;
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
   return (
     <div
@@ -459,19 +459,17 @@ function CardBody({
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
-      {/* 헤더 — 지역명(좌우 중앙) + 그 아래 시간(작게) */}
-      <div className="relative flex h-[30px] flex-col items-center justify-center px-2.5 leading-none">
+      {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
+      <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
         <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
-        <span className={`mt-0.5 rounded px-1 text-[9px] font-black leading-[12px] ${hc}`}>{hours}시간</span>
+        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
-      {/* 본문 — 좌 [배율(텍스트) 위 + 전신] / 중앙 [보상 크게 · 카드 정중앙 + 상태 작게] / 우 [XP(텍스트) 위 + 몬스터] */}
-      <div className={`relative -mt-[14px] flex items-center justify-between px-2.5 ${compact ? 'h-[84px]' : 'h-[92px]'}`}>
-        <span className={`flex flex-none flex-col items-center justify-center gap-0.5 ${compact ? 'w-16' : 'w-[86px]'}`}>
-          <span className={`h-[14px] text-[10px] font-black leading-[14px] text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>
-            {bonusText ?? '—'}
-          </span>
+      {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
+      <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+        <span className={`flex h-6 items-center text-[10px] font-black text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>{bonusText ?? '—'}</span>
+        <span className="flex flex-1 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarSouth ?? GHOST_SRC}
@@ -481,13 +479,10 @@ function CardBody({
             style={{ height: avH, width: 'auto', imageRendering: 'pixelated' }}
           />
         </span>
-        {/* 보상 줄(h-7)의 중심이 카드 세로 정중앙(56px)에 오도록 — 헤더 겹침 보정 후 블록 상단 패딩으로 맞춘다. */}
-        <div className={`flex min-w-0 flex-1 flex-col items-center justify-center text-center ${compact ? 'pt-[14px]' : 'pt-[18px]'}`}>
-          <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
-          <span className={`block h-[18px] w-full truncate text-[11px] font-bold leading-[18px] drop-shadow ${statusCls ?? 'text-zinc-200'}`}>{status}</span>
-        </div>
-        <span className={`flex flex-none flex-col items-center justify-center gap-0.5 ${compact ? 'w-16' : 'w-[86px]'}`}>
-          <span className="h-[14px] text-[10px] font-black leading-[14px] text-zinc-200 drop-shadow">+{hours} XP</span>
+      </span>
+      <span className={`absolute inset-y-0 right-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+        <span className="flex h-6 items-center text-[10px] font-black text-zinc-200 drop-shadow">+{hours} XP</span>
+        <span className="flex flex-1 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
@@ -497,6 +492,11 @@ function CardBody({
             style={{ height: monH, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
           />
         </span>
+      </span>
+      {/* 중앙 — 보상 크게(카드 정중앙) + 그 아래 상태(작게, 조금 더 아래) */}
+      <div className={`relative mx-auto flex flex-col items-center justify-center text-center ${compact ? 'h-[80px] w-[calc(100%-148px)] pt-[12px]' : 'h-[88px] w-[calc(100%-192px)] pt-[16px]'}`}>
+        <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
+        <span className={`mt-1 block h-4 w-full truncate text-[10px] font-bold leading-4 drop-shadow ${statusCls ?? 'text-white'}`}>{status}</span>
       </div>
       {/* 하단 보더 진행 게이지(강화 카드 문법) */}
       {progress > 0 ? (
@@ -522,10 +522,10 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
       >
         {/* dim 레이어 — 보더 영역까지 덮도록 -inset-px(2026-08-28) */}
         <div className="pointer-events-none absolute -inset-px rounded-xl bg-black/60" />
-        <div className="relative flex h-[30px] items-center justify-center px-2.5">
+        <div className="relative flex h-6 items-center justify-center px-2.5">
           <b className="text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
         </div>
-        <div className="relative -mt-[14px] flex h-[92px] items-center justify-between px-2.5">
+        <div className="relative -mt-2.5 flex h-[88px] items-center justify-between px-2.5">
           <span className="flex w-[86px] justify-center text-[22px]">🔒</span>
           <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
             <b className="block h-6 text-[15px] font-black leading-6 text-white">{need.toLocaleString('ko-KR')}</b>
@@ -562,8 +562,8 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
                 hours={hours}
                 avatarSouth={s.avatarSouth ?? null}
                 reward={s.reward}
-                status={done ? '파견 완료' : <span className="tabular-nums">{fmtRemain(remain)}</span>}
-                statusCls={done ? 'text-emerald-400' : 'text-amber-300'}
+                status={done ? '파견 완료' : <span className="tabular-nums">완료까지 {fmtRemain(remain)}</span>}
+                statusCls={done ? 'text-emerald-400' : 'text-white'}
                 bonusText={`×${(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`}
                 progress={progress}
                 glow={done}
