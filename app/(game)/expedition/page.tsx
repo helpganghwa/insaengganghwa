@@ -1,3 +1,4 @@
+import { ServerClockSync } from '@/components/ServerClockSync';
 import type { Metadata } from 'next';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -20,6 +21,7 @@ export default async function ExpeditionPage() {
   return (
     <main className="flex-1 overflow-y-auto px-3 pt-2 pb-6">
       <BackTitle title="파견" className="mb-2" />
+      <ServerClockSync nowIso={new Date().toISOString()} />
       <ExpeditionBoardView initial={board} />
     </main>
   );

@@ -4,6 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
+import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { useDiamondActions } from '@/components/DiamondContext';
@@ -53,19 +54,6 @@ function fmtRemain(ms: number): string {
   return h > 0 ? `${h}시간 ${m}분 ${sec}초` : m > 0 ? `${m}분 ${sec}초` : `${sec}초`;
 }
 
-function RewardLine({ r, strong }: { r: ExpeditionReward; strong?: boolean }) {
-  const parts: string[] = [];
-  if (r.boxes) {
-    const total = r.boxes.weapon + r.boxes.armor + r.boxes.accessory;
-    if (total > 0) parts.push(`상자 ${total}개`);
-  }
-  if (r.diamond) parts.push(`💎 ${r.diamond.toLocaleString('ko-KR')}`);
-  return (
-    <b className={strong ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-800 dark:text-zinc-200'}>
-      {parts.join(' + ')}
-    </b>
-  );
-}
 
 function boxDetail(r: ExpeditionReward): string {
   if (!r.boxes) return '';
@@ -91,7 +79,7 @@ function synergyOf(regions: (ExpeditionRegion | 'general')[], mission: Expeditio
   return bp;
 }
 
-type ClaimPopup = { crit: boolean; reward: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion };
+type ClaimPopup = { crit: boolean; reward: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion; hours: number; avatarSouth: string | null; bonusText: string | null };
 
 export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [board, setBoard] = useState(initial);
@@ -214,7 +202,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         const diff = (r.reward.diamond ?? 0) - preAdd;
         if (diff !== 0) optimisticAdjust(BigInt(diff));
         setBoard(r.board);
-        setClaimPopup({ crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region! });
+        setClaimPopup({
+          crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region!,
+          hours: s.hours ?? 0, avatarSouth: s.avatarSouth ?? null,
+          bonusText: `×${(1 + ((s.reqBonusBp ?? 0) + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`,
+        });
       } else {
         if (preAdd > 0) optimisticAdjust(BigInt(-preAdd));
         setBoard(prev);
@@ -421,7 +413,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
-      {/* 수령 팝업 — 대성공은 서버 판정이라 응답 후 표시 */}
+      {/* 수령 팝업(E2, 2026-08-28) — 귀환 미니 카드(같은 그림) + 보상·XP 2칸. 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (
         <ModalShell onClose={() => setClaimPopup(null)} label="파견 귀환">
           <ModalLayout
@@ -431,23 +423,36 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 원정대가 돌아왔습니다
               </>
             }
+            bodyPad="sm"
             footer={
               <ModalButton tone="contrast" onClick={() => setClaimPopup(null)}>
                 확인
               </ModalButton>
             }
           >
-            {/* 보상 영역 고정 높이 — 상자/다이아/둘 다·대성공 어느 조합이든 동일(레이아웃 시프트 0). */}
-            <div className="flex h-[104px] flex-col items-center justify-center gap-1 text-center">
-              <p className={`text-lg font-extrabold ${claimPopup.crit ? 'text-amber-500' : ''}`}>
-                <RewardLine r={claimPopup.reward} strong={claimPopup.crit} />
-              </p>
-              <p className="h-4 text-[11px] text-zinc-500 dark:text-zinc-400">{claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : ''}</p>
-              <p className="h-4 text-[11px] font-bold text-amber-600 dark:text-amber-400">{claimPopup.crit ? '대성공으로 수량이 2배가 됐어요!' : ''}</p>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                파견 XP +{claimPopup.xpGained}
-                {claimPopup.levelUp ? <b className="ml-1 text-amber-600 dark:text-amber-400">— Lv.{claimPopup.level} 달성!</b> : null}
-              </p>
+            <CardBody
+              region={claimPopup.region}
+              hours={claimPopup.hours}
+              avatarSouth={claimPopup.avatarSouth}
+              reward={claimPopup.reward}
+              status={claimPopup.crit ? '대성공 · 보상 2배' : '파견 완료'}
+              statusCls={claimPopup.crit ? 'text-amber-300' : 'text-emerald-400'}
+              bonusText={claimPopup.bonusText}
+              progress={1}
+              compact
+              hideHeader
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="flex h-[58px] flex-col items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <b className="text-[17px] text-zinc-900 dark:text-zinc-50">{rewardShort(claimPopup.reward) || '—'}</b>
+                <span className="h-4 text-[10px] text-zinc-500 dark:text-zinc-400">{claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : '다이아 지급'}</span>
+              </div>
+              <div className="flex h-[58px] flex-col items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <b className="text-[17px] text-zinc-900 dark:text-zinc-50">+{claimPopup.xpGained} XP</b>
+                <span className={`h-4 text-[10px] ${claimPopup.levelUp ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                  {claimPopup.levelUp ? `파견 Lv.${claimPopup.level} 달성!` : `파견 Lv.${claimPopup.level}`}
+                </span>
+              </div>
             </div>
           </ModalLayout>
         </ModalShell>
@@ -481,8 +486,8 @@ function rewardShort(r: ExpeditionReward | undefined): string {
   return parts.join(' + ');
 }
 
-/** 이벤트 핸들러 전용 현재 시각 — 렌더 경로에서 호출 금지(React 컴파일러 순수성 규칙). */
-const nowMs = () => Date.now();
+/** 이벤트 핸들러 전용 현재 시각(서버 시계 보정) — 렌더 경로에서 호출 금지(React 컴파일러 순수성 규칙). */
+const nowMs = () => serverNow();
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -643,7 +648,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
       ) : (
         <Ticker>
           {(now) => {
-            const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
+            const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - (now + clockOffsetMs()) : 0; // 서버 시계 보정
             const done = remain <= 0;
             const total = Math.max(1, hours * 3_600_000);
             const progress = done ? 1 : Math.min(0.999, Math.max(0, 1 - remain / total));
