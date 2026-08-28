@@ -200,10 +200,16 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
 
   const doClaim = (s: ExpeditionBoardSlot) => {
-    // 다이아는 비크리 기준 낙관 선반영 — 대성공이면 크리 추가분을 응답 후 가산, 실패면 역보정
-    // (적대 검수 4: 클라 시계가 빨라 NOT_READY가 나면 선반영이 표시 드리프트로 남던 문제).
+    // 낙관적(2026-08-28): 탭 즉시 ① 다이아 선반영(비크리 기준) ② 슬롯을 '새 미션 찾는 중' 오퍼로 비움
+    // ③ 아바타 잠금 해제. 대성공은 서버 롤이라 팝업만 응답 후 — 실패 시 전부 역보정 + 서버 보드 재동기.
     const preAdd = s.reward?.diamond ?? 0;
     if (preAdd > 0) optimisticAdjust(BigInt(preAdd));
+    const prev = board;
+    setBoard((b) => ({
+      ...b,
+      slots: b.slots.map((x) => (x.slot === s.slot ? { slot: s.slot, state: 'offer' as const, reward: undefined } : x)),
+      avatars: b.avatars.map((a) => (a.id === s.avatarId ? { ...a, busy: false } : a)),
+    }));
     setPendingSlot(s.slot);
     startTransition(async () => {
       const r: ClaimActionResult = await claimExpeditionAction(s.slot);
@@ -215,6 +221,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         setClaimPopup({ crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region! });
       } else {
         if (preAdd > 0) optimisticAdjust(BigInt(-preAdd));
+        setBoard(prev);
         showError(r.code);
         const fresh = await expeditionBoardAction();
         if (fresh.ok) setBoard(fresh.board);
@@ -222,7 +229,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       setPendingSlot(null);
     });
   };
-
 
   const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
   const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
