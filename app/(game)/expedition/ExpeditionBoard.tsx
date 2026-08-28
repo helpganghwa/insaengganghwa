@@ -321,6 +321,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               bonusText={selectedAv ? `×${(1 + previewBp / 10000).toFixed(2)}` : null}
               progress={0}
               compact
+              hideHeader
             />
             {/* V1 아코디언(2026-08-28) — 최종 배율 높은 순(파견 중은 맨 아래), 선택 행 아래에 장비 3종·계산식 펼침.
                 목록은 고정 높이 내부 스크롤이라 펼침이 팝업 높이를 바꾸지 않는다(시프트 0). */}
@@ -510,6 +511,7 @@ function CardBody({
   bonusText,
   progress,
   compact,
+  hideHeader,
   glow,
   children,
 }: {
@@ -525,6 +527,8 @@ function CardBody({
   /** 하단 보더 진행 게이지 0~1(미배정 0). 강화 카드 문법: <50% 빨강 · 50~ 주황 · 100% 초록. */
   progress: number;
   compact?: boolean;
+  /** 헤더(지역명·시간) 숨김 — 팝업 미니 카드(정보는 팝업 부제에 있음). */
+  hideHeader?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
@@ -546,12 +550,14 @@ function CardBody({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
       {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
       {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
-      <div className="relative flex h-10 items-center justify-center gap-1.5 px-2.5">
-        <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
-          {ui.label}
-        </b>
-        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
-      </div>
+      {hideHeader ? null : (
+        <div className="relative flex h-10 items-center justify-center gap-1.5 px-2.5">
+          <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
+            {ui.label}
+          </b>
+          <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+        </div>
+      )}
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
         <span className={`flex h-6 items-center text-[10px] font-black text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>{bonusText ?? '—'}</span>
