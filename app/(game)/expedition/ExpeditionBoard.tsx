@@ -599,7 +599,7 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} state="offer" avatarSouth={null} bonusBp={0} big="파견 대기" reward={s.reward} hint="탭해서 파견" tag="미배정" />
+        <CardBody region={region} hours={hours} avatarSouth={null} bonusBp={0} big="파견 대기" reward={s.reward} hint="탭해서 파견" tag="미배정" />
       ) : (
         <Ticker>
           {(now) => {
