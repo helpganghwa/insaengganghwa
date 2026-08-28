@@ -15,8 +15,7 @@ import {
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
   expeditionSlotsFor,
-  EXPEDITION_SYNERGY_GENERAL_BP,
-  EXPEDITION_SYNERGY_MATCH_BP,
+  expeditionWeightedSum,
   expeditionAsBonusBp,
   expeditionCritBp,
   expeditionDifficultyDist,
@@ -182,22 +181,15 @@ export function snapshotExpeditionRegions(snapshot: unknown): (ExpeditionRegion 
     .filter((v): v is ExpeditionRegion | 'general' => !!v);
 }
 
-/** 아바타 equipmentSnapshot(카탈로그 key 3종) → 미션 지역 시너지(bp). */
-export function synergyBpForSnapshot(
-  snapshot: unknown,
-  missionRegion: ExpeditionRegion,
-): number {
-  if (!snapshot || typeof snapshot !== 'object') return 0;
-  const keys = Object.values(snapshot as Record<string, unknown>).filter(
-    (v): v is string => typeof v === 'string',
+/**
+ * 아바타 가중 강화 합(시너지 적용, 2026-08-28) — 스냅샷 장비 3종의 강화 레벨에 미션 지역 일치 ×1.3 / 일반 ×1.15를
+ * 곱해 합산. 이 값이 M(AS)로 들어간다(종전 고정 +10%p/+5%p 가산 폐지).
+ */
+export function avatarWeightedSum(snapshot: unknown, levelByKey: ReadonlyMap<string, number>, missionRegion: ExpeditionRegion): number {
+  return expeditionWeightedSum(
+    snapshotEquipment(snapshot, levelByKey).map((e) => ({ level: e.level, region: e.region })),
+    missionRegion,
   );
-  let bp = 0;
-  for (const key of keys.slice(0, 3)) {
-    const mapped = CATALOG_TO_EXPEDITION[REGION_BY_KEY.get(key) as CatalogRegion];
-    if (mapped === missionRegion) bp += EXPEDITION_SYNERGY_MATCH_BP;
-    else if (mapped === 'general') bp += EXPEDITION_SYNERGY_GENERAL_BP;
-  }
-  return bp;
 }
 
 /** 파견 레벨 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */

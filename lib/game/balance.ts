@@ -858,5 +858,22 @@ export function expeditionXpToNext(level: number): number {
  * 지역 일치 개당 +10%(최대 +30%) / "일반" 장비는 어느 파견지든 개당 +5%(최대 +15%).
  * 불일치 감소 없음. 시간 단축이 아닌 보상업인 이유는 EXPEDITION §3.2.
  */
-export const EXPEDITION_SYNERGY_MATCH_BP = 1000;
-export const EXPEDITION_SYNERGY_GENERAL_BP = 500;
+/**
+ * 지역 시너지(2026-08-28 개편, 사용자 확정 B안) — 고정 가산(+10%p/+5%p)이 아니라 **장비 강화 수치에 가중**:
+ * 미션 지역 일치 장비의 강화 레벨 ×1.3, 일반 장비 ×1.15, 불일치 ×1.0 → 가중 합을 M(AS)에 넣는다.
+ * "화산 장비를 강화할수록 화산 파견이 좋아진다"가 수치로 이어지고, 고강 아바타일수록 시너지 효과가 커진다.
+ */
+export const EXPEDITION_SYNERGY_MATCH_MULT = 1.3;
+export const EXPEDITION_SYNERGY_GENERAL_MULT = 1.15;
+/** 장비별 (강화 레벨, 파견 지역) → 미션 지역 기준 가중 합(아바타 강화 합 AS의 시너지 적용판). */
+export function expeditionWeightedSum(
+  items: readonly { level: number; region: ExpeditionRegion | 'general' | null }[],
+  mission: ExpeditionRegion,
+): number {
+  let sum = 0;
+  for (const it of items) {
+    const w = it.region === mission ? EXPEDITION_SYNERGY_MATCH_MULT : it.region === 'general' ? EXPEDITION_SYNERGY_GENERAL_MULT : 1;
+    sum += it.level * w;
+  }
+  return Math.round(sum);
+}

@@ -13,8 +13,9 @@ import {
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
   EXPEDITION_SLOTS,
-  EXPEDITION_SYNERGY_GENERAL_BP,
-  EXPEDITION_SYNERGY_MATCH_BP,
+  EXPEDITION_SYNERGY_GENERAL_MULT,
+  EXPEDITION_SYNERGY_MATCH_MULT,
+  expeditionWeightedSum,
   EXPEDITION_BOX_MAIN_SLOT,
   EXPEDITION_DIFFICULTY_DIST_BP,
   EXPEDITION_DIFFICULTIES,
@@ -89,15 +90,16 @@ describe('expedition balance invariants', () => {
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
     expect(launchDaily * as1000).toBeGreaterThanOrEqual(1260);
     expect(launchDaily * as1000).toBeLessThanOrEqual(1300);
-    // 시너지 만렙 + Lv.50 대성공(15%)만 얹은 상한(축 ③ 제외).
+    // Lv.50 대성공(15%)만 얹은 상한(축 ③ 제외) — 시너지는 이제 AS 가중이라 별도 가산 없음.
     const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX) / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    const maxMult = (1 + (3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000) * (critMax / critMult);
-    expect(launchDaily * maxMult).toBeLessThanOrEqual(750);
+    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(450);
     expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
   });
 
-  it('시너지·슬롯 정합 — 일반은 지역 일치의 절반, 슬롯 4칸은 합산 강화 1k/3k/10k/15k 단조 증가', () => {
-    expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
+  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 4칸은 합산 강화 1k/3k/10k/15k 단조 증가', () => {
+    expect(EXPEDITION_SYNERGY_MATCH_MULT).toBeGreaterThan(EXPEDITION_SYNERGY_GENERAL_MULT);
+    expect(EXPEDITION_SYNERGY_GENERAL_MULT).toBeGreaterThan(1);
+    expect(expeditionWeightedSum([{ level: 100, region: 'volcano' }, { level: 100, region: 'general' }, { level: 100, region: 'orc' }], 'volcano')).toBe(345);
     expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4]);
     expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([1000, 3000, 10000, 15000]);
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);

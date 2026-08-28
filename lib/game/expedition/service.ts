@@ -20,7 +20,7 @@ import {
   asBonusBp,
   avatarEnhanceSum,
   rollMission,
-  synergyBpForSnapshot,
+  avatarWeightedSum,
   type ExpeditionReward,
   type Rng10k,
 } from './engine';
@@ -94,7 +94,7 @@ async function loadAvatarSums(
   tx: Tx,
   userId: string,
   serverId: number,
-): Promise<{ byId: Map<string, number>; base: number }> {
+): Promise<{ byId: Map<string, number>; base: number; levelByKey: Map<string, number> }> {
   const [avs, lv] = await Promise.all([
     tx.execute(sql`
       select id::text, equipment_snapshot from user_profiles
@@ -114,7 +114,7 @@ async function loadAvatarSums(
     byId.set(a.id, sum);
     if (sum > base) base = sum;
   }
-  return { byId, base };
+  return { byId, base, levelByKey };
 }
 
 /** 계정 합산 강화 — 보유 장비 enhance_level 합(리더보드 'sum'과 동일 정의). 슬롯 해금 원천. */
@@ -268,14 +268,16 @@ export function startExpedition(
     `)) as unknown as { equipment_snapshot: unknown }[];
     if (!av) throw new ExpeditionError('AVATAR_NOT_FOUND');
 
-    // 아바타 강화 합(§3.3) — 배율은 배정 아바타 AS 곡선(M(AS)−1)만. 최소치·권장치·페널티 없음.
-    // 시작 시점 AS로 스냅샷(진행 중 하락은 무관).
-    const { byId } = await loadAvatarSums(tx, userId, serverId);
+    // 아바타 강화 합(§3.3) + 지역 시너지(§3.2, 2026-08-28 가중 방식) — 장비 강화 레벨에 일치 ×1.3/일반 ×1.15를
+    // 곱한 가중 합(WS)으로 M(WS) 배율 하나만 적용. 시작 시점 스냅샷(진행 중 하락은 무관).
+    // synergy_bp 컬럼은 "가중으로 늘어난 배율분"(표시·이력용) = M(WS) − M(AS).
+    const { byId, levelByKey } = await loadAvatarSums(tx, userId, serverId);
     const avatarSum = byId.get(avatarProfileId) ?? 0;
-    const synergy = synergyBpForSnapshot(av.equipment_snapshot, offer.region as never);
-    const reqBonus = asBonusBp(avatarSum);
+    const weighted = avatarWeightedSum(av.equipment_snapshot, levelByKey, offer.region as never);
+    const reqBonus = asBonusBp(weighted);
+    const synergy = Math.max(0, reqBonus - asBonusBp(avatarSum));
     // 레벨 배율 없음(2026-08-27) — level_bonus_bp는 0 고정(컬럼은 이력 호환으로 유지).
-    const finalReward = applyMultiplier(offer.reward, synergy + reqBonus);
+    const finalReward = applyMultiplier(offer.reward, reqBonus);
 
     let completeAtIso: string;
     try {

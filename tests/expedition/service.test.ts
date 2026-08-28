@@ -136,8 +136,8 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     const s = await startExpedition(uid, SID, 1, avatarId);
     expect(s.finalReward.kind).toBe('dia');
-    // 기본 40(72×0.55, 2026-08-27 ×0.6)에 테스트 계정 아바타의 실제 시너지(가변)가 가산 — 산식 정합으로 단정.
-    const expected = Math.max(1, Math.round(40 * (1 + s.synergyBp / 10000)));
+    // 기본 40(72×0.55, 2026-08-27 ×0.6)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
+    const expected = Math.max(1, Math.round(40 * (1 + s.reqBonusBp / 10000)));
     expect(s.finalReward.diamond).toBe(expected);
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_READY' });

@@ -8,7 +8,7 @@ import {
   critBp,
   rollBoxSlots,
   rollMission,
-  synergyBpForSnapshot,
+  avatarWeightedSum,
   type Rng10k,
 } from '@/lib/game/expedition/engine';
 import {
@@ -75,12 +75,17 @@ describe('expedition engine — 시너지·배율', () => {
     armorKey: 'general_twin_flintlocks', // 일반(슬롯은 무관 — 지역만 본다)
     accessoryKey: 'orc_hunter_boomerang', // 오크 부락
   };
-  it('배정 아바타 스냅샷 기준 — 일치 +10%/일반 +5%/불일치 0', () => {
-    expect(synergyBpForSnapshot(snap, 'volcano')).toBe(1000 + 500); // 화산 일치 + 일반
-    expect(synergyBpForSnapshot(snap, 'orc')).toBe(1000 + 500); // 오크 일치 + 일반
-    expect(synergyBpForSnapshot(snap, 'swamp')).toBe(500); // 일반만
-    expect(synergyBpForSnapshot(null, 'swamp')).toBe(0);
-    expect(synergyBpForSnapshot({ a: 'no_such_key' }, 'swamp')).toBe(0);
+  it('가중 강화 합(2026-08-28) — 일치 ×1.3 / 일반 ×1.15 / 불일치 ×1', () => {
+    const lv = new Map([
+      ['volcano_dancer_daggers', 100],
+      ['general_twin_flintlocks', 100],
+      ['orc_hunter_boomerang', 100],
+    ]);
+    expect(avatarWeightedSum(snap, lv, 'volcano')).toBe(130 + 115 + 100); // 화산 일치 + 일반 + 불일치
+    expect(avatarWeightedSum(snap, lv, 'orc')).toBe(100 + 115 + 130);
+    expect(avatarWeightedSum(snap, lv, 'swamp')).toBe(100 + 115 + 100); // 일반만 가중
+    expect(avatarWeightedSum(null, lv, 'swamp')).toBe(0);
+    expect(avatarWeightedSum({ a: 'no_such_key' }, lv, 'swamp')).toBe(0);
   });
   it('배율 적용 — 수량 반올림·크리 2배', () => {
     const r = { kind: 'both' as const, boxes: { weapon: 3, armor: 1, accessory: 0 }, diamond: 100 };

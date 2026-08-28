@@ -35,8 +35,8 @@ import {
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_CRIT_BP_PER_LEVEL,
   expeditionCritBp,
-  EXPEDITION_SYNERGY_MATCH_BP,
-  EXPEDITION_SYNERGY_GENERAL_BP,
+  EXPEDITION_SYNERGY_MATCH_MULT,
+  EXPEDITION_SYNERGY_GENERAL_MULT,
   EXPEDITION_DIFFICULTY_DIST_BP,
   EXPEDITION_DIFFICULTY_LABEL,
   EXPEDITION_DIFFICULTY_HOURS,
@@ -323,8 +323,8 @@ export default async function ProbabilityPage() {
             ))}
         </Table>
         <P>
-          아바타 지역 시너지(일치 장비당 +{EXPEDITION_SYNERGY_MATCH_BP / 100}%·일반 장비당 +
-          {EXPEDITION_SYNERGY_GENERAL_BP / 100}%)와 아래 아바타 강화 합 배율은 <b>상자·다이아 수량에만</b>
+          아바타 지역 시너지(파견지와 지역이 같은 장비의 강화 레벨 ×{EXPEDITION_SYNERGY_MATCH_MULT}, 일반 장비
+          ×{EXPEDITION_SYNERGY_GENERAL_MULT}로 계산해 강화 합에 반영)와 아래 아바타 강화 합 배율은 <b>상자·다이아 수량에만</b>
           적용되며, 위 표의 확률 자체는 변하지 않습니다. 파견 레벨은 수량 배율에 관여하지 않습니다.
         </P>
         <P>

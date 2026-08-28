@@ -6,8 +6,8 @@ import {
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
-  EXPEDITION_SYNERGY_GENERAL_BP,
-  EXPEDITION_SYNERGY_MATCH_BP,
+  EXPEDITION_SYNERGY_GENERAL_MULT,
+  EXPEDITION_SYNERGY_MATCH_MULT,
 } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
@@ -57,12 +57,13 @@ export default function Doc() {
           다른 미션에 보낼 수 없다.
         </LI>
         <LI>
-          아바타를 만들 때 입힌 장비의 <b>지역</b>이 미션 지역과 일치하면 장비 하나당 보상 +
-          {bpPct(EXPEDITION_SYNERGY_MATCH_BP)} — 최대 +{bpPct(EXPEDITION_SYNERGY_MATCH_BP * 3)}.
+          아바타를 만들 때 입힌 장비의 <b>지역</b>이 파견지와 일치하면 그 장비의 강화 레벨을{' '}
+          {EXPEDITION_SYNERGY_MATCH_MULT}배로 쳐서 강화 합에 넣는다 — 지역 장비를 많이 강화할수록 그 지역 파견이
+          좋아진다.
         </LI>
         <LI>
-          지역이 없는 &ldquo;일반&rdquo; 장비는 어느 미션에서든 하나당 +
-          {bpPct(EXPEDITION_SYNERGY_GENERAL_BP)}. 불일치 장비는 보너스가 없을 뿐 손해는 없다.
+          지역이 없는 &ldquo;일반&rdquo; 장비는 어느 파견지에서든 {EXPEDITION_SYNERGY_GENERAL_MULT}배. 불일치 장비는
+          그대로(1배)일 뿐 손해는 없다.
         </LI>
         <LI>기본 아바타도 배정할 수 있다(시너지 없음).</LI>
         <LI>

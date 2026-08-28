@@ -1,5 +1,6 @@
 // 파견 기대값 시뮬레이션(EXPEDITION §3.3) — 순수 상수 계산, DB 불필요.
-//   bun run scripts/sim-expedition.ts [--as …] [--level 0,30] [--syn 0,1500,3000] [--slots 1,2,3,4]
+//   bun run scripts/sim-expedition.ts [--as …] [--level 0,30] [--w 1,1.15,1.3] [--slots 1,2,3,4]
+//   --w: 시너지 가중(장비 3종 동일 가정: 1=불일치, 1.15=일반, 1.3=지역 일치) — AS×w가 M()에 들어간다(2026-08-28).
 //   슬롯은 계정 합산 강화로 해금(1k/5k/10k/15k) — 슬롯 수를 변수로 두고 하루 유닛 = 슬롯 × 24h(3.4).
 // 변수: 아바타 강화 합(AS) × 파견 레벨 × 지역 시너지(bp). 출력: 유닛당·하루 기대 💎/📦.
 // 하루 유닛 = 슬롯 수 × 24h 원정 스케일(3.4)(Lv15+ 원정 상시 선택 가정) / Lv<15: 슬롯 × Lv 난이도 분포 평균 × 2.5회.
@@ -22,7 +23,7 @@ function arg(name: string, def: number[]): number[] {
 }
 const AS_LIST = arg('as', [0, 100, 300, 666, 1000, 1500, 2000, 3000]);
 const LEVELS = arg('level', [0, 30]);
-const SYNS = arg('syn', [0, 1500, 3000]);
+const WS = arg('w', [1, 1.15, 1.3]);
 const SLOTS = arg('slots', [1, 2, 3, 4]);
 
 const A = EXPEDITION_BASE_AMOUNTS;
@@ -44,7 +45,7 @@ const dailyUnits = (lv: number, slots: number) => slots * (lv >= 15 ? EXPEDITION
 console.log(`유닛당(8h 기준) 기대: 💎${evDia.toFixed(1)} 📦${evBox.toFixed(2)} · 대성공 ×${crit} · 기본 수량 ${JSON.stringify(A)}`);
 console.log(`슬롯 해금(합산 강화): ${EXPEDITION_SLOT_UNLOCKS.map((u) => `슬롯${u.slot}=${u.enhanceSum.toLocaleString('ko-KR')}`).join(' · ')}`);
 console.log(`하루 유닛(슬롯당): Lv0 ${dailyUnits(0, 1).toFixed(2)}(2.5회) / Lv30 ${EXPEDITION_DURATION_SCALE[24]}(24h×1)\n`);
-const head = ['AS', 'M(AS)', ...LEVELS.flatMap((lv) => SYNS.map((s) => `Lv${lv}·시너지${s / 100}%`))];
+const head = ['AS', 'M(AS)', ...LEVELS.flatMap((lv) => WS.map((w) => `Lv${lv}·가중×${w}`))];
 for (const slots of SLOTS) {
   const unlock = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slots);
   console.log(`\n■ 슬롯 ${slots}칸 풀가동(합산 강화 ≥ ${unlock ? unlock.enhanceSum.toLocaleString('ko-KR') : '?'}) — 하루 기대 💎·📦`);
@@ -52,8 +53,8 @@ for (const slots of SLOTS) {
   for (const as of AS_LIST) {
     const m = 1 + expeditionAsBonusBp(as) / 1e4;
     const cells = LEVELS.flatMap((lv) =>
-      SYNS.map((s) => {
-        const total = 1 + (s + expeditionAsBonusBp(as)) / 1e4; // 레벨 배율 없음 — 레벨은 대성공 확률로만
+      WS.map((w) => {
+        const total = 1 + expeditionAsBonusBp(Math.round(as * w)) / 1e4; // 시너지=AS 가중, 레벨 배율 없음
         const u = dailyUnits(lv, slots);
         return `💎${Math.round(evDia * critOf(lv) * u * total)}·📦${Math.round(evBox * critOf(lv) * u * total)}`;
       }),

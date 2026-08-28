@@ -11,8 +11,9 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
   EXPEDITION_REFRESH_FREE_PER_DAY,
-  EXPEDITION_SYNERGY_GENERAL_BP,
-  EXPEDITION_SYNERGY_MATCH_BP,
+  EXPEDITION_SYNERGY_GENERAL_MULT,
+  EXPEDITION_SYNERGY_MATCH_MULT,
+  expeditionWeightedSum,
   type ExpeditionRegion, expeditionAsBonusBp,
   EXPEDITION_DIFFICULTIES,
   EXPEDITION_DIFFICULTY_DIST_BP,
@@ -20,7 +21,7 @@ import {
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_CRIT_MULT,
   expeditionCritBp, } from '@/lib/game/balance';
-import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
+import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
 import {
@@ -80,14 +81,9 @@ function enhanceBonusOf(avatarSum: number): number {
   return expeditionAsBonusBp(avatarSum);
 }
 
-/** 클라 시너지 미리보기 — 서버 판정(engine)과 동일 산식(배정 시트 표시용, 권위는 서버). */
-function synergyOf(regions: (ExpeditionRegion | 'general')[], mission: ExpeditionRegion): number {
-  let bp = 0;
-  for (const r of regions) {
-    if (r === mission) bp += EXPEDITION_SYNERGY_MATCH_BP;
-    else if (r === 'general') bp += EXPEDITION_SYNERGY_GENERAL_BP;
-  }
-  return bp;
+/** 클라 가중 강화 합 미리보기 — 서버(engine.avatarWeightedSum)와 동일 산식(표시 전용, 권위는 서버). */
+function weightedSumOf(equipment: ExpeditionAvatar['equipment'], mission: ExpeditionRegion): number {
+  return expeditionWeightedSum(equipment.map((e) => ({ level: e.level, region: e.region })), mission);
 }
 
 type ClaimPopup = { crit: boolean; reward: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion; hours: number; avatarSouth: string | null; bonusText: string | null };
@@ -167,7 +163,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
   const doStart = (s: ExpeditionBoardSlot, avatarId: string) => {
     const av = board.avatars.find((a) => a.id === avatarId);
-    const syn = av && s.region ? synergyOf(av.regions, s.region) : 0;
+    const ws = av && s.region ? weightedSumOf(av.equipment, s.region) : (av?.enhanceSum ?? 0);
+    const syn = av ? Math.max(0, enhanceBonusOf(ws) - enhanceBonusOf(av.enhanceSum)) : 0;
     setAssignSlot(null);
     setSelectedAvatar(null);
     run(
@@ -181,7 +178,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 state: 'running',
                 completeAtIso: new Date(Date.now() + (s.hours ?? 0) * 3_600_000).toISOString(),
                 synergyBp: syn,
-                reqBonusBp: enhanceBonusOf(av?.enhanceSum ?? 0),
+                reqBonusBp: enhanceBonusOf(ws),
                 avatarId,
                 avatarFace: av?.face ?? null,
                 avatarSouth: av?.south ?? null,
@@ -217,7 +214,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         setClaimPopup({
           crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region!,
           hours: s.hours ?? 0, avatarSouth: s.avatarSouth ?? null,
-          bonusText: `×${(1 + ((s.reqBonusBp ?? 0) + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`,
+          bonusText: `×${(1 + (s.reqBonusBp ?? 0) / 10000).toFixed(2)}`,
         });
       } else {
         if (preAdd > 0) optimisticAdjust(BigInt(-preAdd));
@@ -232,8 +229,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
   const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
   const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
-  const previewBp =
-    assignFor?.region && selectedAv ? synergyOf(selectedAv.regions, assignFor.region) + enhanceBonusOf(selectedAv.enhanceSum) : 0;
+  const previewBp = assignFor?.region && selectedAv ? enhanceBonusOf(weightedSumOf(selectedAv.equipment, assignFor.region)) : 0;
 
   /** 카드 탭 — 상태별 팝업/액션(카드에는 버튼이 없다, 2026-08-28 UI 개편). */
   const onCardTap = (s: ExpeditionBoardSlot) => {
@@ -327,11 +323,13 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <div className="mt-2 h-[236px] overflow-y-auto rounded-xl border border-zinc-100 p-1 dark:border-zinc-800/60">
               <div className="flex flex-col gap-1">
                 {[...board.avatars]
-                  .map((a) => ({ a, syn: synergyOf(a.regions, assignFor.region!), mult: 1 + (enhanceBonusOf(a.enhanceSum) + synergyOf(a.regions, assignFor.region!)) / 10000 }))
+                  .map((a) => {
+                    const ws = weightedSumOf(a.equipment, assignFor.region!);
+                    return { a, ws, mult: 1 + enhanceBonusOf(ws) / 10000 };
+                  })
                   .sort((x, y) => Number(x.a.busy) - Number(y.a.busy) || y.mult - x.mult)
-                  .map(({ a, syn, mult }) => {
+                  .map(({ a, ws, mult }) => {
                     const sel = selectedAvatar === a.id;
-                    const asMult = 1 + enhanceBonusOf(a.enhanceSum) / 10000;
                     return (
                       <div
                         key={a.id}
@@ -352,7 +350,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                           <span className="flex min-w-0 flex-1 flex-col leading-tight">
                             {a.busy ? <b className="truncate text-[12px] text-zinc-800 dark:text-zinc-50">파견 중</b> : null}
                             <span className="truncate text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
-                              강화 합 {a.enhanceSum} · 시너지 +{syn / 100}%
+                              강화 합 {a.enhanceSum}{ws !== a.enhanceSum ? ` · 시너지 적용 ${ws}` : ''}
                             </span>
                           </span>
                           <b className="text-[13px] font-extrabold text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</b>
@@ -360,7 +358,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                         {sel ? (
                           <div className="mx-1.5 mb-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
                             {a.equipment.map((e) => {
-                              const bonus = e.region === assignFor.region ? '일치 +10%' : e.region === 'general' ? '일반 +5%' : '';
+                              const w = e.region === assignFor.region ? EXPEDITION_SYNERGY_MATCH_MULT : e.region === 'general' ? EXPEDITION_SYNERGY_GENERAL_MULT : 1;
+                              const bonus = w > 1 ? `×${w} → +${Math.round(e.level * w)}` : '';
                               const rc = e.region && e.region !== 'general' ? REGION_UI[e.region] : null;
                               return (
                                 <div key={e.key} className="grid h-5 grid-cols-[30px_1fr_auto_34px_52px] items-center gap-1.5 text-[10.5px]">
@@ -379,13 +378,13 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                             })}
                             <div className={`flex justify-between text-[10px] text-zinc-500 dark:text-zinc-400 ${a.equipment.length > 0 ? 'mt-1 border-t border-zinc-200 pt-1 dark:border-zinc-800' : ''}`}>
                               <span>
-                                강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b> <b className="text-sky-600 dark:text-sky-400">×{asMult.toFixed(2)}</b>
+                                강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b>
                               </span>
                               <span>
-                                시너지 <b className="text-amber-600 dark:text-amber-400">+{syn / 100}%</b>
+                                시너지 적용 <b className="text-amber-600 dark:text-amber-400">{ws}</b>
                               </span>
                               <span>
-                                최종 <b className="text-[12px] text-zinc-900 dark:text-white">×{mult.toFixed(2)}</b>
+                                배율 <b className="text-[12px] text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</b>
                               </span>
                             </div>
                           </div>
@@ -459,7 +458,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <ModalShell onClose={() => setRefreshAsk(false)} label="파견 새로고침">
           <ModalLayout
             title="파견을 새로고침할까요?"
-            subtitle={`미배정 슬롯 ${board.slots.filter((x) => x.state === 'offer').length}개의 파견이 모두 바뀝니다 (진행 중은 제외)`}
+            subtitle={`무료 ${EXPEDITION_REFRESH_FREE_PER_DAY}회 이후 1회당 💎${board.refreshCost}`}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setRefreshAsk(false)}>
@@ -472,7 +471,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             }
           >
             <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              무료 {EXPEDITION_REFRESH_FREE_PER_DAY}회를 다 쓰면 💎{board.refreshCost}이 듭니다.
+              미배정 슬롯 {board.slots.filter((x) => x.state === 'offer').length}개의 파견이 모두 바뀝니다. 진행 중인 파견은 그대로예요.
             </p>
           </ModalLayout>
         </ModalShell>
@@ -578,6 +577,7 @@ function CardBody({
   progress,
   compact,
   hideHeader,
+  muted,
   glow,
   children,
 }: {
@@ -595,6 +595,8 @@ function CardBody({
   compact?: boolean;
   /** 헤더(지역명·시간) 숨김 — 팝업 미니 카드(정보는 팝업 부제에 있음). */
   hideHeader?: boolean;
+  /** 진행 중이 아닌 카드(미배정·완료)는 배경·몬스터만 흑백 — 진행 중 카드에 구분감(2026-08-28). */
+  muted?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
@@ -604,11 +606,15 @@ function CardBody({
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border bg-cover bg-center ${compact ? 'h-[104px]' : 'h-[112px]'} ${
+      className={`relative overflow-hidden rounded-xl border ${compact ? 'h-[104px]' : 'h-[112px]'} ${
         glow ? 'border-emerald-400/70' : 'border-zinc-800'
       }`}
-      style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
     >
+      {/* 배경 — muted면 흑백(아바타·텍스트는 컬러 유지) */}
+      <div
+        className={`pointer-events-none absolute inset-0 bg-cover bg-center ${muted ? 'grayscale' : ''}`}
+        style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
+      />
       {/* 가독성 — 전면 35% 어둡게 + 상·하 그라데이션 */}
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
@@ -647,7 +653,7 @@ function CardBody({
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
             alt=""
             decoding="async"
-            className="drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]"
+            className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${muted ? 'grayscale' : ''}`}
             style={{ height: monH, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
           />
         </span>
@@ -709,7 +715,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} />
+        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} muted />
       ) : (
         <Ticker>
           {(now) => {
@@ -725,9 +731,10 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
                 reward={s.reward}
                 status={done ? '파견 완료' : <span className="tabular-nums">파견 완료까지 {fmtRemain(remain)}</span>}
                 statusCls={done ? 'text-emerald-400' : 'text-white'}
-                bonusText={`×${(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`}
+                bonusText={`×${(1 + bonus / 10000).toFixed(2)}`}
                 progress={progress}
                 glow={done}
+                muted={done}
               />
             );
           }}
