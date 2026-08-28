@@ -30,12 +30,12 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
-/** 시간 라벨 — 길수록 진하게(무채색 농도). */
+/** 시간 라벨 — 시간별 고유색(지역색과 비충돌). */
 const HOUR_CLS: Record<number, string> = {
-  // 지역색(초록/주황/노랑/파랑/빨강/보라)과 겹치지 않도록 무채색 농도로 난이도 표현(2026-08-28).
-  4: 'bg-white/15 text-zinc-200',
-  8: 'bg-white/30 text-white',
-  12: 'bg-white/55 text-zinc-900',
+  // 시간별로 다른 색 — 지역색(초록·주황·노랑·파랑·빨강·보라)과 겹치지 않는 4색(2026-08-28): 흰·청록·분홍·반전.
+  4: 'bg-white/20 text-zinc-100',
+  8: 'bg-cyan-400/25 text-cyan-200',
+  12: 'bg-pink-400/25 text-pink-200',
   24: 'bg-white text-zinc-900',
 };
 
@@ -462,10 +462,10 @@ function CardBody({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
       {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
       <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
-        <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
+        <b className="translate-y-[2px] truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
-        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+        <span className={`translate-y-[2px] rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
