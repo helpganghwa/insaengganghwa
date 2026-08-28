@@ -5,7 +5,6 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { kstDateString } from '@/lib/kst';
 import {
-  EXPEDITION_DAILY_STARTS,
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
@@ -20,8 +19,8 @@ import { critBp, effectiveSlots, snapshotExpeditionRegions, type ExpeditionRewar
 export type ExpeditionBoardSlot = {
   slot: number;
   state: 'locked' | 'offer' | 'running';
-  /** locked 전용 — 해금 조건. */
-  unlock?: { level: number; diamond: number };
+  /** locked 전용 — 해금 조건(계정 합산 강화). */
+  unlock?: { enhanceSum: number };
   /** offer/running 공통 — 미션 내용(오퍼=기본 보상, 진행=최종 확정 보상). */
   region?: ExpeditionRegion;
   difficulty?: ExpeditionDifficulty;
@@ -65,7 +64,8 @@ export type ExpeditionBoard = {
   critBp: number;
   /** 보유 아바타 강화 합 최댓값 — 안내용. */
   baseSum: number;
-  startsLeft: number;
+  /** 계정 합산 강화(보유 장비 강화 합) — 슬롯 해금 원천·헤더 표시. */
+  enhanceSum: number;
   freeRefreshLeft: number;
   refreshCost: number;
   slots: ExpeditionBoardSlot[];
@@ -77,7 +77,7 @@ export type ExpeditionBoard = {
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile, levelRows, critRows] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows, critRows, sumRows] = await Promise.all([
     db.execute(sql`
       select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
              refresh_kst_day::text, refresh_today
@@ -132,7 +132,13 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       order by e.created_at desc, e.id desc
       limit 10
     `) as unknown as Promise<{ nickname: string; detail: { region: ExpeditionRegion; hours: number; diamond: number; boxes: number }; created_at: string | Date }[]>,
+    // 계정 합산 강화 — 슬롯 해금 원천(service.enhanceSumOf와 동일 정의).
+    db.execute(sql`
+      select coalesce(sum(enhance_level), 0)::int as s from user_equipment
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+    `) as unknown as Promise<{ s: number }[]>,
   ]);
+  const enhanceSum = Number(sumRows[0]?.s ?? 0);
   const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
   const sumOf = (snapshot: unknown) => avatarEnhanceSum(snapshot, levelByKey);
   const baseSum = avatarRows.reduce((m, a) => Math.max(m, sumOf(a.equipment_snapshot)), 0);
@@ -140,7 +146,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     level: 0, xp: '0', slots_purchased: 1,
     starts_kst_day: null, starts_today: 0, refresh_kst_day: null, refresh_today: 0,
   };
-  const eff = effectiveSlots(st.level, st.slots_purchased);
+  const eff = effectiveSlots(enhanceSum);
   const activeId = activeProfile[0]?.id ?? null;
   // 얼굴 썸네일 우선 — 기본 스프라이트는 public 정적 face.png로 매핑(채팅 displayFields와 동일 규칙).
   const faceOf = (a: { face: string | null; south: string | null }) =>
@@ -150,12 +156,13 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
 
   const slots: ExpeditionBoardSlot[] = [];
   for (let slot = 1; slot <= EXPEDITION_SLOTS; slot++) {
-    if (slot > eff) {
+    const row = active.find((r) => r.slot === slot);
+    // 닫힌 슬롯: 진행 중(running) 파견이 남아 있으면 그대로 보여준다(합산 강화 하락 케이스 — 수령까지 유지).
+    if (slot > eff && row?.status !== 'running') {
       const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot)!;
-      slots.push({ slot, state: 'locked', unlock: { level: def.level, diamond: def.diamond } });
+      slots.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
       continue;
     }
-    const row = active.find((r) => r.slot === slot);
     if (!row) continue; // ensureOffers 선행 시 없을 수 없으나 방어(다음 렌더에서 채워짐)
     const hours = Math.round(Number(row.duration_ms) / 3_600_000);
     if (row.status === 'offer') {
@@ -177,7 +184,6 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     }
   }
 
-  const startsToday = st.starts_kst_day === today ? st.starts_today : 0;
   const refreshToday = st.refresh_kst_day === today ? st.refresh_today : 0;
   return {
     level: st.level,
@@ -185,7 +191,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     xpNext: expeditionXpToNext(st.level),
     critBp: critBp(st.level),
     baseSum,
-    startsLeft: Math.max(0, EXPEDITION_DAILY_STARTS - startsToday),
+    enhanceSum,
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
     refreshCost: EXPEDITION_REFRESH_COST,
     slots,

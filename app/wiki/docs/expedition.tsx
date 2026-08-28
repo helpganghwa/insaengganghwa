@@ -1,7 +1,6 @@
 import {
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_MULT,
-  EXPEDITION_DAILY_STARTS,
   EXPEDITION_CRIT_BP_PER_LEVEL,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_REFRESH_COST,
@@ -36,10 +35,7 @@ export default function Doc() {
       <UL>
         <LI>파견 슬롯에 열려 있는 미션(지역 × 난이도)에 아바타 한 명을 배정해 보낸다.</LI>
         <LI>난이도가 곧 소요 시간이다 — 쉬움 4시간 · 보통 8시간 · 어려움 12시간 · 원정 24시간.</LI>
-        <LI>
-          파견은 하루 {EXPEDITION_DAILY_STARTS}회까지 보낼 수 있다(자정 초기화). 취소하면 보상은
-          없고 사용한 횟수도 돌아오지 않는다.
-        </LI>
+        <LI>하루 횟수 제한은 없다 — 열린 슬롯 수만큼 동시에 보낼 수 있다. 취소하면 보상은 없다.</LI>
         <LI>귀환한 원정대의 보상을 수령하면 그 슬롯에 새 미션이 열린다.</LI>
       </UL>
 
@@ -93,16 +89,19 @@ export default function Doc() {
         </LI>
         <LI>레벨이 오르면 더 어려운(=더 긴·더 후한) 미션이 자주 등장한다.</LI>
       </UL>
+      <UL>
+        <LI>
+          파견 슬롯은 <b>합산 강화</b>(보유 장비 강화 레벨의 합, 랭킹의 합산 강화와 같다)로만 열린다.
+          다이아나 파견 레벨로는 열 수 없다.
+        </LI>
+        <LI>합산 강화가 내려가 조건에 못 미치면 그 슬롯에 새로 보낼 수 없지만, 이미 나간 파견은 돌아올 때까지 유지된다.</LI>
+      </UL>
       <Tbl
-        head={['슬롯', '무료 오픈', '즉시 구매']}
-        rows={[
-          ['슬롯 1', '기본 제공', '—'],
-          ...EXPEDITION_SLOT_UNLOCKS.map((u) => [
-            `슬롯 ${u.slot}`,
-            `파견 Lv.${u.level}`,
-            `다이아 ${u.diamond.toLocaleString('ko-KR')}`,
-          ]),
-        ]}
+        head={['슬롯', '오픈 조건']}
+        rows={EXPEDITION_SLOT_UNLOCKS.map((u) => [
+          `슬롯 ${u.slot}`,
+          `합산 강화 ${u.enhanceSum.toLocaleString('ko-KR')}`,
+        ])}
       />
       <Note>
         원정 나간 아바타도 대표 아바타 표시는 그대로 유지된다 — 파견은 아바타의 겉모습을 바꾸지

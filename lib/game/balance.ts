@@ -711,11 +711,8 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
 /* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
 /* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
 
-/** 동시 파견 슬롯 수(유저×서버). */
-export const EXPEDITION_SLOTS = 3;
-
-/** 일일 시작(투입) 상한 — 시작 트랜잭션에서 차감, 취소해도 미반환(EXPEDITION §1). */
-export const EXPEDITION_DAILY_STARTS = 6;
+/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). */
+export const EXPEDITION_SLOTS = 4;
 
 /** 파견지 6종 — zones.region 코드 재사용(전부 즉시 개방, 게이트 없음). */
 export type ExpeditionRegion = 'swamp' | 'orc' | 'kingdom' | 'temple' | 'volcano' | 'angel';
@@ -738,7 +735,7 @@ export type ExpeditionDurationH = (typeof EXPEDITION_DURATIONS_H)[number];
 /**
  * 본상 수량 스케일 — 보통(8h)=×1.0 기준. 시간당 효율이 장시간일수록 소폭 우위
  * (8h 0.125/h → 12h 0.133/h → 24h 0.142/h) — "하루 한 번" 유저 배려.
- * 슬롯당 하루 최대 유닛: 원정 24h=3.4 vs 어려움×2=3.2 vs 보통×2=2.0(시작 상한 6회 내).
+ * 슬롯당 하루 최대 유닛: 원정 24h=3.4 vs 어려움×2=3.2 vs 보통×2=2.0(처리량 상한은 슬롯 수뿐).
  */
 export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
   4: 0.55, 8: 1.0, 12: 1.6, 24: 3.4,
@@ -763,11 +760,23 @@ export function expeditionDifficultyDist(level: number): Record<ExpeditionDiffic
   return EXPEDITION_DIFFICULTY_DIST_BP[EXPEDITION_DIFFICULTY_DIST_BP.length - 1]!.dist;
 }
 
-/** 슬롯 해금(A′) — 기본 1칸, 이후 레벨 무료 오픈 또는 다이아 즉시 구매(이중 해금, sink). */
-export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; level: number; diamond: number }[] = [
-  { slot: 2, level: 10, diamond: 1000 }, // 2026-08-27 5→10(≈2~4주): 다이아 해금이 실질 경로가 되도록
-  { slot: 3, level: 30, diamond: 2000 }, // 15→30(≈2개월)
+/**
+ * 슬롯 해금(2026-08-28 개편) — **계정 합산 강화**(보유 장비 enhance_level 합, 리더보드 'sum'과 동일 정의)
+ * 도달 시 오픈. 파견 레벨·다이아 해금 없음: 강화가 파견의 유일한 입구이자 규모다(사용자 확정, 원안 1k/5k/10k/15k).
+ * 합산 강화는 현재 레벨 합이라 하락하면 줄 수 있다 — 진행 중 파견은 유지, **새 배정만** 잠긴다.
+ */
+export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
+  { slot: 1, enhanceSum: 1_000 },
+  { slot: 2, enhanceSum: 5_000 },
+  { slot: 3, enhanceSum: 10_000 },
+  { slot: 4, enhanceSum: 15_000 },
 ] as const;
+/** 합산 강화 → 열린 슬롯 수(0~EXPEDITION_SLOTS). */
+export function expeditionSlotsFor(enhanceSum: number): number {
+  let n = 0;
+  for (const u of EXPEDITION_SLOT_UNLOCKS) if (enhanceSum >= u.enhanceSum) n = Math.max(n, u.slot);
+  return Math.min(EXPEDITION_SLOTS, n);
+}
 
 /** 미션 새로고침 — 슬롯 단위 리롤(보상까지). 무료 소진 후 다이아(sink). */
 export const EXPEDITION_REFRESH_FREE_PER_DAY = 3;

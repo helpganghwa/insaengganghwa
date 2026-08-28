@@ -8,7 +8,6 @@ import { Ticker } from '@/components/Ticker';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
-  EXPEDITION_DAILY_STARTS,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   type ExpeditionRegion, expeditionAsBonusBp } from '@/lib/game/balance';
@@ -19,7 +18,6 @@ import {
   cancelExpeditionAction,
   claimExpeditionAction,
   expeditionBoardAction,
-  purchaseExpeditionSlotAction,
   refreshOfferAction,
   startExpeditionAction,
   type ClaimActionResult,
@@ -104,7 +102,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [assignFor, setAssignFor] = useState<ExpeditionBoardSlot | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [cancelFor, setCancelFor] = useState<number | null>(null);
-  const [purchaseFor, setPurchaseFor] = useState<ExpeditionBoardSlot | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -113,7 +110,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
   const showError = (code: string) => {
     const msg: Record<string, string> = {
-      START_LIMIT: '오늘 파견 횟수를 모두 사용했어요 (자정에 초기화)',
       AVATAR_BUSY: '이미 파견 중인 아바타예요',
       INSUFFICIENT_DIAMOND: '다이아가 부족해요',
       NOT_READY: '아직 귀환하지 않았어요',
@@ -173,7 +169,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       s.slot,
       (b) => ({
         ...b,
-        startsLeft: Math.max(0, b.startsLeft - 1),
         slots: b.slots.map((x) =>
           x.slot === s.slot
             ? {
@@ -233,13 +228,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     });
   };
 
-  const doPurchase = (s: ExpeditionBoardSlot) => {
-    setPurchaseFor(null);
-    const cost = s.unlock?.diamond ?? 0;
-    if (!gate.ensure(cost)) return;
-    optimisticAdjust(BigInt(-cost));
-    run(null, (b) => b, () => purchaseExpeditionSlotAction(s.slot), () => optimisticAdjust(BigInt(cost)));
-  };
 
   const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
 
@@ -253,7 +241,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-bold">대성공 {(board.critBp / 100).toFixed(1)}%</span>
           </span>
           <span>
-            오늘 파견 <b className="text-amber-600 dark:text-amber-400">{EXPEDITION_DAILY_STARTS - board.startsLeft}</b>/{EXPEDITION_DAILY_STARTS}
+            합산 강화 <b className="text-zinc-800 dark:text-zinc-100">{board.enhanceSum.toLocaleString('ko-KR')}</b>
           </span>
         </div>
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -289,7 +277,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           }}
           onCancel={() => setCancelFor(s.slot)}
           onClaim={() => doClaim(s)}
-          onPurchase={() => setPurchaseFor(s)}
+          enhanceSum={board.enhanceSum}
         />
       ))}
 
@@ -334,12 +322,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 </ModalButton>
                 <ModalButton
                   tone="contrast"
-                  disabled={!selectedAvatar || board.startsLeft <= 0}
+                  disabled={!selectedAvatar}
                   onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}
                 >
-                  {board.startsLeft <= 0
-                    ? '오늘 횟수 소진'
-                    : `파견 보내기 (오늘 ${EXPEDITION_DAILY_STARTS - board.startsLeft}/${EXPEDITION_DAILY_STARTS})`}
+                  파견 보내기
                 </ModalButton>
               </>
             }
@@ -421,28 +407,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
-      {/* 슬롯 바로 열기 — 다이아 소모 컨펌(UI 피드백 3) */}
-      {purchaseFor ? (
-        <ModalShell onClose={() => setPurchaseFor(null)} label="슬롯 열기">
-          <ModalLayout
-            title={`슬롯 ${purchaseFor.slot} 바로 열기`}
-            footer={
-              <>
-                <ModalButton tone="ghost" onClick={() => setPurchaseFor(null)}>
-                  닫기
-                </ModalButton>
-                <ModalButton tone="contrast" onClick={() => doPurchase(purchaseFor)}>
-                  💎 {purchaseFor.unlock?.diamond.toLocaleString('ko-KR')} 사용
-                </ModalButton>
-              </>
-            }
-          >
-            <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              파견 Lv.{purchaseFor.unlock?.level} 달성을 기다리지 않고 지금 바로 엽니다.
-            </p>
-          </ModalLayout>
-        </ModalShell>
-      ) : null}
 
       {/* 수령 팝업 — 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (
@@ -505,7 +469,7 @@ function SlotCard({
   onAssign,
   onCancel,
   onClaim,
-  onPurchase,
+  enhanceSum,
 }: {
   s: ExpeditionBoardSlot;
   pending: boolean;
@@ -513,23 +477,26 @@ function SlotCard({
   onAssign: () => void;
   onCancel: () => void;
   onClaim: () => void;
-  onPurchase: () => void;
+  /** 계정 합산 강화 — 잠긴 카드의 진행도 표시용. */
+  enhanceSum: number;
 }) {
   // B안(아바타 히어로) — 전 상태 h-[112px] 고정: 좌측 히어로(지역색 그라데이션+아바타 프레임),
   // 우측 본문(제목/보상/버튼행). 상태 전환은 각 영역의 내용 교체만 — 레이아웃 시프트 0.
   if (s.state === 'locked') {
+    // 잠금 카드 — 해금 조건은 계정 합산 강화뿐(다이아·레벨 해금 없음). 진행도 바로 "강화하면 열린다"를 보여준다.
+    const need = s.unlock?.enhanceSum ?? 0;
+    const pct = need > 0 ? Math.min(100, Math.floor((enhanceSum / need) * 100)) : 0;
     return (
       <div className="flex h-[112px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
         <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
-          슬롯 {s.slot} — <b className="text-zinc-500 dark:text-zinc-400">파견 Lv.{s.unlock?.level}</b> 달성 시 무료 오픈
+          슬롯 {s.slot} — 합산 강화 <b className="text-zinc-500 dark:text-zinc-400">{need.toLocaleString('ko-KR')}</b> 달성 시 오픈
         </p>
-        <button
-          type="button"
-          onClick={onPurchase}
-          className="h-[30px] rounded-lg bg-zinc-100 px-4 text-[11.5px] font-bold text-zinc-600 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300"
-        >
-          💎 {s.unlock?.diamond.toLocaleString('ko-KR')}으로 바로 열기
-        </button>
+        <div className="h-1.5 w-40 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div className="h-full bg-zinc-400 dark:bg-zinc-500" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-[10.5px] text-zinc-400 dark:text-zinc-500">
+          현재 {enhanceSum.toLocaleString('ko-KR')} · {Math.max(0, need - enhanceSum).toLocaleString('ko-KR')} 남음
+        </p>
       </div>
     );
   }

@@ -8,7 +8,6 @@ import {
   claimExpedition,
   ensureOffers,
   ExpeditionError,
-  purchaseSlot,
   refreshOffer,
   startExpedition,
   type ClaimResult,
@@ -93,18 +92,6 @@ export async function claimExpeditionAction(slot: number): Promise<ClaimActionRe
     const r = await claimExpedition(c.userId, c.serverId, slot);
     await ensureOffers(c.userId, c.serverId);
     return { ok: true, ...r, board: await getExpeditionBoard(c.userId, c.serverId) };
-  } catch (e) {
-    return failOf(e);
-  }
-}
-
-export async function purchaseExpeditionSlotAction(slot: number): Promise<BoardResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, code: 'AUTH' };
-  try {
-    await purchaseSlot(c.userId, c.serverId, slot);
-    await ensureOffers(c.userId, c.serverId);
-    return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);
   }

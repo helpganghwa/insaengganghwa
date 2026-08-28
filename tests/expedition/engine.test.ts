@@ -105,13 +105,15 @@ describe('expedition engine — 레벨/슬롯', () => {
     const r = applyExpeditionXp(EXPEDITION_LEVEL_MAX, 0n, 1000);
     expect(r.level).toBe(EXPEDITION_LEVEL_MAX);
   });
-  it('실효 슬롯 = max(구매, 레벨 해금) · 상한 3', () => {
-    expect(effectiveSlots(0, 1)).toBe(1);
-    expect(effectiveSlots(9, 1)).toBe(1);
-    expect(effectiveSlots(10, 1)).toBe(2);
-    expect(effectiveSlots(30, 1)).toBe(3);
-    expect(effectiveSlots(0, 3)).toBe(3);
-    expect(effectiveSlots(50, 99)).toBe(3);
+  it('실효 슬롯 = 합산 강화 문턱(1k/5k/10k/15k) · 상한 4 · 미달 0', () => {
+    expect(effectiveSlots(0)).toBe(0);
+    expect(effectiveSlots(999)).toBe(0);
+    expect(effectiveSlots(1000)).toBe(1);
+    expect(effectiveSlots(4999)).toBe(1);
+    expect(effectiveSlots(5000)).toBe(2);
+    expect(effectiveSlots(10000)).toBe(3);
+    expect(effectiveSlots(15000)).toBe(4);
+    expect(effectiveSlots(999999)).toBe(4);
   });
   it('레벨 곡선 참조 무결(엔진↔밸런스)', () => {
     expect(expeditionXpToNext(0)).toBe(30);

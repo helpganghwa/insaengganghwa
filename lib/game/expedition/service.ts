@@ -7,10 +7,8 @@ import { isUniqueViolation } from '@/lib/db/errors';
 import { kstDateString } from '@/lib/kst';
 import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
 import {
-  EXPEDITION_DAILY_STARTS,
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
-  EXPEDITION_SLOT_UNLOCKS,
 } from '@/lib/game/balance';
 import {
   applyCrit,
@@ -44,9 +42,7 @@ export type ExpeditionErrorCode =
   | 'NOT_READY'
   | 'AVATAR_NOT_FOUND'
   | 'AVATAR_BUSY'
-  | 'START_LIMIT'
   | 'SLOT_LOCKED'
-  | 'SLOT_ALREADY_OPEN'
   | 'INSUFFICIENT_DIAMOND';
 export class ExpeditionError extends Error {
   constructor(public code: ExpeditionErrorCode) {
@@ -121,10 +117,20 @@ async function loadAvatarSums(
   return { byId, base };
 }
 
+/** 계정 합산 강화 — 보유 장비 enhance_level 합(리더보드 'sum'과 동일 정의). 슬롯 해금 원천. */
+export async function enhanceSumOf(tx: Tx, userId: string, serverId: number): Promise<number> {
+  const [r] = (await tx.execute(sql`
+    select coalesce(sum(enhance_level), 0)::int as s from user_equipment
+    where user_id = ${userId}::uuid and server_id = ${serverId}
+  `)) as unknown as { s: number }[];
+  return Number(r?.s ?? 0);
+}
+
 export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cryptoRng10k) {
   return db.transaction(async (tx) => {
     const st = await lockState(tx, userId, serverId);
-    const slots = effectiveSlots(st.level, st.slots_purchased);
+    // 열린 슬롯에만 오퍼를 채운다. 합산 강화 하락으로 닫힌 슬롯의 진행 중 파견은 건드리지 않는다(수령까지 유지).
+    const slots = effectiveSlots(await enhanceSumOf(tx, userId, serverId));
     const today = kstDateString();
     const active = (await tx.execute(sql`
       select id::text, slot, status, (rolled_at at time zone 'Asia/Seoul')::date::text as rolled_kst
@@ -198,7 +204,7 @@ export function refreshOffer(
 
 /**
  * 파견 시작 — 아바타 배정 + 배율 스냅샷 + 서버 시계 stamping.
- * 일일 시작 6회는 여기서 차감(취소 미반환 — 사용자 확정).
+ * 일일 시작 상한 없음(2026-08-28) — 처리량은 슬롯 수(합산 강화 해금)만이 제한한다.
  */
 export function startExpedition(
   userId: string,
@@ -207,10 +213,9 @@ export function startExpedition(
   avatarProfileId: string,
 ): Promise<{ completeAtIso: string; finalReward: ExpeditionReward; synergyBp: number; reqBonusBp: number }> {
   return db.transaction(async (tx) => {
-    const st = await lockState(tx, userId, serverId);
-    const today = kstDateString();
-    const starts = todayCount(st.starts_kst_day, st.starts_today, today);
-    if (starts >= EXPEDITION_DAILY_STARTS) throw new ExpeditionError('START_LIMIT');
+    await lockState(tx, userId, serverId); // 유저×서버 직렬화(동시 시작 경합 방지)
+    // 새 배정 게이트 — 합산 강화가 문턱 아래로 내려가면 그 슬롯은 새로 못 보낸다(진행분은 별도).
+    if (slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
 
     const [offer] = (await tx.execute(sql`
       select id::text, region, duration_ms::text, reward from expeditions
@@ -234,12 +239,6 @@ export function startExpedition(
     const reqBonus = asBonusBp(avatarSum);
     // 레벨 배율 없음(2026-08-27) — level_bonus_bp는 0 고정(컬럼은 이력 호환으로 유지).
     const finalReward = applyMultiplier(offer.reward, synergy + reqBonus);
-
-    // 카운터 선차감(같은 tx — 실패 시 롤백으로 원복).
-    await tx.execute(sql`
-      update expedition_state set starts_kst_day = ${today}, starts_today = ${starts + 1}
-      where user_id = ${userId}::uuid and server_id = ${serverId}
-    `);
 
     let completeAtIso: string;
     try {
@@ -358,20 +357,3 @@ export function claimExpedition(
   });
 }
 
-/** 슬롯 다이아 선구매 — 레벨 무료 해금 전에 여는 sink. */
-export function purchaseSlot(userId: string, serverId: number, slot: number): Promise<void> {
-  return db.transaction(async (tx) => {
-    const st = await lockState(tx, userId, serverId);
-    const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot);
-    if (!def) throw new ExpeditionError('SLOT_LOCKED');
-    if (effectiveSlots(st.level, st.slots_purchased) >= slot) throw new ExpeditionError('SLOT_ALREADY_OPEN');
-    // 순서 강제 — 슬롯3을 먼저 살 수 없다(2를 이미 확보했어야).
-    if (slot === 3 && effectiveSlots(st.level, st.slots_purchased) < 2) throw new ExpeditionError('SLOT_LOCKED');
-    const paid = await walletTrySpend(tx, userId, serverId, def.diamond, 'expedition_slot');
-    if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
-    await tx.execute(sql`
-      update expedition_state set slots_purchased = greatest(slots_purchased, ${slot})
-      where user_id = ${userId}::uuid and server_id = ${serverId}
-    `);
-  });
-}

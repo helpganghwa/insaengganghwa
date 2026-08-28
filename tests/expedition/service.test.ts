@@ -7,7 +7,6 @@ import {
   startExpedition,
 } from '@/lib/game/expedition/service';
 import type { Rng10k } from '@/lib/game/expedition/engine';
-import { EXPEDITION_DAILY_STARTS } from '@/lib/game/balance';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -53,7 +52,25 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     baseBoxes = Object.fromEntries(boxes.map((b) => [b.slot, b.count]));
   });
 
-  beforeEach(wipe);
+  /**
+   * 합산 강화 픽스처(2026-08-28 슬롯 개편) — 슬롯은 user_equipment enhance_level 합으로만 열린다.
+   * 테스트 유저 장비 첫 행에 원하는 합을 싣고 나머지는 0, afterAll에서 원복.
+   */
+  let baseLevels: { id: string; lv: number }[] = [];
+  const setEnhanceSum = async (sum: number) => {
+    if (baseLevels.length === 0) {
+      baseLevels = (await testDb.execute(sql`
+        select id::text, enhance_level as lv from user_equipment where user_id = ${uid}::uuid and server_id = ${SID} order by id
+      `)) as unknown as { id: string; lv: number }[];
+      if (baseLevels.length === 0) throw new Error('TEST 유저에 user_equipment 행이 없음(합산 강화 픽스처 불가)');
+    }
+    await testDb.execute(sql`update user_equipment set enhance_level = 0 where user_id = ${uid}::uuid and server_id = ${SID}`);
+    await testDb.execute(sql`update user_equipment set enhance_level = ${sum} where id = ${BigInt(baseLevels[0]!.id)}`);
+  };
+  beforeEach(async () => {
+    await wipe();
+    await setEnhanceSum(1000); // 기본: 슬롯 1칸
+  });
 
   afterAll(async () => {
     await wipe();
@@ -75,6 +92,9 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
       delete from diamond_ledger where user_id = ${uid}::uuid
         and reason in ('expedition','expedition_refresh','expedition_slot')
     `);
+    for (const b of baseLevels) {
+      await testDb.execute(sql`update user_equipment set enhance_level = ${b.lv} where id = ${BigInt(b.id)}`);
+    }
     await endTestDb();
   });
 
@@ -172,22 +192,35 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(after - before).toBe(BigInt(paid.reward.diamond!)); // 정확 1회 지급
   });
 
-  it('일일 시작 상한 — 6회 소진 시 START_LIMIT', async () => {
+  it('슬롯 해금 — 합산 강화 미달이면 오퍼 0·시작 SLOT_LOCKED, 1k/5k에서 1·2칸', async () => {
+    await setEnhanceSum(999);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
-    await testDb.execute(sql`
-      update expedition_state set starts_kst_day = (now() at time zone 'Asia/Seoul')::date,
-             starts_today = ${EXPEDITION_DAILY_STARTS}
-      where user_id = ${uid}::uuid and server_id = ${SID}
-    `);
-    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'START_LIMIT' });
+    expect(await offerCount()).toBe(0);
+    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
+    await setEnhanceSum(1000);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    expect(await offerCount()).toBe(1);
+    await setEnhanceSum(5000);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    expect(await offerCount()).toBe(2);
+  });
+
+  it('합산 강화 하락 — 진행 중 파견은 유지되고 새 배정만 잠긴다', async () => {
+    await setEnhanceSum(5000);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    await startExpedition(uid, SID, 2, avatarId);
+    await setEnhanceSum(0);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG()); // 닫힌 슬롯의 running은 건드리지 않는다
+    const [r] = (await testDb.execute(sql`
+      select status from expeditions where user_id = ${uid}::uuid and slot = 2
+    `)) as unknown as { status: string }[];
+    expect(r?.status).toBe('running');
+    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
   });
 
   it('아바타 중복 배정 — 두 번째 시작이 AVATAR_BUSY', async () => {
-    // 슬롯 2 확보(레벨 픽스처) 후 두 슬롯에 같은 아바타.
-    await ensureOffers(uid, SID, DIA_OFFER_RNG());
-    await testDb.execute(sql`
-      update expedition_state set level = 10 where user_id = ${uid}::uuid and server_id = ${SID}
-    `);
+    // 슬롯 2 확보(합산 강화 5,000 픽스처) 후 두 슬롯에 같은 아바타.
+    await setEnhanceSum(5000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
     await startExpedition(uid, SID, 1, avatarId);

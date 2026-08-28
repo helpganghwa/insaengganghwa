@@ -5,7 +5,6 @@ import {
   EXPEDITION_BOX_MAIN_BP,
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_MULT,
-  EXPEDITION_DAILY_STARTS,
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
   EXPEDITION_CRIT_BP_PER_LEVEL,
@@ -41,17 +40,17 @@ describe('expedition balance invariants', () => {
     for (const r of EXPEDITION_REGIONS) expect(EXPEDITION_BOX_MAIN_SLOT[r]).toBeTruthy();
   });
 
-  it('시간 옵션 정합 — 스케일 단조 증가 + 일일 최대 유닛은 24h 루트(시작 6회 상한 하)', () => {
+  it('시간 옵션 정합 — 스케일 단조 증가 + 슬롯당 하루 최대 유닛은 24h 루트', () => {
     const keys = Object.keys(EXPEDITION_DURATION_SCALE).map(Number).sort((a, b) => a - b);
     expect(keys).toEqual([...EXPEDITION_DURATIONS_H]);
     // 파견 1건당 스케일은 시간에 단조 증가(짧은 옵션이 유리해지는 역전 금지).
     const scales = EXPEDITION_DURATIONS_H.map((h) => EXPEDITION_DURATION_SCALE[h]);
     for (let i = 1; i < scales.length; i++) expect(scales[i]!).toBeGreaterThan(scales[i - 1]!);
-    // 하루 최대 유닛 루트 = 24h×3슬롯(시작 3회) — 12h×6회·8h×6회보다 크거나 같아야
-    // "하루 한 번" 유저가 손해 보지 않는다(경제 가드도 이 값 기준).
-    const day24 = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
-    expect(day24).toBeGreaterThanOrEqual(EXPEDITION_DAILY_STARTS * EXPEDITION_DURATION_SCALE[12]);
-    expect(day24).toBeGreaterThanOrEqual(EXPEDITION_DAILY_STARTS * EXPEDITION_DURATION_SCALE[8]);
+    // 슬롯당 하루 최대 유닛 = 24h×1 — 12h×2·8h×3(같은 슬롯을 하루에 돌릴 수 있는 횟수)보다 크거나 같아야
+    // "하루 한 번" 유저가 손해 보지 않는다(경제 가드도 이 값 기준). 일일 시작 상한은 없다(2026-08-28).
+    const day24 = EXPEDITION_DURATION_SCALE[24];
+    expect(day24).toBeGreaterThanOrEqual(2 * EXPEDITION_DURATION_SCALE[12]);
+    expect(day24).toBeGreaterThanOrEqual(3 * EXPEDITION_DURATION_SCALE[8]);
   });
 
   it('수량 범위 정합(min ≤ max)', () => {
@@ -74,32 +73,34 @@ describe('expedition balance invariants', () => {
     expect(cum).toBe(4550); // 30×50 + Σ⌊2.5ℓ⌋(ℓ=0..49) = 4,550
   });
 
-  it('경제 가드 — 무강화 기준(배율 0) 하루 최대 다이아 기대 ≈ 300💎(±3%) · 축 ③ AS 1,000이면 ≈ 960💎', () => {
+  it('경제 가드 — 무강화 기준(배율 0) 4슬롯 풀가동 하루 최대 다이아 기대 ≈ 400💎(±3%) · 축 ③ AS 1,000이면 ≈ 1,280💎', () => {
     const { diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
     const a = EXPEDITION_BASE_AMOUNTS;
     const evDia =
       (diamondOnly / 10000) * ((a.diamondOnly.diaMin + a.diamondOnly.diaMax) / 2) +
       (both / 10000) * ((a.both.diaMin + a.both.diaMax) / 2);
     const critMult = 1 + (EXPEDITION_CRIT_BP / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    // 하루 최대 유닛 — 시작 6회·슬롯 3 제약 아래 스케일 합 최대(24h×3슬롯).
+    // 하루 최대 유닛 — 4슬롯(합산 강화 15,000+) × 24h 원정. 슬롯당 100💎/일.
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
     const launchDaily = evDia * critMult * maxDailyUnits;
-    expect(launchDaily).toBeGreaterThanOrEqual(291);
-    expect(launchDaily).toBeLessThanOrEqual(309);
-    // 축 ③(아바타 강화 합, 상한 없음, C안) — AS 1,000 아바타는 ×3.20 → 종전 500💎 기준의 192%.
+    expect(launchDaily).toBeGreaterThanOrEqual(388);
+    expect(launchDaily).toBeLessThanOrEqual(412);
+    // 축 ③(아바타 강화 합, 상한 없음, C안) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
-    expect(launchDaily * as1000).toBeGreaterThanOrEqual(945);
-    expect(launchDaily * as1000).toBeLessThanOrEqual(975);
-    // 시너지 만렙 + Lv.50 대성공(15%)만 얹은 상한 — 축 ③ 제외 시 종전 가드(920) 대비 여유.
+    expect(launchDaily * as1000).toBeGreaterThanOrEqual(1260);
+    expect(launchDaily * as1000).toBeLessThanOrEqual(1300);
+    // 시너지 만렙 + Lv.50 대성공(15%)만 얹은 상한(축 ③ 제외).
     const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX) / 10000) * (EXPEDITION_CRIT_MULT - 1);
     const maxMult = (1 + (3 * EXPEDITION_SYNERGY_MATCH_BP) / 10000) * (critMax / critMult);
-    expect(launchDaily * maxMult).toBeLessThanOrEqual(560);
+    expect(launchDaily * maxMult).toBeLessThanOrEqual(750);
     expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
   });
 
-  it('시너지·상한 정합 — 일반은 지역 일치의 절반, 일일 시작 6회', () => {
+  it('시너지·슬롯 정합 — 일반은 지역 일치의 절반, 슬롯 4칸은 합산 강화 1k/5k/10k/15k 단조 증가', () => {
     expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
-    expect(EXPEDITION_DAILY_STARTS).toBe(6);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([1000, 5000, 10000, 15000]);
+    expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
   it('난이도 분포 — 구간별 합 100%, 고난이도 출현이 레벨에 단조 증가, 원정은 Lv.5부터', () => {
@@ -126,10 +127,12 @@ describe('expedition balance invariants', () => {
     expect(expeditionDifficultyDist(5).grand).toBeGreaterThan(0);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(Lv10/1000·Lv30/2000, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 1k/5k/10k/15k, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
-      { slot: 2, level: 10, diamond: 1000 },
-      { slot: 3, level: 30, diamond: 2000 },
+      { slot: 1, enhanceSum: 1000 },
+      { slot: 2, enhanceSum: 5000 },
+      { slot: 3, enhanceSum: 10000 },
+      { slot: 4, enhanceSum: 15000 },
     ]);
     expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
     expect(EXPEDITION_REFRESH_COST).toBe(20);

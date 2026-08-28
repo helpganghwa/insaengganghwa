@@ -14,8 +14,7 @@ import {
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
-  EXPEDITION_SLOT_UNLOCKS,
-  EXPEDITION_SLOTS,
+  expeditionSlotsFor,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   expeditionAsBonusBp,
@@ -235,9 +234,7 @@ export function applyExpeditionXp(
   return { level: lv, xp: rem };
 }
 
-/** 실효 슬롯 수 = max(구매분, 레벨 무료 해금분). */
-export function effectiveSlots(level: number, purchased: number): number {
-  let byLevel = 1;
-  for (const u of EXPEDITION_SLOT_UNLOCKS) if (level >= u.level) byLevel = Math.max(byLevel, u.slot);
-  return Math.max(1, Math.min(EXPEDITION_SLOTS, Math.max(purchased, byLevel)));
+/** 실효 슬롯 수 — 계정 합산 강화만으로 결정(0~4). 구매·레벨 해금 없음(2026-08-28). */
+export function effectiveSlots(enhanceSum: number): number {
+  return expeditionSlotsFor(enhanceSum);
 }
