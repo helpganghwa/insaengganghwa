@@ -302,17 +302,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               region={assignFor.region}
               hours={assignFor.hours ?? 0}
               avatarSouth={selectedAv?.south ?? null}
-              big={assignFor.reward ? '확정 보상' : '새 미션 찾는 중…'}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
-              meta={
-                selectedAv ? (
-                  <>
-                    <span className="text-sky-400">×{(1 + previewBp / 10000).toFixed(2)}</span> · +{assignFor.hours ?? 0} XP
-                  </>
-                ) : (
-                  `+${assignFor.hours ?? 0} XP`
-                )
-              }
+              status={assignFor.reward ? '선택 대원 기준 확정 보상' : '새 미션 찾는 중…'}
+              bonusText={selectedAv ? `×${(1 + previewBp / 10000).toFixed(2)}` : null}
+              progress={0}
               compact
             />
             {/* 고정 높이 그리드(내부 스크롤) — 아바타 수와 무관하게 팝업 높이 불변(레이아웃 시프트 0). */}
@@ -419,18 +412,20 @@ const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
 const GHOST_SRC = '/sprites/default/male/south.png';
 
 /**
- * 카드 본문(2026-08-28 UI 개편, 최종안 v9) — 112px = 헤더 24(중앙 지역명 · 시간) + 본문 88(정중앙 정렬).
- * 좌: 원정대원 전신 80px(미배정은 실루엣) / 중앙 3줄 고정 높이(값 26 · 보상 20 · 배율+XP 16 — 폰트 고정,
- * 상태 전환 시 시프트 0) / 우: 지역 몬스터 56px(반전). 배지·힌트·상태 태그 없음, 취소 기능 없음.
+ * 카드 본문(2026-08-28 UI 개편 v10) — 112px = 헤더 24(중앙 지역명 · 시간) + 본문 88(정중앙 정렬).
+ * 좌: 배율 배지(위) + 원정대원 전신 72px(미배정은 실루엣·배지 자리 유지) / 중앙: 보상 크게(19px) + 상태 작게
+ * (파견 대기 · 타이머 · 파견 완료, 11px) — 고정 높이라 상태 전환 시 시프트 0 / 우: XP 배지(위) + 지역 몬스터 52px(반전).
+ * 하단 보더에 진행 게이지(강화 카드 문법). 취소 기능 없음.
  */
 function CardBody({
   region,
   hours,
   avatarSouth,
-  big,
-  bigCls,
   reward,
-  meta,
+  status,
+  statusCls,
+  bonusText,
+  progress,
   compact,
   glow,
   children,
@@ -438,19 +433,23 @@ function CardBody({
   region: ExpeditionRegion;
   hours: number;
   avatarSouth: string | null;
-  big: React.ReactNode;
-  bigCls?: string;
   reward: ExpeditionReward | undefined;
-  /** 3줄째 — 배율·XP("×1.55 · +12 XP"). */
-  meta: React.ReactNode;
+  /** 중앙 하단 작은 상태 — '파견 대기' / 타이머 / '파견 완료'. */
+  status: React.ReactNode;
+  statusCls?: string;
+  /** 아바타 위 배지("×1.55") — null이면 자리만 유지(미배정). */
+  bonusText: string | null;
+  /** 하단 보더 진행 게이지 0~1(미배정 0). 강화 카드 문법: <50% 빨강 · 50~ 주황 · 100% 초록. */
+  progress: number;
   compact?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
   const ui = REGION_UI[region];
   const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
-  const avH = compact ? 60 : 80;
-  const monH = compact ? 44 : 56;
+  const avH = compact ? 56 : 72;
+  const monH = compact ? 40 : 52;
+  const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
   return (
     <div
       className={`relative overflow-hidden rounded-xl border bg-cover bg-center ${compact ? 'h-[104px]' : 'h-[112px]'} ${
@@ -462,16 +461,19 @@ function CardBody({
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
-      {/* 헤더 24px — 중앙 지역명 · 시간 칩(v9) */}
+      {/* 헤더 24px — 중앙 지역명 · 시간 칩 */}
       <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
         <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
         <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
-      {/* 본문 — 헤더 아래 영역 정중앙(헤더 높이만큼 위로 보정). 좌 원정대원 전신 / 중앙 3줄 고정 / 우 지역 몬스터 */}
-      <div className={`relative -mt-2.5 flex items-center justify-between px-2.5 ${compact ? 'h-[80px]' : 'h-[88px]'}`}>
-        <span className={`flex flex-none items-center justify-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+      {/* 본문 — 좌 [배율 배지 위 + 전신] / 중앙 [보상 크게 + 상태 작게] / 우 [XP 배지 위 + 몬스터] */}
+      <div className={`relative -mt-2 flex items-center justify-between px-2.5 ${compact ? 'h-[80px]' : 'h-[88px]'}`}>
+        <span className={`flex flex-none flex-col items-center justify-center gap-1 ${compact ? 'w-16' : 'w-[86px]'}`}>
+          <span className={`h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-sky-400 ${bonusText ? '' : 'invisible'}`}>
+            {bonusText ?? '—'}
+          </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarSouth ?? GHOST_SRC}
@@ -482,11 +484,11 @@ function CardBody({
           />
         </span>
         <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
-          <b className={`block h-[26px] w-full truncate text-[17px] font-black leading-[26px] drop-shadow ${bigCls ?? 'text-white'}`}>{big}</b>
-          <span className="block h-5 w-full truncate text-[14px] font-black leading-5 text-white drop-shadow">{rewardShort(reward)}</span>
-          <span className="block h-4 w-full truncate text-[11px] font-bold leading-4 text-zinc-200 drop-shadow">{meta}</span>
+          <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
+          <span className={`block h-[18px] w-full truncate text-[11px] font-bold leading-[18px] drop-shadow ${statusCls ?? 'text-zinc-200'}`}>{status}</span>
         </div>
-        <span className={`flex flex-none items-center justify-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+        <span className={`flex flex-none flex-col items-center justify-center gap-1 ${compact ? 'w-16' : 'w-[86px]'}`}>
+          <span className="h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-zinc-200">+{hours} XP</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
@@ -497,6 +499,10 @@ function CardBody({
           />
         </span>
       </div>
+      {/* 하단 보더 진행 게이지(강화 카드 문법) */}
+      {progress > 0 ? (
+        <div className={`absolute bottom-0 left-0 h-1 ${gaugeCls}`} style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }} />
+      ) : null}
       {children}
     </div>
   );
@@ -512,10 +518,11 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
       <button
         type="button"
         onClick={onTap}
-        className="relative block h-[112px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-600 bg-cover bg-center text-left opacity-85 grayscale"
+        className="relative block h-[112px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-500 bg-cover bg-center text-left grayscale"
         style={{ backgroundImage: `url(/sprites/expedition/bg/${bg}.png)` }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-black/60" />
+        {/* dim 레이어 — 보더 영역까지 덮도록 -inset-px(2026-08-28) */}
+        <div className="pointer-events-none absolute -inset-px rounded-xl bg-black/60" />
         <div className="relative flex h-6 items-center justify-center px-2.5">
           <b className="text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
         </div>
@@ -542,25 +549,24 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} big="파견 대기" reward={s.reward} meta={`+${hours} XP`} />
+        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status="파견 대기" bonusText={null} progress={0} />
       ) : (
         <Ticker>
           {(now) => {
             const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
             const done = remain <= 0;
+            const total = Math.max(1, hours * 3_600_000);
+            const progress = done ? 1 : Math.min(0.999, Math.max(0, 1 - remain / total));
             return (
               <CardBody
                 region={region}
                 hours={hours}
                 avatarSouth={s.avatarSouth ?? null}
-                big={done ? '파견 완료' : <span className="tabular-nums">{fmtRemain(remain)}</span>}
-                bigCls={done ? 'text-emerald-400' : 'text-amber-400'}
                 reward={s.reward}
-                meta={
-                  <>
-                    <span className="text-sky-400">×{(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}</span> · +{hours} XP
-                  </>
-                }
+                status={done ? '파견 완료' : <span className="tabular-nums">{fmtRemain(remain)}</span>}
+                statusCls={done ? 'text-emerald-400' : 'text-amber-300'}
+                bonusText={`×${(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}`}
+                progress={progress}
                 glow={done}
               />
             );
