@@ -48,16 +48,53 @@ export function ProfileSelector({
   const selectChar = (p: ProfileItem) => {
     if (p.id === selectedId) return;
     setSelectedId(p.id);
+    setFlipPreview(false); // 반전은 확인용 미리보기 — 다른 아바타로 옮기면 초기화
   };
 
-  // 적용 → 선택 캐릭터를 대표로 커밋(방향은 정면 고정 — 회전 미사용).
-  const dirty = selectedId !== activeProfileId;
+  // 좌우 반전 — 버튼은 **미리보기만** CSS로 뒤집는다(2026-08-28 "확인만 하고 싶은데 바로 적용" 피드백).
+  // 서버 반영(반전 PNG 저장·URL 교체, flip.ts)은 아래 "적용" 버튼에서만. 짝수 번 누르면 원상태라 변경 없음.
+  const [flipPreview, setFlipPreview] = useState(false);
+  const [flipping, setFlipping] = useState(false);
+  const doFlip = () => {
+    if (flipping) return;
+    haptic.tap();
+    setFlipPreview((v) => !v);
+  };
+
+  // 적용 → (반전 대기 중이면 먼저 서버 반전) + 선택 캐릭터를 대표로 커밋.
+  const activeDirty = selectedId !== activeProfileId;
+  const dirty = activeDirty || flipPreview;
   const apply = () => {
-    if (!dirty) return;
+    if (!dirty || flipping) return;
     haptic.success();
+    const id = selectedId;
+    if (flipPreview) {
+      // 반전은 업로드가 걸려(~1초) 완료를 기다린다 — 완료 전 이동하면 /me 헤더가 옛 이미지로 그려진다.
+      setFlipping(true);
+      void flipProfile(id)
+        .then(async (r) => {
+          if (r.status === 'error') {
+            showError(r.message);
+            return;
+          }
+          setFlipPreview(false); // 서버가 준 URL이 이미 반전본 — CSS 반전 해제
+          if (activeDirty) {
+            const a = await setActiveProfile(id);
+            if (a.status === 'error') {
+              showError(a.message);
+              return;
+            }
+          }
+          showHeaderToast({ title: activeDirty ? '대표 아바타 변경' : '아바타 좌우 반전' });
+          router.push('/me');
+          router.refresh();
+        })
+        .finally(() => setFlipping(false));
+      return;
+    }
     // 낙관: 로딩 없이 즉시 /me로 이동 → 백그라운드 커밋 후 router.refresh로 보정.
     router.push('/me');
-    void setActiveProfile(selectedId).then((r) => {
+    void setActiveProfile(id).then((r) => {
       if (r.status === 'error') {
         showError(r.message);
         return;
@@ -66,28 +103,7 @@ export function ProfileSelector({
       router.refresh();
     });
   };
-
-  // 좌우 반전 — 서버가 반전 PNG로 URL을 바꾸고 revalidate 응답으로 prop이 갱신된다(§11.7).
-  // 낙관적: 누르는 즉시 CSS로 뒤집어 보여주고, 서버가 준 새 URL(이미 반전본)이 도착하면 CSS 반전은
-  // 자동 해제(오버라이드가 "누를 당시 URL"에 묶여 있어 URL이 바뀌면 무효). 실패 시 오버라이드 제거.
-  const [flipOpt, setFlipOpt] = useState<{ id: string; src: string } | null>(null);
-  const cssFlipped = (p: ProfileItem) => flipOpt !== null && flipOpt.id === p.id && frontSrc(p) === flipOpt.src;
-  const [flipping, setFlipping] = useState(false);
-  const doFlip = () => {
-    if (flipping) return;
-    const id = selectedId;
-    setFlipOpt({ id, src: frontSrc(sel) });
-    haptic.tap();
-    setFlipping(true);
-    void flipProfile(id)
-      .then((r) => {
-        if (r.status === 'error') {
-          setFlipOpt(null);
-          showError(r.message);
-        }
-      })
-      .finally(() => setFlipping(false));
-  };
+  const cssFlipped = (p: ProfileItem) => flipPreview && p.id === selectedId;
 
   const doDelete = () => {
     if (pending) return;
@@ -117,8 +133,11 @@ export function ProfileSelector({
           type="button"
           onClick={doFlip}
           disabled={pending || flipping}
-          aria-label="선택한 아바타 좌우 반전"
-          className="absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-zinc-100 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
+          aria-label="선택한 아바타 좌우 반전 미리보기"
+          aria-pressed={flipPreview}
+          className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+            flipPreview ? 'bg-violet-600/85 text-white' : 'bg-black/55 text-zinc-100'
+          }`}
         >
           좌우 반전
         </button>
@@ -188,14 +207,14 @@ export function ProfileSelector({
       <button
         type="button"
         onClick={apply}
-        disabled={pending || !dirty}
+        disabled={pending || flipping || !dirty}
         className={`w-full rounded-xl py-3.5 text-sm font-bold transition-colors ${
-          pending || !dirty
+          pending || flipping || !dirty
             ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
             : 'bg-violet-600 text-white'
         }`}
       >
-        {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
+        {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
       </button>
 
       {/* 아바타 삭제 확인 — 다이아를 쓰고 10분 걸려 만든 자산이라 되돌릴 수 없음을 명시한다. */}
