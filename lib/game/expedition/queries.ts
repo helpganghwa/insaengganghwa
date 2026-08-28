@@ -13,7 +13,7 @@ import {
   type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
-import { critBp, effectiveSlots, snapshotExpeditionRegions, type ExpeditionReward, avatarEnhanceSum } from './engine';
+import { critBp, effectiveSlots, snapshotExpeditionRegions, snapshotEquipment, type ExpeditionReward, type SnapshotEquipment, avatarEnhanceSum } from './engine';
 
 /** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
 export type ExpeditionBoardSlot = {
@@ -48,6 +48,8 @@ export type ExpeditionAvatar = {
   busy: boolean;
   /** 아바타 강화 합(§3.3) — 배율·권장 달성 표시. */
   enhanceSum: number;
+  /** 스냅샷 장비 3종(이름·부위·지역·현재 강화) — 배정 팝업 배율 설명. */
+  equipment: SnapshotEquipment[];
 };
 
 export type ExpeditionBoard = {
@@ -190,6 +192,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       regions: snapshotExpeditionRegions(a.equipment_snapshot),
       busy: a.busy,
       enhanceSum: sumOf(a.equipment_snapshot),
+      equipment: snapshotEquipment(a.equipment_snapshot, levelByKey),
     })),
   };
 }

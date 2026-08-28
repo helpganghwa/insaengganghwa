@@ -279,7 +279,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="원정대원 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간 — 강화 합이 높을수록 보상↑
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간 — 보상 획득률 높은 순
               </>
             }
             bodyPad="sm"
@@ -307,34 +307,78 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               progress={0}
               compact
             />
-            {/* 고정 높이 그리드(내부 스크롤) — 아바타 수와 무관하게 팝업 높이 불변(레이아웃 시프트 0). */}
-            <div className="mt-2 h-[132px] overflow-y-auto rounded-xl border border-zinc-100 p-1.5 dark:border-zinc-800/60">
-              <div className="grid grid-cols-4 gap-1.5">
-                {board.avatars.map((a) => {
-                  const mult = 1 + (enhanceBonusOf(a.enhanceSum) + synergyOf(a.regions, assignFor.region!)) / 10000;
-                  const sel = selectedAvatar === a.id;
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      disabled={a.busy}
-                      onClick={() => setSelectedAvatar(a.id)}
-                      className={`relative flex h-[116px] flex-col items-center justify-end gap-0.5 rounded-xl border p-1.5 text-center transition ${
-                        sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
-                      } ${a.busy ? 'opacity-40' : 'active:scale-95'}`}
-                    >
-                      <span className="flex h-12 items-end justify-center">
-                        {a.south ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.south} alt="" decoding="async" className="h-12 w-auto" style={{ imageRendering: 'pixelated' }} />
+            {/* V1 아코디언(2026-08-28) — 최종 배율 높은 순(파견 중은 맨 아래), 선택 행 아래에 장비 3종·계산식 펼침.
+                목록은 고정 높이 내부 스크롤이라 펼침이 팝업 높이를 바꾸지 않는다(시프트 0). */}
+            <div className="mt-2 h-[236px] overflow-y-auto rounded-xl border border-zinc-100 p-1 dark:border-zinc-800/60">
+              <div className="flex flex-col gap-1">
+                {[...board.avatars]
+                  .map((a) => ({ a, syn: synergyOf(a.regions, assignFor.region!), mult: 1 + (enhanceBonusOf(a.enhanceSum) + synergyOf(a.regions, assignFor.region!)) / 10000 }))
+                  .sort((x, y) => Number(x.a.busy) - Number(y.a.busy) || y.mult - x.mult)
+                  .map(({ a, syn, mult }) => {
+                    const sel = selectedAvatar === a.id;
+                    const asMult = 1 + enhanceBonusOf(a.enhanceSum) / 10000;
+                    return (
+                      <div key={a.id}>
+                        <button
+                          type="button"
+                          disabled={a.busy}
+                          onClick={() => setSelectedAvatar(a.id)}
+                          className={`flex h-[50px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left transition ${
+                            sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
+                          } ${a.busy ? 'opacity-40' : 'active:scale-[0.99]'}`}
+                        >
+                          <span className="flex h-10 w-8 flex-none items-end justify-center">
+                            {a.south ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={a.south} alt="" decoding="async" className="h-10 w-auto" style={{ imageRendering: 'pixelated' }} />
+                            ) : null}
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                            <b className="truncate text-[12px] text-zinc-800 dark:text-zinc-50">
+                              {a.busy ? '파견 중' : a.isActive ? '대표 아바타' : '아바타'}
+                            </b>
+                            <span className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">
+                              강화 합 {a.enhanceSum} · 시너지 +{syn / 100}%
+                            </span>
+                          </span>
+                          <b className="text-[13px] font-extrabold text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</b>
+                        </button>
+                        {sel ? (
+                          <div className="mt-1 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+                            {a.equipment.map((e) => {
+                              const bonus = e.region === assignFor.region ? '일치 +10%' : e.region === 'general' ? '일반 +5%' : '';
+                              const rc = e.region && e.region !== 'general' ? REGION_UI[e.region] : null;
+                              return (
+                                <div key={e.key} className="grid h-5 grid-cols-[30px_1fr_auto_34px_52px] items-center gap-1.5 text-[10.5px]">
+                                  <span className="text-[9.5px] text-zinc-400">{SLOT_KO[e.slot]}</span>
+                                  <span className="truncate font-semibold text-zinc-700 dark:text-zinc-200">{e.name}</span>
+                                  <span
+                                    className="rounded border px-1 text-[9px] font-black"
+                                    style={rc ? { color: rc.color, borderColor: `${rc.color}55` } : { color: '#a1a1aa', borderColor: '#a1a1aa55' }}
+                                  >
+                                    {rc ? rc.label : e.region === 'general' ? '일반' : '—'}
+                                  </span>
+                                  <b className="text-right text-[11px] text-zinc-800 dark:text-zinc-50">+{e.level}</b>
+                                  <span className="text-right text-[9px] font-extrabold text-amber-600 dark:text-amber-400">{bonus}</span>
+                                </div>
+                              );
+                            })}
+                            <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1 text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                              <span>
+                                강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b> → <b className="text-sky-600 dark:text-sky-400">×{asMult.toFixed(2)}</b>
+                              </span>
+                              <span>
+                                시너지 <b className="text-amber-600 dark:text-amber-400">+{syn / 100}%</b>
+                              </span>
+                              <span>
+                                최종 <b className="text-[12px] text-zinc-900 dark:text-white">×{mult.toFixed(2)}</b>
+                              </span>
+                            </div>
+                          </div>
                         ) : null}
-                      </span>
-                      <span className="block h-3.5 text-[9px] font-bold text-zinc-600 dark:text-zinc-300">{a.busy ? '파견 중' : `강화 합 ${a.enhanceSum}`}</span>
-                      <span className="block h-3.5 text-[10px] font-extrabold text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</span>
-                      {a.isActive ? <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span> : null}
-                    </button>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </ModalLayout>
@@ -404,6 +448,8 @@ function rewardShort(r: ExpeditionReward | undefined): string {
 
 /** 이벤트 핸들러 전용 현재 시각 — 렌더 경로에서 호출 금지(React 컴파일러 순수성 규칙). */
 const nowMs = () => Date.now();
+
+const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 /** 시간 → 몬스터 단계(t1~t4). */
 const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };

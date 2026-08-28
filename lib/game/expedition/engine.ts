@@ -149,6 +149,26 @@ const CATALOG_TO_EXPEDITION: Partial<Record<CatalogRegion, ExpeditionRegion | 'g
   일반: 'general',
 };
 const REGION_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.region]));
+const ITEM_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c]));
+
+/** 아바타 스냅샷 장비 3종 상세 — 배정 팝업 "왜 이 배율인가" 설명용(이름·부위·파견 지역·현재 강화). */
+export type SnapshotEquipment = {
+  key: string;
+  slot: 'weapon' | 'armor' | 'accessory';
+  name: string;
+  /** 파견 지역 매핑(일치 +10% / 일반 +5%) — 미매핑은 null(보너스 없음). */
+  region: ExpeditionRegion | 'general' | null;
+  level: number;
+};
+export function snapshotEquipment(snapshot: unknown, levelByKey: ReadonlyMap<string, number>): SnapshotEquipment[] {
+  if (!snapshot || typeof snapshot !== 'object') return [];
+  const keys = Object.values(snapshot as Record<string, unknown>).filter((v): v is string => typeof v === 'string');
+  return keys.slice(0, 3).flatMap((k) => {
+    const c = ITEM_BY_KEY.get(k);
+    if (!c) return [];
+    return [{ key: k, slot: c.slot, name: c.nameKo, region: CATALOG_TO_EXPEDITION[c.region] ?? null, level: levelByKey.get(k) ?? 0 }];
+  });
+}
 
 /** 스냅샷의 장비 지역 목록(UI 배지·클라 시너지 계산용) — 미매핑은 제외. */
 export function snapshotExpeditionRegions(snapshot: unknown): (ExpeditionRegion | 'general')[] {
