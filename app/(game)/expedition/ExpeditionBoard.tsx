@@ -579,6 +579,7 @@ function CardBody({
   children?: React.ReactNode;
 }) {
   const ui = REGION_UI[region];
+  void bonusText; // 카드 배지 삭제(2026-08-28) — 배율은 팝업에서만
   const avH = compact ? 64 : 86;
   const monH = compact ? 48 : 62;
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
@@ -611,7 +612,7 @@ function CardBody({
       )}
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
-        <span className={`flex h-6 items-center text-[10px] font-black text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>{bonusText ?? '—'}</span>
+        <span className="h-6" />
         <span className="flex flex-1 items-center justify-center pb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -624,7 +625,7 @@ function CardBody({
         </span>
       </span>
       <span className={`absolute inset-y-0 right-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
-        <span className="flex h-6 items-center text-[10px] font-black text-zinc-200 drop-shadow">+{hours} XP</span>
+        <span className="h-6" />
         <span className="flex flex-1 items-center justify-center pb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -684,7 +685,7 @@ function ClaimCell({ icon, value, label, delayMs, gold, dim, prefix = '×' }: { 
   return (
     <div
       className={`exp-pop flex h-[78px] flex-col items-center justify-center gap-0.5 rounded-xl border ${
-        gold ? 'border-amber-400/70 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
+        gold ? 'border-amber-400/70 bg-amber-500/10' : dim ? 'border-zinc-200 dark:border-zinc-800' : 'border-sky-400/60 bg-sky-500/5 dark:border-sky-400/50'
       } ${dim ? 'opacity-40 grayscale' : ''}`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
