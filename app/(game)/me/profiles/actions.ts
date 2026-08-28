@@ -2,6 +2,7 @@
 
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -81,7 +82,9 @@ export async function flipProfile(profileId: string): Promise<ActionState> {
   const __b = await actionBlock();
   if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
   const serverId = await getActiveServerId();
-  const r = await flipProfileImage(userId, profileId, serverId);
+  const h = await headers();
+  const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host') ?? 'ganghwa.app'}`;
+  const r = await flipProfileImage(userId, profileId, serverId, origin);
   if (r === 'NOT_FOUND') return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
   if (r === 'FAILED') return { status: 'error', message: '반전에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
   revalidatePath('/me');

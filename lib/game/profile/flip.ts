@@ -1,8 +1,5 @@
 import 'server-only';
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import sharp from 'sharp';
 import { and, eq } from 'drizzle-orm';
 
@@ -22,6 +19,8 @@ export async function flipProfileImage(
   userId: string,
   profileId: string,
   serverId: number,
+  /** 기본 아바타(상대경로 /sprites/default/…) 해석용 요청 origin — OG 라우트와 동일 규약. */
+  origin: string,
 ): Promise<'ok' | 'NOT_FOUND' | 'FAILED'> {
   const [row] = await db
     .select({ rotations: userProfiles.rotations, options: userProfiles.options })
@@ -44,9 +43,11 @@ export async function flipProfileImage(
     } else {
       const supabase = serviceClient();
       const mirrorUpload = async (src: string, name: string): Promise<string> => {
-        const buf = src.startsWith('/')
-          ? await readFile(path.join(process.cwd(), 'public', src)) // 기본 아바타(상대경로)
-          : Buffer.from(await (await fetch(src, { cache: 'no-store' })).arrayBuffer());
+        // 기본 아바타는 상대경로 — 서버 함수 번들에 public/이 있다는 보장이 없어 자기 origin으로 fetch.
+        const abs = src.startsWith('http') ? src : `${origin}${src}`;
+        const res = await fetch(abs, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`fetch ${abs}: ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
         const png = await sharp(buf).flop().png().toBuffer();
         const p = `${userId}/${profileId}/${name}`;
         const up = await supabase.storage
