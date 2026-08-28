@@ -852,6 +852,9 @@ export function WhisperPane({
           onScroll={() => fxPause(listRef.current)}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
         >
+          {/* 아래 정렬(2026-08-28) — 메시지가 적을 때 위에서부터 쌓여 "최신이 최상단"으로 보이던 문제. 전체 채팅처럼
+              항상 바닥에 붙인다(컨테이너보다 길면 일반 스크롤). */}
+          <div className="flex min-h-full flex-col justify-end">
           {msgsLoading && msgs.length === 0 ? (
             <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
           ) : null}
@@ -875,6 +878,7 @@ export function WhisperPane({
               />
             </div>
           ))}
+          </div>
         </div>
 
         <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
