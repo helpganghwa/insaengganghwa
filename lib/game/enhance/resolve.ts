@@ -6,8 +6,7 @@ import { db } from '@/lib/db/client';
 import {
   effectiveOutcomeProbsBp,
   downRateBp,
-  levelAfterFail,
-} from '@/lib/game/balance';
+  levelAfterFail, enhanceReadyGraceMs } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
@@ -112,7 +111,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const startMs = Math.floor(Number(job.started_epoch) * 1000);
   const endMs = Math.floor(Number(job.complete_epoch) * 1000);
   const totalMs = Math.max(1, endMs - startMs);
-  const elapsedMs = Math.min(totalMs, Math.max(0, now - startMs));
+  // 완료 유예(balance.enhanceReadyGraceMs) — 만기 직전 몇 초는 만기로 간주(클라/서버 시계 오차로 "100% 표시인데
+  // 실패" 방지, 2026-08-28). 유예 밖 조기 수령은 종전대로 시간 비례.
+  const elapsedMs = now >= endMs - enhanceReadyGraceMs(totalMs) ? totalMs : Math.min(totalMs, Math.max(0, now - startMs));
   // 만기 후 방치 시간(0166) — elapsed는 만기 클램프라 방치가 안 남는다. 통산 단련 시간
   // 통계(Σ elapsed)의 "방치 제외" 의미는 유지하고, 방치는 이 별도 컬럼에만 기록한다.
   const overdueMs = Math.max(0, now - endMs);

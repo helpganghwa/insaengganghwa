@@ -184,6 +184,17 @@ export function levelAfterFail(fromLevel: number): number {
  * `p_eff = baseRate × clamp(elapsed/total, 0, 1)`. 완료 대기 시 공시 baseRate 도달.
  * resolve.ts 3분기 분기는 effectiveOutcomeProbsBp 사용 — 본 함수는 로깅·표시용.
  */
+/**
+ * 완료 유예(2026-08-28) — 클라이언트 시계가 서버보다 앞서면 화면은 "100%·강화 가능"인데 서버는 몇 초 덜 찼다고
+ * 판정해 실패하는 사고(오픈 후 2초 이내 근소 미달 실패 77건/56명). complete_at 도달 `GRACE` 이내면 만기로 간주해
+ * 공시 base 확률을 적용한다. 짧은 잡(5~10초)은 총시간의 30%로 상한 — 유예로 얻는 시간 이득은 무시할 수준.
+ */
+export const ENHANCE_READY_GRACE_MS = 2500;
+export const ENHANCE_READY_GRACE_FRAC = 0.3;
+export function enhanceReadyGraceMs(totalMs: number): number {
+  return Math.min(ENHANCE_READY_GRACE_MS, Math.round(totalMs * ENHANCE_READY_GRACE_FRAC));
+}
+
 export function effectiveRateBp(baseRateBp: number, elapsedMs: number, totalMs: number): number {
   if (totalMs <= 0) return baseRateBp;
   const frac = Math.min(1, Math.max(0, elapsedMs / totalMs));

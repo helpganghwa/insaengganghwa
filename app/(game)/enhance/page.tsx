@@ -1,3 +1,4 @@
+import { ServerClockSync } from '@/components/ServerClockSync';
 import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 
@@ -128,6 +129,7 @@ export default async function EnhancePage() {
     <div className="space-y-5 px-4 py-4">
       {/* iOS PWA 복귀 시 서버 상태 강제 동기화 — 유령 등록/스테일 슬롯 해소(2026-07-06). */}
       <RefreshOnResume />
+      <ServerClockSync nowIso={new Date().toISOString()} />
       <PushPermissionPrompt trigger={hasRunningJob} />
       {SLOTS.map((slot) => (
         <section key={slot} className="space-y-2">

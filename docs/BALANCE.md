@@ -78,6 +78,8 @@ D_MIN = 10s  ·  D_AT_10 = 10m  ·  D_MAX = 215m
 
 ### 1.2 시간 비례 4분기 outcome 확률 (대성공·성공·하락·유지)
 
+> **완료 유예(2026-08-28)**: complete_at 도달 2.5초 전(짧은 잡은 총시간의 30% 상한)부터는 만기로 간주해 공시 base 확률을 적용한다 — 클라/서버 시계 오차로 "100% 표시인데 실패"하던 사고 방지(`enhanceReadyGraceMs`).
+
 ```
 p_success_total(L, elapsed, total) = baseRate(ℓ) × clamp(elapsed / total, 0, 1)
 p_mega   (...)               = ⌊ p_success_total × MEGA_OF_SUCCESS_BP / 10000 ⌋  ← 성공 분량의 5% (+2 대성공)
