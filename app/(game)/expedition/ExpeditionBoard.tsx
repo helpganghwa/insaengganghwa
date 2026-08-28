@@ -601,10 +601,10 @@ function CardBody({
       {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
       {hideHeader ? null : (
         <div className="relative flex h-10 items-center justify-center gap-1.5 px-2.5">
-          <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
+          <b className="truncate text-[12.5px] font-black" style={{ color: ui.color, ...STROKE }}>
             {ui.label}
           </b>
-          <span className="text-[10px] font-extrabold text-white drop-shadow">
+          <span className="text-[10px] font-extrabold text-white" style={STROKE}>
             {HOUR_MOON[hours] ?? '🌑'} {hours}시간
           </span>
         </div>
