@@ -33,11 +33,15 @@ export type ExpeditionBoardSlot = {
   reqBonusBp?: number;
   avatarId?: string | null;
   avatarFace?: string | null;
+  /** running — 배정 아바타 전신(south). */
+  avatarSouth?: string | null;
 };
 
 export type ExpeditionAvatar = {
   id: string;
   face: string | null;
+  /** 전신(south) — 카드·팝업의 원정대원 표시(2026-08-28 UI 개편, 얼굴 썸네일 대신 전신). */
+  south: string | null;
   isActive: boolean;
   isDefault: boolean;
   regions: (ExpeditionRegion | 'general')[];
@@ -133,6 +137,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     a.face ??
     (a.south?.startsWith('/sprites/default/') ? a.south.replace('south.png', 'face.png') : a.south);
   const faceById = new Map(avatarRows.map((a) => [a.id, faceOf(a)]));
+  const southById = new Map(avatarRows.map((a) => [a.id, a.south]));
 
   const slots: ExpeditionBoardSlot[] = [];
   for (let slot = 1; slot <= EXPEDITION_SLOTS; slot++) {
@@ -160,6 +165,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         reqBonusBp: row.req_bonus_bp,
         avatarId: row.avatar_profile_id,
         avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
+        avatarSouth: row.avatar_profile_id ? (southById.get(row.avatar_profile_id) ?? null) : null,
       });
     }
   }
@@ -178,6 +184,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     avatars: avatarRows.map((a) => ({
       id: a.id,
       face: faceOf(a),
+      south: a.south,
       isActive: a.id === activeId,
       isDefault: a.is_default,
       regions: snapshotExpeditionRegions(a.equipment_snapshot),

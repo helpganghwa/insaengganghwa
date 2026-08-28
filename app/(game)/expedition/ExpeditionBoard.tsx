@@ -99,7 +99,8 @@ type ClaimPopup = { crit: boolean; reward: ExpeditionReward; xpGained: number; l
 export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [board, setBoard] = useState(initial);
   const [pendingSlot, setPendingSlot] = useState<number | null>(null);
-  const [assignFor, setAssignFor] = useState<ExpeditionBoardSlot | null>(null);
+  const [assignSlot, setAssignSlot] = useState<number | null>(null);
+  const assignFor = assignSlot === null ? null : (board.slots.find((x) => x.slot === assignSlot) ?? null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [cancelFor, setCancelFor] = useState<number | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
@@ -163,7 +164,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const doStart = (s: ExpeditionBoardSlot, avatarId: string) => {
     const av = board.avatars.find((a) => a.id === avatarId);
     const syn = av && s.region ? synergyOf(av.regions, s.region) : 0;
-    setAssignFor(null);
+    setAssignSlot(null);
     setSelectedAvatar(null);
     run(
       s.slot,
@@ -179,6 +180,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 reqBonusBp: enhanceBonusOf(av?.enhanceSum ?? 0),
                 avatarId,
                 avatarFace: av?.face ?? null,
+                avatarSouth: av?.south ?? null,
               }
             : x,
         ),
@@ -230,30 +232,51 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
 
   const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
+  const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
+  const previewBp =
+    assignFor?.region && selectedAv ? synergyOf(selectedAv.regions, assignFor.region) + enhanceBonusOf(selectedAv.enhanceSum) : 0;
+  const cancelSlot = cancelFor === null ? null : (board.slots.find((x) => x.slot === cancelFor) ?? null);
+
+  /** 카드 탭 — 상태별 팝업/액션(카드에는 버튼이 없다, 2026-08-28 UI 개편). */
+  const onCardTap = (s: ExpeditionBoardSlot) => {
+    if (pendingSlot === s.slot) return;
+    if (s.state === 'locked') {
+      setError(`합산 강화 ${(s.unlock?.enhanceSum ?? 0).toLocaleString('ko-KR')} 달성 시 열려요`);
+      setTimeout(() => setError(null), 2000);
+      return;
+    }
+    if (s.state === 'offer') {
+      setAssignSlot(s.slot);
+      // 기본 선택 = 배정 가능한 아바타 중 강화 합 최대(배율 최대).
+      setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
+      return;
+    }
+    const done = s.completeAtIso ? Date.parse(s.completeAtIso) <= nowMs() : false;
+    if (done) doClaim(s);
+    else setCancelFor(s.slot);
+  };
 
   return (
     <div className="space-y-2.5">
-      {/* 레벨·카운터 */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-          <span>
-            파견 <b className="text-zinc-800 dark:text-zinc-100">Lv.{board.level}</b>
-            <span className="ml-1.5 text-amber-600 dark:text-amber-400 font-bold">대성공 {(board.critBp / 100).toFixed(1)}%</span>
-          </span>
-          <span>
-            합산 강화 <b className="text-zinc-800 dark:text-zinc-100">{board.enhanceSum.toLocaleString('ko-KR')}</b>
-          </span>
-        </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+      {/* 헤더 — 스탯 칩 4 + XP 바(2026-08-28 UI 개편) */}
+      <div className="grid grid-cols-4 gap-1.5">
+        {[
+          ['Lv', String(board.level)],
+          ['대성공', `${(board.critBp / 100).toFixed(1)}%`],
+          ['합산 강화', board.enhanceSum.toLocaleString('ko-KR')],
+          ['새로고침', board.freeRefreshLeft > 0 ? `${board.freeRefreshLeft}회` : `💎${board.refreshCost}`],
+        ].map(([k, v]) => (
+          <div key={k} className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
+            <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{k}</span>
+            <b className="text-[13px] leading-tight text-zinc-800 dark:text-zinc-50">{v}</b>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 px-0.5">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
           <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300" style={{ width: `${xpPct}%` }} />
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
-          <span>다음 레벨까지 {Math.max(0, board.xpNext - board.xp)} XP</span>
-          <span>
-            새로고침 무료 <b className="text-zinc-600 dark:text-zinc-300">{board.freeRefreshLeft}회</b>
-            {board.freeRefreshLeft === 0 ? ` (💎${board.refreshCost})` : ''}
-          </span>
-        </div>
+        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">다음 레벨 {Math.max(0, board.xpNext - board.xp)} XP</span>
       </div>
 
       {/* 에러 — 목록을 밀지 않는 하단 고정 토스트(레이아웃 시프트 0 규칙) */}
@@ -263,57 +286,51 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </div>
       ) : null}
 
-      {/* 슬롯 */}
+      {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
-        <SlotCard
-          key={s.slot}
-          s={s}
-          pending={pendingSlot === s.slot}
-          onRefresh={() => doRefresh(s)}
-          onAssign={() => {
-            setAssignFor(s);
-            // 기본 선택 = 배정 가능한 아바타 중 강화 합 최대(배율 최대).
-            setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
-          }}
-          onCancel={() => setCancelFor(s.slot)}
-          onClaim={() => doClaim(s)}
-          enhanceSum={board.enhanceSum}
-        />
+        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} enhanceSum={board.enhanceSum} onTap={() => onCardTap(s)} />
       ))}
 
-
-      {/* 아바타 배정 시트 */}
+      {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
       {assignFor?.region ? (
-        <ModalShell onClose={() => setAssignFor(null)} label="원정대원 선택">
+        <ModalShell onClose={() => setAssignSlot(null)} label="원정대원 선택">
           <ModalLayout
-            title={
-              <span style={{ color: REGION_UI[assignFor.region].color }}>
-                {REGION_UI[assignFor.region].label}
-              </span>
+            title="원정대원 선택"
+            subtitle={
+              <>
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간 — 강화 합이 높을수록 보상↑
+              </>
             }
-            subtitle={`${assignFor.hours}시간 파견 — 원정대원을 고르세요 (강화 합이 높을수록 보상↑)`}
             bodyPad="sm"
             footer={
               <>
-                <ModalButton tone="ghost" onClick={() => setAssignFor(null)}>
+                <ModalButton tone="ghost" onClick={() => setAssignSlot(null)}>
                   닫기
                 </ModalButton>
-                <ModalButton
-                  tone="contrast"
-                  disabled={!selectedAvatar}
-                  onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}
-                >
+                <ModalButton tone="neutral" disabled={pendingSlot === assignFor.slot} onClick={() => doRefresh(assignFor)}>
+                  ↻ 다른 미션 {board.freeRefreshLeft > 0 ? `${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}
+                </ModalButton>
+                <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
                   파견 보내기
                 </ModalButton>
               </>
             }
           >
+            <CardBody
+              region={assignFor.region}
+              hours={assignFor.hours ?? 0}
+              avatarSouth={selectedAv?.south ?? null}
+              bonusBp={previewBp}
+              big={assignFor.reward ? '확정 보상' : '새 미션 찾는 중…'}
+              reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
+              hint="선택 대원 기준"
+              compact
+            />
             {/* 고정 높이 그리드(내부 스크롤) — 아바타 수와 무관하게 팝업 높이 불변(레이아웃 시프트 0). */}
-            <div className="h-[184px] overflow-y-auto rounded-xl border border-zinc-100 p-1.5 dark:border-zinc-800/60">
-              <div className="grid grid-cols-4 gap-2">
+            <div className="mt-2 h-[132px] overflow-y-auto rounded-xl border border-zinc-100 p-1.5 dark:border-zinc-800/60">
+              <div className="grid grid-cols-4 gap-1.5">
                 {board.avatars.map((a) => {
-                  const syn = synergyOf(a.regions, assignFor.region!);
-                  const mult = 1 + (enhanceBonusOf(a.enhanceSum) + syn) / 10000; // 강화 합 배율 + 시너지(§3.2·3.3)
+                  const mult = 1 + (enhanceBonusOf(a.enhanceSum) + synergyOf(a.regions, assignFor.region!)) / 10000;
                   const sel = selectedAvatar === a.id;
                   return (
                     <button
@@ -321,43 +338,24 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                       type="button"
                       disabled={a.busy}
                       onClick={() => setSelectedAvatar(a.id)}
-                      className={`relative rounded-xl border p-1.5 text-center transition ${
-                        sel
-                          ? 'border-amber-500 bg-amber-500/10'
-                          : 'border-zinc-200 dark:border-zinc-800'
+                      className={`relative flex h-[116px] flex-col items-center justify-end gap-0.5 rounded-xl border p-1.5 text-center transition ${
+                        sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
                       } ${a.busy ? 'opacity-40' : 'active:scale-95'}`}
                     >
-                      <span className="mx-auto block h-12 w-12 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                        {a.face ? (
+                      <span className="flex h-12 items-end justify-center">
+                        {a.south ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={a.face} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
+                          <img src={a.south} alt="" decoding="async" className="h-12 w-auto" style={{ imageRendering: 'pixelated' }} />
                         ) : null}
                       </span>
-                      <span className={`mt-1 block text-[9px] font-bold ${syn > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}>
-                        {a.busy ? '파견 중' : `강화 합 ${a.enhanceSum} · ×${mult.toFixed(2)}`}
-                      </span>
-                      {a.isActive ? (
-                        <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span>
-                      ) : null}
+                      <span className="block h-3.5 text-[9px] font-bold text-zinc-600 dark:text-zinc-300">{a.busy ? '파견 중' : `강화 합 ${a.enhanceSum}`}</span>
+                      <span className="block h-3.5 text-[10px] font-extrabold text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</span>
+                      {a.isActive ? <span className="absolute top-1 right-1 rounded bg-zinc-800/80 px-1 text-[8px] font-bold text-white">대표</span> : null}
                     </button>
                   );
                 })}
               </div>
             </div>
-            {/* 미리보기 — 선택 전에도 자리 확보(고정 높이, 레이아웃 시프트 0). */}
-            <p className="flex h-9 items-center justify-center px-2 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
-              {selectedAvatar && assignFor.reward ? (
-                <>
-                  최종 보상{' '}
-                  <RewardLine
-                    r={previewFinal(assignFor.reward, synergyOf(board.avatars.find((a) => a.id === selectedAvatar)?.regions ?? [], assignFor.region!) + enhanceBonusOf(board.avatars.find((a) => a.id === selectedAvatar)?.enhanceSum ?? 0))}
-                    strong
-                  />
-                </>
-              ) : (
-                '원정대원을 선택하세요'
-              )}
-            </p>
           </ModalLayout>
         </ModalShell>
       ) : null}
@@ -367,34 +365,40 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <ModalShell onClose={() => setCancelFor(null)} label="파견 취소">
           <ModalLayout
             title="파견을 취소할까요?"
+            subtitle={
+              cancelSlot?.region ? (
+                <>
+                  <span style={{ color: REGION_UI[cancelSlot.region].color }}>{REGION_UI[cancelSlot.region].label}</span> · {cancelSlot.hours}시간 파견 중
+                </>
+              ) : undefined
+            }
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setCancelFor(null)}>
-                  계속 보내기
+                  계속 파견
                 </ModalButton>
                 <ModalButton tone="danger" onClick={() => doCancel(cancelFor)}>
-                  취소하기
+                  파견 취소
                 </ModalButton>
               </>
             }
           >
             <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              보상 없이 파견이 종료돼요.
+              보상 없이 파견이 종료돼요. 슬롯은 바로 새 미션으로 채워집니다.
             </p>
           </ModalLayout>
         </ModalShell>
       ) : null}
 
-
       {/* 수령 팝업 — 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (
         <ModalShell onClose={() => setClaimPopup(null)} label="파견 귀환">
           <ModalLayout
-            title={claimPopup.crit ? '대성공!' : '파견 귀환'}
+            title={claimPopup.crit ? '✨ 대성공!' : '파견 귀환'}
             subtitle={
-              <span style={{ color: REGION_UI[claimPopup.region].color }}>
-                {REGION_UI[claimPopup.region].label}
-              </span>
+              <>
+                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 원정대가 돌아왔습니다
+              </>
             }
             footer={
               <ModalButton tone="contrast" onClick={() => setClaimPopup(null)}>
@@ -407,17 +411,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               <p className={`text-lg font-extrabold ${claimPopup.crit ? 'text-amber-500' : ''}`}>
                 <RewardLine r={claimPopup.reward} strong={claimPopup.crit} />
               </p>
-              <p className="h-4 text-[11px] text-zinc-500 dark:text-zinc-400">
-                {claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : ''}
-              </p>
-              <p className="h-4 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                {claimPopup.crit ? '대성공으로 수량이 2배가 됐어요!' : ''}
-              </p>
+              <p className="h-4 text-[11px] text-zinc-500 dark:text-zinc-400">{claimPopup.reward.boxes ? boxDetail(claimPopup.reward) : ''}</p>
+              <p className="h-4 text-[11px] font-bold text-amber-600 dark:text-amber-400">{claimPopup.crit ? '대성공으로 수량이 2배가 됐어요!' : ''}</p>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                 파견 XP +{claimPopup.xpGained}
-                {claimPopup.levelUp ? (
-                  <b className="ml-1 text-amber-600 dark:text-amber-400">— Lv.{claimPopup.level} 달성!</b>
-                ) : null}
+                {claimPopup.levelUp ? <b className="ml-1 text-amber-600 dark:text-amber-400">— Lv.{claimPopup.level} 달성!</b> : null}
               </p>
             </div>
           </ModalLayout>
@@ -440,167 +438,191 @@ function previewFinal(r: ExpeditionReward, totalBp: number): ExpeditionReward {
   };
 }
 
-function SlotCard({
-  s,
-  pending,
-  onRefresh,
-  onAssign,
-  onCancel,
-  onClaim,
-  enhanceSum,
-}: {
-  s: ExpeditionBoardSlot;
-  pending: boolean;
-  onRefresh: () => void;
-  onAssign: () => void;
-  onCancel: () => void;
-  onClaim: () => void;
-  /** 계정 합산 강화 — 잠긴 카드의 진행도 표시용. */
-  enhanceSum: number;
-}) {
-  // B안(아바타 히어로) — 전 상태 h-[112px] 고정: 좌측 히어로(지역색 그라데이션+아바타 프레임),
-  // 우측 본문(제목/보상/버튼행). 상태 전환은 각 영역의 내용 교체만 — 레이아웃 시프트 0.
-  if (s.state === 'locked') {
-    // 잠금 카드 — 해금 조건은 계정 합산 강화뿐(다이아·레벨 해금 없음). 진행도 바로 "강화하면 열린다"를 보여준다.
-    const need = s.unlock?.enhanceSum ?? 0;
-    const pct = need > 0 ? Math.min(100, Math.floor((enhanceSum / need) * 100)) : 0;
-    return (
-      <div className="flex h-[112px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-        <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
-          슬롯 {s.slot} — 합산 강화 <b className="text-zinc-500 dark:text-zinc-400">{need.toLocaleString('ko-KR')}</b> 달성 시 오픈
-        </p>
-        <div className="h-1.5 w-40 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-          <div className="h-full bg-zinc-400 dark:bg-zinc-500" style={{ width: `${pct}%` }} />
-        </div>
-        <p className="text-[10.5px] text-zinc-400 dark:text-zinc-500">
-          현재 {enhanceSum.toLocaleString('ko-KR')} · {Math.max(0, need - enhanceSum).toLocaleString('ko-KR')} 남음
-        </p>
-      </div>
-    );
+/** 보상 축약 표기(카드용) — "📦 3 + 💎 41". */
+function rewardShort(r: ExpeditionReward | undefined): string {
+  if (!r) return '…';
+  const parts: string[] = [];
+  if (r.boxes) {
+    const t = r.boxes.weapon + r.boxes.armor + r.boxes.accessory;
+    if (t > 0) parts.push(`📦 ${t}`);
   }
+  if (r.diamond) parts.push(`💎 ${r.diamond.toLocaleString('ko-KR')}`);
+  return parts.join(' + ') || '—';
+}
 
-  const region = s.region ? REGION_UI[s.region] : null;
-  const heroLabel = s.state === 'offer' ? '미배정' : null;
+/** 이벤트 핸들러 전용 현재 시각 — 렌더 경로에서 호출 금지(React 컴파일러 순수성 규칙). */
+const nowMs = () => Date.now();
 
+/** 시간 → 몬스터 단계(t1~t4). */
+const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
+/** 미배정 실루엣 — 기본 남 스프라이트(흑백·30%). */
+const GHOST_SRC = '/sprites/default/male/south.png';
+
+/**
+ * 카드 본문(2026-08-28 UI 개편, 최종안 v7) — 헤더 26px(좌 상태 · 중앙 지역 · 우 시간) + 본문 중앙 정렬.
+ * 좌: 원정대원 전신 76px + 배율 배지(18px 고정 — 미배정은 hidden으로 자리 유지) / 중앙 3줄 고정 높이
+ * (값 26 · 보상 20 · 힌트 14 — 폰트 고정, 상태 전환 시 시프트 0) / 우: 지역 몬스터(반전) + XP 배지.
+ */
+function CardBody({
+  region,
+  hours,
+  avatarSouth,
+  bonusBp,
+  big,
+  bigCls,
+  reward,
+  hint,
+  tag,
+  tagCls,
+  compact,
+  glow,
+  children,
+}: {
+  region: ExpeditionRegion;
+  hours: number;
+  avatarSouth: string | null;
+  bonusBp: number;
+  big: React.ReactNode;
+  bigCls?: string;
+  reward: ExpeditionReward | undefined;
+  hint: string;
+  tag?: string;
+  tagCls?: string;
+  compact?: boolean;
+  glow?: boolean;
+  children?: React.ReactNode;
+}) {
+  const ui = REGION_UI[region];
+  const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
+  const bodyH = compact ? 60 : 76;
   return (
     <div
-      className={`flex h-[112px] overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60 ${pending ? 'opacity-70' : ''}`}
+      className={`relative overflow-hidden rounded-xl border bg-cover bg-center ${compact ? 'h-[112px]' : 'h-[128px]'} ${
+        glow ? 'border-emerald-400/70' : 'border-zinc-800'
+      }`}
+      style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
     >
-      {/* 히어로 — 지역색 그라데이션 + 아바타 프레임(미배정=점선 빈 프레임, 사람 이모지 없음). */}
-      <div
-        className="flex w-[76px] shrink-0 flex-col items-center justify-center gap-1.5"
-        style={{
-          background: region
-            ? `linear-gradient(160deg, ${region.color}2e, transparent 70%)`
-            : undefined,
-        }}
-      >
-        <span
-          className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border bg-zinc-100 dark:bg-zinc-900 ${
-            s.state === 'offer' ? 'border-dashed' : ''
-          }`}
-          style={{ borderColor: region ? `${region.color}66` : undefined }}
-        >
-          {s.state !== 'offer' && s.avatarFace ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={s.avatarFace} alt="" decoding="async" className="h-full w-full" style={{ imageRendering: 'pixelated' }} />
-          ) : null}
+      {/* 가독성 — 전면 35% 어둡게 + 상·하 그라데이션 */}
+      <div className="pointer-events-none absolute inset-0 bg-black/35" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
+      {/* 헤더 — 좌 상태 / 중앙 지역명 / 우 시간(좌·우는 76px 열 중앙 = 아래 배지와 세로 정렬) */}
+      <div className="relative grid h-[26px] grid-cols-[76px_1fr_76px] items-center px-2.5">
+        <span className="justify-self-center">
+          {tag ? <span className={`rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black ${tagCls ?? 'text-zinc-300'}`}>{tag}</span> : null}
         </span>
-        <span className="h-3 text-[8.5px] font-bold text-zinc-400 dark:text-zinc-500">{heroLabel ?? ''}</span>
+        <b className="justify-self-center truncate text-[12.5px] font-black text-white drop-shadow" style={{ color: ui.color }}>
+          {ui.label}
+        </b>
+        <span className={`justify-self-center rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
-
-      {/* 본문 — 3영역(제목행/정보행/버튼행) 높이 고정. */}
-      <div className="flex min-w-0 flex-1 flex-col px-3 py-2.5">
-        <div className="flex h-5 items-center gap-1.5">
-          <span className="truncate text-[13px] font-extrabold" style={region ? { color: region.color } : undefined}>
-            {region?.label ?? '…'}
+      {/* 본문 — 헤더 아래 영역 정중앙(헤더 높이만큼 위로 보정) */}
+      <div className={`relative -mt-2 flex items-center justify-between px-2.5 ${compact ? 'h-[86px]' : 'h-[102px]'}`}>
+        <div className="flex w-[76px] flex-none flex-col items-center justify-end gap-0.5" style={{ height: bodyH + 22 }}>
+          <span className="flex items-end justify-center" style={{ height: bodyH }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarSouth ?? GHOST_SRC}
+              alt=""
+              decoding="async"
+              className={avatarSouth ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]' : 'opacity-30 grayscale brightness-150'}
+              style={{ height: bodyH, width: 'auto', imageRendering: 'pixelated' }}
+            />
           </span>
-          {s.hours ? (
-            <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black ${HOUR_CLS[s.hours] ?? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'}`}>
-              {s.hours}시간
-            </span>
-          ) : null}
-          <span className="ml-auto shrink-0">
-            {s.state === 'running' ? (
-              <Ticker>
-                {(now) => {
-                  const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
-                  return remain <= 0 ? (
-                    <span className="text-[12px] font-extrabold text-emerald-500">귀환 완료</span>
-                  ) : (
-                    <span className="text-[12px] font-extrabold tabular-nums text-amber-600 dark:text-amber-400">{fmtRemain(remain)}</span>
-                  );
-                }}
-              </Ticker>
-            ) : null}
+          <span className={`h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-sky-400 ${avatarSouth ? '' : 'invisible'}`}>
+            ×{(1 + bonusBp / 10000).toFixed(2)}
           </span>
         </div>
-
-        <p className="flex h-5 flex-1 items-center truncate text-[10.5px] text-zinc-500 dark:text-zinc-400">
-          {s.reward ? (
-            <>
-              보상 <RewardLine r={s.reward} />
-              <span className="ml-1.5 shrink-0">· 경험치 +{s.hours}</span>
-              {s.state === 'running' && (s.reqBonusBp ?? 0) > 0 ? (
-                <span className="ml-1.5 shrink-0 font-bold text-sky-600 dark:text-sky-400">강화 +{((s.reqBonusBp ?? 0) / 100).toFixed(0)}%</span>
-              ) : null}
-              {s.state === 'running' && (s.synergyBp ?? 0) > 0 ? (
-                <span className="ml-1.5 shrink-0 font-bold text-amber-600 dark:text-amber-400">시너지 +{(s.synergyBp ?? 0) / 100}%</span>
-              ) : null}
-            </>
-          ) : (
-            '새 미션 찾는 중…'
-          )}
-        </p>
-
-        <div className="flex h-[30px] gap-1.5">
-          {s.state === 'offer' ? (
-            <>
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={pending}
-                className="flex-1 rounded-lg bg-zinc-100 text-[11px] font-bold text-zinc-600 active:scale-[0.98] dark:bg-zinc-800 dark:text-zinc-300"
-              >
-                새로고침
-              </button>
-              <button
-                type="button"
-                onClick={onAssign}
-                disabled={pending}
-                className="flex-1 rounded-lg bg-amber-500 text-[11.5px] font-extrabold text-amber-950 active:scale-[0.98]"
-              >
-                배정
-              </button>
-            </>
-          ) : (
-            <Ticker>
-              {(now) => {
-                const done = s.completeAtIso ? Date.parse(s.completeAtIso) - now <= 0 : false;
-                return done ? (
-                  <button
-                    type="button"
-                    onClick={onClaim}
-                    disabled={pending}
-                    className="flex-1 rounded-lg bg-emerald-600 text-[12px] font-extrabold text-white active:scale-[0.98]"
-                  >
-                    보상 수령
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={pending}
-                    className="flex-1 rounded-lg bg-zinc-100 text-[11px] font-bold text-zinc-500 active:scale-[0.98] dark:bg-zinc-800 dark:text-zinc-400"
-                  >
-                    파견 취소
-                  </button>
-                );
-              }}
-            </Ticker>
-          )}
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
+          <b className={`block h-[26px] w-full truncate text-[17px] font-black leading-[26px] drop-shadow ${bigCls ?? 'text-white'}`}>{big}</b>
+          <span className="block h-5 w-full truncate text-[14px] font-black leading-5 text-white drop-shadow">{rewardShort(reward)}</span>
+          <span className="block h-3.5 w-full truncate text-[9.5px] font-medium leading-[14px] text-zinc-300/80">{hint}</span>
+        </div>
+        <div className="flex w-[76px] flex-none flex-col items-center justify-end gap-0.5" style={{ height: bodyH + 22 }}>
+          <span className="flex items-end justify-center" style={{ height: bodyH }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
+              alt=""
+              decoding="async"
+              className="drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]"
+              style={{ height: compact ? 44 : 52, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
+            />
+          </span>
+          <span className="h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-zinc-200">+{hours} XP</span>
         </div>
       </div>
+      {children}
     </div>
+  );
+}
+
+function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; pending: boolean; enhanceSum: number; onTap: () => void }) {
+  if (s.state === 'locked') {
+    // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
+    const need = s.unlock?.enhanceSum ?? 0;
+    const pct = need > 0 ? Math.min(100, Math.floor((enhanceSum / need) * 100)) : 0;
+    const bg = s.slot === 3 ? 'kingdom' : 'angel';
+    return (
+      <button
+        type="button"
+        onClick={onTap}
+        className={`relative block h-[128px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-600 bg-cover bg-center text-left grayscale ${s.slot === 4 ? 'opacity-50' : 'opacity-85'}`}
+        style={{ backgroundImage: `url(/sprites/expedition/bg/${bg}.png)` }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-black/60" />
+        <div className="relative grid h-[26px] grid-cols-[76px_1fr_76px] items-center px-2.5">
+          <span />
+          <b className="justify-self-center text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
+          <span />
+        </div>
+        <div className="relative -mt-2 flex h-[102px] items-center justify-between px-2.5">
+          <span className="flex w-[76px] justify-center text-[22px]">🔒</span>
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
+            <b className="block h-[26px] text-[17px] font-black leading-[26px] text-white">{need.toLocaleString('ko-KR')}</b>
+            <span className="block h-5 text-[13px] font-extrabold leading-5 text-white">합산 강화 달성 시 오픈</span>
+            <span className="block h-3.5 text-[9.5px] leading-[14px] text-zinc-300/80">현재 {enhanceSum.toLocaleString('ko-KR')}</span>
+          </div>
+          <div className="flex w-[76px] flex-col items-center gap-1">
+            <div className="h-1 w-[70px] overflow-hidden rounded-full bg-zinc-700">
+              <div className="h-full bg-zinc-300" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[9.5px] font-medium tabular-nums text-zinc-300/80">{pct}%</span>
+          </div>
+        </div>
+      </button>
+    );
+  }
+  const region = s.region!;
+  const hours = s.hours ?? 0;
+  const bonus = s.reqBonusBp ?? 0;
+  return (
+    <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
+      {s.state === 'offer' ? (
+        <CardBody region={region} hours={hours} state="offer" avatarSouth={null} bonusBp={0} big="파견 대기" reward={s.reward} hint="탭해서 파견" tag="미배정" />
+      ) : (
+        <Ticker>
+          {(now) => {
+            const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - now : 0;
+            const done = remain <= 0;
+            return (
+              <CardBody
+                region={region}
+                hours={hours}
+                avatarSouth={s.avatarSouth ?? null}
+                bonusBp={bonus + (s.synergyBp ?? 0)}
+                big={done ? '파견 완료' : <span className="tabular-nums">{fmtRemain(remain)}</span>}
+                bigCls={done ? 'text-emerald-400' : 'text-amber-400'}
+                reward={s.reward}
+                hint={done ? '탭해서 완료' : '탭해서 취소'}
+                tag={done ? '귀환' : '파견 중'}
+                tagCls={done ? 'text-emerald-400' : 'text-amber-400'}
+                glow={done}
+              />
+            );
+          }}
+        </Ticker>
+      )}
+    </button>
   );
 }
