@@ -144,21 +144,23 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   );
 
   const [refreshAsk, setRefreshAsk] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   /** 전체 새로고침(2026-08-28) — 미배정 슬롯 전부 리롤, 진행 중 제외. 횟수 1회 차감. */
   const doRefreshAll = () => {
     setRefreshAsk(false);
     const paid = board.freeRefreshLeft <= 0;
     if (paid && !gate.ensure(board.refreshCost)) return;
     if (paid) optimisticAdjust(BigInt(-board.refreshCost));
+    // 낙관: 리롤 내용은 서버만 알므로 기존 카드는 그대로 두고(폴백 문자 없음) 상태줄만 '새 파견 찾는 중…'.
+    setRefreshing(true);
     run(
       null,
-      (b) => ({
-        ...b,
-        freeRefreshLeft: paid ? 0 : b.freeRefreshLeft - 1,
-        // 리롤 내용은 서버만 안다 — 미배정 슬롯을 로딩 표시(reward 숨김)로.
-        slots: b.slots.map((x) => (x.state === 'offer' ? { ...x, reward: undefined } : x)),
-      }),
-      () => refreshAllOffersAction(),
+      (b) => ({ ...b, freeRefreshLeft: paid ? 0 : b.freeRefreshLeft - 1 }),
+      async () => {
+        const r = await refreshAllOffersAction();
+        setRefreshing(false);
+        return r;
+      },
       paid ? () => optimisticAdjust(BigInt(board.refreshCost)) : undefined,
     );
   };
@@ -281,7 +283,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
-        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} enhanceSum={board.enhanceSum} onTap={() => onCardTap(s)} />
+        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} onTap={() => onCardTap(s)} />
       ))}
 
       {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
@@ -469,14 +471,14 @@ function previewFinal(r: ExpeditionReward, totalBp: number): ExpeditionReward {
 
 /** 보상 축약 표기(카드용) — "📦 3 + 💎 41". */
 function rewardShort(r: ExpeditionReward | undefined): string {
-  if (!r) return '…';
+  if (!r) return '';
   const parts: string[] = [];
   if (r.boxes) {
     const t = r.boxes.weapon + r.boxes.armor + r.boxes.accessory;
     if (t > 0) parts.push(`📦 ${t}`);
   }
   if (r.diamond) parts.push(`💎 ${r.diamond.toLocaleString('ko-KR')}`);
-  return parts.join(' + ') || '—';
+  return parts.join(' + ');
 }
 
 /** 이벤트 핸들러 전용 현재 시각 — 렌더 경로에서 호출 금지(React 컴파일러 순수성 규칙). */
@@ -596,7 +598,7 @@ function CardBody({
   );
 }
 
-function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; pending: boolean; enhanceSum: number; onTap: () => void }) {
+function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; onTap: () => void }) {
   if (s.state === 'locked') {
     // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
     const need = s.unlock?.enhanceSum ?? 0;
@@ -637,7 +639,7 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status="파견 대기" bonusText={null} progress={0} />
+        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} />
       ) : (
         <Ticker>
           {(now) => {
