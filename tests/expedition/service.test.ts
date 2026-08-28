@@ -192,7 +192,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(after - before).toBe(BigInt(paid.reward.diamond!)); // 정확 1회 지급
   });
 
-  it('슬롯 해금 — 합산 강화 미달이면 오퍼 0·시작 SLOT_LOCKED, 1k/5k에서 1·2칸', async () => {
+  it('슬롯 해금 — 합산 강화 미달이면 오퍼 0·시작 SLOT_LOCKED, 1k/3k에서 1·2칸', async () => {
     await setEnhanceSum(999);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(0);
@@ -200,7 +200,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await setEnhanceSum(1000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(1);
-    await setEnhanceSum(5000);
+    await setEnhanceSum(3000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
   });

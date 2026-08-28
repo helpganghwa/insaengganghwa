@@ -762,12 +762,13 @@ export function expeditionDifficultyDist(level: number): Record<ExpeditionDiffic
 
 /**
  * 슬롯 해금(2026-08-28 개편) — **계정 합산 강화**(보유 장비 enhance_level 합, 리더보드 'sum'과 동일 정의)
- * 도달 시 오픈. 파견 레벨·다이아 해금 없음: 강화가 파견의 유일한 입구이자 규모다(사용자 확정, 원안 1k/5k/10k/15k).
+ * 도달 시 오픈. 파견 레벨·다이아 해금 없음: 강화가 파견의 유일한 입구이자 규모다(사용자 확정 1k/3k/10k/15k —
+ * 2칸은 5k→3k 하향: 1칸 체류 구간이 5배 점프라 목표가 안 보인다는 밸런스 검토 반영).
  * 합산 강화는 현재 레벨 합이라 하락하면 줄 수 있다 — 진행 중 파견은 유지, **새 배정만** 잠긴다.
  */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
   { slot: 1, enhanceSum: 1_000 },
-  { slot: 2, enhanceSum: 5_000 },
+  { slot: 2, enhanceSum: 3_000 },
   { slot: 3, enhanceSum: 10_000 },
   { slot: 4, enhanceSum: 15_000 },
 ] as const;

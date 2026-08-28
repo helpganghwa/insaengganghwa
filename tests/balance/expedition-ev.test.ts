@@ -96,10 +96,10 @@ describe('expedition balance invariants', () => {
     expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
   });
 
-  it('시너지·슬롯 정합 — 일반은 지역 일치의 절반, 슬롯 4칸은 합산 강화 1k/5k/10k/15k 단조 증가', () => {
+  it('시너지·슬롯 정합 — 일반은 지역 일치의 절반, 슬롯 4칸은 합산 강화 1k/3k/10k/15k 단조 증가', () => {
     expect(EXPEDITION_SYNERGY_GENERAL_BP * 2).toBe(EXPEDITION_SYNERGY_MATCH_BP);
     expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4]);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([1000, 5000, 10000, 15000]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([1000, 3000, 10000, 15000]);
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
@@ -127,10 +127,10 @@ describe('expedition balance invariants', () => {
     expect(expeditionDifficultyDist(5).grand).toBeGreaterThan(0);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 1k/5k/10k/15k, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 1k/3k/10k/15k, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
       { slot: 1, enhanceSum: 1000 },
-      { slot: 2, enhanceSum: 5000 },
+      { slot: 2, enhanceSum: 3000 },
       { slot: 3, enhanceSum: 10000 },
       { slot: 4, enhanceSum: 15000 },
     ]);
