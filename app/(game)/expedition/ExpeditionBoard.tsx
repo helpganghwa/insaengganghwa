@@ -707,7 +707,7 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
   const cols = Math.min(5, Math.max(2, cells.length));
   return (
     <div>
-      <style>{`@keyframes exp-pop{0%{opacity:0;transform:scale(.6) translateY(6px)}60%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}.exp-pop{opacity:0;animation:exp-pop .42s cubic-bezier(.2,.9,.3,1.2) forwards}@media(prefers-reduced-motion:reduce){.exp-pop{opacity:1;animation:none}}`}</style>
+      <style>{`@keyframes exp-pop{0%{opacity:0;transform:scale(.6) translateY(6px)}60%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}.exp-pop{opacity:0;animation:exp-pop .42s cubic-bezier(.2,.9,.3,1.2) forwards}@media(prefers-reduced-motion:reduce){.exp-pop{opacity:1;animation:none}}`}</style>
       <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {cells.map((c, i) => (
           <ClaimCell key={`${c.label}-${i}`} icon={c.icon} value={c.value} label={c.label} delayMs={120 + i * 110} gold={c.gold} prefix={c.prefix} />
