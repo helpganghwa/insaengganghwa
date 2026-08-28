@@ -68,14 +68,25 @@ export function ProfileSelector({
   };
 
   // 좌우 반전 — 서버가 반전 PNG로 URL을 바꾸고 revalidate 응답으로 prop이 갱신된다(§11.7).
+  // 낙관적: 누르는 즉시 CSS로 뒤집어 보여주고, 서버가 준 새 URL(이미 반전본)이 도착하면 CSS 반전은
+  // 자동 해제(오버라이드가 "누를 당시 URL"에 묶여 있어 URL이 바뀌면 무효). 실패 시 오버라이드 제거.
+  const [flipOpt, setFlipOpt] = useState<{ id: string; src: string } | null>(null);
+  const cssFlipped = (p: ProfileItem) => flipOpt !== null && flipOpt.id === p.id && frontSrc(p) === flipOpt.src;
+  const [flipping, setFlipping] = useState(false);
   const doFlip = () => {
-    if (pending) return;
-    startTransition(async () => {
-      const r = await flipProfile(selectedId);
-      if (r.status === 'error') return showError(r.message);
-      haptic.success();
-      showHeaderToast({ title: '아바타 좌우 반전' });
-    });
+    if (flipping) return;
+    const id = selectedId;
+    setFlipOpt({ id, src: frontSrc(sel) });
+    haptic.tap();
+    setFlipping(true);
+    void flipProfile(id)
+      .then((r) => {
+        if (r.status === 'error') {
+          setFlipOpt(null);
+          showError(r.message);
+        }
+      })
+      .finally(() => setFlipping(false));
   };
 
   const doDelete = () => {
@@ -105,11 +116,11 @@ export function ProfileSelector({
         <button
           type="button"
           onClick={doFlip}
-          disabled={pending}
+          disabled={pending || flipping}
           aria-label="선택한 아바타 좌우 반전"
           className="absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-zinc-100 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
         >
-          {pending ? '처리 중…' : '좌우 반전'}
+          좌우 반전
         </button>
         {/* 삭제 — 프리뷰 컨테이너 우상단 코너. 3s 재탭 컨펌(마지막 1개 숨김). */}
         {list.length > 1 ? (
@@ -133,7 +144,7 @@ export function ProfileSelector({
               alt="아바타"
               draggable={false}
               className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
-              style={{ imageRendering: 'pixelated' }}
+              style={{ imageRendering: 'pixelated', transform: cssFlipped(sel) ? 'scaleX(-1)' : undefined }}
             />
           ) : null}
         </div>
@@ -167,7 +178,7 @@ export function ProfileSelector({
               alt="아바타"
               draggable={false}
               className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
+              style={{ imageRendering: 'pixelated', transform: cssFlipped(p) ? 'scaleX(-1)' : undefined }}
             />
           </button>
         ))}
