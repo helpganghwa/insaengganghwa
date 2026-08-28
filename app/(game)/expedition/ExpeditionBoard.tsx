@@ -110,14 +110,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
   const toast = useResourceToast();
   // 공용 헤더 토스트(ResourceToast) — 페이지 전용 토스트 금지(2026-08-28).
-  const showError = (code: string) => {
-    const msg: Record<string, string> = {
-      AVATAR_BUSY: '이미 파견 중인 아바타예요',
-      INSUFFICIENT_DIAMOND: '다이아가 부족해요',
-      NOT_READY: '아직 귀환하지 않았어요',
-    };
-    toast.showError(msg[code] ?? '잠시 후 다시 시도해주세요');
-  };
+  const showError = useCallback(
+    (code: string) => {
+      const msg: Record<string, string> = {
+        AVATAR_BUSY: '이미 파견 중인 아바타예요',
+        INSUFFICIENT_DIAMOND: '다이아가 부족해요',
+        NOT_READY: '아직 귀환하지 않았어요',
+      };
+      toast.showError(msg[code] ?? '잠시 후 다시 시도해주세요');
+    },
+    [toast],
+  );
 
   /** 액션 공통 — 실패 시 서버 보드 재동기 + undo(다이아 낙관 선반영 역보정, 적대 검수 4). */
   const run = useCallback(
@@ -141,7 +144,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         setPendingSlot(null);
       });
     },
-    [],
+    [showError],
   );
 
   const doRefresh = (s: ExpeditionBoardSlot) => {
