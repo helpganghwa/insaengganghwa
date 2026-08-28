@@ -200,7 +200,12 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     const prev = board;
     setBoard((b) => ({
       ...b,
-      slots: b.slots.map((x) => (x.slot === s.slot ? { slot: s.slot, state: 'offer' as const, reward: undefined } : x)),
+      // 지역·시간은 유지(카드 렌더에 필요) — 보상만 비워 '새 파견 찾는 중…'으로.
+      slots: b.slots.map((x) =>
+        x.slot === s.slot
+          ? { ...x, state: 'offer' as const, reward: undefined, completeAtIso: undefined, avatarId: undefined, avatarSouth: null, reqBonusBp: 0, synergyBp: 0 }
+          : x,
+      ),
       avatars: b.avatars.map((a) => (a.id === s.avatarId ? { ...a, busy: false } : a)),
     }));
     setPendingSlot(s.slot);
@@ -359,7 +364,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                           <div className="mx-1.5 mb-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
                             {a.equipment.map((e) => {
                               const w = e.region === assignFor.region ? EXPEDITION_SYNERGY_MATCH_MULT : e.region === 'general' ? EXPEDITION_SYNERGY_GENERAL_MULT : 1;
-                              const bonus = w > 1 ? `×${w} → +${Math.round(e.level * w)}` : '';
+                              const bonus = `+${Math.round((w - 1) * 100)}%`;
                               const rc = e.region && e.region !== 'general' ? REGION_UI[e.region] : null;
                               return (
                                 <div key={e.key} className="grid h-5 grid-cols-[30px_1fr_auto_34px_52px] items-center gap-1.5 text-[10.5px]">
@@ -372,7 +377,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                                     {rc ? rc.label : e.region === 'general' ? '일반' : '—'}
                                   </span>
                                   <b className="text-right text-[11px] text-zinc-800 dark:text-zinc-50">+{e.level}</b>
-                                  <span className="text-right text-[9px] font-extrabold text-amber-600 dark:text-amber-400">{bonus}</span>
+                                  <span className={`text-right text-[9px] font-extrabold ${w > 1 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400 dark:text-zinc-500'}`}>{bonus}</span>
                                 </div>
                               );
                             })}
@@ -577,7 +582,8 @@ function CardBody({
   progress,
   compact,
   hideHeader,
-  muted,
+  mutedBg,
+  mutedMon,
   glow,
   children,
 }: {
@@ -595,8 +601,9 @@ function CardBody({
   compact?: boolean;
   /** 헤더(지역명·시간) 숨김 — 팝업 미니 카드(정보는 팝업 부제에 있음). */
   hideHeader?: boolean;
-  /** 진행 중이 아닌 카드(미배정·완료)는 배경·몬스터만 흑백 — 진행 중 카드에 구분감(2026-08-28). */
-  muted?: boolean;
+  /** 흑백 처리 — 미배정: 배경+몬스터, 완료: 몬스터만(배경은 컬러). 진행 중 카드에 구분감(2026-08-28). */
+  mutedBg?: boolean;
+  mutedMon?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
@@ -612,7 +619,7 @@ function CardBody({
     >
       {/* 배경 — muted면 흑백(아바타·텍스트는 컬러 유지) */}
       <div
-        className={`pointer-events-none absolute inset-0 bg-cover bg-center ${muted ? 'grayscale' : ''}`}
+        className={`pointer-events-none absolute inset-0 bg-cover bg-center ${mutedBg ? 'grayscale' : ''}`}
         style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
       />
       {/* 가독성 — 전면 35% 어둡게 + 상·하 그라데이션 */}
@@ -653,7 +660,7 @@ function CardBody({
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
             alt=""
             decoding="async"
-            className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${muted ? 'grayscale' : ''}`}
+            className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${mutedMon ? 'grayscale' : ''}`}
             style={{ height: monH, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
           />
         </span>
@@ -715,7 +722,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} muted />
+        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
       ) : (
         <Ticker>
           {(now) => {
@@ -734,7 +741,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
                 bonusText={`×${(1 + bonus / 10000).toFixed(2)}`}
                 progress={progress}
                 glow={done}
-                muted={done}
+                mutedMon={done}
               />
             );
           }}
