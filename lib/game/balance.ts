@@ -744,7 +744,8 @@ export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
 /**
  * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
  * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
- * 원정(24h)은 Lv.5부터 등장 — 신규가 첫날 24h에 슬롯이 잠기는 경험 방지.
+ * 원정(24h)은 Lv.0부터 10%(2026-08-28) — 파견을 여는 유저는 합산 강화 1,000+ 숙련자뿐이라(슬롯 개편) 첫날부터
+ * 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다. 종전 Lv.5 게이트(신규 보호)는 전제가 사라져 폐지.
  */
 export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
   minLevel: number;
@@ -753,7 +754,7 @@ export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
   { minLevel: 30, dist: { easy: 1500, normal: 3000, hard: 3000, grand: 2500 } },
   { minLevel: 15, dist: { easy: 2500, normal: 3500, hard: 2500, grand: 1500 } },
   { minLevel: 5, dist: { easy: 3500, normal: 3500, hard: 2000, grand: 1000 } },
-  { minLevel: 0, dist: { easy: 5000, normal: 3500, hard: 1500, grand: 0 } },
+  { minLevel: 0, dist: { easy: 4500, normal: 3000, hard: 1500, grand: 1000 } },
 ] as const;
 export function expeditionDifficultyDist(level: number): Record<ExpeditionDifficulty, number> {
   for (const b of EXPEDITION_DIFFICULTY_DIST_BP) if (level >= b.minLevel) return b.dist;

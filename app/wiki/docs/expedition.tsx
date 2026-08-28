@@ -18,7 +18,7 @@ export const meta: WikiDocMeta = {
   slug: 'expedition',
   cat: '성장',
   title: '파견',
-  summary: '아바타를 원정대로 보내 상자·다이아를 얻는 방치 미션, 하루 6회.',
+  summary: '아바타를 원정대로 보내 상자·다이아를 얻는 방치 미션. 슬롯은 합산 강화로 열린다.',
   sections: [
     { id: 'flow', label: '진행' },
     { id: 'mission', label: '미션과 새로고침' },

@@ -103,7 +103,7 @@ describe('expedition balance invariants', () => {
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
-  it('난이도 분포 — 구간별 합 100%, 고난이도 출현이 레벨에 단조 증가, 원정은 Lv.5부터', () => {
+  it('난이도 분포 — 구간별 합 100%, 고난이도 출현이 레벨에 단조 증가, 원정은 Lv.0부터 10%', () => {
     for (const b of EXPEDITION_DIFFICULTY_DIST_BP) {
       const sum = EXPEDITION_DIFFICULTIES.reduce((a, d) => a + b.dist[d], 0);
       expect(sum).toBe(10000);
@@ -123,8 +123,8 @@ describe('expedition balance invariants', () => {
     expect(evScale(5)).toBeGreaterThan(evScale(0));
     expect(evScale(15)).toBeGreaterThan(evScale(5));
     expect(evScale(30)).toBeGreaterThan(evScale(15));
-    expect(expeditionDifficultyDist(0).grand).toBe(0);
-    expect(expeditionDifficultyDist(5).grand).toBeGreaterThan(0);
+    expect(expeditionDifficultyDist(0).grand).toBe(1000);
+    expect(expeditionDifficultyDist(5).grand).toBeGreaterThanOrEqual(expeditionDifficultyDist(0).grand);
   });
 
   it('슬롯 해금·새로고침 — 확정 수치(합산 강화 1k/3k/10k/15k, 무료 3회·20💎)', () => {
