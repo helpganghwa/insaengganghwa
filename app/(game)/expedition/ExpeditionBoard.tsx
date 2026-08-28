@@ -9,6 +9,7 @@ import { Ticker } from '@/components/Ticker';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
+  EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SYNERGY_GENERAL_BP,
   EXPEDITION_SYNERGY_MATCH_BP,
   type ExpeditionRegion, expeditionAsBonusBp } from '@/lib/game/balance';
@@ -18,7 +19,7 @@ import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 import {
   claimExpeditionAction,
   expeditionBoardAction,
-  refreshOfferAction,
+  refreshAllOffersAction,
   startExpeditionAction,
   type ClaimActionResult,
 } from './actions';
@@ -148,19 +149,22 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     [showError],
   );
 
-  const doRefresh = (s: ExpeditionBoardSlot) => {
+  const [refreshAsk, setRefreshAsk] = useState(false);
+  /** 전체 새로고침(2026-08-28) — 미배정 슬롯 전부 리롤, 진행 중 제외. 횟수 1회 차감. */
+  const doRefreshAll = () => {
+    setRefreshAsk(false);
     const paid = board.freeRefreshLeft <= 0;
     if (paid && !gate.ensure(board.refreshCost)) return;
     if (paid) optimisticAdjust(BigInt(-board.refreshCost));
     run(
-      s.slot,
+      null,
       (b) => ({
         ...b,
         freeRefreshLeft: paid ? 0 : b.freeRefreshLeft - 1,
-        // 리롤 내용은 서버만 안다 — 해당 슬롯을 로딩 표시(reward 숨김)로.
-        slots: b.slots.map((x) => (x.slot === s.slot ? { ...x, reward: undefined } : x)),
+        // 리롤 내용은 서버만 안다 — 미배정 슬롯을 로딩 표시(reward 숨김)로.
+        slots: b.slots.map((x) => (x.state === 'offer' ? { ...x, reward: undefined } : x)),
       }),
-      () => refreshOfferAction(s.slot),
+      () => refreshAllOffersAction(),
       paid ? () => optimisticAdjust(BigInt(board.refreshCost)) : undefined,
     );
   };
@@ -234,8 +238,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }
     if (s.state === 'offer') {
       setAssignSlot(s.slot);
-      // 기본 선택 = 배정 가능한 아바타 중 강화 합 최대(배율 최대).
-      setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
+      setSelectedAvatar(null); // 기본 미선택(2026-08-28) — 아바타를 직접 고르게
       return;
     }
     // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령.
@@ -251,13 +254,22 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           ['Lv', String(board.level)],
           ['대성공', `${(board.critBp / 100).toFixed(1)}%`],
           ['합산 강화', board.enhanceSum.toLocaleString('ko-KR')],
-          ['새로고침', board.freeRefreshLeft > 0 ? `${board.freeRefreshLeft}회` : `💎${board.refreshCost}`],
         ].map(([k, v]) => (
           <div key={k} className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/60">
             <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{k}</span>
             <b className="text-[13px] leading-tight text-zinc-800 dark:text-zinc-50">{v}</b>
           </div>
         ))}
+        {/* 새로고침 — 미배정 슬롯 전체 리롤 버튼(진행 중 제외). 무료 잔여/비용 표기. */}
+        <button
+          type="button"
+          onClick={() => setRefreshAsk(true)}
+          disabled={pendingSlot !== null || !board.slots.some((x) => x.state === 'offer')}
+          className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-amber-300 bg-amber-50 active:scale-95 disabled:opacity-40 dark:border-amber-500/40 dark:bg-amber-500/10"
+        >
+          <span className="text-[9px] text-amber-700 dark:text-amber-300">↻ 새로고침</span>
+          <b className="text-[13px] leading-tight text-amber-800 dark:text-amber-200">{board.freeRefreshLeft > 0 ? `무료 ${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}</b>
+        </button>
       </div>
       <div className="flex items-center gap-2 px-0.5">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -274,12 +286,12 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
       {assignFor?.region ? (
-        <ModalShell onClose={() => setAssignSlot(null)} label="원정대원 선택">
+        <ModalShell onClose={() => setAssignSlot(null)} label="아바타 선택">
           <ModalLayout
-            title="원정대원 선택"
+            title="아바타 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간 — 보상 획득률 높은 순
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간
               </>
             }
             bodyPad="sm"
@@ -287,9 +299,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               <>
                 <ModalButton tone="ghost" onClick={() => setAssignSlot(null)}>
                   닫기
-                </ModalButton>
-                <ModalButton tone="neutral" disabled={pendingSlot === assignFor.slot} onClick={() => doRefresh(assignFor)}>
-                  ↻ 다른 미션 {board.freeRefreshLeft > 0 ? `${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}
                 </ModalButton>
                 <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
                   파견 보내기
@@ -302,7 +311,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               hours={assignFor.hours ?? 0}
               avatarSouth={selectedAv?.south ?? null}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
-              status={assignFor.reward ? '선택 대원 기준 확정 보상' : '새 미션 찾는 중…'}
+              status={!assignFor.reward ? '새 미션 찾는 중…' : selectedAv ? '선택 아바타 기준 확정 보상' : '아바타를 선택하세요'}
               bonusText={selectedAv ? `×${(1 + previewBp / 10000).toFixed(2)}` : null}
               progress={0}
               compact
@@ -318,14 +327,15 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                     const sel = selectedAvatar === a.id;
                     const asMult = 1 + enhanceBonusOf(a.enhanceSum) / 10000;
                     return (
-                      <div key={a.id}>
+                      <div
+                        key={a.id}
+                        className={`rounded-xl border transition ${sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'} ${a.busy ? 'opacity-40' : ''}`}
+                      >
                         <button
                           type="button"
                           disabled={a.busy}
-                          onClick={() => setSelectedAvatar(a.id)}
-                          className={`flex h-[50px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left transition ${
-                            sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
-                          } ${a.busy ? 'opacity-40' : 'active:scale-[0.99]'}`}
+                          onClick={() => setSelectedAvatar(sel ? null : a.id)}
+                          className="flex h-[50px] w-full items-center gap-2.5 px-2.5 text-left"
                         >
                           <span className="flex h-10 w-8 flex-none items-end justify-center">
                             {a.south ? (
@@ -334,17 +344,15 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                             ) : null}
                           </span>
                           <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                            <b className="truncate text-[12px] text-zinc-800 dark:text-zinc-50">
-                              {a.busy ? '파견 중' : a.isActive ? '대표 아바타' : '아바타'}
-                            </b>
-                            <span className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">
+                            {a.busy ? <b className="truncate text-[12px] text-zinc-800 dark:text-zinc-50">파견 중</b> : null}
+                            <span className="truncate text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
                               강화 합 {a.enhanceSum} · 시너지 +{syn / 100}%
                             </span>
                           </span>
                           <b className="text-[13px] font-extrabold text-sky-600 dark:text-sky-400">×{mult.toFixed(2)}</b>
                         </button>
                         {sel ? (
-                          <div className="mt-1 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
+                          <div className="mx-1.5 mb-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-950">
                             {a.equipment.map((e) => {
                               const bonus = e.region === assignFor.region ? '일치 +10%' : e.region === 'general' ? '일반 +5%' : '';
                               const rc = e.region && e.region !== 'general' ? REGION_UI[e.region] : null;
@@ -365,7 +373,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                             })}
                             <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1 text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                               <span>
-                                강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b> → <b className="text-sky-600 dark:text-sky-400">×{asMult.toFixed(2)}</b>
+                                강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b> <b className="text-sky-600 dark:text-sky-400">×{asMult.toFixed(2)}</b>
                               </span>
                               <span>
                                 시너지 <b className="text-amber-600 dark:text-amber-400">+{syn / 100}%</b>
@@ -385,6 +393,30 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
+
+      {/* 전체 새로고침 확인 */}
+      {refreshAsk ? (
+        <ModalShell onClose={() => setRefreshAsk(false)} label="미션 새로고침">
+          <ModalLayout
+            title="미션을 새로고침할까요?"
+            subtitle={`미배정 슬롯 ${board.slots.filter((x) => x.state === 'offer').length}개의 미션이 모두 바뀝니다 (진행 중은 제외)`}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setRefreshAsk(false)}>
+                  닫기
+                </ModalButton>
+                <ModalButton tone="contrast" onClick={doRefreshAll}>
+                  {board.freeRefreshLeft > 0 ? `새로고침 (무료 ${board.freeRefreshLeft}회)` : `💎 ${board.refreshCost} 사용`}
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              무료 {EXPEDITION_REFRESH_FREE_PER_DAY}회를 다 쓰면 💎{board.refreshCost}이 듭니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
 
       {/* 수령 팝업 — 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (

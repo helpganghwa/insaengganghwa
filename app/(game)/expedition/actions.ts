@@ -8,6 +8,7 @@ import {
   claimExpedition,
   ensureOffers,
   ExpeditionError,
+  refreshAllOffers,
   refreshOffer,
   startExpedition,
   type ClaimResult,
@@ -54,6 +55,17 @@ export async function refreshOfferAction(slot: number): Promise<BoardResult> {
   if (!c) return { ok: false, code: 'AUTH' };
   try {
     await refreshOffer(c.userId, c.serverId, slot);
+    return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
+  } catch (e) {
+    return failOf(e);
+  }
+}
+
+export async function refreshAllOffersAction(): Promise<BoardResult> {
+  const c = await ctx();
+  if (!c) return { ok: false, code: 'AUTH' };
+  try {
+    await refreshAllOffers(c.userId, c.serverId);
     return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);

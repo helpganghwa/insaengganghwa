@@ -162,6 +162,43 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
   });
 }
 
+/**
+ * 전체 새로고침(2026-08-28 기획 변경) — 미배정(offer) 슬롯을 **한 번에** 리롤. 횟수 1회 차감(무료 3회/일 소진 후 💎20).
+ * 진행 중(running) 슬롯은 건드리지 않는다. offer 슬롯이 0개면 NO_OFFER.
+ */
+export function refreshAllOffers(userId: string, serverId: number, rng: Rng10k = cryptoRng10k): Promise<{ freeLeft: number; rerolled: number }> {
+  return db.transaction(async (tx) => {
+    const st = await lockState(tx, userId, serverId);
+    const today = kstDateString();
+    const used = todayCount(st.refresh_kst_day, st.refresh_today, today);
+    const offers = (await tx.execute(sql`
+      select id::text from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'offer'
+      order by slot for update
+    `)) as unknown as { id: string }[];
+    if (offers.length === 0) throw new ExpeditionError('NO_OFFER');
+    if (used < EXPEDITION_REFRESH_FREE_PER_DAY) {
+      await tx.execute(sql`
+        update expedition_state set refresh_kst_day = ${today}, refresh_today = ${used + 1}
+        where user_id = ${userId}::uuid and server_id = ${serverId}
+      `);
+    } else {
+      const paid = await walletTrySpend(tx, userId, serverId, EXPEDITION_REFRESH_COST, 'expedition_refresh');
+      if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
+    }
+    for (const o of offers) {
+      const m = rollMission(rng, st.level);
+      await tx.execute(sql`
+        update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
+               duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
+        where id = ${BigInt(o.id)} and status = 'offer'
+      `);
+    }
+    const usedAfter = used < EXPEDITION_REFRESH_FREE_PER_DAY ? used + 1 : used;
+    return { freeLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - usedAfter), rerolled: offers.length };
+  });
+}
+
 /** 새로고침 — 무료 3회/일 소진 후 💎20. offer 상태 슬롯만. 반환: 남은 무료 횟수. */
 export function refreshOffer(
   userId: string,
