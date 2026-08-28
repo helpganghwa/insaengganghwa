@@ -533,6 +533,8 @@ const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무
 const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
 /** 미배정 실루엣 — 기본 남 스프라이트(흑백·30%). */
 const GHOST_SRC = '/sprites/default/male/south.png';
+/** 글자 스트로크(R2) — 밝은 배경에서도 흰 글자 대비 유지. */
+const STROKE: React.CSSProperties = { textShadow: '0 0 3px #000, 0 0 6px #000, 0 1px 2px #000' };
 
 /**
  * 카드 본문(2026-08-28 UI 개편 v12) — 112px. 헤더 24(중앙 지역명 · 시간 칩). 좌·우 열은 절대 배치로 카드 전체
@@ -591,10 +593,10 @@ function CardBody({
         className={`pointer-events-none absolute inset-0 bg-cover bg-center ${mutedBg ? 'grayscale' : ''}`}
         style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
       />
-      {/* 가독성 — 전면 35% 어둡게 + 상·하 그라데이션 */}
-      <div className="pointer-events-none absolute inset-0 bg-black/35" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
+      {/* 가독성(R2, 2026-08-28) — 전면 50% 어둡게 + 상·하 그라데이션 진하게 + 글자 2중 그림자(스트로크) */}
+      <div className="pointer-events-none absolute inset-0 bg-black/50" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black/85 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/85 to-transparent" />
       {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
       {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
       {hideHeader ? null : (
@@ -610,7 +612,7 @@ function CardBody({
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
         <span className={`flex h-6 items-center text-[10px] font-black text-sky-300 drop-shadow ${bonusText ? '' : 'invisible'}`}>{bonusText ?? '—'}</span>
-        <span className="flex flex-1 items-center justify-center">
+        <span className="flex flex-1 items-center justify-center pb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarSouth ?? GHOST_SRC}
@@ -623,7 +625,7 @@ function CardBody({
       </span>
       <span className={`absolute inset-y-0 right-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
         <span className="flex h-6 items-center text-[10px] font-black text-zinc-200 drop-shadow">+{hours} XP</span>
-        <span className="flex flex-1 items-center justify-center">
+        <span className="flex flex-1 items-center justify-center pb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
@@ -638,8 +640,8 @@ function CardBody({
           상단 패딩 20으로 보상 줄 중심(=14+20)이 블록 중심(=34)에 오게 → 보상이 정확히 카드 세로 중앙. */}
       <div className={`absolute inset-y-0 text-center ${compact ? 'left-[74px] right-[74px]' : 'left-[96px] right-[96px]'}`}>
         {/* 보상 중심 = 카드 세로 정중앙(112→56 / compact 104→52), 상태 중심 = +36px */}
-        <span className={`absolute inset-x-0 block h-7 truncate text-[19px] font-black leading-7 text-white drop-shadow ${compact ? 'top-[38px]' : 'top-[42px]'}`}>{rewardShort(reward)}</span>
-        <span className={`absolute inset-x-0 block h-4 truncate text-[10px] font-bold leading-4 drop-shadow ${compact ? 'top-[74px]' : 'top-[84px]'} ${statusCls ?? 'text-white'}`}>{status}</span>
+        <span className={`absolute inset-x-0 block h-7 truncate text-[19px] font-black leading-7 text-white ${compact ? 'top-[38px]' : 'top-[42px]'}`} style={STROKE}>{rewardShort(reward)}</span>
+        <span className={`absolute inset-x-0 block h-4 truncate text-[10px] font-bold leading-4 ${compact ? 'top-[74px]' : 'top-[84px]'} ${statusCls ?? 'text-white'}`} style={STROKE}>{status}</span>
       </div>
       {/* 하단 보더 진행 게이지(강화 카드 문법) */}
       {progress > 0 ? (
@@ -687,7 +689,7 @@ function ClaimCell({ icon, value, label, delayMs, gold, dim, prefix = '×' }: { 
       style={{ animationDelay: `${delayMs}ms` }}
     >
       <span className={`text-[20px] leading-none ${gold ? 'text-amber-400' : ''}`}>{icon}</span>
-      <b className={`text-[13px] tabular-nums leading-tight ${gold ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-900 dark:text-zinc-50'}`}>
+      <b className={`whitespace-nowrap text-[13px] tabular-nums leading-tight ${gold ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-900 dark:text-zinc-50'}`}>
         {prefix}{n.toLocaleString('ko-KR')}
       </b>
       <span className={`text-[9.5px] leading-tight ${gold ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'}`}>{label}</span>
@@ -700,9 +702,9 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
   const b = popup.reward.boxes;
   const cells: { icon: string; value: number; label: string; gold?: boolean; prefix?: string }[] = [
     { icon: '💎', value: popup.reward.diamond ?? 0, label: '다이아', prefix: '' },
-    { icon: '📦', value: b?.weapon ?? 0, label: '무기' },
-    { icon: '📦', value: b?.armor ?? 0, label: '방어구' },
-    { icon: '📦', value: b?.accessory ?? 0, label: '장신구' },
+    { icon: '⚔️', value: b?.weapon ?? 0, label: '무기' },
+    { icon: '🛡️', value: b?.armor ?? 0, label: '방어구' },
+    { icon: '💍', value: b?.accessory ?? 0, label: '장신구' },
     { icon: '✦', value: popup.xpGained, label: popup.levelUp ? `Lv.${popup.level} 달성!` : `파견 Lv.${popup.level}`, gold: popup.levelUp, prefix: '+' },
   ];
   const base = popup.baseReward ? rewardShort(popup.baseReward) : null;
@@ -714,14 +716,15 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
           <ClaimCell key={c.label} icon={c.icon} value={c.value} label={c.label} delayMs={120 + i * 110} gold={c.gold} prefix={c.prefix} dim={c.value === 0} />
         ))}
       </div>
-      {/* 계산줄 — 기본 보상 × 아바타 배율 (× 대성공 2) = 최종. 고정 높이 2줄. */}
-      <div className="mt-2 flex h-9 flex-col items-center justify-center text-center leading-tight">
+      {/* 계산줄 — '기본값 × 배율 (× 2) = 보상'. 대성공 안내는 있을 때만 한 줄 추가(없으면 여백 없음). */}
+      <div className="mt-2 flex flex-col items-center text-center leading-tight">
         <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          기본 <b className="text-zinc-700 dark:text-zinc-200">{base ?? '—'}</b>
+          <b className="text-zinc-700 dark:text-zinc-200">{base ?? '—'}</b>
           {popup.bonusText ? <> × <b className="text-sky-600 dark:text-sky-400">{popup.bonusText.replace('×', '')}</b></> : null}
           {popup.crit ? <> × <b className="text-amber-600 dark:text-amber-400">2</b></> : null}
+          {' = '}<b className="text-zinc-900 dark:text-zinc-50">{rewardShort(popup.reward)}</b>
         </span>
-        <span className={`text-[10.5px] font-bold ${popup.crit ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'}`}>{popup.crit ? '대성공으로 수량이 2배가 됐어요' : '·'}</span>
+        {popup.crit ? <span className="mt-1 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">대성공으로 수량이 2배가 됐어요</span> : null}
       </div>
     </div>
   );
