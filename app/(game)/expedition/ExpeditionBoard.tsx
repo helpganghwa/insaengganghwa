@@ -15,7 +15,6 @@ import type { ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
 import {
-  cancelExpeditionAction,
   claimExpeditionAction,
   expeditionBoardAction,
   refreshOfferAction,
@@ -102,7 +101,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [assignSlot, setAssignSlot] = useState<number | null>(null);
   const assignFor = assignSlot === null ? null : (board.slots.find((x) => x.slot === assignSlot) ?? null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
-  const [cancelFor, setCancelFor] = useState<number | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -190,21 +188,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     );
   };
 
-  const doCancel = (slot: number) => {
-    setCancelFor(null);
-    run(
-      slot,
-      (b) => ({
-        ...b,
-        slots: b.slots.map((x) => (x.slot === slot ? { slot, state: 'offer' as const, reward: undefined } : x)),
-        avatars: b.avatars.map((a) => {
-          const row = b.slots.find((x) => x.slot === slot);
-          return row?.avatarId === a.id ? { ...a, busy: false } : a;
-        }),
-      }),
-      () => cancelExpeditionAction(slot),
-    );
-  };
 
   const doClaim = (s: ExpeditionBoardSlot) => {
     // 다이아는 비크리 기준 낙관 선반영 — 대성공이면 크리 추가분을 응답 후 가산, 실패면 역보정
@@ -235,7 +218,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
   const previewBp =
     assignFor?.region && selectedAv ? synergyOf(selectedAv.regions, assignFor.region) + enhanceBonusOf(selectedAv.enhanceSum) : 0;
-  const cancelSlot = cancelFor === null ? null : (board.slots.find((x) => x.slot === cancelFor) ?? null);
 
   /** 카드 탭 — 상태별 팝업/액션(카드에는 버튼이 없다, 2026-08-28 UI 개편). */
   const onCardTap = (s: ExpeditionBoardSlot) => {
@@ -251,9 +233,9 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       setSelectedAvatar([...board.avatars].filter((a) => !a.busy).sort((x, y) => y.enhanceSum - x.enhanceSum)[0]?.id ?? null);
       return;
     }
+    // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령.
     const done = s.completeAtIso ? Date.parse(s.completeAtIso) <= nowMs() : false;
     if (done) doClaim(s);
-    else setCancelFor(s.slot);
   };
 
   return (
@@ -320,10 +302,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               region={assignFor.region}
               hours={assignFor.hours ?? 0}
               avatarSouth={selectedAv?.south ?? null}
-              bonusBp={previewBp}
               big={assignFor.reward ? '확정 보상' : '새 미션 찾는 중…'}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
-              hint="선택 대원 기준"
+              meta={
+                selectedAv ? (
+                  <>
+                    <span className="text-sky-400">×{(1 + previewBp / 10000).toFixed(2)}</span> · +{assignFor.hours ?? 0} XP
+                  </>
+                ) : (
+                  `+${assignFor.hours ?? 0} XP`
+                )
+              }
               compact
             />
             {/* 고정 높이 그리드(내부 스크롤) — 아바타 수와 무관하게 팝업 높이 불변(레이아웃 시프트 0). */}
@@ -360,35 +349,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         </ModalShell>
       ) : null}
 
-      {/* 취소 확인 */}
-      {cancelFor !== null ? (
-        <ModalShell onClose={() => setCancelFor(null)} label="파견 취소">
-          <ModalLayout
-            title="파견을 취소할까요?"
-            subtitle={
-              cancelSlot?.region ? (
-                <>
-                  <span style={{ color: REGION_UI[cancelSlot.region].color }}>{REGION_UI[cancelSlot.region].label}</span> · {cancelSlot.hours}시간 파견 중
-                </>
-              ) : undefined
-            }
-            footer={
-              <>
-                <ModalButton tone="ghost" onClick={() => setCancelFor(null)}>
-                  계속 파견
-                </ModalButton>
-                <ModalButton tone="danger" onClick={() => doCancel(cancelFor)}>
-                  파견 취소
-                </ModalButton>
-              </>
-            }
-          >
-            <p className="text-center text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              보상 없이 파견이 종료돼요. 슬롯은 바로 새 미션으로 채워집니다.
-            </p>
-          </ModalLayout>
-        </ModalShell>
-      ) : null}
 
       {/* 수령 팝업 — 대성공은 서버 판정이라 응답 후 표시 */}
       {claimPopup ? (
@@ -459,21 +419,18 @@ const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
 const GHOST_SRC = '/sprites/default/male/south.png';
 
 /**
- * 카드 본문(2026-08-28 UI 개편, 최종안 v7) — 헤더 26px(좌 상태 · 중앙 지역 · 우 시간) + 본문 중앙 정렬.
- * 좌: 원정대원 전신 76px + 배율 배지(18px 고정 — 미배정은 hidden으로 자리 유지) / 중앙 3줄 고정 높이
- * (값 26 · 보상 20 · 힌트 14 — 폰트 고정, 상태 전환 시 시프트 0) / 우: 지역 몬스터(반전) + XP 배지.
+ * 카드 본문(2026-08-28 UI 개편, 최종안 v9) — 112px = 헤더 24(중앙 지역명 · 시간) + 본문 88(정중앙 정렬).
+ * 좌: 원정대원 전신 80px(미배정은 실루엣) / 중앙 3줄 고정 높이(값 26 · 보상 20 · 배율+XP 16 — 폰트 고정,
+ * 상태 전환 시 시프트 0) / 우: 지역 몬스터 56px(반전). 배지·힌트·상태 태그 없음, 취소 기능 없음.
  */
 function CardBody({
   region,
   hours,
   avatarSouth,
-  bonusBp,
   big,
   bigCls,
   reward,
-  hint,
-  tag,
-  tagCls,
+  meta,
   compact,
   glow,
   children,
@@ -481,23 +438,22 @@ function CardBody({
   region: ExpeditionRegion;
   hours: number;
   avatarSouth: string | null;
-  bonusBp: number;
   big: React.ReactNode;
   bigCls?: string;
   reward: ExpeditionReward | undefined;
-  hint: string;
-  tag?: string;
-  tagCls?: string;
+  /** 3줄째 — 배율·XP("×1.55 · +12 XP"). */
+  meta: React.ReactNode;
   compact?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
   const ui = REGION_UI[region];
   const hc = HOUR_CLS[hours] ?? 'bg-zinc-800 text-zinc-300';
-  const bodyH = compact ? 60 : 76;
+  const avH = compact ? 60 : 80;
+  const monH = compact ? 44 : 56;
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border bg-cover bg-center ${compact ? 'h-[112px]' : 'h-[128px]'} ${
+      className={`relative overflow-hidden rounded-xl border bg-cover bg-center ${compact ? 'h-[104px]' : 'h-[112px]'} ${
         glow ? 'border-emerald-400/70' : 'border-zinc-800'
       }`}
       style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
@@ -506,51 +462,40 @@ function CardBody({
       <div className="pointer-events-none absolute inset-0 bg-black/35" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
-      {/* 헤더 — 좌 상태 / 중앙 지역명 / 우 시간(좌·우는 76px 열 중앙 = 아래 배지와 세로 정렬) */}
-      <div className="relative grid h-[26px] grid-cols-[76px_1fr_76px] items-center px-2.5">
-        <span className="justify-self-center">
-          {tag ? <span className={`rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-black ${tagCls ?? 'text-zinc-300'}`}>{tag}</span> : null}
-        </span>
-        <b className="justify-self-center truncate text-[12.5px] font-black text-white drop-shadow" style={{ color: ui.color }}>
+      {/* 헤더 24px — 중앙 지역명 · 시간 칩(v9) */}
+      <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
+        <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
-        <span className={`justify-self-center rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
-      {/* 본문 — 헤더 아래 영역 정중앙(헤더 높이만큼 위로 보정) */}
-      <div className={`relative -mt-2 flex items-center justify-between px-2.5 ${compact ? 'h-[86px]' : 'h-[102px]'}`}>
-        <div className="flex w-[76px] flex-none flex-col items-center justify-end gap-0.5" style={{ height: bodyH + 22 }}>
-          <span className="flex items-end justify-center" style={{ height: bodyH }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarSouth ?? GHOST_SRC}
-              alt=""
-              decoding="async"
-              className={avatarSouth ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]' : 'opacity-30 grayscale brightness-150'}
-              style={{ height: bodyH, width: 'auto', imageRendering: 'pixelated' }}
-            />
-          </span>
-          <span className={`h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-sky-400 ${avatarSouth ? '' : 'invisible'}`}>
-            ×{(1 + bonusBp / 10000).toFixed(2)}
-          </span>
-        </div>
+      {/* 본문 — 헤더 아래 영역 정중앙(헤더 높이만큼 위로 보정). 좌 원정대원 전신 / 중앙 3줄 고정 / 우 지역 몬스터 */}
+      <div className={`relative -mt-2.5 flex items-center justify-between px-2.5 ${compact ? 'h-[80px]' : 'h-[88px]'}`}>
+        <span className={`flex flex-none items-center justify-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarSouth ?? GHOST_SRC}
+            alt=""
+            decoding="async"
+            className={avatarSouth ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]' : 'opacity-30 grayscale brightness-150'}
+            style={{ height: avH, width: 'auto', imageRendering: 'pixelated' }}
+          />
+        </span>
         <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
           <b className={`block h-[26px] w-full truncate text-[17px] font-black leading-[26px] drop-shadow ${bigCls ?? 'text-white'}`}>{big}</b>
           <span className="block h-5 w-full truncate text-[14px] font-black leading-5 text-white drop-shadow">{rewardShort(reward)}</span>
-          <span className="block h-3.5 w-full truncate text-[9.5px] font-medium leading-[14px] text-zinc-300/80">{hint}</span>
+          <span className="block h-4 w-full truncate text-[11px] font-bold leading-4 text-zinc-200 drop-shadow">{meta}</span>
         </div>
-        <div className="flex w-[76px] flex-none flex-col items-center justify-end gap-0.5" style={{ height: bodyH + 22 }}>
-          <span className="flex items-end justify-center" style={{ height: bodyH }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
-              alt=""
-              decoding="async"
-              className="drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]"
-              style={{ height: compact ? 44 : 52, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
-            />
-          </span>
-          <span className="h-[18px] rounded-md bg-black/70 px-1.5 text-[10px] font-black leading-[18px] text-zinc-200">+{hours} XP</span>
-        </div>
+        <span className={`flex flex-none items-center justify-center ${compact ? 'w-16' : 'w-[86px]'}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
+            alt=""
+            decoding="async"
+            className="drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]"
+            style={{ height: monH, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
+          />
+        </span>
       </div>
       {children}
     </div>
@@ -567,23 +512,21 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
       <button
         type="button"
         onClick={onTap}
-        className={`relative block h-[128px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-600 bg-cover bg-center text-left grayscale ${s.slot === 4 ? 'opacity-50' : 'opacity-85'}`}
+        className="relative block h-[112px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-600 bg-cover bg-center text-left opacity-85 grayscale"
         style={{ backgroundImage: `url(/sprites/expedition/bg/${bg}.png)` }}
       >
         <div className="pointer-events-none absolute inset-0 bg-black/60" />
-        <div className="relative grid h-[26px] grid-cols-[76px_1fr_76px] items-center px-2.5">
-          <span />
-          <b className="justify-self-center text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
-          <span />
+        <div className="relative flex h-6 items-center justify-center px-2.5">
+          <b className="text-[12.5px] font-black text-white">슬롯 {s.slot}</b>
         </div>
-        <div className="relative -mt-2 flex h-[102px] items-center justify-between px-2.5">
-          <span className="flex w-[76px] justify-center text-[22px]">🔒</span>
+        <div className="relative -mt-2.5 flex h-[88px] items-center justify-between px-2.5">
+          <span className="flex w-[86px] justify-center text-[22px]">🔒</span>
           <div className="flex min-w-0 flex-1 flex-col items-center justify-center text-center">
             <b className="block h-[26px] text-[17px] font-black leading-[26px] text-white">{need.toLocaleString('ko-KR')}</b>
             <span className="block h-5 text-[13px] font-extrabold leading-5 text-white">합산 강화 달성 시 오픈</span>
-            <span className="block h-3.5 text-[9.5px] leading-[14px] text-zinc-300/80">현재 {enhanceSum.toLocaleString('ko-KR')}</span>
+            <span className="block h-4 text-[11px] font-bold leading-4 text-zinc-200">현재 {enhanceSum.toLocaleString('ko-KR')}</span>
           </div>
-          <div className="flex w-[76px] flex-col items-center gap-1">
+          <div className="flex w-[86px] flex-col items-center gap-1">
             <div className="h-1 w-[70px] overflow-hidden rounded-full bg-zinc-700">
               <div className="h-full bg-zinc-300" style={{ width: `${pct}%` }} />
             </div>
@@ -599,7 +542,7 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} bonusBp={0} big="파견 대기" reward={s.reward} hint="탭해서 파견" tag="미배정" />
+        <CardBody region={region} hours={hours} avatarSouth={null} big="파견 대기" reward={s.reward} meta={`+${hours} XP`} />
       ) : (
         <Ticker>
           {(now) => {
@@ -610,13 +553,14 @@ function SlotCard({ s, pending, enhanceSum, onTap }: { s: ExpeditionBoardSlot; p
                 region={region}
                 hours={hours}
                 avatarSouth={s.avatarSouth ?? null}
-                bonusBp={bonus + (s.synergyBp ?? 0)}
                 big={done ? '파견 완료' : <span className="tabular-nums">{fmtRemain(remain)}</span>}
                 bigCls={done ? 'text-emerald-400' : 'text-amber-400'}
                 reward={s.reward}
-                hint={done ? '탭해서 완료' : '탭해서 취소'}
-                tag={done ? '귀환' : '파견 중'}
-                tagCls={done ? 'text-emerald-400' : 'text-amber-400'}
+                meta={
+                  <>
+                    <span className="text-sky-400">×{(1 + (bonus + (s.synergyBp ?? 0)) / 10000).toFixed(2)}</span> · +{hours} XP
+                  </>
+                }
                 glow={done}
               />
             );
