@@ -289,7 +289,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="아바타 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{assignFor.hours} XP
               </>
             }
             bodyPad="sm"
@@ -601,19 +601,22 @@ function CardBody({
       {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
       {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
       {hideHeader ? null : (
-        <div className="relative flex h-10 items-center justify-center gap-1.5 px-2.5">
+        <div className="relative flex h-10 items-center justify-center gap-2 px-2.5">
+          <span className="text-[10px] font-extrabold text-white" style={STROKE}>
+            {HOUR_MOON[hours] ?? '🌑'} {hours}시간
+          </span>
           <b className="truncate text-[12.5px] font-black" style={{ color: ui.color, ...STROKE }}>
             {ui.label}
           </b>
-          <span className="text-[10px] font-extrabold text-white" style={STROKE}>
-            {HOUR_MOON[hours] ?? '🌑'} {hours}시간
+          <span className="text-[10px] font-extrabold text-zinc-200" style={STROKE}>
+            +{hours} XP
           </span>
         </div>
       )}
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
-        <span className="h-6" />
-        <span className="flex flex-1 items-center justify-center pb-2">
+        {hideHeader ? null : <span className="h-6" />}
+        <span className={`flex flex-1 items-center justify-center ${hideHeader ? '' : 'pb-2'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarSouth ?? GHOST_SRC}
@@ -625,8 +628,8 @@ function CardBody({
         </span>
       </span>
       <span className={`absolute inset-y-0 right-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
-        <span className="h-6" />
-        <span className="flex flex-1 items-center justify-center pb-2">
+        {hideHeader ? null : <span className="h-6" />}
+        <span className={`flex flex-1 items-center justify-center ${hideHeader ? '' : 'pb-2'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
