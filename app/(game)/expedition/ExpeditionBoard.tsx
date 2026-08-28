@@ -273,7 +273,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           disabled={pendingSlot !== null || !board.slots.some((x) => x.state === 'offer')}
           className="flex h-[46px] flex-col items-center justify-center rounded-xl border border-amber-300 bg-amber-50 active:scale-95 disabled:opacity-40 dark:border-amber-500/40 dark:bg-amber-500/10"
         >
-          <span className="text-[9px] text-amber-700 dark:text-amber-300">↻ 새로고침</span>
+          <span className="text-[9px] text-amber-700 dark:text-amber-300">새로고침</span>
           <b className="text-[13px] leading-tight text-amber-800 dark:text-amber-200">{board.freeRefreshLeft > 0 ? `무료 ${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}</b>
         </button>
       </div>
@@ -317,7 +317,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               hours={assignFor.hours ?? 0}
               avatarSouth={selectedAv?.south ?? null}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
-              status={!assignFor.reward ? '새 미션 찾는 중…' : selectedAv ? '선택 아바타 기준 확정 보상' : '아바타를 선택하세요'}
+              status={!assignFor.reward ? '새 파견 찾는 중…' : selectedAv ? '선택 아바타 기준 확정 보상' : '아바타를 선택하세요'}
               bonusText={selectedAv ? `×${(1 + previewBp / 10000).toFixed(2)}` : null}
               progress={0}
               compact
@@ -377,7 +377,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                                 </div>
                               );
                             })}
-                            <div className="mt-1 flex justify-between border-t border-zinc-200 pt-1 text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                            <div className={`flex justify-between text-[10px] text-zinc-500 dark:text-zinc-400 ${a.equipment.length > 0 ? 'mt-1 border-t border-zinc-200 pt-1 dark:border-zinc-800' : ''}`}>
                               <span>
                                 강화 합 <b className="text-zinc-700 dark:text-zinc-200">{a.enhanceSum}</b> <b className="text-sky-600 dark:text-sky-400">×{asMult.toFixed(2)}</b>
                               </span>
@@ -402,10 +402,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 전체 새로고침 확인 */}
       {refreshAsk ? (
-        <ModalShell onClose={() => setRefreshAsk(false)} label="미션 새로고침">
+        <ModalShell onClose={() => setRefreshAsk(false)} label="파견 새로고침">
           <ModalLayout
-            title="미션을 새로고침할까요?"
-            subtitle={`미배정 슬롯 ${board.slots.filter((x) => x.state === 'offer').length}개의 미션이 모두 바뀝니다 (진행 중은 제외)`}
+            title="파견을 새로고침할까요?"
+            subtitle={`미배정 슬롯 ${board.slots.filter((x) => x.state === 'offer').length}개의 파견이 모두 바뀝니다 (진행 중은 제외)`}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setRefreshAsk(false)}>
@@ -545,11 +545,12 @@ function CardBody({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
       {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
-      <div className="relative flex h-6 items-center justify-center gap-1.5 px-2.5">
-        <b className="translate-y-[2px] truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
+      {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
+      <div className="relative flex h-10 items-center justify-center gap-1.5 px-2.5">
+        <b className="truncate text-[12.5px] font-black drop-shadow" style={{ color: ui.color }}>
           {ui.label}
         </b>
-        <span className={`translate-y-[2px] rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
+        <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${hc}`}>{hours}시간</span>
       </div>
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
       <span className={`absolute inset-y-0 left-2.5 flex flex-col items-center ${compact ? 'w-16' : 'w-[86px]'}`}>
@@ -580,9 +581,10 @@ function CardBody({
       </span>
       {/* 중앙 — 카드 전체 기준 정중앙: 블록(보상 28 + 간격 4 + 상태 16 = 48)을 카드에 수직 중앙 정렬하고
           상단 패딩 20으로 보상 줄 중심(=14+20)이 블록 중심(=34)에 오게 → 보상이 정확히 카드 세로 중앙. */}
-      <div className={`absolute inset-y-0 flex flex-col items-center justify-center text-center pt-[20px] ${compact ? 'left-[74px] right-[74px]' : 'left-[96px] right-[96px]'}`}>
-        <span className="block h-7 w-full truncate text-[19px] font-black leading-7 text-white drop-shadow">{rewardShort(reward)}</span>
-        <span className={`mt-1 block h-4 w-full truncate text-[10px] font-bold leading-4 drop-shadow ${statusCls ?? 'text-white'}`}>{status}</span>
+      <div className={`absolute inset-y-0 text-center ${compact ? 'left-[74px] right-[74px]' : 'left-[96px] right-[96px]'}`}>
+        {/* 보상 중심 = 카드 세로 정중앙(112→56 / compact 104→52), 상태 중심 = +36px */}
+        <span className={`absolute inset-x-0 block h-7 truncate text-[19px] font-black leading-7 text-white drop-shadow ${compact ? 'top-[38px]' : 'top-[42px]'}`}>{rewardShort(reward)}</span>
+        <span className={`absolute inset-x-0 block h-4 truncate text-[10px] font-bold leading-4 drop-shadow ${compact ? 'top-[74px]' : 'top-[84px]'} ${statusCls ?? 'text-white'}`}>{status}</span>
       </div>
       {/* 하단 보더 진행 게이지(강화 카드 문법) */}
       {progress > 0 ? (
