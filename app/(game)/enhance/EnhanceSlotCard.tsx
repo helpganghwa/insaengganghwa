@@ -11,6 +11,7 @@ import {
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
 import { Ticker } from '@/components/Ticker';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
@@ -268,7 +269,7 @@ export function EnhanceSlotCard({
   // timeUp 전이 — 매초 폴링 대신 완료 시각에 맞춘 setTimeout 1개(잡 교체 시 리셋).
   useEffect(() => {
     const end = new Date(activeJob.completeAtIso).getTime();
-    const left = end - Date.now();
+    const left = end - serverNow(); // 서버 시계 보정(2026-08-28)
     if (left <= 0) {
       setTimeUp(true);
       return;
@@ -373,8 +374,9 @@ export function EnhanceSlotCard({
   // 시간 의존 계산(경과·확률·남은시간·단축비용)은 Ticker 자식 렌더 시점에 수행 — 카드 본체 무관.
   const fixedDownBp = activeJob.downRateBp ?? downRateBp(activeJob.fromLevel);
   const isRiskZone = fixedDownBp > 0;
-  const calcElapsed = (now: number) => (done ? totalMs : Math.max(0, Math.min(totalMs, now - startMs)));
-  const calcRemaining = (now: number) => (done ? 0 : Math.max(0, endMs - now));
+  // now(Ticker=Date.now)에 서버 시계 offset을 더해 판정·표시를 서버 기준으로(2026-08-28).
+  const calcElapsed = (now: number) => (done ? totalMs : Math.max(0, Math.min(totalMs, now + clockOffsetMs() - startMs)));
+  const calcRemaining = (now: number) => (done ? 0 : Math.max(0, endMs - (now + clockOffsetMs())));
   // 단축 비용 — 표시(Ticker)와 실행(doReduce)이 같은 계산을 시점만 달리해 쓴다. 서버가
   // min(요청, 잔여시간 환산 최대)로 캡하므로(reduceTime.ts) 시점 오차는 초과 지불로 이어지지 않는다.
   const calcInstantCost = (now: number) => {
