@@ -35,6 +35,8 @@ export type ExpeditionBoardSlot = {
   avatarFace?: string | null;
   /** running — 배정 아바타 전신(south). */
   avatarSouth?: string | null;
+  /** running — 배율 적용 전 기본 보상(오퍼 시점 롤). 수령 팝업의 '기본 × 배율' 표시용. */
+  baseReward?: ExpeditionReward;
 };
 
 export type ExpeditionAvatar = {
@@ -162,6 +164,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         difficulty: row.difficulty,
         hours,
         reward: row.final_reward ?? row.reward,
+        baseReward: row.reward,
         completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
         synergyBp: row.synergy_bp,
         reqBonusBp: row.req_bonus_bp,

@@ -78,7 +78,7 @@ function weightedSumOf(equipment: ExpeditionAvatar['equipment'], mission: Expedi
   return expeditionWeightedSum(equipment.map((e) => ({ level: e.level, region: e.region })), mission);
 }
 
-type ClaimPopup = { crit: boolean; reward: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion; hours: number; avatarSouth: string | null; bonusText: string | null };
+type ClaimPopup = { crit: boolean; reward: ExpeditionReward; baseReward?: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion; hours: number; avatarSouth: string | null; bonusText: string | null };
 
 export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [board, setBoard] = useState(initial);
@@ -210,7 +210,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         setBoard(r.board);
         setClaimPopup({
           crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region!,
-          hours: s.hours ?? 0, avatarSouth: s.avatarSouth ?? null,
+          hours: s.hours ?? 0, avatarSouth: s.avatarSouth ?? null, baseReward: s.baseReward,
           bonusText: `×${(1 + (s.reqBonusBp ?? 0) / 10000).toFixed(2)}`,
         });
       } else {
@@ -677,17 +677,17 @@ function useCountUp(target: number, delayMs: number): number {
   return v;
 }
 
-function ClaimCell({ icon, value, label, delayMs, gold, prefix = '×' }: { icon: string; value: number; label: string; delayMs: number; gold?: boolean; prefix?: string }) {
+function ClaimCell({ icon, value, label, delayMs, gold, dim, prefix = '×' }: { icon: string; value: number; label: string; delayMs: number; gold?: boolean; dim?: boolean; prefix?: string }) {
   const n = useCountUp(value, delayMs);
   return (
     <div
       className={`exp-pop flex h-[78px] flex-col items-center justify-center gap-0.5 rounded-xl border ${
         gold ? 'border-amber-400/70 bg-amber-500/10' : 'border-zinc-200 dark:border-zinc-800'
-      }`}
+      } ${dim ? 'opacity-40 grayscale' : ''}`}
       style={{ animationDelay: `${delayMs}ms` }}
     >
-      <span className={`text-[22px] leading-none ${gold ? 'text-amber-400' : ''}`}>{icon}</span>
-      <b className={`text-[14px] tabular-nums leading-tight ${gold ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-900 dark:text-zinc-50'}`}>
+      <span className={`text-[20px] leading-none ${gold ? 'text-amber-400' : ''}`}>{icon}</span>
+      <b className={`text-[13px] tabular-nums leading-tight ${gold ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-900 dark:text-zinc-50'}`}>
         {prefix}{n.toLocaleString('ko-KR')}
       </b>
       <span className={`text-[9.5px] leading-tight ${gold ? 'font-bold text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-400'}`}>{label}</span>
@@ -695,27 +695,34 @@ function ClaimCell({ icon, value, label, delayMs, gold, prefix = '×' }: { icon:
   );
 }
 
-/** C3 — 받은 것만 칸으로: 상자(부위별, 0은 생략) · 💎 · XP. 대성공 안내는 칸 아래 한 줄(고정 높이). */
+/** C3 — 항상 5칸(💎 · 📦무기 · 📦방어구 · 📦장신구 · ✦XP), 미획득은 ×0(흐리게). 하단에 '기본 × 배율(× 대성공)' 계산줄. */
 function ClaimItems({ popup }: { popup: ClaimPopup }) {
-  const cells: { icon: string; value: number; label: string; gold?: boolean; prefix?: string }[] = [];
   const b = popup.reward.boxes;
-  if (b?.weapon) cells.push({ icon: '📦', value: b.weapon, label: '무기' });
-  if (b?.armor) cells.push({ icon: '📦', value: b.armor, label: '방어구' });
-  if (b?.accessory) cells.push({ icon: '📦', value: b.accessory, label: '장신구' });
-  if (popup.reward.diamond) cells.push({ icon: '💎', value: popup.reward.diamond, label: '다이아', prefix: '' });
-  cells.push({ icon: '✦', value: popup.xpGained, label: popup.levelUp ? `Lv.${popup.level} 달성!` : `파견 Lv.${popup.level}`, gold: popup.levelUp, prefix: '+' });
-  const cols = Math.min(5, Math.max(2, cells.length));
+  const cells: { icon: string; value: number; label: string; gold?: boolean; prefix?: string }[] = [
+    { icon: '💎', value: popup.reward.diamond ?? 0, label: '다이아', prefix: '' },
+    { icon: '📦', value: b?.weapon ?? 0, label: '무기' },
+    { icon: '📦', value: b?.armor ?? 0, label: '방어구' },
+    { icon: '📦', value: b?.accessory ?? 0, label: '장신구' },
+    { icon: '✦', value: popup.xpGained, label: popup.levelUp ? `Lv.${popup.level} 달성!` : `파견 Lv.${popup.level}`, gold: popup.levelUp, prefix: '+' },
+  ];
+  const base = popup.baseReward ? rewardShort(popup.baseReward) : null;
   return (
     <div>
       <style>{`@keyframes exp-pop{0%{opacity:0;transform:scale(.6) translateY(6px)}60%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}.exp-pop{opacity:0;animation:exp-pop .42s cubic-bezier(.2,.9,.3,1.2) forwards}@media(prefers-reduced-motion:reduce){.exp-pop{opacity:1;animation:none}}`}</style>
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className="grid grid-cols-5 gap-1.5">
         {cells.map((c, i) => (
-          <ClaimCell key={`${c.label}-${i}`} icon={c.icon} value={c.value} label={c.label} delayMs={120 + i * 110} gold={c.gold} prefix={c.prefix} />
+          <ClaimCell key={c.label} icon={c.icon} value={c.value} label={c.label} delayMs={120 + i * 110} gold={c.gold} prefix={c.prefix} dim={c.value === 0} />
         ))}
       </div>
-      <p className={`mt-2 h-4 text-center text-[11px] font-bold ${popup.crit ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'}`}>
-        {popup.crit ? '대성공으로 수량이 2배가 됐어요' : '·'}
-      </p>
+      {/* 계산줄 — 기본 보상 × 아바타 배율 (× 대성공 2) = 최종. 고정 높이 2줄. */}
+      <div className="mt-2 flex h-9 flex-col items-center justify-center text-center leading-tight">
+        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          기본 <b className="text-zinc-700 dark:text-zinc-200">{base ?? '—'}</b>
+          {popup.bonusText ? <> × <b className="text-sky-600 dark:text-sky-400">{popup.bonusText.replace('×', '')}</b></> : null}
+          {popup.crit ? <> × <b className="text-amber-600 dark:text-amber-400">2</b></> : null}
+        </span>
+        <span className={`text-[10.5px] font-bold ${popup.crit ? 'text-amber-600 dark:text-amber-400' : 'text-transparent'}`}>{popup.crit ? '대성공으로 수량이 2배가 됐어요' : '·'}</span>
+      </div>
     </div>
   );
 }
