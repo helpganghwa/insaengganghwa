@@ -338,15 +338,6 @@ export function claimExpedition(
     }
 
     const xpGained = Math.round(Number(row.duration_ms) / 3_600_000);
-    // 대성공 로그(2026-08-27) — 파견 페이지 하단 전용 사건. 월드 피드·채팅·연대기는 type으로 제외한다.
-    if (crit) {
-      const boxes = reward.boxes ? reward.boxes.weapon + reward.boxes.armor + reward.boxes.accessory : 0;
-      await tx.execute(sql`
-        insert into world_events (server_id, type, actor_user_id, detail)
-        values (${serverId}, 'expedition_crit', ${userId}::uuid,
-                ${JSON.stringify({ region: row.region, hours: xpGained, diamond: reward.diamond ?? 0, boxes })}::jsonb)
-      `);
-    }
     const next = applyExpeditionXp(st.level, BigInt(st.xp), xpGained);
     await tx.execute(sql`
       update expedition_state set level = ${next.level}, xp = ${next.xp}

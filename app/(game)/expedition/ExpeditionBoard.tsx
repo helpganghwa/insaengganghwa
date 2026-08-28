@@ -281,28 +281,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         />
       ))}
 
-      {/* 대성공 로그(2026-08-27) — 서버 최근 10건, 파견 페이지 전용(월드·길드 피드 미노출). 자랑·강화 동기. */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <p className="mb-1.5 text-[11px] font-bold text-zinc-700 dark:text-zinc-200">최근 대성공</p>
-        {board.critLog.length === 0 ? (
-          <p className="text-[11px] text-zinc-400">아직 대성공 기록이 없습니다.</p>
-        ) : (
-          <ul className="space-y-1">
-            {board.critLog.map((l, i) => (
-              <li key={`${l.atIso}-${i}`} className="flex items-baseline gap-1.5 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">
-                <span className="min-w-0 flex-1 truncate">
-                  <b className="text-zinc-800 dark:text-zinc-100">{l.nickname}</b>님이{' '}
-                  <span style={{ color: REGION_UI[l.region]?.color }}>{REGION_UI[l.region]?.label ?? l.region}</span> {l.hours}h 파견을{' '}
-                  <b className="text-amber-600 dark:text-amber-400">대성공</b>
-                  {l.diamond > 0 ? ` 💎${l.diamond.toLocaleString('ko-KR')}` : ''}
-                  {l.boxes > 0 ? ` 📦${l.boxes}` : ''}
-                </span>
-                <span className="shrink-0 text-[9.5px] text-zinc-400">{new Date(l.atIso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {/* 아바타 배정 시트 */}
       {assignFor?.region ? (
