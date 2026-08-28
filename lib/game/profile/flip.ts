@@ -21,7 +21,7 @@ export async function flipProfileImage(
   serverId: number,
   /** 기본 아바타(상대경로 /sprites/default/…) 해석용 요청 origin — OG 라우트와 동일 규약. */
   origin: string,
-): Promise<'ok' | 'NOT_FOUND' | 'FAILED'> {
+): Promise<{ status: 'ok'; south: string } | 'NOT_FOUND' | 'FAILED'> {
   const [row] = await db
     .select({ rotations: userProfiles.rotations, options: userProfiles.options })
     .from(userProfiles)
@@ -71,7 +71,7 @@ export async function flipProfileImage(
       .update(userProfiles)
       .set({ rotations: rot, options: opts })
       .where(eq(userProfiles.id, profileId));
-    return 'ok';
+    return { status: 'ok', south: rot.south };
   } catch (e) {
     console.error('[profile.flip]', profileId, e);
     return 'FAILED';

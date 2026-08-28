@@ -74,7 +74,9 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
 }
 
 /** 아바타 좌우 반전(본인) — 반전 PNG 저장·URL 교체(flip.ts). 재탭은 원본으로 복귀. */
-export async function flipProfile(profileId: string): Promise<ActionState> {
+export async function flipProfile(
+  profileId: string,
+): Promise<{ status: 'ok'; south: string } | { status: 'error'; message: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (await rateLimited(userId, 'profileEdit'))
@@ -89,7 +91,8 @@ export async function flipProfile(profileId: string): Promise<ActionState> {
   if (r === 'FAILED') return { status: 'error', message: '반전에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
   revalidatePath('/me');
   revalidatePath('/me/profiles');
-  return { status: 'ok' };
+  // 새 URL을 돌려준다 — 클라가 프리로드·디코드한 뒤 CSS 반전을 풀어 옛 비트맵이 반전 없이 비치는 구간을 없앤다.
+  return { status: 'ok', south: r.south };
 }
 
 /** 프로필 삭제(본인). 대표였으면 대표 해제. (hidden 처리는 운영자 전용, 여긴 hard delete) */

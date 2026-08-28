@@ -49,12 +49,19 @@ export function ProfileSelector({
     if (p.id === selectedId) return;
     setSelectedId(p.id);
     setFlipPreview(false); // 반전은 확인용 미리보기 — 다른 아바타로 옮기면 초기화
+    setFlipHold(null);
   };
 
   // 좌우 반전 — 버튼은 **미리보기만** CSS로 뒤집는다(2026-08-28 "확인만 하고 싶은데 바로 적용" 피드백).
   // 서버 반영(반전 PNG 저장·URL 교체, flip.ts)은 아래 "적용" 버튼에서만. 짝수 번 누르면 원상태라 변경 없음.
   const [flipPreview, setFlipPreview] = useState(false);
   const [flipping, setFlipping] = useState(false);
+  /**
+   * 적용 직후 깜빡임 방지 — 서버 성공 시점엔 새(반전본) URL이 아직 프리뷰에 안 실려 있다. 여기 "누를 당시 URL"을
+   * 기록해 두고, 프리뷰 src가 그 URL인 동안만 CSS 반전을 유지한다(props가 새 URL로 바뀌면 자동 해제).
+   * 새 URL은 해제 전에 프리로드·디코드해 두어 src 교체가 즉시 그려진다.
+   */
+  const [flipHold, setFlipHold] = useState<string | null>(null);
   const doFlip = () => {
     if (flipping) return;
     haptic.tap();
@@ -77,7 +84,16 @@ export function ProfileSelector({
             showError(r.message);
             return;
           }
-          setFlipPreview(false); // 서버가 준 URL이 이미 반전본 — CSS 반전 해제
+          // 새 반전본을 먼저 캐시에 올린 뒤(디코드까지) CSS 반전을 "옛 URL 표시 중"으로만 한정한다.
+          try {
+            const img = new Image();
+            img.src = r.south;
+            await img.decode();
+          } catch {
+            /* 프리로드 실패해도 진행 — 최악의 경우 기존 깜빡임 */
+          }
+          setFlipHold(frontSrc(sel));
+          setFlipPreview(false);
           if (activeDirty) {
             const a = await setActiveProfile(id);
             if (a.status === 'error') {
@@ -103,7 +119,8 @@ export function ProfileSelector({
       router.refresh();
     });
   };
-  const cssFlipped = (p: ProfileItem) => flipPreview && p.id === selectedId;
+  const cssFlipped = (p: ProfileItem) =>
+    p.id === selectedId && (flipPreview || (flipHold !== null && frontSrc(p) === flipHold));
 
   const doDelete = () => {
     if (pending) return;
