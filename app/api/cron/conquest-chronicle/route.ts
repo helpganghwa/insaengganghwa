@@ -14,7 +14,7 @@ import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
-import { revealConquest, carryOverDefenders, neutralizeAbandonedZones } from '@/lib/game/guild/conquest/run';
+import { revealConquest, carryOverDefenders, markAbandonedZones } from '@/lib/game/guild/conquest/run';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
@@ -88,14 +88,14 @@ export async function GET(req: Request) {
           // 지연 공개분(pendingRows)은 시간순 재생이라 그 자리에서는 정합하지만, 건너뛰어도 손실이
           // 없다 — 그날 방치였던 구역이 kstDay에도 방치면 아래 kstDay 판정이 잡고, 그 사이 수비가
           // 붙었다면 애초에 뺏을 이유가 없다. 즉 이 게이트는 자가 치유된다.
-          const neutral =
+          const abandoned =
             day === kstDay
-              ? await neutralizeAbandonedZones(sid, day).catch(() => ({ neutralized: 0 }))
-              : { neutralized: 0 };
-          // 소유 변동(점령·중립화) 반영 — 독점 세금 보너스 배율 재계산(B안, 하루 1회). 강화 누적은 저장값만 읽음.
+              ? await markAbandonedZones(sid, day).catch(() => ({ abandoned: 0 }))
+              : { abandoned: 0 };
+          // 소유 변동(점령)·방치 플래그 반영 — 독점 세금 보너스 배율 재계산(하루 1회). 강화 누적은 저장값만 읽음.
           await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
-          // 공개(소유권 플립)·중립화 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
-          if (rev.revealed > 0 || neutral.neutralized > 0) revalidateTag(`world-feed:s${sid}`, 'max');
+          // 공개(소유권 플립)·방치 판정 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
+          if (rev.revealed > 0 || abandoned.abandoned > 0) revalidateTag(`world-feed:s${sid}`, 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           // 이월은 **당일 실행에서만**(전수 감사 2026-08-21) — 백필 날짜에 돌면 carryDay=과거+1의
           // 배치 행이 새로 생겨 영구 잔존·연대기 재생성 오염. neutralize와 동일 게이트.
@@ -108,7 +108,7 @@ export async function GET(req: Request) {
             kstDay: day,
             revealed: rev.revealed,
             mailed: rev.mailed,
-            neutralized: neutral.neutralized,
+            abandoned: abandoned.abandoned,
             carried: carry.carried,
             ...(await generateAndStoreChronicle(day, sid)),
           });

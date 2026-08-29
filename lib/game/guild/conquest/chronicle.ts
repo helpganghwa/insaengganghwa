@@ -33,8 +33,10 @@ export type ConquestDaySummary = {
   attacks: { zone: string; region: string; guild: string }[];
   /** 그날 해산한 길드(world_events guild_disband) — 보유하던 구역이 중립화됨(연대기 서술 재료). */
   disbands: { guildName: string; zones: string[] }[];
-  /** 방치로 중립화된 구역(B안 — world_events zone_neutralized). 이전 소유 길드별 상실 구역(전투 아님). */
+  /** (2026-08-30 이전 이력) 방치로 중립화된 구역 — world_events zone_neutralized. 이전 소유 길드별 상실 구역(전투 아님). */
   neutralized: { guildName: string; zones: string[] }[];
+  /** 방치 판정 구역(0180 — 소유 유지, 다음 정산까지 세금 보너스 제외). 길드별 구역명. */
+  abandoned: { guildName: string; zones: string[] }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
   feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[] }[];
 };
@@ -244,18 +246,27 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
     .filter((d) => d.guildName);
 
-  // 방치 중립화 — 두 소스를 합쳐(zone 단위 dedup) '누가 무엇을 방치로 잃(을/은)나'를 정확히 잡는다.
-  //  (1) zone_neutralized 이벤트(00시 실행분): 이미 중립화 완료 — zones가 null이라 이벤트가 유일 소스.
-  //  (2) 사전생성(23시) 시점: 이벤트가 아직 없다(중립화는 00시 실행). zones에서 중립화 **예정** 구역을
-  //      직접 계산한다(소유·집행관0·그날 배치0 — neutralizeAbandonedZones와 동일 기준). victim 집합은
-  //      배치 유무로만 정해져 소유권 플립 전/후가 같으므로, 사전 계산이 00시 실제 결과와 일치한다.
-  //      (이 계산이 없으면 23시 사전생성 연대기에 방치 상실이 통째로 누락된다 — 2026-07-24 버그.)
+  // 방치 중립화(2026-08-30 이전 이력) — 이벤트만 읽는다. 중립화 규칙은 삭제됐으므로 사전 계산(예정분)은 없다.
   const neutralRows = (await db.execute(sql`
     select detail from world_events
     where server_id = ${serverId} and type = 'zone_neutralized'
       and detail->>'battleDay' = ${kstDay}
   `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
-  const pendingNeutralRows = (await db.execute(sql`
+  const neutralized = neutralRows
+    .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
+    .filter((d) => d.zones.length > 0);
+
+  // 방치 판정(0180) — 두 소스를 합쳐(zone 단위 dedup) '누가 무엇을 방치했나'를 잡는다.
+  //  (1) zone_abandoned 이벤트(00시 실행분).
+  //  (2) 사전생성(23시) 시점: 이벤트가 아직 없다. zones에서 방치 **예정** 구역을 직접 계산한다
+  //      (소유·집행관0·그날 배치0 — markAbandonedZones와 동일 기준). victim 집합은 배치 유무로만
+  //      정해져 소유권 플립 전/후가 같으므로, 사전 계산이 00시 실제 결과와 일치한다.
+  const abandonedRows = (await db.execute(sql`
+    select detail from world_events
+    where server_id = ${serverId} and type = 'zone_abandoned'
+      and detail->>'battleDay' = ${kstDay}
+  `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
+  const pendingAbandonedRows = (await db.execute(sql`
     select g.name as gname, z.name as zname
     from zones z join guilds g on g.id = z.owner_guild_id
     where z.server_id = ${serverId}
@@ -265,22 +276,20 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         select zone_id from guild_battle_deployments
         where server_id = ${serverId} and battle_kst_day = ${kstDay}
       )
-      -- 그 전투일 시작 뒤 점령분 제외 — neutralizeAbandonedZones의 가드와 같은 기준을 유지해야
-      -- 사전생성 연대기가 실제로 일어나지 않을 '방치 상실'을 예고하지 않는다 (2026-08-11).
-      -- 기준 06:00(KST) — run.ts와 동일(2026-08-25): 당일 00:55 정상 플립분은 당일부터 판정.
+      -- 그 전투일 시작 뒤 점령분 제외 — markAbandonedZones의 가드(06:00 KST)와 같은 기준.
       and (z.captured_at is null
            or (z.captured_at at time zone 'Asia/Seoul') < ${kstDay}::date::timestamp + interval '6 hours')
   `)) as unknown as { gname: string; zname: string }[];
-  const neutralMap = new Map<string, Set<string>>();
-  const addNeutral = (guildName: string, zone: string) => {
-    const set = neutralMap.get(guildName) ?? new Set<string>();
+  const abandonedMap = new Map<string, Set<string>>();
+  const addAbandoned = (guildName: string, zone: string) => {
+    const set = abandonedMap.get(guildName) ?? new Set<string>();
     set.add(zone);
-    neutralMap.set(guildName, set);
+    abandonedMap.set(guildName, set);
   };
-  for (const r of neutralRows)
-    for (const z of r.detail?.zones ?? []) addNeutral(r.detail?.guildName ?? '길드', z);
-  for (const r of pendingNeutralRows) addNeutral(r.gname, r.zname);
-  const neutralized = [...neutralMap.entries()]
+  for (const r of abandonedRows)
+    for (const z of r.detail?.zones ?? []) addAbandoned(r.detail?.guildName ?? '길드', z);
+  for (const r of pendingAbandonedRows) addAbandoned(r.gname, r.zname);
+  const abandoned = [...abandonedMap.entries()]
     .map(([guildName, zset]) => ({ guildName, zones: [...zset] }))
     .filter((d) => d.zones.length > 0);
 
@@ -289,6 +298,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     battleCount: battles.length,
     disbands,
     neutralized,
+    abandoned,
     captures,
     defenses,
     standings: standingsRows,
@@ -314,6 +324,7 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 해산 길드에 **보유 구역이 없었으면 땅·영토 상실을 쓰지 마라** — '남긴 땅', '주인 없는 구역이 되었다' 같은 서술은 사실 오류다(해체 사실만 담담히 적는다).
 - 축출 뉘앙스 주의: 사실표에 '중립지/주인 없는 땅' 점령만 있는 지역을 두고 '하나만 남았다·몰아냈다'처럼 다른 세력이 밀려난 듯 쓴 문장은 오류다 — 원래 다른 세력이 없던 곳('유일하게 발을 들였다' 류로 고쳐라).
 - 방치 중립화 주의: 사실표 '방치로 중립화된 구역'은 소유 길드가 아무도 배치하지 않아 방치로 주인을 잃은 구역이다. 다른 길드가 '빼앗다·점령·함락'으로 쓰지 말 것(공격자·교전 지어내기 금지). '방치해 잃었다·관리하지 않아 중립이 되었다'처럼 담담히 서술하고, '점령전으로 빼앗긴 것이 아니라 방치로 잃은 것'처럼 굳이 대조·해설하는 문장은 붙이지 않는다.
+- 방치 주의: 사실표 '방치 구역'은 소유 길드가 아무도 배치하지 않아 방치로 판정된 구역이다. **구역은 그대로 그 길드 소유**이며 잃은 것이 아니다 — '잃었다·중립이 되었다·빼앗겼다'로 쓰지 말 것. 쓸 때는 '지키는 이 없이 비워 두었다·손길이 닿지 않았다'처럼 한 문장으로 담담히 언급하고, 세금 보너스 같은 게임 수치 해설은 붙이지 않는다. 언급하지 않아도 오류가 아니다.
 - 산수 주의: '어제 X곳' 뒤에 'N곳을 더해 K곳'처럼 쓴 문장은 X+N=K가 성립해야 한다 — 상실이 있어 안 맞으면 사실표 '길드별 보유 증감'대로 얻은 수와 잃은 수를 함께 쓰는 문장으로 고쳐라.
 - 서사 응집: 같은 길드·같은 지역의 이야기가 여러 문단에 쪼개져 흐름이 끊기면 한 곳에 모아 재배열하라(사실 불변, 순서만 정리).
 - 사실표에 분단/통합/비지 신호가 없는데 조각·분산을 논평하거나, 나뉜 영토를 '아직 하나가 아니다'류 약점으로 단정한 문장은 삭제하거나 중립으로 고쳐라.
@@ -714,6 +725,13 @@ export async function generateAndStoreChronicle(
       `■ 방치로 중립화된 구역(아무도 공격도 수비도 하지 않아 방치로 주인을 잃은 구역. 점령전 패배가 아님):\n` +
         summary.neutralized
           .map((n) => `· 길드 「${n.guildName}」 이(가) 관리하지 않은 구역 ${n.zones.map((z) => `「${z}」`).join(', ')} 이(가) 방치되어 중립이 됨`)
+          .join('\n'),
+    );
+  if (summary.abandoned.length > 0)
+    digestSections.push(
+      `■ 방치 구역(아무도 공격도 수비도 하지 않은 소유 구역. **소유는 그대로** — 잃은 것이 아니며 보유 증감에 포함하지 말 것):\n` +
+        summary.abandoned
+          .map((n) => `· 길드 「${n.guildName}」 이(가) 구역 ${n.zones.map((z) => `「${z}」`).join(', ')} 을(를) 지키는 이 없이 비워 둠`)
           .join('\n'),
     );
   if (deltaLines) digestSections.push(`■ 길드별 보유 증감(보유 수 서술은 이 수치만 따를 것):\n${deltaLines}`);

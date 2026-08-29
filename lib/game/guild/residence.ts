@@ -6,9 +6,7 @@ import { db } from '@/lib/db/client';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { characters } from '@/lib/db/schema/server';
 import { zones, zoneAdjacency, guildBattleDeployments } from '@/lib/db/schema/guild';
-import { walletTrySpend } from '@/lib/game/wallet';
 
-import { RESIDENCE_MOVE_COOLDOWN_MIN, residenceSpeedUpCost } from './balance';
 import { isConquestLocked, nextBattleKstDay } from './conquest/schedule';
 import { GuildError } from './errors';
 
@@ -17,8 +15,6 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /** 거주 상태 — 이동 가능 여부 판정에 필요한 값 일체(UI가 그대로 쓴다). */
 export type ResidenceState = {
   zoneId: number | null;
-  /** 다음 이동 가능 시각(ISO). null=즉시 가능. */
-  readyAtIso: string | null;
   /**
    * 지금 구역에 묶어두는 역할 — 이동 자체를 막지는 않고, 이동하면 이게 해제된다.
    * UI가 "무엇이 해제되는지" 경고에 그대로 쓴다.
@@ -37,13 +33,13 @@ export async function getResidence(userId: string, serverId: number): Promise<nu
 }
 
 /**
- * 거주 상태 — 구역·쿨타임·잠금을 한 번에. 지도 화면이 이동 버튼 상태를 그리는 데 쓴다.
+ * 거주 상태 — 구역·잠금을 한 번에. 지도 화면이 이동 버튼 상태를 그리는 데 쓴다.
  * 쿼리 3개를 병렬로 묶어 요청당 왕복을 늘리지 않는다.
  */
 export async function getResidenceState(userId: string, serverId: number): Promise<ResidenceState> {
   const [me, dep, exe] = await Promise.all([
     db
-      .select({ zoneId: characters.residenceZoneId, readyAt: characters.residenceReadyAt })
+      .select({ zoneId: characters.residenceZoneId })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
@@ -64,11 +60,9 @@ export async function getResidenceState(userId: string, serverId: number): Promi
       .where(and(eq(zones.executorUserId, userId), eq(zones.serverId, serverId)))
       .limit(1),
   ]);
-  const readyAt = me[0]?.readyAt ?? null;
   const d = dep[0];
   return {
     zoneId: me[0]?.zoneId ?? null,
-    readyAtIso: readyAt && readyAt.getTime() > Date.now() ? readyAt.toISOString() : null,
     lock:
       exe.length > 0
         ? { kind: 'executor', label: '집행관' }
@@ -96,19 +90,16 @@ async function isAdjacent(tx: Tx, a: number, b: number): Promise<boolean> {
 /**
  * 거주 구역 변경 — GUILD §5.5(0139 개편).
  *  ① 인접 구역으로만 (최초 배정 상태에서는 인접 무관 — 아직 살던 곳이 없다)
- *  ② 이동 후 6시간 쿨타임. `paySpeedUp`이면 남은 시간만큼 보석을 받고 즉시 이동
- *  ③ 지금 구역에 배치/집행관으로 묶여 있으면 `release` 없이는 거부. release면 그 역할을 풀고 이동
+ *  ② 지금 구역에 배치/집행관으로 묶여 있으면 `release` 없이는 거부. release면 그 역할을 풀고 이동
+ *  (이동 쿨타임·보석 단축은 2026-08-31 삭제 — 연속 인접 이동 허용)
  *
- * 검사·결제·이동을 한 트랜잭션에 두고 캐릭터 행을 잠근다 — 연타로 쿨타임을 건너뛰거나
- * 보석만 빠져나가는 경우가 없다.
+ * 검사·이동을 한 트랜잭션에 두고 캐릭터 행을 잠근다 — 연타로 해제만 되고 이동이 빠지는 경우가 없다.
  */
 export type SetResidenceOpts = {
   /** 배치·집행관을 해제하고 이동(유저가 팝업에서 확인한 경우). */
   release?: boolean;
-  /** 남은 쿨타임을 보석으로 지불하고 즉시 이동. */
-  paySpeedUp?: boolean;
 };
-export type SetResidenceResult = { spent: number; released: '집행관' | '공격' | '수비' | null };
+export type SetResidenceResult = { released: '집행관' | '공격' | '수비' | null };
 
 export async function setResidence(
   userId: string,
@@ -129,13 +120,13 @@ export async function setResidenceTx(
 ): Promise<SetResidenceResult> {
   {
     const [me] = await tx
-      .select({ zoneId: characters.residenceZoneId, readyAt: characters.residenceReadyAt })
+      .select({ zoneId: characters.residenceZoneId })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .for('update');
     if (!me) throw new GuildError('FORBIDDEN');
     const before = me.zoneId;
-    if (before === zoneId) return { spent: 0, released: null }; // 같은 구역 — 쿨타임 소모 없이 무시
+    if (before === zoneId) return { released: null }; // 같은 구역 — 무시
 
     const [z] = await tx
       .select({ id: zones.id })
@@ -185,16 +176,6 @@ export async function setResidenceTx(
       }
     }
 
-    // ③ 쿨타임 — 남아 있으면 보석으로 지불하거나 거부.
-    let spent = 0;
-    const remain = me.readyAt ? me.readyAt.getTime() - Date.now() : 0;
-    if (remain > 0) {
-      if (!opts.paySpeedUp) throw new GuildError('RESIDENCE_COOLDOWN');
-      spent = residenceSpeedUpCost(remain);
-      const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent), 'residence_cooldown');
-      if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
-    }
-
     // 이사 대상 구역의 지역 — 방랑 대장장이(방문 지역 누적) 이력용.
     const [tz] = await tx
       .select({ region: zones.region })
@@ -205,11 +186,7 @@ export async function setResidenceTx(
       .update(characters)
       .set({
         residenceZoneId: zoneId,
-        // 최초 정착은 이동이 아니므로 쿨타임을 걸지 않는다.
-        residenceReadyAt:
-          before == null
-            ? null
-            : sql`now() + ${`${RESIDENCE_MOVE_COOLDOWN_MIN} minutes`}::interval`,
+        residenceReadyAt: null, // 쿨타임 삭제(2026-08-31) — 컬럼은 이력용으로 남기고 항상 null.
         // 칭호 이력(0166) — 거주 시작 리셋 + 이사 횟수(최초 정착 제외) + 방문 지역 누적(중복 없음).
         residenceSince: sql`now()`,
         residenceMoveCount:
@@ -224,36 +201,8 @@ export async function setResidenceTx(
 
     // 도전 과제(0118) — 기본 배정과 다른 구역으로 '이동'했을 때만 마킹.
     if (before != null) await markChallengeEvent(tx, userId, serverId, 'residence_move');
-    return { spent, released };
+    return { released };
   }
-}
-
-/**
- * 이동 쿨타임 보석 단축 — 남은 시간 1분당 1💎(올림)을 받고 대기시간만 없앤다(이동은 하지 않는다).
- * 강화 시간 단축과 같은 모양: 비용은 결제 시점의 남은 시간으로 산정한다.
- */
-export async function speedUpResidenceMove(
-  userId: string,
-  serverId: number,
-): Promise<{ spent: number }> {
-  return db.transaction(async (tx) => {
-    const [me] = await tx
-      .select({ readyAt: characters.residenceReadyAt })
-      .from(characters)
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
-      .for('update');
-    if (!me) throw new GuildError('FORBIDDEN');
-    const remain = me.readyAt ? me.readyAt.getTime() - Date.now() : 0;
-    if (remain <= 0) return { spent: 0 }; // 이미 가능 — 결제 없이 성공 처리
-    const spent = residenceSpeedUpCost(remain);
-    const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent), 'residence_cooldown');
-    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
-    await tx
-      .update(characters)
-      .set({ residenceReadyAt: null })
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
-    return { spent };
-  });
 }
 
 /** 배치·집행관 지정용 거주 검증 — 트랜잭션 내 호출. 그 구역 거주자가 아니면 throw. */

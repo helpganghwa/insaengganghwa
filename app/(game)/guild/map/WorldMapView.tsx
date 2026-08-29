@@ -13,16 +13,10 @@ import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
-import {
-  GUILD_EXECUTOR_TAX_CUT,
-  RESIDENCE_MOVE_COOLDOWN_MIN,
-  TAX_COLLECT_COOLDOWN_MIN,
-  residenceSpeedUpCost,
-} from '@/lib/game/guild/balance';
+import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
 import {
   setResidenceAction,
-  speedUpResidenceAction,
   getZoneBattleAction,
   collectTaxAction,
   getGuildSummaryAction,
@@ -164,21 +158,12 @@ function hmsFrom(ms: number): string {
 }
 const TAX_COOLDOWN_MS = TAX_COLLECT_COOLDOWN_MIN * 60_000;
 
-/** 남은 ms → '5시간 12분' / '12분' — 버튼 안에 들어가는 짧은 표기(초는 생략). */
-function fmtRemain(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 60_000));
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
-}
-
-
 /**
  * 지도 본체(2026-08-07 렌더 감사) — memo 분리. 이전엔 selectedId·팝업·연대기 탭·컨펌 카운트 등
  * UI state 하나만 바뀌어도 노드 50개+간선 SVG 3패스+문양 img가 통째로 재조정됐다.
  * props는 전부 RSC props·useMemo 배열·원시값·state setter(안정 참조)라 추가 안정화 없이 memo 실효.
  * ⚠ 시간 파생 렌더를 여기로 들여오지 말 것 — memo에 갇혀 시간 전이가 끊긴다(이번 주 회귀 패턴).
- *   쿨타임·수금 타이머는 팝업 쪽 Ticker 소관.
+ *   수금 타이머는 팝업 쪽 Ticker 소관.
  */
 type EdgeSeg = { a: number; b: number; x1: number; y1: number; x2: number; y2: number };
 const WorldMap = memo(function WorldMap({
@@ -441,11 +426,9 @@ export function WorldMapView({
   embedded = false,
 }: {
   mapSrc: string;
-  /** 거주 상태(구역·쿨타임·잠금). 비로그인/조회 실패 시 null. */
+  /** 거주 상태(구역·잠금). 비로그인/조회 실패 시 null. */
   residence: {
     zoneId: number | null;
-    /** 다음 이동 가능 시각(ISO). null=즉시 가능. */
-    readyAtIso: string | null;
     /** 지금 구역에 묶어두는 역할 — 이동하면 해제된다(팝업 경고 문구에 쓴다). */
     lock: { kind: 'executor' | 'deploy'; label: '집행관' | '공격' | '수비' } | null;
   } | null;
@@ -466,30 +449,8 @@ export function WorldMapView({
   const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(2026-08-22)
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceProp?.zoneId ?? null);
-  // 이동 쿨타임 — 서버가 준 ready 시각을 클라에서 1초 틱으로 카운트다운(보석 단축 시 즉시 해제).
-  const [readyAt, setReadyAt] = useState<number | null>(
-    residenceProp?.readyAtIso ? Date.parse(residenceProp.readyAtIso) : null,
-  );
-  // 1초 클럭 분리(2026-08-06) — 종전엔 여기 setInterval이 쿨타임 내내 **지도 전체**를 매초
-  // 리렌더했다. 이제 초 단위 표시는 Ticker(표시 지점)로 내리고, 핸들러는 클릭 시점에 계산한다.
-  const residenceRemainNow = () => (readyAt ? Math.max(0, readyAt - Date.now()) : 0);
-  // 이동 확인 팝업 — 'release'=배치/집행관 해제 경고, 'gem'=쿨타임 보석 지불. 값=대상 구역 id.
-  const [moveAsk, setMoveAsk] = useState<{ kind: 'release' | 'gem'; zoneId: number } | null>(null);
-  const [moveConfirm, setMoveConfirm] = useState(false); // 보석 지불 3초 인-버튼 컨펌
-  const [moveLeft, setMoveLeft] = useState(0);
-  useEffect(() => {
-    if (!moveConfirm) return;
-    const id = setInterval(() => {
-      setMoveLeft((v) => {
-        if (v <= 1) {
-          setMoveConfirm(false);
-          return 0;
-        }
-        return v - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [moveConfirm]);
+  // 이동 확인 팝업 — 배치/집행관 해제 경고. 값=대상 구역 id.
+  const [moveAsk, setMoveAsk] = useState<{ kind: 'release'; zoneId: number } | null>(null);
   const [moveLock, setMoveLock] = useState(residenceProp?.lock ?? null);
   // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 인접한 곳). 거주 미설정이면 어디든 정착 가능.
   const adjacentIds = useMemo(() => {
@@ -729,29 +690,20 @@ export function WorldMapView({
   // 거주 이동 — 낙관적(즉시 반영, 서버 백그라운드). router.refresh를 transition 안에서
   // 호출하면 refresh 동안 pending이 묶여 다음 이동이 막혔음 → 제거해 연속 이동 가능.
   /**
-   * 거주 이동. 배치/집행관 해제(release)와 쿨타임 보석 지불(paySpeedUp)은 팝업에서 확인한 뒤
-   * 서버 한 트랜잭션으로 함께 처리한다 — 해제만 되고 이동은 실패하거나, 보석만 빠지는 경우가 없다.
+   * 거주 이동. 배치/집행관 해제(release)는 팝업에서 확인한 뒤 서버 한 트랜잭션으로 처리한다 —
+   * 해제만 되고 이동은 실패하는 경우가 없다. (쿨타임·보석 단축은 2026-08-31 삭제 — 연속 인접 이동 허용)
    */
-  const moveResidence = (zoneId: number, opts: { release?: boolean; paySpeedUp?: boolean } = {}) => {
-    const cost = opts.paySpeedUp ? residenceSpeedUpCost(residenceRemainNow()) : 0;
+  const moveResidence = (zoneId: number, opts: { release?: boolean } = {}) => {
     const prev = residence;
-    const prevReady = readyAt;
     const prevLock = moveLock;
     setMoveAsk(null);
-    setMoveConfirm(false);
     setResidence(zoneId); // 낙관적
-    setReadyAt(Date.now() + RESIDENCE_MOVE_COOLDOWN_MIN * 60_000);
     if (opts.release) setMoveLock(null);
-    if (cost > 0) optimisticAdjust(-BigInt(cost));
     start(async () => {
       const r = await setResidenceAction(zoneId, opts);
       if (r.status !== 'success') {
         setResidence(prev);
-        setReadyAt(prevReady);
         setMoveLock(prevLock);
-        if (cost > 0) optimisticAdjust(BigInt(cost));
-        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost || undefined); return; }
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({
@@ -760,38 +712,8 @@ export function WorldMapView({
     });
   };
 
-  /** 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도 클릭). */
-  const speedUpOnly = () => {
-    const cost = residenceSpeedUpCost(residenceRemainNow());
-    setMoveAsk(null);
-    setMoveConfirm(false);
-    const prevReady = readyAt;
-    setReadyAt(null); // 낙관적 — 실패 시 되돌린다
-    optimisticAdjust(-BigInt(cost));
-    start(async () => {
-      const r = await speedUpResidenceAction();
-      if (r.status !== 'success') {
-        setReadyAt(prevReady);
-        optimisticAdjust(BigInt(cost));
-        // 부족(레이스)은 충전 유도 팝업(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') { gate.open(cost); return; }
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
-      // 단축은 여기까지 — 이동은 버튼을 한 번 더 눌러 확인한다(오탭으로 옮겨지지 않게).
-    });
-  };
-
-  /**
-   * 이동 버튼 — 남은 관문을 순서대로 통과시킨다: ① 쿨타임(단축) → ② 배치·집행관 해제 확인 → ③ 이동.
-   * 시간이 먼저인 이유: 대기시간이 남아 있으면 해제 여부를 물어봐야 소용이 없다.
-   */
+  /** 이동 버튼 — ① 배치·집행관 해제 확인 → ② 이동. */
   const askMove = (zoneId: number) => {
-    if (residenceRemainNow() > 0) {
-      setMoveLeft(3);
-      setMoveConfirm(false);
-      return setMoveAsk({ kind: 'gem', zoneId });
-    }
     if (moveLock) return setMoveAsk({ kind: 'release', zoneId });
     moveResidence(zoneId);
   };
@@ -1128,34 +1050,14 @@ export function WorldMapView({
                       이동 불가
                     </span>
                   ) : (
-                    // 분기까지 Ticker 안에서 — 팝업을 열어둔 채 쿨타임이 0이 되는 순간
-                    // 단축 안내가 '이동' 버튼으로 즉시 전환된다(분기가 부모 렌더에 갇히지 않게).
-                    <Ticker>
-                      {() => {
-                        const rem = residenceRemainNow();
-                        return rem > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => askMove(selected.id)}
-                            disabled={pending}
-                            className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
-                          >
-                            {fmtRemain(rem)} 후
-                            <br />
-                            또는 💎{residenceSpeedUpCost(rem).toLocaleString('ko-KR')}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => askMove(selected.id)}
-                            disabled={pending}
-                            className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                          >
-                            이동
-                          </button>
-                        );
-                      }}
-                    </Ticker>
+                    <button
+                      type="button"
+                      onClick={() => askMove(selected.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                    >
+                      이동
+                    </button>
                   )
                 ))}
               <button
@@ -1452,25 +1354,15 @@ export function WorldMapView({
           );
         })()}
 
-      {/* 이동 확인 팝업 — ① 배치·집행관 해제 경고 ② 쿨타임 보석 지불(3초 인-버튼 컨펌). */}
+      {/* 이동 확인 팝업 — 배치·집행관 해제 경고. */}
       {moveAsk && (
         <ModalShell
           stacked
-          label={moveAsk.kind === 'release' ? '거주지 이동' : '이동 대기시간 단축'}
-          onClose={() => {
-            setMoveAsk(null);
-            setMoveConfirm(false);
-          }}
-          onSubmit={() => {
-            if (moveAsk.kind === 'release') return moveResidence(moveAsk.zoneId, { release: true });
-            if (moveConfirm) speedUpOnly();
-            else {
-              setMoveLeft(3);
-              setMoveConfirm(true);
-            }
-          }}
+          label="거주지 이동"
+          onClose={() => setMoveAsk(null)}
+          onSubmit={() => moveResidence(moveAsk.zoneId, { release: true })}
         >
-          {moveAsk.kind === 'release' ? (
+          {(
             <ModalLayout
               title="거주지를 옮기시겠습니까?"
               subtitle={
@@ -1507,74 +1399,6 @@ export function WorldMapView({
                 의 <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
                 {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
               </p>
-            </ModalLayout>
-          ) : (
-            <ModalLayout
-              title="이동 대기시간 단축"
-              subtitle={
-                <>
-                  남은{' '}
-                  <b className="font-bold text-zinc-600 dark:text-zinc-300">
-                    <Ticker>{() => fmtRemain(residenceRemainNow())}</Ticker>
-                  </b>
-                </>
-              }
-              footer={
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
-                      // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22).
-                      if (!gate.ensure(residenceSpeedUpCost(residenceRemainNow()))) return;
-                      if (moveConfirm) {
-                        speedUpOnly();
-                      } else {
-                        setMoveLeft(3);
-                        setMoveConfirm(true);
-                      }
-                    }}
-                    disabled={pending}
-                    className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
-                      moveConfirm ? 'bg-sky-700' : 'bg-sky-600'
-                    }`}
-                  >
-                    {moveConfirm && (
-                      <span
-                        aria-hidden
-                        className="absolute inset-0 bg-sky-500"
-                        style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                      />
-                    )}
-                    <span className="relative">
-                      <Ticker>
-                        {() => <>단축 💎{residenceSpeedUpCost(residenceRemainNow()).toLocaleString('ko-KR')}</>}
-                      </Ticker>
-                      {moveConfirm ? ` ${moveLeft}s` : ''}
-                    </span>
-                  </button>
-                  <ModalButton
-                    tone="ghost"
-                    onClick={() => {
-                      setMoveAsk(null);
-                      setMoveConfirm(false);
-                    }}
-                  >
-                    취소
-                  </ModalButton>
-                </>
-              }
-            >
-              <p className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
-                다이아를 사용해 남은 대기시간을 없앱니다.
-              </p>
-              <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
-                <p className="font-mono text-[20px] font-black text-sky-500">
-                  <Ticker>
-                    {() => <>{residenceSpeedUpCost(residenceRemainNow()).toLocaleString('ko-KR')}💎</>}
-                  </Ticker>
-                </p>
-              </div>
             </ModalLayout>
           )}
         </ModalShell>

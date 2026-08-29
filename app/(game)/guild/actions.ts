@@ -19,7 +19,6 @@ import {
   disbandGuild,
   donateToGuild,
   setResidence,
-  speedUpResidenceMove,
   collectZoneTax,
   distributeGuildTax,
   distributeGuildTaxManual,
@@ -387,7 +386,7 @@ export async function donateAction() {
 
 export async function setResidenceAction(
   zoneId: number,
-  opts: { release?: boolean; paySpeedUp?: boolean } = {},
+  opts: { release?: boolean } = {},
 ) {
   const u = await getSessionUserId();
   if (!u) return unauth;
@@ -400,22 +399,6 @@ export async function setResidenceAction(
     return { status: 'success', ...r } as const;
   } catch (e) {
     return fail(e, 'residence');
-  }
-}
-
-/** 거주 이동 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도). */
-export async function speedUpResidenceAction() {
-  const u = await getSessionUserId();
-  if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
-  try {
-    const r = await speedUpResidenceMove(u, await getActiveServerId());
-    revalidatePath('/guild');
-    revalidatePath('/guild/deploy'); // 거주지 상태를 쓰는 배치 화면 — 클라 refresh 제거(2026-08-06) 커버
-    return { status: 'success', spent: r.spent } as const;
-  } catch (e) {
-    return fail(e, 'residence.speedup');
   }
 }
 
@@ -474,7 +457,7 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
 export async function deployAction(
   zoneId: number,
   role: ConquestRole,
-  opts: { move?: boolean; paySpeedUp?: boolean } = {},
+  opts: { move?: boolean } = {},
 ) {
   const u = await getSessionUserId();
   if (!u) return unauth;

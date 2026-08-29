@@ -199,6 +199,8 @@ export const zones = pgTable(
     capturedAt: timestamp('captured_at', { withTimezone: true }),
     /** 독점 세금 보너스 배율(B안) — 소유 변동 시 recalcTaxBonus로 재계산해 저장, 강화 세금 누적은 이 값만 곱함. 중립=1. */
     taxBonus: real('tax_bonus').notNull().default(1),
+    /** 방치 판정된 전투일(0180) — 다음 정산까지 독점 세금 보너스 계산에서 제외. 배치가 붙으면 정산 시 null로 복귀. */
+    abandonedDay: date('abandoned_day'),
   },
   (t) => [index('zone_owner_idx').on(t.ownerGuildId)],
 );

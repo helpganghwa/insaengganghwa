@@ -20,7 +20,8 @@ export type WorldEventType =
   | 'transcend' // 개인 최고 초월 기록 갱신(11+, 유저당 수치별 1회) — detail { item, level }
   | 'guild_create' // 길드 결성 — detail { guildName }
   | 'guild_disband' // 길드 해산(자발·자동 공통) — detail { guildName, zones: string[] }(중립화된 구역, 연대기 재료)
-  | 'zone_neutralized' // 방치로 중립화된 구역(B안) — detail { guildName, zones: string[] }. 연대기 전용(월드 피드·채팅 제외)
+  | 'zone_neutralized' // (2026-08-30 이전 이력) 방치로 중립화된 구역 — detail { guildName, zones: string[] }. 연대기 전용(월드 피드·채팅 제외)
+  | 'zone_abandoned' // 방치 판정 구역(0180, 소유 유지·세금 보너스 제외) — detail { guildName, zones: string[], battleDay }. 연대기 전용
   | 'guild_power_1' // 길드 전투력 1위 교체 — detail { guildName }
   | 'guild_zone_1' // 길드 점령지 1위 교체 — detail { guildName }
   | 'rank_leader' // 랭킹 5종 유저 1위 교체 — detail { metric, value }
@@ -133,8 +134,8 @@ async function getWorldFeedUncached(serverId: number, limit = 40): Promise<World
       createdAt: worldEvents.createdAt,
     })
     .from(worldEvents)
-    // zone_neutralized(연대기 전용)는 월드 피드/채팅엔 노출하지 않는다(피드 노이즈 방지).
-    .where(and(eq(worldEvents.serverId, serverId), notInArray(worldEvents.type, ['zone_neutralized'])))
+    // zone_neutralized·zone_abandoned(연대기 전용)는 월드 피드/채팅엔 노출하지 않는다(피드 노이즈 방지).
+    .where(and(eq(worldEvents.serverId, serverId), notInArray(worldEvents.type, ['zone_neutralized', 'zone_abandoned'])))
     // 동일 ms 이벤트(cron 연속 insert) 순서 결정성 — id(bigserial 삽입순) 2차키(감사 F4).
     .orderBy(desc(worldEvents.createdAt), desc(worldEvents.id))
     .limit(limit);

@@ -46,11 +46,12 @@ export async function accrueResidenceTax(userId: string, serverId: number, reach
 type TaxExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function recalcTaxBonus(serverId: number, executor: TaxExecutor = db): Promise<void> {
   await executor.execute(sql`
-    update zones z set tax_bonus = (case when z.owner_guild_id is null then 1 else
-      1 + (select count(*) from zones z2 where z2.server_id = z.server_id and z2.owner_guild_id = z.owner_guild_id)::numeric * ${GUILD_ZONE_TAX_BONUS}
+    -- 방치 구역(abandoned_day, 0180)은 보너스 없음(=1)이고, 소유 길드의 구역 수·완전장악 집계에서도 빠진다.
+    update zones z set tax_bonus = (case when z.owner_guild_id is null or z.abandoned_day is not null then 1 else
+      1 + (select count(*) from zones z2 where z2.server_id = z.server_id and z2.owner_guild_id = z.owner_guild_id and z2.abandoned_day is null)::numeric * ${GUILD_ZONE_TAX_BONUS}
         + (select count(*) from (
              select 1 from zones z3 where z3.server_id = z.server_id
-             group by z3.region having count(*) = count(*) filter (where z3.owner_guild_id = z.owner_guild_id)
+             group by z3.region having count(*) = count(*) filter (where z3.owner_guild_id = z.owner_guild_id and z3.abandoned_day is null)
            ) t)::numeric * ${GUILD_FULL_REGION_TAX_BONUS}
       end)
     where z.server_id = ${serverId}

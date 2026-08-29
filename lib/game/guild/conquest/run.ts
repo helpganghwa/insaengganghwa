@@ -169,30 +169,24 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *  - battleDay = KST 어제(전투일). chronicle cron이 narrate 직전 호출.
  */
 /**
- * 방치 구역 중립화(B안 — 고착 개선). 그 점령전(battleDay)에 **공격·수비 배치가 하나도 없고
- * 집행관도 없는**(완전 방치) 소유 지역을 중립으로 되돌린다 → 다음 점령전부터 자유공격 개방.
- *  - 수비0+공격O = 무혈 점령(전투로 처리) / 수비O(배치·집행관 자동방어) = 소유 유지 → 이 둘은 제외.
- *  - 세금(tax_diamond/points)은 유지(다음 점령자에게 약탈 이전), 소유·집행관·captured_at만 해제.
- *  - 공개(소유권 플립) 직후 호출 — 뺏긴 구역은 공격 배치가 있어 대상 아님.
+ * 방치 판정(0180 — 방치 중립화 삭제). 그 점령전(battleDay)에 **공격·수비 배치가 하나도 없고
+ * 집행관도 없는**(완전 방치) 소유 구역에 `abandoned_day`를 찍는다. 소유·집행관·세금은 그대로 두고,
+ * 직후 `recalcTaxBonus`가 그 구역을 독점 세금 보너스 계산에서 뺀다(구역 tax_bonus=1 + 소유 길드의
+ * 구역 수·완전장악 집계에서 제외). 다음 정산에서 배치가 있으면 플래그가 풀려 보너스가 돌아온다.
+ *  - 수비0+공격O = 전투로 처리 / 수비O(배치·집행관 자동방어) = 소유 유지 → 이 둘은 방치가 아니다.
+ *  - 공개(소유권 플립) 직후 호출 — 뺏긴 구역은 공격 배치가 있어 대상 아님. 갓 점령한 구역은
+ *    captured_at 06:00 가드로 제외(그날 소유자가 아니었으면 배치할 기회가 없었다).
  *
  * ⚠ **방금 공개한 전투일로만 호출할 것**(지나간 날짜 금지). 판정이 `zones`의 **현재** 소유·집행관과
- *  인자 날짜의 배치를 대조하므로 두 시점이 어긋나면 오작동한다 — 갓 점령한 구역은 집행관이 공석
- *  (revealConquest가 null로 둔다)이고 과거 날짜에 배치가 있을 리 없어, 세 조건을 모두 만족해
- *  전투 없이 중립화된다. 백필 경로에서 이 함수를 호출하지 않는 이유(conquest-chronicle 참조).
- *
- * ⚠ 그런데 호출부의 `day === kstDay` 게이트는 **1일 지연까지만** 막는다 (2026-08-11). 공개가 이틀
- *  연속 실패하면 D+2 자정에 pendingRows=[D, D+1]을 순서대로 도는데, 먼저 D를 공개해 구역이 새 길드로
- *  넘어가고(집행관 공석) 이어지는 D+1은 `day === kstDay`라 게이트를 그냥 통과한다. 새 소유자는 D 결과가
- *  미공개라 D+1에 배치할 수 없었으므로 그 구역이 세 조건을 또 만족한다 — 전투 없이 중립화되고 연대기에
- *  '방치 상실'로 잘못 기록된다. 그래서 게이트와 별개로 victims에 **"그 전투일 시작 뒤 점령" 제외**
- *  가드를 둔다: 그날 소유자가 아니었으면 그날 배치할 기회 자체가 없었으니 방치가 아니다.
+ *  인자 날짜의 배치를 대조하므로 두 시점이 어긋나면 오작동한다 — 백필 경로에서 호출하지 않는 이유.
+ *  플래그는 매 호출마다 서버 전체를 다시 계산한다(먼저 전부 해제 → 방치 구역만 설정)이라 재실행 안전.
  */
-export async function neutralizeAbandonedZones(
+export async function markAbandonedZones(
   serverId: number,
   battleDay: string,
-): Promise<{ neutralized: number }> {
+): Promise<{ abandoned: number }> {
   return db.transaction(async (tx) => {
-    // 방치 구역(소유·집행관0·공격수비배치0) + 이전 소유 길드/구역명을 중립화 **전에** 캡처.
+    // 방치 구역(소유·집행관0·공격수비배치0) + 소유 길드/구역명 캡처(연대기 재료).
     const victims = (await tx.execute(sql`
       select z.id, z.owner_guild_id::text as owner, z.name, g.name as gname
       from zones z join guilds g on g.id = z.owner_guild_id
@@ -203,24 +197,19 @@ export async function neutralizeAbandonedZones(
           select zone_id from guild_battle_deployments
           where server_id = ${serverId} and battle_kst_day = ${battleDay}
         )
-        -- 그 전투일이 시작된 뒤에 점령된 구역은 제외(위 ⚠ 2일 지연 시나리오). captured_at이 null이면
-        -- 대상으로 남긴다 — 오래 소유했는데 배치가 없으면 그건 실제 방치다.
-        -- 기준은 전투일 06:00(KST): 정상 공개(당일 00:55 플립)분은 당일 종일 배치 기회가 있었으므로
-        -- 당일부터 방치 판정 대상이고, 지연 공개(다음날 00:55 이후 플립)분만 제외된다 (2026-08-25 —
-        -- 날짜 단위 비교는 정상 흐름에서도 점령 익일 무조건 면제라는 부수효과가 있었다).
+        -- 그 전투일이 시작된 뒤에 점령된 구역은 제외. 기준은 전투일 06:00(KST): 정상 공개(당일 00:55
+        -- 플립)분은 당일 종일 배치 기회가 있었으므로 당일부터 판정 대상, 지연 공개분만 제외된다.
         and (z.captured_at is null
              or (z.captured_at at time zone 'Asia/Seoul') < ${battleDay}::date::timestamp + interval '6 hours')
     `)) as unknown as { id: number; owner: string; name: string; gname: string }[];
-    if (victims.length === 0) return { neutralized: 0 };
+    // 전날 플래그는 전부 해제 — 배치가 붙은 구역은 보너스가 돌아온다.
+    await tx.update(zones).set({ abandonedDay: null }).where(eq(zones.serverId, serverId));
+    if (victims.length === 0) return { abandoned: 0 };
     await tx
       .update(zones)
-      // taxBonus는 소유가 풀린 순간 1이어야 한다(중립 구역 배율 없음). 호출 직후 recalcTaxBonus가
-      // 전 구역을 다시 계산하지만 그건 best-effort(catch)라, 실패하면 중립 구역이 옛 소유 길드의
-      // 배율로 하루 더 과세된다 — 해산 경로(neutralizeAndDeleteGuild)와 동일하게 여기서도 리셋.
-      .set({ ownerGuildId: null, executorUserId: null, capturedAt: null, taxBonus: 1 })
+      .set({ abandonedDay: battleDay })
       .where(inArray(zones.id, victims.map((v) => v.id)));
-    // 역사 재료 — 이전 소유 길드별 상실 구역을 world_event로 기록(연대기 전용, 월드 피드 제외 타입).
-    // zones는 이미 null이라 이 스냅샷이 '누가 무엇을 방치로 잃었나'의 유일한 소스(chronicle이 읽음).
+    // 역사 재료 — 길드별 방치 구역을 world_event로 기록(연대기 전용, 월드 피드 제외 타입).
     const byGuild = new Map<string, { gname: string; zones: string[] }>();
     for (const v of victims) {
       const e = byGuild.get(v.owner) ?? { gname: v.gname, zones: [] };
@@ -230,14 +219,14 @@ export async function neutralizeAbandonedZones(
     for (const [owner, e] of byGuild) {
       await tx.insert(worldEvents).values({
         serverId,
-        type: 'zone_neutralized',
+        type: 'zone_abandoned',
         guildId: BigInt(owner),
         // battleDay를 detail에 담는다 — 이 이벤트는 정산(D+1 00시)에 생성돼 created_at 날짜가
         // 전투일(D)과 어긋난다. 연대기 집계는 created_at이 아니라 이 battleDay로 매칭한다.
         detail: { guildName: e.gname, zones: e.zones, battleDay },
       });
     }
-    return { neutralized: victims.length };
+    return { abandoned: victims.length };
   });
 }
 

@@ -21,7 +21,6 @@ const MAP: Record<string, string> = {
   ZONE_NOT_FOUND: '구역을 찾을 수 없습니다.',
   NOT_RESIDENT: '그 구역에 거주해야 배치할 수 있습니다. 먼저 거주지를 옮겨주세요.',
   RESIDENCE_NOT_ADJACENT: '인접한 구역으로만 이동할 수 있습니다.',
-  RESIDENCE_COOLDOWN: '이동 대기시간이 남아 있습니다.',
   RESIDENCE_LOCKED_DEPLOY: '점령전에 배치된 동안에는 이동할 수 없습니다. 배치를 해제해주세요.',
   RESIDENCE_LOCKED_EXECUTOR: '집행관은 맡은 구역을 떠날 수 없습니다. 길드장에게 해제를 요청해주세요.',
   NOT_EXECUTOR: '해당 구역의 집행관이 아닙니다.',

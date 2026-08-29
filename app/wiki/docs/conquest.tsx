@@ -6,8 +6,6 @@ import {
   GUILD_EXECUTOR_TAX_CUT,
   GUILD_FULL_REGION_TAX_BONUS,
   GUILD_ZONE_TAX_BONUS,
-  RESIDENCE_MOVE_COOLDOWN_MIN,
-  RESIDENCE_SPEEDUP_GEM_PER_MIN,
   TAX_COLLECT_COOLDOWN_MIN,
   TAX_POINTS_PER_DIAMOND,
   conquestPowerMult,
@@ -22,7 +20,7 @@ export const meta: WikiDocMeta = {
   slug: 'conquest',
   cat: '길드',
   title: '점령전',
-  summary: '하루 한 번 진행되는 구역 다툼, 집행관과 세금, 방치로 잃는 구역.',
+  summary: '하루 한 번 진행되는 구역 다툼, 집행관과 세금, 방치하면 줄어드는 세금.',
   sections: [
     { id: 'day', label: '진행 시각' },
     { id: 'residence', label: '거주지' },
@@ -66,17 +64,12 @@ export default function Doc() {
       <UL>
         <LI>구역에 배치하거나 집행관을 맡으려면 그 구역에 거주해야 한다.</LI>
         <LI>세계지도에서 직접 거주지를 옮길 수 있다.</LI>
-        <LI>이동은 맞닿은 구역으로만 가능하다.</LI>
-        <LI>
-          한 번 옮기면 {fmtMs(RESIDENCE_MOVE_COOLDOWN_MIN * 60_000)} 동안 다시 이동할 수 없으며,
-          남은 시간은 분당 {fmtInt(RESIDENCE_SPEEDUP_GEM_PER_MIN)}
-          다이아로 줄일 수 있다.
-        </LI>
+        <LI>이동은 맞닿은 구역으로만 가능하며, 대기 시간 없이 연속으로 옮길 수 있다.</LI>
         <LI>강화 세금은 거주지에 쌓이며, 거주지를 옮기면 옮긴 곳에서 다시 세금이 쌓인다.</LI>
       </UL>
       <Warn>
         배치나 집행관 자리를 가진 채 거주지를 옮기면 그 역할이 해제된다. 다른 수비를 남기지 않고
-        이동하면 그날 방치로 처리돼 구역을 통째로 잃을 수 있다.
+        이동하면 그날 방치로 처리돼 다음 날 그 구역의 세금 보너스를 받지 못한다.
       </Warn>
 
       <H2 id="deploy">배치</H2>
@@ -171,13 +164,13 @@ export default function Doc() {
 
       <H2 id="abandon">방치 페널티</H2>
       <UL>
-        <LI>그날 전투에 공격도 수비도 없으면 그 구역은 방치로 처리된다.</LI>
-        <LI>중립이 된 구역은 인접하지 않아도 공격할 수 있다.</LI>
+        <LI>그날 전투에 공격도 수비도 없고 집행관도 없으면 그 구역은 방치로 처리된다.</LI>
+        <LI>
+          방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">독점 보너스</DocLink>를
+          받지 못하며, 길드의 구역 수·완전 장악 계산에서도 빠진다.
+        </LI>
+        <LI>소유권과 쌓여 있던 세금은 그대로 유지된다. 다음 날 배치가 있으면 보너스가 돌아온다.</LI>
       </UL>
-      <Warn>
-        방치된 구역은 자정 발표 직후 중립으로 풀린다. 쌓여 있던 세금은 구역에 남아 다음 소유
-        길드가 수금할 수 있다.
-      </Warn>
 
       <H2 id="chronicle">연대기</H2>
       <UL>

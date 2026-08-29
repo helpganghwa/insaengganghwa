@@ -7,16 +7,13 @@ import { Ticker } from '@/components/Ticker';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { useDiamondActions } from '@/components/DiamondContext';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
   CONQUEST_BATTLE_KST_HOUR,
-  residenceSpeedUpCost,
 } from '@/lib/game/guild/balance';
 
 import {
-  speedUpResidenceAction,
   setResidenceAction,
   deployAction,
   cancelDeployAction,
@@ -32,13 +29,6 @@ type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
 type ConquestRole = DeployRole;
 
-/** 남은 ms → '5시간 12분' — 팝업 안내용(초는 생략). */
-function fmtRemain(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 60_000));
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
-}
 type Member = {
   userId: string;
   nickname: string;
@@ -204,7 +194,6 @@ export function DeployBoard({
   /** 내 거주 상태(0139) — 배치는 거주 구역에서만 가능. 이동이 필요하면 배치와 한 번에 처리한다. */
   residence: {
     zoneId: number | null;
-    readyAtIso: string | null;
     lock: { kind: 'executor' | 'deploy'; label: '집행관' | '공격' | '수비' } | null;
   } | null;
   myGuildId: string;
@@ -215,7 +204,6 @@ export function DeployBoard({
   zones: Zone[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamondActions();
   const [members, setMembers] = useState(initialMembers);
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
   const [selectedId, setSelectedId] = useState<number | null>(residence?.zoneId ?? null);
@@ -230,14 +218,6 @@ export function DeployBoard({
     }
     return set;
   }, [adjacency, homeZoneId]);
-  /** 이동 대기시간 단축 팝업 — 세계지도 이동과 같은 순서(단축 먼저, 배치는 다시 누르기). */
-  const [speedUpAsk, setSpeedUpAsk] = useState(false);
-  /** 단축 성공 후 남은 시간을 즉시 0으로 — 서버 갱신을 기다리지 않는다. */
-  const [readyCleared, setReadyCleared] = useState(false);
-  const readyAt = residence?.readyAtIso ? Date.parse(residence.readyAtIso) : null;
-  // 1초 클럭 분리(2026-08-06) — 종전엔 setInterval이 쿨타임 내내 보드 전체를 매초 리렌더.
-  // 초 단위 표시는 Ticker(표시 지점)가 보유, 핸들러는 호출 시점에 계산.
-  const moveRemainNow = () => (readyCleared ? 0 : readyAt ? Math.max(0, readyAt - Date.now()) : 0);
   /** 배치 확인 팝업 — 이동·해제·배치를 한 번에 안내하고 한 번에 실행한다. */
   const [plan, setPlan] = useState<{
     zoneId: number;
@@ -246,26 +226,9 @@ export function DeployBoard({
     role: ConquestRole | null;
     /** 거주지 이동이 필요한가(필요하면 이동+배치를 함께 요청). */
     move: boolean;
-    /** 이동 쿨타임 보석 비용(0이면 무료). */
-    gem: number;
     /** 이번 실행으로 풀리는 기존 역할 설명(없으면 null). */
     release: string | null;
   } | null>(null);
-  const [planConfirm, setPlanConfirm] = useState(false);
-  const [planLeft, setPlanLeft] = useState(0);
-  useEffect(() => {
-    if (!planConfirm) return;
-    const id = setInterval(() => {
-      setPlanLeft((v) => {
-        if (v <= 1) {
-          setPlanConfirm(false);
-          return 0;
-        }
-        return v - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [planConfirm]);
   const [pending, start] = useTransition();
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
@@ -356,15 +319,11 @@ export function DeployBoard({
       : me.depZoneId
         ? `${me.depZoneName} ${me.depRole === 'attack' ? '공격' : '수비'} 배치`
         : null;
-    const gem = needsMove ? residenceSpeedUpCost(moveRemainNow()) : 0;
-    setPlanLeft(3);
-    setPlanConfirm(false);
     setPlan({
       zoneId: selected.id,
       zoneName: selected.name,
       role: selectedRole,
       move: needsMove,
-      gem,
       release,
     });
   };
@@ -385,35 +344,12 @@ export function DeployBoard({
       : me.depZoneId
         ? `${me.depZoneName} ${me.depRole === 'attack' ? '공격' : '수비'} 배치`
         : null;
-    setPlanLeft(3);
-    setPlanConfirm(false);
     setPlan({
       zoneId: selected.id,
       zoneName: selected.name,
       role: null,
       move: true,
-      gem: residenceSpeedUpCost(moveRemainNow()),
       release,
-    });
-  };
-
-  /** 이동 대기시간 단축 — 대기시간만 없앤다(배치는 다시 누른다, 세계지도와 동일). */
-  const doSpeedUp = () => {
-    if (!plan) return;
-    const cost = plan.gem;
-    setSpeedUpAsk(false);
-    setPlanConfirm(false);
-    setReadyCleared(true); // 낙관 — 실패 시 되돌린다
-    optimisticAdjust(-BigInt(cost));
-    start(async () => {
-      const r = await speedUpResidenceAction();
-      if (r.status !== 'success') {
-        setReadyCleared(false);
-        optimisticAdjust(BigInt(cost));
-        return showError(guildErrMsg(r.code));
-      }
-      setPlan((p) => (p ? { ...p, gem: 0 } : p));
-      showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
     });
   };
 
@@ -425,11 +361,9 @@ export function DeployBoard({
     const prev = me;
     const p = plan;
     setPlan(null);
-    setPlanConfirm(false);
     // 배치 시 집행관(자동 방어)은 서버에서 자동 해제 → 로컬도 집행관 표시 제거(낙관적 갱신).
     if (p.role != null)
       patch(myUserId, { depZoneId: p.zoneId, depZoneName: p.zoneName, depRole: p.role, execZoneId: null, execZoneName: null });
-    if (p.gem > 0) optimisticAdjust(-BigInt(p.gem));
     if (p.role == null) {
       // 이동만 — 기존 배치/집행관은 서버가 해제한다(release).
       patch(myUserId, { depZoneId: null, depZoneName: null, depRole: null, execZoneId: null, execZoneName: null });
@@ -440,7 +374,6 @@ export function DeployBoard({
             depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
             execZoneId: prev.execZoneId, execZoneName: prev.execZoneName,
           });
-          if (p.gem > 0) optimisticAdjust(BigInt(p.gem));
           return showError(guildErrMsg(r.code));
         }
         showHeaderToast({ title: `${p.zoneName}(으)로 거주지 이동` });
@@ -456,13 +389,12 @@ export function DeployBoard({
           depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
           execZoneId: prev.execZoneId, execZoneName: prev.execZoneName,
         });
-        if (p.gem > 0) optimisticAdjust(BigInt(p.gem));
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({
         title: `${role === 'attack' ? '공격' : '수비'} 배치${p.move ? ' · 거주지 이동' : ''}`,
       });
-      // refresh 불필요(§11.7) — 거주지·쿨타임은 액션 revalidate 재렌더가 실어 온다.
+      // refresh 불필요(§11.7) — 거주지는 액션 revalidate 재렌더가 실어 온다.
     });
   };
 
@@ -948,102 +880,14 @@ export function DeployBoard({
         </ModalShell>
       )}
 
-      {/* 이동 대기시간 단축 — 배치 전에 먼저 통과해야 하는 관문(세계지도 이동과 동일 순서). */}
-      {speedUpAsk && plan && (
-        <ModalShell
-          stacked
-          onClose={() => {
-            setSpeedUpAsk(false);
-            setPlanConfirm(false);
-          }}
-          onSubmit={() => {
-            if (planConfirm) doSpeedUp();
-            else {
-              setPlanLeft(3);
-              setPlanConfirm(true);
-            }
-          }}
-          label="이동 대기시간 단축"
-        >
-          <ModalLayout
-            title="이동 대기시간 단축"
-            subtitle={
-              <>
-                남은{' '}
-                <b className="font-bold text-zinc-600 dark:text-zinc-300">
-                  <Ticker>{() => fmtRemain(moveRemainNow())}</Ticker>
-                </b>
-              </>
-            }
-            footer={
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (planConfirm) doSpeedUp();
-                    else {
-                      setPlanLeft(3);
-                      setPlanConfirm(true);
-                    }
-                  }}
-                  disabled={pending}
-                  className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
-                    planConfirm ? 'bg-sky-700' : 'bg-sky-600'
-                  }`}
-                >
-                  {planConfirm && (
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 bg-sky-500"
-                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                    />
-                  )}
-                  <span className="relative">
-                    단축 💎{plan.gem.toLocaleString('ko-KR')}
-                    {planConfirm ? ` ${planLeft}s` : ''}
-                  </span>
-                </button>
-                <ModalButton
-                  tone="ghost"
-                  onClick={() => {
-                    setSpeedUpAsk(false);
-                    setPlanConfirm(false);
-                  }}
-                >
-                  취소
-                </ModalButton>
-              </>
-            }
-          >
-            <p className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
-              다이아를 사용해 남은 대기시간을 없앱니다.
-            </p>
-            <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
-              <p className="font-mono text-[20px] font-black text-sky-500">
-                {plan.gem.toLocaleString('ko-KR')}💎
-              </p>
-            </div>
-          </ModalLayout>
-        </ModalShell>
-      )}
-
       {/* 배치 확인 — 이동·해제·배치를 한 화면에 모아 보여주고 한 번에 실행한다. */}
       {plan && (
         <ModalShell
           label="배치 확인"
-          receded={speedUpAsk}
           onClose={() => {
             setPlan(null);
-            setPlanConfirm(false);
-          }}
-          onSubmit={() => {
-            // 손 동작과 같은 순서 — 유료면 첫 Enter가 3초 재확인 무장, 두 번째가 확정.
-            if (plan.gem === 0 || planConfirm) runPlan();
-            else {
-              setPlanLeft(3);
-              setPlanConfirm(true);
-            }
-          }}
+                  }}
+          onSubmit={runPlan}
         >
           <ModalLayout
             title={
@@ -1053,32 +897,12 @@ export function DeployBoard({
             }
             subtitle={
               <>
-                {plan.move ? <span className="font-bold text-amber-500">거주지 이동 포함</span> : null}
-                {plan.move && plan.gem > 0 ? <span className="mx-1 text-zinc-400">·</span> : null}
-                {plan.gem > 0 ? (
-                  <span className="font-mono font-bold text-sky-500">
-                    {plan.gem.toLocaleString('ko-KR')}💎
-                  </span>
-                ) : null}
-                {!plan.move && plan.gem === 0 ? '추가 비용 없음' : null}
+                {plan.move ? <span className="font-bold text-amber-500">거주지 이동 포함</span> : '추가 비용 없음'}
               </>
             }
             footer={
               <>
-                {plan.gem > 0 ? (
-                  // 이동 대기시간이 남았다 — 세계지도와 같은 순서로 단축 팝업을 먼저 띄운다.
-                  <button
-                    type="button"
-                    onClick={() => setSpeedUpAsk(true)}
-                    disabled={pending}
-                    style={{ flex: 1 }}
-                    className="rounded-xl bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
-                  >
-                    <Ticker>{() => <>{fmtRemain(moveRemainNow())} 후</>}</Ticker> {plan.role == null ? '이동' : '배치'}
-                    <br />
-                    또는 💎{plan.gem.toLocaleString('ko-KR')}
-                  </button>
-                ) : (
+                {(
                   <button
                     type="button"
                     onClick={runPlan}
@@ -1095,8 +919,7 @@ export function DeployBoard({
                   tone="ghost"
                   onClick={() => {
                     setPlan(null);
-                    setPlanConfirm(false);
-                  }}
+                                  }}
                 >
                   취소
                 </ModalButton>
@@ -1117,19 +940,6 @@ export function DeployBoard({
                   <span className="text-zinc-400">·</span>
                   <span className="text-zinc-600 dark:text-zinc-300">
                     거주지가 <b className="font-bold text-amber-500">{plan.zoneName}</b>으로 이동합니다.
-                  </span>
-                </li>
-              )}
-              {plan.gem > 0 && (
-                <li className="flex gap-1.5">
-                  <span className="text-zinc-400">·</span>
-                  <span className="text-zinc-600 dark:text-zinc-300">
-                    이동 대기시간{' '}
-                    <b className="font-bold text-zinc-700 dark:text-zinc-200">
-                      <Ticker>{() => fmtRemain(moveRemainNow())}</Ticker>
-                    </b>을{' '}
-                    <b className="font-mono font-bold text-sky-500">{plan.gem.toLocaleString('ko-KR')}💎</b>로
-                    단축합니다.
                   </span>
                 </li>
               )}

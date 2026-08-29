@@ -1,5 +1,4 @@
 import { GEM_TO_MS } from '@/lib/game/balance';
-import { RESIDENCE_SPEEDUP_GEM_PER_MIN } from '@/lib/game/guild/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt, fmtMs } from '../fmt';
@@ -102,10 +101,6 @@ export default function Doc() {
         <LI>
           다이아 1개로 <DocLink slug="enhance" hash="gem">강화</DocLink>의 남은 시간이{' '}
           {fmtMs(GEM_TO_MS)} 줄어든다.
-        </LI>
-        <LI>
-          <DocLink slug="conquest" hash="residence">거주지 이동</DocLink> 쿨타임도 남은 1분당 다이아{' '}
-          {fmtInt(RESIDENCE_SPEEDUP_GEM_PER_MIN)}개로 줄일 수 있다.
         </LI>
         <LI>남은 시간이 1분 이하여도 1분치를 사용한다.</LI>
       </UL>

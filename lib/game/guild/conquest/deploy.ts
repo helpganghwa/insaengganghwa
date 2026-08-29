@@ -16,7 +16,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /**
  * 공격 인접 규칙 — 길드가 소유한 구역에 인접한 구역만 공격 가능.
  *  단, 소유 구역이 0개면 어디든 첫 상륙 가능(부트스트랩). 수비는 인접 무관(이미 소유).
- *  중립 구역(소유 없음)은 인접 무관 공격 가능(B안 — 방치 중립화 개방).
+ *  중립 구역(소유 없음)은 인접 무관 공격 가능(해산·미점령 구역이 즉시 재분배되도록).
  */
 async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): Promise<void> {
   const owned = await tx.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
@@ -52,21 +52,13 @@ export async function deployToZone(input: {
   role: ConquestRole;
   /** 거주 구역이 아니면 함께 이동한다(기존 배치·집행관은 해제). UI에서 확인받은 경우만. */
   move?: boolean;
-  /** 이동 쿨타임이 남았으면 보석으로 지불. */
-  paySpeedUp?: boolean;
-}): Promise<{ battleKstDay: string; spent: number; released: '집행관' | '공격' | '수비' | null }> {
+}): Promise<{ battleKstDay: string; released: '집행관' | '공격' | '수비' | null }> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도(23:00~01:00) 잠금
   return db.transaction(async (tx) => {
-    // 이동+배치를 한 트랜잭션에 — 이동만 되고 배치가 실패해 쿨타임·보석만 날리는 경우를 없앤다.
-    let moved: { spent: number; released: '집행관' | '공격' | '수비' | null } = {
-      spent: 0,
-      released: null,
-    };
+    // 이동+배치를 한 트랜잭션에 — 이동(해제)만 되고 배치가 실패하는 경우를 없앤다.
+    let moved: { released: '집행관' | '공격' | '수비' | null } = { released: null };
     if (input.move) {
-      moved = await setResidenceTx(tx, input.userId, input.serverId, input.zoneId, {
-        release: true,
-        paySpeedUp: input.paySpeedUp,
-      });
+      moved = await setResidenceTx(tx, input.userId, input.serverId, input.zoneId, { release: true });
     }
     const [m] = await tx
       .select({ guildId: guildMembers.guildId })
@@ -93,7 +85,7 @@ export async function deployToZone(input: {
     // 배치 등록 = 집행관(자동 방어) 자동 해제 — 집행관이 자리를 비우고 다른 구역에 참전(2026-07-26 문의 #90).
     // 집행관 지정이 배치를 지우는 것의 정반대라 "1인=집행관 or 배치" 불변식 유지 → 정산 이중집계 없음.
     // **같은 서버** 스코프(감사 G-01: 타 서버 집행관 오해제 방지). 홈 구역은 집행관·배치가 모두
-    // 빠지면 그날 방치 중립화 대상이 된다(neutralizeAbandonedZones) — 다른 수비를 남기지 않으면 상실 위험.
+    // 빠지면 그날 방치 판정 대상이 된다(markAbandonedZones) — 다른 수비를 남기지 않으면 세금 보너스 제외.
     await tx
       .update(zones)
       .set({ executorUserId: null })

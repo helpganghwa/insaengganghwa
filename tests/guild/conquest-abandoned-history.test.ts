@@ -1,22 +1,22 @@
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { revealConquest, neutralizeAbandonedZones } from '@/lib/game/guild/conquest/run';
+import { revealConquest, markAbandonedZones } from '@/lib/game/guild/conquest/run';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { aggregateConquestDay } from '@/lib/game/guild/conquest/chronicle';
 
 import { testDb, sql, endTestDb } from '../db';
 
 /**
- * B안 방치-중립화(neutralizeAbandonedZones)가 역사(chronicle 사실표)에 반영되는지 실증.
+ * 방치 판정(markAbandonedZones, 0180)이 소유를 유지한 채 세금 보너스만 빼고 역사(chronicle 사실표)에 반영되는지 실증.
  * 격리 서버(SV=30000)에 합성 시나리오를 만들고 aggregateConquestDay를 검사한다(LLM 미호출 — 결정론 사실표만).
  *
  * 시나리오(DAY=2020-01-01):
  *  - 알파(990001): 전날 G1이 점령 → DAY에 G2가 공격 점령(conquest_battle winner=G2). 공격 배치 있음.
- *  - 베타(990002): G1 소유, 집행관 없음, 공격·수비 배치 없음 → 방치 → 중립화 대상.
+ *  - 베타(990002): G1 소유, 집행관 없음, 공격·수비 배치 없음 → 방치(소유 유지·보너스 제외).
  *
  * 두 경로를 모두 검증:
- *  1) 이벤트 경로(00시 백필) — neutralizeAbandonedZones가 zone_neutralized 이벤트 생성 후 aggregate.
- *  2) 사전생성 경로(23시) — 이벤트 없이 zones에서 중립화 예정을 직접 계산(2026-07-24 누락 버그 회귀 방지).
+ *  1) 이벤트 경로(00시) — markAbandonedZones가 zone_abandoned 이벤트 생성 후 aggregate.
+ *  2) 사전생성 경로(23시) — 이벤트 없이 zones에서 방치 예정을 직접 계산(2026-07-24 누락 버그 회귀 방지).
  */
 const SV = 30000; // 격리 스크래치 서버(smallint 범위·실서버 1·2와 무충돌)
 const DAY = '2020-01-01';
@@ -64,51 +64,66 @@ afterAll(async () => {
   await endTestDb();
 });
 
-describe('방치-중립화의 역사 반영(B안)', () => {
-  it('[이벤트 경로] 중립화 실행 후 사실표(neutralized)에 잡힌다', async () => {
-    const { g2 } = await setupScenario();
+describe('방치 판정의 역사 반영(0180)', () => {
+  it('[이벤트 경로] 방치 판정 후 소유 유지·보너스 제외·사실표(abandoned)에 잡힌다', async () => {
+    const { g1, g2 } = await setupScenario();
 
     // ── 실제 파이프라인 (자정 cron과 동일 순서) ──
     const rev = await revealConquest(SV, DAY);
-    const neu = await neutralizeAbandonedZones(SV, DAY);
+    const ab = await markAbandonedZones(SV, DAY);
     await recalcTaxBonus(SV);
     const summary = await aggregateConquestDay(DAY, SV);
 
-    const owners = (await testDb.execute(sql`select id, owner_guild_id::text owner from zones where server_id = ${SV} order by id`)) as unknown as { id: number; owner: string | null }[];
+    const owners = (await testDb.execute(sql`select id, owner_guild_id::text owner, abandoned_day::text aday, tax_bonus from zones where server_id = ${SV} order by id`)) as unknown as { id: number; owner: string | null; aday: string | null; tax_bonus: number }[];
     const alpha = owners.find((z) => z.id === ALPHA)!;
     const beta = owners.find((z) => z.id === BETA)!;
 
     expect(rev.revealed).toBeGreaterThanOrEqual(1);
     expect(alpha.owner).toBe(g2.id); // 알파 = G2 점령
-    expect(neu.neutralized).toBe(1); // 베타 1곳 중립화
-    expect(beta.owner).toBeNull(); // 베타 = 중립
+    expect(ab.abandoned).toBe(1); // 베타 1곳 방치
+    expect(beta.owner).toBe(g1.id); // 베타 = 소유 유지(중립화 아님)
+    expect(beta.aday).toBe(DAY); // 방치 플래그
+    expect(Number(beta.tax_bonus)).toBe(1); // 보너스 제외
+    expect(Number(alpha.tax_bonus)).toBeGreaterThan(1); // G2의 정상 구역은 보너스 유지
+    const events = (await testDb.execute(sql`select 1 as x from world_events where server_id = ${SV} and type = 'zone_abandoned'`)) as unknown as unknown[];
+    expect(events).toHaveLength(1);
 
     const capturedZones = summary.captures.map((c) => c.zone);
     expect(capturedZones).toContain('테스트-알파');
     expect(capturedZones).not.toContain('테스트-베타');
     expect(summary.disbands).toHaveLength(0);
-    expect(summary.neutralized).toHaveLength(1);
-    expect(summary.neutralized[0]!.guildName).toBe(G1_NAME);
-    expect(summary.neutralized[0]!.zones).toContain('테스트-베타');
+    expect(summary.neutralized).toHaveLength(0);
+    expect(summary.abandoned).toHaveLength(1);
+    expect(summary.abandoned[0]!.guildName).toBe(G1_NAME);
+    expect(summary.abandoned[0]!.zones).toContain('테스트-베타');
     const standingByGuild = new Map(summary.standings.map((s) => [s.guild, s.zones]));
-    expect(standingByGuild.get(G1_NAME) ?? 0).toBe(0);
+    expect(standingByGuild.get(G1_NAME) ?? 0).toBe(1); // 베타는 여전히 G1 보유
+
+    // 다음 날 재판정 — 배치가 붙으면 플래그 해제 → 보너스 복귀.
+    await testDb.execute(sql`insert into guild_battle_deployments (server_id, battle_kst_day, user_id, guild_id, zone_id, role) values (${SV}, '2020-01-02', ${USER}::uuid, ${g1.id}, ${BETA}, 'defend')`);
+    const ab2 = await markAbandonedZones(SV, '2020-01-02');
+    await recalcTaxBonus(SV);
+    expect(ab2.abandoned).toBe(0);
+    const [beta2] = (await testDb.execute(sql`select abandoned_day::text aday, tax_bonus from zones where id = ${BETA}`)) as unknown as { aday: string | null; tax_bonus: number }[];
+    expect(beta2!.aday).toBeNull();
+    expect(Number(beta2!.tax_bonus)).toBeGreaterThan(1);
   });
 
-  it('[사전생성 경로] 이벤트 없이도 중립화 예정 구역이 사실표에 잡힌다(2026-07-24 누락 버그 회귀 방지)', async () => {
+  it('[사전생성 경로] 이벤트 없이도 방치 예정 구역이 사실표에 잡힌다(2026-07-24 누락 버그 회귀 방지)', async () => {
     const { g1 } = await setupScenario();
 
-    // 23시 사전생성 재현 — neutralizeAbandonedZones/reveal 미실행: zone_neutralized 이벤트 없음, 베타 여전히 G1 소유.
-    const events = (await testDb.execute(sql`select 1 as x from world_events where server_id = ${SV} and type = 'zone_neutralized'`)) as unknown as unknown[];
+    // 23시 사전생성 재현 — markAbandonedZones/reveal 미실행: zone_abandoned 이벤트 없음.
+    const events = (await testDb.execute(sql`select 1 as x from world_events where server_id = ${SV} and type = 'zone_abandoned'`)) as unknown as unknown[];
     expect(events).toHaveLength(0); // 전제: 이벤트 아직 없음
     const [betaBefore] = (await testDb.execute(sql`select owner_guild_id::text owner from zones where id = ${BETA}`)) as unknown as { owner: string | null }[];
-    expect(betaBefore!.owner).toBe(g1.id); // 베타 아직 G1 소유(중립화 전)
+    expect(betaBefore!.owner).toBe(g1.id); // 베타 G1 소유
 
     const summary = await aggregateConquestDay(DAY, SV);
 
-    // 이벤트가 없어도 zones 직접 계산(소유·집행관0·배치0)으로 방치 중립화 예정이 잡혀야 한다.
-    expect(summary.neutralized).toHaveLength(1);
-    expect(summary.neutralized[0]!.guildName).toBe(G1_NAME);
-    expect(summary.neutralized[0]!.zones).toContain('테스트-베타');
+    // 이벤트가 없어도 zones 직접 계산(소유·집행관0·배치0)으로 방치 예정이 잡혀야 한다.
+    expect(summary.abandoned).toHaveLength(1);
+    expect(summary.abandoned[0]!.guildName).toBe(G1_NAME);
+    expect(summary.abandoned[0]!.zones).toContain('테스트-베타');
     console.log('[검증] 이벤트 없이 사전생성 시점에도 베타 방치-중립화가 direct 계산으로 잡힘(회귀 방지)');
   });
 });
