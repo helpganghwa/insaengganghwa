@@ -41,8 +41,8 @@ export type PushPayload = {
   url?: string;
   tag?: string;
   /**
-   * guild = 길드 운영 알림(가입 신청 접수 · 승인/거절, 2026-07-30). 토글 컬럼 없음 = 상시 발송 —
-   * 신청을 처리할 수 있는 사람에게만 보내고 건수도 적어 소음이 되지 않는다.
+   * guild = 길드 운영 알림(승인/거절 결과, 2026-07-30). 토글 컬럼 없음 = 상시 발송(신청자 본인 대상).
+   * guild_join = 가입 신청 접수(가입 관리 권한자 대상). push_guild_join 토글(문의 #148, 0179).
    */
   category:
     | 'enhance'
@@ -53,6 +53,7 @@ export type PushPayload = {
     | 'melee'
     | 'chat_mention'
     | 'guild'
+    | 'guild_join'
     | 'admin';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
@@ -93,6 +94,7 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   profile: profiles.pushProfile,
   referral: profiles.pushReferral,
   chat_mention: profiles.pushChatMention,
+  guild_join: profiles.pushGuildJoin,
 };
 
 /**

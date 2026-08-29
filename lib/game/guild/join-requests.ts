@@ -8,11 +8,13 @@ import {
   guildMembers,
   guildLeaveLog,
   guildJoinRequests,
+  guildJoinRejections,
 } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
 import {
   GUILD_JOIN_REQUEST_TTL_DAYS,
+  GUILD_REAPPLY_COOLDOWN_HOURS,
   GUILD_REJOIN_LOCK_HOURS,
   guildCapacity,
   type GuildJoinPolicy,
@@ -78,6 +80,22 @@ export async function requestOrJoinGuild(input: {
   // 승인제 — 신청만 등록.
   await db.transaction(async (tx) => {
     await assertJoinable(tx, input.userId, g.serverId);
+    // 거절된 길드 재신청 대기 — 거절당한 유저가 반복 신청해 가입 관리자에게 알림이 계속 가는
+    // 문제(문의 #148). 다른 길드 신청은 막지 않는다.
+    const [rej] = await tx
+      .select({ at: guildJoinRejections.rejectedAt })
+      .from(guildJoinRejections)
+      .where(
+        and(
+          eq(guildJoinRejections.userId, input.userId),
+          eq(guildJoinRejections.serverId, g.serverId),
+          eq(guildJoinRejections.guildId, input.guildId),
+        ),
+      )
+      .limit(1);
+    if (rej && Date.now() - rej.at.getTime() < GUILD_REAPPLY_COOLDOWN_HOURS * 3_600_000) {
+      throw new GuildError('REAPPLY_COOLDOWN');
+    }
     await tx
       .insert(guildJoinRequests)
       .values({ userId: input.userId, serverId: g.serverId, guildId: input.guildId })
@@ -168,6 +186,13 @@ export async function rejectJoinRequest(input: {
       )
       .returning({ userId: guildJoinRequests.userId });
     if (rows.length === 0) throw new GuildError('NO_JOIN_REQUEST');
+    await tx
+      .insert(guildJoinRejections)
+      .values({ userId: input.requestUserId, serverId: input.serverId, guildId })
+      .onConflictDoUpdate({
+        target: [guildJoinRejections.userId, guildJoinRejections.serverId, guildJoinRejections.guildId],
+        set: { rejectedAt: sql`now()` },
+      });
     return { guildId };
   });
 }

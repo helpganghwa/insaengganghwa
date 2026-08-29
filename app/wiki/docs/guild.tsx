@@ -5,6 +5,7 @@ import {
   GUILD_DONATION_TIERS,
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   GUILD_JOIN_REQUEST_TTL_DAYS,
+  GUILD_REAPPLY_COOLDOWN_HOURS,
   GUILD_MAX_CAPACITY,
   GUILD_NAME_MAX_LEN,
   GUILD_NAME_MIN_LEN,
@@ -90,6 +91,9 @@ export default function Doc() {
         <LI>자유 가입·승인제 모두 정원이 차 있으면 가입할 수 없다.</LI>
         <LI>
           신청은 한 번에 한 곳만 유지된다. 다른 길드에 신청하면 앞의 신청은 자동으로 취소된다.
+        </LI>
+        <LI>
+          거절된 길드에는 {GUILD_REAPPLY_COOLDOWN_HOURS}시간이 지난 뒤 다시 신청할 수 있다.
           <Fn n={2} />
         </LI>
       </UL>
