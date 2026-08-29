@@ -9,6 +9,8 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
  * ⚠ '/raid'는 공개 '/raid-invite'와 프리픽스 충돌하므로 disallow에서 제외(그 경로는 어차피 로그인 리다이렉트).
  */
 export default function robots(): MetadataRoute.Robots {
+  // preview(스테이징)는 전면 차단 — 미배포 콘텐츠 위키가 색인되지 않도록(2026-08-29).
+  if (process.env.VERCEL_ENV === 'preview') return { rules: [{ userAgent: '*', disallow: '/' }] };
   return {
     rules: [
       {
