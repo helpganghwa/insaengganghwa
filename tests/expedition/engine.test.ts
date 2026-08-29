@@ -115,13 +115,12 @@ describe('expedition engine — 레벨/슬롯', () => {
     expect(r.level).toBe(EXPEDITION_LEVEL_MAX);
   });
   it('실효 슬롯 = 합산 강화 문턱(1k/3k/10k/15k) · 상한 4 · 미달 0', () => {
-    expect(effectiveSlots(0)).toBe(0);
-    expect(effectiveSlots(999)).toBe(0);
-    expect(effectiveSlots(1000)).toBe(1);
-    expect(effectiveSlots(2999)).toBe(1);
-    expect(effectiveSlots(3000)).toBe(2);
-    expect(effectiveSlots(10000)).toBe(3);
-    expect(effectiveSlots(15000)).toBe(4);
+    expect(effectiveSlots(0)).toBe(1); // 1칸은 처음부터(2026-08-29)
+    expect(effectiveSlots(3999)).toBe(1);
+    expect(effectiveSlots(4000)).toBe(2);
+    expect(effectiveSlots(7999)).toBe(2);
+    expect(effectiveSlots(8000)).toBe(3);
+    expect(effectiveSlots(12000)).toBe(4);
     expect(effectiveSlots(999999)).toBe(4);
   });
   it('레벨 곡선 참조 무결(엔진↔밸런스)', () => {

@@ -92,7 +92,7 @@ export default function Doc() {
       </UL>
       <UL>
         <LI>
-          파견 슬롯은 <b>합산 강화</b>(보유 장비 강화 레벨의 합, 랭킹의 합산 강화와 같다)로만 열린다.
+          첫 슬롯은 처음부터 열려 있고, 나머지 슬롯은 <b>합산 강화</b>(보유 장비 강화 레벨의 합, 랭킹의 합산 강화와 같다)로만 열린다.
           다이아나 파견 레벨로는 열 수 없다.
         </LI>
         <LI>합산 강화가 내려가 조건에 못 미치면 그 슬롯에 새로 보낼 수 없지만, 이미 나간 파견은 돌아올 때까지 유지된다.</LI>
@@ -101,7 +101,7 @@ export default function Doc() {
         head={['슬롯', '오픈 조건']}
         rows={EXPEDITION_SLOT_UNLOCKS.map((u) => [
           `슬롯 ${u.slot}`,
-          `합산 강화 ${u.enhanceSum.toLocaleString('ko-KR')}`,
+          u.enhanceSum === 0 ? '처음부터 열림' : `합산 강화 ${u.enhanceSum.toLocaleString('ko-KR')}`,
         ])}
       />
       <Note>

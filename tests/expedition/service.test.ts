@@ -192,21 +192,21 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(after - before).toBe(BigInt(paid.reward.diamond!)); // 정확 1회 지급
   });
 
-  it('슬롯 해금 — 합산 강화 미달이면 오퍼 0·시작 SLOT_LOCKED, 1k/3k에서 1·2칸', async () => {
-    await setEnhanceSum(999);
-    await ensureOffers(uid, SID, DIA_OFFER_RNG());
-    expect(await offerCount()).toBe(0);
-    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
-    await setEnhanceSum(1000);
+  it('슬롯 해금 — 1칸은 처음부터, 2칸은 4k(미달 슬롯 시작은 SLOT_LOCKED)', async () => {
+    await setEnhanceSum(0);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(1);
-    await setEnhanceSum(3000);
+    await expect(startExpedition(uid, SID, 2, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
+    await setEnhanceSum(3999);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    expect(await offerCount()).toBe(1);
+    await setEnhanceSum(4000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
   });
 
   it('합산 강화 하락 — 진행 중 파견은 유지되고 새 배정만 잠긴다', async () => {
-    await setEnhanceSum(5000);
+    await setEnhanceSum(8000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     await startExpedition(uid, SID, 2, avatarId);
     await setEnhanceSum(0);
@@ -215,11 +215,11 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
       select status from expeditions where user_id = ${uid}::uuid and slot = 2
     `)) as unknown as { status: string }[];
     expect(r?.status).toBe('running');
-    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
+    await expect(startExpedition(uid, SID, 3, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
   });
 
   it('아바타 중복 배정 — 두 번째 시작이 AVATAR_BUSY', async () => {
-    // 슬롯 2 확보(합산 강화 5,000 픽스처) 후 두 슬롯에 같은 아바타.
+    // 슬롯 2 확보(합산 강화 5,000 픽스처, 4k 이상) 후 두 슬롯에 같은 아바타.
     await setEnhanceSum(5000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);

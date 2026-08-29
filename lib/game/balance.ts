@@ -755,8 +755,8 @@ export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
 /**
  * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
  * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
- * 원정(24h)은 Lv.0부터 10%(2026-08-28) — 파견을 여는 유저는 합산 강화 1,000+ 숙련자뿐이라(슬롯 개편) 첫날부터
- * 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다. 종전 Lv.5 게이트(신규 보호)는 전제가 사라져 폐지.
+ * 원정(24h)은 Lv.0부터 10%(2026-08-28) — 첫날부터 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다.
+ * 종전 Lv.5 게이트(신규 보호)는 폐지(1칸이 무료라도 무강화 보상은 ×1.00 바닥값이라 보호가 필요 없다).
  */
 export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
   minLevel: number;
@@ -774,15 +774,16 @@ export function expeditionDifficultyDist(level: number): Record<ExpeditionDiffic
 
 /**
  * 슬롯 해금(2026-08-28 개편) — **계정 합산 강화**(보유 장비 enhance_level 합, 리더보드 'sum'과 동일 정의)
- * 도달 시 오픈. 파견 레벨·다이아 해금 없음: 강화가 파견의 유일한 입구이자 규모다(사용자 확정 1k/3k/10k/15k —
- * 2칸은 5k→3k 하향: 1칸 체류 구간이 5배 점프라 목표가 안 보인다는 밸런스 검토 반영).
+ * 도달 시 오픈. 파견 레벨·다이아 해금 없음: 강화가 파견의 유일한 입구이자 규모다.
+ * 2026-08-29 사용자 확정 0/4k/8k/12k — 1칸은 **처음부터 열림**(합산 강화 ≥500이 8%뿐이라 잠긴 콘텐츠로만 보이던
+ * 문제, 무강화 1칸 풀가동 ≈ 83💎/일이 경제 바닥값), 3·4칸은 도달자 0~2명이던 10k/15k에서 하향.
  * 합산 강화는 현재 레벨 합이라 하락하면 줄 수 있다 — 진행 중 파견은 유지, **새 배정만** 잠긴다.
  */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
-  { slot: 1, enhanceSum: 1_000 },
-  { slot: 2, enhanceSum: 3_000 },
-  { slot: 3, enhanceSum: 10_000 },
-  { slot: 4, enhanceSum: 15_000 },
+  { slot: 1, enhanceSum: 0 },
+  { slot: 2, enhanceSum: 4_000 },
+  { slot: 3, enhanceSum: 8_000 },
+  { slot: 4, enhanceSum: 12_000 },
 ] as const;
 /** 합산 강화 → 열린 슬롯 수(0~EXPEDITION_SLOTS). */
 export function expeditionSlotsFor(enhanceSum: number): number {

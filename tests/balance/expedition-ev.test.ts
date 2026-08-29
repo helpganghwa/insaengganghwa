@@ -81,7 +81,7 @@ describe('expedition balance invariants', () => {
       (diamondOnly / 10000) * ((a.diamondOnly.diaMin + a.diamondOnly.diaMax) / 2) +
       (both / 10000) * ((a.both.diaMin + a.both.diaMax) / 2);
     const critMult = 1 + (EXPEDITION_CRIT_BP / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    // 하루 최대 유닛 — 4슬롯(합산 강화 15,000+) × 24h 원정. 슬롯당 100💎/일.
+    // 하루 최대 유닛 — 4슬롯(합산 강화 12,000+) × 24h 원정. 슬롯당 100💎/일.
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
     const launchDaily = evDia * critMult * maxDailyUnits;
     expect(launchDaily).toBeGreaterThanOrEqual(388);
@@ -96,12 +96,12 @@ describe('expedition balance invariants', () => {
     expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
   });
 
-  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 4칸은 합산 강화 1k/3k/10k/15k 단조 증가', () => {
+  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 4칸은 합산 강화 0/4k/8k/12k 단조 증가', () => {
     expect(EXPEDITION_SYNERGY_MATCH_MULT).toBeGreaterThan(EXPEDITION_SYNERGY_GENERAL_MULT);
     expect(EXPEDITION_SYNERGY_GENERAL_MULT).toBeGreaterThan(1);
     expect(expeditionWeightedSum([{ level: 100, region: 'volcano' }, { level: 100, region: 'general' }, { level: 100, region: 'orc' }], 'volcano')).toBe(345);
     expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4]);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([1000, 3000, 10000, 15000]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([0, 4000, 8000, 12000]);
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
@@ -129,12 +129,12 @@ describe('expedition balance invariants', () => {
     expect(expeditionDifficultyDist(5).grand).toBeGreaterThanOrEqual(expeditionDifficultyDist(0).grand);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 1k/3k/10k/15k, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 0/4k/8k/12k, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
-      { slot: 1, enhanceSum: 1000 },
-      { slot: 2, enhanceSum: 3000 },
-      { slot: 3, enhanceSum: 10000 },
-      { slot: 4, enhanceSum: 15000 },
+      { slot: 1, enhanceSum: 0 },
+      { slot: 2, enhanceSum: 4000 },
+      { slot: 3, enhanceSum: 8000 },
+      { slot: 4, enhanceSum: 12000 },
     ]);
     expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
     expect(EXPEDITION_REFRESH_COST).toBe(20);
