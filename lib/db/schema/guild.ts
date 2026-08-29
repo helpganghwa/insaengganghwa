@@ -141,6 +141,22 @@ export const guildJoinRequests = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.serverId] }), index('guild_join_req_guild_idx').on(t.guildId)],
 );
 
+/** 가입 신청 거절 기록 — 같은 길드 재신청은 GUILD_REAPPLY_COOLDOWN_HOURS 뒤부터(0179). 유저×서버×길드 1행. */
+export const guildJoinRejections = pgTable(
+  'guild_join_rejections',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull().default(1),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.guildId] })],
+);
+
 /** §1 탈퇴 로그 — 24h 재가입 제한(가장 최근 left_at 기준). append-only. */
 export const guildLeaveLog = pgTable(
   'guild_leave_log',

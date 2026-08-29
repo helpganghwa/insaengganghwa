@@ -47,6 +47,7 @@ export default async function SettingsPage() {
         pushProfile: profiles.pushProfile,
         pushReferral: profiles.pushReferral,
         pushChatMention: profiles.pushChatMention,
+        pushGuildJoin: profiles.pushGuildJoin,
         pushEnhanceMode: profiles.pushEnhanceMode,
       })
       .from(profiles)
@@ -82,6 +83,7 @@ export default async function SettingsPage() {
           initialProfile={p?.pushProfile ?? true}
           initialReferral={p?.pushReferral ?? true}
           initialChatMention={p?.pushChatMention ?? true}
+          initialGuildJoin={p?.pushGuildJoin ?? true}
           initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
         />
       </Section>

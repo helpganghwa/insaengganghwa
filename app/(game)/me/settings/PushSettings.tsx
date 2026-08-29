@@ -29,7 +29,7 @@ import {
  */
 
 // 일일 보급·대난투는 상시 발송(끄기 불가) — 설정 토글에서 제외.
-type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention';
+type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
@@ -39,6 +39,7 @@ export function PushSettings(props: {
   initialProfile: boolean;
   initialReferral: boolean;
   initialChatMention: boolean;
+  initialGuildJoin: boolean;
   initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function PushSettings(props: {
   const [profile, setProfile] = useState(props.initialProfile);
   const [referral, setReferral] = useState(props.initialReferral);
   const [chatMention, setChatMention] = useState(props.initialChatMention);
+  const [guildJoin, setGuildJoin] = useState(props.initialGuildJoin);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
@@ -113,6 +115,7 @@ export function PushSettings(props: {
       profile: setProfile,
       referral: setReferral,
       chat_mention: setChatMention,
+      guild_join: setGuildJoin,
     };
     const setLocal = setterMap[cat];
     setLocal(next);
@@ -232,6 +235,17 @@ export function PushSettings(props: {
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('chat_mention', v)}
       />
+      <Toggle
+        label="길드 가입 신청"
+        hint="가입 관리 권한이 있을 때 신청이 들어오면"
+        on={guildJoin}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('guild_join', v)}
+      />
+      <p className="px-3 pb-2 pt-1 text-[10px] leading-relaxed text-zinc-500">
+        일일 보급·대난투·운영 우편 알림은 항목과 관계없이 발송됩니다. 모든 알림을 끄려면 맨 위의
+        &lsquo;알림 받기&rsquo;를 꺼 주세요.
+      </p>
     </div>
   );
 }

@@ -59,7 +59,7 @@ export async function notifyJoinRequest(input: {
       url: '/guild/join-requests',
       // 신청이 연달아 오면 최신 1건으로 합친다 — 목록에서 한 번에 처리하면 되므로.
       tag: 'guild-join-request',
-      category: 'guild',
+      category: 'guild_join',
     },
   ).catch(() => undefined);
 }

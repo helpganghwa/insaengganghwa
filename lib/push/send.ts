@@ -41,8 +41,8 @@ export type PushPayload = {
   url?: string;
   tag?: string;
   /**
-   * guild = 길드 운영 알림(가입 신청 접수 · 승인/거절, 2026-07-30). 토글 컬럼 없음 = 상시 발송 —
-   * 신청을 처리할 수 있는 사람에게만 보내고 건수도 적어 소음이 되지 않는다.
+   * guild = 길드 운영 알림(승인/거절 결과, 2026-07-30). 토글 컬럼 없음 = 상시 발송(신청자 본인 대상).
+   * guild_join = 가입 신청 접수(가입 관리 권한자 대상). push_guild_join 토글(문의 #148, 0179).
    */
   category:
     | 'enhance'
@@ -53,6 +53,7 @@ export type PushPayload = {
     | 'melee'
     | 'chat_mention'
     | 'guild'
+    | 'guild_join'
     | 'admin'
     /** 파견 귀환(2026-08-25) — 토글 없음(상시): 유저가 직접 보낸 원정의 완료 통지, 일 최대 6건. */
     | 'expedition';
@@ -95,6 +96,7 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   profile: profiles.pushProfile,
   referral: profiles.pushReferral,
   chat_mention: profiles.pushChatMention,
+  guild_join: profiles.pushGuildJoin,
 };
 
 /**
