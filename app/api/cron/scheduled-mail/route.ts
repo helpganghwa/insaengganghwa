@@ -52,9 +52,12 @@ export async function GET(req: Request) {
             .select({ id: profiles.id })
             .from(profiles)
             .where(sql`${profiles.withdrawnAt} is null`);
+          // 푸시 = 우편 제목 + 본문 앞부분(2026-08-29) — 종전 '운영자 우편 도착 / 제목' 고정 형식은 내용이 안 실렸다.
+          // 본문은 마크다운 강조(**)·줄바꿈을 걷어내고 120자에서 자른다(OS 알림 창은 iOS ~100자·Android ~200자 노출).
+          const plain = m.body.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
           await sendPushToUsers(ids.map((r) => r.id), {
-            title: '운영자 우편 도착',
-            body: m.title.slice(0, 60),
+            title: m.title.slice(0, 60),
+            body: plain.length > 120 ? `${plain.slice(0, 119)}…` : plain,
             url: '/mail',
             category: 'admin',
           });
