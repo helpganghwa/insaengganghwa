@@ -20,6 +20,22 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
+/** 본문 → 푸시용 발췌: 문장 단위로 누적해 max자 이내(첫 문장이 max를 넘으면 잘라 '…'). */
+function pushExcerpt(body: string, max: number): string {
+  const plain = body.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+  const sentences = plain.match(/[^.!?]+[.!?]?/g) ?? [plain];
+  let out = '';
+  for (const raw of sentences) {
+    const sent = raw.trim();
+    if (!sent) continue;
+    const next = out ? `${out} ${sent}` : sent;
+    if (next.length > max) break;
+    out = next;
+  }
+  if (!out) out = plain.length > max ? `${plain.slice(0, max - 1)}…` : plain;
+  return out;
+}
+
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
@@ -52,12 +68,11 @@ export async function GET(req: Request) {
             .select({ id: profiles.id })
             .from(profiles)
             .where(sql`${profiles.withdrawnAt} is null`);
-          // 푸시 = 우편 제목 + 본문 앞부분(2026-08-29) — 종전 '운영자 우편 도착 / 제목' 고정 형식은 내용이 안 실렸다.
-          // 본문은 마크다운 강조(**)·줄바꿈을 걷어내고 120자에서 자른다(OS 알림 창은 iOS ~100자·Android ~200자 노출).
-          const plain = m.body.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+          // 푸시는 짧게, 우편은 길게(2026-08-29 확정): 제목 = 우편 제목, 본문 = 우편 본문의 첫 문장들을 60자 이내로
+          // (문장 단위로 끊어 잘린 말 없이). 마크다운 강조(**)·줄바꿈 제거.
           await sendPushToUsers(ids.map((r) => r.id), {
             title: m.title.slice(0, 60),
-            body: plain.length > 120 ? `${plain.slice(0, 119)}…` : plain,
+            body: pushExcerpt(m.body, 60),
             url: '/mail',
             category: 'admin',
           });
