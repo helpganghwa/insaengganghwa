@@ -58,7 +58,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   friend: [20, '10 s'], // 검색·요청·수락 스팸 방어
   guild: [20, '10 s'], // 기부·배치·가입·문양생성 자동화 방어
   shop: [20, '10 s'], // 무료수령·주문·상자구매 연타 방어
-  profile: [10, '3600 s'], // 아바타 생성(Claude+Pixellab 고비용) — 시간당 10건
+  profile: [30, '3600 s'], // 아바타 생성(Claude+Pixellab 고비용) — 시간당 30건(10→30, 2026-08-31 문의 #166: 정상 유저가 걸림. 거절 환불 반복 봇 방어선으로 유지)
   profileEdit: [30, '10 s'], // 대표 선택·방향 변경·삭제 연타 방어(저비용)
   report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
   support: [5, '3600 s'], // 고객센터 문의 — 시간당 5건(스팸 방어)
