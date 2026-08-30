@@ -636,7 +636,7 @@ function CardBody({
             alt=""
             decoding="async"
             className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${mutedMon ? 'grayscale' : ''}`}
-            style={{ height: monH, width: 'auto', imageRendering: 'pixelated', transform: 'scaleX(-1)' }}
+            style={{ height: monH, width: 'auto', imageRendering: 'pixelated' }} // 스프라이트 파일이 이미 왼쪽(아바타 쪽)을 본다 — CSS 반전 제거(2026-08-30)
           />
         </span>
       </span>
