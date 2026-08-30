@@ -601,11 +601,11 @@ export async function getAttackableZoneIds(guildId: bigint, serverId: number): P
     if (ownedSet.has(e.a)) set.add(e.b);
     if (ownedSet.has(e.b)) set.add(e.a);
   }
-  // 중립 구역(소유 없음)은 인접 무관 공격 가능(B안 — 서버 assertAttackable과 동일 규칙).
+  // 중립 구역(소유 없음)·방치 판정 구역(abandoned_day, 0180)은 인접 무관 공격 가능(서버 assertAttackable과 동일 규칙).
   const neutral = await db
     .select({ id: zones.id })
     .from(zones)
-    .where(and(eq(zones.serverId, serverId), isNull(zones.ownerGuildId)));
+    .where(and(eq(zones.serverId, serverId), or(isNull(zones.ownerGuildId), isNotNull(zones.abandonedDay))));
   for (const z of neutral) set.add(z.id);
   for (const id of ownedIds) set.delete(id); // 자기 소유는 공격 대상 아님
   return [...set];

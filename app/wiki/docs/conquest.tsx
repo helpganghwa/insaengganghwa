@@ -85,7 +85,7 @@ export default function Doc() {
           공격은 자기 길드 소유가 아닌 구역에 배치하되, 자기 길드 구역과 맞닿아 있어야 한다.
           <Fn n={2} />
         </LI>
-        <LI>주인 없는 중립 구역은 맞닿아 있지 않아도 공격할 수 있다.</LI>
+        <LI>주인 없는 중립 구역과 방치된 구역은 맞닿아 있지 않아도 공격할 수 있다.</LI>
         <LI>
           길드원의 배치를 해제하는 것은{' '}
           <DocLink slug="guild-roles" hash="perms">별도 권한</DocLink>이다.
@@ -169,6 +169,7 @@ export default function Doc() {
           방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">세금 보너스</DocLink>를
           받지 못하며, 완전 장악 계산에서도 빠진다.
         </LI>
+        <LI>방치된 구역은 맞닿아 있지 않은 길드도 공격할 수 있다.</LI>
         <LI>소유권과 쌓여 있던 세금은 그대로 유지된다. 다음 날 배치가 있으면 보너스가 돌아온다.</LI>
       </UL>
 
