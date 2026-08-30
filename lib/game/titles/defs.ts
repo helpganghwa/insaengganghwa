@@ -4979,8 +4979,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "파견",
   style: {
-   color: "#8edb71",
-   glow: true
+   fx: "trailflow"
   }
  },
  {
@@ -5020,8 +5019,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "파견",
   style: {
-   color: "#8edb71",
-   glow: true
+   fx: "trailflow"
   }
  },
  {
@@ -5031,8 +5029,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "파견",
   style: {
-   color: "#8edb71",
-   glow: true
+   fx: "trailflow"
   }
  }
 ] as const;

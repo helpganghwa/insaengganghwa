@@ -17,6 +17,8 @@
 .fx-royalflow{background:linear-gradient(90deg,#e5c07b,#c22e2e,#f5d76e,#c22e2e,#e5c07b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
 .fx-azureflow{background:linear-gradient(90deg,#6ea8e0,#e5c07b,#3d7ec2,#e5c07b,#6ea8e0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-verdantflow{background:linear-gradient(90deg,#7fce8a,#e5c07b,#4caf60,#e5c07b,#7fce8a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
+/* 파견 시그니처(2026-08-30 세트 B) — 이끼초록→새벽금→하늘빛 흐름 */
+.fx-trailflow{background:linear-gradient(90deg,#7fce8a,#e5c07b,#8fb4d8,#e5c07b,#7fce8a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
 .fx-nightstar{background:linear-gradient(90deg,#7c8ff0,#f5d76e,#4a5ac2,#f5d76e,#7c8ff0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5.5s linear infinite}
 .fx-pentaflow{background:linear-gradient(90deg,#e05252,#e5a04d,#e5d24d,#5cbf6e,#5c9fd8,#a97be0,#e05252);background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow4 7s linear infinite}
 .fx-steelshine{background:linear-gradient(90deg,#9aa3ad 42%,#f2f6fa 50%,#9aa3ad 58%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}

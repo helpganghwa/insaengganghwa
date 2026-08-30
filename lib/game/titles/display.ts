@@ -282,7 +282,7 @@ const FX_OG: Record<string, string> = {
   goldflow: '#e5c07b', goldglow: '#e5c07b', goldleaf: '#e0b860', goldsoft: '#e5c07b', imperial: '#e5c07b',
   emberflow: '#ff9d4d', crimsonflow: '#e05252', violetflow: '#b98ef0', violetglow: '#c9a2f0',
   steelshine: '#c8ccd8', chrome: '#c8d2dc', emboss: '#d4dae4', silverglow: '#c8ccd8',
-  royalflow: '#e5c07b', staticazure: '#6ea8e0', verdantflow: '#7fce8a', nightstar: '#aab8f0', milkyway: '#c8d8f0',
+  royalflow: '#e5c07b', staticazure: '#6ea8e0', verdantflow: '#7fce8a', trailflow: '#8fc98a', nightstar: '#aab8f0', milkyway: '#c8d8f0',
   pentaflow: '#e5c07b', bloodpulse: '#e05252', flame: '#f0a860', staticember: '#f0a860', staticgold: '#e5c07b',
   neon: '#8beaf8', aurora: '#7ec8c8', moonlight: '#cfd8e8', duskfade: '#f0a860', frostedge: '#bfe3ff',
   yinyang: '#f5d76e', silk: '#d88ca0', breath: '#b9c2cc', obsidian: '#8a84a0', pearl: '#e0d8f0',
