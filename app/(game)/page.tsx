@@ -390,8 +390,10 @@ export default async function HomePage() {
         const totalDiamond = CHALLENGES.reduce((a, c) => a + c.diamond, 0) + COMPLETE_BONUS.diamond;
         const claimedN = chgStatus ? CHALLENGES.filter((c) => chgStatus.claimed.has(c.id)).length : 0;
         const claimable = chgStatus?.claimable ?? 0;
-        const allDone = chgStatus?.completeClaimed ?? false;
-        if (allDone) return null; // 전부 정복(보너스까지 수령) — 배너 은퇴
+        // 배너 은퇴 조건 = 완주 보너스 수령 **그리고** 개별 과제도 전부 수령. 완주 뒤에 과제가 추가되면
+        // (파견 3종, 2026-08-31) 배너가 다시 나타나 새 과제를 받을 수 있다 — 완주 보너스는 그대로 유지.
+        const allDone = (chgStatus?.completeClaimed ?? false) && claimedN === total;
+        if (allDone) return null;
         return (
           <Link prefetch={false}
             href="/challenges"
