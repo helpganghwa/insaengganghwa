@@ -4951,6 +4951,89 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    color: "#fbbf24"
   }
+ },
+ {
+  code: "exp_first",
+  kind: "permanent",
+  label: "첫 원정",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#b3cbaa"
+  }
+ },
+ {
+  code: "exp_50",
+  kind: "permanent",
+  label: "원정대장",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#9ccc8a"
+  }
+ },
+ {
+  code: "exp_500",
+  kind: "permanent",
+  label: "전설의 원정대",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#8edb71",
+   glow: true
+  }
+ },
+ {
+  code: "exp_all_regions",
+  kind: "permanent",
+  label: "여섯 갈래 길",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#9ccc8a"
+  }
+ },
+ {
+  code: "exp_grand_10",
+  kind: "permanent",
+  label: "달빛 원정",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#9ccc8a"
+  }
+ },
+ {
+  code: "exp_crit_10",
+  kind: "permanent",
+  label: "황금 귀환",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#9ccc8a"
+  }
+ },
+ {
+  code: "exp_level_30",
+  kind: "permanent",
+  label: "노련한 지휘관",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#8edb71",
+   glow: true
+  }
+ },
+ {
+  code: "exp_four_slots",
+  kind: "permanent",
+  label: "원정 사령관",
+  hidden: false,
+  cat: "파견",
+  style: {
+   color: "#8edb71",
+   glow: true
+  }
  }
 ] as const;
 

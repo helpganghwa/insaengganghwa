@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { expeditionSlotsFor } from '@/lib/game/balance';
+
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -134,7 +136,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest] = await runLimited([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped] = await runLimited([
     // 강화 로그 집계
     () => db.execute(sql`
       select count(*)::int as total,
@@ -715,6 +717,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where server_id=${s} and actor_user_id=${u} and action='tax_collect') as cq_tax
       from d
     `),
+    // 파견(2026-08-30, 8종) — 수령 누적·지역 수·원정(24h)·대성공·레벨·슬롯 개방(계정 합산 강화).
+    () => db.execute(sql`
+      select (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed') as exp_claims,
+             (select count(distinct region)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed') as exp_regions,
+             (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and difficulty='grand') as exp_grand,
+             (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and crit) as exp_crit,
+             coalesce((select level from expedition_state where user_id=${u} and server_id=${s}), 0)::int as exp_level,
+             coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
+    `),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
@@ -725,7 +736,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
-    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest),
+    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped),
     lgr = g(lg), ghs = g(gh), ft = g(f3);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
@@ -757,6 +768,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
+    // 파견(2026-08-30)
+    exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_grand: n(ex.exp_grand), exp_crit: n(ex.exp_crit),
+    exp_level: n(ex.exp_level), exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
     res_days: n(mi.res_days), res_moves: n(mi.res_moves), regions_lived: n(mi.regions_lived),
     avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
@@ -796,6 +810,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
 
 /** 지표 기반 규칙 — code → 술어. PENDING·아이템 발동·집행관은 여기 없음. */
 const RULES: Record<string, (m: Metrics) => boolean> = {
+  // 파견(2026-08-30)
+  exp_first: (m) => m.exp_claims >= 1,
+  exp_50: (m) => m.exp_claims >= 50,
+  exp_500: (m) => m.exp_claims >= 500,
+  exp_all_regions: (m) => m.exp_regions >= 6,
+  exp_grand_10: (m) => m.exp_grand >= 10,
+  exp_crit_10: (m) => m.exp_crit >= 10,
+  exp_level_30: (m) => m.exp_level >= 30,
+  exp_four_slots: (m) => m.exp_slots >= 4,
   // 강화
   enhance_100: (m) => m.max_lv >= 100,
   enhance_150: (m) => m.max_lv >= 150,

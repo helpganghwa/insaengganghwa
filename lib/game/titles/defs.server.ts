@@ -4728,6 +4728,54 @@ export const TITLE_SECRETS: TitleSecret[] = [
    ],
    min: 70
   }
+ },
+ {
+  code: "exp_first",
+  cat: "파견",
+  cond: "파견 보상 1회 수령",
+  diff: "쉬움"
+ },
+ {
+  code: "exp_50",
+  cat: "파견",
+  cond: "파견 보상 누적 50회 수령",
+  diff: "중간"
+ },
+ {
+  code: "exp_500",
+  cat: "파견",
+  cond: "파견 보상 누적 500회 수령",
+  diff: "어려움"
+ },
+ {
+  code: "exp_all_regions",
+  cat: "파견",
+  cond: "여섯 지역 모두에서 파견 보상 수령",
+  diff: "중간"
+ },
+ {
+  code: "exp_grand_10",
+  cat: "파견",
+  cond: "원정(24시간) 보상 10회 수령",
+  diff: "중간"
+ },
+ {
+  code: "exp_crit_10",
+  cat: "파견",
+  cond: "파견 대성공 10회",
+  diff: "중간"
+ },
+ {
+  code: "exp_level_30",
+  cat: "파견",
+  cond: "파견 레벨 30 도달",
+  diff: "어려움"
+ },
+ {
+  code: "exp_four_slots",
+  cat: "파견",
+  cond: "파견 슬롯 4칸 모두 개방",
+  diff: "어려움"
  }
 ] as const;
 

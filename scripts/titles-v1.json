@@ -4219,5 +4219,77 @@
   "cond": "청홍 쌍검 + 금장 군복 + 사자의 증표를 +70 이상으로 장착 중인 동안",
   "hidden": true,
   "diff": "중간"
+ },
+ {
+  "code": "exp_first",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "첫 원정",
+  "cond": "파견 보상 1회 수령",
+  "hidden": false,
+  "diff": "쉬움"
+ },
+ {
+  "code": "exp_50",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "원정대장",
+  "cond": "파견 보상 누적 50회 수령",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "exp_500",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "전설의 원정대",
+  "cond": "파견 보상 누적 500회 수령",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "exp_all_regions",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "여섯 갈래 길",
+  "cond": "여섯 지역 모두에서 파견 보상 수령",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "exp_grand_10",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "달빛 원정",
+  "cond": "원정(24시간) 보상 10회 수령",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "exp_crit_10",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "황금 귀환",
+  "cond": "파견 대성공 10회",
+  "hidden": false,
+  "diff": "중간"
+ },
+ {
+  "code": "exp_level_30",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "노련한 지휘관",
+  "cond": "파견 레벨 30 도달",
+  "hidden": false,
+  "diff": "어려움"
+ },
+ {
+  "code": "exp_four_slots",
+  "cat": "파견",
+  "kind": "영구",
+  "label": "원정 사령관",
+  "cond": "파견 슬롯 4칸 모두 개방",
+  "hidden": false,
+  "diff": "어려움"
  }
 ]
