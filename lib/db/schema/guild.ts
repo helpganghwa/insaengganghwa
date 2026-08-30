@@ -48,6 +48,8 @@ export const guilds = pgTable('guilds', {
   serverId: smallint('server_id').notNull().default(1),
   /** 길드명 — 전역(전 서버) 유일. 한 서버의 이름은 다른 서버에서도 결성 불가. */
   name: text('name').notNull().unique(),
+  /** 마지막 길드명 변경 시각(0182). null=미변경. 다음 변경 가능 = 결성 7일 뒤 / 변경 30일 뒤(rename.ts). */
+  renamedAt: timestamp('renamed_at', { withTimezone: true }),
   /** 3축(모양·색상톤·키워드) Pixellab 생성물(§1.6). 생성 전/실패 시 null → 폴백 문양. */
   emblemUrl: text('emblem_url'),
   /** 선택 색상톤 — UI 악센트(맵 구분은 문양 썸네일). */

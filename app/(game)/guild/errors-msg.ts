@@ -1,5 +1,5 @@
 // 길드 에러 코드 → 사용자 메시지(클라이언트). 서버 액션의 { code }와 1:1.
-import { GUILD_REAPPLY_COOLDOWN_HOURS, GUILD_REJOIN_LOCK_HOURS } from '@/lib/game/guild/balance';
+import { GUILD_REAPPLY_COOLDOWN_HOURS, GUILD_REJOIN_LOCK_HOURS, GUILD_RENAME_AFTER_DAYS, GUILD_RENAME_COOLDOWN_DAYS } from '@/lib/game/guild/balance';
 
 const MAP: Record<string, string> = {
   ALREADY_IN_GUILD: '이미 길드에 소속되어 있습니다.',
@@ -14,6 +14,8 @@ const MAP: Record<string, string> = {
   REJOIN_LOCKED: `탈퇴 후 ${GUILD_REJOIN_LOCK_HOURS}시간이 지나야 가입할 수 있습니다.`,
   REAPPLY_COOLDOWN: `거절된 길드에는 ${GUILD_REAPPLY_COOLDOWN_HOURS}시간이 지난 뒤 다시 신청할 수 있습니다.`,
   NOT_LEADER: '길드장만 할 수 있습니다.',
+  RENAME_TOO_EARLY: `길드 결성 ${GUILD_RENAME_AFTER_DAYS}일 뒤부터 이름을 바꿀 수 있습니다.`,
+  RENAME_COOLDOWN: `이름을 바꾼 뒤 ${GUILD_RENAME_COOLDOWN_DAYS}일이 지나야 다시 바꿀 수 있습니다.`,
   LEADER_MUST_TRANSFER: '길드장은 위임하거나 해산해야 탈퇴할 수 있습니다.',
   DONATION_CAP_REACHED: '오늘 기부를 모두 했습니다.',
   TARGET_NOT_IN_GUILD: '대상이 같은 길드원이 아닙니다.',

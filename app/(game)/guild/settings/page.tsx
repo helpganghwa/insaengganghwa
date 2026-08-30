@@ -63,6 +63,8 @@ export default async function GuildSettingsPage() {
       can={can}
       view={{
         name: guild.name,
+        createdAtIso: guild.createdAt.toISOString(),
+        renamedAtIso: guild.renamedAt ? guild.renamedAt.toISOString() : null,
         level: guild.level,
         xp: Number(guild.xp),
         emblemUrl: guild.emblemUrl,

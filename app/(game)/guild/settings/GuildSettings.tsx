@@ -8,10 +8,15 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
-import { GUILD_MAX_VICE, MAX_GUILD_EMBLEMS, guildXpToNext } from '@/lib/game/guild/balance';
+import { GUILD_MAX_VICE, MAX_GUILD_EMBLEMS, guildXpToNext,
+  GUILD_NAME_MAX_LEN,
+  GUILD_NAME_MIN_LEN,
+  GUILD_RENAME_AFTER_DAYS,
+  GUILD_RENAME_COOLDOWN_DAYS,
+} from '@/lib/game/guild/balance';
 
 import { GuildPageHeader } from '../GuildPageHeader';
-import { disbandGuildAction } from '../actions';
+import { renameGuildAction, disbandGuildAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 type Role = 'leader' | 'vice' | 'member';
@@ -37,6 +42,9 @@ export type GuildHubView = {
   level: number;
   xp: number;
   emblemUrl: string | null;
+  /** 길드명 변경 판정용(0182). */
+  createdAtIso: string;
+  renamedAtIso: string | null;
   memberCount: number;
   capacity: number;
   viceCount: number;
@@ -85,6 +93,30 @@ export function GuildSettings({
   const { showHeaderToast, showError } = useResourceToast();
   const [pending, start] = useTransition();
   const [askDisband, setAskDisband] = useState(false);
+  // 길드명 변경(2026-08-31) — 결성 7일 뒤 첫 변경, 이후 30일마다. 판정은 서버가 최종(rename.ts), 여기선 표시·안내만.
+  const [askRename, setAskRename] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [guildName, setGuildName] = useState(view.name);
+  const renameReadyAt = (() => {
+    const DAY = 86_400_000;
+    const first = Date.parse(view.createdAtIso) + GUILD_RENAME_AFTER_DAYS * DAY;
+    const next = view.renamedAtIso ? Date.parse(view.renamedAtIso) + GUILD_RENAME_COOLDOWN_DAYS * DAY : 0;
+    return Math.max(first, next);
+  })();
+  const renameWaitDays = Math.max(0, Math.ceil((renameReadyAt - Date.now()) / 86_400_000));
+  const renameNow = () => {
+    const name = newName.trim();
+    if (!name) return;
+    setAskRename(false);
+    start(async () => {
+      const r = await renameGuildAction(name);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      setGuildName(r.after);
+      setNewName('');
+      showHeaderToast({ title: `길드 이름 변경 · ${r.after}` });
+      router.refresh();
+    });
+  };
 
   const isLeader = myRole === 'leader';
   const xpToNext = guildXpToNext(view.level);
@@ -281,6 +313,68 @@ export function GuildSettings({
         ))}
       </div>
       </div>
+
+      {/* 길드명 변경(2026-08-31) — 해산과 같은 '희소·신중' 영역의 텍스트 행. 길드장 전용. */}
+      {isLeader ? (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-800">
+          <div className="min-w-0">
+            <div className="text-[12px] font-bold">길드 이름 변경</div>
+            <div className="text-[10.5px] text-zinc-500">
+              {renameWaitDays > 0
+                ? `${renameWaitDays}일 후 변경 가능`
+                : view.renamedAtIso
+                  ? `변경 가능 · 바꾸면 ${GUILD_RENAME_COOLDOWN_DAYS}일 뒤 다시 가능`
+                  : `변경 가능 · 첫 변경 뒤에는 ${GUILD_RENAME_COOLDOWN_DAYS}일마다`}
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={pending || renameWaitDays > 0}
+            onClick={() => setAskRename(true)}
+            className="shrink-0 rounded-lg bg-zinc-900 px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            변경
+          </button>
+        </div>
+      ) : null}
+      {askRename ? (
+        <ModalShell onClose={() => setAskRename(false)} onSubmit={renameNow} label="길드 이름 변경">
+          <ModalLayout
+            title="길드 이름을 바꿀까요?"
+            subtitle={
+              <>
+                <b className="font-bold">{guildName}</b>
+                <span className="mx-1 text-zinc-400">→</span>
+                <b className="font-bold text-amber-600 dark:text-amber-400">{newName.trim() || '새 이름'}</b>
+              </>
+            }
+            footer={
+              <>
+                <ModalButton tone="primary" onClick={renameNow} disabled={pending || !newName.trim()}>
+                  변경
+                </ModalButton>
+                <ModalButton tone="ghost" onClick={() => setAskRename(false)}>
+                  취소
+                </ModalButton>
+              </>
+            }
+          >
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              maxLength={GUILD_NAME_MAX_LEN}
+              placeholder={`${GUILD_NAME_MIN_LEN}~${GUILD_NAME_MAX_LEN}자, 한글·영문·숫자`}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[14px] outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <ul className="mt-2 space-y-0.5 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              <li>· 결성 {GUILD_RENAME_AFTER_DAYS}일 뒤부터, 변경 후에는 {GUILD_RENAME_COOLDOWN_DAYS}일마다 바꿀 수 있습니다.</li>
+              <li>· 이름은 전 서버를 통틀어 하나입니다.</li>
+              <li>· 변경 기록은 길드 활동과 세계 역사에 남고, 이전 역사는 옛 이름으로 유지됩니다.</li>
+            </ul>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
 
       {/* 해산 — 타일이 아니라 맨 아래 작은 텍스트 버튼(오탭 방지). */}
       {isLeader ? (

@@ -6,6 +6,8 @@ import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   GUILD_JOIN_REQUEST_TTL_DAYS,
   GUILD_REAPPLY_COOLDOWN_HOURS,
+  GUILD_RENAME_AFTER_DAYS,
+  GUILD_RENAME_COOLDOWN_DAYS,
   GUILD_MAX_CAPACITY,
   GUILD_NAME_MAX_LEN,
   GUILD_NAME_MIN_LEN,
@@ -69,6 +71,11 @@ export default function Doc() {
           방식은 승인제로 시작한다.
         </LI>
         <LI>한 서버에 소속할 수 있는 길드는 하나이므로, 이미 가입한 상태에서는 새로 만들지 못한다.</LI>
+        <LI>
+          길드 이름은 길드장이 길드 설정에서 바꿀 수 있다. 결성 {GUILD_RENAME_AFTER_DAYS}일 뒤부터 가능하고,
+          한 번 바꾸면 {GUILD_RENAME_COOLDOWN_DAYS}일이 지나야 다시 바꿀 수 있다. 변경 기록은 길드 활동과 세계
+          역사에 남으며, 이미 기록된 역사는 옛 이름 그대로 남는다.
+        </LI>
         <LI>
           이름은 {fmtInt(GUILD_NAME_MIN_LEN)}~{fmtInt(GUILD_NAME_MAX_LEN)}자, 한글·영문·숫자만
           사용한다.

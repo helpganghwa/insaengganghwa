@@ -96,6 +96,8 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     // set_perm은 activity-log 쿼리에서 피드 제외(내부 설정) — 혹시 노출돼도 원시 코드 대신 문구.
     case 'set_perm':
       return <>{actor}님이 {target}님의 {hl('부길드장 권한', C.indigo)}을 변경했습니다</>;
+    case 'rename':
+      return <>{actor}님이 길드 이름을 {hl(String(e.detail?.before ?? ''), C.amber)}에서 {hl(String(e.detail?.after ?? ''), C.amber)}(으)로 바꿨습니다</>;
     case 'disband':
       return <>{actor}님이 길드를 해산했습니다</>;
     case 'set_join_policy':

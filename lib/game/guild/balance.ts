@@ -65,6 +65,9 @@ export const GUILD_LEADER_HANDOVER_WARN_DAYS = 5;
 /** 탈퇴 후 재가입 잠금(시간). CBT 동안 1시간으로 완화했다가 2026-07-30 원래 값 24로 복원
  *  (길드 안정성 — 점령전 직전 이적으로 판을 흔드는 것을 막는다). */
 export const GUILD_REJOIN_LOCK_HOURS = 24;
+/** 길드명 변경(2026-08-31) — 결성 후 첫 변경까지 대기일 / 변경 후 다음 변경까지 대기일. 잦은 개명이 역사 기록을 흐리지 않게. */
+export const GUILD_RENAME_AFTER_DAYS = 7;
+export const GUILD_RENAME_COOLDOWN_DAYS = 30;
 /** 가입 신청이 거절된 뒤 같은 길드에 다시 신청할 수 있을 때까지의 대기 시간(문의 #148, 신청 스팸 차단). */
 export const GUILD_REAPPLY_COOLDOWN_HOURS = 24;
 

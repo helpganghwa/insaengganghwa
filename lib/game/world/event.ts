@@ -19,6 +19,7 @@ export type WorldEventType =
   | 'enhance' // 강화 100단위 — detail { item, level }
   | 'transcend' // 개인 최고 초월 기록 갱신(11+, 유저당 수치별 1회) — detail { item, level }
   | 'guild_create' // 길드 결성 — detail { guildName }
+  | 'guild_rename' // 길드명 변경(0182) — detail { guildName(새 이름), before }
   | 'guild_disband' // 길드 해산(자발·자동 공통) — detail { guildName, zones: string[] }(중립화된 구역, 연대기 재료)
   | 'zone_neutralized' // (2026-08-30 이전 이력) 방치로 중립화된 구역 — detail { guildName, zones: string[] }. 연대기 전용(월드 피드·채팅 제외)
   | 'zone_abandoned' // 방치 판정 구역(0180, 소유 유지·세금 보너스 제외) — detail { guildName, zones: string[], battleDay }. 연대기 전용

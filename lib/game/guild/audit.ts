@@ -16,6 +16,7 @@ export type GuildAuditAction =
   | 'unset_vice'
   | 'disband'
   | 'set_join_policy'
+  | 'rename' // 길드명 변경(0182) — detail { before, after }
   | 'set_perm' // 부길드장 권한 변경(0142) — detail { before, after } 비트마스크
   | 'auto_handover'
   | 'notice_edit'

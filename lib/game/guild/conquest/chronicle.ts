@@ -35,6 +35,8 @@ export type ConquestDaySummary = {
   disbands: { guildName: string; zones: string[] }[];
   /** (2026-08-30 이전 이력) 방치로 중립화된 구역 — world_events zone_neutralized. 이전 소유 길드별 상실 구역(전투 아님). */
   neutralized: { guildName: string; zones: string[] }[];
+  /** 그날 길드명 변경(world_events guild_rename, KST 일자) — 이후 사건은 새 이름, 이전 발행분은 옛 이름 유지(0182). */
+  renames: { before: string; after: string }[];
   /** 방치 판정 구역(0180 — 소유 유지, 다음 정산까지 세금 보너스 제외). 길드별 구역명. */
   abandoned: { guildName: string; zones: string[] }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
@@ -246,6 +248,16 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
     .filter((d) => d.guildName);
 
+  // 길드명 변경(0182) — KST 일자 매칭. 사실표에서 옛 이름↔새 이름을 이어 주지 않으면 같은 길드가 두 세력으로 서술된다.
+  const renameRows = (await db.execute(sql`
+    select detail from world_events
+    where server_id = ${serverId} and type = 'guild_rename'
+      and (created_at at time zone 'Asia/Seoul')::date = ${kstDay}::date
+  `)) as unknown as { detail: { guildName?: string; before?: string } }[];
+  const renames = renameRows
+    .map((r) => ({ before: r.detail?.before ?? '', after: r.detail?.guildName ?? '' }))
+    .filter((r) => r.before && r.after);
+
   // 방치 중립화(2026-08-30 이전 이력) — 이벤트만 읽는다. 중립화 규칙은 삭제됐으므로 사전 계산(예정분)은 없다.
   const neutralRows = (await db.execute(sql`
     select detail from world_events
@@ -299,6 +311,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     disbands,
     neutralized,
     abandoned,
+    renames,
     captures,
     defenses,
     standings: standingsRows,
@@ -325,6 +338,7 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 축출 뉘앙스 주의: 사실표에 '중립지/주인 없는 땅' 점령만 있는 지역을 두고 '하나만 남았다·몰아냈다'처럼 다른 세력이 밀려난 듯 쓴 문장은 오류다 — 원래 다른 세력이 없던 곳('유일하게 발을 들였다' 류로 고쳐라).
 - 방치 중립화 주의: 사실표 '방치로 중립화된 구역'은 소유 길드가 아무도 배치하지 않아 방치로 주인을 잃은 구역이다. 다른 길드가 '빼앗다·점령·함락'으로 쓰지 말 것(공격자·교전 지어내기 금지). '방치해 잃었다·관리하지 않아 중립이 되었다'처럼 담담히 서술하고, '점령전으로 빼앗긴 것이 아니라 방치로 잃은 것'처럼 굳이 대조·해설하는 문장은 붙이지 않는다.
 - 방치 주의: 사실표 '방치 구역'은 소유 길드가 아무도 배치하지 않아 방치로 판정된 구역이다. **구역은 그대로 그 길드 소유**이며 잃은 것이 아니다 — '잃었다·중립이 되었다·빼앗겼다'로 쓰지 말 것. 쓸 때는 '지키는 이 없이 비워 두었다·손길이 닿지 않았다'처럼 한 문장으로 담담히 언급하고, 세금 보너스 같은 게임 수치 해설은 붙이지 않는다. 언급하지 않아도 오류가 아니다.
+- 길드명 변경 주의: 사실표 '길드명 변경'의 옛 이름과 새 이름은 **같은 길드**다. 오늘 사건은 새 이름으로 쓰고, 옛 이름은 '옛 이름 ○○'처럼 한 번만 이어 준다. 두 이름을 서로 다른 세력으로 서술하면 오류다.
 - 산수 주의: '어제 X곳' 뒤에 'N곳을 더해 K곳'처럼 쓴 문장은 X+N=K가 성립해야 한다 — 상실이 있어 안 맞으면 사실표 '길드별 보유 증감'대로 얻은 수와 잃은 수를 함께 쓰는 문장으로 고쳐라.
 - 서사 응집: 같은 길드·같은 지역의 이야기가 여러 문단에 쪼개져 흐름이 끊기면 한 곳에 모아 재배열하라(사실 불변, 순서만 정리).
 - 사실표에 분단/통합/비지 신호가 없는데 조각·분산을 논평하거나, 나뉜 영토를 '아직 하나가 아니다'류 약점으로 단정한 문장은 삭제하거나 중립으로 고쳐라.
@@ -707,6 +721,11 @@ export async function generateAndStoreChronicle(
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
   if (topoLines) digestSections.push(`■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines}`);
+  if (summary.renames.length > 0)
+    digestSections.push(
+      `■ 길드명 변경(같은 길드다 — 두 세력으로 쓰지 말 것):\n` +
+        summary.renames.map((r) => `· 길드 「${r.before}」 이(가) 오늘부터 「${r.after}」 (으)로 이름을 바꿈 — 오늘 사건은 새 이름으로 부르고, 필요하면 '옛 이름 ○○'로 한 번만 잇는다`).join('\n'),
+    );
   if (summary.disbands.length > 0)
     digestSections.push(
       // 보유 구역이 없던 해산에 '남긴 땅' 서술이 붙던 오류(2026-07-28) — 섹션 제목에서 단정하지 않고

@@ -1,5 +1,7 @@
 'use server';
 
+import { renameGuild } from '@/lib/game/guild/rename';
+
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 
@@ -353,6 +355,22 @@ export async function transferLeadershipAction(targetUserId: string) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'transfer');
+  }
+}
+
+export async function renameGuildAction(name: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    const r = await renameGuild({ userId: u, serverId: await getActiveServerId(), name });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    revalidatePath('/');
+    return { status: 'success', ...r } as const;
+  } catch (e) {
+    return fail(e, 'rename');
   }
 }
 
