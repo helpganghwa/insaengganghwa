@@ -581,7 +581,7 @@ function CardBody({
   const ui = REGION_UI[region];
   void bonusText; // 카드 배지 삭제(2026-08-28) — 배율은 팝업에서만
   const avH = compact ? 64 : 86;
-  const monH = compact ? 48 : 62;
+  const monH = compact ? 42 : 54; // 62→54(2026-08-30 검수: 조금 더 작게)
   const gaugeCls = progress >= 1 ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500';
   return (
     <div
