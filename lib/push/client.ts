@@ -15,6 +15,19 @@ export type PushSupportStatus =
   | { kind: 'ios-needs-install'; permission: 'default' };
 
 /** 환경 감지 — iOS Safari는 PWA(standalone) 모드일 때만 푸시 가능. */
+/**
+ * 기기 단위 수신 거부 플래그(2026-08-30, 문의 #147/#160). 설정의 '알림 받기'를 끄면 브라우저 구독을 해지하지만,
+ * 권한(granted)은 남아 PushAutoSync가 다음 세션에 다시 구독을 만들어 버렸다 — 유저 입장에선 "꺼도 다시 켜짐".
+ * 끄기는 이 플래그를 세우고, 자동 동기화·권한 프롬프트는 플래그가 있으면 건드리지 않는다. 켜기가 지운다.
+ */
+const OPTOUT_KEY = 'push_optout';
+export function isPushOptedOut(): boolean {
+  try { return localStorage.getItem(OPTOUT_KEY) === '1'; } catch { return false; }
+}
+export function setPushOptedOut(v: boolean): void {
+  try { if (v) localStorage.setItem(OPTOUT_KEY, '1'); else localStorage.removeItem(OPTOUT_KEY); } catch { /* noop */ }
+}
+
 export function checkPushSupport(): PushSupportStatus {
   if (typeof window === 'undefined') return { kind: 'unsupported', reason: 'no-window' };
   if (!('serviceWorker' in navigator)) return { kind: 'unsupported', reason: 'no-sw' };

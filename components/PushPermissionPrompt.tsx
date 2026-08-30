@@ -6,6 +6,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import {
   checkPushSupport,
+  isPushOptedOut,
   requestAndSubscribe,
   serializeSubscription,
 } from '@/lib/push/client';
@@ -46,6 +47,8 @@ export function PushPermissionPrompt({
       // 완료모달의 알림·설치 안내는 제거됨(2026-07-18: 첫날 앱 미설치 대다수라 너무 이름) —
       // 이 프롬프트(완료모달의 24h 유예 뒤)와 도전 과제(app_install·push_on)가 안내를 전담.
       if (localStorage.getItem('tut_step')) return;
+      // 설정에서 '알림 받기'를 끈 기기 — 다시 권유하지 않는다(문의 #160).
+      if (isPushOptedOut()) return;
       // 7일 dismiss 윈도(명시적 거절)
       const t = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
       if (t > 0 && Date.now() - t < DISMISS_WINDOW_MS) return;

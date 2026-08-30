@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
-import { checkPushSupport, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
+import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
 
 /**
  * 권한이 이미 granted인 기기의 푸시 구독을 앱 로드 시 서버에 (재)동기화한다.
@@ -90,6 +90,8 @@ export function PushAutoSync() {
   useEffect(() => {
     const support = checkPushSupport();
     if (support.kind !== 'supported' || support.permission !== 'granted') return;
+    // 유저가 설정에서 '알림 받기'를 끈 기기 — 재구독 금지(끄기가 다음 세션에 되살아나던 버그, 문의 #160).
+    if (isPushOptedOut()) return;
     try {
       if (sessionStorage.getItem('push_synced') === '1') return;
     } catch {
