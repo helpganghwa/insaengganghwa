@@ -1,5 +1,6 @@
 'use client';
 
+import { josa } from 'es-hangul';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -97,7 +98,7 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'set_perm':
       return <>{actor}님이 {target}님의 {hl('부길드장 권한', C.indigo)}을 변경했습니다</>;
     case 'rename':
-      return <>{actor}님이 길드 이름을 {hl(String(e.detail?.before ?? ''), C.amber)}에서 {hl(String(e.detail?.after ?? ''), C.amber)}(으)로 바꿨습니다</>;
+      return <>{actor}님이 길드 이름을 {hl(String(e.detail?.before ?? ''), C.amber)}에서 {hl(String(e.detail?.after ?? ''), C.amber)}{josa.pick(String(e.detail?.after ?? ''), '으로/로')} 바꿨습니다</>;
     case 'disband':
       return <>{actor}님이 길드를 해산했습니다</>;
     case 'set_join_policy':

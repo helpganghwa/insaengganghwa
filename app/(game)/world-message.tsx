@@ -1,3 +1,4 @@
+import { josa } from 'es-hangul';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -80,7 +81,7 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     case 'guild_create':
       return <>{actor}님이 {hb(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_rename':
-      return <>{hb(String(d.before ?? ''), C.guild)} 길드가 {hb(guildName, C.guild)}(으)로 이름을 바꿨습니다</>;
+      return <>{hb(String(d.before ?? ''), C.guild)} 길드가 {hb(guildName, C.guild)}{josa.pick(guildName, '으로/로')} 이름을 바꿨습니다</>;
     case 'guild_disband': {
       const zs = (d.zones as string[]) ?? [];
       return (

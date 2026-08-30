@@ -21,6 +21,8 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { assetUrl } from '@/lib/asset-versions';
+
+import { GuildRenameButton } from './GuildRenameButton';
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 
 import { donateAction, leaveGuildAction } from './actions';
@@ -59,6 +61,9 @@ type GuildView = {
   capacity: number;
   emblemUrl: string | null;
   emblemColor: string | null;
+  /** 길드명 변경 판정용(0182). */
+  createdAtIso: string;
+  renamedAtIso: string | null;
   /** 문양 생성 상태(0150) — 'pending' 생성 중 · 'failed' 실패 · 'done' 완료. */
   emblemStatus: string;
   /** 생성 시작 시각(ms) — 굳은 pending 판정용. null=시작 기록 없음. */
@@ -289,7 +294,12 @@ export function GuildHome({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-bold">{guild.name}</h2>
+            <h2 className="flex min-w-0 items-center text-sm font-bold">
+              <span className="truncate">{guild.name}</span>
+              {myRole === 'leader' ? (
+                <GuildRenameButton name={guild.name} createdAtIso={guild.createdAtIso} renamedAtIso={guild.renamedAtIso} />
+              ) : null}
+            </h2>
             {/* 메타 한 줄 — 생성 중·완료·실패가 모두 같은 높이를 쓰도록 멤버 수는 항상 남기고
                 문양 상태만 뒤에 덧붙인다(상태마다 줄 수가 달라 레이아웃이 튀던 문제, 2026-08-06). */}
             <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-zinc-500">

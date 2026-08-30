@@ -130,6 +130,8 @@ export default async function GuildPage() {
           capacity: guild.capacity,
           emblemUrl: guild.emblemUrl,
           emblemColor: guild.emblemColor,
+          createdAtIso: guild.createdAt.toISOString(),
+          renamedAtIso: guild.renamedAt ? guild.renamedAt.toISOString() : null,
           emblemStatus: guild.emblemStatus,
           // 생성 시작 시각(ms) — 굳은 pending을 클라이언트가 실패로 강등하는 근거.
           emblemPendingAt: guild.emblemPendingAt ? guild.emblemPendingAt.getTime() : null,
