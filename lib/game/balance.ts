@@ -755,7 +755,8 @@ export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
 /**
  * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
  * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
- * 원정(24h)은 Lv.0부터 10%(2026-08-28) — 첫날부터 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다.
+ * 원정(24h)은 Lv.0부터 15%(2026-08-30, 10%→15%: 횟수 제한 없이 '타는 횟수'를 줄이려면 하루 한 번 걸어두는 24h가
+ * 쉽게 잡혀야 한다 — 피로도 대책 C안) — 첫날부터 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다.
  * 종전 Lv.5 게이트(신규 보호)는 폐지(1칸이 무료라도 무강화 보상은 ×1.00 바닥값이라 보호가 필요 없다).
  */
 export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
@@ -764,8 +765,8 @@ export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
 }[] = [
   { minLevel: 30, dist: { easy: 1500, normal: 3000, hard: 3000, grand: 2500 } },
   { minLevel: 15, dist: { easy: 2500, normal: 3500, hard: 2500, grand: 1500 } },
-  { minLevel: 5, dist: { easy: 3500, normal: 3500, hard: 2000, grand: 1000 } },
-  { minLevel: 0, dist: { easy: 4500, normal: 3000, hard: 1500, grand: 1000 } },
+  { minLevel: 5, dist: { easy: 3000, normal: 3500, hard: 2000, grand: 1500 } },
+  { minLevel: 0, dist: { easy: 4000, normal: 3000, hard: 1500, grand: 1500 } },
 ] as const;
 export function expeditionDifficultyDist(level: number): Record<ExpeditionDifficulty, number> {
   for (const b of EXPEDITION_DIFFICULTY_DIST_BP) if (level >= b.minLevel) return b.dist;
