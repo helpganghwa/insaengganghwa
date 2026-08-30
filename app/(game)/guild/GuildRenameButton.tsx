@@ -19,7 +19,7 @@ import { guildErrMsg } from './errors-msg';
 const DAY = 86_400_000;
 
 /**
- * 길드명 변경(2026-08-31) — 길드 홈 길드명 오른쪽의 연필 아이콘(길드장만 노출). 탭 → 공용 모달.
+ * 길드명 변경(2026-08-31) — 길드 홈 길드명 아래 작은 텍스트 링크(D안, 길드장만 노출). 탭 → 공용 모달.
  * 결성 7일 뒤 첫 변경, 이후 30일마다. 판정은 서버가 최종(rename.ts) — 여기선 표시·안내만.
  */
 export function GuildRenameButton({
@@ -57,18 +57,20 @@ export function GuildRenameButton({
 
   return (
     <>
+      {/* D안(2026-08-30) — 이름 아래 작은 텍스트 링크. 대기 중이면 회색 + 'N일 후'로 사유를 그 자리에서 보여준다. */}
       <button
         type="button"
-        aria-label="길드 이름 변경"
         onClick={() => {
           if (waitDays > 0) return showError(renamedAtIso ? guildErrMsg('RENAME_COOLDOWN') : guildErrMsg('RENAME_TOO_EARLY'));
           setOpen(true);
         }}
-        className={`ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[12px] ${
-          waitDays > 0 ? 'text-zinc-300 dark:text-zinc-600' : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+        className={`mt-0.5 block text-[11px] leading-tight ${
+          waitDays > 0
+            ? 'text-zinc-400 dark:text-zinc-500'
+            : 'text-amber-600 underline decoration-amber-600/60 underline-offset-2 dark:text-amber-400 dark:decoration-amber-400/60'
         }`}
       >
-        ✎
+        {waitDays > 0 ? `이름 변경 · ${waitDays}일 후` : '이름 변경'}
       </button>
       {open ? (
         <ModalShell onClose={() => setOpen(false)} onSubmit={submit} label="길드 이름 변경">

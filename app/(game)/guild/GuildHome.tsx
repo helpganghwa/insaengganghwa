@@ -294,12 +294,7 @@ export function GuildHome({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="flex min-w-0 items-center text-sm font-bold">
-              <span className="truncate">{guild.name}</span>
-              {myRole === 'leader' ? (
-                <GuildRenameButton name={guild.name} createdAtIso={guild.createdAtIso} renamedAtIso={guild.renamedAtIso} />
-              ) : null}
-            </h2>
+            <h2 className="truncate text-sm font-bold">{guild.name}</h2>
             {/* 메타 한 줄 — 생성 중·완료·실패가 모두 같은 높이를 쓰도록 멤버 수는 항상 남기고
                 문양 상태만 뒤에 덧붙인다(상태마다 줄 수가 달라 레이아웃이 튀던 문제, 2026-08-06). */}
             <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-zinc-500">
@@ -352,6 +347,9 @@ export function GuildHome({
                 </>
               )}
             </div>
+            {myRole === 'leader' ? (
+              <GuildRenameButton name={guild.name} createdAtIso={guild.createdAtIso} renamedAtIso={guild.renamedAtIso} />
+            ) : null}
           </div>
           {/* 오픈채팅 — 설정 시 상단 정보에 그대로 노출(외부 링크). 나머지 메뉴는 하단 그리드로 이동. */}
           <GuildOpenchatButton url={guild.openchatUrl} />
