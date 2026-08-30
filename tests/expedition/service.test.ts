@@ -192,15 +192,15 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(after - before).toBe(BigInt(paid.reward.diamond!)); // 정확 1회 지급
   });
 
-  it('슬롯 해금 — 1칸은 처음부터, 2칸은 4k(미달 슬롯 시작은 SLOT_LOCKED)', async () => {
+  it('슬롯 해금 — 1칸은 처음부터, 2칸은 3k(미달 슬롯 시작은 SLOT_LOCKED)', async () => {
     await setEnhanceSum(0);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(1);
     await expect(startExpedition(uid, SID, 2, avatarId)).rejects.toMatchObject({ code: 'SLOT_LOCKED' });
-    await setEnhanceSum(3999);
+    await setEnhanceSum(2999);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(1);
-    await setEnhanceSum(4000);
+    await setEnhanceSum(3000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
   });
@@ -219,7 +219,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
   });
 
   it('아바타 중복 배정 — 두 번째 시작이 AVATAR_BUSY', async () => {
-    // 슬롯 2 확보(합산 강화 5,000 픽스처, 4k 이상) 후 두 슬롯에 같은 아바타.
+    // 슬롯 2 확보(합산 강화 5,000 픽스처, 3k 이상) 후 두 슬롯에 같은 아바타.
     await setEnhanceSum(5000);
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     expect(await offerCount()).toBe(2);
