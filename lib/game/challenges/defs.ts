@@ -1,7 +1,7 @@
 /**
- * 도전 과제 정의 — 31종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가).
+ * 도전 과제 정의 — 34종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가, 08-30 파견 3종 추가).
  * 게임의 모든 루프를 정확히 한 바퀴 돌게 만드는 일회성 온보딩 리워드.
- * 보상 합계: 과제 💎6,550+📦60 + 완료 보너스 💎1,000+📦75 = 총 💎7,550·📦135.
+ * 보상 합계: 과제 💎6,950+📦63 + 완료 보너스 💎1,000+📦75 = 총 💎7,950·📦138.
  * ⚠ 합계는 아래 배열에서 손으로 센 값이라 수치를 고치면 함께 고친다 — 이 줄이 옛 값
  * (💎17,700)으로 남아 있었고, 그 값이 튜토리얼 완료 팝업에 그대로 베껴져 실지급보다 큰
  * 보상이 신규 유저에게 광고됐다(2026-08-11). 화면에 쓸 숫자는 반드시 상수에서 파생시킬 것.
@@ -69,10 +69,10 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'melee_join', group: 'social', label: '대난투 참가하기', diamond: 200, go: '/melee', guide: '매일 아침 9시, 전투력이 있는 모든 모험가가 자동으로 참가해요. 9시가 지나 시작했다면 내일 아침 대난투부터 참가됩니다!' },
   { id: 'residence_move', group: 'world', label: '거주 구역 이동하기', diamond: 100, go: '/guild/map', guide: '세계지도에서 다른 구역을 선택해 거주지를 이동하면 달성돼요.' },
   { id: 'avatar_change', group: 'avatar', label: '아바타 변경하기', diamond: 100, go: '/me/profiles', guide: '아바타 관리에서 다른 아바타를 대표로 지정하면 달성돼요.' },
-  // 파견(EXPEDITION.md A′ — v1 동봉 3종, 2026-08-25): 신규·기존 유저를 파견 동선으로 안내.
-  { id: 'exp_first_start', group: 'expedition', label: '첫 원정대 보내기', diamond: 100, go: '/expedition', guide: '파견에서 미션에 아바타를 배정해 원정대를 보내면 달성돼요.' },
-  { id: 'exp_first_claim', group: 'expedition', label: '첫 파견 보상 받기', diamond: 200, boxes: 3, go: '/expedition', guide: '파견이 끝난 원정대의 보상을 수령하면 달성돼요.' },
-  { id: 'exp_claim_10', group: 'expedition', label: '파견 보상 10회 받기', diamond: 300, boxes: 6, go: '/expedition', guide: '파견 보상을 총 10회 수령하면 달성돼요 — 매일 원정대를 보내보세요!' },
+  // 파견(v1 동봉 3종, 2026-08-30 확정): 보내기·보상 받기(상태 파생) + 새로고침(이벤트형) — 파견 동선 한 바퀴.
+  { id: 'exp_first_start', group: 'expedition', label: '첫 파견 보내기', diamond: 100, go: '/expedition', guide: '파견에서 카드를 눌러 아바타를 배정해 보내면 달성돼요.' },
+  { id: 'exp_first_claim', group: 'expedition', label: '첫 파견 보상 받기', diamond: 200, boxes: 3, go: '/expedition', guide: '파견이 끝난 카드를 눌러 보상을 수령하면 달성돼요.' },
+  { id: 'exp_refresh', group: 'expedition', label: '파견 새로고침 하기', diamond: 100, go: '/expedition', guide: '파견 화면 위쪽의 새로고침 버튼으로 대기 중인 파견을 바꿔 보면 달성돼요 — 하루 3회는 무료!' },
   { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 500, boxes: 15, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
   { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 100, go: '/shop', guide: '상점 일일 탭에서 무료 선물을 받으면 달성돼요.' },
   { id: 'shop_weekly', group: 'shop', label: '주간 무료 선물 받기', diamond: 100, go: '/shop?tab=weekly', guide: '상점 주간 탭에서 무료 선물을 받으면 달성돼요.' },
@@ -105,4 +105,4 @@ export const COMPLETE_BONUS = {
 export const CHALLENGE_IDS = new Set(CHALLENGES.map((c) => c.id));
 
 /** challenge_events로 마킹되는 이벤트형 과제(상태 흔적이 없는 행위). */
-export const EVENT_CHALLENGES = new Set(['app_install', 'boast_share', 'residence_move', 'avatar_change', 'chat_send']);
+export const EVENT_CHALLENGES = new Set(['app_install', 'boast_share', 'residence_move', 'avatar_change', 'chat_send', 'exp_refresh']);

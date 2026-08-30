@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { isUniqueViolation } from '@/lib/db/errors';
 import { kstDateString } from '@/lib/kst';
 import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
+import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
   EXPEDITION_REFRESH_COST,
   EXPEDITION_REFRESH_FREE_PER_DAY,
@@ -194,6 +195,7 @@ export function refreshAllOffers(userId: string, serverId: number, rng: Rng10k =
         where id = ${BigInt(o.id)} and status = 'offer'
       `);
     }
+    await markChallengeEvent(tx, userId, serverId, 'exp_refresh'); // 도전과제 '파견 새로고침 하기'(이벤트형)
     const usedAfter = used < EXPEDITION_REFRESH_FREE_PER_DAY ? used + 1 : used;
     return { freeLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - usedAfter), rerolled: offers.length };
   });
@@ -234,6 +236,7 @@ export function refreshOffer(
              duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
       where id = ${BigInt(offer.id)} and status = 'offer'
     `);
+    await markChallengeEvent(tx, userId, serverId, 'exp_refresh'); // 도전과제 '파견 새로고침 하기'(이벤트형)
     const usedAfter = used < EXPEDITION_REFRESH_FREE_PER_DAY ? used + 1 : used;
     return { freeLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - usedAfter) };
   });

@@ -79,8 +79,6 @@ export function doneCondSql(id: string, userId: string, serverId: number) {
       return sql`exists(select 1 from expeditions where user_id=${u} and server_id=${s} and status in ('running','claimed','cancelled'))`;
     case 'exp_first_claim':
       return sql`exists(select 1 from expeditions where user_id=${u} and server_id=${s} and status='claimed')`;
-    case 'exp_claim_10':
-      return sql`(select count(*) from expeditions where user_id=${u} and server_id=${s} and status='claimed') >= 10`;
     case 'avatar_create':
       // 생성 시도(잡 존재) 기준 — 결과가 거절·실패(환불)여도 체험은 했으므로 인정(유저 친화).
       return sql`exists(select 1 from profile_generation_jobs where user_id=${u} and server_id=${s})`;
@@ -100,6 +98,7 @@ export function doneCondSql(id: string, userId: string, serverId: number) {
     case 'boast_share':
     case 'residence_move':
     case 'avatar_change':
+    case 'exp_refresh':
       return sql`exists(select 1 from challenge_events where user_id=${u} and server_id=${s} and event_id=${id})`;
     default:
       return sql`false`;
