@@ -757,7 +757,7 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
           {popup.crit && revealed ? <> × <b className="text-amber-600 dark:text-amber-400">{EXPEDITION_CRIT_MULT}</b></> : null}
           {' = '}<b className="text-zinc-900 dark:text-zinc-50">{popup.crit && !revealed && popup.baseReward ? rewardShort(halfReward(popup.reward)) : rewardShort(popup.reward)}</b>
         </span>
-        {popup.crit && revealed ? <span className="mt-1 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">대성공으로 수량이 {EXPEDITION_CRIT_MULT}배가 됐어요</span> : null}
+        {popup.crit && revealed ? <span className="mt-1 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">대성공으로 보상이 {EXPEDITION_CRIT_MULT}배가 됐어요</span> : null}
       </div>
     </div>
   );
