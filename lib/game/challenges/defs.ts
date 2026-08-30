@@ -1,7 +1,7 @@
 /**
  * 도전 과제 정의 — 34종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가, 08-30 파견 3종 추가).
  * 게임의 모든 루프를 정확히 한 바퀴 돌게 만드는 일회성 온보딩 리워드.
- * 보상 합계: 과제 💎6,950+📦63 + 완료 보너스 💎1,000+📦75 = 총 💎7,950·📦138.
+ * 보상 합계: 과제 💎6,950+📦60 + 완료 보너스 💎1,000+📦75 = 총 💎7,950·📦135.
  * ⚠ 합계는 아래 배열에서 손으로 센 값이라 수치를 고치면 함께 고친다 — 이 줄이 옛 값
  * (💎17,700)으로 남아 있었고, 그 값이 튜토리얼 완료 팝업에 그대로 베껴져 실지급보다 큰
  * 보상이 신규 유저에게 광고됐다(2026-08-11). 화면에 쓸 숫자는 반드시 상수에서 파생시킬 것.
@@ -71,7 +71,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'avatar_change', group: 'avatar', label: '아바타 변경하기', diamond: 100, go: '/me/profiles', guide: '아바타 관리에서 다른 아바타를 대표로 지정하면 달성돼요.' },
   // 파견(v1 동봉 3종, 2026-08-30 확정): 보내기·보상 받기(상태 파생) + 새로고침(이벤트형) — 파견 동선 한 바퀴.
   { id: 'exp_first_start', group: 'expedition', label: '첫 파견 보내기', diamond: 100, go: '/expedition', guide: '파견에서 카드를 눌러 아바타를 배정해 보내면 달성돼요.' },
-  { id: 'exp_first_claim', group: 'expedition', label: '첫 파견 보상 받기', diamond: 200, boxes: 3, go: '/expedition', guide: '파견이 끝난 카드를 눌러 보상을 수령하면 달성돼요.' },
+  { id: 'exp_first_claim', group: 'expedition', label: '첫 파견 보상 받기', diamond: 200, go: '/expedition', guide: '파견이 끝난 카드를 눌러 보상을 수령하면 달성돼요.' },
   { id: 'exp_refresh', group: 'expedition', label: '파견 새로고침 하기', diamond: 100, go: '/expedition', guide: '파견 화면 위쪽의 새로고침 버튼으로 대기 중인 파견을 바꿔 보면 달성돼요 — 하루 3회는 무료!' },
   { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 500, boxes: 15, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
   { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 100, go: '/shop', guide: '상점 일일 탭에서 무료 선물을 받으면 달성돼요.' },

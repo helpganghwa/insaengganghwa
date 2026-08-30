@@ -4996,7 +4996,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "exp_grand_10",
   kind: "permanent",
-  label: "달빛 원정",
+  label: "긴 여정의 끝",
   hidden: false,
   cat: "파견",
   style: {
@@ -5006,7 +5006,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "exp_crit_10",
   kind: "permanent",
-  label: "황금 귀환",
+  label: "행운의 귀환",
   hidden: false,
   cat: "파견",
   style: {

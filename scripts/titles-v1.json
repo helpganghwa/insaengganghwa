@@ -4260,7 +4260,7 @@
   "code": "exp_grand_10",
   "cat": "파견",
   "kind": "영구",
-  "label": "달빛 원정",
+  "label": "긴 여정의 끝",
   "cond": "원정(24시간) 보상 10회 수령",
   "hidden": false,
   "diff": "중간"
@@ -4269,7 +4269,7 @@
   "code": "exp_crit_10",
   "cat": "파견",
   "kind": "영구",
-  "label": "황금 귀환",
+  "label": "행운의 귀환",
   "cond": "파견 대성공 10회",
   "hidden": false,
   "diff": "중간"
