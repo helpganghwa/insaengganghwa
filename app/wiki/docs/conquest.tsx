@@ -166,8 +166,8 @@ export default function Doc() {
       <UL>
         <LI>그날 전투에 공격도 수비도 없고 집행관도 없으면 그 구역은 방치로 처리된다.</LI>
         <LI>
-          방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">독점 보너스</DocLink>를
-          받지 못하며, 길드의 구역 수·완전 장악 계산에서도 빠진다.
+          방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">세금 보너스</DocLink>를
+          받지 못하며, 완전 장악 계산에서도 빠진다.
         </LI>
         <LI>소유권과 쌓여 있던 세금은 그대로 유지된다. 다음 날 배치가 있으면 보너스가 돌아온다.</LI>
       </UL>

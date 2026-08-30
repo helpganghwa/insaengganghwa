@@ -48,6 +48,10 @@ export default function Doc() {
             '길드가 수금한 다이아를 배분.',
           ],
           [
+            <><DocLink slug="expedition" hash="reward">파견</DocLink></>,
+            '완료한 파견의 보상으로 지급된다.',
+          ],
+          [
             <><DocLink slug="friends">친구 초대</DocLink></>,
             '초대한 사람이 가입하면 우편으로 지급된다.',
           ],
@@ -88,10 +92,6 @@ export default function Doc() {
             <>
               결성과 문양 제작, <DocLink slug="guild" hash="donate">기부</DocLink>에 사용.
             </>,
-          ],
-          [
-            <><DocLink slug="conquest" hash="residence">거주지 이동</DocLink></>,
-            '남은 이동 쿨타임을 줄인다.',
           ],
         ]}
       />
