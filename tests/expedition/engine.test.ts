@@ -38,12 +38,12 @@ describe('expedition engine — 미션 롤', () => {
     expect(total).toBeLessThanOrEqual(3);
   });
 
-  it('Lv0 원정(grand) 출현 10% — 분포 상단 1000bp에서만 뜬다 / Lv30+에선 25%', () => {
-    // Lv0 분포(2026-08-28): easy4500 normal3000 hard1500 grand1000 → roll 0..8999 비원정, 9000..9999 원정
-    for (let r = 0; r < 9000; r += 137) {
+  it('Lv0 원정(grand) 출현 15% — 분포 상단 1500bp에서만 뜬다 / Lv30+에선 25%', () => {
+    // Lv0 분포(2026-08-30): easy4000 normal3000 hard1500 grand1500 → roll 0..8499 비원정, 8500..9999 원정
+    for (let r = 0; r < 8500; r += 137) {
       expect(rollMission(seq([0, r]), 0).difficulty).not.toBe('grand');
     }
-    expect(rollMission(seq([0, 9000]), 0).difficulty).toBe('grand');
+    expect(rollMission(seq([0, 8500]), 0).difficulty).toBe('grand');
     expect(rollMission(seq([0, 9999]), 0).difficulty).toBe('grand');
     // Lv30 분포: easy1500 normal3000 hard3000 grand2500 → roll 7500 = grand
     expect(rollMission(seq([0, 7500]), 30).difficulty).toBe('grand');
