@@ -7,6 +7,7 @@ import {
   requestAndSubscribe,
   serializeSubscription,
   unsubscribe,
+  setPushOptedOut,
 } from '@/lib/push/client';
 import {
   registerPushSubscriptionAction,
@@ -88,6 +89,7 @@ export function PushSettings(props: {
     if (r.kind === 'ok') {
       const payload = serializeSubscription(r.subscription);
       await registerPushSubscriptionAction({ ...payload, userAgent: navigator.userAgent });
+      setPushOptedOut(false);
       setPermission('granted');
       setHasSubscription(true);
     } else if (r.kind === 'denied') {
@@ -96,6 +98,7 @@ export function PushSettings(props: {
   }
 
   async function disable() {
+    setPushOptedOut(true); // 자동 동기화가 다시 구독하지 않도록 먼저 기록
     try {
       const reg = await navigator.serviceWorker.getRegistration();
       const sub = await reg?.pushManager.getSubscription();
