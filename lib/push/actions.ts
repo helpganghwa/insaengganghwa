@@ -64,7 +64,7 @@ export async function unregisterPushSubscriptionAction(input: {
  * supply(일일 보급)·melee(대난투)는 상시 발송이라 토글 대상에서 제외.
  */
 export async function setPushCategoryAction(input: {
-  category: 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join';
+  category: 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join' | 'expedition';
   enabled: boolean;
 }): Promise<{ ok: boolean }> {
   const userId = await getSessionUserId();
@@ -76,6 +76,7 @@ export async function setPushCategoryAction(input: {
     referral: 'push_referral',
     chat_mention: 'push_chat_mention',
     guild_join: 'push_guild_join',
+    expedition: 'push_expedition',
   };
   const col = colMap[input.category];
   // 컬럼 식별자는 enum이라 SQL injection 위험 없음.

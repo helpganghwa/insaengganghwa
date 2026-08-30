@@ -55,7 +55,7 @@ export type PushPayload = {
     | 'guild'
     | 'guild_join'
     | 'admin'
-    /** 파견 귀환(2026-08-25) — 토글 없음(상시): 유저가 직접 보낸 원정의 완료 통지, 일 최대 6건. */
+    /** 파견 귀환(2026-08-25) — push_expedition 토글(0181, 2026-08-30): 하루 최대 슬롯 수만큼 오는 고빈도라 강화 완료처럼 개인 설정. */
     | 'expedition';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
@@ -97,6 +97,7 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   referral: profiles.pushReferral,
   chat_mention: profiles.pushChatMention,
   guild_join: profiles.pushGuildJoin,
+  expedition: profiles.pushExpedition,
 };
 
 /**

@@ -30,7 +30,7 @@ import {
  */
 
 // 일일 보급·대난투는 상시 발송(끄기 불가) — 설정 토글에서 제외.
-type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join';
+type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join' | 'expedition';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
@@ -41,6 +41,7 @@ export function PushSettings(props: {
   initialReferral: boolean;
   initialChatMention: boolean;
   initialGuildJoin: boolean;
+  initialExpedition: boolean;
   initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function PushSettings(props: {
   const [referral, setReferral] = useState(props.initialReferral);
   const [chatMention, setChatMention] = useState(props.initialChatMention);
   const [guildJoin, setGuildJoin] = useState(props.initialGuildJoin);
+  const [expedition, setExpedition] = useState(props.initialExpedition);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
@@ -119,6 +121,7 @@ export function PushSettings(props: {
       referral: setReferral,
       chat_mention: setChatMention,
       guild_join: setGuildJoin,
+      expedition: setExpedition,
     };
     const setLocal = setterMap[cat];
     setLocal(next);
@@ -237,6 +240,13 @@ export function PushSettings(props: {
         on={chatMention}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('chat_mention', v)}
+      />
+      <Toggle
+        label="파견 귀환"
+        hint="원정대가 돌아와 보상을 받을 수 있을 때"
+        on={expedition}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('expedition', v)}
       />
       <Toggle
         label="길드 가입 신청"

@@ -3,7 +3,7 @@
  *
  * 5분 주기(파견 최소 단위 4h — 분 단위 즉시성 불필요). UPDATE...RETURNING으로 push_sent=true
  * 선마킹한 행만 발송(멱등·재발송 없음 — 1회 누락 < N회 폭격). FOR UPDATE SKIP LOCKED로
- * 동시 실행 안전. 배칭 없음(instant) — 일 유저당 최대 6건이라 소음 아님, 토글 없는 상시 카테고리.
+ * 동시 실행 안전. 같은 실행 창의 귀환은 유저별 1건으로 묶는다. push_expedition 토글(0181).
  */
 import { sql } from 'drizzle-orm';
 
@@ -40,19 +40,24 @@ export async function GET(req: Request) {
       returning e.user_id::text, e.server_id, e.region::text
     `)) as unknown as { user_id: string; server_id: number; region: string }[];
     if (claimed.length === 0) break;
+    // 유저별로 묶어 1건 — 슬롯 여러 개가 같은 5분 창에 귀환하면 진동 N번 대신 "N팀" 한 번(2026-08-30).
+    const byUser = new Map<string, { regions: string[] }>();
     for (const r of claimed) {
+      const e = byUser.get(r.user_id) ?? { regions: [] };
+      e.regions.push(REGION_KO[r.region] ?? r.region);
+      byUser.set(r.user_id, e);
+    }
+    for (const [userId, e] of byUser) {
+      const body =
+        e.regions.length === 1
+          ? `${e.regions[0]} 원정대가 돌아왔어요 — 보상을 수령하세요!`
+          : `원정대 ${e.regions.length}팀이 돌아왔어요(${[...new Set(e.regions)].join('·')}) — 보상을 수령하세요!`;
       try {
-        await sendPushToUser(r.user_id, {
-          title: '파견 귀환',
-          body: `${REGION_KO[r.region] ?? r.region} 원정대가 돌아왔어요 — 보상을 수령하세요!`,
-          url: '/expedition',
-          tag: 'expedition',
-          category: 'expedition',
-        });
+        await sendPushToUser(userId, { title: '파견 귀환', body, url: '/expedition', tag: 'expedition', category: 'expedition' });
         sent++;
-      } catch (e) {
+      } catch (err) {
         failed++;
-        console.error('[push-expedition-ready]', r.user_id, e);
+        console.error('[push-expedition-ready]', userId, err);
       }
     }
     if (claimed.length < CHUNK) break;

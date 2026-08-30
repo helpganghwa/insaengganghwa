@@ -55,6 +55,8 @@ export const profiles = pgTable('profiles', {
   pushChatMention: boolean('push_chat_mention').notNull().default(true),
   /** 길드 가입 신청 접수 알림(가입 관리 권한자 대상, 0179). */
   pushGuildJoin: boolean('push_guild_join').notNull().default(true),
+  /** 파견 귀환 알림(0181). */
+  pushExpedition: boolean('push_expedition').notNull().default(true),
   /** 대표 칭호 code(0149, TITLES.md §4) — null=미장착. 조건부는 표시 시점 재검증. */
   /** @deprecated 칭호 서버별화(0152)로 characters.representative_title_code로 이관 — 읽기/쓰기 금지, 추후 드랍. */
   representativeTitleCode: text('representative_title_code'),

@@ -24,6 +24,7 @@ const HOUR = 60 * MIN;
 export const CRON_MAX_GAP_MS: Record<string, number> = {
   warm: 5 * MIN, // 매분 — 워치독 본체
   'push-enhance-ready': 10 * MIN, // 매분
+  'push-expedition-ready': 20 * MIN, // 5분 — 파견 귀환 푸시(2026-08-31 등재, 배포 직후 시드 필수)
   'profile-poll': 12 * MIN, // 2분 — 아바타 발주 백스톱
   'push-flush': 20 * MIN, // 5분
   'settle-raid': 20 * MIN, // 5분 — 레이드 정산
