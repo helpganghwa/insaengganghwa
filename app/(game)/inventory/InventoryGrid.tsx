@@ -100,7 +100,7 @@ export function InventoryGrid({
           return b.transcendLevel - a.transcendLevel || b.enhanceLevel - a.enhanceLevel || b.acquiredAtMs - a.acquiredAtMs;
         return a.name.localeCompare(b.name, 'ko');
       });
-  }, [displayItems, filter, sortBy]);
+  }, [displayItems, filter, regionFilter, sortBy]);
 
   const openItem = openId ? displayItems.find((i) => i.id === openId) ?? null : null;
 
