@@ -8,6 +8,7 @@ import { userEquipment } from '@/lib/db/schema/equipment';
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { CodexGrid, type CodexItem } from './CodexGrid';
+import { regionOfCode } from '@/lib/game/equipment/region-ui';
 
 /** 도감 — GDD §5 / WIREFRAMES §7. 수집 + 최고 강화 표기. **보상 수령 없음**(전투력 보너스로 반영). */
 export default async function CodexPage() {
@@ -39,6 +40,7 @@ export default async function CodexPage() {
   const items: CodexItem[] = catalog.map((c) => ({
     id: c.id,
     code: c.code,
+    region: regionOfCode(c.code),
     name: c.name,
     slot: c.slot,
     got: codexMap.has(c.id),

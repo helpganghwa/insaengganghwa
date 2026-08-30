@@ -8,6 +8,8 @@ import { atlasMaskStyle } from '@/lib/game/equipment/sprite-atlas';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
+import type { CatalogRegion } from '@/lib/game/equipment/catalog';
+import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 type SlotFilter = 'all' | Slot;
@@ -18,6 +20,8 @@ export type CodexItem = {
   code: string;
   name: string;
   slot: Slot;
+  /** 카탈로그 지역(2026-08-30) — 지역 필터. */
+  region: CatalogRegion;
   got: boolean;
   /** 획득 시 최고 강화 레벨(미획득 null). */
   max: number | null;
@@ -33,13 +37,14 @@ export type CodexItem = {
 export function CodexGrid({ items }: { items: CodexItem[] }) {
   const [filter, setFilter] = useState<SlotFilter | 'missing'>('all');
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
+  const [regionFilter, setRegionFilter] = useState<'all' | CatalogRegion>('all');
 
   const shown = useMemo(() => {
     // 'missing' — 아직 못 모은 것만. 강화순 정렬이라 미획득이 항상 뒤로 밀려 끝까지
     // 스크롤해야 보이던 것을 한 번에 가른다(2026-08-02).
-    const list = items.filter((i) =>
-      filter === 'all' ? true : filter === 'missing' ? !i.got : i.slot === filter,
-    );
+    const list = items
+      .filter((i) => (filter === 'all' ? true : filter === 'missing' ? !i.got : i.slot === filter))
+      .filter((i) => regionFilter === 'all' || i.region === regionFilter);
     const sorted = [...list];
     if (sortBy === 'enhance') {
       // 강화순 — 획득(max) 내림차순, 미획득(null→-1)은 뒤로, 동순위는 이름.
@@ -48,7 +53,7 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
       sorted.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     }
     return sorted;
-  }, [items, filter, sortBy]);
+  }, [items, filter, regionFilter, sortBy]);
 
   const missing = useMemo(() => items.filter((i) => !i.got).length, [items]);
 
@@ -61,7 +66,7 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
     <div className="px-4 pb-4 pt-3">
       <PageHeader title="도감" fallback="/me" />
       <div className="h-3" />
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex gap-1.5">
           <button type="button" className={fb(filter === 'all')} onClick={() => setFilter('all')}>
             전체({items.length})
@@ -81,6 +86,9 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
             </button>
           ) : null}
         </div>
+      </div>
+      {/* 2줄째(2026-08-30): 정렬 + 지역 필터(인벤토리와 동일 구성). */}
+      <div className="mb-3 flex items-center gap-2 text-xs">
         {/* 정렬 — 인벤토리와 동일 컴팩트 셀렉트(네이티브 화살표 제거 후 ▼ 직접). */}
         <ZoomSafeSelect
           value={sortBy}
@@ -91,6 +99,20 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
         >
           <option value="enhance">강화순</option>
           <option value="name">이름순</option>
+        </ZoomSafeSelect>
+        <ZoomSafeSelect
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value as 'all' | CatalogRegion)}
+          aria-label="지역 필터"
+          wrapClassName="h-[30px] w-[132px] shrink-0"
+          className="rounded-full border border-zinc-300 bg-transparent pl-3 pr-7 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+        >
+          <option value="all">모든 지역</option>
+          {REGION_FILTER_ORDER.map((r) => (
+            <option key={r} value={r}>
+              {catalogRegionUi(r).label}
+            </option>
+          ))}
         </ZoomSafeSelect>
       </div>
 

@@ -153,6 +153,9 @@ export function InventoryGrid({
             </button>
           ))}
         </div>
+      </div>
+      {/* 2줄째(2026-08-30): 정렬 + 지역 필터 — 같은 컴팩트 셀렉트. 지역은 보유 목록에만 적용. */}
+      <div className="mt-2 flex items-center gap-2 text-xs">
         {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). 컴팩트 셀렉트(2026-07-19).
             네이티브 화살표는 브라우저마다 위치·색이 제각각(크롬=패딩 밖, iOS PWA=검정)이라
             appearance-none으로 없애고 ▾를 직접 그린다. */}
@@ -167,29 +170,20 @@ export function InventoryGrid({
           <option value="transcend">초월순</option>
           <option value="name">이름순</option>
         </ZoomSafeSelect>
-      </div>
-
-      {/* 지역 필터(2026-08-30) — 세계지도 지역명·색. 보유 목록에만 적용. */}
-      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-        <button type="button" className={fb(regionFilter === 'all')} onClick={() => setRegionFilter('all')}>
-          모든 지역
-        </button>
-        {REGION_FILTER_ORDER.map((r) => {
-          const ui = catalogRegionUi(r);
-          const n = items.filter((i) => !i.equipped && i.region === r).length;
-          return (
-            <button
-              key={r}
-              type="button"
-              className={fb(regionFilter === r)}
-              onClick={() => setRegionFilter(regionFilter === r ? 'all' : r)}
-              style={regionFilter === r ? undefined : { color: ui.color }}
-            >
-              {ui.label}
-              <span className="ml-0.5 tabular-nums opacity-70">{n}</span>
-            </button>
-          );
-        })}
+        <ZoomSafeSelect
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value as 'all' | CatalogRegion)}
+          aria-label="지역 필터"
+          wrapClassName="h-[30px] w-[132px] shrink-0"
+          className="rounded-full border border-zinc-300 bg-transparent pl-3 pr-7 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+        >
+          <option value="all">모든 지역</option>
+          {REGION_FILTER_ORDER.map((r) => (
+            <option key={r} value={r}>
+              {catalogRegionUi(r).label}
+            </option>
+          ))}
+        </ZoomSafeSelect>
       </div>
 
       {equipped.length > 0 ? (
