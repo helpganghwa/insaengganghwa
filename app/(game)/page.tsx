@@ -38,7 +38,7 @@ import { WorldTicker } from './WorldTicker';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 8카드 — 월드맵/길드(최상단) + 대난투/레이드/강화/보급/우편함/상점. 인벤토리는 바텀네비로 이동.
+// 메뉴 7카드 — 월드맵/파견(최상단) + 대난투/레이드/보급/상점/우편함. 길드·인벤토리는 바텀네비로(길드 카드는 2026-08-30 파견에 자리 양보).
 const MENU = [
   {
     href: '/guild/map',
@@ -49,11 +49,11 @@ const MENU = [
     scale: 1.5, // 정사각 지도를 가로 카드에 꽉 차게 — 좌우 바다 여백 제거(중앙 왕국 확대)
   },
   {
-    href: '/guild',
-    label: '길드',
-    desc: '함께 성장·점령',
-    bg: '/sprites/hub/guild.png',
-    tint: '#2a2012',
+    href: '/expedition',
+    label: '파견',
+    desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
+    bg: '/sprites/expedition/bg/kingdom.png', // 전용 허브 에셋 전까지 파견 지역 배경 재활용
+    tint: '#1f2a16',
     scale: 1,
   },
   {
@@ -71,14 +71,6 @@ const MENU = [
     desc: '보스 도전',
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
-    scale: 1,
-  },
-  {
-    href: '/expedition',
-    label: '파견',
-    desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
-    bg: '/sprites/hub/expedition.png', // 에셋 생성 전 — tint 폴백(P5 에셋 승인 후 채움)
-    tint: '#1f2a16',
     scale: 1,
   },
   {
@@ -470,7 +462,8 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+              // 7카드(2026-08-30 길드 카드 제거) — 홀수라 세계지도를 2열 폭으로 키워 빈칸 없이 맞춘다(실제 지도라 넓어도 어색하지 않음).
+              className={`relative flex isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98] ${isWorldmapCard ? 'col-span-2 aspect-[100/24]' : 'aspect-[50/17]'}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
