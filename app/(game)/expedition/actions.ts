@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -77,6 +79,7 @@ export async function startExpeditionAction(slot: number, avatarProfileId: strin
   if (!c) return { ok: false, code: 'AUTH' };
   try {
     await startExpedition(c.userId, c.serverId, slot, avatarProfileId);
+    revalidatePath('/'); // 홈 파견 카드 문구(완료/진행/대기) — 뒤로가기 라우터 캐시 갱신
     return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);
@@ -90,6 +93,7 @@ export async function cancelExpeditionAction(slot: number): Promise<BoardResult>
   try {
     await cancelExpedition(c.userId, c.serverId, slot);
     await ensureOffers(c.userId, c.serverId);
+    revalidatePath('/'); // 홈 파견 카드 문구(완료/진행/대기) — 뒤로가기 라우터 캐시 갱신
     return { ok: true, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);
@@ -103,6 +107,7 @@ export async function claimExpeditionAction(slot: number): Promise<ClaimActionRe
   try {
     const r = await claimExpedition(c.userId, c.serverId, slot);
     await ensureOffers(c.userId, c.serverId);
+    revalidatePath('/'); // 홈 파견 카드 문구(완료/진행/대기) — 뒤로가기 라우터 캐시 갱신
     return { ok: true, ...r, board: await getExpeditionBoard(c.userId, c.serverId) };
   } catch (e) {
     return failOf(e);

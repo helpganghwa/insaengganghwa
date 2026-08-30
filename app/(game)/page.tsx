@@ -134,7 +134,6 @@ export default async function HomePage() {
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 9시 개시';
   let expeditionDesc = '원정대를 보내보세요';
-  let expeditionHot = false;
   let raidJoinable = 0;
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
@@ -299,17 +298,10 @@ export default async function HomePage() {
         raidJoinable = row.raid_joinable ?? 0;
         const expClaimable = row.exp_claimable ?? 0;
         const expRunning = row.exp_running ?? 0;
-        // 카드 문구(2026-08-30): 완료·대기가 하나라도 있으면 그것만(둘 다 가능), 전부 진행 중이면 '파견 중 N'.
+        // 카드 문구(2026-08-30): 완료·진행·대기 세 수치를 항상 흰색으로 간단히. 완료는 배지 숫자로만 강조.
         const expIdle = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable);
-        const expParts: string[] = [];
-        if (expClaimable > 0) expParts.push(`파견 완료 ${expClaimable}`);
-        if (expIdle > 0) expParts.push(`파견 대기 ${expIdle}`);
-        if (expParts.length > 0) expeditionDesc = expParts.join(' · ');
-        else if (expRunning > 0) expeditionDesc = `파견 중 ${expRunning}`;
-        if (expClaimable > 0) {
-          expeditionHot = true;
-          counts['/expedition'] = expClaimable;
-        }
+        expeditionDesc = `완료 ${expClaimable} · 진행 ${expRunning} · 대기 ${expIdle}`;
+        if (expClaimable > 0) counts['/expedition'] = expClaimable;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())
@@ -461,7 +453,7 @@ export default async function HomePage() {
                   ? `참여 가능 레이드 ${raidJoinable}`
                   : m.desc;
           const descHot =
-            (m.href === '/raid' && raidJoinable > 0) || (m.href === '/expedition' && expeditionHot); // 강조색
+            m.href === '/raid' && raidJoinable > 0; // 강조색
           return (
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
@@ -472,8 +464,7 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              // 7카드(2026-08-30 길드 카드 제거) — 홀수라 세계지도를 2열 폭으로 키워 빈칸 없이 맞춘다(실제 지도라 넓어도 어색하지 않음).
-              className={`relative flex isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98] ${isWorldmapCard ? 'col-span-2 aspect-[100/24]' : 'aspect-[50/17]'}`}
+              className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
