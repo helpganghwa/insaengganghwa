@@ -3,7 +3,7 @@
  * **세계지도 지역명·지역색**으로 통일한다(파견 REGION_UI와 같은 색). '일반'은 회색.
  * 순수 모듈(서버/클라 공용) — 카탈로그 상수만 읽는다.
  */
-import { CATALOG_ITEMS, type CatalogRegion } from './catalog';
+import type { CatalogRegion } from './catalog';
 
 export type RegionUi = { key: string; label: string; color: string };
 
@@ -26,9 +26,3 @@ export function catalogRegionUi(region: CatalogRegion): RegionUi {
 
 /** 필터·목록용 지역 순서(세계지도 순) + 일반. */
 export const REGION_FILTER_ORDER: CatalogRegion[] = ['늪지대', '오크 부락', '왕국', '신전', '화산', '타락천사', '일반'];
-
-const REGION_BY_CODE = new Map(CATALOG_ITEMS.map((c) => [c.key, c.region]));
-/** 카탈로그 code(key) → region. 미지정 코드는 '일반'. */
-export function regionOfCode(code: string): CatalogRegion {
-  return REGION_BY_CODE.get(code) ?? '일반';
-}

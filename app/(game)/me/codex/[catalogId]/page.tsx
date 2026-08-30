@@ -10,7 +10,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10 } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
-import { regionOfCode } from '@/lib/game/equipment/region-ui';
+import { regionOfCode } from '@/lib/game/equipment/region-of-code';
 import { RegionTag } from '@/components/RegionTag';
 import { profileHref } from '@/lib/game/profile/href';
 import { TranscendSprite } from '@/components/TranscendSprite';

@@ -8,7 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
-import { regionOfCode } from '@/lib/game/equipment/region-ui';
+import { regionOfCode } from '@/lib/game/equipment/region-of-code';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
 
