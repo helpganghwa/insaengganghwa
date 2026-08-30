@@ -17,7 +17,9 @@ import { getChallengeStatus } from '@/lib/game/challenges/status';
 import { getTodayTicker } from '@/lib/game/today/stats';
 import { TodayTicker } from './TodayTicker';
 import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
-import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
+import { RAID_MAX_PARTICIPANTS,
+  expeditionSlotsFor,
+} from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
 import { ConquestCardStatus } from './ConquestCardStatus';
@@ -52,7 +54,7 @@ const MENU = [
     href: '/expedition',
     label: '파견',
     desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
-    bg: '/sprites/expedition/bg/kingdom.png', // 전용 허브 에셋 전까지 파견 지역 배경 재활용
+    bg: '/sprites/hub/expedition.png',
     tint: '#1f2a16',
     scale: 1,
   },
@@ -218,6 +220,9 @@ export default async function HomePage() {
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and status = 'running' and complete_at > now()) as exp_running,
+            -- 파견 대기 칸 수 계산용 — 열린 슬롯(계정 합산 강화) - 진행 - 완료.
+            (select coalesce(sum(enhance_level), 0)::int from user_equipment
+               where user_id = ${userId}::uuid and server_id = ${serverId}) as exp_enhance_sum,
             -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
             case
               when n.kst::time < time '09:00' then 'before'
@@ -270,6 +275,7 @@ export default async function HomePage() {
         raid_joinable: number;
         exp_claimable: number;
         exp_running: number;
+        exp_enhance_sum: number;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
         melee_champ: string | null;
@@ -293,12 +299,16 @@ export default async function HomePage() {
         raidJoinable = row.raid_joinable ?? 0;
         const expClaimable = row.exp_claimable ?? 0;
         const expRunning = row.exp_running ?? 0;
+        // 카드 문구(2026-08-30): 완료·대기가 하나라도 있으면 그것만(둘 다 가능), 전부 진행 중이면 '파견 중 N'.
+        const expIdle = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable);
+        const expParts: string[] = [];
+        if (expClaimable > 0) expParts.push(`파견 완료 ${expClaimable}`);
+        if (expIdle > 0) expParts.push(`파견 대기 ${expIdle}`);
+        if (expParts.length > 0) expeditionDesc = expParts.join(' · ');
+        else if (expRunning > 0) expeditionDesc = `파견 중 ${expRunning}`;
         if (expClaimable > 0) {
-          expeditionDesc = `보상 수령 대기 ${expClaimable}건`;
           expeditionHot = true;
           counts['/expedition'] = expClaimable;
-        } else if (expRunning > 0) {
-          expeditionDesc = `${expRunning}팀 파견 중`;
         }
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.

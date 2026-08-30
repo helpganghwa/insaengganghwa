@@ -713,7 +713,7 @@ function halfReward(r: ExpeditionReward): ExpeditionReward {
 /** C3 — 항상 5칸(💎 · 📦무기 · 📦방어구 · 📦장신구 · ✦XP), 미획득은 ×0(흐리게). 하단에 '기본 × 배율(× 대성공)' 계산줄. */
 function ClaimItems({ popup }: { popup: ClaimPopup }) {
   // 대성공 2단 공개(2026-08-30) — 먼저 일반 획득량(최종의 절반)이 올라가고, 잠시 뒤 황금 섬광과 함께
-  // '대성공!' 도장이 찍히며 수량이 2배로 이어서 올라간다. 대성공이 아니면 1단만.
+  // 칸이 튀며 수량이 2배로 이어서 올라간다(도장 라벨은 2026-08-30 삭제). 대성공이 아니면 1단만.
   const [revealed, setRevealed] = useState(!popup.crit || prefersReducedMotion());
   useEffect(() => {
     if (!popup.crit || prefersReducedMotion()) return;
@@ -746,11 +746,6 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
         {popup.crit && revealed ? (
           <>
             <div className="exp-flash pointer-events-none absolute -inset-3 rounded-2xl" style={{ background: 'radial-gradient(ellipse at center, rgba(253,224,71,.55), rgba(251,191,36,.18) 55%, transparent 75%)' }} />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <span className="exp-stamp rounded-lg border-[3px] border-amber-400 bg-black/70 px-3 py-1 text-[22px] font-black tracking-wider text-amber-300" style={{ textShadow: '0 0 8px rgba(251,191,36,.8)' }}>
-                ✨ 대성공!
-              </span>
-            </div>
           </>
         ) : null}
       </div>
@@ -828,7 +823,6 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
                 bonusText={`×${(1 + bonus / 10000).toFixed(2)}`}
                 progress={progress}
                 glow={done}
-                mutedMon={done}
               />
             );
           }}
