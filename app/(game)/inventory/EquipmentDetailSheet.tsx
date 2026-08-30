@@ -14,6 +14,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout } from '@/components/ModalLayout';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RegionTag } from '@/components/RegionTag';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { assetUrl } from '@/lib/asset-versions';
 import { advanceTutorial } from '@/components/tutorial/events';
@@ -100,6 +101,7 @@ export function EquipmentDetailSheet({
         title={item.name}
         subtitle={
           <>
+            <RegionTag region={item.region} className="mr-1.5 align-middle" />
             <span className="font-bold text-amber-600 dark:text-amber-400">+{item.enhanceLevel}</span>
             {item.transcendLevel > 0 ? (
               <>

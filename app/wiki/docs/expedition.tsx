@@ -57,7 +57,7 @@ export default function Doc() {
         <LI>
           아바타를 만들 때 사용한 장비의 <b>지역</b>이 파견지와 일치하면 그 장비의 강화 레벨을{' '}
           {EXPEDITION_SYNERGY_MATCH_MULT}배로 쳐서 강화 합에 반영한다. 지역 장비를 많이 강화할수록 그 지역 파견
-          보상이 좋아진다.
+          보상이 좋아진다. 장비의 지역은 <DocLink slug="equipment" hash="region">장비 상세</DocLink>에서 확인할 수 있다.
         </LI>
         <LI>
           지역이 없는 &ldquo;일반&rdquo; 장비는 어느 파견지에서든 {EXPEDITION_SYNERGY_GENERAL_MULT}배.

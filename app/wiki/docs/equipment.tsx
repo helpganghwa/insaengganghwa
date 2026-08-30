@@ -8,6 +8,7 @@ export const meta: WikiDocMeta = {
   summary: '세 부위, 장착 규칙, 보유 장비의 쓰임.',
   sections: [
     { id: 'slots', label: '부위' },
+    { id: 'region', label: '지역' },
     { id: 'record', label: '보유 방식' },
     { id: 'equip', label: '장착과 교체' },
     { id: 'keep', label: '미장착 장비' },
@@ -25,6 +26,19 @@ export default function Doc() {
           전투력을 정하는 것은 <DocLink slug="enhance">강화</DocLink> 수치와{' '}
           <DocLink slug="transcend">초월</DocLink> 단계뿐이며, 같은 수치면 어느 아이템이든 같다.
           <Fn n={1} />
+        </LI>
+      </UL>
+
+      <H2 id="region">지역</H2>
+      <UL>
+        <LI>
+          모든 장비는 지역을 하나 가진다 — 슬라임 늪 · 오크 부락 · 왕국 · 잊힌 신전 · 드래곤 화산 · 타락 천사
+          부유섬, 그리고 어느 지역에도 속하지 않는 일반.
+        </LI>
+        <LI>지역은 장비 상세와 도감 상세에서 확인할 수 있고, 인벤토리에서는 지역으로 걸러 볼 수 있다.</LI>
+        <LI>
+          지역은 전투력에 영향이 없다. <DocLink slug="expedition" hash="avatar">파견</DocLink>에서 아바타에
+          입힌 장비의 지역이 파견지와 같으면 보상이 커진다.
         </LI>
       </UL>
 

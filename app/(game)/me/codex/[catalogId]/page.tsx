@@ -10,6 +10,8 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10 } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
+import { regionOfCode } from '@/lib/game/equipment/region-ui';
+import { RegionTag } from '@/components/RegionTag';
 import { profileHref } from '@/lib/game/profile/href';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -64,6 +66,7 @@ export default async function CodexItemPage({
       <div className="space-y-4 px-4 pb-4">
       <header className="flex items-center gap-2">
         <h1 className="text-lg font-semibold">{item.name}</h1>
+        <RegionTag region={regionOfCode(item.code)} />
         <span className="ml-auto text-xs text-zinc-500">{SLOT_LABEL[item.slot]}</span>
       </header>
 

@@ -3,6 +3,8 @@
 import { memo, useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
+import type { CatalogRegion } from '@/lib/game/equipment/catalog';
+import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
@@ -16,6 +18,8 @@ export type InvItem = {
   code: string;
   name: string;
   slot: Slot;
+  /** 카탈로그 지역(2026-08-30) — 지역 필터·상세 칩. */
+  region: CatalogRegion;
   enhanceLevel: number;
   transcendLevel: number;
   /** 다음 초월까지 누적된 중복 수(임계 = transcendLevel+1). */
@@ -43,6 +47,8 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
+  // 지역 필터(2026-08-30) — 보유 목록에만(장착 3개는 상단 고정).
+  const [regionFilter, setRegionFilter] = useState<'all' | CatalogRegion>('all');
   // 정렬 재도입(2026-07-19 유저 건의) — 06-05에 UI를 뺐지만 카탈로그 106종 시대엔 필요.
   // 기본은 기존과 동일한 강화순(암묵 정렬이 라벨로 드러나는 효과 겸함).
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
@@ -84,6 +90,7 @@ export function InventoryGrid({
   const owned = useMemo(() => {
     return displayItems
       .filter((i) => !i.equipped)
+      .filter((i) => regionFilter === 'all' || i.region === regionFilter)
       .filter((i) => (filter === 'all' ? true : i.slot === filter))
       .sort((a, b) => {
         // 동률 2차 기준까지 명시 — 같은 수치끼리 순서가 널뛰지 않게.
@@ -160,6 +167,29 @@ export function InventoryGrid({
           <option value="transcend">초월순</option>
           <option value="name">이름순</option>
         </ZoomSafeSelect>
+      </div>
+
+      {/* 지역 필터(2026-08-30) — 세계지도 지역명·색. 보유 목록에만 적용. */}
+      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+        <button type="button" className={fb(regionFilter === 'all')} onClick={() => setRegionFilter('all')}>
+          모든 지역
+        </button>
+        {REGION_FILTER_ORDER.map((r) => {
+          const ui = catalogRegionUi(r);
+          const n = items.filter((i) => !i.equipped && i.region === r).length;
+          return (
+            <button
+              key={r}
+              type="button"
+              className={fb(regionFilter === r)}
+              onClick={() => setRegionFilter(regionFilter === r ? 'all' : r)}
+              style={regionFilter === r ? undefined : { color: ui.color }}
+            >
+              {ui.label}
+              <span className="ml-0.5 tabular-nums opacity-70">{n}</span>
+            </button>
+          );
+        })}
       </div>
 
       {equipped.length > 0 ? (
