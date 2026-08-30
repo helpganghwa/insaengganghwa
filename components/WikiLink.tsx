@@ -11,7 +11,9 @@ import { useEffect, useState, type ReactNode } from 'react';
  * 도메인이 같은 배포를 서빙하므로 콘텐츠 동일. 일반 브라우저는 기존처럼 ganghwa.app 새 탭
  * (브랜드 주소 유지 — 첫 페인트는 서버 렌더와 동일한 /wiki라 하이드레이션 불일치 없음).
  */
-const PWA_WIKI_ORIGIN = 'https://insaengganghwa.vercel.app';
+// ⚠ 프로젝트 기본 도메인(insaengganghwa.vercel.app)은 alias가 스테이징(master-dev)을 가리킨 적이 있어(2026-08-30 사고 —
+// PWA 유저가 스테이징 위키를 봄) **프로덕션 전용 자동 alias**를 쓴다. 프로덕션 배포마다 자동 갱신되는 주소.
+const PWA_WIKI_ORIGIN = 'https://insaengganghwa-insaengganghwa.vercel.app';
 
 export function WikiLink({ className, children }: { className?: string; children: ReactNode }) {
   const [href, setHref] = useState('/wiki');
