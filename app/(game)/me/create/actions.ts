@@ -29,7 +29,7 @@ const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   PROFILE_GEN_IN_PROGRESS: '이미 아바타를 생성하고 있어요. 완료 후 다시 시도해 주세요.',
   PROFILE_LIMIT: `아바타는 최대 ${PROFILE_MAX}개까지 보유할 수 있습니다.`,
-  RATE_LIMITED: '아바타 생성이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
+  RATE_LIMITED: '아바타 생성은 한 시간에 30개까지 가능합니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류가 발생했습니다.',
 };
 
