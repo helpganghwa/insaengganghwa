@@ -11,7 +11,7 @@ import {
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct } from '../fmt';
-import { DocLink, H2, LI, Note, Tbl, UL } from '../ui';
+import { DocLink, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
   slug: 'expedition',
