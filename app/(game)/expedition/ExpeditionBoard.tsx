@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState, useTransition, useEffect } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -595,7 +596,7 @@ function CardBody({
       {/* 배경 — muted면 흑백(아바타·텍스트는 컬러 유지) */}
       <div
         className={`pointer-events-none absolute inset-0 bg-cover bg-center ${mutedBg ? 'grayscale' : ''}`}
-        style={{ backgroundImage: `url(/sprites/expedition/bg/${region}.png)` }}
+        style={{ backgroundImage: `url(${assetUrl(`/sprites/expedition/bg/${region}.png`)})` }}
       />
       {/* 가독성(R2, 2026-08-28) — 전면 50% 어둡게 + 상·하 그라데이션 진하게 + 글자 2중 그림자(스트로크) */}
       <div className="pointer-events-none absolute inset-0 bg-black/50" />
@@ -635,7 +636,7 @@ function CardBody({
         <span className={`flex flex-1 items-center justify-center ${hideHeader ? '' : 'pb-2'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`}
+            src={assetUrl(`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`)}
             alt=""
             decoding="async"
             className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${mutedMon ? 'grayscale' : ''}`}
@@ -777,7 +778,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
         type="button"
         onClick={onTap}
         className="relative block h-[112px] w-full overflow-hidden rounded-xl border border-dashed border-zinc-500 bg-cover bg-center text-left grayscale"
-        style={{ backgroundImage: `url(/sprites/expedition/bg/${bg}.png)` }}
+        style={{ backgroundImage: `url(${assetUrl(`/sprites/expedition/bg/${bg}.png`)})` }}
       >
         {/* dim 레이어 — 보더 영역까지 덮도록 -inset-px(2026-08-28) */}
         <div className="pointer-events-none absolute -inset-px rounded-xl bg-black/60" />
