@@ -564,6 +564,7 @@ export async function getWorldmapZones(serverId: number) {
       executorCode: profiles.publicCode,
       taxDiamond: zones.taxDiamond,
       taxBonus: zones.taxBonus, // 독점 세금 보너스 배율(B안) — 세율 표시용
+      abandonedDay: zones.abandonedDay, // 방치 구역(0180) — 세율 계산(구역 수·완전장악) 제외 표시용
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
       capturedAt: zones.capturedAt, // 수금 타이머(습득 72h) 계산용
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).

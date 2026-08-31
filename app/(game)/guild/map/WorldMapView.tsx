@@ -44,8 +44,10 @@ type Zone = {
   /** 집행관 공개코드 — 팝업에서 프로필 이동 링크(없으면 링크 미표시). */
   executorCode: string | null;
   taxDiamond: string;
-  /** 독점 세금 보너스 배율(B안) — 1 + 소유 구역 수×1% + 완전장악 권역 수×25%. 세율=(taxBonus-1). */
+  /** 독점 세금 보너스 배율(B안) — 1 + 미방치 소유 구역 수×1% + 완전장악 권역 수×25%. 세율=(taxBonus-1). */
   taxBonus: number;
+  /** 방치 구역(0180) — 세율 계산(구역 수·완전장악)에서 빠진다(배율 자체는 적용). 안내 모달 표시용. */
+  abandoned: boolean;
   lastTaxAt: number | null;
   /** 구역 습득 시각(ms) — 수금 타이머(습득 72h) 계산용. 중립이면 null. */
   capturedAt: number | null;
@@ -1286,10 +1288,11 @@ export function WorldMapView({
         (() => {
           const gid = selected.ownerGuildId;
           const ownerZones = zones.filter((z) => z.ownerGuildId === gid);
-          const zoneCount = ownerZones.length;
+          // 방치 구역은 세율 계산(구역 수·완전장악)에서 제외 — recalcTaxBonus와 동일 기준.
+          const zoneCount = ownerZones.filter((z) => !z.abandoned).length;
           const fullRegions = REGION_ORDER.filter((rg) => {
             const total = zones.filter((z) => z.region === rg).length;
-            return total > 0 && ownerZones.filter((z) => z.region === rg).length === total;
+            return total > 0 && ownerZones.filter((z) => z.region === rg && !z.abandoned).length === total;
           });
           const totalPct = Math.round((selected.taxBonus - 1) * 100);
           return (
@@ -1316,7 +1319,7 @@ export function WorldMapView({
               <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400">세율</p>
               <dl className="mt-1 space-y-1 text-[12px]">
                 <div className="flex justify-between">
-                  <dt className="text-zinc-500">점령 구역 {zoneCount} × 1%</dt>
+                  <dt className="text-zinc-500">미방치 점령 구역 {zoneCount} × 1%</dt>
                   <dd className="font-bold tabular-nums">+{zoneCount}%</dd>
                 </div>
                 {fullRegions.map((rg) => (

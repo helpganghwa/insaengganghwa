@@ -58,6 +58,7 @@ export default async function WorldMapPage() {
         executorCode: z.executorCode,
         taxDiamond: z.taxDiamond.toString(),
         taxBonus: z.taxBonus,
+        abandoned: z.abandonedDay != null,
         lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
         capturedAt: z.capturedAt ? z.capturedAt.getTime() : null,
         residentCount: z.residentCount,

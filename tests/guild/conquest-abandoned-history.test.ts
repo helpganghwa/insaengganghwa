@@ -23,6 +23,7 @@ const DAY = '2020-01-01';
 const PREV_DAY = '2019-12-31';
 const ALPHA = 990001;
 const BETA = 990002;
+const GAMMA = 990003; // G1 소유·집행관 있음(방치 아님) — 방치 구역의 구역 수 집계 제외 검증용
 const USER = process.env.TEST_USER_ID!;
 const G1_NAME = 'ZZ_NEUTEST_G1';
 const G2_NAME = 'ZZ_NEUTEST_G2';
@@ -47,9 +48,10 @@ async function setupScenario(): Promise<{ g1: { id: string }; g2: { id: string }
   const [g2] = (await testDb.execute(sql`select id::text from guilds where name = ${G2_NAME}`)) as unknown as { id: string }[];
   // 구역: 알파(G1 소유, 곧 G2에 탈취), 베타(G1 소유·집행관0·배치0 → 방치)
   await testDb.execute(sql`
-    insert into zones (id, server_id, region, name, map_x, map_y, owner_guild_id)
-    values (${ALPHA}, ${SV}, 'orc', '테스트-알파', 10, 10, ${g1!.id}),
-           (${BETA},  ${SV}, 'orc', '테스트-베타', 20, 20, ${g1!.id})`);
+    insert into zones (id, server_id, region, name, map_x, map_y, owner_guild_id, executor_user_id)
+    values (${ALPHA}, ${SV}, 'orc', '테스트-알파', 10, 10, ${g1!.id}, null),
+           (${BETA},  ${SV}, 'orc', '테스트-베타', 20, 20, ${g1!.id}, null),
+           (${GAMMA}, ${SV}, 'orc', '테스트-감마', 30, 30, ${g1!.id}, ${USER}::uuid)`);
   // 전날 전투: 알파를 G1이 점령(prev_owner=G1 해소용) — 이미 공개됨.
   await testDb.execute(sql`insert into conquest_battles (server_id, battle_kst_day, zone_id, winner_guild_id, published_at) values (${SV}, ${PREV_DAY}, ${ALPHA}, ${g1!.id}, now())`);
   // DAY 전투: 알파를 G2가 점령(미공개 — reveal 대상).
@@ -84,8 +86,13 @@ describe('방치 판정의 역사 반영(0180)', () => {
     expect(ab.abandoned).toBe(1); // 베타 1곳 방치
     expect(beta.owner).toBe(g1.id); // 베타 = 소유 유지(중립화 아님)
     expect(beta.aday).toBe(DAY); // 방치 플래그
-    expect(Number(beta.tax_bonus)).toBe(1); // 보너스 제외
+    expect(Number(beta.tax_bonus)).toBe(1.01); // 방치 구역도 길드 세율 적용(계산식에서만 제외)
     expect(Number(alpha.tax_bonus)).toBeGreaterThan(1); // G2의 정상 구역은 보너스 유지
+    // 방치 구역은 세금 계산에서 완전히 제외 — 감마(비방치)의 배율은 G1 보유 2구역이 아니라
+    // 방치(베타) 뺀 1구역 기준이어야 한다(2026-09-01 구역 수 포함→제외 변경).
+    const gamma = owners.find((z) => z.id === GAMMA)!;
+    expect(gamma.aday).toBeNull(); // 집행관이 있어 방치 아님
+    expect(Number(gamma.tax_bonus)).toBe(1.01); // 1 + 1×1% (베타 제외)
     const events = (await testDb.execute(sql`select 1 as x from world_events where server_id = ${SV} and type = 'zone_abandoned'`)) as unknown as unknown[];
     expect(events).toHaveLength(1);
 
@@ -98,7 +105,7 @@ describe('방치 판정의 역사 반영(0180)', () => {
     expect(summary.abandoned[0]!.guildName).toBe(G1_NAME);
     expect(summary.abandoned[0]!.zones).toContain('테스트-베타');
     const standingByGuild = new Map(summary.standings.map((s) => [s.guild, s.zones]));
-    expect(standingByGuild.get(G1_NAME) ?? 0).toBe(1); // 베타는 여전히 G1 보유
+    expect(standingByGuild.get(G1_NAME) ?? 0).toBe(2); // 베타(방치)·감마 모두 여전히 G1 보유
 
     // 다음 날 재판정 — 배치가 붙으면 플래그 해제 → 보너스 복귀.
     await testDb.execute(sql`insert into guild_battle_deployments (server_id, battle_kst_day, user_id, guild_id, zone_id, role) values (${SV}, '2020-01-02', ${USER}::uuid, ${g1.id}, ${BETA}, 'defend')`);
