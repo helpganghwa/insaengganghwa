@@ -844,11 +844,11 @@ export const EXPEDITION_CRIT_BP = 500;
  */
 export const EXPEDITION_CRIT_BP_PER_LEVEL = 10;
 /**
- * 계정 합산 강화 → 대성공 가산(2026-08-31 사용자 확정): 합산 1,000당 +1%p(= 합산/10 bp), 상한 +15%p.
+ * 계정 합산 강화 → 대성공 가산(2026-08-31 사용자 확정): 합산 1,000당 +1%p(= 합산/10 bp), 상한 +20%p(합산 20,000).
  * 강화가 파견의 질(대성공)로도 이어지는 매출 연결 축 — 현재 최고 합산 12,439 = +12.4%p.
- * 총 상한 = 5% + 5%p(레벨) + 15%p(합산) = 25%.
+ * 총 상한 = 5% + 5%p(레벨) + 20%p(합산) = 30%.
  */
-export const EXPEDITION_CRIT_SUM_BP_MAX = 1500;
+export const EXPEDITION_CRIT_SUM_BP_MAX = 2000;
 export function expeditionCritBp(level: number, enhanceSum = 0): number {
   const lv = Math.min(Math.max(0, level), EXPEDITION_LEVEL_MAX) * EXPEDITION_CRIT_BP_PER_LEVEL;
   const sum = Math.min(EXPEDITION_CRIT_SUM_BP_MAX, Math.floor(Math.max(0, enhanceSum) / 10));

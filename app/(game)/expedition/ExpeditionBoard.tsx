@@ -445,7 +445,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             </table>
             <p className="mt-2 text-center text-[10.5px] text-zinc-500 dark:text-zinc-400">
               대성공은 보상을 {EXPEDITION_CRIT_MULT}배 지급합니다. 표의 대성공에는 내 계정 합산 강화 보너스(1,000당
-              +1%p, 최대 +15%p)가 포함돼 있습니다. 긴 파견일수록 보상이 큽니다.
+              +1%p, 최대 +20%p)가 포함돼 있습니다. 긴 파견일수록 보상이 큽니다.
             </p>
           </ModalLayout>
         </ModalShell>

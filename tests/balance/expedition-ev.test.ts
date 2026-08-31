@@ -92,9 +92,9 @@ describe('expedition balance invariants', () => {
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
     expect(launchDaily * as1000).toBeGreaterThanOrEqual(1195);
     expect(launchDaily * as1000).toBeLessThanOrEqual(1260);
-    // 대성공 총 상한(25% = 기본 5 + 레벨 5 + 합산 15)만 얹은 상한(축 ③ 제외).
+    // 대성공 총 상한(30% = 기본 5 + 레벨 5 + 합산 20)만 얹은 상한(축 ③ 제외).
     const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(470);
+    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(500);
     expect(expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL + EXPEDITION_CRIT_SUM_BP_MAX);
   });
 

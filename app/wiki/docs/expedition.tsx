@@ -83,7 +83,7 @@ export default function Doc() {
         <LI>
           파견을 완료하면 시간만큼 XP를 얻는다(예: 8시간 파견 = 8 XP). 최대 Lv.{EXPEDITION_LEVEL_MAX}. 레벨은
           보상 수량을 올리지 않는다. 대신 레벨당 대성공 확률이 +{bpPct(EXPEDITION_CRIT_BP_PER_LEVEL)}p 오른다.
-          계정 합산 강화도 1,000당 대성공 확률을 +1%p(최대 +15%p) 올린다.
+          계정 합산 강화도 1,000당 대성공 확률을 +1%p(최대 +20%p) 올린다.
         </LI>
         <LI>레벨이 오르면 더 어려운(더 긴) 파견이 자주 등장한다.</LI>
       </UL>
