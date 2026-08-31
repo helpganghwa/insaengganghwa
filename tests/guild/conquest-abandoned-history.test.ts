@@ -71,6 +71,7 @@ describe('방치 판정의 역사 반영(0180)', () => {
     // ── 실제 파이프라인 (자정 cron과 동일 순서) ──
     const rev = await revealConquest(SV, DAY);
     const ab = await markAbandonedZones(SV, DAY);
+    await markAbandonedZones(SV, DAY); // cron 5분 틱 재호출 재현 — 이벤트 중복 삽입 금지(아래 toHaveLength(1))
     await recalcTaxBonus(SV);
     const summary = await aggregateConquestDay(DAY, SV);
 
