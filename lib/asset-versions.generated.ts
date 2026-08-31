@@ -94,7 +94,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/expedition/mon/swamp-t4.png": "595f1e3e",
   "/sprites/expedition/mon/kingdom-t3.png": "39b126f4",
   "/sprites/expedition/mon/kingdom-t2.png": "a41cda13",
-  "/sprites/expedition/mon/swamp-t1.png": "0ba4af93",
+  "/sprites/expedition/mon/swamp-t1.png": "159f76d0",
   "/sprites/expedition/mon/swamp-t2.png": "a4746522",
   "/sprites/expedition/mon/kingdom-t4.png": "1e5982e2",
   "/sprites/expedition/mon/swamp-t3.png": "d29086c7",
