@@ -615,6 +615,7 @@ function CardBody({
   hideHeader,
   mutedBg,
   mutedMon,
+  mutedAvatar,
   glow,
   children,
 }: {
@@ -635,6 +636,8 @@ function CardBody({
   /** 흑백 처리 — 미배정: 배경+몬스터, 완료: 몬스터만(배경은 컬러). 진행 중 카드에 구분감(2026-08-28). */
   mutedBg?: boolean;
   mutedMon?: boolean;
+  /** 아바타 흑백 — 오늘 완료 카드(배경·아바타·몬스터 전부 흑백, 2026-08-31). */
+  mutedAvatar?: boolean;
   glow?: boolean;
   children?: React.ReactNode;
 }) {
@@ -682,7 +685,7 @@ function CardBody({
             src={avatarSouth ?? GHOST_SRC}
             alt=""
             decoding="async"
-            className={avatarSouth ? 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]' : 'opacity-30 grayscale brightness-150'}
+            className={avatarSouth ? `drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]${mutedAvatar ? ' grayscale' : ''}` : 'opacity-30 grayscale brightness-150'}
             style={{ height: avH, width: 'auto', imageRendering: 'pixelated' }}
           />
         </span>
@@ -865,7 +868,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0}>
+        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (
