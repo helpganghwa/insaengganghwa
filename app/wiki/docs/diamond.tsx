@@ -1,7 +1,7 @@
 import { GEM_TO_MS } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
-import { fmtInt, fmtMs } from '../fmt';
+import { fmtMs } from '../fmt';
 import { DocLink, H2, LI, Tbl, UL } from '../ui';
 
 export const meta: WikiDocMeta = {
