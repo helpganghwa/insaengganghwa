@@ -8,6 +8,7 @@ import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { flipProfileImage } from '@/lib/game/profile/flip';
+import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -96,6 +97,41 @@ export async function flipProfile(
 }
 
 /** 프로필 삭제(본인). 대표였으면 대표 해제. (hidden 처리는 운영자 전용, 여긴 hard delete) */
+/**
+ * 아바타 반환(2026-09-01) — 삭제 버튼을 대체. 신청 즉시 회수(삭제)되고, 운영자 판단 후
+ * 다이아가 우편으로 지급된다(전액=실지불/절반). 로직은 lib/game/profile/return.ts.
+ */
+export async function returnProfile(profileId: string, reason: string): Promise<ActionState> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+
+  const serverId = await getActiveServerId();
+  const safeReason: AvatarReturnReason = ['equipment_mismatch', 'quality', 'etc'].includes(reason)
+    ? (reason as AvatarReturnReason)
+    : 'etc';
+  try {
+    await requestAvatarReturn({ userId, serverId, profileId, reason: safeReason });
+  } catch (e) {
+    if (e instanceof AvatarReturnError) {
+      const msg: Record<typeof e.code, string> = {
+        NOT_FOUND: '아바타를 찾을 수 없습니다.',
+        DEFAULT_AVATAR: '기본 아바타는 반환할 수 없습니다.',
+        REPORTED: '신고 처리 중인 아바타는 반환할 수 없습니다.',
+        LAST_ONE: '아바타는 최소 1개 이상 보유해야 합니다.',
+      };
+      return { status: 'error', message: msg[e.code] };
+    }
+    throw e;
+  }
+  revalidatePath('/me');
+  revalidatePath('/me/profiles');
+  return { status: 'ok' };
+}
+
 export async function deleteProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };

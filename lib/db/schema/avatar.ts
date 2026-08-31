@@ -203,3 +203,38 @@ export const profileReports = pgTable(
 );
 export type ProfileReport = typeof profileReports.$inferSelect;
 export type NewProfileReport = typeof profileReports.$inferInsert;
+
+/**
+ * 아바타 반환(0183, 2026-09-01) — 신청 즉시 회수(삭제)되므로 아바타 행이 없다.
+ * 운영 판단 재료(스프라이트·장비·실지불액)를 전부 스냅샷으로 보관.
+ * status: pending → paid_full(전액) | paid_half(절반). 지급은 우편(reward).
+ */
+export const avatarReturnRequests = pgTable(
+  'avatar_return_requests',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull().default(1),
+    /** 삭제된 아바타의 원 id — FK 아님(대상 행이 이미 없음). */
+    profileId: uuid('profile_id').notNull(),
+    /** equipment_mismatch | quality | etc */
+    reason: text('reason').notNull().default('etc'),
+    spriteUrl: text('sprite_url').notNull(),
+    equipmentSnapshot: jsonb('equipment_snapshot'),
+    /** 실지불액 스냅샷 — 환급 기준(전액/절반의 모수). */
+    paidDiamond: bigint('paid_diamond', { mode: 'bigint' }).notNull(),
+    /** pending | paid_full | paid_half */
+    status: text('status').notNull().default('pending'),
+    refundDiamond: bigint('refund_diamond', { mode: 'bigint' }),
+    adminNote: text('admin_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('avatar_return_status_idx').on(t.status, t.createdAt),
+    index('avatar_return_user_idx').on(t.userId, t.createdAt.desc()),
+  ],
+);
+export type AvatarReturnRequest = typeof avatarReturnRequests.$inferSelect;

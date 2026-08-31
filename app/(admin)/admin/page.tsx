@@ -88,6 +88,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '닉네임 검색 → 계정 360도(지갑·장착·결제·아바타) + 선제 정지/경고',
   },
   {
+    href: '/admin/avatar-returns',
+    icon: '↩️',
+    title: '아바타 반환 검토',
+    desc: '반환 신청(즉시 회수됨)의 지급액 판정 — 전액(결과 하자)/절반(변심), 우편 지급',
+  },
+  {
     href: '/admin/profile-gen',
     icon: '🎨',
     title: '아바타 생성 검수',

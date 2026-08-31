@@ -8,7 +8,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveProfile, deleteProfile, flipProfile } from './actions';
+import { setActiveProfile, returnProfile, flipProfile } from './actions';
 
 type ProfileItem = {
   id: string;
@@ -40,9 +40,10 @@ export function ProfileSelector({
   const [selectedId, setSelectedId] = useState<string>(initId);
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
   const [pending, startTransition] = useTransition();
-  // 삭제 확인 — 유료로 만든 자산을 지우는 동작이라 11px 알약의 3초 재탭으로는 보호가 약하다.
-  // 무엇이 사라지는지 문장으로 읽히는 모달로 승격(2026-07-29 UI 점검).
-  const [deleteAsk, setDeleteAsk] = useState(false);
+  // 반환 확인(2026-09-01, 구 삭제) — 즉시 회수되는 동작이라 무엇이 벌어지는지 문장으로 읽히는
+  // 모달로 확인한다. 사유는 운영 판단(전액/절반) 재료.
+  const [returnAsk, setReturnAsk] = useState(false);
+  const [returnReason, setReturnReason] = useState<'equipment_mismatch' | 'quality' | 'etc'>('quality');
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
@@ -122,13 +123,14 @@ export function ProfileSelector({
   const cssFlipped = (p: ProfileItem) =>
     p.id === selectedId && (flipPreview || (flipHold !== null && frontSrc(p) === flipHold));
 
-  const doDelete = () => {
+  const doReturn = () => {
     if (pending) return;
-    setDeleteAsk(false);
+    setReturnAsk(false);
     startTransition(async () => {
-      const r = await deleteProfile(selectedId);
+      const r = await returnProfile(selectedId, returnReason);
       if (r.status === 'error') return showError(r.message);
-      // 삭제된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
+      showHeaderToast({ title: '반환 접수 — 확인 후 우편으로 지급돼요' });
+      // 회수된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
       const remaining = list.filter((p) => p.id !== selectedId);
       if (remaining.length === 0) {
         router.push('/me');
@@ -136,7 +138,7 @@ export function ProfileSelector({
       }
       setDeletedIds((s) => new Set(s).add(selectedId));
       setSelectedId(remaining[0]!.id);
-      // refresh 제거(2026-08-20, §11.7) — deleteProfile revalidatePath('/me/profiles')
+      // refresh 제거(2026-08-20, §11.7) — returnProfile revalidatePath('/me/profiles')
       // 응답 재렌더가 커버(낙관 제거 + prop 갱신).
     });
   };
@@ -158,16 +160,16 @@ export function ProfileSelector({
         >
           좌우 반전
         </button>
-        {/* 삭제 — 프리뷰 컨테이너 우상단 코너. 3s 재탭 컨펌(마지막 1개 숨김). */}
+        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개 숨김). */}
         {list.length > 1 ? (
           <button
             type="button"
-            onClick={() => setDeleteAsk(true)}
+            onClick={() => setReturnAsk(true)}
             disabled={pending}
-            aria-label="선택한 아바타 삭제"
-            className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-red-300 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
+            aria-label="선택한 아바타 반환"
+            className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-amber-300 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
           >
-            삭제
+            반환
           </button>
         ) : null}
         <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
@@ -234,30 +236,56 @@ export function ProfileSelector({
         {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
       </button>
 
-      {/* 아바타 삭제 확인 — 다이아를 쓰고 10분 걸려 만든 자산이라 되돌릴 수 없음을 명시한다. */}
-      {deleteAsk && (
+      {/* 아바타 반환 확인 — 즉시 회수 + 사후 지급 구조를 문장으로 고지하고 사유를 받는다. */}
+      {returnAsk && (
         <ModalShell
-          onClose={() => setDeleteAsk(false)}
-          onSubmit={doDelete}
-          label="아바타 삭제 확인"
+          onClose={() => setReturnAsk(false)}
+          onSubmit={doReturn}
+          label="아바타 반환 확인"
         >
           <ModalLayout
-            title="이 아바타를 삭제할까요?"
-            subtitle={<span className="font-bold text-red-500">복구 불가</span>}
+            title="이 아바타를 반환할까요?"
+            subtitle={<span className="font-bold text-amber-500">반환하면 즉시 회수됩니다</span>}
             footer={
               <>
-                <ModalButton tone="ghost" onClick={() => setDeleteAsk(false)} disabled={pending}>
+                <ModalButton tone="ghost" onClick={() => setReturnAsk(false)} disabled={pending}>
                   취소
                 </ModalButton>
-                <ModalButton tone="danger" onClick={doDelete} disabled={pending}>
-                  삭제
+                <ModalButton tone="danger" onClick={doReturn} disabled={pending}>
+                  반환
                 </ModalButton>
               </>
             }
           >
-            <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              생성에 사용한 다이아는 돌려받을 수 없고, 똑같은 아바타를 다시 만들 수 없습니다.
-            </p>
+            <div className="space-y-3">
+              <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                반환한 아바타는 바로 사라지고 되돌릴 수 없습니다. 운영자가 확인한 뒤 다이아가
+                우편으로 지급됩니다 — 생성 결과에 문제가 있었다면 <b>구매에 쓴 다이아 전액</b>,
+                그 외에는 <b>절반</b>이 지급됩니다.
+              </p>
+              <div className="flex justify-center gap-1.5">
+                {(
+                  [
+                    ['equipment_mismatch', '장비 미반영'],
+                    ['quality', '결과 불만족'],
+                    ['etc', '기타'],
+                  ] as const
+                ).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setReturnReason(v)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${
+                      returnReason === v
+                        ? 'border-amber-500 bg-amber-500/15 text-amber-500'
+                        : 'border-zinc-300 text-zinc-500 dark:border-zinc-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </ModalLayout>
         </ModalShell>
       )}
