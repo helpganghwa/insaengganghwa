@@ -4776,6 +4776,90 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "파견",
   cond: "파견 슬롯 4칸 모두 개방",
   diff: "어려움"
+ },
+ {
+  code: "guild_officer",
+  cat: "길드",
+  cond: "부길드장인 동안",
+  diff: "쉬움"
+ },
+ {
+  code: "guild_top_contrib",
+  cat: "길드",
+  cond: "소속 길드에서 기여도 1위인 동안",
+  diff: "중간"
+ },
+ {
+  code: "guild_old_100",
+  cat: "길드",
+  cond: "결성 100일이 넘은 길드 소속인 동안",
+  diff: "중간"
+ },
+ {
+  code: "guild_top_combat",
+  cat: "점령전",
+  cond: "길드 전투력 1위 길드 소속인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "guild_top_zones",
+  cat: "점령전",
+  cond: "점령 구역 수 1위 길드 소속인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "guild_top_tax",
+  cat: "점령전",
+  cond: "세금 곳간 1위 길드 소속인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "guild_zones_25",
+  cat: "점령전",
+  cond: "소속 길드가 구역 25개 이상을 보유한 동안",
+  diff: "한정"
+ },
+ {
+  code: "guild_no_loss_7d",
+  cat: "점령전",
+  cond: "최근 7일간 소속 길드가 방어전을 치르고도 구역을 하나도 잃지 않은 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_volcano",
+  cat: "점령전",
+  cond: "소속 길드가 드래곤 화산 권역을 완전장악한 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_temple",
+  cat: "점령전",
+  cond: "소속 길드가 잊힌 신전 권역을 완전장악한 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_swamp",
+  cat: "점령전",
+  cond: "소속 길드가 슬라임 늪 권역을 완전장악한 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_orc",
+  cat: "점령전",
+  cond: "소속 길드가 오크 부락 권역을 완전장악한 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_kingdom",
+  cat: "점령전",
+  cond: "소속 길드가 왕국 권역을 완전장악한 동안",
+  diff: "어려움"
+ },
+ {
+  code: "region_owner_angel",
+  cat: "점령전",
+  cond: "소속 길드가 타락 천사 부유섬 권역을 완전장악한 동안",
+  diff: "어려움"
  }
 ] as const;
 

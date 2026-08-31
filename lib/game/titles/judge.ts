@@ -28,6 +28,7 @@ const KST = `at time zone 'Asia/Seoul'`;
 
 export { PENDING_CODES, EVENT_HOOK_CODES } from './pending';
 import { PENDING_CODES } from './pending';
+import { guildCollectiveCodes } from './guild-facts';
 
 /**
  * 이 칭호를 목록·분모에서 감출지 — 판정이 없는데 아직 보유하지도 않은 것.
@@ -1070,6 +1071,8 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
   if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
   if (mm.gleader === 1) out.add('guild_flag');
+  // 길드 단위 조건부(2026-09-01, 9종 14코드) — 표시 재검증과 같은 사실표(guild-facts.ts).
+  for (const c of await guildCollectiveCodes(userId, serverId)) out.add(c);
   // 유지형 스트릭
   if (mm.checkin_streak >= 30) out.add('streak_king');
   if (mm.raid_streak >= 7) out.add('march_live');

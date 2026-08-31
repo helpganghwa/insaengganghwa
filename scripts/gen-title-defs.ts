@@ -13,7 +13,7 @@ type Design = {
   typography: { size: string; weight: number };
   palette: Record<string, string>;
   regionKeywords: { pattern: string; color: string }[];
-  special: Record<string, { fx: string; pt?: string; pc?: number; split?: boolean }>;
+  special: Record<string, { fx?: string; pt?: string; pc?: number; split?: boolean; color?: string; prefix?: { text: string; color: string } }>;
   /** 어려움·한정 카테고리 시그니처 fx 패밀리(트랙 C) — special이 없는 칭호에 코드 해시로 순환 배정. */
   hardFx: Record<string, string[]>;
 };
@@ -100,7 +100,11 @@ function styleOf(t: T): Style {
   if (t.code === 'zone_executor') return { executor: true };
   const hard = t.diff === '어려움' || t.diff === '한정';
   const sp = design.special[t.code];
-  if (sp) return { fx: sp.fx, ...(sp.pt ? { pt: sp.pt } : {}), ...(sp.pc ? { pc: sp.pc } : {}), ...(sp.split ? { split: true } : {}), ...(hard ? { glow: true } : {}) };
+  if (sp) {
+    // 정적 단색/두 색(prefix) 지정 — 길드 역할·지역 주인(2026-09-01). fx 없이 color만 준 special.
+    if (!sp.fx) return { ...(sp.color ? { color: sp.color } : {}), ...(sp.prefix ? { prefix: sp.prefix } : {}) };
+    return { fx: sp.fx, ...(sp.pt ? { pt: sp.pt } : {}), ...(sp.pc ? { pc: sp.pc } : {}), ...(sp.split ? { split: true } : {}), ...(hard ? { glow: true } : {}) };
+  }
   if (t.cat === '아이템 발동') {
     const cs = itemColors(t.cond);
     if (cs.length >= 2) return { gradient: cs, ...(hard ? { glow: true } : {}) };
@@ -189,6 +193,8 @@ export type TitleStyle = {
   glow?: boolean;
   /** 집행관 — ExecutorTag 렌더 위임. */
   executor?: boolean;
+  /** 두 색 라벨 — 앞부분(text)을 별도 색으로(지역 주인: 지역명=지역색, 뒤=color). */
+  prefix?: { text: string; color: string };
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };

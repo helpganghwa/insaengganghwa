@@ -19,6 +19,8 @@ export type TitleStyle = {
   glow?: boolean;
   /** 집행관 — ExecutorTag 렌더 위임. */
   executor?: boolean;
+  /** 두 색 라벨 — 앞부분(text)을 별도 색으로(지역 주인: 지역명=지역색, 뒤=color). */
+  prefix?: { text: string; color: string };
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
@@ -5030,6 +5032,175 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "파견",
   style: {
    fx: "trailflow"
+  }
+ },
+ {
+  code: "guild_officer",
+  kind: "conditional",
+  label: "오른팔",
+  hidden: false,
+  cat: "길드",
+  style: {
+   color: "#cec6e0"
+  }
+ },
+ {
+  code: "guild_top_contrib",
+  kind: "conditional",
+  label: "살림꾼",
+  hidden: false,
+  cat: "길드",
+  style: {
+   color: "#cec6e0"
+  }
+ },
+ {
+  code: "guild_old_100",
+  kind: "conditional",
+  label: "유서 깊은 가문",
+  hidden: false,
+  cat: "길드",
+  style: {
+   fx: "silk"
+  }
+ },
+ {
+  code: "guild_top_combat",
+  kind: "conditional",
+  label: "불패의 신화",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "legendstatic",
+   glow: true
+  }
+ },
+ {
+  code: "guild_top_zones",
+  kind: "conditional",
+  label: "대륙의 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "verdantstatic",
+   glow: true
+  }
+ },
+ {
+  code: "guild_top_tax",
+  kind: "conditional",
+  label: "황금 곳간",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "treasury",
+   glow: true
+  }
+ },
+ {
+  code: "guild_zones_25",
+  kind: "conditional",
+  label: "지지 않는 태양",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "solarcrown",
+   glow: true
+  }
+ },
+ {
+  code: "guild_no_loss_7d",
+  kind: "conditional",
+  label: "난공불락",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   fx: "steelshine",
+   glow: true
+  }
+ },
+ {
+  code: "region_owner_volcano",
+  kind: "conditional",
+  label: "드래곤 화산 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "드래곤 화산",
+    color: "#ef4444"
+   }
+  }
+ },
+ {
+  code: "region_owner_temple",
+  kind: "conditional",
+  label: "잊힌 신전 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "잊힌 신전",
+    color: "#60a5fa"
+   }
+  }
+ },
+ {
+  code: "region_owner_swamp",
+  kind: "conditional",
+  label: "슬라임 늪 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "슬라임 늪",
+    color: "#22c55e"
+   }
+  }
+ },
+ {
+  code: "region_owner_orc",
+  kind: "conditional",
+  label: "오크 부락 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "오크 부락",
+    color: "#f97316"
+   }
+  }
+ },
+ {
+  code: "region_owner_kingdom",
+  kind: "conditional",
+  label: "왕국 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "왕국",
+    color: "#fbbf24"
+   }
+  }
+ },
+ {
+  code: "region_owner_angel",
+  kind: "conditional",
+  label: "타락 천사 부유섬 주인",
+  hidden: false,
+  cat: "점령전",
+  style: {
+   color: "#dcdfe6",
+   prefix: {
+    text: "타락 천사 부유섬",
+    color: "#c084fc"
+   }
   }
  }
 ] as const;

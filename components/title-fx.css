@@ -177,6 +177,11 @@
 /* 초월 — 별빛(starlight) 외 2변주(성운 흐름·무지개빛 표류) */
 .fx-stardrift{background:linear-gradient(90deg,#c8b8f0,#f0e6d0,#9d8ce0,#e8d8f8,#c8b8f0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite;filter:drop-shadow(0 0 3px rgba(180,160,230,.4))}
 .fx-astralflow{background:linear-gradient(90deg,#b39ddb,#7a5fc0,#e8e0ff,#7a5fc0,#b39ddb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+/* 길드 칭호(2026-09-01) — 1위·규모는 정적 그라데이션(채팅 목록 부담 0), 태양만 느린 흐름 */
+.fx-legendstatic{background:linear-gradient(100deg,#dcdfe6 0%,#c22e2e 35%,#f5d76e 65%,#dcdfe6 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(220,60,60,.35))}
+.fx-verdantstatic{background:linear-gradient(100deg,#7fce8a 0%,#e5c07b 50%,#4caf60 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fx-treasury{background:linear-gradient(115deg,#8f6a1e 0%,#f5d76e 40%,#fff3c4 50%,#f5d76e 60%,#8f6a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(245,215,110,.35))}
+.fx-solarcrown{background:linear-gradient(90deg,#f5d76e,#ffffff,#ffb347,#ffffff,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 10s linear infinite,pulsebr 5.5s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,200,90,.7)) drop-shadow(0 0 12px rgba(255,150,50,.3))}
 @media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */

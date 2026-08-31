@@ -86,6 +86,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`update zones set executor_user_id = null where executor_user_id = ${uid}`);
     await tx.execute(sql`delete from guild_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_join_rejections where user_id = ${uid}`); // 0179 거절 기록(FK cascade지만 명시)
+    await tx.execute(sql`delete from avatar_return_requests where user_id = ${uid}`); // 0183 아바타 반환 요청(FK cascade지만 명시)
     await tx.execute(sql`delete from guild_battle_deployments where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_leave_log where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_members where user_id = ${uid}`);

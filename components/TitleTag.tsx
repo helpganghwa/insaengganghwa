@@ -131,6 +131,12 @@ export function TitleTag({
     <span className={`fx fx-${def.style.fx}`}>
       {def.style.split ? <SplitLabel label={label} /> : label}
     </span>
+  ) : def.style.prefix ? (
+    // 두 색 라벨(2026-09-01 지역 주인) — 앞부분(지역명)은 지역색, 뒷부분은 style.color.
+    <span>
+      <span style={{ color: def.style.prefix.color }}>{def.style.prefix.text}</span>
+      <span style={styleAttr(def.style)}>{label.slice(def.style.prefix.text.length)}</span>
+    </span>
   ) : (
     <span style={styleAttr(def.style)}>{label}</span>
   );

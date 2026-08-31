@@ -7,6 +7,7 @@ import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
 import { TITLE_SECRET_BY_CODE } from './defs.server';
+import { GUILD_COLLECTIVE_CODES, guildCollectiveCodesCached } from './guild-facts';
 
 /**
  * 표시용 대표 칭호 해석 — 핫패스(헤더 등)에서 쓰는 **경량** 활성 검증.
@@ -84,6 +85,8 @@ const HEAVY_CONDITIONALS = new Set([
   // ⚠ 발견 판정과 이 목록은 **항상 함께** 갱신할 것. 여기 없으면 발견은 되는데
   //   대표로 달았을 때 아래 "그 외 조건부 — 보수적 숨김"으로 떨어져 조용히 안 보인다.
   'big_family', 'alley_boss', 'elite_few',
+  // 길드 단위 조건부(2026-09-01) — guild-facts.ts 사실표로 재검증.
+  ...GUILD_COLLECTIVE_CODES,
 ]);
 
 const RANK_METRIC: Record<string, string> = {
@@ -115,6 +118,7 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
   try {
+    if (GUILD_COLLECTIVE_CODES.has(code)) return (await guildCollectiveCodesCached(userId, serverId)).has(code);
     if (RANK_METRIC[code] || code === 'throne_shadow' || code === 'uncrowned' || code === 'rising_star') {
       const rows = (await db.execute(sql`
         select m.metric, (select count(*)+1 from leaderboard_ranks lr
@@ -288,6 +292,8 @@ const FX_OG: Record<string, string> = {
   yinyang: '#f5d76e', silk: '#d88ca0', breath: '#b9c2cc', obsidian: '#8a84a0', pearl: '#e0d8f0',
   inkwash: '#b8bec8', candle: '#f0c890', firstlight: '#e8cf9a', jade: '#8fd4ae', rimlight: '#f0e2b0',
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
+  // 길드 칭호(2026-09-01)
+  legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
   // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
