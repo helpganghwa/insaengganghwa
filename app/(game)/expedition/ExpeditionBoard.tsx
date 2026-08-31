@@ -443,13 +443,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 })}
               </tbody>
             </table>
-            {/* 추가 대성공(합산 강화) 계산 — 표는 레벨분만, 내 보너스는 여기서 식으로(2026-08-31). */}
+            {/* 내 대성공 계산 한 줄 — 표는 레벨분만(2026-08-31). */}
             <p className="mt-2 text-center text-[10.5px] tabular-nums text-zinc-500 dark:text-zinc-400">
-              + 합산 강화 보너스: {board.enhanceSum.toLocaleString('ko-KR')} ÷ 1,000 ={' '}
-              <b className="text-amber-600 dark:text-amber-400">
-                +{((board.critBp - expeditionCritBp(board.level)) / 100).toFixed(1)}%p
-              </b>
-              {' '}→ 현재 대성공{' '}
+              파견 레벨 대성공 {(expeditionCritBp(board.level) / 100).toFixed(1)}% + 합산 강화 보너스{' '}
+              {((board.critBp - expeditionCritBp(board.level)) / 100).toFixed(1)}% = 현재 대성공 확률{' '}
               <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
             </p>
           </ModalLayout>
