@@ -431,7 +431,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                         {now ? <span className="ml-1 text-[9px] font-extrabold text-amber-600 dark:text-amber-400">현재</span> : null}
                       </td>
                       <td className="py-1.5">
-                        {(expeditionCritBp(b.min, board.enhanceSum) / 100).toFixed(1)}~{(expeditionCritBp(b.max, board.enhanceSum) / 100).toFixed(1)}%
+                        {(expeditionCritBp(b.min) / 100).toFixed(1)}~{(expeditionCritBp(b.max) / 100).toFixed(1)}%
                       </td>
                       {EXPEDITION_DIFFICULTIES.map((d) => (
                         <td key={d} className="py-1.5">
@@ -443,9 +443,14 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 })}
               </tbody>
             </table>
-            <p className="mt-2 text-center text-[10.5px] text-zinc-500 dark:text-zinc-400">
-              대성공은 보상을 {EXPEDITION_CRIT_MULT}배 지급합니다. 표의 대성공에는 내 계정 합산 강화 보너스(1,000당
-              +1%p, 최대 +20%p)가 포함돼 있습니다. 긴 파견일수록 보상이 큽니다.
+            {/* 추가 대성공(합산 강화) 계산 — 표는 레벨분만, 내 보너스는 여기서 식으로(2026-08-31). */}
+            <p className="mt-2 text-center text-[10.5px] tabular-nums text-zinc-500 dark:text-zinc-400">
+              + 합산 강화 보너스: {board.enhanceSum.toLocaleString('ko-KR')} ÷ 1,000 ={' '}
+              <b className="text-amber-600 dark:text-amber-400">
+                +{((board.critBp - expeditionCritBp(board.level)) / 100).toFixed(1)}%p
+              </b>
+              {' '}→ 현재 대성공{' '}
+              <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
             </p>
           </ModalLayout>
         </ModalShell>
