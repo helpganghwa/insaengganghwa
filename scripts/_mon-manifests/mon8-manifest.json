@@ -1,0 +1,54 @@
+{
+ "seraph-picked": {
+  "status": "promoted",
+  "objectId": "1c49b379-81c9-4265-bc7a-98ea9e532bd1"
+ },
+ "slime-t2a": {
+  "status": "done",
+  "objectId": "6d493952-6ad0-47ee-abb2-7f99c911cf0a"
+ },
+ "slime-t2b": {
+  "status": "done",
+  "objectId": "810b4d71-c602-42c9-80cf-31791fbac5f4"
+ },
+ "griffin-t4c": {
+  "status": "done",
+  "objectId": "fdac55e6-3d01-4578-ac7c-347265da9463"
+ },
+ "griffin-t4d": {
+  "status": "done",
+  "objectId": "0d933d43-76c8-446e-9005-93435b5ef522"
+ },
+ "golem-t3c": {
+  "status": "done",
+  "objectId": "840fcb4c-7532-4279-8ed1-2ce7b6119a20"
+ },
+ "golem-t3d": {
+  "status": "done",
+  "objectId": "2caee496-0d65-430a-b08e-6c83a99fdfbc"
+ },
+ "golem-t4c": {
+  "status": "done",
+  "objectId": "4f261b67-25ad-4d28-8647-8b1409d03674"
+ },
+ "golem-t4d": {
+  "status": "done",
+  "objectId": "9cea92da-2721-4677-86b8-1e118b2b0ab9"
+ },
+ "seraph-t3a": {
+  "status": "done",
+  "objectId": "54f95479-6e33-4e93-bbad-f00679c07119"
+ },
+ "seraph-t3b": {
+  "status": "done",
+  "objectId": "01c90cee-0f6c-4fc1-8a99-c639d2fbd036"
+ },
+ "seraph-t4a": {
+  "status": "done",
+  "objectId": "6895880a-c9e7-4600-bbae-186a14f95a29"
+ },
+ "seraph-t4b": {
+  "status": "done",
+  "objectId": "cc2921d6-4790-46bc-bdf1-8129c0ac612e"
+ }
+}

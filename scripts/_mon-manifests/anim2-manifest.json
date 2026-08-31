@@ -1,0 +1,38 @@
+{
+ "orc-t1-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t2-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t3-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t4-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t4-idle2": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t3-idle2": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t1-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t3-walk": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t4-walk": {
+  "status": "done",
+  "note": "9f"
+ }
+}

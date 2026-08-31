@@ -1,0 +1,27 @@
+{
+ "slime-base": {
+  "status": "review-saved",
+  "objectId": "22ceeb90-86d2-4d26-ba8d-4317da7fba92",
+  "candidates": 16
+ },
+ "griffin-base": {
+  "status": "review-saved",
+  "objectId": "5531b925-0d22-4830-904c-605b0acd6573",
+  "candidates": 16
+ },
+ "golem-base": {
+  "status": "review-saved",
+  "objectId": "58896208-f36c-4c45-8cc8-ceedfe638813",
+  "candidates": 16
+ },
+ "dragon-base": {
+  "status": "review-saved",
+  "objectId": "56e0fd94-d0ad-4c40-be25-ef1d5c827184",
+  "candidates": 16
+ },
+ "angel-base": {
+  "status": "review-saved",
+  "objectId": "9f92d996-369b-47a9-a701-6ac4610c1dcb",
+  "candidates": 16
+ }
+}

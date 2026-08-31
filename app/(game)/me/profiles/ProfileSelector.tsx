@@ -13,6 +13,8 @@ import { setActiveProfile, returnProfile, flipProfile } from './actions';
 type ProfileItem = {
   id: string;
   rotations: Record<string, string>;
+  /** 기본 아바타(대장장이) — 반환 버튼 미노출 + 서버 가드 이중(2026-09-01). */
+  isDefault?: boolean;
 };
 
 /** 표시용 정면 이미지 — 항상 south(정면, 8방향 미사용). 레거시 프로필 대비 첫 값 폴백. */
@@ -160,8 +162,8 @@ export function ProfileSelector({
         >
           좌우 반전
         </button>
-        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개 숨김). */}
-        {list.length > 1 ? (
+        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개·기본 아바타 숨김). */}
+        {list.length > 1 && !sel.isDefault ? (
           <button
             type="button"
             onClick={() => setReturnAsk(true)}

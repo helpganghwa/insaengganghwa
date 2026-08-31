@@ -1,0 +1,52 @@
+{
+ "gargoyle-base": {
+  "status": "review-saved",
+  "objectId": "dc88ef46-79e9-445c-8c68-ef0a2735e86a",
+  "candidates": 16
+ },
+ "seraph-base": {
+  "status": "review-saved",
+  "objectId": "6a3bae09-c67b-44a9-8615-e275de0fcfb9",
+  "candidates": 16
+ },
+ "orc-t3c": {
+  "status": "done",
+  "objectId": "79948eee-61ab-4f60-8d22-e93b9b16e5db"
+ },
+ "griffin-t4b": {
+  "status": "done",
+  "objectId": "fa9c1b2b-7f13-4b5a-826a-40a9fcef4d7a"
+ },
+ "golem-t1": {
+  "status": "done",
+  "objectId": "e19bdd8e-12bb-4efe-919b-e91058625326"
+ },
+ "golem-t3b": {
+  "status": "done",
+  "objectId": "a446da87-d8fa-403e-bdac-2e86ec2fa87e"
+ },
+ "golem-t4b": {
+  "status": "done",
+  "objectId": "3b7b3f72-ccd3-4c64-8edc-01d2ca3cf7fe"
+ },
+ "gargoyle-picked": {
+  "status": "promoted",
+  "objectId": "a553bc74-d0c8-4ead-8800-b577d10e198c"
+ },
+ "gargoyle-t2": {
+  "status": "done",
+  "objectId": "0c205457-a041-40bf-9ff2-ce0f867c67cc"
+ },
+ "gargoyle-t3": {
+  "status": "done",
+  "objectId": "fb2f43bd-f072-4ecf-b17c-51a5a732e52c"
+ },
+ "gargoyle-t4": {
+  "status": "done",
+  "objectId": "93203fc8-a7dc-4f4f-a934-4ba7bff9e98b"
+ },
+ "seraph-picked": {
+  "status": "promoted",
+  "objectId": "1c49b379-81c9-4265-bc7a-98ea9e532bd1"
+ }
+}

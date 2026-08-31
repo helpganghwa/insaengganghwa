@@ -1,0 +1,66 @@
+{
+ "orc-t1-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t1-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t2-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t2-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t3-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t3-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t4-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "orc-t4-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t1-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t1-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t2-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t2-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t3-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t3-attack": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t4-idle": {
+  "status": "done",
+  "note": "9f"
+ },
+ "griffin-t4-attack": {
+  "status": "done",
+  "note": "9f"
+ }
+}

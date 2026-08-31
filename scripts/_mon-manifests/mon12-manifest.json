@@ -1,0 +1,22 @@
+{
+ "slime12-picked": {
+  "status": "promoted",
+  "objectId": "72407cc7-96c9-4fa6-9fee-dcbd40192bfc"
+ },
+ "slime-t2i": {
+  "status": "done",
+  "objectId": "9af8c8b1-4356-460f-ba2e-8d05bd9bc448"
+ },
+ "slime-t2j": {
+  "status": "done",
+  "objectId": "96f68bf5-bca6-4fad-a7db-69defd378bf5"
+ },
+ "slime-t2k": {
+  "status": "done",
+  "objectId": "6b61fb0c-aff0-48c0-88e1-bbcdaf2af6ba"
+ },
+ "slime-t2l": {
+  "status": "done",
+  "objectId": "cd0bd89d-3547-4a2d-9f42-ef71a6cdbe6a"
+ }
+}

@@ -1,0 +1,13 @@
+{
+ "slime-base": {"status": "review-saved", "objectId": "52070002-a0ed-4a69-98b0-26b479a4bfc4"},
+ "slime-base-picked": {"status": "promoted", "objectId": "6fb99450-451f-43aa-9453-e006afb02869"},
+ "griffin-base": {"status": "review-saved", "objectId": "43396816-373f-42dc-911b-1fd5e9c55550"},
+ "griffin-base-picked": {"status": "promoted", "objectId": "1d0c9ee7-6eb5-48be-a506-bc4d3f957cbc"},
+ "orc-base": {"status": "review-saved", "objectId": "211f9fec-1030-477a-96e5-ab5db067ade6"},
+ "orc-base-picked": {"status": "promoted", "objectId": "f59768a3-039a-4dc6-ae74-0df4d6509f24"},
+ "golem-base": {"status": "review-saved", "objectId": "be135f17-ca13-44ab-930f-1501c3859738"},
+ "golem-base-picked": {"status": "promoted", "objectId": "57551a81-c00d-4d85-adff-b882aa4b2ad9"},
+ "salamander-base": {"status": "review-saved", "objectId": "d8e0b1c0-0e08-4758-b9e2-2ea55aaaa3bc"},
+ "salamander-base-picked": {"status": "promoted", "objectId": "d9b44a8e-95da-45e8-b7a0-02897344a1a7"},
+ "fallen2-base": {"status": "review-saved", "objectId": "3ee585cc-4bc3-4b69-8d16-0176644826a5"}
+}

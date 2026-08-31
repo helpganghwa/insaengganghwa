@@ -1,0 +1,50 @@
+{
+ "slime-t2c": {
+  "status": "done",
+  "objectId": "d79e48fb-e24b-41f8-b3b6-20b289cf041e"
+ },
+ "slime-t2d": {
+  "status": "done",
+  "objectId": "0dcb8e72-01a5-4832-8336-b2092d8f287f"
+ },
+ "griffin-t4e": {
+  "status": "done",
+  "objectId": "8059929b-717f-4344-a584-b95ffe44dcd9"
+ },
+ "griffin-t4f": {
+  "status": "done",
+  "objectId": "500b60c3-6655-4952-a1e6-60906d4d3da9"
+ },
+ "golem-t3e": {
+  "status": "done",
+  "objectId": "d9ff98c1-8b59-4ee5-9477-4807f6ee849c"
+ },
+ "golem-t3f": {
+  "status": "done",
+  "objectId": "8d5bc266-a730-46f5-af15-e80e329d88b0"
+ },
+ "golem-t4e": {
+  "status": "done",
+  "objectId": "d9868bf6-99b7-4405-8241-7399ff86ed81"
+ },
+ "golem-t4f": {
+  "status": "done",
+  "objectId": "1ccb41cf-b1d1-44e1-a873-406b709db4ac"
+ },
+ "seraph-t1a": {
+  "status": "done",
+  "objectId": "055d4b8a-1738-4ea5-b796-53725b3095c3"
+ },
+ "seraph-t1b": {
+  "status": "done",
+  "objectId": "37e2d035-9a5c-43be-95a3-277db82d27f7"
+ },
+ "seraph-t4c": {
+  "status": "done",
+  "objectId": "75f24fa2-6213-4151-91f8-96f814b7e99e"
+ },
+ "seraph-t4d": {
+  "status": "done",
+  "objectId": "ee2aae7c-089c-4c80-a44b-8af946770f57"
+ }
+}

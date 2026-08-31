@@ -1,0 +1,68 @@
+{
+ "golem-base": {
+  "status": "review-saved",
+  "objectId": "e6239ac1-1ee1-4322-96e7-5789cafde0c3",
+  "candidates": 16
+ },
+ "angel-base": {
+  "status": "review-saved",
+  "objectId": "2b0103e5-e1ab-4581-8414-32f2599a7209",
+  "candidates": 16
+ },
+ "slime-picked": {
+  "status": "promoted",
+  "objectId": "cc254e62-5183-439e-955d-6a5ce3184e0a"
+ },
+ "orc-t3b": {
+  "status": "done",
+  "objectId": "0053b2a8-a3ac-4ef1-a81c-abc7b081a8ba"
+ },
+ "griffin-picked": {
+  "status": "promoted",
+  "objectId": "45b8d152-f336-4edf-8d8c-ba7c88e817af"
+ },
+ "griffin-t3": {
+  "status": "done",
+  "objectId": "d434fb62-6526-48ea-9a78-6ed008d54a62"
+ },
+ "griffin-t4": {
+  "status": "done",
+  "objectId": "a73a4627-7ef3-40f4-a31c-2ba045868b3b"
+ },
+ "slime-t2": {
+  "status": "done",
+  "objectId": "668ecc1f-4096-4aed-8b18-effece4426e8"
+ },
+ "golem-picked": {
+  "status": "promoted",
+  "objectId": "e94f1001-54ad-4d08-bff0-f848cf4cbe48"
+ },
+ "angel-picked": {
+  "status": "promoted",
+  "objectId": "7733c2b7-82c4-4ee4-83ae-92abbbf43206"
+ },
+ "angel-t2": {
+  "status": "done",
+  "objectId": "d27fa5b3-8b36-40ce-999f-511e91e4cfbe"
+ },
+ "angel-t3": {
+  "status": "done",
+  "objectId": "f38b9082-e0a9-4891-9879-e0bc53241257"
+ },
+ "angel-t4": {
+  "status": "done",
+  "objectId": "e63ba61b-0d51-470e-a7bb-b5576cbc902e"
+ },
+ "golem-t2": {
+  "status": "done",
+  "objectId": "8559bedf-a51d-4f5a-8f42-5b31730a19ee"
+ },
+ "golem-t3": {
+  "status": "done",
+  "objectId": "291504a1-6427-4ac0-93c2-7af1a8f78c36"
+ },
+ "golem-t4": {
+  "status": "done",
+  "objectId": "a97bf0c9-f54a-4846-8f86-eb5737f8cd8a"
+ }
+}

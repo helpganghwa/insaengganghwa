@@ -1,0 +1,34 @@
+{
+ "dragon-base-picked": {
+  "status": "promoted",
+  "objectId": "eae4fb0d-0ea3-474e-82c2-9adecf96a06c"
+ },
+ "dragon-t2": {
+  "status": "done",
+  "objectId": "218469a4-dbbd-4e78-9264-a1559e40a998"
+ },
+ "dragon-t3": {
+  "status": "done",
+  "objectId": "3a9d44ec-eb93-4818-9105-e284cb41fa99"
+ },
+ "dragon-t4": {
+  "status": "done",
+  "objectId": "8392aa3d-432c-4c03-8929-096631ed0932"
+ },
+ "fallen2-base-picked": {
+  "status": "promoted",
+  "objectId": "48fe3805-5447-46c4-9a2c-9fbdfa4e7a20"
+ },
+ "fallen2-t2": {
+  "status": "done",
+  "objectId": "047ed3d7-e3e8-4175-a08e-21debaeaa819"
+ },
+ "fallen2-t3": {
+  "status": "done",
+  "objectId": "f5d77be9-f242-47f3-8fbe-160085c27c61"
+ },
+ "fallen2-t4": {
+  "status": "done",
+  "objectId": "94ac41c0-a7a5-453f-aae8-575508b0e0bb"
+ }
+}

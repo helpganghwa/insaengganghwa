@@ -24,6 +24,7 @@ export default async function ProfileSelectPage() {
       .select({
         id: userProfiles.id,
         rotations: userProfiles.rotations,
+        options: userProfiles.options,
       })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
@@ -62,6 +63,8 @@ export default async function ProfileSelectPage() {
             profiles={list.map((r) => ({
               id: r.id,
               rotations: r.rotations as Record<string, string>,
+              // 기본 아바타는 반환 버튼 미노출(2026-09-01) — 서버 가드(DEFAULT_AVATAR)와 이중.
+              isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
           />

@@ -1,0 +1,98 @@
+{
+ "swamp-t1": {
+  "status": "done",
+  "objectId": "d2380f63-ebd7-4a9f-b60f-b558ede40e6c"
+ },
+ "swamp-t2": {
+  "status": "done",
+  "objectId": "aa7f5973-4a5d-44ca-9e78-2b371553469e"
+ },
+ "swamp-t3": {
+  "status": "done",
+  "objectId": "0b711cf2-f080-45f2-b4da-600c7d4939a5"
+ },
+ "swamp-t4": {
+  "status": "done",
+  "objectId": "de469288-076a-4c6b-99e2-4974b260586e"
+ },
+ "orc-t1": {
+  "status": "done",
+  "objectId": "1d9685e6-cbbc-4b7a-a24a-defc4cc4ba3a"
+ },
+ "orc-t2": {
+  "status": "done",
+  "objectId": "2791df85-13fb-4b88-99e3-7e519547e382"
+ },
+ "orc-t3": {
+  "status": "done",
+  "objectId": "cac001d6-34ec-4783-9743-07fa8d0ed278"
+ },
+ "orc-t4": {
+  "status": "done",
+  "objectId": "24b1f1ce-579b-4bc1-84aa-7e35e1e8c55d"
+ },
+ "kingdom-t1": {
+  "status": "done",
+  "objectId": "7acd62f8-eede-47ec-b9e3-520244b69a60"
+ },
+ "kingdom-t2": {
+  "status": "done",
+  "objectId": "8514921e-625a-4bc1-a27c-4d85928ae21c"
+ },
+ "kingdom-t3": {
+  "status": "done",
+  "objectId": "fa086ae4-289f-4652-9ea9-1544e3e30abe"
+ },
+ "kingdom-t4": {
+  "status": "done",
+  "objectId": "482a5a07-0506-40ad-a09b-b60e33584e65"
+ },
+ "temple-t1": {
+  "status": "done",
+  "objectId": "00176cdc-35da-4b22-9307-7af01303ccba"
+ },
+ "temple-t2": {
+  "status": "done",
+  "objectId": "18245fc0-a822-44ff-9cd8-216e9d21371b"
+ },
+ "temple-t3": {
+  "status": "done",
+  "objectId": "0730368e-fc0f-4fc5-a485-d48477c48ccb"
+ },
+ "temple-t4": {
+  "status": "done",
+  "objectId": "c2dd81d3-de1e-49f7-9726-613115772a21"
+ },
+ "volcano-t1": {
+  "status": "done",
+  "objectId": "ce6e7a9c-e7c5-4efd-90c2-c0398ffe7675"
+ },
+ "volcano-t2": {
+  "status": "done",
+  "objectId": "22825128-7607-492c-a8af-3d284d61bc8f"
+ },
+ "volcano-t3": {
+  "status": "done",
+  "objectId": "3bc5272a-bbf6-4406-9c60-6eb89d93bde5"
+ },
+ "volcano-t4": {
+  "status": "done",
+  "objectId": "b69aac7e-a7da-4287-ae90-9b8625b72fd4"
+ },
+ "angel-t1": {
+  "status": "done",
+  "objectId": "a750bae3-25a0-40b7-b5e4-30b38af32a96"
+ },
+ "angel-t2": {
+  "status": "done",
+  "objectId": "e0b860c6-7052-4b1c-b596-b7f124d0ba08"
+ },
+ "angel-t3": {
+  "status": "done",
+  "objectId": "a61a3d29-9d4b-4c87-a116-ecf5d82c1a16"
+ },
+ "angel-t4": {
+  "status": "done",
+  "objectId": "7c7ca35a-f385-4863-a78e-585213ac1f9d"
+ }
+}

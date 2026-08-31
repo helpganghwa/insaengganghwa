@@ -1,0 +1,37 @@
+{
+ "slime0-picked": {
+  "status": "pending"
+ },
+ "slime-t2e": {
+  "status": "done",
+  "objectId": "950cb842-6a47-412a-a7a0-5eb8bd177321"
+ },
+ "slime-t2f": {
+  "status": "done",
+  "objectId": "7e45c600-d784-4eb4-aaeb-0847126d9d63"
+ },
+ "golem-t3g": {
+  "status": "done",
+  "objectId": "d3e8add3-1c7d-4083-afb5-e4c785e24c98"
+ },
+ "golem-t3h": {
+  "status": "done",
+  "objectId": "70737c06-84c7-4dc8-a23f-55b4d99bbeec"
+ },
+ "golem-t4g": {
+  "status": "done",
+  "objectId": "461a8271-cec8-4abd-b0be-7c3d8380163b"
+ },
+ "golem-t4h": {
+  "status": "done",
+  "objectId": "6ce483e2-1f29-4157-93af-7fb14288dcdc"
+ },
+ "seraph-t4e": {
+  "status": "done",
+  "objectId": "14763506-d5d4-4c45-88b1-1010ef5ba9fc"
+ },
+ "seraph-t4f": {
+  "status": "done",
+  "objectId": "81fed49c-951e-47b3-8c1d-8b9b61e3449f"
+ }
+}

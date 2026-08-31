@@ -1,0 +1,43 @@
+{
+ "wraith-base": {
+  "status": "review-saved",
+  "objectId": "56db676e-6b0d-4557-a78d-c34e07a276c0",
+  "candidates": 16
+ },
+ "slime-t2v4": {
+  "status": "done",
+  "objectId": "5f856a5d-22e7-4ac5-ba01-6895abd30ff3"
+ },
+ "slime-t3v4": {
+  "status": "done",
+  "objectId": "0a980b08-7e70-40f2-8faa-48a5222f72e6"
+ },
+ "golem-t3v3": {
+  "status": "done",
+  "objectId": "aba45a1d-0900-4db9-bcf5-2818fd21eb31"
+ },
+ "golem-t4v3": {
+  "status": "done",
+  "objectId": "f6cbc65f-fc82-4160-b4c7-55d58d1e0e41"
+ },
+ "dragon-t2v2": {
+  "status": "done",
+  "objectId": "2ac50bd6-a8ea-4e6e-8e21-20b2418a04ad"
+ },
+ "wraith-base-picked": {
+  "objectId": "fa9f89d5-7105-478e-93a8-b25c1dc207ad",
+  "status": "promoted"
+ },
+ "wraith-t2": {
+  "status": "done",
+  "objectId": "91b11739-6f8a-4efe-ba67-e01fcf7bbde9"
+ },
+ "wraith-t3": {
+  "status": "done",
+  "objectId": "97b109a2-3d10-44a2-843c-27fc56584a86"
+ },
+ "wraith-t4": {
+  "status": "done",
+  "objectId": "0cf5761e-17ca-474e-ad41-ab6d9409defd"
+ }
+}
