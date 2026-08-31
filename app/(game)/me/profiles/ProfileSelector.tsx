@@ -130,7 +130,7 @@ export function ProfileSelector({
     startTransition(async () => {
       const r = await returnProfile(selectedId);
       if (r.status === 'error') return showError(r.message);
-      showHeaderToast({ title: '반환 접수 — 확인 후 우편으로 반환 보상이 지급돼요' });
+      showHeaderToast({ title: '검토 후 우편으로 반환 보상이 지급돼요' });
       // 회수된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
       const remaining = list.filter((p) => p.id !== selectedId);
       if (remaining.length === 0) {

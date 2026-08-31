@@ -37,12 +37,12 @@ export async function decideAvatarReturn(
       userId: req.userId,
       serverId: req.serverId,
       type: 'reward',
-      title: '아바타 반환 지급',
+      title: '아바타 반환 보상',
       body:
         outcome === 'full'
-          ? `반환하신 아바타를 확인했습니다. 생성에 사용한 다이아 전액(💎${paid.toLocaleString('ko-KR')})을 돌려드립니다.`
-          : `반환하신 아바타를 확인했습니다. 안내드린 기준에 따라 생성 비용의 절반(💎${refund.toLocaleString('ko-KR')})을 지급해 드립니다.`,
-      senderLabel: '운영자',
+          ? '반환하신 아바타를 확인했습니다. 생성 결과에 문제가 있어 생성에 사용한 다이아 전액을 반환 보상으로 돌려드립니다.'
+          : '반환하신 아바타를 확인했습니다. 생성 결과에 문제가 없어 생성에 사용한 다이아의 절반을 반환 보상으로 지급합니다.',
+      senderLabel: '운영팀',
       payload: { diamond: refund, boxes: { weapon: 0, armor: 0, accessory: 0 } },
     });
     await tx
