@@ -9,6 +9,7 @@ import {
 import type { Rng10k } from '@/lib/game/expedition/engine';
 
 import { endTestDb, sql, testDb } from '../db';
+import { EXPEDITION_DAILY_LIMIT_SINCE_ISO } from '@/lib/game/balance';
 
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';
 const skip = !TEST_USER_ID;
@@ -161,12 +162,15 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_RUNNING' });
     // 슬롯당 하루 1회(2026-09-01) — 수령 후 오퍼가 다시 생기지 않고, 같은 슬롯 재출발은 DAILY_LIMIT.
-    await ensureOffers(uid, SID, DIA_OFFER_RNG());
-    const offers = (await testDb.execute(sql`
-      select count(*)::int as n from expeditions where user_id=${uid}::uuid and server_id=${SID} and slot=1 and status='offer'
-    `)) as unknown as { n: number }[];
-    expect(Number(offers[0]!.n)).toBe(0);
-    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'DAILY_LIMIT' });
+    // 규칙 적용 시각(EXPEDITION_DAILY_LIMIT_SINCE_ISO) 이전에 실행되면 오늘 출발분이 구 규칙으로 면제되어 판정할 수 없다 — 그 경우만 건너뜀.
+    if (Date.now() >= Date.parse(EXPEDITION_DAILY_LIMIT_SINCE_ISO)) {
+      await ensureOffers(uid, SID, DIA_OFFER_RNG());
+      const offers = (await testDb.execute(sql`
+        select count(*)::int as n from expeditions where user_id=${uid}::uuid and server_id=${SID} and slot=1 and status='offer'
+      `)) as unknown as { n: number }[];
+      expect(Number(offers[0]!.n)).toBe(0);
+      await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'DAILY_LIMIT' });
+    }
 
     const [st] = (await testDb.execute(sql`
       select level, xp::text from expedition_state where user_id = ${uid}::uuid and server_id = ${SID}

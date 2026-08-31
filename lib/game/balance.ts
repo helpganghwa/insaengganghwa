@@ -763,6 +763,12 @@ export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
  */
 export const EXPEDITION_XP_BY_HOURS: Record<ExpeditionDurationH, number> = { 2: 20, 4: 21, 8: 22, 12: 24 };
 /**
+ * 슬롯당 하루 1회 규칙의 **적용 시작 시각**(2026-09-01 11:00 KST 배포). 이 시각 전에 출발한 파견(구 규칙 무제한)은
+ * 그날 횟수에 세지 않고 '오늘 완료' 카드로도 남기지 않는다 — 전환일에 "아침에 보낸 파견 때문에 못 보냄" 방지(사용자 확정).
+ * 배포가 밀리면 이 값을 실제 배포 시각으로 맞춘다. 이후엔 무해한 상수.
+ */
+export const EXPEDITION_DAILY_LIMIT_SINCE_ISO = '2026-09-01T02:00:00.000Z';
+/**
  * XP 범위(2026-09-01 사용자 확정 A안) — **오퍼가 열릴 때** 균등 롤해 카드에 확정 표기(보상과 같은 원칙: 수령 시
  * 추첨은 대성공뿐, 대성공은 XP에 적용하지 않음). 평균은 EXPEDITION_XP_BY_HOURS와 같고 폭은 ±2로 구간 신호 유지.
  * 확률공시(§33)에 구간·균등 명시.

@@ -12,6 +12,7 @@ import {
   expeditionXpToNext,
   type ExpeditionDifficulty,
   type ExpeditionRegion,
+  EXPEDITION_DAILY_LIMIT_SINCE_ISO,
 } from '@/lib/game/balance';
 import { critBp, effectiveSlots, snapshotExpeditionRegions, snapshotEquipment, type ExpeditionReward, type SnapshotEquipment, avatarEnhanceSum, applyCrit } from './engine';
 
@@ -93,7 +94,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     db.execute(sql`
       select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
              complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text,
-             (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date) as started_today
+             (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+              and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as started_today
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       order by slot
@@ -147,6 +149,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
         and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+        and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz
       order by slot, claimed_at desc
     `) as unknown as Promise<
       {

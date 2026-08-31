@@ -19,6 +19,7 @@ import { TodayTicker } from './TodayTicker';
 import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 import { RAID_MAX_PARTICIPANTS,
   expeditionSlotsFor,
+  EXPEDITION_DAILY_LIMIT_SINCE_ISO,
 } from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -223,7 +224,8 @@ export default async function HomePage() {
             -- 오늘(KST) 출발한 슬롯 수 — 슬롯당 하루 1회(2026-09-01) '오늘 파견 N/M'의 N(보낸 기준).
             (select count(distinct slot)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
-                 and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date) as exp_started_today,
+                 and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
+                 and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as exp_started_today,
             -- 파견 대기 칸 수 계산용 — 열린 슬롯(계정 합산 강화) - 진행 - 완료.
             (select coalesce(sum(enhance_level), 0)::int from user_equipment
                where user_id = ${userId}::uuid and server_id = ${serverId}) as exp_enhance_sum,

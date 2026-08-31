@@ -10,6 +10,7 @@ import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
   EXPEDITION_REFRESH_COST,
   EXPEDITION_DURATIONS_H,
+  EXPEDITION_DAILY_LIMIT_SINCE_ISO,
   expeditionXpForHours,
   EXPEDITION_REFRESH_FREE_PER_DAY,
 } from '@/lib/game/balance';
@@ -155,6 +156,7 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
         select distinct slot from expeditions
         where user_id = ${userId}::uuid and server_id = ${serverId}
           and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+          and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz
       `)) as unknown as { slot: number }[]).map((r) => Number(r.slot)),
     );
     for (let slot = 1; slot <= slots; slot++) {
@@ -286,6 +288,7 @@ export function startExpedition(
       select 1 from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot}
         and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
+        and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz -- 규칙 적용 전 출발분(구 규칙)은 미집계
       limit 1
     `)) as unknown as unknown[];
     if (dup) throw new ExpeditionError('DAILY_LIMIT');
