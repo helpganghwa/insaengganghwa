@@ -69,7 +69,7 @@ export default function Doc() {
       </UL>
       <Warn>
         배치나 집행관 자리를 가진 채 거주지를 옮기면 그 역할이 해제된다. 다른 수비를 남기지 않고
-        이동하면 그날 방치로 처리돼 다음 날 그 구역의 세금 보너스를 받지 못한다.
+        이동하면 그날 방치로 처리돼 다음 날 세율 계산에서 빠진다.
       </Warn>
 
       <H2 id="deploy">배치</H2>
@@ -142,7 +142,7 @@ export default function Doc() {
           이월된다.
         </LI>
         <LI>
-          구역을 많이 점령한 길드일수록 세율이 높다. 소유 구역 하나당{' '}
+          구역을 많이 점령한 길드일수록 세율이 높다. 방치되지 않은 소유 구역 하나당{' '}
           {bpPct(GUILD_ZONE_TAX_BONUS * 10_000)}이며, {fmtInt(REGION_COUNT)}개 지역 중 하나를
           완전장악하면 그 지역마다 {bpPct(GUILD_FULL_REGION_TAX_BONUS * 10_000)}가 추가된다.
         </LI>
@@ -166,11 +166,11 @@ export default function Doc() {
       <UL>
         <LI>그날 전투에 공격도 수비도 없고 집행관도 없으면 그 구역은 방치로 처리된다.</LI>
         <LI>
-          방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">세금 보너스</DocLink>를
-          받지 못하며, 완전 장악 계산에서도 빠진다.
+          방치된 구역은 다음 점령전 발표까지 <DocLink slug="conquest" hash="tax">세율</DocLink> 계산에서
+          빠진다 — 구역 수에도 세지 않고, 완전 장악 계산에서도 빠진다.
         </LI>
         <LI>방치된 구역은 맞닿아 있지 않은 길드도 공격할 수 있다.</LI>
-        <LI>소유권과 쌓여 있던 세금은 그대로 유지된다. 다음 날 배치가 있으면 보너스가 돌아온다.</LI>
+        <LI>소유권과 쌓여 있던 세금은 그대로 유지된다. 다음 날 배치가 있으면 계산에 다시 들어간다.</LI>
       </UL>
 
       <H2 id="chronicle">연대기</H2>

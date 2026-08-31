@@ -40,15 +40,16 @@ export async function accrueResidenceTax(userId: string, serverId: number, reach
 
 /**
  * 독점 세금 보너스(B안) 재계산 — 소유가 바뀔 때만 호출(하루 1회 점령전 정산·중립화, 해산 등).
- * 각 구역 zones.tax_bonus = 소유 길드의 (소유 구역 수 ×1%) + (완전장악 권역 수 ×25%) + 1. 중립=1.
+ * 각 구역 zones.tax_bonus = 소유 길드의 (미방치 소유 구역 수 ×1%) + (완전장악 권역 수 ×25%) + 1. 중립=1.
  * 강화 세금 누적(accrueResidenceTax)은 이 값을 읽기만 하므로 고빈도 경로에 계산 부하가 없다.
  */
 type TaxExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function recalcTaxBonus(serverId: number, executor: TaxExecutor = db): Promise<void> {
   await executor.execute(sql`
-    -- 방치 구역(abandoned_day, 0180)은 그 구역의 보너스가 없고(=1) 완전장악 집계에서 빠진다. 소유 길드의 구역 수에는 들어간다(2026-08-30 검토).
-    update zones z set tax_bonus = (case when z.owner_guild_id is null or z.abandoned_day is not null then 1 else
-      1 + (select count(*) from zones z2 where z2.server_id = z.server_id and z2.owner_guild_id = z.owner_guild_id)::numeric * ${GUILD_ZONE_TAX_BONUS}
+    -- 방치 구역(abandoned_day, 0180)은 **계산식에서만** 빠진다(2026-09-01): 구역 수(+1%/구역)·완전장악
+    -- 집계에서 제외하되, 산출된 길드 세율은 방치 구역 자체에도 그대로 적용(소유 구역 전체 동일 배율).
+    update zones z set tax_bonus = (case when z.owner_guild_id is null then 1 else
+      1 + (select count(*) from zones z2 where z2.server_id = z.server_id and z2.owner_guild_id = z.owner_guild_id and z2.abandoned_day is null)::numeric * ${GUILD_ZONE_TAX_BONUS}
         + (select count(*) from (
              select 1 from zones z3 where z3.server_id = z.server_id
              group by z3.region having count(*) = count(*) filter (where z3.owner_guild_id = z.owner_guild_id and z3.abandoned_day is null)
