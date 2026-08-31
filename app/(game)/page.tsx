@@ -220,11 +220,10 @@ export default async function HomePage() {
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and status = 'running' and complete_at > now()) as exp_running,
-            -- 오늘(KST) 출발·수령 완료 슬롯 — 슬롯당 하루 1회(2026-09-01): 자정까지 '대기'가 아니다.
+            -- 오늘(KST) 출발한 슬롯 수 — 슬롯당 하루 1회(2026-09-01) '오늘 파견 N/M'의 N(보낸 기준).
             (select count(distinct slot)::int from expeditions
-               where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
-                 and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
-                 and slot not in (select slot from expeditions e2 where e2.user_id = ${userId}::uuid and e2.server_id = ${serverId} and e2.status in ('offer','running'))) as exp_done_today,
+               where user_id = ${userId}::uuid and server_id = ${serverId}
+                 and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date) as exp_started_today,
             -- 파견 대기 칸 수 계산용 — 열린 슬롯(계정 합산 강화) - 진행 - 완료.
             (select coalesce(sum(enhance_level), 0)::int from user_equipment
                where user_id = ${userId}::uuid and server_id = ${serverId}) as exp_enhance_sum,
@@ -279,7 +278,7 @@ export default async function HomePage() {
         raid_unclaimed: number;
         raid_joinable: number;
         exp_claimable: number;
-        exp_running: number; exp_done_today: number;
+        exp_running: number; exp_started_today: number;
         exp_enhance_sum: number;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
@@ -303,13 +302,12 @@ export default async function HomePage() {
         counts['/raid'] = row.raid_unclaimed ?? 0;
         raidJoinable = row.raid_joinable ?? 0;
         const expClaimable = row.exp_claimable ?? 0;
-        const expRunning = row.exp_running ?? 0;
-        // 카드 문구(2026-08-30): 완료·진행·대기 세 수치를 항상 흰색으로 간단히. 완료는 배지 숫자로만 강조.
-        const expIdle = Math.max(0, (Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable)) - Number(row?.exp_done_today ?? 0));
-        // 오늘 파견 N/M(2026-09-01 하루 1회) — 남은 칸이 있으면 강조색(descHot).
+        // 카드 문구(2026-08-31): '오늘 파견 N/M' — N = 오늘 출발한 슬롯(보낸 기준), M = 열린 슬롯. 남았으면 강조색.
+        // 수령할 완료 파견은 숫자 배지(counts)로.
         const expOpen = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0));
-        expeditionDesc = `오늘 파견 ${Math.max(0, expOpen - expIdle)}/${expOpen}`; // 완료·진행은 배지(완료 수)로만(2026-08-31)
-        expeditionCanSend = expIdle > 0;
+        const expSent = Math.min(expOpen, Number(row.exp_started_today ?? 0));
+        expeditionDesc = `오늘 파견 ${expSent}/${expOpen}`;
+        expeditionCanSend = expSent < expOpen;
         if (expClaimable > 0) counts['/expedition'] = expClaimable;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.

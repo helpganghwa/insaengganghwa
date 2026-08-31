@@ -279,10 +279,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         {/* 오늘 파견 N/M(슬롯당 하루 1회, 2026-09-01) — N = 열린 슬롯 − 아직 보낼 수 있는(오퍼) 슬롯. 남았으면 강조색. */}
         {(() => {
           const open = board.slots.filter((x) => x.state !== 'locked').length;
-          const left = board.slots.filter((x) => x.state === 'offer').length;
+          // 보낸 기준(2026-08-31) — 오늘(KST) 출발한 슬롯 수. 어제 출발해 아직 진행 중인 슬롯은 오늘 미출발로 센다.
+          const sent = board.slots.filter((x) => x.state === 'done' || ((x.state === 'running') && x.startedToday)).length;
           return (
             <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-              오늘 <b className={left > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{open - left}/{open}</b>
+              오늘 <b className={sent < open ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{sent}/{open}</b>
             </span>
           );
         })()}
@@ -864,7 +865,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={1}>
+        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0}>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (

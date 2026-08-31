@@ -20,6 +20,8 @@ export type ExpeditionBoardSlot = {
   slot: number;
   /** done = 오늘 출발·수령 완료(슬롯당 하루 1회) — 수령한 카드를 자정까지 그대로 보여준다. */
   state: 'locked' | 'offer' | 'running' | 'done';
+  /** 오늘(KST) 출발했는지 — 헤더 '오늘 N/M'(보낸 기준). done은 항상 true. */
+  startedToday?: boolean;
   /** locked 전용 — 해금 조건(계정 합산 강화). */
   unlock?: { enhanceSum: number };
   /** offer/running 공통 — 미션 내용(오퍼=기본 보상, 진행=최종 확정 보상). */
@@ -88,7 +90,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     >,
     db.execute(sql`
       select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
-             complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text
+             complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text,
+             (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date) as started_today
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       order by slot
@@ -98,7 +101,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         difficulty: ExpeditionDifficulty; duration_ms: string;
         reward: ExpeditionReward; final_reward: ExpeditionReward | null;
         complete_at: string | Date | null; synergy_bp: number; req_bonus_bp: number;
-        avatar_profile_id: string | null;
+        avatar_profile_id: string | null; started_today: boolean | null;
       }[]
     >,
     db.execute(sql`
@@ -175,6 +178,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         slots.push({
           slot,
           state: 'done',
+          startedToday: true,
           region: d.region,
           difficulty: d.difficulty,
           hours: Math.round(Number(d.duration_ms) / 3_600_000),
@@ -193,6 +197,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       slots.push({
         slot,
         state: 'running',
+        startedToday: !!row.started_today,
         region: row.region,
         difficulty: row.difficulty,
         hours,
