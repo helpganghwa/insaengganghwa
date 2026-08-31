@@ -1286,12 +1286,15 @@ export function ChatDock() {
   }, [me]);
 
   // 페인트 전 바닥 스크롤 — openPanel 직후 렌더(이전 목록)와 fetch 반영 렌더 모두.
+  // deps에 tab 포함(2026-08-31 문의 #채팅) — 탭 버퍼 복원이 **같은 배열 참조**를 setMessages하면 리렌더가
+  // 생략돼 이 효과가 안 돌았다. 전체→귓속말→길드→전체처럼 버퍼가 참조 그대로 돌아오는 경로 + 연타
+  // 스로틀로 재조회까지 생략되면 목록이 이전 스크롤(위쪽)에 남던 버그. 탭 변화 자체를 트리거로 삼는다.
   useLayoutEffect(() => {
     if (!open || !needInitialScrollRef.current || messages.length === 0) return;
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
     needInitialScrollRef.current = false;
-  }, [open, messages]);
+  }, [open, messages, tab]);
 
   // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업을 저장분으로 즉시 복원,
   // 이후 백그라운드 재조회로 최신화(1회 소비). useLayoutEffect — useEffect는 페인트 뒤라
