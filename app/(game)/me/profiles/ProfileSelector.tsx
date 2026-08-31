@@ -43,9 +43,8 @@ export function ProfileSelector({
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
   const [pending, startTransition] = useTransition();
   // 반환 확인(2026-09-01, 구 삭제) — 즉시 회수되는 동작이라 무엇이 벌어지는지 문장으로 읽히는
-  // 모달로 확인한다. 사유는 운영 판단(전액/절반) 재료.
+  // 모달로 확인한다. 사유 선택은 두지 않는다(운영자가 스냅샷으로 판단).
   const [returnAsk, setReturnAsk] = useState(false);
-  const [returnReason, setReturnReason] = useState<'equipment_mismatch' | 'quality' | 'etc'>('quality');
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
@@ -129,7 +128,7 @@ export function ProfileSelector({
     if (pending) return;
     setReturnAsk(false);
     startTransition(async () => {
-      const r = await returnProfile(selectedId, returnReason);
+      const r = await returnProfile(selectedId);
       if (r.status === 'error') return showError(r.message);
       showHeaderToast({ title: '반환 접수 — 확인 후 우편으로 지급돼요' });
       // 회수된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
@@ -246,8 +245,7 @@ export function ProfileSelector({
           label="아바타 반환 확인"
         >
           <ModalLayout
-            title="이 아바타를 반환할까요?"
-            subtitle={<span className="font-bold text-amber-500">반환하면 즉시 회수됩니다</span>}
+            title="아바타 반환"
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setReturnAsk(false)} disabled={pending}>
@@ -259,35 +257,11 @@ export function ProfileSelector({
               </>
             }
           >
-            <div className="space-y-3">
-              <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                반환한 아바타는 바로 사라지고 되돌릴 수 없습니다. 운영자가 확인한 뒤 다이아가
-                우편으로 지급됩니다 — 생성 결과에 문제가 있었다면 <b>구매에 쓴 다이아 전액</b>,
-                그 외에는 <b>절반</b>이 지급됩니다.
-              </p>
-              <div className="flex justify-center gap-1.5">
-                {(
-                  [
-                    ['equipment_mismatch', '장비 미반영'],
-                    ['quality', '결과 불만족'],
-                    ['etc', '기타'],
-                  ] as const
-                ).map(([v, label]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setReturnReason(v)}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${
-                      returnReason === v
-                        ? 'border-amber-500 bg-amber-500/15 text-amber-500'
-                        : 'border-zinc-300 text-zinc-500 dark:border-zinc-700'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              반환한 아바타는 바로 회수되고 되돌릴 수 없습니다. 생성 가이드라인 검토 후 결과에
+              문제가 있었다면 생성에 쓴 다이아 <b>전액</b>, 그 외에는 생성에 사용한 다이아의 <b>절반</b>이
+              우편으로 지급됩니다. 반환하시겠습니까?
+            </p>
           </ModalLayout>
         </ModalShell>
       )}

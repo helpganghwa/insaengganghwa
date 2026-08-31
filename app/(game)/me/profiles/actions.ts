@@ -101,7 +101,7 @@ export async function flipProfile(
  * 아바타 반환(2026-09-01) — 삭제 버튼을 대체. 신청 즉시 회수(삭제)되고, 운영자 판단 후
  * 다이아가 우편으로 지급된다(전액=실지불/절반). 로직은 lib/game/profile/return.ts.
  */
-export async function returnProfile(profileId: string, reason: string): Promise<ActionState> {
+export async function returnProfile(profileId: string, reason = 'etc'): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (await rateLimited(userId, 'profileEdit'))
