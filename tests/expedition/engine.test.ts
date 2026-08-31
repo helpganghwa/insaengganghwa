@@ -57,15 +57,15 @@ describe('expedition engine — 미션 롤', () => {
     expect(m.reward.diamond).toBe(Math.round(72 * 3.4));
   });
 
-  it('상자 슬롯 가중 — 주력 슬롯이 우세(대수 검증)', () => {
+  it('상자 슬롯 — 부위 3종 균등 랜덤(지역 가중 폐기, 2026-08-31)', () => {
     let i = 7;
     const rng: Rng10k = () => (i = (i * 9301 + 49297) % 10000);
-    const acc = rollBoxSlots(rng, 'volcano', 3000); // 화산=무기 60%
-    expect(acc.weapon).toBeGreaterThan(acc.armor);
-    expect(acc.weapon).toBeGreaterThan(acc.accessory);
+    const acc = rollBoxSlots(rng, 'volcano', 3000);
     expect(acc.weapon + acc.armor + acc.accessory).toBe(3000);
-    expect(acc.weapon / 3000).toBeGreaterThan(0.55);
-    expect(acc.weapon / 3000).toBeLessThan(0.65);
+    for (const v of [acc.weapon, acc.armor, acc.accessory]) {
+      expect(v / 3000).toBeGreaterThan(0.28);
+      expect(v / 3000).toBeLessThan(0.39);
+    }
   });
 });
 

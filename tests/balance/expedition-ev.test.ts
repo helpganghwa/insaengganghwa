@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EXPEDITION_BASE_AMOUNTS,
-  EXPEDITION_BOX_MAIN_BP,
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_SUM_BP_MAX,
   EXPEDITION_CRIT_MULT,
@@ -17,7 +16,6 @@ import {
   EXPEDITION_SYNERGY_GENERAL_MULT,
   EXPEDITION_SYNERGY_MATCH_MULT,
   expeditionWeightedSum,
-  EXPEDITION_BOX_MAIN_SLOT,
   EXPEDITION_DIFFICULTY_DIST_BP,
   EXPEDITION_DIFFICULTIES,
   EXPEDITION_DIFFICULTY_HOURS,
@@ -34,12 +32,6 @@ describe('expedition balance invariants', () => {
   it('본상 3분기 확률 합 = 100%', () => {
     const { boxOnly, diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
     expect(boxOnly + diamondOnly + both).toBe(10000);
-  });
-
-  it('상자 슬롯 가중 — 주력 60% + 잔여 20%×2 = 100%, 전 지역 매핑 존재', () => {
-    expect(EXPEDITION_BOX_MAIN_BP + (10000 - EXPEDITION_BOX_MAIN_BP)).toBe(10000);
-    expect((10000 - EXPEDITION_BOX_MAIN_BP) % 2).toBe(0);
-    for (const r of EXPEDITION_REGIONS) expect(EXPEDITION_BOX_MAIN_SLOT[r]).toBeTruthy();
   });
 
   it('시간 옵션 정합 — 스케일 단조 증가 + 슬롯당 하루 최대 유닛은 24h 루트', () => {

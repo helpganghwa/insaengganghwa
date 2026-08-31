@@ -797,15 +797,8 @@ export function expeditionSlotsFor(enhanceSum: number): number {
 export const EXPEDITION_REFRESH_FREE_PER_DAY = 3;
 export const EXPEDITION_REFRESH_COST = 20;
 
-/**
- * 지역별 상자 슬롯 가중 — 주력 슬롯 60%, 나머지 두 슬롯 20%씩(합 100%).
- * 게이트 폐지 후 지역 선택의 의미 축 ①(축 ②는 아바타 시너지).
- */
-export const EXPEDITION_BOX_MAIN_SLOT: Record<ExpeditionRegion, 'weapon' | 'armor' | 'accessory'> = {
-  swamp: 'armor', orc: 'weapon', kingdom: 'accessory',
-  temple: 'accessory', volcano: 'weapon', angel: 'armor',
-};
-export const EXPEDITION_BOX_MAIN_BP = 6000; // 주력 슬롯 확률(bp) — 나머지는 (10000-6000)/2씩
+// 지역별 상자 슬롯 가중(주력 60/20/20)은 2026-08-31 폐기 — 상자는 부위 3종 균등 랜덤.
+// 지역 선택의 의미는 아바타 시너지(장비 지역 일치 ×1.3) 하나로 단순화.
 
 /** 본상 3분기(bp, 합 10000) — **미션 생성(오퍼) 시** 1회 롤·카드에 확정 표기(A′). 수령 롤은 대성공뿐. */
 export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both: 2500 } as const;

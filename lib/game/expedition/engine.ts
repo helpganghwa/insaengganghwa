@@ -6,8 +6,6 @@
  */
 import {
   EXPEDITION_BASE_AMOUNTS,
-  EXPEDITION_BOX_MAIN_BP,
-  EXPEDITION_BOX_MAIN_SLOT,
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_DURATION_SCALE,
@@ -83,22 +81,15 @@ function pickWeighted<K extends string>(rng: Rng10k, weights: Record<K, number>)
   return keys[keys.length - 1]!;
 }
 
-/** 지역별 상자 슬롯 분배 — 주력 60% / 나머지 20%×2, n개를 개별 롤. */
+/** 상자 슬롯 분배 — 부위 3종 균등 랜덤(지역 가중 60/20/20은 2026-08-31 폐기). region 인자는 호출부 호환용. */
 export function rollBoxSlots(
   rng: Rng10k,
-  region: ExpeditionRegion,
+  _region: ExpeditionRegion,
   n: number,
 ): { weapon: number; armor: number; accessory: number } {
-  const main = EXPEDITION_BOX_MAIN_SLOT[region];
-  const others = (['weapon', 'armor', 'accessory'] as const).filter((s) => s !== main);
-  const sideBp = (10000 - EXPEDITION_BOX_MAIN_BP) / 2;
+  const slots = ['weapon', 'armor', 'accessory'] as const;
   const out = { weapon: 0, armor: 0, accessory: 0 };
-  for (let i = 0; i < n; i++) {
-    const r = rng();
-    if (r < EXPEDITION_BOX_MAIN_BP) out[main] += 1;
-    else if (r < EXPEDITION_BOX_MAIN_BP + sideBp) out[others[0]!] += 1;
-    else out[others[1]!] += 1;
-  }
+  for (let i = 0; i < n; i++) out[slots[Math.floor((rng() / 10000) * 3) % 3]!] += 1;
   return out;
 }
 

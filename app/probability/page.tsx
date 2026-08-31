@@ -30,7 +30,6 @@ import {
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_SUM_BP_MAX,
   EXPEDITION_CRIT_MULT,
-  EXPEDITION_BOX_MAIN_BP,
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
   EXPEDITION_LEVEL_MAX,
@@ -297,9 +296,8 @@ export default async function ProbabilityPage() {
           </tr>
         </Table>
         <P>
-          수량은 표기 범위에서 고르게 정해집니다. 상자 종류는 파견지마다 주력 슬롯이{' '}
-          {pct(EXPEDITION_BOX_MAIN_BP)}, 나머지 두 슬롯이 각 {pct((10000 - EXPEDITION_BOX_MAIN_BP) / 2)}
-          입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 수량이{' '}
+          수량은 표기 범위에서 고르게 정해집니다. 상자 종류(무기·방어구·장신구)는 파견지와 무관하게
+          균등(각 1/3)입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 수량이{' '}
           {EXPEDITION_CRIT_MULT}배가 됩니다. 대성공 확률은 파견 레벨당 +{EXPEDITION_CRIT_BP_PER_LEVEL / 100}%p, 계정
           합산 강화 1,000당 +1%p(최대 +{EXPEDITION_CRIT_SUM_BP_MAX / 100}%p) 올라 상한은{' '}
           {pct(expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000))}입니다.
