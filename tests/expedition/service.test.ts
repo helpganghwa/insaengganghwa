@@ -160,6 +160,13 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(after - before).toBe(BigInt(c.reward.diamond!));
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_RUNNING' });
+    // 슬롯당 하루 1회(2026-09-01) — 수령 후 오퍼가 다시 생기지 않고, 같은 슬롯 재출발은 DAILY_LIMIT.
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    const offers = (await testDb.execute(sql`
+      select count(*)::int as n from expeditions where user_id=${uid}::uuid and server_id=${SID} and slot=1 and status='offer'
+    `)) as unknown as { n: number }[];
+    expect(Number(offers[0]!.n)).toBe(0);
+    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'DAILY_LIMIT' });
 
     const [st] = (await testDb.execute(sql`
       select level, xp::text from expedition_state where user_id = ${uid}::uuid and server_id = ${SID}

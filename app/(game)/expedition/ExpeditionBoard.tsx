@@ -256,7 +256,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
     const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - nowMs() : 0;
     if (remain <= 0) doClaim(s);
-    else toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)}` });
+    else toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)} 남음` });
   };
 
   return (

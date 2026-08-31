@@ -159,8 +159,15 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
     );
     for (let slot = 1; slot <= slots; slot++) {
       const row = active.find((r) => r.slot === slot);
+      if (startedToday.has(slot)) {
+        // 오늘 이미 출발한 슬롯 — 남아 있는 미배정 오퍼는 치운다(구 로직이 수령 직후 만든 오퍼·오늘 새로고침분).
+        // 안 치우면 오퍼 카드가 보이는데 출발은 DAILY_LIMIT로 막히는 모순(2026-08-31 스테이징 발견). 수령 카드가 '오늘 완료'로 뜬다.
+        if (row?.status === 'offer') {
+          await tx.execute(sql`delete from expeditions where id = ${BigInt(row.id)} and status = 'offer'`);
+        }
+        continue;
+      }
       if (!row) {
-        if (startedToday.has(slot)) continue;
         const m = rollMission(rng, st.level);
         // 경합 안전 — 부분 유니크(one_active)와 do nothing: 동시 진입 시 한쪽만 삽입된다.
         await tx.execute(sql`

@@ -308,7 +308,7 @@ export default async function HomePage() {
         const expIdle = Math.max(0, (Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable)) - Number(row?.exp_done_today ?? 0));
         // 오늘 파견 N/M(2026-09-01 하루 1회) — 남은 칸이 있으면 강조색(descHot).
         const expOpen = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0));
-        expeditionDesc = `오늘 파견 ${Math.max(0, expOpen - expIdle)}/${expOpen} · 완료 ${expClaimable} · 진행 ${expRunning}`;
+        expeditionDesc = `오늘 파견 ${Math.max(0, expOpen - expIdle)}/${expOpen}`; // 완료·진행은 배지(완료 수)로만(2026-08-31)
         expeditionCanSend = expIdle > 0;
         if (expClaimable > 0) counts['/expedition'] = expClaimable;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
