@@ -42,8 +42,8 @@ describe('expedition balance invariants', () => {
     // 슬롯당 하루 최대 유닛 = 24h×1 — 12h×2·8h×3(같은 슬롯을 하루에 돌릴 수 있는 횟수)보다 크거나 같아야
     // "하루 한 번" 유저가 손해 보지 않는다(경제 가드도 이 값 기준). 일일 시작 상한은 없다(2026-08-28).
     // 하루 1회(2026-09-01) — 1회분이 종전 슬롯당 하루 상한(≈3.4)을 그대로 준다. 짧은 파견도 80% 이상(투표 약속 "풀가동 수준").
-    expect(EXPEDITION_DURATION_SCALE[12]).toBe(3.4);
-    expect(EXPEDITION_DURATION_SCALE[2]).toBeGreaterThanOrEqual(0.8 * EXPEDITION_DURATION_SCALE[12]);
+    expect(EXPEDITION_DURATION_SCALE[12]).toBe(2.8); // B 완충(2026-08-31): 상한 3.4의 82%
+    expect(EXPEDITION_DURATION_SCALE[2]).toBeGreaterThanOrEqual(0.75 * EXPEDITION_DURATION_SCALE[12]);
   });
 
   it('수량 범위 정합(min ≤ max)', () => {
@@ -77,12 +77,13 @@ describe('expedition balance invariants', () => {
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[12]; // 슬롯당 하루 1회 × 원정
     const launchDaily = evDia * critMult * maxDailyUnits;
     // 대성공 기본 10%→5%(2026-08-31, 합산 강화 가산 도입) — 무강화 신규 기준 ≈ 382💎.
-    expect(launchDaily).toBeGreaterThanOrEqual(374);
-    expect(launchDaily).toBeLessThanOrEqual(392);
+    // B 완충: 4슬롯 × 2.8 = 11.2유닛 × 💎26.7 × 1.05 ≈ 314
+    expect(launchDaily).toBeGreaterThanOrEqual(305);
+    expect(launchDaily).toBeLessThanOrEqual(323);
     // 축 ③(아바타 강화 합, 상한 없음, C안) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
-    expect(launchDaily * as1000).toBeGreaterThanOrEqual(1195);
-    expect(launchDaily * as1000).toBeLessThanOrEqual(1260);
+    expect(launchDaily * as1000).toBeGreaterThanOrEqual(980);
+    expect(launchDaily * as1000).toBeLessThanOrEqual(1035);
     // 대성공 총 상한(30% = 기본 5 + 레벨 5 + 합산 20)만 얹은 상한(축 ③ 제외).
     const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
     expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(500);

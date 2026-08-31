@@ -33,9 +33,9 @@ describe('expedition engine — 미션 롤', () => {
     expect(m.durationMs).toBe(2 * 3_600_000); // easy = 2h(2026-09-01)
     expect(m.reward.kind).toBe('box');
     const total = Object.values(m.reward.boxes!).reduce((a, b) => a + b, 0);
-    // easy(×2.8, 하루 1회 1회분): base 3~4 → 8~11개(roll 0 = 최소 3 → 8)
-    expect(total).toBeGreaterThanOrEqual(8);
-    expect(total).toBeLessThanOrEqual(11);
+    // easy(×2.2, 하루 1회 B 완충): base 3~4 → 7~9개(roll 0 = 최소 3 → 7)
+    expect(total).toBeGreaterThanOrEqual(7);
+    expect(total).toBeLessThanOrEqual(9);
     // XP — 오퍼 확정 롤(마지막 rng): seq 소진 roll 0 → 2h 최소 18. 배율·대성공을 거쳐도 유지.
     expect(m.reward.xp).toBe(18);
   });
@@ -52,11 +52,11 @@ describe('expedition engine — 미션 롤', () => {
     expect(rollMission(seq([0, 9999]), 30).difficulty).toBe('grand');
   });
 
-  it('다이아 분기 — grand(×3.4) 스케일 적용', () => {
+  it('다이아 분기 — grand(×2.8) 스케일 적용', () => {
     // 난이도 roll 9999(grand, Lv30) → 본상 roll 5500..7499 = diamondOnly → 수량 min(72, 2026-08-27 ×0.6)
     const m = rollMission(seq([0, 9999, 5500, 0]), 30);
     expect(m.reward.kind).toBe('dia');
-    expect(m.reward.diamond).toBe(Math.round(72 * 3.4));
+    expect(m.reward.diamond).toBe(Math.round(72 * 2.8));
   });
 
   it('상자 슬롯 — 부위 3종 균등 랜덤(지역 가중 폐기, 2026-08-31)', () => {
