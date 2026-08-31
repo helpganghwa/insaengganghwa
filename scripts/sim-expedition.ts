@@ -1,9 +1,9 @@
 // 파견 기대값 시뮬레이션(EXPEDITION §3.3) — 순수 상수 계산, DB 불필요.
 //   bun run scripts/sim-expedition.ts [--as …] [--level 0,30] [--w 1,1.15,1.3] [--slots 1,2,3,4]
 //   --w: 시너지 가중(장비 3종 동일 가정: 1=불일치, 1.15=일반, 1.3=지역 일치) — AS×w가 M()에 들어간다(2026-08-28).
-//   슬롯은 계정 합산 강화로 해금(1k/5k/10k/15k) — 슬롯 수를 변수로 두고 하루 유닛 = 슬롯 × 24h(3.4).
+//   슬롯은 계정 합산 강화로 해금(1k/5k/10k/15k) — 슬롯 수를 변수로 두고 하루 유닛 = 슬롯 × 1회(원정 12h 3.4).
 // 변수: 아바타 강화 합(AS) × 파견 레벨 × 지역 시너지(bp). 출력: 유닛당·하루 기대 💎/📦.
-// 하루 유닛 = 슬롯 수 × 24h 원정 스케일(3.4)(Lv15+ 원정 상시 선택 가정) / Lv<15: 슬롯 × Lv 난이도 분포 평균 × 2.5회.
+// 하루 유닛 = 슬롯 수 × 원정 12h 스케일(3.4)(Lv15+ 원정 상시 선택 가정) / Lv<15: 슬롯 × Lv 난이도 분포 평균 × 1회(하루 1회 체제).
 import {
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_CRIT_MULT,
@@ -40,11 +40,11 @@ const evScale = (lv: number) => {
   );
 };
 /** 하루 유닛 — 슬롯 수 × 레벨별 현실적 플레이 가정. */
-const dailyUnits = (lv: number, slots: number) => slots * (lv >= 15 ? EXPEDITION_DURATION_SCALE[24] : evScale(lv) * 2.5);
+const dailyUnits = (lv: number, slots: number) => slots * (lv >= 15 ? EXPEDITION_DURATION_SCALE[12] : evScale(lv)); // 슬롯당 하루 1회(2026-09-01)
 
 console.log(`유닛당(8h 기준) 기대: 💎${evDia.toFixed(1)} 📦${evBox.toFixed(2)} · 대성공 ×${crit} · 기본 수량 ${JSON.stringify(A)}`);
 console.log(`슬롯 해금(합산 강화): ${EXPEDITION_SLOT_UNLOCKS.map((u) => `슬롯${u.slot}=${u.enhanceSum.toLocaleString('ko-KR')}`).join(' · ')}`);
-console.log(`하루 유닛(슬롯당): Lv0 ${dailyUnits(0, 1).toFixed(2)}(2.5회) / Lv30 ${EXPEDITION_DURATION_SCALE[24]}(24h×1)\n`);
+console.log(`하루 유닛(슬롯당): Lv0 ${dailyUnits(0, 1).toFixed(2)}(1회) / Lv30 ${EXPEDITION_DURATION_SCALE[12]}(원정 12h×1)\n`);
 const head = ['AS', 'M(AS)', ...LEVELS.flatMap((lv) => WS.map((w) => `Lv${lv}·가중×${w}`))];
 for (const slots of SLOTS) {
   const unlock = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slots);

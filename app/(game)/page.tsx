@@ -219,6 +219,11 @@ export default async function HomePage() {
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and status = 'running' and complete_at > now()) as exp_running,
+            -- 오늘(KST) 출발·수령 완료 슬롯 — 슬롯당 하루 1회(2026-09-01): 자정까지 '대기'가 아니다.
+            (select count(distinct slot)::int from expeditions
+               where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
+                 and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
+                 and slot not in (select slot from expeditions e2 where e2.user_id = ${userId}::uuid and e2.server_id = ${serverId} and e2.status in ('offer','running'))) as exp_done_today,
             -- 파견 대기 칸 수 계산용 — 열린 슬롯(계정 합산 강화) - 진행 - 완료.
             (select coalesce(sum(enhance_level), 0)::int from user_equipment
                where user_id = ${userId}::uuid and server_id = ${serverId}) as exp_enhance_sum,
@@ -273,7 +278,7 @@ export default async function HomePage() {
         raid_unclaimed: number;
         raid_joinable: number;
         exp_claimable: number;
-        exp_running: number;
+        exp_running: number; exp_done_today: number;
         exp_enhance_sum: number;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
@@ -299,7 +304,7 @@ export default async function HomePage() {
         const expClaimable = row.exp_claimable ?? 0;
         const expRunning = row.exp_running ?? 0;
         // 카드 문구(2026-08-30): 완료·진행·대기 세 수치를 항상 흰색으로 간단히. 완료는 배지 숫자로만 강조.
-        const expIdle = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable);
+        const expIdle = Math.max(0, (Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable)) - Number(row?.exp_done_today ?? 0));
         expeditionDesc = `완료 ${expClaimable} · 진행 ${expRunning} · 대기 ${expIdle}`;
         if (expClaimable > 0) counts['/expedition'] = expClaimable;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서

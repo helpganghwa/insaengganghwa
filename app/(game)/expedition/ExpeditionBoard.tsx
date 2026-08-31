@@ -21,7 +21,9 @@ import {
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_CRIT_MULT,
-  expeditionCritBp, } from '@/lib/game/balance';
+  expeditionCritBp,
+  expeditionXpForHours,
+} from '@/lib/game/balance';
 import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
@@ -46,7 +48,8 @@ const LEVEL_BANDS = [...EXPEDITION_DIFFICULTY_DIST_BP]
   .map((b, i, arr) => ({ min: b.minLevel, max: i + 1 < arr.length ? arr[i + 1]!.minLevel - 1 : EXPEDITION_LEVEL_MAX, dist: b.dist }));
 
 /** 시간 표시 — 달 아이콘(🌘→🌕)으로 길이를 표현(M6, 2026-08-28). 색은 흰색 단일이라 지역색과 충돌 없음. */
-const HOUR_MOON: Record<number, string> = { 4: '🌘', 8: '🌗', 12: '🌖', 24: '🌕' };
+// 2/4/8/12h(2026-09-01) — 24는 배포 전 진행분 표시 폴백.
+const HOUR_MOON: Record<number, string> = { 2: '🌒', 4: '🌓', 8: '🌔', 12: '🌕', 24: '🌕' };
 
 /** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
 const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
@@ -100,6 +103,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         AVATAR_BUSY: '이미 파견 중인 아바타예요',
         INSUFFICIENT_DIAMOND: '다이아가 부족해요',
         NOT_READY: '아직 귀환하지 않았어요',
+        DAILY_LIMIT: '이 슬롯은 오늘 이미 보냈어요 — 내일 다시 보낼 수 있어요',
       };
       toast.showError(msg[code] ?? '잠시 후 다시 시도해주세요');
     },
@@ -241,9 +245,15 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       setSelectedAvatar(null); // 기본 미선택(2026-08-28) — 아바타를 직접 고르게
       return;
     }
-    // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령.
-    const done = s.completeAtIso ? Date.parse(s.completeAtIso) <= nowMs() : false;
-    if (done) doClaim(s);
+    // 오늘 완료(슬롯당 하루 1회, 2026-09-01) — 공용 헤더 토스트로만 안내.
+    if (s.state === 'done') {
+      toast.showHeaderToast({ title: '내일 다시 보낼 수 있어요' });
+      return;
+    }
+    // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
+    const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - nowMs() : 0;
+    if (remain <= 0) doClaim(s);
+    else toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)}` });
   };
 
   return (
@@ -290,7 +300,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="아바타 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{assignFor.hours} XP
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{expeditionXpForHours(assignFor.hours ?? 0)} XP
               </>
             }
             bodyPad="sm"
@@ -534,7 +544,7 @@ const nowMs = () => serverNow();
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 /** 시간 → 몬스터 단계(t1~t4). */
-const MON_TIER: Record<number, number> = { 4: 1, 8: 2, 12: 3, 24: 4 };
+const MON_TIER: Record<number, number> = { 2: 1, 4: 2, 8: 3, 12: 4, 24: 4 };
 /** 미배정 실루엣 — 기본 남 스프라이트(흑백·30%). */
 const GHOST_SRC = '/sprites/default/male/south.png';
 /** 글자 스트로크(R2) — 밝은 배경에서도 흰 글자 대비 유지. */
@@ -613,7 +623,7 @@ function CardBody({
             {ui.label}
           </b>
           <span className="text-[10px] font-extrabold text-zinc-200" style={STROKE}>
-            +{hours} XP
+            +{expeditionXpForHours(hours)} XP
           </span>
         </div>
       )}
@@ -807,7 +817,12 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
   const bonus = s.reqBonusBp ?? 0;
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
-      {s.state === 'offer' ? (
+      {s.state === 'done' ? (
+        // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
+        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={1}>
+          <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
+        </CardBody>
+      ) : s.state === 'offer' ? (
         <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
       ) : (
         <Ticker>

@@ -9,6 +9,7 @@ import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
   EXPEDITION_REFRESH_COST,
+  expeditionXpForHours,
   EXPEDITION_REFRESH_FREE_PER_DAY,
 } from '@/lib/game/balance';
 import {
@@ -44,6 +45,7 @@ export type ExpeditionErrorCode =
   | 'AVATAR_NOT_FOUND'
   | 'AVATAR_BUSY'
   | 'SLOT_LOCKED'
+  | 'DAILY_LIMIT'
   | 'INSUFFICIENT_DIAMOND';
 export class ExpeditionError extends Error {
   constructor(public code: ExpeditionErrorCode) {
@@ -140,9 +142,19 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
       for update
     `)) as unknown as { id: string; slot: number; status: string; rolled_kst: string }[];
 
+    // 슬롯당 하루 1회(2026-09-01): 오늘(KST) 이미 출발한 슬롯은 자정까지 새 오퍼를 채우지 않는다 —
+    // 수령한 카드가 "오늘 완료"로 남고, 자정 이후 첫 진입에서 오퍼가 생긴다. 어제 출발해 오늘 수령한 건은 대상 아님.
+    const startedToday = new Set(
+      ((await tx.execute(sql`
+        select distinct slot from expeditions
+        where user_id = ${userId}::uuid and server_id = ${serverId}
+          and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+      `)) as unknown as { slot: number }[]).map((r) => Number(r.slot)),
+    );
     for (let slot = 1; slot <= slots; slot++) {
       const row = active.find((r) => r.slot === slot);
       if (!row) {
+        if (startedToday.has(slot)) continue;
         const m = rollMission(rng, st.level);
         // 경합 안전 — 부분 유니크(one_active)와 do nothing: 동시 진입 시 한쪽만 삽입된다.
         await tx.execute(sql`
@@ -256,6 +268,14 @@ export function startExpedition(
     await lockState(tx, userId, serverId); // 유저×서버 직렬화(동시 시작 경합 방지)
     // 새 배정 게이트 — 합산 강화가 문턱 아래로 내려가면 그 슬롯은 새로 못 보낸다(진행분은 별도).
     if (slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
+    // 슬롯당 하루 1회(2026-09-01, 투표 26:12) — 판정은 **출발 시각**(KST 일자). 수령은 언제든.
+    const [dup] = (await tx.execute(sql`
+      select 1 from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot}
+        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
+      limit 1
+    `)) as unknown as unknown[];
+    if (dup) throw new ExpeditionError('DAILY_LIMIT');
 
     const [offer] = (await tx.execute(sql`
       select id::text, region, duration_ms::text, reward from expeditions
@@ -379,7 +399,7 @@ export function claimExpedition(
       }
     }
 
-    const xpGained = Math.round(Number(row.duration_ms) / 3_600_000);
+    const xpGained = expeditionXpForHours(Math.round(Number(row.duration_ms) / 3_600_000)); // 유닛 비례(2026-09-01)
     const next = applyExpeditionXp(st.level, BigInt(st.xp), xpGained);
     await tx.execute(sql`
       update expedition_state set level = ${next.level}, xp = ${next.xp}

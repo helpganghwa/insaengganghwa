@@ -33,7 +33,7 @@ describe('expedition balance invariants', () => {
     expect(boxOnly + diamondOnly + both).toBe(10000);
   });
 
-  it('시간 옵션 정합 — 스케일 단조 증가 + 슬롯당 하루 최대 유닛은 24h 루트', () => {
+  it('시간 옵션 정합 — 2/4/8/12h 스케일 단조 증가 + 완만 경사(2h가 12h의 80% 이상, 하루 1회 체제)', () => {
     const keys = Object.keys(EXPEDITION_DURATION_SCALE).map(Number).sort((a, b) => a - b);
     expect(keys).toEqual([...EXPEDITION_DURATIONS_H]);
     // 파견 1건당 스케일은 시간에 단조 증가(짧은 옵션이 유리해지는 역전 금지).
@@ -41,9 +41,9 @@ describe('expedition balance invariants', () => {
     for (let i = 1; i < scales.length; i++) expect(scales[i]!).toBeGreaterThan(scales[i - 1]!);
     // 슬롯당 하루 최대 유닛 = 24h×1 — 12h×2·8h×3(같은 슬롯을 하루에 돌릴 수 있는 횟수)보다 크거나 같아야
     // "하루 한 번" 유저가 손해 보지 않는다(경제 가드도 이 값 기준). 일일 시작 상한은 없다(2026-08-28).
-    const day24 = EXPEDITION_DURATION_SCALE[24];
-    expect(day24).toBeGreaterThanOrEqual(2 * EXPEDITION_DURATION_SCALE[12]);
-    expect(day24).toBeGreaterThanOrEqual(3 * EXPEDITION_DURATION_SCALE[8]);
+    // 하루 1회(2026-09-01) — 1회분이 종전 슬롯당 하루 상한(≈3.4)을 그대로 준다. 짧은 파견도 80% 이상(투표 약속 "풀가동 수준").
+    expect(EXPEDITION_DURATION_SCALE[12]).toBe(3.4);
+    expect(EXPEDITION_DURATION_SCALE[2]).toBeGreaterThanOrEqual(0.8 * EXPEDITION_DURATION_SCALE[12]);
   });
 
   it('수량 범위 정합(min ≤ max)', () => {
@@ -74,7 +74,7 @@ describe('expedition balance invariants', () => {
       (both / 10000) * ((a.both.diaMin + a.both.diaMax) / 2);
     const critMult = 1 + (EXPEDITION_CRIT_BP / 10000) * (EXPEDITION_CRIT_MULT - 1);
     // 하루 최대 유닛 — 4슬롯(합산 강화 9,000+) × 24h 원정. 슬롯당 100💎/일.
-    const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
+    const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[12]; // 슬롯당 하루 1회 × 원정
     const launchDaily = evDia * critMult * maxDailyUnits;
     // 대성공 기본 10%→5%(2026-08-31, 합산 강화 가산 도입) — 무강화 신규 기준 ≈ 382💎.
     expect(launchDaily).toBeGreaterThanOrEqual(374);
@@ -111,7 +111,7 @@ describe('expedition balance invariants', () => {
     const evScale = (lv: number) => {
       const d = expeditionDifficultyDist(lv);
       return EXPEDITION_DIFFICULTIES.reduce(
-        (a, k) => a + (d[k] / 10000) * EXPEDITION_DURATION_SCALE[EXPEDITION_DIFFICULTY_HOURS[k] as 4 | 8 | 12 | 24],
+        (a, k) => a + (d[k] / 10000) * EXPEDITION_DURATION_SCALE[EXPEDITION_DIFFICULTY_HOURS[k] as 2 | 4 | 8 | 12],
         0,
       );
     };

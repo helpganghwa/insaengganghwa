@@ -271,11 +271,11 @@ export default async function ProbabilityPage() {
       <Sec n="6" title="파견" id="expedition">
         <P>
           파견 보상은 <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어
-          카드에 그대로 표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 수량은
-          보통(8시간) 기준이며 난이도(시간)에 비례해 커집니다(
+          카드에 그대로 표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 아래 수량은
+          기본값이며 난이도(시간)별 배율을 곱합니다(슬롯당 하루 1회, 
           {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}).
         </P>
-        <Table head={['본상', '확률', '수량(8h 기준)']}>
+        <Table head={['본상', '확률', '기본 수량(배율 전)']}>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
             <Td>보급 상자만</Td>
             <Td>{pct(EXPEDITION_MAIN_ROLL_BP.boxOnly)}</Td>

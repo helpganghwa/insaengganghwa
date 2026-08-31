@@ -30,12 +30,12 @@ describe('expedition engine — 미션 롤', () => {
     const m = rollMission(seq([0, 0, 0, 0, 0, 0, 0, 0]), 0);
     expect(m.region).toBe('swamp');
     expect(m.difficulty).toBe('easy');
-    expect(m.durationMs).toBe(4 * 3_600_000);
+    expect(m.durationMs).toBe(2 * 3_600_000); // easy = 2h(2026-09-01)
     expect(m.reward.kind).toBe('box');
     const total = Object.values(m.reward.boxes!).reduce((a, b) => a + b, 0);
-    // easy(×0.55): base 4~6 → 2~3개(최소 1 보장)
-    expect(total).toBeGreaterThanOrEqual(2);
-    expect(total).toBeLessThanOrEqual(3);
+    // easy(×2.8, 하루 1회 1회분): base 3~4 → 8~11개(roll 0 = 최소 3 → 8)
+    expect(total).toBeGreaterThanOrEqual(8);
+    expect(total).toBeLessThanOrEqual(11);
   });
 
   it('Lv0 원정(grand) 출현 15% — 분포 상단 1500bp에서만 뜬다 / Lv30+에선 25%', () => {

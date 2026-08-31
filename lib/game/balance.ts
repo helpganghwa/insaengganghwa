@@ -735,28 +735,41 @@ export const EXPEDITION_REGIONS: readonly ExpeditionRegion[] = [
 export type ExpeditionDifficulty = 'easy' | 'normal' | 'hard' | 'grand';
 export const EXPEDITION_DIFFICULTIES: readonly ExpeditionDifficulty[] = ['easy', 'normal', 'hard', 'grand'] as const;
 export const EXPEDITION_DIFFICULTY_HOURS: Record<ExpeditionDifficulty, number> = {
-  easy: 4, normal: 8, hard: 12, grand: 24,
+  // 2026-09-01 슬롯당 하루 1회 전환과 함께 4/8/12/24 → 2/4/8/12(사용자 확정). 하루 1회 체제에서 24h는
+  // "매일 같은 시각에만" 보내게 만드는 강제라 상한을 12h로 낮춰 아침 출발·저녁 귀환·다음 날 자유 재파견이 되게 한다.
+  easy: 2, normal: 4, hard: 8, grand: 12,
 };
 export const EXPEDITION_DIFFICULTY_LABEL: Record<ExpeditionDifficulty, string> = {
   easy: '쉬움', normal: '보통', hard: '어려움', grand: '원정',
 };
-export const EXPEDITION_DURATIONS_H = [4, 8, 12, 24] as const;
+export const EXPEDITION_DURATIONS_H = [2, 4, 8, 12] as const;
 export type ExpeditionDurationH = (typeof EXPEDITION_DURATIONS_H)[number];
 
 /**
- * 본상 수량 스케일 — 보통(8h)=×1.0 기준. 시간당 효율이 장시간일수록 소폭 우위
- * (8h 0.125/h → 12h 0.133/h → 24h 0.142/h) — "하루 한 번" 유저 배려.
- * 슬롯당 하루 최대 유닛: 원정 24h=3.4 vs 어려움×2=3.2 vs 보통×2=2.0(처리량 상한은 슬롯 수뿐).
+ * 본상 수량 스케일 — **슬롯당 하루 1회**(2026-09-01, 투표 26:12) 체제의 1회분. 종전(무제한)에서 슬롯당
+ * 하루 상한이 ≈3.4유닛(24h 1회 ≈ 4h 6회)이었으므로, 한 번에 그 총량을 준다(약속: "보상은 기존 풀가동 수준").
+ * 완만 경사(A1): 짧아도 풀가동의 82~100%, 원정(12h)이 +21% 우대 — 균일이면 "빨리 돌아오는 2h가 무조건 유리"라
+ * 원정 오퍼가 기피 대상이 되는 역전을 막는다. 시간당 효율은 더 이상 의미가 없다(하루 1회).
  */
 export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
-  4: 0.55, 8: 1.0, 12: 1.6, 24: 3.4,
+  2: 2.8, 4: 3.0, 8: 3.2, 12: 3.4,
 };
+
+/**
+ * 완료 XP — 유닛 비례(스케일×7, 정수): 2h 20 · 4h 21 · 8h 22 · 12h 24. 종전 "XP=시간"은 하루 1회 체제에서
+ * 2h 유저의 레벨링을 6배 늦춘다(Lv.50까지 3년). 유닛 비례면 3슬롯 하루 60~72XP → Lv.50(4,550XP) ≈ 65~76일로
+ * 종전 페이스 유지. 표에 없는 시간(배포 전 진행분 24h 등)은 원정 XP로 폴백.
+ */
+export const EXPEDITION_XP_BY_HOURS: Record<ExpeditionDurationH, number> = { 2: 20, 4: 21, 8: 22, 12: 24 };
+export function expeditionXpForHours(hours: number): number {
+  return (EXPEDITION_XP_BY_HOURS as Record<number, number>)[hours] ?? EXPEDITION_XP_BY_HOURS[12];
+}
 
 /**
  * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
  * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
- * 원정(24h)은 Lv.0부터 15%(2026-08-30, 10%→15%: 횟수 제한 없이 '타는 횟수'를 줄이려면 하루 한 번 걸어두는 24h가
- * 쉽게 잡혀야 한다 — 피로도 대책 C안) — 첫날부터 새로고침으로 24h를 잡아 "걸어두고 잊는" 리듬이 가능해야 한다.
+ * 원정(12h)은 Lv.0부터 15%(2026-08-30 10%→15%; 2026-09-01 하루 1회 전환 후에도 유지 — 원정이 1회분 최고 유닛이라
+ * 새로고침으로 원정을 낚는 것이 하루 1회 체제의 핵심 선택이 된다).
  * 종전 Lv.5 게이트(신규 보호)는 폐지(1칸이 무료라도 무강화 보상은 ×1.00 바닥값이라 보호가 필요 없다).
  */
 export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
@@ -851,7 +864,7 @@ export const EXPEDITION_CRIT_MULT = 2;
 
 /** 파견 레벨 — 완료 XP = 시간(h). 상한 Lv.50. 보상 배율 없음(2026-08-27) — 슬롯 해금·난이도 출현·대성공 확률 전용. */
 export const EXPEDITION_LEVEL_MAX = 50;
-/** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(일 60XP 풀가동 기준 ~76일). */
+/** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(3슬롯 하루 1회 60~72XP 기준 ≈65~76일). */
 export function expeditionXpToNext(level: number): number {
   return 30 + Math.floor((level * 5) / 2);
 }

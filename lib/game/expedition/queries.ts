@@ -13,12 +13,13 @@ import {
   type ExpeditionDifficulty,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
-import { critBp, effectiveSlots, snapshotExpeditionRegions, snapshotEquipment, type ExpeditionReward, type SnapshotEquipment, avatarEnhanceSum } from './engine';
+import { critBp, effectiveSlots, snapshotExpeditionRegions, snapshotEquipment, type ExpeditionReward, type SnapshotEquipment, avatarEnhanceSum, applyCrit } from './engine';
 
 /** 보드 DTO — 페이지 서버 컴포넌트가 조립해 클라 보드에 그대로 넘긴다(직렬화 안전 원시값). */
 export type ExpeditionBoardSlot = {
   slot: number;
-  state: 'locked' | 'offer' | 'running';
+  /** done = 오늘 출발·수령 완료(슬롯당 하루 1회) — 수령한 카드를 자정까지 그대로 보여준다. */
+  state: 'locked' | 'offer' | 'running' | 'done';
   /** locked 전용 — 해금 조건(계정 합산 강화). */
   unlock?: { enhanceSum: number };
   /** offer/running 공통 — 미션 내용(오퍼=기본 보상, 진행=최종 확정 보상). */
@@ -73,7 +74,7 @@ export type ExpeditionBoard = {
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, doneRows] = await Promise.all([
     db.execute(sql`
       select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
              refresh_kst_day::text, refresh_today
@@ -125,6 +126,21 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       select coalesce(sum(enhance_level), 0)::int as s from user_equipment
       where user_id = ${userId}::uuid and server_id = ${serverId}
     `) as unknown as Promise<{ s: number }[]>,
+    // 오늘(KST) 출발해 수령까지 마친 파견 — 슬롯당 하루 1회의 "오늘 완료" 카드(슬롯당 최신 1건).
+    db.execute(sql`
+      select distinct on (slot) slot, region, difficulty, duration_ms::text, final_reward, reward, crit,
+             avatar_profile_id::text, claimed_at
+      from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
+        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+      order by slot, claimed_at desc
+    `) as unknown as Promise<
+      {
+        slot: number; region: ExpeditionRegion; difficulty: ExpeditionDifficulty; duration_ms: string;
+        final_reward: ExpeditionReward | null; reward: ExpeditionReward; crit: boolean | null;
+        avatar_profile_id: string | null; claimed_at: string | Date | null;
+      }[]
+    >,
   ]);
   const enhanceSum = Number(sumRows[0]?.s ?? 0);
   const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
@@ -152,7 +168,24 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       slots.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
       continue;
     }
-    if (!row) continue; // ensureOffers 선행 시 없을 수 없으나 방어(다음 렌더에서 채워짐)
+    if (!row) {
+      const d = doneRows.find((r) => r.slot === slot);
+      if (d) {
+        const base = d.final_reward ?? d.reward;
+        slots.push({
+          slot,
+          state: 'done',
+          region: d.region,
+          difficulty: d.difficulty,
+          hours: Math.round(Number(d.duration_ms) / 3_600_000),
+          reward: d.crit ? applyCrit(base) : base,
+          avatarId: d.avatar_profile_id,
+          avatarFace: d.avatar_profile_id ? (faceById.get(d.avatar_profile_id) ?? null) : null,
+          avatarSouth: d.avatar_profile_id ? (southById.get(d.avatar_profile_id) ?? null) : null,
+        });
+      }
+      continue; // 오퍼 없음 = 오늘 이미 출발(자정까지) 또는 ensureOffers 미선행(다음 렌더에서 채워짐)
+    }
     const hours = Math.round(Number(row.duration_ms) / 3_600_000);
     if (row.status === 'offer') {
       slots.push({ slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward });

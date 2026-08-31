@@ -136,8 +136,8 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     const s = await startExpedition(uid, SID, 1, avatarId);
     expect(s.finalReward.kind).toBe('dia');
-    // 기본 40(72×0.55, 2026-08-27 ×0.6)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
-    const expected = Math.max(1, Math.round(40 * (1 + s.reqBonusBp / 10000)));
+    // 기본 202(72×2.8 — 쉬움 2h 1회분, 2026-09-01 하루 1회 스케일)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
+    const expected = Math.max(1, Math.round(202 * (1 + s.reqBonusBp / 10000)));
     expect(s.finalReward.diamond).toBe(expected);
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_READY' });
@@ -153,7 +153,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     );
     const c = await claimExpedition(uid, SID, 1, seq([9999])); // no crit
     expect(c.crit).toBe(false);
-    expect(c.xpGained).toBe(4);
+    expect(c.xpGained).toBe(20); // 쉬움 2h = 유닛 비례 20XP(2026-09-01)
     const after = BigInt(
       ((await testDb.execute(sql`select diamond::text as d from characters where user_id=${uid}::uuid and server_id=${SID}`)) as unknown as { d: string }[])[0]!.d,
     );
@@ -164,7 +164,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     const [st] = (await testDb.execute(sql`
       select level, xp::text from expedition_state where user_id = ${uid}::uuid and server_id = ${SID}
     `)) as unknown as { level: number; xp: string }[];
-    expect(Number(st!.xp)).toBe(4);
+    expect(Number(st!.xp)).toBe(20);
   });
 
   it('동시 수령 4건 — 정확히 1건만 지급', async () => {
