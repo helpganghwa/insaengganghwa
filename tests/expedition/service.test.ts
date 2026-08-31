@@ -136,8 +136,8 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     const s = await startExpedition(uid, SID, 1, avatarId);
     expect(s.finalReward.kind).toBe('dia');
-    // 기본 158(72×2.2 — 쉬움 2h 1회분, B 완충 스케일)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
-    const expected = Math.max(1, Math.round(158 * (1 + s.reqBonusBp / 10000)));
+    // 기본 132(60×2.2 — 쉬움 2h 1회분, B 완충 스케일·다이아 기본치 25💎/📦 정렬)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
+    const expected = Math.max(1, Math.round(132 * (1 + s.reqBonusBp / 10000)));
     expect(s.finalReward.diamond).toBe(expected);
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_READY' });

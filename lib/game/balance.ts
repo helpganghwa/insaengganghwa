@@ -834,9 +834,11 @@ export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both:
 export const EXPEDITION_BASE_AMOUNTS = {
   // 2026-08-27 ×0.6 재조정 — 성장축 ③(필요 강화 합, 상한 없음)이 얹히므로 기본값을 낮춘다.
   // 무강화 유저 ≈ 종전의 60%, 합 1,000 ≈ 114%, 합 2,000 ≈ 155%(EXPEDITION §3.3).
+  // 2026-08-31 다이아 기본치 하향 — 상자 1개 = 25💎(견습의 주머니 일간 300/12) 기준으로 세 분기 기대가치를 정렬.
+  // 종전 72~144는 ≈31💎/📦 가정이라 '다이아만' 카드만 20~30% 후했다. 상자만 3.5개 × 25 = 87.5 = 다이아만 평균(60~115).
   boxOnly: { boxMin: 3, boxMax: 4 },
-  diamondOnly: { diaMin: 72, diaMax: 144 },
-  both: { boxMin: 2, boxMax: 3, diaMin: 12, diaMax: 29 },
+  diamondOnly: { diaMin: 60, diaMax: 115 },
+  both: { boxMin: 2, boxMax: 3, diaMin: 10, diaMax: 24 },
 } as const;
 
 /* ── 성장축 ③ 아바타 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 권장치·최소치 없음, 상한 없음) ── */

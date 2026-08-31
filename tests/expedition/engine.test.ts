@@ -56,7 +56,7 @@ describe('expedition engine — 미션 롤', () => {
     // 난이도 roll 9999(grand, Lv30) → 본상 roll 5500..7499 = diamondOnly → 수량 min(72, 2026-08-27 ×0.6)
     const m = rollMission(seq([0, 9999, 5500, 0]), 30);
     expect(m.reward.kind).toBe('dia');
-    expect(m.reward.diamond).toBe(Math.round(72 * 2.8));
+    expect(m.reward.diamond).toBe(Math.round(60 * 2.8)); // 다이아 기본 60~115(25💎/📦 정렬)
   });
 
   it('상자 슬롯 — 부위 3종 균등 랜덤(지역 가중 폐기, 2026-08-31)', () => {

@@ -77,13 +77,13 @@ describe('expedition balance invariants', () => {
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[12]; // 슬롯당 하루 1회 × 원정
     const launchDaily = evDia * critMult * maxDailyUnits;
     // 대성공 기본 10%→5%(2026-08-31, 합산 강화 가산 도입) — 무강화 신규 기준 ≈ 382💎.
-    // B 완충: 4슬롯 × 2.8 = 11.2유닛 × 💎26.7 × 1.05 ≈ 314
-    expect(launchDaily).toBeGreaterThanOrEqual(305);
-    expect(launchDaily).toBeLessThanOrEqual(323);
+    // B 완충 + 다이아 기본치 25💎/📦 정렬: 4슬롯 × 2.8 = 11.2유닛 × 💎21.8 × 1.05 ≈ 256
+    expect(launchDaily).toBeGreaterThanOrEqual(248);
+    expect(launchDaily).toBeLessThanOrEqual(264);
     // 축 ③(아바타 강화 합, 상한 없음, C안) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
-    expect(launchDaily * as1000).toBeGreaterThanOrEqual(980);
-    expect(launchDaily * as1000).toBeLessThanOrEqual(1035);
+    expect(launchDaily * as1000).toBeGreaterThanOrEqual(795);
+    expect(launchDaily * as1000).toBeLessThanOrEqual(845);
     // 대성공 총 상한(30% = 기본 5 + 레벨 5 + 합산 20)만 얹은 상한(축 ③ 제외).
     const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
     expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(500);
