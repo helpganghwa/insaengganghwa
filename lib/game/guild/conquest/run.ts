@@ -217,6 +217,15 @@ export async function markAbandonedZones(
       byGuild.set(v.owner, e);
     }
     for (const [owner, e] of byGuild) {
+      // 멱등 가드 — 00시대 cron이 5분 틱마다 재호출한다. 플래그는 전체 리셋→재설정이라 안전하지만
+      // 이벤트는 append라 그대로 두면 틱마다 중복 적재된다(2026-09-01 실측 길드당 6행).
+      // 같은 (서버, 전투일, 길드) 이벤트가 이미 있으면 건너뛴다.
+      const dup = (await tx.execute(sql`
+        select 1 from world_events
+        where server_id = ${serverId} and type = 'zone_abandoned'
+          and guild_id = ${owner}::bigint and detail->>'battleDay' = ${battleDay}
+        limit 1`)) as unknown as unknown[];
+      if (dup.length > 0) continue;
       await tx.insert(worldEvents).values({
         serverId,
         type: 'zone_abandoned',
