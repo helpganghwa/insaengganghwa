@@ -423,8 +423,16 @@ export async function getGuildRankingBoard(
   };
 }
 
+/** 길드장 최근 접속 스칼라 서브쿼리 — 추천 정렬용(2026-08-31): 활동 중인 길드가 위로. */
+const leaderLastSeenSql = sql<Date | null>`(
+  select c.last_seen_at from guild_members gm
+  join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
+  where gm.guild_id = ${guilds.id} and gm.role = 'leader'
+  limit 1
+)`;
+
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함.
- *  검색어 없으면 랜덤 10개(검색 전 기본 추천 노출). */
+ *  검색어 없으면 **길드장 최근 접속순** 10개(2026-08-31, 종전 랜덤 — 잠수 길드가 추천 상단에 뜨던 문제). */
 export async function searchGuilds(serverId: number, q: string) {
   const term = q.trim().slice(0, 30);
   // LIKE 와일드카드 리터럴화(풀스캔 유발 방지, 기본 escape=\).
@@ -451,7 +459,8 @@ export async function searchGuilds(serverId: number, q: string) {
         .select(sel)
         .from(guilds)
         .where(eq(guilds.serverId, serverId))
-        .orderBy(sql`random()`)
+        // 길드장 접속이 같은 순간(대량 null 포함)은 랜덤 — 신생·동률 길드도 돌아가며 노출.
+        .orderBy(sql`${leaderLastSeenSql} desc nulls last`, sql`random()`)
         .limit(10);
   const ids = rows.map((r) => r.id);
   const [stats, zoneChips] = await Promise.all([
