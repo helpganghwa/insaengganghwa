@@ -836,15 +836,23 @@ export function expeditionAsBonusBp(avatarSum: number): number {
   return Math.round(EXPEDITION_AS_MULT_COEF * Math.pow(avatarSum / 1000, EXPEDITION_AS_MULT_EXP) * 10000);
 }
 
-/** 대성공 — **수령 시** 기본 10% 확률로 확정 보상 수량 2배(2026-08-25 확정 — 오퍼 노출 아닌 수령 서프라이즈). */
-export const EXPEDITION_CRIT_BP = 1000;
+/** 대성공 — **수령 시** 기본 5% 확률로 확정 보상 수량 2배(2026-08-31 10%→5%: 합산 강화 가산 도입과 함께 하향). */
+export const EXPEDITION_CRIT_BP = 500;
 /**
- * 파견 레벨 → 대성공 확률 가산(2026-08-27 권장안): 레벨당 +0.1%p, Lv.50 = 15%. 레벨은 보상 배율에서 빠지고
- * (배율 축 = 아바타 강화 합·지역 시너지 둘뿐) 슬롯 해금·난이도 출현·대성공 확률만 맡는다. 기대값 영향 ≤ +4.5%.
+ * 파견 레벨 → 대성공 확률 가산: 레벨당 +0.1%p, Lv.50 = +5%p. 레벨은 보상 배율에서 빠지고
+ * (배율 축 = 아바타 강화 합·지역 시너지 둘뿐) 슬롯 해금·난이도 출현·대성공 확률만 맡는다.
  */
 export const EXPEDITION_CRIT_BP_PER_LEVEL = 10;
-export function expeditionCritBp(level: number): number {
-  return EXPEDITION_CRIT_BP + Math.min(Math.max(0, level), EXPEDITION_LEVEL_MAX) * EXPEDITION_CRIT_BP_PER_LEVEL;
+/**
+ * 계정 합산 강화 → 대성공 가산(2026-08-31 사용자 확정): 합산 1,000당 +1%p(= 합산/10 bp), 상한 +15%p.
+ * 강화가 파견의 질(대성공)로도 이어지는 매출 연결 축 — 현재 최고 합산 12,439 = +12.4%p.
+ * 총 상한 = 5% + 5%p(레벨) + 15%p(합산) = 25%.
+ */
+export const EXPEDITION_CRIT_SUM_BP_MAX = 1500;
+export function expeditionCritBp(level: number, enhanceSum = 0): number {
+  const lv = Math.min(Math.max(0, level), EXPEDITION_LEVEL_MAX) * EXPEDITION_CRIT_BP_PER_LEVEL;
+  const sum = Math.min(EXPEDITION_CRIT_SUM_BP_MAX, Math.floor(Math.max(0, enhanceSum) / 10));
+  return EXPEDITION_CRIT_BP + lv + sum;
 }
 export const EXPEDITION_CRIT_MULT = 2;
 

@@ -96,10 +96,13 @@ describe('expedition engine — 시너지·배율', () => {
     expect(c.diamond).toBe(254);
     expect(c.boxes!.weapon).toBe(8);
   });
-  it('파견 레벨 → 대성공 확률 — 10% + 0.1%p/Lv, 상한 Lv.50=15%', () => {
-    expect(critBp(0)).toBe(1000);
-    expect(critBp(7)).toBe(1070);
-    expect(critBp(99)).toBe(1500);
+  it('대성공 확률 — 기본 5% + 0.1%p/Lv(상한 50) + 합산 1,000당 1%p(상한 15%p)', () => {
+    expect(critBp(0)).toBe(500);
+    expect(critBp(7)).toBe(570);
+    expect(critBp(99)).toBe(1000); // 레벨 상한 50
+    expect(critBp(0, 1000)).toBe(600);
+    expect(critBp(0, 12439)).toBe(500 + 1243);
+    expect(critBp(50, 100000)).toBe(500 + 500 + 1500); // 총 상한 25%
   });
 });
 

@@ -352,7 +352,7 @@ export function claimExpedition(
     if (!row) throw new ExpeditionError('NOT_RUNNING');
     if (!row.ready) throw new ExpeditionError('NOT_READY');
 
-    const crit = rng() < critBp(st.level); // 레벨당 +0.1%p(Lv.50=15%)
+    const crit = rng() < critBp(st.level, await enhanceSumOf(tx, userId, serverId)); // 기본 5% + 레벨 0.1%p/lv + 합산 1,000당 1%p(상한 15%p)
     const reward = crit ? applyCrit(row.final_reward) : row.final_reward;
 
     // 조건부 전이 먼저 — 0행이면 다른 요청이 이미 수령(지급 없이 종료).

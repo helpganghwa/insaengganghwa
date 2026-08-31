@@ -4,6 +4,7 @@ import {
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_BOX_MAIN_BP,
   EXPEDITION_CRIT_BP,
+  EXPEDITION_CRIT_SUM_BP_MAX,
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
@@ -84,16 +85,17 @@ describe('expedition balance invariants', () => {
     // 하루 최대 유닛 — 4슬롯(합산 강화 9,000+) × 24h 원정. 슬롯당 100💎/일.
     const maxDailyUnits = EXPEDITION_SLOTS * EXPEDITION_DURATION_SCALE[24];
     const launchDaily = evDia * critMult * maxDailyUnits;
-    expect(launchDaily).toBeGreaterThanOrEqual(388);
-    expect(launchDaily).toBeLessThanOrEqual(412);
+    // 대성공 기본 10%→5%(2026-08-31, 합산 강화 가산 도입) — 무강화 신규 기준 ≈ 382💎.
+    expect(launchDaily).toBeGreaterThanOrEqual(374);
+    expect(launchDaily).toBeLessThanOrEqual(392);
     // 축 ③(아바타 강화 합, 상한 없음, C안) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
-    expect(launchDaily * as1000).toBeGreaterThanOrEqual(1260);
-    expect(launchDaily * as1000).toBeLessThanOrEqual(1300);
-    // Lv.50 대성공(15%)만 얹은 상한(축 ③ 제외) — 시너지는 이제 AS 가중이라 별도 가산 없음.
-    const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX) / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(450);
-    expect(expeditionCritBp(EXPEDITION_LEVEL_MAX)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL);
+    expect(launchDaily * as1000).toBeGreaterThanOrEqual(1195);
+    expect(launchDaily * as1000).toBeLessThanOrEqual(1260);
+    // 대성공 총 상한(25% = 기본 5 + 레벨 5 + 합산 15)만 얹은 상한(축 ③ 제외).
+    const critMax = 1 + (expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
+    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(470);
+    expect(expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_LEVEL_MAX * EXPEDITION_CRIT_BP_PER_LEVEL + EXPEDITION_CRIT_SUM_BP_MAX);
   });
 
   it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 4칸은 합산 강화 0/3k/6k/9k 단조 증가', () => {

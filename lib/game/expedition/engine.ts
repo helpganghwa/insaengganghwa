@@ -192,9 +192,9 @@ export function avatarWeightedSum(snapshot: unknown, levelByKey: ReadonlyMap<str
   );
 }
 
-/** 파견 레벨 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */
-export function critBp(level: number): number {
-  return expeditionCritBp(level);
+/** 파견 레벨·계정 합산 강화 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */
+export function critBp(level: number, enhanceSum = 0): number {
+  return expeditionCritBp(level, enhanceSum);
 }
 
 /** 배율 적용(시작 시 최종 확정) — 상자·다이아 수량에만. floor가 아닌 round(공시 문구와 정합). */

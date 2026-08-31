@@ -180,7 +180,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     level: st.level,
     xp: Number(st.xp),
     xpNext: expeditionXpToNext(st.level),
-    critBp: critBp(st.level),
+    critBp: critBp(st.level, enhanceSum),
     baseSum,
     enhanceSum,
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
