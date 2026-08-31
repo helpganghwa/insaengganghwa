@@ -9,6 +9,7 @@ import {
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DIFFICULTY_HOURS,
   EXPEDITION_DURATION_SCALE,
+  EXPEDITION_XP_RANGE_BY_HOURS,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
@@ -33,6 +34,8 @@ export type ExpeditionReward = {
   kind: 'box' | 'dia' | 'both';
   boxes?: { weapon: number; armor: number; accessory: number };
   diamond?: number;
+  /** 완료 XP — 오퍼 시 균등 롤 확정(2026-09-01). 없으면 시간별 평균 폴백. */
+  xp?: number;
 };
 
 export type ExpeditionMission = {
@@ -123,6 +126,9 @@ export function rollMission(rng: Rng10k, level: number): ExpeditionMission {
       diamond: scaled(uniformInt(rng, a.both.diaMin, a.both.diaMax), scale),
     };
   }
+  // XP — 오퍼 확정 롤(마지막 롤: 기존 rng 시퀀스를 흔들지 않는다). 대성공 미적용.
+  const [xpMin, xpMax] = EXPEDITION_XP_RANGE_BY_HOURS[hours];
+  reward.xp = uniformInt(rng, xpMin, xpMax);
   return { region, difficulty, durationMs: hours * HOUR_MS, reward };
 }
 
@@ -204,6 +210,7 @@ export function applyMultiplier(reward: ExpeditionReward, totalBp: number): Expe
         }
       : {}),
     ...(reward.diamond ? { diamond: scaleN(reward.diamond) } : {}),
+    ...(reward.xp ? { xp: reward.xp } : {}), // XP는 배율 미적용(오퍼 확정값 유지)
   };
 }
 
@@ -216,6 +223,7 @@ export function applyCrit(reward: ExpeditionReward): ExpeditionReward {
       ? { boxes: { weapon: s(reward.boxes.weapon), armor: s(reward.boxes.armor), accessory: s(reward.boxes.accessory) } }
       : {}),
     ...(reward.diamond ? { diamond: s(reward.diamond) } : {}),
+    ...(reward.xp ? { xp: reward.xp } : {}), // 대성공은 XP 미적용(2026-09-01 확정)
   };
 }
 

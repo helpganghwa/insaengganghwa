@@ -761,6 +761,15 @@ export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
  * 종전 페이스 유지. 표에 없는 시간(배포 전 진행분 24h 등)은 원정 XP로 폴백.
  */
 export const EXPEDITION_XP_BY_HOURS: Record<ExpeditionDurationH, number> = { 2: 20, 4: 21, 8: 22, 12: 24 };
+/**
+ * XP 범위(2026-09-01 사용자 확정 A안) — **오퍼가 열릴 때** 균등 롤해 카드에 확정 표기(보상과 같은 원칙: 수령 시
+ * 추첨은 대성공뿐, 대성공은 XP에 적용하지 않음). 평균은 EXPEDITION_XP_BY_HOURS와 같고 폭은 ±2로 구간 신호 유지.
+ * 확률공시(§33)에 구간·균등 명시.
+ */
+export const EXPEDITION_XP_RANGE_BY_HOURS: Record<ExpeditionDurationH, readonly [number, number]> = {
+  2: [18, 22], 4: [19, 23], 8: [20, 24], 12: [22, 26],
+};
+/** 표에 없는 시간(배포 전 진행분 등)·xp 미기록 행의 폴백 = 평균. */
 export function expeditionXpForHours(hours: number): number {
   return (EXPEDITION_XP_BY_HOURS as Record<number, number>)[hours] ?? EXPEDITION_XP_BY_HOURS[12];
 }

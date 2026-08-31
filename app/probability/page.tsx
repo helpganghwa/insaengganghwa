@@ -32,6 +32,7 @@ import {
   EXPEDITION_CRIT_MULT,
   EXPEDITION_DURATIONS_H,
   EXPEDITION_DURATION_SCALE,
+  EXPEDITION_XP_RANGE_BY_HOURS,
   EXPEDITION_LEVEL_MAX,
   EXPEDITION_CRIT_BP_PER_LEVEL,
   expeditionCritBp,
@@ -273,7 +274,9 @@ export default async function ProbabilityPage() {
           파견 보상은 <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어
           카드에 그대로 표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 아래 수량은
           기본값이며 난이도(시간)별 배율을 곱합니다(슬롯당 하루 1회, 
-          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}).
+          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}). 파견 경험치도
+          미션이 열릴 때 시간별 구간에서 균등 추첨되어 카드에 확정 표기됩니다(
+          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ${EXPEDITION_XP_RANGE_BY_HOURS[h][0]}~${EXPEDITION_XP_RANGE_BY_HOURS[h][1]}`).join(' / ')}; 대성공은 경험치에 적용되지 않습니다).
         </P>
         <Table head={['본상', '확률', '기본 수량(배율 전)']}>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">

@@ -134,6 +134,7 @@ export default async function HomePage() {
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 9시 개시';
   let expeditionDesc = '원정대를 보내보세요';
+  let expeditionCanSend = false;
   let raidJoinable = 0;
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
@@ -305,7 +306,10 @@ export default async function HomePage() {
         const expRunning = row.exp_running ?? 0;
         // 카드 문구(2026-08-30): 완료·진행·대기 세 수치를 항상 흰색으로 간단히. 완료는 배지 숫자로만 강조.
         const expIdle = Math.max(0, (Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0) - expRunning - expClaimable)) - Number(row?.exp_done_today ?? 0));
-        expeditionDesc = `완료 ${expClaimable} · 진행 ${expRunning} · 대기 ${expIdle}`;
+        // 오늘 파견 N/M(2026-09-01 하루 1회) — 남은 칸이 있으면 강조색(descHot).
+        const expOpen = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0));
+        expeditionDesc = `오늘 파견 ${Math.max(0, expOpen - expIdle)}/${expOpen} · 완료 ${expClaimable} · 진행 ${expRunning}`;
+        expeditionCanSend = expIdle > 0;
         if (expClaimable > 0) counts['/expedition'] = expClaimable;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
@@ -460,7 +464,7 @@ export default async function HomePage() {
                   ? `참여 가능 레이드 ${raidJoinable}`
                   : m.desc;
           const descHot =
-            m.href === '/raid' && raidJoinable > 0; // 강조색
+            (m.href === '/raid' && raidJoinable > 0) || (m.href === '/expedition' && expeditionCanSend); // 강조색
           return (
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}

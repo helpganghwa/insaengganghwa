@@ -9,6 +9,7 @@ import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
   EXPEDITION_REFRESH_COST,
+  EXPEDITION_DURATIONS_H,
   expeditionXpForHours,
   EXPEDITION_REFRESH_FREE_PER_DAY,
 } from '@/lib/game/balance';
@@ -136,11 +137,16 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
     const slots = effectiveSlots(await enhanceSumOf(tx, userId, serverId));
     const today = kstDateString();
     const active = (await tx.execute(sql`
-      select id::text, slot, status, (rolled_at at time zone 'Asia/Seoul')::date::text as rolled_kst
+      select id::text, slot, status, (rolled_at at time zone 'Asia/Seoul')::date::text as rolled_kst, duration_ms::text
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       for update
-    `)) as unknown as { id: string; slot: number; status: string; rolled_kst: string }[];
+    `)) as unknown as { id: string; slot: number; status: string; rolled_kst: string; duration_ms: string }[];
+    // 시간표 개정(2026-09-01 4/8/12/24→2/4/8/12) 자가 치유 — 옛 시간의 미배정 오퍼는 날짜와 무관하게 즉시 리롤
+    // (구 스케일 보상이 하루 동안 섞여 보이는 것 방지). 진행 중(running) 24h 파견은 건드리지 않는다.
+    const allowedMs = new Set(EXPEDITION_DURATIONS_H.map((h) => h * 3_600_000));
+    const staleOffer = (r: { status: string; rolled_kst: string; duration_ms: string }) =>
+      r.status === 'offer' && (r.rolled_kst !== today || !allowedMs.has(Number(r.duration_ms)));
 
     // 슬롯당 하루 1회(2026-09-01): 오늘(KST) 이미 출발한 슬롯은 자정까지 새 오퍼를 채우지 않는다 —
     // 수령한 카드가 "오늘 완료"로 남고, 자정 이후 첫 진입에서 오퍼가 생긴다. 어제 출발해 오늘 수령한 건은 대상 아님.
@@ -162,8 +168,8 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
           values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${m.difficulty}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb)
           on conflict do nothing
         `);
-      } else if (row.status === 'offer' && row.rolled_kst !== today) {
-        // 자정 전체 교체 — 미배정 오퍼만.
+      } else if (staleOffer(row)) {
+        // 자정 전체 교체(+옛 시간표 오퍼 즉시 교체) — 미배정 오퍼만.
         const m = rollMission(rng, st.level);
         await tx.execute(sql`
           update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
@@ -399,7 +405,7 @@ export function claimExpedition(
       }
     }
 
-    const xpGained = expeditionXpForHours(Math.round(Number(row.duration_ms) / 3_600_000)); // 유닛 비례(2026-09-01)
+    const xpGained = row.final_reward.xp ?? expeditionXpForHours(Math.round(Number(row.duration_ms) / 3_600_000)); // 오퍼 확정 XP(2026-09-01), 구행은 평균 폴백
     const next = applyExpeditionXp(st.level, BigInt(st.xp), xpGained);
     await tx.execute(sql`
       update expedition_state set level = ${next.level}, xp = ${next.xp}

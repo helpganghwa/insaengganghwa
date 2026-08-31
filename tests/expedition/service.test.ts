@@ -153,7 +153,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     );
     const c = await claimExpedition(uid, SID, 1, seq([9999])); // no crit
     expect(c.crit).toBe(false);
-    expect(c.xpGained).toBe(20); // 쉬움 2h = 유닛 비례 20XP(2026-09-01)
+    expect(c.xpGained).toBe(18); // 쉬움 2h XP 18~22 균등 — seq 소진 후 roll 0 = 최소 18(2026-09-01)
     const after = BigInt(
       ((await testDb.execute(sql`select diamond::text as d from characters where user_id=${uid}::uuid and server_id=${SID}`)) as unknown as { d: string }[])[0]!.d,
     );
@@ -164,7 +164,7 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     const [st] = (await testDb.execute(sql`
       select level, xp::text from expedition_state where user_id = ${uid}::uuid and server_id = ${SID}
     `)) as unknown as { level: number; xp: string }[];
-    expect(Number(st!.xp)).toBe(20);
+    expect(Number(st!.xp)).toBe(18);
   });
 
   it('동시 수령 4건 — 정확히 1건만 지급', async () => {

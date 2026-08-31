@@ -23,6 +23,9 @@ import {
   EXPEDITION_CRIT_MULT,
   expeditionCritBp,
   expeditionXpForHours,
+  EXPEDITION_XP_RANGE_BY_HOURS,
+  EXPEDITION_BASE_AMOUNTS,
+  EXPEDITION_DURATION_SCALE,
 } from '@/lib/game/balance';
 import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
@@ -272,6 +275,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
           대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
         </span>
+        <span className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700" />
+        {/* 오늘 파견 N/M(슬롯당 하루 1회, 2026-09-01) — N = 열린 슬롯 − 아직 보낼 수 있는(오퍼) 슬롯. 남았으면 강조색. */}
+        {(() => {
+          const open = board.slots.filter((x) => x.state !== 'locked').length;
+          const left = board.slots.filter((x) => x.state === 'offer').length;
+          return (
+            <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+              오늘 <b className={left > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{open - left}/{open}</b>
+            </span>
+          );
+        })()}
         <button
           type="button"
           onClick={() => setRefreshAsk(true)}
@@ -300,7 +314,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="아바타 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{expeditionXpForHours(assignFor.hours ?? 0)} XP
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{assignFor.reward?.xp ?? expeditionXpForHours(assignFor.hours ?? 0)} XP
               </>
             }
             bodyPad="sm"
@@ -454,6 +468,37 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 })}
               </tbody>
             </table>
+            {/* 난이도별 기본 보상 범위(2026-09-01) — 배율(아바타 강화 합·시너지) 적용 전, 시간 스케일 반영 값. 공시 표와 1:1. */}
+            <table className="mt-3 w-full border-collapse text-center text-[10px]">
+              <thead>
+                <tr className="text-zinc-400">
+                  <th className="border-b border-zinc-200 py-1 text-left font-semibold dark:border-zinc-800">기본 보상</th>
+                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">상자만</th>
+                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">다이아만</th>
+                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">상자+다이아</th>
+                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">XP</th>
+                </tr>
+              </thead>
+              <tbody className="text-zinc-700 dark:text-zinc-300">
+                {EXPEDITION_DIFFICULTIES.map((d) => {
+                  const h = EXPEDITION_DIFFICULTY_HOURS[d] as 2 | 4 | 8 | 12;
+                  const sc = EXPEDITION_DURATION_SCALE[h];
+                  const f = (n: number) => Math.max(1, Math.round(n * sc));
+                  const a = EXPEDITION_BASE_AMOUNTS;
+                  const [x0, x1] = EXPEDITION_XP_RANGE_BY_HOURS[h];
+                  return (
+                    <tr key={d}>
+                      <td className="py-1 text-left font-bold">{HOUR_MOON[h]} {h}h</td>
+                      <td className="py-1">📦{f(a.boxOnly.boxMin)}~{f(a.boxOnly.boxMax)}</td>
+                      <td className="py-1">💎{f(a.diamondOnly.diaMin)}~{f(a.diamondOnly.diaMax)}</td>
+                      <td className="py-1">📦{f(a.both.boxMin)}~{f(a.both.boxMax)} + 💎{f(a.both.diaMin)}~{f(a.both.diaMax)}</td>
+                      <td className="py-1">{x0}~{x1}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-1 text-center text-[9.5px] text-zinc-400">배율(아바타 강화 합·지역 시너지) 적용 전 기본값 · 대성공 시 상자·다이아 2배</p>
             {/* 내 대성공 계산 한 줄 — 표는 레벨분만(2026-08-31). */}
             <p className="mt-2 text-center text-[10.5px] tabular-nums text-zinc-500 dark:text-zinc-400">
               파견 레벨 대성공 {(expeditionCritBp(board.level) / 100).toFixed(1)}% + 합산 강화 보너스{' '}
@@ -623,7 +668,7 @@ function CardBody({
             {ui.label}
           </b>
           <span className="text-[10px] font-extrabold text-zinc-200" style={STROKE}>
-            +{expeditionXpForHours(hours)} XP
+            +{reward?.xp ?? expeditionXpForHours(hours)} XP
           </span>
         </div>
       )}

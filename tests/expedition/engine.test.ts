@@ -36,6 +36,8 @@ describe('expedition engine — 미션 롤', () => {
     // easy(×2.8, 하루 1회 1회분): base 3~4 → 8~11개(roll 0 = 최소 3 → 8)
     expect(total).toBeGreaterThanOrEqual(8);
     expect(total).toBeLessThanOrEqual(11);
+    // XP — 오퍼 확정 롤(마지막 rng): seq 소진 roll 0 → 2h 최소 18. 배율·대성공을 거쳐도 유지.
+    expect(m.reward.xp).toBe(18);
   });
 
   it('Lv0 원정(grand) 출현 15% — 분포 상단 1500bp에서만 뜬다 / Lv30+에선 25%', () => {
