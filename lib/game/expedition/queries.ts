@@ -71,12 +71,14 @@ export type ExpeditionBoard = {
   refreshCost: number;
   slots: ExpeditionBoardSlot[];
   avatars: ExpeditionAvatar[];
+  /** 오늘(KST) 수령한 파견 보상 합계 — 헤더 우측 표시(2026-08-31). 대성공 반영. */
+  todayEarned: { diamond: number; boxes: number };
 };
 
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, doneRows] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, earnedRows, doneRows] = await Promise.all([
     db.execute(sql`
       select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
              refresh_kst_day::text, refresh_today
@@ -129,6 +131,15 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       select coalesce(sum(enhance_level), 0)::int as s from user_equipment
       where user_id = ${userId}::uuid and server_id = ${serverId}
     `) as unknown as Promise<{ s: number }[]>,
+    // 오늘(KST) 수령한 보상 합계(대성공 반영) — 헤더 '오늘 N/M · 💎 · 📦'.
+    db.execute(sql`
+      select coalesce(sum(coalesce((final_reward->>'diamond')::int, 0) * (case when crit then 2 else 1 end)), 0)::int as dia,
+             coalesce(sum((coalesce((final_reward->'boxes'->>'weapon')::int, 0) + coalesce((final_reward->'boxes'->>'armor')::int, 0)
+                          + coalesce((final_reward->'boxes'->>'accessory')::int, 0)) * (case when crit then 2 else 1 end)), 0)::int as boxes
+      from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
+        and claimed_at is not null and (claimed_at at time zone 'Asia/Seoul')::date = ${today}::date
+    `) as unknown as Promise<{ dia: number; boxes: number }[]>,
     // 오늘(KST) 출발해 수령까지 마친 파견 — 슬롯당 하루 1회의 "오늘 완료" 카드(슬롯당 최신 1건).
     db.execute(sql`
       select distinct on (slot) slot, region, difficulty, duration_ms::text, final_reward, reward, crit,
@@ -222,6 +233,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     baseSum,
     enhanceSum,
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
+    todayEarned: { diamond: Number(earnedRows[0]?.dia ?? 0), boxes: Number(earnedRows[0]?.boxes ?? 0) },
     refreshCost: EXPEDITION_REFRESH_COST,
     slots,
     avatars: avatarRows.map((a) => ({

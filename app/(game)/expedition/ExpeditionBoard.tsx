@@ -8,6 +8,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
+import { BackTitle } from '@/components/BackNav';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
@@ -259,8 +260,25 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     else toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)} 남음` });
   };
 
+  // 페이지 타이틀 우측(2026-08-31) — 오늘 파견 N/M(보낸 기준: 오늘 KST 출발 슬롯) · 오늘 수령한 💎/📦 합계.
+  const openSlots = board.slots.filter((x) => x.state !== 'locked').length;
+  const sentToday = board.slots.filter((x) => x.state === 'done' || (x.state === 'running' && x.startedToday)).length;
   return (
     <div className="space-y-2.5">
+      <BackTitle
+        title="파견"
+        className="mb-0.5"
+        right={
+          <span className="flex items-center gap-2 text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">
+            <span>
+              오늘 <b className={sentToday < openSlots ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{sentToday}/{openSlots}</b>
+            </span>
+            <span className="h-3 w-px bg-zinc-300 dark:bg-zinc-700" />
+            <span title="오늘 수령한 파견 보상">💎<b className="text-zinc-900 dark:text-zinc-50">{board.todayEarned.diamond.toLocaleString('ko-KR')}</b></span>
+            <span>📦<b className="text-zinc-900 dark:text-zinc-50">{board.todayEarned.boxes.toLocaleString('ko-KR')}</b></span>
+          </span>
+        }
+      />
       {/* 헤더(H1, 2026-08-28) — 한 줄: Lv 알약(탭→레벨별 확률 표 팝업) · 대성공 · 새로고침 버튼 + XP 바. 합산 강화 칩은 제거(잠금 카드에 표시). */}
       <div className="flex items-center gap-2">
         <button
@@ -275,18 +293,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
           대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
         </span>
-        <span className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700" />
-        {/* 오늘 파견 N/M(슬롯당 하루 1회, 2026-09-01) — N = 열린 슬롯 − 아직 보낼 수 있는(오퍼) 슬롯. 남았으면 강조색. */}
-        {(() => {
-          const open = board.slots.filter((x) => x.state !== 'locked').length;
-          // 보낸 기준(2026-08-31) — 오늘(KST) 출발한 슬롯 수. 어제 출발해 아직 진행 중인 슬롯은 오늘 미출발로 센다.
-          const sent = board.slots.filter((x) => x.state === 'done' || ((x.state === 'running') && x.startedToday)).length;
-          return (
-            <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-              오늘 <b className={sent < open ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{sent}/{open}</b>
-            </span>
-          );
-        })()}
+
         <button
           type="button"
           onClick={() => setRefreshAsk(true)}
