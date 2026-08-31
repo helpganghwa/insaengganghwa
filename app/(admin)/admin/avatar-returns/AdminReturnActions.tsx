@@ -14,6 +14,14 @@ export function AdminReturnActions({ requestId, paid }: { requestId: string; pai
 
   const decide = (outcome: 'full' | 'half') => {
     if (pending) return;
+    // 실수 방지 — 지급은 되돌릴 수 없어(우편 즉시 발송) 금액을 문장으로 다시 확인한다(어드민 관례: window.confirm).
+    const amount = outcome === 'full' ? paid : Math.floor(paid / 2);
+    if (
+      !window.confirm(
+        `${outcome === 'full' ? '전액' : '절반'} 지급할까요?\n\n💎${amount.toLocaleString('ko-KR')} (실지불 💎${paid.toLocaleString('ko-KR')}의 ${outcome === 'full' ? '100%' : '50%'})\n\n확정하면 우편이 바로 발송되고 되돌릴 수 없습니다.`,
+      )
+    )
+      return;
     startTransition(async () => {
       const r = await decideAvatarReturn(requestId, outcome, note || undefined);
       if (r.status === 'error') {
