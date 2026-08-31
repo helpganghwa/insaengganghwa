@@ -238,21 +238,26 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   if (topKillE && topKillE[1].n >= 3)
     feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n, zones: [...topKillE[1].zones] });
 
-  // 그날 해산(guild_disband) — KST 일자 매칭. 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
+  // 그날 해산(guild_disband) — 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
+  // 창은 [전날 23:00, 당일 23:00) KST — 연대기가 23시에 사전생성되므로, 자정 경계 대신 생성 경계로
+  // 나눠야 23:00~24:00 사이 사건이 어느 연대기에도 못 실리는 구멍이 없다(해산·개명 공통, 2026-08-31).
   const disbandRows = (await db.execute(sql`
     select detail from world_events
     where server_id = ${serverId} and type = 'guild_disband'
-      and (created_at at time zone 'Asia/Seoul')::date = ${kstDay}::date
+      and created_at >= ((${kstDay}::date - 1) + time '23:00') at time zone 'Asia/Seoul'
+      and created_at <  (${kstDay}::date + time '23:00') at time zone 'Asia/Seoul'
   `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
   const disbands = disbandRows
     .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
     .filter((d) => d.guildName);
 
-  // 길드명 변경(0182) — KST 일자 매칭. 사실표에서 옛 이름↔새 이름을 이어 주지 않으면 같은 길드가 두 세력으로 서술된다.
+  // 길드명 변경(0182) — 사실표에서 옛 이름↔새 이름을 이어 주지 않으면 같은 길드가 두 세력으로 서술된다.
+  // 창은 해산과 동일한 [전날 23:00, 당일 23:00) KST — 사전생성(23시) 경계 기준(위 주석 참조).
   const renameRows = (await db.execute(sql`
     select detail from world_events
     where server_id = ${serverId} and type = 'guild_rename'
-      and (created_at at time zone 'Asia/Seoul')::date = ${kstDay}::date
+      and created_at >= ((${kstDay}::date - 1) + time '23:00') at time zone 'Asia/Seoul'
+      and created_at <  (${kstDay}::date + time '23:00') at time zone 'Asia/Seoul'
   `)) as unknown as { detail: { guildName?: string; before?: string } }[];
   const renames = renameRows
     .map((r) => ({ before: r.detail?.before ?? '', after: r.detail?.guildName ?? '' }))
