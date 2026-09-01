@@ -49,6 +49,8 @@ type DashRow = {
   sales_today: { sum: string; c: number };
   sales_month: { sum: string; c: number };
   refunds_month: number;
+  sales_total: { sum: string; c: number };
+  refunds_total: number;
   running_jobs: number;
   raids_today: number;
   melee_today: number;
@@ -95,6 +97,9 @@ async function loadDashboard() {
         (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
            from iap_orders where status = 'paid' and paid_at >= ${monthStart}::timestamptz) as sales_month, -- 환불 제외(2026-08-24) — 오늘 매출과 기준 통일, 환불 건수는 별도 표기
         (select count(*)::int from iap_refunds where created_at >= ${monthStart}::timestamptz) as refunds_month,
+        (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
+           from iap_orders where status = 'paid') as sales_total, -- 누적 매출(오픈 이후 전체, 환불 제외 — 오늘/이달과 기준 통일)
+        (select count(*)::int from iap_refunds) as refunds_total,
         (select count(*)::int from enhancement_jobs where status = 'running') as running_jobs,
         (select count(*)::int from raids where opened_at >= ${dayStart}::timestamptz) as raids_today,
         (select count(*)::int from melee_participants mp
@@ -141,6 +146,8 @@ async function loadDashboard() {
     sales_today: salesToday,
     sales_month: salesMonth,
     refunds_month: refundsMonth,
+    sales_total: salesTotal,
+    refunds_total: refundsTotal,
     running_jobs: runningJobs,
     raids_today: raidsToday,
     melee_today: meleeToday,
@@ -167,6 +174,8 @@ async function loadDashboard() {
     salesToday,
     salesMonth,
     refundsMonth,
+    salesTotal,
+    refundsTotal,
     runningJobs,
     raidsToday,
     meleeToday,
@@ -231,6 +240,7 @@ export default async function AdminDashboardPage() {
           <Card label="대난투 참가" value={d.meleeToday.toLocaleString()} />
           <Card label="점령전 배치" value={d.deploysToday.toLocaleString()} />
           <Card label="이달 매출" value={won(d.salesMonth.sum)} sub={`${d.salesMonth.c}건 · 환불 ${d.refundsMonth}건`} />
+          <Card label="누적 매출" value={won(d.salesTotal.sum)} sub={`${d.salesTotal.c}건 · 환불 ${d.refundsTotal}건`} />
         </div>
       </section>
 
