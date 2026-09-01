@@ -96,7 +96,7 @@ export default async function AdminAvatarReturnsPage() {
       equipmentSnapshot: avatarReturnRequests.equipmentSnapshot,
     })
     .from(avatarReturnRequests)
-    .where(inArray(avatarReturnRequests.status, ['paid_full', 'paid_half']))
+    .where(inArray(avatarReturnRequests.status, ['paid_full', 'paid_half', 'closed']))
     .orderBy(desc(avatarReturnRequests.decidedAt))
     .limit(20);
 
@@ -156,7 +156,7 @@ export default async function AdminAvatarReturnsPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={r.spriteUrl} alt="" className="h-8 w-8 object-contain" style={{ imageRendering: 'pixelated' }} />
-                <span>{r.status === 'paid_full' ? '전액' : '절반'} 💎{Number(r.refundDiamond ?? 0).toLocaleString('ko-KR')}</span>
+                <span>{r.status === 'paid_full' ? '전액' : r.status === 'paid_half' ? '절반' : '종결(지급 없음)'} 💎{Number(r.refundDiamond ?? 0).toLocaleString('ko-KR')}</span>
                 <span className="text-zinc-600">{r.decidedAt ? fmt(r.decidedAt) : ''}</span>
               </div>
             );

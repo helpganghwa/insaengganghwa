@@ -6,7 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { safeBigInt } from '@/lib/util/id';
 import { db } from '@/lib/db/client';
-import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
+import { avatarReturnRequests, profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
@@ -105,6 +105,16 @@ export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg
   if (job.status !== 'accepted') return { ok: false, msg: 'accepted(과금 완료) 건만 환불할 수 있습니다.' };
   if (job.userProfileId) return { ok: false, msg: '아바타가 남아 있습니다 — 리젝(회수+환불)을 사용하세요.' };
   if (job.diamondEscrow <= 0n) return { ok: false, msg: '환불할 다이아가 없습니다.' };
+  // 유저가 '아바타 반환'으로 이미 회수한 건이면 user_profile_id가 null이라 여기까지 온다 — 반환 요청과 이중 지급 금지.
+  if (job.pixellabCharacterId) {
+    const [ret] = await db
+      .select({ id: avatarReturnRequests.id, status: avatarReturnRequests.status, refund: avatarReturnRequests.refundDiamond })
+      .from(avatarReturnRequests)
+      .where(sql`${avatarReturnRequests.spriteUrl} like ${'%/' + job.pixellabCharacterId + '/%'}`)
+      .limit(1);
+    if (ret?.status === 'pending') return { ok: false, msg: `이 아바타는 유저가 반환 신청(#${ret.id})했습니다 — 반환 검토 화면에서 전액/절반을 판정하세요(이중 지급 방지).` };
+    if (ret && ret.status !== 'closed') return { ok: false, msg: `이 아바타는 반환 보상(#${ret.id}, 💎${Number(ret.refund ?? 0)})이 이미 지급됐습니다 — 추가 환불 불가.` };
+  }
 
   const claimed = await db.transaction(async (tx) => {
     const rows = await tx

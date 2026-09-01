@@ -5,7 +5,8 @@ import { and, eq } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
-import { avatarReturnRequests } from '@/lib/db/schema/avatar';
+import { avatarReturnRequests, profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { characterIdFromSpriteUrl } from '@/lib/game/profile/return';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
 type Result = { status: 'success' } | { status: 'error'; code: string };
@@ -30,6 +31,30 @@ export async function decideAvatarReturn(
       .for('update')
       .limit(1);
     if (!req) return { status: 'error', code: 'NOT_FOUND_OR_DECIDED' };
+
+    // 이중 지급 가드 — 같은 아바타의 생성 잡이 생성검수에서 이미 환불(admin_decision='reject')됐으면
+    // 반환 보상을 또 주지 않고 요청을 종결한다(#173 사고: 반환 신청 38초 뒤 환불만 처리가 겹침).
+    const cid = characterIdFromSpriteUrl(req.spriteUrl);
+    if (cid) {
+      const [job] = await tx
+        .select({ id: profileGenerationJobs.id, adminDecision: profileGenerationJobs.adminDecision })
+        .from(profileGenerationJobs)
+        .where(eq(profileGenerationJobs.pixellabCharacterId, cid))
+        .limit(1);
+      if (job?.adminDecision === 'reject') {
+        await tx
+          .update(avatarReturnRequests)
+          .set({
+            status: 'closed',
+            refundDiamond: 0n,
+            adminNote: `생성검수 환불 기처리(잡 ${job.id}) — 이중 지급 방지 자동 종결`,
+            decidedAt: new Date(),
+          })
+          .where(eq(avatarReturnRequests.id, id));
+        revalidatePath('/admin/avatar-returns');
+        return { status: 'error', code: 'ALREADY_REFUNDED_BY_REVIEW' };
+      }
+    }
 
     const paid = Number(req.paidDiamond);
     const refund = outcome === 'full' ? paid : Math.floor(paid / 2);

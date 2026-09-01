@@ -110,3 +110,14 @@ export function requestAvatarReturn(input: {
     return { requestId: req!.id };
   });
 }
+
+/**
+ * 반환 요청 스냅샷의 스프라이트 URL(`…/<userId>/<characterId>/south.png`)에서 characterId를 꺼낸다 —
+ * 반환 요청과 생성 잡(pixellab_character_id)을 잇는 유일한 키. 프로필은 반환 즉시 삭제돼 FK가 끊기므로
+ * 이 경로가 "같은 아바타"의 정본 링크다(2026-09-01 #173: 반환 신청 직후 생성검수 환불이 겹친 이중 지급 방지).
+ */
+export function characterIdFromSpriteUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const parts = url.split('?')[0]!.split('/').filter(Boolean);
+  return parts.length >= 2 ? parts[parts.length - 2]! : null;
+}
