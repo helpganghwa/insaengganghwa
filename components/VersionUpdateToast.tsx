@@ -56,12 +56,12 @@ export function VersionUpdateToast() {
           return;
         }
         if (cur !== firstDpl && !reloaded) {
-          // 쿨다운 내면 핑퐁 가능성 — 새로고침 대신 기준만 갱신해 루프 차단.
+          // 쿨다운 내면 핑퐁 가능성 — 이번 사이클은 건너뛴다. 기준(firstDpl)은 덮어쓰지 않는다:
+          // 덮어쓰면 쿨다운 안에 나온 두 번째 배포(2026-09-01 10:29→10:32 연속 배포)가 영영 적용되지
+          // 않고 재접속을 기다린다. 기준을 유지하면 다음 폴링(5분)에 쿨다운이 끝난 뒤 정상 새로고침되고,
+          // 핑퐁이 나더라도 새로고침은 10분당 최대 1회로 상한이 그대로다.
           const last = Number(localStorage.getItem(RELOAD_TS) ?? '0');
-          if (Date.now() - last < RELOAD_COOLDOWN_MS) {
-            firstDpl = cur;
-            return;
-          }
+          if (Date.now() - last < RELOAD_COOLDOWN_MS) return;
           reloaded = true;
           localStorage.setItem(RELOAD_TS, String(Date.now()));
           sessionStorage.setItem(UPDATED_FLAG, '1'); // 새로고침 후 토스트용
