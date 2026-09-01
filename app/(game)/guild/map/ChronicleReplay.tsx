@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ConquestReplay, ReplayEvent } from '@/lib/game/guild/conquest/replay';
 
-import { parseChronicleSegments, type ChronicleSegment } from './chronicle-tokens';
+import { findPastContextZoneKeys, parseChronicleSegments, type ChronicleSegment } from './chronicle-tokens';
 
 /**
  * 세계지도 '오늘의 역사' 리플레이(2026-07-16 확정 연출) — 연대기 타이핑과 지도 연출 동기화.
@@ -92,7 +92,11 @@ export function ChronicleReplayPanel({
 
   // ── 연속 나열 그룹 사전 계산 — 각 z세그(p,s) → groupKey, 그룹 마지막 z에서 일괄 실행 ──
   const groups = useRef<Map<string, { zoneIds: number[]; lastKey: string }>>(new Map());
+  // 과거 회고 문장("어제 …") 안의 구역 마커 — 트리거로 쓰지 않는다(chronicle-tokens.findPastContextZoneKeys 참조).
+  const deferredRef = useRef(new Set<string>());
   useEffect(() => {
+    const deferred = findPastContextZoneKeys(paras.current);
+    deferredRef.current = deferred;
     const g = new Map<string, { zoneIds: number[]; lastKey: string }>();
     for (let p = 0; p < paras.current.length; p++) {
       const segs = paras.current[p]!;
@@ -105,7 +109,7 @@ export function ChronicleReplayPanel({
       for (let s = 0; s < segs.length; s++) {
         const seg = segs[s]!;
         const zid = zoneIdOf(seg);
-        if (zid != null && replay.events[zid]) {
+        if (zid != null && replay.events[zid] && !deferred.has(`${p}:${s}`)) {
           const key = `${p}:${s}`;
           if (cur) { cur.keys.push(key); cur.zoneIds.push(zid); }
           else cur = { keys: [key], zoneIds: [zid] };
@@ -394,7 +398,7 @@ export function ChronicleReplayPanel({
           if (seg.kind === 'z') {
             const zid = zoneIdOf(seg);
             const ev = zid != null ? replay.events[zid] : undefined;
-            if (ev && zid != null && !firedRef.current.has(zid)) {
+            if (ev && zid != null && !firedRef.current.has(zid) && !deferredRef.current.has(`${p}:${s}`)) {
               const key = `${p}:${s}`;
               const grp = groups.current.get(key);
               if (grp && grp.lastKey !== key) {

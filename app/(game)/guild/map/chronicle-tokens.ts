@@ -86,3 +86,34 @@ export function displayName(
   if (!Number.isInteger(id)) return raw;
   return resolve.zoneName(id) ?? raw;
 }
+
+/**
+ * 과거 회고 문장 가드(2026-09-01) — "어제 {z|잿더미 폐허}와 {z|불탄 마을}을 손에 넣었던 …" 처럼 지난 점령전을
+ * 되짚는 문장 안의 구역 마커는 리플레이 트리거로 쓰지 않는다. 트리거는 "첫 등장 1회"라 회고에서 먼저
+ * 소비되면 오늘 사건 연출이 실제 서술보다 앞서 터지고, 그 문장에선 아무 일도 안 일어난다(리플레이 꼬임).
+ * 반환: 건너뛸 세그먼트 키 `${p}:${s}` 집합. 같은 구역이 뒤에서 다시 언급되면 그때 재생되고, 없으면 종료
+ * 일괄 발화가 받는다. 문장 경계는 '. ' / '! ' / '? '(문단 끝 포함).
+ */
+export const PAST_CONTEXT_RE = /어제|전날|그저께|지난\s?(날|밤|점령전|전투|번)/;
+
+export function findPastContextZoneKeys(paras: ChronicleSegment[][]): Set<string> {
+  const out = new Set<string>();
+  const ENDS = ['. ', '! ', '? '];
+  for (let p = 0; p < paras.length; p++) {
+    const segs = paras[p]!;
+    const full = segs.map((x) => x.text).join('');
+    let off = 0;
+    for (let s = 0; s < segs.length; s++) {
+      const seg = segs[s]!;
+      if (seg.kind === 'z') {
+        const sStart = Math.max(-2, ...ENDS.map((b) => full.lastIndexOf(b, off))) + 2;
+        const after = off + seg.text.length;
+        const ends = ENDS.map((b) => full.indexOf(b, after)).filter((i) => i >= 0);
+        const sEnd = ends.length ? Math.min(...ends) + 1 : full.length;
+        if (PAST_CONTEXT_RE.test(full.slice(sStart, sEnd))) out.add(`${p}:${s}`);
+      }
+      off += seg.text.length;
+    }
+  }
+  return out;
+}
