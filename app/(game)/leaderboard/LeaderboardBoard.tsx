@@ -320,11 +320,12 @@ export function LeaderboardBoard({
             </section>
           )}
 
-          {/* 내 순위 고정 줄 — Top 100 밖이면 목록에 내가 없어 "몇 등인지"를 알 수 없다.
-              스크롤과 무관하게 바닥에 붙여 항상 보이게 한다. 목록 안에 있으면 하이라이트가
-              이미 있으므로 중복을 피해 내보내지 않는다(2026-08-02). */}
+          {/* 내 순위 줄 — Top 100 밖이면 목록에 내가 없어 "몇 등인지"를 알 수 없다. 목록 맨 아래에
+              일반 행으로 둔다(스크롤 끝에서 확인). 이전엔 sticky bottom으로 붙였는데 채팅 미니바가
+              그 자리를 덮어 보이지 않았다(2026-09-02). 목록 안에 있으면 하이라이트가 이미 있으므로
+              중복을 피해 내보내지 않는다(2026-08-02). */}
           {mine && !top.some((e) => e.userId === userId) ? (
-            <section className="sticky bottom-2 z-10 flex items-center gap-2.5 rounded-xl border border-amber-500/60 bg-zinc-950/95 px-3 py-2.5 shadow-lg shadow-black/50 backdrop-blur">
+            <section className="mt-2 flex items-center gap-2.5 rounded-xl border border-amber-500/60 bg-zinc-950 px-3 py-2.5">
               <span className="w-7 shrink-0 text-center font-mono text-sm font-bold text-amber-300 tabular-nums">
                 #{mine.rank}
               </span>
