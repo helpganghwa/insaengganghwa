@@ -63,10 +63,11 @@ export async function decideAvatarReturn(
       serverId: req.serverId,
       type: 'reward',
       title: '아바타 반환 보상',
+      // 금액·기준을 본문에 명시 — 첫 생성 할인가(500) 아바타의 "전액"이 500이라 절반으로 오해한 문의(2026-09-01 #177).
       body:
         outcome === 'full'
-          ? '반환하신 아바타를 확인했습니다. 생성 결과에 문제가 있어 생성에 사용한 다이아 전액을 반환 보상으로 돌려드립니다.'
-          : '반환하신 아바타를 확인했습니다. 생성 결과에 문제가 없어 생성에 사용한 다이아의 절반을 반환 보상으로 지급합니다.',
+          ? `반환하신 아바타를 확인했습니다. 생성 결과에 문제가 있어 생성에 사용한 다이아 ${paid.toLocaleString('ko-KR')}개${paid < 1000 ? '(첫 생성 할인가)' : ''} 전액을 반환 보상으로 돌려드립니다.`
+          : `반환하신 아바타를 확인했습니다. 생성 결과에 문제가 없어 생성에 사용한 다이아 ${paid.toLocaleString('ko-KR')}개${paid < 1000 ? '(첫 생성 할인가)' : ''}의 절반인 ${refund.toLocaleString('ko-KR')}개를 반환 보상으로 지급합니다.`,
       senderLabel: '운영팀',
       payload: { diamond: refund, boxes: { weapon: 0, armor: 0, accessory: 0 } },
     });
