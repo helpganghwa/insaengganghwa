@@ -60,6 +60,20 @@ export type MeleeFinale = {
  */
 export type MeleeMyEvent = [0 | 1, string, number, number, number];
 
+/**
+ * 헤드라인(0184) — 규칙 엔진(lib/game/melee/headlines.ts)이 09:00 산출 직후 만든 후보 전부와
+ * 자동 선택. 운영자가 /admin/preview에서 picks를 고르거나 문장을 고치면 editedAt이 찍힌다.
+ * 10:00 발표(reveal)는 picks 문장만 우편에 붙인다. code 'custom' = 운영자가 직접 쓴 줄.
+ */
+export type MeleeHeadlinePick = { code: string; text: string; subjects?: string[] };
+export type MeleeHeadlineCandidate = { code: string; category: string; text: string; score: number; subjects: string[] };
+export type MeleeHeadlines = {
+  candidates: MeleeHeadlineCandidate[];
+  picks: MeleeHeadlinePick[];
+  generatedAt: string;
+  editedAt?: string | null;
+};
+
 /** §13.1 melee_battles — 하루 1행. */
 export const meleeBattles = pgTable('melee_battles', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
@@ -91,6 +105,8 @@ export const meleeBattles = pgTable('melee_battles', {
   trophyAttempts: integer('trophy_attempts').notNull().default(0),
   /** 마지막 트로피 상태 전이 시각 — 'generating' 타임아웃 판정용. */
   trophyUpdatedAt: timestamp('trophy_updated_at', { withTimezone: true }),
+  /** 헤드라인(0184) — 후보·선택·수정. null = 미생성(발표 시 백스톱 생성 후 없으면 헤드라인 없이 발송). */
+  headlines: jsonb('headlines').$type<MeleeHeadlines>(),
 }, (t) => [
   // ⚠ 스키마 드리프트 보수(2026-08-07 서버분리 감사 A3) — DB엔 0059부터 존재하고
   // melee/run.ts의 onConflictDoNothing 멱등(하루 1배틀)이 의존하는 유니크. 선언이 없으면

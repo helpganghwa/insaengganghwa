@@ -4,8 +4,11 @@ import { db } from '@/lib/db/client';
 import { worldChronicle, zones as zonesTable } from '@/lib/db/schema/guild';
 import { getConquestReplay, getZoneAdjacency, type ConquestReplay } from '@/lib/game/guild';
 
+import { loadMeleeReviewItems } from '@/lib/game/melee/headline-service';
+
 import { ServerBadge } from '../ServerBadge';
 import { ChronicleEditor } from './PreviewClient';
+import { MeleeHeadlineEditor } from './MeleeHeadlineEditor';
 
 /**
  * 공개 전 검수 — 유저 공개 전에 운영자가 미리 보고 손보는 콘텐츠(2026-07-14).
@@ -47,12 +50,60 @@ async function loadData() {
 const isTodayKst = (day: string) =>
   day === new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 
-export default async function AdminPreviewPage() {
-  const { chronicles, replays, zoneRows, adjacency } = await loadData();
+export default async function AdminPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
+  const meleeDate = typeof sp.melee === 'string' ? sp.melee : null;
+  const [{ chronicles, replays, zoneRows, adjacency }, meleeItems] = await Promise.all([
+    loadData(),
+    // 대난투 헤드라인(0184) — 최근 2배틀 + ?melee=YYYY-MM-DD로 과거 배틀 지정(생성·편집 검수용).
+    loadMeleeReviewItems({ limit: 2, extraDate: meleeDate }).catch(() => []),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
       <h1 className="text-xl font-bold">공개 전 검수</h1>
+
+      {/* ── 대난투 헤드라인 ── */}
+      <section>
+        <h2 className="text-sm font-bold text-zinc-400">
+          대난투 헤드라인 <span className="font-normal">— 09:00 생성 → 10:00 발표(우편)(검수 창 09:00~10:00)</span>
+        </h2>
+        <form method="get" className="mt-2 flex items-center gap-2 text-[12px]">
+          <label htmlFor="melee-date" className="text-zinc-400">다른 날짜 보기</label>
+          <input id="melee-date" type="date" name="melee" defaultValue={meleeDate ?? ''} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
+          <button type="submit" className="rounded border border-zinc-700 px-2 py-1 font-bold text-zinc-300">불러오기</button>
+        </form>
+        {meleeItems.length === 0 ? (
+          <p className="mt-2 text-sm text-zinc-500">산출된 배틀이 없습니다.</p>
+        ) : (
+          <div className="mt-2 space-y-4">
+            {meleeItems.map((m) => (
+              <div key={`${m.serverId}:${m.battleDate}`} className="rounded-xl border border-zinc-800 p-3">
+                <div className="mb-2 flex items-center gap-2 text-[12px]">
+                  <ServerBadge serverId={m.serverId} />
+                  <span className="font-mono">{m.battleDate}</span>
+                  <span className="text-zinc-500">참가 {m.participantCount.toLocaleString('ko-KR')}명</span>
+                  {m.status === 'computed' ? (
+                    <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">산출됨 — 10:00 발표 예정</span>
+                  ) : (
+                    <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">발표됨</span>
+                  )}
+                </div>
+                {/* key에 생성·수정 시각 포함 — 생성/재생성 후 refresh로 내려온 새 값이 편집 중 상태에 덮이지 않게 리마운트. */}
+                <MeleeHeadlineEditor
+                  key={`${m.serverId}:${m.battleDate}:${m.headlines?.generatedAt ?? ''}:${m.headlines?.editedAt ?? ''}`}
+                  serverId={m.serverId}
+                  battleDate={m.battleDate}
+                  status={m.status}
+                  participantCount={m.participantCount}
+                  podium={m.podium}
+                  headlines={m.headlines}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* ── 점령전 연대기 ── */}
       <section>
