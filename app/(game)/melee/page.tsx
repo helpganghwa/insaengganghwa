@@ -35,7 +35,6 @@ export default async function MeleePage() {
         totalRounds: meleeBattles.totalRounds,
         championUserId: meleeBattles.championUserId,
         finale: meleeBattles.finale,
-        headlines: meleeBattles.headlines,
       })
       .from(meleeBattles)
       .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.battleDate, battleDate)))

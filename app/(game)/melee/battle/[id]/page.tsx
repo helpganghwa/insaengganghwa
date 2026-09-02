@@ -31,7 +31,6 @@ export default async function MeleeBattlePage({ params }: { params: Promise<{ id
         totalRounds: meleeBattles.totalRounds,
         championUserId: meleeBattles.championUserId,
         finale: meleeBattles.finale,
-        headlines: meleeBattles.headlines,
       })
       .from(meleeBattles)
       .where(eq(meleeBattles.id, BigInt(id)))

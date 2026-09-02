@@ -29,7 +29,6 @@ export type MeleeResultView = {
   participantCount: number;
   totalRounds: number;
   /** 오늘의 대난투 헤드라인(0184) — 발표 시 선택된 문장(우편과 동일). 없으면 []. */
-  headlines: string[];
   championNickname: string;
   /** 챔피언 아바타 얼굴 박스 — FINAL 카드 얼굴중심 크롭(없으면 폴백). */
   championFaceBox: FaceBox | null;
@@ -976,18 +975,6 @@ export function MeleeResult({
           </div>
         ) : null}
       </div>
-
-      {/* 오늘의 대난투(0184) — 발표 후 운영자가 고른 헤드라인 3~4줄(우편과 같은 문장). 없으면 숨김. */}
-      {view.headlines.length > 0 ? (
-        <div className="shrink-0 border-b border-amber-900/40 bg-zinc-950 px-3 py-2">
-          <p className="text-[10px] font-bold text-amber-300/90">오늘의 대난투</p>
-          <ul className="mt-0.5 space-y-0.5 text-[11px] leading-snug text-zinc-300">
-            {view.headlines.map((h, i) => (
-              <li key={i}>· {h}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
 
       {/* 필터·컨트롤 — 헤더/무대처럼 고정(shrink-0, 오버스크롤 영향 없음) */}
       <div className="shrink-0 border-b border-zinc-800 bg-zinc-950">

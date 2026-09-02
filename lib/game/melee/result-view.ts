@@ -21,8 +21,6 @@ export type MeleeBattleRow = {
   totalRounds: number;
   championUserId: string | null;
   finale: MeleeFinale;
-  /** 헤드라인(0184) — 발표 시 선택된 문장. 페이지가 melee_battles.headlines를 그대로 넘긴다(없으면 undefined/null). */
-  headlines?: { picks?: { text: string }[] } | null;
 };
 
 /**
@@ -179,7 +177,6 @@ export async function buildMeleeResultView(
   return {
     edition,
     participantCount: battle.participantCount,
-    headlines: (battle.headlines?.picks ?? []).map((p) => p.text).filter((t) => typeof t === 'string' && t.length > 0),
     championNickname,
     // FINAL 카드 아바타 = 트로피(있으면)라 트로피 전용 박스 우선, 없으면 프로필 박스.
     championFaceBox: battle.championUserId ? (faceBoxOf.get(battle.championUserId) ?? null) : null,
