@@ -4,6 +4,8 @@
  * 멱등((server_id, battle_date) UNIQUE)·서버 루프. 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { generateAndStoreMeleeHeadlines } from '@/lib/game/melee/headline-service';
+import { kstDateString } from '@/lib/kst';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { runMelee } from '@/lib/game/melee/run';
 import { openServerIds } from '@/lib/game/server-list';
@@ -29,7 +31,18 @@ export async function GET(req: Request) {
     // per-server 에러격리(감사 G1) — 한 서버 산출 실패가 뒤 서버 미개최로 번지지 않도록. 멱등 재시도 안전.
     for (const sid of await openServerIds()) {
       try {
-        results.push({ serverId: sid, ...(await runMelee(sid)) });
+        const r = await runMelee(sid);
+        // 헤드라인(0184) — 산출 직후 규칙 엔진으로 후보·자동 선택을 만들어 저장(운영자 검수 창 09:00~10:00).
+        // best-effort: 실패해도 배틀 산출은 성공이고, 10:00 발표가 백스톱으로 다시 생성한다.
+        let headlines: string | null = null;
+        if (r.ran) {
+          const h = await generateAndStoreMeleeHeadlines(sid, kstDateString()).catch((e) => {
+            console.warn('[melee-run] headlines', sid, e);
+            return null;
+          });
+          headlines = h?.ok ? `${h.headlines.candidates.length}/${h.headlines.picks.length}` : (h ? h.reason : 'error');
+        }
+        results.push({ serverId: sid, ...r, headlines });
       } catch (se) {
         console.error('[melee-run] server', sid, se);
         results.push({ serverId: sid, error: (se as Error).message });

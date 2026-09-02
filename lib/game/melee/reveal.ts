@@ -12,6 +12,7 @@ import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { meleePointsForRank } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
+import { formatHeadlineBlock, generateAndStoreMeleeHeadlines } from './headline-service';
 
 /**
  * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
@@ -60,6 +61,15 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
   // 트랜잭션 — 상태 플립(computed→revealed, 멱등) + 시상대 조회 + 참가자 결과 우편 일괄 적재를
   // 원자적으로 처리(감사 M1). 플립만 커밋되고 우편 적재 전에 중단되면, 재시도 시 이미 revealed라
   // 0행 조기종료 → 보상 우편이 영영 유실되던 문제 방지. 중단 시 롤백되어 재시도가 둘 다 재수행.
+  // 헤드라인(0184) — 09:00 생성분(운영자 검수 반영)을 우편에 붙인다. 없으면 여기서 백스톱 생성(이미 있으면 그대로 반환).
+  // best-effort·트랜잭션 밖: 헤드라인 때문에 보상 우편이 늦거나 유실되면 안 된다.
+  const headlineBlock = await generateAndStoreMeleeHeadlines(serverId, battleDate)
+    .then((h) => formatHeadlineBlock(h.ok ? h.headlines.picks.map((p) => p.text) : []))
+    .catch((e) => {
+      console.warn('[melee.reveal] headlines skipped', e);
+      return '';
+    });
+
   const result = await db.transaction(async (tx) => {
     const flipped = await tx
       .update(meleeBattles)
@@ -100,7 +110,7 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
              ${serverId},
              'melee'::mailbox_type,
              '대난투 결과',
-             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
+             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock},
              '대난투',
              jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
              now() + interval '30 days'
