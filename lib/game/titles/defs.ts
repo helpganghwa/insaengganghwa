@@ -21,6 +21,9 @@ export type TitleStyle = {
   executor?: boolean;
   /** 두 색 라벨 — 앞부분(text)을 별도 색으로(지역 주인: 지역명=지역색, 뒤=color). */
   prefix?: { text: string; color: string };
+  /** 부분 적용 — 이 조각들에만 fx, 나머지 글자는 plainColor 단색(길드 1위 불꽃: '의' 제외). */
+  fxOnly?: string[];
+  plainColor?: string;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
@@ -5071,7 +5074,12 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "legendflow",
+   fx: "blaze",
+   fxOnly: [
+    "불패",
+    "신화"
+   ],
+   plainColor: "#b8bcc6",
    glow: true
   }
  },
@@ -5082,7 +5090,12 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "dominionflow",
+   fx: "blazegreen",
+   fxOnly: [
+    "대륙",
+    "주인"
+   ],
+   plainColor: "#b8bcc6",
    glow: true
   }
  },
@@ -5093,7 +5106,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "treasuryflow",
+   fx: "blazegold",
    glow: true
   }
  },

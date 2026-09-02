@@ -309,13 +309,23 @@
       "fx": "silk"
     },
     "guild_top_combat": {
-      "fx": "legendflow"
+      "fx": "blaze",
+      "fxOnly": [
+        "불패",
+        "신화"
+      ],
+      "plainColor": "#b8bcc6"
     },
     "guild_top_zones": {
-      "fx": "dominionflow"
+      "fx": "blazegreen",
+      "fxOnly": [
+        "대륙",
+        "주인"
+      ],
+      "plainColor": "#b8bcc6"
     },
     "guild_top_tax": {
-      "fx": "treasuryflow"
+      "fx": "blazegold"
     },
     "guild_zones_25": {
       "fx": "solarcrown",

@@ -62,6 +62,21 @@ function SplitLabel({ label }: { label: string }) {
   );
 }
 
+/** fxOnly 조각으로 라벨 분해 — 조각은 라벨 안에서 순서대로 나타난다고 가정. 하나도 못 찾으면 통째로 fx. */
+function splitByFxOnly(label: string, parts: readonly string[]): { text: string; fx: boolean }[] {
+  const out: { text: string; fx: boolean }[] = [];
+  let cursor = 0;
+  for (const p of parts) {
+    const i = label.indexOf(p, cursor);
+    if (i < 0) continue;
+    if (i > cursor) out.push({ text: label.slice(cursor, i), fx: false });
+    out.push({ text: p, fx: true });
+    cursor = i + p.length;
+  }
+  if (cursor < label.length) out.push({ text: label.slice(cursor), fx: false });
+  return out.some((s) => s.fx) ? out : [{ text: label, fx: true }];
+}
+
 function styleAttr(s: TitleStyle): React.CSSProperties | undefined {
   if (s.fx) return undefined; // 이펙트는 클래스가 전담
   if (s.gradient?.length) {
@@ -127,7 +142,18 @@ export function TitleTag({
   }
 
   const label = def.label;
-  const inner = def.style.fx ? (
+  const inner = def.style.fx && def.style.fxOnly?.length ? (
+    // 부분 적용(2026-09-03 길드 1위 불꽃) — fxOnly 조각만 fx, 나머지('의' 등)는 plainColor 단색.
+    <span>
+      {splitByFxOnly(label, def.style.fxOnly).map((seg, i) =>
+        seg.fx ? (
+          <span key={i} className={`fx fx-${def.style.fx}`}>{seg.text}</span>
+        ) : (
+          <span key={i} style={{ color: def.style.plainColor ?? '#b8bcc6' }}>{seg.text.replace(/ /g, '\u00a0')}</span>
+        ),
+      )}
+    </span>
+  ) : def.style.fx ? (
     <span className={`fx fx-${def.style.fx}`}>
       {def.style.split ? <SplitLabel label={label} /> : label}
     </span>

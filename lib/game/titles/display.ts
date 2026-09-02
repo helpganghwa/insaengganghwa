@@ -294,7 +294,7 @@ const FX_OG: Record<string, string> = {
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
   // 길드 칭호(2026-09-01)
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
-  noblesseflow: '#6ea8e0', legendflow: '#e05252', dominionflow: '#7fce8a', treasuryflow: '#f5d76e',
+  noblesseflow: '#6ea8e0', blaze: '#ff6a1a', blazegreen: '#3fc25a', blazegold: '#f5c33a',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
   // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
