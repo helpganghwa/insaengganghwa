@@ -53,6 +53,11 @@ const isTodayKst = (day: string) =>
 export default async function AdminPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const meleeDate = typeof sp.melee === 'string' ? sp.melee : null;
+  // 탭(2026-09-02) — 검수 창이 다르다: 대난투 09:00~10:00, 점령전 23:05~24:00. 기본 탭은 시간대로(20시 이후 점령전).
+  const kstHour = (new Date().getUTCHours() + 9) % 24;
+  const tab: 'melee' | 'conquest' = sp.tab === 'conquest' || sp.tab === 'melee' ? sp.tab : kstHour >= 20 ? 'conquest' : 'melee';
+  const tabCls = (on: boolean) =>
+    `rounded-lg px-3 py-1.5 text-sm font-bold ${on ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-100' : 'border border-zinc-700 text-zinc-300'}`;
   const [{ chronicles, replays, zoneRows, adjacency }, meleeItems] = await Promise.all([
     loadData(),
     // 대난투 헤드라인(0184) — 최근 2배틀 + ?melee=YYYY-MM-DD로 과거 배틀 지정(생성·편집 검수용).
@@ -62,13 +67,23 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
       <h1 className="text-xl font-bold">공개 전 검수</h1>
+      <nav className="flex items-center gap-2" aria-label="검수 대상">
+        <a href="/admin/preview?tab=melee" className={tabCls(tab === 'melee')} aria-current={tab === 'melee' ? 'page' : undefined}>
+          대난투 <span className="font-normal opacity-70">09:00~10:00</span>
+        </a>
+        <a href="/admin/preview?tab=conquest" className={tabCls(tab === 'conquest')} aria-current={tab === 'conquest' ? 'page' : undefined}>
+          점령전 <span className="font-normal opacity-70">23:05~24:00</span>
+        </a>
+      </nav>
 
       {/* ── 대난투 헤드라인 ── */}
+      {tab === 'melee' ? (
       <section>
         <h2 className="text-sm font-bold text-zinc-400">
           대난투 헤드라인 <span className="font-normal">— 09:00 생성 → 10:00 발표(우편)(검수 창 09:00~10:00)</span>
         </h2>
         <form method="get" className="mt-2 flex items-center gap-2 text-[12px]">
+          <input type="hidden" name="tab" value="melee" />
           <label htmlFor="melee-date" className="text-zinc-400">다른 날짜 보기</label>
           <input id="melee-date" type="date" name="melee" defaultValue={meleeDate ?? ''} className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1" />
           <button type="submit" className="rounded border border-zinc-700 px-2 py-1 font-bold text-zinc-300">불러오기</button>
@@ -104,8 +119,10 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
           </div>
         )}
       </section>
+      ) : null}
 
       {/* ── 점령전 연대기 ── */}
+      {tab === 'conquest' ? (
       <section>
         <h2 className="text-sm font-bold text-zinc-400">
           점령전 연대기 <span className="font-normal">— 23:05 생성 → 자정 공개(검수 창 23:05~24:00)</span>
@@ -175,7 +192,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
           </div>
         )}
       </section>
-
+      ) : null}
     </main>
   );
 }
