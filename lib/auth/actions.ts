@@ -115,18 +115,11 @@ export async function signInWithCredentials(formData: FormData) {
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
   // 임의 Supabase 계정 비번 로그인 방지 — 사전 등록된 테스트/심사 계정만 허용.
-  // 임시 검수 계정은 env EXTRA_REVIEW_EMAILS(콤마 구분)로 추가 — 코드 수정 없이 등록/회수(재심의 등 대응).
-  const isFixed = TEST_ACCOUNTS.some((a) => a.email === email);
-  const extraEmails = (process.env.EXTRA_REVIEW_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  if (!isFixed && !extraEmails.includes(email)) {
+  if (!TEST_ACCOUNTS.some((a) => a.email === email)) {
     redirect('/login?test=true&error=' + encodeURIComponent('등록되지 않은 심사 계정입니다'));
   }
 
-  // 고정 심사 계정만 자동 생성(고정 비번) — env 추가 계정은 사전 생성된 자격증명으로만 로그인.
-  if (isFixed) await ensureTestUser(email); // 첫 로그인 시 계정 보장(비번은 고정값으로 생성됨).
+  await ensureTestUser(email); // 첫 로그인 시 계정 보장(비번은 고정값으로 생성됨).
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
