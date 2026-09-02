@@ -185,17 +185,17 @@
 .fx-solarcrown{background:linear-gradient(90deg,#f0c860 0%,#ffb347 40%,#ffffff 50%,#ffb347 60%,#f0c860 100%);background-size:200% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sunband 6s ease-in-out infinite alternate,pulsebr 5.5s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,200,90,.7)) drop-shadow(0 0 12px rgba(255,150,50,.3))}
 @keyframes sunband{from{background-position:100% 0}to{background-position:0% 0}}
 @keyframes sunmove{from{left:0%}to{left:100%}}
-/* pt-sun — 첫 파티클(nth-child 2)만 쓴다: 글자 위를 오가는 해 4px. 나머지 숨김. 지연은 0 고정(띠와 동기). */
-.pt-sun>i:nth-child(2){display:block;width:4px;height:4px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff8dc 0%,#ffd25a 45%,#ff8c1a 100%);box-shadow:0 0 3px 1px rgba(255,200,90,.85),0 0 7px rgba(255,150,50,.45);filter:none;opacity:1;top:-.38em;margin-left:-2px;animation:sunmove 6s ease-in-out infinite alternate;animation-delay:0s !important}
+/* pt-sun — 첫 파티클(nth-child 2)만 쓴다: 글자 위를 오가는 해 3px. 나머지 숨김. 지연은 0 고정(띠와 동기). */
+.pt-sun>i:nth-child(2){display:block;width:3px;height:3px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#fff8dc 0%,#ffd25a 45%,#ff8c1a 100%);box-shadow:0 0 2px 1px rgba(255,200,90,.85),0 0 5px rgba(255,150,50,.45);filter:none;opacity:1;top:-.33em;margin-left:-1.5px;animation:sunmove 6s ease-in-out infinite alternate;animation-delay:0s !important}
 .pt-sun>i:nth-child(n+3){display:none}
 /* 길드 1위 4종(2026-09-03) — 정적에서 느린 흐름으로(개인 1위 goldflow 계열과 같은 문법, 팔레트 유지). */
 .fx-noblesseflow{background:linear-gradient(90deg,#6ea8e0,#d8ecff,#3d7ec2,#f5d76e,#6ea8e0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 2px rgba(110,168,224,.4))}
 .fx-legendflow{background:linear-gradient(90deg,#dcdfe6,#c22e2e,#f5d76e,#c22e2e,#dcdfe6);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 2px rgba(220,60,60,.4))}
 .fx-dominionflow{background:linear-gradient(90deg,#4caf60,#e5c07b,#b8f0c0,#e5c07b,#4caf60);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 2px rgba(120,200,130,.35))}
 .fx-treasuryflow{background:linear-gradient(90deg,#8f6a1e,#f5d76e,#fff3c4,#f5d76e,#8f6a1e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 2px rgba(245,215,110,.4))}
-/* 1위 유지 일수(2026-09-03) — 칭호 끝 위첨자 “N일”: 숫자는 주황, ‘일’은 흰색. TitleTag days prop. */
+/* 1위 유지 일수(2026-09-03) — 칭호 끝 위첨자 “N일째”: 숫자는 금색(사용자 확정), ‘일째’는 흰색. TitleTag days prop. */
 .ttag .ttag-days{font-size:.55em;font-weight:500;margin-left:.15em;vertical-align:.6em;line-height:0;letter-spacing:0;white-space:nowrap}
-.ttag .ttag-days b{font-weight:800;font-size:1.25em;font-variant-numeric:tabular-nums;color:#ffb347}
+.ttag .ttag-days b{font-weight:800;font-size:1.25em;font-variant-numeric:tabular-nums;color:#f5d76e}
 .ttag .ttag-days span{color:#fff;opacity:.9;margin-left:.05em}
 @media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
