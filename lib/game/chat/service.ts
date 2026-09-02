@@ -10,7 +10,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { systemMode } from '@/lib/db/schema/ops';
-import { repTitleDaysBatch, resolveRepTitlesBatch } from '@/lib/game/titles/display';
+import { resolveRepTitlesBatch } from '@/lib/game/titles/display';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { parseFaceBox } from '@/components/faceCrop';
 
@@ -42,7 +42,6 @@ export type ChatUserMeta = Pick<
   | 'executorZone'
   | 'executorZoneRegion'
   | 'repTitle'
-  | 'repTitleDays'
   | 'isMeleeChampion'
 >;
 
@@ -64,8 +63,6 @@ export type ChatMessageDto = {
   executorZoneRegion: string | null;
   /** 표시용 대표 칭호 code(2026-08-05) — 서버에서 활성 재검증 완료본. null=미표시. */
   repTitle: string | null;
-  /** 1위 유지 일수(0185) — 랭킹 1위 칭호일 때만 값. 칭호 끝 위첨자 “N일”. */
-  repTitleDays: number | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
   /** 유효 멘션(0128) — 닉+공개코드. 표시 시 @ 제거·강조·프로필 링크. (구 string[] 호환) */
@@ -96,7 +93,6 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
     executorZone: null,
     executorZoneRegion: null,
     repTitle: null,
-    repTitleDays: null,
     isMeleeChampion: false,
     mentions: null,
     sysGuild: entry,
@@ -126,7 +122,6 @@ export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
     executorZone: null,
     executorZoneRegion: null,
     repTitle: null,
-    repTitleDays: null,
     isMeleeChampion: false,
     mentions: null,
     sys: entry,
@@ -202,7 +197,7 @@ export async function isChatEnabled(): Promise<boolean> {
 export async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceThumb: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; repTitleDays: number | null; isMeleeChampion: boolean }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceThumb: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; repTitle: string | null; isMeleeChampion: boolean }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
   const [rows, guilds, champion] = await Promise.all([
@@ -233,11 +228,6 @@ export async function displayFields(
     })),
     serverId,
   ).catch(() => new Map<string, string | null>());
-  // 1위 유지 일수(0185) — 표시 code가 랭킹 1위 칭호인 유저만 조회(2쿼리 상한). 실패는 미표시.
-  const daysMap = await repTitleDaysBatch(
-    rows.map((r) => ({ userId: r.userId, code: repMap.get(r.userId) ?? null })),
-    serverId,
-  ).catch(() => new Map<string, number>());
   const m = new Map();
   for (const r of rows) {
     const rot = (r.rotations ?? {}) as Record<string, string>;
@@ -257,7 +247,6 @@ export async function displayFields(
       executorZoneRegion:
         (guilds.get(r.userId) as { executorZoneRegion?: string | null } | undefined)?.executorZoneRegion ?? null,
       repTitle: repMap.get(r.userId) ?? null,
-      repTitleDays: daysMap.get(r.userId) ?? null,
       isMeleeChampion: r.userId === champion,
     });
   }
@@ -340,7 +329,6 @@ export async function getRecentChat(
         executorZone: f?.executorZone ?? null,
         executorZoneRegion: f?.executorZoneRegion ?? null,
         repTitle: f?.repTitle ?? null,
-        repTitleDays: f?.repTitleDays ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
         // 삭제분(0177) — 원문·멘션은 내려보내지 않는다(자리표시만).
         mentions: r.deletedAt ? null : normMentions(r.mentions),
@@ -396,7 +384,6 @@ export async function persistAndBroadcast(
     executorZone: f?.executorZone ?? null,
     executorZoneRegion: f?.executorZoneRegion ?? null,
     repTitle: f?.repTitle ?? null,
-    repTitleDays: f?.repTitleDays ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
     mentions: mentions.length ? mentions : null,
     body,

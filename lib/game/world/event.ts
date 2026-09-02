@@ -227,13 +227,7 @@ export async function runRankingLeaders(serverId: number): Promise<number> {
         .values({ serverId, metric, userId: leader.userId, value: storedValue })
         .onConflictDoUpdate({
           target: [rankingLeaders.serverId, rankingLeaders.metric],
-          set: {
-            userId: leader.userId,
-            value: storedValue,
-            updatedAt: sql`now()`,
-            // since(0185) — 유저가 바뀔 때만 리셋(값만 갱신되면 유지). 1위 칭호 “N일”의 근거.
-            since: sql`case when ranking_leaders.user_id <> excluded.user_id then now() else ranking_leaders.since end`,
-          },
+          set: { userId: leader.userId, value: storedValue, updatedAt: sql`now()` },
         });
     }
   }
@@ -281,47 +275,4 @@ export async function runGuildLeaders(serverId: number): Promise<number> {
     logged += 1;
   }
   return logged;
-}
-
-/**
- * 길드 1위 유지 추적(0185, 2026-09-03) — 길드 1위 칭호 옆 “N일”의 근거. 15분 크론이 metric별 현재 단독 1위를
- * guild_rank_leaders에 upsert(길드가 바뀌면 since 리셋). 산식은 칭호 판정과 동일:
- *  rank = 명가(level, xp 사전식) · combat = 길드 전투력(getGuildRanking 'combat') · zones = 소유 구역 수 · tax = 세금 곳간(>0).
- * 단독 1위가 없으면(동률·0) 그 metric 행을 지운다(다음에 다시 잡히면 1일째부터).
- */
-export async function runGuildLeaderSince(serverId: number): Promise<void> {
-  const top = async (q: ReturnType<typeof sql>) =>
-    ((await db.execute(q)) as unknown as { id: string | null; tie: boolean | null }[])[0] ?? null;
-  const rankTop = await top(sql`
-    with r as (select id, level, xp from guilds where server_id = ${serverId} order by level desc, xp desc, id limit 2)
-    select (select id::text from r limit 1) as id,
-           (select count(*) from r) = 2 and (select level from r limit 1) = (select level from r offset 1) and (select xp from r limit 1) = (select xp from r offset 1) as tie`);
-  const combatRows = await getGuildRanking(serverId, 2, 'combat');
-  const combatTop = combatRows[0] && (combatRows.length < 2 || Number(combatRows[0].combat ?? 0) > Number(combatRows[1]!.combat ?? 0)) && Number(combatRows[0].combat ?? 0) > 0
-    ? String(combatRows[0].id)
-    : null;
-  const zoneTop = await top(sql`
-    with z as (select owner_guild_id as id, count(*)::int as n from zones where server_id = ${serverId} and owner_guild_id is not null group by owner_guild_id order by n desc, owner_guild_id limit 2)
-    select (select id::text from z limit 1) as id, (select count(*) from z) = 2 and (select n from z limit 1) = (select n from z offset 1) as tie`);
-  const taxTop = await top(sql`
-    with t as (select id, tax_pool_diamond as v from guilds where server_id = ${serverId} and tax_pool_diamond > 0 order by tax_pool_diamond desc, id limit 2)
-    select (select id::text from t limit 1) as id, (select count(*) from t) = 2 and (select v from t limit 1) = (select v from t offset 1) as tie`);
-  const leaders: [string, string | null][] = [
-    ['rank', rankTop?.id && !rankTop.tie ? rankTop.id : null],
-    ['combat', combatTop],
-    ['zones', zoneTop?.id && !zoneTop.tie ? zoneTop.id : null],
-    ['tax', taxTop?.id && !taxTop.tie ? taxTop.id : null],
-  ];
-  for (const [metric, guildId] of leaders) {
-    if (guildId == null) {
-      await db.execute(sql`delete from guild_rank_leaders where server_id = ${serverId} and metric = ${metric}`);
-      continue;
-    }
-    await db.execute(sql`
-      insert into guild_rank_leaders (server_id, metric, guild_id) values (${serverId}, ${metric}, ${BigInt(guildId)})
-      on conflict (server_id, metric) do update
-        set guild_id = excluded.guild_id, updated_at = now(),
-            since = case when guild_rank_leaders.guild_id <> excluded.guild_id then now() else guild_rank_leaders.since end
-    `);
-  }
 }

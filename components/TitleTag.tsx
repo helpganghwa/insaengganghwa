@@ -101,7 +101,6 @@ export function TitleTag({
   executorZoneRegion,
   className = '',
   still = false,
-  days = null,
 }: {
   /** 대표 칭호 code — null/미자격이면 호출부가 렌더 생략(활성 검증은 서버 몫). */
   code: string | null | undefined;
@@ -111,8 +110,6 @@ export function TitleTag({
   className?: string;
   /** 정적 모드 — 색은 유지하고 무한 애니메이션만 정지(채팅 행 등 대량 목록, title-fx.css .ttag-still). */
   still?: boolean;
-  /** 1위 유지 일수(0185) — 랭킹 1위 칭호일 때 서버가 계산해 넘긴다(display.repTitleDays). 위첨자 “N일”. */
-  days?: number | null;
 }) {
   if (!code) return null;
   const def = TITLE_BY_CODE.get(code);
@@ -154,12 +151,6 @@ export function TitleTag({
       ) : (
         inner
       )}
-      {days != null && days > 0 ? (
-        <sup className="ttag-days">
-          <b>{days}</b>
-          <span>일째</span>
-        </sup>
-      ) : null}
     </span>
   );
 }

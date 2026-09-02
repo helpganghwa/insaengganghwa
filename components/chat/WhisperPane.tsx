@@ -57,7 +57,6 @@ export type WhisperDisplay = {
   executorZone: string | null;
   executorZoneRegion: string | null;
   repTitle: string | null;
-  repTitleDays: number | null;
   isMeleeChampion: boolean;
 };
 
@@ -90,7 +89,6 @@ const UNKNOWN: WhisperDisplay = {
   executorZone: null,
   executorZoneRegion: null,
   repTitle: null,
-  repTitleDays: null,
   isMeleeChampion: false,
 };
 
@@ -107,7 +105,6 @@ function pickDisplay(d: WhisperDisplay): WhisperDisplay {
     executorZone: d.executorZone,
     executorZoneRegion: d.executorZoneRegion,
     repTitle: d.repTitle,
-    repTitleDays: d.repTitleDays,
     isMeleeChampion: d.isMeleeChampion,
   };
 }
@@ -707,7 +704,6 @@ export function WhisperPane({
                         ) : null}
                         <TitleTag
                           code={t.repTitle}
-                          days={t.repTitleDays}
                           executorZone={t.executorZone}
                           executorZoneRegion={t.executorZoneRegion}
                           className="text-[9.5px]"
@@ -835,7 +831,6 @@ export function WhisperPane({
               ) : null}
               <TitleTag
                 code={active.repTitle}
-                days={active.repTitleDays}
                 executorZone={active.executorZone}
                 executorZoneRegion={active.executorZoneRegion}
                 className="text-[9.5px]"

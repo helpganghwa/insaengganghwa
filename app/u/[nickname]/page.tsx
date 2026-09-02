@@ -25,7 +25,7 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@
 import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
 import { TitleTag } from '@/components/TitleTag';
-import { repTitleDays, resolveRepTitle } from '@/lib/game/titles/display';
+import { resolveRepTitle } from '@/lib/game/titles/display';
 import { BackFab } from '@/components/BackNav';
 
 import { ReportButton } from './ReportButton';
@@ -359,8 +359,6 @@ export default async function PublicProfilePage({
     serverId,
     data.guild?.executorZone ?? null,
   ).catch(() => null);
-  // 1위 유지 일수(0185) — 랭킹 1위 칭호일 때만 값, 실패는 미표시.
-  const repDays = repTitle ? await repTitleDays(repTitle, data.ownerId, serverId).catch(() => null) : null;
 
   let friendRelation: FriendRelation = 'none';
   if (mode === 'other') {
@@ -412,7 +410,6 @@ export default async function PublicProfilePage({
               {data.guild?.name && repTitle && <span className="shrink-0 text-white/40">·</span>}
               <TitleTag
                 code={repTitle}
-                days={repDays}
                 executorZone={data.guild?.executorZone ?? null}
                 executorZoneRegion={data.guild?.executorZoneRegion ?? null}
               />

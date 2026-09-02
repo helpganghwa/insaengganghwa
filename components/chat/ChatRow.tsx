@@ -180,7 +180,6 @@ export const ChatRow = memo(function ChatRow({
           {/* fx는 상시 재생 — 스크롤 중에만 useScrollFxPause(.chat-scrolling)가 일시정지. */}
           <TitleTag
             code={m.repTitle}
-            days={m.repTitleDays}
             executorZone={m.executorZone}
             executorZoneRegion={m.executorZoneRegion}
             className="text-[9.5px]"
