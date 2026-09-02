@@ -4754,10 +4754,10 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "중간"
  },
  {
-  code: "exp_grand_10",
+  code: "exp_200",
   cat: "파견",
-  cond: "원정(24시간) 보상 10회 수령",
-  diff: "중간"
+  cond: "파견 보상 누적 200회 수령",
+  diff: "어려움"
  },
  {
   code: "exp_crit_10",
@@ -4766,9 +4766,9 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "중간"
  },
  {
-  code: "exp_level_30",
+  code: "exp_crit_30",
   cat: "파견",
-  cond: "파견 레벨 30 도달",
+  cond: "파견 대성공 30회",
   diff: "어려움"
  },
  {

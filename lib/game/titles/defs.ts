@@ -4995,13 +4995,13 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "exp_grand_10",
+  code: "exp_200",
   kind: "permanent",
   label: "긴 여정의 끝",
   hidden: false,
   cat: "파견",
   style: {
-   color: "#9ccc8a"
+   fx: "trailflow"
   }
  },
  {
@@ -5015,7 +5015,7 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "exp_level_30",
+  code: "exp_crit_30",
   kind: "permanent",
   label: "노련한 지휘관",
   hidden: false,

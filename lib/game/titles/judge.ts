@@ -718,13 +718,11 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where server_id=${s} and actor_user_id=${u} and action='tax_collect') as cq_tax
       from d
     `),
-    // 파견(2026-08-30, 8종) — 수령 누적·지역 수·원정(24h)·대성공·레벨·슬롯 개방(계정 합산 강화).
+    // 파견(8종) — 수령 누적(1/50/200/500)·지역 수·대성공(10/30)·슬롯 개방(계정 합산 강화). 시간 타입·레벨 지표 없음.
     () => db.execute(sql`
       select (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed') as exp_claims,
              (select count(distinct region)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed') as exp_regions,
-             (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and difficulty='grand') as exp_grand,
              (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and crit) as exp_crit,
-             coalesce((select level from expedition_state where user_id=${u} and server_id=${s}), 0)::int as exp_level,
              coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
     `),
   ], 5);
@@ -770,8 +768,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
     // 파견(2026-08-30)
-    exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_grand: n(ex.exp_grand), exp_crit: n(ex.exp_crit),
-    exp_level: n(ex.exp_level), exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
+    exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_crit: n(ex.exp_crit),
+    exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
     res_days: n(mi.res_days), res_moves: n(mi.res_moves), regions_lived: n(mi.regions_lived),
     avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
@@ -816,9 +814,9 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_50: (m) => m.exp_claims >= 50,
   exp_500: (m) => m.exp_claims >= 500,
   exp_all_regions: (m) => m.exp_regions >= 6,
-  exp_grand_10: (m) => m.exp_grand >= 10,
+  exp_200: (m) => m.exp_claims >= 200,
   exp_crit_10: (m) => m.exp_crit >= 10,
-  exp_level_30: (m) => m.exp_level >= 30,
+  exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
   // 강화
   enhance_100: (m) => m.max_lv >= 100,
