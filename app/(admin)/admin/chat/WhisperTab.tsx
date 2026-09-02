@@ -8,6 +8,7 @@ import {
   getIdentities,
   getUserBrief,
   listReportedWhispers,
+  listWhisperConversations,
   listWhisperPeers,
   listWhisperThread,
   searchCharacters,
@@ -47,6 +48,9 @@ export async function WhisperTab({
   if (userId) return <PeerList params={params} serverId={serverId} userId={userId} />;
 
   const results = q ? await searchCharacters(q, serverId) : [];
+  // 검색 없이도 훑을 수 있게(2026-09-02) — 길드 탭의 채널 목록처럼 최근 대화 목록을 검색 아래 노출.
+  const convs = q ? null : await listWhisperConversations({ serverId, offset: page * CHAT_PAGE_SIZE, limit: CHAT_PAGE_SIZE });
+  const convPager = convs ? pagerHrefs(params, page, convs.hasMore) : null;
   return (
     <div className="space-y-2">
       <ChatSearchForm
@@ -56,9 +60,38 @@ export async function WhisperTab({
         resetHref={chatHref(params, { q: null, p: null })}
       />
       {!q ? (
-        <p className="py-10 text-center text-sm text-zinc-500">
-          검수할 유저를 검색하세요. 해당 유저의 모든 1:1 대화를 볼 수 있습니다.
-        </p>
+        convs!.rows.length === 0 ? (
+          <p className="py-10 text-center text-sm text-zinc-500">귓속말 대화가 없습니다.</p>
+        ) : (
+          <>
+            <p className="px-1 text-[10px] text-zinc-500">최근 대화순 · 유저 검색 없이 바로 열람</p>
+            <ul className="space-y-1.5">
+              {convs!.rows.map((c) => (
+                <li key={`${c.serverId}:${c.aId}:${c.bId}`}>
+                  <Link
+                    prefetch={false}
+                    href={chatHref(params, { uid: c.aId, peer: c.bId, srv: c.serverId, q: null, p: null })}
+                    className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[12px] hover:border-amber-700"
+                  >
+                    <b className="truncate text-zinc-100">{c.aNickname ?? '(탈퇴/미생성)'}</b>
+                    <span className="text-zinc-600">↔</span>
+                    <b className="truncate text-zinc-100">{c.bNickname ?? '(탈퇴/미생성)'}</b>
+                    <ServerBadge serverId={c.serverId} />
+                    <span className="text-zinc-500">{c.msgCount}건</span>
+                    {c.hiddenCount > 0 ? (
+                      <span className="text-[10px] text-red-400">숨김 {c.hiddenCount}</span>
+                    ) : null}
+                    {c.reportCount > 0 ? (
+                      <span className="text-[10px] text-red-400">신고 {c.reportCount}</span>
+                    ) : null}
+                    <span className="ml-auto shrink-0 text-zinc-500">{fmtKst(c.lastAt)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Pager page={page} prevHref={convPager!.prevHref} nextHref={convPager!.nextHref} />
+          </>
+        )
       ) : results.length === 0 ? (
         <p className="py-10 text-center text-sm text-zinc-500">일치하는 유저가 없습니다.</p>
       ) : (

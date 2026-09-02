@@ -304,6 +304,74 @@ export async function listWhisperPeers(
   }));
 }
 
+export interface AdminWhisperConvRow {
+  serverId: number;
+  aId: string;
+  bId: string;
+  aNickname: string | null;
+  bNickname: string | null;
+  lastAt: Date;
+  msgCount: number;
+  hiddenCount: number;
+  reportCount: number;
+}
+
+/**
+ * 귓속말 대화 목록(검색 없이 훑는 입구, 2026-09-02) — 길드 탭의 채널 목록과 같은 문법.
+ * (server, 정규화된 유저쌍)별 집계를 최신 대화순으로 페이지네이션. 신고 수까지 실어
+ * "요주의 대화"가 목록에서 바로 드러나게 한다. whisper_reads(나가기)는 참조하지 않는다.
+ */
+export async function listWhisperConversations(opts: {
+  serverId: number | null;
+  offset: number;
+  limit: number;
+}): Promise<Page<AdminWhisperConvRow>> {
+  const rows = (await db.execute(sql`
+    select t.server_id, t.a::text as a_id, t.b::text as b_id,
+           max(t.created_at) as last_at,
+           count(*)::int as msg_count,
+           (count(*) filter (where t.hidden_at is not null))::int as hidden_count,
+           coalesce(sum(t.reports), 0)::int as report_count
+    from (
+      select m.server_id, m.created_at, m.hidden_at,
+             least(m.from_user_id, m.to_user_id) as a,
+             greatest(m.from_user_id, m.to_user_id) as b,
+             (select count(*) from whisper_reports r where r.message_id = m.id) as reports
+      from whisper_messages m
+      where ${opts.serverId == null ? sql`true` : sql`m.server_id = ${opts.serverId}`}
+    ) t
+    group by t.server_id, t.a, t.b
+    order by max(t.created_at) desc
+    limit ${opts.limit + 1} offset ${opts.offset}
+  `)) as unknown as {
+    server_id: number; a_id: string; b_id: string; last_at: string;
+    msg_count: number; hidden_count: number; report_count: number;
+  }[];
+  const pageRows = rows.slice(0, opts.limit);
+  const ids = [...new Set(pageRows.flatMap((r) => [r.a_id, r.b_id]))];
+  const nicks = ids.length
+    ? await db
+        .select({ userId: characters.userId, serverId: characters.serverId, nickname: characters.nickname })
+        .from(characters)
+        .where(inArray(characters.userId, ids))
+    : [];
+  const nickBy = new Map(nicks.map((n) => [`${n.userId}:${n.serverId}`, n.nickname]));
+  return {
+    rows: pageRows.map((r) => ({
+      serverId: r.server_id,
+      aId: r.a_id,
+      bId: r.b_id,
+      aNickname: nickBy.get(`${r.a_id}:${r.server_id}`) ?? null,
+      bNickname: nickBy.get(`${r.b_id}:${r.server_id}`) ?? null,
+      lastAt: new Date(r.last_at),
+      msgCount: r.msg_count,
+      hiddenCount: r.hidden_count,
+      reportCount: r.report_count,
+    })),
+    hasMore: rows.length > opts.limit,
+  };
+}
+
 export interface AdminWhisperRow {
   id: bigint;
   serverId: number;
