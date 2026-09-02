@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyCrit,
-  applyExpeditionXp,
   applyMultiplier,
   effectiveSlots,
   critBp,
@@ -11,12 +10,7 @@ import {
   avatarWeightedSum,
   type Rng10k,
 } from '@/lib/game/expedition/engine';
-import {
-  EXPEDITION_DIFFICULTY_HOURS,
-  EXPEDITION_LEVEL_MAX,
-  EXPEDITION_REGIONS,
-  expeditionXpToNext,
-} from '@/lib/game/balance';
+import { EXPEDITION_BASE_AMOUNTS, EXPEDITION_DURATION_MS, EXPEDITION_HOURS, EXPEDITION_REGIONS } from '@/lib/game/balance';
 
 /** 결정론 rng — 시퀀스 소진 후 0. */
 const seq = (vals: number[]): Rng10k => {
@@ -25,41 +19,41 @@ const seq = (vals: number[]): Rng10k => {
 };
 
 describe('expedition engine — 미션 롤', () => {
-  it('보상 사전 확정 — 셋 중 하나, 수량 범위·시간 스케일 반영', () => {
-    // 지역 0(swamp) → 난이도 roll 0(Lv0: easy 50%) → 본상 roll 0(boxOnly 55%) → 수량 roll → 슬롯 roll들
-    const m = rollMission(seq([0, 0, 0, 0, 0, 0, 0, 0]), 0);
+  it('보상 사전 확정 — 셋 중 하나, 수량은 1회분 범위 그대로(시간 스케일 없음), 시간은 단일 8h', () => {
+    // 지역 0(swamp) → 본상 roll 0(boxOnly 55%) → 수량 roll 0(최소) → 슬롯 roll들
+    const m = rollMission(seq([0, 0, 0]));
     expect(m.region).toBe('swamp');
-    expect(m.difficulty).toBe('easy');
-    expect(m.durationMs).toBe(2 * 3_600_000); // easy = 2h(2026-09-01)
+    expect(m.durationMs).toBe(EXPEDITION_DURATION_MS);
+    expect(m.durationMs).toBe(8 * 3_600_000);
     expect(m.reward.kind).toBe('box');
     const total = Object.values(m.reward.boxes!).reduce((a, b) => a + b, 0);
-    // easy(×2.2, 하루 1회 B 완충): base 3~4 → 7~9개(roll 0 = 최소 3 → 7)
-    expect(total).toBeGreaterThanOrEqual(7);
-    expect(total).toBeLessThanOrEqual(9);
-    // XP — 오퍼 확정 롤(마지막 rng): seq 소진 roll 0 → 2h 최소 18. 배율·대성공을 거쳐도 유지.
-    expect(m.reward.xp).toBe(18);
+    expect(total).toBe(EXPEDITION_BASE_AMOUNTS.boxOnly.boxMin);
+    expect('xp' in m.reward).toBe(false); // XP·레벨 없음
   });
 
-  it('Lv0 원정(grand) 출현 15% — 분포 상단 1500bp에서만 뜬다 / Lv30+에선 25%', () => {
-    // Lv0 분포(2026-08-30): easy4000 normal3000 hard1500 grand1500 → roll 0..8499 비원정, 8500..9999 원정
-    for (let r = 0; r < 8500; r += 137) {
-      expect(rollMission(seq([0, r]), 0).difficulty).not.toBe('grand');
-    }
-    expect(rollMission(seq([0, 8500]), 0).difficulty).toBe('grand');
-    expect(rollMission(seq([0, 9999]), 0).difficulty).toBe('grand');
-    // Lv30 분포: easy1500 normal3000 hard3000 grand2500 → roll 7500 = grand
-    expect(rollMission(seq([0, 7500]), 30).difficulty).toBe('grand');
-    expect(rollMission(seq([0, 9999]), 30).difficulty).toBe('grand');
+  it('다이아 분기 — 본상 roll 5500..7499, 수량 150~290 균등', () => {
+    const lo = rollMission(seq([0, 5500, 0]));
+    expect(lo.reward.kind).toBe('dia');
+    expect(lo.reward.diamond).toBe(EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMin);
+    const hi = rollMission(seq([0, 7499, 140])); // 150 + 140 % 141 = 290
+    expect(hi.reward.diamond).toBe(EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMax);
   });
 
-  it('다이아 분기 — grand(×2.8) 스케일 적용', () => {
-    // 난이도 roll 9999(grand, Lv30) → 본상 roll 5500..7499 = diamondOnly → 수량 min(72, 2026-08-27 ×0.6)
-    const m = rollMission(seq([0, 9999, 5500, 0]), 30);
-    expect(m.reward.kind).toBe('dia');
-    expect(m.reward.diamond).toBe(Math.round(60 * 2.8)); // 다이아 기본 60~115(25💎/📦 정렬)
+  it('둘 다 분기 — 본상 roll 7500.., 상자·다이아 각각 범위 안', () => {
+    const m = rollMission(seq([5, 9999, 3, 0, 0, 0, 0, 0, 0, 0, 0, 35]));
+    expect(m.region).toBe('angel');
+    expect(m.reward.kind).toBe('both');
+    const total = Object.values(m.reward.boxes!).reduce((a, b) => a + b, 0);
+    expect(total).toBe(EXPEDITION_BASE_AMOUNTS.both.boxMin + 3);
+    expect(m.reward.diamond).toBe(EXPEDITION_BASE_AMOUNTS.both.diaMin + 35);
   });
 
-  it('상자 슬롯 — 부위 3종 균등 랜덤(지역 가중 폐기, 2026-08-31)', () => {
+  it('지역은 6곳 균등 — rng % 6', () => {
+    for (let i = 0; i < 6; i++) expect(rollMission(seq([i, 0, 0])).region).toBe(EXPEDITION_REGIONS[i]);
+    expect(rollMission(seq([6, 0, 0])).region).toBe(EXPEDITION_REGIONS[0]);
+  });
+
+  it('상자 슬롯 — 부위 3종 균등 랜덤', () => {
     let i = 7;
     const rng: Rng10k = () => (i = (i * 9301 + 49297) % 10000);
     const acc = rollBoxSlots(rng, 'volcano', 3000);
@@ -77,7 +71,7 @@ describe('expedition engine — 시너지·배율', () => {
     armorKey: 'general_twin_flintlocks', // 일반(슬롯은 무관 — 지역만 본다)
     accessoryKey: 'orc_hunter_boomerang', // 오크 부락
   };
-  it('가중 강화 합(2026-08-28) — 일치 ×1.3 / 일반 ×1.15 / 불일치 ×1', () => {
+  it('가중 강화 합 — 일치 ×1.3 / 일반 ×1.15 / 불일치 ×1', () => {
     const lv = new Map([
       ['volcano_dancer_daggers', 100],
       ['general_twin_flintlocks', 100],
@@ -98,29 +92,23 @@ describe('expedition engine — 시너지·배율', () => {
     expect(c.diamond).toBe(254);
     expect(c.boxes!.weapon).toBe(8);
   });
-  it('대성공 확률 — 기본 5% + 0.1%p/Lv(상한 50) + 합산 1,000당 1%p(상한 20%p)', () => {
+  it('구행 final_reward의 xp 필드는 배율·대성공 결과에 실리지 않는다', () => {
+    const legacy = { kind: 'dia' as const, diamond: 100, xp: 22 } as { kind: 'dia'; diamond: number };
+    expect('xp' in applyMultiplier(legacy, 0)).toBe(false);
+    expect('xp' in applyCrit(legacy)).toBe(false);
+  });
+  it('대성공 확률 — 기본 5% + 합산 1,000당 1%p(상한 20%p), 레벨 항 없음', () => {
     expect(critBp(0)).toBe(500);
-    expect(critBp(7)).toBe(570);
-    expect(critBp(99)).toBe(1000); // 레벨 상한 50
-    expect(critBp(0, 1000)).toBe(600);
-    expect(critBp(0, 12439)).toBe(500 + 1243);
-    expect(critBp(50, 100000)).toBe(500 + 500 + 2000); // 총 상한 30%
+    expect(critBp()).toBe(500);
+    expect(critBp(1000)).toBe(600);
+    expect(critBp(12439)).toBe(500 + 1243);
+    expect(critBp(100000)).toBe(500 + 2000); // 총 상한 25%
   });
 });
 
-describe('expedition engine — 레벨/슬롯', () => {
-  it('XP 가산·연쇄 레벨업·잔여 XP 규약', () => {
-    const r = applyExpeditionXp(0, 0n, 24 + 24 + 24); // 72h
-    // Lv0→1 30 / Lv1→2 32 → 72-62=10 잔여, Lv2
-    expect(r.level).toBe(2);
-    expect(r.xp).toBe(10n);
-  });
-  it('만렙에서 더 오르지 않는다', () => {
-    const r = applyExpeditionXp(EXPEDITION_LEVEL_MAX, 0n, 1000);
-    expect(r.level).toBe(EXPEDITION_LEVEL_MAX);
-  });
-  it('실효 슬롯 = 합산 강화 문턱(1k/3k/10k/15k) · 상한 4 · 미달 0', () => {
-    expect(effectiveSlots(0)).toBe(1); // 1칸은 처음부터(2026-08-29)
+describe('expedition engine — 슬롯', () => {
+  it('실효 슬롯 = 합산 강화 문턱(0/3k/6k/9k) · 상한 4', () => {
+    expect(effectiveSlots(0)).toBe(1); // 1칸은 처음부터
     expect(effectiveSlots(2999)).toBe(1);
     expect(effectiveSlots(3000)).toBe(2);
     expect(effectiveSlots(5999)).toBe(2);
@@ -128,9 +116,8 @@ describe('expedition engine — 레벨/슬롯', () => {
     expect(effectiveSlots(9000)).toBe(4);
     expect(effectiveSlots(999999)).toBe(4);
   });
-  it('레벨 곡선 참조 무결(엔진↔밸런스)', () => {
-    expect(expeditionXpToNext(0)).toBe(30);
-    expect(Object.keys(EXPEDITION_DIFFICULTY_HOURS).length).toBe(4);
+  it('상수 참조 무결(엔진↔밸런스)', () => {
+    expect(EXPEDITION_HOURS).toBe(8);
     expect(EXPEDITION_REGIONS.length).toBe(6);
   });
 });

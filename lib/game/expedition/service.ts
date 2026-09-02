@@ -9,14 +9,12 @@ import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
   EXPEDITION_REFRESH_COST,
-  EXPEDITION_DURATIONS_H,
+  EXPEDITION_DURATION_MS,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
-  expeditionXpForHours,
   EXPEDITION_REFRESH_FREE_PER_DAY,
 } from '@/lib/game/balance';
 import {
   applyCrit,
-  applyExpeditionXp,
   applyMultiplier,
   cryptoRng10k,
   effectiveSlots,
@@ -28,6 +26,12 @@ import {
   type ExpeditionReward,
   type Rng10k,
 } from './engine';
+
+/**
+ * expeditions.difficulty(not null enum) 호환값 — 시간 타입 폐지(단일 8h) 후에도 컬럼은 남아 있어 새 행에 고정 기록.
+ * 판정·표시 어디서도 읽지 않는다(시간은 duration_ms 스냅샷이 정본).
+ */
+const LEGACY_DIFFICULTY = 'normal';
 
 /**
  * 파견 트랜잭션 서비스(EXPEDITION.md A′) — 관례(1파일 1액션)와 달리 한 파일에 모은 이유:
@@ -57,25 +61,20 @@ export class ExpeditionError extends Error {
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** 유저×서버 상태 행 — 남은 역할은 새로고침 일일 카운터뿐(레벨·XP·시작 카운터 컬럼은 미사용). */
 type StateRow = {
-  level: number;
-  xp: string; // bigint::text
-  slots_purchased: number;
-  starts_kst_day: string | null;
-  starts_today: number;
   refresh_kst_day: string | null;
   refresh_today: number;
 };
 
-/** 상태 행 upsert 후 잠금 — 모든 액션의 첫 걸음(카운터·레벨 정합의 축). */
+/** 상태 행 upsert 후 잠금 — 모든 액션의 첫 걸음(유저×서버 직렬화·카운터 정합의 축). */
 async function lockState(tx: Tx, userId: string, serverId: number): Promise<StateRow> {
   await tx.execute(sql`
     insert into expedition_state (user_id, server_id) values (${userId}::uuid, ${serverId})
     on conflict (user_id, server_id) do nothing
   `);
   const [st] = (await tx.execute(sql`
-    select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
-           refresh_kst_day::text, refresh_today
+    select refresh_kst_day::text, refresh_today
     from expedition_state where user_id = ${userId}::uuid and server_id = ${serverId}
     for update
   `)) as unknown as StateRow[];
@@ -133,7 +132,7 @@ export async function enhanceSumOf(tx: Tx, userId: string, serverId: number): Pr
 
 export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cryptoRng10k) {
   return db.transaction(async (tx) => {
-    const st = await lockState(tx, userId, serverId);
+    await lockState(tx, userId, serverId); // 유저×서버 직렬화(동시 진입 경합 방지)
     // 열린 슬롯에만 오퍼를 채운다. 합산 강화 하락으로 닫힌 슬롯의 진행 중 파견은 건드리지 않는다(수령까지 유지).
     const slots = effectiveSlots(await enhanceSumOf(tx, userId, serverId));
     const today = kstDateString();
@@ -143,11 +142,10 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       for update
     `)) as unknown as { id: string; slot: number; status: string; rolled_kst: string; duration_ms: string }[];
-    // 시간표 개정(2026-09-01 4/8/12/24→2/4/8/12) 자가 치유 — 옛 시간의 미배정 오퍼는 날짜와 무관하게 즉시 리롤
-    // (구 스케일 보상이 하루 동안 섞여 보이는 것 방지). 진행 중(running) 24h 파견은 건드리지 않는다.
-    const allowedMs = new Set(EXPEDITION_DURATIONS_H.map((h) => h * 3_600_000));
+    // 시간표 개정 자가 치유 — 옛 시간(2/4/12h)의 미배정 오퍼는 날짜와 무관하게 즉시 리롤
+    // (구 수량 체계 보상이 하루 동안 섞여 보이는 것 방지). 진행 중(running) 파견은 스냅샷대로 완료된다.
     const staleOffer = (r: { status: string; rolled_kst: string; duration_ms: string }) =>
-      r.status === 'offer' && (r.rolled_kst !== today || !allowedMs.has(Number(r.duration_ms)));
+      r.status === 'offer' && (r.rolled_kst !== today || Number(r.duration_ms) !== EXPEDITION_DURATION_MS);
 
     // 슬롯당 하루 1회(2026-09-01): 오늘(KST) 이미 출발한 슬롯은 자정까지 새 오퍼를 채우지 않는다 —
     // 수령한 카드가 "오늘 완료"로 남고, 자정 이후 첫 진입에서 오퍼가 생긴다. 어제 출발해 오늘 수령한 건은 대상 아님.
@@ -170,18 +168,18 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
         continue;
       }
       if (!row) {
-        const m = rollMission(rng, st.level);
+        const m = rollMission(rng);
         // 경합 안전 — 부분 유니크(one_active)와 do nothing: 동시 진입 시 한쪽만 삽입된다.
         await tx.execute(sql`
           insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward)
-          values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${m.difficulty}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb)
+          values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${LEGACY_DIFFICULTY}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb)
           on conflict do nothing
         `);
       } else if (staleOffer(row)) {
         // 자정 전체 교체(+옛 시간표 오퍼 즉시 교체) — 미배정 오퍼만.
-        const m = rollMission(rng, st.level);
+        const m = rollMission(rng);
         await tx.execute(sql`
-          update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
+          update expeditions set region = ${m.region}, difficulty = ${LEGACY_DIFFICULTY},
                  duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
           where id = ${BigInt(row.id)} and status = 'offer'
         `);
@@ -215,9 +213,9 @@ export function refreshAllOffers(userId: string, serverId: number, rng: Rng10k =
       if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
     }
     for (const o of offers) {
-      const m = rollMission(rng, st.level);
+      const m = rollMission(rng);
       await tx.execute(sql`
-        update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
+        update expeditions set region = ${m.region}, difficulty = ${LEGACY_DIFFICULTY},
                duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
         where id = ${BigInt(o.id)} and status = 'offer'
       `);
@@ -257,9 +255,9 @@ export function refreshOffer(
       if (!paid) throw new ExpeditionError('INSUFFICIENT_DIAMOND');
     }
 
-    const m = rollMission(rng, st.level);
+    const m = rollMission(rng);
     await tx.execute(sql`
-      update expeditions set region = ${m.region}, difficulty = ${m.difficulty},
+      update expeditions set region = ${m.region}, difficulty = ${LEGACY_DIFFICULTY},
              duration_ms = ${m.durationMs}, reward = ${JSON.stringify(m.reward)}::jsonb, rolled_at = now()
       where id = ${BigInt(offer.id)} and status = 'offer'
     `);
@@ -362,14 +360,11 @@ export function cancelExpedition(userId: string, serverId: number, slot: number)
 export type ClaimResult = {
   reward: ExpeditionReward;
   crit: boolean;
-  xpGained: number;
-  level: number;
-  levelUp: boolean;
 };
 
 /**
- * 수령 — 시계 검증(§6.3) → 대성공 판정(여기가 유일한 수령 RNG) → 지급 + XP → claimed.
- * 지급·전이·레벨업이 한 tx(§3.3). 멱등: 조건부 전이(running→claimed)가 이중 지급을 막는다.
+ * 수령 — 시계 검증(§6.3) → 대성공 판정(여기가 유일한 수령 RNG) → 지급 → claimed.
+ * 지급·전이가 한 tx(§3.3). 멱등: 조건부 전이(running→claimed)가 이중 지급을 막는다.
  */
 export function claimExpedition(
   userId: string,
@@ -378,17 +373,18 @@ export function claimExpedition(
   rng: Rng10k = cryptoRng10k,
 ): Promise<ClaimResult> {
   return db.transaction(async (tx) => {
-    const st = await lockState(tx, userId, serverId);
+    await lockState(tx, userId, serverId); // 유저×서버 직렬화
     const [row] = (await tx.execute(sql`
-      select id::text, region, duration_ms::text, final_reward, complete_at <= now() as ready
+      select id::text, region, final_reward, complete_at <= now() as ready
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status = 'running'
       for update
-    `)) as unknown as { id: string; region: string; duration_ms: string; final_reward: ExpeditionReward; ready: boolean }[];
+    `)) as unknown as { id: string; region: string; final_reward: ExpeditionReward; ready: boolean }[];
     if (!row) throw new ExpeditionError('NOT_RUNNING');
     if (!row.ready) throw new ExpeditionError('NOT_READY');
 
-    const crit = rng() < critBp(st.level, await enhanceSumOf(tx, userId, serverId)); // 기본 5% + 레벨 0.1%p/lv + 합산 1,000당 1%p(상한 15%p)
+    const crit = rng() < critBp(await enhanceSumOf(tx, userId, serverId)); // 기본 5% + 합산 1,000당 1%p(상한 +20%p)
+    // 구행(시간 타입 시절)의 final_reward에 남은 xp 필드는 지급 대상이 아니다 — 상자·다이아만 읽는다.
     const reward = crit ? applyCrit(row.final_reward) : row.final_reward;
 
     // 조건부 전이 먼저 — 0행이면 다른 요청이 이미 수령(지급 없이 종료).
@@ -415,14 +411,7 @@ export function claimExpedition(
       }
     }
 
-    const xpGained = row.final_reward.xp ?? expeditionXpForHours(Math.round(Number(row.duration_ms) / 3_600_000)); // 오퍼 확정 XP(2026-09-01), 구행은 평균 폴백
-    const next = applyExpeditionXp(st.level, BigInt(st.xp), xpGained);
-    await tx.execute(sql`
-      update expedition_state set level = ${next.level}, xp = ${next.xp}
-      where user_id = ${userId}::uuid and server_id = ${serverId}
-    `);
-
-    return { reward, crit, xpGained, level: next.level, levelUp: next.level > st.level };
+    return { reward, crit };
   });
 }
 

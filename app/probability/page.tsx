@@ -30,18 +30,10 @@ import {
   EXPEDITION_CRIT_BP,
   EXPEDITION_CRIT_SUM_BP_MAX,
   EXPEDITION_CRIT_MULT,
-  EXPEDITION_DURATIONS_H,
-  EXPEDITION_DURATION_SCALE,
-  EXPEDITION_XP_RANGE_BY_HOURS,
-  EXPEDITION_LEVEL_MAX,
-  EXPEDITION_CRIT_BP_PER_LEVEL,
+  EXPEDITION_HOURS,
   expeditionCritBp,
   EXPEDITION_SYNERGY_MATCH_MULT,
   EXPEDITION_SYNERGY_GENERAL_MULT,
-  EXPEDITION_DIFFICULTY_DIST_BP,
-  EXPEDITION_DIFFICULTY_LABEL,
-  EXPEDITION_DIFFICULTY_HOURS,
-  EXPEDITION_DIFFICULTIES,
   EXPEDITION_REGIONS,
   EXPEDITION_AS_MULT_COEF,
   EXPEDITION_AS_MULT_EXP,
@@ -267,16 +259,12 @@ export default async function ProbabilityPage() {
         </P>
       </Sec>
 
-      {/* 파견(v1) — EXPEDITION_* 상수와 1:1(§33). 판정 시점(오퍼 생성 롤·수령은 대성공만)과
-          난이도 출현 분포까지 공시(적대 검수 2026-08-25 발견 1·2 반영). */}
+      {/* 파견 — EXPEDITION_* 상수와 1:1(§33). 판정 시점(오퍼 생성 롤·수령은 대성공만)까지 공시. */}
       <Sec n="6" title="파견" id="expedition">
         <P>
-          파견 보상은 <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어
-          카드에 그대로 표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 아래 수량은
-          기본값이며 난이도(시간)별 배율을 곱합니다(슬롯당 하루 1회, 
-          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ×${EXPEDITION_DURATION_SCALE[h]}`).join(' / ')}). 파견 경험치도
-          미션이 열릴 때 시간별 구간에서 균등 추첨되어 카드에 확정 표기됩니다(
-          {EXPEDITION_DURATIONS_H.map((h) => `${h}h ${EXPEDITION_XP_RANGE_BY_HOURS[h][0]}~${EXPEDITION_XP_RANGE_BY_HOURS[h][1]}`).join(' / ')}; 대성공은 경험치에 적용되지 않습니다).
+          파견은 슬롯마다 하루 한 번 보낼 수 있고 소요 시간은 항상 {EXPEDITION_HOURS}시간입니다. 보상은{' '}
+          <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어 카드에 그대로
+          표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 아래 수량은 파견 1회분 기본값입니다.
         </P>
         <Table head={['본상', '확률', '기본 수량(배율 전)']}>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
@@ -301,34 +289,17 @@ export default async function ProbabilityPage() {
         <P>
           수량은 표기 범위에서 고르게 정해집니다. 상자 종류(무기·방어구·장신구)는 파견지와 무관하게
           균등(각 1/3)입니다. 수령 시 <b>{pct(EXPEDITION_CRIT_BP)}</b> 확률로 <b>대성공</b>이 터져 수량이{' '}
-          {EXPEDITION_CRIT_MULT}배가 됩니다. 대성공 확률은 파견 레벨당 +{EXPEDITION_CRIT_BP_PER_LEVEL / 100}%p, 계정
-          합산 강화 1,000당 +1%p(최대 +{EXPEDITION_CRIT_SUM_BP_MAX / 100}%p) 올라 상한은{' '}
-          {pct(expeditionCritBp(EXPEDITION_LEVEL_MAX, 100000))}입니다.
+          {EXPEDITION_CRIT_MULT}배가 됩니다. 대성공 확률은 계정 합산 강화 1,000당 +1%p(최대 +{EXPEDITION_CRIT_SUM_BP_MAX / 100}%p)
+          올라 상한은 {pct(expeditionCritBp(100000))}입니다.
         </P>
         <P>
-          미션의 지역은 {EXPEDITION_REGIONS.length}곳 중 균등 추첨되고, 난이도 출현 확률은 파견
-          레벨 구간에 따라 다릅니다. 새로고침(무료 소진 후 유료)은 지역·난이도·보상을 전부 다시
-          추첨합니다.
+          미션의 지역은 {EXPEDITION_REGIONS.length}곳 중 균등 추첨됩니다. 새로고침(무료 소진 후 유료)은 지역·보상을
+          전부 다시 추첨합니다.
         </P>
-        <Table head={['파견 레벨', ...EXPEDITION_DIFFICULTIES.map((d) => `${EXPEDITION_DIFFICULTY_LABEL[d]}(${EXPEDITION_DIFFICULTY_HOURS[d]}h)`)]}>
-          {[...EXPEDITION_DIFFICULTY_DIST_BP]
-            .sort((a, b) => a.minLevel - b.minLevel)
-            .map((b, i, arr) => (
-              <tr key={b.minLevel} className="border-t border-zinc-100 dark:border-zinc-900">
-                <Td>
-                  Lv.{b.minLevel}
-                  {i + 1 < arr.length ? `~${arr[i + 1]!.minLevel - 1}` : '+'}
-                </Td>
-                {EXPEDITION_DIFFICULTIES.map((d) => (
-                  <Td key={d}>{pct(b.dist[d])}</Td>
-                ))}
-              </tr>
-            ))}
-        </Table>
         <P>
           아바타 지역 시너지(파견지와 지역이 같은 장비의 강화 레벨 ×{EXPEDITION_SYNERGY_MATCH_MULT}, 일반 장비
           ×{EXPEDITION_SYNERGY_GENERAL_MULT}로 계산해 강화 합에 반영)와 아래 아바타 강화 합 배율은 <b>상자·다이아 수량에만</b>
-          적용되며, 위 표의 확률 자체는 변하지 않습니다. 파견 레벨은 수량 배율에 관여하지 않습니다.
+          적용되며, 위 표의 확률 자체는 변하지 않습니다.
         </P>
         <P>
           <b>아바타 강화 합</b>: 보상 배율은 파견에 보낸 아바타의 &ldquo;강화 합&rdquo;(아바타를 만들 때 입힌

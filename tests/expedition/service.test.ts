@@ -20,8 +20,9 @@ const seq = (vals: number[]): Rng10k => {
   let i = 0;
   return () => vals[i++] ?? 0;
 };
-/** 결정론 오퍼: swamp · easy(4h) · 다이아 66(120×0.55). */
-const DIA_OFFER_RNG = () => seq([0, 0, 5500, 0]);
+/** 결정론 오퍼: swamp · 다이아만(roll 5500) · 수량 최소 150. rng 순서 = 지역 → 본상 → 수량(시간 롤 없음). */
+const DIA_OFFER_RNG = () => seq([0, 5500, 0]);
+const DIA_OFFER_MIN = 150;
 
 /**
  * 파견 DB 통합(스테이징 TEST_USER_ID·tx 스냅샷 복원 원칙) — 상태머신·카운터·지급 정합.
@@ -137,8 +138,8 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     await ensureOffers(uid, SID, DIA_OFFER_RNG());
     const s = await startExpedition(uid, SID, 1, avatarId);
     expect(s.finalReward.kind).toBe('dia');
-    // 기본 132(60×2.2 — 쉬움 2h 1회분, B 완충 스케일·다이아 기본치 25💎/📦 정렬)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
-    const expected = Math.max(1, Math.round(132 * (1 + s.reqBonusBp / 10000)));
+    // 기본 150(다이아만 최소, 1회분)에 배정 아바타의 가중 강화 합 배율(reqBonusBp, 시너지 포함)이 곱해진다 — 산식 정합으로 단정.
+    const expected = Math.max(1, Math.round(DIA_OFFER_MIN * (1 + s.reqBonusBp / 10000)));
     expect(s.finalReward.diamond).toBe(expected);
 
     await expect(claimExpedition(uid, SID, 1, seq([9999]))).rejects.toMatchObject({ code: 'NOT_READY' });
@@ -154,7 +155,6 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     );
     const c = await claimExpedition(uid, SID, 1, seq([9999])); // no crit
     expect(c.crit).toBe(false);
-    expect(c.xpGained).toBe(18); // 쉬움 2h XP 18~22 균등 — seq 소진 후 roll 0 = 최소 18(2026-09-01)
     const after = BigInt(
       ((await testDb.execute(sql`select diamond::text as d from characters where user_id=${uid}::uuid and server_id=${SID}`)) as unknown as { d: string }[])[0]!.d,
     );
@@ -171,11 +171,6 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
       expect(Number(offers[0]!.n)).toBe(0);
       await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'DAILY_LIMIT' });
     }
-
-    const [st] = (await testDb.execute(sql`
-      select level, xp::text from expedition_state where user_id = ${uid}::uuid and server_id = ${SID}
-    `)) as unknown as { level: number; xp: string }[];
-    expect(Number(st!.xp)).toBe(18);
   });
 
   it('동시 수령 4건 — 정확히 1건만 지급', async () => {

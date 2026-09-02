@@ -1,5 +1,5 @@
 /**
- * 파견 순수 엔진(EXPEDITION.md A′) — 미션 롤·보상 롤·시너지·레벨.
+ * 파견 순수 엔진(EXPEDITION.md A′) — 미션 롤·보상 롤·시너지·대성공.
  *
  * 이 파일은 **DB/IO 없는 순수 함수만** 둔다(단위 테스트 대상). RNG는 주입식 —
  * 실호출은 서버 crypto(rng10k), 테스트는 결정론 스텁. 수치 정본은 balance.ts EXPEDITION_*.
@@ -7,20 +7,13 @@
 import {
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_CRIT_MULT,
-  EXPEDITION_DIFFICULTY_HOURS,
-  EXPEDITION_DURATION_SCALE,
-  EXPEDITION_XP_RANGE_BY_HOURS,
-  EXPEDITION_LEVEL_MAX,
+  EXPEDITION_DURATION_MS,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_REGIONS,
   expeditionSlotsFor,
   expeditionWeightedSum,
   expeditionAsBonusBp,
   expeditionCritBp,
-  expeditionDifficultyDist,
-  expeditionXpToNext,
-  type ExpeditionDifficulty,
-  type ExpeditionDurationH,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
 import { CATALOG_ITEMS, type CatalogRegion } from '@/lib/game/equipment/catalog';
@@ -34,13 +27,10 @@ export type ExpeditionReward = {
   kind: 'box' | 'dia' | 'both';
   boxes?: { weapon: number; armor: number; accessory: number };
   diamond?: number;
-  /** 완료 XP — 오퍼 시 균등 롤 확정(2026-09-01). 없으면 시간별 평균 폴백. */
-  xp?: number;
 };
 
 export type ExpeditionMission = {
   region: ExpeditionRegion;
-  difficulty: ExpeditionDifficulty;
   durationMs: number;
   reward: ExpeditionReward;
 };
@@ -59,12 +49,10 @@ export function avatarEnhanceSum(snapshot: unknown, levelByKey: ReadonlyMap<stri
   return sum;
 }
 
-/** 아바타 강화 합 배율(bp) — balance의 M(AS) 정본(엔진 경유 단일 진입). 시너지·레벨과 bp 합산. */
+/** 아바타 강화 합 배율(bp) — balance의 M(AS) 정본(엔진 경유 단일 진입). 시너지와 bp 합산. */
 export function asBonusBp(avatarSum: number): number {
   return expeditionAsBonusBp(avatarSum);
 }
-
-const HOUR_MS = 3_600_000;
 
 /** min~max 균등 정수(양끝 포함). */
 function uniformInt(rng: Rng10k, min: number, max: number): number {
@@ -84,7 +72,7 @@ function pickWeighted<K extends string>(rng: Rng10k, weights: Record<K, number>)
   return keys[keys.length - 1]!;
 }
 
-/** 상자 슬롯 분배 — 부위 3종 균등 랜덤(지역 가중 60/20/20은 2026-08-31 폐기). region 인자는 호출부 호환용. */
+/** 상자 슬롯 분배 — 부위 3종 균등 랜덤. region 인자는 호출부 호환용. */
 export function rollBoxSlots(
   rng: Rng10k,
   _region: ExpeditionRegion,
@@ -96,45 +84,35 @@ export function rollBoxSlots(
   return out;
 }
 
-/** 수량 스케일 적용 — 최소 1 보장(쉬움 4h ×0.55에서 0개 방지). */
-function scaled(base: number, scale: number): number {
-  return Math.max(1, Math.round(base * scale));
-}
-
 /**
- * 미션 오퍼 롤(A′) — 지역 균등 × 난이도(파견 레벨 구간 분포) × 본상 사전 확정.
- * 대성공은 여기서 롤하지 않는다(수령 시 판정 — 2026-08-25 확정).
+ * 미션 오퍼 롤(A′) — 지역 균등 × 본상 사전 확정. 시간은 단일(EXPEDITION_DURATION_MS)이라 롤하지 않는다.
+ * 대성공은 여기서 롤하지 않는다(수령 시 판정).
+ * rng 순서: 지역 → 본상 분기 → 수량 → (상자면) 부위 n회.
  */
-export function rollMission(rng: Rng10k, level: number): ExpeditionMission {
+export function rollMission(rng: Rng10k): ExpeditionMission {
   const region = EXPEDITION_REGIONS[rng() % EXPEDITION_REGIONS.length]!;
-  const difficulty = pickWeighted(rng, expeditionDifficultyDist(level));
-  const hours = EXPEDITION_DIFFICULTY_HOURS[difficulty] as ExpeditionDurationH;
-  const scale = EXPEDITION_DURATION_SCALE[hours];
   const kind = pickWeighted(rng, EXPEDITION_MAIN_ROLL_BP) as 'boxOnly' | 'diamondOnly' | 'both';
   const a = EXPEDITION_BASE_AMOUNTS;
   let reward: ExpeditionReward;
   if (kind === 'boxOnly') {
-    const n = scaled(uniformInt(rng, a.boxOnly.boxMin, a.boxOnly.boxMax), scale);
+    const n = uniformInt(rng, a.boxOnly.boxMin, a.boxOnly.boxMax);
     reward = { kind: 'box', boxes: rollBoxSlots(rng, region, n) };
   } else if (kind === 'diamondOnly') {
-    reward = { kind: 'dia', diamond: scaled(uniformInt(rng, a.diamondOnly.diaMin, a.diamondOnly.diaMax), scale) };
+    reward = { kind: 'dia', diamond: uniformInt(rng, a.diamondOnly.diaMin, a.diamondOnly.diaMax) };
   } else {
-    const n = scaled(uniformInt(rng, a.both.boxMin, a.both.boxMax), scale);
+    const n = uniformInt(rng, a.both.boxMin, a.both.boxMax);
     reward = {
       kind: 'both',
       boxes: rollBoxSlots(rng, region, n),
-      diamond: scaled(uniformInt(rng, a.both.diaMin, a.both.diaMax), scale),
+      diamond: uniformInt(rng, a.both.diaMin, a.both.diaMax),
     };
   }
-  // XP — 오퍼 확정 롤(마지막 롤: 기존 rng 시퀀스를 흔들지 않는다). 대성공 미적용.
-  const [xpMin, xpMax] = EXPEDITION_XP_RANGE_BY_HOURS[hours];
-  reward.xp = uniformInt(rng, xpMin, xpMax);
-  return { region, difficulty, durationMs: hours * HOUR_MS, reward };
+  return { region, durationMs: EXPEDITION_DURATION_MS, reward };
 }
 
 /* ── 시너지(§3.2) — 배정 아바타 장비 스냅샷 기준 ── */
 
-/** 카탈로그 한글 지역 → 파견 지역 코드. '일반'은 범용(+5%/개). 레거시·미상은 무보정. */
+/** 카탈로그 한글 지역 → 파견 지역 코드. '일반'은 범용. 레거시·미상은 무보정. */
 const CATALOG_TO_EXPEDITION: Partial<Record<CatalogRegion, ExpeditionRegion | 'general'>> = {
   늪지대: 'swamp',
   '오크 부락': 'orc',
@@ -152,7 +130,7 @@ export type SnapshotEquipment = {
   key: string;
   slot: 'weapon' | 'armor' | 'accessory';
   name: string;
-  /** 파견 지역 매핑(일치 +10% / 일반 +5%) — 미매핑은 null(보너스 없음). */
+  /** 파견 지역 매핑(일치 ×1.3 / 일반 ×1.15) — 미매핑은 null(보너스 없음). */
   region: ExpeditionRegion | 'general' | null;
   level: number;
 };
@@ -179,8 +157,8 @@ export function snapshotExpeditionRegions(snapshot: unknown): (ExpeditionRegion 
 }
 
 /**
- * 아바타 가중 강화 합(시너지 적용, 2026-08-28) — 스냅샷 장비 3종의 강화 레벨에 미션 지역 일치 ×1.3 / 일반 ×1.15를
- * 곱해 합산. 이 값이 M(AS)로 들어간다(종전 고정 +10%p/+5%p 가산 폐지).
+ * 아바타 가중 강화 합(시너지 적용) — 스냅샷 장비 3종의 강화 레벨에 미션 지역 일치 ×1.3 / 일반 ×1.15를
+ * 곱해 합산. 이 값이 M(AS)로 들어간다.
  */
 export function avatarWeightedSum(snapshot: unknown, levelByKey: ReadonlyMap<string, number>, missionRegion: ExpeditionRegion): number {
   return expeditionWeightedSum(
@@ -189,9 +167,9 @@ export function avatarWeightedSum(snapshot: unknown, levelByKey: ReadonlyMap<str
   );
 }
 
-/** 파견 레벨·계정 합산 강화 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */
-export function critBp(level: number, enhanceSum = 0): number {
-  return expeditionCritBp(level, enhanceSum);
+/** 계정 합산 강화 → 대성공 확률(bp) — balance.expeditionCritBp 정본(엔진 경유 단일 진입). */
+export function critBp(enhanceSum = 0): number {
+  return expeditionCritBp(enhanceSum);
 }
 
 /** 배율 적용(시작 시 최종 확정) — 상자·다이아 수량에만. floor가 아닌 round(공시 문구와 정합). */
@@ -210,7 +188,6 @@ export function applyMultiplier(reward: ExpeditionReward, totalBp: number): Expe
         }
       : {}),
     ...(reward.diamond ? { diamond: scaleN(reward.diamond) } : {}),
-    ...(reward.xp ? { xp: reward.xp } : {}), // XP는 배율 미적용(오퍼 확정값 유지)
   };
 }
 
@@ -223,29 +200,10 @@ export function applyCrit(reward: ExpeditionReward): ExpeditionReward {
       ? { boxes: { weapon: s(reward.boxes.weapon), armor: s(reward.boxes.armor), accessory: s(reward.boxes.accessory) } }
       : {}),
     ...(reward.diamond ? { diamond: s(reward.diamond) } : {}),
-    ...(reward.xp ? { xp: reward.xp } : {}), // 대성공은 XP 미적용(2026-09-01 확정)
   };
 }
 
-/* ── 레벨/슬롯 ── */
-
-/** XP 가산 + 레벨업 — 잔여 XP 규약(길드 xp와 동일: 비교는 (level, xp) 사전식). */
-export function applyExpeditionXp(
-  level: number,
-  xp: bigint,
-  gainH: number,
-): { level: number; xp: bigint } {
-  let lv = level;
-  let rem = xp + BigInt(gainH);
-  while (lv < EXPEDITION_LEVEL_MAX && rem >= BigInt(expeditionXpToNext(lv))) {
-    rem -= BigInt(expeditionXpToNext(lv));
-    lv += 1;
-  }
-  // 만렙 도달 후 잔여 XP는 다음 임계 미만으로 클램프하지 않고 그대로 둔다(표시는 게이지 100%).
-  return { level: lv, xp: rem };
-}
-
-/** 실효 슬롯 수 — 계정 합산 강화만으로 결정(0~4). 구매·레벨 해금 없음(2026-08-28). */
+/** 실효 슬롯 수 — 계정 합산 강화만으로 결정(0~4). 구매·레벨 해금 없음. */
 export function effectiveSlots(enhanceSum: number): number {
   return expeditionSlotsFor(enhanceSum);
 }

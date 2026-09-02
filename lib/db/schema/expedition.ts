@@ -28,10 +28,10 @@ import { zoneRegionEnum } from './guild';
  * 판정 원칙: 롤·시계·지급 전부 서버(§3.1·§3.2). BALANCE 상수(EXPEDITION_*)가 수치 정본.
  */
 export const expeditionDifficultyEnum = pgEnum('expedition_difficulty', [
-  'easy', // 쉬움 4h
-  'normal', // 보통 8h
-  'hard', // 어려움 12h
-  'grand', // 원정 24h — 파견 Lv.5부터 출현(분포는 레벨 구간별, balance.ts)
+  'easy', // 시간 타입 시절 값 — 신규 행은 항상 'normal'(단일 8h, 판정·표시에 미사용)
+  'normal',
+  'hard',
+  'grand',
 ]);
 export const expeditionStatusEnum = pgEnum('expedition_status', [
   'offer',
@@ -101,7 +101,7 @@ export const expeditions = pgTable(
 export type Expedition = typeof expeditions.$inferSelect;
 
 /**
- * 파견 유저 상태(user×server 1행) — 레벨/XP·슬롯 해금·일일 카운터.
+ * 파견 유저 상태(user×server 1행) — 현재 쓰는 건 새로고침 일일 카운터뿐(level/xp·slots_purchased·starts_*는 시간 타입·레벨 시절 잔존 컬럼, 미사용).
  * 카운터는 KST 일자 컬럼과 쌍(체크인 패턴): 날짜가 다르면 0으로 보고 갱신 시 리셋.
  */
 export const expeditionState = pgTable(

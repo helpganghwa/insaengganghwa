@@ -17,16 +17,12 @@ import {
   EXPEDITION_SYNERGY_MATCH_MULT,
   expeditionWeightedSum,
   type ExpeditionRegion, expeditionAsBonusBp,
-  EXPEDITION_DIFFICULTIES,
-  EXPEDITION_DIFFICULTY_DIST_BP,
-  EXPEDITION_DIFFICULTY_HOURS,
-  EXPEDITION_LEVEL_MAX,
   EXPEDITION_CRIT_MULT,
-  expeditionCritBp,
-  expeditionXpForHours,
-  EXPEDITION_XP_RANGE_BY_HOURS,
+  EXPEDITION_CRIT_BP,
+  EXPEDITION_CRIT_SUM_BP_MAX,
+  EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_BASE_AMOUNTS,
-  EXPEDITION_DURATION_SCALE,
+  EXPEDITION_HOURS,
 } from '@/lib/game/balance';
 import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
@@ -46,14 +42,16 @@ import {
  *  - 수령 팝업만은 서버 응답을 기다린다 — 대성공(10%)이 수령 시 서버 롤이라 예측 불가.
  */
 
-/** 레벨 구간표 — EXPEDITION_DIFFICULTY_DIST_BP(minLevel 내림차순)를 오름차순 구간 [min, max]로. */
-const LEVEL_BANDS = [...EXPEDITION_DIFFICULTY_DIST_BP]
-  .sort((a, b) => a.minLevel - b.minLevel)
-  .map((b, i, arr) => ({ min: b.minLevel, max: i + 1 < arr.length ? arr[i + 1]!.minLevel - 1 : EXPEDITION_LEVEL_MAX, dist: b.dist }));
-
-/** 시간 표시 — 달 아이콘(🌘→🌕)으로 길이를 표현(M6, 2026-08-28). 색은 흰색 단일이라 지역색과 충돌 없음. */
-// 2/4/8/12h(2026-09-01) — 24는 배포 전 진행분 표시 폴백.
-const HOUR_MOON: Record<number, string> = { 2: '🌒', 4: '🌓', 8: '🌔', 12: '🌕', 24: '🌕' };
+/** 배정 기본 선택 — 파견 중이 아닌 아바타 중 그 지역 배율이 가장 높은 것(하루 1회 체제에서 매일 같은 탭을 줄인다). */
+function bestAvatarFor(avatars: ExpeditionAvatar[], region: ExpeditionRegion): string | null {
+  let best: { id: string; ws: number } | null = null;
+  for (const a of avatars) {
+    if (a.busy) continue;
+    const ws = weightedSumOf(a.equipment, region);
+    if (!best || ws > best.ws) best = { id: a.id, ws };
+  }
+  return best?.id ?? null;
+}
 
 /** 지역 표기 — 이모지 대신 지역색(월드맵 노드 REGION_COLOR와 일치, UI 피드백 2026-08-25). */
 const REGION_UI: Record<ExpeditionRegion, { color: string; label: string }> = {
@@ -86,7 +84,7 @@ function weightedSumOf(equipment: ExpeditionAvatar['equipment'], mission: Expedi
   return expeditionWeightedSum(equipment.map((e) => ({ level: e.level, region: e.region })), mission);
 }
 
-type ClaimPopup = { crit: boolean; reward: ExpeditionReward; baseReward?: ExpeditionReward; xpGained: number; level: number; levelUp: boolean; region: ExpeditionRegion; hours: number; avatarSouth: string | null; bonusText: string | null };
+type ClaimPopup = { crit: boolean; reward: ExpeditionReward; baseReward?: ExpeditionReward; region: ExpeditionRegion; avatarSouth: string | null; bonusText: string | null };
 
 export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const [board, setBoard] = useState(initial);
@@ -140,7 +138,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   );
 
   const [refreshAsk, setRefreshAsk] = useState(false);
-  const [levelInfo, setLevelInfo] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   /** 전체 새로고침(2026-08-28) — 미배정 슬롯 전부 리롤, 진행 중 제외. 횟수 1회 차감. */
   const doRefreshAll = () => {
@@ -218,8 +216,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         if (diff !== 0) optimisticAdjust(BigInt(diff));
         setBoard(r.board);
         setClaimPopup({
-          crit: r.crit, reward: r.reward, xpGained: r.xpGained, level: r.level, levelUp: r.levelUp, region: s.region!,
-          hours: s.hours ?? 0, avatarSouth: s.avatarSouth ?? null, baseReward: s.baseReward,
+          crit: r.crit, reward: r.reward, region: s.region!,
+          avatarSouth: s.avatarSouth ?? null, baseReward: s.baseReward,
           bonusText: `×${(1 + (s.reqBonusBp ?? 0) / 10000).toFixed(2)}`,
         });
       } else {
@@ -233,7 +231,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     });
   };
 
-  const xpPct = Math.min(100, Math.round((board.xp / Math.max(1, board.xpNext)) * 100));
   const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
   const previewBp = assignFor?.region && selectedAv ? enhanceBonusOf(weightedSumOf(selectedAv.equipment, assignFor.region)) : 0;
 
@@ -246,7 +243,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }
     if (s.state === 'offer') {
       setAssignSlot(s.slot);
-      setSelectedAvatar(null); // 기본 미선택(2026-08-28) — 아바타를 직접 고르게
+      setSelectedAvatar(s.region ? bestAvatarFor(board.avatars, s.region) : null); // 배율 최고 아바타 기본 선택 — 카드 탭 → 보내기 2탭
       return;
     }
     // 오늘 완료(슬롯당 하루 1회, 2026-09-01) — 공용 헤더 토스트로만 안내.
@@ -279,19 +276,19 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           </span>
         }
       />
-      {/* 헤더(H1, 2026-08-28) — 한 줄: Lv 알약(탭→레벨별 확률 표 팝업) · 대성공 · 새로고침 버튼 + XP 바. 합산 강화 칩은 제거(잠금 카드에 표시). */}
+      {/* 헤더 — 한 줄: 대성공 알약(탭→파견 안내 팝업: 보상 범위·대성공 산식) · 새로고침 버튼. 레벨·XP 바 없음(2026-09-03 간소화). */}
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setLevelInfo(true)}
+          onClick={() => setInfoOpen(true)}
           className="flex h-8 items-center gap-1 rounded-full border border-zinc-300 bg-white px-3 text-[11.5px] text-zinc-600 active:scale-95 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
         >
-          파견 <b className="text-zinc-900 dark:text-zinc-50">Lv.{board.level}</b>
+          대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
           <span className="ml-0.5 text-zinc-400">›</span>
         </button>
         <span className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700" />
         <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-          대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
+          슬롯마다 하루 한 번 · <b className="text-zinc-700 dark:text-zinc-200">{EXPEDITION_HOURS}시간</b>
         </span>
 
         <button
@@ -302,12 +299,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         >
           새로고침 <b>{board.freeRefreshLeft > 0 ? `무료 ${board.freeRefreshLeft}회` : `💎${board.refreshCost}`}</b>
         </button>
-      </div>
-      <div className="flex items-center gap-2 px-0.5">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300" style={{ width: `${xpPct}%` }} />
-        </div>
-        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">다음 레벨 {Math.max(0, board.xpNext - board.xp)} XP</span>
       </div>
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
@@ -322,7 +313,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="아바타 선택"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {HOUR_MOON[assignFor.hours ?? 0] ?? ''} {assignFor.hours}시간 · +{assignFor.reward?.xp ?? expeditionXpForHours(assignFor.hours ?? 0)} XP
+                <span style={{ color: REGION_UI[assignFor.region].color }}>{REGION_UI[assignFor.region].label}</span> · {assignFor.hours}시간 뒤 귀환
               </>
             }
             bodyPad="sm"
@@ -340,6 +331,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <CardBody
               region={assignFor.region}
               hours={assignFor.hours ?? 0}
+              monTier={assignFor.slot}
               avatarSouth={selectedAv?.south ?? null}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
               status={!assignFor.reward ? '새 파견 찾는 중…' : selectedAv ? '선택 아바타 기준 확정 보상' : '아바타를 선택하세요'}
@@ -429,15 +421,15 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       ) : null}
 
 
-      {/* 레벨별 확률 표(H1) — 공시 상수(EXPEDITION_DIFFICULTY_DIST_BP·expeditionCritBp)와 1:1 */}
-      {levelInfo ? (
-        <ModalShell onClose={() => setLevelInfo(false)} label="파견 레벨">
+      {/* 파견 안내 — 본상 3분기 확률·기본 보상 범위(배율 전)·대성공 산식. 공시 상수(EXPEDITION_MAIN_ROLL_BP·BASE_AMOUNTS·critBp)와 1:1 */}
+      {infoOpen ? (
+        <ModalShell onClose={() => setInfoOpen(false)} label="파견 안내">
           <ModalLayout
-            title={`파견 Lv.${board.level}`}
-            subtitle="레벨별 대성공 확률 · 파견 시간 출현 확률"
+            title="파견 안내"
+            subtitle={`슬롯마다 하루 한 번 · ${EXPEDITION_HOURS}시간 뒤 귀환`}
             bodyPad="sm"
             footer={
-              <ModalButton tone="contrast" onClick={() => setLevelInfo(false)}>
+              <ModalButton tone="contrast" onClick={() => setInfoOpen(false)}>
                 닫기
               </ModalButton>
             }
@@ -445,72 +437,33 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <table className="w-full border-collapse text-center text-[10.5px]">
               <thead>
                 <tr className="text-zinc-400">
-                  <th className="border-b border-zinc-200 py-1 text-left font-semibold dark:border-zinc-800">파견 레벨</th>
-                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">대성공</th>
-                  {EXPEDITION_DIFFICULTIES.map((d) => (
-                    <th key={d} className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">
-                      {HOUR_MOON[EXPEDITION_DIFFICULTY_HOURS[d]]} {EXPEDITION_DIFFICULTY_HOURS[d]}h
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {LEVEL_BANDS.map((b) => {
-                  const now = board.level >= b.min && board.level <= b.max;
-                  return (
-                    <tr key={b.min} className={now ? 'bg-amber-500/10 text-amber-700 dark:text-amber-200' : 'text-zinc-700 dark:text-zinc-300'}>
-                      <td className="py-1.5 text-left font-bold">
-                        {b.max >= EXPEDITION_LEVEL_MAX ? `${b.min}+` : `${b.min}~${b.max}`}
-                        {now ? <span className="ml-1 text-[9px] font-extrabold text-amber-600 dark:text-amber-400">현재</span> : null}
-                      </td>
-                      <td className="py-1.5">
-                        {(expeditionCritBp(b.min) / 100).toFixed(1)}~{(expeditionCritBp(b.max) / 100).toFixed(1)}%
-                      </td>
-                      {EXPEDITION_DIFFICULTIES.map((d) => (
-                        <td key={d} className="py-1.5">
-                          {Math.round(b.dist[d] / 100)}%
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* 난이도별 기본 보상 범위(2026-09-01) — 배율(아바타 강화 합·시너지) 적용 전, 시간 스케일 반영 값. 공시 표와 1:1. */}
-            <table className="mt-3 w-full border-collapse text-center text-[10px]">
-              <thead>
-                <tr className="text-zinc-400">
                   <th className="border-b border-zinc-200 py-1 text-left font-semibold dark:border-zinc-800">기본 보상</th>
                   <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">상자만</th>
                   <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">다이아만</th>
                   <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">상자+다이아</th>
-                  <th className="border-b border-zinc-200 py-1 font-semibold dark:border-zinc-800">XP</th>
                 </tr>
               </thead>
               <tbody className="text-zinc-700 dark:text-zinc-300">
-                {EXPEDITION_DIFFICULTIES.map((d) => {
-                  const h = EXPEDITION_DIFFICULTY_HOURS[d] as 2 | 4 | 8 | 12;
-                  const sc = EXPEDITION_DURATION_SCALE[h];
-                  const f = (n: number) => Math.max(1, Math.round(n * sc));
-                  const a = EXPEDITION_BASE_AMOUNTS;
-                  const [x0, x1] = EXPEDITION_XP_RANGE_BY_HOURS[h];
-                  return (
-                    <tr key={d}>
-                      <td className="py-1 text-left font-bold">{HOUR_MOON[h]} {h}h</td>
-                      <td className="py-1">📦{f(a.boxOnly.boxMin)}~{f(a.boxOnly.boxMax)}</td>
-                      <td className="py-1">💎{f(a.diamondOnly.diaMin)}~{f(a.diamondOnly.diaMax)}</td>
-                      <td className="py-1">📦{f(a.both.boxMin)}~{f(a.both.boxMax)} + 💎{f(a.both.diaMin)}~{f(a.both.diaMax)}</td>
-                      <td className="py-1">{x0}~{x1}</td>
-                    </tr>
-                  );
-                })}
+                <tr>
+                  <td className="py-1.5 text-left font-bold">확률</td>
+                  <td className="py-1.5">{EXPEDITION_MAIN_ROLL_BP.boxOnly / 100}%</td>
+                  <td className="py-1.5">{EXPEDITION_MAIN_ROLL_BP.diamondOnly / 100}%</td>
+                  <td className="py-1.5">{EXPEDITION_MAIN_ROLL_BP.both / 100}%</td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 text-left font-bold">수량</td>
+                  <td className="py-1.5">📦{EXPEDITION_BASE_AMOUNTS.boxOnly.boxMin}~{EXPEDITION_BASE_AMOUNTS.boxOnly.boxMax}</td>
+                  <td className="py-1.5">💎{EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMin}~{EXPEDITION_BASE_AMOUNTS.diamondOnly.diaMax}</td>
+                  <td className="py-1.5">
+                    📦{EXPEDITION_BASE_AMOUNTS.both.boxMin}~{EXPEDITION_BASE_AMOUNTS.both.boxMax} + 💎{EXPEDITION_BASE_AMOUNTS.both.diaMin}~{EXPEDITION_BASE_AMOUNTS.both.diaMax}
+                  </td>
+                </tr>
               </tbody>
             </table>
             <p className="mt-1 text-center text-[9.5px] text-zinc-400">배율(아바타 강화 합·지역 시너지) 적용 전 기본값 · 대성공 시 상자·다이아 2배</p>
-            {/* 내 대성공 계산 한 줄 — 표는 레벨분만(2026-08-31). */}
             <p className="mt-2 text-center text-[10.5px] tabular-nums text-zinc-500 dark:text-zinc-400">
-              파견 레벨 대성공 {(expeditionCritBp(board.level) / 100).toFixed(1)}% + 합산 강화 보너스{' '}
-              {((board.critBp - expeditionCritBp(board.level)) / 100).toFixed(1)}% = 현재 대성공 확률{' '}
+              대성공 기본 {(EXPEDITION_CRIT_BP / 100).toFixed(1)}% + 합산 강화 보너스 {((board.critBp - EXPEDITION_CRIT_BP) / 100).toFixed(1)}%
+              (1,000당 +1%p, 최대 +{EXPEDITION_CRIT_SUM_BP_MAX / 100}%p) = 현재{' '}
               <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
             </p>
           </ModalLayout>
@@ -548,7 +501,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="파견 귀환"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> · {claimPopup.hours}시간 원정대가 돌아왔습니다
+                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 원정대가 돌아왔습니다
               </>
             }
             bodyPad="sm"
@@ -596,8 +549,8 @@ const nowMs = () => serverNow();
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-/** 시간 → 몬스터 단계(t1~t4). */
-const MON_TIER: Record<number, number> = { 2: 1, 4: 2, 8: 3, 12: 4, 24: 4 };
+/** 슬롯 → 몬스터 단계(t1~t4) — 시간 타입이 없어져(단일 8h) 위협도는 슬롯 번호(합산 강화 해금 순)로 표현. */
+const monTierOf = (slot: number) => Math.min(4, Math.max(1, slot));
 /** 미배정 실루엣 — 기본 남 스프라이트(흑백·30%). */
 const GHOST_SRC = '/sprites/default/male/south.png';
 /** 글자 스트로크(R2) — 밝은 배경에서도 흰 글자 대비 유지. */
@@ -612,6 +565,7 @@ const STROKE: React.CSSProperties = { textShadow: '0 0 3px #000, 0 0 6px #000, 0
 function CardBody({
   region,
   hours,
+  monTier,
   avatarSouth,
   reward,
   status,
@@ -628,6 +582,8 @@ function CardBody({
 }: {
   region: ExpeditionRegion;
   hours: number;
+  /** 몬스터 단계(슬롯 번호 1~4). */
+  monTier: number;
   avatarSouth: string | null;
   reward: ExpeditionReward | undefined;
   /** 중앙 하단 작은 상태 — '파견 대기' / 타이머 / '파견 완료'. */
@@ -672,14 +628,11 @@ function CardBody({
       {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
       {hideHeader ? null : (
         <div className="relative flex h-10 items-center justify-center gap-2 px-2.5">
-          <span className="text-[10px] font-extrabold text-white" style={STROKE}>
-            {HOUR_MOON[hours] ?? '🌑'} {hours}시간
-          </span>
           <b className="truncate text-[12.5px] font-black" style={{ color: ui.color, ...STROKE }}>
             {ui.label}
           </b>
           <span className="text-[10px] font-extrabold text-zinc-200" style={STROKE}>
-            +{reward?.xp ?? expeditionXpForHours(hours)} XP
+            {hours}시간
           </span>
         </div>
       )}
@@ -702,7 +655,7 @@ function CardBody({
         <span className={`flex flex-1 items-center justify-center ${hideHeader ? '' : 'pb-2'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={assetUrl(`/sprites/expedition/mon/${region}-t${MON_TIER[hours] ?? 1}.png`)}
+            src={assetUrl(`/sprites/expedition/mon/${region}-t${monTierOf(monTier)}.png`)}
             alt=""
             decoding="async"
             className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${mutedMon ? 'grayscale' : ''}`}
@@ -780,7 +733,7 @@ function halfReward(r: ExpeditionReward): ExpeditionReward {
   const h = (v: number | undefined) => (v == null ? v : Math.round(v / EXPEDITION_CRIT_MULT));
   return { ...r, diamond: h(r.diamond), boxes: r.boxes ? { weapon: h(r.boxes.weapon) ?? 0, armor: h(r.boxes.armor) ?? 0, accessory: h(r.boxes.accessory) ?? 0 } : r.boxes };
 }
-/** C3 — 항상 5칸(💎 · 📦무기 · 📦방어구 · 📦장신구 · ✦XP), 미획득은 ×0(흐리게). 하단에 '기본 × 배율(× 대성공)' 계산줄. */
+/** C3 — 항상 4칸(💎 · 📦무기 · 📦방어구 · 📦장신구), 미획득은 ×0(흐리게). 하단에 '기본 × 배율(× 대성공)' 계산줄. */
 function ClaimItems({ popup }: { popup: ClaimPopup }) {
   // 대성공 2단 공개(2026-08-30) — 먼저 일반 획득량(최종의 절반)이 올라가고, 잠시 뒤 황금 섬광과 함께
   // 칸이 튀며 수량이 2배로 이어서 올라간다(도장 라벨은 2026-08-30 삭제). 대성공이 아니면 1단만.
@@ -797,7 +750,6 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
     { icon: '⚔️', value: half(b?.weapon ?? 0), label: '무기', bump: popup.crit && revealed && (b?.weapon ?? 0) > 0 },
     { icon: '🛡️', value: half(b?.armor ?? 0), label: '방어구', bump: popup.crit && revealed && (b?.armor ?? 0) > 0 },
     { icon: '💍', value: half(b?.accessory ?? 0), label: '장신구', bump: popup.crit && revealed && (b?.accessory ?? 0) > 0 },
-    { icon: '✦', value: popup.xpGained, label: popup.levelUp ? `Lv.${popup.level} 달성!` : `파견 Lv.${popup.level}`, gold: popup.levelUp, prefix: '+' },
   ];
   const base = popup.baseReward ? rewardShort(popup.baseReward) : null;
   return (
@@ -808,7 +760,7 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
 @keyframes exp-stamp{0%{opacity:0;transform:scale(2.2) rotate(-8deg)}55%{opacity:1;transform:scale(.92) rotate(-8deg)}100%{opacity:1;transform:scale(1) rotate(-8deg)}}.exp-stamp{animation:exp-stamp .45s cubic-bezier(.2,.9,.3,1.3) forwards}
 @media(prefers-reduced-motion:reduce){.exp-pop,.exp-bump,.exp-stamp{opacity:1;animation:none}.exp-flash{display:none}}`}</style>
       <div className="relative">
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {cells.map((c, i) => (
             <ClaimCell key={c.label} icon={c.icon} value={c.value} label={c.label} delayMs={revealed && popup.crit ? 0 : 120 + i * 110} gold={c.gold} prefix={c.prefix} dim={c.value === 0} bump={c.bump} />
           ))}
@@ -875,11 +827,11 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} hours={hours} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+        <CardBody region={region} hours={hours} monTier={s.slot} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
+        <CardBody region={region} hours={hours} monTier={s.slot} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
       ) : (
         <Ticker>
           {(now) => {
@@ -891,6 +843,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
               <CardBody
                 region={region}
                 hours={hours}
+                monTier={s.slot}
                 avatarSouth={s.avatarSouth ?? null}
                 reward={s.reward}
                 status={done ? '파견 완료' : <span className="tabular-nums">파견 완료까지 {fmtRemain(remain)}</span>}

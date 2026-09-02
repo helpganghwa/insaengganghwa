@@ -24,7 +24,7 @@ describe('expedition — 아바타 강화 합 배율(§3.3)', () => {
     }
   });
 
-  it('배율 합산 — 시너지+레벨+강화 합이 bp로 더해져 수량에만 적용', () => {
+  it('배율 합산 — bp 합이 수량에만 적용(가중 강화 합 배율 하나가 실질, 임의 bp 가산도 선형)', () => {
     const r = applyMultiplier({ kind: 'dia', diamond: 100 }, 1000 + 500 + asBonusBp(1000));
     // 1 + 0.10 + 0.05 + 2.20 = 3.35
     expect(r.diamond).toBe(335);

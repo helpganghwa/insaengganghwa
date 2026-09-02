@@ -731,76 +731,21 @@ export const EXPEDITION_REGIONS: readonly ExpeditionRegion[] = [
   'swamp', 'orc', 'kingdom', 'temple', 'volcano', 'angel',
 ] as const;
 
-/** 난이도 4종 = 시간 통합(A′) — 미션 롤이 (지역 × 난이도)로 뜬다. 1h 옵션은 폐지. */
-export type ExpeditionDifficulty = 'easy' | 'normal' | 'hard' | 'grand';
-export const EXPEDITION_DIFFICULTIES: readonly ExpeditionDifficulty[] = ['easy', 'normal', 'hard', 'grand'] as const;
-export const EXPEDITION_DIFFICULTY_HOURS: Record<ExpeditionDifficulty, number> = {
-  // 2026-09-01 슬롯당 하루 1회 전환과 함께 4/8/12/24 → 2/4/8/12(사용자 확정). 하루 1회 체제에서 24h는
-  // "매일 같은 시각에만" 보내게 만드는 강제라 상한을 12h로 낮춰 아침 출발·저녁 귀환·다음 날 자유 재파견이 되게 한다.
-  easy: 2, normal: 4, hard: 8, grand: 12,
-};
-export const EXPEDITION_DIFFICULTY_LABEL: Record<ExpeditionDifficulty, string> = {
-  easy: '쉬움', normal: '보통', hard: '어려움', grand: '원정',
-};
-export const EXPEDITION_DURATIONS_H = [2, 4, 8, 12] as const;
-export type ExpeditionDurationH = (typeof EXPEDITION_DURATIONS_H)[number];
-
 /**
- * 본상 수량 스케일 — **슬롯당 하루 1회**(2026-09-01, 투표 26:12) 체제의 1회분. 종전(무제한)에서 슬롯당
- * 하루 상한이 ≈3.4유닛(24h 1회 ≈ 4h 6회)이었으므로, 한 번에 그 총량을 준다(약속: "보상은 기존 풀가동 수준").
- * 완만 경사: 원정(12h)이 +27% 우대 — 균일이면 "빨리 돌아오는 2h가 무조건 유리"라 원정 오퍼가 기피되는 역전을 막는다.
- * **B 완충(2026-08-31 실측 후 확정)**: 상한 3.4의 82%. 오픈일 실측에서 78%가 하루 1회만 보내(실현 0.87유닛/일) 상한 그대로면
- * 실현 유입이 4배로 뛰어 완충. 1주 실측 후 재조정 전제(BALANCE §11.4 시즌 리밸런싱).
+ * 파견 시간 — **단일 8시간**. 슬롯당 하루 1회 체제에서 시간은 선택지가 아니라 귀환 시각일 뿐이라
+ * 시간 타입(2/4/8/12h)과 그에 딸린 스케일·난이도 출현·파견 레벨을 모두 없앴다(2026-09-03 간소화).
+ * 8h인 이유: 출발 피크(0시·7시·11시·16시)의 귀환이 같은 날 안에 떨어지고 귀환 푸시 1회로 두 번째 접속을 만든다.
+ * 12h는 저녁 출발분이 새벽 귀환, 2·4h는 "빨리 다시 와야 하는" 숙제가 된다.
  */
-export const EXPEDITION_DURATION_SCALE: Record<ExpeditionDurationH, number> = {
-  2: 2.2, 4: 2.4, 8: 2.6, 12: 2.8,
-};
+export const EXPEDITION_HOURS = 8;
+export const EXPEDITION_DURATION_MS = EXPEDITION_HOURS * 3_600_000;
 
-/**
- * 완료 XP — 유닛 비례(스케일×7, 정수): 2h 20 · 4h 21 · 8h 22 · 12h 24. 종전 "XP=시간"은 하루 1회 체제에서
- * 2h 유저의 레벨링을 6배 늦춘다(Lv.50까지 3년). 유닛 비례면 3슬롯 하루 60~72XP → Lv.50(4,550XP) ≈ 65~76일로
- * 종전 페이스 유지. 표에 없는 시간(배포 전 진행분 24h 등)은 원정 XP로 폴백.
- */
-export const EXPEDITION_XP_BY_HOURS: Record<ExpeditionDurationH, number> = { 2: 20, 4: 21, 8: 22, 12: 24 };
 /**
  * 슬롯당 하루 1회 규칙의 **적용 시작 시각**(2026-09-01 10:29:30 KST 배포 완료 시점 — 사용자 확정). 이 시각 전에 출발한 파견(구 규칙 무제한)은
  * 그날 횟수에 세지 않고 '오늘 완료' 카드로도 남기지 않는다 — 전환일에 "아침에 보낸 파견 때문에 못 보냄" 방지(사용자 확정).
- * 배포가 밀리면 이 값을 실제 배포 시각으로 맞춘다. 이후엔 무해한 상수.
+ * 이후엔 무해한 상수.
  */
 export const EXPEDITION_DAILY_LIMIT_SINCE_ISO = '2026-09-01T01:29:30.000Z';
-/**
- * XP 범위(2026-09-01 사용자 확정 A안) — **오퍼가 열릴 때** 균등 롤해 카드에 확정 표기(보상과 같은 원칙: 수령 시
- * 추첨은 대성공뿐, 대성공은 XP에 적용하지 않음). 평균은 EXPEDITION_XP_BY_HOURS와 같고 폭은 ±2로 구간 신호 유지.
- * 확률공시(§33)에 구간·균등 명시.
- */
-export const EXPEDITION_XP_RANGE_BY_HOURS: Record<ExpeditionDurationH, readonly [number, number]> = {
-  2: [18, 22], 4: [19, 23], 8: [20, 24], 12: [22, 26],
-};
-/** 표에 없는 시간(배포 전 진행분 등)·xp 미기록 행의 폴백 = 평균. */
-export function expeditionXpForHours(hours: number): number {
-  return (EXPEDITION_XP_BY_HOURS as Record<number, number>)[hours] ?? EXPEDITION_XP_BY_HOURS[12];
-}
-
-/**
- * 난이도 출현 분포(bp, 합 10000) — **파견 레벨 구간별**(2026-08-25 사용자 확정: 레벨이 오를수록
- * 고난이도·고효율 미션 출현↑ = 성장 체감). minLevel 내림차순 첫 매치 구간 사용.
- * 원정(12h)은 Lv.0부터 15%(2026-08-30 10%→15%; 2026-09-01 하루 1회 전환 후에도 유지 — 원정이 1회분 최고 유닛이라
- * 새로고침으로 원정을 낚는 것이 하루 1회 체제의 핵심 선택이 된다).
- * 종전 Lv.5 게이트(신규 보호)는 폐지(1칸이 무료라도 무강화 보상은 ×1.00 바닥값이라 보호가 필요 없다).
- */
-export const EXPEDITION_DIFFICULTY_DIST_BP: readonly {
-  minLevel: number;
-  dist: Record<ExpeditionDifficulty, number>;
-}[] = [
-  { minLevel: 30, dist: { easy: 1500, normal: 3000, hard: 3000, grand: 2500 } },
-  { minLevel: 15, dist: { easy: 2500, normal: 3500, hard: 2500, grand: 1500 } },
-  { minLevel: 5, dist: { easy: 3000, normal: 3500, hard: 2000, grand: 1500 } },
-  { minLevel: 0, dist: { easy: 4000, normal: 3000, hard: 1500, grand: 1500 } },
-] as const;
-export function expeditionDifficultyDist(level: number): Record<ExpeditionDifficulty, number> {
-  for (const b of EXPEDITION_DIFFICULTY_DIST_BP) if (level >= b.minLevel) return b.dist;
-  return EXPEDITION_DIFFICULTY_DIST_BP[EXPEDITION_DIFFICULTY_DIST_BP.length - 1]!.dist;
-}
 
 /**
  * 슬롯 해금(2026-08-28 개편) — **계정 합산 강화**(보유 장비 enhance_level 합, 리더보드 'sum'과 동일 정의)
@@ -833,18 +778,15 @@ export const EXPEDITION_REFRESH_COST = 20;
 export const EXPEDITION_MAIN_ROLL_BP = { boxOnly: 5500, diamondOnly: 2000, both: 2500 } as const;
 
 /**
- * 본상 수량(8h 기준·배율 적용 전) — min~max 균등.
- * 다이아는 출시 기준 하루 최대 기대 ≈500💎(사용자 확정 2026-08-25 — 파견을 주 수급처로).
- * 이론 최대(Lv.50+풀시너지)는 ~900💎/일 — 도달 시점 시즌 리밸런싱 전제(BALANCE §11.4).
+ * 본상 수량(파견 1회분·배율 적용 전) — min~max 균등. 시간 스케일 없음(단일 8h).
+ * 세 분기의 기대가치는 상자 1개 = 25💎(견습의 주머니 일간 300/12) 기준으로 정렬: 상자만 9×25=225 · 다이아만 220 · 둘 다 6.5×25+42.5=205.
+ * 종전 시간별 스케일(2.2~2.8)의 실제 출발 가중 평균 2.48을 1회분에 접어 넣은 값(2026-09-03) — 유입 총량 중립.
+ * 무강화 1슬롯 하루 기대 ≈ 💎57 · 📦8, 4슬롯 ≈ 💎229. 여기에 아바타 강화 합 배율(§3.3)이 곱해진다.
  */
 export const EXPEDITION_BASE_AMOUNTS = {
-  // 2026-08-27 ×0.6 재조정 — 성장축 ③(필요 강화 합, 상한 없음)이 얹히므로 기본값을 낮춘다.
-  // 무강화 유저 ≈ 종전의 60%, 합 1,000 ≈ 114%, 합 2,000 ≈ 155%(EXPEDITION §3.3).
-  // 2026-08-31 다이아 기본치 하향 — 상자 1개 = 25💎(견습의 주머니 일간 300/12) 기준으로 세 분기 기대가치를 정렬.
-  // 종전 72~144는 ≈31💎/📦 가정이라 '다이아만' 카드만 20~30% 후했다. 상자만 3.5개 × 25 = 87.5 = 다이아만 평균(60~115).
-  boxOnly: { boxMin: 3, boxMax: 4 },
-  diamondOnly: { diaMin: 60, diaMax: 115 },
-  both: { boxMin: 2, boxMax: 3, diaMin: 10, diaMax: 24 },
+  boxOnly: { boxMin: 8, boxMax: 10 },
+  diamondOnly: { diaMin: 150, diaMax: 290 },
+  both: { boxMin: 5, boxMax: 8, diaMin: 25, diaMax: 60 },
 } as const;
 
 /* ── 성장축 ③ 아바타 강화 합(EXPEDITION §3.3, 2026-08-27 사용자 확정 — 전투력 아닌 강화 합, 권장치·최소치 없음, 상한 없음) ── */
@@ -860,32 +802,19 @@ export function expeditionAsBonusBp(avatarSum: number): number {
   return Math.round(EXPEDITION_AS_MULT_COEF * Math.pow(avatarSum / 1000, EXPEDITION_AS_MULT_EXP) * 10000);
 }
 
-/** 대성공 — **수령 시** 기본 5% 확률로 확정 보상 수량 2배(2026-08-31 10%→5%: 합산 강화 가산 도입과 함께 하향). */
+/** 대성공 — **수령 시** 기본 5% 확률로 확정 보상 수량 2배. */
 export const EXPEDITION_CRIT_BP = 500;
 /**
- * 파견 레벨 → 대성공 확률 가산: 레벨당 +0.1%p, Lv.50 = +5%p. 레벨은 보상 배율에서 빠지고
- * (배율 축 = 아바타 강화 합·지역 시너지 둘뿐) 슬롯 해금·난이도 출현·대성공 확률만 맡는다.
- */
-export const EXPEDITION_CRIT_BP_PER_LEVEL = 10;
-/**
- * 계정 합산 강화 → 대성공 가산(2026-08-31 사용자 확정): 합산 1,000당 +1%p(= 합산/10 bp), 상한 +20%p(합산 20,000).
- * 강화가 파견의 질(대성공)로도 이어지는 매출 연결 축 — 현재 최고 합산 12,439 = +12.4%p.
- * 총 상한 = 5% + 5%p(레벨) + 20%p(합산) = 30%.
+ * 계정 합산 강화 → 대성공 가산: 합산 1,000당 +1%p(= 합산/10 bp), 상한 +20%p(합산 20,000).
+ * 강화가 파견의 질(대성공)로도 이어지는 매출 연결 축. 총 상한 = 5% + 20%p = 25%.
+ * 파견 레벨(레벨당 +0.1%p)은 2026-09-03 간소화로 폐지 — 성장축은 합산 강화 하나.
  */
 export const EXPEDITION_CRIT_SUM_BP_MAX = 2000;
-export function expeditionCritBp(level: number, enhanceSum = 0): number {
-  const lv = Math.min(Math.max(0, level), EXPEDITION_LEVEL_MAX) * EXPEDITION_CRIT_BP_PER_LEVEL;
+export function expeditionCritBp(enhanceSum: number): number {
   const sum = Math.min(EXPEDITION_CRIT_SUM_BP_MAX, Math.floor(Math.max(0, enhanceSum) / 10));
-  return EXPEDITION_CRIT_BP + lv + sum;
+  return EXPEDITION_CRIT_BP + sum;
 }
 export const EXPEDITION_CRIT_MULT = 2;
-
-/** 파견 레벨 — 완료 XP = 시간(h). 상한 Lv.50. 보상 배율 없음(2026-08-27) — 슬롯 해금·난이도 출현·대성공 확률 전용. */
-export const EXPEDITION_LEVEL_MAX = 50;
-/** 레벨 ℓ → ℓ+1 필요 XP — 선형 증가. 누적 Lv.50 = 4,550 XP(3슬롯 하루 1회 60~72XP 기준 ≈65~76일). */
-export function expeditionXpToNext(level: number): number {
-  return 30 + Math.floor((level * 5) / 2);
-}
 
 /**
  * 아바타 지역 시너지(본상 기대값 배율, bp) — 활성 아바타 장비 스냅샷 3종 기준.

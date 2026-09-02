@@ -1,7 +1,7 @@
 /**
  * 파견 '귀환 완료' 푸시 — push-enhance-ready의 원자 클레임 패턴 미러(EXPEDITION.md A′).
  *
- * 5분 주기(파견 최소 단위 4h — 분 단위 즉시성 불필요). UPDATE...RETURNING으로 push_sent=true
+ * 5분 주기(파견은 단일 8h — 분 단위 즉시성 불필요). UPDATE...RETURNING으로 push_sent=true
  * 선마킹한 행만 발송(멱등·재발송 없음 — 1회 누락 < N회 폭격). FOR UPDATE SKIP LOCKED로
  * 동시 실행 안전. 같은 실행 창의 귀환은 유저별 1건으로 묶는다. push_expedition 토글(0181).
  */

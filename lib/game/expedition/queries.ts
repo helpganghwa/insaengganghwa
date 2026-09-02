@@ -9,8 +9,6 @@ import {
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
   EXPEDITION_SLOTS,
-  expeditionXpToNext,
-  type ExpeditionDifficulty,
   type ExpeditionRegion,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
 } from '@/lib/game/balance';
@@ -27,7 +25,7 @@ export type ExpeditionBoardSlot = {
   unlock?: { enhanceSum: number };
   /** offer/running 공통 — 미션 내용(오퍼=기본 보상, 진행=최종 확정 보상). */
   region?: ExpeditionRegion;
-  difficulty?: ExpeditionDifficulty;
+  /** 소요 시간(duration_ms 스냅샷) — 신규는 항상 EXPEDITION_HOURS, 시간 타입 시절 진행분은 2/4/12. */
   hours?: number;
   reward?: ExpeditionReward;
   /** running 전용. */
@@ -59,10 +57,7 @@ export type ExpeditionAvatar = {
 };
 
 export type ExpeditionBoard = {
-  level: number;
-  xp: number;
-  xpNext: number;
-  /** 현재 레벨의 대성공 확률(bp) — 헤더 표시. */
+  /** 현재 대성공 확률(bp, 기본 5% + 합산 강화 가산) — 헤더 표시. */
   critBp: number;
   /** 보유 아바타 강화 합 최댓값 — 안내용. */
   baseSum: number;
@@ -81,18 +76,11 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
   const today = kstDateString();
   const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, earnedRows, doneRows] = await Promise.all([
     db.execute(sql`
-      select level, xp::text, slots_purchased, starts_kst_day::text, starts_today,
-             refresh_kst_day::text, refresh_today
+      select refresh_kst_day::text, refresh_today
       from expedition_state where user_id = ${userId}::uuid and server_id = ${serverId}
-    `) as unknown as Promise<
-      {
-        level: number; xp: string; slots_purchased: number;
-        starts_kst_day: string | null; starts_today: number;
-        refresh_kst_day: string | null; refresh_today: number;
-      }[]
-    >,
+    `) as unknown as Promise<{ refresh_kst_day: string | null; refresh_today: number }[]>,
     db.execute(sql`
-      select slot, status, region, difficulty, duration_ms::text, reward, final_reward,
+      select slot, status, region, duration_ms::text, reward, final_reward,
              complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text,
              (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
               and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as started_today
@@ -101,8 +89,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       order by slot
     `) as unknown as Promise<
       {
-        slot: number; status: 'offer' | 'running'; region: ExpeditionRegion;
-        difficulty: ExpeditionDifficulty; duration_ms: string;
+        slot: number; status: 'offer' | 'running'; region: ExpeditionRegion; duration_ms: string;
         reward: ExpeditionReward; final_reward: ExpeditionReward | null;
         complete_at: string | Date | null; synergy_bp: number; req_bonus_bp: number;
         avatar_profile_id: string | null; started_today: boolean | null;
@@ -144,7 +131,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     `) as unknown as Promise<{ dia: number; boxes: number }[]>,
     // 오늘(KST) 출발해 수령까지 마친 파견 — 슬롯당 하루 1회의 "오늘 완료" 카드(슬롯당 최신 1건).
     db.execute(sql`
-      select distinct on (slot) slot, region, difficulty, duration_ms::text, final_reward, reward, crit,
+      select distinct on (slot) slot, region, duration_ms::text, final_reward, reward, crit,
              avatar_profile_id::text, claimed_at
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'claimed'
@@ -153,7 +140,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       order by slot, claimed_at desc
     `) as unknown as Promise<
       {
-        slot: number; region: ExpeditionRegion; difficulty: ExpeditionDifficulty; duration_ms: string;
+        slot: number; region: ExpeditionRegion; duration_ms: string;
         final_reward: ExpeditionReward | null; reward: ExpeditionReward; crit: boolean | null;
         avatar_profile_id: string | null; claimed_at: string | Date | null;
       }[]
@@ -163,10 +150,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
   const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
   const sumOf = (snapshot: unknown) => avatarEnhanceSum(snapshot, levelByKey);
   const baseSum = avatarRows.reduce((m, a) => Math.max(m, sumOf(a.equipment_snapshot)), 0);
-  const st = stateRows[0] ?? {
-    level: 0, xp: '0', slots_purchased: 1,
-    starts_kst_day: null, starts_today: 0, refresh_kst_day: null, refresh_today: 0,
-  };
+  const st = stateRows[0] ?? { refresh_kst_day: null, refresh_today: 0 };
   const eff = effectiveSlots(enhanceSum);
   const activeId = activeProfile[0]?.id ?? null;
   // 얼굴 썸네일 우선 — 기본 스프라이트는 public 정적 face.png로 매핑(채팅 displayFields와 동일 규칙).
@@ -194,7 +178,6 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
           state: 'done',
           startedToday: true,
           region: d.region,
-          difficulty: d.difficulty,
           hours: Math.round(Number(d.duration_ms) / 3_600_000),
           reward: d.crit ? applyCrit(base) : base,
           avatarId: d.avatar_profile_id,
@@ -206,14 +189,13 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     }
     const hours = Math.round(Number(row.duration_ms) / 3_600_000);
     if (row.status === 'offer') {
-      slots.push({ slot, state: 'offer', region: row.region, difficulty: row.difficulty, hours, reward: row.reward });
+      slots.push({ slot, state: 'offer', region: row.region, hours, reward: row.reward });
     } else {
       slots.push({
         slot,
         state: 'running',
         startedToday: !!row.started_today,
         region: row.region,
-        difficulty: row.difficulty,
         hours,
         reward: row.final_reward ?? row.reward,
         baseReward: row.reward,
@@ -229,10 +211,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
 
   const refreshToday = st.refresh_kst_day === today ? st.refresh_today : 0;
   return {
-    level: st.level,
-    xp: Number(st.xp),
-    xpNext: expeditionXpToNext(st.level),
-    critBp: critBp(st.level, enhanceSum),
+    critBp: critBp(enhanceSum),
     baseSum,
     enhanceSum,
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
