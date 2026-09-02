@@ -17,6 +17,11 @@ describe('findPastContextZoneKeys — 과거 회고 문장의 구역 마커는 �
     expect(names((k) => deferred.has(k))).toEqual(['잿더미 폐허', '불탄 마을']); // 첫 문장(어제)만
     expect(names((k) => !deferred.has(k))).toEqual(['잿더미 폐허', '흑요석 보루', '재의 길목', '포자 습지']); // 둘째 문장 이후는 트리거 유지
   });
+  it('문단이 "어제 …"로 시작해도 회고 마커를 건너뛴다(문장 시작 off-by-one 회귀)', () => {
+    const paras = ['어제 {z|잿더미 폐허|3}를 잃었던 {g|왕실|25}이 오늘 되찾았다. {g|왕실|25}이 {z|잿더미 폐허|3}를 차지했다.'].map((p) => parseChronicleSegments(p));
+    const deferred = findPastContextZoneKeys(paras);
+    expect(deferred.size).toBe(1); // 첫 문장(어제)의 마커만
+  });
   it('회고 표현이 없으면 아무것도 건너뛰지 않는다', () => {
     const paras = ['{g|왕실|25}이 {z|포자 습지|23}를 차지했다. 경합에서 앞서 가져갔다.'].map((p) => parseChronicleSegments(p));
     expect(findPastContextZoneKeys(paras).size).toBe(0);

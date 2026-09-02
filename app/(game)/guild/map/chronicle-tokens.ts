@@ -106,7 +106,10 @@ export function findPastContextZoneKeys(paras: ChronicleSegment[][]): Set<string
     for (let s = 0; s < segs.length; s++) {
       const seg = segs[s]!;
       if (seg.kind === 'z') {
-        const sStart = Math.max(-2, ...ENDS.map((b) => full.lastIndexOf(b, off))) + 2;
+        // 문장 시작: 앞쪽 가장 가까운 경계 뒤. 경계가 없으면 문단 처음(0) — lastIndexOf 미발견(-1)에
+        // +2를 하면 1이 되어 문단이 "어제 …"로 시작할 때 첫 글자를 놓친다(2026-09-02 수정).
+        const starts = ENDS.map((b) => full.lastIndexOf(b, off)).filter((i) => i >= 0);
+        const sStart = starts.length ? Math.max(...starts) + 2 : 0;
         const after = off + seg.text.length;
         const ends = ENDS.map((b) => full.indexOf(b, after)).filter((i) => i >= 0);
         const sEnd = ends.length ? Math.min(...ends) + 1 : full.length;
