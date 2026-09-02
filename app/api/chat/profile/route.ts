@@ -13,7 +13,7 @@ import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { currentMeleeChampion } from '@/lib/game/chat/service';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
-import { resolveRepTitle } from '@/lib/game/titles/display';
+import { repTitleDays, resolveRepTitle } from '@/lib/game/titles/display';
 import { parseFaceBox } from '@/components/faceCrop';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
 
@@ -87,6 +87,8 @@ export async function GET(req: Request) {
   const repTitle = await resolveRepTitle(row.repTitleCode ?? null, uid, serverId, g?.executorZone ?? null).catch(
     () => null,
   );
+  // 1위 유지 일수(0185) — 랭킹 1위 칭호일 때만 값, 실패는 미표시.
+  const repDays = repTitle ? await repTitleDays(repTitle, uid, serverId).catch(() => null) : null;
   const combat = equip.reduce((acc, r) => acc + pieceCombatPower(r.e, r.t), 0);
   const maxEnhance = equip.reduce((acc, r) => Math.max(acc, r.mx), 0);
   const sumEnhance = equip.reduce((acc, r) => acc + r.e, 0);
@@ -102,6 +104,7 @@ export async function GET(req: Request) {
     executorZone: g?.executorZone ?? null,
     executorZoneRegion: g?.executorZoneRegion ?? null,
     repTitle,
+    repTitleDays: repDays,
     isMeleeChampion: uid === champion,
     raidKills: metrics.find((m) => m.metric === 'raid')?.value ?? 0,
     meleeWins: metrics.find((m) => m.metric === 'melee')?.value ?? 0,

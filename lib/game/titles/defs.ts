@@ -140,7 +140,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "조건부",
   style: {
-   fx: "staticazure",
+   fx: "noblesseflow",
    glow: true
   }
  },
@@ -5071,7 +5071,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "legendstatic",
+   fx: "legendflow",
    glow: true
   }
  },
@@ -5082,7 +5082,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "verdantstatic",
+   fx: "dominionflow",
    glow: true
   }
  },
@@ -5093,7 +5093,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "점령전",
   style: {
-   fx: "treasury",
+   fx: "treasuryflow",
    glow: true
   }
  },
@@ -5105,6 +5105,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "점령전",
   style: {
    fx: "solarcrown",
+   pt: "sun",
    glow: true
   }
  },

@@ -86,7 +86,7 @@
       "fx": "imperial"
     },
     "guild_top": {
-      "fx": "staticazure"
+      "fx": "noblesseflow"
     },
     "melee_champion": {
       "fx": "goldglow"
@@ -309,16 +309,17 @@
       "fx": "silk"
     },
     "guild_top_combat": {
-      "fx": "legendstatic"
+      "fx": "legendflow"
     },
     "guild_top_zones": {
-      "fx": "verdantstatic"
+      "fx": "dominionflow"
     },
     "guild_top_tax": {
-      "fx": "treasury"
+      "fx": "treasuryflow"
     },
     "guild_zones_25": {
-      "fx": "solarcrown"
+      "fx": "solarcrown",
+      "pt": "sun"
     },
     "guild_no_loss_7d": {
       "fx": "steelshine"

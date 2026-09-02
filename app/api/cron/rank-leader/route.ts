@@ -10,7 +10,7 @@
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron } from '@/lib/cron/heartbeat';
 import { openServerIds } from '@/lib/game/server-list';
-import { runRankingLeaders, runGuildLeaders } from '@/lib/game/world/event';
+import { runRankingLeaders, runGuildLeaders, runGuildLeaderSince } from '@/lib/game/world/event';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,6 +25,8 @@ export async function GET(req: Request) {
       try {
         const rankLeaders = await runRankingLeaders(sid);
         const guildLeaders = await runGuildLeaders(sid);
+        // 길드 1위 유지 추적(0185) — 실패해도 피드·시드는 진행(장식 데이터).
+        await runGuildLeaderSince(sid).catch((e) => console.warn('[rank-leader] guild since', sid, e));
         results.push({ serverId: sid, rankLeaders, guildLeaders });
       } catch (se) {
         console.error('[rank-leader] server', sid, se);

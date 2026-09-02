@@ -19,7 +19,7 @@ import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { TitleTag } from '@/components/TitleTag';
 import { PENDING_CODES, visibleTitleTotal } from '@/lib/game/titles/judge';
-import { resolveRepTitle } from '@/lib/game/titles/display';
+import { repTitleDays, resolveRepTitle } from '@/lib/game/titles/display';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
@@ -131,6 +131,8 @@ export default async function ProfilePage() {
         () => null,
       )
     : null;
+  // 1위 유지 일수(0185) — 랭킹 1위 칭호일 때만 값, 실패는 미표시.
+  const repDays = repTitle ? await repTitleDays(repTitle, userId, serverId).catch(() => null) : null;
   const libRanks = _r?.[1] ?? new Map<number, number>();
   const catMap = _r?.[2] ?? new Map();
 
@@ -222,7 +224,7 @@ export default async function ProfilePage() {
               {repTitle && row?.guild_name ? (
                 <span className="shrink-0 text-white/30">·</span>
               ) : null}
-              <TitleTag code={repTitle} executorZone={row?.executor_zone} executorZoneRegion={row?.executor_zone_region} />
+              <TitleTag code={repTitle} days={repDays} executorZone={row?.executor_zone} executorZoneRegion={row?.executor_zone_region} />
             </div>
           ) : null}
         </div>

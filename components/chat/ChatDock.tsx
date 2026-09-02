@@ -24,6 +24,7 @@ const EMPTY_CHAT_USER_META: ChatUserMeta = {
   executorZone: null,
   executorZoneRegion: null,
   repTitle: null,
+  repTitleDays: null,
   isMeleeChampion: false,
 };
 import type { WorldEventEntry } from '@/lib/game/world/event';
@@ -146,6 +147,7 @@ type MiniProfile = {
   executorZone: string | null;
   executorZoneRegion: string | null;
   repTitle: string | null;
+  repTitleDays: number | null;
   isMeleeChampion: boolean;
   combat: number;
   maxEnhance: number;
@@ -175,6 +177,7 @@ function sysToMsg(e: WorldEventEntry): ChatMessageDto {
     executorZone: null,
     executorZoneRegion: null,
     repTitle: null,
+    repTitleDays: null,
     isMeleeChampion: false,
     mentions: null,
     sys: e,
@@ -1350,6 +1353,7 @@ export function ChatDock() {
       executorZone: mine?.executorZone ?? null,
       executorZoneRegion: mine?.executorZoneRegion ?? null,
       repTitle: mine?.repTitle ?? null,
+      repTitleDays: mine?.repTitleDays ?? null,
       isMeleeChampion: mine?.isMeleeChampion ?? false,
       mentions: null,
       body,
@@ -1865,6 +1869,7 @@ export function ChatDock() {
                   ) : null}
                   <TitleTag
                     code={profile.data.repTitle}
+                    days={profile.data.repTitleDays}
                     executorZone={profile.data.executorZone}
                     executorZoneRegion={profile.data.executorZoneRegion}
                   />

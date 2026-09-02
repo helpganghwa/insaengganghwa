@@ -67,6 +67,8 @@ export type WhisperDisplay = {
   executorZone: string | null;
   executorZoneRegion: string | null;
   repTitle: string | null;
+  /** 1위 유지 일수(0185) — 랭킹 1위 칭호일 때만. */
+  repTitleDays: number | null;
   isMeleeChampion: boolean;
 };
 
@@ -83,6 +85,7 @@ export function whisperDisplay(f: WhisperDisplay | undefined): WhisperDisplay {
     executorZone: f?.executorZone ?? null,
     executorZoneRegion: f?.executorZoneRegion ?? null,
     repTitle: f?.repTitle ?? null,
+    repTitleDays: f?.repTitleDays ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
   };
 }

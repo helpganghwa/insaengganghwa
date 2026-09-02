@@ -294,6 +294,7 @@ const FX_OG: Record<string, string> = {
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
   // 길드 칭호(2026-09-01)
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
+  noblesseflow: '#6ea8e0', legendflow: '#e05252', dominionflow: '#7fce8a', treasuryflow: '#f5d76e',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
   // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
@@ -428,4 +429,51 @@ export async function resolveRepTitlesBatch(
   }
 
   return out;
+}
+
+/* ── 1위 유지 일수(2026-09-03) — 랭킹 1위 칭호 옆 위첨자 “N일”. 개인 5종은 ranking_leaders.since,
+   길드 4종은 guild_rank_leaders.since(둘 다 rank-leader 15분 크론이 교체 시 리셋). 도입일부터 1일째. ── */
+const RANK_DAY_METRIC: Record<string, string> = { rank_max: 'max', rank_sum: 'sum', rank_combat: 'combat', rank_raid: 'raid', rank_melee: 'melee' };
+const GUILD_DAY_METRIC: Record<string, string> = { guild_top: 'rank', guild_top_combat: 'combat', guild_top_zones: 'zones', guild_top_tax: 'tax' };
+export const RANK_DAY_CODES: ReadonlySet<string> = new Set([...Object.keys(RANK_DAY_METRIC), ...Object.keys(GUILD_DAY_METRIC)]);
+
+/** 여러 유저의 "N일째" 일괄 — 표시 code가 1위 칭호인 유저만 대상. 실패는 호출부가 흡수(장식). */
+export async function repTitleDaysBatch(
+  entries: readonly { userId: string; code: string | null }[],
+  serverId: number,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const personal = entries.filter((e) => e.code && RANK_DAY_METRIC[e.code]);
+  const guild = entries.filter((e) => e.code && GUILD_DAY_METRIC[e.code]);
+  if (personal.length > 0) {
+    const rows = (await db.execute(sql`
+      select metric, user_id::text as user_id, (floor(extract(epoch from (now() - since)) / 86400) + 1)::int as days
+      from ranking_leaders where server_id = ${serverId}
+    `)) as unknown as { metric: string; user_id: string; days: number }[];
+    for (const e of personal) {
+      const r = rows.find((x) => x.metric === RANK_DAY_METRIC[e.code!] && x.user_id === e.userId);
+      if (r) out.set(e.userId, Math.max(1, Number(r.days)));
+    }
+  }
+  if (guild.length > 0) {
+    const ids = [...new Set(guild.map((e) => e.userId))];
+    const rows = (await db.execute(sql`
+      select grl.metric, gm.user_id::text as user_id, (floor(extract(epoch from (now() - grl.since)) / 86400) + 1)::int as days
+      from guild_rank_leaders grl
+      join guild_members gm on gm.guild_id = grl.guild_id and gm.server_id = grl.server_id
+      where grl.server_id = ${serverId} and gm.user_id in ${sql.raw(`(${ids.map((i) => `'${i}'::uuid`).join(',')})`)}
+    `)) as unknown as { metric: string; user_id: string; days: number }[];
+    for (const e of guild) {
+      const r = rows.find((x) => x.metric === GUILD_DAY_METRIC[e.code!] && x.user_id === e.userId);
+      if (r) out.set(e.userId, Math.max(1, Number(r.days)));
+    }
+  }
+  return out;
+}
+
+/** 단건 — 프로필·/me·채팅 미니프로필. 1위 칭호가 아니면 null. */
+export async function repTitleDays(code: string | null, userId: string, serverId: number): Promise<number | null> {
+  if (!code || !RANK_DAY_CODES.has(code)) return null;
+  const m = await repTitleDaysBatch([{ userId, code }], serverId);
+  return m.get(userId) ?? null;
 }

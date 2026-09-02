@@ -51,6 +51,24 @@ export const rankingLeaders = pgTable(
     /** 1위의 지표 값(0167) — 신기록 칭호의 "값 경신" 판정 근거. null=컬럼 도입 전 시드. */
     value: bigint('value', { mode: 'bigint' }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** 현재 1위가 된 시각(0185) — 유저 교체 시에만 리셋. 1위 칭호 위첨자 “N일”의 근거. */
+    since: timestamp('since', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.serverId, t.metric] })],
+);
+
+/**
+ * guild_rank_leaders(0185) — 길드 1위 추적(metric: rank=명가 level/xp · combat · zones · tax).
+ * rank-leader 크론이 15분마다 현재 1위를 upsert, 길드 교체 시 since 리셋. 길드 1위 칭호 위첨자 “N일”의 근거.
+ */
+export const guildRankLeaders = pgTable(
+  'guild_rank_leaders',
+  {
+    serverId: smallint('server_id').notNull(),
+    metric: text('metric').notNull(),
+    guildId: bigint('guild_id', { mode: 'bigint' }).notNull(),
+    since: timestamp('since', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.metric] })],
 );
