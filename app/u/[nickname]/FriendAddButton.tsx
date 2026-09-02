@@ -29,9 +29,12 @@ const ERR_MSG: Record<string, string> = {
 export function FriendAddButton({
   targetId,
   initialRelation,
+  capReached = false,
 }: {
   targetId: string;
   initialRelation: FriendRelation;
+  /** 내 친구 목록이 가득 참 — 요청도 수락도 성립할 수 없어 버튼 대신 안내(2026-09-03). */
+  capReached?: boolean;
 }) {
   const [relation, setRelation] = useState<FriendRelation>(initialRelation);
   const [err, setErr] = useState<string | null>(null);
@@ -66,6 +69,14 @@ export function FriendAddButton({
     return (
       <div className="flex w-full items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 text-sm font-semibold text-zinc-500">
         친구 요청됨
+      </div>
+    );
+  }
+
+  if (capReached) {
+    return (
+      <div className="flex w-full items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 text-sm font-semibold text-zinc-500">
+        친구 목록이 가득 찼어요 (최대 30명)
       </div>
     );
   }

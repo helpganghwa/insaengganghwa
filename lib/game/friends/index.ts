@@ -308,6 +308,9 @@ export async function sendRequest(
       return { status: 'accepted' };
     }
     if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+    // 상대가 가득 찼으면 요청 자체를 막는다(2026-09-03) — 종전엔 수락 시점에만 봐서 가득 찬 유저의
+    // 요청 탭에 수락 불가능한 요청이 쌓였다. 상대가 정리하기 전엔 어차피 성립할 수 없는 요청이다.
+    if ((await countAcceptedTx(tx, targetId, serverId)) >= FRIEND_CAP) throw new FriendError('PEER_CAP_REACHED');
     // 발신 pending 상한(전수 감사 2026-08-21) — 종전엔 무제한이라 한 계정이 요청을 대량
     // 살포해 타 유저의 요청 탭을 매몰시킬 수 있었다(수락 상한만 있었음).
     const [pend] = (await tx.execute(sql`

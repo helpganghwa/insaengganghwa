@@ -1,7 +1,7 @@
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { getFriends, getRequests, type FriendUser } from '@/lib/game/friends';
+import { FRIEND_CAP, getFriends, getRequests, type FriendUser } from '@/lib/game/friends';
 import { getGuildBriefsByUsers } from '@/lib/game/guild';
 
 import { FriendsTabs } from './FriendsTabs';
@@ -35,6 +35,7 @@ export default async function FriendsPage() {
   return (
     <FriendsTabs
       serverId={serverId}
+      cap={FRIEND_CAP}
       friends={friends.map(attach)}
       incoming={requests.incoming.map(attach)}
       outgoing={requests.outgoing.map(attach)}

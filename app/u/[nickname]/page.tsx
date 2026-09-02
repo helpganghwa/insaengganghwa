@@ -9,7 +9,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
-import { getFriendRelation, type FriendRelation } from '@/lib/game/friends';
+import { FRIEND_CAP, getFriendIds, getFriendRelation, type FriendRelation } from '@/lib/game/friends';
 import { getUserGuildBrief } from '@/lib/game/guild';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -361,10 +361,14 @@ export default async function PublicProfilePage({
   ).catch(() => null);
 
   let friendRelation: FriendRelation = 'none';
+  // 내 친구가 가득 찼는지(2026-09-03) — 가득 차면 '친구 추가'를 안내로 바꾼다(서버도 CAP_REACHED로 거부).
+  let friendCapReached = false;
   if (mode === 'other') {
-    friendRelation = await getFriendRelation(viewerId!, await getActiveServerId(), data.ownerId).catch(
-      () => 'none' as const,
-    );
+    const viewerServerId = await getActiveServerId();
+    [friendRelation, friendCapReached] = await Promise.all([
+      getFriendRelation(viewerId!, viewerServerId, data.ownerId).catch(() => 'none' as const),
+      getFriendIds(viewerId!, viewerServerId).then((ids) => ids.length >= FRIEND_CAP).catch(() => false),
+    ]);
   }
 
   return (
@@ -591,7 +595,7 @@ export default async function PublicProfilePage({
             />
             {/* 친구 추가 — 로그인+친구 아님일 때. friend면 렌더 안 함(요구사항). */}
             {friendRelation !== 'friend' ? (
-              <FriendAddButton targetId={data.ownerId} initialRelation={friendRelation} />
+              <FriendAddButton targetId={data.ownerId} initialRelation={friendRelation} capReached={friendCapReached} />
             ) : null}
             {canReport ? <ReportButton profileId={data.profileId!} /> : null}
           </>

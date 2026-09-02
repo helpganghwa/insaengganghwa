@@ -129,11 +129,14 @@ export function FriendsTabs({
   incoming: initIncoming,
   outgoing: initOutgoing,
   serverId,
+  cap,
 }: {
   friends: FriendUser[];
   incoming: FriendUser[];
   outgoing: FriendUser[];
   serverId: number;
+  /** 친구 상한(FRIEND_CAP) — server-only 모듈이라 페이지가 값으로 넘긴다. */
+  cap: number;
 }) {
   const router = useRouter(); // router.push(프로필 이동)용 — refresh는 §11.7로 제거됨
   const { showHeaderToast } = useResourceToast();
@@ -192,8 +195,12 @@ export function FriendsTabs({
     });
   };
 
+  // 가득 참(2026-09-03) — 요청 버튼을 안내로 바꾸고 send도 서버 왕복 없이 막는다(서버도 CAP_REACHED로 거부).
+  const full = friends.length >= cap;
+
   // 요청 보내기(검색) — 낙관적: none→outgoing, 목록에도 추가. 실패 시 복원.
   const send = (u: FriendUser) => {
+    if (full) return fail('CAP_REACHED');
     setRel(u.userId, 'outgoing');
     setOutgoing((p) => [u, ...p]);
     startTransition(async () => {
@@ -414,6 +421,11 @@ export function FriendsTabs({
                 검색
               </button>
             </div>
+            {full ? (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+                친구가 가득 찼어요 ({friends.length}/{cap}). 새 친구를 추가하려면 목록에서 정리해 주세요.
+              </p>
+            ) : null}
             {results === null ? (
               <Empty text="닉네임이나 코드로 친구를 찾아보세요." />
             ) : results.length === 0 ? (
@@ -441,6 +453,8 @@ export function FriendsTabs({
                         >
                           수락
                         </button>
+                      ) : full ? (
+                        <span className="text-[12px] font-medium text-zinc-400">가득 참</span>
                       ) : (
                         <button
                           type="button"
