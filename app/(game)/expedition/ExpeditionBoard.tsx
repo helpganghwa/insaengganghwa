@@ -286,10 +286,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           대성공 <b className="text-amber-600 dark:text-amber-400">{(board.critBp / 100).toFixed(1)}%</b>
           <span className="ml-0.5 text-zinc-400">›</span>
         </button>
-        <span className="h-3.5 w-px bg-zinc-300 dark:bg-zinc-700" />
-        <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-          슬롯마다 하루 한 번 · <b className="text-zinc-700 dark:text-zinc-200">{EXPEDITION_HOURS}시간</b>
-        </span>
 
         <button
           type="button"
@@ -330,7 +326,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
           >
             <CardBody
               region={assignFor.region}
-              hours={assignFor.hours ?? 0}
               monTier={monTierOf(assignFor.reward)}
               avatarSouth={selectedAv?.south ?? null}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
@@ -573,7 +568,6 @@ const STROKE: React.CSSProperties = { textShadow: '0 0 3px #000, 0 0 6px #000, 0
  */
 function CardBody({
   region,
-  hours,
   monTier,
   avatarSouth,
   reward,
@@ -590,7 +584,6 @@ function CardBody({
   children,
 }: {
   region: ExpeditionRegion;
-  hours: number;
   /** 몬스터 단계(1~4) — 기본 보상 크기(monTierOf). */
   monTier: number;
   avatarSouth: string | null;
@@ -633,16 +626,12 @@ function CardBody({
       <div className="pointer-events-none absolute inset-0 bg-black/50" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black/85 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/85 to-transparent" />
-      {/* 헤더 24px — 중앙 지역명 · 시간 칩(v12 롤백) */}
-      {/* 헤더 — 지역명·시간 중심 y=20 (보상 56 · 상태 92와 등간격 36px, v14) */}
+      {/* 헤더 — 지역명만, 중심 y=20 (보상 56 · 상태 92와 등간격 36px). 시간은 단일 8h라 카드에 표기하지 않는다(안내 팝업에만). */}
       {hideHeader ? null : (
-        <div className="relative flex h-10 items-center justify-center gap-2 px-2.5">
+        <div className="relative flex h-10 items-center justify-center px-2.5">
           <b className="truncate text-[12.5px] font-black" style={{ color: ui.color, ...STROKE }}>
             {ui.label}
           </b>
-          <span className="text-[10px] font-extrabold text-zinc-200" style={STROKE}>
-            {hours}시간
-          </span>
         </div>
       )}
       {/* 좌·우 열은 카드 전체 높이(헤더 침범 허용) — 배지 줄(24px)을 헤더 라인에 맞추고 그 아래 스프라이트를 크게 */}
@@ -836,11 +825,11 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} hours={hours} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+        <CardBody region={region} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} monTier={monTierOf(s.reward)} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
+        <CardBody region={region} monTier={monTierOf(s.reward)} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
       ) : (
         <Ticker>
           {(now) => {
@@ -851,7 +840,6 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
             return (
               <CardBody
                 region={region}
-                hours={hours}
                 monTier={monTierOf(s.baseReward ?? s.reward)}
                 avatarSouth={s.avatarSouth ?? null}
                 reward={s.reward}
