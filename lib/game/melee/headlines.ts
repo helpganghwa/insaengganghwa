@@ -185,16 +185,16 @@ export function generateHeadlines(
   };
 
   /* ── 우승·왕관 ── */
-  if (cs.entries === 0) add('debut_win', 'crown', 3.5, `첫 참가에 우승 — ${cName}`, [champ.userId]);
+  if (cs.entries === 0) add('debut_win', 'crown', 3.5, `${cName}, 첫 참가에 우승`, [champ.userId]);
   else if (cs.wins === 0 && cs.seconds >= 2) add('second_breaks', 'crown', 3, `준우승만 ${cs.seconds}번, ${cName} 드디어 우승`, [champ.userId]);
   else if (cs.wins === 0) add('first_win', 'crown', 2.5, `${cName}, 생애 첫 우승`, [champ.userId]);
   if (cs.wins >= 1) {
     const total = cs.wins + 1;
     const streak = y && y.championUserId === champ.userId ? cs.winStreak + 1 : 1;
-    if (streak >= 2) add('win_streak', 'crown', 2.5 + 0.3 * streak, `${cName}, ${streak}일 연속 우승 — 통산 ${total}회`, [champ.userId]);
+    if (streak >= 2) add('win_streak', 'crown', 2.5 + 0.3 * streak, `${cName}, ${streak}일 연속 우승(통산 ${total}회)`, [champ.userId]);
     else if (cs.lastWinDate) {
       const gap = daysBetween(cs.lastWinDate, b.date);
-      if (gap >= 2) add('reclaim', 'crown', 2 + Math.min(1, gap / 10), `${cName}, ${gap}일 만에 정상 탈환 — 통산 ${total}회 우승`, [champ.userId]);
+      if (gap >= 2) add('reclaim', 'crown', 2 + Math.min(1, gap / 10), `${cName}, ${gap}일 만에 정상 탈환(통산 ${total}회 우승)`, [champ.userId]);
     }
     add('career_wins', 'crown', WIN_MILESTONES.has(total) ? 3 : 1.5, `${cName}, 통산 ${total}회 우승`, [champ.userId]);
   }
@@ -206,7 +206,7 @@ export function generateHeadlines(
   {
     const defs = parts.map((p) => p.defenseCount).sort((a, c) => c - a);
     const p95 = defs[Math.max(0, Math.floor(defs.length * 0.05) - 1)] ?? 0;
-    if (champ.defenseCount >= Math.max(15, p95)) add('iron_champ', 'crown', 2, `${champ.defenseCount}번 맞고도 우승 — ${cName}`, [champ.userId]);
+    if (champ.defenseCount >= Math.max(15, p95)) add('iron_champ', 'crown', 2, `${cName}, ${champ.defenseCount}번 맞고도 우승`, [champ.userId]);
   }
   {
     const k = killsOf(champ.userId);
@@ -224,7 +224,7 @@ export function generateHeadlines(
       const maxHp = (roster[cIdx]!.cp || champ.cp) * MELEE_HP_MULT;
       if (lastHit && maxHp > 0) {
         const ratio = Math.max(0, lastHit[3]) / maxHp;
-        if (ratio <= 0.05) add('final_clutch', 'crown', 2 + (0.05 - ratio) * 20, `체력 ${(ratio * 100).toFixed(1)}%를 남기고 우승 — ${cName}`, [champ.userId]);
+        if (ratio <= 0.05) add('final_clutch', 'crown', 2 + (0.05 - ratio) * 20, `${cName}, 체력 ${(ratio * 100).toFixed(1)}%를 남기고 우승`, [champ.userId]);
       }
       if (tIdx >= 0) {
         const thirdOut = ev.findIndex((e) => e[1] === tIdx && e[3] <= 0);
@@ -233,7 +233,7 @@ export function generateHeadlines(
           const champAttacks = finalEvents.filter((e) => e[0] === cIdx).length;
           const hitsOnChamp = finalEvents.filter((e) => e[1] === cIdx).length;
           if (champAttacks >= 2 && hitsOnChamp === 0 && second)
-            add('final_sweep', 'crown', 1.5, `결승에서 한 대도 맞지 않고 ${josa(second.nickname, '을', '를')} 제압 — ${cName}`, [champ.userId]);
+            add('final_sweep', 'crown', 1.5, `${cName}, 결승에서 한 대도 맞지 않고 ${josa(second.nickname, '을', '를')} 제압`, [champ.userId]);
         }
       }
     }
@@ -243,7 +243,7 @@ export function generateHeadlines(
     if (yc && yc.rank > 1) {
       const killer = yc.killerUserId ? byId.get(yc.killerUserId) : null;
       if (killer && killer.userId === champ.userId) {
-        add('hunter_crowned', 'crown', 3, `어제 챔피언 ${josa(yc.nickname, '을', '를')} 직접 꺾고 우승 — ${cName}`, [champ.userId, yc.userId]);
+        add('hunter_crowned', 'crown', 3, `${cName}, 어제 챔피언 ${josa(yc.nickname, '을', '를')} 직접 꺾고 우승`, [champ.userId, yc.userId]);
       } else {
         add('crown_returned', 'crown', 1.5, `어제 챔피언 ${yc.nickname}, 오늘 ${fmt(yc.eliminatedRound ?? 0)}라운드에 ${killer ? `${killer.nickname}에게 ` : ''}탈락(${fmt(yc.rank)}위)`, [yc.userId]);
         if (killer) add('champion_hunter', 'crown', 1.5, `어제 챔피언 ${josa(yc.nickname, '을', '를')} 쓰러뜨린 ${killer.nickname}(${fmt(killer.rank)}위)`, [killer.userId]);
@@ -283,7 +283,7 @@ export function generateHeadlines(
   }
   {
     const top10cp = byCp.slice(0, Math.min(10, n));
-    if (n >= 30 && top10cp.every((p) => p.rank > 10)) add('top10_wiped', 'upset', 3, `이변의 날 — 전투력 상위 10명 중 Top10에 든 사람 없음`, top10cp.map((p) => p.userId));
+    if (n >= 30 && top10cp.every((p) => p.rank > 10)) add('top10_wiped', 'upset', 3, `이변의 날, 전투력 상위 10명 중 Top10에 든 사람 없음`, top10cp.map((p) => p.userId));
   }
   {
     const weak = byRank.filter((p) => p.rank <= 10 && (cpRank.get(p.userId) ?? 0) >= Math.ceil(n * 0.9));
@@ -319,7 +319,7 @@ export function generateHeadlines(
     // 체인 난투에선 상위권이 한 번도 공격받지 않기가 사실상 불가능(실측 무공격 최고 43~165위) — 무공격은 상위 5%를 기준으로.
     const naLimit = Math.max(10, Math.ceil(n * 0.05));
     const na = byRank.find((p) => p.rank <= naLimit && p.attackCount === 0 && p.defenseCount > 0);
-    if (na) add('no_attack_top10', 'survive', 2 + (na.rank <= 10 ? 0.5 : 0), `공격 한 번 없이 ${fmt(n)}명 중 ${na.rank}위 — ${na.nickname}(방어 ${na.defenseCount}회)`, [na.userId]);
+    if (na) add('no_attack_top10', 'survive', 2 + (na.rank <= 10 ? 0.5 : 0), `${na.nickname}, 공격 한 번 없이 ${fmt(n)}명 중 ${na.rank}위(방어 ${na.defenseCount}회)`, [na.userId]);
     let tank: HeadlineParticipant | null = null;
     for (const p of byRank) {
       if (p.rank > 20) break;
@@ -341,7 +341,7 @@ export function generateHeadlines(
     if (topK) {
       const k = killsOf(topK.userId);
       if (recordsReady && k > h.records.maxKills) add('record_kills', 'record', 3, `${topK.nickname}, 하루 ${k}명 처치로 역대 기록 갱신`, [topK.userId]);
-      else if (k >= 3) add('top_kills_today', 'record', 1 + Math.min(0.8, k / 12), `오늘 최다 처치 ${topK.nickname} — ${k}명`, [topK.userId]);
+      else if (k >= 3) add('top_kills_today', 'record', 1 + Math.min(0.8, k / 12), `오늘 최다 처치는 ${topK.nickname}, ${k}명`, [topK.userId]);
     }
     for (const p of parts) {
       const k = killsOf(p.userId);
@@ -376,8 +376,8 @@ export function generateHeadlines(
         if (sk && sk.killer === k.userId && sk.days + 1 >= 3 && (!nemesis || sk.days + 1 > nemesis.days)) nemesis = { k, v, days: sk.days + 1 };
       }
     }
-    if (rival) add('rivals', 'drama', 2.5 + Math.min(1, 0.2 * rival.s), `${josa(rival.k.nickname, '과', '와')} ${rival.v.nickname}, ${rival.s}일째 서로를 겨눔 — 오늘은 ${rival.k.nickname}의 승`, [rival.k.userId, rival.v.userId]);
-    if (nemesis) add('same_killer_streak', 'drama', 2.5, `${nemesis.v.nickname}, ${nemesis.days}일 연속 ${nemesis.k.nickname}에게 탈락 — 천적`, [nemesis.v.userId, nemesis.k.userId]);
+    if (rival) add('rivals', 'drama', 2.5 + Math.min(1, 0.2 * rival.s), `${josa(rival.k.nickname, '과', '와')} ${rival.v.nickname} ${rival.s}일째 맞대결, 오늘은 ${rival.k.nickname}의 승`, [rival.k.userId, rival.v.userId]);
+    if (nemesis) add('same_killer_streak', 'drama', 2.5, `천적 ${nemesis.k.nickname}, ${nemesis.days}일 연속 ${josa(nemesis.v.nickname, '을', '를')} 쓰러뜨림`, [nemesis.v.userId, nemesis.k.userId]);
   }
 
   /* ── 길드 ── */
@@ -385,15 +385,15 @@ export function generateHeadlines(
   if (second && third && champ.guildName && champ.guildName === second.guildName && champ.guildName === third.guildName)
     add('podium_guild_sweep', 'guild', 3, `시상대 3자리 모두 ${champ.guildName}`, [champ.userId, second.userId, third.userId]);
   if (champ.guildName && recordsReady && (h.guildWins.get(champ.guildName) ?? 0) === 0 && (h.guildEntries.get(champ.guildName) ?? 0) >= MIN_BATTLES_FOR_RECORDS)
-    add('guild_first_win', 'guild', 2.5, `${champ.guildName}의 첫 챔피언 — ${cName}`, [champ.userId]);
+    add('guild_first_win', 'guild', 2.5, `${cName}, 길드 ${champ.guildName}의 첫 챔피언`, [champ.userId]);
 
   /* ── 신규·성장 ── */
   for (const p of byRank) {
     if (p.rank > 10) break;
     const s = statsOf(h, p.userId);
     if (s.entries === 0 && p.rank > 1) {
-      if (p.rank <= 3) add('debut_podium', 'growth', 3, `첫 참가에 ${p.rank}위 — ${p.nickname}`, [p.userId]);
-      else add('debut_top10', 'growth', 2, `첫 참가에 ${p.rank}위 — ${p.nickname}`, [p.userId]);
+      if (p.rank <= 3) add('debut_podium', 'growth', 3, `${p.nickname}, 첫 참가에 ${p.rank}위`, [p.userId]);
+      else add('debut_top10', 'growth', 2, `${p.nickname}, 첫 참가에 ${p.rank}위`, [p.userId]);
       break;
     }
   }
