@@ -331,7 +331,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <CardBody
               region={assignFor.region}
               hours={assignFor.hours ?? 0}
-              monTier={assignFor.slot}
+              monTier={monTierOf(assignFor.reward)}
               avatarSouth={selectedAv?.south ?? null}
               reward={assignFor.reward ? previewFinal(assignFor.reward, previewBp) : undefined}
               status={!assignFor.reward ? '새 파견 찾는 중…' : selectedAv ? '선택 아바타 기준 확정 보상' : '아바타를 선택하세요'}
@@ -549,8 +549,17 @@ const nowMs = () => serverNow();
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-/** 슬롯 → 몬스터 단계(t1~t4) — 시간 타입이 없어져(단일 8h) 위협도는 슬롯 번호(합산 강화 해금 순)로 표현. */
-const monTierOf = (slot: number) => Math.min(4, Math.max(1, slot));
+/**
+ * 보상 크기 → 몬스터 단계(t1~t4) — 시간 타입이 없어져(단일 8h) 위협도는 카드의 **기본 보상**(배율 전 오퍼 롤)을
+ * 다이아 환산(상자 1개 = 25💎)한 점수로 표현. 큰 보상일수록 큰 몬스터, 새로고침하면 보상과 함께 몬스터도 바뀐다.
+ * 기본 수량 범위(150~290)에서 대략 t1 15% · t2 30% · t3 30% · t4 25%.
+ */
+function monTierOf(r: ExpeditionReward | undefined): number {
+  if (!r) return 1;
+  const boxes = r.boxes ? r.boxes.weapon + r.boxes.armor + r.boxes.accessory : 0;
+  const score = (r.diamond ?? 0) + boxes * 25;
+  return score >= 250 ? 4 : score >= 220 ? 3 : score >= 190 ? 2 : 1;
+}
 /** 미배정 실루엣 — 기본 남 스프라이트(흑백·30%). */
 const GHOST_SRC = '/sprites/default/male/south.png';
 /** 글자 스트로크(R2) — 밝은 배경에서도 흰 글자 대비 유지. */
@@ -582,7 +591,7 @@ function CardBody({
 }: {
   region: ExpeditionRegion;
   hours: number;
-  /** 몬스터 단계(슬롯 번호 1~4). */
+  /** 몬스터 단계(1~4) — 기본 보상 크기(monTierOf). */
   monTier: number;
   avatarSouth: string | null;
   reward: ExpeditionReward | undefined;
@@ -655,7 +664,7 @@ function CardBody({
         <span className={`flex flex-1 items-center justify-center ${hideHeader ? '' : 'pb-2'}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={assetUrl(`/sprites/expedition/mon/${region}-t${monTierOf(monTier)}.png`)}
+            src={assetUrl(`/sprites/expedition/mon/${region}-t${monTier}.png`)}
             alt=""
             decoding="async"
             className={`drop-shadow-[0_2px_2px_rgba(0,0,0,.8)] ${mutedMon ? 'grayscale' : ''}`}
@@ -827,11 +836,11 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} hours={hours} monTier={s.slot} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+        <CardBody region={region} hours={hours} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (
-        <CardBody region={region} hours={hours} monTier={s.slot} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
+        <CardBody region={region} hours={hours} monTier={monTierOf(s.reward)} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
       ) : (
         <Ticker>
           {(now) => {
@@ -843,7 +852,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
               <CardBody
                 region={region}
                 hours={hours}
-                monTier={s.slot}
+                monTier={monTierOf(s.baseReward ?? s.reward)}
                 avatarSouth={s.avatarSouth ?? null}
                 reward={s.reward}
                 status={done ? '파견 완료' : <span className="tabular-nums">파견 완료까지 {fmtRemain(remain)}</span>}

@@ -180,6 +180,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
           region: d.region,
           hours: Math.round(Number(d.duration_ms) / 3_600_000),
           reward: d.crit ? applyCrit(base) : base,
+          baseReward: d.reward, // 몬스터 단계(보상 크기)는 배율 전 오퍼 롤 기준 — 카드 생애 동안 불변
           avatarId: d.avatar_profile_id,
           avatarFace: d.avatar_profile_id ? (faceById.get(d.avatar_profile_id) ?? null) : null,
           avatarSouth: d.avatar_profile_id ? (southById.get(d.avatar_profile_id) ?? null) : null,
