@@ -50,11 +50,8 @@ export default function Doc() {
       <H2 id="open">소환</H2>
       <UL>
         <LI>
-          보스와 난이도를 선택하고 다이아를 사용해서 소환하며(
-          {RAID_TIER_CODES.map((t) => `${RAID_TIERS[t].label} ${fmtInt(RAID_TIERS[t].openCost)}`).join(
-            ' · ',
-          )}
-          ), 소환한 사람이 방장이자 첫 참가자가 된다.
+          보스와 난이도를 선택하고 {fmtInt(RAID_TIERS.easy.openCost)} 다이아를 사용해서 소환하며(난이도와
+          무관하게 같은 비용), 소환한 사람이 방장이자 첫 참가자가 된다.
           <Fn n={1} />
         </LI>
         <LI>
@@ -72,18 +69,17 @@ export default function Doc() {
 
       <H2 id="tier">난이도</H2>
       <UL>
-        <LI>소환할 때 난이도를 고르며, 난이도에 따라 소환 비용·보스 체력·보상이 달라진다.</LI>
+        <LI>소환할 때 난이도를 고르며, 난이도에 따라 보스 체력과 보상이 달라진다. 소환 비용은 같다.</LI>
         <LI>
           보상은 어느 난이도든 참가자 전원에게 동일하게 지급되며, 기여도에 따라 달라지지 않는다.
         </LI>
       </UL>
       <Tbl
-        head={['난이도', '소환', '보스 체력', '페이즈 보상', '달성 보상', '권장 총합 전투력']}
+        head={['난이도', '보스 체력', '페이즈 보상', '달성 보상', '권장 총합 전투력']}
         rows={RAID_TIER_CODES.map((t) => {
           const r = RAID_TIERS[t];
           return [
             r.label,
-            `${fmtInt(r.openCost)} 다이아`,
             `쉬움의 ×${fmtInt(r.hpMult)}`,
             `${fmtInt(r.boxesPerPhase)}개`,
             raidMilestoneList(t)

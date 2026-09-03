@@ -123,16 +123,17 @@ function fmtMan(n: number): string {
 
 /**
  * 난이도 행(BALANCE §5.4) — 가로 행 3줄, 고른 행만 달성 보상을 펼친다(2026-09-03 시안 4 채택).
- * 추천 로직 없이 사실만 보인다: 소환 다이아 · 체력 계수 · 페이즈 보상 · 달성 보상 · 권장 총합.
- * 권장 총합(참가자 전원 총 전투력 합)을 같이 보여 미달 파티가 비싼 난이도를 여는 손해
- * (어려움 오선택 ≈ 💎1,000 상당)를 막는다. 유저 용어: 페이즈 보상 / 달성 보상(코드의 milestone).
+ * 추천 로직 없이 사실만: 체력 계수 · 페이즈 보상 · 권장 총합(참가자 전원 전투력 합), 펼침 줄에
+ * 달성 보상. 소환 비용은 전 난이도 동일이라 행에 두지 않고 시트 부제·버튼에만 보인다.
+ * 실기기 피드백(09-03): 시트가 스크롤 없이 들어가도록 안내 문장 삭제·행 여백 축소.
+ * 유저 용어: 페이즈 보상 / 달성 보상(코드의 milestone).
  */
 function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier) => void }) {
   return (
     <div className="rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[12px] font-medium">난이도</span>
-        <span className="text-[9.5px] text-zinc-500">보상은 참가자 전원 동일</span>
+        <span className="text-[9.5px] text-zinc-500">보상 전원 동일 · 권장 총합은 파티 전원 전투력 합</span>
       </div>
       <div className="mt-1.5 space-y-1">
         {RAID_TIER_CODES.map((t) => {
@@ -144,21 +145,18 @@ function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier
               type="button"
               aria-pressed={on}
               onClick={() => onChange(t)}
-              className={`w-full rounded-lg border px-2.5 py-1.5 text-left transition ${
+              className={`w-full rounded-lg border px-2.5 py-1 text-left transition ${
                 on
                   ? 'border-amber-500 bg-amber-500/10'
                   : 'border-zinc-200 dark:border-zinc-700'
               }`}
             >
               <span className="flex items-center gap-2">
-                <span className="flex min-w-[46px] items-center gap-1 text-[12px] font-extrabold">
+                <span className="flex min-w-[52px] items-center gap-1 text-[12px] font-extrabold">
                   <span aria-hidden className={`inline-block h-2 w-2 rounded-full ${TIER_DOT[t]}`} />
                   {r.label}
                 </span>
-                <span className="min-w-[46px] font-mono text-[11px] font-extrabold text-sky-500">
-                  💎{r.openCost.toLocaleString()}
-                </span>
-                <span className="flex-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+                <span className="flex-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
                   체력{' '}
                   <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
                     ×{r.hpMult}
@@ -169,15 +167,15 @@ function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier
                   </span>
                 </span>
                 <span
-                  className={`whitespace-nowrap text-[9.5px] font-semibold ${
+                  className={`whitespace-nowrap text-[10px] font-semibold ${
                     r.recommendedTotalCp > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-400'
                   }`}
                 >
-                  {r.recommendedTotalCp > 0 ? `총합 ${fmtMan(r.recommendedTotalCp)}+` : '권장 없음'}
+                  {r.recommendedTotalCp > 0 ? `권장 총합 ${fmtMan(r.recommendedTotalCp)}+` : '권장 없음'}
                 </span>
               </span>
               {on ? (
-                <span className="mt-1.5 flex flex-wrap items-center gap-1 border-t border-dashed border-zinc-300 pt-1.5 text-[10px] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                <span className="mt-1 flex flex-wrap items-center gap-1 border-t border-dashed border-zinc-300 pt-1 text-[10px] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
                   <span className="mr-0.5">달성 보상</span>
                   {raidMilestoneList(t).map(([p, b]) => (
                     <span
@@ -194,10 +192,6 @@ function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier
           );
         })}
       </div>
-      <p className="mt-1.5 text-[10px] leading-snug break-keep text-zinc-500">
-        권장 총합은 참가자 전원 총 전투력의 합. 그보다 약한 파티는 한 단계 낮은 난이도가 상자를 더
-        받아요.
-      </p>
     </div>
   );
 }
@@ -547,13 +541,13 @@ export function RaidSlots({
             subtitle={
               picked ? (
                 <span className="font-mono font-bold text-sky-500">
-                  💎 {openCost.toLocaleString()} · {RAID_TIERS[tier].label}
+                  💎 {openCost.toLocaleString()}
                 </span>
               ) : (
                 `${RAID_BOSS_CODES.length}종`
               )
             }
-            maxBodyClass="max-h-[52vh]"
+            maxBodyClass="max-h-[64vh]"
             footer={
               picked ? (
                 <><button
@@ -626,13 +620,14 @@ export function RaidSlots({
                 </div>
             ) : (
               <>
-                <div className="flex justify-center">
-                  <BossSprite code={picked} size={96} />
+                {/* 보스 스프라이트 + 이야기를 가로로 — 시트가 스크롤 없이 들어가게(실기기 피드백 09-03). */}
+                <div className="flex items-center gap-3 rounded-xl bg-amber-50/60 p-2.5 dark:bg-amber-950/20">
+                  <BossSprite code={picked} size={64} />
+                  <p className="min-w-0 flex-1 text-[11px] leading-snug break-keep text-zinc-600 dark:text-zinc-300">
+                    {RAID_BOSSES[picked].story}
+                  </p>
                 </div>
-                <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
-                  {RAID_BOSSES[picked].story}
-                </p>
-                <div className="mt-3 space-y-1.5">
+                <div className="mt-2 space-y-1.5">
                   <TierRows value={tier} onChange={setTier} />
                   <DurationRow value={durationMs} onChange={setDurationMs} />
                   <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />

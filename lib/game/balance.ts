@@ -330,10 +330,11 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 개설비는 난이도별(RAID_TIERS.openCost, 개설자만 낸다 — 참가자는 무료로 기본 공격 10회).
- * 개설자 한 명이 최대 9명의 플레이 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가
- * 돌지 않는다. 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200, 2026-09-03 난이도
- * 개편으로 쉬움 100 / 보통 200 / 어려움 300.
+ * 개설비는 RAID_TIERS.openCost(개설자만 낸다 — 참가자는 무료로 기본 공격 10회). 개설자 한 명이
+ * 최대 9명의 플레이 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가 돌지 않는다.
+ * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200. 2026-09-03 난이도 개편 때 100/200/300
+ * 차등을 검토했으나 **전 난이도 200 통일**(사용자 결정, 실기기 피드백) — 개설비 sink는 개편 전과
+ * 같고, 난이도 경계(권장 총합)는 상자 수로 결정되어 개설비 차등이 없어도 유지된다.
  */
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
@@ -402,7 +403,7 @@ export type RaidTier = 'easy' | 'normal' | 'hard';
 export const RAID_TIER_CODES = ['easy', 'normal', 'hard'] as const;
 export type RaidTierRule = {
   label: string;
-  /** 개설비(다이아) — 개설자만, 즉시 차감·환불 없음. */
+  /** 개설비(다이아) — 개설자만, 즉시 차감·환불 없음. 현재 전 난이도 동일(200). */
   openCost: number;
   /** phase1 HP 배수 — 개설 시 U(8000,12000)×배수를 저장(페이즈 수식은 공통). */
   hpMult: number;
@@ -416,7 +417,7 @@ export type RaidTierRule = {
 export const RAID_TIERS: Readonly<Record<RaidTier, RaidTierRule>> = {
   easy: {
     label: '쉬움',
-    openCost: 100,
+    openCost: 200,
     hpMult: 1,
     boxesPerPhase: 1,
     milestones: { 10: 5, 15: 10, 20: 15, 25: 30 },
@@ -432,7 +433,7 @@ export const RAID_TIERS: Readonly<Record<RaidTier, RaidTierRule>> = {
   },
   hard: {
     label: '어려움',
-    openCost: 300,
+    openCost: 200,
     hpMult: 120,
     boxesPerPhase: 3,
     milestones: { 10: 45, 15: 90, 20: 180, 25: 360 },

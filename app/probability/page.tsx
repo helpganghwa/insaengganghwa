@@ -262,14 +262,13 @@ export default async function ProbabilityPage() {
           ) — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
         </P>
         <P>
-          난이도는 소환할 때 고르며, 소환 비용·페이즈 1 체력 배수·달성 보상이 다릅니다. 달성 보상은 누적
+          난이도는 소환할 때 고르며, 페이즈 1 체력 배수·페이즈 보상·달성 보상이 다릅니다(소환 비용은 같음). 달성 보상은 누적
           돌파 페이즈가 아래 수에 이를 때마다 전원에게 상자를 추가로 지급합니다(각 1회).
         </P>
-        <Table head={['난이도', '소환 비용', '페이즈 1 체력', '페이즈 보상', '달성 보상']}>
+        <Table head={['난이도', '페이즈 1 체력', '페이즈 보상', '달성 보상']}>
           {RAID_TIER_CODES.map((t) => (
             <tr key={t}>
               <Td>{RAID_TIERS[t].label}</Td>
-              <Td>{RAID_TIERS[t].openCost.toLocaleString('ko-KR')} 다이아</Td>
               <Td>×{RAID_TIERS[t].hpMult.toLocaleString('ko-KR')}</Td>
               <Td>{RAID_TIERS[t].boxesPerPhase}개</Td>
               <Td>
