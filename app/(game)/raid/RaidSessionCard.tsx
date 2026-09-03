@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   RAID_BASE_ATTACKS,
   RAID_TIERS,
-  raidCumulativeHp,
   raidExtraAttackCost,
   raidMilestoneList,
   raidNextMilestone,
@@ -206,55 +205,74 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
 }
 
 /**
- * 달성 보상(코드 milestone) 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 달성까지 남은
- * 페이즈·HP. 유저 용어는 "페이즈 보상"(페이즈마다) / "달성 보상"(특정 페이즈 도달 시 1회).
- * 예상 공격 수는 추측(파티 평균 가정)이라 표시하지 않는다 — 2026-09-03 사용자 결정.
+ * 보상 카드(2026-09-03 시안 7·D 확정) — 페이즈 보상 / 달성 보상 / 누적 보상을 한 카드에 둔다.
+ * 달성 보상(코드 milestone)은 목록만: 받은 것은 켜지고 다음 것은 테두리. "다음까지 남은 페이즈·HP"
+ * 안내는 두지 않는다(이번 페이즈 남은 HP는 게이지가 담당, 예상 공격 수는 추측이라 제외 — 사용자
+ * 결정). 유저 용어: 페이즈 보상(페이즈마다) / 달성 보상(특정 페이즈 도달 시 1회). 정산 뒤엔 결산
+ * 보상 카드와 중복이라 호출부에서 숨긴다.
  */
-function MilestoneRow({
+function RewardCard({
   tier,
   phasesCleared,
-  phase1Hp,
-  total,
-  settled,
+  drops,
 }: {
   tier: RaidTier;
   phasesCleared: number;
-  phase1Hp: number;
-  total: number;
-  settled: boolean;
+  drops: ReturnType<typeof aggregatePhaseDrops>;
 }) {
   const list = raidMilestoneList(tier);
   const next = raidNextMilestone(tier, phasesCleared);
-  const remain = next ? Math.max(0, raidCumulativeHp(phase1Hp, next.phase) - total) : 0;
+  const slots = (['weapon', 'armor', 'accessory'] as SupplySlot[]).filter((k) => drops.boxes[k] > 0);
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[10px]">
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="font-semibold text-zinc-400">달성 보상</span>
-        {list.map(([p, b]) => (
-          <span
-            key={p}
-            className={`rounded px-1 py-px font-mono ${
-              phasesCleared >= p ? 'bg-amber-500/25 text-amber-200' : 'bg-zinc-800 text-zinc-500'
-            }`}
-          >
-            {p} <span className="font-sans">📦{b}</span>
+    <div className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-[10.5px]">
+      <div className="flex items-start gap-2 py-0.5">
+        <span className="min-w-[62px] font-bold text-amber-300">페이즈 보상</span>
+        <span className="text-zinc-200">
+          📦<span className="font-mono font-semibold text-white">{drops.phaseBoxes}</span>
+          <span className="ml-1.5 text-[9.5px] text-zinc-500">
+            {phasesCleared}페이즈 × {RAID_TIERS[tier].boxesPerPhase}
           </span>
-        ))}
+        </span>
       </div>
-      {!settled ? (
-        <div className="mt-1 text-zinc-400">
-          {next ? (
-            <>
-              다음 <span className="font-mono font-bold text-zinc-200">PHASE {next.phase}</span>까지{' '}
-              <span className="font-mono font-bold text-zinc-200">{next.phase - phasesCleared}</span>
-              페이즈 · 남은 HP{' '}
-              <span className="font-mono font-bold text-zinc-200">{remain.toLocaleString()}</span>
-            </>
-          ) : (
-            '달성 보상을 모두 받았어요'
-          )}
-        </div>
-      ) : null}
+      <div className="flex items-start gap-2 py-0.5">
+        <span className="min-w-[62px] pt-px font-bold text-amber-300">달성 보상</span>
+        <span className="flex flex-1 flex-wrap items-center gap-1">
+          {list.map(([p, b]) => {
+            const done = phasesCleared >= p;
+            const isNext = next?.phase === p;
+            return (
+              <span
+                key={p}
+                className={`rounded px-1.5 py-px font-mono text-[9.5px] ${
+                  done
+                    ? 'bg-amber-500/25 text-amber-200'
+                    : isNext
+                      ? 'bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/50'
+                      : 'bg-zinc-800 text-zinc-500'
+                }`}
+              >
+                {p} <span className="font-sans">📦{b}</span>
+              </span>
+            );
+          })}
+          {!next ? (
+            <span className="basis-full text-[9.5px] text-zinc-400">
+              달성 보상을 모두 받았어요 · 페이즈 보상은 계속
+            </span>
+          ) : null}
+        </span>
+      </div>
+      <div className="my-1 border-t border-dashed border-zinc-700" />
+      <div className="flex items-center justify-between pt-0.5 text-[11px] font-bold text-amber-200">
+        <span>누적 보상</span>
+        {slots.length > 0 ? (
+          <span className="text-zinc-100">
+            {slots.map((k, i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[k]}${drops.boxes[k]}`).join('')}
+          </span>
+        ) : (
+          <span className="font-normal text-zinc-500">아직 없음</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -375,6 +393,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const thrFloor = v.phase1Hp * 2 * (1.5 ** v.phasesCleared - 1);
   const nextHp = raidPhaseHp(v.phase1Hp, v.phasesCleared + 1);
   const targetProg = Math.max(0, Math.min(1, (effTotal - thrFloor) / nextHp));
+  // 이번(진행 중) 페이즈의 남은 HP — 게이지 라벨(2026-09-03 결정: 남은 HP는 현재 페이즈만 표시).
+  const remainInPhase = Math.max(0, Math.round(nextHp - (effTotal - thrFloor)));
 
   // prop이 낙관값을 따라잡으면(refresh 도착) override 해제 — 이후 서버 데이터 신뢰.
   useEffect(() => {
@@ -652,8 +672,11 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               <span className={`font-mono text-lg ${pal.text}`}>PHASE {gPhase}</span>
               <span className="ml-1 text-zinc-500">돌파</span>
             </span>
-            <span className="font-mono text-[10px] text-zinc-500">
-              누적 {effTotal.toLocaleString()}
+            <span className="text-[10.5px] text-zinc-300">
+              이번 페이즈 남은 HP{' '}
+              <span className="font-mono text-[11.5px] font-semibold text-zinc-100">
+                {remainInPhase.toLocaleString()}
+              </span>
             </span>
           </div>
           <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-zinc-800">
@@ -663,16 +686,13 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               style={{ width: `${Math.max(2, gPct)}%`, transition: 'width 380ms ease-out' }}
             />
           </div>
+          <div className="mt-0.5 text-right font-mono text-[9.5px] text-zinc-600">
+            누적 {effTotal.toLocaleString()}
+          </div>
         </div>
 
-        {/* 달성 보상(BALANCE §5.4) — 도달분은 켜고, 다음 달성까지 남은 페이즈·HP. */}
-        <MilestoneRow
-          tier={v.tier}
-          phasesCleared={v.phasesCleared}
-          phase1Hp={v.phase1Hp}
-          total={effTotal}
-          settled={settled}
-        />
+        {/* 보상 카드(BALANCE §5.4) — 페이즈 보상·달성 보상·누적 보상. 정산 뒤엔 결산 카드가 대신한다. */}
+        {!settled ? <RewardCard tier={v.tier} phasesCleared={v.phasesCleared} drops={drops} /> : null}
 
         {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (
@@ -798,25 +818,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           </div>
         )}
 
-        {/* 누적 보상 섹션 — 정산 완료(settled) 상태에서는 결산 보상 섹션과 중복이라 숨김. */}
-        {!settled ? (
-          <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
-            <span className="font-semibold text-amber-300">누적 보상</span>{' '}
-            {v.phasesCleared > 0 ? (
-              <span className="text-zinc-200">
-                {Object.entries(drops.boxes)
-                  .filter(([, n]) => n > 0)
-                  .map(([s, n], i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[s as SupplySlot]}${n}`)
-                  .join('')}
-                <span className="ml-1.5 text-[10px] text-zinc-500">
-                  (페이즈 {drops.phaseBoxes} + 달성 {drops.milestoneBoxes})
-                </span>
-              </span>
-            ) : (
-              <span className="text-zinc-500">아직 없음</span>
-            )}
-          </div>
-        ) : null}
 
         {/* ── 참가 요청(개설자만) — 공유링크 등 요청 수락/거절 ── */}
         {v.isHost && visibleReqs.length > 0 ? (
