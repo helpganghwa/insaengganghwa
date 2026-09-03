@@ -16,6 +16,8 @@ export type TitleRow = {
   discovered: boolean;
   earnedAt: string | null;
   activeNow: boolean;
+  /** 아직 확인하지 않은 새 칭호(0187) — 상단 '새로 얻은 칭호' 섹션 + NEW 태그. */
+  isNew: boolean;
 };
 
 type Tri = null | 'a' | 'b';
@@ -82,6 +84,9 @@ export function TitlesClient({
   const [act, setAct] = useState<Tri>(null); // a=활성 b=비활성
   const [favOnly, setFavOnly] = useState(false);
   const [sel, setSel] = useState<string | null>(null); // 팝업 대상 code
+  // 새 칭호(0187) — 서버는 이 화면을 렌더한 뒤 전부 확인 처리하므로, 여기서는 이번 방문 동안의 표시만 관리.
+  // 행을 탭하면 그 칭호의 NEW를 지운다(개별 확인 느낌). 새로고침하면 서버 기준으로 전부 사라진다.
+  const [newSet, setNewSet] = useState<Set<string>>(() => new Set(rows.filter((r) => r.isNew).map((r) => r.code)));
   const [pending, startTransition] = useTransition();
   // ☆ 토글 전용 — 대표 장착의 pending(팝업 버튼 비활성)과 분리(적대 검수 7).
   const [, startFavTransition] = useTransition();
@@ -138,6 +143,8 @@ export function TitlesClient({
     // ★ 섹션에 한 번 더 노출된다(호이스트 아님). 발견분만 — 즐겨찾기 후 미발견이 된 코드(운영
     // 회수 등)가 잠금 행으로 최상단에 박히는 것 방지(적대 검수 2).
     const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
+    // 새로 얻은 칭호(0187) — ★처럼 최상단 중복 표시(원 분류에도 남음). 필터는 그대로 적용.
+    const newList = sortRows(visible.filter((d) => newSet.has(d.code) && byCode.get(d.code)?.discovered));
     const byGroup = new Map<string, TitleDef[]>();
     for (const d of visible) {
       const g = groupOf(d.cat);
@@ -152,9 +159,9 @@ export function TitlesClient({
       const disc = all.filter((d) => byCode.get(d.code)!.discovered).length;
       return { key: g, label: g, progress: `${disc}/${all.length}`, items: sortRows(byGroup.get(g)!) };
     });
-    return { favList, cats };
+    return { favList, newList, cats };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byCode, kind, found, act, favOnly, favSet, rep]);
+  }, [byCode, kind, found, act, favOnly, favSet, rep, newSet]);
 
   const toggle = (code: string) => {
     const next = rep === code ? null : code;
@@ -210,7 +217,10 @@ export function TitlesClient({
       >
         <button
           type="button"
-          onClick={() => setSel(d.code)}
+          onClick={() => {
+            setSel(d.code);
+            if (newSet.has(d.code)) setNewSet((p) => { const n = new Set(p); n.delete(d.code); return n; });
+          }}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -222,6 +232,9 @@ export function TitlesClient({
           </span>
           {st === 'rep' && (
             <span className="shrink-0 rounded border border-amber-400/50 px-1 text-[9px] font-extrabold text-amber-400">대표</span>
+          )}
+          {newSet.has(d.code) && (
+            <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] font-extrabold tracking-wide text-white">NEW</span>
           )}
           {st === 'inactive' && <span className="shrink-0 text-[9px] font-bold text-orange-400">비활성</span>}
         </button>
@@ -307,6 +320,13 @@ export function TitlesClient({
       <div className="pb-8">
         {/* 섹션별 래퍼 div 필수 — sticky 헤더가 자기 섹션 범위에서만 붙고 다음 헤더에 밀려나는
             표준 push-out 동작은 헤더가 각자의 부모 안에 있을 때만 성립한다. */}
+        {/* 새로 얻은 칭호(0187) — 이번 방문에만 보이는 모아보기. 탭하거나 다음 진입 시 사라진다. */}
+        {groups.newList.length > 0 && (
+          <div>
+            {catHead('새로 얻은 칭호', String(groups.newList.length))}
+            {groups.newList.map(renderRow)}
+          </div>
+        )}
         {groups.favList.length > 0 && (
           <div>
             {catHead('즐겨찾기', String(groups.favList.length), true)}

@@ -19,6 +19,7 @@ import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { TitleTag } from '@/components/TitleTag';
 import { PENDING_CODES, visibleTitleTotal } from '@/lib/game/titles/judge';
+import { maybeJudgeTitlesForBadge } from '@/lib/game/titles/judge';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
@@ -66,6 +67,7 @@ export default async function ProfilePage() {
     codex_total: number;
     titles_found: number;
     titles_pending_owned: number;
+    titles_new: number;
     equipment: {
       catalogItemId: number;
       enhanceLevel: number;
@@ -74,6 +76,10 @@ export default async function ProfilePage() {
     }[];
     avatars: { id: string; rotations: unknown }[];
   };
+  // 새 칭호 배지(0187) — 판정은 칭호 페이지 진입이 기본이지만 배지가 먼저 보이려면 여기서도 이따금
+  // 판정해야 한다. 1시간 스로틀·2.5s 타임아웃·실패 무시(maybeJudgeTitlesForBadge 주석).
+  await maybeJudgeTitlesForBadge(userId, serverId);
+
   const _r = await withTimeout(
     Promise.all([
       db.execute(sql`
@@ -99,6 +105,8 @@ export default async function ProfilePage() {
             where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}) as codex_got,
           (select count(*)::int from catalog_items where active) as codex_total,
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}) as titles_found,
+          -- 새 칭호(0187) — 아직 확인하지 않은 획득분. 메뉴 배지(친구 요청과 같은 붉은 숫자).
+          (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId} and seen_at is null) as titles_new,
           -- 판정이 아직 없는 칭호 중 **이미 보유한** 수 — 발견 게이지 분모가 도달 가능해야 한다
           -- (visibleTitleTotal 주석). 미보유 PENDING은 목록·분모 양쪽에서 빠진다.
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}
@@ -148,6 +156,7 @@ export default async function ProfilePage() {
   };
   const friendReqCount = row?.friend_req_count ?? 0;
   const friendCount = row?.friend_count ?? 0;
+  const titlesNew = row?.titles_new ?? 0;
   const codexGot = row?.codex_got ?? 0;
   const codexTotal = row?.codex_total ?? 0;
   const titlesFound = row?.titles_found ?? 0;
@@ -351,6 +360,14 @@ export default async function ProfilePage() {
                 {m.icon}
               </span>
               <span className="text-sm font-medium">{m.label}</span>
+              {m.href === '/me/titles' && titlesNew > 0 ? (
+                <span
+                  aria-label={`새 칭호 ${titlesNew}개`}
+                  className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white tabular-nums"
+                >
+                  {titlesNew > 99 ? '99+' : titlesNew}
+                </span>
+              ) : null}
               {m.href === '/friends' && friendReqCount > 0 ? (
                 <span
                   aria-label={`친구 요청 ${friendReqCount}건`}

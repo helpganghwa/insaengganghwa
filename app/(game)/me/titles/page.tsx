@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -49,8 +50,8 @@ export default async function TitlesPage() {
       // 원장 조회는 판정 **다음**이어야 한다(이번 발견분이 실려야 함).
       const { active } = await discoverTitles(userId, serverId);
       const ledger = (await db.execute(sql`
-        select title_code, earned_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
-      `)) as unknown as { title_code: string; earned_at: Date }[];
+        select title_code, earned_at, seen_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
+      `)) as unknown as { title_code: string; earned_at: Date; seen_at: Date | null }[];
       const rep = await repP;
       return { ledger, active, rep: rep[0] };
     })(),
@@ -74,7 +75,19 @@ export default async function TitlesPage() {
   }
 
   const ledger = new Map((r?.ledger ?? []).map((l) => [l.title_code, l.earned_at]));
+  const unseen = new Set((r?.ledger ?? []).filter((l) => l.seen_at == null).map((l) => l.title_code));
   const active = r?.active ?? new Set<string>();
+
+  // 새 칭호 확인 처리(0187) — 이 화면을 한 번 보면 확인된 것으로 본다. 응답을 보낸 **뒤**(after) 전부
+  // seen_at=now(): 이번 렌더는 NEW를 보여주고 다음 진입부터는 사라진다. 행 탭 개별 확인은 클라 표시만
+  // (서버는 이미 전부 확인 처리). 실패해도 다음 진입에서 다시 시도되므로 무시.
+  if (unseen.size > 0) {
+    after(async () => {
+      await db
+        .execute(sql`update user_titles set seen_at = now() where user_id=${userId}::uuid and server_id=${serverId} and seen_at is null`)
+        .catch((e) => console.warn('[titles] mark seen failed', (e as Error).message));
+    });
+  }
 
   // 판정이 아직 없는 칭호(PENDING)는 **보유하지 않았다면** 목록에서 뺀다 — 목록에 있으면
   // "아직 못 얻은 것"과 구분되지 않은 채 분모에 들어가, 발견 게이지가 채워질 수 없게 된다.
@@ -93,6 +106,7 @@ export default async function TitlesPage() {
       // 발견일 — 목록엔 표시하지 않고 상세 팝업에서만 노출(사용자 확정). KST 표기(§3.8).
       earnedAt: earnedAt ? kstDateString(new Date(earnedAt)) : null,
       activeNow: discovered && (!isConditional || active.has(d.code)),
+      isNew: discovered && unseen.has(d.code),
     };
   });
 
