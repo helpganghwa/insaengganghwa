@@ -215,10 +215,13 @@ function RewardCard({
   tier,
   phasesCleared,
   drops,
+  glowPhase,
 }: {
   tier: RaidTier;
   phasesCleared: number;
   drops: ReturnType<typeof aggregatePhaseDrops>;
+  /** 방금 도달한 달성 페이즈 — 해당 칩 1회 발광(2.4s). */
+  glowPhase: number | null;
 }) {
   const list = raidMilestoneList(tier);
   const next = raidNextMilestone(tier, phasesCleared);
@@ -244,6 +247,8 @@ function RewardCard({
               <span
                 key={p}
                 className={`rounded px-1.5 py-px font-mono text-[9.5px] ${
+                  glowPhase === p ? 'animate-milestone-glow ' : ''
+                }${
                   done
                     ? 'bg-amber-500/25 text-amber-200'
                     : isNext
@@ -404,6 +409,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const [gPhase, setGPhase] = useState(v.phasesCleared);
   const [gPct, setGPct] = useState(targetProg * 100);
   const [phaseUp, setPhaseUp] = useState(false);
+  // 달성 보상 도달 연출(2026-09-03 결정: 헤더 토스트 + 해당 칩 발광만) — 서버가 내려준
+  // phasesCleared가 달성 페이즈를 넘어서는 순간(내 공격·타인 공격 갱신 모두) 1회.
+  const [glowPhase, setGlowPhase] = useState<number | null>(null);
   const animTok = useRef(0);
   const lastRef = useRef({ phase: v.phasesCleared, prog: targetProg });
 
@@ -411,6 +419,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     const last = lastRef.current;
     if (last.phase === v.phasesCleared && Math.abs(last.prog - targetProg) < 0.0001) return;
     const advanced = v.phasesCleared > last.phase;
+    // 이번 갱신으로 새로 도달한 달성 페이즈(보통 0~1개, 큰 점프면 여러 개).
+    const reached = advanced
+      ? raidMilestoneList(v.tier).filter(([p]) => last.phase < p && p <= v.phasesCleared)
+      : [];
     lastRef.current = { phase: v.phasesCleared, prog: targetProg };
     const token = ++animTok.current;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -437,6 +449,19 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       if (advanced) {
         setPhaseUp(true);
         setTimeout(() => setPhaseUp(false), 650);
+      }
+      // 달성 보상 — 게이지 시퀀스가 끝난 뒤 토스트 + 칩 발광(시안 1+2, 플로팅·체크 없음).
+      for (const [p, b] of reached) {
+        showHeaderToast({
+          icon: '🏁',
+          title: `PHASE ${p} 달성 보상`,
+          rewards: [{ icon: '📦', amount: b }],
+          detail: '정산 때 받아요',
+        });
+      }
+      if (reached.length > 0) {
+        setGlowPhase(reached[reached.length - 1]![0]);
+        setTimeout(() => setGlowPhase(null), 2500);
       }
     })();
     // gPhase는 의도적으로 deps 제외(시퀀스 내부에서 갱신).
@@ -692,7 +717,14 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         </div>
 
         {/* 보상 카드(BALANCE §5.4) — 페이즈 보상·달성 보상·누적 보상. 정산 뒤엔 결산 카드가 대신한다. */}
-        {!settled ? <RewardCard tier={v.tier} phasesCleared={v.phasesCleared} drops={drops} /> : null}
+        {!settled ? (
+          <RewardCard
+            tier={v.tier}
+            phasesCleared={v.phasesCleared}
+            drops={drops}
+            glowPhase={glowPhase}
+          />
+        ) : null}
 
         {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (

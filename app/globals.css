@@ -71,6 +71,15 @@ html {
   /* 채팅 미니바 최신 메시지 교체 fade. */
   --animate-chat-swap: chat-swap 0.25s ease-out;
 
+  /* 레이드 달성 보상 도달 — 보상 카드의 해당 칩이 2.4초 황금 발광 1회(2026-09-03 결정: 토스트+칩 발광만). */
+  --animate-milestone-glow: milestone-glow 2.4s ease-in-out;
+  @keyframes milestone-glow {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 0.25); }
+    20%  { box-shadow: 0 0 12px 3px rgba(245, 158, 11, 0.75); background-color: rgba(245, 158, 11, 0.6); }
+    60%  { box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.55); background-color: rgba(245, 158, 11, 0.5); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 0.25); }
+  }
+
   /* 레이드 결산 보상 수령 — 중립(회색) 글로우 1회(disabled 톤 일관). */
   --animate-claim-glow: claim-glow 0.8s ease-out;
   @keyframes claim-glow {
