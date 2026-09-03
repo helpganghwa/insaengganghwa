@@ -452,12 +452,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       }
       // 달성 보상 — 게이지 시퀀스가 끝난 뒤 토스트 + 칩 발광(시안 1+2, 플로팅·체크 없음).
       for (const [p, b] of reached) {
-        showHeaderToast({
-          icon: '🏁',
-          title: `PHASE ${p} 달성 보상`,
-          rewards: [{ icon: '📦', amount: b }],
-          detail: '정산 때 받아요',
-        });
+        // 문구는 "PHASE n 달성 보상 │ 📦b"만(아이콘·부연 없음 — 사용자 결정).
+        showHeaderToast({ title: `PHASE ${p} 달성 보상`, rewards: [{ icon: '📦', amount: b }] });
       }
       if (reached.length > 0) {
         setGlowPhase(reached[reached.length - 1]![0]);
