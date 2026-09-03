@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
   // ── A. 고아 pending 복구 ────────────────────────────────────────────────
   const pending = await db
-    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId, createdAt: iapOrders.createdAt })
+    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId, createdAt: iapOrders.createdAt, provider: iapOrders.provider })
     .from(iapOrders)
     .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
     // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
@@ -68,6 +68,11 @@ export async function GET(req: Request) {
     expired++;
   };
   for (const o of pending) {
+    // Play 주문(0186)은 PG 조회 대상이 아니다 — 결제 시트를 닫은 pending은 만료만(늦은 검증은 expired→paid 허용).
+    if (o.provider === 'play') {
+      await expireIfStale(o).catch((e2) => console.error('[payment-recon] A expire(play) failed', o.pid, e2));
+      continue;
+    }
     try {
       const pay = await getPortonePayment(o.pid);
       if (pay.status === 'PAID') {

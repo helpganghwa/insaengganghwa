@@ -15,6 +15,7 @@ import { PREMIUM, shopGrant } from '@/lib/game/shop/catalog';
 import { reclaimBpSegment } from '@/lib/game/battlepass';
 
 import { raisePaymentAlert } from './alert';
+import { getPlayProductPurchase } from './play-api';
 import { getPortonePayment } from './portone';
 import { parseBpProduct } from './purchase';
 
@@ -182,6 +183,9 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
       status: iapOrders.status,
       paidAt: iapOrders.paidAt,
       createdAt: iapOrders.createdAt,
+      provider: iapOrders.provider,
+      playSku: iapOrders.playSku,
+      playPurchaseToken: iapOrders.playPurchaseToken,
     })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
@@ -189,9 +193,16 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
   if (!order) return { ok: false, code: 'ORDER_NOT_FOUND' };
   if (order.status === 'refunded') return { ok: true, already: true };
 
-  // 포트원 서버 권위 — 실제 전체 취소 상태인지 재확인.
-  const pay = await getPortonePayment(paymentId);
-  if (pay.status !== 'CANCELLED') return { ok: false, code: 'NOT_CANCELLED' };
+  if (order.provider === 'play') {
+    // 구글 서버 권위 — purchaseState 1(취소됨)일 때만 회수. 토큰이 없는 pending 주문은 회수할 것도 없다.
+    if (!order.playSku || !order.playPurchaseToken) return { ok: false, code: 'NOT_CANCELLED' };
+    const p = await getPlayProductPurchase(order.playSku, order.playPurchaseToken);
+    if (p.purchaseState !== 1) return { ok: false, code: 'NOT_CANCELLED' };
+  } else {
+    // 포트원 서버 권위 — 실제 전체 취소 상태인지 재확인.
+    const pay = await getPortonePayment(paymentId);
+    if (pay.status !== 'CANCELLED') return { ok: false, code: 'NOT_CANCELLED' };
+  }
 
   // 월 누적은 결제가 집계된 달(결제월) 기준으로 되돌린다 — 취소가 다음 달에 와도 정확.
   const paidMonth = kstMonthString(order.paidAt ?? order.createdAt);

@@ -10,8 +10,9 @@
  */
 import { cookies } from 'next/headers';
 
-export const PLATFORM_COOKIE = 'ig_platform';
-export const PLATFORM_TWA = 'twa';
+import { PLATFORM_COOKIE, PLATFORM_TWA } from './platform-client';
+
+export { PLATFORM_COOKIE, PLATFORM_TWA, isTwaClient } from './platform-client';
 /** start_url 쿼리 — TWA 매니페스트(twa-manifest.json)에서만 지정, 웹 PWA 매니페스트(app/manifest.ts)는 '/' 유지. */
 export const TWA_SRC_PARAM = 'src';
 
@@ -28,10 +29,4 @@ export async function getPlatform(): Promise<Platform> {
 
 export async function isTwa(): Promise<boolean> {
   return (await getPlatform()) === 'twa';
-}
-
-/** 클라이언트 — document.cookie에서 읽는다(SSR 중엔 false). */
-export function isTwaClient(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.cookie.split('; ').some((c) => c === `${PLATFORM_COOKIE}=${PLATFORM_TWA}`);
 }

@@ -46,6 +46,15 @@
 - **상점 UI** — `isTwa()`면 결제 버튼이 Play 체크아웃을 호출하고 가격 표시는 `getDetails` 값(없으면 카탈로그 KRW). 포트원 SDK 로드 안 함. 영수증·환불 안내 문구를 Play 기준으로 교체(환불은 Google Play 주문내역).
 - **어드민** — 결제 목록에 provider 뱃지, Play 주문은 환불 버튼 대신 "Play 콘솔에서 환불" 안내.
 
+### 3.2 구현 상태(2026-09-03, feat/playstore)
+- ✅ 0186(`provider`·`play_sku`·`play_purchase_token` 부분 유니크·`play_order_id`·`play_consumed_at`, 스테이징 적용). 스키마 `lib/db/schema/payment.ts`.
+- ✅ `lib/payment/play-sku.ts`(순수 SKU 매핑·콘솔 등록 목록 22종) · `play-api.ts`(서비스 계정 JWT, get/consume/refund/voided) · `play.ts`(소모 재시도·voided 동기화) · cron `play-sync`(UTC 18:00 = KST 03:00).
+- ✅ `purchase.ts`: `resolveOrder`(가드 공유) → `createPlayOrder`, `completePurchase(pid, uid, { playPurchaseToken })` provider 분기(토큰 선점 검사→구글 purchaseState 0→paid 전이와 토큰 바인딩→지급→consume). 미성년 초과는 `refundPlayOrder(revoke)` 후 refundPurchase.
+- ✅ `refund.ts`: Play 주문은 구글 purchaseState 1(취소됨)일 때만 회수. 어드민 환불 버튼은 Play 주문에 닫힘(콘솔 환불→동기화 안내). `payment-recon`은 Play pending을 PG 조회 없이 만료만.
+- ✅ 클라 `shop/play-checkout.ts`(Digital Goods API + PaymentRequest) · `ShopTabs`가 `isTwaClient()`로 분기 · 액션 `createPlayOrderAction`/`verifyPlayPurchaseAction`.
+- ✅ 테스트 `tests/payment/play-pure.test.ts`(4) · `play-complete.test.ts`(DB 통합 6: 지급·멱등·미구매·토큰 중복·소모 실패·환불·voided).
+- ⏳ 남은 것: 서비스 계정 env 투입(Vercel) → 라이선스 테스터로 내부 테스트 E2E → 가격 표시(`playPriceLabel`) 상점 반영 여부 결정 → 어드민 결제 목록 Play 주문번호 노출.
+
 ### 3.3 그 외
 - 매니페스트 `start_url: '/?src=twa'`는 TWA 매니페스트(twa-manifest.json)에서만 지정(웹 PWA는 `/` 유지).
 - 푸시: TWA 알림 위임(`enableNotifications`)으로 앱 이름·아이콘으로 표시. 코드 변경 없음.

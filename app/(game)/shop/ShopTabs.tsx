@@ -26,6 +26,8 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 
 import { payFailTitle, runCheckout } from './checkout';
+import { runPlayCheckout } from './play-checkout';
+import { isTwaClient } from '@/lib/platform-client';
 import { FREE_REWARDS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
@@ -536,9 +538,12 @@ export function ShopTabs({
     void (async () => {
       // 복귀 URL = 상점 자신(별도 페이지 없음). 포트원이 ?paymentId=…(&code=…)를 덧붙여 복귀.
       // 전송 실패도 흡수 — paying 고착 시 전 유료 카드가 무반응이 된다.
-      const r = await runCheckout(productId, `${window.location.origin}/shop`).catch(
-        () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
-      );
+      // 플레이스토어 앱(TWA)이면 Play 결제(포트원 결제창 노출 금지 — 구글 정책), 웹은 포트원. 결과 형태 동일.
+      const r = isTwaClient()
+        ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
+        : await runCheckout(productId, `${window.location.origin}/shop`).catch(
+            () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
+          );
       setPaying(false);
       if (r.ok) {
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
@@ -552,6 +557,9 @@ export function ShopTabs({
       } else if (r.reason === 'window') {
         // 결제창 실패(카드 거절·심사 전 미승인 등) — PG가 준 사유를 그대로 보여준다.
         setPayNotice({ title: '결제에 실패했어요', body: r.message });
+      } else if (r.reason === 'unsupported') {
+        // 앱 표식은 있는데 Digital Goods API가 없는 환경(구버전 크롬 등).
+        setPayNotice({ title: '앱에서만 결제할 수 있어요', body: r.message });
       } else if (r.reason === 'verify' && r.code === 'NETWORK') {
         // 결제창은 닫혔는데 확인 요청만 전송 실패 — 지급 권위는 웹훅이라 곧 반영됨(미결제 오해 방지).
         setPayNotice({

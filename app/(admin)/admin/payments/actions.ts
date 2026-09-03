@@ -53,6 +53,7 @@ export async function refundOrderAction(
       status: iapOrders.status,
       product: iapOrders.productCode,
       grantSkipped: iapOrders.grantSkipped,
+      provider: iapOrders.provider,
     })
     .from(iapOrders)
     .where(eq(iapOrders.id, id))
@@ -61,6 +62,9 @@ export async function refundOrderAction(
   if (order.status === 'refunded')
     return { status: 'success', already: true, forced: false, message: undefined } as const;
   if (order.status !== 'paid') return { status: 'error', code: 'NOT_REFUNDABLE' } as const;
+  // Play 주문(0186)은 포트원 취소 경로가 없다 — 운영자가 Play 콘솔(주문 관리)에서 환불하면
+  // play-sync cron(매일 03시)이 voided 목록으로 회수·refunded 처리한다.
+  if (order.provider === 'play') return { status: 'error', code: 'PLAY_ORDER' } as const;
   // 배틀패스(성장패스)는 프리미엄 보상을 하나라도 수령했으면 환불 불가(미수령이면 환불 가능).
   // 단 grant_skipped(중복 결제로 지급이 없었던 주문)는 예외 — 이 주문이 준 것이 없으므로
   // 회수도 없고, 막아두면 운영자가 어드민 대신 PG 콘솔로 취소하게 된다. 콘솔 경로는 웹훅으로

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
@@ -29,6 +29,8 @@ import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-pu
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
+import { consumePlayProductPurchase, getPlayProductPurchase, playConfigured, refundPlayOrder } from './play-api';
+import { playSkuFor } from './play-sku';
 
 /**
  * 배틀패스(성장패스) 결제 상품코드 — `bp_<type>_<구간index>`(예: bp_enhance_2, bp_transcend_0).
@@ -140,14 +142,13 @@ export type CreatedOrder = {
  *  사전 가드: ① 알 수 없는 상품 ② 주기 상품 같은 주기 재구매 ③ 미성년 월 한도 초과.
  * 실제 지급은 결제 성사(웹훅/검증) 후 completePurchase에서만. 주기 사전체크는 비원자(드문 동시구매 경쟁은 허용).
  */
-export async function createOrder(
-  userId: string,
-  serverId: number,
-  productId: string,
-): Promise<CreatedOrder> {
-  const cfg = portoneConfig();
-  if (!cfg) throw new PurchaseError('CONFIG');
+type ResolvedOrder = { krw: number; orderName: string; diamondGranted: number; reviewer: boolean };
 
+/**
+ * 상품 해석 + 구매 가드(주기 재구매·특가 1회·프리미엄 드립·본인인증·미성년 월 한도) —
+ * 포트원(웹) 주문과 Play(앱) 주문이 같은 규칙을 탄다(2026-09-03, docs/PLAYSTORE.md §3.2).
+ */
+async function resolveOrder(userId: string, serverId: number, productId: string): Promise<ResolvedOrder> {
   // 심사(cbt) 계정 결제 차단 없음 — 사용자 결정(2026-07-10): 심사 계정도 결제 허용
   // (심사관 결제 검수 편의 우선, 공개 자격증명의 제3자 결제 리스크는 수용).
 
@@ -242,6 +243,17 @@ export async function createOrder(
   if (!reviewer && isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
     throw new PurchaseError('MINOR_LIMIT');
   }
+  return { krw, orderName, diamondGranted, reviewer };
+}
+
+export async function createOrder(
+  userId: string,
+  serverId: number,
+  productId: string,
+): Promise<CreatedOrder> {
+  const cfg = portoneConfig();
+  if (!cfg) throw new PurchaseError('CONFIG');
+  const { krw, orderName, diamondGranted, reviewer } = await resolveOrder(userId, serverId, productId);
 
   // 구매자 이름 — 이니시스 V2 일반결제 필수. 닉네임 + 고유코드(포트원 콘솔에서 유저 식별용).
   //  예: "대장장이1043(A1B2C3)". 닉네임 없으면 '구매자' 폴백.
@@ -289,9 +301,42 @@ export async function createOrder(
   };
 }
 
+export type CreatedPlayOrder = {
+  /** 내부 주문번호(portone_order_id 컬럼 재사용, 'gp-' 접두) — 검증 액션이 이 값으로 주문을 찾는다. */
+  paymentId: string;
+  /** Play 인앱 상품 ID — 클라가 PaymentRequest data.sku로 넘긴다. */
+  sku: string;
+  orderName: string;
+  amountKrw: number;
+};
+
+/**
+ * Play 주문 생성(pending) — 플레이스토어 앱 안 결제(docs/PLAYSTORE.md §3.2). 가드는 포트원과 동일(resolveOrder).
+ * 서비스 계정 미설정(검증 불가)이면 CONFIG — 지급 못 할 주문을 만들지 않는다.
+ */
+export async function createPlayOrder(userId: string, serverId: number, productId: string): Promise<CreatedPlayOrder> {
+  if (!playConfigured()) throw new PurchaseError('CONFIG');
+  const sku = playSkuFor(productId);
+  if (!sku) throw new PurchaseError('UNKNOWN_PRODUCT');
+  const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId);
+  const paymentId = `gp-${crypto.randomUUID()}`;
+  await db.insert(iapOrders).values({
+    serverId,
+    userId,
+    portoneOrderId: paymentId,
+    productCode: productId,
+    amountKrw: BigInt(krw),
+    diamondGranted: BigInt(diamondGranted),
+    status: 'pending',
+    provider: 'play',
+    playSku: sku,
+  });
+  return { paymentId, sku, orderName, amountKrw: krw };
+}
+
 export type CompleteResult =
   | { ok: true; already: boolean }
-  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' };
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' };
 
 /**
  * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
@@ -307,6 +352,8 @@ export type CompleteResult =
 export async function completePurchase(
   paymentId: string,
   expectedUserId?: string,
+  /** Play 주문: 클라가 결제 시트에서 받은 purchaseToken(첫 검증). 재시도·cron은 저장된 토큰을 쓴다. */
+  opts: { playPurchaseToken?: string } = {},
 ): Promise<CompleteResult> {
   const [order] = await db
     .select({
@@ -316,6 +363,9 @@ export async function completePurchase(
       productCode: iapOrders.productCode,
       amountKrw: iapOrders.amountKrw,
       status: iapOrders.status,
+      provider: iapOrders.provider,
+      playSku: iapOrders.playSku,
+      playPurchaseToken: iapOrders.playPurchaseToken,
     })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
@@ -326,22 +376,42 @@ export async function completePurchase(
     return { ok: false, code: 'ORDER_NOT_FOUND' };
   if (order.status === 'paid') return { ok: true, already: true };
 
-  // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
-  const pay = await getPortonePayment(paymentId);
-  if (pay.status !== 'PAID') return { ok: false, code: 'NOT_PAID' };
-  if (pay.currency !== 'KRW' || pay.amountTotal !== Number(order.amountKrw)) {
-    // 위변조 의심 — 웹훅·클라 verify 어느 경로로 와도 여기서 1회 알림(중복은 dedup).
-    await raisePaymentAlert('AMOUNT_MISMATCH', {
-      paymentId,
-      orderId: order.id,
-      detail: `결제 금액/통화 불일치 — 주문 ₩${Number(order.amountKrw)} vs PG ${pay.amountTotal}${pay.currency}. 지급하지 않음.`,
-    });
-    return { ok: false, code: 'AMOUNT_MISMATCH' };
+  // 결제 수단별 서버 권위 재확인 — 지급은 여기서 통과한 주문만.
+  let play: { token: string; sku: string; googleOrderId: string | null } | null = null;
+  if (order.provider === 'play') {
+    const token = opts.playPurchaseToken ?? order.playPurchaseToken;
+    if (!token || !order.playSku) return { ok: false, code: 'NOT_PAID' };
+    // 토큰 선점 검사 — 같은 구매 토큰이 다른 주문에 이미 묶였으면 거부(부분 유니크 인덱스가 최종 방어).
+    const [dup] = await db
+      .select({ id: iapOrders.id })
+      .from(iapOrders)
+      .where(and(eq(iapOrders.playPurchaseToken, token), ne(iapOrders.id, order.id)))
+      .limit(1);
+    if (dup) return { ok: false, code: 'TOKEN_USED' };
+    // 구글 서버 권위 — SKU가 조회 경로에 들어가므로 다른 상품의 토큰이면 404(throw). purchaseState 0(구매완료)만 지급.
+    // 금액은 SKU가 담당(콘솔 등록가 = 카탈로그 KRW)이라 별도 금액 대조가 없다.
+    const p = await getPlayProductPurchase(order.playSku, token);
+    if (p.purchaseState !== 0) return { ok: false, code: 'NOT_PAID' };
+    play = { token, sku: order.playSku, googleOrderId: p.orderId ?? null };
+  } else {
+    // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
+    const pay = await getPortonePayment(paymentId);
+    if (pay.status !== 'PAID') return { ok: false, code: 'NOT_PAID' };
+    if (pay.currency !== 'KRW' || pay.amountTotal !== Number(order.amountKrw)) {
+      // 위변조 의심 — 웹훅·클라 verify 어느 경로로 와도 여기서 1회 알림(중복은 dedup).
+      await raisePaymentAlert('AMOUNT_MISMATCH', {
+        paymentId,
+        orderId: order.id,
+        detail: `결제 금액/통화 불일치 — 주문 ₩${Number(order.amountKrw)} vs PG ${pay.amountTotal}${pay.currency}. 지급하지 않음.`,
+      });
+      return { ok: false, code: 'AMOUNT_MISMATCH' };
+    }
   }
 
   const kstMonth = kstMonthString();
   let minorExceeded = false;
   let dupSkipped = false;
+  let transitioned = false;
   await db.transaction(async (tx) => {
     // 주문 잠금 + 상태 재확인 — 동시 호출 중 1회만 지급(멱등 핵심).
     const [locked] = await tx
@@ -355,8 +425,14 @@ export async function completePurchase(
 
     await tx
       .update(iapOrders)
-      .set({ status: 'paid', paidAt: new Date() })
+      .set({
+        status: 'paid',
+        paidAt: new Date(),
+        // Play: 구매 토큰·구글 주문번호를 paid 전이와 함께 묶는다(부분 유니크 — 다른 주문이 먼저 묶었으면 여기서 throw).
+        ...(play ? { playPurchaseToken: play.token, playOrderId: play.googleOrderId } : {}),
+      })
       .where(eq(iapOrders.id, order.id));
+    transitioned = true;
 
     // 월 누적 가산을 **지급보다 먼저** — createOrder의 한도 검사는 pending 생성 시점이라
     // 비원자(결제창 여러 개 → pending N건이 각자 한도 이내로 통과 → 전부 결제 완료로
@@ -443,19 +519,35 @@ export async function completePurchase(
       orderId: order.id,
       detail: `미성년 월 한도 초과 결제 감지(동시 주문 우회) — 지급 보류 + 자동 환불 시도. 주문 ₩${Number(order.amountKrw).toLocaleString('ko-KR')}.`,
     });
-    // PortOne 실제 취소를 **먼저** — refundPurchase는 PG가 CANCELLED일 때만 회수·월누적
+    // 실제 취소를 **먼저** — refundPurchase는 PG/구글이 취소 상태일 때만 회수·월누적
     // 복원을 하는 사후 정합화 함수라, 선행 취소 없이는 no-op이 된다(어드민 환불 경로와 동일 순서).
-    // 취소 실패는 삼켜 recon B 백스톱에 맡긴다(refundPurchase가 NOT_CANCELLED로 빠져도 알림은 남음).
+    // 취소 실패는 삼켜 recon B / play-sync 백스톱에 맡긴다(refundPurchase가 NOT_CANCELLED로 빠져도 알림은 남음).
     try {
-      await cancelPortonePayment(paymentId, '미성년 월 한도 초과 자동 환불');
+      if (play) {
+        if (play.googleOrderId) await refundPlayOrder(play.googleOrderId, true);
+      } else {
+        await cancelPortonePayment(paymentId, '미성년 월 한도 초과 자동 환불');
+      }
     } catch (e) {
-      console.error('[purchase] minor-limit portone cancel failed', paymentId, e);
+      console.error('[purchase] minor-limit cancel failed', order.provider, paymentId, e);
     }
     const { refundPurchase } = await import('./refund');
     await refundPurchase(paymentId).catch((e) =>
       console.error('[purchase] minor-limit auto refund failed', paymentId, e),
     );
     return { ok: false, code: 'MINOR_LIMIT' };
+  }
+
+  // Play 소모(consume=확인) — 지급 커밋 후 best-effort. 실패해도 지급은 유지하고 play-sync cron이
+  // 재시도한다(3일 내 미확인이면 구글이 자동 환불 → voided 동기화가 회수). 중복 특가(dupSkipped)도
+  // 구매 자체는 성사됐으므로 소모한다(환불은 운영자가 Play 콘솔에서).
+  if (play && transitioned) {
+    try {
+      await consumePlayProductPurchase(play.sku, play.token);
+      await db.update(iapOrders).set({ playConsumedAt: new Date() }).where(eq(iapOrders.id, order.id));
+    } catch (e) {
+      console.error('[purchase] play consume failed (play-sync will retry)', paymentId, e);
+    }
   }
 
   return { ok: true, already: false };

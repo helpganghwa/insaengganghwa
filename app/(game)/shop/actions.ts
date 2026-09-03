@@ -13,7 +13,7 @@ import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { claimFree, ShopFreeError, type FreeSlot } from '@/lib/game/shop/free';
 import { buyBox, BuyBoxError } from '@/lib/game/shop/buy-box';
-import { createOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
+import { createOrder, createPlayOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
 
 /** 상점 무료 수령 — 결제 불필요. 주기 멱등(서버). */
 export async function claimFreeAction(slot: FreeSlot) {
@@ -56,6 +56,47 @@ export async function createOrderAction(productId: string) {
   } catch (e) {
     if (e instanceof PurchaseError) return { status: 'error', code: e.code } as const;
     console.error('[shop.createOrder]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
+  }
+}
+
+/** Play 주문 생성 — 플레이스토어 앱(TWA) 안 결제(docs/PLAYSTORE.md §3.2). 가드는 createOrderAction과 동일. */
+export async function createPlayOrderAction(productId: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  if (await shouldHidePaidContent()) {
+    const { isAdmin } = await getAdminStatus();
+    if (!isAdmin) return { status: 'error', code: 'PAY_CLOSED' } as const;
+  }
+  try {
+    const o = await createPlayOrder(u, await getActiveServerId(), productId);
+    return { status: 'success', order: o } as const;
+  } catch (e) {
+    if (e instanceof PurchaseError) return { status: 'error', code: e.code } as const;
+    console.error('[shop.createPlayOrder]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
+  }
+}
+
+/** Play 구매 검증·지급 — 결제 시트가 준 purchaseToken을 구글 서버에서 재확인한 뒤 지급·소모(멱등). */
+export async function verifyPlayPurchaseAction(paymentId: string, purchaseToken: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if (!/^gp-[0-9a-f-]{36}$/.test(paymentId) || !purchaseToken || purchaseToken.length > 512) {
+    return { status: 'error', code: 'ORDER_NOT_FOUND' } as const;
+  }
+  try {
+    const r = await completePurchase(paymentId, u, { playPurchaseToken: purchaseToken });
+    if (!r.ok) return { status: 'error', code: r.code } as const;
+    revalidatePath('/shop');
+    revalidatePath('/');
+    revalidatePath('/battlepass');
+    return { status: 'success', already: r.already } as const;
+  } catch (e) {
+    console.error('[shop.verifyPlayPurchase]', e);
     return { status: 'error', code: 'UNKNOWN' } as const;
   }
 }

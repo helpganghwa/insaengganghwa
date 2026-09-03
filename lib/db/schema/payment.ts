@@ -53,6 +53,16 @@ export const iapOrders = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     /** 결과 팝업 확인 시각(0170) — 계정 단위 1회 안내(컨텍스트별 localStorage 중복 방지). */
     clientNotifiedAt: timestamp('client_notified_at', { withTimezone: true }),
+    /** 결제 수단(0186) — 'portone'(웹) | 'play'(플레이스토어 앱, Google Play 결제). */
+    provider: text('provider').notNull().default('portone'),
+    /** Play 인앱 상품 ID(가격 담당) — 주문 생성 시 확정, 검증 조회 경로에 쓴다. */
+    playSku: text('play_sku'),
+    /** Play 구매 토큰 — 한 구매로 두 주문을 지급하지 못하게 부분 유니크(0186). */
+    playPurchaseToken: text('play_purchase_token'),
+    /** 구글 주문번호(GPA.xxxx) — 환불 API·voided 동기화·CS 대조. */
+    playOrderId: text('play_order_id'),
+    /** 소모(consume=확인) 시각 — 없으면 play-sync가 재시도(3일 미확인 자동환불 방지). */
+    playConsumedAt: timestamp('play_consumed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
