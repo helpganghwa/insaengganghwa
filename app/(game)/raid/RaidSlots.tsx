@@ -151,36 +151,44 @@ function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier
                   : 'border-zinc-200 dark:border-zinc-700'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span className="flex min-w-[52px] items-center gap-1 text-[12px] font-extrabold">
+              {/* 390px에서 한 줄 보장(실기기 피드백 09-03) — 각 조각 nowrap, 문구 축약(HP ×8 · 📦2/페이즈). */}
+              <span className="flex items-center gap-2 whitespace-nowrap">
+                <span className="flex min-w-[46px] items-center gap-1 text-[12px] font-extrabold">
                   <span aria-hidden className={`inline-block h-2 w-2 rounded-full ${TIER_DOT[t]}`} />
                   {r.label}
                 </span>
-                <span className="flex-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
-                  체력{' '}
+                <span className="min-w-0 flex-1 truncate text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                  HP{' '}
                   <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
                     ×{r.hpMult}
                   </span>{' '}
-                  · 페이즈마다 📦
+                  · 📦
                   <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
                     {r.boxesPerPhase}
                   </span>
+                  /페이즈
                 </span>
                 <span
-                  className={`whitespace-nowrap text-[10px] font-semibold ${
+                  className={`text-[10px] font-semibold ${
                     r.recommendedTotalCp > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-400'
                   }`}
                 >
-                  {r.recommendedTotalCp > 0 ? `권장 총합 ${fmtMan(r.recommendedTotalCp)}+` : '권장 없음'}
+                  {r.recommendedTotalCp > 0 ? `총합 ${fmtMan(r.recommendedTotalCp)}+` : '제한 없음'}
                 </span>
               </span>
               {on ? (
-                <span className="mt-1 flex flex-wrap items-center gap-1 border-t border-dashed border-zinc-300 pt-1 text-[10px] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
-                  <span className="mr-0.5">달성 보상</span>
+                // 달성 보상 — 고정 열 그리드라 폭이 좁아도 줄바꿈 없이 한 줄(칩은 truncate).
+                <span
+                  className="mt-1 grid items-center gap-1 border-t border-dashed border-zinc-300 pt-1 text-[10px] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
+                  style={{
+                    gridTemplateColumns: `auto repeat(${raidMilestoneList(t).length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  <span className="mr-1 whitespace-nowrap">달성 보상</span>
                   {raidMilestoneList(t).map(([p, b]) => (
                     <span
                       key={p}
-                      className="rounded bg-zinc-100 px-1.5 py-px font-mono text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      className="truncate rounded bg-zinc-100 px-1 py-px text-center font-mono text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                     >
                       {p}{' '}
                       <span className="font-sans font-bold text-amber-600 dark:text-amber-300">📦{b}</span>

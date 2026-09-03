@@ -239,14 +239,18 @@ function RewardCard({
       </div>
       <div className="flex items-start gap-2 py-0.5">
         <span className="min-w-[62px] pt-px font-bold text-amber-300">달성 보상</span>
-        <span className="flex flex-1 flex-wrap items-center gap-1">
+        {/* 고정 열 그리드 — 390px에서 칩이 두 줄로 꺾이지 않게(실기기 피드백 09-03). */}
+        <span
+          className="grid min-w-0 flex-1 items-center gap-1"
+          style={{ gridTemplateColumns: `repeat(${list.length}, minmax(0, 1fr))` }}
+        >
           {list.map(([p, b]) => {
             const done = phasesCleared >= p;
             const isNext = next?.phase === p;
             return (
               <span
                 key={p}
-                className={`rounded px-1.5 py-px font-mono text-[9.5px] ${
+                className={`truncate rounded px-1 py-px text-center font-mono text-[9.5px] ${
                   glowPhase === p ? 'animate-milestone-glow ' : ''
                 }${
                   done
@@ -261,7 +265,7 @@ function RewardCard({
             );
           })}
           {!next ? (
-            <span className="basis-full text-[9.5px] text-zinc-400">
+            <span className="col-span-full text-[9.5px] text-zinc-400">
               달성 보상을 모두 받았어요 · 페이즈 보상은 계속
             </span>
           ) : null}
@@ -770,12 +774,15 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                     보상 📦<span className="font-mono font-bold">{drops.milestoneBoxes}</span>
                   </div>
                   <div
-                    className={`mt-1.5 flex flex-wrap justify-center gap-1 ${rewardClaimed ? 'opacity-60' : ''}`}
+                    className={`mx-auto mt-1.5 grid max-w-[300px] gap-1 ${rewardClaimed ? 'opacity-60' : ''}`}
+                    style={{
+                      gridTemplateColumns: `repeat(${raidMilestoneList(v.tier).length}, minmax(0, 1fr))`,
+                    }}
                   >
                     {raidMilestoneList(v.tier).map(([p, b]) => (
                       <span
                         key={p}
-                        className={`rounded px-1.5 py-px font-mono text-[9.5px] ${
+                        className={`truncate rounded px-1 py-px text-center font-mono text-[9.5px] ${
                           v.phasesCleared >= p
                             ? 'bg-amber-500/25 text-amber-200'
                             : 'bg-zinc-800/80 text-zinc-600'
