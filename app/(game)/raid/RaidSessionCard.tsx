@@ -208,7 +208,8 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
 }
 
 /**
- * 마일스톤 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 마일스톤까지 남은 HP.
+ * 달성 보상(코드 milestone) 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 달성까지 남은 HP.
+ * 유저 용어는 "페이즈 보상"(페이즈마다) / "달성 보상"(특정 페이즈 도달 시 1회) — 2026-09-03 결정.
  * 예상 공격 수는 이 레이드의 실제 평균(누적 데미지 ÷ 총 공격 횟수) 기준이라 파티 구성 변화를
  * 자연히 반영한다(공격 0회면 숨김).
  */
@@ -235,7 +236,7 @@ function MilestoneRow({
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[10px]">
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="font-semibold text-zinc-400">마일스톤</span>
+        <span className="font-semibold text-zinc-400">달성 보상</span>
         {list.map(([p, b]) => (
           <span
             key={p}
@@ -264,7 +265,7 @@ function MilestoneRow({
               ) : null}
             </>
           ) : (
-            '마일스톤을 모두 달성했어요'
+            '달성 보상을 모두 받았어요'
           )}
         </div>
       ) : null}
@@ -823,7 +824,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   .map(([s, n], i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[s as SupplySlot]}${n}`)
                   .join('')}
                 <span className="ml-1.5 text-[10px] text-zinc-500">
-                  (돌파 {drops.phaseBoxes} + 마일스톤 {drops.milestoneBoxes})
+                  (페이즈 {drops.phaseBoxes} + 달성 {drops.milestoneBoxes})
                 </span>
               </span>
             ) : (
