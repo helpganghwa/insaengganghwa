@@ -390,6 +390,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const rewardClaimed = Boolean(v.myReward?.claimed) || claimedOpt;
   // 방금 클릭해 수령(서버 확정 전) — 글로우+도장 1회 연출 트리거. 새로고침 후엔 정적.
   const justClaimed = claimedOpt && !Boolean(v.myReward?.claimed);
+  // 결산 카드 내역(시안 5, 2026-09-03) — 페이즈/달성 상자 수는 (raidId, phasesCleared, tier)
+  // 결정론 재계산. 저장된 boxes 합과 다르면(개편 전 정산분·달성 표 변경 등) 내역을 숨긴다.
+  const rewardTotal = v.myReward
+    ? Object.values(v.myReward.boxes).reduce((a, b) => a + (b ?? 0), 0)
+    : 0;
+  const breakdownOk = v.myReward != null && rewardTotal === drops.phaseBoxes + drops.milestoneBoxes;
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -756,6 +762,31 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   </span>
                 ))}
               </div>
+              {/* 내역 — 페이즈/달성 상자 수 한 줄 + 진행 중 카드와 같은 달성 칩 행(받은 것 켜짐·못 받은 것 회색). */}
+              {breakdownOk ? (
+                <>
+                  <div className={`mt-1 text-[10px] ${rewardClaimed ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    페이즈 보상 📦<span className="font-mono font-bold">{drops.phaseBoxes}</span> · 달성
+                    보상 📦<span className="font-mono font-bold">{drops.milestoneBoxes}</span>
+                  </div>
+                  <div
+                    className={`mt-1.5 flex flex-wrap justify-center gap-1 ${rewardClaimed ? 'opacity-60' : ''}`}
+                  >
+                    {raidMilestoneList(v.tier).map(([p, b]) => (
+                      <span
+                        key={p}
+                        className={`rounded px-1.5 py-px font-mono text-[9.5px] ${
+                          v.phasesCleared >= p
+                            ? 'bg-amber-500/25 text-amber-200'
+                            : 'bg-zinc-800/80 text-zinc-600'
+                        }`}
+                      >
+                        {p} <span className="font-sans">📦{b}</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
               {/* 박스모델을 두 상태 동일하게 — 양쪽 다 border 1px(box-border)로 레이아웃 시프트 차단. */}
               <button
                 type="button"
