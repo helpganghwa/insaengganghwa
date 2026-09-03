@@ -65,7 +65,13 @@ export type PushPayload = {
   renotify?: boolean;
 };
 
-export type SendResult = { ok: number; gone: number; failed: number };
+export type SendResult = {
+  ok: number;
+  gone: number;
+  failed: number;
+  /** 배치 대부분이 VAPID 불일치 — 구독이 아니라 **발신 키**가 틀린 것으로 보고 삭제를 보류했다(2026-09-03 사고 재발 방지). */
+  senderKeyMismatch?: boolean;
+};
 
 /**
  * SERVER.md 경계규칙 1 헬퍼 — 발송 라이브러리는 serverId를 받지 않으므로(범용 유지),
@@ -262,7 +268,8 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
   let ok = 0;
   let gone = 0;
   let failed = 0;
-  const dead: bigint[] = [];
+  const dead: bigint[] = []; // 404/410 — 확실히 사라진 구독
+  const mismatched: bigint[] = []; // VAPID 불일치 — 아래 보호 장치 통과 후에만 삭제
 
   // 청크 병렬 발송 — 대난투/레이드 등 대규모 broadcast(수천~1만+ 구독)에 동시 소켓·메모리 폭증과
   // provider rate-limit(429)을 막기 위해 한 번에 CHUNK개씩만 병렬, 청크 간 순차(이벤트루프·FD 보호).
@@ -280,12 +287,11 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
       // VAPID 키 불일치(403, 또는 Apple 400 VapidPkHashMismatch)는 영구 실패 — 구독을 다른 공개키로
       // 만들었다는 뜻이라 현재 키로는 절대 안 간다. 죽은 것으로 보고 삭제 → 다음 방문 시 재구독해 자가복구.
       const vapidMismatch = status === 403 || (status === 400 && reason.includes('VapidPkHashMismatch'));
-      if (status === 404 || status === 410 || vapidMismatch) {
+      if (vapidMismatch) {
+        mismatched.push(s.id);
+      } else if (status === 404 || status === 410) {
         gone++;
         dead.push(s.id);
-        if (vapidMismatch) {
-          console.warn('[push] VAPID 키 불일치 — 구독 삭제(재구독 필요)', s.endpoint.slice(0, 40));
-        }
       } else {
         failed++;
         console.warn('[push] send failed', s.endpoint.slice(0, 40), status);
@@ -296,10 +302,27 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
     await Promise.all(subs.slice(i, i + CHUNK).map(sendOne));
   }
 
+  // VAPID 불일치 보호 장치(2026-09-03) — 불일치가 3건 이상이고 배치의 절반 이상이면 유저가 다른 키로
+  // 재구독한 게 아니라 **보내는 쪽 키가 틀린 것**이다(로컬 env 키로 prod에 발송한 사고: 168건 삭제).
+  // 그 경우 삭제하지 않고 실패로만 집계해 알린다. 소수 불일치는 종전대로 죽은 구독으로 보고 정리한다.
+  const senderKeyMismatch = mismatched.length >= 3 && mismatched.length * 2 >= subs.length;
+  if (senderKeyMismatch) {
+    failed += mismatched.length;
+    console.error(
+      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 발신 키 문제로 판단, 구독 삭제 보류. VAPID_PRIVATE_KEY/PUBLIC_KEY가 구독을 만든 키와 같은지 확인`,
+    );
+  } else {
+    for (const id of mismatched) {
+      gone++;
+      dead.push(id);
+    }
+    if (mismatched.length > 0) console.warn('[push] VAPID 키 불일치 — 구독 삭제(재구독 필요)', mismatched.length);
+  }
+
   // 만료/Gone 구독 cleanup
   if (dead.length > 0) {
     await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, dead));
   }
 
-  return { ok, gone, failed };
+  return senderKeyMismatch ? { ok, gone, failed, senderKeyMismatch: true } : { ok, gone, failed };
 }
