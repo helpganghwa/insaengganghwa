@@ -5,11 +5,12 @@ import {
   RAID_DURATION_OPTIONS_MS,
   RAID_MAX_CONCURRENT_PER_USER,
   RAID_MAX_PARTICIPANTS,
-  RAID_OPEN_COST_DIAMOND,
   RAID_PHASE1_HP_MAX,
   RAID_PHASE1_HP_MIN,
-  RAID_PHASE_DROP_BOXES,
+  RAID_TIERS,
+  RAID_TIER_CODES,
   raidExtraAttackCost,
+  raidMilestoneList,
 } from '@/lib/game/balance';
 import { RAID_BOSS_CODES } from '@/lib/game/raid/bosses';
 
@@ -21,9 +22,10 @@ export const meta: WikiDocMeta = {
   slug: 'raid',
   cat: '경쟁',
   title: '레이드',
-  summary: '다이아로 소환하는 보스, 돌파한 페이즈만큼 상자.',
+  summary: '난이도를 골라 소환하는 보스, 돌파한 페이즈와 마일스톤만큼 상자.',
   sections: [
     { id: 'open', label: '소환' },
+    { id: 'tier', label: '난이도' },
     { id: 'join', label: '참여' },
     { id: 'attack', label: '공격' },
     { id: 'phase', label: '페이즈' },
@@ -48,8 +50,11 @@ export default function Doc() {
       <H2 id="open">소환</H2>
       <UL>
         <LI>
-          보스를 선택하고 {fmtInt(RAID_OPEN_COST_DIAMOND)} 다이아를 사용해서 소환하며, 소환한
-          사람이 방장이자 첫 참가자가 된다.
+          보스와 난이도를 선택하고 다이아를 사용해서 소환하며(
+          {RAID_TIER_CODES.map((t) => `${RAID_TIERS[t].label} ${fmtInt(RAID_TIERS[t].openCost)}`).join(
+            ' · ',
+          )}
+          ), 소환한 사람이 방장이자 첫 참가자가 된다.
           <Fn n={1} />
         </LI>
         <LI>
@@ -64,6 +69,35 @@ export default function Doc() {
       <Warn>
         소환에 쓴 다이아는 돌려받지 못한다. 아무도 참여하지 않은 채 끝나도 돌려받지 못한다.
       </Warn>
+
+      <H2 id="tier">난이도</H2>
+      <UL>
+        <LI>소환할 때 난이도를 고르며, 난이도에 따라 소환 비용·보스 체력·보상이 달라진다.</LI>
+        <LI>
+          보상은 어느 난이도든 참가자 전원에게 동일하게 지급되며, 기여도에 따라 달라지지 않는다.
+        </LI>
+      </UL>
+      <Tbl
+        head={['난이도', '소환', '보스 체력', '페이즈당 상자', '마일스톤', '권장 총합 전투력']}
+        rows={RAID_TIER_CODES.map((t) => {
+          const r = RAID_TIERS[t];
+          return [
+            r.label,
+            `${fmtInt(r.openCost)} 다이아`,
+            `쉬움의 ×${fmtInt(r.hpMult)}`,
+            `${fmtInt(r.boxesPerPhase)}개`,
+            raidMilestoneList(t)
+              .map(([p, b]) => `${fmtInt(p)}페이즈 ${fmtInt(b)}개`)
+              .join(' · '),
+            r.recommendedTotalCp > 0 ? `${fmtInt(r.recommendedTotalCp)} 이상` : '제한 없음',
+          ];
+        })}
+      />
+      <Note>
+        마일스톤은 누적 돌파 페이즈가 표의 수에 도달할 때마다 한 번씩 받는 추가 상자다. 권장 총합
+        전투력은 참가자 전원의 총 전투력 합이며, 이보다 약한 파티는 한 단계 낮은 난이도가 상자를 더
+        많이 받는다. 혼자라면 쉬움이 가장 유리하다.
+      </Note>
 
       <H2 id="join">참여</H2>
       <UL>
@@ -115,7 +149,11 @@ export default function Doc() {
       <UL>
         <LI>
           보스 체력은 페이즈 단위로 나뉜다. 첫 페이즈는 소환될 때 {fmtInt(RAID_PHASE1_HP_MIN)}에서{' '}
-          {fmtInt(RAID_PHASE1_HP_MAX)} 사이로 랜덤하게 정해진다.
+          {fmtInt(RAID_PHASE1_HP_MAX)} 사이로 랜덤하게 정해지고, 여기에 난이도 배수(
+          {RAID_TIER_CODES.map((t) => `${RAID_TIERS[t].label} ×${fmtInt(RAID_TIERS[t].hpMult)}`).join(
+            ' · ',
+          )}
+          )가 곱해진다.
         </LI>
         <LI>다음 페이즈로 갈수록 체력이 높아지고, 페이즈는 끝없이 이어진다.</LI>
         <LI>
@@ -127,8 +165,16 @@ export default function Doc() {
       <UL>
         <LI>진행 시간이 끝나면 정산되며, 정산 뒤에는 공격할 수 없다.</LI>
         <LI>
-          돌파한 페이즈 하나마다 랜덤 부위 <DocLink slug="supply">보급 상자</DocLink>{' '}
-          {fmtInt(RAID_PHASE_DROP_BOXES)}개가 참가자 전원에게 동일하게 지급된다.
+          돌파한 페이즈 하나마다 랜덤 부위 <DocLink slug="supply">보급 상자</DocLink>가 난이도별
+          개수(
+          {RAID_TIER_CODES.map((t) => `${RAID_TIERS[t].label} ${fmtInt(RAID_TIERS[t].boxesPerPhase)}개`).join(
+            ' · ',
+          )}
+          )로 참가자 전원에게 동일하게 지급된다.
+        </LI>
+        <LI>
+          누적 돌파 페이즈가 마일스톤에 도달하면 난이도 표의 상자를 추가로 받는다. 정산 화면의 누적
+          보상에 돌파 상자와 마일스톤 상자가 나뉘어 표시된다.
         </LI>
         <LI>레이드 화면에서 보상 받기를 눌러야 상자가 지급된다.</LI>
         <LI>

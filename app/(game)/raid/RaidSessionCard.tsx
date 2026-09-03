@@ -6,11 +6,17 @@ import Link from 'next/link';
 
 import {
   RAID_BASE_ATTACKS,
+  RAID_TIERS,
+  raidCumulativeHp,
   raidExtraAttackCost,
+  raidMilestoneList,
+  raidNextMilestone,
   raidPhaseHp,
+  type RaidTier,
   type SupplySlot,
 } from '@/lib/game/balance';
 import { aggregatePhaseDrops } from '@/lib/game/raid/drops';
+import { TierChip } from './TierChip';
 import { RAID_BOSSES, pickRaidShareCopy, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
@@ -40,8 +46,12 @@ export type RaidView = {
   expireAtIso: string;
   shareCode: string;
   isHost: boolean;
+  /** 난이도(BALANCE §5.4) — 보상 내역·마일스톤 표시의 근거. */
+  tier: RaidTier;
   phase1Hp: number;
   totalDamage: number;
+  /** 참가자 전원의 공격 횟수 합(추가 공격 포함) — 다음 마일스톤까지 예상 공격 수의 분모. */
+  attacksUsedTotal: number;
   phasesCleared: number;
   isParticipant: boolean;
   /** 비참가 관전 모드(2026-07-27 문의 #30) — 참가/요청 버튼 정보. 참가자는 null. */
@@ -197,6 +207,71 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
   );
 }
 
+/**
+ * 마일스톤 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 마일스톤까지 남은 HP.
+ * 예상 공격 수는 이 레이드의 실제 평균(누적 데미지 ÷ 총 공격 횟수) 기준이라 파티 구성 변화를
+ * 자연히 반영한다(공격 0회면 숨김).
+ */
+function MilestoneRow({
+  tier,
+  phasesCleared,
+  phase1Hp,
+  total,
+  attacksUsed,
+  settled,
+}: {
+  tier: RaidTier;
+  phasesCleared: number;
+  phase1Hp: number;
+  total: number;
+  attacksUsed: number;
+  settled: boolean;
+}) {
+  const list = raidMilestoneList(tier);
+  const next = raidNextMilestone(tier, phasesCleared);
+  const remain = next ? Math.max(0, raidCumulativeHp(phase1Hp, next.phase) - total) : 0;
+  const avg = attacksUsed > 0 ? total / attacksUsed : 0;
+  const est = next && avg > 0 ? Math.max(1, Math.ceil(remain / avg)) : null;
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[10px]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="font-semibold text-zinc-400">마일스톤</span>
+        {list.map(([p, b]) => (
+          <span
+            key={p}
+            className={`rounded px-1 py-px font-mono ${
+              phasesCleared >= p ? 'bg-amber-500/25 text-amber-200' : 'bg-zinc-800 text-zinc-500'
+            }`}
+          >
+            {p} <span className="font-sans">📦{b}</span>
+          </span>
+        ))}
+      </div>
+      {!settled ? (
+        <div className="mt-1 text-zinc-400">
+          {next ? (
+            <>
+              다음 <span className="font-mono font-bold text-zinc-200">PHASE {next.phase}</span>까지
+              남은 HP{' '}
+              <span className="font-mono font-bold text-zinc-200">{remain.toLocaleString()}</span>
+              {est != null ? (
+                <>
+                  {' '}
+                  · 파티 평균으로 약{' '}
+                  <span className="font-mono font-bold text-zinc-200">{est.toLocaleString()}</span>회
+                  공격
+                </>
+              ) : null}
+            </>
+          ) : (
+            '마일스톤을 모두 달성했어요'
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const { showError, showHeaderToast } = useResourceToast();
   // 다이아 부족 → 충전 유도 팝업(2026-08-22) — 보석 공격 컨펌 진입 사전 체크 + 서버 거절 재사용.
@@ -223,8 +298,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const joined = v.isParticipant || optJoined;
   const canAttack = joined && !settled && !over && left > 0;
 
-  // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 합산.
-  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared);
+  // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 + 도달 마일스톤 합산(난이도별).
+  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared, v.tier);
 
   // ── 타격 FX: hit/crit. (insaeng은 미스 없음 — BALANCE §5.3.) ──
   const [fx, setFx] = useState<null | 'hit' | 'crit'>(null);
@@ -507,7 +582,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: copy.title,
+          // 난이도를 제목에 — 받는 쪽이 파티 규모에 맞는 레이드인지 바로 알게(BALANCE §5.4).
+          title: `${copy.title} · ${RAID_TIERS[v.tier].label}`,
           description: copy.body,
           imageUrl,
           imageWidth: 1200,
@@ -571,6 +647,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between p-3">
           <BackFab fallback="/raid" className="h-8 w-8" />
           <div className="pointer-events-none absolute inset-x-20 top-1/2 -translate-y-1/2 truncate text-center text-sm font-extrabold drop-shadow">
+            <TierChip tier={v.tier} className="mr-1" />
             {boss.name}
             {v.isHost ? (
               <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
@@ -600,6 +677,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
             />
           </div>
         </div>
+
+        {/* 마일스톤(BALANCE §5.4) — 도달분은 켜고, 다음 마일스톤까지 남은 HP·예상 공격 수. */}
+        <MilestoneRow
+          tier={v.tier}
+          phasesCleared={v.phasesCleared}
+          phase1Hp={v.phase1Hp}
+          total={effTotal}
+          attacksUsed={v.attacksUsedTotal}
+          settled={settled}
+        />
 
         {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (
@@ -735,6 +822,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   .filter(([, n]) => n > 0)
                   .map(([s, n], i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[s as SupplySlot]}${n}`)
                   .join('')}
+                <span className="ml-1.5 text-[10px] text-zinc-500">
+                  (돌파 {drops.phaseBoxes} + 마일스톤 {drops.milestoneBoxes})
+                </span>
               </span>
             ) : (
               <span className="text-zinc-500">아직 없음</span>

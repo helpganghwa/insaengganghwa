@@ -330,12 +330,11 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 개설비 — 개설자만 낸다(참가자는 무료로 기본 공격 10회). 개설자 한 명이 최대 9명의 플레이
- * 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가 돌지 않는다.
- * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200. 그래도 CBT 실질가의 1.37배라
- * 레이드 빈도·상자 유입은 CBT보다 낮아진다(레이드는 단일 최대 상자 유입원).
+ * 개설비는 난이도별(RAID_TIERS.openCost, 개설자만 낸다 — 참가자는 무료로 기본 공격 10회).
+ * 개설자 한 명이 최대 9명의 플레이 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가
+ * 돌지 않는다. 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200, 2026-09-03 난이도
+ * 개편으로 쉬움 100 / 보통 200 / 어려움 300.
  */
-export const RAID_OPEN_COST_DIAMOND = 200;
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
@@ -354,7 +353,11 @@ export function raidExtraAttackCost(nth: number): number {
   return 25 * Math.ceil(n / 10);
 }
 
-/** §5.2 phase1 HP 범위. phase n HP = phase1 × 1.5^(n-1). */
+/**
+ * §5.2 phase1 HP 기본 범위(쉬움 기준). phase n HP = phase1 × 1.5^(n-1).
+ * 난이도는 저장되는 phase1_hp에 RAID_TIERS.hpMult를 곱해 반영한다 — 페이즈 수식·돌파 판정·
+ * 게이지 계산은 난이도를 몰라도 되게(개편 전 코드 경로 그대로).
+ */
 export const RAID_PHASE1_HP_MIN = 8000;
 export const RAID_PHASE1_HP_MAX = 12000;
 export const RAID_PHASE_HP_MULT = 1.5;
@@ -380,12 +383,93 @@ export function computeRaidDamage(totalCP: number, varFactor: number, isCrit: bo
 }
 
 /**
- * §5.4 보상 — 1회+ 공격 전원 동일. 기본 참가 보상 없음.
- * 돌파 페이즈마다 **보급 상자 1개**(슬롯 균등 1/3) 지급 — 다이아 드롭 없음.
- * 레이드는 초월용 박스 수급의 *보조* 경로(시뮬 simulate-raid-boxes: 무과금 패시브 대비
- * 보통 ×1.4~1.7, 천장 ×3.3 — 1개 고정 채택. 1~3개는 헤비/고래 ×4~6.6로 과공급).
+ * §5.4 난이도·보상(2026-09-03 개편) — 개설자가 쉬움/보통/어려움 중 고른다. 난이도마다 개설비·
+ * phase1 HP 배수·돌파 페이즈당 상자·마일스톤이 다르고, 보상은 여전히 1회+ 공격 전원 동일
+ * (기여도 무관, 기본 참가 보상 없음, 다이아 드롭 없음).
+ *
+ * 설계 의도 — "파티 총합 전투력에 맞는 난이도를 고르는 것이 이득"이 되게. 권장 총합 미만이면
+ * 한 단계 낮은 난이도가 더 많이 준다. 실서버 30일 재현(394건)으로 경계를 맞췄다: 혼자면 쉬움,
+ * 총합 600만 근처부터 보통(+27%), 1,200만부터 어려움(+11%)이 유리. 어려움을 미달 파티가 열면
+ * 쉬움 대비 약 💎1,000 상당 손해라 개설 화면에서 권장 총합을 경고한다.
+ *
+ * 마일스톤은 **상자만**(사용자 결정). 어려움 20/25는 현 전투력으로 도달 불가라 두지 않는다.
+ * 월간 상자 유입 +21%(상위 파티 집중) — 관찰 항목: 레이드 상자 지급량·상위 20명 초월 속도·
+ * 상자 팩 판매. 조정 레버는 20/25 마일스톤부터 낮춘다.
  */
-export const RAID_PHASE_DROP_BOXES = 1;
+export type RaidTier = 'easy' | 'normal' | 'hard';
+export const RAID_TIER_CODES = ['easy', 'normal', 'hard'] as const;
+export type RaidTierRule = {
+  label: string;
+  /** 개설비(다이아) — 개설자만, 즉시 차감·환불 없음. */
+  openCost: number;
+  /** phase1 HP 배수 — 개설 시 U(8000,12000)×배수를 저장(페이즈 수식은 공통). */
+  hpMult: number;
+  /** 돌파 페이즈 1개당 보급 상자(전원 동일, 슬롯은 결정론 해시). */
+  boxesPerPhase: number;
+  /** 마일스톤 — 누적 돌파 페이즈가 키에 도달하면 값만큼 보급 상자 추가(각 1회, 전원 동일). */
+  milestones: Readonly<Record<number, number>>;
+  /** 권장 파티 총합 전투력 — 이 미만이면 한 단계 낮은 난이도가 유리(개설 화면 안내). */
+  recommendedTotalCp: number;
+};
+export const RAID_TIERS: Readonly<Record<RaidTier, RaidTierRule>> = {
+  easy: {
+    label: '쉬움',
+    openCost: 100,
+    hpMult: 1,
+    boxesPerPhase: 1,
+    milestones: { 10: 5, 15: 10, 20: 15, 25: 30 },
+    recommendedTotalCp: 0,
+  },
+  normal: {
+    label: '보통',
+    openCost: 200,
+    hpMult: 8,
+    boxesPerPhase: 2,
+    milestones: { 10: 5, 15: 30, 20: 60, 25: 120 },
+    recommendedTotalCp: 6_000_000,
+  },
+  hard: {
+    label: '어려움',
+    openCost: 300,
+    hpMult: 120,
+    boxesPerPhase: 3,
+    milestones: { 10: 45, 15: 90 },
+    recommendedTotalCp: 12_000_000,
+  },
+};
+
+export function isRaidTier(v: unknown): v is RaidTier {
+  return typeof v === 'string' && (RAID_TIER_CODES as readonly string[]).includes(v);
+}
+/** DB text 컬럼 → 난이도(알 수 없는 값은 쉬움 — 개편 전 규칙과 동일). */
+export function raidTierOf(v: unknown): RaidTier {
+  return isRaidTier(v) ? v : 'easy';
+}
+/** 마일스톤 페이즈 오름차순 [phase, boxes][]. */
+export function raidMilestoneList(tier: RaidTier): [number, number][] {
+  return Object.entries(RAID_TIERS[tier].milestones)
+    .map(([p, b]) => [Number(p), b] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+}
+/** 누적 돌파 페이즈까지 달성한 마일스톤 상자 합. */
+export function raidMilestoneBoxes(tier: RaidTier, phasesCleared: number): number {
+  let n = 0;
+  for (const [p, b] of raidMilestoneList(tier)) if (phasesCleared >= p) n += b;
+  return n;
+}
+/** 다음 마일스톤(아직 미달성 중 가장 가까운 것) — 전부 달성했으면 null. */
+export function raidNextMilestone(
+  tier: RaidTier,
+  phasesCleared: number,
+): { phase: number; boxes: number } | null {
+  for (const [p, b] of raidMilestoneList(tier)) if (phasesCleared < p) return { phase: p, boxes: b };
+  return null;
+}
+/** 1..N 페이즈 누적 HP(돌파 N에 필요한 누적 데미지) = phase1·(1.5^N − 1)/(1.5 − 1). */
+export function raidCumulativeHp(phase1Hp: number, phases: number): number {
+  const n = Math.max(0, Math.floor(phases));
+  return Math.round((phase1Hp * (Math.pow(RAID_PHASE_HP_MULT, n) - 1)) / (RAID_PHASE_HP_MULT - 1));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §6. 경제 — 단일 프리미엄 재화 (다이아 ≡ 보석)

@@ -19,13 +19,18 @@ const skip = !TEST_USER_ID;
 const SID = 1;
 
 let seq = 0;
-async function seedRaid(opts: { expire: 'past' | 'future'; damage: number; attacks: number }): Promise<bigint> {
+async function seedRaid(opts: {
+  expire: 'past' | 'future';
+  damage: number;
+  attacks: number;
+  tier?: 'easy' | 'normal' | 'hard';
+}): Promise<bigint> {
   seq += 1;
   const days = opts.expire === 'past' ? -1 : 1;
   const r = (await testDb.execute(sql`
-    insert into raids (host_user_id, server_id, boss_code, phase1_hp, share_code, expire_at, status)
+    insert into raids (host_user_id, server_id, boss_code, phase1_hp, share_code, expire_at, status, tier)
     values (${TEST_USER_ID}::uuid, ${SID}, 'slime_king', 100, ${'TR' + seq + '_' + process.pid},
-      now() + make_interval(days => ${days}), 'active')
+      now() + make_interval(days => ${days}), 'active', ${opts.tier ?? 'easy'})
     returning id::text id
   `)) as unknown as { id: string }[];
   const raidId = BigInt(r[0]!.id);
@@ -40,6 +45,12 @@ async function rewardCount(raidId: bigint): Promise<number> {
     select count(*)::int n from raid_rewards where raid_id = ${raidId.toString()}::bigint and user_id = ${TEST_USER_ID}::uuid
   `)) as unknown as { n: number }[];
   return r[0]!.n;
+}
+async function rewardBoxes(raidId: bigint): Promise<number> {
+  const r = (await testDb.execute(sql`
+    select boxes from raid_rewards where raid_id = ${raidId.toString()}::bigint and user_id = ${TEST_USER_ID}::uuid
+  `)) as unknown as { boxes: Record<string, number> }[];
+  return Object.values(r[0]?.boxes ?? {}).reduce((s, n) => s + Number(n), 0);
 }
 async function raidStatus(raidId: bigint): Promise<string> {
   const r = (await testDb.execute(
@@ -82,6 +93,15 @@ describe.skipIf(skip)('raid/settle — 레이드 정산', () => {
     expect(r.settled).toBe(false);
     expect(await raidStatus(raidId)).toBe('active');
     expect(await rewardCount(raidId)).toBe(0);
+  });
+
+  it('난이도 보통 10페이즈: 돌파 2×10 + 마일스톤 5 = 상자 25 적재(BALANCE §5.4)', async () => {
+    // phase1 100 → 10페이즈 누적 HP = 100·(1.5^10−1)/0.5 ≈ 11,333, 11페이즈 ≈ 17,099.
+    const raidId = await seedRaid({ expire: 'past', damage: 11_400, attacks: 1, tier: 'normal' });
+    const r = await settleRaid({ raidId });
+    expect(r.settled).toBe(true);
+    expect(r.phasesCleared).toBe(10);
+    expect(await rewardBoxes(raidId)).toBe(25);
   });
 
   it('공격 0회 참여자는 보상 제외(winner = attacks_used ≥ 1)', async () => {

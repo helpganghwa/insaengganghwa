@@ -1,7 +1,7 @@
 /**
  * SCHEMA §6. 레이드 (플레이어 호스팅 co-op)
  *
- * 개설 1000다이아·동시 3·일일 5·6시간 공격창. 미스 없음·크리 ×1.5·뎀 ±30%.
+ * 개설비 난이도별(쉬움 100/보통 200/어려움 300)·동시 3·일일 5·1~6시간 공격창. 미스 없음·크리 ×1.5·뎀 ±30%.
  * 보상 = 1회+ 공격 전원 동일(기여도 가중 없음). totalDamage는 표시용. 6h 만료 lazy+cron 멱등.
  */
 import {
@@ -60,6 +60,11 @@ export const raids = pgTable(
     friendShare: text('friend_share').notNull().default('off'),
     /** 길드 공개·참가 모드: 'off' | 'free' | 'approval'. */
     guildShare: text('guild_share').notNull().default('off'),
+    /**
+     * 난이도 'easy' | 'normal' | 'hard'(BALANCE §5.4, 0189). 개설비·돌파 상자·마일스톤의 근거.
+     * HP 배수는 phase1_hp에 이미 곱해져 저장된다. 개편 전 행은 'easy'(규칙 동일).
+     */
+    tier: text('tier').notNull().default('easy'),
   },
   (t) => [index('raid_status_expire_idx').on(t.status, t.expireAt)],
 );

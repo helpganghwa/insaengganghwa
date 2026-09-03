@@ -8,6 +8,7 @@ import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
 import { RAID_BOSSES } from './bosses';
+import { RAID_TIERS, raidTierOf } from '@/lib/game/balance';
 import { bumpCountMetric } from '@/lib/game/leaderboard/incremental';
 
 /**
@@ -30,6 +31,7 @@ export async function settleRaid(
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
         bossCode: raids.bossCode,
+        tier: raids.tier,
       })
       .from(raids)
       .where(eq(raids.id, raidId))
@@ -44,6 +46,7 @@ export async function settleRaid(
         winnerIds: [] as string[],
         bossCode: null as null | typeof raid.bossCode,
         serverId: null as number | null,
+        tier: 'easy' as const,
       };
     }
     if (raid.expireAt.getTime() > Date.now()) {
@@ -54,6 +57,7 @@ export async function settleRaid(
         winnerIds: [] as string[],
         bossCode: null as null | typeof raid.bossCode,
         serverId: null as number | null,
+        tier: 'easy' as const,
       }; // 아직 진행 중
     }
 
@@ -62,7 +66,9 @@ export async function settleRaid(
       .from(raidParticipants)
       .where(eq(raidParticipants.raidId, raidId));
     const phasesCleared = raidPhasesCleared(Number(raid.phase1Hp), Number(total));
-    const drops = aggregatePhaseDrops(raidId, phasesCleared);
+    const tier = raidTierOf(raid.tier);
+    // 난이도별 돌파 상자 + 마일스톤(BALANCE §5.4) — 전원 동일, 결정론.
+    const drops = aggregatePhaseDrops(raidId, phasesCleared, tier);
 
     // 1회 이상 공격한 참여자 전원 동일 보상. 0페이즈(미돌파)는 보상 행 자체를 만들지 않는다
     // (전수 감사 2026-08-21) — 빈 payload 행이 홈 뱃지("보상 있음")를 켜고 열면 아무것도
@@ -98,6 +104,7 @@ export async function settleRaid(
       winnerIds: winners.map((w) => w.userId),
       bossCode: raid.bossCode,
       serverId: raid.serverId as number | null,
+      tier,
     };
   });
 
@@ -122,7 +129,7 @@ export async function settleRaid(
       );
     sendPushToUsers(targets.map((t) => t.uid), {
       title: '레이드 종료',
-      body: `${bossName} 레이드가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
+      body: `${bossName} 레이드(${RAID_TIERS[result.tier].label})가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
       url: `/raid/${input.raidId.toString()}`,
       tag: `raid-${input.raidId.toString()}`,
       category: 'raid',
