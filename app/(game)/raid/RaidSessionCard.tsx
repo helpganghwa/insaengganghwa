@@ -50,8 +50,6 @@ export type RaidView = {
   tier: RaidTier;
   phase1Hp: number;
   totalDamage: number;
-  /** 참가자 전원의 공격 횟수 합(추가 공격 포함) — 다음 마일스톤까지 예상 공격 수의 분모. */
-  attacksUsedTotal: number;
   phasesCleared: number;
   isParticipant: boolean;
   /** 비참가 관전 모드(2026-07-27 문의 #30) — 참가/요청 버튼 정보. 참가자는 null. */
@@ -208,31 +206,26 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
 }
 
 /**
- * 달성 보상(코드 milestone) 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 달성까지 남은 HP.
- * 유저 용어는 "페이즈 보상"(페이즈마다) / "달성 보상"(특정 페이즈 도달 시 1회) — 2026-09-03 결정.
- * 예상 공격 수는 이 레이드의 실제 평균(누적 데미지 ÷ 총 공격 횟수) 기준이라 파티 구성 변화를
- * 자연히 반영한다(공격 0회면 숨김).
+ * 달성 보상(코드 milestone) 행 — 난이도별 [페이즈 → 📦] 목록(도달분 강조) + 다음 달성까지 남은
+ * 페이즈·HP. 유저 용어는 "페이즈 보상"(페이즈마다) / "달성 보상"(특정 페이즈 도달 시 1회).
+ * 예상 공격 수는 추측(파티 평균 가정)이라 표시하지 않는다 — 2026-09-03 사용자 결정.
  */
 function MilestoneRow({
   tier,
   phasesCleared,
   phase1Hp,
   total,
-  attacksUsed,
   settled,
 }: {
   tier: RaidTier;
   phasesCleared: number;
   phase1Hp: number;
   total: number;
-  attacksUsed: number;
   settled: boolean;
 }) {
   const list = raidMilestoneList(tier);
   const next = raidNextMilestone(tier, phasesCleared);
   const remain = next ? Math.max(0, raidCumulativeHp(phase1Hp, next.phase) - total) : 0;
-  const avg = attacksUsed > 0 ? total / attacksUsed : 0;
-  const est = next && avg > 0 ? Math.max(1, Math.ceil(remain / avg)) : null;
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[10px]">
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
@@ -252,17 +245,10 @@ function MilestoneRow({
         <div className="mt-1 text-zinc-400">
           {next ? (
             <>
-              다음 <span className="font-mono font-bold text-zinc-200">PHASE {next.phase}</span>까지
-              남은 HP{' '}
+              다음 <span className="font-mono font-bold text-zinc-200">PHASE {next.phase}</span>까지{' '}
+              <span className="font-mono font-bold text-zinc-200">{next.phase - phasesCleared}</span>
+              페이즈 · 남은 HP{' '}
               <span className="font-mono font-bold text-zinc-200">{remain.toLocaleString()}</span>
-              {est != null ? (
-                <>
-                  {' '}
-                  · 파티 평균으로 약{' '}
-                  <span className="font-mono font-bold text-zinc-200">{est.toLocaleString()}</span>회
-                  공격
-                </>
-              ) : null}
             </>
           ) : (
             '달성 보상을 모두 받았어요'
@@ -679,13 +665,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           </div>
         </div>
 
-        {/* 마일스톤(BALANCE §5.4) — 도달분은 켜고, 다음 마일스톤까지 남은 HP·예상 공격 수. */}
+        {/* 달성 보상(BALANCE §5.4) — 도달분은 켜고, 다음 달성까지 남은 페이즈·HP. */}
         <MilestoneRow
           tier={v.tier}
           phasesCleared={v.phasesCleared}
           phase1Hp={v.phase1Hp}
           total={effTotal}
-          attacksUsed={v.attacksUsedTotal}
           settled={settled}
         />
 

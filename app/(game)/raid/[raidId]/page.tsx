@@ -194,7 +194,6 @@ export default async function RaidDetail({
     tier: raidTierOf(raid.tier),
     phase1Hp: Number(raid.phase1Hp),
     totalDamage: total,
-    attacksUsedTotal: parts.reduce((s, p) => s + p.attacksUsed, 0),
     phasesCleared: raidPhasesCleared(Number(raid.phase1Hp), total),
     isParticipant: !!me,
     join,
