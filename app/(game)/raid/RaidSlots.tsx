@@ -209,23 +209,30 @@ function ShareModeRow({
   title,
   value,
   onChange,
+  compact = false,
 }: {
   title: string;
   value: ShareMode;
   onChange: (v: ShareMode) => void;
+  /** 2열 배치용 축소판(소환 시트 컴팩트 시안 1, 09-03) — 라벨·세그먼트 폭 축소. */
+  compact?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-      <span className="text-[12px] font-medium">{title}</span>
+    <div
+      className={`flex items-center justify-between gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 ${
+        compact ? 'px-2 py-1.5' : 'px-3 py-2'
+      }`}
+    >
+      <span className={`whitespace-nowrap font-medium ${compact ? 'text-[11px]' : 'text-[12px]'}`}>{title}</span>
       <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
         {SHARE_OPTS.map((o) => (
           <button
             key={o.v}
             type="button"
             onClick={() => onChange(o.v)}
-            className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
-              value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'
-            }`}
+            className={`rounded-md py-0.5 text-center font-bold transition ${
+              compact ? 'min-w-[2rem] px-1 text-[10px]' : 'min-w-[3.25rem] px-2 text-[11px]'
+            } ${value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'}`}
           >
             {o.label}
           </button>
@@ -358,6 +365,7 @@ export function RaidSlots({
   const [guildShare, setGuildShare] = useState<ShareMode>('off');
   const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
   const [tier, setTier] = useState<RaidTier>('easy'); // 기본 쉬움(가장 싸고 손해 없는 선택)
+  const [storyOpen, setStoryOpen] = useState(false); // 보스 이야기 한 줄 말줄임 → 탭하면 펼침
   const openCost = RAID_TIERS[tier].openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
@@ -593,17 +601,6 @@ export function RaidSlots({
                           : `💎 ${openCost.toLocaleString()} 지불하고 소환`}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      setPicked(null);
-                      setConfirm(false);
-                    }}
-                    className="w-full rounded-xl border border-zinc-300 py-2 text-[11px] font-bold text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
-                  >
-                    다른 보스
-                  </button>
                 </>
               ) : (
                 <ModalButton tone="ghost" onClick={() => setPicking(false)}>
@@ -618,7 +615,10 @@ export function RaidSlots({
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setPicked(c)}
+                      onClick={() => {
+                        setPicked(c);
+                        setStoryOpen(false);
+                      }}
                       className="flex flex-col items-center gap-1 rounded-lg border border-zinc-300 p-2 text-[10px] dark:border-zinc-700"
                     >
                       <BossSprite code={c} size={48} />
@@ -628,18 +628,39 @@ export function RaidSlots({
                 </div>
             ) : (
               <>
-                {/* 보스 스프라이트 + 이야기를 가로로 — 시트가 스크롤 없이 들어가게(실기기 피드백 09-03). */}
-                <div className="flex items-center gap-3 rounded-xl bg-amber-50/60 p-2.5 dark:bg-amber-950/20">
-                  <BossSprite code={picked} size={64} />
-                  <p className="min-w-0 flex-1 text-[11px] leading-snug break-keep text-zinc-600 dark:text-zinc-300">
+                {/* 컴팩트 시트(시안 1, 09-03): 스프라이트 40 + 이야기 한 줄(탭하면 펼침) + '다른 보스' 링크,
+                    친구/길드 공개는 2열, 푸터는 소환 버튼 하나 — SE(667px)에서도 스크롤 없이. */}
+                <div className="flex items-center gap-2.5 rounded-xl bg-amber-50/60 p-2 dark:bg-amber-950/20">
+                  <BossSprite code={picked} size={40} />
+                  <button
+                    type="button"
+                    aria-expanded={storyOpen}
+                    onClick={() => setStoryOpen((o) => !o)}
+                    className={`min-w-0 flex-1 text-left text-[11px] leading-snug text-zinc-600 dark:text-zinc-300 ${
+                      storyOpen ? 'break-keep' : 'truncate'
+                    }`}
+                  >
                     {RAID_BOSSES[picked].story}
-                  </p>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setPicked(null);
+                      setConfirm(false);
+                    }}
+                    className="shrink-0 rounded-full border border-zinc-300 px-2 py-0.5 text-[10.5px] font-bold text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
+                  >
+                    다른 보스 ›
+                  </button>
                 </div>
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-1.5 space-y-1.5">
                   <TierRows value={tier} onChange={setTier} />
                   <DurationRow value={durationMs} onChange={setDurationMs} />
-                  <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
-                  <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <ShareModeRow compact title="친구" value={friendShare} onChange={setFriendShare} />
+                    <ShareModeRow compact title="길드" value={guildShare} onChange={setGuildShare} />
+                  </div>
                 </div>
               </>
             )}
