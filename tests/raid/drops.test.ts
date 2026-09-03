@@ -33,10 +33,12 @@ describe('raid/drops — 난이도별 돌파 상자·마일스톤', () => {
     expect(d.milestoneBoxes).toBe(5 + 30 + 60 + 120);
   });
 
-  it('어려움 15페이즈 = 45 + 135, 20페이즈는 마일스톤 추가 없음', () => {
+  it('어려움 15페이즈 = 45 + 135, 25페이즈 = 75 + 675, 그 뒤 반복 없음', () => {
     expect(sum(aggregatePhaseDrops(3n, 15, 'hard').boxes)).toBe(45 + 45 + 90);
-    expect(aggregatePhaseDrops(3n, 20, 'hard').milestoneBoxes).toBe(135);
-    expect(raidNextMilestone('hard', 15)).toBeNull();
+    expect(aggregatePhaseDrops(3n, 25, 'hard').milestoneBoxes).toBe(45 + 90 + 180 + 360);
+    expect(raidNextMilestone('hard', 15)).toEqual({ phase: 20, boxes: 180 });
+    expect(raidNextMilestone('hard', 25)).toBeNull();
+    expect(aggregatePhaseDrops(3n, 30, 'hard').milestoneBoxes).toBe(675);
   });
 
   it('마일스톤 합·다음 마일스톤 헬퍼가 표와 일치', () => {
