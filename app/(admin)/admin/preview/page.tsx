@@ -107,7 +107,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                   {/* 배틀 재실행 — 발표 전 오늘 배틀만(액션이 날짜·상태를 다시 검증). */}
                   {m.status === 'computed' ? <MeleeRerunButton serverId={m.serverId} battleDate={m.battleDate} /> : null}
                 </div>
-                {/* 1~10위(2026-09-03) — 헤드라인 문장이 가리키는 사람·수치를 같은 화면에서 대조한다. 배틀 시점 스냅샷. */}
+                {/* 1~10위(2026-09-03) — 헤드라인 문장이 가리키는 사람·수치를 같은 화면에서 대조한다. 배틀 시점 스냅샷. 처치=killer 기록 기반(헤드라인·순위표와 같은 기준), 공격/피격 횟수=시도 수. */}
                 {m.top10.length > 0 ? (
                   <div className="mb-3 overflow-x-auto rounded-lg border border-zinc-800">
                     <table className="w-full text-[11px] tabular-nums">
@@ -117,8 +117,9 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                           <th className="px-2 py-1 text-left font-bold">닉네임</th>
                           <th className="px-2 py-1 text-left font-bold">길드</th>
                           <th className="px-2 py-1 text-right font-bold">전투력</th>
-                          <th className="px-2 py-1 text-right font-bold">공격</th>
-                          <th className="px-2 py-1 text-right font-bold">방어</th>
+                          <th className="px-2 py-1 text-right font-bold">처치</th>
+                          <th className="px-2 py-1 text-right font-bold">공격 횟수</th>
+                          <th className="px-2 py-1 text-right font-bold">피격 횟수</th>
                           <th className="px-2 py-1 text-right font-bold">탈락 R</th>
                         </tr>
                       </thead>
@@ -129,8 +130,9 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                             <td className="max-w-[9rem] truncate px-2 py-1">{t.nick}</td>
                             <td className="max-w-[7rem] truncate px-2 py-1 text-zinc-400">{t.guildName ?? '-'}</td>
                             <td className="px-2 py-1 text-right">{t.cp.toLocaleString('ko-KR')}</td>
-                            <td className="px-2 py-1 text-right">{t.attacks}</td>
-                            <td className="px-2 py-1 text-right">{t.defenses}</td>
+                            <td className="px-2 py-1 text-right">{t.kills}</td>
+                            <td className="px-2 py-1 text-right text-zinc-400">{t.attacks}</td>
+                            <td className="px-2 py-1 text-right text-zinc-400">{t.defenses}</td>
                             <td className="px-2 py-1 text-right text-zinc-400">{t.eliminatedRound == null ? '생존' : t.eliminatedRound}</td>
                           </tr>
                         ))}

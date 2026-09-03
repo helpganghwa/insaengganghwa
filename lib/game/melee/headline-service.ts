@@ -292,7 +292,7 @@ export type MeleeReviewItem = {
   /** 1~3위 닉네임(우편 미리보기용) — top10의 앞 3명. */
   podium: string[];
   /** 1~10위(검수 화면 표, 2026-09-03) — 배틀 시점 스냅샷 값. */
-  top10: { rank: number; nick: string; cp: number; attacks: number; defenses: number; eliminatedRound: number | null; guildName: string | null }[];
+  top10: { rank: number; nick: string; cp: number; kills: number; attacks: number; defenses: number; eliminatedRound: number | null; guildName: string | null }[];
   headlines: MeleeHeadlines | null;
 };
 
@@ -319,13 +319,14 @@ export async function loadMeleeReviewItems(opts: { limit?: number; extraDate?: s
     const top = (await db.execute(sql`
       select mp.final_rank as rank, coalesce(mp.nickname, c.nickname, '대장장이') as nick,
              mp.cp_snapshot::text as cp, mp.attack_count as attacks, mp.defense_count as defenses,
+             (select count(*)::int from melee_participants v where v.battle_id = mp.battle_id and v.killer_user_id = mp.user_id) as kills,
              mp.eliminated_round as er, mp.guild_name as guild
       from melee_participants mp
       left join characters c on c.user_id = mp.user_id and c.server_id = ${r.server_id}
       where mp.battle_id = ${BigInt(r.id)} and mp.final_rank <= 10 order by mp.final_rank
-    `)) as unknown as { rank: number; nick: string; cp: string; attacks: number; defenses: number; er: number | null; guild: string | null }[];
+    `)) as unknown as { rank: number; nick: string; cp: string; kills: number; attacks: number; defenses: number; er: number | null; guild: string | null }[];
     const top10 = top.map((t) => ({
-      rank: Number(t.rank), nick: t.nick, cp: Number(t.cp), attacks: Number(t.attacks ?? 0), defenses: Number(t.defenses ?? 0),
+      rank: Number(t.rank), nick: t.nick, cp: Number(t.cp), kills: Number(t.kills ?? 0), attacks: Number(t.attacks ?? 0), defenses: Number(t.defenses ?? 0),
       eliminatedRound: t.er == null ? null : Number(t.er), guildName: t.guild ?? null,
     }));
     items.push({
