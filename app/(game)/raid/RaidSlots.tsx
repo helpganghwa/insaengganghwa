@@ -112,93 +112,67 @@ function DurationRow({ value, onChange }: { value: number; onChange: (v: number)
   );
 }
 
-const TIER_DOT: Record<RaidTier, string> = {
-  easy: 'bg-emerald-500',
-  normal: 'bg-sky-500',
-  hard: 'bg-rose-500',
+const TIER_ACTIVE: Record<RaidTier, string> = {
+  easy: 'bg-emerald-500 text-white',
+  normal: 'bg-sky-500 text-white',
+  hard: 'bg-rose-500 text-white',
 };
 function fmtMan(n: number): string {
   return n >= 10_000 ? `${(n / 10_000).toLocaleString()}만` : n.toLocaleString();
 }
 
 /**
- * 난이도 행(BALANCE §5.4) — 가로 행 3줄, 고른 행만 달성 보상을 펼친다(2026-09-03 시안 4 채택).
- * 추천 로직 없이 사실만: 체력 계수 · 페이즈 보상 · 권장 총합(참가자 전원 전투력 합), 펼침 줄에
- * 달성 보상. 소환 비용은 전 난이도 동일이라 행에 두지 않고 시트 부제·버튼에만 보인다.
- * 실기기 피드백(09-03): 시트가 스크롤 없이 들어가도록 안내 문장 삭제·행 여백 축소.
- * 유저 용어: 페이즈 보상 / 달성 보상(코드의 milestone).
+ * 난이도 행(BALANCE §5.4) — 기존 소환 시트의 다른 행(진행 시간·공개)과 같은 세그먼트 형식으로
+ * 선택지만 더하고, 고른 난이도의 정보를 행 하단에 두 줄로 간략히 보인다(2026-09-04 사용자 결정 —
+ * 행 3줄·컴팩트 시트 시안은 폐기). 추천 로직 없음. 문구는 390px에서 한 줄씩 들어가게 축약.
+ * 유저 용어: 페이즈 보상 / 달성 보상(코드의 milestone). 개설비는 전 난이도 동일이라 표시 X.
  */
-function TierRows({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier) => void }) {
+function TierRow({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier) => void }) {
+  const r = RAID_TIERS[value];
+  const ms = raidMilestoneList(value);
   return (
     <div className="rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[12px] font-medium">난이도</span>
-        <span className="text-[9.5px] text-zinc-500">보상 전원 동일 · 권장 총합은 파티 전원 전투력 합</span>
-      </div>
-      <div className="mt-1.5 space-y-1">
-        {RAID_TIER_CODES.map((t) => {
-          const r = RAID_TIERS[t];
-          const on = t === value;
-          return (
+        <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
+          {RAID_TIER_CODES.map((t) => (
             <button
               key={t}
               type="button"
-              aria-pressed={on}
               onClick={() => onChange(t)}
-              className={`w-full rounded-lg border px-2.5 py-1 text-left transition ${
-                on
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'border-zinc-200 dark:border-zinc-700'
+              className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
+                value === t ? TIER_ACTIVE[t] : 'text-zinc-500'
               }`}
             >
-              {/* 390px에서 한 줄 보장(실기기 피드백 09-03) — 각 조각 nowrap, 문구 축약(HP ×8 · 📦2/페이즈). */}
-              <span className="flex items-center gap-2 whitespace-nowrap">
-                <span className="flex min-w-[46px] items-center gap-1 text-[12px] font-extrabold">
-                  <span aria-hidden className={`inline-block h-2 w-2 rounded-full ${TIER_DOT[t]}`} />
-                  {r.label}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[10.5px] text-zinc-500 dark:text-zinc-400">
-                  HP{' '}
-                  <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                    ×{r.hpMult}
-                  </span>{' '}
-                  · 📦
-                  <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
-                    {r.boxesPerPhase}
-                  </span>
-                  /페이즈
-                </span>
-                <span
-                  className={`text-[10px] font-semibold ${
-                    r.recommendedTotalCp > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-400'
-                  }`}
-                >
-                  {r.recommendedTotalCp > 0 ? `총합 ${fmtMan(r.recommendedTotalCp)}+` : '제한 없음'}
-                </span>
-              </span>
-              {on ? (
-                // 달성 보상 — 고정 열 그리드라 폭이 좁아도 줄바꿈 없이 한 줄(칩은 truncate).
-                <span
-                  className="mt-1 grid items-center gap-1 border-t border-dashed border-zinc-300 pt-1 text-[10px] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
-                  style={{
-                    gridTemplateColumns: `auto repeat(${raidMilestoneList(t).length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  <span className="mr-1 whitespace-nowrap">달성 보상</span>
-                  {raidMilestoneList(t).map(([p, b]) => (
-                    <span
-                      key={p}
-                      className="truncate rounded bg-zinc-100 px-1 py-px text-center font-mono text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    >
-                      {p}{' '}
-                      <span className="font-sans font-bold text-amber-600 dark:text-amber-300">📦{b}</span>
-                    </span>
-                  ))}
-                </span>
-              ) : null}
+              {RAID_TIERS[t].label}
             </button>
-          );
-        })}
+          ))}
+        </div>
+      </div>
+      <div className="mt-1.5 space-y-0.5 text-[10.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+        <div className="whitespace-nowrap">
+          HP <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">×{r.hpMult}</span> ·
+          페이즈 보상 📦
+          <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{r.boxesPerPhase}</span>
+          {r.recommendedTotalCp > 0 ? (
+            <>
+              {' '}
+              · 권장 총합{' '}
+              <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
+                {fmtMan(r.recommendedTotalCp)}+
+              </span>
+            </>
+          ) : (
+            ' · 권장 제한 없음'
+          )}
+        </div>
+        <div className="whitespace-nowrap">
+          달성 보상 📦
+          <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
+            {ms.map(([, b]) => b).join('·')}
+          </span>{' '}
+          <span className="font-mono">({ms.map(([p]) => p).join('·')}페이즈)</span>
+        </div>
       </div>
     </div>
   );
@@ -209,30 +183,23 @@ function ShareModeRow({
   title,
   value,
   onChange,
-  compact = false,
 }: {
   title: string;
   value: ShareMode;
   onChange: (v: ShareMode) => void;
-  /** 2열 배치용 축소판(소환 시트 컴팩트 시안 1, 09-03) — 라벨·세그먼트 폭 축소. */
-  compact?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center justify-between gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 ${
-        compact ? 'px-2 py-1.5' : 'px-3 py-2'
-      }`}
-    >
-      <span className={`whitespace-nowrap font-medium ${compact ? 'text-[11px]' : 'text-[12px]'}`}>{title}</span>
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+      <span className="text-[12px] font-medium">{title}</span>
       <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
         {SHARE_OPTS.map((o) => (
           <button
             key={o.v}
             type="button"
             onClick={() => onChange(o.v)}
-            className={`rounded-md py-0.5 text-center font-bold transition ${
-              compact ? 'min-w-[2rem] px-1 text-[10px]' : 'min-w-[3.25rem] px-2 text-[11px]'
-            } ${value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'}`}
+            className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
+              value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'
+            }`}
           >
             {o.label}
           </button>
@@ -365,7 +332,6 @@ export function RaidSlots({
   const [guildShare, setGuildShare] = useState<ShareMode>('off');
   const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
   const [tier, setTier] = useState<RaidTier>('easy'); // 기본 쉬움(가장 싸고 손해 없는 선택)
-  const [storyOpen, setStoryOpen] = useState(false); // 보스 이야기 한 줄 말줄임 → 탭하면 펼침
   const openCost = RAID_TIERS[tier].openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
@@ -601,6 +567,17 @@ export function RaidSlots({
                           : `💎 ${openCost.toLocaleString()} 지불하고 소환`}
                     </span>
                   </button>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setPicked(null);
+                      setConfirm(false);
+                    }}
+                    className="w-full rounded-xl border border-zinc-300 py-2 text-[11px] font-bold text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
+                  >
+                    다른 보스
+                  </button>
                 </>
               ) : (
                 <ModalButton tone="ghost" onClick={() => setPicking(false)}>
@@ -615,10 +592,7 @@ export function RaidSlots({
                     <button
                       key={c}
                       type="button"
-                      onClick={() => {
-                        setPicked(c);
-                        setStoryOpen(false);
-                      }}
+                      onClick={() => setPicked(c)}
                       className="flex flex-col items-center gap-1 rounded-lg border border-zinc-300 p-2 text-[10px] dark:border-zinc-700"
                     >
                       <BossSprite code={c} size={48} />
@@ -628,39 +602,17 @@ export function RaidSlots({
                 </div>
             ) : (
               <>
-                {/* 컴팩트 시트(시안 1, 09-03): 스프라이트 40 + 이야기 한 줄(탭하면 펼침) + '다른 보스' 링크,
-                    친구/길드 공개는 2열, 푸터는 소환 버튼 하나 — SE(667px)에서도 스크롤 없이. */}
-                <div className="flex items-center gap-2.5 rounded-xl bg-amber-50/60 p-2 dark:bg-amber-950/20">
-                  <BossSprite code={picked} size={40} />
-                  <button
-                    type="button"
-                    aria-expanded={storyOpen}
-                    onClick={() => setStoryOpen((o) => !o)}
-                    className={`min-w-0 flex-1 text-left text-[11px] leading-snug text-zinc-600 dark:text-zinc-300 ${
-                      storyOpen ? 'break-keep' : 'truncate'
-                    }`}
-                  >
-                    {RAID_BOSSES[picked].story}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      setPicked(null);
-                      setConfirm(false);
-                    }}
-                    className="shrink-0 rounded-full border border-zinc-300 px-2 py-0.5 text-[10.5px] font-bold text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
-                  >
-                    다른 보스 ›
-                  </button>
+                <div className="flex justify-center">
+                  <BossSprite code={picked} size={96} />
                 </div>
-                <div className="mt-1.5 space-y-1.5">
-                  <TierRows value={tier} onChange={setTier} />
+                <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
+                  {RAID_BOSSES[picked].story}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  <TierRow value={tier} onChange={setTier} />
                   <DurationRow value={durationMs} onChange={setDurationMs} />
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <ShareModeRow compact title="친구" value={friendShare} onChange={setFriendShare} />
-                    <ShareModeRow compact title="길드" value={guildShare} onChange={setGuildShare} />
-                  </div>
+                  <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
+                  <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
                 </div>
               </>
             )}
