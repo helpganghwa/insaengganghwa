@@ -289,11 +289,14 @@ export type MeleeReviewItem = {
   battleDate: string;
   status: 'running' | 'computed' | 'revealed';
   participantCount: number;
+  /** 1~3위 닉네임(우편 미리보기용) — top10의 앞 3명. */
   podium: string[];
+  /** 1~10위(검수 화면 표, 2026-09-03) — 배틀 시점 스냅샷 값. */
+  top10: { rank: number; nick: string; cp: number; attacks: number; defenses: number; eliminatedRound: number | null; guildName: string | null }[];
   headlines: MeleeHeadlines | null;
 };
 
-/** 어드민 검수 목록 — 최근 배틀 N개(+지정 날짜). 시상대 닉네임 포함. */
+/** 어드민 검수 목록 — 최근 배틀 N개(+지정 날짜). 1~10위(시상대 포함) 동봉. */
 export async function loadMeleeReviewItems(opts: { limit?: number; extraDate?: string | null } = {}): Promise<MeleeReviewItem[]> {
   const limit = opts.limit ?? 2;
   const rows = (await db.execute(sql`
@@ -313,14 +316,21 @@ export async function loadMeleeReviewItems(opts: { limit?: number; extraDate?: s
   }
   const items: MeleeReviewItem[] = [];
   for (const r of rows) {
-    const podium = (await db.execute(sql`
-      select coalesce(mp.nickname, c.nickname, '대장장이') as nick from melee_participants mp
+    const top = (await db.execute(sql`
+      select mp.final_rank as rank, coalesce(mp.nickname, c.nickname, '대장장이') as nick,
+             mp.cp_snapshot::text as cp, mp.attack_count as attacks, mp.defense_count as defenses,
+             mp.eliminated_round as er, mp.guild_name as guild
+      from melee_participants mp
       left join characters c on c.user_id = mp.user_id and c.server_id = ${r.server_id}
-      where mp.battle_id = ${BigInt(r.id)} and mp.final_rank <= 3 order by mp.final_rank
-    `)) as unknown as { nick: string }[];
+      where mp.battle_id = ${BigInt(r.id)} and mp.final_rank <= 10 order by mp.final_rank
+    `)) as unknown as { rank: number; nick: string; cp: string; attacks: number; defenses: number; er: number | null; guild: string | null }[];
+    const top10 = top.map((t) => ({
+      rank: Number(t.rank), nick: t.nick, cp: Number(t.cp), attacks: Number(t.attacks ?? 0), defenses: Number(t.defenses ?? 0),
+      eliminatedRound: t.er == null ? null : Number(t.er), guildName: t.guild ?? null,
+    }));
     items.push({
       serverId: Number(r.server_id), battleDate: r.battle_date, status: r.status,
-      participantCount: Number(r.participant_count), podium: podium.map((p) => p.nick), headlines: r.headlines,
+      participantCount: Number(r.participant_count), podium: top10.slice(0, 3).map((p) => p.nick), top10, headlines: r.headlines,
     });
   }
   return items;

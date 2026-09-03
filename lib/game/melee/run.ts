@@ -32,22 +32,41 @@ function distributeBoxes(count: number): Record<SupplySlot, number> {
   return boxes;
 }
 
-export async function runMelee(serverId: number): Promise<{ ran: boolean; battleId?: string; participants?: number }> {
+export type RunMeleeOptions = {
+  /**
+   * 재실행(어드민 검수 창, 2026-09-03) — 오늘 배틀이 computed(발표 전)면 참가자·배틀 행을 지우고
+   * 새 시드로 다시 돌린다. 시드에 salt를 붙여 결과가 달라지며, 실제 사용 시드는 seed 컬럼에 남는다(재현 가능).
+   * 로스터·전투력은 재실행 시점으로 다시 집계된다(09:00 스냅샷이 아님).
+   */
+  rerun?: { seedSalt: string };
+};
+
+export type RunMeleeResult =
+  | { ran: true; battleId: string; participants: number }
+  | { ran: false; reason: 'EXISTS' | 'NOT_REPLACEABLE' | 'TOO_FEW' | 'RACE' };
+
+export async function runMelee(serverId: number, opts: RunMeleeOptions = {}): Promise<RunMeleeResult> {
   const [today] = (await db.execute(
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
   const battleDate = today!.d;
   // 결정론 시드 — serverId 포함(감사 B5): 날짜만이면 같은 날 두 서버가 동일 RNG 시퀀스를 공유해
   // 인덱스별 공격자선택·박스분배가 상관됨. `${serverId}:${battleDate}`로 서버 간 decorrelation.
-  const seed = `${serverId}:${battleDate}`;
+  // 재실행은 salt를 덧붙여 다른 시퀀스를 만든다.
+  const seed = opts.rerun ? `${serverId}:${battleDate}:${opts.rerun.seedSalt}` : `${serverId}:${battleDate}`;
 
-  // 멱등 선조회
+  // 멱등 선조회 — 재실행은 반대로 '발표 전 배틀이 있어야' 진행한다.
   const [existing] = await db
-    .select({ id: meleeBattles.id })
+    .select({ id: meleeBattles.id, status: meleeBattles.status })
     .from(meleeBattles)
     .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.battleDate, battleDate)))
     .limit(1);
-  if (existing) return { ran: false };
+  if (!opts.rerun) {
+    if (existing) return { ran: false, reason: 'EXISTS' };
+  } else if (!existing || existing.status !== 'computed') {
+    return { ran: false, reason: 'NOT_REPLACEABLE' };
+  }
+  const replaceId = opts.rerun ? existing!.id : null;
 
   // 참가 자격: **전투력 > 0**(장비 보유로 CP가 잡히는 유저)이면 자동 참가. CP 0 = 미참가.
   //  정지 계정 제외 — 리더보드와 동일 정책(정지 중 자동 참가·보상 수령 차단).
@@ -83,7 +102,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   }
   // 2명 미만이면 불성립 — 혼자인 회차가 무전투 1위로 1위 보상 전액(1,000💎+상자 60)을
   // 가져가는 워크오버 차단(전수 감사 2026-08-21, 신서버 초기 실발현 경로).
-  if (withCp.length < 2) return { ran: false };
+  if (withCp.length < 2) return { ran: false, reason: 'TOO_FEW' };
 
   const ids = withCp.map((x) => x.uid);
   // 1000개씩 청크 — 전 참가자 대상 조회라 인원이 곧 파라미터 수다(Postgres 바인드 상한 65,535에서
@@ -168,7 +187,19 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   // 중단되면, 멱등가드(선조회)가 0명 배틀을 영구화 → reveal의 insert…select가 0행 → 전원 보상
   // 우편 영구 유실. 두 적재를 원자화해 부분실패 시 롤백·재시도가 둘 다 재수행. race는 onConflict로 skip.
   const CHUNK = 1000;
-  const out = await db.transaction(async (tx) => {
+  const out = await db.transaction(async (tx): Promise<RunMeleeResult> => {
+    if (replaceId != null) {
+      // 재실행 — 옛 배틀을 잠그고 아직 computed인지 재확인(발표 cron과의 경합: reveal이 먼저 잠갔으면
+      // 여기서 대기했다가 revealed를 보고 롤백). 참가자 → 배틀 순으로 지우고 아래에서 새로 넣는다.
+      const [locked] = await tx
+        .select({ status: meleeBattles.status })
+        .from(meleeBattles)
+        .where(eq(meleeBattles.id, replaceId))
+        .for('update');
+      if (!locked || locked.status !== 'computed') throw new Error('MELEE_RERUN_RACE');
+      await tx.delete(meleeParticipants).where(eq(meleeParticipants.battleId, replaceId));
+      await tx.delete(meleeBattles).where(eq(meleeBattles.id, replaceId));
+    }
     const inserted = await tx
       .insert(meleeBattles)
       .values({
@@ -184,7 +215,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
       })
       .onConflictDoNothing({ target: [meleeBattles.serverId, meleeBattles.battleDate] })
       .returning({ id: meleeBattles.id });
-    if (inserted.length === 0) return { ran: false as const };
+    if (inserted.length === 0) return { ran: false, reason: 'RACE' };
     const battleId = inserted[0]!.id;
 
     // 참가자 행 청크 insert (등수→보상).
@@ -213,7 +244,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
       await tx.insert(meleeParticipants).values(rows.slice(i, i + CHUNK));
     }
 
-    return { ran: true as const, battleId: battleId.toString(), participants: n };
+    return { ran: true, battleId: battleId.toString(), participants: n };
   });
 
   return out;

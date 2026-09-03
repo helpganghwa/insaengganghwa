@@ -9,6 +9,7 @@ import { loadMeleeReviewItems } from '@/lib/game/melee/headline-service';
 import { ServerBadge } from '../ServerBadge';
 import { ChronicleEditor } from './PreviewClient';
 import { MeleeHeadlineEditor } from './MeleeHeadlineEditor';
+import { MeleeRerunButton } from './MeleeRerunButton';
 
 /**
  * 공개 전 검수 — 유저 공개 전에 운영자가 미리 보고 손보는 콘텐츠(2026-07-14).
@@ -94,7 +95,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
           <div className="mt-2 space-y-4">
             {meleeItems.map((m) => (
               <div key={`${m.serverId}:${m.battleDate}`} className="rounded-xl border border-zinc-800 p-3">
-                <div className="mb-2 flex items-center gap-2 text-[12px]">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
                   <ServerBadge serverId={m.serverId} />
                   <span className="font-mono">{m.battleDate}</span>
                   <span className="text-zinc-500">참가 {m.participantCount.toLocaleString('ko-KR')}명</span>
@@ -103,7 +104,40 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                   ) : (
                     <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">발표됨</span>
                   )}
+                  {/* 배틀 재실행 — 발표 전 오늘 배틀만(액션이 날짜·상태를 다시 검증). */}
+                  {m.status === 'computed' ? <MeleeRerunButton serverId={m.serverId} battleDate={m.battleDate} /> : null}
                 </div>
+                {/* 1~10위(2026-09-03) — 헤드라인 문장이 가리키는 사람·수치를 같은 화면에서 대조한다. 배틀 시점 스냅샷. */}
+                {m.top10.length > 0 ? (
+                  <div className="mb-3 overflow-x-auto rounded-lg border border-zinc-800">
+                    <table className="w-full text-[11px] tabular-nums">
+                      <thead className="bg-zinc-900/60 text-[10px] text-zinc-500">
+                        <tr>
+                          <th className="px-2 py-1 text-left font-bold">순위</th>
+                          <th className="px-2 py-1 text-left font-bold">닉네임</th>
+                          <th className="px-2 py-1 text-left font-bold">길드</th>
+                          <th className="px-2 py-1 text-right font-bold">전투력</th>
+                          <th className="px-2 py-1 text-right font-bold">공격</th>
+                          <th className="px-2 py-1 text-right font-bold">방어</th>
+                          <th className="px-2 py-1 text-right font-bold">탈락 R</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {m.top10.map((t) => (
+                          <tr key={t.rank} className={t.rank <= 3 ? 'bg-amber-500/5 font-semibold' : ''}>
+                            <td className="px-2 py-1">{t.rank}</td>
+                            <td className="max-w-[9rem] truncate px-2 py-1">{t.nick}</td>
+                            <td className="max-w-[7rem] truncate px-2 py-1 text-zinc-400">{t.guildName ?? '-'}</td>
+                            <td className="px-2 py-1 text-right">{t.cp.toLocaleString('ko-KR')}</td>
+                            <td className="px-2 py-1 text-right">{t.attacks}</td>
+                            <td className="px-2 py-1 text-right">{t.defenses}</td>
+                            <td className="px-2 py-1 text-right text-zinc-400">{t.eliminatedRound == null ? '생존' : t.eliminatedRound}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
                 {/* key에 생성·수정 시각 포함 — 생성/재생성 후 refresh로 내려온 새 값이 편집 중 상태에 덮이지 않게 리마운트. */}
                 <MeleeHeadlineEditor
                   key={`${m.serverId}:${m.battleDate}:${m.headlines?.generatedAt ?? ''}:${m.headlines?.editedAt ?? ''}`}
