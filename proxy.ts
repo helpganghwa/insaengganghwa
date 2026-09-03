@@ -6,7 +6,7 @@ const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 const STAGING_KEY = process.env.STAGING_ACCESS_KEY ?? '';
 const STAGING_COOKIE = 'stg_access';
 /** 스테이징 게이트 예외 — 헬스체크·크론(CRON_SECRET로 별도 보호)·결제 웹훅(외부 발신). */
-const STAGING_OPEN = [/^\/api\/health/, /^\/api\/cron\//, /^\/api\/webhooks?\//, /^\/api\/portone\//];
+const STAGING_OPEN = [/^\/api\/health/, /^\/api\/cron\//, /^\/api\/webhooks?\//, /^\/api\/portone\//, /^\/\.well-known\//];
 
 /**
  * 스테이징 접근 게이트(2026-08-29) — preview 배포는 Vercel 보호가 꺼져 있어 URL을 아는 누구나(CBT 참가자 등)
@@ -30,10 +30,27 @@ function stagingGate(request: NextRequest): NextResponse | null {
   return new NextResponse('staging', { status: 403, headers: { 'X-Robots-Tag': 'noindex, nofollow' } });
 }
 
+/**
+ * 플레이스토어 앱(TWA) 표식(2026-09-03, docs/PLAYSTORE.md §3.1) — TWA start_url `/?src=twa`로 들어오면
+ * 쿠키 `ig_platform=twa`(1년, httpOnly 아님: 클라 결제 분기가 읽는다)를 심고 쿼리를 지워 리다이렉트.
+ * 이후 요청은 lib/platform.ts가 쿠키로 판별. 게임 로직엔 쓰지 않는다(결제 경로·문구 분기 전용).
+ */
+function twaMarker(request: NextRequest): NextResponse | null {
+  const { searchParams } = request.nextUrl;
+  if (searchParams.get('src') !== 'twa') return null;
+  const url = request.nextUrl.clone();
+  url.searchParams.delete('src');
+  const res = NextResponse.redirect(url);
+  res.cookies.set('ig_platform', 'twa', { httpOnly: false, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
+  return res;
+}
+
 // Next.js 16: middleware → proxy. export 함수명 `proxy` 필수.
 export async function proxy(request: NextRequest) {
   const gated = stagingGate(request);
   if (gated) return gated;
+  const twa = twaMarker(request);
+  if (twa) return twa;
   const res = await updateSession(request);
   // preview 배포는 검색엔진에 절대 노출하지 않는다(미배포 콘텐츠 문서가 색인되는 것 방지).
   if (IS_PREVIEW) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
