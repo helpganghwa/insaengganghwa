@@ -302,11 +302,9 @@ export function ChatDock() {
       const raw = localStorage.getItem(SEEN_KEY);
       if (raw) {
         const d = JSON.parse(raw) as Partial<LatestIds>;
-        seenRef.current = {
-          all: typeof d.all === 'string' ? d.all : null,
-          guild: typeof d.guild === 'string' ? d.guild : null,
-          whisper: typeof d.whisper === 'string' ? d.whisper : null,
-        };
+        // 숫자 id만 복원 — 수정 전 저장된 시스템 라인 id(gsys-/sys-)는 버린다(어떤 최신 id와도 못 맞음).
+        const num = (v: unknown) => (typeof v === 'string' && /^\d+$/.test(v) ? v : null);
+        seenRef.current = { all: num(d.all), guild: num(d.guild), whisper: num(d.whisper) };
         seenPrimedRef.current = true;
       }
     } catch {
