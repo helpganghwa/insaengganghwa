@@ -11,8 +11,8 @@ import {
 } from '@/lib/game/patron/milestones';
 
 describe('후원 구간 보상 정의(2026-08-26 확정)', () => {
-  it('40구간 · 오름차순 · 1,000만 완주 시 💎200,000 + 📦6,000', () => {
-    expect(PATRON_MILESTONES).toHaveLength(40);
+  it('41구간 · 오름차순 · 1,000만 완주 시 💎200,000 + 📦6,000', () => {
+    expect(PATRON_MILESTONES).toHaveLength(41);
     for (let i = 1; i < PATRON_MILESTONES.length; i++) {
       expect(PATRON_MILESTONES[i]!.krw).toBeGreaterThan(PATRON_MILESTONES[i - 1]!.krw);
     }
@@ -21,7 +21,7 @@ describe('후원 구간 보상 정의(2026-08-26 확정)', () => {
     for (const m of PATRON_MILESTONES) expect(m.boxes % 3).toBe(0);
   });
 
-  it('구간 폭·정액 규칙 — A 5만/1,000·30, B 10만/2,000·60, C 50만/10,000·300, D 600만 20,000·600 후 50만/10,000·300', () => {
+  it('구간 폭·정액 규칙 — A 5만/1,000·30, B 10만/2,000·60, C 250만~1,000만 50만/10,000·300', () => {
     const at = (krw: number) => PATRON_MILESTONES.find((m) => m.krw === krw)!;
     expect(at(50_000)).toMatchObject({ diamond: 1_000, boxes: 30 });
     expect(at(500_000)).toMatchObject({ diamond: 1_000, boxes: 30 });
@@ -29,7 +29,9 @@ describe('후원 구간 보상 정의(2026-08-26 확정)', () => {
     expect(at(2_000_000)).toMatchObject({ diamond: 2_000, boxes: 60 });
     expect(at(2_500_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
     expect(at(5_000_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
-    expect(at(6_000_000)).toMatchObject({ diamond: 20_000, boxes: 600 });
+    // 2026-09-05: 500만→600만 100만 폭도 550만·600만으로 쪼개 250만부터 끝까지 50만 단위(0194)
+    expect(at(5_500_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
+    expect(at(6_000_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
     // 2026-09-04: 650만부터 50만 단위(폭 대비 정액 동일 → 환급률 불변)
     expect(at(6_500_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
     expect(at(7_000_000)).toMatchObject({ diamond: 10_000, boxes: 300 });
