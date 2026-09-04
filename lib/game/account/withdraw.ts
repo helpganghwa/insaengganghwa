@@ -162,6 +162,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from challenge_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from challenge_events where user_id = ${uid}`);
     await tx.execute(sql`delete from user_titles where user_id = ${uid}`);
+    // 칭호 발견 보상 수령 기록(0191) — PK (user, server, count)가 잔존하면 재가입 유저의 50·100개 달성 상자가
+    // "이미 수령"으로 막힌다(challenge_claims와 같은 클래스). profiles 보존 앵커라 CASCADE가 안 탄다.
+    await tx.execute(sql`delete from title_milestone_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from announcement_poll_votes where user_id = ${uid}`);
 
     // 아바타(프로필 생성잡 → 활성프로필 SET NULL → 프로필) + 캐릭터(닉네임).

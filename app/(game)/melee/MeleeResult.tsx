@@ -48,6 +48,9 @@ export type MeleeResultView = {
   me: {
     rank: number;
     diamond: number;
+    /** 공격·방어 보너스(0192) — diamond/boxes에 포함된 내역. 이전 배틀은 0. */
+    bonusDiamond: number;
+    bonusBoxes: number;
     boxes: { weapon: number; armor: number; accessory: number };
     /** 공격 성공(쓰러뜨린 수) — killer 기록 기준 전판 정확값. */
     attackSuccess: number;

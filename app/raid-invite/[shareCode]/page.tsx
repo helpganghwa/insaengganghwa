@@ -4,6 +4,7 @@ import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { raidTierOf } from '@/lib/game/balance';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -26,6 +27,7 @@ export default async function RaidInvitePage({
     .select({
       id: raids.id,
       bossCode: raids.bossCode,
+      tier: raids.tier,
       status: raids.status,
       expireAt: raids.expireAt,
     })
@@ -61,6 +63,7 @@ export default async function RaidInvitePage({
       shareCode={shareCode}
       raidId={raid.id.toString()}
       bossCode={raid.bossCode}
+      tier={raidTierOf(raid.tier)}
       status={raid.status}
       expireAtIso={raid.expireAt.toISOString()}
       participantCount={n}

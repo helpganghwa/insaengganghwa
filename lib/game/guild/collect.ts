@@ -19,6 +19,9 @@ export function collectZoneTax(input: {
   zoneId: number;
 }): Promise<{ executorGain: bigint; guildGain: bigint }> {
   return db.transaction(async (tx) => {
+    // 락 순서 통일(characters → zones): 지출 세금 훅(walletTrySpend가 characters를 잠근 뒤 거주 구역 zones 갱신)과
+    // 반대 순서로 잠그면 집행관 본인의 강화 단축·구매와 교착한다. 집행관 = 그 구역 거주자라 같은 두 행이 겹친다.
+    await tx.execute(sql`select 1 from characters where user_id = ${input.userId}::uuid for update`);
     const [z] = await tx
       .select({
         executor: zones.executorUserId,

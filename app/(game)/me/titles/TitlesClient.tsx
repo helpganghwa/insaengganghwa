@@ -6,7 +6,13 @@ import { TitleTag } from '@/components/TitleTag';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TITLE_BY_CODE, TITLE_DEFS, type TitleDef } from '@/lib/game/titles/defs';
-import { setRepresentativeTitleAction, toggleFavoriteTitleAction } from '@/lib/game/titles/actions';
+import {
+  claimTitleRewardsAction,
+  setRepresentativeTitleAction,
+  toggleFavoriteTitleAction,
+} from '@/lib/game/titles/actions';
+import { TITLE_DISCOVERY_DIAMOND, titleMilestoneBoxes } from '@/lib/game/balance';
+import type { TitleRewardSummary } from '@/lib/game/titles/rewards';
 import { useResourceToast } from '@/components/ResourceToast';
 
 /** 서버가 내려주는 행 — 조건(cond)·발견일은 발견한 칭호에만 존재(비노출 원칙). */
@@ -16,6 +22,10 @@ export type TitleRow = {
   discovered: boolean;
   earnedAt: string | null;
   activeNow: boolean;
+  /** 아직 확인하지 않은 새 칭호(0187) — 상단 '새로 얻은 칭호' 섹션 + NEW 태그. */
+  isNew: boolean;
+  /** 발견 보상 미수령(0191) — 행 💎 칩. [모두 받기]로 일괄 수령. */
+  rewardPending: boolean;
 };
 
 type Tri = null | 'a' | 'b';
@@ -68,20 +78,33 @@ export function TitlesClient({
   favorites,
   executorZone,
   executorZoneRegion,
+  reward,
 }: {
   rows: TitleRow[];
   representative: string | null;
   favorites: string[];
   executorZone: string | null;
   executorZoneRegion: string | null;
+  /** 발견 보상 요약(0191) — 상단 "받을 보상" 바 + 상자 달성 게이지. */
+  reward: TitleRewardSummary;
 }) {
   const [rep, setRep] = useState(representative);
+  // 발견 보상 수령(0191, 시안 1 확정) — 낙관: 누르면 바를 접고 행 💎 칩을 지운다. 서버 멱등이라 실패만 되돌린다.
+  const [claimedAll, setClaimedAll] = useState(false);
+  const [claiming, startClaim] = useTransition();
+  const pendingTitles = claimedAll ? 0 : reward.unclaimedTitles;
+  const pendingMilestones = claimedAll ? [] : reward.claimableMilestones;
+  const pendingBoxes = pendingMilestones.reduce((a, m) => a + titleMilestoneBoxes(m), 0);
+  const showClaimBar = pendingTitles > 0 || pendingBoxes > 0;
   const [favs, setFavs] = useState<string[]>(favorites);
   const [kind, setKind] = useState<Tri>(null); // a=조건 b=영구
   const [found, setFound] = useState<Tri>(null); // a=발견 b=미발견
   const [act, setAct] = useState<Tri>(null); // a=활성 b=비활성
   const [favOnly, setFavOnly] = useState(false);
   const [sel, setSel] = useState<string | null>(null); // 팝업 대상 code
+  // 새 칭호(0187) — 서버는 이 화면을 렌더한 뒤 전부 확인 처리하므로, 여기서는 이번 방문 동안의 표시만 관리.
+  // 행을 탭하면 그 칭호의 NEW를 지운다(개별 확인 느낌). 새로고침하면 서버 기준으로 전부 사라진다.
+  const [newSet, setNewSet] = useState<Set<string>>(() => new Set(rows.filter((r) => r.isNew).map((r) => r.code)));
   const [pending, startTransition] = useTransition();
   // ☆ 토글 전용 — 대표 장착의 pending(팝업 버튼 비활성)과 분리(적대 검수 7).
   const [, startFavTransition] = useTransition();
@@ -138,6 +161,8 @@ export function TitlesClient({
     // ★ 섹션에 한 번 더 노출된다(호이스트 아님). 발견분만 — 즐겨찾기 후 미발견이 된 코드(운영
     // 회수 등)가 잠금 행으로 최상단에 박히는 것 방지(적대 검수 2).
     const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
+    // 새로 얻은 칭호(0187) — ★처럼 최상단 중복 표시(원 분류에도 남음). 필터는 그대로 적용.
+    const newList = sortRows(visible.filter((d) => newSet.has(d.code) && byCode.get(d.code)?.discovered));
     const byGroup = new Map<string, TitleDef[]>();
     for (const d of visible) {
       const g = groupOf(d.cat);
@@ -152,9 +177,9 @@ export function TitlesClient({
       const disc = all.filter((d) => byCode.get(d.code)!.discovered).length;
       return { key: g, label: g, progress: `${disc}/${all.length}`, items: sortRows(byGroup.get(g)!) };
     });
-    return { favList, cats };
+    return { favList, newList, cats };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byCode, kind, found, act, favOnly, favSet, rep]);
+  }, [byCode, kind, found, act, favOnly, favSet, rep, newSet]);
 
   const toggle = (code: string) => {
     const next = rep === code ? null : code;
@@ -195,6 +220,25 @@ export function TitlesClient({
     });
   };
 
+  // 낙관 수령(사용자 요청 09-04): 누르는 즉시 바를 접고 행 💎 칩을 지운다. 서버 멱등이라 실패 때만 되돌린다.
+  const claimRewards = () => {
+    if (claiming || !showClaimBar) return;
+    setClaimedAll(true);
+    startClaim(async () => {
+      const res = await claimTitleRewardsAction().catch(() => ({ ok: false as const, error: 'NETWORK' }));
+      if (!res.ok) {
+        setClaimedAll(false);
+        showError('보상 수령에 실패했어. 잠시 후 다시 눌러 줘.');
+        return;
+      }
+      const rewards: { icon: string; amount: number }[] = [];
+      if (res.diamond > 0) rewards.push({ icon: '💎', amount: res.diamond });
+      const boxTotal = res.boxes.weapon + res.boxes.armor + res.boxes.accessory;
+      if (boxTotal > 0) rewards.push({ icon: '📦', amount: boxTotal });
+      if (rewards.length > 0) showHeaderToast({ title: '칭호 발견 보상', rewards });
+    });
+  };
+
   const selRow = sel ? byCode.get(sel) : null;
   const selDef = sel ? TITLE_BY_CODE.get(sel) : null;
 
@@ -210,7 +254,10 @@ export function TitlesClient({
       >
         <button
           type="button"
-          onClick={() => setSel(d.code)}
+          onClick={() => {
+            setSel(d.code);
+            if (newSet.has(d.code)) setNewSet((p) => { const n = new Set(p); n.delete(d.code); return n; });
+          }}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -223,7 +270,15 @@ export function TitlesClient({
           {st === 'rep' && (
             <span className="shrink-0 rounded border border-amber-400/50 px-1 text-[9px] font-extrabold text-amber-400">대표</span>
           )}
+          {newSet.has(d.code) && (
+            <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] font-extrabold tracking-wide text-white">NEW</span>
+          )}
           {st === 'inactive' && <span className="shrink-0 text-[9px] font-bold text-orange-400">비활성</span>}
+          {r.rewardPending && !claimedAll && (
+            <span className="shrink-0 rounded bg-amber-500/15 px-1 font-mono text-[9.5px] font-semibold text-amber-200">
+              💎{TITLE_DISCOVERY_DIAMOND}
+            </span>
+          )}
         </button>
         {/* ☆ 토글 — 발견분 + (미발견이어도) 이미 즐겨찾기된 행. 후자는 해제 수단 보존용
             (즐겨찾기 후 회수된 칭호가 해제 불가로 잠기는 것 방지 — 적대 검수 2). */}
@@ -284,6 +339,36 @@ export function TitlesClient({
           </div>
         </div>
 
+        {/* 받을 보상 바(0191, 시안 1) — 미수령 발견 보상 + 도달한 달성 상자. [모두 받기] 한 번. 없으면 접힘. */}
+        {showClaimBar && (
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-800 bg-gradient-to-r from-amber-900/30 to-zinc-900/60 px-4 py-1.5">
+            <div className="min-w-0 text-[11px] text-zinc-200">
+              받을 보상{' '}
+              <span className="font-mono font-bold text-amber-200">
+                💎{(pendingTitles * TITLE_DISCOVERY_DIAMOND).toLocaleString()}
+              </span>
+              {pendingBoxes > 0 && (
+                <>
+                  {' '}
+                  · <span className="font-mono font-bold text-amber-200">📦{pendingBoxes.toLocaleString()}</span>
+                </>
+              )}
+              <span className="block text-[9.5px] text-zinc-500">
+                발견 {pendingTitles}개
+                {pendingMilestones.length > 0 ? ` · ${pendingMilestones.join('·')}개 달성 보상 포함` : ''}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={claiming}
+              onClick={claimRewards}
+              className="shrink-0 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-extrabold text-amber-950 disabled:opacity-50"
+            >
+              {claiming ? '받는 중…' : '모두 받기'}
+            </button>
+          </div>
+        )}
+
         {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합).
             하단 보더 없음 — 바로 아래 섹션 헤더의 상단 보더와 만나 2px로 보이던 것 제거(피드백). */}
         <div className="flex flex-wrap gap-1.5 px-4 py-2">
@@ -307,6 +392,13 @@ export function TitlesClient({
       <div className="pb-8">
         {/* 섹션별 래퍼 div 필수 — sticky 헤더가 자기 섹션 범위에서만 붙고 다음 헤더에 밀려나는
             표준 push-out 동작은 헤더가 각자의 부모 안에 있을 때만 성립한다. */}
+        {/* 새로 얻은 칭호(0187) — 이번 방문에만 보이는 모아보기. 탭하거나 다음 진입 시 사라진다. */}
+        {groups.newList.length > 0 && (
+          <div>
+            {catHead('새로 얻은 칭호', String(groups.newList.length))}
+            {groups.newList.map(renderRow)}
+          </div>
+        )}
         {groups.favList.length > 0 && (
           <div>
             {catHead('즐겨찾기', String(groups.favList.length), true)}

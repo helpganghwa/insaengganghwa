@@ -179,7 +179,8 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `id` | bigserial PK | |
 | `host_user_id` | uuid FK→profiles | |
 | `boss_code` | enum(`slime_king`,`orc_chief`,`stone_golem`,`dragon_west`,`fallen_angel`,`gold_griffin`) | 난이도 동일 |
-| `phase1_hp` | bigint NOT NULL | 생성 시 `U(8000,12000)` 고정. phase n = `phase1·1.5^(n-1)` |
+| `phase1_hp` | bigint NOT NULL | 생성 시 `U(8000,12000) × 난이도 배수` 고정. phase n = `phase1·1.5^(n-1)` |
+| `tier` | text NOT NULL default `'easy'` | 난이도 `easy`/`normal`/`hard`(0189, BALANCE §5.4) — 개설비·돌파 상자·마일스톤 근거. 개편 전 행은 `easy` |
 | `share_code` | text UNIQUE NOT NULL | 카톡 공유 링크 |
 | `opened_at` | timestamptz default now() | |
 | `expire_at` | timestamptz NOT NULL | = opened_at + 6h(BALANCE §5.1) |
@@ -187,7 +188,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `status` | enum(`active`,`settled`) default `active` | |
 | `settled_at` | timestamptz null | |
 
-- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −300(RAID_OPEN_COST_DIAMOND, 환불 없음)
+- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −난이도별 개설비(`RAID_TIERS.openCost`, 환불 없음)
 
 ### 6.2 raid_participants
 

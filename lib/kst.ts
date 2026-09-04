@@ -21,6 +21,11 @@ export function kstStartOfDay(at: Date = new Date()): Date {
   return new Date(Date.UTC(y, m - 1, d) - KST_OFFSET_MS);
 }
 
+/** 다음 KST 자정(00:00:00)까지 남은 ms — 정밀 자정 공개 크론(conquest-reveal)의 대기 시간. 항상 0 < 값 ≤ 24h. */
+export function msUntilNextKstMidnight(at: Date = new Date()): number {
+  return kstStartOfDay(at).getTime() + 24 * 60 * 60 * 1000 - at.getTime();
+}
+
 /** `YYYY-MM-DD` (KST) — raid_daily_counts 등 일자 키. */
 export function kstDateString(at: Date = new Date()): string {
   const { y, m, d } = kstParts(at);

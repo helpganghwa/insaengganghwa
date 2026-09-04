@@ -5,6 +5,7 @@ import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { raidTierOf } from '@/lib/game/balance';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -39,6 +40,8 @@ export default async function RaidDetail({
         serverId: raids.serverId,
         bossCode: raids.bossCode,
         phase1Hp: raids.phase1Hp,
+        tier: raids.tier,
+        openedAt: raids.openedAt,
         shareCode: raids.shareCode,
         expireAt: raids.expireAt,
         status: raids.status,
@@ -189,6 +192,8 @@ export default async function RaidDetail({
     shareCode: raid.shareCode,
     isHost,
     pendingRequests,
+    tier: raidTierOf(raid.tier),
+    openedAtIso: raid.openedAt.toISOString(),
     phase1Hp: Number(raid.phase1Hp),
     totalDamage: total,
     phasesCleared: raidPhasesCleared(Number(raid.phase1Hp), total),

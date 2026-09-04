@@ -7,7 +7,9 @@ import {
   GUILD_FULL_REGION_TAX_BONUS,
   GUILD_ZONE_TAX_BONUS,
   TAX_COLLECT_COOLDOWN_MIN,
+  TAX_MELEE_PRIZE_RATE,
   TAX_POINTS_PER_DIAMOND,
+  TAX_POINTS_PER_DIAMOND_SPENT,
   conquestPowerMult,
 } from '@/lib/game/guild/balance';
 import { REGION_META } from '@/lib/game/guild/region-meta';
@@ -65,7 +67,7 @@ export default function Doc() {
         <LI>구역에 배치하거나 집행관을 맡으려면 그 구역에 거주해야 한다.</LI>
         <LI>세계지도에서 직접 거주지를 옮길 수 있다.</LI>
         <LI>이동은 맞닿은 구역으로만 가능하며, 대기 시간 없이 연속으로 옮길 수 있다.</LI>
-        <LI>강화 세금은 거주지에 쌓이며, 거주지를 옮기면 옮긴 곳에서 다시 세금이 쌓인다.</LI>
+        <LI>세금은 거주지에 쌓이며, 거주지를 옮기면 옮긴 곳에서 다시 세금이 쌓인다.</LI>
       </UL>
       <Warn>
         배치나 집행관 자리를 가진 채 거주지를 옮기면 그 역할이 해제된다. 다른 수비를 남기지 않고
@@ -136,7 +138,15 @@ export default function Doc() {
 
       <H2 id="tax">세금</H2>
       <UL>
-        <LI>자기 거주지에서 강화에 성공할 때마다 도달한 강화 레벨만큼 포인트가 그 구역에 쌓인다.</LI>
+        <LI>세금은 거주자의 활동에서 나온다. 세 가지가 모두 거주 구역의 포인트로 쌓인다.</LI>
+        <LI>강화에 성공할 때마다 도달한 강화 레벨만큼 포인트가 쌓인다.</LI>
+        <LI>
+          다이아를 사용할 때마다 사용한 다이아 하나당 {fmtInt(TAX_POINTS_PER_DIAMOND_SPENT)}포인트가 쌓인다.
+        </LI>
+        <LI>
+          <DocLink slug="melee" hash="reward">대난투</DocLink> 상금의 {bpPct(TAX_MELEE_PRIZE_RATE * 10_000)}만큼이
+          발표와 함께 거주 구역에 쌓인다.
+        </LI>
         <LI>
           {fmtInt(TAX_POINTS_PER_DIAMOND)}포인트가 모일 때마다 다이아 하나로 전환되고, 남는 포인트는
           이월된다.

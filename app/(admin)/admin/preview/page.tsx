@@ -187,6 +187,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                   serverId={c.serverId}
                   kstDay={c.kstDay}
                   headline={c.headline}
+                  headlineCandidates={Array.isArray(c.headlineCandidates) ? (c.headlineCandidates as string[]) : []}
                   todayText={c.todayText}
                   replay={replays.get(`${c.serverId}:${c.kstDay}`) ?? null}
                   zones={zoneRows.filter((z) => z.serverId === c.serverId)}

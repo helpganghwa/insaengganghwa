@@ -6,7 +6,15 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useRouter } from 'next/navigation';
 
-import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from '@/lib/game/balance';
+import {
+  RAID_TIERS,
+  RAID_TIER_CODES,
+  RAID_WINDOW_MS,
+  RAID_DURATION_OPTIONS_MS,
+  raidMilestoneList,
+  type RaidTier,
+} from '@/lib/game/balance';
+import { TierChip } from './TierChip';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -27,6 +35,7 @@ export type RaidSlotCell =
       kind: 'active';
       raidId: string;
       bossCode: RaidBoss;
+      tier: RaidTier;
       expireAtIso: string;
       phasesCleared: number;
       isHost: boolean;
@@ -38,6 +47,7 @@ export type RaidSlotCell =
       kind: 'pending_claim';
       raidId: string;
       bossCode: RaidBoss;
+      tier: RaidTier;
       boxes: { weapon: number; armor: number; accessory: number };
       phasesCleared: number;
       myRank: number;
@@ -48,6 +58,7 @@ export type RaidSlotCell =
 export type FriendRaid = {
   raidId: string;
   bossCode: RaidBoss;
+  tier: RaidTier;
   shareCode: string;
   expireAtIso: string;
   phasesCleared: number;
@@ -96,6 +107,74 @@ function DurationRow({ value, onChange }: { value: number; onChange: (v: number)
             {o.label}
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+const TIER_ACTIVE: Record<RaidTier, string> = {
+  easy: 'bg-emerald-500 text-white',
+  normal: 'bg-sky-500 text-white',
+  hard: 'bg-rose-500 text-white',
+};
+function fmtMan(n: number): string {
+  return n >= 10_000 ? `${(n / 10_000).toLocaleString()}만` : n.toLocaleString();
+}
+
+/**
+ * 난이도 행(BALANCE §5.4) — 기존 소환 시트의 다른 행(진행 시간·공개)과 같은 세그먼트 형식으로
+ * 선택지만 더하고, 고른 난이도의 정보를 행 하단에 두 줄로 간략히 보인다(2026-09-04 사용자 결정 —
+ * 행 3줄·컴팩트 시트 시안은 폐기). 추천 로직 없음. 문구는 390px에서 한 줄씩 들어가게 축약.
+ * 유저 용어: 페이즈 보상 / 달성 보상(코드의 milestone). 개설비는 전 난이도 동일이라 표시 X.
+ */
+function TierRow({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier) => void }) {
+  const r = RAID_TIERS[value];
+  const ms = raidMilestoneList(value);
+  return (
+    <div className="rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+      <div className="flex items-center justify-between gap-2">
+        <span className="whitespace-nowrap text-[12px] font-medium">
+          난이도
+          {/* HP 배수는 라벨 옆으로(09-04) — 하단 요약 줄에 '권장 참여자 전투력 총합'이 들어갈 자리를 비운다. */}
+          <span className="ml-1.5 text-[10.5px] font-normal text-zinc-500 dark:text-zinc-400">
+            HP <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">×{r.hpMult}</span>
+          </span>
+        </span>
+        <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
+          {RAID_TIER_CODES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onChange(t)}
+              className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
+                value === t ? TIER_ACTIVE[t] : 'text-zinc-500'
+              }`}
+            >
+              {RAID_TIERS[t].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-1.5 space-y-0.5 text-[10.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+        <div className="whitespace-nowrap">
+          페이즈 보상 📦
+          <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{r.boxesPerPhase}</span>
+          {' '}· 권장 참여자 전투력 총합{' '}
+          {r.recommendedTotalCp > 0 ? (
+            <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
+              {fmtMan(r.recommendedTotalCp)}+
+            </span>
+          ) : (
+            <span className="font-bold">제한 없음</span>
+          )}
+        </div>
+        <div className="whitespace-nowrap">
+          달성 보상 📦
+          <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
+            {ms.map(([, b]) => b).join('·')}
+          </span>{' '}
+          <span className="font-mono">({ms.map(([p]) => p).join('·')}페이즈)</span>
+        </div>
       </div>
     </div>
   );
@@ -170,6 +249,7 @@ function RaidListSection({ title, raids }: { title: string; raids: FriendRaid[] 
             <span className="relative min-w-0 flex-1">
               <span className="block truncate text-sm font-bold drop-shadow">
                 {RAID_BOSSES[f.bossCode].name}
+                <TierChip tier={f.tier} className="ml-1" />
                 <span
                   className={`ml-1 text-[11px] font-medium ${
                     f.via === 'invite' ? 'text-amber-300' : 'text-emerald-300'
@@ -253,6 +333,8 @@ export function RaidSlots({
   const [friendShare, setFriendShare] = useState<ShareMode>('off');
   const [guildShare, setGuildShare] = useState<ShareMode>('off');
   const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
+  const [tier, setTier] = useState<RaidTier>('easy'); // 기본 쉬움(가장 싸고 손해 없는 선택)
+  const openCost = RAID_TIERS[tier].openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
   const exhausted = dailyUsed >= dailyCap;
@@ -277,10 +359,10 @@ export function RaidSlots({
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {
-      const r = await openRaidAction(code, friendShare, guildShare, durationMs);
+      const r = await openRaidAction(code, friendShare, guildShare, durationMs, tier);
       if (r.status === 'error') {
         // 부족(레이스)은 충전 유도 팝업, 그 외는 기존 토스트(2026-08-22).
-        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(RAID_OPEN_COST_DIAMOND);
+        if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(openCost);
         else showError(r.message);
         return;
       }
@@ -327,6 +409,7 @@ export function RaidSlots({
                 <span className="relative min-w-0 flex-1">
                   <span className="block text-sm font-bold drop-shadow">
                     {RAID_BOSSES[s.bossCode].name}
+                    <TierChip tier={s.tier} className="ml-1" />
                     <span className="ml-1 rounded bg-amber-400 px-1 text-[9px] text-amber-950">
                       정산 대기
                     </span>
@@ -374,6 +457,7 @@ export function RaidSlots({
               <span className="relative min-w-0 flex-1">
                 <span className="block text-sm font-bold drop-shadow">
                   {RAID_BOSSES[s.bossCode].name}
+                  <TierChip tier={s.tier} className="ml-1" />
                   {s.isHost ? (
                     <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">
                       방장
@@ -441,13 +525,13 @@ export function RaidSlots({
             subtitle={
               picked ? (
                 <span className="font-mono font-bold text-sky-500">
-                  💎 {RAID_OPEN_COST_DIAMOND.toLocaleString()}
+                  💎 {openCost.toLocaleString()}
                 </span>
               ) : (
                 `${RAID_BOSS_CODES.length}종`
               )
             }
-            maxBodyClass="max-h-[52vh]"
+            maxBodyClass="max-h-[64vh]"
             footer={
               picked ? (
                 <><button
@@ -458,7 +542,7 @@ export function RaidSlots({
                       // 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 소환(다이아 지불).
                       // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22) — 3초 컨펌까지
                       // 갔다가 실패하는 헛걸음 제거.
-                      if (!gate.ensure(RAID_OPEN_COST_DIAMOND)) return;
+                      if (!gate.ensure(openCost)) return;
                       if (!confirm) {
                         setConfirm(true);
                         setConfirmLeft(3);
@@ -481,8 +565,8 @@ export function RaidSlots({
                       {pending
                         ? '소환 중…'
                         : confirm
-                          ? `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환 ${confirmLeft}s`
-                          : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환`}
+                          ? `💎 ${openCost.toLocaleString()} 지불하고 소환 ${confirmLeft}s`
+                          : `💎 ${openCost.toLocaleString()} 지불하고 소환`}
                     </span>
                   </button>
                   <button
@@ -527,6 +611,7 @@ export function RaidSlots({
                   {RAID_BOSSES[picked].story}
                 </p>
                 <div className="mt-3 space-y-1.5">
+                  <TierRow value={tier} onChange={setTier} />
                   <DurationRow value={durationMs} onChange={setDurationMs} />
                   <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
                   <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />

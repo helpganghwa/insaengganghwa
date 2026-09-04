@@ -336,7 +336,9 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 특히: 길드별 공격/점령 구역 수를 다른 길드 것과 합치지 말 것, 일부 구역을 잃어도 남은 영토가 있으면 '사라졌다/자리를 잃었다'류 소멸 표현 금지.
 - 조각(연결) 주의: 구역을 **잃어서** 조각 수가 줄어든 것을 '이어붙였다/통합/연결'로 서술하면 오류 — 상실로 인한 감소는 감소로만.
 - 교전 유무 주의: 사실표에 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역을 무혈·무저항·'지키는 병력이 없었다'로 쓴 문장은 오류다 — 저항을 뚫고 함락한 것으로 고쳐라. 반대로 '방어 병력 없음'인 구역에 교전 장면을 지어내도 오류.
-- 재획득 표현 주의: '되찾다·탈환·수복·다시 가져오다'는 공격 길드가 과거 그 구역을 소유했었다는 주장인데, 사실표에는 그 이력이 없다 — 이런 표현은 전부 '빼앗다·차지하다'로 고쳐라.
+- 재획득 표현 주의: '되찾다·탈환·수복·다시 가져오다'는 사실표 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 유효하다. 그 항목이 없는 구역에 쓴 재획득 표현은 전부 '빼앗다·차지하다'로 고쳐라(반대로 항목에 적힌 구역의 '되찾다'는 오류가 아니다).
+- 방어 길드 주의: 사실표 '방어'에 있는 길드를 '싸우지 않았다·다투지 않았다·조용했다'로 쓴 문장은 오류다 — '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 행동으로 고쳐라.
+- 누락 주의: 사실표 '공격 측'의 길드가 초안에 한 번도 등장하지 않으면, 그 길드가 어느 구역을 노렸고 결과가 어땠는지 한 문장을 사실표대로 보태라(지어내기 금지).
 - 지역 귀속 주의: 구역의 소속 지역은 사실표의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 사건을 한 지역 이름('왕국 전역' 등)으로 묶은 문장은 오류다(여러 지역이면 '대륙 전역'). 지역명이 등장하는 문장마다 그 문장 안의 구역 하나하나를 사실표의 '(X 지역)'과 대조하라 — 특히 한 길드가 여러 지역의 구역을 점령한 경우, 'A 지역에서는 ~' 문장 안에 다른 지역 구역이 섞여 들어간 것(예: 사실표에 '(타락 천사 부유섬 지역)'인 구역을 드래곤 화산 문장에 포함)은 오류다.
 - 최초 주장 주의: '최초·처음으로' 주장은 사실표에 그렇게 명시된 경우에만 유효 — 사실표에 '이미 성립한 지역 석권 있음'이 적혀 있는데 '대륙 최초'로 쓴 문장은 오류다.
 - 해산 길드에 **보유 구역이 없었으면 땅·영토 상실을 쓰지 마라** — '남긴 땅', '주인 없는 구역이 되었다' 같은 서술은 사실 오류다(해체 사실만 담담히 적는다).
@@ -401,7 +403,11 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 길드 보유 수 변화 요약은 '길드별 보유 증감' 수치를 그대로 따른다. 얻고 잃은 것이 모두 있으면 'N곳을 얻고 M곳을 내주어 K곳' 형태로 쓴다 — 획득만 언급하고 최종 수를 붙이면 산수가 안 맞는 문장이 된다(금지).
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
-- 반드시 JSON만 출력: {"today": "...", "headline": "..."}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
+- **방어에 성공한 길드는 싸운 길드다.** '방어' 목록에 있는 길드를 '다투지 않았다·싸우지 않았다·조용히 지냈다'로 쓰면 오류 — 공격 배치가 없었으면 '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 이번 행동으로 쓴다(2026-09-04 검수).
+- **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
+- **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
+- **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다** — 하루 만의 탈환은 '어제 {g|X}에게 빼앗겼던 {z|Z}를 하루 만에 되찾았다'처럼, 어제 얻은 땅을 지킨 것은 '어제 손에 넣은 땅을 하루 만에 지켜냈다'처럼 쓴다. '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
+- 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
     · 누가 어느 구역을 점령했고 누가 막아냈는지 — 점령과 방어를 구분해서.
@@ -409,7 +415,8 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
     · 그래서 이번 점령전 이후 대륙의 형세가 어떻게 되었는지(가장 세력이 큰 길드·기세를 질적으로, 등수 없이, 과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(2~4문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
     사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
-  - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 이번 점령전에서 처음 대륙에 이름을 알린 길드('역사적 사건'의 첫 등장)가 있으면 헤드라인 말미에 ', {g|이름} 첫 등장' 식으로 병기한다(여럿이면 '·'로 나열). '역사적 사건'에 판도 복귀(재기)로 적힌 길드는 첫 등장이 아니다. 병기하려면 ', {g|이름} 복귀'로 쓴다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
+  - headline: 그날을 대표하는 한 줄(25자 내외, 마커 포함, 말하듯이). 소재는 아래 우선순위로 고른다 — ① '■ 어제와 이어지는 사실'의 하루 만의 탈환·상실 ② 영토 소멸(마지막 구역 상실) ③ 개인 활약(처치 3 이상) ④ 신흥 세력의 첫 구역 ⑤ 그날 새로 완성한 지역 전체 장악 ⑥ 3곳 이상 확장. 문형은 여섯 가지 중 하나를 고른다: 선언형("{g|A}, 왕국 전역을 지배하다") · 반전형("{g|A}, 하루 만에 되찾은 슬라임 늪") · 인물형("{u|B}, {z|성문}에서 넷을 베다") · 몰락형("{g|C}, 마지막 깃발을 내리다") · 대비형("{g|A}의 첫 깃발, {g|C}의 마지막 깃발") · 숫자형("열 곳 중 열 곳, {g|A}가 늪을 완성하다"). '[지난 역사]'의 최근 7일 헤드라인과 문형·핵심 동사가 겹치지 않게 하고, 같은 지역의 '전역을 지배하다'는 7일 안에 되풀이하지 말 것(다시 완성한 날은 반전형으로). 첫 등장·복귀·소멸 길드는 그날 두 번째로 큰 사건일 때만 ', {g|이름} 첫 등장'처럼 짧게 덧붙이고, 아니면 본문에서만 다룬다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.
+  - headlines: headline 후보 3~5개(첫 항목은 headline과 같은 문장). 나머지는 서로 다른 문형·다른 소재로 쓴다 — 검수자가 고르거나 고쳐 쓸 재료다. headline이 빈 문자열이면 빈 배열([]).`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
 function isNotable(s: ConquestDaySummary): boolean {
@@ -420,16 +427,49 @@ function isNotable(s: ConquestDaySummary): boolean {
  * 그날 연대기 생성·저장(멱등) — 그날 점령전 요약을 AI가 기록.
  * 이미 그날 행이 있으면 skip. 큰 사건 없으면 기록 안 함(별일 없는 날). KEY 없으면 throw.
  */
+/**
+ * 어제 정리와 오늘 정리를 대조해 **코드가 확정하는 연속성 사실**(2026-09-04). 검수 때 매번 손보던 대목 —
+ * 하루 만의 탈환(어제 A가 B에게서 빼앗은 구역을 오늘 B가 되찾음), 어제 얻은 땅의 하루 만 상실, 어제 얻은
+ * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
+ * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
+ */
+export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDaySummary): string[] {
+  const out: string[] = [];
+  const yCap = new Map(yesterday.captures.map((c) => [c.zone, c] as const));
+  for (const c of today.captures) {
+    const y = yCap.get(c.zone);
+    if (!y || !c.from || y.winner !== c.from) continue;
+    if (y.from === c.winner) {
+      out.push(
+        `· 구역 「${c.zone}」: 어제 길드 「${y.winner}」 이(가) 「${c.winner}」 에게서 빼앗았던 곳을 오늘 「${c.winner}」 이(가) 되찾음 — 하루 만의 탈환('되찾다' 허용)`,
+      );
+    } else {
+      out.push(`· 구역 「${c.zone}」: 길드 「${c.from}」 이(가) 어제 얻은 땅을 하루 만에 「${c.winner}」 에게 잃음`);
+    }
+  }
+  for (const d of today.defenses) {
+    const y = yCap.get(d.zone);
+    if (!y || y.winner !== d.owner) continue;
+    const attackers = [...new Set(today.attacks.filter((a) => a.zone === d.zone).map((a) => a.guild))];
+    out.push(
+      `· 구역 「${d.zone}」: 길드 「${d.owner}」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄${attackers.length > 0 ? `(공격 측: 「${attackers.join('」, 「')}」)` : ''}`,
+    );
+  }
+  return out;
+}
+
 export async function generateAndStoreChronicle(
   kstDay: string,
   serverId: number,
-): Promise<{ created: boolean; reason?: string }> {
+  /** dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04). */
+  opts: { dryRun?: boolean } = {},
+): Promise<{ created: boolean; reason?: string; preview?: { today: string; headline: string; headlineCandidates: string[]; digest: string } }> {
   const [existing] = await db
     .select({ kstDay: worldChronicle.kstDay })
     .from(worldChronicle)
     .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
     .limit(1);
-  if (existing) return { created: false, reason: 'already' };
+  if (existing && !opts.dryRun) return { created: false, reason: 'already' };
 
   const summary = await aggregateConquestDay(kstDay, serverId);
   if (!isNotable(summary)) return { created: false, reason: 'no-event' };
@@ -760,6 +800,14 @@ export async function generateAndStoreChronicle(
     );
   if (deltaLines) digestSections.push(`■ 길드별 보유 증감(보유 수 서술은 이 수치만 따를 것):\n${deltaLines}`);
   if (milestones.length > 0) digestSections.push(`■ 역사적 사건(연표 등재 사유):\n${milestones.join('\n')}`);
+  // 어제 정리 — 연속성 사실(코드 확정)과 아래 [어제 점령전 결과] 블록에 함께 쓴다.
+  const prevDay = addDaysToKstDay(kstDay, -1);
+  const y = await aggregateConquestDay(prevDay, serverId);
+  const continuity = continuityFacts(summary, y);
+  if (continuity.length > 0)
+    digestSections.push(
+      `■ 어제와 이어지는 사실(코드가 어제 정리와 대조해 확정 — 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현 허용):\n${continuity.join('\n')}`,
+    );
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
@@ -774,9 +822,7 @@ export async function generateAndStoreChronicle(
       .map(([guild, zones]) => `· 길드 「${guild}」: ${zones}곳 보유`)
       .join('\n') || '· (보유 길드 없음)';
 
-  // 어제 점령전 결과(있으면) — 전날과의 연속성.
-  const prevDay = addDaysToKstDay(kstDay, -1);
-  const y = await aggregateConquestDay(prevDay, serverId);
+  // 어제 점령전 결과(있으면) — 전날과의 연속성(y는 위 연속성 사실 계산과 공유).
   const yCapByGuild = new Map<string, string[]>();
   for (const c of y.captures) {
     const arr = yCapByGuild.get(c.winner) ?? [];
@@ -943,15 +989,15 @@ export async function generateAndStoreChronicle(
     `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
     `정리에 없는 항목(개인 활약·방어·형세 등)은 그 화제를 아예 다루지 말 것 — "~는 없었다"류 부재 언급 금지(있는 사건만으로 서사).\n` +
     `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 점령전'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
-    `'되찾다·탈환·수복·다시' 같은 재획득 표현 금지 — 정리에는 직전 소유만 있고 그 이전 소유 이력은 없다. 공격 길드가 과거에 그 구역을 가졌었는지 알 수 없으므로 항상 '빼앗다·차지하다·가져가다'로만 쓴다(2026-07-18 잿빛 첨석 오서술).\n` +
+    `'되찾다·탈환·수복·다시 가져오다' 같은 재획득 표현은 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 쓴다 — 그 외에는 정리에 직전 소유만 있고 그 이전 이력이 없으므로 '빼앗다·차지하다·가져가다'로만 쓴다(2026-07-18 잿빛 첨석 오서술).\n` +
     `구역의 소속 지역은 정리의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 점령을 한 지역 이름으로 묶지 말 것('왕국 전역에서'는 전부 왕국 지역일 때만, 여러 지역에 걸치면 '대륙 전역에서').\n` +
     `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). 반대로 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역은 실제 교전 끝에 함락된 것이다 — 이런 구역을 '지키는 병력이 없었다'·무혈·무저항으로 쓰면 안 되고, 저항을 뚫고 차지한 것으로 서술한다. '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
           `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
     (bigChange
-      ? `이번 점령전는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}을 중심으로 핵심 한 줄을 쓴다. 이정표가 '지역 전체 장악'이면 구역 수 나열('6곳 장악')이 아니라 지배 선언으로 쓴다(예: "{g|길드명}, 왕국 전역을 지배하다"). 본문에서도 그 이정표를 구체적으로 짚는다 — 어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지.\n`
-      : `이번 점령전는 역사에 남을 날이 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
+      ? `이번 점령전는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다 — 어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지. headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`
+      : `이번 점령전는 역사에 남을 날이 아님 — headline은 반드시 빈 문자열(""), headlines는 빈 배열([])로 둔다.\n`) +
     `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지). **어제·지난 역사 등 과거 맥락으로 언급하는 이름도 예외 없이 마커** — 예: 전날 밀려난 길드 'X'를 회상하며 언급할 때도 {g|X}.\n\n` +
-    `위 규칙대로 JSON({today, headline})만 출력하라.`;
+    `위 규칙대로 JSON({today, headline, headlines})만 출력하라.`;
 
   // ── 생성 + 검증 재시도(최대 3회) — 위반(마커 없는 이름)을 피드백으로 재생성 유도. ──
   // 재시도로도 남으면 enforceMarkers가 결정론 백스톱(동명 모호만 최종 잔존 가능, warn).
@@ -960,6 +1006,7 @@ export async function generateAndStoreChronicle(
   ];
   let today = '';
   let headline = '';
+  let headlineCandidates: string[] = [];
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await client().messages.create({
       model: MODEL_ID,
@@ -973,7 +1020,7 @@ export async function generateAndStoreChronicle(
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
     // 파싱 실패도 재시도 소재(2026-07-18) — 종전엔 즉시 throw라 한 번의 깨진 JSON이 생성 전체를 무산시켰다.
-    const parsed = parseModelJson<{ today?: string; headline?: string }>(raw);
+    const parsed = parseModelJson<{ today?: string; headline?: string; headlines?: unknown }>(raw);
     if (!parsed) {
       // 빈 응답 진단(2026-07-21) — raw가 비면 파싱 이전 문제(중단 사유·블록 구성)를 남긴다.
       console.warn(
@@ -986,7 +1033,7 @@ export async function generateAndStoreChronicle(
         {
           role: 'user',
           content:
-            '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline})만으로 다시 출력하라.',
+            '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline, headlines})만으로 다시 출력하라.',
         },
       );
       continue;
@@ -1000,6 +1047,13 @@ export async function generateAndStoreChronicle(
       }
       today = enrichMarkers(enforceMarkers(candT));
       headline = enrichMarkers(enforceMarkers(candH));
+      // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
+      const rawList = Array.isArray(parsed.headlines) ? parsed.headlines : [];
+      const cleaned = rawList
+        .filter((h): h is string => typeof h === 'string')
+        .map((h) => enrichMarkers(enforceMarkers(correctMarkers(fixBraces(h.trim())))))
+        .filter((h) => h.length > 0 && h.length <= 120);
+      headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
       break;
     }
     console.warn(`[chronicle] 마커 위반 ${viol.length}건 → 재생성(attempt ${attempt + 1}): ${viol.join(', ')}`);
@@ -1009,7 +1063,7 @@ export async function generateAndStoreChronicle(
         role: 'user',
         content:
           `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
-          `길드는 {g|이름}, 인물은 {u|이름}, 개별 구역은 {z|이름}으로 — 위 이름의 모든 등장 위치를 종류에 맞는 마커로 감싸서, 같은 내용을 처음부터 끝까지 다시 JSON({today, headline})으로만 출력하라.`,
+          `길드는 {g|이름}, 인물은 {u|이름}, 개별 구역은 {z|이름}으로 — 위 이름의 모든 등장 위치를 종류에 맞는 마커로 감싸서, 같은 내용을 처음부터 끝까지 다시 JSON({today, headline, headlines})으로만 출력하라.`,
       },
     );
   }
@@ -1053,6 +1107,7 @@ export async function generateAndStoreChronicle(
       if (revT && viol.length === 0 && (!bigChange || revH)) {
         today = revT;
         headline = revH;
+        if (bigChange) headlineCandidates = [...new Set([revH, ...headlineCandidates])].slice(0, 5);
         reviewNotes = (parsed.changes ?? [])
           .filter((c) => c && (c.kind === 'fact' || c.kind === 'style') && c.after)
           .slice(0, 12);
@@ -1070,10 +1125,10 @@ export async function generateAndStoreChronicle(
   // 폴백을 타면 동명 재창설 시 문양이 새 길드로 바뀐다. 길드 수만큼이라 크기도 유계다.
   const guildRefs: ChronicleGuildRef[] = [...guildRefByName.values()];
 
+  if (opts.dryRun) return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest } };
   await db
     .insert(worldChronicle)
-    .values({
-      serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs })
+    .values({ serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates })
     .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }

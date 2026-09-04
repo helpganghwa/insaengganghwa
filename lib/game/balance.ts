@@ -330,12 +330,12 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 개설비 — 개설자만 낸다(참가자는 무료로 기본 공격 10회). 개설자 한 명이 최대 9명의 플레이
- * 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가 돌지 않는다.
- * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200. 그래도 CBT 실질가의 1.37배라
- * 레이드 빈도·상자 유입은 CBT보다 낮아진다(레이드는 단일 최대 상자 유입원).
+ * 개설비는 RAID_TIERS.openCost(개설자만 낸다 — 참가자는 무료로 기본 공격 10회). 개설자 한 명이
+ * 최대 9명의 플레이 기회를 만드는 구조라, 여기가 비싸면 레이드 컨텐츠 전체가 돌지 않는다.
+ * 2026-08-10 유입 리밸런싱(930→454💎/일)에 맞춰 300→200. 2026-09-03 난이도 개편 때 100/200/300
+ * 차등을 검토했으나 **전 난이도 200 통일**(사용자 결정, 실기기 피드백) — 개설비 sink는 개편 전과
+ * 같고, 난이도 경계(권장 총합)는 상자 수로 결정되어 개설비 차등이 없어도 유지된다.
  */
-export const RAID_OPEN_COST_DIAMOND = 200;
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
@@ -354,7 +354,11 @@ export function raidExtraAttackCost(nth: number): number {
   return 25 * Math.ceil(n / 10);
 }
 
-/** §5.2 phase1 HP 범위. phase n HP = phase1 × 1.5^(n-1). */
+/**
+ * §5.2 phase1 HP 기본 범위(쉬움 기준). phase n HP = phase1 × 1.5^(n-1).
+ * 난이도는 저장되는 phase1_hp에 RAID_TIERS.hpMult를 곱해 반영한다 — 페이즈 수식·돌파 판정·
+ * 게이지 계산은 난이도를 몰라도 되게(개편 전 코드 경로 그대로).
+ */
 export const RAID_PHASE1_HP_MIN = 8000;
 export const RAID_PHASE1_HP_MAX = 12000;
 export const RAID_PHASE_HP_MULT = 1.5;
@@ -380,12 +384,108 @@ export function computeRaidDamage(totalCP: number, varFactor: number, isCrit: bo
 }
 
 /**
- * §5.4 보상 — 1회+ 공격 전원 동일. 기본 참가 보상 없음.
- * 돌파 페이즈마다 **보급 상자 1개**(슬롯 균등 1/3) 지급 — 다이아 드롭 없음.
- * 레이드는 초월용 박스 수급의 *보조* 경로(시뮬 simulate-raid-boxes: 무과금 패시브 대비
- * 보통 ×1.4~1.7, 천장 ×3.3 — 1개 고정 채택. 1~3개는 헤비/고래 ×4~6.6로 과공급).
+ * §5.4 난이도·보상(2026-09-03 개편) — 개설자가 쉬움/보통/어려움 중 고른다. 난이도마다 개설비·
+ * phase1 HP 배수·돌파 페이즈당 상자·마일스톤이 다르고, 보상은 여전히 1회+ 공격 전원 동일
+ * (기여도 무관, 기본 참가 보상 없음, 다이아 드롭 없음).
+ *
+ * 설계 의도 — "파티 총합 전투력에 맞는 난이도를 고르는 것이 이득"이 되게. 권장 총합 미만이면
+ * 한 단계 낮은 난이도가 더 많이 준다. 실서버 30일 재현(394건)으로 경계를 맞췄다: 혼자면 쉬움,
+ * 총합 600만 근처부터 보통(+27%), 1,200만부터 어려움(+11%)이 유리. 어려움을 미달 파티가 열면
+ * 쉬움 대비 약 💎1,000 상당 손해라 개설 화면에서 권장 총합을 경고한다.
+ *
+ * 마일스톤은 **상자만**(사용자 결정). 어려움 20/25는 현 전투력으로 도달 불가(누적 80억+)지만 세
+ * 난이도의 양식(10/15/20/25)을 맞추려 둔다 — 값은 15의 ×2, ×4(45/90/180/360; 같은 페이즈에서
+ * 상위 난이도가 더 많다는 단조성 유지). 마지막 달성 뒤 반복 규칙은 없다(2026-09-03 결정).
+ * 월간 상자 유입 +21%(상위 파티 집중) — 관찰 항목: 레이드 상자 지급량·상위 20명 초월 속도·
+ * 상자 팩 판매. 조정 레버는 20/25 마일스톤부터 낮춘다.
  */
-export const RAID_PHASE_DROP_BOXES = 1;
+export type RaidTier = 'easy' | 'normal' | 'hard';
+export const RAID_TIER_CODES = ['easy', 'normal', 'hard'] as const;
+export type RaidTierRule = {
+  label: string;
+  /** 개설비(다이아) — 개설자만, 즉시 차감·환불 없음. 현재 전 난이도 동일(200). */
+  openCost: number;
+  /** phase1 HP 배수 — 개설 시 U(8000,12000)×배수를 저장(페이즈 수식은 공통). */
+  hpMult: number;
+  /** 돌파 페이즈 1개당 보급 상자(전원 동일, 슬롯은 결정론 해시). */
+  boxesPerPhase: number;
+  /** 마일스톤 — 누적 돌파 페이즈가 키에 도달하면 값만큼 보급 상자 추가(각 1회, 전원 동일). */
+  milestones: Readonly<Record<number, number>>;
+  /** 권장 파티 총합 전투력 — 이 미만이면 한 단계 낮은 난이도가 유리(개설 화면 안내). */
+  recommendedTotalCp: number;
+};
+export const RAID_TIERS: Readonly<Record<RaidTier, RaidTierRule>> = {
+  easy: {
+    label: '쉬움',
+    openCost: 200,
+    hpMult: 1,
+    boxesPerPhase: 1,
+    milestones: { 10: 5, 15: 10, 20: 15, 25: 30 },
+    recommendedTotalCp: 0,
+  },
+  normal: {
+    label: '보통',
+    openCost: 200,
+    hpMult: 8,
+    boxesPerPhase: 2,
+    milestones: { 10: 5, 15: 30, 20: 60, 25: 120 },
+    recommendedTotalCp: 6_000_000,
+  },
+  hard: {
+    label: '어려움',
+    openCost: 200,
+    hpMult: 120,
+    boxesPerPhase: 3,
+    milestones: { 10: 45, 15: 90, 20: 180, 25: 360 },
+    recommendedTotalCp: 12_000_000,
+  },
+};
+
+export function isRaidTier(v: unknown): v is RaidTier {
+  return typeof v === 'string' && (RAID_TIER_CODES as readonly string[]).includes(v);
+}
+/** DB text 컬럼 → 난이도(알 수 없는 값은 쉬움 — 개편 전 규칙과 동일). */
+export function raidTierOf(v: unknown): RaidTier {
+  return isRaidTier(v) ? v : 'easy';
+}
+/** 마일스톤 페이즈 오름차순 [phase, boxes][]. */
+/**
+ * 레이드 개편(난이도·달성 보상) 적용 시작 시각 — 2026-09-05 08:00 KST 배포. 그 전에 소환된 레이드는 0189가
+ * tier 'easy'로 표시하지만(HP ×1·페이즈당 상자 1 = 개편 전과 동일) **달성 보상은 주지 않는다** — "업데이트 전
+ * 소환분은 기존 규칙 그대로"(사용자 결정 2026-09-04). 정산·상세 카드·정산 내역 재계산이 모두 이 시각을 본다.
+ */
+export const RAID_TIERS_SINCE_ISO = '2026-09-04T23:00:00.000Z';
+export function raidHasMilestones(openedAt: Date | string | number | null | undefined): boolean {
+  if (openedAt == null) return true;
+  return new Date(openedAt).getTime() >= Date.parse(RAID_TIERS_SINCE_ISO);
+}
+/** 난이도의 달성 보상 목록 — openedAt을 주면 개편 전 소환분([])을 거른다. 소환 시트처럼 레이드가 없으면 생략. */
+export function raidMilestoneList(tier: RaidTier, openedAt?: Date | string | number | null): [number, number][] {
+  if (!raidHasMilestones(openedAt)) return [];
+  return Object.entries(RAID_TIERS[tier].milestones)
+    .map(([p, b]) => [Number(p), b] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+}
+/** 누적 돌파 페이즈까지 달성한 마일스톤 상자 합. */
+export function raidMilestoneBoxes(tier: RaidTier, phasesCleared: number, openedAt?: Date | string | number | null): number {
+  let n = 0;
+  for (const [p, b] of raidMilestoneList(tier, openedAt)) if (phasesCleared >= p) n += b;
+  return n;
+}
+/** 다음 마일스톤(아직 미달성 중 가장 가까운 것) — 전부 달성했으면 null. */
+export function raidNextMilestone(
+  tier: RaidTier,
+  phasesCleared: number,
+  openedAt?: Date | string | number | null,
+): { phase: number; boxes: number } | null {
+  for (const [p, b] of raidMilestoneList(tier, openedAt)) if (phasesCleared < p) return { phase: p, boxes: b };
+  return null;
+}
+/** 1..N 페이즈 누적 HP(돌파 N에 필요한 누적 데미지) = phase1·(1.5^N − 1)/(1.5 − 1). */
+export function raidCumulativeHp(phase1Hp: number, phases: number): number {
+  const n = Math.max(0, Math.floor(phases));
+  return Math.round((phase1Hp * (Math.pow(RAID_PHASE_HP_MULT, n) - 1)) / (RAID_PHASE_HP_MULT - 1));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §6. 경제 — 단일 프리미엄 재화 (다이아 ≡ 보석)
@@ -602,6 +702,23 @@ export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   const t = meleeTierForRank(rank, n);
   const diamond = rank > Math.ceil(n * MELEE_DIAMOND_PCT_CUTOFF) ? 0 : t.diamond;
   return { diamond, boxes: t.boxes };
+}
+
+/**
+ * 공격·방어 보너스(2026-09-04 확정, 0192) — 순위 운과 별개로 "그날 잘 싸운 만큼" 돌려준다.
+ * 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬) → 1회 💎20. 방어 성공 = 피격에서 버틴 횟수(탈락 피격
+ * 제외) → 1회 📦1. 순위 다이아 컷오프(상위 50%)와 무관하게 전원. 결과 우편 한 통에 순위 보상과 합산.
+ * 실서버 하루(892명): 처치 891 → 💎17,820(순위 다이아 7.4만의 +24%, 유입의 1.9%), 방어 성공 839 →
+ * 📦839(전체 상자의 +2.8%). 참가자 65%는 처치 0이라 상위 10%가 다이아의 절반을 가져간다(의도 — 고투력의
+ * 운 나쁜 날 보정). 💎25(상자 1개 값)·📦3안은 상위 겹침·상자 인플레로 기각. 확정 보상 — 확률공시 비대상.
+ */
+export const MELEE_KILL_DIAMOND = 20;
+export const MELEE_DEFENSE_BOX = 1;
+export function meleeBonus(kills: number, defenseSuccess: number): { diamond: number; boxes: number } {
+  return {
+    diamond: Math.max(0, kills) * MELEE_KILL_DIAMOND,
+    boxes: Math.max(0, defenseSuccess) * MELEE_DEFENSE_BOX,
+  };
 }
 
 /** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee'). */
@@ -839,4 +956,32 @@ export function expeditionWeightedSum(
     sum += it.level * w;
   }
   return Math.round(sum);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §12. 칭호 발견 보상 (2026-09-04, 유저 건의 — "칭호를 찾을 동기")
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 칭호 1개 발견(user_titles 최초 기록)마다 다이아. 자동 지급이 아니라 칭호 화면 "받을 보상"에서
+ * [모두 받기]로 수령 — 쌓았다가 한 번에 받는 감각(사용자 결정). 실서버 하루 발견 ≈185개 → ≈3,700💎/일
+ * (유입의 0.4%). 조건부 칭호도 원장 행은 최초 1회만 생기므로 잃었다 되찾아도 중복 지급 없음.
+ * 확정 보상만 — 확률공시(§33) 비대상.
+ */
+export const TITLE_DISCOVERY_DIAMOND = 20;
+/** 발견 개수 달성 보상 — STEP개마다 그 개수만큼 보급 상자(50→📦50, 100→📦100 …), 같은 자리에서 수령. */
+export const TITLE_MILESTONE_STEP = 50;
+/** 발견 수로 도달한 달성 단계 목록(오름차순). */
+export function titleMilestonesReached(discovered: number): number[] {
+  const out: number[] = [];
+  for (let m = TITLE_MILESTONE_STEP; m <= discovered; m += TITLE_MILESTONE_STEP) out.push(m);
+  return out;
+}
+/** 달성 단계의 상자 수 = 그 개수. */
+export function titleMilestoneBoxes(milestone: number): number {
+  return milestone;
+}
+/** 다음 달성 단계(아직 못 닿은 첫 STEP 배수). */
+export function titleNextMilestone(discovered: number): number {
+  return (Math.floor(discovered / TITLE_MILESTONE_STEP) + 1) * TITLE_MILESTONE_STEP;
 }

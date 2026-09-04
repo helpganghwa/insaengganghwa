@@ -6,11 +6,16 @@ import Link from 'next/link';
 
 import {
   RAID_BASE_ATTACKS,
+  RAID_TIERS,
   raidExtraAttackCost,
+  raidMilestoneList,
+  raidNextMilestone,
   raidPhaseHp,
+  type RaidTier,
   type SupplySlot,
 } from '@/lib/game/balance';
 import { aggregatePhaseDrops } from '@/lib/game/raid/drops';
+import { TierChip } from './TierChip';
 import { RAID_BOSSES, pickRaidShareCopy, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
@@ -40,6 +45,10 @@ export type RaidView = {
   expireAtIso: string;
   shareCode: string;
   isHost: boolean;
+  /** 난이도(BALANCE §5.4) — 보상 내역·마일스톤 표시의 근거. */
+  tier: RaidTier;
+  /** 소환 시각 — 개편(RAID_TIERS_SINCE_ISO) 전 소환분은 달성 보상 없음(표시·정산·내역 재계산 공통). */
+  openedAtIso: string;
   phase1Hp: number;
   totalDamage: number;
   phasesCleared: number;
@@ -197,6 +206,90 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
   );
 }
 
+/**
+ * 보상 카드(2026-09-03 시안 7·D 확정) — 페이즈 보상 / 달성 보상 / 누적 보상을 한 카드에 둔다.
+ * 달성 보상(코드 milestone)은 목록만: 받은 것은 켜지고 다음 것은 테두리. "다음까지 남은 페이즈·HP"
+ * 안내는 두지 않는다(이번 페이즈 남은 HP는 게이지가 담당, 예상 공격 수는 추측이라 제외 — 사용자
+ * 결정). 유저 용어: 페이즈 보상(페이즈마다) / 달성 보상(특정 페이즈 도달 시 1회). 정산 뒤엔 결산
+ * 보상 카드와 중복이라 호출부에서 숨긴다.
+ */
+function RewardCard({
+  tier,
+  openedAt,
+  phasesCleared,
+  drops,
+  glowPhase,
+}: {
+  tier: RaidTier;
+  openedAt: string;
+  phasesCleared: number;
+  drops: ReturnType<typeof aggregatePhaseDrops>;
+  /** 방금 도달한 달성 페이즈 — 해당 칩 1회 발광(2.4s). */
+  glowPhase: number | null;
+}) {
+  const list = raidMilestoneList(tier, openedAt);
+  const next = raidNextMilestone(tier, phasesCleared, openedAt);
+  const slots = (['weapon', 'armor', 'accessory'] as SupplySlot[]).filter((k) => drops.boxes[k] > 0);
+  return (
+    <div className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-[10.5px]">
+      <div className="flex items-start gap-2 py-0.5">
+        <span className="min-w-[62px] font-bold text-amber-300">페이즈 보상</span>
+        <span className="text-zinc-200">
+          📦<span className="font-mono font-semibold text-white">{drops.phaseBoxes}</span>
+          <span className="ml-1.5 text-[9.5px] text-zinc-500">
+            {phasesCleared}페이즈 × {RAID_TIERS[tier].boxesPerPhase}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-start gap-2 py-0.5">
+        <span className="min-w-[62px] pt-px font-bold text-amber-300">달성 보상</span>
+        {/* 고정 열 그리드 — 390px에서 칩이 두 줄로 꺾이지 않게(실기기 피드백 09-03). */}
+        <span
+          className="grid min-w-0 flex-1 items-center gap-1"
+          style={{ gridTemplateColumns: `repeat(${list.length}, minmax(0, 1fr))` }}
+        >
+          {list.map(([p, b]) => {
+            const done = phasesCleared >= p;
+            const isNext = next?.phase === p;
+            return (
+              <span
+                key={p}
+                className={`truncate rounded px-1 py-px text-center font-mono text-[9.5px] ${
+                  glowPhase === p ? 'animate-milestone-glow ' : ''
+                }${
+                  done
+                    ? 'bg-amber-500/25 text-amber-200'
+                    : isNext
+                      ? 'bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/50'
+                      : 'bg-zinc-800 text-zinc-500'
+                }`}
+              >
+                {p} <span className="font-sans">📦{b}</span>
+              </span>
+            );
+          })}
+          {!next ? (
+            <span className="col-span-full text-[9.5px] text-zinc-400">
+              달성 보상을 모두 받았어요 · 페이즈 보상은 계속
+            </span>
+          ) : null}
+        </span>
+      </div>
+      <div className="my-1 border-t border-dashed border-zinc-700" />
+      <div className="flex items-center justify-between pt-0.5 text-[11px] font-bold text-amber-200">
+        <span>누적 보상</span>
+        {slots.length > 0 ? (
+          <span className="text-zinc-100">
+            {slots.map((k, i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[k]}${drops.boxes[k]}`).join('')}
+          </span>
+        ) : (
+          <span className="font-normal text-zinc-500">아직 없음</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const { showError, showHeaderToast } = useResourceToast();
   // 다이아 부족 → 충전 유도 팝업(2026-08-22) — 보석 공격 컨펌 진입 사전 체크 + 서버 거절 재사용.
@@ -223,8 +316,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const joined = v.isParticipant || optJoined;
   const canAttack = joined && !settled && !over && left > 0;
 
-  // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 합산.
-  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared);
+  // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 + 도달 마일스톤 합산(난이도별).
+  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared, v.tier, v.openedAtIso);
 
   // ── 타격 FX: hit/crit. (insaeng은 미스 없음 — BALANCE §5.3.) ──
   const [fx, setFx] = useState<null | 'hit' | 'crit'>(null);
@@ -305,6 +398,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const rewardClaimed = Boolean(v.myReward?.claimed) || claimedOpt;
   // 방금 클릭해 수령(서버 확정 전) — 글로우+도장 1회 연출 트리거. 새로고침 후엔 정적.
   const justClaimed = claimedOpt && !Boolean(v.myReward?.claimed);
+  // 결산 카드 내역(시안 5, 2026-09-03) — 페이즈/달성 상자 수는 (raidId, phasesCleared, tier)
+  // 결정론 재계산. 저장된 boxes 합과 다르면(개편 전 정산분·달성 표 변경 등) 내역을 숨긴다.
+  const rewardTotal = v.myReward
+    ? Object.values(v.myReward.boxes).reduce((a, b) => a + (b ?? 0), 0)
+    : 0;
+  const breakdownOk = v.myReward != null && rewardTotal === drops.phaseBoxes + drops.milestoneBoxes;
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -313,6 +412,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const thrFloor = v.phase1Hp * 2 * (1.5 ** v.phasesCleared - 1);
   const nextHp = raidPhaseHp(v.phase1Hp, v.phasesCleared + 1);
   const targetProg = Math.max(0, Math.min(1, (effTotal - thrFloor) / nextHp));
+  // 이번(진행 중) 페이즈의 남은 HP — 게이지 라벨(2026-09-03 결정: 남은 HP는 현재 페이즈만 표시).
+  const remainInPhase = Math.max(0, Math.round(nextHp - (effTotal - thrFloor)));
 
   // prop이 낙관값을 따라잡으면(refresh 도착) override 해제 — 이후 서버 데이터 신뢰.
   useEffect(() => {
@@ -322,14 +423,25 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const [gPhase, setGPhase] = useState(v.phasesCleared);
   const [gPct, setGPct] = useState(targetProg * 100);
   const [phaseUp, setPhaseUp] = useState(false);
+  // 달성 보상 도달 연출(2026-09-03 결정: 헤더 토스트 + 해당 칩 발광만) — 서버가 내려준
+  // phasesCleared가 달성 페이즈를 넘어서는 순간(내 공격·타인 공격 갱신 모두) 1회.
+  const [glowPhase, setGlowPhase] = useState<number | null>(null);
   const animTok = useRef(0);
   const lastRef = useRef({ phase: v.phasesCleared, prog: targetProg });
+  // 아직 연출하지 않은 달성 페이즈 — 게이지 시퀀스 중 다음 갱신이 오면 이번 시퀀스가 취소되므로,
+  // 도달분을 여기 쌓아 두고 끝까지 간 시퀀스가 몰아서 띄운다(유실 없음·중복 없음).
+  const pendingMilestones = useRef<Array<[number, number]>>([]);
 
   useEffect(() => {
     const last = lastRef.current;
     if (last.phase === v.phasesCleared && Math.abs(last.prog - targetProg) < 0.0001) return;
     const advanced = v.phasesCleared > last.phase;
+    // 이번 갱신으로 새로 도달한 달성 페이즈(보통 0~1개, 큰 점프면 여러 개).
+    const reached = advanced
+      ? raidMilestoneList(v.tier, v.openedAtIso).filter(([p]) => last.phase < p && p <= v.phasesCleared)
+      : [];
     lastRef.current = { phase: v.phasesCleared, prog: targetProg };
+    if (reached.length > 0) pendingMilestones.current.push(...reached);
     const token = ++animTok.current;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -355,6 +467,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       if (advanced) {
         setPhaseUp(true);
         setTimeout(() => setPhaseUp(false), 650);
+      }
+      // 달성 보상 — 게이지 시퀀스가 끝난 뒤 토스트 + 칩 발광(시안 1+2, 플로팅·체크 없음).
+      const fire = pendingMilestones.current.splice(0);
+      for (const [p, b] of fire) {
+        // 문구는 "PHASE n 달성 보상 │ 📦b"만(아이콘·부연 없음 — 사용자 결정).
+        showHeaderToast({ title: `PHASE ${p} 달성 보상`, rewards: [{ icon: '📦', amount: b }] });
+      }
+      if (fire.length > 0) {
+        setGlowPhase(fire[fire.length - 1]![0]);
+        setTimeout(() => setGlowPhase(null), 2500);
       }
     })();
     // gPhase는 의도적으로 deps 제외(시퀀스 내부에서 갱신).
@@ -507,7 +629,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: copy.title,
+          // 난이도를 제목에 — 받는 쪽이 파티 규모에 맞는 레이드인지 바로 알게(BALANCE §5.4).
+          title: `${copy.title} · ${RAID_TIERS[v.tier].label}`,
           description: copy.body,
           imageUrl,
           imageWidth: 1200,
@@ -571,6 +694,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between p-3">
           <BackFab fallback="/raid" className="h-8 w-8" />
           <div className="pointer-events-none absolute inset-x-20 top-1/2 -translate-y-1/2 truncate text-center text-sm font-extrabold drop-shadow">
+            <TierChip tier={v.tier} className="mr-1" />
             {boss.name}
             {v.isHost ? (
               <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
@@ -588,8 +712,11 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               <span className={`font-mono text-lg ${pal.text}`}>PHASE {gPhase}</span>
               <span className="ml-1 text-zinc-500">돌파</span>
             </span>
-            <span className="font-mono text-[10px] text-zinc-500">
-              누적 {effTotal.toLocaleString()}
+            <span className="text-[10.5px] text-zinc-300">
+              이번 페이즈 남은 HP{' '}
+              <span className="font-mono text-[11.5px] font-semibold text-zinc-100">
+                {remainInPhase.toLocaleString()}
+              </span>
             </span>
           </div>
           <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-zinc-800">
@@ -599,7 +726,21 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               style={{ width: `${Math.max(2, gPct)}%`, transition: 'width 380ms ease-out' }}
             />
           </div>
+          <div className="mt-0.5 text-right font-mono text-[9.5px] text-zinc-600">
+            누적 {effTotal.toLocaleString()}
+          </div>
         </div>
+
+        {/* 보상 카드(BALANCE §5.4) — 페이즈 보상·달성 보상·누적 보상. 정산 뒤엔 결산 카드가 대신한다. */}
+        {!settled ? (
+          <RewardCard
+            tier={v.tier}
+            openedAt={v.openedAtIso}
+            phasesCleared={v.phasesCleared}
+            drops={drops}
+            glowPhase={glowPhase}
+          />
+        ) : null}
 
         {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (
@@ -635,6 +776,34 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   </span>
                 ))}
               </div>
+              {/* 내역 — 페이즈/달성 상자 수 한 줄 + 진행 중 카드와 같은 달성 칩 행(받은 것 켜짐·못 받은 것 회색). */}
+              {breakdownOk ? (
+                <>
+                  <div className={`mt-1 text-[10px] ${rewardClaimed ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    페이즈 보상 📦<span className="font-mono font-bold">{drops.phaseBoxes}</span> · 달성
+                    보상 📦<span className="font-mono font-bold">{drops.milestoneBoxes}</span>
+                  </div>
+                  <div
+                    className={`mx-auto mt-1.5 grid max-w-[300px] gap-1 ${rewardClaimed ? 'opacity-60' : ''}`}
+                    style={{
+                      gridTemplateColumns: `repeat(${raidMilestoneList(v.tier, v.openedAtIso).length}, minmax(0, 1fr))`,
+                    }}
+                  >
+                    {raidMilestoneList(v.tier, v.openedAtIso).map(([p, b]) => (
+                      <span
+                        key={p}
+                        className={`truncate rounded px-1 py-px text-center font-mono text-[9.5px] ${
+                          v.phasesCleared >= p
+                            ? 'bg-amber-500/25 text-amber-200'
+                            : 'bg-zinc-800/80 text-zinc-600'
+                        }`}
+                      >
+                        {p} <span className="font-sans">📦{b}</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
               {/* 박스모델을 두 상태 동일하게 — 양쪽 다 border 1px(box-border)로 레이아웃 시프트 차단. */}
               <button
                 type="button"
@@ -725,22 +894,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           </div>
         )}
 
-        {/* 누적 보상 섹션 — 정산 완료(settled) 상태에서는 결산 보상 섹션과 중복이라 숨김. */}
-        {!settled ? (
-          <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
-            <span className="font-semibold text-amber-300">누적 보상</span>{' '}
-            {v.phasesCleared > 0 ? (
-              <span className="text-zinc-200">
-                {Object.entries(drops.boxes)
-                  .filter(([, n]) => n > 0)
-                  .map(([s, n], i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[s as SupplySlot]}${n}`)
-                  .join('')}
-              </span>
-            ) : (
-              <span className="text-zinc-500">아직 없음</span>
-            )}
-          </div>
-        ) : null}
 
         {/* ── 참가 요청(개설자만) — 공유링크 등 요청 수락/거절 ── */}
         {v.isHost && visibleReqs.length > 0 ? (

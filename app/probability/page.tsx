@@ -24,7 +24,9 @@ import {
   RAID_CRIT_MULT,
   RAID_DAMAGE_VARIANCE,
   RAID_DAMAGE_K,
-  RAID_PHASE_DROP_BOXES,
+  RAID_TIERS,
+  RAID_TIER_CODES,
+  raidMilestoneList,
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_CRIT_BP,
@@ -226,8 +228,8 @@ export default async function ProbabilityPage() {
       <Sec n="5" title="레이드" id="raid">
         <P>
           페이즈 1의 보스 체력은 {RAID_PHASE1_HP_MIN.toLocaleString('ko-KR')} ~{' '}
-          {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')} 사이에서 고르게 정해지고, 페이즈가 올라갈
-          때마다 체력이 {RAID_PHASE_HP_MULT}배씩 커집니다.
+          {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')} 사이에서 고르게 정해지고(쉬움 기준 — 난이도
+          배수는 아래 표), 페이즈가 올라갈 때마다 체력이 {RAID_PHASE_HP_MULT}배씩 커집니다.
         </P>
         <Table head={['페이즈', 'HP (최소)', 'HP (최대)']}>
           {PHASE_SAMPLES.map((n) => (
@@ -254,9 +256,29 @@ export default async function ProbabilityPage() {
         </Table>
         <P>
           추가 공격 비용은 10번마다 한 칸씩 오릅니다({raidExtraAttackCost(1)} × ⌈횟수÷10⌉ 다이아).
-          보상은 페이즈를 하나 깰 때마다 <b>1회 이상 공격한</b> 참여자 전원에게 보급 상자 {RAID_PHASE_DROP_BOXES}개
-          — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
+          보상은 페이즈를 하나 깰 때마다 <b>1회 이상 공격한</b> 참여자 전원에게 보급 상자를 난이도별
+          개수로(
+          {RAID_TIER_CODES.map((t) => `${RAID_TIERS[t].label} ${RAID_TIERS[t].boxesPerPhase}개`).join(' · ')}
+          ) — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
         </P>
+        <P>
+          난이도는 소환할 때 고르며, 페이즈 1 체력 배수·페이즈 보상·달성 보상이 다릅니다(소환 비용은 같음). 달성 보상은 누적
+          돌파 페이즈가 아래 수에 이를 때마다 전원에게 상자를 추가로 지급합니다(각 1회).
+        </P>
+        <Table head={['난이도', '페이즈 1 체력', '페이즈 보상', '달성 보상']}>
+          {RAID_TIER_CODES.map((t) => (
+            <tr key={t}>
+              <Td>{RAID_TIERS[t].label}</Td>
+              <Td>×{RAID_TIERS[t].hpMult.toLocaleString('ko-KR')}</Td>
+              <Td>{RAID_TIERS[t].boxesPerPhase}개</Td>
+              <Td>
+                {raidMilestoneList(t)
+                  .map(([p, b]) => `${p}페이즈 ${b}개`)
+                  .join(' · ')}
+              </Td>
+            </tr>
+          ))}
+        </Table>
       </Sec>
 
       {/* 파견 — EXPEDITION_* 상수와 1:1(§33). 판정 시점(오퍼 생성 롤·수령은 대성공만)까지 공시. */}

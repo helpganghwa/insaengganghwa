@@ -8,11 +8,13 @@ import { raids, raidParticipants, raidDailyCounts } from '@/lib/db/schema/raid';
 import {
   RAID_DAILY_CAP,
   RAID_MAX_CONCURRENT_PER_USER,
-  RAID_OPEN_COST_DIAMOND,
   RAID_PHASE1_HP_MAX,
   RAID_PHASE1_HP_MIN,
+  RAID_TIERS,
   RAID_WINDOW_MS,
   RAID_DURATION_OPTIONS_MS,
+  raidTierOf,
+  type RaidTier,
 } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 import type { RaidBoss } from './bosses';
@@ -110,8 +112,13 @@ export function openRaid(input: {
   guildShare?: RaidShareMode;
   /** 공격창 길이(ms) — 개설자가 선택(1/3/6시간). 목록 밖 값은 기본 6시간으로 강제. */
   durationMs?: number;
+  /** 난이도(BALANCE §5.4) — 개설비·HP 배수·상자·마일스톤. 알 수 없는 값은 쉬움. */
+  tier?: RaidTier;
 }): Promise<{ raidId: bigint; shareCode: string }> {
   const { userId, bossCode, friendShare = 'off', guildShare = 'off' } = input;
+  // 서버 권위 — 난이도도 허용 목록만(클라 문자열 신뢰 X).
+  const tier = raidTierOf(input.tier);
+  const rule = RAID_TIERS[tier];
   // 서버 권위 — 클라가 보낸 지속시간은 허용 목록(1/3/6h)만 신뢰, 그 외는 기본값.
   const durationMs = (RAID_DURATION_OPTIONS_MS as readonly number[]).includes(input.durationMs ?? -1)
     ? input.durationMs!
@@ -130,12 +137,14 @@ export function openRaid(input: {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 
-    // 개설비 차감 — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
-    const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND, 'raid_open');
+    // 개설비 차감(난이도별) — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
+    const paid = await walletTrySpend(tx, userId, input.serverId, rule.openCost, 'raid_open');
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
+    // 난이도 HP 배수는 여기서 한 번만 곱해 저장 — 이후 페이즈 수식·돌파 판정·게이지는 난이도 무관.
     const phase1Hp =
-      RAID_PHASE1_HP_MIN + (rngU32() % (RAID_PHASE1_HP_MAX - RAID_PHASE1_HP_MIN + 1));
+      (RAID_PHASE1_HP_MIN + (rngU32() % (RAID_PHASE1_HP_MAX - RAID_PHASE1_HP_MIN + 1))) *
+      rule.hpMult;
     const now = Date.now();
     const [raid] = await tx
       .insert(raids)
@@ -149,6 +158,7 @@ export function openRaid(input: {
         status: 'active',
         friendShare,
         guildShare,
+        tier,
       })
       .returning({ id: raids.id, shareCode: raids.shareCode });
 
