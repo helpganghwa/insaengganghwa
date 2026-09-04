@@ -84,7 +84,7 @@ export default function Doc() {
         <LI>
           발견한 칭호가 {fmtInt(TITLE_MILESTONE_STEP)}개, {fmtInt(TITLE_MILESTONE_STEP * 2)}개,{' '}
           {fmtInt(TITLE_MILESTONE_STEP * 3)}개…에 이를 때마다 그 개수만큼 보급 상자를 받는다. 같은 자리에서
-          함께 받으며, 다음 단계까지 남은 개수는 칭호 화면의 게이지로 확인할 수 있다.
+          함께 받는다.
         </LI>
         <LI>이미 발견한 칭호의 보상도 그대로 쌓여 있으니, 칭호 화면에 들어가 받으면 된다.</LI>
       </UL>

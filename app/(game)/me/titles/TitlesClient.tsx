@@ -386,11 +386,6 @@ export function TitlesClient({
             ★ 즐겨찾기
           </button>
         </div>
-
-          <span className="whitespace-nowrap font-mono">
-            {reward.discovered}/{reward.nextMilestone}
-          </span>
-        </div>
       </div>
 
       {/* 목록 — 대분류 섹션 + 1열 밀도 행(트랙 D 확정안). ★ 섹션이 최상단(중복 표시 — 원 섹션에도 남음). */}
