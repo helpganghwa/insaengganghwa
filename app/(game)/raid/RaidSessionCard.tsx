@@ -424,6 +424,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const [glowPhase, setGlowPhase] = useState<number | null>(null);
   const animTok = useRef(0);
   const lastRef = useRef({ phase: v.phasesCleared, prog: targetProg });
+  // 아직 연출하지 않은 달성 페이즈 — 게이지 시퀀스 중 다음 갱신이 오면 이번 시퀀스가 취소되므로,
+  // 도달분을 여기 쌓아 두고 끝까지 간 시퀀스가 몰아서 띄운다(유실 없음·중복 없음).
+  const pendingMilestones = useRef<Array<[number, number]>>([]);
 
   useEffect(() => {
     const last = lastRef.current;
@@ -434,6 +437,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       ? raidMilestoneList(v.tier).filter(([p]) => last.phase < p && p <= v.phasesCleared)
       : [];
     lastRef.current = { phase: v.phasesCleared, prog: targetProg };
+    if (reached.length > 0) pendingMilestones.current.push(...reached);
     const token = ++animTok.current;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -461,12 +465,13 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         setTimeout(() => setPhaseUp(false), 650);
       }
       // 달성 보상 — 게이지 시퀀스가 끝난 뒤 토스트 + 칩 발광(시안 1+2, 플로팅·체크 없음).
-      for (const [p, b] of reached) {
+      const fire = pendingMilestones.current.splice(0);
+      for (const [p, b] of fire) {
         // 문구는 "PHASE n 달성 보상 │ 📦b"만(아이콘·부연 없음 — 사용자 결정).
         showHeaderToast({ title: `PHASE ${p} 달성 보상`, rewards: [{ icon: '📦', amount: b }] });
       }
-      if (reached.length > 0) {
-        setGlowPhase(reached[reached.length - 1]![0]);
+      if (fire.length > 0) {
+        setGlowPhase(fire[fire.length - 1]![0]);
         setTimeout(() => setGlowPhase(null), 2500);
       }
     })();

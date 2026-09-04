@@ -68,4 +68,17 @@ describe('raid/drops — 난이도별 돌파 상자·마일스톤', () => {
       expect(raidPhasesCleared(p1, cum - 1)).toBe(n - 1);
     }
   });
+
+  it('데미지가 누적 HP에 정확히 걸리면 그 페이즈를 돌파한 것(log 추정 오차 보정)', () => {
+    // p1=2^13이면 n≤14에서 누적 HP가 정수라 정확히 맞출 수 있다.
+    const p1 = 8192;
+    for (const n of [1, 5, 10, 14]) {
+      const exact = p1 * (Math.pow(1.5, n) - 1) * 2;
+      expect(Number.isInteger(exact)).toBe(true);
+      expect(raidPhasesCleared(p1, exact)).toBe(n);
+      expect(raidPhasesCleared(p1, exact - 1)).toBe(n - 1);
+    }
+    // 어려움(×120)에서 log 추정이 1 많게 나오던 실제 사례 — 누적 25페이즈 HP보다 작은 데미지는 24.
+    expect(raidPhasesCleared(1_264_920, 63_878_885_757)).toBe(24);
+  });
 });

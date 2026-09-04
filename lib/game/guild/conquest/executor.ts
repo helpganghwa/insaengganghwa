@@ -59,6 +59,9 @@ export async function setZoneExecutor(input: {
 }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도(23:00~01:00) 잠금
   await db.transaction(async (tx) => {
+    // 락 순서 통일(characters → zones): 아래 executor_zone_history 갱신이 대상의 characters 행을 잡는데,
+    // 지출 세금 훅은 characters → 거주 구역 zones 순서라 구역을 먼저 잠그면 대상의 지출과 교착한다.
+    await tx.execute(sql`select 1 from characters where user_id = ${input.targetUserId}::uuid for update`);
     const { guildId, serverId } = await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
 
     // 물러나는 기존 집행관 — 교체로 자동 방어가 사라지므로 아래에서 일반 수비 배치로 복원

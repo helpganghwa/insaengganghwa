@@ -27,8 +27,13 @@ export function raidPhasesCleared(phase1Hp: number, totalDamage: number): number
   // → r^N ≤ 1 + D·(r−1)/phase1
   const r = RAID_PHASE_HP_MULT;
   const bound = 1 + (totalDamage * (r - 1)) / phase1Hp;
-  const n = Math.floor(Math.log(bound) / Math.log(r));
-  return Math.max(0, n);
+  let n = Math.max(0, Math.floor(Math.log(bound) / Math.log(r)));
+  // log 추정은 누적 HP에 정확히 걸린 데미지에서 1 적게(드물게 많게) 나온다 — 정산·달성 보상이 이 값을 쓰므로
+  // 누적 HP(p1·(r^n−1)/(r−1), 이 크기에서 double로 정확)와 직접 비교해 보정한다(반올림한 raidCumulativeHp와 비교하면 안 됨).
+  const cum = (k: number) => (phase1Hp * (Math.pow(r, k) - 1)) / (r - 1);
+  while (cum(n + 1) <= totalDamage) n += 1;
+  while (n > 0 && cum(n) > totalDamage) n -= 1;
+  return n;
 }
 
 /** FNV-1a 32bit — 결정론 해시(시드 컬럼 불필요, 전원 동일 보장). */
