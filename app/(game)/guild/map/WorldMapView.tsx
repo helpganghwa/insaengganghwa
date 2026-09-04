@@ -1350,7 +1350,7 @@ export function WorldMapView({
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt>대난투 상금</dt>
-                      <dd className="font-bold text-zinc-700 dark:text-zinc-300">상금의 10% (상금은 그대로)</dd>
+                      <dd className="font-bold text-zinc-700 dark:text-zinc-300">상금의 10%</dd>
                     </div>
                   </dl>
                   <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-[10px] dark:border-zinc-800 dark:bg-zinc-900">
