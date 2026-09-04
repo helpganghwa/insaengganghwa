@@ -11,7 +11,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
-import { PROFILE_MAX, TITLE_DISCOVERY_DIAMOND } from '@/lib/game/balance';
+import { PROFILE_MAX } from '@/lib/game/balance';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
 
@@ -68,8 +68,6 @@ export default async function ProfilePage() {
     titles_found: number;
     titles_pending_owned: number;
     titles_new: number;
-    /** 미수령 칭호 발견 보상 개수(0191) — 메뉴 금색 배지(× TITLE_DISCOVERY_DIAMOND). */
-    titles_unclaimed: number;
     equipment: {
       catalogItemId: number;
       enhanceLevel: number;
@@ -109,8 +107,6 @@ export default async function ProfilePage() {
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}) as titles_found,
           -- 새 칭호(0187) — 아직 확인하지 않은 획득분. 메뉴 배지(친구 요청과 같은 붉은 숫자).
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId} and seen_at is null) as titles_new,
-          -- 미수령 발견 보상(0191) — 배지 ㄴ: NEW 개수 옆에 받을 💎.
-          (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId} and reward_claimed_at is null) as titles_unclaimed,
           -- 판정이 아직 없는 칭호 중 **이미 보유한** 수 — 발견 게이지 분모가 도달 가능해야 한다
           -- (visibleTitleTotal 주석). 미보유 PENDING은 목록·분모 양쪽에서 빠진다.
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}
@@ -161,7 +157,6 @@ export default async function ProfilePage() {
   const friendReqCount = row?.friend_req_count ?? 0;
   const friendCount = row?.friend_count ?? 0;
   const titlesNew = row?.titles_new ?? 0;
-  const titlesRewardDiamond = (row?.titles_unclaimed ?? 0) * TITLE_DISCOVERY_DIAMOND;
   const codexGot = row?.codex_got ?? 0;
   const codexTotal = row?.codex_total ?? 0;
   const titlesFound = row?.titles_found ?? 0;
@@ -373,14 +368,7 @@ export default async function ProfilePage() {
                   {titlesNew > 99 ? '99+' : titlesNew}
                 </span>
               ) : null}
-              {m.href === '/me/titles' && titlesRewardDiamond > 0 ? (
-                <span
-                  aria-label={`받을 칭호 보상 💎${titlesRewardDiamond}`}
-                  className="inline-flex items-center rounded-full bg-amber-500 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-950 tabular-nums"
-                >
-                  💎{titlesRewardDiamond.toLocaleString()}
-                </span>
-              ) : null}
+
               {m.href === '/friends' && friendReqCount > 0 ? (
                 <span
                   aria-label={`친구 요청 ${friendReqCount}건`}

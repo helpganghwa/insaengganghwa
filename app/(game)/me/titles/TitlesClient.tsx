@@ -220,15 +220,17 @@ export function TitlesClient({
     });
   };
 
+  // 낙관 수령(사용자 요청 09-04): 누르는 즉시 바를 접고 행 💎 칩을 지운다. 서버 멱등이라 실패 때만 되돌린다.
   const claimRewards = () => {
     if (claiming || !showClaimBar) return;
+    setClaimedAll(true);
     startClaim(async () => {
       const res = await claimTitleRewardsAction().catch(() => ({ ok: false as const, error: 'NETWORK' }));
       if (!res.ok) {
+        setClaimedAll(false);
         showError('보상 수령에 실패했어. 잠시 후 다시 눌러 줘.');
         return;
       }
-      setClaimedAll(true);
       const rewards: { icon: string; amount: number }[] = [];
       if (res.diamond > 0) rewards.push({ icon: '💎', amount: res.diamond });
       const boxTotal = res.boxes.weapon + res.boxes.armor + res.boxes.accessory;
@@ -385,18 +387,6 @@ export function TitlesClient({
           </button>
         </div>
 
-        {/* 상자 달성 게이지(0191) — 보상 바와 별개로 항상 표시. 다음 단계(50·100·…)까지 발견 수. */}
-        <div className="flex items-center gap-2 border-b border-zinc-800 px-4 pb-2 text-[10px] text-zinc-500">
-          <span className="whitespace-nowrap">
-            다음 상자 보상{' '}
-            <span className="font-mono font-bold text-amber-200">📦{titleMilestoneBoxes(reward.nextMilestone)}</span>
-          </span>
-          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800">
-            <div
-              className="h-full rounded-full bg-amber-500"
-              style={{ width: `${Math.min(100, (reward.discovered / reward.nextMilestone) * 100)}%` }}
-            />
-          </div>
           <span className="whitespace-nowrap font-mono">
             {reward.discovered}/{reward.nextMilestone}
           </span>
