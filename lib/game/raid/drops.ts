@@ -75,6 +75,8 @@ export function aggregatePhaseDrops(
   raidId: bigint,
   phasesCleared: number,
   tier: RaidTier,
+  /** 소환 시각 — 개편(RAID_TIERS_SINCE_ISO) 전 소환분은 달성 보상 없음. 생략하면 적용. */
+  openedAt?: Date | string | number | null,
 ): { boxes: Record<SupplySlot, number>; phaseBoxes: number; milestoneBoxes: number } {
   const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
   let phaseBoxes = 0;
@@ -85,7 +87,7 @@ export function aggregatePhaseDrops(
     }
   }
   let milestoneBoxes = 0;
-  for (const [p] of raidMilestoneList(tier)) {
+  for (const [p] of raidMilestoneList(tier, openedAt)) {
     if (phasesCleared < p) break;
     for (const slot of milestoneDropOutcome(raidId, p, tier)) {
       boxes[slot] += 1;

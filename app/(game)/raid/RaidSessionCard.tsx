@@ -47,6 +47,8 @@ export type RaidView = {
   isHost: boolean;
   /** 난이도(BALANCE §5.4) — 보상 내역·마일스톤 표시의 근거. */
   tier: RaidTier;
+  /** 소환 시각 — 개편(RAID_TIERS_SINCE_ISO) 전 소환분은 달성 보상 없음(표시·정산·내역 재계산 공통). */
+  openedAtIso: string;
   phase1Hp: number;
   totalDamage: number;
   phasesCleared: number;
@@ -213,18 +215,20 @@ function CountdownBadge({ expireAtIso, settled }: { expireAtIso: string; settled
  */
 function RewardCard({
   tier,
+  openedAt,
   phasesCleared,
   drops,
   glowPhase,
 }: {
   tier: RaidTier;
+  openedAt: string;
   phasesCleared: number;
   drops: ReturnType<typeof aggregatePhaseDrops>;
   /** 방금 도달한 달성 페이즈 — 해당 칩 1회 발광(2.4s). */
   glowPhase: number | null;
 }) {
-  const list = raidMilestoneList(tier);
-  const next = raidNextMilestone(tier, phasesCleared);
+  const list = raidMilestoneList(tier, openedAt);
+  const next = raidNextMilestone(tier, phasesCleared, openedAt);
   const slots = (['weapon', 'armor', 'accessory'] as SupplySlot[]).filter((k) => drops.boxes[k] > 0);
   return (
     <div className="rounded-lg border border-amber-700/50 bg-amber-950/25 px-3 py-2 text-[10.5px]">
@@ -313,7 +317,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const canAttack = joined && !settled && !over && left > 0;
 
   // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 + 도달 마일스톤 합산(난이도별).
-  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared, v.tier);
+  const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared, v.tier, v.openedAtIso);
 
   // ── 타격 FX: hit/crit. (insaeng은 미스 없음 — BALANCE §5.3.) ──
   const [fx, setFx] = useState<null | 'hit' | 'crit'>(null);
@@ -434,7 +438,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     const advanced = v.phasesCleared > last.phase;
     // 이번 갱신으로 새로 도달한 달성 페이즈(보통 0~1개, 큰 점프면 여러 개).
     const reached = advanced
-      ? raidMilestoneList(v.tier).filter(([p]) => last.phase < p && p <= v.phasesCleared)
+      ? raidMilestoneList(v.tier, v.openedAtIso).filter(([p]) => last.phase < p && p <= v.phasesCleared)
       : [];
     lastRef.current = { phase: v.phasesCleared, prog: targetProg };
     if (reached.length > 0) pendingMilestones.current.push(...reached);
@@ -731,6 +735,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         {!settled ? (
           <RewardCard
             tier={v.tier}
+            openedAt={v.openedAtIso}
             phasesCleared={v.phasesCleared}
             drops={drops}
             glowPhase={glowPhase}
@@ -781,10 +786,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   <div
                     className={`mx-auto mt-1.5 grid max-w-[300px] gap-1 ${rewardClaimed ? 'opacity-60' : ''}`}
                     style={{
-                      gridTemplateColumns: `repeat(${raidMilestoneList(v.tier).length}, minmax(0, 1fr))`,
+                      gridTemplateColumns: `repeat(${raidMilestoneList(v.tier, v.openedAtIso).length}, minmax(0, 1fr))`,
                     }}
                   >
-                    {raidMilestoneList(v.tier).map(([p, b]) => (
+                    {raidMilestoneList(v.tier, v.openedAtIso).map(([p, b]) => (
                       <span
                         key={p}
                         className={`truncate rounded px-1 py-px text-center font-mono text-[9.5px] ${

@@ -6,6 +6,8 @@ import {
   raidCumulativeHp,
   raidMilestoneBoxes,
   raidNextMilestone,
+  RAID_TIERS_SINCE_ISO,
+  raidMilestoneList,
 } from '@/lib/game/balance';
 import {
   aggregatePhaseDrops,
@@ -58,6 +60,20 @@ describe('raid/drops — 난이도별 돌파 상자·마일스톤', () => {
     // 쉬움의 페이즈 상자는 개편 전 해시 키(`raid:phase:0`)와 같아 기존 레이드 표시가 이어진다.
     expect(phaseDropOutcome(77n, 1, 'easy')).toHaveLength(1);
     expect(phaseDropOutcome(77n, 1, 'normal')[0]).toBe(phaseDropOutcome(77n, 1, 'easy')[0]);
+  });
+
+  it('개편 전(RAID_TIERS_SINCE_ISO 이전)에 소환된 레이드는 달성 보상 없이 페이즈 상자만', () => {
+    const before = new Date(Date.parse(RAID_TIERS_SINCE_ISO) - 60_000);
+    const after = new Date(Date.parse(RAID_TIERS_SINCE_ISO));
+    const legacy = aggregatePhaseDrops(77n, 12, 'easy', before);
+    const fresh = aggregatePhaseDrops(77n, 12, 'easy', after);
+    expect(legacy.milestoneBoxes).toBe(0);
+    expect(legacy.phaseBoxes).toBe(12);
+    expect(fresh.milestoneBoxes).toBe(5);
+    expect(raidMilestoneList('normal', before)).toEqual([]);
+    expect(raidMilestoneList('normal', after)).toHaveLength(4);
+    expect(raidMilestoneList('normal')).toHaveLength(4); // 소환 시트(레이드 없음)는 항상 표시
+    expect(raidNextMilestone('easy', 3, before)).toBeNull();
   });
 
   it('누적 HP 헬퍼는 돌파 판정과 정합(경계값)', () => {

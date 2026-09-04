@@ -1,3 +1,4 @@
+import { RAID_TIERS_SINCE_ISO } from '@/lib/game/balance';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 // 외부 부작용만 mock(푸시·리더보드) — 정산 코어(보상 적재·상태전이·멱등)는 실제 DB 경로로 검증.
@@ -28,11 +29,12 @@ async function seedRaid(opts: {
   seq += 1;
   const days = opts.expire === 'past' ? -1 : 1;
   const r = (await testDb.execute(sql`
-    insert into raids (host_user_id, server_id, boss_code, phase1_hp, share_code, expire_at, status, tier)
+    insert into raids (host_user_id, server_id, boss_code, phase1_hp, share_code, expire_at, status, tier, opened_at)
     values (${TEST_USER_ID}::uuid, ${SID}, 'slime_king', 100, ${'TR' + seq + '_' + process.pid},
-      now() + make_interval(days => ${days}), 'active', ${opts.tier ?? 'easy'})
+      now() + make_interval(days => ${days}), 'active', ${opts.tier ?? 'easy'},
+      greatest(now(), ${RAID_TIERS_SINCE_ISO}::timestamptz))
     returning id::text id
-  `)) as unknown as { id: string }[];
+  `)) as unknown as { id: string }[]; // opened_at은 개편 컷오프(RAID_TIERS_SINCE_ISO) 이후로 고정 — 달성 보상 경로 검증
   const raidId = BigInt(r[0]!.id);
   await testDb.execute(sql`
     insert into raid_participants (raid_id, user_id, total_damage, attacks_used)

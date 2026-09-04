@@ -449,23 +449,36 @@ export function raidTierOf(v: unknown): RaidTier {
   return isRaidTier(v) ? v : 'easy';
 }
 /** 마일스톤 페이즈 오름차순 [phase, boxes][]. */
-export function raidMilestoneList(tier: RaidTier): [number, number][] {
+/**
+ * 레이드 개편(난이도·달성 보상) 적용 시작 시각 — 2026-09-05 08:00 KST 배포. 그 전에 소환된 레이드는 0189가
+ * tier 'easy'로 표시하지만(HP ×1·페이즈당 상자 1 = 개편 전과 동일) **달성 보상은 주지 않는다** — "업데이트 전
+ * 소환분은 기존 규칙 그대로"(사용자 결정 2026-09-04). 정산·상세 카드·정산 내역 재계산이 모두 이 시각을 본다.
+ */
+export const RAID_TIERS_SINCE_ISO = '2026-09-04T23:00:00.000Z';
+export function raidHasMilestones(openedAt: Date | string | number | null | undefined): boolean {
+  if (openedAt == null) return true;
+  return new Date(openedAt).getTime() >= Date.parse(RAID_TIERS_SINCE_ISO);
+}
+/** 난이도의 달성 보상 목록 — openedAt을 주면 개편 전 소환분([])을 거른다. 소환 시트처럼 레이드가 없으면 생략. */
+export function raidMilestoneList(tier: RaidTier, openedAt?: Date | string | number | null): [number, number][] {
+  if (!raidHasMilestones(openedAt)) return [];
   return Object.entries(RAID_TIERS[tier].milestones)
     .map(([p, b]) => [Number(p), b] as [number, number])
     .sort((a, b) => a[0] - b[0]);
 }
 /** 누적 돌파 페이즈까지 달성한 마일스톤 상자 합. */
-export function raidMilestoneBoxes(tier: RaidTier, phasesCleared: number): number {
+export function raidMilestoneBoxes(tier: RaidTier, phasesCleared: number, openedAt?: Date | string | number | null): number {
   let n = 0;
-  for (const [p, b] of raidMilestoneList(tier)) if (phasesCleared >= p) n += b;
+  for (const [p, b] of raidMilestoneList(tier, openedAt)) if (phasesCleared >= p) n += b;
   return n;
 }
 /** 다음 마일스톤(아직 미달성 중 가장 가까운 것) — 전부 달성했으면 null. */
 export function raidNextMilestone(
   tier: RaidTier,
   phasesCleared: number,
+  openedAt?: Date | string | number | null,
 ): { phase: number; boxes: number } | null {
-  for (const [p, b] of raidMilestoneList(tier)) if (phasesCleared < p) return { phase: p, boxes: b };
+  for (const [p, b] of raidMilestoneList(tier, openedAt)) if (phasesCleared < p) return { phase: p, boxes: b };
   return null;
 }
 /** 1..N 페이즈 누적 HP(돌파 N에 필요한 누적 데미지) = phase1·(1.5^N − 1)/(1.5 − 1). */

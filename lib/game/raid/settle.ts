@@ -32,6 +32,7 @@ export async function settleRaid(
         phase1Hp: raids.phase1Hp,
         bossCode: raids.bossCode,
         tier: raids.tier,
+        openedAt: raids.openedAt,
       })
       .from(raids)
       .where(eq(raids.id, raidId))
@@ -68,7 +69,7 @@ export async function settleRaid(
     const phasesCleared = raidPhasesCleared(Number(raid.phase1Hp), Number(total));
     const tier = raidTierOf(raid.tier);
     // 난이도별 돌파 상자 + 마일스톤(BALANCE §5.4) — 전원 동일, 결정론.
-    const drops = aggregatePhaseDrops(raidId, phasesCleared, tier);
+    const drops = aggregatePhaseDrops(raidId, phasesCleared, tier, raid.openedAt);
 
     // 1회 이상 공격한 참여자 전원 동일 보상. 0페이즈(미돌파)는 보상 행 자체를 만들지 않는다
     // (전수 감사 2026-08-21) — 빈 payload 행이 홈 뱃지("보상 있음")를 켜고 열면 아무것도
