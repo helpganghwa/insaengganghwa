@@ -8,7 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
-import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+import { meleeBonusDiamond, meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
 
@@ -218,16 +218,23 @@ export async function runMelee(serverId: number, opts: RunMeleeOptions = {}): Pr
     if (inserted.length === 0) return { ran: false, reason: 'RACE' };
     const battleId = inserted[0]!.id;
 
-    // 참가자 행 청크 insert (등수→보상).
+    // 공격 성공(킬) = 나를 killer로 기록한 참가자 수. 방어 성공 = 피격 − 탈락 피격(챔피언은 전부).
+    const killsOf = new Map<string, number>();
+    for (const r of result.ranks) if (r.killerUserId) killsOf.set(r.killerUserId, (killsOf.get(r.killerUserId) ?? 0) + 1);
+
+    // 참가자 행 청크 insert (등수→보상 + 공격·방어 성공 보너스, 0192).
     const rows = result.ranks.map((r) => {
       const reward = meleeRewardForRank(r.finalRank, n);
+      const defenseSuccess = Math.max(0, r.defenseCount - (r.killerUserId ? 1 : 0));
+      const bonus = meleeBonusDiamond(killsOf.get(r.userId) ?? 0, defenseSuccess);
       return {
         battleId,
         userId: r.userId,
         cpSnapshot: BigInt(cpOf.get(r.userId) ?? 0),
         finalRank: r.finalRank,
         killerUserId: r.killerUserId,
-        rewardDiamond: BigInt(reward.diamond),
+        rewardDiamond: BigInt(reward.diamond + bonus),
+        rewardBonusDiamond: bonus,
         rewardBoxes: distributeBoxes(reward.boxes),
         myEvents: r.events,
         eliminatedRound: r.eliminatedRound,

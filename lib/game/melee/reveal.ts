@@ -110,7 +110,10 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
              ${serverId},
              'melee'::mailbox_type,
              '대난투 결과',
-             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock},
+             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock}
+               || case when mp.reward_bonus_diamond > 0
+                    then E'\n' || '공격·방어 성공 보너스 💎' || mp.reward_bonus_diamond::text || ' 포함'
+                    else '' end,
              '대난투',
              jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
              now() + interval '30 days'

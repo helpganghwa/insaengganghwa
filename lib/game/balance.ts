@@ -691,6 +691,19 @@ export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   return { diamond, boxes: t.boxes };
 }
 
+/**
+ * 공격 성공·방어 성공 보너스(2026-09-04, 0192) — 순위 운과 별개로 "그날 잘 싸운 만큼" 돌려준다.
+ * 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬), 방어 성공 = 피격에서 버틴 횟수(탈락 피격 제외).
+ * 순위 다이아 컷오프(상위 50%)와 무관하게 전원 적용. 실서버 하루 처치 ≈850·방어 성공 ≈850 →
+ * ≈5,100💎/일(대난투 순위 다이아 ≈7만의 7%). 결과 우편 다이아에 합산되고 내역은 reward_bonus_diamond.
+ * 확정 보상 — 확률공시(§33) 비대상.
+ */
+export const MELEE_KILL_DIAMOND = 3;
+export const MELEE_DEFENSE_DIAMOND = 3;
+export function meleeBonusDiamond(kills: number, defenseSuccess: number): number {
+  return Math.max(0, kills) * MELEE_KILL_DIAMOND + Math.max(0, defenseSuccess) * MELEE_DEFENSE_DIAMOND;
+}
+
 /** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee'). */
 export function meleePointsForRank(rank: number, n: number): number {
   return meleeTierForRank(rank, n).points;
