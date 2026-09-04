@@ -388,7 +388,10 @@ export function ChatDock() {
   }, []);
   const setSeen = useCallback(
     (ch: keyof LatestIds, id: string | null) => {
-      if (!id || id.startsWith('tmp-') || seenRef.current[ch] === id) return;
+      // 실제 메시지 id(숫자)만 확인 처리한다. 시스템 라인(sys-/gsys-: 월드 이벤트·길드 기록)과 낙관 tmp-는
+      // 서버 latestIds(chat_messages max id)에 없어, 한 번 seen에 들어가면 어떤 최신 id와도 같아질 수 없고
+      // 노티점이 영영 켜져 있었다(2026-09-04 문의: 길드 마지막 줄이 가입/점령 기록일 때 재현).
+      if (!id || !/^\d+$/.test(id) || seenRef.current[ch] === id) return;
       seenRef.current = { ...seenRef.current, [ch]: id };
       try {
         localStorage.setItem(SEEN_KEY, JSON.stringify(seenRef.current));
@@ -767,7 +770,7 @@ export function ChatDock() {
     (t: ChatTab, m: ChatMessageDto) => {
       if (t === 'all' && !m.sys && !m.sysGuild) setLatest(m);
       // 보고 있는 채널이면 그 자리에서 확인 처리(다음 폴링의 latestIds와 같은 id).
-      if (openRef.current && viewTabRef.current === t) setSeen(t, m.id);
+      if (openRef.current && viewTabRef.current === t && !m.sys && !m.sysGuild) setSeen(t, m.id);
       if (t === tabRef.current) {
         applyNew(m);
         return;
@@ -1185,7 +1188,8 @@ export function ChatDock() {
         const lastUser = [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild);
         if (lastUser) setLatest(lastUser);
       }
-      setSeen(next, [...r.messages].reverse().find((m) => !m.id.startsWith('tmp-'))?.id ?? null);
+      // 마지막 **실제** 메시지 id — 목록 끝이 시스템 라인이면 그 앞의 실메시지로(서버 latestIds와 같은 축).
+      setSeen(next, [...r.messages].reverse().find((m) => !m.sys && !m.sysGuild && /^\d+$/.test(m.id))?.id ?? null);
     });
   };
 
