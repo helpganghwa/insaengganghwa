@@ -692,16 +692,20 @@ export function meleeRewardForRank(rank: number, n: number): MeleeReward {
 }
 
 /**
- * 공격 성공·방어 성공 보너스(2026-09-04, 0192) — 순위 운과 별개로 "그날 잘 싸운 만큼" 돌려준다.
- * 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬), 방어 성공 = 피격에서 버틴 횟수(탈락 피격 제외).
- * 순위 다이아 컷오프(상위 50%)와 무관하게 전원 적용. 실서버 하루 처치 ≈850·방어 성공 ≈850 →
- * ≈5,100💎/일(대난투 순위 다이아 ≈7만의 7%). 결과 우편 다이아에 합산되고 내역은 reward_bonus_diamond.
- * 확정 보상 — 확률공시(§33) 비대상.
+ * 공격·방어 보너스(2026-09-04 확정, 0192) — 순위 운과 별개로 "그날 잘 싸운 만큼" 돌려준다.
+ * 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬) → 1회 💎20. 방어 성공 = 피격에서 버틴 횟수(탈락 피격
+ * 제외) → 1회 📦1. 순위 다이아 컷오프(상위 50%)와 무관하게 전원. 결과 우편 한 통에 순위 보상과 합산.
+ * 실서버 하루(892명): 처치 891 → 💎17,820(순위 다이아 7.4만의 +24%, 유입의 1.9%), 방어 성공 839 →
+ * 📦839(전체 상자의 +2.8%). 참가자 65%는 처치 0이라 상위 10%가 다이아의 절반을 가져간다(의도 — 고투력의
+ * 운 나쁜 날 보정). 💎25(상자 1개 값)·📦3안은 상위 겹침·상자 인플레로 기각. 확정 보상 — 확률공시 비대상.
  */
-export const MELEE_KILL_DIAMOND = 3;
-export const MELEE_DEFENSE_DIAMOND = 3;
-export function meleeBonusDiamond(kills: number, defenseSuccess: number): number {
-  return Math.max(0, kills) * MELEE_KILL_DIAMOND + Math.max(0, defenseSuccess) * MELEE_DEFENSE_DIAMOND;
+export const MELEE_KILL_DIAMOND = 20;
+export const MELEE_DEFENSE_BOX = 1;
+export function meleeBonus(kills: number, defenseSuccess: number): { diamond: number; boxes: number } {
+  return {
+    diamond: Math.max(0, kills) * MELEE_KILL_DIAMOND,
+    boxes: Math.max(0, defenseSuccess) * MELEE_DEFENSE_BOX,
+  };
 }
 
 /** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee'). */

@@ -8,7 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
-import { meleeBonusDiamond, meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+import { meleeBonus, meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
 
@@ -226,16 +226,17 @@ export async function runMelee(serverId: number, opts: RunMeleeOptions = {}): Pr
     const rows = result.ranks.map((r) => {
       const reward = meleeRewardForRank(r.finalRank, n);
       const defenseSuccess = Math.max(0, r.defenseCount - (r.killerUserId ? 1 : 0));
-      const bonus = meleeBonusDiamond(killsOf.get(r.userId) ?? 0, defenseSuccess);
+      const bonus = meleeBonus(killsOf.get(r.userId) ?? 0, defenseSuccess);
       return {
         battleId,
         userId: r.userId,
         cpSnapshot: BigInt(cpOf.get(r.userId) ?? 0),
         finalRank: r.finalRank,
         killerUserId: r.killerUserId,
-        rewardDiamond: BigInt(reward.diamond + bonus),
-        rewardBonusDiamond: bonus,
-        rewardBoxes: distributeBoxes(reward.boxes),
+        rewardDiamond: BigInt(reward.diamond + bonus.diamond),
+        rewardBonusDiamond: bonus.diamond,
+        rewardBonusBoxes: bonus.boxes,
+        rewardBoxes: distributeBoxes(reward.boxes + bonus.boxes),
         myEvents: r.events,
         eliminatedRound: r.eliminatedRound,
         guildName: guildAll.get(r.userId)?.name ?? null,

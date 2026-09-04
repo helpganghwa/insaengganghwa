@@ -6,7 +6,7 @@ import {
   MELEE_REPLAY_ROUNDS,
   MELEE_REWARD_TIERS,
   MELEE_KILL_DIAMOND,
-  MELEE_DEFENSE_DIAMOND,
+  MELEE_DEFENSE_BOX,
 } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
@@ -90,9 +90,10 @@ export default function Doc() {
         </LI>
         <LI>상자는 무기 · 방어구 · 장신구가 균등하게 지급된다.</LI>
         <LI>
-          등수와 별개로 공격 성공(내 공격으로 상대를 쓰러뜨림) 1회마다 {fmtInt(MELEE_KILL_DIAMOND)} 다이아,
-          방어 성공(공격을 받고도 버팀) 1회마다 {fmtInt(MELEE_DEFENSE_DIAMOND)} 다이아가 더해진다. 순위와
-          상관없이 모든 참가자에게 적용되며, 결과 우편의 다이아에 합쳐져 들어온다.
+          공격·방어 보너스: 등수와 상관없이 공격 성공(내 공격으로 상대를 쓰러뜨림) 1회마다{' '}
+          {fmtInt(MELEE_KILL_DIAMOND)} 다이아, 방어 성공(공격을 받고도 버팀) 1회마다 보급 상자{' '}
+          {fmtInt(MELEE_DEFENSE_BOX)}개가 더해진다. 결과 우편의 다이아·상자에 합쳐져 들어오며, 우편 본문에
+          내역이 적힌다.
         </LI>
         <LI>
           보상은 {fmtInt(REVEAL_KST_HOUR)}시 발표와 함께 우편으로 들어오며, 우편함에서 받아야

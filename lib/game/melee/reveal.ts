@@ -111,8 +111,13 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
              'melee'::mailbox_type,
              '대난투 결과',
              ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock}
-               || case when mp.reward_bonus_diamond > 0
-                    then E'\n' || '공격·방어 성공 보너스 💎' || mp.reward_bonus_diamond::text || ' 포함'
+               || case when (mp.reward_bonus_diamond > 0 or mp.reward_bonus_boxes > 0)
+                    then E'\n' || '공격·방어 보너스 · 공격 성공 '
+                      || (select count(*) from melee_participants k where k.battle_id = mp.battle_id and k.killer_user_id = mp.user_id)::text
+                      || '회 💎' || mp.reward_bonus_diamond::text
+                      || ' · 방어 성공 '
+                      || greatest(0, mp.defense_count - case when mp.killer_user_id is null then 0 else 1 end)::text
+                      || '회 📦' || mp.reward_bonus_boxes::text
                     else '' end,
              '대난투',
              jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),

@@ -48,8 +48,9 @@ export type MeleeResultView = {
   me: {
     rank: number;
     diamond: number;
-    /** 공격·방어 성공 보너스(0192) — diamond에 포함된 내역. 이전 배틀은 0. */
+    /** 공격·방어 보너스(0192) — diamond/boxes에 포함된 내역. 이전 배틀은 0. */
     bonusDiamond: number;
+    bonusBoxes: number;
     boxes: { weapon: number; armor: number; accessory: number };
     /** 공격 성공(쓰러뜨린 수) — killer 기록 기준 전판 정확값. */
     attackSuccess: number;
@@ -1000,10 +1001,13 @@ export function MeleeResult({
             <span className="truncate text-[10px] text-zinc-400">
               <b className="font-bold text-amber-400">{me.rank}위</b>
               {` · 공격 성공 ${me.attackSuccess} · 방어 성공 ${me.defenseSuccess}`}
-              {me.bonusDiamond > 0 ? (
+              {me.bonusDiamond > 0 || me.bonusBoxes > 0 ? (
                 <>
                   {' · '}
-                  <span className="text-amber-300">보너스 💎{me.bonusDiamond.toLocaleString()}</span>
+                  <span className="text-amber-300">
+                    보너스{me.bonusDiamond > 0 ? ` 💎${me.bonusDiamond.toLocaleString()}` : ''}
+                    {me.bonusBoxes > 0 ? ` 📦${me.bonusBoxes}` : ''}
+                  </span>
                 </>
               ) : null}
             </span>
