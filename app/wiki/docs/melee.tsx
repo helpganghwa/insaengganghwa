@@ -8,6 +8,7 @@ import {
   MELEE_KILL_DIAMOND,
   MELEE_DEFENSE_BOX,
 } from '@/lib/game/balance';
+import { TAX_MELEE_PRIZE_RATE } from '@/lib/game/guild/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
@@ -98,6 +99,10 @@ export default function Doc() {
         <LI>
           보상은 {fmtInt(REVEAL_KST_HOUR)}시 발표와 함께 우편으로 들어오며, 우편함에서 받아야
           지급된다.
+        </LI>
+        <LI>
+          상금 다이아의 {bpPct(TAX_MELEE_PRIZE_RATE * 10_000)}만큼이 내 거주 구역의{' '}
+          <DocLink slug="conquest" hash="tax">길드 세금</DocLink>으로 따로 쌓인다. 내가 받는 상금은 줄지 않는다.
         </LI>
       </UL>
       <Tbl
