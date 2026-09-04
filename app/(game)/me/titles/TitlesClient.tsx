@@ -235,7 +235,7 @@ export function TitlesClient({
       if (res.diamond > 0) rewards.push({ icon: '💎', amount: res.diamond });
       const boxTotal = res.boxes.weapon + res.boxes.armor + res.boxes.accessory;
       if (boxTotal > 0) rewards.push({ icon: '📦', amount: boxTotal });
-      if (rewards.length > 0) showHeaderToast({ title: '칭호 보상', rewards });
+      if (rewards.length > 0) showHeaderToast({ title: '칭호 발견 보상', rewards });
     });
   };
 
