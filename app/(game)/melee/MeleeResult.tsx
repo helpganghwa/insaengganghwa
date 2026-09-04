@@ -1001,15 +1001,6 @@ export function MeleeResult({
             <span className="truncate text-[10px] text-zinc-400">
               <b className="font-bold text-amber-400">{me.rank}위</b>
               {` · 공격 성공 ${me.attackSuccess} · 방어 성공 ${me.defenseSuccess}`}
-              {me.bonusDiamond > 0 || me.bonusBoxes > 0 ? (
-                <>
-                  {' · '}
-                  <span className="text-amber-300">
-                    보너스{me.bonusDiamond > 0 ? ` 💎${me.bonusDiamond.toLocaleString()}` : ''}
-                    {me.bonusBoxes > 0 ? ` 📦${me.bonusBoxes}` : ''}
-                  </span>
-                </>
-              ) : null}
             </span>
           ) : (
             <span className="truncate text-[10px] text-zinc-500">

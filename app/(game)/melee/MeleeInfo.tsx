@@ -72,7 +72,7 @@ export const MeleeInfo = memo(function MeleeInfo({
           {/* 공격·방어 보너스(0192, 2026-09-04) — 순위와 별개로 전원. 결과 우편 총액에 합산되며 본문 설명은 없으니 표가 유일한 안내. */}
           <div className="isolate mx-4 mt-2 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
-              <span>공격·방어 보너스 (순위와 별개, 전원)</span>
+              <span>공격·방어 보너스</span>
               <span className="w-16 text-right text-sm">💎</span>
               <span className="w-12 text-right text-sm">📦</span>
             </div>
