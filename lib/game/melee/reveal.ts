@@ -102,6 +102,7 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
         : '🏆우승 챔피언';
 
     // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
+    // 공격·방어 보너스(0192)는 payload 총액에 합산만 — 본문에 내역을 적지 않는다(우편은 원래 보상 설명이 없음, 사용자 결정 09-04).
     // 날짜 라벨 — 백스톱으로 늦게 발표된 과거 배틀은 '오늘'이 오표기라 전투일을 명시.
     const dayLabel = battleDate === kstDateString() ? '오늘 대난투' : `${battleDate} 대난투`;
     const inserted = (await tx.execute(sql`
@@ -110,15 +111,7 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
              ${serverId},
              'melee'::mailbox_type,
              '대난투 결과',
-             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock}
-               || case when (mp.reward_bonus_diamond > 0 or mp.reward_bonus_boxes > 0)
-                    then E'\n' || '공격·방어 보너스 · 공격 성공 '
-                      || (select count(*) from melee_participants k where k.battle_id = mp.battle_id and k.killer_user_id = mp.user_id)::text
-                      || '회 💎' || mp.reward_bonus_diamond::text
-                      || ' · 방어 성공 '
-                      || greatest(0, mp.defense_count - case when mp.killer_user_id is null then 0 else 1 end)::text
-                      || '회 📦' || mp.reward_bonus_boxes::text
-                    else '' end,
+             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr} || ${headlineBlock},
              '대난투',
              jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
              now() + interval '30 days'

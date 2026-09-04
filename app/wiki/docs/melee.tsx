@@ -92,8 +92,8 @@ export default function Doc() {
         <LI>
           공격·방어 보너스: 등수와 상관없이 공격 성공(내 공격으로 상대를 쓰러뜨림) 1회마다{' '}
           {fmtInt(MELEE_KILL_DIAMOND)} 다이아, 방어 성공(공격을 받고도 버팀) 1회마다 보급 상자{' '}
-          {fmtInt(MELEE_DEFENSE_BOX)}개가 더해진다. 결과 우편의 다이아·상자에 합쳐져 들어오며, 우편 본문에
-          내역이 적힌다.
+          {fmtInt(MELEE_DEFENSE_BOX)}개가 더해진다. 결과 우편의 다이아·상자에 합쳐져 들어오며, 내 횟수와
+          보너스는 결과 화면의 내 전투에서 확인할 수 있다.
         </LI>
         <LI>
           보상은 {fmtInt(REVEAL_KST_HOUR)}시 발표와 함께 우편으로 들어오며, 우편함에서 받아야
@@ -108,6 +108,13 @@ export default function Doc() {
           fmtInt(t.boxes),
           t.points > 0 ? `+${fmtInt(t.points)}` : '—',
         ])}
+      />
+      <Tbl
+        head={['공격·방어 보너스', '다이아', '상자']}
+        rows={[
+          ['공격 성공 1회 (상대를 쓰러뜨림)', fmtInt(MELEE_KILL_DIAMOND), '—'],
+          ['방어 성공 1회 (공격받고 버팀)', '—', fmtInt(MELEE_DEFENSE_BOX)],
+        ]}
       />
       <Warn>
         다이아는 참가자 상위 {Math.round(MELEE_DIAMOND_PCT_CUTOFF * 100)}%까지만 지급된다 — 그
