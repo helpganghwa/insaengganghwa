@@ -78,15 +78,12 @@ export default function Doc() {
       <H2 id="reward">발견 보상</H2>
       <UL>
         <LI>
-          칭호를 하나 발견할 때마다 {fmtInt(TITLE_DISCOVERY_DIAMOND)} 다이아가 받을 보상으로 쌓인다. 칭호
-          화면 위쪽의 받을 보상에서 한 번에 받는다.
+          칭호를 하나 발견할 때마다 {fmtInt(TITLE_DISCOVERY_DIAMOND)} 다이아가 받을 보상으로 쌓인다.
         </LI>
         <LI>
           발견한 칭호가 {fmtInt(TITLE_MILESTONE_STEP)}개, {fmtInt(TITLE_MILESTONE_STEP * 2)}개,{' '}
-          {fmtInt(TITLE_MILESTONE_STEP * 3)}개…에 이를 때마다 그 개수만큼 보급 상자를 받는다. 같은 자리에서
-          함께 받는다.
+          {fmtInt(TITLE_MILESTONE_STEP * 3)}개…에 이를 때마다 그 개수만큼 보급 상자를 받는다.
         </LI>
-        <LI>이미 발견한 칭호의 보상도 그대로 쌓여 있으니, 칭호 화면에 들어가 받으면 된다.</LI>
       </UL>
     </>
   );

@@ -142,11 +142,10 @@ export default function Doc() {
         <LI>강화에 성공할 때마다 도달한 강화 레벨만큼 포인트가 쌓인다.</LI>
         <LI>
           다이아를 사용할 때마다 사용한 다이아 하나당 {fmtInt(TAX_POINTS_PER_DIAMOND_SPENT)}포인트가 쌓인다.
-          강화 단축, 상자 구매, 아바타, 레이드, 길드 기부 등 어디에 썼든 같다.
         </LI>
         <LI>
           <DocLink slug="melee" hash="reward">대난투</DocLink> 상금의 {bpPct(TAX_MELEE_PRIZE_RATE * 10_000)}만큼이
-          발표와 함께 거주 구역에 쌓인다. 내가 받는 상금은 줄지 않는다.
+          발표와 함께 거주 구역에 쌓인다.
         </LI>
         <LI>
           {fmtInt(TAX_POINTS_PER_DIAMOND)}포인트가 모일 때마다 다이아 하나로 전환되고, 남는 포인트는

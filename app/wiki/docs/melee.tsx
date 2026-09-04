@@ -102,7 +102,7 @@ export default function Doc() {
         </LI>
         <LI>
           상금 다이아의 {bpPct(TAX_MELEE_PRIZE_RATE * 10_000)}만큼이 내 거주 구역의{' '}
-          <DocLink slug="conquest" hash="tax">길드 세금</DocLink>으로 따로 쌓인다. 내가 받는 상금은 줄지 않는다.
+          <DocLink slug="conquest" hash="tax">길드 세금</DocLink>으로 따로 쌓인다.
         </LI>
       </UL>
       <Tbl
