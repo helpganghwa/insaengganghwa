@@ -927,3 +927,31 @@ export function expeditionWeightedSum(
   }
   return Math.round(sum);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §12. 칭호 발견 보상 (2026-09-04, 유저 건의 — "칭호를 찾을 동기")
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 칭호 1개 발견(user_titles 최초 기록)마다 다이아. 자동 지급이 아니라 칭호 화면 "받을 보상"에서
+ * [모두 받기]로 수령 — 쌓았다가 한 번에 받는 감각(사용자 결정). 실서버 하루 발견 ≈185개 → ≈3,700💎/일
+ * (유입의 0.4%). 조건부 칭호도 원장 행은 최초 1회만 생기므로 잃었다 되찾아도 중복 지급 없음.
+ * 확정 보상만 — 확률공시(§33) 비대상.
+ */
+export const TITLE_DISCOVERY_DIAMOND = 20;
+/** 발견 개수 달성 보상 — STEP개마다 그 개수만큼 보급 상자(50→📦50, 100→📦100 …), 같은 자리에서 수령. */
+export const TITLE_MILESTONE_STEP = 50;
+/** 발견 수로 도달한 달성 단계 목록(오름차순). */
+export function titleMilestonesReached(discovered: number): number[] {
+  const out: number[] = [];
+  for (let m = TITLE_MILESTONE_STEP; m <= discovered; m += TITLE_MILESTONE_STEP) out.push(m);
+  return out;
+}
+/** 달성 단계의 상자 수 = 그 개수. */
+export function titleMilestoneBoxes(milestone: number): number {
+  return milestone;
+}
+/** 다음 달성 단계(아직 못 닿은 첫 STEP 배수). */
+export function titleNextMilestone(discovered: number): number {
+  return (Math.floor(discovered / TITLE_MILESTONE_STEP) + 1) * TITLE_MILESTONE_STEP;
+}

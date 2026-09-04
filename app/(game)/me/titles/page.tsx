@@ -9,6 +9,7 @@ import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
 import { discoverTitles, isHiddenPendingTitle } from '@/lib/game/titles/judge';
+import { getClaimedTitleMilestones, summarizeTitleRewards } from '@/lib/game/titles/rewards';
 
 import { TitlesClient, type TitleRow } from './TitlesClient';
 
@@ -50,10 +51,12 @@ export default async function TitlesPage() {
       // 원장 조회는 판정 **다음**이어야 한다(이번 발견분이 실려야 함).
       const { active } = await discoverTitles(userId, serverId);
       const ledger = (await db.execute(sql`
-        select title_code, earned_at, seen_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
-      `)) as unknown as { title_code: string; earned_at: Date; seen_at: Date | null }[];
+        select title_code, earned_at, seen_at, reward_claimed_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
+      `)) as unknown as { title_code: string; earned_at: Date; seen_at: Date | null; reward_claimed_at: Date | null }[];
+      // 발견 보상(0191) — 달성 상자 수령 기록. 원장과 함께 요약해 "받을 보상" 바를 만든다.
+      const claimedMilestones = await getClaimedTitleMilestones(userId, serverId).catch(() => [] as number[]);
       const rep = await repP;
-      return { ledger, active, rep: rep[0] };
+      return { ledger, active, rep: rep[0], claimedMilestones };
     })(),
     8000,
     'titles.page',
@@ -76,6 +79,9 @@ export default async function TitlesPage() {
 
   const ledger = new Map((r?.ledger ?? []).map((l) => [l.title_code, l.earned_at]));
   const unseen = new Set((r?.ledger ?? []).filter((l) => l.seen_at == null).map((l) => l.title_code));
+  // 미수령 발견 보상(0191) — 행 💎 칩 + 상단 "받을 보상" 바. 수령은 클라 [모두 받기] → claimTitleRewardsAction.
+  const rewardPending = new Set((r?.ledger ?? []).filter((l) => l.reward_claimed_at == null).map((l) => l.title_code));
+  const reward = summarizeTitleRewards(r?.ledger ?? [], r?.claimedMilestones ?? []);
   const active = r?.active ?? new Set<string>();
 
   // 새 칭호 확인 처리(0187) — 이 화면을 한 번 보면 확인된 것으로 본다. 응답을 보낸 **뒤**(after) 전부
@@ -107,6 +113,7 @@ export default async function TitlesPage() {
       earnedAt: earnedAt ? kstDateString(new Date(earnedAt)) : null,
       activeNow: discovered && (!isConditional || active.has(d.code)),
       isNew: discovered && unseen.has(d.code),
+      rewardPending: discovered && rewardPending.has(d.code),
     };
   });
 
@@ -117,6 +124,7 @@ export default async function TitlesPage() {
       favorites={Array.isArray(r?.rep?.favs) ? r.rep.favs : []}
       executorZone={r?.rep?.zone ?? null}
       executorZoneRegion={r?.rep?.zone_region ?? null}
+      reward={reward}
     />
   );
 }

@@ -6,7 +6,13 @@ import { TitleTag } from '@/components/TitleTag';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TITLE_BY_CODE, TITLE_DEFS, type TitleDef } from '@/lib/game/titles/defs';
-import { setRepresentativeTitleAction, toggleFavoriteTitleAction } from '@/lib/game/titles/actions';
+import {
+  claimTitleRewardsAction,
+  setRepresentativeTitleAction,
+  toggleFavoriteTitleAction,
+} from '@/lib/game/titles/actions';
+import { TITLE_DISCOVERY_DIAMOND, titleMilestoneBoxes } from '@/lib/game/balance';
+import type { TitleRewardSummary } from '@/lib/game/titles/rewards';
 import { useResourceToast } from '@/components/ResourceToast';
 
 /** 서버가 내려주는 행 — 조건(cond)·발견일은 발견한 칭호에만 존재(비노출 원칙). */
@@ -18,6 +24,8 @@ export type TitleRow = {
   activeNow: boolean;
   /** 아직 확인하지 않은 새 칭호(0187) — 상단 '새로 얻은 칭호' 섹션 + NEW 태그. */
   isNew: boolean;
+  /** 발견 보상 미수령(0191) — 행 💎 칩. [모두 받기]로 일괄 수령. */
+  rewardPending: boolean;
 };
 
 type Tri = null | 'a' | 'b';
@@ -70,14 +78,24 @@ export function TitlesClient({
   favorites,
   executorZone,
   executorZoneRegion,
+  reward,
 }: {
   rows: TitleRow[];
   representative: string | null;
   favorites: string[];
   executorZone: string | null;
   executorZoneRegion: string | null;
+  /** 발견 보상 요약(0191) — 상단 "받을 보상" 바 + 상자 달성 게이지. */
+  reward: TitleRewardSummary;
 }) {
   const [rep, setRep] = useState(representative);
+  // 발견 보상 수령(0191, 시안 1 확정) — 낙관: 누르면 바를 접고 행 💎 칩을 지운다. 서버 멱등이라 실패만 되돌린다.
+  const [claimedAll, setClaimedAll] = useState(false);
+  const [claiming, startClaim] = useTransition();
+  const pendingTitles = claimedAll ? 0 : reward.unclaimedTitles;
+  const pendingMilestones = claimedAll ? [] : reward.claimableMilestones;
+  const pendingBoxes = pendingMilestones.reduce((a, m) => a + titleMilestoneBoxes(m), 0);
+  const showClaimBar = pendingTitles > 0 || pendingBoxes > 0;
   const [favs, setFavs] = useState<string[]>(favorites);
   const [kind, setKind] = useState<Tri>(null); // a=조건 b=영구
   const [found, setFound] = useState<Tri>(null); // a=발견 b=미발견
@@ -202,6 +220,23 @@ export function TitlesClient({
     });
   };
 
+  const claimRewards = () => {
+    if (claiming || !showClaimBar) return;
+    startClaim(async () => {
+      const res = await claimTitleRewardsAction().catch(() => ({ ok: false as const, error: 'NETWORK' }));
+      if (!res.ok) {
+        showError('보상 수령에 실패했어. 잠시 후 다시 눌러 줘.');
+        return;
+      }
+      setClaimedAll(true);
+      const rewards: { icon: string; amount: number }[] = [];
+      if (res.diamond > 0) rewards.push({ icon: '💎', amount: res.diamond });
+      const boxTotal = res.boxes.weapon + res.boxes.armor + res.boxes.accessory;
+      if (boxTotal > 0) rewards.push({ icon: '📦', amount: boxTotal });
+      if (rewards.length > 0) showHeaderToast({ title: '칭호 보상', rewards });
+    });
+  };
+
   const selRow = sel ? byCode.get(sel) : null;
   const selDef = sel ? TITLE_BY_CODE.get(sel) : null;
 
@@ -237,6 +272,11 @@ export function TitlesClient({
             <span className="shrink-0 rounded bg-red-600 px-1 text-[9px] font-extrabold tracking-wide text-white">NEW</span>
           )}
           {st === 'inactive' && <span className="shrink-0 text-[9px] font-bold text-orange-400">비활성</span>}
+          {r.rewardPending && !claimedAll && (
+            <span className="shrink-0 rounded bg-amber-500/15 px-1 font-mono text-[9.5px] font-semibold text-amber-200">
+              💎{TITLE_DISCOVERY_DIAMOND}
+            </span>
+          )}
         </button>
         {/* ☆ 토글 — 발견분 + (미발견이어도) 이미 즐겨찾기된 행. 후자는 해제 수단 보존용
             (즐겨찾기 후 회수된 칭호가 해제 불가로 잠기는 것 방지 — 적대 검수 2). */}
@@ -297,6 +337,36 @@ export function TitlesClient({
           </div>
         </div>
 
+        {/* 받을 보상 바(0191, 시안 1) — 미수령 발견 보상 + 도달한 달성 상자. [모두 받기] 한 번. 없으면 접힘. */}
+        {showClaimBar && (
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-800 bg-gradient-to-r from-amber-900/30 to-zinc-900/60 px-4 py-1.5">
+            <div className="min-w-0 text-[11px] text-zinc-200">
+              받을 보상{' '}
+              <span className="font-mono font-bold text-amber-200">
+                💎{(pendingTitles * TITLE_DISCOVERY_DIAMOND).toLocaleString()}
+              </span>
+              {pendingBoxes > 0 && (
+                <>
+                  {' '}
+                  · <span className="font-mono font-bold text-amber-200">📦{pendingBoxes.toLocaleString()}</span>
+                </>
+              )}
+              <span className="block text-[9.5px] text-zinc-500">
+                발견 {pendingTitles}개
+                {pendingMilestones.length > 0 ? ` · ${pendingMilestones.join('·')}개 달성 보상 포함` : ''}
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={claiming}
+              onClick={claimRewards}
+              className="shrink-0 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-extrabold text-amber-950 disabled:opacity-50"
+            >
+              {claiming ? '받는 중…' : '모두 받기'}
+            </button>
+          </div>
+        )}
+
         {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합).
             하단 보더 없음 — 바로 아래 섹션 헤더의 상단 보더와 만나 2px로 보이던 것 제거(피드백). */}
         <div className="flex flex-wrap gap-1.5 px-4 py-2">
@@ -313,6 +383,23 @@ export function TitlesClient({
           >
             ★ 즐겨찾기
           </button>
+        </div>
+
+        {/* 상자 달성 게이지(0191) — 보상 바와 별개로 항상 표시. 다음 단계(50·100·…)까지 발견 수. */}
+        <div className="flex items-center gap-2 border-b border-zinc-800 px-4 pb-2 text-[10px] text-zinc-500">
+          <span className="whitespace-nowrap">
+            다음 상자 보상{' '}
+            <span className="font-mono font-bold text-amber-200">📦{titleMilestoneBoxes(reward.nextMilestone)}</span>
+          </span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-amber-500"
+              style={{ width: `${Math.min(100, (reward.discovered / reward.nextMilestone) * 100)}%` }}
+            />
+          </div>
+          <span className="whitespace-nowrap font-mono">
+            {reward.discovered}/{reward.nextMilestone}
+          </span>
         </div>
       </div>
 
