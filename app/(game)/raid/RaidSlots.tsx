@@ -133,7 +133,13 @@ function TierRow({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier)
   return (
     <div className="rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-medium">난이도</span>
+        <span className="whitespace-nowrap text-[12px] font-medium">
+          난이도
+          {/* HP 배수는 라벨 옆으로(09-04) — 하단 요약 줄에 '권장 참여자 전투력 총합'이 들어갈 자리를 비운다. */}
+          <span className="ml-1.5 text-[10.5px] font-normal text-zinc-500 dark:text-zinc-400">
+            HP <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">×{r.hpMult}</span>
+          </span>
+        </span>
         <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
           {RAID_TIER_CODES.map((t) => (
             <button
@@ -151,19 +157,15 @@ function TierRow({ value, onChange }: { value: RaidTier; onChange: (v: RaidTier)
       </div>
       <div className="mt-1.5 space-y-0.5 text-[10.5px] leading-snug text-zinc-500 dark:text-zinc-400">
         <div className="whitespace-nowrap">
-          HP <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">×{r.hpMult}</span> ·
           페이즈 보상 📦
           <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{r.boxesPerPhase}</span>
+          {' '}· 권장 참여자 전투력 총합{' '}
           {r.recommendedTotalCp > 0 ? (
-            <>
-              {' '}
-              · 권장 총합{' '}
-              <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
-                {fmtMan(r.recommendedTotalCp)}+
-              </span>
-            </>
+            <span className="font-mono font-bold text-amber-600 dark:text-amber-300">
+              {fmtMan(r.recommendedTotalCp)}+
+            </span>
           ) : (
-            ' · 권장 제한 없음'
+            <span className="font-bold">제한 없음</span>
           )}
         </div>
         <div className="whitespace-nowrap">
