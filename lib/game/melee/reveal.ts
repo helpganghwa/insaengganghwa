@@ -8,6 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { accrueMeleePrizeTax } from '@/lib/game/guild/tax';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { meleePointsForRank } from '@/lib/game/balance';
@@ -124,6 +125,10 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
 
   if (!result) return null;
   const { battleId, podium, podiumStr } = result;
+
+  // 대난투 상금 세금(GUILD §5.5 ③) — 참가자 상금의 10%를 거주 구역에 적립(유저 상금은 그대로).
+  // reveal 전이가 1회라 정확히 1회 실행. 실패는 흡수(발표·우편을 막지 않는다 — 세금 1회 손실 허용).
+  await accrueMeleePrizeTax(serverId, battleId).catch((e) => console.warn('[melee.reveal] prize tax failed', e));
 
   // 리더보드 증분(v2, 2026-07-22 개편) — 참가자 전원 포인트 적립(구간별 가변).
   // reveal이 조건부 전이로 정확히 1회라 증분이 정확. 놓친 적립은 시간별 스냅샷이 교정.

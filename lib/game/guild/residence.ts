@@ -224,7 +224,7 @@ export async function assertResident(
  * 거주 미배정이면 랜덤 배정(최초 랜덤). 트랜잭션 내 호출. 반환 = 거주 zoneId(구역 0개면 null).
  * profiles 행을 for update로 잠가 동시 배정 레이스 방지.
  */
-export async function ensureResidence(tx: Tx, userId: string, serverId: number): Promise<number | null> {
+export async function ensureResidence(tx: Tx | typeof db, userId: string, serverId: number): Promise<number | null> {
   const [p] = await tx
     .select({ zoneId: characters.residenceZoneId })
     .from(characters)
