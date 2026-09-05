@@ -6,6 +6,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { worldChronicle, type ChronicleGuildRef } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
+import { findPastContextZoneKeys, parseChronicleSegments } from '@/app/(game)/guild/map/chronicle-tokens';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 
@@ -339,6 +340,7 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 재획득 표현 주의: '되찾다·탈환·수복·다시 가져오다'는 사실표 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 유효하다. 그 항목이 없는 구역에 쓴 재획득 표현은 전부 '빼앗다·차지하다'로 고쳐라(반대로 항목에 적힌 구역의 '되찾다'는 오류가 아니다).
 - 방어 길드 주의: 사실표 '방어'에 있는 길드를 '싸우지 않았다·다투지 않았다·조용했다'로 쓴 문장은 오류다 — '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 행동으로 고쳐라.
 - 누락 주의: 사실표 '공격 측'의 길드가 초안에 한 번도 등장하지 않으면, 그 길드가 어느 구역을 노렸고 결과가 어땠는지 한 문장을 사실표대로 보태라(지어내기 금지).
+- 연출 순서 주의: 지도 연출은 구역 마커가 처음 나오는 문장에서 재생되고, '어제·전날·하루 만에'가 든 회고 문장의 마커는 건너뛴다. 어떤 구역이 회고 표현이 든 문장에서만 마커로 등장하면, 그 구역의 오늘 행동 문장(회고 표현 없이)을 앞에 두고 회고 문장에서는 '그 땅·그곳'으로 받도록 고쳐라. 결과 문장이 행동 문장보다 앞서면 순서를 바꿔라.
 - 지역 귀속 주의: 구역의 소속 지역은 사실표의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 사건을 한 지역 이름('왕국 전역' 등)으로 묶은 문장은 오류다(여러 지역이면 '대륙 전역'). 지역명이 등장하는 문장마다 그 문장 안의 구역 하나하나를 사실표의 '(X 지역)'과 대조하라 — 특히 한 길드가 여러 지역의 구역을 점령한 경우, 'A 지역에서는 ~' 문장 안에 다른 지역 구역이 섞여 들어간 것(예: 사실표에 '(타락 천사 부유섬 지역)'인 구역을 드래곤 화산 문장에 포함)은 오류다.
 - 최초 주장 주의: '최초·처음으로' 주장은 사실표에 그렇게 명시된 경우에만 유효 — 사실표에 '이미 성립한 지역 석권 있음'이 적혀 있는데 '대륙 최초'로 쓴 문장은 오류다.
 - 해산 길드에 **보유 구역이 없었으면 땅·영토 상실을 쓰지 마라** — '남긴 땅', '주인 없는 구역이 되었다' 같은 서술은 사실 오류다(해체 사실만 담담히 적는다).
@@ -406,7 +408,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **방어에 성공한 길드는 싸운 길드다.** '방어' 목록에 있는 길드를 '다투지 않았다·싸우지 않았다·조용히 지냈다'로 쓰면 오류 — 공격 배치가 없었으면 '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 이번 행동으로 쓴다(2026-09-04 검수).
 - **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
-- **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다** — 하루 만의 탈환은 '어제 {g|X}에게 빼앗겼던 {z|Z}를 하루 만에 되찾았다'처럼, 어제 얻은 땅을 지킨 것은 '어제 손에 넣은 땅을 하루 만에 지켜냈다'처럼 쓴다. '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
+- **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다 — 단, 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
@@ -419,6 +421,28 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
   - headlines: headline 후보 3~5개(첫 항목은 headline과 같은 문장). 나머지는 서로 다른 문형·다른 소재로 쓴다 — 검수자가 고르거나 고쳐 쓸 재료다. headline이 빈 문자열이면 빈 배열([]).`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
+/**
+ * 연출 순서 검증(2026-09-05) — 오늘 전투가 있었던 구역(점령·방어)이 본문에서 **회고 문장(어제·하루 만에 …)에만**
+ * 마커로 등장하면 지도 리플레이가 그 구역을 건너뛰어 종료 일괄 발화로 밀린다(9/5 검수: 용암 하구·불탄 마을·
+ * 그을린 고목이 그랬다). 클라이언트와 같은 판정 함수(findPastContextZoneKeys)를 서버에서 미리 돌려 재생성 피드백으로 쓴다.
+ * 반환: 문제 구역 이름들(없으면 []).
+ */
+export function replayOrderIssues(text: string, battleZones: string[]): string[] {
+  if (battleZones.length === 0) return [];
+  const paras = text.split(/\n\n+/).map((p) => parseChronicleSegments(p));
+  const skip = findPastContextZoneKeys(paras);
+  const fires = new Set<string>();
+  const mentioned = new Set<string>();
+  paras.forEach((segs, p) =>
+    segs.forEach((seg, i) => {
+      if (seg.kind !== 'z') return;
+      mentioned.add(seg.text);
+      if (!skip.has(`${p}:${i}`)) fires.add(seg.text);
+    }),
+  );
+  return battleZones.filter((z) => mentioned.has(z) && !fires.has(z));
+}
+
 function isNotable(s: ConquestDaySummary): boolean {
   return s.captures.length > 0 || s.feats.length > 0 || s.disbands.length > 0 || s.neutralized.length > 0;
 }
@@ -1004,6 +1028,8 @@ export async function generateAndStoreChronicle(
   const messages: { role: 'user' | 'assistant'; content: string }[] = [
     { role: 'user', content: baseContent },
   ];
+  // 연출 순서 검증 대상 — 오늘 점령·방어가 있었던 구역(회고 문장에만 등장하면 리플레이가 건너뛴다).
+  const battleZones = [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])];
   let today = '';
   let headline = '';
   let headlineCandidates: string[] = [];
@@ -1041,10 +1067,12 @@ export async function generateAndStoreChronicle(
     const candT = correctMarkers(fixBraces((parsed.today ?? '').trim()));
     const candH = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
     const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
-    if (viol.length === 0 || attempt === 2) {
+    const orderIssues = replayOrderIssues(candT, battleZones);
+    if ((viol.length === 0 && orderIssues.length === 0) || attempt === 2) {
       if (viol.length > 0) {
         console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${viol.join(', ')}`);
       }
+      if (orderIssues.length > 0) console.warn(`[chronicle] 연출 순서 위반 잔존(재시도 소진): ${orderIssues.join(', ')}`);
       today = enrichMarkers(enforceMarkers(candT));
       headline = enrichMarkers(enforceMarkers(candH));
       // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
@@ -1056,15 +1084,23 @@ export async function generateAndStoreChronicle(
       headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
       break;
     }
-    console.warn(`[chronicle] 마커 위반 ${viol.length}건 → 재생성(attempt ${attempt + 1}): ${viol.join(', ')}`);
+    console.warn(
+      `[chronicle] 재생성(attempt ${attempt + 1}) — 마커 위반 ${viol.length}건${viol.length ? `: ${viol.join(', ')}` : ''} · 연출 순서 위반 ${orderIssues.length}건${orderIssues.length ? `: ${orderIssues.join(', ')}` : ''}`,
+    );
+    const feedback: string[] = [];
+    if (viol.length > 0)
+      feedback.push(
+        `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
+          `길드는 {g|이름}, 인물은 {u|이름}, 개별 구역은 {z|이름}으로 — 위 이름의 모든 등장 위치를 종류에 맞는 마커로 감싼다.`,
+      );
+    if (orderIssues.length > 0)
+      feedback.push(
+        `다음 구역은 '어제·전날·하루 만에' 같은 회고 표현이 든 문장에서만 마커로 등장해 지도 연출이 본문과 어긋난다: ${orderIssues.join(', ')}\n` +
+          `각 구역을 오늘의 행동 문장(회고 표현 없이 — 노렸다·공격했다·맞섰다)에서 먼저 {z|이름}으로 언급하고, 회고 문장에서는 구역 이름 대신 '그 땅·그곳'으로 받아라. 결과 문장은 행동 문장 뒤에 둔다.`,
+      );
     messages.push(
       { role: 'assistant', content: raw },
-      {
-        role: 'user',
-        content:
-          `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
-          `길드는 {g|이름}, 인물은 {u|이름}, 개별 구역은 {z|이름}으로 — 위 이름의 모든 등장 위치를 종류에 맞는 마커로 감싸서, 같은 내용을 처음부터 끝까지 다시 JSON({today, headline, headlines})으로만 출력하라.`,
-      },
+      { role: 'user', content: feedback.join('\n\n') + '\n\n같은 내용을 처음부터 끝까지 다시 JSON({today, headline, headlines})으로만 출력하라.' },
     );
   }
   if (!today) throw new Error('CHRONICLE_EMPTY');
@@ -1104,7 +1140,10 @@ export async function generateAndStoreChronicle(
         ? enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
         : '';
       const viol = [...findViolations(revT), ...(bigChange ? findViolations(revH) : [])];
-      if (revT && viol.length === 0 && (!bigChange || revH)) {
+      const revOrder = replayOrderIssues(revT, battleZones);
+      if (revOrder.length > replayOrderIssues(today, battleZones).length) {
+        console.warn(`[chronicle] 재검수본 폐기(연출 순서 위반 증가: ${revOrder.join(', ')}) — 초안 유지`);
+      } else if (revT && viol.length === 0 && (!bigChange || revH)) {
         today = revT;
         headline = revH;
         if (bigChange) headlineCandidates = [...new Set([revH, ...headlineCandidates])].slice(0, 5);
