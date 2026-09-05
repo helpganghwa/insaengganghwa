@@ -361,6 +361,21 @@ export function ChronicleReplayPanel({
     await sleepUnless(500, () => skipRef.current);
   }
 
+  /** 미발화 교전 구역 재생 — 무혈 점령은 일괄, 교전(경합/수비전)은 한 곳씩. 스킵 중이면 flushRemaining이 즉시 전환. */
+  async function playLeftover(zoneIds: number[]): Promise<void> {
+    if (skipRef.current) return;
+    const evs = zoneIds
+      .filter((n) => !firedRef.current.has(n))
+      .map((n) => replay.events[n])
+      .filter((e): e is ReplayEvent => Boolean(e));
+    if (evs.length === 0) return;
+    for (const e of evs) firedRef.current.add(e.zoneId);
+    const calm = evs.filter((e) => !hasClash(e));
+    const battles = evs.filter(hasClash);
+    if (calm.length > 0) await runZoneEvents(calm);
+    for (const b of battles) await runZoneEvents([b]);
+  }
+
   function flushRemaining() {
     for (const ev of Object.values(replay.events)) {
       if (firedRef.current.has(ev.zoneId)) continue;
@@ -386,8 +401,14 @@ export function ChronicleReplayPanel({
       if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) skipRef.current = true;
       for (let p = 0; p < paras.current.length; p++) {
         const segs = paras.current[p]!;
+        // 이 문단에서 마커로 언급된 구역(회고 문장의 건너뛴 마커 포함) — 문단 끝에서 미발화분을 재생한다.
+        const mentioned = new Set<number>();
         for (let s = 0; s < segs.length; s++) {
           const seg = segs[s]!;
+          if (seg.kind === 'z') {
+            const mz = zoneIdOf(seg);
+            if (mz != null) mentioned.add(mz);
+          }
           for (let c = 1; c <= seg.text.length; c++) {
             if (cancelled) return;
             setPos({ p, s, c });
@@ -421,7 +442,14 @@ export function ChronicleReplayPanel({
             }
           }
         }
+        if (cancelled) return;
+        // 문단 끝 — 이 문단에서 언급됐지만 회고 문장("어제 …")이라 건너뛴 구역의 전투를 여기서 재생한다(2026-09-05).
+        // 종전엔 flushRemaining이 애니 없이 즉시 전환해 그 구역 전투가 아예 보이지 않았다(용암 하구·전사의 막사·불탄 마을).
+        await playLeftover([...mentioned]);
       }
+      if (cancelled) return;
+      // 본문 어디에도 트리거가 없던 교전 구역 — 종료 연출 전에 순서대로 재생(즉시 전환 대신).
+      await playLeftover(Object.keys(replay.events).map(Number));
       if (cancelled) return;
       await runNeutralizations(); // 종료 연출 — 방치 중립화 문양 소멸 캐스케이드
       if (cancelled) return;
