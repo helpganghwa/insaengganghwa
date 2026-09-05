@@ -6,7 +6,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { worldChronicle, type ChronicleGuildRef } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
-import { findPastContextZoneKeys, parseChronicleSegments } from '@/app/(game)/guild/map/chronicle-tokens';
+import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/guild/map/chronicle-tokens';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 
@@ -424,13 +424,14 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 /**
  * 연출 순서 검증(2026-09-05) — 오늘 전투가 있었던 구역(점령·방어)이 본문에서 **회고 문장(어제·하루 만에 …)에만**
  * 마커로 등장하면 지도 리플레이가 그 구역을 건너뛰어 종료 일괄 발화로 밀린다(9/5 검수: 용암 하구·불탄 마을·
- * 그을린 고목이 그랬다). 클라이언트와 같은 판정 함수(findPastContextZoneKeys)를 서버에서 미리 돌려 재생성 피드백으로 쓴다.
+ * 그을린 고목이 그랬다). 클라는 09-05부터 그런 구역을 회고 문장에서 바로 재생하지만, 서술은 행동 문장이 먼저 오는 편이 나아 재생성 피드백으로 쓴다.
  * 반환: 문제 구역 이름들(없으면 []).
  */
 export function replayOrderIssues(text: string, battleZones: string[]): string[] {
   if (battleZones.length === 0) return [];
   const paras = text.split(/\n\n+/).map((p) => parseChronicleSegments(p));
-  const skip = findPastContextZoneKeys(paras);
+  // raw(필터 없음) 기준 — 클라는 회고에만 나온 구역을 그 자리에서 재생하지만(09-05), 서술 품질로는 행동 문장이 먼저 오는 게 낫다.
+  const skip = pastContextZoneKeysRaw(paras);
   const fires = new Set<string>();
   const mentioned = new Set<string>();
   paras.forEach((segs, p) =>
