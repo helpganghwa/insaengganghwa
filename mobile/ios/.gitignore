@@ -1,0 +1,7 @@
+node_modules/
+ios/App/Pods/
+ios/App/build/
+*.p8
+*.mobileprovision
+*.p12
+DerivedData/

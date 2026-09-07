@@ -86,11 +86,11 @@
 - **분기** `send.ts dispatch`가 `apns:` 접두 구독을 골라 `sendApns`로 보내고 집계·죽은 구독 삭제를 웹푸시와 합친다. 7종 푸시 호출부는 변경 없음. 응답 규칙: 410·400 BadDeviceToken → 삭제 / 403·토픽 오류 → **발신 키 문제**로 실패만 집계(삭제 금지, `senderKeyMismatch`) / 429·5xx → 실패. 키 미설정이면 iOS 구독은 실패로만 세고 보존.
 - **테스트** `tests/push/apns.test.ts`(endpoint 왕복·JWT 서명 검증·캐시·본문/헤더·응답 분류·집계), `tests/push/send-split.test.ts`(분기·합산·미설정·발신 키 오류 전파).
 
-### 3.5 Capacitor 프로젝트
-- 저장소 `mobile/ios/`(별도 패키지, Next 빌드와 분리). `capacitor.config.ts`: `appId 'app.ganghwa.game'`, `server.url`, `ios.contentInset`, 스플래시(기존 splash-*.png 재활용), 아이콘 1024 원본.
-- 플러그인: `@capacitor/push-notifications`, `@capacitor/haptics`(기존 `haptic.tap()`을 네이티브로 승격), `@capacitor/splash-screen`, `@capacitor/status-bar`, `@capacitor/browser`, IAP 플러그인.
-- 오프라인/로드 실패 화면(네이티브) — 4.2 대응.
-- Universal Links(`/.well-known/apple-app-site-association`, `/s/*`·`/raid-invite/*`)는 v1.1.
+### 3.5 Capacitor 프로젝트 (설정 준비 2026-09-07 — Xcode 프로젝트 생성은 운영자 Mac 준비 후)
+- 저장소 `mobile/ios/`(별도 패키지): `package.json`(Capacitor 6 + push-notifications·haptics·splash-screen·status-bar·browser), `capacitor.config.ts`(`appId app.ganghwa.game`, `server.url https://ganghwa.app/?src=ios`, `allowNavigation` 카카오·Supabase·Apple 도메인, 스플래시 #151518), `www/index.html`(로드 실패 안내), README(생성·서명·확인 순서).
+- **셸에 별도 JS 없음** — Capacitor가 WebView에 주입하는 `window.Capacitor`를 웹의 `lib/native/capacitor.ts`가 감지해 표준 PushNotifications 플러그인으로 `window.__ganghwaPush` 브리지를 만들고, 알림 탭(`pushNotificationActionPerformed`)의 `data.url`로 이동시킨다. `PushAutoSync`가 (game) 레이아웃 마운트 시 설치(웹에선 no-op).
+- 결제 브리지(`window.__ganghwaIap`)는 StoreKit 플러그인 확정 후 같은 어댑터에 추가.
+- 오프라인/로드 실패 화면 = `www/index.html`(4.2 대응). Universal Links(`apple-app-site-association`)는 v1.1.
 
 ### 3.6 그 외
 - 테스트: `tests/payment/apple.test.ts`(정상/타 번들/상품 불일치/타 계정 토큰/중복 거래/Sandbox 환경), `tests/push/apns.test.ts`(JWT·payload·토큰 정리).

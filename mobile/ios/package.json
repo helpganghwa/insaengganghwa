@@ -1,0 +1,24 @@
+{
+  "name": "insaengganghwa-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "인생강화 App Store 셸(Capacitor) — 웹은 ganghwa.app을 그대로 로드, 네이티브는 푸시·햅틱·스플래시·결제만",
+  "scripts": {
+    "sync": "cap sync ios",
+    "open": "cap open ios",
+    "doctor": "cap doctor"
+  },
+  "dependencies": {
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/push-notifications": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "typescript": "^5.4.0"
+  }
+}
