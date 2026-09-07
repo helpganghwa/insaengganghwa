@@ -65,6 +65,8 @@ export async function refundOrderAction(
   // Play 주문(0186)은 포트원 취소 경로가 없다 — 운영자가 Play 콘솔(주문 관리)에서 환불하면
   // play-sync cron(매일 03시)이 voided 목록으로 회수·refunded 처리한다.
   if (order.provider === 'play') return { status: 'error', code: 'PLAY_ORDER' } as const;
+  // Apple 주문(0196)은 개발자 환불 API가 없다 — 유저가 Apple에 환불을 요청하면 웹훅(REFUND)·apple-sync cron이 회수한다.
+  if (order.provider === 'apple') return { status: 'error', code: 'APPLE_ORDER' } as const;
   // 배틀패스(성장패스)는 프리미엄 보상을 하나라도 수령했으면 환불 불가(미수령이면 환불 가능).
   // 단 grant_skipped(중복 결제로 지급이 없었던 주문)는 예외 — 이 주문이 준 것이 없으므로
   // 회수도 없고, 막아두면 운영자가 어드민 대신 PG 콘솔로 취소하게 된다. 콘솔 경로는 웹훅으로

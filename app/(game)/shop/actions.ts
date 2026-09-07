@@ -13,7 +13,8 @@ import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { claimFree, ShopFreeError, type FreeSlot } from '@/lib/game/shop/free';
 import { buyBox, BuyBoxError } from '@/lib/game/shop/buy-box';
-import { createOrder, createPlayOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
+import { createOrder, createPlayOrder,
+  createAppleOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
 
 /** 상점 무료 수령 — 결제 불필요. 주기 멱등(서버). */
 export async function claimFreeAction(slot: FreeSlot) {
@@ -190,5 +191,46 @@ export async function ackPayNoticeAction(input: { paymentId?: string; identity?:
     await db.execute(sql`
       update profiles set identity_notified_at = now() where id = ${u}::uuid
     `).catch(() => {});
+  }
+}
+
+/** Apple 주문 생성 — 앱스토어 앱(Capacitor) 안 결제(docs/APPSTORE.md §3.3). 가드는 createOrderAction과 동일. */
+export async function createAppleOrderAction(productId: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  if (await shouldHidePaidContent()) {
+    const { isAdmin } = await getAdminStatus();
+    if (!isAdmin) return { status: 'error', code: 'PAY_CLOSED' } as const;
+  }
+  try {
+    const o = await createAppleOrder(u, await getActiveServerId(), productId);
+    return { status: 'success', order: o } as const;
+  } catch (e) {
+    if (e instanceof PurchaseError) return { status: 'error', code: e.code } as const;
+    console.error('[shop.createAppleOrder]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
+  }
+}
+
+/** Apple 거래 검증·지급 — 클라가 StoreKit에서 받은 transactionId(숫자 문자열). 멱등(재호출은 already). */
+export async function verifyAppleTransactionAction(paymentId: string, transactionId: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if (!/^ap-[0-9a-f-]{36}$/.test(paymentId) || !/^\d{1,32}$/.test(transactionId)) {
+    return { status: 'error', code: 'ORDER_NOT_FOUND' } as const;
+  }
+  try {
+    const r = await completePurchase(paymentId, u, { appleTransactionId: transactionId });
+    if (!r.ok) return { status: 'error', code: r.code } as const;
+    revalidatePath('/shop');
+    revalidatePath('/');
+    revalidatePath('/battlepass');
+    return { status: 'success', already: r.already } as const;
+  } catch (e) {
+    console.error('[shop.verifyAppleTransaction]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
   }
 }

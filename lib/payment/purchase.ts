@@ -31,6 +31,9 @@ import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 import { getPortonePayment, cancelPortonePayment } from './portone';
 import { consumePlayProductPurchase, getPlayProductPurchase, playConfigured, refundPlayOrder } from './play-api';
 import { playSkuFor } from './play-sku';
+import { appleBundleId, appleConfigured, AppleApiError, getAppleTransaction } from './apple-api';
+import { appleProductIdFor } from './apple-sku';
+import { appleAccountTokenOf, checkAppleTransaction, sandboxAllowed } from './apple-jws';
 
 /**
  * 배틀패스(성장패스) 결제 상품코드 — `bp_<type>_<구간index>`(예: bp_enhance_2, bp_transcend_0).
@@ -334,6 +337,42 @@ export async function createPlayOrder(userId: string, serverId: number, productI
   return { paymentId, sku, orderName, amountKrw: krw };
 }
 
+export type CreatedAppleOrder = {
+  /** 내부 주문번호(portone_order_id 컬럼 재사용, 'ap-' 접두) — 검증 액션이 이 값으로 주문을 찾는다. */
+  paymentId: string;
+  /** App Store 상품 ID — 클라가 StoreKit purchase에 넘긴다. */
+  productId: string;
+  /** StoreKit appAccountToken(UUID = paymentId의 UUID) — Apple 거래에 새겨져 서버 검증이 주문과 대조한다. */
+  appAccountToken: string;
+  orderName: string;
+  amountKrw: number;
+};
+
+/**
+ * Apple 주문 생성(pending) — 앱스토어 앱 안 결제(docs/APPSTORE.md §3.3). 가드는 포트원·Play와 동일(resolveOrder).
+ * 키 미설정(검증 불가)이면 CONFIG — 지급 못 할 주문을 만들지 않는다.
+ */
+export async function createAppleOrder(userId: string, serverId: number, productId: string): Promise<CreatedAppleOrder> {
+  if (!appleConfigured()) throw new PurchaseError('CONFIG');
+  const storeProductId = appleProductIdFor(productId);
+  if (!storeProductId) throw new PurchaseError('UNKNOWN_PRODUCT');
+  const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId);
+  const uuid = crypto.randomUUID();
+  const paymentId = `ap-${uuid}`;
+  await db.insert(iapOrders).values({
+    serverId,
+    userId,
+    portoneOrderId: paymentId,
+    productCode: productId,
+    amountKrw: BigInt(krw),
+    diamondGranted: BigInt(diamondGranted),
+    status: 'pending',
+    provider: 'apple',
+    appleProductId: storeProductId,
+  });
+  return { paymentId, productId: storeProductId, appAccountToken: uuid, orderName, amountKrw: krw };
+}
+
 export type CompleteResult =
   | { ok: true; already: boolean }
   | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' };
@@ -352,8 +391,8 @@ export type CompleteResult =
 export async function completePurchase(
   paymentId: string,
   expectedUserId?: string,
-  /** Play 주문: 클라가 결제 시트에서 받은 purchaseToken(첫 검증). 재시도·cron은 저장된 토큰을 쓴다. */
-  opts: { playPurchaseToken?: string } = {},
+  /** Play 주문: 클라가 결제 시트에서 받은 purchaseToken(첫 검증). Apple 주문: transactionId. 재시도·cron은 저장된 값을 쓴다. */
+  opts: { playPurchaseToken?: string; appleTransactionId?: string } = {},
 ): Promise<CompleteResult> {
   const [order] = await db
     .select({
@@ -366,6 +405,8 @@ export async function completePurchase(
       provider: iapOrders.provider,
       playSku: iapOrders.playSku,
       playPurchaseToken: iapOrders.playPurchaseToken,
+      appleProductId: iapOrders.appleProductId,
+      appleTransactionId: iapOrders.appleTransactionId,
     })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
@@ -378,6 +419,7 @@ export async function completePurchase(
 
   // 결제 수단별 서버 권위 재확인 — 지급은 여기서 통과한 주문만.
   let play: { token: string; sku: string; googleOrderId: string | null } | null = null;
+  let apple: { transactionId: string; originalTransactionId: string | null; environment: string | null } | null = null;
   if (order.provider === 'play') {
     const token = opts.playPurchaseToken ?? order.playPurchaseToken;
     if (!token || !order.playSku) return { ok: false, code: 'NOT_PAID' };
@@ -393,6 +435,52 @@ export async function completePurchase(
     const p = await getPlayProductPurchase(order.playSku, token);
     if (p.purchaseState !== 0) return { ok: false, code: 'NOT_PAID' };
     play = { token, sku: order.playSku, googleOrderId: p.orderId ?? null };
+  } else if (order.provider === 'apple') {
+    const txn = opts.appleTransactionId ?? order.appleTransactionId;
+    const accountToken = appleAccountTokenOf(paymentId);
+    if (!txn || !order.appleProductId || !accountToken) return { ok: false, code: 'NOT_PAID' };
+    // 거래 선점 검사 — 같은 거래 ID가 다른 주문에 이미 묶였으면 거부(부분 유니크 인덱스가 최종 방어).
+    const [dup] = await db
+      .select({ id: iapOrders.id })
+      .from(iapOrders)
+      .where(and(eq(iapOrders.appleTransactionId, txn), ne(iapOrders.id, order.id)))
+      .limit(1);
+    if (dup) return { ok: false, code: 'TOKEN_USED' };
+    // Apple 서버 권위 — 거래를 다시 조회해 번들·상품·appAccountToken(=주문 UUID)·미환불을 확인한다.
+    // 금액은 상품 ID가 담당(콘솔 등록가 = 카탈로그 KRW)이라 별도 금액 대조가 없다(Play와 동일).
+    let t;
+    try {
+      t = await getAppleTransaction(txn);
+    } catch (e) {
+      if (e instanceof AppleApiError && e.status === 404) return { ok: false, code: 'NOT_PAID' };
+      throw e;
+    }
+    const check = checkAppleTransaction(t, { bundleId: appleBundleId(), productId: order.appleProductId, appAccountToken: accountToken });
+    if (!check.ok) {
+      if (check.reason === 'ACCOUNT' || check.reason === 'BUNDLE' || check.reason === 'PRODUCT') {
+        // 다른 주문/앱/상품의 거래로 지급을 시도 — 위변조 또는 클라 버그. 지급하지 않고 1회 알림.
+        await raisePaymentAlert('AMOUNT_MISMATCH', {
+          paymentId,
+          orderId: order.id,
+          detail: `Apple 거래 불일치(${check.reason}) — 거래 ${txn} 상품 ${t.productId} 토큰 ${t.appAccountToken ?? '-'} vs 주문 ${order.appleProductId}. 지급하지 않음.`,
+        });
+      }
+      return { ok: false, code: 'NOT_PAID' };
+    }
+    // Sandbox 거래는 심사·TestFlight 계정(reviewer)과 스테이징(APPLE_ALLOW_SANDBOX=1)에서만 지급 —
+    // 실서비스에서 일반 계정이 Sandbox 거래로 지급받는 구멍을 막는다(심사관은 Sandbox로 결제한다).
+    if (t.environment === 'Sandbox') {
+      const reviewer = await isReviewerUserId(order.userId);
+      if (!sandboxAllowed({ reviewer, allowEnv: process.env.APPLE_ALLOW_SANDBOX })) {
+        await raisePaymentAlert('COMPLETE_EXCEPTION', {
+          paymentId,
+          orderId: order.id,
+          detail: `Apple Sandbox 거래(${txn})를 일반 계정이 검증 요청 — 지급하지 않음.`,
+        });
+        return { ok: false, code: 'NOT_PAID' };
+      }
+    }
+    apple = { transactionId: t.transactionId, originalTransactionId: t.originalTransactionId ?? null, environment: t.environment ?? null };
   } else {
     // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
     const pay = await getPortonePayment(paymentId);
@@ -430,6 +518,14 @@ export async function completePurchase(
         paidAt: new Date(),
         // Play: 구매 토큰·구글 주문번호를 paid 전이와 함께 묶는다(부분 유니크 — 다른 주문이 먼저 묶었으면 여기서 throw).
         ...(play ? { playPurchaseToken: play.token, playOrderId: play.googleOrderId } : {}),
+        // Apple: 거래 ID·원거래 ID·환경을 paid 전이와 함께 묶는다(부분 유니크 — 다른 주문이 먼저 묶었으면 여기서 throw).
+        ...(apple
+          ? {
+              appleTransactionId: apple.transactionId,
+              appleOriginalTransactionId: apple.originalTransactionId,
+              appleEnvironment: apple.environment,
+            }
+          : {}),
       })
       .where(eq(iapOrders.id, order.id));
     transitioned = true;
@@ -525,6 +621,14 @@ export async function completePurchase(
     try {
       if (play) {
         if (play.googleOrderId) await refundPlayOrder(play.googleOrderId, true);
+      } else if (apple) {
+        // Apple은 개발자가 환불을 일으키는 API가 없다 — 지급 보류(grant_skipped)만 남기고 알림으로
+        // 운영자가 유저에게 Apple 환불 요청(reportaproblem.apple.com)을 안내한다. 환불되면 웹훅/cron이 refunded 처리.
+        await raisePaymentAlert('COMPLETE_EXCEPTION', {
+          paymentId,
+          orderId: order.id,
+          detail: 'Apple 주문 미성년 한도 초과 — 개발자 환불 불가. 유저에게 Apple 환불 요청 안내 필요(지급은 보류됨).',
+        });
       } else {
         await cancelPortonePayment(paymentId, '미성년 월 한도 초과 자동 환불');
       }

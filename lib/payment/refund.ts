@@ -16,6 +16,7 @@ import { reclaimBpSegment } from '@/lib/game/battlepass';
 
 import { raisePaymentAlert } from './alert';
 import { getPlayProductPurchase } from './play-api';
+import { getAppleTransaction } from './apple-api';
 import { getPortonePayment } from './portone';
 import { parseBpProduct } from './purchase';
 
@@ -186,6 +187,7 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
       provider: iapOrders.provider,
       playSku: iapOrders.playSku,
       playPurchaseToken: iapOrders.playPurchaseToken,
+      appleTransactionId: iapOrders.appleTransactionId,
     })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
@@ -198,6 +200,11 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
     if (!order.playSku || !order.playPurchaseToken) return { ok: false, code: 'NOT_CANCELLED' };
     const p = await getPlayProductPurchase(order.playSku, order.playPurchaseToken);
     if (p.purchaseState !== 1) return { ok: false, code: 'NOT_CANCELLED' };
+  } else if (order.provider === 'apple') {
+    // Apple 서버 권위 — 거래에 revocationDate(환불·취소)가 있을 때만 회수. 거래가 안 묶인 pending 주문은 회수할 것도 없다.
+    if (!order.appleTransactionId) return { ok: false, code: 'NOT_CANCELLED' };
+    const t = await getAppleTransaction(order.appleTransactionId);
+    if (t.revocationDate == null) return { ok: false, code: 'NOT_CANCELLED' };
   } else {
     // 포트원 서버 권위 — 실제 전체 취소 상태인지 재확인.
     const pay = await getPortonePayment(paymentId);

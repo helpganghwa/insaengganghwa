@@ -111,7 +111,7 @@ export default async function AdminPaymentsPage({
       bp: bp != null,
       // 배틀패스: 프리미엄 수령했으면 환불 불가(true). 비-배틀패스는 false.
       bpClaimed: bp != null && claimedKeys.has(`${r.userId}:${r.serverId}:${bp.type}:${bp.segmentIndex}`),
-      provider: (r.provider === 'play' ? 'play' : 'portone') as 'portone' | 'play',
+      provider: (r.provider === 'play' ? 'play' : r.provider === 'apple' ? 'apple' : 'portone') as 'portone' | 'play' | 'apple',
     };
   });
 

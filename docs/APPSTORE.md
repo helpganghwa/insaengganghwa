@@ -53,25 +53,30 @@
 - WKWebView에서 **카카오 로그인**이 끝까지 되는지(카카오 웹 로그인 → Supabase 콜백 `/auth/callback` → 세션 쿠키). 카카오톡 앱 전환 버튼은 실패해도 계정 로그인 경로만 되면 통과. 안 되면 `ASWebAuthenticationSession` 플러그인 + 딥링크 복귀로 우회.
 - Capacitor 셸에서 스플래시·상태바·세이프에어리어·뒤로가기·외부 링크(위키 새창 → `Browser` 플러그인) 동작.
 
-### 3.1 플랫폼 감지 확장
+### 3.1 플랫폼 감지 확장 (완료 2026-09-07)
 - `lib/platform.ts`: `PLATFORM_IOS = 'ios'`, `getPlatform()` 3값, `isIos()`·`isIosClient()`. `proxy.ts`의 `?src=` 처리에 ios 추가.
 - 앱 전용 UI 규칙: `ios`/`twa` 공통 = 포트원 미로드·외부 결제 문구 금지·"앱에서는 스토어 결제" 안내. `ios` 추가 = 웹푸시 구독 UI 숨김(네이티브 푸시로 대체).
 
-### 3.2 Sign in with Apple
+### 3.2 Sign in with Apple (코드 완료 2026-09-07 — `APPLE_LOGIN_ENABLED=1`로 노출, Supabase provider 설정 선행)
 - `lib/auth/actions.ts` `signInWithApple()` — `provider: 'apple'`, 콜백 동일. 로그인 화면 버튼(Apple 디자인 가이드 준수 — 검정 버튼·로고).
 - 신규 가입 흐름은 카카오와 동일(콜백이 캐릭터 생성). 닉네임·이메일 처리는 provider 무관.
 - 계정 연결 정책: 같은 검증 이메일이면 Supabase가 기존 사용자에 identity 추가(자동 연결). Apple 이메일 숨기기(`@privaterelay.appleid.com`)는 새 계정 → 위키/FAQ에 명시.
 - 웹에도 노출(`/login`에 Apple 버튼) — 앱 전용으로 숨기면 웹에서 만든 Apple 계정이 앱에서 못 들어오는 문제가 없어짐.
 
-### 3.3 Apple 결제
-- **DB** `0196_apple_iap.sql`: `iap_orders.provider`에 `'apple'` 허용, `apple_transaction_id` unique, `apple_original_transaction_id`, `apple_product_id`.
-- **서버** `lib/payment/apple.ts` (Play와 같은 골격)
-  - `createAppleOrder(userId, productId)` — 웹 `createOrder`와 같은 검증 후 pending 주문 + `appAccountToken`(= 주문 UUID) 반환.
-  - `verifyAppleTransaction(orderId, transactionId)` — App Store Server API `GET /inApps/v1/transactions/{id}`(ES256 JWT, 외부 SDK 없이 fetch) → 서명 거래 payload 디코드 → `bundleId`·`productId`·`appAccountToken`=주문 UUID·환경(Production/Sandbox) 확인 → paid + 지급(웹 경로와 동일 함수). `transactionId` unique로 멱등. 소모성이라 별도 finish는 클라(`finishTransaction`)가.
-  - `app/api/webhooks/apple-iap/route.ts` — Server Notifications V2(`REFUND`·`REVOKE`·`CONSUMPTION_REQUEST`) 수신 → 거래 ID로 API 재조회(서명 검증 대신 Apple에 직접 확인) → refunded 처리 + 지급 회수(웹 환불 회수 로직 재사용). 보조로 `apple-refund-sync` cron(최근 30일 환불 조회) 1일 1회.
-- **클라** `app/(game)/shop/apple-checkout.ts` — Capacitor IAP 플러그인(StoreKit 2 지원 플러그인 선택은 3.0 스파이크에서 확정)으로 `getProducts([id])` 가격 표시 → `purchase(id, { appAccountToken })` → `transactionId` → `verifyAppleTransactionAction` → `finish`. 미지원(브라우저)이면 "App Store 앱에서만 결제할 수 있어요".
-- **상점 UI** — `isIos()`면 Apple 체크아웃, 가격은 StoreKit 값 우선. 영수증·환불 안내는 App Store 기준(환불은 reportaproblem.apple.com).
-- **어드민** — provider 뱃지 `apple`, 환불 버튼 대신 "App Store에서 처리" 안내(Play와 동일 패턴).
+### 3.3 Apple 결제 (구현 완료 2026-09-07, feat/appstore)
+- **DB** `0196_apple_iap.sql`: `iap_orders.provider`에 `'apple'` 허용, `apple_product_id`·`apple_transaction_id`(부분 unique)·`apple_original_transaction_id`·`apple_environment`. 스테이징 적용, prod는 배포 전 적용.
+- **상품 ID** `lib/payment/apple-sku.ts` — Play SKU와 같은 문자열 22종(가격만 담당, 지급은 주문 product_code).
+- **서버**
+  - `lib/payment/apple-api.ts` — In-App Purchase 키(.p8)로 ES256 JWT(20분 캐시, `dsaEncoding: 'ieee-p1363'`), `GET /inApps/v1/transactions/{id}` Production → 404면 Sandbox. 응답 JWS는 Apple에서 직접 받은 것이라 payload만 해독(서명 검증 생략).
+  - `lib/payment/apple-jws.ts`(순수) — JWS 해독·거래 대조(`checkAppleTransaction`: 번들·상품·appAccountToken 대소문자 무시·미환불·Consumable)·`appleAccountTokenOf('ap-<uuid>')`·Sandbox 허용 규칙.
+  - `purchase.ts` `createAppleOrder` — 주문번호 `ap-<uuid>`, 그 UUID가 StoreKit `appAccountToken`. `completePurchase(..., { appleTransactionId })` — 거래 선점 검사(TOKEN_USED) → Apple 재조회 → 대조 실패는 NOT_PAID(+계정/번들/상품 불일치는 AMOUNT_MISMATCH 알림) → **Sandbox 거래는 심사 계정(reviewer) 또는 `APPLE_ALLOW_SANDBOX=1`(스테이징)에서만 지급** → paid 전이와 함께 거래 ID·원거래 ID·환경 바인딩. 소모(finish)는 클라.
+  - 미성년 월 한도 초과(동시 주문 우회)는 Apple에 개발자 환불 API가 없어 **지급 보류 + 운영 알림**만(유저가 Apple에 환불 요청 → 웹훅/cron이 refunded).
+  - `refund.ts` — Apple 주문은 거래 재조회 후 `revocationDate`가 있을 때만 회수.
+  - `app/api/webhooks/apple-iap/route.ts` — Server Notifications V2. 서명 검증 대신 거래 ID로 주문을 찾아 `refundPurchase`(Apple 재조회)로 확정. REFUND·REVOKE 회수, REFUND_REVERSED 알림, TEST 200. 항상 200.
+  - `lib/payment/apple.ts` `syncAppleRevoked` + cron `/api/cron/apple-sync`(매일 UTC 18:10 = KST 03:10) — 최근 30일 paid 주문 재조회 백스톱. 키 미설정이면 no-op.
+- **클라** `app/(game)/shop/apple-checkout.ts` — 네이티브 브리지 `window.__ganghwaIap`(`getProducts`·`purchase(productId, appAccountToken)`·`finish`)를 Capacitor 셸이 심는다. 웹 코드는 StoreKit 플러그인 종류를 모른다. 흐름: `createAppleOrderAction` → `purchase` → `verifyAppleTransactionAction(paymentId, transactionId)` → `finish`. 브리지 없으면 'unsupported'. pending(구입 요청 승인 대기)은 안내만 — 셸이 승인 후 StoreKit 거래를 다시 받으면 같은 토큰으로 재검증(§3.5).
+- **어드민** — provider 뱃지 `App Store`, 환불 버튼 대신 "Apple 환불" 표시(`APPLE_ORDER`).
+- **테스트** `tests/payment/apple-pure.test.ts`(해독·대조·토큰·Sandbox 규칙·상품 매핑), `apple-complete.test.ts`(DB 통합: 지급·바인딩·already / 토큰 불일치 알림 / 환불·타상품 거부 / Sandbox 게이트 / TOKEN_USED / 환불 / revoked 동기화).
 
 ### 3.4 APNs 푸시
 - **DB** `push_subscriptions`에 `kind`('webpush'|'apns', 기본 webpush)·`apns_token`(unique) — 또는 endpoint 컬럼에 `apns:<token>` 저장해 스키마 변경 최소화(선택).

@@ -108,6 +108,10 @@
       "schedule": "0 18 * * *"
     },
     {
+      "path": "/api/cron/apple-sync",
+      "schedule": "10 18 * * *"
+    },
+    {
       "path": "/api/cron/preopen-cleanup",
       "schedule": "0,10 1 24 8 *"
     }

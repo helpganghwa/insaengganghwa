@@ -30,7 +30,7 @@ export type OrderRow = {
   /** 배틀패스 프리미엄 보상 수령 여부 — true면 환불 불가. */
   bpClaimed: boolean;
   /** 결제 수단(0186) — play는 어드민 환불 대신 Play 콘솔 환불 + 동기화. */
-  provider: 'portone' | 'play';
+  provider: 'portone' | 'play' | 'apple';
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
@@ -53,6 +53,7 @@ const ERR_MSG: Record<string, string> = {
   NOT_FOUND: '주문을 찾을 수 없습니다',
   NOT_REFUNDABLE: '환불 가능한 상태가 아닙니다',
   PLAY_ORDER: 'Play 주문은 Play 콘솔(주문 관리)에서 환불하세요. 매일 03시 동기화로 자동 회수됩니다',
+  APPLE_ORDER: 'App Store 주문은 Apple이 환불합니다(유저가 reportaproblem.apple.com에서 요청). 환불 알림·매일 03:10 동기화로 자동 회수됩니다',
   BP_NOT_REFUNDABLE: '배틀패스는 수령 후 환불할 수 없습니다',
   NOT_CANCELLED: '포트원에서 취소되지 않았습니다(결제 유지 중) — 콘솔 상태 확인',
   AMOUNT_MISMATCH: '금액 불일치',
@@ -99,7 +100,7 @@ export function PaymentsClient({
     {} as Record<string, number>,
   );
   // 환불 가능 = 결제완료 + (비-배틀패스 또는 미수령 배틀패스).
-  const isRefundable = (o: OrderRow) => o.status === 'paid' && o.provider !== 'play' && !(o.bp && o.bpClaimed);
+  const isRefundable = (o: OrderRow) => o.status === 'paid' && o.provider === 'portone' && !(o.bp && o.bpClaimed);
   const refundable = orders.filter(isRefundable).length;
 
   const run = (o: OrderRow, force?: { reason: string }) => {
@@ -259,6 +260,10 @@ export function PaymentsClient({
                     <span className="mt-0.5 inline-block rounded border border-emerald-500/40 px-1 text-[9px] font-bold text-emerald-400">
                       Google Play
                     </span>
+                  ) : o.provider === 'apple' ? (
+                    <span className="mt-0.5 inline-block rounded border border-sky-500/40 px-1 text-[9px] font-bold text-sky-300">
+                      App Store
+                    </span>
                   ) : null}
                   <div className="mt-0.5 text-[10px] tabular-nums text-zinc-600">
                     {fmt(o.paidAt ?? o.createdAt)}
@@ -268,6 +273,11 @@ export function PaymentsClient({
                   // Play 주문 — 어드민 환불 경로 없음(Play 콘솔 환불 → play-sync 동기화).
                   <span className="shrink-0 rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-600">
                     Play 콘솔 환불
+                  </span>
+                ) : o.status === 'paid' && o.provider === 'apple' ? (
+                  // Apple 주문 — 개발자 환불 불가(유저가 Apple에 요청 → 웹훅/apple-sync가 회수).
+                  <span className="shrink-0 rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-600">
+                    Apple 환불
                   </span>
                 ) : o.status === 'paid' ? (
                   o.bp && o.bpClaimed ? (

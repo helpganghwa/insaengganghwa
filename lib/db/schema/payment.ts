@@ -63,6 +63,11 @@ export const iapOrders = pgTable(
     playOrderId: text('play_order_id'),
     /** 소모(consume=확인) 시각 — 없으면 play-sync가 재시도(3일 미확인 자동환불 방지). */
     playConsumedAt: timestamp('play_consumed_at', { withTimezone: true }),
+    /** Apple 인앱 결제(0196, docs/APPSTORE.md §3.3) — provider 'apple'. 상품 ID(가격 담당)·거래 ID(멱등 키, 부분 유니크)·원거래 ID·환경(Sandbox/Production). */
+    appleProductId: text('apple_product_id'),
+    appleTransactionId: text('apple_transaction_id'),
+    appleOriginalTransactionId: text('apple_original_transaction_id'),
+    appleEnvironment: text('apple_environment'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
