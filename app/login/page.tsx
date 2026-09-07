@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 import { PublicFooter } from '@/components/PublicFooter';
 
-import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
+import { signInWithKakao, signInWithApple, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { CbtEndedNotice } from './CbtEndedNotice';
@@ -76,6 +76,8 @@ export default async function LoginPage({
   // 봉인 중 로그인 시도는 콜백(cbt_ended 게이트)이 차단하므로 화면 노출만으로 무해하고,
   // 8/24 10:30 서버 오픈 후에는 실제 로그인까지 되는 조기 점검 통로가 된다.
   const openPreview = preview === 'open';
+  // Apple 로그인(docs/APPSTORE.md §3.2) — Supabase Apple provider 설정 후 env로 켠다(런타임 읽기, 재배포 불필요).
+  const appleLogin = process.env.APPLE_LOGIN_ENABLED === '1';
   const cbtEnded =
     !openPreview && ((maint?.active === true && maint.mode === 'cbt_ended') || preOpen);
 
@@ -153,17 +155,34 @@ export default async function LoginPage({
             </button>
           </form>
         ) : (
-          <form action={signInWithKakao} className="w-full">
-            <button
-              type="submit"
-              aria-label="카카오 로그인"
-              className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
-              <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
-            </button>
-          </form>
+          <div className="w-full space-y-2">
+            <form action={signInWithKakao} className="w-full">
+              <button
+                type="submit"
+                aria-label="카카오 로그인"
+                className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
+                <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
+              </button>
+            </form>
+            {/* Apple 로그인 — HIG 준수(검정 바탕·흰 로고·"Apple로 로그인", 높이는 카카오와 동일). 앱스토어 4.8 의무. */}
+            {appleLogin ? (
+              <form action={signInWithApple} className="w-full">
+                <button
+                  type="submit"
+                  aria-label="Apple로 로그인"
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-black py-3.5 text-white transition active:scale-[0.99] hover:bg-zinc-900"
+                >
+                  <svg aria-hidden viewBox="0 0 170 170" className="h-[18px] w-[18px]" fill="currentColor">
+                    <path d="M150.4 130.3c-2.5 5.7-5.4 11-8.8 15.8-4.6 6.6-8.4 11.1-11.3 13.6-4.5 4.2-9.4 6.3-14.6 6.4-3.7 0-8.2-1.1-13.5-3.2-5.3-2.1-10.1-3.2-14.6-3.2-4.7 0-9.7 1.1-15 3.2-5.3 2.2-9.6 3.3-12.9 3.4-5 .2-10-2-15-6.6-3.2-2.8-7.1-7.5-11.8-14.1-5-7.1-9.2-15.3-12.4-24.6C17.1 111 15.3 101.1 15.3 91.5c0-11 2.4-20.5 7.2-28.5 3.7-6.4 8.7-11.4 15-15.1 6.2-3.7 13-5.6 20.3-5.7 4 0 9.2 1.2 15.7 3.6 6.4 2.4 10.6 3.7 12.4 3.7 1.4 0 6-1.5 13.9-4.4 7.5-2.7 13.8-3.8 18.9-3.4 14 1.1 24.5 6.6 31.5 16.6-12.5 7.6-18.7 18.2-18.6 31.8.1 10.6 4 19.4 11.5 26.4 3.4 3.3 7.3 5.8 11.6 7.5-.9 2.7-1.9 5.3-3 7.8zM119.1 8.4c0 8.2-3 15.9-9 23-7.2 8.4-16 13.3-25.5 12.5-.1-1-.2-2-.2-3.1 0-7.9 3.4-16.3 9.5-23.2 3-3.5 6.9-6.4 11.6-8.7 4.7-2.3 9.1-3.5 13.3-3.8.1 1.1.2 2.2.2 3.3z" />
+                  </svg>
+                  <span className="text-[15px] font-bold">Apple로 로그인</span>
+                </button>
+              </form>
+            ) : null}
+          </div>
         )}
 
         {/* 약관 동의 고지 — 로그인 버튼 바로 아래(동의 시점과 근접). 종료 일반 화면(수단 없음)엔 미노출. */}

@@ -37,11 +37,13 @@ function stagingGate(request: NextRequest): NextResponse | null {
  */
 function twaMarker(request: NextRequest): NextResponse | null {
   const { searchParams } = request.nextUrl;
-  if (searchParams.get('src') !== 'twa') return null;
+  const src = searchParams.get('src');
+  // 'twa' = 플레이스토어 앱, 'ios' = 앱스토어 앱(Capacitor server.url, docs/APPSTORE.md §3.1). 그 외 값은 무시.
+  if (src !== 'twa' && src !== 'ios') return null;
   const url = request.nextUrl.clone();
   url.searchParams.delete('src');
   const res = NextResponse.redirect(url);
-  res.cookies.set('ig_platform', 'twa', { httpOnly: false, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
+  res.cookies.set('ig_platform', src, { httpOnly: false, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
   return res;
 }
 

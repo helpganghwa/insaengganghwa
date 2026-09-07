@@ -4,9 +4,29 @@
  */
 export const PLATFORM_COOKIE = 'ig_platform';
 export const PLATFORM_TWA = 'twa';
+export const PLATFORM_IOS = 'ios';
 
-/** 클라이언트 — document.cookie에서 읽는다(SSR 중엔 false). */
+export type ClientPlatform = 'web' | 'twa' | 'ios';
+
+/** 쿠키 문자열(document.cookie 형식)에서 플랫폼을 읽는다 — 테스트 가능한 순수 함수. */
+export function platformFromCookieString(cookie: string): ClientPlatform {
+  const v = cookie
+    .split('; ')
+    .find((c) => c.startsWith(`${PLATFORM_COOKIE}=`))
+    ?.slice(PLATFORM_COOKIE.length + 1);
+  return v === PLATFORM_TWA ? 'twa' : v === PLATFORM_IOS ? 'ios' : 'web';
+}
+
+/** 클라이언트 — document.cookie에서 읽는다(SSR 중엔 web). */
+export function platformClient(): ClientPlatform {
+  if (typeof document === 'undefined') return 'web';
+  return platformFromCookieString(document.cookie);
+}
+
 export function isTwaClient(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.cookie.split('; ').some((c) => c === `${PLATFORM_COOKIE}=${PLATFORM_TWA}`);
+  return platformClient() === 'twa';
+}
+
+export function isIosClient(): boolean {
+  return platformClient() === 'ios';
 }

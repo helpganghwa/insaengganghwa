@@ -54,6 +54,36 @@ export async function signInWithKakao(formData?: FormData) {
 }
 
 /**
+ * Apple 로그인(Sign in with Apple) — Supabase 관리형(docs/APPSTORE.md §3.2). 앱스토어 가이드라인 4.8:
+ * 카카오 같은 소셜 로그인을 제공하면 Apple 로그인도 동등하게 제공해야 한다. 웹에도 같이 노출해
+ * 웹에서 만든 Apple 계정이 앱에서 못 들어오는 일이 없게 한다. 콜백·서버 선택·캐릭터 생성은 카카오와 동일.
+ * 계정 연결: 같은 검증 이메일이면 Supabase가 기존 사용자에 identity를 붙이고, "이메일 숨기기"는 새 계정.
+ * 노출 게이트는 로그인 화면(env APPLE_LOGIN_ENABLED) — Supabase 콘솔에 Apple provider가 설정된 뒤 켠다.
+ */
+export async function signInWithApple(formData?: FormData) {
+  const supabase = await createSupabaseServerClient();
+  const origin = (await headers()).get('origin') ?? 'http://localhost:5174';
+
+  const next = safeNext(formData?.get('next'));
+  const callback = next
+    ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+    : `${origin}/auth/callback`;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: { redirectTo: callback },
+  });
+
+  if (error) {
+    console.error('[auth] apple signInWithOAuth failed:', error.message);
+    redirect(
+      `/login?error=${encodeURIComponent('Apple 로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.')}`,
+    );
+  }
+  if (data.url) redirect(data.url);
+}
+
+/**
  * 로그인 후 서버 선택 적용(콜백 미경유 경로 공용) — 콜백과 동일하게 "고른 서버에 캐릭터 1개" 보장.
  * 가입 트리거(0067)가 캐릭터를 안 만들므로, login_srv 없을 때도 last_server>최신open으로
  * 확정해 반드시 생성한다(가입 보너스 포함). 테스트/심사 로그인 양쪽이 호출.
