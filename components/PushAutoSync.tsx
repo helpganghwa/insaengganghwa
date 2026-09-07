@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
 import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
 import { nativePushSyncIfGranted } from '@/lib/push/native';
+import { installCapacitorBridges } from '@/lib/native/capacitor';
 
 /**
  * 권한이 이미 granted인 기기의 푸시 구독을 앱 로드 시 서버에 (재)동기화한다.
@@ -89,6 +90,10 @@ export function PushAutoSync() {
   }, [router]);
 
   useEffect(() => {
+    // 앱스토어 앱(Capacitor iOS)이면 표준 플러그인으로 네이티브 푸시 브리지를 먼저 세운다(멱등, 웹에선 no-op).
+    installCapacitorBridges((url) => {
+      if (location.pathname !== url) router.push(url);
+    });
     const support = checkPushSupport();
     // 유저가 설정에서 '알림 받기'를 끈 기기 — 재구독 금지(끄기가 다음 세션에 되살아나던 버그, 문의 #160).
     if (isPushOptedOut()) return;
@@ -133,6 +138,6 @@ export function PushAutoSync() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
   return null;
 }
