@@ -340,8 +340,8 @@ export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 5; // 호스팅+참여 합산 — 2026-09-07 3→5(일일 한도와 동일, 길드 자금 레이드 5연속 개설 건의)
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
 export const RAID_WINDOW_MS = 6 * HOUR; // 개설 후 기본 공격창(선택 미지정 시)
-// 개설 시 선택 가능한 공격창 길이(3/6/10시간). 서버가 이 목록만 허용(그 외는 기본값).
-export const RAID_DURATION_OPTIONS_MS = [3 * HOUR, 6 * HOUR, 10 * HOUR] as const; // 2026-09-07 1/3/6 → 3/6/10(3구간 유지, 1h는 사용 15%로 제외·10h는 점심 개설→퇴근 후 참여 건의)
+// 개설 시 선택 가능한 공격창 길이(1/3/6/10시간). 서버가 이 목록만 허용(그 외는 기본값).
+export const RAID_DURATION_OPTIONS_MS = [1 * HOUR, 3 * HOUR, 6 * HOUR, 10 * HOUR] as const; // 2026-09-07 10h 추가(점심 개설→퇴근 후 참여 건의). 1/3/6은 유지
 export const RAID_BASE_ATTACKS = 10; // 참여자당 기본
 
 /**
