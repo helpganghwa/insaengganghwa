@@ -154,6 +154,8 @@ export function openRaid(input: {
         bossCode,
         phase1Hp: BigInt(phase1Hp),
         shareCode: genShareCode(),
+        // 개설자 전용 코드(0195) — 일반 코드보다 길게(14자). 이 링크로 들어오면 수락 없이 참여(join-request scope 'host').
+        hostShareCode: genShareCode() + genShareCode().slice(0, 4),
         expireAt: new Date(now + durationMs),
         status: 'active',
         friendShare,

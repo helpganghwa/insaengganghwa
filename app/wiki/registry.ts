@@ -18,6 +18,7 @@ import * as friends from './docs/friends';
 import * as avatar from './docs/avatar';
 import * as expedition from './docs/expedition';
 import * as shop from './docs/shop';
+import * as patron from './docs/patron';
 import * as titles from './docs/titles';
 
 /** 좌측 목록의 묶음 순서 — 배열 순서가 곧 화면 순서다. */
@@ -68,6 +69,7 @@ const MODULES = [
   avatar,
   expedition,
   shop,
+  patron,
 ];
 
 export const WIKI_DOCS: readonly WikiDoc[] = MODULES.map((m) => ({

@@ -1,7 +1,7 @@
 /**
  * SCHEMA §6. 레이드 (플레이어 호스팅 co-op)
  *
- * 개설비 200(전 난이도 동일)·동시 3·일일 5·1~6시간 공격창. 미스 없음·크리 ×1.5·뎀 ±30%.
+ * 개설비 200(전 난이도 동일)·동시 5·일일 5·1~10시간 공격창. 미스 없음·크리 ×1.5·뎀 ±30%.
  * 보상 = 1회+ 공격 전원 동일(기여도 가중 없음). totalDamage는 표시용. 6h 만료 lazy+cron 멱등.
  */
 import {
@@ -48,6 +48,8 @@ export const raids = pgTable(
     bossCode: raidBossEnum('boss_code').notNull(),
     phase1Hp: bigint('phase1_hp', { mode: 'bigint' }).notNull(),
     shareCode: text('share_code').notNull().unique(),
+    /** 개설자 전용 참여 코드(0195) — 이 코드의 링크로 들어오면 비공개여도 수락 없이 즉시 참여. 옛 행은 null. */
+    hostShareCode: text('host_share_code'),
     openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
     /** = opened_at + 6h (BALANCE §5.1). */
     expireAt: timestamp('expire_at', { withTimezone: true }).notNull(),

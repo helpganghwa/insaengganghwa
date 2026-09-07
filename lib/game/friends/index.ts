@@ -3,7 +3,7 @@ import 'server-only';
 import { and, or, eq, ne, ilike, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { friendLinks } from '@/lib/db/schema/friends';
+import { friendLinks, friendRequestDeclines } from '@/lib/db/schema/friends';
 import { chatBlocks } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
@@ -16,6 +16,7 @@ import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
  * 친구 = status='accepted' & (requester or addressee = 나). 받은 요청 = pending & addressee=나.
  */
 export const FRIEND_CAP = 30;
+import { FRIEND_REAPPLY_COOLDOWN_HOURS } from '@/lib/game/balance';
 
 export class FriendError extends Error {
   constructor(
@@ -31,7 +32,9 @@ export class FriendError extends Error {
       | 'BLOCKED_BY_ME'
       /** 차단 관계라 보낼 수 없음(상대가 나를 차단한 경우 포함) — **누가 차단했는지는 밝히지 않는다.** */
       | 'BLOCKED'
-      | 'NO_REQUEST',
+      | 'NO_REQUEST'
+      /** 거절된 상대에게 24시간 안에 다시 요청(0195). */
+      | 'REAPPLY_COOLDOWN',
   ) {
     super(code);
     this.name = 'FriendError';
@@ -199,6 +202,21 @@ async function blockState(meId: string, otherId: string): Promise<{ byMe: boolea
 
 type FriendTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** 친구가 성립하면 두 사람 사이의 거절 기록(양방향)을 지운다 — 남겨 두면 나중에 끊고 다시 요청할 때 옛 거절이 막는다. */
+async function clearDeclines(tx: FriendTx, serverId: number, a: string, b: string): Promise<void> {
+  await tx
+    .delete(friendRequestDeclines)
+    .where(
+      and(
+        eq(friendRequestDeclines.serverId, serverId),
+        or(
+          and(eq(friendRequestDeclines.declinerId, a), eq(friendRequestDeclines.requesterId, b)),
+          and(eq(friendRequestDeclines.declinerId, b), eq(friendRequestDeclines.requesterId, a)),
+        ),
+      ),
+    );
+}
+
 /**
  * 링크가 accepted로 바뀌기 직전 **양쪽** 상한을 본다.
  *
@@ -295,6 +313,7 @@ export async function sendRequest(
       if (existing.requesterId === meId) throw new FriendError('ALREADY_REQUESTED');
       // 상대가 내게 보낸 요청 → 수락 성립. 링크가 accepted가 되므로 **양쪽** 상한을 본다.
       await assertBothUnderCap(tx, meId, targetId, serverId);
+      await clearDeclines(tx, serverId, meId, targetId);
       await tx
         .update(friendLinks)
         .set({ status: 'accepted', updatedAt: new Date() })
@@ -306,6 +325,21 @@ export async function sendRequest(
           ),
         );
       return { status: 'accepted' };
+    }
+    // 거절 쿨다운(0195) — 상대가 내 요청을 거절한 지 24시간 안이면 다시 보낼 수 없다(반복 요청으로 알림 점만 켜지던 문의).
+    const [dec] = await tx
+      .select({ at: friendRequestDeclines.declinedAt })
+      .from(friendRequestDeclines)
+      .where(
+        and(
+          eq(friendRequestDeclines.serverId, serverId),
+          eq(friendRequestDeclines.declinerId, targetId),
+          eq(friendRequestDeclines.requesterId, meId),
+        ),
+      )
+      .limit(1);
+    if (dec && Date.now() - dec.at.getTime() < FRIEND_REAPPLY_COOLDOWN_HOURS * 3_600_000) {
+      throw new FriendError('REAPPLY_COOLDOWN');
     }
     if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
     // 상대가 가득 찼으면 요청 자체를 막는다(2026-09-03) — 종전엔 수락 시점에만 봐서 가득 찬 유저의
@@ -373,6 +407,14 @@ export async function respondRequest(
       .for('update');
     if (!row) throw new FriendError('NO_REQUEST');
     if (action === 'decline') {
+      // 거절 기록(0195) — 같은 상대의 재요청을 24시간 막는다. 같은 쌍은 갱신(upsert).
+      await tx
+        .insert(friendRequestDeclines)
+        .values({ serverId, declinerId: meId, requesterId, declinedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [friendRequestDeclines.serverId, friendRequestDeclines.declinerId, friendRequestDeclines.requesterId],
+          set: { declinedAt: new Date() },
+        });
       await tx
         .delete(friendLinks)
         .where(
@@ -385,6 +427,7 @@ export async function respondRequest(
       return;
     }
     await assertBothUnderCap(tx, meId, requesterId, serverId);
+    await clearDeclines(tx, serverId, meId, requesterId);
     await tx
       .update(friendLinks)
       .set({ status: 'accepted', updatedAt: new Date() })

@@ -337,11 +337,11 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
  * 같고, 난이도 경계(권장 총합)는 상자 수로 결정되어 개설비 차등이 없어도 유지된다.
  */
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
-export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
+export const RAID_MAX_CONCURRENT_PER_USER = 5; // 호스팅+참여 합산 — 2026-09-07 3→5(일일 한도와 동일, 길드 자금 레이드 5연속 개설 건의)
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
 export const RAID_WINDOW_MS = 6 * HOUR; // 개설 후 기본 공격창(선택 미지정 시)
-// 개설 시 선택 가능한 공격창 길이(1/3/6시간). 서버가 이 목록만 허용(그 외는 기본값).
-export const RAID_DURATION_OPTIONS_MS = [1 * HOUR, 3 * HOUR, 6 * HOUR] as const;
+// 개설 시 선택 가능한 공격창 길이(1/3/6/8/10시간). 서버가 이 목록만 허용(그 외는 기본값).
+export const RAID_DURATION_OPTIONS_MS = [1 * HOUR, 3 * HOUR, 6 * HOUR, 8 * HOUR, 10 * HOUR] as const; // 2026-09-07 8·10h 추가(직장인: 점심 개설→퇴근 후 참여)
 export const RAID_BASE_ATTACKS = 10; // 참여자당 기본
 
 /**
@@ -985,3 +985,7 @@ export function titleMilestoneBoxes(milestone: number): number {
 export function titleNextMilestone(discovered: number): number {
   return (Math.floor(discovered / TITLE_MILESTONE_STEP) + 1) * TITLE_MILESTONE_STEP;
 }
+
+// ── 친구 (§SOCIAL) ──
+/** 친구 요청 거절 후 같은 상대에게 재요청까지 대기(시간) — 길드 가입 재신청(24h)과 동일 기준(2026-09-07 문의). */
+export const FRIEND_REAPPLY_COOLDOWN_HOURS = 24;

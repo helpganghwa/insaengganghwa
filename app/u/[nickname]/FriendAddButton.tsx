@@ -6,6 +6,7 @@ import { sendRequestAction } from '@/app/(game)/friends/actions';
 import type { FriendRelation } from '@/lib/game/friends';
 
 const ERR_MSG: Record<string, string> = {
+  REAPPLY_COOLDOWN: '거절된 요청은 24시간 뒤에 다시 보낼 수 있어요',
   RATE_LIMITED: '잠시 후 다시 시도해주세요',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30명)',
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',

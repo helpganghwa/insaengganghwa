@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -30,11 +30,14 @@ export default async function RaidInvitePage({
       tier: raids.tier,
       status: raids.status,
       expireAt: raids.expireAt,
+      hostShareCode: raids.hostShareCode,
     })
     .from(raids)
-    .where(eq(raids.shareCode, shareCode))
+    // 일반 공유 코드 또는 개설자 전용 코드(0195) — 전용 코드로 들어오면 수락 없이 참여(s=host).
+    .where(or(eq(raids.shareCode, shareCode), eq(raids.hostShareCode, shareCode)))
     .limit(1);
   if (!raid) notFound();
+  const viaHost = raid.hostShareCode != null && raid.hostShareCode === shareCode;
 
   // LCP — 보스 배경/스프라이트 preload.
   const bg = getBossBg(raid.bossCode);
@@ -61,6 +64,7 @@ export default async function RaidInvitePage({
   return (
     <RaidInviteLanding
       shareCode={shareCode}
+      viaHost={viaHost}
       raidId={raid.id.toString()}
       bossCode={raid.bossCode}
       tier={raidTierOf(raid.tier)}

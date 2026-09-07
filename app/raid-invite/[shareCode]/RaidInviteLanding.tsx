@@ -38,6 +38,7 @@ function useRemaining(expireAtIso: string): { over: boolean; text: string } {
 
 export function RaidInviteLanding({
   shareCode,
+  viaHost = false,
   raidId,
   bossCode,
   tier,
@@ -48,6 +49,8 @@ export function RaidInviteLanding({
   isParticipant,
 }: {
   shareCode: string;
+  /** 개설자 전용 링크로 진입(0195) — 상세에서 수락 없이 즉시 참여. */
+  viaHost?: boolean;
   raidId: string;
   bossCode: RaidBoss;
   tier: RaidTier;
@@ -69,7 +72,7 @@ export function RaidInviteLanding({
   // 관전 진입 — 참가/요청은 상세에서(진입만으로 차감·요청 없음). 호스트/기참가자는 바로 입장.
   const view = () => {
     haptic.success();
-    router.push(`/raid/${raidId}?c=${shareCode}&s=link`);
+    router.push(`/raid/${raidId}?c=${shareCode}&s=${viaHost ? 'host' : 'link'}`);
   };
 
   return (

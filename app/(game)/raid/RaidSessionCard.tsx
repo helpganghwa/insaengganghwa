@@ -44,6 +44,8 @@ export type RaidView = {
   status: 'active' | 'settled';
   expireAtIso: string;
   shareCode: string;
+  /** 개설자 전용 참여 코드(0195) — 개설자의 공유 링크에 쓰고, 그 링크로 온 관전자의 참여에 쓴다. 그 외 null. */
+  hostShareCode: string | null;
   isHost: boolean;
   /** 난이도(BALANCE §5.4) — 보상 내역·마일스톤 표시의 근거. */
   tier: RaidTier;
@@ -56,7 +58,7 @@ export type RaidView = {
   /** 비참가 관전 모드(2026-07-27 문의 #30) — 참가/요청 버튼 정보. 참가자는 null. */
   /** 참가 경로 — invite(0146)는 지목 초대로 승인 없이 즉시 참여한다. */
   join: {
-    scope: 'friend' | 'guild' | 'link' | 'invite';
+    scope: 'friend' | 'guild' | 'link' | 'invite' | 'host';
     mode: 'free' | 'approval';
     requested: boolean;
   } | null;
@@ -357,7 +359,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     if (expectFree) setOptJoined(true);
     else setRequestedLocal(true);
     void (async () => {
-      const r = await joinRaidAction(v.shareCode, v.join!.scope).catch(() => null);
+      // 전용 링크 참여(0195)는 전용 코드로 — 서버가 host_share_code를 대조해 수락 없이 참여시킨다.
+      const code = v.join!.scope === 'host' && v.hostShareCode ? v.hostShareCode : v.shareCode;
+      const r = await joinRaidAction(code, v.join!.scope).catch(() => null);
       joiningRef.current = false;
       if (!r || r.status === 'error') {
         // 롤백 — 관전 상태로 복귀.
@@ -610,7 +614,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const handleKakaoShare = () => {
     haptic.tap();
     const origin = window.location.origin;
-    const url = `${origin}/s/${v.shareCode}`;
+    // 개설자의 공유 링크는 전용 코드(0195) — 이 링크로 들어오면 비공개여도 수락 없이 참여한다(2026-09-07 문의).
+    const url = `${origin}/s/${v.isHost && v.hostShareCode ? v.hostShareCode : v.shareCode}`;
     const k = (
       window as unknown as {
         Kakao?: {

@@ -38,3 +38,18 @@ export const friendLinks = pgTable(
 );
 
 export type FriendLink = typeof friendLinks.$inferSelect;
+
+/**
+ * 친구 요청 거절 기록(0195) — 거절 후 FRIEND_REAPPLY_COOLDOWN_HOURS 동안 같은 상대(requester→decliner) 재요청 불가.
+ * 종전엔 거절 시 요청 행만 지워 즉시 재요청이 가능해 알림 점이 반복 점등됐다(2026-09-07 문의). 수락·친구 성립 시 삭제.
+ */
+export const friendRequestDeclines = pgTable(
+  'friend_request_declines',
+  {
+    serverId: smallint('server_id').notNull(),
+    declinerId: uuid('decliner_id').notNull(),
+    requesterId: uuid('requester_id').notNull(),
+    declinedAt: timestamp('declined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.serverId, t.declinerId, t.requesterId] })],
+);
