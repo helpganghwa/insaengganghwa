@@ -119,7 +119,7 @@ export function openRaid(input: {
   // 서버 권위 — 난이도도 허용 목록만(클라 문자열 신뢰 X).
   const tier = raidTierOf(input.tier);
   const rule = RAID_TIERS[tier];
-  // 서버 권위 — 클라가 보낸 지속시간은 허용 목록(1/3/6h)만 신뢰, 그 외는 기본값.
+  // 서버 권위 — 클라가 보낸 지속시간은 허용 목록(1/6/12h)만 신뢰, 그 외는 기본값.
   const durationMs = (RAID_DURATION_OPTIONS_MS as readonly number[]).includes(input.durationMs ?? -1)
     ? input.durationMs!
     : RAID_WINDOW_MS;
