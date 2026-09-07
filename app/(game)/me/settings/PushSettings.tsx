@@ -15,6 +15,8 @@ import {
   setPushEnhanceModeAction,
   unregisterPushSubscriptionAction,
 } from '@/lib/push/actions';
+import { isPushOptedOut } from '@/lib/push/client';
+import { nativePushRegister, nativePushStatus, nativePushUnregister } from '@/lib/push/native';
 
 /**
  * 설정 페이지의 푸시 토글 그룹.
@@ -64,6 +66,16 @@ export function PushSettings(props: {
   useEffect(() => {
     const support = checkPushSupport();
     setSupportKind(support.kind);
+    if (support.kind === 'native') {
+      // iOS 앱 — OS 권한 + 토큰 보유 + 이 기기에서 끄지 않았음 = 수신 중.
+      nativePushStatus()
+        .then((s) => {
+          setPermission(s.permission);
+          setHasSubscription(s.hasToken && !isPushOptedOut());
+        })
+        .finally(() => setSubChecked(true));
+      return;
+    }
     if (support.kind === 'supported') {
       setPermission(support.permission);
       // 현재 구독 여부 확인 — 끝나면 subChecked=true로 게이트 해제.
@@ -85,6 +97,17 @@ export function PushSettings(props: {
   }, []);
 
   async function enable() {
+    if (supportKind === 'native') {
+      const r = await nativePushRegister();
+      if (r === 'granted') {
+        setPushOptedOut(false);
+        setPermission('granted');
+        setHasSubscription(true);
+      } else if (r === 'denied') {
+        setPermission('denied');
+      }
+      return;
+    }
     const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapid) return;
     const r = await requestAndSubscribe(vapid);
@@ -101,6 +124,14 @@ export function PushSettings(props: {
 
   async function disable() {
     setPushOptedOut(true); // 자동 동기화가 다시 구독하지 않도록 먼저 기록
+    if (supportKind === 'native') {
+      try {
+        await nativePushUnregister();
+      } finally {
+        setHasSubscription(false);
+      }
+      return;
+    }
     try {
       const reg = await navigator.serviceWorker.getRegistration();
       const sub = await reg?.pushManager.getSubscription();
@@ -131,7 +162,7 @@ export function PushSettings(props: {
     });
   }
 
-  if (supportKind === null || (supportKind === 'supported' && !subChecked)) {
+  if (supportKind === null || ((supportKind === 'supported' || supportKind === 'native') && !subChecked)) {
     return <p className="px-3 py-2.5 text-[11px] text-zinc-500">불러오는 중…</p>;
   }
   if (supportKind === 'unsupported') {
@@ -173,8 +204,9 @@ export function PushSettings(props: {
     <div className="space-y-1">
       {permission === 'denied' ? (
         <p className="px-3 py-2.5 text-[11px] leading-relaxed text-amber-600">
-          브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 이 페이지에
-          들어와 주세요.
+          {supportKind === 'native'
+            ? 'iPhone 설정 > 알림 > 인생강화에서 알림을 허용한 뒤 다시 이 페이지에 들어와 주세요.'
+            : '브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 이 페이지에 들어와 주세요.'}
         </p>
       ) : (
         <Toggle

@@ -78,11 +78,13 @@
 - **어드민** — provider 뱃지 `App Store`, 환불 버튼 대신 "Apple 환불" 표시(`APPLE_ORDER`).
 - **테스트** `tests/payment/apple-pure.test.ts`(해독·대조·토큰·Sandbox 규칙·상품 매핑), `apple-complete.test.ts`(DB 통합: 지급·바인딩·already / 토큰 불일치 알림 / 환불·타상품 거부 / Sandbox 게이트 / TOKEN_USED / 환불 / revoked 동기화).
 
-### 3.4 APNs 푸시
-- **DB** `push_subscriptions`에 `kind`('webpush'|'apns', 기본 webpush)·`apns_token`(unique) — 또는 endpoint 컬럼에 `apns:<token>` 저장해 스키마 변경 최소화(선택).
-- **클라** Capacitor `PushNotifications` — 권한 요청 시점은 기존 웹푸시 프롬프트 규칙과 동일(첫 강화 완료 뒤 등), 토큰을 `registerApnsTokenAction`으로 저장. 알림 탭 → 딥링크 경로(`/raid/<id>` 등) 이동.
-- **서버** `lib/push/apns.ts` — Node `http2`로 `api.push.apple.com` 세션, 토큰 인증 JWT(ES256, 50분 캐시), payload `{aps:{alert:{title,body},sound:'default',badge?}, url}`. 410/`BadDeviceToken`·`Unregistered`는 구독 삭제(웹푸시 403/410과 같은 정리 규칙). `lib/push/send.ts` 팬아웃이 kind별로 분기 — 7종 푸시 호출부는 변경 없음.
-- 환경: Sandbox(`api.sandbox.push.apple.com`)는 TestFlight/개발 빌드용 — 토큰에 환경 표시를 저장해 라우팅.
+### 3.4 APNs 푸시 (구현 완료 2026-09-07, feat/appstore)
+- **저장** 스키마 변경 없음 — `push_subscriptions.endpoint`에 `apns:<sandbox|production>:<token>`(`lib/push/apns-endpoint.ts`, p256dh/auth는 자리표시자 'apns'). 유저별 조회·토글 게이팅·삭제·탈퇴 정리가 웹푸시와 같은 경로를 탄다.
+- **등록** `registerApnsTokenAction({ token, environment })`(`lib/push/actions.ts`) — hex 64자 이상 검증, endpoint 유니크 upsert. 해제는 기존 `unregisterPushSubscriptionAction({ endpoint })`.
+- **클라** `lib/push/native.ts` — 셸이 심는 `window.__ganghwaPush`(`getPermission`·`requestPermission`·`getToken`) 브리지. `checkPushSupport()`가 브리지를 보면 `{ kind: 'native' }`를 돌려주고, 설정 화면(`PushSettings`)의 켜기/끄기와 `PushAutoSync`(권한 있으면 로드 시 토큰 재동기화)가 그 분기를 탄다. 권한 요청 시점 규칙(첫 강화 완료 뒤 등)은 웹과 동일. 알림 탭 → 셸이 payload `url`로 WebView 이동.
+- **발송** `lib/push/apns.ts` — 토큰 인증 JWT(ES256, ieee-p1363, 50분 캐시) + Node `http2` 세션(환경별 1개, 요청 10초 타임아웃, 청크 150). 헤더 `apns-topic`(번들)·`apns-push-type: alert`·`apns-priority: 10`·`apns-expiration`(1h)·`apns-collapse-id`(ASCII tag만). 본문 `aps.alert{title,body}`·`sound`·`thread-id`(카테고리) + `url`·`tag`·`category`.
+- **분기** `send.ts dispatch`가 `apns:` 접두 구독을 골라 `sendApns`로 보내고 집계·죽은 구독 삭제를 웹푸시와 합친다. 7종 푸시 호출부는 변경 없음. 응답 규칙: 410·400 BadDeviceToken → 삭제 / 403·토픽 오류 → **발신 키 문제**로 실패만 집계(삭제 금지, `senderKeyMismatch`) / 429·5xx → 실패. 키 미설정이면 iOS 구독은 실패로만 세고 보존.
+- **테스트** `tests/push/apns.test.ts`(endpoint 왕복·JWT 서명 검증·캐시·본문/헤더·응답 분류·집계), `tests/push/send-split.test.ts`(분기·합산·미설정·발신 키 오류 전파).
 
 ### 3.5 Capacitor 프로젝트
 - 저장소 `mobile/ios/`(별도 패키지, Next 빌드와 분리). `capacitor.config.ts`: `appId 'app.ganghwa.game'`, `server.url`, `ios.contentInset`, 스플래시(기존 splash-*.png 재활용), 아이콘 1024 원본.

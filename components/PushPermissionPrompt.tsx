@@ -11,6 +11,7 @@ import {
   serializeSubscription,
 } from '@/lib/push/client';
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
+import { hasNativePushBridge, nativePushRegister, nativePushStatus, nativePushSyncIfGranted } from '@/lib/push/native';
 
 /**
  * 푸시 권한 요청 contextual prompt.
@@ -65,6 +66,17 @@ export function PushPermissionPrompt({
       setStep('ios-guide');
       return;
     }
+    if (support.kind === 'native') {
+      // iOS 앱 — OS 권한 상태를 브리지로 확인해 같은 분기를 탄다(granted면 조용히 등록, denied면 재요청 X).
+      void nativePushStatus().then((st) => {
+        if (st.permission === 'granted') {
+          void nativePushSyncIfGranted().then(() => onDone?.());
+        } else if (st.permission === 'default') {
+          setStep('pitch');
+        }
+      });
+      return;
+    }
     if (support.permission === 'granted') {
       // 이미 권한 있음 — 모달 없이 구독만 보장
       void subscribeAndRegister().then(() => onDone?.()).catch(() => {}); // best-effort — 다음 트리거에서 재시도
@@ -75,6 +87,7 @@ export function PushPermissionPrompt({
   }, [trigger, step, onDone]);
 
   async function subscribeAndRegister() {
+    if (hasNativePushBridge()) return (await nativePushRegister()) === 'granted';
     const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapid) {
       console.warn('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY missing');

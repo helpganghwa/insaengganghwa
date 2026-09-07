@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { pushSubscriptions } from '@/lib/db/schema/push';
 import { getSessionUserId } from '@/lib/auth/session';
+import { apnsEndpoint } from './apns-endpoint';
 
 /**
  * 클라이언트 측 PushManager.subscribe 결과를 백엔드에 등록.
@@ -41,6 +42,31 @@ export async function registerPushSubscriptionAction(input: {
         userAgent: input.userAgent ?? null,
         updatedAt: sql`now()`,
       },
+    });
+  return { ok: true };
+}
+
+/**
+ * iOS 앱(Capacitor) APNs 기기 토큰 등록 — docs/APPSTORE.md §3.4. 같은 push_subscriptions에
+ * endpoint `apns:<env>:<token>`으로 저장(p256dh/auth는 웹푸시 전용이라 자리표시자). 멱등 upsert.
+ */
+export async function registerApnsTokenAction(input: {
+  token: string;
+  environment: 'sandbox' | 'production';
+  userAgent?: string;
+}): Promise<{ ok: boolean }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { ok: false };
+  const token = (input.token ?? '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64,200}$/.test(token)) return { ok: false };
+  const env = input.environment === 'sandbox' ? 'sandbox' : 'production';
+  const endpoint = apnsEndpoint(env, token);
+  await db
+    .insert(pushSubscriptions)
+    .values({ userId, endpoint, p256dh: 'apns', auth: 'apns', userAgent: input.userAgent ?? null })
+    .onConflictDoUpdate({
+      target: pushSubscriptions.endpoint,
+      set: { userId, userAgent: input.userAgent ?? null, updatedAt: sql`now()` },
     });
   return { ok: true };
 }

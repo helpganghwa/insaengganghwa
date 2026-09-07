@@ -7,12 +7,16 @@
  * 즉시 호출 금지(첫 방문 권한 요청은 70%+ 거부).
  */
 
+import { hasNativePushBridge } from './native';
+
 const SW_PATH = '/sw.js';
 
 export type PushSupportStatus =
   | { kind: 'supported'; permission: NotificationPermission }
   | { kind: 'unsupported'; reason: 'no-window' | 'no-sw' | 'no-push' | 'no-notification' }
-  | { kind: 'ios-needs-install'; permission: 'default' };
+  | { kind: 'ios-needs-install'; permission: 'default' }
+  /** 앱스토어 앱(Capacitor) — 웹푸시 대신 네이티브 브리지(lib/push/native.ts)로 APNs 토큰 등록. */
+  | { kind: 'native' };
 
 /** 환경 감지 — iOS Safari는 PWA(standalone) 모드일 때만 푸시 가능. */
 /**
@@ -30,6 +34,7 @@ export function setPushOptedOut(v: boolean): void {
 
 export function checkPushSupport(): PushSupportStatus {
   if (typeof window === 'undefined') return { kind: 'unsupported', reason: 'no-window' };
+  if (hasNativePushBridge()) return { kind: 'native' };
   if (!('serviceWorker' in navigator)) return { kind: 'unsupported', reason: 'no-sw' };
   if (!('PushManager' in window)) return { kind: 'unsupported', reason: 'no-push' };
   if (!('Notification' in window)) return { kind: 'unsupported', reason: 'no-notification' };

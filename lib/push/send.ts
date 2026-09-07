@@ -1,6 +1,9 @@
 import 'server-only';
 
 import webpush from 'web-push';
+
+import { isApnsEndpoint } from './apns-endpoint';
+import { apnsConfigured, sendApns } from './apns';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 
@@ -253,8 +256,11 @@ export async function sendPushToSubscriptions(
   return dispatch(subs, payload);
 }
 
-async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResult> {
-  if (subs.length === 0) return { ok: 0, gone: 0, failed: 0 };
+async function dispatch(allSubs: SubRow[], payload: PushPayload): Promise<SendResult> {
+  if (allSubs.length === 0) return { ok: 0, gone: 0, failed: 0 };
+  // iOS 앱(APNs) 구독은 endpoint 접두 `apns:`로 구분해 별도 경로로(docs/APPSTORE.md §3.4). 나머지는 웹푸시.
+  const apnsSubs = allSubs.filter((s) => isApnsEndpoint(s.endpoint));
+  const subs = allSubs.filter((s) => !isApnsEndpoint(s.endpoint));
   const body = JSON.stringify({
     title: payload.title,
     body: payload.body,
@@ -319,10 +325,26 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
     if (mismatched.length > 0) console.warn('[push] VAPID 키 불일치 — 구독 삭제(재구독 필요)', mismatched.length);
   }
 
+  // APNs — 키 미설정이면 실패로만 집계(구독은 보존). 발신 키/토픽 오류도 삭제하지 않는다(웹푸시 보호 장치와 대칭).
+  let apnsSenderMismatch = false;
+  if (apnsSubs.length > 0) {
+    if (!apnsConfigured()) {
+      failed += apnsSubs.length;
+      console.warn('[push] APNs 구독', apnsSubs.length, '건 — APNS_KEY 미설정으로 미발송');
+    } else {
+      const a = await sendApns(apnsSubs.map((s) => ({ id: s.id, endpoint: s.endpoint })), payload);
+      ok += a.ok;
+      gone += a.gone;
+      failed += a.failed;
+      dead.push(...a.dead);
+      apnsSenderMismatch = a.senderKeyMismatch;
+    }
+  }
+
   // 만료/Gone 구독 cleanup
   if (dead.length > 0) {
     await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, dead));
   }
 
-  return senderKeyMismatch ? { ok, gone, failed, senderKeyMismatch: true } : { ok, gone, failed };
+  return senderKeyMismatch || apnsSenderMismatch ? { ok, gone, failed, senderKeyMismatch: true } : { ok, gone, failed };
 }

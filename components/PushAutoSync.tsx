@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
 import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
+import { nativePushSyncIfGranted } from '@/lib/push/native';
 
 /**
  * 권한이 이미 granted인 기기의 푸시 구독을 앱 로드 시 서버에 (재)동기화한다.
@@ -89,7 +90,6 @@ export function PushAutoSync() {
 
   useEffect(() => {
     const support = checkPushSupport();
-    if (support.kind !== 'supported' || support.permission !== 'granted') return;
     // 유저가 설정에서 '알림 받기'를 끈 기기 — 재구독 금지(끄기가 다음 세션에 되살아나던 버그, 문의 #160).
     if (isPushOptedOut()) return;
     try {
@@ -97,6 +97,19 @@ export function PushAutoSync() {
     } catch {
       /* storage 차단 환경 — 그냥 진행 */
     }
+    if (support.kind === 'native') {
+      // iOS 앱 — OS 권한이 이미 있으면 APNs 토큰을 서버에 멱등 재등록(토큰 교체·서버 유실 복구).
+      void nativePushSyncIfGranted().then((ok) => {
+        if (!ok) return;
+        try {
+          sessionStorage.setItem('push_synced', '1');
+        } catch {
+          /* noop */
+        }
+      });
+      return;
+    }
+    if (support.kind !== 'supported' || support.permission !== 'granted') return;
     const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapid) return;
 
