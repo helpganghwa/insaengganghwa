@@ -1,0 +1,46 @@
+{
+  "packageId": "app.ganghwa.game",
+  "host": "ganghwa.app",
+  "name": "인생강화",
+  "launcherName": "인생강화",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#151518",
+  "themeColorDark": "#151518",
+  "navigationColor": "#151518",
+  "navigationColorDark": "#151518",
+  "navigationDividerColor": "#151518",
+  "navigationDividerColorDark": "#151518",
+  "backgroundColor": "#151518",
+  "enableNotifications": true,
+  "startUrl": "/?src=twa",
+  "iconUrl": "https://ganghwa.app/icons/icon-512.png",
+  "maskableIconUrl": "https://ganghwa.app/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://ganghwa.app/manifest.webmanifest",
+  "fullScopeUrl": "https://ganghwa.app/",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}
