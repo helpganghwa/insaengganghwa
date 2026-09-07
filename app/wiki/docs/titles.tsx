@@ -1,3 +1,4 @@
+import { TITLE_DISCOVERY_DIAMOND, TITLE_MILESTONE_STEP } from '@/lib/game/balance';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { PENDING_CODES } from '@/lib/game/titles/pending';
 
@@ -15,6 +16,7 @@ export const meta: WikiDocMeta = {
     { id: 'state', label: '상태' },
     { id: 'kinds', label: '종류' },
     { id: 'rep', label: '대표 칭호' },
+    { id: 'reward', label: '발견 보상' },
   ],
 };
 
@@ -72,6 +74,17 @@ export default function Doc() {
         </LI>
       </UL>
 
+
+      <H2 id="reward">발견 보상</H2>
+      <UL>
+        <LI>
+          칭호를 하나 발견할 때마다 {fmtInt(TITLE_DISCOVERY_DIAMOND)} 다이아가 받을 보상으로 쌓인다.
+        </LI>
+        <LI>
+          발견한 칭호가 {fmtInt(TITLE_MILESTONE_STEP)}개, {fmtInt(TITLE_MILESTONE_STEP * 2)}개,{' '}
+          {fmtInt(TITLE_MILESTONE_STEP * 3)}개…에 이를 때마다 그 개수만큼 보급 상자를 받는다.
+        </LI>
+      </UL>
     </>
   );
 }

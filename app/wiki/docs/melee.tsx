@@ -5,7 +5,10 @@ import {
   MELEE_HP_MULT,
   MELEE_REPLAY_ROUNDS,
   MELEE_REWARD_TIERS,
+  MELEE_KILL_DIAMOND,
+  MELEE_DEFENSE_BOX,
 } from '@/lib/game/balance';
+import { TAX_MELEE_PRIZE_RATE } from '@/lib/game/guild/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
@@ -86,10 +89,20 @@ export default function Doc() {
         <LI>
           등수 구간에 따라 다이아와 <DocLink slug="supply">보급 상자</DocLink>, 랭킹 포인트를 받는다.
         </LI>
-        <LI>상자는 무기 · 방어구 · 장신구가 균등하게 지급된다.</LI>
+        <LI>상자는 무기 · 방어구 · 장신구에 되도록 균등하게 나뉘어 지급된다.</LI>
+        <LI>
+          공격·방어 보너스: 등수와 상관없이 공격 성공(내 공격으로 상대를 쓰러뜨림) 1회마다{' '}
+          {fmtInt(MELEE_KILL_DIAMOND)} 다이아, 방어 성공(공격을 받고도 버팀) 1회마다 보급 상자{' '}
+          {fmtInt(MELEE_DEFENSE_BOX)}개가 더해진다. 결과 우편의 다이아·상자에 합쳐져 들어오며, 내 횟수는
+          결과 화면의 내 전투에서 확인할 수 있다.
+        </LI>
         <LI>
           보상은 {fmtInt(REVEAL_KST_HOUR)}시 발표와 함께 우편으로 들어오며, 우편함에서 받아야
           지급된다.
+        </LI>
+        <LI>
+          상금 다이아의 {bpPct(TAX_MELEE_PRIZE_RATE * 10_000)}만큼이 내 거주 구역의{' '}
+          <DocLink slug="conquest" hash="tax">길드 세금</DocLink>으로 따로 쌓인다.
         </LI>
       </UL>
       <Tbl
@@ -100,6 +113,13 @@ export default function Doc() {
           fmtInt(t.boxes),
           t.points > 0 ? `+${fmtInt(t.points)}` : '—',
         ])}
+      />
+      <Tbl
+        head={['공격·방어 보너스', '다이아', '상자']}
+        rows={[
+          ['공격 성공 1회 (상대를 쓰러뜨림)', fmtInt(MELEE_KILL_DIAMOND), '—'],
+          ['방어 성공 1회 (공격받고 버팀)', '—', fmtInt(MELEE_DEFENSE_BOX)],
+        ]}
       />
       <Warn>
         다이아는 참가자 상위 {Math.round(MELEE_DIAMOND_PCT_CUTOFF * 100)}%까지만 지급된다 — 그

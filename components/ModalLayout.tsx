@@ -11,6 +11,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
  * 제목을 카드 밖에 두는 이유: 무엇에 대한 팝업인지가 먼저 읽히고, 카드 안에는 정보만 남는다.
  * 푸터를 카드 밖에 두는 이유: 컨텐츠가 길어져 스크롤이 생겨도 버튼이 늘 같은 자리에 있다.
  */
+// 제목에 text-balance를 쓰지 않는다(2026-09-04) — 단어 단위 일반 개행(줄 길이 균등화가 왼쪽 쏠림처럼 보임).
 export function ModalLayout({
   title,
   subtitle,
@@ -84,7 +85,7 @@ export function ModalLayout({
         <div ref={headRef} className="px-1 text-center">
           {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
           {title ? (
-            <h2 className={`text-balance text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
+            <h2 className={`text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
           ) : null}
           {subtitle ? (
             <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">{subtitle}</p>

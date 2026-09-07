@@ -1338,8 +1338,21 @@ export function WorldMapView({
                   세금은 어떻게 쌓이나요?
                 </summary>
                 <div className="mt-2 text-[10.5px] leading-relaxed text-zinc-500">
-                  거주 유저가 강화에 성공하면 <b className="font-bold text-zinc-700 dark:text-zinc-300">성공한 강화 단계의 1%</b>가
-                  세금(💎)으로 적립되고, 위 세율만큼 더 쌓이게 됩니다.
+                  거주 유저의 활동이 세금(💎)으로 적립되고, 위 세율만큼 더 쌓이게 됩니다.
+                  <dl className="mt-1.5 space-y-0.5">
+                    <div className="flex justify-between gap-2">
+                      <dt>강화 성공</dt>
+                      <dd className="font-bold text-zinc-700 dark:text-zinc-300">성공한 강화 단계의 1%</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>다이아 사용</dt>
+                      <dd className="font-bold text-zinc-700 dark:text-zinc-300">사용한 다이아의 1%</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt>대난투 상금</dt>
+                      <dd className="font-bold text-zinc-700 dark:text-zinc-300">상금의 10%</dd>
+                    </div>
+                  </dl>
                   <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-[10px] dark:border-zinc-800 dark:bg-zinc-900">
                     <div className="flex justify-between py-0.5">
                       <span>예) +10,000 강화 성공</span>

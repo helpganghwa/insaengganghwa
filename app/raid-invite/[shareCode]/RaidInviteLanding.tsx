@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+import { TierChip } from '@/app/(game)/raid/TierChip';
 import { RAID_BOSSES, type RaidBoss } from '@/lib/game/raid/bosses';
-import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
+import { RAID_MAX_PARTICIPANTS, type RaidTier } from '@/lib/game/balance';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -37,8 +38,10 @@ function useRemaining(expireAtIso: string): { over: boolean; text: string } {
 
 export function RaidInviteLanding({
   shareCode,
+  viaHost = false,
   raidId,
   bossCode,
+  tier,
   status,
   expireAtIso,
   participantCount,
@@ -46,8 +49,11 @@ export function RaidInviteLanding({
   isParticipant,
 }: {
   shareCode: string;
+  /** 개설자 전용 링크로 진입(0195) — 상세에서 수락 없이 즉시 참여. */
+  viaHost?: boolean;
   raidId: string;
   bossCode: RaidBoss;
+  tier: RaidTier;
   status: 'active' | 'settled';
   expireAtIso: string;
   participantCount: number;
@@ -66,7 +72,7 @@ export function RaidInviteLanding({
   // 관전 진입 — 참가/요청은 상세에서(진입만으로 차감·요청 없음). 호스트/기참가자는 바로 입장.
   const view = () => {
     haptic.success();
-    router.push(`/raid/${raidId}?c=${shareCode}&s=link`);
+    router.push(`/raid/${raidId}?c=${shareCode}&s=${viaHost ? 'host' : 'link'}`);
   };
 
   return (
@@ -94,7 +100,10 @@ export function RaidInviteLanding({
       {/* 이름 + 상태 */}
       <div className="text-center">
         <p className="text-[11px] font-bold tracking-wide text-red-400">⚔️ 레이드 초대</p>
-        <h1 className="mt-0.5 text-xl font-extrabold text-white">{boss.name}</h1>
+        <h1 className="mt-0.5 text-xl font-extrabold text-white">
+          <TierChip tier={tier} className="mr-1.5 text-[10px]" />
+          {boss.name}
+        </h1>
         <div className="mt-1.5 text-[12px] text-zinc-400">
           {ended ? (
             <span className="font-bold text-zinc-500">종료된 레이드입니다</span>

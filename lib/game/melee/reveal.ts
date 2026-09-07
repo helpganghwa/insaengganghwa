@@ -8,6 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { accrueMeleePrizeTax } from '@/lib/game/guild/tax';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { meleePointsForRank } from '@/lib/game/balance';
@@ -102,6 +103,7 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
         : '🏆우승 챔피언';
 
     // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
+    // 공격·방어 보너스(0192)는 payload 총액에 합산만 — 본문에 내역을 적지 않는다(우편은 원래 보상 설명이 없음, 사용자 결정 09-04).
     // 날짜 라벨 — 백스톱으로 늦게 발표된 과거 배틀은 '오늘'이 오표기라 전투일을 명시.
     const dayLabel = battleDate === kstDateString() ? '오늘 대난투' : `${battleDate} 대난투`;
     const inserted = (await tx.execute(sql`
@@ -123,6 +125,10 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
 
   if (!result) return null;
   const { battleId, podium, podiumStr } = result;
+
+  // 대난투 상금 세금(GUILD §5.5 ③) — 참가자 상금의 10%를 거주 구역에 적립(유저 상금은 그대로).
+  // reveal 전이가 1회라 정확히 1회 실행. 실패는 흡수(발표·우편을 막지 않는다 — 세금 1회 손실 허용).
+  await accrueMeleePrizeTax(serverId, battleId).catch((e) => console.warn('[melee.reveal] prize tax failed', e));
 
   // 리더보드 증분(v2, 2026-07-22 개편) — 참가자 전원 포인트 적립(구간별 가변).
   // reveal이 조건부 전이로 정확히 1회라 증분이 정확. 놓친 적립은 시간별 스냅샷이 교정.

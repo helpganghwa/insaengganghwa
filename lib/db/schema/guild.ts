@@ -323,6 +323,8 @@ export const worldChronicle = pgTable(
     reviewNotes: jsonb('review_notes'),
     /** 그날 등장 길드의 표시값 스냅샷(0141). ChronicleGuildRef[]. 0141 이전 행은 null. */
     guildRefs: jsonb('guild_refs').$type<ChronicleGuildRef[]>(),
+    /** 헤드라인 후보(0193) — 생성 시 문형이 다른 3~5개(첫 항목=채택안). 검수 화면에서 골라 쓴다. 이전 행은 null. */
+    headlineCandidates: jsonb('headline_candidates').$type<string[]>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],

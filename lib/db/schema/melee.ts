@@ -131,6 +131,9 @@ export const meleeParticipants = pgTable(
     /** 나를 탈락시킨 유저(마지막 일격). null = 챔피언(1위). */
     killerUserId: uuid('killer_user_id'),
     rewardDiamond: bigint('reward_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 공격·방어 보너스(0192) — 처치 다이아·방어 상자, reward_diamond/reward_boxes에 합산된 내역. 이전 배틀은 0. */
+    rewardBonusDiamond: integer('reward_bonus_diamond').notNull().default(0),
+    rewardBonusBoxes: integer('reward_bonus_boxes').notNull().default(0),
     rewardBoxes: jsonb('reward_boxes')
       .$type<{ weapon: number; armor: number; accessory: number }>()
       .notNull(),

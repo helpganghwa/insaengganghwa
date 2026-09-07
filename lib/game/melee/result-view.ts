@@ -151,6 +151,8 @@ export async function buildMeleeResultView(
       .select({
         rank: meleeParticipants.finalRank,
         diamond: meleeParticipants.rewardDiamond,
+        bonusDiamond: meleeParticipants.rewardBonusDiamond,
+        bonusBoxes: meleeParticipants.rewardBonusBoxes,
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
         cp: meleeParticipants.cpSnapshot,
@@ -185,6 +187,9 @@ export async function buildMeleeResultView(
       ? {
           rank: meRow.rank,
           diamond: Number(meRow.diamond),
+          // 공격·방어 보너스(0192) — diamond/boxes에 포함된 내역. 이전 배틀은 0.
+          bonusDiamond: Number(meRow.bonusDiamond ?? 0),
+          bonusBoxes: Number(meRow.bonusBoxes ?? 0),
           boxes: meRow.boxes,
           attackSuccess: Number(meRow.kills),
           // 방어 성공 = 피격 중 버텨낸 횟수 — 탈락자는 마지막 피격 1회가 탈락이므로 제외.

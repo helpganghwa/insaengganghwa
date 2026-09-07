@@ -2,7 +2,7 @@
 //   dry-run: bun run --conditions=react-server scripts/patron-backfill.ts
 //   실행   : bun run --conditions=react-server scripts/patron-backfill.ts --apply
 //   프로덕션: PATRON_TARGET=prod 를 앞에 붙인다(DATABASE_URL을 PROD_DATABASE_URL로 교체). 기본은 스테이징.
-// 멱등(patron_milestone_grants PK) — 재실행해도 이미 지급된 구간은 건너뛴다. 배포 후·공지와 함께 실행(2026-08-27 예정).
+// 멱등(patron_milestone_grants PK) — 재실행해도 이미 지급된 구간은 건너뛴다. 코드 배포 후 실행(0190을 직전에 한 번 더 적용).
 import { config } from 'dotenv';
 config({ path: '.env.local' });
 if (process.env.PATRON_TARGET === 'prod') process.env.DATABASE_URL = process.env.PROD_DATABASE_URL!;

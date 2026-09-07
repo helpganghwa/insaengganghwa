@@ -112,6 +112,16 @@ export function taxPointsForEnhanceSuccess(reachedLevel: number): number {
 }
 /** 구역 포인트 → 💎 환산비(100pt = 1💎). 잔여 포인트는 carry. 시뮬 튜닝(과하면 상향). */
 export const TAX_POINTS_PER_DIAMOND = 100;
+/** 거주 구역 다이아 지출 세금 — 지출 1💎당 포인트(1pt = 지출의 1%). 지갑 차감 전부가 대상(결제·환불은 지출이 아님). 상한 없음. */
+export const TAX_POINTS_PER_DIAMOND_SPENT = 1;
+export function taxPointsForSpend(diamondsSpent: number): number {
+  return Math.max(0, Math.floor(diamondsSpent)) * TAX_POINTS_PER_DIAMOND_SPENT;
+}
+/** 대난투 상금 세금 — 참가자 상금(💎)의 10%가 거주 구역에 적립된다(유저가 받는 상금은 그대로). */
+export const TAX_MELEE_PRIZE_RATE = 0.1;
+export function taxPointsForMeleePrize(prizeDiamonds: number): number {
+  return Math.round(Math.max(0, prizeDiamonds) * TAX_MELEE_PRIZE_RATE * TAX_POINTS_PER_DIAMOND);
+}
 /** 집행관 수금 시 집행관 몫 비율(10%). 나머지 90%는 길드 풀로. */
 export const GUILD_EXECUTOR_TAX_CUT = 0.1;
 /** 집행관 세금 수금 쿨다운(분) — 3일(72시간). */

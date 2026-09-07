@@ -5,6 +5,7 @@ import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { raidTierOf } from '@/lib/game/balance';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -39,7 +40,10 @@ export default async function RaidDetail({
         serverId: raids.serverId,
         bossCode: raids.bossCode,
         phase1Hp: raids.phase1Hp,
+        tier: raids.tier,
+        openedAt: raids.openedAt,
         shareCode: raids.shareCode,
+        hostShareCode: raids.hostShareCode,
         expireAt: raids.expireAt,
         status: raids.status,
         hostUserId: raids.hostUserId,
@@ -129,12 +133,19 @@ export default async function RaidDetail({
   let join: RaidView['join'] = null;
   if (!me) {
     const sp = await searchParams;
-    if ((sp.c ?? '') !== raid.shareCode) redirect(`/raid-invite/${raid.shareCode}`);
+    // 개설자 전용 코드(0195)도 관전 게이트를 통과한다 — 그 코드로 온 참가는 수락 없이 즉시(scope 'host').
+    const viaHost = raid.hostShareCode != null && sp.c === raid.hostShareCode;
+    if ((sp.c ?? '') !== raid.shareCode && !viaHost) redirect(`/raid-invite/${raid.shareCode}`);
     const scope =
-      sp.s === 'friend' || sp.s === 'guild' || sp.s === 'invite' ? sp.s : 'link';
+      viaHost && sp.s === 'host'
+        ? ('host' as const)
+        : sp.s === 'friend' || sp.s === 'guild' || sp.s === 'invite'
+          ? sp.s
+          : 'link';
     // 버튼 라벨용 예상 모드 — 서버(joinOrRequestRaid)가 재검증하므로 어긋나도 요청으로 처리될 뿐.
     // invite(0146)는 초대 기록이 있으면 즉시 참여라 'free'로 본다(기록 없으면 서버가 요청 처리).
     const mode =
+      scope === 'host' ||
       scope === 'invite' ||
       (scope === 'friend' && raid.friendShare === 'free') ||
       (scope === 'guild' && raid.guildShare === 'free')
@@ -187,8 +198,12 @@ export default async function RaidDetail({
     status: raid.status,
     expireAtIso: raid.expireAt.toISOString(),
     shareCode: raid.shareCode,
+    // 전용 코드는 개설자(공유용)와 그 코드로 들어온 관전자(참여용)에게만 — 일반 링크 유입자에게 새지 않게.
+    hostShareCode: isHost || join?.scope === 'host' ? (raid.hostShareCode ?? null) : null,
     isHost,
     pendingRequests,
+    tier: raidTierOf(raid.tier),
+    openedAtIso: raid.openedAt.toISOString(),
     phase1Hp: Number(raid.phase1Hp),
     totalDamage: total,
     phasesCleared: raidPhasesCleared(Number(raid.phase1Hp), total),

@@ -64,6 +64,10 @@
       "schedule": "*/5 14 * * *"
     },
     {
+      "path": "/api/cron/conquest-reveal",
+      "schedule": "57,58 14 * * *"
+    },
+    {
       "path": "/api/cron/conquest-chronicle",
       "schedule": "0-55/5 15 * * *"
     },

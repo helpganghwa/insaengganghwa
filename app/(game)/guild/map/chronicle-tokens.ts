@@ -96,7 +96,8 @@ export function displayName(
  */
 export const PAST_CONTEXT_RE = /어제|전날|그저께|지난\s?(날|밤|점령전|전투|번)/;
 
-export function findPastContextZoneKeys(paras: ChronicleSegment[][]): Set<string> {
+/** 회고 문장 안의 구역 마커 키 전부(필터 없음) — 서버 검증(replayOrderIssues)이 '회고에만 등장한 구역'을 잡는 데 쓴다. */
+export function pastContextZoneKeysRaw(paras: ChronicleSegment[][]): Set<string> {
   const out = new Set<string>();
   const ENDS = ['. ', '! ', '? '];
   for (let p = 0; p < paras.length; p++) {
@@ -118,5 +119,28 @@ export function findPastContextZoneKeys(paras: ChronicleSegment[][]): Set<string
       off += seg.text.length;
     }
   }
+  return out;
+}
+
+/**
+ * 리플레이가 실제로 건너뛸 회고 마커 — 위 raw 집합에서 **그 구역이 다른(회고 아닌) 문장에도 마커로 등장하는 경우만**
+ * 남긴다(2026-09-05 사용자 결정). 회고 문장에만 나오는 구역은 건너뛰면 문단 끝까지 전투가 밀리므로, 다른 곳처럼
+ * 언급 즉시 재생하는 쪽이 낫다. 회고+본문 둘 다 있는 구역만 본문 쪽에서 재생한다(09-01 꼬임 방지 유지).
+ */
+export function findPastContextZoneKeys(paras: ChronicleSegment[][]): Set<string> {
+  const raw = pastContextZoneKeysRaw(paras);
+  if (raw.size === 0) return raw;
+  const hasNonPast = new Set<string>();
+  paras.forEach((segs, p) =>
+    segs.forEach((seg, s) => {
+      if (seg.kind === 'z' && !raw.has(`${p}:${s}`)) hasNonPast.add(seg.text);
+    }),
+  );
+  const out = new Set<string>();
+  paras.forEach((segs, p) =>
+    segs.forEach((seg, s) => {
+      if (seg.kind === 'z' && raw.has(`${p}:${s}`) && hasNonPast.has(seg.text)) out.add(`${p}:${s}`);
+    }),
+  );
   return out;
 }

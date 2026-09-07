@@ -25,10 +25,10 @@ import {
 } from '@/lib/game/raid';
 import { getInviteCandidates, inviteToRaid } from '@/lib/game/raid/invite';
 import { notifyRaidInvite } from '@/lib/game/raid/notify';
-import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
+import { RAID_TIERS, type RaidTier } from '@/lib/game/balance';
 
 const MSG: Record<string, string> = {
-  INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}).`,
+  INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_TIERS.easy.openCost.toLocaleString('ko-KR')}).`,
   DAILY_CAP_REACHED: '오늘 레이드 한도(5회)를 모두 사용했습니다.',
   CONCURRENT_LIMIT: '동시 진행 레이드는 3개까지입니다.',
   RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',
@@ -61,13 +61,14 @@ export async function openRaidAction(
   friendShare: RaidShareMode = 'off',
   guildShare: RaidShareMode = 'off',
   durationMs?: number,
+  tier: RaidTier = 'easy',
 ) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare, durationMs });
+    const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare, durationMs, tier });
     rev();
     return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
   } catch (e) {

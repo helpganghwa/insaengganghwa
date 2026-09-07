@@ -42,6 +42,7 @@ const ERR: Record<string, string> = {
   NOT_FOUND: '유저를 찾을 수 없습니다',
   ALREADY_FRIEND: '이미 친구입니다',
   ALREADY_REQUESTED: '이미 요청했습니다',
+  REAPPLY_COOLDOWN: '거절된 요청은 24시간 뒤에 다시 보낼 수 있어요',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
   BLOCKED_BY_ME: '차단한 유저예요. 차단을 해제한 뒤 요청할 수 있어요',

@@ -139,6 +139,7 @@ export function ChronicleEditor({
   serverId,
   kstDay,
   headline: initialHeadline,
+  headlineCandidates,
   todayText: initialText,
   replay,
   zones,
@@ -147,6 +148,8 @@ export function ChronicleEditor({
   serverId: number;
   kstDay: string;
   headline: string;
+  /** 생성 시 낸 헤드라인 후보(0193) — 누르면 입력칸에 채워진다. 이전 행은 []. */
+  headlineCandidates: string[];
   todayText: string;
   replay: ConquestReplay | null;
   zones: PreviewZone[];
@@ -191,6 +194,25 @@ export function ChronicleEditor({
         className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-bold"
         placeholder="헤드라인"
       />
+      {headlineCandidates.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {headlineCandidates.map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => setHeadline(h)}
+              className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                h === headline
+                  ? 'border-amber-500 bg-amber-500/15 text-amber-300'
+                  : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500'
+              }`}
+              title={h}
+            >
+              {h.replace(/\{[gzu]\|([^|}]+)(?:\|[^}]*)?\}/g, '$1')}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}

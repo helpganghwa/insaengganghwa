@@ -108,9 +108,10 @@ export function ModalShell({
         aria-label={label}
         aria-hidden={receded || undefined}
         tabIndex={-1}
-        // break-keep: 한국어 어절 중간 꺾임 방지 / [text-wrap:pretty]: 마지막 한 글자만
-        // 다음 줄로 넘어가는 고아 줄 방지(상속) / overflow-wrap: 긴 영문·URL은 강제 개행.
-        className={`break-keep outline-none transition-[transform,opacity,filter] duration-150 [overflow-wrap:anywhere] [text-wrap:pretty] ${
+        // break-keep: 한국어 어절 중간 꺾임 방지(단어 단위 개행) / overflow-wrap: 긴 영문·URL은 강제 개행.
+        // ⚠ text-wrap:pretty/balance 금지(2026-09-04) — iOS Safari는 pretty를 문단 전체 줄 길이 균등화로
+        // 구현해 줄이 오른쪽까지 차지 않고 왼쪽으로 쏠려 보였다(실기기 피드백). 평범한 단어 단위 개행만 쓴다.
+        className={`break-keep outline-none transition-[transform,opacity,filter] duration-150 [overflow-wrap:anywhere] ${
           receded ? 'pointer-events-none scale-[0.94] opacity-35 blur-[1px]' : ''
         } ${className}`}
         onClick={(e) => e.stopPropagation()}

@@ -11,6 +11,7 @@ import {
   RAID_DAILY_CAP,
   RAID_MAX_CONCURRENT_PER_USER,
   RAID_MAX_PARTICIPANTS,
+  raidTierOf,
 } from '@/lib/game/balance';
 import { getFriendIds } from '@/lib/game/friends';
 import { kstDateString } from '@/lib/kst';
@@ -32,6 +33,7 @@ export default async function RaidPage() {
       .select({
         id: raids.id,
         bossCode: raids.bossCode,
+        tier: raids.tier,
         expireAt: raids.expireAt,
         phasesCleared: raids.phasesCleared,
         hostUserId: raids.hostUserId,
@@ -65,6 +67,7 @@ export default async function RaidPage() {
       .select({
         raidId: raidRewards.raidId,
         bossCode: raids.bossCode,
+        tier: raids.tier,
         boxes: raidRewards.boxes,
         phasesCleared: raids.phasesCleared,
       })
@@ -121,6 +124,7 @@ export default async function RaidPage() {
       kind: 'active',
       raidId: r.id.toString(),
       bossCode: r.bossCode,
+      tier: raidTierOf(r.tier),
       expireAtIso: r.expireAt.toISOString(),
       phasesCleared: r.phasesCleared,
       isHost: r.hostUserId === userId,
@@ -137,6 +141,7 @@ export default async function RaidPage() {
       kind: 'pending_claim',
       raidId: p.raidId.toString(),
       bossCode: p.bossCode as RaidBoss,
+      tier: raidTierOf(p.tier),
       boxes: {
         weapon: p.boxes.weapon ?? 0,
         armor: p.boxes.armor ?? 0,
@@ -177,6 +182,7 @@ export default async function RaidPage() {
         .select({
           id: raids.id,
           bossCode: raids.bossCode,
+          tier: raids.tier,
           shareCode: raids.shareCode,
           expireAt: raids.expireAt,
           phasesCleared: raids.phasesCleared,
@@ -211,6 +217,7 @@ export default async function RaidPage() {
       .map((r) => ({
         raidId: r.id.toString(),
         bossCode: r.bossCode as RaidBoss,
+        tier: raidTierOf(r.tier),
         shareCode: r.shareCode,
         expireAtIso: r.expireAt.toISOString(),
         phasesCleared: r.phasesCleared,
@@ -227,7 +234,7 @@ export default async function RaidPage() {
   const guildRaids: FriendRaid[] = (
     (await withTimeout(
       db.execute(sql`
-        select r.id::text as id, r.boss_code as boss_code, r.share_code as share_code,
+        select r.id::text as id, r.boss_code as boss_code, r.tier as tier, r.share_code as share_code,
                r.expire_at as expire_at, r.phases_cleared as phases_cleared,
                coalesce(hc.nickname, '탈퇴한 대장장이') as host_nickname, r.guild_share as guild_share,
                (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
@@ -244,6 +251,7 @@ export default async function RaidPage() {
     ).catch(() => [])) as unknown as {
       id: string;
       boss_code: string;
+      tier: string;
       share_code: string;
       expire_at: Date;
       phases_cleared: number;
@@ -256,6 +264,7 @@ export default async function RaidPage() {
     .map((r) => ({
       raidId: r.id,
       bossCode: r.boss_code as RaidBoss,
+      tier: raidTierOf(r.tier),
       shareCode: r.share_code,
       expireAtIso: new Date(r.expire_at).toISOString(),
       phasesCleared: r.phases_cleared,
@@ -276,6 +285,7 @@ export default async function RaidPage() {
     raidId: i.raidId,
     shareCode: i.shareCode,
     bossCode: i.bossCode as RaidBoss,
+    tier: raidTierOf(i.tier),
     // 남은 시간은 서버 계산값(remainMs)을 절대시각으로 환산 — 카운트다운 컴포넌트가 ISO를 받는다.
     expireAtIso: new Date(Date.now() + i.remainMs).toISOString(),
     phasesCleared: 0,

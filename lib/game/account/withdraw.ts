@@ -128,6 +128,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`update melee_battles set champion_user_id = null where champion_user_id = ${uid}`);
 
     // 친구·공유·광고·푸시.
+    await tx.execute(sql`delete from friend_request_declines where decliner_id = ${uid} or requester_id = ${uid}`); // 0195 거절 기록
     await tx.execute(sql`delete from friend_links where requester_id = ${uid} or addressee_id = ${uid}`);
     // ⚠ referral_attributions는 **삭제하지 않는다**(2026-07-22). 이 행이 추천 보상 1인 1회의
     //   유일한 잠금장치라, 지우면 "탈퇴 → 다시 시작"만으로 추천인에게 보상이 무한 재지급된다
@@ -162,6 +163,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from challenge_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from challenge_events where user_id = ${uid}`);
     await tx.execute(sql`delete from user_titles where user_id = ${uid}`);
+    // 칭호 발견 보상 수령 기록(0191) — PK (user, server, count)가 잔존하면 재가입 유저의 50·100개 달성 상자가
+    // "이미 수령"으로 막힌다(challenge_claims와 같은 클래스). profiles 보존 앵커라 CASCADE가 안 탄다.
+    await tx.execute(sql`delete from title_milestone_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from announcement_poll_votes where user_id = ${uid}`);
 
     // 아바타(프로필 생성잡 → 활성프로필 SET NULL → 프로필) + 캐릭터(닉네임).

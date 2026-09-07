@@ -72,6 +72,8 @@ export type LedgerReason =
   | 'expedition_slot'
   /** 파견 시간 단축 — 강화 단축과 동일하게 **원장 미기록**(LEDGER_SKIP_REASONS). */
   | 'expedition_reduce'
+  /** 칭호 발견 보상 수령(0191) — 칭호 화면 [모두 받기], 발견 1개당 TITLE_DISCOVERY_DIAMOND. */
+  | 'title_discovery'
   /** 결제 환불에 따른 지급분 회수 — 잔액 부족 시 0까지만 회수하므로 실제 회수액만 기록. */
   | 'refund_clawback';
 

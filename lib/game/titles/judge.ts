@@ -1158,6 +1158,11 @@ export async function discoverTitles(
     `)) as unknown as { title_code: string }[];
     inserted.push(...rows.map((r) => r.title_code));
   }
+  // 판정 시각(0187) — /me 진입 스로틀(maybeJudgeTitlesForBadge)이 이 값을 본다. 실패해도 판정 결과엔 영향 없음.
+  await db
+    .execute(sql`update characters set titles_judged_at = now() where user_id=${userId}::uuid and server_id=${serverId}`)
+    .catch(() => undefined);
+
   // active 동봉 — 칭호 화면이 발견+활성을 한 번의 지표 수집으로 받게(중복 collectMetrics 제거).
   const result = { found: inserted, active };
   judgeCache.set(ck, { at: Date.now(), result });
@@ -1216,4 +1221,30 @@ async function activeConditionalsCached(userId: string, serverId: number): Promi
   activeCache.set(ck, { at: Date.now(), active });
   if (activeCache.size > 500) activeCache.clear(); // 러프한 상한 — 인스턴스 메모리 보호
   return active;
+}
+
+/** /me 진입 판정 스로틀 — 서버당 1시간. 이보다 잦으면 프로필 허브가 지표 수집(수십 쿼리)을 매번 떠안는다. */
+const BADGE_JUDGE_INTERVAL_MS = 60 * 60_000;
+
+/**
+ * 새 칭호 배지용 판정(2026-09-03, 0187) — 판정의 기본 시점은 칭호 페이지 진입이지만, 그러면 판정으로
+ * 발견한 칭호는 늘 "보는 순간 확인됨"이 되어 /me 메뉴 배지가 뜰 일이 없다. 프로필 진입 때도 이따금
+ * 판정해 배지가 먼저 보이게 한다. 1시간 스로틀(characters.titles_judged_at) + 타임아웃 + 실패 무시 —
+ * 배지는 부가 정보라 /me 렌더를 늦추거나 깨뜨리면 안 된다.
+ */
+export async function maybeJudgeTitlesForBadge(userId: string, serverId: number, timeoutMs = 2500): Promise<void> {
+  try {
+    const [row] = (await db.execute(sql`
+      select titles_judged_at from characters where user_id=${userId}::uuid and server_id=${serverId} limit 1
+    `)) as unknown as { titles_judged_at: Date | null }[];
+    if (!row) return; // 캐릭터 없음(서버 미가입) — 판정 대상 아님
+    const last = row.titles_judged_at ? new Date(row.titles_judged_at).getTime() : 0;
+    if (Date.now() - last < BADGE_JUDGE_INTERVAL_MS) return;
+    await Promise.race([
+      discoverTitles(userId, serverId),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch (e) {
+    console.warn('[titles] badge judge skipped', (e as Error).message);
+  }
 }

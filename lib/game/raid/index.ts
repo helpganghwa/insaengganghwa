@@ -16,4 +16,4 @@ export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';
 export { settleRaid } from './settle';
 export { claimRaidReward } from './claim';
 export type { ClaimRaidResult } from './claim';
-export { raidPhasesCleared, phaseDropOutcome, aggregatePhaseDrops } from './drops';
+export { raidPhasesCleared, phaseDropOutcome, milestoneDropOutcome, aggregatePhaseDrops } from './drops';

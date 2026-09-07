@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
+import { accrueSpendTax } from '@/lib/game/guild/tax';
 import { recordDiamondLedger, type LedgerDb, type LedgerReason } from '@/lib/game/ledger';
 
 /** db 또는 트랜잭션 핸들 — 원자성(다른 상태 변경과의 묶음)은 호출자 트랜잭션 책임. */
@@ -75,6 +76,9 @@ export async function walletTrySpend(
   // 차감에 성공했을 때만 기록 — 잔액 부족(false)은 실제 변동이 없었으므로 원장에 남기지 않는다.
   if (rows.length > 0) {
     await recordDiamondLedger(dbx, { userId, serverId, delta: -amt, reason, ref });
+    // 거주 구역 지출 세금(GUILD §5.5 ②) — 지출 1💎 = 1pt. 차감과 같은 dbx라 롤백 시 함께 사라진다.
+    // 사유를 가리지 않는다(지갑 차감 = 지출). 결제·환불·운영 지급은 차감이 아니라 자연히 제외.
+    await accrueSpendTax(dbx, userId, serverId, amt);
   }
   return rows.length > 0;
 }

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
@@ -21,7 +21,8 @@ import { PENDING_REFERRAL_COOKIE, PENDING_REFERRAL_AT_COOKIE, PENDING_REFERRAL_S
  *  - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 시도는 silent skip.
  */
 const SEVEN_DAYS = 7 * 24 * 60 * 60;
-const RAID_SHARE_RE = /^[a-z0-9]{10}$/;
+// 일반 공유 코드 10자 · 개설자 전용 코드 14자(0195) — 둘 다 레이드 랜딩으로.
+const RAID_SHARE_RE = /^(?:[a-z0-9]{10}|[a-z0-9]{14})$/;
 
 export async function GET(
   req: NextRequest,
@@ -29,7 +30,7 @@ export async function GET(
 ) {
   const { shareCode } = await params;
 
-  // 1) 레이드 shareCode 우선 매칭 — 영숫자 10자 + DB 조회. 못 찾으면 닉네임 분기로.
+  // 1) 레이드 shareCode 우선 매칭 — 영숫자 10자(일반) 또는 14자(개설자 전용) + DB 조회. 못 찾으면 닉네임 분기로.
   //    공개 풀페이지 초대 랜딩(/raid-invite/<shareCode>)으로 — 헤더/네비 없는 전체 화면.
   //    비로그인도 보스·남은시간 보고 로그인 후 참여 가능(랜딩에서 분기).
   if (RAID_SHARE_RE.test(shareCode)) {
@@ -37,7 +38,7 @@ export async function GET(
       const [r] = await db
         .select({ id: raids.id, serverId: raids.serverId })
         .from(raids)
-        .where(eq(raids.shareCode, shareCode))
+        .where(or(eq(raids.shareCode, shareCode), eq(raids.hostShareCode, shareCode)))
         .limit(1);
       if (r) {
         const res = NextResponse.redirect(

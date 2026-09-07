@@ -1,0 +1,100 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  RAID_TIERS,
+  RAID_TIER_CODES,
+  raidCumulativeHp,
+  raidMilestoneBoxes,
+  raidNextMilestone,
+  RAID_TIERS_SINCE_ISO,
+  raidMilestoneList,
+} from '@/lib/game/balance';
+import {
+  aggregatePhaseDrops,
+  milestoneDropOutcome,
+  phaseDropOutcome,
+  raidPhasesCleared,
+} from '@/lib/game/raid/drops';
+
+/** 레이드 난이도·마일스톤 드롭(BALANCE §5.4) — 순수 함수. 공시 수치와 1:1(§33). */
+describe('raid/drops — 난이도별 돌파 상자·마일스톤', () => {
+  const sum = (b: Record<string, number>) => Object.values(b).reduce((s, n) => s + n, 0);
+
+  it('쉬움 9페이즈 = 상자 9(마일스톤 전), 10페이즈 = 10 + 5', () => {
+    expect(sum(aggregatePhaseDrops(1n, 9, 'easy').boxes)).toBe(9);
+    const d = aggregatePhaseDrops(1n, 10, 'easy');
+    expect(d.phaseBoxes).toBe(10);
+    expect(d.milestoneBoxes).toBe(5);
+    expect(sum(d.boxes)).toBe(15);
+  });
+
+  it('보통 10페이즈 = 20 + 5, 25페이즈 = 50 + 215', () => {
+    expect(sum(aggregatePhaseDrops(2n, 10, 'normal').boxes)).toBe(25);
+    const d = aggregatePhaseDrops(2n, 25, 'normal');
+    expect(d.phaseBoxes).toBe(50);
+    expect(d.milestoneBoxes).toBe(5 + 30 + 60 + 120);
+  });
+
+  it('어려움 15페이즈 = 45 + 135, 25페이즈 = 75 + 675, 그 뒤 반복 없음', () => {
+    expect(sum(aggregatePhaseDrops(3n, 15, 'hard').boxes)).toBe(45 + 45 + 90);
+    expect(aggregatePhaseDrops(3n, 25, 'hard').milestoneBoxes).toBe(45 + 90 + 180 + 360);
+    expect(raidNextMilestone('hard', 15)).toEqual({ phase: 20, boxes: 180 });
+    expect(raidNextMilestone('hard', 25)).toBeNull();
+    expect(aggregatePhaseDrops(3n, 30, 'hard').milestoneBoxes).toBe(675);
+  });
+
+  it('마일스톤 합·다음 마일스톤 헬퍼가 표와 일치', () => {
+    for (const t of RAID_TIER_CODES) {
+      const total = Object.values(RAID_TIERS[t].milestones).reduce((s, n) => s + n, 0);
+      expect(raidMilestoneBoxes(t, 99)).toBe(total);
+      expect(raidMilestoneBoxes(t, 0)).toBe(0);
+    }
+    expect(raidNextMilestone('easy', 0)).toEqual({ phase: 10, boxes: 5 });
+    expect(raidNextMilestone('normal', 15)).toEqual({ phase: 20, boxes: 60 });
+  });
+
+  it('결정론 — 같은 (raidId, phase)는 항상 같은 슬롯, 페이즈/마일스톤 키 공간 분리', () => {
+    expect(phaseDropOutcome(77n, 3, 'hard')).toEqual(phaseDropOutcome(77n, 3, 'hard'));
+    expect(milestoneDropOutcome(77n, 10, 'normal')).toHaveLength(5);
+    expect(milestoneDropOutcome(77n, 11, 'normal')).toHaveLength(0);
+    // 쉬움의 페이즈 상자는 개편 전 해시 키(`raid:phase:0`)와 같아 기존 레이드 표시가 이어진다.
+    expect(phaseDropOutcome(77n, 1, 'easy')).toHaveLength(1);
+    expect(phaseDropOutcome(77n, 1, 'normal')[0]).toBe(phaseDropOutcome(77n, 1, 'easy')[0]);
+  });
+
+  it('개편 전(RAID_TIERS_SINCE_ISO 이전)에 소환된 레이드는 달성 보상 없이 페이즈 상자만', () => {
+    const before = new Date(Date.parse(RAID_TIERS_SINCE_ISO) - 60_000);
+    const after = new Date(Date.parse(RAID_TIERS_SINCE_ISO));
+    const legacy = aggregatePhaseDrops(77n, 12, 'easy', before);
+    const fresh = aggregatePhaseDrops(77n, 12, 'easy', after);
+    expect(legacy.milestoneBoxes).toBe(0);
+    expect(legacy.phaseBoxes).toBe(12);
+    expect(fresh.milestoneBoxes).toBe(5);
+    expect(raidMilestoneList('normal', before)).toEqual([]);
+    expect(raidMilestoneList('normal', after)).toHaveLength(4);
+    expect(raidMilestoneList('normal')).toHaveLength(4); // 소환 시트(레이드 없음)는 항상 표시
+    expect(raidNextMilestone('easy', 3, before)).toBeNull();
+  });
+
+  it('누적 HP 헬퍼는 돌파 판정과 정합(경계값)', () => {
+    const p1 = 10_000;
+    for (const n of [1, 5, 10, 25]) {
+      const cum = raidCumulativeHp(p1, n);
+      expect(raidPhasesCleared(p1, cum + 1)).toBe(n);
+      expect(raidPhasesCleared(p1, cum - 1)).toBe(n - 1);
+    }
+  });
+
+  it('데미지가 누적 HP에 정확히 걸리면 그 페이즈를 돌파한 것(log 추정 오차 보정)', () => {
+    // p1=2^13이면 n≤14에서 누적 HP가 정수라 정확히 맞출 수 있다.
+    const p1 = 8192;
+    for (const n of [1, 5, 10, 14]) {
+      const exact = p1 * (Math.pow(1.5, n) - 1) * 2;
+      expect(Number.isInteger(exact)).toBe(true);
+      expect(raidPhasesCleared(p1, exact)).toBe(n);
+      expect(raidPhasesCleared(p1, exact - 1)).toBe(n - 1);
+    }
+    // 어려움(×120)에서 log 추정이 1 많게 나오던 실제 사례 — 누적 25페이즈 HP보다 작은 데미지는 24.
+    expect(raidPhasesCleared(1_264_920, 63_878_885_757)).toBe(24);
+  });
+});

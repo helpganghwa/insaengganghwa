@@ -11,12 +11,14 @@ import { RaidError, activeRaidCount, bumpDailyOrThrow } from './open';
 import { joinRaid } from './join';
 
 export type JoinRequestState = 'joined' | 'requested';
-export type JoinScope = 'friend' | 'guild' | 'link' | 'invite';
+export type JoinScope = 'friend' | 'guild' | 'link' | 'invite' | 'host';
 
 /**
  * 목록/링크 참가 통합 — 경로(scope)와 라이드의 공개 모드에 따라 즉시 참가 or 요청.
  *  - invite: 지목 초대(0146) — 초대 기록이 있으면 **즉시 참여**(초대가 곧 허가). 없으면 link로 강등.
  *  - link: 항상 요청(수락 필요). 친구/길드: 해당 scope의 share 모드가 'free'면 즉시, 'approval'이면 요청.
+ *  - host(0195): 개설자 전용 코드(raids.host_share_code)로 들어온 참여 — 비공개여도 **즉시 참여**. 코드 자체가 개설자의
+ *    허가라 재수락은 모순(2026-09-07 문의: "비밀 링크에 문지기를 또 둔다"). 코드가 안 맞으면 link로 강등.
  */
 export async function joinOrRequestRaid(input: {
   userId: string;
@@ -24,6 +26,18 @@ export async function joinOrRequestRaid(input: {
   scope: JoinScope;
 }): Promise<{ raidId: bigint; state: JoinRequestState }> {
   const { userId, shareCode, scope } = input;
+  if (scope === 'host') {
+    const [r] = await db
+      .select({ shareCode: raids.shareCode })
+      .from(raids)
+      .where(eq(raids.hostShareCode, shareCode))
+      .limit(1);
+    if (r) {
+      const j = await joinRaid({ userId, shareCode: r.shareCode });
+      return { raidId: j.raidId, state: 'joined' };
+    }
+    return joinOrRequestRaid({ userId, shareCode, scope: 'link' });
+  }
   // 지목 초대(0146) — 초대 기록이 있으면 승인 없이 즉시 참여. 초대 자체가 개설자의 허가라
   // 재승인은 모순이다. 기록이 없으면(위조 링크) 일반 링크 경로로 강등해 요청으로 처리.
   if (scope === 'invite') {

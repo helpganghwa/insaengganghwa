@@ -8,8 +8,11 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { getActiveServerId } from '@/lib/game/servers';
 
+import type { SupplySlot } from '@/lib/game/balance';
+
 import { TITLE_BY_CODE } from './defs';
 import { representativeEligible } from './judge';
+import { claimTitleRewards } from './rewards';
 
 /**
  * 대표 칭호 장착/해제 — code=null이면 미장착.
@@ -91,4 +94,27 @@ export async function toggleFavoriteTitleAction(
     `);
     return { ok: true as const, favorited: !has };
   });
+}
+
+/**
+ * 칭호 발견 보상 수령(0191) — 칭호 화면 [모두 받기]. 미수령 발견 보상 전부 + 도달한 달성 상자를
+ * 한 트랜잭션으로 지갑에. 멱등이라 연타·재호출은 0으로 돌아온다.
+ */
+export async function claimTitleRewardsAction(): Promise<
+  | { ok: true; titles: number; diamond: number; boxes: Record<SupplySlot, number>; milestones: number[] }
+  | { ok: false; error: string }
+> {
+  const userId = await getSessionUserId();
+  if (!userId) return { ok: false, error: 'UNAUTHENTICATED' };
+  const serverId = await getActiveServerId();
+  try {
+    const r = await claimTitleRewards(userId, serverId);
+    // /me 배지(미수령 💎)·칭호 화면 갱신. 헤더 다이아는 액션 응답의 layout 재렌더가 실어 온다(§11.7).
+    revalidatePath('/me');
+    revalidatePath('/me/titles');
+    return { ok: true, ...r };
+  } catch (e) {
+    console.error('[titles.claimRewards]', e);
+    return { ok: false, error: 'UNKNOWN' };
+  }
 }

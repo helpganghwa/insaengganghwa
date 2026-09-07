@@ -262,6 +262,8 @@ export type ReceivedInvite = {
   raidId: string;
   shareCode: string;
   bossCode: string;
+  /** 난이도 text('easy'|'normal'|'hard') — 표시는 raidTierOf로 정규화. */
+  tier: string;
   inviterNickname: string;
   participants: number;
   /** 만료까지 남은 밀리초(서버 계산 — 클라 렌더 중 Date.now() 금지). */
@@ -285,6 +287,7 @@ export async function getReceivedInvites(
       raidId: raids.id,
       shareCode: raids.shareCode,
       bossCode: raids.bossCode,
+      tier: raids.tier,
       expireAt: raids.expireAt,
       inviterNickname: characters.nickname,
     })
@@ -334,6 +337,7 @@ export async function getReceivedInvites(
     raidId: r.raidId.toString(),
     shareCode: r.shareCode,
     bossCode: r.bossCode,
+    tier: r.tier,
     inviterNickname: r.inviterNickname,
     participants: countBy.get(r.raidId.toString()) ?? 0,
     remainMs: Math.max(0, r.expireAt.getTime() - now.getTime()),

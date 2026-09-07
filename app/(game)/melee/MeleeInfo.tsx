@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import Link from 'next/link';
 
-import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
+import { MELEE_DEFENSE_BOX, MELEE_KILL_DIAMOND, MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
@@ -67,6 +67,30 @@ export const MeleeInfo = memo(function MeleeInfo({
                   <span className="w-12 text-right font-mono text-violet-300">{t.points > 0 ? `+${t.points}` : '—'}</span>
                 </li>
               ))}
+            </ul>
+          </div>
+          {/* 공격·방어 보너스(0192, 2026-09-04) — 순위와 별개로 전원. 결과 우편 총액에 합산되며 본문 설명은 없으니 표가 유일한 안내. */}
+          <div className="isolate mx-4 mt-2 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
+              <span>공격·방어 보너스</span>
+              <span className="w-16 text-right text-sm">💎</span>
+              <span className="w-12 text-right text-sm">📦</span>
+            </div>
+            <ul>
+              <li className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900/60 px-3 py-2.5 text-[12px]">
+                <span className="font-bold text-white">
+                  공격 성공 1회 <span className="text-[10px] font-medium text-zinc-500">상대를 쓰러뜨림</span>
+                </span>
+                <span className="w-16 text-right font-mono text-sky-300">{MELEE_KILL_DIAMOND}</span>
+                <span className="w-12 text-right font-mono text-zinc-600">—</span>
+              </li>
+              <li className="grid grid-cols-[1fr_auto_auto] items-center gap-2 px-3 py-2.5 text-[12px]">
+                <span className="font-bold text-white">
+                  방어 성공 1회 <span className="text-[10px] font-medium text-zinc-500">공격받고 버팀</span>
+                </span>
+                <span className="w-16 text-right font-mono text-zinc-600">—</span>
+                <span className="w-12 text-right font-mono text-amber-300">{MELEE_DEFENSE_BOX}</span>
+              </li>
             </ul>
           </div>
           {/* 다이아 상위 50% 컷오프(MELEE_DIAMOND_PCT_CUTOFF) 각주는 사용자 결정으로 미표시
