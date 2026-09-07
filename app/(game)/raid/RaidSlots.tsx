@@ -85,7 +85,7 @@ const SHARE_ACTIVE: Record<ShareMode, string> = {
   approval: 'bg-amber-500 text-white',
 };
 
-// 공격창 길이 선택(1/3/6/10시간) — 공개 범위와 동일한 세그먼트 UI. 활성=amber 단색.
+// 공격창 길이 선택(1/6/12시간) — 공개 범위와 동일한 세그먼트 UI. 활성=amber 단색.
 const HOUR_MS = 3_600_000;
 const DURATION_OPTS = RAID_DURATION_OPTIONS_MS.map((ms) => ({ v: ms, label: `${ms / HOUR_MS}시간` }));
 

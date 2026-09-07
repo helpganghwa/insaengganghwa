@@ -110,7 +110,7 @@ export function openRaid(input: {
   bossCode: RaidBoss;
   friendShare?: RaidShareMode;
   guildShare?: RaidShareMode;
-  /** 공격창 길이(ms) — 개설자가 선택(1/3/6/10시간). 목록 밖 값은 기본 6시간으로 강제. */
+  /** 공격창 길이(ms) — 개설자가 선택(1/6/12시간). 목록 밖 값은 기본 6시간으로 강제. */
   durationMs?: number;
   /** 난이도(BALANCE §5.4) — 개설비·HP 배수·상자·마일스톤. 알 수 없는 값은 쉬움. */
   tier?: RaidTier;
