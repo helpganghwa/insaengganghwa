@@ -85,7 +85,7 @@ export async function revokeMileageForOrder(
   return { credited, taken };
 }
 
-/** 상점 포인트 탭 — 잔액 2종 + 최근 적립 3건씩. 대난투는 활성 서버 기준. */
+/** 상점 포인트 탭 — 잔액 2종 + 최근 적립/사용 10건씩(ⓘ 팝업 목록). 대난투는 활성 서버 기준. */
 export async function getPointsOverview(userId: string, serverId: number): Promise<PointsOverview> {
   const [bal] = (await db.execute(sql`
     select coalesce((select melee_points from characters where user_id = ${userId}::uuid and server_id = ${serverId}), 0)::text as mp,
@@ -94,11 +94,11 @@ export async function getPointsOverview(userId: string, serverId: number): Promi
   const rows = (await db.execute(sql`
     (select id::text as id, kind, to_char(created_at at time zone 'Asia/Seoul', 'FMMM/FMDD') as date, note, delta::text as delta
        from point_ledger where user_id = ${userId}::uuid and kind = 'melee' and server_id = ${serverId}
-       order by created_at desc, id desc limit 3)
+       order by created_at desc, id desc limit 10)
     union all
     (select id::text, kind, to_char(created_at at time zone 'Asia/Seoul', 'FMMM/FMDD'), note, delta::text
        from point_ledger where user_id = ${userId}::uuid and kind = 'mileage'
-       order by created_at desc, id desc limit 3)
+       order by created_at desc, id desc limit 10)
   `)) as unknown as { id: string; kind: 'melee' | 'mileage'; date: string; note: string; delta: string }[];
   const toEntry = (r: (typeof rows)[number]): PointEntry => ({ id: r.id, date: r.date, note: r.note, delta: Number(r.delta) });
   return {

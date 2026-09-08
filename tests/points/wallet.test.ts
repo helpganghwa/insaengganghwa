@@ -69,13 +69,14 @@ describe.skipIf(skip)('포인트 지갑 — DB 통합', () => {
     expect(row?.note.startsWith('환불 회수')).toBe(true);
   });
 
-  it('개요: 잔액과 최근 적립 3건(최신순)', async () => {
+  it('개요: 잔액과 최근 적립/사용 목록(최신순, 최대 10건)', async () => {
     for (let i = 1; i <= 4; i++) {
       await creditMeleePoints(testDb, { userId: TEST_USER_ID, serverId: SERVER_ID, battleId: `${TAG}_b${i}`, points: i, note: `대난투 ${i}위`, at: new Date(Date.now() - (5 - i) * 60_000) });
     }
     const o = await getPointsOverview(TEST_USER_ID, SERVER_ID);
     expect(o.melee.balance - base.mp).toBe(10);
-    expect(o.melee.recent).toHaveLength(3);
+    expect(o.melee.recent.length).toBeGreaterThanOrEqual(4);
+    expect(o.melee.recent.length).toBeLessThanOrEqual(10);
     expect(o.melee.recent[0]!.note).toBe('대난투 4위');
     expect(o.melee.recent[0]!.delta).toBe(4);
     expect(o.melee.recent[0]!.date).toMatch(/^\d{1,2}\/\d{1,2}$/);

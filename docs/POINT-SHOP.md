@@ -23,14 +23,14 @@
 
 ## 3. 코드
 
-- `lib/game/points/wallet.ts` — `creditMeleePoints`(tx, 멱등) · `creditMileageForOrder` · `revokeMileageForOrder` · `getPointsOverview`(잔액 2종 + 최근 3건씩).
+- `lib/game/points/wallet.ts` — `creditMeleePoints`(tx, 멱등) · `creditMileageForOrder` · `revokeMileageForOrder` · `getPointsOverview`(잔액 2종 + 최근 10건씩).
 - 훅: `lib/game/melee/reveal.ts`(리더보드 증분 뒤, 별도 tx, 실패 흡수) · `lib/payment/purchase.ts`(월누적 upsert 직후 — 잠금 순서 iap_orders → monthly → **profiles** → battlepass → characters) · `lib/payment/refund.ts`(같은 자리에서 회수) · `lib/game/account/withdraw.ts`.
 - 순수: `lib/game/points/types.ts`(타입·**안내 문구 정본** POINTS_COPY) · `lib/game/balance.ts`(`MILEAGE_KRW_PER_POINT`, `mileageForKrw`).
 
 ## 4. 화면 (상점 "포인트" 탭 — 시안 V5 + 최근 적립)
 
 - 상점 탭 5개: 일일·주간·월간·충전·**포인트**(딥링크 `?tab=points`). 헤더에는 두 재화를 표시하지 않는다(사용자 확정).
-- 탭 안: **두 칸 지갑 버튼**('대난투 포인트' / '마일리지' — 이모지 없음, 배경 Pixellab 장면: 대난투=트로피 홀 M4, 마일리지=상인 계산대 L3)이 곧 세그먼트. 선택 칸은 금색 테두리·원색, 비선택은 흑백. 각 칸 우상단 **ⓘ**를 누르면 팝업에 안내 문구(POINTS_COPY)와 "최근 적립/사용" 3건(날짜 · note · ±점수). 본문에는 버튼 두 개와 가운데 회색 "준비중" 글자만.
+- 탭 안: **두 칸 지갑 버튼**('대난투 포인트' / '마일리지' — 이모지 없음, 배경 Pixellab 장면: 대난투=트로피 홀 M4, 마일리지=상인 계산대 L3)이 곧 세그먼트. 선택 칸은 금색 테두리·원색, 비선택은 흑백. 각 칸 우상단 **ⓘ**를 누르면 팝업: 제목 아래 안내 문구(POINTS_COPY, subtitle), 콘텐츠는 "최근 적립/사용" 10건 목록만(날짜 · note · ±점수, 중첩 카드 없음). 본문에는 버튼 두 개와 가운데 회색 "준비중" 글자만.
 - 문구: 대난투 "매회 대난투 결과 순위에 따라 쌓입니다." / 마일리지 "결제 금액의 1%가 쌓입니다."
 - 상품 카드·격자·안내 카드는 쓰지 않는다(1차 검토에서 전부 리젝). 상품이 정해지면 "준비중" 자리를 카드 목록으로 교체.
 

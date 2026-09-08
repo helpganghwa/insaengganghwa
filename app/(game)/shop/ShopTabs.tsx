@@ -110,37 +110,35 @@ function PointsTab({ points }: { points: PointsOverview }) {
         <ModalShell onClose={() => setInfo(null)} label={`${label(info)} 안내`}>
           <ModalLayout
             title={label(info)}
+            subtitle={POINTS_COPY[info]}
             footer={
               <ModalButton tone="neutral" onClick={() => setInfo(null)}>
                 확인
               </ModalButton>
             }
           >
-            <p className="mb-3 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">{POINTS_COPY[info]}</p>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="mb-0.5 text-[10px] font-bold text-zinc-500">최근 적립/사용</div>
-              {points[info].recent.length === 0 ? (
-                <p className="py-2 text-[11px] text-zinc-500">아직 내역이 없습니다.</p>
-              ) : (
-                <ul>
-                  {points[info].recent.map((e) => (
-                    <li
-                      key={e.id}
-                      className="flex items-center justify-between gap-3 border-t border-zinc-100 py-1.5 text-[11px] first:border-t-0 dark:border-zinc-800"
-                    >
-                      <span className="min-w-0 truncate text-zinc-600 dark:text-zinc-300">
-                        <span className="mr-1.5 tabular-nums text-zinc-400">{e.date}</span>
-                        {e.note}
-                      </span>
-                      <b className={`shrink-0 tabular-nums ${e.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                        {e.delta >= 0 ? '+' : ''}
-                        {e.delta.toLocaleString('ko-KR')}
-                      </b>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {/* 콘텐츠 = 최근 적립/사용 10건 목록만(중첩 카드 없음 — 2026-09-08 사용자 지적). */}
+            {points[info].recent.length === 0 ? (
+              <p className="py-3 text-center text-[12px] text-zinc-500">아직 내역이 없습니다.</p>
+            ) : (
+              <ul>
+                {points[info].recent.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex items-center justify-between gap-3 border-t border-zinc-100 py-2 text-[12px] first:border-t-0 dark:border-zinc-800"
+                  >
+                    <span className="min-w-0 truncate text-zinc-600 dark:text-zinc-300">
+                      <span className="mr-1.5 tabular-nums text-zinc-400">{e.date}</span>
+                      {e.note}
+                    </span>
+                    <b className={`shrink-0 tabular-nums ${e.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                      {e.delta >= 0 ? '+' : ''}
+                      {e.delta.toLocaleString('ko-KR')}
+                    </b>
+                  </li>
+                ))}
+              </ul>
+            )}
           </ModalLayout>
         </ModalShell>
       ) : null}
