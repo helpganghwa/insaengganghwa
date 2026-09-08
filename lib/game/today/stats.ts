@@ -290,8 +290,10 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select count(*)::int from supply_open_logs where user_id=${userId}::uuid and server_id=${serverId}) boxes,
       (select coalesce(max(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_max,
       (select coalesce(sum(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_sum,
-      (select count(*)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) item_kinds,
-      (select count(*)::int from catalog_items) catalog_total,
+      -- 활성 카탈로그만(2026-09-08 문의: 교체돼 비활성인 무기 6종까지 세어 '/ 126종'으로 보였다 — 도감(me/page)과 같은 기준 120).
+      (select count(*)::int from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
+        where ue.user_id=${userId}::uuid and ue.server_id=${serverId}) item_kinds,
+      (select count(*)::int from catalog_items where active) catalog_total,
       (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
       (select points from melee) melee_points,
       (select ranking_points from melee) melee_ranking_points,
