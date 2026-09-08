@@ -153,6 +153,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              count(*) filter (where extract(isodow from created_at ${sql.raw(KST)})=5 and extract(hour from created_at ${sql.raw(KST)}) >= 20)::int as friday,
              count(*) filter (where extract(isodow from created_at ${sql.raw(KST)})=1 and result='down')::int as monday_down,
              count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) between 18 and 20)::int as evening,
+             count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) = 12)::int as lunch,
              -- 실대기 5분 이내(자연 단시간 + 보석 단축 포함) — cond "대기 5분 이내의 강화"와 1:1(감사 H3)
              count(*) filter (where elapsed_ms <= 300000)::int as five_min_cnt,
              -- 만기 후 방치 수령(0166 overdue_ms) — 컬럼 도입(2026-08-21) 이후 수령분만 집계(과거 행은 null)
@@ -493,6 +494,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     () => db.execute(sql`
       select extract(day from now()-gm.joined_at)::int as gdays,
              (gm.role='leader')::int as gleader,
+             (gm.role='vice')::int as gvice,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
              -- 길드 순위 = (level, xp) 사전식 — guilds.xp는 레벨업 시 임계 차감된 "잔여 XP"라
              -- 단독 비교 시 갓 레벨업한 상위 길드가 밀린다(2026-08-25 명가 오활성 버그).
@@ -637,9 +639,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     () => db.execute(sql`
       with sl as (select catalog_item_id cid, slot, (created_at ${sql.raw(KST)})::date dd,
                          lag(catalog_item_id) over (order by id) p1,
-                         lag(catalog_item_id, 2) over (order by id) p2
+                         lag(catalog_item_id, 2) over (order by id) p2,
+                         lag(catalog_item_id, 3) over (order by id) p3,
+                         lag(catalog_item_id, 4) over (order by id) p4
                   from supply_open_logs where user_id=${u} and server_id=${s})
       select (exists(select 1 from sl where cid=p1 and cid=p2))::int as same_pull_ok,
+             (exists(select 1 from sl where cid=p1 and cid=p2 and cid=p3 and cid=p4))::int as same_pull5_ok,
              (select count(*)::int from (select dd from sl group by dd
                 having count(distinct slot)=3) t) as meals_days
     `),
@@ -748,7 +753,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   return {
     enh_total: n(e.total), enh_ok: n(e.ok), enh_mega: n(e.mega), enh_down: n(e.down), down9: n(e.down9),
     cliff: n(e.cliff), crown: n(e.crown), owl: n(e.owl), early: n(e.early), weekend: n(e.weekend),
-    friday: n(e.friday), monday_down: n(e.monday_down), evening: n(e.evening),
+    friday: n(e.friday), monday_down: n(e.monday_down), evening: n(e.evening), lunch: n(e.lunch),
     five_min: n(e.five_min_cnt),
     win_run: n(st.win_run), down_run: n(st.down_run), hold_run: n(st.hold_run), mega_run: n(st.mega_run),
     max_lv: n(lv.max_lv), max_t: n(lv.max_t), codex: n(lv.codex), lv100_cnt: n(lv.lv100_cnt),
@@ -779,7 +784,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
-    gleader: n(gx.gleader), grank: n(gx.grank) || 9999, gsize: n(gx.gsize), glevel: n(gx.glevel),
+    gleader: n(gx.gleader), gvice: n(gx.gvice), grank: n(gx.grank) || 9999, gsize: n(gx.gsize), glevel: n(gx.glevel),
     chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
     ref_50: n(s2.ref_50), ref_100: n(s2.ref_100), ref_champ: n(s2.ref_champ),
     ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
@@ -791,7 +796,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     eq_max_cnt: n(e3.eq_max_cnt), seven_falls_ok: n(e3.seven_falls_ok), reinc_ok: n(e3.reinc_ok), phoenix_ok: n(e3.phoenix_ok),
     lightning_cnt: n(e3.lightning_cnt), beginner_ok: n(e3.beginner_ok),
     flawless_ok: n(fl.flawless_ok), pure_ok: n(fl.pure_ok),
-    same_pull_ok: n(s3.same_pull_ok), meals_days: n(s3.meals_days),
+    same_pull_ok: n(s3.same_pull_ok), same_pull5_ok: n(s3.same_pull5_ok), meals_days: n(s3.meals_days),
     melee_day_run: n(m3.melee_day_run), melee_win_run: n(m3.melee_win_run), sprint_run: n(m3.sprint_run),
     raid_day_run: n(c3.raid_day_run), fire_support_cnt: n(c3.fire_support_cnt), weekend_raid_cnt: n(c3.weekend_raid_cnt),
     fullcourse_ok: n(c3.fullcourse_ok), day100_ok: n(c3.day100_ok),
@@ -809,6 +814,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
 
 /** 지표 기반 규칙 — code → 술어. PENDING·아이템 발동·집행관은 여기 없음. */
 const RULES: Record<string, (m: Metrics) => boolean> = {
+  // 2026-09-08 추가(칭호 개편 2차 검토 결과 — 지표형 5종)
+  star_sea: (m) => m.t_total >= 10_000,
+  binge_500: (m) => m.supply_day >= 500,
+  fatalist: (m) => m.same_pull5_ok === 1,
+  lunchbox: (m) => m.lunch >= 100,
+  drifter_100: (m) => m.res_moves >= 100,
   // 파견(2026-08-30)
   exp_first: (m) => m.exp_claims >= 1,
   exp_50: (m) => m.exp_claims >= 50,
@@ -1068,6 +1079,9 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.dia_rank === 1 && mm.dia > 0) out.add('rich_apex');
   if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
   if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
+  // 1위 길드 임원(2026-09-08) — 명가 + 직책. 표시 재검증은 display.ts 같은 조건.
+  if (mm.in_guild === 1 && mm.grank === 1 && mm.gleader === 1) out.add('guild_top_leader');
+  if (mm.in_guild === 1 && mm.grank === 1 && mm.gvice === 1) out.add('guild_top_vice');
   if (mm.gleader === 1) out.add('guild_flag');
   // 길드 단위 조건부(2026-09-01, 9종 14코드) — 표시 재검증과 같은 사실표(guild-facts.ts).
   for (const c of await guildCollectiveCodes(userId, serverId)) out.add(c);
