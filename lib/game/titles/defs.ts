@@ -494,7 +494,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeydrip"
+   fx: "honeyflow"
   }
  },
  {
@@ -504,7 +504,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeydrip"
+   fx: "honeyflow"
   }
  },
  {
@@ -534,7 +534,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "초월",
   style: {
-   fx: "starlight"
+   fx: "stardrift"
   }
  },
  {
@@ -1671,7 +1671,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeydrip"
   }
  },
  {
@@ -4839,7 +4839,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeydrip"
   }
  },
  {
@@ -5352,7 +5352,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "초월",
   style: {
-   fx: "stardrift"
+   fx: "stardrift",
+   glow: true
   }
  },
  {
@@ -5362,7 +5363,8 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeyflow",
+   glow: true
   }
  },
  {

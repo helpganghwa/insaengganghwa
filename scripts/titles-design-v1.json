@@ -396,6 +396,12 @@
     },
     "guild_top_vice": {
       "fx": "breathgold"
+    },
+    "star_sea": {
+      "fx": "stardrift"
+    },
+    "binge_500": {
+      "fx": "honeyflow"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

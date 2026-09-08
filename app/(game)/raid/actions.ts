@@ -25,7 +25,7 @@ import {
 } from '@/lib/game/raid';
 import { getInviteCandidates, inviteToRaid } from '@/lib/game/raid/invite';
 import { notifyRaidInvite } from '@/lib/game/raid/notify';
-import { RAID_TIERS, type RaidTier } from '@/lib/game/balance';
+import { RAID_MAX_CONCURRENT_PER_USER, RAID_TIERS, type RaidTier } from '@/lib/game/balance';
 
 const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_TIERS.easy.openCost.toLocaleString('ko-KR')}).`,
