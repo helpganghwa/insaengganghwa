@@ -175,13 +175,27 @@ export async function collectAllZoneTax(
     try {
       collected.push(await runner.transaction((tx) => collectZoneTaxTx(tx, { userId: input.userId, zoneId })));
     } catch (e) {
+      // 구역 단위 커밋이라 여기서 던지면 앞서 걷힌 구역이 "실패"로 보고된다(검토 지적) — 어떤 오류든
+      // 건너뛰고 계속, 비정상 오류만 로그.
       if (e instanceof GuildError) failed.push({ zoneId, code: e.code });
-      else throw e;
+      else {
+        console.error('[guild.collectAll]', zoneId, e);
+        failed.push({ zoneId, code: 'UNKNOWN' });
+      }
     }
   }
   if (collected.length === 0) {
-    // 전부 거부 — 화면이 본 '수금 가능'이 그 사이 사라진 것. 첫 사유를 그대로 올린다.
-    throw new GuildError((failed[0]?.code as GuildError['code']) ?? 'NOTHING_TO_COLLECT');
+    // 전부 거부 — 화면이 본 '수금 가능'이 그 사이 사라진 것. 권한 문제가 아니면 쿨다운/없음으로 말한다
+    // (NOT_EXECUTOR는 집행관 문구라 대리 수금자에게 맞지 않는다).
+    const codes = new Set(failed.map((f) => f.code));
+    const code: GuildError['code'] = codes.has('NO_PERMISSION')
+      ? 'NO_PERMISSION'
+      : codes.has('NOT_IN_GUILD')
+        ? 'NOT_IN_GUILD'
+        : codes.has('COLLECT_COOLDOWN')
+          ? 'COLLECT_COOLDOWN'
+          : 'NOTHING_TO_COLLECT';
+    throw new GuildError(code);
   }
   const guildGain = collected.reduce((n, c) => n + c.guildGain, 0n);
   const executorGain = collected.reduce((n, c) => n + c.executorGain, 0n);
@@ -196,15 +210,18 @@ export async function listCollectableZoneIds(
   runner: { execute: Tx['execute'] } = db,
 ): Promise<number[]> {
   const cooldownMin = TAX_COLLECT_COOLDOWN_MIN;
+  // 앱 시계 하나로 판정(검토 지적) — 화면(getTaxCollectView)·구역 수금(collect)과 같은 기준. DB now()와의
+  // 미세 오차로 화면엔 '수금 가능'인데 목록에서 빠져 조용히 건너뛰는 일을 없앤다.
+  const at = new Date().toISOString(); // Date 인스턴스는 raw execute 파라미터로 못 넘긴다(postgres-js)
   const rows = (await runner.execute(sql`
     select z.id
       from zones z
      where z.server_id = ${serverId} and z.owner_guild_id = ${guildId}
        and z.executor_user_id is not null
        and z.tax_diamond > 0
-       and (z.captured_at is null or z.captured_at <= now() - (${cooldownMin} || ' minutes')::interval)
+       and (z.captured_at is null or z.captured_at <= ${at}::timestamptz - (${cooldownMin} || ' minutes')::interval)
        and (z.last_tax_collected_at is null
-            or z.last_tax_collected_at <= now() - (${cooldownMin} || ' minutes')::interval)
+            or z.last_tax_collected_at <= ${at}::timestamptz - (${cooldownMin} || ' minutes')::interval)
      order by z.id
   `)) as unknown as { id: number }[];
   return rows.map((r) => Number(r.id));

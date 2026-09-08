@@ -453,10 +453,6 @@ export async function collectAllTaxAction() {
   try {
     const serverId = await getActiveServerId();
     const r = await collectAllZoneTax({ userId: u, serverId });
-    revalidatePath('/guild');
-    revalidatePath('/guild/map');
-    revalidatePath('/guild/distribute');
-    revalidatePath('/guild/settings');
     return {
       status: 'success',
       zones: r.collected.length,
@@ -468,6 +464,12 @@ export async function collectAllTaxAction() {
     } as const;
   } catch (e) {
     return fail(e, 'collectAll');
+  } finally {
+    // 구역별 커밋이라 실패로 끝나도 일부는 걷혔을 수 있다 — 화면은 항상 재렌더(검토 지적).
+    revalidatePath('/guild');
+    revalidatePath('/guild/map');
+    revalidatePath('/guild/distribute');
+    revalidatePath('/guild/settings');
   }
 }
 

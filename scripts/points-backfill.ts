@@ -3,8 +3,16 @@
 //   실행: bun run scripts/points-backfill.ts [--apply] [DATABASE_URL]   (기본 dry-run·.env.local DATABASE_URL)
 //   ⚠ 프로덕션은 URL을 명시(PROD_DATABASE_URL 값)하고 0197 적용 뒤에만.
 import postgres from 'postgres';
-
 import { meleePointsForRank, mileageForKrw } from '../lib/game/balance';
+import { paidProduct } from '../lib/game/shop/catalog';
+
+/** 상품 표시명 — lib/payment/purchase.ts productDisplayName과 같은 규칙(그쪽은 server-only 체인이라 여기서 복제). */
+const BP_RE = /^bp_(enhance|transcend)_(\d+)$/;
+function displayName(code: string): string {
+  const m = BP_RE.exec(code);
+  if (m) return `성장 ${m[1] === 'enhance' ? '강화' : '초월'} 패스 ${Number(m[2]) + 1}구간`;
+  return paidProduct(code)?.orderName ?? code;
+}
 
 const apply = process.argv.includes('--apply');
 const url = process.argv.find((a) => a.startsWith('postgres')) ?? process.env.DATABASE_URL;
@@ -50,7 +58,7 @@ async function main() {
       ins += res.length;
     }
     for (const o of orderPts) {
-      const note = `${o.product_code} ₩${Number(o.amount_krw).toLocaleString('ko-KR')}`;
+      const note = `${displayName(o.product_code)} ₩${Number(o.amount_krw).toLocaleString('ko-KR')}`;
       const res = await tx`
         insert into point_ledger (user_id, server_id, kind, delta, note, ref, created_at)
         values (${o.user_id}::uuid, null, 'mileage', ${o.pts}, ${note}, ${'order:' + o.id}, ${o.paid_at})
@@ -64,9 +72,15 @@ async function main() {
         ins += r2.length;
       }
     }
-    // 잔액 = 원장 합(캐시 재계산 — 멱등)
-    await tx`update characters c set melee_points = coalesce((select sum(delta) from point_ledger l where l.user_id = c.user_id and l.server_id = c.server_id and l.kind = 'melee'), 0)`;
-    await tx`update profiles p set mileage = greatest(0, coalesce((select sum(delta) from point_ledger l where l.user_id = p.id and l.kind = 'mileage'), 0))`;
+    // 잔액 = 원장 합(캐시 재계산 — 멱등). 원장이 있는 행만, 값이 다를 때만(점검 반영: 전 행 UPDATE는 두 테이블을
+    // 통째로 잠그고, 문장 스냅샷 뒤에 커밋된 실시간 적립을 덮어쓴다). 대난투 발표(KST 10시) 직후는 피해서 실행.
+    await tx`set local lock_timeout = '5s'`;
+    await tx`update characters c set melee_points = s.total
+             from (select user_id, server_id, sum(delta) as total from point_ledger where kind = 'melee' group by 1, 2) s
+             where s.user_id = c.user_id and s.server_id = c.server_id and c.melee_points is distinct from s.total`;
+    await tx`update profiles p set mileage = greatest(0, s.total)
+             from (select user_id, sum(delta) as total from point_ledger where kind = 'mileage' group by 1) s
+             where s.user_id = p.id and p.mileage is distinct from greatest(0, s.total)`;
   });
   console.log(`[backfill] 원장 신규 ${ins}행, 잔액 재계산 완료`);
 }

@@ -231,7 +231,12 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
 
       // 마일리지 회수(docs/POINT-SHOP.md) — 이 주문이 적립한 점수를 되돌린다(부족분은 원장에 기록). 잠금 순서:
       // 월누적 다음, 재화 앞(completePurchase의 적립 위치와 동일).
-      await revokeMileageForOrder(tx, { userId: order.userId, orderId: order.id });
+      // best-effort 세이브포인트(점검 반영) — 회수 실패가 환불 처리를 막으면 안 된다(누락은 소급 스크립트가 짝을 맞춘다).
+      try {
+        await tx.transaction((sp) => revokeMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
+      } catch (e) {
+        console.error(`[points] 마일리지 회수 실패 user=${order.userId} order=${order.id}`, e);
+      }
 
       // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
       // ⚠ grant_skipped 주문(특가 중복·미성년 보류 — 지급 없이 paid)은 회수를 건너뛴다:

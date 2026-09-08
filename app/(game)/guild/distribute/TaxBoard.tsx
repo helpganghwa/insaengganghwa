@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { josa } from 'josa';
-import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
@@ -26,7 +27,6 @@ export type CollectView = {
   waitSum: string;
   noneCount: number;
   noneSum: string;
-  readyExecutors: number;
 };
 
 /** 요약 칸 = 상태 필터. 상태마다 고유색 — 켜진 칸은 테두리·배경까지, 꺼진 칸은 숫자만 물든다. */
@@ -139,8 +139,18 @@ type Target = { kind: 'all' } | { kind: 'zone'; zone: TaxCollectZone };
 function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [ask, setAsk] = useState<Target | null>(null);
+
+  // 상태(ready/wait/none)는 서버가 정한다 — 화면을 열어 둔 채 쿨다운이 끝나면 가장 이른 시각에 한 번
+  // 재렌더를 요청해 '수금' 버튼·모두 수금 개수를 맞춘다(§11.7 타이머 복귀 예외, 검토 지적).
+  useEffect(() => {
+    const next = view.zones.reduce<number | null>((m, z) => (z.readyAt != null && (m == null || z.readyAt < m) ? z.readyAt : m), null);
+    if (next == null) return;
+    const t = setTimeout(() => router.refresh(), Math.max(1_000, next - Date.now() + 1_500));
+    return () => clearTimeout(t);
+  }, [view.zones, router]);
   /** 상태 필터 — 하나만 켜진다(다시 누르면 해제 = 전체). */
   const [filter, setFilter] = useState<TaxZoneStatus | null>(null);
   const toggleFilter = (st: TaxZoneStatus) => setFilter((f) => (f === st ? null : st));
@@ -290,11 +300,18 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                   </button>
                 ) : z.readyAt != null ? (
                   <Ticker>
-                    {(now) => (
-                      <span className="font-mono text-[10.5px] tabular-nums text-zinc-500">
-                        {hms(z.readyAt! - now)}
-                      </span>
-                    )}
+                    {(now) =>
+                      // 쿨다운이 끝났는데 아직 재렌더 전 — 0:00:00 대신 상태 문구(집행관 없으면 수금 불가).
+                      now >= z.readyAt! ? (
+                        z.status === 'none' ? (
+                          <span className="text-[10.5px] font-bold text-red-500/90">수금 불가</span>
+                        ) : (
+                          <span className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">지금 가능</span>
+                        )
+                      ) : (
+                        <span className="font-mono text-[10.5px] tabular-nums text-zinc-500">{hms(z.readyAt! - now)}</span>
+                      )
+                    }
                   </Ticker>
                 ) : z.status === 'none' ? (
                   <span className="text-[10.5px] font-bold text-red-500/90">수금 불가</span>

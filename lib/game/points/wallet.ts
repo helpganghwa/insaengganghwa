@@ -12,6 +12,7 @@ import type { PointEntry, PointsOverview } from './types';
  * 잔액 컬럼은 캐시. 모든 적립·회수는 (kind, ref) 멱등 키로 한 번만 반영된다.
  * 호출부 트랜잭션의 잠금 순서: iap_orders → monthly_purchase_limits → **profiles(mileage)** → battlepass → characters …
  */
+/** ⚠ 원장 INSERT와 캐시 UPDATE 두 문장이라 **트랜잭션(또는 세이브포인트)** 안에서만 부를 것 — 그 사이 실패하면 멱등 키가 남아 재시도해도 캐시가 안 맞는다(점검 반영). */
 type Dbx = Pick<typeof db, 'execute'>;
 
 /** 대난투 발표 — 순위 포인트와 같은 수치를 잔액에 더한다(감쇠 없음). 같은 (battle, user)는 한 번만. */
