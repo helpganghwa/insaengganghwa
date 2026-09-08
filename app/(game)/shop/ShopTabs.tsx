@@ -52,72 +52,98 @@ const TABS: { key: Tab; label: string; free: FreeSlot | null }[] = [
  */
 function PointsTab({ points }: { points: PointsOverview }) {
   const [kind, setKind] = useState<PointKind>('melee');
-  const cur = points[kind];
+  // 안내 팝업(2026-09-08 사용자 확정) — 적립 규칙 문구와 최근 적립/사용 내역은 본문에 두지 않고 ⓘ로 연다.
+  const [info, setInfo] = useState<PointKind | null>(null);
+  const label = (k: PointKind) => (k === 'melee' ? '대난투 포인트' : '마일리지');
   return (
     <div>
       <div className="mb-2.5 flex gap-2">
         {(['melee', 'mileage'] as const).map((k) => {
           const on = k === kind;
           return (
-            // 배경은 상점 배너와 같은 픽셀 장면(Pixellab, 2026-09-08): 대난투=경기장, 마일리지=금고 회계실.
+            // 배경은 상점 배너와 같은 픽셀 장면(Pixellab, 2026-09-08 선택: 대난투=트로피 홀, 마일리지=상인 계산대).
             // 선택 칸은 금 테두리 + 원색, 비선택 칸은 흑백·어둡게(구매 완료 카드의 grayscale 문법).
-            <button
-              key={k}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setKind(k)}
-              className={`relative isolate h-[60px] flex-1 overflow-hidden rounded-xl border text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
-                on ? 'border-amber-400/70' : 'border-zinc-800/60 grayscale brightness-[.7]'
-              }`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={assetUrl(`/sprites/shop/points-${k}-bg.png`)}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
-              <div className="relative z-10 flex h-full flex-col justify-center px-3">
-                <span className={`text-[10px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${on ? 'text-amber-300' : 'text-white/80'}`}>
-                  {k === 'melee' ? '대난투 포인트' : '마일리지'}
-                </span>
-                <span className="text-[18px] font-extrabold tabular-nums text-white text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                  {points[k].balance.toLocaleString('ko-KR')}
-                </span>
-              </div>
-            </button>
+            <div key={k} className="relative flex-1">
+              <button
+                type="button"
+                aria-pressed={on}
+                onClick={() => setKind(k)}
+                className={`relative isolate block h-[60px] w-full overflow-hidden rounded-xl border text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+                  on ? 'border-amber-400/70' : 'border-zinc-800/60 grayscale brightness-[.7]'
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assetUrl(`/sprites/shop/points-${k}-bg.png`)}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+                <div className="relative z-10 flex h-full flex-col justify-center px-3 pr-8">
+                  <span className={`text-[10px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${on ? 'text-amber-300' : 'text-white/80'}`}>
+                    {label(k)}
+                  </span>
+                  <span className="text-[18px] font-extrabold tabular-nums text-white text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    {points[k].balance.toLocaleString('ko-KR')}
+                  </span>
+                </div>
+              </button>
+              {/* ⓘ — 적립 규칙 + 최근 적립/사용. 버튼 안에 버튼을 두지 않고 형제로 겹친다. */}
+              <button
+                type="button"
+                aria-label={`${label(k)} 안내`}
+                onClick={() => setInfo(k)}
+                className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-white/30 bg-black/50 text-[11px] font-bold leading-none text-white/85 backdrop-blur-[1px] transition active:scale-95"
+              >
+                i
+              </button>
+            </div>
           );
         })}
       </div>
-      <p className="mb-2 px-1 text-[11px] text-zinc-500">{POINTS_COPY[kind]}</p>
-      <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mb-0.5 text-[10px] font-bold text-zinc-500">최근 적립/사용</div>
-        {cur.recent.length === 0 ? (
-          <p className="py-2 text-[11px] text-zinc-500">아직 적립 내역이 없습니다.</p>
-        ) : (
-          <ul>
-            {cur.recent.map((e) => (
-              <li
-                key={e.id}
-                className="flex items-center justify-between gap-3 border-t border-zinc-100 py-1.5 text-[11px] first:border-t-0 dark:border-zinc-800"
-              >
-                <span className="min-w-0 truncate text-zinc-600 dark:text-zinc-300">
-                  <span className="mr-1.5 tabular-nums text-zinc-400">{e.date}</span>
-                  {e.note}
-                </span>
-                <b className={`shrink-0 tabular-nums ${e.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                  {e.delta >= 0 ? '+' : ''}
-                  {e.delta.toLocaleString('ko-KR')}
-                </b>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
       <p className="py-10 text-center text-[13px] font-bold text-zinc-400 dark:text-zinc-600">준비중</p>
+
+      {info ? (
+        <ModalShell onClose={() => setInfo(null)} label={`${label(info)} 안내`}>
+          <ModalLayout
+            title={label(info)}
+            footer={
+              <ModalButton tone="neutral" onClick={() => setInfo(null)}>
+                확인
+              </ModalButton>
+            }
+          >
+            <p className="mb-3 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">{POINTS_COPY[info]}</p>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="mb-0.5 text-[10px] font-bold text-zinc-500">최근 적립/사용</div>
+              {points[info].recent.length === 0 ? (
+                <p className="py-2 text-[11px] text-zinc-500">아직 내역이 없습니다.</p>
+              ) : (
+                <ul>
+                  {points[info].recent.map((e) => (
+                    <li
+                      key={e.id}
+                      className="flex items-center justify-between gap-3 border-t border-zinc-100 py-1.5 text-[11px] first:border-t-0 dark:border-zinc-800"
+                    >
+                      <span className="min-w-0 truncate text-zinc-600 dark:text-zinc-300">
+                        <span className="mr-1.5 tabular-nums text-zinc-400">{e.date}</span>
+                        {e.note}
+                      </span>
+                      <b className={`shrink-0 tabular-nums ${e.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                        {e.delta >= 0 ? '+' : ''}
+                        {e.delta.toLocaleString('ko-KR')}
+                      </b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
     </div>
   );
 }
