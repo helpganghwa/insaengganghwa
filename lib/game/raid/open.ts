@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
@@ -16,8 +16,9 @@ import {
   raidTierOf,
   type RaidTier,
 } from '@/lib/game/balance';
-import { kstDateString } from '@/lib/kst';
+import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import type { RaidBoss } from './bosses';
+import { raidOpenCost } from './free-open';
 
 export type { RaidBoss };
 
@@ -137,9 +138,19 @@ export function openRaid(input: {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 
-    // 개설비 차감(난이도별) — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
-    const paid = await walletTrySpend(tx, userId, input.serverId, rule.openCost, 'raid_open');
-    if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
+    // 개설비 — 하루 첫 소환은 무료(2026-09-08, RAID_FREE_OPENS_PER_DAY). 오늘 소환(호스팅) 횟수는
+    // 참여까지 합산하는 raid_daily_counts가 아니라 raids에서 직접 센다. bumpDailyOrThrow가 유저 행을
+    // 잠근 뒤라 같은 유저의 동시 소환은 여기서 직렬화된다(둘 다 무료가 되는 경합 없음).
+    const [ht] = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(raids)
+      .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, input.serverId), gte(raids.openedAt, kstStartOfDay())));
+    const cost = raidOpenCost(tier, ht?.n ?? 0);
+    if (cost > 0) {
+      // 서버별 지갑 조건부 UPDATE(부족 시 미차감).
+      const paid = await walletTrySpend(tx, userId, input.serverId, cost, 'raid_open');
+      if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
+    }
 
     // 난이도 HP 배수는 여기서 한 번만 곱해 저장 — 이후 페이즈 수식·돌파 판정·게이지는 난이도 무관.
     const phase1Hp =
@@ -166,6 +177,6 @@ export function openRaid(input: {
 
     await tx.insert(raidParticipants).values({ raidId: raid!.id, userId });
 
-    return { raidId: raid!.id, shareCode: raid!.shareCode };
+    return { raidId: raid!.id, shareCode: raid!.shareCode, cost };
   });
 }

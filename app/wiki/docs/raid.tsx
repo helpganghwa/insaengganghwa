@@ -51,7 +51,7 @@ export default function Doc() {
       <UL>
         <LI>
           보스와 난이도를 선택하고 {fmtInt(RAID_TIERS.easy.openCost)} 다이아를 사용해서 소환하며(난이도와
-          무관하게 같은 비용), 소환한 사람이 방장이자 첫 참가자가 된다.
+          무관하게 같은 비용), 소환한 사람이 방장이자 첫 참가자가 된다. 하루 첫 소환은 무료다.
           <Fn n={1} />
         </LI>
         <LI>

@@ -188,7 +188,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `status` | enum(`active`,`settled`) default `active` | |
 | `settled_at` | timestamptz null | |
 
-- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −난이도별 개설비(`RAID_TIERS.openCost`, 환불 없음)
+- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −난이도별 개설비(`RAID_TIERS.openCost`, 환불 없음; 하루 첫 소환은 0 — 오늘 소환 수는 `raids.host_user_id·opened_at`으로 셈, `raid_daily_counts`는 참여 포함이라 쓰지 않음)
 
 ### 6.2 raid_participants
 
