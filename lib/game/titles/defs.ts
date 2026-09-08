@@ -457,7 +457,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeydrip"
   }
  },
  {
@@ -467,7 +467,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeyflow"
+   fx: "honeydrip"
   }
  },
  {
@@ -497,7 +497,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "초월",
   style: {
-   fx: "stardrift"
+   fx: "starlight"
   }
  },
  {
@@ -1634,7 +1634,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "보급",
   style: {
-   fx: "honeydrip"
+   fx: "honeyflow"
   }
  },
  {
@@ -4802,7 +4802,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "보급",
   style: {
-   fx: "honeydrip"
+   fx: "honeyflow"
   }
  },
  {
@@ -5215,6 +5215,147 @@ export const TITLE_DEFS: TitleDef[] = [
     text: "타락 천사 부유섬",
     color: "#c084fc"
    }
+  }
+ },
+ {
+  code: "set_thunder_knight",
+  kind: "conditional",
+  label: "뇌운 기사",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "set_star_navigator",
+  kind: "conditional",
+  label: "별 읽는 항해사",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "set_ash_scythe",
+  kind: "conditional",
+  label: "잿더미의 낫",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "set_marsh_bugler",
+  kind: "conditional",
+  label: "늪의 나팔수",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "set_dusk_pilgrim",
+  kind: "conditional",
+  label: "해질녘 순례자",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "set_academy_fencer",
+  kind: "conditional",
+  label: "학원 검술부",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "set_ball_guest",
+  kind: "conditional",
+  label: "무도회 손님",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "set_dragon_warden",
+  kind: "conditional",
+  label: "용의 파수꾼",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#ff2a2a",
+   glow: true
+  }
+ },
+ {
+  code: "set_desert_patrol",
+  kind: "conditional",
+  label: "사막 순찰대",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "star_sea",
+  kind: "permanent",
+  label: "별의 바다",
+  hidden: false,
+  cat: "초월",
+  style: {
+   fx: "stardrift"
+  }
+ },
+ {
+  code: "binge_500",
+  kind: "permanent",
+  label: "폭식",
+  hidden: true,
+  cat: "보급",
+  style: {
+   fx: "honeyflow"
+  }
+ },
+ {
+  code: "fatalist",
+  kind: "permanent",
+  label: "운명",
+  hidden: true,
+  cat: "보급",
+  style: {
+   color: "#b8a97a"
+  }
+ },
+ {
+  code: "lunchbox",
+  kind: "permanent",
+  label: "점심 도시락",
+  hidden: true,
+  cat: "시간대",
+  style: {
+   color: "#8fb4d8"
+  }
+ },
+ {
+  code: "drifter_100",
+  kind: "permanent",
+  label: "떠돌이",
+  hidden: true,
+  cat: "일상",
+  style: {
+   color: "#a8a8b0"
   }
  }
 ] as const;

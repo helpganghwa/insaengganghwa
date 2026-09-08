@@ -4860,6 +4860,162 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "점령전",
   cond: "소속 길드가 타락 천사 부유섬 권역을 완전장악한 동안",
   diff: "어려움"
+ },
+ {
+  code: "set_thunder_knight",
+  cat: "아이템 발동",
+  cond: "벼락을 박은 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "thunder_emperor_spear",
+    "valkyrie_battle_dress",
+    "valkyrie_winged_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_star_navigator",
+  cat: "아이템 발동",
+  cond: "별자리가 흐르는 장검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_starfield_blade",
+    "kingdom_riddle_coat",
+    "kingdom_riddle_astrolabe"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_ash_scythe",
+  cat: "아이템 발동",
+  cond: "잿불낫 + 불길 케이프 + 재를 막는 눈을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_ember_scythe",
+    "volcano_dancer_cape",
+    "volcano_ashglass_goggles"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_marsh_bugler",
+  cat: "아이템 발동",
+  cond: "피어나는 삼지창 + 늪빛 흉갑 + 부르면 모이는 뿔피리를 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "marsh_bogwarden_chest",
+    "marsh_bogwarden_horn"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_dusk_pilgrim",
+  cat: "아이템 발동",
+  cond: "노을이 앉는 검 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_duskwing_sword",
+    "angel_radiant_gown",
+    "temple_faux_halo"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_academy_fencer",
+  cat: "아이템 발동",
+  cond: "창천검 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier",
+    "academy_student_uniform",
+    "round_gold_glasses"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_ball_guest",
+  cat: "아이템 발동",
+  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 이름을 가린 가면을 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber",
+    "crimson_gothic_dress",
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_dragon_warden",
+  cat: "아이템 발동",
+  cond: "포효하는 용턱 + 도금이 벗겨진 갑주 + 용면 투구를 +100 이상으로 장착 중인 동안",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dragonjaw_halberd",
+    "fallen_gilded_ruin_plate",
+    "dragonknight_horned_helm"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "set_desert_patrol",
+  cat: "아이템 발동",
+  cond: "금당초 쌍권총 + 모래바람의 겹옷 + 가려야 보이는 안대를 +50 이상으로 장착 중인 동안",
+  diff: "중간",
+  req: {
+   items: [
+    "general_twin_flintlocks",
+    "desert_nomad_robes",
+    "general_star_eyepatch"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "star_sea",
+  cat: "초월",
+  cond: "초월 누적 10,000회",
+  diff: "어려움"
+ },
+ {
+  code: "binge_500",
+  cat: "보급",
+  cond: "하루에 보급상자 500개 개봉",
+  diff: "어려움"
+ },
+ {
+  code: "fatalist",
+  cat: "보급",
+  cond: "같은 아이템을 5연속 개봉",
+  diff: "중간"
+ },
+ {
+  code: "lunchbox",
+  cat: "시간대",
+  cond: "점심(12~13시) 강화 수령 100회",
+  diff: "중간"
+ },
+ {
+  code: "drifter_100",
+  cat: "일상",
+  cond: "거주 이동 100회",
+  diff: "중간"
  }
 ] as const;
 
