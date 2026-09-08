@@ -28,6 +28,7 @@ import 'swiper/css/pagination';
 import { payFailTitle, runCheckout } from './checkout';
 import { FREE_REWARDS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
+import { EMPTY_POINTS, POINTS_COPY, type PointKind, type PointsOverview } from '@/lib/game/points/types';
 
 /**
  * 상점 — 상단 배너 + 탭(일일/주간/월간/충전). 담백.
@@ -35,13 +36,115 @@ import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/li
  * 유료 상품: 일반 유저는 클릭 시 '준비 중' 토스트, 어드민은 테스트 즉시 구매(결제 없이 지급).
  * 일일/주간/월간 상품은 그 기간 1회만 — 구매하면 '구매함'(비활성). 수치는 시작값.
  */
-type Tab = 'daily' | 'weekly' | 'monthly' | 'charge';
-const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
+type Tab = 'daily' | 'weekly' | 'monthly' | 'charge' | 'points';
+const TABS: { key: Tab; label: string; free: FreeSlot | null }[] = [
   { key: 'daily', label: '일일', free: 'daily' },
   { key: 'weekly', label: '주간', free: 'weekly' },
   { key: 'monthly', label: '월간', free: 'monthly' },
   { key: 'charge', label: '충전', free: 'signup' },
+  // 포인트(2026-09-08, docs/POINT-SHOP.md) — 대난투 포인트·마일리지 잔액과 최근 적립. 상품은 준비중.
+  { key: 'points', label: '포인트', free: null },
 ];
+
+/**
+ * 포인트 탭(docs/POINT-SHOP.md, 시안 V5 + 최근 적립) — 두 칸 지갑 버튼이 곧 세그먼트('대난투'/'마일리지'),
+ * 아래에 안내 한 줄·최근 적립 3건·"준비중". 상품 카드 없음(사용자 확정).
+ */
+function PointsTab({ points }: { points: PointsOverview }) {
+  const [kind, setKind] = useState<PointKind>('melee');
+  // 안내 팝업(2026-09-08 사용자 확정) — 적립 규칙 문구와 최근 적립/사용 내역은 본문에 두지 않고 ⓘ로 연다.
+  const [info, setInfo] = useState<PointKind | null>(null);
+  const label = (k: PointKind) => (k === 'melee' ? '대난투 포인트' : '마일리지');
+  return (
+    <div>
+      <div className="mb-2.5 flex gap-2">
+        {(['melee', 'mileage'] as const).map((k) => {
+          const on = k === kind;
+          return (
+            // 배경은 상점 배너와 같은 픽셀 장면(Pixellab, 2026-09-08 선택: 대난투=트로피 홀, 마일리지=상인 계산대).
+            // 선택 칸은 금 테두리 + 원색, 비선택 칸은 흑백·어둡게(구매 완료 카드의 grayscale 문법).
+            <div key={k} className="relative flex-1">
+              <button
+                type="button"
+                aria-pressed={on}
+                onClick={() => setKind(k)}
+                className={`relative isolate block h-[60px] w-full overflow-hidden rounded-xl border text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+                  on ? 'border-amber-400/70' : 'border-zinc-800/60 grayscale brightness-[.7]'
+                }`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assetUrl(`/sprites/shop/points-${k}-bg.png`)}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+                <div className="relative z-10 flex h-full flex-col justify-center px-3 pr-8">
+                  <span className={`text-[10px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${on ? 'text-amber-300' : 'text-white/80'}`}>
+                    {label(k)}
+                  </span>
+                  <span className="text-[18px] font-extrabold tabular-nums text-white text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    {points[k].balance.toLocaleString('ko-KR')}
+                  </span>
+                </div>
+              </button>
+              {/* ⓘ — 적립 규칙 + 최근 적립/사용. 버튼 안에 버튼을 두지 않고 형제로 겹친다. */}
+              <button
+                type="button"
+                aria-label={`${label(k)} 안내`}
+                onClick={() => setInfo(k)}
+                className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-white/30 bg-black/50 text-[11px] font-bold leading-none text-white/85 backdrop-blur-[1px] transition active:scale-95"
+              >
+                i
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="py-10 text-center text-[13px] font-bold text-zinc-400 dark:text-zinc-600">준비중</p>
+
+      {info ? (
+        <ModalShell onClose={() => setInfo(null)} label={`${label(info)} 안내`}>
+          <ModalLayout
+            title={label(info)}
+            subtitle={POINTS_COPY[info]}
+            footer={
+              <ModalButton tone="neutral" onClick={() => setInfo(null)}>
+                확인
+              </ModalButton>
+            }
+          >
+            {/* 콘텐츠 = 최근 적립/사용 10건 목록만(중첩 카드 없음 — 2026-09-08 사용자 지적). */}
+            {points[info].recent.length === 0 ? (
+              <p className="py-3 text-center text-[12px] text-zinc-500">아직 내역이 없습니다.</p>
+            ) : (
+              <ul>
+                {points[info].recent.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex items-center justify-between gap-3 border-t border-zinc-100 py-2 text-[12px] first:border-t-0 dark:border-zinc-800"
+                  >
+                    <span className="min-w-0 truncate text-zinc-600 dark:text-zinc-300">
+                      <span className="mr-1.5 tabular-nums text-zinc-400">{e.date}</span>
+                      {e.note}
+                    </span>
+                    <b className={`shrink-0 tabular-nums ${e.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                      {e.delta >= 0 ? '+' : ''}
+                      {e.delta.toLocaleString('ko-KR')}
+                    </b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * 무료 수령 카드에 적히는 보상 문구 — 포맷만 UI 관심사고 **숫자는 전부 FREE_REWARDS 파생**이다.
@@ -284,6 +387,7 @@ export function ShopTabs({
   purchased: initialPurchased,
   premiumDays: initialPremiumDays,
   firstSpecialDone,
+  points = EMPTY_POINTS,
   initialTab = 'daily',
   returnPaymentId = null,
   returnCode = null,
@@ -298,6 +402,8 @@ export function ShopTabs({
   purchased: string[];
   premiumDays: number | null;
   firstSpecialDone: boolean;
+  /** 포인트 탭 데이터(잔액 2종 + 최근 적립). 조회 실패 시 0/빈 목록. */
+  points?: PointsOverview;
   /** 딥링크용 초기 탭(예: 헤더 다이아 클릭 → ?tab=charge). */
   initialTab?: Tab;
   /** 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 리다이렉트. 화면 내에서 검증 처리. */
@@ -715,13 +821,15 @@ export function ShopTabs({
         {/* 탭 — 받을 무료 보상이 있는 탭에 점 표시. */}
         <Tabs
           className="mb-3"
-          items={TABS.map((t) => ({ key: t.key, label: t.label, dot: !!free[t.free] }))}
+          items={TABS.map((t) => ({ key: t.key, label: t.label, dot: t.free ? !!free[t.free] : false }))}
           value={tab}
           onChange={setTab}
         />
 
         {/* 탭 내용 */}
-        {tab !== 'charge' ? (
+        {tab === 'points' ? (
+          <PointsTab points={points} />
+        ) : tab !== 'charge' ? (
           <ul className="space-y-2">
             {/* 무료 수령 — 받기/수령완료 표기 없음. 클릭 시 낙관적 수령(완료=흑백). */}
             <BannerCard

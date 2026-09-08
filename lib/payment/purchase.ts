@@ -27,6 +27,7 @@ import { applyProductGrant } from '@/lib/game/shop/grant';
 import { grantPatronMilestones } from '@/lib/game/patron/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
+import { creditMileageForOrder } from '@/lib/game/points/wallet';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
 
@@ -370,6 +371,14 @@ export async function completePurchase(
         set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
       })
       .returning({ total: monthlyPurchaseLimits.totalKrw });
+    // 마일리지(docs/POINT-SHOP.md) — 결제 100원당 1점, 주문당 1회(멱등). 지급 보류(미성년·중복) 주문도 결제
+    // 자체는 성사됐으므로 적립하고, 환불되면 revokeMileageForOrder가 회수한다. 잠금 순서: 월누적 다음, 재화 앞.
+    await creditMileageForOrder(tx, {
+      userId: order.userId,
+      orderId: order.id,
+      amountKrw: Number(order.amountKrw),
+      note: `${productDisplayName(order.productCode)} ₩${Number(order.amountKrw).toLocaleString('ko-KR')}`,
+    });
     if (Number(monthly?.total ?? 0n) > MINOR_MONTHLY_LIMIT_KRW) {
       // 심사(cbt) 계정은 본인인증을 면제하므로(createOrder:222) 여기서도 미성년 판정에서 빼
       // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
