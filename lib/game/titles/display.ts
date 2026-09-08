@@ -78,6 +78,7 @@ export async function resolveRepTitle(
 const HEAVY_CONDITIONALS = new Set([
   'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
   'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag',
+  'guild_top_leader', 'guild_top_vice', // 1위 길드 길드장·부길드장(2026-09-08)
   'no_guild_30', // 무소속(2026-08-21 조건부 전환) — 가입 시 즉시 해제·탈퇴 7일 후 재활성
   'streak_king', 'march_live', 'smooth_sail',
   'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
@@ -219,6 +220,17 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       `)) as unknown as { ok: number }[];
       return Number(r?.ok) === 1;
     }
+    if (code === 'guild_top_leader' || code === 'guild_top_vice') {
+      // 1위 길드(guild_top과 같은 사전식 순위) + 직책.
+      const [r] = (await db.execute(sql`
+        select gm.role::text as role,
+               (select count(*) from guilds g3 where g3.server_id=${s}
+                  and (g3.level > g.level or (g3.level = g.level and g3.xp > g.xp)))::int as better
+        from guild_members gm join guilds g on g.id=gm.guild_id
+        where gm.user_id=${u} and gm.server_id=${s}
+      `)) as unknown as { role: string; better: number }[];
+      return r != null && Number(r.better) === 0 && r.role === (code === 'guild_top_leader' ? 'leader' : 'vice');
+    }
     if (code === 'guild_flag') {
       const r = (await db.execute(sql`
         select 1 from guild_members where user_id=${u} and server_id=${s} and role='leader' limit 1
@@ -295,6 +307,8 @@ const FX_OG: Record<string, string> = {
   // 길드 칭호(2026-09-01)
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
   noblesseflow: '#6ea8e0', blaze: '#ff6a1a', blazegreen: '#3fc25a', blazegold: '#f5c33a',
+  // 개인 1위 불꽃 팔레트 + 1위 길드 임원(2026-09-08)
+  blazesteel: '#5fa8e6', blazecrimson: '#e03050', blazeviolet: '#9a5fe0', breathgold: '#e5c07b',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
   // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',

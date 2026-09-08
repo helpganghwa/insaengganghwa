@@ -11,8 +11,8 @@ const SETS = ['set_thunder_knight', 'set_star_navigator', 'set_ash_scythe', 'set
 const RULES = ['star_sea', 'binge_500', 'fatalist', 'lunchbox', 'drifter_100'];
 
 describe('칭호 추가 0908 — 정의', () => {
-  it('총 505종, 라벨 중복 없음', () => {
-    expect(TITLE_DEFS).toHaveLength(505);
+  it('총 507종, 라벨 중복 없음', () => {
+    expect(TITLE_DEFS).toHaveLength(507);
     const labels = TITLE_DEFS.map((t) => t.label);
     expect(new Set(labels).size).toBe(labels.length);
   });
@@ -27,6 +27,23 @@ describe('칭호 추가 0908 — 정의', () => {
       expect(s.req!.min).toBeGreaterThanOrEqual(30);
     }
     expect(TITLE_SECRET_BY_CODE.get('set_dragon_warden')!.req!.min).toBe(100);
+  });
+
+  it('개인 1위 5종은 불꽃(V3) — 의만 회백, 맹주·군사는 금빛 숨결(7차 확정)', () => {
+    expect(TITLE_BY_CODE.get('rank_combat')!.style).toMatchObject({ fx: 'blazegold' });
+    expect(TITLE_BY_CODE.get('rank_max')!.style).toMatchObject({ fx: 'blaze', fxOnly: ['불', '정점'], plainColor: '#b8bcc6' });
+    expect(TITLE_BY_CODE.get('rank_sum')!.style).toMatchObject({ fx: 'blazesteel', fxOnly: ['강철', '군주'] });
+    expect(TITLE_BY_CODE.get('rank_raid')!.style).toMatchObject({ fx: 'blazecrimson' });
+    expect(TITLE_BY_CODE.get('rank_melee')!.style).toMatchObject({ fx: 'blazeviolet', fxOnly: ['투기장', '왕'] });
+    for (const code of ['guild_top_leader', 'guild_top_vice']) {
+      const d = TITLE_BY_CODE.get(code)!;
+      expect(d.kind).toBe('conditional');
+      expect(d.hidden).toBe(false);
+      expect(d.style).toMatchObject({ fx: 'breathgold' });
+    }
+    expect(TITLE_BY_CODE.get('guild_top_leader')!.label).toBe('맹주');
+    expect(TITLE_BY_CODE.get('guild_top_vice')!.label).toBe('군사');
+    expect(TITLE_SECRET_BY_CODE.get('guild_top_vice')!.cond).toBe('길드 랭킹 1위 길드의 부길드장인 동안');
   });
 
   it('지표형 5종은 영구이며 "운명"은 5연속 개봉 조건', () => {

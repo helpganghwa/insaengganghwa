@@ -59,19 +59,34 @@
   "multiRegion": "static-gradient",
   "special": {
     "rank_combat": {
-      "fx": "goldflow"
+      "fx": "blazegold"
     },
     "rank_max": {
-      "fx": "emberflow"
+      "fx": "blaze",
+      "fxOnly": [
+        "불",
+        "정점"
+      ],
+      "plainColor": "#b8bcc6"
     },
     "rank_sum": {
-      "fx": "steelshine"
+      "fx": "blazesteel",
+      "fxOnly": [
+        "강철",
+        "군주"
+      ],
+      "plainColor": "#b8bcc6"
     },
     "rank_raid": {
-      "fx": "crimsonflow"
+      "fx": "blazecrimson"
     },
     "rank_melee": {
-      "fx": "violetflow"
+      "fx": "blazeviolet",
+      "fxOnly": [
+        "투기장",
+        "왕"
+      ],
+      "plainColor": "#b8bcc6"
     },
     "throne_shadow": {
       "fx": "silverglow"
@@ -375,6 +390,12 @@
         "color": "#c084fc"
       },
       "color": "#dcdfe6"
+    },
+    "guild_top_leader": {
+      "fx": "breathgold"
+    },
+    "guild_top_vice": {
+      "fx": "breathgold"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

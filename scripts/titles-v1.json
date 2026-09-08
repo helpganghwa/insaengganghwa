@@ -108,6 +108,24 @@
     "diff": "쉬움"
   },
   {
+    "code": "guild_top_leader",
+    "cat": "조건부",
+    "kind": "조건부",
+    "label": "맹주",
+    "cond": "길드 랭킹 1위 길드의 길드장인 동안",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "guild_top_vice",
+    "cat": "조건부",
+    "kind": "조건부",
+    "label": "군사",
+    "cond": "길드 랭킹 1위 길드의 부길드장인 동안",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
     "code": "broke_now",
     "cat": "조건부",
     "kind": "조건부",

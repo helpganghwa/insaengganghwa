@@ -36,7 +36,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "랭킹 1위",
   style: {
-   fx: "goldflow",
+   fx: "blazegold",
    glow: true
   }
  },
@@ -47,7 +47,12 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "랭킹 1위",
   style: {
-   fx: "emberflow",
+   fx: "blaze",
+   fxOnly: [
+    "불",
+    "정점"
+   ],
+   plainColor: "#b8bcc6",
    glow: true
   }
  },
@@ -58,7 +63,12 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "랭킹 1위",
   style: {
-   fx: "steelshine",
+   fx: "blazesteel",
+   fxOnly: [
+    "강철",
+    "군주"
+   ],
+   plainColor: "#b8bcc6",
    glow: true
   }
  },
@@ -69,7 +79,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "랭킹 1위",
   style: {
-   fx: "crimsonflow",
+   fx: "blazecrimson",
    glow: true
   }
  },
@@ -80,7 +90,12 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "랭킹 1위",
   style: {
-   fx: "violetflow",
+   fx: "blazeviolet",
+   fxOnly: [
+    "투기장",
+    "왕"
+   ],
+   plainColor: "#b8bcc6",
    glow: true
   }
  },
@@ -155,6 +170,28 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "조건부",
   style: {
    color: "#cec6e0"
+  }
+ },
+ {
+  code: "guild_top_leader",
+  kind: "conditional",
+  label: "맹주",
+  hidden: false,
+  cat: "조건부",
+  style: {
+   fx: "breathgold",
+   glow: true
+  }
+ },
+ {
+  code: "guild_top_vice",
+  kind: "conditional",
+  label: "군사",
+  hidden: false,
+  cat: "조건부",
+  style: {
+   fx: "breathgold",
+   glow: true
   }
  },
  {

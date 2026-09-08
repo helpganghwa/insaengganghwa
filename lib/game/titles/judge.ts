@@ -494,6 +494,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     () => db.execute(sql`
       select extract(day from now()-gm.joined_at)::int as gdays,
              (gm.role='leader')::int as gleader,
+             (gm.role='vice')::int as gvice,
              (gm.joined_at = (select min(joined_at) from guild_members g2 where g2.guild_id=g.id))::int as founder,
              -- 길드 순위 = (level, xp) 사전식 — guilds.xp는 레벨업 시 임계 차감된 "잔여 XP"라
              -- 단독 비교 시 갓 레벨업한 상위 길드가 밀린다(2026-08-25 명가 오활성 버그).
@@ -783,7 +784,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
-    gleader: n(gx.gleader), grank: n(gx.grank) || 9999, gsize: n(gx.gsize), glevel: n(gx.glevel),
+    gleader: n(gx.gleader), gvice: n(gx.gvice), grank: n(gx.grank) || 9999, gsize: n(gx.gsize), glevel: n(gx.glevel),
     chats: n(cx.chats), night_chats: n(cx.night_chats), mentions_got: n(cx.mentions_got),
     ref_50: n(s2.ref_50), ref_100: n(s2.ref_100), ref_champ: n(s2.ref_champ),
     ref_over: n(s2.ref_over), old_friends: n(s2.old_friends), sprout_friends: n(s2.sprout_friends),
@@ -1078,6 +1079,9 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.dia_rank === 1 && mm.dia > 0) out.add('rich_apex');
   if (mm.pay_rank === 1 && mm.has_pay === 1) out.add('top_patron');
   if (mm.in_guild === 1 && mm.grank === 1) out.add('guild_top');
+  // 1위 길드 임원(2026-09-08) — 명가 + 직책. 표시 재검증은 display.ts 같은 조건.
+  if (mm.in_guild === 1 && mm.grank === 1 && mm.gleader === 1) out.add('guild_top_leader');
+  if (mm.in_guild === 1 && mm.grank === 1 && mm.gvice === 1) out.add('guild_top_vice');
   if (mm.gleader === 1) out.add('guild_flag');
   // 길드 단위 조건부(2026-09-01, 9종 14코드) — 표시 재검증과 같은 사실표(guild-facts.ts).
   for (const c of await guildCollectiveCodes(userId, serverId)) out.add(c);

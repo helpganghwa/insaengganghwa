@@ -81,6 +81,18 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "쉬움"
  },
  {
+  code: "guild_top_leader",
+  cat: "조건부",
+  cond: "길드 랭킹 1위 길드의 길드장인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "guild_top_vice",
+  cat: "조건부",
+  cond: "길드 랭킹 1위 길드의 부길드장인 동안",
+  diff: "어려움"
+ },
+ {
   code: "broke_now",
   cat: "조건부",
   cond: "다이아 보유량이 정확히 0인 동안",
