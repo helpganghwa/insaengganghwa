@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { josa } from 'josa';
 import { useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -145,19 +146,13 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
   const { optimisticAdjust } = useDiamondActions();
   const [pending, start] = useTransition();
   const [ask, setAsk] = useState<Target | null>(null);
-  /** 켜진 상태 필터 — 비어 있으면 전체. 여러 개를 켜면 합집합. */
-  const [filter, setFilter] = useState<Set<TaxZoneStatus>>(() => new Set());
-  const toggleFilter = (st: TaxZoneStatus) =>
-    setFilter((f) => {
-      const n = new Set(f);
-      if (n.has(st)) n.delete(st);
-      else n.add(st);
-      return n;
-    });
+  /** 상태 필터 — 하나만 켜진다(다시 누르면 해제 = 전체). */
+  const [filter, setFilter] = useState<TaxZoneStatus | null>(null);
+  const toggleFilter = (st: TaxZoneStatus) => setFilter((f) => (f === st ? null : st));
 
   const ready = useMemo(() => view.zones.filter((z) => z.status === 'ready'), [view.zones]);
   const visible = useMemo(
-    () => (filter.size === 0 ? view.zones : view.zones.filter((z) => filter.has(z.status))),
+    () => (filter == null ? view.zones : view.zones.filter((z) => z.status === filter)),
     [view.zones, filter],
   );
 
@@ -216,7 +211,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
       <div className="mt-2.5 grid grid-cols-3 gap-1.5">
         {cells.map((c) => {
           const meta = STATUS_CELL[c.st];
-          const on = filter.has(c.st);
+          const on = filter === c.st;
           return (
             <button
               key={c.st}
@@ -272,7 +267,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                   z.status === 'ready'
                     ? 'text-amber-600 dark:text-amber-400'
                     : z.status === 'none'
-                      ? 'text-zinc-400 line-through decoration-zinc-400/60'
+                      ? 'text-zinc-400'
                       : 'text-zinc-600 dark:text-zinc-300'
                 }`}
               >
@@ -303,7 +298,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                 ) : (
                   <Link
                     prefetch={false}
-                    href="/guild/deploy"
+                    href={`/guild/deploy?zone=${z.id}`}
                     className="text-[10.5px] font-bold text-red-500/90 underline decoration-red-500/30 underline-offset-2"
                   >
                     지정하기
@@ -315,20 +310,23 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
         </ul>
       )}
 
-      <button
-        type="button"
-        onClick={() => setAsk({ kind: 'all' })}
-        disabled={pending || view.readyCount === 0}
-        className="mt-2.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
-      >
-        {view.readyCount > 0 ? `모두 수금 ${fmt(readySum)}💎 · ${view.readyCount}곳` : '수금할 구역이 없습니다'}
-      </button>
+      {/* 모두 수금 — 대기·집행관 없음 필터를 보는 중엔 걷을 대상이 화면에 없으니 숨긴다. */}
+      {filter == null || filter === 'ready' ? (
+        <button
+          type="button"
+          onClick={() => setAsk({ kind: 'all' })}
+          disabled={pending || view.readyCount === 0}
+          className="mt-2.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+        >
+          {view.readyCount > 0 ? `모두 수금 ${fmt(readySum)}💎 · ${view.readyCount}곳` : '수금할 구역이 없습니다'}
+        </button>
+      ) : null}
 
       {/* 확인 — 구역·금액을 되읽어준다(재화 이동, 되돌릴 수 없음). */}
       {ask && plan ? (
         <ModalShell onClose={() => setAsk(null)} onSubmit={run} label="세금 수금 확인">
           <ModalLayout
-            title={ask.kind === 'all' ? `${plan.zs.length}곳을 수금할까요?` : `${ask.zone.name}을 수금할까요?`}
+            title={ask.kind === 'all' ? `${plan.zs.length}곳을 수금할까요?` : josa(`${ask.zone.name}#{을} 수금할까요?`)}
             subtitle={
               <>
                 <span className="text-zinc-500">구역 세금 합계</span>
@@ -353,8 +351,11 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
               <ul className="space-y-1">
                 {plan.zs.map((z) => (
                   <li key={z.id} className="flex items-center justify-between gap-2 text-[12.5px]">
-                    <span className="min-w-0 truncate font-semibold" style={{ color: z.color }}>
-                      {z.name}
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <span className="truncate font-semibold" style={{ color: z.color }}>
+                        {z.name}
+                      </span>
+                      <span className="shrink-0 text-[10.5px] text-zinc-400">{z.executorNickname ?? ''}</span>
                     </span>
                     <span className="shrink-0 font-mono font-bold tabular-nums">💎{fmt(BigInt(z.tax))}</span>
                   </li>
@@ -368,23 +369,22 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
             >
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-zinc-500">
-                  집행관 몫 {Math.round(GUILD_EXECUTOR_TAX_CUT * 100)}%
-                  <span className="ml-1 text-zinc-400">({plan.executors}명)</span>
+                  집행관 {Math.round(GUILD_EXECUTOR_TAX_CUT * 100)}%
+                  <span className="ml-1 text-zinc-400">
+                    ({ask.kind === 'all' ? `${plan.executors}명` : (ask.zone.executorNickname ?? '집행관')})
+                  </span>
                 </dt>
                 <dd className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-200">💎{fmt(plan.exec)}</dd>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <dt className="font-bold text-zinc-700 dark:text-zinc-200">곳간에 들어오는 금액</dt>
+                <dt className="font-bold text-zinc-700 dark:text-zinc-200">
+                  길드 {Math.round((1 - GUILD_EXECUTOR_TAX_CUT) * 100)}%
+                </dt>
                 <dd className="font-mono font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
                   💎{fmt(plan.guild)}
                 </dd>
               </div>
             </dl>
-            {ask.kind === 'all' && view.noneCount > 0 ? (
-              <p className="mt-2 text-[11px] text-zinc-500">
-                집행관이 없는 {view.noneCount}곳(💎{fmt(BigInt(view.noneSum))})은 수금되지 않습니다.
-              </p>
-            ) : null}
           </ModalLayout>
         </ModalShell>
       ) : null}
