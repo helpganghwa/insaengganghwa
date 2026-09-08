@@ -246,6 +246,15 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                   {z.executorUserId === myUserId ? (
                     <span className="shrink-0 text-[9px] font-bold text-zinc-400">내 구역</span>
                   ) : null}
+                  {/* 점령지 화면으로 — 그 구역이 선택된 채 열린다(배치·집행관 지정). 모든 행 공통(2026-09-08). */}
+                  <Link
+                    prefetch={false}
+                    href={`/guild/deploy?zone=${z.id}`}
+                    aria-label={`${z.name} 점령지 화면으로 이동`}
+                    className="shrink-0 rounded-md border border-zinc-300 px-1.5 py-px text-[9.5px] font-bold leading-tight text-zinc-500 active:opacity-60 dark:border-zinc-700 dark:text-zinc-400"
+                  >
+                    이동
+                  </Link>
                 </div>
                 <div className="mt-0.5 truncate text-[10.5px] text-zinc-500">
                   {z.executorNickname ? (
@@ -268,6 +277,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
               >
                 💎{fmt(BigInt(z.tax))}
               </span>
+              {/* 오른쪽 열 = 수금 버튼 또는 남은 시간만. 세금 0·공석은 비워 둔다. */}
               <div className="w-[72px] shrink-0 text-right">
                 {z.status === 'ready' ? (
                   <button
@@ -278,27 +288,15 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                   >
                     수금
                   </button>
-                ) : z.status === 'wait' ? (
-                  z.readyAt != null ? (
-                    <Ticker>
-                      {(now) => (
-                        <span className="font-mono text-[10.5px] tabular-nums text-zinc-500">
-                          {hms(z.readyAt! - now)}
-                        </span>
-                      )}
-                    </Ticker>
-                  ) : (
-                    <span className="text-[10.5px] text-zinc-400">세금 없음</span>
-                  )
-                ) : (
-                  <Link
-                    prefetch={false}
-                    href={`/guild/deploy?zone=${z.id}`}
-                    className="text-[10.5px] font-bold text-red-500/90 underline decoration-red-500/30 underline-offset-2"
-                  >
-                    지정하기
-                  </Link>
-                )}
+                ) : z.status === 'wait' && z.readyAt != null ? (
+                  <Ticker>
+                    {(now) => (
+                      <span className="font-mono text-[10.5px] tabular-nums text-zinc-500">
+                        {hms(z.readyAt! - now)}
+                      </span>
+                    )}
+                  </Ticker>
+                ) : null}
               </div>
             </li>
           ))}
