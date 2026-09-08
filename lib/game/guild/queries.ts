@@ -914,3 +914,87 @@ export async function getGuildMembers(guildId: bigint) {
     .orderBy(desc(guildMembers.contributionPoints));
 }
 
+
+export type TaxZoneStatus = 'ready' | 'wait' | 'none';
+export type TaxCollectZone = {
+  id: number;
+  name: string;
+  region: Region;
+  color: string;
+  /** 미수금 누적 💎(문자열 — bigint 직렬화). */
+  tax: string;
+  executorUserId: string | null;
+  executorNickname: string | null;
+  /** ready = 지금 수금 가능 · wait = 쿨다운 중이거나 세금 0 · none = 집행관 공석(동결). */
+  status: TaxZoneStatus;
+  /** wait일 때 수금 가능해지는 시각(ms) — 세금이 0이라 기다리는 곳은 null. */
+  readyAt: number | null;
+};
+
+/**
+ * 세금 수금 화면(2026-09-08, /guild/distribute 수금 탭) — 길드 점령지 전부를 수금 상태와 함께.
+ * 정렬은 수금 가능 → 대기(가까운 순) → 집행관 공석. 판정은 collect.ts와 같은 네 조건.
+ */
+export async function getTaxCollectView(guildId: bigint, serverId: number) {
+  const cooldownMs = TAX_COLLECT_COOLDOWN_MIN * 60_000;
+  const rows = await db
+    .select({
+      id: zones.id,
+      name: zones.name,
+      region: zones.region,
+      tax: zones.taxDiamond,
+      executorUserId: zones.executorUserId,
+      executorNickname: characters.nickname,
+      lastAt: zones.lastTaxCollectedAt,
+      capturedAt: zones.capturedAt,
+    })
+    .from(zones)
+    .leftJoin(
+      characters,
+      and(eq(characters.userId, zones.executorUserId), eq(characters.serverId, zones.serverId)),
+    )
+    .where(and(eq(zones.serverId, serverId), eq(zones.ownerGuildId, guildId)))
+    .orderBy(zones.id);
+
+  const now = Date.now();
+  const list: TaxCollectZone[] = rows.map((r) => {
+    const region = r.region as Region;
+    // 서버(collect.ts)는 captured_at·last_tax 쿨다운을 둘 다 검사 → 실제 게이트는 더 늦은 쪽.
+    const base = Math.max(r.capturedAt?.getTime() ?? 0, r.lastAt?.getTime() ?? 0);
+    const readyAt = base > 0 ? base + cooldownMs : null;
+    const cooling = readyAt != null && readyAt > now;
+    let status: TaxZoneStatus;
+    if (!r.executorUserId) status = 'none';
+    else if (!cooling && r.tax > 0n) status = 'ready';
+    else status = 'wait';
+    return {
+      id: r.id,
+      name: r.name,
+      region,
+      color: REGION_META[region]?.color ?? '#a1a1aa',
+      tax: r.tax.toString(),
+      executorUserId: r.executorUserId,
+      executorNickname: r.executorNickname ?? null,
+      status,
+      readyAt: status === 'wait' && cooling ? readyAt : null,
+    };
+  });
+  const order: Record<TaxZoneStatus, number> = { ready: 0, wait: 1, none: 2 };
+  list.sort((a, b) => {
+    if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+    if (a.status === 'wait') return (a.readyAt ?? Infinity) - (b.readyAt ?? Infinity) || a.id - b.id;
+    if (a.status === 'ready') return Number(BigInt(b.tax) - BigInt(a.tax)) || a.id - b.id;
+    return a.id - b.id;
+  });
+  const sum = (st: TaxZoneStatus) => list.filter((z) => z.status === st).reduce((n, z) => n + BigInt(z.tax), 0n);
+  return {
+    zones: list,
+    readyCount: list.filter((z) => z.status === 'ready').length,
+    readySum: sum('ready').toString(),
+    waitCount: list.filter((z) => z.status === 'wait').length,
+    noneCount: list.filter((z) => z.status === 'none').length,
+    noneSum: sum('none').toString(),
+    /** 집행관 몫 10%를 받을 집행관 수(중복 제외) — 확인 팝업 "집행관 몫 10% (N명)". */
+    readyExecutors: new Set(list.filter((z) => z.status === 'ready').map((z) => z.executorUserId)).size,
+  };
+}

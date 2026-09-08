@@ -426,6 +426,7 @@ export function WorldMapView({
   replay,
   replayYesterday,
   embedded = false,
+  taxOfficerGuildId = null,
 }: {
   mapSrc: string;
   /** 거주 상태(구역·잠금). 비로그인/조회 실패 시 null. */
@@ -436,6 +437,8 @@ export function WorldMapView({
   } | null;
   canSetResidence: boolean;
   myUserId: string | null;
+  /** 내가 세금 권한자(taxDistribute)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
+  taxOfficerGuildId?: string | null;
   serverId: number;
   chronicle: { today: string | null; yesterday: string | null; yesterdayDay: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
@@ -720,15 +723,15 @@ export function WorldMapView({
     moveResidence(zoneId);
   };
 
-  // 집행관 세금 수금 — 그 구역 집행관 본인만(72h 쿨다운, 집행관 10%·길드 풀 90%).
+  // 세금 수금 — 그 구역 집행관 본인 또는 소유 길드 세금 권한자(72h 쿨다운, 집행관 10%·길드 풀 90%).
   const collect = (zoneId: number) => {
     setCollectConfirm(false);
     start(async () => {
       const r = await collectTaxAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      // 지갑은 실제 본인 몫(10%)만 반영, 토스트는 총 수금액(집행관+길드 풀 90%)을 노출.
+      // 지갑은 실제 내 몫(집행관일 때만 10%)만 반영, 토스트는 총 수금액(집행관+길드 풀 90%)을 노출.
       const total = BigInt(r.executorGain) + BigInt(r.guildGain);
-      optimisticAdjust(BigInt(r.executorGain));
+      if (BigInt(r.myGain) > 0n) optimisticAdjust(BigInt(r.myGain));
       showHeaderToast({ title: `세금 수금 완료 ${Number(total).toLocaleString('ko-KR')}💎` });
       setCollectOpen(null);
       // refresh 불필요(§11.7) — 액션 revalidate 재렌더가 수금 상태를 실어 온다(/guild/map 10+쿼리 2배 방지).
@@ -1210,7 +1213,13 @@ export function WorldMapView({
                       const pct =
                         base != null ? Math.min(100, Math.max(0, ((nowMs - base) / TAX_COOLDOWN_MS) * 100)) : 100;
                       const isMyExec = myUserId != null && selected.executorUserId === myUserId;
-                      const canCollect = isMyExec && ready && Number(selected.taxDiamond) > 0;
+                      // 세금 권한자의 대리 수금(2026-09-08) — 집행관이 있는 우리 길드 구역만(공석은 동결).
+                      const isOfficer =
+                        taxOfficerGuildId != null &&
+                        selected.ownerGuildId === taxOfficerGuildId &&
+                        selected.executorUserId != null;
+                      const mayCollect = isMyExec || isOfficer;
+                      const canCollect = mayCollect && ready && Number(selected.taxDiamond) > 0;
                       return (
                         <div className="mt-2 flex items-center gap-2">
                           <div className="min-w-0 flex-1">
@@ -1233,7 +1242,7 @@ export function WorldMapView({
                               />
                             </div>
                           </div>
-                          {isMyExec &&
+                          {mayCollect &&
                             (canCollect ? (
                               <button
                                 type="button"

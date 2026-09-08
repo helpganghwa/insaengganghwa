@@ -27,7 +27,7 @@ export const GUILD_PERM = {
    * 그래서 이 권한이 실제로 여는 것은 해제뿐이다(2026-07-30 확인).
    */
   deploy: 1 << 6,
-  /** 세금 분배 */
+  /** 세금 수금(대리 · 일괄) · 분배 — 2026-09-08 수금이 함께 열린다(별도 수금 권한 없음) */
   taxDistribute: 1 << 7,
   /** 문양 생성·변경(생성마다 다이아 소모) */
   emblem: 1 << 8,
@@ -57,7 +57,7 @@ export const GUILD_PERM_META: Record<GuildPermKey, { label: string; desc?: strin
   executor: { label: '집행관 지정', desc: '세금 수금 권한이 함께 갑니다' },
   deploy: { label: '길드원 배치 해제', desc: '남의 공격 · 수비를 물림(배치는 본인만)' },
   kick: { label: '길드원 추방', desc: '되돌릴 수 없습니다' },
-  taxDistribute: { label: '세금 분배', desc: '다이아가 나갑니다' },
+  taxDistribute: { label: '세금 수금 · 분배', desc: '일괄 수금 · 분배 시 다이아가 나갑니다' },
   emblem: { label: '문양 생성 · 변경', desc: '생성마다 다이아 소모' },
 };
 

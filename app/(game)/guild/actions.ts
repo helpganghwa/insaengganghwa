@@ -22,6 +22,7 @@ import {
   donateToGuild,
   setResidence,
   collectZoneTax,
+  collectAllZoneTax,
   distributeGuildTax,
   distributeGuildTaxManual,
   deployToZone,
@@ -429,9 +430,44 @@ export async function collectTaxAction(zoneId: number) {
     const r = await collectZoneTax({ userId: u, zoneId });
     revalidatePath('/guild');
     revalidatePath('/guild/map'); // 수금 버튼이 있는 화면 — 응답 재렌더로 수금 상태 반영(클라 refresh 제거)
-    return { status: 'success', executorGain: r.executorGain.toString(), guildGain: r.guildGain.toString() } as const;
+    revalidatePath('/guild/distribute'); // 수금 탭(2026-09-08)
+    revalidatePath('/guild/settings'); // 타일 부제 '수금 가능 N곳'
+    return {
+      status: 'success',
+      executorGain: r.executorGain.toString(),
+      guildGain: r.guildGain.toString(),
+      // 내 지갑에 들어온 몫 — 대리 수금(권한자가 남의 구역을 걷음)이면 0. 지갑 낙관 반영은 이 값으로.
+      myGain: (r.executorUserId === u ? r.executorGain : 0n).toString(),
+    } as const;
   } catch (e) {
     return fail(e, 'collect');
+  }
+}
+
+/** 일괄 수금(2026-09-08) — 세금 권한자가 수금 가능한 구역 전부를 한 번에. 구역별 별도 트랜잭션. */
+export async function collectAllTaxAction() {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    const serverId = await getActiveServerId();
+    const r = await collectAllZoneTax({ userId: u, serverId });
+    revalidatePath('/guild');
+    revalidatePath('/guild/map');
+    revalidatePath('/guild/distribute');
+    revalidatePath('/guild/settings');
+    return {
+      status: 'success',
+      zones: r.collected.length,
+      failed: r.failed.length,
+      total: r.total.toString(),
+      guildGain: r.guildGain.toString(),
+      executorGain: r.executorGain.toString(),
+      myGain: r.myGain.toString(),
+    } as const;
+  } catch (e) {
+    return fail(e, 'collectAll');
   }
 }
 

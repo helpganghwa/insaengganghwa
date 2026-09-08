@@ -158,13 +158,16 @@ export default function Doc() {
         </LI>
         <LI>세율은 그 길드의 모든 구역 누적에 곱해진다.</LI>
         <LI>
-          수금은 집행관이 한다. 구역을 점령하고 {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}이 지나야
-          첫 수금이 가능하고, 그 뒤로도 {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}의 쿨타임이 적용된다.
+          수금은 그 구역 집행관이 하거나, 길드장과 세금 권한이 있는 부길드장이 대신 할 수 있다. 길드 관리의
+          세금 수금·분배 화면에서는 수금 가능한 구역을 한 번에 걷을 수도 있다. 구역을 점령하고{' '}
+          {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}이 지나야 첫 수금이 가능하고, 그 뒤로도{' '}
+          {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}의 쿨타임이 적용된다. 집행관이 없는 구역은 수금할 수
+          없다.
           <Fn n={5} />
         </LI>
         <LI>
-          수금한 다이아 중 {bpPct(GUILD_EXECUTOR_TAX_CUT * 10_000)}는 집행관 몫으로 바로 지급되고,
-          나머지 {bpPct((1 - GUILD_EXECUTOR_TAX_CUT) * 10_000)}는 길드 세금으로 모인다.
+          수금한 다이아 중 {bpPct(GUILD_EXECUTOR_TAX_CUT * 10_000)}는 누가 수금했든 집행관 몫으로 바로
+          지급되고, 나머지 {bpPct((1 - GUILD_EXECUTOR_TAX_CUT) * 10_000)}는 길드 세금으로 모인다.
         </LI>
       </UL>
       <Note>
