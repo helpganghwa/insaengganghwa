@@ -121,11 +121,6 @@ export function TaxBoard({
             }`}
           >
             {t.label}
-            {t.key === 'collect' && collect.readyCount > 0 ? (
-              <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 text-[10px] tabular-nums text-amber-600 dark:text-amber-400">
-                {collect.readyCount}
-              </span>
-            ) : null}
           </button>
         ))}
       </div>

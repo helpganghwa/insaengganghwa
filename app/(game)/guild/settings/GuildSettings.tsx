@@ -30,6 +30,8 @@ type Tile = {
   tint: string;
   /** 우상단 빨간 배지(대기 건수). */
   badge?: number;
+  /** 배지 접근성 라벨(기본 '대기 N건'). */
+  badgeLabel?: string;
   show: boolean;
 };
 
@@ -136,6 +138,9 @@ export function GuildSettings({
       href: '/guild/distribute',
       label: '세금',
       desc: '수금·분배',
+      // 수금 가능 구역 수를 배지로(2026-09-08) — 세금 화면 세그먼트가 아니라 여기서 알린다.
+      badge: view.collectableZones,
+      badgeLabel: `수금 가능 ${view.collectableZones}곳`,
       tint: '#332306',
       show: can.taxDistribute,
     },
@@ -263,7 +268,7 @@ export function GuildSettings({
             />
             {t.badge && t.badge > 0 ? (
               <span
-                aria-label={`대기 ${t.badge}건`}
+                aria-label={t.badgeLabel ?? `대기 ${t.badge}건`}
                 className="absolute right-1 top-1 z-20 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 py-0.5 text-[9.5px] font-bold tabular-nums text-white shadow ring-2 ring-zinc-900/50"
               >
                 {t.badge > 99 ? '99+' : t.badge}
