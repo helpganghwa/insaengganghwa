@@ -166,12 +166,12 @@ export default function Doc() {
           <Fn n={5} />
         </LI>
         <LI>
-          수금한 다이아 중 {bpPct(GUILD_EXECUTOR_TAX_CUT * 10_000)}는 누가 수금했든 집행관 몫으로 바로
-          지급되고, 나머지 {bpPct((1 - GUILD_EXECUTOR_TAX_CUT) * 10_000)}는 길드 세금으로 모인다.
+          수금한 다이아 중 {bpPct(GUILD_EXECUTOR_TAX_CUT * 10_000)}는 집행관 몫으로 바로 지급되고,
+          나머지 {bpPct((1 - GUILD_EXECUTOR_TAX_CUT) * 10_000)}는 길드 세금으로 모인다.
         </LI>
       </UL>
       <Note>
-        분배는 세금 분배 권한자가 할 수 있다. 균등 · 기여 비례 · 오늘 기부자 · 직접 중에서 방식을 고르고,
+        분배는 길드장과 세금 권한이 있는 부길드장이 할 수 있다. 균등 · 기여 비례 · 오늘 기부자 · 직접 중에서 방식을 고르고,
         사람별 금액은 수정할 수 있다. 지급은 보상 우편으로 이루어진다.
       </Note>
 

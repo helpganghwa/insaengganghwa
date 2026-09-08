@@ -1,7 +1,6 @@
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
-import { MILEAGE_KRW_PER_POINT } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
@@ -18,7 +17,6 @@ export const meta: WikiDocMeta = {
     { id: 'package', label: '패키지' },
     { id: 'charge', label: '충전' },
     { id: 'limited', label: '한정 상품' },
-    { id: 'points', label: '포인트' },
   ],
 };
 
@@ -121,16 +119,6 @@ export default function Doc() {
         <LI>이용 중에는 배너에 남은 일수가 뜨고, 기간이 끝나면 다시 살 수 있다.</LI>
       </UL>
 
-      <H2 id="points">포인트</H2>
-      <UL>
-        <LI>상점 포인트 탭에서 대난투 포인트와 마일리지 잔액, 최근 적립 내역을 볼 수 있다. 상품은 준비 중이다.</LI>
-        <LI>
-          <b>대난투 포인트</b>는 매회 <DocLink slug="melee">대난투</DocLink> 결과가 발표될 때 순위 포인트와 같은 수치가 쌓인다. 줄어들지 않고 서버마다 따로 쌓인다.
-        </LI>
-        <LI>
-          <b>마일리지</b>는 결제할 때 {fmtInt(MILEAGE_KRW_PER_POINT)}원당 1점이 쌓인다. 계정 단위이며, 환불이 확정되면 그 결제로 받은 마일리지는 회수된다.
-        </LI>
-      </UL>
     </>
   );
 }
