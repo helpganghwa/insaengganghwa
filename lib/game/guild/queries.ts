@@ -992,6 +992,7 @@ export async function getTaxCollectView(guildId: bigint, serverId: number) {
     readyCount: list.filter((z) => z.status === 'ready').length,
     readySum: sum('ready').toString(),
     waitCount: list.filter((z) => z.status === 'wait').length,
+    waitSum: sum('wait').toString(),
     noneCount: list.filter((z) => z.status === 'none').length,
     noneSum: sum('none').toString(),
     /** 집행관 몫 10%를 받을 집행관 수(중복 제외) — 확인 팝업 "집행관 몫 10% (N명)". */

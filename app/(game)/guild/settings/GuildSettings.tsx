@@ -134,9 +134,8 @@ export function GuildSettings({
       key: 'tax',
       art: 'tax',
       href: '/guild/distribute',
-      label: '세금 수금·분배',
-      // 들어가기 전에도 상태가 보이게 — 수금 가능 곳 수 + 곳간(2026-09-08).
-      desc: `수금 가능 ${view.collectableZones}곳 · 💎${Number(view.taxPool).toLocaleString('ko-KR')}`,
+      label: '세금',
+      desc: '수금·분배',
       tint: '#332306',
       show: can.taxDistribute,
     },

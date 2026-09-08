@@ -9,7 +9,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { GUILD_EXECUTOR_TAX_CUT } from '@/lib/game/guild/balance';
-import type { TaxCollectZone } from '@/lib/game/guild/queries';
+import type { TaxCollectZone, TaxZoneStatus } from '@/lib/game/guild/queries';
 
 import { collectAllTaxAction, collectTaxAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
@@ -22,9 +22,35 @@ export type CollectView = {
   readyCount: number;
   readySum: string;
   waitCount: number;
+  waitSum: string;
   noneCount: number;
   noneSum: string;
   readyExecutors: number;
+};
+
+/** 요약 칸 = 상태 필터. 상태마다 고유색 — 켜진 칸은 테두리·배경까지, 꺼진 칸은 숫자만 물든다. */
+const STATUS_CELL: Record<
+  TaxZoneStatus,
+  { label: string; num: string; on: string; off: string }
+> = {
+  ready: {
+    label: '수금 가능',
+    num: 'text-amber-600 dark:text-amber-400',
+    on: 'border-amber-500/70 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-500/15',
+    off: 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950',
+  },
+  wait: {
+    label: '대기',
+    num: 'text-sky-600 dark:text-sky-400',
+    on: 'border-sky-500/70 bg-sky-50 dark:border-sky-500/60 dark:bg-sky-500/15',
+    off: 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950',
+  },
+  none: {
+    label: '집행관 없음',
+    num: 'text-red-500 dark:text-red-400',
+    on: 'border-red-500/70 bg-red-50 dark:border-red-500/60 dark:bg-red-500/15',
+    off: 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950',
+  },
 };
 
 const fmt = (n: bigint | number) => Number(n).toLocaleString('ko-KR');
@@ -119,8 +145,21 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
   const { optimisticAdjust } = useDiamondActions();
   const [pending, start] = useTransition();
   const [ask, setAsk] = useState<Target | null>(null);
+  /** 켜진 상태 필터 — 비어 있으면 전체. 여러 개를 켜면 합집합. */
+  const [filter, setFilter] = useState<Set<TaxZoneStatus>>(() => new Set());
+  const toggleFilter = (st: TaxZoneStatus) =>
+    setFilter((f) => {
+      const n = new Set(f);
+      if (n.has(st)) n.delete(st);
+      else n.add(st);
+      return n;
+    });
 
   const ready = useMemo(() => view.zones.filter((z) => z.status === 'ready'), [view.zones]);
+  const visible = useMemo(
+    () => (filter.size === 0 ? view.zones : view.zones.filter((z) => filter.has(z.status))),
+    [view.zones, filter],
+  );
 
   /** 확인 팝업 수치 — 대상(전체/1곳)에 따라. */
   const plan = useMemo(() => {
@@ -165,58 +204,55 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
   };
 
   const readySum = BigInt(view.readySum);
+  const cells: { st: TaxZoneStatus; count: number; sum: string }[] = [
+    { st: 'ready', count: view.readyCount, sum: view.readySum },
+    { st: 'wait', count: view.waitCount, sum: view.waitSum },
+    { st: 'none', count: view.noneCount, sum: view.noneSum },
+  ];
 
   return (
     <>
-      {/* 요약 3칸 — 수금 가능이 주인공, 나머지는 상태 카운트. */}
+      {/* 요약 3칸 = 상태 필터 — 누르면 그 상태만, 모두 끄면 전체. */}
       <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-        <div className="rounded-xl border border-amber-500/40 bg-amber-50/50 px-2.5 py-2 dark:border-amber-500/30 dark:bg-amber-500/[0.06]">
-          <p className="text-[10px] font-bold tracking-wide text-zinc-400">수금 가능</p>
-          <p className="text-[15px] font-extrabold leading-tight tabular-nums text-amber-600 dark:text-amber-400">
-            {view.readyCount}곳
-          </p>
-          <p className="text-[10.5px] font-bold tabular-nums text-amber-600/90 dark:text-amber-400/90">
-            💎{fmt(readySum)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[10px] font-bold tracking-wide text-zinc-400">대기</p>
-          <p className="text-[15px] font-extrabold leading-tight tabular-nums text-zinc-700 dark:text-zinc-200">
-            {view.waitCount}곳
-          </p>
-          <p className="text-[10.5px] text-zinc-400">쿨타임 · 세금 0</p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[10px] font-bold tracking-wide text-zinc-400">집행관 없음</p>
-          <p
-            className={`text-[15px] font-extrabold leading-tight tabular-nums ${
-              view.noneCount > 0 ? 'text-red-500' : 'text-zinc-700 dark:text-zinc-200'
-            }`}
-          >
-            {view.noneCount}곳
-          </p>
-          <p className="text-[10.5px] tabular-nums text-zinc-400">
-            {view.noneCount > 0 ? `💎${fmt(BigInt(view.noneSum))} 동결` : '수금 불가 없음'}
-          </p>
-        </div>
+        {cells.map((c) => {
+          const meta = STATUS_CELL[c.st];
+          const on = filter.has(c.st);
+          return (
+            <button
+              key={c.st}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggleFilter(c.st)}
+              className={`rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.98] ${on ? meta.on : meta.off}`}
+            >
+              <p className="text-[10px] font-bold tracking-wide text-zinc-400">{meta.label}</p>
+              <p className={`text-[15px] font-extrabold leading-tight tabular-nums ${meta.num}`}>{c.count}곳</p>
+              <p className={`text-[10.5px] font-bold tabular-nums ${meta.num} opacity-90`}>💎{fmt(BigInt(c.sum))}</p>
+            </button>
+          );
+        })}
       </div>
 
       {/* 구역 표 — 수금 가능 → 대기(가까운 순) → 집행관 공석. */}
-      {view.zones.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="mt-2 rounded-xl border border-dashed border-zinc-300 px-3 py-6 text-center text-[12px] text-zinc-500 dark:border-zinc-700">
-          점령지가 없습니다. 점령전에서 구역을 차지하면 세금이 쌓입니다.
+          {view.zones.length === 0
+            ? '점령지가 없습니다. 점령전에서 구역을 차지하면 세금이 쌓입니다.'
+            : '해당하는 구역이 없습니다.'}
         </div>
       ) : (
         <ul className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
-          {view.zones.map((z) => (
+          {visible.map((z) => (
             <li
               key={z.id}
               className="flex items-center gap-2 border-b border-zinc-100 py-2 last:border-b-0 dark:border-zinc-900"
             >
-              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: z.color }} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="truncate text-[12.5px] font-semibold">{z.name}</span>
+                  {/* 지역색은 점 대신 이름 글자색으로(2026-09-08 사용자 결정). */}
+                  <span className="truncate text-[12.5px] font-semibold" style={{ color: z.color }}>
+                    {z.name}
+                  </span>
                   {z.executorUserId === myUserId ? (
                     <span className="shrink-0 text-[9px] font-bold text-zinc-400">내 구역</span>
                   ) : null}
@@ -287,10 +323,6 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
       >
         {view.readyCount > 0 ? `모두 수금 ${fmt(readySum)}💎 · ${view.readyCount}곳` : '수금할 구역이 없습니다'}
       </button>
-      <p className="mt-1.5 px-1 text-[10.5px] leading-relaxed text-zinc-400">
-        수금하면 구역 세금의 {Math.round(GUILD_EXECUTOR_TAX_CUT * 100)}%는 그 구역 집행관에게, 나머지는 길드 곳간으로 들어갑니다.
-        집행관이 없는 구역은 지정 전까지 세금이 동결됩니다.
-      </p>
 
       {/* 확인 — 구역·금액을 되읽어준다(재화 이동, 되돌릴 수 없음). */}
       {ask && plan ? (
@@ -321,9 +353,8 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
               <ul className="space-y-1">
                 {plan.zs.map((z) => (
                   <li key={z.id} className="flex items-center justify-between gap-2 text-[12.5px]">
-                    <span className="flex min-w-0 items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
-                      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: z.color }} />
-                      <span className="truncate">{z.name}</span>
+                    <span className="min-w-0 truncate font-semibold" style={{ color: z.color }}>
+                      {z.name}
                     </span>
                     <span className="shrink-0 font-mono font-bold tabular-nums">💎{fmt(BigInt(z.tax))}</span>
                   </li>
