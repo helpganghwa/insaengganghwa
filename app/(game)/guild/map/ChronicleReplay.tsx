@@ -25,8 +25,12 @@ const MARCH_MS = 2600;
 const sleepUnless = (ms: number, skip: () => boolean) =>
   new Promise<void>((r) => (skip() ? r() : setTimeout(r, ms)));
 
-/** 목표 지점에서 가장 가까운 지도 밖 가장자리(%) — 무영지 길드의 등장 지점. */
-function edgeNear(t: { mapX: number; mapY: number }): { x: number; y: number } {
+/**
+ * 목표 지점에서 가장 가까운 지도 밖 가장자리(%) — 무영지 길드의 등장 지점.
+ * 같은 구역을 노리는 무영지 길드가 여럿이면(k번째 / n개) 가장자리를 따라 9%씩 벌려 세운다 —
+ * 종전엔 전부 같은 점에서 나타나 문양이 겹쳐 어느 길드인지 구분이 안 됐다(2026-09-08 제보).
+ */
+function edgeNear(t: { mapX: number; mapY: number }, k = 0, n = 1): { x: number; y: number } {
   const cands = [
     { x: -6, y: t.mapY }, { x: 106, y: t.mapY }, { x: t.mapX, y: -8 }, { x: t.mapX, y: 110 },
   ];
@@ -36,7 +40,13 @@ function edgeNear(t: { mapX: number; mapY: number }): { x: number; y: number } {
     const d = (c.x - t.mapX) ** 2 + (c.y - t.mapY) ** 2;
     if (d < bd) { bd = d; best = c; }
   }
-  return best;
+  if (n <= 1) return best;
+  const spread = (k - (n - 1) / 2) * 9;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  // 좌우 가장자리면 세로로, 상하 가장자리면 가로로 벌린다(가장자리 밖으로는 안 나가게).
+  return best.x === -6 || best.x === 106
+    ? { x: best.x, y: clamp(best.y + spread, -8, 110) }
+    : { x: clamp(best.x + spread, -6, 106), y: best.y };
 }
 
 /** 연속 나열 그룹 경계 — 구역 마커 사이가 나열 접속(·,와/과/및/공백)뿐이면 같은 그룹. */
@@ -292,10 +302,14 @@ export function ChronicleReplayPanel({
       const standingGuild = standingGuildOf(ev);
       const standing = standingGuild ? { g: standingGuild, el: spawnEmblem(standingGuild, tPct) } : null;
       const marchers: { g: string; el: HTMLElement | null }[] = [];
+      // 무영지(출발 구역 없음) 길드끼리는 등장 지점을 벌린다 — 같은 목표를 노린 깃발 겹침 방지.
+      const edgeParties = parties.filter((g) => ev.origins[g] == null || !zoneById.current.get(ev.origins[g]!));
       for (const g of parties) {
         const originId = ev.origins[g] ?? null;
         const origin = originId != null ? zoneById.current.get(originId) : null;
-        const fromPct = origin ? { x: origin.mapX, y: origin.mapY } : edgeNear(target);
+        const fromPct = origin
+          ? { x: origin.mapX, y: origin.mapY }
+          : edgeNear(target, edgeParties.indexOf(g), edgeParties.length);
         const el = spawnEmblem(g, fromPct);
         marchers.push({ g, el });
         void march(el, fromPct, tPct);
