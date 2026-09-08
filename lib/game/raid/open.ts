@@ -5,6 +5,7 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { raids, raidParticipants, raidDailyCounts } from '@/lib/db/schema/raid';
+import { characters } from '@/lib/db/schema/server';
 import {
   RAID_DAILY_CAP,
   RAID_MAX_CONCURRENT_PER_USER,
@@ -115,7 +116,7 @@ export function openRaid(input: {
   durationMs?: number;
   /** 난이도(BALANCE §5.4) — 개설비·HP 배수·상자·마일스톤. 알 수 없는 값은 쉬움. */
   tier?: RaidTier;
-}): Promise<{ raidId: bigint; shareCode: string }> {
+}): Promise<{ raidId: bigint; shareCode: string; cost: number }> {
   const { userId, bossCode, friendShare = 'off', guildShare = 'off' } = input;
   // 서버 권위 — 난이도도 허용 목록만(클라 문자열 신뢰 X).
   const tier = raidTierOf(input.tier);
@@ -150,6 +151,15 @@ export function openRaid(input: {
       // 서버별 지갑 조건부 UPDATE(부족 시 미차감).
       const paid = await walletTrySpend(tx, userId, input.serverId, cost, 'raid_open');
       if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
+    } else {
+      // 무료 경로는 지갑을 안 건드리므로 "이 서버에 캐릭터가 있다"는 암묵 검사가 빠진다(검토 지적) —
+      // 위조 srv 쿠키로 캐릭터 없는 서버에 CP 0 호스트 레이드를 여는 것을 join.ts와 같은 코드로 막는다.
+      const [ch] = await tx
+        .select({ one: sql<number>`1` })
+        .from(characters)
+        .where(and(eq(characters.userId, userId), eq(characters.serverId, input.serverId)))
+        .limit(1);
+      if (!ch) throw new RaidError('NO_CHARACTER_ON_SERVER');
     }
 
     // 난이도 HP 배수는 여기서 한 번만 곱해 저장 — 이후 페이즈 수식·돌파 판정·게이지는 난이도 무관.

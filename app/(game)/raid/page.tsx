@@ -95,7 +95,8 @@ export default async function RaidPage() {
   const dailyRow = _r?.[1] ?? [];
   const pendingClaims = _r?.[2] ?? [];
   const hostedToday = Number(_r?.[3]?.[0]?.n ?? 0);
-  const freeOpenLeft = raidFreeOpenActive() ? Math.max(0, RAID_FREE_OPENS_PER_DAY - hostedToday) : 0;
+  // DB 타임아웃(_r null)이면 유료 표시 쪽으로 — 서버가 권위라 잘못된 '무료' 라벨만 피한다(검토 지적).
+  const freeOpenLeft = _r && raidFreeOpenActive() ? Math.max(0, RAID_FREE_OPENS_PER_DAY - hostedToday) : 0;
 
   // 내 활성 레이드들의 전체 참가자 데미지로 순위 산출.
   // 보통 RAID_MAX_CONCURRENT_PER_USER × 평균 참가자 수라 1 쿼리 batch면 충분.

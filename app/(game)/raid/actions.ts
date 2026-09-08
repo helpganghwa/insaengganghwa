@@ -30,7 +30,7 @@ import { RAID_TIERS, type RaidTier } from '@/lib/game/balance';
 const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_TIERS.easy.openCost.toLocaleString('ko-KR')}).`,
   DAILY_CAP_REACHED: '오늘 레이드 한도(5회)를 모두 사용했습니다.',
-  CONCURRENT_LIMIT: '동시 진행 레이드는 3개까지입니다.',
+  CONCURRENT_LIMIT: `동시 진행 레이드는 ${RAID_MAX_CONCURRENT_PER_USER}개까지입니다.`,
   RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',
   RAID_CLOSED: '종료되었거나 만료된 레이드입니다.',
   NOT_SHARED: '비공개 레이드입니다.',
@@ -119,7 +119,7 @@ export async function decideJoinRequestAction(
       // 수락 경로 — 개인 한도 초과는 호스트가 아니라 '요청자' 기준이라 호스트 기준 문구로 오인됨(감사 A4).
       // 요청자 관점 문구로 재매핑(RAID_FULL은 중립이라 공통 문구 유지).
       const decideMsg: Record<string, string> = {
-        CONCURRENT_LIMIT: '상대가 동시 진행 한도(3개)를 초과해 수락할 수 없습니다.',
+        CONCURRENT_LIMIT: `상대가 동시 진행 한도(${RAID_MAX_CONCURRENT_PER_USER}개)를 초과해 수락할 수 없습니다.`,
         DAILY_CAP_REACHED: '상대가 오늘 레이드 한도를 모두 사용해 수락할 수 없습니다.',
       };
       const m = decideMsg[e.code];
