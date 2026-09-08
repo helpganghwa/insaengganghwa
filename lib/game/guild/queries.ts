@@ -927,7 +927,7 @@ export type TaxCollectZone = {
   executorNickname: string | null;
   /** ready = 지금 수금 가능 · wait = 쿨다운 중이거나 세금 0 · none = 집행관 공석(동결). */
   status: TaxZoneStatus;
-  /** wait일 때 수금 가능해지는 시각(ms) — 세금이 0이라 기다리는 곳은 null. */
+  /** 쿨다운 중이면 수금 가능해지는 시각(ms) — 공석 구역도 시간은 흐르므로 채운다. 쿨다운이 아니면 null. */
   readyAt: number | null;
 };
 
@@ -976,7 +976,7 @@ export async function getTaxCollectView(guildId: bigint, serverId: number) {
       executorUserId: r.executorUserId,
       executorNickname: r.executorNickname ?? null,
       status,
-      readyAt: status === 'wait' && cooling ? readyAt : null,
+      readyAt: cooling ? readyAt : null,
     };
   });
   const order: Record<TaxZoneStatus, number> = { ready: 0, wait: 1, none: 2 };

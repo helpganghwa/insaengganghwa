@@ -262,7 +262,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                       집행관 <b className="text-zinc-700 dark:text-zinc-300">{z.executorNickname}</b>
                     </>
                   ) : (
-                    <span className="text-red-500/90">집행관 공석 — 수금 불가</span>
+                    <span className="text-red-500/90">집행관 공석</span>
                   )}
                 </div>
               </div>
@@ -277,7 +277,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
               >
                 💎{fmt(BigInt(z.tax))}
               </span>
-              {/* 오른쪽 열 = 수금 버튼 또는 남은 시간만. 세금 0·공석은 비워 둔다. */}
+              {/* 오른쪽 열 = 수금 버튼 · 남은 시간 · (시간은 됐지만 공석이면) 수금 불가. 세금 0은 비워 둔다. */}
               <div className="w-[72px] shrink-0 text-right">
                 {z.status === 'ready' ? (
                   <button
@@ -288,7 +288,7 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                   >
                     수금
                   </button>
-                ) : z.status === 'wait' && z.readyAt != null ? (
+                ) : z.readyAt != null ? (
                   <Ticker>
                     {(now) => (
                       <span className="font-mono text-[10.5px] tabular-nums text-zinc-500">
@@ -296,6 +296,8 @@ function CollectPanel({ myUserId, view }: { myUserId: string; view: CollectView 
                       </span>
                     )}
                   </Ticker>
+                ) : z.status === 'none' ? (
+                  <span className="text-[10.5px] font-bold text-red-500/90">수금 불가</span>
                 ) : null}
               </div>
             </li>
