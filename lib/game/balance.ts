@@ -989,3 +989,11 @@ export function titleNextMilestone(discovered: number): number {
 // ── 친구 (§SOCIAL) ──
 /** 친구 요청 거절 후 같은 상대에게 재요청까지 대기(시간) — 길드 가입 재신청(24h)과 동일 기준(2026-09-07 문의). */
 export const FRIEND_REAPPLY_COOLDOWN_HOURS = 24;
+
+// ── 포인트 지갑(2026-09-08 확정, docs/POINT-SHOP.md) ──
+/** 마일리지 적립 — 결제 100원당 1점(= 결제액의 1%). 소수점 이하 버림. 잔액 카드 문구(POINTS_COPY.mileage)와 1:1. */
+export const MILEAGE_KRW_PER_POINT = 100;
+export function mileageForKrw(krw: number): number {
+  if (!Number.isFinite(krw) || krw <= 0) return 0;
+  return Math.floor(krw / MILEAGE_KRW_PER_POINT);
+}

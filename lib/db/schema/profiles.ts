@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 /**
  * SCHEMA §1. profiles (계정/유저)
  *
@@ -6,6 +7,7 @@
  * 등급/시즌/천장/자가통계 컬럼 없음. `diamond` 변동은 항상 트랜잭션+감사(직접 UPDATE 금지).
  */
 import {
+  bigint,
   pgTable,
   pgEnum,
   uuid,
@@ -81,6 +83,8 @@ export const profiles = pgTable('profiles', {
   lastServerId: smallint('last_server_id').notNull().default(1),
   /** 회원탈퇴 시각(null=활성). 게임데이터 파기 후 마킹, 결제기록은 보존. 재로그인 시 createCharacter가 해제. */
   withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+  /** 마일리지 잔액(0197, docs/POINT-SHOP.md) — 결제 100원당 1점, 계정 단위. 정본은 point_ledger. */
+  mileage: bigint('mileage', { mode: 'bigint' }).notNull().default(sql`0`),
   /** 채팅 금지 만료(0125, null=정상) — 미래 시각이면 월드 채팅 전송 차단(계정 전역). */
   chatMutedUntil: timestamp('chat_muted_until', { withTimezone: true }),
   /** 계정 정지 시각(null=정상). 설정 시 게임 접근 차단·로그인 시 사유 노출(운영). */

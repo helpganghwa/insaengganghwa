@@ -43,6 +43,8 @@ export const characters = pgTable(
       .references(() => servers.id),
     /** 서버별 다이아 지갑(P2 이관) — 증감은 lib/game/wallet.ts 단일 경로로만. */
     diamond: bigint('diamond', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 대난투 포인트 잔액(0197, docs/POINT-SHOP.md) — 발표마다 순위 포인트와 같은 수치, 감쇠 없음, 서버별. 정본은 point_ledger. */
+    meleePoints: bigint('melee_points', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 캐릭터 닉네임(P3 이관) — **전 캐릭터 전역 유일**(같은 계정도 재사용 불가, SERVER.md §1). */
     nickname: text('nickname').notNull(),
     /** 닉변 횟수(캐릭터별) — 0이면 첫 변경 무료. */

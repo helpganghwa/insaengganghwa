@@ -11,6 +11,7 @@ import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { accrueMeleePrizeTax } from '@/lib/game/guild/tax';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
+import { creditMeleePoints } from '@/lib/game/points/wallet';
 import { meleePointsForRank } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 import { formatHeadlineBlock, generateAndStoreMeleeHeadlines } from './headline-service';
@@ -145,6 +146,19 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
     await bumpMeleePoints(entries, serverId).catch((e) =>
       console.warn('[melee.reveal] points bump failed (cron이 교정)', e),
     );
+    // 대난투 포인트 지갑(docs/POINT-SHOP.md) — 랭킹 포인트와 같은 수치를 소모용 잔액에(감쇠 없음).
+    // (battle, user) 멱등 키라 재실행해도 이중 적립 없음. 실패는 흡수(발표를 막지 않음 — 소급 스크립트로 보정).
+    try {
+      await db.transaction(async (tx) => {
+        for (const r of rankRows) {
+          if (r.rank == null) continue;
+          const p = meleePointsForRank(Number(r.rank), n);
+          await creditMeleePoints(tx, { userId: r.uid, serverId, battleId, points: p, note: `대난투 ${r.rank}위` });
+        }
+      });
+    } catch (e) {
+      console.warn('[melee.reveal] melee points credit failed', e);
+    }
   }
   // 우승 마일스톤(통산 우승 N회 — 포인트와 분리 유지). 우승 횟수를 원천에서 재계산해 클레임.
   if (result.championUserId) {

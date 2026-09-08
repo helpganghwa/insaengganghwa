@@ -78,6 +78,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);
+    // 포인트 지갑(0197) — 원장 삭제 + 계정 마일리지 0(profiles는 결제 앵커라 남기므로 잔액만 비운다).
+    await tx.execute(sql`delete from point_ledger where user_id = ${uid}`);
+    await tx.execute(sql`update profiles set mileage = 0 where id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
     // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.

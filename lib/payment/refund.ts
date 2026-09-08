@@ -13,6 +13,7 @@ import { kstMonthString } from '@/lib/kst';
 import { reclaimProductGrant } from '@/lib/game/shop/grant';
 import { PREMIUM, shopGrant } from '@/lib/game/shop/catalog';
 import { reclaimBpSegment } from '@/lib/game/battlepass';
+import { revokeMileageForOrder } from '@/lib/game/points/wallet';
 
 import { raisePaymentAlert } from './alert';
 import { getPortonePayment } from './portone';
@@ -227,6 +228,10 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
             eq(monthlyPurchaseLimits.kstMonth, paidMonth),
           ),
         );
+
+      // 마일리지 회수(docs/POINT-SHOP.md) — 이 주문이 적립한 점수를 되돌린다(부족분은 원장에 기록). 잠금 순서:
+      // 월누적 다음, 재화 앞(completePurchase의 적립 위치와 동일).
+      await revokeMileageForOrder(tx, { userId: order.userId, orderId: order.id });
 
       // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
       // ⚠ grant_skipped 주문(특가 중복·미성년 보류 — 지급 없이 paid)은 회수를 건너뛴다:
