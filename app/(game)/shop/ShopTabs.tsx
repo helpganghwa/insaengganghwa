@@ -59,32 +59,42 @@ function PointsTab({ points }: { points: PointsOverview }) {
         {(['melee', 'mileage'] as const).map((k) => {
           const on = k === kind;
           return (
+            // 배경은 상점 배너와 같은 픽셀 장면(Pixellab, 2026-09-08): 대난투=경기장, 마일리지=금고 회계실.
+            // 선택 칸은 금 테두리 + 원색, 비선택 칸은 흑백·어둡게(구매 완료 카드의 grayscale 문법).
             <button
               key={k}
               type="button"
               aria-pressed={on}
               onClick={() => setKind(k)}
-              className={`flex flex-1 flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition active:scale-[0.99] ${
-                on
-                  ? 'border-amber-400/70 bg-amber-50 dark:bg-[#1c1a14]'
-                  : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
+              className={`relative isolate h-[60px] flex-1 overflow-hidden rounded-xl border text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+                on ? 'border-amber-400/70' : 'border-zinc-800/60 grayscale brightness-[.7]'
               }`}
             >
-              <span className={`text-[10px] font-semibold ${on ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-500'}`}>
-                {k === 'melee' ? '대난투 포인트' : '마일리지'}
-              </span>
-              <span
-                className={`text-[18px] font-extrabold tabular-nums ${on ? 'text-amber-700 dark:text-amber-300' : 'text-zinc-700 dark:text-zinc-200'}`}
-              >
-                {points[k].balance.toLocaleString('ko-KR')}
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={assetUrl(`/sprites/shop/points-${k}-bg.png`)}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+              <div className="relative z-10 flex h-full flex-col justify-center px-3">
+                <span className={`text-[10px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${on ? 'text-amber-300' : 'text-white/80'}`}>
+                  {k === 'melee' ? '대난투 포인트' : '마일리지'}
+                </span>
+                <span className="text-[18px] font-extrabold tabular-nums text-white text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  {points[k].balance.toLocaleString('ko-KR')}
+                </span>
+              </div>
             </button>
           );
         })}
       </div>
       <p className="mb-2 px-1 text-[11px] text-zinc-500">{POINTS_COPY[kind]}</p>
       <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mb-0.5 text-[10px] font-bold text-zinc-500">최근 적립</div>
+        <div className="mb-0.5 text-[10px] font-bold text-zinc-500">최근 적립/사용</div>
         {cur.recent.length === 0 ? (
           <p className="py-2 text-[11px] text-zinc-500">아직 적립 내역이 없습니다.</p>
         ) : (
