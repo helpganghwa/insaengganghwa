@@ -14,8 +14,8 @@ import { FIRST_MILESTONES, type FirstMilestoneMetric } from '@/lib/game/balance'
  *    (값은 단조 증가가 아니어도 임계 이상이면 매번 시도 — 이미 기록된 유저는 unique로 멱등).
  *  - 직렬화: 이정표별 advisory 락(pg_advisory_xact_lock) 안에서 count → insert. 동시 도달 둘이 같은 rank를 계산하는
  *    경쟁을 락이 없앤다. 넷째부터는 rank 4 → check 위반 대신 미리 건너뛴다.
- *  - 소급 없음: 배포 시점에 이미 임계를 넘긴 사람이 있으면 그 사람의 다음 갱신에서 1등으로 기록된다. 그래서 임계는
- *    항상 **현재 1위보다 높게** 잡는다(09-09 기준 최고 강화 460 · 전투력 498만 · 초월 17 · 합산 15,940).
+ *  - 소급: 배포 전에 이미 넘긴 사람은 scripts/first-milestones-backfill.ts가 로그 순서대로 먼저 넣는다(0198 → 소급 → 코드 배포).
+ *    이 훅은 그 뒤에 넘는 사람만 활동 순서로 기록한다.
  */
 type Runner = Pick<typeof db, 'transaction'>;
 

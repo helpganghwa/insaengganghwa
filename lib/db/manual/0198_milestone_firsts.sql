@@ -3,7 +3,7 @@
 --  - rank 1~3 = 도달 순서. (server_id, milestone, rank) PK로 넷째는 못 들어온다. 같은 유저는 이정표당 1행.
 --  - 기록은 리더보드 증분 갱신(refreshEnhanceMetrics) 커밋 뒤 best-effort, 이정표별 advisory 락으로 직렬화.
 --  - 탈퇴 cascade로 빈 순위는 다시 채우지 않는다(다음 도달자는 max(rank)+1 → 3 초과면 기록 없음).
---  - 신설 테이블이라 코드보다 먼저 적용해도 무해. 소급 없음(배포 뒤 도달분만).
+--  - 신설 테이블이라 코드보다 먼저 적용해도 무해. 배포 전 도달분은 scripts/first-milestones-backfill.ts로 로그 순서 소급(0198 → 소급 → 배포).
 begin;
 
 create table if not exists milestone_firsts (
