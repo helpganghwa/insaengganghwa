@@ -203,7 +203,7 @@ export function applyCrit(reward: ExpeditionReward): ExpeditionReward {
   };
 }
 
-/** 실효 슬롯 수 — 계정 합산 강화만으로 결정(0~4). 구매·레벨 해금 없음. */
+/** 실효 슬롯 수 — 계정 합산 강화만으로 결정(0~EXPEDITION_SLOTS). 구매·레벨 해금 없음. */
 export function effectiveSlots(enhanceSum: number): number {
   return expeditionSlotsFor(enhanceSum);
 }

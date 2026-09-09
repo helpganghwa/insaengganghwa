@@ -788,7 +788,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
     const need = s.unlock?.enhanceSum ?? 0;
     const pct = need > 0 ? Math.min(100, Math.floor((enhanceSum / need) * 100)) : 0;
-    const bg = s.slot === 3 ? 'kingdom' : 'angel';
+    const bg = s.slot === 3 ? 'kingdom' : s.slot === 5 ? 'volcano' : 'angel';
     return (
       <button
         type="button"
