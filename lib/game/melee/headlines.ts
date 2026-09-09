@@ -362,7 +362,7 @@ export function generateHeadlines(
     for (const [kid, victims] of kills) {
       const k = byId.get(kid)!;
       const v = victims.find((vv) => y.killerOf.get(k.userId) === vv.userId);
-      if (v) { add('revenge', 'drama', 2, `어제 자신을 쓰러뜨린 ${josa(v.nickname, '을', '를')} 오늘 되갚은 ${k.nickname}`, [k.userId, v.userId]); break; }
+      if (v) { add('revenge', 'drama', 2, `어제 자신을 꺾은 ${josa(v.nickname, '을', '를')} 오늘 쓰러뜨린 ${k.nickname}`, [k.userId, v.userId]); break; }
     }
     // 라이벌·천적은 가장 긴 연속 1건만(같은 종류 후보 중복 방지).
     let rival: { k: HeadlineParticipant; v: HeadlineParticipant; s: number } | null = null;
