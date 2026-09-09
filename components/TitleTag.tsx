@@ -167,15 +167,22 @@ export function TitleTag({
     <span style={styleAttr(def.style)}>{label}</span>
   );
 
+  // 한자 병기(2026-09-09 최초 이정표) — 같은 fx 재질을 .62em 옅게(title-fx.css .hj).
+  const hanja = def.style.hanja ? <span className={`fx fx-${def.style.fx} hj`}>{def.style.hanja}</span> : null;
+
   return (
     <span className={`ttag shrink-0 whitespace-nowrap ${className}${stillCls}`}>
       {def.style.pt ? (
         <span className={`pt pt-${def.style.pt}`}>
           {inner}
+          {hanja}
           {def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
         </span>
       ) : (
-        inner
+        <>
+          {inner}
+          {hanja}
+        </>
       )}
     </span>
   );

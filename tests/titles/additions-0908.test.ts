@@ -11,9 +11,9 @@ const SETS = ['set_thunder_knight', 'set_star_navigator', 'set_ash_scythe', 'set
 const RULES = ['star_sea', 'binge_500', 'fatalist', 'lunchbox', 'drifter_100'];
 
 describe('칭호 추가 0908 — 정의', () => {
-  it('총 507종, 라벨 중복 없음', () => {
-    expect(TITLE_DEFS).toHaveLength(507);
-    const labels = TITLE_DEFS.map((t) => t.label);
+  it('총 531종, 라벨 중복 없음(최초 이정표 금·은·동은 이름 공유)', () => {
+    expect(TITLE_DEFS).toHaveLength(531);
+    const labels = TITLE_DEFS.filter((t) => !/^first_\w+_[123]$/.test(t.code)).map((t) => t.label);
     expect(new Set(labels).size).toBe(labels.length);
   });
 
@@ -29,7 +29,7 @@ describe('칭호 추가 0908 — 정의', () => {
     expect(TITLE_SECRET_BY_CODE.get('set_dragon_warden')!.req!.min).toBe(100);
   });
 
-  it('개인 1위 5종은 불꽃(V3) — 의만 회백, 맹주·군사는 금빛 숨결(7차 확정)', () => {
+  it('개인 1위 5종은 불꽃(V3) — 의만 회백, 맹주·군사는 궁서 세로 광택 금/은(20차 확정)', () => {
     expect(TITLE_BY_CODE.get('rank_combat')!.style).toMatchObject({ fx: 'blazegold' });
     expect(TITLE_BY_CODE.get('rank_max')!.style).toMatchObject({ fx: 'blaze', fxOnly: ['불', '정점'], plainColor: '#b8bcc6' });
     expect(TITLE_BY_CODE.get('rank_sum')!.style).toMatchObject({ fx: 'blazesteel', fxOnly: ['강철', '군주'] });
@@ -39,7 +39,7 @@ describe('칭호 추가 0908 — 정의', () => {
       const d = TITLE_BY_CODE.get(code)!;
       expect(d.kind).toBe('conditional');
       expect(d.hidden).toBe(false);
-      expect(d.style).toMatchObject({ fx: 'breathgold' });
+      expect(d.style).toMatchObject({ fx: code === 'guild_top_leader' ? 'lordgold' : 'lordsilver' });
     }
     expect(TITLE_BY_CODE.get('guild_top_leader')!.label).toBe('맹주');
     expect(TITLE_BY_CODE.get('guild_top_vice')!.label).toBe('군사');

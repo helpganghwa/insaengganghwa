@@ -358,3 +358,23 @@ GDD §7 · BALANCE §7. 1일 1회(KST 자정) 수령 — 누적 출석, 끊겨�
 ---
 
 > 모든 도메인 = Drizzle 도메인별 스키마 파일(`lib/db/schema/*.ts`)로 1:1. 수치 기본값은 `BALANCE.md`, 행위 트랜잭션 규칙은 `CLAUDE.md §3·§6`.
+
+## 13. 최초 이정표 기록 (0198, 2026-09-09)
+
+### 13.1 milestone_firsts
+서버·이정표별로 **처음 넘은 세 사람**(금·은·동)을 남긴다. 최초 이정표 칭호 24종(`first_<key>_<rank>`, docs/TITLES.md)의 판정 정본.
+
+```sql
+create table milestone_firsts (
+  server_id  smallint not null,
+  milestone  text not null,          -- lib/game/balance.ts FIRST_MILESTONES key (enh500 … sum30k)
+  rank       smallint not null check (rank between 1 and 3),
+  user_id    uuid not null references profiles(id) on delete cascade,
+  reached_at timestamptz not null default now(),
+  primary key (server_id, milestone, rank),
+  unique (server_id, milestone, user_id)
+);
+```
+
+- 쓰기는 `lib/game/titles/first-milestones.ts recordFirstMilestones` 한 경로(리더보드 증분 갱신 커밋 뒤 best-effort, 이정표별 advisory 락, 유저당 1행 멱등, rank = max+1이 3을 넘으면 기록 없음).
+- 탈퇴 cascade로 빈 순위는 재충원하지 않는다. 소급 없음.

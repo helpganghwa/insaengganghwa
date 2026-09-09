@@ -26,4 +26,5 @@ export * from './expedition'; // §20 파견 (미션 롤 × 아바타 배정) �
 export * from './support'; // §20 고객센터 문의 (인앱 접수 → 관리자 답변)
 export * from './announcement'; // §20 공지사항 (게시판 — 어드민 작성·발행, 홈 카드/강제 팝업)
 export * from './leaderboard'; // §21 리더보드 사전계산 스냅샷 (cron 재계산 — 읽기 경량화)
+export * from './milestone-firsts'; // 최초 이정표 기록(0198) — 첫 세 사람
 export * from './points';

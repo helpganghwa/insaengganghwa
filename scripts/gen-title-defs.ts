@@ -13,7 +13,7 @@ type Design = {
   typography: { size: string; weight: number };
   palette: Record<string, string>;
   regionKeywords: { pattern: string; color: string }[];
-  special: Record<string, { fx?: string; pt?: string; pc?: number; split?: boolean; color?: string; prefix?: { text: string; color: string }; fxOnly?: string[]; plainColor?: string }>;
+  special: Record<string, { fx?: string; pt?: string; pc?: number; split?: boolean; color?: string; prefix?: { text: string; color: string }; fxOnly?: string[]; plainColor?: string; hanja?: string }>;
   /** 어려움·한정 카테고리 시그니처 fx 패밀리(트랙 C) — special이 없는 칭호에 코드 해시로 순환 배정. */
   hardFx: Record<string, string[]>;
 };
@@ -51,6 +51,8 @@ type Style = {
   plainColor?: string;
   /** 집행관 — 기존 ExecutorTag 렌더(구역명=지역색+집행관 인디고)로 위임. */
   executor?: boolean;
+  /** 한자 병기(2026-09-09 최초 이정표) — 라벨 뒤 .62em 같은 재질로. */
+  hanja?: string;
 };
 
 // ── 팔레트 2차원화(트랙 C) — 카테고리 기본색을 난이도로 변주 ──
@@ -112,6 +114,7 @@ function styleOf(t: T): Style {
       ...(sp.pc ? { pc: sp.pc } : {}),
       ...(sp.split ? { split: true } : {}),
       ...(sp.fxOnly?.length ? { fxOnly: sp.fxOnly, plainColor: sp.plainColor ?? '#b8bcc6' } : {}),
+      ...(sp.hanja ? { hanja: sp.hanja } : {}),
       ...(hard ? { glow: true } : {}),
     };
   }
@@ -208,6 +211,8 @@ export type TitleStyle = {
   /** 부분 적용 — 이 조각들에만 fx, 나머지 글자는 plainColor 단색(길드 1위 불꽃: '의' 제외). */
   fxOnly?: string[];
   plainColor?: string;
+  /** 한자 병기 — 라벨 뒤 .62em, 같은 fx 재질(최초 이정표 24종). */
+  hanja?: string;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };

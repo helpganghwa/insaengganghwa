@@ -310,6 +310,8 @@ const FX_OG: Record<string, string> = {
   // 개인 1위 불꽃 팔레트 + 1위 길드 임원(2026-09-08)
   blazesteel: '#5fa8e6', blazecrimson: '#e03050', blazeviolet: '#9a5fe0', breathgold: '#e5c07b',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
+  // 궁서 세로 광택(2026-09-09) — 맹주·군사·최초 이정표 금/은/동
+  lordgold: '#f0c860', lordsilver: '#dfe6ee', firstgold: '#f0c860', firstsilver: '#dfe6ee', firstbronze: '#c98a5a',
   // 트랙 C 시그니처 패밀리(2026-08-21) — 전부 어려움·한정이라 OG 자랑 수요가 가장 높은 구간.
   bronzeshine: '#c8a06a', honeyflow: '#e8c26a', honeydrip: '#e8c26a', mistdrift: '#b9c2cc',
   roseflow: '#e8a0c0', blushbreath: '#e8a0c0', tideflow: '#7fd0c8', tidewave: '#7fd0c8',

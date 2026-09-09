@@ -24,6 +24,8 @@ export type TitleStyle = {
   /** 부분 적용 — 이 조각들에만 fx, 나머지 글자는 plainColor 단색(길드 1위 불꽃: '의' 제외). */
   fxOnly?: string[];
   plainColor?: string;
+  /** 한자 병기 — 라벨 뒤 .62em, 같은 fx 재질(최초 이정표 24종). */
+  hanja?: string;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
@@ -179,7 +181,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "조건부",
   style: {
-   fx: "breathgold",
+   fx: "lordgold",
    glow: true
   }
  },
@@ -190,7 +192,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "조건부",
   style: {
-   fx: "breathgold",
+   fx: "lordsilver",
    glow: true
   }
  },
@@ -5395,6 +5397,294 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "일상",
   style: {
    color: "#a8a8b0"
+  }
+ },
+ {
+  code: "first_enh500_1",
+  kind: "permanent",
+  label: "고수",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "高手",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh500_2",
+  kind: "permanent",
+  label: "고수",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "高手",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh500_3",
+  kind: "permanent",
+  label: "고수",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "高手",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh1000_1",
+  kind: "permanent",
+  label: "파천황",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "破天荒",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh1000_2",
+  kind: "permanent",
+  label: "파천황",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "破天荒",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh1000_3",
+  kind: "permanent",
+  label: "파천황",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "破天荒",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat5m_1",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat5m_2",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat5m_3",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_1",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "天下第一",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_2",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "天下第一",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_3",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "天下第一",
+   glow: true
+  }
+ },
+ {
+  code: "first_t20_1",
+  kind: "permanent",
+  label: "초인",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "超人",
+   glow: true
+  }
+ },
+ {
+  code: "first_t20_2",
+  kind: "permanent",
+  label: "초인",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "超人",
+   glow: true
+  }
+ },
+ {
+  code: "first_t20_3",
+  kind: "permanent",
+  label: "초인",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "超人",
+   glow: true
+  }
+ },
+ {
+  code: "first_t40_1",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_t40_2",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_t40_3",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_1",
+  kind: "permanent",
+  label: "지존",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "至尊",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_2",
+  kind: "permanent",
+  label: "지존",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "至尊",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_3",
+  kind: "permanent",
+  label: "지존",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "至尊",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum30k_1",
+  kind: "permanent",
+  label: "전설",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstgold",
+   hanja: "傳說",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum30k_2",
+  kind: "permanent",
+  label: "전설",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstsilver",
+   hanja: "傳說",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum30k_3",
+  kind: "permanent",
+  label: "전설",
+  hidden: false,
+  cat: "이정표",
+  style: {
+   fx: "firstbronze",
+   hanja: "傳說",
+   glow: true
   }
  }
 ] as const;

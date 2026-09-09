@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { expeditionSlotsFor } from '@/lib/game/balance';
+import { expeditionSlotsFor, FIRST_MILESTONES } from '@/lib/game/balance';
 
 import { sql } from 'drizzle-orm';
 
@@ -53,6 +53,14 @@ export function visibleTitleTotal(ownedPendingCount: number): number {
 }
 
 type Metrics = Record<string, number>;
+
+/** 최초 이정표 순위 지표(fr_<key> = 1~3, 없으면 0) — milestone_firsts 행에서. 정본·기록은 first-milestones.ts. */
+function firstRanksFrom(rows: { milestone: string; rank: unknown }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const m of FIRST_MILESTONES) out['fr_' + m.key] = 0;
+  for (const r of rows) out['fr_' + r.milestone] = Number(r.rank);
+  return out;
+}
 
 const CATALOG_KEY_BY_ID = new Map<number, string>(); // catalog_items.id → key (지연 로드)
 let catalogLoadedAt = 0;
@@ -137,7 +145,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped] = await runLimited([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, firsts] = await runLimited([
     // 강화 로그 집계
     () => db.execute(sql`
       select count(*)::int as total,
@@ -730,6 +738,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and crit) as exp_crit,
              coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
     `),
+    // 최초 이정표(2026-09-09) — milestone_firsts의 내 순위(fr_<key> = 1~3, 없으면 0). 기록은 first-milestones.ts 한 경로.
+    () => db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
@@ -775,6 +785,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 파견(2026-08-30)
     exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_crit: n(ex.exp_crit),
     exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
+    // 최초 이정표(2026-09-09) — fr_enh500 … fr_sum30k
+    ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
     res_days: n(mi.res_days), res_moves: n(mi.res_moves), regions_lived: n(mi.regions_lived),
     avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
@@ -829,6 +841,31 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
+  // 최초 이정표(2026-09-09) — 서버에서 처음 넘은 세 사람(금·은·동). 순위는 milestone_firsts(정본), 영구.
+  first_enh500_1: (m) => m.fr_enh500 === 1,
+  first_enh500_2: (m) => m.fr_enh500 === 2,
+  first_enh500_3: (m) => m.fr_enh500 === 3,
+  first_enh1000_1: (m) => m.fr_enh1000 === 1,
+  first_enh1000_2: (m) => m.fr_enh1000 === 2,
+  first_enh1000_3: (m) => m.fr_enh1000 === 3,
+  first_combat5m_1: (m) => m.fr_combat5m === 1,
+  first_combat5m_2: (m) => m.fr_combat5m === 2,
+  first_combat5m_3: (m) => m.fr_combat5m === 3,
+  first_combat10m_1: (m) => m.fr_combat10m === 1,
+  first_combat10m_2: (m) => m.fr_combat10m === 2,
+  first_combat10m_3: (m) => m.fr_combat10m === 3,
+  first_t20_1: (m) => m.fr_t20 === 1,
+  first_t20_2: (m) => m.fr_t20 === 2,
+  first_t20_3: (m) => m.fr_t20 === 3,
+  first_t40_1: (m) => m.fr_t40 === 1,
+  first_t40_2: (m) => m.fr_t40 === 2,
+  first_t40_3: (m) => m.fr_t40 === 3,
+  first_sum20k_1: (m) => m.fr_sum20k === 1,
+  first_sum20k_2: (m) => m.fr_sum20k === 2,
+  first_sum20k_3: (m) => m.fr_sum20k === 3,
+  first_sum30k_1: (m) => m.fr_sum30k === 1,
+  first_sum30k_2: (m) => m.fr_sum30k === 2,
+  first_sum30k_3: (m) => m.fr_sum30k === 3,
   // 강화
   enhance_100: (m) => m.max_lv >= 100,
   enhance_150: (m) => m.max_lv >= 150,

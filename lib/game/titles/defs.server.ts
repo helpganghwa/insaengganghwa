@@ -5028,6 +5028,150 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "일상",
   cond: "거주 이동 100회",
   diff: "중간"
+ },
+ {
+  code: "first_enh500_1",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +500에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh500_2",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +500에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh500_3",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +500에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh1000_1",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +1000에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh1000_2",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +1000에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh1000_3",
+  cat: "이정표",
+  cond: "서버에서 최고 강화 +1000에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat5m_1",
+  cat: "이정표",
+  cond: "서버에서 전투력 500만에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat5m_2",
+  cat: "이정표",
+  cond: "서버에서 전투력 500만에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat5m_3",
+  cat: "이정표",
+  cond: "서버에서 전투력 500만에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_1",
+  cat: "이정표",
+  cond: "서버에서 전투력 1,000만에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_2",
+  cat: "이정표",
+  cond: "서버에서 전투력 1,000만에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_3",
+  cat: "이정표",
+  cond: "서버에서 전투력 1,000만에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t20_1",
+  cat: "이정표",
+  cond: "서버에서 초월 20에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t20_2",
+  cat: "이정표",
+  cond: "서버에서 초월 20에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t20_3",
+  cat: "이정표",
+  cond: "서버에서 초월 20에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t40_1",
+  cat: "이정표",
+  cond: "서버에서 초월 40에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t40_2",
+  cat: "이정표",
+  cond: "서버에서 초월 40에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_t40_3",
+  cat: "이정표",
+  cond: "서버에서 초월 40에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_1",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 20,000에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_2",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 20,000에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_3",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 20,000에 세 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum30k_1",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 30,000에 첫 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum30k_2",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 30,000에 두 번째로 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum30k_3",
+  cat: "이정표",
+  cond: "서버에서 합산 강화 30,000에 세 번째로 도달",
+  diff: "한정"
  }
 ] as const;
 

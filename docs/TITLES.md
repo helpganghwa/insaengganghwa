@@ -143,3 +143,28 @@ type TitleDef = {
 - **1위 길드 임원 2종 신설**(조건부·공개·어려움): `guild_top_leader` **맹주**(길드 랭킹 1위 길드의 길드장인 동안) · `guild_top_vice` **군사**(부길드장인 동안). 이펙트 `breathgold`(breath의 금색판). 판정 = 명가(grank 1) + 직책(judge gleader/gvice), 표시 재검증 display.ts 동일 조건.
 - 폐기: 개인 5위·10위 칭호(통합·부문별 모두), 추가 14종 이펙트 변경(현행 유지 — 단, 어려움인 별의 바다·폭식은 hardFx 순환으로 stardrift·honeyflow가 붙는다). 505 → **507종**.
 - 점검 반영(2026-09-08): 별의 바다·폭식을 `special`에 고정 — 어려움 hardFx는 코드 정렬 순환이라 신규가 끼면 기존 보유 칭호(보급왕·만물상·삼시세끼·창고지기·초월자)의 이펙트가 밀린다. 신규 어려움 칭호는 앞으로도 `special`에 고정할 것. 불꽃 계열(`.fx-blaze*`)에 `background-position:0 100%` 기본값 — reduced-motion·정지 프레임에서 그라데이션 윗단(거의 흰색)만 보이던 문제.
+
+## 1위 길드 임원 이펙트 개편 · 최초 이정표 칭호 (2026-09-09, 검토 8~22차 확정)
+
+맹주 보유자의 문의("서버에 한 명인데 더 쉬운 칭호보다 수수하다")에서 출발해 열다섯 판의 시안(불꽃·재질·파티클·캔버스 불·서체 …)을 거쳐 확정. 진단: 채팅 목록은 정지 모드(.ttag-still)라 밝기 호흡뿐인 breathgold가 단색 금 글자로 보였다 → 확정안은 **정적 재질**이라 어디서나 같다.
+
+### 맹주 · 군사
+- 서체 **궁서** — 조선궁서체(조선일보 무료 배포 · 개인·기업 무료 · 웹 임베딩 허용)를 필요한 글자만 서브셋한 `app/fonts/ChosunGs-titles.woff2`(39자, 14KB), `app/layout.tsx` next/font/local `--font-gungseo`(preload 없음). 기기 내장 궁서가 없어(안드로이드·iOS·최신 macOS) 웹폰트가 유일한 경로.
+- 이펙트 `lordgold`(맹주) / `lordsilver`(군사) — 세로 광택 M2(흰 정점 → 본색 → 짙은 바닥, 180deg 5단) + 1px 압출, 움직임 없음. 조건·이름·판정은 그대로(guild_top_leader / guild_top_vice).
+- **서브셋 재생성**(이름·글자가 바뀔 때): `python3 -m fontTools.subset ChosunGs.woff --text="맹주군사<이정표 8이름 한글·한자>" --flavor=woff2 --no-hinting --desubroutinize --output-file=app/fonts/ChosunGs-titles.woff2`. 원본 woff는 눈누 CDN(`cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGs.woff`). 조선궁서체에 '強' 정체 글리프가 없어 통용 자형 '强'을 쓴다.
+
+### 최초 이정표 칭호 24종 (`first_<key>_<rank>`, 카테고리 이정표 · 영구 · 한정)
+서버에서 이정표를 **처음 넘은 세 사람**에게 금·은·동. 이름은 셋이 같고 재질(`firstgold` / `firstsilver` / `firstbronze`, 궁서 M2)만 다르다. 라벨 뒤에 한자를 병기한다(스타일 `hanja`, `.ttag .hj` = 같은 재질 .62em 옅게) — 라벨 유일성 테스트는 이 가족만 예외.
+
+| key | 축 · 기준 | 이름 |
+|---|---|---|
+| enh500 / enh1000 | 최고 강화 +500 / +1000 | 고수 高手 / 파천황 破天荒 |
+| combat5m / combat10m | 전투력 500만 / 1,000만 | 일기당천 一騎當千 / 천하제일 天下第一 |
+| t20 / t40 | 장비 최고 초월 20 / 40 | 초인 超人 / 천외천 天外天 |
+| sum20k / sum30k | 합산 강화 20,000 / 30,000 | 지존 至尊 / 전설 傳說 |
+
+- 임계 정본 `lib/game/balance.ts FIRST_MILESTONES`. 항상 **현재 서버 1위보다 높게** 잡는다(소급 없음 — 배포 뒤 처음 넘는 사람이 1등). 09-09 기준 1위: 강화 460 · 전투력 4,979,298 · 초월 17 · 합산 15,940.
+- 기록 정본 `milestone_firsts`(0198: server_id·milestone·rank 1~3 PK, 유저당 이정표 1행). 기록 경로는 하나 — 리더보드 증분 갱신 `refreshEnhanceMetrics`가 max·sum·combat·최고 초월을 구한 뒤 커밋 밖에서 `recordFirstMilestones`(이정표별 advisory 락, 멱등, 넷째 없음). 강화 정산·보급 개봉(자동 초월)이 그 경로를 타므로 네 축이 전부 잡힌다.
+- 판정: judge 지표 `fr_<key>`(1~3, 없으면 0) → 규칙 `first_<key>_<rank>: fr_<key> === rank`. 영구형이라 발견 뒤 유지. 발견은 여느 칭호처럼 /me/titles 진입 시.
+- 운영 원칙(사용자 확정): **공지·우편·연대기 없음(기록 칭호만)**, 조건은 위키·공지에 적지 않는다(§3.5). 다음 단계(+1100 · 1,500만 · T45 · 35,000 …)는 1위가 다가오면 이름 3종을 새로 정해 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가. 탈퇴로 빈 순위는 다시 채우지 않는다.
+- 총 507 → **531종**.

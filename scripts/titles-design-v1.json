@@ -392,16 +392,112 @@
       "color": "#dcdfe6"
     },
     "guild_top_leader": {
-      "fx": "breathgold"
+      "fx": "lordgold"
     },
     "guild_top_vice": {
-      "fx": "breathgold"
+      "fx": "lordsilver"
     },
     "star_sea": {
       "fx": "stardrift"
     },
     "binge_500": {
       "fx": "honeyflow"
+    },
+    "first_enh500_1": {
+      "fx": "firstgold",
+      "hanja": "高手"
+    },
+    "first_enh500_2": {
+      "fx": "firstsilver",
+      "hanja": "高手"
+    },
+    "first_enh500_3": {
+      "fx": "firstbronze",
+      "hanja": "高手"
+    },
+    "first_enh1000_1": {
+      "fx": "firstgold",
+      "hanja": "破天荒"
+    },
+    "first_enh1000_2": {
+      "fx": "firstsilver",
+      "hanja": "破天荒"
+    },
+    "first_enh1000_3": {
+      "fx": "firstbronze",
+      "hanja": "破天荒"
+    },
+    "first_combat5m_1": {
+      "fx": "firstgold",
+      "hanja": "一騎當千"
+    },
+    "first_combat5m_2": {
+      "fx": "firstsilver",
+      "hanja": "一騎當千"
+    },
+    "first_combat5m_3": {
+      "fx": "firstbronze",
+      "hanja": "一騎當千"
+    },
+    "first_combat10m_1": {
+      "fx": "firstgold",
+      "hanja": "天下第一"
+    },
+    "first_combat10m_2": {
+      "fx": "firstsilver",
+      "hanja": "天下第一"
+    },
+    "first_combat10m_3": {
+      "fx": "firstbronze",
+      "hanja": "天下第一"
+    },
+    "first_t20_1": {
+      "fx": "firstgold",
+      "hanja": "超人"
+    },
+    "first_t20_2": {
+      "fx": "firstsilver",
+      "hanja": "超人"
+    },
+    "first_t20_3": {
+      "fx": "firstbronze",
+      "hanja": "超人"
+    },
+    "first_t40_1": {
+      "fx": "firstgold",
+      "hanja": "天外天"
+    },
+    "first_t40_2": {
+      "fx": "firstsilver",
+      "hanja": "天外天"
+    },
+    "first_t40_3": {
+      "fx": "firstbronze",
+      "hanja": "天外天"
+    },
+    "first_sum20k_1": {
+      "fx": "firstgold",
+      "hanja": "至尊"
+    },
+    "first_sum20k_2": {
+      "fx": "firstsilver",
+      "hanja": "至尊"
+    },
+    "first_sum20k_3": {
+      "fx": "firstbronze",
+      "hanja": "至尊"
+    },
+    "first_sum30k_1": {
+      "fx": "firstgold",
+      "hanja": "傳說"
+    },
+    "first_sum30k_2": {
+      "fx": "firstsilver",
+      "hanja": "傳說"
+    },
+    "first_sum30k_3": {
+      "fx": "firstbronze",
+      "hanja": "傳說"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
