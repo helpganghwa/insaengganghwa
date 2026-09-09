@@ -19,7 +19,15 @@ import { ScrollTopOnMount } from '@/components/ScrollTopOnMount';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DeployPage() {
+export default async function DeployPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ zone?: string }>;
+}) {
+  // `?zone=<id>` — 세금 수금 탭의 공석 '지정하기'에서 그 구역이 선택된 채로 들어온다(2026-09-08).
+  const sp = await searchParams;
+  const zoneParam = sp.zone != null && /^\d+$/.test(sp.zone) ? Number(sp.zone) : null;
+
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
   if (!userId) {
@@ -32,6 +40,7 @@ export default async function DeployPage() {
   // 전속에서 개인별 위임으로 완화. 배치 자체는 본인만 하므로 권한과 무관하다.
   const canDeploy = hasGuildPerm(membership.role, membership.permissions, 'deploy');
   const canExecutor = hasGuildPerm(membership.role, membership.permissions, 'executor');
+  const canTax = hasGuildPerm(membership.role, membership.permissions, 'taxDistribute');
   // 배치용 + '세계지도' 탭용 데이터를 함께 로드(map/page와 동일 소스). 세계지도는 열람+팝업이라
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
@@ -48,8 +57,10 @@ export default async function DeployPage() {
       {/* 지도가 곧 첫 화면 — 앞 화면 스크롤을 물고 들어오면 지도 위쪽이 잘린다. */}
       <ScrollTopOnMount />
       <DeployTerritoryTabs
+      forceTab={zoneParam != null ? 'deploy' : null}
       deploy={
         <DeployBoard
+          initialZoneId={zoneParam}
           canDeploy={canDeploy}
           canExecutor={canExecutor}
           myUserId={userId}
@@ -87,6 +98,7 @@ export default async function DeployPage() {
           residence={residence}
           canSetResidence
           myUserId={userId}
+          taxOfficerGuildId={canTax ? membership.guildId.toString() : null}
           serverId={serverId}
           chronicle={null}
           replay={null}

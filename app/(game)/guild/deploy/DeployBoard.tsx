@@ -185,9 +185,12 @@ export function DeployBoard({
   adjacency,
   members: initialMembers,
   zones,
+  initialZoneId = null,
 }: {
   /** 남의 배치를 **해제**할 수 있는가(deploy 권한, 0142). 배치는 본인만 하므로 무관. */
   canDeploy: boolean;
+  /** 진입 시 선택할 구역(`?zone=`) — 세금 수금 탭의 공석 '지정하기'가 넘겨준다(2026-09-08). 없으면 내 거주지. */
+  initialZoneId?: number | null;
   /** 집행관 지정·해제 가능(executor 권한, 0142). */
   canExecutor: boolean;
   myUserId: string;
@@ -206,7 +209,7 @@ export function DeployBoard({
   const { showHeaderToast, showError } = useResourceToast();
   const [members, setMembers] = useState(initialMembers);
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
-  const [selectedId, setSelectedId] = useState<number | null>(residence?.zoneId ?? null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialZoneId ?? residence?.zoneId ?? null);
   const homeZoneId = residence?.zoneId ?? null;
   // 이동 가능 구역 — 거주지와 인접한 곳. 거주 미설정이면 어디든 정착 가능.
   const adjacentToHome = useMemo(() => {

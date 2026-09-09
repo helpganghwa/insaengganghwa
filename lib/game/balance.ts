@@ -339,6 +339,15 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 5; // 호스팅+참여 합산 — 2026-09-07 3→5(일일 한도와 동일, 길드 자금 레이드 5연속 개설 건의)
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
+/**
+ * 하루 첫 소환 무료(2026-09-08 결정, 문의 "누군가 열겠지 기다리다 하루가 간다" 대응) — **소환(호스팅)만** 센다(참여 제외).
+ * 1회 근거: 14일 실측 소환자-일의 71%가 하루 1회, 2회 이상은 결제 상위 소수(5회 소환자-일 35 중 결제자 30).
+ * 상자 유입(레이드 상자 ↑·상점 상자 판매 ↓ 조짐)을 소환자 수에 묶어 통제. 2주 관찰 후 2회 검토.
+ * 적용 판정은 lib/game/raid/free-open.ts(서버 전용 — 스테이징 즉시·프로덕션 SINCE부터).
+ */
+export const RAID_FREE_OPENS_PER_DAY = 1;
+/** 프로덕션 적용 시작 = 업데이트 다음 날 KST 0시(2026-09-10 00:00). 배포일 소환자 소급 보상 대신 이 방식(사용자 결정). 배포가 밀리면 옮긴다. */
+export const RAID_FREE_OPEN_SINCE_ISO = '2026-09-09T15:00:00.000Z';
 export const RAID_WINDOW_MS = 6 * HOUR; // 개설 후 기본 공격창(선택 미지정 시)
 // 개설 시 선택 가능한 공격창 길이(1/6/12시간). 서버가 이 목록만 허용(그 외는 기본값).
 export const RAID_DURATION_OPTIONS_MS = [1 * HOUR, 6 * HOUR, 12 * HOUR] as const; // 2026-09-07 1/3/6 → 1/6/12(3구간 유지, 점심 개설→퇴근 후 참여 건의로 상한 12h)
@@ -989,3 +998,11 @@ export function titleNextMilestone(discovered: number): number {
 // ── 친구 (§SOCIAL) ──
 /** 친구 요청 거절 후 같은 상대에게 재요청까지 대기(시간) — 길드 가입 재신청(24h)과 동일 기준(2026-09-07 문의). */
 export const FRIEND_REAPPLY_COOLDOWN_HOURS = 24;
+
+// ── 포인트 지갑(2026-09-08 확정, docs/POINT-SHOP.md) ──
+/** 마일리지 적립 — 결제 100원당 1점(= 결제액의 1%). 소수점 이하 버림. 잔액 카드 문구(POINTS_COPY.mileage)와 1:1. */
+export const MILEAGE_KRW_PER_POINT = 100;
+export function mileageForKrw(krw: number): number {
+  if (!Number.isFinite(krw) || krw <= 0) return 0;
+  return Math.floor(krw / MILEAGE_KRW_PER_POINT);
+}

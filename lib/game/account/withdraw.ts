@@ -78,6 +78,16 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);
+    // 포인트 지갑(0197, 점검 반영) — 대난투 원장은 캐릭터와 함께 삭제. 마일리지 원장은 iap_orders와 동축이라
+    // **남기고** 잔액만큼 상계 행(탈퇴 소멸)을 넣는다: 지우면 소급 스크립트 재실행 때 order:<id> 적립이 되살아나
+    // 재가입 계정에 마일리지가 부활한다(diamond_ledger·patron_milestone_grants를 보존하는 것과 같은 원칙).
+    await tx.execute(sql`delete from point_ledger where user_id = ${uid} and kind = 'melee'`);
+    await tx.execute(sql`
+      insert into point_ledger (user_id, server_id, kind, delta, note, ref)
+      select ${uid}::uuid, null, 'mileage', -p.mileage, '탈퇴 소멸', ${'withdraw:' + uid + ':' + Date.now()}
+      from profiles p where p.id = ${uid} and p.mileage > 0
+    `);
+    await tx.execute(sql`update profiles set mileage = 0 where id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
     // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.
