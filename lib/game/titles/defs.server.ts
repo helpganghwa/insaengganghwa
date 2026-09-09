@@ -4786,7 +4786,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "exp_four_slots",
   cat: "파견",
-  cond: "파견 슬롯 4칸 모두 개방",
+  cond: "파견 슬롯 4칸 개방",
   diff: "어려움"
  },
  {

@@ -48,7 +48,7 @@ describe('expedition balance invariants', () => {
     }
   });
 
-  it('경제 가드 — 무강화 기준(배율 0) 4슬롯 하루 다이아 기대 ≈ 229💎(±3%) · 축 ③ AS 1,000이면 ≈ 734💎', () => {
+  it('경제 가드 — 무강화 기준(배율 0) 4슬롯 하루 다이아 기대 ≈ 229💎(±3%)·5슬롯 ≈ 286💎 · 축 ③ AS 1,000이면 ≈ 734💎', () => {
     const { diamondOnly, both } = EXPEDITION_MAIN_ROLL_BP;
     const a = EXPEDITION_BASE_AMOUNTS;
     const evDia =
@@ -56,35 +56,41 @@ describe('expedition balance invariants', () => {
       (both / 10000) * ((a.both.diaMin + a.both.diaMax) / 2);
     const critMult = 1 + (EXPEDITION_CRIT_BP / 10000) * (EXPEDITION_CRIT_MULT - 1);
     // 슬롯당 하루 1회 × 4슬롯(합산 강화 9,000+). 1회분 = 종전 시간 스케일 실측 가중 평균(2.48) 접어 넣은 값.
-    const launchDaily = evDia * critMult * EXPEDITION_SLOTS;
+    const perSlot = evDia * critMult;
+    const launchDaily = perSlot * 4;
     expect(launchDaily).toBeGreaterThanOrEqual(222);
     expect(launchDaily).toBeLessThanOrEqual(237);
+    // 5슬롯(합산 강화 12,000+, 2026-09-09) — 4슬롯의 5/4.
+    expect(EXPEDITION_SLOTS).toBe(5);
+    expect(perSlot * EXPEDITION_SLOTS).toBeGreaterThanOrEqual(277);
+    expect(perSlot * EXPEDITION_SLOTS).toBeLessThanOrEqual(297);
     // 축 ③(아바타 강화 합, 상한 없음) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
     expect(launchDaily * as1000).toBeGreaterThanOrEqual(712);
     expect(launchDaily * as1000).toBeLessThanOrEqual(758);
-    // 대성공 총 상한(25% = 기본 5 + 합산 20)만 얹은 상한(축 ③ 제외).
+    // 대성공 총 상한(25% = 기본 5 + 합산 20)만 얹은 상한(축 ③ 제외) — 5슬롯 전부 기준.
     const critMax = 1 + (expeditionCritBp(100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    expect(launchDaily * (critMax / critMult)).toBeLessThanOrEqual(500);
+    expect(perSlot * EXPEDITION_SLOTS * (critMax / critMult)).toBeLessThanOrEqual(500);
     expect(expeditionCritBp(100000)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_CRIT_SUM_BP_MAX);
     expect(expeditionCritBp(0)).toBe(EXPEDITION_CRIT_BP);
   });
 
-  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 4칸은 합산 강화 0/3k/6k/9k 단조 증가', () => {
+  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 5칸은 합산 강화 0/3k/6k/9k/12k 단조 증가', () => {
     expect(EXPEDITION_SYNERGY_MATCH_MULT).toBeGreaterThan(EXPEDITION_SYNERGY_GENERAL_MULT);
     expect(EXPEDITION_SYNERGY_GENERAL_MULT).toBeGreaterThan(1);
     expect(expeditionWeightedSum([{ level: 100, region: 'volcano' }, { level: 100, region: 'general' }, { level: 100, region: 'orc' }], 'volcano')).toBe(345);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4]);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([0, 3000, 6000, 9000]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4, 5]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([0, 3000, 6000, 9000, 12000]);
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 0/3k/6k/9k, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 0/3k/6k/9k/12k, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
       { slot: 1, enhanceSum: 0 },
       { slot: 2, enhanceSum: 3000 },
       { slot: 3, enhanceSum: 6000 },
       { slot: 4, enhanceSum: 9000 },
+      { slot: 5, enhanceSum: 12000 },
     ]);
     expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
     expect(EXPEDITION_REFRESH_COST).toBe(20);
