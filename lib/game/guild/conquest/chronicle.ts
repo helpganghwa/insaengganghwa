@@ -9,8 +9,12 @@ import { kstDateString } from '@/lib/kst';
 import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/guild/map/chronicle-tokens';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
+import { factIssues, type FactCheckContext } from './chronicle-facts';
 
-const MODEL_ID = 'claude-sonnet-5';
+// Opus 5(2026-09-10) — 이틀 연속 검수에서 사실 창작·규칙 무시가 반복돼 이야기꾼·재검수 모두 상향.
+// 하루 서버당 2회 호출(입력 ~7k·출력 ~2.5k)이라 비용은 무시할 수준. thinking은 아래 호출부처럼 비활성 유지
+// (adaptive는 짧은 max_tokens를 사고에 다 써 본문이 비는 사고 — 09-10 핑 확인).
+const MODEL_ID = 'claude-opus-5';
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -254,10 +258,19 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   `)) as unknown as { zone: string; region: string; guild: string }[];
   const attacks = attackRows.map((a) => ({ zone: a.zone, region: regionKo(a.region), guild: a.guild }));
 
-  const topSurviveE = [...survives.entries()].sort((a, b) => b[1].n - a[1].n)[0];
-  const topKillE = [...kills.entries()].sort((a, b) => b[1].n - a[1].n)[0];
+  // 최다 생존·최다 처치 — **동수면 전원**(닉네임순, 최대 3명). 종전엔 정렬 뒤 [0]만 집어 동수일 때 Map 삽입
+  // 순서(전투 행 순서, 불안정)로 사람이 바뀌었다: 09-10 뉴비·강화의신이 나란히 3회 생존인데 23:05 생성본은
+  // 강화의신, 23:10 검수 조회는 뉴비를 내놓아 "없는 인물"로 오판했다. 사실표는 호출마다 같아야 한다.
+  const topOf = (m: Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>) => {
+    const es = [...m.entries()].filter((e) => e[1].n >= 3);
+    if (es.length === 0) return [];
+    const max = Math.max(...es.map((e) => e[1].n));
+    return es.filter((e) => e[1].n === max).sort((a, b) => a[1].nick.localeCompare(b[1].nick, 'ko')).slice(0, 3);
+  };
+  const topSurvives = topOf(survives);
+  const topKills = topOf(kills);
   // 인물 publicCode 해소 — 연대기 {u|닉|코드} 링크용(닉네임은 변경 가능, 코드는 불변).
-  const featUserIds = [topSurviveE, topKillE].filter((e) => e && e[1].n >= 3).map((e) => e![0]);
+  const featUserIds = [...new Set([...topSurvives, ...topKills].map((e) => e[0]))];
   const codeByUser = new Map<string, string>();
   if (featUserIds.length > 0) {
     const codeRows = (await db.execute(sql`
@@ -266,10 +279,10 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     for (const r of codeRows) if (r.public_code) codeByUser.set(r.uid, r.public_code);
   }
   const feats: ConquestDaySummary['feats'] = [];
-  if (topSurviveE && topSurviveE[1].n >= 3)
-    feats.push({ nickname: topSurviveE[1].nick, publicCode: codeByUser.get(topSurviveE[0]) ?? null, guild: topSurviveE[1].guild, kind: '수비', count: topSurviveE[1].n, zones: [...topSurviveE[1].zones] });
-  if (topKillE && topKillE[1].n >= 3)
-    feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n, zones: [...topKillE[1].zones] });
+  for (const e of topSurvives)
+    feats.push({ nickname: e[1].nick, publicCode: codeByUser.get(e[0]) ?? null, guild: e[1].guild, kind: '수비', count: e[1].n, zones: [...e[1].zones] });
+  for (const e of topKills)
+    feats.push({ nickname: e[1].nick, publicCode: codeByUser.get(e[0]) ?? null, guild: e[1].guild, kind: '처치', count: e[1].n, zones: [...e[1].zones] });
 
   // 그날 해산(guild_disband) — 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
   // 창은 [전날 23:00, 당일 23:00) KST — 연대기가 23시에 사전생성되므로, 자정 경계 대신 생성 경계로
@@ -446,6 +459,10 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **'가장 많은 사람이 몰린 전투'가 있으면 그날의 큰 싸움으로 다룬다** — 공격 길드별 인원과 수비 인원, 결과를 그대로 쓴다(예: '여섯을 보내고 하나를 보태 일곱으로 몰아쳤지만 셋이 막아냈다'). 인원수는 이 한 곳에만 쓰고, 다른 전투에 인원수를 지어내지 말 것. 수비 인원에는 집행관이 섞여 있으므로 '수비수 둘과 집행관 하나'처럼 나누어 쓰지 않는다.
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
 - **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다 — 단, 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
+- **인물 마커({u|})는 정리의 '개인 활약'에 적힌 인물만 쓴다.** 로스터·지난 기록·짐작으로 다른 사람 이름을 꺼내지 말 것(2026-09-10: 목록에 없는 인물의 활약을 지어낸 사건). 활약 횟수도 목록 숫자 그대로.
+- **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투' 한 곳에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다 — 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
+- **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. 연속성 항목이 여럿이면 '갓 얻은 땅', '잃은 지 하루 된 땅', '곧바로 다시 주인이 바뀌었다', '전날 잃은'처럼 표현을 바꿔 잇고, 세 문장 넘게 회고로 채우지 말 것.
+- **'같은 지역의 {z|X}'는 정리의 (X 지역) 표기가 실제로 같을 때만.** 구역을 지역으로 묶기 전에 표기를 다시 확인한다(2026-09-10: 오크 부락 구역을 잊힌 신전 문장에 묶은 사건).
 - 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
@@ -886,6 +903,35 @@ export async function generateAndStoreChronicle(
     );
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
+  // ── 사실 검증 컨텍스트(chronicle-facts.ts) — 재생성 피드백·재검수본 채택 판정 공용. ──
+  const attackersByZone = new Map<string, Set<string>>();
+  for (const a of summary.attacks) attackersByZone.set(a.zone, new Set([...(attackersByZone.get(a.zone) ?? []), a.guild]));
+  const gains = new Map<string, number>();
+  const losses = new Map<string, number>();
+  for (const c of summary.captures) {
+    gains.set(c.winner, (gains.get(c.winner) ?? 0) + 1);
+    if (c.from) losses.set(c.from, (losses.get(c.from) ?? 0) + 1);
+  }
+  const guildCounts = new Map<string, number[]>();
+  for (const g of new Set([...afterCounts.keys(), ...gains.keys(), ...losses.keys()])) {
+    const after = afterCounts.get(g) ?? 0;
+    const gn = gains.get(g) ?? 0;
+    const ls = losses.get(g) ?? 0;
+    guildCounts.set(g, [gn, ls, after, after - gn + ls]);
+  }
+  const factCtx: FactCheckContext = {
+    zoneRegion: new Map(zoneRows.map((z) => [z.name, (REGION_META as Record<string, { label: string }>)[z.region]?.label ?? z.region])),
+    regionLabels: REGION_KO_VALUES,
+    feats: summary.feats.map((f) => ({ nickname: f.nickname, count: f.count })),
+    crowdZones: summary.crowds.map((c) => c.zone),
+    // '되찾다' 허용 = 어제 그 구역을 잃은 길드가 오늘 그 구역을 노렸거나 차지함(시도·실패 포함).
+    recaptureZones: y.captures
+      .filter((yc) => yc.from && (attackersByZone.get(yc.zone)?.has(yc.from) || summary.captures.some((c) => c.zone === yc.zone && c.winner === yc.from)))
+      .map((yc) => yc.zone),
+    yesterdayZones: [...y.captures.map((c) => c.zone), ...y.defenses.map((d) => d.zone)],
+    guildCounts,
+  };
+
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
   // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거. **afterCounts(전투+방치중립화 반영)** 사용:
   // raw summary.standings는 as-if-flipped(전투)만 반영하고 중립화를 빼지 않아, 사전생성 시점에
@@ -926,10 +972,23 @@ export async function generateAndStoreChronicle(
     .orderBy(desc(worldChronicle.kstDay))
     .limit(20);
   const histLines = histRows.map((h) => `· ${String(h.kstDay)}: ${stripMarkers(h.headline)}`).join('\n');
+  // 문체 참고(2026-09-10) — 직전 기록일의 본문(운영자가 공개 전 검수·교정한 완료본)을 문장 리듬·어휘·구성의
+  // 본보기로 준다. 사실은 오늘 정리만 따르게 못 박고, 마커 id는 벗겨 모델이 id를 따라 쓰지 않게 한다.
+  const [styleRow] = await db
+    .select({ todayText: worldChronicle.todayText })
+    .from(worldChronicle)
+    .where(and(eq(worldChronicle.serverId, serverId), lt(worldChronicle.kstDay, kstDay)))
+    .orderBy(desc(worldChronicle.kstDay))
+    .limit(1);
+  const styleRef = (styleRow?.todayText ?? '').replace(/\{([guz])\|([^}|]+)\|[^}]*\}/g, '{$1|$2}').trim();
+  const styleBlock = styleRef
+    ? `\n\n[문체 참고 — 직전 기록 본문(검수 완료본). 문장 리듬·어휘·문단 구성만 본받고, 사실·이름·숫자·날짜는 절대 가져오지 말 것]\n${styleRef}`
+    : '';
   const context =
     `[현재 영토 현황 — '정세' 문단 근거(누적 점령 결과)]\n${standLines}\n\n` +
     `[어제(${prevDay}) 점령전 결과 — 연속성 참고용]\n${yesterdayBlock}\n\n` +
-    `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}`;
+    `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}` +
+    styleBlock;
 
   const bigChange = milestones.length > 0 || specialFeat;
   // ── 이름 집합(검증·교정·강제 공용) — summary가 아는 정답. ──
@@ -1120,11 +1179,13 @@ export async function generateAndStoreChronicle(
     const candH = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
     const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
     const orderIssues = replayOrderIssues(candT, battleZones);
-    if ((viol.length === 0 && orderIssues.length === 0) || attempt === 2) {
+    const facts = factIssues(candT, factCtx);
+    if ((viol.length === 0 && orderIssues.length === 0 && facts.length === 0) || attempt === 2) {
       if (viol.length > 0) {
         console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${viol.join(', ')}`);
       }
       if (orderIssues.length > 0) console.warn(`[chronicle] 연출 순서 위반 잔존(재시도 소진): ${orderIssues.join(', ')}`);
+      if (facts.length > 0) console.warn(`[chronicle] 사실 검증 위반 잔존(재시도 소진) ${facts.length}건:\n${facts.join('\n')}`);
       today = enrichMarkers(enforceMarkers(candT));
       headline = enrichMarkers(enforceMarkers(candH));
       // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
@@ -1137,9 +1198,13 @@ export async function generateAndStoreChronicle(
       break;
     }
     console.warn(
-      `[chronicle] 재생성(attempt ${attempt + 1}) — 마커 위반 ${viol.length}건${viol.length ? `: ${viol.join(', ')}` : ''} · 연출 순서 위반 ${orderIssues.length}건${orderIssues.length ? `: ${orderIssues.join(', ')}` : ''}`,
+      `[chronicle] 재생성(attempt ${attempt + 1}) — 마커 위반 ${viol.length}건${viol.length ? `: ${viol.join(', ')}` : ''} · 연출 순서 위반 ${orderIssues.length}건${orderIssues.length ? `: ${orderIssues.join(', ')}` : ''} · 사실 검증 위반 ${facts.length}건`,
     );
     const feedback: string[] = [];
+    if (facts.length > 0)
+      feedback.push(
+        `사실표와 어긋나는 문장이 있다(코드가 사실표와 대조한 결과라 예외 없이 고친다):\n${facts.map((f) => `- ${f}`).join('\n')}`,
+      );
     if (viol.length > 0)
       feedback.push(
         `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
@@ -1193,8 +1258,11 @@ export async function generateAndStoreChronicle(
         : '';
       const viol = [...findViolations(revT), ...(bigChange ? findViolations(revH) : [])];
       const revOrder = replayOrderIssues(revT, battleZones);
+      const revFacts = factIssues(revT, factCtx);
       if (revOrder.length > replayOrderIssues(today, battleZones).length) {
         console.warn(`[chronicle] 재검수본 폐기(연출 순서 위반 증가: ${revOrder.join(', ')}) — 초안 유지`);
+      } else if (revFacts.length > factIssues(today, factCtx).length) {
+        console.warn(`[chronicle] 재검수본 폐기(사실 검증 위반 증가 ${revFacts.length}건) — 초안 유지:\n${revFacts.join('\n')}`);
       } else if (revT && viol.length === 0 && (!bigChange || revH)) {
         today = revT;
         headline = revH;
