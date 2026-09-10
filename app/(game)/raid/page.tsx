@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -9,13 +9,15 @@ import { raids, raidParticipants, raidRewards, raidDailyCounts, raidJoinRequests
 import {
   RAID_BASE_ATTACKS,
   RAID_DAILY_CAP,
+  RAID_FREE_OPENS_PER_DAY,
   RAID_MAX_CONCURRENT_PER_USER,
   RAID_MAX_PARTICIPANTS,
   raidTierOf,
 } from '@/lib/game/balance';
 import { getFriendIds } from '@/lib/game/friends';
-import { kstDateString } from '@/lib/kst';
+import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import type { RaidBoss } from '@/lib/game/raid/bosses';
+import { raidFreeOpenActive } from '@/lib/game/raid/free-open';
 
 import { getReceivedInvites } from '@/lib/game/raid/invite';
 
@@ -80,6 +82,11 @@ export default async function RaidPage() {
           isNull(raidRewards.claimedAt),
         ),
       ),
+    // 오늘(KST) 내가 소환한 수 — 하루 첫 소환 무료 표시(open.ts와 같은 기준, 참여 제외).
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(raids)
+      .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, serverId), gte(raids.openedAt, kstStartOfDay()))),
     ]),
     3500,
     'raid.page',
@@ -87,6 +94,9 @@ export default async function RaidPage() {
   const rows = _r?.[0] ?? [];
   const dailyRow = _r?.[1] ?? [];
   const pendingClaims = _r?.[2] ?? [];
+  const hostedToday = Number(_r?.[3]?.[0]?.n ?? 0);
+  // DB 타임아웃(_r null)이면 유료 표시 쪽으로 — 서버가 권위라 잘못된 '무료' 라벨만 피한다(검토 지적).
+  const freeOpenLeft = _r && raidFreeOpenActive() ? Math.max(0, RAID_FREE_OPENS_PER_DAY - hostedToday) : 0;
 
   // 내 활성 레이드들의 전체 참가자 데미지로 순위 산출.
   // 보통 RAID_MAX_CONCURRENT_PER_USER × 평균 참가자 수라 1 쿼리 batch면 충분.
@@ -321,6 +331,7 @@ export default async function RaidPage() {
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
+        freeOpenLeft={freeOpenLeft}
         openRaids={openRaids}
       />
     </div>

@@ -316,12 +316,15 @@ export function RaidSlots({
   slots,
   dailyUsed,
   dailyCap,
+  freeOpenLeft = 0,
   openRaids = [],
 }: {
   cells: RaidSlotCell[];
   slots: number;
   dailyUsed: number;
   dailyCap: number;
+  /** 오늘 남은 무료 소환(하루 첫 소환 무료, 2026-09-08) — 서버가 계산(적용 시작 시각 포함). 0이면 유료. */
+  freeOpenLeft?: number;
   /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
   openRaids?: FriendRaid[];
 }) {
@@ -335,6 +338,9 @@ export function RaidSlots({
   const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
   const [tier, setTier] = useState<RaidTier>('easy'); // 기본 쉬움(가장 싸고 손해 없는 선택)
   const openCost = RAID_TIERS[tier].openCost;
+  // 무료 소환이 남았으면 이번 소환은 0 — 버튼·부제·부족 게이트 전부 payCost 기준.
+  const free = freeOpenLeft > 0;
+  const payCost = free ? 0 : openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
   const exhausted = dailyUsed >= dailyCap;
@@ -379,6 +385,7 @@ export function RaidSlots({
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>
           {dailyUsed}/{dailyCap}
         </span>
+        {free && !exhausted ? <span className="ml-1.5 font-semibold text-sky-500">· 오늘 첫 소환 무료</span> : null}
       </p>
       <div className="space-y-2">
         {cells.map((s, i) =>
@@ -524,9 +531,13 @@ export function RaidSlots({
             title={picked ? RAID_BOSSES[picked].name : '보스 선택'}
             subtitle={
               picked ? (
-                <span className="font-mono font-bold text-sky-500">
-                  💎 {openCost.toLocaleString()}
-                </span>
+                free ? (
+                  <span className="font-bold text-sky-500">오늘 첫 소환 무료</span>
+                ) : (
+                  <span className="font-mono font-bold text-sky-500">
+                    💎 {openCost.toLocaleString()}
+                  </span>
+                )
               ) : (
                 `${RAID_BOSS_CODES.length}종`
               )
@@ -542,7 +553,7 @@ export function RaidSlots({
                       // 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 소환(다이아 지불).
                       // 부족이면 컨펌 진입 전에 충전 유도 팝업(2026-08-22) — 3초 컨펌까지
                       // 갔다가 실패하는 헛걸음 제거.
-                      if (!gate.ensure(openCost)) return;
+                      if (!free && !gate.ensure(openCost)) return;
                       if (!confirm) {
                         setConfirm(true);
                         setConfirmLeft(3);
@@ -565,8 +576,12 @@ export function RaidSlots({
                       {pending
                         ? '소환 중…'
                         : confirm
-                          ? `💎 ${openCost.toLocaleString()} 지불하고 소환 ${confirmLeft}s`
-                          : `💎 ${openCost.toLocaleString()} 지불하고 소환`}
+                          ? free
+                            ? `무료로 소환 ${confirmLeft}s`
+                            : `💎 ${payCost.toLocaleString()} 지불하고 소환 ${confirmLeft}s`
+                          : free
+                            ? '무료로 소환'
+                            : `💎 ${payCost.toLocaleString()} 지불하고 소환`}
                     </span>
                   </button>
                   <button

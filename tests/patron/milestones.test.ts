@@ -62,7 +62,17 @@ describe('후원 구간 보상 정의(2026-08-26 확정)', () => {
     expect(r.reduce((a, m) => a + m.boxes, 0)).toBe(2_100);
     expect(nextMilestone(3_655_600)?.krw).toBe(4_000_000);
     expect(reachedMilestones(49_999)).toHaveLength(0);
-    expect(nextMilestone(10_000_000)).toBeNull();
+    // 1,000만 이후(2026-09-09) — 상한 없이 50만마다 계속
+    expect(nextMilestone(10_000_000)).toMatchObject({ krw: 10_500_000, diamond: 10_000, boxes: 300 });
+    expect(nextMilestone(10_044_400)).toMatchObject({ krw: 10_500_000 });
+    expect(nextMilestone(10_500_000)).toMatchObject({ krw: 11_000_000 });
+    expect(nextMilestone(37_123_456)).toMatchObject({ krw: 37_500_000 });
+    expect(reachedMilestones(10_044_400)).toHaveLength(41);
+    const r11 = reachedMilestones(11_000_000);
+    expect(r11).toHaveLength(43);
+    expect(r11.slice(-2).map((m) => m.krw)).toEqual([10_500_000, 11_000_000]);
+    expect(r11.at(-1)).toMatchObject({ diamond: 10_000, boxes: 300 });
+    expect(r11.at(-1)!.titleCode).toBeUndefined();
   });
 
   it('우편 문안 — 제목에 누적액(+칭호), 본문은 공통 2문장(+칭호 문단), 💎📦 외 이모지 없음', () => {

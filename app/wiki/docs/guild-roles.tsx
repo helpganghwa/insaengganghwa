@@ -65,6 +65,10 @@ export default function Doc() {
           구역 <DocLink slug="conquest" hash="tax">세금 수금</DocLink> 권한이 함께 포함된다.
         </LI>
         <LI>
+          {GUILD_PERM_META.taxDistribute.label} 권한이 있으면 집행관을 대신해 수금하고, 수금 가능한 구역을
+          한 번에 걷을 수 있다.
+        </LI>
+        <LI>
           공지는 {fmtInt(GUILD_NOTICE_MAX_LEN)}자, 소개는 {fmtInt(GUILD_INTRO_MAX_LEN)}자까지
           작성할 수 있다. 소개는 <DocLink slug="guild" hash="join">길드 목록</DocLink>에서 누구나 볼 수
           있다.

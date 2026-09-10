@@ -27,6 +27,7 @@ import { applyProductGrant } from '@/lib/game/shop/grant';
 import { grantPatronMilestones } from '@/lib/game/patron/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
+import { creditMileageForOrder } from '@/lib/game/points/wallet';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
 import { consumePlayProductPurchase, getPlayProductPurchase, playConfigured, refundPlayOrder } from './play-api';
@@ -446,6 +447,23 @@ export async function completePurchase(
         set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
       })
       .returning({ total: monthlyPurchaseLimits.totalKrw });
+    // 마일리지(docs/POINT-SHOP.md) — 결제 100원당 1점, 주문당 1회(멱등). 지급 보류(미성년·중복) 주문도 결제
+    // 자체는 성사됐으므로 적립하고, 환불되면 revokeMileageForOrder가 회수한다. 잠금 순서: 월누적 다음, 재화 앞.
+    // best-effort(점검 반영): 원장 테이블 부재·일시 오류가 결제 완료(paid 전이·상품 지급)를 되돌리면 안 된다.
+    // ⚠ 반드시 세이브포인트(tx.transaction) — 실패한 문장 뒤 plain try/catch는 트랜잭션이 aborted 상태라
+    //   이후 COMMIT이 조용히 ROLLBACK된다. 누락분은 scripts/points-backfill.ts가 멱등으로 채운다.
+    try {
+      await tx.transaction((sp) =>
+        creditMileageForOrder(sp, {
+          userId: order.userId,
+          orderId: order.id,
+          amountKrw: Number(order.amountKrw),
+          note: `${productDisplayName(order.productCode)} ₩${Number(order.amountKrw).toLocaleString('ko-KR')}`,
+        }),
+      );
+    } catch (e) {
+      console.error(`[points] 마일리지 적립 실패 user=${order.userId} order=${order.id}`, e);
+    }
     if (Number(monthly?.total ?? 0n) > MINOR_MONTHLY_LIMIT_KRW) {
       // 심사(cbt) 계정은 본인인증을 면제하므로(createOrder:222) 여기서도 미성년 판정에서 빼
       // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
@@ -492,8 +510,9 @@ export async function completePurchase(
     // 후원 구간 보상(0175) — 이 주문까지의 누적 paid 합으로 미지급 구간 우편. 멱등 원장이라 재실행 안전.
     // best-effort: 우편 지급 실패가 결제 완료(paid 전이·상품 지급)를 되돌리면 안 된다 — 로그만 남기고
     // 소급 스크립트(scripts/patron-backfill.ts)로 회복한다.
+    // ⚠ 세이브포인트로 감싼다(점검 반영) — plain try/catch는 실패 문장 뒤 트랜잭션이 aborted라 COMMIT이 ROLLBACK된다.
     try {
-      await grantPatronMilestones(tx, order.userId, order.serverId);
+      await tx.transaction((sp) => grantPatronMilestones(sp, order.userId, order.serverId));
     } catch (e) {
       console.error(`[patron] 구간 보상 지급 실패 user=${order.userId} order=${order.id}`, e);
     }

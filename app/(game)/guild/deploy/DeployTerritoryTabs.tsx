@@ -13,9 +13,19 @@ const TAB_KEY = 'ig:deploy-tab'; // 전투 기록 등 이동 후 뒤로가기 �
  * '세계지도' 탭을 되살린다(구역 팝업 복원 키 ig:worldmap-restore 존재로 판정). 길드 메뉴에서 새로
  * 진입하면 복원 키가 없어 기본(배치) 탭이 열린다.
  */
-export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; worldmap: ReactNode }) {
-  const [tab, setTab] = useState<'deploy' | 'map'>('deploy');
+export function DeployTerritoryTabs({
+  deploy,
+  worldmap,
+  forceTab = null,
+}: {
+  deploy: ReactNode;
+  worldmap: ReactNode;
+  /** 딥링크(`?zone=`)로 들어올 때 탭 고정 — 뒤로가기 복원보다 우선(2026-09-08). */
+  forceTab?: 'deploy' | 'map' | null;
+}) {
+  const [tab, setTab] = useState<'deploy' | 'map'>(forceTab ?? 'deploy');
   useLayoutEffect(() => {
+    if (forceTab) return;
     try {
       // 뒤로가기(구역 팝업 복원 키 존재)일 때만 탭 복원. 새 진입이면 기본 배치 탭.
       if (sessionStorage.getItem('ig:worldmap-restore') == null) return;
@@ -23,7 +33,7 @@ export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; w
     } catch {
       // sessionStorage 불가 — 복원만 생략
     }
-  }, []);
+  }, [forceTab]);
   const changeTab = (t: 'deploy' | 'map') => {
     setTab(t);
     try {

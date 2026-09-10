@@ -11,6 +11,8 @@
  *    — 2026-09-05: 남아 있던 500만→600만 100만 폭(💎20,000+📦600)도 550만·600만 두 구간으로 쪼개 250만부터
  *      끝까지 50만 단위로 통일(0194 — 기존 600만 수령분은 550만을 지급됨으로 표시). 폭 대비 정액은 그대로라
  *      환급률 8.5% 불변, 총액 💎200,000·📦6,000 불변.
+ *  D 1,000만 이후: 상한 없이 50만마다 💎10,000 + 📦300 계속(2026-09-09 사용자 확정 — 1,000만을 넘긴 후원자 둘이 생겨
+ *    표가 끝나 있던 것을 열었다. C와 같은 정액이라 환급률 8.5% 유지, 칭호 없음, 표에 없고 reachedMilestones가 생성).
  * 칭호 구간(5·20·50·200·500·1,000만)은 보너스 구간 위에 정확히 겹쳐 한 통의 우편으로 온다(칭호 자체는
  * titles/judge.ts가 누적 결제로 판정 — 여기선 우편 문안에 칭호 문단만 덧붙인다).
  * 상자는 원가 0(환급률 계산 제외)·3의 배수·슬롯 균등. 확정 보상만 — 확률공시(§33) 비대상.
@@ -50,14 +52,24 @@ export const PATRON_MILESTONES: readonly PatronMilestone[] = [
   ...band(2_500_000, 10_000_000, 500_000, 10_000, 300),
 ];
 
-/** 누적 결제액으로 도달한 구간 전부(오름차순). */
+/** 표 마지막(1,000만) 이후 — 상한 없이 50만마다 C와 같은 정액. */
+export const PATRON_OPEN_FROM = 10_000_000;
+export const PATRON_OPEN_STEP = 500_000;
+export const PATRON_OPEN_REWARD = { diamond: 10_000, boxes: 300 } as const;
+
+/** 누적 결제액으로 도달한 구간 전부(오름차순) — 표 41구간 + 1,000만 이후 생성 구간. */
 export function reachedMilestones(paidKrw: number): PatronMilestone[] {
-  return PATRON_MILESTONES.filter((m) => m.krw <= paidKrw);
+  const out = PATRON_MILESTONES.filter((m) => m.krw <= paidKrw);
+  for (let krw = PATRON_OPEN_FROM + PATRON_OPEN_STEP; krw <= paidKrw; krw += PATRON_OPEN_STEP) out.push({ krw, ...PATRON_OPEN_REWARD });
+  return out;
 }
 
-/** 다음 구간(없으면 null — 1,000만 완주). */
-export function nextMilestone(paidKrw: number): PatronMilestone | null {
-  return PATRON_MILESTONES.find((m) => m.krw > paidKrw) ?? null;
+/** 다음 구간 — 표를 다 채운 뒤에도 50만 단위로 항상 있다(상한 없음). */
+export function nextMilestone(paidKrw: number): PatronMilestone {
+  const m = PATRON_MILESTONES.find((x) => x.krw > paidKrw);
+  if (m) return m;
+  const next = (Math.floor(paidKrw / PATRON_OPEN_STEP) + 1) * PATRON_OPEN_STEP;
+  return { krw: Math.max(next, PATRON_OPEN_FROM + PATRON_OPEN_STEP), ...PATRON_OPEN_REWARD };
 }
 
 /** '5만'·'1,000만' 표기. */

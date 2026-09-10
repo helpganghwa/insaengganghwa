@@ -1,6 +1,8 @@
 import { assetUrl } from '@/lib/asset-versions';
 import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
+import { getGuildPermState } from '@/lib/game/guild/perm-guard';
+import { hasGuildPerm } from '@/lib/game/guild/permissions';
 import { getWorldmapZones, getResidenceState, getChronicle, getZoneAdjacency, getConquestReplay } from '@/lib/game/guild';
 
 import { ChronicleReadMark } from './ChronicleReadMark';
@@ -15,7 +17,7 @@ export default async function WorldMapPage() {
   // 모든 쿼리를 .catch로 방어 — 풀러 클라 커넥션 포화(EMAXCONN) 등 일시 DB 실패에도 페이지가
   // 통째로 크래시되지 않고 degrade(빈 맵·거주지 미표시). getResidence 미방어로 전체 렌더가
   // 터지던 문제 방지(2026-07-13, digest 3878315197).
-  const [zones, residence, chronicle, replay, adjacency] = await Promise.all([
+  const [zones, residence, chronicle, replay, adjacency, perm] = await Promise.all([
     getWorldmapZones(serverId).catch(() => []),
     userId
       ? getResidenceState(userId, serverId).catch(() => null)
@@ -23,7 +25,11 @@ export default async function WorldMapPage() {
     getChronicle(serverId).catch(() => null),
     getConquestReplay(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
+    // 세금 권한자면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
+    userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
   ]);
+  const taxOfficerGuildId =
+    perm && hasGuildPerm(perm.role, perm.permissions, 'taxDistribute') ? perm.guildId.toString() : null;
   // 어제 리플레이 — 연대기 로드 결과(어제 기록일)에 의존해 후속 1회(가벼움, 상세 페이지).
   const replayYesterday = chronicle?.yesterdayDay
     ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(() => null)
@@ -38,6 +44,7 @@ export default async function WorldMapPage() {
       residence={residence}
       canSetResidence={userId != null}
       myUserId={userId}
+      taxOfficerGuildId={taxOfficerGuildId}
       serverId={serverId}
       chronicle={chronicle}
       replay={replay}
