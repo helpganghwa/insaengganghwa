@@ -8,7 +8,7 @@
  *
  * 검사(모두 문장 단위, 마커 안 이름은 제외한 평문 기준):
  *  1. 인물 — {u|} 마커는 '개인 활약' 인물만. 그 인물 문장의 'N차례·N번'은 활약 횟수와 같아야 한다.
- *  2. 인원수 — '둘을·셋이·한 명' 같은 사람 수는 '가장 많은 사람이 몰린 전투' 구역 문맥에서만.
+ *  2. 인원수 — '둘을·셋이·한 명' 같은 사람 수는 인원수가 허용된 전투(최다 인원·열세 방어) 문맥에서만.
  *  3. 지역 — 문장에 지역이 하나만 언급되면 그 문장의 구역은 전부 그 지역이어야 한다. '같은 지역의'는 직전 문맥 지역과 같아야 한다.
  *  4. 재획득 — '되찾다·탈환·도로 가져가다'는 어제 잃은 길드가 오늘 그 구역을 노린 경우에만.
  *  5. 회고 — '어제·전날'이 붙은 구역은 어제 기록(점령·방어)이 있어야 한다.
@@ -25,8 +25,8 @@ export type FactCheckContext = {
   regionLabels: string[];
   /** 개인 활약 — 등장 가능한 인물과 횟수. */
   feats: { nickname: string; count: number }[];
-  /** 인원수 서술이 허용되는 구역('가장 많은 사람이 몰린 전투'). */
-  crowdZones: string[];
+  /** 인원수 서술이 허용되는 구역 — '가장 많은 사람이 몰린 전투' + '열세 방어'(2026-09-10). */
+  headcountZones: string[];
   /** '되찾다'류가 허용되는 구역(어제 잃은 길드가 오늘 그 구역을 노림). */
   recaptureZones: string[];
   /** 어제 기록(점령·방어)이 있는 구역 — 회고 표현 허용 범위. */
@@ -117,7 +117,7 @@ function regionMentions(aligned: string, aliases: Map<string, string>): { at: nu
 export function factIssues(text: string, ctx: FactCheckContext): string[] {
   const issues: string[] = [];
   const featByNick = new Map(ctx.feats.map((f) => [f.nickname, f.count] as const));
-  const crowd = new Set(ctx.crowdZones);
+  const headcount = new Set(ctx.headcountZones);
   const recapture = new Set(ctx.recaptureZones);
   const yesterday = new Set(ctx.yesterdayZones);
   const aliases = regionAliases(ctx.regionLabels);
@@ -159,11 +159,11 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       // 2. 인원수
       const heads = [...aligned.matchAll(HEADCOUNT)].filter((m) => {
         const z = zoneAt(m.index!);
-        return !(z && crowd.has(z));
+        return !(z && headcount.has(z));
       }).map((m) => m[0].trim());
       if (heads.length > 0) {
         issues.push(
-          `사람 수 표현(${heads.join(', ')})은 '가장 많은 사람이 몰린 전투'${ctx.crowdZones.length ? `(${ctx.crowdZones.join(', ')})` : '(이번엔 없음)'} 문맥에서만 쓴다 — 이 문장에서는 인원수를 빼고 '수비를 세워·수비를 뚫고'처럼 쓴다: ${q(sent)}`,
+          `사람 수 표현(${heads.join(', ')})은 인원수가 허용된 전투${ctx.headcountZones.length ? `(${ctx.headcountZones.join(', ')})` : '(이번엔 없음)'} 문맥에서만 쓴다 — 이 문장에서는 인원수를 빼고 '수비를 세워·수비를 뚫고'처럼 쓴다: ${q(sent)}`,
         );
       }
 

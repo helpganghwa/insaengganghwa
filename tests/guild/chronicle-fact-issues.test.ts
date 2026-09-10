@@ -15,7 +15,7 @@ const ctx: FactCheckContext = {
   ]),
   regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
   feats: [{ nickname: '뉴비', count: 3 }],
-  crowdZones: ['연기 평원'],
+  headcountZones: ['연기 평원'],
   // 어제 잃은 길드가 오늘 노린 구역: 용의 해골(케케케는 안 노림 → 제외), 연기 평원(올림포스), 늪지 오두막(로제). 분노의 분화구는 어제 티모집사→케케케라 로제는 해당 없음.
   recaptureZones: ['연기 평원', '늪지 오두막'],
   yesterdayZones: ['분노의 분화구', '늪지 오두막', '용의 해골', '연기 평원', '타락한 성소', '용암 하구', '그을린 고목'],
@@ -46,7 +46,7 @@ describe('연대기 사실 검증기', () => {
     const issues = factIssues(ORIGINAL, ctx);
     const has = (re: RegExp) => issues.some((i) => re.test(i));
     expect(has(/개인 활약에 없는 인물 \{u\|강화의신\}/)).toBe(true);
-    expect(has(/사람 수 표현\(둘을\)[\s\S]*수비수 둘을 세워/)).toBe(true); // 분노의 분화구
+    expect(has(/사람 수 표현\([^)]*둘을[\s\S]*수비수 둘을 세워/)).toBe(true); // 분노의 분화구
     expect(has(/사람 수 표현\(한 명\)/)).toBe(true); // 검은 첨봉
     expect(has(/\{z\|모닥불 평원\} 은\(는\) 오크 부락 지역인데 문장은 잊힌 신전/)).toBe(true);
     expect(has(/\{z\|분노의 분화구\} 은\(는\) 어제 잃은 길드가 오늘 노린 구역이 아니라/)).toBe(true);
@@ -66,6 +66,14 @@ describe('연대기 사실 검증기', () => {
     const bad = `{g|Winners|17}는 다섯 곳을 얻고 여섯 곳을 내주어 서른 곳을 지켰다.`;
     expect(factIssues(bad, ctx).some((i) => /'6곳'이 사실표와 다르다/.test(i))).toBe(true);
     expect(parseZoneCounts('한 곳을 얻고 열한 곳으로, 서른 곳, 12곳, 한두 곳씩')).toEqual([1, 11, 30, 12]);
+  });
+
+  it('열세 방어 구역에서는 인원수 서술을 허용한다(2026-09-10)', () => {
+    const withUnderdog = { ...ctx, headcountZones: ['연기 평원', '그을린 고목'] };
+    const text = `{g|케케케|27}는 {z|그을린 고목|8}에서 셋으로 일곱을 막아냈다.`;
+    expect(factIssues(text, withUnderdog).filter((i) => /사람 수 표현/.test(i))).toEqual([]);
+    // 허용 목록에 없으면 그대로 잡힌다.
+    expect(factIssues(text, ctx).some((i) => /사람 수 표현/.test(i))).toBe(true);
   });
 
   it('회고 — 어제 기록이 없는 구역에 어제를 붙이면 잡는다', () => {
