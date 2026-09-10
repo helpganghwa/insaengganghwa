@@ -168,20 +168,50 @@ export async function resetReportedAvatar(profileId: string): Promise<Result> {
   });
 }
 
-/** 경고 — 비공개·변경 없이 경고 우편만(신고 기록 유지). 모든 사유 공통. */
+/**
+ * 경고 우편 문구(2026-09-09) — 신고 사유별. 뭉뚱그린 한 문장이면 받는 사람이 무엇을 고쳐야 할지 모른다는
+ * 지적으로 분리했다. 사유는 **가장 많이 접수된 하나만** 쓴다(여러 개를 나열하면 결국 예전의 뭉뚱그린 문장이 된다).
+ * 신고 건수·신고자는 넣지 않는다 — 누가 신고했는지 추측하게 되어 보복으로 이어진다.
+ * 닉네임 변경 비용(💎300)은 지급하지 않는다: 신고만으로 재화가 나가면 악용 여지가 생긴다. 스스로 바꾸라고
+ * 요구하지 않고 '확인해 달라'까지만 말한다(사용자 확정).
+ */
+const WARN_MAIL: Record<string, { title: string; body: string }> = {
+  nickname: {
+    title: '운영 경고 · 닉네임',
+    body: '회원님의 닉네임에 대한 신고가 접수되었습니다.\n\n다른 이용자가 불쾌감을 느낄 수 있는 닉네임은 운영정책 위반에 해당합니다. 지금 사용 중인 닉네임을 다시 한 번 확인해 주세요.\n\n확인 후에도 조치가 필요하다고 판단되면 닉네임이 임의의 이름으로 초기화될 수 있습니다.',
+  },
+  avatar: {
+    title: '운영 경고 · 아바타',
+    body: '회원님의 아바타에 대한 신고가 접수되었습니다.\n\n선정적이거나 폭력적인 아바타, 타인을 불쾌하게 하는 아바타는 운영정책 위반에 해당합니다. 현재 대표로 설정하신 아바타를 다시 한 번 확인해 주세요.\n\n확인 후에도 조치가 필요하다고 판단되면 대표 아바타가 기본 아바타로 변경될 수 있습니다.',
+  },
+  bug_abuse: {
+    title: '운영 경고 · 버그 악용',
+    body: '회원님에 대해 버그 악용 신고가 접수되었습니다.\n\n의도되지 않은 동작을 알고도 반복해서 이용하는 행위는 운영정책 위반에 해당합니다. 문제가 되는 동작을 발견하셨다면 이용하지 마시고 고객센터로 알려 주세요.\n\n악용이 확인되면 획득한 재화 회수와 계정 정지로 이어질 수 있습니다.',
+  },
+};
+
+/** 사유 없는 신고(other 등)·신고 기록이 사라진 경우의 기본 문구. */
+const WARN_MAIL_DEFAULT = {
+  title: '운영 경고',
+  body: '회원님에 대한 신고가 접수되었습니다.\n\n운영정책 위반이 확인되면 닉네임 초기화, 아바타 변경, 계정 정지로 이어질 수 있습니다. 게임 내 활동을 다시 한 번 확인해 주세요.',
+};
+
+/** 경고 — 비공개·변경 없이 경고 우편만(신고 기록 유지). 문구는 최다 접수 사유 하나로 고른다. */
 export async function warnProfile(profileId: string): Promise<Result> {
   await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
-    await mail(
-      tx,
-      owner.userId,
-      owner.serverId,
-      'notice',
-      '운영 경고',
-      '회원님에 대한 신고가 접수되었습니다. 운영정책 위반(부적절한 닉네임·아바타, 버그 악용 등)은 닉네임 초기화·아바타 변경·계정 정지로 이어질 수 있으니 유의해 주세요.',
-    );
+    // 최다 사유 1개 — 동수면 최근 접수가 앞선다(마지막에 무엇이 문제였는지가 더 현재에 가깝다).
+    const [top] = await tx
+      .select({ reason: profileReports.reason })
+      .from(profileReports)
+      .where(eq(profileReports.profileId, profileId))
+      .groupBy(profileReports.reason)
+      .orderBy(sql`count(*) desc`, sql`max(${profileReports.createdAt}) desc`)
+      .limit(1);
+    const m = (top && WARN_MAIL[top.reason]) || WARN_MAIL_DEFAULT;
+    await mail(tx, owner.userId, owner.serverId, 'notice', m.title, m.body);
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
