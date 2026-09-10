@@ -829,6 +829,10 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
+  // 골목대장 — 거주 구역 주민 중 전투력 1위를 **한 번** 달성하면 영구(2026-09-10 유저 건의).
+  // 활성/비활성이 바뀌는 조건부였을 때 "이 사람 칭호가 꺼졌다 = 그 구역에 더 강한 사람이 들어왔다"가
+  // 점령전 공격 징후로 읽혀 전략이 노출됐다. 지표 자체(현재 1위 여부)는 그대로, 종류만 영구.
+  alley_boss: (m) => m.alley_boss === 1,
   // 강화
   enhance_100: (m) => m.max_lv >= 100,
   enhance_150: (m) => m.max_lv >= 150,
@@ -1094,12 +1098,12 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.y_melee_last === 1) out.add('melee_shame');
   if (mm.y_raid_top === 1) out.add('raid_hero');
   if (mm.y_open_top === 1) out.add('open_king');
-  // ── PENDING 해소(2026-08-12) — 현재 상태만으로 판정되는 "~인 동안" 3종 ──
+  // ── PENDING 해소(2026-08-12) — 현재 상태만으로 판정되는 "~인 동안" 2종 ──
   // ⚠ 조건부는 발견 판정과 **대표 표시 재검증**이 둘 다 있어야 한다. display.ts의
   //   HEAVY_CONDITIONALS에 같이 넣지 않으면 발견은 되는데 대표로 달면 조용히 숨겨진다.
+  //   골목대장(alley_boss)은 2026-09-10 영구형으로 전환해 RULES로 옮겼다.
   if (mm.in_guild === 1 && mm.gsize >= guildCapacity(mm.glevel)) out.add('big_family');
   if (mm.in_guild === 1 && mm.gsize <= 5 && mm.grank <= 10) out.add('elite_few');
-  if (mm.alley_boss === 1) out.add('alley_boss');
   // 무소속(2026-08-21 조건부 전환) — 미소속 && 마지막 탈퇴(해산 포함) 후 7일, 무기록이면
   // 가입 후 7일. 조건 문구가 정본(코드명의 30은 과거 기획 잔재 — 마이그레이션 비용 때문에 유지).
   if (mm.in_guild === 0 && (mm.since_leave >= 7 || (mm.since_leave < 0 && mm.days >= 7))) {

@@ -2598,8 +2598,8 @@ export const TITLE_SECRETS: TitleSecret[] = [
  },
  {
   code: "alley_boss",
-  cat: "조건부",
-  cond: "거주 구역 주민 중 전투력 1위인 동안",
+  cat: "일상",
+  cond: "거주 구역 주민 중 전투력 1위 달성",
   diff: "중간"
  },
  {
