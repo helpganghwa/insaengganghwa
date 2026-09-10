@@ -42,7 +42,17 @@ export type ConquestDaySummary = {
   abandoned: { guildName: string; zones: string[] }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
   feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[] }[];
+  /**
+   * 사람이 몰린 전투(2026-09-10) — finale 로스터 CROWD_MIN명 이상인 구역만. 그날 큰 싸움의 규모를 서술할 재료다.
+   * 셋이 일곱을 막아낸 날의 그 숫자를 연대기가 볼 수 없어 추가했다(09-09 그을린 고목).
+   * defenders = 소유 길드 소속 수, attackers = 그 외 길드별 수. 둘 다 **집행관 자동 방어를 섞어서 센다**
+   * (리플레이에는 함께 싸우는 것으로 보이므로 글에서만 나누면 읽는 사람이 헷갈린다 — 사용자 확정).
+   */
+  crowds: { zone: string; region: string; owner: string | null; defenders: number; attackers: { guild: string; n: number }[]; total: number; held: boolean }[];
 };
+
+/** 인원수를 넘길 최소 참가자 수 — 이보다 작은 전투는 규모를 서술할 거리가 아니다. 기준은 실측 보고 조정. */
+export const CROWD_MIN = 5;
 
 /** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
 function addDaysToKstDay(kstDay: string, delta: number): string {
@@ -140,6 +150,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const defenses: ConquestDaySummary['defenses'] = [];
   // 개인 활약 — 그날 전 battle의 finale 합산(유저별 수비 성공·처치). zones = 활약이 나온 구역
   // (2026-07-20 피드백: 어느 구역 전투에서의 활약인지 서술에 필요).
+  const crowds: ConquestDaySummary['crowds'] = [];
   const survives = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
   const kills = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
 
@@ -171,6 +182,26 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
       });
     } else {
       defenses.push({ zone: b.zone, region, owner: b.winner });
+    }
+    // 사람이 몰린 전투 — 로스터 기준(배치 + 집행관 자동 방어). 소유 길드 소속 = 수비, 그 외 = 공격(길드별).
+    const roster = b.finale?.roster ?? [];
+    if (roster.length >= CROWD_MIN) {
+      const owner = b.prev_owner;
+      const byGuild = new Map<string, number>();
+      let defenders = 0;
+      for (const r of roster) {
+        if (owner && r.guildName === owner) defenders += 1;
+        else byGuild.set(r.guildName, (byGuild.get(r.guildName) ?? 0) + 1);
+      }
+      crowds.push({
+        zone: b.zone,
+        region,
+        owner,
+        defenders,
+        attackers: [...byGuild.entries()].map(([guild, n]) => ({ guild, n })).sort((x, y) => y.n - x.n),
+        total: roster.length,
+        held: !isCapture,
+      });
     }
     const f = b.finale;
     if (f?.roster && f.events) {
@@ -323,6 +354,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     standings: standingsRows,
     attacks,
     feats,
+    crowds,
   };
 }
 
@@ -407,6 +439,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - **방어에 성공한 길드는 싸운 길드다.** '방어' 목록에 있는 길드를 '다투지 않았다·싸우지 않았다·조용히 지냈다'로 쓰면 오류 — 공격 배치가 없었으면 '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 이번 행동으로 쓴다(2026-09-04 검수).
 - **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
+- **'사람이 몰린 전투'가 있으면 그날의 큰 싸움으로 다룬다** — 공격 길드별 인원과 수비 인원, 결과를 그대로 쓴다(예: '여섯을 보내고 하나를 보태 일곱으로 몰아쳤지만 셋이 막아냈다'). 인원수는 이 항목에 적힌 전투에만 쓰고, 없는 전투에 인원수를 지어내지 말 것. 수비 인원에는 집행관이 섞여 있으므로 '수비수 둘과 집행관 하나'처럼 나누어 쓰지 않는다.
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
 - **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다 — 단, 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
@@ -560,6 +593,16 @@ export async function generateAndStoreChronicle(
   const defLines =
     summary.defenses.map((d) => `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어`).join('\n') ||
     '· (방어 없음)';
+  // 사람이 몰린 전투(2026-09-10) — 규모를 숫자로. 집행관 자동 방어는 수비 인원에 섞여 있다(따로 세지 않는다).
+  const crowdLines =
+    summary.crowds
+      .map((c) => {
+        const atk = c.attackers.map((a) => `길드 「${a.guild}」 ${a.n}명`).join(' + ');
+        const def = c.owner ? `길드 「${c.owner}」 ${c.defenders}명이 수비` : '수비 없음';
+        return `· 구역 「${c.zone}」(${c.region} 지역): ${atk} 이(가) 공격, ${def} — 총 ${c.total}명 · 결과 ${c.held ? '수비 성공' : '함락'}`;
+      })
+      .join('\n') || '';
+
   // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
   // 활약 구역 명시(2026-07-20 피드백) — 어느 구역 전투에서의 활약인지 서술할 수 있게.
   const featZones = (f: (typeof summary.feats)[number]) =>
@@ -789,6 +832,10 @@ export async function generateAndStoreChronicle(
   if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별):\n${capLines}`);
   if (summary.defenses.length > 0)
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
+  if (crowdLines)
+    digestSections.push(
+      `■ 사람이 몰린 전투(${CROWD_MIN}명 이상 — 그날 큰 싸움. 수비 인원에는 집행관 자동 방어가 포함되어 있으니 따로 나누지 말 것):\n${crowdLines}`,
+    );
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
   if (topoLines) digestSections.push(`■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines}`);
   if (summary.renames.length > 0)
