@@ -196,9 +196,13 @@ const WARN_MAIL_DEFAULT = {
   body: '회원님에 대한 신고가 접수되었습니다.\n\n운영정책 위반이 확인되면 닉네임 초기화, 아바타 변경, 계정 정지로 이어질 수 있습니다. 게임 내 활동을 다시 한 번 확인해 주세요.',
 };
 
-/** 경고 — 비공개·변경 없이 경고 우편만(신고 기록 유지). 문구는 최다 접수 사유 하나로 고른다. */
+/**
+ * 경고 — 비공개·변경 없이 경고 우편만(신고 기록 유지). 문구는 최다 접수 사유 하나로 고른다.
+ * 경고는 아무것도 바꾸지 않아 화면에 흔적이 남지 않는다 → 눌렀는지 몰라 중복 발송하기 쉬웠다(2026-09-10).
+ * admin_actions에 'report.warn'으로 남겨 신고 목록이 마지막 발송 시각·사유를 보여준다.
+ */
 export async function warnProfile(profileId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
@@ -212,6 +216,13 @@ export async function warnProfile(profileId: string): Promise<Result> {
       .limit(1);
     const m = (top && WARN_MAIL[top.reason]) || WARN_MAIL_DEFAULT;
     await mail(tx, owner.userId, owner.serverId, 'notice', m.title, m.body);
+    await tx.insert(adminActions).values({
+      adminUserId,
+      action: 'report.warn',
+      targetType: 'profile',
+      targetId: profileId,
+      payload: { reason: top?.reason ?? null },
+    });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });

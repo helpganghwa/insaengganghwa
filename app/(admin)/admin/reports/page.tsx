@@ -1,9 +1,10 @@
-import { and, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
+import { adminActions } from '@/lib/db/schema/ops';
 import { listServers } from '@/lib/game/servers';
 
 import { AdminReportActions } from './AdminReportActions';
@@ -66,6 +67,21 @@ export default async function AdminReportsPage({
     .orderBy(desc(userProfiles.reportCount));
 
   const profileIds = reported.map((r) => r.id);
+
+  // 마지막 경고 발송(2026-09-10) — 경고는 아무것도 바꾸지 않아 화면에 흔적이 없다 → 중복 발송을 막으려 여기서 보여준다.
+  const warnRows = profileIds.length
+    ? await db
+        .select({
+          targetId: adminActions.targetId,
+          at: sql<Date>`max(${adminActions.createdAt})`,
+          reason: sql<string | null>`(array_agg(${adminActions.payload} ->> 'reason' order by ${adminActions.createdAt} desc))[1]`,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(adminActions)
+        .where(and(eq(adminActions.action, 'report.warn'), inArray(adminActions.targetId, profileIds)))
+        .groupBy(adminActions.targetId)
+    : [];
+  const warnByProfile = new Map(warnRows.map((w) => [w.targetId!, w]));
 
   // 각 대상의 개별 신고(신고자·사유·내용·시각).
   const reportRows = profileIds.length
@@ -189,6 +205,18 @@ export default async function AdminReportsPage({
                   ))}
                 </ul>
               )}
+
+              {(() => {
+                const w = warnByProfile.get(p.id);
+                if (!w) return null;
+                return (
+                  <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                    ⚠ 경고 발송됨 · {fmt(new Date(w.at))}
+                    {w.reason ? ` · ${REASON_LABEL[w.reason] ?? w.reason}` : ''}
+                    {w.n > 1 ? ` · 총 ${w.n}회` : ''}
+                  </p>
+                );
+              })()}
 
               <AdminReportActions profileId={p.id} banned={banned} />
             </div>
