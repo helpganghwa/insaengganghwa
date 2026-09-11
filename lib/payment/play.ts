@@ -1,12 +1,18 @@
 import 'server-only';
 
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 
 import { raisePaymentAlert } from './alert';
-import { consumePlayProductPurchase, listPlayVoidedPurchases, playConfigured, PlayApiError } from './play-api';
+import {
+  consumePlayProductPurchase,
+  getPlayProductPurchase,
+  listPlayVoidedPurchases,
+  playConfigured,
+  PlayApiError,
+} from './play-api';
 import { refundPurchase } from './refund';
 
 /**
@@ -106,4 +112,54 @@ export async function playOrderSummary(orderId: bigint): Promise<{ playOrderId: 
     .where(and(eq(iapOrders.id, orderId), eq(iapOrders.provider, 'play')))
     .limit(1);
   return r ? { playOrderId: r.playOrderId, consumedAt: r.consumedAt } : null;
+}
+
+/**
+ * 최근 결제분 취소 여부 직접 조회 — voided purchases 목록에만 기대지 않기 위한 보조 경로.
+ *
+ * 2026-09-11 첫 Play 환불에서 구글 구매 상태는 곧바로 '취소됨'(purchaseState 1)이 됐는데
+ * voided 목록은 비어 있었다. 목록 반영이 늦거나 일부 환불이 빠지면 회수가 통째로 누락되므로,
+ * 최근 주문만 토큰으로 직접 확인한다. 30일 voided 스윕은 그대로 두어 오래된 건을 받친다.
+ *
+ * 회수는 refundPurchase에 맡긴다 — 주문 행을 for update로 잠그고 이미 refunded면 빠져나오므로
+ * voided 경로와 겹쳐도 두 번 회수되지 않는다. 구글 상태 재확인도 그쪽에서 한 번 더 한다.
+ */
+const CANCEL_CHECK_WINDOW_HOURS = 48;
+
+export async function syncPlayCancelledRecent(
+  limit = 50,
+): Promise<{ scanned: number; refunded: number; failed: number }> {
+  if (!playConfigured()) return { scanned: 0, refunded: 0, failed: 0 };
+  const rows = await db
+    .select({ sku: iapOrders.playSku, token: iapOrders.playPurchaseToken, pid: iapOrders.portoneOrderId })
+    .from(iapOrders)
+    .where(
+      and(
+        eq(iapOrders.provider, 'play'),
+        eq(iapOrders.status, 'paid'),
+        isNotNull(iapOrders.playSku),
+        isNotNull(iapOrders.playPurchaseToken),
+        // 창을 좁게 잡는 이유: 10분마다 도는 크론이 누적 주문 전체를 매번 조회하면 API 호출이 헛돈다.
+        gte(iapOrders.paidAt, sql`now() - interval '${sql.raw(String(CANCEL_CHECK_WINDOW_HOURS))} hours'`),
+      ),
+    )
+    .limit(limit);
+  let refunded = 0;
+  let failed = 0;
+  for (const r of rows) {
+    try {
+      const p = await getPlayProductPurchase(r.sku!, r.token!);
+      if (p.purchaseState !== 1) continue; // 0 구매완료 · 2 보류 — 회수 대상 아님.
+      const res = await refundPurchase(r.pid);
+      if (res.ok && !res.already) refunded++;
+      else if (!res.ok) {
+        failed++;
+        console.warn('[play-sync] cancelled refund not applied', r.pid, res.code);
+      }
+    } catch (e) {
+      failed++;
+      console.error('[play-sync] cancelled check failed', r.pid, e);
+    }
+  }
+  return { scanned: rows.length, refunded, failed };
 }

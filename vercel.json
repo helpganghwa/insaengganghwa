@@ -105,7 +105,7 @@
     },
     {
       "path": "/api/cron/play-sync",
-      "schedule": "0 18 * * *"
+      "schedule": "4-54/10 * * * *"
     },
     {
       "path": "/api/cron/preopen-cleanup",
