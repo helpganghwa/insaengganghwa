@@ -32,7 +32,10 @@ export function isStandaloneDisplay(): boolean {
 /**
  * 결제 경로 판정(순수) — Play 결제를 쓸 것인가. 사실 수집은 호출부, 규칙은 여기.
  *
- * `hasDigitalGoods`가 1순위다. 이 API는 Play 결제를 켠 TWA 안에서만 노출되므로 '앱 안'의 확실한 증거다.
+ * `hasDigitalGoods`가 1순위다. 단 이 값은 **API의 존재 여부가 아니라 서비스가 실제로 열렸는지**를
+ * 뜻한다(`digitalGoodsAvailable()`). 안드로이드 크롬은 일반 탭에서도 `getDigitalGoodsService`를
+ * 노출하므로, 존재로 판정하면 웹 유저가 통째로 Play 결제로 갈려 결제가 전부 실패한다
+ * (2026-09-11 16:01 ~ 09-12, 실패 주문 19건·성공 0건). 열리는지로 판정하면 앱 안에서만 참이다.
  * 쿠키를 1순위로 쓰면 안 된다 — TWA는 크롬과 저장소를 공유해(docs/PLAYSTORE.md §9-1의 세션 공유와
  * 같은 성질) 앱을 한 번 열면 같은 기기의 크롬 탭에도 `ig_platform`이 남고, 그 브라우저에서 포트원
  * 결제가 통째로 막힌다.
@@ -43,6 +46,7 @@ export function isStandaloneDisplay(): boolean {
  * 남는 틈: 같은 기기에 PWA와 앱을 모두 설치하면 PWA도 standalone이라 안내로 빠진다(결제는 앱에서 가능).
  */
 export function usePlayBilling(facts: {
+  /** Digital Goods 서비스가 실제로 열렸는가(존재 여부가 아니다 — 위 주석). */
   hasDigitalGoods: boolean;
   twaCookie: boolean;
   standalone: boolean;

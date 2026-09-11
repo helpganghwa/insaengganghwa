@@ -396,7 +396,7 @@ export function BattlePassClient({
       // 전송 실패도 흡수 — paying 고착 시 구매 버튼이 무반응이 된다.
       // 상점과 같은 분기(앱=Play 결제, 웹·PWA=포트원). 성장패스 구간도 Play SKU(bp_<가격>)가 있다.
       const productId = `bp_${passType}_${segmentIndex}`;
-      const r = shouldUsePlayBilling()
+      const r = (await shouldUsePlayBilling())
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/battlepass`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,

@@ -644,7 +644,7 @@ export function ShopTabs({
       // 복귀 URL = 상점 자신(별도 페이지 없음). 포트원이 ?paymentId=…(&code=…)를 덧붙여 복귀.
       // 전송 실패도 흡수 — paying 고착 시 전 유료 카드가 무반응이 된다.
       // 플레이스토어 앱(TWA)이면 Play 결제(포트원 결제창 노출 금지 — 구글 정책), 웹·PWA는 포트원. 결과 형태 동일.
-      const r = shouldUsePlayBilling()
+      const r = (await shouldUsePlayBilling())
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/shop`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,

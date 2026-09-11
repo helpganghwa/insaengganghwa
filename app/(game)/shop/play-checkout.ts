@@ -19,20 +19,51 @@ type DigitalGoodsItem = { itemId: string; title: string; price: { currency: stri
 type DigitalGoodsService = { getDetails(itemIds: string[]): Promise<DigitalGoodsItem[]> };
 type DigitalGoodsWindow = Window & { getDigitalGoodsService?: (paymentMethod: string) => Promise<DigitalGoodsService> };
 
+/**
+ * API가 이 창에 **존재**하는가 — 존재만으로는 앱 안이라는 증거가 되지 않는다(아래 참조).
+ * 결제 경로 판정에는 쓰지 말고, 프로브를 걸 가치가 있는지 판단하는 데만 쓴다.
+ */
 export function playBillingSupported(): boolean {
   if (typeof window === 'undefined') return false;
   return typeof (window as DigitalGoodsWindow).getDigitalGoodsService === 'function' && 'PaymentRequest' in window;
 }
 
-/** 결제 경로 선택 — 사실만 모아 순수 규칙(usePlayBilling)에 넘긴다. 규칙과 근거는 그쪽 주석 참조. */
-export function shouldUsePlayBilling(): boolean {
+/**
+ * Digital Goods 서비스가 실제로 **열리는가**.
+ *
+ * ⚠ 안드로이드 크롬은 일반 탭에서도 `getDigitalGoodsService`를 노출한다. 함수가 있다고 앱 안인 것이
+ * 아니다 — 일반 탭에서 호출하면 "unsupported context"로 reject된다. 존재 여부로 판정하던 동안
+ * **안드로이드 크롬 웹 유저가 전부 Play 결제로 갈려 결제가 통째로 실패했다**(2026-09-11 16:01 ~
+ * 09-12, 실패 주문 19건). 그래서 존재가 아니라 열리는지로 판정한다.
+ */
+export type DigitalGoodsHost = {
+  getDigitalGoodsService?: (paymentMethod: string) => Promise<unknown>;
+  PaymentRequest?: unknown;
+};
+
+export async function digitalGoodsAvailable(host?: DigitalGoodsHost): Promise<boolean> {
+  const w = host ?? (typeof window === 'undefined' ? null : (window as unknown as DigitalGoodsHost));
+  if (!w) return false;
+  if (typeof w.getDigitalGoodsService !== 'function' || typeof w.PaymentRequest !== 'function') return false;
+  try {
+    await w.getDigitalGoodsService(PLAY_BILLING_METHOD);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 결제 경로 선택 — 사실만 모아 순수 규칙(usePlayBilling)에 넘긴다. 규칙과 근거는 그쪽 주석 참조.
+ *
+ * 앱 표식(세션 표식 또는 쿠키+standalone)만으로 Play가 확정되면 프로브를 건너뛴다. 결과가 같을 뿐
+ * 아니라, 앱 안에서 프로브가 실패하더라도 포트원으로 새면 안 되기 때문이다(구글 정책).
+ */
+export async function shouldUsePlayBilling(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  return usePlayBilling({
-    hasDigitalGoods: playBillingSupported(),
-    twaCookie: isTwaClient(),
-    standalone: isStandaloneDisplay(),
-    appSession: isAppSession(),
-  });
+  const facts = { twaCookie: isTwaClient(), standalone: isStandaloneDisplay(), appSession: isAppSession() };
+  if (usePlayBilling({ ...facts, hasDigitalGoods: false })) return true;
+  return usePlayBilling({ ...facts, hasDigitalGoods: await digitalGoodsAvailable() });
 }
 
 /** 표시 가격(콘솔 등록가) — 실패하면 null(카탈로그 KRW로 표시). 결제 시트가 어차피 실제 가격을 보여준다. */
@@ -49,9 +80,13 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
   }
 }
 
+const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
+
 export async function runPlayCheckout(productId: string): Promise<PlayCheckoutResult> {
-  if (!playBillingSupported()) {
-    return { ok: false, reason: 'unsupported', message: '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.' };
+  // 서비스를 **주문 생성보다 먼저** 연다. 순서를 뒤집으면 미지원 환경에서 pending 주문만 쌓인다
+  // (2026-09-12 실측 19건). 여기서 막히면 서버에 아무 흔적도 남지 않는다.
+  if (!(await digitalGoodsAvailable())) {
+    return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
   }
   const r = await createPlayOrderAction(productId).catch(() => null);
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };
@@ -60,8 +95,6 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
 
   let response: PaymentResponse;
   try {
-    // Digital Goods API 초기화 — 지원 여부를 여기서 최종 확인(getDigitalGoodsService가 reject하면 미지원).
-    await (window as DigitalGoodsWindow).getDigitalGoodsService!(PLAY_BILLING_METHOD);
     const request = new PaymentRequest(
       [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
       { total: { label: orderName, amount: { currency: 'KRW', value: String(amountKrw) } } },
@@ -70,8 +103,10 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   } catch (e) {
     const err = e as { name?: string; message?: string };
     if (err?.name === 'AbortError') return { ok: false, reason: 'cancel', code: 'ABORT' };
-    if (err?.name === 'NotSupportedError' || /not supported|digital goods/i.test(err?.message ?? '')) {
-      return { ok: false, reason: 'unsupported', message: '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.' };
+    // 'unsupported context'는 앱 밖에서 Digital Goods를 부를 때 크롬이 주는 말이다 — 날것 그대로
+    // 유저에게 보이면 안 된다(2026-09-12 실제 노출).
+    if (err?.name === 'NotSupportedError' || /not supported|unsupported|digital goods/i.test(err?.message ?? '')) {
+      return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
     }
     return { ok: false, reason: 'window', message: err?.message ?? '결제 시트를 열지 못했어요.' };
   }
