@@ -16,15 +16,24 @@ export const maxDuration = 120;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
-  try {
-    const consume = await retryPlayConsume();
-    const voided = await syncPlayVoided();
-    const cancelled = await syncPlayCancelledRecent();
-    const ok = consume.failed === 0 && voided.failed === 0 && cancelled.failed === 0;
-    if (ok) await beatCron('play-sync');
-    return Response.json({ ok, consume, voided, cancelled, kind: 'play-sync' }, { status: ok ? 200 : 500 });
-  } catch (e) {
-    console.error('[play-sync]', e);
-    return Response.json({ ok: false, error: (e as Error).message, kind: 'play-sync' }, { status: 500 });
-  }
+  // 단계를 서로 격리한다 — 한 단계의 예외가 나머지를 건너뛰게 두면 회수가 통째로 멈춘다
+  // (2026-09-11: voided 조회의 startTime 경계 오류로 크론 전체가 죽어 있었다).
+  const errors: string[] = [];
+  const step = async <T>(name: string, fn: () => Promise<T>): Promise<T | { error: string }> => {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = (e as Error).message;
+      console.error(`[play-sync] ${name}`, e);
+      errors.push(`${name}: ${msg}`);
+      return { error: msg };
+    }
+  };
+  const consume = await step('consume', retryPlayConsume);
+  const voided = await step('voided', syncPlayVoided);
+  const cancelled = await step('cancelled', syncPlayCancelledRecent);
+  const failed = (v: unknown) => typeof v === 'object' && v !== null && 'failed' in v && (v as { failed: number }).failed > 0;
+  const ok = errors.length === 0 && !failed(consume) && !failed(voided) && !failed(cancelled);
+  if (ok) await beatCron('play-sync');
+  return Response.json({ ok, consume, voided, cancelled, errors, kind: 'play-sync' }, { status: ok ? 200 : 500 });
 }

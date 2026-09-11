@@ -23,7 +23,10 @@ import { refundPurchase } from './refund';
  *     (Play 주문은 구글 상태 '취소됨'을 재확인한 뒤 지급분 회수·월누적 복원·환불 우편).
  */
 
-const VOIDED_LOOKBACK_MS = 30 * 24 * 3_600_000;
+// ⚠ 29일이다(30일 아님). 구글은 startTime이 30일 "이내"여야 한다고 거부하는데, 정확히 30일을 보내면
+// 요청이 도달하는 사이 경계를 넘어 항상 400 "Start time must be within [30] days of data"가 난다
+// (2026-09-11 첫 환불에서 발각 — 그 예외로 크론 전체가 죽어 회수 단계까지 가지도 못했다).
+export const VOIDED_LOOKBACK_MS = 29 * 24 * 3_600_000;
 
 export async function retryPlayConsume(limit = 50): Promise<{ scanned: number; consumed: number; failed: number }> {
   if (!playConfigured()) return { scanned: 0, consumed: 0, failed: 0 };
