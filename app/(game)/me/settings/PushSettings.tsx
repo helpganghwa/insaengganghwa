@@ -1,5 +1,7 @@
 'use client';
 
+import { isStandaloneDisplay, isTwaClient } from '@/lib/platform-client';
+
 import { useEffect, useState, useTransition } from 'react';
 
 import {
@@ -46,6 +48,12 @@ export function PushSettings(props: {
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  // 앱(TWA)의 알림 권한은 브라우저 사이트 설정이 아니라 안드로이드 앱 권한이다 — 안내를 갈라야
+  // 유저가 크롬 설정을 헤매지 않는다. 서버 렌더에서는 false라 기존(웹) 문구가 먼저 나온다.
+  const [isAppClient, setIsAppClient] = useState(false);
+  useEffect(() => {
+    setIsAppClient(isTwaClient() && isStandaloneDisplay());
+  }, []);
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
   // 구독 확인 끝나기 전엔 토글을 그리지 않음 — false→true 전환 시 발생하던
   // OFF→ON 슬라이드 애니메이션(2026-06-01 사용자 지적) 회피. 첫 마운트부터
@@ -173,8 +181,9 @@ export function PushSettings(props: {
     <div className="space-y-1">
       {permission === 'denied' ? (
         <p className="px-3 py-2.5 text-[11px] leading-relaxed text-amber-600">
-          브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 이 페이지에
-          들어와 주세요.
+          {isAppClient
+            ? '알림이 차단되어 있어요. 휴대폰 설정 > 앱 > 인생강화 > 알림에서 허용한 뒤 다시 이 페이지에 들어와 주세요.'
+            : '브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 이 페이지에 들어와 주세요.'}
         </p>
       ) : (
         <Toggle

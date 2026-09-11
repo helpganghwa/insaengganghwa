@@ -971,7 +971,7 @@ export function ShopTabs({
           label="본인인증 필요"
         >
           <ModalLayout
-            title="본인인증이 필요합니다"
+            title="본인확인이 필요합니다"
             subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">계정당 최초 1회</span>}
             footer={
               <>
@@ -985,7 +985,7 @@ export function ShopTabs({
             }
           >
             <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              청소년 보호를 위해 최초 결제 시 본인인증이 필요합니다.
+              청소년 보호를 위해 계정당 한 번 본인확인을 거칩니다. 결제 수단과는 무관하며, 확인만 끝나면 다시 묻지 않습니다.
             </p>
             {identityErr ? (
               <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>

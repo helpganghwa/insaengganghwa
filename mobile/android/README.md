@@ -44,7 +44,23 @@ bubblewrap build                    # twa-manifest.json 사용 → app-release-b
 - ⚠ `minSdkVersion`은 **23**이어야 한다(twa-manifest.json). Bubblewrap 기본값 21로 두면 Play 결제 라이브러리와 충돌해 `Manifest merger failed : uses-sdk:minSdkVersion 21 cannot be smaller than version 23 declared in library [com.google.androidbrowserhelper:billing]`로 빌드가 깨진다.
 - `app/`·`gradlew`·`build.gradle` 등 생성물은 커밋하지 않는다(정본은 twa-manifest.json, .gitignore 처리).
 - 웹 매니페스트가 바뀌면 `bubblewrap update`로 twa-manifest.json을 재동기화한 뒤 빌드.
+- ⚠ **`bubblewrap update` 직후 `startUrl`을 반드시 확인**한다. 이 명령은 웹 매니페스트의 `start_url`(`/`)을
+  그대로 가져와 **`/?src=twa`를 지운다**. 표식이 사라지면 앱 진입이 감지되지 않아 ① 심사용 로그인 링크가
+  앱에서 안 보이고 ② Digital Goods API가 없는 기기에서 결제 안전망이 무력화된다(2026-09-11 전수조사).
+  값이 `/`로 바뀌었으면 `/?src=twa`로 되돌린 뒤 빌드할 것.
 - 버전 올릴 때 `appVersionCode` +1, `appVersionName` 갱신 후 빌드.
+
+## 빌드 뒤 손봐야 하는 생성물(2026-09-11 전수조사)
+
+`bubblewrap build`는 `app/` 아래를 매번 새로 만든다. 아래 두 가지는 생성 직후 고친 뒤 빌드해야 한다.
+
+1. **런처 아이콘 배경** — `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`의 배경 레이어가
+   `@android:color/white`로 박혀 있다. 브랜드 색이 어두워서 안드 12+ 시스템 스플래시에 흰 배경이
+   번쩍인 뒤 어두운 화면으로 넘어간다. `#151518`로 바꾼다.
+2. **Chromebook 배포** — 병합 매니페스트에 `uses-feature` 선언이 없어 Play가 터치스크린을 필수로
+   본다. 터치 없는 Chromebook이 배포 대상에서 빠진다. 포함하려면
+   `<uses-feature android:name="android.hardware.touchscreen" android:required="false" />`를
+   `app/src/main/AndroidManifest.xml`에 추가한다.
 
 ## Play Console 이후
 1. 내부 테스트 트랙에 AAB 업로드.

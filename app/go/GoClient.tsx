@@ -20,6 +20,7 @@ const INAPP_RE = /Instagram|FBAN|FBAV|FB_IAB|KAKAOTALK|NAVER\(inApp|DaumApps|Lin
 export function GoClient() {
   const params = useSearchParams();
   const [env, setEnv] = useState<Env>('checking');
+  const [android, setAndroid] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // next = 탈출/이동할 **내부 경로**(추천 쿠키를 외부 브라우저에서 세팅하는 /s/[code]?go=1 등).
@@ -35,6 +36,7 @@ export function GoClient() {
 
   useEffect(() => {
     const ua = navigator.userAgent;
+    setAndroid(/Android/i.test(ua));
     if (!INAPP_RE.test(ua)) {
       setEnv('normal');
       window.location.replace(path);
@@ -48,6 +50,15 @@ export function GoClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * 앱으로 열기(2026-09-11 전수조사) — 패키지를 지정하지 않는 인텐트라 안드로이드가 앱 링크로 해석한다.
+   * 인생강화 앱이 설치돼 있으면 앱이 잡고, 없으면 fallback_url로 브라우저가 연다. openChrome처럼
+   * 크롬 패키지를 박으면 앱이 있어도 절대 앱으로 열리지 않는다(스토어 출시 전에는 맞는 동작이었다).
+   */
+  const openApp = () => {
+    const noScheme = target.replace(/^https?:\/\//, '');
+    window.location.href = `intent://${noScheme}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(target)};end`;
+  };
   const openChrome = () => {
     const noScheme = target.replace(/^https?:\/\//, '');
     window.location.href = `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(target)};end`;
@@ -83,6 +94,10 @@ export function GoClient() {
 
   const primaryBtn =
     'w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3.5 text-[15px] font-extrabold text-amber-950 shadow-[0_0_24px_rgba(245,158,11,0.25)] transition active:scale-[0.99]';
+  const secondaryBtn =
+    'block w-full rounded-xl border border-zinc-700 py-3 text-center text-[14px] font-bold text-zinc-300 active:bg-zinc-800';
+  // 앱 링크 인텐트는 안드로이드에서만 의미가 있다(카카오 인앱은 iOS에도 있다).
+  const isAndroid = env === 'android-inapp' || (env === 'kakao' && android);
 
   return (
     <main className="pc-column-edge mx-auto min-h-dvh w-full max-w-[390px] bg-[#17110c] pb-10 text-zinc-200">
@@ -96,10 +111,10 @@ export function GoClient() {
 
       <div className="px-5">
         <h1 className="text-center text-[18px] font-extrabold leading-relaxed">
-          인생강화는 <span className="text-amber-400">웹게임</span>이에요
+          여기서는 <span className="text-amber-400">제대로 안 열려요</span>
         </h1>
         <p className="mt-1 text-center text-[13px] leading-relaxed text-zinc-400">
-          원활한 플레이를 위해 평소 쓰시는 브라우저로 열어주세요
+          앱이 있으면 앱으로, 없으면 평소 쓰시는 브라우저로 열어주세요
         </p>
 
         <section className="mt-5 rounded-2xl bg-zinc-900/80 p-5 ring-1 ring-amber-700/40">
@@ -108,14 +123,23 @@ export function GoClient() {
             외부 브라우저로 열기
           </h2>
 
-          {env === 'kakao' ? (
-            <button type="button" onClick={openKakaoExternal} className={`mt-4 ${primaryBtn}`}>
-              기본 브라우저로 열기 →
-            </button>
-          ) : env === 'android-inapp' ? (
-            <button type="button" onClick={openChrome} className={`mt-4 ${primaryBtn}`}>
-              Chrome으로 바로 열기 →
-            </button>
+          {env === 'kakao' || env === 'android-inapp' ? (
+            <div className="mt-4 space-y-2">
+              {isAndroid ? (
+                <button type="button" onClick={openApp} className={primaryBtn}>
+                  앱으로 열기 →
+                </button>
+              ) : null}
+              {env === 'kakao' ? (
+                <button type="button" onClick={openKakaoExternal} className={isAndroid ? secondaryBtn : primaryBtn}>
+                  기본 브라우저로 열기 →
+                </button>
+              ) : (
+                <button type="button" onClick={openChrome} className={isAndroid ? secondaryBtn : primaryBtn}>
+                  Chrome으로 열기 →
+                </button>
+              )}
+            </div>
           ) : (
             <div className="mt-4 space-y-4">
               {/* 1단계 — 인앱 브라우저 상단 목업(··· 위치 안내) */}

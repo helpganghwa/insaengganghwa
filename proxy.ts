@@ -35,11 +35,37 @@ function stagingGate(request: NextRequest): NextResponse | null {
  * 쿠키 `ig_platform=twa`(1년, httpOnly 아님: 클라 결제 분기가 읽는다)를 심고 쿼리를 지워 리다이렉트.
  * 이후 요청은 lib/platform.ts가 쿠키로 판별. 게임 로직엔 쓰지 않는다(결제 경로·문구 분기 전용).
  */
+/**
+ * 위키 서브도메인 가드(2026-09-11 전수조사) — `wiki.ganghwa.app`은 위키를 브라우저 뷰로 분리해
+ * 여는 용도의 별칭일 뿐인데, 같은 배포라 게임 전체를 서빙하고 있었다. 앱에서 위키로 나갔다가
+ * "게임으로"를 누르면 **다른 오리진의 게임**이 열려 세션이 없고, 그쪽에서 로그인하면 결제가
+ * 포트원으로 흐른다(앱 표식이 없으므로). 위키 외 경로는 본 도메인으로 되돌린다.
+ */
+const WIKI_HOST = 'wiki.ganghwa.app';
+const CANONICAL_HOST = 'ganghwa.app';
+
+function wikiHostGuard(request: NextRequest): NextResponse | null {
+  if (request.nextUrl.hostname !== WIKI_HOST) return null;
+  const p = request.nextUrl.pathname;
+  // 위키 본문과 그 렌더에 필요한 정적 자산만 남긴다.
+  if (p === '/wiki' || p.startsWith('/wiki/') || p.startsWith('/_next/') || p.startsWith('/sprites/') || p.startsWith('/icons/') || p.startsWith('/fx/')) {
+    return null;
+  }
+  const url = request.nextUrl.clone();
+  url.hostname = CANONICAL_HOST;
+  if (p === '/') url.pathname = '/wiki';
+  return NextResponse.redirect(url);
+}
+
 function twaMarker(request: NextRequest): NextResponse | null {
   const { searchParams } = request.nextUrl;
   if (searchParams.get('src') !== 'twa') return null;
   const url = request.nextUrl.clone();
   url.searchParams.delete('src');
+  // 해시로 표식을 넘긴다 — 해시는 서버로 가지 않고 이 내비게이션에만 붙으므로, 쿠키와 달리
+  // 같은 기기의 다른 크롬 탭으로 새지 않는다. 클라(AppSessionMark)가 읽어 sessionStorage에
+  // 옮기고 즉시 지운다. 쿠키가 새어 브라우저 결제가 막혔던 사고(2026-09-11)의 재발 방지.
+  url.hash = 'app';
   const res = NextResponse.redirect(url);
   res.cookies.set('ig_platform', 'twa', { httpOnly: false, sameSite: 'lax', secure: true, path: '/', maxAge: 60 * 60 * 24 * 365 });
   return res;
@@ -47,6 +73,8 @@ function twaMarker(request: NextRequest): NextResponse | null {
 
 // Next.js 16: middleware → proxy. export 함수명 `proxy` 필수.
 export async function proxy(request: NextRequest) {
+  const wiki = wikiHostGuard(request);
+  if (wiki) return wiki;
   const gated = stagingGate(request);
   if (gated) return gated;
   const twa = twaMarker(request);

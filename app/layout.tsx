@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { Geist, Geist_Mono, Noto_Serif_KR } from 'next/font/google';
 import './globals.css';
 import '@/components/title-fx.css';
+import { AppSessionMark } from '@/components/AppSessionMark';
 import { ClientErrorReporter } from '@/components/ClientErrorReporter';
 import { KakaoPixel } from '@/components/KakaoPixel';
 
@@ -211,6 +212,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
         {children}
         {/* 전역 클라 에러 → 서버 로그 수집(Sentry 없이 v1 관측성). */}
+        {/* 앱(TWA) 진입 표식을 sessionStorage로 옮긴다 — proxy.ts의 `/#app` 참조. */}
+        <AppSessionMark />
         <ClientErrorReporter />
         {/* 카카오 비즈보드 픽셀 — 광고 전환(방문·회원가입·로그인). 트랙 ID 미설정이면 no-op. */}
         <KakaoPixel />

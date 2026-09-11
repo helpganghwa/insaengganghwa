@@ -4,6 +4,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getBattlePassView } from '@/lib/game/battlepass';
+import { playConfigured } from '@/lib/payment/play-api';
 import { portoneConfig } from '@/lib/payment/purchase';
 
 import { BattlePassClient } from './BattlePassClient';
@@ -65,7 +66,7 @@ export default async function BattlePassPage({
       transcend={data[1]}
       // 상점(shop/page.tsx)과 동일 이중 게이트 — 상위 분기(:27)가 바뀌어도 결제 UI가
       // 단독으로 열리지 않게(전수 감사 2026-08-21). 어드민은 심사·점검용으로 항상 열림.
-      payEnabled={portoneConfig() !== null && (isAdmin || !(await shouldHidePaidContent()))}
+      payEnabled={(portoneConfig() !== null || playConfigured()) && (isAdmin || !(await shouldHidePaidContent()))}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
       returnMessage={sp.message ?? null}

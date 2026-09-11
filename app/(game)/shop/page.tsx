@@ -4,6 +4,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
 import { getPurchaseStatus, getPremiumRemainingDays, hasFirstSpecial } from '@/lib/game/shop/dev-purchase';
+import { playConfigured } from '@/lib/payment/play-api';
 import { portoneConfig } from '@/lib/payment/purchase';
 import { getPointsOverview } from '@/lib/game/points/wallet';
 import { EMPTY_POINTS } from '@/lib/game/points/types';
@@ -53,7 +54,9 @@ export default async function ShopPage({
 
   // CBT 기간엔 일반 유저에게 유료 상품을 '준비 중'으로 표시(payEnabled=false). 무료 보급·견습의
   // 주머니(💎)는 payEnabled 무관하게 그대로 사용. 테스터 계정·정식 출시 시에는 실제 설정을 따름.
-  const payEnabled = portoneConfig() !== null && !hidePaid;
+  // 결제 가능 여부 — 웹(포트원)과 앱(Play) 중 **하나라도** 설정돼 있으면 연다. 종전엔 포트원
+  // 단독 조건이라 웹 결제를 내리려고 env를 지우면 앱 결제까지 '준비 중'이 됐다(2026-09-11 전수조사).
+  const payEnabled = (portoneConfig() !== null || playConfigured()) && !hidePaid;
 
   return (
     <ShopTabs

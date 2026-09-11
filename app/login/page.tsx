@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
+import { ReviewerEntry } from './ReviewerEntry';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { CbtEndedNotice } from './CbtEndedNotice';
@@ -67,7 +68,11 @@ export default async function LoginPage({
   // 스토어 심사 진입로(2026-09-11) — 앱(TWA)은 주소창이 없어 심사관이 `?test=true`를 붙일 수 없다.
   // 앱으로 열렸을 때만 화면 맨 아래에 작은 링크를 두어 심사관이 앱 안에서 ID/PW 폼에 닿게 한다.
   // 웹에는 나타나지 않고(쿠키 없음), 링크를 눌러도 cbt 계정의 아이디·비밀번호를 알아야 로그인된다.
-  const showReviewerEntry = !reviewLogin && (await isTwa());
+  const isApp = await isTwa();
+  // 심사용 진입로는 **앱에서만** 보여야 한다. 쿠키만 보면 앱과 저장소를 공유하는 같은 기기의
+  // 크롬 탭에도 뜬다(2026-09-11 프로덕션 실측). 최종 판정은 클라에서 세션 표식·표시 모드까지
+  // 확인한다 — 서버는 쿠키로 1차만 거르고, 렌더 여부는 ReviewerEntry가 정한다.
+  const showReviewerEntry = !reviewLogin && isApp;
   // CBT 종료 모드(0144) — 일반 화면은 로그인 수단 없이 종료 안내·카운트다운만.
   // ?test=true는 ID/PW(심사) + 카카오(어드민 전용 — 콜백에서 검증)를 함께 노출.
   const maint = await getMaintenanceState().catch(() => null);
@@ -214,14 +219,15 @@ export default async function LoginPage({
           </h1>
           <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
             장비를 강화 슬롯에 올려두면 시간이 흐를수록 성공 확률이 올라갑니다. 조급하게 두드릴지,
-            끝까지 기다릴지 — 선택은 당신의 몫. 설치 없이 웹에서 바로, 무료로 시작하세요.
+            끝까지 기다릴지 — 선택은 당신의 몫.{' '}
+            {isApp ? '카카오로 3초면 시작합니다.' : '설치 없이 웹에서 바로, 무료로 시작하세요.'}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-1.5">
             {[
               ['⏳', '시간이 무기', '기다릴수록 오르는 성공 확률'],
               ['📦', '수집과 초월', '100종+ 장비, 중복 수집 자동 초월'],
               ['⚔️', '함께 겨루기', '레이드 · 대난투 · 길드 점령전'],
-              ['⚡', '가볍게 시작', '설치 없음, 카카오 3초, 무료'],
+              ['⚡', '가볍게 시작', isApp ? '카카오 3초, 무료로 시작' : '설치 없음, 카카오 3초, 무료'],
             ].map(([icon, t, d]) => (
               <div key={t} className="rounded-lg bg-white/[0.04] px-2.5 py-2">
                 <h2 className="text-[11px] font-bold text-zinc-200">
@@ -234,14 +240,7 @@ export default async function LoginPage({
         </section>
         )}
 
-        {showReviewerEntry ? (
-          <Link
-            href="/login?test=true"
-            className="mt-6 block w-full text-center text-[10px] text-zinc-600 underline-offset-2 hover:underline"
-          >
-            심사용 로그인 · Reviewer sign-in
-          </Link>
-        ) : null}
+        {showReviewerEntry ? <ReviewerEntry /> : null}
 
         {/* CBT 데이터 초기화 사전 고지는 제거(2026-08-21 전수 대조) — 이 블록이 PAYMENTS_OPEN에
             결합돼 있어, 카드사 심사 대기로 결제만 닫아둔 정식 오픈 화면에 CBT 문구가 노출됐다.

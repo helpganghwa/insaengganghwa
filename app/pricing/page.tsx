@@ -20,7 +20,7 @@ export default function PricingPage() {
       <header className="mb-4">
         <h1 className="text-lg font-bold">상품 안내</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-          모든 상품은 모바일 웹 게임 「인생강화」 내에서 사용되는 디지털 콘텐츠(게임 내 재화 ‘다이아’ 등)이며,
+          모든 상품은 게임 「인생강화」(웹·앱) 안에서 사용되는 디지털 콘텐츠(게임 내 재화 ‘다이아’ 등)이며,
           결제 완료 즉시 계정에 지급됩니다. 가격은 부가가치세 포함 금액입니다.
         </p>
       </header>

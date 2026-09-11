@@ -46,7 +46,7 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
                 위 viewport 재정의가 게임 화면(고정 390)까지 따라간다. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
-              href="/"
+              href="https://ganghwa.app/"
               className={`rounded-md border px-2.5 py-1 text-[12px] font-semibold ${PAPER.card} ${PAPER.hover}`}
             >
               게임으로

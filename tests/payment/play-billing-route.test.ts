@@ -26,4 +26,14 @@ describe('usePlayBilling', () => {
   it('앱 표식 + standalone인데 API가 없으면 Play 경로로 보내 안내로 끝낸다 — 포트원 노출은 정책 위반', () => {
     expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: true })).toBe(true);
   });
+
+  it('앱 세션 표식이 있으면 standalone이 아니어도 Play 경로 — 커스텀탭 폴백에서 포트원이 열리면 안 된다', () => {
+    // 도메인 검증 실패로 앱이 주소창 있는 커스텀탭으로 뜨는 경우. standalone이 아니라
+    // 종전 안전망(쿠키 AND standalone)은 이 상황을 놓쳤다(2026-09-11 전수조사).
+    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: false, appSession: true })).toBe(true);
+  });
+
+  it('세션 표식은 탭마다 독립이라 브라우저 탭에는 없다 — 쿠키만 새어 들어와도 포트원 유지', () => {
+    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: false, appSession: false })).toBe(false);
+  });
 });

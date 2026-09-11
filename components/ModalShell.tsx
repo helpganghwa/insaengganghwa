@@ -63,6 +63,9 @@ export function ModalShell({
   }, [mounted]);
   // 셸 스택 등록 — 키 핸들러의 최상단 판정 근거.
   const shellId = useRef<symbol | null>(null);
+  // 언마운트 정리에서 최신 onClose를 쓰되, effect는 마운트/언마운트에만 돌게 한다.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   if (shellId.current === null) shellId.current = Symbol('modal-shell');
   useEffect(() => {
     const id = shellId.current!;
@@ -93,6 +96,30 @@ export function ModalShell({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, onSubmit]);
+
+  /**
+   * 안드로이드 뒤로가기 — 앱(TWA)에는 주소창이 없어 뒤로가기가 유일한 '취소' 수단이다. 히스토리를
+   * 쌓아 두지 않으면 모달이 뜬 상태의 뒤로가기가 이전 라우트로 이동해 버리고, 홈에서는 **앱이 종료된다**
+   * (2026-09-11 출시 전수조사). 셸 한 곳에서 처리해 모든 모달·바텀시트가 같은 규칙을 따르게 한다.
+   *
+   * 규칙: 열릴 때 항목 하나를 쌓고, popstate가 오면 닫는다. 화면 안의 버튼으로 닫힌 경우에는
+   * 쌓아 둔 항목을 되돌려(back) 히스토리가 늘어나지 않게 한다. 뒤로가기로 닫힌 경우에는 이미
+   * 소비됐으므로 되돌리지 않는다(그러지 않으면 한 칸 더 뒤로 가 버린다).
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let poppedByBack = false;
+    const onPop = () => {
+      poppedByBack = true;
+      onCloseRef.current();
+    };
+    window.history.pushState({ igModal: true }, '');
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if (!poppedByBack) window.history.back();
+    };
+  }, []);
 
   if (!mounted) return null; // 포털은 클라이언트 마운트 후에만(SSR 하이드레이션 안전)
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';

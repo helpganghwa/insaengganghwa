@@ -1,4 +1,4 @@
-import { isStandaloneDisplay, isTwaClient, usePlayBilling } from '@/lib/platform-client';
+import { isAppSession, isStandaloneDisplay, isTwaClient, usePlayBilling } from '@/lib/platform-client';
 import { PLAY_BILLING_METHOD } from '@/lib/payment/play-sku';
 
 import { createPlayOrderAction, verifyPlayPurchaseAction } from './actions';
@@ -31,6 +31,7 @@ export function shouldUsePlayBilling(): boolean {
     hasDigitalGoods: playBillingSupported(),
     twaCookie: isTwaClient(),
     standalone: isStandaloneDisplay(),
+    appSession: isAppSession(),
   });
 }
 

@@ -11,6 +11,18 @@ export function isTwaClient(): boolean {
   return document.cookie.split('; ').some((c) => c === `${PLATFORM_COOKIE}=${PLATFORM_TWA}`);
 }
 
+export const APP_SESSION_KEY = 'ig_app';
+
+/** 이 브라우징 컨텍스트가 앱 진입(`/?src=twa`)을 직접 거쳤는가. sessionStorage라 탭·앱마다 독립이다. */
+export function isAppSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(APP_SESSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 /** 표시 모드가 standalone인가 — TWA·설치형 PWA에서 true, 브라우저 탭에서 false. */
 export function isStandaloneDisplay(): boolean {
   if (typeof window === 'undefined') return false;
@@ -34,7 +46,14 @@ export function usePlayBilling(facts: {
   hasDigitalGoods: boolean;
   twaCookie: boolean;
   standalone: boolean;
+  /** 앱이 심은 표식을 이 브라우징 컨텍스트에서 직접 봤는가(세션 한정 — 쿠키와 달리 새지 않는다). */
+  appSession?: boolean;
 }): boolean {
   if (facts.hasDigitalGoods) return true;
+  // 2순위 안전망 — 앱인데 Digital Goods API가 없는 환경(커스텀탭 폴백·구형 크롬)에서 포트원
+  // 결제창을 띄우면 정책 위반이다. 종전엔 `쿠키 && standalone`이었는데, 폴백은 주소창이 있어
+  // standalone이 **아니다** — 안전망이 필요한 바로 그 상황에서 열리지 않았다(2026-09-11 전수조사).
+  // 세션 표식은 탭 단위라 같은 기기의 다른 크롬 탭으로 새지 않으므로 standalone 없이 써도 안전하다.
+  if (facts.appSession) return true;
   return facts.twaCookie && facts.standalone;
 }

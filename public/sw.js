@@ -8,13 +8,43 @@
  * 캐싱 전략은 두지 않음(Next.js + Vercel CDN에 위임). 본 SW의 단일 책임은 푸시.
  * 향후 오프라인 셸이 필요해지면 별도 검토.
  */
-self.addEventListener('install', () => {
+// 오프라인 폴백(2026-09-11) — 네트워크가 끊긴 채 앱을 열면 크롬 기본 오류 페이지가 앱 전체를
+// 덮는다(주소창이 없어 더 막막하다). **내비게이션 요청이 실패했을 때만** 미리 받아 둔 화면을 대신
+// 보여 준다. 그 외에는 아무것도 가로채지 않는다 — 이 워커의 단일 책임(푸시)을 깨지 않기 위해서다.
+const OFFLINE_URL = '/offline';
+const OFFLINE_CACHE = 'ig-offline-v1';
+
+self.addEventListener('install', (event) => {
   // 즉시 활성화 — 새 SW 배포 시 기존 탭이 바로 적용.
   self.skipWaiting();
+  // 오프라인 폴백 1장만 프리캐시 — 실패해도 설치를 막지 않는다.
+  event.waitUntil(
+    caches
+      .open(OFFLINE_CACHE)
+      .then((c) => c.add(OFFLINE_URL))
+      .catch(() => undefined),
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET' || req.mode !== 'navigate') return;
+  event.respondWith(
+    (async () => {
+      try {
+        const res = await fetch(req);
+        // 성공한 응답은 그대로 흘려보낸다(캐시하지 않는다 — 게임 상태는 항상 서버 권위).
+        return res;
+      } catch {
+        const cached = await caches.match(OFFLINE_URL);
+        return cached ?? new Response('오프라인', { status: 503, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+      }
+    })(),
+  );
 });
 
 self.addEventListener('push', (event) => {
