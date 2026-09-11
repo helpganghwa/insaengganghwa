@@ -24,7 +24,14 @@ export function ServiceWorkerMount() {
     // 위키 호스트에는 걸지 않는다 — /sw.js가 본 도메인으로 리다이렉트돼(proxy.ts 위키 가드)
     // 교차 오리진 리다이렉트로 등록이 매번 실패한다. 위키는 폴백도 푸시도 쓰지 않는다.
     if (window.location.hostname.startsWith('wiki.')) return;
-    void registerServiceWorker();
+    // 부수 기능이라 어떤 실패도 화면을 무너뜨리면 안 된다. 배포가 교체되는 동안 오래 열어 둔 탭에서
+    // 낡은 청크와 새 청크가 섞이면 import 바인딩이 깨지는데, 실제로 그 예외가 전역 에러 경계까지
+    // 올라가 화면이 통째로 죽었다(2026-09-12 06:51, 데스크톱 크롬 1건).
+    try {
+      void registerServiceWorker();
+    } catch {
+      /* 등록 실패는 무시 — 폴백이 없을 뿐 게임은 정상 동작한다. */
+    }
   }, []);
   return null;
 }
