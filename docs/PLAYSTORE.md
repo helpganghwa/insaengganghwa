@@ -60,6 +60,13 @@
 - ✅ 테스트 `tests/payment/play-pure.test.ts`(4) · `play-complete.test.ts`(DB 통합 6: 지급·멱등·미구매·토큰 중복·소모 실패·환불·voided).
 - ⏳ 남은 것: 서비스 계정 env 투입(Vercel) → 라이선스 테스터로 내부 테스트 E2E → 가격 표시(`playPriceLabel`) 상점 반영 여부 결정 → 어드민 결제 목록 Play 주문번호 노출.
 
+**결제 경로 판정(2026-09-11 수정)** — `lib/platform-client.ts`의 순수 함수 `usePlayBilling({hasDigitalGoods, twaCookie, standalone})`이 규칙, `shouldUsePlayBilling()`이 사실 수집. 상점·성장패스 두 결제 진입점이 같은 규칙을 쓴다.
+- **Digital Goods API 존재가 1순위**다. 이 API는 Play 결제를 켠 TWA에서만 노출돼 '앱 안'의 확실한 증거다.
+- ⚠ `ig_platform` 쿠키를 1순위로 쓰면 안 된다. TWA는 크롬과 저장소를 공유하므로(§9-1 세션 공유와 같은 성질) 앱을 한 번 열면 **같은 기기의 브라우저 탭에도 쿠키가 남아** 그 탭의 포트원 결제가 통째로 막힌다.
+- 쿠키는 2순위 안전망(쿠키 **AND** `display-mode: standalone`)으로만 쓴다. 앱인데 API가 없는 환경(커스텀탭 폴백·구버전 크롬)에서 포트원 결제창을 띄우면 정책 위반이라, 그때는 결제를 포기하고 안내로 끝낸다. standalone을 함께 보는 이유는 브라우저 탭을 이 안전망에서 빼기 위해서다.
+- 남는 틈: 같은 기기에 PWA와 앱을 모두 설치하면 PWA도 standalone이라 안내로 빠진다(결제는 앱에서 가능).
+- 회귀 테스트 `tests/payment/play-billing-route.test.ts`.
+
 ### 3.3 그 외
 - 매니페스트 `start_url: '/?src=twa'`는 TWA 매니페스트(twa-manifest.json)에서만 지정(웹 PWA는 `/` 유지).
 - 푸시: TWA 알림 위임(`enableNotifications`)으로 앱 이름·아이콘으로 표시. 코드 변경 없음.

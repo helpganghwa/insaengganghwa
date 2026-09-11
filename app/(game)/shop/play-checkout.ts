@@ -1,3 +1,4 @@
+import { isStandaloneDisplay, isTwaClient, usePlayBilling } from '@/lib/platform-client';
 import { PLAY_BILLING_METHOD } from '@/lib/payment/play-sku';
 
 import { createPlayOrderAction, verifyPlayPurchaseAction } from './actions';
@@ -21,6 +22,16 @@ type DigitalGoodsWindow = Window & { getDigitalGoodsService?: (paymentMethod: st
 export function playBillingSupported(): boolean {
   if (typeof window === 'undefined') return false;
   return typeof (window as DigitalGoodsWindow).getDigitalGoodsService === 'function' && 'PaymentRequest' in window;
+}
+
+/** 결제 경로 선택 — 사실만 모아 순수 규칙(usePlayBilling)에 넘긴다. 규칙과 근거는 그쪽 주석 참조. */
+export function shouldUsePlayBilling(): boolean {
+  if (typeof window === 'undefined') return false;
+  return usePlayBilling({
+    hasDigitalGoods: playBillingSupported(),
+    twaCookie: isTwaClient(),
+    standalone: isStandaloneDisplay(),
+  });
 }
 
 /** 표시 가격(콘솔 등록가) — 실패하면 null(카탈로그 KRW로 표시). 결제 시트가 어차피 실제 가격을 보여준다. */

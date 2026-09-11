@@ -18,3 +18,4 @@ gradlew
 gradlew.bat
 manifest-checksum.txt
 store_icon.png
+*.idsig

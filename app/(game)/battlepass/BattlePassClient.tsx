@@ -16,6 +16,7 @@ import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotic
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import * as PortOne from '@portone/browser-sdk/v2';
 import { payFailTitle, runCheckout } from '@/app/(game)/shop/checkout';
+import { runPlayCheckout, shouldUsePlayBilling } from '@/app/(game)/shop/play-checkout';
 import { verifyPurchaseAction } from '@/app/(game)/shop/actions';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
@@ -393,9 +394,13 @@ export function BattlePassClient({
     setPaying(true);
     void (async () => {
       // 전송 실패도 흡수 — paying 고착 시 구매 버튼이 무반응이 된다.
-      const r = await runCheckout(`bp_${passType}_${segmentIndex}`, `${window.location.origin}/battlepass`).catch(
-        () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
-      );
+      // 상점과 같은 분기(앱=Play 결제, 웹·PWA=포트원). 성장패스 구간도 Play SKU(bp_<가격>)가 있다.
+      const productId = `bp_${passType}_${segmentIndex}`;
+      const r = shouldUsePlayBilling()
+        ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
+        : await runCheckout(productId, `${window.location.origin}/battlepass`).catch(
+            () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
+          );
       setPaying(false);
       if (r.ok) {
         // refresh 제거(2026-08-20, §11.7) — runCheckout 마지막 단계 verifyPurchaseAction의
@@ -407,6 +412,9 @@ export function BattlePassClient({
       } else if (r.reason === 'window') {
         // 결제창 실패 — PG 사유 그대로(침묵하면 무반응으로 보인다, 2026-07-31).
         setError(`결제에 실패했어요 — ${r.message}`);
+      } else if (r.reason === 'unsupported') {
+        // 앱 표식은 있는데 Digital Goods API가 없는 환경(커스텀탭 폴백·구버전 크롬).
+        setError(r.message);
       } else if (r.code === 'IDENTITY_REQUIRED') {
         // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
         setIdentityPrompt(true);
