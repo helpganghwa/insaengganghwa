@@ -8,7 +8,14 @@ import { MarkdownView } from '@/components/MarkdownView';
 import { RatingCard } from '@/components/GameRating';
 import { LEGAL_META, LEGAL_BODY, BUSINESS_INFO, type LegalSlug } from '@/lib/legal/content';
 
+/** 라우팅·검증 대상 전부. */
 const SLUGS: LegalSlug[] = ['terms', 'privacy', 'refund', 'youth', 'account-deletion'];
+/**
+ * 상단 탭에 노출하는 문서 — 계정 삭제 안내는 **주소로만** 연다(2026-09-11 사용자 확정).
+ * 스토어 심사가 요구하는 공개 URL이라 라우팅은 살리되, 약관을 읽으러 온 사람에게 탈퇴를 권하는
+ * 모양이 되지 않도록 탭·푸터에서는 감춘다.
+ */
+const NAV_SLUGS: LegalSlug[] = ['terms', 'privacy', 'refund', 'youth'];
 
 function isSlug(v: string): v is LegalSlug {
   return (SLUGS as string[]).includes(v);
@@ -40,7 +47,7 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
         <h1 className="text-lg font-bold">{meta.title}</h1>
         <p className="mt-0.5 text-[11px] text-zinc-500">시행일: {meta.effectiveDate}</p>
         <nav className="mt-2 flex flex-wrap gap-1.5">
-          {SLUGS.map((s) => (
+          {NAV_SLUGS.map((s) => (
             <Link prefetch={false}
               key={s}
               href={`/legal/${s}`}

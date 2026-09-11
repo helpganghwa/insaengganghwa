@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { LEGAL_BODY, LEGAL_META } from '@/lib/legal/content';
@@ -20,6 +22,16 @@ describe('계정 삭제 안내', () => {
   it('앱 안에서 탈퇴하는 절차를 단계로 적는다', () => {
     expect(body).toContain('계정 탈퇴');
     expect(body).toMatch(/1\.[\s\S]*2\.[\s\S]*3\.[\s\S]*4\./);
+  });
+
+  it('상단 탭·푸터에는 노출하지 않고 주소로만 연다', () => {
+    const page = readFileSync(new URL('../app/legal/[doc]/page.tsx', import.meta.url), 'utf8');
+    expect(page).toContain("const NAV_SLUGS: LegalSlug[] = ['terms', 'privacy', 'refund', 'youth'];");
+    expect(page).toContain('{NAV_SLUGS.map((s) => (');
+    // 라우팅·검증은 살아 있어야 404가 나지 않는다.
+    expect(page).toMatch(/const SLUGS: LegalSlug\[\][^\n]*'account-deletion'/);
+    const footer = readFileSync(new URL('../components/PublicFooter.tsx', import.meta.url), 'utf8');
+    expect(footer).not.toContain('account-deletion');
   });
 
   it('삭제되는 데이터와 법령 보관 기간을 함께 밝힌다', () => {
