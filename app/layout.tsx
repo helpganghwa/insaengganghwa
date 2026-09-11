@@ -6,6 +6,7 @@ import './globals.css';
 import '@/components/title-fx.css';
 import { AppSessionMark } from '@/components/AppSessionMark';
 import { ClientErrorReporter } from '@/components/ClientErrorReporter';
+import { ServiceWorkerMount } from '@/components/ServiceWorkerMount';
 import { KakaoPixel } from '@/components/KakaoPixel';
 
 const geistSans = Geist({
@@ -214,6 +215,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* 전역 클라 에러 → 서버 로그 수집(Sentry 없이 v1 관측성). */}
         {/* 앱(TWA) 진입 표식을 sessionStorage로 옮긴다 — proxy.ts의 `/#app` 참조. */}
         <AppSessionMark />
+        {/* 서비스워커 — 푸시와 오프라인 폴백. 로그인 전 화면에도 걸어야 폴백이 동작한다. */}
+        <ServiceWorkerMount />
         <ClientErrorReporter />
         {/* 카카오 비즈보드 픽셀 — 광고 전환(방문·회원가입·로그인). 트랙 ID 미설정이면 no-op. */}
         <KakaoPixel />

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
-import { checkPushSupport, isPushOptedOut, registerServiceWorker, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
+import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
 
 /**
  * 권한이 이미 granted인 기기의 푸시 구독을 앱 로드 시 서버에 (재)동기화한다.
@@ -86,19 +86,6 @@ export function PushAutoSync() {
       window.removeEventListener('focus', onVisible);
     };
   }, [router]);
-
-  /**
-   * 서비스워커 등록 — 푸시 권한과 무관하게 항상 등록한다(2026-09-11 전수조사).
-   *
-   * 종전엔 권한이 granted인 기기에서만 등록해, 대부분의 유저에게는 워커가 아예 없었다. 그래서
-   * 오프라인 폴백(sw.js의 내비게이션 한정 fetch)이 걸릴 자리가 없었다 — 앱은 주소창이 없어
-   * 네트워크가 끊기면 크롬 기본 오류 페이지가 화면을 통째로 덮는다. 워커는 푸시와 오프라인
-   * 폴백만 하고 응답을 캐시하지 않으므로, 등록 범위를 넓혀도 자산이 낡을 위험은 없다.
-   */
-  useEffect(() => {
-    if (checkPushSupport().kind !== 'supported') return;
-    void registerServiceWorker();
-  }, []);
 
   useEffect(() => {
     const support = checkPushSupport();
