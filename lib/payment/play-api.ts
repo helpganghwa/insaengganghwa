@@ -136,6 +136,59 @@ export async function refundPlayOrder(orderId: string, revoke = true): Promise<v
   });
 }
 
+/** 인앱 상품(inappproducts) 한 건 — 콘솔 등록 상태 대조·생성용(scripts/play-products.ts). */
+export type PlayInAppProduct = {
+  sku: string;
+  status?: string;
+  purchaseType?: string;
+  defaultPrice?: { priceMicros?: string; currency?: string };
+  listings?: Record<string, { title?: string; description?: string }>;
+};
+
+/** 등록된 인앱 상품 전체. 페이지네이션(기본 100)은 22종 규모라 1페이지로 충분하되 토큰이 오면 이어 받는다. */
+export async function listPlayInAppProducts(): Promise<PlayInAppProduct[]> {
+  const out: PlayInAppProduct[] = [];
+  let token: string | undefined;
+  do {
+    const q = token ? `?token=${encodeURIComponent(token)}` : '';
+    const page = await call<{ inappproduct?: PlayInAppProduct[]; tokenPagination?: { nextPageToken?: string } }>(
+      `/inappproducts${q}`,
+    );
+    out.push(...(page.inappproduct ?? []));
+    token = page.tokenPagination?.nextPageToken;
+  } while (token);
+  return out;
+}
+
+/**
+ * 인앱 상품 생성 — 관리 상품(소모성), ko-KR 단일 로케일, 대한민국 KRW 고정가.
+ * priceMicros는 통화 단위 × 1,000,000(KRW는 소수점이 없어도 동일 규칙).
+ * 제품 ID는 생성 후 변경 불가 — 호출 전 SKU를 반드시 확인할 것.
+ */
+export async function createPlayInAppProduct(p: {
+  sku: string;
+  krw: number;
+  title: string;
+  description: string;
+}): Promise<void> {
+  const priceMicros = String(BigInt(p.krw) * 1_000_000n);
+  const price = { priceMicros, currency: 'KRW' };
+  await call('/inappproducts?autoConvertMissingPrices=false', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      packageName: playPackageName(),
+      sku: p.sku,
+      status: 'active',
+      purchaseType: 'managedUser',
+      defaultLanguage: 'ko-KR',
+      defaultPrice: price,
+      prices: { KR: price },
+      listings: { 'ko-KR': { title: p.title, description: p.description } },
+    }),
+  });
+}
+
 export type PlayVoidedPurchase = {
   purchaseToken: string;
   orderId: string;

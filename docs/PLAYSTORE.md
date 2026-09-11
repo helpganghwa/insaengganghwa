@@ -106,6 +106,18 @@
 
 총 22종
 
+**등록 방법** — 콘솔의 CSV 가져오기/내보내기는 **2025-05-19에 폐지**됐다. 수기 입력 아니면 API뿐이므로
+`scripts/play-products.ts`로 일괄 등록한다(코드 `playSkuCatalog()`를 그대로 올려 표와 코드가 갈라지지 않는다).
+
+```bash
+bun --conditions react-server scripts/play-products.ts           # 대조만
+bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생성
+```
+
+- 전제: 로컬 env에 `PLAY_SERVICE_ACCOUNT_JSON`·`PLAY_PACKAGE_NAME`, 서비스 계정에 **앱 정보 보기·재무 데이터 보기** 권한(§2-8).
+- 이미 있는 SKU는 건드리지 않는다 — 판매가를 실수로 덮어쓰지 않기 위해서다. 가격이 어긋나면 경고만 찍고 콘솔에서 고친다.
+- ⚠ `--conditions react-server`를 빼면 `server-only` 가드에 막힌다.
+
 > 성장 패스(`bp_*`)는 **가격만** 담당한다. 어느 구간을 사는지는 주문의 productId가 정하므로 SKU는 6종을 공유한다.
 > 가격은 Play Console이 정본 — 카탈로그와 다르면 `getDetails` 값을 화면에 표시한다(청약·공시 일치).
 
