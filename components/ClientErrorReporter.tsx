@@ -82,6 +82,20 @@ export function ClientErrorReporter() {
       report('error', e.message, e.error instanceof Error ? e.error.stack : undefined);
     };
 
+    // effect가 돌기 전에 쌓인 것부터 넘긴다(app/layout.tsx의 이른 에러 버퍼). 같은 report를
+    // 거치므로 dedupe·양성 필터·세션 상한이 그대로 적용된다. 넘긴 뒤 버퍼를 닫아 중복을 막는다.
+    try {
+      const w = window as unknown as {
+        __igErrQ?: Array<{ kind: string; message: string; stack?: string }>;
+        __igErrReady?: boolean;
+      };
+      for (const e of w.__igErrQ ?? []) report(e.kind, e.message, e.stack || undefined);
+      w.__igErrQ = [];
+      w.__igErrReady = true;
+    } catch {
+      /* 버퍼가 없거나 접근 불가 — 무시. */
+    }
+
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener('error', onError);
     return () => {

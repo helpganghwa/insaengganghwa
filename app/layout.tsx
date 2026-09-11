@@ -206,6 +206,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`notranslate dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        {/*
+          이른 에러 버퍼 — ClientErrorReporter는 effect에서 리스너를 달기 때문에, **effect가 돌기
+          전에 터지는 오류는 구조적으로 수집되지 않는다.** 하이드레이션 실패(React #418)가 그 예다.
+          실측으로 확인했다(2026-09-12): 일부러 던진 오류는 수집되는데 하이드레이션 오류는 0건이고,
+          수집 이력도 08-24가 마지막이었다. 여기서 먼저 담아 두고 리포터가 마운트되면 넘긴다.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var q=[];window.__igErrQ=q;var add=function(k,m,s){if(window.__igErrReady)return;if(q.length>7)return;q.push({kind:k,message:String(m||'').slice(0,500),stack:s?String(s).slice(0,1500):''})};" +
+              "window.addEventListener('error',function(e){add('early-error',e&&e.message,e&&e.error&&e.error.stack)});" +
+              "window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;add('early-rejection',(r&&r.message)||r,r&&r.stack)})}catch(_){}})()",
+          }}
+        />
         {/* 구조화 데이터(JSON-LD) — 검색 리치 결과용. */}
         <script
           type="application/ld+json"
