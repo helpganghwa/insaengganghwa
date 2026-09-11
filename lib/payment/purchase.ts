@@ -30,6 +30,7 @@ import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 import { creditMileageForOrder } from '@/lib/game/points/wallet';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
+import { isKnownMinor, purchaseGate, type PurchaseChannel } from './purchase-gate';
 import { consumePlayProductPurchase, getPlayProductPurchase, playConfigured, refundPlayOrder } from './play-api';
 import { playSkuFor } from './play-sku';
 
@@ -146,10 +147,20 @@ export type CreatedOrder = {
 type ResolvedOrder = { krw: number; orderName: string; diamondGranted: number; reviewer: boolean };
 
 /**
- * 상품 해석 + 구매 가드(주기 재구매·특가 1회·프리미엄 드립·본인인증·미성년 월 한도) —
- * 포트원(웹) 주문과 Play(앱) 주문이 같은 규칙을 탄다(2026-09-03, docs/PLAYSTORE.md §3.2).
+ * 상품 해석 + 구매 가드(주기 재구매·특가 1회·프리미엄 드립·본인확인·미성년 월 한도).
+ * 상품·주기·특가 규칙은 두 경로가 똑같이 탄다(2026-09-03, docs/PLAYSTORE.md §3.2).
+ *
+ * **본인확인은 웹(포트원)에서만 요구한다**(2026-09-12 사용자 결정). 앱은 Google 계정이 연령과
+ * 결제수단·자녀 보호를 이미 관리하고, 그 위에 국내 본인확인을 또 요구하면 구매를 누른 순간 앱이
+ * 통째로 인증 페이지로 바뀐다. 대신 **이미 본인확인으로 미성년임이 확인된 회원**에게는 구매처와
+ * 무관하게 월 한도를 적용한다(아래 knownMinor).
  */
-async function resolveOrder(userId: string, serverId: number, productId: string): Promise<ResolvedOrder> {
+async function resolveOrder(
+  userId: string,
+  serverId: number,
+  productId: string,
+  channel: PurchaseChannel = 'portone',
+): Promise<ResolvedOrder> {
   // 심사(cbt) 계정 결제 차단 없음 — 사용자 결정(2026-07-10): 심사 계정도 결제 허용
   // (심사관 결제 검수 편의 우선, 공개 자격증명의 제3자 결제 리스크는 수용).
 
@@ -240,10 +251,16 @@ async function resolveOrder(userId: string, serverId: number, productId: string)
   // 해야 하는데 본인인증(실명 PASS)을 시킬 수 없다는 회신. 성인 취급(월 한도 미적용).
   // 실유저 경로는 그대로다 — 심사 계정 5개(ID/PW 로그인)만 이 분기를 탄다.
   const reviewer = await isReviewerAccount();
-  if (!verified && !reviewer) throw new PurchaseError('IDENTITY_REQUIRED');
-  if (!reviewer && isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
-    throw new PurchaseError('MINOR_LIMIT');
-  }
+  const gate = purchaseGate({
+    channel,
+    verified,
+    isMinor,
+    reviewer,
+    monthlyKrw,
+    krw,
+    limitKrw: MINOR_MONTHLY_LIMIT_KRW,
+  });
+  if (gate !== 'ok') throw new PurchaseError(gate);
   return { krw, orderName, diamondGranted, reviewer };
 }
 
@@ -319,7 +336,7 @@ export async function createPlayOrder(userId: string, serverId: number, productI
   if (!playConfigured()) throw new PurchaseError('CONFIG');
   const sku = playSkuFor(productId);
   if (!sku) throw new PurchaseError('UNKNOWN_PRODUCT');
-  const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId);
+  const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId, 'play');
   const paymentId = `gp-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
     serverId,
@@ -469,8 +486,11 @@ export async function completePurchase(
       // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
       // 없어 isReviewerAccount()를 못 쓰므로 user_id로 판별한다.
       const reviewer = await isReviewerUserId(order.userId);
-      const { isMinor } = reviewer ? { isMinor: false } : await minorStatus(order.userId, kstMonth);
-      if (isMinor) {
+      // resolveOrder와 **같은 기준**이어야 한다 — 본인확인으로 미성년임이 확인된 경우만 보류한다.
+      // 미인증(나이 모름)까지 미성년으로 보면, 본인확인을 요구하지 않는 앱 결제에서 누적 7만원을
+      // 넘긴 성인이 결제는 되고 지급만 막힌다(2026-09-12).
+      const st = reviewer ? { verified: false, isMinor: false } : await minorStatus(order.userId, kstMonth);
+      if (isKnownMinor(st.verified, st.isMinor)) {
         minorExceeded = true;
         // 지급 없이 paid — 회수 스킵 마커(0108). 없으면 환불 회수가 과거 다른 주문의
         // 지급분을 깎는다(자동 환불이 즉시 따라와도 재화 원장은 이 마커가 지킨다).
