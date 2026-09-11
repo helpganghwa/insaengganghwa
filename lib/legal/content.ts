@@ -39,7 +39,7 @@ export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth' | 'account-dele
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
   terms: { title: '이용약관', effectiveDate: '2026년 7월 27일' },
-  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 7월 27일' },
+  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 9월 19일' },
   refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 7월 27일' },
   youth: { title: '청소년보호정책', effectiveDate: '2026년 7월 27일' },
   // 스토어 심사 요건(2026-09-11) — Google Play는 '계정 삭제 요청' 공개 URL을 요구한다: 앱·개발자 이름,
@@ -178,7 +178,7 @@ const PRIVACY = `
 개인정보분쟁조정위원회(1833-6972) · 개인정보침해신고센터(118) · 경찰청 사이버수사국(182)에 상담·신고할 수 있습니다.
 
 ## 12. 고지
-방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 7월 27일.
+방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 9월 19일 (이전 시행일: 2026년 7월 27일).
 `;
 
 const REFUND = `
