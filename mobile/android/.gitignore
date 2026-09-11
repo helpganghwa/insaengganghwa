@@ -1,5 +1,20 @@
+# 서명 키 — 절대 커밋 금지
 android.keystore
 *.jks
+
+# 빌드 산출물
 *.aab
 *.apk
 build/
+.gradle/
+
+# bubblewrap이 twa-manifest.json에서 매번 생성하는 Android 프로젝트(정본은 twa-manifest.json)
+app/
+build.gradle
+settings.gradle
+gradle.properties
+gradle/
+gradlew
+gradlew.bat
+manifest-checksum.txt
+store_icon.png

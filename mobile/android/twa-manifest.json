@@ -4,7 +4,6 @@
   "name": "인생강화",
   "launcherName": "인생강화",
   "display": "standalone",
-  "orientation": "portrait",
   "themeColor": "#151518",
   "themeColorDark": "#151518",
   "navigationColor": "#151518",
@@ -22,11 +21,10 @@
     "alias": "upload"
   },
   "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://ganghwa.app/manifest.webmanifest",
-  "fullScopeUrl": "https://ganghwa.app/",
   "fallbackType": "customtabs",
   "features": {
     "playBilling": {
@@ -39,8 +37,12 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
+  "fullScopeUrl": "https://ganghwa.app/",
+  "minSdkVersion": 23,
+  "orientation": "portrait",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
+  "displayOverride": [],
   "appVersion": "1.0.0"
 }

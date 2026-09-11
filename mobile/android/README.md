@@ -40,6 +40,9 @@ keytool -list -v -keystore android.keystore -alias upload | grep SHA256   # 업�
 cd mobile/android
 bubblewrap build                    # twa-manifest.json 사용 → app-release-bundle.aab / app-release-signed.apk
 ```
+- 프롬프트 3개(프로젝트 재생성 / 변경 적용 / versionName)에 답하면 서명까지 진행된다. 비밀번호는 `BUBBLEWRAP_KEYSTORE_PASSWORD`·`BUBBLEWRAP_KEY_PASSWORD` 환경변수로도 넘길 수 있다.
+- ⚠ `minSdkVersion`은 **23**이어야 한다(twa-manifest.json). Bubblewrap 기본값 21로 두면 Play 결제 라이브러리와 충돌해 `Manifest merger failed : uses-sdk:minSdkVersion 21 cannot be smaller than version 23 declared in library [com.google.androidbrowserhelper:billing]`로 빌드가 깨진다.
+- `app/`·`gradlew`·`build.gradle` 등 생성물은 커밋하지 않는다(정본은 twa-manifest.json, .gitignore 처리).
 - 웹 매니페스트가 바뀌면 `bubblewrap update`로 twa-manifest.json을 재동기화한 뒤 빌드.
 - 버전 올릴 때 `appVersionCode` +1, `appVersionName` 갱신 후 빌드.
 
@@ -48,3 +51,4 @@ bubblewrap build                    # twa-manifest.json 사용 → app-release-b
 2. App integrity > **앱 서명 키 인증서 SHA-256** 복사 → Vercel `PLAY_ASSETLINKS_SHA256`(업로드 키 지문과 쉼표로 병기) → 재배포 → `https://ganghwa.app/.well-known/assetlinks.json` 확인.
 3. 설치 후 주소창이 보이면 assetlinks 불일치(지문·패키지명 확인).
 4. Play 결제는 `features.playBilling`가 켜져 있어야 Digital Goods API가 동작한다(설정 완료).
+5. **광고 ID 선언 = 아니요**. 병합된 AndroidManifest에 `com.google.android.gms.permission.AD_ID`가 없다(권한은 INTERNET·ACCESS_NETWORK_STATE·POST_NOTIFICATIONS·BILLING·DYNAMIC_RECEIVER_NOT_EXPORTED뿐). 웹의 gtag·카카오 픽셀은 쿠키 기반이라 안드로이드 광고 ID와 무관하다. 빌드마다 `app/build/intermediates/merged_manifest/release/.../AndroidManifest.xml`로 재확인할 수 있다.
