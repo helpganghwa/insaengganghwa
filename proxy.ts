@@ -48,7 +48,17 @@ function wikiHostGuard(request: NextRequest): NextResponse | null {
   if (request.nextUrl.hostname !== WIKI_HOST) return null;
   const p = request.nextUrl.pathname;
   // 위키 본문과 그 렌더에 필요한 정적 자산만 남긴다.
-  if (p === '/wiki' || p.startsWith('/wiki/') || p.startsWith('/_next/') || p.startsWith('/sprites/') || p.startsWith('/icons/') || p.startsWith('/fx/')) {
+  // /api/client-error는 예외로 통과시킨다 — 리다이렉트되면 교차 오리진이 되어 에러 리포트가
+  // 통째로 유실되고, 위키 호스트의 클라 오류 관측이 0이 된다(2026-09-12 재검수).
+  if (
+    p === '/wiki' ||
+    p.startsWith('/wiki/') ||
+    p.startsWith('/_next/') ||
+    p.startsWith('/sprites/') ||
+    p.startsWith('/icons/') ||
+    p.startsWith('/fx/') ||
+    p === '/api/client-error'
+  ) {
     return null;
   }
   const url = request.nextUrl.clone();

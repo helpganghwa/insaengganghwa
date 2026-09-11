@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
+import { consumeModalBack, hasOpenModal, isModalHistoryState } from '@/lib/ui/modal-history';
 
 const CYCLE_MS = 200; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
 const SAFETY_MS = 4000; // 멈춤 방지 자동 해제
@@ -40,7 +41,10 @@ function installHistoryHook(): void {
   window.history.pushState = function patchedPushState(
     ...args: Parameters<typeof origPush>
   ): void {
-    onProgrammaticNav?.();
+    // 모달이 쌓는 항목은 화면 이동이 아니다 — 여기서 걸러내지 않으면 모달을 열 때마다
+    // 로딩 오버레이가 뜨고, 주소가 안 바뀌어 해제 트리거도 안 걸려 안전타이머(4초)까지
+    // 아이템 이미지가 모달 위에 떠 있었다(2026-09-12 재검수).
+    if (!isModalHistoryState(args[0])) onProgrammaticNav?.();
     return origPush(...args);
   };
 }
@@ -110,7 +114,12 @@ export function RouteTransitionOverlay() {
     installHistoryHook();
     onProgrammaticNav = () => show();
     // 뒤로/앞으로 — 같은 라우트일 수 있어 짧은 안전타이머로(무한 표시 방지).
-    const onPop = () => show(POP_SAFETY_MS);
+    // 모달이 닫히는 pop은 제외한다: 뒤로가기로 닫는 경우(모달이 아직 열려 있음)와 화면
+    // 버튼으로 닫아 셸이 스스로 되돌리는 경우(표식) 둘 다 화면 이동이 아니다.
+    const onPop = () => {
+      if (consumeModalBack() || hasOpenModal()) return;
+      show(POP_SAFETY_MS);
+    };
     window.addEventListener('popstate', onPop);
     // bfcache 복원(뒤로/앞으로) 시 잔류 오버레이 강제 해제.
     const onPageShow = (e: PageTransitionEvent) => {

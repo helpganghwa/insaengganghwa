@@ -9,6 +9,9 @@ import { ModalLayout } from '@/components/ModalLayout';
  * (인트로서 스킵한 유저가 첫 루프를 전혀 모른 채 방치되는 문제 방지).
  *
  * ⚠ 백드롭·Esc로 닫히면 안 되는 유일한 팝업 — 닫을 수단이 '시작'뿐이라 onClose는 no-op이다.
+ *   같은 이유로 뒤로가기 처리도 끈다(backToClose={false}) — 닫히지 않는 팝업에 히스토리 항목을
+ *   쌓으면 뒤로가기 한 번이 아무 일 없이 삼켜지고, 신규 유저의 얕은 히스토리에서는 그다음 한 번에
+ *   여전히 앱이 종료된다. 증상을 한 칸 미루는 것뿐이라 아예 쌓지 않는다.
  */
 export function TutorialIntroModal({
   pending,
@@ -18,7 +21,12 @@ export function TutorialIntroModal({
   onStart: () => void;
 }) {
   return (
-    <ModalShell onClose={() => {}} onSubmit={pending ? undefined : onStart} label="튜토리얼 안내">
+    <ModalShell
+      onClose={() => {}}
+      onSubmit={pending ? undefined : onStart}
+      label="튜토리얼 안내"
+      backToClose={false}
+    >
       <ModalLayout
         icon={
           // eslint-disable-next-line @next/next/no-img-element

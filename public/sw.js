@@ -12,7 +12,19 @@
 // 덮는다(주소창이 없어 더 막막하다). **내비게이션 요청이 실패했을 때만** 미리 받아 둔 화면을 대신
 // 보여 준다. 그 외에는 아무것도 가로채지 않는다 — 이 워커의 단일 책임(푸시)을 깨지 않기 위해서다.
 const OFFLINE_URL = '/offline';
-const OFFLINE_CACHE = 'ig-offline-v1';
+const OFFLINE_CACHE = 'ig-offline-v2';
+
+/** 폴백 1장을 네트워크에서 다시 받아 캐시에 덮어쓴다(실패해도 조용히 넘어간다). */
+async function refreshOffline() {
+  try {
+    const res = await fetch(OFFLINE_URL, { cache: 'no-cache' });
+    if (!res.ok) return;
+    const cache = await caches.open(OFFLINE_CACHE);
+    await cache.put(OFFLINE_URL, res);
+  } catch {
+    /* 오프라인이면 그냥 둔다 — 기존 캐시가 남아 있다. */
+  }
+}
 
 self.addEventListener('install', (event) => {
   // 즉시 활성화 — 새 SW 배포 시 기존 탭이 바로 적용.
@@ -27,8 +39,22 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      // 이름이 바뀐 옛 캐시는 지운다 — 두지 않으면 폴백 화면을 고친 뒤에도 예전 것이 남는다.
+      const names = await caches.keys();
+      await Promise.all(names.filter((n) => n !== OFFLINE_CACHE).map((n) => caches.delete(n)));
+      await self.clients.claim();
+    })(),
+  );
 });
+
+/**
+ * 폴백 화면 최신화 — cache.add는 설치 때 한 번뿐이라, sw.js가 그대로인 채 /offline만 바뀌면
+ * 예전 화면이 계속 남는다(2026-09-12 재검수). 워커가 깨어난 뒤 **첫 성공한 내비게이션에서
+ * 한 번만** 다시 받아 덮어쓴다 — 워커 수명당 1회라 트래픽 부담이 없다.
+ */
+let offlineRefreshed = false;
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -38,6 +64,10 @@ self.addEventListener('fetch', (event) => {
       try {
         const res = await fetch(req);
         // 성공한 응답은 그대로 흘려보낸다(캐시하지 않는다 — 게임 상태는 항상 서버 권위).
+        if (!offlineRefreshed) {
+          offlineRefreshed = true;
+          event.waitUntil(refreshOffline());
+        }
         return res;
       } catch {
         const cached = await caches.match(OFFLINE_URL);
