@@ -28,7 +28,8 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || '',
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    // 배지는 흰색 실루엣이어야 한다 — 컬러 아이콘을 주면 안드로이드가 형태를 못 읽고 빈 사각형을 그린다(2026-09-11 앱 확인).
+    badge: '/icons/badge-96.png',
     // tag로 같은 카테고리 알림을 replace — 그룹화 시 최신 메시지만 노출.
     tag: data.tag || 'default',
     // 카테고리별 클릭 시 라우트.
