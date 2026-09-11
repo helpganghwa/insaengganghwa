@@ -136,55 +136,91 @@ export async function refundPlayOrder(orderId: string, revoke = true): Promise<v
   });
 }
 
-/** 인앱 상품(inappproducts) 한 건 — 콘솔 등록 상태 대조·생성용(scripts/play-products.ts). */
-export type PlayInAppProduct = {
-  sku: string;
-  status?: string;
-  purchaseType?: string;
-  defaultPrice?: { priceMicros?: string; currency?: string };
-  listings?: Record<string, { title?: string; description?: string }>;
+/**
+ * 인앱 상품(일회성 상품) — 2026-09-11 확인: 구 `inappproducts`는 폐기됐다("Please migrate to the new
+ * publishing API" 403). 현행은 `oneTimeProducts`이며 상품 아래 **구매 옵션**을 두고 지역별 가격을 건다.
+ * 경로 표기 주의: 레퍼런스의 `monetization.` 접두는 메서드 네임스페이스일 뿐 URL에는 없고, 컬렉션은
+ * 카멜케이스 `oneTimeProducts`다(`/monetization/onetimeproducts`는 404).
+ */
+export type PlayOneTimeProduct = {
+  productId: string;
+  listings?: { languageCode?: string; title?: string; description?: string }[];
+  purchaseOptions?: {
+    purchaseOptionId?: string;
+    /** 출력 전용 — 생성 직후 DRAFT라 activate가 따로 필요하다. */
+    state?: string;
+    regionalPricingAndAvailabilityConfigs?: { regionCode?: string; price?: { currencyCode?: string; units?: string; nanos?: number } }[];
+  }[];
 };
 
-/** 등록된 인앱 상품 전체. 페이지네이션(기본 100)은 22종 규모라 1페이지로 충분하되 토큰이 오면 이어 받는다. */
-export async function listPlayInAppProducts(): Promise<PlayInAppProduct[]> {
-  const out: PlayInAppProduct[] = [];
-  let token: string | undefined;
-  do {
-    const q = token ? `?token=${encodeURIComponent(token)}` : '';
-    const page = await call<{ inappproduct?: PlayInAppProduct[]; tokenPagination?: { nextPageToken?: string } }>(
-      `/inappproducts${q}`,
-    );
-    out.push(...(page.inappproduct ?? []));
-    token = page.tokenPagination?.nextPageToken;
-  } while (token);
-  return out;
+/** 지역 버전 — 가격 해석 기준. 낡은 값을 보내면 서버가 최신으로 올리며 신규 지역을 덧붙인다. */
+const PLAY_REGIONS_VERSION = '2025/03';
+/** 한국만 판매하지만 API가 신규 지역 기준가(USD·EUR)를 요구한다. 배포 국가가 한국뿐이라 실제로는 쓰이지 않는다. */
+const KRW_PER_USD = 1350;
+const KRW_PER_EUR = 1450;
+
+function money(currencyCode: string, amount: number) {
+  const cents = Math.max(1, Math.round(amount * 100));
+  return { currencyCode, units: String(Math.floor(cents / 100)), nanos: (cents % 100) * 10_000_000 };
+}
+
+/** 등록된 일회성 상품 전체. 없으면 빈 배열(204). */
+export async function listPlayOneTimeProducts(): Promise<PlayOneTimeProduct[]> {
+  const r = await call<{ oneTimeProducts?: PlayOneTimeProduct[] }>('/oneTimeProducts');
+  return r.oneTimeProducts ?? [];
 }
 
 /**
- * 인앱 상품 생성 — 관리 상품(소모성), ko-KR 단일 로케일, 대한민국 KRW 고정가.
- * priceMicros는 통화 단위 × 1,000,000(KRW는 소수점이 없어도 동일 규칙).
- * 제품 ID는 생성 후 변경 불가 — 호출 전 SKU를 반드시 확인할 것.
+ * 일회성 상품 생성·수정(batchUpdate) — 개별 PATCH 경로는 라우팅되지 않아 배치가 유일한 쓰기 경로다.
+ * 생성만 하면 구매 옵션이 DRAFT라 팔리지 않는다 — 반드시 activatePlayPurchaseOption을 이어서 부른다.
  */
-export async function createPlayInAppProduct(p: {
-  sku: string;
-  krw: number;
-  title: string;
-  description: string;
-}): Promise<void> {
-  const priceMicros = String(BigInt(p.krw) * 1_000_000n);
-  const price = { priceMicros, currency: 'KRW' };
-  await call('/inappproducts?autoConvertMissingPrices=false', {
+export async function upsertPlayOneTimeProducts(
+  items: { sku: string; krw: number; title: string; description: string }[],
+): Promise<void> {
+  if (!items.length) return;
+  await call('/oneTimeProducts:batchUpdate', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      packageName: playPackageName(),
-      sku: p.sku,
-      status: 'active',
-      purchaseType: 'managedUser',
-      defaultLanguage: 'ko-KR',
-      defaultPrice: price,
-      prices: { KR: price },
-      listings: { 'ko-KR': { title: p.title, description: p.description } },
+      requests: items.map((it) => ({
+        oneTimeProduct: {
+          packageName: playPackageName(),
+          productId: it.sku,
+          listings: [{ languageCode: 'ko-KR', title: it.title, description: it.description }],
+          purchaseOptions: [
+            {
+              purchaseOptionId: 'default',
+              // legacyCompatible — TWA의 PaymentRequest(sku 단건)가 이 구매 옵션을 집는다.
+              buyOption: { legacyCompatible: true },
+              regionalPricingAndAvailabilityConfigs: [
+                { regionCode: 'KR', price: { currencyCode: 'KRW', units: String(it.krw), nanos: 0 }, availability: 'AVAILABLE' },
+              ],
+              // 신규 지역은 AVAILABLE만 허용된다(NO_LONGER_AVAILABLE로는 생성 불가).
+              newRegionsConfig: {
+                usdPrice: money('USD', it.krw / KRW_PER_USD),
+                eurPrice: money('EUR', it.krw / KRW_PER_EUR),
+                availability: 'AVAILABLE',
+              },
+            },
+          ],
+        },
+        updateMask: 'listings,purchaseOptions',
+        allowMissing: true,
+        regionsVersion: { version: PLAY_REGIONS_VERSION },
+      })),
+    }),
+  });
+}
+
+/** 구매 옵션 활성화(DRAFT → ACTIVE). 상품별 경로라 상품 수만큼 호출한다. */
+export async function activatePlayPurchaseOption(sku: string, purchaseOptionId = 'default'): Promise<void> {
+  await call(`/oneTimeProducts/${encodeURIComponent(sku)}/purchaseOptions:batchUpdateStates`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      requests: [
+        { activatePurchaseOptionRequest: { packageName: playPackageName(), productId: sku, purchaseOptionId } },
+      ],
     }),
   });
 }

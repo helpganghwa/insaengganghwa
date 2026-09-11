@@ -17,10 +17,11 @@
  * 이미 있는 SKU는 건드리지 않는다(가격·문구 수정은 콘솔에서 — 실수로 판매가를 덮어쓰지 않기 위함).
  */
 import {
-  createPlayInAppProduct,
-  listPlayInAppProducts,
+  activatePlayPurchaseOption,
+  listPlayOneTimeProducts,
   playConfigured,
   playPackageName,
+  upsertPlayOneTimeProducts,
 } from '@/lib/payment/play-api';
 import { CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM } from '@/lib/game/shop/catalog';
 import { playSkuCatalog } from '@/lib/payment/play-sku';
@@ -75,11 +76,12 @@ async function main() {
     process.exit(1);
   }
   const want = playSkuCatalog().map((p) => ({ ...p, ...listing(p.sku, p.krw) }));
-  const have = await listPlayInAppProducts();
-  const bySku = new Map(have.map((p) => [p.sku, p]));
+  const have = await listPlayOneTimeProducts();
+  const bySku = new Map(have.map((p) => [p.productId, p]));
 
   console.log(`패키지 ${playPackageName()} · 코드 정본 ${want.length}종 · 콘솔 등록 ${have.length}종\n`);
   const missing: typeof want = [];
+  const inactive: string[] = [];
   for (const w of want) {
     const cur = bySku.get(w.sku);
     if (!cur) {
@@ -87,30 +89,43 @@ async function main() {
       console.log(`누락  ${w.sku.padEnd(14)} ${String(n(w.krw)).padStart(7)}원  ${w.title}`);
       continue;
     }
+    const opt = cur.purchaseOptions?.[0];
+    const kr = opt?.regionalPricingAndAvailabilityConfigs?.find((c) => c.regionCode === 'KR');
     // 가격이 어긋나면 청약·공시가 갈라진다 — 고치지는 않고 알리기만 한다(판매가는 콘솔이 정본).
-    const micros = cur.defaultPrice?.priceMicros;
-    const mismatch = micros && micros !== String(BigInt(w.krw) * 1_000_000n);
+    const mismatch = kr?.price?.units && kr.price.units !== String(w.krw);
+    if (opt?.state !== 'ACTIVE') inactive.push(w.sku);
     console.log(
-      `있음  ${w.sku.padEnd(14)} ${String(n(w.krw)).padStart(7)}원  ${cur.status ?? '?'}` +
-        (mismatch ? `  ⚠ 콘솔 가격 다름(${micros} micros)` : ''),
+      `있음  ${w.sku.padEnd(14)} ${String(n(w.krw)).padStart(7)}원  ${opt?.state ?? '?'}` +
+        (mismatch ? `  ⚠ 콘솔 가격 다름(${kr?.price?.units})` : ''),
     );
   }
-  const extra = have.filter((p) => !want.some((w) => w.sku === p.sku));
-  for (const e of extra) console.log(`코드에 없음  ${e.sku}  ⚠ 확인 필요`);
+  const extra = have.filter((p) => !want.some((w) => w.sku === p.productId));
+  for (const e of extra) console.log(`코드에 없음  ${e.productId}  ⚠ 확인 필요`);
 
-  if (!missing.length) {
-    console.log('\n누락 없음.');
+  if (!missing.length && !inactive.length) {
+    console.log('\n누락 없음 · 전부 ACTIVE.');
     return;
   }
   if (!apply) {
-    console.log(`\n누락 ${missing.length}종. 생성하려면 --apply를 붙여 다시 실행하세요(제품 ID는 생성 후 변경 불가).`);
+    if (missing.length) console.log(`\n누락 ${missing.length}종.`);
+    if (inactive.length) console.log(`비활성 ${inactive.length}종: ${inactive.join(', ')}`);
+    console.log('반영하려면 --apply를 붙여 다시 실행하세요(제품 ID는 생성 후 변경 불가).');
     return;
   }
-  for (const m of missing) {
-    await createPlayInAppProduct(m);
-    console.log(`생성  ${m.sku}  ${m.title}`);
+  if (missing.length) {
+    // 배치는 한 번에 보내되 서버 오류 시 어디서 멈췄는지 보이도록 10개씩 끊는다.
+    for (let i = 0; i < missing.length; i += 10) {
+      const chunk = missing.slice(i, i + 10);
+      await upsertPlayOneTimeProducts(chunk);
+      console.log(`생성  ${chunk.map((c) => c.sku).join(', ')}`);
+    }
   }
-  console.log(`\n${missing.length}종 생성 완료. 콘솔에서 가격·문구를 확인하세요.`);
+  // 생성 직후 구매 옵션은 DRAFT다 — 활성화해야 결제 시트에 뜬다.
+  for (const sku of [...missing.map((m) => m.sku), ...inactive]) {
+    await activatePlayPurchaseOption(sku);
+    console.log(`활성  ${sku}`);
+  }
+  console.log('\n완료. 콘솔에서 가격·문구를 확인하세요.');
 }
 
 await main();
