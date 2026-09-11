@@ -8,7 +8,7 @@ import { MarkdownView } from '@/components/MarkdownView';
 import { RatingCard } from '@/components/GameRating';
 import { LEGAL_META, LEGAL_BODY, BUSINESS_INFO, type LegalSlug } from '@/lib/legal/content';
 
-const SLUGS: LegalSlug[] = ['terms', 'privacy', 'refund', 'youth'];
+const SLUGS: LegalSlug[] = ['terms', 'privacy', 'refund', 'youth', 'account-deletion'];
 
 function isSlug(v: string): v is LegalSlug {
   return (SLUGS as string[]).includes(v);
