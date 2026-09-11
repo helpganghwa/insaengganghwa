@@ -31,9 +31,11 @@ export function KakaoPixel() {
   return (
     <Script
       src="//t1.daumcdn.net/kas/static/kp.js"
-      // crossOrigin 없으면 kp.js 내부 예외가 CORS로 잘려 opaque 'Script error.'로만 잡힘
-      // (KakaoSdkLoader와 통일 — 진짜 에러 시 상세 노출). daumcdn은 CORS 헤더 제공.
-      crossOrigin="anonymous"
+      // ⚠ crossOrigin을 붙이면 안 된다(2026-09-11 실측) — t1.daumcdn.net은
+      // Access-Control-Allow-Origin을 주지 않아서, anonymous로 요청하면 브라우저가 스크립트를
+      // 통째로 거부한다("Access to script ... blocked by CORS"). 그동안 픽셀이 한 번도 로드되지
+      // 않았다. 에러 상세(opaque 'Script error.')를 잃는 대신 픽셀이 실제로 동작하게 둔다.
+      // 참고: KakaoSdkLoader가 쓰는 t1.kakaocdn.net은 ACAO를 주므로 그쪽은 anonymous가 맞다.
       strategy="afterInteractive"
       onLoad={() => {
         ready.current = true;
