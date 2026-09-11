@@ -82,10 +82,11 @@ const HEAVY_CONDITIONALS = new Set([
   'no_guild_30', // 무소속(2026-08-21 조건부 전환) — 가입 시 즉시 해제·탈퇴 7일 후 재활성
   'streak_king', 'march_live', 'smooth_sail',
   'melee_champion', 'melee_shame', 'raid_hero', 'open_king',
-  // PENDING 해소(2026-08-12) — judge.activeConditionals에 추가한 "~인 동안" 3종.
+  // PENDING 해소(2026-08-12) — judge.activeConditionals에 추가한 "~인 동안" 2종
+  // (골목대장은 2026-09-10 영구형 전환으로 제외 — 점령전 전략 노출 건의).
   // ⚠ 발견 판정과 이 목록은 **항상 함께** 갱신할 것. 여기 없으면 발견은 되는데
   //   대표로 달았을 때 아래 "그 외 조건부 — 보수적 숨김"으로 떨어져 조용히 안 보인다.
-  'big_family', 'alley_boss', 'elite_few',
+  'big_family', 'elite_few',
   // 길드 단위 조건부(2026-09-01) — guild-facts.ts 사실표로 재검증.
   ...GUILD_COLLECTIVE_CODES,
 ]);
@@ -202,23 +203,6 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       return code === 'big_family'
         ? Number(r.gsize) >= guildCapacity(Number(r.glevel))
         : Number(r.gsize) <= 5 && Number(r.better) + 1 <= 10;
-    }
-    if (code === 'alley_boss') {
-      const [r] = (await db.execute(sql`
-        select (exists(
-          select 1 from characters me
-          where me.user_id=${u} and me.server_id=${s} and me.residence_zone_id is not null
-            and exists(select 1 from leaderboard_ranks lm
-                       where lm.user_id=me.user_id and lm.server_id=${s} and lm.metric='combat')
-            and not exists(
-              select 1 from characters c2
-              join leaderboard_ranks l2 on l2.user_id=c2.user_id and l2.server_id=${s} and l2.metric='combat'
-              where c2.server_id=${s} and c2.residence_zone_id=me.residence_zone_id
-                and l2.value > (select value from leaderboard_ranks
-                                where user_id=me.user_id and server_id=${s} and metric='combat'))
-        ))::int as ok
-      `)) as unknown as { ok: number }[];
-      return Number(r?.ok) === 1;
     }
     if (code === 'guild_top_leader' || code === 'guild_top_vice') {
       // 1위 길드(guild_top과 같은 사전식 순위) + 직책.

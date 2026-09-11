@@ -114,7 +114,9 @@ describe('expedition engine — 슬롯', () => {
     expect(effectiveSlots(5999)).toBe(2);
     expect(effectiveSlots(6000)).toBe(3);
     expect(effectiveSlots(9000)).toBe(4);
-    expect(effectiveSlots(999999)).toBe(4);
+    expect(effectiveSlots(11999)).toBe(4);
+    expect(effectiveSlots(12000)).toBe(5);
+    expect(effectiveSlots(999999)).toBe(5);
   });
   it('상수 참조 무결(엔진↔밸런스)', () => {
     expect(EXPEDITION_HOURS).toBe(8);

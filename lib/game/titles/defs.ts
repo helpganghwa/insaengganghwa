@@ -3155,12 +3155,12 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "alley_boss",
-  kind: "conditional",
+  kind: "permanent",
   label: "골목대장",
   hidden: true,
-  cat: "조건부",
+  cat: "일상",
   style: {
-   color: "#b9a7e0"
+   color: "#a8a8b0"
   }
  },
  {

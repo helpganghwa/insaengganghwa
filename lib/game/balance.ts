@@ -848,8 +848,8 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
 /* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
 /* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
 
-/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). */
-export const EXPEDITION_SLOTS = 4;
+/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09 추가. */
+export const EXPEDITION_SLOTS = 5;
 
 /** 파견지 6종 — zones.region 코드 재사용(전부 즉시 개방, 게이트 없음). */
 export type ExpeditionRegion = 'swamp' | 'orc' | 'kingdom' | 'temple' | 'volcano' | 'angel';
@@ -879,12 +879,16 @@ export const EXPEDITION_DAILY_LIMIT_SINCE_ISO = '2026-09-01T01:29:30.000Z';
  * 2026-08-30 사용자 확정 0/3k/6k/9k(전날 0/4k/8k/12k에서 재하향) — 1칸은 **처음부터 열림**(합산 강화 ≥500이 8%뿐이라 잠긴 콘텐츠로만 보이던
  * 문제, 무강화 1칸 풀가동 ≈ 83💎/일이 경제 바닥값), 3·4칸은 도달자 0~2명이던 10k/15k에서 하향.
  * 합산 강화는 현재 레벨 합이라 하락하면 줄 수 있다 — 진행 중 파견은 유지, **새 배정만** 잠긴다.
+ * 2026-09-09 5칸(12k) 추가 — 상위권 "앞서나간 보상" 요청. 4칸 도달자가 2명(15.9k·15.4k)뿐이고 3위가 8.1k라 12k는 그 둘만
+ * 즉시 열리고 다음 사람은 합산을 갑절 올려야 닿는다. 파견 다이아는 그들 경제의 0.5% 미만이라 실질 증분은 상자 하루 ≈28개.
+ * 다이아 해금·시간 단축은 계속 없음 — 3,000 간격 유지.
  */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
   { slot: 1, enhanceSum: 0 },
   { slot: 2, enhanceSum: 3_000 },
   { slot: 3, enhanceSum: 6_000 },
   { slot: 4, enhanceSum: 9_000 },
+  { slot: 5, enhanceSum: 12_000 },
 ] as const;
 /** 합산 강화 → 열린 슬롯 수(0~EXPEDITION_SLOTS). */
 export function expeditionSlotsFor(enhanceSum: number): number {
