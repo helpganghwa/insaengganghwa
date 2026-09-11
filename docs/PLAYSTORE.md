@@ -26,6 +26,11 @@
 7. **인앱 상품 등록** — §4 SKU 22종(관리 소모성). 가격 KRW(부가세 포함, 웹과 동일 금액).
 8. **Google Play Developer API** — Cloud 프로젝트 연결 → 서비스 계정 생성 → Play Console 사용자·권한에서 "재무 데이터 보기·주문 관리·앱 정보 보기" 부여 → JSON 키를 Vercel `PLAY_SERVICE_ACCOUNT_JSON`에.
 9. **앱 서명** — Play 앱 서명 사용. App integrity 화면의 **앱 서명 인증서 SHA-256** → Vercel `PLAY_ASSETLINKS_SHA256`(업로드 키 지문도 쉼표로 병기).
+9-1. **앱 액세스(심사 로그인)** — 앱은 주소창이 없어 심사관이 `?test=true`를 붙일 수 없다. 두 경로를 함께 둔다:
+   ① 앱 로그인 화면 맨 아래 **'심사용 로그인 · Reviewer sign-in'** 링크(2026-09-11, TWA 쿠키가 있을 때만 렌더 — 웹에는 없음)
+   ② 콘솔 '앱 액세스에 필요한 기타 정보'에 크롬으로 `https://ganghwa.app/login?test=true`를 여는 절차를 한국어·영어로 기재(앱과 브라우저가 세션 공유).
+   계정은 `cbt@ganghwa.app` / `cbt123456`, 전체 기능 접근 체크박스 선택.
+
 10. **라이선스 테스터** — 설정 > 라이선스 테스트에 운영자 계정 등록(테스트 결제 무과금).
 11. **내부 테스트 트랙**에 AAB 업로드 → 설치 → 로그인·결제·푸시 확인 → **프로덕션** 제출(심사 1~7일).
 12. 15% 수수료 프로그램(Play Media Experience 아님 — "15% service fee tier") 등록.

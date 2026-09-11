@@ -15,6 +15,7 @@ import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select'
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { ServerPicker } from './ServerPicker';
+import { isTwa } from '@/lib/platform';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 // 걸린 렌더의 상한(2026-07-31) — 풀 포화 시 postgres.js가 쿼리를 **기한 없이 큐에 세워**
@@ -63,6 +64,10 @@ export default async function LoginPage({
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   // 스테이징(preview)은 항상 노출 — PWA는 주소창이 없어 ?test=true를 붙일 수 없다(검수 동선).
   const reviewLogin = test === 'true' || process.env.VERCEL_ENV === 'preview';
+  // 스토어 심사 진입로(2026-09-11) — 앱(TWA)은 주소창이 없어 심사관이 `?test=true`를 붙일 수 없다.
+  // 앱으로 열렸을 때만 화면 맨 아래에 작은 링크를 두어 심사관이 앱 안에서 ID/PW 폼에 닿게 한다.
+  // 웹에는 나타나지 않고(쿠키 없음), 링크를 눌러도 cbt 계정의 아이디·비밀번호를 알아야 로그인된다.
+  const showReviewerEntry = !reviewLogin && (await isTwa());
   // CBT 종료 모드(0144) — 일반 화면은 로그인 수단 없이 종료 안내·카운트다운만.
   // ?test=true는 ID/PW(심사) + 카카오(어드민 전용 — 콜백에서 검증)를 함께 노출.
   const maint = await getMaintenanceState().catch(() => null);
@@ -228,6 +233,15 @@ export default async function LoginPage({
           </div>
         </section>
         )}
+
+        {showReviewerEntry ? (
+          <Link
+            href="/login?test=true"
+            className="mt-6 block w-full text-center text-[10px] text-zinc-600 underline-offset-2 hover:underline"
+          >
+            심사용 로그인 · Reviewer sign-in
+          </Link>
+        ) : null}
 
         {/* CBT 데이터 초기화 사전 고지는 제거(2026-08-21 전수 대조) — 이 블록이 PAYMENTS_OPEN에
             결합돼 있어, 카드사 심사 대기로 결제만 닫아둔 정식 오픈 화면에 CBT 문구가 노출됐다.
