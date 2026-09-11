@@ -63,6 +63,9 @@ export const metadata: Metadata = {
     },
   },
   formatDetection: { telephone: false },
+  // 크롬 번역 제안 끄기 — 한국어 전용 서비스라 번역 막대가 뜰 이유가 없고, 앱(TWA)에서는
+  // 하단을 가려 UI를 덮는다(2026-09-11 내부 테스트에서 확인). <html translate="no">와 함께 건다.
+  other: { google: 'notranslate' },
   // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입.
   // 아이콘은 app/icon.png(favicon) + app/apple-icon.png(iOS)도 Next convention으로
   // 자동 주입되지만, 사이즈/타입 명시를 위해 metadata에도 두 번 선언(중복 무해).
@@ -197,7 +200,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="ko"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} h-full overscroll-none antialiased`}
+      translate="no"
+      className={`notranslate dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {/* 구조화 데이터(JSON-LD) — 검색 리치 결과용. */}
