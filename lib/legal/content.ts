@@ -35,13 +35,16 @@ export const GAME_RATING = {
  */
 export const MINOR_MONTHLY_LIMIT_KRW = 70_000;
 
-export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
+export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth' | 'account-deletion';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
   terms: { title: '이용약관', effectiveDate: '2026년 7월 27일' },
   privacy: { title: '개인정보처리방침', effectiveDate: '2026년 7월 27일' },
   refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 7월 27일' },
   youth: { title: '청소년보호정책', effectiveDate: '2026년 7월 27일' },
+  // 스토어 심사 요건(2026-09-11) — Google Play는 '계정 삭제 요청' 공개 URL을 요구한다: 앱·개발자 이름,
+  // 삭제 절차, 삭제·보관되는 데이터와 보관 기간을 **로그인 없이** 볼 수 있어야 한다.
+  'account-deletion': { title: '계정 삭제 안내', effectiveDate: '2026년 9월 11일' },
 };
 
 const TERMS = `
@@ -223,9 +226,52 @@ const YOUTH = `
 청소년 사이버상담센터(1388, cyber1388.kr) 등을 통해 상담·신고할 수 있습니다.
 `;
 
+const ACCOUNT_DELETION = `
+인생강화(개발자 서해남)의 계정과 데이터를 삭제하는 방법을 안내합니다.
+
+## 1. 게임에서 직접 탈퇴하기
+1. 인생강화에 로그인합니다.
+2. 화면 아래 **프로필**을 엽니다.
+3. **설정**으로 들어갑니다.
+4. 맨 아래 **계정 탈퇴**를 누르고 안내에 따라 확인합니다.
+
+탈퇴는 즉시 처리되며 되돌릴 수 없습니다. 남은 다이아·상자·장비는 복구되지 않습니다.
+
+## 2. 게임에 접속할 수 없을 때
+로그인이 되지 않아 직접 탈퇴할 수 없다면 **help@ganghwa.app** 으로 요청해 주세요.
+가입에 사용한 카카오 계정으로 본인 확인을 거친 뒤 처리해 드립니다.
+
+## 3. 삭제되는 데이터
+탈퇴하면 아래 데이터를 지체 없이 삭제합니다.
+
+- 계정 정보(카카오 회원번호, 이메일)
+- 캐릭터·닉네임·장비·강화 기록·보유 재화
+- 친구·길드 소속·채팅과 귓속말·우편
+- 프로필 이미지와 아바타, 칭호와 도감 기록
+- 알림(푸시) 구독 정보
+- 본인확인으로 받은 휴대폰번호
+
+## 4. 법령에 따라 보관되는 데이터
+아래는 관계 법령이 정한 기간 동안만 보관한 뒤 파기하며, 다른 목적으로 이용하지 않습니다.
+
+| 항목 | 기간 | 근거 |
+|------|------|------|
+| 계약·결제·재화 공급 기록 | 5년 | 전자상거래법 |
+| 소비자 불만·분쟁 처리 기록 | 3년 | 전자상거래법 |
+| 표시·광고 기록 | 6개월 | 전자상거래법 |
+| 접속 기록 | 3개월 | 통신비밀보호법 |
+| 성인 여부·인증 일시 | 법정 보존 기간 | 청소년 보호 |
+
+길드 활동이나 세계 연대기처럼 여러 사람이 함께 만든 기록은 남을 수 있고, 이때 닉네임 대신 '탈퇴한 대장장이'로 표시됩니다.
+
+## 5. 문의
+계정·데이터 삭제 문의는 **help@ganghwa.app** 또는 게임 내 설정 > 문의하기로 보내주세요.
+`;
+
 export const LEGAL_BODY: Record<LegalSlug, string> = {
   terms: TERMS.trim(),
   privacy: PRIVACY.trim(),
   refund: REFUND.trim(),
   youth: YOUTH.trim(),
+  'account-deletion': ACCOUNT_DELETION.trim(),
 };
