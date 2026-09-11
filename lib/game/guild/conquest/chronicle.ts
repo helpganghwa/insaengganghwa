@@ -11,28 +11,10 @@ import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 import { factIssues, type FactCheckContext } from './chronicle-facts';
 
-// Opus 5(2026-09-10) — 이틀 연속 검수에서 사실 창작·규칙 무시가 반복돼 이야기꾼·재검수 모두 상향.
-// 하루 서버당 2회 호출(입력 ~7k·출력 ~2.5k)이라 비용은 무시할 수준. thinking은 아래 호출부처럼 비활성 유지
-// (adaptive는 짧은 max_tokens를 사고에 다 써 본문이 비는 사고 — 09-10 핑 확인).
-const MODEL_ID = 'claude-opus-5';
-/** 상위 모델이 막혔을 때(키 권한·일시 장애) 이어받는 모델 — 종전 모델. */
-const MODEL_FALLBACK = 'claude-sonnet-5';
-
-/**
- * 연대기 모델 호출 — MODEL_ID가 실패하면 MODEL_FALLBACK으로 한 번 더.
- * 연대기는 **하루 한 번뿐**이라 한 번의 모델 오류가 그날 기록을 통째로 비운다(재시도 크론도 같은 이유로 실패).
- * 상위 모델 접근 권한은 환경(Vercel env 키)마다 다를 수 있어, 코드가 스스로 물러설 길을 둔다.
- */
-async function createChronicleMessage(
-  params: Omit<Parameters<Anthropic['messages']['create']>[0], 'model'>,
-): Promise<Anthropic.Message> {
-  try {
-    return (await client().messages.create({ ...params, model: MODEL_ID, stream: false })) as Anthropic.Message;
-  } catch (e) {
-    console.warn(`[chronicle] ${MODEL_ID} 실패 → ${MODEL_FALLBACK}로 재시도: ${(e as Error).message}`);
-    return (await client().messages.create({ ...params, model: MODEL_FALLBACK, stream: false })) as Anthropic.Message;
-  }
-}
+// 연대기 모델(2026-09-10 재확인) — 사실 오류는 chronicle-facts.ts 검증기가 재생성 피드백으로 잡고,
+// 문체는 직전 검수 완료본을 참고로 준다. 모델을 올리는 것보다 이 두 장치가 확실해 기존 모델을 유지한다
+// (상위 모델은 환경별 접근 권한이 달라 하루 한 번뿐인 생성이 통째로 실패할 위험도 있다).
+const MODEL_ID = 'claude-sonnet-5';
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -1231,7 +1213,8 @@ export async function generateAndStoreChronicle(
   let headline = '';
   let headlineCandidates: string[] = [];
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await createChronicleMessage({
+    const res = await client().messages.create({
+      model: MODEL_ID,
       max_tokens: 2200,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
@@ -1312,7 +1295,8 @@ export async function generateAndStoreChronicle(
   // 실패·마커 위반 시 초안 유지. 사실표는 코드가 계산한 값이라 "코드가 AI를 검사"하는 구조.
   let reviewNotes: ChronicleReviewNote[] = [];
   try {
-    const res = await createChronicleMessage({
+    const res = await client().messages.create({
+      model: MODEL_ID,
       max_tokens: 2600,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
