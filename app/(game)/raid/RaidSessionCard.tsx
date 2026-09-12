@@ -329,6 +329,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const fxKey = useRef(0);
   // 보석 공격 멱등키(0109) — 클릭 의도당 1개, 전송 실패 재시도에서만 재사용.
   const gemKeyRef = useRef<string | null>(null);
+  // 기본 공격 멱등키(2026-09-12) — 다이아는 안 쓰지만 하루 공격 횟수를 먹으므로 같은 보호가 필요.
+  const atkKeyRef = useRef<string | null>(null);
   // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
   const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
   const decideReq = (requesterId: string, approve: boolean) => {
@@ -543,8 +545,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const handleAttack = () => {
     if (!canAttack || attacking) return;
     setLocalUsed((n) => n + 1); // 낙관 횟수 차감
+    // 멱등키 — 전송 실패(NETWORK) 재시도는 같은 키를 재사용해 서버가 횟수를 두 번 먹지 않게 한다.
+    // 성공·비즈니스 거절은 키 폐기 → 다음 클릭은 새 키(보석 공격과 같은 규칙).
+    atkKeyRef.current ??= crypto.randomUUID();
+    const key = atkKeyRef.current;
     runAttack(
-      () => attackRaidAction(v.raidId),
+      async () => {
+        const r = await attackRaidAction(v.raidId, key);
+        if (r.status === 'success' || r.code !== 'NETWORK') atkKeyRef.current = null;
+        return r;
+      },
       () => setLocalUsed((n) => Math.max(0, n - 1)),
     );
   };

@@ -33,7 +33,19 @@ export function AppSessionMark() {
     }
     if (window.location.hash !== '#app') return;
     // 해시를 지워 주소와 공유 링크에 남지 않게 한다(히스토리 항목은 늘리지 않는다).
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    //
+    // ⚠ **state를 null로 덮으면 안 된다.** 이 effect는 루트 레이아웃의 자식이라 Next가 history를
+    // 감싸기 **전에** 돈다. 그래서 여기 호출은 네이티브 replaceState이고, Next가 심어 둔 내부 값
+    // (`__NA`·트리)을 통째로 지운다. 프로덕션 실측(2026-09-12): 일반 진입은
+    // `[igModal, __NA, TREE]`인데 `/?src=twa`로 들어오면 `[igModal]`만 남았다.
+    // 그 상태에서 뒤로가기를 누르면 Next가 자기 항목이 아니라고 보고 **앱을 통째로 새로고침**하거나
+    // 아무 일도 하지 않는다(주소만 바뀌고 화면은 그대로 → 한 번 더 누르면 앱 종료).
+    // 기존 state를 그대로 넘기면 패치 전후 어느 시점이든 안전하다.
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search,
+    );
   }, []);
   return null;
 }

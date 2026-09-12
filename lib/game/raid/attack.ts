@@ -40,10 +40,16 @@ async function userTotalCP(userId: string, serverId: number): Promise<number> {
 export async function attackRaid(input: {
   userId: string;
   raidId: bigint;
+  /**
+   * 클릭 의도당 클라 생성 UUID(0109) — 응답 유실 후 재클릭이 공격 횟수를 한 번 더 먹는 것을 막는다.
+   * 보석 공격(gemAttackRaid)·추가 공격 구매만 있던 보호를 기본 공격에도 붙였다(2026-09-12):
+   * 기본 공격은 다이아를 안 쓰지만 하루 30회 한도를 먹으므로 유실 재시도가 그대로 손실이다.
+   */
+  idemKey?: string;
   /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). 1회차=크리 판정, 2회차=데미지 분산. */
   rng?: () => number;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; totalDamage: string }> {
-  const { userId, raidId } = input;
+  const { userId, raidId, idemKey } = input;
   const rng = input.rng ?? rngU32;
 
   // 락 밖 — serverId 가벼운 사전조회(비잠금) + CP 계산(유저 장비 스캔). 게이트는 락 내 재확인.
@@ -85,6 +91,29 @@ export async function attackRaid(input: {
       .for('update');
     if (!part) throw new RaidError('NOT_PARTICIPANT');
 
+    // 멱등 재시도 — 같은 키의 공격이 이미 기록돼 있으면(응답 유실 후 재클릭) 횟수를 다시 먹지
+    // 않고 그 결과를 반환. 같은 유저는 participant FOR UPDATE로 직렬화되어 select가 정확;
+    // raid_attacks_idem_uq(partial unique)가 이론적 경합의 최종 백스톱.
+    if (idemKey) {
+      const [prev] = await tx
+        .select({ damage: raidAttacks.damage, isCrit: raidAttacks.isCrit })
+        .from(raidAttacks)
+        .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
+        .limit(1);
+      if (prev) {
+        const [{ total: curTotal }] = await tx
+          .select({ total: sql<string>`coalesce(sum(${raidParticipants.totalDamage}), 0)` })
+          .from(raidParticipants)
+          .where(eq(raidParticipants.raidId, raidId));
+        return {
+          damage: Number(prev.damage),
+          isCrit: prev.isCrit,
+          phasesCleared: raid.phasesCleared,
+          totalDamage: String(curTotal),
+        };
+      }
+    }
+
     const allowed = RAID_BASE_ATTACKS + part.extraAttacks;
     if (part.attacksUsed >= allowed) throw new RaidError('NO_ATTACKS');
 
@@ -119,6 +148,7 @@ export async function attackRaid(input: {
       isCrit,
       isExtra,
       diamondCost: 0n,
+      idempotencyKey: idemKey ?? null,
     });
 
     // totalDamage(레이드 전체 누적) 동봉 — 클라가 보스 HP를 응답 즉시 반영(router.refresh

@@ -75,6 +75,23 @@ describe.skipIf(skip)('attackRaid / buyExtraAttack — DB 통합', () => {
     expect(atk[0]?.ic).toBe(true);
   });
 
+  it('기본 공격 멱등: 같은 idemKey 재요청은 횟수를 다시 먹지 않고 같은 결과 반환', async () => {
+    const KEY = '22222222-2222-2222-2222-222222222222';
+    const raidId = await makeRaid({ attacksUsed: 0 });
+    const first = await attackRaid({ userId: TEST_USER_ID, raidId, idemKey: KEY, rng: seqRng([0, 0]) });
+    // 두 번째 호출은 다른 rng를 줘도 저장된 결과가 그대로 나와야 한다(재판정 없음).
+    const again = await attackRaid({ userId: TEST_USER_ID, raidId, idemKey: KEY, rng: seqRng([9999, 0]) });
+    expect(again.damage).toBe(first.damage);
+    expect(again.isCrit).toBe(first.isCrit);
+    expect(again.totalDamage).toBe(first.totalDamage);
+
+    const part = (await testDb.execute(sql`select attacks_used au from raid_participants where raid_id=${raidId.toString()}::bigint and user_id=${TEST_USER_ID}::uuid`)) as unknown as { au: number }[];
+    expect(Number(part[0]?.au)).toBe(1); // 1회만 차감
+
+    const atk = (await testDb.execute(sql`select count(*)::int n from raid_attacks where raid_id=${raidId.toString()}::bigint`)) as unknown as { n: number }[];
+    expect(Number(atk[0]?.n)).toBe(1); // 로그도 1행
+  });
+
   it('NO_ATTACKS: 기본 공격 소진 시 거부', async () => {
     const raidId = await makeRaid({ attacksUsed: RAID_BASE_ATTACKS });
     await expect(

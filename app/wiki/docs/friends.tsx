@@ -42,7 +42,7 @@ export default function Doc() {
       <H2 id="cap">상한</H2>
       <UL>
         <LI>친구는 최대 {fmtInt(FRIEND_CAP)}명까지 등록할 수 있다.</LI>
-        <LI>상대 목록이 가득 차 있어도 요청은 보낼 수 있지만 상대가 수락할 수 없다.</LI>
+        <LI>내 목록이나 상대 목록이 가득 차 있으면 요청을 보낼 수 없다.</LI>
       </UL>
 
       <H2 id="use">친구 사이</H2>

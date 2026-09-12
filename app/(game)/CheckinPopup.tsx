@@ -533,7 +533,22 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
             {fxOn ? '닫기' : ctaLabel(today, day)}
           </button>
 
-          {error ? <p className="mt-2 text-center text-[11px] text-red-400">{error}</p> : null}
+          {error ? (
+            <>
+              <p className="mt-2 text-center text-[11px] text-red-400">{error}</p>
+              {/* 실패했을 때의 유일한 탈출구 — 이 팝업엔 ✕도 Esc도 뒤로가기 처리도 없고,
+                  배경 클릭은 수령 연출이 시작된 뒤에만 열린다(강제 수령이 의도). 그런데 수령은
+                  점검·정지에서 거부되므로, 이게 없으면 그 상황의 유저가 화면에 갇힌다
+                  (2026-09-12 검수 — 점검을 켜는 순간 미수령자 전원이 대상). */}
+              <button
+                type="button"
+                onClick={closePopup}
+                className="mt-3 w-full rounded-xl border border-zinc-700 py-2.5 text-[13px] font-semibold text-zinc-300 active:scale-[0.99]"
+              >
+                닫기
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

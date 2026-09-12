@@ -32,7 +32,7 @@ export default function Doc() {
           ],
           [
             <><DocLink slug="supply" hash="sources">일일 보급</DocLink></>,
-            '매일 자정 우편함에 들어온다.',
+            '자정이 지나고 처음 접속할 때 우편함에 들어온다.',
           ],
           [
             <><DocLink slug="shop" hash="free">상점 무료 수령</DocLink></>,

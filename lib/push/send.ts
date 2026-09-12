@@ -305,11 +305,23 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
   // VAPID 불일치 보호 장치(2026-09-03) — 불일치가 3건 이상이고 배치의 절반 이상이면 유저가 다른 키로
   // 재구독한 게 아니라 **보내는 쪽 키가 틀린 것**이다(로컬 env 키로 prod에 발송한 사고: 168건 삭제).
   // 그 경우 삭제하지 않고 실패로만 집계해 알린다. 소수 불일치는 종전대로 죽은 구독으로 보고 정리한다.
+  //
+  // ⚠ 이 판정은 **배치가 3건 이상일 때만** 성립한다(2026-09-12). 1인 발송(강화 완료·레이드·귓속말 등
+  // 구독 1~2건)은 mismatched.length >= 3이 절대 참이 될 수 없어 발신 키가 틀려도 전량 삭제로 흘렀다.
+  // 즉 사고 재발 방지가 정작 발송 대부분을 차지하는 1인 알림에서는 꺼져 있었다. 배치가 작으면
+  // 둘(구독이 낡음 / 발신 키가 틀림)을 구분할 근거 자체가 없으므로 **판단 불가**로 보고 삭제를 보류한다.
+  // 구독이 진짜 낡았다면 다음 배치 발송이나 PushAutoSync 재구독으로 정리되니 보류 비용은 알림 유실뿐이다.
+  const tooSmallToJudge = subs.length < 3;
   const senderKeyMismatch = mismatched.length >= 3 && mismatched.length * 2 >= subs.length;
   if (senderKeyMismatch) {
     failed += mismatched.length;
     console.error(
       `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 발신 키 문제로 판단, 구독 삭제 보류. VAPID_PRIVATE_KEY/PUBLIC_KEY가 구독을 만든 키와 같은지 확인`,
+    );
+  } else if (tooSmallToJudge && mismatched.length > 0) {
+    failed += mismatched.length;
+    console.warn(
+      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 배치가 작아 발신 키 문제인지 판단 불가, 구독 삭제 보류`,
     );
   } else {
     for (const id of mismatched) {
