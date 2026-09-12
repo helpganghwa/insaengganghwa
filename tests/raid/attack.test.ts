@@ -92,6 +92,27 @@ describe.skipIf(skip)('attackRaid / buyExtraAttack — DB 통합', () => {
     expect(Number(atk[0]?.n)).toBe(1); // 로그도 1행
   });
 
+  // 클라 ref 누수로 앞 레이드의 키가 흘러들어오면 그 결과를 돌려주면 안 된다 — 이번 레이드엔
+  // 공격이 안 들어간 채 데미지만 보이게 된다(2026-09-12 자가 검수).
+  it('다른 레이드의 멱등키가 오면 멱등 복원이 아니라 정상 공격으로 처리한다', async () => {
+    const KEY = '33333333-3333-3333-3333-333333333333';
+    const raidA = await makeRaid({ attacksUsed: 0 });
+    const first = await attackRaid({ userId: TEST_USER_ID, raidId: raidA, idemKey: KEY, rng: seqRng([0, 0]) });
+    const cleanupA = cleanupRaid!;
+
+    const raidB = await makeRaid({ attacksUsed: 0 });
+    const second = await attackRaid({ userId: TEST_USER_ID, raidId: raidB, idemKey: KEY, rng: seqRng([9999, 0]) });
+    // 앞 레이드 결과가 복사되지 않았다 — 크리 판정이 rng대로 갈렸다.
+    expect(second.isCrit).toBe(false);
+    expect(first.isCrit).toBe(true);
+
+    const b = (await testDb.execute(sql`select count(*)::int n, max(idempotency_key::text) k from raid_attacks where raid_id=${raidB.toString()}::bigint`)) as unknown as { n: number; k: string | null }[];
+    expect(Number(b[0]?.n)).toBe(1); // 이번 레이드에 공격이 실제로 들어갔다
+    expect(b[0]?.k).toBeNull(); // 전역 유니크 충돌을 피해 키는 저장하지 않는다
+
+    await cleanupA();
+  });
+
   it('NO_ATTACKS: 기본 공격 소진 시 거부', async () => {
     const raidId = await makeRaid({ attacksUsed: RAID_BASE_ATTACKS });
     await expect(

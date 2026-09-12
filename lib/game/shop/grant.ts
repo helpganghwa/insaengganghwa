@@ -177,14 +177,22 @@ export async function reclaimProductGrant(
     // 권리를 통째로 지웠다 — 두 번 산 유저가 한 건만 환불하면 아직 돈을 낸 쪽의 일일 지급까지
     // 같이 끊기고 미수령 우편도 전부 사라졌다.
     //
-    // 이 주문은 호출 시점에 이미 refunded로 전이돼 있으므로(refund.ts) 아래 조회에 안 걸린다.
+    // 프리미엄의 모든 판정(일일 지급 창·"N일 남음" 표시·재구매 차단)은 shop_purchases.updated_at
+    // **하나**에서 나오고, 그 값은 구매할 때마다 최신 시각으로 덮어써진다. 그래서 "다른 주문이
+    // 존재하는가"로는 부족하다 — 한참 전에 만료된 주문이 남아 있어도 "있다"가 되어, 환불된 주문이
+    // 세팅해 둔 창이 그대로 살아버린다(자가 검수 2026-09-12에서 잡은 회귀).
+    //
+    // 올바른 역연산은 **남은 주문 중 가장 최근 것으로 창을 되돌리는 것**이다. 그 시각이 이미
+    // 30일을 넘겼으면 창은 자연히 닫히고, 아직 살아 있으면 그 주문 몫만큼만 남는다.
+    // 이 주문은 호출 시점에 이미 refunded로 전이돼 있으므로(refund.ts) 조회에 안 걸린다.
     // grant_skipped 주문은 애초에 지급이 없었으니 권리로 치지 않는다.
-    const [alive] = (await tx.execute(sql`
-      select 1 from iap_orders
+    const [prev] = (await tx.execute(sql`
+      select max(coalesce(paid_at, created_at)) as at from iap_orders
       where user_id = ${userId}::uuid and server_id = ${serverId}
         and product_code = ${PREMIUM.id} and status = 'paid' and grant_skipped = false
-      limit 1
-    `)) as unknown as unknown[];
+    `)) as unknown as { at: string | Date | null }[];
+    // raw execute는 timestamptz를 문자열로 줄 수 있다 — drizzle .set()은 Date를 요구한다.
+    const alive = prev?.at ? new Date(prev.at) : null;
 
     if (!alive) {
       // 살아 있는 프리미엄 주문이 없다 — 권리 자체가 사라졌으므로 종전대로 전부 회수.
@@ -210,9 +218,22 @@ export async function reclaimProductGrant(
       return;
     }
 
-    // 다른 주문이 살아 있다 — 일일 지급 권리는 그 주문 몫이라 건드리지 않고, 즉시 보상 **한 통**만
-    // 미수령이면 회수한다. 어느 통이 어느 주문 것인지는 우편에 남지 않지만 값이 같으므로 개수가
-    // 맞으면 결과도 맞다(주문 2건·수령 1통 → 1통 남김). 이미 수령한 분은 종전 정책대로 운영 수동.
+    // 남은 주문이 있다 — 창을 그 주문 시각으로 되돌린다. 이미 만료된 시각이면 다음 일일 지급부터
+    // 자연히 멈추고, 살아 있으면 남은 일수만 이어진다.
+    await tx
+      .update(shopPurchases)
+      .set({ updatedAt: alive })
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, PREMIUM.id),
+        ),
+      );
+
+    // 즉시 보상은 **한 통**만 미수령이면 회수한다. 어느 통이 어느 주문 것인지는 우편에 남지 않지만
+    // 값이 같으므로 개수가 맞으면 결과도 맞다(주문 2건·1건 환불 → 1통 남김). 이미 수령한 분은
+    // 종전 정책대로 운영 수동.
     await tx.execute(sql`
       delete from mailbox where id in (
         select id from mailbox

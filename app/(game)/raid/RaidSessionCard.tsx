@@ -331,6 +331,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const gemKeyRef = useRef<string | null>(null);
   // 기본 공격 멱등키(2026-09-12) — 다이아는 안 쓰지만 하루 공격 횟수를 먹으므로 같은 보호가 필요.
   const atkKeyRef = useRef<string | null>(null);
+  // ⚠ 멱등키는 **레이드마다 새로** 시작해야 한다(2026-09-12 자가 검수). Next App Router는
+  // /raid/A → /raid/B 이동에서 같은 위치의 컴포넌트를 재사용하므로 ref가 살아남는다. 전송 실패로
+  // 키를 쥔 채 다른 레이드로 이동해 공격하면, 서버가 그 키로 **앞 레이드의 공격 기록**을 찾아
+  // 돌려주고 이번 레이드에는 공격이 들어가지 않는다(공격 기회만 사라진다). 레이드가 바뀌면 버린다.
+  const keyRaidRef = useRef(v.raidId);
+  if (keyRaidRef.current !== v.raidId) {
+    keyRaidRef.current = v.raidId;
+    gemKeyRef.current = null;
+    atkKeyRef.current = null;
+  }
   // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
   const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
   const decideReq = (requesterId: string, approve: boolean) => {

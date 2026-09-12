@@ -49,7 +49,9 @@ export async function attackRaid(input: {
   /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). 1회차=크리 판정, 2회차=데미지 분산. */
   rng?: () => number;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; totalDamage: string }> {
-  const { userId, raidId, idemKey } = input;
+  const { userId, raidId } = input;
+  // 레이드 대조에 실패하면 키를 버린다(아래) — 그래서 재할당 가능해야 한다.
+  let idemKey = input.idemKey;
   const rng = input.rng ?? rngU32;
 
   // 락 밖 — serverId 가벼운 사전조회(비잠금) + CP 계산(유저 장비 스캔). 게이트는 락 내 재확인.
@@ -96,11 +98,15 @@ export async function attackRaid(input: {
     // raid_attacks_idem_uq(partial unique)가 이론적 경합의 최종 백스톱.
     if (idemKey) {
       const [prev] = await tx
-        .select({ damage: raidAttacks.damage, isCrit: raidAttacks.isCrit })
+        .select({ damage: raidAttacks.damage, isCrit: raidAttacks.isCrit, raidId: raidAttacks.raidId })
         .from(raidAttacks)
         .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
         .limit(1);
-      if (prev) {
+      // 다른 레이드의 키가 흘러들어온 경우(클라 ref 누수)는 멱등이 아니라 **오답**이다 — 그 결과를
+      // 돌려주면 이번 레이드엔 공격이 안 들어간 채 데미지만 보인다. 키를 버리고 정상 공격으로 진행하되
+      // 전역 partial unique(raid_attacks_idem_uq) 충돌을 피하려 저장은 하지 않는다(2026-09-12 자가 검수).
+      if (prev && prev.raidId !== raidId) idemKey = undefined;
+      else if (prev) {
         const [{ total: curTotal }] = await tx
           .select({ total: sql<string>`coalesce(sum(${raidParticipants.totalDamage}), 0)` })
           .from(raidParticipants)
@@ -220,7 +226,9 @@ export async function gemAttackRaid(input: {
   /** 클릭 의도당 클라 생성 UUID(0109) — 응답 유실 재시도의 이중 차감 방지. */
   idemKey?: string;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number; totalDamage: string }> {
-  const { userId, raidId, idemKey } = input;
+  const { userId, raidId } = input;
+  // 레이드 대조에 실패하면 키를 버린다(아래) — 그래서 재할당 가능해야 한다.
+  let idemKey = input.idemKey;
 
   // 락 밖 — serverId 사전조회 + CP 계산(감사 S2). 게이트·결제는 락 내 재확인/수행.
   const [meta] = await db
@@ -271,11 +279,14 @@ export async function gemAttackRaid(input: {
           damage: raidAttacks.damage,
           isCrit: raidAttacks.isCrit,
           diamondCost: raidAttacks.diamondCost,
+          raidId: raidAttacks.raidId,
         })
         .from(raidAttacks)
         .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
         .limit(1);
-      if (prev) {
+      // 기본 공격과 같은 이유로 레이드를 대조한다(2026-09-12 자가 검수 — 기존 결함).
+      if (prev && prev.raidId !== raidId) idemKey = undefined;
+      else if (prev) {
         // 멱등 재시도도 현재 누적 데미지를 함께 반환(HP 바 즉시 반영 일관성).
         const [{ total: curTotal }] = await tx
           .select({ total: sql<string>`coalesce(sum(${raidParticipants.totalDamage}), 0)` })
