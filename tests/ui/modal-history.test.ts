@@ -19,7 +19,7 @@ import { createModalHistory, isModalHistoryState, MODAL_HISTORY_KEY, type Histor
 class FakeBrowser {
   entries: Array<{ href: string; state: unknown }> = [{ href: 'https://g/inventory', state: null }];
   index = 0;
-  private handlers: Array<() => void> = [];
+  private handlers: Array<(ev: unknown) => void> = [];
 
   readonly host: HistoryHost = {
     href: () => this.entries[this.index]!.href,
@@ -42,7 +42,8 @@ class FakeBrowser {
   private goBack(): void {
     if (this.index === 0) return;
     this.index -= 1;
-    for (const h of [...this.handlers]) h();
+    const ev = { type: 'popstate' }; // 한 번의 뒤로가기 = 하나의 이벤트 객체(브라우저와 동일)
+    for (const h of [...this.handlers]) h(ev);
   }
 
   /** 라우트 이동(Next의 pushState). */

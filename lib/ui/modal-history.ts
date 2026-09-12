@@ -30,7 +30,8 @@ export type HistoryHost = {
   href(): string;
   pushState(state: unknown): void;
   back(): void;
-  onPop(handler: () => void): void;
+  /** popstate 구독 — 핸들러는 **그 이벤트 자체**를 받는다(순서 무관 판정의 근거, `verdictFor`). */
+  onPop(handler: (ev: unknown) => void): void;
 };
 
 export type ModalHistoryHandle = {
@@ -47,6 +48,22 @@ export function createModalHistory(host: HistoryHost) {
   const stack: Entry[] = [];
   let selfBackAt = 0;
   let installed = false;
+  /**
+   * 마지막으로 판정을 내린 popstate와 그 결론 — **리스너 순서 의존을 없애는 장치**(2026-09-13).
+   *
+   * popstate 리스너는 둘이다: 여기(처리용)와 `RouteTransitionOverlay`(판정용). 그런데 처리용은
+   * 판정용이 읽는 값을 **소비한다**(`selfBackAt = 0`, `stack.pop()`). 처리용이 먼저 돌면 판정용은
+   * 이미 비워진 상태를 보고 모달 닫기를 '화면 이동'으로 잘못 세어 로딩 오버레이를 띄웠다.
+   *
+   * 순서는 실제로 뒤집힌다 — 오버레이는 (game) 레이아웃에만 있어 /u·/admin 등 다른 라우트
+   * 그룹에 다녀오면 언마운트·재마운트되며 리스너를 다시 다는데, 이 리스너는 모듈 스코프라
+   * 그대로 남는다. 그 뒤로는 영구히 뒤집힌 순서로 돈다(iOS PWA 실기기 제보 — 앱 안에서만
+   * 프로필·위키를 열어 이 왕복이 잦다. PC는 새 탭으로 열려 재현이 어려웠다).
+   *
+   * 그래서 판정을 **이벤트에 못박아** 기록한다. 누가 먼저 돌든 같은 popstate면 같은 답이 나온다.
+   */
+  let lastPopEvent: unknown = null;
+  let lastPopWasModal = false;
 
   const selfBackPending = () => selfBackAt !== 0 && Date.now() - selfBackAt < SELF_BACK_TTL_MS;
 
@@ -55,7 +72,10 @@ export function createModalHistory(host: HistoryHost) {
     installed = true;
     // 리스너는 **모듈에 하나만** 둔다. 셸마다 달면 하나의 popstate에 전부 반응해, 어느 셸이
     // 닫혀야 하는지를 리스너 등록 순서로 추측하게 된다(중첩 모달이 같이 닫히던 원인).
-    host.onPop(() => {
+    host.onPop((ev) => {
+      // 소비하기 **전에** 판정을 굳힌다 — 판정용 리스너가 뒤에 돌아도 이 답을 그대로 쓴다.
+      lastPopEvent = ev ?? null;
+      lastPopWasModal = selfBackPending() || stack.length > 0;
       if (selfBackPending()) {
         // 버튼으로 닫으며 우리가 되돌린 것 — 소비만 하고 아무도 닫지 않는다.
         selfBackAt = 0;
@@ -99,6 +119,16 @@ export function createModalHistory(host: HistoryHost) {
     isSelfBack(): boolean {
       return selfBackPending();
     },
+    /**
+     * 이 popstate를 모달이 삼켰는가 — **리스너 순서와 무관하게** 같은 답을 준다.
+     *
+     * 처리용 리스너가 이미 판정한 이벤트면 그 결론을, 아직이면(우리가 먼저 돌았거나 모달을
+     * 한 번도 연 적 없어 리스너가 없으면) 현재 상태를 본다.
+     */
+    verdictFor(ev: unknown): boolean {
+      if (ev != null && ev === lastPopEvent) return lastPopWasModal;
+      return selfBackPending() || stack.length > 0;
+    },
     /** 테스트용 — 스택 깊이. */
     depth(): number {
       return stack.length;
@@ -122,13 +152,18 @@ const browserHost: HistoryHost = {
     window.history.back();
   },
   onPop(handler) {
-    window.addEventListener('popstate', handler);
+    window.addEventListener('popstate', (ev) => handler(ev));
   },
 };
 
 export const modalHistory = createModalHistory(browserHost);
 
-/** 오버레이용 — 지금 뒤로가기가 모달을 닫는 중인가(화면 이동이 아닌가). */
-export function isModalPop(): boolean {
-  return modalHistory.isSelfBack() || modalHistory.hasOpen();
+/**
+ * 오버레이용 — 이 뒤로가기가 모달을 닫는 중인가(화면 이동이 아닌가).
+ *
+ * ⚠ **popstate 이벤트를 반드시 넘긴다.** 안 넘기면 리스너 순서에 따라 답이 달라진다
+ * (`verdictFor` 주석 참조 — 2026-09-13 팝업 닫을 때 로딩 오버레이가 뜨던 버그).
+ */
+export function isModalPop(ev?: unknown): boolean {
+  return modalHistory.verdictFor(ev ?? null);
 }

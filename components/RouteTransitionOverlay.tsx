@@ -116,8 +116,12 @@ export function RouteTransitionOverlay() {
     // 뒤로/앞으로 — 같은 라우트일 수 있어 짧은 안전타이머로(무한 표시 방지).
     // 모달이 닫히는 pop은 제외한다: 뒤로가기로 닫는 경우(모달이 아직 열려 있음)와 화면
     // 버튼으로 닫아 셸이 스스로 되돌리는 경우(표식) 둘 다 화면 이동이 아니다.
-    const onPop = () => {
-      if (isModalPop()) return;
+    // ⚠ **이벤트를 그대로 넘긴다.** modalHistory의 처리용 리스너가 우리보다 먼저 돌면
+    // 판정 근거(selfBack 표식·모달 스택)를 이미 소비한 뒤라, 상태만 보면 모달 닫기를
+    // 화면 이동으로 잘못 센다. 이벤트를 넘기면 그 popstate에 못박힌 판정을 되읽는다
+    // (2026-09-13 — 라우트 그룹을 다녀와 이 컴포넌트만 재마운트되면 순서가 영구히 뒤집힌다).
+    const onPop = (ev: PopStateEvent) => {
+      if (isModalPop(ev)) return;
       show(POP_SAFETY_MS);
     };
     window.addEventListener('popstate', onPop);
