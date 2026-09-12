@@ -44,7 +44,7 @@
 ### 3.2 Play 결제
 - **DB** `0186_play_billing.sql`: `iap_orders.provider`('portone'|'play', 기본 portone) · `play_purchase_token` unique · `play_order_id` · `play_sku`. `portone_order_id`는 Play 주문에서도 내부 주문번호로 재사용(`play_<uuid>`).
 - **서버** `lib/payment/play.ts`
-  - `createPlayOrder(userId, productId)` — 웹 `createOrder`와 같은 검증(본인인증·미성년 월 한도·상품 유효·중복 특가) 후 pending 주문 + 사용할 SKU 반환.
+  - `createPlayOrder(userId, productId)` — 웹 `createOrder`와 같은 검증(상품 유효·중복 특가·미성년 월 한도) 후 pending 주문 + 사용할 SKU 반환. **본인인증은 요구하지 않는다**(§5 참조).
   - `verifyPlayPurchase(orderId, purchaseToken)` — Google Play Developer API `purchases.products.get`(서비스 계정 JWT → access token, 외부 SDK 없이 fetch) → `purchaseState=0`·SKU 일치·`obfuscatedExternalAccountId=userId` 확인 → 주문 paid + 지급(`applyProductGrant`/`applyBpSegmentPurchase`/후원 마일스톤 — 웹 경로와 동일 함수) → `purchases.products.consume`(소모성 재구매 가능). 토큰 unique로 멱등.
   - `syncVoidedPurchases()` — `purchases.voidedpurchases.list`(최근 30일) → 환불/취소된 토큰의 주문을 refunded 처리 + 지급분 회수(웹 환불 회수 로직 재사용). cron `play-voided` 매일 1회.
 - **클라** `app/(game)/shop/play-checkout.ts` — `window.getDigitalGoodsService('https://play.google.com/billing')` → `getDetails([sku])`(표시 가격) → `new PaymentRequest([{ supportedMethods: 'https://play.google.com/billing', data: { sku } }], …).show()` → `purchaseToken` → `verifyPlayPurchaseAction`. 미지원(브라우저·구버전 Chrome)이면 "Play 스토어 앱에서만 결제할 수 있어요".
@@ -125,7 +125,13 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 
 - **앱 안에서 외부 결제 유도 금지** — 충전 안내 팝업(다이아 부족 게이트 11곳)이 웹 상점으로 보내는 문구·링크 없이 앱 상점(Play)으로 가야 한다.
 - **가격 표시** — Play 가격은 Console에서 관리. 카탈로그 KRW와 다르면 `getDetails` 값을 우선 표시(청약·공시 문제 방지).
-- **본인인증** — Play 결제도 기존 IDENTITY_REQUIRED·미성년 월 한도를 그대로 적용(주문 생성 단계에서 차단).
+- **본인인증** — Play 결제는 **면제**한다(`lib/payment/purchase-gate.ts`). 구글이 계정·결제수단을
+  이미 확인하고, 앱에서 KG이니시스 인증 페이지를 띄우면 화면이 통째로 바뀌는 데다 쓰지도 않을
+  실명·생년 PII를 건당 비용까지 내며 수집하게 된다. 웹(포트원)은 종전대로 IDENTITY_REQUIRED.
+  ⚠ 남는 틈: **한 번도 본인확인을 하지 않은 미성년**은 앱에서 월 한도(70,000원)에 걸리지 않는다
+  (`isKnownMinor`가 인증된 미성년만 미성년으로 본다). 이미 미성년으로 인증된 계정은 두 채널 모두
+  한도가 걸린다. `payment-recon`의 미성년 점검도 `identity_verifications` 조인이라 미인증 계정은
+  탐지선 밖이다.
 - **서비스 계정 키** — Vercel env 서버 전용. 로컬에 두지 않는다(푸시 키 사고 교훈, [push-send-local-vapid-incident]).
 - **Digital Goods API 가용성** — Chrome 101+ TWA에서만. 삼성 브라우저 기본 기기는 TWA가 Chrome을 강제하므로 문제없음.
 - **환불** — Google이 처리. voided purchases 동기화가 회수의 유일한 경로이므로 cron 하트비트 필수.
