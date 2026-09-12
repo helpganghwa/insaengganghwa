@@ -308,11 +308,20 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
   //
   // ⚠ 이 판정은 **배치가 3건 이상일 때만** 성립한다(2026-09-12). 1인 발송(강화 완료·레이드·귓속말 등
   // 구독 1~2건)은 mismatched.length >= 3이 절대 참이 될 수 없어 발신 키가 틀려도 전량 삭제로 흘렀다.
-  // 즉 사고 재발 방지가 정작 발송 대부분을 차지하는 1인 알림에서는 꺼져 있었다. 배치가 작으면
-  // 둘(구독이 낡음 / 발신 키가 틀림)을 구분할 근거 자체가 없으므로 **판단 불가**로 보고 삭제를 보류한다.
-  // 구독이 진짜 낡았다면 다음 배치 발송이나 PushAutoSync 재구독으로 정리되니 보류 비용은 알림 유실뿐이다.
-  const tooSmallToJudge = subs.length < 3;
+  // 즉 사고 재발 방지가 정작 발송 대부분을 차지하는 1인 알림에서는 꺼져 있었다.
+  //
+  // 작은 배치는 **이번 배치에 성공이 한 건이라도 있었는가**로 가른다(자가 검수에서 교정). 같은 키로
+  // 하나라도 전송에 성공했다면 발신 키는 옳다는 증거이므로 남은 403은 그 구독이 낡은 것이다 → 삭제.
+  // 성공이 0건이면서 배치도 작으면 둘(구독이 낡음 / 발신 키가 틀림)을 가를 근거가 없어 보류한다.
+  // 구독이 진짜 낡았다면 다음 발송이나 PushAutoSync 재구독이 정리하므로 보류 비용은 알림 한 번뿐이다.
+  //
+  // ⚠ 단, 9/3 사고 형태(불일치 3건 이상 + 배치의 절반 이상)는 **성공이 섞여 있어도 무조건 보류**한다.
+  // 성공 여부로 키를 입증하는 추론이 "모든 푸시 서비스가 VAPID 서명을 검증한다"는 가정에 기대는데,
+  // 그 가정이 틀린 서비스가 배치에 섞이면 성공 한 건이 키를 잘못 입증할 수 있다. 168건을 지운
+  // 사고를 되풀이하는 쪽이 낡은 구독 몇 개를 남기는 쪽보다 훨씬 비싸므로 보수적으로 간다.
+  const keyProvenByThisBatch = ok > 0;
   const senderKeyMismatch = mismatched.length >= 3 && mismatched.length * 2 >= subs.length;
+  const tooSmallToJudge = !senderKeyMismatch && !keyProvenByThisBatch && subs.length < 3;
   if (senderKeyMismatch) {
     failed += mismatched.length;
     console.error(
@@ -321,7 +330,7 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
   } else if (tooSmallToJudge && mismatched.length > 0) {
     failed += mismatched.length;
     console.warn(
-      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 배치가 작아 발신 키 문제인지 판단 불가, 구독 삭제 보류`,
+      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 성공 0건에 배치도 작아 판단 불가, 구독 삭제 보류`,
     );
   } else {
     for (const id of mismatched) {

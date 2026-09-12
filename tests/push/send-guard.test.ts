@@ -59,12 +59,25 @@ describe('push send — VAPID 불일치 보호 장치', () => {
     expect(del).not.toHaveBeenCalled();
   });
 
-  it('구독 2건도 마찬가지로 보류한다', async () => {
+  // 같은 키로 한 건이라도 성공했으면 발신 키는 옳다 — 남은 403은 그 구독이 낡은 것이므로 삭제한다.
+  it('작은 배치라도 성공이 섞여 있으면 키가 입증되므로 삭제한다', async () => {
     sendNotification.mockImplementation(async (s: { endpoint: string }) => {
       if (s.endpoint.endsWith('/1')) throw err(403);
     });
     const r = await sendPushToSubscriptions([1, 2].map(sub), payload);
-    expect(r).toEqual({ ok: 1, gone: 0, failed: 1 });
+    expect(r).toEqual({ ok: 1, gone: 1, failed: 0 });
+    expect(del).toHaveBeenCalledTimes(1);
+  });
+
+  // 반대로 9/3 사고 형태(불일치 3건 이상 + 절반 이상)는 성공이 섞여 있어도 보류한다 —
+  // 성공으로 키를 입증하는 추론보다 168건을 지운 사고의 재발 방지가 우선이다.
+  it('대다수가 불일치면 성공이 섞여 있어도 보류한다', async () => {
+    sendNotification.mockImplementation(async (s: { endpoint: string }) => {
+      if (/\/(1|2)$/.test(s.endpoint)) return; // 2건 성공
+      throw err(403); // 3건 불일치
+    });
+    const r = await sendPushToSubscriptions([1, 2, 3, 4, 5].map(sub), payload);
+    expect(r).toEqual({ ok: 2, gone: 0, failed: 3, senderKeyMismatch: true });
     expect(del).not.toHaveBeenCalled();
   });
 
