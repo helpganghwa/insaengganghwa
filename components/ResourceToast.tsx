@@ -312,7 +312,9 @@ function RankingCompact({
 function RankingBar({ entry }: { entry: RankingToast }) {
   return (
     <div
-      className="pointer-events-none w-full border-b border-zinc-200 bg-zinc-950/95 shadow-lg backdrop-blur dark:border-zinc-800"
+      // 셸 폭(max-w-390)에 맞춰 가운데로 — 부모가 `fixed inset-x-0`이라 이게 없으면 넓은 화면에서
+      // 바가 뷰포트 전체로 퍼져 헤더를 벗어난다(2026-09-12 실측). HeaderBar와 동일 구조.
+      className="pointer-events-none mx-auto w-full max-w-[390px] border-b border-zinc-200 bg-zinc-950/95 shadow-lg backdrop-blur dark:border-zinc-800"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex h-12 items-center justify-between gap-1 px-3">
