@@ -51,6 +51,14 @@ async function setWindow(tx: Tx, at: string): Promise<void> {
     do update set updated_at = ${at}::timestamptz, period_key = 'test'`);
 }
 
+/** 프리미엄 우편 한 통을 지정 시각으로 적재(미수령). */
+async function mail(tx: Tx, title: string, at: string): Promise<void> {
+  await tx.execute(sql`
+    insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, created_at)
+    values (${TEST_USER_ID}::uuid, ${SERVER_ID}, 'reward'::mailbox_type, ${title}, 'test',
+            '성장 프리미엄', '{}'::jsonb, ${at}::timestamptz)`);
+}
+
 async function readWindow(tx: Tx): Promise<string | null> {
   const r = (await tx.execute(sql`
     select to_char(updated_at at time zone 'UTC','YYYY-MM-DD') d from shop_purchases
@@ -75,6 +83,27 @@ describe.skipIf(skip)('프리미엄 환불 회수 — 주문 단위', () => {
 
       // 창이 오래전 주문 시각으로 되돌아간다 → +29일이 이미 지나 드립이 안 나간다.
       expect(await readWindow(tx)).toBe('2026-01-01');
+    });
+  });
+
+  it('되돌린 창 바깥의 미수령 일일 보상은 회수하고, 창 안의 것은 남긴다', async () => {
+    await inRollback(async (tx) => {
+      await order(tx, `t_prem_w_old_${process.pid}`, 'paid', '2026-01-01T00:00:00Z');
+      await order(tx, `t_prem_w_new_${process.pid}`, 'refunded', '2026-09-01T00:00:00Z');
+      await setWindow(tx, '2026-09-01T00:00:00Z');
+      // 창 안(1/1 구매 → 1/30까지) 한 통 + 환불된 창에서 나간 한 통.
+      await mail(tx, '성장 프리미엄 — 오늘의 보상', '2026-01-05T00:00:00Z');
+      await mail(tx, '성장 프리미엄 — 오늘의 보상', '2026-09-03T00:00:00Z');
+
+      await reclaimProductGrant(tx, TEST_USER_ID, SERVER_ID, 'premium', 't');
+
+      const left = (await tx.execute(sql`
+        select to_char(created_at at time zone 'UTC','YYYY-MM-DD') d from mailbox
+        where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}
+          and sender_label='성장 프리미엄' and claimed_at is null
+        order by created_at
+      `)) as unknown as { d: string }[];
+      expect(left.map((r) => r.d)).toEqual(['2026-01-05']); // 창 안만 남는다
     });
   });
 

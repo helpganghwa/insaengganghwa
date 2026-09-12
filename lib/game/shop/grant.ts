@@ -160,8 +160,9 @@ export async function applyProductGrant(
  *    음수 잔액은 UI·차감 불변식을 깨므로 의도적으로 만들지 않는다(악용 방지는 추후 정책으로).
  *  - 상자: **슬롯 합계** 기준 회수(reclaimBoxesTotal). 환불 사전판정이 합계로 충분 여부를 보므로
  *    슬롯별 역분배로 회수하면 판정은 통과하고 회수만 조용히 줄어든다(supply/reclaim.ts 참조).
- *  - 프리미엄: **주문 단위**. 살아 있는 프리미엄 주문이 더 없을 때만 일일 드립 중단(shop_purchases
- *    행 삭제) + 미수령 프리미엄 우편 전부 회수. 다른 주문이 남아 있으면 즉시 보상 한 통만 회수한다.
+ *  - 프리미엄: **주문 단위**. 남은 주문이 없으면 일일 지급 창을 지우고 미수령 프리미엄 우편을 전부
+ *    회수한다. 남은 주문이 있으면 창을 그 주문 시각으로 되돌리고(만료된 시각이면 자연히 닫힌다),
+ *    즉시 보상 한 통 + 되돌린 창 바깥의 미수령 일일 보상을 회수한다.
  *    이미 수령(지갑 반영)한 분은 자동 회수하지 않는다(운영 수동) — 중복 회수 방지.
  */
 export async function reclaimProductGrant(
@@ -242,6 +243,18 @@ export async function reclaimProductGrant(
           and title = ${PREMIUM_INSTANT_TITLE}
         order by id desc limit 1
       )
+    `);
+
+    // 환불된 주문의 창에서 이미 나간 **일일 보상**도 미수령이면 회수한다. 되돌린 창의 끝
+    // (남은 주문 + 29일)보다 뒤에 적재된 통은 환불된 주문의 창에서만 나올 수 있다. 두 창이
+    // 겹치는 방어적 경우엔 끝이 미래라 아무것도 지우지 않는다(남은 주문 몫을 뺏지 않는다).
+    await tx.execute(sql`
+      delete from mailbox
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+        and sender_label = '성장 프리미엄' and claimed_at is null
+        and title <> ${PREMIUM_INSTANT_TITLE}
+        and (created_at at time zone 'Asia/Seoul')::date
+            > (${alive.toISOString()}::timestamptz at time zone 'Asia/Seoul')::date + ${PREMIUM.daily.days - 1}::int
     `);
     return;
   }
