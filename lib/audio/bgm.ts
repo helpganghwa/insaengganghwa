@@ -31,7 +31,14 @@ const FADE_OUT_S = 0.8;
 
 export function bgmEnabled(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(BGM_STORAGE_KEY) === '1'; // 기본 OFF
+  // ⚠ localStorage는 **접근 자체가 throw**한다(사파리 시크릿·사이트 데이터 차단). 이 함수는 게임
+  // 레이아웃에 상시 마운트된 BgmPlayer의 effect에서 동기로 불리므로, 던지면 게임 화면 전체가
+  // 에러 경계로 떨어지고 '다시 시도'를 눌러도 같은 effect가 또 던져 복구가 안 된다(2026-09-12 검수).
+  try {
+    return localStorage.getItem(BGM_STORAGE_KEY) === '1'; // 기본 OFF
+  } catch {
+    return false;
+  }
 }
 
 // ── 재생 상태 ───────────────────────────────────────────────────────────────

@@ -93,7 +93,9 @@ export function IdentityVerifyRow({
       } else setErr(r.message);
     } catch (e) {
       setBusy(false);
-      setErr((e as Error).message);
+      // 영문 DOMException 원문을 그대로 보이지 않는다(2026-09-12 검수).
+      console.error('[identity] 인증창 실패', e);
+      setErr('본인확인 창을 열지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
 

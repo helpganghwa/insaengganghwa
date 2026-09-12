@@ -12,7 +12,13 @@ const STORAGE_KEY = 'ig:sound';
 
 function isEnabled(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(STORAGE_KEY) !== '0'; // 기본 ON
+  // ⚠ 저장소 접근이 throw하면(시크릿·데이터 차단) 효과음 호출부의 **뒤 코드가 통째로 안 돈다** —
+  // 레이드 공격이 전송되지 않고 버튼만 비활성으로 굳거나, 강화 오버레이가 안 걷힌다(2026-09-12 검수).
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== '0'; // 기본 ON
+  } catch {
+    return true;
+  }
 }
 
 // ── 합성 엔진 ───────────────────────────────────────────────────────────────

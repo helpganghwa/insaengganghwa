@@ -3,16 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import {
-  currentModalToken,
-  markModalBack,
-  MODAL_HISTORY_KEY,
-  modalHistoryClosed,
-  modalHistoryOpened,
-  nextModalToken,
-  shouldCloseOnPop,
-  shouldRewindOnUnmount,
-} from '@/lib/ui/modal-history';
+import { modalHistory } from '@/lib/ui/modal-history';
 
 // 열린 셸의 전역 스택 — Esc/Enter는 **최상단 모달만** 반응한다. 종전엔 셸마다 document
 // keydown을 달아 stacked 팝업(다이아 부족 등)이 떠 있을 때 Esc 한 번에 호스트 팝업까지
@@ -120,38 +111,13 @@ export function ModalShell({
    * 쌓아 두지 않으면 모달이 뜬 상태의 뒤로가기가 이전 라우트로 이동해 버리고, 홈에서는 **앱이 종료된다**
    * (2026-09-11 출시 전수조사). 셸 한 곳에서 처리해 모든 모달·바텀시트가 같은 규칙을 따르게 한다.
    *
-   * 규칙: 열릴 때 내 토큰을 실은 항목 하나를 쌓고, 그 항목이 사라지는 popstate에만 닫는다.
-   * 판정은 **전부 history.state의 토큰**으로 한다 — 열린 순서(스택)로 판정하면 중첩 모달에서
-   * 어긋난다(아래 두 함정, 2026-09-12 재검수).
-   *
-   * ⚠ 중첩 모달: 위 팝업이 닫히면 현재 항목은 **내 토큰**으로 돌아온다. 즉 `내 토큰 === 현재`면
-   *   사라진 건 내 항목이 아니므로 반응하지 않는다. 이 가드가 없으면 확인 팝업에서 '취소'를 누를 때
-   *   뒤에 있던 시트까지 같이 닫혔다.
-   * ⚠ 라우트 이동: 모달을 연 채 링크를 누르면 새 라우트가 push돼 내 항목이 히스토리 **아래로 묻힌다**.
-   *   이때 back()을 부르면 방금 떠난 화면으로 도로 튕긴다(튜토리얼 완료 CTA·다이아 충전 유도 동선).
-   *   내 항목이 현재일 때만 걷어낸다.
+   * 규칙과 함정(중첩 모달·라우트 이동·Next의 history.state 덮어쓰기)은 전부
+   * `lib/ui/modal-history.ts`가 들고 있다. 여기서는 열고 닫기만 위임한다.
    */
   useEffect(() => {
     if (!backToClose || typeof window === 'undefined') return;
-    const token = nextModalToken();
-    let poppedByBack = false;
-    const onPop = () => {
-      if (!shouldCloseOnPop(currentModalToken(), token)) return; // 내 항목은 그대로 — 위 팝업이 닫힌 것이다.
-      poppedByBack = true;
-      onCloseRef.current();
-    };
-    window.history.pushState({ [MODAL_HISTORY_KEY]: token }, '');
-    modalHistoryOpened();
-    window.addEventListener('popstate', onPop);
-    return () => {
-      window.removeEventListener('popstate', onPop);
-      modalHistoryClosed();
-      if (!shouldRewindOnUnmount({ poppedByBack, currentToken: currentModalToken(), myToken: token })) {
-        return; // 뒤로가기로 이미 소비됐거나, 라우트 이동으로 히스토리 아래에 묻혔다.
-      }
-      markModalBack();
-      window.history.back();
-    };
+    const h = modalHistory.open(() => onCloseRef.current());
+    return () => h.release();
   }, [backToClose]);
 
   if (!mounted) return null; // 포털은 클라이언트 마운트 후에만(SSR 하이드레이션 안전)

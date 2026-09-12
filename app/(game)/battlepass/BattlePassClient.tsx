@@ -15,7 +15,7 @@ import { ResultNoticeModal } from '@/components/ResultNoticeModal';
 import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotice';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import * as PortOne from '@portone/browser-sdk/v2';
-import { payFailTitle, runCheckout } from '@/app/(game)/shop/checkout';
+import { payFailBody, payFailTitle, runCheckout } from '@/app/(game)/shop/checkout';
 import { runPlayCheckout, shouldUsePlayBilling } from '@/app/(game)/shop/play-checkout';
 import { verifyPurchaseAction } from '@/app/(game)/shop/actions';
 
@@ -298,7 +298,13 @@ export function BattlePassClient({
         redirectUrl: `${window.location.origin}/battlepass`,
       });
       // 모바일은 리다이렉트되어 여기 도달하지 않음(아래 useEffect에서 복귀 처리). PC는 res 반환.
-      if (!res) return;
+      // ⚠ 여기서 busy를 풀지 않으면 인증창이 외부 탭에서 열리는 환경(PWA·인앱 브라우저)에서
+      // 돌아왔을 때 [본인인증 하기]·[취소]가 둘 다 비활성으로 굳어 팝업을 닫을 수도 없다
+      // (2026-09-12 검수 — 원본 IdentityVerifyRow에는 있는 해제가 이 복사본들에서만 빠져 있었다).
+      if (!res) {
+        setIdentityBusy(false);
+        return;
+      }
       if (res.code) {
         setIdentityBusy(false);
         setIdentityErr(res.message ?? '본인인증에 실패했습니다.');
@@ -315,7 +321,9 @@ export function BattlePassClient({
       } else setIdentityErr(r.message);
     } catch (e) {
       setIdentityBusy(false);
-      setIdentityErr((e as Error).message);
+      // 영문 DOMException 원문을 그대로 보이지 않는다(2026-09-12 검수).
+      console.error('[identity] 인증창 실패', e);
+      setIdentityErr('본인확인 창을 열지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
 
@@ -361,7 +369,7 @@ export function BattlePassClient({
     if (returnCode) {
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setError(payFailTitle(returnMessage));
+        setError(`${payFailTitle()} — ${payFailBody(returnMessage)}`);
       }
       return;
     }
@@ -396,7 +404,9 @@ export function BattlePassClient({
       // 전송 실패도 흡수 — paying 고착 시 구매 버튼이 무반응이 된다.
       // 상점과 같은 분기(앱=Play 결제, 웹·PWA=포트원). 성장패스 구간도 Play SKU(bp_<가격>)가 있다.
       const productId = `bp_${passType}_${segmentIndex}`;
-      const r = (await shouldUsePlayBilling())
+      // 판정이 던져도 결제가 멈추면 안 된다 — 여기서 흡수하지 않으면 paying이 고착돼
+      // 유료 카드가 전부 무반응이 된다(2026-09-12 검수). 실패 시 웹 경로로 떨어진다.
+      const r = (await shouldUsePlayBilling().catch(() => false))
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/battlepass`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,

@@ -6,6 +6,10 @@ import { WIKI_LINKS } from './registry';
 import { PAPER, SERIF } from './theme';
 import { WikiSearch } from './WikiSearch';
 
+/** 본 도메인 — 위키 서브도메인에서 게임으로 돌아가는 절대 주소. 스테이징·로컬에서
+ *  프로덕션으로 튀지 않도록 env를 따른다(app/layout.tsx와 같은 축). */
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
+
 /**
  * 공식 위키 셸 — 게임 라우트 그룹 (game) 밖이라 앱 헤더·하단 내비·채팅·BGM 같은
  * 게임 크롬을 상속하지 않는다(루트 레이아웃이 감싸는 건 JSON-LD·에러 리포터·픽셀뿐).
@@ -46,7 +50,7 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
                 위 viewport 재정의가 게임 화면(고정 390)까지 따라간다. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
-              href="https://ganghwa.app/"
+              href={`${SITE_ORIGIN}/`}
               className={`rounded-md border px-2.5 py-1 text-[12px] font-semibold ${PAPER.card} ${PAPER.hover}`}
             >
               게임으로

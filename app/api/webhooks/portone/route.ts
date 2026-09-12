@@ -19,6 +19,11 @@ import { raisePaymentAlert } from '@/lib/payment/alert';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** 경보 dedup 키용 KST 시간 버킷 — 실패 건별 경보는 소음이라 시간당 1회로 묶는다. */
+function kstHourKey(): string {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 13);
+}
+
 export async function POST(req: Request) {
   const secret = process.env.PORTONE_WEBHOOK_SECRET;
   if (!secret) return new Response('webhook not configured', { status: 503 });
@@ -80,6 +85,15 @@ export async function POST(req: Request) {
         console.error('[portone.webhook] NOT_CANCELLED, retrying', paymentId);
         return new Response('not cancelled yet', { status: 500 });
       }
+    } else if (webhook.type === 'Transaction.Failed') {
+      // PG가 "이 결제 실패했다"고 직접 알려주는 유일한 경로다. 종전엔 알 수 없는 type과 함께
+      // 조용히 ack하고 버렸다 — 결제가 통째로 막혀도 서버에 아무 신호가 없던 이유 중 하나다
+      // (2026-09-12 검수). 카드사 설정 사고·가맹점 미승인은 여기서 즉시 드러난다.
+      // 건별로 울리면 소음이라 KST 시간 버킷으로 묶어 시간당 1회만 울린다.
+      await raisePaymentAlert('PAYMENT_FAILED', {
+        paymentId: `fail:${kstHourKey()}`,
+        detail: `결제 실패 수신(${paymentId}). 같은 시간대 반복되면 결제 경로 점검 필요.`,
+      });
     } else if (webhook.type === 'Transaction.PartialCancelled') {
       // 부분취소 — 고정가 디지털 상품 특성상 드묾. 자동 회수하지 않고 운영 수동 처리.
       await raisePaymentAlert('PARTIAL_CANCELLED', {

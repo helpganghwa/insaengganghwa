@@ -18,10 +18,23 @@ export type CheckoutResult =
  * PC(팝업)는 resp.message를 바로 노출하는데 모바일만 일반 문구로 덮이면 원인을 알 수 없다
  * (2026-08-03 '승인되지 않은 가맹점'이 모바일에서만 가려진 사례). URL 유래 문자열이라 길이를 자른다.
  */
-export function payFailTitle(pgMessage?: string | null): string {
+export function payFailTitle(): string {
+  return '결제가 완료되지 않았습니다';
+}
+
+/**
+ * PG가 준 실패 사유 — **본문**에만 쓴다.
+ *
+ * ⚠ 종전엔 이 문자열이 팝업 **제목**이었다. 제목은 주소만 보내면 누구나 바꿀 수 있는 값이라
+ * (`/shop?code=X&message=<임의 문구>`) 앱의 공식 안내처럼 보이는 임의 문구를 띄울 수 있었다.
+ * 제목은 고정하고 사유는 본문으로 내린다 — 원인 확인(‘승인되지 않은 가맹점’)은 그대로 된다.
+ */
+export function payFailBody(pgMessage?: string | null): string {
   const m = pgMessage?.trim();
-  if (!m) return '결제가 완료되지 않았습니다';
-  return m.length > 60 ? `${m.slice(0, 60)}…` : m;
+  const fallback = '카드사에서 결제를 승인하지 않았어요. 다른 결제수단으로 다시 시도해 주세요.';
+  if (!m) return fallback;
+  const reason = m.length > 60 ? `${m.slice(0, 60)}…` : m;
+  return `${fallback}\n\n결제사 안내: ${reason}`;
 }
 
 export async function runCheckout(productId: string, redirectUrl: string): Promise<CheckoutResult> {

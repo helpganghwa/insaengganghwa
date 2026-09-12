@@ -25,7 +25,7 @@ import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-import { payFailTitle, runCheckout } from './checkout';
+import { payFailBody, payFailTitle, runCheckout } from './checkout';
 import { runPlayCheckout, shouldUsePlayBilling } from './play-checkout';
 import { FREE_REWARDS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
@@ -467,7 +467,13 @@ export function ShopTabs({
         redirectUrl: `${window.location.origin}/shop`,
       });
       // 모바일은 리다이렉트되어 여기 도달하지 않음(아래 useEffect에서 복귀 처리). PC는 res 반환.
-      if (!res) return;
+      // ⚠ 여기서 busy를 풀지 않으면 인증창이 외부 탭에서 열리는 환경(PWA·인앱 브라우저)에서
+      // 돌아왔을 때 [본인인증 하기]·[취소]가 둘 다 비활성으로 굳어 팝업을 닫을 수도 없다
+      // (2026-09-12 검수 — 원본 IdentityVerifyRow에는 있는 해제가 이 복사본들에서만 빠져 있었다).
+      if (!res) {
+        setIdentityBusy(false);
+        return;
+      }
       if (res.code) {
         setIdentityBusy(false);
         setIdentityErr(res.message ?? '본인인증에 실패했습니다.');
@@ -484,7 +490,9 @@ export function ShopTabs({
       } else setIdentityErr(r.message);
     } catch (e) {
       setIdentityBusy(false);
-      setIdentityErr((e as Error).message);
+      // 영문 DOMException 원문을 그대로 보이지 않는다(2026-09-12 검수).
+      console.error('[identity] 인증창 실패', e);
+      setIdentityErr('본인확인 창을 열지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
 
@@ -549,7 +557,7 @@ export function ShopTabs({
       // (예: '승인되지 않은 가맹점'). 일반 문구로 덮으면 PC와 달리 모바일만 원인을 알 수 없다.
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
         // 결과 팝업(2026-08-22 사용자 확정) — 복귀 직후 토스트는 리렌더와 겹쳐 놓친다.
-        setPayNotice({ title: payFailTitle(returnMessage) });
+        setPayNotice({ title: payFailTitle(), body: payFailBody(returnMessage) });
       }
       return;
     }
@@ -644,7 +652,9 @@ export function ShopTabs({
       // 복귀 URL = 상점 자신(별도 페이지 없음). 포트원이 ?paymentId=…(&code=…)를 덧붙여 복귀.
       // 전송 실패도 흡수 — paying 고착 시 전 유료 카드가 무반응이 된다.
       // 플레이스토어 앱(TWA)이면 Play 결제(포트원 결제창 노출 금지 — 구글 정책), 웹·PWA는 포트원. 결과 형태 동일.
-      const r = (await shouldUsePlayBilling())
+      // 판정이 던져도 결제가 멈추면 안 된다 — 여기서 흡수하지 않으면 paying이 고착돼
+      // 유료 카드가 전부 무반응이 된다(2026-09-12 검수). 실패 시 웹 경로로 떨어진다.
+      const r = (await shouldUsePlayBilling().catch(() => false))
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/shop`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,

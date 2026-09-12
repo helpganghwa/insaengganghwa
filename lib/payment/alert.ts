@@ -24,6 +24,7 @@ export type PaymentAlertKind =
   | 'WEBHOOK_VERIFY_FAILED' // 致命: 웹훅 서명 검증 실패(시크릿/설정 사고)
   | 'MINOR_LIMIT_EXCEEDED' // 高(법규): 미성년 월 한도 초과
   | 'ORPHAN_PENDING' // 中: 장시간 pending(PG도 미결제)
+  | 'PAYMENT_FAILED' // 中: PG가 알려준 결제 실패(시간 버킷 단위 집계)
   | 'COMPLETE_EXCEPTION' // 高: 지급 처리 중 예외
   | 'PARTIAL_CANCELLED' // 中: 부분취소(수동 처리 필요)
   | 'RECON_SCAN_CAPPED'; // 高: recon 스캔이 limit에 걸림(백로그 초과 — 미스캔 주문 존재 가능)
@@ -39,6 +40,7 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   COMPLETE_EXCEPTION: 'high',
   AMOUNT_MISMATCH: 'warn',
   ORPHAN_PENDING: 'warn',
+  PAYMENT_FAILED: 'warn',
   PARTIAL_CANCELLED: 'warn',
   RECON_SCAN_CAPPED: 'high',
 };

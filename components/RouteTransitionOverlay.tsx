@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
-import { consumeModalBack, hasOpenModal, isModalHistoryState } from '@/lib/ui/modal-history';
+import { isModalHistoryState, isModalPop } from '@/lib/ui/modal-history';
 
 const CYCLE_MS = 200; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
 const SAFETY_MS = 4000; // 멈춤 방지 자동 해제
@@ -117,7 +117,7 @@ export function RouteTransitionOverlay() {
     // 모달이 닫히는 pop은 제외한다: 뒤로가기로 닫는 경우(모달이 아직 열려 있음)와 화면
     // 버튼으로 닫아 셸이 스스로 되돌리는 경우(표식) 둘 다 화면 이동이 아니다.
     const onPop = () => {
-      if (consumeModalBack() || hasOpenModal()) return;
+      if (isModalPop()) return;
       show(POP_SAFETY_MS);
     };
     window.addEventListener('popstate', onPop);

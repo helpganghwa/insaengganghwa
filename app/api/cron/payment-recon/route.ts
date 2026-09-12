@@ -28,6 +28,13 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const ORPHAN_PENDING_LIMIT = 50;
+/** 한 주기에 이만큼 만료되면 결제 경로 이상으로 보고 경보한다(평시엔 0~1건). */
+const ORPHAN_PENDING_ALERT = 5;
+
+/** 경보 dedup 키용 KST 시간 버킷 — 건별 경보는 소음이라 시간당 1회로 묶는다. */
+function kstHourKey(): string {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 13);
+}
 // 50 → 200(2026-08-24) → 600(2026-08-26): 3일 paid가 200을 넘어 캡 상시 도달 — 캡에 걸리면
 // 최신 결제의 환불 백스톱이 밀린다(asc 기아 방지 정렬의 대가). 600 = 하루 200건 × 3일,
 // 건당 ~0.3s 순차 조회라 캡까지 가도 ~3분(maxDuration 300s 안).
@@ -53,6 +60,8 @@ export async function GET(req: Request) {
   let healed = 0;
   let stillPending = 0;
   let expired = 0;
+  /** A단계에서 포트원 조회가 실패한 건수 — 전건 실패면 beat를 찍지 않는다. */
+  let aErrors = 0;
   // 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구 점유해 진짜
   // 유실 주문이 기아. 방금 PG 미결제를 확인한 주문만, 조건부(pending)로 전이해 웹훅과 경합해도
   // 안전. 만료 후 늦은 결제는 completePurchase가 expired→paid를 허용해 지급 유실 없음.
@@ -95,9 +104,20 @@ export async function GET(req: Request) {
         continue;
       }
       console.error('[payment-recon] A pending check failed', o.pid, e);
+      aErrors += 1;
     }
   }
   out.orphanPending = { scanned: pending.length, healed, stillPending, expired, capped: pending.length === ORPHAN_PENDING_LIMIT };
+
+  // 결제가 통째로 실패하고 있어도 아무도 모르던 문제(2026-09-11~12, 16시간·19건)의 감지선.
+  // 만료로 정리된 고아 pending이 한 주기에 몰리면 결제 경로 자체가 깨진 신호다. 건별로 울리면
+  // 소음이라 KST 시간 버킷으로 묶어 시간당 1회만 울린다.
+  if (expired >= ORPHAN_PENDING_ALERT) {
+    await raisePaymentAlert('ORPHAN_PENDING', {
+      paymentId: `orphan:${kstHourKey()}`,
+      detail: `한 주기에 고아 pending ${expired}건 만료(스캔 ${pending.length}건). 결제 경로 점검 필요 — 결제창이 열리지 않거나 결제 후 검증이 도달하지 못하는 상태일 수 있다.`,
+    });
+  }
 
   // ── B. 환불 미회수 백스톱(최근 3일 paid) ──────────────────────────────────
   const recentPaid = await db
@@ -155,6 +175,9 @@ export async function GET(req: Request) {
   }
   out.minorLimit = { over: minorOver.length };
 
-  await beatCron('payment-recon');
-  return Response.json({ ok: true, ...out });
+  // ⚠ beat는 **성공했을 때만**. 종전엔 무조건 찍어, 포트원 조회가 전건 실패해도(키 만료·장애)
+  // dead-man이 초록으로 남았다 — 하필 '결제 백스톱(최중요)'에서(2026-09-12 검수).
+  const aAllFailed = pending.length > 0 && aErrors === pending.length;
+  if (!aAllFailed) await beatCron('payment-recon');
+  return Response.json({ ok: true, ...out, aErrors });
 }

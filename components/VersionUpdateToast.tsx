@@ -31,9 +31,14 @@ export function VersionUpdateToast() {
   // 자동 새로고침 직후 — 안내 토스트 1회.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (sessionStorage.getItem(UPDATED_FLAG)) {
-      sessionStorage.removeItem(UPDATED_FLAG);
-      showHeaderToast({ title: '✨ 새 버전으로 자동 업데이트 되었어요 ✨' });
+    // 저장소 접근 throw가 게임 레이아웃 전체를 에러 경계로 보낸다(아래 effect엔 이미 가드가 있다).
+    try {
+      if (sessionStorage.getItem(UPDATED_FLAG)) {
+        sessionStorage.removeItem(UPDATED_FLAG);
+        showHeaderToast({ title: '✨ 새 버전으로 자동 업데이트 되었어요 ✨' });
+      }
+    } catch {
+      /* 저장소 불가 — 안내만 생략한다. */
     }
   }, [showHeaderToast]);
 

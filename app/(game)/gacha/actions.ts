@@ -42,7 +42,7 @@ const MSG: Record<string, string> = {
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '점검 중입니다. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정입니다.',
-  UNKNOWN: '알 수 없는 오류',
+  UNKNOWN: '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.',
 };
 
 export async function openAction(slot: Slot, count: number): Promise<OpenActionResult> {

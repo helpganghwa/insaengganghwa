@@ -69,7 +69,12 @@ export function getAudioContext(): AudioContext | null {
 
 function enabled(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(STORAGE_KEY) !== '0'; // 기본 ON (값 없으면 켜짐)
+  // ⚠ 저장소 접근 throw가 호출부 뒤 코드를 삼킨다 — lib/game/sound.ts의 같은 주석 참조.
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== '0'; // 기본 ON (값 없으면 켜짐)
+  } catch {
+    return true;
+  }
 }
 
 function load(name: SfxName): Promise<AudioBuffer | null> {

@@ -83,7 +83,15 @@ export async function verifyAndStoreIdentity(
   try {
     idv = await getPortoneIdentity(identityVerificationId);
   } catch (e) {
-    return { ok: false, code: 'ERROR', message: (e as Error).message };
+    // ⚠ 예외 메시지에는 포트원 응답 본문 300자가 들어 있다(위 getPortoneIdentity). 그대로 돌려주면
+    // 본인확인 모달에 `portone identity 401: {"type":"UNAUTHORIZED"...}` 같은 영문 원문이 그대로
+    // 뜬다 — 유저는 뜻을 알 수 없고 내부 응답까지 새어 나간다(2026-09-12 검수). 원문은 로그로만.
+    console.error('[identity] 조회 실패', e);
+    return {
+      ok: false,
+      code: 'ERROR',
+      message: '본인확인 서버와 연결이 잘 안 돼요. 잠시 후 다시 시도해 주세요.',
+    };
   }
   if (idv.status !== 'VERIFIED') {
     return { ok: false, code: 'NOT_VERIFIED', message: '본인인증이 완료되지 않았습니다.' };

@@ -20,15 +20,6 @@ type DigitalGoodsService = { getDetails(itemIds: string[]): Promise<DigitalGoods
 type DigitalGoodsWindow = Window & { getDigitalGoodsService?: (paymentMethod: string) => Promise<DigitalGoodsService> };
 
 /**
- * API가 이 창에 **존재**하는가 — 존재만으로는 앱 안이라는 증거가 되지 않는다(아래 참조).
- * 결제 경로 판정에는 쓰지 말고, 프로브를 걸 가치가 있는지 판단하는 데만 쓴다.
- */
-export function playBillingSupported(): boolean {
-  if (typeof window === 'undefined') return false;
-  return typeof (window as DigitalGoodsWindow).getDigitalGoodsService === 'function' && 'PaymentRequest' in window;
-}
-
-/**
  * Digital Goods 서비스가 실제로 **열리는가**.
  *
  * ⚠ 안드로이드 크롬은 일반 탭에서도 `getDigitalGoodsService`를 노출한다. 함수가 있다고 앱 안인 것이

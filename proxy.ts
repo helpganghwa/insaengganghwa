@@ -6,7 +6,16 @@ const IS_PREVIEW = process.env.VERCEL_ENV === 'preview';
 const STAGING_KEY = process.env.STAGING_ACCESS_KEY ?? '';
 const STAGING_COOKIE = 'stg_access';
 /** 스테이징 게이트 예외 — 헬스체크·크론(CRON_SECRET로 별도 보호)·결제 웹훅(외부 발신). */
-const STAGING_OPEN = [/^\/api\/health/, /^\/api\/cron\//, /^\/api\/webhooks?\//, /^\/api\/portone\//, /^\/\.well-known\//];
+const STAGING_OPEN = [
+  /^\/api\/health/,
+  /^\/api\/cron\//,
+  /^\/api\/webhooks?\//,
+  /^\/api\/portone\//,
+  /^\/\.well-known\//,
+  // 서비스워커가 설치 때 받아 두는 오프라인 폴백 — 게이트에 막히면 스테이징에선 폴백이 아예
+  // 안 깔려(cache.add 실패) 검수 자체가 불가능하다. 정적 안내 화면이라 새어도 무해하다.
+  /^\/offline$/,
+];
 
 /**
  * 스테이징 접근 게이트(2026-08-29) — preview 배포는 Vercel 보호가 꺼져 있어 URL을 아는 누구나(CBT 참가자 등)
