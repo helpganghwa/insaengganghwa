@@ -406,7 +406,8 @@ export function BattlePassClient({
       const productId = `bp_${passType}_${segmentIndex}`;
       // 판정이 던져도 결제가 멈추면 안 된다 — 여기서 흡수하지 않으면 paying이 고착돼
       // 유료 카드가 전부 무반응이 된다(2026-09-12 검수). 실패 시 웹 경로로 떨어진다.
-      const r = (await shouldUsePlayBilling().catch(() => false))
+      const viaPlay = await shouldUsePlayBilling().catch(() => false);
+      const r = viaPlay
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/battlepass`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
@@ -438,7 +439,11 @@ export function BattlePassClient({
                 ? '미성년 월 구매한도를 초과했습니다.'
                 : r.code === 'NETWORK'
                   ? r.reason === 'verify'
-                    ? '결제 확인이 지연되고 있어요 — 지급은 잠시 후 자동 반영됩니다.'
+                    ? // 앱(Play)은 구매 토큰을 화면만 알고 있어 전송에 실패하면 서버가 따라잡지
+                      // 못한다 — 자동 반영이 오지 않는다(ShopTabs와 같은 근거, 6차 검수).
+                      viaPlay
+                      ? '결제 확인이 서버에 전달되지 않았어요. 지급이 없으면 고객센터로 알려 주세요.'
+                      : '결제 확인이 지연되고 있어요 — 지급은 잠시 후 자동 반영됩니다.'
                     : '요청이 전송되지 않았어요. 연결을 확인해 주세요.'
                   : '결제에 실패했습니다.',
         );

@@ -1,4 +1,4 @@
-import { signOut } from '@/lib/auth/actions';
+import { SignOutButton } from '@/components/SignOutButton';
 import type { BanState } from '@/lib/game/account/ban';
 
 /** 계정 정지 풀사이즈 화면 — (game) 레이아웃이 banned 유저에게 children 대신 렌더. */
@@ -28,11 +28,9 @@ export function BanScreen({ state }: { state: BanState }) {
       <p className="max-w-xs text-[11px] text-zinc-500">
         이의가 있으면 고객센터(help@ganghwa.app)로 문의해 주세요.
       </p>
-      <form action={signOut}>
-        <button type="submit" className="mt-2 rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300">
-          로그아웃
-        </button>
-      </form>
+      <SignOutButton className="mt-2 rounded-xl border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 disabled:opacity-60">
+        로그아웃
+      </SignOutButton>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { signOut } from '@/lib/auth/actions';
+import { SignOutButton } from '@/components/SignOutButton';
 
 import { LocalToggle } from './SettingsControls';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -160,14 +160,9 @@ export default async function SettingsPage() {
         />
       </Section>
 
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="w-full rounded-xl border border-zinc-200 py-3 text-sm font-medium text-red-600 dark:border-zinc-800"
-        >
-          로그아웃
-        </button>
-      </form>
+      <SignOutButton className="w-full rounded-xl border border-zinc-200 py-3 text-sm font-medium text-red-600 disabled:opacity-60 dark:border-zinc-800">
+        로그아웃
+      </SignOutButton>
 
       <WithdrawButton />
       </div>

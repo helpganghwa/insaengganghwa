@@ -654,7 +654,8 @@ export function ShopTabs({
       // 플레이스토어 앱(TWA)이면 Play 결제(포트원 결제창 노출 금지 — 구글 정책), 웹·PWA는 포트원. 결과 형태 동일.
       // 판정이 던져도 결제가 멈추면 안 된다 — 여기서 흡수하지 않으면 paying이 고착돼
       // 유료 카드가 전부 무반응이 된다(2026-09-12 검수). 실패 시 웹 경로로 떨어진다.
-      const r = (await shouldUsePlayBilling().catch(() => false))
+      const viaPlay = await shouldUsePlayBilling().catch(() => false);
+      const r = viaPlay
         ? await runPlayCheckout(productId).catch(() => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const)
         : await runCheckout(productId, `${window.location.origin}/shop`).catch(
             () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
@@ -676,11 +677,23 @@ export function ShopTabs({
         // 앱 표식은 있는데 Digital Goods API가 없는 환경(구버전 크롬 등).
         setPayNotice({ title: '앱에서만 결제할 수 있어요', body: r.message });
       } else if (r.reason === 'verify' && r.code === 'NETWORK') {
-        // 결제창은 닫혔는데 확인 요청만 전송 실패 — 지급 권위는 웹훅이라 곧 반영됨(미결제 오해 방지).
-        setPayNotice({
-          title: '결제 확인이 지연되고 있어요',
-          body: '결제는 정상 접수됐고 지급은 잠시 후 자동으로 반영됩니다. 10분이 지나도 반영되지 않으면 고객센터로 문의해 주세요.',
-        });
+        // 결제창은 닫혔는데 확인 요청만 전송 실패.
+        //
+        // ⚠ 두 경로의 사실이 다르다(2026-09-12 6차 검수). 포트원은 지급 권위가 웹훅이라 서버가
+        // 알아서 따라잡지만, Play는 **구매 토큰을 화면만 알고 있어서** 전송에 실패하면 서버에
+        // 아무 단서도 남지 않는다 — 자동 반영이 오지 않는다(3일 뒤 구글 자동 환불이 유일한 구제).
+        // 한쪽에서 참인 문구를 다른 쪽에 쓰면 유저가 기다리다 구제 시점을 놓친다.
+        setPayNotice(
+          viaPlay
+            ? {
+                title: '결제 확인이 안 됐어요',
+                body: '결제창은 닫혔지만 구매 확인이 서버에 전달되지 않았습니다. 앱을 다시 열어도 지급이 없으면 고객센터로 알려 주세요 — 확인 후 처리해 드립니다.',
+              }
+            : {
+                title: '결제 확인이 지연되고 있어요',
+                body: '결제는 정상 접수됐고 지급은 잠시 후 자동으로 반영됩니다. 10분이 지나도 반영되지 않으면 고객센터로 문의해 주세요.',
+              },
+        );
       } else if (r.code === 'IDENTITY_REQUIRED') {
         // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
         setIdentityPrompt(true);
