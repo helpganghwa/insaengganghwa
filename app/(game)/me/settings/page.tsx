@@ -20,6 +20,8 @@ import { PushSettings } from './PushSettings';
 import { SupportModal } from './SupportModal';
 import { WithdrawButton } from './WithdrawButton';
 import { IdentityVerifyRow } from './IdentityVerifyRow';
+import { AppSignalDiag } from './AppSignalDiag';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 
 /** 설정 — WIREFRAMES §9. 알림/서버/계정/가이드/약관/로그아웃. */
 export default async function SettingsPage() {
@@ -65,6 +67,8 @@ export default async function SettingsPage() {
   // 심사(cbt) 계정은 실명 PASS 인증을 시킬 수 없어 항상 인증 완료로 표시한다(결제 게이트도
   // 동일하게 통과 — purchase.ts createOrder). 실유저 표시는 그대로 profiles 값을 따른다.
   const verified = p?.verifiedAt != null || (await isReviewerAccount().catch(() => false));
+  // 앱 판정 신호 진단(임시) — 웹앱/앱 분리를 확정하기 위한 실기기 확인용. 운영자만 본다.
+  const { isAdmin } = await getAdminStatus().catch(() => ({ isAdmin: false }));
 
   return (
     <>
@@ -159,6 +163,8 @@ export default async function SettingsPage() {
           serverName={serverName}
         />
       </Section>
+
+      {isAdmin ? <AppSignalDiag /> : null}
 
       <form action={signOut}>
         <button
