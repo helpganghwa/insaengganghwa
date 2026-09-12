@@ -45,7 +45,11 @@ export async function EnhanceStatsCard() {
   const s = await getEnhanceLive();
   return (
     <StatsShell>
-      <StatTile tone="live" value={`${s.totalUsers.toLocaleString('ko-KR')}명`} label="인생강화중" />
+      <StatTile
+        tone="live"
+        value={s.totalUsers == null ? '—' : `${s.totalUsers.toLocaleString('ko-KR')}명`}
+        label="인생강화중"
+      />
       <StatTile tone="success" value={num(s.success)} label="강화 성공" />
       <StatTile tone="hold" value={num(s.hold)} label="강화 유지" />
       <StatTile tone="down" value={num(s.down)} label="강화 하락" />

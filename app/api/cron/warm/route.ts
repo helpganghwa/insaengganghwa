@@ -64,7 +64,11 @@ export async function GET(req: Request) {
     ]);
     out.enhanceTotals = done === null ? 'timeout' : done ? 'refreshed' : 'fresh';
   } catch (e) {
+    // ⚠ 응답 본문은 아무도 안 읽는다(위 워치독 주석과 같은 이유). 0198 미적용 같은 상태를
+    // 알아차릴 신호가 필요하므로 로그로도 남긴다 — 그래야 통계 카드가 조용히 "—"가 된 이유를
+    // 추적할 수 있다(7차 검수).
     out.enhanceTotals = `ERR ${(e as Error).message.slice(0, 80)}`;
+    console.error('[warm] 누적 통계 스냅샷 실패 — 0198 적용 여부 확인', e);
   }
 
   return Response.json({ ms: Date.now() - t0, ...out });

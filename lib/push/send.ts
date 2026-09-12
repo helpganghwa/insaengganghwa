@@ -321,18 +321,22 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
   // 성공 여부로 키를 입증하는 추론이 "모든 푸시 서비스가 VAPID 서명을 검증한다"는 가정에 기대는데,
   // 그 가정이 틀린 서비스가 배치에 섞이면 성공 한 건이 키를 잘못 입증할 수 있다. 168건을 지운
   // 사고를 되풀이하는 쪽이 낡은 구독 몇 개를 남기는 쪽보다 훨씬 비싸므로 보수적으로 간다.
+  // ⚠ 삭제는 **키가 입증됐을 때만** 한다(7차 검수에서 비대칭 교정). 종전엔 보류 조건을 두 개
+  // (대다수 불일치 / 배치가 작음) 두고 그 사이 구간을 무방비로 뒀다 — 예: 구독 4~10건 배치에서
+  // 한 건도 성공하지 못했는데 403 구독을 지웠다. 발신 키가 틀린 상태의 소규모 길드 알림·귓속말
+  // 묶음이 정확히 그 모양이라, 9/3 사고를 작은 규모로 되풀이할 수 있었다.
   const keyProvenByThisBatch = ok > 0;
   const senderKeyMismatch = mismatched.length >= 3 && mismatched.length * 2 >= subs.length;
-  const tooSmallToJudge = !senderKeyMismatch && !keyProvenByThisBatch && subs.length < 3;
+  const cannotJudge = !senderKeyMismatch && !keyProvenByThisBatch;
   if (senderKeyMismatch) {
     failed += mismatched.length;
     console.error(
       `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 발신 키 문제로 판단, 구독 삭제 보류. VAPID_PRIVATE_KEY/PUBLIC_KEY가 구독을 만든 키와 같은지 확인`,
     );
-  } else if (tooSmallToJudge && mismatched.length > 0) {
+  } else if (cannotJudge && mismatched.length > 0) {
     failed += mismatched.length;
     console.warn(
-      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 성공 0건에 배치도 작아 판단 불가, 구독 삭제 보류`,
+      `[push] VAPID 불일치 ${mismatched.length}/${subs.length} — 이 배치에 성공이 0건이라 키를 입증할 수 없음, 구독 삭제 보류`,
     );
   } else {
     for (const id of mismatched) {

@@ -187,6 +187,17 @@ export async function reclaimProductGrant(
     // 30일을 넘겼으면 창은 자연히 닫히고, 아직 살아 있으면 그 주문 몫만큼만 남는다.
     // 이 주문은 호출 시점에 이미 refunded로 전이돼 있으므로(refund.ts) 조회에 안 걸린다.
     // grant_skipped 주문은 애초에 지급이 없었으니 권리로 치지 않는다.
+    //
+    // ⚠ 창 행을 **먼저 잠근다**(7차 검수). 같은 유저의 프리미엄 주문 둘이 동시에 환불되면(웹훅
+    // 재전송·연속 환불) 두 트랜잭션은 서로 다른 iap_orders 행을 잠그므로 직렬화되지 않는다.
+    // 잠금 없이 읽으면 A는 "B가 아직 paid", B는 "A가 아직 paid"로 보고 각자 상대 시각으로 창을
+    // 덮어써, 둘 다 환불됐는데도 최대 29일치 일일 지급이 계속 나간다. 창 행을 먼저 잠그면 두
+    // 트랜잭션이 여기서 직렬화되고, 뒤늦은 쪽은 상대의 refunded 전이를 본 뒤 계산한다.
+    await tx.execute(sql`
+      select 1 from shop_purchases
+      where user_id = ${userId}::uuid and server_id = ${serverId} and product_id = ${PREMIUM.id}
+      for update
+    `);
     const [prev] = (await tx.execute(sql`
       select max(coalesce(paid_at, created_at)) as at from iap_orders
       where user_id = ${userId}::uuid and server_id = ${serverId}

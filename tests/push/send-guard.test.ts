@@ -81,6 +81,17 @@ describe('push send — VAPID 불일치 보호 장치', () => {
     expect(del).not.toHaveBeenCalled();
   });
 
+  // 7차 검수 — 보류 조건이 '대다수 불일치'와 '작은 배치' 둘뿐이라 그 사이가 뚫려 있었다.
+  it('배치가 커도 성공이 0건이면 키를 입증할 수 없어 보류한다', async () => {
+    sendNotification.mockImplementation(async (s: { endpoint: string }) => {
+      if (/\/(1|2)$/.test(s.endpoint)) throw err(403); // 불일치 2건(3 미만)
+      throw err(500); // 나머지는 다른 오류 — 성공 0건
+    });
+    const r = await sendPushToSubscriptions([1, 2, 3, 4, 5].map(sub), payload);
+    expect(r).toEqual({ ok: 0, gone: 0, failed: 5 });
+    expect(del).not.toHaveBeenCalled();
+  });
+
   it('작은 배치라도 404/410은 종전대로 삭제한다', async () => {
     sendNotification.mockRejectedValue(err(410));
     const r = await sendPushToSubscriptions([sub(1)], payload);

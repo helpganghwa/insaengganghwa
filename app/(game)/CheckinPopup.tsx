@@ -119,7 +119,15 @@ function rewardToasts(r: CheckinReward, bonus: number): HeaderReward[] {
   return rows;
 }
 
-/** 수령 실패 후 닫은 표식 — 세션 한정(탭을 닫으면 사라져 다음 접속엔 정상 노출). */
+/**
+ * 수령 실패 후 닫은 표식 — 값은 **닫은 날(KST)** 이다.
+ *
+ * '1' 같은 불린으로 두면 두 가지가 깨진다(7차 검수). ① 23:50에 닫고 탭을 켜 둔 채 자정을 넘기면
+ * **새 날의 출석 팝업도 안 뜬다.** ② 앱(TWA)·홈화면 PWA는 앱을 종료하기 전까지 sessionStorage가
+ * 유지돼 "세션"이 며칠 간다 — 점검이 끝나 수령이 가능해져도 그 동안 출석 자체를 못 한다.
+ * 출석 진입로가 이 팝업뿐이라 연속 출석이 끊기는 손해가 유저에게 간다.
+ * 날짜를 담고 오늘과 다르면 무시하며, 수령에 성공하면 지운다.
+ */
 const DISMISS_KEY = 'ig:checkin-dismissed';
 
 export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
@@ -136,13 +144,11 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const [mounted, setMounted] = useState(false);
   const [closed, setClosed] = useState(false);
   useEffect(() => {
-    let dismissed = false;
     try {
-      dismissed = window.sessionStorage.getItem(DISMISS_KEY) === '1';
+      if (window.sessionStorage.getItem(DISMISS_KEY) === kstDay()) setClosed(true);
     } catch {
       // 저장소 차단 — 표식 없음으로 본다.
     }
-    if (dismissed) setClosed(true);
     setMounted(true);
   }, []);
   const [fxOn, setFxOn] = useState(false); // 낙관 시퀀스 시작됨(버튼=닫기·배경 닫기 허용)
@@ -183,12 +189,13 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
     timersRef.current.forEach(clearTimeout);
     // 수령에 실패해 닫은 경우만 세션에 남긴다 — 정상 수령 후 닫기는 서버 상태가 이미 바뀌어
     // 다시 뜰 일이 없으므로 표식이 필요 없다.
-    if (remember) {
-      try {
-        window.sessionStorage.setItem(DISMISS_KEY, '1');
-      } catch {
-        // 저장 불가 — 종전대로 이 렌더에서만 닫힌다.
-      }
+    try {
+      // 실패해서 닫았으면 오늘 날짜를 남기고, 수령이 끝난 뒤 닫았으면 표식을 거둔다
+      // (점검이 풀린 뒤 같은 세션에서 다시 열 수 있어야 한다).
+      if (remember) window.sessionStorage.setItem(DISMISS_KEY, kstDay());
+      else window.sessionStorage.removeItem(DISMISS_KEY);
+    } catch {
+      // 저장 불가 — 종전대로 이 렌더에서만 닫힌다.
     }
     setClosed(true);
     router.refresh(); // 헤더 다이아·도전과제·배너 갱신
