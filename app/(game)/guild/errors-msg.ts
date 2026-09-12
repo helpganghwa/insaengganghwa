@@ -2,6 +2,9 @@
 import { GUILD_REAPPLY_COOLDOWN_HOURS, GUILD_REJOIN_LOCK_HOURS, GUILD_RENAME_AFTER_DAYS, GUILD_RENAME_COOLDOWN_DAYS } from '@/lib/game/guild/balance';
 
 const MAP: Record<string, string> = {
+  // 전송 실패 — 액션이 거부된 경우(2026-09-12). UNKNOWN("처리할 수 없다")로 뭉뚱그리면
+  // 유저가 서버 탓으로 읽고 재시도를 안 한다. 연결 문제라고 말해 줘야 다시 누른다.
+  NETWORK: '요청이 전송되지 않았어요. 연결을 확인해 주세요.',
   ALREADY_IN_GUILD: '이미 길드에 소속되어 있습니다.',
   NOT_IN_GUILD: '길드에 소속되어 있지 않습니다.',
   NAME_INVALID: '길드 이름은 2~8자여야 합니다.',

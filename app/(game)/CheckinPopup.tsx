@@ -360,7 +360,11 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
     const t0 = Date.now();
     runFx();
     startTransition(async () => {
-      const res = await claimCheckinAction();
+      // 거부(reject)도 흡수 — 안 그러면 claimingRef가 true로 고착해 버튼이 영영 잠기고
+      // 오류 안내도 안 뜬다(2026-09-12 낙관 UI 전수조사).
+      const res = await claimCheckinAction().catch(
+        () => ({ status: 'error', code: 'NETWORK', message: '요청이 전송되지 않았어요. 연결을 확인해 주세요.' }) as const,
+      );
       claimingRef.current = false;
       const elapsed = Date.now() - t0;
       if (res.status === 'success') {

@@ -65,7 +65,8 @@ export function CreateGuildForm() {
     setConfirm(false);
     optimisticAdjust(BigInt(-GUILD_CREATE_COST_DIAMOND)); // 낙관 차감(실패 시 롤백)
     start(async () => {
-      const r = await createGuildAction(cleaned, emblem);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await createGuildAction(cleaned, emblem).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         optimisticAdjust(BigInt(GUILD_CREATE_COST_DIAMOND));
         // 부족(레이스)은 충전 유도 팝업(2026-08-22).

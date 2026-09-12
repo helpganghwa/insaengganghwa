@@ -92,7 +92,10 @@ export function ChallengesClient({
     else setClaimed((s) => new Set(s).add(id));
     optimisticAdjust(BigInt(diamond));
     start(async () => {
-      const r = await claimChallengeAction(id);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await claimChallengeAction(id).catch(
+        () => ({ status: 'error', message: '요청이 전송되지 않았어요. 연결을 확인해 주세요.' }) as const,
+      );
       setPendingIds((p) => {
         const n = new Set(p);
         n.delete(id);
@@ -132,7 +135,10 @@ export function ChallengesClient({
     setClaimed((s) => new Set([...s, ...targets.map((c) => c.id)]));
     optimisticAdjust(BigInt(totalDiamond));
     start(async () => {
-      const r = await claimAllChallengesAction();
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await claimAllChallengesAction().catch(
+        () => ({ status: 'error', message: '요청이 전송되지 않았어요. 연결을 확인해 주세요.' }) as const,
+      );
       setPendingIds((p) => {
         const n = new Set(p);
         n.delete('__all__');

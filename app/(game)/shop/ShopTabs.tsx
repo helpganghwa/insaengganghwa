@@ -734,7 +734,9 @@ export function ShopTabs({
     optimisticAdjust(-BigInt(cost));
     setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
     startTransition(async () => {
-      const r = await buyBoxAction(productId);
+      // ⚠ 거부(reject)도 흡수한다(2026-09-12) — 같은 파일의 결제 경로와 같은 이유.
+      // 종전엔 전송이 끊기면 아래 복원이 건너뛰어져 흑백 처리와 차감 표시가 틀린 채 남았다.
+      const r = await buyBoxAction(productId).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         showHeaderToast({ title: '구매 완료', rewards: [{ icon: '', amount: r.boxes }] });
       } else {
@@ -761,7 +763,8 @@ export function ShopTabs({
     setFree((f) => ({ ...f, [slot]: false }));
     if (d.diamond) optimisticAdjust(BigInt(d.diamond));
     startTransition(async () => {
-      const r = await claimFreeAction(slot);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await claimFreeAction(slot).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         const rewards: HeaderReward[] = [];
         if (d.diamond) rewards.push({ icon: '💎', amount: d.diamond });

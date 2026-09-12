@@ -189,7 +189,8 @@ export function TitlesClient({
     setSel(null); // 팝업 즉시 닫고 결과는 공용 토스트로(사용자 확정)
     window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: next })); // 채팅 등 낙관 동기화
     startTransition(async () => {
-      const res = await setRepresentativeTitleAction(next);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const res = await setRepresentativeTitleAction(next).catch(() => ({ ok: false }) as const);
       if (!res.ok) {
         setRep(prevRep);
         window.dispatchEvent(new CustomEvent('ig:reptitle', { detail: prevRep }));

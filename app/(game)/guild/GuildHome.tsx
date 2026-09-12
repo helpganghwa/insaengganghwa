@@ -219,7 +219,10 @@ export function GuildHome({
     if (tier.cost > 0) optimisticAdjust(BigInt(-tier.cost));
     showHeaderToast({ title: `기부 완료 +${tier.xp} XP` });
     start(async () => {
-      const r = await donateAction();
+      // ⚠ 거부(reject)도 흡수한다(2026-09-12). 종전엔 .catch가 없어, 전송이 끊기면 await가
+      // 던지고 **아래 롤백이 통째로 건너뛰어졌다** — "기부 완료 +XP" 토스트와 차감된 다이아
+      // 표시가 틀린 채 남고 에러도 안 떴다(서버는 무사하지만 화면만 거짓말).
+      const r = await donateAction().catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         setOptDonations((n) => Math.max(0, n - 1));
         setOptXp((x) => Math.max(0, x - tier.xp));

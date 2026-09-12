@@ -346,7 +346,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const decideReq = (requesterId: string, approve: boolean) => {
     setHandledReqs((s) => new Set(s).add(requesterId));
     void (async () => {
-      const r = await decideJoinRequestAction(v.raidId, requesterId, approve);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await decideJoinRequestAction(v.raidId, requesterId, approve).catch(
+        () => ({ status: 'error', code: 'NETWORK', message: '요청이 전송되지 않았어요.' }) as const,
+      );
       if (r.status !== 'success') {
         setHandledReqs((s) => {
           const n = new Set(s);

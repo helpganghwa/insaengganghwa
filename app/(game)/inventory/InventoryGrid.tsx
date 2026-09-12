@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
+import { memo, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import type { CatalogRegion } from '@/lib/game/equipment/catalog';
@@ -105,21 +105,23 @@ export function InventoryGrid({
   const openItem = openId ? displayItems.find((i) => i.id === openId) ?? null : null;
 
   // NEW 표시 — 인벤토리 진입 시점에 캡처(직전 seen에 없는 id) → 이번 방문에 표시.
-  const [newIds] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const raw = localStorage.getItem(SEEN_STORAGE_KEY);
-      const seen = new Set(raw ? (JSON.parse(raw) as string[]) : []);
-      return new Set(items.filter((it) => !seen.has(it.id)).map((it) => it.id));
-    } catch {
-      return new Set();
-    }
-  });
+  //
+  // ⚠ 저장소는 **마운트 후에** 읽는다. 초기 state에서 읽으면 서버(저장소를 몰라 NEW를 하나도
+  // 안 그림)와 브라우저(NEW를 그림)가 어긋나 하이드레이션 오류가 난다(React #418 — 실서버에서
+  // 재현했고 client_errors에도 쌓인다, 2026-09-12). 읽기와 기록을 한 effect에 묶어 둔다 —
+  // 나누면 기록이 먼저 돌아 seen이 채워지고 NEW가 영영 빈 집합이 된다.
+  const [newIds, setNewIds] = useState<Set<string>>(() => new Set());
+  const capturedRef = useRef(false);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     try {
       const raw = localStorage.getItem(SEEN_STORAGE_KEY);
       const seen = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+      // 캡처는 이 방문에 **한 번만** — items가 갱신될 때마다 다시 잡으면 이미 본 것이 NEW로 돌아온다.
+      if (!capturedRef.current) {
+        capturedRef.current = true;
+        const fresh = items.filter((it) => !seen.has(it.id)).map((it) => it.id);
+        if (fresh.length > 0) setNewIds(new Set(fresh));
+      }
       let changed = false;
       for (const it of items) {
         if (!seen.has(it.id)) {
@@ -127,11 +129,9 @@ export function InventoryGrid({
           changed = true;
         }
       }
-      if (changed) {
-        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(seen)));
-      }
+      if (changed) localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(seen)));
     } catch {
-      /* ignore */
+      /* 저장소 차단 — NEW 표시 없이 동작 */
     }
   }, [items]);
 

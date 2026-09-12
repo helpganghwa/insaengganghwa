@@ -205,7 +205,8 @@ export function FriendsTabs({
     setRel(u.userId, 'outgoing');
     setOutgoing((p) => [u, ...p]);
     startTransition(async () => {
-      const r = await sendRequestAction(u.userId);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r = await sendRequestAction(u.userId).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         if (r.result === 'accepted') {
           setRel(u.userId, 'friend');

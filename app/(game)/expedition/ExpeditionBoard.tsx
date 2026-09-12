@@ -126,7 +126,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       setPendingSlot(slot);
       setBoard(optimistic);
       startTransition(async () => {
-        const r = await act();
+        // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+        const r: Awaited<ReturnType<typeof act>> = await act().catch(() => ({ ok: false, code: 'NETWORK' }));
         if (r.ok && r.board) setBoard(r.board);
         else {
           undo?.();
@@ -212,7 +213,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }));
     setPendingSlot(s.slot);
     startTransition(async () => {
-      const r: ClaimActionResult = await claimExpeditionAction(s.slot);
+      // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
+      const r: ClaimActionResult = await claimExpeditionAction(s.slot).catch(
+        () => ({ ok: false, code: 'UNKNOWN' }) as ClaimActionResult,
+      );
       if (r.ok) {
         // 크리·시작가 차이 보정 — 실지급(r.reward)과 선반영(preAdd)의 차액만 추가 반영.
         const diff = (r.reward.diamond ?? 0) - preAdd;
