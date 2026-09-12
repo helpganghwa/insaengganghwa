@@ -17,6 +17,21 @@ import { GUILD_NAME_CHAR_REGEX, normalizeGuildName } from '@/lib/game/guild/crea
 import { containsProfanity } from '@/lib/game/moderation/profanity';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * 운영 조치 기록(2026-09-12) — 종전엔 경고·길드명 변경만 남고 닉네임 초기화·아바타 삭제·정지·해제·
+ * 기각은 아무 흔적도 남기지 않았다. 유저가 이의를 제기하면 "누가·언제·왜"를 댈 근거가 없다.
+ * 조치와 같은 트랜잭션이라 롤백되면 기록도 같이 사라진다(조치 없는 기록이 남지 않는다).
+ */
+function logAction(
+  tx: Tx,
+  adminUserId: string,
+  action: string,
+  profileId: string,
+  payload: Record<string, unknown> | null,
+) {
+  return tx.insert(adminActions).values({ adminUserId, action, targetType: 'profile', targetId: profileId, payload });
+}
 type Result = { status: 'success' } | { status: 'error'; code: string };
 
 async function ownerOf(tx: Tx, profileId: string) {
@@ -66,7 +81,7 @@ function randomBlacksmithNick(): string {
  * 변경비 우편은 초기화된 서버마다 각각 — 서버별 지갑이라 그 서버에서 재변경할 비용.
  */
 export async function resetReportedNickname(profileId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
@@ -105,6 +120,10 @@ export async function resetReportedNickname(profileId: string): Promise<Result> 
       );
     }
     await clearReports(tx, profileId);
+    await logAction(tx, adminUserId, 'report.nickname_reset', profileId, {
+      servers: chars.map((c) => c.serverId),
+      nicknames: [...used],
+    });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
@@ -112,7 +131,7 @@ export async function resetReportedNickname(profileId: string): Promise<Result> 
 
 /** 아바타 신고 처리 — 기본 아바타로 전환(위반 아바타 삭제) + 생성비 지급 + 신고 정리. 기본 아바타는 삭제 안 함. */
 export async function resetReportedAvatar(profileId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
@@ -122,6 +141,7 @@ export async function resetReportedAvatar(profileId: string): Promise<Result> {
       // 기본 아바타가 신고됨 — 삭제 불가, 안내만 후 정리.
       await mail(tx, owner.userId, owner.serverId, 'notice', '신고 처리 안내', '신고가 검토되었습니다.');
       await clearReports(tx, profileId);
+      await logAction(tx, adminUserId, 'report.avatar_reset', profileId, { defaultAvatar: true });
       revalidatePath('/admin/reports');
       return { status: 'success' };
     }
@@ -163,6 +183,13 @@ export async function resetReportedAvatar(profileId: string): Promise<Result> {
       '운영정책 위반으로 아바타가 기본 아바타로 변경되었습니다. 아바타 생성 비용을 지급해 드리니 적절한 아바타로 다시 만들어 주세요.',
       PROFILE_GENERATION_DIAMOND,
     );
+    // 아바타 행 자체를 지우는 조치라 되돌릴 수 없다 — 어느 아바타였는지만이라도 남긴다.
+    await logAction(tx, adminUserId, 'report.avatar_reset', profileId, {
+      userId: owner.userId,
+      serverId: owner.serverId,
+      deleted: true,
+      grantedDiamond: PROFILE_GENERATION_DIAMOND,
+    });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
@@ -234,7 +261,7 @@ export async function banReportedUser(
   reason: string,
   untilIso: string | null,
 ): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   if (!reason.trim()) return { status: 'error', code: 'NO_REASON' };
   let until: Date | null = null;
   if (untilIso) {
@@ -251,6 +278,11 @@ export async function banReportedUser(
       .set({ bannedAt: new Date(), banReason: reason.trim().slice(0, 500), banUntil: until })
       .where(eq(profiles.id, owner.userId));
     await clearReports(tx, profileId);
+    await logAction(tx, adminUserId, 'user.ban', profileId, {
+      userId: owner.userId,
+      reason: reason.trim().slice(0, 500),
+      until: until?.toISOString() ?? null,
+    });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
@@ -258,7 +290,7 @@ export async function banReportedUser(
 
 /** 정지 해제 — profileId의 소유자 banned 해제. */
 export async function unbanReportedUser(profileId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   return db.transaction(async (tx) => {
     const owner = await ownerOf(tx, profileId);
     if (!owner) return { status: 'error', code: 'NOT_FOUND' };
@@ -266,6 +298,7 @@ export async function unbanReportedUser(profileId: string): Promise<Result> {
       .update(profiles)
       .set({ bannedAt: null, banReason: null, banUntil: null })
       .where(eq(profiles.id, owner.userId));
+    await logAction(tx, adminUserId, 'user.unban', profileId, { userId: owner.userId });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
@@ -352,9 +385,10 @@ export async function renameGuildAction(input: {
 
 /** 기각 — 신고 무효(기록 삭제 + count 0). 제재·우편 없음. */
 export async function dismissReports(profileId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   await db.transaction(async (tx) => {
     await clearReports(tx, profileId);
+    await logAction(tx, adminUserId, 'report.dismiss', profileId, null);
   });
   revalidatePath('/admin/reports');
   return { status: 'success' };

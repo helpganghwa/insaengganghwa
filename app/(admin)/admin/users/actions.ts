@@ -11,8 +11,26 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { GEM_TO_MS } from '@/lib/game/balance';
 import { removeUserFromBoards, restoreUserBoards } from '@/lib/game/leaderboard/incremental';
+import { adminActions } from '@/lib/db/schema/ops';
 
 type Result = { status: 'success' } | { status: 'error'; code: string };
+
+/**
+ * 운영 조치 기록(2026-09-12) — 이 파일의 네 조치(정지·해제·보상·경고)는 종전에 아무 흔적도
+ * 남기지 않았다. 유저가 이의를 제기하면 "누가·언제·왜"를 댈 근거가 없고, 보상은 금액까지 사라진다.
+ * 기록 실패가 조치를 되돌리면 안 되므로(조치는 이미 커밋) best-effort로 삼킨다.
+ */
+async function logAdmin(
+  adminUserId: string,
+  action: string,
+  userId: string,
+  payload: Record<string, unknown> | null,
+) {
+  await db
+    .insert(adminActions)
+    .values({ adminUserId, action, targetType: 'user', targetId: userId, payload })
+    .catch((e) => console.error('[admin] 조치 기록 실패', action, userId, e));
+}
 
 // 취소 피해 보상 상한 — 오지급 방어. 정상적 산정치는 수천 규모, 이 이상은 수기 우편으로.
 const COMP_MAX_DIAMOND = 100_000;
@@ -26,7 +44,7 @@ export async function banUserAction(
   reason: string,
   untilIso: string | null,
 ): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   if (!reason.trim()) return { status: 'error', code: 'NO_REASON' };
   let until: Date | null = null;
   if (untilIso) {
@@ -44,12 +62,16 @@ export async function banUserAction(
   // 리더보드 즉시 제외(v2) — 읽기 경로에 밴 조인을 두지 않는 대가로 쓰기 시점 삭제.
   // 실패해도 시간별 전체 재계산(밴 제외 술어)이 교정.
   await removeUserFromBoards(userId).catch((e) => console.warn('[ban] board remove failed', e));
+  await logAdmin(adminUserId, 'user.ban', userId, {
+    reason: reason.trim().slice(0, 500),
+    until: until?.toISOString() ?? null,
+  });
   revalidatePath('/admin/users');
   return { status: 'success' };
 }
 
 export async function unbanUserAction(userId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const updated = await db
     .update(profiles)
     .set({ bannedAt: null, banReason: null, banUntil: null })
@@ -66,6 +88,7 @@ export async function unbanUserAction(userId: string): Promise<Result> {
   } catch (e) {
     console.warn('[unban] board restore failed (cron이 교정)', e);
   }
+  await logAdmin(adminUserId, 'user.unban', userId, null);
   revalidatePath('/admin/users');
   return { status: 'success' };
 }
@@ -77,7 +100,7 @@ export async function unbanUserAction(userId: string): Promise<Result> {
  * 멱등(0106): 보상한 잡은 cancel_compensated_at 마킹 — 재클릭은 그 후 새 취소분만 집계한다.
  */
 export async function compensateCancelDamageAction(userId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const [p] = await db
     .select({ sid: profiles.lastServerId })
     .from(profiles)
@@ -131,12 +154,14 @@ export async function compensateCancelDamageAction(userId: string): Promise<Resu
     return total;
   });
   if (compensated <= 0) return { status: 'error', code: 'NOTHING_TO_COMPENSATE' };
+  // 재화가 움직인 조치라 금액까지 남긴다 — 분쟁 때 "얼마를 왜 줬나"가 핵심이다.
+  await logAdmin(adminUserId, 'user.compensate_cancel', userId, { diamond: compensated });
   revalidatePath('/admin/users');
   return { status: 'success' };
 }
 
 export async function warnUserAction(userId: string): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const [p] = await db
     .select({ sid: profiles.lastServerId })
     .from(profiles)
@@ -152,6 +177,7 @@ export async function warnUserAction(userId: string): Promise<Result> {
     senderLabel: '운영팀',
     payload: {},
   });
+  await logAdmin(adminUserId, 'user.warn', userId, null);
   revalidatePath('/admin/users');
   return { status: 'success' };
 }

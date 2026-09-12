@@ -5,37 +5,32 @@ import { digitalGoodsAvailable } from '@/app/(game)/shop/play-checkout';
 
 /**
  * 결제 경로 판정 — 앱=Play 결제, 웹·PWA=포트원.
- * 회귀 방지 대상은 "쿠키 단독 판정"이다. TWA는 크롬과 저장소를 공유해 앱을 한 번 열면 같은 기기의
- * 브라우저 탭에도 ig_platform이 남는다. 쿠키만 보면 그 탭에서 포트원 결제가 통째로 막힌다.
+ * 판정 근거는 둘뿐이다: Digital Goods 서비스가 실제로 열리는가, 앱 세션 표식이 있는가.
+ * ig_platform 쿠키는 TWA와 크롬이 저장소를 공유해 같은 기기의 브라우저 탭·PWA로 새므로 쓰지 않는다.
  */
 describe('usePlayBilling', () => {
   it('Digital Goods 서비스가 실제로 열리면 Play 결제 — 앱 안이라는 확실한 증거', () => {
-    expect(usePlayBilling({ hasDigitalGoods: true, twaCookie: true, standalone: true })).toBe(true);
-    // 쿠키가 지워졌어도(저장소 정리 등) 서비스가 열리면 앱이다.
-    expect(usePlayBilling({ hasDigitalGoods: true, twaCookie: false, standalone: true })).toBe(true);
+    expect(usePlayBilling({ hasDigitalGoods: true })).toBe(true);
+    expect(usePlayBilling({ hasDigitalGoods: true, appSession: false })).toBe(true);
   });
 
-  it('브라우저 탭은 쿠키가 새어 들어와도 포트원 — 모바일 웹 결제가 막히면 안 된다', () => {
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: false })).toBe(false);
+  it('웹·PWA는 포트원', () => {
+    expect(usePlayBilling({ hasDigitalGoods: false })).toBe(false);
+    expect(usePlayBilling({ hasDigitalGoods: false, appSession: false })).toBe(false);
   });
 
-  it('웹·PWA(쿠키 없음)는 포트원', () => {
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: false, standalone: false })).toBe(false);
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: false, standalone: true })).toBe(false);
+  it('앱 세션 표식이 있으면 API가 없어도 Play 경로 — 커스텀탭 폴백에서 포트원이 열리면 안 된다', () => {
+    // 도메인 검증 실패로 앱이 주소창 있는 커스텀탭으로 뜨는 경우. Digital Goods가 없어도
+    // 포트원을 열면 구글 정책 위반이라 Play 경로로 보내 안내로 끝낸다.
+    expect(usePlayBilling({ hasDigitalGoods: false, appSession: true })).toBe(true);
   });
 
-  it('앱 표식 + standalone인데 API가 없으면 Play 경로로 보내 안내로 끝낸다 — 포트원 노출은 정책 위반', () => {
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: true })).toBe(true);
-  });
-
-  it('앱 세션 표식이 있으면 standalone이 아니어도 Play 경로 — 커스텀탭 폴백에서 포트원이 열리면 안 된다', () => {
-    // 도메인 검증 실패로 앱이 주소창 있는 커스텀탭으로 뜨는 경우. standalone이 아니라
-    // 종전 안전망(쿠키 AND standalone)은 이 상황을 놓쳤다(2026-09-11 전수조사).
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: false, appSession: true })).toBe(true);
-  });
-
-  it('세션 표식은 탭마다 독립이라 브라우저 탭에는 없다 — 쿠키만 새어 들어와도 포트원 유지', () => {
-    expect(usePlayBilling({ hasDigitalGoods: false, twaCookie: true, standalone: false, appSession: false })).toBe(false);
+  // 2026-09-12 — 같은 기기에 홈 화면 PWA와 앱을 둘 다 두면 PWA에도 ig_platform 쿠키가 남고
+  // PWA도 standalone이다. 종전 안전망(쿠키 && standalone)이 그 PWA의 결제를 통째로 막았는데,
+  // 정작 PWA는 Play 결제를 쓸 수 없어 아무 경로도 남지 않았다. 쿠키·standalone은 이제 안 본다.
+  it('쿠키·standalone은 더 이상 판정에 쓰지 않는다 — PWA 결제가 막히면 안 된다', () => {
+    const pwaWithLeakedCookie = { hasDigitalGoods: false, appSession: false };
+    expect(usePlayBilling(pwaWithLeakedCookie)).toBe(false);
   });
 });
 

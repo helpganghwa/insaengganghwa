@@ -54,6 +54,7 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   announcements: '전역', admin_scheduled_mails: '전역(운영 예약)', daily_supply_broadcasts: '전역 방송 기록',
   catalog_items: '전역', servers: '전역', zones: '전역', zone_adjacency: '전역',
   system_mode: '전역', cron_heartbeats: '크론 dead-man 원장', schema_migrations: '마이그레이션 원장',
+  enhance_totals: '전역 누적 집계 스냅샷 1행(0198) — 유저 축이 없고 크론이 재계산해 자가치유',
 };
 
 export async function withdrawAccount(userId: string): Promise<void> {

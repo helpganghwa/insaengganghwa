@@ -40,24 +40,25 @@ export function isStandaloneDisplay(): boolean {
  * 같은 성질) 앱을 한 번 열면 같은 기기의 크롬 탭에도 `ig_platform`이 남고, 그 브라우저에서 포트원
  * 결제가 통째로 막힌다.
  *
- * 쿠키는 2순위 안전망으로만 쓴다: 앱인데 API가 없는 환경(커스텀탭 폴백·구버전 크롬)에서 포트원
- * 결제창을 띄우면 구글 정책 위반이라, 그때는 결제를 포기하고 안내로 끝내야 한다. `standalone`을 함께
- * 보는 이유는 브라우저 탭을 이 안전망에서 빼기 위해서다.
- * 남는 틈: 같은 기기에 PWA와 앱을 모두 설치하면 PWA도 standalone이라 안내로 빠진다(결제는 앱에서 가능).
+ * 2순위 안전망은 **세션 표식(appSession)뿐**이다: 앱인데 API가 없는 환경(커스텀탭 폴백·구버전
+ * 크롬)에서 포트원 결제창을 띄우면 구글 정책 위반이라, 그때는 결제를 포기하고 안내로 끝내야 한다.
+ * 세션 표식은 앱 진입(`/?src=twa` → `#app`)이나 `android-app://` referrer에서만 붙고 탭·앱마다
+ * 독립이라 다른 브라우징 컨텍스트로 새지 않는다(AppSessionMark).
+ *
+ * 종전엔 `쿠키 && standalone`도 안전망이었는데 **뺐다**(2026-09-12, 사용자 확정). 쿠키는 앱과 크롬이
+ * 공유하므로, 같은 기기에 홈 화면 PWA와 앱을 둘 다 두면 PWA도 `쿠키 && standalone`을 만족해 결제가
+ * 통째로 막혔다 — 정작 그 PWA는 Play 결제를 쓸 수 없어 아무 경로도 남지 않는다. 쿠키가 메우던
+ * 진짜 구멍(앱인데 API 없음)은 세션 표식이 같은 상황을 이미 잡는다.
  */
 export function usePlayBilling(facts: {
   /** Digital Goods 서비스가 실제로 열렸는가(존재 여부가 아니다 — 위 주석). */
   hasDigitalGoods: boolean;
-  twaCookie: boolean;
-  standalone: boolean;
   /** 앱이 심은 표식을 이 브라우징 컨텍스트에서 직접 봤는가(세션 한정 — 쿠키와 달리 새지 않는다). */
   appSession?: boolean;
 }): boolean {
   if (facts.hasDigitalGoods) return true;
   // 2순위 안전망 — 앱인데 Digital Goods API가 없는 환경(커스텀탭 폴백·구형 크롬)에서 포트원
-  // 결제창을 띄우면 정책 위반이다. 종전엔 `쿠키 && standalone`이었는데, 폴백은 주소창이 있어
-  // standalone이 **아니다** — 안전망이 필요한 바로 그 상황에서 열리지 않았다(2026-09-11 전수조사).
-  // 세션 표식은 탭 단위라 같은 기기의 다른 크롬 탭으로 새지 않으므로 standalone 없이 써도 안전하다.
-  if (facts.appSession) return true;
-  return facts.twaCookie && facts.standalone;
+  // 결제창을 띄우면 정책 위반이다. 세션 표식은 탭 단위라 같은 기기의 다른 브라우징 컨텍스트로
+  // 새지 않는다. 쿠키·standalone은 더 보지 않는다(위 주석 — PWA가 막히던 원인).
+  return facts.appSession === true;
 }

@@ -1,4 +1,4 @@
-import { isAppSession, isStandaloneDisplay, isTwaClient, usePlayBilling } from '@/lib/platform-client';
+import { isAppSession, usePlayBilling } from '@/lib/platform-client';
 import { PLAY_BILLING_METHOD } from '@/lib/payment/play-sku';
 
 import { createPlayOrderAction, verifyPlayPurchaseAction } from './actions';
@@ -47,14 +47,14 @@ export async function digitalGoodsAvailable(host?: DigitalGoodsHost): Promise<bo
 /**
  * 결제 경로 선택 — 사실만 모아 순수 규칙(usePlayBilling)에 넘긴다. 규칙과 근거는 그쪽 주석 참조.
  *
- * 앱 표식(세션 표식 또는 쿠키+standalone)만으로 Play가 확정되면 프로브를 건너뛴다. 결과가 같을 뿐
- * 아니라, 앱 안에서 프로브가 실패하더라도 포트원으로 새면 안 되기 때문이다(구글 정책).
+ * 앱 세션 표식만으로 Play가 확정되면 프로브를 건너뛴다. 결과가 같을 뿐 아니라, 앱 안에서 프로브가
+ * 실패하더라도 포트원으로 새면 안 되기 때문이다(구글 정책).
  */
 export async function shouldUsePlayBilling(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  const facts = { twaCookie: isTwaClient(), standalone: isStandaloneDisplay(), appSession: isAppSession() };
-  if (usePlayBilling({ ...facts, hasDigitalGoods: false })) return true;
-  return usePlayBilling({ ...facts, hasDigitalGoods: await digitalGoodsAvailable() });
+  const appSession = isAppSession();
+  if (usePlayBilling({ appSession, hasDigitalGoods: false })) return true;
+  return usePlayBilling({ appSession, hasDigitalGoods: await digitalGoodsAvailable() });
 }
 
 /** 표시 가격(콘솔 등록가) — 실패하면 null(카탈로그 KRW로 표시). 결제 시트가 어차피 실제 가격을 보여준다. */

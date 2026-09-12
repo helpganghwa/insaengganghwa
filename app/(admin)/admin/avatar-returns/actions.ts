@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { avatarReturnRequests, profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { characterIdFromSpriteUrl } from '@/lib/game/profile/return';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { adminActions } from '@/lib/db/schema/ops';
 
 type Result = { status: 'success' } | { status: 'error'; code: string };
 
@@ -21,7 +22,7 @@ export async function decideAvatarReturn(
   outcome: 'full' | 'half',
   note?: string,
 ): Promise<Result> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const id = BigInt(requestId);
   return db.transaction(async (tx) => {
     const [req] = await tx
@@ -80,6 +81,16 @@ export async function decideAvatarReturn(
         decidedAt: new Date(),
       })
       .where(eq(avatarReturnRequests.id, id));
+
+    // 판정 자체는 요청 행에 남지만 **누가** 결정했는지는 없었다(2026-09-12). 재화가 움직이는
+    // 조치는 조치 원장에도 같이 남긴다 — 분쟁 조사가 admin_actions 한 곳에서 끝나게.
+    await tx.insert(adminActions).values({
+      adminUserId,
+      action: 'avatar_return.decide',
+      targetType: 'avatar_return_request',
+      targetId: requestId,
+      payload: { userId: req.userId, serverId: req.serverId, outcome, paid, refund },
+    });
 
     revalidatePath('/admin/avatar-returns');
     return { status: 'success' };

@@ -84,7 +84,11 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
       .limit(1);
     if (!order) {
       // 우리 주문과 연결되지 않은 구매(검증 전 취소·테스트 구매 등) — 지급된 것이 없으니 기록만.
+      // ⚠ 이 값이 꾸준히 0이 아니면 토큰 매칭이 새는 것이다(지급했는데 환불 회수를 못 함).
+      // 크론이 하트비트 detail에 unknown=n을 남기므로 어드민 대시보드에서 추세를 본다
+      // (2026-09-12 실측 시점 Play paid 주문 0건 — 알림 임계는 사례가 쌓인 뒤에 정한다).
       unknown++;
+      console.warn('[play-sync] 주문 미매칭 voided 구매', v.purchaseToken.slice(0, 12));
       continue;
     }
     if (order.status === 'refunded') {

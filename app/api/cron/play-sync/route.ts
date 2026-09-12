@@ -34,6 +34,16 @@ export async function GET(req: Request) {
   const cancelled = await step('cancelled', syncPlayCancelledRecent);
   const failed = (v: unknown) => typeof v === 'object' && v !== null && 'failed' in v && (v as { failed: number }).failed > 0;
   const ok = errors.length === 0 && !failed(consume) && !failed(voided) && !failed(cancelled);
-  if (ok) await beatCron('play-sync');
+  // 하트비트에 수치를 남긴다(2026-09-12) — 종전엔 beatCron('play-sync')만 불러 detail이 null이라,
+  // syncPlayVoided의 `unknown`(우리 주문과 안 붙는 취소 구매)이 어디에도 안 남았다. 그 값이 꾸준히
+  // 0이 아니면 토큰 매칭이 새는 것인데 **셀 방법 자체가 없었다**. 알림을 붙이기 전에 먼저 센다.
+  const n = (v: unknown, k: string) =>
+    typeof v === 'object' && v !== null && k in v ? String((v as Record<string, unknown>)[k]) : '?';
+  if (ok) {
+    await beatCron(
+      'play-sync',
+      `consume=${n(consume, 'consumed')} voided=${n(voided, 'voided')} refunded=${n(voided, 'refunded')} unknown=${n(voided, 'unknown')} cancelled=${n(cancelled, 'refunded')}`,
+    );
+  }
   return Response.json({ ok, consume, voided, cancelled, errors, kind: 'play-sync' }, { status: ok ? 200 : 500 });
 }

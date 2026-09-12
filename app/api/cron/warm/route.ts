@@ -11,6 +11,7 @@
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron, getStaleCrons, markStaleAlerted } from '@/lib/cron/heartbeat';
+import { refreshEnhanceTotals } from '@/lib/game/stats/queries';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 
 export const runtime = 'nodejs';
@@ -45,6 +46,18 @@ export async function GET(req: Request) {
   } catch (e) {
     out.stale = (e as Error).message;
     watchdog = `watchdog:ERR ${(e as Error).message.slice(0, 120)}`;
+  }
+
+  // 누적 강화 통계 스냅샷(0198) — 10분 지난 경우에만 전수 집계. 별도 크론을 늘리지 않고 매분 도는
+  // warm에 얹되, 실패·지연이 워치독을 건드리면 안 되므로 타임아웃 + 삼킴. 값이 조금 늦어도 무해하다.
+  try {
+    const done = await Promise.race([
+      refreshEnhanceTotals(),
+      new Promise<null>((r) => setTimeout(() => r(null), 6000)),
+    ]);
+    out.enhanceTotals = done === null ? 'timeout' : done ? 'refreshed' : 'fresh';
+  } catch (e) {
+    out.enhanceTotals = `ERR ${(e as Error).message.slice(0, 80)}`;
   }
 
   // beat 호출은 조건 없이 유지 — warm이 beat를 멈추면 /api/health/deep이 503(cron-system-down)을

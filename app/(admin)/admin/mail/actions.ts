@@ -9,6 +9,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox, adminMailLogs, adminScheduledMails } from '@/lib/db/schema/mailbox';
 import { sendPushToUser, sendPushToUsers } from '@/lib/push/send';
+import { SENDABLE_SQL } from '@/lib/game/account/ban';
 
 export interface MailPayload {
   diamond?: number;
@@ -199,7 +200,7 @@ export async function broadcastMailAction(opts: {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, ${targetServerId}, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from profiles p
-        where p.withdrawn_at is null
+        where ${SENDABLE_SQL('p')}
           and exists(select 1 from characters c where c.user_id = p.id and c.server_id = ${targetServerId})
         returning id
       `
@@ -207,7 +208,7 @@ export async function broadcastMailAction(opts: {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from profiles p
-        where p.withdrawn_at is null
+        where ${SENDABLE_SQL('p')}
         returning id
       `,
       )) as unknown as { id: string }[];
@@ -228,8 +229,8 @@ export async function broadcastMailAction(opts: {
           .from(profiles)
           .where(
             targetServerId != null
-              ? sql`${profiles.withdrawnAt} is null and ${profiles.lastServerId} = ${targetServerId}`
-              : sql`${profiles.withdrawnAt} is null`,
+              ? sql`${SENDABLE_SQL('profiles')} and ${profiles.lastServerId} = ${targetServerId}`
+              : SENDABLE_SQL('profiles'),
           );
         await sendPushToUsers(ids.map((r) => r.id), {
           title: '운영자 우편 도착',

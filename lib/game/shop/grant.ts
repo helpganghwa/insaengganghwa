@@ -14,6 +14,9 @@ import { reclaimBoxesTotal } from '@/lib/game/supply/reclaim';
 import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
 import { periodKey } from './period';
 
+/** 즉시 보상 우편 제목 — 지급과 회수가 같은 문자열을 봐야 주문 단위 회수가 정확하다. */
+const PREMIUM_INSTANT_TITLE = '성장 프리미엄 — 즉시 보상';
+
 /**
  * 상점 지급 — dev 테스트 즉시구매(dev-purchase)와 실결제(payment) **공용 단일 진실 원천**.
  * 지급 수치·분배·우편 형식이 두 경로에서 어긋나면 결제 정합성이 깨지므로 여기서만 정의.
@@ -130,7 +133,7 @@ export async function applyProductGrant(
 
   if (productId === PREMIUM.id) {
     await mailPremiumInstant(tx, userId, serverId, g, {
-      title: '성장 프리미엄 — 즉시 보상',
+      title: PREMIUM_INSTANT_TITLE,
       body: '성장 프리미엄 구매 감사합니다. 즉시 보상이 도착했어요. 매일 보상도 우편으로 찾아갑니다.',
     });
   } else {
@@ -157,7 +160,8 @@ export async function applyProductGrant(
  *    음수 잔액은 UI·차감 불변식을 깨므로 의도적으로 만들지 않는다(악용 방지는 추후 정책으로).
  *  - 상자: **슬롯 합계** 기준 회수(reclaimBoxesTotal). 환불 사전판정이 합계로 충분 여부를 보므로
  *    슬롯별 역분배로 회수하면 판정은 통과하고 회수만 조용히 줄어든다(supply/reclaim.ts 참조).
- *  - 프리미엄: 미래 일일 드립 중단(shop_purchases 행 삭제) + **미수령** 프리미엄 우편 회수(claimedAt null).
+ *  - 프리미엄: **주문 단위**. 살아 있는 프리미엄 주문이 더 없을 때만 일일 드립 중단(shop_purchases
+ *    행 삭제) + 미수령 프리미엄 우편 전부 회수. 다른 주문이 남아 있으면 즉시 보상 한 통만 회수한다.
  *    이미 수령(지갑 반영)한 분은 자동 회수하지 않는다(운영 수동) — 중복 회수 방지.
  */
 export async function reclaimProductGrant(
@@ -169,25 +173,55 @@ export async function reclaimProductGrant(
   ref?: string,
 ): Promise<void> {
   if (productId === PREMIUM.id) {
-    await tx
-      .delete(shopPurchases)
-      .where(
-        and(
-          eq(shopPurchases.userId, userId),
-          eq(shopPurchases.serverId, serverId),
-          eq(shopPurchases.productId, PREMIUM.id),
-        ),
-      );
-    await tx
-      .delete(mailbox)
-      .where(
-        and(
-          eq(mailbox.userId, userId),
-          eq(mailbox.serverId, serverId),
-          eq(mailbox.senderLabel, '성장 프리미엄'),
-          isNull(mailbox.claimedAt),
-        ),
-      );
+    // 회수는 **주문 단위**여야 한다(2026-09-12 사용자 확정). 종전엔 ref를 무시하고 프리미엄
+    // 권리를 통째로 지웠다 — 두 번 산 유저가 한 건만 환불하면 아직 돈을 낸 쪽의 일일 지급까지
+    // 같이 끊기고 미수령 우편도 전부 사라졌다.
+    //
+    // 이 주문은 호출 시점에 이미 refunded로 전이돼 있으므로(refund.ts) 아래 조회에 안 걸린다.
+    // grant_skipped 주문은 애초에 지급이 없었으니 권리로 치지 않는다.
+    const [alive] = (await tx.execute(sql`
+      select 1 from iap_orders
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+        and product_code = ${PREMIUM.id} and status = 'paid' and grant_skipped = false
+      limit 1
+    `)) as unknown as unknown[];
+
+    if (!alive) {
+      // 살아 있는 프리미엄 주문이 없다 — 권리 자체가 사라졌으므로 종전대로 전부 회수.
+      await tx
+        .delete(shopPurchases)
+        .where(
+          and(
+            eq(shopPurchases.userId, userId),
+            eq(shopPurchases.serverId, serverId),
+            eq(shopPurchases.productId, PREMIUM.id),
+          ),
+        );
+      await tx
+        .delete(mailbox)
+        .where(
+          and(
+            eq(mailbox.userId, userId),
+            eq(mailbox.serverId, serverId),
+            eq(mailbox.senderLabel, '성장 프리미엄'),
+            isNull(mailbox.claimedAt),
+          ),
+        );
+      return;
+    }
+
+    // 다른 주문이 살아 있다 — 일일 지급 권리는 그 주문 몫이라 건드리지 않고, 즉시 보상 **한 통**만
+    // 미수령이면 회수한다. 어느 통이 어느 주문 것인지는 우편에 남지 않지만 값이 같으므로 개수가
+    // 맞으면 결과도 맞다(주문 2건·수령 1통 → 1통 남김). 이미 수령한 분은 종전 정책대로 운영 수동.
+    await tx.execute(sql`
+      delete from mailbox where id in (
+        select id from mailbox
+        where user_id = ${userId}::uuid and server_id = ${serverId}
+          and sender_label = '성장 프리미엄' and claimed_at is null
+          and title = ${PREMIUM_INSTANT_TITLE}
+        order by id desc limit 1
+      )
+    `);
     return;
   }
 

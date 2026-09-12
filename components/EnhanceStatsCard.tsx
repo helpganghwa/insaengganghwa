@@ -38,14 +38,17 @@ function StatsShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** 값이 없으면 "—" — 조회 실패를 "0번 성공했다"로 보여주지 않는다(fallback과 같은 모습). */
+const num = (v: number | null) => (v == null ? '—' : fmtCompact(v));
+
 export async function EnhanceStatsCard() {
   const s = await getEnhanceLive();
   return (
     <StatsShell>
       <StatTile tone="live" value={`${s.totalUsers.toLocaleString('ko-KR')}명`} label="인생강화중" />
-      <StatTile tone="success" value={fmtCompact(s.success)} label="강화 성공" />
-      <StatTile tone="hold" value={fmtCompact(s.hold)} label="강화 유지" />
-      <StatTile tone="down" value={fmtCompact(s.down)} label="강화 하락" />
+      <StatTile tone="success" value={num(s.success)} label="강화 성공" />
+      <StatTile tone="hold" value={num(s.hold)} label="강화 유지" />
+      <StatTile tone="down" value={num(s.down)} label="강화 하락" />
     </StatsShell>
   );
 }

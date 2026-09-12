@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -38,3 +38,18 @@ export async function getBanStateCached(userId: string): Promise<BanState> {
   banCache.set(userId, { at: Date.now(), s });
   return s;
 }
+
+/**
+ * 전체 발송(우편·알림) 수신 자격 — SQL 조각. `profiles` 별칭을 받아 where 절에 끼운다.
+ *
+ * 전체 발송이 `withdrawn_at is null`만 보던 탓에 **정지 계정에도 운영 우편과 푸시가 갔다**
+ * (2026-09-12 검수). 정지된 유저는 게임에 들어올 수 없어 보상을 받을 수도, 공지를 볼 수도 없는데
+ * 푸시만 계속 받는다 — 운영 메시지가 정지 사실과 모순되는 신호를 보내는 셈이다.
+ *
+ * 판정은 getBanState와 같다: 정지 시각이 있고, 해제 예정이 없거나 아직 오지 않음. 기간이 지난
+ * 정지는 자동 해제로 보므로 수신 대상이다.
+ */
+export const SENDABLE_SQL = (alias: string) =>
+  sql.raw(
+    `${alias}.withdrawn_at is null and (${alias}.banned_at is null or (${alias}.ban_until is not null and ${alias}.ban_until <= now()))`,
+  );

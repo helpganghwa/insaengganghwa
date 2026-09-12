@@ -13,6 +13,7 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
+import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
         from profiles p, lg
-        where p.withdrawn_at is null
+        where ${SENDABLE_SQL('p')}
         returning id
       `)) as unknown as { id: string }[];
       sent += rows.length;
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
           const ids = await db
             .select({ id: profiles.id })
             .from(profiles)
-            .where(sql`${profiles.withdrawnAt} is null`);
+            .where(SENDABLE_SQL('profiles'));
           // 푸시는 짧게, 우편은 길게(2026-08-29 확정): 제목 = 우편 제목, 본문 = 우편 본문의 첫 문장들을 60자 이내로
           // (문장 단위로 끊어 잘린 말 없이). 마크다운 강조(**)·줄바꿈 제거.
           await sendPushToUsers(ids.map((r) => r.id), {
