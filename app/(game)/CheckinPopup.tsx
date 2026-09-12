@@ -120,15 +120,27 @@ function rewardToasts(r: CheckinReward, bonus: number): HeaderReward[] {
 }
 
 /**
- * 수령 실패 후 닫은 표식 — 값은 **닫은 날(KST)** 이다.
+ * 수령 실패 후 닫은 표식 — 값은 **닫은 시각(epoch ms)** 이다.
  *
- * '1' 같은 불린으로 두면 두 가지가 깨진다(7차 검수). ① 23:50에 닫고 탭을 켜 둔 채 자정을 넘기면
- * **새 날의 출석 팝업도 안 뜬다.** ② 앱(TWA)·홈화면 PWA는 앱을 종료하기 전까지 sessionStorage가
- * 유지돼 "세션"이 며칠 간다 — 점검이 끝나 수령이 가능해져도 그 동안 출석 자체를 못 한다.
- * 출석 진입로가 이 팝업뿐이라 연속 출석이 끊기는 손해가 유저에게 간다.
- * 날짜를 담고 오늘과 다르면 무시하며, 수령에 성공하면 지운다.
+ * 이 표식이 하는 일은 하나뿐이다: 점검처럼 수령이 계속 거부되는 동안 홈에 올 때마다 팝업에
+ * 다시 갇히지 않게 하는 것. 그래서 **짧게만** 살아야 한다.
+ *
+ * 불린('1')으로 두면 ① 23:50에 닫고 자정을 넘겼을 때 새 날의 출석도 안 뜨고 ② 앱·홈화면 PWA는
+ * 앱을 죽이기 전까지 sessionStorage가 유지돼 "세션"이 며칠 간다. 날짜로 바꿔도 ②의 절반이
+ * 남는다 — **점검은 끝나는데 표식은 그날 내내 남아**, 11시에 점검이 풀려도 그 유저는 그날
+ * 출석을 못 한다. 그래서 30분 만료 + 같은 KST 날짜 둘 다 만족할 때만 인정한다(7차 검수).
  */
 const DISMISS_KEY = 'ig:checkin-dismissed';
+/** 표식 유효 시간 — 점검이 끝나면 곧 다시 시도할 수 있어야 한다. */
+const DISMISS_TTL_MS = 30 * 60_000;
+
+/** 저장된 표식이 아직 유효한가 — 30분 이내 + 같은 KST 날짜. */
+function dismissedRecently(raw: string | null): boolean {
+  const at = Number(raw);
+  if (!Number.isFinite(at) || at <= 0) return false;
+  if (Date.now() - at >= DISMISS_TTL_MS) return false;
+  return new Date(at + 9 * 3600_000).toISOString().slice(0, 10) === kstDay();
+}
 
 export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const router = useRouter();
@@ -145,7 +157,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const [closed, setClosed] = useState(false);
   useEffect(() => {
     try {
-      if (window.sessionStorage.getItem(DISMISS_KEY) === kstDay()) setClosed(true);
+      if (dismissedRecently(window.sessionStorage.getItem(DISMISS_KEY))) setClosed(true);
     } catch {
       // 저장소 차단 — 표식 없음으로 본다.
     }
@@ -194,7 +206,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
     try {
       // 실패해서 닫았으면 오늘 날짜를 남기고, 수령이 끝난 뒤 닫았으면 표식을 거둔다
       // (점검이 풀린 뒤 같은 세션에서 다시 열 수 있어야 한다).
-      if (remember) window.sessionStorage.setItem(DISMISS_KEY, kstDay());
+      if (remember) window.sessionStorage.setItem(DISMISS_KEY, String(Date.now()));
       else window.sessionStorage.removeItem(DISMISS_KEY);
     } catch {
       // 저장 불가 — 종전대로 이 렌더에서만 닫힌다.
