@@ -200,7 +200,7 @@ export async function broadcastMailAction(opts: {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, ${targetServerId}, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from profiles p
-        where ${SENDABLE_SQL('p')}
+        where p.withdrawn_at is null
           and exists(select 1 from characters c where c.user_id = p.id and c.server_id = ${targetServerId})
         returning id
       `
@@ -208,7 +208,7 @@ export async function broadcastMailAction(opts: {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from profiles p
-        where ${SENDABLE_SQL('p')}
+        where p.withdrawn_at is null
         returning id
       `,
       )) as unknown as { id: string }[];
@@ -255,15 +255,17 @@ export async function broadcastMailAction(opts: {
 
 /**
  * 전체 발송 대상 수 — 발송 전 미리보기.
- * 발송 본문과 **같은 술어**를 써야 한다(2026-09-12). 종전엔 가입자 전수를 세어 탈퇴·정지를
+ * 우편 발송 본문과 **같은 술어**를 쓴다(2026-09-12). 종전엔 가입자 전수를 세어 탈퇴자까지
  * 포함했고, 발송은 그들을 빼므로 "N명에게 보냅니다"와 실제 적재 건수가 어긋나 유실로 오인됐다.
+ * ⚠ 서버를 지정하면 실제 적재는 그 서버에 캐릭터가 있는 사람만이라 더 적다 — 이 숫자는
+ * 전 서버 기준이다(미리보기를 서버별로 다시 부르는 것은 별도 회차).
  */
 export async function getBroadcastRecipientCountAction(): Promise<{ count: number }> {
   await requireAdmin();
   const [row] = await db
     .select({ c: sql<number>`count(*)::int` })
     .from(profiles)
-    .where(SENDABLE_SQL('profiles'));
+    .where(sql`${profiles.withdrawnAt} is null`);
   return { count: row?.c ?? 0 };
 }
 

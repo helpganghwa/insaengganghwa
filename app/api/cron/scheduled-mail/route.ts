@@ -59,7 +59,7 @@ export async function GET(req: Request) {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
         from profiles p, lg
-        where ${SENDABLE_SQL('p')}
+        where p.withdrawn_at is null
         returning id
       `)) as unknown as { id: string }[];
       sent += rows.length;
