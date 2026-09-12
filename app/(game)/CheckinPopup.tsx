@@ -128,14 +128,23 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   // 수령 실패로 닫은 사실은 **세션에 남긴다**(2026-09-12 6차 검수). 이 팝업은 홈에만 마운트되고
   // closed가 컴포넌트 지역 상태라, 점검 중이라 수령이 계속 거부되는 동안엔 홈을 떠났다 돌아올
   // 때마다 다시 갇혔다. 세션 표식이면 그 방문 동안은 다시 뜨지 않고, 다음 접속엔 정상 복귀한다.
-  const [closed, setClosed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+  //
+  // ⚠ 표식은 **마운트 후에** 읽는다. 초기 state에서 읽으면 서버(표식 모름 → 팝업 그림)와 클라
+  // (표식 있음 → 숨김)가 어긋나 하이드레이션 오류가 난다(React #418 — 7차 검수에서 실측).
+  // 그 오류는 client_errors 수집기에도 그대로 쌓인다. 그래서 마운트 전에는 아무것도 그리지 않고,
+  // 마운트 직후 표식을 읽어 판정한다. 오버레이라 한 틱 늦게 뜨는 것은 체감되지 않는다.
+  const [mounted, setMounted] = useState(false);
+  const [closed, setClosed] = useState(false);
+  useEffect(() => {
+    let dismissed = false;
     try {
-      return window.sessionStorage.getItem(DISMISS_KEY) === '1';
+      dismissed = window.sessionStorage.getItem(DISMISS_KEY) === '1';
     } catch {
-      return false;
+      // 저장소 차단 — 표식 없음으로 본다.
     }
-  });
+    if (dismissed) setClosed(true);
+    setMounted(true);
+  }, []);
   const [fxOn, setFxOn] = useState(false); // 낙관 시퀀스 시작됨(버튼=닫기·배경 닫기 허용)
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -167,7 +176,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
     return () => t.forEach(clearTimeout);
   }, []);
 
-  if (closed) return null;
+  if (!mounted || closed) return null;
 
   const after = (ms: number, f: () => void) => timersRef.current.push(setTimeout(f, ms));
   const closePopup = (remember = false) => {

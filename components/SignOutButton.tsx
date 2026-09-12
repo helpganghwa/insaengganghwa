@@ -18,6 +18,15 @@ import { unregisterPushSubscriptionAction } from '@/lib/push/actions';
  *
  * 정리에 실패해도 로그아웃은 반드시 진행한다. 알림이 조금 새는 것보다 세션이 안 닫히는 쪽이 나쁘다.
  */
+
+/**
+ * 로그아웃 시 비우는 세션 표식 — **계정 축**의 판단만 담는다.
+ *  - push_synced: 이 세션에서 구독을 서버와 맞췄는가(다음 로그인이 새 주인으로 다시 맞춰야 한다)
+ *  - ig:checkin-dismissed: 출석 팝업을 닫았는가(다음 사람에게 적용되면 안 된다)
+ * `ig_app`은 앱이 연 화면인가라는 **기기/브라우징 컨텍스트** 사실이라 로그아웃과 무관하다.
+ */
+const ACCOUNT_SESSION_KEYS = ['push_synced', 'ig:checkin-dismissed'];
+
 export function SignOutButton({ className, children }: { className?: string; children: ReactNode }) {
   const [pending, startTransition] = useTransition();
 
@@ -31,10 +40,14 @@ export function SignOutButton({ className, children }: { className?: string; chi
       } catch {
         // 서비스워커 없음·저장소 차단 등 — 무시하고 로그아웃으로 넘어간다.
       }
-      try {
-        sessionStorage.removeItem('push_synced');
-      } catch {
-        // noop
+      // 계정에 딸린 세션 표식은 지운다 — 같은 탭에서 다른 계정이 로그인하면 앞 계정의 판단이
+      // 그대로 적용된다. `ig_app`(앱 진입 표식)은 **기기** 맥락이라 남긴다.
+      for (const k of ACCOUNT_SESSION_KEYS) {
+        try {
+          sessionStorage.removeItem(k);
+        } catch {
+          // noop
+        }
       }
       await signOut();
     });
