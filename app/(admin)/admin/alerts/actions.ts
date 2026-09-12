@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
+import { adminActions } from '@/lib/db/schema/ops';
 import { paymentAlerts } from '@/lib/db/schema/payment';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
@@ -19,15 +20,33 @@ function parseId(s: string): bigint | null {
   }
 }
 
+/**
+ * 운영 조치 기록(2026-09-12 전수조사) — 이 파일의 두 액션은 **재화가 움직이거나 돈 관련 경보를
+ * 끄는** 조치인데 실행자가 어디에도 남지 않았다. 기록 실패가 조치를 되돌리면 안 되므로 삼킨다.
+ */
+async function logAdmin(
+  adminUserId: string,
+  action: string,
+  alertId: string,
+  payload: Record<string, unknown> | null,
+) {
+  await db
+    .insert(adminActions)
+    .values({ adminUserId, action, targetType: 'payment_alert', targetId: alertId, payload })
+    .catch((e) => console.error('[admin] 조치 기록 실패', action, alertId, e));
+}
+
 /** 사고를 해결 처리(resolved=true). 같은 (kind,payment_id) 재발 시 새 알림 생성됨. */
 export async function resolveAlertAction(alertId: string) {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const id = parseId(alertId);
   if (id == null) return { status: 'error', code: 'BAD_ID' } as const;
   await db
     .update(paymentAlerts)
     .set({ resolved: true, resolvedAt: new Date() })
     .where(eq(paymentAlerts.id, id));
+  // 돈 관련 경보를 **누가 껐는지** 남긴다(2026-09-12) — 종전엔 알림만 조용히 사라졌다.
+  await logAdmin(adminUserId, 'payment_alert.resolve', alertId, null);
   revalidatePath('/admin/alerts');
   return { status: 'success' } as const;
 }
@@ -41,7 +60,7 @@ export async function resolveAlertAction(alertId: string) {
  *   다시 돌려도 회수액이 같고, 이미 refunded라 ok=true로 돌아와 사고가 거짓 해결된다.
  */
 export async function retryAlertAction(alertId: string) {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const id = parseId(alertId);
   if (id == null) return { status: 'error', code: 'BAD_ID' } as const;
 
@@ -63,6 +82,14 @@ export async function retryAlertAction(alertId: string) {
   } else {
     return { status: 'error', code: 'NOT_RETRYABLE' } as const;
   }
+
+  // 재지급·재회수는 재화가 움직이는 조치다 — 성공 여부와 무관하게 시도를 남긴다(실패한 시도도
+  // "누가 언제 무엇을 건드렸나"의 일부다).
+  await logAdmin(adminUserId, 'payment_alert.retry', alertId, {
+    kind: a.kind,
+    paymentId: a.paymentId,
+    ok,
+  });
 
   if (ok) {
     await db

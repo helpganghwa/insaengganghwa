@@ -134,6 +134,30 @@ export async function refundOrderAction(
   const r = await refundPurchase(order.portoneOrderId);
   if (!r.ok) return { status: 'error', code: r.code } as const; // NOT_CANCELLED = 포트원 여전히 결제됨
 
+  // ⚠ 실행자를 남긴다(2026-09-12 전수조사). 종전엔 **약관 예외(force) 분기 안에서만** 기록해,
+  // 잔액이 충분한 평범한 환불 — 돈이 나가고 재화를 회수하는 조치 — 은 아무 흔적도 없었다.
+  // iap_refunds에는 실행자 컬럼이 없으므로 이 원장이 유일한 "누가 환불했나"의 근거다.
+  // 정지·경고 같은 가벼운 조치는 남는데 가장 무거운 금전 조치가 빠진 역전이었다.
+  await db
+    .insert(adminActions)
+    .values({
+      adminUserId,
+      action: 'payment.refund',
+      targetType: 'iap_order',
+      targetId: order.id.toString(),
+      payload: {
+        portoneOrderId: order.portoneOrderId,
+        product: order.product,
+        userId: order.userId,
+        serverId: order.serverId,
+        reason,
+        forced: !preview.sufficient,
+        already: r.already,
+        short: r.short ?? null,
+      },
+    })
+    .catch((e) => console.error('[admin.refund] 조치 기록 실패', order.id, e));
+
   revalidatePath('/admin/payments');
   return {
     status: 'success',

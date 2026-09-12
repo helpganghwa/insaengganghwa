@@ -9,6 +9,7 @@ import { db } from '@/lib/db/client';
 import { guilds, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
+import { adminActions } from '@/lib/db/schema/ops';
 import { generateAndStoreEmblem, markEmblemStatus } from '@/lib/game/guild/emblem';
 import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
@@ -19,6 +20,21 @@ import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/e
  *    + 연결된 유료 예치(completed) 자동 환불 + 길드장 통지 우편.
  *  - 별도 환불: 유료 예치 단독 환불(문양은 유지).
  */
+
+/**
+ * 운영 조치 기록(2026-09-12 전수조사) — 문양 검수의 에스크로 환불은 재화가 움직이는데 실행자가
+ * 어디에도 남지 않았다. 환불 트랜잭션과 같은 tx에 넣어 롤백되면 기록도 함께 사라지게 한다.
+ */
+type LogTx = { insert: (t: typeof adminActions) => { values: (v: Record<string, unknown>) => Promise<unknown> } };
+function logEscrow(
+  tx: LogTx,
+  adminUserId: string,
+  action: string,
+  targetId: string,
+  payload: Record<string, unknown>,
+) {
+  return tx.insert(adminActions).values({ adminUserId, action, targetType: 'guild_emblem_escrow', targetId, payload });
+}
 
 export async function adminConfirmEmblem(emblemId: string): Promise<{ ok: boolean; msg?: string }> {
   await requireAdmin();
@@ -35,7 +51,7 @@ export async function adminConfirmEmblem(emblemId: string): Promise<{ ok: boolea
 }
 
 export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean; msg?: string }> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const eid = safeBigInt(emblemId);
   if (eid === null) return { ok: false, msg: '잘못된 문양 ID입니다.' };
   const [emblem] = await db
@@ -116,6 +132,9 @@ export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean
         .returning({ id: guildEmblemEscrows.id });
       if (moved.length > 0) {
         await walletAdd(tx, esc.userId, esc.serverId, esc.amount, 'emblem_refund');
+        await logEscrow(tx as unknown as LogTx, adminUserId, 'emblem.reject_refund', esc.id.toString(), {
+          userId: esc.userId, serverId: esc.serverId, diamond: Number(esc.amount),
+        });
         amount = esc.amount;
         await tx.insert(mailbox).values({
           userId: esc.userId,
@@ -163,7 +182,7 @@ async function stillRemoved(eid: bigint): Promise<boolean> {
 }
 
 export async function adminRefundEmblemEscrow(escrowId: string): Promise<{ ok: boolean; msg?: string }> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const eid = safeBigInt(escrowId);
   if (eid === null) return { ok: false, msg: '잘못된 예치 ID입니다.' };
   const ok = await db.transaction(async (tx) => {
@@ -180,6 +199,9 @@ export async function adminRefundEmblemEscrow(escrowId: string): Promise<{ ok: b
     const r = rows[0];
     if (!r) return false;
     await walletAdd(tx, r.userId, r.serverId, r.amount, 'emblem_refund');
+    await logEscrow(tx as unknown as LogTx, adminUserId, 'emblem.refund_escrow', escrowId, {
+      userId: r.userId, serverId: r.serverId, diamond: Number(r.amount),
+    });
     await tx.insert(mailbox).values({
       userId: r.userId,
       serverId: r.serverId,

@@ -10,6 +10,7 @@ import { avatarReturnRequests, profileGenerationJobs, userProfiles } from '@/lib
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
+import { adminActions } from '@/lib/db/schema/ops';
 import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
 
 /**
@@ -18,8 +19,24 @@ import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
  * - escrow 다이아 환불(walletAdd)
  * - 잡에 회수 사유 기록 + 운영자 우편 통지
  */
+/**
+ * 운영 조치 기록(2026-09-12 전수조사) — 아바타 검수의 환불 두 종은 재화가 움직이는데 실행자가
+ * 어디에도 남지 않았다. 옆 도메인(아바타 반환 판정)은 기록하는데 여기만 빠져 있었다.
+ * 지급 트랜잭션과 같은 tx에 넣어, 롤백되면 기록도 함께 사라지게 한다.
+ */
+type LogTx = { insert: (t: typeof adminActions) => { values: (v: Record<string, unknown>) => Promise<unknown> } };
+function logJob(
+  tx: LogTx,
+  adminUserId: string,
+  action: string,
+  jobId: string,
+  payload: Record<string, unknown>,
+) {
+  return tx.insert(adminActions).values({ adminUserId, action, targetType: 'profile_generation_job', targetId: jobId, payload });
+}
+
 export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean; msg?: string }> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const jid = safeBigInt(jobId);
   if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
   const [job] = await db
@@ -71,6 +88,9 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
       );
     await tx.delete(userProfiles).where(eq(userProfiles.id, profileId));
     await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
+    await logJob(tx as unknown as LogTx, adminUserId, 'avatar.revoke_refund', job.id.toString(), {
+      userId: job.userId, serverId: job.serverId, diamond: Number(job.diamondEscrow),
+    });
     await tx.insert(mailbox).values({
       userId: job.userId,
       serverId: job.serverId,
@@ -93,7 +113,7 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
  * reject로 마킹되므로 첫 생성 할인 이력에서도 제외된다(회수+환불과 동일 정산 의미).
  */
 export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg?: string }> {
-  await requireAdmin();
+  const adminUserId = await requireAdmin();
   const jid = safeBigInt(jobId);
   if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
   const [job] = await db
@@ -134,6 +154,9 @@ export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg
       .returning({ id: profileGenerationJobs.id });
     if (rows.length === 0) return false;
     await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
+    await logJob(tx as unknown as LogTx, adminUserId, 'avatar.refund', job.id.toString(), {
+      userId: job.userId, serverId: job.serverId, diamond: Number(job.diamondEscrow),
+    });
     await tx.insert(mailbox).values({
       userId: job.userId,
       serverId: job.serverId,
