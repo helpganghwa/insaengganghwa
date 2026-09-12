@@ -228,7 +228,14 @@ export function TitlesClient({
       const res = await claimTitleRewardsAction().catch(() => ({ ok: false as const, error: 'NETWORK' }));
       if (!res.ok) {
         setClaimedAll(false);
-        showError('보상 수령에 실패했어. 잠시 후 다시 눌러 줘.');
+        // 정지·점검은 다시 눌러도 안 되는 상태다 — "잠시 후 다시"로 뭉개면 계속 누르게 된다.
+        const msg: Record<string, string> = {
+          BANNED: '이용이 제한된 계정이야.',
+          BLOCKED: '지금은 받을 수 없어. 서버 점검 중이면 끝난 뒤에 다시 눌러 줘.',
+          MAINTENANCE: '서버 점검 중이야. 끝난 뒤에 다시 눌러 줘.',
+          RATE_LIMITED: '너무 빨라. 잠깐 쉬었다 다시 눌러 줘.',
+        };
+        showError(msg[res.error] ?? '보상 수령에 실패했어. 잠시 후 다시 눌러 줘.');
         return;
       }
       const rewards: { icon: string; amount: number }[] = [];

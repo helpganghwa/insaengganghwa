@@ -106,6 +106,9 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         INSUFFICIENT_DIAMOND: '다이아가 부족해요',
         NOT_READY: '아직 귀환하지 않았어요',
         DAILY_LIMIT: '이 슬롯은 오늘 이미 보냈어요 — 내일 다시 보낼 수 있어요',
+        BANNED: '이용이 제한된 계정입니다',
+        MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요',
+        AUTH: '로그인이 필요해요',
       };
       toast.showError(msg[code] ?? '잠시 후 다시 시도해주세요');
     },

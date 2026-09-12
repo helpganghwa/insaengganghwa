@@ -7,6 +7,8 @@ import { sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { getActiveServerId } from '@/lib/game/servers';
+import { actionBlock } from '@/lib/game/action-gate';
+import { rateLimited } from '@/lib/ratelimit';
 
 import type { SupplySlot } from '@/lib/game/balance';
 
@@ -106,6 +108,11 @@ export async function claimTitleRewardsAction(): Promise<
 > {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false, error: 'UNAUTHENTICATED' };
+  // 💎·상자를 실제로 지급하는 경제 액션인데 정지·점검 게이트도 레이트리밋도 없었다(2026-09-12 검수).
+  // 지급 자체는 멱등이라 이중 지급은 없었지만, 정지 계정이 화면 없이 미수령 보상을 전부 수령할 수 있었다.
+  if (await rateLimited(userId, 'challenge')) return { ok: false, error: 'RATE_LIMITED' };
+  const blocked = await actionBlock();
+  if (blocked) return { ok: false, error: blocked };
   const serverId = await getActiveServerId();
   try {
     const r = await claimTitleRewards(userId, serverId);
