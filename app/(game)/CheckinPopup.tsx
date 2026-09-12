@@ -119,10 +119,23 @@ function rewardToasts(r: CheckinReward, bonus: number): HeaderReward[] {
   return rows;
 }
 
+/** 수령 실패 후 닫은 표식 — 세션 한정(탭을 닫으면 사라져 다음 접속엔 정상 노출). */
+const DISMISS_KEY = 'ig:checkin-dismissed';
+
 export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
-  const [closed, setClosed] = useState(false);
+  // 수령 실패로 닫은 사실은 **세션에 남긴다**(2026-09-12 6차 검수). 이 팝업은 홈에만 마운트되고
+  // closed가 컴포넌트 지역 상태라, 점검 중이라 수령이 계속 거부되는 동안엔 홈을 떠났다 돌아올
+  // 때마다 다시 갇혔다. 세션 표식이면 그 방문 동안은 다시 뜨지 않고, 다음 접속엔 정상 복귀한다.
+  const [closed, setClosed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.sessionStorage.getItem(DISMISS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [fxOn, setFxOn] = useState(false); // 낙관 시퀀스 시작됨(버튼=닫기·배경 닫기 허용)
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -157,8 +170,17 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   if (closed) return null;
 
   const after = (ms: number, f: () => void) => timersRef.current.push(setTimeout(f, ms));
-  const closePopup = () => {
+  const closePopup = (remember = false) => {
     timersRef.current.forEach(clearTimeout);
+    // 수령에 실패해 닫은 경우만 세션에 남긴다 — 정상 수령 후 닫기는 서버 상태가 이미 바뀌어
+    // 다시 뜰 일이 없으므로 표식이 필요 없다.
+    if (remember) {
+      try {
+        window.sessionStorage.setItem(DISMISS_KEY, '1');
+      } catch {
+        // 저장 불가 — 종전대로 이 렌더에서만 닫힌다.
+      }
+    }
     setClosed(true);
     router.refresh(); // 헤더 다이아·도전과제·배너 갱신
   };
@@ -348,7 +370,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
-      onClick={fxOn ? closePopup : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
+      onClick={fxOn ? () => closePopup() : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
     >
       {/* 연출 전용 CSS — FLIP 그리드·키프레임(ck- 프리픽스, 팝업 스코프) */}
       <style>{`
@@ -542,7 +564,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   (2026-09-12 검수 — 점검을 켜는 순간 미수령자 전원이 대상). */}
               <button
                 type="button"
-                onClick={closePopup}
+                onClick={() => closePopup(true)}
                 className="mt-3 w-full rounded-xl border border-zinc-700 py-2.5 text-[13px] font-semibold text-zinc-300 active:scale-[0.99]"
               >
                 닫기

@@ -32,6 +32,21 @@ function logAction(
 ) {
   return tx.insert(adminActions).values({ adminUserId, action, targetType: 'profile', targetId: profileId, payload });
 }
+
+/**
+ * 계정 축 기록 — 신고 화면의 targetId는 **아바타 프로필 id**라 계정 id가 아니다(2026-09-12 6차 검수).
+ * `target_id = <userId>`로 한 유저의 조치 이력을 뽑으면 신고 경유 조치가 통째로 빠지므로,
+ * 계정에 가해진 조치(정지·해제)는 users 화면과 **같은 축**(targetType 'user')으로도 남긴다.
+ */
+function logUserAction(
+  tx: Tx,
+  adminUserId: string,
+  action: string,
+  userId: string,
+  payload: Record<string, unknown> | null,
+) {
+  return tx.insert(adminActions).values({ adminUserId, action, targetType: 'user', targetId: userId, payload });
+}
 type Result = { status: 'success' } | { status: 'error'; code: string };
 
 async function ownerOf(tx: Tx, profileId: string) {
@@ -278,8 +293,9 @@ export async function banReportedUser(
       .set({ bannedAt: new Date(), banReason: reason.trim().slice(0, 500), banUntil: until })
       .where(eq(profiles.id, owner.userId));
     await clearReports(tx, profileId);
-    await logAction(tx, adminUserId, 'user.ban', profileId, {
-      userId: owner.userId,
+    await logUserAction(tx, adminUserId, 'user.ban', owner.userId, {
+      via: 'report',
+      profileId,
       reason: reason.trim().slice(0, 500),
       until: until?.toISOString() ?? null,
     });
@@ -298,7 +314,7 @@ export async function unbanReportedUser(profileId: string): Promise<Result> {
       .update(profiles)
       .set({ bannedAt: null, banReason: null, banUntil: null })
       .where(eq(profiles.id, owner.userId));
-    await logAction(tx, adminUserId, 'user.unban', profileId, { userId: owner.userId });
+    await logUserAction(tx, adminUserId, 'user.unban', owner.userId, { via: 'report', profileId });
     revalidatePath('/admin/reports');
     return { status: 'success' };
   });
@@ -387,8 +403,9 @@ export async function renameGuildAction(input: {
 export async function dismissReports(profileId: string): Promise<Result> {
   const adminUserId = await requireAdmin();
   await db.transaction(async (tx) => {
+    const owner = await ownerOf(tx, profileId);
     await clearReports(tx, profileId);
-    await logAction(tx, adminUserId, 'report.dismiss', profileId, null);
+    await logAction(tx, adminUserId, 'report.dismiss', profileId, { userId: owner?.userId ?? null });
   });
   revalidatePath('/admin/reports');
   return { status: 'success' };

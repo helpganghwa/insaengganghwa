@@ -253,10 +253,17 @@ export async function broadcastMailAction(opts: {
   }
 }
 
-/** 전체 발송 대상 수 — broadcast 발송 전 미리보기용(가입자 수). */
+/**
+ * 전체 발송 대상 수 — 발송 전 미리보기.
+ * 발송 본문과 **같은 술어**를 써야 한다(2026-09-12). 종전엔 가입자 전수를 세어 탈퇴·정지를
+ * 포함했고, 발송은 그들을 빼므로 "N명에게 보냅니다"와 실제 적재 건수가 어긋나 유실로 오인됐다.
+ */
 export async function getBroadcastRecipientCountAction(): Promise<{ count: number }> {
   await requireAdmin();
-  const [row] = await db.select({ c: sql<number>`count(*)::int` }).from(profiles);
+  const [row] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(profiles)
+    .where(SENDABLE_SQL('profiles'));
   return { count: row?.c ?? 0 };
 }
 

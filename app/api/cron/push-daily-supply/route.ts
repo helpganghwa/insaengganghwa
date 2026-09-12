@@ -16,6 +16,7 @@ import { getMaintenanceState } from '@/lib/game/system-mode';
 import { db } from '@/lib/db/client';
 import { sendPushToUsers } from '@/lib/push/send';
 import { beatCron } from '@/lib/cron/heartbeat';
+import { SENDABLE_SQL } from '@/lib/game/account/ban';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,7 +69,7 @@ export async function GET(req: Request) {
     select distinct p.id::text user_id
     from profiles p
     inner join push_subscriptions s on s.user_id = p.id
-    where p.id > ${cursor}::uuid
+    where p.id > ${cursor}::uuid and ${SENDABLE_SQL('p')}
     order by user_id
   `)) as unknown as Row[];
 

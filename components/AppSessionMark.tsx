@@ -35,7 +35,9 @@ export function AppSessionMark() {
     try {
       window.sessionStorage.setItem(APP_SESSION_KEY, '1');
     } catch {
-      // 프라이빗 모드 등 저장 불가 — 쿠키 경로가 그대로 받친다.
+      // 프라이빗 모드 등 저장 불가 — 표식이 안 남는다. 쿠키 폴백은 2026-09-12에 제거됐으므로
+      // 이 경우 Digital Goods 프로브만 남는다(앱 안이면 대개 열린다). 둘 다 실패하는 단말은
+      // 결제가 포트원으로 흐르는데, 앱 안이라면 정책 위반이라 남은 위험으로 기록해 둔다.
     }
     if (window.location.hash !== '#app') return;
     // 해시를 지워 주소와 공유 링크에 남지 않게 한다(히스토리 항목은 늘리지 않는다).

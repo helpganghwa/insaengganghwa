@@ -79,6 +79,11 @@ function wikiHostGuard(request: NextRequest): NextResponse | null {
 function twaMarker(request: NextRequest): NextResponse | null {
   const { searchParams } = request.nextUrl;
   if (searchParams.get('src') !== 'twa') return null;
+  // ⚠ UA를 함께 본다(2026-09-12 6차 검수). 종전엔 `?src=twa`가 붙기만 하면 **어떤 브라우저든**
+  // 표식을 받았다. 이 주소가 공유·북마크·광고로 돌면 데스크톱·아이폰 유저도 앱으로 판정돼
+  // 그 세션 내내 결제가 "플레이스토어에서 설치한 앱에서만 결제할 수 있어요"로 막힌다 — 웹 결제가
+  // 16시간 멈췄던 사고(2026-09-11)와 같은 형태다. TWA는 안드로이드 전용이므로 UA로 거른다.
+  if (!/Android/i.test(request.headers.get('user-agent') ?? '')) return null;
   const url = request.nextUrl.clone();
   url.searchParams.delete('src');
   // 해시로 표식을 넘긴다 — 해시는 서버로 가지 않고 이 내비게이션에만 붙으므로, 쿠키와 달리
