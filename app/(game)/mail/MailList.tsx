@@ -250,7 +250,11 @@ export function MailList({
         const dia = Number(target.payload.diamond ?? 0);
         if (dia > 0) adjustDiamond(BigInt(dia));
       }
-      const r = await claimMailAction(id);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완). 목록은 useOptimistic이라
+      // 자동 복귀하지만 헤더 다이아는 평범한 state라 롤백이 안 돌면 부풀어 있는 채 남는다.
+      const r = await claimMailAction(id).catch(
+        () => ({ status: 'error', message: '요청이 전송되지 않았어요. 연결을 확인해 주세요.' }) as const,
+      );
       if (r.status === 'error') {
         if (target) {
           const dia = Number(target.payload.diamond ?? 0);
@@ -283,7 +287,10 @@ export function MailList({
       // 낙관: 모든 우편 즉시 제거 + 다이아 합계 가산.
       setOptimisticItems([]);
       if (totalDiamondOptimistic > 0) adjustDiamond(BigInt(totalDiamondOptimistic));
-      const r = await claimAllMailAction();
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await claimAllMailAction().catch(
+        () => ({ status: 'error', message: '요청이 전송되지 않았어요. 연결을 확인해 주세요.' }) as const,
+      );
       if (r.status === 'error') {
         if (totalDiamondOptimistic > 0) adjustDiamond(-BigInt(totalDiamondOptimistic));
         setError(r.message);

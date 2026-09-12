@@ -33,6 +33,8 @@ const MSG: Record<string, string> = {
   CONCURRENT_LIMIT: `동시 진행 레이드는 ${RAID_MAX_CONCURRENT_PER_USER}개까지입니다.`,
   RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',
   RAID_CLOSED: '종료되었거나 만료된 레이드입니다.',
+  // 클라가 다른 레이드의 멱등키를 보낸 경우 — 과금 경로에서만 발생. 다시 누르면 새 키로 나간다.
+  RETRY: '요청이 꼬였어요. 한 번 더 눌러 주세요.',
   NOT_SHARED: '비공개 레이드입니다.',
   RAID_FULL: '인원이 가득 찼습니다 (최대 10명).',
   ALREADY_JOINED: '이미 참여 중입니다.',

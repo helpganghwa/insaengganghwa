@@ -153,6 +153,8 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   }, []);
   const [fxOn, setFxOn] = useState(false); // 낙관 시퀀스 시작됨(버튼=닫기·배경 닫기 허용)
   const [error, setError] = useState<string | null>(null);
+  /** 점검·정지처럼 **다시 눌러도 소용없는** 거부인가 — 닫기 표식을 남길지 가른다. */
+  const [persistentBlock, setPersistentBlock] = useState(false);
   const [, startTransition] = useTransition();
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -379,6 +381,10 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
       } else {
         rollbackFx();
         setError(res.message);
+        // 표식은 **지속적 거부**(점검·정지)일 때만 남긴다(7차 검수에서 교정). 일시적 전송
+        // 실패까지 표식을 박으면, 한 번 끊긴 것만으로 그날 출석이 통째로 막힌다 — 앱·PWA는
+        // 앱을 죽이기 전까지 세션이 유지돼 새로고침으로도 안 풀린다. 점검이 풀려도 못 받는다.
+        setPersistentBlock(res.code === 'MAINTENANCE' || res.code === 'BANNED');
       }
     });
   };
@@ -584,7 +590,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   (2026-09-12 검수 — 점검을 켜는 순간 미수령자 전원이 대상). */}
               <button
                 type="button"
-                onClick={() => closePopup(true)}
+                onClick={() => closePopup(persistentBlock)}
                 className="mt-3 w-full rounded-xl border border-zinc-700 py-2.5 text-[13px] font-semibold text-zinc-300 active:scale-[0.99]"
               >
                 닫기

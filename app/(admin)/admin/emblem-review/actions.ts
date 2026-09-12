@@ -25,7 +25,8 @@ import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/e
  * 운영 조치 기록(2026-09-12 전수조사) — 문양 검수의 에스크로 환불은 재화가 움직이는데 실행자가
  * 어디에도 남지 않았다. 환불 트랜잭션과 같은 tx에 넣어 롤백되면 기록도 함께 사라지게 한다.
  */
-type LogTx = { insert: (t: typeof adminActions) => { values: (v: Record<string, unknown>) => Promise<unknown> } };
+/** 트랜잭션 타입 — 캐스트 대신 정식 타입을 쓴다(7차 검수: `as unknown as`가 컬럼 오타를 못 잡았다). */
+type LogTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 function logEscrow(
   tx: LogTx,
   adminUserId: string,
@@ -132,7 +133,7 @@ export async function adminRejectEmblem(emblemId: string): Promise<{ ok: boolean
         .returning({ id: guildEmblemEscrows.id });
       if (moved.length > 0) {
         await walletAdd(tx, esc.userId, esc.serverId, esc.amount, 'emblem_refund');
-        await logEscrow(tx as unknown as LogTx, adminUserId, 'emblem.reject_refund', esc.id.toString(), {
+        await logEscrow(tx, adminUserId, 'emblem.reject_refund', esc.id.toString(), {
           userId: esc.userId, serverId: esc.serverId, diamond: Number(esc.amount),
         });
         amount = esc.amount;
@@ -199,7 +200,7 @@ export async function adminRefundEmblemEscrow(escrowId: string): Promise<{ ok: b
     const r = rows[0];
     if (!r) return false;
     await walletAdd(tx, r.userId, r.serverId, r.amount, 'emblem_refund');
-    await logEscrow(tx as unknown as LogTx, adminUserId, 'emblem.refund_escrow', escrowId, {
+    await logEscrow(tx, adminUserId, 'emblem.refund_escrow', escrowId, {
       userId: r.userId, serverId: r.serverId, diamond: Number(r.amount),
     });
     await tx.insert(mailbox).values({

@@ -38,6 +38,8 @@ type Tab = 'list' | 'requests' | 'find';
 type SearchRow = FriendUser & { relation: FriendRelation };
 
 const ERR: Record<string, string> = {
+  // 전송 실패 — 연결 문제라고 말해 줘야 다시 누른다(7차 검수).
+  NETWORK: '요청이 전송되지 않았어요. 연결을 확인해 주세요.',
   SELF: '본인은 추가할 수 없습니다',
   NOT_FOUND: '유저를 찾을 수 없습니다',
   ALREADY_FRIEND: '이미 친구입니다',
@@ -228,7 +230,8 @@ export function FriendsTabs({
     setFriends((p) => [u, ...p]);
     if (fromSearch) setRel(u.userId, 'friend');
     startTransition(async () => {
-      const r = await respondAction(u.userId, 'accept');
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await respondAction(u.userId, 'accept').catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         toast('친구가 되었습니다');
       } else {
@@ -243,7 +246,8 @@ export function FriendsTabs({
   const decline = (u: FriendUser) => {
     setIncoming((p) => p.filter((x) => x.userId !== u.userId));
     startTransition(async () => {
-      const r = await respondAction(u.userId, 'decline');
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await respondAction(u.userId, 'decline').catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         toast('요청을 거절했어요');
       } else {
@@ -257,7 +261,8 @@ export function FriendsTabs({
     setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
     setRel(u.userId, 'none');
     startTransition(async () => {
-      const r = await cancelAction(u.userId);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await cancelAction(u.userId).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         toast('요청을 취소했어요');
       } else {
@@ -276,7 +281,8 @@ export function FriendsTabs({
     setFriends((p) => p.filter((x) => x.userId !== u.userId));
     setRel(u.userId, 'none');
     startTransition(async () => {
-      const r = await removeFriendAction(u.userId);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await removeFriendAction(u.userId).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status === 'success') {
         toast('친구를 삭제했어요');
       } else {

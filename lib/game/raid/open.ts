@@ -40,7 +40,9 @@ export type RaidErrorCode =
   | 'REWARD_ALREADY_CLAIMED'
   | 'NOT_HOST'
   | 'REQUEST_NOT_FOUND'
-  | 'NOT_SHARED';
+  | 'NOT_SHARED'
+  // 클라가 다른 레이드의 멱등키를 보냈다 — 과금 경로에서만 쓴다(조용히 재과금하느니 거부).
+  | 'RETRY';
 
 export class RaidError extends Error {
   constructor(public code: RaidErrorCode) {

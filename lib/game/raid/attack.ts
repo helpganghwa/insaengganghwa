@@ -285,8 +285,13 @@ export async function gemAttackRaid(input: {
         .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
         .limit(1);
       // 기본 공격과 같은 이유로 레이드를 대조한다(2026-09-12 자가 검수 — 기존 결함).
-      if (prev && prev.raidId !== raidId) idemKey = undefined;
-      else if (prev) {
+      //
+      // ⚠ 다만 보석 공격은 **거부한다**(7차 검수). 기본 공격처럼 키를 버리고 진행하면 그 요청은
+      // 멱등 보호가 없어지는데, 여기는 다이아가 나가는 경로다 — 같은 키로 재시도가 또 오면
+      // 또 불일치로 판정돼 다시 과금된다. 키가 다른 레이드 것이라는 건 이미 클라가 잘못된
+      // 상태라는 뜻이므로, 조용히 과금하는 것보다 실패시키고 다시 누르게 하는 편이 안전하다.
+      if (prev && prev.raidId !== raidId) throw new RaidError('RETRY');
+      if (prev) {
         // 멱등 재시도도 현재 누적 데미지를 함께 반환(HP 바 즉시 반영 일관성).
         const [{ total: curTotal }] = await tx
           .select({ total: sql<string>`coalesce(sum(${raidParticipants.totalDamage}), 0)` })

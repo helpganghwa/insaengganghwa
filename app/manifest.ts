@@ -10,11 +10,13 @@ import type { MetadataRoute } from 'next';
  *  - background_color/theme_color: layout.tsx viewport.themeColor와 동기(#151518).
  *  - icons: any + maskable 두 purpose 모두 제공(안드로이드 마스킹 대응).
  *  - id: '/' — 홈 추가 후 같은 origin 다른 path와 별도 PWA로 인식되지 않도록 고정.
- *  - related_applications — 같은 서비스의 Play 앱을 선언한다(2026-09-12 6차 검수). 없으면 앱을
- *    이미 설치한 유저의 크롬에도 설치 배너가 계속 뜨고, 누르면 WebAPK가 따로 깔려 **홈 화면에
- *    같은 이름 아이콘이 두 개** 생긴다. 그 PWA는 Play 결제를 못 써 포트원으로 흐르므로 유저
- *    눈엔 "앱인데 결제창이 다르다"로 보인다. prefer_related_applications는 켜지 않는다 —
- *    앱이 없는 유저(iOS·데스크톱)에게는 PWA 설치가 여전히 정상 경로다.
+ *  - related_applications — 같은 서비스의 Play 앱을 선언한다(2026-09-12). 브라우저·OS가 "이 웹은
+ *    Play 앱으로도 나와 있다"를 알 수 있는 표준 통로이고, `getInstalledRelatedApps()`로 설치
+ *    여부를 물어볼 근거가 된다. ⚠ 다만 **이것만으로 크롬의 PWA 설치 배너가 사라지지는 않는다**
+ *    — 억제는 `prefer_related_applications: true`가 해야 하는데, 그러면 앱이 없는 유저
+ *    (iOS·데스크톱)의 PWA 설치까지 막히므로 켜지 않는다. 지금은 선언만 해 두고, 앱 설치 유저의
+ *    중복 설치를 실제로 막으려면 설치 띠지 쪽에서 getInstalledRelatedApps를 보고 감추는 편이
+ *    맞다(별도 회차). iOS·데스크톱은 이 필드를 무시하므로 설치 흐름에 영향이 없다.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

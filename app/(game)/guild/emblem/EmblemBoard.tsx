@@ -185,7 +185,8 @@ export function EmblemBoard({
     const prev = list;
     setList((l) => l.map((e) => ({ ...e, isActive: e.id === id }))); // 낙관적
     start(async () => {
-      const r = await setActiveEmblemAction(id);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await setActiveEmblemAction(id).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         setList(prev);
         return showError(guildErrMsg(r.code));
@@ -198,7 +199,8 @@ export function EmblemBoard({
     const prev = list;
     setList((l) => l.filter((e) => e.id !== id)); // 낙관적
     start(async () => {
-      const r = await deleteEmblemAction(id);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await deleteEmblemAction(id).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         setList(prev);
         return showError(guildErrMsg(r.code));

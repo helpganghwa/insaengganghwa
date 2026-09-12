@@ -24,7 +24,8 @@ import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
  * 어디에도 남지 않았다. 옆 도메인(아바타 반환 판정)은 기록하는데 여기만 빠져 있었다.
  * 지급 트랜잭션과 같은 tx에 넣어, 롤백되면 기록도 함께 사라지게 한다.
  */
-type LogTx = { insert: (t: typeof adminActions) => { values: (v: Record<string, unknown>) => Promise<unknown> } };
+/** 트랜잭션 타입 — 캐스트 대신 정식 타입을 쓴다(7차 검수: `as unknown as`가 컬럼 오타를 못 잡았다). */
+type LogTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 function logJob(
   tx: LogTx,
   adminUserId: string,
@@ -88,7 +89,7 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
       );
     await tx.delete(userProfiles).where(eq(userProfiles.id, profileId));
     await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
-    await logJob(tx as unknown as LogTx, adminUserId, 'avatar.revoke_refund', job.id.toString(), {
+    await logJob(tx, adminUserId, 'avatar.revoke_refund', job.id.toString(), {
       userId: job.userId, serverId: job.serverId, diamond: Number(job.diamondEscrow),
     });
     await tx.insert(mailbox).values({
@@ -154,7 +155,7 @@ export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg
       .returning({ id: profileGenerationJobs.id });
     if (rows.length === 0) return false;
     await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow, 'avatar_refund', `job:${job.id}`);
-    await logJob(tx as unknown as LogTx, adminUserId, 'avatar.refund', job.id.toString(), {
+    await logJob(tx, adminUserId, 'avatar.refund', job.id.toString(), {
       userId: job.userId, serverId: job.serverId, diamond: Number(job.diamondEscrow),
     });
     await tx.insert(mailbox).values({

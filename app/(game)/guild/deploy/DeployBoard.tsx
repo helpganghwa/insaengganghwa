@@ -371,7 +371,10 @@ export function DeployBoard({
       // 이동만 — 기존 배치/집행관은 서버가 해제한다(release).
       patch(myUserId, { depZoneId: null, depZoneName: null, depRole: null, execZoneId: null, execZoneName: null });
       start(async () => {
-        const r = await setResidenceAction(p.zoneId, { release: p.release != null });
+        // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+        const r = await setResidenceAction(p.zoneId, { release: p.release != null }).catch(
+          () => ({ status: 'error', code: 'NETWORK' }) as const,
+        );
         if (r.status !== 'success') {
           patch(myUserId, {
             depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
@@ -407,7 +410,10 @@ export function DeployBoard({
     const isSelf = m.userId === myUserId;
     patch(m.userId, { depZoneId: null, depZoneName: null, depRole: null });
     start(async () => {
-      const r = isSelf ? await cancelDeployAction() : await clearMemberDeploymentAction(m.userId);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await (isSelf ? cancelDeployAction() : clearMemberDeploymentAction(m.userId)).catch(
+        () => ({ status: 'error', code: 'NETWORK' }) as const,
+      );
       if (r.status !== 'success') {
         patch(m.userId, { depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole });
         return showError(guildErrMsg(r.code));

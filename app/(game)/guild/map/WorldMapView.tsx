@@ -705,7 +705,8 @@ export function WorldMapView({
     setResidence(zoneId); // 낙관적
     if (opts.release) setMoveLock(null);
     start(async () => {
-      const r = await setResidenceAction(zoneId, opts);
+      // 거부(reject) 흡수 — 없으면 아래 롤백이 통째로 건너뛰어진다(7차 검수에서 누락분 보완).
+      const r = await setResidenceAction(zoneId, opts).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         setResidence(prev);
         setMoveLock(prevLock);

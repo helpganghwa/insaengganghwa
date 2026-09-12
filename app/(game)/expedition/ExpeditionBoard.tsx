@@ -102,6 +102,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const showError = useCallback(
     (code: string) => {
       const msg: Record<string, string> = {
+        // 전송 실패 — 서버 탓으로 읽히지 않게 연결 문제라고 말한다(7차 검수).
+        NETWORK: '요청이 전송되지 않았어요. 연결을 확인해 주세요.',
         AVATAR_BUSY: '이미 파견 중인 아바타예요',
         INSUFFICIENT_DIAMOND: '다이아가 부족해요',
         NOT_READY: '아직 귀환하지 않았어요',
@@ -132,8 +134,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         else {
           undo?.();
           if (!r.ok && r.code) showError(r.code);
-          const fresh = await expeditionBoardAction();
-          if (fresh.ok) setBoard(fresh.board);
+          // ⚠ 재조회도 흡수한다 — 이 분기가 겨냥한 상황(전송 실패)에서는 재조회도 같이 거부되고,
+          // 그러면 아래 setPendingSlot(null)이 건너뛰어져 **슬롯이 잠긴 채 남는다**(7차 검수).
+          const fresh = await expeditionBoardAction().catch(() => null);
+          if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
         }
         setPendingSlot(null);
       });
@@ -215,7 +219,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     startTransition(async () => {
       // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
       const r: ClaimActionResult = await claimExpeditionAction(s.slot).catch(
-        () => ({ ok: false, code: 'UNKNOWN' }) as ClaimActionResult,
+        () => ({ ok: false, code: 'NETWORK' }) as unknown as ClaimActionResult,
       );
       if (r.ok) {
         // 크리·시작가 차이 보정 — 실지급(r.reward)과 선반영(preAdd)의 차액만 추가 반영.
@@ -231,8 +235,9 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         if (preAdd > 0) optimisticAdjust(BigInt(-preAdd));
         setBoard(prev);
         showError(r.code);
-        const fresh = await expeditionBoardAction();
-        if (fresh.ok) setBoard(fresh.board);
+        // ⚠ 위와 같은 이유로 재조회도 흡수한다(슬롯 고착 방지).
+        const fresh = await expeditionBoardAction().catch(() => null);
+        if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
       }
       setPendingSlot(null);
     });

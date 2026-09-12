@@ -26,6 +26,10 @@ const CLEANUP_TIMEOUT_MS = 2500;
  * 기기 축(`ig:sound`·`ig:bgm`·`push_optout`·설치 안내 닫음·`ig:chat-collapsed`·`ig_app`·
  * `ig_platform`)은 그대로 둔다 — 사람이 바뀌어도 그 기기의 사실은 그대로다.
  *
+ * ⚠ `ig:seen-items`(인벤 NEW 배지)는 **일부러 남긴다** — 담기는 id가 user_equipment 행 id라
+ * 다른 계정과 충돌하지 않고(교차 오염 없음), 지우면 같은 계정이 재로그인할 때 보유 장비 전부에
+ * NEW가 다시 뜬다. 이득 0에 비용만 있는 삭제였다(7차 검수에서 제외).
+ *
  * `tut_step`이 가장 중요하다. 주석이 스스로 "계정·서버 구분 없는 브라우저 키"라고 적어 둔 값인데,
  * 남아 있으면 같은 브라우저에 갓 가입한 계정이 **앞 사람의 튜토리얼 단계부터 시작**해 보급·장착을
  * 건너뛰고, 그 키의 **존재만으로** 채팅 독이 숨고 푸시 권한 요청이 막힌다.
@@ -36,7 +40,6 @@ const ACCOUNT_LOCAL_KEYS = [
   'ig:chat-seen',
   'ig:chat-gid',
   'annSeenAt',
-  'ig:seen-items',
   'ig:payack',
   'ig:idvack',
   'chg_app_marked',
@@ -97,7 +100,9 @@ export function SignOutButton({ className, children }: { className?: string; chi
 
   return (
     <button type="button" onClick={handle} disabled={pending} className={className}>
-      {children}
+      {/* 정리에 최대 2.5초가 걸린다 — 아무 변화가 없으면 눌리지 않은 줄 안다(7차 검수).
+          정지 화면에서는 유일한 탈출구라 특히 중요하다. */}
+      {pending ? '로그아웃 중…' : children}
     </button>
   );
 }
