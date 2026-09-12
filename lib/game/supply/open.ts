@@ -280,8 +280,15 @@ export async function openSupplyBoxes(input: {
             { item: ci?.name ?? '장비', level: newMax },
             { actorUserId: userId },
           );
-          // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최고 갱신 게이트가 1회 보장).
-          await sendMilestoneMail(userId, serverId, 'transcend', newMax);
+          // 이정표 보상 우편 — **건너뛴 단계까지 전부**(2026-09-12 사용자 결정).
+          // 종전엔 최고 단계 하나만 보냈다. 한 번에 많이 열어 T11→T13이 되면 T12분 상자 30이
+          // 사라지고, 나눠서 연 사람은 두 번 다 받았다 — 한 번에 많이 열수록 손해인 역인센티브였다.
+          // 피드·업적은 종전대로 신기록 1건만 남긴다(도배 방지가 그 결정의 본래 이유였고,
+          // 보상이 거기 얹혀 있었을 뿐이다). sendMilestoneMail은 내부에서 예외를 삼키므로
+          // 한 건이 실패해도 나머지 단계는 계속 나간다.
+          for (let lv = Math.max(prevMax + 1, 11); lv <= newMax; lv += 1) {
+            await sendMilestoneMail(userId, serverId, 'transcend', lv);
+          }
         }
       }
     }
