@@ -80,6 +80,16 @@ export function parseZoneCounts(plain: string): number[] {
 /** 사람 수 표현 — 수사 뒤에 '명·사람'(조사 무관) 또는 조사가 바로 붙는 꼴(둘을·셋이·일곱으로). '두 곳·세 차례·여섯 길드'는 잡지 않는다. */
 const HEADCOUNT = /(?<![가-힣])(?:(?:하나|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|둘|셋|넷)\s?(?:명|사람)|(?:하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열)(?:이|을|를|의|은|도|만|과|와|으로|로|가)(?![가-힣]))/g;
 
+/**
+ * 사람이 아니라 **땅을 세는** 수사 — 인원수 검사에서 제외한다(2026-09-13 오탐 2건).
+ *  · "거점 하나를 더 세웠다"  — 앞에 거점·구역·땅이 온다
+ *  · "하나를 얻고 하나를 잃어" — 같은 문장이 '곳'으로 세고 있고 사람 이야기가 없다
+ * 이걸 안 빼면 정상 문장이 매일 재생성 피드백을 타 연대기가 공회전한다.
+ */
+const THING_BEFORE = /(구역|거점|땅|자리|깃발|곳|지역)\s?$/;
+/** 사람 이야기 표지 — 하나라도 있으면 '곳' 문장이어도 인원수 검사를 그대로 한다. */
+const PEOPLE_WORD = /명|사람|수비|공격|병력|베|쓰러|눕|처치|막아|맞서|버[티틴]/;
+
 /** 마커를 같은 길이의 공백으로 바꾼 평문 — 정규식 위치를 마커 위치와 맞대어 '그 표현이 어느 구역 뒤에 나왔는지' 잡는다. */
 function plainAligned(s: string): string {
   return s.replace(MARKER, (m) => ' '.repeat(m.length));
@@ -161,10 +171,16 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       }
 
       // 2. 인원수
-      const heads = [...aligned.matchAll(HEADCOUNT)].filter((m) => {
-        const z = zoneAt(m.index!);
-        return !(z && headcount.has(z));
-      }).map((m) => m[0].trim());
+      // '곳'으로 구역을 세는 문장에 사람 이야기가 없으면 그 안의 수사는 전부 땅이다(집계 문단).
+      const countsZones = /곳/.test(plain) && !PEOPLE_WORD.test(plain);
+      const heads = [...aligned.matchAll(HEADCOUNT)]
+        .filter((m) => {
+          if (countsZones) return false;
+          if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 4), m.index!))) return false;
+          const z = zoneAt(m.index!);
+          return !(z && headcount.has(z));
+        })
+        .map((m) => m[0].trim());
       if (heads.length > 0) {
         issues.push(
           `사람 수 표현(${heads.join(', ')})은 인원수가 허용된 전투${ctx.headcountZones.length ? `(${ctx.headcountZones.join(', ')})` : '(이번엔 없음)'} 문맥에서만 쓴다 — 이 문장에서는 인원수를 빼고 '수비를 세워·수비를 뚫고'처럼 쓴다: ${q(sent)}`,

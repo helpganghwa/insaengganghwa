@@ -82,4 +82,16 @@ describe('연대기 사실 검증기 — 2026-09-13 회귀', () => {
     expect(factIssues(text, { ...ctx, yesterdayZones: ['감시 망루', '검은 첨봉'] })
       .some((i) => i.includes('회고 문장이 2개'))).toBe(true);
   });
+
+  it('땅을 세는 수사는 인원수로 보지 않는다 — 오탐 2종(2026-09-13)', () => {
+    // 인원수가 허용되지 않은 구역인데도, 아래 둘은 사람 이야기가 아니라 잡히면 안 된다.
+    const a = '{g|올림포스|32}는 {z|검은 깃털 제단|50}을 {g|로제|25}가 비워 둔 틈에 손에 넣어, 거점 하나를 더 세웠다.';
+    const b = '{g|제국|37}은 두 곳을 더해 여덟 곳, {g|케케케|27}는 하나를 얻고 하나를 잃어 세 곳 그대로가 되었다.';
+    for (const t of [a, b]) expect(factIssues(t, ctx).some((i) => i.includes('사람 수 표현'))).toBe(false);
+  });
+
+  it('사람 이야기가 섞인 집계 문장은 그대로 잡는다 — 위 완화가 진짜 위반을 가리지 않게', () => {
+    const t = '{g|로제|25}는 두 곳을 얻었고 {z|모닥불 평원|40}에서는 셋을 베었다.';
+    expect(factIssues(t, ctx).some((i) => i.includes('사람 수 표현'))).toBe(true);
+  });
 });
