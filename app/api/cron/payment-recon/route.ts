@@ -28,8 +28,19 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 const ORPHAN_PENDING_LIMIT = 50;
-/** 한 주기에 이만큼 만료되면 결제 경로 이상으로 보고 경보한다(평시엔 0~1건). */
+/** 한 주기에 이만큼 만료되면 **경보 후보**. 확정은 아래 '성공 대조'까지 통과해야 한다(평시엔 0~1건). */
 const ORPHAN_PENDING_ALERT = 5;
+/**
+ * 성공 대조 창(2026-09-13) — 이 시간 안에 **성사된 결제가 하나라도 있으면 경로는 살아 있다**.
+ *
+ * 왜 사유 조회로 못 가르는가: 이 경보가 잡으려던 09-11~12 장애(16시간·19건)에서도 포트원 조회는
+ * 404였다 — 앱으로 잘못 라우팅돼 PG에 결제 시도 자체가 없었기 때문이다. 그러니 404·취소 사유를
+ * 이탈로 치면 **정작 잡아야 할 사고를 놓친다**. 반대로 한 유저가 결제창을 스무 번 여닫아도
+ * 만료는 쌓인다(09-11~12 대장장이wo2y expired 20여 건). 두 경우를 가르는 것은 사유가 아니라
+ * **"그동안 아무도 결제에 성공하지 못했는가"**다 — 장애 기간의 결제 성공은 0건이었고,
+ * 반복 이탈 유저가 있던 날에는 다른 유저들이 정상 결제했다(실측).
+ */
+const ORPHAN_SUCCESS_WINDOW_MS = 6 * 60 * 60 * 1000;
 
 /** 경보 dedup 키용 KST 시간 버킷 — 건별 경보는 소음이라 시간당 1회로 묶는다. */
 function kstHourKey(): string {
@@ -50,7 +61,13 @@ export async function GET(req: Request) {
 
   // ── A. 고아 pending 복구 ────────────────────────────────────────────────
   const pending = await db
-    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId, createdAt: iapOrders.createdAt, provider: iapOrders.provider })
+    .select({
+      id: iapOrders.id,
+      pid: iapOrders.portoneOrderId,
+      createdAt: iapOrders.createdAt,
+      provider: iapOrders.provider,
+      userId: iapOrders.userId,
+    })
     .from(iapOrders)
     .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
     // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
@@ -60,6 +77,8 @@ export async function GET(req: Request) {
   let healed = 0;
   let stillPending = 0;
   let expired = 0;
+  /** 만료된 주문의 주인들 — 한 사람의 반복 이탈인지, 여러 사람이 겪는 일인지 가른다. */
+  const expiredUsers = new Set<string>();
   /** A단계에서 포트원 조회가 실패한 건수 — 전건 실패면 beat를 찍지 않는다. */
   let aErrors = 0;
   // 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구 점유해 진짜
@@ -75,6 +94,7 @@ export async function GET(req: Request) {
       .set({ status: 'expired' })
       .where(and(eq(iapOrders.id, o.id), eq(iapOrders.status, 'pending')));
     expired++;
+    expiredUsers.add(o.userId);
   };
   for (const o of pending) {
     // Play 주문(0186)은 PG 조회 대상이 아니다 — 결제 시트를 닫은 pending은 만료만(늦은 검증은 expired→paid 허용).
@@ -107,16 +127,42 @@ export async function GET(req: Request) {
       aErrors += 1;
     }
   }
-  out.orphanPending = { scanned: pending.length, healed, stillPending, expired, capped: pending.length === ORPHAN_PENDING_LIMIT };
+  out.orphanPending = {
+    scanned: pending.length,
+    healed,
+    stillPending,
+    expired,
+    users: expiredUsers.size,
+    capped: pending.length === ORPHAN_PENDING_LIMIT,
+  };
 
   // 결제가 통째로 실패하고 있어도 아무도 모르던 문제(2026-09-11~12, 16시간·19건)의 감지선.
   // 만료로 정리된 고아 pending이 한 주기에 몰리면 결제 경로 자체가 깨진 신호다. 건별로 울리면
   // 소음이라 KST 시간 버킷으로 묶어 시간당 1회만 울린다.
   if (expired >= ORPHAN_PENDING_ALERT) {
-    await raisePaymentAlert('ORPHAN_PENDING', {
-      paymentId: `orphan:${kstHourKey()}`,
-      detail: `한 주기에 고아 pending ${expired}건 만료(스캔 ${pending.length}건). 결제 경로 점검 필요 — 결제창이 열리지 않거나 결제 후 검증이 도달하지 못하는 상태일 수 있다.`,
-    });
+    // 성공 대조 — 최근에 성사된 결제가 하나라도 있으면 경로는 살아 있다(위 상수 주석 참조).
+    const [ok] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(iapOrders)
+      .where(and(eq(iapOrders.status, 'paid'), gt(iapOrders.paidAt, new Date(Date.now() - ORPHAN_SUCCESS_WINDOW_MS))));
+    const paidRecently = Number(ok?.n ?? 0);
+    out.orphanPendingAlert = { expired, users: expiredUsers.size, paidRecently };
+    if (paidRecently > 0) {
+      // 누군가는 결제에 성공하고 있다 — 경로 장애가 아니라 이탈이 몰린 것. 기록도 남기지 않는다
+      // (어드민 경보 목록은 '진짜 결제 오류'만 담는다, 사용자 확정 2026-09-13).
+      console.info(
+        `[payment-recon] 고아 pending ${expired}건 만료(유저 ${expiredUsers.size}명) — 최근 ${
+          ORPHAN_SUCCESS_WINDOW_MS / 3_600_000
+        }시간 결제 성공 ${paidRecently}건이라 경로 정상, 경보 없음`,
+      );
+    } else {
+      await raisePaymentAlert('ORPHAN_PENDING', {
+        paymentId: `orphan:${kstHourKey()}`,
+        detail: `고아 pending ${expired}건 만료(유저 ${expiredUsers.size}명, 스캔 ${pending.length}건)인데 최근 ${
+          ORPHAN_SUCCESS_WINDOW_MS / 3_600_000
+        }시간 **결제 성공 0건**. 결제 경로가 끊겼을 가능성 — 결제창이 열리지 않거나 결제 후 검증이 도달하지 못하는 상태일 수 있다.`,
+      });
+    }
   }
 
   // ── B. 환불 미회수 백스톱(최근 3일 paid) ──────────────────────────────────
