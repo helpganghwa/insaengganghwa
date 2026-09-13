@@ -27,10 +27,10 @@ function newPid(tag: string): string {
   return `test_${tag}_${seq}_${process.pid}`;
 }
 function paid(pid: string, amount = AMOUNT) {
-  return { status: 'PAID' as const, amountTotal: amount, currency: 'KRW', paymentId: pid };
+  return { status: 'PAID' as const, amountTotal: amount, currency: 'KRW', paymentId: pid, failure: null };
 }
 function cancelled(pid: string) {
-  return { status: 'CANCELLED' as const, amountTotal: AMOUNT, currency: 'KRW', paymentId: pid };
+  return { status: 'CANCELLED' as const, amountTotal: AMOUNT, currency: 'KRW', paymentId: pid, failure: null };
 }
 
 async function insertOrder(pid: string): Promise<bigint> {

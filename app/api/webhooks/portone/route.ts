@@ -15,6 +15,8 @@ import * as PortOne from '@portone/server-sdk';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { raisePaymentAlert } from '@/lib/payment/alert';
+import { getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
+import { classifyPaymentFailure } from '@/lib/payment/failure-reason';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -86,14 +88,35 @@ export async function POST(req: Request) {
         return new Response('not cancelled yet', { status: 500 });
       }
     } else if (webhook.type === 'Transaction.Failed') {
-      // PG가 "이 결제 실패했다"고 직접 알려주는 유일한 경로다. 종전엔 알 수 없는 type과 함께
-      // 조용히 ack하고 버렸다 — 결제가 통째로 막혀도 서버에 아무 신호가 없던 이유 중 하나다
-      // (2026-09-12 검수). 카드사 설정 사고·가맹점 미승인은 여기서 즉시 드러난다.
-      // 건별로 울리면 소음이라 KST 시간 버킷으로 묶어 시간당 1회만 울린다.
-      await raisePaymentAlert('PAYMENT_FAILED', {
-        paymentId: `fail:${kstHourKey()}`,
-        detail: `결제 실패 수신(${paymentId}). 같은 시간대 반복되면 결제 경로 점검 필요.`,
-      });
+      // PG가 "이 결제 실패했다"고 직접 알려주는 유일한 경로다(2026-09-12 추가). 카드사 설정 사고·
+      // 가맹점 미승인이 여기서 즉시 드러난다.
+      //
+      // ⚠ 다만 이 웹훅은 **유저가 결제창을 닫거나 취소를 눌러도** 온다. 그대로 울리면 경보가 전부
+      // 오경보가 된다 — 실서버 4건이 그랬고, 셋은 같은 유저가 1~4분 안에 결제를 성공시켰다
+      // (2026-09-13 실측). 그래서 포트원 단건 조회로 **실패 사유를 읽어** 유저 이탈이면 알리지 않는다.
+      // 사유를 못 읽으면(조회 실패·사유 없음) 종전대로 울린다 — 놓친 사고보다 오경보가 낫다.
+      let verdict = { userCancelled: false, summary: '실패 사유 조회 실패 — 사유 미상' };
+      try {
+        const pay = await getPortonePayment(paymentId);
+        verdict = classifyPaymentFailure(pay.failure);
+      } catch (e) {
+        if (e instanceof PortonePaymentNotFoundError) {
+          // PG에 결제 시도 기록 자체가 없다 — 결제창만 열고 닫은 경우. 사고가 아니다.
+          verdict = { userCancelled: true, summary: '포트원에 결제 기록 없음(결제창만 열고 닫음)' };
+        } else {
+          console.error('[portone.webhook] 실패 사유 조회 실패', paymentId, e);
+        }
+      }
+      if (verdict.userCancelled) {
+        // 기록도 남기지 않는다 — 어드민 경보 목록은 '진짜 결제 오류'만 담는다(사용자 확정 2026-09-13).
+        console.info(`[portone.webhook] 결제 실패(유저 이탈, 경보 없음) ${paymentId} — ${verdict.summary}`);
+      } else {
+        // 건별로 울리면 소음이라 KST 시간 버킷으로 묶어 시간당 1회만 울린다.
+        await raisePaymentAlert('PAYMENT_FAILED', {
+          paymentId: `fail:${kstHourKey()}`,
+          detail: `결제 실패(${paymentId}) — ${verdict.summary}. 유저 취소가 아닌 실패다. 같은 시간대 반복되면 결제 경로 점검 필요.`,
+        });
+      }
     } else if (webhook.type === 'Transaction.PartialCancelled') {
       // 부분취소 — 고정가 디지털 상품 특성상 드묾. 자동 회수하지 않고 운영 수동 처리.
       await raisePaymentAlert('PARTIAL_CANCELLED', {

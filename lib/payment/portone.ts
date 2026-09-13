@@ -30,6 +30,11 @@ export type PortonePayment = {
   currency: string;
   /** 우리가 주문 생성 시 넘긴 결제 id(= portone_order_id). */
   paymentId: string;
+  /**
+   * 실패 사유(FAILED일 때만 옴) — 유저 이탈과 진짜 결제 오류를 가르는 유일한 근거.
+   * 필드 유무는 PG마다 다르므로 전부 선택으로 읽는다(없으면 '모름' → 오류로 취급, fail-safe).
+   */
+  failure: { reason: string | null; pgCode: string | null; pgMessage: string | null } | null;
 };
 
 /**
@@ -87,11 +92,16 @@ export async function getPortonePayment(paymentId: string): Promise<PortonePayme
     paymentId?: string;
     currency: string;
     amount?: { total?: number };
+    failure?: { reason?: string; pgCode?: string; pgMessage?: string } | null;
   };
+  const f = data.failure;
   return {
     status: data.status,
     amountTotal: data.amount?.total ?? 0,
     currency: data.currency,
     paymentId: data.paymentId ?? data.id ?? paymentId,
+    failure: f
+      ? { reason: f.reason ?? null, pgCode: f.pgCode ?? null, pgMessage: f.pgMessage ?? null }
+      : null,
   };
 }
