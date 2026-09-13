@@ -63,6 +63,12 @@ export type ConquestDaySummary = {
    */
   underdogDefenses: { zone: string; region: string; owner: string; defenders: number; attackers: { guild: string; n: number }[]; attackerTotal: number }[];
   /**
+   * 열세 점령(2026-09-13) — 수비보다 **적은 인원**으로 들어가 구역을 빼앗은 전투. 열세 방어의 반대편이고
+   * 똑같이 극적인데 종전엔 인원수 서술이 막혀 "수비를 세웠지만 넘어갔다"로만 나갔다
+   * (09-13 잿더미 폐허: 로제 하나가 수비 둘을 모두 베고 차지, 황금 회랑: 하나가 셋을 전멸).
+   */
+  underdogCaptures: { zone: string; region: string; winner: string; from: string | null; attackers: number; defenders: number }[];
+  /**
    * 사람이 몰린 전투(2026-09-10) — finale 로스터 CROWD_MIN명 이상인 구역 중 **가장 많이 몰린 한 곳만**(사용자 확정:
    * 여러 곳이면 최고 인원 한 곳만 언급). 그날 큰 싸움의 규모를 서술할 재료다.
    * 셋이 일곱을 막아낸 날의 그 숫자를 연대기가 볼 수 없어 추가했다(09-09 그을린 고목).
@@ -79,6 +85,13 @@ export const CROWD_MIN = 5;
  * 3으로 두면 "여럿에게 집중 표적이 되고도 살아남은" 사람만 남는다. 1대1 반복 피격은 이제 1이라 걸리지 않는다.
  */
 export const FEAT_MIN = 3;
+/**
+ * 하루에 이름을 올릴 수 있는 최대 인원(2026-09-13) — 넓히되 이름 행렬이 되지 않게.
+ * 다섯이면 그날 정말 눈에 띄는 활약만 남고, 여섯 번째부터는 "둘 쓰러뜨림"이 줄줄이 붙는다.
+ */
+export const FEAT_MAX = 5;
+/** '단독 전멸·분전 후 전사'가 성립하려면 상대가 최소 몇 명이어야 하는가 — 1대1은 활약이 아니다. */
+export const DRAMA_MIN_FOES = 2;
 
 /** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
 function addDaysToKstDay(kstDay: string, delta: number): string {
@@ -184,6 +197,15 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   // (2026-07-20 피드백: 어느 구역 전투에서의 활약인지 서술에 필요).
   const crowds: ConquestDaySummary['crowds'] = [];
   const underdogDefenses: ConquestDaySummary['underdogDefenses'] = [];
+  const underdogCaptures: ConquestDaySummary['underdogCaptures'] = [];
+  /**
+   * 극적 활약 판정 재료(2026-09-13) — 사람별로 그날 전투를 훑어 모은다.
+   *  solo  = 자기 **길드가 혼자**인데 상대를 전원 쓰러뜨리고 본인 생존(단독 전멸)
+   *  last  = 자기 길드가 혼자서 둘 이상 쓰러뜨리고 본인도 전사(분전 후 전사)
+   *  foes  = 그날 상대한 인원의 최댓값(동점자 정렬 기준 — 더 많은 적을 상대한 쪽이 앞)
+   * 종전엔 '최다 1명'만 뽑아 라프산두(3처치)가 규규(6처치)에 가려 탈락했다.
+   */
+  const drama = new Map<string, { nick: string; guild: string; solo: boolean; last: boolean; foes: number }>();
   // 수비 활약 = 서로 다른 공격자 집합(끝까지 살아남은 사람만). 처치 = 쓰러뜨린 수.
   const survives = new Map<string, { nick: string; guild: string; atk: Set<string>; zones: Set<string> }>();
   const kills = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
@@ -248,6 +270,13 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
       if (!isCapture && owner && defenders > 0 && attackerTotal > defenders) {
         underdogDefenses.push({ zone: b.zone, region, owner, defenders, attackers: attackerList, attackerTotal });
       }
+      // 열세 점령 — 빼앗았는데 들어간 인원이 수비보다 적을 때(승자 길드 인원 기준).
+      if (isCapture && b.winner && defenders > 0) {
+        const won = attackerList.find((x) => x.guild === b.winner)?.n ?? 0;
+        if (won > 0 && won < defenders) {
+          underdogCaptures.push({ zone: b.zone, region, winner: b.winner, from: owner, attackers: won, defenders });
+        }
+      }
     }
     if (roster.length >= CROWD_MIN) {
       const owner = b.prev_owner;
@@ -287,6 +316,33 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         }
         const ra = f.roster[a];
         if (ra) atkOf.set(t, (atkOf.get(t) ?? new Set<string>()).add(ra.userId));
+      }
+      // 극적 활약 판정 — 길드 단위 '자기 편'으로 본다(공격 길드끼리 맞붙는 전투가 있어 진영으로는 못 가른다).
+      {
+        const sideSize = new Map<string, number>();
+        for (const r of f.roster) sideSize.set(r.guildName, (sideSize.get(r.guildName) ?? 0) + 1);
+        const killsHere = new Map<string, number>();
+        for (const [a, , , hp] of f.events) {
+          if (hp > 0) continue;
+          const ru = f.roster[a];
+          if (ru) killsHere.set(ru.userId, (killsHere.get(ru.userId) ?? 0) + 1);
+        }
+        f.roster.forEach((r, i) => {
+          if ((sideSize.get(r.guildName) ?? 0) !== 1) return; // '혼자'가 아니면 두 판정 다 대상 아님
+          const foes = f.roster.filter((o) => o.guildName !== r.guildName);
+          const foesDown = foes.every((o) => fallen.has(f.roster.indexOf(o)));
+          const mine = killsHere.get(r.userId) ?? 0;
+          const e = drama.get(r.userId) ?? { nick: r.nickname, guild: r.guildName, solo: false, last: false, foes: 0 };
+          // 상대가 한 명뿐인 1대1은 '단독 전멸'도 '분전'도 아니다 — 하한을 두지 않으면
+          // 1킬짜리가 매일 다섯 자리를 채운다(09-11·09-12 실측에서 확인).
+          // 상대가 한 명뿐인 1대1은 '단독 전멸'도 '분전'도 아니다. 그리고 **본인이 둘 이상 쓰러뜨렸을 때만**
+          // 센다 — 하한이 없으면 남이 다 잡고 살아남기만 한 1킬짜리가 매일 다섯 자리를 채운다(09-11·12 실측).
+          if (foes.length < DRAMA_MIN_FOES || mine < 2) return;
+          if (!fallen.has(i) && foesDown) e.solo = true;
+          if (fallen.has(i)) e.last = true;
+          e.foes = Math.max(e.foes, foes.length);
+          drama.set(r.userId, e);
+        });
       }
       for (const [t, atk] of atkOf) {
         if (fallen.has(t)) continue; // 끝내 쓰러진 사람은 활약이 아니다
@@ -329,16 +385,57 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   // 최다 생존·최다 처치 — **동수면 전원**(닉네임순, 최대 3명). 종전엔 정렬 뒤 [0]만 집어 동수일 때 Map 삽입
   // 순서(전투 행 순서, 불안정)로 사람이 바뀌었다: 09-10 뉴비·강화의신이 나란히 3회 생존인데 23:05 생성본은
   // 강화의신, 23:10 검수 조회는 뉴비를 내놓아 "없는 인물"로 오판했다. 사실표는 호출마다 같아야 한다.
-  const topOf = <T extends { nick: string }>(m: Map<string, T>, count: (v: T) => number) => {
-    const es = [...m.entries()].filter((e) => count(e[1]) >= FEAT_MIN);
-    if (es.length === 0) return [];
-    const max = Math.max(...es.map((e) => count(e[1])));
-    return es.filter((e) => count(e[1]) === max).sort((a, b) => a[1].nick.localeCompare(b[1].nick, 'ko')).slice(0, 3);
-  };
-  const topSurvives = topOf(survives, (v) => v.atk.size);
-  const topKills = topOf(kills, (v) => v.n);
+  /**
+   * 극적 활약 선정(2026-09-13 개편) — 넷 중 하나에 해당하면 후보, 점수순 최대 FEAT_MAX명.
+   *  ① 처치 FEAT_MIN 이상  ② 서로 다른 공격자 FEAT_MIN 이상을 받아내고 생존
+   *  ③ 단독 전멸(solo)     ④ 분전 후 전사(last)
+   * 종전엔 '최다 1명(동수 전원)'만 뽑아, 그날 두 번째로 인상적인 활약이 통째로 사라졌다
+   * (09-13 라프산두 3처치가 규규 6처치에 가려 탈락 → 연대기가 그 전투를 밋밋하게 서술).
+   * 사실표는 호출마다 같아야 하므로 정렬은 전부 결정론(점수 → 상대 인원 → 닉네임).
+   */
+  const cand = new Map<string, { nick: string; guild: string; kills: number; held: number; zones: Set<string>; solo: boolean; last: boolean; foes: number }>();
+  const touch = (uid: string, nick: string, guild: string) =>
+    cand.get(uid) ?? (cand.set(uid, { nick, guild, kills: 0, held: 0, zones: new Set(), solo: false, last: false, foes: 0 }), cand.get(uid)!);
+  for (const [uid, v] of kills) {
+    const e = touch(uid, v.nick, v.guild);
+    e.kills = v.n;
+    for (const z of v.zones) e.zones.add(z);
+  }
+  for (const [uid, v] of survives) {
+    const e = touch(uid, v.nick, v.guild);
+    e.held = v.atk.size;
+    for (const z of v.zones) e.zones.add(z);
+  }
+  for (const [uid, v] of drama) {
+    if (!v.solo && !v.last) continue;
+    const e = touch(uid, v.nick, v.guild);
+    e.solo = v.solo;
+    e.last = v.last;
+    e.foes = v.foes;
+  }
+  for (const [uid, v] of drama) {
+    const e = cand.get(uid);
+    if (e) e.foes = Math.max(e.foes, v.foes);
+  }
+  // 한 전투에서는 한 사람만 — 같은 구역에서 둘셋을 뽑으면 그날 다른 전투가 통째로 이름 없이 지나간다
+  // (09-13 썩은 잔교에서만 둘이 뽑혀 변경 초소의 분전이 밀려났다).
+  const ranked = [...cand.entries()]
+    .filter(([, v]) => v.kills >= FEAT_MIN || v.held >= FEAT_MIN || v.solo || v.last)
+    .sort((a, b) =>
+      Math.max(b[1].kills, b[1].held) - Math.max(a[1].kills, a[1].held) ||
+      b[1].foes - a[1].foes ||
+      a[1].nick.localeCompare(b[1].nick, 'ko'));
+  const usedZone = new Set<string>();
+  const picked: typeof ranked = [];
+  for (const e of ranked) {
+    if (picked.length >= FEAT_MAX) break;
+    const zs = [...e[1].zones];
+    if (zs.some((z) => usedZone.has(z))) continue;
+    for (const z of zs) usedZone.add(z);
+    picked.push(e);
+  }
   // 인물 publicCode 해소 — 연대기 {u|닉|코드} 링크용(닉네임은 변경 가능, 코드는 불변).
-  const featUserIds = [...new Set([...topSurvives, ...topKills].map((e) => e[0]))];
+  const featUserIds = [...new Set(picked.map((e) => e[0]))];
   const codeByUser = new Map<string, string>();
   if (featUserIds.length > 0) {
     const codeRows = (await db.execute(sql`
@@ -346,11 +443,15 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     `)) as unknown as { uid: string; public_code: string | null }[];
     for (const r of codeRows) if (r.public_code) codeByUser.set(r.uid, r.public_code);
   }
-  const feats: ConquestDaySummary['feats'] = [];
-  for (const e of topSurvives)
-    feats.push({ nickname: e[1].nick, publicCode: codeByUser.get(e[0]) ?? null, guild: e[1].guild, kind: '수비', count: e[1].atk.size, zones: [...e[1].zones] });
-  for (const e of topKills)
-    feats.push({ nickname: e[1].nick, publicCode: codeByUser.get(e[0]) ?? null, guild: e[1].guild, kind: '처치', count: e[1].n, zones: [...e[1].zones] });
+  // 한 사람은 한 줄만 — 쓰러뜨린 수가 있으면 '처치'(더 구체적), 없으면 '수비'.
+  const feats: ConquestDaySummary['feats'] = picked.map(([uid, v]) => ({
+    nickname: v.nick,
+    publicCode: codeByUser.get(uid) ?? null,
+    guild: v.guild,
+    kind: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? ('처치' as const) : ('수비' as const),
+    count: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? v.kills : v.held,
+    zones: [...v.zones],
+  }));
 
   // 그날 해산(guild_disband) — 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
   // 창은 [전날 23:00, 당일 23:00) KST — 연대기가 23시에 사전생성되므로, 자정 경계 대신 생성 경계로
@@ -446,6 +547,15 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         (a, b) =>
           b.attackerTotal / b.defenders - a.attackerTotal / a.defenders ||
           b.attackerTotal - a.attackerTotal ||
+          a.zone.localeCompare(b.zone, 'ko'),
+      )
+      .slice(0, 2),
+    // 열세가 큰 순(수비/공격 비율) → 수비 인원 → 구역명. 두 곳까지 — 열세 방어와 같은 취급.
+    underdogCaptures: underdogCaptures
+      .sort(
+        (a, b) =>
+          b.defenders / b.attackers - a.defenders / a.attackers ||
+          b.defenders - a.defenders ||
           a.zone.localeCompare(b.zone, 'ko'),
       )
       .slice(0, 2),
@@ -727,6 +837,18 @@ export async function generateAndStoreChronicle(
       })
       .join('\n') || '';
 
+  // 열세 점령(2026-09-13) — 수비보다 적은 인원으로 들어가 빼앗은 전투. 열세 방어의 반대편이고
+  // 인원수 서술이 허용되는 셋째 자리다.
+  const underdogCapLines =
+    summary.underdogCaptures
+      .map(
+        (u) =>
+          `· 구역 「${u.zone}」(${u.region} 지역): 길드 「${u.winner}」 ${u.attackers}명이 공격해, ${
+            u.from ? `길드 「${u.from}」 ` : ''
+          }수비 ${u.defenders}명을 뚫고 점령 — 적은 인원으로 빼앗은 전투`,
+      )
+      .join('\n') || '';
+
   // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
   // 활약 구역 명시(2026-07-20 피드백) — 어느 구역 전투에서의 활약인지 서술할 수 있게.
   const featZones = (f: (typeof summary.feats)[number]) =>
@@ -964,6 +1086,10 @@ export async function generateAndStoreChronicle(
     digestSections.push(
       `■ 열세 방어(수적으로 밀리면서 지켜낸 전투 — 그날의 팀 단위 활약. 인원에는 집행관 자동 방어가 섞여 있으니 따로 나누지 말 것):\n${underdogLines}`,
     );
+  if (underdogCapLines)
+    digestSections.push(
+      `■ 열세 점령(수비보다 적은 인원으로 들어가 빼앗은 전투 — 열세 방어와 같은 무게의 활약. 인원수를 써도 되는 자리다):\n${underdogCapLines}`,
+    );
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
   if (topoLines) digestSections.push(`■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines}`);
   if (summary.renames.length > 0)
@@ -1030,7 +1156,15 @@ export async function generateAndStoreChronicle(
     zoneRegion: new Map(zoneRows.map((z) => [z.name, (REGION_META as Record<string, { label: string }>)[z.region]?.label ?? z.region])),
     regionLabels: REGION_KO_VALUES,
     feats: summary.feats.map((f) => ({ nickname: f.nickname, count: f.count })),
-    headcountZones: [...summary.crowds.map((c) => c.zone), ...summary.underdogDefenses.map((u) => u.zone)],
+    // 인원수 서술 허용 구역(2026-09-13 확장) — 최다 인원 1곳 · 열세 방어 · 열세 점령 ·
+    // **개인 활약이 나온 구역**. 활약한 사람을 쓸 수 있는데 그가 몇을 쓰러뜨렸는지를 못 쓰면
+    // "둘을 베고 전사했다"가 검증에 걸려 서술이 밋밋해진다(09-13 변경 초소).
+    headcountZones: [
+      ...summary.crowds.map((c) => c.zone),
+      ...summary.underdogDefenses.map((u) => u.zone),
+      ...summary.underdogCaptures.map((u) => u.zone),
+      ...summary.feats.flatMap((f) => f.zones),
+    ],
     // '되찾다' 허용 = 어제 그 구역을 잃은 길드가 오늘 그 구역을 노렸거나 차지함(시도·실패 포함).
     recaptureZones: y.captures
       .filter((yc) => yc.from && (attackersByZone.get(yc.zone)?.has(yc.from) || summary.captures.some((c) => c.zone === yc.zone && c.winner === yc.from)))
