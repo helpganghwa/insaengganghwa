@@ -26,6 +26,7 @@ const cap = (zone: string, winner: string, from: string | null, defenders = 0) =
   from,
   firstCapture: false,
   defenders,
+  deployedDefenders: defenders, // 이 테스트는 집행관 단독 구분과 무관 — 배치 수비로 둔다
 });
 
 describe('continuityFacts — 어제와 이어지는 사실', () => {
@@ -50,7 +51,9 @@ describe('continuityFacts — 어제와 이어지는 사실', () => {
   it('어제 얻은 땅을 오늘 지켜내면 수성 + 공격 측 병기, 무관한 구역은 없음', () => {
     const y = day({ captures: [cap('그을린 고목', '게이들', null)] });
     const t = day({
-      defenses: [{ zone: '그을린 고목', region: 'volcano', owner: '게이들' }],
+      defenses: [
+        { zone: '그을린 고목', region: 'volcano', owner: '게이들', defenders: 1, deployedDefenders: 1 },
+      ],
       attacks: [
         { zone: '그을린 고목', region: 'volcano', guild: '민초' },
         { zone: '그을린 고목', region: 'volcano', guild: '케케케' },

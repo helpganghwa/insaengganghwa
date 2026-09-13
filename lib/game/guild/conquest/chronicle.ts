@@ -28,10 +28,14 @@ export type ConquestDaySummary = {
   kstDay: string;
   battleCount: number;
   /** 점령(소유권 변경) — winner가 prevOwner로부터 빼앗음(prevOwner null=중립 첫 점령).
-   * defenders = finale 로스터 중 이전 주인 소속 수(>0이면 교전 끝 함락 — '무혈'로 서술 금지). */
-  captures: { zone: string; region: string; winner: string; from: string | null; firstCapture: boolean; defenders: number }[];
-  /** 방어 성공(소유 길드 유지). */
-  defenses: { zone: string; region: string; owner: string }[];
+   * defenders = finale 로스터 중 이전 주인 소속 수(>0이면 교전 끝 함락 — '무혈'로 서술 금지).
+   * deployedDefenders = 그중 **배치로 세운** 수비(role=defend). 0인데 defenders>0이면 **집행관 자동 방어뿐**이다
+   * — 이 둘을 섞어 두면 사실표가 '수비수 N명으로 맞서 싸웠으나 패배'만 내보내고, 프롬프트 규칙이 그걸
+   * '저항을 뚫고 함락'으로 쓰라고 강제해 모델이 **'수비를 세워 맞섰으나'라는 없는 사실**을 쓴다
+   * (2026-09-13 검은 첨봉: 케케케 배치 0·집행관 예수만 자동 방어였는데 "수비를 세워 맞섰으나"로 나갔다). */
+  captures: { zone: string; region: string; winner: string; from: string | null; firstCapture: boolean; defenders: number; deployedDefenders: number }[];
+  /** 방어 성공(소유 길드 유지). defenders/deployedDefenders는 captures와 같은 기준(집행관 단독 방어 구분용). */
+  defenses: { zone: string; region: string; owner: string; defenders: number; deployedDefenders: number }[];
   /** 영토 순위(그날 이후 보유 구역 수, 상위). */
   standings: { guild: string; zones: number }[];
   /** 공격 측 — 그날 각 구역을 공격한(role=attack 배치) 길드(구역×길드 distinct). */
@@ -154,7 +158,12 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
            end) as prev_owner,
            exists(select 1 from conquest_battles cb3
               where cb3.zone_id = cb.zone_id and cb3.battle_kst_day < ${kstDay}
-                and cb3.winner_guild_id is not null) as had_owner_history
+                and cb3.winner_guild_id is not null) as had_owner_history,
+           -- 배치로 세운 수비 수(role=defend) — 집행관 자동 방어는 배치 행이 없어 여기 안 잡힌다.
+           -- finale 로스터 기반 defenders와의 차이가 곧 '집행관만 맞선 전투'다.
+           (select count(*)::int from guild_battle_deployments d
+              where d.zone_id = cb.zone_id and d.battle_kst_day = ${kstDay}
+                and d.server_id = ${serverId} and d.role = 'defend') as deployed_defenders
     from conquest_battles cb
     join zones z on z.id = cb.zone_id
     left join guilds g on g.id = cb.winner_guild_id
@@ -166,6 +175,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     finale: ConquestFinale | null;
     prev_owner: string | null;
     had_owner_history: boolean;
+    deployed_defenders: number;
   }[];
 
   const captures: ConquestDaySummary['captures'] = [];
@@ -181,7 +191,14 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   for (const b of battles) {
     if (!b.winner) {
       // 무승부(승자 없음) — 소유 길드가 있으면 '소유 유지'로 방어에 준해 기록(결과 누락 방지).
-      if (b.prev_owner) defenses.push({ zone: b.zone, region: regionKo(b.region), owner: b.prev_owner });
+      if (b.prev_owner)
+        defenses.push({
+          zone: b.zone,
+          region: regionKo(b.region),
+          owner: b.prev_owner,
+          defenders: (b.finale?.roster ?? []).filter((r) => r.guildName === b.prev_owner).length,
+          deployedDefenders: Number(b.deployed_defenders ?? 0),
+        });
       continue;
     }
     const region = regionKo(b.region);
@@ -203,9 +220,16 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         defenders: b.prev_owner
           ? (b.finale?.roster ?? []).filter((r) => r.guildName === b.prev_owner).length
           : 0,
+        deployedDefenders: Number(b.deployed_defenders ?? 0),
       });
     } else {
-      defenses.push({ zone: b.zone, region, owner: b.winner });
+      defenses.push({
+        zone: b.zone,
+        region,
+        owner: b.winner,
+        defenders: (b.finale?.roster ?? []).filter((r) => r.guildName === b.winner).length,
+        deployedDefenders: Number(b.deployed_defenders ?? 0),
+      });
     }
     // 로스터 기준 인원(배치 + 집행관 자동 방어). 소유 길드 소속 = 수비, 그 외 = 공격(길드별).
     // 같은 집계를 '사람이 몰린 전투'(CROWD_MIN 이상)와 '열세 방어'(수비<공격인데 지켜냄) 둘이 함께 쓴다.
@@ -439,6 +463,7 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 특히: 길드별 공격/점령 구역 수를 다른 길드 것과 합치지 말 것, 일부 구역을 잃어도 남은 영토가 있으면 '사라졌다/자리를 잃었다'류 소멸 표현 금지.
 - 조각(연결) 주의: 구역을 **잃어서** 조각 수가 줄어든 것을 '이어붙였다/통합/연결'로 서술하면 오류 — 상실로 인한 감소는 감소로만.
 - 교전 유무 주의: 사실표에 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역을 무혈·무저항·'지키는 병력이 없었다'로 쓴 문장은 오류다 — 저항을 뚫고 함락한 것으로 고쳐라. 반대로 '방어 병력 없음'인 구역에 교전 장면을 지어내도 오류.
+- 집행관 단독 주의: 사실표에 '배치한 수비 없이 집행관 혼자'가 붙은 구역을 '수비를 세워 맞섰으나·병력을 세웠으나'로 쓴 문장은 오류다(길드가 수비를 배치한 적이 없다) — '집행관 혼자 맞섰다·지키는 이는 집행관뿐이었다'로 고쳐라. 무혈로 쓰는 것도 오류다(교전은 있었다).
 - 재획득 표현 주의: '되찾다·탈환·수복·다시 가져오다'는 사실표 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 유효하다. 그 항목이 없는 구역에 쓴 재획득 표현은 전부 '빼앗다·차지하다'로 고쳐라(반대로 항목에 적힌 구역의 '되찾다'는 오류가 아니다).
 - 방어 길드 주의: 사실표 '방어'에 있는 길드를 '싸우지 않았다·다투지 않았다·조용했다'로 쓴 문장은 오류다 — '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 행동으로 고쳐라.
 - 누락 주의: 사실표 '공격 측'의 길드가 초안에 한 번도 등장하지 않으면, 그 길드가 어느 구역을 노렸고 결과가 어땠는지 한 문장을 사실표대로 보태라(지어내기 금지).
@@ -513,7 +538,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **'열세 방어'가 있으면 그날의 활약으로 세운다** — 적은 수로 더 많은 공격을 받아내고 지켜낸 전투다. 인원을 대비시켜 한두 문장으로 쓰고('셋이 일곱을 막아냈다'), 길드를 주어로 삼는다. 개인 활약이 함께 있으면 둘을 같은 문단에 묶되 같은 말을 두 번 하지 않는다.
 - **인원수를 쓸 수 있는 전투는 '가장 많은 사람이 몰린 전투'와 '열세 방어' 둘뿐이다.** 그 밖의 구역에는 인원수를 지어내지 말 것.
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
-- **'■ 어제와 이어지는 사실'이 있으면 반드시 서사에 잇는다 — 단, 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
+- **'■ 어제와 이어지는 사실'은 그날 헤드라인 소재이거나 가장 큰 사건일 때만 **한 문장**으로 잇는다(2026-09-13 사용자 지시 — 회고가 잦으면 오늘 이야기가 묻힌다). 나머지는 회고 없이 오늘 일만 쓴다. 이을 때는 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
 - **인물 마커({u|})는 정리의 '개인 활약'에 적힌 인물만 쓴다.** 로스터·지난 기록·짐작으로 다른 사람 이름을 꺼내지 말 것(2026-09-10: 목록에 없는 인물의 활약을 지어낸 사건). 활약 횟수도 목록 숫자 그대로.
 - **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'와 '열세 방어'에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다 — 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
 - **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. 연속성 항목이 여럿이면 '갓 얻은 땅', '잃은 지 하루 된 땅', '곧바로 다시 주인이 바뀌었다', '전날 잃은'처럼 표현을 바꿔 잇고, 세 문장 넘게 회고로 채우지 말 것.
@@ -628,9 +653,12 @@ export async function generateAndStoreChronicle(
     if (c.from) {
       // 교전 유무는 finale 로스터 기반 defenders로 판정 — defenses(방어 성공 목록)로 판정하면
       // '싸우고도 진 방어'가 전부 '방어 병력 없음'이 된다(2026-07-17 성문 오서술 사건).
+      // 집행관 단독(배치 0)은 따로 적는다 — 섞으면 '수비를 세웠다'는 없는 사실이 나간다(2026-09-13).
       const defNote =
         c.defenders > 0
-          ? ` — 이전 주인 「${c.from}」 이(가) 수비수 ${c.defenders}명으로 맞서 싸웠으나 패배(교전 있었음 — 무혈·무저항 아님)`
+          ? c.deployedDefenders > 0
+            ? ` — 이전 주인 「${c.from}」 이(가) 수비수 ${c.defenders}명으로 맞서 싸웠으나 패배(교전 있었음 — 무혈·무저항 아님)`
+            : ` — 이전 주인 「${c.from}」 은(는) **배치한 수비 없이 집행관 혼자** 맞섰으나 패배(교전은 있었으니 무혈로 쓰지 말고, '수비를 세웠다·병력을 세웠다'로도 쓰지 말 것)`
           : ` — 이전 주인 「${c.from}」 은(는) 방어 병력 없음`;
       return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote})`;
     }
@@ -667,7 +695,18 @@ export async function generateAndStoreChronicle(
     .join('\n');
   const atkLines = atkZoneLines ? `${atkZoneLines}\n${atkTotals}` : '· (공격 측 없음)';
   const defLines =
-    summary.defenses.map((d) => `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어`).join('\n') ||
+    summary.defenses
+      .map((d) => {
+        // 집행관 단독 방어를 '수비를 세워 막아냈다'로 쓰지 않게 구분해 준다(2026-09-13).
+        const how =
+          d.defenders > 0 && d.deployedDefenders === 0
+            ? ' (배치한 수비 없이 집행관 혼자 막아냄 — 「수비를 세웠다」로 쓰지 말 것)'
+            : d.defenders === 0
+              ? ' (교전 없음 — 공격이 닿지 않았거나 싸움이 벌어지지 않음)'
+              : '';
+        return `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어${how}`;
+      })
+      .join('\n') ||
     '· (방어 없음)';
   // 사람이 몰린 전투(2026-09-10) — 규모를 숫자로. 집행관 자동 방어는 수비 인원에 섞여 있다(따로 세지 않는다).
   const crowdLines =
@@ -998,6 +1037,9 @@ export async function generateAndStoreChronicle(
       .map((yc) => yc.zone),
     yesterdayZones: [...y.captures.map((c) => c.zone), ...y.defenses.map((d) => d.zone)],
     guildCounts,
+    // 그날 전투가 있었던 구역 전부 — 하나라도 본문에서 빠지면 재생성 피드백으로 잡는다.
+    battleZones: [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])],
+    captureBy: new Map(summary.captures.map((c) => [c.zone, { winner: c.winner, from: c.from }] as const)),
   };
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
@@ -1194,7 +1236,7 @@ export async function generateAndStoreChronicle(
     `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 점령전'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
     `'되찾다·탈환·수복·다시 가져오다' 같은 재획득 표현은 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 쓴다 — 그 외에는 정리에 직전 소유만 있고 그 이전 이력이 없으므로 '빼앗다·차지하다·가져가다'로만 쓴다(2026-07-18 잿빛 첨석 오서술).\n` +
     `구역의 소속 지역은 정리의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 점령을 한 지역 이름으로 묶지 말 것('왕국 전역에서'는 전부 왕국 지역일 때만, 여러 지역에 걸치면 '대륙 전역에서').\n` +
-    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). 반대로 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역은 실제 교전 끝에 함락된 것이다 — 이런 구역을 '지키는 병력이 없었다'·무혈·무저항으로 쓰면 안 되고, 저항을 뚫고 차지한 것으로 서술한다. '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
+    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). 반대로 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역은 실제 교전 끝에 함락된 것이다 — 이런 구역을 '지키는 병력이 없었다'·무혈·무저항으로 쓰면 안 되고, 저항을 뚫고 차지한 것으로 서술한다. '배치한 수비 없이 집행관 혼자'가 붙은 구역은 그 중간이다 — 교전은 있었으니 무혈로 쓰지 말되, 길드가 수비를 배치한 적은 없으므로 '수비를 세웠다'로도 쓰지 말고 '집행관 혼자 맞섰다'로 서술한다. '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
           `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
     (bigChange
       ? `이번 점령전는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다 — 어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지. headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`

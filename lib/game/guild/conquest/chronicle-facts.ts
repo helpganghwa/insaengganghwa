@@ -33,6 +33,10 @@ export type FactCheckContext = {
   yesterdayZones: string[];
   /** 길드 → 문장에 나올 수 있는 '곳' 수(얻음·잃음·현재·직전). 없으면 검사 생략. */
   guildCounts: Map<string, number[]>;
+  /** 그날 전투가 벌어진 구역 전체 — 본문에 하나도 빠지면 안 된다(2026-09-13 왕성·타락의 심연·버섯 군락 누락). */
+  battleZones: string[];
+  /** 소유권이 바뀐 구역 → 가져간 길드·빼앗긴 길드. 둘 다 그 구역 문단에 나와야 집계 산수가 본문에서 따라진다. */
+  captureBy: Map<string, { winner: string; from: string | null }>;
 };
 
 const MARKER = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}/g;
@@ -233,7 +237,61 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   once(/하루 만에/g, '하루 만에');
   once(/어제[^.]*내주었던/g, '어제 … 내주었던');
   once(/다시 노렸다/g, '다시 노렸다');
-  if (retroSentences > 3) issues.push(`'어제·전날' 회고 문장이 ${retroSentences}개다 — 세 문장 이하로 줄이고 나머지 연속성은 회고 표현 없이 잇는다.`);
+  // 회고는 한 문장까지(2026-09-13 사용자 지시 — 종전 세 문장은 '어제 언급이 너무 잦다'는 평의 원인).
+  if (retroSentences > 1)
+    issues.push(
+      `'어제·전날' 회고 문장이 ${retroSentences}개다 — **한 문장**만 남기고 나머지 연속성은 회고 표현 없이 오늘 일로만 쓴다.`,
+    );
+
+  // 8. 구역 누락 — 그날 전투가 있었던 구역은 전부 본문에 나와야 한다. 빠지면 그 전투가
+  //    통째로 없던 일이 된다(2026-09-13: 19전투 중 3곳이 빠져 Winners 방어전 일부가 사라졌다).
+  const mentionedZones = new Set(tokens(text).filter((t) => t.kind === 'z').map((t) => t.name));
+  const missing = ctx.battleZones.filter((z) => !mentionedZones.has(z));
+  if (missing.length > 0) {
+    issues.push(
+      `그날 전투가 있었는데 본문에 한 번도 안 나온 구역이 ${missing.length}곳이다: ${missing
+        .map((z) => `{z|${z}}`)
+        .join(', ')} — 정리대로 각 구역의 결과를 한 번씩은 쓴다(지어내기 금지).`,
+    );
+  }
+
+  // 9·10. 점령 구역 — 가져간 길드를 '지켰다'로 쓰거나(주체 혼동), 승자·이전 주인 중 하나라도
+  //       그 구역 문단에 없으면(귀속 누락) 잡는다. 둘 다 2026-09-13 실오류.
+  const HELD = /지켰|지켜냈|막아냈|사수|버텨냈|내주지 않/;
+  for (const para of text.split(/\n\n+/)) {
+    const paraGuilds = new Set(tokens(para).filter((t) => t.kind === 'g').map((t) => t.name));
+    for (const sent of sentences(para)) {
+      const toks = tokens(sent);
+      const zs = toks.filter((t) => t.kind === 'z').map((t) => t.name);
+      const gs = new Set(toks.filter((t) => t.kind === 'g').map((t) => t.name));
+      for (const z of zs) {
+        const c = ctx.captureBy.get(z);
+        if (!c) continue;
+        if (gs.has(c.winner) && HELD.test(plainText(sent))) {
+          issues.push(
+            `{z|${z}} 은(는) {g|${c.winner}} 이(가) ${c.from ? `{g|${c.from}} 에게서 ` : ''}**빼앗은** 구역인데 지켜낸 것처럼 썼다 — '차지했다·가져갔다·손에 넣었다'로 고친다: ${
+              sent.length > 60 ? sent.slice(0, 60) + '…' : sent
+            }`,
+          );
+        }
+      }
+    }
+    // 귀속 — 이 문단이 그 구역을 처음 다룬다면 승자와 이전 주인이 같은 문단 안에 있어야 한다.
+    for (const z of new Set(tokens(para).filter((t) => t.kind === 'z').map((t) => t.name))) {
+      const c = ctx.captureBy.get(z);
+      if (!c) continue;
+      const firstPara = text.split(/\n\n+/).find((pp) => pp.includes(`{z|${z}`)) === para;
+      if (!firstPara) continue;
+      const lack: string[] = [];
+      if (!paraGuilds.has(c.winner)) lack.push(`가져간 길드 {g|${c.winner}}`);
+      if (c.from && !paraGuilds.has(c.from)) lack.push(`빼앗긴 길드 {g|${c.from}}`);
+      if (lack.length > 0) {
+        issues.push(
+          `{z|${z}} 의 소유권 이동에서 ${lack.join('와(과) ')} 이(가) 같은 문단에 없다 — 누가 누구에게서 가져갔는지 밝혀야 마지막 집계의 증감이 본문에서 따라진다.`,
+        );
+      }
+    }
+  }
 
   return [...new Set(issues)];
 }
