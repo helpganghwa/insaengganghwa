@@ -11,6 +11,8 @@
  * 이전엔 빈 칸이라 생성 실패한 길드가 다른 화면에서 '길드 없는 사람'처럼 보였다.
  * 미소속(name도 없음)은 그대로 미렌더 — 폴백은 '길드는 있는데 문양만 없는' 경우에만.
  */
+import { GuildEmblemImg } from '@/components/GuildEmblemImg';
+
 export function GuildBadge({
   emblemUrl,
   name = null,
@@ -43,17 +45,9 @@ export function GuildBadge({
       <path d="M8 1.2 2.6 3.1v5.2c0 3 2.3 5.4 5.4 6.5 3.1-1.1 5.4-3.5 5.4-6.5V3.1L8 1.2Z" fill="currentColor" />
     </svg>
   );
+  // 로드 실패(사라진 옛 문양 파일 등)는 같은 폴백으로 — 깨진 이미지 아이콘을 내지 않는다(2026-09-14).
   const img = emblemUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={emblemUrl}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      decoding="async"
-      className="shrink-0 object-contain"
-      style={{ width: size, height: size, imageRendering: 'pixelated' }}
-    />
+    <GuildEmblemImg key={emblemUrl} src={emblemUrl} size={size} fallback={fallback} className="shrink-0 object-contain" />
   ) : name ? (
     fallback
   ) : null;
@@ -64,16 +58,7 @@ export function GuildBadge({
       <span className={`relative inline-flex max-w-full items-center ${className}`}>
         <span className="absolute right-full top-1/2 mr-1 -translate-y-1/2">
           {emblemUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={emblemUrl}
-              alt=""
-              aria-hidden
-              loading="lazy"
-              decoding="async"
-              className="object-contain"
-              style={{ width: size, height: size, imageRendering: 'pixelated' }}
-            />
+            <GuildEmblemImg key={emblemUrl} src={emblemUrl} size={size} fallback={fallback} className="object-contain" />
           ) : (
             fallback
           )}

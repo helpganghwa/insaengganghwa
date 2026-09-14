@@ -387,14 +387,6 @@ async function generateEmblemAsset(
   return { emblemUrl, color, prompt };
 }
 
-/** url에서 스토리지 키 추출(삭제 정리용). 못 찾으면 null. */
-function storageKeyFromUrl(url: string | null): string | null {
-  if (!url) return null;
-  const marker = `/${BUCKET}/`;
-  const i = url.indexOf(marker);
-  if (i < 0) return null;
-  return url.slice(i + marker.length).split('?')[0] || null;
-}
 
 /**
  * 결성 시 첫 문양(무료) — best-effort. 생성·업로드 성공 후에만 행 삽입 + 활성 지정(빈 행 방지).
@@ -676,9 +668,10 @@ export async function deleteEmblem(input: { userId: string; serverId: number; em
     await setGuildActiveEmblem(guildId, next);
   }
   await db.delete(guildEmblems).where(eq(guildEmblems.id, input.emblemId));
-  // 스토리지 파일 정리(best-effort) — url에서 키 추출(경로=uuid).
-  const key = storageKeyFromUrl(target.emblemUrl);
-  if (key) await serviceClient().storage.from(BUCKET).remove([key]).catch(() => {});
+  // 스토리지 파일은 지우지 않는다(2026-09-14). 문양 URL은 대난투 참가자·피날레 로스터·연대기
+  // guild_refs·점령전 기록에 "그 시점 문양"으로 박제돼 있어, 파일을 지우면 과거 회차의 마크가
+  // 전부 깨진다(길드 「전설」 옛 문양 삭제 → 8/26~29 회차 101곳 NoSuchKey). 행만 지워 보관함에서
+  // 사라지게 하고, 객체(64px PNG)는 역사 기록의 일부로 남긴다.
 }
 
 /**
