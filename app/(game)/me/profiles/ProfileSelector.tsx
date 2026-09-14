@@ -243,9 +243,9 @@ export function ProfileSelector({
         {sel.equipment && sel.equipment.length > 0 ? (() => {
           const plan = setPlan(sel.equipment, nowShown);
           return (
-            <div className="mt-2.5" aria-label="생성 당시 착용 장비">
+            <div className="mt-2.5" aria-label="생성에 사용된 장비">
               <div className="flex h-5 items-center justify-between px-0.5">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">생성 당시 장비</span>
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">생성에 사용된 장비</span>
                 {plan.equip.length > 0 ? (
                   <button
                     type="button"
