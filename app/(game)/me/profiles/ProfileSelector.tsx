@@ -377,36 +377,31 @@ export function ProfileSelector({
               </>
             }
           >
-            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {equipAsk.items.map((c) => {
-                const bg = atlasBgStyle(c.key, 32);
-                const cur = nowShown[c.slot];
-                return (
-                  <li key={c.key} className="flex items-center gap-2.5 px-2 py-2">
-                    {bg ? (
-                      <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
-                    ) : (
-                      <span aria-hidden className="h-8 w-8 shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" />
-                    )}
-                    <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[c.slot]}</span>
-                      <span className="truncate text-[13px] font-bold text-zinc-800 dark:text-zinc-100">{c.name}</span>
-                      <span className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">
-                        {cur ? `지금 장착 중: ${cur.name} → 해제` : '지금 이 부위에 장착한 장비 없음'}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-            {equipAsk.skipped.length > 0 ? (
-              <p className="px-2 pb-1 pt-2 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                미보유 {equipAsk.skipped.length}개({equipAsk.skipped.map((c) => c.name).join(', ')})는 건너뜁니다.
-              </p>
-            ) : null}
-            <p className="px-2 pb-1 pt-2 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              장착은 외형만 바뀌며 강화 진행과 랭킹에는 영향이 없습니다.
-            </p>
+            {/* 현재 장착 → 장착할 장비, 부위별 한 줄. 문장 대신 두 칸으로 보여준다(2026-09-14 사용자 요청). */}
+            <div className="px-1 py-1">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2 px-1 pb-1 text-[10px] text-zinc-400 dark:text-zinc-500">
+                <span>현재 장착</span>
+                <span aria-hidden className="w-4" />
+                <span>장착할 장비</span>
+              </div>
+              <ul className="space-y-1.5">
+                {equipAsk.items.map((c) => {
+                  const cur = nowShown[c.slot];
+                  return (
+                    <li key={c.key} className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
+                      <EquipCell itemKey={cur?.key} name={cur?.name} slot={c.slot} tone="current" />
+                      <span aria-hidden className="w-4 text-center text-[13px] text-zinc-400">→</span>
+                      <EquipCell itemKey={c.key} name={c.name} slot={c.slot} tone="next" />
+                    </li>
+                  );
+                })}
+              </ul>
+              {equipAsk.skipped.length > 0 ? (
+                <p className="px-1 pt-2 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  미보유 {equipAsk.skipped.length}개({equipAsk.skipped.map((c) => c.name).join(', ')})는 건너뜁니다.
+                </p>
+              ) : null}
+            </div>
           </ModalLayout>
         </ModalShell>
       )}
@@ -439,6 +434,47 @@ export function ProfileSelector({
           </ModalLayout>
         </ModalShell>
       )}
+    </div>
+  );
+}
+
+/** 장착 확인 팝업의 한 칸 — 부위·스프라이트·이름. 비어 있으면 점선 자리표와 '없음'. */
+function EquipCell({
+  itemKey,
+  name,
+  slot,
+  tone,
+}: {
+  itemKey?: string;
+  name?: string;
+  slot: SnapshotChip['slot'];
+  tone: 'current' | 'next';
+}) {
+  const bg = itemKey ? atlasBgStyle(itemKey, 28) : null;
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 py-1.5 ${
+        tone === 'next'
+          ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'
+          : 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950'
+      }`}
+    >
+      {bg ? (
+        <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
+      ) : (
+        <span
+          aria-hidden
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-dashed border-zinc-300 text-[11px] text-zinc-400 dark:border-zinc-700"
+        >
+          –
+        </span>
+      )}
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[slot]}</span>
+        <span className={`truncate text-[11px] font-bold ${name ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'}`}>
+          {name ?? '없음'}
+        </span>
+      </span>
     </div>
   );
 }
