@@ -15,7 +15,7 @@ export function GuildEmblemImg({
   className = '',
 }: {
   src: string;
-  /** 정사각 px. 생략하면 className(h-*/w-*)이 크기를 정한다 — 세계지도 마커·목록용. */
+  /** 정사각 px. 생략하면 className의 h-·w- 클래스가 크기를 정한다 — 세계지도 마커·목록용. */
   size?: number;
   /** 로드 실패 시 대신 그릴 것. 생략(null)이면 아무것도 안 그린다(길드 색 박스 등 바탕이 이미 있는 자리). */
   fallback?: React.ReactNode;
