@@ -774,18 +774,23 @@ export function DeployBoard({
                     power={fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
                     isMe={m.userId === myUserId}
                     actions={
-                      !locked && (canDeploy || m.userId === myUserId) ? (
+                      // 버튼마다 자기 권한만 본다(2026-09-14 문의). 종전엔 바깥 조건이 `deploy 권한 || 본인`이라
+                      // executor 권한만 있는 부길드장은 **자기 행에서만** [집행관]이 보였다 — 남을 집행관으로
+                      // 세울 수 없다는 제보. 서버(assertLeaderOfZoneOwner)는 처음부터 누구든 허용했다.
+                      !locked && ((isDefend && canExecutor) || canDeploy || m.userId === myUserId) ? (
                         <>
-                          {/* 집행관 지정 — executor 권한(0142) */}
+                          {/* 집행관 지정 — executor 권한(0142), 수비 배치자 누구든 */}
                           {isDefend && canExecutor && (
                             <RowAction onClick={() => setExec(m)} disabled={pending} tone="exec">
                               집행관
                             </RowAction>
                           )}
                           {/* 본인은 자기 배치 취소, 임원(deploy 권한)은 남의 배치도 해제 */}
-                          <RowAction onClick={() => remove(m)} disabled={pending} tone="danger">
-                            해제
-                          </RowAction>
+                          {(canDeploy || m.userId === myUserId) && (
+                            <RowAction onClick={() => remove(m)} disabled={pending} tone="danger">
+                              해제
+                            </RowAction>
+                          )}
                         </>
                       ) : null
                     }
