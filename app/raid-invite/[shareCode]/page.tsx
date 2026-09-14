@@ -73,6 +73,7 @@ export default async function RaidInvitePage({
       participantCount={n}
       loggedIn={!!userId}
       isParticipant={isParticipant}
+      nowIso={new Date().toISOString()}
     />
   );
 }

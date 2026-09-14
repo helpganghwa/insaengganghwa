@@ -530,6 +530,7 @@ export default async function HomePage() {
                       serverId={serverId}
                       chronicleDay={latestChronicleDay}
                       chronicleHeadline={chronicleHeadline}
+                      nowIso={new Date().toISOString()}
                     />
                   ) : descHot ? (
                     <span className="font-extrabold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{desc}</span>

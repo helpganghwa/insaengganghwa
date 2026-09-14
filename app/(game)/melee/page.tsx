@@ -75,6 +75,7 @@ export default async function MeleePage() {
         hasBattle={battle != null}
         participantCount={battle?.participantCount ?? null}
         history={history}
+        nowIso={new Date().toISOString()}
       />
     );
   }

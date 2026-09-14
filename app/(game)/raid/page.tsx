@@ -333,6 +333,7 @@ export default async function RaidPage() {
         dailyCap={RAID_DAILY_CAP}
         freeOpenLeft={freeOpenLeft}
         openRaids={openRaids}
+        nowIso={new Date().toISOString()}
       />
     </div>
   );

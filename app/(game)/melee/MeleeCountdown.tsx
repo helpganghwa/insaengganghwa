@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+
+import { useServerClock } from '@/lib/client/use-server-clock';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -33,9 +35,12 @@ export function MeleeCountdown({
   hasBattle,
   participantCount,
   history,
+  nowIso,
 }: {
   edition: number;
   runAtIso: string;
+  /** 서버 렌더 시각 — 보정 시계의 출발점(useServerClock 주석 참조). */
+  nowIso: string;
   /** 난투 진행 중 → 우승컵 전달 중 전환 경계(09:45). */
   deliverAtIso: string;
   revealAtIso: string;
@@ -45,11 +50,9 @@ export function MeleeCountdown({
   history: MeleeHistoryRow[];
 }) {
   const router = useRouter();
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  // 서버 시각으로 시작하는 보정 시계 — 폰 시계가 밀려도 발표 전환(shouldPoll)이 서버와 같은
+  // 시점에 걸린다. 종전엔 Date.now()라 시계가 밀린 기기에서 발표가 나도 화면이 안 넘어갔다.
+  const now = useServerClock(nowIso);
 
   const runAt = new Date(runAtIso).getTime();
   const deliverAt = new Date(deliverAtIso).getTime();

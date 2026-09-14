@@ -20,6 +20,7 @@ import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useServerClock } from '@/lib/client/use-server-clock';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -217,7 +218,7 @@ function ShareModeRow({
  * 통합 목록(2026-07-31) — 초대·친구·길드를 한 섹션에 모으고 관계는 배지로 구분한다.
  * 섹션을 나누면 친구이자 길드원인 개설자의 레이드가 중복 노출되고, 우선순위를 고정하면
  * 더 유리한 참가 경로(자유 참여)를 버리게 된다. 경로 선택은 page가 이미 끝냈다. */
-function RaidListSection({ title, raids }: { title: string; raids: FriendRaid[] }) {
+function RaidListSection({ title, raids, nowIso }: { title: string; raids: FriendRaid[]; nowIso: string }) {
   if (raids.length === 0) return null;
   return (
     <section className="mt-5">
@@ -271,7 +272,7 @@ function RaidListSection({ title, raids }: { title: string; raids: FriendRaid[] 
                 </span>
               </span>
               <span className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-zinc-300">
-                <Countdown iso={f.expireAtIso} />
+                <Countdown iso={f.expireAtIso} nowIso={nowIso} />
                 <span>
                   페이즈 <span className="font-mono font-bold">{f.phasesCleared}</span>
                 </span>
@@ -294,12 +295,10 @@ function RaidListSection({ title, raids }: { title: string; raids: FriendRaid[] 
   );
 }
 
-function Countdown({ iso }: { iso: string }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+function Countdown({ iso, nowIso }: { iso: string; nowIso: string }) {
+  // 서버 시각으로 시작하는 보정 시계 — '정산 대기' 전환과 10분 미만 강조가 실제 마감과
+  // 어긋나지 않게(useServerClock 주석). 종전엔 폰 시계라 남은 시간이 틀렸다.
+  const now = useServerClock(nowIso);
   const ms = new Date(iso).getTime() - now;
   if (ms <= 0) return <span className="text-zinc-400">정산 대기</span>;
   const h = Math.floor(ms / 3600000);
@@ -318,6 +317,7 @@ export function RaidSlots({
   dailyCap,
   freeOpenLeft = 0,
   openRaids = [],
+  nowIso,
 }: {
   cells: RaidSlotCell[];
   slots: number;
@@ -327,6 +327,8 @@ export function RaidSlots({
   freeOpenLeft?: number;
   /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
   openRaids?: FriendRaid[];
+  /** 서버 렌더 시각 — 보정 시계의 출발점. */
+  nowIso: string;
 }) {
   const router = useRouter();
   const { showError } = useResourceToast();
@@ -472,7 +474,7 @@ export function RaidSlots({
                   ) : null}
                 </span>
                 <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-zinc-300">
-                  <Countdown iso={s.expireAtIso} />
+                  <Countdown iso={s.expireAtIso} nowIso={nowIso} />
                   <span>
                     페이즈 <span className="font-mono font-bold">{s.phasesCleared}</span>
                   </span>
@@ -505,7 +507,7 @@ export function RaidSlots({
 
       {/* 참여 가능한 레이드 — 초대·친구·길드 통합(중복 제거·유리한 경로 선택은 page에서).
           행 클릭 = 상세 관전(참가/요청은 상세에서). */}
-      <RaidListSection title="참여 가능한 레이드" raids={openRaids} />
+      <RaidListSection title="참여 가능한 레이드" raids={openRaids} nowIso={nowIso} />
 
       {picking ? (
         // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).

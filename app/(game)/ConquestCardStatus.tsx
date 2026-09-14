@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { serverNow, setServerNow } from '@/lib/client/server-clock';
 
 /** 연대기 열람 기록 localStorage 키 — 값 = 마지막으로 읽은 공개 연대기의 kst_day. */
 export const chronicleReadKey = (serverId: number) => `ig:chron-read:s${serverId}`;
@@ -19,6 +20,7 @@ export function ConquestCardStatus({
   serverId,
   chronicleDay,
   chronicleHeadline,
+  nowIso,
 }: {
   inProgress: boolean;
   targetMs: number;
@@ -26,8 +28,15 @@ export function ConquestCardStatus({
   chronicleDay: string | null;
   /** 그날 헤드라인(평문) — 있으면 티저 문구로 우선 사용(부모 div의 truncate가 말줄임). */
   chronicleHeadline: string | null;
+  /** 서버 렌더 시각 — 보정 시계의 출발점(lib/client/use-server-clock 주석). */
+  nowIso: string;
 }) {
-  const [now, setNow] = useState<number | null>(null);
+  // 서버 시각으로 시작 — 종전엔 null이라 마운트 전 '다음 점령전까지'만 뜨고 숫자가 빈 자리였다.
+  // 값이 prop에서 오므로 SSR·하이드레이션이 같고, 첫 페인트부터 남은 시간이 보인다.
+  const [now, setNow] = useState<number | null>(() => {
+    const t = Date.parse(nowIso);
+    return Number.isFinite(t) ? t : null;
+  });
   const [unread, setUnread] = useState(false);
   // 긴 헤드라인 마퀴 — 넘친 폭(px). 0이면 정적 표시(짧은 문구·측정 전).
   const [overflowPx, setOverflowPx] = useState(0);
@@ -48,11 +57,13 @@ export function ConquestCardStatus({
   }, [unread, chronicleHeadline]);
   useEffect(() => {
     if (inProgress || unread) return;
-    const tick = () => setNow(Date.now());
+    // 폰 시계가 밀려도 다음 점령전까지 남은 시간이 서버와 맞게(2026-09-14).
+    setServerNow(nowIso);
+    const tick = () => setNow(serverNow());
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [inProgress, unread]);
+  }, [inProgress, unread, nowIso]);
 
   if (inProgress) return <>점령전 진행중</>;
   // 헤드라인이 없으면 티저를 띄우지 않는다 — '새로운 역사가 쓰였다'는 알맹이가 없어

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +9,7 @@ import { RAID_MAX_PARTICIPANTS, type RaidTier } from '@/lib/game/balance';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
+import { useServerClock } from '@/lib/client/use-server-clock';
 import { signInWithKakao } from '@/lib/auth/actions';
 import * as haptic from '@/lib/game/haptic';
 
@@ -22,12 +22,10 @@ import * as haptic from '@/lib/game/haptic';
  *  - 참가 가능: '레이드 보러가기' → 상세 관전(?c=코드) — 참가 요청은 상세에서
  *    (2026-07-27 문의 #30: 구경 후 참가 결정, 진입만으로 차감 없음).
  */
-function useRemaining(expireAtIso: string): { over: boolean; text: string } {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
+function useRemaining(expireAtIso: string, nowIso: string): { over: boolean; text: string } {
+  // 서버 시각으로 시작하는 보정 시계 — 공유 링크로 들어오는 최초 로드라 폰 시계 오차가
+  // 그대로 만료 표시에 드러난다(useServerClock 주석).
+  const now = useServerClock(nowIso);
   const ms = new Date(expireAtIso).getTime() - now;
   if (ms <= 0) return { over: true, text: '' };
   const h = Math.floor(ms / 3_600_000);
@@ -44,6 +42,7 @@ export function RaidInviteLanding({
   tier,
   status,
   expireAtIso,
+  nowIso,
   participantCount,
   loggedIn,
   isParticipant,
@@ -56,6 +55,8 @@ export function RaidInviteLanding({
   tier: RaidTier;
   status: 'active' | 'settled';
   expireAtIso: string;
+  /** 서버 렌더 시각 — 보정 시계의 출발점. */
+  nowIso: string;
   participantCount: number;
   loggedIn: boolean;
   isParticipant: boolean;
@@ -63,7 +64,7 @@ export function RaidInviteLanding({
   const router = useRouter();
   const boss = RAID_BOSSES[bossCode];
   const bg = getBossBg(bossCode);
-  const { over, text } = useRemaining(expireAtIso);
+  const { over, text } = useRemaining(expireAtIso, nowIso);
   const ended = status === 'settled' || over;
   const full = participantCount >= RAID_MAX_PARTICIPANTS;
 
