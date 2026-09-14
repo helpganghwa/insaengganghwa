@@ -6,12 +6,14 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { PROFILE_MAX } from '@/lib/game/balance';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
+import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { snapshotEquipment } from '@/lib/game/expedition/engine';
 
 import { ProfileSelector } from './ProfileSelector';
+import type { EquippedNow } from './equip-plan';
 
 const SLOT_ORDER = { weapon: 0, armor: 1, accessory: 2 } as const;
 
@@ -38,12 +40,24 @@ export default async function ProfileSelectPage() {
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
+    // 보유 장비 전체(카탈로그당 1행, 최대 카탈로그 종 수) — 스냅샷 키가 지금도 보유 중인지(장착 가능)와
+    // 부위별 현재 장착(확인 팝업의 "해제될 장비")을 한 번에 얻는다(2026-09-14, 장착 기능).
+    // 스냅샷 키로 좁히려면 프로필 조회 뒤 한 번 더 왕복해야 해서 병렬 전체 조회가 더 싸다(/me·인벤토리와 같은 방식).
+    db
+      .select({ id: userEquipment.id, code: catalogItems.code, name: catalogItems.name, equippedSlot: userEquipment.equippedSlot })
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
+      .where(and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId))),
     ]),
     3500,
     'me.profiles.page',
   ).catch(() => null);
   const list = _r?.[0] ?? [];
   const p = _r?.[1] ?? [];
+  const owned = _r?.[2] ?? [];
+  const ownedIdByKey = new Map(owned.map((r) => [r.code, r.id.toString()]));
+  const equippedNow: EquippedNow = {};
+  for (const r of owned) if (r.equippedSlot) equippedNow[r.equippedSlot] = { key: r.code, name: r.name };
 
   return (
     <>
@@ -74,11 +88,13 @@ export default async function ProfileSelectPage() {
               // 되는데, 그러면 "만들 때 +37이었나"로 읽힌다(시안 검토 결정). 기본 아바타는 빈 배열 → 줄 숨김.
               // 부위 순서는 게임 전체와 같게 무기·방어구·장신구로 고정 — 스냅샷 키 순서(armor가 먼저)를 그대로
               // 두면 화면마다 순서가 달라 보인다(로컬 검증에서 확인).
+              // userEquipmentId — 지금도 보유 중이면 그 행의 id(장착 액션 인자), 아니면 null(미보유 칩).
               equipment: snapshotEquipment(r.equipmentSnapshot, new Map())
-                .map((e) => ({ key: e.key, slot: e.slot, name: e.name }))
+                .map((e) => ({ key: e.key, slot: e.slot, name: e.name, userEquipmentId: ownedIdByKey.get(e.key) ?? null }))
                 .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]),
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
+            equippedNow={equippedNow}
           />
           <Link prefetch={false}
             href="/me/create"

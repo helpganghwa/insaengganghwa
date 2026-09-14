@@ -9,6 +9,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
+import { equipItem, EquipError } from '@/lib/game/equipment/equip';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -197,4 +198,53 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   revalidatePath('/me');
   revalidatePath('/me/profiles');
   return { status: 'ok' };
+}
+
+/**
+ * 아바타 생성 장비 장착(2026-09-14, 소규모 업데이트 6) — 아바타 관리 화면의 장비 칩·'이 세트 장착'.
+ * 인벤토리 장착과 같은 equipItem(외형 전용, 강화·랭킹 무관)을 최대 3개 순서대로 적용한다.
+ * 한 번의 왕복으로 세트를 처리하려고 배열을 받는다. 중간 실패 시 앞서 성공한 부위는 그대로 두고
+ * 실패 사유와 성공 개수를 돌려준다(클라가 refresh로 실제 상태를 맞춘다).
+ */
+export async function equipSnapshotItems(
+  ids: string[],
+): Promise<{ status: 'ok'; equipped: number } | { status: 'error'; message: string; equipped: number }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.', equipped: 0 };
+  if (await rateLimited(userId, 'inventory'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.', equipped: 0 };
+  const __b = await actionBlock();
+  if (__b)
+    return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.', equipped: 0 };
+
+  // bigint id 문자열만, 중복 제거, 부위 수(3) 상한 — 소유 검증은 equipItem(user_id 조건)이 한다.
+  const uniq = [...new Set(ids.filter((s) => typeof s === 'string' && /^\d{1,19}$/.test(s)))].slice(0, 3);
+  if (uniq.length === 0) return { status: 'error', message: '장착할 장비가 없습니다.', equipped: 0 };
+
+  const MSG: Record<EquipError['code'], string> = {
+    NOT_FOUND: '장비를 찾을 수 없습니다.',
+    SLOT_TAKEN: '같은 부위를 방금 다른 곳에서 장착했어요. 다시 시도해 주세요.',
+  };
+  let equipped = 0;
+  let failure: string | null = null;
+  for (const id of uniq) {
+    try {
+      await equipItem(userId, BigInt(id));
+      equipped += 1;
+    } catch (e) {
+      failure = e instanceof EquipError ? MSG[e.code] : '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
+      if (!(e instanceof EquipError)) console.error('[profiles.equip]', e);
+      break;
+    }
+  }
+  if (equipped > 0) {
+    // 장착 표시가 있는 화면 전부 — 인벤토리 액션의 revalidate와 같은 목록 + 이 화면·프로필 허브.
+    revalidatePath('/');
+    revalidatePath('/inventory');
+    revalidatePath('/enhance');
+    revalidatePath('/me');
+    revalidatePath('/me/profiles');
+  }
+  if (failure) return { status: 'error', message: failure, equipped };
+  return { status: 'ok', equipped };
 }

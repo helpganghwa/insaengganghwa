@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
@@ -9,7 +9,8 @@ import { atlasBgStyle } from '@/lib/game/equipment/sprite-atlas';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveProfile, returnProfile, flipProfile } from './actions';
+import { setActiveProfile, returnProfile, flipProfile, equipSnapshotItems } from './actions';
+import { chipState, optimisticPatch, setPlan, type EquippedNow, type SnapshotChip } from './equip-plan';
 
 type ProfileItem = {
   id: string;
@@ -17,7 +18,7 @@ type ProfileItem = {
   /** 기본 아바타(대장장이) — 반환 버튼 미노출 + 서버 가드 이중(2026-09-01). */
   isDefault?: boolean;
   /** 생성 당시 착용 장비(부위 순, 최대 3) — 없으면(기본 아바타·레거시) 줄을 그리지 않는다. */
-  equipment?: { key: string; slot: 'weapon' | 'armor' | 'accessory'; name: string }[];
+  equipment?: SnapshotChip[];
 };
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -30,9 +31,12 @@ function frontSrc(p: ProfileItem): string {
 export function ProfileSelector({
   profiles,
   activeProfileId,
+  equippedNow,
 }: {
   profiles: ProfileItem[];
   activeProfileId: string | null;
+  /** 부위별 현재 장착(서버) — 칩 상태(장착 중/장착 가능)와 확인 팝업의 "해제될 장비"의 기준. */
+  equippedNow: EquippedNow;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -50,6 +54,45 @@ export function ProfileSelector({
   // 반환 확인(2026-09-01, 구 삭제) — 즉시 회수되는 동작이라 무엇이 벌어지는지 문장으로 읽히는
   // 모달로 확인한다. 사유 선택은 두지 않는다(운영자가 스냅샷으로 판단).
   const [returnAsk, setReturnAsk] = useState(false);
+
+  // 생성 장비 장착(2026-09-14, E2안 + 확인 팝업) — 칩 탭은 그 부위만, '이 세트 장착'은 보유한 부위 전부.
+  // 둘 다 공용 팝업으로 무엇이 장착·해제되는지 보여준 뒤 실행한다. 낙관 반영: 확정 즉시 '장착 중'으로
+  // 바꾸고, 액션의 revalidatePath('/me/profiles') 응답이 equippedNow prop을 갱신하면 useOptimistic이
+  // 그 값으로 복귀(§11.7, 인벤토리 시트와 같은 구조). 에러만 refresh로 서버 실제 상태로 되돌린다.
+  const [nowShown, patchNow] = useOptimistic(equippedNow, (state: EquippedNow, patch: EquippedNow) => ({ ...state, ...patch }));
+  const [equipAsk, setEquipAsk] = useState<{ kind: 'one' | 'set'; items: SnapshotChip[]; skipped: SnapshotChip[] } | null>(null);
+  const [equipPending, startEquip] = useTransition();
+  const askEquipOne = (chip: SnapshotChip) => {
+    if (equipPending || chipState(chip, nowShown) !== 'can') return;
+    haptic.tap();
+    setEquipAsk({ kind: 'one', items: [chip], skipped: [] });
+  };
+  const askEquipSet = (chips: SnapshotChip[]) => {
+    if (equipPending) return;
+    const plan = setPlan(chips, nowShown);
+    if (plan.equip.length === 0) return;
+    haptic.tap();
+    setEquipAsk({ kind: 'set', items: plan.equip, skipped: plan.skipped });
+  };
+  const doEquip = () => {
+    if (!equipAsk || equipPending) return;
+    const items = equipAsk.items;
+    setEquipAsk(null);
+    haptic.success();
+    startEquip(async () => {
+      patchNow(optimisticPatch(items));
+      const r = await equipSnapshotItems(items.map((c) => c.userEquipmentId ?? ''));
+      if (r.status === 'error') {
+        showError(r.message);
+        router.refresh();
+        return;
+      }
+      showHeaderToast({
+        title: items.length === 1 ? `${SLOT_KO[items[0]!.slot]} 장착` : `${r.equipped}개 부위 장착`,
+        detail: items.map((c) => c.name).join(' · '),
+      });
+    });
+  };
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
@@ -194,32 +237,77 @@ export function ProfileSelector({
         </div>
         {/* 생성 당시 착용 장비(2026-09-14, 문의 "어떤 장비로 만들었는지 항시 확인") — 파견 화면 칩과
             같은 어휘(스프라이트·부위·이름). 탭 없이 항상 보이고, 썸네일을 넘길 때마다 바뀐다.
-            강화 수치는 넣지 않는다(스냅샷엔 키만 있어 '지금' 값이 되어 오해를 부른다). */}
-        {sel.equipment && sel.equipment.length > 0 ? (
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5" aria-label="생성 당시 착용 장비">
-            {sel.equipment.map((e) => {
-              const bg = atlasBgStyle(e.key, 26);
-              return (
-                <div
-                  key={e.key}
-                  className="flex min-w-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-1.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
-                >
-                  {bg ? (
-                    <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
-                  ) : (
-                    <span aria-hidden className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[9px] font-bold text-zinc-500 dark:bg-zinc-900">
-                      {SLOT_KO[e.slot].slice(0, 1)}
-                    </span>
-                  )}
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[e.slot]}</span>
-                    <span className="truncate text-[11px] font-bold text-zinc-800 dark:text-zinc-100">{e.name}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
+            강화 수치는 넣지 않는다(스냅샷엔 키만 있어 '지금' 값이 되어 오해를 부른다).
+            칩 우하단 라벨이 상태를 말한다: 장착(탭 가능) / 장착 중 / 미보유. 세트 버튼은 장착 가능한
+            부위가 하나라도 있을 때만 보인다. */}
+        {sel.equipment && sel.equipment.length > 0 ? (() => {
+          const plan = setPlan(sel.equipment, nowShown);
+          return (
+            <div className="mt-2.5" aria-label="생성 당시 착용 장비">
+              <div className="flex h-5 items-center justify-between px-0.5">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">생성 당시 장비</span>
+                {plan.equip.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => askEquipSet(sel.equipment!)}
+                    disabled={equipPending}
+                    className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-amber-600 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-amber-400"
+                  >
+                    이 세트 장착
+                  </button>
+                ) : plan.skipped.length === 0 ? (
+                  <span className="text-[10px] font-bold text-violet-500">모두 장착 중</span>
+                ) : null}
+              </div>
+              <div className="mt-1 grid grid-cols-3 gap-1.5">
+                {sel.equipment.map((e) => {
+                  const bg = atlasBgStyle(e.key, 26);
+                  const st = chipState(e, nowShown);
+                  return (
+                    <button
+                      key={e.key}
+                      type="button"
+                      onClick={() => askEquipOne(e)}
+                      disabled={st !== 'can' || equipPending}
+                      aria-label={`${SLOT_KO[e.slot]} ${e.name} — ${st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}`}
+                      className={`relative flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 pb-4 pt-1.5 text-left transition active:scale-[0.98] ${
+                        st === 'on'
+                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'
+                          : st === 'can'
+                            ? 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950'
+                            : 'border-zinc-200 bg-zinc-50 opacity-45 dark:border-zinc-800 dark:bg-zinc-950'
+                      }`}
+                    >
+                      {bg ? (
+                        <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
+                      ) : (
+                        <span aria-hidden className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[9px] font-bold text-zinc-500 dark:bg-zinc-900">
+                          {SLOT_KO[e.slot].slice(0, 1)}
+                        </span>
+                      )}
+                      <span className="flex min-w-0 flex-col leading-tight">
+                        <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[e.slot]}</span>
+                        <span className="truncate text-[11px] font-bold text-zinc-800 dark:text-zinc-100">{e.name}</span>
+                      </span>
+                      <span
+                        aria-hidden
+                        className={`absolute bottom-1 right-1 rounded px-1 text-[8.5px] font-extrabold leading-[1.3] ${
+                          st === 'on'
+                            ? 'bg-violet-600 text-white'
+                            : st === 'can'
+                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+                              : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                        }`}
+                      >
+                        {st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })() : null}
       </div>
 
       {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정).
@@ -269,6 +357,59 @@ export function ProfileSelector({
       >
         {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
       </button>
+
+      {/* 장비 장착 확인 — 무엇이 장착되고 같은 부위의 무엇이 해제되는지 부위별로 보여준다.
+          장착은 외형 전용(강화·랭킹 무관)이라 경고 톤은 쓰지 않는다. */}
+      {equipAsk && (
+        <ModalShell onClose={() => setEquipAsk(null)} onSubmit={doEquip} label="장비 장착 확인">
+          <ModalLayout
+            title={equipAsk.kind === 'set' ? '이 세트 장착' : '장비 장착'}
+            subtitle={equipAsk.kind === 'set' ? `${equipAsk.items.length}개 부위` : SLOT_KO[equipAsk.items[0]!.slot]}
+            bodyPad="sm"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setEquipAsk(null)} disabled={equipPending}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="primary" onClick={doEquip} disabled={equipPending}>
+                  {equipAsk.kind === 'set' ? `${equipAsk.items.length}개 장착` : '장착'}
+                </ModalButton>
+              </>
+            }
+          >
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {equipAsk.items.map((c) => {
+                const bg = atlasBgStyle(c.key, 32);
+                const cur = nowShown[c.slot];
+                return (
+                  <li key={c.key} className="flex items-center gap-2.5 px-2 py-2">
+                    {bg ? (
+                      <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
+                    ) : (
+                      <span aria-hidden className="h-8 w-8 shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" />
+                    )}
+                    <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[c.slot]}</span>
+                      <span className="truncate text-[13px] font-bold text-zinc-800 dark:text-zinc-100">{c.name}</span>
+                      <span className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {cur ? `지금 장착 중: ${cur.name} → 해제` : '지금 이 부위에 장착한 장비 없음'}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {equipAsk.skipped.length > 0 ? (
+              <p className="px-2 pb-1 pt-2 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                미보유 {equipAsk.skipped.length}개({equipAsk.skipped.map((c) => c.name).join(', ')})는 건너뜁니다.
+              </p>
+            ) : null}
+            <p className="px-2 pb-1 pt-2 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              장착은 외형만 바뀌며 강화 진행과 랭킹에는 영향이 없습니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      )}
 
       {/* 아바타 반환 확인 — 즉시 회수 + 사후 지급 구조를 문장으로 고지하고 사유를 받는다. */}
       {returnAsk && (
