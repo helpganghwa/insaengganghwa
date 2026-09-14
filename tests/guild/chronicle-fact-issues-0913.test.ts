@@ -94,4 +94,16 @@ describe('연대기 사실 검증기 — 2026-09-13 회귀', () => {
     const t = '{g|로제|25}는 두 곳을 얻었고 {z|모닥불 평원|40}에서는 셋을 베었다.';
     expect(factIssues(t, ctx).some((i) => i.includes('사람 수 표현'))).toBe(true);
   });
+
+  it('활약 인물이 쓰러뜨린 수를 부풀리면 잡는다 — 인원수 허용을 넓히며 생긴 구멍(2026-09-14)', () => {
+    const c2 = { ...ctx, feats: [{ nickname: '쩌내', count: 3 }], headcountZones: ['고사목 숲'] };
+    const bad = '{z|고사목 숲|29}에서는 {u|쩌내|fmWISaRB}가 넷을 모두 눕혔다.';
+    const good = '{z|고사목 숲|29}에서는 {u|쩌내|fmWISaRB}가 셋을 모두 눕혔다.';
+    expect(factIssues(bad, c2).some((i) => i.includes('쓰러뜨린 수는 3'))).toBe(true);
+    expect(factIssues(good, c2).some((i) => i.includes('쓰러뜨린 수는'))).toBe(false);
+    // 상대가 "여섯을 모아" 온 것은 활약 수가 아니다 — 잡히면 안 된다
+    const foes = '{z|썩은 잔교|25}에는 {g|케케케|27}가 여섯을 모아 들이쳤지만 {u|규규|wnKGLGz2}가 여섯을 쓰러뜨렸다.';
+    expect(factIssues(foes, { ...ctx, feats: [{ nickname: '규규', count: 6 }], headcountZones: ['썩은 잔교'] })
+      .some((i) => i.includes('쓰러뜨린 수는'))).toBe(false);
+  });
 });

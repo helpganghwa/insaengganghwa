@@ -168,6 +168,17 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         if (m && UNIT[m[1]!] !== undefined && UNIT[m[1]!] !== count && !(m[1] === '열' && count === 10)) {
           issues.push(`{u|${t.name}} 의 활약 횟수는 ${count}인데 문장은 '${m[0]}'로 적었다: ${q(sent)}`);
         }
+        // 2026-09-14 — 인원수 허용 구역을 '활약이 나온 구역'까지 넓히면서, 활약 인물 문장의
+        // "둘을 베고·셋을 쓰러뜨리고"가 실제 처치 수와 대조되지 않는 구멍이 생겼다. 그 사람이 쓰러뜨린
+        // 수(단독 서수+조사 꼴)도 활약 횟수와 같아야 한다. '여섯을 모아'처럼 상대가 모은 수는 활약이
+        // 아니므로 '베|쓰러|눕|처치|잡|무너' 동사가 바로 뒤따르는 경우만 본다.
+        const HEAD_UNIT: Record<string, number> = { 하나: 1, 둘: 2, 셋: 3, 넷: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
+        for (const k of plain.matchAll(/(하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열)(?:을|를)\s?(?:모두\s?|전부\s?|다\s?)?(베|쓰러|눕|처치|잡|무너)/g)) {
+          const n = HEAD_UNIT[k[1]!]!;
+          if (n !== count) {
+            issues.push(`{u|${t.name}} 이(가) 쓰러뜨린 수는 ${count}인데 문장은 '${k[1]}${k[0].slice(k[1]!.length, k[1]!.length + 1)} ${k[2]}…'로 적었다 — 개인 활약 목록의 수로 고친다: ${q(sent)}`);
+          }
+        }
       }
 
       // 2. 인원수

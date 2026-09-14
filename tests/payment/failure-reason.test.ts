@@ -17,9 +17,9 @@ describe('classifyPaymentFailure', () => {
   it('한국어 취소 문구를 잡는다', () => {
     for (const pgMessage of [
       '사용자가 결제를 취소하였습니다',
-      '결제를 취소했습니다',
       '고객 취소',
       '사용자 중단',
+      '이용자가 결제를 중단했습니다',
       '결제창을 닫았습니다',
     ]) {
       expect(classifyPaymentFailure({ pgMessage }).userCancelled).toBe(true);
@@ -40,6 +40,18 @@ describe('classifyPaymentFailure', () => {
       { pgMessage: '유효하지 않은 카드번호' },
     ]) {
       expect(classifyPaymentFailure(f).userCancelled).toBe(false);
+    }
+  });
+
+  it('행위자 없는 취소 종결형은 이탈로 보지 않는다 — PG·카드사 측 취소가 경보를 못 삼키게(2026-09-14)', () => {
+    for (const pgMessage of [
+      '카드사에서 승인이 취소되었습니다',
+      '한도 초과로 거래가 취소되었습니다',
+      '결제가 취소되었습니다', // 누가 취소했는지 모름 → 오류로
+      '기한 만료로 자동 취소됨',
+      '승인 거절: 정지된 카드',
+    ]) {
+      expect(classifyPaymentFailure({ pgMessage }).userCancelled).toBe(false);
     }
   });
 
