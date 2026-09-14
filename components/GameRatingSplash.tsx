@@ -76,7 +76,7 @@ export function GameRatingSplash() {
     // 헤더가 아니라 띠지를 덮어 두 줄이 어긋나 보인다(띠지 없으면 0px = 기존과 동일).
     <div className="pointer-events-none fixed inset-x-0 z-[150]" style={{ top: 'var(--inst-h, 0px)' }}>
       <div
-        className={`mx-auto max-w-[390px] border-b border-zinc-700/60 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
+        className={`mx-auto max-w-[390px] border-b border-zinc-700/60 bg-zinc-950 shadow-[0_4px_16px_rgba(0,0,0,0.5)] transition-transform duration-500 ease-out ${
           entered ? 'translate-y-0' : '-translate-y-full'
         }`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}

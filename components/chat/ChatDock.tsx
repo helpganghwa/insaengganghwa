@@ -1579,7 +1579,7 @@ export function ChatDock() {
                 type="button"
                 onClick={toggleCollapsed}
                 aria-label="채팅 펼치기"
-                className="pointer-events-auto flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
+                className="pointer-events-auto flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white dark:border-zinc-700/60 dark:bg-zinc-900"
               >
                 {/* 점은 항상 말풍선 아이콘의 왼쪽 위 — 접힘/펼침에서 같은 자리에 보이도록
                     바(가변 폭)가 아니라 아이콘을 기준으로 단다(2026-08-07 피드백). */}
@@ -1593,7 +1593,7 @@ export function ChatDock() {
             ) : (
               // 펼침 — 미니바 본문은 **탭과 무관하게 항상 전체 채널 최신 1건**.
               // 귓속말은 내용·발신자를 여기 절대 노출하지 않고, 새 소식은 우상단 점으로만 알린다.
-              <div className="pointer-events-auto relative flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pr-3 pl-1.5 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
+              <div className="pointer-events-auto relative flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white pr-3 pl-1.5 dark:border-zinc-700/60 dark:bg-zinc-900">
                 <button
                   type="button"
                   onClick={toggleCollapsed}

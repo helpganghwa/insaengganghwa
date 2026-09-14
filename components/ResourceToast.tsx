@@ -314,7 +314,7 @@ function RankingBar({ entry }: { entry: RankingToast }) {
     <div
       // 셸 폭(max-w-390)에 맞춰 가운데로 — 부모가 `fixed inset-x-0`이라 이게 없으면 넓은 화면에서
       // 바가 뷰포트 전체로 퍼져 헤더를 벗어난다(2026-09-12 실측). HeaderBar와 동일 구조.
-      className="pointer-events-none mx-auto w-full max-w-[390px] border-b border-zinc-200 bg-zinc-950/95 shadow-lg backdrop-blur dark:border-zinc-800"
+      className="pointer-events-none mx-auto w-full max-w-[390px] border-b border-zinc-200 bg-zinc-950 shadow-lg dark:border-zinc-800"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex h-12 items-center justify-between gap-1 px-3">
@@ -360,10 +360,10 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
       {/* 헤더 정확히 덮기 — 셸 폭(max-w-390) + safe-area pad + h-12 (AppHeader와 동일 구조). */}
       {/* 에러 톤이면 적색 바, 기본은 다크 바(공용 동일 컴포넌트). */}
       <div
-        className={`mx-auto max-w-[390px] border-b shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm ${
+        className={`mx-auto max-w-[390px] border-b shadow-[0_4px_16px_rgba(0,0,0,0.5)] ${
           entry.tone === 'error'
-            ? 'border-red-900/70 bg-red-700/95'
-            : 'border-zinc-700/60 bg-zinc-950/95'
+            ? 'border-red-900/70 bg-red-700'
+            : 'border-zinc-700/60 bg-zinc-950'
         }`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
