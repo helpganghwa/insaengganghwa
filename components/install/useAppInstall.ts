@@ -25,6 +25,7 @@ export type InstallState =
   | { kind: 'ios-other'; kakao: boolean } // iOS 비-Safari(Chrome/인앱) — Safari로 열어야 설치 가능
   | { kind: 'android' } // 안드 but prompt 미발생 — 수동 안내
   | { kind: 'inapp' } // 안드 인앱 웹뷰 — 외부 Chrome으로
+  | { kind: 'play-installed' } // 안드 크롬인데 Play 앱이 이미 설치됨 — PWA 대신 앱으로 열기
   | { kind: 'unsupported' };
 
 /** 안드로이드 인앱 웹뷰 → 외부 Chrome 강제 오픈(intent). */
@@ -34,6 +35,15 @@ function openAndroidChrome() {
   window.location.href =
     `intent://${loc.host}${loc.pathname}${loc.search}` +
     `#Intent;scheme=${scheme};package=com.android.chrome;` +
+    `S.browser_fallback_url=${encodeURIComponent(loc.href)};end`;
+}
+
+/** 설치된 Play 앱으로 열기 — 안드로이드 인텐트(패키지 지정). 앱이 없으면 현재 주소로 폴백. */
+function openPlayApp() {
+  const loc = window.location;
+  window.location.href =
+    `intent://${loc.host}${loc.pathname}${loc.search}` +
+    `#Intent;scheme=https;package=${PLAY_APP_ID};` +
     `S.browser_fallback_url=${encodeURIComponent(loc.href)};end`;
 }
 
@@ -97,7 +107,7 @@ export function useAppInstall(): {
         .then((apps) => {
           if (!apps.some((a) => a.platform === 'play' && a.id === PLAY_APP_ID)) return;
           playInstalled = true;
-          setState({ kind: 'installed' });
+          setState({ kind: 'play-installed' });
         })
         .catch(() => {});
     }
@@ -143,6 +153,10 @@ export function useAppInstall(): {
     }
     if (state.kind === 'inapp') {
       openAndroidChrome();
+      return 'external';
+    }
+    if (state.kind === 'play-installed') {
+      openPlayApp();
       return 'external';
     }
     return 'none';
