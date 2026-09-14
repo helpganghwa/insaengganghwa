@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { serverNow, setServerNow } from './server-clock';
+import { isServerClockEstablished, serverNow, setServerNow } from './server-clock';
 
 /**
  * 서버 시각으로 시작하는 1초 시계(2026-09-14).
@@ -27,6 +27,9 @@ import { serverNow, setServerNow } from './server-clock';
  */
 export function useServerClock(nowIso: string, intervalMs = 1000): number {
   const [now, setNow] = useState(() => {
+    // 이미 보정된 세션(클라 내비게이션·뒤로가기 복원)이면 prop보다 보정 시계가 정확하다 — prop은 캐시된
+    // 옛 값일 수 있다. 첫 로드(하이드레이션)에서는 서버·클라 모두 미등록이라 같은 prop으로 같은 값을 만든다.
+    if (isServerClockEstablished()) return serverNow();
     const t = Date.parse(nowIso);
     // 잘못된 값이 와도 화면이 죽지 않게 — 폰 시계로 폴백(종전 동작과 동일).
     return Number.isFinite(t) ? t : Date.now();

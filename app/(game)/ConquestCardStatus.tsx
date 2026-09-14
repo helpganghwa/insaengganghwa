@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { serverNow, setServerNow } from '@/lib/client/server-clock';
+import { isServerClockEstablished, serverNow, setServerNow } from '@/lib/client/server-clock';
 
 /** 연대기 열람 기록 localStorage 키 — 값 = 마지막으로 읽은 공개 연대기의 kst_day. */
 export const chronicleReadKey = (serverId: number) => `ig:chron-read:s${serverId}`;
@@ -34,6 +34,8 @@ export function ConquestCardStatus({
   // 서버 시각으로 시작 — 종전엔 null이라 마운트 전 '다음 점령전까지'만 뜨고 숫자가 빈 자리였다.
   // 값이 prop에서 오므로 SSR·하이드레이션이 같고, 첫 페인트부터 남은 시간이 보인다.
   const [now, setNow] = useState<number | null>(() => {
+    // 보정된 세션이면 보정 시계로(뒤로가기 복원 시 prop이 옛 값일 수 있음 — use-server-clock 주석).
+    if (isServerClockEstablished()) return serverNow();
     const t = Date.parse(nowIso);
     return Number.isFinite(t) ? t : null;
   });

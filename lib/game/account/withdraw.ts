@@ -79,6 +79,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);
+    await tx.execute(sql`delete from platform_daily where user_id = ${uid}`); // 0199 플랫폼별 접속(통계) — 개인 활동 기록이라 파기
     // 포인트 지갑(0197, 점검 반영) — 대난투 원장은 캐릭터와 함께 삭제. 마일리지 원장은 iap_orders와 동축이라
     // **남기고** 잔액만큼 상계 행(탈퇴 소멸)을 넣는다: 지우면 소급 스크립트 재실행 때 order:<id> 적립이 되살아나
     // 재가입 계정에 마일리지가 부활한다(diamond_ledger·patron_milestone_grants를 보존하는 것과 같은 원칙).
