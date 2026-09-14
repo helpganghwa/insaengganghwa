@@ -25,6 +25,16 @@ const MARCH_MS = 2600;
 const sleepUnless = (ms: number, skip: () => boolean) =>
   new Promise<void>((r) => (skip() ? r() : setTimeout(r, ms)));
 
+/** 문양 미보유·문양 파일 유실 공통 폴백 — 길드 색 방패 + 머리글자(이동 문양용 26×30 박스). */
+function shieldFallback(e: HTMLElement, color: string | null, guild: string): void {
+  e.style.clipPath = 'polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%)';
+  e.style.background = color ?? '#71717a';
+  e.textContent = guild.slice(0, 1);
+  e.style.fontSize = '11px';
+  e.style.fontWeight = '900';
+  e.style.color = '#fff';
+}
+
 /**
  * 목표 지점에서 가장 가까운 지도 밖 가장자리(%) — 무영지 길드의 등장 지점.
  * 같은 구역을 노리는 무영지 길드가 여럿이면(k번째 / n개) 가장자리를 따라 9%씩 벌려 세운다 —
@@ -153,14 +163,14 @@ export function ChronicleReplayPanel({
       img.src = g.emblemUrl;
       img.alt = '';
       img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+      // 파일이 사라진 옛 문양(그 시점 스냅샷 URL) — 깨진 아이콘 대신 미보유 길드와 같은 색 방패(2026-09-14).
+      img.onerror = () => {
+        img.remove();
+        shieldFallback(e, g.color, guild);
+      };
       e.appendChild(img);
     } else {
-      e.style.clipPath = 'polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%)';
-      e.style.background = g.color ?? '#71717a';
-      e.textContent = guild.slice(0, 1);
-      e.style.fontSize = '11px';
-      e.style.fontWeight = '900';
-      e.style.color = '#fff';
+      shieldFallback(e, g.color, guild);
     }
     e.style.left = `${at.x}%`;
     e.style.top = `${at.y}%`;
@@ -227,6 +237,10 @@ export function ChronicleReplayPanel({
       img.src = g.emblemUrl;
       img.alt = '';
       img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+      img.onerror = () => {
+        img.remove();
+        e.style.background = g.color ?? '#71717a';
+      };
       e.appendChild(img);
     } else {
       e.style.background = g.color ?? '#71717a';

@@ -11,6 +11,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
+import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
@@ -369,15 +370,9 @@ const WorldMap = memo(function WorldMap({
                 }}
               >
                 {/* 점령 길드 문양(있으면) — 리플레이 중엔 override 소유 길드의 문양 */}
+                {/* 파일이 사라진 옛 문양(리플레이·타임랩스의 스냅샷 URL)은 깨진 아이콘 대신 길드 색 박스만 남긴다(2026-09-14). */}
                 {owned && emblemUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={emblemUrl}
-                    alt=""
-                    aria-hidden
-                    className="h-full w-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
+                  <GuildEmblemImg key={emblemUrl} src={emblemUrl} className="h-full w-full object-contain" />
                 ) : null}
               </span>
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
@@ -974,14 +969,7 @@ export function WorldMapView({
                             }`}
                           >
                             {z.ownerGuildId && z.ownerEmblemUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={z.ownerEmblemUrl}
-                                alt=""
-                                aria-hidden
-                                className="h-3 w-3 shrink-0"
-                                style={{ imageRendering: 'pixelated' }}
-                              />
+                              <GuildEmblemImg key={z.ownerEmblemUrl} src={z.ownerEmblemUrl} className="h-3 w-3 shrink-0" />
                             ) : null}
                             <span className="truncate">{z.ownerGuildName ?? '중립'}</span>
                           </span>
@@ -1004,14 +992,7 @@ export function WorldMapView({
                     </span>
                     <span className="flex min-w-0 flex-1 items-center gap-1 font-semibold text-zinc-700 dark:text-zinc-200">
                       {g.emblemUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={g.emblemUrl}
-                          alt=""
-                          aria-hidden
-                          className="h-3.5 w-3.5 shrink-0"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
+                        <GuildEmblemImg key={g.emblemUrl} src={g.emblemUrl} className="h-3.5 w-3.5 shrink-0" />
                       ) : null}
                       <span className="truncate">{g.name}</span>
                     </span>
@@ -1089,13 +1070,10 @@ export function WorldMapView({
               {/* 길드 영토 강조 — 문양을 헤더 우상단에 불투명하게 붙임(작은 배지 크기). DOM상 텍스트
                   블록보다 앞이라 겹쳐도 텍스트가 위에 그려짐. 중립이면 미표시. */}
               {selected.ownerEmblemUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <GuildEmblemImg
+                  key={selected.ownerEmblemUrl}
                   src={selected.ownerEmblemUrl}
-                  alt=""
-                  aria-hidden
                   className="pointer-events-none absolute top-2 right-2 h-12 w-12 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
-                  style={{ imageRendering: 'pixelated' }}
                 />
               )}
               <div className="relative flex h-full items-end gap-2 p-3">
@@ -1126,14 +1104,7 @@ export function WorldMapView({
                   {selected.ownerGuildName ? (
                     <>
                       {selected.ownerEmblemUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={selected.ownerEmblemUrl}
-                          alt=""
-                          aria-hidden
-                          className="h-[19px] w-[19px] shrink-0 rounded object-contain"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
+                        <GuildEmblemImg key={selected.ownerEmblemUrl} src={selected.ownerEmblemUrl} className="h-[19px] w-[19px] shrink-0 rounded object-contain" />
                       )}
                       <span className="min-w-0 truncate text-[13.5px] font-extrabold">{selected.ownerGuildName}</span>
                     </>
@@ -1548,14 +1519,7 @@ export function WorldMapView({
           <ModalLayout
             icon={
               guildPopup.emblemUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={guildPopup.emblemUrl}
-                  alt=""
-                  aria-hidden
-                  className="mx-auto h-11 w-11 object-contain"
-                  style={{ imageRendering: 'pixelated' }}
-                />
+                <GuildEmblemImg key={guildPopup.emblemUrl} src={guildPopup.emblemUrl} className="mx-auto h-11 w-11 object-contain" fallback="🛡️" />
               ) : (
                 '🛡️'
               )

@@ -1,5 +1,6 @@
 'use client';
 import { profileHref } from '@/lib/game/profile/href';
+import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -307,14 +308,7 @@ function IntroView({
               <span className="text-amber-300">점령</span> {view.winner.name}
             </span>
             {view.winner.emblemUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={view.winner.emblemUrl}
-                alt=""
-                aria-hidden
-                className="h-4 w-4 object-contain"
-                style={{ imageRendering: 'pixelated' }}
-              />
+              <GuildEmblemImg key={view.winner.emblemUrl} src={view.winner.emblemUrl} className="h-4 w-4 object-contain" />
             ) : null}
           </div>
         ) : (
