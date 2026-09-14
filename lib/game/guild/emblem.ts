@@ -637,7 +637,8 @@ export async function setActiveEmblem(input: { userId: string; serverId: number;
   const [em] = await db
     .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
     .from(guildEmblems)
-    .where(and(eq(guildEmblems.id, input.emblemId), eq(guildEmblems.guildId, guildId)))
+    // removedAt: 삭제(소프트)·리젝된 문양은 다시 활성으로 고를 수 없다.
+    .where(and(eq(guildEmblems.id, input.emblemId), eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)))
     .limit(1);
   if (!em) throw new GuildError('EMBLEM_NOT_FOUND');
   await setGuildActiveEmblem(guildId, em);
@@ -667,11 +668,13 @@ export async function deleteEmblem(input: { userId: string; serverId: number; em
     const next = rows.find((r) => r.id !== input.emblemId)!;
     await setGuildActiveEmblem(guildId, next);
   }
-  await db.delete(guildEmblems).where(eq(guildEmblems.id, input.emblemId));
-  // 스토리지 파일은 지우지 않는다(2026-09-14). 문양 URL은 대난투 참가자·피날레 로스터·연대기
-  // guild_refs·점령전 기록에 "그 시점 문양"으로 박제돼 있어, 파일을 지우면 과거 회차의 마크가
-  // 전부 깨진다(길드 「전설」 옛 문양 삭제 → 8/26~29 회차 101곳 NoSuchKey). 행만 지워 보관함에서
-  // 사라지게 하고, 객체(64px PNG)는 역사 기록의 일부로 남긴다.
+  // 소프트 삭제(2026-09-14) — 행도 파일도 지우지 않고 removed_at만 찍는다. 문양 URL은 대난투
+  // 참가자·피날레 로스터·연대기 guild_refs에 "그 시점 문양"으로 박제돼 있어, 파일을 지우면 과거
+  // 회차의 마크가 전부 깨진다(길드 「전설」 옛 문양 삭제 → 8/25~29 회차 95곳 NoSuchKey, 복구 불능).
+  // 행을 남기면 검수 페이지에 선택값·프롬프트까지 이력으로 보존된다. 유저 목록·한도·활성 선택은
+  // 모두 removed_at IS NULL만 보므로 보관함에서는 사라진다. 운영 리젝(admin_decision='reject')과는
+  // admin_decision으로 구분한다.
+  await db.update(guildEmblems).set({ removedAt: new Date() }).where(eq(guildEmblems.id, input.emblemId));
 }
 
 /**

@@ -214,6 +214,11 @@ export default async function AdminEmblemReviewPage({
                         {e.activeEmblemId != null && e.activeEmblemId === e.id ? (
                           <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">활성</span>
                         ) : null}
+                        {/* 길드장이 보관함에서 지운 문양(소프트 삭제, 2026-09-14) — 리젝과 구분. 과거 회차
+                            스냅샷이 참조하므로 파일·행 모두 남아 있다. */}
+                        {e.removedAt && e.adminDecision !== 'reject' ? (
+                          <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 text-[9px] font-bold text-zinc-400">길드장 삭제</span>
+                        ) : null}
                         {e.adminDecision === 'reject' ? (
                           <span className="shrink-0 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-400">리젝</span>
                         ) : e.adminDecision === 'confirm' ? (
@@ -233,7 +238,8 @@ export default async function AdminEmblemReviewPage({
                         </details>
                       ) : null}
                     </div>
-                    {e.adminDecision == null ? <EmblemDecisionButtons emblemId={String(e.id)} /> : null}
+                    {/* 삭제된 문양은 결정 대상이 아니다(리젝해도 환불·전환할 것이 없다). */}
+                    {e.adminDecision == null && !e.removedAt ? <EmblemDecisionButtons emblemId={String(e.id)} /> : null}
                   </div>
                 </li>
               );
