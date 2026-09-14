@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
+import { isAppSession } from '@/lib/platform-client';
+
+/** 우리 Play 앱 패키지 — manifest related_applications·assetlinks와 같은 값. */
+const PLAY_APP_ID = 'app.ganghwa.game';
+
 // PWA 설치 상태/핸들러 — 헤더 띠지(InstallStrip)·설정 버튼(InstallAppButton) 공용.
 //
 // iOS 특수성: 홈 화면 추가(설치)는 Safari에서만 가능. Chrome(iOS)·인앱 웹뷰는 전부
@@ -64,7 +69,9 @@ export function useAppInstall(): {
     const otherInApp = /FBAN|FBAV|Instagram|Line\//i.test(ua);
 
     let sync: InstallState | null = null;
-    if (standalone) {
+    // 앱 진입 표식(2026-09-14 출시 점검) — TWA의 커스텀탭 폴백(크롬이 없는 기기)은 standalone이
+    // 아니라서 앱 안인데도 "앱 설치" 띠지가 떴다. 표식은 앱이 연 브라우징 컨텍스트에만 남는다.
+    if (standalone || isAppSession()) {
       sync = { kind: 'installed' };
     } else if (isIos) {
       // iOS Safari = add-to-home 가능. 그 외(Chrome/FF/Edge/인앱)는 Safari 유도.
@@ -79,9 +86,26 @@ export function useAppInstall(): {
       return;
     }
 
+    // Play 앱이 이미 깔린 안드로이드 크롬(2026-09-14) — 웹에서 PWA 설치를 또 권하지 않는다(중복 설치).
+    // manifest의 related_applications + assetlinks가 있어야 크롬이 답한다. 미지원·거부는 조용히 무시.
+    let playInstalled = false;
+    const related = (navigator as { getInstalledRelatedApps?: () => Promise<{ id?: string; platform: string }[]> })
+      .getInstalledRelatedApps;
+    if (typeof related === 'function') {
+      void related
+        .call(navigator)
+        .then((apps) => {
+          if (!apps.some((a) => a.platform === 'play' && a.id === PLAY_APP_ID)) return;
+          playInstalled = true;
+          setState({ kind: 'installed' });
+        })
+        .catch(() => {});
+    }
+
     // 안드/데스크톱 크롬 — beforeinstallprompt 대기, 미발생 시 수동 안내(android)로 폴백.
     const onBeforePrompt = (e: Event) => {
       e.preventDefault();
+      if (playInstalled) return; // Play 앱 보유자에겐 PWA 프롬프트를 열지 않는다
       setState({ kind: 'installable', ev: e as BeforeInstallPromptEvent });
     };
     const onInstalled = () => setState({ kind: 'installed' });
