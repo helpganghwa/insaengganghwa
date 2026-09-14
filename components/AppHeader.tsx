@@ -45,8 +45,11 @@ export function AppHeaderShell({
   /** AppHeader(server)가 client HeaderDiamond를 주입 — Suspense fallback은 정적 표시. */
   diamondSlot?: React.ReactNode;
 }) {
+  // -mb-px(2026-09-14) — 헤더가 main 위로 1px 겹친다. width=390 뷰포트를 폰 폭에 맞춰 확대하면(예 1.06배)
+  // 헤더 아랫변과 main 윗변이 서로 다른 기기 픽셀로 반올림돼 그 사이 1px에 뒤 배경이 비쳤다(안드로이드 앱 제보,
+  // 홈 월드 로그 띠 위). 헤더(z-30)가 그 자리를 덮으면 반올림 방향과 무관하게 틈이 없다.
   return (
-    <header className="sticky top-0 z-30 box-content flex h-12 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="sticky top-0 z-30 -mb-px box-content flex h-12 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
       {/* 아바타 클릭=아바타 선택(/me/profiles), 이름 클릭=닉네임 변경 팝업. */}
       <div className="flex min-w-0 items-center gap-2">
         <Link prefetch={false}
