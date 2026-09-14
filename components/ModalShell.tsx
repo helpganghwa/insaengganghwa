@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { modalHistory } from '@/lib/ui/modal-history';
+import { acquireRootBlur } from '@/lib/ui/root-blur';
 
 // 열린 셸의 전역 스택 — Esc/Enter는 **최상단 모달만** 반응한다. 종전엔 셸마다 document
 // keydown을 달아 stacked 팝업(다이아 부족 등)이 떠 있을 때 Esc 한 번에 호스트 팝업까지
@@ -15,7 +16,7 @@ const openShells: symbol[] = [];
  * 접근성 모달 셸 — 백드롭(클릭 시 닫힘) + 패널(role=dialog·aria-modal·Esc·마운트 시 포커스).
  *
  * **body 포털 렌더** — 부모의 스택 컨텍스트(isolate·transform)와 무관하게 항상 최상단 레이어에 뜬다.
- * z-50 단일 레이어(헤더/GNB z-30·채팅 z-40 위). 배경 bg-black/60 + blur-sm 공통 — 모든 모달 통일.
+ * z-50 단일 레이어(헤더/GNB z-30·채팅 z-40 위). 배경 bg-black/60 공통 + 뒤 컨텐츠 흐림은 앱 셸 filter(root-blur) — 모든 모달 통일.
  * 패널 크기/스크롤/배경은 호출처가 className으로 지정(기존 외형 유지). 정렬은 align(center 기본|bottom|top).
  */
 export function ModalShell({
@@ -79,9 +80,12 @@ export function ModalShell({
   useEffect(() => {
     const id = shellId.current!;
     openShells.push(id);
+    // 뒤 컨텐츠 흐림 — 백드롭 blur 대신 앱 셸을 흐린다(lib/ui/root-blur.ts, 앱에서 blur가 안 그려지던 문제).
+    const releaseBlur = acquireRootBlur();
     return () => {
       const i = openShells.indexOf(id);
       if (i >= 0) openShells.splice(i, 1);
+      releaseBlur();
     };
   }, []);
   // Esc 닫기 / Enter 확정 — onClose·onSubmit 최신값만 반영(포커스 재설정과 분리).
@@ -124,7 +128,8 @@ export function ModalShell({
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex justify-center ${alignCls} bg-black/60 p-4 backdrop-blur-sm`}
+      // backdrop-blur 제거(2026-09-14) — 흐림은 앱 셸 filter가 담당(root-blur). 둘 다 두면 이중 흐림.
+      className={`fixed inset-0 z-50 flex justify-center ${alignCls} bg-black/60 p-4`}
       onClick={onClose}
     >
       <div
