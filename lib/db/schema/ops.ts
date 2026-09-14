@@ -69,6 +69,8 @@ export const clientErrors = pgTable(
     message: text('message').notNull(),
     url: text('url'),
     ua: text('ua'),
+    /** 발생 플랫폼(0199) — twa|pwa|web, 구버전 클라는 null. */
+    platform: text('platform'),
     stack: text('stack'),
     /** 동일 fingerprint 발생 횟수. */
     count: integer('count').notNull().default(1),

@@ -50,13 +50,15 @@ export async function POST(req: Request) {
       stack?: string;
       url?: string;
       ua?: string;
+      platform?: string;
     };
     const message = (b.message ?? '').slice(0, 500);
     if (!message) return new Response(null, { status: 204 });
     if (IGNORE_PATTERNS.some((p) => p.test(message))) return new Response(null, { status: 204 });
     if (typeof b.stack === 'string' && IGNORE_STACK.some((p) => p.test(b.stack!))) return new Response(null, { status: 204 });
     // 적재·그룹화·상한은 공용 헬퍼(서버 throw 집계와 동일 경로).
-    await recordError({ kind: b.kind ?? 'error', message, url: b.url, ua: b.ua, stack: b.stack });
+    const platform = b.platform === 'twa' || b.platform === 'pwa' || b.platform === 'web' ? b.platform : null;
+    await recordError({ kind: b.kind ?? 'error', message, url: b.url, ua: b.ua, stack: b.stack, platform });
   } catch {
     // 파싱/DB 실패 — 무시(관측은 best-effort, 사용자 영향 없음).
   }

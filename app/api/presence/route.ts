@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic';
  * 붙었다(전수 감사 P1). 조건부 UPDATE 2회면 끝나는 작업이라 204 라우트가 정합.
  * 클라 쿠키 게이트(2분)가 통과시킬 때만 호출됨 — 서버측에도 110s WHERE 이중 스로틀.
  */
-export async function POST() {
+const PLATFORMS = new Set(['twa', 'pwa', 'web']);
+
+export async function POST(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return new Response(null, { status: 204 });
   const serverId = await getActiveServerId();
@@ -31,5 +33,21 @@ export async function POST() {
           where id = ${userId} and last_server_id is distinct from ${serverId}`,
     )
     .catch(() => {});
+  // 플랫폼별 일일 접속(0199) — 클라가 판정한 값을 하루 1행으로. 본문이 없거나 이상하면 건너뛴다(구버전 클라).
+  // 같은 날 재핑은 10분에 한 번만 last_seen 갱신(WHERE로 무의미한 쓰기 차단).
+  const platform = await req
+    .json()
+    .then((b: { platform?: unknown }) => (typeof b?.platform === 'string' && PLATFORMS.has(b.platform) ? b.platform : null))
+    .catch(() => null);
+  if (platform) {
+    await db
+      .execute(
+        sql`insert into platform_daily (kst_day, server_id, user_id, platform)
+            values ((now() at time zone 'Asia/Seoul')::date, ${serverId}, ${userId}, ${platform})
+            on conflict (kst_day, server_id, user_id, platform) do update set last_seen_at = now()
+            where platform_daily.last_seen_at < now() - interval '10 minutes'`,
+      )
+      .catch(() => {});
+  }
   return new Response(null, { status: 204 });
 }

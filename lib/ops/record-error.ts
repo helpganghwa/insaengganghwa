@@ -12,6 +12,8 @@ export interface RecordErrorInput {
   message: string;
   url?: string | null;
   ua?: string | null;
+  /** 발생 플랫폼(0199) — twa|pwa|web. 서버 throw·구버전 클라는 null. */
+  platform?: string | null;
   stack?: string | null;
 }
 
@@ -44,7 +46,7 @@ export async function recordError(input: RecordErrorInput): Promise<void> {
     if (n < OPEN_ROW_CAP) {
       await db
         .insert(clientErrors)
-        .values({ fingerprint, kind, message, url, ua, stack })
+        .values({ fingerprint, kind, message, url, ua, stack, platform: input.platform ?? null })
         .onConflictDoNothing();
     }
   }

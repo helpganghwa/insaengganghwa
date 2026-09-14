@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { detectClientPlatform } from '@/lib/platform-client';
 
 /**
  * 전역 클라이언트 에러 → /api/client-error 수집(서버 로그). Sentry 없이 v1 관측성.
@@ -53,6 +54,7 @@ export function ClientErrorReporter() {
         stack: stack?.slice(0, 1500),
         url: location.pathname, // search 제외 — 콜백 토큰·추천코드 등 시크릿 DB 잔류 방지(report-boundary와 동일 정책)
         ua: navigator.userAgent.slice(0, 200),
+        platform: detectClientPlatform(), // 앱 전용 오류를 걸러 보기 위해(0199)
       });
       try {
         if (navigator.sendBeacon) {

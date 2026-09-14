@@ -62,3 +62,13 @@ export function usePlayBilling(facts: {
   // 새지 않는다. 쿠키·standalone은 더 보지 않는다(위 주석 — PWA가 막히던 원인).
   return facts.appSession === true;
 }
+
+/**
+ * 통계용 플랫폼 판정(2026-09-14, 0199) — 하트비트·클라 에러가 보낸다. 결제 판정(usePlayBilling)과는
+ * 별개로, 여기서는 "앱 세션이면 twa, 설치형이면 pwa, 아니면 web"만 본다. 쿠키는 새므로 보지 않는다.
+ */
+export function detectClientPlatform(): 'twa' | 'pwa' | 'web' {
+  if (isAppSession()) return 'twa';
+  if (isStandaloneDisplay()) return 'pwa';
+  return 'web';
+}

@@ -29,7 +29,8 @@ export default async function AdminClientErrorsPage() {
     kind: e.kind,
     message: e.message,
     url: e.url,
-    ua: e.ua,
+    // 플랫폼(0199)을 ua 앞에 붙여 보여준다 — 앱 전용 오류인지 한눈에.
+    ua: e.platform ? `[${e.platform}] ${e.ua ?? ''}` : e.ua,
     stack: e.stack,
     count: e.count,
     resolved: e.resolved,

@@ -44,6 +44,7 @@ type DashRow = {
   signups_today_invited: number; // 오늘 가입 중 초대(추천 링크)로 유입된 수
   accounts_invited: number; // 누적 가입 중 초대로 유입된 수
   dau: number;
+  dau_platform: { platform: 'twa' | 'pwa' | 'web'; c: number }[];
   chars_by_server: { serverId: number; name: string; c: number }[];
   accounts_total: number;
   sales_today: { sum: string; c: number };
@@ -87,6 +88,10 @@ async function loadDashboard() {
            and exists (select 1 from referral_attributions r where r.new_user_id = p.id)) as signups_today_invited,
         (select count(distinct new_user_id)::int from referral_attributions) as accounts_invited,
         (select count(distinct user_id)::int from characters where last_seen_at >= ${dayStart}::timestamptz) as dau,
+        -- 플랫폼별 DAU(0199) — 하트비트가 적재한 platform_daily. 앱·PWA·웹을 모두 쓴 유저는 각각에 세어 합이 DAU를 넘을 수 있다.
+        (select coalesce(json_agg(t), '[]'::json) from (
+           select platform, count(distinct user_id)::int as c from platform_daily
+           where kst_day = ${today}::date group by platform order by platform) t) as dau_platform,
         (select coalesce(json_agg(t), '[]'::json) from (
            select c.server_id as "serverId", s.name, count(*)::int as c
            from characters c join servers s on s.id = c.server_id
@@ -141,6 +146,7 @@ async function loadDashboard() {
     signups_today_invited: signupsTodayInvited,
     accounts_invited: accountsInvited,
     dau,
+    dau_platform: dauPlatform,
     chars_by_server: charsByServer,
     accounts_total: accountsTotal,
     sales_today: salesToday,
@@ -169,6 +175,7 @@ async function loadDashboard() {
     signupsTodayInvited,
     accountsInvited,
     dau,
+    dauPlatform,
     charsByServer,
     accountsTotal,
     salesToday,
@@ -234,6 +241,12 @@ export default async function AdminDashboardPage() {
             sub={`일반 ${(d.signupsToday - d.signupsTodayInvited).toLocaleString()} · 초대 ${d.signupsTodayInvited.toLocaleString()}`}
           />
           <Card label="DAU (접속 유저)" value={d.dau.toLocaleString()} />
+          {/* 플랫폼별(0199) — 앱 출시 효과 관측용. 두 플랫폼을 쓴 유저는 양쪽에 세어져 합이 DAU를 넘을 수 있다. */}
+          <Card
+            label="DAU 플랫폼 (앱 · PWA · 웹)"
+            value={`앱 ${platCount(d.dauPlatform, 'twa')}`}
+            sub={`PWA ${platCount(d.dauPlatform, 'pwa')} · 웹 ${platCount(d.dauPlatform, 'web')}`}
+          />
           <Card label="오늘 매출" value={won(d.salesToday.sum)} sub={`${d.salesToday.c}건`} />
           <Card label="레이드 개설" value={d.raidsToday.toLocaleString()} />
           <Card label="진행 중 강화" value={d.runningJobs.toLocaleString()} />
@@ -293,4 +306,9 @@ export default async function AdminDashboardPage() {
       </section>
     </div>
   );
+}
+
+/** 플랫폼별 DAU 카드용 — 없는 플랫폼은 0. */
+function platCount(list: { platform: string; c: number }[], p: string): string {
+  return (list.find((x) => x.platform === p)?.c ?? 0).toLocaleString();
 }
