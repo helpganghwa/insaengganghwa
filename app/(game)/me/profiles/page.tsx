@@ -13,6 +13,8 @@ import { snapshotEquipment } from '@/lib/game/expedition/engine';
 
 import { ProfileSelector } from './ProfileSelector';
 
+const SLOT_ORDER = { weapon: 0, armor: 1, accessory: 2 } as const;
+
 export default async function ProfileSelectPage() {
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
@@ -70,7 +72,11 @@ export default async function ProfileSelectPage() {
               // 생성 당시 착용 장비(2026-09-14, 문의 약속) — 스냅샷은 카탈로그 키만 담고 있어 정적 카탈로그로
               // 이름·부위를 푼다(DB 왕복 없음). 강화 수치는 일부러 넣지 않는다: 스냅샷에 없어서 '지금' 레벨이
               // 되는데, 그러면 "만들 때 +37이었나"로 읽힌다(시안 검토 결정). 기본 아바타는 빈 배열 → 줄 숨김.
-              equipment: snapshotEquipment(r.equipmentSnapshot, new Map()).map((e) => ({ key: e.key, slot: e.slot, name: e.name })),
+              // 부위 순서는 게임 전체와 같게 무기·방어구·장신구로 고정 — 스냅샷 키 순서(armor가 먼저)를 그대로
+              // 두면 화면마다 순서가 달라 보인다(로컬 검증에서 확인).
+              equipment: snapshotEquipment(r.equipmentSnapshot, new Map())
+                .map((e) => ({ key: e.key, slot: e.slot, name: e.name }))
+                .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]),
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
           />
