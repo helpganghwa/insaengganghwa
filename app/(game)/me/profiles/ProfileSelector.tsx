@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
+import { atlasBgStyle } from '@/lib/game/equipment/sprite-atlas';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -15,7 +16,11 @@ type ProfileItem = {
   rotations: Record<string, string>;
   /** 기본 아바타(대장장이) — 반환 버튼 미노출 + 서버 가드 이중(2026-09-01). */
   isDefault?: boolean;
+  /** 생성 당시 착용 장비(부위 순, 최대 3) — 없으면(기본 아바타·레거시) 줄을 그리지 않는다. */
+  equipment?: { key: string; slot: 'weapon' | 'armor' | 'accessory'; name: string }[];
 };
+
+const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 /** 표시용 정면 이미지 — 항상 south(정면, 8방향 미사용). 레거시 프로필 대비 첫 값 폴백. */
 function frontSrc(p: ProfileItem): string {
@@ -187,6 +192,34 @@ export function ProfileSelector({
             />
           ) : null}
         </div>
+        {/* 생성 당시 착용 장비(2026-09-14, 문의 "어떤 장비로 만들었는지 항시 확인") — 파견 화면 칩과
+            같은 어휘(스프라이트·부위·이름). 탭 없이 항상 보이고, 썸네일을 넘길 때마다 바뀐다.
+            강화 수치는 넣지 않는다(스냅샷엔 키만 있어 '지금' 값이 되어 오해를 부른다). */}
+        {sel.equipment && sel.equipment.length > 0 ? (
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5" aria-label="생성 당시 착용 장비">
+            {sel.equipment.map((e) => {
+              const bg = atlasBgStyle(e.key, 26);
+              return (
+                <div
+                  key={e.key}
+                  className="flex min-w-0 items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-1.5 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  {bg ? (
+                    <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
+                  ) : (
+                    <span aria-hidden className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[9px] font-bold text-zinc-500 dark:bg-zinc-900">
+                      {SLOT_KO[e.slot].slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[e.slot]}</span>
+                    <span className="truncate text-[11px] font-bold text-zinc-800 dark:text-zinc-100">{e.name}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정).

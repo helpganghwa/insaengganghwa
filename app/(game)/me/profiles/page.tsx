@@ -9,6 +9,7 @@ import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { snapshotEquipment } from '@/lib/game/expedition/engine';
 
 import { ProfileSelector } from './ProfileSelector';
 
@@ -25,6 +26,7 @@ export default async function ProfileSelectPage() {
         id: userProfiles.id,
         rotations: userProfiles.rotations,
         options: userProfiles.options,
+        equipmentSnapshot: userProfiles.equipmentSnapshot,
       })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
@@ -65,6 +67,10 @@ export default async function ProfileSelectPage() {
               rotations: r.rotations as Record<string, string>,
               // 기본 아바타는 반환 버튼 미노출(2026-09-01) — 서버 가드(DEFAULT_AVATAR)와 이중.
               isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
+              // 생성 당시 착용 장비(2026-09-14, 문의 약속) — 스냅샷은 카탈로그 키만 담고 있어 정적 카탈로그로
+              // 이름·부위를 푼다(DB 왕복 없음). 강화 수치는 일부러 넣지 않는다: 스냅샷에 없어서 '지금' 레벨이
+              // 되는데, 그러면 "만들 때 +37이었나"로 읽힌다(시안 검토 결정). 기본 아바타는 빈 배열 → 줄 숨김.
+              equipment: snapshotEquipment(r.equipmentSnapshot, new Map()).map((e) => ({ key: e.key, slot: e.slot, name: e.name })),
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
           />
