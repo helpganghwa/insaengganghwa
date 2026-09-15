@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
@@ -71,9 +72,24 @@ export function getPgClient(): ReturnType<typeof postgres> {
 
 let _db: DrizzleDb | undefined;
 
+/**
+ * 요청 범위 DB 교체(2026-09-16, 역사 페이지) — 이 스코프 안에서 `db`를 쓰는 모든 코드가 다른 연결을 탄다.
+ * 스테이징 역사 페이지가 프로덕션 읽기 전용 연결(HISTORY_DATABASE_URL)로 리플레이·연대기 계산을 그대로
+ * 재사용하기 위한 장치. 쓰기 코드에는 절대 쓰지 말 것(읽기 전용 역할이라 실패하지만, 설계상으로도 금지).
+ */
+const dbScope = new AsyncLocalStorage<DrizzleDb>();
+export function runWithDb<T>(alt: DrizzleDb, fn: () => Promise<T>): Promise<T> {
+  return dbScope.run(alt, fn);
+}
+export function makeDb(url: string, max = 3): DrizzleDb {
+  return drizzle(postgres(url, { ...POSTGRES_OPTS, max }), { schema });
+}
+
 // Lazy — 빌드 시 DATABASE_URL 없어도 OK. 런타임 첫 사용 시 검증/연결.
 export const db = new Proxy({} as DrizzleDb, {
   get(_t, prop, receiver) {
+    const alt = dbScope.getStore();
+    if (alt) return Reflect.get(alt, prop, receiver);
     _db ??= drizzle(getPg(), { schema });
     return Reflect.get(_db, prop, receiver);
   },
