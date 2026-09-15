@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { PENDING_KEY } from '@/lib/push/prompt-policy';
 import Link from 'next/link';
 
 import { ModalShell } from '@/components/ModalShell';
@@ -21,12 +22,14 @@ const BONUS_BOXES =
  *    강화페이지 프롬프트(아래 24시간 유예 후)·도전 과제 안내로 충분.
  */
 export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
-  // 튜토리얼 직후엔 알림 프롬프트를 띄우지 않는다 — 24시간 유예 후(다음 재방문) 강화페이지
-  // 프롬프트가 2차 안내(D1 실측: 푸시 구독 43% vs 미구독 8% 재방문 — 재방문 루프 강화).
+  // 알림 프롬프트 시점(2026-09-15 변경) — 종전 24시간 유예 대신 표식만 남긴다. 강화 페이지에
+  // **다시 들어온** 마운트에서 프롬프트가 1회 뜬다(lib/push/prompt-policy.ts). 24h 유예는 신규 가입자가
+  // 첫날 안에 물을 기회를 없앴다(첫 세션 허용 5%, 9/14~15 코호트). 재진입한 사람에게만 물어 거절 누적을
+  // 피한다. iOS(설치 안내 분기)도 같은 시점(사용자 결정). D1 실측(푸시 구독 43% vs 미구독 8%)은 유지 근거.
   // (push_dismiss_at(7일)은 명시적 거절 전용으로 별도 유지.)
   useEffect(() => {
     try {
-      localStorage.setItem('push_dismiss_until', String(Date.now() + 24 * 60 * 60 * 1000));
+      localStorage.setItem(PENDING_KEY, String(Date.now()));
     } catch {
       /* localStorage 차단 환경 — 무시 */
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
@@ -11,12 +11,15 @@ import {
   serializeSubscription,
 } from '@/lib/push/client';
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
+import { PENDING_KEY, pushPromptGate } from '@/lib/push/prompt-policy';
 
 /**
  * 푸시 권한 요청 contextual prompt.
  *
  * 표시 정책(GDD §3.10 v1):
  *  - `trigger` prop이 true가 되는 순간(첫 강화 큐 등록 후 등)에만 노출
+ *  - 튜토리얼 완료 뒤 **강화 페이지 재진입** 마운트에서는 trigger와 무관하게 1회 노출
+ *    (완료 팝업이 남긴 push_prompt_pending — lib/push/prompt-policy.ts, 2026-09-15)
  *  - 권한 이미 granted = 자동 구독·모달 X
  *  - 권한 denied = 모달 X (재요청은 brand-killing이라 7일 후)
  *  - 거부 후 localStorage 'push_dismiss_at'에 ts 기록 → 7일 내 재노출 X
@@ -24,7 +27,6 @@ import { registerPushSubscriptionAction } from '@/lib/push/actions';
  */
 
 const DISMISS_KEY = 'push_dismiss_at';
-const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 /** 만료시각 방식 억제 키 — 튜토리얼 완료 모달이 24h 유예를 걸 때 사용(2026-07-14 D1 개선). */
 export const DISMISS_UNTIL_KEY = 'push_dismiss_until';
 
@@ -39,25 +41,33 @@ export function PushPermissionPrompt({
 }) {
   const [step, setStep] = useState<Step>('closed');
   const [pending, setPending] = useState(false);
+  // 이 마운트 시각 — 완료 팝업이 같은 방문에서 찍은 표식(마운트 뒤)은 무시하고, 재진입 마운트에서만 표식을 따른다.
+  const mountedAt = useRef(Date.now());
 
   useEffect(() => {
-    if (!trigger || step !== 'closed') return;
+    if (step !== 'closed') return;
+    let viaPending = false;
     try {
-      // 튜토리얼 진행 중엔 절대 미노출 — 코치(z-61)·완료모달(z-62)과 경합 방지(2026-07-14).
-      // 완료모달의 알림·설치 안내는 제거됨(2026-07-18: 첫날 앱 미설치 대다수라 너무 이름) —
-      // 이 프롬프트(완료모달의 24h 유예 뒤)와 도전 과제(app_install·push_on)가 안내를 전담.
-      if (localStorage.getItem('tut_step')) return;
-      // 설정에서 '알림 받기'를 끈 기기 — 다시 권유하지 않는다(문의 #160).
-      if (isPushOptedOut()) return;
-      // 7일 dismiss 윈도(명시적 거절)
-      const t = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
-      if (t > 0 && Date.now() - t < DISMISS_WINDOW_MS) return;
-      // 만료시각 방식 유예(완료모달이 기록한 24h) — 지났으면 키 정리 후 진행.
+      // 판정은 순수 함수(prompt-policy.ts)에 — 튜토리얼 진행 중·설정 끔·7일 거절·재진입 표식·24h 유예·trigger.
+      const gate = pushPromptGate({
+        trigger,
+        pendingAt: (() => { const v = Number(localStorage.getItem(PENDING_KEY) ?? 0); return v > 0 ? v : null; })(),
+        mountedAt: mountedAt.current,
+        now: Date.now(),
+        tutorialActive: !!localStorage.getItem('tut_step'),
+        optedOut: isPushOptedOut(),
+        dismissAt: Number(localStorage.getItem(DISMISS_KEY) ?? 0),
+        until: Number(localStorage.getItem(DISMISS_UNTIL_KEY) ?? 0),
+      });
+      if (!gate.show) return;
+      viaPending = gate.reason === 'pending';
+      // 1회성 표식·지난 유예 키는 정리(다음 마운트에서 또 뜨지 않게).
+      if (viaPending) localStorage.removeItem(PENDING_KEY);
       const until = Number(localStorage.getItem(DISMISS_UNTIL_KEY) ?? 0);
-      if (until > Date.now()) return;
-      if (until > 0) localStorage.removeItem(DISMISS_UNTIL_KEY);
+      if (until > 0 && until <= Date.now()) localStorage.removeItem(DISMISS_UNTIL_KEY);
     } catch {
-      // localStorage 차단 환경 — 그냥 진행
+      // localStorage 차단 환경 — 종전대로 trigger만 본다.
+      if (!trigger) return;
     }
     const support = checkPushSupport();
     if (support.kind === 'unsupported') return;
