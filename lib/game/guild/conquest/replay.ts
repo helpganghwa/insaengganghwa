@@ -65,7 +65,8 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   return v;
 }
 
-async function computeConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
+/** 캐시 없이 계산 — 역사 페이지(다른 DB 스코프)가 직접 쓴다(2026-09-16). 일반 화면은 getConquestReplay. */
+export async function computeConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
   // 기본: 연대기와 동일한 '최신 공개일'(읽기 게이트 kst_day < 오늘 KST와 정합).
   // forKstDay 지정 시 그 날짜로 — 공개 전 검수(어드민 미리보기, 2026-07-16) 전용.
   let kstDay: string;

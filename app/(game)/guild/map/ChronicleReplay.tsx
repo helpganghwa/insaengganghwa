@@ -24,6 +24,11 @@ const MARCH_MS = 2600;
 
 const sleepUnless = (ms: number, skip: () => boolean) =>
   new Promise<void>((r) => (skip() ? r() : setTimeout(r, ms)));
+/** 일시정지 지원 대기(2026-09-16, 역사 페이지) — 잠든 뒤 pausedRef가 true인 동안 120ms 간격으로 머문다. */
+const sleepPausable = async (ms: number, skip: () => boolean, paused?: React.RefObject<boolean>) => {
+  await sleepUnless(ms, skip);
+  while (paused?.current && !skip()) await new Promise<void>((r) => setTimeout(r, 120));
+};
 
 /** 문양 미보유·문양 파일 유실 공통 폴백 — 길드 색 방패 + 머리글자(이동 문양용 26×30 박스). */
 function shieldFallback(e: HTMLElement, color: string | null, guild: string): void {
@@ -71,6 +76,8 @@ export function ChronicleReplayPanel({
   onOwnerFlip,
   onNeutralize,
   onDone,
+  speed = 1,
+  pausedRef,
 }: {
   text: string;
   replay: ConquestReplay;
@@ -80,7 +87,15 @@ export function ChronicleReplayPanel({
   onOwnerFlip: (zoneId: number, guild: string) => void;
   onNeutralize: (zoneId: number) => void;
   onDone: () => void;
+  /** 배속(2026-09-16, 역사 페이지) — 타이핑·진군·격돌·플래시 길이를 나눈다. 재생 중 바꿔도 다음 구간부터 적용. */
+  speed?: number;
+  /** 일시정지 — true인 동안 다음 구간으로 넘어가지 않는다(진행 중인 애니메이션은 끝까지 간다). */
+  pausedRef?: React.RefObject<boolean>;
 }) {
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+  const d = (ms: number) => Math.max(1, Math.round(ms / speedRef.current));
+  const wait = (ms: number, skip: () => boolean) => sleepPausable(d(ms), skip, pausedRef);
   // 구역 표시명은 **현재 이름**으로 해소 — 개명된 구역이 지도와 어긋나지 않게(0141).
   const zoneNameById = useRef(new Map(zones.map((z) => [z.id, z.name])));
   const zoneIdByName = useRef(new Map(zones.map((z) => [z.name, z.id])));
@@ -204,7 +219,7 @@ export function ChronicleReplayPanel({
         top: `${(u * u * from.y + 2 * u * t * mid.y + t * t * to.y).toFixed(3)}%`,
       };
     });
-    const anim = e.animate(frames, { duration: MARCH_MS, easing: 'cubic-bezier(0.4,0,0.35,1)', fill: 'forwards' });
+    const anim = e.animate(frames, { duration: d(MARCH_MS), easing: 'cubic-bezier(0.4,0,0.35,1)', fill: 'forwards' });
     return anim.finished.catch(() => {}).then(() => {
       anim.cancel();
       e.style.left = `${to.x}%`;
@@ -252,7 +267,7 @@ export function ChronicleReplayPanel({
         { opacity: 0.85, transform: 'scale(1.08) rotate(-4deg)', filter: 'grayscale(0.5)', offset: 0.25 },
         { opacity: 0, transform: 'scale(0.2) rotate(-28deg) translateY(9px)', filter: 'grayscale(1)' },
       ],
-      { duration: 720, easing: 'cubic-bezier(0.5,0,0.75,0)', fill: 'forwards' },
+      { duration: d(720), easing: 'cubic-bezier(0.5,0,0.75,0)', fill: 'forwards' },
     );
     setTimeout(() => e.remove(), 740);
     // 중립 복귀를 알리는 옅은 회색 링(약).
@@ -270,7 +285,7 @@ export function ChronicleReplayPanel({
         { opacity: 1, transform: 'scale(1.35)', offset: 0.25 },
         { opacity: 0, transform: 'scale(0.7) translateY(-14px)' },
       ],
-      { duration: 900, easing: 'ease-out', fill: 'forwards' },
+      { duration: d(900), easing: 'ease-out', fill: 'forwards' },
     );
     setTimeout(() => s.remove(), 950);
   }
@@ -286,7 +301,7 @@ export function ChronicleReplayPanel({
         { boxShadow: `0 0 0 0 ${color}${strong ? 'd9' : '99'}`, background: `${color}${strong ? 'd9' : '55'}` },
         { boxShadow: `0 0 0 ${strong ? 26 : 15}px ${color}00`, background: `${color}00` },
       ],
-      { duration: strong ? 1500 : 1000, easing: 'ease-out', fill: 'forwards' },
+      { duration: d(strong ? 1500 : 1000), easing: 'ease-out', fill: 'forwards' },
     );
     setTimeout(() => f.remove(), strong ? 1600 : 1100);
   }
@@ -331,7 +346,7 @@ export function ChronicleReplayPanel({
       all.push({ ev, marchers, standing });
     }
     if (all.length === 0) return;
-    await sleepUnless(MARCH_MS + 150, () => skipRef.current);
+    await wait(MARCH_MS + 150, () => skipRef.current);
     // 격돌(교전 이벤트만 — 경합 또는 수비전) — 병렬
     const clashers = all.filter((a) => hasClash(a.ev));
     if (clashers.length > 0 && !skipRef.current) {
@@ -339,12 +354,12 @@ export function ChronicleReplayPanel({
         const z = zoneById.current.get(c.ev.zoneId)!;
         sparkAt({ x: z.mapX, y: z.mapY });
       }
-      await sleepUnless(750, () => skipRef.current);
+      await wait(750, () => skipRef.current);
       for (const c of clashers) {
         const z = zoneById.current.get(c.ev.zoneId)!;
         sparkAt({ x: z.mapX, y: z.mapY });
       }
-      await sleepUnless(750, () => skipRef.current);
+      await wait(750, () => skipRef.current);
     }
     // 점령/방어 결과 — 플래시 스태거(220ms)로 일괄 발표의 리듬
     for (const { ev, marchers, standing } of all) {
@@ -358,10 +373,10 @@ export function ChronicleReplayPanel({
       const z = zoneById.current.get(ev.zoneId);
       applyFlip(ev);
       if (z) flashAt({ x: z.mapX, y: z.mapY }, guildOf(ev.winner).color ?? '#a8a29e');
-      await sleepUnless(300, () => skipRef.current);
+      await wait(300, () => skipRef.current);
       for (const m of marchers) if (!losers.includes(m.g)) setTimeout(() => fadeEmblem(m.el), 450);
     }
-    await sleepUnless(650, () => skipRef.current);
+    await wait(650, () => skipRef.current);
   }
 
   function applyFlip(ev: ReplayEvent) {
@@ -383,10 +398,10 @@ export function ChronicleReplayPanel({
       ownersRef.current[n.zoneId] = null;
       if (z && !skipRef.current) {
         crumbleAt(n.guild, { x: z.mapX, y: z.mapY });
-        await sleepUnless(90, () => skipRef.current); // 캐스케이드 간격
+        await wait(90, () => skipRef.current); // 캐스케이드 간격
       }
     }
-    await sleepUnless(500, () => skipRef.current);
+    await wait(500, () => skipRef.current);
   }
 
   /** 미발화 교전 구역 재생 — 무혈 점령은 일괄, 교전(경합/수비전)은 한 곳씩. 스킵 중이면 flushRemaining이 즉시 전환. */
@@ -441,7 +456,7 @@ export function ChronicleReplayPanel({
             if (cancelled) return;
             setPos({ p, s, c });
             if (!skipRef.current) {
-              await sleepUnless(seg.text[c - 1] === ' ' ? 28 : CHAR_MS, () => skipRef.current);
+              await wait(seg.text[c - 1] === ' ' ? 28 : CHAR_MS, () => skipRef.current);
             }
           }
           if (seg.kind === 'z') {
