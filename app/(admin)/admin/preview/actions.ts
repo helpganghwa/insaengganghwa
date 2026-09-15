@@ -7,15 +7,8 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { guilds, worldChronicle, zones } from '@/lib/db/schema/guild';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
-import {
-  CHRONICLE_FEEDBACK,
-  CHRONICLE_IMPROVE_MODELS,
-  chronicleIssues,
-  improveChronicleText,
-  type ChronicleFeedbackKey,
-  type ChronicleImproveModel,
-  type ChronicleImproveResult,
-} from '@/lib/game/guild/conquest/chronicle';
+import { chronicleIssues, improveChronicleText, type ChronicleImproveResult } from '@/lib/game/guild/conquest/chronicle';
+import { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS, type ChronicleFeedbackKey, type ChronicleImproveModel } from '@/lib/game/guild/conquest/chronicle-options';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
 

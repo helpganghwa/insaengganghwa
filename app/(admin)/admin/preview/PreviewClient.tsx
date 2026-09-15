@@ -9,7 +9,7 @@ import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { assetUrl } from '@/lib/asset-versions';
 
 import { updateChronicleAction, regenerateChronicleAction, improveChronicleAction, checkChronicleAction } from './actions';
-import { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from '@/lib/game/guild/conquest/chronicle';
+import { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from '@/lib/game/guild/conquest/chronicle-options';
 
 type PreviewZone = { id: number; name: string; mapX: number; mapY: number; region: Region };
 

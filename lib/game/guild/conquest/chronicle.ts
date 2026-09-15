@@ -10,6 +10,7 @@ import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/gui
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 import { factIssues, type FactCheckContext } from './chronicle-facts';
+import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from './chronicle-options';
 
 // 연대기 모델(2026-09-10 재확인) — 사실 오류는 chronicle-facts.ts 검증기가 재생성 피드백으로 잡고,
 // 문체는 직전 검수 완료본을 참고로 준다. 모델을 올리는 것보다 이 두 장치가 확실해 기존 모델을 유지한다
@@ -563,7 +564,8 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
 }
 
 /** 재검수 노트 — 어드민 공개 전 검수 페이지에 diff로 노출(0119). */
-export type ChronicleReviewNote = { kind: 'fact' | 'style'; before: string; after: string; reason: string };
+export type { ChronicleReviewNote, ChronicleFeedbackKey, ChronicleImproveModel } from './chronicle-options';
+export { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS } from './chronicle-options';
 
 const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. 이야기꾼이 쓴 초안을 두 기준으로 재검수한다.
 
@@ -1633,43 +1635,6 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
 }
 
 // ── 검수 개선 패스(2026-09-15) — 운영자가 고른 방향대로 현재 텍스트를 고친다. 저장하지 않는다(화면이 교체·저장). ──
-
-/** 피드백 칩 — 라벨은 화면, instruction은 모델 지시. 순서가 화면 순서. */
-export const CHRONICLE_FEEDBACK = {
-  dedupe: {
-    label: '중복 표현 지양',
-    instruction:
-      '같은 낱말·구문의 반복(예: 집행관·하루 만에·노렸으나·막아내며·각각)을 문맥에 맞는 다른 표현으로 바꿔 한 표현이 두 번을 넘지 않게 한다. 사실·마커는 그대로.',
-  },
-  facts: {
-    label: '사실관계 확인',
-    instruction:
-      '본문의 모든 소유·귀속·인원·수치·공수(누가 지키고 누가 쳐들어갔는지)를 사실표와 전수 대조해 어긋난 문장을 사실표대로 고치고, 고친 것은 changes에 kind "fact"로 전부 남긴다.',
-  },
-  flow: {
-    label: '스토리 자연스럽게',
-    instruction:
-      '같은 길드·같은 지역의 사건을 한 곳에 모아 원인→결과→의미 순으로 잇고, 문단 첫 문장이 그 문단의 주제를 말하게 하며, 문단 사이가 끊기지 않게 연결 문장을 다듬는다(사실·순서 규칙 불변, 새 사건 추가 금지).',
-  },
-  headline: {
-    label: '제목을 스토리에 맞게',
-    instruction:
-      '본문에서 가장 큰 사건과 그 결말을 담아 headline을 새로 짓는다(30자 안팎, 마커 포함, 본문에 없는 사실 금지). 본문은 이 항목 때문에 바꾸지 않는다.',
-  },
-  concise: {
-    label: '더 간결하게',
-    instruction: '사실은 하나도 빼지 않고 군더더기 수식·중복 설명을 줄여 전체 길이를 20~30% 줄인다.',
-  },
-} as const;
-export type ChronicleFeedbackKey = keyof typeof CHRONICLE_FEEDBACK;
-
-/** 개선 패스에 고를 수 있는 모델 — 기본은 생성과 같은 Sonnet 5. */
-export const CHRONICLE_IMPROVE_MODELS = {
-  'claude-sonnet-5': 'Sonnet 5',
-  'claude-opus-5': 'Opus 5',
-  'claude-fable-5-1': 'Fable 5.1',
-} as const;
-export type ChronicleImproveModel = keyof typeof CHRONICLE_IMPROVE_MODELS;
 
 /** 재검수 프롬프트의 [1. 사실 검증] 블록만 떼어 재사용 — 규칙이 한 곳에서만 자란다. */
 const FACT_RULES = REVIEW_SYSTEM_PROMPT.slice(
