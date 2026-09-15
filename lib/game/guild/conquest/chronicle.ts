@@ -718,51 +718,12 @@ export async function chroniclePregenStatus(kstDay: string, serverId: number): P
  * 이미 그날 행이 있으면 skip. 큰 사건 없으면 기록 안 함(별일 없는 날). KEY 없으면 throw.
  */
 /**
- * 어제 정리와 오늘 정리를 대조해 **코드가 확정하는 연속성 사실**(2026-09-04). 검수 때 매번 손보던 대목 —
- * 하루 만의 탈환(어제 A가 B에게서 빼앗은 구역을 오늘 B가 되찾음), 어제 얻은 땅의 하루 만 상실, 어제 얻은
- * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
- * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
+ * 그날의 사실표(2026-09-15 분리) — 생성(generateAndStoreChronicle)과 검수 개선(improveChronicleText)이 같은 표를 쓴다.
+ * 사건이 없는 날(isNotable=false)은 null. 내용은 분리 전 생성 함수 본문 그대로.
  */
-export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDaySummary): string[] {
-  const out: string[] = [];
-  const yCap = new Map(yesterday.captures.map((c) => [c.zone, c] as const));
-  for (const c of today.captures) {
-    const y = yCap.get(c.zone);
-    if (!y || !c.from || y.winner !== c.from) continue;
-    if (y.from === c.winner) {
-      out.push(
-        `· 구역 「${c.zone}」: 어제 길드 「${y.winner}」 이(가) 「${c.winner}」 에게서 빼앗았던 곳을 오늘 「${c.winner}」 이(가) 되찾음 — 하루 만의 탈환('되찾다' 허용)`,
-      );
-    } else {
-      out.push(`· 구역 「${c.zone}」: 길드 「${c.from}」 이(가) 어제 얻은 땅을 하루 만에 「${c.winner}」 에게 잃음`);
-    }
-  }
-  for (const d of today.defenses) {
-    const y = yCap.get(d.zone);
-    if (!y || y.winner !== d.owner) continue;
-    const attackers = [...new Set(today.attacks.filter((a) => a.zone === d.zone).map((a) => a.guild))];
-    out.push(
-      `· 구역 「${d.zone}」: 길드 「${d.owner}」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄${attackers.length > 0 ? `(공격 측: 「${attackers.join('」, 「')}」)` : ''}`,
-    );
-  }
-  return out;
-}
-
-export async function generateAndStoreChronicle(
-  kstDay: string,
-  serverId: number,
-  /** dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04). */
-  opts: { dryRun?: boolean } = {},
-): Promise<{ created: boolean; reason?: string; preview?: { today: string; headline: string; headlineCandidates: string[]; digest: string } }> {
-  const [existing] = await db
-    .select({ kstDay: worldChronicle.kstDay })
-    .from(worldChronicle)
-    .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
-    .limit(1);
-  if (existing && !opts.dryRun) return { created: false, reason: 'already' };
-
+async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const summary = await aggregateConquestDay(kstDay, serverId);
-  if (!isNotable(summary)) return { created: false, reason: 'no-event' };
+  if (!isNotable(summary)) return null;
 
   // 길드별로 미리 그룹핑한 명확한 요약 — 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
   const capByGuild = new Map<string, string[]>();
@@ -1256,6 +1217,14 @@ export async function generateAndStoreChronicle(
     styleBlock;
 
   const bigChange = milestones.length > 0 || specialFeat;
+  return { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange };
+}
+export type ChronicleFactPack = NonNullable<Awaited<ReturnType<typeof buildChronicleFactPack>>>;
+
+/**
+ * 마커 도구(2026-09-15 분리) — 이름 집합·교정·강제·보강·위반 검출. 생성과 검수 개선이 공유.
+ */
+async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: ChronicleFactPack['zoneRows'], idByName: ChronicleFactPack['idByName'], serverId: number) {
   // ── 이름 집합(검증·교정·강제 공용) — summary가 아는 정답. ──
   const guildNames = new Set<string>();
   const zoneNames = new Set<string>();
@@ -1381,6 +1350,58 @@ export async function generateAndStoreChronicle(
       return id != null ? `{z|${name}|${id}}` : `{z|${name}}`;
     });
   const enrichMarkers = (s: string) => enrichZoneMarkers(enrichGuildMarkers(enrichUserMarkers(s)));
+
+  return { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers };
+}
+
+/**
+ * 어제 정리와 오늘 정리를 대조해 **코드가 확정하는 연속성 사실**(2026-09-04). 검수 때 매번 손보던 대목 —
+ * 하루 만의 탈환(어제 A가 B에게서 빼앗은 구역을 오늘 B가 되찾음), 어제 얻은 땅의 하루 만 상실, 어제 얻은
+ * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
+ * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
+ */
+export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDaySummary): string[] {
+  const out: string[] = [];
+  const yCap = new Map(yesterday.captures.map((c) => [c.zone, c] as const));
+  for (const c of today.captures) {
+    const y = yCap.get(c.zone);
+    if (!y || !c.from || y.winner !== c.from) continue;
+    if (y.from === c.winner) {
+      out.push(
+        `· 구역 「${c.zone}」: 어제 길드 「${y.winner}」 이(가) 「${c.winner}」 에게서 빼앗았던 곳을 오늘 「${c.winner}」 이(가) 되찾음 — 하루 만의 탈환('되찾다' 허용)`,
+      );
+    } else {
+      out.push(`· 구역 「${c.zone}」: 길드 「${c.from}」 이(가) 어제 얻은 땅을 하루 만에 「${c.winner}」 에게 잃음`);
+    }
+  }
+  for (const d of today.defenses) {
+    const y = yCap.get(d.zone);
+    if (!y || y.winner !== d.owner) continue;
+    const attackers = [...new Set(today.attacks.filter((a) => a.zone === d.zone).map((a) => a.guild))];
+    out.push(
+      `· 구역 「${d.zone}」: 길드 「${d.owner}」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄${attackers.length > 0 ? `(공격 측: 「${attackers.join('」, 「')}」)` : ''}`,
+    );
+  }
+  return out;
+}
+
+export async function generateAndStoreChronicle(
+  kstDay: string,
+  serverId: number,
+  /** dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04). */
+  opts: { dryRun?: boolean } = {},
+): Promise<{ created: boolean; reason?: string; preview?: { today: string; headline: string; headlineCandidates: string[]; digest: string } }> {
+  const [existing] = await db
+    .select({ kstDay: worldChronicle.kstDay })
+    .from(worldChronicle)
+    .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
+    .limit(1);
+  if (existing && !opts.dryRun) return { created: false, reason: 'already' };
+
+  const pack = await buildChronicleFactPack(kstDay, serverId);
+  if (!pack) return { created: false, reason: 'no-event' };
+  const { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange } = pack;
+  const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = await buildMarkerTools(summary, zoneRows, idByName, serverId);
 
   const baseContent =
     `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
@@ -1609,4 +1630,176 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
       .filter((r) => r.headline && r.headline.trim().length > 0)
       .map((r) => ({ kstDay: String(r.kstDay), headline: r.headline })),
   };
+}
+
+// ── 검수 개선 패스(2026-09-15) — 운영자가 고른 방향대로 현재 텍스트를 고친다. 저장하지 않는다(화면이 교체·저장). ──
+
+/** 피드백 칩 — 라벨은 화면, instruction은 모델 지시. 순서가 화면 순서. */
+export const CHRONICLE_FEEDBACK = {
+  dedupe: {
+    label: '중복 표현 지양',
+    instruction:
+      '같은 낱말·구문의 반복(예: 집행관·하루 만에·노렸으나·막아내며·각각)을 문맥에 맞는 다른 표현으로 바꿔 한 표현이 두 번을 넘지 않게 한다. 사실·마커는 그대로.',
+  },
+  facts: {
+    label: '사실관계 확인',
+    instruction:
+      '본문의 모든 소유·귀속·인원·수치·공수(누가 지키고 누가 쳐들어갔는지)를 사실표와 전수 대조해 어긋난 문장을 사실표대로 고치고, 고친 것은 changes에 kind "fact"로 전부 남긴다.',
+  },
+  flow: {
+    label: '스토리 자연스럽게',
+    instruction:
+      '같은 길드·같은 지역의 사건을 한 곳에 모아 원인→결과→의미 순으로 잇고, 문단 첫 문장이 그 문단의 주제를 말하게 하며, 문단 사이가 끊기지 않게 연결 문장을 다듬는다(사실·순서 규칙 불변, 새 사건 추가 금지).',
+  },
+  headline: {
+    label: '제목을 스토리에 맞게',
+    instruction:
+      '본문에서 가장 큰 사건과 그 결말을 담아 headline을 새로 짓는다(30자 안팎, 마커 포함, 본문에 없는 사실 금지). 본문은 이 항목 때문에 바꾸지 않는다.',
+  },
+  concise: {
+    label: '더 간결하게',
+    instruction: '사실은 하나도 빼지 않고 군더더기 수식·중복 설명을 줄여 전체 길이를 20~30% 줄인다.',
+  },
+} as const;
+export type ChronicleFeedbackKey = keyof typeof CHRONICLE_FEEDBACK;
+
+/** 개선 패스에 고를 수 있는 모델 — 기본은 생성과 같은 Sonnet 5. */
+export const CHRONICLE_IMPROVE_MODELS = {
+  'claude-sonnet-5': 'Sonnet 5',
+  'claude-opus-5': 'Opus 5',
+  'claude-fable-5-1': 'Fable 5.1',
+} as const;
+export type ChronicleImproveModel = keyof typeof CHRONICLE_IMPROVE_MODELS;
+
+/** 재검수 프롬프트의 [1. 사실 검증] 블록만 떼어 재사용 — 규칙이 한 곳에서만 자란다. */
+const FACT_RULES = REVIEW_SYSTEM_PROMPT.slice(
+  REVIEW_SYSTEM_PROMPT.indexOf('[1. 사실 검증'),
+  REVIEW_SYSTEM_PROMPT.indexOf('[2. 문장 퇴고'),
+);
+const IMPROVE_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. 운영자가 고른 개선 방향대로 현재 본문을 고친다.
+
+${FACT_RULES}
+[개선 방향 — 요청된 항목만]
+- 요청된 방향에 해당하는 대목만 고치고, 그 밖의 문장은 원문 그대로 둔다(다시 쓰기 금지, 과장·미사여구 추가 금지).
+- 요청에 '사실관계 확인'이 없어도 사실표와 어긋난 문장은 고친다 — 사실표가 유일한 진실이다.
+- 제목 항목이 요청되지 않았으면 headline은 입력 그대로 돌려준다.
+- '더 간결하게'가 요청되지 않았으면 전체 길이는 원문의 ±15% 안에서 유지한다.
+- 고친 곳은 changes에 전부 남긴다(kind: 사실 수정은 "fact", 표현·흐름은 "style"). 바꾼 것이 없으면 changes는 빈 배열.
+
+[마커 — 절대 규칙]
+- 길드={g|이름}, 인물={u|닉} 또는 {u|닉|코드}, 개별 구역={z|이름}. 모든 이름은 등장할 때마다 마커로 감싼다. 마커 문법을 새로 만들거나 깨뜨리지 말 것. 입력에 있던 마커의 id·코드는 그대로 유지한다.
+
+출력은 JSON 하나만: {"today": string, "headline": string, "changes": [{"kind": "fact"|"style", "before": string, "after": string, "reason": string}]}`;
+
+export type ChronicleImproveResult =
+  | { ok: true; today: string; headline: string; changes: ChronicleReviewNote[]; issuesBefore: string[]; issuesAfter: string[] }
+  | { ok: false; reason: string; issuesBefore: string[] };
+
+/** 코드 검증 묶음 — 마커 누락·연출 순서·사실 대조를 한 목록으로(검수 화면 표시용). */
+function chronicleIssuesWith(
+  text: string,
+  tools: { findViolations: (s: string) => string[] },
+  factCtx: FactCheckContext,
+  battleZones: string[],
+): string[] {
+  return [
+    ...tools.findViolations(text).map((v) => `마커 누락: ${v}`),
+    ...replayOrderIssues(text, battleZones).map((v) => `연출 순서: ${v}`),
+    ...factIssues(text, factCtx),
+  ];
+}
+
+/** 코드 검증만(LLM 없음) — 검수 화면 '사실 검증' 버튼. 사건 없는 날은 빈 목록. */
+export async function chronicleIssues(kstDay: string, serverId: number, text: string): Promise<string[]> {
+  const pack = await buildChronicleFactPack(kstDay, serverId);
+  if (!pack) return [];
+  const tools = await buildMarkerTools(pack.summary, pack.zoneRows, pack.idByName, serverId);
+  const battleZones = [...new Set([...pack.summary.captures.map((c) => c.zone), ...pack.summary.defenses.map((d) => d.zone)])];
+  return chronicleIssuesWith(text, tools, pack.factCtx, battleZones);
+}
+
+/**
+ * 검수 개선 — 현재 텍스트(운영자 수정분 포함)를 그날 사실표와 함께 모델에 주고, 고른 방향대로 고친 본문을
+ * 돌려준다. 저장하지 않는다. 결과는 생성 재검수와 같은 코드 검증을 거쳐 마커 위반이 있거나 연출 순서·사실
+ * 위반이 원문보다 늘면 버린다(사유 반환). 파싱 실패는 1회 재시도.
+ */
+export async function improveChronicleText(input: {
+  kstDay: string;
+  serverId: number;
+  today: string;
+  headline: string;
+  feedback: ChronicleFeedbackKey[];
+  note?: string;
+  model: ChronicleImproveModel;
+}): Promise<ChronicleImproveResult> {
+  const pack = await buildChronicleFactPack(input.kstDay, input.serverId);
+  if (!pack) return { ok: false, reason: '그날은 기록할 사건이 없어 사실표를 만들 수 없습니다.', issuesBefore: [] };
+  const { summary, zoneRows, idByName, digest, context, factCtx } = pack;
+  const tools = await buildMarkerTools(summary, zoneRows, idByName, input.serverId);
+  const battleZones = [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])];
+  const issuesBefore = chronicleIssuesWith(input.today, tools, factCtx, battleZones);
+
+  const asks = input.feedback.map((k) => `- ${CHRONICLE_FEEDBACK[k].label}: ${CHRONICLE_FEEDBACK[k].instruction}`);
+  const note = (input.note ?? '').trim();
+  if (note) asks.push(`- 운영자 지시: ${note.slice(0, 300)}`);
+  if (asks.length === 0) return { ok: false, reason: '개선 방향을 하나 이상 고르세요.', issuesBefore };
+  const wantHeadline = input.feedback.includes('headline');
+
+  const userContent =
+    `[사실표 — 유일한 진실]\n${digest}\n\n${context}\n\n[요청된 개선 방향]\n${asks.join('\n')}\n\n[현재 본문]\n` +
+    JSON.stringify({ today: input.today, headline: input.headline }) +
+    `\n\n개선 결과를 JSON으로만 출력하라.`;
+  const messages: { role: 'user' | 'assistant'; content: string }[] = [{ role: 'user', content: userContent }];
+
+  // Fable은 thinking 항상 켜짐(파라미터 거부) — 지정하지 않고 출력 예산만 넉넉히. Sonnet·Opus는 생성과 같이 비활성.
+  // 출력 = 본문 전체 + changes 목록이라 초안 생성보다 길다 — 첫 실측(09-15) 3,200에서 잘림(rawLen 3,360). 5,000/8,000.
+  const isFable = input.model === 'claude-fable-5-1';
+  let parsed: { today?: string; headline?: string; changes?: ChronicleReviewNote[] } | null = null;
+  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+    const res = await client().messages.create({
+      model: input.model,
+      max_tokens: isFable ? 8000 : 5000,
+      ...(isFable ? {} : { thinking: { type: 'disabled' as const } }),
+      system: [{ type: 'text', text: IMPROVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages,
+    });
+    const block = res.content.find((b) => b.type === 'text');
+    const raw = block && 'text' in block ? block.text : '';
+    parsed = parseModelJson<{ today?: string; headline?: string; changes?: ChronicleReviewNote[] }>(raw);
+    if (!parsed) {
+      const truncated = res.stop_reason === 'max_tokens';
+      console.warn(`[chronicle.improve] ${truncated ? '출력 잘림' : 'JSON 파싱 실패'} stop=${res.stop_reason} rawLen=${raw.length} (attempt ${attempt + 1})`);
+      messages.push(
+        { role: 'assistant', content: raw },
+        {
+          role: 'user',
+          content: truncated
+            ? '출력이 길이 상한에서 잘렸다. 본문은 그대로 두되 changes는 가장 중요한 8건까지만, reason은 한 문장으로 줄여 JSON({today, headline, changes})만으로 다시 출력하라. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프한다.'
+            : '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline, changes})만으로 다시 출력하라.',
+        },
+      );
+    }
+  }
+  if (!parsed) return { ok: false, reason: '모델 응답을 읽지 못했습니다(JSON 파싱 실패 2회).', issuesBefore };
+
+  const fix = (s: string) => tools.enrichMarkers(tools.enforceMarkers(tools.correctMarkers(tools.fixBraces(s.trim()))));
+  const today = fix(parsed.today ?? '');
+  const headline = wantHeadline && (parsed.headline ?? '').trim() ? fix(parsed.headline ?? '') : input.headline;
+  if (!today) return { ok: false, reason: '모델이 빈 본문을 돌려줬습니다.', issuesBefore };
+
+  const viol = [...tools.findViolations(today), ...tools.findViolations(headline)];
+  if (viol.length > 0) return { ok: false, reason: `마커 누락 ${viol.length}건(${viol.slice(0, 5).join(', ')}) — 결과를 버렸습니다.`, issuesBefore };
+  const orderBefore = replayOrderIssues(input.today, battleZones).length;
+  const orderAfter = replayOrderIssues(today, battleZones);
+  if (orderAfter.length > orderBefore)
+    return { ok: false, reason: `연출 순서 위반이 늘어(${orderAfter.length}건) 결과를 버렸습니다: ${orderAfter.slice(0, 3).join(' / ')}`, issuesBefore };
+  const factsBefore = factIssues(input.today, factCtx).length;
+  const factsAfter = factIssues(today, factCtx);
+  if (factsAfter.length > factsBefore)
+    return { ok: false, reason: `사실 검증 위반이 늘어(${factsAfter.length}건) 결과를 버렸습니다: ${factsAfter.slice(0, 3).join(' / ')}`, issuesBefore };
+
+  const changes = (parsed.changes ?? [])
+    .filter((c) => c && (c.kind === 'fact' || c.kind === 'style') && typeof c.after === 'string')
+    .slice(0, 12);
+  return { ok: true, today, headline, changes, issuesBefore, issuesAfter: chronicleIssuesWith(today, tools, factCtx, battleZones) };
 }

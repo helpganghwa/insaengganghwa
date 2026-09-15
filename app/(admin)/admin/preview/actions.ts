@@ -7,6 +7,15 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { guilds, worldChronicle, zones } from '@/lib/db/schema/guild';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
+import {
+  CHRONICLE_FEEDBACK,
+  CHRONICLE_IMPROVE_MODELS,
+  chronicleIssues,
+  improveChronicleText,
+  type ChronicleFeedbackKey,
+  type ChronicleImproveModel,
+  type ChronicleImproveResult,
+} from '@/lib/game/guild/conquest/chronicle';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
 
@@ -106,5 +115,50 @@ export async function regenerateChronicleAction(input: {
   } catch (e) {
     console.error('[admin.preview] chronicle regen', (e as Error).message);
     return { status: 'error', message: '재생성 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 검수 개선(2026-09-15) — 운영자가 고른 피드백·모델로 현재 텍스트(수정분 포함)를 고친 결과를 돌려준다.
+ * 저장하지 않는다 — 화면이 입력칸을 바로 교체하고, 확정은 기존 '수정 저장'. LLM 1회(20~60초).
+ */
+export async function improveChronicleAction(input: {
+  serverId: number;
+  kstDay: string;
+  headline: string;
+  todayText: string;
+  feedback: string[];
+  note?: string;
+  model: string;
+}): Promise<ChronicleImproveResult> {
+  try {
+    await requireAdmin();
+    const feedback = input.feedback.filter((k): k is ChronicleFeedbackKey => k in CHRONICLE_FEEDBACK);
+    if (!(input.model in CHRONICLE_IMPROVE_MODELS)) return { ok: false, reason: '지원하지 않는 모델입니다.', issuesBefore: [] };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.kstDay)) return { ok: false, reason: '날짜 형식 오류', issuesBefore: [] };
+    return await improveChronicleText({
+      kstDay: input.kstDay,
+      serverId: input.serverId,
+      today: input.todayText,
+      headline: input.headline,
+      feedback,
+      note: input.note,
+      model: input.model as ChronicleImproveModel,
+    });
+  } catch (e) {
+    console.error('[admin.preview] chronicle improve', (e as Error).message);
+    return { ok: false, reason: `개선 중 오류: ${(e as Error).message.slice(0, 120)}`, issuesBefore: [] };
+  }
+}
+
+/** 코드 검증만(LLM 없음) — 마커 누락·연출 순서·사실 대조 목록. */
+export async function checkChronicleAction(input: { serverId: number; kstDay: string; todayText: string }): Promise<{ issues: string[] } | { error: string }> {
+  try {
+    await requireAdmin();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.kstDay)) return { error: '날짜 형식 오류' };
+    return { issues: await chronicleIssues(input.kstDay, input.serverId, input.todayText) };
+  } catch (e) {
+    console.error('[admin.preview] chronicle check', (e as Error).message);
+    return { error: `검증 중 오류: ${(e as Error).message.slice(0, 120)}` };
   }
 }
