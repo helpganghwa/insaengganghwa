@@ -5,6 +5,9 @@ import { worldChronicle, zones as zonesTable } from '@/lib/db/schema/guild';
 import { getConquestReplay, getZoneAdjacency, type ConquestReplay } from '@/lib/game/guild';
 
 import { loadMeleeReviewItems } from '@/lib/game/melee/headline-service';
+import { chroniclePregenStatus } from '@/lib/game/guild/conquest/chronicle';
+import { openServerIds } from '@/lib/game/server-list';
+import { kstDateString } from '@/lib/kst';
 
 import { ServerBadge } from '../ServerBadge';
 import { ChronicleEditor } from './PreviewClient';
@@ -51,6 +54,32 @@ async function loadData() {
 const isTodayKst = (day: string) =>
   day === new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 
+/**
+ * 오늘 사전 생성 상태 줄(2026-09-15) — 오늘 행이 없는 서버마다 한 줄. 23시대에만 실제 상태를 계산한다
+ * (그 전엔 전투가 없어 '사건 없음'으로 오판). 09-15 23:00 틱이 출력 잘림으로 실패했을 때 검수 화면에
+ * 아무 설명이 없어 원인을 로그에서 찾아야 했다.
+ */
+async function pregenStatusLines(kstHour: number, hasTodayFor: (sid: number) => boolean): Promise<{ sid: number; text: string }[]> {
+  const today = kstDateString();
+  const out: { sid: number; text: string }[] = [];
+  for (const sid of await openServerIds()) {
+    if (hasTodayFor(sid)) continue;
+    if (kstHour !== 23) {
+      out.push({ sid, text: `오늘(${today}) 연대기는 23:00 정산 뒤 생성됩니다.` });
+      continue;
+    }
+    const st = await chroniclePregenStatus(today, sid).catch(() => 'pending' as const);
+    out.push({
+      sid,
+      text:
+        st === 'no-event'
+          ? `오늘(${today})은 기록할 사건이 없어 연대기를 만들지 않습니다(점령·활약·해산·중립화 없음).`
+          : `오늘(${today}) 사전 생성 미완료 — 5분 간격으로 재시도 중입니다(23:00 틱 실패 시 로그 '[chronicle]' 확인). 자정까지 안 되면 00시 백필이 생성합니다.`,
+    });
+  }
+  return out;
+}
+
 export default async function AdminPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const meleeDate = typeof sp.melee === 'string' ? sp.melee : null;
@@ -64,6 +93,10 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
     // 대난투 헤드라인(0184) — 최근 2배틀 + ?melee=YYYY-MM-DD로 과거 배틀 지정(생성·편집 검수용).
     loadMeleeReviewItems({ limit: 2, extraDate: meleeDate }).catch(() => []),
   ]);
+  const pregenLines =
+    tab === 'conquest'
+      ? await pregenStatusLines(kstHour, (sid) => chronicles.some((c) => c.serverId === sid && isTodayKst(c.kstDay))).catch(() => [])
+      : [];
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
@@ -163,6 +196,12 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
         <h2 className="text-sm font-bold text-zinc-400">
           점령전 연대기 <span className="font-normal">— 23:05 생성 → 자정 공개(검수 창 23:05~24:00)</span>
         </h2>
+        {pregenLines.map((l) => (
+          <p key={l.sid} className="mt-2 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200">
+            <ServerBadge serverId={l.sid} />
+            <span>{l.text}</span>
+          </p>
+        ))}
         {chronicles.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">연대기가 없습니다.</p>
         ) : (

@@ -688,8 +688,29 @@ export function replayOrderIssues(text: string, battleZones: string[]): string[]
   return battleZones.filter((z) => mentioned.has(z) && !fires.has(z));
 }
 
-function isNotable(s: ConquestDaySummary): boolean {
+export function isNotable(s: ConquestDaySummary): boolean {
   return s.captures.length > 0 || s.feats.length > 0 || s.disbands.length > 0 || s.neutralized.length > 0;
+}
+
+/**
+ * 초안 생성 출력 상한(2026-09-15). 종전 2,200 고정 — 점령 14건인 날 본문이 상한에서 잘려(stop=max_tokens,
+ * 약 2,080자) 세 번 모두 파싱 실패했고 23:05 틱이 우연히 짧게 써서 살아났다. 기본을 3,200으로 올리고,
+ * **직전 시도가 잘렸으면** 한 단계씩 더 올린다(파싱 실패는 상한 문제가 아니라 그대로). 순수 함수.
+ */
+export const CHRONICLE_MAX_TOKENS = [3200, 4200, 5200] as const;
+export function chronicleMaxTokens(truncations: number): number {
+  return CHRONICLE_MAX_TOKENS[Math.min(truncations, CHRONICLE_MAX_TOKENS.length - 1)]!;
+}
+
+/** 오늘 사전 생성 상태(검수 페이지용) — 행 있음 / 사건 없어 생성 안 함 / 아직 없음(재시도 중). */
+export async function chroniclePregenStatus(kstDay: string, serverId: number): Promise<'exists' | 'no-event' | 'pending'> {
+  const [existing] = await db
+    .select({ kstDay: worldChronicle.kstDay })
+    .from(worldChronicle)
+    .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
+    .limit(1);
+  if (existing) return 'exists';
+  return isNotable(await aggregateConquestDay(kstDay, serverId)) ? 'pending' : 'no-event';
 }
 
 /**
@@ -1388,10 +1409,13 @@ export async function generateAndStoreChronicle(
   let today = '';
   let headline = '';
   let headlineCandidates: string[] = [];
+  // 잘림 횟수 — 직전 시도가 max_tokens에서 끊겼으면 다음 시도의 상한을 올린다(chronicleMaxTokens).
+  let truncations = 0;
   for (let attempt = 0; attempt < 3; attempt++) {
+    const maxTokens = chronicleMaxTokens(truncations);
     const res = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: 2200,
+      max_tokens: maxTokens,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
       thinking: { type: 'disabled' },
@@ -1400,21 +1424,30 @@ export async function generateAndStoreChronicle(
     });
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
+    const truncated = res.stop_reason === 'max_tokens';
     // 파싱 실패도 재시도 소재(2026-07-18) — 종전엔 즉시 throw라 한 번의 깨진 JSON이 생성 전체를 무산시켰다.
     const parsed = parseModelJson<{ today?: string; headline?: string; headlines?: unknown }>(raw);
     if (!parsed) {
       // 빈 응답 진단(2026-07-21) — raw가 비면 파싱 이전 문제(중단 사유·블록 구성)를 남긴다.
       console.warn(
-        `[chronicle] 응답 진단 stop=${res.stop_reason} blocks=[${res.content.map((b) => b.type).join(',')}] rawLen=${raw.length}`,
+        `[chronicle] 응답 진단 stop=${res.stop_reason} max_tokens=${maxTokens} blocks=[${res.content.map((b) => b.type).join(',')}] rawLen=${raw.length}`,
       );
-      if (attempt === 2) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
-      console.warn(`[chronicle] JSON 파싱 실패 → 재생성(attempt ${attempt + 1})`);
+      // 잘림과 깨진 JSON을 구분한다(2026-09-15) — 잘림은 상한 문제라 상한을 올리고 더 짧게 쓰라고 하고,
+      // 깨진 JSON은 같은 내용을 JSON만으로 다시 쓰라고 한다. 로그·에러 코드도 갈라 원인이 바로 보이게.
+      if (attempt === 2) throw new Error(`${truncated ? 'CHRONICLE_TRUNCATED' : 'CHRONICLE_PARSE_FAIL'}: ${raw.slice(0, 200)}`);
+      if (truncated) {
+        truncations += 1;
+        console.warn(`[chronicle] 출력 잘림(max_tokens ${maxTokens}) → 상한 ${chronicleMaxTokens(truncations)}로 재생성(attempt ${attempt + 1})`);
+      } else {
+        console.warn(`[chronicle] JSON 파싱 실패 → 재생성(attempt ${attempt + 1})`);
+      }
       messages.push(
         { role: 'assistant', content: raw },
         {
           role: 'user',
-          content:
-            '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline, headlines})만으로 다시 출력하라.',
+          content: truncated
+            ? '출력이 길이 상한에서 잘렸다. 같은 사실을 빠짐없이 담되 문장을 더 간결하게 줄여, JSON({today, headline, headlines})만으로 다시 출력하라. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프한다.'
+            : '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline, headlines})만으로 다시 출력하라.',
         },
       );
       continue;
