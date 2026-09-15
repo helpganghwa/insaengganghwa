@@ -19,6 +19,19 @@ export function InstallAppButton() {
   if (state.kind === 'installed') {
     return <div className="px-3 py-2.5 text-[11px] text-zinc-500">이미 앱으로 실행 중입니다.</div>;
   }
+  // Play 앱이 깔린 안드로이드 크롬(2026-09-14) — PWA 설치를 권하지 않고 앱으로 여는 버튼만.
+  if (state.kind === 'play-installed') {
+    return (
+      <button
+        type="button"
+        onClick={() => void install()}
+        className="flex w-full items-center justify-between px-3 py-2.5 text-sm active:bg-zinc-100 dark:active:bg-zinc-900"
+      >
+        <span>📱 인생강화 앱에서 열기</span>
+        <span className="text-[11px] text-zinc-400">Play 앱 설치됨</span>
+      </button>
+    );
+  }
 
   const openExternal = state.kind === 'inapp' || state.kind === 'ios-other';
   const disabled = state.kind === 'unsupported' || state.kind === 'idle';

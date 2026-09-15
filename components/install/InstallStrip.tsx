@@ -92,7 +92,7 @@ export function InstallStrip() {
       {/* 차분한 블랙톤 시스템 바 — 다크 셸에 녹는 중립 톤 + 미세 보더. 무채색 통일. */}
       <div
         ref={barRef}
-        className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.06] bg-zinc-950/90 px-3.5 pt-[env(safe-area-inset-top)] backdrop-blur-sm"
+        className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.06] bg-zinc-950 px-3.5 pt-[env(safe-area-inset-top)]"
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 py-2">
           <span className="shrink-0 text-[13px] leading-none opacity-80">📲</span>

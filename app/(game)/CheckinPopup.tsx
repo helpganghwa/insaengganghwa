@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+
+import { acquireRootBlur } from '@/lib/ui/root-blur';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -143,6 +145,8 @@ function dismissedRecently(raw: string | null): boolean {
 }
 
 export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
+  // 뒤 컨텐츠 흐림 — ModalShell과 같은 방식(자체 오버레이라 직접 건다).
+  useEffect(() => acquireRootBlur(), []);
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
   // 수령 실패로 닫은 사실은 **세션에 남긴다**(2026-09-12 6차 검수). 이 팝업은 홈에만 마운트되고
@@ -407,7 +411,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
       // 없으면 튜토리얼 스텝 중 이 팝업이 뜰 때 받기/닫기가 전부 차단돼 신규 유저 소프트락).
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5"
       onClick={fxOn ? () => closePopup() : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
     >
       {/* 연출 전용 CSS — FLIP 그리드·키프레임(ck- 프리픽스, 팝업 스코프) */}

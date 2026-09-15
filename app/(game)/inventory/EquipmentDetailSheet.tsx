@@ -22,8 +22,11 @@ import { advanceTutorial } from '@/components/tutorial/events';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 // 공통 버튼 — Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 중앙.
+// 비활성(강화 진행 중 등)은 버튼을 투명하게 만들지 않는다(2026-09-14) — 종전 disabled:opacity-40은
+// 버튼 전체가 비쳐 뒤 목록이 보였고 앱에서 "배경이 깨졌다"로 읽혔다. 상자는 불투명(bg-zinc-900)으로 두고
+// 이미지만 흑백·어둡게, 라벨은 회색으로(BtnBg의 group-disabled).
 const BTN =
-  'relative flex h-12 flex-col items-center justify-center isolate overflow-hidden rounded-lg border border-zinc-800 px-1 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
+  'group relative flex h-12 flex-col items-center justify-center isolate overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 px-1 text-white transition-transform active:scale-[0.97] disabled:active:scale-100';
 
 function BtnBg({ src, label }: { src: string; label: string }) {
   return (
@@ -34,12 +37,12 @@ function BtnBg({ src, label }: { src: string; label: string }) {
         alt=""
         aria-hidden
         draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover group-disabled:opacity-30 group-disabled:grayscale"
         style={{ imageRendering: 'pixelated' }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/15" />
       <span
-        className="relative text-[13px] font-bold tracking-wide"
+        className="relative text-[13px] font-bold tracking-wide group-disabled:text-zinc-400"
         style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}
       >
         {label}
@@ -160,7 +163,7 @@ export function EquipmentDetailSheet({
             }}
             className={BTN}
           >
-            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
+            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label={canEnhance ? '강화' : '강화 중'} />
           </button>
           {/* 장착/해제 */}
           <button
