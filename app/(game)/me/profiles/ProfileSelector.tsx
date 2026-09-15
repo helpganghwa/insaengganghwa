@@ -24,6 +24,32 @@ type ProfileItem = {
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
+/** 순서 이동 버튼 아이콘(2026-09-15) — 14px, currentColor. 맨 앞/맨 뒤는 막대 + 삼각형, 앞/뒤는 삼각형만. */
+const MOVE_ICON: Record<MoveDir, React.ReactNode> = {
+  first: (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
+      <path d="M3.5 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M13 3.5v9L6.5 8z" fill="currentColor" />
+    </svg>
+  ),
+  prev: (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
+      <path d="M11.5 3v10L4.5 8z" fill="currentColor" />
+    </svg>
+  ),
+  next: (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
+      <path d="M4.5 3v10l7-5z" fill="currentColor" />
+    </svg>
+  ),
+  last: (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
+      <path d="M12.5 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M3 3.5v9L9.5 8z" fill="currentColor" />
+    </svg>
+  ),
+};
+
 /** 표시용 정면 이미지 — 항상 south(정면, 8방향 미사용). 레거시 프로필 대비 첫 값 폴백. */
 function frontSrc(p: ProfileItem): string {
   return p.rotations.south ?? Object.values(p.rotations)[0] ?? '';
@@ -373,9 +399,11 @@ export function ProfileSelector({
         })() : null}
       </div>
 
-      {/* 목록 라벨 줄(2026-09-15) — 왼쪽 개수, 오른쪽 순서 편집 진입(2개 이상일 때). 편집 중에는 취소·완료. */}
+      {/* 목록 라벨 줄 + 띠(2026-09-15) — 한 블록으로 묶어 간격 8px. (space-y는 앞 형제의 margin-bottom이라
+          음수 마진으로 당기면 겹친다 — 스테이징 검증 지적.) 라벨 줄: 왼쪽 개수, 오른쪽 순서 편집 진입(2개 이상). */}
+      <div className="space-y-2">
       {list.length > 1 ? (
-        <div className="-mb-2 flex h-6 items-center justify-between px-0.5">
+        <div className="flex h-6 items-center justify-between px-0.5">
           <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
             {editing ? '아바타를 고른 뒤 아래 버튼으로 옮기세요' : `보유 아바타 ${list.length}`}
           </span>
@@ -445,18 +473,20 @@ export function ProfileSelector({
           </button>
         ))}
       </DragScrollRow>
+      </div>
 
-      {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼. 끝에 있으면 톤 다운(투명도 대신 톤, 앱 규칙). */}
+      {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼, 같은 너비. 아이콘은 SVG(이모지는 기기마다
+          폭이 달라 버튼 너비가 어긋난다 — 스테이징 검증 지적). 끝에 있으면 톤 다운(투명도 대신 톤, 앱 규칙). */}
       {editing && draft ? (
         <div className="flex gap-1.5" role="group" aria-label="아바타 순서 이동">
           {(
             [
-              ['first', '⏮ 맨 앞으로', 'flex-[1.4]'],
-              ['prev', '◀ 앞으로', 'flex-1'],
-              ['next', '뒤로 ▶', 'flex-1'],
-              ['last', '맨 뒤로 ⏭', 'flex-[1.4]'],
+              ['first', '맨 앞으로', true],
+              ['prev', '앞으로', true],
+              ['next', '뒤로', false],
+              ['last', '맨 뒤로', false],
             ] as const
-          ).map(([dir, label, grow]) => {
+          ).map(([dir, label, iconFirst]) => {
             const ok = canMove(draft, selectedId, dir);
             return (
               <button
@@ -464,13 +494,15 @@ export function ProfileSelector({
                 type="button"
                 onClick={() => moveSel(dir)}
                 disabled={!ok}
-                className={`${grow} rounded-xl border py-2.5 text-[12px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
+                className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl border px-1 py-2.5 text-[11px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
                   ok
                     ? 'border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100'
                     : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
                 }`}
               >
-                {label}
+                {iconFirst ? MOVE_ICON[dir] : null}
+                <span>{label}</span>
+                {iconFirst ? null : MOVE_ICON[dir]}
               </button>
             );
           })}
