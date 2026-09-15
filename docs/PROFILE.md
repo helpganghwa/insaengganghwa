@@ -60,6 +60,7 @@
 | `equipment_snapshot` | jsonb | `{ weapon, armor, accessory }` 카탈로그 키 — 디버그·재현용 |
 | `description_prompt` | text | 합성된 최종 description (재현·신고 처리용) |
 | `report_count` | int default 0 | 누적 신고 수 (표시용, 자동 차단 X) |
+| `sort_order` | int default 0 | 관리 화면 표시 순서(0200). 0 = 미배치(새 아바타, 맨 앞·같은 0끼리 최신순), 저장 시 1..N 재부여. 관리 화면 전용 |
 | `created_at` | timestamptz | 검토 통과·풀 추가 시점 |
 
 인덱스: `(user_id, created_at desc)`, `(report_count desc)`(운영자 신고 대시보드).
@@ -364,6 +365,7 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 
 - 큰 정면(south) 이미지 프리뷰 — 아바타는 앞모습 하나로 통일(방향 회전 없음).
 - 액션: "active 프로필로 설정"(보유 목록 중 이 프로필을 메인으로) / "삭제"(확인 모달, hidden 처리는 운영자만).
+- **순서 편집**(2026-09-15, 문의): 목록 라벨 줄 우측 "순서 편집" 알약(2개 이상일 때) → 그 자리에서 편집. 프리뷰는 작게·흐리게, 반전·반환·장착·적용은 숨김. 썸네일 탭 = 옮길 아바타 선택, 띠 아래 네 버튼(맨 앞으로·앞으로·뒤로·맨 뒤로, 끝이면 톤 다운). 완료 때 전체 id 배열을 한 번에 저장(`reorderProfiles`, 낙관 갱신·실패 시 refresh), 취소는 버림. 새 아바타는 맨 앞, 대표는 고정하지 않고 배지로만 구분, 파견 배정 등 다른 목록은 생성 최신순 유지. 표시 정렬 `(sort_order asc, created_at desc)`.
 
 ### 8.3 옵션 선택 화면
 

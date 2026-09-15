@@ -1,6 +1,6 @@
 'use client';
 
-import { useOptimistic, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
@@ -9,8 +9,9 @@ import { atlasBgStyle } from '@/lib/game/equipment/sprite-atlas';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveProfile, returnProfile, flipProfile, equipSnapshotItems } from './actions';
+import { setActiveProfile, returnProfile, flipProfile, equipSnapshotItems, reorderProfiles } from './actions';
 import { chipState, optimisticPatch, setPlan, type EquippedNow, type SnapshotChip } from './equip-plan';
+import { canMove, move, sameOrder, type MoveDir } from './reorder-plan';
 
 type ProfileItem = {
   id: string;
@@ -42,7 +43,20 @@ export function ProfileSelector({
   const { showHeaderToast, showError } = useResourceToast();
   // 삭제된 프로필은 즉시 목록에서 제외(상세 페이지 유지) — optimistic.
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const list = profiles.filter((p) => !deletedIds.has(p.id));
+
+  // 순서 편집(2026-09-15, 0200) — 서버 순서(props)를 기준으로 편집 중에는 draft 배열을, 완료 직후에는
+  // useOptimistic 값을 보여준다. 완료 때 한 번만 저장하고, 액션의 revalidatePath 응답이 같은 순서의 props를
+  // 실어 오면 낙관값에서 자연히 복귀. 실패하면 refresh로 서버 순서 복원 + 에러 토스트.
+  const serverOrder = useMemo(() => profiles.map((p) => p.id), [profiles]);
+  const [shownOrder, setShownOrder] = useOptimistic(serverOrder, (_s: string[], next: string[]) => next);
+  const [draft, setDraft] = useState<readonly string[] | null>(null);
+  const editing = draft !== null;
+  const byId = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
+  const list = (draft ?? shownOrder)
+    .map((id) => byId.get(id))
+    .filter((p): p is ProfileItem => !!p && !deletedIds.has(p.id))
+    // 순서 배열이 모르는 아바타(다른 탭에서 방금 생성)는 서버 순서대로 뒤에 붙인다 — 화면에서 사라지지 않게.
+    .concat(profiles.filter((p) => !(draft ?? shownOrder).includes(p.id) && !deletedIds.has(p.id)));
   const initId =
     activeProfileId && list.some((p) => p.id === activeProfileId)
       ? activeProfileId
@@ -192,11 +206,55 @@ export function ProfileSelector({
     });
   };
 
+  // 순서 편집 — 진입은 목록 라벨 줄의 알약, 이동은 네 버튼(맨 앞으로·앞으로·뒤로·맨 뒤로, 선택 아바타 기준).
+  // 편집 중에는 반전·반환·장착·적용을 감춘다(순서만 만진다). 취소는 draft를 버린다.
+  const [reorderPending, startReorder] = useTransition();
+  const beginEdit = () => {
+    if (editing || list.length < 2) return;
+    haptic.tap();
+    setFlipPreview(false);
+    setDraft(list.map((p) => p.id));
+  };
+  const cancelEdit = () => {
+    haptic.tap();
+    setDraft(null);
+  };
+  const moveSel = (dir: MoveDir) => {
+    if (!draft) return;
+    const next = move(draft, selectedId, dir);
+    if (next === draft) return;
+    haptic.tap();
+    setDraft(next);
+  };
+  const finishEdit = () => {
+    if (!draft || reorderPending) return;
+    const next = [...draft];
+    setDraft(null);
+    if (sameOrder(next, shownOrder)) return; // 변경 없음 — 요청 없이 닫기
+    haptic.success();
+    startReorder(async () => {
+      setShownOrder(next);
+      const r = await reorderProfiles(next);
+      if (r.status === 'error') {
+        showError(r.message);
+        router.refresh();
+        return;
+      }
+      showHeaderToast({ title: '아바타 순서 저장' });
+    });
+  };
+  // 옮긴 뒤 선택 썸네일이 띠 밖으로 나가면 보이게 스크롤(가로만 — block은 nearest라 세로는 건드리지 않음).
+  const selRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (editing) selRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  }, [editing, draft]);
+
   return (
     <div className="space-y-4">
-      {/* 선택된 캐릭터 정면 프리뷰(회전 미사용). */}
+      {/* 선택된 캐릭터 정면 프리뷰(회전 미사용). 편집 중에는 작게·흐리게(순서 편집 대상 확인용). */}
       <div className="relative rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        {/* 좌우 반전 — 프리뷰 좌상단 코너(삭제와 대칭). */}
+        {/* 좌우 반전 — 프리뷰 좌상단 코너(삭제와 대칭). 편집 중 숨김. */}
+        {!editing ? (
         <button
           type="button"
           onClick={doFlip}
@@ -209,8 +267,9 @@ export function ProfileSelector({
         >
           좌우 반전
         </button>
-        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개·기본 아바타 숨김). */}
-        {list.length > 1 && !sel.isDefault ? (
+        ) : null}
+        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개·기본 아바타 숨김). 편집 중 숨김. */}
+        {!editing && list.length > 1 && !sel.isDefault ? (
           <button
             type="button"
             onClick={() => setReturnAsk(true)}
@@ -221,7 +280,11 @@ export function ProfileSelector({
             반환
           </button>
         ) : null}
-        <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
+        <div
+          className={`relative mx-auto flex aspect-square w-full select-none items-center justify-center isolate overflow-hidden rounded-xl transition-[max-width,opacity] duration-200 ${
+            editing ? 'max-w-[120px] opacity-50' : 'max-w-[256px]'
+          }`}
+        >
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
           {frontSrc(sel) ? (
@@ -240,7 +303,7 @@ export function ProfileSelector({
             강화 수치는 넣지 않는다(스냅샷엔 키만 있어 '지금' 값이 되어 오해를 부른다).
             칩 우하단 라벨이 상태를 말한다: 장착(탭 가능) / 장착 중 / 미보유. 세트 버튼은 장착 가능한
             부위가 하나라도 있을 때만 보인다. */}
-        {sel.equipment && sel.equipment.length > 0 ? (() => {
+        {!editing && sel.equipment && sel.equipment.length > 0 ? (() => {
           const plan = setPlan(sel.equipment, nowShown);
           return (
             <div className="mt-2.5" aria-label="생성에 사용된 장비">
@@ -310,12 +373,51 @@ export function ProfileSelector({
         })() : null}
       </div>
 
-      {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정).
+      {/* 목록 라벨 줄(2026-09-15) — 왼쪽 개수, 오른쪽 순서 편집 진입(2개 이상일 때). 편집 중에는 취소·완료. */}
+      {list.length > 1 ? (
+        <div className="-mb-2 flex h-6 items-center justify-between px-0.5">
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+            {editing ? '아바타를 고른 뒤 아래 버튼으로 옮기세요' : `보유 아바타 ${list.length}`}
+          </span>
+          {editing ? (
+            <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={reorderPending}
+                className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-zinc-500 transition active:scale-95 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={finishEdit}
+                disabled={reorderPending}
+                className="rounded-full bg-violet-600 px-2.5 py-0.5 text-[10px] font-bold text-white transition active:scale-95"
+              >
+                완료
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={beginEdit}
+              disabled={pending || flipping || reorderPending}
+              className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-violet-600 transition active:scale-95 dark:border-zinc-700 dark:bg-zinc-950 dark:text-violet-400"
+            >
+              순서 편집
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정). 편집 중에는 탭 = 옮길 아바타 선택.
           DragScrollRow — PC에서 드래그·휠로도 넘겨진다(문의: 키보드 화살표가 유일했음). */}
       <DragScrollRow className="flex gap-2 pb-1">
         {list.map((p) => (
           <button
             key={p.id}
+            ref={p.id === selectedId ? selRef : undefined}
             type="button"
             onClick={() => selectChar(p)}
             className={`relative flex aspect-square w-16 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border-2 bg-white dark:bg-zinc-950 ${
@@ -344,7 +446,39 @@ export function ProfileSelector({
         ))}
       </DragScrollRow>
 
-      {/* 적용 — 선택 캐릭터를 대표 프로필로 커밋 */}
+      {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼. 끝에 있으면 톤 다운(투명도 대신 톤, 앱 규칙). */}
+      {editing && draft ? (
+        <div className="flex gap-1.5" role="group" aria-label="아바타 순서 이동">
+          {(
+            [
+              ['first', '⏮ 맨 앞으로', 'flex-[1.4]'],
+              ['prev', '◀ 앞으로', 'flex-1'],
+              ['next', '뒤로 ▶', 'flex-1'],
+              ['last', '맨 뒤로 ⏭', 'flex-[1.4]'],
+            ] as const
+          ).map(([dir, label, grow]) => {
+            const ok = canMove(draft, selectedId, dir);
+            return (
+              <button
+                key={dir}
+                type="button"
+                onClick={() => moveSel(dir)}
+                disabled={!ok}
+                className={`${grow} rounded-xl border py-2.5 text-[12px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
+                  ok
+                    ? 'border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100'
+                    : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* 적용 — 선택 캐릭터를 대표 프로필로 커밋(편집 중 숨김) */}
+      {!editing ? (
       <button
         type="button"
         onClick={apply}
@@ -357,6 +491,7 @@ export function ProfileSelector({
       >
         {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
       </button>
+      ) : null}
 
       {/* 장비 장착 확인 — 무엇이 장착되고 같은 부위의 무엇이 해제되는지 부위별로 보여준다.
           장착은 외형 전용(강화·랭킹 무관)이라 경고 톤은 쓰지 않는다. */}

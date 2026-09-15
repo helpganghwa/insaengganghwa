@@ -10,6 +10,7 @@ import { actionBlock } from '@/lib/game/action-gate';
 import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
+import { reorderUserProfiles } from '@/lib/game/profile/reorder';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -247,4 +248,27 @@ export async function equipSnapshotItems(
   }
   if (failure) return { status: 'error', message: failure, equipped };
   return { status: 'ok', equipped };
+}
+
+/**
+ * 아바타 관리 화면 순서 저장(2026-09-15, 0200) — 화면이 보여 주던 전체 id 배열을 한 번에 받는다(완료 시 1회).
+ * 검증·갱신은 reorderUserProfiles. 다른 탭에서 방금 만든 아바타처럼 배열에 없는 것은 맨 앞(0)으로.
+ */
+export async function reorderProfiles(ids: string[]): Promise<ActionState> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (!Array.isArray(ids) || ids.some((x) => typeof x !== 'string'))
+    return { status: 'error', message: '잘못된 요청입니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+
+  const serverId = await getActiveServerId();
+  const r = await db.transaction((tx) => reorderUserProfiles(tx, userId, serverId, ids));
+  if (r === 'INVALID') return { status: 'error', message: '잘못된 요청입니다.' };
+  if (r === 'NOT_OWNED') return { status: 'error', message: '아바타 목록이 바뀌었어요. 다시 열어 주세요.' };
+
+  revalidatePath('/me/profiles');
+  return { status: 'ok' };
 }

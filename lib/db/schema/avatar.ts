@@ -103,6 +103,11 @@ export const userProfiles = pgTable(
     descriptionPrompt: text('description_prompt').notNull(),
     /** 누적 신고 수(표시·정렬용, 자동 차단 X). */
     reportCount: integer('report_count').notNull().default(0),
+    /**
+     * 관리 화면 표시 순서(0200) — 0 = 아직 배치되지 않음(새 아바타, 맨 앞·같은 0끼리는 최신순),
+     * 저장 시 전체 목록이 1..N으로 재부여. 표시 정렬은 (sort_order asc, created_at desc). 관리 화면 전용.
+     */
+    sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

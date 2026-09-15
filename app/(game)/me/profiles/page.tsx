@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -34,7 +34,8 @@ export default async function ProfileSelectPage() {
       })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
-      .orderBy(desc(userProfiles.createdAt)),
+      // 유저가 정한 순서(0200) — 0(미배치·새 아바타)이 맨 앞, 같은 값끼리는 최신순.
+      .orderBy(asc(userProfiles.sortOrder), desc(userProfiles.createdAt)),
     db
       .select({ activeProfileId: characters.activeProfileId })
       .from(characters)
