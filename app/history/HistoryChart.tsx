@@ -69,8 +69,9 @@ export function HistoryChart({
     const maxY = Math.max(5, ...story.counts.flat());
     chart.setOption(
       {
-        animationDuration: 400,
-        animationDurationUpdate: 400,
+        animationDuration: 500,
+        animationDurationUpdate: 700,
+        animationEasingUpdate: 'cubicOut',
         grid: { left: 26, right: 10, top: 8, bottom: 20 },
         tooltip: {
           trigger: 'axis',
@@ -127,7 +128,7 @@ export function HistoryChart({
             : { markLine: { data: [] } }),
         })),
       },
-      { replaceMerge: ['series'] },
+      // 시리즈 수가 고정이라 병합 갱신 — 교체(replaceMerge)하면 갱신마다 선을 처음부터 다시 그려 깜박인다(09-16 제보).
     );
   }, [days, story, upTo, current]);
 

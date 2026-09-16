@@ -71,6 +71,24 @@ function ordinalKo(n: number): string {
 const fmtDay = (d: string) => `${Number(d.slice(0, 4))}년 ${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`;
 const shortDay = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
+/** 목표 구역에서 가장 가까운 지도 밖 가장자리(%) — 출발 구역이 없는 길드의 등장 지점(재생 엔진과 같은 규칙). */
+function nearestEdge(t: { mapX: number; mapY: number }): { x: number; y: number } {
+  const cands = [{ x: -6, y: t.mapY }, { x: 106, y: t.mapY }, { x: t.mapX, y: -8 }, { x: t.mapX, y: 110 }];
+  let best = cands[0]!;
+  let bd = Infinity;
+  for (const c of cands) { const d = (c.x - t.mapX) ** 2 + (c.y - t.mapY) ** 2; if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+/** 문양 없는 길드의 색 방패(재생 엔진의 shieldFallback과 같은 모양). */
+function shieldQuick(e: HTMLElement, color: string, guild: string): void {
+  e.style.clipPath = 'polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%)';
+  e.style.background = color;
+  e.textContent = guild.slice(0, 1);
+  e.style.fontSize = '11px';
+  e.style.fontWeight = '900';
+  e.style.color = '#fff';
+}
+
 export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex; mapSrc: string; startDay: string | null }) {
   const { days, zones, edges, serverId, story } = index;
   const n = days.length;
@@ -106,6 +124,8 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
   }, [mode]);
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
+  const dayKeys = useMemo(() => days.map((d) => d.kstDay), [days]); // 차트 prop — 렌더마다 새 배열이면 차트가 매번 다시 그려진다
+  const pickDay = useCallback((i: number) => void startAtRef.current(i), []);
   const zonesByRegion = useMemo(() => {
     const m = new Map<string, number[]>();
     for (const z of zones) m.set(z.region, [...(m.get(z.region) ?? []), z.id]);
@@ -178,18 +198,43 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     [days, serverId],
   );
 
-  /** 지도 위 번쩍임(빠른 흐름용) — 재생 엔진 없이 소유 변화만 표시. */
-  const flashZone = useCallback(
-    (zoneId: number, color: string | null) => {
-      const z = zoneById.get(zoneId);
+  /** 빠른 흐름 연출 — 출발 구역(없으면 가장 가까운 지도 밖 가장자리)에서 목표로 문양이 흘러가 닿으면 소유가 바뀐다.
+   *  번쩍임만으로는 무엇이 어디로 갔는지 읽히지 않았다(09-16 제보). */
+  const marchQuick = useCallback(
+    (ev: { zoneId: number; winner: string; origins: Record<string, number | null> }, g: HistoryGuildMeta | undefined, ms: number, onArrive: () => void) => {
+      const to = zoneById.get(ev.zoneId);
       const l = layerRef.current;
-      if (!z || !l) return;
-      const f = document.createElement('div');
-      const c = color ?? '#a8a29e';
-      f.style.cssText = `position:absolute;z-index:35;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:7px;left:${z.mapX}%;top:${z.mapY}%;pointer-events:none;`;
-      l.appendChild(f);
-      f.animate([{ boxShadow: `0 0 0 0 ${c}d9`, background: `${c}d9` }, { boxShadow: `0 0 0 22px ${c}00`, background: `${c}00` }], { duration: 1100, easing: 'ease-out', fill: 'forwards' });
-      setTimeout(() => f.remove(), 1200);
+      if (!to || !l) { onArrive(); return; }
+      const originId = ev.origins[ev.winner] ?? null;
+      const from = originId != null ? zoneById.get(originId) : null;
+      const fromPct = from ? { x: from.mapX, y: from.mapY } : nearestEdge(to);
+      const e = document.createElement('div');
+      const color = g?.color ?? '#71717a';
+      e.style.cssText = `position:absolute;width:22px;height:26px;margin:-13px 0 0 -11px;z-index:40;display:flex;align-items:center;justify-content:center;left:${fromPct.x}%;top:${fromPct.y}%;filter:drop-shadow(0 0 5px ${color}cc);opacity:0;`;
+      if (g?.emblemUrl) {
+        const img = document.createElement('img');
+        img.src = g.emblemUrl;
+        img.alt = '';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+        img.onerror = () => { img.remove(); shieldQuick(e, color, ev.winner); };
+        e.appendChild(img);
+      } else shieldQuick(e, color, ev.winner);
+      l.appendChild(e);
+      const mid = { x: (fromPct.x + to.mapX) / 2 + (to.mapY - fromPct.y) * 0.15, y: (fromPct.y + to.mapY) / 2 - (to.mapX - fromPct.x) * 0.15 };
+      const N = 16;
+      const frames = Array.from({ length: N + 1 }, (_, i) => { const t = i / N; const u = 1 - t; return { left: `${(u * u * fromPct.x + 2 * u * t * mid.x + t * t * to.mapX).toFixed(2)}%`, top: `${(u * u * fromPct.y + 2 * u * t * mid.y + t * t * to.mapY).toFixed(2)}%`, opacity: i === 0 ? 0.2 : 1 }; });
+      const anim = e.animate(frames, { duration: ms, easing: 'cubic-bezier(0.4,0,0.35,1)', fill: 'forwards' });
+      anim.finished.catch(() => {}).then(() => {
+        onArrive();
+        // 착지 — 부드러운 링 한 번, 문양은 잠시 머물다 사라진다.
+        const f = document.createElement('div');
+        f.style.cssText = `position:absolute;z-index:35;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:7px;left:${to.mapX}%;top:${to.mapY}%;pointer-events:none;`;
+        l.appendChild(f);
+        f.animate([{ boxShadow: `0 0 0 0 ${color}99`, background: `${color}66` }, { boxShadow: `0 0 0 16px ${color}00`, background: `${color}00` }], { duration: 1200, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => f.remove(), 1250);
+        e.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.6)' }], { duration: 500, delay: 250, fill: 'forwards' });
+        setTimeout(() => e.remove(), 800);
+      });
     },
     [zoneById],
   );
@@ -209,28 +254,37 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     [n, finish],
   );
 
-  /** 빠른 흐름 — 그날 점령을 순서대로 번쩍이며 2.5초 안에 넘긴다(재생 엔진 미사용). */
+  /** 빠른 흐름 — 그날 점령을 출발지에서 목표로 흘려보낸다. 점령이 많은 날은 그만큼 길어진다(최소 2.5초, 한 건당 0.32초). */
   const runQuick = useCallback(
     async (k: number, token: number, data: HistoryDayData) => {
       const replay = data.replay;
       const captures = replay ? Object.values(replay.events).filter((e) => e.type === 'capture') : [];
-      const step = (QUICK_DAY_MS / speed) / (captures.length + 1);
+      const dayMs = Math.max(QUICK_DAY_MS, 320 * captures.length + 900) / speed;
+      const stagger = captures.length > 0 ? (dayMs - 900 / speed) / captures.length : dayMs;
+      const marchMs = Math.min(1100 / speed, Math.max(500 / speed, stagger * 2.4));
       const wait = async (ms: number) => {
         await new Promise((r) => setTimeout(r, ms));
         while (pausedRef.current && token === run.current) await new Promise((r) => setTimeout(r, 120));
       };
+      let pending = 0;
       for (const ev of captures) {
-        await wait(step);
         if (token !== run.current) return;
-        setOwners((o) => ({ ...o, [ev.zoneId]: ev.winner }));
-        flashZone(ev.zoneId, replay?.guilds[ev.winner]?.color ?? null);
+        pending++;
+        marchQuick(ev, replay?.guilds[ev.winner] ? { color: replay.guilds[ev.winner]!.color, emblemUrl: replay.guilds[ev.winner]!.emblemUrl } : undefined, marchMs, () => {
+          pending--;
+          if (token === run.current) setOwners((o) => ({ ...o, [ev.zoneId]: ev.winner }));
+        });
+        await wait(stagger);
       }
-      await wait(step);
+      // 마지막 문양이 닿을 때까지 + 여운.
+      const t0 = Date.now();
+      while (pending > 0 && Date.now() - t0 < marchMs + 300) await wait(60);
+      await wait(600 / speed);
       if (token !== run.current) return;
       setQuickRows((q) => (q.some((r) => r.kstDay === data.kstDay) ? q : [...q, { kstDay: data.kstDay, headline: data.headline, nth: k + 1, captures: captures.length }]));
       advance(k);
     },
-    [speed, flashZone, advance],
+    [speed, marchQuick, advance],
   );
 
   /** k번째 날부터 재생 — 이어 재생(continuous)이면 위에 쌓인 기록을 유지. */
@@ -378,6 +432,9 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                     {paused ? ' · 일시정지' : phase === 'loading' ? ' · 펼치는 중' : mode === 'quick' && phase === 'playing' ? ' · 빠른 흐름' : ''}
                   </div>
                 </div>
+                {mode === 'quick' && phase === 'playing' && cur.headline ? (
+                  <div className="mt-1 text-[12.5px] font-semibold leading-snug" style={SERIF}><Headline text={cur.headline} /></div>
+                ) : null}
                 {legend.length > 0 ? (
                   <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] tabular-nums">
                     {legend.map(([g, c]) => (
@@ -412,7 +469,7 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
               <div className={`border-t px-3 pb-2 pt-2 ${PAPER.border} ${PAPER.card}`}>
                 <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
                   <div className={`mb-0.5 flex justify-between text-[10px] ${PAPER.muted}`}><span>영토 판도 · 길드별 구역 수</span><span>{phase === 'end' || phase === 'idle' ? '전체' : '지금까지'}</span></div>
-                  <HistoryChart days={days.map((d) => d.kstDay)} story={story} upTo={chartUpTo} current={phase === 'idle' ? -1 : idx} onPick={(i) => void startAt(i)} />
+                  <HistoryChart days={dayKeys} story={story} upTo={chartUpTo} current={phase === 'idle' ? -1 : idx} onPick={pickDay} />
                 </div>
               </div>
             ) : null}
