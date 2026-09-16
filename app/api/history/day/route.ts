@@ -20,5 +20,5 @@ export async function GET(req: Request) {
     return null;
   });
   if (!data) return NextResponse.json({ error: 'not found' }, { status: 404, headers: { 'Cache-Control': 'public, s-maxage=60' } });
-  return NextResponse.json(data, { headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400' } });
+  return NextResponse.json(data, { headers: { 'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400' } });
 }

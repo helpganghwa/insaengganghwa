@@ -107,7 +107,8 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
       if (!d) return null;
       if (cache.current.has(d.kstDay)) return cache.current.get(d.kstDay)!;
       try {
-        const r = await fetch(`/api/history/day?s=${serverId}&day=${d.kstDay}`, { cache: 'force-cache' });
+        // 브라우저 캐시는 쓰지 않는다(force-cache가 배포 전 응답을 계속 돌려줘 개명 전 이름이 남았음, 09-16). CDN 캐시만.
+        const r = await fetch(`/api/history/day?s=${serverId}&day=${d.kstDay}&v=2`, { cache: 'no-store' });
         const v = r.ok ? ((await r.json()) as HistoryDayData) : null;
         cache.current.set(d.kstDay, v);
         return v;
