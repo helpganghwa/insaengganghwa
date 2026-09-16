@@ -22,7 +22,7 @@ export const GUILD_NAME_MIN_LEN = 2;
 export const GUILD_NAME_MAX_LEN = 8;
 export const GUILD_NOTICE_MAX_LEN = 200;
 /** 길드 소개(공개, 목록 팝업 노출) 최대 길이. */
-export const GUILD_INTRO_MAX_LEN = 60;
+export const GUILD_INTRO_MAX_LEN = 120; // 2026-09-16 유저 건의(플레이스토어 오픈 전 "뭐 하는 길드인지" 보여주기엔 60자 부족) — 60→120
 /** 가입 방식 — open(자유: 즉시 가입) | approval(승인: 길드장/부길드장 승인). */
 export type GuildJoinPolicy = 'open' | 'approval';
 

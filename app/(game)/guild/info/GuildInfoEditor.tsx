@@ -126,7 +126,7 @@ export function GuildInfoEditor({
         <ZoomSafeTextarea
           value={draft.intro}
           onChange={(e) => setDraft((d) => ({ ...d, intro: e.target.value.slice(0, GUILD_INTRO_MAX_LEN) }))}
-          placeholder="가입을 고민하는 사람에게 보일 한 줄"
+          placeholder="가입을 고민하는 사람에게 보일 소개"
           readOnly={!can.intro}
           autoResize
           minHeight={54}
