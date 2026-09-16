@@ -30,6 +30,7 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
         mapX: zones.mapX,
         mapY: zones.mapY,
         owner: guilds.name,
+        ownerId: guilds.id,
         color: guilds.emblemColor,
         emblemUrl: guilds.emblemUrl,
       })
@@ -47,8 +48,23 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
     const guildMeta: Record<string, HistoryGuildMeta> = {};
     for (const z of zoneRows) {
       owners[z.id] = z.owner ?? null;
-      if (z.owner) guildMeta[z.owner] = { color: z.color ?? null, emblemUrl: z.emblemUrl ?? null };
+      if (z.owner) guildMeta[z.owner] = { color: z.color ?? null, emblemUrl: z.emblemUrl ?? null, id: z.ownerId != null ? Number(z.ownerId) : null };
     }
+    // 문양 이력 — 날짜순 스냅샷에서 길드별 URL을 처음 나온 순서로, 끝에 현재 문양(guild_emblems 표는 읽지 않는다: 스냅샷만으로 충분).
+    const refRows = await db
+      .select({ refs: worldChronicle.guildRefs })
+      .from(worldChronicle)
+      .where(and(eq(worldChronicle.serverId, serverId), lt(worldChronicle.kstDay, today)))
+      .orderBy(asc(worldChronicle.kstDay));
+    const emblemHistory: Record<number, string[]> = {};
+    const pushEmblem = (id: number, url: string | null | undefined) => {
+      if (!url) return;
+      const list = (emblemHistory[id] ??= []);
+      if (!list.includes(url)) list.push(url);
+    };
+    for (const r of refRows) for (const x of r.refs ?? []) pushEmblem(Number(x.id), x.emblemUrl);
+    const currentRows = await db.select({ id: guilds.id, emblemUrl: guilds.emblemUrl }).from(guilds).where(eq(guilds.serverId, serverId));
+    for (const g of currentRows) pushEmblem(Number(g.id), g.emblemUrl);
     const days = dayRows.map((r) => ({ kstDay: String(r.kstDay).slice(0, 10), headline: r.headline ?? '' }));
     const story = await buildStory(serverId, days.map((d) => d.kstDay), zoneRows.length);
     return {
@@ -58,6 +74,7 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
       edges: edgeRows.map((e) => ({ a: e.a, b: e.b })),
       owners,
       guilds: guildMeta,
+      emblemHistory,
       story,
     };
   });

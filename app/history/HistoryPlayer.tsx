@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
-import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { PAPER, SERIF } from '@/app/wiki/theme';
 import type {
@@ -112,6 +111,35 @@ function nearestEdge(t: { mapX: number; mapY: number }): { x: number; y: number 
   return best;
 }
 /** 문양 없는 길드의 색 방패(재생 엔진의 shieldFallback과 같은 모양). */
+/** 문양 후보 — 그날 스냅샷 URL부터 시작해 이력에서 그 뒤의 문양들(스냅샷이 이력에 없으면 이력 전체를 뒤에). 첫 파일이 사라졌을 때 다음 문양으로 넘어가기 위한 순서. */
+function emblemChainOf(history: Record<number, string[]>, g: HistoryGuildMeta | undefined): string[] {
+  if (!g) return [];
+  const hist = g.id != null ? (history[g.id] ?? []) : [];
+  if (!g.emblemUrl) return hist;
+  const k = hist.indexOf(g.emblemUrl);
+  return k >= 0 ? hist.slice(k) : [g.emblemUrl, ...hist];
+}
+
+/** 노드 문양 — 후보를 차례로 시도하고 전부 실패하면 아무것도 그리지 않는다(밑에 깔린 머리글자가 보인다). */
+function EmblemChain({ urls, className }: { urls: string[]; className: string }) {
+  const [k, setK] = useState(0);
+  const src = urls[k];
+  if (!src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      loading="lazy"
+      decoding="async"
+      onError={() => setK((i) => i + 1)}
+      className={className}
+      style={{ imageRendering: 'pixelated' }}
+    />
+  );
+}
+
 function shieldQuick(e: HTMLElement, color: string, guild: string): void {
   e.style.clipPath = 'polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%)';
   e.style.background = color;
@@ -140,6 +168,7 @@ export function HistoryPlayer({
   const pausedRef = useRef(false);
   const [owners, setOwners] = useState<Record<number, string | null>>(index.owners);
   const [meta, setMeta] = useState<Record<string, HistoryGuildMeta>>(index.guilds);
+  const emblemChain = useCallback((g: HistoryGuildMeta | undefined) => emblemChainOf(index.emblemHistory, g), [index.emblemHistory]);
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const layerRef = useRef<HTMLDivElement | null>(null);
   const bindLayer = useCallback((el: HTMLDivElement | null) => {
@@ -302,14 +331,21 @@ export function HistoryPlayer({
       const e = document.createElement('div');
       const color = g?.color ?? '#71717a';
       e.style.cssText = `position:absolute;width:22px;height:26px;margin:-13px 0 0 -11px;z-index:40;display:flex;align-items:center;justify-content:center;left:${fromPct.x}%;top:${fromPct.y}%;filter:drop-shadow(0 0 5px ${color}cc);opacity:0;`;
-      if (g?.emblemUrl) {
+      const urls = emblemChain(g);
+      if (urls.length > 0) {
         const img = document.createElement('img');
-        img.src = g.emblemUrl;
+        let k = 0;
+        img.src = urls[0]!;
         img.alt = '';
         img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+        // 파일이 사라진 문양이면 이력의 다음 문양으로, 전부 실패하면 머리글자 방패.
         img.onerror = () => {
-          img.remove();
-          shieldQuick(e, color, ev.winner);
+          k += 1;
+          if (k < urls.length) img.src = urls[k]!;
+          else {
+            img.remove();
+            shieldQuick(e, color, ev.winner);
+          }
         };
         e.appendChild(img);
       } else shieldQuick(e, color, ev.winner);
@@ -359,7 +395,7 @@ export function HistoryPlayer({
           setTimeout(() => e.remove(), 800);
         });
     },
-    [zoneById],
+    [zoneById, emblemChain],
   );
 
   const finish = useCallback(() => {
@@ -404,6 +440,7 @@ export function HistoryPlayer({
             ? {
                 color: snap?.color ?? known?.color ?? '#71717a',
                 emblemUrl: snap?.emblemUrl ?? known?.emblemUrl ?? null,
+                id: snap?.guildId ?? known?.id ?? null,
               }
             : undefined,
           marchMs,
@@ -462,7 +499,7 @@ export function HistoryPlayer({
         setOwners((o) => (sameOwners(o, replay.beforeOwner) ? o : { ...replay.beforeOwner }));
         baselineRef.current = summarize(replay.beforeOwner);
         const snap = Object.entries(replay.guilds).map(
-          ([g, v]) => [g, { color: v.color, emblemUrl: v.emblemUrl }] as const,
+          ([g, v]) => [g, { color: v.color, emblemUrl: v.emblemUrl, id: v.guildId }] as const,
         );
         setMeta((m) => ({ ...m, ...Object.fromEntries(snap) }));
       }
@@ -703,13 +740,7 @@ export function HistoryPlayer({
                             >
                               {owner.slice(0, 1)}
                             </span>
-                            {m?.emblemUrl ? (
-                              <GuildEmblemImg
-                                key={m.emblemUrl}
-                                src={m.emblemUrl}
-                                className="relative h-full w-full object-contain"
-                              />
-                            ) : null}
+                            <EmblemChain key={m?.emblemUrl ?? 'none'} urls={emblemChain(m)} className="relative h-full w-full object-contain" />
                           </>
                         ) : null}
                       </span>

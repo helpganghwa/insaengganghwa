@@ -3,7 +3,8 @@ import type { ConquestReplay } from '@/lib/game/guild/conquest/replay';
 
 export type HistoryDay = { kstDay: string; headline: string };
 export type HistoryZone = { id: number; name: string; region: string; mapX: number; mapY: number };
-export type HistoryGuildMeta = { color: string | null; emblemUrl: string | null };
+/** 길드 표시값. `id`는 문양 이력(emblemHistory) 조회용 — 스냅샷·현재 모두 없으면 null. */
+export type HistoryGuildMeta = { color: string | null; emblemUrl: string | null; id?: number | null };
 export type HistoryIndex = {
   serverId: number;
   /** 공개된 날(kst_day < 오늘 KST) 오름차순 — 첫날부터. */
@@ -14,6 +15,11 @@ export type HistoryIndex = {
   owners: Record<number, string | null>;
   /** 현재 길드 표시값(이름 → 색·문양). 과거 날은 그날 리플레이의 스냅샷이 우선. */
   guilds: Record<string, HistoryGuildMeta>;
+  /**
+   * 길드 id → 연대기 스냅샷에 등장한 문양 URL을 시간순으로(중복 제거) + 현재 문양. 옛 문양 파일이 사라진 URL(보관함
+   * 삭제 → 400)이면 클라이언트가 이 목록에서 그 다음 문양으로 넘어간다(2026-09-16: 「전설」 첫 문양 유실 → 두 번째 문양).
+   */
+  emblemHistory: Record<number, string[]>;
   story: HistoryStory;
 };
 export type HistoryDayData = { kstDay: string; headline: string; text: string; replay: ConquestReplay | null };
