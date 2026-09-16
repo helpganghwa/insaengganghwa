@@ -381,21 +381,39 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     [edges, zoneById],
   );
   // 시대 띠·사건 눈금
-  const ticks = useMemo(
-    () => days.map((d, i) => { const evs = story.events[d.kstDay]; if (!evs?.length) return null; const e = [...evs].sort((a, b) => EVENT_PRIORITY[a.kind] - EVENT_PRIORITY[b.kind])[0]!; return { i, short: e.short, label: e.label }; }).filter((x): x is NonNullable<typeof x> => !!x),
-    [days, story.events],
-  );
+  // 눈금: 날마다 가장 큰 사건 하나. 라벨은 1위 교체·석권·최대/과반만(나머지는 눈금+툴팁), 위아래 줄을 번갈아 겹침을 피한다.
+  const ticks = useMemo(() => {
+    const out: { i: number; short: string; label: string; labeled: boolean; row: number }[] = [];
+    let lastLabeled = -99;
+    let lastRow = 1;
+    for (let i = 0; i < days.length; i++) {
+      const evs = story.events[days[i]!.kstDay];
+      if (!evs?.length) continue;
+      const e = [...evs].sort((a, b) => EVENT_PRIORITY[a.kind] - EVENT_PRIORITY[b.kind])[0]!;
+      const labeled = e.kind === 'leader' || e.kind === 'sweep' || e.kind === 'peak';
+      let row = 0;
+      if (labeled) {
+        row = i - lastLabeled <= 3 ? 1 - lastRow : 0; // 사흘 안에 이웃 라벨이 있으면 반대 줄
+        lastLabeled = i;
+        lastRow = row;
+      }
+      out.push({ i, short: e.short, label: evs.map((x) => x.label).join(' · '), labeled, row });
+    }
+    return out;
+  }, [days, story.events]);
   const curEra = story.eras.findIndex((e) => idx >= e.startIdx && idx <= e.endIdx);
   const chartUpTo = phase === 'idle' || phase === 'end' ? n - 1 : idx;
   const pct = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * 100);
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-0 py-0 md:px-6 md:py-6">
-      <div className={`overflow-hidden border-y md:rounded-2xl md:border ${PAPER.card}`}>
-        <div className="md:grid md:grid-cols-[390px_minmax(0,1fr)]">
-          {/* ── 지도 열 ── */}
-          <div className="sticky top-14 z-20 md:static">
-            <div className="mx-auto w-full bg-[#0c0a09]" style={{ maxWidth: STAGE_PX }}>
+      {/* overflow-hidden은 md에서만 — 모바일에서 카드가 overflow를 가지면 고정 묶음이 카드 기준으로 붙어 56px 밀려 두루마리를 가린다(로컬 검증). */}
+      <div className={`border-y md:overflow-hidden md:rounded-2xl md:border ${PAPER.card}`}>
+        {/* 배치 — 모바일: [지도·현황·조작](상단 고정) → 두루마리 → 차트. PC: 왼쪽 열 [지도·현황·조작·차트], 오른쪽 두루마리.
+            같은 DOM으로 두 배치를 내려면 모바일 고정 묶음을 md에서 contents로 풀고 그리드 칸을 자식에 직접 준다. */}
+        <div className="flex flex-col md:grid md:grid-cols-[390px_minmax(0,1fr)] md:grid-rows-[auto_auto_auto_auto_1fr]">
+          <div className="sticky top-14 z-20 order-1 md:contents">
+            <div className="mx-auto w-full bg-[#0c0a09] md:col-start-1 md:row-start-1" style={{ maxWidth: STAGE_PX }}>
               <div className="relative isolate aspect-square w-full overflow-hidden bg-zinc-950">
                 <div ref={bindLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -423,7 +441,7 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
             </div>
 
             {/* ── 현황 줄: 날짜 · 집계 · 순간 자막 · 이날의 사건 ── */}
-            <div className={`border-t px-3 pb-2 pt-2 ${PAPER.border} ${PAPER.card}`}>
+            <div className={`border-t px-3 pb-2 pt-2 md:col-start-1 md:row-start-2 ${PAPER.border} ${PAPER.card}`}>
               <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
                 <div className="flex items-baseline justify-between gap-2">
                   <div className="text-[14px] font-bold" style={SERIF}>{fmtDay(showingDay.kstDay)}</div>
@@ -464,18 +482,8 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
               </div>
             </div>
 
-            {/* ── 판도 차트 ── */}
-            {story.guilds.length > 0 ? (
-              <div className={`border-t px-3 pb-2 pt-2 ${PAPER.border} ${PAPER.card}`}>
-                <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
-                  <div className={`mb-0.5 flex justify-between text-[10px] ${PAPER.muted}`}><span>영토 판도 · 길드별 구역 수</span><span>{phase === 'end' || phase === 'idle' ? '전체' : '지금까지'}</span></div>
-                  <HistoryChart days={dayKeys} story={story} upTo={chartUpTo} current={phase === 'idle' ? -1 : idx} onPick={pickDay} />
-                </div>
-              </div>
-            ) : null}
-
-            {/* ── 시대 띠 + 스크러버 + 조작 ── */}
-            <div className={`border-t px-3 pb-3 pt-2 ${PAPER.border} ${PAPER.card}`}>
+            {/* ── 시대 띠 + 스크러버 + 조작(한 줄) ── */}
+            <div className={`border-t px-3 pb-2 pt-1.5 md:col-start-1 md:row-start-3 ${PAPER.border} ${PAPER.card}`}>
               <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
                 {story.eras.length > 0 ? (
                   <>
@@ -491,15 +499,15 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                         />
                       ))}
                     </div>
-                    <div className="relative mt-0.5 h-4">
+                    <div className="relative mt-0.5 h-3 md:h-6">
                       {ticks.map((t) => (
                         <button key={t.i} type="button" title={`${days[t.i]!.kstDay} · ${t.label}`} onClick={() => void startAt(t.i)} className="absolute top-0 -translate-x-1/2" style={{ left: `${pct(t.i)}%` }}>
-                          <span className="block h-1.5 w-px bg-[#6d6455]" />
-                          <span className="hidden whitespace-nowrap font-mono text-[8px] text-[#6d6455] md:block">{t.short}</span>
+                          <span className={`mx-auto block w-px ${t.labeled ? 'h-2 bg-[#8a4b23]' : 'h-1.5 bg-[#b8ae9a]'}`} />
+                          {t.labeled ? <span className={`hidden whitespace-nowrap font-mono text-[8px] leading-none text-[#8a4b23] md:block ${t.row === 1 ? 'mt-2' : ''}`}>{t.short}</span> : null}
                         </button>
                       ))}
                     </div>
-                    <div className="mt-1 flex gap-1 overflow-x-auto pb-0.5">
+                    <div className="mt-1 hidden gap-1 overflow-x-auto pb-0.5 md:flex">
                       {story.eras.map((e, i) => (
                         <button key={i} type="button" onClick={() => void startAt(e.startIdx)} className={`shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] ${i === curEra && phase !== 'idle' ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.hover}`}`}>
                           「{e.name}」의 시대 · {e.endIdx - e.startIdx + 1}일
@@ -514,30 +522,44 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                   <span className="font-semibold text-[#2a251e]">{shortDay(showingDay.kstDay)}</span>
                   <span>{shortDay(days[n - 1]!.kstDay)}</span>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <Btn onClick={() => void startAt(0)} label="⏮ 처음" />
-                  <Btn onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)} label="◀ 전날" disabled={phase !== 'idle' && idx === 0} />
-                  <button type="button" onClick={togglePause} className="rounded-lg bg-[#8a4b23] px-3.5 py-1.5 text-[12px] font-extrabold text-white">
-                    {phase === 'idle' ? '▶ 처음부터' : phase === 'end' ? '▶ 다시 보기' : paused ? '▶ 재생' : '❚❚ 일시정지'}
+                <div className="mt-1.5 flex items-center gap-1">
+                  <Btn onClick={() => void startAt(0)} label="⏮" title="처음부터" />
+                  <Btn onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)} label="◀" title="전날" disabled={phase !== 'idle' && idx === 0} />
+                  <button type="button" onClick={togglePause} className="min-w-[88px] rounded-lg bg-[#8a4b23] px-3 py-1.5 text-[12px] font-extrabold text-white">
+                    {phase === 'idle' ? '▶ 처음부터' : phase === 'end' ? '▶ 다시' : paused ? '▶ 재생' : '❚❚ 일시정지'}
                   </button>
-                  <Btn onClick={() => void startAt(idx + 1)} label="다음 날 ▶" disabled={phase === 'idle' || idx >= n - 1} />
-                  <span className="mx-1 h-4 w-px bg-[#e2d9c6]" />
-                  {SPEEDS.map((s) => (
-                    <button key={s} type="button" onClick={() => setSpeed(s)} aria-pressed={speed === s} className={`rounded-lg border px-2 py-1.5 font-mono text-[11px] font-bold ${speed === s ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.hover}`}`}>×{s}</button>
-                  ))}
-                  <span className="mx-1 h-4 w-px bg-[#e2d9c6]" />
-                  {(['battle', 'quick'] as const).map((m) => (
-                    <button key={m} type="button" onClick={() => switchMode(m)} aria-pressed={mode === m} className={`rounded-lg border px-2 py-1.5 text-[11px] font-bold ${mode === m ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.hover}`}`}>
-                      {m === 'battle' ? '전투 재생' : '빠른 흐름'}
-                    </button>
-                  ))}
+                  <Btn onClick={() => void startAt(idx + 1)} label="▶" title="다음 날" disabled={phase === 'idle' || idx >= n - 1} />
+                  <button
+                    type="button"
+                    onClick={() => setSpeed((s) => (SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1))}
+                    title="배속(누를 때마다 ×1 → ×2 → ×4)"
+                    className={`rounded-lg border px-2 py-1.5 font-mono text-[11px] font-bold ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
+                  >
+                    ×{speed}
+                  </button>
+                  <span className={`ml-auto inline-flex overflow-hidden rounded-lg border ${PAPER.border}`} role="group" aria-label="재생 방식">
+                    {(['battle', 'quick'] as const).map((m) => (
+                      <button key={m} type="button" onClick={() => switchMode(m)} aria-pressed={mode === m} className={`px-2 py-1.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : PAPER.hover}`}>
+                        {m === 'battle' ? '전투' : '빠른'}
+                      </button>
+                    ))}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
+            {/* ── 판도 차트 ── */}
+          {story.guilds.length > 0 ? (
+              <div className={`order-3 border-t px-3 pb-2 pt-2 md:col-start-1 md:row-start-4 ${PAPER.border} ${PAPER.card}`}>
+                <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
+                  <div className={`mb-0.5 flex justify-between text-[10px] ${PAPER.muted}`}><span>영토 판도 · 길드별 구역 수</span><span>{phase === 'end' || phase === 'idle' ? '전체' : '지금까지'}</span></div>
+                  <HistoryChart days={dayKeys} story={story} upTo={chartUpTo} current={phase === 'idle' ? -1 : idx} onPick={pickDay} />
+                </div>
+              </div>
+            ) : null}
 
-          {/* ── 두루마리 ── */}
-          <div className={`flex min-h-[280px] flex-col border-t md:border-l md:border-t-0 ${PAPER.border}`}>
+          {/* ── 두루마리 — 모바일은 고정 묶음 아래(order-2), PC는 오른쪽 열 전체 ── */}
+          <div className={`order-2 flex min-h-[220px] flex-col border-t md:col-start-2 md:row-start-1 md:row-span-5 md:border-l md:border-t-0 ${PAPER.border}`}>
             {phase === 'idle' ? (
               <div className="flex flex-1 flex-col p-4 md:p-6">
                 <div className="text-[18px] font-bold leading-snug" style={SERIF}>대륙의 역사</div>
@@ -561,7 +583,7 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                 </div>
               </div>
             ) : (
-              <div ref={readerRef} className="max-h-[56vh] flex-1 overflow-y-auto p-4 md:max-h-[720px] md:p-6">
+              <div ref={readerRef} className="max-h-[max(220px,calc(100dvh-600px))] flex-1 overflow-y-auto p-4 md:max-h-[calc(100dvh-7.5rem)] md:p-6">
                 {queue.length === 0 && quickRows.length === 0 && phase === 'loading' ? <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p> : null}
                 {mode === 'quick' ? (
                   <div className="flex flex-col gap-1">
@@ -676,12 +698,14 @@ function StaticChronicle({ text, zoneColor }: { text: string; zoneColor: (name: 
   );
 }
 
-function Btn({ onClick, label, disabled }: { onClick: () => void; label: string; disabled?: boolean }) {
+function Btn({ onClick, label, disabled, title }: { onClick: () => void; label: string; disabled?: boolean; title?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={title}
+      aria-label={title}
       className={`rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold ${disabled ? 'border-[#e2d9c6] text-[#b8ae9a]' : `${PAPER.border} ${PAPER.hover}`}`}
     >
       {label}

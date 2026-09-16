@@ -134,7 +134,7 @@ export function HistoryChart({
 
   return (
     <div className="relative">
-      <div ref={ref} className="h-[128px] w-full" aria-label="영토 판도 차트" />
+      <div ref={ref} className="h-[112px] w-full" aria-label="영토 판도 차트" />
       <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[#6d6455]">
         {story.guilds.map((g, gi) => (
           <span key={g.id} className="inline-flex items-center gap-1">

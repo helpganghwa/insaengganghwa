@@ -115,7 +115,14 @@ async function buildStory(serverId: number, kstDays: string[], zoneCount: number
 
   // 차트 대상: 최대 보유 상위 6.
   const top = ids.map((g) => [g, Math.max(...byGuild.get(g)!)] as const).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([g]) => g);
-  const guildsOut = top.map((g) => ({ id: g, name: curById.get(g)?.name ?? lastSnap.get(g)?.name ?? `#${g}`, color: colorOf(g) }));
+  // 차트 범례 이름 — 개명한 길드는 「처음 이름→지금 이름」으로(선 하나가 두 이름을 잇는다는 걸 보여 준다).
+  const guildsOut = top.map((g) => {
+    const arr = byGuild.get(g)!;
+    const firstIdx = Math.max(0, arr.findIndex((n) => n > 0));
+    const first = nameOn(g, kstDays[firstIdx]!);
+    const now = curById.get(g)?.name ?? lastSnap.get(g)?.name ?? `#${g}`;
+    return { id: g, name: first !== now ? `${first}→${now}` : now, color: colorOf(g) };
+  });
   const counts = kstDays.map((_d, i) => top.map((g) => byGuild.get(g)![i] ?? 0));
 
   // 시대: 일별 1위(동률이면 전날 1위 유지) → id가 바뀌는 날이 경계.
