@@ -621,7 +621,7 @@ export function HistoryPlayer({
   }, [owners, zones]);
   const cur = days[idx]!;
   const showingDay = phase === 'idle' ? days[n - 1]! : cur;
-  const dayEvents = phase === 'idle' ? [] : (story.events[cur.kstDay] ?? []);
+  const dayEvents = story.events[showingDay.kstDay] ?? [];
   const edgeLines = useMemo(
     () =>
       edges
@@ -637,27 +637,35 @@ export function HistoryPlayer({
   );
   // 시대 띠·사건 눈금
   // 눈금: 날마다 가장 큰 사건 하나. 라벨은 1위 교체·석권·최대/과반만(나머지는 눈금+툴팁), 위아래 줄을 번갈아 겹침을 피한다.
+  // 사건 눈금 — 날마다 가장 큰 사건 하나. 라벨 없이 눈금+툴팁, 1위 교체·석권·최대만 진한 눈금.
   const ticks = useMemo(() => {
-    const out: { i: number; short: string; label: string; labeled: boolean; row: number }[] = [];
-    let lastLabeled = -99;
-    let lastRow = 1;
+    const out: { i: number; label: string; big: boolean }[] = [];
     for (let i = 0; i < days.length; i++) {
       const evs = story.events[days[i]!.kstDay];
       if (!evs?.length) continue;
       const e = [...evs].sort((a, b) => EVENT_PRIORITY[a.kind] - EVENT_PRIORITY[b.kind])[0]!;
-      const labeled = e.kind === 'leader' || e.kind === 'sweep' || e.kind === 'peak';
-      let row = 0;
-      if (labeled) {
-        row = i - lastLabeled <= 3 ? 1 - lastRow : 0; // 사흘 안에 이웃 라벨이 있으면 반대 줄
-        lastLabeled = i;
-        lastRow = row;
-      }
-      out.push({ i, short: e.short, label: evs.map((x) => x.label).join(' · '), labeled, row });
+      out.push({
+        i,
+        label: evs.map((x) => x.label).join(' · '),
+        big: e.kind === 'leader' || e.kind === 'sweep' || e.kind === 'peak',
+      });
     }
     return out;
   }, [days, story.events]);
-  const curEra = story.eras.findIndex((e) => idx >= e.startIdx && idx <= e.endIdx);
   const pct = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * 100);
+  const statusText =
+    (phase === 'idle'
+      ? `지금의 대륙 · ${n}일째`
+      : `${ordinalKo(idx + 1)} 번째 날 · ${idx + 1} / ${n}`) +
+    (paused
+      ? ' · 일시정지'
+      : phase === 'loading'
+        ? ' · 펼치는 중'
+        : mode === 'quick' && phase === 'playing'
+          ? ' · 빠른 흐름'
+          : '');
+  const isPlaying = phase === 'playing' && !paused;
+  const ownedCount = Object.values(owners).filter(Boolean).length;
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-0 py-0 md:px-6 md:py-6">
@@ -799,6 +807,21 @@ export function HistoryPlayer({
                     </div>
                   );
                 })}
+                {/* 순위 보기 — 합계 한 줄, 깃발이 없는 날엔 안내. */}
+                <div
+                  aria-hidden={stageView !== 'rank'}
+                  className={`pointer-events-none absolute inset-x-0 bottom-[5%] z-[12] text-center text-[10.5px] text-[#cfc6b3] tabular-nums transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-100' : 'opacity-0'}`}
+                >
+                  구역 {ownedCount} · 중립 {zones.length - ownedCount}
+                </div>
+                {stageView === 'rank' && rank.labels.length === 0 ? (
+                  <div
+                    className="pointer-events-none absolute inset-0 z-[12] flex items-center justify-center text-[13px] text-[#e7dcc0]"
+                    style={SERIF}
+                  >
+                    아직 세워진 깃발이 없습니다
+                  </div>
+                ) : null}
                 {/* 순위 줄 라벨 — 문양·이름·구역 수. 줄 순서가 바뀌면 top이 미끄러진다. */}
                 {rank.labels.map((r) => {
                   const m = meta[r.guild];
@@ -852,212 +875,162 @@ export function HistoryPlayer({
               </div>
             </div>
 
-            {/* ── 현황 줄: 날짜 · 집계 · 순간 자막 · 이날의 사건 ── */}
+            {/* ── 현황 줄: 날짜 · 상태 · 헤드라인 · 집계 · 사건(순간 자막은 강조 칩으로 앞에) ── */}
             <div
-              className={`border-t px-3 pt-2 pb-2 md:col-start-1 md:row-start-2 ${PAPER.border} ${PAPER.card}`}
+              className={`border-t px-3 pt-2.5 pb-2 md:col-start-1 md:row-start-2 ${PAPER.border} ${PAPER.card}`}
             >
               <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="text-[14px] font-bold" style={SERIF}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="text-[15px] font-bold whitespace-nowrap" style={SERIF}>
                     {fmtDay(showingDay.kstDay)}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex overflow-hidden rounded-md border text-[10px] font-bold ${PAPER.border}`}
-                      role="group"
-                      aria-label="무대 보기"
-                    >
-                      {(['map', 'rank'] as const).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          aria-pressed={stageView === v}
-                          onClick={() => setStageView(v)}
-                          className={`px-2 py-0.5 ${stageView === v ? 'bg-[#2a251e] text-[#fdfaf3]' : PAPER.muted}`}
-                        >
-                          {v === 'map' ? '지도' : '순위'}
-                        </button>
-                      ))}
-                    </span>
-                    <div className={`font-mono text-[10px] ${PAPER.muted}`}>
-                      {phase === 'idle'
-                        ? `지금의 대륙 · ${n}일째`
-                        : `${ordinalKo(idx + 1)} 번째 날 · ${idx + 1} / ${n}`}
-                      {paused
-                        ? ' · 일시정지'
-                        : phase === 'loading'
-                          ? ' · 펼치는 중'
-                          : mode === 'quick' && phase === 'playing'
-                            ? ' · 빠른 흐름'
-                            : ''}
-                    </div>
+                  <div className={`truncate text-[11px] tabular-nums ${PAPER.muted}`}>
+                    {statusText}
                   </div>
                 </div>
-                {/* 헤드라인 줄 — 두 모드 모두 항상 한 줄(높이 고정). 재생 전엔 최근 기록. */}
+                {/* 헤드라인 — 항상 한 줄(높이 고정). 재생 전엔 최근 기록. */}
                 <div
-                  className="mt-0.5 h-[20px] truncate text-[12.5px] leading-[20px] font-semibold"
+                  className="mt-0.5 h-[20px] truncate text-[13px] leading-[20px] font-semibold"
                   style={SERIF}
                 >
                   <Headline text={showingDay.headline || '기록'} />
                 </div>
-                {legend.length > 0 ? (
-                  <div className="mt-1 flex h-[18px] flex-nowrap gap-x-3 overflow-hidden text-[11px] tabular-nums">
-                    {legend.map(([g, c]) => (
-                      <span key={g} className="inline-flex items-center gap-1.5">
-                        <i
-                          className="inline-block h-2 w-2 rounded-full ring-1 ring-black/20"
-                          style={{ background: meta[g]?.color ?? '#9a917f' }}
-                        />
-                        <span className="font-semibold">{g}</span>
-                        <b className={`font-mono font-medium ${PAPER.muted}`}>{c}</b>
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                {/* 자막·사건 칩은 자리를 항상 확보한다 — 높이가 들쭉날쭉하면 아래 조작 줄이 날마다 튀어 흐름이 끊겨 보인다(피드백). */}
-                {phase !== 'idle' ? (
-                  <>
-                    <div className="mt-1.5 flex h-[30px] items-center">
-                      {subtitle ? (
-                        <div
-                          key={subtitle.at}
-                          className="flex h-full w-full items-center gap-2 rounded-lg border border-[#f0c987] bg-[#fff3d6] px-2.5 text-[11.5px] text-[#2a251e] motion-safe:animate-[fadeIn_.4s_ease-out]"
-                        >
-                          <span className="rounded-full bg-[#8a4b23] px-2 py-px font-mono text-[9.5px] font-bold text-white">
-                            {subtitle.kind}
-                          </span>
-                          <span className="min-w-0 truncate">{subtitle.text}</span>
-                        </div>
-                      ) : (
-                        <div
-                          className={`h-full w-full rounded-lg border border-dashed ${PAPER.border} ${phase === 'playing' ? 'opacity-40' : 'opacity-0'}`}
-                          aria-hidden
-                        />
-                      )}
-                    </div>
-                    <div className="mt-1 flex h-[20px] flex-nowrap gap-1 overflow-hidden">
-                      {dayEvents.slice(0, 3).map((e, i) => (
-                        <span
-                          key={i}
-                          title={e.label}
-                          className={`shrink-0 rounded-full border px-2 text-[10px] leading-[18px] ${e.kind === 'leader' || e.kind === 'sweep' ? 'border-[#8a4b23] font-bold text-[#8a4b23]' : `${PAPER.border} ${PAPER.muted}`}`}
-                        >
-                          {e.label}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
+                <div className="mt-1 flex h-[18px] flex-nowrap gap-x-3 overflow-hidden text-[11px] tabular-nums">
+                  {legend.map(([g, c]) => (
+                    <span key={g} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <i
+                        className="inline-block h-2 w-2 rounded-[2px]"
+                        style={{ background: meta[g]?.color ?? '#9a917f' }}
+                      />
+                      <span className="font-semibold">{g}</span>
+                      <b className={`font-medium ${PAPER.muted}`}>{c}</b>
+                    </span>
+                  ))}
+                </div>
+                {/* 사건 줄 — 높이 고정. 순간 자막(1위 교체·석권·과반·소멸)은 강조 칩으로 맨 앞에 끼어들었다가 사라진다. */}
+                <div className="mt-1.5 flex h-[22px] flex-nowrap items-center gap-1.5 overflow-hidden">
+                  {subtitle ? (
+                    <span
+                      key={subtitle.at}
+                      className="max-w-full shrink-0 truncate rounded-full border border-[#e9c98f] bg-[#fff5df] px-2.5 text-[10.5px] leading-[20px] font-bold text-[#2a251e] motion-safe:animate-[fadeIn_.4s_ease-out]"
+                    >
+                      <em className="mr-1.5 text-[#8a4b23] not-italic">{subtitle.kind}</em>
+                      {subtitle.text}
+                    </span>
+                  ) : null}
+                  {dayEvents.slice(0, 3).map((e, i) => (
+                    <span
+                      key={i}
+                      title={e.label}
+                      className={`shrink-0 rounded-full border px-2.5 text-[10.5px] leading-[20px] whitespace-nowrap ${e.kind === 'leader' || e.kind === 'sweep' ? 'border-[#d9c39a] font-bold text-[#8a4b23]' : `${PAPER.border} ${PAPER.muted}`}`}
+                    >
+                      {e.label}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* ── 시대 띠 + 스크러버 + 조작(한 줄) ── */}
+            {/* ── 시간축(시대 띠 = 스크러버) + 조작 ── */}
             <div
-              className={`border-t px-3 pt-1.5 pb-2 md:col-start-1 md:row-start-3 ${PAPER.border} ${PAPER.card}`}
+              className={`border-t px-3 pt-2.5 pb-2.5 md:col-start-1 md:row-start-3 ${PAPER.border} ${PAPER.card}`}
             >
               <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
-                {story.eras.length > 0 ? (
-                  <>
-                    <div
-                      className="flex h-2.5 overflow-hidden rounded-[5px] border border-[#e2d9c6]"
-                      role="list"
-                      aria-label="시대"
-                    >
-                      {story.eras.map((e, i) => (
-                        <button
+                <div className="relative">
+                  <div
+                    className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
+                    role="list"
+                    aria-label="시대"
+                  >
+                    {story.eras.map((e, i) => {
+                      const len = e.endIdx - e.startIdx + 1;
+                      const future = phase !== 'idle' && e.startIdx > idx;
+                      return (
+                        <div
                           key={i}
-                          type="button"
-                          title={`「${e.name}」의 시대 · ${days[e.startIdx]!.kstDay} ~ ${days[e.endIdx]!.kstDay}`}
-                          onClick={() => void startAt(e.startIdx)}
-                          className="h-full border-r border-[#f5f0e6] last:border-r-0"
+                          role="listitem"
+                          className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
                           style={{
-                            width: `${((e.endIdx - e.startIdx + 1) / n) * 100}%`,
+                            width: `${(len / n) * 100}%`,
                             background: e.color ?? '#9a917f',
-                            opacity: i === curEra || phase === 'idle' ? 1 : 0.45,
+                            opacity: future ? 0.35 : 1,
                           }}
-                        />
-                      ))}
-                    </div>
-                    <div className="relative mt-0.5 h-3 md:h-6">
-                      {ticks.map((t) => (
-                        <button
-                          key={t.i}
-                          type="button"
-                          title={`${days[t.i]!.kstDay} · ${t.label}`}
-                          onClick={() => void startAt(t.i)}
-                          className="absolute top-0 -translate-x-1/2"
-                          style={{ left: `${pct(t.i)}%` }}
                         >
-                          <span
-                            className={`mx-auto block w-px ${t.labeled ? 'h-2 bg-[#8a4b23]' : 'h-1.5 bg-[#b8ae9a]'}`}
-                          />
-                          {t.labeled ? (
-                            <span
-                              className={`hidden font-mono text-[8px] leading-none whitespace-nowrap text-[#8a4b23] md:block ${t.row === 1 ? 'mt-2' : ''}`}
-                            >
-                              {t.short}
-                            </span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-1 hidden gap-1 overflow-x-auto pb-0.5 md:flex">
-                      {story.eras.map((e, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => void startAt(e.startIdx)}
-                          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] ${i === curEra && phase !== 'idle' ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.hover}`}`}
-                        >
-                          「{e.name}」의 시대 · {e.endIdx - e.startIdx + 1}일
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-                <input
-                  type="range"
-                  min={0}
-                  max={n - 1}
-                  value={phase === 'idle' ? n - 1 : idx}
-                  onChange={(e) => void startAt(Number(e.target.value))}
-                  aria-label="날짜"
-                  className="mt-1 h-1.5 w-full cursor-pointer accent-[#8a4b23]"
-                />
+                          {len >= 4
+                            ? `「${e.name}」의 시대 · ${len}일`
+                            : len >= 2
+                              ? `${e.name} ${len}`
+                              : ''}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* 스크러버 — 띠 위에 투명하게 겹친 range. 클릭·드래그로 그날부터. */}
+                  <input
+                    type="range"
+                    min={0}
+                    max={n - 1}
+                    value={phase === 'idle' ? n - 1 : idx}
+                    onChange={(e) => void startAt(Number(e.target.value))}
+                    aria-label="날짜"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
+                    style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
+                  />
+                </div>
+                {/* 사건 눈금 — 라벨 없이, 올리면 툴팁. 진한 눈금 = 1위 교체·석권·최대. */}
+                <div className="relative mt-[3px] h-[6px]">
+                  {ticks.map((t) => (
+                    <button
+                      key={t.i}
+                      type="button"
+                      title={`${days[t.i]!.kstDay} · ${t.label}`}
+                      aria-label={`${days[t.i]!.kstDay} ${t.label}`}
+                      onClick={() => void startAt(t.i)}
+                      className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
+                      style={{
+                        left: `${pct(t.i)}%`,
+                        borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
+                      }}
+                    />
+                  ))}
+                </div>
                 <div
-                  className={`mt-0.5 flex justify-between font-mono text-[9.5px] ${PAPER.muted}`}
+                  className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}
                 >
                   <span>{shortDay(days[0]!.kstDay)}</span>
-                  <span className="font-semibold text-[#2a251e]">
-                    {shortDay(showingDay.kstDay)}
-                  </span>
                   <span>{shortDay(days[n - 1]!.kstDay)}</span>
                 </div>
-                <div className="mt-1.5 flex items-center gap-1">
-                  <Btn onClick={() => void startAt(0)} label="⏮" title="처음부터" />
-                  <Btn
+                {/* 조작 — 고정 폭 아이콘 4개 · 배속 · 재생 방식 · 무대 보기 */}
+                <div className="mt-2 flex items-center gap-1.5">
+                  <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
+                  <IconBtn
                     onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)}
-                    label="◀"
                     title="전날"
+                    icon="prev"
                     disabled={phase !== 'idle' && idx === 0}
                   />
-                  <button
-                    type="button"
+                  <IconBtn
                     onClick={togglePause}
-                    className="min-w-[88px] rounded-lg bg-[#8a4b23] px-3 py-1.5 text-[12px] font-extrabold text-white"
-                  >
-                    {phase === 'idle'
-                      ? '▶ 처음부터'
-                      : phase === 'end'
-                        ? '▶ 다시'
-                        : paused
-                          ? '▶ 재생'
-                          : '❚❚ 일시정지'}
-                  </button>
-                  <Btn
+                    title={
+                      phase === 'idle'
+                        ? '처음부터 재생'
+                        : phase === 'end'
+                          ? '다시 재생'
+                          : isPlaying
+                            ? '일시정지'
+                            : '재생'
+                    }
+                    icon={isPlaying ? 'pause' : 'play'}
+                    primary
+                  />
+                  <IconBtn
                     onClick={() => void startAt(idx + 1)}
-                    label="▶"
                     title="다음 날"
+                    icon="next"
                     disabled={phase === 'idle' || idx >= n - 1}
                   />
                   <button
@@ -1066,12 +1039,12 @@ export function HistoryPlayer({
                       setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1)
                     }
                     title="배속(누를 때마다 ×1 → ×2 → ×4)"
-                    className={`rounded-lg border px-2 py-1.5 font-mono text-[11px] font-bold ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
+                    className={`h-7 rounded-lg border px-2 text-[11px] font-bold tabular-nums ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
                   >
                     ×{speed}
                   </button>
                   <span
-                    className={`ml-auto inline-flex overflow-hidden rounded-lg border ${PAPER.border}`}
+                    className={`ml-auto inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
                     role="group"
                     aria-label="재생 방식"
                   >
@@ -1081,9 +1054,26 @@ export function HistoryPlayer({
                         type="button"
                         onClick={() => switchMode(m)}
                         aria-pressed={mode === m}
-                        className={`px-2 py-1.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : PAPER.hover}`}
+                        className={`px-2.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
                       >
                         {m === 'battle' ? '전투' : '빠른'}
+                      </button>
+                    ))}
+                  </span>
+                  <span
+                    className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
+                    role="group"
+                    aria-label="무대 보기"
+                  >
+                    {(['map', 'rank'] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        aria-pressed={stageView === v}
+                        onClick={() => setStageView(v)}
+                        className={`px-2.5 text-[11px] font-bold ${stageView === v ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
+                      >
+                        {v === 'map' ? '지도' : '순위'}
                       </button>
                     ))}
                   </span>
@@ -1098,58 +1088,71 @@ export function HistoryPlayer({
           >
             {phase === 'idle' ? (
               <div className="flex flex-1 flex-col p-4 md:p-6">
-                <div className="text-[18px] leading-snug font-bold" style={SERIF}>
+                <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                   대륙의 역사
                 </div>
-                <div className={`mt-1 font-mono text-[10.5px] ${PAPER.muted}`}>
+                <div className={`mt-1 text-[11.5px] tabular-nums ${PAPER.muted}`}>
                   {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록 · 시대{' '}
                   {story.eras.length}
                 </div>
-                <p className="mt-3 max-w-[60ch] text-[13px] leading-relaxed">
+                <p className="mt-3 max-w-[60ch] text-[13px] leading-[1.75]">
                   점령전이 있던 날마다 이야기꾼이 남긴 기록을 첫날부터 오늘까지 지도 위에 이어서
-                  재생합니다. 1위가 바뀌는 날을 경계로 시대가 나뉘고, 구역이 뒤집힐 때마다 판도
-                  차트가 자랍니다.
+                  재생합니다. 1위가 바뀌는 날을 경계로 시대가 나뉘고, 순위 보기에서는 구역 타일이
+                  길드별 막대로 모입니다.
                 </p>
                 {story.eras.length > 0 ? (
-                  <div className="mt-3 space-y-1">
-                    {story.eras.map((e, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => begin('battle', e.startIdx)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-1.5 text-left text-[12.5px] ${PAPER.border} ${PAPER.hover}`}
-                      >
-                        <span className="flex items-center gap-2">
+                  <div className="mt-4 border-t border-[#ece5d6]">
+                    {story.eras.map((e, i) => {
+                      const len = e.endIdx - e.startIdx + 1;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => begin('battle', e.startIdx)}
+                          title="이 시대부터 재생"
+                          className={`grid w-full grid-cols-[14px_1fr_auto_72px] items-center gap-2.5 border-b border-[#ece5d6] px-0.5 py-2 text-left text-[12.5px] ${PAPER.hover}`}
+                        >
                           <i
-                            className="inline-block h-2.5 w-2.5 rounded-sm"
+                            className="h-3 w-3 rounded-[3px]"
                             style={{ background: e.color ?? '#9a917f' }}
                           />
-                          <span className="font-semibold" style={SERIF}>
+                          <span className="font-bold" style={SERIF}>
                             「{e.name}」의 시대
                           </span>
-                        </span>
-                        <span className={`font-mono text-[10px] ${PAPER.muted}`}>
-                          {days[e.startIdx]!.kstDay.slice(5)} ~ {days[e.endIdx]!.kstDay.slice(5)} ·{' '}
-                          {e.endIdx - e.startIdx + 1}일
-                        </span>
-                      </button>
-                    ))}
+                          <span className={`text-[11px] tabular-nums ${PAPER.muted}`}>
+                            {days[e.startIdx]!.kstDay.slice(5)} ~{' '}
+                            {e.endIdx === n - 1 ? '' : days[e.endIdx]!.kstDay.slice(5)} · {len}일
+                          </span>
+                          <span className="flex justify-end">
+                            <span
+                              className="h-1.5 rounded-full opacity-70"
+                              style={{
+                                width: `${Math.max(6, (len / n) * 72)}px`,
+                                background: e.color ?? '#9a917f',
+                              }}
+                            />
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => begin('quick', 0)}
-                    className="rounded-lg bg-[#8a4b23] px-4 py-2 text-[13px] font-extrabold text-white"
+                    className="inline-flex items-center gap-2 rounded-[9px] bg-[#8a4b23] px-4 py-2 text-[12.5px] font-bold text-white"
                   >
-                    ⏩ 1분 만에 보기
+                    <Icon name="ff" />
+                    1분 만에 보기
                   </button>
                   <button
                     type="button"
                     onClick={() => begin('battle', 0)}
-                    className={`rounded-lg border px-4 py-2 text-[13px] font-extrabold ${PAPER.border} ${PAPER.hover}`}
+                    className={`inline-flex items-center gap-2 rounded-[9px] border px-4 py-2 text-[12.5px] font-bold ${PAPER.border} ${PAPER.hover}`}
                   >
-                    ▶ 처음부터 자세히
+                    <Icon name="play" />
+                    처음부터 자세히
                   </button>
                 </div>
               </div>
@@ -1183,13 +1186,13 @@ export function HistoryPlayer({
                         className={`grid grid-cols-[46px_1fr_auto] items-baseline gap-2 rounded-md px-1 py-1 text-left ${r.captures < 0 ? 'bg-[#ece3d1]' : PAPER.hover}`}
                         title="이날을 전투 재생으로 보기"
                       >
-                        <span className={`font-mono text-[10px] ${PAPER.muted}`}>
+                        <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>
                           {r.kstDay.slice(5)}
                         </span>
                         <span className="text-[12.5px] leading-snug font-semibold" style={SERIF}>
                           {r.headline ? <Headline text={r.headline} /> : '기록'}
                         </span>
-                        <span className={`font-mono text-[10px] ${PAPER.muted}`}>
+                        <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>
                           {r.captures >= 0 ? `점령 ${r.captures}` : '…'}
                         </span>
                       </button>
@@ -1209,7 +1212,7 @@ export function HistoryPlayer({
                         dim={i < queue.length - 1}
                       />
                       <div
-                        className={`mt-2 text-[13px] leading-[1.85] transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
+                        className={`mt-2 text-[13.5px] leading-[1.9] transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
                       >
                         {q.data.replay ? (
                           <ChronicleReplayPanel
@@ -1242,24 +1245,27 @@ export function HistoryPlayer({
                 )}
                 {phase === 'end' ? (
                   <section className="mt-8 text-center">
-                    <div className={`flex items-center gap-2 font-mono text-[10px] ${PAPER.muted}`}>
-                      <span className="h-px flex-1 bg-[#e2d9c6]" />
+                    <div
+                      className={`flex items-center gap-2 text-[10.5px] tracking-[.02em] ${PAPER.muted}`}
+                    >
+                      <span className="h-px flex-1 bg-[#ece5d6]" />
                       <span>{ordinalKo(n)} 번째 날까지</span>
-                      <span className="h-px flex-1 bg-[#e2d9c6]" />
+                      <span className="h-px flex-1 bg-[#ece5d6]" />
                     </div>
-                    <div className="mt-3 text-[16px] font-bold" style={SERIF}>
+                    <div className="mt-3 text-[17px] font-bold" style={SERIF}>
                       여기까지가 오늘의 대륙입니다
                     </div>
                     <div className={`mt-1 text-[11px] ${PAPER.muted}`}>
-                      다음 기록은 자정에 열립니다 · 판도 차트에 전체 흐름이 펼쳐졌습니다
+                      다음 기록은 자정에 열립니다 · 순위 보기에서 오늘의 판도를 볼 수 있습니다
                     </div>
                     <div className="mt-3 flex justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => begin(mode, 0)}
-                        className="rounded-lg bg-[#8a4b23] px-3 py-2 text-[12px] font-bold text-white"
+                        className="inline-flex items-center gap-2 rounded-[9px] bg-[#8a4b23] px-3.5 py-2 text-[12px] font-bold text-white"
                       >
-                        ⏮ 처음부터 다시
+                        <Icon name="first" />
+                        처음부터 다시
                       </button>
                       <button
                         type="button"
@@ -1270,7 +1276,7 @@ export function HistoryPlayer({
                           setQuickRows([]);
                           setOwners(index.owners);
                         }}
-                        className={`rounded-lg border px-3 py-2 text-[12px] font-bold ${PAPER.border} ${PAPER.hover}`}
+                        className={`rounded-[9px] border px-3.5 py-2 text-[12px] font-bold ${PAPER.border} ${PAPER.hover}`}
                       >
                         지금의 대륙
                       </button>
@@ -1302,16 +1308,18 @@ function DayDivider({
 }) {
   return (
     <div className={`transition-opacity duration-1000 ${dim ? 'opacity-70' : ''}`}>
-      <div className={`flex items-center gap-2 font-mono text-[10px] ${PAPER.muted}`}>
-        <span className="h-px flex-1 bg-[#e2d9c6]" />
+      <div
+        className={`flex items-center gap-2.5 text-[10.5px] tracking-[.02em] tabular-nums ${PAPER.muted}`}
+      >
+        <span className="h-px flex-1 bg-[#ece5d6]" />
         <span>
           {ordinalKo(nth)} 번째 날 · {kstDay}
           {battles ? ` · 전투 ${battles}` : ''}
         </span>
-        <span className="h-px flex-1 bg-[#e2d9c6]" />
+        <span className="h-px flex-1 bg-[#ece5d6]" />
       </div>
       {headline ? (
-        <div className="mt-1.5 text-[14px] leading-snug font-bold" style={SERIF}>
+        <div className="mt-2 text-[15px] leading-[1.45] font-bold" style={SERIF}>
           <Headline text={headline} />
         </div>
       ) : null}
@@ -1381,16 +1389,37 @@ function StaticChronicle({
   );
 }
 
-function Btn({
+const ICONS = {
+  first: 'M1 1h2v10H1zM11 1v10L4 6z',
+  prev: 'M9 1v10L2 6z',
+  play: 'M3 1l8 5-8 5z',
+  pause: 'M2 1h3v10H2zM7 1h3v10H7z',
+  next: 'M3 1v10l7-5z',
+  ff: 'M1 1l5 5-5 5zM6 1l5 5-5 5z',
+} as const;
+type IconName = keyof typeof ICONS;
+
+/** 조작 아이콘 — 이모지는 글꼴마다 폭이 달라 버튼이 들쭉날쭉해서 SVG로(아바타 순서 편집과 같은 이유). */
+function Icon({ name }: { name: IconName }) {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden className="h-3 w-3 fill-current">
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+function IconBtn({
   onClick,
-  label,
-  disabled,
   title,
+  icon,
+  disabled,
+  primary,
 }: {
   onClick: () => void;
-  label: string;
+  title: string;
+  icon: IconName;
   disabled?: boolean;
-  title?: string;
+  primary?: boolean;
 }) {
   return (
     <button
@@ -1399,9 +1428,13 @@ function Btn({
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold ${disabled ? 'border-[#e2d9c6] text-[#b8ae9a]' : `${PAPER.border} ${PAPER.hover}`}`}
+      className={`inline-flex h-7 shrink-0 items-center justify-center rounded-lg border ${
+        primary
+          ? 'w-9 border-[#8a4b23] bg-[#8a4b23] text-white'
+          : `w-7 ${disabled ? 'border-[#e2d9c6] text-[#c9c0ad]' : `${PAPER.border} text-[#2a251e] ${PAPER.hover}`}`
+      }`}
     >
-      {label}
+      <Icon name={icon} />
     </button>
   );
 }
