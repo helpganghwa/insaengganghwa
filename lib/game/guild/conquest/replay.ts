@@ -205,6 +205,11 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
   }
 
   const missing = [...names].filter((n) => guildMeta[n]?.guildId == null);
+  // 당시 이름 정합(2026-09-16, 역사 페이지 제보) — 이벤트·소유의 길드명은 guilds의 **현재** 이름인데
+  // 그날 스냅샷(guild_refs)엔 **당시** 이름이 있다. 개명한 길드(예: 「전설」→「Winners」)는 이름으로는 스냅샷을
+  // 못 찾아 현재 문양·이름이 옛 기록에 붙었다. 현재 이름→id→스냅샷으로 잇고, 스냅샷 이름이 다르면 이벤트·
+  // 소유·중립화·메타의 이름을 전부 당시 이름으로 바꿔 연대기 본문({g|전설})·범례와 맞춘다.
+  const rename: Record<string, string> = {};
   if (missing.length > 0) {
     const guildRows = await db
       .select({
@@ -215,8 +220,30 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
       })
       .from(guilds)
       .where(and(eq(guilds.serverId, serverId), inArray(guilds.name, missing)));
+    const refById = new Map((chron?.refs ?? []).map((r) => [Number(r.id), r] as const));
     for (const g of guildRows) {
-      guildMeta[g.name] = { guildId: Number(g.id), color: g.color, emblemUrl: g.emblemUrl };
+      const ref = refById.get(Number(g.id));
+      if (ref && ref.name !== g.name) {
+        rename[g.name] = ref.name;
+        guildMeta[ref.name] = { guildId: ref.id, color: ref.color, emblemUrl: ref.emblemUrl };
+        delete guildMeta[g.name];
+      } else {
+        guildMeta[g.name] = { guildId: Number(g.id), color: g.color, emblemUrl: g.emblemUrl };
+      }
+    }
+  }
+  if (Object.keys(rename).length > 0) {
+    const rn = (s: string) => rename[s] ?? s;
+    for (const ev of Object.values(events)) {
+      ev.winner = rn(ev.winner);
+      ev.from = ev.from ? rn(ev.from) : ev.from;
+      ev.rivals = ev.rivals.map(rn);
+      ev.origins = Object.fromEntries(Object.entries(ev.origins).map(([g, z]) => [rn(g), z]));
+    }
+    for (const n of neutralized) n.guild = rn(n.guild);
+    for (const k of Object.keys(beforeOwner)) {
+      const o = beforeOwner[Number(k)];
+      if (o) beforeOwner[Number(k)] = rn(o);
     }
   }
 

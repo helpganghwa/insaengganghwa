@@ -71,14 +71,14 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
   const n = days.length;
   const [phase, setPhase] = useState<Phase>('idle');
   const [idx, setIdx] = useState<number>(n - 1);
-  const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(2);
+  const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1); // 게임과 같은 속도가 기본(피드백 2)
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [owners, setOwners] = useState<Record<number, string | null>>(index.owners);
   const [meta, setMeta] = useState<Record<string, HistoryGuildMeta>>(index.guilds);
-  const [dayData, setDayData] = useState<HistoryDayData | null>(null);
-  // 이어 읽기(피드백 3) — 재생이 끝난 날의 본문은 위에 남기고, 새 날은 아래로 이어 붙인다. 스크러버로 뛰면 비운다.
-  const [played, setPlayed] = useState<{ kstDay: string; headline: string; text: string }[]>([]);
+  // 이어 읽기(피드백 3·4) — 시작한 날들을 한 목록에 쌓고, 끝난 날의 재생 패널도 **그대로 마운트해 둔다**(정적으로
+  // 바꿔 그리면 스타일이 튀어 끊긴 느낌). 마지막 항목이 지금 재생 중인 날. 스크러버·버튼으로 뛰면 목록을 비운다.
+  const [queue, setQueue] = useState<{ kstDay: string; headline: string; nth: number; data: HistoryDayData; session: number }[]>([]);
   const readerRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true); // 사용자가 위로 올려 읽는 중이면 자동 스크롤을 멈춘다
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
@@ -87,8 +87,6 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     layerRef.current = el;
     setLayer(el);
   }, []);
-  const [copied, setCopied] = useState(false);
-  const [session, setSession] = useState(0); // 재생 세션 — 같은 날을 다시 시작해도 패널이 리마운트되게 key에 섞는다
   const cache = useRef(new Map<string, HistoryDayData | null>());
   const run = useRef(0); // 재생 세션 토큰 — 스크러버로 뛰면 이전 로딩·타이머를 무효화
   const startAtRef = useRef<(k: number, continuous?: boolean) => Promise<void>>(async () => {});
@@ -120,13 +118,9 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     [days, serverId],
   );
 
-  /** 하루가 끝났을 때 — 본문을 위에 남기고 곧바로 다음 날로(하루 카드 없음), 마지막이면 끝 화면(소유는 지금 상태로). */
+  /** 하루가 끝났을 때 — 곧바로 다음 날로(카드·로딩 표시 없음), 마지막이면 끝(소유는 지금 상태로). */
   const advance = useCallback(
     (k: number) => {
-      setDayData((d) => {
-        if (d) setPlayed((p) => (p.some((x) => x.kstDay === d.kstDay) ? p : [...p, { kstDay: d.kstDay, headline: d.headline, text: d.text }]));
-        return d;
-      });
       if (k + 1 < n) void startAtRef.current(k + 1, true);
       else {
         setPhase('end');
@@ -144,12 +138,12 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
       pausedRef.current = false;
       setPaused(false);
       layerRef.current?.replaceChildren();
-      if (!continuous) setPlayed([]);
+      if (!continuous) setQueue([]);
       stickRef.current = true;
       setIdx(k);
-      setSession((s) => s + 1);
-      setPhase('loading');
-      setDayData(null);
+      const sess = token;
+      // 이어 재생(continuous)이면 이전 패널을 그대로 둔 채 데이터만 기다린다 — 미리 받아 둬서 거의 즉시.
+      if (!continuous) setPhase('loading');
       const data = await fetchDay(k);
       if (token !== run.current) return;
       void fetchDay(k + 1); // 다음 날 미리
@@ -159,9 +153,8 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
         const snap = Object.entries(replay.guilds).map(([g, v]) => [g, { color: v.color, emblemUrl: v.emblemUrl }] as const);
         setMeta((m) => ({ ...m, ...Object.fromEntries(snap) }));
       }
-      setDayData(data);
+      if (data) setQueue((q) => [...q, { kstDay: data.kstDay, headline: data.headline, nth: k + 1, data, session: sess }]);
       setPhase('playing');
-      window.history.replaceState(null, '', `?s=${serverId}&day=${days[k]!.kstDay}`);
       if (!replay) {
         // 스크립트 없는 날 — 본문만 잠시 보여 주고 넘어간다.
         setTimeout(() => {
@@ -169,29 +162,29 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
         }, STATIC_DAY_MS / speed);
       }
     },
-    [n, fetchDay, serverId, days, speed, advance],
+    [n, fetchDay, speed, advance],
   );
   useEffect(() => {
     startAtRef.current = startAt;
   }, [startAt]);
 
-  // 자동 스크롤 — 재생 중 읽기 칸을 바닥에 붙여 둔다(사용자가 위로 올리면 멈추고, 다시 바닥 근처로 내리면 재개).
+  // 자동 스크롤 — 글자가 찍힐 때마다(DOM 변경) 바닥을 따라간다. 사용자가 위로 올리면 멈추고, 바닥 근처로 내리면 재개.
   useEffect(() => {
-    if (phase !== 'playing') return;
     const el = readerRef.current;
-    if (!el) return;
-    const id = setInterval(() => {
+    if (!el || phase === 'idle') return;
+    const mo = new MutationObserver(() => {
       if (stickRef.current) el.scrollTop = el.scrollHeight;
-    }, 250);
+    });
+    mo.observe(el, { childList: true, subtree: true, characterData: true });
     const onScroll = () => {
       stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      clearInterval(id);
+      mo.disconnect();
       el.removeEventListener('scroll', onScroll);
     };
-  }, [phase, idx]);
+  }, [phase]);
 
   // ?day= 딥링크 — 첫 렌더 뒤 그날부터(동기 setState 회피: 다음 틱).
   useEffect(() => {
@@ -209,15 +202,6 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
     }
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
-  };
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(`${location.origin}/history?s=${serverId}&day=${days[idx]!.kstDay}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* 클립보드 거부 — 무시 */
-    }
   };
 
   // 실시간 영토 집계(상위 5)
@@ -252,12 +236,13 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                 <div ref={bindLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={mapSrc} alt="대륙 지도" draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
+                {/* 길(인접선) — 게임 세계지도와 같은 어두운 외곽 + 앰버 본선(피드백 2). */}
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
                   {edgeLines.map((l) => (
-                    <line key={`h${l.key}`} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#000" strokeOpacity={0.35} strokeWidth={0.9} strokeLinecap="round" />
+                    <line key={`h${l.key}`} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#000000" strokeOpacity={0.42} strokeWidth={1} strokeLinecap="round" />
                   ))}
                   {edgeLines.map((l) => (
-                    <line key={`m${l.key}`} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#cbd5e1" strokeOpacity={0.5} strokeWidth={0.5} strokeLinecap="round" />
+                    <line key={`m${l.key}`} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="#fde047" strokeOpacity={0.95} strokeWidth={0.72} strokeLinecap="round" />
                   ))}
                 </svg>
                 {zones.map((z) => {
@@ -285,39 +270,29 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                     </div>
                   );
                 })}
-                {/* 날짜 배지 — 날이 바뀔 때 조용히 바뀐다(카드 없음). */}
-                <div key={showingDay.kstDay} className="absolute left-2.5 top-2 z-30 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)] motion-safe:animate-[fadeIn_.5s_ease-out]">
-                  <div className="text-[14px] font-bold text-stone-50" style={SERIF}>
+              </div>
+            </div>
+            {/* ── 현황 줄(지도 밖, 피드백 1·6) — 날짜 · N번째 날 · 그날 이름 기준 영토 집계 ── */}
+            <div className={`border-t px-3 pb-2 pt-2 ${PAPER.border} ${PAPER.card}`}>
+              <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-[14px] font-bold" style={SERIF}>
                     {fmtDay(showingDay.kstDay)}
                   </div>
-                  <div className="font-mono text-[10px] text-stone-300">
+                  <div className={`font-mono text-[10px] ${PAPER.muted}`}>
                     {phase === 'idle' ? `지금의 대륙 · ${n}일째` : `${ordinalKo(idx + 1)} 번째 날 · ${idx + 1} / ${n}`}
                     {paused ? ' · 일시정지' : phase === 'loading' ? ' · 펼치는 중' : ''}
                   </div>
                 </div>
                 {legend.length > 0 ? (
-                  <div className="absolute right-2 top-2 z-30 min-w-[104px] rounded-lg bg-black/50 px-2 py-1.5 text-[10px] text-stone-100 backdrop-blur-[2px]">
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] tabular-nums">
                     {legend.map(([g, c]) => (
-                      <div key={g} className="flex items-center justify-between gap-2 tabular-nums">
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <i className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: meta[g]?.color ?? '#71717a' }} />
-                          <span className="truncate">{g}</span>
-                        </span>
-                        <b className="font-mono font-medium">{c}</b>
-                      </div>
+                      <span key={g} className="inline-flex items-center gap-1.5">
+                        <i className="inline-block h-2 w-2 rounded-full ring-1 ring-black/20" style={{ background: meta[g]?.color ?? '#9a917f' }} />
+                        <span className="font-semibold">{g}</span>
+                        <b className={`font-mono font-medium ${PAPER.muted}`}>{c}</b>
+                      </span>
                     ))}
-                  </div>
-                ) : null}
-                {phase === 'end' ? (
-                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/55">
-                    <div className={`max-w-[82%] rounded-2xl border px-5 py-5 text-center shadow-2xl ${PAPER.card}`}>
-                      <div className="text-[16px] font-bold" style={SERIF}>여기까지가 오늘의 대륙입니다</div>
-                      <div className={`mt-1 text-[11px] ${PAPER.muted}`}>{ordinalKo(n)} 번째 날 · 다음 기록은 자정에 열립니다</div>
-                      <div className="mt-3 flex justify-center gap-2">
-                        <button type="button" onClick={() => void startAt(0)} className="rounded-lg bg-[#8a4b23] px-3 py-2 text-[12px] font-bold text-white">⏮ 처음부터 다시</button>
-                        <button type="button" onClick={() => { setPhase('idle'); setIdx(n - 1); setPlayed([]); }} className={`rounded-lg border px-3 py-2 text-[12px] font-bold ${PAPER.border} ${PAPER.hover}`}>지금의 대륙</button>
-                      </div>
-                    </div>
                   </div>
                 ) : null}
               </div>
@@ -368,9 +343,6 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
                       ×{s}
                     </button>
                   ))}
-                  <button type="button" onClick={() => void copyLink()} className={`ml-auto rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${PAPER.border} ${PAPER.hover}`}>
-                    {copied ? '복사됨' : '🔗 이 시점 링크'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -397,42 +369,47 @@ export function HistoryPlayer({ index, mapSrc, startDay }: { index: HistoryIndex
               </div>
             ) : (
               <div ref={readerRef} className="max-h-[56vh] flex-1 overflow-y-auto p-4 md:max-h-[640px] md:p-6">
-                {played.map((d, i) => (
-                  <section key={d.kstDay} className={i === 0 ? '' : 'mt-6'}>
-                    <DayDivider kstDay={d.kstDay} nth={days.findIndex((x) => x.kstDay === d.kstDay) + 1} headline={d.headline} dim />
-                    <div className={`mt-2 text-[13px] leading-[1.85] ${PAPER.muted}`}>
-                      <StaticChronicle text={d.text} zoneColor={zoneColor} />
-                    </div>
-                  </section>
-                ))}
-                <section className={played.length > 0 ? 'mt-6' : ''}>
-                  <DayDivider kstDay={cur.kstDay} nth={idx + 1} headline={cur.headline} battles={dayData?.replay ? Object.keys(dayData.replay.events).length : null} />
-                  <div className="mt-2 text-[13px] leading-[1.85]">
-                    {phase === 'loading' ? (
-                      <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
-                    ) : phase === 'playing' && dayData ? (
-                      dayData.replay ? (
+                {queue.length === 0 && phase === 'loading' ? <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p> : null}
+                {queue.map((q, i) => (
+                  <section key={`${q.kstDay}-${q.session}`} className={i === 0 ? '' : 'mt-7'}>
+                    <DayDivider kstDay={q.kstDay} nth={q.nth} headline={q.headline} battles={q.data.replay ? Object.keys(q.data.replay.events).length : null} dim={i < queue.length - 1} />
+                    <div className={`mt-2 text-[13px] leading-[1.85] ${i < queue.length - 1 ? 'opacity-75' : ''}`}>
+                      {q.data.replay ? (
                         <ChronicleReplayPanel
-                          key={`${cur.kstDay}-${session}`}
-                          text={dayData.text}
-                          replay={dayData.replay}
+                          text={q.data.text}
+                          replay={q.data.replay}
                           zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
                           layer={layer}
                           zoneColor={zoneColor}
                           onOwnerFlip={(zoneId, guild) => setOwners((o) => ({ ...o, [zoneId]: guild }))}
                           onNeutralize={(zoneId) => setOwners((o) => ({ ...o, [zoneId]: null }))}
-                          onDone={() => advance(idx)}
+                          onDone={() => {
+                            if (q.session === run.current) advance(q.nth - 1);
+                          }}
                           speed={speed}
                           pausedRef={pausedRef}
                         />
                       ) : (
-                        <StaticChronicle text={dayData.text} zoneColor={zoneColor} />
-                      )
-                    ) : phase === 'end' ? (
-                      <p className={`text-[12px] ${PAPER.muted}`}>마지막 기록까지 재생했습니다.</p>
-                    ) : null}
-                  </div>
-                </section>
+                        <StaticChronicle text={q.data.text} zoneColor={zoneColor} />
+                      )}
+                    </div>
+                  </section>
+                ))}
+                {phase === 'end' ? (
+                  <section className="mt-8 text-center">
+                    <div className={`flex items-center gap-2 font-mono text-[10px] ${PAPER.muted}`}>
+                      <span className="h-px flex-1 bg-[#e2d9c6]" />
+                      <span>{ordinalKo(n)} 번째 날까지</span>
+                      <span className="h-px flex-1 bg-[#e2d9c6]" />
+                    </div>
+                    <div className="mt-3 text-[16px] font-bold" style={SERIF}>여기까지가 오늘의 대륙입니다</div>
+                    <div className={`mt-1 text-[11px] ${PAPER.muted}`}>다음 기록은 자정에 열립니다</div>
+                    <div className="mt-3 flex justify-center gap-2">
+                      <button type="button" onClick={() => void startAt(0)} className="rounded-lg bg-[#8a4b23] px-3 py-2 text-[12px] font-bold text-white">⏮ 처음부터 다시</button>
+                      <button type="button" onClick={() => { setPhase('idle'); setIdx(n - 1); setQueue([]); setOwners(index.owners); }} className={`rounded-lg border px-3 py-2 text-[12px] font-bold ${PAPER.border} ${PAPER.hover}`}>지금의 대륙</button>
+                    </div>
+                  </section>
+                ) : null}
               </div>
             )}
           </div>
