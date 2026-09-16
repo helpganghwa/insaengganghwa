@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
@@ -403,12 +404,12 @@ export function ProfileSelector({
           음수 마진으로 당기면 겹친다 — 스테이징 검증 지적.) 라벨 줄: 왼쪽 개수, 오른쪽 순서 편집 진입(2개 이상). */}
       <div className="space-y-2">
       {list.length > 1 ? (
-        <div className="flex h-6 items-center justify-between px-0.5">
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-            {editing ? '아바타를 고른 뒤 아래 버튼으로 옮기세요' : `보유 아바타 ${list.length}`}
+        <div className="flex min-h-6 items-center justify-between gap-2 px-0.5">
+          <span className="min-w-0 text-[10px] leading-tight text-zinc-400 dark:text-zinc-500">
+            {editing ? '아바타를 선택한 후 버튼으로 옮긴 뒤 완료를 눌러 저장하세요' : `보유 아바타 ${list.length}`}
           </span>
           {editing ? (
-            <span className="flex items-center gap-1.5">
+            <span className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={cancelEdit}
@@ -523,6 +524,17 @@ export function ProfileSelector({
       >
         {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
       </button>
+      ) : null}
+
+      {/* 아바타 생성 — 페이지에서 옮겨 옴(2026-09-16): 순서 편집 중에는 숨긴다(사용자 지시). */}
+      {!editing ? (
+        <Link
+          prefetch={false}
+          href="/me/create"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
+        >
+          <span aria-hidden>✨</span> 아바타 생성
+        </Link>
       ) : null}
 
       {/* 장비 장착 확인 — 무엇이 장착되고 같은 부위의 무엇이 해제되는지 부위별로 보여준다.

@@ -97,12 +97,7 @@ export default async function ProfileSelectPage() {
             activeProfileId={p[0]?.activeProfileId ?? null}
             equippedNow={equippedNow}
           />
-          <Link prefetch={false}
-            href="/me/create"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
-          >
-            <span aria-hidden>✨</span> 아바타 생성
-          </Link>
+          {/* 아바타 생성 버튼은 ProfileSelector 안으로(2026-09-16) — 순서 편집 중 숨김. */}
         </>
       )}
       </div>
