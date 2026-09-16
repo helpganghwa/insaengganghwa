@@ -177,7 +177,7 @@ function main() {
   };
 
   const here = dirname(fileURLToPath(import.meta.url));
-  const outPath = resolvePath(here, '../public/simulation/enhance.json');
+  const outPath = resolvePath(here, 'out/simulation/enhance.json');
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(out, null, 2) + '\n', 'utf-8');
   console.log(`\n저장: ${outPath}`);

@@ -42,3 +42,6 @@ next-env.d.ts
 .sprite-review/
 scripts/sprite-jobs.json
 public/sprites/anim3-raw/
+
+# 분석 스크립트 산출물(analyze-enhance·simulate-enhance) — 커밋·배포 금지(public에 두면 공개 URL이 된다)
+scripts/out/
