@@ -2,6 +2,8 @@ import 'server-only';
 
 import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
+import { aggregateConquestDay } from '@/lib/game/guild/conquest/chronicle';
+import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { db } from '@/lib/db/client';
 import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { guilds, worldChronicle, zoneAdjacency, zones } from '@/lib/db/schema/guild';
@@ -10,7 +12,8 @@ import { kstDateString } from '@/lib/kst';
 import { withHistoryDb } from './db';
 
 export type { HistoryDay, HistoryZone, HistoryGuildMeta, HistoryIndex, HistoryDayData } from './types';
-import type { HistoryGuildMeta, HistoryIndex, HistoryDayData, HistoryStory, HistoryEvent } from './types';
+import type { HistoryGuildMeta, HistoryIndex, HistoryDayData, HistoryStory, HistoryEvent, HistoryScene } from './types';
+import type { ConquestReplay } from '@/lib/game/guild/conquest/replay';
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -206,6 +209,88 @@ export function loadHistoryDay(serverId: number, kstDay: string): Promise<Histor
       .limit(1);
     if (!row) return null;
     const replay = await computeConquestReplay(serverId, kstDay);
-    return { kstDay, headline: row.headline ?? '', text: row.text, replay };
+    const scene = await buildScene(serverId, kstDay, row.headline ?? '', replay).catch(() => null);
+    return { kstDay, headline: row.headline ?? '', text: row.text, replay, scene };
   });
+}
+
+const stripMarkers = (s: string) => s.replace(/\{[guz]\|([^}|]+)(?:\|[^}]*)?\}+/g, '$1');
+
+/**
+ * 그날의 장면 — 집계(aggregateConquestDay)와 리플레이 종료 상태로 하루의 가장 큰 사건 하나를 고른다.
+ * 석권(그날 점령이 있었던 지역을 한 길드가 전부 보유) > 1위 교체(시작 대비 종료 1위) > 격전(crowds) > 소수 승리(underdog) > 활약(feats) > 헤드라인.
+ */
+async function buildScene(serverId: number, kstDay: string, headline: string, replay: ConquestReplay | null): Promise<HistoryScene | null> {
+  const s = await aggregateConquestDay(kstDay, serverId);
+  const zoneRows = await db
+    .select({ id: zones.id, name: zones.name, region: zones.region })
+    .from(zones)
+    .where(eq(zones.serverId, serverId));
+  const regionOf = new Map(zoneRows.map((z) => [z.name, String(z.region)]));
+  const label = (code: string | null) => (code && code in REGION_META ? REGION_META[code as Region].label : code);
+  const gmeta = (names: (string | null | undefined)[]) =>
+    [...new Set(names.filter((x): x is string => !!x))].slice(0, 3).map((name) => {
+      const g = replay?.guilds[name];
+      return { name, color: g?.color ?? null, emblemUrl: g?.emblemUrl ?? null, emblemAlsoTry: g?.emblemAlsoTry };
+    });
+  const hero = s.feats.length > 0 && s.feats[0]!.count >= 2
+    ? { nickname: s.feats[0]!.nickname, code: s.feats[0]!.publicCode, guild: s.feats[0]!.guild, kind: s.feats[0]!.kind, count: s.feats[0]!.count }
+    : null;
+
+  // 종료 소유(리플레이 시작 상태 + 그날 점령) → 지역별 석권·1위.
+  if (replay) {
+    const owner = new Map<number, string | null>(Object.entries(replay.beforeOwner).map(([k, v]) => [Number(k), v]));
+    for (const ev of Object.values(replay.events)) if (ev.type === 'capture') owner.set(ev.zoneId, ev.winner);
+    const byRegion = new Map<string, { total: number; byGuild: Map<string, number> }>();
+    for (const z of zoneRows) {
+      const r = byRegion.get(String(z.region)) ?? { total: 0, byGuild: new Map() };
+      r.total += 1;
+      const o = owner.get(z.id);
+      if (o) r.byGuild.set(o, (r.byGuild.get(o) ?? 0) + 1);
+      byRegion.set(String(z.region), r);
+    }
+    const capturedRegions = new Set(s.captures.map((c) => regionOf.get(c.zone)).filter((x): x is string => !!x));
+    for (const [code, r] of byRegion) {
+      if (!capturedRegions.has(code)) continue;
+      for (const [g, n] of r.byGuild) {
+        if (n === r.total && r.total >= 3) {
+          return { kind: 'sweep', title: `${label(code)} 석권`, note: `${g}가 ${label(code)} ${r.total}곳을 모두 깃발 아래 두었다`, region: code, regionLabel: label(code), zone: null, guilds: gmeta([g]), hero };
+        }
+      }
+    }
+    const count = (m: Map<number, string | null>) => {
+      const c = new Map<string, number>();
+      for (const g of m.values()) if (g) c.set(g, (c.get(g) ?? 0) + 1);
+      return [...c.entries()].sort((a, b) => b[1] - a[1]);
+    };
+    const before = count(new Map(Object.entries(replay.beforeOwner).map(([k, v]) => [Number(k), v])));
+    const after = count(owner);
+    if (after[0] && before[0] && after[0][0] !== before[0][0]) {
+      const [g, n] = after[0];
+      const biggest = s.captures.filter((c) => c.winner === g)[0];
+      const code = biggest ? (regionOf.get(biggest.zone) ?? null) : null;
+      return { kind: 'leader', title: '대륙 1위 교체', note: `${before[0][0]}를 제치고 ${g}가 ${n}곳으로 가장 넓은 영토를 쥐었다`, region: code, regionLabel: label(code), zone: biggest?.zone ?? null, guilds: gmeta([g, before[0][0]]), hero };
+    }
+  }
+  if (s.crowds.length > 0) {
+    const c = [...s.crowds].sort((a, b) => b.total - a.total)[0]!;
+    const code = regionOf.get(c.zone) ?? null;
+    const atk = c.attackers.map((a) => `${a.guild} ${a.n}`).join('·');
+    return { kind: 'clash', title: `${c.zone} 격전`, note: `${atk}이 ${c.defenders}의 수비를 ${c.held ? '뚫지 못했다' : '무너뜨렸다'}`, region: code, regionLabel: label(code), zone: c.zone, guilds: gmeta([c.owner, ...c.attackers.map((a) => a.guild)]), hero };
+  }
+  if (s.underdogDefenses.length > 0 || s.underdogCaptures.length > 0) {
+    const d = s.underdogDefenses[0];
+    if (d) {
+      const code = regionOf.get(d.zone) ?? null;
+      return { kind: 'underdog', title: `${d.zone}의 수비`, note: `${d.defenders}이 ${d.attackerTotal}을 막아냈다`, region: code, regionLabel: label(code), zone: d.zone, guilds: gmeta([d.owner, ...d.attackers.map((a) => a.guild)]), hero };
+    }
+  }
+  if (hero) {
+    const z = s.feats[0]!.zones[0] ?? null;
+    const code = z ? (regionOf.get(z) ?? null) : null;
+    return { kind: 'hero', title: `${hero.nickname}의 ${hero.kind} ${hero.count}`, note: z ? `${z}에서 ${hero.guild}의 ${hero.nickname}이 ${hero.kind} ${hero.count}` : `${hero.guild}의 ${hero.nickname}`, region: code, regionLabel: label(code), zone: z, guilds: gmeta([hero.guild]), hero };
+  }
+  const first = s.captures[0];
+  const code = first ? (regionOf.get(first.zone) ?? null) : null;
+  return { kind: 'headline', title: stripMarkers(headline), note: first ? `${first.winner}가 ${first.zone}을 얻었다` : '', region: code, regionLabel: label(code), zone: first?.zone ?? null, guilds: gmeta(first ? [first.winner] : []), hero };
 }

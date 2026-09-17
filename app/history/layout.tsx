@@ -15,7 +15,8 @@ const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
  */
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#f5f0e6' };
 
-const HISTORY_DESC = '인생강화 점령전의 첫날부터 오늘까지, 대륙의 역사를 지도 위에서 이어서 재생합니다.';
+const HISTORY_DESC =
+  '인생강화 점령전의 첫날부터 오늘까지, 대륙의 역사를 지도 위에서 이어서 재생합니다.';
 /** 공개 페이지 — 검색 색인 허용(사용자 확정 2026-09-16). 공유 카드는 대륙 지도. 루트 metadataBase가 절대 URL로 직렬화한다. */
 export const metadata: Metadata = {
   title: { absolute: '대륙 연대기', template: '%s — 대륙 연대기' },
@@ -30,7 +31,12 @@ export const metadata: Metadata = {
     locale: 'ko_KR',
     images: [{ url: '/sprites/guild/worldmap.png', alt: '인생강화 대륙 지도' }],
   },
-  twitter: { card: 'summary_large_image', title: '대륙 연대기 — 인생강화', description: HISTORY_DESC, images: ['/sprites/guild/worldmap.png'] },
+  twitter: {
+    card: 'summary_large_image',
+    title: '대륙 연대기 — 인생강화',
+    description: HISTORY_DESC,
+    images: ['/sprites/guild/worldmap.png'],
+  },
   robots: { index: true, follow: true },
 };
 
@@ -41,6 +47,10 @@ const PAPER_INK_CSS = `
 .ig-paper .dark\\:text-zinc-600{color:#9a917f}
 .ig-paper .text-zinc-600{color:#2a251e}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.ig-paper{background-image:radial-gradient(120% 80% at 50% 0%,#faf6ee 0%,#f5f0e6 55%,#eee6d4 100%)}
+.ig-day p{font-size:15px;line-height:1.9;color:#2a251e}
+.ig-day p+p{margin-top:12px}
+.ig-day p:first-of-type::first-letter{float:left;font-family:Georgia,"Apple SD Gothic Neo",serif;font-size:3.1em;line-height:.82;padding:5px 7px 0 0;color:#8a4b23;font-weight:700}
 `;
 
 export default function HistoryLayout({ children }: { children: ReactNode }) {
@@ -54,8 +64,13 @@ export default function HistoryLayout({ children }: { children: ReactNode }) {
           </Link>
           <nav className={`flex items-center gap-2 text-[12px] ${PAPER.muted}`}>
             <span className="rounded-md px-2 py-1 font-semibold text-[#2a251e]">재생</span>
-            <a href={`${SITE_ORIGIN}/wiki`} className={`rounded-md px-2 py-1 ${PAPER.hover}`}>위키</a>
-            <a href={`${SITE_ORIGIN}/`} className={`rounded-md border px-2.5 py-1 font-semibold ${PAPER.card} ${PAPER.hover}`}>
+            <a href={`${SITE_ORIGIN}/wiki`} className={`rounded-md px-2 py-1 ${PAPER.hover}`}>
+              위키
+            </a>
+            <a
+              href={`${SITE_ORIGIN}/`}
+              className={`rounded-md border px-2.5 py-1 font-semibold ${PAPER.card} ${PAPER.hover}`}
+            >
               게임으로
             </a>
           </nav>

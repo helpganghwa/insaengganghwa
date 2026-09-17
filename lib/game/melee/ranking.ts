@@ -2,7 +2,11 @@ import 'server-only';
 
 import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 
-import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
+import {
+  emblemAlsoTry,
+  getGuildEmblemHistory,
+  isEmblemAlive,
+} from '@/lib/game/guild/emblem-history';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
@@ -69,7 +73,9 @@ export async function getMeleeRanking(input: {
   aroundRank?: number;
 }): Promise<{ rows: MeleeRankRow[]; myRank: number | null }> {
   const { battleId, serverId, viewerUserId, mode } = input;
-  const emblemHistory = await getGuildEmblemHistory(serverId).catch(() => ({}) as Record<number, string[]>);
+  const emblemHistory = await getGuildEmblemHistory(serverId).catch(
+    () => ({}) as Record<number, string[]>,
+  );
 
   // 발표 게이트(전수 감사 2026-08-21) — computed 상태(09시 산출~10시 발표 사이)의 결과가
   // 이 API로 전부 유출됐다(MELEE.md §"발표 전 조회 차단" 위반). 타 서버 배틀도 거부.
@@ -85,7 +91,9 @@ export async function getMeleeRanking(input: {
   const [meRow] = await db
     .select({ rank: meleeParticipants.finalRank })
     .from(meleeParticipants)
-    .where(and(eq(meleeParticipants.battleId, battleId), eq(meleeParticipants.userId, viewerUserId)))
+    .where(
+      and(eq(meleeParticipants.battleId, battleId), eq(meleeParticipants.userId, viewerUserId)),
+    )
     .limit(1);
   const myRank = meRow?.rank ?? null;
 
@@ -191,10 +199,7 @@ export async function getMeleeRanking(input: {
         and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
       )
       .where(
-        and(
-          eq(meleeParticipants.battleId, battleId),
-          inArray(meleeParticipants.userId, killerIds),
-        ),
+        and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.userId, killerIds)),
       );
     for (const k of ks) {
       killerNick.set(k.uid, { nick: k.snapNick ?? k.liveNick ?? '플레이어', code: k.code });
@@ -214,8 +219,14 @@ export async function getMeleeRanking(input: {
         avatar: snap ? r.snapAvatar : r.avatar,
         faceBox: parseFaceBox(snap ? r.snapFaceBox : r.faceBoxRaw),
         guildName: r.guildName,
-        guildEmblemUrl: r.guildEmblemUrl,
-        guildEmblemAlsoTry: emblemAlsoTry(r.guildEmblemUrl, emblemHistory),
+        guildEmblemUrl:
+          r.guildEmblemUrl && !isEmblemAlive(r.guildEmblemUrl)
+            ? (emblemAlsoTry(r.guildEmblemUrl, emblemHistory)[0] ?? null)
+            : r.guildEmblemUrl,
+        guildEmblemAlsoTry:
+          r.guildEmblemUrl && !isEmblemAlive(r.guildEmblemUrl)
+            ? emblemAlsoTry(r.guildEmblemUrl, emblemHistory).slice(1)
+            : emblemAlsoTry(r.guildEmblemUrl, emblemHistory),
         attackSuccess: Number(r.kills),
         // 탈락자는 마지막 피격 1회가 탈락이므로 방어 성공에서 제외(내 전투 요약과 동일 기준).
         defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),

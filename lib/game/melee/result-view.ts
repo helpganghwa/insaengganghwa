@@ -2,7 +2,11 @@ import 'server-only';
 
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 
-import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
+import {
+  emblemAlsoTry,
+  getGuildEmblemHistory,
+  isEmblemAlive,
+} from '@/lib/game/guild/emblem-history';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
@@ -40,7 +44,12 @@ export async function buildMeleeResultView(
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(meleeBattles)
-      .where(and(eq(meleeBattles.serverId, battle.serverId), lte(meleeBattles.battleDate, battle.battleDate))),
+      .where(
+        and(
+          eq(meleeBattles.serverId, battle.serverId),
+          lte(meleeBattles.battleDate, battle.battleDate),
+        ),
+      ),
     2000,
     'melee.edition',
   ).catch(() => [] as { n: number }[]);
@@ -63,7 +72,9 @@ export async function buildMeleeResultView(
         .from(characters)
         .innerJoin(profiles, eq(profiles.id, characters.userId))
         .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
-        .where(and(eq(characters.serverId, battle.serverId), inArray(characters.userId, rosterIds))),
+        .where(
+          and(eq(characters.serverId, battle.serverId), inArray(characters.userId, rosterIds)),
+        ),
       3000,
       'melee.avatars',
     ).catch(() => []);
@@ -103,7 +114,10 @@ export async function buildMeleeResultView(
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
       .innerJoin(
         characters,
-        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, battle.serverId)),
+        and(
+          eq(characters.userId, meleeParticipants.userId),
+          eq(characters.serverId, battle.serverId),
+        ),
       )
       .where(and(eq(meleeParticipants.battleId, battle.id), lte(meleeParticipants.finalRank, 3)))
       .orderBy(meleeParticipants.finalRank),
@@ -119,10 +133,21 @@ export async function buildMeleeResultView(
     }
   }
   // 스냅샷 문양 파일이 사라졌을 때(옛 보관함 삭제) 그 길드의 다음 문양으로 넘어갈 후보(2026-09-17) — 역사 페이지와 같은 규칙.
-  const emblemHistory = await getGuildEmblemHistory(battle.serverId).catch(() => ({}) as Record<number, string[]>);
-  const guildFor = (uid: string): { name: string; emblemUrl: string | null; alsoTry: string[] } | null => {
+  const emblemHistory = await getGuildEmblemHistory(battle.serverId).catch(
+    () => ({}) as Record<number, string[]>,
+  );
+  const guildFor = (
+    uid: string,
+  ): { name: string; emblemUrl: string | null; alsoTry: string[] } | null => {
     const sg = snapGuild.get(uid);
-    return sg && sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl, alsoTry: emblemAlsoTry(sg.emblemUrl, emblemHistory) } : null;
+    if (!sg || !sg.name) return null;
+    const alsoTry = emblemAlsoTry(sg.emblemUrl, emblemHistory);
+    const dead = !!sg.emblemUrl && !isEmblemAlive(sg.emblemUrl);
+    return {
+      name: sg.name,
+      emblemUrl: dead ? (alsoTry[0] ?? null) : sg.emblemUrl,
+      alsoTry: dead ? alsoTry.slice(1) : alsoTry,
+    };
   };
   const podium = topRows.map((r) => ({
     rank: r.rank,
@@ -172,7 +197,10 @@ export async function buildMeleeResultView(
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
       .innerJoin(
         characters,
-        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, battle.serverId)),
+        and(
+          eq(characters.userId, meleeParticipants.userId),
+          eq(characters.serverId, battle.serverId),
+        ),
       )
       .where(and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.userId, userId)))
       .limit(1),

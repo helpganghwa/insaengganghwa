@@ -96,6 +96,8 @@ export function ChronicleReplayPanel({
   guildColor,
   guildEmblem,
   zoneStyle = 'chip',
+  userStyle = 'game',
+  reveal = 'type',
   captionEl,
 }: {
   text: string;
@@ -116,6 +118,13 @@ export function ChronicleReplayPanel({
   guildEmblem?: (name: string) => readonly string[];
   /** 구역명 표시 — chip(게임 기본: 지역색 칩) | plain(점선 밑줄만) | tint(지역색 글자 + 지역색 점선, 배경 없음 — 역사 페이지). */
   zoneStyle?: 'chip' | 'plain' | 'tint';
+  /** 인물명 표시 — game(회색 점선 밑줄) | plain(잉크색 보통 글자, 역사 페이지). */
+  userStyle?: 'game' | 'plain';
+  /**
+   * 등장 방식(2026-09-17, 역사 페이지) — type(글자 타이핑, 마커에 닿을 때 연출) | paragraph(문단이 한 번에 나타나고 그 문단의
+   * 구역 연출을 문단 끝에 몰아서 재생, 읽을 시간만큼 머문 뒤 다음 문단). 24일을 이어 볼 땐 타이핑이 너무 느리다.
+   */
+  reveal?: 'type' | 'paragraph';
   /** 자막 요소(역사 페이지) — 타이핑 중인 문장을 이 요소의 textContent로 비춘다(React 상태 없이 DOM 직접, 글자마다). */
   captionEl?: HTMLElement | null;
 }) {
@@ -506,6 +515,19 @@ export function ChronicleReplayPanel({
         const segs = paras.current[p]!;
         // 이 문단에서 마커로 언급된 구역(회고 문장의 건너뛴 마커 포함) — 문단 끝에서 미발화분을 재생한다.
         const mentioned = new Set<number>();
+        if (reveal === 'paragraph') {
+          // 문단 등장 — 통째로 보이고, 구역 연출은 문단 끝에 몰아서, 읽을 시간만큼 머문다(글자 수 비례, 최대 4초).
+          for (const seg of segs) if (seg.kind === 'z') { const mz = zoneIdOf(seg); if (mz != null) mentioned.add(mz); }
+          const last = Math.max(0, segs.length - 1);
+          setPos({ p, s: last, c: segs[last]?.text.length ?? 0 });
+          if (!skipRef.current) await wait(450, () => skipRef.current);
+          if (cancelled) return;
+          await playLeftover([...mentioned]);
+          if (cancelled) return;
+          const chars = segs.reduce((a, sg) => a + sg.text.length, 0);
+          if (!skipRef.current) await wait(Math.min(4000, 900 + chars * 12), () => skipRef.current);
+          continue;
+        }
         for (let s = 0; s < segs.length; s++) {
           const seg = segs[s]!;
           if (seg.kind === 'z') {
@@ -634,9 +656,11 @@ export function ChronicleReplayPanel({
         <span
           key={key}
           className={
-            seg.code
-              ? 'text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400'
-              : 'text-stone-500 dark:text-stone-400'
+            userStyle === 'plain'
+              ? 'font-medium'
+              : seg.code
+                ? 'text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400'
+                : 'text-stone-500 dark:text-stone-400'
           }
         >
           {shown}
@@ -645,7 +669,7 @@ export function ChronicleReplayPanel({
     if (seg.kind === 'z') {
       if (zoneStyle === 'plain')
         return (
-          <span key={key} className="underline decoration-dotted underline-offset-2 opacity-85">
+          <span key={key} className="font-medium">
             {shown}
           </span>
         );
@@ -688,14 +712,14 @@ export function ChronicleReplayPanel({
           return (
             <p
               key={p}
-              className="text-[13px] leading-relaxed whitespace-pre-line text-zinc-600 dark:text-zinc-300"
+              className={`text-[13px] leading-relaxed whitespace-pre-line text-zinc-600 dark:text-zinc-300 ${reveal === 'paragraph' && p === pos.p ? 'motion-safe:animate-[fadeIn_.6s_ease-out]' : ''}`}
             >
               {segs.map((seg, s) => {
                 if (p < pos.p || s < pos.s) return renderSeg(seg, seg.text, s);
                 if (s > pos.s) return null;
                 return renderSeg(seg, seg.text.slice(0, pos.c), s);
               })}
-              {p === pos.p && !ended ? (
+              {p === pos.p && !ended && reveal === 'type' ? (
                 <span
                   className="ml-px inline-block h-[13px] w-[7px] animate-pulse bg-amber-500 align-[-2px]"
                   aria-hidden
