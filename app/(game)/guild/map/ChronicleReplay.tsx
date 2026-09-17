@@ -652,11 +652,7 @@ export function ChronicleReplayPanel({
       if (zoneStyle === 'tint') {
         const zc = zoneColor(seg.name);
         return (
-          <span
-            key={key}
-            className="underline decoration-dotted underline-offset-2"
-            style={zc ? { color: zc, textDecorationColor: zc } : undefined}
-          >
+          <span key={key} className="font-medium" style={zc ? { color: zc } : undefined}>
             {shown}
           </span>
         );

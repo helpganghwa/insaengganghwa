@@ -24,7 +24,6 @@ import type {
 type Phase = 'idle' | 'loading' | 'playing' | 'end';
 type Mode = 'battle' | 'quick';
 const QUICK_DAY_MS = 2500; // 빠른 흐름 — 하루 2.5초(23일 ≈ 1분)
-const SUBTITLE_MS = 4000;
 const EVENT_PRIORITY: Record<HistoryEvent['kind'], number> = {
   leader: 0,
   sweep: 1,
@@ -85,10 +84,10 @@ function Headline({
             kind === 'g'
               ? `inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`
               : kind === 'z'
-                ? 'inline-block px-0.5 underline decoration-dotted underline-offset-2'
+                ? 'inline-block px-0.5 font-medium'
                 : 'inline-block px-0.5 font-semibold text-[#8a4b23]'
           }
-          style={gc ? { color: gc } : zc ? { color: zc, textDecorationColor: zc } : undefined}
+          style={gc ? { color: gc } : zc ? { color: zc } : undefined}
         >
           {name}
         </span>,
@@ -198,13 +197,6 @@ export function HistoryPlayer({
     layerRef.current = el;
     setLayer(el);
   }, []);
-  /** 지도 아래 자막(2026-09-17) — 재생 패널이 타이핑 중인 문장을 DOM으로 직접 쓴다(글과 지도를 오가지 않게). */
-  const [captionEl, setCaptionEl] = useState<HTMLDivElement | null>(null);
-  const captionRef = useRef<HTMLDivElement | null>(null);
-  const bindCaption = useCallback((el: HTMLDivElement | null) => {
-    captionRef.current = el;
-    setCaptionEl(el);
-  }, []);
   // 이어 읽기 — 시작한 날들을 한 목록에 쌓고 끝난 날의 재생 패널도 그대로 마운트해 둔다(정적으로 바꿔 그리면 튄다).
   const [queue, setQueue] = useState<
     { kstDay: string; headline: string; nth: number; data: HistoryDayData; session: number }[]
@@ -214,13 +206,7 @@ export function HistoryPlayer({
     { kstDay: string; headline: string; nth: number; captures: number }[]
   >([]);
   // 순간 자막(1위 교체·지역 석권·과반·소멸) — 소유가 바뀔 때 계산.
-  const [subtitle, setSubtitle] = useState<{ kind: string; text: string; at: number } | null>(null);
   const metaRef = useRef<Record<string, HistoryGuildMeta>>(index.guilds);
-  const baselineRef = useRef<{
-    leader: string | null;
-    regions: Record<string, string | null>;
-    counts: Record<string, number>;
-  } | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true);
   const cache = useRef(new Map<string, HistoryDayData | null>());
@@ -232,17 +218,8 @@ export function HistoryPlayer({
   }, [mode]);
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
-  const zonesByRegion = useMemo(() => {
-    const m = new Map<string, number[]>();
-    for (const z of zones) m.set(z.region, [...(m.get(z.region) ?? []), z.id]);
-    return m;
-  }, [zones]);
   const regionColor = useCallback(
     (region: string) => REGION_META[region as Region]?.color ?? '#a8a29e',
-    [],
-  );
-  const regionLabel = useCallback(
-    (region: string) => REGION_META[region as Region]?.label ?? region,
     [],
   );
   const zoneColor = useCallback(
@@ -252,72 +229,6 @@ export function HistoryPlayer({
     },
     [zones, regionColor],
   );
-
-  /** 소유 상태 요약 — 1위·지역별 단독 소유·길드별 수. 자막 판정의 재료. */
-  const summarize = useCallback(
-    (o: Record<number, string | null>) => {
-      const counts: Record<string, number> = {};
-      for (const g of Object.values(o)) if (g) counts[g] = (counts[g] ?? 0) + 1;
-      let leader: string | null = null;
-      let best = 0;
-      for (const [g, c] of Object.entries(counts))
-        if (c > best) {
-          best = c;
-          leader = g;
-        }
-      const regions: Record<string, string | null> = {};
-      for (const [r, ids] of zonesByRegion) {
-        const first = o[ids[0]!] ?? null;
-        regions[r] = first && ids.every((id) => o[id] === first) ? first : null;
-      }
-      return { leader, regions, counts };
-    },
-    [zonesByRegion],
-  );
-  // 순간 자막 — 재생 중 소유가 바뀔 때마다 기준(그날 시작)과 비교.
-  useEffect(() => {
-    if (phase !== 'playing' || !baselineRef.current) return;
-    const now = summarize(owners);
-    const base = baselineRef.current;
-    let text: { kind: string; text: string } | null = null;
-    if (now.leader && base.leader && now.leader !== base.leader)
-      text = {
-        kind: '1위 교체',
-        text: `${base.leader} ${base.counts[base.leader] ?? 0} → ${now.leader} ${now.counts[now.leader] ?? 0}`,
-      };
-    if (!text)
-      for (const [r, g] of Object.entries(now.regions))
-        if (g && base.regions[r] !== g) {
-          text = { kind: '지역 석권', text: `${g}, ${regionLabel(r)} 전역` };
-          break;
-        }
-    const half = Math.ceil(zones.length / 2);
-    if (!text)
-      for (const [g, c] of Object.entries(now.counts))
-        if (c >= half && (base.counts[g] ?? 0) < half) {
-          text = { kind: '과반', text: `${g}, 대륙 과반 ${c}곳` };
-          break;
-        }
-    if (!text)
-      for (const [g, c] of Object.entries(base.counts))
-        if (c > 0 && !(now.counts[g] ?? 0)) {
-          text = { kind: '소멸', text: `${g}, 대륙에서 사라지다` };
-          break;
-        }
-    if (text) {
-      setSubtitle({ ...text, at: Date.now() });
-      baselineRef.current = now;
-    }
-  }, [owners, phase, summarize, regionLabel, zones.length]);
-  // 자막 자동 소거.
-  useEffect(() => {
-    if (!subtitle) return;
-    const id = setTimeout(
-      () => setSubtitle((s) => (s && s.at === subtitle.at ? null : s)),
-      SUBTITLE_MS / speed,
-    );
-    return () => clearTimeout(id);
-  }, [subtitle, speed]);
 
   const fetchDay = useCallback(
     async (k: number): Promise<HistoryDayData | null> => {
@@ -429,7 +340,6 @@ export function HistoryPlayer({
   const finish = useCallback(() => {
     setPhase('end');
     setOwners(index.owners);
-    baselineRef.current = null;
   }, [index.owners]);
 
   /** 하루가 끝났을 때 — 곧바로 다음 날로, 마지막이면 끝. */
@@ -508,7 +418,6 @@ export function HistoryPlayer({
       const token = ++run.current;
       pausedRef.current = false;
       setPaused(false);
-      if (!continuous && captionRef.current) captionRef.current.textContent = '';
       if (!continuous) {
         // 새로 시작할 때만 지도를 비운다 — 이어 재생 중엔 전날의 마지막 문양·착지 링이 자연스럽게 사라지도록 둔다(날짜 경계의 '끊김' 원인).
         layerRef.current?.replaceChildren();
@@ -517,7 +426,6 @@ export function HistoryPlayer({
       }
       stickRef.current = true;
       setIdx(k);
-      if (!continuous) setSubtitle(null); // 이어 재생 중엔 자막을 유지(시간 만료로만 사라짐) — 날짜 경계 깜박임 방지
       if (!continuous) setPhase('loading');
       const data = await fetchDay(k);
       if (token !== run.current) return;
@@ -526,7 +434,6 @@ export function HistoryPlayer({
       if (replay) {
         // 전날 결과 == 오늘 시작 상태라면 그대로 둔다(같은 값으로 다시 세팅하면 transition이 끊겨 깜박인다). 건너뛰기·처음 시작만 스냅.
         setOwners((o) => (sameOwners(o, replay.beforeOwner) ? o : { ...replay.beforeOwner }));
-        baselineRef.current = summarize(replay.beforeOwner);
         const snap = Object.entries(replay.guilds).map(
           ([g, v]) => [g, { color: v.color, emblemUrl: v.emblemUrl, id: v.guildId }] as const,
         );
@@ -552,7 +459,7 @@ export function HistoryPlayer({
           if (token === run.current) advance(k);
         }, STATIC_DAY_MS / speed);
     },
-    [n, fetchDay, speed, advance, runQuick, summarize],
+    [n, fetchDay, speed, advance, runQuick],
   );
   useEffect(() => {
     startAtRef.current = startAt;
@@ -608,11 +515,6 @@ export function HistoryPlayer({
     if (phase === 'playing' || phase === 'loading') void startAt(idx);
   };
 
-  const legend = useMemo(() => {
-    const c = new Map<string, number>();
-    for (const g of Object.values(owners)) if (g) c.set(g, (c.get(g) ?? 0) + 1);
-    return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [owners]);
   /**
    * 순위 배치(2026-09-16) — 지금 소유 상태로 길드별 줄을 만든다(구역 많은 순, 동률은 이름순). 각 구역 타일은 자기 길드
    * 줄의 j번째 칸으로 미끄러져 '타일로 된 막대'가 되고, 소유가 바뀌면 다른 줄로 건너간다. 좌표는 무대 %(폭이 줄어도 비율 유지).
@@ -645,7 +547,6 @@ export function HistoryPlayer({
   }, [owners, zones]);
   const cur = days[idx]!;
   const showingDay = phase === 'idle' ? days[n - 1]! : cur;
-  const dayEvents = story.events[showingDay.kstDay] ?? [];
   const edgeLines = useMemo(
     () =>
       edges
@@ -677,6 +578,18 @@ export function HistoryPlayer({
     return out;
   }, [days, story.events]);
   const pct = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * 100);
+  // 정지 화면 — 오늘(최신 공개일)의 기록 전문을 오른쪽에 깔아 재생 전에도 읽을 것이 있게 한다(2026-09-17 집중판).
+  const [latest, setLatest] = useState<HistoryDayData | null>(null);
+  useEffect(() => {
+    if (phase !== 'idle' || n === 0) return;
+    let alive = true;
+    void fetchDay(n - 1).then((d) => {
+      if (alive) setLatest(d);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [phase, fetchDay, n]);
   const statusText =
     (phase === 'idle'
       ? `지금의 대륙 · ${n}일째`
@@ -693,439 +606,220 @@ export function HistoryPlayer({
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-0 py-0 md:px-6 md:py-6">
-      {/* overflow-hidden은 md에서만 — 모바일에서 카드가 overflow를 가지면 고정 묶음이 카드 기준으로 붙어 56px 밀려 두루마리를 가린다(로컬 검증). */}
       <div className={`border-y md:overflow-hidden md:rounded-2xl md:border ${PAPER.card}`}>
-        {/* 배치 — 모바일: [지도·현황·조작](상단 고정) → 두루마리 → 차트. PC: 왼쪽 열 [지도·현황·조작·차트], 오른쪽 두루마리.
-            같은 DOM으로 두 배치를 내려면 모바일 고정 묶음을 md에서 contents로 풀고 그리드 칸을 자식에 직접 준다. */}
-        <div className="flex flex-col md:grid md:grid-cols-[390px_minmax(0,1fr)] md:grid-rows-[auto_auto_auto_auto_1fr]">
-          <div className="sticky top-14 z-20 order-1 md:contents">
-            <div
-              className="mx-auto w-full bg-[#0c0a09] md:col-start-1 md:row-start-1"
-              style={{ maxWidth: STAGE_PX }}
-            >
-              <div className="relative isolate aspect-square w-full overflow-hidden bg-zinc-950">
-                <div
-                  ref={bindLayer}
-                  aria-hidden
-                  className={`pointer-events-none absolute inset-0 z-40 transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={mapSrc}
-                  alt="대륙 지도"
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-                {/* 순위 보기 — 지도를 어둡게 내려 막대·이름이 읽히게 한다. */}
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute inset-0 z-[3] bg-[#14110d] transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-80' : 'opacity-0'}`}
-                />
-                {/* 길(인접선) — 역사 화면에선 이동 경로가 아니라 배경이다: 게임의 비활성 톤(회색·얇게)으로 낮춘다(피드백: 길이 문양보다 눈에 띔). */}
-                <svg
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
-                >
-                  {edgeLines.map((l) => (
-                    <line
-                      key={`h${l.key}`}
-                      x1={l.x1}
-                      y1={l.y1}
-                      x2={l.x2}
-                      y2={l.y2}
-                      stroke="#000000"
-                      strokeOpacity={0.25}
-                      strokeWidth={0.8}
-                      strokeLinecap="round"
-                    />
-                  ))}
-                  {edgeLines.map((l) => (
-                    <line
-                      key={`m${l.key}`}
-                      x1={l.x1}
-                      y1={l.y1}
-                      x2={l.x2}
-                      y2={l.y2}
-                      stroke="#e7dcc0"
-                      strokeOpacity={0.35}
-                      strokeWidth={0.45}
-                      strokeLinecap="round"
-                    />
-                  ))}
-                </svg>
-                {/* 영토 빛 — 소유 길드 색의 부드러운 원이 노드 밑에 깔려 지도가 '누구 땅'인지 색면으로 읽힌다. 소유가 바뀌면 700ms에 걸쳐 색이 흐른다. */}
-                {zones.map((z) => {
-                  const owner = owners[z.id] ?? null;
-                  const c = owner
-                    ? `color-mix(in srgb, ${meta[owner]?.color ?? '#9a917f'} 70%, white)`
-                    : null;
-                  return (
-                    <div
-                      key={`g${z.id}`}
-                      aria-hidden
-                      className="pointer-events-none absolute h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-[opacity,background] duration-700"
-                      style={{
-                        left: `${z.mapX}%`,
-                        top: `${z.mapY}%`,
-                        zIndex: 4,
-                        opacity: c && stageView === 'map' ? 1 : 0,
-                        background: c
-                          ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
-                          : 'transparent',
-                      }}
-                    />
-                  );
-                })}
-                {zones.map((z) => {
-                  const owner = owners[z.id] ?? null;
-                  const m = owner ? meta[owner] : undefined;
-                  const gc = m?.color ?? '#9a917f';
-                  const color = regionColor(z.region);
-                  const rp = stageView === 'rank' ? rank.pos.get(z.id) : undefined;
-                  const size = stageView === 'rank' ? 14 : 19;
-                  return (
-                    <div
-                      key={z.id}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
-                      style={{
-                        left: `${rp ? rp.left : z.mapX}%`,
-                        top: `${rp ? rp.top : z.mapY}%`,
-                        zIndex: owner ? 10 : 6,
-                        opacity: stageView === 'rank' && !rp ? 0 : 1,
-                      }}
-                      title={`${z.name}${owner ? ` · ${owner}` : ''}`}
-                    >
-                      <span
-                        className="relative flex items-center justify-center overflow-hidden rounded-[5px] transition-[width,height,background-color] duration-500"
-                        style={{
-                          width: size,
-                          height: size,
-                          // 문양(대개 어두운 외곽선)이 읽히도록 타일은 길드색을 밝게 섞은 바탕, 테두리는 길드색 원색.
-                          backgroundColor: owner
-                            ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
-                            : 'rgba(10,12,20,0.55)',
-                          boxShadow: owner
-                            ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
-                            : `0 0 0 1px ${color}66`,
-                        }}
-                      >
-                        {owner ? (
-                          <>
-                            {/* 문양이 없거나(옛 회차) 파일이 사라진 URL이면 길드 첫 글자 — 빈 타일로 두지 않는다. */}
-                            <span
-                              className="absolute inset-0 flex items-center justify-center text-[10px] leading-none font-black"
-                              style={{ color: gc, textShadow: '0 0 2px #fff' }}
-                            >
-                              {owner.slice(0, 1)}
-                            </span>
-                            <EmblemChain
-                              key={m?.emblemUrl ?? 'none'}
-                              urls={emblemChain(m)}
-                              className="relative h-full w-full object-contain"
-                            />
-                          </>
-                        ) : null}
-                      </span>
-                    </div>
-                  );
-                })}
-                {/* 순위 보기 — 합계 한 줄, 깃발이 없는 날엔 안내. */}
-                <div
-                  aria-hidden={stageView !== 'rank'}
-                  className={`pointer-events-none absolute inset-x-0 bottom-[5%] z-[12] text-center text-[10.5px] text-[#cfc6b3] tabular-nums transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  구역 {ownedCount} · 중립 {zones.length - ownedCount}
-                </div>
-                {stageView === 'rank' && rank.labels.length === 0 ? (
+        {/* 배치(2026-09-17 집중판) — 왼쪽은 지도만, 오른쪽은 글만(날짜 줄 + 두루마리), 조작·시간축은 카드 아래. */}
+        <div className="flex flex-col md:grid md:grid-cols-[390px_minmax(0,1fr)]">
+          <div className="mx-auto w-full bg-[#0c0a09]" style={{ maxWidth: STAGE_PX }}>
+            <div className="relative isolate aspect-square w-full overflow-hidden bg-zinc-950">
+              <div
+                ref={bindLayer}
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 z-40 transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mapSrc}
+                alt="대륙 지도"
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {/* 순위 보기 — 지도를 어둡게 내려 막대·이름이 읽히게 한다. */}
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 z-[3] bg-[#14110d] transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-80' : 'opacity-0'}`}
+              />
+              {/* 길(인접선) — 역사 화면에선 이동 경로가 아니라 배경이다: 게임의 비활성 톤(회색·얇게)으로 낮춘다(피드백: 길이 문양보다 눈에 띔). */}
+              <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
+              >
+                {edgeLines.map((l) => (
+                  <line
+                    key={`h${l.key}`}
+                    x1={l.x1}
+                    y1={l.y1}
+                    x2={l.x2}
+                    y2={l.y2}
+                    stroke="#000000"
+                    strokeOpacity={0.25}
+                    strokeWidth={0.8}
+                    strokeLinecap="round"
+                  />
+                ))}
+                {edgeLines.map((l) => (
+                  <line
+                    key={`m${l.key}`}
+                    x1={l.x1}
+                    y1={l.y1}
+                    x2={l.x2}
+                    y2={l.y2}
+                    stroke="#e7dcc0"
+                    strokeOpacity={0.35}
+                    strokeWidth={0.45}
+                    strokeLinecap="round"
+                  />
+                ))}
+              </svg>
+              {/* 영토 빛 — 소유 길드 색의 부드러운 원이 노드 밑에 깔려 지도가 '누구 땅'인지 색면으로 읽힌다. 소유가 바뀌면 700ms에 걸쳐 색이 흐른다. */}
+              {zones.map((z) => {
+                const owner = owners[z.id] ?? null;
+                const c = owner
+                  ? `color-mix(in srgb, ${meta[owner]?.color ?? '#9a917f'} 70%, white)`
+                  : null;
+                return (
                   <div
-                    className="pointer-events-none absolute inset-0 z-[12] flex items-center justify-center text-[13px] text-[#e7dcc0]"
-                    style={SERIF}
+                    key={`g${z.id}`}
+                    aria-hidden
+                    className="pointer-events-none absolute h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-[opacity,background] duration-700"
+                    style={{
+                      left: `${z.mapX}%`,
+                      top: `${z.mapY}%`,
+                      zIndex: 4,
+                      opacity: c && stageView === 'map' ? 1 : 0,
+                      background: c
+                        ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
+                        : 'transparent',
+                    }}
+                  />
+                );
+              })}
+              {zones.map((z) => {
+                const owner = owners[z.id] ?? null;
+                const m = owner ? meta[owner] : undefined;
+                const gc = m?.color ?? '#9a917f';
+                const color = regionColor(z.region);
+                const rp = stageView === 'rank' ? rank.pos.get(z.id) : undefined;
+                const size = stageView === 'rank' ? 14 : 19;
+                return (
+                  <div
+                    key={z.id}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
+                    style={{
+                      left: `${rp ? rp.left : z.mapX}%`,
+                      top: `${rp ? rp.top : z.mapY}%`,
+                      zIndex: owner ? 10 : 6,
+                      opacity: stageView === 'rank' && !rp ? 0 : 1,
+                    }}
+                    title={`${z.name}${owner ? ` · ${owner}` : ''}`}
                   >
-                    아직 세워진 깃발이 없습니다
-                  </div>
-                ) : null}
-                {/* 순위 줄 라벨 — 문양·이름·구역 수. 줄 순서가 바뀌면 top이 미끄러진다. */}
-                {rank.labels.map((r) => {
-                  const m = meta[r.guild];
-                  const gc = m?.color ?? '#9a917f';
-                  return (
-                    <div
-                      key={`r${r.guild}`}
-                      className="pointer-events-none absolute flex -translate-y-1/2 items-center gap-1 transition-[top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
+                    <span
+                      className="relative flex items-center justify-center overflow-hidden rounded-[5px] transition-[width,height,background-color] duration-500"
                       style={{
-                        left: '2%',
-                        top: `${r.top}%`,
-                        width: '29%',
-                        zIndex: 12,
-                        opacity: stageView === 'rank' ? 1 : 0,
+                        width: size,
+                        height: size,
+                        // 문양(대개 어두운 외곽선)이 읽히도록 타일은 길드색을 밝게 섞은 바탕, 테두리는 길드색 원색.
+                        backgroundColor: owner
+                          ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
+                          : 'rgba(10,12,20,0.55)',
+                        boxShadow: owner
+                          ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                          : `0 0 0 1px ${color}66`,
                       }}
                     >
-                      <span
-                        className="relative flex h-[14px] w-[14px] shrink-0 items-center justify-center overflow-hidden rounded-[4px]"
-                        style={{
-                          backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
-                          boxShadow: `0 0 0 1.5px ${gc}`,
-                        }}
-                      >
-                        <span
-                          className="absolute inset-0 flex items-center justify-center text-[8px] leading-none font-black"
-                          style={{ color: gc, textShadow: '0 0 2px #fff' }}
-                        >
-                          {r.guild.slice(0, 1)}
-                        </span>
-                        <EmblemChain
-                          key={m?.emblemUrl ?? 'none'}
-                          urls={emblemChain(m)}
-                          className="relative h-full w-full object-contain"
-                        />
-                      </span>
-                      <span
-                        className="min-w-0 truncate text-[11px] leading-none font-bold text-[#f3ede2]"
-                        style={{ textShadow: '0 1px 2px #000' }}
-                      >
-                        {r.guild}
-                      </span>
-                      <span
-                        className="shrink-0 font-mono text-[10px] leading-none text-[#e7dcc0]"
-                        style={{ textShadow: '0 1px 2px #000' }}
-                      >
-                        {r.count}
-                      </span>
-                    </div>
-                  );
-                })}
+                      {owner ? (
+                        <>
+                          {/* 문양이 없거나(옛 회차) 파일이 사라진 URL이면 길드 첫 글자 — 빈 타일로 두지 않는다. */}
+                          <span
+                            className="absolute inset-0 flex items-center justify-center text-[10px] leading-none font-black"
+                            style={{ color: gc, textShadow: '0 0 2px #fff' }}
+                          >
+                            {owner.slice(0, 1)}
+                          </span>
+                          <EmblemChain
+                            key={m?.emblemUrl ?? 'none'}
+                            urls={emblemChain(m)}
+                            className="relative h-full w-full object-contain"
+                          />
+                        </>
+                      ) : null}
+                    </span>
+                  </div>
+                );
+              })}
+              {/* 순위 보기 — 합계 한 줄, 깃발이 없는 날엔 안내. */}
+              <div
+                aria-hidden={stageView !== 'rank'}
+                className={`pointer-events-none absolute inset-x-0 bottom-[5%] z-[12] text-center text-[10.5px] text-[#cfc6b3] tabular-nums transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-100' : 'opacity-0'}`}
+              >
+                구역 {ownedCount} · 중립 {zones.length - ownedCount}
               </div>
-            </div>
-
-            {/* ── 현황 줄: 날짜 · 상태 · 헤드라인 · 집계 · 사건(순간 자막은 강조 칩으로 앞에) ── */}
-            <div
-              className={`border-t px-3 pt-2.5 pb-2 md:col-start-1 md:row-start-2 ${PAPER.border} ${PAPER.card}`}
-            >
-              <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="text-[15px] font-bold whitespace-nowrap" style={SERIF}>
-                    {fmtDay(showingDay.kstDay)}
-                  </div>
-                  <div className={`truncate text-[11px] tabular-nums ${PAPER.muted}`}>
-                    {statusText}
-                  </div>
-                </div>
-                {/* 헤드라인 — 항상 한 줄(높이 고정). 재생 전엔 최근 기록. */}
+              {stageView === 'rank' && rank.labels.length === 0 ? (
                 <div
-                  className="mt-0.5 h-[20px] truncate text-[13px] leading-[20px] font-semibold"
+                  className="pointer-events-none absolute inset-0 z-[12] flex items-center justify-center text-[13px] text-[#e7dcc0]"
                   style={SERIF}
                 >
-                  <Headline
-                    text={showingDay.headline || '기록'}
-                    guildColor={guildColor}
-                    guildEmblem={guildEmblem}
-                    zoneColor={zoneColor}
-                  />
+                  아직 세워진 깃발이 없습니다
                 </div>
-                <div className="mt-1 flex h-[18px] flex-nowrap gap-x-3 overflow-hidden text-[11px] tabular-nums">
-                  {legend.map(([g, c]) => (
-                    <span key={g} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                      <i
-                        className="inline-block h-2 w-2 rounded-[2px]"
-                        style={{ background: meta[g]?.color ?? '#9a917f' }}
-                      />
-                      <span className="font-semibold">{g}</span>
-                      <b className={`font-medium ${PAPER.muted}`}>{c}</b>
-                    </span>
-                  ))}
-                </div>
-                {/* 사건 줄 — 높이 고정. 순간 자막(1위 교체·석권·과반·소멸)은 강조 칩으로 맨 앞에 끼어들었다가 사라진다. */}
-                <div className="mt-1.5 flex h-[22px] flex-nowrap items-center gap-1.5 overflow-hidden">
-                  {subtitle ? (
-                    <span
-                      key={subtitle.at}
-                      className="max-w-full shrink-0 truncate rounded-full border border-[#e9c98f] bg-[#fff5df] px-2.5 text-[10.5px] leading-[20px] font-bold text-[#2a251e] motion-safe:animate-[fadeIn_.4s_ease-out]"
-                    >
-                      <em className="mr-1.5 text-[#8a4b23] not-italic">{subtitle.kind}</em>
-                      {subtitle.text}
-                    </span>
-                  ) : null}
-                  {dayEvents.slice(0, 3).map((e, i) => (
-                    <span
-                      key={i}
-                      title={e.label}
-                      className={`shrink-0 rounded-full border px-2.5 text-[10.5px] leading-[20px] whitespace-nowrap ${e.kind === 'leader' || e.kind === 'sweep' ? 'border-[#d9c39a] font-bold text-[#8a4b23]' : `${PAPER.border} ${PAPER.muted}`}`}
-                    >
-                      {e.label}
-                    </span>
-                  ))}
-                </div>
-                {/* 자막 — 전투 재생 중 지금 타이핑되는 문장(패널이 직접 씀). 지도와 같은 열에 있어 시선이 오가지 않는다. */}
-                {mode === 'battle' && phase !== 'idle' ? (
+              ) : null}
+              {/* 순위 줄 라벨 — 문양·이름·구역 수. 줄 순서가 바뀌면 top이 미끄러진다. */}
+              {rank.labels.map((r) => {
+                const m = meta[r.guild];
+                const gc = m?.color ?? '#9a917f';
+                return (
                   <div
-                    ref={bindCaption}
-                    aria-live="off"
-                    className="mt-2 [display:-webkit-box] h-[63px] overflow-hidden text-[13px] leading-[21px] text-[#2a251e] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
-                    style={SERIF}
-                  />
-                ) : null}
-              </div>
-            </div>
-
-            {/* ── 시간축(시대 띠 = 스크러버) + 조작 ── */}
-            <div
-              className={`border-t px-3 pt-2.5 pb-2.5 md:col-start-1 md:row-start-3 ${PAPER.border} ${PAPER.card}`}
-            >
-              <div className="mx-auto" style={{ maxWidth: STAGE_PX }}>
-                <div className="relative">
-                  <div
-                    className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
-                    role="list"
-                    aria-label="시대"
+                    key={`r${r.guild}`}
+                    className="pointer-events-none absolute flex -translate-y-1/2 items-center gap-1 transition-[top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
+                    style={{
+                      left: '2%',
+                      top: `${r.top}%`,
+                      width: '29%',
+                      zIndex: 12,
+                      opacity: stageView === 'rank' ? 1 : 0,
+                    }}
                   >
-                    {story.eras.map((e, i) => {
-                      const len = e.endIdx - e.startIdx + 1;
-                      const future = phase !== 'idle' && e.startIdx > idx;
-                      return (
-                        <div
-                          key={i}
-                          role="listitem"
-                          className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
-                          style={{
-                            width: `${(len / n) * 100}%`,
-                            background: e.color ?? '#9a917f',
-                            opacity: future ? 0.35 : 1,
-                          }}
-                        >
-                          {len >= 4
-                            ? `「${e.name}」의 시대 · ${len}일`
-                            : len >= 2
-                              ? `${e.name} ${len}`
-                              : ''}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* 스크러버 — 띠 위에 투명하게 겹친 range. 클릭·드래그로 그날부터. */}
-                  <input
-                    type="range"
-                    min={0}
-                    max={n - 1}
-                    value={phase === 'idle' ? n - 1 : idx}
-                    onChange={(e) => void startAt(Number(e.target.value))}
-                    aria-label="날짜"
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
-                    style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
-                  />
-                </div>
-                {/* 사건 눈금 — 라벨 없이, 올리면 툴팁. 진한 눈금 = 1위 교체·석권·최대. */}
-                <div className="relative mt-[3px] h-[6px]">
-                  {ticks.map((t) => (
-                    <button
-                      key={t.i}
-                      type="button"
-                      title={`${days[t.i]!.kstDay} · ${t.label}`}
-                      aria-label={`${days[t.i]!.kstDay} ${t.label}`}
-                      onClick={() => void startAt(t.i)}
-                      className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
+                    <span
+                      className="relative flex h-[14px] w-[14px] shrink-0 items-center justify-center overflow-hidden rounded-[4px]"
                       style={{
-                        left: `${pct(t.i)}%`,
-                        borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
+                        backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
+                        boxShadow: `0 0 0 1.5px ${gc}`,
                       }}
-                    />
-                  ))}
-                </div>
-                <div
-                  className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}
-                >
-                  <span>{shortDay(days[0]!.kstDay)}</span>
-                  <span>{shortDay(days[n - 1]!.kstDay)}</span>
-                </div>
-                {/* 조작 — 고정 폭 아이콘 4개 · 배속 · 재생 방식 · 무대 보기 */}
-                <div className="mt-2 flex items-center gap-1.5">
-                  <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
-                  <IconBtn
-                    onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)}
-                    title="전날"
-                    icon="prev"
-                    disabled={phase !== 'idle' && idx === 0}
-                  />
-                  <IconBtn
-                    onClick={togglePause}
-                    title={
-                      phase === 'idle'
-                        ? '처음부터 재생'
-                        : phase === 'end'
-                          ? '다시 재생'
-                          : isPlaying
-                            ? '일시정지'
-                            : '재생'
-                    }
-                    icon={isPlaying ? 'pause' : 'play'}
-                    primary
-                  />
-                  <IconBtn
-                    onClick={() => void startAt(idx + 1)}
-                    title="다음 날"
-                    icon="next"
-                    disabled={phase === 'idle' || idx >= n - 1}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1)
-                    }
-                    title="배속(누를 때마다 ×1 → ×2 → ×4)"
-                    className={`h-7 rounded-lg border px-2 text-[11px] font-bold tabular-nums ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
-                  >
-                    ×{speed}
-                  </button>
-                  <span
-                    className={`ml-auto inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
-                    role="group"
-                    aria-label="재생 방식"
-                  >
-                    {(['battle', 'quick'] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => switchMode(m)}
-                        aria-pressed={mode === m}
-                        className={`px-2.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
+                    >
+                      <span
+                        className="absolute inset-0 flex items-center justify-center text-[8px] leading-none font-black"
+                        style={{ color: gc, textShadow: '0 0 2px #fff' }}
                       >
-                        {m === 'battle' ? '전투' : '빠른'}
-                      </button>
-                    ))}
-                  </span>
-                  <span
-                    className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
-                    role="group"
-                    aria-label="무대 보기"
-                  >
-                    {(['map', 'rank'] as const).map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        aria-pressed={stageView === v}
-                        onClick={() => setStageView(v)}
-                        className={`px-2.5 text-[11px] font-bold ${stageView === v ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
-                      >
-                        {v === 'map' ? '지도' : '순위'}
-                      </button>
-                    ))}
-                  </span>
-                </div>
-              </div>
+                        {r.guild.slice(0, 1)}
+                      </span>
+                      <EmblemChain
+                        key={m?.emblemUrl ?? 'none'}
+                        urls={emblemChain(m)}
+                        className="relative h-full w-full object-contain"
+                      />
+                    </span>
+                    <span
+                      className="min-w-0 truncate text-[11px] leading-none font-bold text-[#f3ede2]"
+                      style={{ textShadow: '0 1px 2px #000' }}
+                    >
+                      {r.guild}
+                    </span>
+                    <span
+                      className="shrink-0 font-mono text-[10px] leading-none text-[#e7dcc0]"
+                      style={{ textShadow: '0 1px 2px #000' }}
+                    >
+                      {r.count}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* ── 두루마리 — 모바일은 고정 묶음 아래(order-2), PC는 오른쪽 열 전체 ── */}
+          {/* ── 오른쪽: 날짜 줄 + 두루마리(정지 땐 오늘의 기록) ── */}
           <div
-            className={`order-2 flex min-h-[220px] flex-col border-t md:col-start-2 md:row-span-5 md:row-start-1 md:border-t-0 md:border-l ${PAPER.border}`}
+            className={`flex min-h-[260px] flex-col border-t md:h-[390px] md:min-h-0 md:border-t-0 md:border-l ${PAPER.border}`}
           >
+            <div
+              className={`flex shrink-0 items-baseline justify-between gap-3 border-b px-5 py-2 ${PAPER.border}`}
+            >
+              <div className="text-[15px] font-bold whitespace-nowrap" style={SERIF}>
+                {fmtDay(showingDay.kstDay)}
+              </div>
+              <div className={`truncate text-[11px] tabular-nums ${PAPER.muted}`}>{statusText}</div>
+            </div>
             {phase === 'idle' ? (
-              <div className="flex flex-1 flex-col p-4 md:p-6">
+              <div className="flex-1 overflow-y-auto px-5 py-4">
                 <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                   대륙의 역사
                 </div>
@@ -1133,43 +827,6 @@ export function HistoryPlayer({
                   {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록 · 시대{' '}
                   {story.eras.length}
                 </div>
-                {story.eras.length > 0 ? (
-                  <div className="mt-4 border-t border-[#ece5d6]">
-                    {story.eras.map((e, i) => {
-                      const len = e.endIdx - e.startIdx + 1;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => begin('battle', e.startIdx)}
-                          title="이 시대부터 재생"
-                          className={`grid w-full grid-cols-[14px_1fr_auto_72px] items-center gap-2.5 border-b border-[#ece5d6] px-0.5 py-2 text-left text-[12.5px] ${PAPER.hover}`}
-                        >
-                          <i
-                            className="h-3 w-3 rounded-[3px]"
-                            style={{ background: e.color ?? '#9a917f' }}
-                          />
-                          <span className="font-bold" style={SERIF}>
-                            「{e.name}」의 시대
-                          </span>
-                          <span className={`text-[11px] tabular-nums ${PAPER.muted}`}>
-                            {days[e.startIdx]!.kstDay.slice(5)} ~{' '}
-                            {e.endIdx === n - 1 ? '' : days[e.endIdx]!.kstDay.slice(5)} · {len}일
-                          </span>
-                          <span className="flex justify-end">
-                            <span
-                              className="h-1.5 rounded-full opacity-70"
-                              style={{
-                                width: `${Math.max(6, (len / n) * 72)}px`,
-                                background: e.color ?? '#9a917f',
-                              }}
-                            />
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -1188,12 +845,31 @@ export function HistoryPlayer({
                     처음부터 자세히
                   </button>
                 </div>
+                {latest ? (
+                  <div className="mt-5 opacity-80">
+                    <DayDivider
+                      kstDay={latest.kstDay}
+                      nth={n}
+                      headline={latest.headline}
+                      battles={latest.replay ? Object.keys(latest.replay.events).length : null}
+                      events={story.events[latest.kstDay] ?? []}
+                      guildColor={guildColor}
+                      guildEmblem={guildEmblem}
+                      zoneColor={zoneColor}
+                    />
+                    <div className="mt-2 text-[13.5px] leading-[1.9]">
+                      <StaticChronicle
+                        text={latest.text}
+                        guildColor={guildColor}
+                        guildEmblem={guildEmblem}
+                        zoneColor={zoneColor}
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : (
-              <div
-                ref={readerRef}
-                className="max-h-[max(220px,calc(100dvh-600px))] flex-1 overflow-y-auto p-4 md:max-h-[calc(100dvh-7.5rem)] md:p-6"
-              >
+              <div ref={readerRef} className="flex-1 overflow-y-auto px-5 py-4">
                 {queue.length === 0 && quickRows.length === 0 && phase === 'loading' ? (
                   <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
                 ) : null}
@@ -1247,6 +923,7 @@ export function HistoryPlayer({
                         headline={q.headline}
                         battles={q.data.replay ? Object.keys(q.data.replay.events).length : null}
                         dim={i < queue.length - 1}
+                        events={story.events[q.kstDay] ?? []}
                         guildColor={guildColor}
                         guildEmblem={guildEmblem}
                         zoneColor={zoneColor}
@@ -1278,7 +955,6 @@ export function HistoryPlayer({
                             guildColor={guildColor}
                             guildEmblem={guildEmblem}
                             zoneStyle="tint"
-                            captionEl={captionEl}
                           />
                         ) : (
                           <StaticChronicle
@@ -1336,6 +1012,149 @@ export function HistoryPlayer({
             )}
           </div>
         </div>
+
+        {/* ── 조작 바(한 줄) — 재생 조작 · 배속 · 시간축(시대 띠 = 스크러버) · 스위치 ── */}
+        <div
+          className={`flex flex-wrap items-center gap-2 border-t px-4 py-2.5 ${PAPER.border} ${PAPER.card}`}
+        >
+          <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
+          <IconBtn
+            onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)}
+            title="전날"
+            icon="prev"
+            disabled={phase !== 'idle' && idx === 0}
+          />
+          <IconBtn
+            onClick={togglePause}
+            title={
+              phase === 'idle'
+                ? '처음부터 재생'
+                : phase === 'end'
+                  ? '다시 재생'
+                  : isPlaying
+                    ? '일시정지'
+                    : '재생'
+            }
+            icon={isPlaying ? 'pause' : 'play'}
+            primary
+          />
+          <IconBtn
+            onClick={() => void startAt(idx + 1)}
+            title="다음 날"
+            icon="next"
+            disabled={phase === 'idle' || idx >= n - 1}
+          />
+          <button
+            type="button"
+            onClick={() => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1)}
+            title="배속(누를 때마다 ×1 → ×2 → ×4)"
+            className={`h-7 rounded-lg border px-2 text-[11px] font-bold tabular-nums ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
+          >
+            ×{speed}
+          </button>
+          <div className="min-w-[260px] flex-1 px-1">
+            <div className="relative">
+              <div
+                className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
+                role="list"
+                aria-label="시대"
+              >
+                {story.eras.map((e, i) => {
+                  const len = e.endIdx - e.startIdx + 1;
+                  const future = phase !== 'idle' && e.startIdx > idx;
+                  return (
+                    <div
+                      key={i}
+                      role="listitem"
+                      className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
+                      style={{
+                        width: `${(len / n) * 100}%`,
+                        background: e.color ?? '#9a917f',
+                        opacity: future ? 0.35 : 1,
+                      }}
+                    >
+                      {len >= 4
+                        ? `「${e.name}」의 시대 · ${len}일`
+                        : len >= 2
+                          ? `${e.name} ${len}`
+                          : ''}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* 스크러버 — 띠 위에 투명하게 겹친 range. 클릭·드래그로 그날부터. */}
+              <input
+                type="range"
+                min={0}
+                max={n - 1}
+                value={phase === 'idle' ? n - 1 : idx}
+                onChange={(e) => void startAt(Number(e.target.value))}
+                aria-label="날짜"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
+                style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
+              />
+            </div>
+            {/* 사건 눈금 — 라벨 없이, 올리면 툴팁. 진한 눈금 = 1위 교체·석권·최대. */}
+            <div className="relative mt-[3px] h-[6px]">
+              {ticks.map((t) => (
+                <button
+                  key={t.i}
+                  type="button"
+                  title={`${days[t.i]!.kstDay} · ${t.label}`}
+                  aria-label={`${days[t.i]!.kstDay} ${t.label}`}
+                  onClick={() => void startAt(t.i)}
+                  className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
+                  style={{
+                    left: `${pct(t.i)}%`,
+                    borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
+                  }}
+                />
+              ))}
+            </div>
+            <div className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}>
+              <span>{shortDay(days[0]!.kstDay)}</span>
+              <span>{shortDay(days[n - 1]!.kstDay)}</span>
+            </div>
+          </div>
+          <span
+            className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
+            role="group"
+            aria-label="재생 방식"
+          >
+            {(['battle', 'quick'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchMode(m)}
+                aria-pressed={mode === m}
+                className={`px-2.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
+              >
+                {m === 'battle' ? '전투' : '빠른'}
+              </button>
+            ))}
+          </span>
+          <span
+            className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
+            role="group"
+            aria-label="무대 보기"
+          >
+            {(['map', 'rank'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={stageView === v}
+                onClick={() => setStageView(v)}
+                className={`px-2.5 text-[11px] font-bold ${stageView === v ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
+              >
+                {v === 'map' ? '지도' : '순위'}
+              </button>
+            ))}
+          </span>
+        </div>
       </div>
     </main>
   );
@@ -1348,6 +1167,7 @@ function DayDivider({
   headline,
   battles,
   dim,
+  events,
   guildColor,
   guildEmblem,
   zoneColor,
@@ -1357,6 +1177,8 @@ function DayDivider({
   headline: string;
   battles?: number | null;
   dim?: boolean;
+  /** 그날 사건 칩(1위 교체·석권·개명·해산 등) — 구분선 끝에 작게. */
+  events?: HistoryEvent[];
   guildColor?: (name: string) => string | null;
   guildEmblem?: (name: string) => readonly string[];
   zoneColor?: (name: string) => string | null;
@@ -1367,9 +1189,18 @@ function DayDivider({
         className={`flex items-center gap-2.5 text-[10.5px] tracking-[.02em] tabular-nums ${PAPER.muted}`}
       >
         <span className="h-px flex-1 bg-[#ece5d6]" />
-        <span>
-          {ordinalKo(nth)} 번째 날 · {kstDay}
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          {ordinalKo(nth)} 번째 날 · {kstDay.slice(5).replace('-', '/')}
           {battles ? ` · 전투 ${battles}` : ''}
+          {(events ?? []).slice(0, 3).map((e, i) => (
+            <i
+              key={i}
+              title={e.label}
+              className={`rounded-full border px-1.5 not-italic ${e.kind === 'leader' || e.kind === 'sweep' ? 'border-[#d9c39a] font-bold text-[#8a4b23]' : PAPER.border}`}
+            >
+              {e.short}
+            </i>
+          ))}
         </span>
         <span className="h-px flex-1 bg-[#ece5d6]" />
       </div>
@@ -1412,11 +1243,7 @@ function StaticChronicle({
           if (kind === 'z') {
             const zc = zoneColor(name);
             parts.push(
-              <span
-                key={k++}
-                className="underline decoration-dotted underline-offset-2"
-                style={zc ? { color: zc, textDecorationColor: zc } : undefined}
-              >
+              <span key={k++} className="font-medium" style={zc ? { color: zc } : undefined}>
                 {name}
               </span>,
             );

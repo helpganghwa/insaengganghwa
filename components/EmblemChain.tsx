@@ -23,7 +23,7 @@ export function EmblemChain({ urls, className }: { urls: readonly string[]; clas
 }
 
 /**
- * 인라인 길드 표식(2026-09-17, 역사 페이지) — 지도 타일과 같은 작은 타일(길드색 바탕 + 머리글자 위 문양) + 길드색 굵은 이름.
+ * 인라인 길드 표식(2026-09-17, 역사 페이지) — 12px 문양 이미지 + 길드색 굵은 이름.
  * 연대기 본문·헤드라인에서 길드가 구역보다 먼저 눈에 들어오게 한다. shown = 타이핑 중 일부 텍스트.
  */
 export function GuildInline({
@@ -42,30 +42,18 @@ export function GuildInline({
   className?: string;
 }) {
   const gc = color ?? '#4b3a8a';
+  // 문양 이미지만(배경·테두리 없음, 2026-09-17 사용자 지시). 문양이 없으면 이름만.
   return (
-    <span className={`inline whitespace-nowrap ${className}`}>
-      <span
-        aria-hidden
-        className="relative mr-[3px] inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[3px] align-[-2px]"
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
-          boxShadow: `0 0 0 1px ${gc}`,
-        }}
-      >
+    <span className={`inline whitespace-nowrap ${className}`} title={name}>
+      {urls.length > 0 ? (
         <span
-          className="absolute inset-0 flex items-center justify-center text-[7px] leading-none font-black"
-          style={{ color: gc, textShadow: '0 0 1px #fff' }}
+          aria-hidden
+          className="mr-[3px] inline-block align-[-2px]"
+          style={{ width: size, height: size }}
         >
-          {name.slice(0, 1)}
+          <EmblemChain key={urls[0]} urls={urls} className="h-full w-full object-contain" />
         </span>
-        <EmblemChain
-          key={urls[0] ?? 'none'}
-          urls={urls}
-          className="relative h-full w-full object-contain"
-        />
-      </span>
+      ) : null}
       <b className="font-bold" style={{ color: gc }}>
         {shown}
       </b>
