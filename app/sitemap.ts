@@ -24,6 +24,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/login`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     { url: `${SITE}/faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE}/wiki`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
+    // 대륙 연대기(공개 역사 페이지) — 매일 자정 새 기록이 열린다.
+    { url: `${SITE}/history`, lastModified: now, changeFrequency: 'daily', priority: 0.7 },
     // 위키 문서 — 규칙 검색 유입(롱테일). 목록은 registry가 단일 원천이라 문서 추가 시 자동 반영.
     ...WIKI_DOCS.map((d) => ({
       url: `${SITE}/wiki/${d.meta.slug}`,

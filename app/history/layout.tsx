@@ -15,9 +15,23 @@ const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
  */
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, themeColor: '#f5f0e6' };
 
+const HISTORY_DESC = '인생강화 점령전의 첫날부터 오늘까지, 대륙의 역사를 지도 위에서 이어서 재생합니다.';
+/** 공개 페이지 — 검색 색인 허용(사용자 확정 2026-09-16). 공유 카드는 대륙 지도. 루트 metadataBase가 절대 URL로 직렬화한다. */
 export const metadata: Metadata = {
   title: { absolute: '대륙 연대기', template: '%s — 대륙 연대기' },
-  description: '인생강화 점령전의 첫날부터 오늘까지, 대륙의 역사를 이어서 재생합니다.',
+  description: HISTORY_DESC,
+  alternates: { canonical: '/history' },
+  openGraph: {
+    title: '대륙 연대기 — 인생강화',
+    description: HISTORY_DESC,
+    url: '/history',
+    type: 'website',
+    siteName: '인생강화',
+    locale: 'ko_KR',
+    images: [{ url: '/sprites/guild/worldmap.png', alt: '인생강화 대륙 지도' }],
+  },
+  twitter: { card: 'summary_large_image', title: '대륙 연대기 — 인생강화', description: HISTORY_DESC, images: ['/sprites/guild/worldmap.png'] },
+  robots: { index: true, follow: true },
 };
 
 const PAPER_INK_CSS = `
