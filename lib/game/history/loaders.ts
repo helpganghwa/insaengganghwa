@@ -166,6 +166,9 @@ async function buildStory(serverId: number, kstDays: string[], zoneCount: number
       if (arr[i]! >= Math.ceil(zoneCount / 2) && arr[i - 1]! < Math.ceil(zoneCount / 2)) push(kstDays[i]!, { kind: 'peak', label: `${nameOn(g, kstDays[i]!)}, 대륙 과반(${arr[i]}곳)`, short: '과반' });
     }
   }
+  // 연대기 스냅샷에 한 번이라도 나온 길드 이름 — 해산 칩의 기준(영토·전투로 역사에 남은 길드만).
+  const snapNames = new Set<string>();
+  for (const m of snapByDay.values()) for (const r of m.values()) snapNames.add(r.name);
   // world_events: 석권(자정 공개 이벤트라 전투일 = 전날), 개명, 해산.
   const ev = (await db.execute(sql`
     select type, detail, (created_at at time zone 'Asia/Seoul')::date::text kd, ((created_at at time zone 'Asia/Seoul')::date - interval '1 day')::date::text prev
@@ -180,6 +183,9 @@ async function buildStory(serverId: number, kstDays: string[], zoneCount: number
       const kd = e.kd.slice(0, 10);
       if (dayIdx.has(kd)) push(kd, { kind: 'rename', label: `${String(e.detail?.oldName ?? e.detail?.from ?? '')}${e.detail?.oldName || e.detail?.from ? ' → ' : ''}${gname} 개명`, short: '개명' });
     } else if (e.type === 'guild_disband') {
+      // 역사에 등장한 적 없는 길드(만들자마자 해산한 시험 길드 — 8/24 「세계」「길드생성」)는 칩을 만들지 않는다.
+      const zones = Array.isArray(e.detail?.zones) ? (e.detail.zones as unknown[]) : [];
+      if (zones.length === 0 && !snapNames.has(gname)) continue;
       const kd = e.kd.slice(0, 10);
       if (dayIdx.has(kd)) push(kd, { kind: 'disband', label: `${gname} 해산`, short: '해산' });
     }
