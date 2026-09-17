@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 
 import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
+import { winnerNameFragments } from './winner-name';
 import { db } from '@/lib/db/client';
 import { guilds, worldChronicle } from '@/lib/db/schema/guild';
 
@@ -99,6 +100,7 @@ export async function computeConquestReplay(
   // 플립 전)의 오늘 리플레이도 어긋난다(2026-07-17). 그러나 전투 이력만 보면 방치로 중립이 된
   // 구역이 옛 소유 길드로 남아, 리플레이 시작 시 이미 잃은 문양이 뜬다(2026-07-25 검수 발견) →
   // 마지막 전투 승자와 마지막 zone_neutralized(battleDay) 중 더 최근 것으로 판정, 중립화가 최근이면 중립(null).
+  const wn = await winnerNameFragments();
   const zoneRows = (await db.execute(dsql`
     select z.id, z.name, z.map_x, z.map_y,
            (case
@@ -109,13 +111,13 @@ export async function computeConquestReplay(
                    >= coalesce((select max(cb3.battle_kst_day)::text from conquest_battles cb3
                         where cb3.zone_id = z.id and cb3.server_id = z.server_id
                           and cb3.battle_kst_day <= ${kstDay}::date
-                          and (cb3.winner_guild_id is not null or cb3.winner_guild_name is not null)), '')
+                          and ${wn.hasWinner('cb3')}), '')
               then null
-              else (select coalesce(g2.name, cb2.winner_guild_name) from conquest_battles cb2
+              else (select ${wn.winner('g2', 'cb2')} from conquest_battles cb2
                       left join guilds g2 on g2.id = cb2.winner_guild_id
                       where cb2.zone_id = z.id and cb2.server_id = z.server_id
                         and cb2.battle_kst_day <= ${kstDay}::date
-                        and (cb2.winner_guild_id is not null or cb2.winner_guild_name is not null)
+                        and ${wn.hasWinner('cb2')}
                       order by cb2.battle_kst_day desc limit 1)
            end) as owner
     from zones z

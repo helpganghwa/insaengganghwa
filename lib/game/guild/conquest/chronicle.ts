@@ -3,6 +3,7 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
+import { winnerNameFragments } from './winner-name';
 import { db } from '@/lib/db/client';
 import { worldChronicle, type ChronicleGuildRef } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
@@ -150,9 +151,10 @@ const REGION_KO_VALUES = Object.values(REGION_META).map((m) => m.label);
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
 export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
+  const wn = await winnerNameFragments();
   const battles = (await db.execute(sql`
     select z.name as zone, z.region::text as region,
-           coalesce(g.name, cb.winner_guild_name) as winner, cb.finale as finale,
+           ${wn.winner('g', 'cb')} as winner, cb.finale as finale,
            -- 이전 소유(from) = 전투 이력의 마지막 승자. 단, 그 이후 방치 중립화(zone_neutralized)가
            -- 더 최근이면 현재 '중립'이므로 null(주인 없는 땅)로 본다. 중립화를 무시하면 이미 방치로 잃은
            -- 구역을 '옛 소유 길드로부터 빼앗음'으로 오서술한다(2026-07-25 검수 발견).
@@ -163,18 +165,18 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
                         and zn = z.name and (we.detail->>'battleDay') < ${kstDay})
                    >= coalesce((select max(cb4.battle_kst_day)::text from conquest_battles cb4
                         where cb4.zone_id = cb.zone_id and cb4.battle_kst_day < ${kstDay}
-                          and (cb4.winner_guild_id is not null or cb4.winner_guild_name is not null)), '')
+                          and ${wn.hasWinner('cb4')}), '')
               then null
               -- 승자 이름 = 현재 길드명, 해산했으면 스냅샷(0201). join guilds만 쓰면 해산 길드의 승리가 빠져 그 전 주인이 튀어나온다.
-              else (select coalesce(g2.name, cb2.winner_guild_name) from conquest_battles cb2
+              else (select ${wn.winner('g2', 'cb2')} from conquest_battles cb2
                       left join guilds g2 on g2.id = cb2.winner_guild_id
                       where cb2.zone_id = cb.zone_id and cb2.battle_kst_day < ${kstDay}
-                        and (cb2.winner_guild_id is not null or cb2.winner_guild_name is not null)
+                        and ${wn.hasWinner('cb2')}
                       order by cb2.battle_kst_day desc limit 1)
            end) as prev_owner,
            exists(select 1 from conquest_battles cb3
               where cb3.zone_id = cb.zone_id and cb3.battle_kst_day < ${kstDay}
-                and (cb3.winner_guild_id is not null or cb3.winner_guild_name is not null)) as had_owner_history,
+                and ${wn.hasWinner('cb3')}) as had_owner_history,
            -- 배치로 세운 수비 수(role=defend) — 집행관 자동 방어는 배치 행이 없어 여기 안 잡힌다.
            -- finale 로스터 기반 defenders와의 차이가 곧 '집행관만 맞선 전투'다.
            (select count(*)::int from guild_battle_deployments d
