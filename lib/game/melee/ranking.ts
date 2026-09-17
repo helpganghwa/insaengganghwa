@@ -2,6 +2,7 @@ import 'server-only';
 
 import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 
+import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
@@ -23,6 +24,8 @@ export type MeleeRankRow = {
   /** 회차 시점 길드 스냅샷(0138 이전 회차는 null). */
   guildName: string | null;
   guildEmblemUrl: string | null;
+  /** 스냅샷 문양이 사라졌을 때 차례로 시도할 그 길드의 다음 문양들(2026-09-17). */
+  guildEmblemAlsoTry: string[];
   /** 공격 성공 = 내가 쓰러뜨린 수. */
   attackSuccess: number;
   /** 방어 성공 = 피격 중 버텨낸 수(탈락자는 마지막 피격 제외). */
@@ -66,6 +69,7 @@ export async function getMeleeRanking(input: {
   aroundRank?: number;
 }): Promise<{ rows: MeleeRankRow[]; myRank: number | null }> {
   const { battleId, serverId, viewerUserId, mode } = input;
+  const emblemHistory = await getGuildEmblemHistory(serverId).catch(() => ({}) as Record<number, string[]>);
 
   // 발표 게이트(전수 감사 2026-08-21) — computed 상태(09시 산출~10시 발표 사이)의 결과가
   // 이 API로 전부 유출됐다(MELEE.md §"발표 전 조회 차단" 위반). 타 서버 배틀도 거부.
@@ -211,6 +215,7 @@ export async function getMeleeRanking(input: {
         faceBox: parseFaceBox(snap ? r.snapFaceBox : r.faceBoxRaw),
         guildName: r.guildName,
         guildEmblemUrl: r.guildEmblemUrl,
+        guildEmblemAlsoTry: emblemAlsoTry(r.guildEmblemUrl, emblemHistory),
         attackSuccess: Number(r.kills),
         // 탈락자는 마지막 피격 1회가 탈락이므로 방어 성공에서 제외(내 전투 요약과 동일 기준).
         defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),

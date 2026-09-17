@@ -3,6 +3,7 @@ import 'server-only';
 import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { guilds, worldChronicle, zoneAdjacency, zones } from '@/lib/db/schema/guild';
 import { computeConquestReplay } from '@/lib/game/guild/conquest/replay';
 import { kstDateString } from '@/lib/kst';
@@ -50,21 +51,7 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
       owners[z.id] = z.owner ?? null;
       if (z.owner) guildMeta[z.owner] = { color: z.color ?? null, emblemUrl: z.emblemUrl ?? null, id: z.ownerId != null ? Number(z.ownerId) : null };
     }
-    // 문양 이력 — 날짜순 스냅샷에서 길드별 URL을 처음 나온 순서로, 끝에 현재 문양(guild_emblems 표는 읽지 않는다: 스냅샷만으로 충분).
-    const refRows = await db
-      .select({ refs: worldChronicle.guildRefs })
-      .from(worldChronicle)
-      .where(and(eq(worldChronicle.serverId, serverId), lt(worldChronicle.kstDay, today)))
-      .orderBy(asc(worldChronicle.kstDay));
-    const emblemHistory: Record<number, string[]> = {};
-    const pushEmblem = (id: number, url: string | null | undefined) => {
-      if (!url) return;
-      const list = (emblemHistory[id] ??= []);
-      if (!list.includes(url)) list.push(url);
-    };
-    for (const r of refRows) for (const x of r.refs ?? []) pushEmblem(Number(x.id), x.emblemUrl);
-    const currentRows = await db.select({ id: guilds.id, emblemUrl: guilds.emblemUrl }).from(guilds).where(eq(guilds.serverId, serverId));
-    for (const g of currentRows) pushEmblem(Number(g.id), g.emblemUrl);
+    const emblemHistory = await getGuildEmblemHistory(serverId);
     const days = dayRows.map((r) => ({ kstDay: String(r.kstDay).slice(0, 10), headline: r.headline ?? '' }));
     const story = await buildStory(serverId, days.map((d) => d.kstDay), zoneRows.length);
     return {

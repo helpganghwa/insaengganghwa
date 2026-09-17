@@ -10,28 +10,32 @@ import { useState } from 'react';
  */
 export function GuildEmblemImg({
   src,
+  alsoTry,
   size,
   fallback = null,
   className = '',
 }: {
   src: string;
+  /** src가 안 열리면 차례로 시도할 다음 문양들(2026-09-17, 사라진 옛 문양 → 그 길드의 다음 문양). 전부 실패해야 fallback. */
+  alsoTry?: readonly string[];
   /** 정사각 px. 생략하면 className의 h-·w- 클래스가 크기를 정한다 — 세계지도 마커·목록용. */
   size?: number;
   /** 로드 실패 시 대신 그릴 것. 생략(null)이면 아무것도 안 그린다(길드 색 박스 등 바탕이 이미 있는 자리). */
   fallback?: React.ReactNode;
   className?: string;
 }) {
-  const [broken, setBroken] = useState(false);
-  if (broken) return <>{fallback}</>;
+  const [k, setK] = useState(0);
+  const cur = k === 0 ? src : alsoTry?.[k - 1];
+  if (!cur) return <>{fallback}</>;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={cur}
       alt=""
       aria-hidden
       loading="lazy"
       decoding="async"
-      onError={() => setBroken(true)}
+      onError={() => setK((i) => i + 1)}
       className={className}
       style={{ ...(size != null ? { width: size, height: size } : {}), imageRendering: 'pixelated' }}
     />

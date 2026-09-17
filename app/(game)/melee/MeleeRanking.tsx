@@ -426,6 +426,7 @@ const Row = memo(function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: bo
             {r.guildName ? (
               <GuildBadge
                 emblemUrl={r.guildEmblemUrl}
+                alsoTry={r.guildEmblemAlsoTry}
                 name={r.guildName}
                 size={11}
                 className="min-w-0 shrink text-[9.5px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"

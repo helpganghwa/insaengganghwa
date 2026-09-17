@@ -40,6 +40,8 @@ export type MeleeResultView = {
     avatarUrl: string | null;
     guildName: string | null;
     guildEmblemUrl: string | null;
+    /** 스냅샷 문양이 사라졌을 때 차례로 시도할 그 길드의 다음 문양들. */
+    guildEmblemAlsoTry?: string[];
     /** 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬). */
     attackSuccess: number;
     /** 방어 성공 = 공격받고도 버텨낸 횟수(피격 − 탈락당함). */
@@ -72,7 +74,7 @@ export type MeleeResultView = {
       rank: number;
       avatar: string | null;
       code: string | null;
-      guild: { name: string; emblemUrl: string | null } | null;
+      guild: { name: string; emblemUrl: string | null; alsoTry?: string[] } | null;
     }[];
     events: MeleeFinale['events'];
   };
@@ -91,8 +93,8 @@ type Fight = {
   tgtAvatar: string | null;
   tgtHref?: string | null;
   /** 닉네임 밑 길드(문양+이름) — 미소속/미상 null. */
-  atkGuild?: { name: string; emblemUrl: string | null } | null;
-  tgtGuild?: { name: string; emblemUrl: string | null } | null;
+  atkGuild?: { name: string; emblemUrl: string | null; alsoTry?: string[] } | null;
+  tgtGuild?: { name: string; emblemUrl: string | null; alsoTry?: string[] } | null;
   dmg: number;
   hpAfter: number;
   tgtMaxHp?: number;
@@ -179,7 +181,7 @@ function Fighter({
 }: {
   name: string;
   avatar: string | null;
-  guild?: { name: string; emblemUrl: string | null } | null;
+  guild?: { name: string; emblemUrl: string | null; alsoTry?: string[] } | null;
   /** 있으면 아바타 클릭 시 프로필 상세로 이동. */
   href?: string | null;
   side: 'l' | 'r';
@@ -227,7 +229,7 @@ function Fighter({
       <div className="flex h-[12px] max-w-[150px] items-center gap-0.5">
         {guild ? (
           <>
-            <GuildBadge emblemUrl={guild.emblemUrl ?? null} size={10} className="shrink-0" />
+            <GuildBadge emblemUrl={guild.emblemUrl ?? null} alsoTry={guild.alsoTry} size={10} className="shrink-0" />
             <span className="truncate text-[9px] font-medium text-amber-100/85 drop-shadow">
               {guild.name}
             </span>
@@ -485,7 +487,7 @@ function RankingView({
               <div className="flex h-[12px] items-center gap-0.5">
                 {p?.guildName ? (
                   <>
-                    <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} size={10} className="shrink-0" />
+                    <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} alsoTry={p.guildEmblemAlsoTry} size={10} className="shrink-0" />
                     <span className="text-pixel-outline text-[9px] font-medium leading-none text-amber-100/85">
                       {p.guildName}
                     </span>

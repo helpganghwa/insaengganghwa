@@ -15,6 +15,7 @@ import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 
 export function GuildBadge({
   emblemUrl,
+  alsoTry,
   name = null,
   emblemColor = null,
   size = 16,
@@ -22,6 +23,8 @@ export function GuildBadge({
   pinEmblemRight = false,
 }: {
   emblemUrl: string | null;
+  /** 스냅샷 문양 파일이 사라졌을 때 차례로 시도할 그 길드의 다음 문양들(emblemAlsoTry). */
+  alsoTry?: readonly string[];
   name?: string | null;
   /** 문양 미완 시 폴백 방패 색 — 길드 대표색. 없으면 인디고. */
   emblemColor?: string | null;
@@ -47,7 +50,7 @@ export function GuildBadge({
   );
   // 로드 실패(사라진 옛 문양 파일 등)는 같은 폴백으로 — 깨진 이미지 아이콘을 내지 않는다(2026-09-14).
   const img = emblemUrl ? (
-    <GuildEmblemImg key={emblemUrl} src={emblemUrl} size={size} fallback={fallback} className="shrink-0 object-contain" />
+    <GuildEmblemImg key={emblemUrl} src={emblemUrl} alsoTry={alsoTry} size={size} fallback={fallback} className="shrink-0 object-contain" />
   ) : name ? (
     fallback
   ) : null;

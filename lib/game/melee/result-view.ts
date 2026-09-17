@@ -2,6 +2,7 @@ import 'server-only';
 
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 
+import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
@@ -117,9 +118,11 @@ export async function buildMeleeResultView(
       snapGuild.set(r.userId, { name: r.guildName ?? null, emblemUrl: r.guildEmblemUrl ?? null });
     }
   }
-  const guildFor = (uid: string): { name: string; emblemUrl: string | null } | null => {
+  // 스냅샷 문양 파일이 사라졌을 때(옛 보관함 삭제) 그 길드의 다음 문양으로 넘어갈 후보(2026-09-17) — 역사 페이지와 같은 규칙.
+  const emblemHistory = await getGuildEmblemHistory(battle.serverId).catch(() => ({}) as Record<number, string[]>);
+  const guildFor = (uid: string): { name: string; emblemUrl: string | null; alsoTry: string[] } | null => {
     const sg = snapGuild.get(uid);
-    return sg && sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl } : null;
+    return sg && sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl, alsoTry: emblemAlsoTry(sg.emblemUrl, emblemHistory) } : null;
   };
   const podium = topRows.map((r) => ({
     rank: r.rank,
@@ -132,6 +135,7 @@ export async function buildMeleeResultView(
     defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
     guildName: guildFor(r.uid)?.name ?? null,
     guildEmblemUrl: guildFor(r.uid)?.emblemUrl ?? null,
+    guildEmblemAlsoTry: guildFor(r.uid)?.alsoTry ?? [],
   }));
   // 전투 재생 로스터(감사 C 오버패칭) — 종전엔 아바타·코드·길드가 roster와 평행한 별도
   // 배열 3종으로 나가 참가자 정보가 4곳에 흩어졌다. 요소에 병합해 1곳으로, userId(uuid)는
