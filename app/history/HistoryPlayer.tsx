@@ -177,13 +177,10 @@ export function HistoryPlayer({
   const [stageView, setStageView] = useState<'map' | 'rank'>('map');
   /** 등장 방식 — 문단(기본) | 타이핑(느린 세밀 재생). */
   const [reveal, setReveal] = useState<'paragraph' | 'type'>('paragraph');
-  /** 무대 표시 크기(px) — PC 600(1.54배), 좁은 화면은 폭에 맞춤. 내부는 390 기준으로 그리고 transform으로 키운다(픽셀 아트라 깨끗). */
+  /** 무대 표시 크기(px) — 원본 390(사용자 확정 2026-09-17, 확대 안 함). 좁은 화면만 폭에 맞춰 줄인다. */
   const [stageSize, setStageSize] = useState(STAGE_PX);
   useEffect(() => {
-    const calc = () =>
-      setStageSize(
-        window.innerWidth >= 768 ? 600 : Math.max(280, Math.min(STAGE_PX, window.innerWidth - 32)),
-      );
+    const calc = () => setStageSize(Math.max(280, Math.min(STAGE_PX, window.innerWidth - 32)));
     calc();
     window.addEventListener('resize', calc);
     return () => window.removeEventListener('resize', calc);
@@ -637,8 +634,8 @@ export function HistoryPlayer({
 
   return (
     <main className="mx-auto w-full max-w-[1200px] px-4 py-4 md:px-6 md:py-8">
-      {/* 책 펼침면(2026-09-17) — 왼쪽: 판화 액자 속 지도(1.5배)·판도 한 줄·조작(화면에 고정), 오른쪽: 페이지를 따라 흐르는 기록. */}
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[600px_minmax(0,1fr)] md:items-start md:gap-10">
+      {/* 책 펼침면(2026-09-17) — 왼쪽: 판화 액자 속 지도(원본 390px)·판도 한 줄·조작(화면에 고정), 오른쪽: 페이지를 따라 흐르는 기록. */}
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[404px_minmax(0,1fr)] md:items-start md:gap-10">
         <aside className="md:sticky md:top-[72px] md:self-start">
           <div className="relative rounded-[6px] border border-[#b9a982] bg-[#efe7d3] p-[7px] shadow-[inset_0_0_0_1px_#fbf7ee,0_1px_0_#fff,0_10px_24px_-14px_rgba(60,40,10,.45)]">
             <div
