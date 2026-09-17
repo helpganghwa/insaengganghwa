@@ -50,7 +50,6 @@ const PAPER_INK_CSS = `
 .ig-paper{background-image:radial-gradient(120% 80% at 50% 0%,#faf6ee 0%,#f5f0e6 55%,#eee6d4 100%)}
 .ig-day p{font-size:15px;line-height:1.9;color:#2a251e}
 .ig-day p+p{margin-top:12px}
-.ig-day p:first-of-type::first-letter{float:left;font-family:Georgia,"Apple SD Gothic Neo",serif;font-size:3.1em;line-height:.82;padding:5px 7px 0 0;color:#8a4b23;font-weight:700}
 `;
 
 export default function HistoryLayout({ children }: { children: ReactNode }) {

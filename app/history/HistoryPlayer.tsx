@@ -16,6 +16,7 @@ import type {
   HistoryScene,
 } from '@/lib/game/history/types';
 import { assetUrl } from '@/lib/asset-versions';
+import { HistoryRace } from './HistoryRace';
 
 /**
  * 대륙의 역사 연속 재생(2026-09-16, 시안 v2 01) — 무대(지도) + 읽기 칸(재생 중 문장 강조) + 스크러버·조작.
@@ -41,6 +42,8 @@ const SPEEDS = [1, 2, 4] as const;
 const STATIC_DAY_MS = 5000; // 리플레이 스크립트가 없는 날(전투 없이 기록만) — 본문만 보여 주고 넘어간다
 /** 게임 세계지도와 같은 무대 폭(루트 viewport 390 기준 정사각) — 노드 17px가 게임과 같은 비율로 보인다(피드백 2). */
 const STAGE_PX = 390;
+/** 본문·헤드라인에는 길드 문양을 붙이지 않는다(2026-09-17 사용자 지시) — 색 굵은 이름만. */
+const NO_EMBLEM = (): readonly string[] => [];
 
 const TOKEN_RE = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}+/g;
 /** 헤드라인·카드용 칩 렌더 — 재생 본문은 패널이 그린다. */
@@ -174,7 +177,6 @@ export function HistoryPlayer({
   const [phase, setPhase] = useState<Phase>('idle');
   const [mode, setMode] = useState<Mode>('battle');
   /** 무대 보기 — 지도(구역 타일 제자리) | 순위(타일이 길드별 줄로 모여 막대를 이룸). 사용자가 누를 때만 바뀐다. */
-  const [stageView, setStageView] = useState<'map' | 'rank'>('map');
   /** 등장 방식 — 문단(기본) | 타이핑(느린 세밀 재생). */
   const [reveal, setReveal] = useState<'paragraph' | 'type'>('paragraph');
   /** 무대 표시 크기(px) — 원본 390(사용자 확정 2026-09-17, 확대 안 함). 좁은 화면만 폭에 맞춰 줄인다. */
@@ -501,12 +503,12 @@ export function HistoryPlayer({
     });
     mo.observe(el, { childList: true, subtree: true, characterData: true });
     const onScroll = () => {
-      stickRef.current = el.getBoundingClientRect().bottom < window.innerHeight + 120;
+      stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       mo.disconnect();
-      window.removeEventListener('scroll', onScroll);
+      el.removeEventListener('scroll', onScroll);
     };
   }, [phase]);
 
@@ -539,36 +541,6 @@ export function HistoryPlayer({
     if (phase === 'playing' || phase === 'loading') void startAt(idx);
   };
 
-  /**
-   * 순위 배치(2026-09-16) — 지금 소유 상태로 길드별 줄을 만든다(구역 많은 순, 동률은 이름순). 각 구역 타일은 자기 길드
-   * 줄의 j번째 칸으로 미끄러져 '타일로 된 막대'가 되고, 소유가 바뀌면 다른 줄로 건너간다. 좌표는 무대 %(폭이 줄어도 비율 유지).
-   */
-  const rank = useMemo(() => {
-    const byGuild = new Map<string, number[]>();
-    for (const z of zones) {
-      const g = owners[z.id];
-      if (!g) continue;
-      const list = byGuild.get(g);
-      if (list) list.push(z.id);
-      else byGuild.set(g, [z.id]);
-    }
-    const rows = [...byGuild.entries()].sort(
-      (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ko'),
-    );
-    const rowH = Math.min(8.5, 86 / Math.max(rows.length, 1));
-    const top0 = 7;
-    const labelW = 31;
-    const pos = new Map<number, { left: number; top: number }>();
-    const labels = rows.map(([guild, ids], k) => {
-      const top = top0 + k * rowH;
-      const step = Math.min(3.9, (100 - labelW - 3) / Math.max(ids.length, 1));
-      [...ids]
-        .sort((a, b) => a - b)
-        .forEach((id, j) => pos.set(id, { left: labelW + 1.8 + j * step, top }));
-      return { guild, count: ids.length, top };
-    });
-    return { pos, labels };
-  }, [owners, zones]);
   const cur = days[idx]!;
   const showingDay = phase === 'idle' ? days[n - 1]! : cur;
   const edgeLines = useMemo(
@@ -640,337 +612,12 @@ export function HistoryPlayer({
       : story.eras.findIndex((e) => idx >= e.startIdx && idx <= e.endIdx);
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] px-4 py-4 md:px-6 md:py-8">
-      {/* 책 펼침면(2026-09-17) — 왼쪽: 판화 액자 속 지도(원본 390px)·판도 한 줄·조작(화면에 고정), 오른쪽: 페이지를 따라 흐르는 기록. */}
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[404px_minmax(0,1fr)] md:items-start md:gap-10 xl:grid-cols-[404px_minmax(0,1fr)_272px] xl:gap-9">
-        <aside className="md:sticky md:top-[72px] md:self-start">
-          <div className="relative rounded-[6px] border border-[#b9a982] bg-[#efe7d3] p-[7px] shadow-[inset_0_0_0_1px_#fbf7ee,0_1px_0_#fff,0_10px_24px_-14px_rgba(60,40,10,.45)]">
-            <div
-              className="relative overflow-hidden rounded-[3px] border border-[#3a3128]"
-              style={{ width: stageSize, height: stageSize }}
-            >
-              <div
-                className="absolute top-0 left-0 isolate overflow-hidden bg-zinc-950"
-                style={{
-                  width: STAGE_PX,
-                  height: STAGE_PX,
-                  transform: `scale(${stageScale})`,
-                  transformOrigin: 'top left',
-                }}
-              >
-                <div
-                  ref={bindLayer}
-                  aria-hidden
-                  className={`pointer-events-none absolute inset-0 z-40 transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
-                />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={mapSrc}
-                  alt="대륙 지도"
-                  draggable={false}
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-                {/* 순위 보기 — 지도를 어둡게 내려 막대·이름이 읽히게 한다. */}
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute inset-0 z-[3] bg-[#14110d] transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-80' : 'opacity-0'}`}
-                />
-                {/* 길(인접선) — 역사 화면에선 이동 경로가 아니라 배경이다: 게임의 비활성 톤(회색·얇게)으로 낮춘다(피드백: 길이 문양보다 눈에 띔). */}
-                <svg
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-500 ${stageView === 'rank' ? 'opacity-0' : ''}`}
-                >
-                  {edgeLines.map((l) => (
-                    <line
-                      key={`h${l.key}`}
-                      x1={l.x1}
-                      y1={l.y1}
-                      x2={l.x2}
-                      y2={l.y2}
-                      stroke="#000000"
-                      strokeOpacity={0.25}
-                      strokeWidth={0.8}
-                      strokeLinecap="round"
-                    />
-                  ))}
-                  {edgeLines.map((l) => (
-                    <line
-                      key={`m${l.key}`}
-                      x1={l.x1}
-                      y1={l.y1}
-                      x2={l.x2}
-                      y2={l.y2}
-                      stroke="#e7dcc0"
-                      strokeOpacity={0.35}
-                      strokeWidth={0.45}
-                      strokeLinecap="round"
-                    />
-                  ))}
-                </svg>
-                {/* 영토 빛 — 소유 길드 색의 부드러운 원이 노드 밑에 깔려 지도가 '누구 땅'인지 색면으로 읽힌다. 소유가 바뀌면 700ms에 걸쳐 색이 흐른다. */}
-                {zones.map((z) => {
-                  const owner = owners[z.id] ?? null;
-                  const c = owner
-                    ? `color-mix(in srgb, ${meta[owner]?.color ?? '#9a917f'} 70%, white)`
-                    : null;
-                  return (
-                    <div
-                      key={`g${z.id}`}
-                      aria-hidden
-                      className="pointer-events-none absolute h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-[opacity,background] duration-700"
-                      style={{
-                        left: `${z.mapX}%`,
-                        top: `${z.mapY}%`,
-                        zIndex: 4,
-                        opacity: c && stageView === 'map' ? 1 : 0,
-                        background: c
-                          ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
-                          : 'transparent',
-                      }}
-                    />
-                  );
-                })}
-                {zones.map((z) => {
-                  const owner = owners[z.id] ?? null;
-                  const m = owner ? meta[owner] : undefined;
-                  const gc = m?.color ?? '#9a917f';
-                  const color = regionColor(z.region);
-                  const rp = stageView === 'rank' ? rank.pos.get(z.id) : undefined;
-                  const size = stageView === 'rank' ? 14 : 19;
-                  return (
-                    <div
-                      key={z.id}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
-                      style={{
-                        left: `${rp ? rp.left : z.mapX}%`,
-                        top: `${rp ? rp.top : z.mapY}%`,
-                        zIndex: owner ? 10 : 6,
-                        opacity: stageView === 'rank' && !rp ? 0 : 1,
-                      }}
-                      title={`${z.name}${owner ? ` · ${owner}` : ''}`}
-                    >
-                      <span
-                        className="relative flex items-center justify-center overflow-hidden rounded-[5px] transition-[width,height,background-color] duration-500"
-                        style={{
-                          width: size,
-                          height: size,
-                          // 문양(대개 어두운 외곽선)이 읽히도록 타일은 길드색을 밝게 섞은 바탕, 테두리는 길드색 원색.
-                          backgroundColor: owner
-                            ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
-                            : 'rgba(10,12,20,0.55)',
-                          boxShadow:
-                            focusRegion === z.region
-                              ? `0 0 0 2px #fde047, 0 0 10px #fde047aa, 0 1px 2px rgba(0,0,0,.55)`
-                              : owner
-                                ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
-                                : `0 0 0 1px ${color}66`,
-                        }}
-                      >
-                        {owner ? (
-                          <>
-                            {/* 문양이 없거나(옛 회차) 파일이 사라진 URL이면 길드 첫 글자 — 빈 타일로 두지 않는다. */}
-                            <span
-                              className="absolute inset-0 flex items-center justify-center text-[10px] leading-none font-black"
-                              style={{ color: gc, textShadow: '0 0 2px #fff' }}
-                            >
-                              {owner.slice(0, 1)}
-                            </span>
-                            <EmblemChain
-                              key={m?.emblemUrl ?? 'none'}
-                              urls={emblemChain(m)}
-                              className="relative h-full w-full object-contain"
-                            />
-                          </>
-                        ) : null}
-                      </span>
-                    </div>
-                  );
-                })}
-                {/* 순위 보기 — 합계 한 줄, 깃발이 없는 날엔 안내. */}
-                <div
-                  aria-hidden={stageView !== 'rank'}
-                  className={`pointer-events-none absolute inset-x-0 bottom-[5%] z-[12] text-center text-[10.5px] text-[#cfc6b3] tabular-nums transition-opacity duration-700 ${stageView === 'rank' ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  구역 {ownedCount} · 중립 {zones.length - ownedCount}
-                </div>
-                {stageView === 'rank' && rank.labels.length === 0 ? (
-                  <div
-                    className="pointer-events-none absolute inset-0 z-[12] flex items-center justify-center text-[13px] text-[#e7dcc0]"
-                    style={SERIF}
-                  >
-                    아직 세워진 깃발이 없습니다
-                  </div>
-                ) : null}
-                {/* 순위 줄 라벨 — 문양·이름·구역 수. 줄 순서가 바뀌면 top이 미끄러진다. */}
-                {rank.labels.map((r) => {
-                  const m = meta[r.guild];
-                  const gc = m?.color ?? '#9a917f';
-                  return (
-                    <div
-                      key={`r${r.guild}`}
-                      className="pointer-events-none absolute flex -translate-y-1/2 items-center gap-1 transition-[top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
-                      style={{
-                        left: '2%',
-                        top: `${r.top}%`,
-                        width: '29%',
-                        zIndex: 12,
-                        opacity: stageView === 'rank' ? 1 : 0,
-                      }}
-                    >
-                      <span
-                        className="relative flex h-[14px] w-[14px] shrink-0 items-center justify-center overflow-hidden rounded-[4px]"
-                        style={{
-                          backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
-                          boxShadow: `0 0 0 1.5px ${gc}`,
-                        }}
-                      >
-                        <span
-                          className="absolute inset-0 flex items-center justify-center text-[8px] leading-none font-black"
-                          style={{ color: gc, textShadow: '0 0 2px #fff' }}
-                        >
-                          {r.guild.slice(0, 1)}
-                        </span>
-                        <EmblemChain
-                          key={m?.emblemUrl ?? 'none'}
-                          urls={emblemChain(m)}
-                          className="relative h-full w-full object-contain"
-                        />
-                      </span>
-                      <span
-                        className="min-w-0 truncate text-[11px] leading-none font-bold text-[#f3ede2]"
-                        style={{ textShadow: '0 1px 2px #000' }}
-                      >
-                        {r.guild}
-                      </span>
-                      <span
-                        className="shrink-0 font-mono text-[10px] leading-none text-[#e7dcc0]"
-                        style={{ textShadow: '0 1px 2px #000' }}
-                      >
-                        {r.count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* 판도 한 줄 — 길드별 영토 비율. 점령 때마다 움직인다. */}
-          <div className="mt-3">
-            <div className={`mb-1 flex justify-between text-[11px] tabular-nums ${PAPER.muted}`}>
-              <span className="truncate">
-                {share.slice(0, 4).map(([g, c], i) => (
-                  <span key={g} className="mr-2.5 whitespace-nowrap">
-                    <i
-                      className="mr-1 inline-block h-2 w-2 rounded-[2px] align-[-1px]"
-                      style={{ background: meta[g]?.color ?? '#9a917f' }}
-                    />
-                    <b className="font-semibold text-[#2a251e]">{g}</b> {c}
-                    {i < Math.min(3, share.length - 1) ? '' : ''}
-                  </span>
-                ))}
-              </span>
-              <span className="shrink-0">중립 {zones.length - ownedCount}</span>
-            </div>
-            <div className="flex h-2.5 overflow-hidden rounded-full bg-[#e2d9c6]">
-              {share.map(([g, c]) => (
-                <div
-                  key={g}
-                  title={`${g} ${c}`}
-                  className="h-full transition-[width] duration-700 ease-out"
-                  style={{
-                    width: `${(c / Math.max(1, zones.length)) * 100}%`,
-                    background: meta[g]?.color ?? '#9a917f',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* 조작 — 재생 조작 · 배속 · 읽기 방식 · 전투|빠른 · 지도|순위 */}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
-            <IconBtn
-              onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)}
-              title="전날"
-              icon="prev"
-              disabled={phase !== 'idle' && idx === 0}
-            />
-            <IconBtn
-              onClick={togglePause}
-              title={
-                phase === 'idle'
-                  ? '처음부터 재생'
-                  : phase === 'end'
-                    ? '다시 재생'
-                    : isPlaying
-                      ? '일시정지'
-                      : '재생'
-              }
-              icon={isPlaying ? 'pause' : 'play'}
-              primary
-            />
-            <IconBtn
-              onClick={() => void startAt(idx + 1)}
-              title="다음 날"
-              icon="next"
-              disabled={phase === 'idle' || idx >= n - 1}
-            />
-            <button
-              type="button"
-              onClick={() => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1)}
-              title="배속(누를 때마다 ×1 → ×2 → ×4)"
-              className={`h-7 rounded-lg border px-2 text-[11px] font-bold tabular-nums ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
-            >
-              ×{speed}
-            </button>
-            <button
-              type="button"
-              onClick={() => setReveal((r) => (r === 'paragraph' ? 'type' : 'paragraph'))}
-              aria-pressed={reveal === 'type'}
-              title="글자 타이핑 재생(느림)"
-              className={`h-7 rounded-lg border px-2 text-[11px] font-bold ${reveal === 'type' ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.muted} ${PAPER.hover}`}`}
-            >
-              타이핑
-            </button>
-            <span
-              className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
-              role="group"
-              aria-label="재생 방식"
-            >
-              {(['battle', 'quick'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => switchMode(m)}
-                  aria-pressed={mode === m}
-                  className={`px-2.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
-                >
-                  {m === 'battle' ? '전투' : '빠른'}
-                </button>
-              ))}
-            </span>
-            <span
-              className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
-              role="group"
-              aria-label="무대 보기"
-            >
-              {(['map', 'rank'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-pressed={stageView === v}
-                  onClick={() => setStageView(v)}
-                  className={`px-2.5 text-[11px] font-bold ${stageView === v ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
-                >
-                  {v === 'map' ? '지도' : '순위'}
-                </button>
-              ))}
-            </span>
-          </div>
-          <div className="mt-2.5">
+    <main className="mx-auto w-full max-w-[1360px] px-4 pt-4 pb-24 md:h-[calc(100dvh-56px)] md:px-6 md:pt-5 md:pb-20">
+      {/* 3분할(2026-09-17 상세 수정) — 세로 스크롤 없이 화면 높이에 맞춘다: 지도 | 글(열 안에서 스크롤) | 순위 바 레이스·장면·시대. 조작은 화면 하단 플로팅. */}
+      <div className="flex flex-col gap-6 md:grid md:h-full md:grid-cols-[390px_minmax(0,1fr)] md:items-stretch md:gap-8 xl:grid-cols-[390px_minmax(0,1fr)_300px]">
+        <aside className="md:flex md:h-full md:min-h-0 md:flex-col">
+          {/* 시대 띠(스크러버) — 지도 위 */}
+          <div>
             <div className="relative">
               <div
                 className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
@@ -1038,6 +685,182 @@ export function HistoryPlayer({
               <span>{shortDay(days[n - 1]!.kstDay)}</span>
             </div>
           </div>
+          <div className="mx-auto mt-2.5 w-full" style={{ maxWidth: STAGE_PX }}>
+            <div
+              className="relative overflow-hidden rounded-[3px]"
+              style={{ width: stageSize, height: stageSize }}
+            >
+              <div
+                className="absolute top-0 left-0 isolate overflow-hidden bg-zinc-950"
+                style={{
+                  width: STAGE_PX,
+                  height: STAGE_PX,
+                  transform: `scale(${stageScale})`,
+                  transformOrigin: 'top left',
+                }}
+              >
+                <div
+                  ref={bindLayer}
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-0 z-40 transition-opacity duration-500`}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mapSrc}
+                  alt="대륙 지도"
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                {/* 순위 보기 — 지도를 어둡게 내려 막대·이름이 읽히게 한다. */}
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute inset-0 z-[3] bg-[#14110d] opacity-0 transition-opacity duration-700`}
+                />
+                {/* 길(인접선) — 역사 화면에선 이동 경로가 아니라 배경이다: 게임의 비활성 톤(회색·얇게)으로 낮춘다(피드백: 길이 문양보다 눈에 띔). */}
+                <svg
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-500`}
+                >
+                  {edgeLines.map((l) => (
+                    <line
+                      key={`h${l.key}`}
+                      x1={l.x1}
+                      y1={l.y1}
+                      x2={l.x2}
+                      y2={l.y2}
+                      stroke="#000000"
+                      strokeOpacity={0.25}
+                      strokeWidth={0.8}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                  {edgeLines.map((l) => (
+                    <line
+                      key={`m${l.key}`}
+                      x1={l.x1}
+                      y1={l.y1}
+                      x2={l.x2}
+                      y2={l.y2}
+                      stroke="#e7dcc0"
+                      strokeOpacity={0.35}
+                      strokeWidth={0.45}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                </svg>
+                {/* 영토 빛 — 소유 길드 색의 부드러운 원이 노드 밑에 깔려 지도가 '누구 땅'인지 색면으로 읽힌다. 소유가 바뀌면 700ms에 걸쳐 색이 흐른다. */}
+                {zones.map((z) => {
+                  const owner = owners[z.id] ?? null;
+                  const c = owner
+                    ? `color-mix(in srgb, ${meta[owner]?.color ?? '#9a917f'} 70%, white)`
+                    : null;
+                  return (
+                    <div
+                      key={`g${z.id}`}
+                      aria-hidden
+                      className="pointer-events-none absolute h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-[opacity,background] duration-700"
+                      style={{
+                        left: `${z.mapX}%`,
+                        top: `${z.mapY}%`,
+                        zIndex: 4,
+                        opacity: c ? 1 : 0,
+                        background: c
+                          ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
+                          : 'transparent',
+                      }}
+                    />
+                  );
+                })}
+                {zones.map((z) => {
+                  const owner = owners[z.id] ?? null;
+                  const m = owner ? meta[owner] : undefined;
+                  const gc = m?.color ?? '#9a917f';
+                  const color = regionColor(z.region);
+                  const size = 19;
+                  return (
+                    <div
+                      key={z.id}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 transition-[left,top,opacity] duration-700 ease-[cubic-bezier(.4,0,.2,1)]"
+                      style={{
+                        left: `${z.mapX}%`,
+                        top: `${z.mapY}%`,
+                        zIndex: owner ? 10 : 6,
+                      }}
+                      title={`${z.name}${owner ? ` · ${owner}` : ''}`}
+                    >
+                      <span
+                        className="relative flex items-center justify-center overflow-hidden rounded-[5px] transition-[width,height,background-color] duration-500"
+                        style={{
+                          width: size,
+                          height: size,
+                          // 문양(대개 어두운 외곽선)이 읽히도록 타일은 길드색을 밝게 섞은 바탕, 테두리는 길드색 원색.
+                          backgroundColor: owner
+                            ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
+                            : 'rgba(10,12,20,0.55)',
+                          boxShadow:
+                            focusRegion === z.region
+                              ? `0 0 0 2px #fde047, 0 0 10px #fde047aa, 0 1px 2px rgba(0,0,0,.55)`
+                              : owner
+                                ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                                : `0 0 0 1px ${color}66`,
+                        }}
+                      >
+                        {owner ? (
+                          <>
+                            {/* 문양이 없거나(옛 회차) 파일이 사라진 URL이면 길드 첫 글자 — 빈 타일로 두지 않는다. */}
+                            <span
+                              className="absolute inset-0 flex items-center justify-center text-[10px] leading-none font-black"
+                              style={{ color: gc, textShadow: '0 0 2px #fff' }}
+                            >
+                              {owner.slice(0, 1)}
+                            </span>
+                            <EmblemChain
+                              key={m?.emblemUrl ?? 'none'}
+                              urls={emblemChain(m)}
+                              className="relative h-full w-full object-contain"
+                            />
+                          </>
+                        ) : null}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          {/* 판도 한 줄 — 길드별 영토 비율. 점령 때마다 움직인다. */}
+          <div className="mt-2.5">
+            <div className={`mb-1 flex justify-between text-[11px] tabular-nums ${PAPER.muted}`}>
+              <span className="truncate">
+                {share.slice(0, 4).map(([g, c], i) => (
+                  <span key={g} className="mr-2.5 whitespace-nowrap">
+                    <i
+                      className="mr-1 inline-block h-2 w-2 rounded-[2px] align-[-1px]"
+                      style={{ background: meta[g]?.color ?? '#9a917f' }}
+                    />
+                    <b className="font-semibold text-[#2a251e]">{g}</b> {c}
+                    {i < Math.min(3, share.length - 1) ? '' : ''}
+                  </span>
+                ))}
+              </span>
+              <span className="shrink-0">중립 {zones.length - ownedCount}</span>
+            </div>
+            <div className="flex h-2.5 overflow-hidden rounded-full bg-[#e2d9c6]">
+              {share.map(([g, c]) => (
+                <div
+                  key={g}
+                  title={`${g} ${c}`}
+                  className="h-full transition-[width] duration-700 ease-out"
+                  style={{
+                    width: `${(c / Math.max(1, zones.length)) * 100}%`,
+                    background: meta[g]?.color ?? '#9a917f',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
           <div className="mt-5 xl:hidden">
             <InfoPanel
               scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
@@ -1065,7 +888,7 @@ export function HistoryPlayer({
             </div>
           </div>
           {phase === 'idle' ? (
-            <div className="pt-4">
+            <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-2 md:max-w-[66ch]">
               <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                 대륙의 역사
               </div>
@@ -1102,23 +925,25 @@ export function HistoryPlayer({
                     kstDay={latest.kstDay}
                     nth={n}
                     headline={latest.headline}
-                    battles={latest.replay ? Object.keys(latest.replay.events).length : null}
                     events={story.events[latest.kstDay] ?? []}
                     guildColor={guildColor}
-                    guildEmblem={guildEmblem}
+                    guildEmblem={NO_EMBLEM}
                   />
                   <div className="ig-day mt-3">
                     <StaticChronicle
                       text={latest.text}
                       guildColor={guildColor}
-                      guildEmblem={guildEmblem}
+                      guildEmblem={NO_EMBLEM}
                     />
                   </div>
                 </div>
               ) : null}
             </div>
           ) : (
-            <div ref={readerRef} className="pt-4">
+            <div
+              ref={readerRef}
+              className="min-h-0 flex-1 overflow-y-auto pt-4 pr-2 md:max-w-[66ch]"
+            >
               {queue.length === 0 && quickRows.length === 0 && phase === 'loading' ? (
                 <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
               ) : null}
@@ -1141,7 +966,7 @@ export function HistoryPlayer({
                       key={r.kstDay}
                       type="button"
                       onClick={() => begin('battle', r.nth - 1)}
-                      className={`grid grid-cols-[46px_1fr_auto] items-baseline gap-2 rounded-md px-1 py-1 text-left ${r.captures < 0 ? 'bg-[#ece3d1]' : PAPER.hover}`}
+                      className={`grid grid-cols-[46px_1fr] items-baseline gap-2 rounded-md px-1 py-1 text-left ${r.captures < 0 ? 'bg-[#ece3d1]' : PAPER.hover}`}
                       title="이날을 전투 재생으로 보기"
                     >
                       <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>
@@ -1153,9 +978,6 @@ export function HistoryPlayer({
                         ) : (
                           '기록'
                         )}
-                      </span>
-                      <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>
-                        {r.captures >= 0 ? `점령 ${r.captures}` : '…'}
                       </span>
                     </button>
                   ))}
@@ -1177,11 +999,10 @@ export function HistoryPlayer({
                       kstDay={q.kstDay}
                       nth={q.nth}
                       headline={q.headline}
-                      battles={q.data.replay ? Object.keys(q.data.replay.events).length : null}
                       dim={i < queue.length - 1}
                       events={story.events[q.kstDay] ?? []}
                       guildColor={guildColor}
-                      guildEmblem={guildEmblem}
+                      guildEmblem={NO_EMBLEM}
                     />
                     <div
                       className={`ig-day mt-3 transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
@@ -1208,7 +1029,6 @@ export function HistoryPlayer({
                           speed={speed}
                           pausedRef={pausedRef}
                           guildColor={guildColor}
-                          guildEmblem={guildEmblem}
                           zoneStyle="plain"
                           userStyle="plain"
                           reveal={reveal}
@@ -1217,7 +1037,7 @@ export function HistoryPlayer({
                         <StaticChronicle
                           text={q.data.text}
                           guildColor={guildColor}
-                          guildEmblem={guildEmblem}
+                          guildEmblem={NO_EMBLEM}
                         />
                       )}
                     </div>
@@ -1269,7 +1089,7 @@ export function HistoryPlayer({
         </section>
 
         {/* ── 정보 열(오른쪽, 넓은 화면) — 이날의 장면 · 순위 · 시대 목차. 글 열은 문장만 남긴다. ── */}
-        <aside className="hidden xl:sticky xl:top-[72px] xl:block xl:self-start">
+        <aside className="hidden xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-y-auto">
           <InfoPanel
             scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
             share={share}
@@ -1281,6 +1101,78 @@ export function HistoryPlayer({
             onEra={(k) => (phase === 'idle' ? begin('battle', k) : void startAt(k))}
           />
         </aside>
+      </div>
+
+      {/* ── 플로팅 컨트롤러 — 화면 하단 가운데, 가로 한 줄 ── */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+        <div
+          className={`pointer-events-auto flex max-w-full flex-wrap items-center gap-1.5 rounded-full border bg-[#fdfaf3]/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(40,30,10,.35)] backdrop-blur ${PAPER.border}`}
+        >
+          <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
+          <IconBtn
+            onClick={() => void startAt((phase === 'idle' ? n : idx) - 1)}
+            title="전날"
+            icon="prev"
+            disabled={phase !== 'idle' && idx === 0}
+          />
+          <IconBtn
+            onClick={togglePause}
+            title={
+              phase === 'idle'
+                ? '처음부터 재생'
+                : phase === 'end'
+                  ? '다시 재생'
+                  : isPlaying
+                    ? '일시정지'
+                    : '재생'
+            }
+            icon={isPlaying ? 'pause' : 'play'}
+            primary
+          />
+          <IconBtn
+            onClick={() => void startAt(idx + 1)}
+            title="다음 날"
+            icon="next"
+            disabled={phase === 'idle' || idx >= n - 1}
+          />
+          <button
+            type="button"
+            onClick={() => setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length] ?? 1)}
+            title="배속(누를 때마다 ×1 → ×2 → ×4)"
+            className={`h-7 rounded-lg border px-2 text-[11px] font-bold tabular-nums ${speed === 1 ? `${PAPER.border} ${PAPER.hover}` : 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]'}`}
+          >
+            ×{speed}
+          </button>
+          <button
+            type="button"
+            onClick={() => setReveal((r) => (r === 'paragraph' ? 'type' : 'paragraph'))}
+            aria-pressed={reveal === 'type'}
+            title="글자 타이핑 재생(느림)"
+            className={`h-7 rounded-lg border px-2 text-[11px] font-bold ${reveal === 'type' ? 'border-[#2a251e] bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.border} ${PAPER.muted} ${PAPER.hover}`}`}
+          >
+            타이핑
+          </button>
+          <span
+            className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`}
+            role="group"
+            aria-label="재생 방식"
+          >
+            {(['battle', 'quick'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => switchMode(m)}
+                aria-pressed={mode === m}
+                className={`px-2.5 text-[11px] font-bold ${mode === m ? 'bg-[#2a251e] text-[#f5f0e6]' : `${PAPER.muted} ${PAPER.hover}`}`}
+              >
+                {m === 'battle' ? '전투' : '빠른'}
+              </button>
+            ))}
+          </span>
+          <span className={`ml-1 pr-1 text-[11px] tabular-nums ${PAPER.muted}`}>
+            {phase === 'idle' ? `${n}일` : `${idx + 1} / ${n}`}
+          </span>
+        </div>
       </div>
     </main>
   );
@@ -1306,7 +1198,6 @@ function InfoPanel({
   curEra: number;
   onEra: (startIdx: number) => void;
 }) {
-  const max = Math.max(1, share[0]?.[1] ?? 1);
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -1323,44 +1214,19 @@ function InfoPanel({
       </div>
       <div>
         <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>순위</div>
-        <div className="flex flex-col gap-1.5">
-          {share.slice(0, 8).map(([g, c], i) => {
-            const gc = meta[g]?.color ?? '#9a917f';
-            const urls = guildEmblem(g);
-            return (
-              <div
-                key={g}
-                className="grid grid-cols-[14px_16px_1fr_28px] items-center gap-2 text-[12px]"
-              >
-                <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>{i + 1}</span>
-                <span
-                  className="inline-block h-4 w-4 overflow-hidden rounded-[3px]"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
-                    boxShadow: `0 0 0 1px ${gc}`,
-                  }}
-                >
-                  <EmblemChain
-                    key={urls[0] ?? 'none'}
-                    urls={urls}
-                    className="h-full w-full object-contain"
-                  />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold">{g}</span>
-                  <span
-                    className="mt-0.5 block h-1 rounded-full transition-[width] duration-700 ease-out"
-                    style={{ width: `${(c / max) * 100}%`, background: gc }}
-                  />
-                </span>
-                <span className="text-right text-[12px] font-semibold tabular-nums">{c}</span>
-              </div>
-            );
-          })}
-          {share.length === 0 ? (
-            <div className={`text-[11.5px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>
-          ) : null}
-        </div>
+        {share.length > 0 ? (
+          <HistoryRace
+            rows={share.map(([g, c]) => ({
+              key: String(meta[g]?.id ?? g),
+              name: g,
+              count: c,
+              color: meta[g]?.color ?? '#9a917f',
+              emblem: guildEmblem(g)[0] ?? null,
+            }))}
+          />
+        ) : (
+          <div className={`text-[11.5px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>
+        )}
       </div>
       {eras.length > 0 ? (
         <div>
@@ -1505,7 +1371,6 @@ function DayDivider({
   kstDay,
   nth,
   headline,
-  battles,
   dim,
   events,
   guildColor,
@@ -1514,7 +1379,6 @@ function DayDivider({
   kstDay: string;
   nth: number;
   headline: string;
-  battles?: number | null;
   dim?: boolean;
   /** 그날 사건 칩(1위 교체·석권·개명·해산 등) — 구분선 끝에 작게. */
   events?: HistoryEvent[];
@@ -1529,7 +1393,6 @@ function DayDivider({
         <span className="h-px flex-1 bg-[#ece5d6]" />
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
           {ordinalKo(nth)} 번째 날 · {kstDay.slice(5).replace('-', '/')}
-          {battles ? ` · 전투 ${battles}` : ''}
           {(events ?? []).slice(0, 3).map((e, i) => (
             <i
               key={i}
