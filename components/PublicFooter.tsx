@@ -33,9 +33,6 @@ export function PublicFooter() {
         {/* 위키는 viewport를 재정의하므로 통짜 <a> + 새 창. PWA에선 cross-origin으로
             열어 브라우저 뷰 강제 분리(WikiLink — 스코프 내 _blank가 앱 안에서 열리는 버그 대응). */}
         <WikiLink className="shrink-0 hover:underline">위키</WikiLink>
-        <WikiLink path="/history" className="shrink-0 hover:underline">
-          역사
-        </WikiLink>
       </nav>
       {/* 가격 목록은 DOM에만(sr-only) — 크롤러·스크린리더 인식용, 화면 미표시.
           /pricing 접근은 상단 nav '상품안내' 링크로 충분(중복 제거). */}

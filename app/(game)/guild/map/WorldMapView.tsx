@@ -1,6 +1,5 @@
 'use client';
 
-import { WikiLink } from '@/components/WikiLink';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, useCallback } from 'react';
@@ -910,15 +909,6 @@ export function WorldMapView({
                   </span>
                 </li>
               ))}
-              {/* 대륙 연대기(공개 역사 페이지, 2026-09-17) — 첫날부터 지도 위에서 이어 보기. 위키와 같은 새 창 규칙. */}
-              <li className="pt-2.5">
-                <WikiLink
-                  path="/history"
-                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2.5 py-1 text-[11.5px] font-bold text-zinc-600 active:opacity-60 dark:border-zinc-800 dark:text-zinc-300"
-                >
-                  대륙의 역사 이어 보기 →
-                </WikiLink>
-              </li>
               {/* 로어 마감 — 더 오래된 기록은 소실됨을 암시. */}
               <li className="pt-3 text-center text-[11px] italic leading-relaxed text-zinc-400 dark:text-zinc-600">
                 그 이전의 기록은 세월에 바래어, 이제는 아무도 알지 못한다.

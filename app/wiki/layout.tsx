@@ -49,9 +49,6 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
             {/* 게임으로는 통짜 이동 — 소프트 내비게이션은 루트 레이아웃을 다시 렌더하지 않아
                 위 viewport 재정의가 게임 화면(고정 390)까지 따라간다. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href={`${SITE_ORIGIN}/history`} className={`rounded-md px-2 py-1 ${PAPER.hover}`}>
-              역사
-            </a>
             <a
               href={`${SITE_ORIGIN}/`}
               className={`rounded-md border px-2.5 py-1 text-[12px] font-semibold ${PAPER.card} ${PAPER.hover}`}
