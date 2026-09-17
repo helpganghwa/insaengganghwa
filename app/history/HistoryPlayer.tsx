@@ -188,6 +188,8 @@ export function HistoryPlayer({
   const stageScale = stageSize / STAGE_PX;
   /** 그날의 장면 지역 — 날이 시작될 때 2.2초 동안 그 지역 타일이 밝아진다. */
   const [focusRegion, setFocusRegion] = useState<string | null>(null);
+  /** 오른쪽 정보 열의 '이날의 장면' — 재생 중인 날의 장면(정지 땐 오늘). */
+  const [curScene, setCurScene] = useState<HistoryScene | null>(null);
   const [idx, setIdx] = useState<number>(n - 1);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1); // 게임과 같은 속도가 기본
   const [paused, setPaused] = useState(false);
@@ -442,6 +444,7 @@ export function HistoryPlayer({
       if (token !== run.current) return;
       void fetchDay(k + 1);
       const replay = data?.replay ?? null;
+      setCurScene(data?.scene ?? null);
       // 그날의 장면 지역을 잠깐 밝힌다.
       if (data?.scene?.region) {
         const region = data.scene.region;
@@ -631,11 +634,15 @@ export function HistoryPlayer({
     return [...c.entries()].sort((a, b) => b[1] - a[1]);
   }, [owners]);
   const eraStartIdx = useMemo(() => new Set(story.eras.map((e) => e.startIdx)), [story.eras]);
+  const curEraIdx =
+    phase === 'idle'
+      ? story.eras.length - 1
+      : story.eras.findIndex((e) => idx >= e.startIdx && idx <= e.endIdx);
 
   return (
-    <main className="mx-auto w-full max-w-[1200px] px-4 py-4 md:px-6 md:py-8">
+    <main className="mx-auto w-full max-w-[1360px] px-4 py-4 md:px-6 md:py-8">
       {/* 책 펼침면(2026-09-17) — 왼쪽: 판화 액자 속 지도(원본 390px)·판도 한 줄·조작(화면에 고정), 오른쪽: 페이지를 따라 흐르는 기록. */}
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[404px_minmax(0,1fr)] md:items-start md:gap-10">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[404px_minmax(0,1fr)] md:items-start md:gap-10 xl:grid-cols-[404px_minmax(0,1fr)_272px] xl:gap-9">
         <aside className="md:sticky md:top-[72px] md:self-start">
           <div className="relative rounded-[6px] border border-[#b9a982] bg-[#efe7d3] p-[7px] shadow-[inset_0_0_0_1px_#fbf7ee,0_1px_0_#fff,0_10px_24px_-14px_rgba(60,40,10,.45)]">
             <div
@@ -1031,9 +1038,21 @@ export function HistoryPlayer({
               <span>{shortDay(days[n - 1]!.kstDay)}</span>
             </div>
           </div>
+          <div className="mt-5 xl:hidden">
+            <InfoPanel
+              scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
+              share={share}
+              meta={meta}
+              guildEmblem={guildEmblem}
+              eras={story.eras}
+              days={days}
+              curEra={curEraIdx}
+              onEra={(k) => (phase === 'idle' ? begin('battle', k) : void startAt(k))}
+            />
+          </div>
         </aside>
 
-        {/* ── 기록(오른쪽) — 페이지를 따라 흐른다. 정지 땐 제목·버튼과 오늘의 기록. ── */}
+        {/* ── 기록(가운데) — 페이지를 따라 흐른다. 정지 땐 제목·버튼과 오늘의 기록. ── */}
         <section className="max-w-[66ch] min-w-0">
           <div
             className={`flex items-baseline justify-between gap-3 border-b pb-2 ${PAPER.border}`}
@@ -1088,7 +1107,6 @@ export function HistoryPlayer({
                     guildColor={guildColor}
                     guildEmblem={guildEmblem}
                   />
-                  <SceneCard scene={latest.scene} guildEmblem={guildEmblem} />
                   <div className="ig-day mt-3">
                     <StaticChronicle
                       text={latest.text}
@@ -1165,7 +1183,6 @@ export function HistoryPlayer({
                       guildColor={guildColor}
                       guildEmblem={guildEmblem}
                     />
-                    <SceneCard scene={q.data.scene} guildEmblem={guildEmblem} />
                     <div
                       className={`ig-day mt-3 transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
                     >
@@ -1250,8 +1267,132 @@ export function HistoryPlayer({
             </div>
           )}
         </section>
+
+        {/* ── 정보 열(오른쪽, 넓은 화면) — 이날의 장면 · 순위 · 시대 목차. 글 열은 문장만 남긴다. ── */}
+        <aside className="hidden xl:sticky xl:top-[72px] xl:block xl:self-start">
+          <InfoPanel
+            scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
+            share={share}
+            meta={meta}
+            guildEmblem={guildEmblem}
+            eras={story.eras}
+            days={days}
+            curEra={curEraIdx}
+            onEra={(k) => (phase === 'idle' ? begin('battle', k) : void startAt(k))}
+          />
+        </aside>
       </div>
     </main>
+  );
+}
+
+/** 정보 열 — 이날의 장면 카드, 길드 순위(문양·구역 수·막대), 시대 목차(누르면 그 시대 첫날부터). */
+function InfoPanel({
+  scene,
+  share,
+  meta,
+  guildEmblem,
+  eras,
+  days,
+  curEra,
+  onEra,
+}: {
+  scene: HistoryScene | null;
+  share: [string, number][];
+  meta: Record<string, HistoryGuildMeta>;
+  guildEmblem: (name: string) => readonly string[];
+  eras: HistoryEra[];
+  days: HistoryDay[];
+  curEra: number;
+  onEra: (startIdx: number) => void;
+}) {
+  const max = Math.max(1, share[0]?.[1] ?? 1);
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>이날의 장면</div>
+        {scene ? (
+          <SceneCard scene={scene} guildEmblem={guildEmblem} compact />
+        ) : (
+          <div
+            className={`rounded-[6px] border border-dashed px-3 py-6 text-center text-[11.5px] ${PAPER.border} ${PAPER.muted}`}
+          >
+            기록을 펼치면 나타납니다
+          </div>
+        )}
+      </div>
+      <div>
+        <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>순위</div>
+        <div className="flex flex-col gap-1.5">
+          {share.slice(0, 8).map(([g, c], i) => {
+            const gc = meta[g]?.color ?? '#9a917f';
+            const urls = guildEmblem(g);
+            return (
+              <div
+                key={g}
+                className="grid grid-cols-[14px_16px_1fr_28px] items-center gap-2 text-[12px]"
+              >
+                <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>{i + 1}</span>
+                <span
+                  className="inline-block h-4 w-4 overflow-hidden rounded-[3px]"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${gc} 40%, #fdfaf3)`,
+                    boxShadow: `0 0 0 1px ${gc}`,
+                  }}
+                >
+                  <EmblemChain
+                    key={urls[0] ?? 'none'}
+                    urls={urls}
+                    className="h-full w-full object-contain"
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{g}</span>
+                  <span
+                    className="mt-0.5 block h-1 rounded-full transition-[width] duration-700 ease-out"
+                    style={{ width: `${(c / max) * 100}%`, background: gc }}
+                  />
+                </span>
+                <span className="text-right text-[12px] font-semibold tabular-nums">{c}</span>
+              </div>
+            );
+          })}
+          {share.length === 0 ? (
+            <div className={`text-[11.5px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>
+          ) : null}
+        </div>
+      </div>
+      {eras.length > 0 ? (
+        <div>
+          <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>시대</div>
+          <div className={`divide-y border-y ${PAPER.border} divide-[#ece5d6]`}>
+            {eras.map((e, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onEra(e.startIdx)}
+                title="이 시대 첫날부터 재생"
+                className={`flex w-full items-center gap-2.5 px-1 py-2 text-left text-[12px] ${i === curEra ? 'bg-[#f6efe1]' : PAPER.hover}`}
+              >
+                <span className={`w-9 shrink-0 text-[10px] tabular-nums ${PAPER.muted}`}>
+                  제{i + 1}장
+                </span>
+                <i
+                  className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                  style={{ background: e.color ?? '#9a917f' }}
+                />
+                <span className="min-w-0 flex-1 truncate font-semibold" style={SERIF}>
+                  「{e.name}」의 시대
+                </span>
+                <span className={`shrink-0 text-[10.5px] tabular-nums ${PAPER.muted}`}>
+                  {shortDay(days[e.startIdx]!.kstDay)}~ · {e.endIdx - e.startIdx + 1}일
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1286,14 +1427,19 @@ function ChapterHeading({
 function SceneCard({
   scene,
   guildEmblem,
+  compact = false,
 }: {
   scene: HistoryScene | null;
   guildEmblem: (name: string) => readonly string[];
+  /** 정보 열용 — 위 여백 없이. */
+  compact?: boolean;
 }) {
   if (!scene) return null;
   const bg = scene.region ? assetUrl(`/sprites/guild/region/${scene.region}.png`) : null;
   return (
-    <div className="relative mt-3 overflow-hidden rounded-[6px] border border-[#3a3128] bg-[#1b1712] text-[#f3ede2]">
+    <div
+      className={`relative overflow-hidden rounded-[6px] border border-[#3a3128] bg-[#1b1712] text-[#f3ede2] ${compact ? '' : 'mt-3'}`}
+    >
       {bg ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
