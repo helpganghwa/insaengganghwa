@@ -40,7 +40,16 @@ const STAGE_PX = 390;
 
 const TOKEN_RE = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}+/g;
 /** 헤드라인·카드용 칩 렌더 — 재생 본문은 패널이 그린다. */
-function Headline({ text, className = '' }: { text: string; className?: string }) {
+function Headline({
+  text,
+  className = '',
+  guildColor,
+}: {
+  text: string;
+  className?: string;
+  /** 길드명 색(없으면 기본 보라). */
+  guildColor?: (name: string) => string | null;
+}) {
   const parts: React.ReactNode[] = [];
   let last = 0;
   let i = 0;
@@ -48,16 +57,18 @@ function Headline({ text, className = '' }: { text: string; className?: string }
     if (m.index! > last) parts.push(text.slice(last, m.index));
     const kind = m[1]!;
     const name = m[2]!;
+    const gc = kind === 'g' ? (guildColor?.(name) ?? null) : null;
     parts.push(
       <span
         key={i++}
         className={
           kind === 'g'
-            ? 'inline-block rounded px-1 font-semibold text-[#4b3a8a]'
+            ? `inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`
             : kind === 'z'
-              ? 'inline-block rounded px-1 font-semibold text-[#2f6a45]'
-              : 'inline-block rounded px-1 font-semibold text-[#8a4b23]'
+              ? 'inline-block px-0.5 underline decoration-dotted underline-offset-2'
+              : 'inline-block px-0.5 font-semibold text-[#8a4b23]'
         }
+        style={gc ? { color: gc } : undefined}
       >
         {name}
       </span>,
@@ -172,6 +183,8 @@ export function HistoryPlayer({
   const pausedRef = useRef(false);
   const [owners, setOwners] = useState<Record<number, string | null>>(index.owners);
   const [meta, setMeta] = useState<Record<string, HistoryGuildMeta>>(index.guilds);
+  /** 길드명 색 — 연대기 본문·헤드라인에서 지역색 대신 길드색을 강조(2026-09-17). */
+  const guildColor = useCallback((name: string) => meta[name]?.color ?? null, [meta]);
   const emblemChain = useCallback(
     (g: HistoryGuildMeta | undefined) => emblemChainOf(index.emblemHistory, g),
     [index.emblemHistory],
@@ -748,7 +761,7 @@ export function HistoryPlayer({
                         zIndex: 4,
                         opacity: c && stageView === 'map' ? 1 : 0,
                         background: c
-                          ? `radial-gradient(circle, color-mix(in srgb, ${c} 55%, transparent) 0%, color-mix(in srgb, ${c} 25%, transparent) 48%, transparent 70%)`
+                          ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
                           : 'transparent',
                       }}
                     />
@@ -783,8 +796,8 @@ export function HistoryPlayer({
                             ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
                             : 'rgba(10,12,20,0.55)',
                           boxShadow: owner
-                            ? `0 0 0 2px ${gc}, 0 0 7px color-mix(in srgb, ${gc} 70%, white), 0 1px 2px #000`
-                            : `0 0 0 1px ${color}77`,
+                            ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                            : `0 0 0 1px ${color}66`,
                         }}
                       >
                         {owner ? (
@@ -893,7 +906,7 @@ export function HistoryPlayer({
                   className="mt-0.5 h-[20px] truncate text-[13px] leading-[20px] font-semibold"
                   style={SERIF}
                 >
-                  <Headline text={showingDay.headline || '기록'} />
+                  <Headline text={showingDay.headline || '기록'} guildColor={guildColor} />
                 </div>
                 <div className="mt-1 flex h-[18px] flex-nowrap gap-x-3 overflow-hidden text-[11px] tabular-nums">
                   {legend.map(([g, c]) => (
@@ -1095,11 +1108,6 @@ export function HistoryPlayer({
                   {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록 · 시대{' '}
                   {story.eras.length}
                 </div>
-                <p className="mt-3 max-w-[60ch] text-[13px] leading-[1.75]">
-                  점령전이 있던 날마다 이야기꾼이 남긴 기록을 첫날부터 오늘까지 지도 위에 이어서
-                  재생합니다. 1위가 바뀌는 날을 경계로 시대가 나뉘고, 순위 보기에서는 구역 타일이
-                  길드별 막대로 모입니다.
-                </p>
                 {story.eras.length > 0 ? (
                   <div className="mt-4 border-t border-[#ece5d6]">
                     {story.eras.map((e, i) => {
@@ -1190,7 +1198,11 @@ export function HistoryPlayer({
                           {r.kstDay.slice(5)}
                         </span>
                         <span className="text-[12.5px] leading-snug font-semibold" style={SERIF}>
-                          {r.headline ? <Headline text={r.headline} /> : '기록'}
+                          {r.headline ? (
+                            <Headline text={r.headline} guildColor={guildColor} />
+                          ) : (
+                            '기록'
+                          )}
                         </span>
                         <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>
                           {r.captures >= 0 ? `점령 ${r.captures}` : '…'}
@@ -1210,6 +1222,7 @@ export function HistoryPlayer({
                         headline={q.headline}
                         battles={q.data.replay ? Object.keys(q.data.replay.events).length : null}
                         dim={i < queue.length - 1}
+                        guildColor={guildColor}
                       />
                       <div
                         className={`mt-2 text-[13.5px] leading-[1.9] transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
@@ -1235,9 +1248,11 @@ export function HistoryPlayer({
                             }}
                             speed={speed}
                             pausedRef={pausedRef}
+                            guildColor={guildColor}
+                            zoneStyle="plain"
                           />
                         ) : (
-                          <StaticChronicle text={q.data.text} zoneColor={zoneColor} />
+                          <StaticChronicle text={q.data.text} guildColor={guildColor} />
                         )}
                       </div>
                     </section>
@@ -1299,12 +1314,14 @@ function DayDivider({
   headline,
   battles,
   dim,
+  guildColor,
 }: {
   kstDay: string;
   nth: number;
   headline: string;
   battles?: number | null;
   dim?: boolean;
+  guildColor?: (name: string) => string | null;
 }) {
   return (
     <div className={`transition-opacity duration-1000 ${dim ? 'opacity-70' : ''}`}>
@@ -1320,7 +1337,7 @@ function DayDivider({
       </div>
       {headline ? (
         <div className="mt-2 text-[15px] leading-[1.45] font-bold" style={SERIF}>
-          <Headline text={headline} />
+          <Headline text={headline} guildColor={guildColor} />
         </div>
       ) : null}
     </div>
@@ -1330,10 +1347,10 @@ function DayDivider({
 /** 재생이 끝난 날의 정적 본문 — 마커를 칩으로(재생 패널과 같은 어휘, 종이 톤). */
 function StaticChronicle({
   text,
-  zoneColor,
+  guildColor,
 }: {
   text: string;
-  zoneColor: (name: string) => string | null;
+  guildColor: (name: string) => string | null;
 }) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -1346,23 +1363,19 @@ function StaticChronicle({
           const kind = m[1]!;
           const name = m[2]!;
           if (kind === 'z') {
-            const c = zoneColor(name);
             parts.push(
-              <span
-                key={k++}
-                className="mx-px inline-block rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
-                style={{
-                  backgroundColor: c ? `${c}33` : '#e2d9c6',
-                  color: c ?? '#2a251e',
-                  boxShadow: c ? `inset 0 0 0 1px ${c}55` : undefined,
-                }}
-              >
+              <span key={k++} className="underline decoration-dotted underline-offset-2 opacity-85">
                 {name}
               </span>,
             );
           } else if (kind === 'g') {
+            const gc = guildColor(name);
             parts.push(
-              <span key={k++} className="inline-block align-baseline font-semibold text-[#4b3a8a]">
+              <span
+                key={k++}
+                className={`inline-block align-baseline font-bold ${gc ? '' : 'text-[#4b3a8a]'}`}
+                style={gc ? { color: gc } : undefined}
+              >
                 {name}
               </span>,
             );

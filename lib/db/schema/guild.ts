@@ -262,6 +262,8 @@ export const conquestBattles = pgTable(
     winnerGuildId: bigint('winner_guild_id', { mode: 'bigint' }).references(() => guilds.id, {
       onDelete: 'set null',
     }),
+    /** 승자 길드 이름 스냅샷(0201) — 길드 해산으로 winner_guild_id가 비워져도 역사(연대기·리플레이)가 승자를 잃지 않는다. 읽을 땐 coalesce(guilds.name, 이 값). */
+    winnerGuildName: text('winner_guild_name'),
     finale: jsonb('finale').$type<unknown>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     /**

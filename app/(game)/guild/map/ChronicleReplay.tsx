@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ConquestReplay, ReplayEvent } from '@/lib/game/guild/conquest/replay';
 
-import { findPastContextZoneKeys, parseChronicleSegments, type ChronicleSegment } from './chronicle-tokens';
+import {
+  findPastContextZoneKeys,
+  parseChronicleSegments,
+  type ChronicleSegment,
+} from './chronicle-tokens';
 
 /**
  * 세계지도 '오늘의 역사' 리플레이(2026-07-16 확정 연출) — 연대기 타이핑과 지도 연출 동기화.
@@ -25,7 +29,11 @@ const MARCH_MS = 2600;
 const sleepUnless = (ms: number, skip: () => boolean) =>
   new Promise<void>((r) => (skip() ? r() : setTimeout(r, ms)));
 /** 일시정지 지원 대기(2026-09-16, 역사 페이지) — 잠든 뒤 pausedRef가 true인 동안 120ms 간격으로 머문다. */
-const sleepPausable = async (ms: number, skip: () => boolean, paused?: React.RefObject<boolean>) => {
+const sleepPausable = async (
+  ms: number,
+  skip: () => boolean,
+  paused?: React.RefObject<boolean>,
+) => {
   await sleepUnless(ms, skip);
   while (paused?.current && !skip()) await new Promise<void>((r) => setTimeout(r, 120));
 };
@@ -47,13 +55,19 @@ function shieldFallback(e: HTMLElement, color: string | null, guild: string): vo
  */
 function edgeNear(t: { mapX: number; mapY: number }, k = 0, n = 1): { x: number; y: number } {
   const cands = [
-    { x: -6, y: t.mapY }, { x: 106, y: t.mapY }, { x: t.mapX, y: -8 }, { x: t.mapX, y: 110 },
+    { x: -6, y: t.mapY },
+    { x: 106, y: t.mapY },
+    { x: t.mapX, y: -8 },
+    { x: t.mapX, y: 110 },
   ];
   let best = cands[0]!;
   let bd = Infinity;
   for (const c of cands) {
     const d = (c.x - t.mapX) ** 2 + (c.y - t.mapY) ** 2;
-    if (d < bd) { bd = d; best = c; }
+    if (d < bd) {
+      bd = d;
+      best = c;
+    }
   }
   if (n <= 1) return best;
   const spread = (k - (n - 1) / 2) * 9;
@@ -78,6 +92,8 @@ export function ChronicleReplayPanel({
   onDone,
   speed = 1,
   pausedRef,
+  guildColor,
+  zoneStyle = 'chip',
 }: {
   text: string;
   replay: ConquestReplay;
@@ -91,6 +107,10 @@ export function ChronicleReplayPanel({
   speed?: number;
   /** 일시정지 — true인 동안 다음 구간으로 넘어가지 않는다(진행 중인 애니메이션은 끝까지 간다). */
   pausedRef?: React.RefObject<boolean>;
+  /** 길드명을 길드 색으로 강조(2026-09-17, 역사 페이지: 지역색보다 길드·인물에 초점). 없으면 게임 기본(회색). */
+  guildColor?: (name: string) => string | null;
+  /** 구역명 표시 — chip(게임 기본: 지역색 칩) | plain(점선 밑줄만, 역사 페이지). */
+  zoneStyle?: 'chip' | 'plain';
 }) {
   const speedRef = useRef(speed);
   speedRef.current = speed;
@@ -138,7 +158,8 @@ export function ChronicleReplayPanel({
       let cur: { keys: string[]; zoneIds: number[] } | null = null;
       const flush = () => {
         if (!cur) return;
-        for (const k of cur.keys) g.set(k, { zoneIds: cur.zoneIds, lastKey: cur.keys[cur.keys.length - 1]! });
+        for (const k of cur.keys)
+          g.set(k, { zoneIds: cur.zoneIds, lastKey: cur.keys[cur.keys.length - 1]! });
         cur = null;
       };
       for (let s = 0; s < segs.length; s++) {
@@ -146,8 +167,10 @@ export function ChronicleReplayPanel({
         const zid = zoneIdOf(seg);
         if (zid != null && replay.events[zid] && !deferred.has(`${p}:${s}`)) {
           const key = `${p}:${s}`;
-          if (cur) { cur.keys.push(key); cur.zoneIds.push(zid); }
-          else cur = { keys: [key], zoneIds: [zid] };
+          if (cur) {
+            cur.keys.push(key);
+            cur.zoneIds.push(zid);
+          } else cur = { keys: [key], zoneIds: [zid] };
         } else if (seg.kind === 'text' && cur && LIST_GLUE_RE.test(seg.text)) {
           // 나열 접속 — 그룹 유지
         } else {
@@ -161,7 +184,30 @@ export function ChronicleReplayPanel({
   }, []);
 
   // ── 오버레이 연출 ──
-  const guildOf = (name: string) => replay.guilds[name] ?? { color: null, emblemUrl: null };
+  const guildOf = (name: string) =>
+    replay.guilds[name] ?? { color: null, emblemUrl: null, emblemAlsoTry: [] };
+  /** 문양 img — 파일이 사라진 스냅샷 URL이면 이력의 다음 문양으로, 전부 실패하면 onFail. */
+  const emblemImg = (
+    g: { emblemUrl: string | null; emblemAlsoTry?: string[] },
+    onFail: () => void,
+  ): HTMLImageElement | null => {
+    if (!g.emblemUrl) return null;
+    const urls = [g.emblemUrl, ...(g.emblemAlsoTry ?? [])];
+    const img = document.createElement('img');
+    let k = 0;
+    img.src = urls[0]!;
+    img.alt = '';
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+    img.onerror = () => {
+      k += 1;
+      if (k < urls.length) img.src = urls[k]!;
+      else {
+        img.remove();
+        onFail();
+      }
+    };
+    return img;
+  };
 
   function spawnEmblem(guild: string, at: { x: number; y: number }): HTMLElement | null {
     if (!layer) return null;
@@ -173,33 +219,29 @@ export function ChronicleReplayPanel({
       'display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0.4);' +
       'transition:opacity 0.5s,transform 0.45s;' +
       `filter:drop-shadow(0 0 6px ${g.color ?? '#71717a'}cc);`;
-    if (g.emblemUrl) {
-      const img = document.createElement('img');
-      img.src = g.emblemUrl;
-      img.alt = '';
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
-      // 파일이 사라진 옛 문양(그 시점 스냅샷 URL) — 깨진 아이콘 대신 미보유 길드와 같은 색 방패(2026-09-14).
-      img.onerror = () => {
-        img.remove();
-        shieldFallback(e, g.color, guild);
-      };
-      e.appendChild(img);
-    } else {
-      shieldFallback(e, g.color, guild);
-    }
+    // 파일이 사라진 옛 문양(그 시점 스냅샷 URL) — 이력의 다음 문양으로, 그것도 없으면 미보유 길드와 같은 색 방패.
+    const img = emblemImg(g, () => shieldFallback(e, g.color, guild));
+    if (img) e.appendChild(img);
+    else shieldFallback(e, g.color, guild);
     e.style.left = `${at.x}%`;
     e.style.top = `${at.y}%`;
     layer.appendChild(e);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      e.style.opacity = '1';
-      e.style.transform = 'scale(1)';
-    }));
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        e.style.opacity = '1';
+        e.style.transform = 'scale(1)';
+      }),
+    );
     return e;
   }
 
   /** 진군 — 2차 베지어를 % 좌표로 샘플링한 left/top 키프레임(오프셋패스 앵커 오차로 인한
    *  '근처 도착 후 순간이동' 제거, 2026-07-16). 종료값 = 노드 좌표와 동일해 정확 착지. */
-  function march(e: HTMLElement | null, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
+  function march(
+    e: HTMLElement | null,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ): Promise<void> {
     if (!e) return Promise.resolve();
     if (skipRef.current) {
       e.style.left = `${to.x}%`;
@@ -219,12 +261,18 @@ export function ChronicleReplayPanel({
         top: `${(u * u * from.y + 2 * u * t * mid.y + t * t * to.y).toFixed(3)}%`,
       };
     });
-    const anim = e.animate(frames, { duration: d(MARCH_MS), easing: 'cubic-bezier(0.4,0,0.35,1)', fill: 'forwards' });
-    return anim.finished.catch(() => {}).then(() => {
-      anim.cancel();
-      e.style.left = `${to.x}%`;
-      e.style.top = `${to.y}%`;
+    const anim = e.animate(frames, {
+      duration: d(MARCH_MS),
+      easing: 'cubic-bezier(0.4,0,0.35,1)',
+      fill: 'forwards',
     });
+    return anim.finished
+      .catch(() => {})
+      .then(() => {
+        anim.cancel();
+        e.style.left = `${to.x}%`;
+        e.style.top = `${to.y}%`;
+      });
   }
 
   function killEmblem(e: HTMLElement | null) {
@@ -247,25 +295,26 @@ export function ChronicleReplayPanel({
     e.style.cssText =
       `position:absolute;width:17px;height:17px;margin:-8.5px 0 0 -8.5px;z-index:38;left:${at.x}%;top:${at.y}%;` +
       'pointer-events:none;border-radius:4px;overflow:hidden;';
-    if (g.emblemUrl) {
-      const img = document.createElement('img');
-      img.src = g.emblemUrl;
-      img.alt = '';
-      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
-      img.onerror = () => {
-        img.remove();
-        e.style.background = g.color ?? '#71717a';
-      };
-      e.appendChild(img);
-    } else {
+    const img = emblemImg(g, () => {
       e.style.background = g.color ?? '#71717a';
-    }
+    });
+    if (img) e.appendChild(img);
+    else e.style.background = g.color ?? '#71717a';
     layer.appendChild(e);
     e.animate(
       [
         { opacity: 1, transform: 'scale(1) rotate(0deg) translateY(0)', filter: 'grayscale(0)' },
-        { opacity: 0.85, transform: 'scale(1.08) rotate(-4deg)', filter: 'grayscale(0.5)', offset: 0.25 },
-        { opacity: 0, transform: 'scale(0.2) rotate(-28deg) translateY(9px)', filter: 'grayscale(1)' },
+        {
+          opacity: 0.85,
+          transform: 'scale(1.08) rotate(-4deg)',
+          filter: 'grayscale(0.5)',
+          offset: 0.25,
+        },
+        {
+          opacity: 0,
+          transform: 'scale(0.2) rotate(-28deg) translateY(9px)',
+          filter: 'grayscale(1)',
+        },
       ],
       { duration: d(720), easing: 'cubic-bezier(0.5,0,0.75,0)', fill: 'forwards' },
     );
@@ -293,12 +342,14 @@ export function ChronicleReplayPanel({
   function flashAt(pct: { x: number; y: number }, color: string, strong = true) {
     if (!layer || skipRef.current) return;
     const f = document.createElement('div');
-    f.style.cssText =
-      `position:absolute;z-index:35;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:7px;left:${pct.x}%;top:${pct.y}%;pointer-events:none;`;
+    f.style.cssText = `position:absolute;z-index:35;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:7px;left:${pct.x}%;top:${pct.y}%;pointer-events:none;`;
     layer.appendChild(f);
     f.animate(
       [
-        { boxShadow: `0 0 0 0 ${color}${strong ? 'd9' : '99'}`, background: `${color}${strong ? 'd9' : '55'}` },
+        {
+          boxShadow: `0 0 0 0 ${color}${strong ? 'd9' : '99'}`,
+          background: `${color}${strong ? 'd9' : '55'}`,
+        },
         { boxShadow: `0 0 0 ${strong ? 26 : 15}px ${color}00`, background: `${color}00` },
       ],
       { duration: d(strong ? 1500 : 1000), easing: 'ease-out', fill: 'forwards' },
@@ -329,10 +380,14 @@ export function ChronicleReplayPanel({
       const parties = ev.type === 'capture' ? [ev.winner, ...ev.rivals] : ev.rivals;
       // 수비 문양 — 구역 위에 서서 맞선다(진군 없음). 무혈 함락과 시각적으로 구분(2026-07-17).
       const standingGuild = standingGuildOf(ev);
-      const standing = standingGuild ? { g: standingGuild, el: spawnEmblem(standingGuild, tPct) } : null;
+      const standing = standingGuild
+        ? { g: standingGuild, el: spawnEmblem(standingGuild, tPct) }
+        : null;
       const marchers: { g: string; el: HTMLElement | null }[] = [];
       // 무영지(출발 구역 없음) 길드끼리는 등장 지점을 벌린다 — 같은 목표를 노린 깃발 겹침 방지.
-      const edgeParties = parties.filter((g) => ev.origins[g] == null || !zoneById.current.get(ev.origins[g]!));
+      const edgeParties = parties.filter(
+        (g) => ev.origins[g] == null || !zoneById.current.get(ev.origins[g]!),
+      );
       for (const g of parties) {
         const originId = ev.origins[g] ?? null;
         const origin = originId != null ? zoneById.current.get(originId) : null;
@@ -435,8 +490,6 @@ export function ChronicleReplayPanel({
     if (layer) layer.innerHTML = '';
   }
 
-
-
   // ── 타이핑 본체 ──
   useEffect(() => {
     let cancelled = false;
@@ -462,7 +515,12 @@ export function ChronicleReplayPanel({
           if (seg.kind === 'z') {
             const zid = zoneIdOf(seg);
             const ev = zid != null ? replay.events[zid] : undefined;
-            if (ev && zid != null && !firedRef.current.has(zid) && !deferredRef.current.has(`${p}:${s}`)) {
+            if (
+              ev &&
+              zid != null &&
+              !firedRef.current.has(zid) &&
+              !deferredRef.current.has(`${p}:${s}`)
+            ) {
               const key = `${p}:${s}`;
               const grp = groups.current.get(key);
               if (grp && grp.lastKey !== key) {
@@ -478,7 +536,12 @@ export function ChronicleReplayPanel({
                 if (calm.length > 0) await runZoneEvents(calm);
                 for (const b of battles) await runZoneEvents([b]);
               }
-            } else if (!ev && !neutralTriggeredRef.current && zid != null && neutralIdsRef.current.has(zid)) {
+            } else if (
+              !ev &&
+              !neutralTriggeredRef.current &&
+              zid != null &&
+              neutralIdsRef.current.has(zid)
+            ) {
               // 방치 중립화 문장의 첫 구역 마커 도달 → 문양 소멸 캐스케이드 즉시 발동(종료 대기 X).
               neutralTriggeredRef.current = true;
               await runNeutralizations();
@@ -503,7 +566,10 @@ export function ChronicleReplayPanel({
         setTimeout(() => onDone(), 900);
       }
     })();
-    return () => { cancelled = true; if (layer) layer.innerHTML = ''; };
+    return () => {
+      cancelled = true;
+      if (layer) layer.innerHTML = '';
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -523,10 +589,21 @@ export function ChronicleReplayPanel({
   // 한 덩어리로 줄바꿈)이라, 재생판 span도 inline-block으로 맞춘다(2026-07-16: 재생/완료
   // 화면의 개행 기준이 달라지던 문제). 클릭은 재생 중 비활성이므로 button 미사용(중첩 금지).
   const renderSeg = (seg: ChronicleSegment, shown: string, key: number) => {
-    if (seg.kind === 'g')
-      return (
-        <span key={key} className="inline-block align-baseline font-semibold text-slate-600 dark:text-slate-400">{shown}</span>
+    if (seg.kind === 'g') {
+      const gc = guildColor?.(seg.name) ?? null;
+      return gc ? (
+        <span key={key} className="inline-block align-baseline font-bold" style={{ color: gc }}>
+          {shown}
+        </span>
+      ) : (
+        <span
+          key={key}
+          className="inline-block align-baseline font-semibold text-slate-600 dark:text-slate-400"
+        >
+          {shown}
+        </span>
       );
+    }
     if (seg.kind === 'u')
       return (
         <span
@@ -541,12 +618,22 @@ export function ChronicleReplayPanel({
         </span>
       );
     if (seg.kind === 'z') {
+      if (zoneStyle === 'plain')
+        return (
+          <span key={key} className="underline decoration-dotted underline-offset-2 opacity-85">
+            {shown}
+          </span>
+        );
       const c = zoneColor(seg.name);
       return (
         <span
           key={key}
           className="mx-px inline-block rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
-          style={c ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` } : undefined}
+          style={
+            c
+              ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` }
+              : undefined
+          }
         >
           {shown}
         </span>
@@ -556,24 +643,37 @@ export function ChronicleReplayPanel({
   };
 
   return (
-    <button type="button" onClick={skip} className="block w-full cursor-pointer text-left" aria-label="역사 재생 건너뛰기">
+    <button
+      type="button"
+      onClick={skip}
+      className="block w-full cursor-pointer text-left"
+      aria-label="역사 재생 건너뛰기"
+    >
       <div className="flex flex-col gap-2.5">
         {paras.current.map((segs, p) => {
           if (p > pos.p) return null;
           return (
-            <p key={p} className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            <p
+              key={p}
+              className="text-[13px] leading-relaxed whitespace-pre-line text-zinc-600 dark:text-zinc-300"
+            >
               {segs.map((seg, s) => {
                 if (p < pos.p || s < pos.s) return renderSeg(seg, seg.text, s);
                 if (s > pos.s) return null;
                 return renderSeg(seg, seg.text.slice(0, pos.c), s);
               })}
               {p === pos.p && !ended ? (
-                <span className="ml-px inline-block h-[13px] w-[7px] animate-pulse bg-amber-500 align-[-2px]" aria-hidden />
+                <span
+                  className="ml-px inline-block h-[13px] w-[7px] animate-pulse bg-amber-500 align-[-2px]"
+                  aria-hidden
+                />
               ) : null}
             </p>
           );
         })}
-        {!ended ? <p className="text-[9px] text-zinc-400 dark:text-zinc-600">탭하면 건너뛰기</p> : null}
+        {!ended ? (
+          <p className="text-[9px] text-zinc-400 dark:text-zinc-600">탭하면 건너뛰기</p>
+        ) : null}
       </div>
     </button>
   );

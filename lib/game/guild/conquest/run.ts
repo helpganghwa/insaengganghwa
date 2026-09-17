@@ -150,6 +150,8 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         battleKstDay: battleDay,
         zoneId,
         winnerGuildId: winner ? BigInt(winner) : null,
+        // 승자 이름 스냅샷(0201) — 해산으로 id가 비워져도 역사가 승자를 잃지 않는다.
+        winnerGuildName: winner ? (units.find((u) => u.guildId === winner)?.guildName ?? null) : null,
         finale: result.finale,
       })
       .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })

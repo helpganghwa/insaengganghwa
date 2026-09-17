@@ -2,6 +2,7 @@ import 'server-only';
 
 import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 
+import { emblemAlsoTry, getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { db } from '@/lib/db/client';
 import { guilds, worldChronicle } from '@/lib/db/schema/guild';
 
@@ -19,6 +20,8 @@ export type ReplayGuild = {
   guildId: number | null;
   color: string | null;
   emblemUrl: string | null;
+  /** 스냅샷 문양 파일이 사라졌을 때 차례로 시도할 그 길드의 다음 문양들(2026-09-17, emblem-history). */
+  emblemAlsoTry?: string[];
 };
 
 export type ReplayEvent = {
@@ -55,7 +58,10 @@ export type ConquestReplay = {
 const replayCache = new Map<string, { at: number; v: ConquestReplay | null }>();
 const REPLAY_TTL_MS = 300_000;
 
-export async function getConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
+export async function getConquestReplay(
+  serverId: number,
+  forKstDay?: string,
+): Promise<ConquestReplay | null> {
   const ck = `${serverId}:${forKstDay?.slice(0, 10) ?? 'latest'}`;
   const hit = replayCache.get(ck);
   if (hit && Date.now() - hit.at < REPLAY_TTL_MS) return hit.v;
@@ -66,7 +72,10 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
 }
 
 /** 캐시 없이 계산 — 역사 페이지(다른 DB 스코프)가 직접 쓴다(2026-09-16). 일반 화면은 getConquestReplay. */
-export async function computeConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
+export async function computeConquestReplay(
+  serverId: number,
+  forKstDay?: string,
+): Promise<ConquestReplay | null> {
   // 기본: 연대기와 동일한 '최신 공개일'(읽기 게이트 kst_day < 오늘 KST와 정합).
   // forKstDay 지정 시 그 날짜로 — 공개 전 검수(어드민 미리보기, 2026-07-16) 전용.
   let kstDay: string;
@@ -99,17 +108,25 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
                         and zn = z.name and (we.detail->>'battleDay') <= ${kstDay})
                    >= coalesce((select max(cb3.battle_kst_day)::text from conquest_battles cb3
                         where cb3.zone_id = z.id and cb3.server_id = z.server_id
-                          and cb3.battle_kst_day <= ${kstDay}::date and cb3.winner_guild_id is not null), '')
+                          and cb3.battle_kst_day <= ${kstDay}::date
+                          and (cb3.winner_guild_id is not null or cb3.winner_guild_name is not null)), '')
               then null
-              else (select g2.name from conquest_battles cb2
-                      join guilds g2 on g2.id = cb2.winner_guild_id
+              else (select coalesce(g2.name, cb2.winner_guild_name) from conquest_battles cb2
+                      left join guilds g2 on g2.id = cb2.winner_guild_id
                       where cb2.zone_id = z.id and cb2.server_id = z.server_id
                         and cb2.battle_kst_day <= ${kstDay}::date
+                        and (cb2.winner_guild_id is not null or cb2.winner_guild_name is not null)
                       order by cb2.battle_kst_day desc limit 1)
            end) as owner
     from zones z
     where z.server_id = ${serverId}
-  `)) as unknown as { id: number; name: string; map_x: number; map_y: number; owner: string | null }[];
+  `)) as unknown as {
+    id: number;
+    name: string;
+    map_x: number;
+    map_y: number;
+    owner: string | null;
+  }[];
   const byName = new Map(zoneRows.map((z) => [z.name, z]));
 
   // 이전 소유 복원 — 그날 종료 상태에서 그날 점령을 되돌림(위 이력 기반이라 날짜 무관 정확).
@@ -154,12 +171,16 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
     for (const z of zoneRows) {
       if (beforeOwner[z.id] !== guild || z.name === targetZone) continue;
       const d = (z.map_x - t.map_x) ** 2 + (z.map_y - t.map_y) ** 2;
-      if (d < bd) { bd = d; best = z.id; }
+      if (d < bd) {
+        bd = d;
+        best = z.id;
+      }
     }
     return best; // null = 무영지 → 지도 밖 등장
   };
-  const rivalsFor = (zone: string, winner: string) =>
-    [...new Set(s.attacks.filter((a) => a.zone === zone && a.guild !== winner).map((a) => a.guild))];
+  const rivalsFor = (zone: string, winner: string) => [
+    ...new Set(s.attacks.filter((a) => a.zone === zone && a.guild !== winner).map((a) => a.guild)),
+  ];
 
   for (const c of s.captures) {
     const z = byName.get(c.zone);
@@ -167,7 +188,16 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
     const rivals = rivalsFor(c.zone, c.winner);
     const origins: Record<string, number | null> = { [c.winner]: originFor(c.winner, c.zone) };
     for (const r of rivals) origins[r] = originFor(r, c.zone);
-    events[z.id] = { zoneId: z.id, zone: c.zone, type: 'capture', winner: c.winner, from: c.from, rivals, origins, defended: c.defenders > 0 };
+    events[z.id] = {
+      zoneId: z.id,
+      zone: c.zone,
+      type: 'capture',
+      winner: c.winner,
+      from: c.from,
+      rivals,
+      origins,
+      defended: c.defenders > 0,
+    };
   }
   for (const d of s.defenses) {
     const z = byName.get(d.zone);
@@ -176,7 +206,16 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
     if (rivals.length === 0) continue; // 공격 없던 방어(무승부 보정 등)는 연출 생략
     const origins: Record<string, number | null> = {};
     for (const r of rivals) origins[r] = originFor(r, d.zone);
-    events[z.id] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
+    events[z.id] = {
+      zoneId: z.id,
+      zone: d.zone,
+      type: 'defense',
+      winner: d.owner,
+      from: null,
+      rivals,
+      origins,
+      defended: true,
+    };
   }
 
   if (Object.keys(events).length === 0 && neutralized.length === 0) return null;
@@ -246,6 +285,13 @@ export async function computeConquestReplay(serverId: number, forKstDay?: string
       if (o) beforeOwner[Number(k)] = rn(o);
     }
   }
+
+  // 사라진 옛 문양 폴백(2026-09-17) — 스냅샷 URL이 안 열리면 그 길드의 다음 문양으로(역사 페이지·세계지도 공통).
+  const emblemHistory = await getGuildEmblemHistory(serverId).catch(
+    () => ({}) as Record<number, string[]>,
+  );
+  for (const g of Object.values(guildMeta))
+    g.emblemAlsoTry = emblemAlsoTry(g.emblemUrl, emblemHistory);
 
   return { kstDay, guilds: guildMeta, events, neutralized, beforeOwner };
 }
