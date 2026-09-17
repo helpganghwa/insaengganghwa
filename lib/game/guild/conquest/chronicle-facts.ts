@@ -14,6 +14,8 @@
  *  5. 회고 — '어제·전날'이 붙은 구역은 어제 기록(점령·방어)이 있어야 한다.
  *  6. 반복 — '하루 만에'·'어제 … 내주었던'·'다시 노렸다'는 본문 전체에서 한 번까지, 회고 문장은 세 문장까지.
  *  7. 산수 — 길드 하나만 나오는 문장의 'N곳'은 그 길드의 얻은 수·잃은 수·현재 보유·직전 보유 중 하나여야 한다.
+ *  11~16(2026-09-17 실오류) — 동시 진행에 순서 만들기 · '어제 차지했던'의 귀속 · 지역별 수 · 짧은 복귀 공백의 '오랫동안' ·
+ *     쓰러진 인물을 버틴 주어로 · 석권 서수('세 번째로 완성한').
  *
  * 순수 함수 — 테스트 tests/guild/chronicle-fact-issues.test.ts(09-10 실제 오류 본문으로 회귀).
  */
@@ -37,6 +39,14 @@ export type FactCheckContext = {
   battleZones: string[];
   /** 소유권이 바뀐 구역 → 가져간 길드·빼앗긴 길드. 둘 다 그 구역 문단에 나와야 집계 산수가 본문에서 따라진다. */
   captureBy: Map<string, { winner: string; from: string | null }>;
+  /** (09-17) 어제 소유권이 바뀐 구역 → 어제 가져간 길드. '어제 {g|G}가 차지했던 곳'의 귀속 검사. 없으면 검사 생략. */
+  yesterdayCaptureBy?: Map<string, string>;
+  /** (09-17) 길드 → 지역 라벨 → { gain, loss, after, before }. 'X 지역에서 N곳'의 N 검사. 없으면 검사 생략. */
+  regionCounts?: Map<string, Map<string, { gain: number; loss: number; after: number; before: number }>>;
+  /** (09-17) 영토를 잃은 지 며칠 안 돼 돌아온 길드 — '오랫동안·한동안'을 붙이면 안 된다. */
+  shortGapGuilds?: string[];
+  /** (09-17) 개인 활약 중 그날 끝내 쓰러진 인물 — '지켜냈다·버텼다'의 주어로 쓰면 안 된다. */
+  fellFeats?: string[];
 };
 
 const MARKER = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}/g;
@@ -97,6 +107,30 @@ function plainAligned(s: string): string {
 
 const RECAPTURE = /되찾|탈환|수복|되돌려|돌려받|도로 가져|다시 가져|다시 손에/;
 const RETRO = /어제|전날/;
+/** 11 — 구역 사이 순서 표현. */
+const SEQUENCE = /곧이어|뒤이어|그 직후|그러자/;
+/** 12 — 회고 문장의 '가져간' 동사(잃은 쪽 회고 '어제 내주었던'은 5번 규칙이 본다). */
+const RETRO_TAKEN = /차지했|차지한|빼앗았|빼앗은|손에 넣|가져갔|가져간/;
+/** 12 — 앞 문장의 여러 구역을 한꺼번에 받는 말. */
+const PLURAL_REF = /그 땅들|그곳들|이 땅들|이곳들|그 구역들|모두|모든 곳/;
+/** 13 — 'N곳' 수사(위치 포함). */
+const ZONE_COUNT = /(?:스물|서른|마흔|쉰|열)?(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉)?\s?곳|\d+\s?곳/g;
+/** 14 — 긴 공백 표현. */
+const LONG_GAP = /오랫동안|오래도록|오랜만|한동안|긴 공백|오래 영토/;
+/** 15 — 버팀·지켜냄 / 쓰러짐. */
+const SURVIVED = /지켜냈|지켰|버텨냈|버텼|살아남|끝까지 남/;
+const FELL_WORD = /쓰러졌|쓰러지고|쓰러지며|전사했|숨을 거|눈을 감|끝내 무너/;
+/** 16 — 석권 서수. */
+const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완성|장악|석권|지배|손에 넣)/;
+
+/** 13 — 위치 앞에서 가장 가까운 주어 길드({g|G} 바로 뒤에 은·는·이·가·도). */
+function subjectGuildBefore(sent: string, pos: number): string | null {
+  let found: string | null = null;
+  for (const m of sent.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도)(?![가-힣])/g)) {
+    if (m.index! < pos) found = m[1]!.trim();
+  }
+  return found;
+}
 
 /** 지역 별칭 — 라벨의 마지막 낱말('드래곤 화산'→'화산'). 같은 별칭이 둘 이상이면 별칭은 쓰지 않는다. */
 function regionAliases(labels: string[]): Map<string, string> {
@@ -139,6 +173,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   let retroSentences = 0;
   for (const para of text.split(/\n\n+/)) {
     let lastZone: string | null = null;
+    let prevZones: string[] = [];
     let lastRegion: string | null = null;
     for (const sent of sentences(para)) {
       const toks = tokens(sent);
@@ -248,7 +283,76 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         }
       }
 
-      if (zones.length > 0) lastZone = zones[zones.length - 1]!;
+      // 11. 동시 진행 — 모든 구역의 점령전은 같은 시각이다. 구역 사이에 순서를 만들면 사실이 아니다(09-17 "곧이어 {g|민초}까지").
+      const seq = plain.match(SEQUENCE);
+      if (seq) {
+        issues.push(`점령전은 모든 구역에서 같은 시각에 벌어지는데 '${seq[0]}'로 순서를 만들었다 — '같은 날·한편'으로 고친다: ${q(sent)}`);
+      }
+
+      // 12. '어제 … 차지했던'의 귀속 — 가리키는 구역이 전부 어제 그 길드가 가져간 곳이어야 한다.
+      //     구역 마커가 없고 '그 땅들·그곳들·모두'로 받으면 앞 문장의 구역 전부를 가리킨다(09-17: 넷 중 둘만 어제 차지).
+      if (ctx.yesterdayCaptureBy && RETRO.test(plain) && RETRO_TAKEN.test(plain)) {
+        const targets = zones.length > 0 ? zones : PLURAL_REF.test(plain) ? prevZones : lastZone ? [lastZone] : [];
+        const wrong = targets.filter((z) => {
+          const by = ctx.yesterdayCaptureBy!.get(z);
+          if (!by) return true;
+          return guilds.length > 0 && !guilds.includes(by);
+        });
+        if (wrong.length > 0) {
+          issues.push(
+            `${wrong.map((z) => `{z|${z}}`).join(', ')} 은(는) 어제 ${guilds.length > 0 ? guilds.map((g) => `{g|${g}}`).join('·') + ' 이(가) ' : ''}차지한 구역이 아니다 — 점령 줄의 보유 기간 표기대로 어제 차지한 구역만 묶어 쓴다: ${q(sent)}`,
+          );
+        }
+      }
+
+      // 13. 지역별 수 — 'X 지역에서 N곳을 늘렸다'의 N은 그 길드의 그 지역 수여야 한다(09-17: 오크 부락 2곳을 '세 곳'으로).
+      if (ctx.regionCounts) {
+        for (const m of aligned.matchAll(ZONE_COUNT)) {
+          const at = m.index!;
+          const n = parseZoneCounts(m[0])[0];
+          if (n === undefined) continue;
+          const reg = [...mentions].reverse().find((r) => r.at < at && at - r.at <= 30 && !aligned.slice(r.at, at).includes(','));
+          if (!reg) continue;
+          const subject = subjectGuildBefore(sent, at);
+          if (!subject || !ctx.guildCounts.has(subject)) continue;
+          const c = ctx.regionCounts.get(subject)?.get(reg.label) ?? { gain: 0, loss: 0, after: 0, before: 0 };
+          const verb = aligned.slice(at + m[0].length, at + m[0].length + 10);
+          const allowed = /늘|더|얻|차지|가져|넓|손에/.test(verb)
+            ? [c.gain]
+            : /잃|내주|내준|빼앗기/.test(verb)
+              ? [c.loss]
+              : [c.gain, c.loss, c.after, c.before];
+          if (!allowed.includes(n)) {
+            issues.push(
+              `{g|${subject}} 의 ${reg.label} 지역 수 '${n}곳'이 사실표와 다르다(그 지역 얻음 ${c.gain}·잃음 ${c.loss}·보유 ${c.after}) — 점령 줄의 '지역별' 수대로 고친다: ${q(sent)}`,
+            );
+          }
+        }
+      }
+
+      // 14. 짧은 복귀 공백 — 하루이틀 비었다 돌아온 길드에 '오랫동안'을 붙이지 않는다(09-17 민초).
+      if (ctx.shortGapGuilds && LONG_GAP.test(plain)) {
+        const g = guilds.find((x) => ctx.shortGapGuilds!.includes(x));
+        if (g) issues.push(`{g|${g}} 은(는) 영토를 잃은 지 며칠 만에 돌아왔는데 긴 공백처럼 썼다 — '오랫동안·한동안'을 빼고 사실표의 복귀 일수대로 쓴다: ${q(sent)}`);
+      }
+
+      // 15. 쓰러진 인물 — 끝내 쓰러진 사람을 '지켜냈다·버텼다'의 주어로 쓰지 않는다(09-17 늪지 오두막 전사).
+      if (ctx.fellFeats) {
+        for (const tk of toks.filter((x) => x.kind === 'u' && ctx.fellFeats!.includes(x.name))) {
+          if (SURVIVED.test(plain) && !FELL_WORD.test(plain)) {
+            issues.push(`{u|${tk.name}} 은(는) 그날 끝내 쓰러졌는데 버티고 지켜낸 것처럼 썼다 — 쓰러뜨린 뒤 쓰러졌다고 쓰고, 지켜낸 주어는 길드로 나눈다: ${q(sent)}`);
+          }
+        }
+      }
+
+      // 16. 석권 서수 — '세 번째로 완성한 지역' 같은 순번은 사실표가 주지 않는다(09-17).
+      const ord = plain.match(SWEEP_ORDINAL);
+      if (ord) issues.push(`지역 석권에 '${ord[0]}' 같은 순번을 붙였다 — 사실표 '지역 석권 현황'의 이력만 쓰고 서수는 뺀다: ${q(sent)}`);
+
+      if (zones.length > 0) {
+        lastZone = zones[zones.length - 1]!;
+        prevZones = zones;
+      }
       if (regions.length === 1) lastRegion = regions[0]!;
       else if (regions.length === 0 && zones.length > 0) lastRegion = ctx.zoneRegion.get(zones[zones.length - 1]!) ?? lastRegion;
       else if (regions.length > 1) lastRegion = null;
@@ -289,12 +393,17 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
     const paraGuilds = new Set(tokens(para).filter((t) => t.kind === 'g').map((t) => t.name));
     for (const sent of sentences(para)) {
       const toks = tokens(sent);
-      const zs = toks.filter((t) => t.kind === 'z').map((t) => t.name);
       const gs = new Set(toks.filter((t) => t.kind === 'g').map((t) => t.name));
-      for (const z of zs) {
+      // '지켰다'는 그 구역을 다루는 구간(앞 구역 마커 뒤 ~ 다음 구역 마커 앞)에서만 본다 — 한 문장이 빼앗은 구역과
+      // 지켜낸 구역을 함께 말할 때 뒤 구역의 '막아냈다'가 앞 구역에 걸리던 오탐(09-17 불탄 마을·잿더미 폐허).
+      const aligned = plainAligned(sent);
+      const zmarks = [...sent.matchAll(MARKER)].filter((m) => m[1] === 'z').map((m) => ({ at: m.index!, end: m.index! + m[0].length, name: m[2]!.trim() }));
+      for (let k = 0; k < zmarks.length; k++) {
+        const z = zmarks[k]!.name;
         const c = ctx.captureBy.get(z);
         if (!c) continue;
-        if (gs.has(c.winner) && HELD.test(plainText(sent))) {
+        const segment = aligned.slice(k > 0 ? zmarks[k - 1]!.end : 0, k + 1 < zmarks.length ? zmarks[k + 1]!.at : aligned.length);
+        if (gs.has(c.winner) && HELD.test(segment)) {
           issues.push(
             `{z|${z}} 은(는) {g|${c.winner}} 이(가) ${c.from ? `{g|${c.from}} 에게서 ` : ''}**빼앗은** 구역인데 지켜낸 것처럼 썼다 — '차지했다·가져갔다·손에 넣었다'로 고친다: ${
               sent.length > 60 ? sent.slice(0, 60) + '…' : sent

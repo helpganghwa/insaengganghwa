@@ -11,7 +11,7 @@ import { characters } from '@/lib/db/schema/server';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 
 import { conquestPowerMult } from '../balance';
-import { simulateConquest, type ConquestUnit } from './simulate';
+import { simulateConquest, type ConquestFinale, type ConquestUnit } from './simulate';
 
 /**
  * 점령전 정산 — GUILD §5.8⑧. **KST 23:00 cron**. 그날(오늘 KST) 전투를 결정론 정산.
@@ -116,9 +116,11 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
     const z = zoneInfo.get(zoneId);
     if (!z) continue;
     const units: ConquestUnit[] = [];
+    const roleOf: ('attack' | 'defend' | 'executor')[] = [];
     const seen = new Set<string>();
     for (const d of depsByZone.get(zoneId) ?? []) {
       seen.add(d.uid);
+      roleOf.push(d.role);
       units.push({
         userId: d.uid,
         nickname: nickOf.get(d.uid) ?? '플레이어',
@@ -130,6 +132,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
     }
     // 집행관 자동 방어(×CONQUEST_EXECUTOR_POWER_MULT) — 배치행 없이 포함(중복 방지).
     if (z.executor && z.owner_guild_id && !seen.has(z.executor)) {
+      roleOf.push('executor');
       units.push({
         userId: z.executor,
         nickname: nickOf.get(z.executor) ?? '집행관',
@@ -141,6 +144,18 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
 
     const result = simulateConquest(units, `conquest:${battleDay}:${zoneId}`);
     const winner = result.winnerGuildId;
+    // 전체 참가자 집계 — finale(마지막 N라운드)만으로는 인원·처치가 모자라 연대기가 틀린다(simulate.ts 주석).
+    const killsOf = new Map<string, number>();
+    for (const r of result.ranks) if (r.killerUserId) killsOf.set(r.killerUserId, (killsOf.get(r.killerUserId) ?? 0) + 1);
+    const tally: NonNullable<ConquestFinale['units']> = units.map((u, i) => ({
+      userId: u.userId,
+      nickname: u.nickname,
+      guildId: u.guildId,
+      guildName: u.guildName,
+      role: roleOf[i]!,
+      kills: killsOf.get(u.userId) ?? 0,
+      survived: result.ranks[i]!.survived,
+    }));
 
     // 결과 저장만(published_at=NULL) — 소유권/우편은 24:00 revealConquest로 지연.
     const ins = await db
@@ -152,7 +167,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         winnerGuildId: winner ? BigInt(winner) : null,
         // 승자 이름 스냅샷(0201) — 해산으로 id가 비워져도 역사가 승자를 잃지 않는다.
         winnerGuildName: winner ? (units.find((u) => u.guildId === winner)?.guildName ?? null) : null,
-        finale: result.finale,
+        finale: { ...result.finale, units: tally },
       })
       .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })
       .returning({ id: conquestBattles.id });

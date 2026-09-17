@@ -11,6 +11,7 @@ import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/gui
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 import { factIssues, type FactCheckContext } from './chronicle-facts';
+import { daysBetween, holdingSince, koDate, lastWipeDay, ownersBefore, replayOwnership, sweepPeriods, type OwnershipEvent } from './chronicle-history';
 import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from './chronicle-options';
 
 // 연대기 모델(2026-09-10 재확인) — 사실 오류는 chronicle-facts.ts 검증기가 재생성 피드백으로 잡고,
@@ -57,7 +58,8 @@ export type ConquestDaySummary = {
    *    3이 되어 "세 차례 공격을 받아냈다"는 과장이 나왔고, 끝내 탈락한 사람도 집계에 남았다
    *    (09-10 검수: 뉴비·냐옹 모두 공격자 1명). 이제 **끝까지 살아남은 사람의 서로 다른 공격자 수**만 센다.
    */
-  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[] }[];
+  /** fell — 그날 전투에서 끝내 쓰러졌는지(true)·끝까지 살아남았는지(false)·모름(null, 이전 전투 기록). 09-17 추가. */
+  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[]; fell: boolean | null }[];
   /**
    * 열세 방어(2026-09-10) — 수비 인원이 공격 인원보다 적은데 **지켜낸** 전투. 사람 단위 활약이 과장되기 쉬운 자리를
    * 팀 단위 사실로 대신한다(09-09 그을린 고목: 셋이 일곱을 막아냄). 인원은 crowds와 같은 기준으로
@@ -79,6 +81,9 @@ export type ConquestDaySummary = {
    */
   crowds: { zone: string; region: string; owner: string | null; defenders: number; attackers: { guild: string; n: number }[]; total: number; held: boolean }[];
 };
+
+/** 복귀 공백이 이 일수 이하면 '오랫동안'류 표현을 막는다(09-17 민초: 하루 비었다 돌아옴). */
+export const COMEBACK_SHORT_GAP_DAYS = 3;
 
 /** 인원수를 넘길 최소 참가자 수 — 이보다 작은 전투는 규모를 서술할 거리가 아니다. 기준은 실측 보고 조정. */
 export const CROWD_MIN = 5;
@@ -181,7 +186,13 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
            -- finale 로스터 기반 defenders와의 차이가 곧 '집행관만 맞선 전투'다.
            (select count(*)::int from guild_battle_deployments d
               where d.zone_id = cb.zone_id and d.battle_kst_day = ${kstDay}
-                and d.server_id = ${serverId} and d.role = 'defend') as deployed_defenders
+                and d.server_id = ${serverId} and d.role = 'defend') as deployed_defenders,
+           -- 참가자 보완(2026-09-17) — finale.units가 없는 이전 전투용. 공개 전(published_at null)이면 구역의
+           -- 현재 집행관이 곧 그 전투의 자동 방어자다(공개 뒤엔 교체될 수 있어 쓰지 않는다).
+           z.id::int as zone_id,
+           cb.published_at is null as unrevealed,
+           z.executor_user_id::text as executor,
+           (select g5.name from guilds g5 where g5.id = z.owner_guild_id) as db_owner
     from conquest_battles cb
     join zones z on z.id = cb.zone_id
     left join guilds g on g.id = cb.winner_guild_id
@@ -194,7 +205,60 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     prev_owner: string | null;
     had_owner_history: boolean;
     deployed_defenders: number;
+    zone_id: number;
+    unrevealed: boolean;
+    executor: string | null;
+    db_owner: string | null;
   }[];
+
+  // 그날 배치 전부 — finale.units가 없는 이전 전투의 참가자 정본(finale는 마지막 N라운드만 담는다).
+  const depRows = (await db.execute(sql`
+    select d.zone_id::int as zone_id, d.user_id::text as uid, g.name as guild, c.nickname
+    from guild_battle_deployments d
+    left join guilds g on g.id = d.guild_id
+    left join characters c on c.user_id = d.user_id and c.server_id = d.server_id
+    where d.battle_kst_day = ${kstDay} and d.server_id = ${serverId}
+  `)) as unknown as { zone_id: number; uid: string; guild: string | null; nickname: string | null }[];
+
+  /**
+   * 전투 참가자(2026-09-17) — 인원수·처치·생존의 정본.
+   *  - finale.units(09-17 이후 전투): 전투 전체 집계 그대로.
+   *  - 이전 전투: 배치 ∪ finale 등장 인물 ∪ (공개 전이면) 현재 집행관. 처치는 finale 구간만 알 수 있어
+   *    최소치이고, finale 밖에서 쓰러진 사람의 생사는 모른다(fell=null).
+   * 종전엔 finale 등장 인물만 세서, 일찍 쓰러진 공격자가 빠진 "1명이 수비 2명을 뚫었다"가 사실표에 실렸다
+   * (09-17 황금 회랑: 실제 Winners 3명 배치).
+   */
+  type Participant = { userId: string; nickname: string; guildName: string; kills: number; fell: boolean | null };
+  const participantsOf = (b: (typeof battles)[number]): Participant[] => {
+    const f = b.finale;
+    if (f?.units && f.units.length > 0) {
+      return f.units.map((u) => ({ userId: u.userId, nickname: u.nickname, guildName: u.guildName, kills: u.kills, fell: !u.survived }));
+    }
+    const finaleKills = new Map<string, number>();
+    const finaleFell = new Set<string>();
+    for (const [a, tg, , hp] of f?.events ?? []) {
+      if (hp > 0) continue;
+      const ra = f!.roster[a];
+      if (ra) finaleKills.set(ra.userId, (finaleKills.get(ra.userId) ?? 0) + 1);
+      const rt = f!.roster[tg];
+      if (rt) finaleFell.add(rt.userId);
+    }
+    // finale는 전투의 **마지막** N라운드라, 거기 등장해 쓰러지지 않은 사람은 끝까지 살아남은 것이다.
+    // 등장하지 않은 사람(배치만 있음)은 그 전에 쓰러졌을 가능성이 크지만 확정은 못 한다(null).
+    const inFinale = new Set((f?.roster ?? []).map((r) => r.userId));
+    const out = new Map<string, Participant>();
+    const add = (userId: string, nickname: string, guildName: string) => {
+      if (out.has(userId)) return;
+      const fell = inFinale.has(userId) ? finaleFell.has(userId) : null;
+      out.set(userId, { userId, nickname, guildName, kills: finaleKills.get(userId) ?? 0, fell });
+    };
+    for (const d of depRows) if (d.zone_id === b.zone_id && d.guild) add(d.uid, d.nickname ?? '', d.guild);
+    for (const r of f?.roster ?? []) add(r.userId, r.nickname, r.guildName);
+    if (b.unrevealed && b.executor && b.prev_owner && b.db_owner === b.prev_owner) add(b.executor, '', b.prev_owner);
+    return [...out.values()];
+  };
+  /** 사람별 생존 — 한 번이라도 쓰러졌으면 true, 확인된 생존뿐이면 false, 모르면 null. */
+  const fellOf = new Map<string, boolean | null>();
 
   const captures: ConquestDaySummary['captures'] = [];
   const defenses: ConquestDaySummary['defenses'] = [];
@@ -216,6 +280,11 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const kills = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
 
   for (const b of battles) {
+    const parts = participantsOf(b);
+    for (const pt of parts) {
+      const prev = fellOf.get(pt.userId);
+      fellOf.set(pt.userId, prev === true || pt.fell === true ? true : prev === null || pt.fell === null ? null : false);
+    }
     if (!b.winner) {
       // 무승부(승자 없음) — 소유 길드가 있으면 '소유 유지'로 방어에 준해 기록(결과 누락 방지).
       if (b.prev_owner)
@@ -223,7 +292,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
           zone: b.zone,
           region: regionKo(b.region),
           owner: b.prev_owner,
-          defenders: (b.finale?.roster ?? []).filter((r) => r.guildName === b.prev_owner).length,
+          defenders: parts.filter((r) => r.guildName === b.prev_owner).length,
           deployedDefenders: Number(b.deployed_defenders ?? 0),
         });
       continue;
@@ -244,9 +313,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         firstCapture: b.prev_owner == null && !b.had_owner_history,
         // 방어 병력 유무는 defenses(방어 '성공' 목록)가 아니라 finale 로스터로 판정 —
         // 싸우고도 진 방어를 '방어 병력 없음'으로 오표기한 사건(2026-07-17 성문) 방지.
-        defenders: b.prev_owner
-          ? (b.finale?.roster ?? []).filter((r) => r.guildName === b.prev_owner).length
-          : 0,
+        defenders: b.prev_owner ? parts.filter((r) => r.guildName === b.prev_owner).length : 0,
         deployedDefenders: Number(b.deployed_defenders ?? 0),
       });
     } else {
@@ -254,13 +321,13 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         zone: b.zone,
         region,
         owner: b.winner,
-        defenders: (b.finale?.roster ?? []).filter((r) => r.guildName === b.winner).length,
+        defenders: parts.filter((r) => r.guildName === b.winner).length,
         deployedDefenders: Number(b.deployed_defenders ?? 0),
       });
     }
     // 로스터 기준 인원(배치 + 집행관 자동 방어). 소유 길드 소속 = 수비, 그 외 = 공격(길드별).
     // 같은 집계를 '사람이 몰린 전투'(CROWD_MIN 이상)와 '열세 방어'(수비<공격인데 지켜냄) 둘이 함께 쓴다.
-    const roster = b.finale?.roster ?? [];
+    const roster = parts;
     {
       const owner = b.prev_owner;
       const byGuild = new Map<string, number>();
@@ -301,53 +368,45 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         held: !isCapture,
       });
     }
+    // 처치 — 참가자 집계 기준(finale.units가 있으면 전투 전체, 없으면 finale 구간 최소치).
+    for (const pt of parts) {
+      if (pt.kills <= 0) continue;
+      const e = kills.get(pt.userId) ?? { nick: pt.nickname, guild: pt.guildName, n: 0, zones: new Set<string>() };
+      e.n += pt.kills;
+      e.zones.add(b.zone);
+      if (!e.nick && pt.nickname) e.nick = pt.nickname;
+      kills.set(pt.userId, e);
+    }
+    // 극적 활약 판정 — 길드 단위 '자기 편'으로 본다(공격 길드끼리 맞붙는 전투가 있어 진영으로는 못 가른다).
+    // 생사를 모르는 사람(이전 전투의 finale 밖)은 단독 전멸·분전 판정에 쓰지 않는다(없는 극적 서사 방지).
+    {
+      const sideSize = new Map<string, number>();
+      for (const pt of parts) sideSize.set(pt.guildName, (sideSize.get(pt.guildName) ?? 0) + 1);
+      for (const pt of parts) {
+        if ((sideSize.get(pt.guildName) ?? 0) !== 1) continue; // '혼자'가 아니면 두 판정 다 대상 아님
+        const foes = parts.filter((o) => o.guildName !== pt.guildName);
+        // 상대가 한 명뿐인 1대1은 '단독 전멸'도 '분전'도 아니다. 그리고 **본인이 둘 이상 쓰러뜨렸을 때만**
+        // 센다 — 하한이 없으면 남이 다 잡고 살아남기만 한 1킬짜리가 매일 다섯 자리를 채운다(09-11·12 실측).
+        if (foes.length < DRAMA_MIN_FOES || pt.kills < 2 || pt.fell === null) continue;
+        const e = drama.get(pt.userId) ?? { nick: pt.nickname, guild: pt.guildName, solo: false, last: false, foes: 0 };
+        // 전투는 한 길드만 남아야 끝나므로, 본인이 살아남았고 확인된 생존 상대가 없으면 상대 전원이 쓰러진 것이다.
+        if (pt.fell === false && foes.every((o) => o.fell !== false)) e.solo = true;
+        if (pt.fell === true) e.last = true;
+        e.foes = Math.max(e.foes, foes.length);
+        drama.set(pt.userId, e);
+      }
+    }
     const f = b.finale;
     if (f?.roster && f.events) {
       // 이 전투에서 쓰러진 사람(피날레 구간 기준 — 그 전에 죽은 사람은 애초에 표적으로 등장하지 않는다).
       const fallen = new Set<number>();
-      for (const [, t, , hp] of f.events) if (hp <= 0) fallen.add(t);
+      for (const [, tg, , hp] of f.events) if (hp <= 0) fallen.add(tg);
       // 표적별 '서로 다른 공격자' 집합. 같은 사람이 여러 번 때려도 하나로 센다(1대1 세 라운드 ≠ 활약).
       const atkOf = new Map<number, Set<string>>();
-      for (const [a, t, , hp] of f.events) {
-        if (hp <= 0) {
-          const ru = f.roster[a];
-          if (ru) {
-            const e = kills.get(ru.userId) ?? { nick: ru.nickname, guild: ru.guildName, n: 0, zones: new Set<string>() };
-            e.n += 1;
-            e.zones.add(b.zone);
-            kills.set(ru.userId, e);
-          }
-          continue;
-        }
+      for (const [a, tg, , hp] of f.events) {
+        if (hp <= 0) continue;
         const ra = f.roster[a];
-        if (ra) atkOf.set(t, (atkOf.get(t) ?? new Set<string>()).add(ra.userId));
-      }
-      // 극적 활약 판정 — 길드 단위 '자기 편'으로 본다(공격 길드끼리 맞붙는 전투가 있어 진영으로는 못 가른다).
-      {
-        const sideSize = new Map<string, number>();
-        for (const r of f.roster) sideSize.set(r.guildName, (sideSize.get(r.guildName) ?? 0) + 1);
-        const killsHere = new Map<string, number>();
-        for (const [a, , , hp] of f.events) {
-          if (hp > 0) continue;
-          const ru = f.roster[a];
-          if (ru) killsHere.set(ru.userId, (killsHere.get(ru.userId) ?? 0) + 1);
-        }
-        f.roster.forEach((r, i) => {
-          if ((sideSize.get(r.guildName) ?? 0) !== 1) return; // '혼자'가 아니면 두 판정 다 대상 아님
-          const foes = f.roster.filter((o) => o.guildName !== r.guildName);
-          const foesDown = foes.every((o) => fallen.has(f.roster.indexOf(o)));
-          const mine = killsHere.get(r.userId) ?? 0;
-          const e = drama.get(r.userId) ?? { nick: r.nickname, guild: r.guildName, solo: false, last: false, foes: 0 };
-          // 상대가 한 명뿐인 1대1은 '단독 전멸'도 '분전'도 아니다 — 하한을 두지 않으면
-          // 1킬짜리가 매일 다섯 자리를 채운다(09-11·09-12 실측에서 확인).
-          // 상대가 한 명뿐인 1대1은 '단독 전멸'도 '분전'도 아니다. 그리고 **본인이 둘 이상 쓰러뜨렸을 때만**
-          // 센다 — 하한이 없으면 남이 다 잡고 살아남기만 한 1킬짜리가 매일 다섯 자리를 채운다(09-11·12 실측).
-          if (foes.length < DRAMA_MIN_FOES || mine < 2) return;
-          if (!fallen.has(i) && foesDown) e.solo = true;
-          if (fallen.has(i)) e.last = true;
-          e.foes = Math.max(e.foes, foes.length);
-          drama.set(r.userId, e);
-        });
+        if (ra) atkOf.set(tg, (atkOf.get(tg) ?? new Set<string>()).add(ra.userId));
       }
       for (const [t, atk] of atkOf) {
         if (fallen.has(t)) continue; // 끝내 쓰러진 사람은 활약이 아니다
@@ -456,6 +515,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     kind: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? ('처치' as const) : ('수비' as const),
     count: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? v.kills : v.held,
     zones: [...v.zones],
+    fell: fellOf.get(uid) ?? null,
   }));
 
   // 그날 해산(guild_disband) — 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
@@ -585,7 +645,10 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 누락 주의: 사실표 '공격 측'의 길드가 초안에 한 번도 등장하지 않으면, 그 길드가 어느 구역을 노렸고 결과가 어땠는지 한 문장을 사실표대로 보태라(지어내기 금지).
 - 연출 순서 주의: 지도 연출은 구역 마커가 처음 나오는 문장에서 재생되고, '어제·전날·하루 만에'가 든 회고 문장의 마커는 건너뛴다. 어떤 구역이 회고 표현이 든 문장에서만 마커로 등장하면, 그 구역의 오늘 행동 문장(회고 표현 없이)을 앞에 두고 회고 문장에서는 '그 땅·그곳'으로 받도록 고쳐라. 결과 문장이 행동 문장보다 앞서면 순서를 바꿔라.
 - 지역 귀속 주의: 구역의 소속 지역은 사실표의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 사건을 한 지역 이름('왕국 전역' 등)으로 묶은 문장은 오류다(여러 지역이면 '대륙 전역'). 지역명이 등장하는 문장마다 그 문장 안의 구역 하나하나를 사실표의 '(X 지역)'과 대조하라 — 특히 한 길드가 여러 지역의 구역을 점령한 경우, 'A 지역에서는 ~' 문장 안에 다른 지역 구역이 섞여 들어간 것(예: 사실표에 '(타락 천사 부유섬 지역)'인 구역을 드래곤 화산 문장에 포함)은 오류다.
-- 최초 주장 주의: '최초·처음으로' 주장은 사실표에 그렇게 명시된 경우에만 유효 — 사실표에 '이미 성립한 지역 석권 있음'이 적혀 있는데 '대륙 최초'로 쓴 문장은 오류다.
+- 최초 주장 주의: '최초·처음으로' 주장은 사실표에 그렇게 명시된 경우에만 유효하다. 지역 석권의 '세 번째로 완성한'·'차례로 지배했던' 같은 서수·이력 주장은 사실표 '■ 지역 석권 현황'에 적힌 이력만 쓸 수 있고, 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓴 문장은 오류다.
+- 동시 진행 주의: 그날의 점령전은 모든 구역에서 같은 시각에 벌어진다. '곧이어·뒤이어·그 직후·그러자'처럼 구역 사이에 순서를 만든 문장은 오류다 — 순서 없이 '같은 날·한편'으로 고쳐라.
+- 지역별 수 주의: 'X 지역에서 N곳을 늘렸다'의 N은 사실표 점령 줄의 '지역별' 수만 쓴다. 길드 전체 획득 수를 한 지역의 수로 쓰면 오류다.
+- 생존 주의: 개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물을 '자리를 지켜냈다·버텼다'의 주어로 쓴 문장은 오류다 — 쓰러뜨린 뒤 쓰러졌고 길드가 지켜냈다는 식으로 나눠 써라.
 - 해산 길드에 **보유 구역이 없었으면 땅·영토 상실을 쓰지 마라** — '남긴 땅', '주인 없는 구역이 되었다' 같은 서술은 사실 오류다(해체 사실만 담담히 적는다).
 - 축출 뉘앙스 주의: 사실표에 '중립지/주인 없는 땅' 점령만 있는 지역을 두고 '하나만 남았다·몰아냈다'처럼 다른 세력이 밀려난 듯 쓴 문장은 오류다 — 원래 다른 세력이 없던 곳('유일하게 발을 들였다' 류로 고쳐라).
 - 방치 중립화 주의: 사실표 '방치로 중립화된 구역'은 소유 길드가 아무도 배치하지 않아 방치로 주인을 잃은 구역이다. 다른 길드가 '빼앗다·점령·함락'으로 쓰지 말 것(공격자·교전 지어내기 금지). '방치해 잃었다·관리하지 않아 중립이 되었다'처럼 담담히 서술하고, '점령전으로 빼앗긴 것이 아니라 방치로 잃은 것'처럼 굳이 대조·해설하는 문장은 붙이지 않는다.
@@ -658,6 +721,11 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **인물 마커({u|})는 정리의 '개인 활약'에 적힌 인물만 쓴다.** 로스터·지난 기록·짐작으로 다른 사람 이름을 꺼내지 말 것(2026-09-10: 목록에 없는 인물의 활약을 지어낸 사건). 활약 횟수도 목록 숫자 그대로.
 - **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'와 '열세 방어'에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다 — 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
 - **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. 연속성 항목이 여럿이면 '갓 얻은 땅', '잃은 지 하루 된 땅', '곧바로 다시 주인이 바뀌었다', '전날 잃은'처럼 표현을 바꿔 잇고, 세 문장 넘게 회고로 채우지 말 것.
+- **점령전은 모든 구역에서 같은 시각에 벌어진다.** 구역과 구역 사이에 '곧이어·뒤이어·그 직후·그러자' 같은 순서를 만들지 말고 '같은 날·한편'으로 잇는다(2026-09-17).
+- **지역 석권 이력은 '■ 지역 석권 현황'에 적힌 것만 쓴다.** 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓰거나, '세 번째로 완성한·차례로 지배했던' 같은 서수·이력을 지어 붙이지 말 것. '다시 장악'이 적혀 있으면 그 기간·일수를 그대로 써도 좋다.
+- **'X 지역에서 N곳'의 N은 점령 줄의 '지역별' 수만 쓴다.** 길드 전체 획득 수를 한 지역의 수로 옮기지 말 것.
+- **잃은 구역의 보유 기간은 점령 줄의 표기를 따른다.** '어제 막 차지했던 곳'이 붙은 구역만 어제 차지한 땅이고, 'N일 동안 쥐고 있던 곳'을 함께 묶어 '어제 차지했던 곳들'로 쓰지 말 것.
+- **개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물은 '자리를 지켜냈다·버텼다'의 주어로 쓰지 않는다.** 쓰러뜨린 뒤 쓰러졌고, 자리는 길드가 지켰다는 식으로 나눠 쓴다.
 - **'같은 지역의 {z|X}'는 정리의 (X 지역) 표기가 실제로 같을 때만.** 구역을 지역으로 묶기 전에 표기를 다시 확인한다(2026-09-10: 오크 부락 구역을 잊힌 신전 문장에 묶은 사건).
 - 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
@@ -731,6 +799,33 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const summary = await aggregateConquestDay(kstDay, serverId);
   if (!isNotable(summary)) return null;
 
+  // ── 소유 이력(chronicle-history.ts) — 석권 성립·붕괴, 복귀까지의 공백, 잃은 구역의 보유 기간. ──
+  // 전투 직전 상태만 알던 사실표가 이력을 모델 추측에 맡겨 "차례로 지배·세 번째 완성·오랫동안·어제 차지했던"을
+  // 지어냈다(09-17). 해산 중립화는 연대기 창(전날 23시~당일 23시)과 같게 KST+1시간의 날짜로 묶는다.
+  const wnHist = await winnerNameFragments();
+  const histBattleRows = (await db.execute(sql`
+    select cb.battle_kst_day::text as day, z.name as zone, ${wnHist.winner('g', 'cb')} as guild
+    from conquest_battles cb
+    join zones z on z.id = cb.zone_id
+    left join guilds g on g.id = cb.winner_guild_id
+    where cb.server_id = ${serverId} and cb.battle_kst_day <= ${kstDay} and ${wnHist.hasWinner('cb')}
+  `)) as unknown as { day: string; zone: string; guild: string | null }[];
+  const histNeutralRows = (await db.execute(sql`
+    select we.detail->>'battleDay' as day, zn as zone
+    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
+    where we.server_id = ${serverId} and we.type = 'zone_neutralized' and (we.detail->>'battleDay') <= ${kstDay}
+    union all
+    select to_char(((we.created_at at time zone 'Asia/Seoul') + interval '1 hour')::date, 'YYYY-MM-DD') as day, zn as zone
+    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
+    where we.server_id = ${serverId} and we.type = 'guild_disband'
+  `)) as unknown as { day: string | null; zone: string }[];
+  const ownershipEvents: OwnershipEvent[] = [
+    ...histNeutralRows.filter((r) => r.day).map((r) => ({ day: r.day!, zone: r.zone, guild: null, kind: 'neutral' as const })),
+    ...histBattleRows.map((r) => ({ day: r.day, zone: r.zone, guild: r.guild, kind: 'battle' as const })),
+  ];
+  const snaps = replayOwnership(ownershipEvents);
+  const histBefore = ownersBefore(snaps, kstDay);
+
   // 길드별로 미리 그룹핑한 명확한 요약 — 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
   const capByGuild = new Map<string, string[]>();
   for (const c of summary.captures) {
@@ -758,7 +853,15 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
             ? ` — 이전 주인 「${c.from}」 이(가) 수비수 ${c.defenders}명으로 맞서 싸웠으나 패배(교전 있었음 — 무혈·무저항 아님)`
             : ` — 이전 주인 「${c.from}」 은(는) **배치한 수비 없이 집행관 혼자** 맞섰으나 패배(교전은 있었으니 무혈로 쓰지 말고, '수비를 세웠다·병력을 세웠다'로도 쓰지 말 것)`
           : ` — 이전 주인 「${c.from}」 은(는) 방어 병력 없음`;
-      return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote})`;
+      // 잃은 쪽이 그 구역을 쥐고 있던 기간(09-17) — 이력 재생이 전투 직전 주인과 맞을 때만.
+      const since = histBefore.get(zone) === c.from ? holdingSince(snaps, zone, c.from, kstDay) : null;
+      const held = since ? daysBetween(since, kstDay) : 0;
+      const tenureNote = since
+        ? held <= 1
+          ? ` · 「${c.from}」 이(가) 어제 막 차지했던 곳`
+          : ` · 「${c.from}」 이(가) ${koDate(since)}부터 ${held}일 동안 쥐고 있던 곳('어제 차지했던'으로 쓰지 말 것)`
+        : '';
+      return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote}${tenureNote})`;
     }
     return c.firstCapture ? `(중립지 첫 점령${rivalNote})` : `(지키는 세력 없던 빈 구역 · 교전 없이 접수${rivalNote})`;
   };
@@ -767,7 +870,16 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const regionOf = (zone: string) => summary.captures.find((x) => x.zone === zone)?.region ?? '';
   const capLines =
     [...capByGuild.entries()]
-      .map(([g, zs]) => `· 길드 「${g}」 이(가) 구역 ${zs.map((z) => `「${z}」(${regionOf(z)} 지역)${capAnno(z)}`).join(', ')} 을(를) 점령 (총 ${zs.length}곳)`)
+      .map(([g, zs]) => {
+        // 여러 지역에 걸치면 지역별 수를 함께 준다(09-17: 오크 부락 2곳 + 잊힌 신전 1곳을 "오크 부락에서 세 곳"으로 씀).
+        const byRegion = new Map<string, number>();
+        for (const z of zs) byRegion.set(regionOf(z), (byRegion.get(regionOf(z)) ?? 0) + 1);
+        const split =
+          byRegion.size > 1
+            ? ` — 지역별 ${[...byRegion.entries()].map(([r, n]) => `${r} ${n}곳`).join('·')}(한 지역에서 늘린 수는 이 지역별 수만 쓸 것)`
+            : '';
+        return `· 길드 「${g}」 이(가) 구역 ${zs.map((z) => `「${z}」(${regionOf(z)} 지역)${capAnno(z)}`).join(', ')} 을(를) 점령 (총 ${zs.length}곳${split})`;
+      })
       .join('\n') || '· (신규 점령 없음)';
   // 공격 측(role=attack) — 누가 어느 구역을 공격했는지. 구역별로 길드 묶음(공격 길드 정확 귀속).
   const atkByZone = new Map<string, string[]>();
@@ -811,7 +923,8 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     summary.crowds
       .map((c) => {
         const atk = c.attackers.map((a) => `길드 「${a.guild}」 ${a.n}명`).join(' + ');
-        const def = c.owner ? `길드 「${c.owner}」 ${c.defenders}명이 수비` : '수비 없음';
+        // 주인은 있는데 아무도 지키지 않은 구역을 '0명이 수비'로 쓰지 않는다(09-17 약탈자 야영지).
+        const def = c.owner && c.defenders > 0 ? `길드 「${c.owner}」 ${c.defenders}명이 수비` : c.owner ? `길드 「${c.owner}」 은(는) 지키는 이 없음` : '수비 없음';
         return `· 구역 「${c.zone}」(${c.region} 지역): ${atk} 이(가) 공격, ${def} — 총 ${c.total}명 · 결과 ${c.held ? '수비 성공' : '함락'}`;
       })
       .join('\n') || '';
@@ -845,7 +958,9 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     summary.feats
       .map((f) =>
         f.kind === '처치'
-          ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)${featZones(f)}`
+          ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)${featZones(f)}${
+              f.fell === true ? ' — 본인은 끝내 쓰러짐(버텼다·지켜냈다의 주어로 쓰지 말 것)' : f.fell === false ? ' — 끝까지 살아남음' : ''
+            }`
           : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 서로 다른 ${f.count}명의 공격을 받아내고 끝까지 살아남음${featZones(f)}`,
       )
       .join('\n') || '· (없음)';
@@ -867,23 +982,28 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     nbr.set(e.a, [...(nbr.get(e.a) ?? []), e.b]);
     nbr.set(e.b, [...(nbr.get(e.b) ?? []), e.a]);
   }
-  const compCount = (ownerOf: Map<number, string | null>, guild: string): { comps: number; zones: number } => {
+  const nameById = new Map(zoneRows.map((z) => [z.id, z.name]));
+  const compCount = (ownerOf: Map<number, string | null>, guild: string): { comps: number; zones: number; pieces: string[][] } => {
     const mine = new Set([...ownerOf.entries()].filter(([, o]) => o === guild).map(([id]) => id));
     const seen = new Set<number>();
-    let comps = 0;
+    const pieces: string[][] = [];
     for (const start of mine) {
       if (seen.has(start)) continue;
-      comps++;
+      const piece: string[] = [];
       const stack = [start];
       while (stack.length) {
         const cur = stack.pop()!;
         if (seen.has(cur)) continue;
         seen.add(cur);
+        piece.push(nameById.get(cur) ?? String(cur));
         for (const nx of nbr.get(cur) ?? []) if (mine.has(nx) && !seen.has(nx)) stack.push(nx);
       }
+      pieces.push(piece);
     }
-    return { comps, zones: mine.size };
+    return { comps: pieces.length, zones: mine.size, pieces };
   };
+  // 조각 구성(09-17) — "섬 영토가 갈라졌다"처럼 갈라진 자리를 추측하지 않게 조각별 구역을 적어 준다.
+  const piecesNote = (pieces: string[][]) => ` — 남은 조각: ${pieces.map((pc) => `[${pc.join('·')}]`).join(' / ')}`;
   // after = 그날 전투 반영 후 상태 — DB 소유권에 captures(winner)를 **오버레이**해 계산.
   // 사전 생성(23시대, 플립 전)엔 DB가 아직 '이전' 상태라 오버레이가 필수이고, 공개 후 실행이면
   // DB=winner라 no-op(멱등). before = after에서 오늘 점령을 되돌린 상태.
@@ -919,8 +1039,8 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       if (a.zones === 0 && b.zones > 0) return `· 길드 「${g}」: 마지막 구역까지 잃어 영토 소멸`;
       if (a.comps > b.comps && a.zones < b.zones)
         return b.comps === 1
-          ? `· 길드 「${g}」: 하나로 이어져 있던 영토가 구역 상실로 ${a.comps}개 조각으로 갈라짐(분단 — 이 변화가 핵심 이야깃거리)`
-          : `· 길드 「${g}」: 구역 상실로 영토가 ${b.comps}→${a.comps}개 조각으로 더 갈라짐(분단)`;
+          ? `· 길드 「${g}」: 하나로 이어져 있던 영토가 구역 상실로 ${a.comps}개 조각으로 갈라짐(분단 — 이 변화가 핵심 이야깃거리)${piecesNote(a.pieces)}`
+          : `· 길드 「${g}」: 구역 상실로 영토가 ${b.comps}→${a.comps}개 조각으로 더 갈라짐(분단)${piecesNote(a.pieces)}`;
       // b.zones>0 필수 — 첫 점령(0→1)은 '기존 영토와 떨어진 비지'가 아니라 데뷔다(기존 영토가 없음).
       // 이 가드가 없으면 첫 구역이 "기존 세력권과 이어지지 않은 홀로 떨어진 조각"으로 오서술됨(2026-07-07 사건).
       if (a.comps > b.comps && b.zones > 0)
@@ -971,26 +1091,54 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     milestones.push(`· 길드 「${nextLeader}」 이(가) 가장 넓은 영토를 지닌 길드가 됨(직전까지는 「${prevLeader}」, 등수 표현 말고 질적으로 서술)`);
   const regionZoneIds = new Map<string, number[]>();
   for (const z of zoneRows) regionZoneIds.set(z.region, [...(regionZoneIds.get(z.region) ?? []), z.id]);
-  // 전투 전 이미 성립해 있던 지역 석권 — '최초/N번째' 판단 근거를 사실표에 명시
-  // (2026-07-19: 왕국 석권이 이미 있는데 오크 부락을 '대륙 최초'로 오서술한 사건).
-  const priorSweeps: string[] = [];
+  // 지역 석권(2026-09-17 개편) — 전투 **전후**와 소유 이력을 함께 본다.
+  // 종전엔 '전투 전 석권'만 세어 "이미 성립한 석권 있음: 슬라임 늪·부유섬 — 3번째"를 넘겼는데, 그 둘은 바로 그날
+  // 깨졌다. 모델은 이걸 "앞서 두 지역을 차례로 지배했던 길드의 세 번째 완성"으로 옮겼다. 이제 유지·붕괴·성립을
+  // 나눠 적고, 이력은 재생 결과가 전투 직전 DB 상태와 맞는 지역에만 싣는다. 서수('N번째')는 주지 않는다.
+  const regionNames = new Map<string, string[]>();
+  for (const [region, ids] of regionZoneIds) regionNames.set(region, ids.map((id) => nameById.get(id) ?? String(id)));
+  const pastSweeps = sweepPeriods(snaps, regionNames, kstDay);
+  const histMatches = (ids: number[]) => ids.every((id) => (histBefore.get(nameById.get(id) ?? '') ?? null) === (beforeOwner.get(id) ?? null));
+  const soleOwner = (ownerOf: Map<number, string | null>, ids: number[]): string | null => {
+    const owners = new Set(ids.map((id) => ownerOf.get(id) ?? null));
+    return owners.size === 1 ? ([...owners][0] ?? null) : null;
+  };
+  const sweepLines: string[] = [];
+  // '대륙 최초' 판정은 지역 순회 전에 끝낸다 — 순회 중에 세면 앞 지역의 성립이 뒤 지역의 기존 석권을 못 본다.
+  const anySweepBefore = pastSweeps.length > 0 || [...regionZoneIds.values()].some((ids) => soleOwner(beforeOwner, ids) !== null);
   for (const [region, ids] of regionZoneIds) {
-    const owners = new Set(ids.map((id) => beforeOwner.get(id) ?? null));
-    if (owners.size !== 1) continue;
-    const g = [...owners][0];
-    if (g) priorSweeps.push(`${regionKo(region)}=「${g}」`);
-  }
-  for (const [region, ids] of regionZoneIds) {
-    const owners = new Set(ids.map((id) => afterOwner.get(id) ?? null));
-    if (owners.size !== 1) continue;
-    const g = [...owners][0];
-    // 그날 새로 성립한 완전 장악만(전날부터 이미 전 구역 소유였으면 제외).
-    if (g && !ids.every((id) => beforeOwner.get(id) === g)) {
-      const firstNote =
-        priorSweeps.length > 0
-          ? ` (이미 성립한 지역 석권 있음: ${priorSweeps.join(', ')} — '대륙 최초' 아님, ${priorSweeps.length + 1}번째)`
-          : ' (대륙 최초의 지역 석권)';
-      milestones.push(`· 길드 「${g}」 이(가) ${regionKo(region)} 전체 ${ids.length}곳을 장악${firstNote}`);
+    const label = regionKo(region);
+    const bG = soleOwner(beforeOwner, ids);
+    const aG = soleOwner(afterOwner, ids);
+    const trusted = histMatches(ids);
+    const ongoing = trusted ? pastSweeps.find((s) => s.region === region && s.brokenOn === null && s.guild === bG) : undefined;
+    if (bG && aG === bG) {
+      sweepLines.push(`· ${label}: 「${bG}」 석권 유지${ongoing ? `(${koDate(ongoing.from)}부터 ${daysBetween(ongoing.from, kstDay)}일째)` : ''}`);
+    } else if (bG) {
+      const lostZones = ids.filter((id) => afterOwner.get(id) !== bG).map((id) => `「${nameById.get(id)}」`);
+      sweepLines.push(
+        `· ${label}: 「${bG}」 석권이 오늘 깨짐 — 구역 ${lostZones.join(', ')} 을(를) 잃음${
+          ongoing ? `(${koDate(ongoing.from)}에 이룬 석권, ${daysBetween(ongoing.from, kstDay)}일 만)` : ''
+        }. 이제 이 지역을 전부 쥔 길드는 없다`,
+      );
+    }
+    if (aG && aG !== bG) {
+      const prev = trusted
+        ? pastSweeps.filter((s) => s.region === region && s.guild === aG && s.brokenOn).at(-1)
+        : undefined;
+      const hist = prev
+        ? ` — ${koDate(prev.from)}부터 ${daysBetween(prev.from, prev.brokenOn!)}일 동안 쥐었다가 ${koDate(prev.brokenOn!)}에 흩어진 지역을 ${daysBetween(prev.brokenOn!, kstDay)}일 만에 다시 장악`
+        : trusted
+          ? ' — 이력상 이 길드의 첫 석권 지역'
+          : '';
+      sweepLines.push(`· ${label}: 「${aG}」 이(가) 오늘 전 구역 장악${hist}`);
+      milestones.push(
+        `· 길드 「${aG}」 이(가) ${label} 전체 ${ids.length}곳을 장악${
+          anySweepBefore
+            ? " ('최초'·'N번째' 같은 서수 표현 금지 — 이력은 '지역 석권 현황'만 따를 것)"
+            : ' (대륙 최초의 지역 석권)'
+        }`,
+      );
     }
   }
   // 데뷔 후보(전날 0 → 오늘 1+)의 과거 이력 조회 — '어제 상태'만 보면 영토를 전부 잃었다
@@ -1008,14 +1156,23 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       `)) as unknown as { name: string }[])
     : [];
   const veterans = new Set(veteranRows.map((r) => r.name));
+  const shortGapGuilds: string[] = [];
   for (const g of new Set([...beforeCounts.keys(), ...afterCounts.keys()])) {
     const b = beforeCounts.get(g) ?? 0;
     const a = afterCounts.get(g) ?? 0;
     if (b > 0 && a === 0) milestones.push(`· 길드 「${g}」 영토 소멸(마지막 구역 상실)`);
+    // 복귀 공백(09-17) — 하루 비었다 돌아온 길드를 "오랫동안 영토를 갖지 못했던"으로 쓴 사고.
+    const wipedOn = b === 0 && a > 0 && veterans.has(g) ? lastWipeDay(snaps, g, kstDay) : null;
+    const gapDays = wipedOn ? daysBetween(wipedOn, kstDay) : null;
+    if (gapDays !== null && gapDays <= COMEBACK_SHORT_GAP_DAYS) shortGapGuilds.push(g);
     if (b === 0 && a > 0)
       milestones.push(
         veterans.has(g)
-          ? `· 길드 「${g}」 이(가) 영토를 모두 잃었던 처지에서 다시 구역을 확보하며 판도에 복귀(재기 — 과거에 영토를 가졌던 길드다. '첫 등장'·'대륙에 이름을 알렸다' 표현 금지, '돌아왔다'류로)`
+          ? `· 길드 「${g}」 이(가) 영토를 모두 잃었던 처지에서 다시 구역을 확보하며 판도에 복귀(재기 — 과거에 영토를 가졌던 길드다. '첫 등장'·'대륙에 이름을 알렸다' 표현 금지, '돌아왔다'류로${
+              gapDays !== null
+                ? `. 영토를 모두 잃은 ${koDate(wipedOn!)} 이후 ${gapDays}일 만의 복귀${gapDays <= COMEBACK_SHORT_GAP_DAYS ? " — '오랫동안·오래·한동안·긴 공백' 표현 금지" : ''}`
+                : ''
+            })`
           : beforeCounts.size === 0
             ? `· 길드 「${g}」 이(가) 대륙 최초로 구역을 점령`
             : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 대륙에 이름을 알림(첫 등장 — '판도에 등장' 대신 이 표현으로)`,
@@ -1079,7 +1236,14 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       `■ 열세 점령(수비보다 적은 인원으로 들어가 빼앗은 전투 — 열세 방어와 같은 무게의 활약. 인원수를 써도 되는 자리다):\n${underdogCapLines}`,
     );
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
-  if (topoLines) digestSections.push(`■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines}`);
+  if (topoLines)
+    digestSections.push(
+      `■ 지형 형세(지도 분석 — 형세 서술 근거. 조각은 지역 경계와 무관하게 맞닿은 구역끼리 묶은 것이다. 한 지역 안의 영토가 갈라졌다고 옮기지 말고 조각 구성대로 쓸 것):\n${topoLines}`,
+    );
+  if (sweepLines.length > 0)
+    digestSections.push(
+      `■ 지역 석권 현황(한 길드가 지역 구역을 전부 쥔 곳, 오늘 전후 비교 — 석권 이력은 여기 적힌 것만 쓰고, 오늘 깨진 석권을 아직 쥔 것처럼 쓰지 말 것):\n${sweepLines.join('\n')}`,
+    );
   if (summary.renames.length > 0)
     digestSections.push(
       `■ 길드명 변경(같은 길드다 — 두 세력으로 쓰지 말 것):\n` +
@@ -1162,6 +1326,30 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     // 그날 전투가 있었던 구역 전부 — 하나라도 본문에서 빠지면 재생성 피드백으로 잡는다.
     battleZones: [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])],
     captureBy: new Map(summary.captures.map((c) => [c.zone, { winner: c.winner, from: c.from }] as const)),
+    // 09-17 추가 — 어제 귀속·지역별 수·짧은 복귀 공백·쓰러진 인물.
+    yesterdayCaptureBy: new Map(y.captures.map((c) => [c.zone, c.winner] as const)),
+    regionCounts: (() => {
+      const m = new Map<string, Map<string, { gain: number; loss: number; after: number; before: number }>>();
+      const bump = (g: string | null | undefined, region: string, key: 'gain' | 'loss' | 'after' | 'before') => {
+        if (!g) return;
+        const byRegion = m.get(g) ?? new Map();
+        const c = byRegion.get(region) ?? { gain: 0, loss: 0, after: 0, before: 0 };
+        c[key] += 1;
+        byRegion.set(region, c);
+        m.set(g, byRegion);
+      };
+      for (const c of summary.captures) {
+        bump(c.winner, c.region, 'gain');
+        bump(c.from, c.region, 'loss');
+      }
+      for (const z of zoneRows) {
+        bump(afterOwner.get(z.id), regionKo(z.region), 'after');
+        bump(beforeOwner.get(z.id), regionKo(z.region), 'before');
+      }
+      return m;
+    })(),
+    shortGapGuilds,
+    fellFeats: summary.feats.filter((f) => f.fell === true).map((f) => f.nickname),
   };
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──

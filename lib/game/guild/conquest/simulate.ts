@@ -54,6 +54,21 @@ export type ConquestFinale = {
   }>;
   /** [attackerLocal, targetLocal, dmg, hpAfter(≤0=탈락)] — 시간순 마지막 N라운드. */
   events: Array<[number, number, number, number]>;
+  /**
+   * 전투 전체 참가자 집계(2026-09-17 추가, 이전 행에는 없음) — roster/events는 **마지막 N라운드**만 담아
+   * 일찍 쓰러진 사람이 빠진다. 연대기 사실표가 그걸로 인원·처치를 세다 "Winners 1명이 수비 2명을 뚫었다"
+   * (실제 배치 3명, 09-17 황금 회랑)처럼 없는 열세 점령을 만들었다. 인원·처치·생존은 이 목록이 정본이다.
+   * role: attack/defend = 배치, executor = 집행관 자동 방어.
+   */
+  units?: Array<{
+    userId: string;
+    nickname: string;
+    guildId: string;
+    guildName: string;
+    role: 'attack' | 'defend' | 'executor';
+    kills: number;
+    survived: boolean;
+  }>;
 };
 
 export type ConquestSimResult = {
