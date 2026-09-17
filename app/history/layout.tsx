@@ -54,9 +54,9 @@ const PAPER_INK_CSS = `
 
 export default function HistoryLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={`ig-paper min-h-dvh ${PAPER.page}`}>
+    <div className={`ig-paper flex min-h-dvh flex-col md:h-dvh md:overflow-hidden ${PAPER.page}`}>
       <style dangerouslySetInnerHTML={{ __html: PAPER_INK_CSS }} />
-      <header className={`sticky top-0 z-30 border-b backdrop-blur ${PAPER.bar}`}>
+      <header className={`sticky top-0 z-30 shrink-0 border-b backdrop-blur ${PAPER.bar}`}>
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-4 md:px-6">
           <Link href="/history" style={SERIF} className="text-[17px] font-bold">
             대륙 연대기
@@ -75,7 +75,7 @@ export default function HistoryLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      {children}
+      <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
 }

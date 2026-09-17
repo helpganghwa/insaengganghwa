@@ -612,80 +612,13 @@ export function HistoryPlayer({
       : story.eras.findIndex((e) => idx >= e.startIdx && idx <= e.endIdx);
 
   return (
-    <main className="mx-auto w-full max-w-[1360px] px-4 pt-4 pb-24 md:h-[calc(100dvh-56px)] md:px-6 md:pt-5 md:pb-20">
-      {/* 3분할(2026-09-17 상세 수정) — 세로 스크롤 없이 화면 높이에 맞춘다: 지도 | 글(열 안에서 스크롤) | 순위 바 레이스·장면·시대. 조작은 화면 하단 플로팅. */}
-      <div className="flex flex-col gap-6 md:grid md:h-full md:grid-cols-[390px_minmax(0,1fr)] md:items-stretch md:gap-8 xl:grid-cols-[390px_minmax(0,1fr)_300px]">
-        <aside className="md:flex md:h-full md:min-h-0 md:flex-col">
-          {/* 시대 띠(스크러버) — 지도 위 */}
-          <div>
-            <div className="relative">
-              <div
-                className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
-                role="list"
-                aria-label="시대"
-              >
-                {story.eras.map((e, i) => {
-                  const len = e.endIdx - e.startIdx + 1;
-                  const future = phase !== 'idle' && e.startIdx > idx;
-                  return (
-                    <div
-                      key={i}
-                      role="listitem"
-                      className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
-                      style={{
-                        width: `${(len / n) * 100}%`,
-                        background: e.color ?? '#9a917f',
-                        opacity: future ? 0.35 : 1,
-                      }}
-                    >
-                      {len >= 4
-                        ? `「${e.name}」의 시대 · ${len}일`
-                        : len >= 2
-                          ? `${e.name} ${len}`
-                          : ''}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* 스크러버 — 띠 위에 투명하게 겹친 range. 클릭·드래그로 그날부터. */}
-              <input
-                type="range"
-                min={0}
-                max={n - 1}
-                value={phase === 'idle' ? n - 1 : idx}
-                onChange={(e) => void startAt(Number(e.target.value))}
-                aria-label="날짜"
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
-                style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
-              />
-            </div>
-            {/* 사건 눈금 — 라벨 없이, 올리면 툴팁. 진한 눈금 = 1위 교체·석권·최대. */}
-            <div className="relative mt-[3px] h-[6px]">
-              {ticks.map((t) => (
-                <button
-                  key={t.i}
-                  type="button"
-                  title={`${days[t.i]!.kstDay} · ${t.label}`}
-                  aria-label={`${days[t.i]!.kstDay} ${t.label}`}
-                  onClick={() => void startAt(t.i)}
-                  className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
-                  style={{
-                    left: `${pct(t.i)}%`,
-                    borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
-                  }}
-                />
-              ))}
-            </div>
-            <div className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}>
-              <span>{shortDay(days[0]!.kstDay)}</span>
-              <span>{shortDay(days[n - 1]!.kstDay)}</span>
-            </div>
-          </div>
-          <div className="mx-auto mt-2.5 w-full" style={{ maxWidth: STAGE_PX }}>
+    <main className="mx-auto w-full max-w-[1400px] px-3 pt-3 pb-28 md:h-full md:min-h-0 md:px-5 md:pt-4 md:pb-24">
+      {/* 큰 틀 하나를 3등분(2026-09-17) — 지도 | 글 | 장면·순위·시대. 각 칸이 자기 안에서 스크롤하고 페이지는 스크롤하지 않는다. 조작·시대 띠는 하단 플로팅. */}
+      <div
+        className={`flex flex-col rounded-2xl border md:grid md:h-full md:min-h-0 md:grid-cols-[390px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:divide-x md:divide-[#e2d9c6] md:overflow-hidden xl:grid-cols-[390px_minmax(0,1fr)_300px] ${PAPER.border} ${PAPER.card}`}
+      >
+        <aside className="min-h-0 overflow-y-auto p-4 md:h-full">
+          <div className="mx-auto w-full" style={{ maxWidth: STAGE_PX }}>
             <div
               className="relative overflow-hidden rounded-[3px]"
               style={{ width: stageSize, height: stageSize }}
@@ -831,7 +764,7 @@ export function HistoryPlayer({
             </div>
           </div>
           {/* 판도 한 줄 — 길드별 영토 비율. 점령 때마다 움직인다. */}
-          <div className="mt-2.5">
+          <div className="mx-auto mt-2.5 w-full" style={{ maxWidth: STAGE_PX }}>
             <div className={`mb-1 flex justify-between text-[11px] tabular-nums ${PAPER.muted}`}>
               <span className="truncate">
                 {share.slice(0, 4).map(([g, c], i) => (
@@ -876,9 +809,9 @@ export function HistoryPlayer({
         </aside>
 
         {/* ── 기록(가운데) — 페이지를 따라 흐른다. 정지 땐 제목·버튼과 오늘의 기록. ── */}
-        <section className="max-w-[66ch] min-w-0">
+        <section className="min-h-0 md:flex md:h-full md:flex-col">
           <div
-            className={`flex items-baseline justify-between gap-3 border-b pb-2 ${PAPER.border}`}
+            className={`flex shrink-0 items-baseline justify-between gap-3 border-b px-5 py-2.5 ${PAPER.border}`}
           >
             <div className="text-[15px] font-bold whitespace-nowrap" style={SERIF}>
               {fmtDay(showingDay.kstDay)}
@@ -888,7 +821,7 @@ export function HistoryPlayer({
             </div>
           </div>
           {phase === 'idle' ? (
-            <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-2 md:max-w-[66ch]">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-8 md:max-w-[70ch]">
               <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                 대륙의 역사
               </div>
@@ -942,7 +875,7 @@ export function HistoryPlayer({
           ) : (
             <div
               ref={readerRef}
-              className="min-h-0 flex-1 overflow-y-auto pt-4 pr-2 md:max-w-[66ch]"
+              className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-8 md:max-w-[70ch]"
             >
               {queue.length === 0 && quickRows.length === 0 && phase === 'loading' ? (
                 <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
@@ -1089,7 +1022,7 @@ export function HistoryPlayer({
         </section>
 
         {/* ── 정보 열(오른쪽, 넓은 화면) — 이날의 장면 · 순위 · 시대 목차. 글 열은 문장만 남긴다. ── */}
-        <aside className="hidden xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-y-auto">
+        <aside className="hidden min-h-0 overflow-y-auto p-4 xl:block xl:h-full">
           <InfoPanel
             scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
             share={share}
@@ -1103,10 +1036,10 @@ export function HistoryPlayer({
         </aside>
       </div>
 
-      {/* ── 플로팅 컨트롤러 — 화면 하단 가운데, 가로 한 줄 ── */}
+      {/* ── 플로팅 컨트롤러 — 화면 하단 가운데: 재생 조작 · 배속 · 방식 · 시대 띠(스크러버) · N / 전체 ── */}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
         <div
-          className={`pointer-events-auto flex max-w-full flex-wrap items-center gap-1.5 rounded-full border bg-[#fdfaf3]/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(40,30,10,.35)] backdrop-blur ${PAPER.border}`}
+          className={`pointer-events-auto flex w-full max-w-[1120px] flex-wrap items-center gap-2 rounded-xl border bg-[#fdfaf3]/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(40,30,10,.35)] backdrop-blur ${PAPER.border}`}
         >
           <IconBtn onClick={() => void startAt(0)} title="처음부터" icon="first" />
           <IconBtn
@@ -1169,7 +1102,75 @@ export function HistoryPlayer({
               </button>
             ))}
           </span>
-          <span className={`ml-1 pr-1 text-[11px] tabular-nums ${PAPER.muted}`}>
+          <div className="min-w-[260px] flex-1 px-2">
+            <div className="relative">
+              <div
+                className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
+                role="list"
+                aria-label="시대"
+              >
+                {story.eras.map((e, i) => {
+                  const len = e.endIdx - e.startIdx + 1;
+                  const future = phase !== 'idle' && e.startIdx > idx;
+                  return (
+                    <div
+                      key={i}
+                      role="listitem"
+                      className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
+                      style={{
+                        width: `${(len / n) * 100}%`,
+                        background: e.color ?? '#9a917f',
+                        opacity: future ? 0.35 : 1,
+                      }}
+                    >
+                      {len >= 4
+                        ? `「${e.name}」의 시대 · ${len}일`
+                        : len >= 2
+                          ? `${e.name} ${len}`
+                          : ''}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* 스크러버 — 띠 위에 투명하게 겹친 range. 클릭·드래그로 그날부터. */}
+              <input
+                type="range"
+                min={0}
+                max={n - 1}
+                value={phase === 'idle' ? n - 1 : idx}
+                onChange={(e) => void startAt(Number(e.target.value))}
+                aria-label="날짜"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
+                style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
+              />
+            </div>
+            {/* 사건 눈금 — 라벨 없이, 올리면 툴팁. 진한 눈금 = 1위 교체·석권·최대. */}
+            <div className="relative mt-[3px] h-[6px]">
+              {ticks.map((t) => (
+                <button
+                  key={t.i}
+                  type="button"
+                  title={`${days[t.i]!.kstDay} · ${t.label}`}
+                  aria-label={`${days[t.i]!.kstDay} ${t.label}`}
+                  onClick={() => void startAt(t.i)}
+                  className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
+                  style={{
+                    left: `${pct(t.i)}%`,
+                    borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
+                  }}
+                />
+              ))}
+            </div>
+            <div className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}>
+              <span>{shortDay(days[0]!.kstDay)}</span>
+              <span>{shortDay(days[n - 1]!.kstDay)}</span>
+            </div>
+          </div>
+          <span className={`pr-1 text-[11px] tabular-nums ${PAPER.muted}`}>
             {phase === 'idle' ? `${n}일` : `${idx + 1} / ${n}`}
           </span>
         </div>
@@ -1221,7 +1222,7 @@ function InfoPanel({
               name: g,
               count: c,
               color: meta[g]?.color ?? '#9a917f',
-              emblem: guildEmblem(g)[0] ?? null,
+              emblems: guildEmblem(g),
             }))}
           />
         ) : (
@@ -1333,7 +1334,7 @@ function SceneCard({
           ) : null}
         </div>
         {scene.guilds.length > 0 ? (
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center -space-x-2">
             {scene.guilds.map((g) => {
               const urls =
                 guildEmblem(g.name).length > 0
@@ -1341,21 +1342,14 @@ function SceneCard({
                   : g.emblemUrl
                     ? [g.emblemUrl, ...(g.emblemAlsoTry ?? [])]
                     : [];
+              if (urls.length === 0) return null;
               return (
                 <span
                   key={g.name}
                   title={g.name}
-                  className="inline-block h-7 w-7 overflow-hidden rounded-[5px]"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${g.color ?? '#9a917f'} 40%, #fdfaf3)`,
-                    boxShadow: `0 0 0 1.5px ${g.color ?? '#9a917f'}`,
-                  }}
+                  className="inline-block h-12 w-12 opacity-95 drop-shadow-[0_2px_6px_rgba(0,0,0,.7)]"
                 >
-                  <EmblemChain
-                    key={urls[0] ?? 'none'}
-                    urls={urls}
-                    className="h-full w-full object-contain"
-                  />
+                  <EmblemChain key={urls[0]} urls={urls} className="h-full w-full object-contain" />
                 </span>
               );
             })}
