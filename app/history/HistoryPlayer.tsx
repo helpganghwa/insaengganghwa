@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { EmblemChain, GuildInline } from '@/components/EmblemChain';
 import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { PAPER, SERIF } from '@/app/wiki/theme';
@@ -44,11 +45,17 @@ function Headline({
   text,
   className = '',
   guildColor,
+  guildEmblem,
+  zoneColor,
 }: {
   text: string;
   className?: string;
   /** 길드명 색(없으면 기본 보라). */
   guildColor?: (name: string) => string | null;
+  /** 길드 문양 후보 — 주면 이름 앞에 작은 타일. */
+  guildEmblem?: (name: string) => readonly string[];
+  /** 구역 지역색 — 주면 구역명을 지역색 글자+점선으로. */
+  zoneColor?: (name: string) => string | null;
 }) {
   const parts: React.ReactNode[] = [];
   let last = 0;
@@ -58,21 +65,35 @@ function Headline({
     const kind = m[1]!;
     const name = m[2]!;
     const gc = kind === 'g' ? (guildColor?.(name) ?? null) : null;
-    parts.push(
-      <span
-        key={i++}
-        className={
-          kind === 'g'
-            ? `inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`
-            : kind === 'z'
-              ? 'inline-block px-0.5 underline decoration-dotted underline-offset-2'
-              : 'inline-block px-0.5 font-semibold text-[#8a4b23]'
-        }
-        style={gc ? { color: gc } : undefined}
-      >
-        {name}
-      </span>,
-    );
+    const zc = kind === 'z' ? (zoneColor?.(name) ?? null) : null;
+    if (kind === 'g' && guildEmblem) {
+      parts.push(
+        <GuildInline
+          key={i++}
+          name={name}
+          shown={name}
+          color={gc}
+          urls={guildEmblem(name)}
+          className="px-0.5"
+        />,
+      );
+    } else {
+      parts.push(
+        <span
+          key={i++}
+          className={
+            kind === 'g'
+              ? `inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`
+              : kind === 'z'
+                ? 'inline-block px-0.5 underline decoration-dotted underline-offset-2'
+                : 'inline-block px-0.5 font-semibold text-[#8a4b23]'
+          }
+          style={gc ? { color: gc } : zc ? { color: zc, textDecorationColor: zc } : undefined}
+        >
+          {name}
+        </span>,
+      );
+    }
     last = m.index! + m[0].length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -133,26 +154,6 @@ function emblemChainOf(
   return k >= 0 ? hist.slice(k) : [g.emblemUrl, ...hist];
 }
 
-/** 노드 문양 — 후보를 차례로 시도하고 전부 실패하면 아무것도 그리지 않는다(밑에 깔린 머리글자가 보인다). */
-function EmblemChain({ urls, className }: { urls: string[]; className: string }) {
-  const [k, setK] = useState(0);
-  const src = urls[k];
-  if (!src) return null;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt=""
-      aria-hidden
-      loading="lazy"
-      decoding="async"
-      onError={() => setK((i) => i + 1)}
-      className={className}
-      style={{ imageRendering: 'pixelated' }}
-    />
-  );
-}
-
 function shieldQuick(e: HTMLElement, color: string, guild: string): void {
   e.style.clipPath = 'polygon(50% 0,100% 18%,100% 62%,50% 100%,0 62%,0 18%)';
   e.style.background = color;
@@ -189,11 +190,20 @@ export function HistoryPlayer({
     (g: HistoryGuildMeta | undefined) => emblemChainOf(index.emblemHistory, g),
     [index.emblemHistory],
   );
+  /** 본문·헤드라인의 인라인 길드 타일용 문양 후보. */
+  const guildEmblem = useCallback((name: string) => emblemChain(meta[name]), [meta, emblemChain]);
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const layerRef = useRef<HTMLDivElement | null>(null);
   const bindLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el;
     setLayer(el);
+  }, []);
+  /** 지도 아래 자막(2026-09-17) — 재생 패널이 타이핑 중인 문장을 DOM으로 직접 쓴다(글과 지도를 오가지 않게). */
+  const [captionEl, setCaptionEl] = useState<HTMLDivElement | null>(null);
+  const captionRef = useRef<HTMLDivElement | null>(null);
+  const bindCaption = useCallback((el: HTMLDivElement | null) => {
+    captionRef.current = el;
+    setCaptionEl(el);
   }, []);
   // 이어 읽기 — 시작한 날들을 한 목록에 쌓고 끝난 날의 재생 패널도 그대로 마운트해 둔다(정적으로 바꿔 그리면 튄다).
   const [queue, setQueue] = useState<
@@ -498,6 +508,7 @@ export function HistoryPlayer({
       const token = ++run.current;
       pausedRef.current = false;
       setPaused(false);
+      if (!continuous && captionRef.current) captionRef.current.textContent = '';
       if (!continuous) {
         // 새로 시작할 때만 지도를 비운다 — 이어 재생 중엔 전날의 마지막 문양·착지 링이 자연스럽게 사라지도록 둔다(날짜 경계의 '끊김' 원인).
         layerRef.current?.replaceChildren();
@@ -906,7 +917,12 @@ export function HistoryPlayer({
                   className="mt-0.5 h-[20px] truncate text-[13px] leading-[20px] font-semibold"
                   style={SERIF}
                 >
-                  <Headline text={showingDay.headline || '기록'} guildColor={guildColor} />
+                  <Headline
+                    text={showingDay.headline || '기록'}
+                    guildColor={guildColor}
+                    guildEmblem={guildEmblem}
+                    zoneColor={zoneColor}
+                  />
                 </div>
                 <div className="mt-1 flex h-[18px] flex-nowrap gap-x-3 overflow-hidden text-[11px] tabular-nums">
                   {legend.map(([g, c]) => (
@@ -941,6 +957,15 @@ export function HistoryPlayer({
                     </span>
                   ))}
                 </div>
+                {/* 자막 — 전투 재생 중 지금 타이핑되는 문장(패널이 직접 씀). 지도와 같은 열에 있어 시선이 오가지 않는다. */}
+                {mode === 'battle' && phase !== 'idle' ? (
+                  <div
+                    ref={bindCaption}
+                    aria-live="off"
+                    className="mt-2 [display:-webkit-box] h-[63px] overflow-hidden text-[13px] leading-[21px] text-[#2a251e] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+                    style={SERIF}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -1223,6 +1248,8 @@ export function HistoryPlayer({
                         battles={q.data.replay ? Object.keys(q.data.replay.events).length : null}
                         dim={i < queue.length - 1}
                         guildColor={guildColor}
+                        guildEmblem={guildEmblem}
+                        zoneColor={zoneColor}
                       />
                       <div
                         className={`mt-2 text-[13.5px] leading-[1.9] transition-opacity duration-1000 ${i < queue.length - 1 ? 'opacity-70' : ''}`}
@@ -1249,10 +1276,17 @@ export function HistoryPlayer({
                             speed={speed}
                             pausedRef={pausedRef}
                             guildColor={guildColor}
-                            zoneStyle="plain"
+                            guildEmblem={guildEmblem}
+                            zoneStyle="tint"
+                            captionEl={captionEl}
                           />
                         ) : (
-                          <StaticChronicle text={q.data.text} guildColor={guildColor} />
+                          <StaticChronicle
+                            text={q.data.text}
+                            guildColor={guildColor}
+                            guildEmblem={guildEmblem}
+                            zoneColor={zoneColor}
+                          />
                         )}
                       </div>
                     </section>
@@ -1315,6 +1349,8 @@ function DayDivider({
   battles,
   dim,
   guildColor,
+  guildEmblem,
+  zoneColor,
 }: {
   kstDay: string;
   nth: number;
@@ -1322,6 +1358,8 @@ function DayDivider({
   battles?: number | null;
   dim?: boolean;
   guildColor?: (name: string) => string | null;
+  guildEmblem?: (name: string) => readonly string[];
+  zoneColor?: (name: string) => string | null;
 }) {
   return (
     <div className={`transition-opacity duration-1000 ${dim ? 'opacity-70' : ''}`}>
@@ -1337,7 +1375,12 @@ function DayDivider({
       </div>
       {headline ? (
         <div className="mt-2 text-[15px] leading-[1.45] font-bold" style={SERIF}>
-          <Headline text={headline} guildColor={guildColor} />
+          <Headline
+            text={headline}
+            guildColor={guildColor}
+            guildEmblem={guildEmblem}
+            zoneColor={zoneColor}
+          />
         </div>
       ) : null}
     </div>
@@ -1348,9 +1391,13 @@ function DayDivider({
 function StaticChronicle({
   text,
   guildColor,
+  guildEmblem,
+  zoneColor,
 }: {
   text: string;
   guildColor: (name: string) => string | null;
+  guildEmblem: (name: string) => readonly string[];
+  zoneColor: (name: string) => string | null;
 }) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -1363,21 +1410,25 @@ function StaticChronicle({
           const kind = m[1]!;
           const name = m[2]!;
           if (kind === 'z') {
+            const zc = zoneColor(name);
             parts.push(
-              <span key={k++} className="underline decoration-dotted underline-offset-2 opacity-85">
+              <span
+                key={k++}
+                className="underline decoration-dotted underline-offset-2"
+                style={zc ? { color: zc, textDecorationColor: zc } : undefined}
+              >
                 {name}
               </span>,
             );
           } else if (kind === 'g') {
-            const gc = guildColor(name);
             parts.push(
-              <span
+              <GuildInline
                 key={k++}
-                className={`inline-block align-baseline font-bold ${gc ? '' : 'text-[#4b3a8a]'}`}
-                style={gc ? { color: gc } : undefined}
-              >
-                {name}
-              </span>,
+                name={name}
+                shown={name}
+                color={guildColor(name)}
+                urls={guildEmblem(name)}
+              />,
             );
           } else {
             parts.push(

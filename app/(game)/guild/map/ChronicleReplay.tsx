@@ -1,5 +1,6 @@
 'use client';
 
+import { GuildInline } from '@/components/EmblemChain';
 import { useEffect, useRef, useState } from 'react';
 
 import type { ConquestReplay, ReplayEvent } from '@/lib/game/guild/conquest/replay';
@@ -93,7 +94,9 @@ export function ChronicleReplayPanel({
   speed = 1,
   pausedRef,
   guildColor,
+  guildEmblem,
   zoneStyle = 'chip',
+  captionEl,
 }: {
   text: string;
   replay: ConquestReplay;
@@ -109,8 +112,12 @@ export function ChronicleReplayPanel({
   pausedRef?: React.RefObject<boolean>;
   /** 길드명을 길드 색으로 강조(2026-09-17, 역사 페이지: 지역색보다 길드·인물에 초점). 없으면 게임 기본(회색). */
   guildColor?: (name: string) => string | null;
-  /** 구역명 표시 — chip(게임 기본: 지역색 칩) | plain(점선 밑줄만, 역사 페이지). */
-  zoneStyle?: 'chip' | 'plain';
+  /** 길드 문양 후보(2026-09-17, 역사 페이지) — 주면 길드명 앞에 작은 타일(문양)을 붙인다. guildColor와 함께 씀. */
+  guildEmblem?: (name: string) => readonly string[];
+  /** 구역명 표시 — chip(게임 기본: 지역색 칩) | plain(점선 밑줄만) | tint(지역색 글자 + 지역색 점선, 배경 없음 — 역사 페이지). */
+  zoneStyle?: 'chip' | 'plain' | 'tint';
+  /** 자막 요소(역사 페이지) — 타이핑 중인 문장을 이 요소의 textContent로 비춘다(React 상태 없이 DOM 직접, 글자마다). */
+  captionEl?: HTMLElement | null;
 }) {
   const speedRef = useRef(speed);
   speedRef.current = speed;
@@ -508,6 +515,14 @@ export function ChronicleReplayPanel({
           for (let c = 1; c <= seg.text.length; c++) {
             if (cancelled) return;
             setPos({ p, s, c });
+            // 자막(역사 페이지) — 이 문단에서 지금까지 찍힌 글자 중 마지막 문장을 지도 아래 자막 요소에 비춘다.
+            if (captionEl) {
+              let typed = '';
+              for (let i = 0; i < s; i++) typed += segs[i]!.text;
+              typed += seg.text.slice(0, c);
+              const sentences = typed.split(/(?<=[.!?…])\s+/);
+              captionEl.textContent = sentences[sentences.length - 1] ?? typed;
+            }
             if (!skipRef.current) {
               await wait(seg.text[c - 1] === ' ' ? 28 : CHAR_MS, () => skipRef.current);
             }
@@ -591,6 +606,16 @@ export function ChronicleReplayPanel({
   const renderSeg = (seg: ChronicleSegment, shown: string, key: number) => {
     if (seg.kind === 'g') {
       const gc = guildColor?.(seg.name) ?? null;
+      if (guildEmblem)
+        return (
+          <GuildInline
+            key={key}
+            name={seg.name}
+            shown={shown}
+            color={gc}
+            urls={guildEmblem(seg.name)}
+          />
+        );
       return gc ? (
         <span key={key} className="inline-block align-baseline font-bold" style={{ color: gc }}>
           {shown}
@@ -624,6 +649,18 @@ export function ChronicleReplayPanel({
             {shown}
           </span>
         );
+      if (zoneStyle === 'tint') {
+        const zc = zoneColor(seg.name);
+        return (
+          <span
+            key={key}
+            className="underline decoration-dotted underline-offset-2"
+            style={zc ? { color: zc, textDecorationColor: zc } : undefined}
+          >
+            {shown}
+          </span>
+        );
+      }
       const c = zoneColor(seg.name);
       return (
         <span
