@@ -18,8 +18,10 @@ import { HistoryRace } from './HistoryRace';
 
 /**
  * 대륙의 역사 — 시대(章) 중심 재생(2026-09-18, 시안 4 A안 '장 재생').
- *  - 기본 단위는 시대. 장 제목·요약이 뜨고 지도가 그 시대의 날들을 하루 DAY_MS로 넘기며(소유표 ownersByDay) 색을 바꾼다.
- *    넘긴 날마다 글 칸에 날짜·헤드라인 한 줄이 쌓이고, 시대가 끝나면 맺음 한 줄 뒤 다음 장으로 이어진다.
+ *  - 기본 단위는 시대. 장 제목·요약이 뜨고, 지도는 날마다 그날 리플레이를 **본문 없이**(ChronicleReplayPanel reveal='map')
+ *    돌려 문양의 진군·격돌·점령을 그대로 보여 준다(2026-09-18 사용자: 빠르든 느리든 이동과 전투가 보여야 한다). 리플레이가
+ *    없는 날은 소유표(ownersByDay)로 색만 바꾸고 DAY_MS 머문다. 날마다 글 칸에 날짜·헤드라인 한 줄이 쌓이고, 시대가 끝나면
+ *    맺음 한 줄 뒤 다음 장으로 이어진다.
  *  - 어느 줄이든 '자세히'를 누르면 그날의 연대기 재생(/api/history/day + ChronicleReplayPanel)으로 바뀌고, 끝나면
  *    '다음 날도 자세히'·'시대 흐름으로'를 고르거나 DETAIL_RETURN_MS 뒤 자동으로 흐름에 복귀한다.
  *  - 첫 진입은 지금의 대륙 + 장 목차. 소유 상태는 길드 이름으로 들고 다니며(리플레이 스냅샷과 같은 축), 시대 흐름에서는
@@ -36,8 +38,8 @@ const EVENT_PRIORITY: Record<HistoryEvent['kind'], number> = {
   power1: 6,
 };
 const SPEEDS = [1, 2, 4] as const;
-/** 시대 흐름 — 하루에 걸리는 시간. */
-const DAY_MS = 1200;
+/** 시대 흐름 — 리플레이가 없는 날(전투 없이 기록만)에 머무는 시간. 리플레이가 있는 날은 연출이 끝날 때까지. */
+const DAY_MS = 1600;
 /** 시대가 끝난 뒤 맺음을 읽을 시간. */
 const EPILOGUE_MS = 2400;
 /** 하루 자세히가 끝난 뒤 아무것도 누르지 않으면 흐름으로 돌아가기까지. */
@@ -172,6 +174,9 @@ export function HistoryPlayer({
   }, []);
   /** 시대 흐름에서 쌓인 날들(오름차순). 장 제목은 그 시대의 첫 줄 앞에. */
   const [lines, setLines] = useState<number[]>([]);
+  /** 시대 흐름의 지도 재생 — 그날 리플레이를 본문 없이 지도에만(패널은 아무것도 그리지 않는다). */
+  const [mapPlay, setMapPlay] = useState<{ dayIdx: number; data: HistoryDayData; session: number } | null>(null);
+  const mapDoneRef = useRef<(() => void) | null>(null);
   /** 하루 자세히 — 그날 데이터와 세션 토큰. */
   const [detail, setDetail] = useState<{ dayIdx: number; data: HistoryDayData | null; session: number } | null>(null);
   const [detailDone, setDetailDone] = useState(false);
@@ -282,6 +287,9 @@ export function HistoryPlayer({
       setPaused(false);
       setDetail(null);
       setDetailDone(false);
+      mapDoneRef.current?.();
+      mapDoneRef.current = null;
+      setMapPlay(null);
       layerRef.current?.replaceChildren();
       stickRef.current = true;
       setPhase('era');
@@ -290,18 +298,38 @@ export function HistoryPlayer({
         for (let i = k; i < n; i++) {
           if (token !== run.current) return;
           setIdx(i);
-          applyDay(i);
           setLines((ls) => (ls.includes(i) ? ls : [...ls.filter((d) => d < i), i]));
+          const data = await fetchDay(i);
+          if (token !== run.current) return;
+          void fetchDay(i + 1);
+          const replay = data?.replay ?? null;
+          if (data && replay) {
+            // 그날 시작 상태로 맞추고(전날 끝과 같으면 그대로), 그날 스냅샷 이름·색을 얹은 뒤 지도 재생이 끝날 때까지 기다린다.
+            setOwners((o) => (sameOwners(o, replay.beforeOwner) ? o : { ...replay.beforeOwner }));
+            const snap = Object.entries(replay.guilds).map(
+              ([g, v]) => [g, { color: v.color, emblemUrl: v.emblemUrl, id: v.guildId }] as const,
+            );
+            setMeta((m) => ({ ...m, ...Object.fromEntries(snap) }));
+            await new Promise<void>((resolve) => {
+              mapDoneRef.current = resolve;
+              setMapPlay({ dayIdx: i, data, session: token });
+            });
+            if (token !== run.current) return;
+            mapDoneRef.current = null;
+            setMapPlay(null);
+          } else {
+            applyDay(i);
+            await wait(DAY_MS / speedRef.current, token);
+          }
           const e = eras[eraOf(i)];
           const eraEnds = e ? i === e.endIdx && i < n - 1 : false;
-          await wait(DAY_MS / speedRef.current, token);
           if (eraEnds) await wait(EPILOGUE_MS / speedRef.current, token);
         }
         if (token !== run.current) return;
         setPhase('end');
       })();
     },
-    [n, index.owners, applyDay, wait, eras, eraOf],
+    [n, index.owners, applyDay, wait, eras, eraOf, fetchDay],
   );
   useEffect(() => {
     flowRef.current = flowFrom;
@@ -315,6 +343,9 @@ export function HistoryPlayer({
       pausedRef.current = false;
       setPaused(false);
       setDetailDone(false);
+      mapDoneRef.current?.();
+      mapDoneRef.current = null;
+      setMapPlay(null);
       layerRef.current?.replaceChildren();
       stickRef.current = true;
       setIdx(k);
@@ -406,6 +437,9 @@ export function HistoryPlayer({
   };
   const goToIdle = () => {
     run.current += 1;
+    mapDoneRef.current?.();
+    mapDoneRef.current = null;
+    setMapPlay(null);
     layerRef.current?.replaceChildren();
     setPhase('idle');
     setIdx(n - 1);
@@ -497,6 +531,24 @@ export function HistoryPlayer({
                 style={{ width: STAGE_PX, height: STAGE_PX, transform: `scale(${stageScale})`, transformOrigin: 'top left' }}
               >
                 <div ref={bindLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
+                {mapPlay?.data.replay ? (
+                  <ChronicleReplayPanel
+                    key={`map-${mapPlay.dayIdx}-${mapPlay.session}`}
+                    text={mapPlay.data.text}
+                    replay={mapPlay.data.replay}
+                    zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
+                    layer={layer}
+                    zoneColor={zoneColor}
+                    onOwnerFlip={(zoneId, guild) => setOwners((o) => ({ ...o, [zoneId]: guild }))}
+                    onNeutralize={(zoneId) => setOwners((o) => ({ ...o, [zoneId]: null }))}
+                    onDone={() => {
+                      if (mapPlay.session === run.current) mapDoneRef.current?.();
+                    }}
+                    speed={speed}
+                    pausedRef={pausedRef}
+                    reveal="map"
+                  />
+                ) : null}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={mapSrc} alt="대륙 지도" draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
                 {/* 길(인접선) — 배경 톤. */}

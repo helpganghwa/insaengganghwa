@@ -122,9 +122,10 @@ export function ChronicleReplayPanel({
   userStyle?: 'game' | 'plain';
   /**
    * 등장 방식(2026-09-17, 역사 페이지) — type(글자 타이핑, 마커에 닿을 때 연출) | paragraph(문단이 한 번에 나타나고 그 문단의
-   * 구역 연출을 문단 끝에 몰아서 재생, 읽을 시간만큼 머문 뒤 다음 문단). 24일을 이어 볼 땐 타이핑이 너무 느리다.
+   * 구역 연출을 문단 끝에 몰아서 재생, 읽을 시간만큼 머문 뒤 다음 문단) | map(2026-09-18: 본문 없이 지도 연출만 — 그날의
+   * 무혈 점령을 한꺼번에 진군시킨 뒤 교전은 한 곳씩, 마지막에 방치 중립화. 역사 페이지 시대 흐름이 쓴다).
    */
-  reveal?: 'type' | 'paragraph';
+  reveal?: 'type' | 'paragraph' | 'map';
   /** 자막 요소(역사 페이지) — 타이핑 중인 문장을 이 요소의 textContent로 비춘다(React 상태 없이 DOM 직접, 글자마다). */
   captionEl?: HTMLElement | null;
 }) {
@@ -511,6 +512,20 @@ export function ChronicleReplayPanel({
     let cancelled = false;
     (async () => {
       if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) skipRef.current = true;
+      if (reveal === 'map') {
+        // 지도만 — 본문 순서와 무관하게 그날 사건 전부(무혈 일괄 → 교전 한 곳씩), 그다음 중립화 캐스케이드.
+        await playLeftover(Object.keys(replay.events).map(Number));
+        if (cancelled) return;
+        await runNeutralizations();
+        if (cancelled) return;
+        flushRemaining();
+        setEnded(true);
+        if (!doneRef.current) {
+          doneRef.current = true;
+          setTimeout(() => onDone(), 600);
+        }
+        return;
+      }
       for (let p = 0; p < paras.current.length; p++) {
         const segs = paras.current[p]!;
         // 이 문단에서 마커로 언급된 구역(회고 문장의 건너뛴 마커 포함) — 문단 끝에서 미발화분을 재생한다.
@@ -699,6 +714,7 @@ export function ChronicleReplayPanel({
     return <span key={key}>{shown}</span>;
   };
 
+  if (reveal === 'map') return null;
   return (
     <button
       type="button"
