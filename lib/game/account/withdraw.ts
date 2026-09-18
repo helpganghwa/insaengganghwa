@@ -47,6 +47,7 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   chat_reports: 'chat_messages 정리 주기와 동행', chat_blocks: '차단 목록 유지 — 재가입 시에도 차단 관계 보수적 유지',
   whisper_reports: 'whisper_messages 명시 삭제의 CASCADE로 소멸 — 직접 삭제 불필요',
   conquest_battles: '월드 역사(길드 단위)', world_chronicle: '월드 역사', world_events: '월드 역사',
+  history_era_summaries: '월드 역사 — 서버별 시대 요약(0202, 유저 데이터 없음)',
   guild_tax_distributions: '길드 단위 기록', guilds: '길드 엔티티(리더 탈퇴는 위임/해산 선행)',
   guild_emblems: '길드 자산', guild_emblem_escrows: '길드 자산(에스크로)',
   ranking_leaders: '메트릭당 1행(현 1위) — 시간당 크론이 재계산해 자가치유',
