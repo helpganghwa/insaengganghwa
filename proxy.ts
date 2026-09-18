@@ -59,9 +59,15 @@ function wikiHostGuard(request: NextRequest): NextResponse | null {
   // 위키 본문과 그 렌더에 필요한 정적 자산만 남긴다.
   // /api/client-error는 예외로 통과시킨다 — 리다이렉트되면 교차 오리진이 되어 에러 리포트가
   // 통째로 유실되고, 위키 호스트의 클라 오류 관측이 0이 된다(2026-09-12 재검수).
+  // 역사 위키(/history, 2026-09-18)도 위키와 같은 이유로 이 호스트에서 연다(WikiLink path='/history' — PWA에서 브라우저 뷰로
+  // 분리). 막으면 본 도메인으로 되돌려져 분리가 무력해지고, 화면이 부르는 하루 API(/api/history/day)는 교차 오리진이 돼 실패한다.
+  // 둘 다 비로그인 공개 읽기 전용이라 세션·결제 분기와 무관하다.
   if (
     p === '/wiki' ||
     p.startsWith('/wiki/') ||
+    p === '/history' ||
+    p.startsWith('/history/') ||
+    p.startsWith('/api/history/') ||
     p.startsWith('/_next/') ||
     p.startsWith('/sprites/') ||
     p.startsWith('/icons/') ||
