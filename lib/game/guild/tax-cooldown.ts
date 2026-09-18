@@ -13,7 +13,7 @@ import { TAX_COLLECT_COOLDOWN_LEGACY_MIN, TAX_COLLECT_COOLDOWN_MIN, taxCooldownM
  * 스테이징(preview)·로컬은 이 커밋 시각부터 바로 적용해 확인할 수 있게 한다. 허용 목록으로 닫는다 —
  * VERCEL_ENV가 비어 있는 프로덕션 빌드(설정 실수)에서 조기 적용되지 않게(raid free-open.ts와 같은 방식).
  */
-export const TAX_COOLDOWN_48H_SINCE_PROD_ISO = '2099-01-01T00:00:00.000Z';
+export const TAX_COOLDOWN_48H_SINCE_PROD_ISO = '2026-09-18T23:12:00.000Z'; // 소규모 업데이트 8 프로덕션 배포 시각
 export const TAX_COOLDOWN_48H_SINCE_STAGING_ISO = '2026-09-18T06:00:00.000Z';
 
 export function taxCooldown48SinceMs(
