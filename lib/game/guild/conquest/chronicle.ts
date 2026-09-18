@@ -212,13 +212,14 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   }[];
 
   // 그날 배치 전부 — finale.units가 없는 이전 전투의 참가자 정본(finale는 마지막 N라운드만 담는다).
+  // 닉네임은 여기서 읽지 않는다 — 배치만 있고 finale에 없는 사람은 처치·활약이 없어 이름이 쓰이지 않고,
+  // characters 조인은 역사 페이지의 읽기 전용 역할(history_reader)에 권한이 없어 하루 API가 통째로 죽었다(09-18 스테이징).
   const depRows = (await db.execute(sql`
-    select d.zone_id::int as zone_id, d.user_id::text as uid, g.name as guild, c.nickname
+    select d.zone_id::int as zone_id, d.user_id::text as uid, g.name as guild
     from guild_battle_deployments d
     left join guilds g on g.id = d.guild_id
-    left join characters c on c.user_id = d.user_id and c.server_id = d.server_id
     where d.battle_kst_day = ${kstDay} and d.server_id = ${serverId}
-  `)) as unknown as { zone_id: number; uid: string; guild: string | null; nickname: string | null }[];
+  `)) as unknown as { zone_id: number; uid: string; guild: string | null }[];
 
   /**
    * 전투 참가자(2026-09-17) — 인원수·처치·생존의 정본.
@@ -252,7 +253,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
       const fell = inFinale.has(userId) ? finaleFell.has(userId) : null;
       out.set(userId, { userId, nickname, guildName, kills: finaleKills.get(userId) ?? 0, fell });
     };
-    for (const d of depRows) if (d.zone_id === b.zone_id && d.guild) add(d.uid, d.nickname ?? '', d.guild);
+    for (const d of depRows) if (d.zone_id === b.zone_id && d.guild) add(d.uid, '', d.guild);
     for (const r of f?.roster ?? []) add(r.userId, r.nickname, r.guildName);
     if (b.unrevealed && b.executor && b.prev_owner && b.db_owner === b.prev_owner) add(b.executor, '', b.prev_owner);
     return [...out.values()];
@@ -502,9 +503,12 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const featUserIds = [...new Set(picked.map((e) => e[0]))];
   const codeByUser = new Map<string, string>();
   if (featUserIds.length > 0) {
-    const codeRows = (await db.execute(sql`
+    // profiles는 역사 페이지의 읽기 전용 역할에 권한이 없다 — 코드는 링크용일 뿐이라 못 읽으면 코드 없이 간다(09-18).
+    const codeRows = (await db
+      .execute(sql`
       select id::text as uid, public_code from profiles where id in ${sql`(${sql.join(featUserIds.map((u) => sql`${u}::uuid`), sql`, `)})`}
-    `)) as unknown as { uid: string; public_code: string | null }[];
+    `)
+      .catch(() => [])) as unknown as { uid: string; public_code: string | null }[];
     for (const r of codeRows) if (r.public_code) codeByUser.set(r.uid, r.public_code);
   }
   // 한 사람은 한 줄만 — 쓰러뜨린 수가 있으면 '처치'(더 구체적), 없으면 '수비'.

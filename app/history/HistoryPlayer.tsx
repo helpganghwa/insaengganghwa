@@ -678,7 +678,7 @@ export function HistoryPlayer({
               <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                 대륙의 역사
               </div>
-              <div className={`mt-1 text-[11.5px] tabular-nums ${PAPER.muted}`}>
+              <div className={`mt-1 text-[11px] tabular-nums ${PAPER.muted}`}>
                 {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -700,7 +700,7 @@ export function HistoryPlayer({
               {/* 장 목차 — 제N장 · 「길드」의 시대 · 기간 · 요약. 누르면 그 장부터. */}
               <div className="mt-7 flex flex-col gap-4">
                 {eras.map((e, i) => (
-                  <button key={i} type="button" onClick={() => flowFrom(e.startIdx)} className={`rounded-[10px] px-3 py-3 text-left ${PAPER.hover}`} title="이 장부터 재생">
+                  <button key={i} type="button" onClick={() => flowFrom(e.startIdx)} className={`-mx-3 rounded-[10px] px-3 py-3 text-left ${PAPER.hover}`} title="이 장부터 재생">
                     <div className={`flex items-center gap-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>
                       <span>제{i + 1}장</span>
                       <i className="h-2.5 w-2.5 rounded-[2px]" style={{ background: e.color ?? '#9a917f' }} />
@@ -708,10 +708,10 @@ export function HistoryPlayer({
                         {shortDay(days[e.startIdx]!.kstDay)} ~ {e.endIdx === n - 1 ? '' : shortDay(days[e.endIdx]!.kstDay)} · {e.endIdx - e.startIdx + 1}일
                       </span>
                     </div>
-                    <div className="mt-1 text-[18px] leading-tight font-bold" style={SERIF}>
+                    <div className="mt-1 text-[22px] leading-tight font-bold" style={SERIF}>
                       「{e.name}」의 시대
                     </div>
-                    <div className="mt-1.5 text-[13px] leading-[1.75]">
+                    <div className="mt-2 text-[13.5px] leading-[1.8]">
                       <Headline text={e.summary} guildColor={guildColor} />
                     </div>
                   </button>
@@ -722,7 +722,7 @@ export function HistoryPlayer({
             <div ref={readerRef} className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-8 md:max-w-[70ch]">
               {phase === 'detail' && detail ? (
                 <div>
-                  <div className={`mb-3 flex items-center justify-between gap-2 rounded-[8px] border border-dashed px-3 py-2 text-[12px] ${PAPER.border}`}>
+                  <div className={`mb-3 flex items-center justify-between gap-2 rounded-[8px] border border-dashed px-3 py-2 text-[12.5px] ${PAPER.border}`}>
                     <span>
                       <b style={SERIF}>{monthDay(detail.data?.kstDay ?? cur.kstDay)}</b> 자세히 보는 중
                       {curEra ? ` · 제${curEraIdx + 1}장 「${curEra.name}」의 시대` : ''}
@@ -855,7 +855,7 @@ export function HistoryPlayer({
         </aside>
       </div>
 
-      {/* ── 플로팅 컨트롤러 — 재생 조작 · 배속 · 장 이동 · 시대 띠(스크러버) · N / 전체 ── */}
+      {/* ── 플로팅 컨트롤러 — 재생 조작 · 배속 · 시대 띠(스크러버) · N / 전체. 장 이동은 오른쪽 시대 목차·시대 띠가 맡는다(09-18 버튼 삭제). ── */}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
         <div className={`pointer-events-auto flex w-full max-w-[1120px] flex-wrap items-center gap-2 rounded-xl border bg-[#fdfaf3]/95 px-3 py-2 shadow-[0_8px_24px_-8px_rgba(40,30,10,.35)] backdrop-blur ${PAPER.border}`}>
           <IconBtn onClick={() => flowFrom(0)} title="처음부터" icon="first" />
@@ -875,25 +875,6 @@ export function HistoryPlayer({
           >
             ×{speed}
           </button>
-          <span className={`inline-flex h-7 overflow-hidden rounded-lg border ${PAPER.border}`} role="group" aria-label="장 이동">
-            <button
-              type="button"
-              onClick={() => flowFrom(eras[Math.max(0, curEraIdx - (phase === 'era' && curEra && idx > curEra.startIdx ? 0 : 1))]?.startIdx ?? 0)}
-              title="이전 장(장의 중간이면 그 장 처음으로)"
-              className={`px-2.5 text-[11px] font-bold ${PAPER.muted} ${PAPER.hover}`}
-            >
-              ◀ 장
-            </button>
-            <button
-              type="button"
-              onClick={() => (curEraIdx + 1 < eras.length ? flowFrom(eras[curEraIdx + 1]!.startIdx) : undefined)}
-              disabled={curEraIdx + 1 >= eras.length}
-              title="다음 장"
-              className={`border-l px-2.5 text-[11px] font-bold ${PAPER.border} ${curEraIdx + 1 >= eras.length ? 'text-[#c9c0ad]' : `${PAPER.muted} ${PAPER.hover}`}`}
-            >
-              장 ▶
-            </button>
-          </span>
           <div className="min-w-[260px] flex-1 px-2">
             <div className="relative">
               <div className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]" role="list" aria-label="시대">
@@ -1017,7 +998,7 @@ function ChapterHeading({ era, index, days }: { era: HistoryEra | null; index: n
   const len = era.endIdx - era.startIdx + 1;
   return (
     <div className="mb-4 text-center">
-      <div className={`text-[10.5px] tracking-[.25em] ${PAPER.muted}`}>제{index}장</div>
+      <div className={`text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>제{index}장</div>
       <div className="mt-1 text-[22px] leading-tight font-bold" style={SERIF}>
         「{era.name}」의 시대
       </div>

@@ -47,6 +47,8 @@ function resolveEmblem(key: string, urls: readonly string[]): Promise<string | n
 
 /** 보이는 막대 수 — 그 아래 순위는 화면 밖으로 밀려 내려가고(realtimeSort), 올라오면 아래에서 들어온다. */
 const VISIBLE = 8;
+/** 라벨 열 폭(px) — 문양 14 + 이름. 고정이라 문양이 늦게 열려도 막대 영역이 움직이지 않는다. */
+const LABEL_W = 104;
 /** 값 변화·순위 교체에 걸리는 시간(ms) — 점령 한 건이 지도에 닿는 간격과 비슷하게. 선형이라 연속 갱신이 끊기지 않는다. */
 const UPDATE_MS = 1000;
 
@@ -78,7 +80,8 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
       animationDurationUpdate: UPDATE_MS,
       animationEasing: 'linear',
       animationEasingUpdate: 'linear',
-      grid: { left: 4, right: 36, top: 2, bottom: 2, containLabel: true },
+      // 라벨 폭을 고정한다(containLabel 금지) — 문양이 나중에 붙으면서 라벨이 넓어지면 막대가 줄어드는 애니메이션이 첫 화면에 보였다(09-18).
+      grid: { left: LABEL_W, right: 36, top: 2, bottom: 2, containLabel: false },
       xAxis: { type: 'value', max: 'dataMax', show: false },
       yAxis: {
         type: 'category',
@@ -89,7 +92,7 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
         animationDurationUpdate: 300,
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { color: '#2a251e', fontSize: 11.5, fontWeight: 700, margin: 8 },
+        axisLabel: { color: '#2a251e', fontSize: 11.5, fontWeight: 700, margin: 8, width: LABEL_W - 12, overflow: 'truncate' },
       },
       series: [
         {
