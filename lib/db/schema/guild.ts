@@ -17,6 +17,7 @@ import {
   text,
   bigint,
   bigserial,
+  boolean,
   integer,
   real,
   date,
@@ -331,6 +332,31 @@ export const worldChronicle = pgTable(
   },
   (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],
 );
+
+/**
+ * 0202 역사 페이지 시대 요약(2026-09-18) — 이야기꾼 문장의 정본. (server_id, start_kst_day)로 시대를 식별.
+ * locked=true면 운영자가 저장·확정한 것이라 크론이 다시 쓰지 않는다. source: ai | code | manual.
+ */
+export const historyEraSummaries = pgTable(
+  'history_era_summaries',
+  {
+    serverId: smallint('server_id').notNull(),
+    startKstDay: date('start_kst_day').notNull(),
+    guildId: integer('guild_id').notNull(),
+    endKstDay: date('end_kst_day').notNull(),
+    ongoing: boolean('ongoing').notNull().default(true),
+    /** 사실표 해시 — 같으면 다시 생성하지 않는다(끝난 시대는 영원히 같다). */
+    factsHash: text('facts_hash').notNull(),
+    summary: text('summary').notNull(),
+    closing: text('closing').notNull().default(''),
+    source: text('source').notNull().default('ai'),
+    locked: boolean('locked').notNull().default(false),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.serverId, t.startKstDay] })],
+);
+export type HistoryEraSummaryRow = typeof historyEraSummaries.$inferSelect;
 
 /**
  * 0049 길드 문양 보관함 — 길드당 최대 3개(앱 로직 제한, 최소 1). 아바타 다중 프로필 패턴 미러.

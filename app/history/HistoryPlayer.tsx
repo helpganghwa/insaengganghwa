@@ -42,6 +42,8 @@ const SPEEDS = [1, 2, 4] as const;
 const DAY_MS = 1600;
 /** 시대가 끝난 뒤 맺음을 읽을 시간. */
 const EPILOGUE_MS = 2400;
+/** 장이 열릴 때 요약 타이핑 속도(ms/글자) — 읽을 시간을 준다(2026-09-18 사용자 지시). 배속으로 나뉜다. */
+const SUMMARY_CHAR_MS = 34;
 /** 시대 흐름의 지도 재생 배속(사용자 배속에 곱함) — 흐름은 빠르게, 자세히는 게임 속도로(2026-09-18 사용자: 빠르게 이동·전투가 보이면 된다). */
 const FLOW_SPEED = 2.5;
 const STATIC_DAY_MS = 5000; // 리플레이 스크립트가 없는 날(전투 없이 기록만)
@@ -90,6 +92,104 @@ function Headline({
   }
   if (last < text.length) parts.push(text.slice(last));
   return <span className={className}>{parts}</span>;
+}
+
+/**
+ * 타이핑 헤드라인 — 마커 문장을 글자 단위로 드러낸다. 누르면 끝까지. 일시정지를 존중한다.
+ * 길드 마커는 통째로 색 굵은 이름으로 나오되 글자 수만큼만 드러난다.
+ */
+function TypedHeadline({
+  text,
+  guildColor,
+  charMs,
+  pausedRef,
+  onDone,
+}: {
+  text: string;
+  guildColor: (name: string) => string | null;
+  charMs: number;
+  pausedRef: React.RefObject<boolean>;
+  onDone: () => void;
+}) {
+  const segs = useMemo(() => {
+    const out: { kind: 'text' | 'g'; s: string }[] = [];
+    let last = 0;
+    for (const m of text.matchAll(TOKEN_RE)) {
+      if (m.index! > last) out.push({ kind: 'text', s: text.slice(last, m.index) });
+      out.push({ kind: m[1] === 'g' ? 'g' : 'text', s: m[2]! });
+      last = m.index! + m[0].length;
+    }
+    if (last < text.length) out.push({ kind: 'text', s: text.slice(last) });
+    return out;
+  }, [text]);
+  const total = useMemo(() => segs.reduce((a, s) => a + s.s.length, 0), [segs]);
+  const [shown, setShown] = useState(0);
+  const doneRef = useRef(false);
+  const skipRef = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    let n = 0;
+    const tick = () => {
+      if (!alive) return;
+      if (skipRef.current) {
+        setShown(total);
+        return;
+      }
+      if (pausedRef.current) {
+        setTimeout(tick, 120);
+        return;
+      }
+      n += 1;
+      setShown(n);
+      if (n < total) setTimeout(tick, Math.max(8, charMs));
+    };
+    const id = setTimeout(tick, 250);
+    return () => {
+      alive = false;
+      clearTimeout(id);
+    };
+  }, [total, charMs, pausedRef]);
+  useEffect(() => {
+    if (shown >= total && !doneRef.current) {
+      doneRef.current = true;
+      const id = setTimeout(onDone, 700);
+      return () => clearTimeout(id);
+    }
+  }, [shown, total, onDone]);
+  // 세그먼트별로 드러난 글자 수를 먼저 계산한다(렌더 중 변수 변경 금지 — React 컴파일러 규칙).
+  const parts = useMemo(() => {
+    let left = shown;
+    return segs.map((sg) => {
+      const part = left > 0 ? sg.s.slice(0, left) : '';
+      left -= sg.s.length;
+      return part;
+    });
+  }, [segs, shown]);
+  return (
+    <span
+      onClick={() => {
+        skipRef.current = true;
+        setShown(total);
+      }}
+      title="누르면 끝까지"
+      className="cursor-pointer"
+    >
+      {segs.map((sg, i) => {
+        const part = parts[i] ?? '';
+        if (!part) return null;
+        if (sg.kind === 'g') {
+          const gc = guildColor(sg.s);
+          return (
+            <span key={i} className={`inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`} style={gc ? { color: gc } : undefined}>
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+      {shown < total ? <span className="ml-px inline-block h-[13px] w-[6px] animate-pulse bg-[#8a4b23] align-[-2px]" aria-hidden /> : null}
+    </span>
+  );
 }
 
 function ordinalKo(n: number): string {
@@ -177,6 +277,9 @@ export function HistoryPlayer({
   /** 시대 흐름의 지도 재생 — 그날 리플레이를 본문 없이 지도에만(패널은 아무것도 그리지 않는다). */
   const [mapPlay, setMapPlay] = useState<{ dayIdx: number; data: HistoryDayData; session: number } | null>(null);
   const mapDoneRef = useRef<(() => void) | null>(null);
+  /** 장이 열리는 순간의 요약 타이핑 — 끝나야 첫날 지도가 시작된다. */
+  const [typing, setTyping] = useState<{ eraIdx: number; session: number } | null>(null);
+  const typingDoneRef = useRef<(() => void) | null>(null);
   /** 하루 자세히 — 그날 데이터와 세션 토큰. */
   const [detail, setDetail] = useState<{ dayIdx: number; data: HistoryDayData | null; session: number; failed?: boolean } | null>(null);
   const [detailDone, setDetailDone] = useState(false);
@@ -299,6 +402,9 @@ export function HistoryPlayer({
       mapDoneRef.current?.();
       mapDoneRef.current = null;
       setMapPlay(null);
+      typingDoneRef.current?.();
+      typingDoneRef.current = null;
+      setTyping(null);
       layerRef.current?.replaceChildren();
       stickRef.current = true;
       setPhase('era');
@@ -307,6 +413,19 @@ export function HistoryPlayer({
         for (let i = k; i < n; i++) {
           if (token !== run.current) return;
           setIdx(i);
+          const ei = eraOf(i);
+          const era = eras[ei];
+          // 장이 열리는 날 — 요약을 타이핑으로 읽히고(읽을 시간), 끝난 뒤 첫날을 시작한다.
+          if (era && i === era.startIdx) {
+            setLines((ls) => ls.filter((d) => d < i));
+            await new Promise<void>((resolve) => {
+              typingDoneRef.current = resolve;
+              setTyping({ eraIdx: ei, session: token });
+            });
+            if (token !== run.current) return;
+            typingDoneRef.current = null;
+            setTyping(null);
+          }
           setLines((ls) => (ls.includes(i) ? ls : [...ls.filter((d) => d < i), i]));
           const data = await fetchDay(i);
           if (token !== run.current) return;
@@ -355,6 +474,9 @@ export function HistoryPlayer({
       mapDoneRef.current?.();
       mapDoneRef.current = null;
       setMapPlay(null);
+      typingDoneRef.current?.();
+      typingDoneRef.current = null;
+      setTyping(null);
       layerRef.current?.replaceChildren();
       stickRef.current = true;
       setIdx(k);
@@ -429,19 +551,44 @@ export function HistoryPlayer({
     return () => clearTimeout(id);
   }, [startDay, days]);
 
-  const togglePause = () => {
+  const togglePause = useCallback(() => {
     if (phase === 'idle' || phase === 'end') {
       flowFrom(0);
       return;
     }
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
-  };
+  }, [phase, flowFrom]);
+  // 키보드(2026-09-18, E) — 스페이스 재생·일시정지, ←/→ 전날·다음 날, Esc 자세히에서 흐름으로.
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const tg = ev.target as HTMLElement | null;
+      if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable)) return;
+      if (ev.code === 'Space') {
+        ev.preventDefault();
+        togglePause();
+      } else if (ev.key === 'ArrowLeft' && phase !== 'idle') {
+        ev.preventDefault();
+        flowRef.current(idx - 1);
+      } else if (ev.key === 'ArrowRight' && phase !== 'idle') {
+        ev.preventDefault();
+        flowRef.current(idx + 1);
+      } else if (ev.key === 'Escape' && phase === 'detail') {
+        ev.preventDefault();
+        flowRef.current(idx + 1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, idx, togglePause]);
   const goToIdle = () => {
     run.current += 1;
     mapDoneRef.current?.();
     mapDoneRef.current = null;
     setMapPlay(null);
+    typingDoneRef.current?.();
+    typingDoneRef.current = null;
+    setTyping(null);
     layerRef.current?.replaceChildren();
     setPhase('idle');
     setIdx(n - 1);
@@ -506,18 +653,20 @@ export function HistoryPlayer({
       if (last && last.eraIdx === ei) last.days.push(d);
       else blocks.push({ eraIdx: ei, days: [d], future: [], ended: false });
     }
+    // 장이 열리며 요약을 타이핑하는 중 — 아직 줄이 없어도 그 장의 제목·요약은 보여야 한다.
+    if (typing && !blocks.some((b) => b.eraIdx === typing.eraIdx)) blocks.push({ eraIdx: typing.eraIdx, days: [], future: [], ended: false });
     const last = blocks[blocks.length - 1];
     if (last) {
       const e = eras[last.eraIdx];
       if (e) {
-        const lastDay = last.days[last.days.length - 1]!;
-        last.ended = lastDay === e.endIdx && (e.endIdx < n - 1 || phase === 'end');
+        const lastDay = last.days[last.days.length - 1] ?? e.startIdx - 1;
+        last.ended = last.days.length > 0 && lastDay === e.endIdx && (e.endIdx < n - 1 || phase === 'end');
         if (!last.ended) for (let i = lastDay + 1; i <= e.endIdx; i++) last.future.push(i);
       }
     }
     for (const b of blocks.slice(0, -1)) b.ended = true;
     return blocks;
-  }, [lines, eraOf, eras, n, phase]);
+  }, [lines, eraOf, eras, n, phase, typing]);
 
   return (
     <main className="mx-auto w-full max-w-[1400px] px-3 pt-3 pb-28 md:h-full md:min-h-0 md:px-5 md:pt-4 md:pb-24">
@@ -796,7 +945,20 @@ export function HistoryPlayer({
                       <section key={b.eraIdx} className={bi === 0 ? '' : 'mt-8'}>
                         <ChapterHeading era={e} index={b.eraIdx + 1} days={days} />
                         <p className={`text-[13.5px] leading-[1.8] ${isLast ? '' : 'opacity-70'}`}>
-                          <Headline text={e.summary} guildColor={guildColor} />
+                          {typing && typing.eraIdx === b.eraIdx ? (
+                            <TypedHeadline
+                              key={typing.session}
+                              text={e.summary}
+                              guildColor={guildColor}
+                              charMs={SUMMARY_CHAR_MS / speed}
+                              pausedRef={pausedRef}
+                              onDone={() => {
+                                if (typing.session === run.current) typingDoneRef.current?.();
+                              }}
+                            />
+                          ) : (
+                            <Headline text={e.summary} guildColor={guildColor} />
+                          )}
                         </p>
                         <div className="mt-3.5">
                           {b.days.map((d, di) => (

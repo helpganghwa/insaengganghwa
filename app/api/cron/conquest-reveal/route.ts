@@ -12,6 +12,7 @@ import { revalidateTag } from 'next/cache';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { revealConquest } from '@/lib/game/guild/conquest/run';
+import { syncHistoryEras } from '@/lib/game/history/loaders';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString, msUntilNextKstMidnight } from '@/lib/kst';
@@ -55,6 +56,11 @@ export async function GET(req: Request) {
       console.error('[conquest-reveal] server', sid, e);
       results.push({ serverId: sid, error: (e as Error).message });
     }
+  }
+  // 역사 페이지 시대 요약(0202) — 새 날이 공개됐으니 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. 실패해도 공개는 유효.
+  for (const r of results) {
+    if (r.error) continue;
+    await syncHistoryEras(r.serverId).catch((e: unknown) => console.warn('[conquest-reveal] syncHistoryEras', r.serverId, e));
   }
   const ok = results.every((r) => !r.error);
   return Response.json(

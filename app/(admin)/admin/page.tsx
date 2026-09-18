@@ -88,6 +88,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '닉네임 검색 → 계정 360도(지갑·장착·결제·아바타) + 선제 정지/경고',
   },
   {
+    href: '/admin/history-eras',
+    icon: '📜',
+    title: '역사 시대 요약',
+    desc: '역사 페이지 장(章) 요약 검수 — 이야기꾼 생성문 확인·수정·확정, 다시 생성',
+  },
+  {
     href: '/admin/avatar-returns',
     icon: '↩️',
     title: '아바타 반환 검토',

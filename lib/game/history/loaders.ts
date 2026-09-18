@@ -4,7 +4,9 @@ import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { replayOwnership } from '@/lib/game/guild/conquest/chronicle-history';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { narrateEra, type EraFacts } from './era-summary';
+import { readStoredEraSummaries, syncEraSummaries, type EraInput, type SyncResult } from './era-store';
 import { db } from '@/lib/db/client';
 import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { guilds, worldChronicle, zoneAdjacency, zones } from '@/lib/db/schema/guild';
@@ -17,9 +19,34 @@ import type { HistoryGuildMeta, HistoryIndex, HistoryDayData, HistoryStory, Hist
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** 메인 화면 재료 — 날짜 목록·지도 기하·현재 소유. 프로덕션 데이터 기준 수 KB. */
+/**
+ * 메인 화면 재료 — 날짜 목록·지도 기하·현재 소유·시대. 하루 한 번 바뀌는 데이터라 Next 데이터 캐시에 10분 보관(2026-09-18, G).
+ * 자정 공개·어드민 요약 저장은 태그 'history-index'로 즉시 비운다. 로컬 점검 스크립트는 HISTORY_NO_CACHE=1로 직접 호출.
+ */
 export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
-  return withHistoryDb(async () => {
+  if (process.env.HISTORY_NO_CACHE === '1') return withHistoryDb(async () => (await buildIndexCore(serverId)).index);
+  return withHistoryDb(() => cachedIndex(serverId));
+}
+const cachedIndex = unstable_cache(async (serverId: number) => (await buildIndexCore(serverId)).index, ['history-index-v1'], {
+  revalidate: 600,
+  tags: ['history-index'],
+});
+
+/** 시대 요약 동기화 재료(크론·어드민) — 사실표 + 집계 문장 + 주인 길드 id. */
+export function loadEraInputs(serverId: number): Promise<EraInput[]> {
+  return withHistoryDb(async () => (await buildIndexCore(serverId)).eraInputs);
+}
+
+/** 자정 공개 뒤·어드민에서 — 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. */
+export async function syncHistoryEras(serverId: number, opts: { force?: boolean; only?: string } = {}): Promise<SyncResult> {
+  const inputs = await loadEraInputs(serverId);
+  const r = await syncEraSummaries(serverId, inputs, opts);
+  revalidateTag('history-index', 'max');
+  return r;
+}
+
+async function buildIndexCore(serverId: number): Promise<{ index: HistoryIndex; eraInputs: EraInput[] }> {
+  return (async () => {
     const today = kstDateString();
     const dayRows = await db
       .select({ kstDay: worldChronicle.kstDay, headline: worldChronicle.headline })
@@ -62,15 +89,25 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
       zoneRows.map((z) => ({ id: z.id, name: z.name, region: String(z.region) })),
       new Map(days.map((d) => [d.kstDay, d.headline])),
     );
-    // 시대 요약을 이야기꾼 목소리로(검증 통과분만) — 실패하면 집계 문장 그대로.
-    const narratives = await Promise.all(eraFacts.map((f) => narrateEra(f)));
-    narratives.forEach((nr, i) => {
-      const era = story.eras[i];
-      if (!nr || !era) return;
-      era.summary = nr.summary;
-      if (nr.closing) era.closing = nr.closing;
-    });
-    return {
+    // 시대 요약 — ① 저장된 정본(0202, 운영자 통제) ② 없으면 이야기꾼 생성(데이터 캐시, 검증 통과분만) ③ 집계 문장.
+    const eraInputs: EraInput[] = story.eras.map((e, i) => ({ facts: eraFacts[i]!, fallback: { summary: e.summary, closing: e.closing }, guildId: e.guildId }));
+    const stored = await readStoredEraSummaries(serverId);
+    await Promise.all(
+      story.eras.map(async (era, i) => {
+        const facts = eraFacts[i]!;
+        const row = stored.get(facts.from);
+        if (row) {
+          era.summary = row.summary;
+          if (row.closing) era.closing = row.closing;
+          return;
+        }
+        const nr = await narrateEra(facts);
+        if (!nr) return;
+        era.summary = nr.summary;
+        if (nr.closing) era.closing = nr.closing;
+      }),
+    );
+    const index: HistoryIndex = {
       serverId,
       days,
       zones: zoneRows.map((z) => ({ id: z.id, name: z.name, region: z.region, mapX: Number(z.mapX), mapY: Number(z.mapY) })),
@@ -83,7 +120,8 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
       guildsById,
       nameAliases,
     };
-  });
+    return { index, eraInputs };
+  })();
 }
 
 /**
