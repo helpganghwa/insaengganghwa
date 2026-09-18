@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+import { taxReadyAtMs } from '@/lib/game/guild/balance';
+import { taxCooldown48SinceMs, taxNextCooldownMin } from '@/lib/game/guild/tax-cooldown';
 import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -24,6 +26,7 @@ export default async function DeployPage({
 }: {
   searchParams: Promise<{ zone?: string }>;
 }) {
+  const since48 = taxCooldown48SinceMs();
   // `?zone=<id>` — 세금 수금 탭의 공석 '지정하기'에서 그 구역이 선택된 채로 들어온다(2026-09-08).
   const sp = await searchParams;
   const zoneParam = sp.zone != null && /^\d+$/.test(sp.zone) ? Number(sp.zone) : null;
@@ -93,6 +96,7 @@ export default async function DeployPage({
       }
       worldmap={
         <WorldMapView
+        taxNextCooldownMin={taxNextCooldownMin()}
           embedded
           mapSrc={mapSrc}
           residence={residence}
@@ -122,6 +126,7 @@ export default async function DeployPage({
             abandoned: z.abandonedDay != null,
             lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
             capturedAt: z.capturedAt ? z.capturedAt.getTime() : null,
+        taxReadyAt: taxReadyAtMs(z.capturedAt ? z.capturedAt.getTime() : null, z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null, since48),
             residentCount: z.residentCount,
           }))}
         />

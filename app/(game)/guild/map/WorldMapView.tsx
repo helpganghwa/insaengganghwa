@@ -52,6 +52,11 @@ type Zone = {
   lastTaxAt: number | null;
   /** 구역 습득 시각(ms) — 수금 타이머(습득 후 쿨다운) 계산용. 중립이면 null. */
   capturedAt: number | null;
+  /**
+   * 수금 가능 시각(ms, 서버 계산) — 쿨다운 길이가 시작 시각에 따라 72h/48h로 갈리고(2026-09-18 전환 규칙) 적용 시작은
+   * 서버 환경별이라 화면이 직접 계산하지 않는다. null = 게이트 없음(즉시 가능).
+   */
+  taxReadyAt: number | null;
   residentCount: number;
 };
 
@@ -159,7 +164,6 @@ function hmsFrom(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
-const TAX_COOLDOWN_MS = TAX_COLLECT_COOLDOWN_MIN * 60_000;
 
 /**
  * 지도 본체(2026-08-07 렌더 감사) — memo 분리. 이전엔 selectedId·팝업·연대기 탭·컨펌 카운트 등
@@ -422,8 +426,11 @@ export function WorldMapView({
   replayYesterday,
   embedded = false,
   taxOfficerGuildId = null,
+  taxNextCooldownMin = TAX_COLLECT_COOLDOWN_MIN,
 }: {
   mapSrc: string;
+  /** 지금 수금하면 걸리는 쿨다운(분, 서버 계산) — 전환 규칙상 적용 시작 전이면 72h, 이후면 48h. 안내 문구용. */
+  taxNextCooldownMin?: number;
   /** 거주 상태(구역·잠금). 비로그인/조회 실패 시 null. */
   residence: {
     zoneId: number | null;
@@ -1177,13 +1184,13 @@ export function WorldMapView({
                         selected.capturedAt == null && selected.lastTaxAt == null
                           ? null
                           : Math.max(selected.capturedAt ?? 0, selected.lastTaxAt ?? 0);
-                      const end = base != null ? base + TAX_COOLDOWN_MS : null;
+                      const end = selected.taxReadyAt;
                       const remMs = end != null ? end - nowMs : null;
-                      // base 없음(습득·수금 시각 미상 = 게이트 없음)이면 서버가 즉시 수금을 허용
-                      // (collect.ts: capturedAt/lastAt이 null이면 쿨다운 throw 안 함) → ready로 취급.
+                      // 게이트 없음(습득·수금 시각 미상)이면 서버가 즉시 수금을 허용 → ready로 취급.
                       const ready = remMs == null || remMs <= 0;
+                      const span = base != null && end != null ? Math.max(1, end - base) : null;
                       const pct =
-                        base != null ? Math.min(100, Math.max(0, ((nowMs - base) / TAX_COOLDOWN_MS) * 100)) : 100;
+                        base != null && span != null ? Math.min(100, Math.max(0, ((nowMs - base) / span) * 100)) : 100;
                       const isMyExec = myUserId != null && selected.executorUserId === myUserId;
                       // 세금 권한자의 대리 수금(2026-09-08) — 집행관이 있는 우리 길드 구역만(공석은 동결).
                       const isOfficer =
@@ -1411,11 +1418,7 @@ export function WorldMapView({
           const guildCut = tax - execCut;
           // 수금 가능 시각 — 직전 수금(lastTaxAt) 우선, 없으면 습득(capturedAt) 기준 쿨다운(B안 첫 수금 게이트).
           // 서버와 동일 — captured_at·last_tax 중 더 최근(늦은) 시각이 실제 쿨다운 기준.
-          const cdBase =
-            cz.capturedAt == null && cz.lastTaxAt == null
-              ? null
-              : Math.max(cz.capturedAt ?? 0, cz.lastTaxAt ?? 0);
-          const cdEnd = cdBase != null ? cdBase + TAX_COLLECT_COOLDOWN_MIN * 60_000 : 0;
+          const cdEnd = cz.taxReadyAt ?? 0;
           const remMs = cdEnd - collectNow;
           const onCd = remMs > 0;
           const hh = Math.floor(remMs / 3_600_000);
@@ -1506,7 +1509,7 @@ export function WorldMapView({
                   </div>
                 </div>
                 <p className="mt-2.5 text-center text-[10.5px] text-zinc-400">
-                  수금 후 {Math.round(TAX_COLLECT_COOLDOWN_MIN / 60)}시간 동안 다시 수금할 수 없습니다.
+                  수금 후 {Math.round(taxNextCooldownMin / 60)}시간 동안 다시 수금할 수 없습니다.
                 </p>
               </ModalLayout>
             </ModalShell>

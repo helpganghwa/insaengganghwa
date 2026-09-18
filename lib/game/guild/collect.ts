@@ -6,7 +6,8 @@ import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
-import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from './balance';
+import { GUILD_EXECUTOR_TAX_CUT, taxReadyAtMs } from './balance';
+import { taxCooldown48SinceMs, taxCooldownDoneSql } from './tax-cooldown';
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 import { hasGuildPerm } from './permissions';
@@ -26,7 +27,7 @@ export type CollectResult = {
 };
 
 /**
- * 구역 세금 수금 — GUILD §5.5. 2일(48h) 쿨다운(TAX_COLLECT_COOLDOWN_MIN). 구역 누적 💎 → 집행관 10% + 소유 길드 곳간 90%.
+ * 구역 세금 수금 — GUILD §5.5. 2일(48h) 쿨다운(전환 전 시작분은 72h — balance.taxReadyAtMs). 구역 누적 💎 → 집행관 10% + 소유 길드 곳간 90%.
  *
  * 수금 주체(2026-09-08 일괄 수금 도입):
  *  - 그 구역 **집행관 본인**(종전 그대로), 또는
@@ -86,14 +87,11 @@ export async function collectZoneTaxTx(
   if (!mem || mem.guildId !== z.owner) throw new GuildError('NOT_EXECUTOR');
 
   const now = Date.now();
-  const cooldownMs = TAX_COLLECT_COOLDOWN_MIN * 60_000;
   // 첫 수금 게이트(B안) — 구역 습득(captured_at) 후 쿨다운이 지나야 첫 수금 가능. 탈취 시 captured_at이
-  // 갱신되고 last_tax_collected_at도 리셋되므로, 뺏은 길드도 쿨다운 뒤부터 수금(리셋).
-  if (z.capturedAt && now - z.capturedAt.getTime() < cooldownMs) {
-    throw new GuildError('COLLECT_COOLDOWN');
-  }
-  // 이후 쿨다운 — 직전 수금 후 같은 시간.
-  if (z.lastAt && now - z.lastAt.getTime() < cooldownMs) {
+  // 갱신되고 last_tax_collected_at도 리셋되므로, 뺏은 길드도 쿨다운 뒤부터 수금(리셋). 이후 쿨다운 — 직전 수금 후.
+  // 쿨다운 길이는 시작 시각 기준 72h/48h(balance.ts 전환 규칙) — 두 쿨다운의 끝 중 늦은 쪽이 게이트.
+  const readyAt = taxReadyAtMs(z.capturedAt?.getTime() ?? null, z.lastAt?.getTime() ?? null, taxCooldown48SinceMs());
+  if (readyAt != null && now < readyAt) {
     throw new GuildError('COLLECT_COOLDOWN');
   }
   const tax = z.tax; // bigint
@@ -209,7 +207,6 @@ export async function listCollectableZoneIds(
   serverId: number,
   runner: { execute: Tx['execute'] } = db,
 ): Promise<number[]> {
-  const cooldownMin = TAX_COLLECT_COOLDOWN_MIN;
   // 앱 시계 하나로 판정(검토 지적) — 화면(getTaxCollectView)·구역 수금(collect)과 같은 기준. DB now()와의
   // 미세 오차로 화면엔 '수금 가능'인데 목록에서 빠져 조용히 건너뛰는 일을 없앤다.
   const at = new Date().toISOString(); // Date 인스턴스는 raw execute 파라미터로 못 넘긴다(postgres-js)
@@ -219,9 +216,8 @@ export async function listCollectableZoneIds(
      where z.server_id = ${serverId} and z.owner_guild_id = ${guildId}
        and z.executor_user_id is not null
        and z.tax_diamond > 0
-       and (z.captured_at is null or z.captured_at <= ${at}::timestamptz - (${cooldownMin} || ' minutes')::interval)
-       and (z.last_tax_collected_at is null
-            or z.last_tax_collected_at <= ${at}::timestamptz - (${cooldownMin} || ' minutes')::interval)
+       and ${taxCooldownDoneSql('z', 'captured_at', at)}
+       and ${taxCooldownDoneSql('z', 'last_tax_collected_at', at)}
      order by z.id
   `)) as unknown as { id: number }[];
   return rows.map((r) => Number(r.id));

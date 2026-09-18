@@ -126,10 +126,31 @@ export function taxPointsForMeleePrize(prizeDiamonds: number): number {
 export const GUILD_EXECUTOR_TAX_CUT = 0.1;
 /**
  * 집행관 세금 수금 쿨다운(분) — 2일(48시간). 2026-09-18 유저 투표 결과로 72h → 48h(소규모 업데이트 8).
- * 쿨다운은 구역에 저장하지 않고 '습득·직전 수금 시각 + 이 값'으로 매번 계산하므로, 바꾸는 즉시 진행 중인 쿨다운도
- * 전부 24시간씩 당겨진다(모든 길드에 같은 폭 — 따로 이관하지 않는다). 세금 적립량은 수금 주기와 무관해 경제 총량은 그대로.
+ * 세금 적립량은 수금 주기와 무관해 다이아 유입 총량은 그대로다.
+ *
+ * 전환 규칙(사용자 결정 2026-09-18: 이미 도는 쿨다운으로 점령전을 계획한 길드 보호) — **쿨다운이 시작된 시각**
+ * (습득 captured_at 또는 직전 수금 last_tax_collected_at)이 48h 적용 시작 전이면 그 쿨다운은 끝까지 72h,
+ * 이후에 시작된 쿨다운부터 48h. 적용 시작 시각은 서버가 환경별로 정해(tax-cooldown.ts) 화면에 내려준다.
  */
 export const TAX_COLLECT_COOLDOWN_MIN = 48 * 60;
+/** 48h 전환 전에 시작된 쿨다운의 길이(분) — 이전 규칙 72시간. */
+export const TAX_COLLECT_COOLDOWN_LEGACY_MIN = 72 * 60;
+
+/** 쿨다운 길이(ms) — 그 쿨다운이 시작된 시각과 48h 적용 시작 시각으로. 서버·화면 공용 순수 함수. */
+export function taxCooldownMsFor(startMs: number, since48Ms: number): number {
+  return (startMs >= since48Ms ? TAX_COLLECT_COOLDOWN_MIN : TAX_COLLECT_COOLDOWN_LEGACY_MIN) * 60_000;
+}
+
+/**
+ * 수금 가능 시각(ms) — 습득 쿨다운과 직전 수금 쿨다운을 **각자의 길이로** 끝낸 뒤 늦은 쪽(서버 게이트와 같은 판정).
+ * 둘 다 없으면 null(게이트 없음 = 즉시 가능).
+ */
+export function taxReadyAtMs(capturedMs: number | null, lastMs: number | null, since48Ms: number): number | null {
+  const ends: number[] = [];
+  if (capturedMs != null) ends.push(capturedMs + taxCooldownMsFor(capturedMs, since48Ms));
+  if (lastMs != null) ends.push(lastMs + taxCooldownMsFor(lastMs, since48Ms));
+  return ends.length > 0 ? Math.max(...ends) : null;
+}
 /** 독점 세금 보너스(B안) — 소유 구역 1개당 +1%, 완전장악 권역 1개당 +25%. 그 길드 세금 전체에 적용(누적 시점).
  *  예) 왕국6(완전장악)+오크1 = 7구역 → 7% + 25% = +32%. */
 export const GUILD_ZONE_TAX_BONUS = 0.01;

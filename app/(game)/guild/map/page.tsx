@@ -1,4 +1,6 @@
 import { assetUrl } from '@/lib/asset-versions';
+import { taxReadyAtMs } from '@/lib/game/guild/balance';
+import { taxCooldown48SinceMs, taxNextCooldownMin } from '@/lib/game/guild/tax-cooldown';
 import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
@@ -11,6 +13,7 @@ import { WorldMapView } from './WorldMapView';
 export const dynamic = 'force-dynamic';
 
 export default async function WorldMapPage() {
+  const since48 = taxCooldown48SinceMs();
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
 
@@ -40,6 +43,7 @@ export default async function WorldMapPage() {
     {/* 세계지도 진입 = 연대기 열람 — 홈 카드 '새 역사' 티저를 카운트다운으로 복귀시킨다. */}
     <ChronicleReadMark serverId={serverId} day={chronicle?.todayDay ?? null} />
     <WorldMapView
+        taxNextCooldownMin={taxNextCooldownMin()}
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       residence={residence}
       canSetResidence={userId != null}
@@ -68,6 +72,7 @@ export default async function WorldMapPage() {
         abandoned: z.abandonedDay != null,
         lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
         capturedAt: z.capturedAt ? z.capturedAt.getTime() : null,
+        taxReadyAt: taxReadyAtMs(z.capturedAt ? z.capturedAt.getTime() : null, z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null, since48),
         residentCount: z.residentCount,
       }))}
     />

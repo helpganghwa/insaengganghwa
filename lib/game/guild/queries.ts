@@ -25,8 +25,9 @@ import {
   guildCapacity,
   GUILD_DONATION_TIERS,
   GUILD_JOIN_REQUEST_TTL_DAYS,
-  TAX_COLLECT_COOLDOWN_MIN,
+  taxReadyAtMs,
 } from './balance';
+import { taxCooldown48SinceMs, taxCooldownDoneSql } from './tax-cooldown';
 import { REGION_META, type Region } from './region-meta';
 import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
@@ -65,15 +66,13 @@ export async function getMyMembership(userId: string, serverId: number) {
  * 집행관이 없는 구역은 수금 자체가 불가라 이름까지 돌려준다(어디인지가 바로 필요한 정보).
  */
 export async function getGuildHubStatus(guildId: bigint, serverId: number) {
-  const cooldownMin = TAX_COLLECT_COOLDOWN_MIN;
   const rows = (await db.execute(sql`
     select z.name, z.region::text as region,
            z.executor_user_id is null as no_executor,
            (z.executor_user_id is not null
              and z.tax_diamond > 0
-             and (z.captured_at is null or z.captured_at <= now() - (${cooldownMin} || ' minutes')::interval)
-             and (z.last_tax_collected_at is null
-                  or z.last_tax_collected_at <= now() - (${cooldownMin} || ' minutes')::interval)
+             and ${taxCooldownDoneSql('z', 'captured_at', sql`now()`)}
+             and ${taxCooldownDoneSql('z', 'last_tax_collected_at', sql`now()`)}
            ) as collectable
       from zones z
      where z.server_id = ${serverId} and z.owner_guild_id = ${guildId}
@@ -936,7 +935,7 @@ export type TaxCollectZone = {
  * 정렬은 수금 가능 → 대기(가까운 순) → 집행관 공석. 판정은 collect.ts와 같은 네 조건.
  */
 export async function getTaxCollectView(guildId: bigint, serverId: number) {
-  const cooldownMs = TAX_COLLECT_COOLDOWN_MIN * 60_000;
+  const since48 = taxCooldown48SinceMs();
   const rows = await db
     .select({
       id: zones.id,
@@ -959,9 +958,8 @@ export async function getTaxCollectView(guildId: bigint, serverId: number) {
   const now = Date.now();
   const list: TaxCollectZone[] = rows.map((r) => {
     const region = r.region as Region;
-    // 서버(collect.ts)는 captured_at·last_tax 쿨다운을 둘 다 검사 → 실제 게이트는 더 늦은 쪽.
-    const base = Math.max(r.capturedAt?.getTime() ?? 0, r.lastAt?.getTime() ?? 0);
-    const readyAt = base > 0 ? base + cooldownMs : null;
+    // 서버(collect.ts)와 같은 판정 — 습득·직전 수금 쿨다운을 각자의 길이(시작 시각 기준 72h/48h)로 끝낸 뒤 늦은 쪽.
+    const readyAt = taxReadyAtMs(r.capturedAt?.getTime() ?? null, r.lastAt?.getTime() ?? null, since48);
     const cooling = readyAt != null && readyAt > now;
     let status: TaxZoneStatus;
     if (!r.executorUserId) status = 'none';
