@@ -13,9 +13,7 @@ import type {
   HistoryEvent,
   HistoryGuildMeta,
   HistoryIndex,
-  HistoryScene,
 } from '@/lib/game/history/types';
-import { assetUrl } from '@/lib/asset-versions';
 import { HistoryRace } from './HistoryRace';
 
 /**
@@ -188,10 +186,6 @@ export function HistoryPlayer({
     return () => window.removeEventListener('resize', calc);
   }, []);
   const stageScale = stageSize / STAGE_PX;
-  /** 그날의 장면 지역 — 날이 시작될 때 2.2초 동안 그 지역 타일이 밝아진다. */
-  const [focusRegion, setFocusRegion] = useState<string | null>(null);
-  /** 오른쪽 정보 열의 '이날의 장면' — 재생 중인 날의 장면(정지 땐 오늘). */
-  const [curScene, setCurScene] = useState<HistoryScene | null>(null);
   const [idx, setIdx] = useState<number>(n - 1);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1); // 게임과 같은 속도가 기본
   const [paused, setPaused] = useState(false);
@@ -446,13 +440,6 @@ export function HistoryPlayer({
       if (token !== run.current) return;
       void fetchDay(k + 1);
       const replay = data?.replay ?? null;
-      setCurScene(data?.scene ?? null);
-      // 그날의 장면 지역을 잠깐 밝힌다.
-      if (data?.scene?.region) {
-        const region = data.scene.region;
-        setFocusRegion(region);
-        setTimeout(() => setFocusRegion((r) => (r === region ? null : r)), 2200);
-      }
       if (replay) {
         // 전날 결과 == 오늘 시작 상태라면 그대로 둔다(같은 값으로 다시 세팅하면 transition이 끊겨 깜박인다). 건너뛰기·처음 시작만 스냅.
         setOwners((o) => (sameOwners(o, replay.beforeOwner) ? o : { ...replay.beforeOwner }));
@@ -732,12 +719,9 @@ export function HistoryPlayer({
                           backgroundColor: owner
                             ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
                             : 'rgba(10,12,20,0.55)',
-                          boxShadow:
-                            focusRegion === z.region
-                              ? `0 0 0 2px #fde047, 0 0 10px #fde047aa, 0 1px 2px rgba(0,0,0,.55)`
-                              : owner
-                                ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
-                                : `0 0 0 1px ${color}66`,
+                          boxShadow: owner
+                            ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                            : `0 0 0 1px ${color}66`,
                         }}
                       >
                         {owner ? (
@@ -796,7 +780,6 @@ export function HistoryPlayer({
           </div>
           <div className="mt-5 xl:hidden">
             <InfoPanel
-              scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
               share={share}
               meta={meta}
               guildEmblem={guildEmblem}
@@ -1021,10 +1004,9 @@ export function HistoryPlayer({
           )}
         </section>
 
-        {/* ── 정보 열(오른쪽, 넓은 화면) — 이날의 장면 · 순위 · 시대 목차. 글 열은 문장만 남긴다. ── */}
+        {/* ── 정보 열(오른쪽, 넓은 화면) — 순위 · 시대 목차. 글 열은 문장만 남긴다. ── */}
         <aside className="hidden min-h-0 overflow-y-auto p-4 xl:block xl:h-full">
           <InfoPanel
-            scene={phase === 'idle' ? (latest?.scene ?? null) : curScene}
             share={share}
             meta={meta}
             guildEmblem={guildEmblem}
@@ -1179,9 +1161,8 @@ export function HistoryPlayer({
   );
 }
 
-/** 정보 열 — 이날의 장면 카드, 길드 순위(문양·구역 수·막대), 시대 목차(누르면 그 시대 첫날부터). */
+/** 정보 열 — 길드 순위(문양·구역 수·막대), 시대 목차(누르면 그 시대 첫날부터). '이날의 장면' 카드는 2026-09-18 삭제(사용자 지시). */
 function InfoPanel({
-  scene,
   share,
   meta,
   guildEmblem,
@@ -1190,7 +1171,6 @@ function InfoPanel({
   curEra,
   onEra,
 }: {
-  scene: HistoryScene | null;
   share: [string, number][];
   meta: Record<string, HistoryGuildMeta>;
   guildEmblem: (name: string) => readonly string[];
@@ -1201,18 +1181,6 @@ function InfoPanel({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>이날의 장면</div>
-        {scene ? (
-          <SceneCard scene={scene} guildEmblem={guildEmblem} compact />
-        ) : (
-          <div
-            className={`rounded-[6px] border border-dashed px-3 py-6 text-center text-[11.5px] ${PAPER.border} ${PAPER.muted}`}
-          >
-            기록을 펼치면 나타납니다
-          </div>
-        )}
-      </div>
       <div>
         <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>순위</div>
         {share.length > 0 ? (
@@ -1286,76 +1254,6 @@ function ChapterHeading({
         {era.endIdx === days.length - 1 ? '' : shortDay(days[era.endIdx]!.kstDay)} · {len}일
       </div>
       <div className="mx-auto mt-3 h-px w-16 bg-[#b9a982]" />
-    </div>
-  );
-}
-
-/** 그날의 장면 — 가장 큰 사건 하나를 지역 그림 위에 카드로. */
-function SceneCard({
-  scene,
-  guildEmblem,
-  compact = false,
-}: {
-  scene: HistoryScene | null;
-  guildEmblem: (name: string) => readonly string[];
-  /** 정보 열용 — 위 여백 없이. */
-  compact?: boolean;
-}) {
-  if (!scene) return null;
-  const bg = scene.region ? assetUrl(`/sprites/guild/region/${scene.region}.png`) : null;
-  return (
-    <div
-      className={`relative overflow-hidden rounded-[6px] border border-[#3a3128] bg-[#1b1712] text-[#f3ede2] ${compact ? '' : 'mt-3'}`}
-    >
-      {bg ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={bg}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover opacity-55"
-          style={{ imageRendering: 'pixelated' }}
-        />
-      ) : null}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#1b1712] via-[#1b1712cc] to-[#1b171266]" />
-      <div className="relative flex items-center gap-4 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-[10.5px] tracking-[.2em] text-[#d9c39a]">
-            이날의 장면{scene.regionLabel ? ` · ${scene.regionLabel}` : ''}
-          </div>
-          <div className="mt-0.5 truncate text-[16px] leading-snug font-bold" style={SERIF}>
-            {scene.title}
-          </div>
-          <div className="mt-0.5 truncate text-[12px] text-[#e7dcc0]">{scene.note}</div>
-          {scene.hero ? (
-            <div className="mt-1 text-[11px] text-[#cfc6b3]">
-              활약 — {scene.hero.nickname}({scene.hero.guild}) {scene.hero.kind} {scene.hero.count}
-            </div>
-          ) : null}
-        </div>
-        {scene.guilds.length > 0 ? (
-          <div className="flex shrink-0 items-center -space-x-2">
-            {scene.guilds.map((g) => {
-              const urls =
-                guildEmblem(g.name).length > 0
-                  ? guildEmblem(g.name)
-                  : g.emblemUrl
-                    ? [g.emblemUrl, ...(g.emblemAlsoTry ?? [])]
-                    : [];
-              if (urls.length === 0) return null;
-              return (
-                <span
-                  key={g.name}
-                  title={g.name}
-                  className="inline-block h-12 w-12 opacity-95 drop-shadow-[0_2px_6px_rgba(0,0,0,.7)]"
-                >
-                  <EmblemChain key={urls[0]} urls={urls} className="h-full w-full object-contain" />
-                </span>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }

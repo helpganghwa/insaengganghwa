@@ -22,28 +22,11 @@ export type HistoryIndex = {
   emblemHistory: Record<number, string[]>;
   story: HistoryStory;
 };
-/** 그날의 장면(2026-09-17) — 하루에서 가장 큰 사건 하나를 카드로. 우선순위: 석권 > 1위 교체 > 격전 > 소수 승리 > 활약 > 헤드라인. */
-export type HistoryScene = {
-  kind: 'sweep' | 'leader' | 'clash' | 'underdog' | 'hero' | 'headline';
-  /** 큰 제목(마커 없음). */
-  title: string;
-  /** 한 줄 설명(마커 없음). */
-  note: string;
-  /** 배경 그림용 지역 코드(sprites/guild/region/<code>.png) — 없으면 null. */
-  region: string | null;
-  regionLabel: string | null;
-  zone: string | null;
-  /** 관련 길드(최대 3) — 그날 스냅샷 표시값. */
-  guilds: { name: string; color: string | null; emblemUrl: string | null; emblemAlsoTry?: string[] }[];
-  /** 활약 인물(있으면). */
-  hero: { nickname: string; code: string | null; guild: string; kind: string; count: number } | null;
-};
 export type HistoryDayData = {
   kstDay: string;
   headline: string;
   text: string;
   replay: ConquestReplay | null;
-  scene: HistoryScene | null;
 };
 
 /** 판도 차트·시대·사건(2026-09-16, A안) — 전부 코드 집계. */
