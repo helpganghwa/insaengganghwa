@@ -339,6 +339,8 @@ export function HistoryPlayer({
   const [detailDone, setDetailDone] = useState(false);
   /** 소유가 바뀐 타일의 링 — 값이 바뀌면 다시 그려져 애니메이션이 한 번 더 돈다. */
   const [pulse, setPulse] = useState<Record<number, number>>({});
+  /** 판도에서 호버한 길드(이름) — 지도에서 그 길드 구역만 밝히고 나머지는 흐리게(2026-09-18). */
+  const [focusGuild, setFocusGuild] = useState<string | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true);
   const cache = useRef(new Map<string, HistoryDayData | null>());
@@ -889,7 +891,7 @@ export function HistoryPlayer({
                               left: `${z.mapX}%`,
                               top: `${z.mapY}%`,
                               zIndex: 4,
-                              opacity: c ? 1 : 0,
+                              opacity: c ? (focusGuild && owner !== focusGuild ? 0.12 : 1) : 0,
                               background: c
                                 ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
                                 : 'transparent',
@@ -904,14 +906,17 @@ export function HistoryPlayer({
                         const color = regionColor(z.region);
                         const size = 19;
                         const ring = pulse[z.id];
+                        const focused = !!owner && owner === focusGuild;
                         return (
                           <div
                             key={z.id}
-                            className="absolute -translate-x-1/2 -translate-y-1/2"
+                            className="absolute -translate-x-1/2 -translate-y-1/2 transition-[opacity,scale] duration-200"
                             style={{
                               left: `${z.mapX}%`,
                               top: `${z.mapY}%`,
-                              zIndex: owner ? 10 : 6,
+                              zIndex: focused ? 20 : owner ? 10 : 6,
+                              opacity: focusGuild && !focused ? 0.28 : 1,
+                              scale: focused ? 1.3 : 1,
                             }}
                             title={`${z.name}${owner ? ` · ${owner}` : ''}`}
                           >
@@ -931,9 +936,11 @@ export function HistoryPlayer({
                                 backgroundColor: owner
                                   ? `color-mix(in srgb, ${gc} 40%, #fdfaf3)`
                                   : 'rgba(10,12,20,0.55)',
-                                boxShadow: owner
-                                  ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
-                                  : `0 0 0 1px ${color}66`,
+                                boxShadow: focused
+                                  ? `0 0 0 2px ${gc}, 0 0 10px 2px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                                  : owner
+                                    ? `0 0 0 1.5px ${gc}, 0 1px 2px rgba(0,0,0,.55)`
+                                    : `0 0 0 1px ${color}66`,
                               }}
                             >
                               {owner ? (
@@ -956,6 +963,22 @@ export function HistoryPlayer({
                         );
                       })}
                     </div>
+                    {focusGuild ? (
+                      <div
+                        aria-live="polite"
+                        className="pointer-events-none absolute top-2 left-2 z-50 flex items-center gap-1.5 rounded-[6px] bg-[#fdfaf3]/95 px-2 py-1 text-[11.5px] font-bold text-[#2a251e] shadow-[0_2px_8px_rgba(0,0,0,.35)]"
+                        style={SERIF}
+                      >
+                        <i
+                          className="h-2.5 w-2.5 rounded-[2px]"
+                          style={{ background: meta[focusGuild]?.color ?? '#9a917f' }}
+                        />
+                        {focusGuild}
+                        <span className={`font-normal tabular-nums ${PAPER.muted}`}>
+                          {share.find(([g]) => g === focusGuild)?.[1] ?? 0}곳
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 {/* 판도 띠 — 길드별 영토 비율(이름·수는 오른쪽 판도 칸이 맡는다). */}
@@ -965,10 +988,11 @@ export function HistoryPlayer({
                       <div
                         key={g}
                         title={`${g} ${c}`}
-                        className="h-full transition-[width] duration-700 ease-out"
+                        className="h-full transition-[width,opacity] duration-700 ease-out"
                         style={{
                           width: `${(c / Math.max(1, zones.length)) * 100}%`,
                           background: meta[g]?.color ?? '#9a917f',
+                          opacity: focusGuild && g !== focusGuild ? 0.3 : 1,
                         }}
                       />
                     ))}
@@ -980,7 +1004,12 @@ export function HistoryPlayer({
                 </div>
                 <div className="mt-6 xl:hidden">
                   <div className={`mb-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>판도</div>
-                  <RacePanel share={share} meta={meta} guildEmblem={guildEmblem} />
+                  <RacePanel
+                    share={share}
+                    meta={meta}
+                    guildEmblem={guildEmblem}
+                    onFocus={setFocusGuild}
+                  />
                   <div className="mt-6">
                     <EraToc eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
                   </div>
@@ -1011,16 +1040,6 @@ export function HistoryPlayer({
                         <Icon name="play" />
                         처음부터 시대별로
                       </button>
-                      {eras.length > 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => flowFrom(eras[eras.length - 1]!.startIdx)}
-                          className={`inline-flex items-center gap-2 rounded-[9px] border px-4 py-2 text-[12.5px] font-bold ${PAPER.border} ${PAPER.hover}`}
-                        >
-                          <Icon name="ff" />
-                          지금의 시대부터
-                        </button>
-                      ) : null}
                     </div>
                     {/* 장 목차 — 제N장 · 「길드」의 시대 · 기간 · 요약. 누르면 그 장부터. 최근 장이 위(09-18 사용자 지시, 장 번호는 시간순). */}
                     <div className="mt-7 flex flex-col gap-4">
@@ -1266,7 +1285,13 @@ export function HistoryPlayer({
                 meta={`${share.length}개 길드 · 중립 ${zones.length - ownedCount}`}
               />
               <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-6">
-                <RacePanel share={share} meta={meta} guildEmblem={guildEmblem} tall />
+                <RacePanel
+                  share={share}
+                  meta={meta}
+                  guildEmblem={guildEmblem}
+                  onFocus={setFocusGuild}
+                  tall
+                />
               </div>
             </aside>
           </div>
@@ -1648,11 +1673,13 @@ function RacePanel({
   share,
   meta,
   guildEmblem,
+  onFocus,
   tall = false,
 }: {
   share: [string, number][];
   meta: Record<string, HistoryGuildMeta>;
   guildEmblem: (name: string) => readonly string[];
+  onFocus?: (name: string | null) => void;
   tall?: boolean;
 }) {
   if (share.length === 0)
@@ -1660,6 +1687,7 @@ function RacePanel({
   return (
     <HistoryRace
       height={tall ? 300 : 240}
+      onFocus={onFocus}
       rows={share.map(([g, c]) => ({
         key: String(meta[g]?.id ?? g),
         name: g,
@@ -1866,7 +1894,6 @@ const ICONS = {
   play: 'M3 1l8 5-8 5z',
   pause: 'M2 1h3v10H2zM7 1h3v10H7z',
   next: 'M3 1v10l7-5z',
-  ff: 'M1 1l5 5-5 5zM6 1l5 5-5 5z',
 } as const;
 type IconName = keyof typeof ICONS;
 

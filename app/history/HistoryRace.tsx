@@ -61,8 +61,21 @@ const UPDATE_MS = 1000;
  *    카테고리를 새로 배치해 막대가 튀고, replaceMerge로 시리즈를 갈아 끼우면 애니메이션이 아예 끊긴다.
  *  - 값·순위 갱신은 선형 UPDATE_MS. 라벨 숫자는 valueAnimation으로 함께 굴러간다.
  */
-export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: number }) {
+export function HistoryRace({
+  rows,
+  height = 260,
+  onFocus,
+}: {
+  rows: RaceRow[];
+  height?: number;
+  /** 막대·이름에 올린 길드(이름) — 지도가 그 길드 구역을 밝힌다(2026-09-18). 벗어나면 null. */
+  onFocus?: (name: string | null) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const focusRef = useRef(onFocus);
+  useEffect(() => {
+    focusRef.current = onFocus;
+  }, [onFocus]);
   const chart = useRef<echarts.ECharts | null>(null);
   /** 등장 순서대로 고정된 카테고리(길드 키). 한 번 들어오면 빠지지 않는다. */
   const cats = useRef<string[]>([]);
@@ -92,13 +105,25 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
         animationDurationUpdate: 300,
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { color: '#2a251e', fontSize: 11.5, fontWeight: 700, margin: 8, width: LABEL_W - 12, overflow: 'truncate' },
+        // 이름에 올려도 막대와 같이 강조한다.
+        triggerEvent: true,
+        axisLabel: {
+          color: '#2a251e',
+          fontSize: 11.5,
+          fontWeight: 700,
+          margin: 8,
+          width: LABEL_W - 12,
+          overflow: 'truncate',
+        },
       },
       series: [
         {
           type: 'bar',
           realtimeSort: true,
           barCategoryGap: '28%',
+          cursor: 'default',
+          emphasis: { focus: 'self' },
+          blur: { itemStyle: { opacity: 0.3 } },
           data: [],
           label: {
             show: true,
@@ -112,9 +137,49 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
         },
       ],
     });
+    // 호버 강조 — 막대(series)와 이름(yAxis) 어느 쪽이든 그 길드를 강조하고 이름을 밖으로 알린다.
+    // 막대 → 이름으로 옮길 때 잠깐 비는 mouseout은 80ms 유예로 흡수해 지도가 깜빡이지 않게.
+    let lit = -1;
+    let clearT: ReturnType<typeof setTimeout> | null = null;
+    const focus = (key: string) => {
+      if (clearT) {
+        clearTimeout(clearT);
+        clearT = null;
+      }
+      const di = cats.current.indexOf(key);
+      if (di < 0) return;
+      if (di !== lit) {
+        if (lit >= 0) c.dispatchAction({ type: 'downplay', seriesIndex: 0, dataIndex: lit });
+        c.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: di });
+        lit = di;
+      }
+      focusRef.current?.(seenRef.current.get(key)?.name ?? null);
+    };
+    const blur = () => {
+      if (clearT) clearTimeout(clearT);
+      clearT = setTimeout(() => {
+        clearT = null;
+        if (lit >= 0) c.dispatchAction({ type: 'downplay', seriesIndex: 0, dataIndex: lit });
+        lit = -1;
+        focusRef.current?.(null);
+      }, 80);
+    };
+    c.on('mouseover', (raw) => {
+      const p = raw as { componentType?: string; dataIndex?: number; value?: unknown };
+      const key =
+        p.componentType === 'series' && typeof p.dataIndex === 'number'
+          ? cats.current[p.dataIndex]
+          : p.componentType === 'yAxis'
+            ? String(p.value)
+            : undefined;
+      if (key) focus(key);
+    });
+    c.on('mouseout', blur);
+    c.on('globalout', blur);
     const ro = new ResizeObserver(() => c.resize());
     ro.observe(ref.current);
     return () => {
+      if (clearT) clearTimeout(clearT);
       ro.disconnect();
       c.dispose();
       chart.current = null;
@@ -159,7 +224,10 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
           rich: Object.fromEntries(
             [...seen.values()]
               .filter((r) => emblemOf(r))
-              .map((r) => [`e${r.key}`, { width: 14, height: 14, backgroundColor: { image: emblemOf(r)! } }]),
+              .map((r) => [
+                `e${r.key}`,
+                { width: 14, height: 14, backgroundColor: { image: emblemOf(r)! } },
+              ]),
           ),
         },
       },
@@ -170,7 +238,10 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
             const r = byKey.get(key);
             return {
               value: r?.count ?? 0,
-              itemStyle: { color: (r ?? seen.get(key))?.color ?? '#9a917f', borderRadius: [0, 3, 3, 0] },
+              itemStyle: {
+                color: (r ?? seen.get(key))?.color ?? '#9a917f',
+                borderRadius: [0, 3, 3, 0],
+              },
             };
           }),
         },
