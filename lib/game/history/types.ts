@@ -21,6 +21,15 @@ export type HistoryIndex = {
    */
   emblemHistory: Record<number, string[]>;
   story: HistoryStory;
+  /**
+   * 날짜별 구역 소유(2026-09-18, 시대 흐름 재생의 재료) — ownersByDay[dayIdx][zoneIdx] = 길드 id, 0 = 중립.
+   * zoneIdx는 `zones` 배열 순서. 전투 승자·방치 중립화·해산을 날짜순으로 재생한 값이라 리플레이의 시작 상태와 같은 규칙.
+   */
+  ownersByDay: number[][];
+  /** 역사에 등장한 모든 길드(id → 현재 이름·색·문양). 차트 상위 6개만 담는 story.guilds와 달리 전부. */
+  guildsById: Record<number, { name: string; color: string | null; emblemUrl: string | null; /** 이름 구간 [dayIdx, 그날부터의 이름] 오름차순 — 시대 흐름이 그 시절 이름으로 부르게(개명 이력). */ namesFrom: [number, string][] }>;
+  /** 역사에 등장한 모든 이름(개명 전 포함) → 길드 id. 옛 이름으로 적힌 요약·헤드라인이 색·문양을 찾는 길. */
+  nameAliases: Record<string, number>;
 };
 export type HistoryDayData = {
   kstDay: string;
@@ -31,7 +40,17 @@ export type HistoryDayData = {
 
 /** 판도 차트·시대·사건(2026-09-16, A안) — 전부 코드 집계. */
 export type HistorySeriesGuild = { id: number; name: string; color: string | null };
-export type HistoryEra = { startIdx: number; endIdx: number; guildId: number; name: string; color: string | null };
+export type HistoryEra = {
+  startIdx: number;
+  endIdx: number;
+  guildId: number;
+  name: string;
+  color: string | null;
+  /** 시대 요약(코드 집계 문장, 마커 {g|이름} 포함) — 여는 문장 + 그 시대의 사실(석권·최대 영토·사라진 길드). */
+  summary: string;
+  /** 맺음 — 시대가 끝났으면 "N일 만에 …에게 내주었다", 진행 중이면 빈 문자열. */
+  closing: string;
+};
 export type HistoryEventKind = 'sweep' | 'rename' | 'disband' | 'vanish' | 'peak' | 'leader' | 'power1';
 export type HistoryEvent = { kind: HistoryEventKind; label: string; short: string };
 export type HistoryStory = {

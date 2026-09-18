@@ -47,6 +47,7 @@ const PAPER_INK_CSS = `
 .ig-paper .dark\\:text-zinc-600{color:#9a917f}
 .ig-paper .text-zinc-600{color:#2a251e}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@keyframes igRing{from{box-shadow:0 0 0 0 var(--ring,#fff8)}to{box-shadow:0 0 0 14px transparent}}
 .ig-paper{background-image:radial-gradient(120% 80% at 50% 0%,#faf6ee 0%,#f5f0e6 55%,#eee6d4 100%)}
 .ig-day p{font-size:15px;line-height:1.9;color:#2a251e}
 .ig-day p+p{margin-top:12px}
