@@ -6,7 +6,7 @@ import { PAPER, SERIF } from '@/app/wiki/theme';
 
 /**
  * 역사 위키 준비 중 화면(2026-09-18) — 아직 쓰이지 않은 장을 펼친 책으로 보여 준다.
- * 왼쪽 면 = 제목·안내, 오른쪽 면 = 그 장에 들어갈 것(길드 깃발·인물 초상)을 옅게 깔고 '준비 중' 도장.
+ * 왼쪽 면 = 제목·안내, 오른쪽 면 = 그 장에 들어갈 것(길드 깃발·인물 초상)을 옅게(도장은 09-18 사용자 지시로 삭제).
  * 배경은 대륙 지도를 아주 옅게 — 연대기 화면과 같은 세계라는 표시.
  */
 export function ComingSoonBook({
@@ -65,17 +65,6 @@ export function ComingSoonBook({
               {caption}
             </div>
           ) : null}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-[46%] left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[9deg]"
-          >
-            <div className="relative grid h-[112px] w-[112px] place-items-center rounded-full border-[3px] border-[#a3402a]/85 bg-[#fbf7ee]/80 text-[#a3402a] shadow-[0_0_0_6px_rgba(251,247,238,.55)] motion-safe:animate-[igStamp_.55s_cubic-bezier(.3,1.4,.5,1)_.25s_both]">
-              <i className="absolute inset-[5px] rounded-full border border-[#a3402a]/60" />
-              <span className="text-[19px] font-bold tracking-[.1em]" style={SERIF}>
-                준비 중
-              </span>
-            </div>
-          </div>
         </div>
       </section>
     </main>

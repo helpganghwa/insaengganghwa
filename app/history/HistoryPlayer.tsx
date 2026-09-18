@@ -248,6 +248,11 @@ function sameOwners(a: Record<number, string | null>, b: Record<number, string |
 }
 
 /** 문양 후보 — 그날 스냅샷 URL부터 시작해 이력에서 그 뒤의 문양들. 첫 파일이 사라졌을 때 다음 문양으로 넘어가기 위한 순서. */
+/** 장 목록 순서 — 최근 장이 위(2026-09-18 사용자 지시). 원래 순번 i를 함께 넘겨 '제N장'은 시간 순서 그대로. */
+function newestFirst(eras: HistoryEra[]): (readonly [HistoryEra, number])[] {
+  return eras.map((e, i) => [e, i] as const).reverse();
+}
+
 function emblemChainOf(
   history: Record<number, string[]>,
   g: HistoryGuildMeta | undefined,
@@ -1017,9 +1022,9 @@ export function HistoryPlayer({
                         </button>
                       ) : null}
                     </div>
-                    {/* 장 목차 — 제N장 · 「길드」의 시대 · 기간 · 요약. 누르면 그 장부터. */}
+                    {/* 장 목차 — 제N장 · 「길드」의 시대 · 기간 · 요약. 누르면 그 장부터. 최근 장이 위(09-18 사용자 지시, 장 번호는 시간순). */}
                     <div className="mt-7 flex flex-col gap-4">
-                      {eras.map((e, i) => (
+                      {newestFirst(eras).map(([e, i]) => (
                         <button
                           key={i}
                           type="button"
@@ -1396,22 +1401,19 @@ function MobileFallback({
       ) : null}
       <section className="mt-7 flex flex-col gap-6">
         {/* 최근 시대가 위로(2026-09-18 사용자 지시) — 장 번호는 시간 순서 그대로 둔다. */}
-        {eras
-          .map((e, i) => [e, i] as const)
-          .reverse()
-          .map(([e, i]) => (
-            <article key={i}>
-              <ChapterHeading era={e} index={i + 1} days={days} />
-              <p className="text-[13.5px] leading-[1.8]">
-                <Headline text={e.summary} guildColor={guildColor} />
+        {newestFirst(eras).map(([e, i]) => (
+          <article key={i}>
+            <ChapterHeading era={e} index={i + 1} days={days} />
+            <p className="text-[13.5px] leading-[1.8]">
+              <Headline text={e.summary} guildColor={guildColor} />
+            </p>
+            {e.closing ? (
+              <p className={`mt-2 text-[12.5px] leading-[1.7] ${PAPER.muted}`}>
+                <Headline text={e.closing} guildColor={guildColor} />
               </p>
-              {e.closing ? (
-                <p className={`mt-2 text-[12.5px] leading-[1.7] ${PAPER.muted}`}>
-                  <Headline text={e.closing} guildColor={guildColor} />
-                </p>
-              ) : null}
-            </article>
-          ))}
+            ) : null}
+          </article>
+        ))}
       </section>
     </main>
   );
@@ -1596,7 +1598,6 @@ function EraScrubber({
                   ))}
                 </div>
               ) : null}
-              <div className={`mt-1.5 text-[10px] ${PAPER.muted}`}>누르면 이날부터 봅니다</div>
             </div>
           </>
         ) : null}
@@ -1670,7 +1671,7 @@ function RacePanel({
   );
 }
 
-/** 장 목차 — 누르면 그 장 처음부터. 지금 장은 밝게. */
+/** 장 목차 — 누르면 그 장 처음부터. 지금 장은 밝게. 최근 장이 위. */
 function EraToc({
   eras,
   days,
@@ -1687,7 +1688,7 @@ function EraToc({
     <div>
       <div className={`mb-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>장 목차</div>
       <div className={`divide-y border-y ${PAPER.border} divide-[#ece5d6]`}>
-        {eras.map((e, i) => (
+        {newestFirst(eras).map(([e, i]) => (
           <button
             key={i}
             type="button"
