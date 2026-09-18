@@ -66,6 +66,8 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
   const cats = useRef<string[]>([]);
   /** 마지막으로 본 이름·색·문양(키별) — 순위 밖으로 밀린 길드의 라벨도 남는다. */
   const seenRef = useRef(new Map<string, RaceRow>());
+  /** 첫 데이터는 애니메이션 없이 그린다(첫 화면에서 막대가 0에서 자라지 않게 — 2026-09-18 사용자 지시). */
+  const primedRef = useRef(false);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!ref.current) return;
@@ -138,8 +140,12 @@ export function HistoryRace({ rows, height = 260 }: { rows: RaceRow[]; height?: 
     // 라벨은 마지막으로 본 이름·문양을 기억한다(순위 밖으로 밀린 길드도 카테고리는 남는다).
     const seen = seenRef.current;
     for (const r of rows) seen.set(r.key, r);
+    const first = !primedRef.current && rows.length > 0;
+    if (first) primedRef.current = true;
     c.setOption({
+      animationDurationUpdate: first ? 0 : UPDATE_MS,
       yAxis: {
+        animationDurationUpdate: first ? 0 : 300,
         data: cats.current,
         axisLabel: {
           formatter: (key: string) => {

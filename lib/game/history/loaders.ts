@@ -4,6 +4,7 @@ import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { replayOwnership } from '@/lib/game/guild/conquest/chronicle-history';
+import { narrateEra, type EraFacts } from './era-summary';
 import { db } from '@/lib/db/client';
 import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
 import { guilds, worldChronicle, zoneAdjacency, zones } from '@/lib/db/schema/guild';
@@ -55,11 +56,20 @@ export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
     }
     const emblemHistory = await getGuildEmblemHistory(serverId);
     const days = dayRows.map((r) => ({ kstDay: String(r.kstDay).slice(0, 10), headline: r.headline ?? '' }));
-    const { story, ownersByDay, guildsById, nameAliases } = await buildStory(
+    const { story, ownersByDay, guildsById, nameAliases, eraFacts } = await buildStory(
       serverId,
       days.map((d) => d.kstDay),
       zoneRows.map((z) => ({ id: z.id, name: z.name, region: String(z.region) })),
+      new Map(days.map((d) => [d.kstDay, d.headline])),
     );
+    // 시대 요약을 이야기꾼 목소리로(검증 통과분만) — 실패하면 집계 문장 그대로.
+    const narratives = await Promise.all(eraFacts.map((f) => narrateEra(f)));
+    narratives.forEach((nr, i) => {
+      const era = story.eras[i];
+      if (!nr || !era) return;
+      era.summary = nr.summary;
+      if (nr.closing) era.closing = nr.closing;
+    });
     return {
       serverId,
       days,
@@ -86,8 +96,9 @@ async function buildStory(
   serverId: number,
   kstDays: string[],
   zoneRows: { id: number; name: string; region: string }[],
-): Promise<{ story: HistoryStory; ownersByDay: number[][]; guildsById: HistoryIndex['guildsById']; nameAliases: Record<string, number> }> {
-  const empty = { story: { guilds: [], counts: [], eras: [], events: {} } as HistoryStory, ownersByDay: [] as number[][], guildsById: {} as HistoryIndex['guildsById'], nameAliases: {} as Record<string, number> };
+  headlineOf: Map<string, string>,
+): Promise<{ story: HistoryStory; ownersByDay: number[][]; guildsById: HistoryIndex['guildsById']; nameAliases: Record<string, number>; eraFacts: EraFacts[] }> {
+  const empty = { story: { guilds: [], counts: [], eras: [], events: {} } as HistoryStory, ownersByDay: [] as number[][], guildsById: {} as HistoryIndex['guildsById'], nameAliases: {} as Record<string, number>, eraFacts: [] as EraFacts[] };
   if (kstDays.length === 0) return empty;
   const lastDay = kstDays[kstDays.length - 1]!;
   // 소유 변화 — 승자 id가 있는 전투만(해산으로 id가 비워진 승리는 그 길드의 해산 중립화로 곧 덮인다).
@@ -281,6 +292,9 @@ async function buildStory(
   };
   const joinKo = (xs: string[]) => xs.join('·');
   const renameRows = ev.filter((e) => e.type === 'guild_rename');
+  // 헤드라인은 마커를 살리고 id만 벗긴다({g|이름|17} → {g|이름}) — 요약이 거기 나온 길드를 마커로 쓸 수 있게.
+  const stripIds = (s: string) => s.replace(/\{([guz])\|([^}|]+)(?:\|[^}]*)?\}+/g, '{$1|$2}');
+  const eraFacts: EraFacts[] = [];
   eras.forEach((era, k) => {
     const open = eraOpen[k]!;
     const d0 = kstDays[era.startIdx]!;
@@ -290,6 +304,7 @@ async function buildStory(
     const inEra = (i: number) => i >= era.startIdx && i <= era.endIdx;
     // 개명 — 장 안에서 이름이 바뀌면 한 문장으로 잇는다(이후 문장은 새 이름).
     const renamedAt = new Map<number, string>();
+    const factRenames: EraFacts['renames'] = [];
     for (const r of renameRows) {
       const kd = r.kd.slice(0, 10);
       const i = dayIdx.get(kd);
@@ -299,6 +314,7 @@ async function buildStory(
       const gid = nameAliases[after] ?? nameAliases[before];
       if (!gid || !before || !after) continue;
       renamedAt.set(gid, kd);
+      factRenames.push({ day: kd, before, after });
       lines.push(`${md(kd)} {g|${before}}${josa(before, ['은', '는'])} {g|${after}}${josa(after, ['으로', '로'])} 이름을 바꾸었다.`);
     }
     const nameIn = (gid: number, pair?: [string, string]) => G(gid, renamedAt.has(gid) ? kstDays[era.endIdx]! : d0, pair);
@@ -321,8 +337,29 @@ async function buildStory(
       const to = arr[next.startIdx]!;
       era.closing = `${len}일 만에 ${G(next.guildId, kstDays[next.startIdx]!)}에게 가장 넓은 영토를 내주었다. ${peak}곳에서 ${to}곳으로.`;
     } else era.closing = '';
+    // 이야기꾼 요약용 사실표 — 이름은 장 첫날 기준(개명은 항목으로), 마커 없는 평문.
+    const plainName = (gid: number, kd: string) => nameOn(gid, kd);
+    eraFacts.push({
+      index: k + 1,
+      leader: plainName(era.guildId, d0),
+      from: d0,
+      to: kstDays[era.endIdx]!,
+      days: len,
+      ongoing: !next,
+      prevLeader: open.prev != null ? plainName(open.prev, d0) : null,
+      margin: open.margin,
+      renames: factRenames,
+      sweeps: sw
+        .slice()
+        .sort((a, b) => a.dayIdx - b.dayIdx)
+        .map((s) => ({ day: kstDays[s.dayIdx]!, guild: plainName(s.gid, kstDays[s.dayIdx]!), region: regionLabel(s.region) })),
+      peak: len >= 2 && peak > arr[era.startIdx]! ? peak : null,
+      vanished: [...new Set(vanishes.filter((v) => inEra(v.dayIdx)).map((v) => plainName(v.gid, kstDays[Math.max(0, v.dayIdx - 1)]!)))],
+      closing: next ? { next: plainName(next.guildId, kstDays[next.startIdx]!), peak, to: arr[next.startIdx]! } : null,
+      headlines: kstDays.slice(era.startIdx, era.endIdx + 1).map((kd) => stripIds(headlineOf.get(kd) ?? '')).filter(Boolean),
+    });
   });
-  return { story: { guilds: guildsOut, counts, eras, events }, ownersByDay, guildsById, nameAliases };
+  return { story: { guilds: guildsOut, counts, eras, events }, ownersByDay, guildsById, nameAliases, eraFacts };
 }
 
 /** 하루치 — 본문·헤드라인·리플레이 스크립트(캐시 없는 계산; API 응답은 CDN 캐시). 미공개·없는 날은 null. */

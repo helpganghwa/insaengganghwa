@@ -23,7 +23,7 @@ import { HistoryRace } from './HistoryRace';
  *    없는 날은 소유표(ownersByDay)로 색만 바꾸고 DAY_MS 머문다. 날마다 글 칸에 날짜·헤드라인 한 줄이 쌓이고, 시대가 끝나면
  *    맺음 한 줄 뒤 다음 장으로 이어진다.
  *  - 어느 줄이든 '자세히'를 누르면 그날의 연대기 재생(/api/history/day + ChronicleReplayPanel)으로 바뀌고, 끝나면
- *    '다음 날도 자세히'·'시대 흐름으로'를 고르거나 DETAIL_RETURN_MS 뒤 자동으로 흐름에 복귀한다.
+ *    '다음 날도 자세히'·'시대 흐름으로'를 고른다(자동 복귀는 2026-09-18 사용자 지시로 삭제).
  *  - 첫 진입은 지금의 대륙 + 장 목차. 소유 상태는 길드 이름으로 들고 다니며(리플레이 스냅샷과 같은 축), 시대 흐름에서는
  *    guildsById의 현재 이름을 쓴다.
  */
@@ -42,8 +42,8 @@ const SPEEDS = [1, 2, 4] as const;
 const DAY_MS = 1600;
 /** 시대가 끝난 뒤 맺음을 읽을 시간. */
 const EPILOGUE_MS = 2400;
-/** 하루 자세히가 끝난 뒤 아무것도 누르지 않으면 흐름으로 돌아가기까지. */
-const DETAIL_RETURN_MS = 4000;
+/** 시대 흐름의 지도 재생 배속(사용자 배속에 곱함) — 흐름은 빠르게, 자세히는 게임 속도로(2026-09-18 사용자: 빠르게 이동·전투가 보이면 된다). */
+const FLOW_SPEED = 2.5;
 const STATIC_DAY_MS = 5000; // 리플레이 스크립트가 없는 날(전투 없이 기록만)
 /** 게임 세계지도와 같은 무대 폭(루트 viewport 390 기준 정사각). */
 const STAGE_PX = 390;
@@ -178,7 +178,7 @@ export function HistoryPlayer({
   const [mapPlay, setMapPlay] = useState<{ dayIdx: number; data: HistoryDayData; session: number } | null>(null);
   const mapDoneRef = useRef<(() => void) | null>(null);
   /** 하루 자세히 — 그날 데이터와 세션 토큰. */
-  const [detail, setDetail] = useState<{ dayIdx: number; data: HistoryDayData | null; session: number } | null>(null);
+  const [detail, setDetail] = useState<{ dayIdx: number; data: HistoryDayData | null; session: number; failed?: boolean } | null>(null);
   const [detailDone, setDetailDone] = useState(false);
   /** 소유가 바뀐 타일의 링 — 값이 바뀌면 다시 그려져 애니메이션이 한 번 더 돈다. */
   const [pulse, setPulse] = useState<Record<number, number>>({});
@@ -228,19 +228,28 @@ export function HistoryPlayer({
     [ownersByDay, zones, nameAt],
   );
 
+  // 실패는 캐시하지 않고 한 번 더 시도한다 — 한 번 비었던 응답이 영영 '펼치는 중'으로 남던 문제(2026-09-18 스테이징 제보).
   const fetchDay = useCallback(
     async (k: number): Promise<HistoryDayData | null> => {
       const d = days[k];
       if (!d) return null;
-      if (cache.current.has(d.kstDay)) return cache.current.get(d.kstDay)!;
-      try {
-        const r = await fetch(`/api/history/day?s=${serverId}&day=${d.kstDay}&v=3`, { cache: 'no-store' });
-        const v = r.ok ? ((await r.json()) as HistoryDayData) : null;
-        cache.current.set(d.kstDay, v);
-        return v;
-      } catch {
-        return null;
+      const hit = cache.current.get(d.kstDay);
+      if (hit) return hit;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(`/api/history/day?s=${serverId}&day=${d.kstDay}&v=3`, { cache: 'no-store' });
+          if (r.ok) {
+            const v = (await r.json()) as HistoryDayData;
+            cache.current.set(d.kstDay, v);
+            return v;
+          }
+          console.error('[history] day fetch', d.kstDay, r.status);
+        } catch (e) {
+          console.error('[history] day fetch', d.kstDay, (e as Error).message);
+        }
+        await new Promise((r) => setTimeout(r, 1200));
       }
+      return null;
     },
     [days, serverId],
   );
@@ -363,7 +372,8 @@ export function HistoryPlayer({
           );
           setMeta((m) => ({ ...m, ...Object.fromEntries(snap) }));
         } else applyDay(k);
-        setDetail({ dayIdx: k, data, session: token });
+        setDetail({ dayIdx: k, data, session: token, failed: !data });
+        if (!data) return;
         if (!replay) {
           await wait(STATIC_DAY_MS / speedRef.current, token);
           if (token === run.current) setDetailDone(true);
@@ -372,14 +382,6 @@ export function HistoryPlayer({
     },
     [n, fetchDay, applyDay, wait],
   );
-  // 자세히가 끝나면 DETAIL_RETURN_MS 뒤 흐름으로(다음 날부터). 그 사이 사용자가 고르면 취소된다.
-  useEffect(() => {
-    if (phase !== 'detail' || !detailDone || !detail) return;
-    const k = detail.dayIdx;
-    const id = setTimeout(() => flowRef.current(k + 1), DETAIL_RETURN_MS);
-    return () => clearTimeout(id);
-  }, [phase, detailDone, detail]);
-
   // 자동 스크롤 — 자세히(글자가 찍히는 동안)는 바닥을 따라가고, 시대 흐름은 지금 날의 줄을 가운데에 둔다.
   // 사용자가 위로 올리면 멈추고, 바닥 근처로 내리면 다시 따라간다.
   useEffect(() => {
@@ -484,7 +486,7 @@ export function HistoryPlayer({
   const curEra = eras[curEraIdx] ?? null;
   const statusText =
     phase === 'idle'
-      ? `지금의 대륙 · ${n}일째`
+      ? ''
       : phase === 'end'
         ? `${ordinalKo(n)} 번째 날까지`
         : `${idx + 1} / ${n}${phase === 'detail' ? ' · 자세히' : ''}${paused ? ' · 일시정지' : ''}`;
@@ -544,7 +546,7 @@ export function HistoryPlayer({
                     onDone={() => {
                       if (mapPlay.session === run.current) mapDoneRef.current?.();
                     }}
-                    speed={speed}
+                    speed={speed * FLOW_SPEED}
                     pausedRef={pausedRef}
                     reveal="map"
                   />
@@ -677,7 +679,7 @@ export function HistoryPlayer({
                 대륙의 역사
               </div>
               <div className={`mt-1 text-[11.5px] tabular-nums ${PAPER.muted}`}>
-                {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록 · 시대 {eras.length}
+                {days[0]!.kstDay} 부터 {days[n - 1]!.kstDay} 까지 · {n}일의 기록
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <button type="button" onClick={() => flowFrom(0)} className="inline-flex items-center gap-2 rounded-[9px] bg-[#8a4b23] px-4 py-2 text-[12.5px] font-bold text-white">
@@ -735,7 +737,16 @@ export function HistoryPlayer({
                     </div>
                   ) : null}
                   {!detail.data ? (
-                    <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
+                    detail.failed ? (
+                      <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                        <span className={PAPER.muted}>이날의 기록을 불러오지 못했습니다.</span>
+                        <button type="button" onClick={() => openDetail(detail.dayIdx)} className={`rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold text-[#8a4b23] ${PAPER.border} ${PAPER.hover}`}>
+                          다시 시도
+                        </button>
+                      </div>
+                    ) : (
+                      <p className={`text-[12px] ${PAPER.muted}`}>기록을 펼치는 중…</p>
+                    )
                   ) : (
                     <div className="ig-day" key={`${detail.dayIdx}-${detail.session}`}>
                       {detail.data.replay ? (
@@ -772,7 +783,6 @@ export function HistoryPlayer({
                       <button type="button" onClick={() => flowFrom(detail.dayIdx + 1)} className={`rounded-full border px-3 py-1 text-[11px] font-bold text-[#8a4b23] ${PAPER.border} ${PAPER.hover}`}>
                         시대 흐름으로 돌아가기
                       </button>
-                      <span className={`text-[10.5px] ${PAPER.muted}`}>잠시 뒤 흐름으로 돌아갑니다</span>
                     </div>
                   ) : null}
                 </div>
