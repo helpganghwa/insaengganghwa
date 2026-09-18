@@ -15,14 +15,23 @@ import { useEffect, useState, type ReactNode } from 'react';
 // (이전 insaengganghwa.vercel.app은 스테이징을 가리켜 사고 — 프로젝트 기본 .vercel.app 주소는 쓰지 않는다)
 const PWA_WIKI_ORIGIN = 'https://wiki.ganghwa.app';
 
-export function WikiLink({ className, children }: { className?: string; children: ReactNode }) {
-  const [href, setHref] = useState('/wiki');
+export function WikiLink({
+  className,
+  children,
+  path = '/wiki',
+}: {
+  className?: string;
+  children: ReactNode;
+  /** 열 경로 — 역사 위키(/history)도 위키처럼 device-width viewport라 같은 새 창 규칙을 쓴다(2026-09-18). */
+  path?: '/wiki' | '/history';
+}) {
+  const [href, setHref] = useState<string>(path);
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (navigator as { standalone?: boolean }).standalone === true;
-    if (standalone) setHref(`${PWA_WIKI_ORIGIN}/wiki`);
-  }, []);
+    if (standalone) setHref(`${PWA_WIKI_ORIGIN}${path}`);
+  }, [path]);
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
       {children}

@@ -29,8 +29,8 @@ export default async function SettingsPage() {
   const serverCount = await countServers().catch(() => 1);
   const serverName =
     serverCount > 1
-      ? ((await listServersForUser(userId).catch(() => [])).find((sv) => sv.id === serverId)?.name ??
-        `${serverId}서버`)
+      ? ((await listServersForUser(userId).catch(() => [])).find((sv) => sv.id === serverId)
+          ?.name ?? `${serverId}서버`)
       : '';
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 기본값으로 degrade(2026-05-29).
@@ -68,103 +68,111 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <div className="px-4 pb-3 pt-3">
+      <div className="px-4 pt-3 pb-3">
         <PageHeader title="설정" fallback="/me" />
       </div>
       <div className="space-y-4 px-4 pb-4">
-      <Section title="알림 / 사운드">
-        <LocalToggle storageKey="ig:sound" label="효과음" />
-        <Divider />
-        {/* 배경음 — 기본 OFF(강제 노출 피로 방지). 켜면 게임 화면에서 즉시 재생(ig:bgm-change). */}
-        <LocalToggle storageKey="ig:bgm" label="배경음" defaultOn={false} eventName="ig:bgm-change" />
-        <Divider />
-        <PushSettings
-          initialEnhance={p?.pushEnhance ?? true}
-          initialRaid={p?.pushRaid ?? true}
-          initialProfile={p?.pushProfile ?? true}
-          initialReferral={p?.pushReferral ?? true}
-          initialChatMention={p?.pushChatMention ?? true}
-          initialGuildJoin={p?.pushGuildJoin ?? true}
-          initialExpedition={p?.pushExpedition ?? true}
-          initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
-        />
-      </Section>
+        <Section title="알림 / 사운드">
+          <LocalToggle storageKey="ig:sound" label="효과음" />
+          <Divider />
+          {/* 배경음 — 기본 OFF(강제 노출 피로 방지). 켜면 게임 화면에서 즉시 재생(ig:bgm-change). */}
+          <LocalToggle
+            storageKey="ig:bgm"
+            label="배경음"
+            defaultOn={false}
+            eventName="ig:bgm-change"
+          />
+          <Divider />
+          <PushSettings
+            initialEnhance={p?.pushEnhance ?? true}
+            initialRaid={p?.pushRaid ?? true}
+            initialProfile={p?.pushProfile ?? true}
+            initialReferral={p?.pushReferral ?? true}
+            initialChatMention={p?.pushChatMention ?? true}
+            initialGuildJoin={p?.pushGuildJoin ?? true}
+            initialExpedition={p?.pushExpedition ?? true}
+            initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
+          />
+        </Section>
 
-      {serverCount > 1 && (
-        <Section title="서버">
-          <Row label="현재 서버">
-            <span className="text-sm font-semibold">{serverName}</span>
+        {serverCount > 1 && (
+          <Section title="서버">
+            <Row label="현재 서버">
+              <span className="text-sm font-semibold">{serverName}</span>
+            </Row>
+            <Divider />
+            <p className="px-3 py-2 text-[11px] leading-relaxed text-zinc-500">
+              서버 변경은 로그아웃 후 로그인 화면에서 선택하세요.
+            </p>
+          </Section>
+        )}
+
+        <Section title="계정">
+          <Row label="닉네임">
+            <NicknameRow
+              current={p?.nickname ?? '플레이어'}
+              changedCount={p?.nicknameChangedCount ?? 0}
+              diamond={String(p?.diamond ?? 0n)}
+            />
           </Row>
           <Divider />
-          <p className="px-3 py-2 text-[11px] leading-relaxed text-zinc-500">
-            서버 변경은 로그아웃 후 로그인 화면에서 선택하세요.
-          </p>
-        </Section>
-      )}
-
-      <Section title="계정">
-        <Row label="닉네임">
-          <NicknameRow
-            current={p?.nickname ?? '플레이어'}
-            changedCount={p?.nicknameChangedCount ?? 0}
-            diamond={String(p?.diamond ?? 0n)}
-          />
-        </Row>
-        <Divider />
-        {/* 내 코드 — 친구 검색·문의 식별용 공개 코드 조회/복사(2026-07-13 요청). */}
-        <Row label="코드">
-          <CodeRow code={p?.publicCode ?? '------'} />
-        </Row>
-        <Divider />
-        <Row label="로그인 방식">
-          <span className="text-sm text-zinc-500">카카오</span>
-        </Row>
-        {/* 본인인증 = 결제 전용 → CBT 기간엔 결제와 함께 숨김(isCbtPaidHidden). 노출 시 CBT 유저가
+          {/* 내 코드 — 친구 검색·문의 식별용 공개 코드 조회/복사(2026-07-13 요청). */}
+          <Row label="코드">
+            <CodeRow code={p?.publicCode ?? '------'} />
+          </Row>
+          <Divider />
+          <Row label="로그인 방식">
+            <span className="text-sm text-zinc-500">카카오</span>
+          </Row>
+          {/* 본인인증 = 결제 전용 → CBT 기간엔 결제와 함께 숨김(isCbtPaidHidden). 노출 시 CBT 유저가
             불필요하게 KMC/PASS 실인증(건당 비용·실명/생년 PII 수집)을 하게 됨. 정식 오픈(게이트 off) 시 노출. */}
-        {isCbtPaidHidden() ? null : (
-          <>
-            <Divider />
-            <Row label="본인인증">
-              <IdentityVerifyRow
-                verified={verified}
-                storeId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
-                channelKey={
-                  process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
-                  process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
-                }
-              />
-            </Row>
-          </>
-        )}
-      </Section>
+          {isCbtPaidHidden() ? null : (
+            <>
+              <Divider />
+              <Row label="본인인증">
+                <IdentityVerifyRow
+                  verified={verified}
+                  storeId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
+                  channelKey={
+                    process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
+                    process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
+                  }
+                />
+              </Row>
+            </>
+          )}
+        </Section>
 
-      <Section title="가이드">
-        <SettingLink href="/wiki" label="공식 위키" hard />
-      </Section>
+        <Section title="가이드">
+          {/* 역사 위키(2026-09-18) — 점령전 기록을 시대별로. 위키와 같은 새 창 규칙. */}
+          <SettingLink href="/history" label="역사 위키" hard />
+          <Divider />
+          <SettingLink href="/wiki" label="공식 위키" hard />
+        </Section>
 
-      <Section title="약관 / 문의">
-        <SettingLink href="/legal/terms" label="이용약관" />
-        <Divider />
-        <SettingLink href="/legal/privacy" label="개인정보처리방침" />
-        <Divider />
-        <SettingLink href="/legal/refund" label="환불·청약철회 안내" />
-        <Divider />
-        <SettingLink href="/legal/youth" label="청소년보호정책" />
-        <Divider />
-        <SettingLink href="/probability" label="확률 공시" />
-        <Divider />
-        <SupportModal
-          nickname={p?.nickname ?? '플레이어'}
-          publicCode={p?.publicCode ?? '------'}
-          serverName={serverName}
-        />
-      </Section>
+        <Section title="약관 / 문의">
+          <SettingLink href="/legal/terms" label="이용약관" />
+          <Divider />
+          <SettingLink href="/legal/privacy" label="개인정보처리방침" />
+          <Divider />
+          <SettingLink href="/legal/refund" label="환불·청약철회 안내" />
+          <Divider />
+          <SettingLink href="/legal/youth" label="청소년보호정책" />
+          <Divider />
+          <SettingLink href="/probability" label="확률 공시" />
+          <Divider />
+          <SupportModal
+            nickname={p?.nickname ?? '플레이어'}
+            publicCode={p?.publicCode ?? '------'}
+            serverName={serverName}
+          />
+        </Section>
 
-      <SignOutButton className="w-full rounded-xl border border-zinc-200 py-3 text-sm font-medium text-red-600 disabled:opacity-60 dark:border-zinc-800">
-        로그아웃
-      </SignOutButton>
+        <SignOutButton className="w-full rounded-xl border border-zinc-200 py-3 text-sm font-medium text-red-600 disabled:opacity-60 dark:border-zinc-800">
+          로그아웃
+        </SignOutButton>
 
-      <WithdrawButton />
+        <WithdrawButton />
       </div>
     </>
   );
@@ -196,7 +204,10 @@ function SettingLink({ href, label, hard }: { href: string; label: string; hard?
   // PWA(standalone)에선 WikiLink가 cross-origin으로 열어 브라우저 뷰를 강제 분리한다.
   if (hard) {
     return (
-      <WikiLink className="flex items-center px-3 py-2.5">
+      <WikiLink
+        path={href === '/history' ? '/history' : '/wiki'}
+        className="flex items-center px-3 py-2.5"
+      >
         <span className="text-sm">{label}</span>
       </WikiLink>
     );
