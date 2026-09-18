@@ -44,7 +44,7 @@ export function GuildInline({
   const gc = color ?? '#4b3a8a';
   // 문양 이미지만(배경·테두리 없음, 2026-09-17 사용자 지시). 문양이 없으면 이름만.
   return (
-    <span className={`inline whitespace-nowrap ${className}`} title={name}>
+    <span className={`inline whitespace-nowrap ${className}`} title={name} data-guild={name}>
       {urls.length > 0 ? (
         <span
           aria-hidden

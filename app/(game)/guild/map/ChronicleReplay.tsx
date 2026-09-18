@@ -540,7 +540,11 @@ export function ChronicleReplayPanel({
         const mentioned = new Set<number>();
         if (reveal === 'paragraph') {
           // 문단 등장 — 통째로 보이고, 구역 연출은 문단 끝에 몰아서, 읽을 시간만큼 머문다(글자 수 비례, 최대 4초).
-          for (const seg of segs) if (seg.kind === 'z') { const mz = zoneIdOf(seg); if (mz != null) mentioned.add(mz); }
+          for (const seg of segs)
+            if (seg.kind === 'z') {
+              const mz = zoneIdOf(seg);
+              if (mz != null) mentioned.add(mz);
+            }
           const last = Math.max(0, segs.length - 1);
           setPos({ p, s: last, c: segs[last]?.text.length ?? 0 });
           if (!skipRef.current) await wait(450, () => skipRef.current);
@@ -664,13 +668,20 @@ export function ChronicleReplayPanel({
             urls={guildEmblem(seg.name)}
           />
         );
+      // data-guild: 역사 페이지가 이름 호버로 지도에서 그 길드를 밝힌다(2026-09-18). 게임 화면엔 영향 없음.
       return gc ? (
-        <span key={key} className="inline-block align-baseline font-bold" style={{ color: gc }}>
+        <span
+          key={key}
+          data-guild={seg.name}
+          className="inline-block align-baseline font-bold"
+          style={{ color: gc }}
+        >
           {shown}
         </span>
       ) : (
         <span
           key={key}
+          data-guild={seg.name}
           className="inline-block align-baseline font-semibold text-slate-600 dark:text-slate-400"
         >
           {shown}

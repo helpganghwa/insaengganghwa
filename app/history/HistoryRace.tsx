@@ -45,6 +45,13 @@ function resolveEmblem(key: string, urls: readonly string[]): Promise<string | n
   return run;
 }
 
+/** 한 길드 막대만 강조(나머지는 emphasis.focus='self'로 흐려짐). key가 없거나 없는 길드면 전부 해제. */
+function applyHighlight(c: echarts.ECharts, cats: string[], key: string | null) {
+  c.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+  const di = key ? cats.indexOf(key) : -1;
+  if (di >= 0) c.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: di });
+}
+
 /** 보이는 막대 수 — 그 아래 순위는 화면 밖으로 밀려 내려가고(realtimeSort), 올라오면 아래에서 들어온다. */
 const VISIBLE = 8;
 /** 라벨 열 폭(px) — 문양 14 + 이름. 고정이라 문양이 늦게 열려도 막대 영역이 움직이지 않는다. */
@@ -65,17 +72,21 @@ export function HistoryRace({
   rows,
   height = 260,
   onFocus,
+  focusKey = null,
 }: {
   rows: RaceRow[];
   height?: number;
   /** 막대·이름에 올린 길드(이름) — 지도가 그 길드 구역을 밝힌다(2026-09-18). 벗어나면 null. */
   onFocus?: (name: string | null) => void;
+  /** 밖(지도 표식·글 속 이름)에서 호버한 길드의 행 키 — 이 막대만 밝히고 나머지는 흐리게. */
+  focusKey?: string | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const focusRef = useRef(onFocus);
   useEffect(() => {
     focusRef.current = onFocus;
   }, [onFocus]);
+  const focusKeyRef = useRef(focusKey);
   const chart = useRef<echarts.ECharts | null>(null);
   /** 등장 순서대로 고정된 카테고리(길드 키). 한 번 들어오면 빠지지 않는다. */
   const cats = useRef<string[]>([]);
@@ -139,28 +150,19 @@ export function HistoryRace({
     });
     // 호버 강조 — 막대(series)와 이름(yAxis) 어느 쪽이든 그 길드를 강조하고 이름을 밖으로 알린다.
     // 막대 → 이름으로 옮길 때 잠깐 비는 mouseout은 80ms 유예로 흡수해 지도가 깜빡이지 않게.
-    let lit = -1;
     let clearT: ReturnType<typeof setTimeout> | null = null;
     const focus = (key: string) => {
       if (clearT) {
         clearTimeout(clearT);
         clearT = null;
       }
-      const di = cats.current.indexOf(key);
-      if (di < 0) return;
-      if (di !== lit) {
-        if (lit >= 0) c.dispatchAction({ type: 'downplay', seriesIndex: 0, dataIndex: lit });
-        c.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: di });
-        lit = di;
-      }
+      applyHighlight(c, cats.current, key);
       focusRef.current?.(seenRef.current.get(key)?.name ?? null);
     };
     const blur = () => {
       if (clearT) clearTimeout(clearT);
       clearT = setTimeout(() => {
         clearT = null;
-        if (lit >= 0) c.dispatchAction({ type: 'downplay', seriesIndex: 0, dataIndex: lit });
-        lit = -1;
         focusRef.current?.(null);
       }, 80);
     };
@@ -185,6 +187,11 @@ export function HistoryRace({
       chart.current = null;
     };
   }, []);
+  // 밖에서 정한 강조(지도 표식·글 속 이름·이 차트 자신의 호버가 부모를 거쳐 돌아온 값).
+  useEffect(() => {
+    focusKeyRef.current = focusKey;
+    if (chart.current) applyHighlight(chart.current, cats.current, focusKey);
+  }, [focusKey]);
   // 문양 미리 읽기 — 새로 열린 문양이 생기면 라벨만 한 번 더 그린다.
   useEffect(() => {
     let alive = true;
@@ -247,6 +254,8 @@ export function HistoryRace({
         },
       ],
     });
+    // 데이터 갱신이 강조 상태를 풀 수 있어 다시 건다.
+    if (focusKeyRef.current) applyHighlight(c, cats.current, focusKeyRef.current);
   }, [rows, tick]);
   return <div ref={ref} style={{ height }} aria-label="길드 순위" role="img" />;
 }

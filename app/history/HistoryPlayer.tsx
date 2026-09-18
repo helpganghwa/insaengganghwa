@@ -88,6 +88,7 @@ function Headline({
       parts.push(
         <span
           key={i++}
+          data-guild={kind === 'g' ? name : undefined}
           className={
             kind === 'g'
               ? `inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`
@@ -196,6 +197,7 @@ function TypedHeadline({
           return (
             <span
               key={i}
+              data-guild={sg.s}
               className={`inline-block px-0.5 font-bold ${gc ? '' : 'text-[#4b3a8a]'}`}
               style={gc ? { color: gc } : undefined}
             >
@@ -311,6 +313,28 @@ export function HistoryPlayer({
     [index.emblemHistory],
   );
   const guildEmblem = useCallback((name: string) => emblemChain(meta[name]), [meta, emblemChain]);
+  /**
+   * 호버한 길드 — 판도 막대·이름, 지도 길드 표식, 글 속 길드 이름(2026-09-18). 지도에서 그 길드 구역만 밝히고 나머지는 흐리게.
+   * key는 길드 id(개명 전 이름도 같은 길드로 — 글은 그 시절 이름, 지도는 그날 이름이라 이름 비교는 어긋난다). name은 호버한 표기.
+   */
+  const [focus, setFocus] = useState<{ key: string; name: string } | null>(null);
+  /** 길드 식별 키 — 판도 차트 행 키와 같은 형식(id 문자열, id를 모르면 이름). */
+  const guildKey = useCallback(
+    (name: string) => String(index.nameAliases[name] ?? meta[name]?.id ?? name),
+    [index.nameAliases, meta],
+  );
+  const focusByName = useCallback(
+    (name: string | null) =>
+      setFocus((f) => {
+        if (!name) return f ? null : f;
+        const key = guildKey(name);
+        return f && f.key === key ? f : { key, name };
+      }),
+    [guildKey],
+  );
+  const focusKey = focus?.key ?? null;
+  const isFocused = (name: string | null) =>
+    !!name && focusKey !== null && guildKey(name) === focusKey;
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const layerRef = useRef<HTMLDivElement | null>(null);
   const bindLayer = useCallback((el: HTMLDivElement | null) => {
@@ -339,8 +363,6 @@ export function HistoryPlayer({
   const [detailDone, setDetailDone] = useState(false);
   /** 소유가 바뀐 타일의 링 — 값이 바뀌면 다시 그려져 애니메이션이 한 번 더 돈다. */
   const [pulse, setPulse] = useState<Record<number, number>>({});
-  /** 판도에서 호버한 길드(이름) — 지도에서 그 길드 구역만 밝히고 나머지는 흐리게(2026-09-18). */
-  const [focusGuild, setFocusGuild] = useState<string | null>(null);
   const readerRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef(true);
   const cache = useRef(new Map<string, HistoryDayData | null>());
@@ -730,6 +752,17 @@ export function HistoryPlayer({
     for (const g of Object.values(owners)) if (g) c.set(g, (c.get(g) ?? 0) + 1);
     return [...c.entries()].sort((a, b) => b[1] - a[1]);
   }, [owners]);
+  /** 지도 왼쪽 위 표시 — 지금 지도에서 그 길드가 쓰는 이름(개명 후면 새 이름)·보유 수. 지도에 없으면 호버한 이름·0곳. */
+  const focusChip = (() => {
+    if (!focus) return null;
+    const hit = share.filter(([g]) => guildKey(g) === focus.key);
+    const name = hit[0]?.[0] ?? focus.name;
+    return {
+      name,
+      count: hit.reduce((s, [, c]) => s + c, 0),
+      color: meta[name]?.color ?? meta[focus.name]?.color ?? '#9a917f',
+    };
+  })();
   const curEraIdx = phase === 'idle' || phase === 'end' ? eras.length - 1 : eraOf(idx);
   const curEra = eras[curEraIdx] ?? null;
   const statusText =
@@ -891,7 +924,7 @@ export function HistoryPlayer({
                               left: `${z.mapX}%`,
                               top: `${z.mapY}%`,
                               zIndex: 4,
-                              opacity: c ? (focusGuild && owner !== focusGuild ? 0.12 : 1) : 0,
+                              opacity: c ? (focusKey && !isFocused(owner) ? 0.12 : 1) : 0,
                               background: c
                                 ? `radial-gradient(circle, color-mix(in srgb, ${c} 34%, transparent) 0%, color-mix(in srgb, ${c} 14%, transparent) 48%, transparent 70%)`
                                 : 'transparent',
@@ -906,16 +939,20 @@ export function HistoryPlayer({
                         const color = regionColor(z.region);
                         const size = 19;
                         const ring = pulse[z.id];
-                        const focused = !!owner && owner === focusGuild;
+                        const focused = isFocused(owner);
                         return (
                           <div
                             key={z.id}
+                            onPointerEnter={() => {
+                              if (owner) focusByName(owner);
+                            }}
+                            onPointerLeave={() => focusByName(null)}
                             className="absolute -translate-x-1/2 -translate-y-1/2 transition-[opacity,scale] duration-200"
                             style={{
                               left: `${z.mapX}%`,
                               top: `${z.mapY}%`,
                               zIndex: focused ? 20 : owner ? 10 : 6,
-                              opacity: focusGuild && !focused ? 0.28 : 1,
+                              opacity: focusKey && !focused ? 0.28 : 1,
                               scale: focused ? 1.3 : 1,
                             }}
                             title={`${z.name}${owner ? ` · ${owner}` : ''}`}
@@ -963,7 +1000,7 @@ export function HistoryPlayer({
                         );
                       })}
                     </div>
-                    {focusGuild ? (
+                    {focusChip ? (
                       <div
                         aria-live="polite"
                         className="pointer-events-none absolute top-2 left-2 z-50 flex items-center gap-1.5 rounded-[6px] bg-[#fdfaf3]/95 px-2 py-1 text-[11.5px] font-bold text-[#2a251e] shadow-[0_2px_8px_rgba(0,0,0,.35)]"
@@ -971,11 +1008,11 @@ export function HistoryPlayer({
                       >
                         <i
                           className="h-2.5 w-2.5 rounded-[2px]"
-                          style={{ background: meta[focusGuild]?.color ?? '#9a917f' }}
+                          style={{ background: focusChip.color }}
                         />
-                        {focusGuild}
+                        {focusChip.name}
                         <span className={`font-normal tabular-nums ${PAPER.muted}`}>
-                          {share.find(([g]) => g === focusGuild)?.[1] ?? 0}곳
+                          {focusChip.count}곳
                         </span>
                       </div>
                     ) : null}
@@ -992,7 +1029,7 @@ export function HistoryPlayer({
                         style={{
                           width: `${(c / Math.max(1, zones.length)) * 100}%`,
                           background: meta[g]?.color ?? '#9a917f',
-                          opacity: focusGuild && g !== focusGuild ? 0.3 : 1,
+                          opacity: focusKey && !isFocused(g) ? 0.3 : 1,
                         }}
                       />
                     ))}
@@ -1008,7 +1045,9 @@ export function HistoryPlayer({
                     share={share}
                     meta={meta}
                     guildEmblem={guildEmblem}
-                    onFocus={setFocusGuild}
+                    onFocus={focusByName}
+                    focusKey={focusKey}
+                    keyOf={guildKey}
                   />
                   <div className="mt-6">
                     <EraToc eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
@@ -1018,7 +1057,15 @@ export function HistoryPlayer({
             </aside>
 
             {/* ── 글(가운데) — 정지: 목차, 흐름: 장·줄, 자세히: 그날 연대기. ── */}
-            <section className="min-h-0 md:flex md:h-full md:flex-col">
+            {/* 글 속 길드 이름(data-guild)에 올리면 지도에서 그 길드를 밝힌다 — 이름마다 핸들러를 달지 않고 칸에서 한 번에. */}
+            <section
+              className="min-h-0 md:flex md:h-full md:flex-col"
+              onPointerOver={(ev) => {
+                if (ev.pointerType !== 'mouse' || !(ev.target instanceof Element)) return;
+                focusByName(ev.target.closest('[data-guild]')?.getAttribute('data-guild') ?? null);
+              }}
+              onPointerLeave={() => focusByName(null)}
+            >
               <ColumnHeader title={midTitle} meta={statusText} />
 
               {phase === 'idle' ? (
@@ -1217,6 +1264,7 @@ export function HistoryPlayer({
                                         : 'past'
                                     }
                                     onDetail={() => openDetail(d)}
+                                    onJump={() => flowFrom(d)}
                                   />
                                 ))}
                                 {b.future.map((d) => (
@@ -1226,6 +1274,7 @@ export function HistoryPlayer({
                                     events={story.events[days[d]!.kstDay] ?? []}
                                     guildColor={guildColor}
                                     state="future"
+                                    onJump={() => flowFrom(d)}
                                   />
                                 ))}
                               </div>
@@ -1289,7 +1338,9 @@ export function HistoryPlayer({
                   share={share}
                   meta={meta}
                   guildEmblem={guildEmblem}
-                  onFocus={setFocusGuild}
+                  onFocus={focusByName}
+                  focusKey={focusKey}
+                  keyOf={guildKey}
                   tall
                 />
               </div>
@@ -1674,12 +1725,17 @@ function RacePanel({
   meta,
   guildEmblem,
   onFocus,
+  focusKey = null,
+  keyOf,
   tall = false,
 }: {
   share: [string, number][];
   meta: Record<string, HistoryGuildMeta>;
   guildEmblem: (name: string) => readonly string[];
   onFocus?: (name: string | null) => void;
+  focusKey?: string | null;
+  /** 행 키 — 호버 강조 키(guildKey)와 같은 함수여야 밖에서 고른 길드 막대를 찾는다. */
+  keyOf: (name: string) => string;
   tall?: boolean;
 }) {
   if (share.length === 0)
@@ -1688,8 +1744,9 @@ function RacePanel({
     <HistoryRace
       height={tall ? 300 : 240}
       onFocus={onFocus}
+      focusKey={focusKey}
       rows={share.map(([g, c]) => ({
-        key: String(meta[g]?.id ?? g),
+        key: keyOf(g),
         name: g,
         count: c,
         color: meta[g]?.color ?? '#9a917f',
@@ -1735,7 +1792,7 @@ function EraToc({
               「{e.name}」의 시대
             </span>
             <span className={`shrink-0 text-[11px] tabular-nums ${PAPER.muted}`}>
-              {eraSpan(e, days, true)}
+              {eraSpan(e, days)}
             </span>
           </button>
         ))}
@@ -1776,55 +1833,73 @@ function DayLine({
   guildColor,
   state,
   onDetail,
+  onJump,
 }: {
   day: HistoryDay;
   events: HistoryEvent[];
   guildColor: (name: string) => string | null;
   state: 'now' | 'past' | 'future';
   onDetail?: () => void;
+  /** 줄(날짜·헤드라인)을 누르면 그날로 이동(2026-09-18 사용자 지시). */
+  onJump?: () => void;
 }) {
   const chips = [...events]
     .sort((a, b) => EVENT_PRIORITY[a.kind] - EVENT_PRIORITY[b.kind])
     .slice(0, 2);
   return (
+    // 줄 전체(여백 포함)를 누르면 그날로 — 안쪽 버튼은 키보드용, 자세히는 전파를 막는다.
     <div
       id={state === 'now' ? 'ig-now' : undefined}
-      className={`grid grid-cols-[42px_1fr_auto] items-baseline gap-2.5 rounded-[7px] px-1.5 py-1.5 text-[12.5px] ${
+      onClick={onJump}
+      className={`grid cursor-pointer grid-cols-[1fr_auto] items-baseline gap-2.5 rounded-[7px] px-1.5 py-1.5 text-[12.5px] transition-opacity ${
         state === 'now'
           ? 'bg-[#ece3d1] motion-safe:animate-[fadeIn_.5s_ease-out]'
           : state === 'future'
-            ? 'opacity-35'
-            : 'opacity-60'
+            ? 'opacity-35 hover:bg-[#f3ecdd] hover:opacity-100'
+            : 'opacity-60 hover:bg-[#f3ecdd] hover:opacity-100'
       }`}
     >
-      <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>{shortDay(day.kstDay)}</span>
-      <span className="leading-[1.45] font-bold" style={SERIF}>
-        {day.headline ? (
-          <Headline text={day.headline} guildColor={guildColor} />
-        ) : (
-          <span className={`font-normal ${PAPER.muted}`}>기록</span>
-        )}
-        {chips.map((e, i) => (
-          <i
-            key={i}
-            title={e.label}
-            className={`ml-1.5 rounded-[4px] px-1.5 align-[1px] text-[9.5px] font-bold not-italic ${
-              e.kind === 'leader' || e.kind === 'sweep'
-                ? 'bg-[#8a4b23] text-[#fdfaf3]'
-                : `bg-[#ece3d1] ${PAPER.muted}`
-            }`}
-            style={{ fontFamily: 'inherit' }}
-          >
-            {e.short}
-          </i>
-        ))}
-      </span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onJump?.();
+        }}
+        title={`${monthDay(day.kstDay)}로 이동`}
+        className="grid cursor-pointer grid-cols-[42px_1fr] items-baseline gap-2.5 text-left"
+      >
+        <span className={`text-[10.5px] tabular-nums ${PAPER.muted}`}>{shortDay(day.kstDay)}</span>
+        <span className="leading-[1.45] font-bold" style={SERIF}>
+          {day.headline ? (
+            <Headline text={day.headline} guildColor={guildColor} />
+          ) : (
+            <span className={`font-normal ${PAPER.muted}`}>기록</span>
+          )}
+          {chips.map((e, i) => (
+            <i
+              key={i}
+              title={e.label}
+              className={`ml-1.5 rounded-[4px] px-1.5 align-[1px] text-[9.5px] font-bold not-italic ${
+                e.kind === 'leader' || e.kind === 'sweep'
+                  ? 'bg-[#8a4b23] text-[#fdfaf3]'
+                  : `bg-[#ece3d1] ${PAPER.muted}`
+              }`}
+              style={{ fontFamily: 'inherit' }}
+            >
+              {e.short}
+            </i>
+          ))}
+        </span>
+      </button>
       {state === 'future' ? (
         <span />
       ) : (
         <button
           type="button"
-          onClick={onDetail}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetail?.();
+          }}
           className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold whitespace-nowrap ${
             state === 'now'
               ? 'border-[#8a4b23] bg-[#8a4b23] text-[#fdfaf3]'
