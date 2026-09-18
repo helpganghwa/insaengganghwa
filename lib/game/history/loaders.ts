@@ -25,9 +25,11 @@ const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
  */
 export function loadHistoryIndex(serverId: number): Promise<HistoryIndex> {
   if (process.env.HISTORY_NO_CACHE === '1') return withHistoryDb(async () => (await buildIndexCore(serverId)).index);
-  return withHistoryDb(() => cachedIndex(serverId));
+  // 캐시 키에 KST 오늘 날짜를 넣는다 — 자정에 새 날이 공개되면 바로 새 항목으로(스테이징엔 공개 크론이 없어 태그 무효화가
+  // 오지 않는다. 날짜 키가 없으면 최대 10분 동안 어제까지만 보인다).
+  return withHistoryDb(() => cachedIndex(serverId, kstDateString()));
 }
-const cachedIndex = unstable_cache(async (serverId: number) => (await buildIndexCore(serverId)).index, ['history-index-v1'], {
+const cachedIndex = unstable_cache(async (serverId: number, _today: string) => (await buildIndexCore(serverId)).index, ['history-index-v2'], {
   revalidate: 600,
   tags: ['history-index'],
 });
@@ -252,7 +254,8 @@ async function buildStory(
       if (eras.length > 0) eras[eras.length - 1]!.endIdx = i - 1;
       eras.push({ startIdx: i, endIdx: kstDays.length - 1, guildId: best, name: nameOn(best, kstDays[i]!), color: colorOf(best), summary: '', closing: '' });
       eraOpen.push({ prev: leader, margin: bestN - second });
-      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: `1위 교체 — ${nameOn(leader, kstDays[i]!)} → ${nameOn(best, kstDays[i]!)}`, short: '1위 교체' });
+      // 등수 표현 대신 시대 어휘로(연대기 문체 규칙과 같게 — 2026-09-18 검수).
+      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: `새 시대 — ${nameOn(best, kstDays[i]!)}가 ${nameOn(leader, kstDays[i]!)}를 제치고 가장 넓은 영토를 쥠`, short: '새 시대' });
       leader = best;
     }
   }
@@ -367,7 +370,7 @@ async function buildStory(
     const peak = Math.max(...arr.slice(era.startIdx, era.endIdx + 1));
     const len = era.endIdx - era.startIdx + 1;
     if (len >= 2 && peak > arr[era.startIdx]!) lines.push(`${nameIn(era.guildId)}의 영토는 최대 ${peak}곳에 이르렀다.`);
-    const gone = [...new Set(vanishes.filter((v) => inEra(v.dayIdx)).map((v) => v.gid))].map((gid) => G(gid, kstDays[Math.max(0, (vanishes.find((v) => v.gid === gid)?.dayIdx ?? 1) - 1)]!));
+    const gone = [...new Set(vanishes.filter((v) => inEra(v.dayIdx) && (byGuild.get(v.gid)![era.endIdx] ?? 0) === 0).map((v) => v.gid))].map((gid) => G(gid, kstDays[Math.max(0, (vanishes.find((v) => v.gid === gid)?.dayIdx ?? 1) - 1)]!));
     if (gone.length > 0) lines.push(`이 시대에 ${joinKo(gone)}${josa(gone[gone.length - 1]!.replace(/\}$/, '').replace(/^\{g\|/, ''), ['이', '가'])} 대륙에서 사라졌다.`);
     era.summary = lines.join(' ');
     const next = eras[k + 1];
@@ -380,6 +383,7 @@ async function buildStory(
     eraFacts.push({
       index: k + 1,
       leader: plainName(era.guildId, d0),
+      leaderAtEnd: plainName(era.guildId, kstDays[era.endIdx]!),
       from: d0,
       to: kstDays[era.endIdx]!,
       days: len,
@@ -392,7 +396,15 @@ async function buildStory(
         .sort((a, b) => a.dayIdx - b.dayIdx)
         .map((s) => ({ day: kstDays[s.dayIdx]!, guild: plainName(s.gid, kstDays[s.dayIdx]!), region: regionLabel(s.region) })),
       peak: len >= 2 && peak > arr[era.startIdx]! ? peak : null,
-      vanished: [...new Set(vanishes.filter((v) => inEra(v.dayIdx)).map((v) => plainName(v.gid, kstDays[Math.max(0, v.dayIdx - 1)]!)))],
+      peakDay: len >= 2 && peak > arr[era.startIdx]! ? kstDays[era.startIdx + arr.slice(era.startIdx, era.endIdx + 1).indexOf(peak)]! : null,
+      // 소멸 — 장이 끝날 때까지 돌아오지 않은 길드만(8/31 사라졌다 9/1 돌아온 케케케처럼 곧 복귀한 길드를 '사라졌다'로 쓰지 않게).
+      vanished: [
+        ...new Set<string>(
+          vanishes
+            .filter((v) => inEra(v.dayIdx) && (byGuild.get(v.gid)![era.endIdx] ?? 0) === 0)
+            .map((v) => JSON.stringify({ day: kstDays[v.dayIdx]!, guild: plainName(v.gid, kstDays[Math.max(0, v.dayIdx - 1)]!) })),
+        ),
+      ].map((s) => JSON.parse(s) as { day: string; guild: string }),
       closing: next ? { next: plainName(next.guildId, kstDays[next.startIdx]!), peak, to: arr[next.startIdx]! } : null,
       headlines: kstDays.slice(era.startIdx, era.endIdx + 1).map((kd) => stripIds(headlineOf.get(kd) ?? '')).filter(Boolean),
     });
