@@ -153,6 +153,11 @@ export function ChronicleReplayPanel({
   const [pos, setPos] = useState<{ p: number; s: number; c: number }>({ p: 0, s: 0, c: 0 });
   const [ended, setEnded] = useState(false);
   const skipRef = useRef(false);
+  /**
+   * 해제됨(2026-09-18) — 패널이 언마운트된 뒤에도 진행 중이던 runZoneEvents가 문양을 새로 띄우고 소유를 바꿔,
+   * 역사 페이지에서 다른 시대로 넘어가도 이전 날의 행군이 계속 보였다. 해제되면 모든 연출·콜백을 멈춘다.
+   */
+  const deadRef = useRef(false);
   const doneRef = useRef(false);
   const firedRef = useRef(new Set<number>());
   const neutralFiredRef = useRef(new Set<number>());
@@ -227,7 +232,7 @@ export function ChronicleReplayPanel({
   };
 
   function spawnEmblem(guild: string, at: { x: number; y: number }): HTMLElement | null {
-    if (!layer) return null;
+    if (!layer || deadRef.current) return null;
     const g = guildOf(guild);
     const e = document.createElement('div');
     // 이동 문양은 배경 없음(2026-07-16 확정) — 문양 이미지만. 문양 미보유 길드만 색 방패 폴백.
@@ -306,7 +311,7 @@ export function ChronicleReplayPanel({
   /** 방치 중립화 연출 — 구역 위 소유 길드 문양이 탈색·수축·기울며 부서져 사라진다(전투 아님).
    *  노드 문양은 onNeutralize로 즉시 중립 전환되고, 이 오버레이가 '무너져 내리는' 결을 얹는다. */
   function crumbleAt(guild: string, at: { x: number; y: number }) {
-    if (!layer || skipRef.current) return;
+    if (!layer || skipRef.current || deadRef.current) return;
     const g = guildOf(guild);
     const e = document.createElement('div');
     e.style.cssText =
@@ -340,7 +345,7 @@ export function ChronicleReplayPanel({
     flashAt(at, '#71717a', false);
   }
   function sparkAt(pct: { x: number; y: number }) {
-    if (!layer) return;
+    if (!layer || deadRef.current) return;
     const s = document.createElement('div');
     s.textContent = '⚔️';
     s.style.cssText = `position:absolute;z-index:50;font-size:18px;margin:-11px 0 0 -9px;left:${pct.x}%;top:${pct.y}%;pointer-events:none;`;
@@ -357,7 +362,7 @@ export function ChronicleReplayPanel({
   }
   /** 점령 플래시(강) / 재언급 펄스(약) — 길드색 링 확산. */
   function flashAt(pct: { x: number; y: number }, color: string, strong = true) {
-    if (!layer || skipRef.current) return;
+    if (!layer || skipRef.current || deadRef.current) return;
     const f = document.createElement('div');
     f.style.cssText = `position:absolute;z-index:35;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:7px;left:${pct.x}%;top:${pct.y}%;pointer-events:none;`;
     layer.appendChild(f);
@@ -452,6 +457,7 @@ export function ChronicleReplayPanel({
   }
 
   function applyFlip(ev: ReplayEvent) {
+    if (deadRef.current) return;
     if (ev.type === 'capture') {
       ownersRef.current[ev.zoneId] = ev.winner;
       onOwnerFlip(ev.zoneId, ev.winner);
@@ -466,6 +472,7 @@ export function ChronicleReplayPanel({
       if (neutralFiredRef.current.has(n.zoneId)) continue;
       neutralFiredRef.current.add(n.zoneId);
       const z = zoneById.current.get(n.zoneId);
+      if (deadRef.current) return;
       onNeutralize(n.zoneId); // 노드 문양 즉시 중립 전환(node transition으로 페이드)
       ownersRef.current[n.zoneId] = null;
       if (z && !skipRef.current) {
@@ -492,6 +499,7 @@ export function ChronicleReplayPanel({
   }
 
   function flushRemaining() {
+    if (deadRef.current) return;
     for (const ev of Object.values(replay.events)) {
       if (firedRef.current.has(ev.zoneId)) continue;
       firedRef.current.add(ev.zoneId);
@@ -620,6 +628,9 @@ export function ChronicleReplayPanel({
     })();
     return () => {
       cancelled = true;
+      // 남은 대기(wait·march)를 즉시 풀고 이후 연출·콜백을 막는다 — 진행 중이던 구역 연출이 새 화면에 섞이지 않게.
+      deadRef.current = true;
+      skipRef.current = true;
       if (layer) layer.innerHTML = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

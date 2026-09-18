@@ -203,7 +203,6 @@ function ordinalKo(n: number): string {
   }
   return `${n}`;
 }
-const fmtDay = (d: string) => `${Number(d.slice(0, 4))}년 ${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`;
 const shortDay = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 const monthDay = (d: string) => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`;
 
@@ -409,6 +408,12 @@ export function HistoryPlayer({
       stickRef.current = true;
       setPhase('era');
       setLines((ls) => ls.filter((d) => d < k));
+      // 들어가는 날 직전 상태로 지도를 맞춘다 — 장 요약을 읽는 동안 이전 위치의 지도·판도가 남아 있지 않게.
+      {
+        const start: Record<number, string | null> = k > 0 ? ownersOn(k - 1) : Object.fromEntries(zones.map((z) => [z.id, null]));
+        ownersRef.current = start;
+        setOwners(start);
+      }
       void (async () => {
         for (let i = k; i < n; i++) {
           if (token !== run.current) return;
@@ -457,7 +462,7 @@ export function HistoryPlayer({
         setPhase('end');
       })();
     },
-    [n, index.owners, applyDay, wait, eras, eraOf, fetchDay],
+    [n, index.owners, applyDay, wait, eras, eraOf, fetchDay, ownersOn, zones],
   );
   useEffect(() => {
     flowRef.current = flowFrom;
@@ -633,16 +638,12 @@ export function HistoryPlayer({
   const curEra = eras[curEraIdx] ?? null;
   const statusText =
     phase === 'idle'
-      ? ''
+      ? `${eras.length}장 · ${n}일`
       : phase === 'end'
         ? `${ordinalKo(n)} 번째 날까지`
-        : `${idx + 1} / ${n}${phase === 'detail' ? ' · 자세히' : ''}${paused ? ' · 일시정지' : ''}`;
-  const midTitle =
-    phase === 'era' && curEra
-      ? `제${curEraIdx + 1}장 「${curEra.name}」의 시대`
-      : phase === 'idle'
-        ? '대륙의 역사'
-        : fmtDay(cur.kstDay);
+        : `${curEra ? `제${curEraIdx + 1}장 · ` : ''}${idx + 1} / ${n}${paused ? ' · 일시정지' : ''}`;
+  // 가운데 칸 머리 — 지금 무엇을 보고 있는지(장 제목·날짜는 본문이 크게 보여 주므로 여기서 반복하지 않는다).
+  const midTitle = phase === 'idle' ? '목차' : phase === 'detail' ? '하루 자세히' : '시대 흐름';
 
   /** 시대 흐름 글 칸 — 쌓인 줄을 시대별로 묶고, 지금 시대의 남은 날은 흐리게 미리 보여 준다. */
   const flowBlocks = useMemo(() => {
@@ -672,9 +673,11 @@ export function HistoryPlayer({
     <main className="mx-auto w-full max-w-[1400px] px-3 pt-3 pb-28 md:h-full md:min-h-0 md:px-5 md:pt-4 md:pb-24">
       {/* 큰 틀 하나를 3등분 — 지도 | 글 | 순위·시대. 각 칸이 자기 안에서 스크롤하고 페이지는 스크롤하지 않는다. 조작·시대 띠는 하단 플로팅. */}
       <div
-        className={`flex flex-col rounded-2xl border md:grid md:h-full md:min-h-0 md:grid-cols-[390px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:divide-x md:divide-[#e2d9c6] md:overflow-hidden xl:grid-cols-[390px_minmax(0,1fr)_300px] ${PAPER.border} ${PAPER.card}`}
+        className={`flex flex-col rounded-2xl border md:grid md:h-full md:min-h-0 md:grid-cols-[430px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:divide-x md:divide-[#e2d9c6] md:overflow-hidden xl:grid-cols-[430px_minmax(0,1fr)_300px] ${PAPER.border} ${PAPER.card}`}
       >
-        <aside className="min-h-0 overflow-y-auto p-4 md:h-full">
+        <aside className="min-h-0 md:flex md:h-full md:flex-col">
+          <ColumnHeader title="대륙 지도" meta={phase === 'era' || phase === 'detail' ? `${monthDay(cur.kstDay)} · ${idx + 1}일째` : `${monthDay(days[n - 1]!.kstDay)} 기준`} />
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 pt-4 pb-6">
           <div className="mx-auto w-full" style={{ maxWidth: STAGE_PX }}>
             <div className="relative overflow-hidden rounded-[3px]" style={{ width: stageSize, height: stageSize }}>
               <div
@@ -690,8 +693,12 @@ export function HistoryPlayer({
                     zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
                     layer={layer}
                     zoneColor={zoneColor}
-                    onOwnerFlip={(zoneId, guild) => setOwners((o) => ({ ...o, [zoneId]: guild }))}
-                    onNeutralize={(zoneId) => setOwners((o) => ({ ...o, [zoneId]: null }))}
+                    onOwnerFlip={(zoneId, guild) => {
+                      if (mapPlay.session === run.current) setOwners((o) => ({ ...o, [zoneId]: guild }));
+                    }}
+                    onNeutralize={(zoneId) => {
+                      if (mapPlay.session === run.current) setOwners((o) => ({ ...o, [zoneId]: null }));
+                    }}
                     onDone={() => {
                       if (mapPlay.session === run.current) mapDoneRef.current?.();
                     }}
@@ -775,29 +782,12 @@ export function HistoryPlayer({
                     </div>
                   );
                 })}
-                {/* 날짜 카드 — 흐름·자세히 중에만. */}
-                {phase === 'era' || phase === 'detail' ? (
-                  <div className="absolute top-2 left-2 z-30 rounded-md bg-[#14110dc8] px-2 py-1 text-[11px] font-bold tabular-nums text-[#f5f0e6]" style={SERIF}>
-                    {monthDay(cur.kstDay)} · {idx + 1}일째
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
-          {/* 판도 한 줄 — 길드별 영토 비율. */}
-          <div className="mx-auto mt-2.5 w-full" style={{ maxWidth: STAGE_PX }}>
-            <div className={`mb-1 flex justify-between text-[11px] tabular-nums ${PAPER.muted}`}>
-              <span className="truncate">
-                {share.slice(0, 4).map(([g, c]) => (
-                  <span key={g} className="mr-2.5 whitespace-nowrap">
-                    <i className="mr-1 inline-block h-2 w-2 rounded-[2px] align-[-1px]" style={{ background: meta[g]?.color ?? '#9a917f' }} />
-                    <b className="font-semibold text-[#2a251e]">{g}</b> {c}
-                  </span>
-                ))}
-              </span>
-              <span className="shrink-0">중립 {zones.length - ownedCount}</span>
-            </div>
-            <div className="flex h-2.5 overflow-hidden rounded-full bg-[#e2d9c6]">
+          {/* 판도 띠 — 길드별 영토 비율(이름·수는 오른쪽 판도 칸이 맡는다). */}
+          <div className="mx-auto mt-3 w-full" style={{ maxWidth: STAGE_PX }}>
+            <div className="flex h-2 overflow-hidden rounded-full bg-[#e2d9c6]">
               {share.map(([g, c]) => (
                 <div
                   key={g}
@@ -808,22 +798,27 @@ export function HistoryPlayer({
               ))}
             </div>
           </div>
-          <div className="mt-5 xl:hidden">
-            <InfoPanel share={share} meta={meta} guildEmblem={guildEmblem} eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
+          {/* 넓은 화면: 지도 아래는 장 목차(지도를 보며 장을 고른다). 중간 폭: 판도·목차를 모두 여기에. */}
+          <div className="mx-auto mt-6 hidden w-full xl:block" style={{ maxWidth: STAGE_PX }}>
+            <EraToc eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
+          </div>
+          <div className="mt-6 xl:hidden">
+            <div className={`mb-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>판도</div>
+            <RacePanel share={share} meta={meta} guildEmblem={guildEmblem} />
+            <div className="mt-6">
+              <EraToc eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
+            </div>
+          </div>
           </div>
         </aside>
 
         {/* ── 글(가운데) — 정지: 목차, 흐름: 장·줄, 자세히: 그날 연대기. ── */}
         <section className="min-h-0 md:flex md:h-full md:flex-col">
-          <div className={`flex shrink-0 items-baseline justify-between gap-3 border-b px-5 py-2.5 ${PAPER.border}`}>
-            <div className="truncate text-[15px] font-bold whitespace-nowrap" style={SERIF}>
-              {midTitle}
-            </div>
-            <div className={`shrink-0 truncate text-[11px] tracking-[.03em] tabular-nums ${PAPER.muted}`}>{statusText}</div>
-          </div>
+          <ColumnHeader title={midTitle} meta={statusText} />
 
           {phase === 'idle' ? (
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-8 md:max-w-[70ch]">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-8">
+              <div className="max-w-[64ch]">
               <div className="text-[22px] leading-tight font-bold" style={SERIF}>
                 대륙의 역사
               </div>
@@ -866,9 +861,11 @@ export function HistoryPlayer({
                   </button>
                 ))}
               </div>
+              </div>
             </div>
           ) : (
-            <div ref={readerRef} className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-8 md:max-w-[70ch]">
+            <div ref={readerRef} className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-8">
+              <div className="max-w-[64ch]">
               {phase === 'detail' && detail ? (
                 <div>
                   <div className={`mb-3 flex items-center justify-between gap-2 rounded-[8px] border border-dashed px-3 py-2 text-[12.5px] ${PAPER.border}`}>
@@ -905,8 +902,12 @@ export function HistoryPlayer({
                           zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
                           layer={layer}
                           zoneColor={zoneColor}
-                          onOwnerFlip={(zoneId, guild) => setOwners((o) => ({ ...o, [zoneId]: guild }))}
-                          onNeutralize={(zoneId) => setOwners((o) => ({ ...o, [zoneId]: null }))}
+                          onOwnerFlip={(zoneId, guild) => {
+                            if (detail.session === run.current) setOwners((o) => ({ ...o, [zoneId]: guild }));
+                          }}
+                          onNeutralize={(zoneId) => {
+                            if (detail.session === run.current) setOwners((o) => ({ ...o, [zoneId]: null }));
+                          }}
                           onDone={() => {
                             if (detail.session === run.current) setDetailDone(true);
                           }}
@@ -915,7 +916,7 @@ export function HistoryPlayer({
                           guildColor={guildColor}
                           zoneStyle="plain"
                           userStyle="plain"
-                          reveal="paragraph"
+                          reveal="type"
                         />
                       ) : (
                         <StaticChronicle text={detail.data.text} guildColor={guildColor} guildEmblem={NO_EMBLEM} />
@@ -1007,13 +1008,17 @@ export function HistoryPlayer({
                   ) : null}
                 </>
               )}
+              </div>
             </div>
           )}
         </section>
 
-        {/* ── 정보 열(오른쪽, 넓은 화면) — 순위 · 시대 목차. ── */}
-        <aside className="hidden min-h-0 overflow-y-auto p-4 xl:block xl:h-full">
-          <InfoPanel share={share} meta={meta} guildEmblem={guildEmblem} eras={eras} days={days} curEra={curEraIdx} onEra={(k) => flowFrom(k)} />
+        {/* ── 판도(오른쪽, 넓은 화면) — 길드별 영토 바 레이스. 장 목차는 지도 아래로. ── */}
+        <aside className="hidden min-h-0 xl:flex xl:h-full xl:flex-col">
+          <ColumnHeader title="판도" meta={`${share.length}개 길드 · 중립 ${zones.length - ownedCount}`} />
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-6">
+            <RacePanel share={share} meta={meta} guildEmblem={guildEmblem} tall />
+          </div>
         </aside>
       </div>
 
@@ -1095,79 +1100,85 @@ export function HistoryPlayer({
   );
 }
 
-/** 정보 열 — 길드 순위(바 레이스), 시대 목차(누르면 그 시대 첫날부터). */
-function InfoPanel({
-  share,
-  meta,
-  guildEmblem,
-  eras,
-  days,
-  curEra,
-  onEra,
-}: {
-  share: [string, number][];
-  meta: Record<string, HistoryGuildMeta>;
-  guildEmblem: (name: string) => readonly string[];
-  eras: HistoryEra[];
-  days: HistoryDay[];
-  curEra: number;
-  onEra: (startIdx: number) => void;
-}) {
+/** 칸 머리 — 세 칸이 같은 높이·선·글자로 시작한다(2026-09-18 레이아웃 정리). */
+function ColumnHeader({ title, meta }: { title: string; meta?: string }) {
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>순위</div>
-        {share.length > 0 ? (
-          <HistoryRace
-            rows={share.map(([g, c]) => ({ key: String(meta[g]?.id ?? g), name: g, count: c, color: meta[g]?.color ?? '#9a917f', emblems: guildEmblem(g) }))}
-          />
-        ) : (
-          <div className={`text-[11.5px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>
-        )}
+    <div className={`flex h-11 shrink-0 items-center justify-between gap-3 border-b px-5 ${PAPER.border}`}>
+      <div className="truncate text-[13.5px] font-bold" style={SERIF}>
+        {title}
       </div>
-      {eras.length > 0 ? (
-        <div>
-          <div className={`mb-1.5 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>시대</div>
-          <div className={`divide-y border-y ${PAPER.border} divide-[#ece5d6]`}>
-            {eras.map((e, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onEra(e.startIdx)}
-                title="이 장 처음부터"
-                className={`flex w-full items-center gap-2.5 px-1 py-2 text-left text-[12px] ${i === curEra ? 'bg-[#f6efe1]' : PAPER.hover}`}
-              >
-                <span className={`w-9 shrink-0 text-[10px] tabular-nums ${PAPER.muted}`}>제{i + 1}장</span>
-                <i className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ background: e.color ?? '#9a917f' }} />
-                <span className="min-w-0 flex-1 truncate font-semibold" style={SERIF}>
-                  「{e.name}」의 시대
-                </span>
-                <span className={`shrink-0 text-[10.5px] tabular-nums ${PAPER.muted}`}>
-                  {shortDay(days[e.startIdx]!.kstDay)}~ · {e.endIdx - e.startIdx + 1}일
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {meta ? <div className={`shrink-0 truncate text-[11px] tabular-nums ${PAPER.muted}`}>{meta}</div> : null}
     </div>
   );
 }
 
-/** 챕터 제목 — 시대가 시작하는 자리에 한 번. 책의 장(章)처럼. */
+/** 판도 — 길드별 영토 바 레이스. */
+function RacePanel({
+  share,
+  meta,
+  guildEmblem,
+  tall = false,
+}: {
+  share: [string, number][];
+  meta: Record<string, HistoryGuildMeta>;
+  guildEmblem: (name: string) => readonly string[];
+  tall?: boolean;
+}) {
+  if (share.length === 0) return <div className={`text-[12px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>;
+  return (
+    <HistoryRace
+      height={tall ? 300 : 240}
+      rows={share.map(([g, c]) => ({ key: String(meta[g]?.id ?? g), name: g, count: c, color: meta[g]?.color ?? '#9a917f', emblems: guildEmblem(g) }))}
+    />
+  );
+}
+
+/** 장 목차 — 누르면 그 장 처음부터. 지금 장은 밝게. */
+function EraToc({ eras, days, curEra, onEra }: { eras: HistoryEra[]; days: HistoryDay[]; curEra: number; onEra: (startIdx: number) => void }) {
+  if (eras.length === 0) return null;
+  return (
+    <div>
+      <div className={`mb-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>장 목차</div>
+      <div className={`divide-y border-y ${PAPER.border} divide-[#ece5d6]`}>
+        {eras.map((e, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onEra(e.startIdx)}
+            title="이 장 처음부터"
+            className={`flex w-full items-center gap-2.5 px-2 py-2.5 text-left text-[12.5px] ${i === curEra ? 'bg-[#f6efe1]' : PAPER.hover}`}
+          >
+            <span className={`w-10 shrink-0 text-[10.5px] tabular-nums ${PAPER.muted}`}>제{i + 1}장</span>
+            <i className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ background: e.color ?? '#9a917f' }} />
+            <span className="min-w-0 flex-1 truncate font-semibold" style={SERIF}>
+              「{e.name}」의 시대
+            </span>
+            <span className={`shrink-0 text-[11px] tabular-nums ${PAPER.muted}`}>
+              {shortDay(days[e.startIdx]!.kstDay)}~ · {e.endIdx - e.startIdx + 1}일
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 장 머리 — 목차 항목과 같은 모양(눈썹: 제N장 · 색 · 기간, 제목 22px). 본문과 같은 왼쪽 축. */
 function ChapterHeading({ era, index, days }: { era: HistoryEra | null; index: number; days: HistoryDay[] }) {
   if (!era) return null;
   const len = era.endIdx - era.startIdx + 1;
   return (
-    <div className="mb-4 text-center">
-      <div className={`text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>제{index}장</div>
+    <div className="mb-3">
+      <div className={`flex items-center gap-2 text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>
+        <span>제{index}장</span>
+        <i className="h-2.5 w-2.5 rounded-[2px]" style={{ background: era.color ?? '#9a917f' }} />
+        <span className="tracking-normal tabular-nums">
+          {shortDay(days[era.startIdx]!.kstDay)} ~ {era.endIdx === days.length - 1 ? '' : shortDay(days[era.endIdx]!.kstDay)} · {len}일
+        </span>
+      </div>
       <div className="mt-1 text-[22px] leading-tight font-bold" style={SERIF}>
         「{era.name}」의 시대
       </div>
-      <div className={`mt-1 text-[11px] tabular-nums ${PAPER.muted}`}>
-        {shortDay(days[era.startIdx]!.kstDay)} ~ {era.endIdx === days.length - 1 ? '' : shortDay(days[era.endIdx]!.kstDay)} · {len}일
-      </div>
-      <div className="mx-auto mt-3 h-px w-16 bg-[#b9a982]" />
     </div>
   );
 }
