@@ -43,7 +43,9 @@ export async function syncEraSummaries(serverId: number, inputs: EraInput[], opt
       out.locked += 1;
       continue;
     }
-    if (row && row.factsHash === hash && !opts.force) {
+    // 사실표가 그대로여도 source='code'(직전 생성 실패로 집계 문장이 들어간 행)는 다시 시도한다 —
+    // 건너뛰면 끝난 시대는 사실표가 더는 안 바뀌어 실패한 문장이 영영 남는다(09-18 점검).
+    if (row && row.factsHash === hash && row.source !== 'code' && !opts.force) {
       out.skipped += 1;
       continue;
     }

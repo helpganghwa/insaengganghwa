@@ -49,7 +49,9 @@ let _client: Anthropic | null = null;
 function client(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY missing');
-  return (_client ??= new Anthropic({ apiKey: key }));
+  // 호출당 40초·재시도 1회 — 자정 공개 크론(maxDuration 300s, 대기 최대 ~180s) 안에서 돌기 때문에 API가 멈춰도
+  // 크론이 한도까지 끌려가지 않게 한다(SDK 기본은 10분). 실패하면 집계 문장으로 떨어지고 다음 동기화에서 다시 쓴다.
+  return (_client ??= new Anthropic({ apiKey: key, timeout: 40_000, maxRetries: 1 }));
 }
 
 const SYSTEM = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 이야기꾼이다. 지금은 한 시대(한 길드가 대륙에서 가장 넓은 영토를 쥐고 있던 기간)를 책의 한 장(章)처럼 여는 글을 쓴다.
