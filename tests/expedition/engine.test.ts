@@ -92,6 +92,23 @@ describe('expedition engine — 시너지·배율', () => {
     expect(c.diamond).toBe(254);
     expect(c.boxes!.weapon).toBe(8);
   });
+  it('배율은 총량에 먼저 곱한다 — 부위 배분이 달라도 총합이 같다(09-18 문의 회귀)', () => {
+    // 같은 장비 아바타 두 파견이 기본 10상자·같은 배율인데 32와 31로 갈렸던 실사례(2026-09-18 '세이렌느').
+    const bp = 21700; // ×3.17
+    const a = applyMultiplier({ kind: 'box', boxes: { weapon: 2, armor: 5, accessory: 3 } }, bp).boxes!;
+    const b = applyMultiplier({ kind: 'box', boxes: { weapon: 2, armor: 6, accessory: 2 } }, bp).boxes!;
+    const sum = (x: { weapon: number; armor: number; accessory: number }) => x.weapon + x.armor + x.accessory;
+    expect(sum(a)).toBe(32);
+    expect(sum(b)).toBe(32);
+    // 배분 비율은 기본 배분을 따라가고, 기본이 0인 부위는 0으로 남는다.
+    expect(a.armor).toBeGreaterThan(a.weapon);
+    expect(applyMultiplier({ kind: 'box', boxes: { weapon: 4, armor: 0, accessory: 0 } }, bp).boxes).toEqual({
+      weapon: 13,
+      armor: 0,
+      accessory: 0,
+    });
+  });
+
   it('구행 final_reward의 xp 필드는 배율·대성공 결과에 실리지 않는다', () => {
     const legacy = { kind: 'dia' as const, diamond: 100, xp: 22 } as { kind: 'dia'; diamond: number };
     expect('xp' in applyMultiplier(legacy, 0)).toBe(false);

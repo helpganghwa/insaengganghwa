@@ -946,6 +946,40 @@ export function expeditionCritBp(enhanceSum: number): number {
 }
 export const EXPEDITION_CRIT_MULT = 2;
 
+/** 파견 상자 부위 — 배분 순서 고정(나머지 배분 동률 처리). */
+export const EXPEDITION_BOX_SLOTS = ['weapon', 'armor', 'accessory'] as const;
+export type ExpeditionBoxes = { weapon: number; armor: number; accessory: number };
+
+/**
+ * 상자 배율 적용(2026-09-18 개편) — **기본 상자 총량에 배율을 먼저 곱해 최종 총량을 확정**하고,
+ * 그 총량을 기본 배분 비율대로 부위에 나눈다(최대 나머지 배분, 동률은 무기→방어구→장신구 순).
+ *
+ * 종전에는 부위마다 곱하고 각각 반올림해, 같은 배율·같은 기본 총량이어도 부위 배분에 따라 총합이
+ * 1~2개씩 달라졌다(09-18 '세이렌느' 문의: 같은 장비 아바타 두 파견이 10상자·같은 배율인데 32와 31).
+ * 이제 총합은 배분과 무관하게 round(기본 총량 × 배율)로 일정하다.
+ */
+export function expeditionScaleBoxes(boxes: ExpeditionBoxes, totalBp: number): ExpeditionBoxes {
+  const base = boxes.weapon + boxes.armor + boxes.accessory;
+  const out: ExpeditionBoxes = { weapon: 0, armor: 0, accessory: 0 };
+  if (base <= 0) return out;
+  const target = Math.max(1, Math.round(base * (1 + totalBp / 10000)));
+  const shares = EXPEDITION_BOX_SLOTS.map((s) => (boxes[s] / base) * target);
+  let used = 0;
+  EXPEDITION_BOX_SLOTS.forEach((s, i) => {
+    out[s] = Math.floor(shares[i]!);
+    used += out[s];
+  });
+  // 나머지는 소수부가 큰 부위부터. 기본 배분이 0인 부위는 계속 0으로 둔다(없던 부위를 만들지 않는다).
+  const rest = EXPEDITION_BOX_SLOTS.map((s, i) => ({ s, frac: shares[i]! - Math.floor(shares[i]!) }))
+    .filter((r) => boxes[r.s] > 0)
+    .sort((a, b) => b.frac - a.frac || EXPEDITION_BOX_SLOTS.indexOf(a.s) - EXPEDITION_BOX_SLOTS.indexOf(b.s));
+  for (let i = 0; used < target && rest.length > 0; i++) {
+    out[rest[i % rest.length]!.s] += 1;
+    used += 1;
+  }
+  return out;
+}
+
 /**
  * 아바타 지역 시너지(본상 기대값 배율, bp) — 활성 아바타 장비 스냅샷 3종 기준.
  * 지역 일치 개당 +10%(최대 +30%) / "일반" 장비는 어느 파견지든 개당 +5%(최대 +15%).

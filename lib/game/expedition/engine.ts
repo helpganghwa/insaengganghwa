@@ -14,6 +14,7 @@ import {
   expeditionWeightedSum,
   expeditionAsBonusBp,
   expeditionCritBp,
+  expeditionScaleBoxes,
   type ExpeditionRegion,
 } from '@/lib/game/balance';
 import { CATALOG_ITEMS, type CatalogRegion } from '@/lib/game/equipment/catalog';
@@ -172,21 +173,17 @@ export function critBp(enhanceSum = 0): number {
   return expeditionCritBp(enhanceSum);
 }
 
-/** 배율 적용(시작 시 최종 확정) — 상자·다이아 수량에만. floor가 아닌 round(공시 문구와 정합). */
+/**
+ * 배율 적용(시작 시 최종 확정) — 상자는 **총량에 곱한 뒤 부위로 나누고**(balance.expeditionScaleBoxes),
+ * 다이아는 반올림. 부위마다 곱해 각각 반올림하던 종전 방식은 같은 배율·같은 기본 총량에서도 배분에 따라
+ * 총합이 달라져 "같은 장비 아바타인데 결과가 다르다"는 문의를 낳았다(09-18).
+ */
 export function applyMultiplier(reward: ExpeditionReward, totalBp: number): ExpeditionReward {
   const m = 1 + totalBp / 10000;
   const scaleN = (n: number) => Math.max(1, Math.round(n * m));
   return {
     kind: reward.kind,
-    ...(reward.boxes
-      ? {
-          boxes: {
-            weapon: reward.boxes.weapon ? scaleN(reward.boxes.weapon) : 0,
-            armor: reward.boxes.armor ? scaleN(reward.boxes.armor) : 0,
-            accessory: reward.boxes.accessory ? scaleN(reward.boxes.accessory) : 0,
-          },
-        }
-      : {}),
+    ...(reward.boxes ? { boxes: expeditionScaleBoxes(reward.boxes, totalBp) } : {}),
     ...(reward.diamond ? { diamond: scaleN(reward.diamond) } : {}),
   };
 }

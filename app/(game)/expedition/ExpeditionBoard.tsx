@@ -23,6 +23,7 @@ import {
   EXPEDITION_MAIN_ROLL_BP,
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_HOURS,
+  expeditionScaleBoxes,
 } from '@/lib/game/balance';
 import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
@@ -528,13 +529,13 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   );
 }
 
-/** 클라 미리보기 배율 — engine.applyMultiplier와 동일 산식(표시 전용, 권위는 서버). */
+/** 클라 미리보기 배율 — 상자는 서버와 같은 expeditionScaleBoxes(총량 곱 후 배분), 다이아는 반올림(표시 전용, 권위는 서버). */
 function previewFinal(r: ExpeditionReward, totalBp: number): ExpeditionReward {
   const m = 1 + totalBp / 10000;
   const s = (n: number) => Math.max(1, Math.round(n * m));
   return {
     kind: r.kind,
-    ...(r.boxes ? { boxes: { weapon: r.boxes.weapon ? s(r.boxes.weapon) : 0, armor: r.boxes.armor ? s(r.boxes.armor) : 0, accessory: r.boxes.accessory ? s(r.boxes.accessory) : 0 } } : {}),
+    ...(r.boxes ? { boxes: expeditionScaleBoxes(r.boxes, totalBp) } : {}),
     ...(r.diamond ? { diamond: s(r.diamond) } : {}),
   };
 }
