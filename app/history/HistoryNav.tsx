@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { PAPER } from '@/app/wiki/theme';
 
 /**
- * 역사 위키 상단 메뉴(2026-09-18) — 연대기(재생) · 길드 · 인물 | 위키 · 게임하기.
+ * 역사 위키 상단 메뉴(2026-09-18) — 연대기(재생) · 길드 · 인물 | 게임하기(위키 링크는 09-18 삭제).
  * 길드·인물은 자리만 먼저 만들고 '준비 중' 화면(사용자 결정). 지금 보고 있는 메뉴는 진한 글자로.
  */
 const SECTIONS = [
@@ -35,13 +35,9 @@ export function HistoryNav({ siteOrigin }: { siteOrigin: string }) {
           </Link>
         );
       })}
-      <span aria-hidden className="mx-1 h-3.5 w-px bg-[#d8ceb9] sm:mx-1.5" />
-      <a href={`${siteOrigin}/wiki`} className={`rounded-md px-1.5 py-1 sm:px-2 ${PAPER.hover}`}>
-        위키
-      </a>
       <a
         href={`${siteOrigin}/`}
-        className={`ml-0.5 rounded-md border px-2 py-1 font-semibold text-[#2a251e] sm:ml-1 sm:px-2.5 ${PAPER.card} ${PAPER.hover}`}
+        className={`ml-1.5 rounded-md border px-2 py-1 font-semibold text-[#2a251e] sm:ml-2.5 sm:px-2.5 ${PAPER.card} ${PAPER.hover}`}
       >
         게임하기
       </a>

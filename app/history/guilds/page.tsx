@@ -1,28 +1,79 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
-import { PAPER, SERIF } from '@/app/wiki/theme';
+import { EmblemChain } from '@/components/EmblemChain';
+import { loadHistoryIndex } from '@/lib/game/history/loaders';
+import { SERIF } from '@/app/wiki/theme';
 
-/** 역사 위키 · 길드(2026-09-18) — 메뉴 자리만 먼저. 준비 중 화면(사용자 결정). 내용이 없어 검색 색인은 막는다. */
+import { ComingSoonBook } from '../ComingSoonBook';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * 역사 위키 · 길드(2026-09-18) — 준비 중. 오른쪽 면에 역사에 이름을 올린 길드의 깃발을 등장 순으로 옅게 건다(실제 이름·색·문양).
+ * 내용이 없어 검색 색인은 막는다.
+ */
 export const metadata: Metadata = {
   title: '길드',
   robots: { index: false, follow: true },
 };
 
-export default function HistoryComingSoonPage() {
+const SHOWN = 8;
+
+export default async function HistoryGuildsPage() {
+  const index = await loadHistoryIndex(1).catch(() => null);
+  const all = index
+    ? Object.entries(index.guildsById)
+        .map(([id, g]) => ({
+          id: Number(id),
+          name: g.namesFrom.at(-1)?.[1] ?? g.name,
+          color: g.color ?? '#9a917f',
+          first: g.namesFrom[0]?.[0] ?? 0,
+          urls: [
+            ...new Set([
+              ...(g.emblemUrl ? [g.emblemUrl] : []),
+              ...(index.emblemHistory[Number(id)] ?? []),
+            ]),
+          ],
+        }))
+        .sort((a, b) => a.first - b.first || a.id - b.id)
+    : [];
+  const banners = all.slice(0, SHOWN);
   return (
-    <main className="mx-auto flex w-full max-w-[560px] flex-col items-start px-5 pt-16 pb-20">
-      <div className={`text-[10.5px] tracking-[.2em] ${PAPER.muted}`}>역사 위키</div>
-      <h1 className="mt-1 text-[24px] leading-tight font-bold" style={SERIF}>
-        길드
-      </h1>
-      <p className="mt-3 text-[14px] leading-[1.8]">준비 중입니다.</p>
-      <Link
-        href="/history"
-        className="mt-6 rounded-[9px] bg-[#8a4b23] px-4 py-2 text-[12.5px] font-bold text-white"
-      >
-        연대기 보기
-      </Link>
-    </main>
+    <ComingSoonBook
+      title="길드"
+      lead="결성부터 오늘까지, 길드마다 걸어온 길을 모으고 있습니다."
+      caption={all.length > 0 ? `지금까지 역사에 이름을 올린 길드 ${all.length}곳` : undefined}
+      gallery={
+        <div className="grid grid-cols-4 gap-x-3 gap-y-6">
+          {banners.map((g) => (
+            <div key={g.id} className="flex min-w-0 flex-col items-center">
+              <i className="block h-[3px] w-[46px] rounded-full bg-[#6d6455]" />
+              <div
+                className="relative h-[62px] w-[38px]"
+                style={{
+                  background: `linear-gradient(to bottom, rgba(0,0,0,.14), transparent 22%), ${g.color}`,
+                  clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)',
+                  filter: 'saturate(.6) sepia(.2)',
+                }}
+              >
+                <EmblemChain
+                  urls={g.urls}
+                  className="absolute top-2.5 left-1/2 h-5 w-5 -translate-x-1/2"
+                />
+              </div>
+              <span className="mt-1.5 max-w-full truncate text-[10.5px] font-bold" style={SERIF}>
+                {g.name}
+              </span>
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, 4 - banners.length) }, (_, i) => (
+            <div key={`e${i}`} className="flex flex-col items-center">
+              <i className="block h-[3px] w-[46px] rounded-full bg-[#b8ae9a]" />
+              <div className="h-[62px] w-[38px] border border-dashed border-[#c9bfa9]" />
+            </div>
+          ))}
+        </div>
+      }
+    />
   );
 }

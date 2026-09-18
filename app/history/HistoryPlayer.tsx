@@ -715,7 +715,6 @@ export function HistoryPlayer({
     }
     return out;
   }, [days, story.events]);
-  const pct = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * 100);
   const isPlaying = (phase === 'era' || phase === 'detail') && !paused;
   const ownedCount = Object.values(owners).filter(Boolean).length;
   /** 판도 한 줄 — 길드별 보유 수(많은 순). */
@@ -1309,74 +1308,16 @@ export function HistoryPlayer({
               >
                 ×{speed}
               </button>
-              <div className="min-w-[260px] flex-1 px-2">
-                <div className="relative">
-                  <div
-                    className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
-                    role="list"
-                    aria-label="시대"
-                  >
-                    {eras.map((e, i) => {
-                      const len = e.endIdx - e.startIdx + 1;
-                      const future = (phase === 'era' || phase === 'detail') && e.startIdx > idx;
-                      return (
-                        <div
-                          key={i}
-                          role="listitem"
-                          className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
-                          style={{
-                            width: `${(len / n) * 100}%`,
-                            background: e.color ?? '#9a917f',
-                            opacity: future ? 0.35 : 1,
-                          }}
-                        >
-                          {len >= 4
-                            ? `「${e.name}」의 시대 · ${len}일`
-                            : len >= 2
-                              ? `${e.name} ${len}`
-                              : ''}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={n - 1}
-                    value={phase === 'idle' ? n - 1 : idx}
-                    onChange={(e) => flowFrom(Number(e.target.value))}
-                    aria-label="날짜"
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
-                    style={{ left: `calc(${pct(phase === 'idle' ? n - 1 : idx)}% - 1.5px)` }}
-                  />
-                </div>
-                <div className="relative mt-[3px] h-[6px]">
-                  {ticks.map((t) => (
-                    <button
-                      key={t.i}
-                      type="button"
-                      title={`${days[t.i]!.kstDay} · ${t.label}`}
-                      aria-label={`${days[t.i]!.kstDay} ${t.label}`}
-                      onClick={() => flowFrom(t.i)}
-                      className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
-                      style={{
-                        left: `${pct(t.i)}%`,
-                        borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
-                      }}
-                    />
-                  ))}
-                </div>
-                <div
-                  className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}
-                >
-                  <span>{shortDay(days[0]!.kstDay)}</span>
-                  <span>{shortDay(days[n - 1]!.kstDay)}</span>
-                </div>
-              </div>
+              <EraScrubber
+                days={days}
+                eras={eras}
+                ticks={ticks}
+                events={story.events}
+                pos={phase === 'idle' ? n - 1 : idx}
+                dimAfter={phase === 'era' || phase === 'detail' ? idx : null}
+                onSeek={flowFrom}
+                guildColor={guildColor}
+              />
               <span className={`pr-1 text-[11px] tabular-nums ${PAPER.muted}`}>
                 {phase === 'idle' ? `${n}일` : `${idx + 1} / ${n}`}
               </span>
@@ -1473,6 +1414,215 @@ function MobileFallback({
           ))}
       </section>
     </main>
+  );
+}
+
+/**
+ * 하단 시대 띠(스크러버) — 장 색 띠 위에 지금 날 노브, 아래 사건 눈금.
+ * 호버 툴팁(2026-09-18 사용자 요청): 포인터 아래 날의 장·날짜·헤드라인·사건을 띄운다. 호버 상태를 이 안에 두어
+ * 움직일 때 재생 화면 전체가 다시 그려지지 않게 한다.
+ * 날 i는 띠의 [i/n, (i+1)/n] 칸을 차지하고 노브·눈금은 칸 가운데 — 장 색 칸과 호버·클릭한 날이 어긋나지 않는다.
+ * 클릭·끌기는 이 칸 계산으로 직접 처리하고, 투명 range는 키보드 조작용으로만 남긴다(pointer-events 없음).
+ */
+function EraScrubber({
+  days,
+  eras,
+  ticks,
+  events,
+  pos,
+  dimAfter,
+  onSeek,
+  guildColor,
+}: {
+  days: HistoryDay[];
+  eras: HistoryEra[];
+  ticks: { i: number; label: string; big: boolean }[];
+  events: Record<string, HistoryEvent[]>;
+  pos: number;
+  dimAfter: number | null;
+  onSeek: (i: number) => void;
+  guildColor: (name: string) => string | null;
+}) {
+  const n = days.length;
+  const barRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ on: boolean; last: number }>({ on: false, last: -1 });
+  const [hover, setHover] = useState<number | null>(null);
+  const center = (i: number) => (n <= 0 ? 0 : ((i + 0.5) / n) * 100);
+  const dayAt = (clientX: number) => {
+    const r = barRef.current?.getBoundingClientRect();
+    if (!r || r.width <= 0) return 0;
+    const ratio = Math.min(Math.max((clientX - r.left) / r.width, 0), 0.9999);
+    return Math.floor(ratio * n);
+  };
+  const eraOf = (i: number) => eras.findIndex((e) => e.startIdx <= i && i <= e.endIdx);
+  const tip =
+    hover === null
+      ? null
+      : (() => {
+          const k = eraOf(hover);
+          const era = k >= 0 ? eras[k]! : null;
+          const day = days[hover]!;
+          const evs = [...(events[day.kstDay] ?? [])]
+            .sort((a, b) => EVENT_PRIORITY[a.kind] - EVENT_PRIORITY[b.kind])
+            .slice(0, 3);
+          return { k, era, day, evs };
+        })();
+  return (
+    <div className="min-w-[260px] flex-1 px-2">
+      <div
+        ref={barRef}
+        className="relative cursor-pointer rounded-[5px] has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-[#8a4b23]/40"
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            // 캡처가 안 되는 포인터면 끌기만 빠진다(누른 날로 이동은 그대로).
+          }
+          const i = dayAt(e.clientX);
+          dragRef.current = { on: true, last: i };
+          setHover(i);
+          onSeek(i);
+        }}
+        onPointerMove={(e) => {
+          const i = dayAt(e.clientX);
+          if (i !== hover) setHover(i);
+          const d = dragRef.current;
+          if (d.on && i !== d.last) {
+            d.last = i;
+            onSeek(i);
+          }
+        }}
+        onPointerUp={() => {
+          dragRef.current.on = false;
+        }}
+        onPointerCancel={() => {
+          dragRef.current.on = false;
+          setHover(null);
+        }}
+        onPointerLeave={() => {
+          if (!dragRef.current.on) setHover(null);
+        }}
+      >
+        <div
+          className="flex h-[18px] overflow-hidden rounded-[5px] shadow-[inset_0_0_0_1px_rgba(0,0,0,.08)]"
+          role="list"
+          aria-label="시대"
+        >
+          {eras.map((e, i) => {
+            const len = e.endIdx - e.startIdx + 1;
+            const future = dimAfter !== null && e.startIdx > dimAfter;
+            return (
+              <div
+                key={i}
+                role="listitem"
+                className="flex h-full items-center overflow-hidden px-1.5 text-[10px] font-bold whitespace-nowrap text-[#f7f2e8] transition-opacity duration-500"
+                style={{
+                  width: `${(len / n) * 100}%`,
+                  background: e.color ?? '#9a917f',
+                  opacity: future ? 0.35 : hover !== null && eraOf(hover) !== i ? 0.55 : 1,
+                }}
+              >
+                {len >= 4 ? `「${e.name}」의 시대 · ${len}일` : len >= 2 ? `${e.name} ${len}` : ''}
+              </div>
+            );
+          })}
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={n - 1}
+          value={pos}
+          onChange={(e) => onSeek(Number(e.target.value))}
+          aria-label="날짜"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+        />
+        {hover !== null && hover !== pos ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 h-full w-[2px] -translate-x-1/2 bg-[#fdfaf3]/85"
+            style={{ left: `${center(hover)}%` }}
+          />
+        ) : null}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-[3px] h-[24px] w-[3px] rounded-[2px] bg-[#8a4b23] shadow-[0_0_0_2px_#fdfaf3] transition-[left] duration-300"
+          style={{ left: `calc(${center(pos)}% - 1.5px)` }}
+        />
+        {tip ? (
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-[calc(100%+5px)] z-20 h-2 w-2 -translate-x-1/2 rotate-45 border-r border-b border-[#d8ceb9] bg-[#fdfaf3]"
+              style={{ left: `${center(hover!)}%` }}
+            />
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute bottom-[calc(100%+9px)] z-10 w-[264px] -translate-x-1/2 rounded-[9px] border border-[#d8ceb9] bg-[#fdfaf3] px-3 py-2.5 text-left shadow-[0_8px_22px_rgba(42,37,30,.16)]"
+              style={{ left: `clamp(132px, ${center(hover!)}%, calc(100% - 132px))` }}
+            >
+              {tip.era ? (
+                <div className={`flex items-center gap-1.5 text-[10.5px] ${PAPER.muted}`}>
+                  <i
+                    className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                    style={{ background: tip.era.color ?? '#9a917f' }}
+                  />
+                  <span className="truncate">
+                    제{tip.k + 1}장 「{tip.era.name}」의 시대
+                  </span>
+                </div>
+              ) : null}
+              <div className="mt-1 text-[13px] font-bold tabular-nums" style={SERIF}>
+                {monthDay(tip.day.kstDay)}
+              </div>
+              {tip.day.headline ? (
+                <div className="mt-0.5 line-clamp-2 text-[12px] leading-[1.5]" style={SERIF}>
+                  <Headline text={tip.day.headline} guildColor={guildColor} />
+                </div>
+              ) : null}
+              {tip.evs.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {tip.evs.map((ev, j) => (
+                    <span
+                      key={j}
+                      className={`rounded-[4px] px-1.5 py-px text-[9.5px] font-bold ${
+                        ev.kind === 'leader' || ev.kind === 'sweep'
+                          ? 'bg-[#8a4b23] text-[#fdfaf3]'
+                          : `bg-[#ece3d1] ${PAPER.muted}`
+                      }`}
+                    >
+                      {ev.label}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div className={`mt-1.5 text-[10px] ${PAPER.muted}`}>누르면 이날부터 봅니다</div>
+            </div>
+          </>
+        ) : null}
+      </div>
+      <div className="relative mt-[3px] h-[6px]">
+        {ticks.map((t) => (
+          <button
+            key={t.i}
+            type="button"
+            aria-label={`${days[t.i]!.kstDay} ${t.label}`}
+            onClick={() => onSeek(t.i)}
+            onPointerEnter={() => setHover(t.i)}
+            onPointerLeave={() => setHover(null)}
+            className="absolute top-0 h-0 w-0 -translate-x-1/2 border-x-[3px] border-b-[5px] border-x-transparent"
+            style={{
+              left: `${center(t.i)}%`,
+              borderBottomColor: t.big ? '#8a4b23' : '#b8ae9a',
+            }}
+          />
+        ))}
+      </div>
+      <div className={`mt-1 flex justify-between text-[10px] tabular-nums ${PAPER.muted}`}>
+        <span>{shortDay(days[0]!.kstDay)}</span>
+        <span>{shortDay(days[n - 1]!.kstDay)}</span>
+      </div>
+    </div>
   );
 }
 
