@@ -124,8 +124,12 @@ export function taxPointsForMeleePrize(prizeDiamonds: number): number {
 }
 /** 집행관 수금 시 집행관 몫 비율(10%). 나머지 90%는 길드 풀로. */
 export const GUILD_EXECUTOR_TAX_CUT = 0.1;
-/** 집행관 세금 수금 쿨다운(분) — 3일(72시간). */
-export const TAX_COLLECT_COOLDOWN_MIN = 72 * 60;
+/**
+ * 집행관 세금 수금 쿨다운(분) — 2일(48시간). 2026-09-18 유저 투표 결과로 72h → 48h(소규모 업데이트 8).
+ * 쿨다운은 구역에 저장하지 않고 '습득·직전 수금 시각 + 이 값'으로 매번 계산하므로, 바꾸는 즉시 진행 중인 쿨다운도
+ * 전부 24시간씩 당겨진다(모든 길드에 같은 폭 — 따로 이관하지 않는다). 세금 적립량은 수금 주기와 무관해 경제 총량은 그대로.
+ */
+export const TAX_COLLECT_COOLDOWN_MIN = 48 * 60;
 /** 독점 세금 보너스(B안) — 소유 구역 1개당 +1%, 완전장악 권역 1개당 +25%. 그 길드 세금 전체에 적용(누적 시점).
  *  예) 왕국6(완전장악)+오크1 = 7구역 → 7% + 25% = +32%. */
 export const GUILD_ZONE_TAX_BONUS = 0.01;

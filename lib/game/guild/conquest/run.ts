@@ -353,7 +353,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
       .where(and(eq(conquestBattles.id, BigInt(r.id)), isNull(conquestBattles.publishedAt)))
       .returning({ id: conquestBattles.id });
     if (flip.length === 0) continue; // 다른 실행이 이미 공개
-    // 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석 + 수금 타이머 리셋(B안 — 뺏은 길드도 습득 72h 뒤 수금).
+    // 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석 + 수금 타이머 리셋(B안 — 뺏은 길드도 습득 후 쿨다운 뒤 수금).
     if (r.winner && r.winner !== r.prev) {
       await tx
         .update(zones)

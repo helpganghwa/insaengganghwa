@@ -26,7 +26,7 @@ export type CollectResult = {
 };
 
 /**
- * 구역 세금 수금 — GUILD §5.5. 3일(72h) 쿨다운. 구역 누적 💎 → 집행관 10% + 소유 길드 곳간 90%.
+ * 구역 세금 수금 — GUILD §5.5. 2일(48h) 쿨다운(TAX_COLLECT_COOLDOWN_MIN). 구역 누적 💎 → 집행관 10% + 소유 길드 곳간 90%.
  *
  * 수금 주체(2026-09-08 일괄 수금 도입):
  *  - 그 구역 **집행관 본인**(종전 그대로), 또는
@@ -87,12 +87,12 @@ export async function collectZoneTaxTx(
 
   const now = Date.now();
   const cooldownMs = TAX_COLLECT_COOLDOWN_MIN * 60_000;
-  // 첫 수금 게이트(B안) — 구역 습득(captured_at) 후 72h 지나야 첫 수금 가능. 탈취 시 captured_at이
-  // 갱신되고 last_tax_collected_at도 리셋되므로, 뺏은 길드도 72h 뒤부터 수금(리셋).
+  // 첫 수금 게이트(B안) — 구역 습득(captured_at) 후 쿨다운이 지나야 첫 수금 가능. 탈취 시 captured_at이
+  // 갱신되고 last_tax_collected_at도 리셋되므로, 뺏은 길드도 쿨다운 뒤부터 수금(리셋).
   if (z.capturedAt && now - z.capturedAt.getTime() < cooldownMs) {
     throw new GuildError('COLLECT_COOLDOWN');
   }
-  // 이후 쿨다운 — 직전 수금 후 72h.
+  // 이후 쿨다운 — 직전 수금 후 같은 시간.
   if (z.lastAt && now - z.lastAt.getTime() < cooldownMs) {
     throw new GuildError('COLLECT_COOLDOWN');
   }
@@ -203,7 +203,7 @@ export async function collectAllZoneTax(
   return { collected, failed, total: guildGain + executorGain, guildGain, executorGain, myGain };
 }
 
-/** 지금 수금 가능한 구역 id(집행관 있음 · 세금 > 0 · 습득/직전 수금 72h 경과) — id 순. */
+/** 지금 수금 가능한 구역 id(집행관 있음 · 세금 > 0 · 습득/직전 수금 후 쿨다운 경과) — id 순. */
 export async function listCollectableZoneIds(
   guildId: bigint,
   serverId: number,

@@ -55,7 +55,7 @@ const STATUS_CELL: Record<
 };
 
 const fmt = (n: bigint | number) => Number(n).toLocaleString('ko-KR');
-/** 남은 ms → H:MM:SS(72h 쿨다운은 시간 단위가 커서 일 단위로 접지 않는다 — 지도 팝업과 같은 표기). */
+/** 남은 ms → H:MM:SS(48h 쿨다운도 시간 단위로 — 일 단위로 접지 않는다, 지도 팝업과 같은 표기). */
 function hms(ms: number) {
   const s = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(s / 3600);

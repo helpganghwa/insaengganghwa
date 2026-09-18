@@ -60,7 +60,7 @@ export async function getMyMembership(userId: string, serverId: number) {
 /**
  * 길드 관리 허브 요약(2026-07-30) — 타일이 담지 못하는 점령전 수금 상태.
  *
- * 수금 조건은 구역마다 다르다(collect.ts): 집행관 존재 · 습득 후 72h · 직전 수금 후 72h · 세금 > 0.
+ * 수금 조건은 구역마다 다르다(collect.ts): 집행관 존재 · 습득 후 쿨다운 · 직전 수금 후 쿨다운 · 세금 > 0.
  * 그래서 "다음 수금 시각" 하나로는 못 말하고, **지금 걷을 수 있는 곳이 몇 곳인지**를 센다.
  * 집행관이 없는 구역은 수금 자체가 불가라 이름까지 돌려준다(어디인지가 바로 필요한 정보).
  */
@@ -566,7 +566,7 @@ export async function getWorldmapZones(serverId: number) {
       taxBonus: zones.taxBonus, // 독점 세금 보너스 배율(B안) — 세율 표시용
       abandonedDay: zones.abandonedDay, // 방치 구역(0180) — 세율 계산(구역 수·완전장악) 제외 표시용
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
-      capturedAt: zones.capturedAt, // 수금 타이머(습득 72h) 계산용
+      capturedAt: zones.capturedAt, // 수금 타이머(습득 후 쿨다운) 계산용
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
       residentCount: sql<number>`(select count(*)::int from characters rc where rc.residence_zone_id = ${zones.id})`,
     })

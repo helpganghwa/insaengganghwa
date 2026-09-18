@@ -50,7 +50,7 @@ type Zone = {
   /** 방치 구역(0180) — 세율 계산(구역 수·완전장악)에서 빠진다(배율 자체는 적용). 안내 모달 표시용. */
   abandoned: boolean;
   lastTaxAt: number | null;
-  /** 구역 습득 시각(ms) — 수금 타이머(습득 72h) 계산용. 중립이면 null. */
+  /** 구역 습득 시각(ms) — 수금 타이머(습득 후 쿨다운) 계산용. 중립이면 null. */
   capturedAt: number | null;
   residentCount: number;
 };
@@ -719,7 +719,7 @@ export function WorldMapView({
     moveResidence(zoneId);
   };
 
-  // 세금 수금 — 그 구역 집행관 본인 또는 소유 길드 세금 권한자(72h 쿨다운, 집행관 10%·길드 풀 90%).
+  // 세금 수금 — 그 구역 집행관 본인 또는 소유 길드 세금 권한자(TAX_COLLECT_COOLDOWN_MIN 쿨다운, 집행관 10%·길드 풀 90%).
   const collect = (zoneId: number) => {
     setCollectConfirm(false);
     start(async () => {
@@ -1409,7 +1409,7 @@ export function WorldMapView({
           const tax = Number(cz.taxDiamond);
           const execCut = Math.floor(tax * GUILD_EXECUTOR_TAX_CUT);
           const guildCut = tax - execCut;
-          // 수금 가능 시각 — 직전 수금(lastTaxAt) 우선, 없으면 습득(capturedAt) 기준 72h(B안 첫 수금 게이트).
+          // 수금 가능 시각 — 직전 수금(lastTaxAt) 우선, 없으면 습득(capturedAt) 기준 쿨다운(B안 첫 수금 게이트).
           // 서버와 동일 — captured_at·last_tax 중 더 최근(늦은) 시각이 실제 쿨다운 기준.
           const cdBase =
             cz.capturedAt == null && cz.lastTaxAt == null
