@@ -249,7 +249,13 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     const inFinale = new Set((f?.roster ?? []).map((r) => r.userId));
     const out = new Map<string, Participant>();
     const add = (userId: string, nickname: string, guildName: string) => {
-      if (out.has(userId)) return;
+      const cur = out.get(userId);
+      if (cur) {
+        // 배치 행(닉네임 없음)이 먼저 들어오면 finale 로스터의 닉네임으로 채운다 — 안 채우면 배치된 활약자가
+        // 이름 없이 집계돼 사실표에서 빠지고, 검증기가 본문의 그 인물을 '활약 목록에 없는 인물'로 지운다(09-18).
+        if (!cur.nickname && nickname) cur.nickname = nickname;
+        return;
+      }
       const fell = inFinale.has(userId) ? finaleFell.has(userId) : null;
       out.set(userId, { userId, nickname, guildName, kills: finaleKills.get(userId) ?? 0, fell });
     };
