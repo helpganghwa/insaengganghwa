@@ -866,5 +866,25 @@
   "chuseok_gift_bojagi": {
     "key": "key3",
     "objectId": "3d34714e-1ddd-430c-a1b6-8948591cc6cc"
+  },
+  "chuseok_hanbok_fan": {
+    "key": "key3",
+    "objectId": "5fb347e5-42f9-46f5-b4ac-394e151c4421"
+  },
+  "chuseok_hanbok_v2": {
+    "key": "key3",
+    "objectId": "f8bca935-884e-4400-afae-41212e16b1a5"
+  },
+  "chuseok_rabbit_pestle": {
+    "key": "key3",
+    "objectId": "d66b0c4b-d92f-4d14-9990-5e1310af922a"
+  },
+  "chuseok_moonrabbit_suit_v2": {
+    "key": "key3",
+    "objectId": "f562de4d-13c8-41cc-a91d-66438de56ad9"
+  },
+  "chuseok_rabbit_ears": {
+    "key": "key3",
+    "objectId": "c14b6e6b-94d0-4482-958f-2aae0ac31d87"
   }
 }

@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤). */
-  batch: 1 | 2 | 3;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤). */
+  batch: 1 | 2 | 3 | 4;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -318,6 +318,59 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a holiday gift bundle — a square box wrapped in rainbow saekdong striped silk bojagi cloth, tied on top in a neat knot with two pointed ends, ' +
       'a small gold moon charm hanging on a red tassel, festive and precious',
+  },
+  // ══ 4차: 확정 컨셉 재생성(09-19 밤) ════════════════════════════════════════════════════
+  // 사용자 확정 — ① 한복 세트(무기 미정 → 합죽선 제안 · 한복 · 복주머니는 1차 그림 유지) ② 달토끼 세트(절굿공이 · 달토끼 옷 · 토끼 귀).
+  // 한복 세트는 1차 복주머니(진홍 비단·금빛 달토끼·오색 끈)와 색을 맞춘다. 고급스러움 우선.
+  {
+    key: 'chuseok_hanbok_fan',
+    nameKo: '합죽선',
+    slot: 'weapon',
+    batch: 4,
+    concept: '한복 세트 무기(제안)',
+    art:
+      'a large folding war fan — polished dark bamboo ribs spread in a wide arc, a deep crimson silk leaf painted with a golden full moon over pale clouds, ' +
+      'a gold-capped pivot with a long red silk tassel and a small five-color knot, elegant and graceful, clearly a war fan weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_v2',
+    nameKo: '한가위 한복(재생성)',
+    slot: 'armor',
+    batch: 4,
+    concept: '한복 세트 방어구',
+    art:
+      'a luxurious Korean hanbok — a pale jade silk jeogori jacket with rainbow saekdong striped sleeves and a long crimson ribbon tie, ' +
+      'a full-length flowing deep crimson chima skirt with gold-leaf moon and cloud patterns along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_rabbit_pestle',
+    nameKo: '달토끼 절굿공이',
+    slot: 'weapon',
+    batch: 4,
+    concept: '달토끼 세트 무기',
+    art:
+      "a moon rabbit's long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends ringed in gold bands and a slim waisted grip in the middle, " +
+      'the grip wrapped in red silk cord with a small golden full-moon charm, charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonrabbit_suit_v2',
+    nameKo: '달토끼 옷(재생성)',
+    slot: 'armor',
+    batch: 4,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a moon rabbit costume — a soft fluffy white fur jumpsuit with a big round fur collar, pale pink paw-pad mittens and fluffy white boots, a round cotton tail, ' +
+      'a flowing pale lavender silk sash tied at the waist with a golden full-moon ornament, cute and elegant',
+  },
+  {
+    key: 'chuseok_rabbit_ears',
+    nameKo: '토끼 귀',
+    slot: 'accessory',
+    batch: 4,
+    concept: '달토끼 세트 장신구',
+    art:
+      'a moon rabbit ear headpiece — two tall fluffy white rabbit ears lined in pale pink rising from a slim gold hairband, ' +
+      'a small golden full-moon ornament and a short red silk ribbon at the base of one ear, cute and elegant',
   },
 ];
 
