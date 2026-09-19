@@ -237,4 +237,5 @@ async function main(): Promise<void> {
   if (fail > 0) process.exitCode = 1;
 }
 
-void main();
+// 직접 실행할 때만 생성한다 — 검토 페이지 빌더가 CANDIDATES만 가져다 쓸 때 유료 호출이 나가지 않게.
+if (process.argv[1]?.endsWith('gen-chuseok-cand.ts')) void main();

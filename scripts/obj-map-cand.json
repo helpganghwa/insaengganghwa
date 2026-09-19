@@ -758,5 +758,41 @@
   "druid_sunwheel_staff": {
     "key": "key1",
     "objectId": "b4263ac5-9bac-477b-9bce-0d82abd5c3dd"
+  },
+  "chuseok_songpyeon_fork": {
+    "key": "key3",
+    "objectId": "7422a922-31eb-4843-879b-ec2952a97ab9"
+  },
+  "chuseok_moonrabbit_mallet": {
+    "key": "key3",
+    "objectId": "9a889924-62ea-45f5-ae8a-637e03ca8f57"
+  },
+  "chuseok_dokkaebi_club": {
+    "key": "key3",
+    "objectId": "0cfe8da5-293e-4d47-865d-efea7c4a9ded"
+  },
+  "chuseok_hanbok": {
+    "key": "key3",
+    "objectId": "59a58353-7522-42e8-9384-ef8e9f8587cb"
+  },
+  "chuseok_moonrabbit_suit": {
+    "key": "key3",
+    "objectId": "92ba8f6f-d6d5-4478-964b-67b93e004eda"
+  },
+  "chuseok_moon_spacesuit": {
+    "key": "key3",
+    "objectId": "38d250f0-e036-4a09-92d7-b15d38741135"
+  },
+  "chuseok_dokkaebi_mask": {
+    "key": "key3",
+    "objectId": "46407aa2-3033-4dc4-b763-565287504ea7"
+  },
+  "chuseok_fullmoon_norigae": {
+    "key": "key3",
+    "objectId": "f282e155-5ca8-44a4-a021-e414cf768666"
+  },
+  "chuseok_bok_pouch": {
+    "key": "key3",
+    "objectId": "8f52f558-9eae-4b5a-847d-e6b69f5dc1d3"
   }
 }
