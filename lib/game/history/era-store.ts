@@ -141,8 +141,8 @@ export async function dismissEraProposal(serverId: number, startKstDay: string):
  * 운영자 수정 저장. 기다리던 제안이 있었다면 그 사실표까지 보고 쓴 글로 쳐서 제안을 닫는다(해시 승계).
  * 잠그지 않는다 — 정본은 크론이 건드리지 못하므로, 잠그면 진행 중인 시대에 제안이 끊길 뿐이다.
  */
-export async function saveEraSummaryManual(serverId: number, startKstDay: string, summary: string, closing: string): Promise<void> {
-  await db
+export async function saveEraSummaryManual(serverId: number, startKstDay: string, summary: string, closing: string): Promise<'ok' | 'NO_ROW'> {
+  const rows = await db
     .update(historyEraSummaries)
     .set({
       summary,
@@ -155,7 +155,10 @@ export async function saveEraSummaryManual(serverId: number, startKstDay: string
       proposedAt: null,
       updatedAt: new Date(),
     })
-    .where(and(eq(historyEraSummaries.serverId, serverId), eq(historyEraSummaries.startKstDay, startKstDay)));
+    .where(and(eq(historyEraSummaries.serverId, serverId), eq(historyEraSummaries.startKstDay, startKstDay)))
+    .returning({ day: historyEraSummaries.startKstDay });
+  // 행은 동기화가 만든다 — 아직 없는 시대(동기화 전)는 저장할 곳이 없다. 조용히 성공으로 넘기지 않는다.
+  return rows.length > 0 ? 'ok' : 'NO_ROW';
 }
 
 export async function setEraSummaryLocked(serverId: number, startKstDay: string, locked: boolean): Promise<void> {

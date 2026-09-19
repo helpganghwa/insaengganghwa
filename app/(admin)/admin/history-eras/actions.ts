@@ -46,7 +46,8 @@ export async function saveEraAction(serverId: number, startKstDay: string, summa
   const c = closing.trim();
   if (s.length < 20 || s.length > 800) return { status: 'error', code: 'SUMMARY_LENGTH' };
   if (c.length > 300) return { status: 'error', code: 'CLOSING_LENGTH' };
-  await saveEraSummaryManual(serverId, startKstDay, s, c);
+  const saved = await saveEraSummaryManual(serverId, startKstDay, s, c);
+  if (saved !== 'ok') return { status: 'error', code: 'NO_ROW — 먼저 [바뀐 시대 제안 받기]로 행을 만드세요' };
   await db.insert(adminActions).values({
     adminUserId,
     action: 'history_era.save',
