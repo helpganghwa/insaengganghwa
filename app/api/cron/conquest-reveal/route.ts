@@ -57,7 +57,7 @@ export async function GET(req: Request) {
       results.push({ serverId: sid, error: (e as Error).message });
     }
   }
-  // 역사 페이지 시대 요약(0202) — 새 날이 공개됐으니 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. 실패해도 공개는 유효.
+  // 역사 페이지 시대 요약(0202·0203) — 새 날이 공개됐으니 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(적용은 어드민에서). 실패해도 공개는 유효.
   for (const r of results) {
     if (r.error) continue;
     await syncHistoryEras(r.serverId).catch((e: unknown) => console.warn('[conquest-reveal] syncHistoryEras', r.serverId, e));

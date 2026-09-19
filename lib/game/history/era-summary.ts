@@ -1,7 +1,6 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
-import { unstable_cache } from 'next/cache';
 
 /**
  * 시대 요약 이야기(2026-09-18) — 코드가 뽑은 시대 사실(누가 언제 앞자리에 섰고, 무엇을 석권했고, 누가 사라졌고,
@@ -9,11 +8,10 @@ import { unstable_cache } from 'next/cache';
  * "딱딱하고 재미없다".
  *
  * 안전장치 — 사실은 여기 준 것만 쓰게 하고, 결과를 코드가 검사한다(길드 마커는 허용 목록만, 아라비아 숫자는 사실표의
- * 수만, 등수·줄표·이모지 금지, 길이). 하나라도 어긋나면 집계 문장(fallback)으로 돌아간다. 검수 없이 자동 공개되는
- * 글이라 검증을 통과한 것만 내보낸다.
+ * 수만, 등수·줄표·이모지 금지, 길이). 하나라도 어긋나면 버린다(null).
  *
- * 캐시 — Next 데이터 캐시(unstable_cache)에 사실표 전체를 키로 하루 보관. 끝난 시대는 사실이 변하지 않아 배포당 한 번,
- * 진행 중인 시대는 날마다 한 번 생성된다. DB에 쓰지 않으므로 읽기 전용 스코프(스테이징)에서도 동작한다.
+ * 생성문은 곧바로 공개되지 않는다(0203) — 동기화(era-store)가 제안으로 쌓고, 운영자가 어드민에서 적용해야 역사 페이지에 나간다.
+ * 그래서 요청 경로에서 부르는 캐시 경유 함수는 두지 않는다.
  */
 export type EraFacts = {
   index: number;
@@ -286,23 +284,4 @@ async function narrateOnce(facts: EraFacts, feedback: string): Promise<{ ok: tru
     return { ok: false, reason: bad };
   }
   return { ok: true, value: { summary, closing } };
-}
-
-const narrateEraCached = unstable_cache(
-  async (factsJson: string) => narrateEraUncached(JSON.parse(factsJson) as EraFacts),
-  ['history-era-narrative-v5'],
-  { revalidate: 60 * 60 * 24 },
-);
-
-/** 캐시 경유 — 키 없음·실패·검증 탈락은 null(호출부가 집계 문장을 유지). */
-export async function narrateEra(facts: EraFacts): Promise<EraNarrative | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  try {
-    // 로컬 점검 스크립트(Next 런타임 밖)는 데이터 캐시가 없어 직접 호출.
-    if (process.env.HISTORY_ERA_NO_CACHE === '1') return await narrateEraUncached(facts);
-    return await narrateEraCached(JSON.stringify(facts));
-  } catch (e) {
-    console.warn('[history.era] 요약 생성 실패 → 집계 문장 유지:', (e as Error).message);
-    return null;
-  }
 }

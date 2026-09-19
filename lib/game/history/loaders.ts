@@ -5,7 +5,7 @@ import { and, asc, eq, lt, sql } from 'drizzle-orm';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { replayOwnership } from '@/lib/game/guild/conquest/chronicle-history';
 import { unstable_cache, revalidateTag } from 'next/cache';
-import { narrateEra, type EraFacts } from './era-summary';
+import type { EraFacts } from './era-summary';
 import { readStoredEraSummaries, syncEraSummaries, type EraInput, type SyncResult } from './era-store';
 import { db } from '@/lib/db/client';
 import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
@@ -39,7 +39,7 @@ export function loadEraInputs(serverId: number): Promise<EraInput[]> {
   return withHistoryDb(async () => (await buildIndexCore(serverId)).eraInputs);
 }
 
-/** 자정 공개 뒤·어드민에서 — 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. */
+/** 자정 공개 뒤·어드민에서 — 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(정본은 그대로). 새 시대가 생기면 집계 문장이 정본으로 들어가므로 첫 화면 캐시도 비운다. */
 export async function syncHistoryEras(serverId: number, opts: { force?: boolean; only?: string } = {}): Promise<SyncResult> {
   const inputs = await loadEraInputs(serverId);
   const r = await syncEraSummaries(serverId, inputs, opts);
@@ -91,24 +91,16 @@ async function buildIndexCore(serverId: number): Promise<{ index: HistoryIndex; 
       zoneRows.map((z) => ({ id: z.id, name: z.name, region: String(z.region) })),
       new Map(days.map((d) => [d.kstDay, d.headline])),
     );
-    // 시대 요약 — ① 저장된 정본(0202, 운영자 통제) ② 없으면 이야기꾼 생성(데이터 캐시, 검증 통과분만) ③ 집계 문장.
+    // 시대 요약 — ① 저장된 정본(0202, 운영자가 적용·수정한 글) ② 없으면 집계 문장.
+    // 이야기꾼 생성문은 제안으로만 쌓이고(0203) 운영자가 적용해야 정본이 된다 — 검수 전 글은 여기서 읽지 않는다.
     const eraInputs: EraInput[] = story.eras.map((e, i) => ({ facts: eraFacts[i]!, fallback: { summary: e.summary, closing: e.closing }, guildId: e.guildId }));
     const stored = await readStoredEraSummaries(serverId);
-    await Promise.all(
-      story.eras.map(async (era, i) => {
-        const facts = eraFacts[i]!;
-        const row = stored.get(facts.from);
-        if (row) {
-          era.summary = row.summary;
-          if (row.closing) era.closing = row.closing;
-          return;
-        }
-        const nr = await narrateEra(facts);
-        if (!nr) return;
-        era.summary = nr.summary;
-        if (nr.closing) era.closing = nr.closing;
-      }),
-    );
+    story.eras.forEach((era, i) => {
+      const row = stored.get(eraFacts[i]!.from);
+      if (!row) return;
+      era.summary = row.summary;
+      if (row.closing) era.closing = row.closing;
+    });
     const index: HistoryIndex = {
       serverId,
       days,

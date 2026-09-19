@@ -335,7 +335,8 @@ export const worldChronicle = pgTable(
 
 /**
  * 0202 역사 페이지 시대 요약(2026-09-18) — 이야기꾼 문장의 정본. (server_id, start_kst_day)로 시대를 식별.
- * locked=true면 운영자가 저장·확정한 것이라 크론이 다시 쓰지 않는다. source: ai | code | manual.
+ * source: ai | code | manual. 0203부터 이야기꾼 생성문은 proposed_*에만 쌓이고 운영자가 적용해야 summary가 바뀐다.
+ * locked=true면 제안도 받지 않는다.
  */
 export const historyEraSummaries = pgTable(
   'history_era_summaries',
@@ -351,6 +352,11 @@ export const historyEraSummaries = pgTable(
     closing: text('closing').notNull().default(''),
     source: text('source').notNull().default('ai'),
     locked: boolean('locked').notNull().default(false),
+    /** 0203 — 적용을 기다리는 이야기꾼 제안. 버린 제안은 글만 null이고 해시는 남는다(같은 사실표로 다시 제안하지 않게). */
+    proposedSummary: text('proposed_summary'),
+    proposedClosing: text('proposed_closing'),
+    proposedFactsHash: text('proposed_facts_hash'),
+    proposedAt: timestamp('proposed_at', { withTimezone: true }),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
