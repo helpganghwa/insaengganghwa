@@ -11,12 +11,11 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
 import { stripFloorLine } from './strip-floor-line';
+import { labelFromMap, scriptKeyFor } from './pixellab-script-key';
 
 // 애니는 **객체를 만든 계정**에서만 요청할 수 있다. V4 17종은 key1/key2에 나뉘어 있어
 // obj-map-v4.json의 키 라벨로 아이템마다 토큰을 고른다(레거시 seed-* 는 key2 고정).
-const TOK1 = process.env.PIXELLAB_API_KEY;
-const TOK2 = process.env.PIXELLAB_API_KEY_2;
-if (!TOK2) { console.error('PIXELLAB_API_KEY_2 필요'); process.exit(1); }
+// key3 객체(추석 아이템, 2026-09-19)도 같은 규칙 — 라벨의 키가 .env.local에 없으면 그 아이템에서 멈춘다.
 const PIX = 'https://api.pixellab.ai/v2';
 const ROOT = process.cwd();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -42,14 +41,12 @@ for (const [k, v] of Object.entries(cand)) {
   map[k] = v.objectId;
   v4[k] = v; // tokenFor가 키 라벨을 여기서 찾는다 — 후보는 전부 key1로 만들었다.
 }
-/** 이 아이템의 객체를 만든 계정 토큰. */
+/** 이 아이템의 객체를 만든 계정 토큰(레거시·라벨 없음 = key2). */
 function tokenFor(pid: string): string {
-  const label = v4[pid]?.key;
-  if (label === 'key1') {
-    if (!TOK1) throw new Error('PIXELLAB_API_KEY(key1) 필요 — ' + pid + ' 은 key1 객체다');
-    return TOK1;
-  }
-  return TOK2!;
+  const label = labelFromMap(v4[pid]?.key);
+  const { key, envName } = scriptKeyFor(label);
+  if (!key) throw new Error(`${envName}(${label}) 필요 — ${pid} 은 ${label} 객체다`);
+  return key;
 }
 const A = JSON.parse(readFileSync(join(ROOT, 'scripts/anim3-prompts.json'), 'utf8')) as {
   items: Record<string, string>; fixFloorDefault?: number; fixFloor?: Record<string, number>;

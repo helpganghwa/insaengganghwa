@@ -536,7 +536,7 @@ export const PROFILE_MAX = 100;
 
 /**
  * 아바타 동시 생성 상한 — **Pixellab 키 1개당**. 키풀(key1/key2) 각각 이 값까지 동시 생성.
- * 서버 전체 상한 = 이 값 × 활성 키 수(profileGenConcurrency, key2 있으면 4×2=8). 보수적 4.
+ * 서버 전체 상한 = 이 값 × 활성 키 수(profileGenConcurrency — 키 2개면 4×2=8, 3개면 4×3=12). 보수적 4.
  * 'starting'+'downloading'을 키별로 카운트(ai_reviewing은 Claude·수초라 미포함).
  */
 export const PROFILE_GEN_PER_KEY = 4;

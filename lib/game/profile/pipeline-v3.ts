@@ -15,7 +15,7 @@ import { pickRandomAppearance, type Appearance } from './appearance-v3';
 import { weaponKindOf } from '@/lib/game/equipment/weapon-kind';
 import { markFailedAndRefund } from './pipeline';
 import { generationAgeMin } from './gen-age';
-import { pixellabKeyByIdx, pixellabKeyCount, profileGenConcurrency } from './pixellab-keys';
+import { configuredPixellabKeyIdxs, nextPixellabKeyIdx, pixellabKeyByIdx, profileGenConcurrency } from './pixellab-keys';
 import type { ProfileGender } from './refs';
 
 const WORN_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.wornDesc ?? c.art]));
@@ -157,14 +157,15 @@ async function claimSlot(): Promise<ClaimedJob | null> {
       where status in ('starting', 'downloading')
       group by 1
     `)) as unknown as Array<{ k: number; n: number }>;
-    const byKey: Record<number, number> = { 1: 0, 2: 0 };
+    const byKey: Record<number, number> = {};
     for (const r of rows) byKey[Number(r.k)] = Number(r.n);
 
     // 여유 있는 키 중 가장 덜 바쁜 키 배정. 없으면 전 키 가득 → 대기.
     let target = 0;
     let best = Infinity;
     let tie = false;
-    for (let k = 1; k <= pixellabKeyCount(); k++) {
+    // 이 배포에 설정된 키만 돈다(key2·key3는 env가 있을 때만 — pixellab-keys.ts). 인덱스가 1,3처럼 비어도 된다.
+    for (const k of configuredPixellabKeyIdxs()) {
       const n = byKey[k] ?? 0;
       if (n >= PROFILE_GEN_PER_KEY) continue;
       if (n < best) {
@@ -176,8 +177,9 @@ async function claimSlot(): Promise<ClaimedJob | null> {
       }
     }
     if (target === 0) return null;
-    // 동률이면 마지막 배정 키의 반대 키로 교대 — 한산할 때 key1 편중을 없애 두 키의
+    // 동률이면 마지막 배정 키의 **다음 키**로 교대 — 한산할 때 key1 편중을 없애 키들의
     // 사용량(과금·쿼터)을 고르게 유지한다. 판정은 options.pixellabClaimedAt(배정 시각) 우선.
+    // 다음 키가 가득 찼으면(동률 집합 밖) 그 다음으로 넘어간다 — 동률 최소값을 가진 키 중에서 고른다.
     if (tie) {
       const lastRows = (await tx.execute(sql`
         select coalesce((options->>'pixellabKeyIdx')::int, 1) as k
@@ -186,8 +188,14 @@ async function claimSlot(): Promise<ClaimedJob | null> {
         order by coalesce((options->>'pixellabClaimedAt')::bigint, 0) desc, created_at desc
         limit 1
       `)) as unknown as Array<{ k: number }>;
-      const lastKey = Number(lastRows[0]?.k ?? 2);
-      target = lastKey === 1 ? 2 : 1;
+      const lastKey = Number(lastRows[0]?.k ?? 0);
+      const idxs = configuredPixellabKeyIdxs();
+      let cand = nextPixellabKeyIdx(lastKey);
+      for (let s = 0; s < idxs.length; s++) {
+        if ((byKey[cand] ?? 0) === best) break;
+        cand = nextPixellabKeyIdx(cand);
+      }
+      target = cand;
     }
 
     const [job] = await tx

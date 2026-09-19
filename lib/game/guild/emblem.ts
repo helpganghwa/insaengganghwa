@@ -9,7 +9,7 @@ import { db } from '@/lib/db/client';
 import { walletTrySpend, walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
-import { pixellabKeyByIdx, pickPixellabKeyIdx } from '@/lib/game/profile/pixellab-keys';
+import { nextPixellabKeyIdx, pixellabKeyByIdx, pickPixellabKeyIdx } from '@/lib/game/profile/pixellab-keys';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
@@ -253,7 +253,7 @@ async function fitEmblemToFrame(png: Buffer, size = 128, pad = 6): Promise<Buffe
  *  shieldLike=false(마름모·깃발)면 negatives에 방패류를 추가해 모델 기본값(방패)을 밀어낸다. */
 // startKeyIdx: 라운드로빈 시작 키(1|2). pixflux는 동기 단발 호출이라 아바타와 달리 키 일관성
 // 제약이 없어(폴링 없음) 재시도마다 키를 교대한다 — 부하 분산 + 한쪽 키 429 시 다른 키로 failover.
-// key2 미설정이면 pixellabKeyByIdx가 항상 key1 반환(단일 키 환경 무영향).
+// key2·key3 미설정이면 교대 대상이 key1뿐이다(단일 키 환경 무영향).
 async function generateEmblemPng(
   prompt: string,
   shieldLike = true,
@@ -275,7 +275,9 @@ async function generateEmblemPng(
       lastErr = `time budget exceeded (${lastErr})`;
       break;
     }
-    const keyIdx = ((startKeyIdx - 1 + attempt) % 2) + 1; // 시작키에서 시도마다 1↔2 교대
+    // 시작 키에서 시도마다 설정된 키들 사이를 교대(key1↔key2↔key3). 키가 하나면 계속 key1.
+    let keyIdx = startKeyIdx;
+    for (let s = 0; s < attempt; s++) keyIdx = nextPixellabKeyIdx(keyIdx);
     const key = pixellabKeyByIdx(keyIdx);
     // 행 방지 — Pixellab 무응답/쿼터초과 시 25초 후 abort(과거 300초 함수 타임아웃 유발). 빠른 실패→폴백.
     const ctrl = new AbortController();

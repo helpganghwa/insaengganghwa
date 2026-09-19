@@ -1,5 +1,5 @@
 // 신규 120종 아이템 스프라이트 생성 — Pixellab pixflux(128×128 투명) → public/sprites/<slot>/<key>.png
-// + public/item-review.html 갱신. **두 번째 키(PIXELLAB_API_KEY_2) 전용.** 재개형(기존 파일 skip).
+// + public/item-review.html 갱신. 기본은 두 번째 키(PIXELLAB_API_KEY_2), GEN_KEY=1|3으로 다른 키. 재개형(기존 파일 skip).
 //
 // 사용:
 //   bun run scripts/gen-items.ts            # 미생성분 중 5개 생성(기본)
@@ -13,12 +13,14 @@ import { join } from 'node:path';
 import { config } from 'dotenv';
 
 import { ITEMS_V2, buildArt, type ItemV2 } from './items-v2';
+import { scriptKeyFor, scriptKeyLabel } from './pixellab-script-key';
 
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
-// GEN_KEY=1 → 첫 번째 키(PIXELLAB_API_KEY), 기본은 두 번째 키.
-const KEY = process.env.GEN_KEY === '1' ? process.env.PIXELLAB_API_KEY : process.env.PIXELLAB_API_KEY_2;
+// GEN_KEY=1|2|3 → 그 키(PIXELLAB_API_KEY·_2·_3), 기본은 두 번째 키. 추석 아이템은 GEN_KEY=3(2026-09-19).
+const KEY_LABEL = scriptKeyLabel('key2');
+const { key: KEY, envName: KEY_ENV } = scriptKeyFor(KEY_LABEL);
 const ROOT = process.cwd();
 const spriteFile = (it: ItemV2) => join(ROOT, 'public', 'sprites', it.slot, `${it.key}.png`);
 const spriteRel = (it: ItemV2) => `sprites/${it.slot}/${it.key}.png`;
@@ -57,7 +59,7 @@ function rememberObject(itemKey: string, objectId: string): void {
   } catch {
     m = {};
   }
-  m[itemKey] = { key: process.env.GEN_KEY === '1' ? 'key1' : 'key2', objectId };
+  m[itemKey] = { key: KEY_LABEL, objectId }; // 후속 애니(gen-anim3)는 이 라벨의 키로만 요청할 수 있다
   writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
 }
 
@@ -298,7 +300,7 @@ async function main(): Promise<void> {
     return;
   }
   if (!KEY) {
-    console.error('Pixellab 키 필요 — .env.local의 PIXELLAB_API_KEY(GEN_KEY=1) 또는 PIXELLAB_API_KEY_2.');
+    console.error(`Pixellab 키 필요 — .env.local의 ${KEY_ENV}(GEN_KEY=${KEY_LABEL.slice(3)}).`);
     process.exit(1);
   }
   // key-모드: 숫자/html이 아닌 인자는 생성할 key 목록으로 취급(특정 아이템만 생성/테스트).
@@ -313,7 +315,7 @@ async function main(): Promise<void> {
     batch = pending.slice(0, n);
   }
   const CONC = Math.max(1, Number(process.env.GEN_CONC ?? 3)); // 동시 생성 수(429 백오프로 보호)
-  console.log(`[gen-items] ${process.env.GEN_KEY === '1' ? 'key1' : 'key2'} 객체 생성 ${batch.length}개(미생성 ${pending.length}/${ITEMS_V2.length}). 동시 ${CONC}개+429백오프.`);
+  console.log(`[gen-items] ${KEY_LABEL} 객체 생성 ${batch.length}개(미생성 ${pending.length}/${ITEMS_V2.length}). 동시 ${CONC}개+429백오프.`);
   let ok = 0, fail = 0, idx = 0;
   const worker = async () => {
     while (idx < batch.length) {
