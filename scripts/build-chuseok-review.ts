@@ -59,7 +59,7 @@ const sections = SLOTS.map(({ slot, ko }) => {
   </section>`;
 });
 
-const title = BATCH === '2' ? '추석 아이템 후보 2차' : '추석 아이템 후보';
+const title = BATCH ? `추석 아이템 후보 ${BATCH}차` : '추석 아이템 후보';
 const html = `<title>${title}</title>
 <style>
   :root { --bg:#f3f1ec; --panel:#fffdf8; --ink:#1f1b16; --muted:#6b6358; --line:#e3ddd1; --tile:#18181b; --accent:#b4532a; color-scheme: light; }

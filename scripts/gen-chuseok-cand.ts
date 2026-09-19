@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁). */
-  batch: 1 | 2;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤). */
+  batch: 1 | 2 | 3;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -226,6 +226,98 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a Korean pungmul sangmo hat — a small black felt hat with a colorful paper flower on top ' +
       'and a very long white paper ribbon streaming from its crown in a graceful curve, lively and festive',
+  },
+  // ══ 3차: 추석 풍경·햇곡식(09-19 밤, 사용자 '좀 더 추석 한가위스럽게') ══════════════════════
+  // 보름달·햇밤·전 부치기·가을 들판·선물 보자기처럼 추석에만 있는 소재. 실루엣으로 알아보는 형태 우선.
+  {
+    key: 'chuseok_chestnut_mace',
+    nameKo: '밤송이 철퇴',
+    slot: 'weapon',
+    batch: 3,
+    concept: '햇밤',
+    art:
+      'a chestnut burr mace — a large round spiky green chestnut burr head split open at the top to show glossy brown chestnuts, ' +
+      'a sturdy dark wooden haft with a bronze collar and a red cord wrap, autumnal and sturdy, clearly a mace weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_jeon_spatula',
+    nameKo: '전 뒤집개',
+    slot: 'weapon',
+    batch: 3,
+    concept: '명절 전 부치기',
+    art:
+      'a giant polished brass cooking spatula with a wide flat square blade carrying a golden crispy round jeon pancake, ' +
+      'a long lacquered wooden handle wrapped in red cord, cheerful and festive, clearly a giant spatula weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonlantern_staff',
+    nameKo: '보름달 등불 지팡이',
+    slot: 'weapon',
+    batch: 3,
+    concept: '달맞이',
+    art:
+      'a slender dark lacquered wooden staff curving into a hook at the top, a round glowing paper lantern shaped like a full moon hanging from the hook, ' +
+      'a small moon rabbit silhouette on the lantern, a red silk tassel below, serene and luminous, clearly a staff magic rod weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonrise_hanbok',
+    nameKo: '달맞이 한복',
+    slot: 'armor',
+    batch: 3,
+    concept: '강강술래',
+    art:
+      'a Korean hanbok — a white jeogori jacket with a deep indigo collar and a long indigo ribbon tie, ' +
+      'a full-length flowing deep indigo chima skirt patterned with small silver full moons, graceful and luminous',
+  },
+  {
+    key: 'chuseok_holiday_apron',
+    nameKo: '명절 앞치마',
+    slot: 'armor',
+    batch: 3,
+    concept: '명절 전 부치기',
+    art:
+      'a hanbok with a cooking apron — a soft pastel yellow jeogori jacket and a long pale green chima skirt, ' +
+      'a crisp white cotton apron tied at the waist in a large bow with a small embroidered persimmon on its pocket, neat and cheerful',
+  },
+  {
+    key: 'chuseok_scarecrow_outfit',
+    nameKo: '허수아비 옷',
+    slot: 'armor',
+    batch: 3,
+    concept: '가을 들판',
+    art:
+      'a charming scarecrow outfit — a faded blue work jacket with colorful cloth patches and golden straw poking out from the cuffs and collar, ' +
+      'loose patched trousers tied with rope, a bundle of ripe golden rice stalks tucked at the belt, rustic and playful',
+  },
+  {
+    key: 'chuseok_fullmoon_shield',
+    nameKo: '보름달 방패',
+    slot: 'accessory',
+    batch: 3,
+    concept: '한가위 보름달',
+    art:
+      'a round full-moon shield — a large pale golden disc glowing softly like the harvest moon, the faint silhouette of a rabbit pounding rice cakes on its face, ' +
+      'a thin silver rim with small cloud engravings, serene and radiant',
+  },
+  {
+    key: 'chuseok_moonrabbit_headband',
+    nameKo: '달토끼 머리띠',
+    slot: 'accessory',
+    batch: 3,
+    concept: '달토끼',
+    art:
+      'a moon rabbit ear headband — a slim gold band with two tall soft white rabbit ears lined in pale pink, ' +
+      'a small golden full-moon ornament and a red silk ribbon at one side, cute and elegant',
+  },
+  {
+    key: 'chuseok_gift_bojagi',
+    nameKo: '명절 선물 보자기',
+    slot: 'accessory',
+    batch: 3,
+    concept: '추석 선물',
+    art:
+      'a holiday gift bundle — a square box wrapped in rainbow saekdong striped silk bojagi cloth, tied on top in a neat knot with two pointed ends, ' +
+      'a small gold moon charm hanging on a red tassel, festive and precious',
   },
 ];
 

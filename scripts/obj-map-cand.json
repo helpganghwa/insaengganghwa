@@ -830,5 +830,41 @@
   "chuseok_sangmo": {
     "key": "key3",
     "objectId": "48389a64-c865-4555-9b05-47723cd70db3"
+  },
+  "chuseok_chestnut_mace": {
+    "key": "key3",
+    "objectId": "7e98cfb4-d7aa-4d80-9cc4-5ebbcf54f8ad"
+  },
+  "chuseok_jeon_spatula": {
+    "key": "key3",
+    "objectId": "194fd581-f351-4466-980f-1c176c4a9d2d"
+  },
+  "chuseok_moonlantern_staff": {
+    "key": "key3",
+    "objectId": "6c579a52-b299-46bf-b598-11779f9ce757"
+  },
+  "chuseok_moonrise_hanbok": {
+    "key": "key3",
+    "objectId": "c271208e-bb98-4cf1-b1df-58a461eee711"
+  },
+  "chuseok_holiday_apron": {
+    "key": "key3",
+    "objectId": "38091054-34b3-4bc9-9e18-00ee16c391fb"
+  },
+  "chuseok_scarecrow_outfit": {
+    "key": "key3",
+    "objectId": "a2d364c1-a3dc-4e28-ad54-d856e90e15d5"
+  },
+  "chuseok_fullmoon_shield": {
+    "key": "key3",
+    "objectId": "beb79195-1599-48d6-8c3b-1b8a96a23b6c"
+  },
+  "chuseok_moonrabbit_headband": {
+    "key": "key3",
+    "objectId": "370a1299-6f3b-48ea-b143-1e83f80b50da"
+  },
+  "chuseok_gift_bojagi": {
+    "key": "key3",
+    "objectId": "3d34714e-1ddd-430c-a1b6-8948591cc6cc"
   }
 }
