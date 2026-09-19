@@ -104,6 +104,9 @@ const BY_KEY: Record<string, WeaponKind> = {
   chuseok_songpyeon_fork: { noun: 'trident fork (a long three-pronged polearm)' },
   chuseok_moonrabbit_mallet: { noun: 'wooden mallet (a large rice-cake pounding hammer)' },
   chuseok_dokkaebi_club: { noun: 'studded wooden club (a heavy one-handed cudgel)' },
+  chuseok_golden_axe: { noun: 'golden battle axe (a long two-bladed axe)' },
+  chuseok_hwando: { noun: 'hwando (a slightly curved Korean saber)' },
+  chuseok_foxfire_staff: { noun: 'staff (a long magic rod)' },
 };
 
 /** 접미사 폴백 — 사전 누락분이 종류 없이 나가지 않게 한다. */

@@ -21,7 +21,9 @@ config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
 const KEY_IDX = 3;
-const OUT = join(process.cwd(), 'scripts', 'out', 'chuseok-avatars');
+/** --set=2 → 2차(사극·민담 코스튬) 조합. 출력 폴더도 따로. */
+const SET = process.argv.includes('--set=2') ? 2 : 1;
+const OUT = join(process.cwd(), 'scripts', 'out', SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** 생성된 그림을 보고 쓴 착용 묘사(영문) — compose가 이미지와 함께 읽는다. */
@@ -44,10 +46,30 @@ export const WORN: Record<string, string> = {
     'a traditional Korean norigae charm: a round pale jade full-moon disc in a gold frame hanging from a knotted crimson silk cord, with a long flowing tassel of red and gold silk threads',
   chuseok_bok_pouch:
     'a round crimson silk bokjumeoni lucky pouch embroidered in gold with a moon rabbit pounding rice cakes before a full moon and swirling clouds, closed with a braided five-color drawstring cord ending in rainbow tassels',
+  // ── 2차(사극·민담 코스튬) ──
+  chuseok_golden_axe:
+    'a gleaming golden double-bladed axe with two broad polished gold crescent blades and a small cloud emblem at the center, a long pale wooden haft bound with gold rings',
+  chuseok_hwando:
+    'a Korean hwando saber with a slightly curved single-edged polished steel blade, a round brass guard, a black cord-wrapped hilt and a long red silk tassel hanging from the pommel',
+  chuseok_foxfire_staff:
+    'a slender pale birch staff whose curled top cradles a glowing orb of blue fox fire, with a bundle of fluffy white fox tails tied below it by a red cord',
+  chuseok_gonryongpo:
+    "a Joseon king's crimson silk gonryongpo robe with round golden dragon medallions on the chest and both shoulders, a jade-plaque belt with gold tassels at the waist, wide sleeves with gold-embroidered dark cuffs and a gold-embroidered hem",
+  chuseok_dujeonggap:
+    'a long crimson Joseon dujeonggap brigandine coat studded all over with rows of small brass rivets, blue trim along every edge, padded shoulder guards, a leather belt with a small pouch, split coat skirts over dark trousers and brown leather boots',
+  chuseok_reaper_dopo:
+    "a Korean grim reaper's long black silk dopo robe with very wide flowing sleeves, a pale cream inner collar and a thin dark red cord sash tied at the chest",
+  chuseok_heungnip:
+    'a Joseon black gat hat with a tall translucent black horsehair crown, a very wide flat round brim and a long string of amber beads hanging as the chin strap',
+  chuseok_ikseongwan:
+    "a Joseon king's ikseongwan crown hat of black silk with two upright rounded wing panels rising behind it, trimmed with a thin gold band and a small jade ornament at the front",
+  chuseok_sangmo:
+    'a small black pungmul sangmo hat with a large pink, teal and yellow paper flower on the front and a long white paper ribbon curling out from its top',
 };
 
-/** 조합 — 방어구는 성별마다, 무기·장신구는 고루 돌린다(각 방어구 남녀 1회, 무기 2~3회, 장신구 남녀 1회 이상). */
-export const COMBOS: { gender: 'male' | 'female'; weapon: string; armor: string; accessory: string }[] = [
+type Combo = { gender: 'male' | 'female'; weapon: string; armor: string; accessory: string };
+/** 1차 조합 — 방어구는 성별마다, 무기·장신구는 고루 돌린다(각 방어구 남녀 1회, 무기 2~3회, 장신구 남녀 1회 이상). */
+export const COMBOS1: Combo[] = [
   { gender: 'female', weapon: 'chuseok_songpyeon_fork', armor: 'chuseok_hanbok', accessory: 'chuseok_fullmoon_norigae' },
   { gender: 'male', weapon: 'chuseok_dokkaebi_club', armor: 'chuseok_hanbok', accessory: 'chuseok_dokkaebi_mask' },
   { gender: 'female', weapon: 'chuseok_moonrabbit_mallet', armor: 'chuseok_moonrabbit_suit', accessory: 'chuseok_bok_pouch' },
@@ -57,11 +79,24 @@ export const COMBOS: { gender: 'male' | 'female'; weapon: string; armor: string;
   { gender: 'female', weapon: 'chuseok_moonrabbit_mallet', armor: 'chuseok_hanbok', accessory: 'chuseok_dokkaebi_mask' },
   { gender: 'male', weapon: 'chuseok_songpyeon_fork', armor: 'chuseok_moon_spacesuit', accessory: 'chuseok_bok_pouch' },
 ];
+/** 2차 조합 — 코스튬 완성형(왕·무관·저승사자·선비) + 새 방어구 남녀 1회씩, 새 장신구 남녀, 새 무기 2~3회. */
+export const COMBOS2: Combo[] = [
+  { gender: 'male', weapon: 'chuseok_hwando', armor: 'chuseok_gonryongpo', accessory: 'chuseok_ikseongwan' },
+  { gender: 'female', weapon: 'chuseok_foxfire_staff', armor: 'chuseok_gonryongpo', accessory: 'chuseok_ikseongwan' },
+  { gender: 'male', weapon: 'chuseok_hwando', armor: 'chuseok_dujeonggap', accessory: 'chuseok_heungnip' },
+  { gender: 'female', weapon: 'chuseok_golden_axe', armor: 'chuseok_dujeonggap', accessory: 'chuseok_sangmo' },
+  { gender: 'male', weapon: 'chuseok_foxfire_staff', armor: 'chuseok_reaper_dopo', accessory: 'chuseok_heungnip' },
+  { gender: 'female', weapon: 'chuseok_hwando', armor: 'chuseok_reaper_dopo', accessory: 'chuseok_heungnip' },
+  { gender: 'female', weapon: 'chuseok_golden_axe', armor: 'chuseok_hanbok', accessory: 'chuseok_heungnip' },
+  { gender: 'male', weapon: 'chuseok_golden_axe', armor: 'chuseok_hanbok', accessory: 'chuseok_sangmo' },
+];
+export const COMBOS: Combo[] = SET === 2 ? COMBOS2 : COMBOS1;
 
 /** 후보를 이 프로세스의 카탈로그·스프라이트 표에만 더한다(파일·DB 변경 없음). */
 function injectCandidates(): void {
   for (const c of CANDIDATES) {
     if (CATALOG_ITEMS.some((x) => x.key === c.key)) continue;
+    if (!WORN[c.key]) throw new Error(`착용 묘사(WORN) 없음: ${c.key} — 생성 그림을 보고 먼저 쓸 것`);
     (CATALOG_ITEMS as CatalogItem[]).push({
       key: c.key,
       slot: c.slot,

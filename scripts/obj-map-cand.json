@@ -794,5 +794,41 @@
   "chuseok_bok_pouch": {
     "key": "key3",
     "objectId": "8f52f558-9eae-4b5a-847d-e6b69f5dc1d3"
+  },
+  "chuseok_golden_axe": {
+    "key": "key3",
+    "objectId": "9e530238-4f23-4833-84c4-727afdbfeacf"
+  },
+  "chuseok_hwando": {
+    "key": "key3",
+    "objectId": "6f423a6e-6b90-4969-a365-2b52e3643d37"
+  },
+  "chuseok_foxfire_staff": {
+    "key": "key3",
+    "objectId": "aa0a6dcc-acd3-4838-b9de-2d0b58a65cf7"
+  },
+  "chuseok_gonryongpo": {
+    "key": "key3",
+    "objectId": "aceb3281-5560-4dc5-b3ee-40fab2d488c3"
+  },
+  "chuseok_dujeonggap": {
+    "key": "key3",
+    "objectId": "3f222974-4311-417d-bbd1-68ee58ff890b"
+  },
+  "chuseok_reaper_dopo": {
+    "key": "key3",
+    "objectId": "1c6a4ab0-999d-448f-b7ad-03a3a6c93232"
+  },
+  "chuseok_heungnip": {
+    "key": "key3",
+    "objectId": "85e31e46-bd0c-45b7-9268-82705407a7de"
+  },
+  "chuseok_ikseongwan": {
+    "key": "key3",
+    "objectId": "1d53d6eb-a301-42a2-9247-1634b43096de"
+  },
+  "chuseok_sangmo": {
+    "key": "key3",
+    "objectId": "48389a64-c865-4555-9b05-47723cd70db3"
   }
 }

@@ -6,8 +6,9 @@ import { join } from 'node:path';
 import { CANDIDATES } from './gen-chuseok-cand';
 
 const ROOT = process.cwd();
-const OUT_DIR = join(ROOT, 'scripts', 'out', 'chuseok-avatars');
-const out = process.argv[2];
+const SET = process.argv.includes('--set=2') ? 2 : 1;
+const OUT_DIR = join(ROOT, 'scripts', 'out', SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
+const out = process.argv.slice(2).find((a) => !a.startsWith('--'));
 if (!out) {
   console.error('출력 경로 필요');
   process.exit(1);
@@ -38,7 +39,8 @@ for (let n = 1; n <= 8; n++) {
   </article>`);
 }
 
-const html = `<title>추석 시험 아바타</title>
+const title = SET === 2 ? '추석 시험 아바타 2차' : '추석 시험 아바타';
+const html = `<title>${title}</title>
 <style>
   :root { --bg:#f3f1ec; --panel:#fffdf8; --ink:#1f1b16; --muted:#6b6358; --line:#e3ddd1; --stage:#e9e4da; color-scheme: light; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121110; --panel:#1b1917; --ink:#f2eee7; --muted:#a39a8d; --line:#2e2a26; --stage:#26231f; color-scheme: dark; } }
@@ -60,8 +62,8 @@ const html = `<title>추석 시험 아바타</title>
   li img { width:32px; height:32px; image-rendering:pixelated; background:#18181b; border-radius:6px; }
 </style>
 <div class="wrap">
-  <h1>추석 시험 아바타</h1>
-  <p class="lead">실서버와 같은 생성 과정(장비 그림을 보고 AI가 설명을 조립한 뒤 Pixellab이 그림)으로 만든 시험 아바타 ${made}개입니다. 조합마다 입힌 장비 세 개를 아래에 두었습니다. 방어구 세 종은 남녀로 한 번씩, 무기와 장신구는 고루 섞었습니다.</p>
+  <h1>${title}</h1>
+  <p class="lead">실서버와 같은 생성 과정(장비 그림을 보고 AI가 설명을 조립한 뒤 Pixellab이 그림)으로 만든 시험 아바타 ${made}개입니다. 조합마다 입힌 장비 세 개를 아래에 두었습니다. ${SET === 2 ? '왕 · 무관 · 저승사자 · 선비 코스튬을 완성형으로 넣고, 새 방어구는 남녀로 한 번씩 입혔습니다.' : '방어구 세 종은 남녀로 한 번씩, 무기와 장신구는 고루 섞었습니다.'}</p>
   <div class="grid">${cards.join('')}</div>
 </div>
 `;

@@ -8,7 +8,9 @@ import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
 import { CANDIDATES } from './gen-chuseok-cand';
 
 const ROOT = process.cwd();
-const out = process.argv[2];
+const out = process.argv.slice(2).find((a) => !a.startsWith('--'));
+/** --batch=2 → 2차 후보만. 없으면 전부. */
+const BATCH = process.argv.find((a) => a.startsWith('--batch='))?.slice(8);
 if (!out) {
   console.error('출력 경로 필요');
   process.exit(1);
@@ -38,7 +40,7 @@ function refsOf(slot: string) {
 
 let made = 0;
 const sections = SLOTS.map(({ slot, ko }) => {
-  const cands = CANDIDATES.filter((c) => c.slot === slot).map((c) => {
+  const cands = CANDIDATES.filter((c) => c.slot === slot && (!BATCH || String(c.batch) === BATCH)).map((c) => {
     const src = uri(join(ROOT, 'public', 'sprites', 'chuseok-cand', `${c.key}.png`));
     if (src) made += 1;
     return `<figure class="card">
@@ -57,7 +59,8 @@ const sections = SLOTS.map(({ slot, ko }) => {
   </section>`;
 });
 
-const html = `<title>추석 아이템 후보</title>
+const title = BATCH === '2' ? '추석 아이템 후보 2차' : '추석 아이템 후보';
+const html = `<title>${title}</title>
 <style>
   :root { --bg:#f3f1ec; --panel:#fffdf8; --ink:#1f1b16; --muted:#6b6358; --line:#e3ddd1; --tile:#18181b; --accent:#b4532a; color-scheme: light; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121110; --panel:#1b1917; --ink:#f2eee7; --muted:#a39a8d; --line:#2e2a26; --tile:#0b0b0c; --accent:#e0874f; color-scheme: dark; } }
@@ -83,7 +86,7 @@ const html = `<title>추석 아이템 후보</title>
   .ref figcaption { padding:4px 2px; font-size:11px; color:var(--muted); }
 </style>
 <div class="wrap">
-  <h1>추석 아이템 후보</h1>
+  <h1>${title}</h1>
   <p class="lead">세 번째 Pixellab 키로 만든 후보 ${made}종입니다. 기존 120종과 같은 방식(객체 · 측면 · 256px)으로 만들었고, 부위마다 기존 아이템 4개를 아래에 두어 화풍과 크기를 비교할 수 있게 했습니다. 이름은 검토용 가제입니다.</p>
   ${sections.join('')}
 </div>

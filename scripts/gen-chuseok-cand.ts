@@ -27,7 +27,15 @@ const OUT_DIR = join(ROOT, 'public', 'sprites', 'chuseok-cand');
 const MAP_PATH = join(ROOT, 'scripts', 'obj-map-cand.json');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export type ChuseokCand = { key: string; nameKo: string; slot: 'weapon' | 'armor' | 'accessory'; concept: string; art: string };
+export type ChuseokCand = {
+  key: string;
+  nameKo: string;
+  slot: 'weapon' | 'armor' | 'accessory';
+  concept: string;
+  art: string;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁). */
+  batch: 1 | 2;
+};
 
 export const CANDIDATES: ChuseokCand[] = [
   // ── 무기 ─────────────────────────────────────────────────────────────────
@@ -35,6 +43,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_songpyeon_fork',
     nameKo: '송편 삼지창',
     slot: 'weapon',
+    batch: 1,
     concept: '송편 찌른 포크',
     art:
       'a giant silver three-pronged fork skewering three plump half-moon songpyeon rice cakes in pastel pink, green and white, ' +
@@ -45,6 +54,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_moonrabbit_mallet',
     nameKo: '달토끼 떡메',
     slot: 'weapon',
+    batch: 1,
     concept: '달토끼가 떡 찧는 떡메',
     art:
       'a large wooden rice-cake pounding mallet with a round barrel head of pale polished wood, ' +
@@ -55,6 +65,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_dokkaebi_club',
     nameKo: '도깨비 방망이',
     slot: 'weapon',
+    batch: 1,
     concept: '도깨비 방망이',
     art:
       'a dokkaebi goblin club — a thick knobbly wooden cudgel studded with rounded iron nubs, ' +
@@ -66,6 +77,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_hanbok',
     nameKo: '한가위 한복',
     slot: 'armor',
+    batch: 1,
     concept: '한복',
     art:
       'a festive Korean hanbok — a short jeogori jacket with rainbow saekdong striped sleeves, a deep indigo sash tied in a long bow, ' +
@@ -75,6 +87,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_moonrabbit_suit',
     nameKo: '달토끼 옷',
     slot: 'armor',
+    batch: 1,
     concept: '달토끼 인형탈',
     art:
       'a plush moon rabbit costume jumpsuit — soft fluffy white fur, a round cotton tail, pink paw-pad mittens, ' +
@@ -84,6 +97,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_moon_spacesuit',
     nameKo: '달나라 우주복',
     slot: 'armor',
+    batch: 1,
     concept: '우주복(달나라)',
     art:
       'a sleek white lunar spacesuit with soft padded segments and silver joints, a golden full-moon emblem on the chest, ' +
@@ -94,6 +108,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_dokkaebi_mask',
     nameKo: '도깨비 탈',
     slot: 'accessory',
+    batch: 1,
     concept: '도깨비',
     art:
       'a painted dokkaebi goblin mask — a grinning red face with two small golden horns, bold black brows and bright round eyes, ' +
@@ -103,6 +118,7 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_fullmoon_norigae',
     nameKo: '보름달 노리개',
     slot: 'accessory',
+    batch: 1,
     concept: '보름달 노리개',
     art:
       'a traditional Korean norigae ornament — a round pale jade full-moon disc framed in gold, ' +
@@ -112,10 +128,104 @@ export const CANDIDATES: ChuseokCand[] = [
     key: 'chuseok_bok_pouch',
     nameKo: '한가위 복주머니',
     slot: 'accessory',
+    batch: 1,
     concept: '복주머니',
     art:
       'a round silk lucky pouch bokjumeoni in deep red with a gold-embroidered moon rabbit and full moon, ' +
       'a drawstring of braided five-color cord with small tassels, festive and precious',
+  },
+  // ══ 2차: 한국 사극·민담 코스튬(09-19 저녁, 사용자 '코스튬플레이 하기 좋은 것') ══════════════
+  // 시험 아바타 교훈 — 실루엣만으로 알아보는 물건 위주(작은 장식은 아바타에서 사라진다), 머리 장신구·전신 의상은 잘 산다.
+  {
+    key: 'chuseok_golden_axe',
+    nameKo: '금도끼',
+    slot: 'weapon',
+    batch: 2,
+    concept: '산신령 · 금도끼 은도끼',
+    art:
+      'a gleaming golden axe — a broad polished gold crescent blade with a soft radiant shine, a small cloud motif engraved near the edge, ' +
+      'a straight pale wooden haft bound in gold rings, legendary and radiant, clearly a one-handed axe weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hwando',
+    nameKo: '조선 환도',
+    slot: 'weapon',
+    batch: 2,
+    concept: '조선 무관 · 사극 무사',
+    art:
+      'a Joseon hwando saber — a single slightly curved single-edged steel blade with a bright polished edge, a round brass guard, ' +
+      'a black lacquered hilt wrapped in cord with a long red silk tassel hanging from the pommel, noble and disciplined, ' +
+      'clearly a curved saber sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_foxfire_staff',
+    nameKo: '여우불 지팡이',
+    slot: 'weapon',
+    batch: 2,
+    concept: '구미호',
+    art:
+      'a nine-tailed fox spirit staff — a slender pale birch staff curling at the top around a floating orb of soft blue fox fire, ' +
+      'small white fox-fur tails tied below the orb with a red cord, mystical and elegant, clearly a staff magic rod weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_gonryongpo',
+    nameKo: '곤룡포',
+    slot: 'armor',
+    batch: 2,
+    concept: '조선의 왕',
+    art:
+      "a Joseon king's gonryongpo dragon robe — a long crimson silk robe with round golden dragon medallions on the chest and shoulders, " +
+      'a jade-plaque belt at the waist, wide sleeves with dark cuffs, majestic and regal',
+  },
+  {
+    key: 'chuseok_dujeonggap',
+    nameKo: '두정갑',
+    slot: 'armor',
+    batch: 2,
+    concept: '조선 무관',
+    art:
+      'a Joseon dujeonggap brigandine coat armor — a long crimson padded coat studded with rows of round brass rivets, blue-trimmed edges, ' +
+      'a leather belt, split coat skirts over dark trousers and boots, stately and martial',
+  },
+  {
+    key: 'chuseok_reaper_dopo',
+    nameKo: '저승사자 도포',
+    slot: 'armor',
+    batch: 2,
+    concept: '저승사자',
+    // 어두운 옷이라 슬롯 꼬리표의 'bright and stylish, not gothic'을 뺀 완성 프롬프트(buildArt가 그대로 쓴다).
+    art:
+      "a Korean grim reaper's black dopo robe — a long flowing black silk robe with very wide sleeves, a thin dark red sash tied at the chest, " +
+      'a pale inner collar, solemn and elegant, a beautiful clean fantasy anime RPG gacha-game outfit, ' +
+      'shown as the worn outfit on its own with no head and no neck, a slim full-length figure, a single isolated object on a plain flat empty background, pixel art',
+  },
+  {
+    key: 'chuseok_heungnip',
+    nameKo: '흑립',
+    slot: 'accessory',
+    batch: 2,
+    concept: '선비 · 저승사자 · 사극',
+    art:
+      'a Joseon black gat hat — a tall translucent black horsehair crown with a very wide flat round brim, ' +
+      'a long string of dark amber beads as the chin strap, refined and scholarly',
+  },
+  {
+    key: 'chuseok_ikseongwan',
+    nameKo: '익선관',
+    slot: 'accessory',
+    batch: 2,
+    concept: '조선의 왕',
+    art: "a Joseon king's ikseongwan crown hat — a black silk crown with two upright rounded wing panels at the back, a subtle gold trim, dignified and regal",
+  },
+  {
+    key: 'chuseok_sangmo',
+    nameKo: '상모',
+    slot: 'accessory',
+    batch: 2,
+    concept: '풍물놀이',
+    art:
+      'a Korean pungmul sangmo hat — a small black felt hat with a colorful paper flower on top ' +
+      'and a very long white paper ribbon streaming from its crown in a graceful curve, lively and festive',
   },
 ];
 
