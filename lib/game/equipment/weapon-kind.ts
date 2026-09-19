@@ -100,6 +100,10 @@ const BY_KEY: Record<string, WeaponKind> = {
   puppeteer_thread_claw: { noun: 'puppet control bar (a cross-shaped handle with hanging threads)' },
   oni_slayer_odachi: { noun: 'odachi (a very long two-handed Japanese sword)' },
   druid_thorn_staff: { noun: 'staff (a long magic rod)' },
+  // ── 추석(2026-09-19, 후보 — 채택 안 된 키는 카탈로그에 없어 영향 없음) ──
+  chuseok_songpyeon_fork: { noun: 'trident fork (a long three-pronged polearm)' },
+  chuseok_moonrabbit_mallet: { noun: 'wooden mallet (a large rice-cake pounding hammer)' },
+  chuseok_dokkaebi_club: { noun: 'studded wooden club (a heavy one-handed cudgel)' },
 };
 
 /** 접미사 폴백 — 사전 누락분이 종류 없이 나가지 않게 한다. */
