@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤). */
-  batch: 1 | 2 | 3 | 4 | 5;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20). */
+  batch: 1 | 2 | 3 | 4 | 5 | 6;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -436,6 +436,88 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a rabbit ear headpiece — two tall fluffy white rabbit ears lined in pale pink rising from a slim gold hairband, ' +
       'a pale pink silk ribbon bow with a small gold bell at the base of one ear, cute and elegant',
+  },
+  // ══ 6차: 사용자 피드백 '퀄리티가 별로' — 한복 세트는 화려하게(무기는 다른 종류), 달토끼 세트는 심플하게(09-20) ══
+  // 한복 = 궁중 예복 수준(활옷·당의·금실 자수·구슬 술). 달토끼 = 장식을 걷어 낸 깨끗한 형태.
+  {
+    key: 'chuseok_hanbok_sword',
+    nameKo: '의장검',
+    slot: 'weapon',
+    batch: 6,
+    concept: '한복 세트 무기(검)',
+    art:
+      'a Korean royal ceremonial sword — a long straight double-edged steel blade inlaid with golden constellations, an ornate gold guard shaped like lotus petals, ' +
+      'a crimson lacquered hilt wrapped in gold wire, a long flowing five-color silk tassel with jade beads hanging from the pommel, ' +
+      'opulent and majestic, clearly a straight sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_bow',
+    nameKo: '금박 각궁',
+    slot: 'weapon',
+    batch: 6,
+    concept: '한복 세트 무기(활)',
+    art:
+      'a Korean royal horn bow — a strongly recurved bow lacquered in crimson with gold-leaf phoenix and cloud patterns, gold-capped tips, ' +
+      'a grip wrapped in jade-green silk, a five-color silk tassel with jade beads, opulent and graceful, clearly a recurve bow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_hwarot',
+    nameKo: '활옷',
+    slot: 'armor',
+    batch: 6,
+    concept: '한복 세트 방어구(궁중 예복)',
+    art:
+      'a magnificent Korean royal hwarot ceremonial robe — a long crimson silk robe densely embroidered with golden phoenixes, peonies and waves, ' +
+      'very wide sleeves ending in rainbow saekdong stripes and white cuffs, a wide gold-embroidered sash hanging at the front, ' +
+      'a deep blue inner skirt showing at the hem, opulent and regal, large',
+  },
+  {
+    key: 'chuseok_hanbok_dangui',
+    nameKo: '금박 당의',
+    slot: 'armor',
+    batch: 6,
+    concept: '한복 세트 방어구(궁중 당의)',
+    art:
+      'a lavish Korean court hanbok — a jade-green silk dangui jacket with long curved front panels covered in gold-leaf patterns and a round gold-embroidered phoenix medallion on the chest, ' +
+      'a crimson ribbon tie, a voluminous deep crimson chima skirt with two wide bands of gold-leaf flowers, a jeweled norigae tassel at the waist, opulent and elegant, large',
+  },
+  {
+    key: 'chuseok_bok_pouch_v3',
+    nameKo: '금실 복주머니',
+    slot: 'accessory',
+    batch: 6,
+    concept: '한복 세트 장신구',
+    art:
+      'a lavish silk lucky pouch bokjumeoni — deep crimson silk densely embroidered in gold thread with a phoenix, peonies and clouds, ' +
+      'small pearls and jade beads sewn along the gathered top, a thick braided five-color cord tied in an ornate knot with long jade-beaded tassels, opulent and precious',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v3',
+    nameKo: '절굿공이(심플)',
+    slot: 'weapon',
+    batch: 6,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple wooden rice-cake pestle — a long smooth pale wooden pestle with two rounded club ends and a slim grip in the middle, ' +
+      'a single thin red cord tied around the grip, clean and minimal, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonrabbit_suit_v4',
+    nameKo: '달토끼 옷(심플)',
+    slot: 'armor',
+    batch: 6,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a simple white rabbit costume — a plain soft white one-piece jumpsuit with a small round cotton tail, white mittens and white boots, ' +
+      'a single small pink bow at the neck, clean and minimal, large',
+  },
+  {
+    key: 'chuseok_rabbit_ears_v3',
+    nameKo: '토끼 귀(심플)',
+    slot: 'accessory',
+    batch: 6,
+    concept: '달토끼 세트 장신구',
+    art: 'a simple rabbit ear headband — two tall plain white rabbit ears with soft pink inner lining on a thin white band, clean and minimal',
   },
 ];
 

@@ -910,5 +910,37 @@
   "chuseok_rabbit_ears_v2": {
     "key": "key3",
     "objectId": "9daafac0-2bd8-4891-b20d-6e34a5f607f5"
+  },
+  "chuseok_hanbok_sword": {
+    "key": "key3",
+    "objectId": "5629d45f-95ed-4e10-9edc-5b9127ad8ec0"
+  },
+  "chuseok_hanbok_bow": {
+    "key": "key3",
+    "objectId": "d35abe78-4a70-4d03-bb0a-d750398f9b3b"
+  },
+  "chuseok_hanbok_hwarot": {
+    "key": "key3",
+    "objectId": "7bbc36ac-8d8f-45ce-a379-df26f70d9b1d"
+  },
+  "chuseok_hanbok_dangui": {
+    "key": "key3",
+    "objectId": "4ad0376b-5d22-4101-866a-5aa92e53ebec"
+  },
+  "chuseok_bok_pouch_v3": {
+    "key": "key3",
+    "objectId": "74816c0c-109d-4e48-b806-7c0cf32f3608"
+  },
+  "chuseok_rabbit_pestle_v3": {
+    "key": "key3",
+    "objectId": "b514926c-d056-4553-803a-af4efc0ba589"
+  },
+  "chuseok_moonrabbit_suit_v4": {
+    "key": "key3",
+    "objectId": "140dfa6d-d7df-487e-8f7e-6f410aa6413c"
+  },
+  "chuseok_rabbit_ears_v3": {
+    "key": "key3",
+    "objectId": "3a6fa6b7-0230-43ef-9a8a-1c8ac1dbab48"
   }
 }
