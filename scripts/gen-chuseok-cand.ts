@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤). */
-  batch: 1 | 2 | 3 | 4;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤). */
+  batch: 1 | 2 | 3 | 4 | 5;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -371,6 +371,71 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a moon rabbit ear headpiece — two tall fluffy white rabbit ears lined in pale pink rising from a slim gold hairband, ' +
       'a small golden full-moon ornament and a short red silk ribbon at the base of one ear, cute and elegant',
+  },
+  // ══ 5차: 확정 컨셉 다른 안(09-19 밤) ═══════════════════════════════════════════════════
+  // 사용자 지시 — 4차 그림도 후보로 두고 6종을 다시. 한복 세트 무기는 다른 컨셉(합죽선 → 청사초롱), 달토끼 세트는 달 장식을 덜어 낸다.
+  // 한복 세트는 달·토끼 없이 금박 꽃무늬로(달토끼 세트와 소재가 겹치지 않게).
+  {
+    key: 'chuseok_hanbok_lantern',
+    nameKo: '청사초롱',
+    slot: 'weapon',
+    batch: 5,
+    concept: '한복 세트 무기(다른 안)',
+    art:
+      'a Korean cheongsachorong silk lantern on a long pole — a tall cylindrical lantern of red silk above and blue silk below glowing warmly from within, ' +
+      'hanging from the curved tip of a long dark lacquered pole with gold fittings, a five-color silk tassel beneath the lantern, elegant and festive, ' +
+      'clearly a lantern pole staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_v3',
+    nameKo: '한가위 한복(다른 안)',
+    slot: 'armor',
+    batch: 5,
+    concept: '한복 세트 방어구',
+    art:
+      'a luxurious Korean hanbok — a soft ivory silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing crimson chima skirt with a wide band of gold-leaf flower patterns along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_bok_pouch_v2',
+    nameKo: '한가위 복주머니(다른 안)',
+    slot: 'accessory',
+    batch: 5,
+    concept: '한복 세트 장신구',
+    art:
+      'a round silk lucky pouch bokjumeoni in deep crimson with gold-embroidered peony flowers and small clouds, ' +
+      'a drawstring of braided five-color cord tied in a bow with small tassels, festive and precious',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v2',
+    nameKo: '달토끼 절굿공이(다른 안)',
+    slot: 'weapon',
+    batch: 5,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
+      'a small rabbit face carved on one end, the grip wrapped in pink and white silk cord with a fluffy white pompom charm, ' +
+      'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonrabbit_suit_v3',
+    nameKo: '달토끼 옷(다른 안)',
+    slot: 'armor',
+    batch: 5,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a rabbit costume — a soft fluffy white fur jumpsuit with a big round fur collar, pale pink paw-pad mittens and fluffy white boots, a round cotton tail, ' +
+      'a large pale pink silk ribbon bow at the collar with a small gold bell, cute and elegant',
+  },
+  {
+    key: 'chuseok_rabbit_ears_v2',
+    nameKo: '토끼 귀(다른 안)',
+    slot: 'accessory',
+    batch: 5,
+    concept: '달토끼 세트 장신구',
+    art:
+      'a rabbit ear headpiece — two tall fluffy white rabbit ears lined in pale pink rising from a slim gold hairband, ' +
+      'a pale pink silk ribbon bow with a small gold bell at the base of one ear, cute and elegant',
   },
 ];
 

@@ -18,24 +18,25 @@ const uri = (k: string) => {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const nameOf = (k: string) => CANDIDATES.find((c) => c.key === k)?.nameKo ?? k;
 
-type Piece = { slot: string; key: string; note: string; prev?: string[] };
+/** alt = 같은 부위의 다른 안(5차). 본 그림과 같은 크기로 나란히 둔다. */
+type Piece = { slot: string; key: string; note: string; alt?: { key: string; note: string }; prev?: string[] };
 const SETS: { title: string; lead: string; pieces: Piece[] }[] = [
   {
     title: '한복',
-    lead: '복주머니의 진홍 비단과 금빛 달토끼에 색을 맞췄습니다. 무기는 아직 정해지지 않아 합죽선을 제안합니다.',
+    lead: '복주머니의 진홍 비단과 금빛에 색을 맞췄습니다. 무기는 합죽선과 청사초롱 두 가지를 만들었습니다.',
     pieces: [
-      { slot: '무기', key: 'chuseok_hanbok_fan', note: '제안 · 새로 만듦' },
-      { slot: '방어구', key: 'chuseok_hanbok_v2', note: '다시 만듦', prev: ['chuseok_hanbok', 'chuseok_moonrise_hanbok'] },
-      { slot: '장신구', key: 'chuseok_bok_pouch', note: '1차 그림 그대로' },
+      { slot: '무기', key: 'chuseok_hanbok_fan', note: '가안 · 합죽선', alt: { key: 'chuseok_hanbok_lantern', note: '나안 · 청사초롱' } },
+      { slot: '방어구', key: 'chuseok_hanbok_v2', note: '가안 · 옥색 저고리', alt: { key: 'chuseok_hanbok_v3', note: '나안 · 미색 저고리, 금박 꽃무늬' }, prev: ['chuseok_hanbok', 'chuseok_moonrise_hanbok'] },
+      { slot: '장신구', key: 'chuseok_bok_pouch', note: '가안 · 1차 그림(달토끼 자수)', alt: { key: 'chuseok_bok_pouch_v2', note: '나안 · 모란 자수' } },
     ],
   },
   {
     title: '달토끼',
-    lead: '달에서 떡방아를 찧는 토끼를 세 부위로 나눴습니다.',
+    lead: '달에서 떡방아를 찧는 토끼를 세 부위로 나눴습니다. 나안은 달 장식을 덜어 낸 쪽입니다.',
     pieces: [
-      { slot: '무기', key: 'chuseok_rabbit_pestle', note: '새로 만듦', prev: ['chuseok_moonrabbit_mallet'] },
-      { slot: '방어구', key: 'chuseok_moonrabbit_suit_v2', note: '다시 만듦', prev: ['chuseok_moonrabbit_suit'] },
-      { slot: '장신구', key: 'chuseok_rabbit_ears', note: '다시 만듦', prev: ['chuseok_moonrabbit_headband'] },
+      { slot: '무기', key: 'chuseok_rabbit_pestle', note: '가안 · 달 장식', alt: { key: 'chuseok_rabbit_pestle_v2', note: '나안 · 토끼 얼굴, 방울술' }, prev: ['chuseok_moonrabbit_mallet'] },
+      { slot: '방어구', key: 'chuseok_moonrabbit_suit_v2', note: '가안 · 연보라 띠, 달 장식', alt: { key: 'chuseok_moonrabbit_suit_v3', note: '나안 · 분홍 리본(그림이 작게 나옴)' }, prev: ['chuseok_moonrabbit_suit'] },
+      { slot: '장신구', key: 'chuseok_rabbit_ears', note: '가안 · 달 장식', alt: { key: 'chuseok_rabbit_ears_v2', note: '나안 · 분홍 리본, 방울' }, prev: ['chuseok_moonrabbit_headband'] },
     ],
   },
 ];
@@ -51,11 +52,14 @@ const sections = SETS.map((s) => {
         return ps ? `<figure class="prev"><img src="${ps}" alt="${esc(nameOf(k))}"><figcaption>${esc(nameOf(k))}</figcaption></figure>` : '';
       })
       .join('');
+    const altSrc = p.alt ? uri(p.alt.key) : null;
+    if (altSrc) made += 1;
+    const tile = (s: string | null, k: string, note: string) =>
+      `<figure class="opt"><div class="tile">${s ? `<img src="${s}" alt="${esc(nameOf(k))}">` : '<span class="miss">생성 실패</span>'}</div><figcaption>${esc(note)}</figcaption></figure>`;
     return `<article class="card">
-      <div class="tile">${src ? `<img src="${src}" alt="${esc(nameOf(p.key))}">` : '<span class="miss">생성 실패</span>'}</div>
+      <div class="opts">${tile(src, p.key, p.note)}${p.alt ? tile(altSrc, p.alt.key, p.alt.note) : ''}</div>
       <div class="meta">
-        <div class="row"><span class="slot">${esc(p.slot)}</span><span class="note">${esc(p.note)}</span></div>
-        <b>${esc(nameOf(p.key))}</b>
+        <div class="row"><span class="slot">${esc(p.slot)}</span></div>
         ${prev ? `<p class="plabel">이전 후보</p><div class="prevs">${prev}</div>` : ''}
       </div>
     </article>`;
@@ -76,7 +80,10 @@ const html = `<title>추석 확정 세트</title>
   section { margin-top:30px; padding-top:18px; border-top:1px solid var(--line); }
   h2 { font-size:17px; margin:0 0 4px; }
   .slead { margin:0 0 14px; color:var(--muted); font-size:13px; }
-  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr)); gap:16px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr)); gap:16px; }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); }
+  .opt { margin:0; background:var(--panel); }
+  .opt figcaption { padding:6px 10px 8px; font-size:11.5px; color:var(--muted); }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
   .tile { background:var(--tile); aspect-ratio:1/1; display:grid; place-items:center; }
   .tile img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
@@ -93,9 +100,9 @@ const html = `<title>추석 확정 세트</title>
 </style>
 <div class="wrap">
   <h1>추석 확정 세트</h1>
-  <p class="lead">확정한 두 컨셉을 세트로 모았습니다. 복주머니는 1차 그림을 그대로 쓰고, 나머지 ${made - 1}종은 세 번째 Pixellab 키로 새로 만들었습니다. 다시 만든 부위는 이전 후보를 아래에 작게 두었습니다. 이름은 검토용 가제입니다.</p>
+  <p class="lead">확정한 두 컨셉을 세트로 모았습니다. 부위마다 가안(먼저 만든 그림)과 나안(다시 만든 그림)을 나란히 두었고, 그보다 앞선 후보는 아래에 작게 두었습니다. 부위별로 하나씩 골라 주세요.</p>
   ${sections.join('')}
 </div>
 `;
 writeFileSync(out, html);
-console.log(`검토 페이지 → ${out} (그림 ${made}/6)`);
+console.log(`검토 페이지 → ${out} (그림 ${made}/12)`);

@@ -886,5 +886,29 @@
   "chuseok_rabbit_ears": {
     "key": "key3",
     "objectId": "c14b6e6b-94d0-4482-958f-2aae0ac31d87"
+  },
+  "chuseok_hanbok_lantern": {
+    "key": "key3",
+    "objectId": "9d28c0fb-5035-4089-b848-5541c5bccbce"
+  },
+  "chuseok_hanbok_v3": {
+    "key": "key3",
+    "objectId": "104fb05c-acec-483a-aaba-6d773b8d8241"
+  },
+  "chuseok_bok_pouch_v2": {
+    "key": "key3",
+    "objectId": "f46a8e90-0a6e-4fa9-8aa4-dcbf2cfdaffc"
+  },
+  "chuseok_rabbit_pestle_v2": {
+    "key": "key3",
+    "objectId": "8c278b53-43ef-4987-bbca-3d8970ef539d"
+  },
+  "chuseok_moonrabbit_suit_v3": {
+    "key": "key3",
+    "objectId": "6351af26-83b3-4356-8628-fc718cd096dd"
+  },
+  "chuseok_rabbit_ears_v2": {
+    "key": "key3",
+    "objectId": "9daafac0-2bd8-4891-b20d-6e34a5f607f5"
   }
 }
