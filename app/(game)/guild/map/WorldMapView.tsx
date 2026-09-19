@@ -1602,7 +1602,7 @@ export function WorldMapView({
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            <p className="mt-1 max-h-[10.5rem] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
               {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없어요.'}
             </p>
           </div>
