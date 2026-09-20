@@ -38,7 +38,9 @@ export default async function GuildSettingsPage() {
     intro: hasGuildPerm(m.role, m.permissions, 'intro'),
     openchat: hasGuildPerm(m.role, m.permissions, 'openchat'),
     joinReview: hasGuildPerm(m.role, m.permissions, 'joinReview'),
-    taxDistribute: hasGuildPerm(m.role, m.permissions, 'taxDistribute'),
+    // 세금 타일 — 수금·분배 중 하나라도 있으면 들어간다(2026-09-20 권한 분리). 수금 가능 배지는 수금 권한자에게만.
+    tax: hasGuildPerm(m.role, m.permissions, 'taxCollect') || hasGuildPerm(m.role, m.permissions, 'taxDistribute'),
+    taxCollect: hasGuildPerm(m.role, m.permissions, 'taxCollect'),
     emblem: hasGuildPerm(m.role, m.permissions, 'emblem'),
   };
 

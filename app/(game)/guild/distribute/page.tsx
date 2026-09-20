@@ -27,8 +27,11 @@ export default async function DistributePage({
   }
   const membership = await getGuildPermState(userId, serverId);
   if (!membership) redirect('/guild');
-  // 수금·분배 모두 taxDistribute 권한자(길드장 · 허용된 부길드장, 0142) — 별도 수금 권한은 두지 않는다.
-  if (!hasGuildPerm(membership.role, membership.permissions, 'taxDistribute')) {
+  // 수금(taxCollect)과 분배(taxDistribute)는 따로 주는 권한이다(2026-09-20 분리) — 둘 중 하나라도 있으면 들어온다.
+  // 실제 수금·분배는 서버가 각 권한으로 다시 검사한다(collect.ts · distribute.ts).
+  const canCollect = hasGuildPerm(membership.role, membership.permissions, 'taxCollect');
+  const canDistribute = hasGuildPerm(membership.role, membership.permissions, 'taxDistribute');
+  if (!canCollect && !canDistribute) {
     redirect('/guild/settings');
   }
 

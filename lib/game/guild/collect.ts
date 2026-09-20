@@ -31,7 +31,7 @@ export type CollectResult = {
  *
  * 수금 주체(2026-09-08 일괄 수금 도입):
  *  - 그 구역 **집행관 본인**(종전 그대로), 또는
- *  - 소유 길드의 **세금 권한자**(길드장 · taxDistribute 부길드장)의 **대리 수금** — 집행관 몫 10%는
+ *  - 소유 길드의 **수금 권한자**(길드장 · taxCollect 부길드장, 2026-09-20 분배 권한에서 분리)의 **대리 수금** — 집행관 몫 10%는
  *    그래도 집행관 지갑으로 간다(집행관은 방어를 맡은 대가로 받는 것이지 버튼을 누른 대가가 아니다).
  *  - **집행관 공석 구역은 누구도 수금 불가**(💎 동결 유지 — 집행관 지정 유인).
  *
@@ -70,14 +70,14 @@ export async function collectZoneTaxTx(
     throw new GuildError('NOT_EXECUTOR');
   }
 
-  // 행위자 판정 — 집행관 본인이 아니면 소유 길드의 세금 권한자여야 한다.
+  // 행위자 판정 — 집행관 본인이 아니면 소유 길드의 수금 권한자여야 한다(분배 권한과는 별개, 2026-09-20).
   if (z.executor !== input.userId) {
     const [actor] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role, permissions: guildMembers.permissions })
       .from(guildMembers)
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, z.serverId)));
     if (!actor || actor.guildId !== z.owner) throw new GuildError('NOT_EXECUTOR');
-    if (!hasGuildPerm(actor.role, actor.permissions, 'taxDistribute')) throw new GuildError('NO_PERMISSION');
+    if (!hasGuildPerm(actor.role, actor.permissions, 'taxCollect')) throw new GuildError('NO_PERMISSION');
   }
   // 집행관이 여전히 소유 길드 소속인지 재검증 — 이탈 정리 누락 등에 대비한 방어선(비길드원 세수 탈취 차단).
   const [mem] = await tx
@@ -156,13 +156,13 @@ export async function collectAllZoneTax(
   input: { userId: string; serverId: number },
   runner: TxRunner = db,
 ): Promise<CollectAllResult> {
-  // 권한 — 세금 권한자만(집행관 본인 구역만 걷고 싶으면 지도의 개별 수금).
+  // 권한 — 수금 권한자만(집행관 본인 구역만 걷고 싶으면 지도의 개별 수금).
   const [actor] = (await runner.execute(sql`
     select guild_id::text as guild_id, role::text as role, permissions from guild_members
      where user_id = ${input.userId}::uuid and server_id = ${input.serverId} limit 1
   `)) as unknown as { guild_id: string; role: 'leader' | 'vice' | 'member'; permissions: number | null }[];
   if (!actor) throw new GuildError('NOT_IN_GUILD');
-  if (!hasGuildPerm(actor.role, actor.permissions, 'taxDistribute')) throw new GuildError('NO_PERMISSION');
+  if (!hasGuildPerm(actor.role, actor.permissions, 'taxCollect')) throw new GuildError('NO_PERMISSION');
 
   const ids = await listCollectableZoneIds(BigInt(actor.guild_id), input.serverId, runner);
   if (ids.length === 0) throw new GuildError('NOTHING_TO_COLLECT');

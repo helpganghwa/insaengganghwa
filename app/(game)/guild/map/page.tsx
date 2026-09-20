@@ -32,7 +32,7 @@ export default async function WorldMapPage() {
     userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
   ]);
   const taxOfficerGuildId =
-    perm && hasGuildPerm(perm.role, perm.permissions, 'taxDistribute') ? perm.guildId.toString() : null;
+    perm && hasGuildPerm(perm.role, perm.permissions, 'taxCollect') ? perm.guildId.toString() : null;
   // 어제 리플레이 — 연대기 로드 결과(어제 기록일)에 의존해 후속 1회(가벼움, 상세 페이지).
   const replayYesterday = chronicle?.yesterdayDay
     ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(() => null)

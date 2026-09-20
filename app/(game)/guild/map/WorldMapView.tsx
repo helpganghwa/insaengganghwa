@@ -439,7 +439,7 @@ export function WorldMapView({
   } | null;
   canSetResidence: boolean;
   myUserId: string | null;
-  /** 내가 세금 권한자(taxDistribute)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
+  /** 내가 수금 권한자(taxCollect)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
   taxOfficerGuildId?: string | null;
   serverId: number;
   chronicle: { today: string | null; yesterday: string | null; yesterdayDay: string | null; list: { kstDay: string; headline: string }[] } | null;

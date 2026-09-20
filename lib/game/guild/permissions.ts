@@ -1,5 +1,5 @@
 /**
- * 부길드장 권한(2026-07-30) — 길드장이 부길드장 **개인별**로 열어주는 아홉 가지.
+ * 부길드장 권한(2026-07-30) — 길드장이 부길드장 **개인별**로 열어주는 열 가지.
  *
  * 길드장은 항상 전부 가진다(설정 대상이 아니다). 길드장 전속 네 가지는 이 목록에 없다 —
  * 부길드장 임명·해제 / 길드장 위임 / 길드 해산 / **권한 설정 자체**. 마지막 것을 전속으로
@@ -27,10 +27,16 @@ export const GUILD_PERM = {
    * 그래서 이 권한이 실제로 여는 것은 해제뿐이다(2026-07-30 확인).
    */
   deploy: 1 << 6,
-  /** 세금 수금(대리 · 일괄) · 분배 — 2026-09-08 수금이 함께 열린다(별도 수금 권한 없음) */
+  /** 세금 분배 — 곳간의 다이아를 길드원에게 나눠 준다(되돌릴 수 없음). 2026-09-20 수금이 taxCollect로 갈라졌다. */
   taxDistribute: 1 << 7,
   /** 문양 생성·변경(생성마다 다이아 소모) */
   emblem: 1 << 8,
+  /**
+   * 세금 수금(대리 · 일괄) — 남이 집행관인 구역의 세금을 곳간으로 걷는다(집행관 몫 10%는 그대로 집행관에게).
+   * 2026-09-20 분배에서 분리(유저 건의): 수금은 단순 작업이고 분배는 잘못하면 되돌릴 수 없어 맡기는 사람이 다르다.
+   * 집행관 본인의 자기 구역 수금은 이 권한과 무관하다.
+   */
+  taxCollect: 1 << 9,
 } as const;
 
 export type GuildPermKey = keyof typeof GUILD_PERM;
@@ -44,6 +50,7 @@ export const GUILD_PERM_ORDER: GuildPermKey[] = [
   'executor',
   'deploy',
   'kick',
+  'taxCollect',
   'taxDistribute',
   'emblem',
 ];
@@ -57,7 +64,8 @@ export const GUILD_PERM_META: Record<GuildPermKey, { label: string; desc?: strin
   executor: { label: '집행관 지정', desc: '세금 수금 권한이 함께 갑니다' },
   deploy: { label: '길드원 배치 해제', desc: '남의 공격 · 수비를 물림(배치는 본인만)' },
   kick: { label: '길드원 추방', desc: '되돌릴 수 없습니다' },
-  taxDistribute: { label: '세금 수금 · 분배', desc: '일괄 수금 · 분배 시 다이아가 나갑니다' },
+  taxCollect: { label: '세금 수금', desc: '남의 구역 대리 수금 · 모두 수금' },
+  taxDistribute: { label: '세금 분배', desc: '분배 시 다이아가 나갑니다' },
   emblem: { label: '문양 생성 · 변경', desc: '생성마다 다이아 소모' },
 };
 

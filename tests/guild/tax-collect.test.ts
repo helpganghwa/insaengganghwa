@@ -118,7 +118,10 @@ describe.skipIf(!USER)('세금 수금 — 권한자 대리 수금 · 일괄 수�
 
         await f.setRole('vice', 0);
         expect(await code(collectZoneTaxTx(tx, { userId: USER, zoneId: f.A }))).toBe('NO_PERMISSION');
+        // 분배 권한만으로는 수금할 수 없다(2026-09-20 권한 분리) — 수금 권한이 있어야 한다.
         await f.setRole('vice', GUILD_PERM.taxDistribute);
+        expect(await code(collectZoneTaxTx(tx, { userId: USER, zoneId: f.A }))).toBe('NO_PERMISSION');
+        await f.setRole('vice', GUILD_PERM.taxCollect);
         expect((await collectZoneTaxTx(tx, { userId: USER, zoneId: f.A })).guildGain).toBe(900n);
         throw ROLLBACK;
       })
