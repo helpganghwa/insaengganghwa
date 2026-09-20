@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20). */
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -608,6 +608,98 @@ export const CANDIDATES: ChuseokCand[] = [
     concept: '풍물놀이 세트 장신구',
     art:
       'a Korean gokkal festival hat — a tall white folded paper peaked hat covered with large paper flowers in red, yellow, blue and white, with white chin ribbons, lively and festive',
+  },
+  // ══ 8차: 사용자 지시 '6종 + 다른 컨셉 3종, 한복·토끼는 다른 느낌으로, 한복 무기도 다른 종류'(09-20) ══════════
+  // 한복 = 단아하고 고운(미색·연분홍·연보라·은실 매화) + 무기는 은장도. 달토끼 = 동화풍 귀여움(떡 묻은 절굿공이·롬퍼·늘어진 귀).
+  // 새 컨셉 = 추수(풍년). 롬퍼에 후드를 넣지 않는다 — 머리 윤곽이 같이 그려지는 실패(7차 달토끼 옷)를 피한다.
+  {
+    key: 'chuseok_hanbok_dagger',
+    nameKo: '은장도',
+    slot: 'weapon',
+    batch: 8,
+    concept: '한복 세트 무기(단아)',
+    art:
+      'a Korean eunjangdo ornamental silver dagger — a slender gleaming straight blade, an ornate engraved silver hilt inlaid with pale jade and pearls, ' +
+      'a long lilac and white silk norigae tassel with a small butterfly knot hanging from the pommel, refined and graceful, clearly a dagger weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_pastel',
+    nameKo: '매화 한복',
+    slot: 'armor',
+    batch: 8,
+    concept: '한복 세트 방어구(단아)',
+    art:
+      'an elegant Korean hanbok — an ivory silk jeogori jacket with a pale lilac ribbon tie and delicate silver-thread plum blossom embroidery on the sleeves, ' +
+      'a full-length flowing soft pink chima skirt fading to pale lilac at the hem with scattered silver blossoms, a small pearl norigae at the waist, refined and graceful, large',
+  },
+  {
+    key: 'chuseok_bok_pouch_v5',
+    nameKo: '매화 복주머니',
+    slot: 'accessory',
+    batch: 8,
+    concept: '한복 세트 장신구(단아)',
+    art:
+      'an elegant silk lucky pouch bokjumeoni — ivory and pale pink silk embroidered with silver-thread plum blossoms and a small butterfly, a gathered top, ' +
+      'a braided lilac and white cord tied in a bow with pearl beads and soft tassels, refined and precious',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v5',
+    nameKo: '떡 묻은 절굿공이',
+    slot: 'weapon',
+    batch: 8,
+    concept: '달토끼 세트 무기(동화풍)',
+    art:
+      'a cute rice-cake pestle — a chubby rounded pale wooden pestle with a slim grip in the middle, a soft white sticky rice cake blob stuck on the top end, ' +
+      'a big pink ribbon bow tied at the grip, charming and adorable, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_romper',
+    nameKo: '토끼 롬퍼',
+    slot: 'armor',
+    batch: 8,
+    concept: '달토끼 세트 방어구(동화풍)',
+    art:
+      'a cute rabbit costume — a cream-white fluffy romper with puffy short legs, a big pale pink bow and two pompom buttons on the chest, fluffy cuffs, ' +
+      'a round cotton tail, white knee socks and pink mary jane shoes, charming and adorable, large',
+  },
+  {
+    key: 'chuseok_rabbit_lop_ears',
+    nameKo: '늘어진 토끼 귀',
+    slot: 'accessory',
+    batch: 8,
+    concept: '달토끼 세트 장신구(동화풍)',
+    art:
+      'a cute lop-eared rabbit headband — two long fluffy cream-white rabbit ears drooping down on both sides with pale pink inner lining, ' +
+      'a pale pink ribbon bow on the band, charming and adorable',
+  },
+  {
+    key: 'chuseok_harvest_sickle',
+    nameKo: '황금 낫',
+    slot: 'weapon',
+    batch: 8,
+    concept: '추수 세트 무기',
+    art:
+      'a golden harvest sickle — a large curved gleaming golden blade on a sturdy wooden handle, a bundle of ripe golden rice stalks tied to the neck with a red ribbon, ' +
+      'bountiful and cheerful, clearly a sickle weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_harvest_outfit',
+    nameKo: '가을걷이 옷',
+    slot: 'armor',
+    batch: 8,
+    concept: '추수 세트 방어구',
+    art:
+      'an autumn harvest farmer outfit — a warm ochre cotton jacket with rolled sleeves over a cream shirt, a woven straw vest, loose indigo trousers tied at the ankles with straw rope, ' +
+      'a belt pouch overflowing with chestnuts and persimmons, a sheaf of golden rice tucked at the back, bountiful and cheerful, large',
+  },
+  {
+    key: 'chuseok_harvest_hat',
+    nameKo: '참새 밀짚모자',
+    slot: 'accessory',
+    batch: 8,
+    concept: '추수 세트 장신구',
+    art:
+      'a woven straw hat — a wide round golden straw hat decorated with ripe rice stalks and a red ribbon band, a small brown sparrow perched on the brim, bountiful and cheerful',
   },
 ];
 

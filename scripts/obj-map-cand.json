@@ -978,5 +978,41 @@
   "chuseok_pungmul_gokkal": {
     "key": "key3",
     "objectId": "df8c0236-92eb-44ef-a889-eebe9fb79c58"
+  },
+  "chuseok_hanbok_dagger": {
+    "key": "key3",
+    "objectId": "64962f0c-cfe6-48f3-acb4-abd9db222f76"
+  },
+  "chuseok_hanbok_pastel": {
+    "key": "key3",
+    "objectId": "98f7925d-5f2f-4001-b7db-73c1ec635dd3"
+  },
+  "chuseok_bok_pouch_v5": {
+    "key": "key3",
+    "objectId": "96fca450-f856-44e2-8768-c5ae527b2b01"
+  },
+  "chuseok_rabbit_pestle_v5": {
+    "key": "key3",
+    "objectId": "8c45796a-1535-45e1-a119-697c5ae041bf"
+  },
+  "chuseok_rabbit_romper": {
+    "key": "key3",
+    "objectId": "f22bce10-34bb-4571-a9d7-5f3cf4e31bb2"
+  },
+  "chuseok_rabbit_lop_ears": {
+    "key": "key3",
+    "objectId": "7b912bf3-243f-464e-af53-e9677e18f963"
+  },
+  "chuseok_harvest_sickle": {
+    "key": "key3",
+    "objectId": "e33e991d-28ec-4253-9d61-78e426ccb09b"
+  },
+  "chuseok_harvest_outfit": {
+    "key": "key3",
+    "objectId": "a5809b8f-79d3-4b54-b08a-7c05fc0baafc"
+  },
+  "chuseok_harvest_hat": {
+    "key": "key3",
+    "objectId": "5443540c-22fa-4654-a2fa-62801603134a"
   }
 }

@@ -18,106 +18,112 @@ const uri = (k: string) => {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const nameOf = (k: string) => CANDIDATES.find((c) => c.key === k)?.nameKo ?? k;
 
-/** options = 같은 부위의 최신 후보들(같은 크기로 나란히, fresh=방금 만든 그림). prev = 그보다 앞서 만든 그림(작게). */
-type Option = { key: string; note: string; fresh?: boolean };
-type Piece = { slot: string; options: Option[]; prev?: string[] };
-const SETS: { title: string; lead: string; pieces: Piece[] }[] = [
+/** 세트마다 분위기 갈래(look)를 두고, 갈래마다 무기·방어구·장신구를 한 줄로 보여 준다. alts = 같은 갈래에서 앞서 만든 다른 그림(작게). */
+type Item = { slot: '무기' | '방어구' | '장신구'; key: string; note: string };
+type Look = { title: string; note: string; fresh?: boolean; items: Item[]; alts?: string[] };
+const SETS: { title: string; lead: string; looks: Look[] }[] = [
   {
     title: '한복',
-    lead: '궁중 예복 수준으로 화려하게. 같은 방식으로 두 번 만들어 부위마다 고를 수 있습니다.',
-    pieces: [
+    lead: '같은 컨셉을 두 가지 분위기로 만들었습니다.',
+    looks: [
       {
-        slot: '무기',
-        options: [
-          { key: 'chuseok_hanbok_sword_v2', note: '의장검 · 용을 새긴 칼날, 봉황 머리 자루', fresh: true },
-          { key: 'chuseok_hanbok_sword', note: '의장검 · 금 상감 칼날, 연꽃 코등이' },
-          { key: 'chuseok_hanbok_bow', note: '금박 각궁' },
+        title: '화려하게',
+        note: '궁중 예복. 진홍 비단에 금실 자수, 옥과 산호 구슬.',
+        items: [
+          { slot: '무기', key: 'chuseok_hanbok_sword_v2', note: '의장검 · 용을 새긴 칼날' },
+          { slot: '방어구', key: 'chuseok_hanbok_hwarot_v2', note: '활옷 · 황금 치마' },
+          { slot: '장신구', key: 'chuseok_bok_pouch_v4', note: '복주머니 · 학 자수' },
         ],
-        prev: ['chuseok_hanbok_fan', 'chuseok_hanbok_lantern'],
+        alts: ['chuseok_hanbok_sword', 'chuseok_hanbok_bow', 'chuseok_hanbok_hwarot', 'chuseok_hanbok_dangui', 'chuseok_bok_pouch_v3'],
       },
       {
-        slot: '방어구',
-        options: [
-          { key: 'chuseok_hanbok_hwarot_v2', note: '활옷 · 황금 치마', fresh: true },
-          { key: 'chuseok_hanbok_hwarot', note: '활옷 · 남색 속치마' },
-          { key: 'chuseok_hanbok_dangui', note: '금박 당의' },
+        title: '단아하게',
+        note: '미색과 연분홍, 연보라에 은실 매화. 무기는 은장도.',
+        fresh: true,
+        items: [
+          { slot: '무기', key: 'chuseok_hanbok_dagger', note: '은장도 · 은 세공 자루, 연보라 술' },
+          { slot: '방어구', key: 'chuseok_hanbok_pastel', note: '매화 한복 · 분홍에서 연보라로 번지는 치마' },
+          { slot: '장신구', key: 'chuseok_bok_pouch_v5', note: '매화 복주머니 · 은실 매화, 진주' },
         ],
-        prev: ['chuseok_hanbok_v2', 'chuseok_hanbok_v3', 'chuseok_hanbok'],
-      },
-      {
-        slot: '장신구',
-        options: [
-          { key: 'chuseok_bok_pouch_v4', note: '복주머니 · 학 자수, 진주 테두리', fresh: true },
-          { key: 'chuseok_bok_pouch_v3', note: '복주머니 · 봉황 자수, 구슬 술' },
-        ],
-        prev: ['chuseok_bok_pouch', 'chuseok_bok_pouch_v2'],
       },
     ],
   },
   {
     title: '달토끼',
-    lead: '장식을 걷어 내고 형태만 남겼습니다.',
-    pieces: [
+    lead: '장식을 걷어 낸 쪽과 동화풍으로 귀엽게 만든 쪽입니다.',
+    looks: [
       {
-        slot: '무기',
-        options: [
-          { key: 'chuseok_rabbit_pestle_v4', note: '절굿공이 · 흰 리본', fresh: true },
-          { key: 'chuseok_rabbit_pestle_v3', note: '절굿공이 · 붉은 끈' },
+        title: '심플하게',
+        note: '형태만 남긴 깨끗한 흰색.',
+        items: [
+          { slot: '무기', key: 'chuseok_rabbit_pestle_v3', note: '절굿공이 · 붉은 끈' },
+          { slot: '방어구', key: 'chuseok_moonrabbit_suit_v4', note: '달토끼 옷 · 분홍 리본, 솜꼬리' },
+          { slot: '장신구', key: 'chuseok_rabbit_ears_v4', note: '토끼 귀 · 한쪽 귀가 접힘' },
         ],
-        prev: ['chuseok_rabbit_pestle', 'chuseok_rabbit_pestle_v2', 'chuseok_moonrabbit_mallet'],
+        alts: ['chuseok_rabbit_pestle_v4', 'chuseok_rabbit_ears_v3'],
       },
       {
-        slot: '방어구',
-        options: [
-          { key: 'chuseok_moonrabbit_suit_v4', note: '달토끼 옷 · 분홍 리본, 솜꼬리' },
-          { key: 'chuseok_moonrabbit_suit_v5', note: '잘못 나옴 · 머리 윤곽이 그려지고 몸에 붙는 옷이 됨', fresh: true },
+        title: '동화풍으로',
+        note: '크림색과 분홍 리본. 떡이 묻은 절굿공이, 롬퍼, 늘어진 귀.',
+        fresh: true,
+        items: [
+          { slot: '무기', key: 'chuseok_rabbit_pestle_v5', note: '떡 묻은 절굿공이 · 큰 분홍 리본' },
+          { slot: '방어구', key: 'chuseok_rabbit_romper', note: '토끼 롬퍼 · 방울 단추, 솜꼬리, 분홍 구두' },
+          { slot: '장신구', key: 'chuseok_rabbit_lop_ears', note: '늘어진 토끼 귀 · 분홍 리본' },
         ],
-        prev: ['chuseok_moonrabbit_suit_v2', 'chuseok_moonrabbit_suit'],
-      },
-      {
-        slot: '장신구',
-        options: [
-          { key: 'chuseok_rabbit_ears_v4', note: '토끼 귀 · 한쪽 귀가 접힘', fresh: true },
-          { key: 'chuseok_rabbit_ears_v3', note: '토끼 귀 · 곧은 귀' },
-        ],
-        prev: ['chuseok_rabbit_ears', 'chuseok_rabbit_ears_v2', 'chuseok_moonrabbit_headband'],
       },
     ],
   },
   {
-    title: '풍물놀이',
-    lead: '새 컨셉. 한가위 농악패 차림으로, 알록달록한 축제 분위기입니다.',
-    pieces: [
-      { slot: '무기', options: [{ key: 'chuseok_pungmul_banner', note: '오색 깃발 창 · 꿩깃 장목, 삼색 띠(세로로 서서 가늘게 나옴)', fresh: true }] },
-      { slot: '방어구', options: [{ key: 'chuseok_pungmul_outfit', note: '풍물패 옷 · 흰 옷에 검은 더거리, 삼색 띠', fresh: true }] },
-      { slot: '장신구', options: [{ key: 'chuseok_pungmul_gokkal', note: '꽃 고깔 · 오색 종이꽃', fresh: true }], prev: ['chuseok_sangmo'] },
+    title: '새 컨셉',
+    lead: '세 번째 세트 후보 두 가지입니다.',
+    looks: [
+      {
+        title: '풍물놀이',
+        note: '한가위 농악패. 알록달록한 축제 분위기.',
+        items: [
+          { slot: '무기', key: 'chuseok_pungmul_banner', note: '오색 깃발 창 · 세로로 서서 가늘게 나옴' },
+          { slot: '방어구', key: 'chuseok_pungmul_outfit', note: '풍물패 옷 · 삼색 띠' },
+          { slot: '장신구', key: 'chuseok_pungmul_gokkal', note: '꽃 고깔 · 오색 종이꽃' },
+        ],
+      },
+      {
+        title: '추수',
+        note: '풍년 들판. 벼 이삭과 햇과일.',
+        fresh: true,
+        items: [
+          { slot: '무기', key: 'chuseok_harvest_sickle', note: '황금 낫 · 벼 이삭 묶음, 붉은 리본' },
+          { slot: '방어구', key: 'chuseok_harvest_outfit', note: '가을걷이 옷 · 짚 조끼, 밤과 감이 든 주머니' },
+          { slot: '장신구', key: 'chuseok_harvest_hat', note: '참새 밀짚모자 · 챙에 앉은 참새' },
+        ],
+      },
     ],
   },
 ];
 
 let made = 0;
 const sections = SETS.map((s) => {
-  const cards = s.pieces.map((p) => {
-    const tiles = p.options
-      .map((o) => {
-        const src = uri(o.key);
+  const looks = s.looks.map((l) => {
+    const tiles = l.items
+      .map((it) => {
+        const src = uri(it.key);
         if (src) made += 1;
-        return `<figure class="opt"><div class="tile">${src ? `<img src="${src}" alt="${esc(nameOf(o.key))}">` : '<span class="miss">생성 실패</span>'}</div><figcaption>${o.fresh ? '<em>새 그림</em>' : ''}${esc(o.note)}</figcaption></figure>`;
+        return `<figure class="opt"><div class="tile">${src ? `<img src="${src}" alt="${esc(nameOf(it.key))}">` : '<span class="miss">생성 실패</span>'}</div><figcaption><b>${esc(it.slot)}</b>${esc(it.note)}</figcaption></figure>`;
       })
       .join('');
-    const prev = (p.prev ?? [])
+    const alts = (l.alts ?? [])
       .map((k) => {
         const ps = uri(k);
         return ps ? `<figure class="prev"><img src="${ps}" alt="${esc(nameOf(k))}"><figcaption>${esc(nameOf(k))}</figcaption></figure>` : '';
       })
       .join('');
     return `<article class="card">
-      <div class="head"><span class="slot">${esc(p.slot)}</span><span class="note">후보 ${p.options.length}개</span></div>
+      <div class="head"><span class="slot">${esc(l.title)}${l.fresh ? '<em>새 그림</em>' : ''}</span><span class="note">${esc(l.note)}</span></div>
       <div class="opts">${tiles}</div>
-      ${prev ? `<div class="meta"><p class="plabel">앞서 만든 그림</p><div class="prevs">${prev}</div></div>` : ''}
+      ${alts ? `<div class="meta"><p class="plabel">같은 분위기로 만든 다른 그림</p><div class="prevs">${alts}</div></div>` : ''}
     </article>`;
   });
-  return `<section><h2>${esc(s.title)} 세트</h2><p class="slead">${esc(s.lead)}</p><div class="cards">${cards.join('')}</div></section>`;
+  return `<section><h2>${esc(s.title)} 세트</h2><p class="slead">${esc(s.lead)}</p><div class="cards">${looks.join('')}</div></section>`;
 });
 
 const html = `<title>추석 확정 세트</title>
@@ -135,13 +141,15 @@ const html = `<title>추석 확정 세트</title>
   .slead { margin:0 0 14px; color:var(--muted); font-size:13px; }
   .cards { display:flex; flex-direction:column; gap:16px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  .head { display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-bottom:1px solid var(--line); }
-  .slot { font-size:12.5px; font-weight:800; color:var(--accent); letter-spacing:.04em; }
+  .head { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; padding:9px 12px; border-bottom:1px solid var(--line); }
+  .slot { font-size:14px; font-weight:800; color:var(--accent); }
+  .slot em { font-style:normal; font-size:11px; font-weight:800; color:var(--fresh); margin-left:8px; }
   .note { font-size:11.5px; color:var(--muted); }
-  .opts { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr)); gap:1px; background:var(--line); }
+  .opts { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); }
+  @media (max-width:560px) { .opts { grid-template-columns:1fr; } }
   .opt { margin:0; background:var(--panel); }
   .opt figcaption { padding:7px 11px 9px; font-size:12px; color:var(--muted); line-height:1.45; }
-  .opt figcaption em { font-style:normal; font-weight:800; color:var(--fresh); margin-right:6px; }
+  .opt figcaption b { display:block; font-size:11px; color:var(--ink); letter-spacing:.04em; }
   .tile { background:var(--tile); aspect-ratio:1/1; display:grid; place-items:center; }
   .tile img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
   .miss { color:#a1a1aa; font-size:12px; }
@@ -154,7 +162,7 @@ const html = `<title>추석 확정 세트</title>
 </style>
 <div class="wrap">
   <h1>추석 확정 세트</h1>
-  <p class="lead">확정한 두 컨셉에 새 컨셉(풍물놀이)을 더한 세 세트입니다. 부위마다 최신 후보를 같은 크기로 나란히 두었고, 방금 만든 그림에는 초록색으로 표시했습니다. 그보다 앞서 만든 그림은 아래에 작게 있습니다. 부위별로 하나씩 골라 주세요.</p>
+  <p class="lead">세트마다 분위기를 두 갈래로 만들었습니다. 갈래 하나가 무기, 방어구, 장신구 한 벌입니다. 방금 만든 갈래는 초록색으로 표시했습니다. 세트별로 어느 갈래로 갈지 골라 주세요. 부위를 섞어 고르셔도 됩니다.</p>
   ${sections.join('')}
 </div>
 `;
