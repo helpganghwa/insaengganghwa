@@ -72,6 +72,8 @@ function executorCut(tax: bigint) {
  * 세금 수금·분배(2026-09-08, S안) — 한 화면을 **수금 | 분배** 세그먼트로 나눈다.
  * 분배는 종전 DistributeBoard 그대로. 수금은 요약 3칸 + 구역 표 + '모두 수금'.
  * 수금 직후 서버 액션 재렌더로 곳간 숫자가 늘어난 채 분배 탭으로 넘어간다(§11.7).
+ * 2026-09-20 권한 분리 — 수금 권한이 없으면 `collect`가 null, 분배 권한이 없으면 `members`가 비어 온다.
+ * 한쪽만 가진 사람에게는 세그먼트 없이 그 화면만 보여 준다(없는 탭은 숨김 — 사용자 확정).
  */
 export function TaxBoard({
   myUserId,
@@ -79,13 +81,19 @@ export function TaxBoard({
   collect,
   pool,
   members,
+  canDistribute,
 }: {
   myUserId: string;
   initialTab: TaxTab;
-  collect: CollectView;
+  /** 수금 권한이 없으면 null. */
+  collect: CollectView | null;
   pool: string;
+  /** 분배 권한이 없으면 빈 배열(분배 화면 자체가 나오지 않는다). */
   members: DistributeMember[];
+  canDistribute: boolean;
 }) {
+  const canCollect = collect != null;
+  const both = canCollect && canDistribute;
   const [tab, setTab] = useState<TaxTab>(initialTab);
   const switchTab = (next: TaxTab) => {
     setTab(next);
@@ -99,9 +107,13 @@ export function TaxBoard({
     }
   };
 
+  // 가진 권한이 한쪽뿐이면 상태와 무관하게 그 화면이다(주소의 tab이 어긋나 있어도).
+  const shown: TaxTab = both ? tab : canCollect ? 'collect' : 'distribute';
+
   return (
     <section className="mt-3">
-      <div role="tablist" className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+      {/* 세그먼트는 두 권한을 모두 가진 사람에게만 — 한쪽뿐이면 고를 것이 없다. */}
+      <div role="tablist" hidden={!both} className={both ? 'flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900' : undefined}>
         {(
           [
             { key: 'collect', label: '수금' },
@@ -125,7 +137,7 @@ export function TaxBoard({
         ))}
       </div>
 
-      {tab === 'collect' ? (
+      {shown === 'collect' && collect ? (
         <CollectPanel myUserId={myUserId} view={collect} />
       ) : (
         <DistributeBoard myUserId={myUserId} pool={pool} members={members} />
