@@ -49,6 +49,8 @@ import { notifyJoinDecision, notifyJoinRequest } from '@/lib/game/guild/notify';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
 import { getGuild } from '@/lib/game/guild/queries';
+import { DEPLOY_VISIBILITIES, type DeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
+import { setDeployVisibility } from '@/lib/game/guild/conquest/set-deploy-visibility';
 import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
 import {
   isValidEmblemSelection,
@@ -243,6 +245,23 @@ export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setJoinPolicy');
+  }
+}
+
+/** 점령전 배치 정보 공개 범위(0204) — 길드장만. 점령지 화면의 배치 현황 팝업에서 바꾼다. */
+export async function setDeployVisibilityAction(visibility: DeployVisibility) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  if (!DEPLOY_VISIBILITIES.includes(visibility)) return { status: 'error', code: 'UNKNOWN' } as const;
+  try {
+    await setDeployVisibility({ userId: u, serverId: await getActiveServerId(), visibility });
+    revalidatePath('/guild');
+    revalidatePath('/guild/deploy');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setDeployVisibility');
   }
 }
 

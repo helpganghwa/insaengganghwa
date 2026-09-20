@@ -14,6 +14,8 @@ import {
 } from '@/lib/game/guild';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
+import { getGuild } from '@/lib/game/guild/queries';
+import { isDeployViewRestricted, maskDeployMembers, parseDeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
 import { DeployTerritoryTabs } from './DeployTerritoryTabs';
@@ -47,13 +49,19 @@ export default async function DeployPage({
   // 배치용 + '세계지도' 탭용 데이터를 함께 로드(map/page와 동일 소스). 세계지도는 열람+팝업이라
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
-  const [board, attackable, adjacency, wmZones, residence] = await Promise.all([
+  const [board, attackable, adjacency, wmZones, residence, guildRow] = await Promise.all([
     getDeployBoard(membership.guildId, serverId),
     getAttackableZoneIds(membership.guildId, serverId),
     getZoneAdjacency(serverId),
     getWorldmapZones(serverId).catch(() => []),
     getResidenceState(userId, serverId).catch(() => null),
+    getGuild(membership.guildId),
   ]);
+  // 배치 정보 공개 범위(0204) — '권한자만'이면 배치 담당자가 아닌 길드원에게는 **본인 배치만** 내려보낸다.
+  // 화면에서 숨기는 것이 아니라 여기서 지운다(전원분이 RSC payload에 실리지 않게).
+  const visibility = parseDeployVisibility(guildRow?.deployVisibility);
+  const restricted = isDeployViewRestricted(visibility, membership.role, membership.permissions);
+  const visibleMembers = restricted ? maskDeployMembers(board.members, userId, (m) => m.uid) : board.members;
 
   return (
     <>
@@ -72,7 +80,10 @@ export default async function DeployPage({
           mapSrc={mapSrc}
           attackableZoneIds={attackable}
           adjacency={adjacency}
-          members={board.members.map((m) => ({
+          restricted={restricted}
+          visibility={visibility}
+          canSetVisibility={membership.role === 'leader'}
+          members={visibleMembers.map((m) => ({
             userId: m.uid,
             nickname: m.nickname,
             role: m.mrole,

@@ -6,10 +6,10 @@ import {
   isDeployViewRestricted,
   maskDeployMembers,
   parseDeployVisibility,
-  type DeployMemberView,
 } from '@/lib/game/guild/conquest/deploy-visibility';
 
-const m = (userId: string, over: Partial<DeployMemberView> = {}): DeployMemberView & { nickname: string; combat: number } => ({
+type Row = { userId: string; nickname: string; combat: number; depZoneId: number | null; depZoneName: string | null; depRole: 'attack' | 'defend' | null; execZoneId: number | null; execZoneName: string | null };
+const m = (userId: string, over: Partial<Row> = {}): Row => ({
   userId,
   nickname: userId,
   combat: 1000,
@@ -45,7 +45,7 @@ describe('배치 정보 공개 범위', () => {
     expect(isDeployViewRestricted('officer', 'leader', 0)).toBe(false);
   });
 
-  it('제한된 길드원은 본인과 같은 구역에 선 사람만 본다', () => {
+  it('제한된 길드원은 본인 배치만 본다 — 같은 구역 동료도 내려가지 않는다', () => {
     const members = [
       m('me', { depZoneId: 33, depZoneName: '변경 초소', depRole: 'defend' }),
       m('same', { depZoneId: 33, depZoneName: '변경 초소', depRole: 'defend' }),
@@ -53,36 +53,15 @@ describe('배치 정보 공개 범위', () => {
       m('other', { depZoneId: 29, depZoneName: '고사목 숲', depRole: 'attack' }),
       m('idle'),
     ];
-    const out = maskDeployMembers(members, 'me');
-    expect(out.map((x) => x.userId)).toEqual(['me', 'same', 'exec']);
-    // 닉네임·전투력 같은 나머지 필드는 그대로 실린다.
-    expect(out[1]!.nickname).toBe('same');
-  });
-
-  it('같은 구역 사람이 다른 구역에도 걸쳐 있으면 그쪽 정보는 지운다', () => {
-    const members = [
-      m('me', { depZoneId: 33, depZoneName: '변경 초소', depRole: 'defend' }),
-      m('both', { depZoneId: 33, depZoneName: '변경 초소', depRole: 'defend', execZoneId: 29, execZoneName: '고사목 숲' }),
-    ];
-    const both = maskDeployMembers(members, 'me')[1]!;
-    expect(both.depZoneId).toBe(33);
-    expect(both.execZoneId).toBeNull();
-    expect(both.execZoneName).toBeNull();
-  });
-
-  it('집행관인 구역도 내 구역으로 친다', () => {
-    const members = [
-      m('me', { execZoneId: 47, execZoneName: '타락한 성소' }),
-      m('def', { depZoneId: 47, depZoneName: '타락한 성소', depRole: 'defend' }),
-      m('else', { depZoneId: 48, depZoneName: '타락의 심연', depRole: 'defend' }),
-    ];
-    expect(maskDeployMembers(members, 'me').map((x) => x.userId)).toEqual(['me', 'def']);
-  });
-
-  it('어디에도 서지 않았으면 본인 한 줄만 남는다 · 원본 배열은 건드리지 않는다', () => {
-    const members = [m('me'), m('a', { depZoneId: 1, depZoneName: 'A', depRole: 'attack' })];
-    const out = maskDeployMembers(members, 'me');
+    const out = maskDeployMembers(members, 'me', (x) => x.userId);
     expect(out.map((x) => x.userId)).toEqual(['me']);
-    expect(members[1]!.depZoneId).toBe(1);
+    expect(out[0]!.depZoneId).toBe(33);
+    // 원본 배열은 건드리지 않는다.
+    expect(members).toHaveLength(5);
+  });
+
+  it('배치하지 않은 길드원도 본인 한 줄은 남는다 · 목록에 본인이 없으면 빈 목록', () => {
+    expect(maskDeployMembers([m('me'), m('a', { depZoneId: 1, depZoneName: 'A', depRole: 'attack' })], 'me', (x) => x.userId).map((x) => x.userId)).toEqual(['me']);
+    expect(maskDeployMembers([m('a')], 'me', (x) => x.userId)).toEqual([]);
   });
 });
