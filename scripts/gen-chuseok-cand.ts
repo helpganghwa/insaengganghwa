@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20). */
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -518,6 +518,96 @@ export const CANDIDATES: ChuseokCand[] = [
     batch: 6,
     concept: '달토끼 세트 장신구',
     art: 'a simple rabbit ear headband — two tall plain white rabbit ears with soft pink inner lining on a thin white band, clean and minimal',
+  },
+  // ══ 7차: 사용자 지시 '추석 세트 6종 + 새 컨셉 한 세트 3종, 같은 방식으로'(09-20) ═══════════════════
+  // 한복=화려하게·달토끼=심플하게를 한 번 더(세부만 바꿔 고를 폭을 넓힘) + 풍물놀이 세트(알록달록한 축제 — 앞 두 세트와 겹치지 않는 분위기).
+  {
+    key: 'chuseok_hanbok_sword_v2',
+    nameKo: '의장검(용 새김)',
+    slot: 'weapon',
+    batch: 7,
+    concept: '한복 세트 무기',
+    art:
+      'a Korean royal ceremonial sword — a long straight steel blade engraved with a golden dragon along its length, an ornate gold guard and a phoenix-head pommel, ' +
+      'a crimson hilt wrapped in gold cord, a long flowing five-color silk tassel with jade and coral beads, opulent and majestic, clearly a straight sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hanbok_hwarot_v2',
+    nameKo: '활옷(황금 치마)',
+    slot: 'armor',
+    batch: 7,
+    concept: '한복 세트 방어구',
+    art:
+      'a magnificent Korean royal ceremonial hanbok — a long crimson silk robe over a golden-yellow skirt, densely embroidered with golden phoenixes, peonies and clouds, ' +
+      'very wide sleeves with rainbow saekdong bands and white cuffs, a wide embroidered gold belt with a long front panel, jade ornaments, opulent and regal, large',
+  },
+  {
+    key: 'chuseok_bok_pouch_v4',
+    nameKo: '금실 복주머니(학 자수)',
+    slot: 'accessory',
+    batch: 7,
+    concept: '한복 세트 장신구',
+    art:
+      'a lavish silk lucky pouch bokjumeoni — rich crimson silk embroidered in gold thread with a pair of cranes, peonies and clouds, a scalloped gathered top trimmed with pearls, ' +
+      'a thick braided five-color cord tied in an ornate butterfly knot with long tassels of jade and coral beads, opulent and precious',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v4',
+    nameKo: '절굿공이(흰 리본)',
+    slot: 'weapon',
+    batch: 7,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple wooden rice-cake pestle — a long smooth pale wooden pestle with thick rounded ends tapering to a slim grip in the middle, ' +
+      'a small white ribbon tied at the grip, clean and minimal, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonrabbit_suit_v5',
+    nameKo: '달토끼 옷(보송한 결)',
+    slot: 'armor',
+    batch: 7,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a simple white rabbit costume — a plain soft white one-piece jumpsuit with a slightly fluffy texture, a small round cotton tail, ' +
+      'white mittens and white boots with pale pink soles, a small pale pink ribbon at the neck, clean and minimal, large',
+  },
+  {
+    key: 'chuseok_rabbit_ears_v4',
+    nameKo: '토끼 귀(접힌 귀)',
+    slot: 'accessory',
+    batch: 7,
+    concept: '달토끼 세트 장신구',
+    art: 'a simple rabbit ear headband — two tall soft white rabbit ears with pale pink inner lining, one ear tip gently folded, on a thin white band, clean and minimal',
+  },
+  {
+    key: 'chuseok_pungmul_banner',
+    nameKo: '오색 깃발 창',
+    slot: 'weapon',
+    batch: 7,
+    concept: '풍물놀이 세트 무기',
+    art:
+      'a Korean festival banner spear — a long red lacquered pole topped with a gold spearhead and a plume of pheasant feathers, ' +
+      'a triangular crimson silk pennant edged with a five-color fringe flying below the tip, long red, blue and yellow silk streamers, ' +
+      'festive and splendid, clearly a banner spear polearm weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_pungmul_outfit',
+    nameKo: '풍물패 옷',
+    slot: 'armor',
+    batch: 7,
+    concept: '풍물놀이 세트 방어구',
+    art:
+      'a Korean pungmul festival performer outfit — a crisp white hanbok jacket and white trousers under a sleeveless black vest with gold trim, ' +
+      'three wide silk sashes in red, blue and yellow crossed over the chest and tied at the waist with long flowing ends, white leggings and straw-colored shoes, lively and festive, large',
+  },
+  {
+    key: 'chuseok_pungmul_gokkal',
+    nameKo: '꽃 고깔',
+    slot: 'accessory',
+    batch: 7,
+    concept: '풍물놀이 세트 장신구',
+    art:
+      'a Korean gokkal festival hat — a tall white folded paper peaked hat covered with large paper flowers in red, yellow, blue and white, with white chin ribbons, lively and festive',
   },
 ];
 

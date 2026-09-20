@@ -942,5 +942,41 @@
   "chuseok_rabbit_ears_v3": {
     "key": "key3",
     "objectId": "3a6fa6b7-0230-43ef-9a8a-1c8ac1dbab48"
+  },
+  "chuseok_hanbok_sword_v2": {
+    "key": "key3",
+    "objectId": "efe4cec0-3b00-4942-81e5-2bf9d0840900"
+  },
+  "chuseok_hanbok_hwarot_v2": {
+    "key": "key3",
+    "objectId": "3d4efae9-a2cf-4f7a-bada-e3fb8f2689ae"
+  },
+  "chuseok_bok_pouch_v4": {
+    "key": "key3",
+    "objectId": "576a5228-6559-416b-9fec-fd669ad52ffe"
+  },
+  "chuseok_rabbit_pestle_v4": {
+    "key": "key3",
+    "objectId": "fcca89bb-ac26-4ada-85cb-96a8db327d39"
+  },
+  "chuseok_moonrabbit_suit_v5": {
+    "key": "key3",
+    "objectId": "b5046a21-e9ad-4f88-8976-ab8660496141"
+  },
+  "chuseok_rabbit_ears_v4": {
+    "key": "key3",
+    "objectId": "e733ca4b-7702-4af3-86ba-ca02a05de395"
+  },
+  "chuseok_pungmul_banner": {
+    "key": "key3",
+    "objectId": "61c478ee-032f-48bf-9f9b-c03bcb79e84b"
+  },
+  "chuseok_pungmul_outfit": {
+    "key": "key3",
+    "objectId": "963b88ed-cb0a-483e-9383-31a13f6c3fe4"
+  },
+  "chuseok_pungmul_gokkal": {
+    "key": "key3",
+    "objectId": "df8c0236-92eb-44ef-a889-eebe9fb79c58"
   }
 }
