@@ -15,7 +15,7 @@ const uri = (k: string) => {
   return existsSync(p) ? `data:image/png;base64,${readFileSync(p).toString('base64')}` : null;
 };
 
-type Opt = { key: string; name: string; note: string };
+type Opt = { key: string; name: string; note: string; fresh?: boolean };
 type Slot = { id: string; set: '한복' | '달토끼'; slot: '무기' | '방어구' | '장신구'; options: Opt[] };
 const SLOTS: Slot[] = [
   {
@@ -23,6 +23,9 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
+      { key: 'chuseok_moon_wand_full', name: '보름달 완드', note: '금빛 보름달에 토끼 그림자, 구름 테, 오색 술', fresh: true },
+      { key: 'chuseok_moon_wand_crescent', name: '초승달 완드', note: '진주를 품은 초승달, 진홍 리본', fresh: true },
+      { key: 'chuseok_moon_wand_jade', name: '옥 보름달 완드', note: '옥 보름달에 금테, 진홍 자루와 술', fresh: true },
       { key: 'chuseok_hanbok_sword_v2', name: '의장검(용 새김)', note: '화려 · 용을 새긴 칼날, 봉황 머리 자루' },
       { key: 'chuseok_hanbok_sword', name: '의장검', note: '화려 · 금 상감 칼날, 연꽃 코등이' },
       { key: 'chuseok_hanbok_bow', name: '금박 각궁', note: '화려 · 진홍 옻칠, 금박 무늬' },
@@ -65,6 +68,9 @@ const SLOTS: Slot[] = [
     set: '달토끼',
     slot: '무기',
     options: [
+      { key: 'chuseok_rabbit_mallet_v2', name: '흰 떡메', note: '흰 나무 메에 토끼 얼굴, 흰 리본', fresh: true },
+      { key: 'chuseok_rabbit_pestle_v6', name: '절굿공이(굵은 양끝)', note: '양끝이 굵은 흰 절굿공이, 분홍 끈', fresh: true },
+      { key: 'chuseok_rabbit_mallet_mochi', name: '통통한 떡메', note: '가로로 누워 나옴 · 떡은 보이지 않음', fresh: true },
       { key: 'chuseok_rabbit_pestle_v5', name: '떡 묻은 절굿공이', note: '동화풍 · 끝에 흰 떡, 큰 분홍 리본' },
       { key: 'chuseok_rabbit_pestle_v3', name: '절굿공이(붉은 끈)', note: '심플 · 매끈한 나무' },
       { key: 'chuseok_rabbit_pestle_v4', name: '절굿공이(흰 리본)', note: '심플 · 한쪽이 굵은 모양' },
@@ -78,6 +84,9 @@ const SLOTS: Slot[] = [
     set: '달토끼',
     slot: '방어구',
     options: [
+      { key: 'chuseok_rabbit_hanbok', name: '토끼 한복', note: '흰 저고리에 분홍 고름, 털 소매, 솜꼬리', fresh: true },
+      { key: 'chuseok_rabbit_cape', name: '토끼 망토 코트', note: '방울 끈 털 망토, 토끼 무늬 코트, 흰 부츠', fresh: true },
+      { key: 'chuseok_rabbit_twopiece', name: '토끼 투피스', note: '짧은 털 재킷과 반바지 · 다리 부분이 비어 보임', fresh: true },
       { key: 'chuseok_rabbit_romper', name: '토끼 롬퍼', note: '동화풍 · 크림색 롬퍼, 분홍 리본, 솜꼬리' },
       { key: 'chuseok_moonrabbit_suit_v4', name: '달토끼 옷(심플)', note: '심플 · 흰 점프슈트, 분홍 리본' },
       { key: 'chuseok_moonrabbit_suit_v2', name: '달토끼 옷(연보라 띠)', note: '털 깃, 연보라 띠, 달 장식' },
@@ -117,7 +126,9 @@ const SCRIPT = String.raw`
   var SLOTS = window.__SLOTS__;
   var LS_KEY = 'chuseok-pick-draft-v1';
   var state = {};
-  SLOTS.forEach(function (s) { state[s.id] = { pick: null, redo: false, reason: '' }; });
+  // 1차 제출에서 확정한 세 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
+  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v3', hanbok_accessory: 'chuseok_bok_pouch', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
+  SLOTS.forEach(function (s) { state[s.id] = { pick: CONFIRMED[s.id] || null, redo: false, reason: '' }; });
   try {
     var saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
     if (saved) SLOTS.forEach(function (s) { if (saved[s.id]) state[s.id] = Object.assign(state[s.id], saved[s.id]); });
@@ -144,7 +155,9 @@ const SCRIPT = String.raw`
       b.setAttribute('aria-pressed', 'false');
       var im = el('img'); im.src = o.src; im.alt = o.name; im.loading = 'lazy';
       var box = el('span', 'imgbox'); box.appendChild(im); b.appendChild(box);
-      b.appendChild(el('span', 'tname', o.name));
+      var nm = el('span', 'tname', o.name);
+      if (o.fresh) { var fr = el('em', 'fresh', '새 그림'); nm.appendChild(fr); }
+      b.appendChild(nm);
       b.appendChild(el('span', 'tnote', o.note));
       b.addEventListener('click', function () {
         var cur = state[s.id];
@@ -294,6 +307,7 @@ const html = `<title>추석 세트 선택</title>
   .imgbox { display:block; background:var(--tile); aspect-ratio:1/1; }
   .imgbox img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; display:block; }
   .tname { padding:6px 9px 0; font-size:12.5px; font-weight:700; }
+  .fresh { font-style:normal; font-size:10px; font-weight:800; color:var(--ok); margin-left:6px; }
   .tnote { padding:1px 9px 8px; font-size:11.5px; color:var(--muted); line-height:1.4; }
   .redo { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; }
   .redo input { width:17px; height:17px; accent-color:var(--warn); }
@@ -311,7 +325,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">지금까지 만든 한복 세트와 달토끼 세트 그림을 부위별로 모두 모았습니다. 부위마다 하나씩, 모두 여섯 개를 골라 주세요. 마음에 드는 것이 없는 부위는 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">다시 만들어 달라고 하신 세 부위(한복 무기 · 달토끼 무기 · 달토끼 방어구)에 새 그림을 3장씩 맨 앞에 넣었습니다. 지금까지 만든 한복 세트와 달토끼 세트 그림을 부위별로 모두 모았습니다. 부위마다 하나씩, 모두 여섯 개를 골라 주세요. 마음에 드는 것이 없는 부위는 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>

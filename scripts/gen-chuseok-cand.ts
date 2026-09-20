@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21). */
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -700,6 +700,99 @@ export const CANDIDATES: ChuseokCand[] = [
     concept: '추수 세트 장신구',
     art:
       'a woven straw hat — a wide round golden straw hat decorated with ripe rice stalks and a red ribbon band, a small brown sparrow perched on the brim, bountiful and cheerful',
+  },
+  // ══ 9차: 선택 폼 결과(09-21) — 확정: 한복(금박 꽃무늬)·한가위 복주머니·토끼 귀(접힌 귀). 미선택 3부위를 3가지씩 ══════════
+  // 한복 무기 = 사용자 지시 '달 완드'(확정한 한복·복주머니의 진홍·금색에 맞춤). 달토끼 무기·방어구 = 사유 없음 →
+  // 지금까지 탈락한 절굿공이·점프슈트형을 피해 방향을 넓힌다(떡메 / 한복·망토·투피스). 확정한 접힌 귀의 깨끗한 흰색에 맞춘다.
+  {
+    key: 'chuseok_moon_wand_full',
+    nameKo: '보름달 완드',
+    slot: 'weapon',
+    batch: 9,
+    concept: '한복 세트 무기(달 완드)',
+    art:
+      'a moon wand — a slender crimson lacquered wand with gold fittings topped by a large glowing golden full moon disc ringed with small golden clouds, ' +
+      'a faint rabbit silhouette on the moon, a five-color silk tassel with jade beads hanging below the head, opulent and elegant, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_wand_crescent',
+    nameKo: '초승달 완드',
+    slot: 'weapon',
+    batch: 9,
+    concept: '한복 세트 무기(달 완드)',
+    art:
+      'a crescent moon wand — a slender ivory and gold wand topped by a large golden crescent moon cradling a small glowing pearl, ' +
+      'a crimson silk ribbon and a five-color tassel tied below the head, graceful and luminous, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_wand_jade',
+    nameKo: '옥 보름달 완드',
+    slot: 'weapon',
+    batch: 9,
+    concept: '한복 세트 무기(달 완드)',
+    art:
+      'a moon wand — a long crimson lacquered rod with gold-leaf flower patterns, topped by a round pale jade full moon framed in a gold ring with tiny gold stars, ' +
+      'long crimson and gold silk tassels, regal and elegant, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_mallet_v2',
+    nameKo: '흰 떡메',
+    slot: 'weapon',
+    batch: 9,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple rice-cake mallet — a large smooth round barrel head of pale white wood on a long slim handle, a small rabbit face stamped on the head, ' +
+      'a white ribbon at the neck, clean and minimal, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v6',
+    nameKo: '절굿공이(굵은 양끝)',
+    slot: 'weapon',
+    batch: 9,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple double-headed rice-cake pestle — a long pale white wooden pestle with two large bulbous rounded heads and a narrow waist grip in the middle, ' +
+      'a soft pink cord wrapped at the grip, clean and minimal, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_mallet_mochi',
+    nameKo: '떡 늘어지는 떡메',
+    slot: 'weapon',
+    batch: 9,
+    concept: '달토끼 세트 무기',
+    art:
+      'a cute rice-cake mallet — a chubby pale wooden mallet with a round barrel head, a soft white sticky rice cake stretching from the head, ' +
+      'a pale pink ribbon bow on the handle, clean and charming, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_hanbok',
+    nameKo: '토끼 한복',
+    slot: 'armor',
+    batch: 9,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a white rabbit hanbok — a soft white jeogori jacket with a pale pink ribbon tie under a short fluffy white fur vest, white baggy trousers gathered at the ankles, ' +
+      'fluffy white fur cuffs, a round cotton tail, clean and charming, large',
+  },
+  {
+    key: 'chuseok_rabbit_cape',
+    nameKo: '토끼 망토 코트',
+    slot: 'armor',
+    batch: 9,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a white rabbit cape coat — a short fluffy white fur-trimmed cape with two round pompom ties over a simple white knee-length coat dress, ' +
+      'white tights and fluffy white boots, a round cotton tail, clean and elegant, large',
+  },
+  {
+    key: 'chuseok_rabbit_twopiece',
+    nameKo: '토끼 투피스',
+    slot: 'armor',
+    batch: 9,
+    concept: '달토끼 세트 방어구',
+    art:
+      'a simple white rabbit outfit — a cropped fluffy white jacket with a round collar and one pale pink ribbon, white shorts with a round cotton tail, ' +
+      'fluffy white leg warmers and white shoes, clean and minimal, large',
   },
 ];
 

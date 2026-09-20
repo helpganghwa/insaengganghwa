@@ -1014,5 +1014,41 @@
   "chuseok_harvest_hat": {
     "key": "key3",
     "objectId": "5443540c-22fa-4654-a2fa-62801603134a"
+  },
+  "chuseok_moon_wand_full": {
+    "key": "key3",
+    "objectId": "beaaa04b-8957-4272-8547-0381df9b723f"
+  },
+  "chuseok_moon_wand_crescent": {
+    "key": "key3",
+    "objectId": "5514f63f-2d9b-4a36-85e7-750b8dbbc871"
+  },
+  "chuseok_moon_wand_jade": {
+    "key": "key3",
+    "objectId": "b432fcda-9409-4775-8f6f-cc14bd79b8ec"
+  },
+  "chuseok_rabbit_mallet_v2": {
+    "key": "key3",
+    "objectId": "da55034e-f816-4efc-9049-92aa51c19f3a"
+  },
+  "chuseok_rabbit_pestle_v6": {
+    "key": "key3",
+    "objectId": "e83e2b1d-77cc-43c3-938f-7aa9182cb6f0"
+  },
+  "chuseok_rabbit_mallet_mochi": {
+    "key": "key3",
+    "objectId": "ea6ef604-0767-4951-9c27-4cb1d9f8382e"
+  },
+  "chuseok_rabbit_hanbok": {
+    "key": "key3",
+    "objectId": "186c42ba-1e09-437f-9bdb-81f62c853117"
+  },
+  "chuseok_rabbit_cape": {
+    "key": "key3",
+    "objectId": "cb7cb50b-982c-4e3e-bfb0-3a2a1aadae30"
+  },
+  "chuseok_rabbit_twopiece": {
+    "key": "key3",
+    "objectId": "94818484-cddc-40d4-b564-8e54d83306c1"
   }
 }
