@@ -133,12 +133,24 @@ async function buildStory(
   const empty = { story: { guilds: [], counts: [], eras: [], events: {} } as HistoryStory, ownersByDay: [] as number[][], guildsById: {} as HistoryIndex['guildsById'], nameAliases: {} as Record<string, number>, eraFacts: [] as EraFacts[] };
   if (kstDays.length === 0) return empty;
   const lastDay = kstDays[kstDays.length - 1]!;
-  // 소유 변화 — 승자 id가 있는 전투만(해산으로 id가 비워진 승리는 그 길드의 해산 중립화로 곧 덮인다).
-  const battleRows = (await db.execute(sql`
-    select cb.battle_kst_day::text as day, z.name as zone, cb.winner_guild_id::int as gid
+  // 소유 변화 — 승자가 있는 전투 전부. 길드가 해산하면 winner_guild_id는 FK(on delete set null)로 비워지지만
+  // 이름 스냅샷(0201 winner_guild_name)은 남는다. 그런 행은 연대기 스냅샷(guild_refs)에서 가장 가까운 날의
+  // 같은 이름으로 **옛 id를 되찾아** 센다. id가 빈 승리를 버리면 그 길드가 차지했던 땅이 과거 전체에 걸쳐 이전 주인의
+  // 것으로 되돌아가, 길드 하나가 해산할 때마다 지난 날들의 보유 수와 시대 경계가 바뀐다
+  // (2026-09-20 제국·구혼각 해산 → 9/13의 한 곳 차이가 동률이 되어 2·3장이 1장에 합쳐진 사고).
+  const battleRowsRaw = (await db.execute(sql`
+    select cb.battle_kst_day::text as day, z.name as zone,
+      coalesce(
+        cb.winner_guild_id,
+        (select (r->>'id')::bigint from world_chronicle wc, jsonb_array_elements(wc.guild_refs) r
+          where wc.server_id = cb.server_id and r->>'name' = cb.winner_guild_name
+          order by abs(wc.kst_day - cb.battle_kst_day) limit 1)
+      )::int as gid
     from conquest_battles cb join zones z on z.id = cb.zone_id
-    where cb.server_id = ${serverId} and cb.winner_guild_id is not null and cb.battle_kst_day <= ${lastDay}
-  `)) as unknown as { day: string; zone: string; gid: number }[];
+    where cb.server_id = ${serverId} and cb.battle_kst_day <= ${lastDay}
+      and (cb.winner_guild_id is not null or cb.winner_guild_name is not null)
+  `)) as unknown as { day: string; zone: string; gid: number | null }[];
+  const battleRows = battleRowsRaw.filter((r): r is { day: string; zone: string; gid: number } => r.gid != null);
   const neutralRows = (await db.execute(sql`
     select we.detail->>'battleDay' as day, zn as zone
     from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
