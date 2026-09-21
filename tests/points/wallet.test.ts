@@ -25,7 +25,7 @@ const TAG = `t${process.pid}_${Date.now()}`;
 async function balances() {
   const [r] = (await testDb.execute(sql`
     select (select melee_points::text from characters where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}) as mp,
-           (select mileage::text from profiles where id=${TEST_USER_ID}::uuid) as ml
+           (select balance::text from mileage_wallets where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}) as ml
   `)) as unknown as { mp: string | null; ml: string | null }[];
   return { mp: Number(r?.mp ?? 0), ml: Number(r?.ml ?? 0) };
 }
@@ -38,7 +38,10 @@ describe.skipIf(skip)('포인트 지갑 — DB 통합', () => {
   afterEach(async () => {
     await testDb.execute(sql`delete from point_ledger where user_id=${TEST_USER_ID}::uuid and ref like ${'%' + TAG + '%'}`);
     await testDb.execute(sql`update characters set melee_points=${base.mp} where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}`);
-    await testDb.execute(sql`update profiles set mileage=${base.ml} where id=${TEST_USER_ID}::uuid`);
+    await testDb.execute(sql`
+      insert into mileage_wallets (user_id, server_id, balance) values (${TEST_USER_ID}::uuid, ${SERVER_ID}, ${base.ml})
+      on conflict (user_id, server_id) do update set balance = ${base.ml}
+    `);
   });
 
   it('대난투 포인트: 같은 (battle, user)는 한 번만 적립된다', async () => {
@@ -53,11 +56,14 @@ describe.skipIf(skip)('포인트 지갑 — DB 통합', () => {
 
   it('마일리지: 주문당 1회 적립, 환불 시 회수, 부족분은 기록', async () => {
     const orderId = `${TAG}_o1`;
-    expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, orderId, amountKrw: 9900, note: '테스트 ₩9,900' })).toBe(99);
-    expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, orderId, amountKrw: 9900, note: '테스트 ₩9,900' })).toBe(0);
+    expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, serverId: SERVER_ID, orderId, amountKrw: 9900, note: '테스트 ₩9,900' })).toBe(99);
+    expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, serverId: SERVER_ID, orderId, amountKrw: 9900, note: '테스트 ₩9,900' })).toBe(0);
     expect((await balances()).ml - base.ml).toBe(99);
     // 잔액을 일부 써 버린 상황을 흉내 — 60점만 남김
-    await testDb.execute(sql`update profiles set mileage=${base.ml + 60} where id=${TEST_USER_ID}::uuid`);
+    await testDb.execute(sql`
+      insert into mileage_wallets (user_id, server_id, balance) values (${TEST_USER_ID}::uuid, ${SERVER_ID}, ${base.ml + 60})
+      on conflict (user_id, server_id) do update set balance = ${base.ml + 60}
+    `);
     // 기존 잔액(base.ml)이 있으면 그만큼 더 회수 가능하므로 taken = min(base.ml+60, 99)
     const r = await revokeMileageForOrder(testDb, { userId: TEST_USER_ID, orderId });
     expect(r.credited).toBe(99);
@@ -67,6 +73,24 @@ describe.skipIf(skip)('포인트 지갑 — DB 통합', () => {
     expect(again.taken).toBe(0);
     const [row] = (await testDb.execute(sql`select note from point_ledger where kind='mileage' and ref=${'order:' + orderId + ':refund'}`)) as unknown as { note: string }[];
     expect(row?.note.startsWith('환불 회수')).toBe(true);
+  });
+
+  it('마일리지는 결제한 서버에만 쌓이고, 회수도 그 서버에서만 한다(0211)', async () => {
+    const OTHER = 9000 + (process.pid % 900); // 실재하지 않는 서버 번호 — 지갑 테이블은 서버 FK가 없다
+    const orderId = `${TAG}_o2`;
+    try {
+      expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, serverId: OTHER, orderId, amountKrw: 5000, note: '테스트 ₩5,000' })).toBe(50);
+      // 활성 서버(1) 잔액은 그대로 — 종전(계정 단위)이었다면 여기서 50이 올랐다.
+      expect((await balances()).ml).toBe(base.ml);
+      expect((await getPointsOverview(TEST_USER_ID, OTHER)).mileage.balance).toBe(50);
+      expect((await getPointsOverview(TEST_USER_ID, SERVER_ID)).mileage.balance).toBe(base.ml);
+      const r = await revokeMileageForOrder(testDb, { userId: TEST_USER_ID, orderId });
+      expect(r).toEqual({ credited: 50, taken: 50 });
+      expect((await getPointsOverview(TEST_USER_ID, OTHER)).mileage.balance).toBe(0);
+      expect((await balances()).ml).toBe(base.ml); // 다른 서버 지갑은 건드리지 않는다
+    } finally {
+      await testDb.execute(sql`delete from mileage_wallets where user_id=${TEST_USER_ID}::uuid and server_id=${OTHER}`);
+    }
   });
 
   it('개요: 잔액과 최근 적립/사용 목록(최신순, 최대 10건)', async () => {

@@ -10,7 +10,7 @@ import {
   CharacterError,
   createCharacterAuto,
   touchLastServer,
-  latestOpenServerId,
+  recommendedServerId,
 } from '@/lib/game/server-select';
 import { correctServerFor } from '@/lib/game/server-guard';
 import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
               .limit(1);
             sid = p?.sid ?? null;
           }
-          if (!sid) sid = await latestOpenServerId();
+          if (!sid) sid = await recommendedServerId();
           // 그 서버에 캐릭터가 없으면 생성(가입 보너스 + 기본 아바타 + 거주지 포함).
           // 가입 트리거(0067)는 더 이상 캐릭터를 만들지 않으므로, 신규 가입·새 서버 합류 모두
           // 여기서 "고른 서버에 정확히 1개"만 생성된다(유령 캐릭터·중복 보너스 제거).
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
                   await createCharacterAuto({ userId, serverId: sid });
                 } catch (ce) {
                   if (!(ce instanceof CharacterError) || ce.code !== 'SERVER_NOT_OPEN') throw ce;
-                  const fallback = await latestOpenServerId();
+                  const fallback = await recommendedServerId();
                   if (fallback === sid) throw ce;
                   sid = fallback;
                   if (!(await canEnterServer(userId, sid))) {

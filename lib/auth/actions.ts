@@ -11,7 +11,7 @@ import {
   canEnterServer,
   createCharacterAuto,
   touchLastServer,
-  latestOpenServerId,
+  recommendedServerId,
 } from '@/lib/game/server-select';
 import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
 import { TEST_ACCOUNTS, passwordForTestAccount } from './test-accounts';
@@ -71,7 +71,7 @@ async function applyServerSelect(uid: string): Promise<void> {
         .limit(1);
       sid = p?.sid ?? null;
     }
-    if (!sid) sid = await latestOpenServerId();
+    if (!sid) sid = await recommendedServerId();
     if (sid) {
       if (!(await canEnterServer(uid, sid))) await createCharacterAuto({ userId: uid, serverId: sid });
       await touchLastServer(uid, sid);

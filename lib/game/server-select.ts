@@ -288,11 +288,18 @@ export async function listServersPublic(): Promise<{ id: number; name: string; s
     .orderBy(servers.id);
 }
 
-/** 최신 open 서버 id — 신규 기본 선택(가입 트리거와 동일 규칙). */
-export async function latestOpenServerId(): Promise<number> {
-  const [r] = await db
-    .select({ id: sql<number>`coalesce(max(${servers.id}), 1)` })
-    .from(servers)
-    .where(eq(servers.status, 'open'));
-  return r?.id ?? 1;
+/**
+ * 신규 유저의 기본 서버(0210) — 운영자가 추천으로 지정한 open 서버. 지정이 없거나 그 서버가 open이
+ * 아니면 최신 open 서버로 떨어진다(가입 트리거 v10과 같은 규칙). 로그인 화면의 '추천' 라벨도 이 값.
+ * 종전에는 무조건 최신 open이라, 2서버를 여는 순간 1서버에 신규가 끊겼다.
+ */
+export async function recommendedServerId(): Promise<number> {
+  const rows = (await db.execute(sql`
+    select coalesce(
+      (select id from servers where recommended and status = 'open' limit 1),
+      (select max(id) from servers where status = 'open'),
+      1
+    )::int as id
+  `)) as unknown as { id: number }[];
+  return rows[0]?.id ?? 1;
 }

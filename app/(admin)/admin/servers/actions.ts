@@ -19,17 +19,25 @@ export type ServerRow = {
   characters: number;
   /** 최근 7일 접속자 — 포화 판단 재료. */
   active7: number;
+  /** 운영자가 추천으로 지정했는가(0210). */
+  recommended: boolean;
+  /** 지금 신규가 실제로 배정되는 서버인가 — 지정이 없으면 최신 open 서버가 대신 맡는다. */
+  effective: boolean;
 };
 
 export async function listServerRows(): Promise<ServerRow[]> {
   await requireAdmin();
   return (await db.execute(sql`
-    select s.id::int as id, s.name, s.status::text as status,
+    select s.id::int as id, s.name, s.status::text as status, s.recommended,
+           s.id = coalesce(
+             (select id from servers where recommended and status = 'open' limit 1),
+             (select max(id) from servers where status = 'open')
+           ) as effective,
            count(c.user_id)::int as characters,
            count(c.user_id) filter (where c.last_seen_at >= now() - interval '7 days')::int as active7
       from servers s
       left join characters c on c.server_id = s.id
-     group by s.id, s.name, s.status
+     group by s.id, s.name, s.status, s.recommended
      order by s.id
   `)) as unknown as ServerRow[];
 }
@@ -81,13 +89,57 @@ export async function setServerStatusAction(
   }
 
   await db.transaction(async (tx) => {
-    await tx.update(servers).set({ status }).where(eq(servers.id, serverId));
+    // 추천 서버는 open일 때만 뜻이 있다 — open을 벗어나면 지정을 함께 푼다(신규는 최신 open 서버로).
+    await tx
+      .update(servers)
+      .set(status === 'open' ? { status } : { status, recommended: false })
+      .where(eq(servers.id, serverId));
     await tx.insert(adminActions).values({
       adminUserId: adminId,
       action: 'server.set_status',
       targetType: 'server',
       targetId: String(serverId),
       payload: { name: cur.name, before: cur.status, after: status },
+    });
+  });
+  revalidatePath('/admin/servers');
+  return { status: 'success' };
+}
+
+/**
+ * 추천 서버 지정(0210, 2서버 남은 결정 D1) — 신규 유저의 기본 서버. 한 곳만, open 서버만.
+ * 서버를 여는 날과 신규를 받기 시작하는 날을 따로 정할 수 있게 한다(종전엔 무조건 최신 서버).
+ * 초대 링크로 온 신규는 이 값과 무관하게 초대한 사람의 서버로 간다.
+ */
+export async function setRecommendedServerAction(
+  serverId: number,
+): Promise<{ status: 'success' } | { status: 'error'; code: string; message: string }> {
+  const adminId = await requireAdmin();
+  const [cur] = await db
+    .select({ id: servers.id, name: servers.name, status: servers.status, recommended: servers.recommended })
+    .from(servers)
+    .where(eq(servers.id, serverId))
+    .limit(1);
+  if (!cur) return { status: 'error', code: 'NOT_FOUND', message: '없는 서버입니다.' };
+  if (cur.status !== 'open') {
+    return { status: 'error', code: 'NOT_OPEN', message: "'정상' 상태인 서버만 추천으로 지정할 수 있습니다." };
+  }
+  if (cur.recommended) return { status: 'success' };
+
+  await db.transaction(async (tx) => {
+    // 부분 유니크(servers_one_recommended_uq)가 한 곳만 허용 — 먼저 내리고 올린다.
+    const prev = await tx
+      .update(servers)
+      .set({ recommended: false })
+      .where(eq(servers.recommended, true))
+      .returning({ id: servers.id });
+    await tx.update(servers).set({ recommended: true }).where(eq(servers.id, serverId));
+    await tx.insert(adminActions).values({
+      adminUserId: adminId,
+      action: 'server.set_recommended',
+      targetType: 'server',
+      targetId: String(serverId),
+      payload: { name: cur.name, before: prev[0]?.id ?? null, after: serverId },
     });
   });
   revalidatePath('/admin/servers');

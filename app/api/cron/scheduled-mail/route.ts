@@ -59,9 +59,9 @@ export async function GET(req: Request) {
     let sent = 0;
     for (const m of due) {
       // 대상 서버(0208): 숫자면 그 서버 캐릭터 보유자에게만 그 서버 우편함으로(즉시 발송과 동일),
-      // null이면 전 서버 = **계정당 1통**. 배송지는 마지막 접속 서버를 우선하되 거기 캐릭터가
-      // 없으면 가진 서버 중 가장 낮은 곳으로 — 종전에는 last_server_id를 그대로 써서 캐릭터가
-      // 없는 서버 우편함에 떨어지면 영영 못 받았다(2026-09-21 ⑥).
+      // null이면 전 서버 = **캐릭터가 있는 서버마다 1통**(2026-09-21 결정 D2). 종전에는 계정당 1통을
+      // last_server_id로 보내, 두 서버를 하는 사람은 한쪽에서만 받고 캐릭터가 없는 서버 우편함에
+      // 떨어지면 영영 못 받았다. 일일 보급·출석과 같은 기준(캐릭터마다)이 된다. 알림은 계정당 한 번.
       const target = m.server_id;
       const label = target == null ? '전체(예약)' : `${target}서버(예약)`;
       const rows = (await db.execute(sql`
@@ -71,16 +71,11 @@ export async function GET(req: Request) {
           returning id
         ),
         dest as (
-          select p.id as user_id,
-                 coalesce(
-                   max(c.server_id) filter (where c.server_id = p.last_server_id),
-                   min(c.server_id)
-                 )::smallint as server_id
-            from profiles p
-            join characters c on c.user_id = p.id
+          select c.user_id, c.server_id
+            from characters c
+            join profiles p on p.id = c.user_id
            where p.withdrawn_at is null
              and (${target}::smallint is null or c.server_id = ${target}::smallint)
-           group by p.id
         )
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select d.user_id, d.server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb

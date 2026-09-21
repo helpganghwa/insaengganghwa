@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   pgTable,
   smallint,
   text,
@@ -25,6 +26,8 @@ export const servers = pgTable('servers', {
   name: text('name').notNull(),
   /** open(정상) | full(신규 캐릭터 생성 제한) | closed(준비/통합 대비) */
   status: text('status').notNull().default('open'),
+  /** 신규 유저의 기본 서버(0210) — 운영자가 한 곳만 지정. 없거나 open이 아니면 최신 open 서버. */
+  recommended: boolean('recommended').notNull().default(false),
   openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

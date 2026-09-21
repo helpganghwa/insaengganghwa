@@ -473,6 +473,7 @@ export async function completePurchase(
       await tx.transaction((sp) =>
         creditMileageForOrder(sp, {
           userId: order.userId,
+          serverId: order.serverId, // 결제한 서버에 쌓인다(0211) — 다이아 지급과 같은 귀속
           orderId: order.id,
           amountKrw: Number(order.amountKrw),
           note: `${productDisplayName(order.productCode)} ₩${Number(order.amountKrw).toLocaleString('ko-KR')}`,
