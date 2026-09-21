@@ -20,7 +20,7 @@
 - 잔액은 캐시: `characters.melee_points`, `mileage_wallets(user_id, server_id, balance)`. 원장 합으로 다시 세울 수 있다(0211이 그 SQL, 멱등).
 - 마일리지를 `characters` 행에 두지 않는 이유 = 결제·환불 트랜잭션의 잠금 순서(iap_orders → monthly_purchase_limits → **마일리지** → battlepass → characters). characters에 두면 환불이 characters를 battlepass보다 먼저 잠가 배틀패스 수령과 교착이 난다.
 - 탈퇴: 대난투 원장 삭제, 마일리지는 지갑마다 상계 행(탈퇴 소멸)을 넣고 지갑을 비운다(원장은 결제 기록과 동축이라 보존). characters 삭제로 대난투 잔액은 함께 사라짐.
-- 소급·복구: `bun run scripts/points-backfill.ts [--apply] [DB_URL]` — dry-run 기본. 실시간 적립은 실패해도 발표·결제를 막지 않으므로, 빠진 적립은 이 스크립트가 멱등으로 채운다(마일리지는 주문의 서버로 적고 서버별 지갑을 다시 세운다). created_at은 발표 시각/결제 시각으로 적어 화면 날짜가 맞는다.
+- 소급·복구: `bun run scripts/points-backfill.ts [--apply] [--server=N] [DB_URL]` — dry-run 기본, `--server=N`이면 그 서버만(적재·잔액 재계산 모두, 생략 시 전 서버). 먼저 그 DB의 서버 목록과 서버별 건수를 보여 준다. 실시간 적립은 실패해도 발표·결제를 막지 않으므로, 빠진 적립은 이 스크립트가 멱등으로 채운다(마일리지는 주문의 서버로 적고 서버별 지갑을 다시 세운다). created_at은 발표 시각/결제 시각으로 적어 화면 날짜가 맞는다.
 
 ## 3. 코드
 
