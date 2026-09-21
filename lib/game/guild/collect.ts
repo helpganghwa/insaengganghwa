@@ -43,7 +43,7 @@ export async function collectZoneTaxTx(
 ): Promise<CollectResult> {
   // 소유·집행관을 먼저 읽는다(락 없이) — 잠글 characters 행이 **집행관**의 것이기 때문(지갑 입금 대상).
   const [pre] = await tx
-    .select({ executor: zones.executorUserId, owner: zones.ownerGuildId })
+    .select({ executor: zones.executorUserId, owner: zones.ownerGuildId, serverId: zones.serverId })
     .from(zones)
     .where(eq(zones.id, input.zoneId));
   if (!pre) throw new GuildError('ZONE_NOT_FOUND');
@@ -51,7 +51,11 @@ export async function collectZoneTaxTx(
 
   // 락 순서 통일(characters → zones): 지출 세금 훅(walletTrySpend가 characters를 잠근 뒤 거주 구역 zones 갱신)과
   // 반대 순서로 잠그면 집행관 본인의 강화 단축·구매와 교착한다. 집행관 = 그 구역 거주자라 같은 두 행이 겹친다.
-  await tx.execute(sql`select 1 from characters where user_id = ${pre.executor}::uuid for update`);
+  // **그 구역 서버의 캐릭터만** 잠근다 — 서버 조건이 없으면 집행관의 다른 서버 캐릭터까지 잠겨, 수금하는
+  // 동안 그 사람의 다른 서버 다이아 사용이 기다린다(구역의 서버는 바뀌지 않는 값).
+  await tx.execute(
+    sql`select 1 from characters where user_id = ${pre.executor}::uuid and server_id = ${pre.serverId} for update`,
+  );
   const [z] = await tx
     .select({
       executor: zones.executorUserId,

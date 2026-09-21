@@ -208,8 +208,13 @@ export async function GET(request: NextRequest) {
         }
       }
       // 확인이 필요하면 게임 대신 확인 화면으로 — 쿠키 처리(초대 귀속 등)는 그대로 두고 목적지만 바꾼다.
+      // 카카오 픽셀 표식(kakao_ev)도 같이 옮긴다 — 픽셀 로더는 루트 레이아웃에 있어 확인 화면에서도 발화한다.
+      // 빼먹으면 이 경로로 들어온 로그인만 전환 집계에서 빠진다.
       if (confirmNewServerId != null) {
-        res.headers.set('location', `${origin}/login/new-character?to=${confirmNewServerId}`);
+        const confirm = new URL(`${origin}/login/new-character`);
+        confirm.searchParams.set('to', String(confirmNewServerId));
+        if (kakaoEv) confirm.searchParams.set('kakao_ev', kakaoEv);
+        res.headers.set('location', confirm.toString());
       }
       return res;
     }

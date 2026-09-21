@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { chatBlocks } from '@/lib/db/schema/chat';
 import { characters } from '@/lib/db/schema/server';
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 
@@ -26,6 +27,16 @@ export async function notifyRaidInvite(input: {
   // 레이드 화면 '초대받은 레이드' 섹션에 남으므로 미발송이 정보 유실은 아니다.
   const [target] = await filterByActiveServer([input.inviteeUserId], input.serverId);
   if (!target) return;
+
+  // 초대받는 사람이 개설자를 차단했으면 푸시하지 않는다 — 차단은 연락 차단이다. 차단 시 친구 정리는
+  // 누른 서버에서만 하므로(chat/service setChatBlock) 다른 서버에 남은 친구·같은 길드원의 초대가 여기로 온다.
+  // 초대 자체는 남는다(개설자에게 차단 사실이 드러나지 않게 — 목록에서 빼지 않는다).
+  const [blocked] = await db
+    .select({ one: chatBlocks.userId })
+    .from(chatBlocks)
+    .where(and(eq(chatBlocks.userId, input.inviteeUserId), eq(chatBlocks.blockedUserId, input.hostUserId)))
+    .limit(1);
+  if (blocked) return;
 
   const [host] = await db
     .select({ nickname: characters.nickname })
