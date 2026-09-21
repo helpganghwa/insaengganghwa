@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { EmblemChain } from '@/components/EmblemChain';
-import { loadHistoryIndex } from '@/lib/game/history/loaders';
+import { loadHistoryIndex, parseHistoryServerId } from '@/lib/game/history/loaders';
 import { SERIF } from '@/app/wiki/theme';
 
 import { ComingSoonBook } from '../ComingSoonBook';
@@ -19,8 +19,15 @@ export const metadata: Metadata = {
 
 const SHOWN = 8;
 
-export default async function HistoryGuildsPage() {
-  const index = await loadHistoryIndex(1).catch(() => null);
+export default async function HistoryGuildsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // 서버는 쿼리스트링으로만 구분한다(2026-09-21 ⑦) — 종전에는 1서버가 박혀 있어
+  // `?s=2`로 들어와도 1서버 길드 깃발이 떴다.
+  const serverId = parseHistoryServerId((await searchParams).s);
+  const index = await loadHistoryIndex(serverId).catch(() => null);
   const all = index
     ? Object.entries(index.guildsById)
         .map(([id, g]) => ({

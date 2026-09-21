@@ -24,8 +24,13 @@ export type NicknameChangeOutcome =
  * 깎아 diamond_ledger에 아무 흔적이 없었고, 원장을 근거로 삼는 집계가 그만큼 과소 집계됐다
  * (LedgerReason 'nickname_change'는 선언만 있고 호출부가 없던 상태, 2026-08-12 재검증).
  *
- * 닉네임 중복(characters_nickname_uq)은 마지막 UPDATE에서 23505로 터져 호출부가 받는다 —
- * 같은 트랜잭션이라 차감도 함께 롤백된다.
+ * 닉네임 중복은 마지막 UPDATE에서 DB가 막고 호출부가 받는다 — 같은 트랜잭션이라 차감도 함께
+ * 롤백된다. 0207부터 두 가지다: 같은 서버 안 중복은 23505(characters_server_nickname_uq),
+ * **다른 사람이 쓰는 이름**은 23P01(characters_nickname_owner_excl). 호출부는 `isNicknameTaken`.
+ *
+ * ⚠ 앱에서 사전 중복 검사를 하지 않는다 — 그래서 **다른 서버에서 쓰는 내 이름으로 바꾸는 것은
+ * 그대로 된다**(0207이 같은 계정은 허용). 새 서버는 임의 닉으로 시작하고, 원하면 닉네임 변경으로
+ * 본래 이름을 가져오는 흐름(2026-09-21 사용자 확정).
  */
 export async function applyNicknameChange(
   tx: Tx,

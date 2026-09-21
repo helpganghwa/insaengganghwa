@@ -432,3 +432,12 @@ export function loadHistoryDay(serverId: number, kstDay: string): Promise<Histor
     return { kstDay, headline: row.headline ?? '', text: row.text, replay };
   });
 }
+
+/**
+ * 역사 위키의 서버 파라미터(`?s=`) — 위키는 서버 선택 UI 없이 **쿼리스트링으로만** 구분한다
+ * (2026-09-21 ⑦, 사용자 확정). 없거나 이상하면 1서버.
+ */
+export function parseHistoryServerId(v: unknown): number {
+  const n = Number(typeof v === 'string' ? v : NaN);
+  return Number.isInteger(n) && n >= 1 && n <= 99 ? n : 1;
+}

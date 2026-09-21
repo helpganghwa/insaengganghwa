@@ -90,6 +90,37 @@ describe.skipIf(!USER)('닉네임 소유 — 이름 하나에 사람 하나', ()
     });
   });
 
+  it('닉네임 변경 — 다른 서버에서 쓰는 내 이름으로 바꿀 수 있다', async () => {
+    await inTx(async (tx) => {
+      await tx.execute(sql`insert into servers (id, name, status) values (9001, '테스트A', 'closed'), (9002, '테스트B', 'closed')`);
+      const mine = `승계테스트${Date.now() % 100000}`;
+      await put(tx, USER, 9001, mine); // 1서버에서 쓰던 이름
+      await put(tx, USER, 9002, `대장장이zz01`); // 새 서버는 임의 닉으로 시작
+      // 닉네임 변경 UPDATE(applyNicknameChange 본문과 같은 문장) — 내 이름이라 통과해야 한다.
+      const ok = await codeIn(tx, (t) =>
+        t.execute(sql`update characters set nickname = ${mine} where user_id = ${USER}::uuid and server_id = 9002`),
+      );
+      expect(ok).toBeNull();
+    });
+  });
+
+  it('닉네임 변경 — 남이 쓰는 이름으로는 못 바꾼다', async () => {
+    await inTx(async (tx) => {
+      await tx.execute(sql`insert into servers (id, name, status) values (9001, '테스트A', 'closed'), (9002, '테스트B', 'closed')`);
+      const [other] = (await tx.execute(sql`
+        select user_id::text as id from characters where user_id <> ${USER}::uuid limit 1
+      `)) as unknown as { id: string }[];
+      if (!other) return;
+      const theirs = `남의이름${Date.now() % 100000}`;
+      await put(tx, other.id, 9001, theirs);
+      await put(tx, USER, 9002, `대장장이zz02`);
+      const blocked = await codeIn(tx, (t) =>
+        t.execute(sql`update characters set nickname = ${theirs} where user_id = ${USER}::uuid and server_id = 9002`),
+      );
+      expect(blocked).toBe('23P01');
+    });
+  });
+
   it('두 위반 모두 "이미 쓰는 이름"으로 읽힌다 — 재추첨 루프가 죽지 않는다', () => {
     const uniq = { cause: { code: '23505' } };
     const excl = { cause: { code: '23P01' } };

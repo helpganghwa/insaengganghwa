@@ -1,4 +1,4 @@
-import { loadHistoryIndex } from '@/lib/game/history/loaders';
+import { loadHistoryIndex, parseHistoryServerId } from '@/lib/game/history/loaders';
 import { assetUrl } from '@/lib/asset-versions';
 
 import { HistoryPlayer } from './HistoryPlayer';
@@ -11,8 +11,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function HistoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
-  const s = Number(typeof sp.s === 'string' ? sp.s : '1');
-  const serverId = Number.isInteger(s) && s >= 1 && s <= 99 ? s : 1;
+  const serverId = parseHistoryServerId(sp.s);
   const startDay = typeof sp.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(sp.day) ? sp.day : null;
   const index = await loadHistoryIndex(serverId).catch((e) => {
     console.error('[history.index]', (e as Error).message);
