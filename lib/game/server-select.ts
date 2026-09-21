@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { servers, characters } from '@/lib/db/schema/server';
@@ -282,9 +282,12 @@ export async function createCharacterAuto(input: {
 
 /** 공개 서버 목록(비로그인 — 로그인 화면 셀렉터용). 이름·상태만. */
 export async function listServersPublic(): Promise<{ id: number; name: string; status: string }[]> {
+  // 닫힘(closed)은 내보내지 않는다(2026-09-21 F1) — 준비 중인 서버가 눌리지 않는 칩으로 보여,
+  // 오픈 전에 미리 만들어 두면 존재가 드러났다. 열림·포화만 보인다(포화는 기존 유저가 고른다).
   return db
     .select({ id: servers.id, name: servers.name, status: servers.status })
     .from(servers)
+    .where(ne(servers.status, 'closed'))
     .orderBy(servers.id);
 }
 

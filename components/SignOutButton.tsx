@@ -46,7 +46,7 @@ const ACCOUNT_LOCAL_KEYS = [
 ];
 const ACCOUNT_SESSION_KEYS = ['push_synced', 'ig:checkin-dismissed', 'ig:chat-restore'];
 /** 계정 축 접두사 — 서버별로 키가 갈린다. */
-const ACCOUNT_LOCAL_PREFIXES = ['ig:chron-read:'];
+const ACCOUNT_LOCAL_PREFIXES = ['ig:chron-read:', 'annSeenAt:'];
 
 function clearAccountState(): void {
   for (const k of ACCOUNT_LOCAL_KEYS) {

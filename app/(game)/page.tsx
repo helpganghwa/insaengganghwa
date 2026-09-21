@@ -469,7 +469,7 @@ export default async function HomePage() {
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
               {i === 6 && (
-                <AnnouncementBoard items={announcements} tint="#2b2147" holdPopup={tutorialActive} myVotes={myPollVotes} />
+                <AnnouncementBoard serverId={serverId} items={announcements} tint="#2b2147" holdPopup={tutorialActive} myVotes={myPollVotes} />
               )}
               <Link prefetch={false}
               href={m.href}

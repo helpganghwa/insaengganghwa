@@ -153,10 +153,14 @@ export async function recentPayResultAction(): Promise<{
 }> {
   const u = await getSessionUserId();
   if (!u) return { paid: null, verifiedAtIso: null };
+  // 결제 완료 팝업은 **결제한 서버에서만**(2026-09-21 F5) — 재화는 주문의 서버에 들어가므로, 다른
+  // 서버로 들어온 직후 "결제가 완료됐어요"가 뜨면 거기엔 그 재화가 없다. 본인인증은 계정 단위라 그대로.
+  const serverId = await getActiveServerId();
   const [rows, prof] = await Promise.all([
     db.execute(sql`
       select portone_order_id as payment_id, product_code, paid_at from iap_orders
       where user_id = ${u}::uuid and status = 'paid' and paid_at > now() - interval '15 minutes'
+        and server_id = ${serverId}
         and client_notified_at is null
       order by paid_at desc limit 1
     `) as unknown as Promise<{ payment_id: string; product_code: string; paid_at: Date }[]>,
