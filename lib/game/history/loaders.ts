@@ -39,6 +39,21 @@ export function loadEraInputs(serverId: number): Promise<EraInput[]> {
   return withHistoryDb(async () => (await buildIndexCore(serverId)).eraInputs);
 }
 
+/**
+ * 어드민 검수 화면용 — 표시만 하므로 첫 화면과 같은 캐시 규칙(10분·태그 'history-index'·날짜 키)을 탄다.
+ * 서버마다 전체 연대기를 다시 계산하는 일이라, 캐시 없이는 서버 수만큼 어드민 진입이 느려진다.
+ * ⚠ 동기화(syncHistoryEras)는 사실표 해시를 비교하므로 반드시 캐시 없는 loadEraInputs를 쓴다.
+ */
+export function loadEraInputsForView(serverId: number): Promise<EraInput[]> {
+  if (process.env.HISTORY_NO_CACHE === '1') return loadEraInputs(serverId);
+  return withHistoryDb(() => cachedEraInputs(serverId, kstDateString()));
+}
+const cachedEraInputs = unstable_cache(
+  async (serverId: number, _today: string) => (await buildIndexCore(serverId)).eraInputs,
+  ['history-era-inputs-v1'],
+  { revalidate: 600, tags: ['history-index'] },
+);
+
 /** 자정 공개 뒤·어드민에서 — 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(정본은 그대로). 새 시대가 생기면 집계 문장이 정본으로 들어가므로 첫 화면 캐시도 비운다. */
 export async function syncHistoryEras(serverId: number, opts: { force?: boolean; only?: string } = {}): Promise<SyncResult> {
   const inputs = await loadEraInputs(serverId);

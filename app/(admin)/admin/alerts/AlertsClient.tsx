@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
+import { ServerBadge } from '../ServerBadge';
 import { resolveAlertAction, retryAlertAction } from './actions';
 
 export type AlertRow = {
@@ -10,6 +11,8 @@ export type AlertRow = {
   severity: string;
   paymentId: string;
   orderId: string | null;
+  /** 연결된 주문의 서버 — 주문을 못 찾은 경보는 null. */
+  serverId: number | null;
   detail: string;
   resolved: boolean;
   createdAt: string;
@@ -48,6 +51,7 @@ function Row({ a }: { a: AlertRow }) {
           {a.severity}
         </span>
         <span className="font-mono text-sm font-bold text-zinc-200">{a.kind}</span>
+        {a.serverId != null ? <ServerBadge serverId={a.serverId} /> : null}
         <span className="ml-auto text-[11px] text-zinc-500">{fmt(a.createdAt)}</span>
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-zinc-300">{a.detail}</p>

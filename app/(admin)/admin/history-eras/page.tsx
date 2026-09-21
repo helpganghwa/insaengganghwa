@@ -1,6 +1,6 @@
 import { openServerIds } from '@/lib/game/server-list';
 import { readStoredEraSummaries } from '@/lib/game/history/era-store';
-import { loadEraInputs } from '@/lib/game/history/loaders';
+import { loadEraInputsForView } from '@/lib/game/history/loaders';
 
 import { EraEditor, SyncAllButton } from './EraEditor';
 
@@ -14,7 +14,7 @@ export default async function AdminHistoryErasPage() {
   const servers = await openServerIds();
   const blocks = await Promise.all(
     servers.map(async (serverId) => {
-      const [inputs, stored] = await Promise.all([loadEraInputs(serverId).catch(() => []), readStoredEraSummaries(serverId)]);
+      const [inputs, stored] = await Promise.all([loadEraInputsForView(serverId).catch(() => []), readStoredEraSummaries(serverId)]);
       return { serverId, inputs, stored };
     }),
   );
