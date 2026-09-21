@@ -39,12 +39,7 @@ export function ServerPicker({
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
   return (
     <div className="w-full rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/50">
-      <p className="mb-1.5 text-left text-[10px] font-bold text-zinc-400">
-        서버 선택
-        <span className="ml-1 font-medium text-zinc-400/80">
-          {servers.length > 1 ? '· 고르지 않으면 하던 서버로 들어가요' : ''}
-        </span>
-      </p>
+      <p className="mb-1.5 text-left text-[10px] font-bold text-zinc-400">서버 선택</p>
       <div className="grid grid-cols-3 gap-1.5">
         {servers.map((sv) => {
           // 포화(full)는 **신규 생성만** 막는 상태다(SERVER.md §6) — 기존 유저는 골라 들어올 수
