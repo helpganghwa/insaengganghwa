@@ -46,6 +46,14 @@ export function VicePermissionsBoard({
   const [perms, setPerms] = useState<Record<string, number>>(() =>
     Object.fromEntries(vices.map((v) => [v.userId, v.permissions])),
   );
+  // 렌더 중 state 조정(React 권장 패턴) — 서버가 새 값을 내려 주면 그 값으로 다시 맞춘다. 다른 기기에서
+  // 바뀐 권한이 이 화면에 낡은 채 남지 않게 한다(실패한 저장은 props가 그대로라 아래 되돌림이 맡는다).
+  const serverSig = vices.map((v) => `${v.userId}:${v.permissions}`).join(',');
+  const [prevSig, setPrevSig] = useState(serverSig);
+  if (serverSig !== prevSig) {
+    setPrevSig(serverSig);
+    setPerms(Object.fromEntries(vices.map((v) => [v.userId, v.permissions])));
+  }
   const [selected, setSelected] = useState<string | null>(initialSelected ?? vices[0]?.userId ?? null);
   const [confirm, setConfirm] = useState<{ userId: string; key: GuildPermConfirmKey } | null>(null);
 

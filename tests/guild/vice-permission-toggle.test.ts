@@ -72,6 +72,21 @@ describe.skipIf(!USER)('부길드장 권한 — 하나씩 켜고 끈다', () => 
       });
   });
 
+  it('이 코드가 모르는 비트도 지우지 않는다 — 권한이 늘어난 뒤 옛 코드로 되돌린 배포가 새 권한을 없애면 안 된다', async () => {
+    await testDb
+      .transaction(async (tx) => {
+        const f = await setup(tx);
+        const UNKNOWN = 1 << 10; // 지금은 정의되지 않은 자리
+        await tx.execute(sql`update guild_members set permissions = permissions | ${UNKNOWN} where user_id = ${f.VICE}::uuid and server_id = ${SERVER_ID}`);
+        await setVicePermissionTx(tx, { leaderUserId: USER, serverId: SERVER_ID, targetUserId: f.VICE, key: 'notice', on: false });
+        expect(await f.perms()).toBe(GUILD_PERM.taxDistribute | UNKNOWN);
+        throw ROLLBACK;
+      })
+      .catch((e) => {
+        if (e !== ROLLBACK) throw e;
+      });
+  });
+
   it('변화가 없으면 기록하지 않고, 바뀌면 어떤 권한을 켰는지까지 남긴다', async () => {
     await testDb
       .transaction(async (tx) => {

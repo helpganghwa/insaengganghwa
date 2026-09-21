@@ -10,7 +10,6 @@ import {
   hasGuildPerm,
   isConfirmKey,
   permKeys,
-  sanitizePerms,
   type GuildPermKey,
 } from '@/lib/game/guild/permissions';
 import { taxMailBody } from '@/lib/game/guild/tax-mail';
@@ -52,13 +51,6 @@ describe('부길드장 권한 비트', () => {
     }
   });
 
-  it('저장 전 정제 — 아는 비트는 지키고 모르는 비트·음수·소수는 버린다', () => {
-    expect(sanitizePerms(GUILD_PERM.taxDistribute | GUILD_PERM.taxCollect)).toBe(640);
-    expect(sanitizePerms(GUILD_PERM.taxCollect | 1024)).toBe(512);
-    expect(sanitizePerms(-5)).toBe(0);
-    expect(sanitizePerms(7.9)).toBe(7);
-  });
-
   it('임명 기본값은 공지·소개·오픈채팅뿐이다 — 세금 권한은 길드장이 직접 켠다', () => {
     expect(permKeys(GUILD_PERM_DEFAULT)).toEqual(['notice', 'intro', 'openchat']);
   });
@@ -72,10 +64,10 @@ describe('부길드장 권한 비트', () => {
 
 describe('세금 분배 우편 본문', () => {
   it('분배한 사람의 실제 직책으로 적는다', () => {
-    expect(taxMailBody('Winners', 'leader', '여왕', 12000n)).toBe('Winners 길드장 여왕님이 세금 💎12,000을 분배했습니다.');
-    expect(taxMailBody('Winners', 'vice', '헤이론', 500n)).toBe('Winners 부길드장 헤이론님이 세금 💎500을 분배했습니다.');
+    expect(taxMailBody('새벽길드', 'leader', '길드장닉', 12000n)).toBe('새벽길드 길드장 길드장닉님이 세금 💎12,000을 분배했습니다.');
+    expect(taxMailBody('새벽길드', 'vice', '부길드장닉', 500n)).toBe('새벽길드 부길드장 부길드장닉님이 세금 💎500을 분배했습니다.');
   });
   it('닉네임을 못 읽으면 직책만 적는다', () => {
-    expect(taxMailBody('Winners', 'vice', null, 1n)).toBe('Winners 부길드장이 세금 💎1을 분배했습니다.');
+    expect(taxMailBody('새벽길드', 'vice', null, 1n)).toBe('새벽길드 부길드장이 세금 💎1을 분배했습니다.');
   });
 });

@@ -9,7 +9,7 @@ import { logGuildAudit } from './audit';
 import { GUILD_MAX_VICE } from './balance';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { GuildError } from './errors';
-import { GUILD_PERM, GUILD_PERM_DEFAULT, hasGuildPerm, sanitizePerms, type GuildPermKey } from './permissions';
+import { GUILD_PERM, GUILD_PERM_DEFAULT, hasGuildPerm, type GuildPermKey } from './permissions';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -165,7 +165,8 @@ export async function setVicePermissionTx(
   if (!target || target.guildId !== leader.guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
   if (target.role !== 'vice') throw new GuildError('INVALID_TARGET');
 
-  const next = sanitizePerms(input.on ? target.permissions | bit : target.permissions & ~bit);
+  // 그 비트 말고는 건드리지 않는다 — 이 코드가 모르는 비트(나중에 늘어난 권한)를 지우면 되돌린 배포가 권한을 조용히 없앤다.
+  const next = input.on ? target.permissions | bit : target.permissions & ~bit;
   if (next === target.permissions) return; // 변화 없음 — 로그도 남기지 않는다
   await tx
     .update(guildMembers)

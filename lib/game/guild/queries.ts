@@ -660,7 +660,8 @@ export async function getConquestBattleById(id: bigint) {
 export async function getDeployBoard(guildId: bigint, gServerId: number, opts: { onlyUserId?: string } = {}) {
   // onlyUserId — 배치 정보 공개 범위(0204)가 '권한자만'인 길드의 일반 길드원. 처음부터 **본인 행만** 읽는다:
   // 남의 배치를 읽었다가 지우는 것보다 안전하고, 길드원 전원의 장비를 읽어 전투력을 계산하는 비용도 없다.
-  const onlyMe = opts.onlyUserId ? sql`and gm.user_id = ${opts.onlyUserId}::uuid` : sql``;
+  // 빈 문자열이 '제한 없음'으로 새면 전원이 읽힌다 — 값이 넘어왔는지만 본다(빈 값은 uuid 변환에서 실패해 닫힌 쪽으로 떨어진다).
+  const onlyMe = opts.onlyUserId !== undefined ? sql`and gm.user_id = ${opts.onlyUserId}::uuid` : sql``;
   // 잠금 시간(23:00~23:59)엔 다음 전투(빈 보드) 대신 진행 중(오늘) 전투 배치를 그대로 노출.
   // 클라(DeployBoard)는 이미 자체 시계로 '진행 중·읽기전용'을 표시 → 여기선 데이터만 맞춤.
   const battleKstDay = isConquestLocked() ? kstDateString() : nextBattleKstDay();

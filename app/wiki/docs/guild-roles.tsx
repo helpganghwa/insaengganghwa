@@ -66,9 +66,9 @@ export default function Doc() {
           <DocLink slug="conquest" hash="tax">세금</DocLink>을 걷을 수 있다.
         </LI>
         <LI>
-          <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>가 &lsquo;권한자만&rsquo;인 길드에서는{' '}
-          {GUILD_PERM_META.deploy.label} 권한이나 {GUILD_PERM_META.executor.label} 권한이 있는 부길드장만 길드
-          전체 배치를 볼 수 있다.
+          <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>가 &lsquo;권한자만&rsquo;인 길드에서는
+          길드장과, {GUILD_PERM_META.deploy.label} 권한이나 {GUILD_PERM_META.executor.label} 권한이 있는
+          부길드장만 길드 전체 배치를 볼 수 있다.
         </LI>
         <LI>
           {GUILD_PERM_META.taxCollect.label} 권한이 있으면 집행관을 대신해 수금하고, 수금 가능한 구역을

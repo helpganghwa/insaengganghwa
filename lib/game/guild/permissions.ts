@@ -19,7 +19,7 @@ export const GUILD_PERM = {
   joinReview: 1 << 3,
   /** 일반 길드원 추방(부길드장은 대상 불가 — 그건 길드장 전속) */
   kick: 1 << 4,
-  /** 점령전 집행관 지정·해제(세금 수금 권한이 함께 간다) */
+  /** 점령전 집행관 지정·해제(집행관은 맡은 구역의 세금을 권한 없이 수금한다) */
   executor: 1 << 5,
   /**
    * 다른 길드원의 점령전 배치 **해제**.
@@ -61,7 +61,7 @@ export const GUILD_PERM_META: Record<GuildPermKey, { label: string; desc?: strin
   intro: { label: '소개 작성', desc: '길드 목록에 공개' },
   openchat: { label: '오픈채팅 설정' },
   joinReview: { label: '가입 관리', desc: '신청 승인 · 거절 · 가입 방식' },
-  executor: { label: '집행관 지정', desc: '세금 수금 권한이 함께 갑니다' },
+  executor: { label: '집행관 지정', desc: '집행관은 맡은 구역 세금을 수금합니다' },
   deploy: { label: '길드원 배치 해제', desc: '남의 공격 · 수비를 물림(배치는 본인만)' },
   kick: { label: '길드원 추방', desc: '되돌릴 수 없습니다' },
   taxCollect: { label: '세금 수금', desc: '남의 구역 대리 수금 · 모두 수금' },
@@ -108,7 +108,3 @@ export function permKeys(permissions: number | null | undefined): GuildPermKey[]
   return GUILD_PERM_ORDER.filter((k) => (p & GUILD_PERM[k]) !== 0);
 }
 
-/** 저장 전 정제 — 정의되지 않은 비트 제거(스키마 확장·클라 조작 방어). */
-export function sanitizePerms(permissions: number): number {
-  return Math.max(0, Math.trunc(permissions)) & GUILD_PERM_ALL;
-}

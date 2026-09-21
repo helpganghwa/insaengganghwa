@@ -135,7 +135,7 @@ export default function Doc() {
           집행관은 구역 수비로 참여하며, 유효 전투력이{' '}
           {bpPct(conquestPowerMult('defend', true) * 10_000)}로 적용된다.
         </LI>
-        <LI>집행관에게는 세금 수금 권한도 함께 주어진다.</LI>
+        <LI>집행관은 맡은 구역의 세금을 직접 수금할 수 있다.</LI>
         <LI>
           길드를 탈퇴하거나 추방당하면 집행관 자리는 곧바로 해제된다.
           <Fn n={4} />

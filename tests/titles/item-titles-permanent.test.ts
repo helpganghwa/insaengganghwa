@@ -12,7 +12,7 @@ describe('아이템 발동 칭호는 영구형', () => {
   const itemTitles = TITLE_SECRETS.filter((t) => t.cat === '아이템 발동');
 
   it('아이템 발동 칭호는 전부 영구형이고, 판정에 쓰는 장비 조건(req)을 갖고 있다', () => {
-    expect(itemTitles.length).toBeGreaterThan(200);
+    expect(itemTitles.length).toBe(272);
     for (const t of itemTitles) {
       expect(TITLE_BY_CODE.get(t.code)?.kind, t.code).toBe('permanent');
       expect(t.req?.items.length ?? 0, t.code).toBeGreaterThan(0);
