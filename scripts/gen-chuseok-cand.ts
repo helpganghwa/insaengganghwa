@@ -33,8 +33,8 @@ export type ChuseokCand = {
   slot: 'weapon' | 'armor' | 'accessory';
   concept: string;
   art: string;
-  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -793,6 +793,135 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a simple white rabbit outfit — a cropped fluffy white jacket with a round collar and one pale pink ribbon, white shorts with a round cotton tail, ' +
       'fluffy white leg warmers and white shoes, clean and minimal, large',
+  },
+  // ── 10차(2026-09-21 밤) — 선택 폼 2차 결과. 확정 = 복주머니·접힌 귀, 나머지 4부위 재생성 ─────────
+  // 한복 무기: "달 또는 송편 컨셉의 무기"(9차 완드 3종은 채택 안 됨 → 완드가 아닌 무기 종류로).
+  {
+    key: 'chuseok_crescent_glaive',
+    nameKo: '초승달 언월도',
+    slot: 'weapon',
+    batch: 10,
+    concept: '한복 세트 무기 — 달',
+    art:
+      'a crescent-moon glaive — a long crimson lacquered shaft topped with a large sweeping golden crescent-moon blade, ' +
+      'gold cloud engraving on the blade, a jade ring and a five-colored silk tassel below it, ' +
+      'opulent and graceful, clearly a polearm glaive weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_songpyeon_spear',
+    nameKo: '송편 꼬치 창',
+    slot: 'weapon',
+    batch: 10,
+    concept: '한복 세트 무기 — 송편',
+    art:
+      'a festival spear — a long pale wooden shaft skewering three large plump half-moon songpyeon rice cakes in white, pale green and pink just below a gold spearhead, ' +
+      'a sprig of green pine needles bound with a five-colored cord, ' +
+      'festive and charming, clearly a spear weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_crescent_bow',
+    nameKo: '초승달 활',
+    slot: 'weapon',
+    batch: 10,
+    concept: '한복 세트 무기 — 달',
+    art:
+      'a crescent-moon bow — a recurve bow whose limbs form one slender golden crescent moon, a crimson silk-wrapped grip, a fine silver string, ' +
+      'a small jade pendant with a five-colored tassel hanging from the lower tip, ' +
+      'opulent and graceful, clearly a bow weapon, no text, large, diagonal',
+  },
+  // 한복 방어구: "금박 꽃무늬(v3)·옥색 저고리(v2)가 마음에 든다 — 비슷한 느낌으로 하나 더". 두 안의 레시피를 유지하고 색만 바꾼다.
+  {
+    key: 'chuseok_hanbok_v6',
+    nameKo: '한복(옥색 저고리·금박 꽃무늬)',
+    slot: 'armor',
+    batch: 10,
+    concept: '한복 세트 방어구 — v2의 옥색 + v3의 금박 꽃 띠',
+    art:
+      'a luxurious Korean hanbok — a pale jade silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing crimson chima skirt with a wide band of gold-leaf flower patterns along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_hanbok_v7',
+    nameKo: '한복(노랑 저고리)',
+    slot: 'armor',
+    batch: 10,
+    concept: '한복 세트 방어구 — 노랑 저고리 다홍 치마',
+    art:
+      'a luxurious Korean hanbok — a soft pale yellow silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing crimson chima skirt with a wide band of gold-leaf flower patterns along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_hanbok_v8',
+    nameKo: '한복(남색 치마)',
+    slot: 'armor',
+    batch: 10,
+    concept: '한복 세트 방어구 — 미색 저고리 남색 치마',
+    art:
+      'a luxurious Korean hanbok — a soft ivory silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing deep navy-blue chima skirt with a wide band of gold-leaf flower patterns along the hem, elegant and festive',
+  },
+  // 달토끼 무기: "떡메나 절굿공이 다 좋고 토끼도 좋은데 리본은 별로" → 끈·매듭 장식을 아예 쓰지 않는다(없는 것을 이름으로 부르지 않기).
+  {
+    key: 'chuseok_rabbit_mallet_v3',
+    nameKo: '흰 떡메(토끼 얼굴)',
+    slot: 'weapon',
+    batch: 10,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple rice-cake mallet — a large smooth round barrel head of pale white wood on a long slim plain handle, a small rabbit face stamped on the head, ' +
+      'clean and minimal, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v7',
+    nameKo: '절굿공이(토끼 새김)',
+    slot: 'weapon',
+    batch: 10,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple double-headed rice-cake pestle — a long pale white wooden pestle with two large bulbous rounded heads and a narrow smooth waist grip in the middle, ' +
+      'a small rabbit silhouette engraved on one head, clean and minimal, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_mallet_ears',
+    nameKo: '토끼 귀 떡메',
+    slot: 'weapon',
+    batch: 10,
+    concept: '달토끼 세트 무기 — 메 머리가 토끼 모양',
+    art:
+      'a rice-cake mallet shaped like a rabbit — a large smooth round barrel head of pale white wood with two tall upright rabbit ears carved on top and a small rabbit face on the front, ' +
+      'a long slim plain handle, clean and minimal, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  // 달토끼 방어구: "토끼 인형탈 느낌으로(머리 아래로만 전신슈트)". 머리·후드·가면 같은 말은 쓰지 않는다 —
+  // 5·7차에서 그런 말이 들어가면 머리 윤곽이 그려졌다. 목둘레가 열린 한 벌 옷으로만 묘사한다.
+  {
+    key: 'chuseok_rabbit_suit',
+    nameKo: '토끼 인형 슈트',
+    slot: 'armor',
+    batch: 10,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline, a pale pink oval belly patch, ' +
+      'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_zip',
+    nameKo: '토끼 인형 슈트(지퍼)',
+    slot: 'armor',
+    batch: 10,
+    concept: '달토끼 세트 방어구 — 지퍼 달린 플리스 슈트',
+    art:
+      'a plush cream rabbit costume jumpsuit — a chubby one-piece full-body fleece suit with a front zipper and a round open neckline trimmed with soft white fur, ' +
+      'short rounded arms ending in mitten paws, big oversized feet and a fluffy round tail, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_round',
+    nameKo: '토끼 인형 슈트(통통한 몸)',
+    slot: 'armor',
+    batch: 10,
+    concept: '달토끼 세트 방어구 — 놀이공원 인형 옷 몸통',
+    art:
+      'a theme-park rabbit costume body — a rounded pear-shaped white plush full-body suit with a wide belly and a pink heart-shaped belly patch, ' +
+      'a round open neckline, stubby arms with rounded paws, large flat feet and a pom-pom tail, cheerful and plump',
   },
 ];
 

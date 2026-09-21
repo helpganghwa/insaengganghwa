@@ -1050,5 +1050,53 @@
   "chuseok_rabbit_twopiece": {
     "key": "key3",
     "objectId": "94818484-cddc-40d4-b564-8e54d83306c1"
+  },
+  "chuseok_crescent_glaive": {
+    "key": "key3",
+    "objectId": "2695c017-b7d1-4d7f-abef-4f2de49d1e06"
+  },
+  "chuseok_songpyeon_spear": {
+    "key": "key3",
+    "objectId": "bf2258e6-1765-40b0-8c23-2787ac6fae18"
+  },
+  "chuseok_crescent_bow": {
+    "key": "key3",
+    "objectId": "43f4a919-e823-4c08-b1a2-6c6b7fe1520c"
+  },
+  "chuseok_hanbok_v6": {
+    "key": "key3",
+    "objectId": "8f580471-57fa-4647-b04b-d4552ba01537"
+  },
+  "chuseok_hanbok_v7": {
+    "key": "key3",
+    "objectId": "06de265e-cdce-44e9-aa1d-00a19b37b0c7"
+  },
+  "chuseok_hanbok_v8": {
+    "key": "key3",
+    "objectId": "9f70082a-dc6a-427d-a124-caa32e4511eb"
+  },
+  "chuseok_rabbit_mallet_v3": {
+    "key": "key3",
+    "objectId": "08465acc-aa5f-4dc8-93b6-10fc96d910b4"
+  },
+  "chuseok_rabbit_pestle_v7": {
+    "key": "key3",
+    "objectId": "d3d64749-c8c3-43f2-a6aa-f633787c370d"
+  },
+  "chuseok_rabbit_mallet_ears": {
+    "key": "key3",
+    "objectId": "4469dc11-5f6e-4245-8e16-b4dd47d9d13c"
+  },
+  "chuseok_rabbit_suit": {
+    "key": "key3",
+    "objectId": "debacdab-80b8-4b49-82dd-e37ba46f7ee3"
+  },
+  "chuseok_rabbit_suit_zip": {
+    "key": "key3",
+    "objectId": "064c3fe5-f359-4e63-8632-ab909cf8aa22"
+  },
+  "chuseok_rabbit_suit_round": {
+    "key": "key3",
+    "objectId": "8d6ad008-686a-4bf4-a327-701ad5cf4433"
   }
 }
