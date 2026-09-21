@@ -59,13 +59,6 @@ export default async function NewCharacterPage({
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
-        <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-          새로 시작하면 다이아·장비·강화가 {target.name} 것으로 따로 쌓여요. 서버끼리 옮길 수 없고,
-          만든 캐릭터는 지울 수 없어요.
-        </p>
-      </div>
-
       <NewCharacterChoice
         serverId={serverId}
         serverName={target.name}
