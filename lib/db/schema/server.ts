@@ -85,7 +85,8 @@ export const characters = pgTable(
     primaryKey({ columns: [t.userId, t.serverId] }),
     index('characters_server_idx').on(t.serverId),
     // 닉네임 유일성은 0207부터 **제외 제약**이 강제한다(Drizzle로 표현 불가):
-    //   exclude using gist (lower(nickname) with =, user_id with <>)
+    //   exclude using gist (lower(nickname) with =, (user_id::text) with <>)
+    //   (user_id를 표현식으로 두는 이유 = `where user_id = ?` 조회가 이 GiST를 타지 않게 — 0207 주석)
     // = "같은 이름인데 주인이 다르면 거부". 같은 계정은 여러 서버에서 자기 이름을 쓴다.
     // 서버 내 유일 + 정확 일치 조회는 characters_server_nickname_uq(0207, SQL에서 생성).
     uniqueIndex('characters_server_nickname_uq').on(t.serverId, sql`lower(${t.nickname})`),

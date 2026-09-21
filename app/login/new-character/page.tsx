@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUserId } from '@/lib/auth/session';
 import { listServersForUser } from '@/lib/game/server-select';
 import { loadUserServers } from '@/lib/game/server-guard';
+import { roJosa } from '@/lib/korean/ro';
 
 import { NewCharacterChoice, type MyServer } from './NewCharacterChoice';
 
@@ -60,7 +61,9 @@ export default async function NewCharacterPage({
           {mine.length === 1 ? (
             <>
               <b className="text-zinc-700 dark:text-zinc-200">{head.name}</b>에서{' '}
-              <b className="text-zinc-700 dark:text-zinc-200">{head.nickname}</b>으로 하던 기록은
+              {/* 조사는 닉네임 끝소리에 맞춘다 — 고정 '으로'는 받침 없는 닉네임에서 틀린다("치즈으로"). */}
+              <b className="text-zinc-700 dark:text-zinc-200">{head.nickname}</b>
+              {roJosa(head.nickname)} 하던 기록은
               그대로 있어요.
               <br />
               거기로 돌아가거나, {target.name}에서 처음부터 시작할 수 있어요.

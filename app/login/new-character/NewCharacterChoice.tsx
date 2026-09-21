@@ -2,6 +2,8 @@
 
 import { useTransition } from 'react';
 
+import { roJosa } from '@/lib/korean/ro';
+
 import { startOnServerAction } from './actions';
 
 export type MyServer = {
@@ -71,7 +73,10 @@ export function NewCharacterChoice({
                 </span>
               </>
             ) : (
-              <span className="w-full text-center text-sm font-semibold">{s.name}로 돌아가기</span>
+              <span className="w-full text-center text-sm font-semibold">
+                {s.name}
+                {roJosa(s.name)} 돌아가기
+              </span>
             )}
           </a>
         ))}
