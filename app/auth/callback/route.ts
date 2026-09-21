@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
       // 다른 서버에 이미 캐릭터가 있는데 없는 서버를 골랐을 때 — 바로 만들지 않고 확인을 받는다.
       // (2026-09-21 ②) 값이 있으면 아래에서 목적지를 확인 화면으로 바꾼다.
       let confirmNewServerId: number | null = null;
+      // 다른 서버 보유 여부 조회가 실패했는가 — 실패하면 만들지 않고 쿠키만 세워 레이아웃에 맡긴다.
+      let guardFailed = false;
       if (userId) {
         try {
           // 대상 서버 확정(2026-07-10 R1 조정, 우선순위 사용자 확정): 명시 클릭(login_srv)
@@ -132,11 +134,21 @@ export async function GET(request: NextRequest) {
               // 이미 다른 서버에 캐릭터가 있으면 **묻고 만든다**(2026-09-21 ②). 종전에는 확인 없이
               // 만들어서, 로그인 화면이 실제 배정과 다른 서버를 골라 둔 채 그 칩을 한 번 누른
               // 기존 유저에게 새 캐릭터가 생겼다(캐릭터 삭제 수단이 없어 되돌릴 수 없음).
-              // ⚠ 이 조회가 실패하면 **만들지 않는다**(예외를 그대로 올려 아래 catch가 서버 선택을 통째로
-              // 건너뛴다). 실패를 '캐릭터 없음'으로 읽으면 바로 그 막으려던 사고 — 확인 없이 새 캐릭터 —
-              // 가 난다. 쿠키 없이 들어간 뒤 레이아웃의 같은 관문이 다시 판단한다(layout-data와 같은 원칙).
-              const hasElsewhere = await correctServerFor(userId, sid);
-              if (hasElsewhere != null) {
+              // ⚠ 이 조회가 실패하면 **여기서는 만들지도 묻지도 않는다**. 실패를 '캐릭터 없음'으로 읽으면
+              // 바로 그 막으려던 사고 — 확인 없이 새 캐릭터 — 가 난다. 대신 활성 서버 쿠키만 의도한 서버로
+              // 두고 레이아웃의 같은 관문(layout-data)에 맡긴다: 다른 서버에 캐릭터가 있으면 그리로 되돌리고,
+              // 없으면 **이 서버에** 만든다. 서버 선택을 통째로 건너뛰면 쿠키 없이 1서버로 떨어져, 초대받은
+              // 신규가 엉뚱한 서버에 생긴다. 마지막 서버 기록(last_server_id)은 확정된 게 없으니 건드리지 않는다.
+              let hasElsewhere: number | null = null;
+              try {
+                hasElsewhere = await correctServerFor(userId, sid);
+              } catch (ge) {
+                guardFailed = true;
+                console.warn('[auth.callback] server guard failed — defer to layout', (ge as Error).message);
+              }
+              if (guardFailed) {
+                // 아래에서 쿠키만 세운다.
+              } else if (hasElsewhere != null) {
                 confirmNewServerId = sid;
               } else {
                 // 캐릭터가 하나도 없는 신규 — 고른(또는 링크가 가리킨) 서버가 포화·닫힘이면 열려 있는
@@ -156,7 +168,7 @@ export async function GET(request: NextRequest) {
               }
             }
             if (confirmNewServerId == null) {
-              await touchLastServer(userId, sid);
+              if (!guardFailed) await touchLastServer(userId, sid);
               res.cookies.set('srv', String(sid), {
                 httpOnly: true,
                 secure: true,
