@@ -23,7 +23,7 @@ import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { syncPlayVoided } from '@/lib/payment/play';
 
-import { endTestDb, sql, testDb } from '../db';
+import { endTestDb, resyncTestMileage, sql, testDb } from '../db';
 
 const mockGet = vi.mocked(getPlayProductPurchase);
 const mockConsume = vi.mocked(consumePlayProductPurchase);
@@ -78,9 +78,12 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
     for (const id of made) {
       await testDb.execute(sql`delete from iap_refunds where order_id = ${id.toString()}::bigint`);
       await testDb.execute(sql`delete from diamond_ledger where user_id = ${TEST_USER_ID}::uuid and ref = ${'order:' + id.toString()}`).catch(() => undefined);
+      // 마일리지 원장(적립·회수) — 이 테스트 주문이 남긴 행만.
+      await testDb.execute(sql`delete from point_ledger where kind = 'mileage' and ref in (${'order:' + id.toString()}, ${'order:' + id.toString() + ':refund'})`);
       await testDb.execute(sql`delete from iap_orders where id = ${id.toString()}::bigint`);
     }
     made.length = 0;
+    await resyncTestMileage(TEST_USER_ID);
     await testDb.execute(sql`update characters set diamond = ${baseline.toString()}::bigint where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
     await testDb.execute(sql`delete from mailbox where user_id = ${TEST_USER_ID}::uuid and title = '결제 환불 안내' and created_at > now() - interval '2 minutes'`);
     await testDb.execute(sql`delete from monthly_purchase_limits where user_id = ${TEST_USER_ID}::uuid and total_krw <= 0`);

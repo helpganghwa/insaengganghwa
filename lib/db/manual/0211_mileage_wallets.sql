@@ -20,6 +20,10 @@ create table if not exists mileage_wallets (
   balance bigint not null default 0,
   primary key (user_id, server_id)
 );
+-- RLS deny-all 백스톱(0113 규칙: 새 표는 만들 때 함께 켠다). 공개 역할(anon·authenticated)에는 애초에 grant가
+-- 없어 지금도 노출은 없지만, 누군가 실수로 grant를 주는 순간을 막는 두 번째 그물이다. 앱의 접속 역할
+-- (postgres — 소유자·bypassrls)은 영향이 없다. 멱등.
+alter table mileage_wallets enable row level security;
 
 -- 원장에 서버 채우기 — 적립·회수 행은 주문의 서버를 따른다.
 update point_ledger pl
