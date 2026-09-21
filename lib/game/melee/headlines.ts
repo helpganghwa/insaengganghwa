@@ -18,9 +18,9 @@ export type HeadlineParticipant = {
   defenseCount: number;
   eliminatedRound: number | null;
   guildName: string | null;
-  /** 배틀 시점 길드장 여부(조인). 모르면 false. */
+  /** 배틀 시점 **그 서버의** 길드장 여부(조인). 모르면 false. */
   isGuildLeader?: boolean;
-  /** 가입 후 경과 일수(배틀일 기준, 0=당일). 모르면 null. */
+  /** **그 서버에서 시작한 뒤** 경과 일수(캐릭터 생성일 기준, 배틀일 기준 0=당일). 모르면 null. */
   accountAgeDays?: number | null;
 };
 
