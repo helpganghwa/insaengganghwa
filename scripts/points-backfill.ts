@@ -1,7 +1,9 @@
-// 포인트 지갑 소급(2026-09-08, docs/POINT-SHOP.md) — 오픈 이후 대난투 참가 기록·결제 기록을 point_ledger에 적재하고
-// 잔액 컬럼을 원장 합으로 다시 세운다. (kind, ref) 멱등 키라 여러 번 실행해도 안전.
+// 포인트 지갑 소급·복구(docs/POINT-SHOP.md) — 대난투 참가 기록·결제 기록을 point_ledger에 적재하고 잔액을 원장
+// 합으로 다시 세운다. (kind, ref) 멱등 키라 여러 번 실행해도 안전.
+// 실시간 적립(대난투 발표·결제 완료)은 실패해도 본 흐름을 막지 않게 되어 있어, **빠진 적립을 채우는 수단이 이것뿐**이다.
+// 마일리지는 서버별(0211) — 원장 행은 그 주문의 서버를 달고, 잔액은 mileage_wallets에 세운다.
 //   실행: bun run scripts/points-backfill.ts [--apply] [DATABASE_URL]   (기본 dry-run·.env.local DATABASE_URL)
-//   ⚠ 프로덕션은 URL을 명시(PROD_DATABASE_URL 값)하고 0197 적용 뒤에만.
+//   ⚠ 프로덕션은 URL을 명시(PROD_DATABASE_URL 값)하고 0197·0211 적용 뒤에만.
 import postgres from 'postgres';
 import { meleePointsForRank, mileageForKrw } from '../lib/game/balance';
 import { paidProduct } from '../lib/game/shop/catalog';
@@ -20,7 +22,7 @@ if (!url) throw new Error('DATABASE_URL 필요');
 const sql = postgres(url, { prepare: false, max: 1 });
 
 type MeleeRow = { battle_id: string; user_id: string; final_rank: number; n: number; server_id: number; at: string };
-type OrderRow = { id: string; user_id: string; amount_krw: string; product_code: string; paid_at: string; status: string };
+type OrderRow = { id: string; user_id: string; server_id: number; amount_krw: string; product_code: string; paid_at: string; status: string };
 
 async function main() {
   const melee = (await sql`
@@ -31,7 +33,7 @@ async function main() {
       and exists (select 1 from profiles p where p.id = mp.user_id)
   `) as unknown as MeleeRow[];
   const orders = (await sql`
-    select id::text as id, user_id, amount_krw::text as amount_krw, product_code, paid_at, status
+    select id::text as id, user_id, server_id, amount_krw::text as amount_krw, product_code, paid_at, status
     from iap_orders where paid_at is not null and status in ('paid', 'refunded')
       and exists (select 1 from profiles p where p.id = iap_orders.user_id)
   `) as unknown as OrderRow[];
@@ -44,7 +46,10 @@ async function main() {
     const top = [...byUser.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
     console.log('[backfill] 대난투 상위 5', top);
     const mile = new Map<string, number>();
-    for (const o of orderPts) if (o.status === 'paid') mile.set(o.user_id, (mile.get(o.user_id) ?? 0) + o.pts);
+    for (const o of orderPts) {
+      const k = `${o.user_id}@s${o.server_id}`;
+      if (o.status === 'paid') mile.set(k, (mile.get(k) ?? 0) + o.pts);
+    }
     console.log('[backfill] 마일리지 상위 5', [...mile.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5));
     return;
   }
@@ -61,13 +66,13 @@ async function main() {
       const note = `${displayName(o.product_code)} ₩${Number(o.amount_krw).toLocaleString('ko-KR')}`;
       const res = await tx`
         insert into point_ledger (user_id, server_id, kind, delta, note, ref, created_at)
-        values (${o.user_id}::uuid, null, 'mileage', ${o.pts}, ${note}, ${'order:' + o.id}, ${o.paid_at})
+        values (${o.user_id}::uuid, ${o.server_id}, 'mileage', ${o.pts}, ${note}, ${'order:' + o.id}, ${o.paid_at})
         on conflict (kind, ref) where ref is not null do nothing returning id`;
       ins += res.length;
       if (o.status === 'refunded') {
         const r2 = await tx`
           insert into point_ledger (user_id, server_id, kind, delta, note, ref, created_at)
-          values (${o.user_id}::uuid, null, 'mileage', ${-o.pts}, '환불 회수', ${'order:' + o.id + ':refund'}, ${o.paid_at})
+          values (${o.user_id}::uuid, ${o.server_id}, 'mileage', ${-o.pts}, '환불 회수', ${'order:' + o.id + ':refund'}, ${o.paid_at})
           on conflict (kind, ref) where ref is not null do nothing returning id`;
         ins += r2.length;
       }
@@ -78,9 +83,12 @@ async function main() {
     await tx`update characters c set melee_points = s.total
              from (select user_id, server_id, sum(delta) as total from point_ledger where kind = 'melee' group by 1, 2) s
              where s.user_id = c.user_id and s.server_id = c.server_id and c.melee_points is distinct from s.total`;
-    await tx`update profiles p set mileage = greatest(0, s.total)
-             from (select user_id, sum(delta) as total from point_ledger where kind = 'mileage' group by 1) s
-             where s.user_id = p.id and p.mileage is distinct from greatest(0, s.total)`;
+    // 마일리지 잔액 = 서버별 지갑(0211과 같은 문장). 값이 다를 때만 쓴다 — 같은 이유(실시간 적립을 덮지 않게).
+    await tx`insert into mileage_wallets (user_id, server_id, balance)
+             select user_id, server_id, greatest(0, sum(delta)) from point_ledger
+              where kind = 'mileage' and server_id is not null group by user_id, server_id
+             on conflict (user_id, server_id) do update set balance = excluded.balance
+              where mileage_wallets.balance is distinct from excluded.balance`;
   });
   console.log(`[backfill] 원장 신규 ${ins}행, 잔액 재계산 완료`);
 }

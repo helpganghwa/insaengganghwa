@@ -201,7 +201,7 @@ export const adminScheduledMails = pgTable('admin_scheduled_mails', {
   body: text('body').notNull().default(''),
   payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
   push: boolean('push').notNull().default(false),
-  /** 대상 서버(0208) — null=전 서버(계정당 1통), 숫자=그 서버 캐릭터 보유자에게만. */
+  /** 대상 서버(0208) — null=전 서버(캐릭터가 있는 서버마다 1통), 숫자=그 서버 캐릭터 보유자에게만. */
   serverId: smallint('server_id'),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
   sentAt: timestamp('sent_at', { withTimezone: true }),

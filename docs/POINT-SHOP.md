@@ -20,12 +20,12 @@
 - 잔액은 캐시: `characters.melee_points`, `mileage_wallets(user_id, server_id, balance)`. 원장 합으로 다시 세울 수 있다(0211이 그 SQL, 멱등).
 - 마일리지를 `characters` 행에 두지 않는 이유 = 결제·환불 트랜잭션의 잠금 순서(iap_orders → monthly_purchase_limits → **마일리지** → battlepass → characters). characters에 두면 환불이 characters를 battlepass보다 먼저 잠가 배틀패스 수령과 교착이 난다.
 - 탈퇴: 대난투 원장 삭제, 마일리지는 지갑마다 상계 행(탈퇴 소멸)을 넣고 지갑을 비운다(원장은 결제 기록과 동축이라 보존). characters 삭제로 대난투 잔액은 함께 사라짐.
-- 소급: `bun run scripts/points-backfill.ts [--apply] [DB_URL]` — dry-run 기본. created_at은 발표 시각/결제 시각으로 적어 화면 날짜가 맞는다.
+- 소급·복구: `bun run scripts/points-backfill.ts [--apply] [DB_URL]` — dry-run 기본. 실시간 적립은 실패해도 발표·결제를 막지 않으므로, 빠진 적립은 이 스크립트가 멱등으로 채운다(마일리지는 주문의 서버로 적고 서버별 지갑을 다시 세운다). created_at은 발표 시각/결제 시각으로 적어 화면 날짜가 맞는다.
 
 ## 3. 코드
 
 - `lib/game/points/wallet.ts` — `creditMeleePoints`(tx, 멱등) · `creditMileageForOrder` · `revokeMileageForOrder` · `getPointsOverview`(잔액 2종 + 최근 10건씩).
-- 훅: `lib/game/melee/reveal.ts`(리더보드 증분 뒤, 별도 tx, 실패 흡수) · `lib/payment/purchase.ts`(월누적 upsert 직후 — 잠금 순서 iap_orders → monthly → **profiles** → battlepass → characters) · `lib/payment/refund.ts`(같은 자리에서 회수) · `lib/game/account/withdraw.ts`.
+- 훅: `lib/game/melee/reveal.ts`(리더보드 증분 뒤, 별도 tx, 실패 흡수) · `lib/payment/purchase.ts`(월누적 upsert 직후 — 잠금 순서 iap_orders → monthly → **mileage_wallets** → battlepass → characters) · `lib/payment/refund.ts`(같은 자리에서 회수) · `lib/game/account/withdraw.ts`.
 - 순수: `lib/game/points/types.ts`(타입·**안내 문구 정본** POINTS_COPY) · `lib/game/balance.ts`(`MILEAGE_KRW_PER_POINT`, `mileageForKrw`).
 
 ## 4. 화면 (상점 "포인트" 탭 — 시안 V5 + 최근 적립)

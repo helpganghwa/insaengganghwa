@@ -123,8 +123,12 @@ async function loadDashboard() {
         (select count(*)::int from payment_alerts where resolved = false) as open_alerts,
         -- 푸시 적체 — 가장 긴 묶음 모드(batched_1h=60분) 윈도 + 크론 주기(5분) + 여유 후에도
         -- 안 나간 행. 45분 임계는 batched_1h 유저의 정상 대기(≤60분)를 오탐했음(2026-07-14).
-        (select count(*)::int from push_pending
-           where first_at < now() - interval '75 minutes') as push_backlog,
+        -- **지금 보낼 수 있는 묶음만** 센다 — 그 사람이 다른 서버에 접속해 있는 동안의 묶음은 일부러
+        -- 들고 있는 것이라(돌아오면 발송, 하루 지나면 push-flush가 버림) 적체가 아니다. 다 세면 서버가
+        -- 둘이 되는 날부터 이 경보가 꺼지지 않는다.
+        (select count(*)::int from push_pending pp join profiles p on p.id = pp.user_id
+           where pp.first_at < now() - interval '75 minutes'
+             and pp.server_id = p.last_server_id) as push_backlog,
         -- 헬스 지표의 **서버 내역**(2026-09-21 ⑭) — 합계만 보면 어느 서버가 고장인지 알 수 없어
         -- 대시보드만 보고 대응할 수 없었다. 0이 아닌 서버만 담는다.
         (select coalesce(json_agg(t), '[]'::json) from (
@@ -138,8 +142,10 @@ async function loadDashboard() {
                select server_id, 0, count(*)::int, 0, 0 from conquest_battles
                 where published_at is null and battle_kst_day < ${today} group by server_id
                union all
-               select server_id, 0, 0, count(*)::int, 0 from push_pending
-                where first_at < now() - interval '75 minutes' group by server_id
+               select pp.server_id, 0, 0, count(*)::int, 0 from push_pending pp
+                 join profiles p on p.id = pp.user_id
+                where pp.first_at < now() - interval '75 minutes'
+                  and pp.server_id = p.last_server_id group by pp.server_id
                union all
                select server_id, 0, 0, 0, count(*)::int from profile_generation_jobs
                 where status in ('queued','starting','downloading','ai_reviewing')

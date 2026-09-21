@@ -5,6 +5,7 @@ import { FriendError, sendRequest } from '@/lib/game/friends';
 import { GuildError } from '@/lib/game/guild/errors';
 import { joinGuild } from '@/lib/game/guild/join';
 import { requestOrJoinGuild } from '@/lib/game/guild/join-requests';
+import { createOrder, PurchaseError } from '@/lib/payment/purchase';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -22,7 +23,7 @@ const code = async (p: Promise<unknown>) => {
     await p;
     return null;
   } catch (e) {
-    if (e instanceof GuildError || e instanceof FriendError) return e.code;
+    if (e instanceof GuildError || e instanceof FriendError || e instanceof PurchaseError) return e.code;
     return `THROWN:${String(e)}`;
   }
 };
@@ -64,6 +65,26 @@ describe.skipIf(!USER)('크로스서버 관문', () => {
     if (!other) return;
     // 발신자 가드 — 종전에는 대상만 확인해 유령 요청이 통과했다.
     expect(await code(sendRequest(USER, ABSENT_SERVER, other.id))).toBe('NO_CHARACTER_ON_SERVER');
+  });
+
+  it('결제 — 내 캐릭터가 없는 서버로는 주문이 만들어지지 않는다', async () => {
+    // 결제 채널 설정 검사(CONFIG)가 먼저라 값만 채워 둔다 — 관문에서 끊기므로 주문 행은 생기지 않는다.
+    const keep = { s: process.env.PORTONE_STORE_ID, c: process.env.PORTONE_CHANNEL_KEY };
+    process.env.PORTONE_STORE_ID ||= 'store-test';
+    process.env.PORTONE_CHANNEL_KEY ||= 'channel-test';
+    try {
+      const before = (await testDb.execute(
+        sql`select count(*)::int as n from iap_orders where user_id = ${USER}::uuid`,
+      )) as unknown as { n: number }[];
+      expect(await code(createOrder(USER, ABSENT_SERVER, 'any-product'))).toBe('NO_CHARACTER_ON_SERVER');
+      const after = (await testDb.execute(
+        sql`select count(*)::int as n from iap_orders where user_id = ${USER}::uuid`,
+      )) as unknown as { n: number }[];
+      expect(after[0]!.n).toBe(before[0]!.n);
+    } finally {
+      if (keep.s === undefined) delete process.env.PORTONE_STORE_ID;
+      if (keep.c === undefined) delete process.env.PORTONE_CHANNEL_KEY;
+    }
   });
 
   it('길드 — 다른 서버 길드에는 가입도 신청도 할 수 없다', async () => {

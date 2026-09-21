@@ -4,5 +4,5 @@
 -- 운영자가 "2서버에만 보내는 보상 우편"을 예약할 방법이 없었다. 화면도 "예약은 전서버만"이라는
 -- 가드로 막아 두고 있었다.
 --
--- null = 전 서버(종전 동작). 숫자 = 그 서버 캐릭터 보유자에게만, 그 서버 우편함으로.
+-- null = 전 서버(캐릭터가 있는 서버마다 1통). 숫자 = 그 서버 캐릭터 보유자에게만, 그 서버 우편함으로.
 alter table admin_scheduled_mails add column if not exists server_id smallint;

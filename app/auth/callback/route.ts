@@ -30,7 +30,7 @@ const REFERRAL_NEW_SIGNUP_WINDOW_MS = 5 * 60 * 1000;
  * Kakao OAuth 콜백 — Supabase 토큰 교환 후 이 경로로 리다이렉트.
  * code → 세션 쿠키 변환 후 next(기본 '/')로 이동.
  *
- * srv 쿠키 복원(SERVER.md §3): 활성 서버는 쿠키 기반(기본 1)이라 신규 가입(최신 서버 자동
+ * srv 쿠키 복원(SERVER.md §3): 활성 서버는 쿠키 기반(기본 1)이라 신규 가입(추천 서버 자동
  * 배정)·기기 변경 시 쿠키가 비어 1서버로 떨어진다 — 로그인 시 last_server_id로 복원해
  * 항상 마지막(또는 배정된) 서버에서 게임이 시작되게 한다. 실패해도 로그인은 진행(기본 1).
  */
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         try {
           // 대상 서버 확정(2026-07-10 R1 조정, 우선순위 사용자 확정): 명시 클릭(login_srv)
           // > 마지막 접속(last_server_id — 기존 유저 복원) > 공유/초대 링크 의도(pending_server
-          // — 사실상 신규 유저만 여기 도달) > 최신 open. 기존 유저는 초대 링크를 눌렀어도 자기
+          // — 사실상 신규 유저만 여기 도달) > 추천 서버. 기존 유저는 초대 링크를 눌렀어도 자기
           // 서버로 복원되며, 따라가려면 셀렉터에서 직접 선택한다(오배정 방지 우선).
           // login_srv는 셀렉터 **클릭 시에만** 기록됨(마운트 자동 기록이 복원을 가리던 R1 수정).
           const asSid = (raw: string | undefined): number | null => {
@@ -132,12 +132,15 @@ export async function GET(request: NextRequest) {
               // 이미 다른 서버에 캐릭터가 있으면 **묻고 만든다**(2026-09-21 ②). 종전에는 확인 없이
               // 만들어서, 로그인 화면이 실제 배정과 다른 서버를 골라 둔 채 그 칩을 한 번 누른
               // 기존 유저에게 새 캐릭터가 생겼다(캐릭터 삭제 수단이 없어 되돌릴 수 없음).
-              const hasElsewhere = await correctServerFor(userId, sid).catch(() => null);
+              // ⚠ 이 조회가 실패하면 **만들지 않는다**(예외를 그대로 올려 아래 catch가 서버 선택을 통째로
+              // 건너뛴다). 실패를 '캐릭터 없음'으로 읽으면 바로 그 막으려던 사고 — 확인 없이 새 캐릭터 —
+              // 가 난다. 쿠키 없이 들어간 뒤 레이아웃의 같은 관문이 다시 판단한다(layout-data와 같은 원칙).
+              const hasElsewhere = await correctServerFor(userId, sid);
               if (hasElsewhere != null) {
                 confirmNewServerId = sid;
               } else {
                 // 캐릭터가 하나도 없는 신규 — 고른(또는 링크가 가리킨) 서버가 포화·닫힘이면 열려 있는
-                // 최신 서버로 대신 보낸다. 종전에는 여기서 던진 예외가 서버 선택 전체를 건너뛰게 해,
+                // 추천 서버로 대신 보낸다. 종전에는 여기서 던진 예외가 서버 선택 전체를 건너뛰게 해,
                 // 쿠키 없이 1서버로 떨어진 뒤 1서버마저 포화면 빈 화면에 갇혔다(2026-09-21 재검수).
                 try {
                   await createCharacterAuto({ userId, serverId: sid });
