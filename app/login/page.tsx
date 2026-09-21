@@ -50,6 +50,17 @@ export default async function LoginPage({
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
   const showServers = servers.length >= 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
+  // 선택 표시는 **아는 경우에만**(2026-09-21) — 이 기기에서 마지막으로 쓴 서버(srv 쿠키)가 있으면
+  // 그 서버를 선택된 것으로 보여 준다. 고르지 않고 로그인하면 콜백이 그 서버로 복원하므로 화면과
+  // 결과가 일치한다. 쿠키가 없으면(새 기기·첫 방문) 표시하지 않는다 — 종전에는 이때 최신 서버를
+  // 칠해 둬서, 1서버 유저에게 2서버가 선택된 것처럼 보였다. 초대 링크의 서버(pending_server)도
+  // 쓰지 않는다: 기존 유저는 링크를 타고 와도 자기 서버로 복원돼 표시가 틀린 말이 된다.
+  // ⚠ 표시일 뿐 `login_srv`는 쓰지 않는다 — 그 쿠키는 사용자가 직접 눌렀을 때만(ServerPicker).
+  const srvCookie = Number((await cookies()).get('srv')?.value);
+  const knownSrv =
+    showServers && servers.some((sv) => sv.id === srvCookie && sv.status !== 'closed')
+      ? srvCookie
+      : null;
   // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   // 스테이징(preview)은 항상 노출 — PWA는 주소창이 없어 ?test=true를 붙일 수 없다(검수 동선).
@@ -101,7 +112,7 @@ export default async function LoginPage({
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
         {showServers && !(cbtEnded && !reviewLogin) ? (
           <div className="mb-4 w-full">
-            <ServerPicker servers={servers} recommendedId={recommendedId} />
+            <ServerPicker servers={servers} knownSrv={knownSrv} recommendedId={recommendedId} />
           </div>
         ) : null}
 

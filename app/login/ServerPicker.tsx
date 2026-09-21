@@ -9,20 +9,25 @@ import { useEffect, useState } from 'react';
  * 유저)이 항상 가려져, 신서버 오픈 후 기존 유저가 빈 신서버에 오배정된다(2026-07-10 감사 R1).
  * 미클릭 시 콜백 기본 체인(last_server_id → pending_server(초대 링크) → 최신 open)이 서버를 정한다.
  *
- * ⚠ **아무 칩도 미리 선택하지 않는다**(2026-09-21 ②). 로그인 전이라 이 화면은 그 사람이 어느
- * 서버를 쓰던 사람인지 알 수 없는데(계정을 모른다), 종전에는 최신 서버를 선택된 것처럼 칠해 뒀다.
- * 실제 배정은 `last_server_id` 복원이라 화면과 결과가 어긋났고, 그 칩을 "확인하려고" 누른
- * 기존 유저에게 새 캐릭터가 생겼다. 고른 적이 없으면 선택도 없어야 한다.
+ * ⚠ **선택 표시는 아는 경우에만**(2026-09-21 ②). 로그인 전이라 이 화면은 그 사람이 어느 서버를
+ * 쓰던 사람인지 모른다. 종전에는 모를 때도 최신 서버를 선택된 것처럼 칠해 뒀는데, 실제 배정은
+ * `last_server_id` 복원이라 화면과 결과가 어긋났고 그 칩을 "확인하려고" 누른 기존 유저에게 새
+ * 캐릭터가 생겼다. 이제 이 기기에서 마지막으로 쓴 서버(`knownSrv`)가 있을 때만 그 칩을 칠하고,
+ * 없으면 아무것도 칠하지 않는다. 칠해진 칩은 **표시일 뿐** `login_srv`를 쓰지 않는다 —
+ * 안 누르고 로그인하면 콜백의 복원이 같은 서버로 데려간다.
  */
 export function ServerPicker({
   servers,
+  knownSrv,
   recommendedId,
 }: {
   servers: { id: number; name: string; status: string }[];
+  /** 이 기기에서 마지막으로 쓴 서버(srv 쿠키) — 없거나 닫힌 서버면 null. */
+  knownSrv: number | null;
   /** 최신 open 서버 — '추천' 라벨 대상. */
   recommendedId: number;
 }) {
-  const [picked, setPicked] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number | null>(knownSrv);
 
   // 마운트 시 잔존 login_srv 소거 — 직전 시도(중단된 로그인 등)의 선택이 이번 로그인에
   // 유령처럼 적용되는 것 방지. 이후 기록은 오직 사용자 클릭에서만.
