@@ -108,19 +108,3 @@ export async function reclaimInactiveNicknames(): Promise<{ reclaimed: number; f
   }
   return { reclaimed, failed };
 }
-
-/** 회수 대상 수(어드민 표시·점검용) — 실제 회수 없이 개수만 센다. */
-export async function countReclaimTargets(): Promise<number> {
-  const rows = (await db.execute(sql`
-    select count(*)::int as n from (
-      select c.user_id
-        from characters c
-       group by c.user_id
-      having max(coalesce(c.last_seen_at, c.created_at)) < now() - interval '${sql.raw(String(INACTIVE_DAYS))} days'
-         and bool_or(c.nickname !~ ${sql.raw(DEFAULT_NICK_RE)})
-    ) t
-  `)) as unknown as { n: number }[];
-  return rows[0]?.n ?? 0;
-}
-
-export const NICKNAME_RECLAIM_INACTIVE_DAYS = INACTIVE_DAYS;

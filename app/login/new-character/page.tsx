@@ -22,12 +22,12 @@ const ro = getJosaPicker('으로');
 export default async function NewCharacterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string }>;
+  searchParams: Promise<{ to?: string; e?: string }>;
 }) {
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
 
-  const { to } = await searchParams;
+  const { to, e } = await searchParams;
   const n = Number(to);
   const serverId = Number.isInteger(n) && n >= 1 && n <= 32767 ? n : null;
   if (serverId == null) redirect('/');
@@ -80,6 +80,12 @@ export default async function NewCharacterPage({
           )}
         </p>
       </div>
+
+      {e === '1' ? (
+        <p role="alert" className="text-[13px] font-semibold text-red-600 dark:text-red-400">
+          지금은 시작할 수 없어요. 잠시 후 다시 시도해 주세요.
+        </p>
+      ) : null}
 
       <NewCharacterChoice serverId={serverId} serverName={target.name} mine={mine} />
     </main>

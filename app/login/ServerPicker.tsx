@@ -57,6 +57,8 @@ export function ServerPicker({
               key={sv.id}
               type="button"
               disabled={!open}
+              // 선택 상태를 색으로만 전하지 않는다(화면 낭독기) — 토글 버튼 묶음이라 aria-pressed.
+              aria-pressed={active}
               onClick={() => pick(sv.id)}
               className={`relative rounded-lg border px-1 py-1.5 text-[12px] font-bold transition ${
                 active
