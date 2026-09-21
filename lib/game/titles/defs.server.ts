@@ -1613,7 +1613,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "top_patron",
   cat: "조건부",
-  cond: "누적 후원액 1위인 동안",
+  cond: "현재 서버 누적 후원액 1위인 동안",
   diff: "어려움"
  },
  {

@@ -230,8 +230,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from referral_attributions where referrer_user_id=${u})
                + coalesce((select invite_count from cbt_carryover where user_id=${u}), 0) as invites
     `),
-    // 결제·시간 단축 — 결제(iap_orders)는 서버 무관 **계정 단위**가 의도(결제 테이블에 server_id
-    // 없음). pay_*·top_patron 조건 문구도 서버를 언급하지 않는다(감사 M4에서 문구 쪽을 정렬).
+    // 결제·시간 단축 — 누적 결제 금액(pay_*)은 서버 무관 **계정 단위**가 의도다(조건 문구도 서버를
+    // 언급하지 않는다, 감사 M4). iap_orders에 server_id는 있다 — 순위형 top_patron만 서버별(위 sums).
     // 환불 제외(2026-08-22 사용자 확정) — 결제→환불 반복으로 실비용 0에 후원 칭호·결제
     // 랭킹을 만드는 어뷰징 차단. 기획득 영구 칭호는 원장 원칙상 잔존(어뷰저는 운영 제재).
     () => db.execute(sql`
@@ -442,7 +442,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              -- 4일차 이후 첫 칭호 화면 진입 시 영구 미발견). 수락(지급)된 잡의 생성 시각 기준.
              (select exists(select 1 from profile_generation_jobs j
                 where j.user_id=${u} and j.server_id=${s} and j.user_profile_id is not null
-                  and j.created_at <= (select p.created_at from profiles p where p.id=${u}::uuid) + interval '3 days'))::int as first3
+                  -- 기준 = **그 서버 캐릭터 생성 시각**(2026-09-21 F9). 계정 가입일(profiles)을 보면 기존 계정은
+                  -- 새 서버에서 이 칭호를 영영 못 얻는다. 100일차 지표(day100_ok)도 characters.created_at 기준이다.
+                  and j.created_at <= (select c.created_at from characters c
+                                        where c.user_id=${u}::uuid and c.server_id=${s}) + interval '3 days'))::int as first3
     `),
     // 기타 — 가입 경과·도전과제·해방
     () => db.execute(sql`
@@ -479,9 +482,11 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       from leaderboard_ranks m where m.server_id=${s} and m.user_id=${u}
     `),
     // 재화·결제 순위(판정 2차) — 다이아 현재값·서버 순위, 누적 결제 순위
+    // 결제 **순위**(top_patron)는 서버별(2026-09-21 F8) — 순위 칭호는 전부 서버 기준인데 이것만 전 서버
+    // 1명이었다(칭호는 서버별, 2026-08-07 결정). 누적 결제 **금액** 칭호(pay_*)는 계정 단위 그대로.
     () => db.execute(sql`
       with sums as (select io.user_id, sum(io.amount_krw) t from iap_orders io
-                    where io.status = 'paid' group by 1) -- 환불 제외(2026-08-22)
+                    where io.status = 'paid' and io.server_id = ${s} group by 1) -- 환불 제외(2026-08-22)
       select coalesce(c.diamond::bigint,0) as dia,
              case when c.user_id is null then 9999
                   else (select count(*)+1 from characters c2

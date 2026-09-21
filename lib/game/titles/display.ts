@@ -174,7 +174,7 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
     if (code === 'top_patron') {
       const [r] = (await db.execute(sql`
         with sums as (select io.user_id, sum(io.amount_krw) t from iap_orders io
-                      where io.status = 'paid' group by 1) -- 환불 제외(2026-08-22)
+                      where io.status = 'paid' and io.server_id = ${s} group by 1) -- 환불 제외 · 서버별(F8, judge와 동일)
         select (exists(select 1 from sums where user_id=${u}))::int as has_pay,
                (select count(*)::int from sums s2
                  where s2.t > coalesce((select t from sums where user_id=${u}),0)) as better
