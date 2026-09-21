@@ -9,7 +9,7 @@ import { CHALLENGES } from '@/lib/game/challenges/defs';
 import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
-import { TITLE_SECRETS, TITLE_SECRET_BY_CODE } from './defs.server';
+import { TITLE_SECRETS } from './defs.server';
 
 /**
  * 칭호 판정 엔진 — 상태 파생(도전과제 status.ts 철학, TITLES.md §2).
@@ -1037,7 +1037,11 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   checkin_100: (m) => m.checkin >= 100,
 };
 
-/** 조건부(상태형) 활성 — 대표 표시·발견 공용. 아이템 발동 + 장비 상태 + 해방 + 집행관. */
+/**
+ * 조건부(상태형) 활성 — 대표 표시·발견 공용. 장비 상태 + 해방 + 집행관, 그리고 **아이템 발동 칭호의 발견**.
+ * 아이템 발동 칭호는 2026-09-21부터 영구형이지만(한 번 발견하면 벗어도 남는다), 발견은 '지금 그 장비를
+ * 조건대로 장착하고 있는가'로만 알 수 있어 여기서 함께 본다 — discoverTitles가 이 결과를 원장에 적는다.
+ */
 export async function activeConditionals(userId: string, serverId: number, m?: Metrics): Promise<Set<string>> {
   const eq = await equippedMap(userId, serverId);
   const out = new Set<string>();
@@ -1202,12 +1206,10 @@ export async function representativeEligible(userId: string, serverId: number, c
   const def = TITLE_BY_CODE.get(code);
   if (!def) return false;
   if (def.kind !== 'conditional') return true;
-  // 최다 케이스 표적 검증(칭호 감사 3-a) — 아이템 발동(164종)·장비 상태형·집행관은 장착
-  // 1~2쿼리로 끝난다. 지표 27쿼리 전체 수집은 랭킹·스트릭 등 나머지 조건부에만.
-  const secret = TITLE_SECRET_BY_CODE.get(code);
-  if (secret?.req || code === 'balance_master' || code === 'full_armed' || code === 'star_holder') {
+  // 최다 케이스 표적 검증(칭호 감사 3-a) — 장비 상태형·집행관은 장착 1~2쿼리로 끝난다.
+  // 지표 27쿼리 전체 수집은 랭킹·스트릭 등 나머지 조건부에만. (아이템 발동 칭호는 영구형이라 위에서 이미 통과한다.)
+  if (code === 'balance_master' || code === 'full_armed' || code === 'star_holder') {
     const eq = await equippedMap(userId, serverId);
-    if (secret?.req) return secret.req.items.every((k) => (eq.get(k) ?? -1) >= secret.req!.min);
     const lvls = [...eq.values()];
     if (code === 'balance_master') return lvls.length === 3 && lvls.every((v) => v === lvls[0]) && lvls[0]! >= 50;
     if (code === 'full_armed') return lvls.length === 3 && lvls.every((v) => v >= 100);

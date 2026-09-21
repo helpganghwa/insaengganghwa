@@ -6,7 +6,6 @@ import { db } from '@/lib/db/client';
 import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
-import { TITLE_SECRET_BY_CODE } from './defs.server';
 import { GUILD_COLLECTIVE_CODES, guildCollectiveCodesCached } from './guild-facts';
 
 /**
@@ -15,7 +14,8 @@ import { GUILD_COLLECTIVE_CODES, guildCollectiveCodesCached } from './guild-fact
  * (자동 해제 UPDATE 없음 — 조건 회복 시 자동 복귀).
  *
  * 검증 비용: 영구형 0쿼리 · 집행관 0쿼리(호출부의 executorZone 재사용) ·
- * 착용형/장비상태형 1쿼리 · 해방형 1쿼리. 그 외 조건부(랭킹 등 판정 미구현)는
+ * 장비 상태형 1쿼리 · 해방형 1쿼리. 아이템 발동 칭호(272종)는 2026-09-21부터 영구형이라 재검증하지 않는다 —
+ * 조건을 갖춘 장비를 한 번 장착해 발견하면 벗어도 남는다(유저 건의). 그 외 조건부(랭킹 등 판정 미구현)는
  * 보수적으로 숨긴다 — 아직 발견 자체가 불가능한 코드라 실사용 영향 없음.
  */
 export async function resolveRepTitle(
@@ -33,16 +33,14 @@ export async function resolveRepTitle(
 
   if (def.style.executor) return executorZone ? repCode : null;
 
-  const secret = TITLE_SECRET_BY_CODE.get(repCode);
-  // 착용형/장비 상태형 — 장착 3행 조회 1회
-  if (secret?.req || ['balance_master', 'full_armed', 'star_holder'].includes(repCode)) {
+  // 장비 상태형(지금의 장비 상태를 말하는 칭호) — 장착 3행 조회 1회
+  if (EQUIP_STATE_CODES.includes(repCode)) {
     const rows = (await db.execute(sql`
       select ci.code, ue.enhance_level from user_equipment ue
       join catalog_items ci on ci.id = ue.catalog_item_id
       where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ue.equipped_slot is not null
     `)) as unknown as { code: string; enhance_level: number }[];
     const eq = new Map(rows.map((r) => [r.code, Number(r.enhance_level)]));
-    if (secret?.req) return secret.req.items.every((k) => (eq.get(k) ?? -1) >= secret.req!.min) ? repCode : null;
     const lv = [...eq.values()];
     if (repCode === 'balance_master') return lv.length === 3 && lv.every((v) => v === lv[0]) && lv[0]! >= 50 ? repCode : null;
     if (repCode === 'full_armed') return lv.length === 3 && lv.every((v) => v >= 100) ? repCode : null;
@@ -73,6 +71,9 @@ export async function resolveRepTitle(
   // 그 외 조건부 — 판정 붙기 전까지 보수적으로 숨김
   return null;
 }
+
+/** 장비 상태형 — 지금 장착한 세 부위의 상태를 말하는 조건부 칭호(아이템 발동 칭호와 달리 벗으면 사라진다). */
+const EQUIP_STATE_CODES = ['balance_master', 'full_armed', 'star_holder'];
 
 /** 판정 2차 조건부 — 표시 시점 재검증이 표적 쿼리로 가능한 코드. */
 const HEAVY_CONDITIONALS = new Set([
@@ -351,8 +352,7 @@ export async function resolveRepTitlesBatch(
     if (!def) { out.set(e.userId, null); continue; }
     if (def.kind !== 'conditional') { out.set(e.userId, e.repCode); continue; }
     if (def.style.executor) { out.set(e.userId, e.executorZone ? e.repCode : null); continue; }
-    const secret = TITLE_SECRET_BY_CODE.get(e.repCode);
-    if (secret?.req || ['balance_master', 'full_armed', 'star_holder'].includes(e.repCode)) {
+    if (EQUIP_STATE_CODES.includes(e.repCode)) {
       needEquip.push({ userId: e.userId, code: e.repCode });
     } else if (['lib_holder', 'lib_ten', 'champ_5', 'armory_lord'].includes(e.repCode)) {
       needLib.push({ userId: e.userId, code: e.repCode });
@@ -378,15 +378,11 @@ export async function resolveRepTitlesBatch(
     }
     for (const n of needEquip) {
       const eq = byUser.get(n.userId) ?? new Map<string, number>();
-      const secret = TITLE_SECRET_BY_CODE.get(n.code);
+      const lv = [...eq.values()];
       let ok = false;
-      if (secret?.req) ok = secret.req.items.every((k) => (eq.get(k) ?? -1) >= secret.req!.min);
-      else {
-        const lv = [...eq.values()];
-        if (n.code === 'balance_master') ok = lv.length === 3 && lv.every((v) => v === lv[0]) && lv[0]! >= 50;
-        else if (n.code === 'full_armed') ok = lv.length === 3 && lv.every((v) => v >= 100);
-        else ok = lv.some((v) => v >= 200);
-      }
+      if (n.code === 'balance_master') ok = lv.length === 3 && lv.every((v) => v === lv[0]) && lv[0]! >= 50;
+      else if (n.code === 'full_armed') ok = lv.length === 3 && lv.every((v) => v >= 100);
+      else ok = lv.some((v) => v >= 200);
       out.set(n.userId, ok ? n.code : null);
     }
   }
