@@ -183,7 +183,15 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       // 종전에는 곧바로 만들어서, srv 쿠키를 잃은 2서버 유저가 1서버에 새 캐릭터(가입 보너스·
       // 기본 아바타 포함)를 받고 "진행도가 사라졌다"로 보였다. 캐릭터를 지울 수단이 없어 되돌릴
       // 수도 없다. 이 조회는 캐릭터가 없는 드문 경로에서만 돌아 핫패스 비용이 없다.
-      const correctServerId = await correctServerFor(userId, serverId).catch(() => null);
+      // 관문 조회 자체가 실패하면(풀 포화 등) **만들지 않는다** — '모르겠으니 일단 생성'이 바로
+      // 막으려던 사고다. 이번 렌더는 기본값으로 내보내고 다음 요청에서 다시 판단한다.
+      let correctServerId: number | null;
+      try {
+        correctServerId = await correctServerFor(userId, serverId);
+      } catch (ge) {
+        console.warn('[layout] server guard failed — skip heal', (ge as Error).message);
+        return DEFAULTS;
+      }
       if (correctServerId != null) {
         console.warn('[layout] wrong active server — redirecting', { userId, serverId, correctServerId });
         return { ...DEFAULTS, correctServerId };

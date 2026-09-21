@@ -7,6 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import {
   canEnterServer,
+  CharacterError,
   createCharacterAuto,
   touchLastServer,
   latestOpenServerId,
@@ -135,7 +136,20 @@ export async function GET(request: NextRequest) {
               if (hasElsewhere != null) {
                 confirmNewServerId = sid;
               } else {
-                await createCharacterAuto({ userId, serverId: sid });
+                // 캐릭터가 하나도 없는 신규 — 고른(또는 링크가 가리킨) 서버가 포화·닫힘이면 열려 있는
+                // 최신 서버로 대신 보낸다. 종전에는 여기서 던진 예외가 서버 선택 전체를 건너뛰게 해,
+                // 쿠키 없이 1서버로 떨어진 뒤 1서버마저 포화면 빈 화면에 갇혔다(2026-09-21 재검수).
+                try {
+                  await createCharacterAuto({ userId, serverId: sid });
+                } catch (ce) {
+                  if (!(ce instanceof CharacterError) || ce.code !== 'SERVER_NOT_OPEN') throw ce;
+                  const fallback = await latestOpenServerId();
+                  if (fallback === sid) throw ce;
+                  sid = fallback;
+                  if (!(await canEnterServer(userId, sid))) {
+                    await createCharacterAuto({ userId, serverId: sid });
+                  }
+                }
               }
             }
             if (confirmNewServerId == null) {

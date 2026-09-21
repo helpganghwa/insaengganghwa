@@ -30,11 +30,16 @@ export default async function NewCharacterPage({
 
   const servers = await listServersForUser(userId);
   const target = servers.find((s) => s.id === serverId);
-  // 이미 캐릭터가 있거나(중복 진입) 열려 있지 않은 서버면 물을 것이 없다.
-  if (!target || target.my || target.status !== 'open') redirect('/');
+  // 이미 캐릭터가 있으면(중복 진입) 물을 것이 없다.
+  if (!target || target.my) redirect('/');
 
   // 캐릭터가 있는 서버 전부 — 마지막으로 하던 곳이 맨 앞(서버가 셋 이상이면 어디로 갈지 고른다).
   const { preferred } = await loadUserServers(userId);
+  // 새 캐릭터를 받을 수 없는 서버(포화·닫힘)를 골랐다 — 물을 것 없이 하던 서버로 돌려보낸다.
+  // 그냥 '/'로 보내면 활성 서버 쿠키가 없는 새 기기에서는 엉뚱한 서버를 볼 수 있다.
+  if (target.status !== 'open') {
+    redirect(preferred != null ? `/auth/switch-server?to=${preferred}` : '/');
+  }
   const mine: MyServer[] = servers
     .filter((s) => s.my && s.id !== serverId)
     .map((s) => ({ id: s.id, name: s.name, nickname: s.my!.nickname, diamond: s.my!.diamond }))

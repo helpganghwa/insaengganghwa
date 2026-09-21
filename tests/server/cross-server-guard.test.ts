@@ -68,6 +68,9 @@ describe.skipIf(!USER)('크로스서버 관문', () => {
 
   it('길드 — 다른 서버 길드에는 가입도 신청도 할 수 없다', async () => {
     const name = `관문테스트${Date.now() % 1000000}`;
+    // 이전 실행이 중간에 죽어 남긴 잔여부터 치운다(공유 스테이징 DB — 로그인 화면에 칩으로 보인다).
+    await testDb.execute(sql`delete from guilds where server_id = ${ABSENT_SERVER}`);
+    await testDb.execute(sql`delete from servers where id = ${ABSENT_SERVER}`);
     // guilds.server_id는 servers FK라 임시 서버 행이 필요하다. status='closed'로 넣어
     // 크론 순회(openServerIds = open+full)에 걸리지 않게 하고, finally에서 지운다.
     await testDb.execute(sql`

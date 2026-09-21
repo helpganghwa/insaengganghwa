@@ -47,7 +47,10 @@ export function ServerPicker({
       </p>
       <div className="grid grid-cols-3 gap-1.5">
         {servers.map((sv) => {
-          const open = sv.status === 'open';
+          // 포화(full)는 **신규 생성만** 막는 상태다(SERVER.md §6) — 기존 유저는 골라 들어올 수
+          // 있어야 한다. 종전에는 open만 눌려서, 두 서버를 하는 사람이 포화 서버로 못 돌아갔다.
+          // 닫힘(closed)만 비활성. 포화 서버에 캐릭터가 없는 사람이 고르면 콜백·확인 화면이 막는다.
+          const open = sv.status === 'open' || sv.status === 'full';
           const active = sv.id === picked;
           return (
             <button
@@ -65,7 +68,7 @@ export function ServerPicker({
             >
               {/* 이름만 truncate — 버튼에 overflow-hidden을 주면 추천 뱃지(음수 위치)가 잘림 */}
               <span className="block truncate">{sv.name}</span>
-              {sv.id === recommendedId && open && (
+              {sv.id === recommendedId && sv.status === 'open' && (
                 <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow-sm">
                   추천
                 </span>
