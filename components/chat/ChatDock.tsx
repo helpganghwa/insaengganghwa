@@ -188,6 +188,8 @@ export function ChatDock() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState<boolean | null>(null); // null=로딩(도크 미표시)
   const [channel, setChannel] = useState<string | null>(null);
+  // 미니바 준실시간 토픽 — 서버 발급값만 쓴다(HMAC 포함, 클라 조립 금지).
+  const [miniChannel, setMiniChannel] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [myGuild, setMyGuild] = useState<{ id: string; name: string } | null>(null);
   const [guildTopic, setGuildTopic] = useState<string | null>(null);
@@ -674,6 +676,9 @@ export function ChatDock() {
         const data = (await res.json()) as {
           disabled?: boolean;
           channel?: string;
+          miniChannel?: string;
+          /** 활성 서버 — 토픽 파싱 대신 서버가 명시로 준다(2026-09-21 ⑱). */
+          serverId?: number;
           me?: string;
           mode?: 'full' | 'delta';
           /** 정규화 응답(감사 C) — 발신자 메타는 users에 1회, messages는 참조만. */
@@ -709,13 +714,11 @@ export function ChatDock() {
         }
         // 응답이 도착한 시점의 활성 탭과 요청 탭이 다르면(빠른 전환) 채널·목록 반영 스킵.
         if (!anyTab && t !== tabRef.current) return null;
-        if (data.channel) {
-          setChannel(data.channel);
-          const sidNum = Number(data.channel.split(':s')[1]);
-          if (Number.isInteger(sidNum)) {
-            serverIdRef.current = sidNum;
-            setSid(sidNum);
-          }
+        if (data.channel) setChannel(data.channel);
+        if (data.miniChannel) setMiniChannel(data.miniChannel);
+        if (typeof data.serverId === 'number' && Number.isInteger(data.serverId)) {
+          serverIdRef.current = data.serverId;
+          setSid(data.serverId);
         }
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
@@ -942,11 +945,11 @@ export function ChatDock() {
   useEffect(() => {
     // enabled 가드 — 킬스위치(채팅 OFF)가 내려가면 미니 연결도 함께 끊는다(리뷰 지적:
     // Realtime 과부하 시 킬스위치로 연결을 떨어뜨리는 시나리오의 반쪽 방지).
-    if (enabled !== true || sid === null || open || collapsed) return;
+    if (enabled !== true || miniChannel === null || open || collapsed) return;
     const sb = supabaseBrowser();
     if (!sb) return;
     const ch = sb
-      .channel(`chat-mini:s${sid}`)
+      .channel(miniChannel)
       .on('broadcast', { event: 'new' }, ({ payload }) =>
         routeIncoming('all', payload as ChatMessageDto),
       )
@@ -957,7 +960,7 @@ export function ChatDock() {
     return () => {
       void sb.removeChannel(ch);
     };
-  }, [enabled, sid, open, collapsed, routeIncoming, markDeleted]);
+  }, [enabled, miniChannel, open, collapsed, routeIncoming, markDeleted]);
 
   // 길드 탈퇴/해산 감지 — 길드 버퍼 잔존 제거.
   useEffect(() => {

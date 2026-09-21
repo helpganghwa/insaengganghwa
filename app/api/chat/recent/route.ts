@@ -16,13 +16,16 @@ import {
   type ChatUserMeta,
 } from '@/lib/game/chat/service';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
-import { chatTopic, whisperTopic } from '@/lib/game/chat/realtime';
+import { chatMiniTopic, chatTopic, whisperTopic } from '@/lib/game/chat/realtime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /** 채널별 최신 항목 id(문자열 직렬화 — bigint는 JSON에 실을 수 없다). null=그 채널에 항목 없음. */
 type LatestIds = { all: string | null; guild: string | null; whisper: string | null };
+const EMPTY_LATEST: LatestIds = { all: null, guild: null, whisper: null };
+/** 노티점 + 활성 서버에 내 캐릭터가 있는지(같은 문장에서 함께 읽는다). */
+type LatestWithGuard = LatestIds & { hasChar: boolean };
 
 /**
  * 미니바 노티점(0155) — 전체/길드/귓속말의 '가장 최근 항목 id'를 한 문(스칼라 서브셀렉트 3개)으로.
@@ -36,7 +39,7 @@ async function latestChannelIds(
   userId: string,
   serverId: number,
   gidRaw: string | null,
-): Promise<LatestIds> {
+): Promise<LatestWithGuard> {
   const gid = gidRaw && /^\d{1,19}$/.test(gidRaw) ? BigInt(gidRaw) : null;
   const [row] = (await db.execute(sql`
     select
@@ -56,9 +59,24 @@ async function latestChannelIds(
             select 1 from chat_blocks b
             where (b.user_id = ${userId}::uuid and b.blocked_user_id = m.from_user_id)
                or (b.user_id = m.from_user_id and b.blocked_user_id = ${userId}::uuid)
-          )) as whisper_id
-  `)) as unknown as { all_id: string | null; guild_id: string | null; whisper_id: string | null }[];
-  return { all: row?.all_id ?? null, guild: row?.guild_id ?? null, whisper: row?.whisper_id ?? null };
+          )) as whisper_id,
+      -- 그 서버에 내 캐릭터가 있는가(2026-09-21 ⑱) — srv 쿠키는 검증 없이 활성 서버가 되므로,
+      -- 쿠키만 바꾸면 남의 서버 월드 채팅을 읽을 수 있었다. 왕복을 늘리지 않으려고 이미 도는
+      -- 이 문장에 편승시킨다(PK 조회라 비용 상수).
+      exists (select 1 from characters c
+               where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as has_char
+  `)) as unknown as {
+    all_id: string | null;
+    guild_id: string | null;
+    whisper_id: string | null;
+    has_char: boolean;
+  }[];
+  return {
+    all: row?.all_id ?? null,
+    guild: row?.guild_id ?? null,
+    whisper: row?.whisper_id ?? null,
+    hasChar: row?.has_char ?? false,
+  };
 }
 
 /**
@@ -128,6 +146,10 @@ export async function GET(req: Request) {
       channel === 'guild' && !guild ? Promise.resolve([]) : getRecentChat(serverId, limit, guildId),
       latestChannelIds(userId, serverId, url.searchParams.get('gid')),
     ]);
+    // 활성 서버에 캐릭터가 없으면 그 서버 채팅을 볼 자격이 없다(쿠키 위조 방어).
+    if (!latestIds.hasChar) {
+      return NextResponse.json({ mode: 'full', messages: [], users: {}, latestIds: EMPTY_LATEST });
+    }
     const { mode, messages } = slice(full);
     return NextResponse.json({ mode, ...normalize(messages as ChatMessageDto[]), latestIds });
   }
@@ -154,10 +176,19 @@ export async function GET(req: Request) {
     channel === 'guild' && !guild ? Promise.resolve([]) : getRecentChat(serverId, limit, guildId),
     latestChannelIds(userId, serverId, guild ? guild.guildId : null),
   ]);
+  // 전체 조회는 이미 내 캐릭터를 읽는다 — 없으면 그 서버 사람이 아니므로 토픽도 내주지 않는다.
+  if (!meChar) {
+    return NextResponse.json({ mode: 'full', messages: [], users: {}, latestIds: EMPTY_LATEST });
+  }
   const { mode, messages } = slice(full);
 
   return NextResponse.json({
     channel: chatTopic(serverId, guildId),
+    // 미니바 준실시간 토픽(HMAC 포함, 2026-09-21 ⑱) — 클라가 조립하지 않고 이 값을 쓴다.
+    miniChannel: chatMiniTopic(serverId),
+    // 활성 서버를 명시로 내려준다 — 클라가 토픽 문자열에서 파싱하던 것을 없앴다(토픽에 HMAC이
+    // 붙어 형식이 바뀌면 조용히 NaN이 된다, 2026-09-21 ⑱).
+    serverId,
     // 길드 실시간 토픽(HMAC 토큰 포함) — 소속 검증된 응답으로만 전달(비길드원 도청 차단).
     guildChannel: guild ? chatTopic(serverId, BigInt(guild.guildId)) : null,
     // 내 귓속말 수신 토픽(HMAC 토큰 포함) — 같은 원칙(세션 검증된 응답으로만 전달). threads

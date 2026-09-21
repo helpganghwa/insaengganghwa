@@ -61,6 +61,7 @@ type DashRow = {
   pending_orders: number;
   open_alerts: number;
   push_backlog: number;
+  health_by_server: { serverId: number; melee: number; conquest: number; push: number; gen: number }[];
   client_err: { groups: number; hits: number };
   gen_stuck: number;
   slot_counts: { slot: string; n: number }[];
@@ -124,6 +125,27 @@ async function loadDashboard() {
         -- 안 나간 행. 45분 임계는 batched_1h 유저의 정상 대기(≤60분)를 오탐했음(2026-07-14).
         (select count(*)::int from push_pending
            where first_at < now() - interval '75 minutes') as push_backlog,
+        -- 헬스 지표의 **서버 내역**(2026-09-21 ⑭) — 합계만 보면 어느 서버가 고장인지 알 수 없어
+        -- 대시보드만 보고 대응할 수 없었다. 0이 아닌 서버만 담는다.
+        (select coalesce(json_agg(t), '[]'::json) from (
+           select server_id as "serverId",
+                  sum(melee)::int as melee, sum(conquest)::int as conquest,
+                  sum(push)::int as push, sum(gen)::int as gen
+             from (
+               select server_id, count(*)::int melee, 0 conquest, 0 push, 0 gen from melee_battles
+                where status = 'computed' and battle_date < ${today} group by server_id
+               union all
+               select server_id, 0, count(*)::int, 0, 0 from conquest_battles
+                where published_at is null and battle_kst_day < ${today} group by server_id
+               union all
+               select server_id, 0, 0, count(*)::int, 0 from push_pending
+                where first_at < now() - interval '75 minutes' group by server_id
+               union all
+               select server_id, 0, 0, 0, count(*)::int from profile_generation_jobs
+                where status in ('queued','starting','downloading','ai_reviewing')
+                  and created_at < now() - interval '20 minutes' group by server_id
+             ) u
+            group by server_id order by server_id) t) as health_by_server,
         -- 미해결만 — resolved 처리된 그룹의 24h 잔상이 소프트리밋(3)을 넘겨 오탐(2026-07-14).
         (select json_build_object('groups', count(*)::int, 'hits', coalesce(sum("count"), 0)::int)
            from client_errors where resolved = false and last_seen >= now() - interval '24 hours') as client_err,
@@ -163,6 +185,7 @@ async function loadDashboard() {
     pending_orders: pendingOrders,
     open_alerts: openAlerts,
     push_backlog: pushBacklog,
+    health_by_server: healthByServer,
     client_err: clientErr24h,
     gen_stuck: genStuck,
   } = r;
@@ -170,6 +193,13 @@ async function loadDashboard() {
   // 크론 dead-man — 허용 간격 초과(또는 한 번도 성공 없음). 총체적 정지(CRON_SECRET 사고) 포함.
   const staleCrons = await getStaleCrons(Date.now()).catch(() => []);
 
+
+  // 헬스 지표에 붙일 서버 내역(2026-09-21 ⑭) — 서버가 하나뿐이면 붙이지 않는다(잡음).
+  const srvTag = (k: 'melee' | 'conquest' | 'push' | 'gen') => {
+    const hits = (healthByServer ?? []).filter((h) => (h[k] ?? 0) > 0);
+    if (hits.length === 0 || (charsByServer ?? []).length < 2) return '';
+    return ` · ${hits.map((h) => `${h.serverId}서버 ${h[k]}`).join(' · ')}`;
+  };
   return {
     signupsToday,
     signupsTodayInvited,
@@ -189,12 +219,12 @@ async function loadDashboard() {
     deploysToday,
     invariants: [
       { label: '정지 크론 (dead-man)', value: staleCrons.length, hint: staleCrons.length ? `정지: ${staleCrons.map((s) => s.name).join(', ')} — CRON_SECRET·Vercel Cron 확인` : '전 크론 정상 beat' },
-      { label: '미발표 대난투 (어제 이전 computed)', value: meleeStuck, hint: 'melee-reveal 크론 확인 — 참가자 보상 우편 미발송 상태' },
-      { label: '미공개 점령전 (어제 이전)', value: conquestUnpublished, hint: 'conquest-chronicle 크론 확인 — 소유권·우편 미적용 상태' },
+      { label: '미발표 대난투 (어제 이전 computed)', value: meleeStuck, hint: `melee-reveal 크론 확인 — 참가자 보상 우편 미발송 상태${srvTag('melee')}` },
+      { label: '미공개 점령전 (어제 이전)', value: conquestUnpublished, hint: `conquest-chronicle 크론 확인 — 소유권·우편 미적용 상태${srvTag('conquest')}` },
       { label: '15분+ pending 주문', value: pendingOrders, hint: 'payment-recon이 자동 치유 — 지속되면 /admin/payments 확인' },
       { label: '미해결 결제 사고 알림', value: openAlerts, hint: '/admin/alerts에서 처리' },
-      { label: '푸시 적체 (45분+)', value: pushBacklog, hint: 'push-flush 크론 확인' },
-      { label: '아바타 생성 정체 (20분+)', value: genStuck, hint: 'profile-poll 크론·Pixellab 상태 확인' },
+      { label: '푸시 적체 (45분+)', value: pushBacklog, hint: `push-flush 크론 확인${srvTag('push')}` },
+      { label: '아바타 생성 정체 (20분+)', value: genStuck, hint: `profile-poll 크론·Pixellab 상태 확인${srvTag('gen')}` },
       { label: '클라 에러 24h', value: clientErr24h.groups, hint: `발생 ${clientErr24h.hits}회 — /admin/client-errors`, softLimit: 3 },
       { label: '확률 공시 스냅샷 미기록 변경 (§33)', value: probStale, hint: 'balance/카탈로그 변경분 미기록 — record-probability-snapshot.ts --confirm 실행' },
     ] as { label: string; value: number; hint: string; softLimit?: number }[],

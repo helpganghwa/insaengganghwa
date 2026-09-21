@@ -152,6 +152,13 @@ export function CreateProfileForm({
         <div className="mt-1 text-sm font-semibold">
           {waiting ? `아바타 생성 대기 중` : `아바타 ${statusText}`}
         </div>
+        {/* 아바타 생성은 계정에 하나씩만 돌아간다 — 다른 곳에서 만드는 중이면 여기선 못 만든다.
+            종전에는 이 화면이 비어 있어서 "왜 막히지?"가 됐다(2026-09-21 ⑨). */}
+        {queue?.onOtherServer && (
+          <div className="mt-1 text-[12.5px] text-amber-700 dark:text-amber-300">
+            다른 곳에서 만들고 있어요. 한 번에 하나씩만 만들 수 있어요.
+          </div>
+        )}
         {waiting && queue ? (
           <div className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">
             대기 {queue.position}번째 · 예상 약 {queue.etaMinutes}분

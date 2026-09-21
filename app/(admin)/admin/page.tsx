@@ -164,6 +164,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '미지급·환불 미회수·금액불일치 등 사고 감지 내역, 자동치유 재시도/해결 처리',
   },
   {
+    href: '/admin/servers',
+    icon: '🗄️',
+    title: '서버 상태',
+    desc: '정상/포화/닫힘 전환 — 포화는 신규 생성만 차단, 닫힘은 크론 순회에서 제외',
+  },
+  {
     href: '/admin/maintenance',
     icon: '🔧',
     title: '서버 점검',

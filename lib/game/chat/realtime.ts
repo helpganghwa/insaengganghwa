@@ -6,23 +6,29 @@ import { createHmac } from 'node:crypto';
  * Supabase Realtime broadcast 송신(0125) — 서버리스에서 WS 없이 HTTP로 브로드캐스트.
  * 클라이언트는 anon 키로 같은 topic을 WS 구독(ChatDock). 실패는 무해(수신 측 폴링 폴백).
  */
+/** 서버만 계산할 수 있는 토픽 토큰 — 토픽명을 알아도 열거로는 못 만든다. */
+function topicToken(kind: string, ...parts: (string | number | bigint)[]): string {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'dev';
+  return createHmac('sha256', secret).update([kind, ...parts].join(':')).digest('hex').slice(0, 12);
+}
+
 export function chatTopic(serverId: number, guildId?: bigint | null): string {
-  if (!guildId) return `chat:s${serverId}`;
+  // 월드 채널도 HMAC(2026-09-21 ⑱) — 종전엔 `chat:s{N}`이라 anon 키만 있으면 서버 번호를
+  // 바꿔 **다른 서버 월드 채팅을 실시간으로 받아** 갈 수 있었다(길드·귓속말에는 이미 있던 보호).
+  if (!guildId) return `chat:s${serverId}:${topicToken('world', serverId)}`;
   // 길드 토픽 토큰 — broadcast가 public 채널이라 토픽명을 알면 비길드원도 구독 가능(guildId는
   // 순차라 열거됨). 서버만 계산 가능한 HMAC을 붙여, 소속 검증된 /api/chat/recent 응답으로만
   // 토픽을 전달한다(도청 차단). 키 회전 시 토픽이 바뀌지만 클라는 응답값을 쓰므로 무해.
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'dev';
-  const token = createHmac('sha256', secret).update(`chat:${serverId}:${guildId}`).digest('hex').slice(0, 12);
-  return `chat:s${serverId}:g${guildId}:${token}`;
+  return `chat:s${serverId}:g${guildId}:${topicToken('chat', serverId, guildId)}`;
 }
 
 /**
  * 미니바 준실시간 토픽(2026-08-06 확정) — 닫힘(비접힘) 클라 전용. 월드 채널 한정,
  * 서버가 15초당 최대 1건만 발사(service.ts 스로틀)해 fan-out 비용 상한이 고정된다.
- * ⚠ 클라(ChatDock)가 같은 문자열을 인라인 조립 — 형식 변경 시 양쪽 동기화.
+ * ⚠ **서버 발급 전용 · 클라 조립 금지**(2026-09-21 ⑱) — recent 응답의 miniChannel을 쓴다.
  */
 export function chatMiniTopic(serverId: number): string {
-  return `chat-mini:s${serverId}`;
+  return `chat-mini:s${serverId}:${topicToken('mini', serverId)}`;
 }
 
 /**
@@ -34,9 +40,7 @@ export function chatMiniTopic(serverId: number): string {
  * 키 회전 시 토픽이 바뀌지만 클라는 응답값을 쓰므로 무해.
  */
 export function whisperTopic(serverId: number, userId: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'dev';
-  const token = createHmac('sha256', secret).update(`whisper:${serverId}:${userId}`).digest('hex').slice(0, 12);
-  return `chat:s${serverId}:w:${token}`;
+  return `chat:s${serverId}:w:${topicToken('whisper', serverId, userId)}`;
 }
 
 /**

@@ -280,6 +280,8 @@ export async function scheduleBroadcastAction(opts: {
   body: string;
   payload: MailPayload;
   push?: boolean;
+  /** 대상 서버(0208) — null/미지정=전 서버, 숫자=그 서버 캐릭터 보유자에게만. */
+  serverId?: number | null;
   /** KST 'YYYY-MM-DDTHH:mm' (datetime-local 값). */
   scheduledAtKst: string;
 }): Promise<{ status: 'success'; scheduledAtIso: string } | ErrorState> {
@@ -297,6 +299,7 @@ export async function scheduleBroadcastAction(opts: {
       body: (opts.body || '').slice(0, 1000),
       payload: clampPayload(opts.payload),
       push: !!opts.push,
+      serverId: opts.serverId ?? null,
       scheduledAt: at,
     });
     revalidatePath('/admin/mail');
