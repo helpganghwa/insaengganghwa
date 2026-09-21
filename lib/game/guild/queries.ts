@@ -657,7 +657,10 @@ export async function getConquestBattleById(id: bigint) {
 }
 
 /** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
-export async function getDeployBoard(guildId: bigint, gServerId: number) {
+export async function getDeployBoard(guildId: bigint, gServerId: number, opts: { onlyUserId?: string } = {}) {
+  // onlyUserId — 배치 정보 공개 범위(0204)가 '권한자만'인 길드의 일반 길드원. 처음부터 **본인 행만** 읽는다:
+  // 남의 배치를 읽었다가 지우는 것보다 안전하고, 길드원 전원의 장비를 읽어 전투력을 계산하는 비용도 없다.
+  const onlyMe = opts.onlyUserId ? sql`and gm.user_id = ${opts.onlyUserId}::uuid` : sql``;
   // 잠금 시간(23:00~23:59)엔 다음 전투(빈 보드) 대신 진행 중(오늘) 전투 배치를 그대로 노출.
   // 클라(DeployBoard)는 이미 자체 시계로 '진행 중·읽기전용'을 표시 → 여기선 데이터만 맞춤.
   const battleKstDay = isConquestLocked() ? kstDateString() : nextBattleKstDay();
@@ -670,7 +673,7 @@ export async function getDeployBoard(guildId: bigint, gServerId: number) {
     left join guild_battle_deployments d on d.user_id = gm.user_id and d.server_id = gm.server_id and d.battle_kst_day = ${battleKstDay}
     left join zones dz on dz.id = d.zone_id
     left join zones ez on ez.executor_user_id = gm.user_id and ez.server_id = gm.server_id
-    where gm.guild_id = ${guildId}
+    where gm.guild_id = ${guildId} ${onlyMe}
     order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, c.nickname
   `)) as unknown as DeployBoardMember[];
 

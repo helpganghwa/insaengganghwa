@@ -113,29 +113,31 @@ export function TaxBoard({
   return (
     <section className="mt-3">
       {/* 세그먼트는 두 권한을 모두 가진 사람에게만 — 한쪽뿐이면 고를 것이 없다. */}
-      <div role="tablist" hidden={!both} className={both ? 'flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900' : undefined}>
-        {(
-          [
-            { key: 'collect', label: '수금' },
-            { key: 'distribute', label: '분배' },
-          ] as { key: TaxTab; label: string }[]
-        ).map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            type="button"
-            aria-selected={tab === t.key}
-            onClick={() => switchTab(t.key)}
-            className={`flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
-              tab === t.key
-                ? 'bg-white text-amber-600 shadow-sm dark:bg-zinc-950 dark:text-amber-400'
-                : 'text-zinc-500'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {both ? (
+        <div role="tablist" className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+          {(
+            [
+              { key: 'collect', label: '수금' },
+              { key: 'distribute', label: '분배' },
+            ] as { key: TaxTab; label: string }[]
+          ).map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              type="button"
+              aria-selected={tab === t.key}
+              onClick={() => switchTab(t.key)}
+              className={`flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
+                tab === t.key
+                  ? 'bg-white text-amber-600 shadow-sm dark:bg-zinc-950 dark:text-amber-400'
+                  : 'text-zinc-500'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {shown === 'collect' && collect ? (
         <CollectPanel myUserId={myUserId} view={collect} />

@@ -73,7 +73,12 @@ export const GUILD_PERM_META: Record<GuildPermKey, { label: string; desc?: strin
  * 켤 때 확인을 받아야 하는 권한 — 되돌릴 수 없거나 재화가 나가는 것.
  * 끄는 쪽은 확인하지 않는다(권한을 좁히는 방향은 막을 이유가 없다).
  */
-export const GUILD_PERM_CONFIRM: GuildPermKey[] = ['executor', 'kick', 'taxDistribute', 'emblem'];
+export const GUILD_PERM_CONFIRM = ['executor', 'kick', 'taxDistribute', 'emblem'] as const satisfies readonly GuildPermKey[];
+export type GuildPermConfirmKey = (typeof GUILD_PERM_CONFIRM)[number];
+/** 켤 때 확인이 필요한 권한인가(타입 가드 — 확인 문구 표를 이 키로만 찾게 한다). */
+export function isConfirmKey(key: GuildPermKey): key is GuildPermConfirmKey {
+  return (GUILD_PERM_CONFIRM as readonly GuildPermKey[]).includes(key);
+}
 
 /** 부길드장 임명 시 기본값 — 공지·소개·오픈채팅만 켬. 이 셋도 길드장이 끌 수 있다. */
 export const GUILD_PERM_DEFAULT = GUILD_PERM.notice | GUILD_PERM.intro | GUILD_PERM.openchat;

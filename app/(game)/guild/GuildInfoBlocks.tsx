@@ -51,12 +51,14 @@ export function GuildOpenchatButton({
 }
 
 /** 길드 목록·랭킹 팝업의 소개 블록 — 비어 있으면 안내 문장으로 대체(목록과 동일).
- *  높이 상한: 160자를 줄바꿈으로 채워도 팝업(스크롤 없음)이 화면 밖으로 늘어나지 않게 소개만 따로 스크롤한다. 세계지도 길드 팝업에 같은 마크업이 있다. */
+ *  높이 상한: 160자를 줄바꿈으로 채워도 팝업(스크롤 없음)이 화면 밖으로 늘어나지 않게 소개만 따로 스크롤한다.
+ *  11.25rem ≈ 8.5줄(13px × 1.625) — 줄 경계에 딱 맞추면 넘친 글이 깔끔히 잘려 '더 있다'는 단서가 없다. 반 줄을 걸쳐 보인다.
+ *  세계지도 길드 팝업에 같은 마크업이 있다. */
 export function GuildIntroBlock({ intro }: { intro: string | null }) {
   return (
     <div>
       <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
-      <p className="mt-1 max-h-[10.5rem] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+      <p className="mt-1 max-h-[11.25rem] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
         {intro?.trim() ? intro : '등록된 소개가 없어요.'}
       </p>
     </div>

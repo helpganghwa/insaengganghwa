@@ -9,7 +9,7 @@ import { logGuildAudit } from './audit';
 import { GUILD_MAX_VICE } from './balance';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { GuildError } from './errors';
-import { GUILD_PERM_DEFAULT, hasGuildPerm, sanitizePerms } from './permissions';
+import { GUILD_PERM, GUILD_PERM_DEFAULT, hasGuildPerm, sanitizePerms, type GuildPermKey } from './permissions';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -136,36 +136,48 @@ export function kickMember(input: {
  * 대상은 같은 길드의 부길드장이어야 한다(일반 길드원·길드장은 권한 개념이 없다).
  * 변경 내역은 감사 로그에 남긴다 — 누가 누구에게 무엇을 열었는지가 분쟁의 근거가 된다.
  */
-export function setVicePermissions(input: {
+export function setVicePermission(input: {
   leaderUserId: string;
   serverId: number;
   targetUserId: string;
-  permissions: number;
+  key: GuildPermKey;
+  on: boolean;
 }): Promise<void> {
-  return db.transaction(async (tx) => {
-    const leader = await lockMember(tx, input.leaderUserId, input.serverId);
-    if (!leader) throw new GuildError('NOT_IN_GUILD');
-    if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
-    const target = await lockMember(tx, input.targetUserId, input.serverId);
-    if (!target || target.guildId !== leader.guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
-    if (target.role !== 'vice') throw new GuildError('INVALID_TARGET');
+  return db.transaction((tx) => setVicePermissionTx(tx, input));
+}
 
-    const next = sanitizePerms(input.permissions);
-    if (next === target.permissions) return; // 변화 없음 — 로그도 남기지 않는다
-    await tx
-      .update(guildMembers)
-      .set({ permissions: next })
-      .where(
-        and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)),
-      );
-    // docstring이 약속한 감사 로그(분쟁 근거) — 선언만 있고 write가 비어 있었다(전수 감사 2026-08-21).
-    await logGuildAudit(tx, {
-      serverId: input.serverId,
-      guildId: leader.guildId,
-      actorUserId: input.leaderUserId,
-      action: 'set_perm',
-      targetUserId: input.targetUserId,
-      detail: { before: target.permissions, after: next },
-    });
+/**
+ * 트랜잭션 본체(테스트가 바깥 트랜잭션을 넘겨 롤백한다).
+ * **권한 하나만** 켜고 끈다 — 클라가 전체 비트마스크를 보내던 종전 방식은, 화면을 열어 둔 사이 다른 경로로
+ * 바뀐 비트(다른 기기의 편집 · 0205 같은 소급 SQL)를 낡은 값으로 덮어써 조용히 지웠다(2026-09-21 재검수).
+ * 대상 행을 잠근 채 **현재 값**에서 그 비트만 바꾼다.
+ */
+export async function setVicePermissionTx(
+  tx: Tx,
+  input: { leaderUserId: string; serverId: number; targetUserId: string; key: GuildPermKey; on: boolean },
+): Promise<void> {
+  const bit = GUILD_PERM[input.key];
+  if (typeof bit !== 'number') throw new Error('BAD_PERM_KEY'); // 타입상 올 수 없다 — 액션이 먼저 거른다(클라 조작 방어)
+  const leader = await lockMember(tx, input.leaderUserId, input.serverId);
+  if (!leader) throw new GuildError('NOT_IN_GUILD');
+  if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
+  const target = await lockMember(tx, input.targetUserId, input.serverId);
+  if (!target || target.guildId !== leader.guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
+  if (target.role !== 'vice') throw new GuildError('INVALID_TARGET');
+
+  const next = sanitizePerms(input.on ? target.permissions | bit : target.permissions & ~bit);
+  if (next === target.permissions) return; // 변화 없음 — 로그도 남기지 않는다
+  await tx
+    .update(guildMembers)
+    .set({ permissions: next })
+    .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
+  // 누가 누구에게 무엇을 열었는지가 분쟁의 근거가 된다(전수 감사 2026-08-21).
+  await logGuildAudit(tx, {
+    serverId: input.serverId,
+    guildId: leader.guildId,
+    actorUserId: input.leaderUserId,
+    action: 'set_perm',
+    targetUserId: input.targetUserId,
+    detail: { before: target.permissions, after: next, key: input.key, on: input.on },
   });
 }

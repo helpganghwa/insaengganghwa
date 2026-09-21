@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guildMembers } from '@/lib/db/schema/guild';
+import { guildMembers, guilds } from '@/lib/db/schema/guild';
 
 import { GuildError } from './errors';
 import { hasGuildPerm, type GuildPermKey, type GuildRole } from './permissions';
@@ -51,6 +51,29 @@ export async function getGuildPermState(
       permissions: guildMembers.permissions,
     })
     .from(guildMembers)
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
+    .limit(1);
+  return m ?? null;
+}
+
+/**
+ * 점령지 화면 전용 — 직책·권한에 **길드의 배치 정보 공개 범위(0204)** 를 얹어 한 번에 읽는다.
+ * 공개 범위를 먼저 알아야 배치 보드를 전원분으로 읽을지 본인 행만 읽을지 정할 수 있다
+ * (길드 정보를 통째로 읽는 getGuild를 따로 부르지 않는다 — 요청당 왕복 최소화 §11.4).
+ */
+export async function getDeployViewerState(
+  userId: string,
+  serverId: number,
+): Promise<{ guildId: bigint; role: GuildRole; permissions: number; deployVisibility: string } | null> {
+  const [m] = await db
+    .select({
+      guildId: guildMembers.guildId,
+      role: guildMembers.role,
+      permissions: guildMembers.permissions,
+      deployVisibility: guilds.deployVisibility,
+    })
+    .from(guildMembers)
+    .innerJoin(guilds, eq(guilds.id, guildMembers.guildId))
     .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   return m ?? null;

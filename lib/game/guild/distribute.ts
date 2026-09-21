@@ -11,6 +11,8 @@ import type { GuildTaxDistribution } from './balance';
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 import { assertGuildPerm } from './perm-guard';
+import type { GuildRole } from './permissions';
+import { taxMailBody } from './tax-mail';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -19,8 +21,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function sendTaxMails(
   tx: Tx,
   serverId: number,
-  guildName: string,
-  leaderNick: string,
+  meta: { guildName: string; actorRole: GuildRole; actorNick: string | null },
   rows: { userId: string; amount: bigint }[],
 ): Promise<void> {
   if (rows.length === 0) return;
@@ -30,22 +31,22 @@ async function sendTaxMails(
       serverId,
       type: 'reward' as const,
       title: '길드 세금 분배',
-      body: `${guildName} 길드장 ${leaderNick}님이 세금 💎${r.amount.toLocaleString('ko-KR')}을 분배했습니다.`,
+      body: taxMailBody(meta.guildName, meta.actorRole, meta.actorNick, r.amount),
       senderLabel: '길드',
       payload: { diamond: Number(r.amount) },
     })),
   );
 }
 
-/** 분배 우편 문구용 — 길드명 + 길드장 닉네임(캐릭터 행 부재 시 폴백). */
-async function guildMailMeta(tx: Tx, guildId: bigint, leaderUserId: string, serverId: number) {
+/** 분배 우편 문구용 — 길드명 + 분배한 사람의 직책·닉네임(캐릭터 행이 없으면 직책만 적는다). */
+async function guildMailMeta(tx: Tx, guildId: bigint, actorUserId: string, serverId: number, actorRole: GuildRole) {
   const [g] = await tx.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
   const [c] = await tx
     .select({ nick: characters.nickname })
     .from(characters)
-    .where(and(eq(characters.userId, leaderUserId), eq(characters.serverId, serverId)))
+    .where(and(eq(characters.userId, actorUserId), eq(characters.serverId, serverId)))
     .limit(1);
-  return { guildName: g?.name ?? '길드', leaderNick: c?.nick ?? '길드장' };
+  return { guildName: g?.name ?? '길드', actorRole, actorNick: c?.nick ?? null };
 }
 
 /**
@@ -80,8 +81,8 @@ export function distributeGuildTax(input: {
         .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
         .limit(1);
       if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
-      const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
-      await sendTaxMails(tx, input.serverId, meta.guildName, meta.leaderNick, [
+      const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
+      await sendTaxMails(tx, input.serverId, meta, [
         { userId: input.targetUserId, amount: pool },
       ]);
       await tx.update(guilds).set({ taxPoolDiamond: 0n }).where(eq(guilds.id, gid));
@@ -115,12 +116,11 @@ export function distributeGuildTax(input: {
     if (per <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE'); // 풀 < 인원
     const distributed = per * n;
 
-    const metaEq = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
+    const metaEq = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
     await sendTaxMails(
       tx,
       input.serverId,
-      metaEq.guildName,
-      metaEq.leaderNick,
+      metaEq,
       members.map((m) => ({ userId: m.u, amount: per })),
     );
     await tx
@@ -187,12 +187,11 @@ export function distributeGuildTaxManual(input: {
     const memberSet = new Set(memberRows.map((r) => r.u));
     for (const uid of byUser.keys()) if (!memberSet.has(uid)) throw new GuildError('TARGET_NOT_IN_GUILD');
 
-    const metaMan = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
+    const metaMan = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
     await sendTaxMails(
       tx,
       input.serverId,
-      metaMan.guildName,
-      metaMan.leaderNick,
+      metaMan,
       [...byUser].map(([uid, amt]) => ({ userId: uid, amount: amt })),
     );
     await tx

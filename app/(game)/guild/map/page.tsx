@@ -28,7 +28,7 @@ export default async function WorldMapPage() {
     getChronicle(serverId).catch(() => null),
     getConquestReplay(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
-    // 세금 권한자면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
+    // 수금 권한자(taxCollect)면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
     userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
   ]);
   const taxOfficerGuildId =

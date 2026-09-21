@@ -65,12 +65,17 @@ describe.skipIf(!USER)('배치 정보 공개 범위 설정', () => {
       });
   });
 
-  it('부길드장은 어떤 권한을 가져도 바꿀 수 없다(NOT_LEADER) · 길드가 없으면 NOT_IN_GUILD', async () => {
+  it('부길드장·일반 길드원은 바꿀 수 없다(NOT_LEADER) · 다른 서버·길드 없음은 NOT_IN_GUILD', async () => {
     await testDb
       .transaction(async (tx) => {
         const f = await setup(tx);
         await f.setRole('vice', 1023);
         expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_LEADER');
+        await f.setRole('member', 0);
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_LEADER');
+        // 서버 분리 — 1서버 길드장이 다른 서버 번호로 부르면 그 서버에는 소속이 없다.
+        await f.setRole('leader', 0);
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: 9, visibility: 'officer' }))).toBe('NOT_IN_GUILD');
         expect(await f.vis()).toBe('all');
         await tx.execute(sql`delete from guild_members where server_id = ${SERVER_ID} and user_id = ${USER}::uuid`);
         expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_IN_GUILD');

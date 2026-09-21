@@ -168,7 +168,7 @@ function RowAction({
 }
 
 /** 공개 범위가 '권한자만'일 때 권한 없는 길드원에게 보이는 안내(0204). */
-const RESTRICTED_NOTE = '길드 전체 배치는 길드장과 배치 담당 부길드장만 볼 수 있습니다.';
+const RESTRICTED_NOTE = '길드 전체 배치는 길드장과 권한이 있는 부길드장만 볼 수 있습니다.';
 
 /** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
 const STATUS_FILTERS = [
@@ -300,7 +300,7 @@ export function DeployBoard({
     const prev = vis;
     setVis(next);
     start(async () => {
-      const r = await setDeployVisibilityAction(next).catch(() => ({ status: 'error', code: 'UNKNOWN' }) as const);
+      const r = await setDeployVisibilityAction(next).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
         setVis(prev);
         showError(guildErrMsg(r.code));

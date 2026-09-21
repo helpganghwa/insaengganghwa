@@ -41,13 +41,13 @@ import {
   setActiveEmblem,
   deleteEmblem,
   setViceRole,
-  setVicePermissions,
+  setVicePermission,
   kickMember,
   transferLeadership,
 } from '@/lib/game/guild';
 import { notifyJoinDecision, notifyJoinRequest } from '@/lib/game/guild/notify';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
-import { hasGuildPerm } from '@/lib/game/guild/permissions';
+import { GUILD_PERM_ORDER, hasGuildPerm, type GuildPermKey } from '@/lib/game/guild/permissions';
 import { getGuild } from '@/lib/game/guild/queries';
 import { DEPLOY_VISIBILITIES, type DeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
 import { setDeployVisibility } from '@/lib/game/guild/conquest/set-deploy-visibility';
@@ -463,7 +463,7 @@ export async function collectTaxAction(zoneId: number) {
   }
 }
 
-/** 일괄 수금(2026-09-08) — 세금 권한자가 수금 가능한 구역 전부를 한 번에. 구역별 별도 트랜잭션. */
+/** 일괄 수금(2026-09-08) — 수금 권한자(taxCollect)가 수금 가능한 구역 전부를 한 번에. 구역별 별도 트랜잭션. */
 export async function collectAllTaxAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
@@ -644,26 +644,28 @@ export async function getZoneBattleAction(zoneId: number) {
 
 /**
  * 부길드장 권한 설정 — **길드장 전속**(0142). 대상은 같은 길드의 부길드장.
- * 비트마스크는 서버에서 sanitize하므로 클라가 알 수 없는 비트를 보내도 버려진다.
+ * 권한 **하나**를 켜고 끈다 — 전체 비트마스크를 받지 않는다(열어 둔 화면의 낡은 값이 다른 비트를 지우지 않게, 2026-09-21).
  */
-export async function setVicePermissionsAction(targetUserId: string, permissions: number) {
+export async function setVicePermissionAction(targetUserId: string, key: GuildPermKey, on: boolean) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  if (!GUILD_PERM_ORDER.includes(key) || typeof on !== 'boolean') return { status: 'error', code: 'UNKNOWN' } as const;
   try {
-    await setVicePermissions({
+    await setVicePermission({
       leaderUserId: u,
       serverId: await getActiveServerId(),
       targetUserId,
-      permissions,
+      key,
+      on,
     });
     revalidatePath('/guild/settings');
     revalidatePath('/guild');
     revalidatePath('/guild/roles'); // 권한 화면 — 클라 refresh 제거(2026-08-20) 명시 커버
     return { status: 'success' } as const;
   } catch (e) {
-    return fail(e, 'setVicePermissions');
+    return fail(e, 'setVicePermission');
   }
 }
 

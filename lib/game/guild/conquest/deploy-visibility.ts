@@ -23,12 +23,62 @@ export function isDeployOfficer(role: GuildRole, permissions: number | null | un
   return hasGuildPerm(role, permissions, 'deploy') || hasGuildPerm(role, permissions, 'executor');
 }
 
+/** 배치 보드 조회가 돌려주는 멤버 행(서버 쿼리 컬럼 이름 그대로). */
+export type DeployBoardRow = {
+  uid: string;
+  nickname: string;
+  mrole: GuildRole;
+  dep_zone_id: number | null;
+  dep_zone_name: string | null;
+  dep_role: 'attack' | 'defend' | null;
+  exec_zone_id: number | null;
+  exec_zone_name: string | null;
+};
+
+/** 점령지 화면(클라이언트)으로 넘기는 멤버 한 줄. */
+export type DeployMemberProp = {
+  userId: string;
+  nickname: string;
+  role: GuildRole;
+  combat: number;
+  depZoneId: number | null;
+  depZoneName: string | null;
+  depRole: 'attack' | 'defend' | null;
+  execZoneId: number | null;
+  execZoneName: string | null;
+};
+
 /**
  * 제한된 시청자에게 내려보낼 멤버 목록 — **본인 한 줄만** 남긴다.
  * 같은 구역에 함께 선 길드원도 내려보내지 않는다: 한 구역의 인원·전투력만 알아도 그 구역의 방비가 드러난다.
  */
 export function maskDeployMembers<T>(members: T[], viewerId: string, idOf: (m: T) => string): T[] {
   return members.filter((m) => idOf(m) === viewerId);
+}
+
+/**
+ * 클라이언트로 넘길 멤버 목록 조립 — 페이지가 이 함수만 거쳐 넘긴다.
+ * 제한된 시청자면 서버 쿼리가 이미 본인 행만 읽지만, 여기서 **한 번 더** 거른다(조회 옵션을 빠뜨리는 회귀 대비).
+ * 전투력은 남는 멤버 것만 꺼낸다 — combat 맵 전체를 넘기지 않는다.
+ */
+export function toDeployMemberProps(
+  rows: DeployBoardRow[],
+  combat: Record<string, number>,
+  viewerId: string,
+  restricted: boolean,
+): DeployMemberProp[] {
+  const visible = restricted ? maskDeployMembers(rows, viewerId, (m) => m.uid) : rows;
+  return visible.map((m) => ({
+    userId: m.uid,
+    nickname: m.nickname,
+    role: m.mrole,
+    combat: combat[m.uid] ?? 0,
+    depZoneId: m.dep_zone_id,
+    depZoneName: m.dep_zone_name,
+    depRole: m.dep_role,
+    execZoneId: m.exec_zone_id,
+    execZoneName: m.exec_zone_name,
+  }));
 }
 
 /** 이 시청자에게 제한이 걸리는가 — 설정이 'officer'이고 배치 담당자가 아닐 때. */
