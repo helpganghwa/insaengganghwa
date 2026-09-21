@@ -184,6 +184,9 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     channel: chatTopic(serverId, guildId),
+    // 월드 채널 실시간 토픽(HMAC 포함) — **요청한 탭과 무관하게 항상 월드 것**. 위 channel은 길드 탭을
+    // 요청하면 길드 토픽이 되므로, 패널 열림 중의 월드 구독은 이 값을 쓴다(클라 조립 금지).
+    worldChannel: chatTopic(serverId),
     // 미니바 준실시간 토픽(HMAC 포함, 2026-09-21 ⑱) — 클라가 조립하지 않고 이 값을 쓴다.
     miniChannel: chatMiniTopic(serverId),
     // 활성 서버를 명시로 내려준다 — 클라가 토픽 문자열에서 파싱하던 것을 없앴다(토픽에 HMAC이
