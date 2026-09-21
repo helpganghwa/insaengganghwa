@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { listServersForUser } from '@/lib/game/server-select';
-import { correctServerFor } from '@/lib/game/server-guard';
+import { loadUserServers } from '@/lib/game/server-guard';
 
-import { NewCharacterChoice } from './NewCharacterChoice';
+import { NewCharacterChoice, type MyServer } from './NewCharacterChoice';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +33,15 @@ export default async function NewCharacterPage({
   // 이미 캐릭터가 있거나(중복 진입) 열려 있지 않은 서버면 물을 것이 없다.
   if (!target || target.my || target.status !== 'open') redirect('/');
 
-  const back = await correctServerFor(userId, serverId);
-  if (back == null) redirect('/'); // 캐릭터가 아예 없는 계정 — 콜백이 알아서 만든다
-  const backServer = servers.find((s) => s.id === back);
+  // 캐릭터가 있는 서버 전부 — 마지막으로 하던 곳이 맨 앞(서버가 셋 이상이면 어디로 갈지 고른다).
+  const { preferred } = await loadUserServers(userId);
+  const mine: MyServer[] = servers
+    .filter((s) => s.my && s.id !== serverId)
+    .map((s) => ({ id: s.id, name: s.name, nickname: s.my!.nickname, diamond: s.my!.diamond }))
+    .sort((a, b) => (a.id === preferred ? -1 : b.id === preferred ? 1 : a.id - b.id));
+  if (mine.length === 0) redirect('/'); // 캐릭터가 아예 없는 계정 — 콜백이 알아서 만든다
+
+  const head = mine[0]!;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[390px] flex-col justify-center gap-6 px-7 py-12">
@@ -46,25 +52,25 @@ export default async function NewCharacterPage({
           캐릭터가 없어요
         </h1>
         <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-          {backServer?.my ? (
+          {mine.length === 1 ? (
             <>
-              <b className="text-zinc-700 dark:text-zinc-200">{backServer.name}</b>에서 <b className="text-zinc-700 dark:text-zinc-200">{backServer.my.nickname}</b>으로
-              하던 기록은 그대로 있어요.
+              <b className="text-zinc-700 dark:text-zinc-200">{head.name}</b>에서{' '}
+              <b className="text-zinc-700 dark:text-zinc-200">{head.nickname}</b>으로 하던 기록은
+              그대로 있어요.
               <br />
               거기로 돌아가거나, {target.name}에서 처음부터 시작할 수 있어요.
             </>
           ) : (
-            <>하던 기록은 그대로 있어요. 돌아가거나 여기서 처음부터 시작할 수 있어요.</>
+            <>
+              하던 기록은 그대로 있어요. 어디로 갈까요?
+              <br />
+              {target.name}에서 처음부터 시작할 수도 있어요.
+            </>
           )}
         </p>
       </div>
 
-      <NewCharacterChoice
-        serverId={serverId}
-        serverName={target.name}
-        backHref={`/auth/switch-server?to=${back}`}
-        backLabel={backServer ? `${backServer.name}로 돌아가기` : '원래 서버로 돌아가기'}
-      />
+      <NewCharacterChoice serverId={serverId} serverName={target.name} mine={mine} />
     </main>
   );
 }
