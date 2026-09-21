@@ -3,11 +3,14 @@ import { redirect } from 'next/navigation';
 import { getSessionUserId } from '@/lib/auth/session';
 import { listServersForUser } from '@/lib/game/server-select';
 import { loadUserServers } from '@/lib/game/server-guard';
-import { roJosa } from '@/lib/korean/ro';
+import { getJosaPicker } from 'josa';
 
 import { NewCharacterChoice, type MyServer } from './NewCharacterChoice';
 
 export const dynamic = 'force-dynamic';
+
+/** '(으)로' — 닉네임 끝소리에 맞춘다(josa: ㄹ받침·숫자 발음·로마자까지 처리). */
+const ro = getJosaPicker('으로');
 
 /**
  * 새 서버에서 시작할지 확인(2026-09-21 ②).
@@ -63,7 +66,7 @@ export default async function NewCharacterPage({
               <b className="text-zinc-700 dark:text-zinc-200">{head.name}</b>에서{' '}
               {/* 조사는 닉네임 끝소리에 맞춘다 — 고정 '으로'는 받침 없는 닉네임에서 틀린다("치즈으로"). */}
               <b className="text-zinc-700 dark:text-zinc-200">{head.nickname}</b>
-              {roJosa(head.nickname)} 하던 기록은
+              {ro(head.nickname)} 하던 기록은
               그대로 있어요.
               <br />
               거기로 돌아가거나, {target.name}에서 처음부터 시작할 수 있어요.

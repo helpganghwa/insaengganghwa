@@ -2,9 +2,12 @@
 
 import { useTransition } from 'react';
 
-import { roJosa } from '@/lib/korean/ro';
+import { getJosaPicker } from 'josa';
 
 import { startOnServerAction } from './actions';
+
+/** '(으)로' — 서버 이름 끝소리에 맞춘다. */
+const ro = getJosaPicker('으로');
 
 export type MyServer = {
   id: number;
@@ -75,7 +78,7 @@ export function NewCharacterChoice({
             ) : (
               <span className="w-full text-center text-sm font-semibold">
                 {s.name}
-                {roJosa(s.name)} 돌아가기
+                {ro(s.name)} 돌아가기
               </span>
             )}
           </a>
