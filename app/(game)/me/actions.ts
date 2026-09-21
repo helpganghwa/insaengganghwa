@@ -7,7 +7,7 @@ import { unstable_cache } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
-import { isUniqueViolation } from '@/lib/db/errors';
+import { isNicknameTaken } from '@/lib/db/errors';
 import { applyNicknameChange } from '@/lib/game/nickname-change';
 import { profiles } from '@/lib/db/schema/profiles';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
@@ -81,9 +81,9 @@ export async function changeNicknameAction(
       charged: outcome.charged,
     };
   } catch (e) {
-    // UNIQUE 위반 — 닉네임 중복. 이 경로에서 23505를 낼 수 있는 제약은 characters_nickname_uq뿐이다.
+    // 닉네임 중복 — 서버 안 유니크(23505)와 계정 간 소유 제약(23P01, 0207) 둘 다 같은 뜻이다.
     // (drizzle 0.45가 pg 에러를 감싸 e.code가 비므로 cause를 따라가는 헬퍼로 판정한다.)
-    if (isUniqueViolation(e)) {
+    if (isNicknameTaken(e)) {
       return { status: 'error', code: 'TAKEN', message: '이미 사용 중인 닉네임입니다.' };
     }
     console.error('[changeNickname]', e);

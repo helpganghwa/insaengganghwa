@@ -47,17 +47,22 @@ export async function sendMailToUserAction(opts: {
   try {
     const adminId = await requireAdmin();
     let recipientId: string | null = null;
-    // 닉네임은 특정 서버의 캐릭터를 가리킴 — 그 캐릭터의 서버로 배송해야
-    // 다른 서버 우편함/지갑에 오배송되지 않는다(닉네임 전역 유일).
+    // 닉네임 → 캐릭터. 0207부터 **같은 사람이 여러 서버에서 같은 이름**을 쓸 수 있어 행이 여럿일
+    // 수 있다. 서버 조건 없이 아무 행이나 집으면 엉뚱한 서버 우편함·지갑으로 배송된다
+    // (2026-09-21 ⑫). 마지막 접속 서버를 우선하고, 없으면 가장 낮은 서버로 정한다.
+    // 이름이 다른 사람과 겹치는 일은 제외 제약이 막으므로 수신자 자체는 한 명으로 확정된다.
     let recipientServerId: number | null = null;
     if (opts.toNickname?.trim()) {
-      const [r] = await db
-        .select({ id: characters.userId, sid: characters.serverId })
-        .from(characters)
-        .where(eq(characters.nickname, opts.toNickname.trim()))
-        .limit(1);
-      recipientId = r?.id ?? null;
-      recipientServerId = r?.sid ?? null;
+      const rows = (await db.execute(sql`
+        select c.user_id::text as id, c.server_id::int as sid
+          from characters c
+          join profiles p on p.id = c.user_id
+         where lower(c.nickname) = lower(${opts.toNickname.trim()})
+         order by (c.server_id = p.last_server_id) desc, c.server_id
+         limit 1
+      `)) as unknown as { id: string; sid: number }[];
+      recipientId = rows[0]?.id ?? null;
+      recipientServerId = rows[0]?.sid ?? null;
     } else if (opts.toCode?.trim()) {
       // 코드 = 계정 단위(서버 불특정) — 배송 서버는 수신자의 마지막 활성 서버 폴백(하단 로직).
       const code = opts.toCode.trim().replace(/^#/, '');

@@ -10,7 +10,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
 import { recordDiamondLedger } from '@/lib/game/ledger';
-import { isUniqueViolation, pgConstraintName } from '@/lib/db/errors';
+import { isUniqueViolation, isNicknameTaken, pgConstraintName } from '@/lib/db/errors';
 import {
   NICKNAME_MIN_LEN,
   NICKNAME_MAX_LEN,
@@ -169,11 +169,13 @@ export async function createCharacter(input: {
       // NICKNAME_TAKEN으로 오인됐다(2026-08-12 실측, dbbe95ce가 놓친 9번째이자 마지막 자리).
       // 그 오인이 createCharacterAuto의 10회 재추첨을 태워, 출시 버스트의 풀 포화를 장애가
       // 지속되는 동안 증폭시키는 구조였다. SQLSTATE 판별은 반드시 lib/db/errors.ts 경유.
-      if (isUniqueViolation(e)) {
-        // 이 문장이 23505를 낼 제약은 정확히 둘 — PK(더블서밋)와 닉 유니크. 구분해야
-        // 더블서밋이 닉 재추첨을 낭비하지 않고 즉시 ALREADY_EXISTS로 끝난다.
-        if (pgConstraintName(e) === 'characters_pkey') throw new CharacterError('ALREADY_EXISTS');
-        throw new CharacterError('NICKNAME_TAKEN'); // characters_nickname_uq
+      if (isNicknameTaken(e)) {
+        // 이 문장이 낼 수 있는 제약은 셋 — PK(더블서밋), 서버 내 닉 유니크, 닉 소유 제약(0207).
+        // PK를 구분해야 더블서밋이 닉 재추첨을 낭비하지 않고 즉시 ALREADY_EXISTS로 끝난다.
+        if (isUniqueViolation(e) && pgConstraintName(e) === 'characters_pkey') {
+          throw new CharacterError('ALREADY_EXISTS');
+        }
+        throw new CharacterError('NICKNAME_TAKEN');
       }
       throw e; // 그 외(타임아웃·FK 등)는 전파 — 재시도 루프를 타면 안 된다.
     }
