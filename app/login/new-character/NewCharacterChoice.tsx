@@ -38,48 +38,43 @@ export function NewCharacterChoice({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      {mine.map((s, i) => (
-        <a
-          key={s.id}
-          href={`/auth/switch-server?to=${s.id}`}
-          className={
-            i === 0
-              ? 'flex w-full items-center justify-between gap-3 rounded-xl bg-amber-500 px-4 py-3 text-zinc-900'
-              : 'flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-300 px-4 py-3 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
-          }
-        >
-          {many ? (
-            <>
-              <span className="min-w-0 truncate text-sm font-bold">
-                {s.name}
-                <span className={i === 0 ? 'ml-1.5 font-semibold text-zinc-900/70' : 'ml-1.5 font-semibold text-zinc-400'}>
-                  {s.nickname}
-                </span>
-              </span>
-              <span className={i === 0 ? 'shrink-0 text-[13px] font-bold' : 'shrink-0 text-[13px] font-bold text-zinc-400'}>
-                💎 {fmt(s.diamond)}
-              </span>
-            </>
-          ) : (
-            <span className="w-full text-center text-sm font-bold">{s.name}로 돌아가기</span>
-          )}
-        </a>
-      ))}
+      {/* 새로 시작 — 이 화면에서 고르라고 내민 동작이라 주 버튼. */}
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(() => {
+            void startOnServerAction(serverId);
+          })
+        }
+        className="w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-zinc-900 disabled:opacity-60"
+      >
+        {pending ? '만드는 중...' : `${serverName}에서 새로 시작하기`}
+      </button>
 
-      {/* 돌아가기(위)와 성격이 다른 동작 — 선을 하나 두고 글자 버튼으로 낮춘다. */}
-      <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() =>
-            start(() => {
-              void startOnServerAction(serverId);
-            })
-          }
-          className="w-full py-2 text-[13px] font-semibold text-zinc-400 underline underline-offset-4 disabled:opacity-60 dark:text-zinc-500"
-        >
-          {pending ? '만드는 중...' : `${serverName}에서 새로 시작하기`}
-        </button>
+      {/* 하던 서버로 돌아가기 — 있는 그대로만 보여 준다. */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        {mine.map((s) => (
+          <a
+            key={s.id}
+            href={`/auth/switch-server?to=${s.id}`}
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-200 px-4 py-3 text-zinc-600 dark:border-zinc-800 dark:text-zinc-300"
+          >
+            {many ? (
+              <>
+                <span className="min-w-0 truncate text-sm font-semibold">
+                  {s.name}
+                  <span className="ml-1.5 font-medium text-zinc-400">{s.nickname}</span>
+                </span>
+                <span className="shrink-0 text-[13px] font-semibold text-zinc-400">
+                  💎 {fmt(s.diamond)}
+                </span>
+              </>
+            ) : (
+              <span className="w-full text-center text-sm font-semibold">{s.name}로 돌아가기</span>
+            )}
+          </a>
+        ))}
       </div>
     </div>
   );

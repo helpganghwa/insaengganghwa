@@ -273,6 +273,6 @@ export function VicePermissionsBoard({
 const CONFIRM_BODY: Record<GuildPermConfirmKey, string> = {
   executor: '집행관으로 지정된 길드원은 그 구역의 세금을 수금할 수 있습니다. 집행관을 정하는 권한을 함께 주게 됩니다.',
   kick: '길드원을 내보낼 수 있게 됩니다. 추방은 되돌릴 수 없고, 추방된 길드원은 한동안 다시 가입할 수 없습니다.',
-  taxDistribute: '길드가 모은 세금을 길드원에게 나눠 줄 수 있게 됩니다. 나간 다이아는 되돌릴 수 없습니다.',
+  taxDistribute: '길드가 모은 세금을 길드원에게 나눠 줄 수 있게 됩니다. 분배된 다이아는 되돌릴 수 없습니다.',
   emblem: '길드 문양을 새로 만들거나 바꿀 수 있게 됩니다. 만들 때마다 길드장의 다이아가 아니라 본인의 다이아가 소모됩니다.',
 };
