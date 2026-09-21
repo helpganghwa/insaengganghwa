@@ -11,6 +11,7 @@ import {
   touchLastServer,
   latestOpenServerId,
 } from '@/lib/game/server-select';
+import { correctServerFor } from '@/lib/game/server-guard';
 import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getAdminStatus } from '@/lib/auth/require-admin';
@@ -85,6 +86,9 @@ export async function GET(request: NextRequest) {
       const dest = new URL(`${origin}${next}`);
       if (kakaoEv) dest.searchParams.set('kakao_ev', kakaoEv);
       const res = NextResponse.redirect(dest.toString());
+      // 다른 서버에 이미 캐릭터가 있는데 없는 서버를 골랐을 때 — 바로 만들지 않고 확인을 받는다.
+      // (2026-09-21 ②) 값이 있으면 아래에서 목적지를 확인 화면으로 바꾼다.
+      let confirmNewServerId: number | null = null;
       if (userId) {
         try {
           // 대상 서버 확정(2026-07-10 R1 조정, 우선순위 사용자 확정): 명시 클릭(login_srv)
@@ -124,15 +128,26 @@ export async function GET(request: NextRequest) {
           // 여기서 "고른 서버에 정확히 1개"만 생성된다(유령 캐릭터·중복 보너스 제거).
           if (sid) {
             if (!(await canEnterServer(userId, sid))) {
-              await createCharacterAuto({ userId, serverId: sid });
+              // 이미 다른 서버에 캐릭터가 있으면 **묻고 만든다**(2026-09-21 ②). 종전에는 확인 없이
+              // 만들어서, 로그인 화면이 실제 배정과 다른 서버를 골라 둔 채 그 칩을 한 번 누른
+              // 기존 유저에게 새 캐릭터가 생겼다(캐릭터 삭제 수단이 없어 되돌릴 수 없음).
+              const hasElsewhere = await correctServerFor(userId, sid).catch(() => null);
+              if (hasElsewhere != null) {
+                confirmNewServerId = sid;
+              } else {
+                await createCharacterAuto({ userId, serverId: sid });
+              }
             }
-            await touchLastServer(userId, sid);
-            res.cookies.set('srv', String(sid), {
-              httpOnly: true,
-              sameSite: 'lax',
-              path: '/',
-              maxAge: 60 * 60 * 24 * 365,
-            });
+            if (confirmNewServerId == null) {
+              await touchLastServer(userId, sid);
+              res.cookies.set('srv', String(sid), {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 365,
+              });
+            }
           }
           res.cookies.delete('login_srv');
           // 공유 링크 서버 의도는 1회성 — 소비 후 소거(F7: 7일 잔존 시 이후 재로그인의
@@ -177,6 +192,10 @@ export async function GET(request: NextRequest) {
             console.warn('[auth.callback] referral skipped', (e as Error).message);
           }
         }
+      }
+      // 확인이 필요하면 게임 대신 확인 화면으로 — 쿠키 처리(초대 귀속 등)는 그대로 두고 목적지만 바꾼다.
+      if (confirmNewServerId != null) {
+        res.headers.set('location', `${origin}/login/new-character?to=${confirmNewServerId}`);
       }
       return res;
     }

@@ -32,6 +32,8 @@ export class FriendError extends Error {
       | 'BLOCKED_BY_ME'
       /** 차단 관계라 보낼 수 없음(상대가 나를 차단한 경우 포함) — **누가 차단했는지는 밝히지 않는다.** */
       | 'BLOCKED'
+      /** 내 캐릭터가 없는 서버에서 보낸 요청 — 활성 서버 위조 방어(2026-09-21). */
+      | 'NO_CHARACTER_ON_SERVER'
       | 'NO_REQUEST'
       /** 거절된 상대에게 24시간 안에 다시 요청(0195). */
       | 'REAPPLY_COOLDOWN',
@@ -274,14 +276,17 @@ export async function sendRequest(
   targetId: string,
 ): Promise<{ status: 'requested' | 'accepted' }> {
   if (meId === targetId) throw new FriendError('SELF');
-  // 대상 검증은 캐릭터(서버 스코프) 기준 — 친구는 서버별인데 profiles만 보면 그 서버에
-  // 캐릭터가 없는 유저(타서버 프로필 링크 등)에게 유령 요청이 걸린다(2026-07-07 전수감사).
-  const [t] = await db
-    .select({ id: characters.userId })
-    .from(characters)
-    .where(and(eq(characters.userId, targetId), eq(characters.serverId, serverId)))
-    .limit(1);
-  if (!t) throw new FriendError('NOT_FOUND');
+  // 대상 **과 발신자** 둘 다 그 서버에 캐릭터가 있어야 한다. 대상만 보던 종전 코드는 활성 서버
+  // 쿠키를 바꾸면 내 캐릭터가 없는 서버에서도 요청이 나가, 받는 쪽에 **끌 수 없는 빨간 점**이
+  // 남았다(배지는 friend_links만 세고 목록은 characters 조인이라 화면에 안 보임). 수락되면
+  // 상대의 30칸 중 한 칸이 보이지 않게 소진된다(2026-09-21 ③, 채팅·귓속말과 같은 가드).
+  const both = (await db.execute(
+    sql`select user_id::text as uid from characters
+         where server_id = ${serverId} and user_id in (${meId}::uuid, ${targetId}::uuid)`,
+  )) as unknown as { uid: string }[];
+  const have = new Set(both.map((r) => r.uid));
+  if (!have.has(meId)) throw new FriendError('NO_CHARACTER_ON_SERVER');
+  if (!have.has(targetId)) throw new FriendError('NOT_FOUND');
   // 차단 검사는 트랜잭션 밖 — 읽기 한 번이고, 막히면 어차피 아무것도 안 쓴다.
   const blocked = await blockState(meId, targetId);
   if (blocked.byMe) throw new FriendError('BLOCKED_BY_ME');

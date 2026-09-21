@@ -13,6 +13,7 @@ const MAP: Record<string, string> = {
   PROFANITY: '사용할 수 없는 단어가 포함되어 있습니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   GUILD_NOT_FOUND: '길드를 찾을 수 없습니다.',
+  NO_CHARACTER_ON_SERVER: '다른 서버의 길드입니다. 해당 서버 캐릭터로만 가입할 수 있어요.',
   GUILD_FULL: '길드 정원이 가득 찼습니다.',
   REJOIN_LOCKED: `탈퇴 후 ${GUILD_REJOIN_LOCK_HOURS}시간이 지나야 가입할 수 있습니다.`,
   REAPPLY_COOLDOWN: `거절된 길드에는 ${GUILD_REAPPLY_COOLDOWN_HOURS}시간이 지난 뒤 다시 신청할 수 있습니다.`,

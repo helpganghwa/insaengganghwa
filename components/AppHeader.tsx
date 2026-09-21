@@ -8,6 +8,7 @@ import { HeaderDiamond } from '@/components/HeaderDiamond';
 import { HeaderStatsInitializer, HeaderStatsLine } from '@/components/HeaderStatsContext';
 import { GuildBadge } from '@/components/GuildBadge';
 import { TitleTag } from '@/components/TitleTag';
+import { ServerCorrect } from '@/components/ServerCorrect';
 
 /**
  * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 📬(미수령 dot) · 닉네임 · 💎 다이아.
@@ -129,6 +130,8 @@ export function AppHeaderShell({
  */
 export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutData> }) {
   const d = await dataPromise;
+  // 활성 서버가 틀렸다 — 캐릭터를 만들지 않고 원래 서버로 되돌린다(2026-09-21 ④).
+  if (d.correctServerId != null) return <ServerCorrect to={d.correctServerId} />;
   return (
     <>
       <DiamondInitializer diamond={d.diamond} />

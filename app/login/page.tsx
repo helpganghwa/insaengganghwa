@@ -38,16 +38,6 @@ function loginErrorMessage(raw: string): string {
   return '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
 }
 
-/** 로그인 화면 서버 기본 선택 — 공유된 서버 > 직전 접속 서버(srv 잔존) > 최신 open 서버. */
-async function defaultServerId(open: { id: number; status: string }[]): Promise<number> {
-  const jar = await cookies();
-  const cand = [Number(jar.get('pending_server')?.value), Number(jar.get('srv')?.value)];
-  for (const c of cand) {
-    if (Number.isInteger(c) && open.some((s) => s.id === c && s.status === 'open')) return c;
-  }
-  return latestOpenServerId();
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
@@ -59,7 +49,6 @@ export default async function LoginPage({
   // 변경은 로그아웃 후 여기서.
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
   const showServers = servers.length >= 1;
-  const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
@@ -112,7 +101,7 @@ export default async function LoginPage({
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
         {showServers && !(cbtEnded && !reviewLogin) ? (
           <div className="mb-4 w-full">
-            <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />
+            <ServerPicker servers={servers} recommendedId={recommendedId} />
           </div>
         ) : null}
 

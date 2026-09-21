@@ -38,6 +38,13 @@ async function assertJoinManage(tx: Tx, userId: string, serverId: number): Promi
 
 /** 비소속 + 24h 재가입 잠금 검사(요청/즉시가입 공통). */
 async function assertJoinable(tx: Tx, userId: string, serverId: number): Promise<void> {
+  // 크로스서버 차단(2026-09-21 ③) — 길드 서버에 내 캐릭터가 있어야 신청·가입·승인이 가능하다.
+  // 없으면 guild_members에 보이지 않는 행이 남아 정원만 잡아먹는다(레이드와 같은 가드).
+  const [ch] = (await tx.execute(
+    sql`select 1 from characters where user_id = ${userId}::uuid and server_id = ${serverId} limit 1`,
+  )) as unknown as unknown[];
+  if (!ch) throw new GuildError('NO_CHARACTER_ON_SERVER');
+
   const [m] = await tx
     .select({ g: guildMembers.guildId })
     .from(guildMembers)
@@ -146,6 +153,11 @@ export async function approveJoinRequest(input: {
       .from(guildMembers)
       .where(eq(guildMembers.guildId, guildId));
     if ((cnt?.n ?? 0) >= guildCapacity(g.level)) throw new GuildError('GUILD_FULL');
+    // 신청 뒤 신청자의 캐릭터가 사라졌을 수 있다(탈퇴·서버 정리) — 승인 시점에 다시 본다.
+    const [ch] = (await tx.execute(
+      sql`select 1 from characters where user_id = ${input.requestUserId}::uuid and server_id = ${input.serverId} limit 1`,
+    )) as unknown as unknown[];
+    if (!ch) throw new GuildError('NO_CHARACTER_ON_SERVER');
 
     await tx
       .insert(guildMembers)

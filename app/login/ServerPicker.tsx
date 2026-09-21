@@ -8,18 +8,21 @@ import { useEffect, useState } from 'react';
  * 활성 서버 확정. ⚠ 마운트 즉시 기본값을 기록하면 콜백의 `last_server_id` 복원(기기 변경
  * 유저)이 항상 가려져, 신서버 오픈 후 기존 유저가 빈 신서버에 오배정된다(2026-07-10 감사 R1).
  * 미클릭 시 콜백 기본 체인(last_server_id → pending_server(초대 링크) → 최신 open)이 서버를 정한다.
+ *
+ * ⚠ **아무 칩도 미리 선택하지 않는다**(2026-09-21 ②). 로그인 전이라 이 화면은 그 사람이 어느
+ * 서버를 쓰던 사람인지 알 수 없는데(계정을 모른다), 종전에는 최신 서버를 선택된 것처럼 칠해 뒀다.
+ * 실제 배정은 `last_server_id` 복원이라 화면과 결과가 어긋났고, 그 칩을 "확인하려고" 누른
+ * 기존 유저에게 새 캐릭터가 생겼다. 고른 적이 없으면 선택도 없어야 한다.
  */
 export function ServerPicker({
   servers,
-  defaultSrv,
   recommendedId,
 }: {
   servers: { id: number; name: string; status: string }[];
-  defaultSrv: number;
   /** 최신 open 서버 — '추천' 라벨 대상. */
   recommendedId: number;
 }) {
-  const [picked, setPicked] = useState(defaultSrv);
+  const [picked, setPicked] = useState<number | null>(null);
 
   // 마운트 시 잔존 login_srv 소거 — 직전 시도(중단된 로그인 등)의 선택이 이번 로그인에
   // 유령처럼 적용되는 것 방지. 이후 기록은 오직 사용자 클릭에서만.
@@ -36,7 +39,12 @@ export function ServerPicker({
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
   return (
     <div className="w-full rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/50">
-      <p className="mb-1.5 text-left text-[10px] font-bold text-zinc-400">서버 선택</p>
+      <p className="mb-1.5 text-left text-[10px] font-bold text-zinc-400">
+        서버 선택
+        <span className="ml-1 font-medium text-zinc-400/80">
+          {servers.length > 1 ? '· 고르지 않으면 하던 서버로 들어가요' : ''}
+        </span>
+      </p>
       <div className="grid grid-cols-3 gap-1.5">
         {servers.map((sv) => {
           const open = sv.status === 'open';

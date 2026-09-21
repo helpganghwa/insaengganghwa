@@ -1,15 +1,21 @@
 /**
  * 신서버 오픈(SERVER.md §6) — 운영 이벤트(코드 배포 불필요).
  *
- * 사용: bun run scripts/open-server.ts <serverId> <이름>
- *   예: bun run scripts/open-server.ts 2 2서버
+ * 사용:
+ *   bun run scripts/open-server.ts <serverId> <이름>                     # DIRECT_URL(기본) = 스테이징
+ *   bun run scripts/open-server.ts <serverId> <이름> PROD_DATABASE_URL   # 프로덕션
+ *   예: bun run scripts/open-server.ts 2 2서버 PROD_DATABASE_URL
+ *
+ * ⚠ 대상 env를 **반드시 명시**한다 — 기본값 DIRECT_URL은 스테이징이라, 프로덕션 오픈인 줄 알고
+ *   인자 없이 돌리면 스테이징에 서버가 생기고 성공 로그만 찍힌다(프로덕션은 그대로 1서버).
+ *   apply-migration.ts와 같은 규약(3번째 인자 = env 이름).
  *
  * 처리(단일 트랜잭션):
  *  1) servers 행 INSERT(status=open)
  *  2) zones 50구역 시드 — 1서버 구역을 템플릿으로 복제(이름·지역·좌표), 새 id 부여
  *  3) zone_adjacency 간선 복제(id 매핑)
  *
- * 환경: DIRECT_URL(.env.local). 멱등 — 이미 존재하는 serverId면 중단.
+ * 멱등 — 이미 존재하는 serverId면 중단.
  */
 import { config } from 'dotenv';
 import postgres from 'postgres';
@@ -19,15 +25,27 @@ config({ path: '.env.local' });
 const serverId = Number(process.argv[2]);
 const name = process.argv[3];
 if (!Number.isInteger(serverId) || serverId < 2 || !name) {
-  console.error('사용: bun run scripts/open-server.ts <serverId(2+)> <이름>');
+  console.error('사용: bun run scripts/open-server.ts <serverId(2+)> <이름> [ENV_NAME]');
+  console.error('  ENV_NAME 생략 시 DIRECT_URL(스테이징). 프로덕션은 PROD_DATABASE_URL을 명시한다.');
   process.exit(1);
 }
 
-const url = process.env.DIRECT_URL;
-if (!url) throw new Error('DIRECT_URL required');
+const urlEnv = process.argv[4] ?? 'DIRECT_URL';
+const url = process.env[urlEnv];
+if (!url) {
+  console.error(`${urlEnv} 미설정 — .env.local 확인`);
+  process.exit(1);
+}
+console.log(`[open-server] 대상 = ${urlEnv}${urlEnv === 'DIRECT_URL' ? ' (스테이징 기본값)' : ''}`);
 const sql = postgres(url, { prepare: false, max: 1 });
 
 try {
+  // 대상 DB 확인용 — 지금 열려 있는 서버를 먼저 보여 준다(엉뚱한 DB에 붙었는지 눈으로 검증).
+  const before = await sql`select id, name, status from servers order by id`;
+  console.log(
+    `[open-server] 현재 서버: ${before.length === 0 ? '(없음)' : before.map((s) => `${s.id}=${s.name}(${s.status})`).join(', ')}`,
+  );
+
   await sql.begin(async (tx) => {
     const [exists] = await tx`select id from servers where id = ${serverId}`;
     if (exists) throw new Error(`server ${serverId} already exists`);
