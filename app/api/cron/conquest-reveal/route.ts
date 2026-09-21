@@ -58,8 +58,12 @@ export async function GET(req: Request) {
     }
   }
   // 역사 페이지 시대 요약(0202·0203) — 새 날이 공개됐으니 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(적용은 어드민에서). 실패해도 공개는 유효.
+  // ⚠ **실제로 공개한 서버만** 부른다(2026-09-21 ⑯). 이 크론은 23:57·23:58 두 틱이 각각 정각까지
+  // 잤다가 같은 순간에 깨어나는데, 종전에는 둘 다 요약 AI를 불러 서버 수 × 2회가 나갔다.
+  // 공개는 조건부 플립이라 둘 중 하나만 revealed>0을 받는다 — 그 한쪽만 요약을 쌓으면 된다.
+  // (공개된 날이 없으면 사실표도 그대로라 부를 이유가 없다.)
   for (const r of results) {
-    if (r.error) continue;
+    if (r.error || !r.revealed) continue;
     await syncHistoryEras(r.serverId).catch((e: unknown) => console.warn('[conquest-reveal] syncHistoryEras', r.serverId, e));
   }
   const ok = results.every((r) => !r.error);

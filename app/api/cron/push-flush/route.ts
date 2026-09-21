@@ -32,7 +32,7 @@ const CLAIM_BATCH = 500;
 const SEND_CHUNK = 200;
 const TIME_BUDGET_MS = 90_000;
 
-type FlushRow = { user_id: string; server_id: number | null; items: unknown[] };
+type FlushRow = { user_id: string; server_id: number; items: unknown[] };
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
@@ -61,13 +61,14 @@ export async function GET(req: Request) {
       using profiles p
       where p.id = pp.user_id
         and pp.category = 'enhance'::push_category
-        and (pp.user_id, pp.category) in (
-          select pp2.user_id, pp2.category
+        and (pp.user_id, pp.category, pp.server_id) in (
+          select pp2.user_id, pp2.category, pp2.server_id
           from push_pending pp2
           join profiles p2 on p2.id = pp2.user_id
           where pp2.category = 'enhance'::push_category
-            -- 경계규칙 1(0154): 이벤트 서버가 활성 서버일 때만 발송. null=구행 호환(통과).
-            and (pp2.server_id is null or pp2.server_id = p2.last_server_id)
+            -- 경계규칙 1(0154): 이벤트 서버가 활성 서버일 때만 발송. 0206부터 server_id는
+            -- not null이고 키의 일부라, 다른 서버 묶음은 그 서버로 돌아올 때까지 남는다.
+            and pp2.server_id = p2.last_server_id
             and (
               (p2.push_enhance_mode = 'batched'    and pp2.first_at + interval '30 minutes' <= now())
               or

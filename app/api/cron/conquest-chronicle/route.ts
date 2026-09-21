@@ -21,20 +21,27 @@ import { kstDateString } from '@/lib/kst';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
-// 백스톱 포함 1틱당 처리 일수 상한 — 연대기 LLM 호출이 있어 maxDuration(60s) 예산 보호.
-// 밀린 날이 더 있어도 다음 틱(5분 간격 12틱)이 이어받는다.
+// 백스톱 포함 **서버당** 처리 일수 상한. 잔여는 다음 틱(5분 간격 12틱)이 이어받는다.
 const MAX_DAYS_PER_TICK = 3;
+// 틱 전체 벽시계 예산(2026-09-21 ⑯) — 일수 상한이 서버 루프 **안**에 있어 서버가 늘면 한 틱이
+// 서버 수 × 3일이 됐다. 백필 1일치는 LLM을 두 번 부르므로 서버가 둘만 돼도 종전 60초를 넘겨
+// 함수가 강제 종료되고, 마지막 줄의 beatCron에 닿지 못해 dead-man 오탐까지 따라왔다.
+// maxDuration을 올리고(일일 크론이라 비용 영향 없음) 그 안에서 시간으로 끊는다.
+const TIME_BUDGET_MS = 240_000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   // 자정(KST 00시대) 실행 → 어제(전투일) 결과를 공개·발표하고 연대기 생성(24h 전 KST 날짜).
   const kstDay = kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const startedAt = Date.now();
   try {
     const results = [];
+    let budgetHit = false;
     // per-server 에러격리(감사 G1) — 한 서버 공개 실패가 뒤 서버 소유권·보상 우편 누락으로 번지지 않도록. 멱등 재시도 안전.
     for (const sid of await openServerIds()) {
+      if (budgetHit) break;
       try {
         // 대상 일자 = 어제 + **과거 미공개 잔여분**(백스톱, 감사 M-2) — 공개 윈도(00시대 12틱)가
         // 장애로 전량 실패하면 실행 시각 파생 날짜만 봐서는 그 전투가 영영 미공개로 남아
@@ -65,11 +72,18 @@ export async function GET(req: Request) {
         `)) as unknown as { d: string }[];
         for (const h of holes) if (!days.includes(h.d)) days.push(h.d);
         // 1틱 예산 보호 — 백스톱·백필 합산 상한(LLM 호출 포함). 잔여는 다음 틱(5분 간격)이
-        // 이어받는다. 단 어제(오늘 자정 공개분)는 항상 포함 — 잘리면 마지막 슬롯과 교체.
+        // 이어받는다. **어제(오늘 자정 공개분)를 맨 앞으로** 올린다 — 시간 예산에 걸려 중간에
+        // 끊기더라도 그날 공개·우편만은 반드시 끝나야 한다(2026-09-21 ⑯).
+        days.sort((a, b) => (a === kstDay ? -1 : b === kstDay ? 1 : a.localeCompare(b)));
         days.splice(MAX_DAYS_PER_TICK);
-        if (!days.includes(kstDay) && days.length > 0) days[days.length - 1] = kstDay;
+        if (!days.includes(kstDay)) days.unshift(kstDay);
 
         for (const day of days) {
+          // 예산 초과 — 여기서 멈추고 잔여는 다음 틱에 넘긴다(5분 간격 12틱).
+          if (Date.now() - startedAt > TIME_BUDGET_MS) {
+            budgetHit = true;
+            break;
+          }
           // narrate 전에 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
           // 연대기는 통상 23시대 conquest-run이 **사전 생성**해 두므로(정각 공개 설계) 아래
           // generate는 skip('already')로 끝난다 — 이 틱의 실작업은 플립·우편뿐(LLM 없음, 수초).
