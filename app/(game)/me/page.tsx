@@ -351,6 +351,8 @@ export default async function ProfilePage() {
       />
 
       <nav className="space-y-2">
+        {/* 안드로이드 웹·PWA 유저에게 Play 앱 권유(2026-09-22) — 메뉴 맨 위. 앱 안·iOS·데스크톱은 렌더 안 됨(클라 판정). */}
+        <AppStoreMenuRow forceShow={process.env.VERCEL_ENV === 'preview'} />
         {MENU.map((m) => (
           <Link prefetch={false}
             key={m.href}
@@ -394,8 +396,6 @@ export default async function ProfilePage() {
             ) : null}
           </Link>
         ))}
-        {/* 안드로이드 웹·PWA 유저에게 Play 앱 권유(2026-09-22) — 앱 안·iOS·데스크톱은 렌더 안 됨(클라 판정). */}
-        <AppStoreMenuRow forceShow={process.env.VERCEL_ENV === 'preview'} />
         {isAdmin ? (
           <Link prefetch={false}
             href="/admin"

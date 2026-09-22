@@ -7,6 +7,18 @@ import { isAppSession } from '@/lib/platform-client';
 
 type Row = 'hidden' | 'install' | 'open';
 
+/** Google Play 로고(삼각형 4색) — 이모지 대신(2026-09-22 사용자). 스토어 링크 표식으로만 쓴다. */
+function PlayIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" width="20" height="20" className="shrink-0">
+      <path d="M3.6 2.4c-.3.3-.5.8-.5 1.4v16.4c0 .6.2 1.1.5 1.4l.1.1 9.2-9.2v-.2L3.7 2.3l-.1.1z" fill="#00A0FF" />
+      <path d="M16 15.6l-3.1-3.1v-.2L16 9.2l.1.1 3.6 2.1c1 .6 1 1.6 0 2.2L16 15.6z" fill="#FFBC00" />
+      <path d="M16.1 15.5L12.9 12.3 3.6 21.6c.3.4.9.4 1.5.1l11-6.2" fill="#FF3A44" />
+      <path d="M16.1 9.1L5.1 2.9c-.6-.4-1.2-.3-1.5.1l9.3 9.3 3.2-3.2z" fill="#32A071" />
+    </svg>
+  );
+}
+
 /**
  * 프로필 메뉴 — 안드로이드 웹·PWA 유저에게 Play 앱을 권한다(2026-09-22, 사용자 제안).
  *
@@ -52,9 +64,7 @@ export function AppStoreMenuRow({ forceShow = false }: { /** 스테이징 확인
     return (
       <button type="button" onClick={openPlayApp} className={cls}>
         <span className="flex items-center gap-3">
-          <span aria-hidden className="text-xl">
-            📱
-          </span>
+          <PlayIcon />
           <span className="text-sm font-medium">앱에서 열기</span>
         </span>
         <span className="shrink-0 text-[11.5px] text-zinc-400">Play 앱 설치됨</span>
@@ -64,9 +74,7 @@ export function AppStoreMenuRow({ forceShow = false }: { /** 스테이징 확인
   return (
     <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className={cls}>
       <span className="flex items-center gap-3">
-        <span aria-hidden className="text-xl">
-          📱
-        </span>
+        <PlayIcon />
         <span className="text-sm font-medium">앱으로 설치하기</span>
       </span>
       <span className="shrink-0 text-[11.5px] text-zinc-400">Google Play</span>
