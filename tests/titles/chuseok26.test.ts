@@ -22,7 +22,7 @@ describe('한가위 2026 순위 칭호', () => {
         expect(d, code).toBeDefined();
         expect(d!.kind).toBe('permanent');
         expect(d!.hidden).toBe(false);
-        expect(d!.cat).toBe('한가위');
+        expect(d!.cat).toBe('추석');
         expect(TITLE_SECRET_BY_CODE.get(code)?.diff).toBe('한정');
         expect(PENDING_CODES.has(code)).toBe(false);
       }

@@ -34,7 +34,7 @@ export async function openChuseokCatalogIfDue(now = Date.now()): Promise<{ opene
   const slotCounts = (await db.execute(sql`
     select slot, count(*)::int as n from catalog_items where active = true group by slot order by slot
   `)) as unknown as { slot: string; n: number }[];
-  const payload = { ...buildProbabilityPayloadCore(slotCounts), note: `한가위 6종 개방(${rows.map((r) => r.code).join(', ')})` };
+  const payload = { ...buildProbabilityPayloadCore(slotCounts), note: `추석 6종 개방(${rows.map((r) => r.code).join(', ')})` };
   const [snap] = (await db.execute(sql`
     insert into probability_snapshots (effective_at, payload) values (${CHUSEOK_START_ISO}::timestamptz, ${JSON.stringify(payload)}::jsonb) returning id
   `)) as unknown as { id: string }[];

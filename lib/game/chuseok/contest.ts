@@ -4,8 +4,10 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
+import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
+import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
+import { resolveRepTitlesBatch } from '@/lib/game/titles/display';
 import { CATALOG_V6 } from '@/lib/game/equipment/catalog-v6';
 
 import {
@@ -21,7 +23,7 @@ import {
 import { rankRows, type RankInput, type RankedRow } from './rank';
 
 /**
- * 한가위 강화 대회 — 아이템별 순위(현황판·최종 결과)와 정산(우편·칭호). 규칙은 rank.ts·config.ts.
+ * 추석 강화 대회 — 아이템별 순위(현황판·최종 결과)와 정산(우편·칭호). 규칙은 rank.ts·config.ts.
  *
  * 마감 시점의 단계는 별도 스냅샷 없이 enhancement_logs로 되짚는다 — 장비의 "기준 시각 이전 마지막 강화
  * 기록"의 to_level이 그 시각의 단계이고, 그 기록 시각이 도달 시각이다(기록이 없으면 +0·획득 시각).
@@ -36,10 +38,15 @@ export type BoardRow = {
   level: number;
   reachedAt: string | null;
   me: boolean;
-  /** 활성 프로필 정면 프레임(랭킹 화면과 같은 출처) — 없으면 null. */
-  img: string | null;
-  /** 프로필 페이지 링크용 공개 코드(랭킹 행과 같은 동선, 2026-09-23 UX 점검) — 없으면 null. */
-  publicCode: string | null;
+  /** 행 배경 아바타(활성 프로필 정면 프레임)와 얼굴 박스 — 대난투 순위 행과 같은 표시(2026-09-23). 없으면 null. */
+  avatar: string | null;
+  faceBox: FaceBox | null;
+  guildName: string | null;
+  guildEmblemUrl: string | null;
+  /** 표시용 대표 칭호(배치 재검증 뒤) — 없으면 null. 집행관 칭호는 구역명·지역을 함께. */
+  titleCode: string | null;
+  executorZone: string | null;
+  executorZoneRegion: string | null;
 };
 export type BoardItem = {
   code: string;
@@ -52,8 +59,6 @@ export type BoardItem = {
 };
 export type ContestBoard = {
   phase: ChuseokPhase;
-  /** 조회한 서버 — 행의 프로필 링크(profileHref)가 쓴다. */
-  serverId: number;
   /** 정산이 끝나 결과 표를 읽었는가(마감 뒤 미정산이면 마감 시각 기준 계산값). */
   settled: boolean;
   items: BoardItem[];
@@ -100,7 +105,7 @@ function toItem(code: string, set: 'moon' | 'flower', ranked: RankedRow[], userI
     code,
     name: NAME_BY_CODE.get(code) ?? code,
     set,
-    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, reachedAt: iso(r.reachedAt), me: r.userId === userId, img: null, publicCode: null })),
+    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, reachedAt: iso(r.reachedAt), me: r.userId === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
     mine: mineRow
       ? { rank: mineRow.rank, level: mineRow.level, reachedAt: iso(mineRow.reachedAt), nextTierEnd: nextRewardTierEnd(mineRow.rank), reward: rankRewardFor(mineRow.rank) }
       : null,
@@ -113,36 +118,53 @@ export async function getContestBoard(serverId: number, userId: string | null, a
   const phase = chuseokPhase(at);
   if (phase !== 'accrue') {
     const settled = await loadSettled(serverId, userId);
-    if (settled) return { phase, serverId, settled: true, items: await attachImgs(serverId, settled) };
+    if (settled) return { phase, settled: true, items: await attachDecor(serverId, settled) };
   }
   const cutoff = phase === 'accrue' || phase === 'before' ? at : CHUSEOK_ACCRUE_END_MS;
   const by = await loadRows(serverId, cutoff);
   const items = CHUSEOK_CONTEST_ITEMS.map((i) => toItem(i.code, i.set, rankRows(by.get(i.code) ?? []), userId));
-  return { phase, serverId, settled: false, items: await attachImgs(serverId, items) };
+  return { phase, settled: false, items: await attachDecor(serverId, items) };
 }
 
-/** 순위 행의 아바타 — 활성 프로필의 정면(south) 프레임(랭킹 화면과 같은 출처). 조회 실패는 이미지 없이 진행. */
-async function attachImgs(serverId: number, items: BoardItem[]): Promise<BoardItem[]> {
+/**
+ * 순위 행 꾸밈 — 배경 아바타(활성 프로필 정면·얼굴 박스)·길드 마크·대표 칭호. 대난투 순위 행과 같은 재료를
+ * 같은 출처(characters ⨝ user_profiles, 길드 brief, 대표 칭호 배치 재검증)에서 가져온다. 조회 실패는 꾸밈 없이 진행.
+ */
+async function attachDecor(serverId: number, items: BoardItem[]): Promise<BoardItem[]> {
   const ids = [...new Set(items.flatMap((i) => i.rows.map((r) => r.userId)))];
   if (ids.length === 0) return items;
-  let map = new Map<string, { img: string | null; publicCode: string | null }>();
+  type Decor = Omit<BoardRow, 'rank' | 'userId' | 'nickname' | 'level' | 'reachedAt' | 'me'>;
+  const map = new Map<string, Decor>();
   try {
-    const rows = await db
-      .select({ userId: characters.userId, rotations: userProfiles.rotations, publicCode: profiles.publicCode })
-      .from(characters)
-      .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
-      .leftJoin(profiles, eq(profiles.id, characters.userId))
-      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids)));
-    map = new Map(
-      rows.map((r) => {
-        const rot = r.rotations as Record<string, string> | null;
-        return [r.userId, { img: rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null, publicCode: r.publicCode ?? null }] as const;
-      }),
-    );
+    const [rows, guilds] = await Promise.all([
+      db
+        .select({ userId: characters.userId, repTitleCode: characters.representativeTitleCode, rotations: userProfiles.rotations, options: userProfiles.options })
+        .from(characters)
+        .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+        .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids))),
+      getGuildBriefsByUsers(ids, serverId).catch(() => new Map()),
+    ]);
+    const rep = await resolveRepTitlesBatch(
+      rows.map((r) => ({ userId: r.userId, repCode: r.repTitleCode ?? null, executorZone: guilds.get(r.userId)?.executorZone ?? null })),
+      serverId,
+    ).catch(() => new Map<string, string | null>());
+    for (const r of rows) {
+      const rot = r.rotations as Record<string, string> | null;
+      const g = guilds.get(r.userId);
+      map.set(r.userId, {
+        avatar: rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null,
+        faceBox: parseFaceBox((r.options as Record<string, unknown> | null)?.faceBox),
+        guildName: g?.name ?? null,
+        guildEmblemUrl: g?.emblemUrl ?? null,
+        titleCode: rep.get(r.userId) ?? null,
+        executorZone: g?.executorZone ?? null,
+        executorZoneRegion: g?.executorZoneRegion ?? null,
+      });
+    }
   } catch (e) {
-    console.error('[chuseok.board] profile images failed', e);
+    console.error('[chuseok.board] row decor failed', e);
   }
-  return items.map((i) => ({ ...i, rows: i.rows.map((r) => ({ ...r, img: map.get(r.userId)?.img ?? null, publicCode: map.get(r.userId)?.publicCode ?? null })) }));
+  return items.map((i) => ({ ...i, rows: i.rows.map((r) => ({ ...r, ...(map.get(r.userId) ?? {}) })) }));
 }
 
 async function loadSettled(serverId: number, userId: string | null): Promise<BoardItem[] | null> {
@@ -162,7 +184,7 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
       set: i.set,
       rows: rows
         .filter((r) => r.code === i.code)
-        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), reachedAt: r.reached_at, me: r.user_id === userId, img: null, publicCode: null })),
+        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), reachedAt: r.reached_at, me: r.user_id === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
       mine: mine
         ? { rank: Number(mine.rank), level: Number(mine.level), reachedAt: mine.reached_at, nextTierEnd: null, reward: rankRewardFor(Number(mine.rank)) }
         : null,
@@ -204,11 +226,11 @@ export async function settleContest(serverId: number, adminId: string, at = Date
         rowsN++;
         const per = reward.boxes / 3;
         const payload = JSON.stringify({ diamond: reward.diamond, boxes: { weapon: per, armor: per, accessory: per } });
-        const title = `한가위 강화 대회 ${r.rank}등 보상`;
+        const title = `추석 강화 대회 ${r.rank}등 보상`;
         const body = `${name} 강화 대회에서 ${r.rank}등을 하셨습니다. 마감 시각 기준 +${r.level.toLocaleString('ko-KR')} 단계였습니다.\n보상으로 💎${reward.diamond.toLocaleString('ko-KR')}과 📦${reward.boxes}개를 드립니다.${titles.length ? ' 칭호는 칭호 화면에서 확인해 주세요.' : ''}`;
         await tx.execute(sql`
           insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
-          values (${r.userId}::uuid, ${serverId}, 'admin'::mailbox_type, ${title}, ${body}, '한가위 강화 대회', ${payload}::jsonb)
+          values (${r.userId}::uuid, ${serverId}, 'admin'::mailbox_type, ${title}, ${body}, '추석 강화 대회', ${payload}::jsonb)
         `);
         mailsN++;
         if (titles.length) {

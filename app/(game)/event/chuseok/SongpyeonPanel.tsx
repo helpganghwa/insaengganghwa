@@ -52,7 +52,7 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
   const next = nextLadderStep(ov.total);
   const open = ov.phase === 'accrue' || ov.phase === 'claim';
   const closedText =
-    ov.phase === 'before' ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.' : ov.phase === 'ended' ? '한가위 송편은 끝났어요.' : null;
+    ov.phase === 'before' ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.' : ov.phase === 'ended' ? '추석 송편은 끝났어요.' : null;
 
   // 낙관 갱신(2026-09-22 사용자 요청) — 받음 표시·다이아·토스트를 먼저 반영하고 실패하면 되돌린다.
   // 서버가 '이미 받음'이라 하면 화면이 맞는 것이므로 되돌리지 않는다.
@@ -113,16 +113,16 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5 rounded-xl border border-amber-500/50 bg-zinc-900 px-3 py-2.5">
         <div className="flex flex-col">
           <span className="text-[10.5px] text-zinc-400">누적 송편</span>
-          <b className="text-[20px] font-mono tabular-nums text-amber-200">
-            <SongpyeonIcon /> {n(ov.total)}
+          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-amber-200">
+            <SongpyeonIcon size={28} /> {n(ov.total)}
           </b>
           <small className="text-[10px] text-zinc-500">{next ? `다음 보상까지 ${n(next.remain)}` : '모든 단계 도달'}</small>
         </div>
         <span className="h-9 w-px bg-zinc-800" />
         <div className="flex flex-col">
           <span className="text-[10.5px] text-zinc-400">사용 가능</span>
-          <b className="text-[20px] font-mono tabular-nums text-amber-200">
-            <SongpyeonIcon /> {n(ov.available)}
+          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-amber-200">
+            <SongpyeonIcon size={28} /> {n(ov.available)}
           </b>
           <small className="text-[10px] text-zinc-500">교환에 쓴 {n(ov.spent)}</small>
         </div>
@@ -133,32 +133,39 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
       <p className="mb-1.5 mt-4 text-[12.5px] font-bold">
         도달 보상 <small className="ml-1.5 font-medium text-zinc-400">누적 송편으로 따져요. 교환에 써도 줄지 않아요.</small>
       </p>
-      <ol className="relative ml-2 flex flex-col gap-2.5 border-l-2 border-zinc-800 pl-[18px]">
+      <ol className="relative ml-2 flex flex-col gap-1.5 border-l-2 border-zinc-800 pl-[18px]">
         {SONGPYEON_LADDER.map((l) => {
           const done = claimedSet.has(l.step);
           const ready = !done && ov.total >= l.at && open;
+          // 세 상태를 행 전체로 구분(2026-09-23): 받기=앰버 테두리·배경, 받음=흐리게+체크, 미도달=기본.
+          // 높이 고정(h-10) + 오른쪽 칸 고정 폭 — 받기→받음으로 바뀔 때 레이아웃이 밀리지 않게.
+          const rowCls = ready
+            ? 'border-amber-500/60 bg-amber-500/10'
+            : done
+              ? 'border-transparent opacity-55'
+              : 'border-transparent';
           return (
-            <li key={l.step} className="relative grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 gap-y-0.5">
+            <li key={l.step} className={`relative -ml-2 grid h-10 grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-lg border pl-2 pr-1.5 ${rowCls}`}>
               <span
-                className={`absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-zinc-950 ${
-                  done ? 'bg-emerald-500' : ready ? 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]' : 'bg-zinc-700'
+                className={`absolute -left-[23px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-zinc-950 ${
+                  done ? 'bg-emerald-500' : ready ? 'bg-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.3)]' : 'bg-zinc-700'
                 }`}
               />
-              <span className="font-mono text-[13px] tabular-nums">{n(l.at)}</span>
+              <span className={`font-mono text-[13px] tabular-nums ${ready ? 'font-bold text-amber-200' : ''}`}>{n(l.at)}</span>
               <span className="text-[11px] text-zinc-400">
                 💎{n(l.diamond)} · 📦{l.boxes}
               </span>
-              <span className="col-start-3 row-span-2 row-start-1 text-[10.5px]">
+              <span className="flex w-[68px] justify-end text-[10.5px]">
                 {done ? (
-                  <span className="text-emerald-300">받음</span>
+                  <span className="rounded-md border border-emerald-700/60 px-2 py-1 font-bold text-emerald-300">✓ 받음</span>
                 ) : ready ? (
                   <button
                     type="button"
                     disabled={busyStep !== null || pending}
                     onClick={() => claim(l.step)}
-                    className="rounded-md bg-amber-600 px-2.5 py-1 text-[10.5px] font-extrabold text-white transition active:scale-[0.97] disabled:opacity-60"
+                    className="rounded-md bg-amber-500 px-3 py-1 text-[11px] font-extrabold text-zinc-950 transition active:scale-[0.97] disabled:opacity-60"
                   >
-                    {busyStep === l.step ? '받는 중' : '받기'}
+                    받기
                   </button>
                 ) : (
                   <span className="text-zinc-500">{ov.total >= l.at ? '기간 종료' : `${n(l.at - ov.total)} 더`}</span>
@@ -173,7 +180,7 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
       <p className="mb-1.5 mt-4 text-[12.5px] font-bold">
         교환 <small className="ml-1.5 font-medium text-zinc-400">사용 가능 송편으로 바꿔요</small>
       </p>
-      <div className="flex flex-col gap-1.5">
+      <div className="grid grid-cols-2 gap-2">
         {(
           [
             { kind: 'box' as const, title: `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개`, sub: `${n(SONGPYEON_EXCHANGE.box.songpyeon)} 송편 · 한도 없음` },
@@ -184,22 +191,22 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
           // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
           const sub = !open ? `${x.sub.split(' · ')[0]} · 기간 종료` : need > 0 ? `${n(need)} 더 모으면 교환할 수 있어요` : x.sub;
           return (
-          <div key={x.kind} className="grid grid-cols-[1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
-            <b className="text-[12.5px]">{x.title}</b>
-            <span className={`col-start-1 text-[10.5px] ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
-            <button
-              type="button"
-              disabled={!open || ov.available < SONGPYEON_EXCHANGE[x.kind].songpyeon}
-              onClick={() => setModal(x.kind)}
-              className="col-start-2 row-span-2 row-start-1 rounded-md bg-amber-600 px-2.5 py-1 text-[10.5px] font-extrabold text-white transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
-            >
-              교환
-            </button>
-          </div>
+            <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
+              <b className="text-[13px]">{x.title}</b>
+              <span className={`min-h-[30px] text-[10.5px] leading-snug ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
+              <button
+                type="button"
+                disabled={!open || ov.available < SONGPYEON_EXCHANGE[x.kind].songpyeon}
+                onClick={() => setModal(x.kind)}
+                className="mt-auto rounded-md bg-amber-600 py-1.5 text-[11px] font-extrabold text-white transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
+              >
+                교환
+              </button>
+            </div>
           );
         })}
       </div>
-      <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 10/3까지 받고 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>
+      <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 10/3까지 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>
 
       {modal ? (
         <ExchangeModal kind={modal} available={ov.available} onClose={() => setModal(null)} onSubmit={(count) => exchange(modal, count)} />

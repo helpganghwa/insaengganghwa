@@ -5406,7 +5406,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "신월",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "newmoon",
    alt: "新月",
@@ -5418,7 +5418,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "반월",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "halfmoon",
    alt: "半月",
@@ -5430,7 +5430,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "만월",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "fullmoon",
    alt: "滿月",
@@ -5442,7 +5442,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "매화",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "plum",
    pt: "petal",
@@ -5456,7 +5456,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "작약",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "peony",
    pt: "petal",
@@ -5470,7 +5470,7 @@ export const TITLE_DEFS: TitleDef[] = [
   kind: "permanent",
   label: "모란",
   hidden: false,
-  cat: "한가위",
+  cat: "추석",
   style: {
    fx: "moran",
    pt: "petal",

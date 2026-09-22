@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import { meleeFaceCropStyle } from '@/components/faceCrop';
+import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { TitleTag } from '@/components/TitleTag';
 import { assetUrl } from '@/lib/asset-versions';
-import { CHUSEOK_RANK_LIMIT, CHUSEOK_RANK_REWARDS, rankRewardFor } from '@/lib/game/chuseok/config';
+import { CHUSEOK_RANK_LIMIT, CHUSEOK_RANK_REWARDS, contestTitlesFor } from '@/lib/game/chuseok/config';
 import type { BoardItem, BoardRow, ContestBoard } from '@/lib/game/chuseok/contest';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
-import { profileHref } from '@/lib/game/profile/href';
 
 const n = (v: number) => v.toLocaleString('ko-KR');
 const fmtTime = (iso: string | null) => {
@@ -25,17 +27,54 @@ function ItemImg({ code, size }: { code: string; size: number }) {
   return <img src={assetUrl(src)} alt="" aria-hidden width={size} height={size} draggable={false} className="flex-none" style={{ imageRendering: 'pixelated' }} />;
 }
 
-/** 순위 행 아바타 — 활성 프로필 정면(랭킹 4위~ 목록과 같은 표시). 없으면 첫 글자. */
-function Avatar({ row }: { row: BoardRow }) {
+/** 등수별 배경 틴트·숫자색 — 대난투 순위 행과 같은 규칙(금·은·동, 내 행은 앰버). */
+function rankTint(rank: number, me: boolean): string {
+  if (rank === 1) return 'from-amber-400/35 via-amber-500/10';
+  if (rank === 2) return 'from-slate-300/30 via-slate-300/8';
+  if (rank === 3) return 'from-orange-600/30 via-orange-700/8';
+  return me ? 'from-amber-500/25 via-amber-500/5' : 'from-zinc-400/10 via-transparent';
+}
+function rankAccent(rank: number, me: boolean): { text: string; line: string } {
+  if (rank === 1) return { text: 'text-amber-200', line: 'bg-amber-400/60' };
+  if (rank === 2) return { text: 'text-slate-100', line: 'bg-slate-300/50' };
+  if (rank === 3) return { text: 'text-orange-200', line: 'bg-orange-500/55' };
+  return me ? { text: 'text-amber-300', line: 'bg-amber-600/50' } : { text: 'text-zinc-300', line: 'bg-zinc-700/60' };
+}
+
+/** 순위 한 줄 — 대난투 순위 행과 같은 구성(우측 얼굴 배경 + 좌→우 그라데이션, 1~3등 메달, 닉네임·길드 마크·칭호). 링크 없음. */
+function Row({ r }: { r: BoardRow }) {
+  const medal = r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : null;
+  const accent = rankAccent(r.rank, r.me);
+  const at = fmtTime(r.reachedAt);
   return (
-    <span className="grid h-[34px] w-[34px] flex-none place-items-center overflow-hidden rounded-lg bg-zinc-800 text-[13px] font-bold text-zinc-300">
-      {row.img ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={row.img} loading="lazy" decoding="async" alt="" aria-hidden draggable={false} className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
-      ) : (
-        (row.me ? '나' : row.nickname).slice(0, 1)
-      )}
-    </span>
+    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3 last:border-b-0">
+      {r.avatar ? (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
+        </div>
+      ) : null}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
+      <div className="relative z-10 flex w-full items-center gap-2.5">
+        <span className={`w-8 shrink-0 text-center font-mono text-[14px] font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${accent.text}`}>{medal ?? r.rank}</span>
+        <div className={`w-px shrink-0 self-stretch ${accent.line}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <span className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
+            {r.guildName ? (
+              <GuildBadge emblemUrl={r.guildEmblemUrl} name={r.guildName} size={11} className="min-w-0 shrink text-[9.5px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+            ) : null}
+            {r.me ? <span className="shrink-0 rounded bg-amber-500/25 px-1 text-[8.5px] font-black text-amber-300">나</span> : null}
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5 text-[9.5px] text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="max-w-[45%] truncate" />
+            <b className="font-mono text-[12px] font-black tabular-nums text-amber-200">+{n(r.level)}</b>
+            {at ? <span className="truncate tabular-nums">{at} 도달</span> : null}
+          </div>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -55,9 +94,9 @@ function nextLineFor(item: BoardItem, live: boolean): string | null {
 }
 
 /**
- * 순위 세그먼트(시안 현황판) — 장비 칩 6개(그림 + 내 등수) → 장비 머리글(그림·이름·[보상 보기]) →
- * 1~10등 표(아바타·닉네임·도달 시각·단계·보상) → 화면 아래 고정된 내 자리 줄([강화하러 가기]).
- * 보상표는 공통 팝업(ModalShell + ModalLayout). 마감 뒤에는 정산 결과(확정)를 그대로 보여 준다(10/3까지).
+ * 강화 순위 세그먼트 — 장비 칩 6개(그림 + 내 등수) → 장비 머리글(그림·이름·[보상 보기]) →
+ * 1~10등(대난투식 행: 메달·배경 아바타·길드 마크·칭호·단계·도달 시각, 2026-09-23) → 화면 아래 고정된 내 자리 줄.
+ * 보상표는 공통 팝업. 마감 뒤에는 정산 결과(확정)를 그대로 보여 준다(10/3까지).
  */
 export function RankPanel({ board }: { board: ContestBoard }) {
   const [sel, setSel] = useState(board.items[0]?.code ?? '');
@@ -110,37 +149,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         {item.rows.length === 0 ? (
           <li className="px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 강화하면 순위에 올라요.</li>
         ) : (
-          item.rows.map((r) => {
-            const rw = rankRewardFor(r.rank);
-            const at = fmtTime(r.reachedAt);
-            const inner = (
-              <>
-                  <span className={`w-6 flex-none text-center font-mono text-[13px] tabular-nums ${r.rank <= 3 ? 'font-bold text-amber-300' : 'text-zinc-400'}`}>{r.rank}</span>
-                  <Avatar row={r} />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <b className="truncate text-[13.5px] font-semibold">{r.me ? '나' : r.nickname}</b>
-                    <span className="text-[10.5px] tabular-nums text-zinc-400">{at ? `${at} 도달` : ' '}</span>
-                  </span>
-                  <span className="flex flex-none flex-col text-right">
-                    <b className="font-mono text-[14px] tabular-nums text-amber-200">+{n(r.level)}</b>
-                    {rw ? <span className="text-[10px] tabular-nums text-zinc-400">💎{n(rw.diamond)} · 📦{n(rw.boxes)}</span> : null}
-                  </span>
-              </>
-            );
-            const cls = `flex h-[52px] items-center gap-2.5 border-b border-zinc-800 px-3 ${r.me ? 'bg-[#2a1f0a]' : ''}`;
-            // 행을 누르면 프로필로(랭킹 화면과 같은 동선, 2026-09-23 UX 점검) — 공개 코드가 없으면(탈퇴 등) 일반 행.
-            return (
-              <li key={r.rank} className="last:[&>*]:border-b-0">
-                {r.publicCode ? (
-                  <Link prefetch={false} href={profileHref(r.publicCode, board.serverId)} className={`${cls} active:bg-zinc-800/60`}>
-                    {inner}
-                  </Link>
-                ) : (
-                  <div className={cls}>{inner}</div>
-                )}
-              </li>
-            );
-          })
+          item.rows.map((r) => <Row key={r.rank} r={r} />)
         )}
       </ol>
       {board.phase === 'claim' ? (
@@ -175,20 +184,19 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         </div>
       ) : null}
 
-      {sheet ? <RewardSheet item={item} live={live} nextLine={nextLine} onClose={() => setSheet(false)} /> : null}
+      {sheet ? <RewardSheet item={item} onClose={() => setSheet(false)} /> : null}
     </div>
   );
 }
 
-/** 순위별 보상 팝업 — 공통 팝업(헤더 · 표 카드 · 닫기). 내 구간 행 강조 + 아래 '지금 내 순위로 받는 보상' 줄. */
-function RewardSheet({ item, live, nextLine, onClose }: { item: BoardItem; live: boolean; nextLine: string | null; onClose: () => void }) {
-  const mine = item.mine;
+/** 순위별 보상 팝업 — 공통 팝업(헤더 · 표 카드 · 닫기). 내 순위 표시 없음, 칭호는 실제 이름으로(2026-09-23). */
+function RewardSheet({ item, onClose }: { item: BoardItem; onClose: () => void }) {
   const tierLabel = (t: { from: number; to: number }) => (t.from === t.to ? `${t.from}등` : `${t.from}~${t.to}등`);
   return (
     <ModalShell onClose={onClose} label="순위별 보상">
       <ModalLayout
         title="순위별 보상"
-        subtitle="장비 6종마다 따로 드려요. 여러 장비에서 순위에 들면 모두 받아요."
+        subtitle="장비 6종마다 따로 드려요. 칭호는 1등을 하면 2, 3등을, 2등을 하면 3등까지 모두 지급돼요."
         bodyPad="sm"
         footer={
           <ModalButton tone="neutral" onClick={onClose}>
@@ -209,42 +217,20 @@ function RewardSheet({ item, live, nextLine, onClose }: { item: BoardItem; live:
             </thead>
             <tbody>
               {CHUSEOK_RANK_REWARDS.map((t) => {
-                const on = !!mine && mine.rank >= t.from && mine.rank <= t.to;
-                const td = `whitespace-nowrap border-b border-zinc-800 px-1.5 py-[7px] ${on ? 'bg-[#2a1f0a] text-amber-200' : ''}`;
+                const td = 'whitespace-nowrap border-b border-zinc-800 px-1.5 py-[7px]';
+                // 그 등수의 칭호(1등=만월/모란 …). 아래 등수 칭호까지 함께 받는 규칙은 부제에.
+                const titleCode = t.from <= 3 ? contestTitlesFor(item.set, t.from)[0] : null;
                 return (
                   <tr key={t.from}>
-                    <td className={`${td} rounded-l-lg`}>{tierLabel(t)}</td>
+                    <td className={td}>{tierLabel(t)}</td>
                     <td className={td}>💎 {n(t.diamond)}</td>
                     <td className={td}>📦 {n(t.boxes)}</td>
-                    <td className={`${td} rounded-r-lg text-[11.5px] text-amber-300`}>{t.from <= 3 ? '한정 칭호' : ''}</td>
+                    <td className={`${td} text-[11.5px]`}>{titleCode ? <TitleTag code={titleCode} /> : ''}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          <div className="mt-2.5 flex items-center gap-2.5 rounded-[10px] border border-amber-500/60 bg-[#0c0c0e] px-2.5 py-2">
-            {mine ? (
-              <>
-                <span className="w-6 flex-none text-center font-mono text-[13px] font-bold tabular-nums text-amber-300">{mine.rank}</span>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <b className="text-[12.5px]">{live ? '지금 내 순위로 받는 보상' : '최종 순위로 받는 보상'}</b>
-                  {live && nextLine ? <span className="text-[10.5px] tabular-nums text-amber-300">{nextLine}</span> : null}
-                </span>
-                <span className="flex flex-none flex-col text-right">
-                  {mine.reward ? (
-                    <>
-                      <b className="font-mono text-[13px] tabular-nums text-amber-200">💎 {n(mine.reward.diamond)}</b>
-                      <span className="text-[10px] tabular-nums text-zinc-400">📦 {n(mine.reward.boxes)}</span>
-                    </>
-                  ) : (
-                    <span className="text-[11px] text-zinc-400">{live ? '10등 안에 들면 받아요' : '보상 없음'}</span>
-                  )}
-                </span>
-              </>
-            ) : (
-              <span className="text-[12px] text-zinc-400">이 장비를 갖고 있으면 순위에 올라요</span>
-            )}
-          </div>
         </div>
       </ModalLayout>
     </ModalShell>

@@ -184,7 +184,7 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
   {
     href: '/admin/chuseok',
     icon: '🌕',
-    title: '한가위 강화 대회 정산',
+    title: '추석 강화 대회 정산',
     desc: '아이템별 최종 순위 확인(마감 시각 기준) → 10/1 정산·지급(우편 💎📦 + 칭호). 서버당 1회',
   },
 ];
