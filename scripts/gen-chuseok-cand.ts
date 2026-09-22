@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1032,6 +1032,84 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit in a single even snow-white color with a round open neckline, ' +
       'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly',
+  },
+  // ── 12차(09-22): 4차 선택 결과. 달토끼 무기 = "절굿공이(토끼 얼굴, v2)에서 방울솔만 없는 느낌".
+  // v2의 문장에서 방울솔 구절만 뺀다(없는 것을 이름 부르지 않음). 코드로 v2에서 방울솔을 지운 판이 1순위, 아래는 비교용.
+  {
+    key: 'chuseok_rabbit_pestle_v8',
+    nameKo: '절굿공이(토끼 얼굴 · 방울솔 없음)',
+    slot: 'weapon',
+    batch: 12,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
+      'a small rabbit face carved on one end, the grip neatly wrapped in pink and white silk cord, ' +
+      'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v9',
+    nameKo: '절굿공이(토끼 얼굴 · 방울솔 없음 · 2)',
+    slot: 'weapon',
+    batch: 12,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
+      'a small rabbit face carved on one end and a tiny crescent moon carved on the other, the grip neatly wrapped in pink and white silk cord, ' +
+      'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  // 달토끼 방어구: 코드 보정판(흰 배)은 객체가 없어 애니메이션을 못 붙인다(사용자 09-22) → 원본 슈트 문장에서
+  // 배 무늬 구절만 빼고 세 번 굴린다. 절굿공이도 보정판 대신 v8 문장으로 두 장 더.
+  {
+    key: 'chuseok_rabbit_suit_v3',
+    nameKo: '토끼 인형 슈트(흰 배 · 새 그림 2)',
+    slot: 'armor',
+    batch: 12,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline, ' +
+      'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v4',
+    nameKo: '토끼 인형 슈트(흰 배 · 새 그림 3)',
+    slot: 'armor',
+    batch: 12,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline, plain white front, ' +
+      'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v5',
+    nameKo: '토끼 인형 슈트(흰 배 · 새 그림 4)',
+    slot: 'armor',
+    batch: 12,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline, ' +
+      'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly, front view',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v10',
+    nameKo: '절굿공이(토끼 얼굴 · 방울솔 없음 · 3)',
+    slot: 'weapon',
+    batch: 12,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
+      'a small rabbit face carved on one end, the grip neatly wrapped in pink and white silk cord, ' +
+      'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v11',
+    nameKo: '절굿공이(토끼 얼굴 · 방울솔 없음 · 4)',
+    slot: 'weapon',
+    batch: 12,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
+      'a small rabbit face carved on one end, the grip wrapped in pink and white silk cord, ' +
+      'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
   },
 ];
 

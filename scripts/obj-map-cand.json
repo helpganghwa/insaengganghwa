@@ -1138,5 +1138,33 @@
   "chuseok_rabbit_suit_v2": {
     "key": "key3",
     "objectId": "358f99f7-3fbe-4e31-b9c3-cb4aa63cb33d"
+  },
+  "chuseok_rabbit_pestle_v8": {
+    "key": "key3",
+    "objectId": "abcc46eb-feaf-4a5c-8212-fbf368322b95"
+  },
+  "chuseok_rabbit_pestle_v9": {
+    "key": "key3",
+    "objectId": "1297c075-bab8-4cd4-9494-8649397d6fdb"
+  },
+  "chuseok_rabbit_suit_v3": {
+    "key": "key3",
+    "objectId": "4131890e-ac3e-43cb-9e67-c155f747d7e5"
+  },
+  "chuseok_rabbit_suit_v4": {
+    "key": "key3",
+    "objectId": "d32cbb2b-60d5-4c19-acf8-c0bf360f5f1b"
+  },
+  "chuseok_rabbit_suit_v5": {
+    "key": "key3",
+    "objectId": "f3f400ab-8f88-4a64-8f23-1850d0da63e7"
+  },
+  "chuseok_rabbit_pestle_v10": {
+    "key": "key3",
+    "objectId": "3b1d70f0-338a-40c6-93ae-3c5bab8c326b"
+  },
+  "chuseok_rabbit_pestle_v11": {
+    "key": "key3",
+    "objectId": "90df9aab-5508-4cd4-85a5-063dcefc4543"
   }
 }
