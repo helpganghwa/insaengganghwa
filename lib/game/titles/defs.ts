@@ -24,6 +24,8 @@ export type TitleStyle = {
   /** 부분 적용 — 이 조각들에만 fx, 나머지 글자는 plainColor 단색(길드 1위 불꽃: '의' 제외). */
   fxOnly?: string[];
   plainColor?: string;
+  /** 두 겹 라벨 — 빛(달)이 지나는 자리만 이 글자(한자)로 바뀐다(한가위 달 칭호). */
+  alt?: string;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
@@ -5405,6 +5407,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "newmoon",
+   alt: "新月",
    glow: true
   }
  },
@@ -5416,6 +5419,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "halfmoon",
+   alt: "半月",
    glow: true
   }
  },
@@ -5427,7 +5431,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "fullmoon",
-   pt: "moondust",
+   alt: "滿月",
    glow: true
   }
  },

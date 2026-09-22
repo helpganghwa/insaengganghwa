@@ -405,14 +405,16 @@
       "fx": "honeyflow"
     },
     "chuseok26_moon3": {
-      "fx": "newmoon"
+      "fx": "newmoon",
+      "alt": "新月"
     },
     "chuseok26_moon2": {
-      "fx": "halfmoon"
+      "fx": "halfmoon",
+      "alt": "半月"
     },
     "chuseok26_moon1": {
       "fx": "fullmoon",
-      "pt": "moondust"
+      "alt": "滿月"
     },
     "chuseok26_flower3": {
       "fx": "plum"

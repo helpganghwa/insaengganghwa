@@ -11,7 +11,7 @@ import { PENDING_CODES } from '@/lib/game/titles/pending';
  */
 describe('한가위 2026 순위 칭호', () => {
   const sets = {
-    moon: { codes: ['chuseok26_moon3', 'chuseok26_moon2', 'chuseok26_moon1'], labels: ['신월', '반월', '만월'], fx: ['newmoon', 'halfmoon', 'fullmoon'], pt: 'moondust' },
+    moon: { codes: ['chuseok26_moon3', 'chuseok26_moon2', 'chuseok26_moon1'], labels: ['신월', '반월', '만월'], fx: ['newmoon', 'halfmoon', 'fullmoon'], alt: ['新月', '半月', '滿月'] },
     flower: { codes: ['chuseok26_flower3', 'chuseok26_flower2', 'chuseok26_flower1'], labels: ['매화', '작약', '모란'], fx: ['plum', 'peony', 'moran'], pt: 'petal' },
   } as const;
 
@@ -30,14 +30,20 @@ describe('한가위 2026 순위 칭호', () => {
     }
   });
 
-  it('세트마다 효과에 위계가 있다 — 1등만 파티클', () => {
-    for (const set of Object.values(sets)) {
-      const [r3, r2, r1] = set.codes.map((c) => TITLE_BY_CODE.get(c)!.style);
-      expect([r3.fx, r2.fx, r1.fx]).toEqual([...set.fx]);
-      expect(r3.pt).toBeUndefined();
-      expect(r2.pt).toBeUndefined();
-      expect(r1.pt).toBe(set.pt);
-    }
+  it('달 세트는 두 겹 라벨(한자)이고 파티클이 없다 — 달(.orb)이 파티클을 대신한다', () => {
+    const styles = sets.moon.codes.map((c) => TITLE_BY_CODE.get(c)!.style);
+    expect(styles.map((s) => s.fx)).toEqual([...sets.moon.fx]);
+    expect(styles.map((s) => s.alt)).toEqual([...sets.moon.alt]);
+    for (const s of styles) expect(s.pt).toBeUndefined();
+  });
+
+  it('꽃 세트는 효과에 위계가 있다 — 1등만 파티클', () => {
+    const [r3, r2, r1] = sets.flower.codes.map((c) => TITLE_BY_CODE.get(c)!.style);
+    expect([r3.fx, r2.fx, r1.fx]).toEqual([...sets.flower.fx]);
+    expect(r3.pt).toBeUndefined();
+    expect(r2.pt).toBeUndefined();
+    expect(r1.pt).toBe(sets.flower.pt);
+    for (const s of [r3, r2, r1]) expect(s.alt).toBeUndefined();
   });
 
   it('공개 정의에는 조건이 실리지 않는다', () => {

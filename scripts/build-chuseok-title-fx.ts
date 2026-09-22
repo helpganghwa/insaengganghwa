@@ -8,11 +8,11 @@ const out = process.argv[2];
 if (!out) throw new Error('출력 경로가 필요합니다');
 const css = readFileSync('components/title-fx.css', 'utf8');
 
-type T = { label: string; fx: string; pt?: string; rank: string; note: string };
+type T = { label: string; fx: string; pt?: string; alt?: string; rank: string; note: string };
 const MOON: T[] = [
-  { label: '신월', fx: 'newmoon', rank: '3등', note: '가는 달의 테두리 빛이 왼쪽에서 오른쪽으로 천천히 옮겨 갑니다.' },
-  { label: '반월', fx: 'halfmoon', rank: '2등', note: '흰빛과 남색이 반씩 흐르며 밝은 면이 돌아갑니다.' },
-  { label: '만월', fx: 'fullmoon', pt: 'moondust', rank: '1등', note: '가득 찬 금빛이 흐르고, 달빛 티끌이 글자 위로 떠오릅니다.' },
+  { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '작은 초승달이 글자 위를 좌우로 오가고, 그 빛이 닿은 글자만 新月로 바뀝니다. 비추는 폭이 가장 좁습니다.' },
+  { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '반달이 오가며 半月로 바뀝니다. 비추는 폭과 빛이 초승달보다 넓고 셉니다.' },
+  { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛 보름달이 오가며 滿月로 바뀝니다. 비추는 폭이 가장 넓고 글자에 금빛 후광이 붙습니다.' },
 ];
 const FLOWER: T[] = [
   { label: '매화', fx: 'plum', rank: '3등', note: '흰 꽃잎이 연분홍으로 물들었다 돌아오는 숨결입니다.' },
@@ -22,7 +22,10 @@ const FLOWER: T[] = [
 // TitleTag.tsx의 Particles()와 같은 4점 배치·지연.
 const dots = [0, 1, 2, 3].map((i) => `<i style="left:${12 + i * 24}%;animation-delay:${(i * 1.35).toFixed(2)}s"></i>`).join('');
 const tag = (t: T, size: string) => {
-  const inner = `<span class="fx fx-${t.fx}">${t.label}</span>`;
+  // TitleTag.tsx와 같은 마크업 — 두 겹 라벨은 .ko/.hj/.orb.
+  const inner = t.alt
+    ? `<span class="fx fx-${t.fx} fx-dual"><span class="ko">${t.label}</span><span class="hj" aria-hidden="true">${t.alt}</span><i class="orb" aria-hidden="true"></i></span>`
+    : `<span class="fx fx-${t.fx}">${t.label}</span>`;
   const body = t.pt ? `<span class="pt pt-${t.pt}">${inner}${dots}</span>` : inner;
   return `<span class="ttag" style="font-size:${size}">${body}</span>`;
 };
@@ -80,7 +83,7 @@ const html = `<title>한가위 칭호 이펙트</title>
 <div class="wrap">
   <h1>한가위 칭호 이펙트</h1>
   <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 전용 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다. 고칠 점이 있으면 아래에 적어 복사해 주세요.</p>
-  ${setBlock('달토끼 장비', '3등 신월 · 2등 반월 · 1등 만월 — 은빛에서 금빛으로', MOON)}
+  ${setBlock('달토끼 장비', '3등 신월 · 2등 반월 · 1등 만월 — 달이 지나가면 한자로', MOON)}
   ${setBlock('한복 장비', '3등 매화 · 2등 작약 · 1등 모란 — 연분홍에서 진홍과 금으로', FLOWER)}
   <label class="m" for="memo">의견</label><textarea id="memo" placeholder="칭호별로 바꾸고 싶은 색·움직임"></textarea>
   <div class="acts"><button type="button" id="copy">의견 복사</button><span id="toast" role="status"></span></div>

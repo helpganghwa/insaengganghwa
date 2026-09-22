@@ -206,27 +206,47 @@
 .fx-blazeviolet{background-image:linear-gradient(0deg,#22083a 0%,#5b2a9a 22%,#9a5fe0 46%,#c9a2f0 66%,#e8d8ff 82%,#fbf5ff 100%);animation:blazey 1.15s ease-in-out infinite alternate,flick2 1.7s ease-in-out infinite}
 @keyframes blazey{from{background-position:0 100%}to{background-position:0 55%}}
 @keyframes flick2{0%,100%{filter:brightness(1)}30%{filter:brightness(1.18)}55%{filter:brightness(.94)}75%{filter:brightness(1.12)}}
-/* 2026 한가위 강화 대회 순위 칭호 6종(2026-09-22) — 달토끼 장비(신월·반월·만월)는 은빛→금빛, 한복 장비(매화·작약·모란)는
-   연분홍→진홍·금. 3등 맥동 → 2등 흐름 → 1등 흐름+파티클의 위계. 파티클은 1등 둘에만, 4점·저불투명·느린 주기. */
-.fx-newmoon{color:#d6dbe6;animation:newmoonrim 5.2s ease-in-out infinite}
-@keyframes newmoonrim{0%,100%{text-shadow:-2px 0 3px rgba(205,220,245,.4),0 0 1px rgba(255,255,255,.15)}50%{text-shadow:2px 0 3px rgba(205,220,245,.4),0 0 1px rgba(255,255,255,.3)}}
-.fx-halfmoon{background:linear-gradient(90deg,#f4f7ff 0%,#d0d9ea 30%,#8896bd 50%,#5a6890 70%,#f4f7ff 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7.5s linear infinite}
-.fx-fullmoon{background:linear-gradient(90deg,#fff6d2,#f5d76e,#e6b94a,#fff6d2,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 2px rgba(245,215,110,.4))}
-.pt-moondust>i{width:2.5px;height:2.5px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(255,250,225,.95) 0%,rgba(245,215,110,.75) 60%,rgba(230,185,74,0) 100%);bottom:10%;animation:p-mdst 5.4s ease-out infinite}
-@keyframes p-mdst{0%,40%,100%{opacity:0;transform:translate(0,0) scale(.5)}47%{opacity:.65;transform:translate(0,-1px) scale(.9)}66%{opacity:.4;transform:translate(1px,-4px) scale(.8)}78%{opacity:0;transform:translate(1px,-6px) scale(.5)}}
+/* 2026 한가위 강화 대회 순위 칭호 6종(2026-09-22).
+   달토끼 장비(신월·반월·만월) = 두 겹 라벨(.fx-dual): 한글(.ko) 위에 한자(.hj)를 겹치고, 순위별 달(.orb: 초승달·반달·보름달)이
+   글자 위를 좌우로 오가며 비춘다. 한자 층은 달 자리를 따라가는 원형 마스크로만 드러나 "달빛이 닿은 글자가 한자로 바뀐다".
+   달이 클수록(순위가 높을수록) 비추는 폭이 넓고 빛이 세다. 마스크 창 폭(--w)과 달 지름(--d)은 em 단위라 채팅 13px에서도 비율 유지.
+   한복 장비(매화·작약·모란) = 연분홍 숨결 → 장밋빛 흐름 → 진홍·금 흐름+꽃잎 파티클. */
+.fx-dual{position:relative;display:inline-block;white-space:nowrap}
+/* 한자 층: 창(원형 마스크) 안에서만 보임. 한글 층: 같은 창을 뺀 나머지에서만 보임(전체 마스크에서 원을 exclude) →
+   달빛 자리에는 한자만 남는다. 창은 글자 왼끝 바깥(-.6w)에서 오른끝 바깥(+.6w)까지 왕복. */
+.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);mask-image:radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);-webkit-mask-size:var(--w) 100%;mask-size:var(--w) 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:moonmask var(--t) ease-in-out infinite alternate}
+.fx-dual .ko{display:inline-block;-webkit-mask-image:linear-gradient(#000,#000),radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);mask-image:linear-gradient(#000,#000),radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);-webkit-mask-size:100% 100%,var(--w) 100%;mask-size:100% 100%,var(--w) 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-composite:xor;mask-composite:exclude;animation:moonmask2 var(--t) ease-in-out infinite alternate}
+@keyframes moonmask{from{-webkit-mask-position:calc(0% - var(--w) * .6) 0;mask-position:calc(0% - var(--w) * .6) 0}to{-webkit-mask-position:calc(100% + var(--w) * .6) 0;mask-position:calc(100% + var(--w) * .6) 0}}
+@keyframes moonmask2{from{-webkit-mask-position:0 0,calc(0% - var(--w) * .6) 0;mask-position:0 0,calc(0% - var(--w) * .6) 0}to{-webkit-mask-position:0 0,calc(100% + var(--w) * .6) 0;mask-position:0 0,calc(100% + var(--w) * .6) 0}}
+/* 달은 마스크 창의 중심과 같은 x를 달린다: 창 왼끝 + (창 폭 - 달 지름)/2 */
+.fx-dual .orb{position:absolute;top:-.62em;width:var(--d);height:var(--d);border-radius:50%;pointer-events:none;animation:moonorb var(--t) ease-in-out infinite alternate}
+@keyframes moonorb{from{left:calc(0% - var(--w) * .6 + (var(--w) - var(--d)) / 2)}to{left:calc(100% + var(--w) * .6 + (var(--w) - var(--d)) / 2)}}
+.fx-newmoon{--w:.9em;--d:.36em;--t:7.5s}
+.fx-newmoon .ko{color:#b7c0d2}
+.fx-newmoon .hj{color:#eef2ff;text-shadow:0 0 3px rgba(205,220,245,.55)}
+.fx-newmoon .orb{background:transparent;box-shadow:inset .11em 0 0 0 #e8eefc,0 0 2px rgba(205,220,245,.55)}
+.fx-halfmoon{--w:1.15em;--d:.42em;--t:7s}
+.fx-halfmoon .ko{color:#c3cbdc}
+.fx-halfmoon .hj{color:#f6f8ff;text-shadow:0 0 4px rgba(215,228,250,.7)}
+.fx-halfmoon .orb{background:linear-gradient(90deg,#f4f7ff 50%,#333a52 50%);box-shadow:0 0 2px 1px rgba(215,228,250,.5)}
+.fx-fullmoon{--w:1.45em;--d:.5em;--t:6.5s}
+.fx-fullmoon .ko{color:#d9c98f}
+.fx-fullmoon .hj{color:#fff3c4;text-shadow:0 0 5px rgba(245,215,110,.85),0 0 9px rgba(245,215,110,.4)}
+.fx-fullmoon .orb{background:radial-gradient(circle at 40% 40%,#fff8dc 0%,#f5d76e 55%,#d9a93a 100%);box-shadow:0 0 3px 1px rgba(245,215,110,.75),0 0 7px rgba(245,215,110,.4)}
 .fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
 @keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
 .fx-peony{background:linear-gradient(90deg,#f6b3c8,#e0578a,#ffd9e6,#e0578a,#f6b3c8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite}
 .fx-moran{background:linear-gradient(90deg,#c9203e,#ff8aa4,#f5d76e,#fff0f0,#c9203e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 2px rgba(230,80,120,.35))}
 .pt-petal>i{width:3.5px;height:2.5px;border-radius:60% 40% 60% 40%;background:linear-gradient(120deg,rgba(255,214,228,.9) 0%,rgba(240,120,160,.8) 100%);top:-3px;animation:p-ptl 5.6s ease-in-out infinite}
 @keyframes p-ptl{0%,38%,100%{opacity:0;transform:translate(0,-1px) rotate(0deg)}44%{opacity:.7;transform:translate(-1px,1px) rotate(25deg)}64%{opacity:.45;transform:translate(-3px,5px) rotate(70deg)}78%{opacity:0;transform:translate(-4px,7px) rotate(100deg)}}
-@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .orb{animation:none !important}.ttag .fx-dual .hj,.ttag .fx-dual .orb{display:none}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
 .ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
 .ttag-still .pt>i{display:none}
+.ttag-still .fx-dual .hj,.ttag-still .fx-dual .orb{display:none}
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
-.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i{animation-play-state:paused !important}
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb{animation-play-state:paused !important}
 }
