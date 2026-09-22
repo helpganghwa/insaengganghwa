@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1397,6 +1397,67 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a plush white rabbit costume bodysuit — a one-piece full-body suit with a round open neckline, soft fluffy fur texture with subtle shading folds, fluffy fur cuffs, rounded mitten paws, big padded feet with pink pads, ' +
       'a fluffy round cotton tail at the side of the hip, detailed and charming, soft and cuddly',
+  },
+  // ── 16차(09-22 밤): 8차 선택. 한복 무기 "송편·윷놀이처럼 한가위에 어울리는 컨셉" → 명절 놀이·음식·풍경 소재를 무기로.
+  {
+    key: 'chuseok_yut_sticks',
+    nameKo: '윷가락 한 벌',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 한가위 놀이',
+    art:
+      'a bundle of four large Korean yut sticks (yutnori game sticks), each a long half-round wooden stick with a flat pale side and a dark rounded bark side, held together by a crimson silk cord with a gold bead, ' +
+      'elegant and opulent, clearly a set of throwing sticks used as a weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_songpyeon_mace',
+    nameKo: '송편 철퇴',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 한가위 음식',
+    art:
+      'a mace with a dark lacquered wooden handle wrapped in crimson cord and a big head shaped like a plump white half-moon Korean songpyeon rice cake, smooth and glossy with a soft pink tint at the seam, a few green pine needles at the neck, ' +
+      'elegant and opulent, clearly a mace weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_tuho_arrows',
+    nameKo: '투호살 다발',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 한가위 놀이',
+    art:
+      'a bundle of five long Korean tuho throwing arrows, slender dark lacquered shafts with gold tips and crimson and white feather fletching, tied together with a gold cord and tassel, ' +
+      'elegant and opulent, clearly a set of throwing darts used as a weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_chestnut_mace_v2',
+    nameKo: '밤송이 철퇴',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 한가위 열매',
+    art:
+      'a spiked mace whose head is a big autumn chestnut burr, a round spiky green-brown husk split open to show two glossy brown chestnuts, on a dark wooden handle wrapped in crimson cord with a gold cap, ' +
+      'elegant and opulent, clearly a spiked mace weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_lantern_staff',
+    nameKo: '달맞이 등불 지팡이',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 달맞이',
+    art:
+      'a long dark lacquered wooden staff with a round glowing paper lantern shaped like a golden full moon hanging from a curved gold hook at the top, a crimson silk tassel below the lantern, ' +
+      'elegant and opulent, clearly a lantern staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_persimmon_staff',
+    nameKo: '감나무 가지 지팡이',
+    slot: 'weapon',
+    batch: 16,
+    concept: '한복 세트 무기 — 한가위 열매',
+    art:
+      'a gnarled persimmon tree branch staff with dark bark, a few orange-red ripe persimmons and autumn leaves growing near the top, a crimson silk cord and gold bead wrapped around the grip, ' +
+      'elegant and opulent, clearly a staff weapon, no text, large, diagonal',
   },
 ];
 

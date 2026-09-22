@@ -1278,5 +1278,29 @@
   "chuseok_rabbit_suit_v15": {
     "key": "key3",
     "objectId": "29f8e671-e59f-4d96-a200-a348b8e1cca8"
+  },
+  "chuseok_yut_sticks": {
+    "key": "key3",
+    "objectId": "11ec7df6-a9d8-430b-a225-2a2d430ea9f0"
+  },
+  "chuseok_songpyeon_mace": {
+    "key": "key3",
+    "objectId": "7c332bec-3c0a-4ce7-8755-68df016cc6f1"
+  },
+  "chuseok_tuho_arrows": {
+    "key": "key3",
+    "objectId": "d8582093-6133-44fd-accc-7df87802c879"
+  },
+  "chuseok_moon_lantern_staff": {
+    "key": "key3",
+    "objectId": "05959760-79ad-41ff-a948-da9de174dfac"
+  },
+  "chuseok_persimmon_staff": {
+    "key": "key3",
+    "objectId": "1c60625f-75fd-4573-94c0-5407105c10f2"
+  },
+  "chuseok_chestnut_mace_v2": {
+    "key": "key3",
+    "objectId": "17147dc2-6570-42f2-a557-d36c5205469e"
   }
 }

@@ -23,12 +23,19 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
-      { key: 'chuseok_woldo', name: '보름달 월도', note: '긴 검은 자루 끝에 초승달꼴 금 날, 날에 보름달 새김, 진홍 술. 전통 장병기 월도입니다.', fresh: true },
-      { key: 'chuseok_gakgung_moon', name: '보름달 각궁', note: '진홍 칠에 금박 달·솔잎 무늬, 감빛 손잡이, 금 깃 화살 한 대. 전통 각궁입니다.', fresh: true },
-      { key: 'chuseok_pyeongon', name: '벼이삭 편곤', note: '검은 장대와 쇠사슬로 이어진 짧은 타격봉, 봉에 황금 벼이삭과 금 띠, 진홍 술. 도리깨에서 온 전통 무기 편곤입니다.', fresh: true },
-      { key: 'chuseok_dangpa', name: '솔잎 당파', note: '세 갈래 금 창날, 날 아래 보름달 구슬, 큰 진홍 비단 술. 전통 삼지창 당파입니다.', fresh: true },
-      { key: 'chuseok_hwando_persimmon', name: '감빛 환도', note: '감빛 칼집에 금 달·솔잎 무늬, 검은 끈을 감은 자루, 금 코등이, 진홍 술. 전통 환도입니다.', fresh: true },
-      { key: 'chuseok_moon_mace', name: '보름달 철퇴', note: '검은 자루에 진홍 끈, 머리가 빛나는 금빛 보름달. 전통 철퇴입니다.', fresh: true },
+      { key: 'chuseok_yut_sticks', name: '윷가락 한 벌', note: '반달꼴 나무 윷 네 가락을 진홍 끈과 금 구슬로 묶은 던지기 무기. 윷놀이 그대로입니다.', fresh: true },
+      { key: 'chuseok_songpyeon_mace', name: '송편 철퇴', note: '머리가 통통한 흰 송편(분홍 테), 목에 솔잎, 진홍 끈을 감은 검은 자루. 가장 한가위다운 판입니다.', fresh: true },
+      { key: 'chuseok_tuho_arrows', name: '투호살 다발', note: '진홍·흰 깃의 긴 투호살 다섯 대를 금 끈으로 묶음. 투호 놀이입니다.', fresh: true },
+      { key: 'chuseok_chestnut_mace_v2', name: '밤송이 철퇴(새 그림)', note: '벌어진 밤송이 속 알밤 두 톨이 머리, 진홍 끈 자루. 같은 문장으로 새로 만든 판.', fresh: true },
+      { key: 'chuseok_chestnut_mace', name: '밤송이 철퇴(3차 그림)', note: '3차 때 만들어 둔 밤송이 철퇴. 초록 가시 밤송이가 크고 또렷합니다.', fresh: true },
+      { key: 'chuseok_moon_lantern_staff', name: '달맞이 등불 지팡이', note: '굽은 금 고리에 보름달 같은 둥근 등불을 건 긴 지팡이, 진홍 술. 달맞이입니다.', fresh: true },
+      { key: 'chuseok_persimmon_staff', name: '감나무 가지 지팡이', note: '감이 열린 감나무 가지 지팡이, 손잡이에 진홍 끈과 금 구슬, 끝에 쇠촉.', fresh: true },
+      { key: 'chuseok_woldo', name: '보름달 월도', note: '긴 검은 자루 끝에 초승달꼴 금 날, 날에 보름달 새김, 진홍 술. 전통 장병기 월도입니다.' },
+      { key: 'chuseok_gakgung_moon', name: '보름달 각궁', note: '진홍 칠에 금박 달·솔잎 무늬, 감빛 손잡이, 금 깃 화살 한 대. 전통 각궁입니다.' },
+      { key: 'chuseok_pyeongon', name: '벼이삭 편곤', note: '검은 장대와 쇠사슬로 이어진 짧은 타격봉, 봉에 황금 벼이삭과 금 띠, 진홍 술. 도리깨에서 온 전통 무기 편곤입니다.' },
+      { key: 'chuseok_dangpa', name: '솔잎 당파', note: '세 갈래 금 창날, 날 아래 보름달 구슬, 큰 진홍 비단 술. 전통 삼지창 당파입니다.' },
+      { key: 'chuseok_hwando_persimmon', name: '감빛 환도', note: '감빛 칼집에 금 달·솔잎 무늬, 검은 끈을 감은 자루, 금 코등이, 진홍 술. 전통 환도입니다.' },
+      { key: 'chuseok_moon_mace', name: '보름달 철퇴', note: '검은 자루에 진홍 끈, 머리가 빛나는 금빛 보름달. 전통 철퇴입니다.' },
       { key: 'chuseok_jade_hwando', name: '옥 자루 환도(진홍 칼집)', note: '옥색 비단을 감은 자루, 진홍 칠 칼집에 금박 구름무늬, 옥고리 술. 확정 한복(옥색 저고리·진홍 치마)과 같은 팔레트입니다.' },
       { key: 'chuseok_jade_fan', name: '옥색 비단 둥근 부채', note: '옥색 비단 면에 금박 보름달·초승달·구름, 진홍 테와 자루, 긴 진홍 술. 한복 치마의 달무늬와 가장 직접 이어집니다.' },
       { key: 'chuseok_jade_parasol', name: '옥색 비단 양산', note: '접어 둔 옥색 비단 양산, 접힌 면에 금박 구름, 옥색 굽은 손잡이에 진홍 술. 절제된 편입니다.' },
@@ -124,9 +131,9 @@ const SLOTS: Slot[] = [
     set: '달토끼',
     slot: '방어구',
     options: [
-      { key: 'chuseok_rabbit_suit_v13', name: '토끼 인형 슈트(디테일 · 방울 없음)', note: '디테일·방울 판의 문장에서 방울과 리본만 뺐습니다. 손목·발목 털 깃, 왼쪽 엉덩이에 작은 꼬리 술.', fresh: true },
-      { key: 'chuseok_rabbit_suit_v14', name: '토끼 인형 슈트(디테일 · 방울 없음 · 2)', note: '같은 문장. 목둘레·손목 털 깃, 큰 발에 분홍 발바닥, 털 결이 가장 뚜렷합니다. 꼬리는 안 보입니다.', fresh: true },
-      { key: 'chuseok_rabbit_suit_v15', name: '토끼 인형 슈트(디테일 · 방울 없음 · 3)', note: '같은 문장. 손목 털 깃, 분홍 발바닥, 왼쪽 엉덩이에 작은 꼬리 술. 셋 중 가장 매끈합니다.', fresh: true },
+      { key: 'chuseok_rabbit_suit_v13', name: '토끼 인형 슈트(디테일 · 방울 없음)', note: '디테일·방울 판의 문장에서 방울과 리본만 뺐습니다. 손목·발목 털 깃, 왼쪽 엉덩이에 작은 꼬리 술.' },
+      { key: 'chuseok_rabbit_suit_v14', name: '토끼 인형 슈트(디테일 · 방울 없음 · 2)', note: '같은 문장. 목둘레·손목 털 깃, 큰 발에 분홍 발바닥, 털 결이 가장 뚜렷합니다. 꼬리는 안 보입니다.' },
+      { key: 'chuseok_rabbit_suit_v15', name: '토끼 인형 슈트(디테일 · 방울 없음 · 3)', note: '같은 문장. 손목 털 깃, 분홍 발바닥, 왼쪽 엉덩이에 작은 꼬리 술. 셋 중 가장 매끈합니다.' },
       { key: 'chuseok_rabbit_suit_v9', name: '토끼 인형 슈트(심플)', note: '심플. 푸른 기 도는 흰색 한 벌, 무늬·솔기 없음, 벙어리 손과 큰 발. 꼬리는 안 보입니다.' },
       { key: 'chuseok_rabbit_suit_v10', name: '토끼 인형 슈트(심플 · 분홍 발바닥)', note: '심플. 크림빛 흰색, 가운데 솔기 한 줄, 발에 분홍 발바닥. 꼬리는 안 보입니다.' },
       { key: 'chuseok_rabbit_suit_v11', name: '토끼 인형 슈트(디테일 · 털 깃과 소매)', note: '디테일. 목둘레·손목·발목에 복슬한 털 깃, 손발에 분홍 발바닥, 털 결이 살아 있습니다. 꼬리는 안 보입니다.' },
@@ -181,11 +188,11 @@ const data = SLOTS.map((s) => ({
 const SCRIPT = String.raw`
 (function () {
   var SLOTS = window.__SLOTS__;
-  var LS_KEY = 'chuseok-pick-draft-v9'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
+  var LS_KEY = 'chuseok-pick-draft-v10'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
   var state = {};
   // 2차 제출까지 확정한 두 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
   // 한복 방어구는 2차에서 다시 열렸다("금박 꽃무늬·옥색 저고리와 비슷한 느낌으로 하나 더") — 미리 고르지 않는다.
-  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v2', hanbok_accessory: 'chuseok_bok_pouch', rabbit_weapon: 'chuseok_rabbit_pestle_v14', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
+  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v2', hanbok_accessory: 'chuseok_bok_pouch', rabbit_weapon: 'chuseok_rabbit_pestle_v14', rabbit_armor: 'chuseok_rabbit_suit_v15', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
   SLOTS.forEach(function (s) { state[s.id] = { pick: CONFIRMED[s.id] || null, redo: false, reason: '' }; });
   try {
     var saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
@@ -383,7 +390,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">네 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 한복 무기는 실제 전통 무기(월도·각궁·편곤·당파·환도·철퇴)에 보름달·감·솔잎·벼이삭을 얹은 여섯 가지, 토끼 슈트는 디테일·방울 판에서 방울과 리본만 뺀 세 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없는 부위는 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 한가위 놀이·음식·풍경 소재(윷가락 · 송편 철퇴 · 투호살 · 밤송이 철퇴 · 달맞이 등불 · 감나무 가지) 일곱 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>
