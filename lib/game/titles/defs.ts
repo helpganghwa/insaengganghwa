@@ -5446,6 +5446,7 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "plum",
    pt: "petal",
+   pc: 6,
    orb: true,
    glow: true
   }
@@ -5459,6 +5460,7 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "peony",
    pt: "petal",
+   pc: 6,
    orb: true,
    glow: true
   }
@@ -5472,6 +5474,7 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "moran",
    pt: "petal",
+   pc: 6,
    orb: true,
    glow: true
   }

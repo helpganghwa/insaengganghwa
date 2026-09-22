@@ -419,17 +419,20 @@
     "chuseok26_flower3": {
       "fx": "plum",
       "orb": true,
-      "pt": "petal"
+      "pt": "petal",
+      "pc": 6
     },
     "chuseok26_flower2": {
       "fx": "peony",
       "orb": true,
-      "pt": "petal"
+      "pt": "petal",
+      "pc": 6
     },
     "chuseok26_flower1": {
       "fx": "moran",
       "orb": true,
-      "pt": "petal"
+      "pt": "petal",
+      "pc": 6
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
