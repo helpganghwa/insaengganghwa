@@ -29,7 +29,8 @@ const img = async (k: string, w: number): Promise<string | null> => {
 const SPA = await img('songpyeon_a', 64);
 const SPB = await img('songpyeon_b', 64);
 const SPC = await img('songpyeon_c', 64);
-const SP = SPC ?? SPA ?? SPB;
+const SPL = await img('sp_obj_l', 64); // 확정 아이콘(09-22): 흰 송편과 분홍 송편
+const SP = SPL ?? SPC ?? SPA ?? SPB;
 const BGA = await img('banner_a', 768);
 const BGB = await img('banner_b', 768);
 const spIcon = (size = '.9em') => SP ? `<img class="spi" src="${SP}" alt="" style="width:${size};height:${size}">` : '🥟';
