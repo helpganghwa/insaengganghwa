@@ -44,11 +44,11 @@ const ROWS: [string, number, string][] = [
 ];
 // 사용자가 논의 결과에 적은 수치(미확정) — 시안에서 자리와 길이를 보기 위한 값.
 const REWARD: [string, number, number][] = [
-  ['1등', 50000, 600],
-  ['2등', 30000, 300],
-  ['3등', 20000, 150],
-  ['4~5등', 10000, 90],
-  ['6~10등', 5000, 60],
+  ['1등', 30000, 600],
+  ['2등', 20000, 300],
+  ['3등', 10000, 150],
+  ['4~5등', 5000, 90],
+  ['6~10등', 3000, 60],
 ];
 const rewardOf = (rank: number) => REWARD[rank === 1 ? 0 : rank === 2 ? 1 : rank === 3 ? 2 : rank <= 5 ? 3 : 4];
 const n = (v: number) => v.toLocaleString('ko-KR');
@@ -102,7 +102,7 @@ const phoneIn = `<div class="ph">${head(LEFT)}
   ${itemHead(ITEMS[3])}
   ${list({ reward: true, meAt: 8 })}
 </div>
-<div class="mine in"><span class="rk">8</span><span class="who"><b>나</b><span>7등까지 +5 · 9등과 +5 차이</span></span><span class="lv"><b>+66</b></span><i class="go">강화하러 가기</i></div>
+<div class="mine in"><span class="rk">8</span><span class="who"><b>나</b><span>5등까지 +12</span></span><span class="lv"><b>+66</b></span><i class="go">강화하러 가기</i></div>
 ${nav}</div>`;
 
 const phoneNone = `<div class="ph">${head(LEFT)}
@@ -128,7 +128,7 @@ const sheet = `<div class="ph">${head(LEFT)}
   <table class="rt"><thead><tr><th>순위</th><th>다이아</th><th>상자</th><th>칭호</th></tr></thead><tbody>
   ${REWARD.map(([r, d, b], i) => `<tr class="${i === 4 ? 'me' : ''}"><td>${r}</td><td>💎 ${n(d)}</td><td>📦 ${n(b)}</td><td>${i < 3 ? '한정 칭호' : ''}</td></tr>`).join('')}
   </tbody></table>
-  <div class="myr"><span class="rk">8</span><span class="who"><b>지금 내 순위로 받는 보상</b><span>7등까지 +5</span></span><span class="lv"><b>💎 5,000</b><span>📦 60</span></span></div>
+  <div class="myr"><span class="rk">8</span><span class="who"><b>지금 내 순위로 받는 보상</b><span>5등까지 +12</span></span><span class="lv"><b>💎 5,000</b><span>📦 60</span></span></div>
   </div>
   <div class="mf"><span class="mbtn">닫기</span></div>
 </div></div>`;
@@ -155,10 +155,10 @@ type Fig = { id: string; title: string; phone: string; cap: string; checks: stri
 const FIGS: Fig[] = [
   { id: 'a', title: '순위표', phone: phoneA, cap: '들어오자마자 순위표가 보입니다. 위쪽 칩 여섯 개가 장비 선택이자 내 순위 요약입니다. 아이템 이름 아래 안내 문장은 뺐습니다.',
     checks: ['안내 문장이 빠진 뒤 머리글 높이', '행 오른쪽 단계와 보상의 밀도'] },
-  { id: 'in', title: '내가 10등 안에 있을 때', phone: phoneIn, cap: '목록의 내 줄이 강조되고, 아래 고정 줄은 윗자리까지 남은 단계와 아랫자리와의 차이를 함께 보여 줍니다.',
-    checks: ['아랫자리와의 차이 표기', '1~3등 행의 금색 강조 정도'] },
+  { id: 'in', title: '내가 10등 안에 있을 때', phone: phoneIn, cap: '목록의 내 줄이 강조되고, 아래 고정 줄은 바로 윗자리가 아니라 다음 보상 구간(5등)까지 남은 단계를 보여 줍니다. 10등 밖이면 "10등까지 +N"입니다.',
+    checks: ['다음 보상 구간까지 표기', '1~3등 행의 금색 강조 정도'] },
   { id: 'none', title: '장비가 없을 때', phone: phoneNone, cap: '없다는 사실만 알립니다.', checks: ['이 한 줄로 충분한지, 칩의 "없음" 표기'] },
-  { id: 'sheet', title: '순위별 보상 팝업', phone: sheet, cap: '안내문을 빼고, 표에서 지금 내 순위가 속한 줄을 칠한 뒤 아래에 지금 받을 수 있는 보상을 따로 보여 줍니다. 10등 밖이면 이 줄이 "지금 14등 · 10등 안에 들면 받아요"로 바뀌고, 장비가 없으면 줄이 없습니다.',
+  { id: 'sheet', title: '순위별 보상 팝업', phone: sheet, cap: '확정된 보상 수치입니다. 표에서 지금 내 순위가 속한 줄을 칠한 뒤 아래에 지금 받을 수 있는 보상을 따로 보여 줍니다. 10등 밖이면 이 줄이 "지금 14등 · 10등 안에 들면 받아요"로 바뀌고, 장비가 없으면 줄이 없습니다.',
     checks: ['내 보상 줄의 위치(표 아래)와 윗자리까지 남은 단계 표기', '칭호는 이름을 밝히지 않고 "한정 칭호"로만 적었습니다'] },
   { id: 'final', title: '종료 뒤 최종 결과', phone: phoneFinal, cap: '안내 구획을 빼고 헤더 오른쪽에 확정 시각만 남겼습니다. 10/3까지 열어 둡니다.',
     checks: ['확정 시각을 헤더에 두는 것으로 충분한지', '지급이 끝난 뒤 알림은 우편으로만'] },
@@ -178,6 +178,7 @@ const FIXED: [string, string][] = [
   ['종료 뒤 결과 공개', '3일(10/3까지), 안내 구획 없이 헤더에 확정 시각만'],
   ['아이템 머리글', '안내 문장 없이 그림과 이름만'],
   ['보상 팝업', '안내문 없이 표 + 지금 내 순위로 받는 보상'],
+  ['내 순위 줄의 남은 단계', '바로 윗자리가 아니라 다음 보상 구간까지(+N)'],
 ];
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -298,7 +299,7 @@ const html = `<title>한가위 현황판 시안</title>
 <div class="wrap">
   <h1>한가위 현황판 시안</h1>
   <p class="lead">2차 점검까지 반영한 3차 시안입니다. 아이템 이름 아래 안내 문장을 빼고, 보상 팝업은 안내문 대신 지금 내 순위로 받는 보상을 보여 줍니다. 더 고칠 점이 있으면 의견을 남기고 맨 아래 요약을 복사해 채팅에 붙여 주세요. 없으면 이 화면대로 구현에 들어갑니다.</p>
-  <p class="note">닉네임, 단계, 시각은 모두 지어낸 예시입니다. 장비 네 부위의 그림과 이름은 아직 고르기 전이라 후보 그림을 임시로 넣었습니다. 보상 수치는 논의 결과에 적어 주신 값이며 확정 전입니다.</p>
+  <p class="note">닉네임, 단계, 시각은 모두 지어낸 예시입니다. 아직 고르기 전인 부위의 그림과 이름은 후보 그림을 임시로 넣었습니다. 보상 수치는 확정안입니다.</p>
 
   <h2>화면</h2>
   <div class="figs">
@@ -327,7 +328,7 @@ const html = `<title>한가위 현황판 시안</title>
   var KEY='chuseok-board-mock-v3';
   function q(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
   function build(){
-    var lines=['[한가위 현황판 시안 3차 점검]'];
+    var lines=['[한가위 현황판 시안 4차 점검]'];
     q('figure.fig').forEach(function(f){
       var m=f.querySelector('.memo').value.trim();
       if(m)lines.push('- '+f.getAttribute('data-title')+': '+m.replace(/\\n+/g,' '));
