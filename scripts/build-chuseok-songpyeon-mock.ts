@@ -31,8 +31,8 @@ const SPB = await img('songpyeon_b', 64);
 const SPC = await img('songpyeon_c', 64);
 const SPL = await img('sp_obj_l', 64); // 확정 아이콘(09-22): 흰 송편과 분홍 송편
 const SP = SPL ?? SPC ?? SPA ?? SPB;
-const BGA = await img('banner_a', 768);
-const BGB = await img('banner_b', 768);
+const BGA = await img('banner_c', 768); // 확정(09-22): 강화 대회 배너 = 한옥 마당과 감나무
+const BGB = await img('moon_h5', 768); // 확정(09-22): 송편 마일리지 배너 = 자줏빛 달 + 돌절구 토끼(합성)
 const spIcon = (size = '.9em') => SP ? `<img class="spi" src="${SP}" alt="" style="width:${size};height:${size}">` : '🥟';
 const foot = `<p class="foot">대회가 끝난 뒤 10/3까지 받고 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>`;
 // 누적/사용 가능을 한 카드에(사용자 확정)
