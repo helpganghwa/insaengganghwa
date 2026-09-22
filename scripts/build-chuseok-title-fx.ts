@@ -15,9 +15,9 @@ const MOON: T[] = [
   { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 가장 큰 보름달이 밝아지며 滿月로 바뀝니다.' },
 ];
 const FLOWER: T[] = [
-  { label: '매화', fx: 'plum', rank: '3등', note: '흰 꽃잎이 연분홍으로 물들었다 돌아오는 숨결입니다.' },
-  { label: '작약', fx: 'peony', rank: '2등', note: '장밋빛과 연분홍이 흐릅니다.' },
-  { label: '모란', fx: 'moran', pt: 'petal', rank: '1등', note: '진홍에서 금빛으로 흐르고, 꽃잎이 글자 위에서 떨어집니다.' },
+  { label: '매화', fx: 'plum', alt: '梅花', rank: '3등', note: '백매의 흰빛 도는 연분홍. 다섯 잎 매화가 살짝 벌어지며 밝아질 때 글자가 오른쪽부터 梅花로 번지고, 다음에 매화로 돌아옵니다.' },
+  { label: '작약', fx: 'peony', alt: '芍藥', rank: '2등', note: '분홍. 여덟 잎 작약이 벌어질 때 芍藥으로 바뀝니다. 꽃이 매화보다 큽니다.' },
+  { label: '모란', fx: 'moran', alt: '牡丹', rank: '1등', note: '진홍. 겹꽃 모란이 가장 크게 벌어지며 牡丹으로 바뀝니다. 꽃술이 금빛입니다.' },
 ];
 // TitleTag.tsx의 Particles()와 같은 4점 배치·지연.
 const dots = [0, 1, 2, 3].map((i) => `<i style="left:${12 + i * 24}%;animation-delay:${(i * 1.35).toFixed(2)}s"></i>`).join('');
@@ -86,7 +86,7 @@ const html = `<title>한가위 칭호 이펙트</title>
   <h1>한가위 칭호 이펙트</h1>
   <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 전용 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다. 고칠 점이 있으면 아래에 적어 복사해 주세요.</p>
   ${setBlock('달토끼 장비', '3등 은빛 · 2등 체리빛 · 1등 금빛 — 달이 밝아질 때 글자가 오른쪽부터 한자로, 다음에 한글로', MOON)}
-  ${setBlock('한복 장비', '3등 매화 · 2등 작약 · 1등 모란 — 연분홍에서 진홍과 금으로', FLOWER)}
+  ${setBlock('한복 장비', '3등 매화 흰 연분홍 · 2등 작약 분홍 · 1등 모란 진홍 — 꽃이 벌어질 때 글자가 오른쪽부터 한자로', FLOWER)}
   <label class="m" for="memo">의견</label><textarea id="memo" placeholder="칭호별로 바꾸고 싶은 색·움직임"></textarea>
   <div class="acts"><button type="button" id="copy">의견 복사</button><span id="toast" role="status"></span></div>
 </div>

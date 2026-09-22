@@ -5443,6 +5443,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "plum",
+   alt: "梅花",
    glow: true
   }
  },
@@ -5454,6 +5455,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "peony",
+   alt: "芍藥",
    glow: true
   }
  },
@@ -5465,7 +5467,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "moran",
-   pt: "petal",
+   alt: "牡丹",
    glow: true
   }
  }
