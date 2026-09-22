@@ -216,15 +216,13 @@
 /* 서체: 후원 칭호와 같은 명조(--font-serif-kr, Noto Serif KR 700). 글자에는 후광·그라데이션을 두지 않는다('대륙의 주인'처럼
    선명한 단색, 사용자 확정) — 빛은 달에만. */
 .fx-dual{position:relative;display:inline-block;white-space:nowrap;font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700;letter-spacing:.04em}
-/* 전환: 두 층 모두 폭 2배의 [투명→검정] 띠 마스크(경계 폭 1.12em = 글자 전체, 선이 아니라 기울어진 안개처럼 번짐). 위치를 0→100→200%로 밀면 경계가 늘
-   오른쪽에서 왼쪽으로 지나가며 한자(첫 숨)·한글(둘째 숨)이 그 순서로 드러난다. 한글 층은 같은 띠를 100%에서 시작하고
-   둘째 숨 직전(둘 다 안 보이는 순간)에 0%로 되감아 다시 오른쪽부터 드러난다. */
-.fx-dual .ko,.fx-dual .hj{-webkit-mask-image:linear-gradient(90deg,transparent 0 22%,#000 78%);mask-image:linear-gradient(90deg,transparent 0 22%,#000 78%);-webkit-mask-size:200% 100%;mask-size:200% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.fx-dual .ko{display:inline-block;-webkit-mask-position:100% 0;mask-position:100% 0;animation:kowipe var(--t) ease-in-out infinite}
-.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-position:0% 0;mask-position:0% 0;animation:hjwipe var(--t) ease-in-out infinite}
-@keyframes hjwipe{0%,17%{-webkit-mask-position:0% 0;mask-position:0% 0}35%,61%{-webkit-mask-position:100% 0;mask-position:100% 0}79%,100%{-webkit-mask-position:200% 0;mask-position:200% 0}}
-@keyframes kowipe{0%,17%{-webkit-mask-position:100% 0;mask-position:100% 0}35%,61%{-webkit-mask-position:200% 0;mask-position:200% 0}61.01%{-webkit-mask-position:0% 0;mask-position:0% 0}79%,100%{-webkit-mask-position:100% 0;mask-position:100% 0}}
-/* 달: 본체는 ::before의 SVG 마스크(초승달·반달·보름달), 후광은 부모 drop-shadow. 글자가 바뀌는 사이(24%·68%)에 가장 밝다. */
+/* 전환: 마스크 이미지는 글자 폭의 5배, 다섯 구간(각 1배 폭). 한자 층 = [투명|투명→검정|검정|검정→투명|투명],
+   한글 층 = 그 반대. 위치를 0→50→100%로 밀면 경계(1배 폭의 부드러운 ramp)가 늘 오른쪽에서 왼쪽으로 지나가며
+   한자(첫 숨)·한글(둘째 숨)이 드러나고, 멈춘 상태(0·50·100%)에서는 글자가 온전히 보이거나 온전히 숨어 흐린 구간이 남지 않는다. */
+.fx-dual .ko,.fx-dual .hj{-webkit-mask-size:500% 100%;mask-size:500% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0% 0;mask-position:0% 0;animation:moonwipe var(--t) ease-in-out infinite}
+.fx-dual .ko{display:inline-block;-webkit-mask-image:linear-gradient(90deg,#000 0 20%,transparent 40% 60%,#000 80% 100%);mask-image:linear-gradient(90deg,#000 0 20%,transparent 40% 60%,#000 80% 100%)}
+.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,transparent 0 20%,#000 40% 60%,transparent 80% 100%);mask-image:linear-gradient(90deg,transparent 0 20%,#000 40% 60%,transparent 80% 100%)}
+@keyframes moonwipe{0%,17%{-webkit-mask-position:0% 0;mask-position:0% 0}35%,61%{-webkit-mask-position:50% 0;mask-position:50% 0}79%,100%{-webkit-mask-position:100% 0;mask-position:100% 0}}
 /* 달 그리기: ::before가 밝은 면(SVG 마스크: 오른쪽이 빛나는 초승달·상현달, 보름달). 어두운 면은 그리지 않는다(사용자 확정).
    초승달·상현달은 저녁 하늘처럼 빛나는 쪽이 아래오른쪽을 향하게 살짝 기울인다. 채움은 빛 쪽에서 경계로 갈수록 어두워지고,
    보름달은 가장자리 어둡힘+희미한 바다 무늬. */
