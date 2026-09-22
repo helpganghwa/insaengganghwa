@@ -16,12 +16,13 @@ const ICONS: Opt[] = [
 ];
 const BANNERS: Opt[] = [
   { key: 'banner_c', name: '한옥 마당과 감나무', note: '지금까지 고르신 배경' },
-  { key: 'banner_u', name: '창호에 비친 달토끼', note: '한옥 마당·감나무·구름 위 보름달. 오른쪽 창호지에 절구 찧는 토끼 그림자. 송편 없음', fresh: true },
-  { key: 'banner_u2', name: '창호에 비친 달토끼 + 송편', note: '위 장면의 툇마루 난간에 송편 접시(흰·분홍)를 얹은 판', fresh: true },
-  { key: 'banner_v2', name: '툇마루의 토끼와 송편', note: '옥색 조끼 입은 흰 토끼가 난간에서 달을 봄, 감 달린 가지와 등롱, 문 앞에 송편 접시', fresh: true },
-  { key: 'banner_w2', name: '절구 찧는 토끼와 송편', note: '보름달 앞에서 절구 찧는 흰 토끼, 쌀 그릇, 양쪽 감나무 가지, 마루 오른쪽에 송편 접시', fresh: true },
-  { key: 'banner_x2', name: '언덕 위 토끼 둘과 송편', note: '언덕에 앉아 달을 보는 흰 토끼 둘, 감나무와 한옥 지붕, 가운데 상 위에 송편 접시(작게)', fresh: true },
-  { key: 'banner_y', name: '마당의 송편상과 달 위 토끼', note: '그림 자체에 송편을 그리게 한 판. 송편이 둥근 떡처럼 나왔고 토끼는 달 위에 앉음(합성 없음)', fresh: true },
+  { key: 'moon_a', name: '황금 갈대밭의 달토끼', note: '호박빛·금빛. 노을 속 큰 달 앞 갈대밭에서 절구 찧는 토끼', fresh: true },
+  { key: 'moon_b', name: '진홍 구름의 달토끼', note: '진홍·금. 붉은 구름 사이 금빛 보름달, 그 아래 절구 찧는 토끼', fresh: true },
+  { key: 'moon_c', name: '옥빛 처마의 달토끼', note: '옥색·청록. 등롱 걸린 처마와 청기와 한옥, 구름 위 절구 찧는 토끼', fresh: true },
+  { key: 'moon_d', name: '연보라 들판의 달토끼', note: '연보라·분홍. 꽃잎 날리는 들판에서 절구 찧는 토끼, 흰 달', fresh: true },
+  { key: 'moon_e', name: '은달 앞 토끼 그림자', note: '남색·은빛. 은빛 보름달 앞 절구 찧는 토끼 실루엣, 구름 바다', fresh: true },
+  { key: 'moon_f', name: '방 안의 달토끼', note: '상아·갈색. 열린 문 너머 보름달, 방 안에서 절구를 안은 토끼', fresh: true },
+  { key: 'moon_g', name: '자줏빛 달 위의 토끼', note: '자주·금. 큰 보름달 위에 서서 절구 찧는 토끼, 초승달과 별', fresh: true },
 ];
 const PRESET: Record<string, string> = { icon: 'sp_obj_l', banner: 'banner_c' };
 const card = (slot: string, o: Opt, src: string | null, wide: boolean) => `<label class="card${wide ? ' wide' : ''}${o.fresh ? ' fresh' : ''}"><input type="radio" name="${slot}" value="${o.key}" id="${slot}_${o.key}">
@@ -49,7 +50,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 </style>
 <div class="wrap">
   <h1>한가위 UI 그림 선택</h1>
-  <p class="lead">6차입니다. 송편 아이콘은 흰 송편과 분홍 송편으로 확정되어 미리 골라 두었습니다. 배너는 한옥 마당과 감나무의 분위기를 살린 채 달토끼와 송편을 넣은 장면 여섯 장을 새로 만들었고, 지금까지 고르신 한옥 마당도 그대로 두었습니다. 송편은 그림이 계속 틀리게 그려서, 장면은 빈 상만 두고 따로 만든 송편 접시를 얹어 합성한 판이 대부분입니다. 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
+  <p class="lead">7차입니다. 송편 아이콘은 흰 송편과 분홍 송편으로 확정되어 미리 골라 두었습니다. 배너는 송편 없이 절구와 달토끼만 넣고, 한옥 마당과 감나무와는 다른 색감 일곱 가지로 새로 만들었습니다. 지금까지 고르신 한옥 마당도 그대로 두었습니다. 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
   ${await slotHtml('icon', '송편 아이콘', ICONS, false, 192)}
   ${await slotHtml('banner', '홈 배너 배경', BANNERS, true, 768)}
   <section class="slot"><h2>요약</h2><textarea id="out" readonly></textarea></section>
@@ -57,7 +58,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 <div class="foot"><b id="cnt">선택 0 · 미정 2</b><span>두 곳을 모두 정하거나 다시 생성으로 표시해 주세요.</span><button type="button" id="copy">요약 복사</button><span id="toast" role="status"></span></div>
 <script>
 (function(){
-  var KEY='chuseok-ui-pick-v6', NAMES={};
+  var KEY='chuseok-ui-pick-v7', NAMES={};
   document.querySelectorAll('.card').forEach(function(c){var i=c.querySelector('input');NAMES[i.value]=c.querySelector('.nm').childNodes[0].textContent;});
   function q(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
   function build(){
