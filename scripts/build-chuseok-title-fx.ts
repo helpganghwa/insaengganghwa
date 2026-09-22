@@ -33,14 +33,6 @@ const tag = (t: T, size: string) => {
   const body = t.pt ? `<span class="pt pt-${t.pt}">${inner}${spread}</span>` : inner;
   return `<span class="ttag" style="font-size:${size}">${body}</span>`;
 };
-const moonTag = (fx: string, base: string, label: string, alt: string, size: string) =>
-  `<span class="ttag" style="font-size:${size}"><span class="fx fx-${base} ${fx} fx-dual"><span class="ko">${label}</span><span class="hj" aria-hidden="true">${alt}</span><i class="orb" aria-hidden="true"></i></span></span>`;
-const cmpCol = (title: string, sfx: string) => `<div class="ph dark"><h4>${title}</h4>
-  <div class="row2">${moonTag(sfx ? 'fx-newmoon' + sfx : '', 'newmoon', '신월', '新月', '22px')}${moonTag(sfx ? 'fx-halfmoon' + sfx : '', 'halfmoon', '반월', '半月', '22px')}${moonTag('', 'fullmoon', '만월', '滿月', '22px')}</div>
-  <div class="row3">${moonTag(sfx ? 'fx-newmoon' + sfx : '', 'newmoon', '신월', '新月', '13px')}${moonTag(sfx ? 'fx-halfmoon' + sfx : '', 'halfmoon', '반월', '半月', '13px')}${moonTag('', 'fullmoon', '만월', '滿月', '13px')}</div></div>`;
-const cmpBlock = `<section class="set"><h2>달 모양 비교<small>A 지금 · B 모양 유지하고 초승달을 두껍게, 신월은 블루문 색 · C 셋 다 둥근 달(블루문·레드문·골든문)</small></h2>
-<div class="cmp">${cmpCol('A · 지금', '')}${cmpCol('B · 두꺼운 초승달 + 블루문 색', 'B')}${cmpCol('C · 둥근 달 세 가지 색', 'C')}</div>
-<p class="note" style="margin-top:8px">C는 이름(신월=초승달, 반월=반달)과 그림이 어긋납니다. B는 이름을 지키면서 신월에 블루문 색을 얹은 안입니다.</p></section>`;
 const setBlock = (title: string, sub: string, items: T[]) => `
 <section class="set">
   <h2>${title}<small>${sub}</small></h2>
@@ -95,28 +87,9 @@ const html = `<title>한가위 칭호 이펙트</title>
   @media (prefers-reduced-motion: reduce) { .ttag span, .ttag .pt>i { animation:none !important; } }
 </style>
 <style>${css}</style>
-<style>
-/* 달 모양 비교(미리보기 전용) */
-.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-top:12px}
-.cmp .ph{gap:10px}
-.cmp h4{margin:0 0 4px;font-size:13px;color:#a1a1aa;font-weight:600}
-.cmp .row2{display:flex;align-items:center;gap:26px;height:44px;padding:0 8px;border-radius:10px;background:#18181b}
-.cmp .row3{display:flex;align-items:center;gap:18px;height:30px;padding:0 8px;font-size:13px}
-/* B: 초승달을 두껍게(안쪽 반지름 10→12.5), 신월은 블루문 색 */
-.fx-newmoonB .orb::before{transform:rotate(28deg);background:radial-gradient(circle at 80% 50%,#eaf3ff 0%,#bcd4ff 45%,#7fa6f0 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A12.5 12.5 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A12.5 12.5 0 0 0 9 1 Z'/></svg>")}
-.fx-newmoonB .ko,.fx-newmoonB .hj{color:#9fbdf5}
-.fx-newmoonB{--glow-lo:drop-shadow(0 0 1px rgba(150,190,255,.5));--glow-hi:drop-shadow(0 0 1px rgba(200,222,255,.9)) drop-shadow(0 0 3px rgba(120,170,255,.5))}
-/* C: 셋 다 둥근 달, 색만 다름(블루문·레드문·골든문) */
-.fx-newmoonC .orb::before,.fx-halfmoonC .orb::before{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");transform:none;filter:none}
-.fx-newmoonC .orb::before{background:radial-gradient(circle at 40% 38%,#f0f6ff 0%,#a9c6ff 50%,#5f8be0 100%)}
-.fx-newmoonC .ko,.fx-newmoonC .hj{color:#9fbdf5}
-.fx-newmoonC{--glow-lo:drop-shadow(0 0 1px rgba(150,190,255,.5));--glow-hi:drop-shadow(0 0 1px rgba(200,222,255,.9)) drop-shadow(0 0 3px rgba(120,170,255,.5))}
-.fx-halfmoonC .orb::before{background:radial-gradient(circle at 40% 38%,#ffe3e8 0%,#ff8aa0 50%,#d63a58 100%)}
-</style>
 <div class="wrap">
   <h1>한가위 칭호 이펙트</h1>
-  <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 전용 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다. 고칠 점이 있으면 아래에 적어 복사해 주세요.</p>
-  ${cmpBlock}
+  <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 확정 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다.</p>
   ${setBlock('달토끼 장비', '3등 은빛 · 2등 체리빛 · 1등 금빛 — 달이 밝아질 때 글자가 오른쪽부터 한자로, 다음에 한글로', MOON)}
   ${setBlock('한복 장비', '3등 매화 흰 연분홍 · 2등 작약 분홍 · 1등 모란 진홍 — 꽃에서 꽃잎이 글자 쪽으로 흩날림', FLOWER)}
   <label class="m" for="memo">의견</label><textarea id="memo" placeholder="칭호별로 바꾸고 싶은 색·움직임"></textarea>
