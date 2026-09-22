@@ -87,11 +87,11 @@
     "volcano_ashglass_goggles": "재를 막는 눈",
     "general_wing_hairclip": "백은 깃 머리핀",
     "chuseok_moon_wand_full": "완드는 고정, 머리의 금빛 보름달만 숨 쉬듯 밝아졌다 어두워지고 오색 술이 살짝 흔들림",
-    "chuseok_hanbok_v2": "한복은 고정, 진홍 치마의 금박 달·구름 무늬가 차례로 반짝이고 치맛자락이 아주 살짝 흔들림",
-    "chuseok_bok_pouch": "복주머니는 고정, 금실 자수가 은은히 반짝이고 오색 매듭과 술이 살짝 흔들림",
+    "chuseok_hanbok_v2": "한복은 완전히 고정, 반짝임 없음, 치맛자락과 고름 끝만 밤바람에 아주 살짝 천천히 흔들림",
+    "chuseok_bok_pouch": "복주머니는 완전히 고정, 반짝임 없음, 비단 술과 매듭 끈만 아주 살짝 천천히 흔들림",
     "chuseok_rabbit_pestle_v14": "절굿공이는 고정, 매끈한 나무를 따라 흰 달빛 광택이 천천히 흐르고 머리 주위에 작은 반짝임이 떠오름",
-    "chuseok_rabbit_suit_v15": "옷은 고정, 털 깃과 솜꼬리가 바람에 살짝 일렁이고 옷 전체에 따뜻한 빛이 숨 쉬듯 번짐",
-    "chuseok_rabbit_ears_v4": "머리띠는 고정, 선 귀가 두어 번 살짝 움찔하고 접힌 귀는 그대로, 분홍 귀 안쪽이 은은히 빛남"
+    "chuseok_rabbit_suit_v15": "옷은 완전히 고정, 빛·번쩍임·일렁임 없음, 솜꼬리만 한두 번 아주 살짝 까딱임",
+    "chuseok_rabbit_ears_v4": "머리띠는 고정, 빛·반짝임 없음, 접힌 귀가 천천히 펴져 섰다가 다시 접히고 다른 귀는 그대로"
   },
   "items": {
     "seed-kingdom_ribbon_rapier": "the slender rapier floats perfectly still while its trailing blue ribbon ripples and flutters, a soft silver-blue radiance pulsing along the blade",
@@ -178,11 +178,11 @@
     "oni_slayer_odachi": "an odachi frozen exactly in place — the sword itself is identical in every frame, a still image that never moves, rotates, sways or shifts; the only thing that changes is a deep crimson aura brightening and dimming around it with faint ember motes rising through it",
     "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom",
     "chuseok_moon_wand_full": "the wand stays completely fixed and motionless; only the golden full moon at its head brightens and dims slowly like breathing, the dark rabbit silhouette inside it stays still, and the colorful silk tassels sway very gently",
-    "chuseok_hanbok_v2": "the hanbok stays fixed and motionless; the gold-leaf moon and cloud patterns on the crimson skirt shimmer softly one after another, and the skirt hem sways very slightly as if in a night breeze",
-    "chuseok_bok_pouch": "the pouch stays fixed and motionless; the gold embroidery glints softly, and the colorful silk knot and tassel sway gently",
+    "chuseok_hanbok_v2": "the hanbok stays completely fixed and motionless; nothing glints, shimmers or flashes; only the skirt hem and the ribbon ends sway very slightly and slowly, as if in a faint night breeze",
+    "chuseok_bok_pouch": "the pouch stays completely fixed and motionless; nothing glints, sparkles or flashes; only the silk tassel and the knot cords sway very gently and slowly",
     "chuseok_rabbit_pestle_v14": "the pestle stays completely fixed and motionless; a soft white moonlight sheen slides slowly along the smooth wood from the grip to the head, and a few tiny pale sparkles drift up around the head",
-    "chuseok_rabbit_suit_v15": "the suit stays fixed and motionless; the fluffy fur cuffs and the round cotton tail ruffle gently as if in a breeze, and a soft warm glow breathes around the whole suit",
-    "chuseok_rabbit_ears_v4": "the headband stays fixed; the standing ear twitches slightly a couple of times while the folded ear stays folded, and the pink inner ears glow softly"
+    "chuseok_rabbit_suit_v15": "the suit stays completely fixed and motionless; no glow, no flashing, no ruffling; only the round cotton tail bobs very slightly once or twice, everything else stays perfectly still",
+    "chuseok_rabbit_ears_v4": "the headband stays fixed; no glow, no sparkle, no flashing; the folded ear slowly unfolds to stand upright and then folds back down again, while the other ear stays perfectly still"
   },
   "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",
   "fixAmp": {},
