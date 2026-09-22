@@ -58,6 +58,7 @@ const av = (i: number, ch: string) =>
 
 const nav = `<div class="nav"><span>🏠<em>홈</em></span><span>🎒<em>인벤토리</em></span><span>⚒️<em>강화</em></span><span>🏰<em>길드</em></span><span>👤<em>프로필</em></span></div>`;
 const head = (right: string) => `<div class="bar"><span class="back">‹</span><b>한가위 강화 대회</b><small>${right}</small></div>`;
+const LEFT = '2일 09:14:07 남음';
 
 const chips = (sel: string, showMine = true) =>
   `<div class="chips">${ITEMS.map(
@@ -75,7 +76,7 @@ const list = (opts: { reward: boolean; meAt?: number; final?: boolean }) =>
     return `<li class="${me ? 'me' : ''}${i < 3 ? ' top' : ''}"><span class="rk">${i + 1}</span>${av(i, me ? '나' : nm[0])}<span class="who"><b>${me ? '나' : nm}</b><span>${at} 도달</span></span><span class="lv"><b>+${lv}</b>${opts.reward ? `<span>💎${n(r[1])} · 📦${n(r[2])}</span>` : ''}</span></li>`;
   }).join('')}</ol>`;
 
-const phoneA = `<div class="ph">${head('2일 9시간 남음')}
+const phoneA = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('hc')}
   ${itemHead(ITEMS[2], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
@@ -95,7 +96,7 @@ const phoneB = `<div class="ph">${head('2일 9시간 남음')}
 </div>
 ${nav}</div>`;
 
-const phoneIn = `<div class="ph">${head('2일 9시간 남음')}
+const phoneIn = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('rw')}
   ${itemHead(ITEMS[3], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
@@ -104,7 +105,7 @@ const phoneIn = `<div class="ph">${head('2일 9시간 남음')}
 <div class="mine in"><span class="rk">8</span><span class="who"><b>나</b><span>7등까지 +5 · 9등과 +5 차이</span></span><span class="lv"><b>+66</b></span><i class="go">강화하러 가기</i></div>
 ${nav}</div>`;
 
-const phoneNone = `<div class="ph">${head('2일 9시간 남음')}
+const phoneNone = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('ra')}
   ${itemHead(ITEMS[4], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
@@ -114,27 +115,27 @@ const phoneNone = `<div class="ph">${head('2일 9시간 남음')}
 <div class="mine none"><span class="who"><b>아직 이 장비가 없어요</b></span></div>
 ${nav}</div>`;
 
-const sheet = `<div class="ph">${head('2일 9시간 남음')}
-<div class="body dim">
+const sheet = `<div class="ph">${head(LEFT)}
+<div class="body">
   ${chips('hc')}
   ${itemHead(ITEMS[2], '순위는 지금 단계로 매겨요.')}
   ${list({ reward: true })}
 </div>
-<div class="sheet">
-  <div class="grab"></div>
-  <b class="st">순위별 보상</b>
-  <p class="sd">장비 6종마다 따로 드려요. 여러 장비에서 순위에 들면 모두 받아요.</p>
+<div class="dimmer"></div>
+<div class="modal">
+  <div class="mh"><b class="st">순위별 보상</b><p class="sd">장비 6종마다 따로 드려요. 여러 장비에서 순위에 들면 모두 받아요.</p></div>
+  <div class="mb">
   <table class="rt"><thead><tr><th>순위</th><th>다이아</th><th>상자</th><th>칭호</th></tr></thead><tbody>
   ${REWARD.map(([r, d, b], i) => `<tr><td>${r}</td><td>💎 ${n(d)}</td><td>📦 ${n(b)}</td><td>${i < 3 ? '한정 칭호' : ''}</td></tr>`).join('')}
   </tbody></table>
   <p class="sd">상자는 무기·방어구·장신구 상자를 같은 수로 나눠 드려요.</p>
   <p class="sd">9/30 23:59까지 수령한 강화 결과만 인정돼요. 보상은 순위 확인을 거쳐 10/1에 우편으로 보내 드려요.</p>
-  <div class="btn gray">닫기</div>
+  </div>
+  <div class="mf"><span class="mbtn">닫기</span></div>
 </div></div>`;
 
-const phoneFinal = `<div class="ph">${head('대회 종료')}
+const phoneFinal = `<div class="ph">${head('9/30 23:59 확정')}
 <div class="body">
-  <div class="fin"><b>최종 순위예요</b><span>9/30 23:59에 확정됐어요. 보상은 순위 확인을 거쳐 10/1에 우편으로 보내 드려요.</span></div>
   ${chips('hc')}
   ${itemHead(ITEMS[2], '9/30 23:59 확정')}
   ${list({ reward: true, final: true })}
@@ -144,38 +145,38 @@ ${nav}</div>`;
 
 const phoneHome = `<div class="ph"><div class="bar"><b>인생강화</b><small>⚔ 12,480 · 💎 2,122</small></div>
 <div class="body">
-  <div class="banner"><span class="moon"></span><span class="bt"><b>한가위 강화 대회</b><span>추석 장비 6종, 장비마다 10등까지 보상</span></span><i>9/30까지</i></div>
+  <div class="banner"><span class="moon"></span><span class="bt"><b>한가위 강화 대회</b><span>추석 장비 6종, 장비마다 10등까지 보상</span></span><i>2일 09:14:07</i></div>
   <div class="stub"></div><div class="stub"></div>
-  <p class="cap2">종료 뒤 일주일</p>
+  <p class="cap2">종료 뒤 3일(10/3까지)</p>
   <div class="banner done"><span class="moon"></span><span class="bt"><b>한가위 강화 대회 결과</b><span>최종 순위를 확인해 보세요</span></span><i>결과 보기</i></div>
 </div>
 ${nav}</div>`;
 
 type Fig = { id: string; title: string; phone: string; cap: string; checks: string[] };
 const FIGS: Fig[] = [
-  { id: 'a', title: '안 A · 장비 칩으로 바로 전환', phone: phoneA, cap: '들어오자마자 순위표가 보입니다. 위쪽 칩 여섯 개가 장비 선택이자 내 순위 요약입니다.',
-    checks: ['칩 아래 숫자(3등, 14등, 없음)만으로 여섯 장비의 내 위치가 읽히는지', '행 오른쪽에 단계와 보상을 함께 둔 것이 복잡해 보이지 않는지', '내 순위 줄을 화면 아래에 고정하고 그 안에 [강화하러 가기]를 둔 위치'] },
-  { id: 'b', title: '안 B · 여섯 장비 요약이 먼저', phone: phoneB, cap: '첫 화면은 장비 카드 여섯 장입니다. 카드를 누르면 안 A와 같은 순위표로 들어갑니다.',
-    checks: ['한 번 더 눌러야 순위표가 나오는 것이 번거롭지 않은지', '카드에 1등과 내 순위만 보여 주는 정보량이 적당한지'] },
+  { id: 'a', title: '순위표', phone: phoneA, cap: '들어오자마자 순위표가 보입니다. 위쪽 칩 여섯 개가 장비 선택이자 내 순위 요약입니다. 남은 시간은 초 단위까지 흐릅니다.',
+    checks: ['남은 시간을 헤더 오른쪽에 둔 자리', '행 오른쪽 단계와 보상의 밀도'] },
   { id: 'in', title: '내가 10등 안에 있을 때', phone: phoneIn, cap: '목록의 내 줄이 강조되고, 아래 고정 줄은 윗자리까지 남은 단계와 아랫자리와의 차이를 함께 보여 줍니다.',
-    checks: ['지금 단계 기준이라 단계가 내려가면 순위도 내려갑니다. 아랫자리와의 차이를 함께 보여 주는 것이 도움이 되는지', '1~3등 행의 금색 강조 정도'] },
-  { id: 'none', title: '장비가 없을 때', phone: phoneNone, cap: '논의에서 얻는 방법 안내는 빼기로 하셔서, 없다는 사실만 알립니다.',
-    checks: ['이 한 줄로 충분한지, 칩의 "없음" 표기가 어색하지 않은지'] },
-  { id: 'sheet', title: '순위별 보상 시트', phone: sheet, cap: '[보상 보기]를 누르면 아래에서 올라옵니다. 수치는 논의 결과에 적어 주신 값이고 아직 확정 전입니다.',
-    checks: ['칭호는 이름을 밝히지 않고 "한정 칭호"로만 적었습니다', '인정 기준과 지급 일정을 이 시트에 두는 것이 맞는지'] },
-  { id: 'final', title: '종료 뒤 최종 결과', phone: phoneFinal, cap: '종료 시각의 순위를 그대로 보여 줍니다. 지급이 끝나면 위 안내가 "보상을 우편으로 보냈어요"로 바뀝니다.',
-    checks: ['종료 뒤에는 [강화하러 가기]를 뺐습니다', '지급 전과 지급 후 안내 문구'] },
-  { id: 'home', title: '홈 배너', phone: phoneHome, cap: '진행 중에는 위 배너, 종료 뒤에는 결과 배너로 바뀌고 공개 기간이 지나면 사라집니다.',
-    checks: ['배너 문구와 기한 표기(9/30까지)', '기존 일일 보급 배너와 함께 넘겨 보는 방식'] },
+    checks: ['아랫자리와의 차이 표기', '1~3등 행의 금색 강조 정도'] },
+  { id: 'none', title: '장비가 없을 때', phone: phoneNone, cap: '없다는 사실만 알립니다.', checks: ['이 한 줄로 충분한지, 칩의 "없음" 표기'] },
+  { id: 'sheet', title: '순위별 보상 팝업', phone: sheet, cap: '[보상 보기]를 누르면 공통 팝업으로 뜹니다. 수치는 논의 결과에 적어 주신 값이고 아직 확정 전입니다.',
+    checks: ['칭호는 이름을 밝히지 않고 "한정 칭호"로만 적었습니다', '인정 기준과 지급 일정을 이 팝업에 두는 것이 맞는지'] },
+  { id: 'final', title: '종료 뒤 최종 결과', phone: phoneFinal, cap: '안내 구획을 빼고 헤더 오른쪽에 확정 시각만 남겼습니다. 10/3까지 열어 둡니다.',
+    checks: ['확정 시각을 헤더에 두는 것으로 충분한지', '지급이 끝난 뒤 알림은 우편으로만'] },
+  { id: 'home', title: '홈 배너', phone: phoneHome, cap: '진행 중에는 남은 시간이 초 단위로 흐르고, 종료 뒤 3일은 결과 배너로 바뀝니다.',
+    checks: ['배너 오른쪽 남은 시간의 크기', '기존 일일 보급 배너와 함께 넘겨 보는 방식'] },
 ];
 
 type Dec = { id: string; title: string; help: string; options: { v: string; rec?: boolean }[] };
-const DECS: Dec[] = [
-  { id: 'layout', title: '첫 화면 구성', help: '안 A는 칩에 내 순위가 함께 보여 요약 화면 역할까지 합니다. 한 번 덜 누릅니다.', options: [{ v: '안 A · 장비 칩으로 바로 전환', rec: true }, { v: '안 B · 여섯 장비 요약이 먼저' }] },
-  { id: 'rowreward', title: '순위표 행에 보상 표시', help: '행에서 바로 보이면 한 계단 위의 보상이 동기가 됩니다. 대신 행이 조금 빽빽해집니다.', options: [{ v: '행마다 보상을 함께 표시', rec: true }, { v: '보상은 시트에서만' }] },
-  { id: 'time', title: '도달 시각 표기', help: '동률을 가르는 근거라서 누가 봐도 같은 값인 날짜와 시각이 시비가 적습니다.', options: [{ v: '날짜와 시각(9/27 21:14)', rec: true }, { v: '지난 시간(18시간 전)' }] },
-  { id: 'mine', title: '내 순위 줄의 위치', help: '랭킹 화면이 이미 아래 고정 방식이라 같은 자리에 두면 익숙합니다.', options: [{ v: '화면 아래 고정', rec: true }, { v: '순위표 위에 카드로' }] },
-  { id: 'keep', title: '종료 뒤 결과 공개 기간', help: '지급(10/1)을 확인하고 자랑할 시간을 주되, 홈 배너 자리를 오래 차지하지 않는 길이입니다.', options: [{ v: '7일(10/7까지)', rec: true }, { v: '3일(10/3까지)' }, { v: '14일(10/14까지)' }] },
+const DECS: Dec[] = [];
+const FIXED: [string, string][] = [
+  ['첫 화면 구성', '장비 칩으로 바로 전환'],
+  ['순위표 행에 보상 표시', '행마다 함께 표시'],
+  ['도달 시각 표기', '날짜와 시각(9/27 21:14)'],
+  ['내 순위 줄의 위치', '화면 아래 고정'],
+  ['남은 시간', '초 단위까지, 헤더와 홈 배너에'],
+  ['순위별 보상', '공통 팝업 레이아웃'],
+  ['종료 뒤 결과 공개', '3일(10/3까지), 안내 구획 없이 헤더에 확정 시각만'],
 ];
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -207,7 +208,6 @@ const html = `<title>한가위 현황판 시안</title>
   .ph .bar .back { font-size:20px; line-height:1; color:#a1a1aa; }
   .ph .bar small { margin-left:auto; font-size:11.5px; color:#fbbf24; font-weight:700; }
   .ph .body { padding:12px 14px 12px; }
-  .ph .body.dim { opacity:.35; }
   .chips { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
   .chip { display:flex; flex-direction:column; align-items:center; gap:1px; padding:5px 0 4px; border-radius:10px; background:#18181b; border:1px solid #27272a; }
   .chip.on { border-color:#f59e0b; background:#241c0c; }
@@ -250,10 +250,14 @@ const html = `<title>한가위 현황판 시안</title>
   .btn { text-align:center; border-radius:10px; padding:9px; font-weight:800; font-size:12.5px; margin-top:10px; background:#d97706; color:#fff; }
   .btn.gray { background:#27272a; color:#e4e4e7; }
   .more { text-align:center; color:#52525b; margin:4px 0 0; }
-  .sheet { position:absolute; left:0; right:0; bottom:0; background:#18181b; border-top:1px solid #3f3f46; border-radius:18px 18px 0 0; padding:8px 16px 16px; }
-  .grab { width:36px; height:4px; border-radius:2px; background:#3f3f46; margin:0 auto 10px; }
-  .st { font-size:15px; } .sd { margin:6px 0 0; font-size:11.5px; color:#a1a1aa; }
-  .rt { width:100%; border-collapse:collapse; margin-top:10px; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .dimmer { position:absolute; inset:0; background:rgba(0,0,0,.72); backdrop-filter:blur(2px); }
+  .ph .mh .st, .ph .mh .sd { text-shadow:0 1px 2px rgba(0,0,0,.8); }
+  .modal { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:320px; max-width:calc(100% - 32px); display:flex; flex-direction:column; gap:10px; }
+  .mh { text-align:center; padding:0 4px; } .mh .sd { margin-top:4px; }
+  .mb { background:#18181b; border-radius:16px; padding:14px 16px; }
+  .mf { display:flex; gap:8px; } .mbtn { flex:1; text-align:center; border-radius:12px; padding:10px; font-size:13px; font-weight:800; background:#27272a; color:#e4e4e7; }
+  .st { font-size:15px; font-weight:800; } .sd { margin:6px 0 0; font-size:11.5px; color:#a1a1aa; }
+  .rt { width:100%; border-collapse:collapse; margin-top:0; font-size:12.5px; font-variant-numeric:tabular-nums; }
   .rt th { text-align:left; font-size:10.5px; color:#a1a1aa; font-weight:600; padding:4px 6px; border-bottom:1px solid #3f3f46; }
   .rt td { color:#f4f4f5; font-size:12.5px; padding:7px 6px; border-bottom:1px solid #27272a; white-space:nowrap; }
   .rt td:last-child { color:#fcd34d; font-size:11.5px; }
@@ -266,6 +270,10 @@ const html = `<title>한가위 현황판 시안</title>
   .banner i { flex:none; font-style:normal; font-size:10.5px; font-weight:800; background:rgba(0,0,0,.35); padding:4px 9px; border-radius:99px; }
   .stub { height:44px; border-radius:12px; background:#141417; border:1px solid #202024; margin-top:10px; }
   .cap2 { margin:16px 0 6px; font-size:11px; color:#71717a; }
+  .tw { overflow-x:auto; margin-top:12px; }
+  .fx { border-collapse:collapse; width:100%; max-width:720px; font-size:13.5px; }
+  .fx th { text-align:left; font-weight:700; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; width:34%; }
+  .fx td { padding:8px 10px; border-bottom:1px solid var(--line); }
   /* 결정 */
   .decs { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:14px; margin-top:14px; }
   fieldset { margin:0; border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:12px 14px; min-width:0; }
@@ -283,7 +291,7 @@ const html = `<title>한가위 현황판 시안</title>
 </style>
 <div class="wrap">
   <h1>한가위 현황판 시안</h1>
-  <p class="lead">논의에서 고르신 내용(장비 6종마다 1~10등, 지금 단계 기준, 도달 시각, 내 순위와 윗자리 차이, 보상 표, 종료 뒤 결과 공개)을 실제 게임 화면 크기로 옮겼습니다. 화면마다 확인할 점을 적어 두었으니 의견을 남기고 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
+  <p class="lead">1차 점검에서 정해 주신 대로 고친 2차 시안입니다. 남은 시간은 초 단위까지, 보상은 공통 팝업으로, 종료 뒤 안내 구획은 빼고, 결과 공개는 3일로 바꿨습니다. 더 고칠 점이 있으면 의견을 남기고 맨 아래 요약을 복사해 채팅에 붙여 주세요. 없으면 이 화면대로 구현에 들어갑니다.</p>
   <p class="note">닉네임, 단계, 시각은 모두 지어낸 예시입니다. 장비 네 부위의 그림과 이름은 아직 고르기 전이라 후보 그림을 임시로 넣었습니다. 보상 수치는 논의 결과에 적어 주신 값이며 확정 전입니다.</p>
 
   <h2>화면</h2>
@@ -296,31 +304,24 @@ const html = `<title>한가위 현황판 시안</title>
   ).join('\n')}
   </div>
 
-  <h2>정할 것</h2>
-  <div class="decs">
-  ${DECS.map(
-    (d) => `<fieldset class="dec" data-title="${esc(d.title)}"><legend>${d.title}</legend><p class="help">${d.help}</p>
-    ${d.options.map((o, i) => `<label class="o"><input type="radio" name="${d.id}" id="${d.id}_${i}" value="${esc(o.v)}"${o.rec ? ' data-rec="1"' : ''}><span>${o.v}${o.rec ? '<span class="tag">추천</span>' : ''}</span></label>`).join('')}</fieldset>`,
-  ).join('\n')}
-  </div>
+  <h2>정해진 것</h2>
+  <div class="tw"><table class="fx"><tbody>
+  ${FIXED.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}
+  </tbody></table></div>
 
   <h2>요약</h2>
   <div class="sum">
     <label class="m" for="memo_all">전체 의견</label><textarea class="memo" id="memo_all" placeholder="화면 전반에 대한 의견"></textarea>
     <label class="m" for="out">복사용 요약</label><textarea id="out" readonly></textarea>
-    <div class="acts"><button type="button" id="fill">고르지 않은 항목을 추천으로 채우기</button><button type="button" class="p" id="copy">요약 복사</button><span id="toast" role="status"></span></div>
+    <div class="acts"><button type="button" class="p" id="copy">요약 복사</button><span id="toast" role="status"></span></div>
   </div>
 </div>
 <script>
 (function(){
-  var KEY='chuseok-board-mock-v1';
+  var KEY='chuseok-board-mock-v2';
   function q(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
   function build(){
-    var lines=['[한가위 현황판 시안 점검]'];
-    q('fieldset.dec').forEach(function(fs,i){
-      var c=fs.querySelector('input:checked');
-      lines.push((i+1)+'. '+fs.getAttribute('data-title')+': '+(c?c.value:'(미선택)'));
-    });
+    var lines=['[한가위 현황판 시안 2차 점검]'];
     q('figure.fig').forEach(function(f){
       var m=f.querySelector('.memo').value.trim();
       if(m)lines.push('- '+f.getAttribute('data-title')+': '+m.replace(/\\n+/g,' '));
@@ -333,10 +334,6 @@ const html = `<title>한가위 현황판 시안</title>
   function load(){try{var st=JSON.parse(localStorage.getItem(KEY)||'null');if(!st)return;(st.c||[]).forEach(function(id){var el=document.getElementById(id);if(el)el.checked=true;});Object.keys(st.t||{}).forEach(function(id){var el=document.getElementById(id);if(el)el.value=st.t[id];});}catch(e){}}
   document.addEventListener('change',function(){build();save();});
   document.addEventListener('input',function(e){if(e.target&&e.target.classList&&e.target.classList.contains('memo')){build();save();}});
-  document.getElementById('fill').addEventListener('click',function(){
-    q('fieldset.dec').forEach(function(fs){if(fs.querySelector('input:checked'))return;var r=fs.querySelector('input[data-rec]');if(r)r.checked=true;});
-    build();save();document.getElementById('toast').textContent='고르지 않은 항목만 추천으로 채웠습니다.';
-  });
   document.getElementById('copy').addEventListener('click',function(){
     var t=document.getElementById('out');
     function done(){document.getElementById('toast').textContent='복사했습니다. 채팅에 붙여 주세요.';}

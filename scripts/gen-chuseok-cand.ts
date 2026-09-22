@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -923,6 +923,116 @@ export const CANDIDATES: ChuseokCand[] = [
       'a theme-park rabbit costume body — a rounded pear-shaped white plush full-body suit with a wide belly and a pink heart-shaped belly patch, ' +
       'a round open neckline, stubby arms with rounded paws, large flat feet and a pom-pom tail, cheerful and plump',
   },
+  // ── 11차(09-22): 3차 선택 결과 ──────────────────────────────────────────────
+  // 한복 무기: 10차 달·송편 무기 3종 미채택(사유 없음) → 아직 안 해 본 형태 셋(칼·둥근 부채·피리).
+  {
+    key: 'chuseok_moon_sword',
+    nameKo: '달빛 환도',
+    slot: 'weapon',
+    batch: 11,
+    concept: '한복 세트 무기 — 달',
+    art:
+      'a moonlit Korean hwando sword — a slender gently curved pale silver blade with a faint gold full-moon and cloud engraving, ' +
+      'a golden crescent-moon shaped guard, a crimson silk-wrapped hilt, a jade ring and a five-colored silk tassel on the pommel, ' +
+      'opulent and graceful, clearly a sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_roundfan',
+    nameKo: '보름달 단선',
+    slot: 'weapon',
+    batch: 11,
+    concept: '한복 세트 무기 — 달',
+    art:
+      'a round Korean silk hand fan — a large perfectly round fan face of pale gold silk painted with a glowing full moon and gold-leaf clouds, a thin gold rim, ' +
+      'a slim crimson lacquered handle with a jade bead and a five-colored silk tassel, ' +
+      'opulent and graceful, clearly a fan weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_flute',
+    nameKo: '달빛 옥피리',
+    slot: 'weapon',
+    batch: 11,
+    concept: '한복 세트 무기 — 달',
+    art:
+      'a long Korean jade bamboo flute — a slender pale jade-green transverse flute with gold bands, a small golden crescent moon ornament near one end, ' +
+      'a crimson cord with a five-colored silk tassel, ' +
+      'opulent and graceful, clearly a flute staff weapon, no text, large, diagonal',
+  },
+  // 한복 방어구: "옥색 저고리(v2)의 치마 달무늬 + 금박 꽃무늬(v3)의 상의". v3 상의 문장 + v2 치마 문장을 그대로 잇는다.
+  {
+    key: 'chuseok_hanbok_v9',
+    nameKo: '한복(미색 저고리·달무늬 치마)',
+    slot: 'armor',
+    batch: 11,
+    concept: '한복 세트 방어구',
+    art:
+      'a luxurious Korean hanbok — a soft ivory silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing deep crimson chima skirt with gold-leaf moon and cloud patterns along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_hanbok_v10',
+    nameKo: '한복(미색 저고리·달 변화 무늬)',
+    slot: 'armor',
+    batch: 11,
+    concept: '한복 세트 방어구',
+    art:
+      'a luxurious Korean hanbok — a soft ivory silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing deep crimson chima skirt with a row of gold-leaf moon phases from crescent to full moon and small gold clouds along the hem, elegant and festive',
+  },
+  {
+    key: 'chuseok_hanbok_v11',
+    nameKo: '한복(미색 저고리·보름달 구름무늬)',
+    slot: 'armor',
+    batch: 11,
+    concept: '한복 세트 방어구',
+    art:
+      'a luxurious Korean hanbok — a soft ivory silk jeogori jacket with a white collar, rainbow saekdong striped cuffs and a long crimson ribbon tie, ' +
+      'a full-length flowing deep crimson chima skirt with gold-leaf full moons, crescent moons, stars and swirling clouds along the hem, elegant and festive',
+  },
+  // 달토끼 무기: "흰 떡메(9차 v2)에서 리본만 없는 느낌". 10차 v3는 정면·평면으로 나와 밋밋했다 →
+  // v2 문장을 유지하고 입체(원통)·비스듬한 각도만 분명히 한다. 끈·매듭류 단어는 아예 쓰지 않는다.
+  {
+    key: 'chuseok_rabbit_mallet_v4',
+    nameKo: '흰 떡메(리본 없음)',
+    slot: 'weapon',
+    batch: 11,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple rice-cake mallet seen at a three-quarter angle — a large smooth round cylindrical barrel head of pale white wood on a long slim handle, a small rabbit face stamped on the side of the head, ' +
+      'soft shading, clean and minimal, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_mallet_v5',
+    nameKo: '흰 떡메(리본 없음 · 둥근 통)',
+    slot: 'weapon',
+    batch: 11,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple rice-cake mallet — a large smooth round barrel head of pale white wood with visible round end caps, on a long slim handle of the same pale wood, a small rabbit face stamped on the head, ' +
+      'three-dimensional with soft shading, clean and minimal, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_mallet_v6',
+    nameKo: '흰 떡메(리본 없음 · 금테)',
+    slot: 'weapon',
+    batch: 11,
+    concept: '달토끼 세트 무기',
+    art:
+      'a simple rice-cake mallet seen at a three-quarter angle — a large smooth round cylindrical barrel head of pale white wood with a thin gold band at each end, on a long slim handle, a small rabbit face stamped on the side of the head, ' +
+      'soft shading, clean and refined, clearly a mallet hammer weapon, no text, large, diagonal',
+  },
+  // 달토끼 방어구: "토끼 인형 슈트가 괜찮은데 배는 그냥 흰색". 원본을 코드로 보정한 판(chuseok_rabbit_suit_white)이
+  // 1순위이고, 아래는 비교용 새 그림 1장. 배 무늬 단어를 아예 쓰지 않는다.
+  {
+    key: 'chuseok_rabbit_suit_v2',
+    nameKo: '토끼 인형 슈트(온통 흰색 · 새 그림)',
+    slot: 'armor',
+    batch: 11,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit in a single even snow-white color with a round open neckline, ' +
+      'rounded mitten paws, big padded feet with pink paw pads and a round cotton tail, soft and cuddly',
+  },
 ];
 
 function promptOf(c: ChuseokCand): string {
@@ -930,6 +1040,15 @@ function promptOf(c: ChuseokCand): string {
 }
 
 /** 객체 id 즉시 기록 — 애니를 붙일 유일한 연결고리. 라벨 key3(gen-anim3가 이 키로 요청). */
+function rememberedObject(itemKey: string): string {
+  try {
+    const m = JSON.parse(readFileSync(MAP_PATH, 'utf8')) as Record<string, { key: string; objectId: string }>;
+    return m[itemKey]?.key === LABEL ? (m[itemKey].objectId ?? '') : '';
+  } catch {
+    return '';
+  }
+}
+
 function rememberObject(itemKey: string, objectId: string): void {
   let m: Record<string, { key: string; objectId: string }> = {};
   try {
@@ -963,8 +1082,11 @@ function pickUrl(v: unknown): string | null {
 async function genOne(c: ChuseokCand, key: string): Promise<'ok' | 'skip' | 'fail'> {
   const out = join(OUT_DIR, `${c.key}.png`);
   if (existsSync(out)) return 'skip';
-  let objectId = '';
-  for (let attempt = 0; attempt < 5; attempt++) {
+  // 생성은 됐는데 내려받다 끊긴 경우(ECONNRESET 등) — 기록된 객체 id로 결과만 다시 받는다.
+  // 없으면 같은 그림을 한 번 더 만들어 비용이 두 번 든다(2026-09-22 11차에서 실제 발생).
+  let objectId = rememberedObject(c.key);
+  if (objectId) console.log(`  ${c.key} 기록된 객체 재사용(생성 요청 없음)`);
+  for (let attempt = 0; attempt < 5 && !objectId; attempt++) {
     let res: Response;
     try {
       res = await fetch(`${PIX}/create-1-direction-object`, {
@@ -1004,8 +1126,16 @@ async function genOne(c: ChuseokCand, key: string): Promise<'ok' | 'skip' | 'fai
     if (gj.status === 'completed' || gj.status === 'review') {
       const url = pickUrl(gj.rotation_urls) ?? pickUrl(gj.frame_urls) ?? pickUrl(gj.storage_urls);
       if (!url) return 'fail';
-      const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
-      if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50) return 'fail';
+      let buf: Buffer | null = null;
+      for (let d = 0; d < 4 && !buf; d++) {
+        try {
+          buf = Buffer.from(await (await fetch(url)).arrayBuffer());
+        } catch (e) {
+          console.error(`  ${c.key} 내려받기 — 재시도: ${(e as Error).message}`);
+          await sleep(1500 * 2 ** d);
+        }
+      }
+      if (!buf || buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50) return 'fail';
       writeFileSync(out, buf);
       return 'ok';
     }

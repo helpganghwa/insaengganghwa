@@ -1098,5 +1098,45 @@
   "chuseok_rabbit_suit_round": {
     "key": "key3",
     "objectId": "8d6ad008-686a-4bf4-a327-701ad5cf4433"
+  },
+  "chuseok_moon_sword": {
+    "key": "key3",
+    "objectId": "6127da86-7f65-4e59-b0f3-bb7dd37e0e2b"
+  },
+  "chuseok_moon_roundfan": {
+    "key": "key3",
+    "objectId": "a36bd291-05d1-49d3-b073-09233a580a72"
+  },
+  "chuseok_moon_flute": {
+    "key": "key3",
+    "objectId": "cbad1e12-4431-4832-a07f-387cd8a88653"
+  },
+  "chuseok_hanbok_v9": {
+    "key": "key3",
+    "objectId": "7af14e29-db1a-4f81-ac0f-c0b627248a9e"
+  },
+  "chuseok_hanbok_v10": {
+    "key": "key3",
+    "objectId": "d8288c58-e1f8-45cd-80f8-94ca93af2d77"
+  },
+  "chuseok_hanbok_v11": {
+    "key": "key3",
+    "objectId": "62efabb4-6dab-41ed-ba06-6ac0d78247fb"
+  },
+  "chuseok_rabbit_mallet_v4": {
+    "key": "key3",
+    "objectId": "64152b02-7346-40d7-ab37-85a087419e99"
+  },
+  "chuseok_rabbit_mallet_v5": {
+    "key": "key3",
+    "objectId": "69d86566-f39c-4e97-ba11-f00e1abae68d"
+  },
+  "chuseok_rabbit_mallet_v6": {
+    "key": "key3",
+    "objectId": "ae371115-8b46-483f-92b7-7d59fb24f04e"
+  },
+  "chuseok_rabbit_suit_v2": {
+    "key": "key3",
+    "objectId": "358f99f7-3fbe-4e31-b9c3-cb4aa63cb33d"
   }
 }
