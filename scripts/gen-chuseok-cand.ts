@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1110,6 +1110,119 @@ export const CANDIDATES: ChuseokCand[] = [
       'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, ' +
       'a small rabbit face carved on one end, the grip wrapped in pink and white silk cord, ' +
       'charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  // ── 13차(09-22 밤): 5차 선택 결과. 한복 무기 "다른 컨셉으로" → 안 해 본 다섯 가지.
+  {
+    key: 'chuseok_rice_sickle',
+    nameKo: '황금 벼이삭 낫',
+    slot: 'weapon',
+    batch: 13,
+    concept: '한복 세트 무기 — 수확',
+    art:
+      'a harvest sickle — a curved golden blade shaped like a bending ear of rice with engraved grain patterns, a dark lacquered wooden handle with a crimson silk cord, ' +
+      'a small bundle of golden rice ears tied at the base of the blade, opulent and graceful, clearly a sickle weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_dadeumi',
+    nameKo: '다듬이 방망이 한 쌍',
+    slot: 'weapon',
+    batch: 13,
+    concept: '한복 세트 무기 — 한복 도구',
+    art:
+      'a pair of Korean laundry beating clubs (dadeumi bangmangi) crossed — two smooth polished pale wooden clubs with rounded tapered heads, gold leaf flower patterns on the handles, a crimson silk cord tying them together, ' +
+      'refined and elegant, clearly a pair of club weapons, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_ribbon_whip',
+    nameKo: '옷고름 비단 채찍',
+    slot: 'weapon',
+    batch: 13,
+    concept: '한복 세트 무기 — 한복 옷고름',
+    art:
+      'a long flowing silk ribbon whip like a hanbok coat string — a crimson silk ribbon with gold leaf moon and cloud patterns streaming from a short jade handle, the ribbon curling in an elegant S curve, ' +
+      'graceful and opulent, clearly a whip weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_norigae_dagger',
+    nameKo: '옥 노리개 단검',
+    slot: 'weapon',
+    batch: 13,
+    concept: '한복 세트 무기 — 노리개',
+    art:
+      'a small ornamental jade dagger hanging like a norigae pendant — a short pale jade blade with a gold ferrule, an ornate knotted crimson silk cord with a large decorative knot above the hilt and a long tassel below, ' +
+      'delicate and opulent, clearly a dagger weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moonjar_staff',
+    nameKo: '달항아리 지팡이',
+    slot: 'weapon',
+    batch: 13,
+    concept: '한복 세트 무기 — 달항아리',
+    art:
+      'a tall staff topped with a small white porcelain moon jar (Korean dal-hangari) glowing softly like a full moon, a dark lacquered wooden shaft with gold bands, a crimson silk cord with a jade bead, ' +
+      'serene and opulent, clearly a staff weapon, no text, large, diagonal',
+  },
+  // 달토끼 무기: "절굿공이 손잡이에 실로 감은 것 없이 매끈한 버전" — v2 문장에서 끈·솔 구절을 빼고 매끈한 나무 손잡이만.
+  {
+    key: 'chuseok_rabbit_pestle_v12',
+    nameKo: '절굿공이(매끈한 손잡이)',
+    slot: 'weapon',
+    batch: 13,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, a small rabbit face carved on one end, ' +
+      'the grip is plain smooth polished wood, charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v13',
+    nameKo: '절굿공이(매끈한 손잡이 · 2)',
+    slot: 'weapon',
+    batch: 13,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip in the middle, a small rabbit face carved on one end and a tiny crescent moon on the other, ' +
+      'the grip is plain smooth polished wood, charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_rabbit_pestle_v14',
+    nameKo: '절굿공이(매끈한 손잡이 · 3)',
+    slot: 'weapon',
+    batch: 13,
+    concept: '달토끼 세트 무기',
+    art:
+      'a long rice-cake pestle seen at a three-quarter angle — a tall pale polished wooden pestle with thick rounded ends and a slim waisted grip, a small rabbit face carved on the upper end, ' +
+      'the grip is plain smooth polished wood with soft grain, charming and elegant, clearly a long pestle staff weapon, no text, large, diagonal',
+  },
+  // 달토끼 방어구: "배는 흰색 + 꼬리가 살짝 보이면" — 원본 슈트 문장에서 배 무늬만 빼고 꼬리를 옆에 보이게.
+  {
+    key: 'chuseok_rabbit_suit_v6',
+    nameKo: '토끼 인형 슈트(흰 배 · 꼬리)',
+    slot: 'armor',
+    batch: 13,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline, rounded mitten paws, big padded feet with pink paw pads, ' +
+      'a fluffy round white cotton tail peeking out at the side of the hip, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v7',
+    nameKo: '토끼 인형 슈트(흰 배 · 꼬리 · 2)',
+    slot: 'armor',
+    batch: 13,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit seen slightly from the side — a one-piece fluffy full-body suit with a round open neckline, rounded mitten paws, big padded feet with pink paw pads, ' +
+      'a large fluffy round cotton tail clearly visible at the back of the hip, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v8',
+    nameKo: '토끼 인형 슈트(흰 배 · 꼬리 · 3)',
+    slot: 'armor',
+    batch: 13,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush snow-white rabbit costume bodysuit — a one-piece fluffy full-body suit with a round open neckline and a fluffy fur collar, rounded mitten paws, big padded feet with pink paw pads, ' +
+      'a fluffy round cotton tail peeking out at one side, soft and cuddly',
   },
 ];
 

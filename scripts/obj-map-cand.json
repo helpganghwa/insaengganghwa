@@ -1166,5 +1166,49 @@
   "chuseok_rabbit_pestle_v11": {
     "key": "key3",
     "objectId": "90df9aab-5508-4cd4-85a5-063dcefc4543"
+  },
+  "chuseok_rice_sickle": {
+    "key": "key3",
+    "objectId": "3c46ebc0-51ae-4328-9786-48daa37356af"
+  },
+  "chuseok_dadeumi": {
+    "key": "key3",
+    "objectId": "4d500611-d06b-4c69-b59c-8ee3bb1e2dec"
+  },
+  "chuseok_ribbon_whip": {
+    "key": "key3",
+    "objectId": "4f3dd518-0b8d-4122-9f5f-f6c200570c42"
+  },
+  "chuseok_norigae_dagger": {
+    "key": "key3",
+    "objectId": "85a8ad2e-ff55-4ef4-a541-8b68595fc50c"
+  },
+  "chuseok_moonjar_staff": {
+    "key": "key3",
+    "objectId": "77c19eda-3af7-4506-9b0b-95fd7675d8e0"
+  },
+  "chuseok_rabbit_pestle_v12": {
+    "key": "key3",
+    "objectId": "78c74859-2df5-4391-bc1b-452881d7715e"
+  },
+  "chuseok_rabbit_pestle_v13": {
+    "key": "key3",
+    "objectId": "f1d545ea-ea68-441b-a462-696b3e55a7dd"
+  },
+  "chuseok_rabbit_pestle_v14": {
+    "key": "key3",
+    "objectId": "0000239c-c9a8-4d2c-815b-474418fefafd"
+  },
+  "chuseok_rabbit_suit_v6": {
+    "key": "key3",
+    "objectId": "dadf05d5-ba9b-4eb9-91c3-3b922439b0c1"
+  },
+  "chuseok_rabbit_suit_v7": {
+    "key": "key3",
+    "objectId": "0d6b6549-c1c5-4220-8a15-7df1116d3eb4"
+  },
+  "chuseok_rabbit_suit_v8": {
+    "key": "key3",
+    "objectId": "5b065b2b-b49d-4df0-b5c6-8ec3af9a51ee"
   }
 }

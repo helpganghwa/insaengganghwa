@@ -23,6 +23,11 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
+      { key: 'chuseok_rice_sickle', name: '황금 벼이삭 낫', note: '벼이삭 무늬를 새긴 금빛 초승달 날에 검은 자루와 붉은 끈, 날 밑에 벼이삭 한 묶음. 수확 명절다운 무기입니다.', fresh: true },
+      { key: 'chuseok_dadeumi', name: '다듬이 방망이 한 쌍', note: '금박 무늬 손잡이의 흰 나무 방망이 두 자루가 붉은 끈으로 묶여 교차. 한복과 가장 직접 닿는 도구입니다.', fresh: true },
+      { key: 'chuseok_ribbon_whip', name: '옷고름 비단 채찍', note: '옥 손잡이에서 뻗은 진홍 비단 옷고름이 금박 달·구름 무늬를 띠고 S자로 흐릅니다. 확정 한복의 치마와 같은 무늬입니다.', fresh: true },
+      { key: 'chuseok_norigae_dagger', name: '옥 노리개 단검', note: '옥빛 날에 금 코등이, 위에 붉은 매듭과 산호 장식, 아래로 긴 술. 노리개처럼 매달린 단검입니다.', fresh: true },
+      { key: 'chuseok_moonjar_staff', name: '달항아리 지팡이', note: '검은 자루 끝에 은은히 빛나는 흰 달항아리, 금테와 옥 구슬 끈. 가장 조용하고 고급스러운 인상입니다.', fresh: true },
       { key: 'chuseok_moon_sword', name: '달빛 환도', note: '가늘게 휜 은빛 환도에 금빛 초승달 코등이, 붉은 손잡이와 옥 고리 오색 술. 달빛이 절제된 편입니다.' },
       { key: 'chuseok_moon_roundfan', name: '보름달 단선', note: '둥근 금빛 비단 부채에 보름달과 금박 구름, 붉은 자루와 오색 술. 달 컨셉이 가장 큽니다.' },
       { key: 'chuseok_moon_flute', name: '달빛 옥피리', note: '옥색 대금에 금테와 작은 초승달 장식, 오색 술. 무기로는 가장 부드러운 인상입니다.' },
@@ -80,10 +85,13 @@ const SLOTS: Slot[] = [
     set: '달토끼',
     slot: '무기',
     options: [
-      { key: 'chuseok_rabbit_pestle_v10', name: '절굿공이(토끼 얼굴 · 새 그림 3)', note: '토끼 얼굴 새김에 분홍 감개, 방울솔 없음. 원본 절굿공이의 비율과 가장 비슷합니다.', fresh: true },
-      { key: 'chuseok_rabbit_pestle_v11', name: '절굿공이(토끼 얼굴 · 새 그림 4)', note: '토끼 얼굴 새김에 분홍 감개, 방울솔 없음. 감개가 조금 굵고 나무색이 진합니다.', fresh: true },
-      { key: 'chuseok_rabbit_pestle_v8', name: '절굿공이(토끼 얼굴 · 새 그림)', note: '새로 그린 절굿공이. 한쪽 끝이 둥근 원판에 토끼 얼굴이 크게 새겨졌고 분홍 감개, 방울솔 없음. 원본보다 토끼가 또렷합니다.', fresh: true },
-      { key: 'chuseok_rabbit_pestle_v9', name: '절굿공이(토끼 얼굴 · 초승달 · 새 그림)', note: '새로 그린 절굿공이. 토끼 얼굴과 반대쪽 끝의 작은 초승달, 촘촘한 분홍 감개, 방울솔 없음. 원본과 가장 닮았습니다.', fresh: true },
+      { key: 'chuseok_rabbit_pestle_v12', name: '절굿공이(매끈한 손잡이)', note: '손잡이에 아무것도 감지 않은 매끈한 연한 나무 절굿공이, 위쪽 끝에 토끼 얼굴. 가늘고 밝습니다.', fresh: true },
+      { key: 'chuseok_rabbit_pestle_v13', name: '절굿공이(매끈한 손잡이 · 초승달)', note: '나뭇결이 보이는 굵은 절굿공이, 토끼 얼굴과 아래쪽 초승달 새김, 손잡이 매끈. 셋 중 가장 입체적입니다.', fresh: true },
+      { key: 'chuseok_rabbit_pestle_v14', name: '절굿공이(매끈한 손잡이 · 비스듬)', note: '매끈한 손잡이의 절굿공이를 비스듬히 본 그림, 토끼 얼굴 새김. 장식이 가장 적습니다.', fresh: true },
+      { key: 'chuseok_rabbit_pestle_v10', name: '절굿공이(토끼 얼굴 · 새 그림 3)', note: '토끼 얼굴 새김에 분홍 감개, 방울솔 없음. 원본 절굿공이의 비율과 가장 비슷합니다.' },
+      { key: 'chuseok_rabbit_pestle_v11', name: '절굿공이(토끼 얼굴 · 새 그림 4)', note: '토끼 얼굴 새김에 분홍 감개, 방울솔 없음. 감개가 조금 굵고 나무색이 진합니다.' },
+      { key: 'chuseok_rabbit_pestle_v8', name: '절굿공이(토끼 얼굴 · 새 그림)', note: '새로 그린 절굿공이. 한쪽 끝이 둥근 원판에 토끼 얼굴이 크게 새겨졌고 분홍 감개, 방울솔 없음. 원본보다 토끼가 또렷합니다.' },
+      { key: 'chuseok_rabbit_pestle_v9', name: '절굿공이(토끼 얼굴 · 초승달 · 새 그림)', note: '새로 그린 절굿공이. 토끼 얼굴과 반대쪽 끝의 작은 초승달, 촘촘한 분홍 감개, 방울솔 없음. 원본과 가장 닮았습니다.' },
       { key: 'chuseok_rabbit_mallet_v4', name: '흰 떡메(리본 없음)', note: '흰 떡메에서 리본만 뺀 그림. 세로로 서 있고 토끼 얼굴이 옆면에 찍혔습니다.' },
       { key: 'chuseok_rabbit_mallet_v5', name: '흰 떡메(리본 없음 · 둥근 통)', note: '리본 없는 흰 떡메. 통이 크고 둥글게 나와 가로로 눕습니다.' },
       { key: 'chuseok_rabbit_mallet_v6', name: '흰 떡메(리본 없음 · 금테)', note: '리본 없는 흰 떡메에 양끝 가는 금테. 비스듬한 각도라 9차 흰 떡메와 가장 비슷합니다.' },
@@ -106,9 +114,12 @@ const SLOTS: Slot[] = [
     set: '달토끼',
     slot: '방어구',
     options: [
-      { key: 'chuseok_rabbit_suit_v3', name: '토끼 인형 슈트(흰 배 · 새 그림 2)', note: '원본 슈트 문장에서 배 무늬만 뺀 새 그림. 온통 흰색에 분홍 발바닥. 원본보다 작게 나와 확대하면 조금 뭉툭합니다.', fresh: true },
-      { key: 'chuseok_rabbit_suit_v4', name: '토끼 인형 슈트(흰 배 · 새 그림 3)', note: '크림색 슈트에 분홍 목둘레, 배에 흰 천과 작은 수 장식이 생겼습니다. 배가 완전히 비지는 않았습니다.', fresh: true },
-      { key: 'chuseok_rabbit_suit_v5', name: '토끼 인형 슈트(흰 배 · 새 그림 4)', note: '푸른빛 도는 흰 슈트에 분홍 목둘레, 배에 아무 무늬 없음. 넷 중 가장 깔끔합니다.', fresh: true },
+      { key: 'chuseok_rabbit_suit_v6', name: '토끼 인형 슈트(흰 배 · 꼬리)', note: '크림빛 흰 슈트, 배는 무늬 없이 흰색이지만 작은 리본과 달·별 자수가 붙었고 꼬리는 오른쪽 엉덩이에 살짝.', fresh: true },
+      { key: 'chuseok_rabbit_suit_v7', name: '토끼 인형 슈트(흰 배 · 꼬리 · 옆모습)', note: '온통 흰 슈트에 무늬 없음, 오른쪽 엉덩이에 둥근 꼬리가 분명히 보임. 사유에 가장 가깝습니다.', fresh: true },
+      { key: 'chuseok_rabbit_suit_v8', name: '토끼 인형 슈트(흰 배 · 꼬리 · 털 깃)', note: '흰 슈트에 털 깃, 배는 흰색, 꼬리는 오른쪽에 작게. 앞서 좋게 보셨던 지퍼형과 비슷한 인상입니다.', fresh: true },
+      { key: 'chuseok_rabbit_suit_v3', name: '토끼 인형 슈트(흰 배 · 새 그림 2)', note: '원본 슈트 문장에서 배 무늬만 뺀 새 그림. 온통 흰색에 분홍 발바닥. 원본보다 작게 나와 확대하면 조금 뭉툭합니다.' },
+      { key: 'chuseok_rabbit_suit_v4', name: '토끼 인형 슈트(흰 배 · 새 그림 3)', note: '크림색 슈트에 분홍 목둘레, 배에 흰 천과 작은 수 장식이 생겼습니다. 배가 완전히 비지는 않았습니다.' },
+      { key: 'chuseok_rabbit_suit_v5', name: '토끼 인형 슈트(흰 배 · 새 그림 4)', note: '푸른빛 도는 흰 슈트에 분홍 목둘레, 배에 아무 무늬 없음. 넷 중 가장 깔끔합니다.' },
       { key: 'chuseok_rabbit_suit_v2', name: '토끼 인형 슈트(온통 흰색 · 새 그림)', fresh: true, note: '새로 그린 온통 흰 슈트. 발바닥 분홍이 없고 가슴에 작은 복숭아 무늬가 붙었습니다.' },
       { key: 'chuseok_rabbit_suit', name: '토끼 인형 슈트', note: '목 아래로만 입는 흰 전신 슈트, 분홍 배와 발바닥. 가장 단순합니다. 발밑 검은 선은 옮길 때 지웁니다.' },
       { key: 'chuseok_rabbit_suit_zip', name: '토끼 인형 슈트(지퍼)', note: '크림색 슈트에 털 깃, 토끼 지퍼 손잡이, 당근 주머니. 인형탈 옷 느낌이 가장 납니다.' },
@@ -153,11 +164,11 @@ const data = SLOTS.map((s) => ({
 const SCRIPT = String.raw`
 (function () {
   var SLOTS = window.__SLOTS__;
-  var LS_KEY = 'chuseok-pick-draft-v6'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
+  var LS_KEY = 'chuseok-pick-draft-v7'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
   var state = {};
   // 2차 제출까지 확정한 두 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
   // 한복 방어구는 2차에서 다시 열렸다("금박 꽃무늬·옥색 저고리와 비슷한 느낌으로 하나 더") — 미리 고르지 않는다.
-  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v9', hanbok_accessory: 'chuseok_bok_pouch', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
+  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v2', hanbok_accessory: 'chuseok_bok_pouch', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
   SLOTS.forEach(function (s) { state[s.id] = { pick: CONFIRMED[s.id] || null, redo: false, reason: '' }; });
   try {
     var saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
@@ -355,7 +366,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">세 부위(한복 방어구 · 한복 장신구 · 달토끼 장신구)가 확정되어 미리 골라 두었습니다. 코드로 손본 그림은 애니메이션을 붙일 수 없어 뺐고, 같은 방향(배가 흰 토끼 인형 슈트 · 방울솔 없는 절굿공이)을 새로 그려 맨 앞에 넣었습니다. 한복 무기는 방향을 여쭙고 있어 새 그림이 없습니다. 마음에 드는 것이 없는 부위는 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">세 부위(한복 방어구는 옥색 저고리로 바뀜 · 한복 장신구 · 달토끼 장신구)가 확정되어 미리 골라 두었습니다. 한복 무기는 아직 안 해 본 컨셉 다섯 가지, 절굿공이는 손잡이에 감은 것 없이 매끈한 나무, 슈트는 흰 배에 꼬리가 보이는 안을 맨 앞에 넣었습니다. 마음에 드는 것이 없는 부위는 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>
