@@ -66,8 +66,8 @@ const chips = (sel: string, showMine = true) =>
       `<span class="chip${it.id === sel ? ' on' : ''}"><img src="${img[it.id]}" alt=""><em>${showMine ? (it.my ? `${it.my}등` : '없음') : '&nbsp;'}</em></span>`,
   ).join('')}</div>`;
 
-const itemHead = (it: Item, sub: string) =>
-  `<div class="ihead"><img src="${img[it.id]}" alt=""><div><b>${it.name}</b><span>${sub}</span></div><i class="rbtn">보상 보기</i></div>`;
+const itemHead = (it: Item) =>
+  `<div class="ihead"><img src="${img[it.id]}" alt=""><div><b>${it.name}</b></div><i class="rbtn">보상 보기</i></div>`;
 
 const list = (opts: { reward: boolean; meAt?: number; final?: boolean }) =>
   `<ol class="rows">${ROWS.map(([nm, lv, at], i) => {
@@ -79,7 +79,7 @@ const list = (opts: { reward: boolean; meAt?: number; final?: boolean }) =>
 const phoneA = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('hc')}
-  ${itemHead(ITEMS[2], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
+  ${itemHead(ITEMS[2])}
   ${list({ reward: true })}
 </div>
 <div class="mine"><span class="rk">14</span><span class="who"><b>나</b><span>10등까지 +7</span></span><span class="lv"><b>+52</b></span><i class="go">강화하러 가기</i></div>
@@ -99,7 +99,7 @@ ${nav}</div>`;
 const phoneIn = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('rw')}
-  ${itemHead(ITEMS[3], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
+  ${itemHead(ITEMS[3])}
   ${list({ reward: true, meAt: 8 })}
 </div>
 <div class="mine in"><span class="rk">8</span><span class="who"><b>나</b><span>7등까지 +5 · 9등과 +5 차이</span></span><span class="lv"><b>+66</b></span><i class="go">강화하러 가기</i></div>
@@ -108,7 +108,7 @@ ${nav}</div>`;
 const phoneNone = `<div class="ph">${head(LEFT)}
 <div class="body">
   ${chips('ra')}
-  ${itemHead(ITEMS[4], '순위는 지금 단계로 매겨요. 같은 단계면 먼저 오른 사람이 앞서요.')}
+  ${itemHead(ITEMS[4])}
   ${list({ reward: false }).replace(/<li[\s\S]*$/, (m) => m.split('</li>').slice(0, 4).join('</li>') + '</li></ol>')}
   <p class="more">⋯</p>
 </div>
@@ -117,19 +117,18 @@ ${nav}</div>`;
 
 const sheet = `<div class="ph">${head(LEFT)}
 <div class="body">
-  ${chips('hc')}
-  ${itemHead(ITEMS[2], '순위는 지금 단계로 매겨요.')}
-  ${list({ reward: true })}
+  ${chips('rw')}
+  ${itemHead(ITEMS[3])}
+  ${list({ reward: true, meAt: 8 })}
 </div>
 <div class="dimmer"></div>
 <div class="modal">
   <div class="mh"><b class="st">순위별 보상</b><p class="sd">장비 6종마다 따로 드려요. 여러 장비에서 순위에 들면 모두 받아요.</p></div>
   <div class="mb">
   <table class="rt"><thead><tr><th>순위</th><th>다이아</th><th>상자</th><th>칭호</th></tr></thead><tbody>
-  ${REWARD.map(([r, d, b], i) => `<tr><td>${r}</td><td>💎 ${n(d)}</td><td>📦 ${n(b)}</td><td>${i < 3 ? '한정 칭호' : ''}</td></tr>`).join('')}
+  ${REWARD.map(([r, d, b], i) => `<tr class="${i === 4 ? 'me' : ''}"><td>${r}</td><td>💎 ${n(d)}</td><td>📦 ${n(b)}</td><td>${i < 3 ? '한정 칭호' : ''}</td></tr>`).join('')}
   </tbody></table>
-  <p class="sd">상자는 무기·방어구·장신구 상자를 같은 수로 나눠 드려요.</p>
-  <p class="sd">9/30 23:59까지 수령한 강화 결과만 인정돼요. 보상은 순위 확인을 거쳐 10/1에 우편으로 보내 드려요.</p>
+  <div class="myr"><span class="rk">8</span><span class="who"><b>지금 내 순위로 받는 보상</b><span>7등까지 +5</span></span><span class="lv"><b>💎 5,000</b><span>📦 60</span></span></div>
   </div>
   <div class="mf"><span class="mbtn">닫기</span></div>
 </div></div>`;
@@ -137,7 +136,7 @@ const sheet = `<div class="ph">${head(LEFT)}
 const phoneFinal = `<div class="ph">${head('9/30 23:59 확정')}
 <div class="body">
   ${chips('hc')}
-  ${itemHead(ITEMS[2], '9/30 23:59 확정')}
+  ${itemHead(ITEMS[2])}
   ${list({ reward: true, final: true })}
 </div>
 <div class="mine"><span class="rk">12</span><span class="who"><b>나</b><span>최종 12등</span></span><span class="lv"><b>+63</b></span></div>
@@ -154,13 +153,13 @@ ${nav}</div>`;
 
 type Fig = { id: string; title: string; phone: string; cap: string; checks: string[] };
 const FIGS: Fig[] = [
-  { id: 'a', title: '순위표', phone: phoneA, cap: '들어오자마자 순위표가 보입니다. 위쪽 칩 여섯 개가 장비 선택이자 내 순위 요약입니다. 남은 시간은 초 단위까지 흐릅니다.',
-    checks: ['남은 시간을 헤더 오른쪽에 둔 자리', '행 오른쪽 단계와 보상의 밀도'] },
+  { id: 'a', title: '순위표', phone: phoneA, cap: '들어오자마자 순위표가 보입니다. 위쪽 칩 여섯 개가 장비 선택이자 내 순위 요약입니다. 아이템 이름 아래 안내 문장은 뺐습니다.',
+    checks: ['안내 문장이 빠진 뒤 머리글 높이', '행 오른쪽 단계와 보상의 밀도'] },
   { id: 'in', title: '내가 10등 안에 있을 때', phone: phoneIn, cap: '목록의 내 줄이 강조되고, 아래 고정 줄은 윗자리까지 남은 단계와 아랫자리와의 차이를 함께 보여 줍니다.',
     checks: ['아랫자리와의 차이 표기', '1~3등 행의 금색 강조 정도'] },
   { id: 'none', title: '장비가 없을 때', phone: phoneNone, cap: '없다는 사실만 알립니다.', checks: ['이 한 줄로 충분한지, 칩의 "없음" 표기'] },
-  { id: 'sheet', title: '순위별 보상 팝업', phone: sheet, cap: '[보상 보기]를 누르면 공통 팝업으로 뜹니다. 수치는 논의 결과에 적어 주신 값이고 아직 확정 전입니다.',
-    checks: ['칭호는 이름을 밝히지 않고 "한정 칭호"로만 적었습니다', '인정 기준과 지급 일정을 이 팝업에 두는 것이 맞는지'] },
+  { id: 'sheet', title: '순위별 보상 팝업', phone: sheet, cap: '안내문을 빼고, 표에서 지금 내 순위가 속한 줄을 칠한 뒤 아래에 지금 받을 수 있는 보상을 따로 보여 줍니다. 10등 밖이면 이 줄이 "지금 14등 · 10등 안에 들면 받아요"로 바뀌고, 장비가 없으면 줄이 없습니다.',
+    checks: ['내 보상 줄의 위치(표 아래)와 윗자리까지 남은 단계 표기', '칭호는 이름을 밝히지 않고 "한정 칭호"로만 적었습니다'] },
   { id: 'final', title: '종료 뒤 최종 결과', phone: phoneFinal, cap: '안내 구획을 빼고 헤더 오른쪽에 확정 시각만 남겼습니다. 10/3까지 열어 둡니다.',
     checks: ['확정 시각을 헤더에 두는 것으로 충분한지', '지급이 끝난 뒤 알림은 우편으로만'] },
   { id: 'home', title: '홈 배너', phone: phoneHome, cap: '진행 중에는 남은 시간이 초 단위로 흐르고, 종료 뒤 3일은 결과 배너로 바뀝니다.',
@@ -177,6 +176,8 @@ const FIXED: [string, string][] = [
   ['남은 시간', '초 단위까지, 헤더와 홈 배너에'],
   ['순위별 보상', '공통 팝업 레이아웃'],
   ['종료 뒤 결과 공개', '3일(10/3까지), 안내 구획 없이 헤더에 확정 시각만'],
+  ['아이템 머리글', '안내 문장 없이 그림과 이름만'],
+  ['보상 팝업', '안내문 없이 표 + 지금 내 순위로 받는 보상'],
 ];
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -261,6 +262,11 @@ const html = `<title>한가위 현황판 시안</title>
   .rt th { text-align:left; font-size:10.5px; color:#a1a1aa; font-weight:600; padding:4px 6px; border-bottom:1px solid #3f3f46; }
   .rt td { color:#f4f4f5; font-size:12.5px; padding:7px 6px; border-bottom:1px solid #27272a; white-space:nowrap; }
   .rt td:last-child { color:#fcd34d; font-size:11.5px; }
+  .rt tr.me td { background:#2a1f0a; color:#fde68a; }
+  .rt tr.me td:first-child { border-radius:8px 0 0 8px; } .rt tr.me td:last-child { border-radius:0 8px 8px 0; }
+  .myr { display:flex; align-items:center; gap:10px; margin-top:10px; padding:9px 10px; border-radius:10px; border:1px solid rgba(245,158,11,.6); background:#0c0c0e; }
+  .myr .rk { color:#fcd34d; font-weight:700; } .myr .who b { font-size:12.5px; } .myr .who span { color:#fcd34d; }
+  .myr .lv b { font-size:13px; }
   .fin { background:#241c0c; border:1px solid #78350f; border-radius:12px; padding:10px 12px; margin-bottom:12px; }
   .fin b { display:block; font-size:14px; color:#fde68a; } .fin span { font-size:11.5px; color:#d4d4d8; }
   .banner { border-radius:12px; padding:12px 14px; background:linear-gradient(100deg,#3b0f0a 0%,#7a1f12 55%,#c9892b 130%); display:flex; align-items:center; gap:12px; }
@@ -291,7 +297,7 @@ const html = `<title>한가위 현황판 시안</title>
 </style>
 <div class="wrap">
   <h1>한가위 현황판 시안</h1>
-  <p class="lead">1차 점검에서 정해 주신 대로 고친 2차 시안입니다. 남은 시간은 초 단위까지, 보상은 공통 팝업으로, 종료 뒤 안내 구획은 빼고, 결과 공개는 3일로 바꿨습니다. 더 고칠 점이 있으면 의견을 남기고 맨 아래 요약을 복사해 채팅에 붙여 주세요. 없으면 이 화면대로 구현에 들어갑니다.</p>
+  <p class="lead">2차 점검까지 반영한 3차 시안입니다. 아이템 이름 아래 안내 문장을 빼고, 보상 팝업은 안내문 대신 지금 내 순위로 받는 보상을 보여 줍니다. 더 고칠 점이 있으면 의견을 남기고 맨 아래 요약을 복사해 채팅에 붙여 주세요. 없으면 이 화면대로 구현에 들어갑니다.</p>
   <p class="note">닉네임, 단계, 시각은 모두 지어낸 예시입니다. 장비 네 부위의 그림과 이름은 아직 고르기 전이라 후보 그림을 임시로 넣었습니다. 보상 수치는 논의 결과에 적어 주신 값이며 확정 전입니다.</p>
 
   <h2>화면</h2>
@@ -318,10 +324,10 @@ const html = `<title>한가위 현황판 시안</title>
 </div>
 <script>
 (function(){
-  var KEY='chuseok-board-mock-v2';
+  var KEY='chuseok-board-mock-v3';
   function q(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
   function build(){
-    var lines=['[한가위 현황판 시안 2차 점검]'];
+    var lines=['[한가위 현황판 시안 3차 점검]'];
     q('figure.fig').forEach(function(f){
       var m=f.querySelector('.memo').value.trim();
       if(m)lines.push('- '+f.getAttribute('data-title')+': '+m.replace(/\\n+/g,' '));
