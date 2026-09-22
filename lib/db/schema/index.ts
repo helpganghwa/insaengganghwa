@@ -27,3 +27,4 @@ export * from './support'; // §20 고객센터 문의 (인앱 접수 → 관리
 export * from './announcement'; // §20 공지사항 (게시판 — 어드민 작성·발행, 홈 카드/강제 팝업)
 export * from './leaderboard'; // §21 리더보드 사전계산 스냅샷 (cron 재계산 — 읽기 경량화)
 export * from './points';
+export * from './chuseok'; // §22 한가위 이벤트 — 송편(강화 성공 적립), 0213

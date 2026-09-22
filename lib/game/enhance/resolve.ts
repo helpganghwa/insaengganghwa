@@ -8,6 +8,7 @@ import {
   downRateBp,
   levelAfterFail, enhanceReadyGraceMs } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
+import { accrueSongpyeon } from '@/lib/game/chuseok/songpyeon';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { sendMilestoneMail } from '@/lib/game/milestone-mail';
@@ -235,6 +236,13 @@ export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
       await rebuildCodexChampionsForItem(serverId, catalogItemId);
     } catch {
       // 부분 재계산 실패 무시(cron 백스톱).
+    }
+    // 한가위 송편(2026-09, lib/game/chuseok) — 성공·mega마다 도달 단계만큼 적립. 기간 밖이면 0,
+    // 같은 잡은 원장 ref로 한 번만. 실패해도 강화 결과 불변(값을 남겨 수동 적립 가능).
+    try {
+      await accrueSongpyeon({ userId, serverId, jobId: r.jobId, level: toLevel });
+    } catch (e) {
+      console.error(`[enhance.resolve] 송편 적립 실패 job=${String(r.jobId)} user=${userId} level=${toLevel}`, e);
     }
   }
 

@@ -29,6 +29,10 @@ export type LedgerReason =
   | 'challenge'
   /** 도전 과제 전체 완료 보너스. */
   | 'challenge_bonus'
+  /** 한가위 송편 도달 보상(2026-09) — ref=step:<n>. */
+  | 'chuseok_ladder'
+  /** 한가위 송편 교환(다이아 상품) — ref=ex:<uuid>. */
+  | 'chuseok_exchange'
   /** 상점 무료 수령(일일/주간/월간). */
   | 'shop_free'
   /** 결제 상품 지급 — ref=주문 id. */
