@@ -55,7 +55,7 @@
 | chuseok_rabbit_ears | 장신구 | 접힌 토끼 귀 머리띠 | 달토끼 |
 
 - 정본 `lib/game/equipment/catalog-v6.ts`. 지역 '일반', 기존 아이템과 같은 취급(보급 균등 추첨 풀에 합류 → 슬롯당 40→42종, 아이템당 2.5%→약 2.38%).
-- **개방 절차(§33)**: `seed-catalog`가 active=false로 삽입 → 운영자가 9/23 00:00 전 확률 공시 게시 → 9/24 00:00 KST에 예약 발행 크론(`lib/game/chuseok/open.ts`)이 active=true·catalog 캐시 무효화·probability_snapshots 기록. 스테이징은 크론이 없어 SQL로 직접 켰다.
+- **개방 절차(§33)**: `seed-catalog`가 active=false로 삽입 → 운영자가 9/23 00:00 전 확률 공시 게시 → **9/24 00:00:00 KST 정각에 서버 시각으로 열린다**(`chuseokItemsOpen`: 확률 공시·도감이 읽는 `getActiveCatalog`와 보급 추첨 풀 `supply/open.ts`가 같은 판정, 2026-09-23 사용자 지적으로 크론 의존 제거). 예약 발행 크론(`lib/game/chuseok/open.ts`, 00:02~00:07)은 뒷정리 — active=true 기록·catalog 캐시 무효화·probability_snapshots(effective_at = 시작 정각) 기록. 도감 총수 같은 SQL `active` 집계는 크론이 켤 때까지 최대 7분 40종으로 보인다(허용). 스테이징은 SQL로 직접 켰고, 크론 경로는 로컬에서 스테이징 DB로 실행해 검증했다(09-23).
 - 아틀라스 `build-sprite-atlas` ROWS 11(132칸). 토끼 귀 그림의 바닥 검은 선 2행은 사용자 결정으로 코드에서 지웠다(애니메이션 도입 시 재생성).
 
 ## 6. 강화 대회 — 순위·정산 (2026-09-22 확정)

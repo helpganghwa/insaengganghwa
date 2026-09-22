@@ -1,10 +1,11 @@
 import 'server-only';
 
 import { unstable_cache } from 'next/cache';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
+import { CHUSEOK_ITEM_CODES, chuseokItemsOpen } from '@/lib/game/chuseok/config';
 
 export type CatalogItem = { id: number; code: string; name: string; slot: Slot };
 
@@ -13,22 +14,36 @@ export type CatalogItem = { id: number; code: string; name: string; slot: Slot }
  * 요청 경로에서 DB 조회를 제거(캐시). 변경은 드물어 10분 revalidate + 'catalog' 태그.
  * 핫패스(도감·강화·인벤·가챠)에서 공유 호출해 풀 압박/왕복을 줄인다.
  */
-export const getActiveCatalog = unstable_cache(
-  async (): Promise<CatalogItem[]> =>
+const getActiveCatalogCached = unstable_cache(
+  async (): Promise<(CatalogItem & { active: boolean })[]> =>
     db
       .select({
         id: catalogItems.id,
         code: catalogItems.code,
         name: catalogItems.name,
         slot: catalogItems.slot,
+        active: catalogItems.active,
       })
       .from(catalogItems)
-      .where(eq(catalogItems.active, true)),
-  ['active-catalog-v1'],
+      // 한가위 6종은 비활성이어도 캐시에 싣는다 — 노출 여부는 아래에서 **서버 시각**으로 판정(2026-09-23).
+      // 캐시(최대 10분)에 시각 판정을 넣으면 자정 직전 캐시가 자정 뒤까지 옛 목록을 내보낸다.
+      .where(or(eq(catalogItems.active, true), inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]))),
+  ['active-catalog-v2'],
   // 강제 무효화: POST /api/admin/revalidate?tag=catalog — 카탈로그 전환 스크립트 후 필수
   // (안 쏘면 확률 공시가 최대 10분 구 데이터 = §33 공시-판정 불일치 창).
   { revalidate: 600, tags: ['catalog'] },
 );
+
+const CHUSEOK_CODE_SET = new Set(CHUSEOK_ITEM_CODES);
+
+/** 지금 노출·추첨 대상인 카탈로그 — 활성 행 + 한가위 6종(시작 시각 이후). 보급 풀(supply/open.ts)과 같은 판정. */
+export async function getActiveCatalog(): Promise<CatalogItem[]> {
+  const rows = await getActiveCatalogCached();
+  const open = chuseokItemsOpen();
+  return rows
+    .filter((r) => r.active || (open && CHUSEOK_CODE_SET.has(r.code)))
+    .map(({ id, code, name, slot }) => ({ id, code, name, slot }));
+}
 
 /**
  * 전체 카탈로그(active 무관) — 보유 아이템이 비활성 카탈로그여도 메타 조인이 되도록.

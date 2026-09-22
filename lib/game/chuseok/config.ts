@@ -72,6 +72,16 @@ export const CHUSEOK_CONTEST_ITEMS: readonly { code: string; set: 'moon' | 'flow
   { code: 'chuseok_bok_pouch', set: 'flower' },
 ];
 
+/** 6종 코드(카탈로그 key = DB code). 보급 풀·활성 카탈로그의 시각 게이트가 쓴다. */
+export const CHUSEOK_ITEM_CODES: readonly string[] = CHUSEOK_CONTEST_ITEMS.map((i) => i.code);
+/**
+ * 6종이 열렸는가 — **서버 시각** 기준(2026-09-23 사용자 지적: 크론에 기대면 00:02~00:07에 열려 송편·배너와 어긋난다).
+ * DB active 플래그는 크론이 뒤따라 켜는 기록용이고, 실제 노출·추첨은 이 시각으로 판정한다.
+ */
+export function chuseokItemsOpen(now: number | Date = Date.now()): boolean {
+  return (typeof now === 'number' ? now : now.getTime()) >= CHUSEOK_START_MS;
+}
+
 /** 아이템당 순위 보상(2026-09-22 확정). 상자는 3슬롯 균등(전부 3의 배수). */
 export const CHUSEOK_RANK_REWARDS: readonly { from: number; to: number; diamond: number; boxes: number }[] = [
   { from: 1, to: 1, diamond: 30_000, boxes: 600 },

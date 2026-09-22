@@ -49,3 +49,13 @@ describe('대회 순위 규칙', () => {
     expect(CHUSEOK_CONTEST_ITEMS.filter((i) => i.set === 'flower')).toHaveLength(3);
   });
 });
+
+describe('한가위 6종 공개 시각 게이트(서버 시각)', () => {
+  it('시작 정각 전엔 닫히고 정각부터 열린다 — 크론 플래그와 무관', async () => {
+    const { chuseokItemsOpen, CHUSEOK_START_MS, CHUSEOK_ITEM_CODES } = await import('@/lib/game/chuseok/config');
+    expect(chuseokItemsOpen(CHUSEOK_START_MS - 1)).toBe(false);
+    expect(chuseokItemsOpen(CHUSEOK_START_MS)).toBe(true);
+    expect(chuseokItemsOpen(new Date(CHUSEOK_START_MS + 1))).toBe(true);
+    expect(CHUSEOK_ITEM_CODES).toHaveLength(6);
+  });
+});
