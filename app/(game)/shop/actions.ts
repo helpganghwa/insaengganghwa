@@ -14,6 +14,7 @@ import { actionBlock } from '@/lib/game/action-gate';
 import { claimFree, ShopFreeError, type FreeSlot } from '@/lib/game/shop/free';
 import { buyBox, BuyBoxError } from '@/lib/game/shop/buy-box';
 import { createOrder, createPlayOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
+import { recoverPlayPurchase } from '@/lib/payment/play-recover';
 
 /** 상점 무료 수령 — 결제 불필요. 주기 멱등(서버). */
 export async function claimFreeAction(slot: FreeSlot) {
@@ -190,5 +191,30 @@ export async function ackPayNoticeAction(input: { paymentId?: string; identity?:
     await db.execute(sql`
       update profiles set identity_notified_at = now() where id = ${u}::uuid
     `).catch(() => {});
+  }
+}
+
+/**
+ * Play 결제 복구(2026-09-22) — 앱이 상점을 열 때 기기에 남은 미확정 구매(listPurchases)를 보내면
+ * 다시 검증·지급·소모한다. 토큰은 서버가 구글에 재확인하므로 클라 값을 믿지 않는다. 멱등.
+ */
+export async function recoverPlayPurchaseAction(sku: string, purchaseToken: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  if (typeof sku !== 'string' || !/^[a-z0-9_]{1,40}$/.test(sku) || !purchaseToken || purchaseToken.length > 512) {
+    return { status: 'error', code: 'ORDER_NOT_FOUND' } as const;
+  }
+  try {
+    const r = await recoverPlayPurchase(u, await getActiveServerId(), sku, purchaseToken);
+    if (!r.ok) return { status: 'error', code: r.code } as const;
+    revalidatePath('/shop');
+    revalidatePath('/');
+    revalidatePath('/battlepass');
+    return { status: 'success', already: r.already, paymentId: r.paymentId } as const;
+  } catch (e) {
+    console.error('[shop.recoverPlayPurchase]', sku, e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
   }
 }

@@ -1,7 +1,7 @@
-import { isAppSession, usePlayBilling } from '@/lib/platform-client';
+import { detectClientPlatform, isAppSession, usePlayBilling } from '@/lib/platform-client';
 import { PLAY_BILLING_METHOD } from '@/lib/payment/play-sku';
 
-import { createPlayOrderAction, verifyPlayPurchaseAction } from './actions';
+import { createPlayOrderAction, recoverPlayPurchaseAction, verifyPlayPurchaseAction } from './actions';
 
 /**
  * 플레이스토어 앱(TWA) 안 결제 — Digital Goods API + PaymentRequest(docs/PLAYSTORE.md §3.2).
@@ -16,7 +16,14 @@ export type PlayCheckoutResult =
   | { ok: false; reason: 'unsupported'; message: string };
 
 type DigitalGoodsItem = { itemId: string; title: string; price: { currency: string; value: string } };
-type DigitalGoodsService = { getDetails(itemIds: string[]): Promise<DigitalGoodsItem[]> };
+type DigitalGoodsPurchase = { itemId: string; purchaseToken: string };
+type DigitalGoodsService = {
+  getDetails(itemIds: string[]): Promise<DigitalGoodsItem[]>;
+  /** 이 앱·계정의 미소모(미확정) 구매 — Digital Goods API 2.1. */
+  listPurchases?(): Promise<DigitalGoodsPurchase[]>;
+  /** 기기에서 직접 소모 — 서버가 지급을 거부한(취소·환불) 구매의 "already own" 잠김을 푼다. */
+  consume?(purchaseToken: string): Promise<void>;
+};
 type DigitalGoodsWindow = Window & { getDigitalGoodsService?: (paymentMethod: string) => Promise<DigitalGoodsService> };
 
 /**
@@ -73,6 +80,89 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
 
 const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
 
+/**
+ * Play 결제 실패 기록(2026-09-22) — 결제 시트가 왜 실패했는지 서버에는 아무 흔적이 없었다(한 유저가
+ * ₩68,000을 여덟 번 시도하고 전부 시트에서 끝났는데 이유를 알 수 없었다). client_errors에 남긴다.
+ * 토큰·개인정보는 싣지 않는다. 실패해도 조용히 무시.
+ */
+function reportPlayCheckout(stage: string, sku: string, detail: { name?: string; message?: string; code?: string }): void {
+  try {
+    const parts = [`sku=${sku}`, `stage=${stage}`];
+    if (detail.code) parts.push(`code=${detail.code}`);
+    if (detail.name) parts.push(`name=${detail.name}`);
+    if (detail.message) parts.push(`message=${detail.message.slice(0, 200)}`);
+    const body = JSON.stringify({
+      kind: 'play-checkout',
+      message: parts.join(' '),
+      url: location.pathname,
+      ua: navigator.userAgent.slice(0, 200),
+      platform: detectClientPlatform(),
+    });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/client-error', new Blob([body], { type: 'application/json' }));
+    else void fetch('/api/client-error', { method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive: true });
+  } catch {
+    // 기록 실패는 무시.
+  }
+}
+
+export type PlayRecoverSummary = { checked: number; granted: number; cleared: number; failed: number };
+
+/**
+ * 결제 복구(2026-09-22) — 앱에서 상점을 열 때 한 번. 기기에 남은 미확정 구매를 서버에 보내 다시
+ * 검증·지급·소모한다. 서버가 "구매 아님"(취소·환불된 구매)이라고 답하면 기기에서 소모해
+ * "already own" 잠김을 푼다(지급 없이 잠김만 해제 — 서버가 구글에 재확인한 결과라 안전).
+ * 앱 밖·미지원 환경이면 아무것도 하지 않는다.
+ */
+export async function recoverPlayPurchases(): Promise<PlayRecoverSummary> {
+  const out: PlayRecoverSummary = { checked: 0, granted: 0, cleared: 0, failed: 0 };
+  if (typeof window === 'undefined') return out;
+  const w = window as DigitalGoodsWindow;
+  if (typeof w.getDigitalGoodsService !== 'function') return out;
+  let svc: DigitalGoodsService;
+  try {
+    svc = await w.getDigitalGoodsService(PLAY_BILLING_METHOD);
+  } catch {
+    return out;
+  }
+  if (typeof svc.listPurchases !== 'function') return out;
+  let purchases: DigitalGoodsPurchase[] = [];
+  try {
+    purchases = await svc.listPurchases();
+  } catch (e) {
+    const err = e as { name?: string; message?: string };
+    reportPlayCheckout('list', '-', { name: err?.name, message: err?.message });
+    return out;
+  }
+  for (const p of purchases) {
+    if (!p?.itemId || !p?.purchaseToken) continue;
+    out.checked++;
+    const r = await recoverPlayPurchaseAction(p.itemId, p.purchaseToken).catch(() => null);
+    if (!r) {
+      out.failed++;
+      reportPlayCheckout('recover', p.itemId, { code: 'NETWORK' });
+      continue;
+    }
+    if (r.status === 'success') {
+      if (!r.already) out.granted++;
+      continue;
+    }
+    // 구글이 구매 아님(취소·환불)이라고 답한 건 — 기기 소모로 잠김만 푼다.
+    if (r.code === 'NOT_PAID' && typeof svc.consume === 'function') {
+      try {
+        await svc.consume(p.purchaseToken);
+        out.cleared++;
+      } catch (e) {
+        out.failed++;
+        reportPlayCheckout('consume', p.itemId, { name: (e as Error)?.name, message: (e as Error)?.message });
+      }
+      continue;
+    }
+    out.failed++;
+    reportPlayCheckout('recover', p.itemId, { code: r.code });
+  }
+  return out;
+}
+
 export async function runPlayCheckout(productId: string): Promise<PlayCheckoutResult> {
   // 서비스를 **주문 생성보다 먼저** 연다. 순서를 뒤집으면 미지원 환경에서 pending 주문만 쌓인다
   // (2026-09-12 실측 19건). 여기서 막히면 서버에 아무 흔적도 남지 않는다.
@@ -99,21 +189,30 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     if (err?.name === 'NotSupportedError' || /not supported|unsupported|digital goods/i.test(err?.message ?? '')) {
       return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
     }
+    reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
     return { ok: false, reason: 'window', message: err?.message ?? '결제 시트를 열지 못했어요.' };
   }
 
   const token = (response.details as { purchaseToken?: string } | undefined)?.purchaseToken ?? '';
   if (!token) {
     await response.complete('fail').catch(() => undefined);
-    return { ok: false, reason: 'window', message: '구매 토큰을 받지 못했어요. 결제가 됐다면 잠시 후 자동 반영됩니다.' };
+    reportPlayCheckout('token', sku, { code: 'EMPTY' });
+    return { ok: false, reason: 'window', message: '구매 토큰을 받지 못했어요. 결제가 됐다면 상점을 다시 열면 반영됩니다.' };
   }
   const v = await verifyPlayPurchaseAction(paymentId, token).catch(() => null);
   if (!v) {
-    // 전송 실패 — 구매는 성사됐을 수 있다. 시트는 성공으로 닫고(구글 쪽 구매 확정) 서버 정합화(cron·재시도)에 맡긴다.
+    // 전송 실패 — 구매는 성사됐을 수 있다. 시트는 성공으로 닫고(구글 쪽 구매 확정) 다음 상점 진입의 복구(recoverPlayPurchases)에 맡긴다.
     await response.complete('success').catch(() => undefined);
+    reportPlayCheckout('verify', sku, { code: 'NETWORK' });
     return { ok: false, reason: 'verify', code: 'NETWORK' };
   }
-  await response.complete(v.status === 'success' ? 'success' : 'fail').catch(() => undefined);
-  if (v.status !== 'success') return { ok: false, reason: 'verify', code: v.code };
+  // 검증 실패도 시트는 success로 닫는다(2026-09-22) — fail로 닫으면 구글이 구매를 실패로 표시하지만 소모성
+  // 구매 자체는 남아 "already own"이 되고, 서버엔 토큰이 없어 손댈 수 없었다. 구매는 성사된 사실이므로
+  // success로 닫고, 지급은 다음 상점 진입의 복구가 다시 시도한다(취소·환불이면 복구가 기기 소모로 잠김을 푼다).
+  await response.complete('success').catch(() => undefined);
+  if (v.status !== 'success') {
+    reportPlayCheckout('verify', sku, { code: v.code });
+    return { ok: false, reason: 'verify', code: v.code };
+  }
   return { ok: true, already: v.already, paymentId };
 }
