@@ -10,9 +10,9 @@ const css = readFileSync('components/title-fx.css', 'utf8');
 
 type T = { label: string; fx: string; pt?: string; alt?: string; rank: string; note: string };
 const MOON: T[] = [
-  { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '차가운 은청색. 기울어진 초승달이 숨 쉬듯 밝아질 때 글자가 오른쪽부터 新月로 번지고, 다음 숨에 신월로 돌아옵니다. 글자에는 빛이 없습니다.' },
-  { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '진주빛 흰색. 반달이 밝아지며 半月로 바뀔 때 글자에도 달빛 후광이 잠깐 스칩니다.' },
-  { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 滿月은 금이 느리게 흐르는 글자에 후광이 붙고, 보름달 곁에서 작은 별 둘이 번갈아 반짝입니다.' },
+  { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '은빛. 기울어진 초승달이 숨 쉬듯 밝아질 때 글자가 오른쪽부터 新月로 번지고, 다음 숨에 신월로 돌아옵니다. 글자에는 빛이 없습니다.' },
+  { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '체리빛. 붉은 반달이 밝아지며 半月로 바뀔 때 글자에도 붉은 후광이 잠깐 스칩니다.' },
+  { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 滿月은 선명한 금색 글자에 금빛 후광이 붙습니다.' },
 ];
 const FLOWER: T[] = [
   { label: '매화', fx: 'plum', rank: '3등', note: '흰 꽃잎이 연분홍으로 물들었다 돌아오는 숨결입니다.' },
@@ -85,7 +85,7 @@ const html = `<title>한가위 칭호 이펙트</title>
 <div class="wrap">
   <h1>한가위 칭호 이펙트</h1>
   <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 전용 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다. 고칠 점이 있으면 아래에 적어 복사해 주세요.</p>
-  ${setBlock('달토끼 장비', '3등 은청 · 2등 진주 · 1등 금 — 달이 밝아질 때 글자가 오른쪽부터 한자로, 다음에 한글로', MOON)}
+  ${setBlock('달토끼 장비', '3등 은빛 · 2등 체리빛 · 1등 금빛 — 달이 밝아질 때 글자가 오른쪽부터 한자로, 다음에 한글로', MOON)}
   ${setBlock('한복 장비', '3등 매화 · 2등 작약 · 1등 모란 — 연분홍에서 진홍과 금으로', FLOWER)}
   <label class="m" for="memo">의견</label><textarea id="memo" placeholder="칭호별로 바꾸고 싶은 색·움직임"></textarea>
   <div class="acts"><button type="button" id="copy">의견 복사</button><span id="toast" role="status"></span></div>
