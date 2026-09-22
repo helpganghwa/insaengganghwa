@@ -12,24 +12,20 @@ const uri = async (k: string, w: number) => { const f = `${DIR}/${k}.png`; if (!
 
 type Opt = { key: string; name: string; note: string; fresh?: boolean };
 const ICONS: Opt[] = [
-  { key: 'songpyeon_d', name: '흰 반달 송편', note: '앞에서 살짝 위로 본 반달, 주름 있는 곡선', fresh: true },
-  { key: 'songpyeon_e', name: '흰·쑥 송편 한 쌍', note: '나란히 놓인 두 개', fresh: true },
-  { key: 'songpyeon_f', name: '분홍 송편과 솔잎', note: '솔잎 위 분홍 반달', fresh: true },
-  { key: 'songpyeon_g', name: '마스코트풍 송편', note: '굵은 외곽선, 납작한 색', fresh: true },
-  { key: 'songpyeon_h', name: '찜기 위 세 개', note: '대나무 찜기에 부채꼴로', fresh: true },
-  { key: 'songpyeon_i', name: '빛나는 송편', note: '작은 달처럼 은은히 빛남', fresh: true },
-  { key: 'songpyeon_c', name: '반달 송편(1차)', note: '1차 후보' },
-  { key: 'songpyeon_b', name: '접시 위 세 개(1차)', note: '1차 후보' },
-  { key: 'songpyeon_a', name: '연두 송편(1차)', note: '1차 후보, 덩어리로 보임' },
+  { key: 'sp_obj_a', name: '흰 송편 하나', note: '객체 생성. 도톰한 반달, 주름 곡선', fresh: true },
+  { key: 'sp_obj_b', name: '쑥 송편과 솔잎', note: '객체 생성. 연둣빛, 솔잎 위', fresh: true },
+  { key: 'sp_obj_c', name: '분홍 송편', note: '객체 생성. 깨 한 톨', fresh: true },
+  { key: 'sp_obj_d', name: '접시 위 세 개', note: '객체 생성. 흰·쑥·분홍', fresh: true },
+  { key: 'sp_obj_e', name: '찜기 위 다섯 개', note: '객체 생성. 대나무 찜기와 솔잎', fresh: true },
+  { key: 'sp_obj_f', name: '기대어 놓은 두 개', note: '객체 생성. 흰·분홍', fresh: true },
 ];
 const BANNERS: Opt[] = [
-  { key: 'banner_c', name: '한옥 마당과 감나무', note: '기와 담, 감나무, 창호지 불빛', fresh: true },
-  { key: 'banner_d', name: '강강술래', note: '언덕 위 손잡고 도는 실루엣', fresh: true },
-  { key: 'banner_e', name: '가을 들녘', note: '억새와 벼이삭, 저녁 하늘의 달', fresh: true },
-  { key: 'banner_f', name: '청사초롱', note: '줄에 걸린 등롱과 정자 난간', fresh: true },
-  { key: 'banner_a', name: '보름달과 기와지붕(1차)', note: '산 위 마을 불빛' },
-  { key: 'banner_b', name: '달토끼와 송편 접시(1차)', note: '흩날리는 꽃잎' },
+  { key: 'banner_c', name: '한옥 마당과 감나무', note: '고르신 배경' },
+  { key: 'banner_g', name: '달 속 절구 찧는 토끼', note: '달토끼 재생성 1. 보름달 속 실루엣, 아래 송편 접시', fresh: true },
+  { key: 'banner_h', name: '언덕 위 토끼와 송편', note: '달토끼 재생성 2. 꽃잎, 앞쪽 송편 접시', fresh: true },
+  { key: 'banner_i', name: '창가 송편상과 토끼', note: '달토끼 재생성 3. 둥근 창 너머 달, 접시 뒤 토끼', fresh: true },
 ];
+const PRESET: Record<string, string> = { banner: 'banner_c' };
 const card = (slot: string, o: Opt, src: string | null, wide: boolean) => `<label class="card${wide ? ' wide' : ''}${o.fresh ? ' fresh' : ''}"><input type="radio" name="${slot}" value="${o.key}" id="${slot}_${o.key}">
   <span class="img">${src ? `<img src="${src}" alt="">` : '<em>생성 전</em>'}</span><span class="nm">${o.name}${o.fresh ? '<i>새 그림</i>' : ''}</span><span class="nt">${o.note}</span></label>`;
 const slotHtml = async (slot: string, title: string, opts: Opt[], wide: boolean, w: number) => `<section class="slot" data-slot="${slot}" data-title="${title}"><h2>${title}<span class="st" data-st="${slot}">아직 안 골랐습니다</span></h2>
@@ -55,7 +51,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 </style>
 <div class="wrap">
   <h1>한가위 UI 그림 선택</h1>
-  <p class="lead">송편 아이콘과 홈 배너 배경을 하나씩 골라 주세요. 아이콘은 누적·사용 가능 숫자 앞과 도달 단계 표시에 작게(약 13px) 쓰이고, 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
+  <p class="lead">2차입니다. 송편 아이콘은 아이템 후보와 같은 객체 생성 방식으로 여섯 장을 새로 만들었고, 배너는 고르신 한옥 마당을 미리 골라 둔 채 달토끼와 송편 배경 세 장을 더 만들었습니다. 송편 아이콘과 홈 배너 배경을 하나씩 골라 주세요. 아이콘은 누적·사용 가능 숫자 앞과 도달 단계 표시에 작게(약 13px) 쓰이고, 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
   ${await slotHtml('icon', '송편 아이콘', ICONS, false, 192)}
   ${await slotHtml('banner', '홈 배너 배경', BANNERS, true, 768)}
   <section class="slot"><h2>요약</h2><textarea id="out" readonly></textarea></section>
@@ -63,7 +59,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 <div class="foot"><b id="cnt">선택 0 · 미정 2</b><span>두 곳을 모두 정하거나 다시 생성으로 표시해 주세요.</span><button type="button" id="copy">요약 복사</button><span id="toast" role="status"></span></div>
 <script>
 (function(){
-  var KEY='chuseok-ui-pick-v1', NAMES={};
+  var KEY='chuseok-ui-pick-v2', NAMES={};
   document.querySelectorAll('.card').forEach(function(c){var i=c.querySelector('input');NAMES[i.value]=c.querySelector('.nm').childNodes[0].textContent;});
   function q(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
   function build(){
@@ -83,9 +79,11 @@ const html = `<title>한가위 UI 그림 선택</title>
   document.addEventListener('change',function(){build();save();});
   document.addEventListener('input',function(e){if(e.target&&e.target.classList&&e.target.classList.contains('why')){build();save();}});
   document.getElementById('copy').addEventListener('click',function(){var t=document.getElementById('out');function done(){document.getElementById('toast').textContent='복사했습니다.';}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t.value).then(done,function(){t.select();try{document.execCommand('copy');done();}catch(e){}});}else{t.select();try{document.execCommand('copy');done();}catch(e){}}});
-  load();build();
+  load();
+  var PRESET=__PRESET__;Object.keys(PRESET).forEach(function(slot){var sec=document.querySelector('section.slot[data-slot="'+slot+'"]');if(sec&&!sec.querySelector('input[type=radio]:checked')){var el=document.getElementById(slot+'_'+PRESET[slot]);if(el)el.checked=true;}});
+  build();
 })();
 </script>
-`;
+`.replace('__PRESET__', JSON.stringify(PRESET));
 writeFileSync(out, html);
 console.log(`wrote ${out} (${(html.length / 1024).toFixed(0)} KB)`);
