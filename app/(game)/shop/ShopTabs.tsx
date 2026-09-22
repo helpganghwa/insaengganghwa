@@ -26,7 +26,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 
 import { payFailBody, payFailTitle, runCheckout } from './checkout';
-import { runPlayCheckout, shouldUsePlayBilling } from './play-checkout';
+import { recoverPlayPurchases, runPlayCheckout, shouldUsePlayBilling } from './play-checkout';
 import { FREE_REWARDS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 import { EMPTY_POINTS, POINTS_COPY, type PointKind, type PointsOverview } from '@/lib/game/points/types';
@@ -542,6 +542,26 @@ export function ShopTabs({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPremiumDays(initialPremiumDays);
   }, [initialPremiumDays]);
+
+  // Play 결제 복구(2026-09-22) — 앱에서 상점을 열 때 한 번, 기기에 남은 미확정 구매를 서버에 다시 보낸다.
+  // 검증이 한 번 실패한 구매(서비스 계정 401 등)는 서버에 토큰이 없어 여기서만 살릴 수 있다. 앱 밖이면 no-op.
+  const recoverRan = useRef(false);
+  useEffect(() => {
+    if (recoverRan.current) return;
+    recoverRan.current = true;
+    void (async () => {
+      if (!(await shouldUsePlayBilling().catch(() => false))) return;
+      const r = await recoverPlayPurchases().catch(() => null);
+      if (!r || r.checked === 0) return;
+      if (r.granted > 0) {
+        setPayNotice({ title: '결제가 반영됐어요', body: '지난 결제의 지급이 완료되었습니다. 상단 다이아와 상점 화면에서 확인해 보세요.' });
+        router.refresh();
+      } else if (r.cleared > 0) {
+        router.refresh();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 돌아오면 화면 내에서 검증·지급 확인.
   //  별도 페이지 없이 상점에서 처리. 처리 후 쿼리 제거(새로고침 시 재처리 방지). 지급 권위는 서버(웹훅 포함).

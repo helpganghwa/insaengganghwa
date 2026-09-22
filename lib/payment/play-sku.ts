@@ -28,6 +28,30 @@ export function playSkuFor(productId: string): string | null {
   return null;
 }
 
+/**
+ * Play SKU → 웹 productId(역매핑, 결제 복구용). 성장패스 구간(bp_<가격>)은 가격이 같은 구간끼리 SKU를
+ * 공유해 하나로 못 돌리므로 null — 복구는 주문(product_code)이 남아 있을 때만 가능하다.
+ */
+export function productIdForPlaySku(sku: string): string | null {
+  if (sku === 'premium') return PREMIUM.id;
+  if (sku === 'first_special') return FIRST_SPECIAL.id;
+  if (sku.startsWith('dia_')) {
+    const id = sku.slice(4);
+    return DIAMONDS.some((d) => d.id === id) ? id : null;
+  }
+  if (sku.startsWith('cash_')) {
+    const id = sku.slice(5);
+    for (const list of Object.values(CASH)) if (list.some((c) => c.id === id)) return id;
+    return null;
+  }
+  return null;
+}
+
+/** 등록된 SKU인가(복구 요청의 1차 검증). */
+export function isKnownPlaySku(sku: string): boolean {
+  return playSkuCatalog().some((c) => c.sku === sku);
+}
+
 /** Play Console에 등록할 SKU 전체(22종) — 문서·검증 스크립트용. 이름은 콘솔 표시명(유저에게 보임). */
 export function playSkuCatalog(): { sku: string; krw: number; name: string }[] {
   const out: { sku: string; krw: number; name: string }[] = [];
