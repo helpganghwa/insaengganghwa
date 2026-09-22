@@ -213,24 +213,29 @@
 /* 달토끼 장비(신월·반월·만월) — 두 겹 라벨(.fx-dual: .ko 한글 / .hj 한자 / .orb 달). 사용자 확정 B안(2026-09-22, 3차 "가볍게").
    글자 오른쪽의 달이 한 주기(--t)에 두 번 은은하게 숨 쉬듯 밝아지고, 그 박자에 맞춰 글자가 한자로(첫 숨), 한글로(둘째 숨)
    천천히 녹아들듯 바뀐다(불투명도 교차, 약 0.9초). 빛띠·큰 후광 없음 — 달 본체의 밝기와 얇은 후광만. */
-.fx-dual{position:relative;display:inline-block;white-space:nowrap}
-.fx-dual .ko{display:inline-block;opacity:1;animation:kofade var(--t) ease-in-out infinite}
-.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;opacity:0;animation:hjfade var(--t) ease-in-out infinite}
-@keyframes hjfade{0%,19%{opacity:0}30%,63%{opacity:1}74%,100%{opacity:0}}
-@keyframes kofade{0%,19%{opacity:1}30%,63%{opacity:0}74%,100%{opacity:1}}
+/* 서체: 후원 칭호와 같은 명조(--font-serif-kr, Noto Serif KR 700) — 한자와 어울리고 한글·한자 두 층의 획 굵기가 맞는다. */
+.fx-dual{position:relative;display:inline-block;white-space:nowrap;font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700;letter-spacing:.04em}
+/* 전환: 두 층 모두 폭 2배의 [투명→검정] 띠 마스크(경계 폭 0.72em, 부드러움). 위치를 0→100→200%로 밀면 경계가 늘
+   오른쪽에서 왼쪽으로 지나가며 한자(첫 숨)·한글(둘째 숨)이 그 순서로 드러난다. 한글 층은 같은 띠를 100%에서 시작하고
+   둘째 숨 직전(둘 다 안 보이는 순간)에 0%로 되감아 다시 오른쪽부터 드러난다. */
+.fx-dual .ko,.fx-dual .hj{-webkit-mask-image:linear-gradient(90deg,transparent 0 32%,#000 68%);mask-image:linear-gradient(90deg,transparent 0 32%,#000 68%);-webkit-mask-size:200% 100%;mask-size:200% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fx-dual .ko{display:inline-block;-webkit-mask-position:100% 0;mask-position:100% 0;animation:kowipe var(--t) ease-in-out infinite}
+.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-position:0% 0;mask-position:0% 0;animation:hjwipe var(--t) ease-in-out infinite}
+@keyframes hjwipe{0%,19%{-webkit-mask-position:0% 0;mask-position:0% 0}32%,63%{-webkit-mask-position:100% 0;mask-position:100% 0}76%,100%{-webkit-mask-position:200% 0;mask-position:200% 0}}
+@keyframes kowipe{0%,19%{-webkit-mask-position:100% 0;mask-position:100% 0}32%,63%{-webkit-mask-position:200% 0;mask-position:200% 0}63.01%{-webkit-mask-position:0% 0;mask-position:0% 0}76%,100%{-webkit-mask-position:100% 0;mask-position:100% 0}}
 /* 달: 본체는 ::before의 SVG 마스크(초승달·반달·보름달), 후광은 부모 drop-shadow. 글자가 바뀌는 사이(24%·68%)에 가장 밝다. */
-/* 달 그리기: .orb 자체는 어두운 면(지구조, 희미한 원판), ::before는 밝은 면(SVG 마스크: 오른쪽이 빛나는 초승달·상현달·보름달).
-   밝은 면의 채움은 빛 쪽에서 그림자 경계로 갈수록 어두워져(radial) 경계가 부드럽고, 보름달은 가장자리 어둡힘+희미한 바다 무늬. */
-.fx-dual .orb{display:inline-block;position:relative;width:var(--d);height:var(--d);margin-left:.24em;vertical-align:.04em;border-radius:50%;background:radial-gradient(circle at 50% 50%,rgba(196,206,232,.14) 0%,rgba(196,206,232,.1) 58%,transparent 66%);filter:var(--glow-lo);animation:moonbreath var(--t) ease-in-out infinite}
+/* 달 그리기: ::before가 밝은 면(SVG 마스크: 오른쪽이 빛나는 초승달·상현달, 보름달). 어두운 면은 그리지 않는다(사용자 확정).
+   초승달·상현달은 저녁 하늘처럼 빛나는 쪽이 아래오른쪽을 향하게 살짝 기울인다. 채움은 빛 쪽에서 경계로 갈수록 어두워지고,
+   보름달은 가장자리 어둡힘+희미한 바다 무늬. */
+.fx-dual .orb{display:inline-block;position:relative;width:var(--d);height:var(--d);margin-left:.24em;vertical-align:.04em;filter:var(--glow-lo);animation:moonbreath var(--t) ease-in-out infinite}
 .fx-dual .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-@keyframes moonbreath{0%,12%,38%,56%,82%,100%{filter:var(--glow-lo);transform:scale(1)}24%,68%{filter:var(--glow-hi);transform:scale(1.05)}}
+@keyframes moonbreath{0%,12%,40%,56%,84%,100%{filter:var(--glow-lo);transform:scale(1)}26%,70%{filter:var(--glow-hi);transform:scale(1.05)}}
 .fx-newmoon{--d:.48em;--t:8s;--glow-lo:drop-shadow(0 0 1px rgba(225,235,255,.45));--glow-hi:drop-shadow(0 0 1px rgba(235,242,255,.9)) drop-shadow(0 0 3px rgba(200,218,250,.5))}
 .fx-newmoon .ko{color:#b7c0d2}.fx-newmoon .hj{color:#e6ecfa;text-shadow:0 0 2px rgba(205,220,245,.35)}
-.fx-newmoon .orb::before{background:radial-gradient(circle at 84% 50%,#ffffff 0%,#eef3ff 40%,#d3dcf2 70%,rgba(190,204,236,.55) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>")}
+.fx-newmoon .orb::before{transform:rotate(28deg);background:radial-gradient(circle at 84% 50%,#ffffff 0%,#eef3ff 40%,#d3dcf2 70%,rgba(190,204,236,.55) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>")}
 .fx-halfmoon{--d:.52em;--t:7.5s;--glow-lo:drop-shadow(0 0 1px rgba(230,238,255,.5));--glow-hi:drop-shadow(0 0 1px rgba(240,246,255,.95)) drop-shadow(0 0 3.5px rgba(205,220,250,.55))}
 .fx-halfmoon .ko{color:#c3cbdc}.fx-halfmoon .hj{color:#eef2fc;text-shadow:0 0 3px rgba(215,228,250,.4)}
-.fx-halfmoon .orb::before{filter:blur(.018em);background:radial-gradient(circle at 78% 50%,#ffffff 0%,#f0f4ff 42%,#d6dff3 72%,rgba(196,210,240,.6) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>")}
-.fx-fullmoon .orb{background:none}
+.fx-halfmoon .orb::before{transform:rotate(20deg);filter:blur(.018em);background:radial-gradient(circle at 78% 50%,#ffffff 0%,#f0f4ff 42%,#d6dff3 72%,rgba(196,210,240,.6) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>")}
 .fx-fullmoon{--d:.58em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.55));--glow-hi:drop-shadow(0 0 1.5px rgba(255,246,205,.95)) drop-shadow(0 0 5px rgba(245,215,110,.6))}
 .fx-fullmoon .ko{color:#d9c98f}.fx-fullmoon .hj{color:#fff0bd;text-shadow:0 0 3px rgba(245,215,110,.55),0 0 6px rgba(245,215,110,.25)}
 .fx-fullmoon .orb::before{background:radial-gradient(circle at 62% 34%,rgba(176,134,50,.32) 0 13%,transparent 15%),radial-gradient(circle at 36% 56%,rgba(176,134,50,.28) 0 17%,transparent 19%),radial-gradient(circle at 58% 66%,rgba(176,134,50,.22) 0 9%,transparent 11%),radial-gradient(circle at 42% 40%,#fffbe6 0%,#f7dd7e 52%,#dfb247 88%,#c49838 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
