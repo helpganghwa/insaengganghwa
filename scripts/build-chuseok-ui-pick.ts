@@ -12,18 +12,16 @@ const uri = async (k: string, w: number) => { const f = `${DIR}/${k}.png`; if (!
 
 type Opt = { key: string; name: string; note: string; fresh?: boolean };
 const ICONS: Opt[] = [
-  { key: 'sp_obj_a', name: '흰 송편 하나', note: '객체 생성. 도톰한 반달, 주름 곡선', fresh: true },
-  { key: 'sp_obj_b', name: '쑥 송편과 솔잎', note: '객체 생성. 연둣빛, 솔잎 위', fresh: true },
-  { key: 'sp_obj_c', name: '분홍 송편', note: '객체 생성. 깨 한 톨', fresh: true },
-  { key: 'sp_obj_d', name: '접시 위 세 개', note: '객체 생성. 흰·쑥·분홍', fresh: true },
-  { key: 'sp_obj_e', name: '찜기 위 다섯 개', note: '객체 생성. 대나무 찜기와 솔잎', fresh: true },
-  { key: 'sp_obj_f', name: '기대어 놓은 두 개', note: '객체 생성. 흰·분홍', fresh: true },
+  { key: 'sp_obj_g', name: '매끈한 흰 송편 하나', note: '주름 없음, 둥근 표면', fresh: true },
+  { key: 'sp_obj_h', name: '매끈한 흰 송편과 솔잎', note: '주름 없음, 솔잎 두 가닥', fresh: true },
+  { key: 'sp_obj_i', name: '매끈한 흰 송편 두 개', note: '주름 없음, 나란히', fresh: true },
+  { key: 'sp_obj_j', name: '접시 위 매끈한 세 개', note: '주름 없음, 흰 접시와 솔잎', fresh: true },
 ];
 const BANNERS: Opt[] = [
   { key: 'banner_c', name: '한옥 마당과 감나무', note: '고르신 배경' },
-  { key: 'banner_g', name: '달 속 절구 찧는 토끼', note: '달토끼 재생성 1. 보름달 속 실루엣, 아래 송편 접시', fresh: true },
-  { key: 'banner_h', name: '언덕 위 토끼와 송편', note: '달토끼 재생성 2. 꽃잎, 앞쪽 송편 접시', fresh: true },
-  { key: 'banner_i', name: '창가 송편상과 토끼', note: '달토끼 재생성 3. 둥근 창 너머 달, 접시 뒤 토끼', fresh: true },
+  { key: 'banner_j', name: '달 속 절구 토끼 · 접시 재생성 1', note: '접시의 송편을 흰 반달로 강조해 다시 생성', fresh: true },
+  { key: 'banner_k', name: '달 속 절구 토끼 · 접시 재생성 2', note: '앞쪽 나무 쟁반에 송편을 쌓은 구도', fresh: true },
+  { key: 'banner_l', name: '달 속 절구 토끼 · 합성', note: '바탕(접시 없음)에 객체 생성 송편 접시를 얹음. 송편 모양이 가장 확실함', fresh: true },
 ];
 const PRESET: Record<string, string> = { banner: 'banner_c' };
 const card = (slot: string, o: Opt, src: string | null, wide: boolean) => `<label class="card${wide ? ' wide' : ''}${o.fresh ? ' fresh' : ''}"><input type="radio" name="${slot}" value="${o.key}" id="${slot}_${o.key}">
@@ -51,7 +49,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 </style>
 <div class="wrap">
   <h1>한가위 UI 그림 선택</h1>
-  <p class="lead">2차입니다. 송편 아이콘은 아이템 후보와 같은 객체 생성 방식으로 여섯 장을 새로 만들었고, 배너는 고르신 한옥 마당을 미리 골라 둔 채 달토끼와 송편 배경 세 장을 더 만들었습니다. 송편 아이콘과 홈 배너 배경을 하나씩 골라 주세요. 아이콘은 누적·사용 가능 숫자 앞과 도달 단계 표시에 작게(약 13px) 쓰이고, 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
+  <p class="lead">3차입니다. 송편 아이콘은 주름 없는 매끈한 흰 반달로 네 장을 다시 만들었고, 배너는 한옥 마당을 미리 골라 둔 채 달 속 절구 토끼 컨셉을 접시 위 송편이 송편답게 보이도록 세 장(재생성 둘, 합성 하나) 더 만들었습니다. 송편 아이콘과 홈 배너 배경을 하나씩 골라 주세요. 아이콘은 누적·사용 가능 숫자 앞과 도달 단계 표시에 작게(약 13px) 쓰이고, 배너는 홈 화면 폭에 맞춰 잘려 들어갑니다. 마음에 드는 것이 없으면 확인란을 누르고 방향을 적어 주시면 그 방향으로 다시 만듭니다. 맨 아래 요약을 복사해 채팅에 붙여 주세요.</p>
   ${await slotHtml('icon', '송편 아이콘', ICONS, false, 192)}
   ${await slotHtml('banner', '홈 배너 배경', BANNERS, true, 768)}
   <section class="slot"><h2>요약</h2><textarea id="out" readonly></textarea></section>
@@ -59,7 +57,7 @@ const html = `<title>한가위 UI 그림 선택</title>
 <div class="foot"><b id="cnt">선택 0 · 미정 2</b><span>두 곳을 모두 정하거나 다시 생성으로 표시해 주세요.</span><button type="button" id="copy">요약 복사</button><span id="toast" role="status"></span></div>
 <script>
 (function(){
-  var KEY='chuseok-ui-pick-v2', NAMES={};
+  var KEY='chuseok-ui-pick-v3', NAMES={};
   document.querySelectorAll('.card').forEach(function(c){var i=c.querySelector('input');NAMES[i.value]=c.querySelector('.nm').childNodes[0].textContent;});
   function q(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
   function build(){
