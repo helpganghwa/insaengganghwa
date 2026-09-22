@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1519,6 +1519,47 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a tall staff of dark wood with a large glowing golden full moon orb at the top, soft silver pampas grass plumes and a few gold rice ears tied around the orb base with a crimson cord, ' +
       'elegant and opulent, clearly a magic staff weapon, no text, large, diagonal',
+  },
+  // ── 18차(09-22 밤): 10차 선택. "한복 입은 사람이 지니는 소품" 방향 — 은장도 2 + 옥비녀 검 2.
+  {
+    key: 'chuseok_eunjangdo_a',
+    nameKo: '달빛 은장도',
+    slot: 'weapon',
+    batch: 18,
+    concept: '한복 세트 무기 — 한복 소품',
+    art:
+      'a Korean eunjangdo ornamental knife: a slender silver sheath and hilt engraved with a full moon and cloud pattern, a small jade inlay, the short blade partly drawn, an ornate crimson silk knot (maedeup) with a long crimson tassel hanging from the hilt, ' +
+      'elegant and opulent, clearly a dagger weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_eunjangdo_b',
+    nameKo: '달빛 은장도(옥 칼집)',
+    slot: 'weapon',
+    batch: 18,
+    concept: '한복 세트 무기 — 한복 소품',
+    art:
+      'a Korean eunjangdo ornamental knife: a slender pale jade sheath with silver fittings engraved with a crescent moon, a silver hilt, the short blade sheathed, a crimson silk knot (maedeup) and a gold bead with a crimson tassel hanging below, ' +
+      'elegant and opulent, clearly a dagger weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_binyeo_a',
+    nameKo: '옥비녀 검',
+    slot: 'weapon',
+    batch: 18,
+    concept: '한복 세트 무기 — 한복 소품',
+    art:
+      'a long Korean binyeo hairpin used as a weapon: a slender pale jade rod tapering to a sharp point like a stiletto, topped with a round golden full moon head set in gold with tiny cloud engraving, a short crimson silk tassel below the head, ' +
+      'elegant and opulent, clearly a piercing weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_binyeo_b',
+    nameKo: '옥비녀 검(은 장식)',
+    slot: 'weapon',
+    batch: 18,
+    concept: '한복 세트 무기 — 한복 소품',
+    art:
+      'a long Korean binyeo hairpin used as a weapon: a slender pale jade rod tapering to a sharp silver point, topped with an ornate silver full moon head with a small crescent and cloud filigree, a crimson silk knot and tassel below the head, ' +
+      'elegant and opulent, clearly a piercing weapon, no text, large, diagonal',
   },
 ];
 

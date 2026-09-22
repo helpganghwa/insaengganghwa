@@ -23,12 +23,16 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
-      { key: 'chuseok_moon_wand_a', name: '보름달 완드(금 초승달 받침)', note: '검은 자루 끝 금 초승달 받침에 금빛 보름달 구슬, 진홍 술과 옥 구슬. 짧은 완드입니다.', fresh: true },
-      { key: 'chuseok_moon_wand_b', name: '달구름 완드(옥색 비단)', note: '옥색 비단을 감은 자루, 금 구름이 감싼 보름달 구슬, 진홍·금 술. 확정 한복의 옥색과 맞습니다.', fresh: true },
-      { key: 'chuseok_moon_wand_c', name: '보름달 노리개 완드', note: '검은 자루 끝 은은한 달구슬, 진홍 매듭과 긴 술. 노리개처럼 생긴 완드입니다.', fresh: true },
-      { key: 'chuseok_moon_staff_a', name: '보름달 지팡이(금 구름)', note: '긴 검은 지팡이 위 금빛 보름달, 금 구름 장식, 진홍 끈. 긴 지팡이입니다.', fresh: true },
-      { key: 'chuseok_moon_staff_b', name: '옥 보름달 지팡이', note: '옥 지팡이에 금 띠, 위에 금 초승달 고리 안에 연푸른 달구슬, 진홍 술. 셋 중 가장 절제된 판.', fresh: true },
-      { key: 'chuseok_moon_staff_c', name: '달빛 억새 지팡이', note: '검은 지팡이 위 초승달 안의 보름달, 은빛 억새와 금 벼이삭, 진홍 끈. 한가위 들판 느낌입니다.', fresh: true },
+      { key: 'chuseok_eunjangdo_a', name: '달빛 은장도', note: '은 칼집과 자루에 달·구름 새김, 옥 상감, 날이 살짝 뽑힌 모습, 진홍 매듭과 긴 술. 한복에 차던 장도 그대로입니다.', fresh: true },
+      { key: 'chuseok_eunjangdo_b', name: '달빛 은장도(옥 칼집)', note: '옥색 칼집에 은 장식과 초승달 새김, 은 자루, 진홍 매듭과 금 구슬 술. 확정 한복의 옥색과 맞습니다.', fresh: true },
+      { key: 'chuseok_binyeo_a', name: '옥비녀 검(금 달 머리)', note: '옥 비녀대가 송곳처럼 뾰족하고, 머리에 금빛 보름달, 진홍 술. 셋 중 가장 단순합니다.', fresh: true },
+      { key: 'chuseok_binyeo_b', name: '옥비녀 검(은 달 머리)', note: '옥 비녀대에 은 촉, 머리에 은 보름달과 초승달·구름 장식, 진홍 매듭 술. 가장 정교합니다.', fresh: true },
+      { key: 'chuseok_moon_wand_a', name: '보름달 완드(금 초승달 받침)', note: '검은 자루 끝 금 초승달 받침에 금빛 보름달 구슬, 진홍 술과 옥 구슬. 짧은 완드입니다.' },
+      { key: 'chuseok_moon_wand_b', name: '달구름 완드(옥색 비단)', note: '옥색 비단을 감은 자루, 금 구름이 감싼 보름달 구슬, 진홍·금 술. 확정 한복의 옥색과 맞습니다.' },
+      { key: 'chuseok_moon_wand_c', name: '보름달 노리개 완드', note: '검은 자루 끝 은은한 달구슬, 진홍 매듭과 긴 술. 노리개처럼 생긴 완드입니다.' },
+      { key: 'chuseok_moon_staff_a', name: '보름달 지팡이(금 구름)', note: '긴 검은 지팡이 위 금빛 보름달, 금 구름 장식, 진홍 끈. 긴 지팡이입니다.' },
+      { key: 'chuseok_moon_staff_b', name: '옥 보름달 지팡이', note: '옥 지팡이에 금 띠, 위에 금 초승달 고리 안에 연푸른 달구슬, 진홍 술. 셋 중 가장 절제된 판.' },
+      { key: 'chuseok_moon_staff_c', name: '달빛 억새 지팡이', note: '검은 지팡이 위 초승달 안의 보름달, 은빛 억새와 금 벼이삭, 진홍 끈. 한가위 들판 느낌입니다.' },
       { key: 'chuseok_yut_sticks', name: '윷가락 한 벌', note: '반달꼴 나무 윷 네 가락을 진홍 끈과 금 구슬로 묶은 던지기 무기. 윷놀이 그대로입니다.' },
       { key: 'chuseok_songpyeon_mace', name: '송편 철퇴', note: '머리가 통통한 흰 송편(분홍 테), 목에 솔잎, 진홍 끈을 감은 검은 자루. 가장 한가위다운 판입니다.' },
       { key: 'chuseok_tuho_arrows', name: '투호살 다발', note: '진홍·흰 깃의 긴 투호살 다섯 대를 금 끈으로 묶음. 투호 놀이입니다.' },
@@ -194,7 +198,7 @@ const data = SLOTS.map((s) => ({
 const SCRIPT = String.raw`
 (function () {
   var SLOTS = window.__SLOTS__;
-  var LS_KEY = 'chuseok-pick-draft-v11'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
+  var LS_KEY = 'chuseok-pick-draft-v12'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
   var state = {};
   // 2차 제출까지 확정한 두 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
   // 한복 방어구는 2차에서 다시 열렸다("금박 꽃무늬·옥색 저고리와 비슷한 느낌으로 하나 더") — 미리 고르지 않는다.
@@ -396,7 +400,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 보름달 완드 세 장과 보름달 지팡이 세 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 한복 입은 사람이 지니는 소품으로 은장도 두 장과 옥비녀 검 두 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>

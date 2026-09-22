@@ -1326,5 +1326,21 @@
   "chuseok_moon_staff_c": {
     "key": "key3",
     "objectId": "5b359045-8319-431d-8da0-74edbaa585bf"
+  },
+  "chuseok_eunjangdo_a": {
+    "key": "key3",
+    "objectId": "1258a50b-6027-48fe-99f1-225e106e1e50"
+  },
+  "chuseok_eunjangdo_b": {
+    "key": "key3",
+    "objectId": "275c7c90-d956-4933-bdce-2a574f80a7d3"
+  },
+  "chuseok_binyeo_a": {
+    "key": "key3",
+    "objectId": "ca064698-5a82-4fd9-97fd-020b17e87791"
+  },
+  "chuseok_binyeo_b": {
+    "key": "key3",
+    "objectId": "3496a44d-1883-4ab7-8b84-e72b6e6608e8"
   }
 }
