@@ -1210,5 +1210,37 @@
   "chuseok_rabbit_suit_v8": {
     "key": "key3",
     "objectId": "5b065b2b-b49d-4df0-b5c6-8ec3af9a51ee"
+  },
+  "chuseok_jade_hwando": {
+    "key": "key3",
+    "objectId": "6f7f0267-e099-4dbd-b897-2a319ce43d76"
+  },
+  "chuseok_jade_fan": {
+    "key": "key3",
+    "objectId": "2a455908-11b5-467e-bf8d-0cb108c94f07"
+  },
+  "chuseok_jade_parasol": {
+    "key": "key3",
+    "objectId": "ea409ce1-7001-4ddb-8a9f-a2b121b506dd"
+  },
+  "chuseok_jade_spear": {
+    "key": "key3",
+    "objectId": "a877c02a-6454-4aa3-aff1-ab341fd23e02"
+  },
+  "chuseok_rabbit_suit_v9": {
+    "key": "key3",
+    "objectId": "5c529e7d-bb18-4412-b37c-3c03c1b957c1"
+  },
+  "chuseok_rabbit_suit_v10": {
+    "key": "key3",
+    "objectId": "cdb03253-b0a7-4f22-bd3c-fb5b96532fc6"
+  },
+  "chuseok_rabbit_suit_v11": {
+    "key": "key3",
+    "objectId": "0b882c66-2508-4a39-850e-ef9e459db1cb"
+  },
+  "chuseok_rabbit_suit_v12": {
+    "key": "key3",
+    "objectId": "4e475fd2-a900-49cd-9390-8bed9c78de24"
   }
 }
