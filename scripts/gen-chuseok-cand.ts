@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1458,6 +1458,67 @@ export const CANDIDATES: ChuseokCand[] = [
     art:
       'a gnarled persimmon tree branch staff with dark bark, a few orange-red ripe persimmons and autumn leaves growing near the top, a crimson silk cord and gold bead wrapped around the grip, ' +
       'elegant and opulent, clearly a staff weapon, no text, large, diagonal',
+  },
+  // ── 17차(09-22 밤): 9차 선택. 한복 무기 "보름달 완드? 지팡이? 로 여러 개" → 보름달 구슬을 얹은 완드·지팡이 6종(짧은 완드 3, 긴 지팡이 3).
+  {
+    key: 'chuseok_moon_wand_a',
+    nameKo: '보름달 완드(금 초승달 받침)',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 완드',
+    art:
+      'a short slender wand of dark lacquered wood topped with a glowing golden full moon orb held in a gold crescent-shaped cradle, a crimson silk tassel with a small jade bead at the grip, ' +
+      'elegant and opulent, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_wand_b',
+    nameKo: '달구름 완드(옥색 비단)',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 완드',
+    art:
+      'a short wand wrapped in pale jade-green silk with a glowing golden full moon orb at the tip, thin gold-leaf cloud wisps curling around the orb, a crimson and gold tassel, ' +
+      'elegant and opulent, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_wand_c',
+    nameKo: '보름달 노리개 완드',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 완드',
+    art:
+      'a short wand styled like a Korean norigae ornament: a dark wooden rod with a round pale moonstone full moon pendant at the tip set in gold, an ornate crimson silk knot (maedeup) and a long crimson tassel hanging below, ' +
+      'elegant and opulent, clearly a magic wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_staff_a',
+    nameKo: '보름달 지팡이(금 구름)',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 지팡이',
+    art:
+      'a tall staff of dark lacquered wood with a large glowing golden full moon orb at the top, small gold cloud ornaments and a tiny gold star spiraling around the orb, a crimson silk cord wrapped around the upper shaft, ' +
+      'elegant and opulent, clearly a magic staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_staff_b',
+    nameKo: '옥 보름달 지팡이',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 지팡이',
+    art:
+      'a tall staff of pale jade with gold bands, a large pale glowing moonstone full moon at the top cradled by a thin gold crescent, a crimson silk tassel hanging from the crescent, ' +
+      'elegant and opulent, clearly a magic staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_staff_c',
+    nameKo: '달빛 억새 지팡이',
+    slot: 'weapon',
+    batch: 17,
+    concept: '한복 세트 무기 — 보름달 지팡이',
+    art:
+      'a tall staff of dark wood with a large glowing golden full moon orb at the top, soft silver pampas grass plumes and a few gold rice ears tied around the orb base with a crimson cord, ' +
+      'elegant and opulent, clearly a magic staff weapon, no text, large, diagonal',
   },
 ];
 

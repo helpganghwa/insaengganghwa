@@ -1302,5 +1302,29 @@
   "chuseok_chestnut_mace_v2": {
     "key": "key3",
     "objectId": "17147dc2-6570-42f2-a557-d36c5205469e"
+  },
+  "chuseok_moon_wand_a": {
+    "key": "key3",
+    "objectId": "af75afbe-dc21-4ac1-a3d2-9d405300f48b"
+  },
+  "chuseok_moon_wand_b": {
+    "key": "key3",
+    "objectId": "e43684d3-7b2a-489e-99ef-e9ac3b29b44f"
+  },
+  "chuseok_moon_wand_c": {
+    "key": "key3",
+    "objectId": "d938542d-9470-436e-bc06-fb0c14e60ac1"
+  },
+  "chuseok_moon_staff_a": {
+    "key": "key3",
+    "objectId": "9d6f94b3-d056-4894-8133-a58b07e795aa"
+  },
+  "chuseok_moon_staff_b": {
+    "key": "key3",
+    "objectId": "35b5ca02-55ef-4016-8845-32fcf67c59e6"
+  },
+  "chuseok_moon_staff_c": {
+    "key": "key3",
+    "objectId": "5b359045-8319-431d-8da0-74edbaa585bf"
   }
 }

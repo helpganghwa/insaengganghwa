@@ -23,13 +23,19 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
-      { key: 'chuseok_yut_sticks', name: '윷가락 한 벌', note: '반달꼴 나무 윷 네 가락을 진홍 끈과 금 구슬로 묶은 던지기 무기. 윷놀이 그대로입니다.', fresh: true },
-      { key: 'chuseok_songpyeon_mace', name: '송편 철퇴', note: '머리가 통통한 흰 송편(분홍 테), 목에 솔잎, 진홍 끈을 감은 검은 자루. 가장 한가위다운 판입니다.', fresh: true },
-      { key: 'chuseok_tuho_arrows', name: '투호살 다발', note: '진홍·흰 깃의 긴 투호살 다섯 대를 금 끈으로 묶음. 투호 놀이입니다.', fresh: true },
-      { key: 'chuseok_chestnut_mace_v2', name: '밤송이 철퇴(새 그림)', note: '벌어진 밤송이 속 알밤 두 톨이 머리, 진홍 끈 자루. 같은 문장으로 새로 만든 판.', fresh: true },
-      { key: 'chuseok_chestnut_mace', name: '밤송이 철퇴(3차 그림)', note: '3차 때 만들어 둔 밤송이 철퇴. 초록 가시 밤송이가 크고 또렷합니다.', fresh: true },
-      { key: 'chuseok_moon_lantern_staff', name: '달맞이 등불 지팡이', note: '굽은 금 고리에 보름달 같은 둥근 등불을 건 긴 지팡이, 진홍 술. 달맞이입니다.', fresh: true },
-      { key: 'chuseok_persimmon_staff', name: '감나무 가지 지팡이', note: '감이 열린 감나무 가지 지팡이, 손잡이에 진홍 끈과 금 구슬, 끝에 쇠촉.', fresh: true },
+      { key: 'chuseok_moon_wand_a', name: '보름달 완드(금 초승달 받침)', note: '검은 자루 끝 금 초승달 받침에 금빛 보름달 구슬, 진홍 술과 옥 구슬. 짧은 완드입니다.', fresh: true },
+      { key: 'chuseok_moon_wand_b', name: '달구름 완드(옥색 비단)', note: '옥색 비단을 감은 자루, 금 구름이 감싼 보름달 구슬, 진홍·금 술. 확정 한복의 옥색과 맞습니다.', fresh: true },
+      { key: 'chuseok_moon_wand_c', name: '보름달 노리개 완드', note: '검은 자루 끝 은은한 달구슬, 진홍 매듭과 긴 술. 노리개처럼 생긴 완드입니다.', fresh: true },
+      { key: 'chuseok_moon_staff_a', name: '보름달 지팡이(금 구름)', note: '긴 검은 지팡이 위 금빛 보름달, 금 구름 장식, 진홍 끈. 긴 지팡이입니다.', fresh: true },
+      { key: 'chuseok_moon_staff_b', name: '옥 보름달 지팡이', note: '옥 지팡이에 금 띠, 위에 금 초승달 고리 안에 연푸른 달구슬, 진홍 술. 셋 중 가장 절제된 판.', fresh: true },
+      { key: 'chuseok_moon_staff_c', name: '달빛 억새 지팡이', note: '검은 지팡이 위 초승달 안의 보름달, 은빛 억새와 금 벼이삭, 진홍 끈. 한가위 들판 느낌입니다.', fresh: true },
+      { key: 'chuseok_yut_sticks', name: '윷가락 한 벌', note: '반달꼴 나무 윷 네 가락을 진홍 끈과 금 구슬로 묶은 던지기 무기. 윷놀이 그대로입니다.' },
+      { key: 'chuseok_songpyeon_mace', name: '송편 철퇴', note: '머리가 통통한 흰 송편(분홍 테), 목에 솔잎, 진홍 끈을 감은 검은 자루. 가장 한가위다운 판입니다.' },
+      { key: 'chuseok_tuho_arrows', name: '투호살 다발', note: '진홍·흰 깃의 긴 투호살 다섯 대를 금 끈으로 묶음. 투호 놀이입니다.' },
+      { key: 'chuseok_chestnut_mace_v2', name: '밤송이 철퇴(새 그림)', note: '벌어진 밤송이 속 알밤 두 톨이 머리, 진홍 끈 자루. 같은 문장으로 새로 만든 판.' },
+      { key: 'chuseok_chestnut_mace', name: '밤송이 철퇴(3차 그림)', note: '3차 때 만들어 둔 밤송이 철퇴. 초록 가시 밤송이가 크고 또렷합니다.' },
+      { key: 'chuseok_moon_lantern_staff', name: '달맞이 등불 지팡이', note: '굽은 금 고리에 보름달 같은 둥근 등불을 건 긴 지팡이, 진홍 술. 달맞이입니다.' },
+      { key: 'chuseok_persimmon_staff', name: '감나무 가지 지팡이', note: '감이 열린 감나무 가지 지팡이, 손잡이에 진홍 끈과 금 구슬, 끝에 쇠촉.' },
       { key: 'chuseok_woldo', name: '보름달 월도', note: '긴 검은 자루 끝에 초승달꼴 금 날, 날에 보름달 새김, 진홍 술. 전통 장병기 월도입니다.' },
       { key: 'chuseok_gakgung_moon', name: '보름달 각궁', note: '진홍 칠에 금박 달·솔잎 무늬, 감빛 손잡이, 금 깃 화살 한 대. 전통 각궁입니다.' },
       { key: 'chuseok_pyeongon', name: '벼이삭 편곤', note: '검은 장대와 쇠사슬로 이어진 짧은 타격봉, 봉에 황금 벼이삭과 금 띠, 진홍 술. 도리깨에서 온 전통 무기 편곤입니다.' },
@@ -188,7 +194,7 @@ const data = SLOTS.map((s) => ({
 const SCRIPT = String.raw`
 (function () {
   var SLOTS = window.__SLOTS__;
-  var LS_KEY = 'chuseok-pick-draft-v10'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
+  var LS_KEY = 'chuseok-pick-draft-v11'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
   var state = {};
   // 2차 제출까지 확정한 두 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
   // 한복 방어구는 2차에서 다시 열렸다("금박 꽃무늬·옥색 저고리와 비슷한 느낌으로 하나 더") — 미리 고르지 않는다.
@@ -390,7 +396,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 한가위 놀이·음식·풍경 소재(윷가락 · 송편 철퇴 · 투호살 · 밤송이 철퇴 · 달맞이 등불 · 감나무 가지) 일곱 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 보름달 완드 세 장과 보름달 지팡이 세 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>
