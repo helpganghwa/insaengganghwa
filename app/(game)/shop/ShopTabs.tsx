@@ -696,6 +696,15 @@ export function ShopTabs({
       } else if (r.reason === 'unsupported') {
         // 앱 표식은 있는데 Digital Goods API가 없는 환경(구버전 크롬 등).
         setPayNotice({ title: '앱에서만 결제할 수 있어요', body: r.message });
+      } else if (viaPlay && r.reason === 'verify' && r.code !== 'NETWORK') {
+        // Play 검증 실패(2026-09-22) — 구글 결제는 끝났고 우리 확인만 실패한 상태. 시트는 success로 닫혔고
+        // 다음 상점 진입의 복구(recoverPlayPurchases)가 다시 지급을 시도한다. '결제 실패'로 말하면 유저가
+        // 다시 사려다 "already own"을 만난다(오늘 실측).
+        setPayNotice({
+          title: '결제 확인이 안 됐어요',
+          body: '결제는 접수됐습니다. 상점을 닫았다 다시 열면 지급이 다시 시도되고, 그래도 들어오지 않으면 고객센터로 알려 주세요.',
+          support: true,
+        });
       } else if (r.reason === 'verify' && r.code === 'NETWORK') {
         // 결제창은 닫혔는데 확인 요청만 전송 실패.
         //
