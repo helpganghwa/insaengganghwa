@@ -230,14 +230,18 @@
 .fx-dual .orb{display:inline-block;position:relative;width:var(--d);height:var(--d);margin-left:.22em;vertical-align:-.02em;filter:var(--glow-lo);animation:moonbreath var(--t) ease-in-out infinite}
 .fx-dual .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 @keyframes moonbreath{0%,12%,40%,56%,84%,100%{filter:var(--glow-lo);transform:scale(1)}26%,70%{filter:var(--glow-hi);transform:scale(1.05)}}
-.fx-newmoon{--d:.64em;--t:8s;--glow-lo:drop-shadow(0 0 1px rgba(225,235,255,.45));--glow-hi:drop-shadow(0 0 1px rgba(235,242,255,.9)) drop-shadow(0 0 3px rgba(200,218,250,.5))}
-.fx-newmoon .ko{color:#b7c0d2}.fx-newmoon .hj{color:#e6ecfa;text-shadow:0 0 2px rgba(205,220,245,.35)}
-.fx-newmoon .orb::before{transform:rotate(28deg);background:radial-gradient(circle at 84% 50%,#ffffff 0%,#eef3ff 40%,#d3dcf2 70%,rgba(190,204,236,.55) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>")}
-.fx-halfmoon{--d:.68em;--t:7.5s;--glow-lo:drop-shadow(0 0 1px rgba(230,238,255,.5));--glow-hi:drop-shadow(0 0 1px rgba(240,246,255,.95)) drop-shadow(0 0 3.5px rgba(205,220,250,.55))}
-.fx-halfmoon .ko{color:#c3cbdc}.fx-halfmoon .hj{color:#eef2fc;text-shadow:0 0 3px rgba(215,228,250,.4)}
+.fx-newmoon{--d:.64em;--t:8.5s;--glow-lo:drop-shadow(0 0 1px rgba(200,214,240,.4));--glow-hi:drop-shadow(0 0 1px rgba(220,230,250,.85)) drop-shadow(0 0 2.5px rgba(170,195,240,.45))}
+.fx-newmoon .ko{color:#9fa9bf}.fx-newmoon .hj{color:#d5ddee}
+.fx-newmoon .orb::before{transform:rotate(28deg);background:radial-gradient(circle at 84% 50%,#f4f7ff 0%,#dfe7fa 40%,#bfcbe8 70%,rgba(170,188,228,.55) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>")}
+.fx-halfmoon{--d:.68em;--t:7.5s;--glow-lo:drop-shadow(0 0 1px rgba(235,241,255,.6)) drop-shadow(0 0 2px rgba(210,222,250,.25));--glow-hi:drop-shadow(0 0 1.5px rgba(250,252,255,1)) drop-shadow(0 0 5px rgba(215,228,255,.7))}
+.fx-halfmoon .ko{color:#d3dae8}.fx-halfmoon .hj{color:#ffffff;animation:hjwipe var(--t) ease-in-out infinite,pearlglow var(--t) ease-in-out infinite}
+@keyframes pearlglow{0%,14%,40%,58%,84%,100%{text-shadow:0 0 0 rgba(225,235,255,0)}26%,70%{text-shadow:0 0 5px rgba(225,235,255,.75),0 0 10px rgba(200,216,250,.35)}}
 .fx-halfmoon .orb::before{filter:blur(.018em);background:radial-gradient(circle at 78% 50%,#ffffff 0%,#f0f4ff 42%,#d6dff3 72%,rgba(196,210,240,.6) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>")}
-.fx-fullmoon{--d:.74em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.55));--glow-hi:drop-shadow(0 0 1.5px rgba(255,246,205,.95)) drop-shadow(0 0 5px rgba(245,215,110,.6))}
-.fx-fullmoon .ko{color:#d9c98f}.fx-fullmoon .hj{color:#fff0bd;text-shadow:0 0 3px rgba(245,215,110,.55),0 0 6px rgba(245,215,110,.25)}
+.fx-fullmoon{--d:.74em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.6)) drop-shadow(0 0 3px rgba(245,215,110,.3));--glow-hi:drop-shadow(0 0 2px rgba(255,248,215,1)) drop-shadow(0 0 7px rgba(245,215,110,.8))}
+.fx-fullmoon .ko{color:#d9c98f}.fx-fullmoon .hj{background:linear-gradient(90deg,#fff3c4,#f5d76e,#fff8dc,#e6c25a,#fff3c4);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 3px rgba(245,215,110,.55));animation:hjwipe var(--t) ease-in-out infinite,flow 9s linear infinite}
+/* 보름달 곁 별 둘 — 1등만. 4.2초 주기로 번갈아 반짝임. */
+.fx-fullmoon .orb::after{content:"";position:absolute;left:-.2em;top:-.12em;width:.07em;height:.07em;border-radius:50%;background:#fff8dc;box-shadow:.98em .82em 0 0 #fff2c0;animation:moonstars 4.2s ease-in-out infinite}
+@keyframes moonstars{0%,100%{opacity:.25;transform:scale(.8)}30%{opacity:1;transform:scale(1.15)}60%{opacity:.35;transform:scale(.9)}}
 .fx-fullmoon .orb::before{background:radial-gradient(circle at 62% 34%,rgba(176,134,50,.32) 0 13%,transparent 15%),radial-gradient(circle at 36% 56%,rgba(176,134,50,.28) 0 17%,transparent 19%),radial-gradient(circle at 58% 66%,rgba(176,134,50,.22) 0 9%,transparent 11%),radial-gradient(circle at 42% 40%,#fffbe6 0%,#f7dd7e 52%,#dfb247 88%,#c49838 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
 .fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
 @keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
@@ -251,6 +255,7 @@
 .ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
 .ttag-still .pt>i{display:none}
 .ttag-still .fx-dual .hj{display:none}
+.ttag-still .orb,.ttag-still .orb::after{animation:none !important}
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
