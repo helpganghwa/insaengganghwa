@@ -64,8 +64,13 @@ for (const it of CATALOG_V6) {
   <label class="f"><span>이름</span><input type="text" name="name" value="${esc(it.nameKo)}" maxlength="20"></label>
   <label class="f"><span>로어 <small>${it.lore.length}자 · 톤 ${it.tone ?? '-'}</small></span><textarea name="lore" rows="4">${esc(it.lore)}</textarea></label>
   <details><summary>애니 프롬프트</summary><p class="pr">${esc(prompts.itemsKo?.[cid] ?? '')}</p><p class="pr en">${esc(prompts.items[cid] ?? '')}</p></details>
-  <label class="chk"><input type="checkbox" name="redo"> 애니메이션 다시 생성</label>
-  <input type="text" name="why" placeholder="애니 방향(예: 달만 더 밝게, 술 흔들림 줄이기)">
+  <div class="rej">
+    <span class="rl">리젝</span>
+    <label class="chk"><input type="checkbox" name="rej_name"> 이름</label>
+    <label class="chk"><input type="checkbox" name="rej_lore"> 로어</label>
+    <label class="chk"><input type="checkbox" name="rej_anim"> 애니메이션</label>
+  </div>
+  <input type="text" name="why" placeholder="리젝 사유·원하는 방향(예: 이름이 길다, 로어를 더 밝게, 달만 더 빛나게)">
 </section>`);
 }
 
@@ -100,7 +105,9 @@ details{margin-top:8px;font-size:12px}
 details summary{cursor:pointer;color:var(--ink2)}
 .pr{margin:4px 0;font-size:12px}
 .pr.en{color:var(--ink2);font-size:11.5px}
-.chk{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px}
+.rej{display:flex;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.rej .rl{font-size:12px;font-weight:700;color:var(--gold)}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:13px}
 .card input[name=why]{margin-top:6px}
 .card.changed{border-color:var(--gold)}
 .foot{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
@@ -115,21 +122,21 @@ pre.sum{white-space:pre-wrap;background:var(--paper);border:1px solid var(--line
 </style>
 <div class="wrap">
 <h1>한가위 6종 리뷰</h1>
-<p class="lead">이름과 로어는 칸에서 바로 고치면 됩니다(고친 카드는 테두리가 금색). 애니메이션은 확정 그림의 Pixellab 객체로 만든 해방 애니(본체 고정·빛과 장식만 움직임)입니다. 다시 만들 것은 확인란을 누르고 방향을 적어 주세요. 맨 아래 요약을 복사해 채팅에 붙이면 그대로 반영합니다.</p>
+<p class="lead">카드마다 이름·로어·해방 애니메이션을 봅니다. 마음에 안 드는 것은 <b>리젝</b>에서 이름·로어·애니메이션을 골라 사유를 적어 주세요(고른 카드는 테두리가 금색). 이름·로어는 칸에서 직접 고쳐도 됩니다. 애니메이션은 확정 그림의 Pixellab 객체로 만든 해방 애니(본체 고정·빛과 장식만 움직임)입니다. 맨 아래 요약을 복사해 채팅에 붙이면 그대로 반영합니다.</p>
 <form id="f">${cards.join('\n')}</form>
 <h2 style="font-size:16px;margin:24px 0 6px">요약</h2>
 <pre class="sum" id="sum"></pre>
 </div>
-<div class="foot"><div class="st">바뀐 카드 <b id="cnt">0</b> / 6 · 다시 생성 <b id="redo">0</b></div><button class="copy" id="copy" type="button">요약 복사</button></div>
+<div class="foot"><div class="st">리젝·수정 카드 <b id="cnt">0</b> / 6 · 리젝 <b id="redo">0</b></div><button class="copy" id="copy" type="button">요약 복사</button></div>
 <script>
 (function(){
-  var KEY='chuseok-items-review-v1';
+  var KEY='chuseok-items-review-v2';
   var cards=Array.prototype.slice.call(document.querySelectorAll('.card'));
-  function startAnims(){cards.forEach(function(c){var a=c.querySelector('.anim');if(!a)return;var n=parseInt(a.getAttribute('data-frames'),10)||1;var i=0;setInterval(function(){i=(i+1)%n;a.style.backgroundPosition=(-i*100/(n-1||1))+'% 0';},110);a.style.backgroundSize=(n*100)+'% 100%';});}
-  function state(c){return {key:c.getAttribute('data-key'),name0:c.getAttribute('data-name'),name:c.querySelector('[name=name]').value.trim(),lore0:c.querySelector('[name=lore]').defaultValue,lore:c.querySelector('[name=lore]').value.trim(),redo:c.querySelector('[name=redo]').checked,why:c.querySelector('[name=why]').value.trim()}}
-  function build(){var lines=['[한가위 6종 리뷰]'];var changed=0,redo=0;cards.forEach(function(c){var s=state(c);var parts=[];if(s.name!==s.name0)parts.push('이름: '+s.name0+' → '+s.name);if(s.lore!==s.lore0)parts.push('로어: '+s.lore);if(s.redo){redo++;parts.push('애니 다시 생성'+(s.why?' / 방향: '+s.why:''));}else if(s.why)parts.push('애니 메모: '+s.why);var ch=parts.length>0;c.classList.toggle('changed',ch);if(ch){changed++;lines.push(s.key+' ('+s.name0+'): '+parts.join(' · '));}});if(changed===0)lines.push('수정 없음 — 이름·로어·애니 모두 확정');document.getElementById('cnt').textContent=changed;document.getElementById('redo').textContent=redo;document.getElementById('sum').textContent=lines.join('\\n');return lines.join('\\n');}
-  function persist(){try{localStorage.setItem(KEY,JSON.stringify(cards.map(function(c){var s=state(c);return {key:s.key,name:s.name,lore:s.lore,redo:s.redo,why:s.why}})))}catch(e){}}
-  function restore(){try{var o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return;o.forEach(function(v){var c=cards.filter(function(x){return x.getAttribute('data-key')===v.key})[0];if(!c)return;c.querySelector('[name=name]').value=v.name;c.querySelector('[name=lore]').value=v.lore;c.querySelector('[name=redo]').checked=!!v.redo;c.querySelector('[name=why]').value=v.why||''})}catch(e){}}
+  function startAnims(){cards.forEach(function(c){var a=c.querySelector('.anim');if(!a)return;var n=parseInt(a.getAttribute('data-frames'),10)||1;var i=0;setInterval(function(){i=(i+1)%n;a.style.backgroundPosition=(i*100/(n-1||1))+'% 0';},110);a.style.backgroundSize=(n*100)+'% 100%';});}
+  function state(c){return {key:c.getAttribute('data-key'),name0:c.getAttribute('data-name'),name:c.querySelector('[name=name]').value.trim(),lore0:c.querySelector('[name=lore]').defaultValue.trim(),lore:c.querySelector('[name=lore]').value.trim(),rn:c.querySelector('[name=rej_name]').checked,rl:c.querySelector('[name=rej_lore]').checked,ra:c.querySelector('[name=rej_anim]').checked,why:c.querySelector('[name=why]').value.trim()}}
+  function build(){var lines=['[한가위 6종 리뷰]'];var changed=0,rej=0;cards.forEach(function(c){var s=state(c);var parts=[];var rj=[];if(s.rn)rj.push('이름');if(s.rl)rj.push('로어');if(s.ra)rj.push('애니메이션');if(rj.length){rej++;parts.push('리젝: '+rj.join('·')+(s.why?' / 사유: '+s.why:' / 사유: (적지 않음)'));}else if(s.why)parts.push('메모: '+s.why);if(s.name!==s.name0)parts.push('이름 수정: '+s.name0+' → '+s.name);if(s.lore!==s.lore0)parts.push('로어 수정: '+s.lore);var ch=parts.length>0;c.classList.toggle('changed',ch);if(ch){changed++;lines.push(s.key+' ('+s.name0+'): '+parts.join(' · '));}});if(changed===0)lines.push('리젝·수정 없음 — 이름·로어·애니 모두 확정');document.getElementById('cnt').textContent=changed;document.getElementById('redo').textContent=rej;document.getElementById('sum').textContent=lines.join('\\n');return lines.join('\\n');}
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(cards.map(function(c){var s=state(c);return {key:s.key,name:s.name,lore:s.lore,rn:s.rn,rl:s.rl,ra:s.ra,why:s.why}})))}catch(e){}}
+  function restore(){try{var o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return;o.forEach(function(v){var c=cards.filter(function(x){return x.getAttribute('data-key')===v.key})[0];if(!c)return;c.querySelector('[name=name]').value=v.name;c.querySelector('[name=lore]').value=v.lore;c.querySelector('[name=rej_name]').checked=!!v.rn;c.querySelector('[name=rej_lore]').checked=!!v.rl;c.querySelector('[name=rej_anim]').checked=!!v.ra;c.querySelector('[name=why]').value=v.why||''})}catch(e){}}
   document.getElementById('f').addEventListener('input',function(){build();persist()});document.getElementById('f').addEventListener('change',function(){build();persist()});
   document.getElementById('copy').addEventListener('click',function(){var t=build();var b=this;function done(ok){b.textContent=ok?'복사됨':'복사 실패';setTimeout(function(){b.textContent='요약 복사'},1800)}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){done(true)},function(){done(false)})}else done(false)});
   restore();build();startAnims();
