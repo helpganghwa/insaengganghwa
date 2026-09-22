@@ -212,27 +212,32 @@
    달이 클수록(순위가 높을수록) 비추는 폭이 넓고 빛이 세다. 마스크 창 폭(--w)과 달 지름(--d)은 em 단위라 채팅 13px에서도 비율 유지.
    한복 장비(매화·작약·모란) = 연분홍 숨결 → 장밋빛 흐름 → 진홍·금 흐름+꽃잎 파티클. */
 .fx-dual{position:relative;display:inline-block;white-space:nowrap}
-/* 한자 층: 창(원형 마스크) 안에서만 보임. 한글 층: 같은 창을 뺀 나머지에서만 보임(전체 마스크에서 원을 exclude) →
-   달빛 자리에는 한자만 남는다. 창은 글자 왼끝 바깥(-.6w)에서 오른끝 바깥(+.6w)까지 왕복. */
-.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);mask-image:radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);-webkit-mask-size:var(--w) 100%;mask-size:var(--w) 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:moonmask var(--t) ease-in-out infinite alternate}
-.fx-dual .ko{display:inline-block;-webkit-mask-image:linear-gradient(#000,#000),radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);mask-image:linear-gradient(#000,#000),radial-gradient(circle at 50% 50%,#000 0 36%,transparent 60%);-webkit-mask-size:100% 100%,var(--w) 100%;mask-size:100% 100%,var(--w) 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-composite:xor;mask-composite:exclude;animation:moonmask2 var(--t) ease-in-out infinite alternate}
-@keyframes moonmask{from{-webkit-mask-position:calc(0% - var(--w) * .6) 0;mask-position:calc(0% - var(--w) * .6) 0}to{-webkit-mask-position:calc(100% + var(--w) * .6) 0;mask-position:calc(100% + var(--w) * .6) 0}}
-@keyframes moonmask2{from{-webkit-mask-position:0 0,calc(0% - var(--w) * .6) 0;mask-position:0 0,calc(0% - var(--w) * .6) 0}to{-webkit-mask-position:0 0,calc(100% + var(--w) * .6) 0;mask-position:0 0,calc(100% + var(--w) * .6) 0}}
-/* 달은 마스크 창의 중심과 같은 x를 달린다: 창 왼끝 + (창 폭 - 달 지름)/2 */
-.fx-dual .orb{position:absolute;top:-.62em;width:var(--d);height:var(--d);border-radius:50%;pointer-events:none;animation:moonorb var(--t) ease-in-out infinite alternate}
-@keyframes moonorb{from{left:calc(0% - var(--w) * .6 + (var(--w) - var(--d)) / 2)}to{left:calc(100% + var(--w) * .6 + (var(--w) - var(--d)) / 2)}}
-.fx-newmoon{--w:.9em;--d:.36em;--t:7.5s}
+/* 닦아내기(2026-09-22 2차): 달이 왼쪽에서 오른쪽으로 지나가면 지나간 글자가 한자로 남고, 오른쪽에서 돌아올 때는 지나간
+   글자가 한글로 돌아온다. 한자 층 마스크 = 폭 2배의 [검정|투명] 띠를 달의 x에 맞춰 밀고(경계 = 달 중심), 한글 층은 그 반대 띠.
+   alternate라 왕복 두 구간이 같은 기하로 이어지고, 양끝에서 잠깐 머문다(moonhold). 합성(mask-composite) 불필요. */
+.fx-dual .hj,.fx-dual .ko{-webkit-mask-size:200% 100%;mask-size:200% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:moonwipe var(--t) ease-in-out infinite alternate}
+.fx-dual .ko{display:inline-block;-webkit-mask-image:linear-gradient(90deg,transparent 0 48%,#000 52%);mask-image:linear-gradient(90deg,transparent 0 48%,#000 52%)}
+.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,#000 0 48%,transparent 52%);mask-image:linear-gradient(90deg,#000 0 48%,transparent 52%)}
+@keyframes moonwipe{0%,8%{-webkit-mask-position:100% 0;mask-position:100% 0}92%,100%{-webkit-mask-position:0% 0;mask-position:0% 0}}
+/* 달(.orb): 모양은 ::before의 SVG 마스크(초승달·반달·보름달)로만 만들고 테두리를 두지 않는다. 후광은 부모의 drop-shadow라 모양을 따라간다. */
+.fx-dual .orb{position:absolute;top:-.68em;width:var(--d);height:var(--d);pointer-events:none;animation:moonride var(--t) ease-in-out infinite alternate}
+@keyframes moonride{0%,8%{left:calc(0% - var(--d) / 2)}92%,100%{left:calc(100% - var(--d) / 2)}}
+.fx-dual .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fx-newmoon{--d:.5em;--t:9s}
 .fx-newmoon .ko{color:#b7c0d2}
-.fx-newmoon .hj{color:#eef2ff;text-shadow:0 0 3px rgba(205,220,245,.55)}
-.fx-newmoon .orb{background:transparent;box-shadow:inset .11em 0 0 0 #e8eefc,0 0 2px rgba(205,220,245,.55)}
-.fx-halfmoon{--w:1.15em;--d:.42em;--t:7s}
+.fx-newmoon .hj{color:#eef2ff;text-shadow:0 0 3px rgba(205,220,245,.5)}
+.fx-newmoon .orb{filter:drop-shadow(0 0 1px rgba(225,235,255,.8)) drop-shadow(0 0 3px rgba(190,210,245,.45))}
+.fx-newmoon .orb::before{background:radial-gradient(circle at 30% 50%,#ffffff 0%,#e4ebfa 55%,#c2cfe8 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M11 1 A9 9 0 1 0 11 19 A10 10 0 0 1 11 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M11 1 A9 9 0 1 0 11 19 A10 10 0 0 1 11 1 Z'/></svg>")}
+.fx-halfmoon{--d:.54em;--t:8.5s}
 .fx-halfmoon .ko{color:#c3cbdc}
-.fx-halfmoon .hj{color:#f6f8ff;text-shadow:0 0 4px rgba(215,228,250,.7)}
-.fx-halfmoon .orb{background:linear-gradient(90deg,#f4f7ff 50%,#333a52 50%);box-shadow:0 0 2px 1px rgba(215,228,250,.5)}
-.fx-fullmoon{--w:1.45em;--d:.5em;--t:6.5s}
+.fx-halfmoon .hj{color:#f6f8ff;text-shadow:0 0 4px rgba(215,228,250,.65)}
+.fx-halfmoon .orb{filter:drop-shadow(0 0 1px rgba(230,238,255,.85)) drop-shadow(0 0 3.5px rgba(200,215,245,.5))}
+.fx-halfmoon .orb::before{background:radial-gradient(circle at 35% 50%,#ffffff 0%,#eaf0fc 55%,#cbd6ec 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 0 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 0 10 19 Z'/></svg>")}
+.fx-fullmoon{--d:.6em;--t:8s}
 .fx-fullmoon .ko{color:#d9c98f}
 .fx-fullmoon .hj{color:#fff3c4;text-shadow:0 0 5px rgba(245,215,110,.85),0 0 9px rgba(245,215,110,.4)}
-.fx-fullmoon .orb{background:radial-gradient(circle at 40% 40%,#fff8dc 0%,#f5d76e 55%,#d9a93a 100%);box-shadow:0 0 3px 1px rgba(245,215,110,.75),0 0 7px rgba(245,215,110,.4)}
+.fx-fullmoon .orb{filter:drop-shadow(0 0 1.5px rgba(255,236,170,.9)) drop-shadow(0 0 5px rgba(245,215,110,.55))}
+.fx-fullmoon .orb::before{background:radial-gradient(circle at 38% 38%,#fffbe6 0%,#f8df82 50%,#dcae3e 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
 .fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
 @keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
 .fx-peony{background:linear-gradient(90deg,#f6b3c8,#e0578a,#ffd9e6,#e0578a,#f6b3c8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite}
