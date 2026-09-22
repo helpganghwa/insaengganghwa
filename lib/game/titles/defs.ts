@@ -5396,6 +5396,40 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    color: "#a8a8b0"
   }
+ },
+ {
+  code: "chuseok26_rank3",
+  kind: "permanent",
+  label: "신월",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "moonlight",
+   glow: true
+  }
+ },
+ {
+  code: "chuseok26_rank2",
+  kind: "permanent",
+  label: "반월",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "lunarflow",
+   glow: true
+  }
+ },
+ {
+  code: "chuseok26_rank1",
+  kind: "permanent",
+  label: "만월",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "goldflow",
+   pt: "stardust",
+   glow: true
+  }
  }
 ] as const;
 

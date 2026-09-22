@@ -5028,6 +5028,24 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "일상",
   cond: "거주 이동 100회",
   diff: "중간"
+ },
+ {
+  code: "chuseok26_rank3",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 3등 안에 든 사람(아이템 하나면 충분)",
+  diff: "한정"
+ },
+ {
+  code: "chuseok26_rank2",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 2등 안에 든 사람(아이템 하나면 충분)",
+  diff: "한정"
+ },
+ {
+  code: "chuseok26_rank1",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 1등(아이템 하나면 충분)",
+  diff: "한정"
  }
 ] as const;
 

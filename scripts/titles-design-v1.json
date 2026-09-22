@@ -28,7 +28,8 @@
     "조합": "#80cbc4",
     "아바타": "#d8a0c8",
     "헌정": "#f0a860",
-    "파견": "#9ccc8a"
+    "파견": "#9ccc8a",
+    "한가위": "#e8d9a8"
   },
   "regionKeywords": [
     {
@@ -402,6 +403,16 @@
     },
     "binge_500": {
       "fx": "honeyflow"
+    },
+    "chuseok26_rank3": {
+      "fx": "moonlight"
+    },
+    "chuseok26_rank2": {
+      "fx": "lunarflow"
+    },
+    "chuseok26_rank1": {
+      "fx": "goldflow",
+      "pt": "stardust"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
