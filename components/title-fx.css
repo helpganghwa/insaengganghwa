@@ -230,13 +230,13 @@
 .fx-dual .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 @keyframes moonbreath{0%,12%,40%,56%,84%,100%{filter:var(--glow-lo);transform:scale(1)}26%,70%{filter:var(--glow-hi);transform:scale(1.05)}}
 .fx-newmoon{--d:.64em;--t:8.5s;--glow-lo:drop-shadow(0 0 1px rgba(226,230,238,.4));--glow-hi:drop-shadow(0 0 1px rgba(240,243,248,.85)) drop-shadow(0 0 2.5px rgba(205,212,225,.45))}
-.fx-newmoon .ko{color:#d4d9e2}.fx-newmoon .hj{color:#ffffff}
+.fx-newmoon .ko,.fx-newmoon .hj{color:#d4d9e2}
 .fx-newmoon .orb::before{transform:rotate(28deg);background:radial-gradient(circle at 84% 50%,#ffffff 0%,#eceef3 40%,#cdd2dc 70%,rgba(190,196,208,.55) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M9 1 A9 9 0 1 1 9 19 A10 10 0 0 0 9 1 Z'/></svg>")}
 .fx-halfmoon{--d:.68em;--t:7.5s;--glow-lo:drop-shadow(0 0 1px rgba(255,170,190,.55)) drop-shadow(0 0 2px rgba(230,80,120,.25));--glow-hi:drop-shadow(0 0 1.5px rgba(255,210,222,1)) drop-shadow(0 0 5px rgba(240,100,140,.7))}
-.fx-halfmoon .ko{color:#f0587a}.fx-halfmoon .hj{color:#ffa3b8}
+.fx-halfmoon .ko,.fx-halfmoon .hj{color:#f0587a}
 .fx-halfmoon .orb::before{filter:blur(.018em);background:radial-gradient(circle at 78% 50%,#ffe3e8 0%,#ff9fb2 42%,#e85f7e 72%,rgba(200,60,95,.65) 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 1 10 19 Z'/></svg>")}
 .fx-fullmoon{--d:.74em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.6)) drop-shadow(0 0 3px rgba(245,215,110,.3));--glow-hi:drop-shadow(0 0 2px rgba(255,248,215,1)) drop-shadow(0 0 7px rgba(245,215,110,.8))}
-.fx-fullmoon .ko{color:#f2c23c}.fx-fullmoon .hj{color:#ffe07a}
+.fx-fullmoon .ko,.fx-fullmoon .hj{color:#f2c23c}
 .fx-fullmoon .orb::before{background:radial-gradient(circle at 62% 34%,rgba(176,134,50,.32) 0 13%,transparent 15%),radial-gradient(circle at 36% 56%,rgba(176,134,50,.28) 0 17%,transparent 19%),radial-gradient(circle at 58% 66%,rgba(176,134,50,.22) 0 9%,transparent 11%),radial-gradient(circle at 42% 40%,#fffbe6 0%,#f7dd7e 52%,#dfb247 88%,#c49838 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
 .fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
 @keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
