@@ -23,10 +23,10 @@ const SLOTS: Slot[] = [
     set: '한복',
     slot: '무기',
     options: [
-      { key: 'chuseok_eunjangdo_a', name: '달빛 은장도', note: '은 칼집과 자루에 달·구름 새김, 옥 상감, 날이 살짝 뽑힌 모습, 진홍 매듭과 긴 술. 한복에 차던 장도 그대로입니다.', fresh: true },
-      { key: 'chuseok_eunjangdo_b', name: '달빛 은장도(옥 칼집)', note: '옥색 칼집에 은 장식과 초승달 새김, 은 자루, 진홍 매듭과 금 구슬 술. 확정 한복의 옥색과 맞습니다.', fresh: true },
-      { key: 'chuseok_binyeo_a', name: '옥비녀 검(금 달 머리)', note: '옥 비녀대가 송곳처럼 뾰족하고, 머리에 금빛 보름달, 진홍 술. 셋 중 가장 단순합니다.', fresh: true },
-      { key: 'chuseok_binyeo_b', name: '옥비녀 검(은 달 머리)', note: '옥 비녀대에 은 촉, 머리에 은 보름달과 초승달·구름 장식, 진홍 매듭 술. 가장 정교합니다.', fresh: true },
+      { key: 'chuseok_eunjangdo_a', name: '달빛 은장도', note: '은 칼집과 자루에 달·구름 새김, 옥 상감, 날이 살짝 뽑힌 모습, 진홍 매듭과 긴 술. 한복에 차던 장도 그대로입니다.' },
+      { key: 'chuseok_eunjangdo_b', name: '달빛 은장도(옥 칼집)', note: '옥색 칼집에 은 장식과 초승달 새김, 은 자루, 진홍 매듭과 금 구슬 술. 확정 한복의 옥색과 맞습니다.' },
+      { key: 'chuseok_binyeo_a', name: '옥비녀 검(금 달 머리)', note: '옥 비녀대가 송곳처럼 뾰족하고, 머리에 금빛 보름달, 진홍 술. 셋 중 가장 단순합니다.' },
+      { key: 'chuseok_binyeo_b', name: '옥비녀 검(은 달 머리)', note: '옥 비녀대에 은 촉, 머리에 은 보름달과 초승달·구름 장식, 진홍 매듭 술. 가장 정교합니다.' },
       { key: 'chuseok_moon_wand_a', name: '보름달 완드(금 초승달 받침)', note: '검은 자루 끝 금 초승달 받침에 금빛 보름달 구슬, 진홍 술과 옥 구슬. 짧은 완드입니다.' },
       { key: 'chuseok_moon_wand_b', name: '달구름 완드(옥색 비단)', note: '옥색 비단을 감은 자루, 금 구름이 감싼 보름달 구슬, 진홍·금 술. 확정 한복의 옥색과 맞습니다.' },
       { key: 'chuseok_moon_wand_c', name: '보름달 노리개 완드', note: '검은 자루 끝 은은한 달구슬, 진홍 매듭과 긴 술. 노리개처럼 생긴 완드입니다.' },
@@ -198,11 +198,11 @@ const data = SLOTS.map((s) => ({
 const SCRIPT = String.raw`
 (function () {
   var SLOTS = window.__SLOTS__;
-  var LS_KEY = 'chuseok-pick-draft-v12'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
+  var LS_KEY = 'chuseok-pick-draft-v13'; // 회차마다 올린다 — 지난 회차의 '다시 만들기' 체크가 새 그림 위에 남지 않게
   var state = {};
   // 2차 제출까지 확정한 두 부위는 미리 골라 둔다(이 브라우저에 임시 저장본이 있으면 그것이 우선).
   // 한복 방어구는 2차에서 다시 열렸다("금박 꽃무늬·옥색 저고리와 비슷한 느낌으로 하나 더") — 미리 고르지 않는다.
-  var CONFIRMED = { hanbok_armor: 'chuseok_hanbok_v2', hanbok_accessory: 'chuseok_bok_pouch', rabbit_weapon: 'chuseok_rabbit_pestle_v14', rabbit_armor: 'chuseok_rabbit_suit_v15', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
+  var CONFIRMED = { hanbok_weapon: 'chuseok_moon_wand_full', hanbok_armor: 'chuseok_hanbok_v2', hanbok_accessory: 'chuseok_bok_pouch', rabbit_weapon: 'chuseok_rabbit_pestle_v14', rabbit_armor: 'chuseok_rabbit_suit_v15', rabbit_accessory: 'chuseok_rabbit_ears_v4' };
   SLOTS.forEach(function (s) { state[s.id] = { pick: CONFIRMED[s.id] || null, redo: false, reason: '' }; });
   try {
     var saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
@@ -400,7 +400,7 @@ const html = `<title>추석 세트 선택</title>
 </style>
 <div class="wrap">
   <h1>추석 세트 선택</h1>
-  <p class="lead">다섯 부위(한복 방어구 옥색 저고리 · 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음·3 · 접힌 귀)가 확정되어 미리 골라 두었습니다. 남은 한복 무기는 한복 입은 사람이 지니는 소품으로 은장도 두 장과 옥비녀 검 두 장을 맨 앞에 넣었습니다. 마음에 드는 것이 없으면 아래 확인란을 누르고 아쉬운 점을 적어 주시면 그 방향으로 다시 만듭니다. 고른 내용은 이 브라우저에 임시로 남아 있고, [제출]을 눌러야 저장됩니다.</p>
+  <p class="lead">여섯 부위가 모두 확정되었습니다(한복 무기 보름달 완드 · 한복 옥색 저고리 · 한가위 복주머니 · 절굿공이 매끈한 손잡이 · 토끼 인형 슈트 디테일·방울 없음 · 토끼 귀 접힌 귀). 확정된 그림이 미리 골라져 있으니 바꾸고 싶은 부위가 있을 때만 다시 골라 [제출]해 주세요.</p>
   <div id="slots"></div>
   <div class="summary" id="summaryWrap" hidden>
     <b>제출 요약</b>
