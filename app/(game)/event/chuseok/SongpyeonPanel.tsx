@@ -179,10 +179,14 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
             { kind: 'box' as const, title: `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개`, sub: `${n(SONGPYEON_EXCHANGE.box.songpyeon)} 송편 · 한도 없음` },
             { kind: 'diamond' as const, title: `💎 ${SONGPYEON_EXCHANGE.diamond.diamond}`, sub: `${n(SONGPYEON_EXCHANGE.diamond.songpyeon)} 송편 · 한도 없음` },
           ] as const
-        ).map((x) => (
+        ).map((x) => {
+          const need = SONGPYEON_EXCHANGE[x.kind].songpyeon - ov.available;
+          // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
+          const sub = !open ? `${x.sub.split(' · ')[0]} · 기간 종료` : need > 0 ? `${n(need)} 더 모으면 교환할 수 있어요` : x.sub;
+          return (
           <div key={x.kind} className="grid grid-cols-[1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
             <b className="text-[12.5px]">{x.title}</b>
-            <span className="col-start-1 text-[10.5px] text-zinc-500">{x.sub}</span>
+            <span className={`col-start-1 text-[10.5px] ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
             <button
               type="button"
               disabled={!open || ov.available < SONGPYEON_EXCHANGE[x.kind].songpyeon}
@@ -192,7 +196,8 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
               교환
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
       <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 10/3까지 받고 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>
 

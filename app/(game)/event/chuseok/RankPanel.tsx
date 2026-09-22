@@ -9,6 +9,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { CHUSEOK_RANK_LIMIT, CHUSEOK_RANK_REWARDS, rankRewardFor } from '@/lib/game/chuseok/config';
 import type { BoardItem, BoardRow, ContestBoard } from '@/lib/game/chuseok/contest';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
+import { profileHref } from '@/lib/game/profile/href';
 
 const n = (v: number) => v.toLocaleString('ko-KR');
 const fmtTime = (iso: string | null) => {
@@ -112,23 +113,39 @@ export function RankPanel({ board }: { board: ContestBoard }) {
           item.rows.map((r) => {
             const rw = rankRewardFor(r.rank);
             const at = fmtTime(r.reachedAt);
+            const inner = (
+              <>
+                  <span className={`w-6 flex-none text-center font-mono text-[13px] tabular-nums ${r.rank <= 3 ? 'font-bold text-amber-300' : 'text-zinc-400'}`}>{r.rank}</span>
+                  <Avatar row={r} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <b className="truncate text-[13.5px] font-semibold">{r.me ? '나' : r.nickname}</b>
+                    <span className="text-[10.5px] tabular-nums text-zinc-400">{at ? `${at} 도달` : ' '}</span>
+                  </span>
+                  <span className="flex flex-none flex-col text-right">
+                    <b className="font-mono text-[14px] tabular-nums text-amber-200">+{n(r.level)}</b>
+                    {rw ? <span className="text-[10px] tabular-nums text-zinc-400">💎{n(rw.diamond)} · 📦{n(rw.boxes)}</span> : null}
+                  </span>
+              </>
+            );
+            const cls = `flex h-[52px] items-center gap-2.5 border-b border-zinc-800 px-3 ${r.me ? 'bg-[#2a1f0a]' : ''}`;
+            // 행을 누르면 프로필로(랭킹 화면과 같은 동선, 2026-09-23 UX 점검) — 공개 코드가 없으면(탈퇴 등) 일반 행.
             return (
-              <li key={r.rank} className={`flex h-[52px] items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${r.me ? 'bg-[#2a1f0a]' : ''}`}>
-                <span className={`w-6 flex-none text-center font-mono text-[13px] tabular-nums ${r.rank <= 3 ? 'font-bold text-amber-300' : 'text-zinc-400'}`}>{r.rank}</span>
-                <Avatar row={r} />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <b className="truncate text-[13.5px] font-semibold">{r.me ? '나' : r.nickname}</b>
-                  <span className="text-[10.5px] tabular-nums text-zinc-400">{at ? `${at} 도달` : ' '}</span>
-                </span>
-                <span className="flex flex-none flex-col text-right">
-                  <b className="font-mono text-[14px] tabular-nums text-amber-200">+{n(r.level)}</b>
-                  {rw ? <span className="text-[10px] tabular-nums text-zinc-400">💎{n(rw.diamond)} · 📦{n(rw.boxes)}</span> : null}
-                </span>
+              <li key={r.rank} className="last:[&>*]:border-b-0">
+                {r.publicCode ? (
+                  <Link prefetch={false} href={profileHref(r.publicCode, board.serverId)} className={`${cls} active:bg-zinc-800/60`}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div className={cls}>{inner}</div>
+                )}
               </li>
             );
           })
         )}
       </ol>
+      {board.phase === 'claim' ? (
+        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상과 칭호는 우편함으로 보냈어요.' : '순위 보상과 칭호는 10월 1일 정산 뒤 우편으로 드려요.'}</p>
+      ) : null}
 
       {/* 내 자리 — 목록을 스크롤해도 화면 아래(채팅 미니바 위)에 붙는다 */}
       {board.phase !== 'before' ? (

@@ -54,6 +54,8 @@ for (const it of CATALOG_V6) {
   const cid = CAND[it.key]!;
   const frames = manifest.items[cid]?.frames ?? 0;
   const anim = frames ? await dataUrl(join(ROOT, 'public/sprites/anim3', `${cid}.webp`), 'image/webp') : null;
+  // 보정안(있을 때만) — public/sprites/anim3-alt/<cid>.webp. 재생성 원본과 나란히 놓고 고른다(2026-09-23).
+  const alt = frames ? await dataUrl(join(ROOT, 'public/sprites/anim3-alt', `${cid}.webp`), 'image/webp') : null;
   const sprite = await spriteUrl(it.slot, it.key);
   const cell = manifest.cell;
   cards.push(`
@@ -61,8 +63,10 @@ for (const it of CATALOG_V6) {
   <header><span class="slot">${SLOT_KO[it.slot]} · ${SET[it.key]} 벌</span><code>${it.key}</code></header>
   <div class="media">
     <figure><div class="img">${sprite ? `<img src="${sprite}" alt="">` : '<span class="ph">그림 없음</span>'}</div><figcaption>그림(확정)</figcaption></figure>
-    <figure><div class="img">${anim ? `<div class="anim" data-frames="${frames}" data-cell="${cell}" style="background-image:url('${anim}')"></div>` : '<span class="ph">애니 생성 중</span>'}</div><figcaption>해방 애니메이션${frames ? ` · ${frames}프레임` : ''}</figcaption></figure>
+    <figure><div class="img">${anim ? `<div class="anim" data-frames="${frames}" data-cell="${cell}" style="background-image:url('${anim}')"></div>` : '<span class="ph">애니 생성 중</span>'}</div><figcaption>${alt ? '재생성 원본(보정 없음)' : '해방 애니메이션'}${frames ? ` · ${frames}프레임` : ''}</figcaption></figure>
+    ${alt ? `<figure><div class="img"><div class="anim" data-frames="${frames}" data-cell="${cell}" style="background-image:url('${alt}')"></div></div><figcaption>보정안</figcaption></figure>` : ''}
   </div>
+  ${alt ? `<div class="rej"><span class="rl">애니 선택</span><label class="chk"><input type="radio" name="anim_pick" value="원본" checked> 재생성 원본</label><label class="chk"><input type="radio" name="anim_pick" value="보정안"> 보정안</label></div>` : ''}
   <label class="f"><span>이름</span><input type="text" name="name" value="${esc(it.nameKo)}" maxlength="20"></label>
   <div class="f"><span>로어 후보 <small>느낌이 다른 3안 · 고르면 아래 칸에 들어가고 칸에서 더 고칠 수 있어요</small></span>
     <div class="cands">${(LORES[it.key] ?? []).map((c, i) => `<label class="cand"><input type="radio" name="lore_pick" value="${'ABC'[i]}" data-text="${esc(c.text)}"${i === 0 ? ' checked' : ''}><b>${'ABC'[i]}</b><em>${esc(c.feel)}</em><span>${esc(c.text)}</span></label>`).join('')}</div>
@@ -94,7 +98,7 @@ h1{font-size:22px;margin:0 0 4px;color:var(--navy)}
 .card header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
 .card header .slot{font-size:12px;font-weight:700;color:var(--gold)}
 .card header code{font-size:11px;color:var(--ink2)}
-.media{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.media{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 figure{margin:0}
 .img{background:var(--dark);border-radius:12px;aspect-ratio:1;display:grid;place-items:center;overflow:hidden}
 .img img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
@@ -139,13 +143,14 @@ pre.sum{white-space:pre-wrap;background:var(--paper);border:1px solid var(--line
 <div class="foot"><div class="st">리젝·수정 카드 <b id="cnt">0</b> / 6 · 리젝 <b id="redo">0</b></div><button class="copy" id="copy" type="button">요약 복사</button></div>
 <script>
 (function(){
-  var KEY='chuseok-items-review-v3';
+  var KEY='chuseok-items-review-v5';
   var cards=Array.prototype.slice.call(document.querySelectorAll('.card'));
   function startAnims(){cards.forEach(function(c){var a=c.querySelector('.anim');if(!a)return;var n=parseInt(a.getAttribute('data-frames'),10)||1;var i=0;setInterval(function(){i=(i+1)%n;a.style.backgroundPosition=(i*100/(n-1||1))+'% 0';},110);a.style.backgroundSize=(n*100)+'% 100%';});}
   function pickOf(c){var r=c.querySelector('[name=lore_pick]:checked');return r?r.value:'A'}
   function pickText(c){var r=c.querySelector('[name=lore_pick]:checked');return r?r.getAttribute('data-text'):''}
-  function state(c){return {key:c.getAttribute('data-key'),name0:c.getAttribute('data-name'),pick:pickOf(c),pickText:pickText(c),name:c.querySelector('[name=name]').value.trim(),lore0:c.querySelector('[name=lore]').defaultValue.trim(),lore:c.querySelector('[name=lore]').value.trim(),rn:c.querySelector('[name=rej_name]').checked,rl:c.querySelector('[name=rej_lore]').checked,ra:c.querySelector('[name=rej_anim]').checked,why:c.querySelector('[name=why]').value.trim()}}
-  function build(){var lines=['[한가위 6종 리뷰]'];var changed=0,rej=0;cards.forEach(function(c){var s=state(c);var parts=[];var rj=[];if(s.rn)rj.push('이름');if(s.rl)rj.push('로어');if(s.ra)rj.push('애니메이션');if(rj.length){rej++;parts.push('리젝: '+rj.join('·')+(s.why?' / 사유: '+s.why:' / 사유: (적지 않음)'));}else if(s.why)parts.push('메모: '+s.why);if(s.name!==s.name0)parts.push('이름 수정: '+s.name0+' → '+s.name);if(s.pick!=='A')parts.push('로어 '+s.pick+'안 선택');if(s.lore!==s.pickText)parts.push('로어 수정: '+s.lore);var ch=parts.length>0;c.classList.toggle('changed',ch);if(ch){changed++;lines.push(s.key+' ('+s.name0+'): '+parts.join(' · '));}});if(changed===0)lines.push('리젝·수정 없음 — 이름·로어·애니 모두 확정');document.getElementById('cnt').textContent=changed;document.getElementById('redo').textContent=rej;document.getElementById('sum').textContent=lines.join('\\n');return lines.join('\\n');}
+  function animPick(c){var r=c.querySelector('[name=anim_pick]:checked');return r?r.value:null}
+  function state(c){return {key:c.getAttribute('data-key'),name0:c.getAttribute('data-name'),anim:animPick(c),pick:pickOf(c),pickText:pickText(c),name:c.querySelector('[name=name]').value.trim(),lore0:c.querySelector('[name=lore]').defaultValue.trim(),lore:c.querySelector('[name=lore]').value.trim(),rn:c.querySelector('[name=rej_name]').checked,rl:c.querySelector('[name=rej_lore]').checked,ra:c.querySelector('[name=rej_anim]').checked,why:c.querySelector('[name=why]').value.trim()}}
+  function build(){var lines=['[한가위 6종 리뷰]'];var changed=0,rej=0;cards.forEach(function(c){var s=state(c);var parts=[];var rj=[];if(s.rn)rj.push('이름');if(s.rl)rj.push('로어');if(s.ra)rj.push('애니메이션');if(rj.length){rej++;parts.push('리젝: '+rj.join('·')+(s.why?' / 사유: '+s.why:' / 사유: (적지 않음)'));}else if(s.why)parts.push('메모: '+s.why);if(s.name!==s.name0)parts.push('이름 수정: '+s.name0+' → '+s.name);if(s.anim)parts.push('애니: '+s.anim);if(s.pick!=='A')parts.push('로어 '+s.pick+'안 선택');if(s.lore!==s.pickText)parts.push('로어 수정: '+s.lore);var ch=parts.length>0;c.classList.toggle('changed',ch);if(ch){changed++;lines.push(s.key+' ('+s.name0+'): '+parts.join(' · '));}});if(changed===0)lines.push('리젝·수정 없음 — 이름·로어·애니 모두 확정');document.getElementById('cnt').textContent=changed;document.getElementById('redo').textContent=rej;document.getElementById('sum').textContent=lines.join('\\n');return lines.join('\\n');}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(cards.map(function(c){var s=state(c);return {key:s.key,name:s.name,pick:s.pick,lore:s.lore,rn:s.rn,rl:s.rl,ra:s.ra,why:s.why}})))}catch(e){}}
   function restore(){try{var o=JSON.parse(localStorage.getItem(KEY)||'null');if(!o)return;o.forEach(function(v){var c=cards.filter(function(x){return x.getAttribute('data-key')===v.key})[0];if(!c)return;c.querySelector('[name=name]').value=v.name;var rr=c.querySelector('[name=lore_pick][value="'+(v.pick||'A')+'"]');if(rr)rr.checked=true;c.querySelector('[name=lore]').value=v.lore;c.querySelector('[name=rej_name]').checked=!!v.rn;c.querySelector('[name=rej_lore]').checked=!!v.rl;c.querySelector('[name=rej_anim]').checked=!!v.ra;c.querySelector('[name=why]').value=v.why||''})}catch(e){}}
   document.getElementById('f').addEventListener('input',function(){build();persist()});document.getElementById('f').addEventListener('change',function(e){if(e.target&&e.target.name==='lore_pick'){var c=e.target.closest('.card');c.querySelector('[name=lore]').value=e.target.getAttribute('data-text');}build();persist()});
