@@ -253,22 +253,28 @@
 .fx-moran{--d:.8em;--glow-lo:drop-shadow(0 0 1.5px rgba(255,120,140,.5))}
 .fx-moran .ko{color:#e6334f}
 .fx-moran .orb::before{background:radial-gradient(circle at 50% 50%,#ffd978 0%,#ffcf6a 10%,#ff8a9c 18%,#e8405c 55%,#b8203c 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(22.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(67.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(112.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(157.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(202.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(247.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(292.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(337.5 10 10)'/><circle cx='10.00' cy='7.10' r='3.1'/><circle cx='12.51' cy='8.55' r='3.1'/><circle cx='12.51' cy='11.45' r='3.1'/><circle cx='10.00' cy='12.90' r='3.1'/><circle cx='7.49' cy='11.45' r='3.1'/><circle cx='7.49' cy='8.55' r='3.1'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(22.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(67.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(112.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(157.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(202.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(247.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(292.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(337.5 10 10)'/><circle cx='10.00' cy='7.10' r='3.1'/><circle cx='12.51' cy='8.55' r='3.1'/><circle cx='12.51' cy='11.45' r='3.1'/><circle cx='10.00' cy='12.90' r='3.1'/><circle cx='7.49' cy='11.45' r='3.1'/><circle cx='7.49' cy='8.55' r='3.1'/></svg>")}
-/* 꽃잎 6장(pc:6). 10초 주기 중 앞 3.4초(0→34%)에만 날고 나머지는 비어 있어, 한 번 흩날린 뒤 쉬는 구간이 생긴다.
-   장마다 0.4초씩 늦게 출발(컴포넌트 inline 지연을 !important로 덮음)해 5초쯤 이어지다 멎는다. 꽃의 위·아래·왼쪽 여러 지점에서
-   태어나 글자 가운데 띠를 지나며 위아래로 살랑이고 천천히 돈다. 홀수 장은 글자 뒤(z 0), 짝수 장은 앞(z 2). */
+/* 꽃잎 6장(pc:6). 경로와 팔랑임을 분리한다: <i>는 보이지 않는 운반자로 호(왼쪽으로 가며 아래로 처짐, 가로는 느려지고 세로는
+   빨라짐)를 그리고, ::before가 실제 꽃잎을 그리며 제 박자로 기울고 납작해졌다 펴져(scaleX) 뒤집히듯 팔랑인다.
+   10초 주기 중 앞 3.4초(0→34%)에만 날고 나머지는 비어 있어 한 번 흩날린 뒤 쉰다. 장마다 0.4초씩 늦게 출발(inline 지연을 !important로 덮음).
+   꽃의 위·아래·왼쪽 여러 지점에서 태어나고, 홀수 장은 글자 뒤(z 0)·짝수 장은 앞(z 2). */
 .pt-petal>.fx{position:relative;z-index:1}
-.pt-petal>i{left:auto !important;width:.26em;height:.18em;border-radius:70% 30% 65% 35%;filter:blur(.2px);animation:p-petal 10s ease-in-out infinite}
-.pt-petal>i:nth-child(2){right:.62em;top:.22em;--px:-2.3em;--py:.3em;--rz:260deg;z-index:0;animation-delay:0s !important}
-.pt-petal>i:nth-child(3){right:.95em;top:.6em;--px:-1.6em;--py:-.15em;--rz:-200deg;z-index:2;width:.22em;height:.15em;animation-delay:.4s !important}
-.pt-petal>i:nth-child(4){right:.45em;top:.78em;--px:-2.7em;--py:.1em;--rz:330deg;z-index:0;animation-delay:.8s !important}
-.pt-petal>i:nth-child(5){right:.8em;top:.36em;--px:-1.2em;--py:.4em;--rz:-140deg;z-index:2;width:.2em;height:.14em;animation-delay:1.2s !important}
-.pt-petal>i:nth-child(6){right:.3em;top:.5em;--px:-2.0em;--py:-.2em;--rz:190deg;z-index:0;width:.24em;height:.17em;animation-delay:1.6s !important}
-.pt-petal>i:nth-child(7){right:.7em;top:.68em;--px:-1.9em;--py:.25em;--rz:-300deg;z-index:2;animation-delay:2s !important}
-@keyframes p-petal{0%{opacity:0;transform:translate(0,0) rotate(0deg) scale(.6)}3%{opacity:.85;transform:translate(calc(var(--px) * .08),calc(var(--py) * .05 - .05em)) rotate(calc(var(--rz) * .08)) scale(1)}11%{opacity:.8;transform:translate(calc(var(--px) * .3),calc(var(--py) * .25 + .08em)) rotate(calc(var(--rz) * .3)) scale(.98)}19%{opacity:.7;transform:translate(calc(var(--px) * .55),calc(var(--py) * .55 - .1em)) rotate(calc(var(--rz) * .55)) scale(.95)}27%{opacity:.45;transform:translate(calc(var(--px) * .78),calc(var(--py) * .8 + .06em)) rotate(calc(var(--rz) * .78)) scale(.9)}34%,100%{opacity:0;transform:translate(var(--px),calc(var(--py) * 1.05)) rotate(var(--rz)) scale(.8)}}
-.pt-petal>.fx-plum~i{background:linear-gradient(135deg,#fff7fa 0%,#ffe4ec 55%,#f9c9d6 100%)}
-.pt-petal>.fx-peony~i{background:linear-gradient(135deg,#ffe0ea 0%,#ffb6cc 55%,#f27fa6 100%)}
-.pt-petal>.fx-moran~i{background:linear-gradient(135deg,#ff9fae 0%,#ef5c74 55%,#c9243f 100%)}
-@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .orb,.ttag .orb::after{animation:none !important}.ttag .fx-dual .hj{display:none}}
+.pt-petal>i{left:auto !important;width:.26em;height:.18em;background:none;filter:none;opacity:0;animation:p-path 10s ease-in-out infinite}
+.pt-petal>i::before{content:"";position:absolute;inset:0;border-radius:70% 30% 65% 35%;filter:blur(.2px);animation:p-flutter 1.7s ease-in-out infinite}
+.pt-petal>i:nth-child(2){right:.62em;top:.12em;--px:-2.3em;--py:.42em;z-index:0;animation-delay:0s !important}
+.pt-petal>i:nth-child(3){right:.95em;top:.4em;--px:-1.6em;--py:.28em;z-index:2;width:.22em;height:.15em;animation-delay:.4s !important}
+.pt-petal>i:nth-child(4){right:.45em;top:.02em;--px:-2.7em;--py:.6em;z-index:0;animation-delay:.8s !important}
+.pt-petal>i:nth-child(5){right:.8em;top:.3em;--px:-1.2em;--py:.5em;z-index:2;width:.2em;height:.14em;animation-delay:1.2s !important}
+.pt-petal>i:nth-child(6){right:.3em;top:.22em;--px:-2.0em;--py:.2em;z-index:0;width:.24em;height:.17em;animation-delay:1.6s !important}
+.pt-petal>i:nth-child(7){right:.7em;top:.48em;--px:-1.9em;--py:.36em;z-index:2;animation-delay:2s !important}
+.pt-petal>i:nth-child(2)::before{animation-delay:-.2s}.pt-petal>i:nth-child(3)::before{animation-delay:-.7s;animation-duration:1.5s}.pt-petal>i:nth-child(4)::before{animation-delay:-1.1s;animation-duration:1.9s}.pt-petal>i:nth-child(5)::before{animation-delay:-.4s;animation-duration:1.4s}.pt-petal>i:nth-child(6)::before{animation-delay:-.9s;animation-duration:1.8s}.pt-petal>i:nth-child(7)::before{animation-delay:-1.4s;animation-duration:1.6s}
+/* 경로: 가로는 점점 느려지고(공기 저항) 세로는 점점 빨라진다(중력). 끝 1/4에서 서서히 사라짐. */
+@keyframes p-path{0%{opacity:0;transform:translate(0,0)}3%{opacity:.9;transform:translate(calc(var(--px) * .06),calc(var(--py) * .02))}12%{opacity:.9;transform:translate(calc(var(--px) * .36),calc(var(--py) * .16))}22%{opacity:.8;transform:translate(calc(var(--px) * .66),calc(var(--py) * .48))}29%{opacity:.4;transform:translate(calc(var(--px) * .9),calc(var(--py) * .82))}34%,100%{opacity:0;transform:translate(var(--px),calc(var(--py) * 1.05))}}
+/* 팔랑임: 기울었다 되돌아오며 납작해졌다 펴진다(꽃잎이 바람에 뒤집히는 느낌). 위아래로도 살짝. */
+@keyframes p-flutter{0%{transform:rotate(-18deg) scaleX(1) translateY(0)}25%{transform:rotate(22deg) scaleX(.42) translateY(-.04em)}50%{transform:rotate(-6deg) scaleX(.95) translateY(.03em)}75%{transform:rotate(30deg) scaleX(.5) translateY(-.02em)}100%{transform:rotate(-18deg) scaleX(1) translateY(0)}}
+.pt-petal>.fx-plum~i::before{background:linear-gradient(135deg,#fff7fa 0%,#ffe4ec 55%,#f9c9d6 100%)}
+.pt-petal>.fx-peony~i::before{background:linear-gradient(135deg,#ffe0ea 0%,#ffb6cc 55%,#f27fa6 100%)}
+.pt-petal>.fx-moran~i::before{background:linear-gradient(135deg,#ff9fae 0%,#ef5c74 55%,#c9243f 100%)}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .pt>i::before,.ttag .orb,.ttag .orb::after{animation:none !important}.ttag .fx-dual .hj{display:none}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
 .ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
@@ -278,5 +284,5 @@
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
-.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after{animation-play-state:paused !important}
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .pt>i::before,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after{animation-play-state:paused !important}
 }
