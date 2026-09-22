@@ -109,8 +109,8 @@ export type PlayRecoverSummary = { checked: number; granted: number; cleared: nu
 
 /**
  * 결제 복구(2026-09-22) — 앱에서 상점을 열 때 한 번. 기기에 남은 미확정 구매를 서버에 보내 다시
- * 검증·지급·소모한다. 서버가 "구매 아님"(취소·환불된 구매)이라고 답하면 기기에서 소모해
- * "already own" 잠김을 푼다(지급 없이 잠김만 해제 — 서버가 구글에 재확인한 결과라 안전).
+ * 검증·지급·소모한다. 서버가 CANCELLED(구글이 취소·환불됐다고 답함)면 기기에서 소모해
+ * "already own" 잠김을 푼다(지급 없이 잠김만 해제 — 서버가 구글에 재확인한 결과라 안전). PENDING(보류)은 건드리지 않는다.
  * 앱 밖·미지원 환경이면 아무것도 하지 않는다.
  */
 export async function recoverPlayPurchases(): Promise<PlayRecoverSummary> {
@@ -146,8 +146,10 @@ export async function recoverPlayPurchases(): Promise<PlayRecoverSummary> {
       if (!r.already) out.granted++;
       continue;
     }
-    // 구글이 구매 아님(취소·환불)이라고 답한 건 — 기기 소모로 잠김만 푼다.
-    if (r.code === 'NOT_PAID' && typeof svc.consume === 'function') {
+    // 구글 쪽 결제 보류(편의점 결제 등) — 건드리지 않는다. 결제가 끝나면 다음 진입에서 다시 온다.
+    if (r.code === 'PENDING') continue;
+    // 구글이 취소·환불됐다고 답한 구매 — 지급 없이 기기 소모로 잠김만 푼다(서버가 구글에 확인한 결과).
+    if (r.code === 'CANCELLED' && typeof svc.consume === 'function') {
       try {
         await svc.consume(p.purchaseToken);
         out.cleared++;

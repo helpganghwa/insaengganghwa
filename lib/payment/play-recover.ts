@@ -5,6 +5,7 @@ import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 
+import { getPlayProductPurchase, PlayApiError } from './play-api';
 import { isKnownPlaySku, productIdForPlaySku } from './play-sku';
 import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult } from './purchase';
 
@@ -22,7 +23,11 @@ import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult }
 type CompleteFailCode = Extract<CompleteResult, { ok: false }>['code'];
 export type RecoverResult =
   | { ok: true; already: boolean; paymentId: string }
-  | { ok: false; code: 'UNKNOWN_SKU' | 'NO_ORDER' | CompleteFailCode };
+  /**
+   * CANCELLED = 구글이 취소·환불됐다고 답한 구매(지급 없음, 클라가 기기 consume으로 잠김만 푼다).
+   * PENDING = 구글 쪽 결제 보류(편의점 결제 등) — 손대지 않는다. NOT_FOUND = 그 SKU의 구매가 아님.
+   */
+  | { ok: false; code: 'UNKNOWN_SKU' | 'NO_ORDER' | 'CANCELLED' | 'PENDING' | 'NOT_FOUND' | CompleteFailCode };
 
 const LOOKBACK_DAYS = 7;
 
@@ -34,15 +39,28 @@ export async function recoverPlayPurchase(
 ): Promise<RecoverResult> {
   if (!isKnownPlaySku(sku)) return { ok: false, code: 'UNKNOWN_SKU' };
 
-  // ① 토큰이 이미 묶인 주문(본인 것만) — paid면 already, 아니면 그 주문으로 재시도.
+  // 구글 권위부터 — 상태에 따라 갈린다. 보류(2)는 손대지 않고, 취소(1)는 지급 없이 잠김만 풀게 한다.
+  // 다른 SKU의 토큰이면 조회 경로가 404(PlayApiError)로 던진다.
+  let state: number;
+  try {
+    state = (await getPlayProductPurchase(sku, purchaseToken)).purchaseState;
+  } catch (e) {
+    if (e instanceof PlayApiError && (e.status === 404 || e.status === 400)) return { ok: false, code: 'NOT_FOUND' };
+    throw e;
+  }
+  if (state === 2) return { ok: false, code: 'PENDING' };
+  if (state !== 0) return { ok: false, code: 'CANCELLED' };
+
+  // ① 토큰이 이미 묶인 주문(본인 것만) — 미완 주문만 다시 시도. paid·refunded 등 끝난 주문은 손대지 않는다
+  //   (completePurchase는 전이가 없어도 ok를 돌려주므로 여기서 걸러야 "반영됐어요"가 헛뜨지 않는다).
   const [bound] = await db
     .select({ paymentId: iapOrders.portoneOrderId, status: iapOrders.status })
     .from(iapOrders)
     .where(and(eq(iapOrders.userId, userId), eq(iapOrders.playPurchaseToken, purchaseToken)))
     .limit(1);
   if (bound) {
-    if (bound.status === 'paid') return { ok: true, already: true, paymentId: bound.paymentId };
-    return finish(bound.paymentId, userId, purchaseToken);
+    if (bound.status === 'pending' || bound.status === 'expired') return finish(bound.paymentId, userId, purchaseToken);
+    return { ok: true, already: true, paymentId: bound.paymentId };
   }
 
   // ② 같은 SKU의 최근 미완 주문(최신부터).
