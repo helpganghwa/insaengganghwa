@@ -207,36 +207,36 @@
 @keyframes blazey{from{background-position:0 100%}to{background-position:0 55%}}
 @keyframes flick2{0%,100%{filter:brightness(1)}30%{filter:brightness(1.18)}55%{filter:brightness(.94)}75%{filter:brightness(1.12)}}
 /* 2026 한가위 강화 대회 순위 칭호 6종(2026-09-22).
-   달토끼 장비(신월·반월·만월) = 두 겹 라벨(.fx-dual): 한글(.ko) 위에 한자(.hj)를 겹치고, 순위별 달(.orb: 초승달·반달·보름달)이
-   글자 위를 좌우로 오가며 비춘다. 한자 층은 달 자리를 따라가는 원형 마스크로만 드러나 "달빛이 닿은 글자가 한자로 바뀐다".
-   달이 클수록(순위가 높을수록) 비추는 폭이 넓고 빛이 세다. 마스크 창 폭(--w)과 달 지름(--d)은 em 단위라 채팅 13px에서도 비율 유지.
+   달토끼 장비(신월·반월·만월) = 글자 오른쪽에 순위별 달(.orb: 초승달·반달·보름달)이 떠 있고, 달이 빛날 때 그 빛이 글자 위를
+   훑고 지나가며 빛이 닿은 글자부터 한자로(첫 빛), 한글로(둘째 빛) 바뀐다. 크기·주기는 em 변수라 채팅 13px에서도 비율 유지.
    한복 장비(매화·작약·모란) = 연분홍 숨결 → 장밋빛 흐름 → 진홍·금 흐름+꽃잎 파티클. */
+/* 달토끼 장비(신월·반월·만월) — 두 겹 라벨(.fx-dual: .ko 한글 / .hj 한자 / .orb 달). 사용자 확정 B안(2026-09-22).
+   한 주기(--t)에 달이 두 번 빛난다. 빛나기 전 차오름(10%→18%) → 정점에서 넓은 후광(::after)이 퍼지고 → 빛띠(.fx-dual::after)가
+   달 쪽(오른쪽)에서 글자 위를 훑고 지나가며 → 빛이 닿은 글자부터 한자로(첫 번째 빛), 한글로(두 번째 빛) 바뀐다.
+   두 층의 마스크는 같은 [투명|검정] 띠(폭 2배)를 쓰고 위치만 0→100→200%로 밀어 경계가 늘 오른쪽에서 왼쪽으로 움직인다. */
 .fx-dual{position:relative;display:inline-block;white-space:nowrap}
-/* 닦아내기(2026-09-22 2차): 달이 왼쪽에서 오른쪽으로 지나가면 지나간 글자가 한자로 남고, 오른쪽에서 돌아올 때는 지나간
-   글자가 한글로 돌아온다. 한자 층 마스크 = 폭 2배의 [검정|투명] 띠를 달의 x에 맞춰 밀고(경계 = 달 중심), 한글 층은 그 반대 띠.
-   alternate라 왕복 두 구간이 같은 기하로 이어지고, 양끝에서 잠깐 머문다(moonhold). 합성(mask-composite) 불필요. */
-.fx-dual .hj,.fx-dual .ko{-webkit-mask-size:200% 100%;mask-size:200% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:moonwipe var(--t) ease-in-out infinite alternate}
-.fx-dual .ko{display:inline-block;-webkit-mask-image:linear-gradient(90deg,transparent 0 48%,#000 52%);mask-image:linear-gradient(90deg,transparent 0 48%,#000 52%)}
-.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,#000 0 48%,transparent 52%);mask-image:linear-gradient(90deg,#000 0 48%,transparent 52%)}
-@keyframes moonwipe{0%,8%{-webkit-mask-position:100% 0;mask-position:100% 0}92%,100%{-webkit-mask-position:0% 0;mask-position:0% 0}}
-/* 달(.orb): 모양은 ::before의 SVG 마스크(초승달·반달·보름달)로만 만들고 테두리를 두지 않는다. 후광은 부모의 drop-shadow라 모양을 따라간다. */
-.fx-dual .orb{position:absolute;top:-.68em;width:var(--d);height:var(--d);pointer-events:none;animation:moonride var(--t) ease-in-out infinite alternate}
-@keyframes moonride{0%,8%{left:calc(0% - var(--d) / 2)}92%,100%{left:calc(100% - var(--d) / 2)}}
-.fx-dual .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.fx-newmoon{--d:.5em;--t:9s}
-.fx-newmoon .ko{color:#b7c0d2}
-.fx-newmoon .hj{color:#eef2ff;text-shadow:0 0 3px rgba(205,220,245,.5)}
-.fx-newmoon .orb{filter:drop-shadow(0 0 1px rgba(225,235,255,.8)) drop-shadow(0 0 3px rgba(190,210,245,.45))}
+.fx-dual .ko,.fx-dual .hj{-webkit-mask-image:linear-gradient(90deg,transparent 0 46%,#000 54%);mask-image:linear-gradient(90deg,transparent 0 46%,#000 54%);-webkit-mask-size:200% 100%;mask-size:200% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fx-dual .ko{display:inline-block;-webkit-mask-position:100% 0;mask-position:100% 0;animation:kowipe var(--t) ease-in-out infinite}
+.fx-dual .hj{position:absolute;left:0;top:0;pointer-events:none;-webkit-mask-position:0% 0;mask-position:0% 0;animation:hjwipe var(--t) ease-in-out infinite}
+@keyframes hjwipe{0%,18%{-webkit-mask-position:0% 0;mask-position:0% 0}27%,62%{-webkit-mask-position:100% 0;mask-position:100% 0}71%,100%{-webkit-mask-position:200% 0;mask-position:200% 0}}
+@keyframes kowipe{0%,18%{-webkit-mask-position:100% 0;mask-position:100% 0}27%,62%{-webkit-mask-position:200% 0;mask-position:200% 0}62.01%{-webkit-mask-position:0% 0;mask-position:0% 0}71%,100%{-webkit-mask-position:100% 0;mask-position:100% 0}}
+/* 빛띠: 글자 위를 오른쪽에서 왼쪽으로 지나가는 부드러운 빛. 글자보다 위 레이어(z-index), 섞임은 screen. */
+.fx-dual::after{content:"";position:absolute;top:-.55em;height:2.1em;width:90%;left:100%;opacity:0;pointer-events:none;filter:blur(2px);mix-blend-mode:screen;background:radial-gradient(ellipse at center,var(--band) 0%,transparent 60%);animation:lightband var(--t) ease-in-out infinite}
+@keyframes lightband{0%,17%{left:90%;opacity:0}20%{opacity:1}29%{left:-80%;opacity:0}61%{left:90%;opacity:0}64%{opacity:1}73%{left:-80%;opacity:0}100%{left:90%;opacity:0}}
+/* 달: 본체(::before, SVG 마스크) + 후광(::after, 정점에서 퍼짐). 정점 직전 차오름은 밝기·크기로. */
+.fx-dual .orb{display:inline-block;position:relative;width:var(--d);height:var(--d);margin-left:.26em;vertical-align:.04em;filter:var(--glow-lo);animation:moonshine var(--t) ease-in-out infinite}
+.fx-dual .orb::before{content:"";position:absolute;inset:0;z-index:1;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fx-dual .orb::after{content:"";position:absolute;left:50%;top:50%;width:260%;height:260%;margin:-130% 0 0 -130%;border-radius:50%;background:radial-gradient(circle,var(--aura) 0%,transparent 62%);opacity:0;animation:moonaura var(--t) ease-out infinite}
+@keyframes moonshine{0%,8%,36%,52%,80%,100%{filter:var(--glow-lo);transform:scale(1)}18%,62%{filter:var(--glow-hi);transform:scale(1.14)}}
+@keyframes moonaura{0%,14%,58%{opacity:0;transform:scale(.4)}19%,63%{opacity:.75;transform:scale(1)}34%,78%,100%{opacity:0;transform:scale(1.7)}}
+.fx-newmoon{--d:.5em;--t:8s;--band:rgba(214,226,255,.26);--aura:rgba(200,216,250,.55);--glow-lo:drop-shadow(0 0 1px rgba(225,235,255,.55)) drop-shadow(0 0 2px rgba(190,210,245,.2));--glow-hi:drop-shadow(0 0 1.5px rgba(240,246,255,1)) drop-shadow(0 0 6px rgba(200,218,250,.85))}
+.fx-newmoon .ko{color:#b7c0d2}.fx-newmoon .hj{color:#eef2ff;text-shadow:0 0 3px rgba(205,220,245,.5)}
 .fx-newmoon .orb::before{background:radial-gradient(circle at 30% 50%,#ffffff 0%,#e4ebfa 55%,#c2cfe8 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M11 1 A9 9 0 1 0 11 19 A10 10 0 0 1 11 1 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M11 1 A9 9 0 1 0 11 19 A10 10 0 0 1 11 1 Z'/></svg>")}
-.fx-halfmoon{--d:.54em;--t:8.5s}
-.fx-halfmoon .ko{color:#c3cbdc}
-.fx-halfmoon .hj{color:#f6f8ff;text-shadow:0 0 4px rgba(215,228,250,.65)}
-.fx-halfmoon .orb{filter:drop-shadow(0 0 1px rgba(230,238,255,.85)) drop-shadow(0 0 3.5px rgba(200,215,245,.5))}
+.fx-halfmoon{--d:.54em;--t:7.5s;--band:rgba(224,233,255,.3);--aura:rgba(210,224,252,.6);--glow-lo:drop-shadow(0 0 1px rgba(230,238,255,.6)) drop-shadow(0 0 2.5px rgba(200,215,245,.25));--glow-hi:drop-shadow(0 0 1.5px rgba(245,248,255,1)) drop-shadow(0 0 7px rgba(205,220,250,.9))}
+.fx-halfmoon .ko{color:#c3cbdc}.fx-halfmoon .hj{color:#f6f8ff;text-shadow:0 0 4px rgba(215,228,250,.65)}
 .fx-halfmoon .orb::before{background:radial-gradient(circle at 35% 50%,#ffffff 0%,#eaf0fc 55%,#cbd6ec 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 0 10 19 Z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 1 A9 9 0 1 0 10 19 Z'/></svg>")}
-.fx-fullmoon{--d:.6em;--t:8s}
-.fx-fullmoon .ko{color:#d9c98f}
-.fx-fullmoon .hj{color:#fff3c4;text-shadow:0 0 5px rgba(245,215,110,.85),0 0 9px rgba(245,215,110,.4)}
-.fx-fullmoon .orb{filter:drop-shadow(0 0 1.5px rgba(255,236,170,.9)) drop-shadow(0 0 5px rgba(245,215,110,.55))}
+.fx-fullmoon{--d:.6em;--t:7s;--band:rgba(255,236,180,.34);--aura:rgba(250,220,130,.65);--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.7)) drop-shadow(0 0 3px rgba(245,215,110,.3));--glow-hi:drop-shadow(0 0 2px rgba(255,248,210,1)) drop-shadow(0 0 9px rgba(245,215,110,.95))}
+.fx-fullmoon .ko{color:#d9c98f}.fx-fullmoon .hj{color:#fff3c4;text-shadow:0 0 5px rgba(245,215,110,.85),0 0 9px rgba(245,215,110,.4)}
 .fx-fullmoon .orb::before{background:radial-gradient(circle at 38% 38%,#fffbe6 0%,#f8df82 50%,#dcae3e 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
 .fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
 @keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
@@ -244,14 +244,14 @@
 .fx-moran{background:linear-gradient(90deg,#c9203e,#ff8aa4,#f5d76e,#fff0f0,#c9203e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 2px rgba(230,80,120,.35))}
 .pt-petal>i{width:3.5px;height:2.5px;border-radius:60% 40% 60% 40%;background:linear-gradient(120deg,rgba(255,214,228,.9) 0%,rgba(240,120,160,.8) 100%);top:-3px;animation:p-ptl 5.6s ease-in-out infinite}
 @keyframes p-ptl{0%,38%,100%{opacity:0;transform:translate(0,-1px) rotate(0deg)}44%{opacity:.7;transform:translate(-1px,1px) rotate(25deg)}64%{opacity:.45;transform:translate(-3px,5px) rotate(70deg)}78%{opacity:0;transform:translate(-4px,7px) rotate(100deg)}}
-@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .orb{animation:none !important}.ttag .fx-dual .hj,.ttag .fx-dual .orb{display:none}}
+@media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .orb,.ttag .orb::after{animation:none !important}.ttag .fx-dual .hj,.ttag .fx-dual::after{display:none}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */
 .ttag-still span,.ttag-still span::before,.ttag-still span::after,.ttag-still b{animation:none !important}
 .ttag-still .pt>i{display:none}
-.ttag-still .fx-dual .hj,.ttag-still .fx-dual .orb{display:none}
+.ttag-still .fx-dual .hj,.ttag-still .fx-dual::after,.ttag-still .orb::after{display:none}
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
-.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb{animation-play-state:paused !important}
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after{animation-play-state:paused !important}
 }
