@@ -5030,21 +5030,39 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "중간"
  },
  {
-  code: "chuseok26_rank3",
+  code: "chuseok26_moon3",
   cat: "한가위",
-  cond: "2026 한가위 강화 대회 3등 안에 든 사람(아이템 하나면 충분)",
+  cond: "2026 한가위 강화 대회 달토끼 장비 3등 안(아이템 하나면 충분)",
   diff: "한정"
  },
  {
-  code: "chuseok26_rank2",
+  code: "chuseok26_moon2",
   cat: "한가위",
-  cond: "2026 한가위 강화 대회 2등 안에 든 사람(아이템 하나면 충분)",
+  cond: "2026 한가위 강화 대회 달토끼 장비 2등 안(아이템 하나면 충분)",
   diff: "한정"
  },
  {
-  code: "chuseok26_rank1",
+  code: "chuseok26_moon1",
   cat: "한가위",
-  cond: "2026 한가위 강화 대회 1등(아이템 하나면 충분)",
+  cond: "2026 한가위 강화 대회 달토끼 장비 1등(아이템 하나면 충분)",
+  diff: "한정"
+ },
+ {
+  code: "chuseok26_flower3",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 한복 장비 3등 안(아이템 하나면 충분)",
+  diff: "한정"
+ },
+ {
+  code: "chuseok26_flower2",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 한복 장비 2등 안(아이템 하나면 충분)",
+  diff: "한정"
+ },
+ {
+  code: "chuseok26_flower1",
+  cat: "한가위",
+  cond: "2026 한가위 강화 대회 한복 장비 1등(아이템 하나면 충분)",
   diff: "한정"
  }
 ] as const;

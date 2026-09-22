@@ -299,6 +299,8 @@ const FX_OG: Record<string, string> = {
   roseflow: '#e8a0c0', blushbreath: '#e8a0c0', tideflow: '#7fd0c8', tidewave: '#7fd0c8',
   forgeshine: '#e0a878', cinderflow: '#d4674a', duelbeat: '#e05252', duelflow: '#e05252',
   forgeheart: '#ffb347', eternalflame: '#ffd27a',
+  // 2026 한가위 순위 칭호(2026-09-22) — 달 세트·꽃 세트.
+  newmoon: '#d6dbe6', halfmoon: '#c8d2e4', fullmoon: '#f5d76e', plum: '#f3c9d8', peony: '#e0578a', moran: '#e0455f',
   goldsheen: '#e5c07b', sovereignflow: '#f5d76e',
   patronleaf: '#e0b860', royalseal: '#f5d76e', imperialcrown: '#f0c060',
   patron1: '#efe6d2', patron2: '#ecdcb4', patron3: '#e9c96a', patron4: '#e8b04a', patron5: '#f05a3a', patron6: '#f05a3a', patron7: '#a8203a',

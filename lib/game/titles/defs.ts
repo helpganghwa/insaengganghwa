@@ -5398,36 +5398,70 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "chuseok26_rank3",
+  code: "chuseok26_moon3",
   kind: "permanent",
   label: "신월",
   hidden: false,
   cat: "한가위",
   style: {
-   fx: "moonlight",
+   fx: "newmoon",
    glow: true
   }
  },
  {
-  code: "chuseok26_rank2",
+  code: "chuseok26_moon2",
   kind: "permanent",
   label: "반월",
   hidden: false,
   cat: "한가위",
   style: {
-   fx: "lunarflow",
+   fx: "halfmoon",
    glow: true
   }
  },
  {
-  code: "chuseok26_rank1",
+  code: "chuseok26_moon1",
   kind: "permanent",
   label: "만월",
   hidden: false,
   cat: "한가위",
   style: {
-   fx: "goldflow",
-   pt: "stardust",
+   fx: "fullmoon",
+   pt: "moondust",
+   glow: true
+  }
+ },
+ {
+  code: "chuseok26_flower3",
+  kind: "permanent",
+  label: "매화",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "plum",
+   glow: true
+  }
+ },
+ {
+  code: "chuseok26_flower2",
+  kind: "permanent",
+  label: "작약",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "peony",
+   glow: true
+  }
+ },
+ {
+  code: "chuseok26_flower1",
+  kind: "permanent",
+  label: "모란",
+  hidden: false,
+  cat: "한가위",
+  style: {
+   fx: "moran",
+   pt: "petal",
    glow: true
   }
  }

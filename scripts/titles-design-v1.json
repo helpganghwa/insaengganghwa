@@ -404,15 +404,25 @@
     "binge_500": {
       "fx": "honeyflow"
     },
-    "chuseok26_rank3": {
-      "fx": "moonlight"
+    "chuseok26_moon3": {
+      "fx": "newmoon"
     },
-    "chuseok26_rank2": {
-      "fx": "lunarflow"
+    "chuseok26_moon2": {
+      "fx": "halfmoon"
     },
-    "chuseok26_rank1": {
-      "fx": "goldflow",
-      "pt": "stardust"
+    "chuseok26_moon1": {
+      "fx": "fullmoon",
+      "pt": "moondust"
+    },
+    "chuseok26_flower3": {
+      "fx": "plum"
+    },
+    "chuseok26_flower2": {
+      "fx": "peony"
+    },
+    "chuseok26_flower1": {
+      "fx": "moran",
+      "pt": "petal"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

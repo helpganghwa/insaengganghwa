@@ -206,6 +206,20 @@
 .fx-blazeviolet{background-image:linear-gradient(0deg,#22083a 0%,#5b2a9a 22%,#9a5fe0 46%,#c9a2f0 66%,#e8d8ff 82%,#fbf5ff 100%);animation:blazey 1.15s ease-in-out infinite alternate,flick2 1.7s ease-in-out infinite}
 @keyframes blazey{from{background-position:0 100%}to{background-position:0 55%}}
 @keyframes flick2{0%,100%{filter:brightness(1)}30%{filter:brightness(1.18)}55%{filter:brightness(.94)}75%{filter:brightness(1.12)}}
+/* 2026 한가위 강화 대회 순위 칭호 6종(2026-09-22) — 달토끼 장비(신월·반월·만월)는 은빛→금빛, 한복 장비(매화·작약·모란)는
+   연분홍→진홍·금. 3등 맥동 → 2등 흐름 → 1등 흐름+파티클의 위계. 파티클은 1등 둘에만, 4점·저불투명·느린 주기. */
+.fx-newmoon{color:#d6dbe6;animation:newmoonrim 5.2s ease-in-out infinite}
+@keyframes newmoonrim{0%,100%{text-shadow:-2px 0 3px rgba(205,220,245,.4),0 0 1px rgba(255,255,255,.15)}50%{text-shadow:2px 0 3px rgba(205,220,245,.4),0 0 1px rgba(255,255,255,.3)}}
+.fx-halfmoon{background:linear-gradient(90deg,#f4f7ff 0%,#d0d9ea 30%,#8896bd 50%,#5a6890 70%,#f4f7ff 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7.5s linear infinite}
+.fx-fullmoon{background:linear-gradient(90deg,#fff6d2,#f5d76e,#e6b94a,#fff6d2,#f5d76e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 8s linear infinite;filter:drop-shadow(0 0 2px rgba(245,215,110,.4))}
+.pt-moondust>i{width:2.5px;height:2.5px;border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(255,250,225,.95) 0%,rgba(245,215,110,.75) 60%,rgba(230,185,74,0) 100%);bottom:10%;animation:p-mdst 5.4s ease-out infinite}
+@keyframes p-mdst{0%,40%,100%{opacity:0;transform:translate(0,0) scale(.5)}47%{opacity:.65;transform:translate(0,-1px) scale(.9)}66%{opacity:.4;transform:translate(1px,-4px) scale(.8)}78%{opacity:0;transform:translate(1px,-6px) scale(.5)}}
+.fx-plum{animation:plumbreath 4.8s ease-in-out infinite}
+@keyframes plumbreath{0%,100%{color:#f6e4ea;text-shadow:0 0 3px rgba(240,180,200,.25)}50%{color:#f3c9d8;text-shadow:0 0 4px rgba(236,150,180,.45)}}
+.fx-peony{background:linear-gradient(90deg,#f6b3c8,#e0578a,#ffd9e6,#e0578a,#f6b3c8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6.5s linear infinite}
+.fx-moran{background:linear-gradient(90deg,#c9203e,#ff8aa4,#f5d76e,#fff0f0,#c9203e);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite;filter:drop-shadow(0 0 2px rgba(230,80,120,.35))}
+.pt-petal>i{width:3.5px;height:2.5px;border-radius:60% 40% 60% 40%;background:linear-gradient(120deg,rgba(255,214,228,.9) 0%,rgba(240,120,160,.8) 100%);top:-3px;animation:p-ptl 5.6s ease-in-out infinite}
+@keyframes p-ptl{0%,38%,100%{opacity:0;transform:translate(0,-1px) rotate(0deg)}44%{opacity:.7;transform:translate(-1px,1px) rotate(25deg)}64%{opacity:.45;transform:translate(-3px,5px) rotate(70deg)}78%{opacity:0;transform:translate(-4px,7px) rotate(100deg)}}
 @media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i{animation:none !important}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */

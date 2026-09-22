@@ -11,8 +11,8 @@ const SETS = ['set_thunder_knight', 'set_star_navigator', 'set_ash_scythe', 'set
 const RULES = ['star_sea', 'binge_500', 'fatalist', 'lunchbox', 'drifter_100'];
 
 describe('칭호 추가 0908 — 정의', () => {
-  it('총 510종, 라벨 중복 없음', () => {
-    expect(TITLE_DEFS).toHaveLength(510);
+  it('총 513종, 라벨 중복 없음', () => {
+    expect(TITLE_DEFS).toHaveLength(513);
     const labels = TITLE_DEFS.map((t) => t.label);
     expect(new Set(labels).size).toBe(labels.length);
   });
