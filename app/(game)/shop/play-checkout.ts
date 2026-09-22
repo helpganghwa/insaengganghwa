@@ -185,13 +185,16 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     response = await request.show();
   } catch (e) {
     const err = e as { name?: string; message?: string };
+    // 거부는 전부 기록한다(2026-09-22) — 크롬은 유저 취소와 결제 앱 오류(상품 없음·판매자 미설정 등)에 같은
+    // AbortError를 쓰고 메시지만 다르다("User closed the Payment Request UI" = 취소). 오늘 실유저 3명이
+    // 1초 간격으로 47번 시도했는데 취소·미지원으로 분류돼 서버엔 흔적이 없었다.
+    reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
     if (err?.name === 'AbortError') return { ok: false, reason: 'cancel', code: 'ABORT' };
     // 'unsupported context'는 앱 밖에서 Digital Goods를 부를 때 크롬이 주는 말이다 — 날것 그대로
     // 유저에게 보이면 안 된다(2026-09-12 실제 노출).
     if (err?.name === 'NotSupportedError' || /not supported|unsupported|digital goods/i.test(err?.message ?? '')) {
       return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
     }
-    reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
     return { ok: false, reason: 'window', message: err?.message ?? '결제 시트를 열지 못했어요.' };
   }
 
