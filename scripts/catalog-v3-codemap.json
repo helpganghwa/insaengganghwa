@@ -238,5 +238,29 @@
   "a-round-glasses-245": {
     "code": "round_gold_glasses",
     "slot": "accessory"
+  },
+  "chuseok_moon_wand_full": {
+    "code": "chuseok_moon_wand",
+    "slot": "weapon"
+  },
+  "chuseok_hanbok_v2": {
+    "code": "chuseok_jade_hanbok",
+    "slot": "armor"
+  },
+  "chuseok_bok_pouch": {
+    "code": "chuseok_bok_pouch",
+    "slot": "accessory"
+  },
+  "chuseok_rabbit_pestle_v14": {
+    "code": "chuseok_rabbit_pestle",
+    "slot": "weapon"
+  },
+  "chuseok_rabbit_suit_v15": {
+    "code": "chuseok_rabbit_suit",
+    "slot": "armor"
+  },
+  "chuseok_rabbit_ears_v4": {
+    "code": "chuseok_rabbit_ears",
+    "slot": "accessory"
   }
 }
