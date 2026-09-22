@@ -122,6 +122,9 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/expedition/bg/angel.png": "b21564b8",
   "/sprites/expedition/bg/volcano.png": "ceb60023",
   "/sprites/expedition/bg/kingdom.png": "0ae2d75d",
+  "/sprites/chuseok/banner-songpyeon.png": "3c415b72",
+  "/sprites/chuseok/banner-contest.png": "fb9402c0",
+  "/sprites/chuseok/songpyeon.png": "263d6dbb",
   "/og/og-8.png": "a7340279",
   "/og/og-6.png": "7496bf44",
   "/og/og-7.png": "f2f0644d",
@@ -136,5 +139,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "bde7ad86",
   "/og/og-3.png": "f9e55cce",
   "/og/og-2.png": "cf937c31",
-  "/sprites/atlas.webp": "c92a0a39"
+  "/sprites/atlas.webp": "5b70f8cb"
 };
