@@ -10,9 +10,9 @@ const css = readFileSync('components/title-fx.css', 'utf8');
 
 type T = { label: string; fx: string; pt?: string; alt?: string; rank: string; note: string };
 const MOON: T[] = [
-  { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '은빛. 기울어진 초승달이 숨 쉬듯 밝아질 때 글자가 오른쪽부터 新月로 번지고, 다음 숨에 신월로 돌아옵니다. 글자에는 빛이 없습니다.' },
-  { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '체리빛. 붉은 반달이 밝아지며 半月로 바뀔 때 글자에도 붉은 후광이 잠깐 스칩니다.' },
-  { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 滿月은 선명한 금색 글자에 금빛 후광이 붙습니다.' },
+  { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '은빛. 기울어진 초승달이 숨 쉬듯 밝아질 때 글자가 오른쪽부터 新月로 번지고, 다음 숨에 신월로 돌아옵니다.' },
+  { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '체리빛. 붉은 반달이 밝아지며 半月로 바뀝니다.' },
+  { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 가장 큰 보름달이 밝아지며 滿月로 바뀝니다.' },
 ];
 const FLOWER: T[] = [
   { label: '매화', fx: 'plum', rank: '3등', note: '흰 꽃잎이 연분홍으로 물들었다 돌아오는 숨결입니다.' },
