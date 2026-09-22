@@ -63,8 +63,12 @@ async function loadParticipants(serverId: number, battleId: string, battleDate: 
            coalesce(mp.nickname, c.nickname, '대장장이') as nickname,
            mp.cp_snapshot::text as cp, mp.final_rank, mp.killer_user_id::text as killer_user_id,
            mp.attack_count, mp.defense_count, mp.eliminated_round, mp.guild_name,
-           exists(select 1 from guild_members gm where gm.user_id = mp.user_id and gm.role = 'leader') as is_leader,
-           (${battleDate}::date - (p.created_at at time zone 'Asia/Seoul')::date)::int as age_days
+           -- 길드장 여부·가입 경과일은 **그 서버 기준**(2026-09-21) — 헤드라인 문장에 그대로 들어간다.
+           -- 서버 조건이 없으면 1서버 길드장이 2서버에서 "○○ 길드장 △△ 우승"으로 나오고(길드 이름은 그 서버
+           -- 스냅샷인데 직책만 다른 서버 것), 계정 가입일을 보면 새 서버에서 시작한 사람은 "가입 N일차"가 영영 안 나온다.
+           exists(select 1 from guild_members gm
+                   where gm.user_id = mp.user_id and gm.server_id = ${serverId} and gm.role = 'leader') as is_leader,
+           (${battleDate}::date - (coalesce(c.created_at, p.created_at) at time zone 'Asia/Seoul')::date)::int as age_days
     from melee_participants mp
     join profiles p on p.id = mp.user_id
     left join characters c on c.user_id = mp.user_id and c.server_id = ${serverId}
@@ -299,12 +303,18 @@ export type MeleeReviewItem = {
 /** 어드민 검수 목록 — 최근 배틀 N개(+지정 날짜). 1~10위(시상대 포함) 동봉. */
 export async function loadMeleeReviewItems(opts: { limit?: number; extraDate?: string | null } = {}): Promise<MeleeReviewItem[]> {
   const limit = opts.limit ?? 2;
+  // limit은 **서버마다** — 전체에서 자르면 서버가 둘일 때 어제 배틀이 밀려나고, 한 서버의 오늘 산출이
+  // 늦으면 다른 서버의 어제 것이 그 자리를 차지한다(검수 창은 09:00~10:00뿐).
   const rows = (await db.execute(sql`
-    select id::text, server_id, battle_date::text, status, participant_count, headlines
-    from melee_battles
-    where status in ('computed', 'revealed')
-    order by battle_date desc, server_id
-    limit ${limit}
+    select t.id::text as id, t.server_id, t.battle_date::text as battle_date, t.status, t.participant_count, t.headlines
+    from (
+      select mb.*, row_number() over (partition by mb.server_id order by mb.battle_date desc) as rn
+      from melee_battles mb
+      where mb.status in ('computed', 'revealed')
+        and mb.server_id in (select id from servers where status <> 'closed')
+    ) t
+    where t.rn <= ${limit}
+    order by t.battle_date desc, t.server_id
   `)) as unknown as { id: string; server_id: number; battle_date: string; status: MeleeReviewItem['status']; participant_count: number; headlines: MeleeHeadlines | null }[];
   if (opts.extraDate && /^\d{4}-\d{2}-\d{2}$/.test(opts.extraDate) && !rows.some((r) => r.battle_date === opts.extraDate)) {
     const extra = (await db.execute(sql`

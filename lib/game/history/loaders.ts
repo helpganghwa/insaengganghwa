@@ -5,7 +5,7 @@ import { and, asc, eq, lt, sql } from 'drizzle-orm';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { replayOwnership } from '@/lib/game/guild/conquest/chronicle-history';
 import { unstable_cache, revalidateTag } from 'next/cache';
-import { narrateEra, type EraFacts } from './era-summary';
+import type { EraFacts } from './era-summary';
 import { readStoredEraSummaries, syncEraSummaries, type EraInput, type SyncResult } from './era-store';
 import { db } from '@/lib/db/client';
 import { getGuildEmblemHistory } from '@/lib/game/guild/emblem-history';
@@ -39,7 +39,22 @@ export function loadEraInputs(serverId: number): Promise<EraInput[]> {
   return withHistoryDb(async () => (await buildIndexCore(serverId)).eraInputs);
 }
 
-/** 자정 공개 뒤·어드민에서 — 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. */
+/**
+ * 어드민 검수 화면용 — 표시만 하므로 첫 화면과 같은 캐시 규칙(10분·태그 'history-index'·날짜 키)을 탄다.
+ * 서버마다 전체 연대기를 다시 계산하는 일이라, 캐시 없이는 서버 수만큼 어드민 진입이 느려진다.
+ * ⚠ 동기화(syncHistoryEras)는 사실표 해시를 비교하므로 반드시 캐시 없는 loadEraInputs를 쓴다.
+ */
+export function loadEraInputsForView(serverId: number): Promise<EraInput[]> {
+  if (process.env.HISTORY_NO_CACHE === '1') return loadEraInputs(serverId);
+  return withHistoryDb(() => cachedEraInputs(serverId, kstDateString()));
+}
+const cachedEraInputs = unstable_cache(
+  async (serverId: number, _today: string) => (await buildIndexCore(serverId)).eraInputs,
+  ['history-era-inputs-v1'],
+  { revalidate: 600, tags: ['history-index'] },
+);
+
+/** 자정 공개 뒤·어드민에서 — 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(정본은 그대로). 새 시대가 생기면 집계 문장이 정본으로 들어가므로 첫 화면 캐시도 비운다. */
 export async function syncHistoryEras(serverId: number, opts: { force?: boolean; only?: string } = {}): Promise<SyncResult> {
   const inputs = await loadEraInputs(serverId);
   const r = await syncEraSummaries(serverId, inputs, opts);
@@ -91,24 +106,16 @@ async function buildIndexCore(serverId: number): Promise<{ index: HistoryIndex; 
       zoneRows.map((z) => ({ id: z.id, name: z.name, region: String(z.region) })),
       new Map(days.map((d) => [d.kstDay, d.headline])),
     );
-    // 시대 요약 — ① 저장된 정본(0202, 운영자 통제) ② 없으면 이야기꾼 생성(데이터 캐시, 검증 통과분만) ③ 집계 문장.
+    // 시대 요약 — ① 저장된 정본(0202, 운영자가 적용·수정한 글) ② 없으면 집계 문장.
+    // 이야기꾼 생성문은 제안으로만 쌓이고(0203) 운영자가 적용해야 정본이 된다 — 검수 전 글은 여기서 읽지 않는다.
     const eraInputs: EraInput[] = story.eras.map((e, i) => ({ facts: eraFacts[i]!, fallback: { summary: e.summary, closing: e.closing }, guildId: e.guildId }));
     const stored = await readStoredEraSummaries(serverId);
-    await Promise.all(
-      story.eras.map(async (era, i) => {
-        const facts = eraFacts[i]!;
-        const row = stored.get(facts.from);
-        if (row) {
-          era.summary = row.summary;
-          if (row.closing) era.closing = row.closing;
-          return;
-        }
-        const nr = await narrateEra(facts);
-        if (!nr) return;
-        era.summary = nr.summary;
-        if (nr.closing) era.closing = nr.closing;
-      }),
-    );
+    story.eras.forEach((era, i) => {
+      const row = stored.get(eraFacts[i]!.from);
+      if (!row) return;
+      era.summary = row.summary;
+      if (row.closing) era.closing = row.closing;
+    });
     const index: HistoryIndex = {
       serverId,
       days,
@@ -141,12 +148,24 @@ async function buildStory(
   const empty = { story: { guilds: [], counts: [], eras: [], events: {} } as HistoryStory, ownersByDay: [] as number[][], guildsById: {} as HistoryIndex['guildsById'], nameAliases: {} as Record<string, number>, eraFacts: [] as EraFacts[] };
   if (kstDays.length === 0) return empty;
   const lastDay = kstDays[kstDays.length - 1]!;
-  // 소유 변화 — 승자 id가 있는 전투만(해산으로 id가 비워진 승리는 그 길드의 해산 중립화로 곧 덮인다).
-  const battleRows = (await db.execute(sql`
-    select cb.battle_kst_day::text as day, z.name as zone, cb.winner_guild_id::int as gid
+  // 소유 변화 — 승자가 있는 전투 전부. 길드가 해산하면 winner_guild_id는 FK(on delete set null)로 비워지지만
+  // 이름 스냅샷(0201 winner_guild_name)은 남는다. 그런 행은 연대기 스냅샷(guild_refs)에서 가장 가까운 날의
+  // 같은 이름으로 **옛 id를 되찾아** 센다. id가 빈 승리를 버리면 그 길드가 차지했던 땅이 과거 전체에 걸쳐 이전 주인의
+  // 것으로 되돌아가, 길드 하나가 해산할 때마다 지난 날들의 보유 수와 시대 경계가 바뀐다
+  // (2026-09-20 제국·구혼각 해산 → 9/13의 한 곳 차이가 동률이 되어 2·3장이 1장에 합쳐진 사고).
+  const battleRowsRaw = (await db.execute(sql`
+    select cb.battle_kst_day::text as day, z.name as zone,
+      coalesce(
+        cb.winner_guild_id,
+        (select (r->>'id')::bigint from world_chronicle wc, jsonb_array_elements(wc.guild_refs) r
+          where wc.server_id = cb.server_id and r->>'name' = cb.winner_guild_name
+          order by abs(wc.kst_day - cb.battle_kst_day) limit 1)
+      )::int as gid
     from conquest_battles cb join zones z on z.id = cb.zone_id
-    where cb.server_id = ${serverId} and cb.winner_guild_id is not null and cb.battle_kst_day <= ${lastDay}
-  `)) as unknown as { day: string; zone: string; gid: number }[];
+    where cb.server_id = ${serverId} and cb.battle_kst_day <= ${lastDay}
+      and (cb.winner_guild_id is not null or cb.winner_guild_name is not null)
+  `)) as unknown as { day: string; zone: string; gid: number | null }[];
+  const battleRows = battleRowsRaw.filter((r): r is { day: string; zone: string; gid: number } => r.gid != null);
   const neutralRows = (await db.execute(sql`
     select we.detail->>'battleDay' as day, zn as zone
     from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
@@ -427,4 +446,13 @@ export function loadHistoryDay(serverId: number, kstDay: string): Promise<Histor
     const replay = await computeConquestReplay(serverId, kstDay);
     return { kstDay, headline: row.headline ?? '', text: row.text, replay };
   });
+}
+
+/**
+ * 역사 위키의 서버 파라미터(`?s=`) — 위키는 서버 선택 UI 없이 **쿼리스트링으로만** 구분한다
+ * (2026-09-21 ⑦, 사용자 확정). 없거나 이상하면 1서버.
+ */
+export function parseHistoryServerId(v: unknown): number {
+  const n = Number(typeof v === 'string' ? v : NaN);
+  return Number.isInteger(n) && n >= 1 && n <= 99 ? n : 1;
 }

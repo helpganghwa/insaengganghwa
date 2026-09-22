@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   pgTable,
   smallint,
   text,
@@ -25,6 +26,8 @@ export const servers = pgTable('servers', {
   name: text('name').notNull(),
   /** open(정상) | full(신규 캐릭터 생성 제한) | closed(준비/통합 대비) */
   status: text('status').notNull().default('open'),
+  /** 신규 유저의 기본 서버(0210) — 운영자가 한 곳만 지정. 없거나 open이 아니면 최신 open 서버. */
+  recommended: boolean('recommended').notNull().default(false),
   openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -81,7 +84,12 @@ export const characters = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.serverId] }),
     index('characters_server_idx').on(t.serverId),
-    uniqueIndex('characters_nickname_uq').on(t.nickname),
+    // 닉네임 유일성은 0207부터 **제외 제약**이 강제한다(Drizzle로 표현 불가):
+    //   exclude using gist (lower(nickname) with =, (user_id::text) with <>)
+    //   (user_id를 표현식으로 두는 이유 = `where user_id = ?` 조회가 이 GiST를 타지 않게 — 0207 주석)
+    // = "같은 이름인데 주인이 다르면 거부". 같은 계정은 여러 서버에서 자기 이름을 쓴다.
+    // 서버 내 유일 + 정확 일치 조회는 characters_server_nickname_uq(0207, SQL에서 생성).
+    uniqueIndex('characters_server_nickname_uq').on(t.serverId, sql`lower(${t.nickname})`),
     index('characters_residence_idx').on(t.residenceZoneId),
     // 친구 검색 nickname ILIKE '%term%' 부분일치용 trigram GIN(감사 F3-mail, manual 0088).
     // UNIQUE btree는 양끝 와일드카드엔 무용 → seq scan이던 것을 인덱스 스캔으로.

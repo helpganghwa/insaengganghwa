@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { GUILD_PERM } from '@/lib/game/guild/permissions';
 import { collectAllZoneTax, collectZoneTaxTx, listCollectableZoneIds } from '@/lib/game/guild/collect';
 import { GuildError } from '@/lib/game/guild/errors';
+import { assertGuildPerm } from '@/lib/game/guild/perm-guard';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -72,7 +73,7 @@ async function setup(tx: Tx) {
   return { U2, gid: BigInt(gid), A: A!, B: B!, C: C!, diamond, pool, zone, set, setRole };
 }
 
-describe.skipIf(!USER)('세금 수금 — 권한자 대리 수금 · 일괄 수금', () => {
+describe.skipIf(!USER)('세금 수금 — 수금 권한자 대리 수금 · 일괄 수금', () => {
   afterAll(endTestDb);
 
   it('길드장이 남의 구역을 대리 수금하면 10%는 집행관 지갑, 90%는 곳간', async () => {
@@ -118,7 +119,10 @@ describe.skipIf(!USER)('세금 수금 — 권한자 대리 수금 · 일괄 수�
 
         await f.setRole('vice', 0);
         expect(await code(collectZoneTaxTx(tx, { userId: USER, zoneId: f.A }))).toBe('NO_PERMISSION');
+        // 분배 권한만으로는 수금할 수 없다(2026-09-20 권한 분리) — 수금 권한이 있어야 한다.
         await f.setRole('vice', GUILD_PERM.taxDistribute);
+        expect(await code(collectZoneTaxTx(tx, { userId: USER, zoneId: f.A }))).toBe('NO_PERMISSION');
+        await f.setRole('vice', GUILD_PERM.taxCollect);
         expect((await collectZoneTaxTx(tx, { userId: USER, zoneId: f.A })).guildGain).toBe(900n);
         throw ROLLBACK;
       })
@@ -160,6 +164,26 @@ describe.skipIf(!USER)('세금 수금 — 권한자 대리 수금 · 일괄 수�
         // 권한 없는 길드원은 거부.
         await f.setRole('member', 0);
         expect(await code(collectAllZoneTax({ userId: USER, serverId: SERVER_ID }, tx))).toBe('NO_PERMISSION');
+        throw ROLLBACK;
+      })
+      .catch((e) => {
+        if (e !== ROLLBACK) throw e;
+      });
+  });
+
+  it('일괄 수금과 분배도 권한이 갈린다 — 분배만 있으면 모두 수금 불가, 수금만 있으면 분배 가드에 막힌다', async () => {
+    await testDb
+      .transaction(async (tx) => {
+        const f = await setup(tx);
+        await f.setRole('vice', GUILD_PERM.taxDistribute);
+        expect(await code(collectAllZoneTax({ userId: USER, serverId: SERVER_ID }, tx))).toBe('NO_PERMISSION');
+        // 분배 가드(distribute.ts가 트랜잭션 첫 줄에서 부르는 것과 같은 호출)는 통과한다.
+        expect((await assertGuildPerm(tx, USER, SERVER_ID, 'taxDistribute')).role).toBe('vice');
+
+        await f.setRole('vice', GUILD_PERM.taxCollect);
+        expect(await code(assertGuildPerm(tx, USER, SERVER_ID, 'taxDistribute'))).toBe('NO_PERMISSION');
+        const r = await collectAllZoneTax({ userId: USER, serverId: SERVER_ID }, tx);
+        expect(r.collected.length).toBeGreaterThan(0);
         throw ROLLBACK;
       })
       .catch((e) => {

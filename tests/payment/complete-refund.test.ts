@@ -8,7 +8,7 @@ import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { kstMonthString } from '@/lib/kst';
 
-import { endTestDb, sql, testDb } from '../db';
+import { endTestDb, resyncTestMileage, sql, testDb } from '../db';
 
 const mockGet = vi.mocked(getPortonePayment);
 
@@ -109,7 +109,7 @@ describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통�
         and reason in ${sql.raw(LEDGER_REASONS)}`);
     // 마일리지 원장(0197) — completePurchase/refund가 이 테스트 주문마다 적립·회수 행을 남긴다. 잔액은 0으로.
     await testDb.execute(sql`delete from point_ledger where user_id = ${TEST_USER_ID}::uuid and kind = 'mileage'`);
-    await testDb.execute(sql`update profiles set mileage = 0 where id = ${TEST_USER_ID}::uuid`);
+    await resyncTestMileage(TEST_USER_ID); // 잔액은 서버별 지갑(0211) — 원장에서 다시 세운다
   });
 
   afterAll(async () => {

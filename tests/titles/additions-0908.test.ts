@@ -17,11 +17,11 @@ describe('칭호 추가 0908 — 정의', () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it('장비 조합 9종은 숨김·조건부이며 카탈로그 키 3개 req로 파싱된다', () => {
+  it('장비 조합 9종은 숨김·영구형(2026-09-21 아이템 발동 칭호 영구 전환)이며 카탈로그 키 3개 req로 파싱된다', () => {
     for (const code of SETS) {
       const d = TITLE_BY_CODE.get(code)!;
       expect(d.hidden).toBe(true);
-      expect(d.kind).toBe('conditional');
+      expect(d.kind).toBe('permanent');
       const s = TITLE_SECRET_BY_CODE.get(code)!;
       expect(s.req?.items).toHaveLength(3);
       expect(s.req!.min).toBeGreaterThanOrEqual(30);

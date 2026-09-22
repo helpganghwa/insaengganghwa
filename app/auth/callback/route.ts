@@ -7,10 +7,12 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import {
   canEnterServer,
+  CharacterError,
   createCharacterAuto,
   touchLastServer,
-  latestOpenServerId,
+  recommendedServerId,
 } from '@/lib/game/server-select';
+import { correctServerFor } from '@/lib/game/server-guard';
 import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getAdminStatus } from '@/lib/auth/require-admin';
@@ -28,7 +30,7 @@ const REFERRAL_NEW_SIGNUP_WINDOW_MS = 5 * 60 * 1000;
  * Kakao OAuth 콜백 — Supabase 토큰 교환 후 이 경로로 리다이렉트.
  * code → 세션 쿠키 변환 후 next(기본 '/')로 이동.
  *
- * srv 쿠키 복원(SERVER.md §3): 활성 서버는 쿠키 기반(기본 1)이라 신규 가입(최신 서버 자동
+ * srv 쿠키 복원(SERVER.md §3): 활성 서버는 쿠키 기반(기본 1)이라 신규 가입(추천 서버 자동
  * 배정)·기기 변경 시 쿠키가 비어 1서버로 떨어진다 — 로그인 시 last_server_id로 복원해
  * 항상 마지막(또는 배정된) 서버에서 게임이 시작되게 한다. 실패해도 로그인은 진행(기본 1).
  */
@@ -85,11 +87,16 @@ export async function GET(request: NextRequest) {
       const dest = new URL(`${origin}${next}`);
       if (kakaoEv) dest.searchParams.set('kakao_ev', kakaoEv);
       const res = NextResponse.redirect(dest.toString());
+      // 다른 서버에 이미 캐릭터가 있는데 없는 서버를 골랐을 때 — 바로 만들지 않고 확인을 받는다.
+      // (2026-09-21 ②) 값이 있으면 아래에서 목적지를 확인 화면으로 바꾼다.
+      let confirmNewServerId: number | null = null;
+      // 다른 서버 보유 여부 조회가 실패했는가 — 실패하면 만들지 않고 쿠키만 세워 레이아웃에 맡긴다.
+      let guardFailed = false;
       if (userId) {
         try {
           // 대상 서버 확정(2026-07-10 R1 조정, 우선순위 사용자 확정): 명시 클릭(login_srv)
           // > 마지막 접속(last_server_id — 기존 유저 복원) > 공유/초대 링크 의도(pending_server
-          // — 사실상 신규 유저만 여기 도달) > 최신 open. 기존 유저는 초대 링크를 눌렀어도 자기
+          // — 사실상 신규 유저만 여기 도달) > 추천 서버. 기존 유저는 초대 링크를 눌렀어도 자기
           // 서버로 복원되며, 따라가려면 셀렉터에서 직접 선택한다(오배정 방지 우선).
           // login_srv는 셀렉터 **클릭 시에만** 기록됨(마운트 자동 기록이 복원을 가리던 R1 수정).
           const asSid = (raw: string | undefined): number | null => {
@@ -118,21 +125,58 @@ export async function GET(request: NextRequest) {
               .limit(1);
             sid = p?.sid ?? null;
           }
-          if (!sid) sid = await latestOpenServerId();
+          if (!sid) sid = await recommendedServerId();
           // 그 서버에 캐릭터가 없으면 생성(가입 보너스 + 기본 아바타 + 거주지 포함).
           // 가입 트리거(0067)는 더 이상 캐릭터를 만들지 않으므로, 신규 가입·새 서버 합류 모두
           // 여기서 "고른 서버에 정확히 1개"만 생성된다(유령 캐릭터·중복 보너스 제거).
           if (sid) {
             if (!(await canEnterServer(userId, sid))) {
-              await createCharacterAuto({ userId, serverId: sid });
+              // 이미 다른 서버에 캐릭터가 있으면 **묻고 만든다**(2026-09-21 ②). 종전에는 확인 없이
+              // 만들어서, 로그인 화면이 실제 배정과 다른 서버를 골라 둔 채 그 칩을 한 번 누른
+              // 기존 유저에게 새 캐릭터가 생겼다(캐릭터 삭제 수단이 없어 되돌릴 수 없음).
+              // ⚠ 이 조회가 실패하면 **여기서는 만들지도 묻지도 않는다**. 실패를 '캐릭터 없음'으로 읽으면
+              // 바로 그 막으려던 사고 — 확인 없이 새 캐릭터 — 가 난다. 대신 활성 서버 쿠키만 의도한 서버로
+              // 두고 레이아웃의 같은 관문(layout-data)에 맡긴다: 다른 서버에 캐릭터가 있으면 그리로 되돌리고,
+              // 없으면 **이 서버에** 만든다. 서버 선택을 통째로 건너뛰면 쿠키 없이 1서버로 떨어져, 초대받은
+              // 신규가 엉뚱한 서버에 생긴다. 마지막 서버 기록(last_server_id)은 확정된 게 없으니 건드리지 않는다.
+              let hasElsewhere: number | null = null;
+              try {
+                hasElsewhere = await correctServerFor(userId, sid);
+              } catch (ge) {
+                guardFailed = true;
+                console.warn('[auth.callback] server guard failed — defer to layout', (ge as Error).message);
+              }
+              if (guardFailed) {
+                // 아래에서 쿠키만 세운다.
+              } else if (hasElsewhere != null) {
+                confirmNewServerId = sid;
+              } else {
+                // 캐릭터가 하나도 없는 신규 — 고른(또는 링크가 가리킨) 서버가 포화·닫힘이면 열려 있는
+                // 추천 서버로 대신 보낸다. 종전에는 여기서 던진 예외가 서버 선택 전체를 건너뛰게 해,
+                // 쿠키 없이 1서버로 떨어진 뒤 1서버마저 포화면 빈 화면에 갇혔다(2026-09-21 재검수).
+                try {
+                  await createCharacterAuto({ userId, serverId: sid });
+                } catch (ce) {
+                  if (!(ce instanceof CharacterError) || ce.code !== 'SERVER_NOT_OPEN') throw ce;
+                  const fallback = await recommendedServerId();
+                  if (fallback === sid) throw ce;
+                  sid = fallback;
+                  if (!(await canEnterServer(userId, sid))) {
+                    await createCharacterAuto({ userId, serverId: sid });
+                  }
+                }
+              }
             }
-            await touchLastServer(userId, sid);
-            res.cookies.set('srv', String(sid), {
-              httpOnly: true,
-              sameSite: 'lax',
-              path: '/',
-              maxAge: 60 * 60 * 24 * 365,
-            });
+            if (confirmNewServerId == null) {
+              if (!guardFailed) await touchLastServer(userId, sid);
+              res.cookies.set('srv', String(sid), {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 365,
+              });
+            }
           }
           res.cookies.delete('login_srv');
           // 공유 링크 서버 의도는 1회성 — 소비 후 소거(F7: 7일 잔존 시 이후 재로그인의
@@ -177,6 +221,15 @@ export async function GET(request: NextRequest) {
             console.warn('[auth.callback] referral skipped', (e as Error).message);
           }
         }
+      }
+      // 확인이 필요하면 게임 대신 확인 화면으로 — 쿠키 처리(초대 귀속 등)는 그대로 두고 목적지만 바꾼다.
+      // 카카오 픽셀 표식(kakao_ev)도 같이 옮긴다 — 픽셀 로더는 루트 레이아웃에 있어 확인 화면에서도 발화한다.
+      // 빼먹으면 이 경로로 들어온 로그인만 전환 집계에서 빠진다.
+      if (confirmNewServerId != null) {
+        const confirm = new URL(`${origin}/login/new-character`);
+        confirm.searchParams.set('to', String(confirmNewServerId));
+        if (kakaoEv) confirm.searchParams.set('kakao_ev', kakaoEv);
+        res.headers.set('location', confirm.toString());
       }
       return res;
     }

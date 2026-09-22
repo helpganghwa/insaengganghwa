@@ -19,19 +19,22 @@ export function WikiLink({
   className,
   children,
   path = '/wiki',
+  query = '',
 }: {
   className?: string;
   children: ReactNode;
   /** 열 경로 — 역사 위키(/history)도 위키처럼 device-width viewport라 같은 새 창 규칙을 쓴다(2026-09-18). */
   path?: '/wiki' | '/history';
+  /** 뒤에 붙일 쿼리스트링('?s=2' 등) — 역사 위키는 서버를 이 값으로만 구분한다(2026-09-21 ⑦). */
+  query?: string;
 }) {
-  const [href, setHref] = useState<string>(path);
+  const [href, setHref] = useState<string>(`${path}${query}`);
   useEffect(() => {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches ||
       (navigator as { standalone?: boolean }).standalone === true;
-    if (standalone) setHref(`${PWA_WIKI_ORIGIN}${path}`);
-  }, [path]);
+    if (standalone) setHref(`${PWA_WIKI_ORIGIN}${path}${query}`);
+  }, [path, query]);
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
       {children}

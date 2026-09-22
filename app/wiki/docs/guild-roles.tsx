@@ -61,12 +61,19 @@ export default function Doc() {
           본인만 가능하다.
         </LI>
         <LI>
-          <DocLink slug="conquest" hash="executor">{GUILD_PERM_META.executor.label}</DocLink>에는 그
-          구역 <DocLink slug="conquest" hash="tax">세금 수금</DocLink> 권한이 함께 포함된다.
+          <DocLink slug="conquest" hash="executor">집행관</DocLink>으로 지정된 길드원은{' '}
+          {GUILD_PERM_META.taxCollect.label} 권한이 없어도 자기 구역의{' '}
+          <DocLink slug="conquest" hash="tax">세금</DocLink>을 걷을 수 있다.
         </LI>
         <LI>
-          {GUILD_PERM_META.taxDistribute.label} 권한이 있으면 집행관을 대신해 수금하고, 수금 가능한 구역을
-          한 번에 걷을 수 있다.
+          <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>가 &lsquo;권한자만&rsquo;인 길드에서는
+          길드장과, {GUILD_PERM_META.deploy.label} 권한이나 {GUILD_PERM_META.executor.label} 권한이 있는
+          부길드장만 길드 전체 배치를 볼 수 있다.
+        </LI>
+        <LI>
+          {GUILD_PERM_META.taxCollect.label} 권한이 있으면 집행관을 대신해 수금하고, 수금 가능한 구역을
+          한 번에 걷을 수 있다. 걷은 세금을 길드원에게 나누는 것은 {GUILD_PERM_META.taxDistribute.label}{' '}
+          권한이 따로 있어야 한다.
         </LI>
         <LI>
           공지는 {fmtInt(GUILD_NOTICE_MAX_LEN)}자, 소개는 {fmtInt(GUILD_INTRO_MAX_LEN)}자까지

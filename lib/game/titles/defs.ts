@@ -1183,7 +1183,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "kintsugi_master",
-  kind: "conditional",
+  kind: "permanent",
   label: "흑금의 주인",
   hidden: true,
   cat: "아이템 발동",
@@ -1194,7 +1194,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "starfield_master",
-  kind: "conditional",
+  kind: "permanent",
   label: "별자리를 쥔 손",
   hidden: true,
   cat: "아이템 발동",
@@ -1206,7 +1206,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "frog_prince",
-  kind: "conditional",
+  kind: "permanent",
   label: "개구리 왕자",
   hidden: true,
   cat: "아이템 발동",
@@ -1216,7 +1216,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "true_witch",
-  kind: "conditional",
+  kind: "permanent",
   label: "진짜 마녀",
   hidden: true,
   cat: "아이템 발동",
@@ -1226,7 +1226,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "winter_itself",
-  kind: "conditional",
+  kind: "permanent",
   label: "겨울의 화신",
   hidden: true,
   cat: "아이템 발동",
@@ -1236,7 +1236,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dawn_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "여명의 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -1246,7 +1246,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dragon_heir",
-  kind: "conditional",
+  kind: "permanent",
   label: "용의 후예",
   hidden: true,
   cat: "아이템 발동",
@@ -1551,7 +1551,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "model_student",
-  kind: "conditional",
+  kind: "permanent",
   label: "모범생",
   hidden: true,
   cat: "아이템 발동",
@@ -1561,7 +1561,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "night_noble",
-  kind: "conditional",
+  kind: "permanent",
   label: "밤의 귀족",
   hidden: true,
   cat: "아이템 발동",
@@ -1571,7 +1571,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "valkyrie",
-  kind: "conditional",
+  kind: "permanent",
   label: "발키리",
   hidden: true,
   cat: "아이템 발동",
@@ -1584,7 +1584,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "grim_envoy",
-  kind: "conditional",
+  kind: "permanent",
   label: "명부의 사자",
   hidden: true,
   cat: "아이템 발동",
@@ -1597,7 +1597,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "archangel",
-  kind: "conditional",
+  kind: "permanent",
   label: "대천사",
   hidden: true,
   cat: "아이템 발동",
@@ -1607,7 +1607,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "outlaw",
-  kind: "conditional",
+  kind: "permanent",
   label: "무법자",
   hidden: true,
   cat: "아이템 발동",
@@ -1710,7 +1710,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "winter_blade",
-  kind: "conditional",
+  kind: "permanent",
   label: "겨울 검객",
   hidden: true,
   cat: "아이템 발동",
@@ -1722,7 +1722,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "volcano_heart",
-  kind: "conditional",
+  kind: "permanent",
   label: "화산의 심장",
   hidden: true,
   cat: "아이템 발동",
@@ -1734,7 +1734,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lotus_warrior",
-  kind: "conditional",
+  kind: "permanent",
   label: "연꽃 무사",
   hidden: true,
   cat: "아이템 발동",
@@ -1744,7 +1744,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "star_mage",
-  kind: "conditional",
+  kind: "permanent",
   label: "별의 마술사",
   hidden: true,
   cat: "아이템 발동",
@@ -1754,7 +1754,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "thunder_emperor",
-  kind: "conditional",
+  kind: "permanent",
   label: "뇌제",
   hidden: true,
   cat: "아이템 발동",
@@ -1766,7 +1766,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "one_shot",
-  kind: "conditional",
+  kind: "permanent",
   label: "단 한 발",
   hidden: true,
   cat: "아이템 발동",
@@ -1776,7 +1776,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "blue_sky",
-  kind: "conditional",
+  kind: "permanent",
   label: "창천",
   hidden: true,
   cat: "아이템 발동",
@@ -1786,7 +1786,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "phoenix_archer",
-  kind: "conditional",
+  kind: "permanent",
   label: "불사조",
   hidden: true,
   cat: "아이템 발동",
@@ -1796,7 +1796,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "shaman",
-  kind: "conditional",
+  kind: "permanent",
   label: "주술사",
   hidden: true,
   cat: "아이템 발동",
@@ -1806,7 +1806,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "angler",
-  kind: "conditional",
+  kind: "permanent",
   label: "강태공",
   hidden: true,
   cat: "아이템 발동",
@@ -1816,7 +1816,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "paladin",
-  kind: "conditional",
+  kind: "permanent",
   label: "성기사",
   hidden: true,
   cat: "아이템 발동",
@@ -1826,7 +1826,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "astrologer",
-  kind: "conditional",
+  kind: "permanent",
   label: "점성술사",
   hidden: true,
   cat: "아이템 발동",
@@ -1836,7 +1836,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "masquerade",
-  kind: "conditional",
+  kind: "permanent",
   label: "가면무도회",
   hidden: true,
   cat: "아이템 발동",
@@ -1846,7 +1846,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "headmaster",
-  kind: "conditional",
+  kind: "permanent",
   label: "학장",
   hidden: true,
   cat: "아이템 발동",
@@ -1856,7 +1856,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "coronation",
-  kind: "conditional",
+  kind: "permanent",
   label: "대관식",
   hidden: true,
   cat: "아이템 발동",
@@ -1987,7 +1987,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "frog_sniper",
-  kind: "conditional",
+  kind: "permanent",
   label: "개구리 저격수",
   hidden: true,
   cat: "아이템 발동",
@@ -1997,7 +1997,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "gentleman",
-  kind: "conditional",
+  kind: "permanent",
   label: "신사",
   hidden: true,
   cat: "아이템 발동",
@@ -2007,7 +2007,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "cupid",
-  kind: "conditional",
+  kind: "permanent",
   label: "큐피드",
   hidden: true,
   cat: "아이템 발동",
@@ -2017,7 +2017,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "hunter",
-  kind: "conditional",
+  kind: "permanent",
   label: "사냥꾼",
   hidden: true,
   cat: "아이템 발동",
@@ -2027,7 +2027,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "twin_saber",
-  kind: "conditional",
+  kind: "permanent",
   label: "쌍검객",
   hidden: true,
   cat: "아이템 발동",
@@ -2037,7 +2037,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "standard_bearer",
-  kind: "conditional",
+  kind: "permanent",
   label: "기수",
   hidden: true,
   cat: "아이템 발동",
@@ -2047,7 +2047,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ash_reaper",
-  kind: "conditional",
+  kind: "permanent",
   label: "재의 수확자",
   hidden: true,
   cat: "아이템 발동",
@@ -2057,7 +2057,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dusk",
-  kind: "conditional",
+  kind: "permanent",
   label: "황혼",
   hidden: true,
   cat: "아이템 발동",
@@ -2067,7 +2067,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "sky_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "창공의 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -2077,7 +2077,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dragon_slayer",
-  kind: "conditional",
+  kind: "permanent",
   label: "용살자",
   hidden: true,
   cat: "아이템 발동",
@@ -2087,7 +2087,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "shadow",
-  kind: "conditional",
+  kind: "permanent",
   label: "그림자",
   hidden: true,
   cat: "아이템 발동",
@@ -2097,7 +2097,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "forge_heart",
-  kind: "conditional",
+  kind: "permanent",
   label: "화심",
   hidden: true,
   cat: "아이템 발동",
@@ -2107,7 +2107,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "grim_reaper",
-  kind: "conditional",
+  kind: "permanent",
   label: "사신",
   hidden: true,
   cat: "아이템 발동",
@@ -2118,7 +2118,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "necromancer",
-  kind: "conditional",
+  kind: "permanent",
   label: "강령술사",
   hidden: true,
   cat: "아이템 발동",
@@ -2129,7 +2129,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "morning_blade",
-  kind: "conditional",
+  kind: "permanent",
   label: "아침의 검",
   hidden: true,
   cat: "아이템 발동",
@@ -2140,7 +2140,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "twin_wings",
-  kind: "conditional",
+  kind: "permanent",
   label: "쌍익",
   hidden: true,
   cat: "아이템 발동",
@@ -2151,7 +2151,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "wanderer",
-  kind: "conditional",
+  kind: "permanent",
   label: "유랑자",
   hidden: true,
   cat: "아이템 발동",
@@ -2161,7 +2161,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "little_angel",
-  kind: "conditional",
+  kind: "permanent",
   label: "꼬마 천사",
   hidden: true,
   cat: "아이템 발동",
@@ -2171,7 +2171,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lily_spirit",
-  kind: "conditional",
+  kind: "permanent",
   label: "수련의 정령",
   hidden: true,
   cat: "아이템 발동",
@@ -2181,7 +2181,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fire_dancer",
-  kind: "conditional",
+  kind: "permanent",
   label: "불의 무희",
   hidden: true,
   cat: "아이템 발동",
@@ -2191,7 +2191,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "beast_king",
-  kind: "conditional",
+  kind: "permanent",
   label: "야수의 왕",
   hidden: true,
   cat: "아이템 발동",
@@ -2201,7 +2201,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "royal_guard",
-  kind: "conditional",
+  kind: "permanent",
   label: "근위대장",
   hidden: true,
   cat: "아이템 발동",
@@ -2343,7 +2343,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "seraph",
-  kind: "conditional",
+  kind: "permanent",
   label: "세라핌",
   hidden: true,
   cat: "아이템 발동",
@@ -2353,7 +2353,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "black_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "흑기사",
   hidden: true,
   cat: "아이템 발동",
@@ -2363,7 +2363,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "field_marshal",
-  kind: "conditional",
+  kind: "permanent",
   label: "대원수",
   hidden: true,
   cat: "아이템 발동",
@@ -2374,7 +2374,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "snow_priest",
-  kind: "conditional",
+  kind: "permanent",
   label: "설야의 사제",
   hidden: true,
   cat: "아이템 발동",
@@ -2384,7 +2384,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "firebird",
-  kind: "conditional",
+  kind: "permanent",
   label: "불새",
   hidden: true,
   cat: "아이템 발동",
@@ -2394,7 +2394,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "forest_keeper",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲지기",
   hidden: true,
   cat: "아이템 발동",
@@ -2404,7 +2404,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "star_reader",
-  kind: "conditional",
+  kind: "permanent",
   label: "별을 읽는 자",
   hidden: true,
   cat: "아이템 발동",
@@ -2414,7 +2414,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "penitent",
-  kind: "conditional",
+  kind: "permanent",
   label: "속죄자",
   hidden: true,
   cat: "아이템 발동",
@@ -2424,7 +2424,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "bog_warden",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪의 파수꾼",
   hidden: true,
   cat: "아이템 발동",
@@ -2434,7 +2434,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ascetic",
-  kind: "conditional",
+  kind: "permanent",
   label: "수행자",
   hidden: true,
   cat: "아이템 발동",
@@ -2444,7 +2444,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lion_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "사자 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -2454,7 +2454,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "herald",
-  kind: "conditional",
+  kind: "permanent",
   label: "전령",
   hidden: true,
   cat: "아이템 발동",
@@ -2464,7 +2464,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "bog_witch",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪마녀",
   hidden: true,
   cat: "아이템 발동",
@@ -2474,7 +2474,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "self_saint",
-  kind: "conditional",
+  kind: "permanent",
   label: "자칭 성자",
   hidden: true,
   cat: "아이템 발동",
@@ -2484,7 +2484,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lava_dancer",
-  kind: "conditional",
+  kind: "permanent",
   label: "화염 무도",
   hidden: true,
   cat: "아이템 발동",
@@ -2494,7 +2494,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "vampire",
-  kind: "conditional",
+  kind: "permanent",
   label: "흡혈귀",
   hidden: true,
   cat: "아이템 발동",
@@ -2504,7 +2504,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lantern_keeper",
-  kind: "conditional",
+  kind: "permanent",
   label: "등불지기",
   hidden: true,
   cat: "아이템 발동",
@@ -2514,7 +2514,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "herbalist",
-  kind: "conditional",
+  kind: "permanent",
   label: "약초꾼",
   hidden: true,
   cat: "아이템 발동",
@@ -2524,7 +2524,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "little_devil",
-  kind: "conditional",
+  kind: "permanent",
   label: "꼬마 악마",
   hidden: true,
   cat: "아이템 발동",
@@ -2534,7 +2534,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "drunkard",
-  kind: "conditional",
+  kind: "permanent",
   label: "가득 찬 잔",
   hidden: true,
   cat: "아이템 발동",
@@ -2544,7 +2544,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "feather_style",
-  kind: "conditional",
+  kind: "permanent",
   label: "깃털 단장",
   hidden: true,
   cat: "아이템 발동",
@@ -2554,7 +2554,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "one_eye",
-  kind: "conditional",
+  kind: "permanent",
   label: "외눈 검객",
   hidden: true,
   cat: "아이템 발동",
@@ -2564,7 +2564,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "trumpeter",
-  kind: "conditional",
+  kind: "permanent",
   label: "나팔수",
   hidden: true,
   cat: "아이템 발동",
@@ -2574,7 +2574,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "drummer",
-  kind: "conditional",
+  kind: "permanent",
   label: "북재비",
   hidden: true,
   cat: "아이템 발동",
@@ -2584,7 +2584,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "court_dancer",
-  kind: "conditional",
+  kind: "permanent",
   label: "궁중 무희",
   hidden: true,
   cat: "아이템 발동",
@@ -2594,7 +2594,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "tribal_banner",
-  kind: "conditional",
+  kind: "permanent",
   label: "부족의 기수",
   hidden: true,
   cat: "아이템 발동",
@@ -2604,7 +2604,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "mechanic",
-  kind: "conditional",
+  kind: "permanent",
   label: "정비공",
   hidden: true,
   cat: "아이템 발동",
@@ -2614,7 +2614,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ice_heart",
-  kind: "conditional",
+  kind: "permanent",
   label: "얼음 심장",
   hidden: true,
   cat: "아이템 발동",
@@ -2624,7 +2624,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "iron_fist",
-  kind: "conditional",
+  kind: "permanent",
   label: "강철 주먹",
   hidden: true,
   cat: "아이템 발동",
@@ -2634,7 +2634,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lion_heart",
-  kind: "conditional",
+  kind: "permanent",
   label: "사자의 심장",
   hidden: true,
   cat: "아이템 발동",
@@ -2644,7 +2644,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fur_collar",
-  kind: "conditional",
+  kind: "permanent",
   label: "설백",
   hidden: true,
   cat: "아이템 발동",
@@ -2654,7 +2654,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "incense_keeper",
-  kind: "conditional",
+  kind: "permanent",
   label: "향지기",
   hidden: true,
   cat: "아이템 발동",
@@ -2664,7 +2664,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dragon_face",
-  kind: "conditional",
+  kind: "permanent",
   label: "용의 얼굴",
   hidden: true,
   cat: "아이템 발동",
@@ -2674,7 +2674,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "snow_monk",
-  kind: "conditional",
+  kind: "permanent",
   label: "설산 수도승",
   hidden: true,
   cat: "아이템 발동",
@@ -2684,7 +2684,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fallen_priest",
-  kind: "conditional",
+  kind: "permanent",
   label: "타락 사제",
   hidden: true,
   cat: "아이템 발동",
@@ -2694,7 +2694,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "volcano_smith",
-  kind: "conditional",
+  kind: "permanent",
   label: "화산 대장장이",
   hidden: true,
   cat: "아이템 발동",
@@ -2704,7 +2704,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "thunder_general",
-  kind: "conditional",
+  kind: "permanent",
   label: "뇌운의 장군",
   hidden: true,
   cat: "아이템 발동",
@@ -2716,7 +2716,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "night_visitor",
-  kind: "conditional",
+  kind: "permanent",
   label: "밤손님",
   hidden: true,
   cat: "아이템 발동",
@@ -2726,7 +2726,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "honor_student",
-  kind: "conditional",
+  kind: "permanent",
   label: "우등생",
   hidden: true,
   cat: "아이템 발동",
@@ -2736,7 +2736,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fluffy_cloud",
-  kind: "conditional",
+  kind: "permanent",
   label: "뭉게구름",
   hidden: true,
   cat: "아이템 발동",
@@ -2746,7 +2746,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "frog_person",
-  kind: "conditional",
+  kind: "permanent",
   label: "개구리 인간",
   hidden: true,
   cat: "아이템 발동",
@@ -2756,7 +2756,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "peddler",
-  kind: "conditional",
+  kind: "permanent",
   label: "보부상",
   hidden: true,
   cat: "아이템 발동",
@@ -2766,7 +2766,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "flower_crown",
-  kind: "conditional",
+  kind: "permanent",
   label: "화관",
   hidden: true,
   cat: "아이템 발동",
@@ -2776,7 +2776,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "pointy_hat",
-  kind: "conditional",
+  kind: "permanent",
   label: "뾰족 모자",
   hidden: true,
   cat: "아이템 발동",
@@ -2786,7 +2786,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "bookworm",
-  kind: "conditional",
+  kind: "permanent",
   label: "책벌레",
   hidden: true,
   cat: "아이템 발동",
@@ -2796,7 +2796,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "firefly",
-  kind: "conditional",
+  kind: "permanent",
   label: "반딧불",
   hidden: true,
   cat: "아이템 발동",
@@ -2806,7 +2806,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "azure_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "쪽빛 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -2816,7 +2816,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "pumpkin_glow",
-  kind: "conditional",
+  kind: "permanent",
   label: "호박등",
   hidden: true,
   cat: "아이템 발동",
@@ -2826,7 +2826,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "old_professor",
-  kind: "conditional",
+  kind: "permanent",
   label: "노교수",
   hidden: true,
   cat: "아이템 발동",
@@ -2836,7 +2836,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "silence",
-  kind: "conditional",
+  kind: "permanent",
   label: "침묵",
   hidden: true,
   cat: "아이템 발동",
@@ -2846,7 +2846,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lily_pad",
-  kind: "conditional",
+  kind: "permanent",
   label: "수련잎",
   hidden: true,
   cat: "아이템 발동",
@@ -2856,7 +2856,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ball_night",
-  kind: "conditional",
+  kind: "permanent",
   label: "무도회의 밤",
   hidden: true,
   cat: "아이템 발동",
@@ -2866,7 +2866,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "white_feather",
-  kind: "conditional",
+  kind: "permanent",
   label: "하얀 깃",
   hidden: true,
   cat: "아이템 발동",
@@ -2876,7 +2876,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "hourglass",
-  kind: "conditional",
+  kind: "permanent",
   label: "모래시계",
   hidden: true,
   cat: "아이템 발동",
@@ -2886,7 +2886,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ancestor",
-  kind: "conditional",
+  kind: "permanent",
   label: "조상님",
   hidden: true,
   cat: "아이템 발동",
@@ -2896,7 +2896,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "star_gazer",
-  kind: "conditional",
+  kind: "permanent",
   label: "별점",
   hidden: true,
   cat: "아이템 발동",
@@ -2906,7 +2906,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "nomad_fox",
-  kind: "conditional",
+  kind: "permanent",
   label: "사막 여우",
   hidden: true,
   cat: "아이템 발동",
@@ -2916,7 +2916,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "red_night",
-  kind: "conditional",
+  kind: "permanent",
   label: "붉은 밤",
   hidden: true,
   cat: "아이템 발동",
@@ -2926,7 +2926,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "raven",
-  kind: "conditional",
+  kind: "permanent",
   label: "갈까마귀",
   hidden: true,
   cat: "아이템 발동",
@@ -2936,7 +2936,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "starlight_cloak",
-  kind: "conditional",
+  kind: "permanent",
   label: "별빛 망토",
   hidden: true,
   cat: "아이템 발동",
@@ -2946,7 +2946,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "snow_flower",
-  kind: "conditional",
+  kind: "permanent",
   label: "설화",
   hidden: true,
   cat: "아이템 발동",
@@ -2956,7 +2956,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fire_dragon",
-  kind: "conditional",
+  kind: "permanent",
   label: "화룡",
   hidden: true,
   cat: "아이템 발동",
@@ -2966,7 +2966,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "obsidian",
-  kind: "conditional",
+  kind: "permanent",
   label: "흑요",
   hidden: true,
   cat: "아이템 발동",
@@ -2976,7 +2976,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "radiance",
-  kind: "conditional",
+  kind: "permanent",
   label: "광휘",
   hidden: true,
   cat: "아이템 발동",
@@ -2986,7 +2986,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ember_silk",
-  kind: "conditional",
+  kind: "permanent",
   label: "화문",
   hidden: true,
   cat: "아이템 발동",
@@ -2996,7 +2996,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "battle_wings",
-  kind: "conditional",
+  kind: "permanent",
   label: "전장의 날개",
   hidden: true,
   cat: "아이템 발동",
@@ -3006,7 +3006,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "holy_light",
-  kind: "conditional",
+  kind: "permanent",
   label: "성광",
   hidden: true,
   cat: "아이템 발동",
@@ -3016,7 +3016,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "black_dragon",
-  kind: "conditional",
+  kind: "permanent",
   label: "흑룡",
   hidden: true,
   cat: "아이템 발동",
@@ -3026,7 +3026,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "archangel_chief",
-  kind: "conditional",
+  kind: "permanent",
   label: "천사장",
   hidden: true,
   cat: "아이템 발동",
@@ -3036,7 +3036,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "forest_hermit",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲의 은둔자",
   hidden: true,
   cat: "아이템 발동",
@@ -3169,7 +3169,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "red_ball",
-  kind: "conditional",
+  kind: "permanent",
   label: "붉은 무도회",
   hidden: true,
   cat: "아이템 발동",
@@ -3179,7 +3179,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "gunslinger",
-  kind: "conditional",
+  kind: "permanent",
   label: "황야의 총잡이",
   hidden: true,
   cat: "아이템 발동",
@@ -3189,7 +3189,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "phantom_thief",
-  kind: "conditional",
+  kind: "permanent",
   label: "괴도",
   hidden: true,
   cat: "아이템 발동",
@@ -3199,7 +3199,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "star_navigator",
-  kind: "conditional",
+  kind: "permanent",
   label: "별의 항해사",
   hidden: true,
   cat: "아이템 발동",
@@ -3211,7 +3211,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "forest_witch",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲의 마녀",
   hidden: true,
   cat: "아이템 발동",
@@ -3221,7 +3221,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "lava_lord",
-  kind: "conditional",
+  kind: "permanent",
   label: "용암 군주",
   hidden: true,
   cat: "아이템 발동",
@@ -3233,7 +3233,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "gardener",
-  kind: "conditional",
+  kind: "permanent",
   label: "정원사",
   hidden: true,
   cat: "아이템 발동",
@@ -3243,7 +3243,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "kings_blade",
-  kind: "conditional",
+  kind: "permanent",
   label: "왕의 검",
   hidden: true,
   cat: "아이템 발동",
@@ -3253,7 +3253,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "marksman",
-  kind: "conditional",
+  kind: "permanent",
   label: "명포수",
   hidden: true,
   cat: "아이템 발동",
@@ -3334,7 +3334,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dawn_prayer",
-  kind: "conditional",
+  kind: "permanent",
   label: "새벽 기도",
   hidden: true,
   cat: "아이템 발동",
@@ -3344,7 +3344,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "phoenix_set",
-  kind: "conditional",
+  kind: "permanent",
   label: "봉황",
   hidden: true,
   cat: "아이템 발동",
@@ -3354,7 +3354,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "abyss_lord",
-  kind: "conditional",
+  kind: "permanent",
   label: "심연의 군주",
   hidden: true,
   cat: "아이템 발동",
@@ -3366,7 +3366,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "silver_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "백은 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -3379,7 +3379,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "marsh_patrol",
-  kind: "conditional",
+  kind: "permanent",
   label: "습지 순찰대",
   hidden: true,
   cat: "아이템 발동",
@@ -3389,7 +3389,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "light_maiden",
-  kind: "conditional",
+  kind: "permanent",
   label: "빛의 무녀",
   hidden: true,
   cat: "아이템 발동",
@@ -3399,7 +3399,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "warpath",
-  kind: "conditional",
+  kind: "permanent",
   label: "패도",
   hidden: true,
   cat: "아이템 발동",
@@ -3411,7 +3411,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "festival_night",
-  kind: "conditional",
+  kind: "permanent",
   label: "축제의 밤",
   hidden: true,
   cat: "아이템 발동",
@@ -3421,7 +3421,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "night_walk",
-  kind: "conditional",
+  kind: "permanent",
   label: "야행",
   hidden: true,
   cat: "아이템 발동",
@@ -3431,7 +3431,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "glacier_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "빙하 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -3443,7 +3443,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "steppe_wind",
-  kind: "conditional",
+  kind: "permanent",
   label: "초원의 바람",
   hidden: true,
   cat: "아이템 발동",
@@ -3453,7 +3453,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "court_mage",
-  kind: "conditional",
+  kind: "permanent",
   label: "궁정 마법사",
   hidden: true,
   cat: "아이템 발동",
@@ -3463,7 +3463,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ash_judge",
-  kind: "conditional",
+  kind: "permanent",
   label: "재의 심판자",
   hidden: true,
   cat: "아이템 발동",
@@ -3515,7 +3515,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "fire_and_ice",
-  kind: "conditional",
+  kind: "permanent",
   label: "얼음과 불",
   hidden: true,
   cat: "아이템 발동",
@@ -3529,7 +3529,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "heaven_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "하늘의 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -3542,7 +3542,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "steam",
-  kind: "conditional",
+  kind: "permanent",
   label: "수증기",
   hidden: true,
   cat: "아이템 발동",
@@ -3555,7 +3555,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "frozen_marsh",
-  kind: "conditional",
+  kind: "permanent",
   label: "얼어붙은 늪",
   hidden: true,
   cat: "아이템 발동",
@@ -3568,7 +3568,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "savage_noble",
-  kind: "conditional",
+  kind: "permanent",
   label: "야만과 문명",
   hidden: true,
   cat: "아이템 발동",
@@ -3581,7 +3581,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "foreign_god",
-  kind: "conditional",
+  kind: "permanent",
   label: "이방의 신",
   hidden: true,
   cat: "아이템 발동",
@@ -3595,7 +3595,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "dragon_crown",
-  kind: "conditional",
+  kind: "permanent",
   label: "용과 왕관",
   hidden: true,
   cat: "아이템 발동",
@@ -3609,7 +3609,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "transfer_student",
-  kind: "conditional",
+  kind: "permanent",
   label: "전학생",
   hidden: true,
   cat: "아이템 발동",
@@ -3622,7 +3622,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ash_angel",
-  kind: "conditional",
+  kind: "permanent",
   label: "재의 천사",
   hidden: true,
   cat: "아이템 발동",
@@ -3635,7 +3635,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ringing_pilgrim",
-  kind: "conditional",
+  kind: "permanent",
   label: "길 비우는 소리",
   hidden: true,
   cat: "아이템 발동",
@@ -3646,7 +3646,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "temple_procession",
-  kind: "conditional",
+  kind: "permanent",
   label: "행렬의 선두",
   hidden: true,
   cat: "아이템 발동",
@@ -3656,7 +3656,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "never_sheathed",
-  kind: "conditional",
+  kind: "permanent",
   label: "칼집 없는 자",
   hidden: true,
   cat: "아이템 발동",
@@ -3667,7 +3667,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "ember_ball",
-  kind: "conditional",
+  kind: "permanent",
   label: "잿불 무도",
   hidden: true,
   cat: "아이템 발동",
@@ -3678,7 +3678,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "forge_hand",
-  kind: "conditional",
+  kind: "permanent",
   label: "불을 다루는 손",
   hidden: true,
   cat: "아이템 발동",
@@ -3688,7 +3688,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "antler_hunter",
-  kind: "conditional",
+  kind: "permanent",
   label: "뿔의 사냥꾼",
   hidden: true,
   cat: "아이템 발동",
@@ -3698,7 +3698,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "marsh_tracker",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪을 읽는 자",
   hidden: true,
   cat: "아이템 발동",
@@ -3708,7 +3708,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "summer_keeper",
-  kind: "conditional",
+  kind: "permanent",
   label: "여름을 든 자",
   hidden: true,
   cat: "아이템 발동",
@@ -3719,7 +3719,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "green_circle",
-  kind: "conditional",
+  kind: "permanent",
   label: "푸른 원",
   hidden: true,
   cat: "아이템 발동",
@@ -3729,7 +3729,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "oni_slayer",
-  kind: "conditional",
+  kind: "permanent",
   label: "귀참",
   hidden: true,
   cat: "아이템 발동",
@@ -3740,7 +3740,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "red_edge",
-  kind: "conditional",
+  kind: "permanent",
   label: "붉은 날",
   hidden: true,
   cat: "아이템 발동",
@@ -3751,7 +3751,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "mask_and_blade",
-  kind: "conditional",
+  kind: "permanent",
   label: "가면과 칼",
   hidden: true,
   cat: "아이템 발동",
@@ -3761,7 +3761,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "thorn_bearer",
-  kind: "conditional",
+  kind: "permanent",
   label: "가시를 쥔 자",
   hidden: true,
   cat: "아이템 발동",
@@ -3791,7 +3791,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_001",
-  kind: "conditional",
+  kind: "permanent",
   label: "뇌신 강림",
   hidden: false,
   cat: "아이템 발동",
@@ -3802,7 +3802,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_002",
-  kind: "conditional",
+  kind: "permanent",
   label: "별에 묻는 길",
   hidden: false,
   cat: "아이템 발동",
@@ -3813,7 +3813,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_003",
-  kind: "conditional",
+  kind: "permanent",
   label: "한겨울 산책",
   hidden: false,
   cat: "아이템 발동",
@@ -3823,7 +3823,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_004",
-  kind: "conditional",
+  kind: "permanent",
   label: "용암 한 벌",
   hidden: false,
   cat: "아이템 발동",
@@ -3834,7 +3834,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_005",
-  kind: "conditional",
+  kind: "permanent",
   label: "그림자 손님",
   hidden: true,
   cat: "아이템 발동",
@@ -3845,7 +3845,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_006",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲의 식구",
   hidden: false,
   cat: "아이템 발동",
@@ -3855,7 +3855,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_007",
-  kind: "conditional",
+  kind: "permanent",
   label: "옥좌의 창",
   hidden: false,
   cat: "아이템 발동",
@@ -3866,7 +3866,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_008",
-  kind: "conditional",
+  kind: "permanent",
   label: "온전한 비행",
   hidden: true,
   cat: "아이템 발동",
@@ -3877,7 +3877,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_009",
-  kind: "conditional",
+  kind: "permanent",
   label: "조상님 총출동",
   hidden: true,
   cat: "아이템 발동",
@@ -3890,7 +3890,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_010",
-  kind: "conditional",
+  kind: "permanent",
   label: "장마 준비 끝",
   hidden: true,
   cat: "아이템 발동",
@@ -3900,7 +3900,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_011",
-  kind: "conditional",
+  kind: "permanent",
   label: "한밤의 무도회",
   hidden: false,
   cat: "아이템 발동",
@@ -3911,7 +3911,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_012",
-  kind: "conditional",
+  kind: "permanent",
   label: "재의 시간",
   hidden: true,
   cat: "아이템 발동",
@@ -3922,7 +3922,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_013",
-  kind: "conditional",
+  kind: "permanent",
   label: "종신 교수",
   hidden: true,
   cat: "아이템 발동",
@@ -3935,7 +3935,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_014",
-  kind: "conditional",
+  kind: "permanent",
   label: "심쿵 저격수",
   hidden: true,
   cat: "아이템 발동",
@@ -3945,7 +3945,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_015",
-  kind: "conditional",
+  kind: "permanent",
   label: "침묵의 한 발",
   hidden: false,
   cat: "아이템 발동",
@@ -3956,7 +3956,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_016",
-  kind: "conditional",
+  kind: "permanent",
   label: "미라클 모닝",
   hidden: true,
   cat: "아이템 발동",
@@ -3966,7 +3966,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_017",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲 속 괴담",
   hidden: true,
   cat: "아이템 발동",
@@ -3979,7 +3979,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_018",
-  kind: "conditional",
+  kind: "permanent",
   label: "몰락한 왕좌",
   hidden: true,
   cat: "아이템 발동",
@@ -3990,7 +3990,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_019",
-  kind: "conditional",
+  kind: "permanent",
   label: "불꽃 댄서",
   hidden: false,
   cat: "아이템 발동",
@@ -4001,7 +4001,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_020",
-  kind: "conditional",
+  kind: "permanent",
   label: "청홍의 균형",
   hidden: false,
   cat: "아이템 발동",
@@ -4011,7 +4011,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_021",
-  kind: "conditional",
+  kind: "permanent",
   label: "매의 눈",
   hidden: false,
   cat: "아이템 발동",
@@ -4021,7 +4021,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_022",
-  kind: "conditional",
+  kind: "permanent",
   label: "우중 순례",
   hidden: true,
   cat: "아이템 발동",
@@ -4031,7 +4031,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_023",
-  kind: "conditional",
+  kind: "permanent",
   label: "용의 행상인",
   hidden: true,
   cat: "아이템 발동",
@@ -4042,7 +4042,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_024",
-  kind: "conditional",
+  kind: "permanent",
   label: "가시 속 장미",
   hidden: false,
   cat: "아이템 발동",
@@ -4052,7 +4052,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_025",
-  kind: "conditional",
+  kind: "permanent",
   label: "하루의 끝",
   hidden: true,
   cat: "아이템 발동",
@@ -4065,7 +4065,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_026",
-  kind: "conditional",
+  kind: "permanent",
   label: "식지 않는 불",
   hidden: false,
   cat: "아이템 발동",
@@ -4076,7 +4076,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_027",
-  kind: "conditional",
+  kind: "permanent",
   label: "쪽빛 일색",
   hidden: false,
   cat: "아이템 발동",
@@ -4089,7 +4089,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_028",
-  kind: "conditional",
+  kind: "permanent",
   label: "구름 위 산책",
   hidden: true,
   cat: "아이템 발동",
@@ -4102,7 +4102,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_029",
-  kind: "conditional",
+  kind: "permanent",
   label: "쏟아지는 밤",
   hidden: false,
   cat: "아이템 발동",
@@ -4113,7 +4113,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_030",
-  kind: "conditional",
+  kind: "permanent",
   label: "까마귀 마녀",
   hidden: true,
   cat: "아이템 발동",
@@ -4123,7 +4123,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_031",
-  kind: "conditional",
+  kind: "permanent",
   label: "진홍 일색",
   hidden: false,
   cat: "아이템 발동",
@@ -4133,7 +4133,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_032",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪의 그림자",
   hidden: true,
   cat: "아이템 발동",
@@ -4144,7 +4144,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_033",
-  kind: "conditional",
+  kind: "permanent",
   label: "금빛 일색",
   hidden: false,
   cat: "아이템 발동",
@@ -4154,7 +4154,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_034",
-  kind: "conditional",
+  kind: "permanent",
   label: "칠흑 일색",
   hidden: false,
   cat: "아이템 발동",
@@ -4164,7 +4164,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_035",
-  kind: "conditional",
+  kind: "permanent",
   label: "개구리 사냥",
   hidden: true,
   cat: "아이템 발동",
@@ -4177,7 +4177,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_036",
-  kind: "conditional",
+  kind: "permanent",
   label: "재의 궁수",
   hidden: false,
   cat: "아이템 발동",
@@ -4187,7 +4187,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_037",
-  kind: "conditional",
+  kind: "permanent",
   label: "맹세의 아침",
   hidden: false,
   cat: "아이템 발동",
@@ -4200,7 +4200,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_038",
-  kind: "conditional",
+  kind: "permanent",
   label: "서약의 기사",
   hidden: false,
   cat: "아이템 발동",
@@ -4211,7 +4211,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_039",
-  kind: "conditional",
+  kind: "permanent",
   label: "설원의 저격수",
   hidden: true,
   cat: "아이템 발동",
@@ -4222,7 +4222,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_040",
-  kind: "conditional",
+  kind: "permanent",
   label: "연못의 주인",
   hidden: false,
   cat: "아이템 발동",
@@ -4232,7 +4232,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_041",
-  kind: "conditional",
+  kind: "permanent",
   label: "숲의 현자",
   hidden: false,
   cat: "아이템 발동",
@@ -4242,7 +4242,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_042",
-  kind: "conditional",
+  kind: "permanent",
   label: "수상한 사제",
   hidden: true,
   cat: "아이템 발동",
@@ -4252,7 +4252,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_043",
-  kind: "conditional",
+  kind: "permanent",
   label: "사막의 낭인",
   hidden: false,
   cat: "아이템 발동",
@@ -4262,7 +4262,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_044",
-  kind: "conditional",
+  kind: "permanent",
   label: "충성의 무게",
   hidden: false,
   cat: "아이템 발동",
@@ -4273,7 +4273,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_045",
-  kind: "conditional",
+  kind: "permanent",
   label: "저녁놀",
   hidden: false,
   cat: "아이템 발동",
@@ -4283,7 +4283,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_046",
-  kind: "conditional",
+  kind: "permanent",
   label: "첫 왈츠",
   hidden: true,
   cat: "아이템 발동",
@@ -4293,7 +4293,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_047",
-  kind: "conditional",
+  kind: "permanent",
   label: "불꽃 놀이",
   hidden: false,
   cat: "아이템 발동",
@@ -4303,7 +4303,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_048",
-  kind: "conditional",
+  kind: "permanent",
   label: "하늘 수비대",
   hidden: false,
   cat: "아이템 발동",
@@ -4317,7 +4317,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_049",
-  kind: "conditional",
+  kind: "permanent",
   label: "견습 마왕",
   hidden: true,
   cat: "아이템 발동",
@@ -4328,7 +4328,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_050",
-  kind: "conditional",
+  kind: "permanent",
   label: "빛의 기사",
   hidden: false,
   cat: "아이템 발동",
@@ -4342,7 +4342,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_051",
-  kind: "conditional",
+  kind: "permanent",
   label: "천문학 개론",
   hidden: true,
   cat: "아이템 발동",
@@ -4352,7 +4352,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_052",
-  kind: "conditional",
+  kind: "permanent",
   label: "길잡이 매",
   hidden: false,
   cat: "아이템 발동",
@@ -4362,7 +4362,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_053",
-  kind: "conditional",
+  kind: "permanent",
   label: "선봉의 깃발",
   hidden: false,
   cat: "아이템 발동",
@@ -4375,7 +4375,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_054",
-  kind: "conditional",
+  kind: "permanent",
   label: "첫눈 마중",
   hidden: false,
   cat: "아이템 발동",
@@ -4385,7 +4385,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_055",
-  kind: "conditional",
+  kind: "permanent",
   label: "빛나는 아침",
   hidden: false,
   cat: "아이템 발동",
@@ -4395,7 +4395,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_056",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪의 문지기",
   hidden: false,
   cat: "아이템 발동",
@@ -4405,7 +4405,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_057",
-  kind: "conditional",
+  kind: "permanent",
   label: "용의 대장간",
   hidden: false,
   cat: "아이템 발동",
@@ -4416,7 +4416,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_058",
-  kind: "conditional",
+  kind: "permanent",
   label: "우레 기병",
   hidden: false,
   cat: "아이템 발동",
@@ -4427,7 +4427,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_059",
-  kind: "conditional",
+  kind: "permanent",
   label: "모래폭풍 사수",
   hidden: false,
   cat: "아이템 발동",
@@ -4437,7 +4437,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_060",
-  kind: "conditional",
+  kind: "permanent",
   label: "떠돌이 상인",
   hidden: true,
   cat: "아이템 발동",
@@ -4447,7 +4447,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_061",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪의 주술사",
   hidden: true,
   cat: "아이템 발동",
@@ -4460,7 +4460,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_062",
-  kind: "conditional",
+  kind: "permanent",
   label: "왕국의 새벽",
   hidden: false,
   cat: "아이템 발동",
@@ -4471,7 +4471,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_063",
-  kind: "conditional",
+  kind: "permanent",
   label: "푸른 맹세",
   hidden: false,
   cat: "아이템 발동",
@@ -4484,7 +4484,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_064",
-  kind: "conditional",
+  kind: "permanent",
   label: "잿바람",
   hidden: true,
   cat: "아이템 발동",
@@ -4494,7 +4494,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_065",
-  kind: "conditional",
+  kind: "permanent",
   label: "새벽 사냥꾼",
   hidden: false,
   cat: "아이템 발동",
@@ -4504,7 +4504,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_066",
-  kind: "conditional",
+  kind: "permanent",
   label: "재건의 망치",
   hidden: true,
   cat: "아이템 발동",
@@ -4517,7 +4517,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_067",
-  kind: "conditional",
+  kind: "permanent",
   label: "가면의 검무",
   hidden: false,
   cat: "아이템 발동",
@@ -4527,7 +4527,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_068",
-  kind: "conditional",
+  kind: "permanent",
   label: "수석 사수",
   hidden: true,
   cat: "아이템 발동",
@@ -4537,7 +4537,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_069",
-  kind: "conditional",
+  kind: "permanent",
   label: "성전의 창",
   hidden: false,
   cat: "아이템 발동",
@@ -4548,7 +4548,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_070",
-  kind: "conditional",
+  kind: "permanent",
   label: "백작의 오후",
   hidden: true,
   cat: "아이템 발동",
@@ -4558,7 +4558,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_071",
-  kind: "conditional",
+  kind: "permanent",
   label: "스러진 시간",
   hidden: true,
   cat: "아이템 발동",
@@ -4573,7 +4573,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_072",
-  kind: "conditional",
+  kind: "permanent",
   label: "세 번의 맹세",
   hidden: false,
   cat: "아이템 발동",
@@ -4584,7 +4584,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_073",
-  kind: "conditional",
+  kind: "permanent",
   label: "새들의 회의",
   hidden: true,
   cat: "아이템 발동",
@@ -4597,7 +4597,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_074",
-  kind: "conditional",
+  kind: "permanent",
   label: "꽃길만 걷자",
   hidden: true,
   cat: "아이템 발동",
@@ -4607,7 +4607,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_075",
-  kind: "conditional",
+  kind: "permanent",
   label: "새벽 별지기",
   hidden: false,
   cat: "아이템 발동",
@@ -4617,7 +4617,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_076",
-  kind: "conditional",
+  kind: "permanent",
   label: "셀프 대관식",
   hidden: true,
   cat: "아이템 발동",
@@ -4627,7 +4627,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_077",
-  kind: "conditional",
+  kind: "permanent",
   label: "촌캉스",
   hidden: true,
   cat: "아이템 발동",
@@ -4637,7 +4637,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_078",
-  kind: "conditional",
+  kind: "permanent",
   label: "작은 악당",
   hidden: true,
   cat: "아이템 발동",
@@ -4647,7 +4647,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_079",
-  kind: "conditional",
+  kind: "permanent",
   label: "온몸이 불꽃",
   hidden: false,
   cat: "아이템 발동",
@@ -4658,7 +4658,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_080",
-  kind: "conditional",
+  kind: "permanent",
   label: "붉은 근위대",
   hidden: false,
   cat: "아이템 발동",
@@ -4668,7 +4668,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_081",
-  kind: "conditional",
+  kind: "permanent",
   label: "초원의 부름",
   hidden: false,
   cat: "아이템 발동",
@@ -4678,7 +4678,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_082",
-  kind: "conditional",
+  kind: "permanent",
   label: "군악대장",
   hidden: true,
   cat: "아이템 발동",
@@ -4692,7 +4692,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_083",
-  kind: "conditional",
+  kind: "permanent",
   label: "심안",
   hidden: true,
   cat: "아이템 발동",
@@ -4706,7 +4706,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_084",
-  kind: "conditional",
+  kind: "permanent",
   label: "조상님 어깨너머",
   hidden: true,
   cat: "아이템 발동",
@@ -4719,7 +4719,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_085",
-  kind: "conditional",
+  kind: "permanent",
   label: "새참의 맛",
   hidden: true,
   cat: "아이템 발동",
@@ -4733,7 +4733,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_086",
-  kind: "conditional",
+  kind: "permanent",
   label: "빛 수집가",
   hidden: false,
   cat: "아이템 발동",
@@ -4743,7 +4743,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_087",
-  kind: "conditional",
+  kind: "permanent",
   label: "쌍검비무",
   hidden: false,
   cat: "아이템 발동",
@@ -4753,7 +4753,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_088",
-  kind: "conditional",
+  kind: "permanent",
   label: "이름 없는 총성",
   hidden: true,
   cat: "아이템 발동",
@@ -4764,7 +4764,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_089",
-  kind: "conditional",
+  kind: "permanent",
   label: "뇌룡 기수",
   hidden: false,
   cat: "아이템 발동",
@@ -4775,7 +4775,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_090",
-  kind: "conditional",
+  kind: "permanent",
   label: "동트기 전",
   hidden: false,
   cat: "아이템 발동",
@@ -4785,7 +4785,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_091",
-  kind: "conditional",
+  kind: "permanent",
   label: "은빛 아침",
   hidden: false,
   cat: "아이템 발동",
@@ -4918,7 +4918,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_icehearth",
-  kind: "conditional",
+  kind: "permanent",
   label: "얼음 화로",
   hidden: true,
   cat: "아이템 발동",
@@ -4928,7 +4928,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_gradball",
-  kind: "conditional",
+  kind: "permanent",
   label: "졸업 무도회",
   hidden: true,
   cat: "아이템 발동",
@@ -4938,7 +4938,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_marshfire",
-  kind: "conditional",
+  kind: "permanent",
   label: "습지의 불꽃",
   hidden: true,
   cat: "아이템 발동",
@@ -4948,7 +4948,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_galaxyknight",
-  kind: "conditional",
+  kind: "permanent",
   label: "은하 기사",
   hidden: false,
   cat: "아이템 발동",
@@ -4959,7 +4959,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_plaindrum",
-  kind: "conditional",
+  kind: "permanent",
   label: "초원의 북소리",
   hidden: true,
   cat: "아이템 발동",
@@ -4969,7 +4969,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_fallenwing",
-  kind: "conditional",
+  kind: "permanent",
   label: "몰락한 날개",
   hidden: false,
   cat: "아이템 발동",
@@ -4980,7 +4980,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_sunsetpilgrim",
-  kind: "conditional",
+  kind: "permanent",
   label: "노을 순례",
   hidden: true,
   cat: "아이템 발동",
@@ -4990,7 +4990,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "combo_royalduel",
-  kind: "conditional",
+  kind: "permanent",
   label: "왕실 검객",
   hidden: true,
   cat: "아이템 발동",
@@ -5260,7 +5260,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_thunder_knight",
-  kind: "conditional",
+  kind: "permanent",
   label: "뇌운 기사",
   hidden: true,
   cat: "아이템 발동",
@@ -5270,7 +5270,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_star_navigator",
-  kind: "conditional",
+  kind: "permanent",
   label: "별 읽는 항해사",
   hidden: true,
   cat: "아이템 발동",
@@ -5280,7 +5280,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_ash_scythe",
-  kind: "conditional",
+  kind: "permanent",
   label: "잿더미의 낫",
   hidden: true,
   cat: "아이템 발동",
@@ -5290,7 +5290,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_marsh_bugler",
-  kind: "conditional",
+  kind: "permanent",
   label: "늪의 나팔수",
   hidden: true,
   cat: "아이템 발동",
@@ -5300,7 +5300,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_dusk_pilgrim",
-  kind: "conditional",
+  kind: "permanent",
   label: "해질녘 순례자",
   hidden: true,
   cat: "아이템 발동",
@@ -5310,7 +5310,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_academy_fencer",
-  kind: "conditional",
+  kind: "permanent",
   label: "학원 검술부",
   hidden: true,
   cat: "아이템 발동",
@@ -5320,7 +5320,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_ball_guest",
-  kind: "conditional",
+  kind: "permanent",
   label: "무도회 손님",
   hidden: true,
   cat: "아이템 발동",
@@ -5330,7 +5330,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_dragon_warden",
-  kind: "conditional",
+  kind: "permanent",
   label: "용의 파수꾼",
   hidden: true,
   cat: "아이템 발동",
@@ -5341,7 +5341,7 @@ export const TITLE_DEFS: TitleDef[] = [
  },
  {
   code: "set_desert_patrol",
-  kind: "conditional",
+  kind: "permanent",
   label: "사막 순찰대",
   hidden: true,
   cat: "아이템 발동",

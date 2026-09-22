@@ -12,8 +12,9 @@ import {
   getWorldmapZones,
   getResidenceState,
 } from '@/lib/game/guild';
-import { getGuildPermState } from '@/lib/game/guild/perm-guard';
+import { getDeployViewerState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
+import { isDeployViewRestricted, parseDeployVisibility, toDeployMemberProps } from '@/lib/game/guild/conquest/deploy-visibility';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
 import { DeployTerritoryTabs } from './DeployTerritoryTabs';
@@ -36,24 +37,30 @@ export default async function DeployPage({
   if (!userId) {
     return <div className="px-4 py-8 text-center text-sm text-zinc-500">로그인이 필요합니다.</div>;
   }
-  const membership = await getGuildPermState(userId, serverId);
+  const membership = await getDeployViewerState(userId, serverId);
   if (!membership) redirect('/guild');
 
   // 남의 배치 **해제** = deploy 권한, 집행관 지정/해제 = executor 권한(0142) — 종전 길드장
   // 전속에서 개인별 위임으로 완화. 배치 자체는 본인만 하므로 권한과 무관하다.
   const canDeploy = hasGuildPerm(membership.role, membership.permissions, 'deploy');
   const canExecutor = hasGuildPerm(membership.role, membership.permissions, 'executor');
-  const canTax = hasGuildPerm(membership.role, membership.permissions, 'taxDistribute');
+  const canTax = hasGuildPerm(membership.role, membership.permissions, 'taxCollect');
   // 배치용 + '세계지도' 탭용 데이터를 함께 로드(map/page와 동일 소스). 세계지도는 열람+팝업이라
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
+  // 배치 정보 공개 범위(0204) — '권한자만'이면 배치 담당자가 아닌 길드원에게는 **본인 배치만** 내려보낸다.
+  // 화면에서 숨기는 것이 아니라 서버에서 읽지도 않는다(전원분이 RSC payload에 실리지 않게).
+  const visibility = parseDeployVisibility(membership.deployVisibility);
+  const restricted = isDeployViewRestricted(visibility, membership.role, membership.permissions);
   const [board, attackable, adjacency, wmZones, residence] = await Promise.all([
-    getDeployBoard(membership.guildId, serverId),
+    getDeployBoard(membership.guildId, serverId, restricted ? { onlyUserId: userId } : {}),
     getAttackableZoneIds(membership.guildId, serverId),
     getZoneAdjacency(serverId),
     getWorldmapZones(serverId).catch(() => []),
     getResidenceState(userId, serverId).catch(() => null),
   ]);
+  // 클라이언트로 넘길 멤버 목록 — 조립은 순수 함수에 맡긴다(제한 시 본인 외 정보가 섞이지 않는지 테스트로 고정).
+  const memberProps = toDeployMemberProps(board.members, board.combat, userId, restricted);
 
   return (
     <>
@@ -63,6 +70,9 @@ export default async function DeployPage({
       forceTab={zoneParam != null ? 'deploy' : null}
       deploy={
         <DeployBoard
+          // 제한 여부가 바뀌면 새로 마운트한다 — 보드는 members를 자체 state로 들고 있어, 열어 둔 화면에서 설정·권한이
+          // 바뀐 뒤 재렌더되면 옛 목록 위에 새 규칙이 얹혀 '길드원 1명'·엉뚱한 '내 배치' 라벨 같은 거짓 표시가 난다.
+          key={restricted ? 'restricted' : 'full'}
           initialZoneId={zoneParam}
           canDeploy={canDeploy}
           canExecutor={canExecutor}
@@ -72,17 +82,10 @@ export default async function DeployPage({
           mapSrc={mapSrc}
           attackableZoneIds={attackable}
           adjacency={adjacency}
-          members={board.members.map((m) => ({
-            userId: m.uid,
-            nickname: m.nickname,
-            role: m.mrole,
-            combat: board.combat[m.uid] ?? 0,
-            depZoneId: m.dep_zone_id,
-            depZoneName: m.dep_zone_name,
-            depRole: m.dep_role,
-            execZoneId: m.exec_zone_id,
-            execZoneName: m.exec_zone_name,
-          }))}
+          restricted={restricted}
+          visibility={visibility}
+          canSetVisibility={membership.role === 'leader'}
+          members={memberProps}
           zones={board.zones.map((z) => ({
             id: z.id,
             name: z.name,

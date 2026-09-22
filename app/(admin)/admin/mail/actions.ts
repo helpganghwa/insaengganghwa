@@ -47,17 +47,22 @@ export async function sendMailToUserAction(opts: {
   try {
     const adminId = await requireAdmin();
     let recipientId: string | null = null;
-    // 닉네임은 특정 서버의 캐릭터를 가리킴 — 그 캐릭터의 서버로 배송해야
-    // 다른 서버 우편함/지갑에 오배송되지 않는다(닉네임 전역 유일).
+    // 닉네임 → 캐릭터. 0207부터 **같은 사람이 여러 서버에서 같은 이름**을 쓸 수 있어 행이 여럿일
+    // 수 있다. 서버 조건 없이 아무 행이나 집으면 엉뚱한 서버 우편함·지갑으로 배송된다
+    // (2026-09-21 ⑫). 마지막 접속 서버를 우선하고, 없으면 가장 낮은 서버로 정한다.
+    // 이름이 다른 사람과 겹치는 일은 제외 제약이 막으므로 수신자 자체는 한 명으로 확정된다.
     let recipientServerId: number | null = null;
     if (opts.toNickname?.trim()) {
-      const [r] = await db
-        .select({ id: characters.userId, sid: characters.serverId })
-        .from(characters)
-        .where(eq(characters.nickname, opts.toNickname.trim()))
-        .limit(1);
-      recipientId = r?.id ?? null;
-      recipientServerId = r?.sid ?? null;
+      const rows = (await db.execute(sql`
+        select c.user_id::text as id, c.server_id::int as sid
+          from characters c
+          join profiles p on p.id = c.user_id
+         where lower(c.nickname) = lower(${opts.toNickname.trim()})
+         order by (c.server_id = p.last_server_id) desc, c.server_id
+         limit 1
+      `)) as unknown as { id: string; sid: number }[];
+      recipientId = rows[0]?.id ?? null;
+      recipientServerId = rows[0]?.sid ?? null;
     } else if (opts.toCode?.trim()) {
       // 코드 = 계정 단위(서버 불특정) — 배송 서버는 수신자의 마지막 활성 서버 폴백(하단 로직).
       const code = opts.toCode.trim().replace(/^#/, '');
@@ -193,7 +198,10 @@ export async function broadcastMailAction(opts: {
         return;
       }
       // 서버 지정(2026-08-07) — 해당 서버 캐릭터 보유자에게 그 서버 우편함으로.
-      // 전서버(기본)는 종전대로 전 유저의 활성 서버(last_server_id) 우편함으로.
+      // 전서버(기본)는 **캐릭터가 있는 서버마다 1통**(2026-09-21 결정 D2). 종전에는 계정당 1통을
+      // 마지막 접속 서버로 보내, 두 서버를 하는 사람은 그 순간 접속해 있던 쪽에서만 받았다. 일일
+      // 보급·출석이 이미 캐릭터마다 나가는 것과 같은 기준이고, 지갑이 서버별이라 한 서버의 경제가
+      // 부풀지 않는다. 예약 발송(scheduled-mail 크론)도 같은 규칙.
       const rows = (await tx.execute(
         targetServerId != null
           ? sql`
@@ -206,8 +214,9 @@ export async function broadcastMailAction(opts: {
       `
           : sql`
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
-        select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
-        from profiles p
+        select c.user_id, c.server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
+        from characters c
+        join profiles p on p.id = c.user_id
         where p.withdrawn_at is null
         returning id
       `,
@@ -275,6 +284,8 @@ export async function scheduleBroadcastAction(opts: {
   body: string;
   payload: MailPayload;
   push?: boolean;
+  /** 대상 서버(0208) — null/미지정=전 서버, 숫자=그 서버 캐릭터 보유자에게만. */
+  serverId?: number | null;
   /** KST 'YYYY-MM-DDTHH:mm' (datetime-local 값). */
   scheduledAtKst: string;
 }): Promise<{ status: 'success'; scheduledAtIso: string } | ErrorState> {
@@ -292,6 +303,7 @@ export async function scheduleBroadcastAction(opts: {
       body: (opts.body || '').slice(0, 1000),
       payload: clampPayload(opts.payload),
       push: !!opts.push,
+      serverId: opts.serverId ?? null,
       scheduledAt: at,
     });
     revalidatePath('/admin/mail');

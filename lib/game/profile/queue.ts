@@ -18,6 +18,13 @@ export type ProfileQueueInfo = {
   etaMinutes: number;
   /** true = 슬롯이 가득 차 실제로 대기 중(웨이브≥1). false = 곧/이미 생성 시작. */
   waiting: boolean;
+  /**
+   * 이 잡이 **다른 서버**에서 돌고 있는가(2026-09-21 ⑨).
+   * 생성 동시성 캡은 계정 전역 1건인데(profile_gen_one_active_per_user는 user_id만) 종전에는
+   * 이 조회만 서버로 걸러, 다른 서버에서 만드는 중이면 화면엔 아무것도 없는데 누르면
+   * "이미 아바타를 생성하고 있어요"만 떴다. 이제 잡을 찾아 주고 어디서 도는지 알려 준다.
+   */
+  onOtherServer: boolean;
 };
 
 const ACTIVE = ['queued', 'starting', 'downloading', 'ai_reviewing'] as const;
@@ -60,22 +67,24 @@ export async function getMyProfileQueueInfo(
   userId: string,
   serverId: number,
 ): Promise<ProfileQueueInfo | null> {
+  // 캡이 계정 전역이므로 조회도 계정 전역 — 서버로 거르면 '화면엔 없는데 막히는' 상태가 된다.
   const [job] = await db
     .select({
       status: profileGenerationJobs.status,
       createdAt: profileGenerationJobs.createdAt,
       options: profileGenerationJobs.options,
+      serverId: profileGenerationJobs.serverId,
     })
     .from(profileGenerationJobs)
     .where(
       and(
         eq(profileGenerationJobs.userId, userId),
-        eq(profileGenerationJobs.serverId, serverId),
         inArray(profileGenerationJobs.status, [...ACTIVE]),
       ),
     )
     .limit(1);
   if (!job) return null;
+  const onOtherServer = job.serverId !== serverId;
 
   // 쿼리가 ACTIVE로 필터해 실제론 활성 4종 중 하나(TS는 enum 전체로 봄 → 좁힘).
   const status = job.status as ProfileQueueInfo['status'];
@@ -88,7 +97,7 @@ export async function getMyProfileQueueInfo(
     const genMin = Math.max(0, generationAgeMin(job.options, createdAt, Date.now()));
     const remain =
       status === 'ai_reviewing' ? 1 : Math.max(1, Math.ceil(PROFILE_GEN_SLOT_MINUTES - genMin));
-    return { status, createdAt: createdAt.toISOString(), position: 0, etaMinutes: remain, waiting: false };
+    return { status, createdAt: createdAt.toISOString(), position: 0, etaMinutes: remain, waiting: false, onOtherServer };
   }
 
   // 대기 — 활성(starting+downloading) 수와 나보다 앞선 queued 수로 시작 웨이브 계산.
@@ -113,5 +122,5 @@ export async function getMyProfileQueueInfo(
   const etaMinutes = startWaves * PROFILE_GEN_SLOT_MINUTES + PROFILE_GEN_SLOT_MINUTES;
 
   // 슬롯 여유가 있어 다음 드레인에 바로 시작할 경우(startWaves 0)는 '대기'로 표기하지 않음.
-  return { status: 'queued', createdAt: createdAt.toISOString(), position, etaMinutes, waiting: startWaves >= 1 };
+  return { status: 'queued', createdAt: createdAt.toISOString(), position, etaMinutes, waiting: startWaves >= 1, onOtherServer };
 }

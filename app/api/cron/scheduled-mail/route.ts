@@ -45,30 +45,52 @@ export async function GET(req: Request) {
       update admin_scheduled_mails
       set sent_at = now()
       where scheduled_at <= now() and sent_at is null and canceled_at is null
-      returning id, admin_id, title, body, payload, push
-    `)) as unknown as { id: string; admin_id: string; title: string; body: string; payload: unknown; push: boolean }[];
+      returning id, admin_id, title, body, payload, push, server_id
+    `)) as unknown as {
+      id: string;
+      admin_id: string;
+      title: string;
+      body: string;
+      payload: unknown;
+      push: boolean;
+      server_id: number | null;
+    }[];
 
     let sent = 0;
     for (const m of due) {
+      // 대상 서버(0208): 숫자면 그 서버 캐릭터 보유자에게만 그 서버 우편함으로(즉시 발송과 동일),
+      // null이면 전 서버 = **캐릭터가 있는 서버마다 1통**(2026-09-21 결정 D2). 종전에는 계정당 1통을
+      // last_server_id로 보내, 두 서버를 하는 사람은 한쪽에서만 받고 캐릭터가 없는 서버 우편함에
+      // 떨어지면 영영 못 받았다. 일일 보급·출석과 같은 기준(캐릭터마다)이 된다. 알림은 계정당 한 번.
+      const target = m.server_id;
+      const label = target == null ? '전체(예약)' : `${target}서버(예약)`;
       const rows = (await db.execute(sql`
         with lg as (
           insert into admin_mail_logs (admin_id, mode, recipient_count, target_label, title, body, payload)
-          values (${m.admin_id}::uuid, 'broadcast', 0, '전체(예약)', ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb)
+          values (${m.admin_id}::uuid, 'broadcast', 0, ${label}, ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb)
           returning id
+        ),
+        dest as (
+          select c.user_id, c.server_id
+            from characters c
+            join profiles p on p.id = c.user_id
+           where p.withdrawn_at is null
+             and (${target}::smallint is null or c.server_id = ${target}::smallint)
         )
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
-        select p.id, p.last_server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
-        from profiles p, lg
-        where p.withdrawn_at is null
+        select d.user_id, d.server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
+        from dest d, lg
         returning id
       `)) as unknown as { id: string }[];
       sent += rows.length;
       if (m.push) {
         try {
-          const ids = await db
-            .select({ id: profiles.id })
-            .from(profiles)
-            .where(SENDABLE_SQL('profiles'));
+          // 경계규칙1 — 서버 지정 예약이면 활성 서버가 그 서버인 사람에게만(즉시 발송과 동일).
+          const ids = (await db.execute(sql`
+            select p.id::text as id from profiles p
+             where ${SENDABLE_SQL('p')}
+               and (${target}::smallint is null or p.last_server_id = ${target}::smallint)
+          `)) as unknown as { id: string }[];
           // 푸시는 짧게, 우편은 길게(2026-08-29 확정): 제목 = 우편 제목, 본문 = 우편 본문의 첫 문장들을 60자 이내로
           // (문장 단위로 끊어 잘린 말 없이). 마크다운 강조(**)·줄바꿈 제거.
           await sendPushToUsers(ids.map((r) => r.id), {

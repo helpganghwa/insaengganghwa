@@ -80,6 +80,8 @@ export function GuildSettings({
     intro: boolean;
     openchat: boolean;
     joinReview: boolean;
+    tax: boolean;
+    taxCollect: boolean;
     taxDistribute: boolean;
     emblem: boolean;
   };
@@ -137,12 +139,13 @@ export function GuildSettings({
       art: 'tax',
       href: '/guild/distribute',
       label: '세금',
-      desc: '수금·분배',
+      // 가진 권한만큼만 말한다 — 수금 권한만 있는데 '수금·분배'라고 적혀 있으면 들어가서 어긋난다.
+      desc: can.taxCollect && can.taxDistribute ? '수금·분배' : can.taxCollect ? '수금' : '분배',
       // 수금 가능 구역 수를 배지로(2026-09-08) — 세금 화면 세그먼트가 아니라 여기서 알린다.
-      badge: view.collectableZones,
+      badge: can.taxCollect ? view.collectableZones : 0,
       badgeLabel: `수금 가능 ${view.collectableZones}곳`,
       tint: '#332306',
-      show: can.taxDistribute,
+      show: can.tax,
     },
     {
       key: 'emblem',

@@ -42,7 +42,8 @@ export async function GET(
         .limit(1);
       if (r) {
         const res = NextResponse.redirect(
-          new URL(`/raid-invite/${shareCode}`, req.nextUrl.origin),
+          // v=1 — 랜딩이 "서버를 기록하고 왔다"를 알아보는 표식(직접 진입 시 이쪽으로 한 번 돌려보낸다).
+          new URL(`/raid-invite/${shareCode}?v=1`, req.nextUrl.origin),
           307,
         );
         // 공유된 서버를 로그인 기본 선택으로(SERVER.md §3 — 초대받은 서버에서 시작).

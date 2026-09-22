@@ -1,7 +1,7 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { paymentAlerts } from '@/lib/db/schema/payment';
+import { iapOrders, paymentAlerts } from '@/lib/db/schema/payment';
 
 import { AlertsClient, type AlertRow } from './AlertsClient';
 
@@ -27,12 +27,37 @@ export default async function AdminAlertsPage() {
       .limit(30),
   ]);
 
+  // 어느 서버 지갑 건인지 — 경보 표에는 서버 컬럼이 없어 연결된 주문에서 읽는다(주문 id 우선, 없으면
+  // 결제 id). 주문을 못 찾은 경보(서명 검증 실패 등)는 서버 표기 없이 둔다.
+  const all = [...open, ...recentResolved];
+  const orderIds = [...new Set(all.flatMap((a) => (a.orderId != null ? [a.orderId] : [])))];
+  const paymentIds = [...new Set(all.flatMap((a) => (a.paymentId ? [a.paymentId] : [])))];
+  const orderRows =
+    orderIds.length + paymentIds.length === 0
+      ? []
+      : await db
+          .select({ id: iapOrders.id, portoneOrderId: iapOrders.portoneOrderId, serverId: iapOrders.serverId })
+          .from(iapOrders)
+          .where(
+            or(
+              orderIds.length > 0 ? inArray(iapOrders.id, orderIds) : undefined,
+              paymentIds.length > 0 ? inArray(iapOrders.portoneOrderId, paymentIds) : undefined,
+            ),
+          )
+          .catch(() => []);
+  const serverByOrder = new Map(orderRows.map((o) => [o.id.toString(), o.serverId]));
+  const serverByPayment = new Map(orderRows.map((o) => [o.portoneOrderId, o.serverId]));
+
   const toRow = (a: typeof paymentAlerts.$inferSelect): AlertRow => ({
     id: a.id.toString(),
     kind: a.kind,
     severity: a.severity,
     paymentId: a.paymentId,
     orderId: a.orderId?.toString() ?? null,
+    serverId:
+      (a.orderId != null ? serverByOrder.get(a.orderId.toString()) : undefined) ??
+      serverByPayment.get(a.paymentId) ??
+      null,
     detail: a.detail,
     resolved: a.resolved,
     createdAt: a.createdAt.toISOString(),

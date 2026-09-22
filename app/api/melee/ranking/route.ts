@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 
+import { eq } from 'drizzle-orm';
+
 import { getSessionUserId } from '@/lib/auth/session';
-import { getActiveServerId } from '@/lib/game/servers';
+import { db } from '@/lib/db/client';
+import { meleeBattles } from '@/lib/db/schema/melee';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
 import { getMeleeRanking, type MeleeRankMode } from '@/lib/game/melee/ranking';
 
@@ -31,10 +34,18 @@ export async function GET(req: Request) {
     return Number.isInteger(v) && v > 0 ? v : undefined;
   };
   try {
-    const serverId = await getActiveServerId();
+    // 회차의 서버로 조회한다(2026-09-21 F6) — 결과 화면(SSR)은 `battle.serverId`로 첫 페이지를 그리는데
+    // 이 API만 보는 사람의 활성 서버를 써서, 다른 서버 회차를 열면 첫 화면은 나오고 스크롤하면 끊겼다.
+    // 발표 전 차단은 getMeleeRanking의 status 게이트가 그대로 맡는다.
+    const [b] = await db
+      .select({ serverId: meleeBattles.serverId })
+      .from(meleeBattles)
+      .where(eq(meleeBattles.id, BigInt(battleIdRaw)))
+      .limit(1);
+    if (!b) return NextResponse.json({ status: 'success', rows: [], myRank: null });
     const r = await getMeleeRanking({
       battleId: BigInt(battleIdRaw),
-      serverId,
+      serverId: b.serverId,
       viewerUserId: userId,
       mode,
       afterRank: num('after'),

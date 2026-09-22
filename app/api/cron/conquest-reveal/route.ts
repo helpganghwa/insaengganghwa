@@ -57,9 +57,17 @@ export async function GET(req: Request) {
       results.push({ serverId: sid, error: (e as Error).message });
     }
   }
-  // 역사 페이지 시대 요약(0202) — 새 날이 공개됐으니 바뀐 시대만 다시 쓰고 첫 화면 캐시를 비운다. 실패해도 공개는 유효.
+  // 역사 페이지 시대 요약(0202·0203) — 새 날이 공개됐으니 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(적용은 어드민에서). 실패해도 공개는 유효.
+  // ⚠ 두 틱 중 **한쪽만** 부른다(2026-09-21 ⑯). 이 크론은 23:57·23:58 두 틱이 각각 정각까지
+  // 잤다가 같은 순간에 깨어나는데, 종전에는 둘 다 요약 AI를 불러 서버 수 × 2회가 나갔다.
+  //  - 직접 공개한 틱(revealed>0)은 부른다 — 공개는 조건부 플립이라 둘 중 하나만 해당된다.
+  //  - 아무도 공개하지 못한 경우도 있다: 같은 정각에 도는 conquest-chronicle(00:00 틱)이 먼저
+  //    플립을 가져가면 두 틱 모두 revealed=0이다. 그때 요약이 통째로 빠지지 않도록 **앞 틱(57분)**
+  //    이 맡는다. 뒤 틱이 플립을 이긴 드문 경우에만 두 번 불린다(결과는 같고 마지막 저장이 남는다).
+  const isPrimaryTick = new Date(firedAt).getUTCMinutes() === 57;
   for (const r of results) {
     if (r.error) continue;
+    if (!r.revealed && !isPrimaryTick) continue;
     await syncHistoryEras(r.serverId).catch((e: unknown) => console.warn('[conquest-reveal] syncHistoryEras', r.serverId, e));
   }
   const ok = results.every((r) => !r.error);

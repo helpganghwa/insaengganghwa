@@ -1,4 +1,4 @@
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle, zones as zonesTable } from '@/lib/db/schema/guild';
@@ -22,13 +22,23 @@ export const dynamic = 'force-dynamic';
 // 재생성 액션이 LLM 2회(초안+재검수)를 호출한다 — 기본 예산이면 도중에 끊긴다.
 export const maxDuration = 120;
 
-// 항목별 최근 2개만 — 검수 대상은 항상 최신분(2026-07-15), 과거분은 스크롤 노이즈.
+// 항목별 **서버마다** 최근 2개만 — 검수 대상은 항상 최신분(2026-07-15), 과거분은 스크롤 노이즈.
+// 전체에서 2개를 자르면 한 서버의 오늘 것이 아직 없을 때 다른 서버의 어제 것이 자리를 차지해,
+// 늦게 생성된 서버의 오늘 연대기가 검수 창(23:05~24:00)에 아예 안 보인다.
 async function loadData() {
   const chronicles = await db
     .select()
     .from(worldChronicle)
-    .orderBy(desc(worldChronicle.kstDay))
-    .limit(2);
+    .where(
+      sql`(${worldChronicle.serverId}, ${worldChronicle.kstDay}) in (
+        select t.server_id, t.kst_day from (
+          select server_id, kst_day,
+                 row_number() over (partition by server_id order by kst_day desc) as rn
+          from world_chronicle
+          where server_id in (select id from servers where status <> 'closed')
+        ) t where t.rn <= 2)`,
+    )
+    .orderBy(desc(worldChronicle.kstDay), worldChronicle.serverId);
   // 애니메이션 미리보기 재료(2026-07-16) — 연대기 날짜별 리플레이 스크립트 + 구역 좌표.
   const replays = new Map<string, ConquestReplay | null>();
   for (const c of chronicles) {
@@ -37,7 +47,11 @@ async function loadData() {
       await getConquestReplay(c.serverId, c.kstDay).catch(() => null),
     );
   }
-  const adjacency = await getZoneAdjacency(1).catch(() => []);
+  // 길(인접)은 서버마다 다른 구역 id를 쓴다 — 화면에 나오는 서버 것만 읽는다.
+  const adjacency = new Map<number, { a: number; b: number }[]>();
+  for (const sid of new Set(chronicles.map((c) => c.serverId))) {
+    adjacency.set(sid, await getZoneAdjacency(sid).catch(() => []));
+  }
   const zoneRows = await db
     .select({
       id: zonesTable.id,
@@ -90,7 +104,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
     `rounded-lg px-3 py-1.5 text-sm font-bold ${on ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-100' : 'border border-zinc-700 text-zinc-300'}`;
   const [{ chronicles, replays, zoneRows, adjacency }, meleeItems] = await Promise.all([
     loadData(),
-    // 대난투 헤드라인(0184) — 최근 2배틀 + ?melee=YYYY-MM-DD로 과거 배틀 지정(생성·편집 검수용).
+    // 대난투 헤드라인(0184) — 서버마다 최근 2배틀 + ?melee=YYYY-MM-DD로 과거 배틀 지정(생성·편집 검수용).
     loadMeleeReviewItems({ limit: 2, extraDate: meleeDate }).catch(() => []),
   ]);
   const pregenLines =
@@ -230,7 +244,7 @@ export default async function AdminPreviewPage({ searchParams }: { searchParams:
                   todayText={c.todayText}
                   replay={replays.get(`${c.serverId}:${c.kstDay}`) ?? null}
                   zones={zoneRows.filter((z) => z.serverId === c.serverId)}
-                  adjacency={adjacency}
+                  adjacency={adjacency.get(c.serverId) ?? []}
                 />
                 {/* AI 재검수 내역(0119) — 초안에서 바뀐 구절 diff. 사람 검수는 이 목록만 훑으면 됨. */}
                 {Array.isArray(c.reviewNotes) && c.reviewNotes.length > 0 ? (

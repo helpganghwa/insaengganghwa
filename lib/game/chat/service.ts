@@ -526,6 +526,8 @@ export async function setChatBlock(
   userId: string,
   blockedUserId: string,
   on: boolean,
+  /** 차단을 누른 서버 — 친구 정리는 이 서버에서만 한다(아래). */
+  serverId: number,
 ): Promise<'blocked' | 'unblocked' | 'CAP'> {
   if (!on) {
     await db
@@ -542,13 +544,19 @@ export async function setChatBlock(
   // 두 사람 사이의 친구 관계를 **상태 무관** 양방향 정리 — pending은 유령 행(배지만 켜짐)
   // 방지(2026-08-12), accepted는 차단 시 친구 자동 해제(2026-08-21 사용자 확정). 관계를
   // 남기면 차단해도 레이드 초대 푸시가 오고 접속 시각(lastSeenAt)이 계속 보였다(전수 감사).
-  // 차단을 풀어도 친구는 복구되지 않는다 — 다시 친구가 되려면 재신청. 계정 단위라 전 서버 정리.
+  // 차단을 풀어도 친구는 복구되지 않는다 — 다시 친구가 되려면 재신청.
+  // 정리 범위 = **차단을 누른 서버만**(2026-09-21). 차단은 계정 단위지만 친구는 서버 단위라, 전 서버를
+  // 지우면 보지도 않은 다른 서버의 친구가 되돌릴 수 없이 사라진다. 다른 서버에 남은 관계로 연락이 새지
+  // 않도록 채팅·귓속말·친구 요청은 계정 단위 차단이 그대로 막고, 레이드 초대 푸시도 차단을 본다(raid/notify).
   await db
     .delete(friendLinks)
     .where(
-      or(
-        and(eq(friendLinks.requesterId, userId), eq(friendLinks.addresseeId, blockedUserId)),
-        and(eq(friendLinks.requesterId, blockedUserId), eq(friendLinks.addresseeId, userId)),
+      and(
+        eq(friendLinks.serverId, serverId),
+        or(
+          and(eq(friendLinks.requesterId, userId), eq(friendLinks.addresseeId, blockedUserId)),
+          and(eq(friendLinks.requesterId, blockedUserId), eq(friendLinks.addresseeId, userId)),
+        ),
       ),
     );
   return 'blocked';

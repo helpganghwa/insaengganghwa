@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { servers, characters } from '@/lib/db/schema/server';
@@ -10,7 +10,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
 import { recordDiamondLedger } from '@/lib/game/ledger';
-import { isUniqueViolation, pgConstraintName } from '@/lib/db/errors';
+import { isUniqueViolation, isNicknameTaken, pgConstraintName } from '@/lib/db/errors';
 import {
   NICKNAME_MIN_LEN,
   NICKNAME_MAX_LEN,
@@ -169,11 +169,13 @@ export async function createCharacter(input: {
       // NICKNAME_TAKEN으로 오인됐다(2026-08-12 실측, dbbe95ce가 놓친 9번째이자 마지막 자리).
       // 그 오인이 createCharacterAuto의 10회 재추첨을 태워, 출시 버스트의 풀 포화를 장애가
       // 지속되는 동안 증폭시키는 구조였다. SQLSTATE 판별은 반드시 lib/db/errors.ts 경유.
-      if (isUniqueViolation(e)) {
-        // 이 문장이 23505를 낼 제약은 정확히 둘 — PK(더블서밋)와 닉 유니크. 구분해야
-        // 더블서밋이 닉 재추첨을 낭비하지 않고 즉시 ALREADY_EXISTS로 끝난다.
-        if (pgConstraintName(e) === 'characters_pkey') throw new CharacterError('ALREADY_EXISTS');
-        throw new CharacterError('NICKNAME_TAKEN'); // characters_nickname_uq
+      if (isNicknameTaken(e)) {
+        // 이 문장이 낼 수 있는 제약은 셋 — PK(더블서밋), 서버 내 닉 유니크, 닉 소유 제약(0207).
+        // PK를 구분해야 더블서밋이 닉 재추첨을 낭비하지 않고 즉시 ALREADY_EXISTS로 끝난다.
+        if (isUniqueViolation(e) && pgConstraintName(e) === 'characters_pkey') {
+          throw new CharacterError('ALREADY_EXISTS');
+        }
+        throw new CharacterError('NICKNAME_TAKEN');
       }
       throw e; // 그 외(타임아웃·FK 등)는 전파 — 재시도 루프를 타면 안 된다.
     }
@@ -280,17 +282,27 @@ export async function createCharacterAuto(input: {
 
 /** 공개 서버 목록(비로그인 — 로그인 화면 셀렉터용). 이름·상태만. */
 export async function listServersPublic(): Promise<{ id: number; name: string; status: string }[]> {
+  // 닫힘(closed)은 내보내지 않는다(2026-09-21 F1) — 준비 중인 서버가 눌리지 않는 칩으로 보여,
+  // 오픈 전에 미리 만들어 두면 존재가 드러났다. 열림·포화만 보인다(포화는 기존 유저가 고른다).
   return db
     .select({ id: servers.id, name: servers.name, status: servers.status })
     .from(servers)
+    .where(ne(servers.status, 'closed'))
     .orderBy(servers.id);
 }
 
-/** 최신 open 서버 id — 신규 기본 선택(가입 트리거와 동일 규칙). */
-export async function latestOpenServerId(): Promise<number> {
-  const [r] = await db
-    .select({ id: sql<number>`coalesce(max(${servers.id}), 1)` })
-    .from(servers)
-    .where(eq(servers.status, 'open'));
-  return r?.id ?? 1;
+/**
+ * 신규 유저의 기본 서버(0210) — 운영자가 추천으로 지정한 open 서버. 지정이 없거나 그 서버가 open이
+ * 아니면 최신 open 서버로 떨어진다(가입 트리거 v10과 같은 규칙). 로그인 화면의 '추천' 라벨도 이 값.
+ * 종전에는 무조건 최신 open이라, 2서버를 여는 순간 1서버에 신규가 끊겼다.
+ */
+export async function recommendedServerId(): Promise<number> {
+  const rows = (await db.execute(sql`
+    select coalesce(
+      (select id from servers where recommended and status = 'open' limit 1),
+      (select max(id) from servers where status = 'open'),
+      1
+    )::int as id
+  `)) as unknown as { id: number }[];
+  return rows[0]?.id ?? 1;
 }

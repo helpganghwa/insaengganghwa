@@ -9,20 +9,21 @@ import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_MAX_VICE } from '@/lib/game/guild/balance';
 import {
   GUILD_PERM,
-  GUILD_PERM_CONFIRM,
+  isConfirmKey,
+  type GuildPermConfirmKey,
   GUILD_PERM_META,
   GUILD_PERM_ORDER,
   type GuildPermKey,
 } from '@/lib/game/guild/permissions';
 
 import { GuildPageHeader } from '../GuildPageHeader';
-import { setVicePermissionsAction } from '../actions';
+import { setVicePermissionAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 type Vice = { userId: string; nickname: string; permissions: number; avatar: string | null };
 
 /**
- * 부길드장 권한 화면(P-1 확정안) — 한 사람을 고르고 아홉 개 토글.
+ * 부길드장 권한 화면(P-1 확정안) — 한 사람을 고르고 권한마다 토글 하나(GUILD_PERM_ORDER).
  *
  *  - 토글은 **즉시 적용**(저장 버튼 없음). 낙관적 반영 후 실패하면 되돌린다.
  *  - 되돌릴 수 없거나 재화가 나가는 권한(GUILD_PERM_CONFIRM)은 **켤 때만** 확인받는다.
@@ -45,8 +46,16 @@ export function VicePermissionsBoard({
   const [perms, setPerms] = useState<Record<string, number>>(() =>
     Object.fromEntries(vices.map((v) => [v.userId, v.permissions])),
   );
+  // 렌더 중 state 조정(React 권장 패턴) — 서버가 새 값을 내려 주면 그 값으로 다시 맞춘다. 다른 기기에서
+  // 바뀐 권한이 이 화면에 낡은 채 남지 않게 한다(실패한 저장은 props가 그대로라 아래 되돌림이 맡는다).
+  const serverSig = vices.map((v) => `${v.userId}:${v.permissions}`).join(',');
+  const [prevSig, setPrevSig] = useState(serverSig);
+  if (serverSig !== prevSig) {
+    setPrevSig(serverSig);
+    setPerms(Object.fromEntries(vices.map((v) => [v.userId, v.permissions])));
+  }
   const [selected, setSelected] = useState<string | null>(initialSelected ?? vices[0]?.userId ?? null);
-  const [confirm, setConfirm] = useState<{ userId: string; key: GuildPermKey } | null>(null);
+  const [confirm, setConfirm] = useState<{ userId: string; key: GuildPermConfirmKey } | null>(null);
 
   const target = vices.find((v) => v.userId === selected) ?? null;
   const targetPerms = target ? (perms[target.userId] ?? 0) : 0;
@@ -55,11 +64,13 @@ export function VicePermissionsBoard({
     return GUILD_PERM_ORDER.filter((k) => (p & GUILD_PERM[k]) !== 0).length;
   };
 
-  const apply = (userId: string, next: number) => {
+  // 서버에는 **바꾼 권한 하나만** 보낸다 — 전체 값을 보내면 이 화면을 연 뒤 다른 경로로 바뀐 비트를 낡은 값으로 덮어쓴다.
+  const apply = (userId: string, key: GuildPermKey, on: boolean) => {
     const before = perms[userId] ?? 0;
+    const next = on ? before | GUILD_PERM[key] : before & ~GUILD_PERM[key];
     setPerms((m) => ({ ...m, [userId]: next }));
     start(async () => {
-      const r = await setVicePermissionsAction(userId, next).catch(() => null);
+      const r = await setVicePermissionAction(userId, key, on).catch(() => null);
       if (!r || r.status !== 'success') {
         setPerms((m) => ({ ...m, [userId]: before })); // 실패 → 되돌림
         showError(r ? guildErrMsg(r.code) : '전송에 실패했어요. 다시 시도해 주세요.');
@@ -73,11 +84,11 @@ export function VicePermissionsBoard({
   const toggle = (key: GuildPermKey) => {
     if (!target || pending) return;
     const on = (targetPerms & GUILD_PERM[key]) !== 0;
-    if (!on && GUILD_PERM_CONFIRM.includes(key)) {
+    if (!on && isConfirmKey(key)) {
       setConfirm({ userId: target.userId, key });
       return;
     }
-    apply(target.userId, on ? targetPerms & ~GUILD_PERM[key] : targetPerms | GUILD_PERM[key]);
+    apply(target.userId, key, !on);
   };
 
   if (vices.length === 0) {
@@ -121,7 +132,7 @@ export function VicePermissionsBoard({
         />
       )}
 
-      {/* 토글 아홉 개 */}
+      {/* 권한 토글 — 개수·순서는 GUILD_PERM_ORDER */}
       <section className="mt-3 rounded-xl border border-sky-500/30 bg-sky-50/40 p-3 dark:border-sky-500/25 dark:bg-sky-950/15">
         <div className="mb-1 flex items-center justify-between gap-2">
           <h2 className="text-sm font-bold">허용된 권한</h2>
@@ -238,7 +249,7 @@ export function VicePermissionsBoard({
                   onClick={() => {
                     const c = confirm;
                     setConfirm(null);
-                    apply(c.userId, (perms[c.userId] ?? 0) | GUILD_PERM[c.key]);
+                    apply(c.userId, c.key, true);
                   }}
                   disabled={pending}
                 >
@@ -258,10 +269,10 @@ export function VicePermissionsBoard({
   );
 }
 
-/** 강한 권한을 켤 때 보여줄 한 문장 — 무엇이 함께 따라오는지만 말한다. */
-const CONFIRM_BODY: Record<string, string> = {
+/** 강한 권한을 켤 때 보여줄 한 문장 — 무엇이 함께 따라오는지만 말한다. 확인 대상에 키를 더하고 문구를 빠뜨리면 컴파일이 막는다. */
+const CONFIRM_BODY: Record<GuildPermConfirmKey, string> = {
   executor: '집행관으로 지정된 길드원은 그 구역의 세금을 수금할 수 있습니다. 집행관을 정하는 권한을 함께 주게 됩니다.',
   kick: '길드원을 내보낼 수 있게 됩니다. 추방은 되돌릴 수 없고, 추방된 길드원은 한동안 다시 가입할 수 없습니다.',
-  taxDistribute: '길드가 모은 세금을 길드원에게 나눠 줄 수 있게 됩니다. 나간 다이아는 되돌릴 수 없습니다.',
+  taxDistribute: '길드가 모은 세금을 길드원에게 나눠 줄 수 있게 됩니다. 분배된 다이아는 되돌릴 수 없습니다.',
   emblem: '길드 문양을 새로 만들거나 바꿀 수 있게 됩니다. 만들 때마다 길드장의 다이아가 아니라 본인의 다이아가 소모됩니다.',
 };

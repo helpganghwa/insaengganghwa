@@ -439,7 +439,7 @@ export function WorldMapView({
   } | null;
   canSetResidence: boolean;
   myUserId: string | null;
-  /** 내가 세금 권한자(taxDistribute)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
+  /** 내가 수금 권한자(taxCollect)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
   taxOfficerGuildId?: string | null;
   serverId: number;
   chronicle: { today: string | null; yesterday: string | null; yesterdayDay: string | null; list: { kstDay: string; headline: string }[] } | null;
@@ -726,7 +726,7 @@ export function WorldMapView({
     moveResidence(zoneId);
   };
 
-  // 세금 수금 — 그 구역 집행관 본인 또는 소유 길드 세금 권한자(TAX_COLLECT_COOLDOWN_MIN 쿨다운, 집행관 10%·길드 풀 90%).
+  // 세금 수금 — 그 구역 집행관 본인 또는 소유 길드 수금 권한자(TAX_COLLECT_COOLDOWN_MIN 쿨다운, 집행관 10%·길드 풀 90%).
   const collect = (zoneId: number) => {
     setCollectConfirm(false);
     start(async () => {
@@ -1192,7 +1192,7 @@ export function WorldMapView({
                       const pct =
                         base != null && span != null ? Math.min(100, Math.max(0, ((nowMs - base) / span) * 100)) : 100;
                       const isMyExec = myUserId != null && selected.executorUserId === myUserId;
-                      // 세금 권한자의 대리 수금(2026-09-08) — 집행관이 있는 우리 길드 구역만(공석은 동결).
+                      // 수금 권한자의 대리 수금(2026-09-08) — 집행관이 있는 우리 길드 구역만(공석은 동결).
                       const isOfficer =
                         taxOfficerGuildId != null &&
                         selected.ownerGuildId === taxOfficerGuildId &&
@@ -1602,7 +1602,7 @@ export function WorldMapView({
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            <p className="mt-1 max-h-[11.25rem] overflow-y-auto whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
               {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없어요.'}
             </p>
           </div>

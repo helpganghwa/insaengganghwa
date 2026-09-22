@@ -114,13 +114,16 @@ export function AdminMailClient({
           return;
         }
         if (scheduleAt) {
-          // 예약 전송은 서버 지정 미지원(0123 스키마) — 잘못된 기대 방지 가드.
-          if (targetServer !== 'all') {
-            setFlash({ ok: false, msg: '예약 전송은 전서버만 지원합니다 — 서버 지정은 즉시 발송으로 진행하세요.' });
-            return;
-          }
           // 예약 전송(0123) — 즉시 발송 대신 예약 등록, 크론이 도래 시 발송.
-          const r = await scheduleBroadcastAction({ title, body, payload, push: pushOn, scheduledAtKst: scheduleAt });
+          // 대상 서버는 0208부터 예약에도 적용된다(즉시 발송과 같은 규칙).
+          const r = await scheduleBroadcastAction({
+            title,
+            body,
+            payload,
+            push: pushOn,
+            serverId: targetServer === 'all' ? null : targetServer,
+            scheduledAtKst: scheduleAt,
+          });
           if (r.status === 'error') setFlash({ ok: false, msg: r.message });
           else {
             setFlash({ ok: true, msg: '예약 등록 완료 — 예약 시각에 자동 발송됩니다' });
@@ -201,9 +204,9 @@ export function AdminMailClient({
             </strong>
             에게 같은 우편을 발송합니다. 청크 500/배치.
           </div>
-          {/* 대상 서버(2026-08-07) — 전서버(활성 서버 우편함) 또는 특정 서버(그 서버 캐릭터 보유자만,
+          {/* 대상 서버(2026-08-07) — 전서버(캐릭터가 있는 서버마다 1통, 2026-09-21) 또는 특정 서버(그 서버 캐릭터 보유자만,
               푸시도 활성 서버 일치자만). 유저 노출 텍스트에 서버 표기는 안 한다(운영자 화면에서만
-              구분 — 사용자 결정). ⚠ 예약 전송은 전서버 고정. */}
+              구분 — 사용자 결정). 예약 전송도 같은 규칙(0208). */}
           <label className="flex items-center gap-1.5">
             대상 서버
             <select
@@ -218,9 +221,9 @@ export function AdminMailClient({
                 </option>
               ))}
             </select>
-            {targetServer !== 'all' && scheduleAt ? (
-              <span className="font-bold text-red-600 dark:text-red-400">예약 전송은 전서버만 지원 — 즉시 발송으로 진행하세요</span>
-            ) : null}
+            <span className="text-[10px] text-zinc-500">
+              전서버 = 캐릭터가 있는 서버마다 1통 · 서버 지정 = 그 서버 캐릭터 보유자에게만
+            </span>
           </label>
         </section>
       )}

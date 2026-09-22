@@ -17,7 +17,13 @@ import { votePollAction } from './announcement-poll-actions';
 // 안읽음 기준 = '가장 최근 발행 시각'(ISO). id를 쓰면 예약 발행에서 새 글을 놓친다 —
 // 미리 만들어 둔 공지(작은 id)가 나중에 발행되면 그 사이 다른 공지를 읽은 유저의 seen(큰 id)이
 // 이미 앞서 있어 팝업·빨간 점이 뜨지 않는다(감사 F4). 발행 시각은 언제나 단조 증가한다.
-const SEEN_KEY = 'annSeenAt';
+/**
+ * 읽음 표시 키 — **서버별**(2026-09-21 F4). 공지는 서버별로 걸러 나오는데(전서버 + 그 서버 전용)
+ * 읽음 시각이 하나뿐이면, 한 서버에서 더 최근 공지를 읽은 뒤 다른 서버 전용 공지의 새 글 표시와
+ * 팝업이 아예 뜨지 않는다. 종전 키('annSeenAt')는 1서버 값으로 이어받는다.
+ */
+const LEGACY_SEEN_KEY = 'annSeenAt';
+const seenKeyOf = (serverId: number) => `annSeenAt:s${serverId}`;
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '';
@@ -227,9 +233,12 @@ export function AnnouncementBoard({
   tint,
   holdPopup = false,
   myVotes = {},
+  serverId,
 }: {
   items: AnnouncementView[];
   tint: string;
+  /** 활성 서버 — 읽음 표시를 서버별로 나눠 적는다. */
+  serverId: number;
   /** true면 홈 강제 팝업 억제(예: 튜토리얼 진행 중 — 온보딩 우선). 카드·목록은 정상 노출. */
   holdPopup?: boolean;
   /** 내 투표({`공지id:질문no`: optionId}, 0137 다중 설문) — 집계는 미포함(유저 비노출). */
@@ -253,7 +262,11 @@ export function AnnouncementBoard({
   const [seenAt, setSeenAt] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     try {
-      return localStorage.getItem(SEEN_KEY) || '';
+      return (
+        localStorage.getItem(seenKeyOf(serverId)) ||
+        (serverId === 1 ? localStorage.getItem(LEGACY_SEEN_KEY) : null) ||
+        ''
+      );
     } catch {
       return '';
     }
@@ -305,7 +318,7 @@ export function AnnouncementBoard({
     if (!latestAt) return;
     setSeenAt(latestAt);
     try {
-      localStorage.setItem(SEEN_KEY, latestAt);
+      localStorage.setItem(seenKeyOf(serverId), latestAt);
     } catch {
       /* noop */
     }

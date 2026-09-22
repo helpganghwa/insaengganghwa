@@ -363,8 +363,12 @@ export default async function PublicProfilePage({
   let friendRelation: FriendRelation = 'none';
   // 내 친구가 가득 찼는지(2026-09-03) — 가득 차면 '친구 추가'를 안내로 바꾼다(서버도 CAP_REACHED로 거부).
   let friendCapReached = false;
+  // 친구는 서버별이다 — 보고 있는 프로필의 서버가 내 활성 서버와 다르면 친구 추가를 내지 않는다
+  // (2026-09-21 F2). 종전에는 버튼이 눌리는데 요청은 내 서버로 나가 "유저를 찾을 수 없습니다"만 떴다.
+  let sameServer = true;
   if (mode === 'other') {
     const viewerServerId = await getActiveServerId();
+    sameServer = viewerServerId === serverId;
     [friendRelation, friendCapReached] = await Promise.all([
       getFriendRelation(viewerId!, viewerServerId, data.ownerId).catch(() => 'none' as const),
       getFriendIds(viewerId!, viewerServerId).then((ids) => ids.length >= FRIEND_CAP).catch(() => false),
@@ -594,7 +598,7 @@ export default async function PublicProfilePage({
               label="프로필 공유하기"
             />
             {/* 친구 추가 — 로그인+친구 아님일 때. friend면 렌더 안 함(요구사항). */}
-            {friendRelation !== 'friend' ? (
+            {friendRelation !== 'friend' && sameServer ? (
               <FriendAddButton targetId={data.ownerId} initialRelation={friendRelation} capReached={friendCapReached} />
             ) : null}
             {canReport ? <ReportButton profileId={data.profileId!} /> : null}

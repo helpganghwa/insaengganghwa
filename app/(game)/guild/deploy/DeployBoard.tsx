@@ -20,7 +20,9 @@ import {
   clearMemberDeploymentAction,
   setExecutorAction,
   clearExecutorAction,
+  setDeployVisibilityAction,
 } from '../actions';
+import type { DeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
 import { Tabs } from '@/components/ui/Tabs';
 
 import { guildErrMsg } from '../errors-msg';
@@ -165,6 +167,9 @@ function RowAction({
   );
 }
 
+/** 공개 범위가 '권한자만'일 때 권한 없는 길드원에게 보이는 안내(0204). */
+const RESTRICTED_NOTE = '길드 전체 배치는 길드장과 권한이 있는 부길드장만 볼 수 있습니다.';
+
 /** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
 const STATUS_FILTERS = [
   { key: 'all', label: '전체' },
@@ -186,7 +191,18 @@ export function DeployBoard({
   members: initialMembers,
   zones,
   initialZoneId = null,
+  restricted,
+  visibility,
+  canSetVisibility,
 }: {
+  /**
+   * 배치 정보 공개 범위(0204)가 '권한자만'이고 내가 배치 담당자가 아닐 때 — 서버가 `members`에 **내 한 줄만** 내려보낸다.
+   * 그래서 인원·전투력 합계는 의미가 없고, 그 자리에 '내 배치'와 안내문을 보인다.
+   */
+  restricted: boolean;
+  visibility: DeployVisibility;
+  /** 공개 범위를 바꿀 수 있는가 — 길드장만. */
+  canSetVisibility: boolean;
   /** 남의 배치를 **해제**할 수 있는가(deploy 권한, 0142). 배치는 본인만 하므로 무관. */
   canDeploy: boolean;
   /** 진입 시 선택할 구역(`?zone=`) — 세금 수금 탭의 공석 '지정하기'가 넘겨준다(2026-09-08). 없으면 내 거주지. */
@@ -208,6 +224,7 @@ export function DeployBoard({
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const [members, setMembers] = useState(initialMembers);
+  const [vis, setVis] = useState<DeployVisibility>(visibility);
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
   const [selectedId, setSelectedId] = useState<number | null>(initialZoneId ?? residence?.zoneId ?? null);
   const homeZoneId = residence?.zoneId ?? null;
@@ -276,6 +293,22 @@ export function DeployBoard({
 
   const patch = (userId: string, p: Partial<Member>) =>
     setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, ...p } : m)));
+
+  // 공개 범위 변경(길드장) — 낙관 반영 후 실패하면 되돌린다.
+  const changeVisibility = (next: DeployVisibility) => {
+    if (next === vis) return;
+    const prev = vis;
+    setVis(next);
+    start(async () => {
+      const r = await setDeployVisibilityAction(next).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
+      if (r.status !== 'success') {
+        setVis(prev);
+        showError(guildErrMsg(r.code));
+        return;
+      }
+      showHeaderToast({ title: next === 'officer' ? '배치 정보를 권한자만 봅니다' : '배치 정보를 전체 길드원이 봅니다' });
+    });
+  };
 
   // 배치 현황 팝업 — 길드원 전체를 시트 밖으로 뺀 자리(D-1).
   const [statusOpen, setStatusOpen] = useState(false);
@@ -639,11 +672,15 @@ export function DeployBoard({
               {/* 배치 요약 라벨 — 우리 배치가 있으면 인원↔전투력 토글(노드 하단) */}
               {dep && (
                 <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/75 px-1 text-[7px] font-bold leading-[1.4] text-white shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  <Ticker intervalMs={3000}>
-                    {(now) =>
-                      Math.floor(now / 3000) % 2 === 1 ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`
-                    }
-                  </Ticker>
+                  {restricted ? (
+                    '내 배치'
+                  ) : (
+                    <Ticker intervalMs={3000}>
+                      {(now) =>
+                        Math.floor(now / 3000) % 2 === 1 ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`
+                      }
+                    </Ticker>
+                  )}
                 </span>
               )}
               <MapPins home={isHome} selected={isSel} />
@@ -657,12 +694,18 @@ export function DeployBoard({
           onClick={() => setStatusOpen(true)}
           className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2.5 py-1 text-[9.5px] font-bold tabular-nums text-white shadow-lg backdrop-blur-sm active:opacity-70"
         >
-          <span className="text-red-400">{attackCount}</span>
-          <span className="mx-0.5 text-white/40">·</span>
-          <span className="text-sky-400">{defendCount}</span>
-          <span className="mx-0.5 text-white/40">·</span>
-          <span className={idleCount > 0 ? 'text-amber-300' : 'text-white/50'}>{idleCount}</span>
-          <span className="ml-1 font-semibold text-white/70">배치 현황</span>
+          {restricted ? (
+            <span className="font-semibold text-white/80">내 배치</span>
+          ) : (
+            <>
+              <span className="text-red-400">{attackCount}</span>
+              <span className="mx-0.5 text-white/40">·</span>
+              <span className="text-sky-400">{defendCount}</span>
+              <span className="mx-0.5 text-white/40">·</span>
+              <span className={idleCount > 0 ? 'text-amber-300' : 'text-white/50'}>{idleCount}</span>
+              <span className="ml-1 font-semibold text-white/70">배치 현황</span>
+            </>
+          )}
         </button>
 
         {/* 범례(좌하단) */}
@@ -699,10 +742,12 @@ export function DeployBoard({
               >
                 {isDefend ? '수비' : '공격'}
               </span>
-              <span className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-500">
-                {execHere.length + deployedHere.length}명 ·{' '}
-                <span className="font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
-              </span>
+              {restricted ? null : (
+                <span className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-500">
+                  {execHere.length + deployedHere.length}명 ·{' '}
+                  <span className="font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
+                </span>
+              )}
             </div>
 
             {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
@@ -745,7 +790,7 @@ export function DeployBoard({
             )}
 
             {execHere.length === 0 && deployedHere.length === 0 ? (
-              <p className="mt-2.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
+              restricted ? null : <p className="mt-2.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
             ) : (
               <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-900">
                 {execHere.map((m) => (
@@ -798,6 +843,7 @@ export function DeployBoard({
                 ))}
               </ul>
             )}
+            {restricted ? <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{RESTRICTED_NOTE}</p> : null}
           </section>
         ) : (
           <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
@@ -808,25 +854,64 @@ export function DeployBoard({
 
       {/* 배치 현황 팝업 — 누가 어디에 있고 누가 비어 있는지. 행을 누르면 그 구역으로 간다. */}
       {statusOpen && (
-        <ModalShell onClose={() => setStatusOpen(false)} label="길드원 배치 현황">
+        <ModalShell onClose={() => setStatusOpen(false)} label={restricted ? '내 배치' : '길드원 배치 현황'}>
           <ModalLayout
-            title="배치 현황"
-            subtitle={`길드원 ${members.length}명 · 공격 ${attackCount} · 수비 ${defendCount} · 미배치 ${idleCount}`}
+            title={restricted ? '내 배치' : '배치 현황'}
+            subtitle={
+              restricted
+                ? undefined
+                : `길드원 ${members.length}명 · 공격 ${attackCount} · 수비 ${defendCount} · 미배치 ${idleCount}`
+            }
             footer={
               <ModalButton tone="neutral" onClick={() => setStatusOpen(false)}>
                 닫기
               </ModalButton>
             }
           >
-            <Tabs
-              size="sm"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              items={STATUS_FILTERS.map((f) => ({ key: f.key, label: f.label }))}
-            />
-            {/* 높이 고정 — 필터마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
+            {/* 공개 범위 설정(0204) — 길드장만. 바꾸면 길드 기록에 남는다. */}
+            {canSetVisibility ? (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-900/60">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11.5px] font-bold">배치 정보 공개</p>
+                  <p className="text-[10px] leading-snug text-zinc-500">
+                    {vis === 'officer' ? '권한자 외 길드원은 자기 배치만 봅니다' : '길드원 모두가 전체 배치를 봅니다'}
+                  </p>
+                </div>
+                <div role="radiogroup" aria-label="배치 정보 공개 범위" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
+                  {(
+                    [
+                      { key: 'all', label: '전체' },
+                      { key: 'officer', label: '권한자만' },
+                    ] as { key: DeployVisibility; label: string }[]
+                  ).map((o) => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={vis === o.key}
+                      disabled={pending}
+                      onClick={() => changeVisibility(o.key)}
+                      className={`rounded-md px-2 py-1 text-[10.5px] font-bold transition disabled:opacity-60 ${
+                        vis === o.key ? 'bg-sky-500 text-white' : 'text-zinc-500'
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {restricted ? null : (
+              <Tabs
+                size="sm"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                items={STATUS_FILTERS.map((f) => ({ key: f.key, label: f.label }))}
+              />
+            )}
+            {/* 높이 고정 — 필터마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다(제한된 화면은 한 줄뿐이라 고정하지 않는다). */}
             <ul
-              className={`mt-2 h-[46vh] overflow-y-auto ${
+              className={`mt-2 ${restricted ? '' : 'h-[46vh]'} overflow-y-auto ${
                 statusList.length === 0
                   ? 'flex items-center justify-center'
                   : 'divide-y divide-zinc-100 dark:divide-zinc-900'
@@ -890,6 +975,7 @@ export function DeployBoard({
                 })
               )}
             </ul>
+            {restricted ? <p className="mt-2 text-[11px] leading-snug text-zinc-400">{RESTRICTED_NOTE}</p> : null}
           </ModalLayout>
         </ModalShell>
       )}

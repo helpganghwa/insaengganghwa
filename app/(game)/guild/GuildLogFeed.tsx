@@ -103,6 +103,12 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 길드를 해산했습니다</>;
     case 'set_join_policy':
       return <>{actor}님이 가입 방식을 변경했습니다</>;
+    case 'set_deploy_visibility':
+      return (
+        <>
+          {actor}님이 점령전 배치 정보 공개 범위를 {hl(e.detail?.visibility === 'officer' ? '권한자만' : '전체 길드원', C.indigo)}으로 바꿨습니다
+        </>
+      );
     case 'notice_edit':
       return e.detail?.cleared ? (
         <>{actor}님이 공지를 삭제했습니다</>

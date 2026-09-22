@@ -3,6 +3,7 @@ import 'server-only';
 import { pgGuard } from '@/lib/db/guarded';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { createCharacterAuto } from '@/lib/game/server-select';
+import { correctServerFor } from '@/lib/game/server-guard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
@@ -48,6 +49,12 @@ export interface LayoutData {
    * (getTutorialState의 실패 폴백과 동일하게 done 처리됨).
    */
   tutorialSeed: { step: number; createdAt: string } | null;
+  /**
+   * 활성 서버가 틀렸을 때 돌아갈 서버(2026-09-21 ④). 쿠키가 내 캐릭터가 없는 서버를 가리키는데
+   * 다른 서버에는 캐릭터가 있을 때만 숫자가 들어온다 — 헤더가 그 서버로 되돌린다.
+   * null = 정상이거나, 캐릭터가 아예 없는 신규(그 서버에 만드는 것이 맞다).
+   */
+  correctServerId: number | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -65,6 +72,7 @@ const DEFAULTS: LayoutData = {
   repTitle: null,
   stats: null,
   tutorialSeed: null,
+  correctServerId: null,
 };
 
 /**
@@ -171,6 +179,23 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
     // 재귀는 1단으로 끝난다: 스로틀 맵이 직후 재시도를 차단하고, 성공 경로는 nickname이 채워진다.
     if (profileRows.length > 0 && p?.nickname == null) {
+      // ⚠ 캐릭터를 만들기 전에 **다른 서버에 이미 있는지** 먼저 본다(2026-09-21 ④).
+      // 종전에는 곧바로 만들어서, srv 쿠키를 잃은 2서버 유저가 1서버에 새 캐릭터(가입 보너스·
+      // 기본 아바타 포함)를 받고 "진행도가 사라졌다"로 보였다. 캐릭터를 지울 수단이 없어 되돌릴
+      // 수도 없다. 이 조회는 캐릭터가 없는 드문 경로에서만 돌아 핫패스 비용이 없다.
+      // 관문 조회 자체가 실패하면(풀 포화 등) **만들지 않는다** — '모르겠으니 일단 생성'이 바로
+      // 막으려던 사고다. 이번 렌더는 기본값으로 내보내고 다음 요청에서 다시 판단한다.
+      let correctServerId: number | null;
+      try {
+        correctServerId = await correctServerFor(userId, serverId);
+      } catch (ge) {
+        console.warn('[layout] server guard failed — skip heal', (ge as Error).message);
+        return DEFAULTS;
+      }
+      if (correctServerId != null) {
+        console.warn('[layout] wrong active server — redirecting', { userId, serverId, correctServerId });
+        return { ...DEFAULTS, correctServerId };
+      }
       const healKey = `${userId}:${serverId}`;
       const last = healAttemptAt.get(healKey) ?? 0;
       if (Date.now() - last > HEAL_RETRY_MS) {
@@ -212,6 +237,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       executorZone: p?.executor_zone ?? null,
       executorZoneRegion: p?.executor_zone_region ?? null,
       repTitle,
+      correctServerId: null,
       stats: (() => {
         // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
         let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;

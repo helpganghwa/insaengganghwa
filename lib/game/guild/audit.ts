@@ -16,8 +16,9 @@ export type GuildAuditAction =
   | 'unset_vice'
   | 'disband'
   | 'set_join_policy'
+  | 'set_deploy_visibility' // 점령전 배치 정보 공개 범위(0204) — detail { visibility }
   | 'rename' // 길드명 변경(0182) — detail { before, after }
-  | 'set_perm' // 부길드장 권한 변경(0142) — detail { before, after } 비트마스크
+  | 'set_perm' // 부길드장 권한 변경(0142) — detail { before, after, key, on }(before·after는 비트마스크, key는 켜고 끈 권한)
   | 'auto_handover'
   | 'notice_edit'
   // 활동 피드 — 가입/탈퇴/레벨업/세금수금/세금분배/점령·상실.

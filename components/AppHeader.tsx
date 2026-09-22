@@ -8,6 +8,7 @@ import { HeaderDiamond } from '@/components/HeaderDiamond';
 import { HeaderStatsInitializer, HeaderStatsLine } from '@/components/HeaderStatsContext';
 import { GuildBadge } from '@/components/GuildBadge';
 import { TitleTag } from '@/components/TitleTag';
+import { ServerCorrect } from '@/components/ServerCorrect';
 
 /**
  * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 📬(미수령 dot) · 닉네임 · 💎 다이아.
@@ -129,6 +130,12 @@ export function AppHeaderShell({
  */
 export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutData> }) {
   const d = await dataPromise;
+  // 활성 서버가 틀렸다 — 캐릭터를 만들지 않고 원래 서버로 되돌린다(2026-09-21 ④).
+  // 안내 화면 없이 곧바로 교정 라우트로 보낸다: 화면을 띄우면 그 위에 공지 팝업 같은 다른 모달이
+  // 겹쳐 무슨 일인지 알 수 없었다. 쿠키를 고쳐 원래 서버로 돌아오는 것뿐이라 설명할 것도 없다.
+  // ⚠ 여기서 `redirect()`를 쓰지 않는다 — 이 컴포넌트는 Suspense 안에서 스트리밍되어, redirect가
+  //   클라 라우터 처리로 넘어가면서 라우터 내부에서 훅 개수 예외가 난다(ServerCorrect 주석 참조).
+  if (d.correctServerId != null) return <ServerCorrect to={d.correctServerId} />;
   return (
     <>
       <DiamondInitializer diamond={d.diamond} />

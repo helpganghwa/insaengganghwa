@@ -54,6 +54,8 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   //   그때 단계 격리와 성공 게이트 beat까지 넣었는데 **정작 그 beat를 읽는 곳이 없었다**
   //   — 여기 없으면 getStaleCrons가 순회조차 하지 않는다(2026-09-12 검수).
   'play-sync': 40 * MIN, // (2026-09-12 등재 — 배포 직후 prod 시드 필요)
+  'daily-stats': 26 * HOUR, // KST 00:01 하루 1틱 — 정지 시 '오늘의 인생강화' 기준선이 통째로 빈다
+                            // (2026-09-21 등재 — 배포 직후 prod 시드 필요)
 };
 
 /**

@@ -12,6 +12,7 @@ import {
   TAX_POINTS_PER_DIAMOND_SPENT,
   conquestPowerMult,
 } from '@/lib/game/guild/balance';
+import { GUILD_PERM_META } from '@/lib/game/guild/permissions';
 import { REGION_META } from '@/lib/game/guild/region-meta';
 
 import type { WikiDocMeta } from '../registry';
@@ -92,6 +93,11 @@ export default function Doc() {
           길드원의 배치를 해제하는 것은{' '}
           <DocLink slug="guild-roles" hash="perms">별도 권한</DocLink>이다.
         </LI>
+        <LI>
+          길드장은 배치 현황 창에서 배치 정보 공개 범위를 정할 수 있다. &lsquo;권한자만&rsquo;으로 두면 길드장과
+          배치 해제 또는 집행관 지정 권한이 있는 부길드장만 길드 전체 배치를 보고, 그 밖의 길드원은 자기
+          배치만 본다. 기본값은 길드원 모두가 보는 &lsquo;전체&rsquo;이다.
+        </LI>
       </UL>
 
       <H2 id="battle">전투</H2>
@@ -129,7 +135,7 @@ export default function Doc() {
           집행관은 구역 수비로 참여하며, 유효 전투력이{' '}
           {bpPct(conquestPowerMult('defend', true) * 10_000)}로 적용된다.
         </LI>
-        <LI>집행관에게는 세금 수금 권한도 함께 주어진다.</LI>
+        <LI>집행관은 맡은 구역의 세금을 직접 수금할 수 있다.</LI>
         <LI>
           길드를 탈퇴하거나 추방당하면 집행관 자리는 곧바로 해제된다.
           <Fn n={4} />
@@ -158,8 +164,8 @@ export default function Doc() {
         </LI>
         <LI>세율은 그 길드의 모든 구역 누적에 곱해진다.</LI>
         <LI>
-          수금은 그 구역 집행관이 하거나, 길드장과 세금 권한이 있는 부길드장이 대신 할 수 있다. 길드 관리의
-          세금 수금·분배 화면에서는 수금 가능한 구역을 한 번에 걷을 수도 있다. 구역을 점령하고{' '}
+          수금은 그 구역 집행관이 하거나, 길드장과 {GUILD_PERM_META.taxCollect.label} 권한이 있는 부길드장이 대신 할 수
+          있다. 길드 관리의 세금 화면에서는 수금 가능한 구역을 한 번에 걷을 수도 있다. 구역을 점령하고{' '}
           {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}이 지나야 첫 수금이 가능하고, 그 뒤로도{' '}
           {fmtMs(TAX_COLLECT_COOLDOWN_MIN * 60_000)}의 쿨타임이 적용된다. 집행관이 없는 구역은 수금할 수
           없다.
@@ -171,7 +177,7 @@ export default function Doc() {
         </LI>
       </UL>
       <Note>
-        분배는 길드장과 세금 권한이 있는 부길드장이 할 수 있다. 균등 · 기여 비례 · 오늘 기부자 · 직접 중에서 방식을 고르고,
+        분배는 길드장과 {GUILD_PERM_META.taxDistribute.label} 권한이 있는 부길드장이 할 수 있다. 균등 · 기여 비례 · 오늘 기부자 · 직접 중에서 방식을 고르고,
         사람별 금액은 수정할 수 있다. 지급은 보상 우편으로 이루어진다.
       </Note>
 

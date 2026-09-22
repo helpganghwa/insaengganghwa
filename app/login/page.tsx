@@ -12,7 +12,7 @@ import { CbtEndedNotice } from './CbtEndedNotice';
 // ⚠ lib/launch에서 직접 import — CbtEndedNotice('use client') 경유 시 서버에서 값이
 // 클라이언트 참조로 평가돼 Date.parse가 NaN(시간 게이트 무력화, 2026-08-21 검증에서 검출).
 import { OPEN_AT_ISO } from '@/lib/launch';
-import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
+import { listServersPublic, recommendedServerId } from '@/lib/game/server-select';
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { ServerPicker } from './ServerPicker';
@@ -38,16 +38,6 @@ function loginErrorMessage(raw: string): string {
   return '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
 }
 
-/** 로그인 화면 서버 기본 선택 — 공유된 서버 > 직전 접속 서버(srv 잔존) > 최신 open 서버. */
-async function defaultServerId(open: { id: number; status: string }[]): Promise<number> {
-  const jar = await cookies();
-  const cand = [Number(jar.get('pending_server')?.value), Number(jar.get('srv')?.value)];
-  for (const c of cand) {
-    if (Number.isInteger(c) && open.some((s) => s.id === c && s.status === 'open')) return c;
-  }
-  return latestOpenServerId();
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
@@ -59,8 +49,18 @@ export default async function LoginPage({
   // 변경은 로그아웃 후 여기서.
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
   const showServers = servers.length >= 1;
-  const defaultSrv = showServers ? await defaultServerId(servers) : 1;
-  const recommendedId = showServers ? await latestOpenServerId() : 1;
+  const recommendedId = showServers ? await recommendedServerId() : 1;
+  // 선택 표시는 **아는 경우에만**(2026-09-21) — 이 기기에서 마지막으로 쓴 서버(srv 쿠키)가 있으면
+  // 그 서버를 선택된 것으로 보여 준다. 고르지 않고 로그인하면 콜백이 그 서버로 복원하므로 화면과
+  // 결과가 일치한다. 쿠키가 없으면(새 기기·첫 방문) 표시하지 않는다 — 종전에는 이때 최신 서버를
+  // 칠해 둬서, 1서버 유저에게 2서버가 선택된 것처럼 보였다. 초대 링크의 서버(pending_server)도
+  // 쓰지 않는다: 기존 유저는 링크를 타고 와도 자기 서버로 복원돼 표시가 틀린 말이 된다.
+  // ⚠ 표시일 뿐 `login_srv`는 쓰지 않는다 — 그 쿠키는 사용자가 직접 눌렀을 때만(ServerPicker).
+  const srvCookie = Number((await cookies()).get('srv')?.value);
+  const knownSrv =
+    showServers && servers.some((sv) => sv.id === srvCookie && sv.status !== 'closed')
+      ? srvCookie
+      : null;
   // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   // 스테이징(preview)은 항상 노출 — PWA는 주소창이 없어 ?test=true를 붙일 수 없다(검수 동선).
@@ -112,7 +112,7 @@ export default async function LoginPage({
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
         {showServers && !(cbtEnded && !reviewLogin) ? (
           <div className="mb-4 w-full">
-            <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />
+            <ServerPicker servers={servers} knownSrv={knownSrv} recommendedId={recommendedId} />
           </div>
         ) : null}
 

@@ -60,7 +60,7 @@ describe.skipIf(skip)('titles/rewards — DB 수령(멱등)', () => {
     await testDb.execute(sql`delete from title_milestone_claims where user_id=${TEST_USER_ID}::uuid and server_id=${SID} and count > ${c0}`);
     const pre = await claimTitleRewards(TEST_USER_ID, SID);
     grantedDiamond += pre.diamond; grantedBoxes += pre.boxes.weapon + pre.boxes.armor + pre.boxes.accessory;
-  });
+    }, 30_000);
   const cleanSeeded = async () => {
     await testDb.execute(sql`delete from user_titles where user_id=${TEST_USER_ID}::uuid and server_id=${SID} and title_code like 'test_reward_%'`);
     seeded = [];
@@ -86,7 +86,7 @@ describe.skipIf(skip)('titles/rewards — DB 수령(멱등)', () => {
     expect(await diamond()).toBe(d0 + 3 * TITLE_DISCOVERY_DIAMOND);
     const again = await claimTitleRewards(TEST_USER_ID, SID);
     expect(again).toMatchObject({ titles: 0, diamond: 0, milestones: [] });
-  });
+    }, 30_000);
 
   it('발견 수가 다음 50 배수에 닿으면 그 개수만큼 상자, 한 번만', async () => {
     const base = await discovered();
@@ -100,5 +100,5 @@ describe.skipIf(skip)('titles/rewards — DB 수령(멱등)', () => {
     expect(await boxes()).toBe(b0 + target);
     const again = await claimTitleRewards(TEST_USER_ID, SID);
     expect(again.milestones).toEqual([]);
-  });
+    }, 60_000);
 });

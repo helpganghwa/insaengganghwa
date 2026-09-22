@@ -2,6 +2,7 @@
 export type GuildErrorCode =
   | 'ALREADY_IN_GUILD' // 이미 길드 소속(1유저 1길드)
   | 'NOT_IN_GUILD'
+  | 'NO_CHARACTER_ON_SERVER' // 그 길드의 서버에 내 캐릭터가 없음(활성 서버 위조 방어, 2026-09-21)
   | 'NAME_INVALID' // 길이/형식 위반
   | 'NAME_CHARSET' // 문자셋 위반(한글·영문·숫자만, 공백·특수문자·이모지 불가)
   | 'NAME_TAKEN' // 이름 중복

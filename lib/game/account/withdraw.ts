@@ -85,12 +85,14 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // **남기고** 잔액만큼 상계 행(탈퇴 소멸)을 넣는다: 지우면 소급 스크립트 재실행 때 order:<id> 적립이 되살아나
     // 재가입 계정에 마일리지가 부활한다(diamond_ledger·patron_milestone_grants를 보존하는 것과 같은 원칙).
     await tx.execute(sql`delete from point_ledger where user_id = ${uid} and kind = 'melee'`);
+    // 0211부터 마일리지는 서버별 지갑 — 지갑마다 상계 행을 넣고 지갑을 비운다(멱등 키에 서버 포함).
     await tx.execute(sql`
       insert into point_ledger (user_id, server_id, kind, delta, note, ref)
-      select ${uid}::uuid, null, 'mileage', -p.mileage, '탈퇴 소멸', ${'withdraw:' + uid + ':' + Date.now()}
-      from profiles p where p.id = ${uid} and p.mileage > 0
+      select ${uid}::uuid, w.server_id, 'mileage', -w.balance, '탈퇴 소멸',
+             ${'withdraw:' + uid + ':' + Date.now()} || ':s' || w.server_id
+      from mileage_wallets w where w.user_id = ${uid} and w.balance > 0
     `);
-    await tx.execute(sql`update profiles set mileage = 0 where id = ${uid}`);
+    await tx.execute(sql`delete from mileage_wallets where user_id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
     // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.

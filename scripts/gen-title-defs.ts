@@ -170,7 +170,9 @@ const pub = titles.map((t) => ({
 // 아이템 발동 조건 → 기계 판독 명세(카탈로그 key + 최소 강화). 이름이 안 풀리면 빌드 실패.
 const nameToKey = new Map(CATALOG_ITEMS.map((c) => [c.nameKo, c.key]));
 function parseReq(cond: string): { items: string[]; min: number } | null {
-  const m = cond.match(/^(.+?)[를을] \+(\d+) 이상으로 (?:동시 )?장착 중인 동안$/);
+  // 아이템 발동 칭호는 2026-09-21부터 영구형 — 조건을 갖춘 장비를 한 번 장착해 발견하면 벗어도 남는다(유저 건의).
+  // 그래서 조건문도 '장착 중인 동안'이 아니라 '장착'으로 끝난다(옛 표기도 받아 준다).
+  const m = cond.match(/^(.+?)[를을] \+(\d+) 이상으로 (?:동시 )?장착(?: 중인 동안)?$/);
   if (!m) return null;
   const items = m[1].split(' + ').map((n) => {
     const k = nameToKey.get(n.trim());

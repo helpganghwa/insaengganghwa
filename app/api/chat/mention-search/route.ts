@@ -31,6 +31,9 @@ export async function GET(req: Request) {
       and(
         eq(characters.serverId, serverId),
         ne(characters.userId, userId),
+        // 요청자도 그 서버 사람이어야 한다(2026-09-21 ⑱) — srv 쿠키는 검증 없이 활성 서버가
+        // 되므로, 쿠키만 바꾸면 남의 서버 닉네임을 훑을 수 있었다. 같은 문장에 편승(왕복 0).
+        sql`exists (select 1 from characters me where me.user_id = ${userId}::uuid and me.server_id = ${serverId})`,
         // prefix 검색 — characters_nick_prefix_idx(0129, text_pattern_ops)를 타는 형태.
         // %/_는 이스케이프(닉네임 정책상 특수문자 없음이지만 방어).
         sql`lower(${characters.nickname}) like lower(${q.replaceAll('%', '\\%').replaceAll('_', '\\_')}) || '%'`,

@@ -23,6 +23,15 @@ export function joinGuild(input: { userId: string; guildId: bigint }): Promise<v
       .for('update');
     if (!g) throw new GuildError('GUILD_NOT_FOUND');
 
+    // 크로스서버 가입 차단(2026-09-21 ③) — 길드 행에서 서버를 유도하기만 하고 "내가 그 서버에
+    // 캐릭터를 가졌는지"는 보지 않았다. 활성 서버 쿠키를 바꾸면 타 서버 길드에 **보이지 않는
+    // 멤버 행**이 생긴다(정원에는 잡히고 멤버 목록에는 characters 조인이라 안 보임 → 슬롯 영구
+    // 잠금, 탈퇴는 활성 서버 기준이라 본인도 못 빠져나옴). 레이드와 같은 가드.
+    const [ch] = (await tx.execute(
+      sql`select 1 from characters where user_id = ${input.userId}::uuid and server_id = ${g.serverId} limit 1`,
+    )) as unknown as unknown[];
+    if (!ch) throw new GuildError('NO_CHARACTER_ON_SERVER');
+
     const [m] = await tx
       .select({ g: guildMembers.guildId })
       .from(guildMembers)

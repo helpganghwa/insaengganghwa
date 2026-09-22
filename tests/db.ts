@@ -20,6 +20,24 @@ export async function endTestDb(): Promise<void> {
   await client.end({ timeout: 5 });
 }
 
+/**
+ * 테스트 계정의 마일리지 지갑을 **원장 합으로 다시 맞춘다**(0211 — 서버별 지갑).
+ * 결제 테스트는 completePurchase/refund를 실제로 돌려 원장 행과 지갑 증감을 남긴다. 원장 행만 지우고
+ * 지갑을 그대로 두면 실행할 때마다 지갑이 불어난다(원장은 비었는데 지갑 240이던 잔여물, 2026-09-21).
+ * 값을 '되돌리는' 대신 원장에서 다시 세우므로, 병렬로 도는 다른 테스트 파일과 엇갈려도 결과가 같다.
+ * ⚠ 자기가 만든 원장 행을 **먼저 지운 뒤** 부를 것.
+ */
+export async function resyncTestMileage(userId: string): Promise<void> {
+  await testDb.execute(sql`delete from mileage_wallets where user_id = ${userId}::uuid`);
+  await testDb.execute(sql`
+    insert into mileage_wallets (user_id, server_id, balance)
+    select user_id, server_id, sum(delta) from point_ledger
+     where kind = 'mileage' and user_id = ${userId}::uuid and server_id is not null
+     group by user_id, server_id having sum(delta) > 0
+    on conflict (user_id, server_id) do update set balance = excluded.balance
+  `);
+}
+
 /** 유저가 미보유이고, **lane 여유 있는 슬롯**의 active catalog_item_id — 테스트 격리. */
 export async function pickUnusedCatalogId(userId: string): Promise<number> {
   const r = (await testDb.execute(sql`

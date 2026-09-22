@@ -28,11 +28,11 @@ export default async function WorldMapPage() {
     getChronicle(serverId).catch(() => null),
     getConquestReplay(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
-    // 세금 권한자면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
+    // 수금 권한자(taxCollect)면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
     userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
   ]);
   const taxOfficerGuildId =
-    perm && hasGuildPerm(perm.role, perm.permissions, 'taxDistribute') ? perm.guildId.toString() : null;
+    perm && hasGuildPerm(perm.role, perm.permissions, 'taxCollect') ? perm.guildId.toString() : null;
   // 어제 리플레이 — 연대기 로드 결과(어제 기록일)에 의존해 후속 1회(가벼움, 상세 페이지).
   const replayYesterday = chronicle?.yesterdayDay
     ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(() => null)

@@ -1,5 +1,4 @@
 import { notFound, redirect } from 'next/navigation';
-import { getActiveServerId } from '@/lib/game/servers';
 import { and, eq } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
@@ -116,7 +115,6 @@ export default async function RaidDetail({
     publicCode: string;
   }[]);
 
-  const serverId = await getActiveServerId();
   // 참가자 길드 문양 일괄(닉네임 옆 노출용) — 실패해도 레이드는 표시.
   // 레이드의 서버 기준(감사 B5) — 관전자(활성 서버가 다를 수 있음) 기준이면 참가자 길드가
   // 안 뜨거나 동명 유저의 타 서버 길드 문양이 잘못 붙는다.
@@ -225,7 +223,9 @@ export default async function RaidDetail({
 
   return (
     <div className="flex-1">
-      <RaidSessionCard view={view} serverId={serverId} />
+      {/* 참가자 프로필 링크는 **레이드의 서버**로(2026-09-21 F3) — 보는 사람의 활성 서버를 쓰면 다른
+          서버 레이드에서 참가자를 눌렀을 때 그 사람의 다른 서버 캐릭터(또는 404)가 열린다. */}
+      <RaidSessionCard view={view} serverId={raid.serverId} />
     </div>
   );
 }

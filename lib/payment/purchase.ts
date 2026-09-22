@@ -28,6 +28,7 @@ import { grantPatronMilestones } from '@/lib/game/patron/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 import { creditMileageForOrder } from '@/lib/game/points/wallet';
+import { hasCharacterOn } from '@/lib/game/server-guard';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
 import { isKnownMinor, purchaseGate, type PurchaseChannel } from './purchase-gate';
@@ -68,6 +69,7 @@ export type PurchaseErrorCode =
   | 'ALREADY_PURCHASED' // 주기 상품 같은 주기 재구매
   | 'IDENTITY_REQUIRED' // 본인인증 미완료(결제 전 필수 — 청소년보호)
   | 'MINOR_LIMIT' // 미성년 월 한도 초과
+  | 'NO_CHARACTER_ON_SERVER' // 활성 서버에 내 캐릭터가 없음(쿠키 위조 방어)
   | 'CONFIG'; // 포트원 env 미설정
 
 export class PurchaseError extends Error {
@@ -163,6 +165,11 @@ async function resolveOrder(
 ): Promise<ResolvedOrder> {
   // 심사(cbt) 계정 결제 차단 없음 — 사용자 결정(2026-07-10): 심사 계정도 결제 허용
   // (심사관 결제 검수 편의 우선, 공개 자격증명의 제3자 결제 리스크는 수용).
+
+  // 주문은 **내 캐릭터가 있는 서버에만** 만든다. 활성 서버는 검증 없는 쿠키라, 값을 바꿔 액션을 직접
+  // 부르면 캐릭터 없는 서버로 주문이 생기고 결제 뒤 지급이 받을 지갑 없이 끝난다(웹·앱 결제 공통 관문).
+  // 정상 경로에서는 레이아웃이 먼저 원래 서버로 되돌리므로 여기까지 오지 않는다.
+  if (!(await hasCharacterOn(userId, serverId))) throw new PurchaseError('NO_CHARACTER_ON_SERVER');
 
   // 상품 해석 — 배틀패스 구간(bp_*) vs 상점 상품. 금액·지급은 서버 권위.
   const bp = parseBpProduct(productId);
@@ -473,6 +480,7 @@ export async function completePurchase(
       await tx.transaction((sp) =>
         creditMileageForOrder(sp, {
           userId: order.userId,
+          serverId: order.serverId, // 결제한 서버에 쌓인다(0211) — 다이아 지급과 같은 귀속
           orderId: order.id,
           amountKrw: Number(order.amountKrw),
           note: `${productDisplayName(order.productCode)} ₩${Number(order.amountKrw).toLocaleString('ko-KR')}`,

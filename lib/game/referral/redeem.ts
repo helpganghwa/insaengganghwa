@@ -8,7 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { referralAttributions } from '@/lib/db/schema/social';
-import { sendPushToUser } from '@/lib/push/send';
+import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import { INVITE_BOX_PER_REFERRAL, INVITE_DIAMOND_PER_REFERRAL } from './stats';
 
 export class ReferralError extends Error {
@@ -53,15 +53,16 @@ export async function attributeReferralFromShare(
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
-    // publicCode 단일 해석(2026-07-22) — 닉네임 폴백 제거(파일 헤더 참조). 다중 서버 캐릭터가
-    // 있을 수 있어 마지막 활성 서버 닉을 우선(표시용).
-    const [referrer] = await tx
-      .select({ id: profiles.id, nickname: characters.nickname, lastServerId: profiles.lastServerId })
+    // publicCode 단일 해석(2026-07-22) — 닉네임 폴백 제거(파일 헤더 참조). 추천인의 캐릭터를 전부
+    // 읽는다(서버 수만큼이라 몇 행) — 맨 앞 = 마지막으로 하던 서버, 그다음 서버 번호순. 닉네임 표시와
+    // 보상 서버 결정(아래)에 같이 쓴다.
+    const referrerRows = await tx
+      .select({ id: profiles.id, nickname: characters.nickname, serverId: characters.serverId })
       .from(profiles)
       .innerJoin(characters, eq(characters.userId, profiles.id))
       .where(eq(profiles.publicCode, shareCode))
-      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`)
-      .limit(1);
+      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`, characters.serverId);
+    const referrer = referrerRows[0];
     if (!referrer) return null;
 
     if (referrer.id === newUserId) {
@@ -119,11 +120,12 @@ export async function attributeReferralFromShare(
     // mailbox row — referrer가 명시적 수령. claim 시 다이아 + 슬롯별 상자 가산.
     // 상자는 3슬롯 균등 분배 — 상수에서 파생(payload 하드코딩 드리프트 방지).
     // 보상 메일은 **링크가 생성된 서버** 우편함으로(SERVER.md 경계규칙 4, 2026-08-07 확정) —
-    // 신규 유저가 어느 서버로 가입하든 링크 서버에 지급. 레거시 쿠키(서버 미전달)만 활성 서버 폴백.
+    // 신규 유저가 어느 서버로 가입하든 링크 서버에 지급.
+    // 단 **추천인 캐릭터가 있는 서버에만** 넣는다 — 링크의 서버 번호는 쿼리스트링이라 누구나 바꿀 수
+    // 있고, 캐릭터 없는 서버 우편함에 들어간 보상은 열어 볼 방법이 없다(우편함은 접속 서버 것만 보인다).
+    // 링크 서버에 캐릭터가 없거나 레거시 쿠키(서버 미전달)면 마지막으로 하던 서버 → 가장 낮은 서버 순.
     const rewardServerId =
-      Number.isInteger(linkServerId) && (linkServerId as number) >= 1 && (linkServerId as number) <= 32767
-        ? (linkServerId as number)
-        : referrer.lastServerId;
+      referrerRows.find((r) => r.serverId === linkServerId)?.serverId ?? referrer.serverId;
     const invitePerSlot = INVITE_BOX_PER_REFERRAL / 3;
     await tx.insert(mailbox).values({
       userId: referrer.id,
@@ -143,13 +145,15 @@ export async function attributeReferralFromShare(
       .set({ rewarded: true })
       .where(eq(referralAttributions.newUserId, newUserId));
 
-    return { referrerId: referrer.id, referrerNickname: referrer.nickname, newUserNickname };
+    return { referrerId: referrer.id, referrerNickname: referrer.nickname, newUserNickname, rewardServerId };
   });
   if (!result) return null;
 
-  // 2. push 알림 — referrer에게 즉시 발송(tx 밖, best-effort).
+  // 2. push 알림 — referrer에게 즉시 발송(tx 밖, best-effort). 보상이 들어간 서버에 접속해 있을 때만
+  // 보낸다(SERVER.md 경계규칙 1) — 다른 서버에서 알림을 눌러 /mail로 가면 그 우편이 없다.
   try {
-    await sendPushToUser(result.referrerId, {
+    const [target] = await filterByActiveServer([result.referrerId], result.rewardServerId);
+    if (target) await sendPushToUser(target, {
       title: '친구 초대 보상',
       body: `${result.newUserNickname}님이 가입했어요! 💎 ${INVITE_DIAMOND_PER_REFERRAL} + 📦 ${INVITE_BOX_PER_REFERRAL}개 받기`,
       url: '/mail',

@@ -20,7 +20,7 @@ export async function setChatBlockAction(
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (!/^[0-9a-f-]{36}$/i.test(blockedUserId) || blockedUserId === userId)
     return { status: 'error', message: '잘못된 요청입니다.' };
-  const r = await setChatBlock(userId, blockedUserId, on);
+  const r = await setChatBlock(userId, blockedUserId, on, await getActiveServerId());
   if (r === 'CAP') return { status: 'error', message: '차단은 최대 100명까지 가능합니다.' };
   return { status: 'ok' };
 }

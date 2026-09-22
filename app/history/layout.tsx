@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 
 import { PAPER, SERIF } from '@/app/wiki/theme';
@@ -64,7 +64,11 @@ export default function HistoryLayout({ children }: { children: ReactNode }) {
           <Link href="/history" style={SERIF} className="shrink-0 text-[17px] font-bold">
             역사 위키
           </Link>
-          <HistoryNav siteOrigin={SITE_ORIGIN} />
+          {/* useSearchParams(?s= 유지)를 쓰므로 Suspense 경계 안에 — 없으면 정적 페이지
+              (/history/people)가 CSR 바일아웃으로 빌드에서 막힌다(2026-09-21 ⑦). */}
+          <Suspense fallback={<div className="h-[30px]" />}>
+            <HistoryNav siteOrigin={SITE_ORIGIN} />
+          </Suspense>
         </div>
       </header>
       <div className="min-h-0 flex-1">{children}</div>

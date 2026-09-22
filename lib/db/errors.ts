@@ -31,6 +31,21 @@ export function isUniqueViolation(e: unknown): boolean {
 }
 
 /**
+ * Postgres exclusion_violation(23P01) — 제외 제약 위반.
+ * 닉네임 소유 제약(0207 characters_nickname_owner_excl)이 이 코드를 낸다. 유니크(23505)와
+ * **다른 코드**라 23505만 보던 자리에 반드시 함께 넣어야 한다 — 빠뜨리면 '이미 쓰는 이름'이
+ * 일반 오류로 새어 나가고, 자동 닉 재추첨 루프가 첫 충돌에서 죽는다.
+ */
+export function isExclusionViolation(e: unknown): boolean {
+  return pgErrorCode(e) === '23P01';
+}
+
+/** 닉네임이 이미 임자가 있는가 — 유니크(서버 내)든 소유 제약(계정 간)이든 같은 뜻(0207). */
+export function isNicknameTaken(e: unknown): boolean {
+  return isUniqueViolation(e) || isExclusionViolation(e);
+}
+
+/**
  * cause 체인에서 위반된 제약 이름(constraint_name) — postgres.js PostgresError의 snake_case 필드.
  *
  * 한 문장이 서로 다른 유니크 제약 여러 개에 걸릴 수 있을 때(예: characters INSERT는

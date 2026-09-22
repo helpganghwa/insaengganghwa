@@ -659,7 +659,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "kintsugi_master",
   cat: "아이템 발동",
-  cond: "흑금 대도를 +100 이상으로 장착 중인 동안",
+  cond: "흑금 대도를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -671,7 +671,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "starfield_master",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검을 +200 이상으로 장착 중인 동안",
+  cond: "별자리가 흐르는 장검을 +200 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -683,7 +683,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "frog_prince",
   cat: "아이템 발동",
-  cond: "퉤! 하는 대롱 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 장착 중인 동안",
+  cond: "퉤! 하는 대롱 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -697,7 +697,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "true_witch",
   cat: "아이템 발동",
-  cond: "마녀의 등불 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 장착 중인 동안",
+  cond: "마녀의 등불 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -711,7 +711,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "winter_itself",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 설산 파수의 갑주 + 설화의 관을 +50 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도 + 설산 파수의 갑주 + 설화의 관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -725,7 +725,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dawn_knight",
   cat: "아이템 발동",
-  cond: "동트는 맹세 + 여명의 벽 + 새벽지기의 표식을 +50 이상으로 장착 중인 동안",
+  cond: "동트는 맹세 + 여명의 벽 + 새벽지기의 표식을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -739,7 +739,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dragon_heir",
   cat: "아이템 발동",
-  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 화룡의 뿔관을 +100 이상으로 장착 중인 동안",
+  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 화룡의 뿔관을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -927,7 +927,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "model_student",
   cat: "아이템 발동",
-  cond: "왕립 학원 교복 + 금테 둥근 안경을 +10 이상으로 장착 중인 동안",
+  cond: "왕립 학원 교복 + 금테 둥근 안경을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -940,7 +940,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "night_noble",
   cat: "아이템 발동",
-  cond: "진홍의 가는 검 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 장착 중인 동안",
+  cond: "진홍의 가는 검 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -954,7 +954,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "valkyrie",
   cat: "아이템 발동",
-  cond: "왕기의 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +70 이상으로 장착 중인 동안",
+  cond: "왕기의 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -968,7 +968,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "grim_envoy",
   cat: "아이템 발동",
-  cond: "혼불낫 + 갈까마귀 로브 + 재가 흐르는 모래시계를 +70 이상으로 장착 중인 동안",
+  cond: "혼불낫 + 갈까마귀 로브 + 재가 흐르는 모래시계를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -982,7 +982,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "archangel",
   cat: "아이템 발동",
-  cond: "해오름검 + 아침빛 예복 + 하얀 깃 날개를 +70 이상으로 장착 중인 동안",
+  cond: "해오름검 + 아침빛 예복 + 하얀 깃 날개를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -996,7 +996,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "outlaw",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총을 +100 이상으로 장착 중인 동안",
+  cond: "금당초 쌍권총을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1062,7 +1062,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "winter_blade",
   cat: "아이템 발동",
-  cond: "눈꽃 대도를 +100 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1074,7 +1074,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "volcano_heart",
   cat: "아이템 발동",
-  cond: "용암을 가둔 대검을 +100 이상으로 장착 중인 동안",
+  cond: "용암을 가둔 대검을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1086,7 +1086,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lotus_warrior",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창을 +50 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1098,7 +1098,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "star_mage",
   cat: "아이템 발동",
-  cond: "유성의 지팡이를 +50 이상으로 장착 중인 동안",
+  cond: "유성의 지팡이를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1110,7 +1110,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "thunder_emperor",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창을 +150 이상으로 장착 중인 동안",
+  cond: "벼락을 박은 창을 +150 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1122,7 +1122,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "one_shot",
   cat: "아이템 발동",
-  cond: "상아빛 한 발을 +70 이상으로 장착 중인 동안",
+  cond: "상아빛 한 발을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1134,7 +1134,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "blue_sky",
   cat: "아이템 발동",
-  cond: "창천검을 +10 이상으로 장착 중인 동안",
+  cond: "창천검을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1146,7 +1146,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "phoenix_archer",
   cat: "아이템 발동",
-  cond: "재에서 당기는 활을 +70 이상으로 장착 중인 동안",
+  cond: "재에서 당기는 활을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1158,7 +1158,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "shaman",
   cat: "아이템 발동",
-  cond: "묻지 않는 지팡이 + 깃털 두른 침묵 + 조상의 얼굴을 +30 이상으로 장착 중인 동안",
+  cond: "묻지 않는 지팡이 + 깃털 두른 침묵 + 조상의 얼굴을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1172,7 +1172,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "angler",
   cat: "아이템 발동",
-  cond: "도롱이 + 반딧불 통발을 +1 이상으로 장착 중인 동안",
+  cond: "도롱이 + 반딧불 통발을 +1 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1185,7 +1185,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "paladin",
   cat: "아이템 발동",
-  cond: "성광 갑주 + 백은 날개 투구를 +70 이상으로 장착 중인 동안",
+  cond: "성광 갑주 + 백은 날개 투구를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1198,7 +1198,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "astrologer",
   cat: "아이템 발동",
-  cond: "성좌의 망토 + 대답하지 않는 나침반 + 유성의 지팡이를 +50 이상으로 장착 중인 동안",
+  cond: "성좌의 망토 + 대답하지 않는 나침반 + 유성의 지팡이를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1212,7 +1212,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "masquerade",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 이름 없는 드레스 + 이름을 가린 가면을 +30 이상으로 장착 중인 동안",
+  cond: "무도회의 한 수 + 이름 없는 드레스 + 이름을 가린 가면을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1226,7 +1226,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "headmaster",
   cat: "아이템 발동",
-  cond: "학장복 + 금테 둥근 안경을 +10 이상으로 장착 중인 동안",
+  cond: "학장복 + 금테 둥근 안경을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1239,7 +1239,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "coronation",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 별을 두른 망토 + 별이 박힌 왕관을 +100 이상으로 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 별을 두른 망토 + 별이 박힌 왕관을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1325,7 +1325,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "frog_sniper",
   cat: "아이템 발동",
-  cond: "퉤! 하는 대롱을 +10 이상으로 장착 중인 동안",
+  cond: "퉤! 하는 대롱을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1337,7 +1337,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "gentleman",
   cat: "아이템 발동",
-  cond: "매 머리 지팡이검을 +30 이상으로 장착 중인 동안",
+  cond: "매 머리 지팡이검을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1349,7 +1349,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "cupid",
   cat: "아이템 발동",
-  cond: "두근 화살을 +30 이상으로 장착 중인 동안",
+  cond: "두근 화살을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1361,7 +1361,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "hunter",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈를 +30 이상으로 장착 중인 동안",
+  cond: "돌아오는 뼈를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1373,7 +1373,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "twin_saber",
   cat: "아이템 발동",
-  cond: "청홍 쌍검을 +50 이상으로 장착 중인 동안",
+  cond: "청홍 쌍검을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1385,7 +1385,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "standard_bearer",
   cat: "아이템 발동",
-  cond: "왕기의 창을 +50 이상으로 장착 중인 동안",
+  cond: "왕기의 창을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1397,7 +1397,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ash_reaper",
   cat: "아이템 발동",
-  cond: "잿불낫을 +50 이상으로 장착 중인 동안",
+  cond: "잿불낫을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1409,7 +1409,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dusk",
   cat: "아이템 발동",
-  cond: "노을이 앉는 검을 +50 이상으로 장착 중인 동안",
+  cond: "노을이 앉는 검을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1421,7 +1421,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "sky_knight",
   cat: "아이템 발동",
-  cond: "창궁검을 +70 이상으로 장착 중인 동안",
+  cond: "창궁검을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1433,7 +1433,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dragon_slayer",
   cat: "아이템 발동",
-  cond: "포효하는 용턱을 +70 이상으로 장착 중인 동안",
+  cond: "포효하는 용턱을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1445,7 +1445,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "shadow",
   cat: "아이템 발동",
-  cond: "쌍익 단검을 +70 이상으로 장착 중인 동안",
+  cond: "쌍익 단검을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1457,7 +1457,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "forge_heart",
   cat: "아이템 발동",
-  cond: "화심의 망치를 +70 이상으로 장착 중인 동안",
+  cond: "화심의 망치를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1469,7 +1469,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "grim_reaper",
   cat: "아이템 발동",
-  cond: "혼불낫을 +100 이상으로 장착 중인 동안",
+  cond: "혼불낫을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1481,7 +1481,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "necromancer",
   cat: "아이템 발동",
-  cond: "초혼의 해골장을 +100 이상으로 장착 중인 동안",
+  cond: "초혼의 해골장을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1493,7 +1493,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "morning_blade",
   cat: "아이템 발동",
-  cond: "해오름검을 +100 이상으로 장착 중인 동안",
+  cond: "해오름검을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1505,7 +1505,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "twin_wings",
   cat: "아이템 발동",
-  cond: "한 쌍의 깃을 +100 이상으로 장착 중인 동안",
+  cond: "한 쌍의 깃을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1517,7 +1517,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "wanderer",
   cat: "아이템 발동",
-  cond: "모래바람의 겹옷 + 용비늘 가방 + 돌아오는 뼈를 +30 이상으로 장착 중인 동안",
+  cond: "모래바람의 겹옷 + 용비늘 가방 + 돌아오는 뼈를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1531,7 +1531,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "little_angel",
   cat: "아이템 발동",
-  cond: "두근 화살 + 구름 갑옷 + 철사로 띄운 후광을 +30 이상으로 장착 중인 동안",
+  cond: "두근 화살 + 구름 갑옷 + 철사로 띄운 후광을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1545,7 +1545,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lily_spirit",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 수련이 피는 드레스 + 수련 화관을 +50 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창 + 수련이 피는 드레스 + 수련 화관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1559,7 +1559,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fire_dancer",
   cat: "아이템 발동",
-  cond: "춤추는 쌍불꽃 + 불길 케이프 + 흑요 봉황선을 +50 이상으로 장착 중인 동안",
+  cond: "춤추는 쌍불꽃 + 불길 케이프 + 흑요 봉황선을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1573,7 +1573,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "beast_king",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +70 이상으로 장착 중인 동안",
+  cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1587,7 +1587,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "royal_guard",
   cat: "아이템 발동",
-  cond: "창궁검 + 쪽빛 기사복 + 푸른 깃 견장을 +70 이상으로 장착 중인 동안",
+  cond: "창궁검 + 쪽빛 기사복 + 푸른 깃 견장을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1613,7 +1613,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "top_patron",
   cat: "조건부",
-  cond: "누적 후원액 1위인 동안",
+  cond: "현재 서버 누적 후원액 1위인 동안",
   diff: "어려움"
  },
  {
@@ -1679,7 +1679,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "seraph",
   cat: "아이템 발동",
-  cond: "세라핌의 갑주를 +70 이상으로 장착 중인 동안",
+  cond: "세라핌의 갑주를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1691,7 +1691,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "black_knight",
   cat: "아이템 발동",
-  cond: "적금 갑주를 +50 이상으로 장착 중인 동안",
+  cond: "적금 갑주를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1703,7 +1703,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "field_marshal",
   cat: "아이템 발동",
-  cond: "금장 군복을 +100 이상으로 장착 중인 동안",
+  cond: "금장 군복을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -1715,7 +1715,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "snow_priest",
   cat: "아이템 발동",
-  cond: "설야 예복을 +50 이상으로 장착 중인 동안",
+  cond: "설야 예복을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1727,7 +1727,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "firebird",
   cat: "아이템 발동",
-  cond: "불새 깃 드레스를 +70 이상으로 장착 중인 동안",
+  cond: "불새 깃 드레스를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1739,7 +1739,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "forest_keeper",
   cat: "아이템 발동",
-  cond: "숲지기의 한 벌을 +30 이상으로 장착 중인 동안",
+  cond: "숲지기의 한 벌을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1751,7 +1751,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "star_reader",
   cat: "아이템 발동",
-  cond: "별을 읽는 외투를 +50 이상으로 장착 중인 동안",
+  cond: "별을 읽는 외투를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1763,7 +1763,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "penitent",
   cat: "아이템 발동",
-  cond: "사슬과 한쪽 날개를 +70 이상으로 장착 중인 동안",
+  cond: "사슬과 한쪽 날개를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1775,7 +1775,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "bog_warden",
   cat: "아이템 발동",
-  cond: "늪빛 흉갑을 +50 이상으로 장착 중인 동안",
+  cond: "늪빛 흉갑을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1787,7 +1787,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ascetic",
   cat: "아이템 발동",
-  cond: "한쪽 어깨 띠를 +30 이상으로 장착 중인 동안",
+  cond: "한쪽 어깨 띠를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1799,7 +1799,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lion_knight",
   cat: "아이템 발동",
-  cond: "백금 사자 갑주를 +70 이상으로 장착 중인 동안",
+  cond: "백금 사자 갑주를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1811,7 +1811,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "herald",
   cat: "아이템 발동",
-  cond: "푸른 서약 기사복을 +50 이상으로 장착 중인 동안",
+  cond: "푸른 서약 기사복을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1823,7 +1823,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "bog_witch",
   cat: "아이템 발동",
-  cond: "이끼 자란 넝마 드레스를 +50 이상으로 장착 중인 동안",
+  cond: "이끼 자란 넝마 드레스를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1835,7 +1835,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "self_saint",
   cat: "아이템 발동",
-  cond: "자칭 훈장 사제복을 +30 이상으로 장착 중인 동안",
+  cond: "자칭 훈장 사제복을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1847,7 +1847,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lava_dancer",
   cat: "아이템 발동",
-  cond: "용암으로 짠 드레스를 +70 이상으로 장착 중인 동안",
+  cond: "용암으로 짠 드레스를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1859,7 +1859,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "vampire",
   cat: "아이템 발동",
-  cond: "진홍의 가는 검을 +70 이상으로 장착 중인 동안",
+  cond: "진홍의 가는 검을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1871,7 +1871,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lantern_keeper",
   cat: "아이템 발동",
-  cond: "마녀의 등불을 +30 이상으로 장착 중인 동안",
+  cond: "마녀의 등불을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1883,7 +1883,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "herbalist",
   cat: "아이템 발동",
-  cond: "약초꾼의 버섯 모자를 +10 이상으로 장착 중인 동안",
+  cond: "약초꾼의 버섯 모자를 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1895,7 +1895,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "little_devil",
   cat: "아이템 발동",
-  cond: "작은 악마의 뿔을 +10 이상으로 장착 중인 동안",
+  cond: "작은 악마의 뿔을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1907,7 +1907,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "drunkard",
   cat: "아이템 발동",
-  cond: "한 잔의 보람을 +10 이상으로 장착 중인 동안",
+  cond: "한 잔의 보람을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1919,7 +1919,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "feather_style",
   cat: "아이템 발동",
-  cond: "백은 깃 머리핀을 +10 이상으로 장착 중인 동안",
+  cond: "백은 깃 머리핀을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -1931,7 +1931,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "one_eye",
   cat: "아이템 발동",
-  cond: "가려야 보이는 안대를 +30 이상으로 장착 중인 동안",
+  cond: "가려야 보이는 안대를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1943,7 +1943,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "trumpeter",
   cat: "아이템 발동",
-  cond: "부르면 모이는 뿔피리를 +30 이상으로 장착 중인 동안",
+  cond: "부르면 모이는 뿔피리를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1955,7 +1955,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "drummer",
   cat: "아이템 발동",
-  cond: "북이 된 방패를 +30 이상으로 장착 중인 동안",
+  cond: "북이 된 방패를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1967,7 +1967,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "court_dancer",
   cat: "아이템 발동",
-  cond: "진홍 봉황선을 +30 이상으로 장착 중인 동안",
+  cond: "진홍 봉황선을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1979,7 +1979,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "tribal_banner",
   cat: "아이템 발동",
-  cond: "조상의 깃발을 +30 이상으로 장착 중인 동안",
+  cond: "조상의 깃발을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -1991,7 +1991,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "mechanic",
   cat: "아이템 발동",
-  cond: "재를 막는 눈을 +30 이상으로 장착 중인 동안",
+  cond: "재를 막는 눈을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2003,7 +2003,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ice_heart",
   cat: "아이템 발동",
-  cond: "식지 않는 심장을 +50 이상으로 장착 중인 동안",
+  cond: "식지 않는 심장을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2015,7 +2015,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "iron_fist",
   cat: "아이템 발동",
-  cond: "맹세를 쥔 손을 +50 이상으로 장착 중인 동안",
+  cond: "맹세를 쥔 손을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2027,7 +2027,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lion_heart",
   cat: "아이템 발동",
-  cond: "사자의 증표를 +50 이상으로 장착 중인 동안",
+  cond: "사자의 증표를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2039,7 +2039,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fur_collar",
   cat: "아이템 발동",
-  cond: "설백 목도리를 +30 이상으로 장착 중인 동안",
+  cond: "설백 목도리를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2051,7 +2051,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "incense_keeper",
   cat: "아이템 발동",
-  cond: "흔들리는 향로를 +30 이상으로 장착 중인 동안",
+  cond: "흔들리는 향로를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2063,7 +2063,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dragon_face",
   cat: "아이템 발동",
-  cond: "용면 투구를 +70 이상으로 장착 중인 동안",
+  cond: "용면 투구를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2075,7 +2075,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "snow_monk",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 설야 예복 + 흔들리는 향로를 +50 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도 + 설야 예복 + 흔들리는 향로를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2089,7 +2089,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fallen_priest",
   cat: "아이템 발동",
-  cond: "초혼의 해골장 + 자칭 훈장 사제복 + 철사로 띄운 후광을 +70 이상으로 장착 중인 동안",
+  cond: "초혼의 해골장 + 자칭 훈장 사제복 + 철사로 띄운 후광을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2103,7 +2103,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "volcano_smith",
   cat: "아이템 발동",
-  cond: "화심의 망치 + 적금 갑주 + 재를 막는 눈을 +50 이상으로 장착 중인 동안",
+  cond: "화심의 망치 + 적금 갑주 + 재를 막는 눈을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2117,7 +2117,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "thunder_general",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창 + 금장 군복 + 푸른 깃 견장을 +100 이상으로 장착 중인 동안",
+  cond: "벼락을 박은 창 + 금장 군복 + 푸른 깃 견장을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2131,7 +2131,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "night_visitor",
   cat: "아이템 발동",
-  cond: "쌍익 단검 + 늪빛 흉갑 + 상아 반가면을 +50 이상으로 장착 중인 동안",
+  cond: "쌍익 단검 + 늪빛 흉갑 + 상아 반가면을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2145,7 +2145,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "honor_student",
   cat: "아이템 발동",
-  cond: "왕립 학원 교복을 +10 이상으로 장착 중인 동안",
+  cond: "왕립 학원 교복을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2157,7 +2157,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fluffy_cloud",
   cat: "아이템 발동",
-  cond: "구름 갑옷을 +10 이상으로 장착 중인 동안",
+  cond: "구름 갑옷을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2169,7 +2169,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "frog_person",
   cat: "아이템 발동",
-  cond: "개구리 탈 망토를 +10 이상으로 장착 중인 동안",
+  cond: "개구리 탈 망토를 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2181,7 +2181,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "peddler",
   cat: "아이템 발동",
-  cond: "용비늘 가방을 +10 이상으로 장착 중인 동안",
+  cond: "용비늘 가방을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2193,7 +2193,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "flower_crown",
   cat: "아이템 발동",
-  cond: "수련 화관을 +10 이상으로 장착 중인 동안",
+  cond: "수련 화관을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2205,7 +2205,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "pointy_hat",
   cat: "아이템 발동",
-  cond: "마녀의 뾰족 모자를 +10 이상으로 장착 중인 동안",
+  cond: "마녀의 뾰족 모자를 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2217,7 +2217,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "bookworm",
   cat: "아이템 발동",
-  cond: "금테 둥근 안경을 +10 이상으로 장착 중인 동안",
+  cond: "금테 둥근 안경을 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2229,7 +2229,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "firefly",
   cat: "아이템 발동",
-  cond: "반딧불 충전기를 +10 이상으로 장착 중인 동안",
+  cond: "반딧불 충전기를 +10 이상으로 장착",
   diff: "쉬움",
   req: {
    items: [
@@ -2241,7 +2241,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "azure_knight",
   cat: "아이템 발동",
-  cond: "쪽빛 기사복을 +30 이상으로 장착 중인 동안",
+  cond: "쪽빛 기사복을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2253,7 +2253,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "pumpkin_glow",
   cat: "아이템 발동",
-  cond: "호박등 드레스를 +30 이상으로 장착 중인 동안",
+  cond: "호박등 드레스를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2265,7 +2265,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "old_professor",
   cat: "아이템 발동",
-  cond: "학장복을 +30 이상으로 장착 중인 동안",
+  cond: "학장복을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2277,7 +2277,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "silence",
   cat: "아이템 발동",
-  cond: "깃털 두른 침묵을 +30 이상으로 장착 중인 동안",
+  cond: "깃털 두른 침묵을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2289,7 +2289,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lily_pad",
   cat: "아이템 발동",
-  cond: "수련이 피는 드레스를 +30 이상으로 장착 중인 동안",
+  cond: "수련이 피는 드레스를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2301,7 +2301,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ball_night",
   cat: "아이템 발동",
-  cond: "이름 없는 드레스를 +30 이상으로 장착 중인 동안",
+  cond: "이름 없는 드레스를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2313,7 +2313,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "white_feather",
   cat: "아이템 발동",
-  cond: "하얀 깃 날개를 +30 이상으로 장착 중인 동안",
+  cond: "하얀 깃 날개를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2325,7 +2325,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "hourglass",
   cat: "아이템 발동",
-  cond: "재가 흐르는 모래시계를 +30 이상으로 장착 중인 동안",
+  cond: "재가 흐르는 모래시계를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2337,7 +2337,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ancestor",
   cat: "아이템 발동",
-  cond: "손목에 감은 조상을 +30 이상으로 장착 중인 동안",
+  cond: "손목에 감은 조상을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2349,7 +2349,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "star_gazer",
   cat: "아이템 발동",
-  cond: "대답하지 않는 나침반을 +30 이상으로 장착 중인 동안",
+  cond: "대답하지 않는 나침반을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2361,7 +2361,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "nomad_fox",
   cat: "아이템 발동",
-  cond: "모래바람의 겹옷을 +30 이상으로 장착 중인 동안",
+  cond: "모래바람의 겹옷을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2373,7 +2373,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "red_night",
   cat: "아이템 발동",
-  cond: "진홍 레이스 드레스를 +50 이상으로 장착 중인 동안",
+  cond: "진홍 레이스 드레스를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2385,7 +2385,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "raven",
   cat: "아이템 발동",
-  cond: "갈까마귀 로브를 +50 이상으로 장착 중인 동안",
+  cond: "갈까마귀 로브를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2397,7 +2397,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "starlight_cloak",
   cat: "아이템 발동",
-  cond: "별을 두른 망토를 +50 이상으로 장착 중인 동안",
+  cond: "별을 두른 망토를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2409,7 +2409,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "snow_flower",
   cat: "아이템 발동",
-  cond: "설화의 관을 +50 이상으로 장착 중인 동안",
+  cond: "설화의 관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2421,7 +2421,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fire_dragon",
   cat: "아이템 발동",
-  cond: "화룡의 뿔관을 +50 이상으로 장착 중인 동안",
+  cond: "화룡의 뿔관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2433,7 +2433,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "obsidian",
   cat: "아이템 발동",
-  cond: "흑요 봉황선을 +50 이상으로 장착 중인 동안",
+  cond: "흑요 봉황선을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2445,7 +2445,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "radiance",
   cat: "아이템 발동",
-  cond: "아침빛 예복을 +50 이상으로 장착 중인 동안",
+  cond: "아침빛 예복을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2457,7 +2457,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ember_silk",
   cat: "아이템 발동",
-  cond: "화문 예복을 +50 이상으로 장착 중인 동안",
+  cond: "화문 예복을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2469,7 +2469,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "battle_wings",
   cat: "아이템 발동",
-  cond: "창공의 전투복을 +70 이상으로 장착 중인 동안",
+  cond: "창공의 전투복을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2481,7 +2481,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "holy_light",
   cat: "아이템 발동",
-  cond: "성광 갑주를 +70 이상으로 장착 중인 동안",
+  cond: "성광 갑주를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2493,7 +2493,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "black_dragon",
   cat: "아이템 발동",
-  cond: "흑룡의 비늘갑을 +70 이상으로 장착 중인 동안",
+  cond: "흑룡의 비늘갑을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2505,7 +2505,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "archangel_chief",
   cat: "아이템 발동",
-  cond: "해오름검 + 세라핌의 갑주 + 하얀 깃 날개를 +70 이상으로 장착 중인 동안",
+  cond: "해오름검 + 세라핌의 갑주 + 하얀 깃 날개를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2519,7 +2519,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "forest_hermit",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 장착 중인 동안",
+  cond: "돌아오는 뼈 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2605,7 +2605,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "red_ball",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 진홍 봉황선을 +50 이상으로 장착 중인 동안",
+  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 진홍 봉황선을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2619,7 +2619,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "gunslinger",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총 + 모래바람의 겹옷 + 재를 막는 눈을 +50 이상으로 장착 중인 동안",
+  cond: "금당초 쌍권총 + 모래바람의 겹옷 + 재를 막는 눈을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2633,7 +2633,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "phantom_thief",
   cat: "아이템 발동",
-  cond: "상아빛 한 발 + 별을 읽는 외투 + 상아 반가면을 +50 이상으로 장착 중인 동안",
+  cond: "상아빛 한 발 + 별을 읽는 외투 + 상아 반가면을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2647,7 +2647,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "star_navigator",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검 + 성좌의 망토 + 별이 박힌 왕관을 +100 이상으로 장착 중인 동안",
+  cond: "별자리가 흐르는 장검 + 성좌의 망토 + 별이 박힌 왕관을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2661,7 +2661,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "forest_witch",
   cat: "아이템 발동",
-  cond: "마녀의 등불 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 장착 중인 동안",
+  cond: "마녀의 등불 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2675,7 +2675,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "lava_lord",
   cat: "아이템 발동",
-  cond: "용암을 가둔 대검 + 화문 예복 + 화룡의 뿔관을 +100 이상으로 장착 중인 동안",
+  cond: "용암을 가둔 대검 + 화문 예복 + 화룡의 뿔관을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2689,7 +2689,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "gardener",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 숲지기의 한 벌 + 수련 화관을 +30 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창 + 숲지기의 한 벌 + 수련 화관을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2703,7 +2703,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "kings_blade",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 금장 군복 + 맹세를 쥔 손을 +70 이상으로 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 금장 군복 + 맹세를 쥔 손을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2717,7 +2717,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "marksman",
   cat: "아이템 발동",
-  cond: "재에서 당기는 활 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +50 이상으로 장착 중인 동안",
+  cond: "재에서 당기는 활 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2773,7 +2773,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dawn_prayer",
   cat: "아이템 발동",
-  cond: "해오름검 + 설야 예복 + 흔들리는 향로를 +50 이상으로 장착 중인 동안",
+  cond: "해오름검 + 설야 예복 + 흔들리는 향로를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2787,7 +2787,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "phoenix_set",
   cat: "아이템 발동",
-  cond: "재에서 당기는 활 + 불새 깃 드레스 + 진홍 봉황선을 +70 이상으로 장착 중인 동안",
+  cond: "재에서 당기는 활 + 불새 깃 드레스 + 진홍 봉황선을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2801,7 +2801,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "abyss_lord",
   cat: "아이템 발동",
-  cond: "혼불낫 + 도금이 벗겨진 갑주 + 작은 악마의 뿔을 +100 이상으로 장착 중인 동안",
+  cond: "혼불낫 + 도금이 벗겨진 갑주 + 작은 악마의 뿔을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2815,7 +2815,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "silver_knight",
   cat: "아이템 발동",
-  cond: "동트는 맹세 + 세라핌의 갑주 + 백은 날개 투구를 +50 이상으로 장착 중인 동안",
+  cond: "동트는 맹세 + 세라핌의 갑주 + 백은 날개 투구를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2829,7 +2829,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "marsh_patrol",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 개구리 탈 망토 + 반딧불 통발을 +30 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창 + 개구리 탈 망토 + 반딧불 통발을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2843,7 +2843,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "light_maiden",
   cat: "아이템 발동",
-  cond: "유성의 지팡이 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 장착 중인 동안",
+  cond: "유성의 지팡이 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2857,7 +2857,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "warpath",
   cat: "아이템 발동",
-  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 장착 중인 동안",
+  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2871,7 +2871,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "festival_night",
   cat: "아이템 발동",
-  cond: "춤추는 쌍불꽃 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 장착 중인 동안",
+  cond: "춤추는 쌍불꽃 + 호박등 드레스 + 마녀의 뾰족 모자를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2885,7 +2885,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "night_walk",
   cat: "아이템 발동",
-  cond: "흑금 대도 + 갈까마귀 로브 + 가려야 보이는 안대를 +50 이상으로 장착 중인 동안",
+  cond: "흑금 대도 + 갈까마귀 로브 + 가려야 보이는 안대를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2899,7 +2899,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "glacier_knight",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2913,7 +2913,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "steppe_wind",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 모래바람의 겹옷 + 조상의 깃발을 +50 이상으로 장착 중인 동안",
+  cond: "돌아오는 뼈 + 모래바람의 겹옷 + 조상의 깃발을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2927,7 +2927,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "court_mage",
   cat: "아이템 발동",
-  cond: "유성의 지팡이 + 별을 읽는 외투 + 별이 박힌 왕관을 +70 이상으로 장착 중인 동안",
+  cond: "유성의 지팡이 + 별을 읽는 외투 + 별이 박힌 왕관을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2941,7 +2941,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ash_judge",
   cat: "아이템 발동",
-  cond: "잿불낫 + 화문 예복 + 재가 흐르는 모래시계를 +70 이상으로 장착 중인 동안",
+  cond: "잿불낫 + 화문 예복 + 재가 흐르는 모래시계를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -2979,7 +2979,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "fire_and_ice",
   cat: "아이템 발동",
-  cond: "용암을 가둔 대검 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 장착 중인 동안",
+  cond: "용암을 가둔 대검 + 설산 파수의 갑주 + 빙정 방패를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -2993,7 +2993,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "heaven_knight",
   cat: "아이템 발동",
-  cond: "창궁검 + 아침빛 예복 + 하얀 깃 날개를 +50 이상으로 장착 중인 동안",
+  cond: "창궁검 + 아침빛 예복 + 하얀 깃 날개를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3007,7 +3007,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "steam",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 화문 예복 + 재가 흐르는 모래시계를 +50 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창 + 화문 예복 + 재가 흐르는 모래시계를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3021,7 +3021,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "frozen_marsh",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3035,7 +3035,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "savage_noble",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 금장 군복 + 사자의 증표를 +50 이상으로 장착 중인 동안",
+  cond: "돌아오는 뼈 + 금장 군복 + 사자의 증표를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3049,7 +3049,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "foreign_god",
   cat: "아이템 발동",
-  cond: "해오름검 + 깃털 두른 침묵 + 조상의 얼굴을 +100 이상으로 장착 중인 동안",
+  cond: "해오름검 + 깃털 두른 침묵 + 조상의 얼굴을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3063,7 +3063,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "dragon_crown",
   cat: "아이템 발동",
-  cond: "포효하는 용턱 + 백금 사자 갑주 + 별이 박힌 왕관을 +100 이상으로 장착 중인 동안",
+  cond: "포효하는 용턱 + 백금 사자 갑주 + 별이 박힌 왕관을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3077,7 +3077,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "transfer_student",
   cat: "아이템 발동",
-  cond: "퉤! 하는 대롱 + 왕립 학원 교복 + 반딧불 통발을 +30 이상으로 장착 중인 동안",
+  cond: "퉤! 하는 대롱 + 왕립 학원 교복 + 반딧불 통발을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3091,7 +3091,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ash_angel",
   cat: "아이템 발동",
-  cond: "재에서 당기는 활 + 사슬과 한쪽 날개 + 재를 막는 눈을 +70 이상으로 장착 중인 동안",
+  cond: "재에서 당기는 활 + 사슬과 한쪽 날개 + 재를 막는 눈을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3105,7 +3105,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ringing_pilgrim",
   cat: "아이템 발동",
-  cond: "육환 석장을 +100 이상으로 장착 중인 동안",
+  cond: "육환 석장을 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3117,7 +3117,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "temple_procession",
   cat: "아이템 발동",
-  cond: "육환 석장 + 자칭 훈장 사제복 + 흔들리는 향로를 +70 이상으로 장착 중인 동안",
+  cond: "육환 석장 + 자칭 훈장 사제복 + 흔들리는 향로를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3131,7 +3131,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "never_sheathed",
   cat: "아이템 발동",
-  cond: "놓을 곳 없는 화염검을 +150 이상으로 장착 중인 동안",
+  cond: "놓을 곳 없는 화염검을 +150 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3143,7 +3143,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "ember_ball",
   cat: "아이템 발동",
-  cond: "놓을 곳 없는 화염검 + 용암으로 짠 드레스 + 재가 흐르는 모래시계를 +100 이상으로 장착 중인 동안",
+  cond: "놓을 곳 없는 화염검 + 용암으로 짠 드레스 + 재가 흐르는 모래시계를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3157,7 +3157,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "forge_hand",
   cat: "아이템 발동",
-  cond: "놓을 곳 없는 화염검 + 화문 예복 + 재를 막는 눈을 +30 이상으로 장착 중인 동안",
+  cond: "놓을 곳 없는 화염검 + 화문 예복 + 재를 막는 눈을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3171,7 +3171,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "antler_hunter",
   cat: "아이템 발동",
-  cond: "사슴뿔 활을 +70 이상으로 장착 중인 동안",
+  cond: "사슴뿔 활을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3183,7 +3183,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "marsh_tracker",
   cat: "아이템 발동",
-  cond: "사슴뿔 활 + 숲지기의 한 벌 + 반딧불 통발을 +50 이상으로 장착 중인 동안",
+  cond: "사슴뿔 활 + 숲지기의 한 벌 + 반딧불 통발을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3197,7 +3197,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "summer_keeper",
   cat: "아이템 발동",
-  cond: "드루이드의 지팡이를 +100 이상으로 장착 중인 동안",
+  cond: "드루이드의 지팡이를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3209,7 +3209,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "green_circle",
   cat: "아이템 발동",
-  cond: "드루이드의 지팡이 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 장착 중인 동안",
+  cond: "드루이드의 지팡이 + 이끼 자란 넝마 드레스 + 수련 화관을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3223,7 +3223,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "oni_slayer",
   cat: "아이템 발동",
-  cond: "귀참의 대태도를 +150 이상으로 장착 중인 동안",
+  cond: "귀참의 대태도를 +150 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3235,7 +3235,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "red_edge",
   cat: "아이템 발동",
-  cond: "귀참의 대태도 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 장착 중인 동안",
+  cond: "귀참의 대태도 + 흑룡의 비늘갑 + 용면 투구를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3249,7 +3249,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "mask_and_blade",
   cat: "아이템 발동",
-  cond: "귀참의 대태도 + 한쪽 어깨 띠 + 조상의 얼굴을 +30 이상으로 장착 중인 동안",
+  cond: "귀참의 대태도 + 한쪽 어깨 띠 + 조상의 얼굴을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3263,7 +3263,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "thorn_bearer",
   cat: "아이템 발동",
-  cond: "장미 핀 가시 지팡이를 +70 이상으로 장착 중인 동안",
+  cond: "장미 핀 가시 지팡이를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -3287,7 +3287,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_001",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창 + 구름 갑옷 + 철사로 띄운 후광을 +50 이상으로 동시 장착 중인 동안",
+  cond: "벼락을 박은 창 + 구름 갑옷 + 철사로 띄운 후광을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3301,7 +3301,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_002",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검 + 별을 두른 망토 + 대답하지 않는 나침반을 +50 이상으로 동시 장착 중인 동안",
+  cond: "별자리가 흐르는 장검 + 별을 두른 망토 + 대답하지 않는 나침반을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3315,7 +3315,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_003",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 설백 목도리를 +30 이상으로 동시 장착 중인 동안",
+  cond: "눈꽃 대도 + 설백 목도리를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3328,7 +3328,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_004",
   cat: "아이템 발동",
-  cond: "용암을 가둔 대검 + 용암으로 짠 드레스 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "용암을 가둔 대검 + 용암으로 짠 드레스 + 화룡의 뿔관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3342,7 +3342,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_005",
   cat: "아이템 발동",
-  cond: "귀참의 대태도 + 갈까마귀 로브 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  cond: "귀참의 대태도 + 갈까마귀 로브 + 이름을 가린 가면을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3356,7 +3356,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_006",
   cat: "아이템 발동",
-  cond: "사슴뿔 활 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  cond: "사슴뿔 활 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3370,7 +3370,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_007",
   cat: "아이템 발동",
-  cond: "왕기의 창 + 백금 사자 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕기의 창 + 백금 사자 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3384,7 +3384,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_008",
   cat: "아이템 발동",
-  cond: "한 쌍의 깃 + 사슬과 한쪽 날개 + 하얀 깃 날개를 +50 이상으로 동시 장착 중인 동안",
+  cond: "한 쌍의 깃 + 사슬과 한쪽 날개 + 하얀 깃 날개를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3398,7 +3398,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_009",
   cat: "아이템 발동",
-  cond: "초혼의 해골장 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +30 이상으로 동시 장착 중인 동안",
+  cond: "초혼의 해골장 + 냄새를 덮는 가죽옷 + 손목에 감은 조상을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3412,7 +3412,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_010",
   cat: "아이템 발동",
-  cond: "퉤! 하는 대롱 + 도롱이 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  cond: "퉤! 하는 대롱 + 도롱이 + 반딧불 통발을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3426,7 +3426,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_011",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 동시 장착 중인 동안",
+  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 상아 반가면을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3440,7 +3440,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_012",
   cat: "아이템 발동",
-  cond: "잿불낫 + 불길 케이프 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
+  cond: "잿불낫 + 불길 케이프 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3454,7 +3454,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_013",
   cat: "아이템 발동",
-  cond: "묻지 않는 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  cond: "묻지 않는 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3468,7 +3468,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_014",
   cat: "아이템 발동",
-  cond: "두근 화살 + 진홍 레이스 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  cond: "두근 화살 + 진홍 레이스 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3482,7 +3482,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_015",
   cat: "아이템 발동",
-  cond: "상아빛 한 발 + 깃털 두른 침묵 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  cond: "상아빛 한 발 + 깃털 두른 침묵 + 이름을 가린 가면을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3496,7 +3496,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_016",
   cat: "아이템 발동",
-  cond: "해오름검 + 아침빛 예복 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  cond: "해오름검 + 아침빛 예복 + 새벽지기의 표식을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3510,7 +3510,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_017",
   cat: "아이템 발동",
-  cond: "혼불낫 + 이끼 자란 넝마 드레스 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  cond: "혼불낫 + 이끼 자란 넝마 드레스 + 흔들리는 향로를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3524,7 +3524,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_018",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 도금이 벗겨진 갑주 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 도금이 벗겨진 갑주 + 사자의 증표를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3538,7 +3538,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_019",
   cat: "아이템 발동",
-  cond: "춤추는 쌍불꽃 + 불새 깃 드레스 + 식지 않는 심장을 +50 이상으로 동시 장착 중인 동안",
+  cond: "춤추는 쌍불꽃 + 불새 깃 드레스 + 식지 않는 심장을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3552,7 +3552,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_020",
   cat: "아이템 발동",
-  cond: "청홍 쌍검 + 쪽빛 기사복 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "청홍 쌍검 + 쪽빛 기사복 + 진홍 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3566,7 +3566,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_021",
   cat: "아이템 발동",
-  cond: "매 머리 지팡이검 + 창공의 전투복 + 푸른 깃 견장을 +30 이상으로 동시 장착 중인 동안",
+  cond: "매 머리 지팡이검 + 창공의 전투복 + 푸른 깃 견장을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3580,7 +3580,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_022",
   cat: "아이템 발동",
-  cond: "육환 석장 + 도롱이 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  cond: "육환 석장 + 도롱이 + 흔들리는 향로를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3594,7 +3594,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_023",
   cat: "아이템 발동",
-  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용비늘 가방을 +50 이상으로 동시 장착 중인 동안",
+  cond: "포효하는 용턱 + 흑룡의 비늘갑 + 용비늘 가방을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3608,7 +3608,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_024",
   cat: "아이템 발동",
-  cond: "장미 핀 가시 지팡이 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  cond: "장미 핀 가시 지팡이 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3622,7 +3622,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_025",
   cat: "아이템 발동",
-  cond: "노을이 앉는 검 + 별을 읽는 외투 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착 중인 동안",
+  cond: "노을이 앉는 검 + 별을 읽는 외투 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3636,7 +3636,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_026",
   cat: "아이템 발동",
-  cond: "화심의 망치 + 적금 갑주 + 식지 않는 심장을 +50 이상으로 동시 장착 중인 동안",
+  cond: "화심의 망치 + 적금 갑주 + 식지 않는 심장을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3650,7 +3650,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_027",
   cat: "아이템 발동",
-  cond: "창천검 + 쪽빛 기사복 + 빙정 방패를 +30 이상으로 동시 장착 중인 동안",
+  cond: "창천검 + 쪽빛 기사복 + 빙정 방패를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3664,7 +3664,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_028",
   cat: "아이템 발동",
-  cond: "창궁검 + 구름 갑옷 + 하얀 깃 날개를 +30 이상으로 동시 장착 중인 동안",
+  cond: "창궁검 + 구름 갑옷 + 하얀 깃 날개를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3678,7 +3678,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_029",
   cat: "아이템 발동",
-  cond: "유성의 지팡이 + 별을 두른 망토 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "유성의 지팡이 + 별을 두른 망토 + 별이 박힌 왕관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3692,7 +3692,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_030",
   cat: "아이템 발동",
-  cond: "마녀의 등불 + 갈까마귀 로브 + 마녀의 뾰족 모자를 +30 이상으로 동시 장착 중인 동안",
+  cond: "마녀의 등불 + 갈까마귀 로브 + 마녀의 뾰족 모자를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3706,7 +3706,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_031",
   cat: "아이템 발동",
-  cond: "진홍의 가는 검 + 불새 깃 드레스 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "진홍의 가는 검 + 불새 깃 드레스 + 진홍 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3720,7 +3720,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_032",
   cat: "아이템 발동",
-  cond: "쌍익 단검 + 늪빛 흉갑 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  cond: "쌍익 단검 + 늪빛 흉갑 + 이름을 가린 가면을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3734,7 +3734,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_033",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총 + 금장 군복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  cond: "금당초 쌍권총 + 금장 군복 + 금테 둥근 안경을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3748,7 +3748,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_034",
   cat: "아이템 발동",
-  cond: "흑금 대도 + 흑룡의 비늘갑 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "흑금 대도 + 흑룡의 비늘갑 + 흑요 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3762,7 +3762,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_035",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 동시 장착 중인 동안",
+  cond: "돌아오는 뼈 + 개구리 탈 망토 + 반딧불 충전기를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3776,7 +3776,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_036",
   cat: "아이템 발동",
-  cond: "재에서 당기는 활 + 화문 예복 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착 중인 동안",
+  cond: "재에서 당기는 활 + 화문 예복 + 재가 흐르는 모래시계를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3790,7 +3790,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_037",
   cat: "아이템 발동",
-  cond: "동트는 맹세 + 아침빛 예복 + 하얀 깃 날개를 +30 이상으로 동시 장착 중인 동안",
+  cond: "동트는 맹세 + 아침빛 예복 + 하얀 깃 날개를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3804,7 +3804,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_038",
   cat: "아이템 발동",
-  cond: "왕기의 창 + 푸른 서약 기사복 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕기의 창 + 푸른 서약 기사복 + 사자의 증표를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3818,7 +3818,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_039",
   cat: "아이템 발동",
-  cond: "상아빛 한 발 + 설산 파수의 갑주 + 설백 목도리를 +50 이상으로 동시 장착 중인 동안",
+  cond: "상아빛 한 발 + 설산 파수의 갑주 + 설백 목도리를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3832,7 +3832,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_040",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 수련이 피는 드레스 + 반딧불 통발을 +30 이상으로 동시 장착 중인 동안",
+  cond: "피어나는 삼지창 + 수련이 피는 드레스 + 반딧불 통발을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3846,7 +3846,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_041",
   cat: "아이템 발동",
-  cond: "드루이드의 지팡이 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  cond: "드루이드의 지팡이 + 이끼 자란 넝마 드레스 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3860,7 +3860,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_042",
   cat: "아이템 발동",
-  cond: "초혼의 해골장 + 자칭 훈장 사제복 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  cond: "초혼의 해골장 + 자칭 훈장 사제복 + 흔들리는 향로를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3874,7 +3874,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_043",
   cat: "아이템 발동",
-  cond: "귀참의 대태도 + 모래바람의 겹옷 + 조상의 깃발을 +30 이상으로 동시 장착 중인 동안",
+  cond: "귀참의 대태도 + 모래바람의 겹옷 + 조상의 깃발을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3888,7 +3888,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_044",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 백금 사자 갑주 + 맹세를 쥔 손을 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 백금 사자 갑주 + 맹세를 쥔 손을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3902,7 +3902,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_045",
   cat: "아이템 발동",
-  cond: "노을이 앉는 검 + 불길 케이프 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "노을이 앉는 검 + 불길 케이프 + 진홍 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3916,7 +3916,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_046",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  cond: "무도회의 한 수 + 이름 없는 드레스 + 백은 깃 머리핀을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3930,7 +3930,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_047",
   cat: "아이템 발동",
-  cond: "춤추는 쌍불꽃 + 화문 예복 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "춤추는 쌍불꽃 + 화문 예복 + 흑요 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -3944,7 +3944,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_048",
   cat: "아이템 발동",
-  cond: "창궁검 + 세라핌의 갑주 + 발키리의 날개 서클릿을 +50 이상으로 동시 장착 중인 동안",
+  cond: "창궁검 + 세라핌의 갑주 + 발키리의 날개 서클릿을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3958,7 +3958,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_049",
   cat: "아이템 발동",
-  cond: "혼불낫 + 갈까마귀 로브 + 한 뼘짜리 마왕 날개를 +50 이상으로 동시 장착 중인 동안",
+  cond: "혼불낫 + 갈까마귀 로브 + 한 뼘짜리 마왕 날개를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3972,7 +3972,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_050",
   cat: "아이템 발동",
-  cond: "창천검 + 성광 갑주 + 백은 날개 투구를 +50 이상으로 동시 장착 중인 동안",
+  cond: "창천검 + 성광 갑주 + 백은 날개 투구를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -3986,7 +3986,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_051",
   cat: "아이템 발동",
-  cond: "유성의 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  cond: "유성의 지팡이 + 학장복 + 금테 둥근 안경을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4000,7 +4000,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_052",
   cat: "아이템 발동",
-  cond: "매 머리 지팡이검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +30 이상으로 동시 장착 중인 동안",
+  cond: "매 머리 지팡이검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4014,7 +4014,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_053",
   cat: "아이템 발동",
-  cond: "왕기의 창 + 금장 군복 + 조상의 깃발을 +30 이상으로 동시 장착 중인 동안",
+  cond: "왕기의 창 + 금장 군복 + 조상의 깃발을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4028,7 +4028,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_054",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 설야 예복 + 설화의 관을 +30 이상으로 동시 장착 중인 동안",
+  cond: "눈꽃 대도 + 설야 예복 + 설화의 관을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4042,7 +4042,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_055",
   cat: "아이템 발동",
-  cond: "해오름검 + 세라핌의 갑주 + 철사로 띄운 후광을 +30 이상으로 동시 장착 중인 동안",
+  cond: "해오름검 + 세라핌의 갑주 + 철사로 띄운 후광을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4056,7 +4056,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_056",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 늪빛 흉갑 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
+  cond: "피어나는 삼지창 + 늪빛 흉갑 + 수련 화관을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4070,7 +4070,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_057",
   cat: "아이템 발동",
-  cond: "용암을 가둔 대검 + 흑룡의 비늘갑 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "용암을 가둔 대검 + 흑룡의 비늘갑 + 화룡의 뿔관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4084,7 +4084,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_058",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창 + 창공의 전투복 + 푸른 깃 견장을 +50 이상으로 동시 장착 중인 동안",
+  cond: "벼락을 박은 창 + 창공의 전투복 + 푸른 깃 견장을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4098,7 +4098,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_059",
   cat: "아이템 발동",
-  cond: "상아빛 한 발 + 모래바람의 겹옷 + 재를 막는 눈을 +30 이상으로 동시 장착 중인 동안",
+  cond: "상아빛 한 발 + 모래바람의 겹옷 + 재를 막는 눈을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4112,7 +4112,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_060",
   cat: "아이템 발동",
-  cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +30 이상으로 동시 장착 중인 동안",
+  cond: "돌아오는 뼈 + 냄새를 덮는 가죽옷 + 용비늘 가방을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4126,7 +4126,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_061",
   cat: "아이템 발동",
-  cond: "초혼의 해골장 + 개구리 탈 망토 + 흔들리는 향로를 +30 이상으로 동시 장착 중인 동안",
+  cond: "초혼의 해골장 + 개구리 탈 망토 + 흔들리는 향로를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4140,7 +4140,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_062",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 여명의 벽 + 사자의 증표를 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 여명의 벽 + 사자의 증표를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4154,7 +4154,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_063",
   cat: "아이템 발동",
-  cond: "창궁검 + 푸른 서약 기사복 + 빙정 방패를 +30 이상으로 동시 장착 중인 동안",
+  cond: "창궁검 + 푸른 서약 기사복 + 빙정 방패를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4168,7 +4168,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_064",
   cat: "아이템 발동",
-  cond: "잿불낫 + 용암으로 짠 드레스 + 재를 막는 눈을 +30 이상으로 동시 장착 중인 동안",
+  cond: "잿불낫 + 용암으로 짠 드레스 + 재를 막는 눈을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4182,7 +4182,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_065",
   cat: "아이템 발동",
-  cond: "사슴뿔 활 + 구름 갑옷 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  cond: "사슴뿔 활 + 구름 갑옷 + 새벽지기의 표식을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4196,7 +4196,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_066",
   cat: "아이템 발동",
-  cond: "화심의 망치 + 도금이 벗겨진 갑주 + 맹세를 쥔 손을 +30 이상으로 동시 장착 중인 동안",
+  cond: "화심의 망치 + 도금이 벗겨진 갑주 + 맹세를 쥔 손을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4210,7 +4210,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_067",
   cat: "아이템 발동",
-  cond: "진홍의 가는 검 + 이름 없는 드레스 + 상아 반가면을 +30 이상으로 동시 장착 중인 동안",
+  cond: "진홍의 가는 검 + 이름 없는 드레스 + 상아 반가면을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4224,7 +4224,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_068",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  cond: "금당초 쌍권총 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4238,7 +4238,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_069",
   cat: "아이템 발동",
-  cond: "왕기의 창 + 성광 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "왕기의 창 + 성광 갑주 + 별이 박힌 왕관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4252,7 +4252,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_070",
   cat: "아이템 발동",
-  cond: "상아빛 한 발 + 백금 사자 갑주 + 금테 둥근 안경을 +30 이상으로 동시 장착 중인 동안",
+  cond: "상아빛 한 발 + 백금 사자 갑주 + 금테 둥근 안경을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4266,7 +4266,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_071",
   cat: "아이템 발동",
-  cond: "혼불낫 + 깃털 두른 침묵 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착 중인 동안",
+  cond: "혼불낫 + 깃털 두른 침묵 + 재가 흐르는 모래시계를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4280,7 +4280,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_072",
   cat: "아이템 발동",
-  cond: "동트는 맹세 + 푸른 서약 기사복 + 맹세를 쥔 손을 +50 이상으로 동시 장착 중인 동안",
+  cond: "동트는 맹세 + 푸른 서약 기사복 + 맹세를 쥔 손을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4294,7 +4294,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_073",
   cat: "아이템 발동",
-  cond: "매 머리 지팡이검 + 갈까마귀 로브 + 푸른 깃 견장을 +30 이상으로 동시 장착 중인 동안",
+  cond: "매 머리 지팡이검 + 갈까마귀 로브 + 푸른 깃 견장을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4308,7 +4308,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_074",
   cat: "아이템 발동",
-  cond: "장미 핀 가시 지팡이 + 진홍 레이스 드레스 + 수련 화관을 +30 이상으로 동시 장착 중인 동안",
+  cond: "장미 핀 가시 지팡이 + 진홍 레이스 드레스 + 수련 화관을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4322,7 +4322,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_075",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검 + 성좌의 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  cond: "별자리가 흐르는 장검 + 성좌의 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4336,7 +4336,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_076",
   cat: "아이템 발동",
-  cond: "왕을 짊어진 대검 + 왕립 학원 교복 + 별이 박힌 왕관을 +30 이상으로 동시 장착 중인 동안",
+  cond: "왕을 짊어진 대검 + 왕립 학원 교복 + 별이 박힌 왕관을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4350,7 +4350,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_077",
   cat: "아이템 발동",
-  cond: "퉤! 하는 대롱 + 냄새를 덮는 가죽옷 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착 중인 동안",
+  cond: "퉤! 하는 대롱 + 냄새를 덮는 가죽옷 + 약초꾼의 버섯 모자를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4364,7 +4364,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_078",
   cat: "아이템 발동",
-  cond: "쌍익 단검 + 사슬과 한쪽 날개 + 작은 악마의 뿔을 +30 이상으로 동시 장착 중인 동안",
+  cond: "쌍익 단검 + 사슬과 한쪽 날개 + 작은 악마의 뿔을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4378,7 +4378,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_079",
   cat: "아이템 발동",
-  cond: "놓을 곳 없는 화염검 + 불길 케이프 + 화룡의 뿔관을 +50 이상으로 동시 장착 중인 동안",
+  cond: "놓을 곳 없는 화염검 + 불길 케이프 + 화룡의 뿔관을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4392,7 +4392,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_080",
   cat: "아이템 발동",
-  cond: "진홍의 가는 검 + 금장 군복 + 진홍 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "진홍의 가는 검 + 금장 군복 + 진홍 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4406,7 +4406,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_081",
   cat: "아이템 발동",
-  cond: "사슴뿔 활 + 모래바람의 겹옷 + 부르면 모이는 뿔피리를 +30 이상으로 동시 장착 중인 동안",
+  cond: "사슴뿔 활 + 모래바람의 겹옷 + 부르면 모이는 뿔피리를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4420,7 +4420,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_082",
   cat: "아이템 발동",
-  cond: "화심의 망치 + 금장 군복 + 북이 된 방패를 +30 이상으로 동시 장착 중인 동안",
+  cond: "화심의 망치 + 금장 군복 + 북이 된 방패를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4434,7 +4434,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_083",
   cat: "아이템 발동",
-  cond: "초혼의 해골장 + 깃털 두른 침묵 + 가려야 보이는 안대를 +50 이상으로 동시 장착 중인 동안",
+  cond: "초혼의 해골장 + 깃털 두른 침묵 + 가려야 보이는 안대를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4448,7 +4448,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_084",
   cat: "아이템 발동",
-  cond: "화심의 망치 + 한쪽 어깨 띠 + 조상의 얼굴을 +30 이상으로 동시 장착 중인 동안",
+  cond: "화심의 망치 + 한쪽 어깨 띠 + 조상의 얼굴을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4462,7 +4462,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_085",
   cat: "아이템 발동",
-  cond: "잿불낫 + 도롱이 + 한 잔의 보람을 +30 이상으로 동시 장착 중인 동안",
+  cond: "잿불낫 + 도롱이 + 한 잔의 보람을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4476,7 +4476,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_086",
   cat: "아이템 발동",
-  cond: "유성의 지팡이 + 별을 읽는 외투 + 반딧불 충전기를 +30 이상으로 동시 장착 중인 동안",
+  cond: "유성의 지팡이 + 별을 읽는 외투 + 반딧불 충전기를 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4490,7 +4490,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_087",
   cat: "아이템 발동",
-  cond: "청홍 쌍검 + 창공의 전투복 + 흑요 봉황선을 +30 이상으로 동시 장착 중인 동안",
+  cond: "청홍 쌍검 + 창공의 전투복 + 흑요 봉황선을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4504,7 +4504,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_088",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총 + 이름 없는 드레스 + 이름을 가린 가면을 +50 이상으로 동시 장착 중인 동안",
+  cond: "금당초 쌍권총 + 이름 없는 드레스 + 이름을 가린 가면을 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4518,7 +4518,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_089",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창 + 흑룡의 비늘갑 + 용면 투구를 +50 이상으로 동시 장착 중인 동안",
+  cond: "벼락을 박은 창 + 흑룡의 비늘갑 + 용면 투구를 +50 이상으로 동시 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4532,7 +4532,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_090",
   cat: "아이템 발동",
-  cond: "창천검 + 별을 두른 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착 중인 동안",
+  cond: "창천검 + 별을 두른 망토 + 새벽지기의 표식을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4546,7 +4546,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_091",
   cat: "아이템 발동",
-  cond: "창궁검 + 아침빛 예복 + 백은 깃 머리핀을 +30 이상으로 동시 장착 중인 동안",
+  cond: "창궁검 + 아침빛 예복 + 백은 깃 머리핀을 +30 이상으로 동시 장착",
   diff: "중간",
   req: {
    items: [
@@ -4632,7 +4632,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_icehearth",
   cat: "아이템 발동",
-  cond: "눈꽃 대도 + 적금 갑주 + 식지 않는 심장을 +70 이상으로 장착 중인 동안",
+  cond: "눈꽃 대도 + 적금 갑주 + 식지 않는 심장을 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4646,7 +4646,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_gradball",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 왕립 학원 교복 + 백은 깃 머리핀을 +50 이상으로 장착 중인 동안",
+  cond: "무도회의 한 수 + 왕립 학원 교복 + 백은 깃 머리핀을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4660,7 +4660,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_marshfire",
   cat: "아이템 발동",
-  cond: "놓을 곳 없는 화염검 + 늪빛 흉갑 + 반딧불 충전기를 +50 이상으로 장착 중인 동안",
+  cond: "놓을 곳 없는 화염검 + 늪빛 흉갑 + 반딧불 충전기를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4674,7 +4674,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_galaxyknight",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검 + 성광 갑주 + 백은 날개 투구를 +100 이상으로 장착 중인 동안",
+  cond: "별자리가 흐르는 장검 + 성광 갑주 + 백은 날개 투구를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4688,7 +4688,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_plaindrum",
   cat: "아이템 발동",
-  cond: "사슴뿔 활 + 깃털 두른 침묵 + 북이 된 방패를 +50 이상으로 장착 중인 동안",
+  cond: "사슴뿔 활 + 깃털 두른 침묵 + 북이 된 방패를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4702,7 +4702,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_fallenwing",
   cat: "아이템 발동",
-  cond: "혼불낫 + 도금이 벗겨진 갑주 + 한 뼘짜리 마왕 날개를 +100 이상으로 장착 중인 동안",
+  cond: "혼불낫 + 도금이 벗겨진 갑주 + 한 뼘짜리 마왕 날개를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4716,7 +4716,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_sunsetpilgrim",
   cat: "아이템 발동",
-  cond: "노을이 앉는 검 + 자칭 훈장 사제복 + 흔들리는 향로를 +50 이상으로 장착 중인 동안",
+  cond: "노을이 앉는 검 + 자칭 훈장 사제복 + 흔들리는 향로를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4730,7 +4730,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "combo_royalduel",
   cat: "아이템 발동",
-  cond: "청홍 쌍검 + 금장 군복 + 사자의 증표를 +70 이상으로 장착 중인 동안",
+  cond: "청홍 쌍검 + 금장 군복 + 사자의 증표를 +70 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4876,7 +4876,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_thunder_knight",
   cat: "아이템 발동",
-  cond: "벼락을 박은 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +50 이상으로 장착 중인 동안",
+  cond: "벼락을 박은 창 + 창공의 전투복 + 발키리의 날개 서클릿을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4890,7 +4890,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_star_navigator",
   cat: "아이템 발동",
-  cond: "별자리가 흐르는 장검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +50 이상으로 장착 중인 동안",
+  cond: "별자리가 흐르는 장검 + 별을 읽는 외투 + 대답하지 않는 나침반을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4904,7 +4904,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_ash_scythe",
   cat: "아이템 발동",
-  cond: "잿불낫 + 불길 케이프 + 재를 막는 눈을 +50 이상으로 장착 중인 동안",
+  cond: "잿불낫 + 불길 케이프 + 재를 막는 눈을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4918,7 +4918,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_marsh_bugler",
   cat: "아이템 발동",
-  cond: "피어나는 삼지창 + 늪빛 흉갑 + 부르면 모이는 뿔피리를 +50 이상으로 장착 중인 동안",
+  cond: "피어나는 삼지창 + 늪빛 흉갑 + 부르면 모이는 뿔피리를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4932,7 +4932,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_dusk_pilgrim",
   cat: "아이템 발동",
-  cond: "노을이 앉는 검 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 장착 중인 동안",
+  cond: "노을이 앉는 검 + 아침빛 예복 + 철사로 띄운 후광을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4946,7 +4946,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_academy_fencer",
   cat: "아이템 발동",
-  cond: "창천검 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 장착 중인 동안",
+  cond: "창천검 + 왕립 학원 교복 + 금테 둥근 안경을 +30 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4960,7 +4960,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_ball_guest",
   cat: "아이템 발동",
-  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 이름을 가린 가면을 +50 이상으로 장착 중인 동안",
+  cond: "무도회의 한 수 + 진홍 레이스 드레스 + 이름을 가린 가면을 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [
@@ -4974,7 +4974,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_dragon_warden",
   cat: "아이템 발동",
-  cond: "포효하는 용턱 + 도금이 벗겨진 갑주 + 용면 투구를 +100 이상으로 장착 중인 동안",
+  cond: "포효하는 용턱 + 도금이 벗겨진 갑주 + 용면 투구를 +100 이상으로 장착",
   diff: "어려움",
   req: {
    items: [
@@ -4988,7 +4988,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "set_desert_patrol",
   cat: "아이템 발동",
-  cond: "금당초 쌍권총 + 모래바람의 겹옷 + 가려야 보이는 안대를 +50 이상으로 장착 중인 동안",
+  cond: "금당초 쌍권총 + 모래바람의 겹옷 + 가려야 보이는 안대를 +50 이상으로 장착",
   diff: "중간",
   req: {
    items: [

@@ -47,6 +47,7 @@ const ERR: Record<string, string> = {
   REAPPLY_COOLDOWN: '거절된 요청은 24시간 뒤에 다시 보낼 수 있어요',
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
+  NO_CHARACTER_ON_SERVER: '다른 서버의 유저예요',
   BLOCKED_BY_ME: '차단한 유저예요. 차단을 해제한 뒤 요청할 수 있어요',
   // 상대가 나를 차단한 경우 — 차단 사실을 드러내지 않도록 중립적으로.
   BLOCKED: '지금은 친구 요청을 보낼 수 없어요',

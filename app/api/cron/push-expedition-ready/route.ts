@@ -30,10 +30,15 @@ export async function GET(req: Request) {
     const claimed = (await db.execute(sql`
       with target as (
         select e.id from expeditions e
+        join profiles p on p.id = e.user_id
         where e.status = 'running' and e.push_sent = false and e.complete_at <= now()
+          -- 활성 서버 이벤트만 푸시(SERVER.md 경계규칙1) — push-enhance-ready와 같은 방식.
+          -- ⚠ 이 필터는 반드시 **집는 단계**에 둔다. 집은 뒤 걸러내면 push_sent만 true가 되어
+          -- 그 사람이 원래 서버로 돌아와도 알림이 영영 오지 않는다(2026-09-21 ⑤).
+          and p.last_server_id = e.server_id
         order by e.complete_at
         limit ${CHUNK}
-        for update skip locked
+        for update of e skip locked
       )
       update expeditions e set push_sent = true
       from target t where e.id = t.id

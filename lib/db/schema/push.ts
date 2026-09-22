@@ -74,8 +74,8 @@ export const pushPending = pgTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     category: pushCategoryEnum('category').notNull(),
     /** 이벤트 서버(0154, SERVER.md 경계규칙 1) — flush가 활성 서버 일치를 재확인하는 근거.
-     *  nullable: 마이그레이션 이전 잔여 행 호환(flush는 null을 통과시킨다). */
-    serverId: smallint('server_id'),
+     *  0206부터 **PK의 일부**: 서버마다 묶음이 따로 쌓여야 두 서버 항목이 한 행에 섞이지 않는다. */
+    serverId: smallint('server_id').notNull().default(1),
     /** 누적 항목 배열 (강화: [{ fromLevel, toLevel, outcome }]). */
     items: jsonb('items').notNull().default(sql`'[]'::jsonb`),
     /** 첫 누적 시각 — flush 트리거(`first_at + interval '30 min' <= now()`). */
@@ -83,7 +83,7 @@ export const pushPending = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    primaryKey({ columns: [t.userId, t.category] }),
+    primaryKey({ columns: [t.userId, t.category, t.serverId] }),
     index('push_pending_flush_idx').on(t.firstAt),
   ],
 );

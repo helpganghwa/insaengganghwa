@@ -34,6 +34,12 @@ export async function GET(req: Request) {
   const uid = new URL(req.url).searchParams.get('uid');
   if (!uid || !/^[0-9a-f-]{36}$/i.test(uid)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   const serverId = await getActiveServerId();
+  // 요청자도 그 서버 사람이어야 한다(2026-09-21 ⑱) — 쿠키만 바꾸면 남의 서버 유저 카드를
+  // 열어 볼 수 있었다. 채팅 쓰기(send·whisper)에는 이미 있던 검사.
+  const mine = (await db.execute(
+    sql`select 1 from characters where user_id = ${me}::uuid and server_id = ${serverId} limit 1`,
+  )) as unknown as unknown[];
+  if (mine.length === 0) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
   const [[row], equip, guilds, [fr], champion, metrics] = await Promise.all([
     db

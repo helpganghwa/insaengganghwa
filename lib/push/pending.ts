@@ -65,8 +65,8 @@ export async function appendEnhanceReady(
   //   새 항목으로 교체. 저레벨 cycling 시 같은 슬롯이 윈도 안에서 여러 번
   //   완료해도 카운트가 6(슬롯)을 초과하지 않음.
   // first_at은 INSERT 시점에만 set — 윈도 시작점 유지(ON CONFLICT는 미수정).
-  // server_id는 마지막 적재 서버로 갱신 — 적재 조건(활성 서버=잡 서버)상 항상 현재 활성 서버라
-  // 윈도 안에서 서버를 옮겨도 최신 활성 서버 귀속이 맞다(flush가 발송 시점에 재확인).
+  // server_id는 **키의 일부**(0206) — 서버마다 묶음이 따로 쌓인다. 종전에는 한 행을 공유해
+  // 윈도 중 서버를 옮기면 두 서버 항목이 섞이고, 같은 슬롯이면 앞 서버 항목이 지워졌다.
   const itemJson = JSON.stringify(item);
   await db.execute(sql`
     insert into push_pending (user_id, category, server_id, items, first_at)
@@ -77,9 +77,8 @@ export async function appendEnhanceReady(
       jsonb_build_array(${itemJson}::jsonb),
       now()
     )
-    on conflict (user_id, category) do update
-      set server_id = excluded.server_id,
-      items = coalesce(
+    on conflict (user_id, category, server_id) do update
+      set items = coalesce(
         (select jsonb_agg(elem)
          from jsonb_array_elements(push_pending.items) elem
          where not (

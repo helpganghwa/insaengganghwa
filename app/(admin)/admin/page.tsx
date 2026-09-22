@@ -6,6 +6,7 @@ import { paymentAlerts } from '@/lib/db/schema/payment';
 import { clientErrors } from '@/lib/db/schema/ops';
 import { userProfiles, profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { supportInquiries } from '@/lib/db/schema/support';
+import { countPendingEraProposals } from '@/lib/game/history/era-store';
 
 /**
  * 관리자 허브 — /admin. (admin) 레이아웃이 접근을 게이트하므로 여기선 메뉴만.
@@ -21,7 +22,7 @@ async function pendingCounts(): Promise<Record<string, number>> {
   const dayMs = new Date(`${kstToday}T00:00:00+09:00`).getTime();
   const dayStart = new Date(dayMs);
   const dayEnd = new Date(dayMs + 24 * 3600 * 1000);
-  const [alerts, reports, genTodo, cerrors, supportOpen] = await Promise.all([
+  const [alerts, reports, genTodo, cerrors, supportOpen, eraProposals] = await Promise.all([
     // 미해결 결제 사고.
     one(
       db
@@ -64,6 +65,8 @@ async function pendingCounts(): Promise<Record<string, number>> {
         .from(supportInquiries)
         .where(eq(supportInquiries.status, 'open')),
     ).catch(() => 0),
+    // 적용을 기다리는 역사 시대 요약 제안(0203 적용 전이면 0).
+    countPendingEraProposals(),
   ]);
   return {
     '/admin/alerts': alerts,
@@ -71,6 +74,7 @@ async function pendingCounts(): Promise<Record<string, number>> {
     '/admin/profile-gen': genTodo,
     '/admin/client-errors': cerrors,
     '/admin/support': supportOpen,
+    '/admin/history-eras': eraProposals,
   };
 }
 
@@ -91,7 +95,7 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     href: '/admin/history-eras',
     icon: '📜',
     title: '역사 시대 요약',
-    desc: '역사 페이지 장(章) 요약 검수 — 이야기꾼 생성문 확인·수정·확정, 다시 생성',
+    desc: '역사 페이지 장(章) 요약 검수 — 이야기꾼 제안 확인 후 적용·수정, 새 제안 받기',
   },
   {
     href: '/admin/avatar-returns',
@@ -158,6 +162,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     icon: '🔔',
     title: '결제 사고 알림',
     desc: '미지급·환불 미회수·금액불일치 등 사고 감지 내역, 자동치유 재시도/해결 처리',
+  },
+  {
+    href: '/admin/servers',
+    icon: '🗄️',
+    title: '서버 상태',
+    desc: '정상/포화/닫힘 전환 — 포화는 신규 생성만 차단, 닫힘은 크론 순회에서 제외',
   },
   {
     href: '/admin/maintenance',
