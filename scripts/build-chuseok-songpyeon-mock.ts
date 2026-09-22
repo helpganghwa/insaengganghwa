@@ -33,65 +33,23 @@ const SP = SPC ?? SPA ?? SPB;
 const BGA = await img('banner_a', 768);
 const BGB = await img('banner_b', 768);
 const spIcon = (size = '.9em') => SP ? `<img class="spi" src="${SP}" alt="" style="width:${size};height:${size}">` : '🥟';
-// 누적/사용 가능 두 숫자 카드(공통)
-const twoNums = (cls = '') => `<div class="two ${cls}"><div class="tn"><span class="lab">누적 송편</span><b>${spIcon()}${n(MY)}</b><small>다음 보상까지 ${n(NEXT - MY)}</small></div><div class="tn"><span class="lab">사용 가능</span><b>${spIcon()}${n(AVAIL)}</b><small>교환에 쓴 ${n(USED)}</small></div></div>`;
-
-const steps = (cls = '') => `<div class="lad ${cls}">${LADDER.map(([m, d, b], i) => {
-  const st = MY >= m ? (i < 2 ? 'done' : 'ready') : '';
-  return `<div class="st ${st}"><b>${n(m)}</b><span>💎${n(d)} · 📦${b}</span>${st === 'done' ? '<i>받음</i>' : st === 'ready' ? '<i class="btn">받기</i>' : ''}</div>`;
-}).join('')}</div>`;
-const shop = `<div class="shop"><div class="it"><b>📦 상자 3개</b><span>150</span><i class="btn">교환</i><small>20회 중 3회 남음</small></div><div class="it"><b>💎 100</b><span>400</span><i class="btn">교환</i><small>20회 중 18회 남음</small></div></div>`;
 const foot = `<p class="foot">대회가 끝난 뒤 10/3까지 받고 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>`;
-
-// A · 요약 카드 + 격자 사다리 + 교환 목록
-const A = `<div class="ph">${head}${seg('sp')}<div class="body">
-  ${twoNums()}<div class="gauge solo"><i style="width:${Math.round((100 * (MY - 800)) / (2000 - 800))}%"></i></div>
-  <p class="sub2">도달 보상 <small>누적 송편으로 따져요. 교환에 써도 줄지 않아요.</small></p>${steps()}
-  <div class="xbtn">교환하기 <small>사용 가능 ${n(AVAIL)}</small></div>${foot}</div>${nav}</div>`;
-
-// B · 세로 진행 트랙(타임라인) + 교환은 접이식
-const B = `<div class="ph">${head}${seg('sp')}<div class="body">
-  ${twoNums('compact')}
-  <div class="tl">${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="tr ${st}"><span class="dot"></span><span class="m">${n(m)}</span><span class="rw">💎${n(d)} · 📦${b}</span>${st === 'done' ? '<i>받음</i>' : st === 'ready' ? '<i class="btn">받기</i>' : `<i class="left">${n(m - MY)} 더</i>`}</div>`; }).join('')}</div>
-  <div class="xbtn">교환하기 <small>사용 가능 ${n(AVAIL)}</small></div>${foot}</div>${nav}</div>`;
-
-// C · 가로 이정표 게이지(칭호 발견 게이지처럼) + 큰 숫자 + 2칸 교환
-const pos = (m: number) => Math.min(100, Math.round((100 * Math.log10(m)) / Math.log10(30000)));
-const C = `<div class="ph">${head}${seg('sp')}<div class="body">
-  ${twoNums('compact')}
-  <div class="track"><div class="fill" style="width:${pos(MY)}%"></div>${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="ms ${st}" style="left:${pos(m)}%"><span class="pin"></span><span class="lb">${m >= 1000 ? `${m / 1000}k` : m}</span></div>`; }).join('')}</div>
-  <div class="next"><span>다음 보상 <b>2,000</b> · 💎400 · 📦12</span><i class="btn">지금 받을 보상 1개</i></div>
-  <div class="xbtn">교환하기 <small>사용 가능 ${n(AVAIL)}</small></div>${foot}</div>${nav}</div>`;
-
-// D · 접시에 쌓이는 송편(그림) + 가로 스크롤 단계 카드
-const D = `<div class="ph">${head}${seg('sp')}<div class="body">
-  <div class="dish">${SPB ? `<img src="${SPB}" alt="" class="dishimg">` : '<span class="dishph">🥟</span>'}<div class="dn"><span class="lab">누적 송편</span><b>${n(MY)}</b><span class="lab">사용 가능 <em>${n(AVAIL)}</em></span></div></div>
-  <div class="hs">${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="hc ${st}"><b>${n(m)}</b><span>💎${n(d)}</span><span>📦${b}</span>${st === 'done' ? '<i>받음</i>' : st === 'ready' ? '<i class="btn">받기</i>' : `<i class="left">${n(m - MY)} 더</i>`}</div>`; }).join('')}</div>
-  <p class="hint">옆으로 넘겨 다음 단계를 보세요</p>
-  <div class="xbtn">교환하기 <small>사용 가능 ${n(AVAIL)}</small></div>${foot}</div>${nav}</div>`;
-
-// E · 도장판(7칸) + 아래 고정 교환 바
-const E = `<div class="ph">${head}${seg('sp')}<div class="body">
-  ${twoNums()}
-  <p class="sub2">도달 보상 <small>단계마다 도장이 찍혀요</small></p>
-  <div class="stamps">${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="stp ${st}"><span class="ring">${st === 'done' ? spIcon('1.3em') : st === 'ready' ? '!' : ''}</span><b>${m >= 1000 ? `${m / 1000}k` : m}</b><small>💎${n(d)}·📦${b}</small></div>`; }).join('')}</div>
-  <div class="readybar"><span>받을 수 있는 보상 <b>1개</b> · 800단계 💎300·📦9</span><i class="btn">모두 받기</i></div>
-</div><div class="fixbar"><span>사용 가능 ${spIcon()}<b>${n(AVAIL)}</b></span><i class="btn big">교환하기</i></div>${nav}</div>`;
-
-// F · 목록형: 헤더 게이지 + 단계별 행(오른쪽에 상태 버튼), 교환은 헤더 버튼
-const F = `<div class="ph">${head}${seg('sp')}<div class="body">
-  <div class="fh"><div><span class="lab">누적 송편</span><b>${spIcon()}${n(MY)}</b></div><div><span class="lab">사용 가능</span><b>${spIcon()}${n(AVAIL)}</b></div><i class="btn">교환</i></div>
-  <div class="gauge solo"><i style="width:${Math.round((100 * (MY - 800)) / (2000 - 800))}%"></i></div><p class="hint">다음 보상 2,000까지 ${n(NEXT - MY)}</p>
-  <div class="frows">${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="fr ${st}"><b>${n(m)}</b><span>💎${n(d)} · 📦${b}</span>${st === 'done' ? '<i class="ok">받음</i>' : st === 'ready' ? '<i class="btn">받기</i>' : `<i class="left">${n(m - MY)} 더</i>`}</div>`; }).join('')}</div>${foot}</div>${nav}</div>`;
-
-// 교환 팝업(공통 팝업 레이아웃): 여러 상품을 개수로 골라 한 번에 교환
-const POP = `<div class="ph">${head}${seg('sp')}<div class="body">${twoNums()}<p class="sub2">도달 보상</p>${steps()}<div class="xbtn">교환하기 <small>사용 가능 ${n(AVAIL)}</small></div>${foot}</div>
-<div class="dimmer"></div><div class="modal"><div class="mh"><b class="st2">송편 교환</b><p class="sd">개수를 정하면 아래에 필요한 송편이 더해져요.</p></div>
+// 누적/사용 가능을 한 카드에(사용자 확정)
+const oneCard = `<div class="one"><div class="oc"><span class="lab">누적 송편</span><b>${spIcon()}${n(MY)}</b><small>다음 보상까지 ${n(NEXT - MY)}</small></div><span class="vsep"></span><div class="oc"><span class="lab">사용 가능</span><b>${spIcon()}${n(AVAIL)}</b><small>교환에 쓴 ${n(USED)}</small></div></div>`;
+// 교환: 상자·다이아 각각 버튼(수량은 팝업에서)
+const xrows = `<div class="xrows"><div class="xr"><b>📦 상자 3개</b><span>150 송편 · 20회 중 17회 남음</span><i class="btn">교환</i></div><div class="xr"><b>💎 100</b><span>400 송편 · 20회 중 18회 남음</span><i class="btn">교환</i></div></div>`;
+const tl = `<div class="tl">${LADDER.map(([m, d, b], i) => { const st = MY >= m ? (i < 2 ? 'done' : 'ready') : ''; return `<div class="tr ${st}"><span class="dot"></span><span class="m">${n(m)}</span><span class="rw">💎${n(d)} · 📦${b}</span>${st === 'done' ? '<i>받음</i>' : st === 'ready' ? '<i class="btn">받기</i>' : `<i class="left">${n(m - MY)} 더</i>`}</div>`; }).join('')}</div>`;
+const B2 = `<div class="ph">${head}${seg('sp')}<div class="body">
+  ${oneCard}
+  <p class="sub2">도달 보상 <small>누적 송편으로 따져요. 교환에 써도 줄지 않아요.</small></p>${tl}
+  <p class="sub2">교환 <small>사용 가능 송편으로 바꿔요</small></p>${xrows}${foot}</div>${nav}</div>`;
+// 수량 팝업(상품 하나): 개수 조절 → 필요한 송편·교환 뒤 사용 가능·남은 횟수
+const POP2 = `<div class="ph">${head}${seg('sp')}<div class="body">${oneCard}<p class="sub2">도달 보상</p>${tl}<p class="sub2">교환</p>${xrows}${foot}</div>
+<div class="dimmer"></div><div class="modal"><div class="mh"><b class="st2">📦 상자 3개 교환</b><p class="sd">한 번에 150 송편 · 20회 중 17회 남음</p></div>
 <div class="mb">
-  <div class="pr"><b>📦 상자 3개</b><span>150 송편</span><div class="step"><i>−</i><b>2</b><i>+</i></div><small>20회 중 17회 남음</small></div>
-  <div class="pr"><b>💎 100</b><span>400 송편</span><div class="step"><i>−</i><b>1</b><i>+</i></div><small>20회 중 18회 남음</small></div>
-  <div class="tot"><span>필요한 송편</span><b>700</b><span>교환 뒤 사용 가능</span><b>${n(AVAIL - 700)}</b></div>
-</div><div class="mf"><span class="mbtn">취소</span><span class="mbtn p">700 송편으로 교환</span></div></div></div>`;
+  <div class="qty"><i>−</i><b>2</b><i>+</i><small>최대 6</small></div>
+  <div class="tot"><span>받는 것</span><b>📦 6</b><span>필요한 송편</span><b>300</b><span>교환 뒤 사용 가능</span><b>${n(AVAIL - 300)}</b></div>
+</div><div class="mf"><span class="mbtn">취소</span><span class="mbtn p">300 송편으로 교환</span></div></div></div>`;
 
 // 순위 탭 위 송편 스트립(있음/없음)
 const RANK = (strip: boolean) => `<div class="ph">${head}${seg('rank')}<div class="body">
@@ -104,24 +62,21 @@ const bannerBg = (src: string | null, cls: string) => src ? `style="background-i
 const BAN = `<div class="ph short"><div class="bar"><b>인생강화</b><small>⚔ 12,480 · 💎 2,122</small></div><div class="body">
   <p class="cap2">평소 → 누르면 순위 탭</p><div class="banner img" ${bannerBg(BGA, '')}><span class="bt"><b>한가위 강화 대회</b><span>추석 장비 6종, 장비마다 10등까지 보상</span></span><i>2일 09:14:07</i></div>
   <p class="cap2">받을 송편 보상이 생겼을 때 → 누르면 송편 탭</p><div class="banner img" ${bannerBg(BGB, 'hot')}><span class="bt"><b>송편 보상을 받을 수 있어요</b><span>한가위 강화 대회 · 800단계 도달</span></span><i>받기 ›</i></div>
-  <p class="cap2">송편 아이콘 후보(Pixellab)</p><div class="icons">${[['A', SPA], ['B', SPB], ['C', SPC]].map(([k, src]) => src ? `<figure class="icf"><img src="${src}" alt=""><figcaption>${k}</figcaption></figure>` : `<figure class="icf"><div class="icph">${k}</div></figure>`).join('')}</div>
-  <p class="cap2">배경 그림 후보(Pixellab)</p><div class="bgs">${[['A', BGA], ['B', BGB]].map(([k, src]) => src ? `<figure class="bgf"><img src="${src}" alt=""><figcaption>${k}</figcaption></figure>` : `<figure class="bgf"><div class="bgph">${k} 생성 전</div></figure>`).join('')}</div>
 </div></div>`;
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 type Dec = { id: string; title: string; help: string; options: { v: string; rec?: boolean }[] };
 const DECS: Dec[] = [
-  { id: 'layout', title: '송편 탭 배치', help: '여섯 안 모두 누적 송편과 사용 가능 송편을 따로 보여 주고, 교환은 팝업으로 엽니다.', options: [{ v: 'A · 두 숫자 카드 + 격자 사다리' }, { v: 'B · 세로 진행 트랙' }, { v: 'C · 가로 이정표 게이지' }, { v: 'D · 접시 그림 + 가로 스크롤 단계' }, { v: 'E · 도장판 + 고정 교환 바', rec: true }, { v: 'F · 목록형' }] },
-  { id: 'bg', title: '배너 배경 그림', help: 'A는 보름달과 기와지붕, B는 달토끼와 송편 접시입니다. 둘 다 아니면 새로 뽑습니다.', options: [{ v: 'A · 보름달과 기와지붕', rec: true }, { v: 'B · 달토끼와 송편 접시' }, { v: '둘 다 아님, 다시 생성' }] },
-  { id: 'icon', title: '송편 아이콘', help: '누적·사용 가능 숫자 앞과 도장판에 쓰는 작은 그림입니다. 배너 그림 아래에 세 후보를 나란히 두었습니다.', options: [{ v: 'A · 연두 송편 한 개' }, { v: 'B · 접시 위 세 개' }, { v: 'C · 반달 송편 한 개', rec: true }, { v: '모두 아님, 다시 생성' }] },
-  { id: 'popup', title: '교환 팝업', help: '개수 조절과 합계 계산, 남은 횟수 표시를 한 팝업에 두었습니다.', options: [{ v: '시안대로', rec: true }, { v: '상품마다 따로 교환(개수만 고름)' }] },
+  { id: 'popup', title: '수량 팝업', help: '상품마다 따로 열리고, 개수 조절과 합계, 남은 횟수를 보여 줍니다.', options: [{ v: '시안대로', rec: true }, { v: '개수 없이 1개씩만 교환' }] },
+  { id: 'ladderpos', title: '트랙에서 못 받은 단계의 표시', help: '지금은 몇 개 더 필요한지 적었습니다.', options: [{ v: '"N 더"로 남은 양 표시', rec: true }, { v: '보상만 보이고 남은 양은 숨김' }] },
 ];
 const FIXED: [string, string][] = [
+  ['송편 탭 배치', 'B안(세로 진행 트랙) 개정: 누적·사용 가능 한 카드, 교환은 상자·다이아 별도 버튼'],
+  ['교환 수량', '상품별 팝업에서 개수 선택'],
   ['순위 탭', '스트립 없음'],
   ['홈 배너', '평소/보상 있을 때 문구·배경 교체, 누르면 해당 세그먼트가 선택된 상태로 진입'],
   ['송편 표기', '1단계 = 송편 1개'],
-  ['송편 숫자', '누적 송편(도달 보상 기준)과 사용 가능 송편(교환 기준)을 따로 표시'],
-  ['교환', '팝업에서 여러 상품을 개수로 골라 한 번에'],
+  ['송편 아이콘 · 배너 배경', '선택 폼에서 고름(여러 후보 생성)'],
   ['도달 보상 사다리 · 교환 비율', '더 고민(시안의 숫자는 가안)'],
 ];
 
@@ -175,6 +130,9 @@ const html = `<title>송편 화면 시안</title>
   .moon { width:42px; height:42px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#fff6d0,#f2c14e 70%); flex:none; } .bt { min-width:0; flex:1; } .bt b { display:block; font-size:14px; } .bt span { display:block; font-size:11px; color:#fde7c0; } .banner i { flex:none; font-style:normal; font-size:10.5px; font-weight:800; background:rgba(0,0,0,.35); padding:4px 9px; border-radius:99px; }
   .cap2 { margin:10px 0 6px; font-size:11px; color:#71717a; }
   .spi { display:inline-block; vertical-align:-.12em; margin-right:.15em; image-rendering:pixelated; }
+  .one { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:center; background:#18181b; border:1px solid rgba(245,158,11,.5); border-radius:12px; padding:10px 12px; } .oc { display:flex; flex-direction:column; gap:1px; } .oc .lab { font-size:10.5px; color:#a1a1aa; } .oc b { font-family:ui-monospace,Menlo,monospace; font-size:20px; color:#fde68a; } .oc small { font-size:10px; color:#71717a; } .vsep { width:1px; height:34px; background:#27272a; }
+  .xrows { display:flex; flex-direction:column; gap:6px; } .xr { display:grid; grid-template-columns:1fr auto; gap:0 10px; align-items:center; background:#18181b; border:1px solid #27272a; border-radius:10px; padding:8px 10px; } .xr b { font-size:12.5px; } .xr span { grid-column:1; font-size:10.5px; color:#71717a; } .xr i { grid-column:2; grid-row:1/3; }
+  .qty { display:flex; align-items:center; justify-content:center; gap:14px; padding:6px 0 2px; } .qty i { font-style:normal; width:32px; height:32px; border-radius:8px; background:#27272a; display:grid; place-items:center; font-weight:800; font-size:16px; } .qty b { font-family:ui-monospace,Menlo,monospace; font-size:22px; min-width:28px; text-align:center; color:#fde68a; } .qty small { font-size:10px; color:#71717a; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; } .tn { background:#18181b; border:1px solid #27272a; border-radius:12px; padding:9px 11px; display:flex; flex-direction:column; gap:1px; } .tn:first-child { border-color:rgba(245,158,11,.5); }
   .tn .lab { font-size:10.5px; color:#a1a1aa; } .tn b { font-family:ui-monospace,Menlo,monospace; font-size:20px; color:#fde68a; } .tn small { font-size:10px; color:#71717a; } .two.compact .tn b { font-size:17px; }
   .gauge.solo { margin:8px 2px 0; } .xbtn { margin-top:12px; text-align:center; background:#d97706; color:#fff; border-radius:10px; padding:9px; font-weight:800; font-size:12.5px; } .xbtn small { font-weight:500; color:#fff3c4; margin-left:6px; }
@@ -204,22 +162,17 @@ const html = `<title>송편 화면 시안</title>
 </style>
 <div class="wrap">
   <h1>송편 화면 시안</h1>
-  <p class="lead">2차 시안입니다. 누적 송편과 사용 가능 송편을 따로 두고, 교환은 팝업에서 여러 개를 한 번에 하도록 바꿨습니다. 배치 안을 셋 더 그렸고(D·E·F), 배너 배경과 송편 아이콘은 Pixellab로 만든 후보를 넣었습니다. 예시 값은 누적 1,240 · 사용 가능 940입니다. 사다리와 교환 비율 숫자는 가안입니다.</p>
+  <p class="lead">3차 시안입니다. 고르신 B안(세로 진행 트랙)을 기준으로 누적 송편과 사용 가능 송편을 한 카드에 넣고, 교환은 상자와 다이아 각각의 버튼에서 수량 팝업으로 하도록 고쳤습니다. 예시 값은 누적 1,240 · 사용 가능 940이고, 사다리와 교환 비율 숫자는 가안입니다. 송편 아이콘과 배너 배경은 선택 폼에서 고르시면 반영합니다.</p>
   <p class="note">세금식은 성공 한 번에 도달 단계만큼 쌓여 숫자가 빨리 커집니다. 사다리는 100에서 30,000까지 로그 간격으로 잡았고, 지난주 실서버 기록으로 닿는 사람 비율과 총 지급을 함께 계산했습니다.</p>
-  <h2>송편 탭 배치</h2>
+  <h2>송편 탭 · B안 개정</h2>
   <div class="figs">
-    <figure data-title="A · 요약 카드 + 격자 사다리 + 교환 목록"><h3>A · 요약 카드 + 격자 사다리 + 교환 목록</h3>${A}<figcaption>위에 내 송편과 다음 보상까지, 가운데 일곱 단계 격자, 아래 교환 목록. 한 화면에 다 들어갑니다.</figcaption><label class="m" for="memo_a">의견</label><textarea class="memo" id="memo_a"></textarea></figure>
-    <figure data-title="B · 세로 진행 트랙"><h3>B · 세로 진행 트랙, 교환은 접이식</h3>${B}<figcaption>단계를 세로 타임라인으로 늘어놓아 단계 사이 거리감이 살고, 못 받은 단계에는 몇 개 더 필요한지 적힙니다. 교환은 접어 두었습니다.</figcaption><label class="m" for="memo_b">의견</label><textarea class="memo" id="memo_b"></textarea></figure>
-    <figure data-title="C · 가로 이정표 게이지"><h3>C · 가로 이정표 게이지</h3>${C}<figcaption>칭호 발견 게이지와 같은 문법입니다. 로그 눈금 게이지에 이정표 일곱 개, 다음 보상 한 줄.</figcaption><label class="m" for="memo_c">의견</label><textarea class="memo" id="memo_c"></textarea></figure>
-    <figure data-title="D · 접시 그림 + 가로 스크롤 단계"><h3>D · 접시에 쌓인 송편 + 가로 스크롤 단계</h3>${D}<figcaption>송편 그림이 주인공입니다. 단계 카드는 옆으로 넘기며 보고, 카드마다 몇 개 더 필요한지 적힙니다.</figcaption><label class="m" for="memo_d">의견</label><textarea class="memo" id="memo_d"></textarea></figure>
-    <figure data-title="E · 도장판 + 고정 교환 바"><h3>E · 도장판 + 아래 고정 교환 바</h3>${E}<figcaption>일곱 칸 도장판에 도달한 단계마다 송편 도장이 찍히고, 받을 보상은 한 줄로 모아 [모두 받기]. 교환 버튼은 아래에 고정.</figcaption><label class="m" for="memo_e">의견</label><textarea class="memo" id="memo_e"></textarea></figure>
-    <figure data-title="F · 목록형"><h3>F · 목록형, 교환은 헤더 버튼</h3>${F}<figcaption>가장 담백한 안입니다. 위에 두 숫자와 교환 버튼, 게이지, 아래로 단계 행이 이어집니다.</figcaption><label class="m" for="memo_f">의견</label><textarea class="memo" id="memo_f"></textarea></figure>
-    <figure data-title="교환 팝업"><h3>교환 팝업 · 여러 개 동시 교환</h3>${POP}<figcaption>공통 팝업 레이아웃. 상품마다 개수를 더하면 필요한 송편과 교환 뒤 남는 사용 가능 송편이 아래에 계산되고, 한 번에 교환합니다. 남은 횟수도 함께 보입니다.</figcaption><label class="m" for="memo_pop">의견</label><textarea class="memo" id="memo_pop"></textarea></figure>
+    <figure data-title="송편 탭(B 개정)"><h3>송편 탭 · 한 카드에 누적과 사용 가능, 세로 트랙, 교환 버튼 둘</h3>${B2}<figcaption>위 카드 한 장에 누적 송편과 사용 가능 송편이 나란히 있고, 가운데 세로 트랙, 아래에 상자와 다이아 교환 줄이 따로 있습니다. 각 줄의 [교환]을 누르면 수량 팝업이 뜹니다.</figcaption><label class="m" for="memo_b2">의견</label><textarea class="memo" id="memo_b2"></textarea></figure>
+    <figure data-title="수량 팝업"><h3>수량 팝업 · 상품 하나씩</h3>${POP2}<figcaption>공통 팝업 레이아웃. 개수를 조절하면 받는 양, 필요한 송편, 교환 뒤 남는 사용 가능 송편이 계산됩니다. 최대 개수는 남은 횟수와 사용 가능 송편으로 정해집니다.</figcaption><label class="m" for="memo_pop2">의견</label><textarea class="memo" id="memo_pop2"></textarea></figure>
   </div>
   <h2>순위 탭과 홈 배너</h2>
   <div class="figs">
-    <figure data-title="순위 탭"><h3>순위 탭 · 스트립 없음(확정)</h3>${RANK(false)}<figcaption>순위표만 둡니다. 송편은 세그먼트로 넘어가야 보입니다.</figcaption><label class="m" for="memo_s2">의견</label><textarea class="memo" id="memo_s2"></textarea></figure>
-    <figure data-title="홈 배너"><h3>홈 배너 · 문구와 배경 교체, 세그먼트 딥링크</h3>${BAN}<figcaption>평소 배너를 누르면 순위 탭, 받을 보상이 있을 때의 배너를 누르면 송편 탭이 선택된 상태로 들어갑니다. 배경 그림은 Pixellab로 만든 후보 둘이고 아래에서 고릅니다.</figcaption><label class="m" for="memo_ban">의견</label><textarea class="memo" id="memo_ban"></textarea></figure>
+    <figure data-title="순위 탭"><h3>순위 탭 · 스트립 없음(확정)</h3>${RANK(false)}<figcaption>순위표만 둡니다.</figcaption><label class="m" for="memo_s2">의견</label><textarea class="memo" id="memo_s2"></textarea></figure>
+    <figure data-title="홈 배너"><h3>홈 배너 · 문구와 배경 교체, 세그먼트 딥링크</h3>${BAN}<figcaption>배경 그림과 송편 아이콘은 선택 폼에서 고르신 것으로 바꿔 넣습니다. 지금은 1차 후보로 채워 두었습니다.</figcaption><label class="m" for="memo_ban">의견</label><textarea class="memo" id="memo_ban"></textarea></figure>
   </div>
   <h2>정해진 것</h2>
   <div class="tw"><table class="fx"><tbody>${FIXED.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</tbody></table></div>
@@ -232,10 +185,10 @@ const html = `<title>송편 화면 시안</title>
 </div>
 <script>
 (function(){
-  var KEY='chuseok-songpyeon-mock-v2';
+  var KEY='chuseok-songpyeon-mock-v3';
   function q(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
   function build(){
-    var lines=['[송편 화면 시안 2차 점검]'];
+    var lines=['[송편 화면 시안 3차 점검]'];
     q('fieldset.dec').forEach(function(fs,i){var c=fs.querySelector('input:checked');lines.push((i+1)+'. '+fs.getAttribute('data-title')+': '+(c?c.value:'(미선택)'));});
     q('figure[data-title]').forEach(function(f){var el=f.querySelector('.memo');if(!el)return;var m=el.value.trim();if(m)lines.push('- '+f.getAttribute('data-title')+': '+m.replace(/\\n+/g,' '));});
     var all=document.getElementById('memo_all').value.trim();if(all)lines.push('- 전체: '+all.replace(/\\n+/g,' '));
