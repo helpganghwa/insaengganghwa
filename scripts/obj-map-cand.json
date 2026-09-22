@@ -1242,5 +1242,41 @@
   "chuseok_rabbit_suit_v12": {
     "key": "key3",
     "objectId": "4e475fd2-a900-49cd-9390-8bed9c78de24"
+  },
+  "chuseok_woldo": {
+    "key": "key3",
+    "objectId": "56a82549-f23b-4b0b-8a60-615a54e259c6"
+  },
+  "chuseok_gakgung_moon": {
+    "key": "key3",
+    "objectId": "353d19fa-73e8-4ca7-b779-5a1bd29f2cfb"
+  },
+  "chuseok_pyeongon": {
+    "key": "key3",
+    "objectId": "74a39042-7293-48d4-83a4-dde047345cfb"
+  },
+  "chuseok_dangpa": {
+    "key": "key3",
+    "objectId": "fa1c2f23-4de0-47ee-a334-bed850daa587"
+  },
+  "chuseok_hwando_persimmon": {
+    "key": "key3",
+    "objectId": "62110d63-de63-40e7-8089-ed664607a1aa"
+  },
+  "chuseok_moon_mace": {
+    "key": "key3",
+    "objectId": "24e27db7-469e-45df-b8ca-763487019fe3"
+  },
+  "chuseok_rabbit_suit_v13": {
+    "key": "key3",
+    "objectId": "30e29b79-c013-4cb0-80ec-cb39d3af65c4"
+  },
+  "chuseok_rabbit_suit_v14": {
+    "key": "key3",
+    "objectId": "3b7cb005-dbaf-440e-886d-fa29cfc498af"
+  },
+  "chuseok_rabbit_suit_v15": {
+    "key": "key3",
+    "objectId": "29f8e671-e59f-4d96-a200-a348b8e1cca8"
   }
 }

@@ -34,7 +34,7 @@ export type ChuseokCand = {
   concept: string;
   art: string;
   /** 1차(09-19 오후) · 2차(한국 사극·민담 코스튬, 09-19 저녁) · 3차(추석 풍경·햇곡식, 09-19 밤) · 4차(확정 컨셉 재생성, 09-19 밤) · 5차(확정 컨셉 다른 안, 09-19 밤) · 6차(한복=화려하게·달토끼=심플하게, 09-20) · 7차(두 세트 한 번 더 + 풍물놀이 세트, 09-20) · 8차(한복=단아하게·달토끼=동화풍 + 추수 세트, 09-20) · 9차(선택 폼 결과 — 미선택 3부위 재생성, 09-21) · 10차(선택 폼 2차 결과 — 4부위 재생성: 달·송편 무기 / 금박 한복 비슷한 안 / 장식 끈 없는 떡메·절굿공이 / 토끼 인형탈 전신 슈트, 09-21 밤). */
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 };
 
 export const CANDIDATES: ChuseokCand[] = [
@@ -1304,6 +1304,98 @@ export const CANDIDATES: ChuseokCand[] = [
     concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
     art:
       'a plush white rabbit costume bodysuit — a one-piece full-body suit with a round open neckline, soft fluffy fur texture with subtle shading folds, a small gold bell on a crimson ribbon at the neckline, fluffy fur cuffs, rounded mitten paws, big padded feet with pink pads, ' +
+      'a fluffy round cotton tail at the side of the hip, detailed and charming, soft and cuddly',
+  },
+  // ── 15차(09-22 밤): 7차 선택. 한복 무기 "한국 전통 무기 + 한가위 컨셉" → 실제 전통 무기(월도·각궁·도리깨/편곤·당파·환도·철퇴)에 보름달·감·솔잎·벼이삭 무늬.
+  {
+    key: 'chuseok_woldo',
+    nameKo: '보름달 월도',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean woldo polearm: a long dark lacquered wooden shaft with a large curved crescent-moon-shaped gold blade at the top, a full moon engraved on the blade, a crimson silk tassel below the blade, ' +
+      'elegant and opulent, clearly a crescent glaive weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_gakgung_moon',
+    nameKo: '보름달 각궁',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean horn bow (gakgung) with strongly recurved limbs, deep crimson lacquer with gold-leaf full moon and pine needle patterns, a persimmon-orange silk grip wrap, a taut pale string, a single arrow with gold fletching beside it, ' +
+      'elegant and opulent, clearly a bow weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_pyeongon',
+    nameKo: '벼이삭 편곤',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean pyeongon flail weapon: a long dark wooden staff joined by a short iron chain to a shorter striking rod, the rod wrapped with golden rice ears and a gold band, a crimson tassel at the grip, ' +
+      'elegant and opulent, clearly a two-section flail weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_dangpa',
+    nameKo: '솔잎 당파',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean dangpa trident spear: a long dark lacquered shaft with three gold prongs at the top, the center prong longest, a small full moon disc at the base of the prongs, pine needle engraving and a crimson silk tassel, ' +
+      'elegant and opulent, clearly a trident weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_hwando_persimmon',
+    nameKo: '감빛 환도',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean hwando sword with a persimmon-orange lacquered scabbard decorated with gold full moon and pine needle patterns, a dark wood hilt wrapped in black cord, a gold guard, a crimson silk tassel, ' +
+      'elegant and opulent, clearly a sword weapon, no text, large, diagonal',
+  },
+  {
+    key: 'chuseok_moon_mace',
+    nameKo: '보름달 철퇴',
+    slot: 'weapon',
+    batch: 15,
+    concept: '한복 세트 무기 — 전통 무기 + 한가위',
+    art:
+      'a Korean iron mace with a dark lacquered wooden handle wrapped in crimson cord and a large round polished gold head shaped like a glowing full moon with faint crater marks, a gold cap and a silk tassel at the grip end, ' +
+      'elegant and opulent, clearly a mace weapon, no text, large, diagonal',
+  },
+  // 달토끼 방어구: "디테일·방울(v12)에서 방울 + 리본만 없으면" → v12 문장에서 방울·리본 구절만 뺀 v13~v15
+  {
+    key: 'chuseok_rabbit_suit_v13',
+    nameKo: '토끼 인형 슈트(디테일 · 방울 없음)',
+    slot: 'armor',
+    batch: 15,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece full-body suit with a round open neckline, soft fluffy fur texture with subtle shading folds, fluffy fur cuffs, rounded mitten paws, big padded feet with pink pads, ' +
+      'a fluffy round cotton tail at the side of the hip, detailed and charming, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v14',
+    nameKo: '토끼 인형 슈트(디테일 · 방울 없음 · 2)',
+    slot: 'armor',
+    batch: 15,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece full-body suit with a round open neckline, soft fluffy fur texture with subtle shading folds, fluffy fur cuffs, rounded mitten paws, big padded feet with pink pads, ' +
+      'a fluffy round cotton tail at the side of the hip, detailed and charming, soft and cuddly',
+  },
+  {
+    key: 'chuseok_rabbit_suit_v15',
+    nameKo: '토끼 인형 슈트(디테일 · 방울 없음 · 3)',
+    slot: 'armor',
+    batch: 15,
+    concept: '달토끼 세트 방어구 — 전신 봉제 슈트',
+    art:
+      'a plush white rabbit costume bodysuit — a one-piece full-body suit with a round open neckline, soft fluffy fur texture with subtle shading folds, fluffy fur cuffs, rounded mitten paws, big padded feet with pink pads, ' +
       'a fluffy round cotton tail at the side of the hip, detailed and charming, soft and cuddly',
   },
 ];
