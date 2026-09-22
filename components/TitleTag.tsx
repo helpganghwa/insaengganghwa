@@ -153,12 +153,12 @@ export function TitleTag({
         ),
       )}
     </span>
-  ) : def.style.fx && def.style.alt ? (
-    // 두 겹 라벨(2026-09-22 한가위 달 칭호) — 한글 위에 한자를 겹쳐 두고, 글자 위를 오가는 달(.orb)이
-    // 비추는 자리만 마스크로 한자가 드러난다(title-fx.css .fx-dual). 정적 모드·reduced-motion은 한글만.
-    <span className={`fx fx-${def.style.fx} fx-dual`}>
+  ) : def.style.fx && (def.style.alt || def.style.orb) ? (
+    // 글자 오른쪽 아이콘(.orb: 달·꽃, 2026-09-22 한가위 칭호). alt가 있으면 두 겹 라벨(.fx-dual) — 한글 위에
+    // 한자를 겹쳐 두고 달이 밝아질 때 마스크로 한자가 드러난다(title-fx.css). 정적 모드·reduced-motion은 한글만.
+    <span className={`fx fx-${def.style.fx} ${def.style.alt ? 'fx-dual' : 'fx-orb'}`}>
       <span className="ko">{label}</span>
-      <span className="hj" aria-hidden>{def.style.alt}</span>
+      {def.style.alt ? <span className="hj" aria-hidden>{def.style.alt}</span> : null}
       <i className="orb" aria-hidden />
     </span>
   ) : def.style.fx ? (

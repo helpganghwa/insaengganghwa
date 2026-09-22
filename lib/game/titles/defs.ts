@@ -26,6 +26,8 @@ export type TitleStyle = {
   plainColor?: string;
   /** 두 겹 라벨 — 빛(달)이 지나는 자리만 이 글자(한자)로 바뀐다(한가위 달 칭호). */
   alt?: string;
+  /** 글자 오른쪽 아이콘(.orb)만 — 한자 없이(한가위 꽃 칭호). */
+  orb?: boolean;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };
@@ -5443,7 +5445,8 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "plum",
-   alt: "梅花",
+   pt: "petal",
+   orb: true,
    glow: true
   }
  },
@@ -5455,7 +5458,8 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "peony",
-   alt: "芍藥",
+   pt: "petal",
+   orb: true,
    glow: true
   }
  },
@@ -5467,7 +5471,8 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "한가위",
   style: {
    fx: "moran",
-   alt: "牡丹",
+   pt: "petal",
+   orb: true,
    glow: true
   }
  }

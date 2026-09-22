@@ -13,7 +13,7 @@ type Design = {
   typography: { size: string; weight: number };
   palette: Record<string, string>;
   regionKeywords: { pattern: string; color: string }[];
-  special: Record<string, { fx?: string; pt?: string; pc?: number; split?: boolean; color?: string; prefix?: { text: string; color: string }; fxOnly?: string[]; plainColor?: string; alt?: string }>;
+  special: Record<string, { fx?: string; pt?: string; pc?: number; split?: boolean; color?: string; prefix?: { text: string; color: string }; fxOnly?: string[]; plainColor?: string; alt?: string; orb?: boolean }>;
   /** 어려움·한정 카테고리 시그니처 fx 패밀리(트랙 C) — special이 없는 칭호에 코드 해시로 순환 배정. */
   hardFx: Record<string, string[]>;
 };
@@ -53,6 +53,8 @@ type Style = {
   executor?: boolean;
   /** 두 겹 라벨(2026-09-22 한가위 달 칭호) — 달빛이 닿은 자리만 이 글자(한자)로 바뀐다. */
   alt?: string;
+  /** 글자 오른쪽 아이콘(.orb)만 — 한자 없이(한가위 꽃 칭호). */
+  orb?: boolean;
 };
 
 // ── 팔레트 2차원화(트랙 C) — 카테고리 기본색을 난이도로 변주 ──
@@ -115,6 +117,7 @@ function styleOf(t: T): Style {
       ...(sp.split ? { split: true } : {}),
       ...(sp.fxOnly?.length ? { fxOnly: sp.fxOnly, plainColor: sp.plainColor ?? '#b8bcc6' } : {}),
       ...(sp.alt ? { alt: sp.alt } : {}),
+      ...(sp.orb ? { orb: true } : {}),
       ...(hard ? { glow: true } : {}),
     };
   }
@@ -213,6 +216,8 @@ export type TitleStyle = {
   plainColor?: string;
   /** 두 겹 라벨 — 빛(달)이 지나는 자리만 이 글자(한자)로 바뀐다(한가위 달 칭호). */
   alt?: string;
+  /** 글자 오른쪽 아이콘(.orb)만 — 한자 없이(한가위 꽃 칭호). */
+  orb?: boolean;
 };
 
 export type TitleDef = { code: string; kind: TitleKind; label: string; hidden: boolean; cat: string; style: TitleStyle };

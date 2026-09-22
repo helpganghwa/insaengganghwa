@@ -418,15 +418,18 @@
     },
     "chuseok26_flower3": {
       "fx": "plum",
-      "alt": "梅花"
+      "orb": true,
+      "pt": "petal"
     },
     "chuseok26_flower2": {
       "fx": "peony",
-      "alt": "芍藥"
+      "orb": true,
+      "pt": "petal"
     },
     "chuseok26_flower1": {
       "fx": "moran",
-      "alt": "牡丹"
+      "orb": true,
+      "pt": "petal"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

@@ -209,7 +209,7 @@
 /* 2026 한가위 강화 대회 순위 칭호 6종(2026-09-22).
    달토끼 장비(신월·반월·만월) = 글자 오른쪽에 순위별 달(.orb: 초승달·반달·보름달)이 떠 있고, 달이 숨 쉬듯 밝아질 때마다
    글자가 한자로(첫 숨), 한글로(둘째 숨) 천천히 녹아들듯 바뀐다. 크기·주기는 em 변수라 채팅 13px에서도 비율 유지.
-   한복 장비(매화·작약·모란) = 같은 구조로 꽃이 벌어질 때 한자(梅花·芍藥·牡丹)로. */
+   한복 장비(매화·작약·모란) = 한자 없이 글자 오른쪽의 꽃에서 꽃잎이 글자 쪽으로 흩날림(pt-petal). */
 /* 달토끼 장비(신월·반월·만월) — 두 겹 라벨(.fx-dual: .ko 한글 / .hj 한자 / .orb 달). 사용자 확정 B안(2026-09-22, 3차 "가볍게").
    글자 오른쪽의 달이 한 주기(--t)에 두 번 은은하게 숨 쉬듯 밝아지고, 그 박자에 맞춰 글자가 한자로(첫 숨), 한글로(둘째 숨)
    천천히 녹아들듯 바뀐다(불투명도 교차, 약 0.9초). 빛띠·큰 후광 없음 — 달 본체의 밝기와 얇은 후광만. */
@@ -239,19 +239,31 @@
 .fx-fullmoon{--d:.74em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,236,170,.6)) drop-shadow(0 0 3px rgba(245,215,110,.3));--glow-hi:drop-shadow(0 0 2px rgba(255,248,215,1)) drop-shadow(0 0 7px rgba(245,215,110,.8))}
 .fx-fullmoon .ko,.fx-fullmoon .hj{color:#f2c23c}
 .fx-fullmoon .orb::before{background:radial-gradient(circle at 62% 34%,rgba(176,134,50,.32) 0 13%,transparent 15%),radial-gradient(circle at 36% 56%,rgba(176,134,50,.28) 0 17%,transparent 19%),radial-gradient(circle at 58% 66%,rgba(176,134,50,.22) 0 9%,transparent 11%),radial-gradient(circle at 42% 40%,#fffbe6 0%,#f7dd7e 52%,#dfb247 88%,#c49838 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10' cy='10' r='9'/></svg>")}
-/* 한복 장비(매화·작약·모란) — 달 세트와 같은 두 겹 라벨. 글자 오른쪽의 꽃(SVG 마스크: 매화 다섯 잎·작약 여덟 잎·모란 겹꽃)이
-   살짝 벌어지며 밝아질 때 글자가 오른쪽부터 한자(梅花·芍藥·牡丹)로, 다음 벌어짐에 한글로 번진다. 글자는 후광 없는 단색. */
-.fx-plum .orb,.fx-peony .orb,.fx-moran .orb{animation:bloom var(--t) ease-in-out infinite}
-@keyframes bloom{0%,12%{filter:var(--glow-lo);transform:scale(1) rotate(0deg)}30%{filter:var(--glow-hi);transform:scale(1.1) rotate(7deg)}48%,56%{filter:var(--glow-lo);transform:scale(1) rotate(0deg)}74%{filter:var(--glow-hi);transform:scale(1.1) rotate(7deg)}92%,100%{filter:var(--glow-lo);transform:scale(1) rotate(0deg)}}
-.fx-plum{--d:.66em;--t:8.5s;--glow-lo:drop-shadow(0 0 1px rgba(255,236,242,.45));--glow-hi:drop-shadow(0 0 1.5px rgba(255,245,248,.95)) drop-shadow(0 0 3px rgba(255,200,215,.45))}
-.fx-plum .ko,.fx-plum .hj{color:#f7e3e9}
+/* 한복 장비(매화·작약·모란) — 한자 없음(.fx-orb: 글자 + 오른쪽 꽃). 꽃은 밝아지지 않고 가만히 있으며, 꽃에서 떨어진
+   꽃잎(pt-petal, 4장)이 글자 쪽(왼쪽)으로 흩날린다. 글자는 후광 없는 단색(꽃 색). 꽃잎 색은 꽃 형제 선택자(.fx-* ~ i)로. */
+.fx-orb{position:relative;display:inline-block;white-space:nowrap;font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700;letter-spacing:.04em}
+.fx-orb .orb{display:inline-block;position:relative;width:var(--d);height:var(--d);margin-left:.22em;vertical-align:-.04em;filter:var(--glow-lo)}
+.fx-orb .orb::before{content:"";position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.fx-plum{--d:.66em;--glow-lo:drop-shadow(0 0 1px rgba(255,236,242,.45))}
+.fx-plum .ko{color:#f7e3e9}
 .fx-plum .orb::before{background:radial-gradient(circle at 50% 50%,#ffd76a 0%,#ffcf5c 13%,#fff6f8 21%,#fff0f3 58%,#f8d5df 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10.00' cy='5.10' r='4.1'/><circle cx='14.66' cy='8.49' r='4.1'/><circle cx='12.88' cy='13.96' r='4.1'/><circle cx='7.12' cy='13.96' r='4.1'/><circle cx='5.34' cy='8.49' r='4.1'/><circle cx='10' cy='10' r='2.4'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><circle cx='10.00' cy='5.10' r='4.1'/><circle cx='14.66' cy='8.49' r='4.1'/><circle cx='12.88' cy='13.96' r='4.1'/><circle cx='7.12' cy='13.96' r='4.1'/><circle cx='5.34' cy='8.49' r='4.1'/><circle cx='10' cy='10' r='2.4'/></svg>")}
-.fx-peony{--d:.72em;--t:7.5s;--glow-lo:drop-shadow(0 0 1px rgba(255,180,205,.5));--glow-hi:drop-shadow(0 0 1.5px rgba(255,205,225,1)) drop-shadow(0 0 4px rgba(245,120,165,.55))}
-.fx-peony .ko,.fx-peony .hj{color:#f79cb9}
+.fx-peony{--d:.72em;--glow-lo:drop-shadow(0 0 1px rgba(255,180,205,.5))}
+.fx-peony .ko{color:#f79cb9}
 .fx-peony .orb::before{background:radial-gradient(circle at 50% 50%,#fff4f7 0%,#ffdce6 18%,#ffb3cb 52%,#f27fa6 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(0 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(45 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(90 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(135 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(180 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(225 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(270 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(315 10 10)'/><circle cx='10' cy='10' r='3.2'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(0 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(45 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(90 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(135 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(180 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(225 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(270 10 10)'/><ellipse cx='10' cy='5.3' rx='2.7' ry='4.7' transform='rotate(315 10 10)'/><circle cx='10' cy='10' r='3.2'/></svg>")}
-.fx-moran{--d:.8em;--t:7s;--glow-lo:drop-shadow(0 0 1.5px rgba(255,120,140,.5));--glow-hi:drop-shadow(0 0 2px rgba(255,190,200,1)) drop-shadow(0 0 5px rgba(230,50,80,.6))}
-.fx-moran .ko,.fx-moran .hj{color:#e6334f}
+.fx-moran{--d:.8em;--glow-lo:drop-shadow(0 0 1.5px rgba(255,120,140,.5))}
+.fx-moran .ko{color:#e6334f}
 .fx-moran .orb::before{background:radial-gradient(circle at 50% 50%,#ffd978 0%,#ffcf6a 10%,#ff8a9c 18%,#e8405c 55%,#b8203c 100%);-webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(22.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(67.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(112.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(157.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(202.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(247.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(292.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(337.5 10 10)'/><circle cx='10.00' cy='7.10' r='3.1'/><circle cx='12.51' cy='8.55' r='3.1'/><circle cx='12.51' cy='11.45' r='3.1'/><circle cx='10.00' cy='12.90' r='3.1'/><circle cx='7.49' cy='11.45' r='3.1'/><circle cx='7.49' cy='8.55' r='3.1'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(22.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(67.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(112.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(157.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(202.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(247.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(292.5 10 10)'/><ellipse cx='10' cy='4.9' rx='3.1' ry='5.1' transform='rotate(337.5 10 10)'/><circle cx='10.00' cy='7.10' r='3.1'/><circle cx='12.51' cy='8.55' r='3.1'/><circle cx='12.51' cy='11.45' r='3.1'/><circle cx='10.00' cy='12.90' r='3.1'/><circle cx='7.49' cy='11.45' r='3.1'/><circle cx='7.49' cy='8.55' r='3.1'/></svg>")}
+/* 꽃잎: 꽃 자리(오른쪽 끝)에서 태어나 왼쪽으로 글자 위를 가로지르며 살랑이다 사라진다. 4장이 1.35s 간격(TitleTag Particles 지연)으로
+   이어져 끊기지 않는다. 시작 위치는 컴포넌트의 inline left를 !important로 덮어 모두 꽃 곁에서 출발한다. */
+.pt-petal>i{left:auto !important;right:.55em;top:.12em;width:.26em;height:.18em;border-radius:70% 30% 65% 35%;filter:blur(.2px);animation:p-petal 5.4s ease-in-out infinite}
+.pt-petal>i:nth-child(2){--dx:-2.1em;--dy:.35em;--rz:220deg}
+.pt-petal>i:nth-child(3){--dx:-1.5em;--dy:-.2em;--rz:-160deg;top:.42em}
+.pt-petal>i:nth-child(4){--dx:-2.5em;--dy:.55em;--rz:300deg;top:0}
+.pt-petal>i:nth-child(5){--dx:-1.2em;--dy:.15em;--rz:-90deg;top:.3em}
+@keyframes p-petal{0%{opacity:0;transform:translate(0,0) rotate(0deg) scale(.7)}10%{opacity:.85;transform:translate(calc(var(--dx) * .15),calc(var(--dy) * .1)) rotate(calc(var(--rz) * .15)) scale(1)}50%{opacity:.7;transform:translate(calc(var(--dx) * .6),calc(var(--dy) * .7)) rotate(calc(var(--rz) * .6)) scale(.95)}85%{opacity:.25;transform:translate(calc(var(--dx) * .95),var(--dy)) rotate(calc(var(--rz) * .95)) scale(.85)}100%{opacity:0;transform:translate(var(--dx),calc(var(--dy) * 1.1)) rotate(var(--rz)) scale(.8)}}
+.pt-petal>.fx-plum~i{background:linear-gradient(135deg,#fff7fa 0%,#ffe4ec 55%,#f9c9d6 100%)}
+.pt-petal>.fx-peony~i{background:linear-gradient(135deg,#ffe0ea 0%,#ffb6cc 55%,#f27fa6 100%)}
+.pt-petal>.fx-moran~i{background:linear-gradient(135deg,#ff9fae 0%,#ef5c74 55%,#c9243f 100%)}
 @media (prefers-reduced-motion: reduce){.ttag span,.ttag span::after,.ttag span::before,.ttag b,.ttag .pt>i,.ttag .orb,.ttag .orb::after{animation:none !important}.ttag .fx-dual .hj{display:none}}
 /* 정적 모드(.ttag-still) — 채팅 행 등 대량 목록용(2026-08-24 모바일 스크롤 프레임 확보):
    색·그라데이션 첫 프레임은 유지하고 무한 애니메이션만 정지. 파티클 점은 정지 시 어색해 숨김. */

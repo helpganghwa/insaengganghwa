@@ -8,16 +8,16 @@ const out = process.argv[2];
 if (!out) throw new Error('출력 경로가 필요합니다');
 const css = readFileSync('components/title-fx.css', 'utf8');
 
-type T = { label: string; fx: string; pt?: string; alt?: string; rank: string; note: string };
+type T = { label: string; fx: string; pt?: string; alt?: string; orb?: boolean; rank: string; note: string };
 const MOON: T[] = [
   { label: '신월', fx: 'newmoon', alt: '新月', rank: '3등', note: '은빛. 기울어진 초승달이 숨 쉬듯 밝아질 때 글자가 오른쪽부터 新月로 번지고, 다음 숨에 신월로 돌아옵니다.' },
   { label: '반월', fx: 'halfmoon', alt: '半月', rank: '2등', note: '체리빛. 붉은 반달이 밝아지며 半月로 바뀝니다.' },
   { label: '만월', fx: 'fullmoon', alt: '滿月', rank: '1등', note: '금빛. 가장 큰 보름달이 밝아지며 滿月로 바뀝니다.' },
 ];
 const FLOWER: T[] = [
-  { label: '매화', fx: 'plum', alt: '梅花', rank: '3등', note: '백매의 흰빛 도는 연분홍. 다섯 잎 매화가 살짝 벌어지며 밝아질 때 글자가 오른쪽부터 梅花로 번지고, 다음에 매화로 돌아옵니다.' },
-  { label: '작약', fx: 'peony', alt: '芍藥', rank: '2등', note: '분홍. 여덟 잎 작약이 벌어질 때 芍藥으로 바뀝니다. 꽃이 매화보다 큽니다.' },
-  { label: '모란', fx: 'moran', alt: '牡丹', rank: '1등', note: '진홍. 겹꽃 모란이 가장 크게 벌어지며 牡丹으로 바뀝니다. 꽃술이 금빛입니다.' },
+  { label: '매화', fx: 'plum', orb: true, pt: 'petal', rank: '3등', note: '백매의 흰빛 도는 연분홍. 오른쪽 매화에서 흰 꽃잎이 떨어져 글자 위로 흩날립니다. 한자 전환은 없습니다.' },
+  { label: '작약', fx: 'peony', orb: true, pt: 'petal', rank: '2등', note: '분홍. 작약에서 분홍 꽃잎이 흩날립니다. 꽃이 매화보다 큽니다.' },
+  { label: '모란', fx: 'moran', orb: true, pt: 'petal', rank: '1등', note: '진홍. 겹꽃 모란에서 진홍 꽃잎이 흩날립니다. 꽃이 가장 크고 꽃술이 금빛입니다.' },
 ];
 // TitleTag.tsx의 Particles()와 같은 4점 배치·지연.
 const dots = [0, 1, 2, 3].map((i) => `<i style="left:${12 + i * 24}%;animation-delay:${(i * 1.35).toFixed(2)}s"></i>`).join('');
@@ -25,7 +25,9 @@ const tag = (t: T, size: string) => {
   // TitleTag.tsx와 같은 마크업 — 두 겹 라벨은 .ko/.hj/.orb.
   const inner = t.alt
     ? `<span class="fx fx-${t.fx} fx-dual"><span class="ko">${t.label}</span><span class="hj" aria-hidden="true">${t.alt}</span><i class="orb" aria-hidden="true"></i></span>`
-    : `<span class="fx fx-${t.fx}">${t.label}</span>`;
+    : t.orb
+      ? `<span class="fx fx-${t.fx} fx-orb"><span class="ko">${t.label}</span><i class="orb" aria-hidden="true"></i></span>`
+      : `<span class="fx fx-${t.fx}">${t.label}</span>`;
   const body = t.pt ? `<span class="pt pt-${t.pt}">${inner}${dots}</span>` : inner;
   return `<span class="ttag" style="font-size:${size}">${body}</span>`;
 };
@@ -86,7 +88,7 @@ const html = `<title>한가위 칭호 이펙트</title>
   <h1>한가위 칭호 이펙트</h1>
   <p class="lead">2026 한가위 강화 대회 순위 칭호 6종의 전용 이펙트입니다. 왼쪽은 채팅 행과 프로필 크기, 오른쪽은 칭호 목록 행과 아바타 카드 크기입니다. 게임은 항상 어두운 화면이라 그 위에서만 봅니다. 실제 게임의 이펙트 CSS를 그대로 썼으니 보이는 그대로 들어갑니다. 고칠 점이 있으면 아래에 적어 복사해 주세요.</p>
   ${setBlock('달토끼 장비', '3등 은빛 · 2등 체리빛 · 1등 금빛 — 달이 밝아질 때 글자가 오른쪽부터 한자로, 다음에 한글로', MOON)}
-  ${setBlock('한복 장비', '3등 매화 흰 연분홍 · 2등 작약 분홍 · 1등 모란 진홍 — 꽃이 벌어질 때 글자가 오른쪽부터 한자로', FLOWER)}
+  ${setBlock('한복 장비', '3등 매화 흰 연분홍 · 2등 작약 분홍 · 1등 모란 진홍 — 꽃에서 꽃잎이 글자 쪽으로 흩날림', FLOWER)}
   <label class="m" for="memo">의견</label><textarea id="memo" placeholder="칭호별로 바꾸고 싶은 색·움직임"></textarea>
   <div class="acts"><button type="button" id="copy">의견 복사</button><span id="toast" role="status"></span></div>
 </div>
