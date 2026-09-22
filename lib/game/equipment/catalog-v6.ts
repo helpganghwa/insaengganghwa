@@ -59,7 +59,7 @@ export const CATALOG_V6: CatalogItem[] = [
     nameKo: '한가위 복주머니',
     region: '일반',
     tone: '희망',
-    lore: '진홍 비단에 금실로 복 자를 수놓은 주머니다. 매듭을 풀면 안은 늘 비어 있는데, 그래서 넣을 자리가 남는다. 바라는 것을 하나 적어 넣고 매듭을 지으면, 이듬해 풀었을 때 종이는 없고 주머니만 조금 무거워져 있다.',
+    lore: '진홍 비단에 금실로 달과 절구 찧는 토끼를 수놓은 주머니다. 매듭을 풀면 안은 늘 비어 있는데, 그래서 넣을 자리가 남는다. 바라는 것을 하나 적어 넣고 매듭을 지으면, 이듬해 풀었을 때 종이는 없고 주머니만 조금 무거워져 있다.',
     art: 'a small Korean bok-jumeoni lucky pouch of deep crimson silk embroidered with a gold character and floral patterns, tied with a colorful silk knot and tassel, pixel art',
     wornDesc: 'a small deep-crimson silk lucky pouch embroidered in gold, tied with a colorful silk knot and tassel, hanging at the waist',
   },
