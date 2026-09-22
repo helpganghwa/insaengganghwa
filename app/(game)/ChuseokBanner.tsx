@@ -5,16 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { CHUSEOK_ACCRUE_END_MS } from '@/lib/game/chuseok/config';
-
-function fmtLeft(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const d = Math.floor(s / 86_400);
-  const h = Math.floor((s % 86_400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const hh = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  return d > 0 ? `${d}일 ${hh}` : hh;
-}
+import { fmtLeft } from '@/lib/game/chuseok/countdown';
 
 /**
  * 홈 §1 — 한가위 배너(캐러셀 슬라이드). 평소엔 대회(한옥 마당 배경, 초 단위 남은 시간),

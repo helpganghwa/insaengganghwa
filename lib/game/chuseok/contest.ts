@@ -1,8 +1,10 @@
 import 'server-only';
 
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { userProfiles } from '@/lib/db/schema/avatar';
+import { characters } from '@/lib/db/schema/server';
 import { CATALOG_V6 } from '@/lib/game/equipment/catalog-v6';
 
 import {
@@ -26,7 +28,16 @@ import { rankRows, type RankInput, type RankedRow } from './rank';
  */
 const NAME_BY_CODE = new Map(CATALOG_V6.map((c) => [c.key, c.nameKo]));
 
-export type BoardRow = { rank: number; userId: string; nickname: string; level: number; reachedAt: string | null; me: boolean };
+export type BoardRow = {
+  rank: number;
+  userId: string;
+  nickname: string;
+  level: number;
+  reachedAt: string | null;
+  me: boolean;
+  /** 활성 프로필 정면 프레임(랭킹 화면과 같은 출처) — 없으면 null. */
+  img: string | null;
+};
 export type BoardItem = {
   code: string;
   name: string;
@@ -84,7 +95,7 @@ function toItem(code: string, set: 'moon' | 'flower', ranked: RankedRow[], userI
     code,
     name: NAME_BY_CODE.get(code) ?? code,
     set,
-    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, reachedAt: iso(r.reachedAt), me: r.userId === userId })),
+    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, reachedAt: iso(r.reachedAt), me: r.userId === userId, img: null })),
     mine: mineRow
       ? { rank: mineRow.rank, level: mineRow.level, reachedAt: iso(mineRow.reachedAt), nextTierEnd: nextRewardTierEnd(mineRow.rank), reward: rankRewardFor(mineRow.rank) }
       : null,
@@ -97,12 +108,35 @@ export async function getContestBoard(serverId: number, userId: string | null, a
   const phase = chuseokPhase(at);
   if (phase !== 'accrue') {
     const settled = await loadSettled(serverId, userId);
-    if (settled) return { phase, settled: true, items: settled };
+    if (settled) return { phase, settled: true, items: await attachImgs(serverId, settled) };
   }
   const cutoff = phase === 'accrue' || phase === 'before' ? at : CHUSEOK_ACCRUE_END_MS;
   const by = await loadRows(serverId, cutoff);
   const items = CHUSEOK_CONTEST_ITEMS.map((i) => toItem(i.code, i.set, rankRows(by.get(i.code) ?? []), userId));
-  return { phase, settled: false, items };
+  return { phase, settled: false, items: await attachImgs(serverId, items) };
+}
+
+/** 순위 행의 아바타 — 활성 프로필의 정면(south) 프레임(랭킹 화면과 같은 출처). 조회 실패는 이미지 없이 진행. */
+async function attachImgs(serverId: number, items: BoardItem[]): Promise<BoardItem[]> {
+  const ids = [...new Set(items.flatMap((i) => i.rows.map((r) => r.userId)))];
+  if (ids.length === 0) return items;
+  let map = new Map<string, string | null>();
+  try {
+    const rows = await db
+      .select({ userId: characters.userId, rotations: userProfiles.rotations })
+      .from(characters)
+      .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids)));
+    map = new Map(
+      rows.map((r) => {
+        const rot = r.rotations as Record<string, string> | null;
+        return [r.userId, rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null] as const;
+      }),
+    );
+  } catch (e) {
+    console.error('[chuseok.board] profile images failed', e);
+  }
+  return items.map((i) => ({ ...i, rows: i.rows.map((r) => ({ ...r, img: map.get(r.userId) ?? null })) }));
 }
 
 async function loadSettled(serverId: number, userId: string | null): Promise<BoardItem[] | null> {
@@ -122,7 +156,7 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
       set: i.set,
       rows: rows
         .filter((r) => r.code === i.code)
-        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), reachedAt: r.reached_at, me: r.user_id === userId })),
+        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), reachedAt: r.reached_at, me: r.user_id === userId, img: null })),
       mine: mine
         ? { rank: Number(mine.rank), level: Number(mine.level), reachedAt: mine.reached_at, nextTierEnd: null, reward: rankRewardFor(Number(mine.rank)) }
         : null,

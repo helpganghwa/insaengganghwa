@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import { useDiamondActions } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { assetUrl } from '@/lib/asset-versions';
 import {
@@ -53,25 +54,57 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
   const closedText =
     ov.phase === 'before' ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.' : ov.phase === 'ended' ? '한가위 송편은 끝났어요.' : null;
 
+  // 낙관 갱신(2026-09-22 사용자 요청) — 받음 표시·다이아·토스트를 먼저 반영하고 실패하면 되돌린다.
+  // 서버가 '이미 받음'이라 하면 화면이 맞는 것이므로 되돌리지 않는다.
   const claim = (step: number) => {
     if (busyStep !== null || !open) return;
+    const def = SONGPYEON_LADDER.find((l) => l.step === step);
+    if (!def) return;
     setBusyStep(step);
+    setOv((o) => ({ ...o, claimed: [...o.claimed, step].sort((a, b) => a - b), claimable: Math.max(0, o.claimable - 1) }));
+    optimisticAdjust(BigInt(def.diamond));
+    showHeaderToast({ title: `💎 ${n(def.diamond)} 획득!`, detail: `보급상자 ${n(def.boxes)}개 지급` });
+    const rollback = (message: string) => {
+      setOv((o) => ({ ...o, claimed: o.claimed.filter((c) => c !== step), claimable: o.claimable + 1 }));
+      optimisticAdjust(-BigInt(def.diamond));
+      showError(message);
+    };
     startTransition(async () => {
       try {
         const r = await claimSongpyeonStepAction(step);
-        if (r.status !== 'success') {
-          showError(r.message);
-          return;
-        }
-        optimisticAdjust(BigInt(r.diamond));
-        setOv((o) => ({ ...o, claimed: [...o.claimed, r.step].sort((a, b) => a - b), claimable: Math.max(0, o.claimable - 1) }));
-        showHeaderToast({ title: `💎 ${n(r.diamond)} 획득!`, detail: `보급상자 ${n(r.boxes)}개 지급` });
+        if (r.status !== 'success' && r.code !== 'ALREADY') rollback(r.message);
       } catch {
-        showError('지금은 받을 수 없어요. 잠시 후 다시 시도해 주세요.');
+        rollback('지금은 받을 수 없어요. 잠시 후 다시 시도해 주세요.');
       } finally {
         setBusyStep(null);
       }
     });
+  };
+
+  // 교환도 낙관 갱신 — 팝업을 바로 닫고 송편·다이아를 먼저 움직인다. 실패하면 되돌리고 사유를 보여 준다.
+  const exchange = (kind: SongpyeonExchangeKind, count: number) => {
+    const def = SONGPYEON_EXCHANGE[kind];
+    const cost = def.songpyeon * count;
+    const diamond = kind === 'diamond' ? SONGPYEON_EXCHANGE.diamond.diamond * count : 0;
+    const boxes = kind === 'box' ? SONGPYEON_EXCHANGE.box.boxes * count : 0;
+    setModal(null);
+    setOv((o) => ({ ...o, spent: o.spent + cost, available: o.available - cost }));
+    if (diamond > 0) optimisticAdjust(BigInt(diamond));
+    showHeaderToast({
+      title: diamond > 0 ? `💎 ${n(diamond)} 교환!` : `📦 상자 ${n(boxes)}개 교환!`,
+      detail: `송편 ${n(cost)} 사용`,
+    });
+    const rollback = (message: string) => {
+      setOv((o) => ({ ...o, spent: o.spent - cost, available: o.available + cost }));
+      if (diamond > 0) optimisticAdjust(-BigInt(diamond));
+      showError(message);
+    };
+    exchangeSongpyeonAction(kind, count)
+      .then((r) => {
+        if (r.status !== 'success') rollback(r.message);
+        else setOv((o) => ({ ...o, available: r.available, spent: o.total - r.available }));
+      })
+      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
   };
 
   return (
@@ -164,100 +197,72 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
       <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 10/3까지 받고 교환할 수 있어요. 그 뒤 남은 송편은 사라져요.</p>
 
       {modal ? (
-        <ExchangeModal
-          kind={modal}
-          available={ov.available}
-          onClose={() => setModal(null)}
-          onDone={(r) => {
-            setOv((o) => ({ ...o, spent: o.spent + r.cost, available: r.available }));
-            if (r.diamond > 0) optimisticAdjust(BigInt(r.diamond));
-            showHeaderToast({
-              title: r.diamond > 0 ? `💎 ${n(r.diamond)} 교환!` : `📦 상자 ${n(r.boxes)}개 교환!`,
-              detail: `송편 ${n(r.cost)} 사용 · 남은 ${n(r.available)}`,
-            });
-            setModal(null);
-          }}
-        />
+        <ExchangeModal kind={modal} available={ov.available} onClose={() => setModal(null)} onSubmit={(count) => exchange(modal, count)} />
       ) : null}
     </div>
   );
 }
 
-/** 수량 팝업 — 상품 하나씩. 개수를 조절하면 받는 양·필요한 송편·교환 뒤 남는 송편이 바뀐다. */
+/** 수량 팝업(공통 팝업) — 상품 하나씩. 개수를 조절하면 받는 것·필요한 송편·교환 뒤 사용 가능이 바뀐다. */
 function ExchangeModal({
   kind,
   available,
   onClose,
-  onDone,
+  onSubmit,
 }: {
   kind: SongpyeonExchangeKind;
   available: number;
   onClose: () => void;
-  onDone: (r: { cost: number; diamond: number; boxes: number; available: number }) => void;
+  onSubmit: (count: number) => void;
 }) {
   const def = SONGPYEON_EXCHANGE[kind];
   const max = Math.max(1, Math.min(SONGPYEON_EXCHANGE_MAX_PER_ACTION, Math.floor(available / def.songpyeon)));
   const [count, setCount] = useState(1);
-  const [busy, setBusy] = useState(false);
-  const { showError } = useResourceToast();
   const cost = def.songpyeon * count;
-  const get = kind === 'diamond' ? `💎 ${n(SONGPYEON_EXCHANGE.diamond.diamond * count)}` : `📦 상자 ${n(SONGPYEON_EXCHANGE.box.boxes * count)}개`;
+  const get = kind === 'diamond' ? `💎 ${n(SONGPYEON_EXCHANGE.diamond.diamond * count)}` : `📦 ${n(SONGPYEON_EXCHANGE.box.boxes * count)}`;
   const submit = () => {
-    if (busy || cost > available) return;
-    setBusy(true);
-    exchangeSongpyeonAction(kind, count)
-      .then((r) => {
-        if (r.status !== 'success') {
-          showError(r.message);
-          return;
-        }
-        onDone({ cost: r.cost, diamond: r.diamond, boxes: r.boxes, available: r.available });
-      })
-      .catch(() => showError('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'))
-      .finally(() => setBusy(false));
+    if (cost > available) return;
+    onSubmit(count);
   };
   const step = (d: number) => setCount((c) => Math.min(max, Math.max(1, c + d)));
+  const stepBtn = 'grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold text-zinc-100 disabled:opacity-40';
   return (
-    <ModalShell onClose={onClose} onSubmit={submit} label="송편 교환" className="w-[300px] rounded-2xl bg-zinc-950 p-4">
-      <h2 className="text-center text-[14px] font-extrabold">{kind === 'diamond' ? '💎 다이아 교환' : '📦 상자 교환'}</h2>
-      <p className="mt-0.5 text-center text-[11px] text-zinc-500">
-        {kind === 'diamond'
-          ? `💎 ${SONGPYEON_EXCHANGE.diamond.diamond} = ${n(SONGPYEON_EXCHANGE.diamond.songpyeon)} 송편`
-          : `📦 ${SONGPYEON_EXCHANGE.box.boxes}개 = ${n(SONGPYEON_EXCHANGE.box.songpyeon)} 송편`}
-      </p>
-      <div className="mt-3 flex items-center justify-center gap-3.5">
-        <button type="button" aria-label="하나 줄이기" onClick={() => step(-1)} disabled={count <= 1} className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold disabled:opacity-40">
-          −
-        </button>
-        <b className="min-w-[28px] text-center font-mono text-[22px] tabular-nums text-amber-200">{count}</b>
-        <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold disabled:opacity-40">
-          +
-        </button>
-        <button type="button" onClick={() => setCount(max)} className="rounded-md bg-zinc-800 px-2 py-1 text-[10.5px] text-zinc-300">
-          최대
-        </button>
-      </div>
-      <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1 text-[12px]">
-        <dt className="text-zinc-400">받는 양</dt>
-        <dd className="text-right font-bold">{get}</dd>
-        <dt className="text-zinc-400">필요한 송편</dt>
-        <dd className="text-right font-mono tabular-nums">{n(cost)}</dd>
-        <dt className="text-zinc-400">교환 뒤 사용 가능</dt>
-        <dd className={`text-right font-mono tabular-nums ${available - cost < 0 ? 'text-red-400' : ''}`}>{n(available - cost)}</dd>
-      </dl>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" onClick={onClose} className="rounded-xl bg-zinc-800 py-2.5 text-[12.5px] font-bold text-zinc-300">
-          취소
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy || cost > available}
-          className="rounded-xl bg-amber-600 py-2.5 text-[12.5px] font-extrabold text-white disabled:opacity-60"
-        >
-          {busy ? '교환 중' : '교환'}
-        </button>
-      </div>
+    <ModalShell onClose={onClose} onSubmit={submit} label="송편 교환">
+      <ModalLayout
+        title={kind === 'diamond' ? `💎 ${n(SONGPYEON_EXCHANGE.diamond.diamond)} 교환` : `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개 교환`}
+        subtitle={`한 번에 ${n(def.songpyeon)} 송편 · 한도 없음`}
+        footer={
+          <>
+            <ModalButton tone="neutral" onClick={onClose}>
+              취소
+            </ModalButton>
+            <ModalButton tone="primary" onClick={submit} disabled={cost > available}>
+              {`${n(cost)} 송편으로 교환`}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="flex items-center justify-center gap-3.5 pb-0.5 pt-1.5">
+          <button type="button" aria-label="하나 줄이기" onClick={() => step(-1)} disabled={count <= 1} className={stepBtn}>
+            −
+          </button>
+          <b className="min-w-[28px] text-center font-mono text-[22px] tabular-nums text-amber-200">{count}</b>
+          <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className={stepBtn}>
+            +
+          </button>
+          <button type="button" onClick={() => setCount(max)} className="text-[11px] tabular-nums text-zinc-400 underline-offset-2 active:underline">
+            최대 {n(max)}
+          </button>
+        </div>
+        <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 text-[12px]">
+          <dt className="text-zinc-400">받는 것</dt>
+          <dd className="text-right font-bold">{get}</dd>
+          <dt className="text-zinc-400">필요한 송편</dt>
+          <dd className="text-right font-mono tabular-nums">{n(cost)}</dd>
+          <dt className="text-zinc-400">교환 뒤 사용 가능</dt>
+          <dd className={`text-right font-mono tabular-nums ${available - cost < 0 ? 'text-red-400' : ''}`}>{n(available - cost)}</dd>
+        </dl>
+      </ModalLayout>
     </ModalShell>
   );
 }
