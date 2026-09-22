@@ -18,7 +18,7 @@ export const CATALOG_V6: CatalogItem[] = [
     nameKo: '달그림자 완드',
     region: '일반',
     tone: '수수께끼',
-    lore: '달에서 떡을 찧던 토끼가 떡메 대신 잠시 들었던 완드라고 한다. 자루를 들면 금빛 보름달이 손 위에 뜨고, 오색 술은 바람 한 점 없어도 흔들린다. 토끼가 돌려 달라며 내려온 적은 아직 한 번도 없다.',
+    lore: '금빛 보름달 하나를 구름 테에 끼워 자루 끝에 얹었다. 오색 술이 흔들릴 때마다 달빛이 술 끝까지 흘러내린다. 하늘의 달은 한 달에 한 번만 차지만, 이 달은 자루를 쥔 손이 놓지 않는 한 늘 가득 차 있다.',
     art: 'a short wand topped with a large glowing golden full moon disc showing a dark rabbit-pounding-mortar silhouette, a thin gold cloud rim around the moon, dark wooden handle with five-colored silk tassels, pixel art',
     wornDesc: 'a short wand held in one hand, topped with a round glowing golden full-moon disc that shows a small dark rabbit silhouette, a thin gold cloud rim around the disc, colorful silk tassels hanging from the dark handle',
   },

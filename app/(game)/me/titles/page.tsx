@@ -4,6 +4,7 @@ import { after } from 'next/server';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
+import { chuseokPhase } from '@/lib/game/chuseok/config';
 import { getActiveServerId } from '@/lib/game/servers';
 import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
@@ -98,8 +99,11 @@ export default async function TitlesPage() {
   // 판정이 아직 없는 칭호(PENDING)는 **보유하지 않았다면** 목록에서 뺀다 — 목록에 있으면
   // "아직 못 얻은 것"과 구분되지 않은 채 분모에 들어가, 발견 게이지가 채워질 수 없게 된다.
   // 이벤트 훅 등으로 이미 보유한 분은 그대로 보인다(isHiddenPendingTitle 주석).
+  // 한가위 순위 칭호 6종은 대회 시작(9/24 00:00 KST) 전엔 이름도 감춘다 — 코드는 하루 먼저 배포되므로
+  // 배포 직후 목록에 새 칭호가 새지 않게(2026-09-23 점검). 시작 뒤엔 다른 칭호와 같은 원칙(이름 공개·조건 비공개).
+  const chuseokBefore = chuseokPhase() === 'before';
   const rows: TitleRow[] = TITLE_DEFS.filter(
-    (d) => !isHiddenPendingTitle(d.code, ledger.has(d.code)),
+    (d) => !isHiddenPendingTitle(d.code, ledger.has(d.code)) && !(chuseokBefore && d.code.startsWith('chuseok26_') && !ledger.has(d.code)),
   ).map((d) => {
     const earnedAt = ledger.get(d.code) ?? null;
     const discovered = earnedAt !== null;

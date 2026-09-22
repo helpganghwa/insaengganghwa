@@ -6,8 +6,7 @@
   "_fixFloorNote": "후처리 강도: 1=정렬만(매 프레임 원본과 비교해 위치보정, 기본), 0=정렬+본체완전고정. 예외만 등재.",
   "fixFloorDefault": 1,
   "fixFloor": {
-    "general_wing_hairclip": 0,
-    "chuseok_hanbok_v2": 0
+    "general_wing_hairclip": 0
   },
   "itemsKo": {
     "seed-kingdom_ribbon_rapier": "가는 레이피어는 완전히 멈춘 채, 늘어진 푸른 리본이 물결치며 나부끼고 칼날을 따라 은청색 광휘가 맥동한다",
@@ -89,9 +88,9 @@
     "general_wing_hairclip": "백은 깃 머리핀",
     "chuseok_moon_wand_full": "완드는 고정, 머리의 금빛 보름달만 숨 쉬듯 밝아졌다 어두워지고 오색 술이 살짝 흔들림",
     "chuseok_hanbok_v2": "한복 전체 고정, 소매·팔 움직임 없음, 치마 천 색은 그대로, 치맛자락의 금박 달·구름 무늬가 등불처럼 차례로 또렷하게 금빛으로 빛남",
-    "chuseok_bok_pouch": "복주머니 몸통은 완전히 고정·불투명(구멍·비침 없음), 비단 술과 매듭 끈만 아주 살짝 천천히 흔들림, 반짝임 없음",
+    "chuseok_bok_pouch": "주머니 몸통·토끼와 절구 자수·달·구름은 매 프레임 그대로(불투명, 구멍·노이즈 없음), 비단 술과 매듭 끈만 아주 살짝 천천히 흔들림",
     "chuseok_rabbit_pestle_v14": "절굿공이는 고정, 매끈한 나무를 따라 흰 달빛 광택이 천천히 흐르고 머리 주위에 작은 반짝임이 떠오름",
-    "chuseok_rabbit_suit_v15": "옷과 솜꼬리는 완전히 고정, 복슬한 두 손만 천천히 쥐었다 펴짐, 빛·반짝임 없음",
+    "chuseok_rabbit_suit_v15": "옷·다리·등의 솜꼬리는 조금도 움직이지 않고 완전히 고정, 복슬한 두 손만 천천히 쥐었다 펴짐, 빛·반짝임 없음",
     "chuseok_rabbit_ears_v4": "머리띠는 고정, 빛·반짝임 없음, 접힌 귀가 천천히 펴져 섰다가 다시 접히고 다른 귀는 그대로"
   },
   "items": {
@@ -180,9 +179,9 @@
     "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom",
     "chuseok_moon_wand_full": "the wand stays completely fixed and motionless; only the golden full moon at its head brightens and dims slowly like breathing, the dark rabbit silhouette inside it stays still, and the colorful silk tassels sway very gently",
     "chuseok_hanbok_v2": "the whole hanbok stays completely fixed and motionless and the sleeves and arms never move; the crimson skirt fabric keeps the same colour; the gold-leaf moon and cloud patterns along the skirt hem glow brightly, pulsing with warm golden light one after another like lanterns, clearly visible; no movement of the fabric",
-    "chuseok_bok_pouch": "the pouch body stays completely fixed, solid and fully opaque with no holes, gaps or transparency; only the silk tassel and the knot cords sway very gently and slowly; no glints, no sparkles, no flashing",
+    "chuseok_bok_pouch": "the pouch body, the gold rabbit-and-mortar embroidery, the moon and the clouds stay exactly the same in every frame, solid and fully opaque with no holes or noise; only the silk tassel and the knot cords sway very gently and slowly; no glints, no sparkles",
     "chuseok_rabbit_pestle_v14": "the pestle stays completely fixed and motionless; a soft white moonlight sheen slides slowly along the smooth wood from the grip to the head, and a few tiny pale sparkles drift up around the head",
-    "chuseok_rabbit_suit_v15": "the suit stays completely fixed in place and the round cotton tail stays perfectly still; only the two fluffy paws slowly clench into fists and open again; no glow, no sparkles, nothing else moves",
+    "chuseok_rabbit_suit_v15": "the suit is completely fixed in place; the body, legs and the round cotton tail on the back never move at all, not even slightly; the only motion is the two fluffy paws slowly clenching into fists and opening again; no glow, no sparkles",
     "chuseok_rabbit_ears_v4": "the headband stays fixed; no glow, no sparkle, no flashing; the folded ear slowly unfolds to stand upright and then folds back down again, while the other ear stays perfectly still"
   },
   "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",
@@ -194,17 +193,14 @@
       0,
       255,
       102
-    ],
-    "chuseok_hanbok_v2": [
-      0,
-      0,
-      255,
-      130
     ]
   },
   "_stripFloorNote": "발밑에 그려지는 1px 지면선을 원본 프레임에서 제거(아이템은 배경 없이 떠 있는 형태로 쓴다).",
   "stripFloor": [
     "general_beastmaster_hide",
     "chuseok_rabbit_ears_v4"
-  ]
+  ],
+  "bandTop": {
+    "chuseok_hanbok_v2": 130
+  }
 }
