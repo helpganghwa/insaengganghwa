@@ -10,6 +10,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 
 import * as schema from '../lib/db/schema';
 import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
+import { CHUSEOK_ITEM_KEYS } from '../lib/game/equipment/catalog-v6';
 
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
@@ -26,10 +27,13 @@ const db = drizzle(client, { schema });
 async function main() {
   console.log(`[catalog] upsert ${CATALOG_ITEMS.length}개`);
   let n = 0;
+  // 한가위 6종(2026-09)은 **꺼진 채로** 넣는다 — 확률 공시 24시간 뒤(9/24 00:00 KST)에 크론(lib/game/chuseok/open.ts)이
+  // 켠다. 기존 행의 active는 어느 쪽이든 건드리지 않는다(운영 관리).
+  const inactiveAtSeed = new Set(CHUSEOK_ITEM_KEYS);
   for (const c of CATALOG_ITEMS) {
     await db
       .insert(schema.catalogItems)
-      .values({ code: c.key, name: c.nameKo, slot: c.slot, active: true })
+      .values({ code: c.key, name: c.nameKo, slot: c.slot, active: !inactiveAtSeed.has(c.key) })
       .onConflictDoUpdate({
         target: schema.catalogItems.code,
         // 로어/이름이 바뀌어도 code는 불변 — name·slot만 동기화. active는 운영이 관리하므로 건드리지 않음.

@@ -16,11 +16,13 @@ type Row = 'hidden' | 'install' | 'open';
  *   설치 행을 보여 준다(스토어 페이지가 설치 여부를 알아서 보여 준다).
  * - 첫 페인트에는 숨긴다(하이드레이션 안전, 웹에서 잠깐 비치지 않게).
  */
-export function AppStoreMenuRow() {
+export function AppStoreMenuRow({ forceShow = false }: { /** 스테이징 확인용 — OS·앱 세션과 무관하게 보인다(프로덕션은 false). */ forceShow?: boolean }) {
   const [row, setRow] = useState<Row>('hidden');
   useEffect(() => {
-    if (isAppSession()) return;
-    if (!/Android/.test(window.navigator.userAgent)) return;
+    if (!forceShow) {
+      if (isAppSession()) return;
+      if (!/Android/.test(window.navigator.userAgent)) return;
+    }
     let alive = true;
     const related = (navigator as { getInstalledRelatedApps?: () => Promise<{ id?: string; platform: string }[]> })
       .getInstalledRelatedApps;
@@ -41,7 +43,7 @@ export function AppStoreMenuRow() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [forceShow]);
   if (row === 'hidden') return null;
 
   const cls =

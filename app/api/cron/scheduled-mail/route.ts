@@ -15,6 +15,7 @@ import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
+import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
 import { sendPushToUsers } from '@/lib/push/send';
 
 export const runtime = 'nodejs';
@@ -103,6 +104,12 @@ export async function GET(req: Request) {
           console.warn('[scheduled-mail] push failed', (e as Error).message);
         }
       }
+    }
+    // ── 한가위 6종 자동 개방(2026-09-22) ── 시작 시각이 지나면 한 번 켠다(멱등). 우편·공지와 독립.
+    try {
+      await openChuseokCatalogIfDue();
+    } catch (e) {
+      console.error('[scheduled-mail] chuseok-open failed', e);
     }
     // ── 예약 공지 발행(0158) ── 우편과 독립 — 여기서 터져도 위 우편 발송 결과는 지킨다.
     let announcementsPublished = 0;

@@ -395,7 +395,7 @@ export default async function ProfilePage() {
           </Link>
         ))}
         {/* 안드로이드 웹·PWA 유저에게 Play 앱 권유(2026-09-22) — 앱 안·iOS·데스크톱은 렌더 안 됨(클라 판정). */}
-        <AppStoreMenuRow />
+        <AppStoreMenuRow forceShow={process.env.VERCEL_ENV === 'preview'} />
         {isAdmin ? (
           <Link prefetch={false}
             href="/admin"

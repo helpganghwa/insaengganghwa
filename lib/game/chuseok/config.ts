@@ -60,3 +60,49 @@ export function nextLadderStep(total: number): { at: number; remain: number } | 
   const nxt = SONGPYEON_LADDER.find((l) => total < l.at);
   return nxt ? { at: nxt.at, remain: nxt.at - total } : null;
 }
+
+// ── 한가위 강화 대회(순위) ──────────────────────────────────────────────
+/** 대회 대상 6종과 벌(칭호 세트). 순위는 아이템별·서버별로 따로 매긴다. */
+export const CHUSEOK_CONTEST_ITEMS: readonly { code: string; set: 'moon' | 'flower' }[] = [
+  { code: 'chuseok_rabbit_pestle', set: 'moon' },
+  { code: 'chuseok_rabbit_suit', set: 'moon' },
+  { code: 'chuseok_rabbit_ears', set: 'moon' },
+  { code: 'chuseok_moon_wand', set: 'flower' },
+  { code: 'chuseok_jade_hanbok', set: 'flower' },
+  { code: 'chuseok_bok_pouch', set: 'flower' },
+];
+
+/** 아이템당 순위 보상(2026-09-22 확정). 상자는 3슬롯 균등(전부 3의 배수). */
+export const CHUSEOK_RANK_REWARDS: readonly { from: number; to: number; diamond: number; boxes: number }[] = [
+  { from: 1, to: 1, diamond: 30_000, boxes: 600 },
+  { from: 2, to: 2, diamond: 20_000, boxes: 300 },
+  { from: 3, to: 3, diamond: 10_000, boxes: 150 },
+  { from: 4, to: 5, diamond: 5_000, boxes: 90 },
+  { from: 6, to: 10, diamond: 3_000, boxes: 60 },
+];
+export const CHUSEOK_RANK_LIMIT = 10;
+
+export function rankRewardFor(rank: number): { diamond: number; boxes: number } | null {
+  const t = CHUSEOK_RANK_REWARDS.find((r) => rank >= r.from && rank <= r.to);
+  return t ? { diamond: t.diamond, boxes: t.boxes } : null;
+}
+
+/** 다음 보상 구간(더 좋은 구간)의 마지막 등수 — 현황판 "N등까지 +M"용. 1등이면 null. */
+export function nextRewardTierEnd(rank: number): number | null {
+  if (rank <= 1) return null;
+  const cur = CHUSEOK_RANK_REWARDS.find((r) => rank >= r.from && rank <= r.to);
+  if (!cur) return CHUSEOK_RANK_LIMIT;
+  const idx = CHUSEOK_RANK_REWARDS.indexOf(cur);
+  return CHUSEOK_RANK_REWARDS[idx - 1]?.to ?? null;
+}
+
+/**
+ * 순위 → 칭호(2026-09-22 사용자 확정: 도달한 등수의 칭호를 모두 지급 — 1등이면 세 개 다).
+ * moon = 달토끼 벌(만월·반월·신월), flower = 한복 벌(모란·작약·매화). 4등 밖은 없음.
+ */
+export function contestTitlesFor(set: 'moon' | 'flower', rank: number): string[] {
+  if (rank < 1 || rank > 3) return [];
+  const out: string[] = [];
+  for (let t = rank; t <= 3; t++) out.push(`chuseok26_${set}${t}`);
+  return out;
+}

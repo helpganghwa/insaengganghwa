@@ -181,6 +181,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '클라이언트 에러',
     desc: '사용자 기기 전역 에러 수집(그룹화·발생횟수). 해결 처리',
   },
+  {
+    href: '/admin/chuseok',
+    icon: '🌕',
+    title: '한가위 강화 대회 정산',
+    desc: '아이템별 최종 순위 확인(마감 시각 기준) → 10/1 정산·지급(우편 💎📦 + 칭호). 서버당 1회',
+  },
 ];
 
 export default async function AdminHubPage() {

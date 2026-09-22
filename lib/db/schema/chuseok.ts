@@ -59,3 +59,24 @@ export const chuseokSongpyeonClaims = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.serverId, t.step] })],
 );
+
+/** 한가위 강화 대회 정산 결과(0214) — 아이템별·서버별 1~10등. 어드민 정산이 한 번에 넣고 우편·칭호를 지급한다. */
+export const chuseokContestResults = pgTable(
+  'chuseok_contest_results',
+  {
+    serverId: smallint('server_id').notNull(),
+    catalogCode: text('catalog_code').notNull(),
+    rank: smallint('rank').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    level: integer('level').notNull(),
+    reachedAt: timestamp('reached_at', { withTimezone: true }),
+    diamond: bigint('diamond', { mode: 'bigint' }).notNull(),
+    boxes: integer('boxes').notNull(),
+    titles: text('titles').array().notNull().default([]),
+    settledAt: timestamp('settled_at', { withTimezone: true }).notNull().defaultNow(),
+    settledBy: uuid('settled_by'),
+  },
+  (t) => [primaryKey({ columns: [t.serverId, t.catalogCode, t.rank] }), index('chuseok_contest_results_user_idx').on(t.userId, t.serverId)],
+);

@@ -28,6 +28,9 @@ export type WeaponKind = {
 
 /** 키 → 종류. nameKo·wornDesc·스프라이트를 대조해 확정(2026-08-06). */
 const BY_KEY: Record<string, WeaponKind> = {
+  // ── 한가위(2026-09, catalog-v6) ──
+  chuseok_moon_wand: { noun: 'magic wand (a short rod topped with a glowing moon disc)' },
+  chuseok_rabbit_pestle: { noun: 'pestle (a thick smooth wooden rod held like a club)' },
   // ── 한손검·도 ──
   kingdom_ribbon_rapier: { noun: 'rapier (a slender one-handed sword)' },
   vampire_blood_rapier: { noun: 'rapier (a slender one-handed sword)' },
