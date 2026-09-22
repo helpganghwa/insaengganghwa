@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
@@ -344,6 +344,26 @@ export async function createPlayOrder(userId: string, serverId: number, productI
   const sku = playSkuFor(productId);
   if (!sku) throw new PurchaseError('UNKNOWN_PRODUCT');
   const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId, 'play');
+  // 같은 상품의 살아 있는 pending(토큰 없음·6h 내)이 있으면 재사용한다(2026-09-22). Play 시트가 바로 닫히는
+  // 환경에서는 탭마다 주문이 새로 쌓여(실측: 유저 3명 47건) recon 스캔(limit 50)을 점유하고 캡 경보가 울렸다.
+  // 재사용해도 검증은 주문번호+토큰으로 그 주문을 찾아 지급하므로 경로는 같고, 금액·상품이 같아 검사도 같다.
+  const [reuse] = await db
+    .select({ paymentId: iapOrders.portoneOrderId })
+    .from(iapOrders)
+    .where(
+      and(
+        eq(iapOrders.userId, userId),
+        eq(iapOrders.serverId, serverId),
+        eq(iapOrders.provider, 'play'),
+        eq(iapOrders.productCode, productId),
+        eq(iapOrders.status, 'pending'),
+        isNull(iapOrders.playPurchaseToken),
+        gt(iapOrders.createdAt, sql`now() - interval '6 hours'`),
+      ),
+    )
+    .orderBy(desc(iapOrders.createdAt))
+    .limit(1);
+  if (reuse) return { paymentId: reuse.paymentId, sku, orderName, amountKrw: krw };
   const paymentId = `gp-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
     serverId,

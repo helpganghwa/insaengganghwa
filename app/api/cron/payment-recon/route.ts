@@ -10,7 +10,7 @@
  * 인증: isCronAuthorized(CRON_SECRET Bearer 또는 x-vercel-cron). 각 주문 PortOne 조회는
  *  개별 try로 격리 — 1건 실패가 전체 run을 막지 않게.
  */
-import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, lt, ne, sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
@@ -59,7 +59,20 @@ export async function GET(req: Request) {
 
   const out: Record<string, unknown> = {};
 
-  // ── A. 고아 pending 복구 ────────────────────────────────────────────────
+  // ── A0. Play 이탈 pending 일괄 만료 ────────────────────────────────────
+  // Play 주문은 PG 조회가 없어 만료만 하면 된다. 건별 스캔(limit 50)에 태우면 결제 시트가 바로 닫히는
+  // 환경의 반복 탭(2026-09-22: 유저 3명 47건, 전부 6h 내)이 스캔을 점유해 포트원 주문이 기아·캡 경보가
+  // 울린다. 만료 뒤 늦은 검증은 completePurchase가 expired→paid를 허용해 지급 유실 없음.
+  const playExpired = await db
+    .update(iapOrders)
+    .set({ status: 'expired' })
+    .where(
+      and(eq(iapOrders.status, 'pending'), eq(iapOrders.provider, 'play'), lt(iapOrders.createdAt, new Date(Date.now() - PENDING_EXPIRE_MS))),
+    )
+    .returning({ userId: iapOrders.userId });
+  out.playExpired = playExpired.length;
+
+  // ── A. 고아 pending 복구(포트원) ────────────────────────────────────────
   const pending = await db
     .select({
       id: iapOrders.id,
@@ -69,16 +82,16 @@ export async function GET(req: Request) {
       userId: iapOrders.userId,
     })
     .from(iapOrders)
-    .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
+    .where(and(eq(iapOrders.status, 'pending'), ne(iapOrders.provider, 'play'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
     // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
     // 주문이 영원히 스캔 밖에 남는 기아 발생(감사 M-4).
     .orderBy(asc(iapOrders.createdAt))
     .limit(ORPHAN_PENDING_LIMIT);
   let healed = 0;
   let stillPending = 0;
-  let expired = 0;
+  let expired = playExpired.length; // Play 일괄 만료분 포함 — 경로 장애 판정(아래)은 결제 성공 대조가 가른다.
   /** 만료된 주문의 주인들 — 한 사람의 반복 이탈인지, 여러 사람이 겪는 일인지 가른다. */
-  const expiredUsers = new Set<string>();
+  const expiredUsers = new Set<string>(playExpired.map((r) => r.userId));
   /** A단계에서 포트원 조회가 실패한 건수 — 전건 실패면 beat를 찍지 않는다. */
   let aErrors = 0;
   // 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구 점유해 진짜
@@ -97,11 +110,6 @@ export async function GET(req: Request) {
     expiredUsers.add(o.userId);
   };
   for (const o of pending) {
-    // Play 주문(0186)은 PG 조회 대상이 아니다 — 결제 시트를 닫은 pending은 만료만(늦은 검증은 expired→paid 허용).
-    if (o.provider === 'play') {
-      await expireIfStale(o).catch((e2) => console.error('[payment-recon] A expire(play) failed', o.pid, e2));
-      continue;
-    }
     try {
       const pay = await getPortonePayment(o.pid);
       if (pay.status === 'PAID') {
