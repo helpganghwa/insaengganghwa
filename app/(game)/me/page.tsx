@@ -1,4 +1,6 @@
 import Link from 'next/link';
+
+import { AppStoreMenuRow } from './AppStoreMenuRow';
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -392,6 +394,8 @@ export default async function ProfilePage() {
             ) : null}
           </Link>
         ))}
+        {/* 안드로이드 웹·PWA 유저에게 Play 앱 권유(2026-09-22) — 앱 안·iOS·데스크톱은 렌더 안 됨(클라 판정). */}
+        <AppStoreMenuRow />
         {isAdmin ? (
           <Link prefetch={false}
             href="/admin"

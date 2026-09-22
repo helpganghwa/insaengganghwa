@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react';
 import { isAppSession } from '@/lib/platform-client';
 
 /** 우리 Play 앱 패키지 — manifest related_applications·assetlinks와 같은 값. */
-const PLAY_APP_ID = 'app.ganghwa.game';
+export const PLAY_APP_ID = 'app.ganghwa.game';
+/** 스토어 페이지 — manifest related_applications.url과 같은 값. 프로필 메뉴 '앱으로 설치하기'가 쓴다. */
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_APP_ID}`;
 
 // PWA 설치 상태/핸들러 — 헤더 띠지(InstallStrip)·설정 버튼(InstallAppButton) 공용.
 //
@@ -39,7 +41,7 @@ function openAndroidChrome() {
 }
 
 /** 설치된 Play 앱으로 열기 — 안드로이드 인텐트(패키지 지정). 앱이 없으면 현재 주소로 폴백. */
-function openPlayApp() {
+export function openPlayApp() {
   const loc = window.location;
   window.location.href =
     `intent://${loc.host}${loc.pathname}${loc.search}` +
