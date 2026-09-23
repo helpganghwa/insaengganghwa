@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { assetUrl } from '@/lib/asset-versions';
 import { CHUSEOK_ACCRUE_END_MS } from '@/lib/game/chuseok/config';
 import { fmtLeft } from '@/lib/game/chuseok/countdown';
+import { serverNow } from '@/lib/client/server-clock';
 
 /**
  * 홈 §1 — 추석 배너(캐러셀 슬라이드). 평소엔 대회(한옥 마당 배경, 초 단위 남은 시간),
@@ -16,8 +17,8 @@ export function ChuseokBanner({ claimable, phase }: { claimable: number; phase: 
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     // 첫 값은 다음 프레임에(하이드레이션 불일치·효과 안 동기 setState 회피), 이후 1초마다.
-    const raf = requestAnimationFrame(() => setNow(Date.now()));
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const raf = requestAnimationFrame(() => setNow(serverNow()));
+    const id = setInterval(() => setNow(serverNow()), 1000);
     return () => {
       cancelAnimationFrame(raf);
       clearInterval(id);

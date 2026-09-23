@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs } from '@/components/ui/Tabs';
 import { CHUSEOK_ACCRUE_END_MS } from '@/lib/game/chuseok/config';
 import { fmtLeft } from '@/lib/game/chuseok/countdown';
+import { serverNow } from '@/lib/client/server-clock';
 import type { ContestBoard } from '@/lib/game/chuseok/contest';
 import type { SongpyeonOverview } from '@/lib/game/chuseok/songpyeon';
 
@@ -26,8 +27,8 @@ export function ChuseokEventClient({ initialTab, songpyeon, board }: { initialTa
   useEffect(() => {
     if (!live) return;
     // 첫 값은 다음 프레임에(하이드레이션 불일치 회피), 이후 1초마다.
-    const raf = requestAnimationFrame(() => setNow(Date.now()));
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const raf = requestAnimationFrame(() => setNow(serverNow()));
+    const id = setInterval(() => setNow(serverNow()), 1000);
     return () => {
       cancelAnimationFrame(raf);
       clearInterval(id);

@@ -50,10 +50,16 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
   const claimedSet = useMemo(() => new Set(ov.claimed), [ov.claimed]);
   const open = ov.phase === 'accrue' || ov.phase === 'claim';
   const closedText =
-    ov.phase === 'before' ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.' : ov.phase === 'ended' ? '추석 송편은 끝났어요.' : null;
+    ov.phase === 'before'
+      ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.'
+      : ov.phase === 'accrue'
+        ? '강화에 성공하면 도달한 단계만큼 송편이 쌓여요. 9/30 23:59까지 쌓을 수 있어요.'
+        : ov.phase === 'ended'
+          ? '송편 교환 기간이 끝났어요.'
+          : null;
 
   // 낙관 갱신(2026-09-22 사용자 요청) — 받음 표시·다이아·토스트를 먼저 반영하고 실패하면 되돌린다.
-  // 서버가 '이미 받음'이라 하면 화면이 맞는 것이므로 되돌리지 않는다.
+  // 서버가 '이미 받음'이라 하면 받음 표시는 맞지만 다이아는 이미 들어와 있으니 낙관 증가분만 되돌린다(2026-09-23 감사).
   const claim = (step: number) => {
     if (busyStep !== null || !open) return;
     const def = SONGPYEON_LADDER.find((l) => l.step === step);
@@ -70,7 +76,8 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
     startTransition(async () => {
       try {
         const r = await claimSongpyeonStepAction(step);
-        if (r.status !== 'success' && r.code !== 'ALREADY') rollback(r.message);
+        if (r.status !== 'success' && r.code === 'ALREADY') optimisticAdjust(-BigInt(def.diamond));
+        else if (r.status !== 'success') rollback(r.message);
       } catch {
         rollback('지금은 받을 수 없어요. 잠시 후 다시 시도해 주세요.');
       } finally {
@@ -185,11 +192,11 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
         ).map((x) => {
           const need = SONGPYEON_EXCHANGE[x.kind].songpyeon - ov.available;
           // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
-          const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? `${n(need)} 더 모으면 교환할 수 있어요` : x.sub;
+          const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? `송편 ${n(need)}개 더 모으면 교환할 수 있어요` : x.sub;
           return (
             <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
               <b className="text-[13px]">{x.title}</b>
-              <span className={`min-h-[30px] text-[10.5px] leading-snug ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
+              <span className={`min-h-[30px] break-keep text-[10.5px] leading-snug [overflow-wrap:anywhere] ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
               <button
                 type="button"
                 disabled={!open || ov.available < SONGPYEON_EXCHANGE[x.kind].songpyeon}

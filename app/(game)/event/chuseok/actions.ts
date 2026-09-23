@@ -12,9 +12,9 @@ import { rateLimited } from '@/lib/ratelimit';
 
 const MSG: Record<string, string> = {
   AUTH: '로그인이 필요해요.',
-  BLOCKED: '지금은 받을 수 없어요.',
+  BLOCKED: '지금은 이용할 수 없어요.',
   RATE: '잠시 후 다시 시도해 주세요.',
-  CLOSED: '받을 수 있는 기간이 끝났어요.',
+  CLOSED: '이벤트 기간이 끝났어요.',
   UNKNOWN_STEP: '없는 단계예요.',
   NOT_REACHED: '아직 도달하지 않은 단계예요.',
   ALREADY: '이미 받은 보상이에요.',

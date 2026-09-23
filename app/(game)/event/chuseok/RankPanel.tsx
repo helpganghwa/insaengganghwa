@@ -78,11 +78,14 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
           <TranscendSprite code={item.code} slot={item.slot} level={r.transcend} championRank={r.rank <= 3 ? r.rank : null} size={38} frameless />
           <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/70 px-1 text-[10px] font-extrabold leading-tight text-amber-300">+{n(r.level)}</span>
         </span>
-        <div className="min-w-0 flex-1">
+        {/* 글자 칸은 오른쪽 얼굴 배경(w-36) 안쪽까지만 — 긴 닉네임+칭호가 얼굴 위로 올라가 잘리지 않게(2026-09-23 감사). */}
+        <div className="min-w-0 max-w-[calc(100%-5.5rem)] flex-1">
           <div className="flex min-w-0 items-center gap-1">
-            <span className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
+            <span className="max-w-[9rem] shrink-0 truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
             {r.guildEmblemUrl ? <GuildEmblemImg src={r.guildEmblemUrl} size={12} className="shrink-0 self-center" /> : null}
-            <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+            <span className="min-w-0 truncate">
+              <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+            </span>
           </div>
           {at ? <div className="truncate text-[9.5px] tabular-nums text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{at} 도달</div> : null}
         </div>
@@ -166,7 +169,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         )}
       </ol>
       {board.phase === 'claim' ? (
-        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상과 칭호는 우편함으로 보냈어요.' : '순위 보상과 칭호는 10월 1일 정산 뒤 우편으로 드려요.'}</p>
+        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상은 우편함으로 보냈고, 칭호는 바로 드렸어요.' : '10월 1일에 순위 보상은 우편으로, 칭호는 바로 드려요.'}</p>
       ) : null}
 
       {/* 내 자리 — 목록을 스크롤해도 화면 아래(채팅 미니바 위)에 붙는다 */}

@@ -204,6 +204,8 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
   return CHUSEOK_CONTEST_ITEMS.map((i) => {
     const mine = rows.find((r) => r.code === i.code && r.user_id === userId);
     const mineOutside = !mine && outside ? rankRows(outside.get(i.code) ?? []).find((r) => r.userId === userId) ?? null : null;
+    // 정산 뒤 상위권 탈퇴·정지로 재계산 등수가 결과 표 안으로 올라와도 지급된 보상은 없다 — 등수는 결과 표 아래로, 보상은 null.
+    const lastRank = rows.filter((r) => r.code === i.code).reduce((m, r) => Math.max(m, Number(r.rank)), 0);
     return {
       code: i.code,
       name: NAME_BY_CODE.get(i.code) ?? i.code,
@@ -215,7 +217,7 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
       mine: mine
         ? { rank: Number(mine.rank), level: Number(mine.level), reachedAt: mine.reached_at, nextTierEnd: null, reward: rankRewardFor(Number(mine.rank)) }
         : mineOutside
-          ? { rank: mineOutside.rank, level: mineOutside.level, reachedAt: iso(mineOutside.reachedAt), nextTierEnd: null, reward: rankRewardFor(mineOutside.rank) }
+          ? { rank: Math.max(mineOutside.rank, lastRank + 1), level: mineOutside.level, reachedAt: iso(mineOutside.reachedAt), nextTierEnd: null, reward: null }
           : null,
       participants: rows.filter((r) => r.code === i.code).length,
     };
