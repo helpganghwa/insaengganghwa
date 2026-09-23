@@ -82,7 +82,8 @@ const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제�
 // 앱 안 결제는 앱 안에서 해결한다(2026-09-23 사용자 결정) — 브라우저 결제나 다른 앱 설치를 권하지 않는다.
 const SHEET_UNAVAILABLE_MSG = '구글 플레이 결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.';
 /**
- * 삼성 인터넷이 앱을 띄운 경우(2026-09-23 실측: 실패 76회 전부 SamsungBrowser/28·30 UA, 성공은 Chrome).
+ * 삼성 인터넷·네이버 웨일이 앱을 띄운 경우(2026-09-23 실측: 실패 76회 전부 SamsungBrowser/28·30 UA, 성공은 Chrome. 웨일은
+ * 결제창이 열려 청구까지 되지만 돌아올 때 화면을 새로 불러 결과를 잃었다 — 아래 hostedByNonChromeBrowser).
  * 기본 브라우저가 삼성 인터넷이면 안드로이드가 Play 앱(TWA)을 삼성 인터넷으로 열고, 삼성 인터넷은 Digital Goods 상품 조회까지는
  * 되지만 구글 결제창(PaymentRequest)을 열지 못한다. 근본 해결은 앱이 TWA 제공자를 Chrome으로 고정하는 것(mobile/android
  * LauncherActivity.createTwaLauncher, 앱 업데이트 필요). 그때까지는 시트를 열지 않고 업데이트 안내만 한다.

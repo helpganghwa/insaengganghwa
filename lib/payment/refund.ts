@@ -311,9 +311,10 @@ export async function refundPurchase(
                     eq(mailbox.serverId, order.serverId),
                     inArray(mailbox.title, PREMIUM_MAIL_TITLES),
                     isNotNull(mailbox.claimedAt),
-                    // 이 주문의 드립 창(구매 후 31일)만 — 다음 프리미엄 주문의 우편이 섞이지 않게. 하한은 주문 생성 시각:
-                    // 즉시 보상 우편의 created_at(DB now()=트랜잭션 시작)은 JS로 찍는 paid_at보다 앞선다.
-                    gte(mailbox.createdAt, order.createdAt),
+                    // 이 주문의 드립 창(구매 후 31일)만 — 다음 프리미엄 주문의 우편이 섞이지 않게. 하한은 paid_at−10분:
+                    // 즉시 보상 우편의 created_at(DB now()=트랜잭션 시작)은 JS로 찍는 paid_at보다 조금 앞선다.
+                    // 주문 생성 시각은 재사용·늦은 복구로 오래전일 수 있어 쓰지 않는다.
+                    gte(mailbox.createdAt, new Date(paidAt.getTime() - 10 * 60_000)),
                     lt(mailbox.createdAt, new Date(paidAt.getTime() + 31 * 24 * 3_600_000)),
                   ),
                 );

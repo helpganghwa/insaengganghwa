@@ -10,7 +10,7 @@
  * 인증: isCronAuthorized(CRON_SECRET Bearer 또는 x-vercel-cron). 각 주문 PortOne 조회는
  *  개별 try로 격리 — 1건 실패가 전체 run을 막지 않게.
  */
-import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
@@ -18,13 +18,15 @@ import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/d
 import { cancelPortonePayment, getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
-import { refundPlayOrder } from '@/lib/payment/play-api';
+import { retryGrantSkippedRefund } from '@/lib/payment/grant-skipped-refund';
 import { raisePaymentAlert } from '@/lib/payment/alert';
 import { kstMonthString } from '@/lib/kst';
 import { beatCron } from '@/lib/cron/heartbeat';
 
 /** 지급 보류 자동 환불(C단계)의 적용 시작. 이 시각 전 30일간 프로덕션 지급 보류 주문은 0건이었다(2026-09-24 조회) —
- *  배포보다 앞서 두어 배포 직후 빈 구간이 없게 한다(늦게 두면 그 사이 함수가 죽은 지급 보류 결제가 경보 없이 남는다). */
+ *  배포보다 앞서 두어 배포 직후 빈 구간이 없게 한다(늦게 두면 그 사이 함수가 죽은 지급 보류 결제가 경보 없이 남는다).
+ *  ⚠ 이 시각부터 배포까지는 옛 코드(중복=운영자 수동 처리)가 돈다 — 배포 직전 이 시각 이후 지급 보류 주문이 0건인지
+ *  다시 조회하고, 있으면 운영자 처리 방식을 확인해 이 값을 배포 시각으로 올린다(docs/PLAYSTORE.md 배포 순서). */
 const GRANT_SKIPPED_AUTO_REFUND_SINCE = '2026-09-24T00:00:00+09:00';
 
 export const runtime = 'nodejs';
@@ -288,6 +290,8 @@ export async function GET(req: Request) {
     .where(
       and(
         eq(iapOrders.status, 'paid'),
+        // 제공자를 명시 — 다른 결제 수단(예: Apple)이 합쳐져도 포트원 경로로 흘러가지 않게.
+        inArray(iapOrders.provider, ['portone', 'play']),
         eq(iapOrders.grantSkipped, true),
         lt(iapOrders.paidAt, sql`now() - interval '30 minutes'`),
         gt(iapOrders.paidAt, sql`now() - interval '30 days'`),
@@ -300,34 +304,7 @@ export async function GET(req: Request) {
   for (const o of skipped) {
     if (timeUp()) break;
     skippedOut.scanned++;
-    try {
-      let r: Awaited<ReturnType<typeof refundPurchase>>;
-      if (o.provider === 'play') {
-        if (!o.playOrderId) throw new Error('구글 주문번호 없음');
-        await refundPlayOrder(o.playOrderId, true);
-        r = await refundPurchase(o.pid, { reason: 'error', playVoided: true });
-      } else {
-        const pay = await getPortonePayment(o.pid);
-        if (pay.status === 'PAID') await cancelPortonePayment(o.pid, '지급 보류 결제 자동 환불(재시도)');
-        r = await refundPurchase(o.pid, { reason: 'error' });
-      }
-      if (r.ok) skippedOut.refunded++;
-      else
-        await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
-          paymentId: `skipped-refund:${o.pid}`,
-          orderId: o.id,
-          detail: `지급 보류(중복·미성년) 결제의 환불 마감 실패(code=${r.code}) — ${o.provider === 'play' ? 'Play' : '포트원'} 콘솔에서 환불 확인 필요.`,
-          onceEver: true,
-        });
-    } catch (e) {
-      console.error('[payment-recon] C skipped refund failed', o.pid, e);
-      await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
-        paymentId: `skipped-refund:${o.pid}`,
-        orderId: o.id,
-        detail: `지급 보류(중복·미성년) 결제의 자동 환불 재시도 실패 — ${(e as Error)?.message ?? e}. ${o.provider === 'play' ? 'Play' : '포트원'} 콘솔에서 환불 필요.`,
-        onceEver: true,
-      }).catch(() => undefined);
-    }
+    if (await retryGrantSkippedRefund(o)) skippedOut.refunded++;
   }
   out.grantSkippedRefund = skippedOut;
   // 캡 도달 = 미스캔 주문이 존재할 수 있는 상태 — 응답 JSON에만 남기지 않고 알림(중복은 미해결 1회 게이트).

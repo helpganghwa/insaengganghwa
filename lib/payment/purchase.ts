@@ -656,7 +656,7 @@ export async function completePurchase(
   if (dupSkipped) {
     // 중복 결제 — 지급은 이미 막혔다. 결제분을 **즉시 자동 환불**한다(2026-09-24 감사: 종전엔 운영자 수동 환불에 기대
     // 방치되면 결제만 성사된 채 남았고, Play는 소모하지 않으면 공유 가격 SKU가 3일 잠겼다). grant_skipped라 회수는 없고
-    // 월누적·마일리지만 복원된다. 취소가 실패하면 경보(Play는 미소모라 3일 뒤 구글 자동 환불이 안전망).
+    // 월누적·마일리지만 복원된다. 취소가 실패하면 경보(정산 크론 C단계가 30분 뒤 다시 환불하고, Play는 미소모라 3일 자동 환불도 남는다).
     let refunded = false;
     let cancelledAtPg = false;
     try {
@@ -681,7 +681,7 @@ export async function completePurchase(
       orderId: order.id,
       detail: cancelledAtPg
           ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — ${play ? '구글 환불' : 'PG 취소'}은 됐고 주문 마감만 지연(취소 반영 대기). ${play ? 'play-sync(환불 동기화)가' : '웹훅·정산 크론이'} 곧 마감한다 — 확인만.`
-          : `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불 필요(기존 지급분은 회수되지 않으니 안심하고 환불).`,
+          : `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. 정산 크론이 30분 뒤 다시 환불한다 — 그 뒤에도 남으면 ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불(기존 지급분은 회수되지 않으니 안심하고 환불).`,
     });
     // 화면엔 '구매 완료'가 아니라 중복·환불을 알린다(재검증 C-4). 지급·환불 처리는 위에서 끝났다.
     return { ok: false, code: 'DUPLICATE' };
@@ -709,11 +709,11 @@ export async function completePurchase(
       cancelled = true;
     } catch (e) {
       console.error('[purchase] minor-limit cancel failed', order.provider, paymentId, e);
-      // 취소 실패는 경보로 드러낸다(2026-09-24 감사) — Play는 미소모로 두므로 3일 뒤 구글 자동 환불이 안전망, 포트원은 수동 취소 필요.
+      // 취소 실패는 경보로 드러낸다(2026-09-24 감사) — 정산 크론 C단계가 30분 뒤 다시 환불한다(Play는 미소모라 3일 자동 환불도 남는다).
       await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
         paymentId,
         orderId: order.id,
-        detail: `미성년 한도 초과 자동 환불의 ${play ? '구글' : 'PG'} 취소 실패 — ${(e as Error)?.message ?? e}. ${play ? '미소모라 3일 뒤 구글 자동 환불 예정, 확인 필요.' : '포트원 콘솔에서 수동 취소 필요.'}`,
+        detail: `미성년 한도 초과 자동 환불의 ${play ? '구글' : 'PG'} 취소 실패 — ${(e as Error)?.message ?? e}. 정산 크론이 30분 뒤 다시 환불한다 — 그 뒤에도 남으면 ${play ? 'Play' : '포트원'} 콘솔에서 환불.`,
       });
     }
     const { refundPurchase } = await import('./refund');
