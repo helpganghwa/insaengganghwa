@@ -77,6 +77,8 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
   afterEach(async () => {
     for (const id of made) {
       await testDb.execute(sql`delete from iap_refunds where order_id = ${id.toString()}::bigint`);
+      // 경보(PLAY_TOKEN_USED 등)가 주문을 참조한다 — 주문보다 먼저 지운다.
+      await testDb.execute(sql`delete from payment_alerts where order_id = ${id.toString()}::bigint`);
       await testDb.execute(sql`delete from diamond_ledger where user_id = ${TEST_USER_ID}::uuid and ref = ${'order:' + id.toString()}`).catch(() => undefined);
       // 마일리지 원장(적립·회수) — 이 테스트 주문이 남긴 행만.
       await testDb.execute(sql`delete from point_ledger where kind = 'mileage' and ref in (${'order:' + id.toString()}, ${'order:' + id.toString() + ':refund'})`);

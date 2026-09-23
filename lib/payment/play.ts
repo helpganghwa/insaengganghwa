@@ -39,6 +39,9 @@ export async function retryPlayConsume(limit = 50): Promise<{ scanned: number; c
         eq(iapOrders.status, 'paid'),
         isNull(iapOrders.playConsumedAt),
         isNotNull(iapOrders.playPurchaseToken),
+        // 지급 보류 주문(미성년 한도·중복 특가)은 소모하지 않는다(2026-09-24 감사) — 자동 환불 호출이 실패했어도
+        // 미확인으로 두면 구글이 3일 뒤 자동 환불하고 voided 동기화가 마감한다. 소모하면 청구·미지급·미환불로 굳는다.
+        eq(iapOrders.grantSkipped, false),
       ),
     )
     .limit(limit);

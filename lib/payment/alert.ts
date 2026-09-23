@@ -29,7 +29,8 @@ export type PaymentAlertKind =
   | 'PARTIAL_CANCELLED' // 中: 부분취소(수동 처리 필요)
   | 'RECON_SCAN_CAPPED' // 高: recon 스캔이 limit에 걸림(백로그 초과 — 미스캔 주문 존재 가능)
   | 'PLAY_RTDN_UNMATCHED' // 高: 구글이 알려 온 결제를 우리 주문과 하나로 맞추지 못함(0건·여러 건) — 콘솔 확인 후 어드민 도구로 지급
-  | 'PLAY_RTDN_FAILED'; // 高: 알림으로 맞춘 주문의 지급 처리 실패
+  | 'PLAY_RTDN_FAILED' // 高: 알림으로 맞춘 주문의 지급 처리 실패
+  | 'PLAY_TOKEN_USED'; // 高: 한 Play 구매 토큰이 두 주문으로 옴 — 잘못 묶였을 수 있음
 
 type Severity = 'critical' | 'high' | 'warn';
 
@@ -47,6 +48,7 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   RECON_SCAN_CAPPED: 'high',
   PLAY_RTDN_UNMATCHED: 'high',
   PLAY_RTDN_FAILED: 'high',
+  PLAY_TOKEN_USED: 'high',
 };
 
 const SEV_EMOJI: Record<Severity, string> = { critical: '🔴', high: '🟠', warn: '🟡' };

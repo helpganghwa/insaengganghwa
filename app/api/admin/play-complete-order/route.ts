@@ -4,7 +4,7 @@ import { getAdminStatus } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 import { adminActions } from '@/lib/db/schema/ops';
-import { getPlayOrder, PlayApiError } from '@/lib/payment/play-api';
+import { getPlayOrder, getPlayProductPurchase, PlayApiError } from '@/lib/payment/play-api';
 import { completePurchase } from '@/lib/payment/purchase';
 
 export const runtime = 'nodejs';
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!/^GPA\.[\d-]+$/.test(orderId) || !paymentId) return Response.json({ ok: false, error: 'BAD_INPUT' }, { status: 400 });
 
   const [order] = await db
-    .select({ userId: iapOrders.userId, status: iapOrders.status, provider: iapOrders.provider, playSku: iapOrders.playSku, amountKrw: iapOrders.amountKrw, token: iapOrders.playPurchaseToken })
+    .select({ userId: iapOrders.userId, status: iapOrders.status, provider: iapOrders.provider, playSku: iapOrders.playSku, amountKrw: iapOrders.amountKrw, token: iapOrders.playPurchaseToken, createdAt: iapOrders.createdAt })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
     .limit(1);
@@ -45,9 +45,16 @@ export async function POST(req: Request) {
   }
   const token = g.purchaseToken ?? '';
   const googleProduct = g.lineItems?.[0]?.productId ?? null;
-  const summary = { googleState: g.state ?? null, googleProduct, ourSku: order.playSku, ourStatus: order.status, amountKrw: String(order.amountKrw), hasToken: !!token };
+  // 구매 시각·유형을 함께 보여 운영자가 우리 주문 생성 시각과 대조하게 한다(다른 유저 주문에 잘못 묶기 방지, 2026-09-24 감사).
+  const p = token && order.playSku ? await getPlayProductPurchase(order.playSku, token).catch(() => null) : null;
+  const summary = {
+    googleState: g.state ?? null, googleProduct, ourSku: order.playSku, ourStatus: order.status, amountKrw: String(order.amountKrw), hasToken: !!token,
+    purchaseTime: p?.purchaseTimeMillis ? new Date(Number(p.purchaseTimeMillis)).toISOString() : null,
+    purchaseType: p?.purchaseType ?? null,
+    orderCreatedAt: order.createdAt.toISOString(),
+  };
   if (!token) return Response.json({ ok: false, error: 'NO_TOKEN', ...summary }, { status: 409 });
-  if (googleProduct && googleProduct !== order.playSku) return Response.json({ ok: false, error: 'SKU_MISMATCH', ...summary }, { status: 409 });
+  if (!googleProduct || googleProduct !== order.playSku) return Response.json({ ok: false, error: 'SKU_MISMATCH', ...summary }, { status: 409 });
   if (order.token && order.token !== token) return Response.json({ ok: false, error: 'TOKEN_MISMATCH', ...summary }, { status: 409 });
   const [bound] = await db.select({ paymentId: iapOrders.portoneOrderId }).from(iapOrders).where(eq(iapOrders.playPurchaseToken, token)).limit(1);
   if (bound && bound.paymentId !== paymentId) return Response.json({ ok: false, error: 'TOKEN_BOUND_ELSEWHERE', boundTo: bound.paymentId, ...summary }, { status: 409 });
