@@ -78,8 +78,8 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
           <TranscendSprite code={item.code} slot={item.slot} level={r.transcend} championRank={r.rank <= 3 ? r.rank : null} size={38} frameless />
           <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/70 px-1 text-[10px] font-extrabold leading-tight text-amber-300">+{n(r.level)}</span>
         </span>
-        {/* 글자 칸은 오른쪽 얼굴 배경(w-36) 안쪽까지만 — 긴 닉네임+칭호가 얼굴 위로 올라가 잘리지 않게(2026-09-23 감사). */}
-        <div className="min-w-0 max-w-[calc(100%-5.5rem)] flex-1">
+        {/* 닉네임은 9rem에서, 칭호는 남는 폭에서 말줄임 — 긴 닉네임+칭호가 넘쳐 잘리지 않게(2026-09-23 감사). 얼굴 배경은 왼쪽으로 옅어져 겹침을 허용. */}
+        <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
             <span className="max-w-[9rem] shrink-0 truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
             {r.guildEmblemUrl ? <GuildEmblemImg src={r.guildEmblemUrl} size={12} className="shrink-0 self-center" /> : null}

@@ -58,6 +58,8 @@ export type ResolveResult = {
   userId: string;
   serverId: number;
   catalogItemId: number;
+  /** 판정 시각(ms) — 송편 적립 국면 판정용. 사후처리는 after()에서 수백 ms 뒤에 돌므로 이 값을 쓴다(2026-09-23). */
+  resolvedAt: number;
 };
 
 function rollBp(): number {
@@ -205,6 +207,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     userId: String(job.user_id),
     serverId: Number(job.job_server_id),
     catalogItemId,
+    resolvedAt: now,
   };
 }
 
@@ -215,8 +218,8 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
  */
 export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
   const { userId, serverId, catalogItemId, fromLevel, toLevel, outcome } = r;
-  // 송편 적립 국면 판정용 시각 — 앞선 사후처리(지표·세금·해방 재계산)에 수백 ms가 걸려 마감 경계에서 어긋나지 않게 먼저 잡는다(2026-09-23).
-  const postAt = new Date();
+  // 송편 적립 국면 판정용 시각 = 판정 시각(resolvedAt). after()·앞선 사후처리 지연으로 마감 경계에서 순위엔 들고 송편은 0이 되지 않게(2026-09-23).
+  const postAt = new Date(r.resolvedAt);
 
   // 리더보드 증분 갱신(v2) — 레벨이 변했을 때만(성공·메가·하락). 유저 1명 스코프 재계산.
   if (toLevel !== fromLevel) {
