@@ -101,15 +101,37 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
-  it('주인 본인은 다시 눌러 시도 시각이 밀린 주문이라도, 다른 유저 주문이 창에 있어도 자기 주문으로 복구된다', async () => {
+  it('주인 본인은 다시 눌러 시도 시각이 밀린 주문이라도 자기 주문으로 복구된다(남의 오래된 결제창은 무관)', async () => {
     const pt = Date.now() - 30 * 60_000;
     const own = await order(TEST_USER_ID, pt, -60_000, 20 * 60_000);
-    await order(otherProfile, pt, -10 * 60_000, -10 * 60_000);
+    await order(otherProfile, pt, -2 * 3_600_000, -2 * 3_600_000);
     const gid = google(pt);
     const tok = `tok-recguard-${seq}`;
     expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, tok)).toEqual({ ok: true, already: false, paymentId: own });
     expect(mockComplete).toHaveBeenCalledWith(own, TEST_USER_ID, { playPurchaseToken: tok });
     expect(await alertCount(gid)).toBe(0);
+  });
+
+  it('본인과 다른 유저가 둘 다 구매 직전에 결제창을 열었으면 가릴 수 없어 막는다', async () => {
+    const pt = Date.now() - 30 * 60_000;
+    await order(TEST_USER_ID, pt, -60_000, -60_000);
+    await order(otherProfile, pt, -10 * 60_000, -10 * 60_000);
+    const gid = google(pt);
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it('몇 시간 전 자기 구매(paid)가 있어도 다른 유저의 직전 주문이 있으면 가져가지 않는다(11차 감사 회귀)', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    const paidPid = await order(TEST_USER_ID, pt, -3 * 3_600_000, -3 * 3_600_000);
+    await testDb.execute(sql`update iap_orders set status = 'paid', play_purchase_token = ${'tok-recguard-paid-' + seq + '-' + process.pid} where portone_order_id = ${paidPid}`);
+    await order(otherProfile, pt, -60_000, -60_000);
+    const gid = google(pt);
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('복구 유저 자신의 주문이 창 밖이고 다른 유저가 구매 직전에 연 주문이 있으면 막는다', async () => {
