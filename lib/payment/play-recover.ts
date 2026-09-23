@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -23,8 +23,8 @@ import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult }
  * ③ 없으면 SKU로 상품을 알 수 있을 때만 새 주문(성장패스 구간은 가격 SKU를 공유해 못 만든다 → NO_ORDER).
  *
  * ⚠ 다른 유저 보호(2026-09-24 감사): 기기의 listPurchases()는 **구글 계정** 단위라, 같은 기기에서 게임 계정을 바꾸면
- * 다른 게임 계정이 산 구매가 보인다. 이 유저의 주문이 구매 시각 창(RTDN과 같은 [구매−6시간 10분, 구매+5분]) 안에 없는데
- * 그 창 안에 **다른 유저**의 토큰 없는 미완 주문이 있으면 그 사람의 구매일 수 있다 — ②·③으로 지급하지 않고 경보만 남긴다
+ * 다른 게임 계정이 산 구매가 보인다. 이 유저의 주문이 구매 시각 창(RTDN과 같은 [구매−6시간 10분, 구매+5분])과 겹치지 않는데
+ * 그 창과 겹치는 **다른 유저**의 토큰 없는 미완 주문이 있으면 그 사람의 구매일 수 있다 — ②·③으로 지급하지 않고 경보만 남긴다
  * (기기는 소모하지 않으므로 RTDN이 주인 주문을 찾아 지급하거나, 운영자가 어드민 도구로 처리한다).
  */
 type CompleteFailCode = Extract<CompleteResult, { ok: false }>['code'];
@@ -74,10 +74,28 @@ export async function recoverPlayPurchase(
     return { ok: true, already: true, paymentId: bound.paymentId };
   }
 
-  // ② 같은 SKU의 최근 미완 주문(최신부터).
-  const lastTry = sql<Date>`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`;
+  // ⓪ 이 토큰이 **다른 유저** 주문에 이미 묶였으면(보류 선결합·지급 후 소모 실패) 이 유저 몫이 아니다 — 새 주문을 만들어
+  //   남의 복구 창·RTDN 후보를 어지럽히지 않고 끝낸다(completePurchase도 TOKEN_USED로 막지만 쓰레기 주문이 남는다).
+  const [boundElsewhere] = await db
+    .select({ id: iapOrders.id })
+    .from(iapOrders)
+    .where(and(ne(iapOrders.userId, userId), eq(iapOrders.playPurchaseToken, purchaseToken)))
+    .limit(1);
+  if (boundElsewhere) return { ok: false, code: 'NO_ORDER' };
+
+  // 구매 시각 창 — RTDN과 같은 [구매−6시간 10분, 구매+5분]. 시각이 없으면(드묾) 지금을 구매 시각으로 본다(창이 넓어지진 않는다).
+  const pt = g.purchaseTimeMillis ? Number(g.purchaseTimeMillis) : Date.now();
+  const winStart = sql`${new Date(pt - RTDN_LOOKBACK_MS).toISOString()}::timestamptz`;
+  const winEnd = sql`${new Date(pt + 5 * 60_000).toISOString()}::timestamptz`;
+  const lastTry = sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`;
+  // 주문을 한 시각이 아니라 [만든 시각, 마지막 결제 시도] 구간으로 보고 창과 겹치는지 본다 — 결과를 잃고 다시 구매를 누르면
+  // 재사용 주문의 play_checkout_at이 구매 뒤로 밀리지만(createPlayOrder), 만든 시각은 구매 전이라 여전히 그 구매의 주문이다.
+  const overlaps = sql<boolean>`(${iapOrders.createdAt} <= ${winEnd} and ${lastTry} >= ${winStart})`;
+
+  // ② 같은 SKU의 최근 미완 주문 — 창과 겹치는 주문 먼저, 그다음 마지막 결제 시도 순(0215: 성장패스처럼 가격 SKU를 공유하면
+  //   가장 최근에 결제창을 연 주문이 이 구매다).
   const [pending] = await db
-    .select({ paymentId: iapOrders.portoneOrderId, lastTry })
+    .select({ paymentId: iapOrders.portoneOrderId, inWindow: overlaps })
     .from(iapOrders)
     .where(
       and(
@@ -90,15 +108,10 @@ export async function recoverPlayPurchase(
         gte(iapOrders.createdAt, sql`now() - interval '${sql.raw(String(LOOKBACK_DAYS))} days'`),
       ),
     )
-    // 마지막 결제 시도 순(0215) — 성장패스처럼 가격 SKU를 공유하면 가장 최근에 결제창을 연 주문이 이 구매다.
-    .orderBy(desc(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`))
+    .orderBy(desc(overlaps), desc(lastTry))
     .limit(1);
-  // 구매 시각 창 — 시각을 모르면 지금 기준(보수적으로 넓게).
-  const pt = g.purchaseTimeMillis ? Number(g.purchaseTimeMillis) : Date.now();
-  const winStart = pt - RTDN_LOOKBACK_MS;
-  const winEnd = pt + 5 * 60_000;
-  const mineInWindow = !!pending && new Date(pending.lastTry).getTime() >= winStart && new Date(pending.lastTry).getTime() <= winEnd;
-  if (!mineInWindow) {
+  // 이 유저의 주문이 창과 겹치지 않는데 **다른 유저**의 토큰 없는 미완 주문이 겹치면, 같은 기기의 다른 게임 계정 구매일 수 있다.
+  if (!pending?.inWindow) {
     const others = await db
       .select({ paymentId: iapOrders.portoneOrderId })
       .from(iapOrders)
@@ -109,9 +122,7 @@ export async function recoverPlayPurchase(
           eq(iapOrders.playSku, sku),
           isNull(iapOrders.playPurchaseToken),
           inArray(iapOrders.status, ['pending', 'expired']),
-          // ⚠ sql 식과 비교할 땐 Date가 아니라 ISO 문자열 + timestamptz 캐스트(드라이버 인코딩).
-          gte(lastTry, sql`${new Date(winStart).toISOString()}::timestamptz`),
-          lte(lastTry, sql`${new Date(winEnd).toISOString()}::timestamptz`),
+          overlaps,
         ),
       )
       .limit(5);

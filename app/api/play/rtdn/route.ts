@@ -91,8 +91,9 @@ export async function POST(req: Request) {
       return new Response('later', { status: 500 });
     }
     // 서비스 계정 인증 실패 — 구매 조회 401·403, 또는 토큰 발급 실패(키 삭제·폐기면 400 invalid_grant, play-api가
-    // 'token ' 접두로 던진다). 구매 문제가 아니므로 알림을 버리지 않고 재전송하며, 원인을 경보 1건으로 드러낸다.
-    const authFail = e instanceof PlayApiError && ([401, 403].includes(e.status) || e.message.startsWith('token '));
+    // 'token <코드>' 접두로 던진다). 구매 문제가 아니므로 알림을 버리지 않고 재전송하며, 원인을 경보 1건으로 드러낸다.
+    // 서비스 계정 미설정(status 0)도 같은 부류 — 재전송만 7일 반복되므로 경보로 드러낸다. 토큰 발급의 5xx·429는 일시 오류라 제외.
+    const authFail = e instanceof PlayApiError && ([0, 401, 403].includes(e.status) || /^token (400|401|403) /.test(e.message));
     // 영구 실패(잘못된·다른 앱의 토큰: 400·404·410)는 재전송해도 같다 — 경보만 남기고 끝낸다. 나머지(인증·구글 5xx·DB)는 재전송.
     if (e instanceof PlayApiError && !authFail && [400, 404, 410].includes(e.status)) {
       await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
