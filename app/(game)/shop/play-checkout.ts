@@ -80,7 +80,37 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
 
 const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
 const SHEET_UNAVAILABLE_MSG =
-  '구글 플레이 결제창을 열 수 없어요. Play 스토어 앱을 최신으로 업데이트하고 기기를 다시 시작한 뒤 시도해 주세요. 계속 안 되면 브라우저에서 ganghwa.app에 접속해 결제할 수 있어요.';
+  '구글 플레이 결제창을 열 수 없어요. Chrome 앱과 Play 스토어 앱을 최신으로 업데이트하고 기기를 다시 시작한 뒤 시도해 주세요. 계속 안 되면 브라우저에서 ganghwa.app에 접속해 결제할 수 있어요.';
+
+/** 시트 직전 진단 요약(직후 실패 기록에 함께 붙인다). */
+let lastSheetDiag = '';
+async function playSheetDiagnostics(sku: string, request: PaymentRequest): Promise<{ canMakePayment: boolean | null; summary: string }> {
+  const parts: string[] = [];
+  let canMakePayment: boolean | null = null;
+  try {
+    const brands = (navigator as Navigator & { userAgentData?: { brands?: { brand: string; version: string }[] } }).userAgentData?.brands ?? [];
+    const chrome = brands.find((b) => /chrome/i.test(b.brand));
+    parts.push(`chrome=${chrome?.version ?? '?'}`);
+  } catch {
+    parts.push('chrome=?');
+  }
+  try {
+    const w = window as DigitalGoodsWindow;
+    const svc = w.getDigitalGoodsService ? await w.getDigitalGoodsService(PLAY_BILLING_METHOD) : null;
+    const [item] = svc ? await svc.getDetails([sku]) : [];
+    parts.push(`details=${item ? `${item.price.currency} ${item.price.value}` : 'none'}`);
+  } catch (e) {
+    parts.push(`details=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`);
+  }
+  try {
+    canMakePayment = await request.canMakePayment();
+    parts.push(`canMakePayment=${canMakePayment}`);
+  } catch (e) {
+    parts.push(`canMakePayment=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`);
+  }
+  lastSheetDiag = parts.join(' ');
+  return { canMakePayment, summary: lastSheetDiag };
+}
 
 /**
  * Play 결제 실패 기록(2026-09-22) — 결제 시트가 왜 실패했는지 서버에는 아무 흔적이 없었다(한 유저가
@@ -184,13 +214,20 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
       [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
       { total: { label: orderName, amount: { currency: 'KRW', value: String(amountKrw) } } },
     );
+    // 진단(2026-09-23): 실유저 8명 76회가 시트 단계 AbortError "Invalid state."로 끝나는데 원인이 안 잡힌다.
+    // 시트를 열기 전에 상품 조회·canMakePayment·크롬 버전을 기록해 실패 기기의 공통점을 찾는다. 기록은 best-effort.
+    const diag = await playSheetDiagnostics(sku, request);
+    if (diag.canMakePayment === false) {
+      reportPlayCheckout('precheck', sku, { code: 'CANNOT_PAY', message: diag.summary });
+      return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };
+    }
     response = await request.show();
   } catch (e) {
     const err = e as { name?: string; message?: string };
     // 거부는 전부 기록한다(2026-09-22) — 크롬은 유저 취소와 결제 앱 오류(상품 없음·판매자 미설정 등)에 같은
     // AbortError를 쓰고 메시지만 다르다("User closed the Payment Request UI" = 취소). 오늘 실유저 3명이
     // 1초 간격으로 47번 시도했는데 취소·미지원으로 분류돼 서버엔 흔적이 없었다.
-    reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
+    reportPlayCheckout('sheet', sku, { name: err?.name, message: `${err?.message ?? ''} | ${lastSheetDiag}` });
     if (err?.name === 'AbortError') {
       // 유저가 닫은 것("User closed the Payment Request UI")만 조용히 취소. 그 밖의 AbortError("Invalid state.",
       // RESULT_CANCELED 등)는 결제 앱이 시트를 못 연 것이라 안내를 띄운다(2026-09-23: 실유저 실패 76회가 전부 이 경우).
