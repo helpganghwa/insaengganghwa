@@ -49,6 +49,11 @@ function loadServiceAccount(): ServiceAccount | null {
   }
 }
 
+/** 서비스 계정 이메일 — RTDN 푸시(Pub/Sub OIDC) 토큰의 발급 주체 확인용(비밀 아님). */
+export function playServiceAccountEmail(): string | null {
+  return loadServiceAccount()?.client_email ?? null;
+}
+
 /** Play 결제 서버 검증이 가능한 상태인지(서비스 계정 키 존재). 미설정이면 createPlayOrder가 CONFIG로 거부. */
 export function playConfigured(): boolean {
   return loadServiceAccount() !== null;

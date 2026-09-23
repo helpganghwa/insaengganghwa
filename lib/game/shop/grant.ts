@@ -35,9 +35,10 @@ function splitBoxes(n: number): Record<string, number> {
 }
 
 /** 다이아 → 지갑 가산, 상자 → 슬롯별 보유량 가산. 즉시 반영(비-우편). */
-async function creditGrant(tx: Tx, userId: string, serverId: number, g: Grant): Promise<void> {
+async function creditGrant(tx: Tx, userId: string, serverId: number, g: Grant, ref?: string): Promise<void> {
   if (g.diamond > 0) {
-    await walletAdd(tx, userId, serverId, g.diamond, 'iap');
+    // ref = 'order:<id>'(2026-09-24) — 회수 원장(refund_clawback)과 같은 키로 주문당 지급을 정확히 대조한다.
+    await walletAdd(tx, userId, serverId, g.diamond, 'iap', ref);
   }
   if (g.boxes > 0) {
     const dist = splitBoxes(g.boxes);
@@ -89,6 +90,8 @@ export async function applyProductGrant(
   userId: string,
   serverId: number,
   productId: string,
+  /** 원장 ref(결제 주문이면 'order:<id>'). dev 즉시구매 등은 생략. */
+  ref?: string,
 ): Promise<Grant & { skipped?: boolean }> {
   const g = shopGrant(productId);
   if (!g) throw new Error('UNKNOWN_PRODUCT');
@@ -137,7 +140,7 @@ export async function applyProductGrant(
       body: '성장 프리미엄 구매 감사합니다. 즉시 보상이 도착했어요. 매일 보상도 우편으로 찾아갑니다.',
     });
   } else {
-    await creditGrant(tx, userId, serverId, g);
+    await creditGrant(tx, userId, serverId, g, ref);
   }
 
   if (period) {

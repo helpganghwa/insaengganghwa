@@ -158,3 +158,21 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 - 코드: 3.1 dev 반영, 3.2는 `feat/playstore`(cc2e9c38, dev보다 51커밋 뒤) — 착수 시 dev 재정렬·스테이징 재검증 필요. 3.3 미착수.
 - 운영자: D-U-N-S 신청 접수(사건번호 34818142) 대기. 조직 계정·판매자 프로필·앱·상품·서비스 계정 미진행.
 - iOS는 `docs/APPSTORE.md`(Capacitor + StoreKit 2 + Sign in with Apple + APNs)로 병행. D-U-N-S 번호는 양쪽 공용.
+
+## 실시간 개발자 알림(RTDN) — 결제 결과를 구글에서 서버로 직접 받기(2026-09-24)
+
+**왜**: 결제 결과(구매 토큰)가 브라우저 화면을 거쳐야만 서버에 오던 구조라, 결제 중 화면이 새로 열리면 구글은 청구했는데 서버는 모르는 건이 생겼다(9/24 00:24 웨일 호스트 ₩68,000, 어드민 도구로 수동 지급). RTDN은 구글이 모든 일회성 구매를 Pub/Sub로 서버에 알린다.
+
+**처리**(`app/api/play/rtdn/route.ts` → `lib/payment/play-rtdn.ts`):
+- 인증 = Pub/Sub 푸시 OIDC 토큰(구글 공개키 서명·발급자·audience `https://ganghwa.app/api/play/rtdn`·발급 서비스 계정 = Play 서비스 계정 이메일). 뚫려도 구매는 구글 API로 재검증한다.
+- ONE_TIME_PRODUCT_PURCHASED(1)만 처리. 취소·환불은 기존 play-sync(voided)가 맡는다.
+- ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리) ② 없으면 같은 SKU·토큰 없는 미완(pending·expired) 주문 중 **마지막 결제 시도 시각**(`play_checkout_at`, 0215 — 주문 생성·재사용 때마다 갱신)이 구매 시각 [-15분, +2분]에 있는 것이 **정확히 1건일 때만** `completePurchase`(재검증·지급·소모). 우리 결제창을 거친 구매자 본인 주문은 반드시 후보에 들어가므로 1건이면 본인 주문이다. 테스트·프로모·리워드 구매(purchaseType 0·1·2)는 본인 주문이 없을 수 있어 자동 지급하지 않는다. 0건·여러 건이면 지급하지 않고 결제 경보 `PLAY_RTDN_UNMATCHED` → 콘솔 확인 뒤 `/api/admin/play-complete-order`.
+- 화면 경로와 동시에 와도 같은 주문·토큰이라 1회만 지급(FOR UPDATE + paid 가드). 일시 오류는 500으로 Pub/Sub 재전송.
+
+**배포 순서**: 0215 마이그레이션(프로덕션) → 코드 배포 → 아래 설정. 0215 전에 코드를 배포하면 Play 주문 생성이 없는 컬럼을 써서 실패한다.
+
+**설정(운영자, 코드 배포 뒤)**:
+1. Google Cloud 콘솔(Play 서비스 계정이 속한 프로젝트) → Pub/Sub API 사용.
+2. 주제 `play-rtdn` 생성 → 권한에 `google-play-developer-notifications@system.gserviceaccount.com`을 **Pub/Sub 게시자**로 추가.
+3. 구독 생성: 전송 유형 **푸시**, **payload unwrapping 끔**(켜면 메시지 형식이 달라 모든 알림을 놓친다), 엔드포인트 `https://ganghwa.app/api/play/rtdn`, **인증 사용** → 서비스 계정 = Play 서비스 계정, 대상(audience) = 엔드포인트와 같은 URL. 토큰 생성 권한 안내가 뜨면 허용.
+4. Play Console → 수익 창출 설정 → 실시간 개발자 알림: 주제 `projects/<프로젝트 ID>/topics/play-rtdn` 입력 → 저장 → **테스트 알림 보내기** → Vercel 로그 `[play-rtdn] test notification` 확인.
