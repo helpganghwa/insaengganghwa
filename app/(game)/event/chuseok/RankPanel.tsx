@@ -78,14 +78,13 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
           <TranscendSprite code={item.code} slot={item.slot} level={r.transcend} championRank={r.rank <= 3 ? r.rank : null} size={38} frameless />
           <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/70 px-1 text-[10px] font-extrabold leading-tight text-amber-300">+{n(r.level)}</span>
         </span>
-        {/* 닉네임은 9rem에서, 칭호는 남는 폭에서 말줄임 — 긴 닉네임+칭호가 넘쳐 잘리지 않게(2026-09-23 감사). 얼굴 배경은 왼쪽으로 옅어져 겹침을 허용. */}
+        {/* 칭호는 채팅 행처럼 이펙트를 살리고(정적 모드·말줄임 칸 제거 — 칸이 줄 높이를 키워 칭호가 아래로 처지고
+            발광·파티클이 잘렸다, 2026-09-24) 폭이 모자라면 닉네임이 먼저 말줄임된다(칭호는 8자 이내). */}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
-            <span className="max-w-[9rem] shrink-0 truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
+            <span className="min-w-0 truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
             {r.guildEmblemUrl ? <GuildEmblemImg src={r.guildEmblemUrl} size={12} className="shrink-0 self-center" /> : null}
-            <span className="min-w-0 truncate">
-              <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-            </span>
+            <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} className="text-[9.5px]" />
           </div>
           {at ? <div className="truncate text-[9.5px] tabular-nums text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{at} 도달</div> : null}
         </div>
