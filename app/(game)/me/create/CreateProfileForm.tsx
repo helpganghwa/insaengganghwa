@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { josa } from 'josa';
 import { useRouter } from 'next/navigation';
 
 import { Ticker } from '@/components/Ticker';
@@ -300,7 +301,7 @@ export function CreateProfileForm({
         <ModalShell onClose={() => setConfirm(false)} label="아바타 생성 확인">
           <ModalLayout
             title="아바타를 생성할까요?"
-            subtitle={`💎 ${price.toLocaleString('ko-KR')}이 차감됩니다`}
+            subtitle={josa(`💎 ${price.toLocaleString('ko-KR')}#{이} 차감됩니다`)}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setConfirm(false)}>

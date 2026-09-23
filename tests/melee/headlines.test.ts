@@ -45,7 +45,8 @@ describe('melee headlines — 조사', () => {
     expect(josa('Res', '을', '를')).toBe('Res를');
     expect(josa('Aiden', '을', '를')).toBe('Aiden을');
     expect(josa('지인', '과', '와')).toBe('지인과');
-    expect(josa('☆', '이', '가')).toBe('☆이(가)');
+    expect(josa('☆', '이', '가')).toMatch(/^☆(이|가)$/);
+    expect(josa('대장장이1043', '으로', '로')).toBe('대장장이1043으로');
   });
 });
 

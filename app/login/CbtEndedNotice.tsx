@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { getJosaPicker } from 'josa';
 
 import { BgmPlayer } from '@/components/audio/BgmPlayer';
 
@@ -192,10 +193,12 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
             울렸습니다.
           </span>
           <span className="block break-keep">
-            <b className="font-bold text-zinc-200">{STAT.sparks}</b>은 불꽃이 됐고
+            <b className="font-bold text-zinc-200">{STAT.sparks}</b>
+            {getJosaPicker('은')(String(STAT.sparks))} 불꽃이 됐고
           </span>
           <span className="block break-keep">
-            <b className="font-bold text-zinc-200">{STAT.tempered}</b>은 담금질이 됐으며,
+            <b className="font-bold text-zinc-200">{STAT.tempered}</b>
+            {getJosaPicker('은')(String(STAT.tempered))} 담금질이 됐으며,
           </span>
           <span className="block break-keep">
             누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐습니다.

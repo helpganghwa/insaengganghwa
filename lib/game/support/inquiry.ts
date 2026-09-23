@@ -1,4 +1,5 @@
 import 'server-only';
+import { josa } from 'josa';
 
 import { and, desc, eq, sql } from 'drizzle-orm';
 
@@ -116,7 +117,8 @@ export async function submitInquiry(input: {
     serverId: input.serverId,
     type: 'admin',
     title: '문의가 접수되었어요',
-    body: `${label}가 정상 접수되었습니다.\n담당자가 확인 후 답변을 우편으로 보내드릴게요.\n\n■ 접수 내용\n${body}`,
+    // 유저 본문은 josa 밖에 둔다 — 본문에 '#{'가 있어도 치환되지 않게.
+    body: `${josa(`${label}#{가} 정상 접수되었습니다.`)}\n담당자가 확인 후 답변을 우편으로 보내드릴게요.\n\n■ 접수 내용\n${body}`,
     senderLabel: '운영자',
     payload: {},
   });

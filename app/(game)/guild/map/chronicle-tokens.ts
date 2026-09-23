@@ -1,4 +1,4 @@
-import { josa } from 'es-hangul';
+import { getJosaPicker } from 'josa';
 
 /**
  * 연대기 마커 파싱 공용(2026-07-16, WorldMapView에서 분리) — 정적 렌더(ChronicleText)와
@@ -8,32 +8,37 @@ import { josa } from 'es-hangul';
 export const CHRONICLE_TOKEN_RE = /\{([guz])\|([^}|]+)(?:\|([^}]+))?\}+/g;
 
 // 마커 직후 조사 보정용 — AI가 쓴 한쪽 조사를 이름 받침에 맞게 교정(은↔는 등).
-// 긴 조사부터 검사(으로부터>로>... 접두 충돌 방지). es-hangul josa.pick으로 정확 산출.
-const JOSA_PARTICLES: { p: string; pair: Parameters<typeof josa>[1] }[] = [
-  { p: '으로부터', pair: '으로부터/로부터' }, { p: '로부터', pair: '으로부터/로부터' },
-  { p: '으로서', pair: '으로서/로서' }, { p: '로서', pair: '으로서/로서' },
-  { p: '으로써', pair: '으로써/로써' }, { p: '로써', pair: '으로써/로써' },
-  { p: '이에요', pair: '이에요/예요' }, { p: '예요', pair: '이에요/예요' },
-  { p: '이란', pair: '이란/란' }, { p: '란', pair: '이란/란' },
-  { p: '이랑', pair: '이랑/랑' }, { p: '랑', pair: '이랑/랑' },
-  { p: '이나', pair: '이나/나' }, { p: '나', pair: '이나/나' },
-  { p: '이라', pair: '이라/라' }, { p: '라', pair: '이라/라' },
-  { p: '으로', pair: '으로/로' }, { p: '로', pair: '으로/로' },
-  { p: '은', pair: '은/는' }, { p: '는', pair: '은/는' },
-  { p: '이', pair: '이/가' }, { p: '가', pair: '이/가' },
-  { p: '을', pair: '을/를' }, { p: '를', pair: '을/를' },
-  { p: '와', pair: '와/과' }, { p: '과', pair: '와/과' },
-  { p: '아', pair: '아/야' }, { p: '야', pair: '아/야' },
+// 긴 조사부터 검사(으로부터>로>... 접두 충돌 방지). 판정은 josa 패키지(ㄹ받침·숫자 발음·로마자 처리, 2026-09-23).
+// 패키지에 없는 조사(이란·이랑·이나·이라·으로부터…)는 이/가·으로/로 판정에서 파생한다.
+const pickI = getJosaPicker('이'); // 받침 → '이', 없음 → '가'
+const pickRo = getJosaPicker('으로'); // 받침(ㄹ 제외) → '으로', 없음·ㄹ받침 → '로'
+const withI = (a: string, b: string) => (name: string) => (pickI(name) === '이' ? a : b);
+const withRo = (tail: string) => (name: string) => `${pickRo(name)}${tail}`;
+const JOSA_PARTICLES: { p: string; pick: (name: string) => string }[] = [
+  { p: '으로부터', pick: withRo('부터') }, { p: '로부터', pick: withRo('부터') },
+  { p: '으로서', pick: withRo('서') }, { p: '로서', pick: withRo('서') },
+  { p: '으로써', pick: withRo('써') }, { p: '로써', pick: withRo('써') },
+  { p: '이에요', pick: withI('이에요', '예요') }, { p: '예요', pick: withI('이에요', '예요') },
+  { p: '이란', pick: withI('이란', '란') }, { p: '란', pick: withI('이란', '란') },
+  { p: '이랑', pick: withI('이랑', '랑') }, { p: '랑', pick: withI('이랑', '랑') },
+  { p: '이나', pick: withI('이나', '나') }, { p: '나', pick: withI('이나', '나') },
+  { p: '이라', pick: withI('이라', '라') }, { p: '라', pick: withI('이라', '라') },
+  { p: '으로', pick: pickRo }, { p: '로', pick: pickRo },
+  { p: '은', pick: getJosaPicker('은') }, { p: '는', pick: getJosaPicker('은') },
+  { p: '이', pick: pickI }, { p: '가', pick: pickI },
+  { p: '을', pick: getJosaPicker('을') }, { p: '를', pick: getJosaPicker('을') },
+  { p: '와', pick: getJosaPicker('과') }, { p: '과', pick: getJosaPicker('과') },
+  { p: '아', pick: getJosaPicker('아') }, { p: '야', pick: getJosaPicker('아') },
 ];
 
 /** 마커(name) 직후 텍스트(after)의 선두 조사를 이름 받침에 맞게 교정. 교정 조사 + 소비 길이 반환(없으면 null). */
 export function fixLeadingJosa(name: string, after: string): { josa: string; len: number } | null {
-  for (const { p, pair } of JOSA_PARTICLES) {
+  for (const { p, pick } of JOSA_PARTICLES) {
     if (!after.startsWith(p)) continue;
     // 조사 뒤가 한글 음절이면 단어 일부일 수 있어 보정 안 함(공백·문장부호·끝만 조사로 인정).
     const next = after[p.length];
     if (next !== undefined && /[가-힣]/.test(next)) return null;
-    return { josa: josa.pick(name, pair), len: p.length };
+    return { josa: pick(name), len: p.length };
   }
   return null;
 }

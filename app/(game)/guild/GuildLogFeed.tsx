@@ -1,6 +1,6 @@
 'use client';
 
-import { josa } from 'es-hangul';
+import { getJosaPicker } from 'josa';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -79,9 +79,9 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'levelup':
       return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)} 달성했습니다</>;
     case 'tax_collect':
-      return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}를 수금했습니다</>;
+      return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}{getJosaPicker('을')(String(amt))} 수금했습니다</>;
     case 'tax_distribute':
-      return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}를 지급했습니다</>;
+      return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}{getJosaPicker('을')(String(amt))} 지급했습니다</>;
     case 'zone_capture':
       return <>{zone} 구역을 {hl('점령', C.emerald)}했습니다</>;
     case 'zone_lost':
@@ -98,7 +98,7 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'set_perm':
       return <>{actor}님이 {target}님의 {hl('부길드장 권한', C.indigo)}을 변경했습니다</>;
     case 'rename':
-      return <>{actor}님이 길드 이름을 {hl(String(e.detail?.before ?? ''), C.amber)}에서 {hl(String(e.detail?.after ?? ''), C.amber)}{josa.pick(String(e.detail?.after ?? ''), '으로/로')} 바꿨습니다</>;
+      return <>{actor}님이 길드 이름을 {hl(String(e.detail?.before ?? ''), C.amber)}에서 {hl(String(e.detail?.after ?? ''), C.amber)}{getJosaPicker('으로')(String(e.detail?.after ?? ''))} 바꿨습니다</>;
     case 'disband':
       return <>{actor}님이 길드를 해산했습니다</>;
     case 'set_join_policy':

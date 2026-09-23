@@ -7,6 +7,7 @@
  * 원칙: 이름이 붙는 사건은 긍정·중립 프레임. 이모지 없음. 이름은 배틀 시점 닉네임 스냅샷.
  */
 import { MELEE_HP_MULT } from '@/lib/game/balance';
+import { josa as fillJosa } from 'josa';
 
 export type HeadlineParticipant = {
   userId: string;
@@ -111,22 +112,12 @@ const fmt = (n: number) => Math.round(n).toLocaleString('ko-KR');
 const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 /**
- * 받침 판정 — 한글은 정확, 숫자는 발음 기준(0·1·3·6·7·8 받침), 로마자는 한국어 표기 관례 근사
- * (b·c·d·g·k·l·m·n·p·t 끝 = 받침, 모음·s·x·z·r·h 등 = 없음). 판정 불가(기호 등)는 null → "이(가)" 병기.
+ * 조사 붙이기 — josa('슷파', '이', '가') → '슷파가', josa('Res', '을', '를') → 'Res를'.
+ * 받침 판정은 josa 패키지(한글·ㄹ받침·숫자 발음·로마자, 기호는 앞 글자 기준)에 맡긴다(2026-09-23).
+ * 둘째 인자가 받침형 조사(이·을·과…)이고 셋째는 호출부 가독성용이라 판정에는 쓰지 않는다.
  */
-function hasBatchim(word: string): boolean | null {
-  const ch = word.trim().slice(-1);
-  if (!ch) return null;
-  const code = ch.charCodeAt(0);
-  if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 !== 0;
-  if (/[0-9]/.test(ch)) return '013678'.includes(ch);
-  if (/[a-zA-Z]/.test(ch)) return /[bcdgklmnpt]/i.test(ch);
-  return null;
-}
-/** 조사 붙이기 — josa('슷파', '이', '가') → '슷파가', josa('Res', '을', '를') → 'Res를'. */
-export function josa(word: string, withBatchim: string, without: string): string {
-  const r = hasBatchim(word);
-  return word + (r === null ? `${withBatchim}(${without})` : r ? withBatchim : without);
+export function josa(word: string, withBatchim: string, _without: string): string {
+  return fillJosa(`${word}#{${withBatchim}}`);
 }
 /** 기본 닉네임(미변경) 패턴 — 주인공으로 나오면 읽는 맛이 떨어져 감점. */
 const DEFAULT_NICK = /^대장장이[0-9a-z]{4}$/;

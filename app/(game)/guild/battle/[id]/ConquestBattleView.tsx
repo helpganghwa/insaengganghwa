@@ -4,7 +4,7 @@ import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { josa } from 'es-hangul';
+import { josa } from 'josa';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { BackFab } from '@/components/BackNav';
@@ -29,15 +29,15 @@ const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 
 // 점령전 내레이션 — 라운드별 결정적 선택(round % len)으로 렌더 순수성 유지.
 const KILLED_MSGS: ((a: string, t: string, d: string) => string)[] = [
-  (a, t, d) => `${a}의 일격이 ${josa(t, '을/를')} 베어 넘긴다. ${t}, 전열에서 이탈한다. (-${d})`,
-  (a, t, d) => `${josa(a, '이/가')} 결정타를 꽂는다. ${t} 무너지고, ${d}의 피해가 전장에 새겨진다.`,
+  (a, t, d) => `${a}의 일격이 ${josa(`${t}#{을}`)} 베어 넘긴다. ${t}, 전열에서 이탈한다. (-${d})`,
+  (a, t, d) => `${josa(`${a}#{이}`)} 결정타를 꽂는다. ${t} 무너지고, ${d}의 피해가 전장에 새겨진다.`,
   (a, t, d) => `${t}, ${a}의 맹공을 버티지 못하고 쓰러진다. (-${d})`,
-  (a, t, d) => `${a}의 창끝이 ${josa(t, '을/를')} 꿰뚫는다 — ${t} 전사. (-${d})`,
+  (a, t, d) => `${a}의 창끝이 ${josa(`${t}#{을}`)} 꿰뚫는다 — ${t} 전사. (-${d})`,
 ];
 const SURVIVE_MSGS: ((a: string, t: string, d: string, hp: string) => string)[] = [
-  (a, t, d, hp) => `${a}의 공격이 ${josa(t, '을/를')} 강타! ${t}, 체력 ${hp}로 버틴다. (-${d})`,
-  (a, t, d, hp) => `${josa(a, '이/가')} ${d}의 일격을 날린다. ${t}, 체력 ${hp}로 진영을 지킨다.`,
-  (a, t, d, hp) => `격전! ${a}의 ${d} 피해에도 ${josa(t, '은/는')} 체력 ${hp}로 견딘다.`,
+  (a, t, d, hp) => `${a}의 공격이 ${josa(`${t}#{을}`)} 강타! ${t}, 체력 ${hp}로 버틴다. (-${d})`,
+  (a, t, d, hp) => `${josa(`${a}#{이}`)} ${d}의 일격을 날린다. ${t}, 체력 ${hp}로 진영을 지킨다.`,
+  (a, t, d, hp) => `격전! ${a}의 ${d} 피해에도 ${josa(`${t}#{은}`)} 체력 ${hp}로 견딘다.`,
   (a, t, d, hp) => `${a}의 맹공 ${d}. ${t}, ${hp}의 기세로 맞선다.`,
 ];
 

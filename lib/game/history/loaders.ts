@@ -1,4 +1,5 @@
 import 'server-only';
+import { josa as fillJosa, getJosaPicker } from 'josa';
 
 import { and, asc, eq, lt, sql } from 'drizzle-orm';
 
@@ -274,7 +275,7 @@ async function buildStory(
       eras.push({ startIdx: i, endIdx: kstDays.length - 1, guildId: best, name: nameOn(best, kstDays[i]!), color: colorOf(best), summary: '', closing: '' });
       eraOpen.push({ prev: leader, margin: bestN - second });
       // 등수 표현 대신 시대 어휘로(연대기 문체 규칙과 같게 — 2026-09-18 검수).
-      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: `새 시대 — ${nameOn(best, kstDays[i]!)}가 ${nameOn(leader, kstDays[i]!)}를 제치고 가장 넓은 영토를 쥠`, short: '새 시대' });
+      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: fillJosa(`새 시대 — ${nameOn(best, kstDays[i]!)}#{가} ${nameOn(leader, kstDays[i]!)}#{를} 제치고 가장 넓은 영토를 쥠`), short: '새 시대' });
       leader = best;
     }
   }
@@ -339,12 +340,8 @@ async function buildStory(
 
   // 시대 요약 — 코드 집계 문장(AI 없음). 여는 문장 + 그 시대의 석권·최대 영토·소멸, 맺음은 다음 시대에 넘긴 사실.
   const md = (d: string) => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`;
-  // 조사 — 마지막 글자의 받침으로. 한글이 아니면(영문 길드명) 연대기와 같이 모음형('Winners가').
-  const hasBatchim = (s: string) => {
-    const c = s.charCodeAt(s.length - 1);
-    return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
-  };
-  const josa = (name: string, pair: [string, string]) => (hasBatchim(name) ? pair[0] : pair[1]);
+  // 조사 — josa 패키지 판정(ㄹ받침·숫자 발음·로마자, 2026-09-23). pair[0]=받침형(은·이·을·으로).
+  const josa = (name: string, pair: [string, string]) => getJosaPicker(pair[0])(name);
   /** 한 장 안에서는 그 장 첫날의 이름으로 통일(장 제목과 같은 이름). 개명은 문장으로 따로 잇는다. */
   const G = (gid: number, kd: string, pair?: [string, string]) => {
     const nm = nameOn(gid, kd);

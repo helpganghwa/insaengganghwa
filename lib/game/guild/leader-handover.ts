@@ -1,4 +1,5 @@
 import 'server-only';
+import { josa } from 'josa';
 
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
@@ -233,7 +234,7 @@ async function autoDisband(serverId: number, g: GuildRow): Promise<boolean> {
           serverId,
           type: 'guild' as const,
           title: '길드 자동 해산',
-          body: `길드 '${gRow?.name ?? ''}'이(가) 길드장의 장기 미접속과 활동 길드원 부재로 자동 해산되었습니다. 새 길드에 가입하거나 직접 창설할 수 있습니다.`,
+          body: josa(`길드 '${gRow?.name ?? ''}'#{이} 길드장의 장기 미접속과 활동 길드원 부재로 자동 해산되었습니다. 새 길드에 가입하거나 직접 창설할 수 있습니다.`),
           senderLabel: '인생강화',
           payload: {},
         })),

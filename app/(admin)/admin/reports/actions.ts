@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { josa } from 'josa';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -127,7 +128,7 @@ export async function resetReportedNickname(profileId: string): Promise<Result> 
         c.serverId,
         'reward',
         '닉네임 초기화 안내',
-        `운영정책 위반으로 닉네임이 "${nick}"(으)로 초기화되었습니다. 닉네임 변경 비용을 지급해 드리니 적절한 닉네임으로 변경해 주세요.`,
+        josa(`운영정책 위반으로 닉네임이 "${nick}"#{으로} 초기화되었습니다. 닉네임 변경 비용을 지급해 드리니 적절한 닉네임으로 변경해 주세요.`),
         NICKNAME_CHANGE_COST_DIAMOND,
       );
     }

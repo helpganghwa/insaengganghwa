@@ -1,4 +1,5 @@
 import 'server-only';
+import { josa } from 'josa';
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
@@ -282,7 +283,7 @@ export async function settleContest(serverId: number, adminId: string, at = Date
         const per = reward.boxes / 3;
         const payload = JSON.stringify({ diamond: reward.diamond, boxes: { weapon: per, armor: per, accessory: per } });
         const title = `추석 강화 대회 ${r.rank}등 보상`;
-        const body = `${name} 강화 대회에서 ${r.rank}등을 하셨습니다. 마감 시각 기준 +${r.level.toLocaleString('ko-KR')} 단계였습니다.\n보상으로 💎${reward.diamond.toLocaleString('ko-KR')}과 📦${reward.boxes}개를 드립니다.${titles.length ? ' 칭호는 칭호 화면에서 확인해 주세요.' : ''}`;
+        const body = josa(`${name} 강화 대회에서 ${r.rank}등을 하셨습니다. 마감 시각 기준 +${r.level.toLocaleString('ko-KR')} 단계였습니다.\n보상으로 💎${reward.diamond.toLocaleString('ko-KR')}#{과} 📦${reward.boxes}개를 드립니다.${titles.length ? ' 칭호는 칭호 화면에서 확인해 주세요.' : ''}`);
         await tx.execute(sql`
           insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
           values (${r.userId}::uuid, ${serverId}, 'admin'::mailbox_type, ${title}, ${body}, '추석 강화 대회', ${payload}::jsonb)

@@ -1,5 +1,6 @@
 'use client';
 import { profileHref } from '@/lib/game/profile/href';
+import { josa } from 'josa';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -127,10 +128,10 @@ const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
 };
 // 보석 공격 컨펌 로어 — {n}=보석 비용.
 const GEM_CONFIRM_LORE = [
-  '다이아 {n}을 바쳐 한 번 더 검을 들겠는가?',
+  '다이아 {n}#{을} 바쳐 한 번 더 검을 들겠는가?',
   '{n}의 대가로 일격의 기회를 청하시겠습니까?',
-  '{n}을 제물 삼아 다시 맞서시겠습니까?',
-  '영혼의 {n}을 불살라 추가 공격을 감행할까?',
+  '{n}#{을} 제물 삼아 다시 맞서시겠습니까?',
+  '영혼의 {n}#{을} 불살라 추가 공격을 감행할까?',
 ] as const;
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]!;
 
@@ -893,7 +894,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                     // 부족이면 무장하지 않고 충전 유도 팝업(2026-08-22).
                     if (!gate.ensure(cost)) return false;
                     haptic.tap();
-                    gemLoreRef.current = pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`);
+                    gemLoreRef.current = josa(pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`));
                   }}
                   onConfirm={handleGemAttack}
                   disabled={attacking}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { josa, getJosaPicker } from 'josa';
 
 import { Ticker } from '@/components/Ticker';
 
@@ -399,7 +400,7 @@ export function DeployBoard({
           });
           return showError(guildErrMsg(r.code));
         }
-        showHeaderToast({ title: `${p.zoneName}(으)로 거주지 이동` });
+        showHeaderToast({ title: josa(`${p.zoneName}#{으로} 거주지 이동`) });
         // refresh 불필요(§11.7) — 액션 revalidate 재렌더가 거주지 상태를 실어 온다.
       });
       return;
@@ -960,21 +961,27 @@ export function DeployBoard({
       {/* 배치 확인 — 이동·해제·배치를 한 화면에 모아 보여주고 한 번에 실행한다. */}
       {plan && (
         <ModalShell
-          label="배치 확인"
+          label={plan.role == null ? '이동 확인' : '배치 확인'}
           onClose={() => {
             setPlan(null);
-                  }}
+          }}
           onSubmit={runPlan}
         >
           <ModalLayout
             title={
               plan.role == null
-                ? `${plan.zoneName}(으)로 이동`
+                ? josa(`${plan.zoneName}#{으로} 이동`)
                 : `${plan.zoneName} ${plan.role === 'attack' ? '공격' : '수비'} 배치`
             }
             subtitle={
               <>
-                {plan.move ? <span className="font-bold text-amber-500">거주지 이동 포함</span> : '추가 비용 없음'}
+                {plan.role == null ? (
+                  '배치 없이 거주지만 옮깁니다'
+                ) : plan.move ? (
+                  <span className="font-bold text-amber-500">거주지 이동 포함</span>
+                ) : (
+                  '추가 비용 없음'
+                )}
               </>
             }
             footer={
@@ -1008,7 +1015,8 @@ export function DeployBoard({
                 <li className="flex gap-1.5">
                   <span className="text-zinc-400">·</span>
                   <span className="text-zinc-600 dark:text-zinc-300">
-                    <b className="font-bold text-red-500">{plan.release}</b>가 해제됩니다.
+                    <b className="font-bold text-red-500">{plan.release}</b>
+                    {getJosaPicker('이')(plan.release)} 해제됩니다.
                   </span>
                 </li>
               )}
@@ -1016,19 +1024,23 @@ export function DeployBoard({
                 <li className="flex gap-1.5">
                   <span className="text-zinc-400">·</span>
                   <span className="text-zinc-600 dark:text-zinc-300">
-                    거주지가 <b className="font-bold text-amber-500">{plan.zoneName}</b>으로 이동합니다.
+                    거주지가 <b className="font-bold text-amber-500">{plan.zoneName}</b>
+                    {getJosaPicker('으로')(plan.zoneName)} 이동합니다.
                   </span>
                 </li>
               )}
-              <li className="flex gap-1.5">
-                <span className="text-zinc-400">·</span>
-                <span className="text-zinc-600 dark:text-zinc-300">
-                  <b className={`font-bold ${plan.role === 'attack' ? 'text-red-500' : 'text-sky-500'}`}>
-                    {plan.role === 'attack' ? '공격' : '수비'}
-                  </b>
-                  로 배치됩니다.
-                </span>
-              </li>
+              {/* 이동만(role null)일 때는 배치가 없다 — 배치 문구를 내지 않는다(2026-09-23 사용자 지적). */}
+              {plan.role != null && (
+                <li className="flex gap-1.5">
+                  <span className="text-zinc-400">·</span>
+                  <span className="text-zinc-600 dark:text-zinc-300">
+                    <b className={`font-bold ${plan.role === 'attack' ? 'text-red-500' : 'text-sky-500'}`}>
+                      {plan.role === 'attack' ? '공격' : '수비'}
+                    </b>
+                    로 배치됩니다.
+                  </span>
+                </li>
+              )}
             </ul>
           </ModalLayout>
         </ModalShell>

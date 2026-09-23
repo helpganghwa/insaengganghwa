@@ -1,3 +1,5 @@
+import { josa } from 'josa';
+
 import type { GuildRole } from './permissions';
 
 /**
@@ -7,6 +9,6 @@ import type { GuildRole } from './permissions';
  */
 export function taxMailBody(guildName: string, role: GuildRole, nick: string | null, amount: bigint): string {
   const title = role === 'leader' ? '길드장' : '부길드장';
-  const who = nick ? `${title} ${nick}님이` : `${title}이`;
-  return `${guildName} ${who} 세금 💎${amount.toLocaleString('ko-KR')}을 분배했습니다.`;
+  const who = nick ? `${title} ${nick}님이` : josa(`${title}#{이}`);
+  return josa(`${guildName} ${who} 세금 💎${amount.toLocaleString('ko-KR')}#{을} 분배했습니다.`);
 }
