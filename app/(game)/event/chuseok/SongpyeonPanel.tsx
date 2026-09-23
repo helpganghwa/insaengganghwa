@@ -234,6 +234,7 @@ function ExchangeModal({
   };
   const step = (d: number) => setCount((c) => Math.min(max, Math.max(1, c + d)));
   const stepBtn = 'grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold text-zinc-100 disabled:opacity-40';
+  const edgeBtn = 'h-8 rounded-lg bg-zinc-800 px-2.5 text-[11px] font-bold text-zinc-300 active:opacity-80 disabled:opacity-40';
   return (
     <ModalShell onClose={onClose} onSubmit={submit} label="송편 교환">
       <ModalLayout
@@ -249,7 +250,11 @@ function ExchangeModal({
           </>
         }
       >
-        <div className="flex items-center justify-center gap-3.5 pb-0.5 pt-1.5">
+        {/* 최소 · − 수량 + · 최대 — 좌우 대칭 한 줄(2026-09-23). */}
+        <div className="flex items-center justify-center gap-3 pb-0.5 pt-1.5">
+          <button type="button" onClick={() => setCount(1)} disabled={count <= 1} className={edgeBtn}>
+            최소
+          </button>
           <button type="button" aria-label="하나 줄이기" onClick={() => step(-1)} disabled={count <= 1} className={stepBtn}>
             −
           </button>
@@ -257,14 +262,9 @@ function ExchangeModal({
           <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className={stepBtn}>
             +
           </button>
-          <span className="flex flex-col gap-1">
-            <button type="button" onClick={() => setCount(max)} className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10.5px] tabular-nums text-zinc-300 active:opacity-80">
-              최대 {n(max)}
-            </button>
-            <button type="button" onClick={() => setCount(1)} className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10.5px] tabular-nums text-zinc-300 active:opacity-80">
-              최소
-            </button>
-          </span>
+          <button type="button" onClick={() => setCount(max)} disabled={count >= max} className={edgeBtn}>
+            최대
+          </button>
         </div>
         <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 text-[12px]">
           <dt className="text-zinc-400">받는 것</dt>

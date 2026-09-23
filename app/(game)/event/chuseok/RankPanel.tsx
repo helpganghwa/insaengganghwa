@@ -45,7 +45,8 @@ function rankAccent(rank: number, me: boolean): { text: string } {
 
 /**
  * 순위 한 줄 — 대난투 순위 행과 같은 구성(우측 얼굴 배경 + 좌→우 그라데이션, 1~3등 메달). 순위 오른쪽에 장비 타일
- * (초월 테두리 + 단계, 1~3등은 해방 애니), 닉네임 옆엔 길드 문양만, 그 오른쪽에 대표 칭호(채팅 행과 같은 배치). 구분선 없음. 내 행은 '나' 배지 대신 앰버 테두리(2026-09-23).
+ * (초월 테두리 + 단계, 1~3등은 해방 애니), 닉네임 옆엔 길드 문양만, 그 오른쪽에 대표 칭호(채팅 행과 같은 배치). 구분선 없음. 내 행은 '나' 배지 대신 단색 앰버 테두리(2026-09-23) —
+ * 목록 테두리를 행이 나눠 갖고(첫 행 상단·끝 행 하단·양옆), 내 행은 네 변 모두 앰버, 바로 위 행은 하단선을 비워 이중선을 막는다.
  * 링크 없음(2026-09-23).
  */
 function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
@@ -53,7 +54,10 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
   const accent = rankAccent(r.rank, r.me);
   const at = fmtTime(r.reachedAt);
   return (
-    <li className={`relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3 last:border-b-0 ${r.me ? 'ring-1 ring-inset ring-amber-400/70' : ''}`}>
+    <li
+      data-me={r.me ? '' : undefined}
+      className={`relative flex h-[56px] items-center overflow-hidden border-x border-b px-3 first:rounded-t-xl first:border-t last:rounded-b-xl [&:has(+[data-me])]:border-b-0 ${r.me ? 'border-t border-amber-400' : 'border-zinc-800'}`}
+    >
       {r.avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -154,9 +158,9 @@ export function RankPanel({ board }: { board: ContestBoard }) {
       </div>
 
       {/* 1~10등 */}
-      <ol className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+      <ol className="overflow-hidden rounded-xl bg-zinc-900">
         {item.rows.length === 0 ? (
-          <li className="px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 강화하면 순위에 올라요.</li>
+          <li className="rounded-xl border border-zinc-800 px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 강화하면 순위에 올라요.</li>
         ) : (
           item.rows.map((r) => <Row key={r.rank} r={r} item={item} />)
         )}
