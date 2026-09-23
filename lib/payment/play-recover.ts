@@ -7,7 +7,6 @@ import { iapOrders } from '@/lib/db/schema/payment';
 
 import { raisePaymentAlert } from './alert';
 import { getPlayProductPurchase, PlayApiError, type PlayProductPurchase } from './play-api';
-import { RTDN_LOOKBACK_MS } from './play-rtdn';
 import { isKnownPlaySku, productIdForPlaySku } from './play-sku';
 import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult } from './purchase';
 
@@ -24,8 +23,10 @@ import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult }
  *
  * ⚠ 다른 유저 보호(2026-09-24 감사): 기기의 listPurchases()는 **구글 계정** 단위라, 같은 기기에서 게임 계정을 바꾸면
  * 다른 게임 계정이 산 구매가 보인다. **다른 유저**가 구매 직전([구매−30분, 구매+5분])에 연 토큰 없는 미완 주문이 있으면
- * 누구의 구매인지 가릴 수 없으므로(이 유저에게도 주문이 있어도) 그 사람의 구매일 수 있다 — ②·③으로 지급하지 않고 경보만 남긴다
- * (기기는 소모하지 않으므로 RTDN이 주인 주문을 찾아 지급하거나, 운영자가 어드민 도구로 처리한다).
+ * 누구의 구매인지 가릴 수 없으므로(이 유저에게도 주문이 있어도) ②·③으로 지급하지 않고 경보만 남긴다. 기기는 소모하지 않는다.
+ * 이런 건은 RTDN도 후보가 둘 이상이라 애매함으로 빠지므로 **대개 운영자가 어드민 도구로 처리**한다(3일 안에 안 하면 구글 자동 환불).
+ * 구매 시각을 모르면(드묾) 창을 잡을 수 없어 ②·③ 없이 경보만 남긴다(RTDN과 같은 규칙).
+ * 남는 한계: 진짜 구매자가 결제창을 연 뒤 30분 넘게 지나 구매를 확정했다면 그 주문은 창 밖이라 이 보호에 걸리지 않는다.
  */
 type CompleteFailCode = Extract<CompleteResult, { ok: false }>['code'];
 export type RecoverResult =
@@ -83,21 +84,26 @@ export async function recoverPlayPurchase(
     .limit(1);
   if (boundElsewhere) return { ok: false, code: 'NO_ORDER' };
 
-  // 구매 시각 창. 시각이 없으면(드묾) 지금을 구매 시각으로 본다(창이 넓어지진 않는다).
-  //  · 본인 주문 선택: RTDN과 같은 [구매−6시간 10분, 구매+5분]과 겹치는 주문 우선.
-  //  · 다른 유저 주문: [구매−30분, 구매+5분] — 진짜 구매자는 결제 직전에 결제창을 열었으므로(다시 눌렀으면 그 뒤로 밀림) 이 안에
-  //    든다. 넓히면 몇 시간 전에 버려진 남의 결제창 때문에 정상 복구가 막힌다(RTDN과 보수적인 방향이 반대).
-  const pt = g.purchaseTimeMillis ? Number(g.purchaseTimeMillis) : Date.now();
+  // 구매 시각을 모르면 누구의 구매인지 가릴 창이 없다 — 추정 지급(②·③)을 하지 않는다.
+  if (!g.purchaseTimeMillis) {
+    await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
+      paymentId: `recover:${g.orderId ?? purchaseToken.slice(0, 16)}`,
+      detail: `상점 복구: 구글 주문 ${g.orderId ?? '?'}(${sku})의 구매 시각이 없어 주문을 가릴 수 없다(복구 유저 ${userId}) — 지급하지 않음. 콘솔에서 구매자 확인 뒤 /api/admin/play-complete-order로 지급(3일 안에 처리하지 않으면 구글 자동 환불).`,
+      onceEver: true,
+    });
+    return { ok: false, code: 'NO_ORDER' };
+  }
+  // 다른 유저 판정 창 [구매−30분, 구매+5분] — 진짜 구매자는 결제 직전에 결제창을 열었으므로(다시 눌렀으면 그 뒤로 밀림) 이 안에
+  // 든다. 넓히면 몇 시간 전에 버려진 남의 결제창 때문에 정상 복구가 막힌다(RTDN과 보수적인 방향이 반대).
+  const pt = Number(g.purchaseTimeMillis);
   const ts = (ms: number) => sql`${new Date(ms).toISOString()}::timestamptz`;
-  const winEnd = ts(pt + 5 * 60_000);
   const lastTry = sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`;
   // 주문을 한 시각이 아니라 [만든 시각, 마지막 결제 시도] 구간으로 보고 창과 겹치는지 본다 — 결과를 잃고 다시 구매를 누르면
   // 재사용 주문의 play_checkout_at이 구매 뒤로 밀리지만(createPlayOrder), 만든 시각은 구매 전이라 여전히 그 구매의 주문이다.
-  const overlaps = sql<boolean>`(${iapOrders.createdAt} <= ${winEnd} and ${lastTry} >= ${ts(pt - RTDN_LOOKBACK_MS)})`;
-  const overlapsNarrow = sql<boolean>`(${iapOrders.createdAt} <= ${winEnd} and ${lastTry} >= ${ts(pt - 30 * 60_000)})`;
+  const overlapsNarrow = sql<boolean>`(${iapOrders.createdAt} <= ${ts(pt + 5 * 60_000)} and ${lastTry} >= ${ts(pt - 30 * 60_000)})`;
 
-  // ② 같은 SKU의 최근 미완 주문 — 창과 겹치는 주문 먼저, 그중 구매 전에 만든 주문 먼저(구매 뒤 같은 가격의 다른 성장패스 구간을
-  //   눌러 생긴 주문을 고르지 않게), 그다음 마지막 결제 시도 순(0215: 가격 SKU를 공유하면 가장 최근에 결제창을 연 주문이 이 구매).
+  // ② 같은 SKU의 최근 미완 주문 — 구매 전에 만든 주문 먼저(구매 뒤 같은 가격의 다른 성장패스 구간을 눌러 생긴 주문을 고르지 않게),
+  //   그다음 마지막 결제 시도 순(0215: 가격 SKU를 공유하면 가장 최근에 결제창을 연 주문이 이 구매).
   const [pending] = await db
     .select({ paymentId: iapOrders.portoneOrderId })
     .from(iapOrders)
@@ -112,35 +118,33 @@ export async function recoverPlayPurchase(
         gte(lastTry, sql`now() - interval '${sql.raw(String(LOOKBACK_DAYS))} days'`),
       ),
     )
-    .orderBy(desc(overlaps), desc(sql`${iapOrders.createdAt} <= ${ts(pt)}`), desc(lastTry))
+    .orderBy(desc(sql`${iapOrders.createdAt} <= ${ts(pt)}`), desc(lastTry))
     .limit(1);
   // **다른 유저**가 구매 직전에 연 토큰 없는 미완 주문이 있으면 누구의 구매인지 가릴 수 없다 — 이 유저에게도 창 안 주문이
   // 있더라도 막는다(RTDN과 같은 '애매하면 경보' 원칙). 본인 주문만으로 풀어 주면, 같은 기기의 다른 게임 계정이 몇 시간 전의
   // 자기 구매·버린 결제창을 근거로 남의 직전 구매를 가져가 소모해 버린다(2026-09-24 11차 감사).
-  {
-    const others = await db
-      .select({ paymentId: iapOrders.portoneOrderId })
-      .from(iapOrders)
-      .where(
-        and(
-          ne(iapOrders.userId, userId),
-          eq(iapOrders.provider, 'play'),
-          eq(iapOrders.playSku, sku),
-          isNull(iapOrders.playPurchaseToken),
-          inArray(iapOrders.status, ['pending', 'expired']),
-          overlapsNarrow,
-        ),
-      )
-      .limit(5);
-    if (others.length > 0) {
-      await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
-        paymentId: `recover:${g.orderId ?? purchaseToken.slice(0, 16)}`,
-        detail: `상점 복구: 구글 주문 ${g.orderId ?? '?'}(${sku})가 이 기기에 있지만 복구한 유저(${userId}) 말고도 다른 유저가 구매 직전에 연 미완 주문(${others.map((o) => o.paymentId).join(', ')})이 있어 누구의 구매인지 가릴 수 없다 — 같은 기기의 다른 게임 계정 구매일 수 있어 지급하지 않음. 완료 알림(RTDN)이 처리하지 못하면 콘솔에서 구매자 확인 뒤 /api/admin/play-complete-order로 지급(3일 안에 처리하지 않으면 구글 자동 환불).`,
-        // 복구는 상점을 열 때마다 돈다 — 해결 처리 뒤 같은 구매로 다시 울리지 않게.
-        onceEver: true,
-      });
-      return { ok: false, code: 'NO_ORDER' };
-    }
+  const others = await db
+    .select({ paymentId: iapOrders.portoneOrderId })
+    .from(iapOrders)
+    .where(
+      and(
+        ne(iapOrders.userId, userId),
+        eq(iapOrders.provider, 'play'),
+        eq(iapOrders.playSku, sku),
+        isNull(iapOrders.playPurchaseToken),
+        inArray(iapOrders.status, ['pending', 'expired']),
+        overlapsNarrow,
+      ),
+    )
+    .limit(5);
+  if (others.length > 0) {
+    await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
+      paymentId: `recover:${g.orderId ?? purchaseToken.slice(0, 16)}`,
+      detail: `상점 복구: 구글 주문 ${g.orderId ?? '?'}(${sku})가 이 기기에 있지만 복구한 유저(${userId}) 말고도 다른 유저가 구매 직전에 연 미완 주문(${others.map((o) => o.paymentId).join(', ')})이 있어 누구의 구매인지 가릴 수 없다 — 같은 기기의 다른 게임 계정 구매일 수 있어 지급하지 않음. RTDN도 대개 애매함으로 빠지니 콘솔에서 구매자 확인 뒤 /api/admin/play-complete-order로 지급(3일 안에 처리하지 않으면 구글 자동 환불).`,
+      // 복구는 상점을 열 때마다 돈다 — 해결 처리 뒤 같은 구매로 다시 울리지 않게.
+      onceEver: true,
+    });
+    return { ok: false, code: 'NO_ORDER' };
   }
   if (pending) return finish(pending.paymentId, userId, purchaseToken);
 

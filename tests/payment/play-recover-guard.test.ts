@@ -153,6 +153,43 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
     expect(await alertCount(gid)).toBe(0);
   });
 
+  it('토큰이 다른 유저 주문에 이미 묶였으면 새 주문 없이 끝낸다', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    const pid = await order(TEST_USER_ID, pt, -60_000, -60_000);
+    const tok = `tok-recguard-bound-${seq}-${process.pid}`;
+    await testDb.execute(sql`update iap_orders set play_purchase_token = ${tok} where portone_order_id = ${pid}`);
+    google(pt);
+    expect(await recoverPlayPurchase(randomUUID(), 1, SKU, tok)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it('구매 시각이 없으면 추정 지급하지 않고 경보', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    await order(TEST_USER_ID, pt, -60_000, -60_000);
+    const gid = google(pt);
+    mockGet.mockResolvedValue({ purchaseState: 0, consumptionState: 0, orderId: gid });
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it('다른 유저의 직전 주문이 expired여도 막고, 토큰이 이미 묶인(끝난) 주문이면 막지 않는다', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    const exp = await order(TEST_USER_ID, pt, -60_000, -60_000);
+    await testDb.execute(sql`update iap_orders set status = 'expired' where portone_order_id = ${exp}`);
+    const gid = google(pt);
+    expect(await recoverPlayPurchase(randomUUID(), 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+
+    await testDb.execute(sql`update iap_orders set status = 'paid', play_purchase_token = ${'tok-recguard-done-' + seq + '-' + process.pid} where portone_order_id = ${exp}`);
+    seq++; // 다른 구글 주문번호로
+    const gid2 = google(pt);
+    mockCreate.mockResolvedValue({ paymentId: 'gp-recguard-new3' } as Awaited<ReturnType<typeof createPlayOrder>>);
+    expect(await recoverPlayPurchase(randomUUID(), 1, SKU, `tok-recguard-${seq}-b`)).toEqual({ ok: true, already: false, paymentId: 'gp-recguard-new3' });
+    expect(await alertCount(gid2)).toBe(0);
+  });
+
   it('다른 유저의 미완 주문이 구매 시각 창 밖이면 막지 않는다(새 주문으로 복구, 경보 없음)', async () => {
     const pt = Date.now() - 10 * 60_000;
     await order(TEST_USER_ID, pt, -8 * 3_600_000, -8 * 3_600_000);
