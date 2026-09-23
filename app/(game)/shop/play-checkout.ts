@@ -87,7 +87,7 @@ const SHEET_UNAVAILABLE_MSG = '구글 플레이 결제창을 열지 못했어요
  * 되지만 구글 결제창(PaymentRequest)을 열지 못한다. 근본 해결은 앱이 TWA 제공자를 Chrome으로 고정하는 것(mobile/android
  * LauncherActivity.createTwaLauncher, 앱 업데이트 필요). 그때까지는 시트를 열지 않고 업데이트 안내만 한다.
  */
-const SAMSUNG_HOST_MSG =
+const NON_CHROME_HOST_MSG =
   '지금 이 기기에서는 앱 안 결제창이 열리지 않는 문제가 있어요. 이를 고친 앱 업데이트를 준비하고 있으니, 업데이트가 나오면 다시 시도해 주세요.';
 /** 삼성 인터넷·네이버 웨일이 띄운 앱 — 삼성은 결제창을 못 열고, 웨일은 결제창이 열려 청구까지 되지만 돌아올 때 화면을 새로
  *  불러 결과를 잃는다(2026-09-24 청구·미지급 1건). 1.0.1(크롬 우선) 전까지 둘 다 결제를 막는다. */
@@ -190,7 +190,7 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   // 호스트 판정도 주문 생성보다 먼저(2026-09-23 감사) — 삼성 인터넷·웨일은 결제를 끝까지 이어가지 못하니 서버 액션·pending 주문 없이 안내만.
   if (hostedByNonChromeBrowser()) {
     reportPlayCheckout('precheck', productId, { code: 'NON_CHROME_HOST' });
-    return { ok: false, reason: 'window', message: SAMSUNG_HOST_MSG };
+    return { ok: false, reason: 'window', message: NON_CHROME_HOST_MSG };
   }
   const r = await createPlayOrderAction(productId).catch(() => null);
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };

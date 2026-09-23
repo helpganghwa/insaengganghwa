@@ -18,12 +18,14 @@ import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/d
 import { cancelPortonePayment, getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
+import { refundPlayOrder } from '@/lib/payment/play-api';
 import { raisePaymentAlert } from '@/lib/payment/alert';
 import { kstMonthString } from '@/lib/kst';
 import { beatCron } from '@/lib/cron/heartbeat';
 
-/** 지급 보류 자동 환불(C단계)의 적용 시작 — 11차 배포 시각 이후 결제만. 배포가 이보다 늦어지면 실제 배포 시각으로 올린다. */
-const GRANT_SKIPPED_AUTO_REFUND_SINCE = '2026-09-24T12:00:00+09:00';
+/** 지급 보류 자동 환불(C단계)의 적용 시작. 이 시각 전 30일간 프로덕션 지급 보류 주문은 0건이었다(2026-09-24 조회) —
+ *  배포보다 앞서 두어 배포 직후 빈 구간이 없게 한다(늦게 두면 그 사이 함수가 죽은 지급 보류 결제가 경보 없이 남는다). */
+const GRANT_SKIPPED_AUTO_REFUND_SINCE = '2026-09-24T00:00:00+09:00';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -274,18 +276,18 @@ export async function GET(req: Request) {
   }
   out.refundLongSweep = longSweep;
 
-  // ── C. 지급 보류(중복·미성년) 웹 결제 환불 마감 ─────────────────────────────
-  // 지급 보류로 paid가 된 뒤 자동 취소 전에 함수가 죽으면(타임아웃·인스턴스 종료) 청구·미지급·미환불로 남는다.
-  // Play는 소모하지 않아 3일 자동 환불이 안전망이지만 포트원은 없다. 30분 지난 건을 다시 취소한다.
+  // ── C. 지급 보류(중복·미성년) 결제 환불 마감 ─────────────────────────────
+  // 지급 보류로 paid가 된 뒤 자동 환불 전에 함수가 죽으면(타임아웃·인스턴스 종료) 청구·미지급·미환불로 남는다.
+  // 포트원은 다른 안전망이 없고, Play도 '미확인 구매는 3일 뒤 구글 자동 환불'이 TWA 흐름에서 실측되지 않았다.
+  // 그래서 둘 다 30분 지난 건을 다시 환불한다(Play는 구글 환불 API 성공 직후 환불 확정으로 마감).
   // ⚠ 하한(GRANT_SKIPPED_AUTO_REFUND_SINCE): 그 전 코드는 중복 결제를 운영자가 수동 처리했다 — 이미 다른 보상으로
   // 처리한 옛 주문을 배포 직후 자동 취소하면 보상과 환불을 둘 다 받는다. 옛 건은 경보·수동 처리로 남긴다.
   const skipped = await db
-    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
+    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId, provider: iapOrders.provider, playOrderId: iapOrders.playOrderId })
     .from(iapOrders)
     .where(
       and(
         eq(iapOrders.status, 'paid'),
-        eq(iapOrders.provider, 'portone'),
         eq(iapOrders.grantSkipped, true),
         lt(iapOrders.paidAt, sql`now() - interval '30 minutes'`),
         gt(iapOrders.paidAt, sql`now() - interval '30 days'`),
@@ -299,15 +301,22 @@ export async function GET(req: Request) {
     if (timeUp()) break;
     skippedOut.scanned++;
     try {
-      const pay = await getPortonePayment(o.pid);
-      if (pay.status === 'PAID') await cancelPortonePayment(o.pid, '지급 보류 결제 자동 환불(재시도)');
-      const r = await refundPurchase(o.pid, { reason: 'error' });
+      let r: Awaited<ReturnType<typeof refundPurchase>>;
+      if (o.provider === 'play') {
+        if (!o.playOrderId) throw new Error('구글 주문번호 없음');
+        await refundPlayOrder(o.playOrderId, true);
+        r = await refundPurchase(o.pid, { reason: 'error', playVoided: true });
+      } else {
+        const pay = await getPortonePayment(o.pid);
+        if (pay.status === 'PAID') await cancelPortonePayment(o.pid, '지급 보류 결제 자동 환불(재시도)');
+        r = await refundPurchase(o.pid, { reason: 'error' });
+      }
       if (r.ok) skippedOut.refunded++;
       else
         await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
           paymentId: `skipped-refund:${o.pid}`,
           orderId: o.id,
-          detail: `지급 보류(중복·미성년) 웹 결제의 환불 마감 실패(code=${r.code}) — 포트원 콘솔에서 취소 확인 필요.`,
+          detail: `지급 보류(중복·미성년) 결제의 환불 마감 실패(code=${r.code}) — ${o.provider === 'play' ? 'Play' : '포트원'} 콘솔에서 환불 확인 필요.`,
           onceEver: true,
         });
     } catch (e) {
@@ -315,7 +324,7 @@ export async function GET(req: Request) {
       await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
         paymentId: `skipped-refund:${o.pid}`,
         orderId: o.id,
-        detail: `지급 보류(중복·미성년) 웹 결제의 자동 환불 재시도 실패 — ${(e as Error)?.message ?? e}. 포트원 콘솔에서 취소 필요.`,
+        detail: `지급 보류(중복·미성년) 결제의 자동 환불 재시도 실패 — ${(e as Error)?.message ?? e}. ${o.provider === 'play' ? 'Play' : '포트원'} 콘솔에서 환불 필요.`,
         onceEver: true,
       }).catch(() => undefined);
     }

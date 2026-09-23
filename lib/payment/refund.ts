@@ -297,52 +297,67 @@ export async function refundPurchase(
         clawbackDone = preview.sufficient;
         if (!preview.sufficient) shortPreview = preview;
         // 성장 프리미엄: 미수령 우편은 reclaim이 지우지만 **이미 받은** 즉시·일일 보상은 자동 회수하지 않는다(운영 판단).
+        // 경보용 부가 집계 — 실패해도 환불 본 처리(상태·회수)를 롤백시키지 않게 세이브포인트로 격리한다.
         if (order.productCode === PREMIUM.id && order.paidAt) {
-          const claimed = await tx
-            .select({ payload: mailbox.payload })
-            .from(mailbox)
-            .where(
-              and(
-                eq(mailbox.userId, order.userId),
-                eq(mailbox.serverId, order.serverId),
-                inArray(mailbox.title, PREMIUM_MAIL_TITLES),
-                isNotNull(mailbox.claimedAt),
-                // 이 주문의 드립 창(구매 후 31일)만 — 다음 프리미엄 주문의 우편이 섞이지 않게.
-                gte(mailbox.createdAt, order.paidAt),
-                lt(mailbox.createdAt, new Date(order.paidAt.getTime() + 31 * 24 * 3_600_000)),
-              ),
-            );
-          if (claimed.length > 0) {
-            let d = 0;
-            let b = 0;
-            for (const c of claimed) {
-              // payload가 jsonb 문자열로 저장된 옛 행도 있다(premium-daily의 JSON.stringify::jsonb) — 둘 다 읽는다.
-              const raw = typeof c.payload === 'string' ? (JSON.parse(c.payload) as unknown) : c.payload;
-              const p = (raw ?? {}) as { diamond?: number; boxes?: Record<string, number> };
-              d += Number(p.diamond ?? 0);
-              b += Object.values(p.boxes ?? {}).reduce((a, x) => a + Number(x), 0);
-            }
-            unrecovered.push(`성장 프리미엄 수령분 ${claimed.length}통(💎${num(d)} 📦${num(b)}) 미회수`);
+          const paidAt = order.paidAt;
+          try {
+            await tx.transaction(async (sp) => {
+              const claimed = await sp
+                .select({ payload: mailbox.payload })
+                .from(mailbox)
+                .where(
+                  and(
+                    eq(mailbox.userId, order.userId),
+                    eq(mailbox.serverId, order.serverId),
+                    inArray(mailbox.title, PREMIUM_MAIL_TITLES),
+                    isNotNull(mailbox.claimedAt),
+                    // 이 주문의 드립 창(구매 후 31일)만 — 다음 프리미엄 주문의 우편이 섞이지 않게. 하한은 주문 생성 시각:
+                    // 즉시 보상 우편의 created_at(DB now()=트랜잭션 시작)은 JS로 찍는 paid_at보다 앞선다.
+                    gte(mailbox.createdAt, order.createdAt),
+                    lt(mailbox.createdAt, new Date(paidAt.getTime() + 31 * 24 * 3_600_000)),
+                  ),
+                );
+              if (claimed.length > 0) {
+                let d = 0;
+                let b = 0;
+                for (const c of claimed) {
+                  // payload가 jsonb 문자열로 저장된 옛 행도 있다(premium-daily의 JSON.stringify::jsonb) — 둘 다 읽는다.
+                  const raw = typeof c.payload === 'string' ? (JSON.parse(c.payload) as unknown) : c.payload;
+                  const p = (raw ?? {}) as { diamond?: number; boxes?: Record<string, number> };
+                  d += Number(p.diamond ?? 0);
+                  b += Object.values(p.boxes ?? {}).reduce((a, x) => a + Number(x), 0);
+                }
+                unrecovered.push(`성장 프리미엄 수령분 ${claimed.length}통(💎${num(d)} 📦${num(b)}) 미회수`);
+              }
+            });
+          } catch (e) {
+            console.error('[refund] premium claimed tally failed', paymentId, e);
+            unrecovered.push('성장 프리미엄 수령분 집계 실패 — 수동 확인');
           }
         }
       }
       // 후원 구간 보상: 환불로 누적 결제액이 구간 아래로 내려가도 이미 준 우편은 자동 회수하지 않는다(운영 판단).
       // 지급보류 주문도 누적에 들어갔으므로 grantSkipped와 무관하게 본다.
-      {
-        const [sum] = await tx
-          .select({ paid: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::bigint` })
-          .from(iapOrders)
-          .where(and(eq(iapOrders.userId, order.userId), eq(iapOrders.status, 'paid')));
-        // 이번 환불로 **새로** 누적액 아래로 내려간 구간만(환불 전 도달 ∖ 환불 후 도달) — 예전 환불분까지 다시 나열하지 않는다.
-        const after = Number(sum?.paid ?? 0);
-        const stillReached = new Set(reachedMilestones(after).map((m) => m.krw));
-        const wasReached = new Set(reachedMilestones(after + Number(order.amountKrw)).map((m) => m.krw));
-        const grants = await tx
-          .select({ krw: patronMilestoneGrants.milestoneKrw })
-          .from(patronMilestoneGrants)
-          .where(eq(patronMilestoneGrants.userId, order.userId));
-        const over = grants.map((g) => g.krw).filter((k) => wasReached.has(k) && !stillReached.has(k)).sort((a, b) => a - b);
-        if (over.length > 0) unrecovered.push(`후원 구간 보상 ${over.map((k) => `${num(k / 10_000)}만`).join('·')} 구간이 환불 뒤 누적액보다 높음(지급분 미회수)`);
+      try {
+        await tx.transaction(async (sp) => {
+          const [sum] = await sp
+            .select({ paid: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::bigint` })
+            .from(iapOrders)
+            .where(and(eq(iapOrders.userId, order.userId), eq(iapOrders.status, 'paid')));
+          // 이번 환불로 **새로** 누적액 아래로 내려간 구간만(환불 전 도달 ∖ 환불 후 도달) — 예전 환불분까지 다시 나열하지 않는다.
+          const after = Number(sum?.paid ?? 0);
+          const stillReached = new Set(reachedMilestones(after).map((m) => m.krw));
+          const wasReached = new Set(reachedMilestones(after + Number(order.amountKrw)).map((m) => m.krw));
+          const grants = await sp
+            .select({ krw: patronMilestoneGrants.milestoneKrw })
+            .from(patronMilestoneGrants)
+            .where(eq(patronMilestoneGrants.userId, order.userId));
+          const over = grants.map((g) => g.krw).filter((k) => wasReached.has(k) && !stillReached.has(k)).sort((a, b) => a - b);
+          if (over.length > 0) unrecovered.push(`후원 구간 보상 ${over.map((k) => `${num(k / 10_000)}만`).join('·')} 구간이 환불 뒤 누적액보다 높음(지급분 미회수)`);
+        });
+      } catch (e) {
+        console.error('[refund] patron tally failed', paymentId, e);
+        unrecovered.push('후원 구간 집계 실패 — 수동 확인');
       }
       if (unrecovered.length > 0) clawbackDone = false;
       // 환불 안내 우편(notice, 보상 없음). 웹훅·어드민 환불 공통.
