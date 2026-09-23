@@ -72,9 +72,10 @@ type RawRow = { code: string; user_id: string; nickname: string; level: number; 
 
 /**
  * 기준 시각의 아이템별 참가 행 — 정지·탈퇴 계정 제외.
- * 단계는 기준 시각 이전 마지막 강화 기록의 to_level, 도달 시각은 **그 단계에 도달한 마지막 성공(success·mega) 기록**의
- * created_at이다(2026-09-23 감사 H1: 마지막 기록을 그대로 쓰면 '유지'가 88%라 방치한 선착이 뒤늦은 시도 한 번에 밀렸다).
- * 하락 뒤 다시 올라오면 다시 도달한 시각, 강화 기록이 없으면 획득 시각.
+ * 단계 L은 기준 시각 이전 마지막 강화 기록의 to_level. 도달 시각은 **이번 오름에서 처음 L 이상이 된 기록**의 created_at:
+ * "마지막으로 L 미만이었던 기록" 다음에 오는 첫 L 이상 기록이다(2026-09-23 감사). 마지막 기록을 그대로 쓰면 '유지'가 88%라
+ * 방치한 선착이 뒤늦은 시도 한 번에 밀렸고, "L에 도달한 성공 기록"만 찾으면 mega로 L을 건너뛴 뒤 하락으로 L에 내려온 장비가
+ * 기록이 없어 획득 시각으로 떨어져 모두를 앞질렀다. 하락 뒤 다시 올라오면 다시 오른 시각, +0이거나 기록이 없으면 획득 시각.
  */
 async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
   const codes = CHUSEOK_CONTEST_ITEMS.map((i) => i.code);
@@ -83,7 +84,7 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
     select ci.code, ue.user_id::text as user_id, c.nickname,
            coalesce(l.to_level, 0)::int as level,
            ue.transcend_level::int as transcend,
-           coalesce(r.created_at, ue.first_acquired_at) as reached_at
+           case when coalesce(l.to_level, 0) = 0 then ue.first_acquired_at else coalesce(r.created_at, ue.first_acquired_at) end as reached_at
       from user_equipment ue
       join catalog_items ci on ci.id = ue.catalog_item_id
        and ci.code = any(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
@@ -99,8 +100,12 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
       left join lateral (
         select el.created_at from enhancement_logs el
          where el.user_equipment_id = ue.id and el.created_at <= ${cutoff}::timestamptz
-           and el.result in ('success', 'mega') and el.to_level = l.to_level
-         order by el.created_at desc limit 1
+           and el.to_level >= l.to_level
+           and el.created_at > coalesce((
+             select max(b.created_at) from enhancement_logs b
+              where b.user_equipment_id = ue.id and b.created_at <= ${cutoff}::timestamptz and b.to_level < l.to_level
+           ), '-infinity'::timestamptz)
+         order by el.created_at asc limit 1
       ) r on true
      where ue.server_id = ${serverId} and ue.first_acquired_at <= ${cutoff}::timestamptz
   `)) as unknown as RawRow[];

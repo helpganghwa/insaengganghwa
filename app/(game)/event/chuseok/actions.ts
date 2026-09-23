@@ -48,7 +48,7 @@ export async function exchangeSongpyeonAction(
   if (!userId) return err('AUTH');
   if (await actionBlock()) return err('BLOCKED');
   if (await rateLimited(userId, 'chuseok')) return err('RATE');
-  if (!(kind in SONGPYEON_EXCHANGE)) return err('BAD_COUNT');
+  if (!(Object.hasOwn(SONGPYEON_EXCHANGE, kind))) return err('BAD_COUNT');
   const serverId = await getActiveServerId();
   const r = await exchangeSongpyeon(userId, serverId, kind, Math.floor(Number(count)));
   if (!r.ok) return err(r.reason);
