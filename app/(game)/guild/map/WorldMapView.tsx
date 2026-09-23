@@ -241,10 +241,8 @@ const WorldMap = memo(function WorldMap({
           {(() => {
             const isSel = (e: { a: number; b: number }) =>
               selectedId != null && (e.a === selectedId || e.b === selectedId);
-            // 이동 가능한 길 — 내 거주지에 인접한 간선만 또렷하게(점령지 배치 화면과 같은 방식).
-            // 거주지가 없으면(최초 정착 전) 전부 또렷.
-            const isWalk = (e: { a: number; b: number }) =>
-              residence == null || e.a === residence || e.b === residence;
+            // 거주 이동에 인접 제한이 없어(2026-09-23 삭제) 모든 길을 이동 가능한 모양으로 그린다.
+            const isWalk = (_e: { a: number; b: number }) => true;
             return (
               <>
                 {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
@@ -460,16 +458,6 @@ export function WorldMapView({
   // 이동 확인 팝업 — 배치/집행관 해제 경고. 값=대상 구역 id.
   const [moveAsk, setMoveAsk] = useState<{ kind: 'release'; zoneId: number } | null>(null);
   const [moveLock, setMoveLock] = useState(residenceProp?.lock ?? null);
-  // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 인접한 곳). 거주 미설정이면 어디든 정착 가능.
-  const adjacentIds = useMemo(() => {
-    if (residence == null) return null;
-    const set = new Set<number>();
-    for (const { a, b } of adjacency) {
-      if (a === residence) set.add(b);
-      else if (b === residence) set.add(a);
-    }
-    return set;
-  }, [adjacency, residence]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // 구역 팝업 복원(2026-07-21) — 집행관 프로필로 이동 후 뒤로가기 시 팝업 유지(채팅창 패턴).
   // 이동 직전 sessionStorage에 구역 id를 남기고, 마운트 시 1회 소비해 재오픈.
@@ -699,7 +687,7 @@ export function WorldMapView({
   // 호출하면 refresh 동안 pending이 묶여 다음 이동이 막혔음 → 제거해 연속 이동 가능.
   /**
    * 거주 이동. 배치/집행관 해제(release)는 팝업에서 확인한 뒤 서버 한 트랜잭션으로 처리한다 —
-   * 해제만 되고 이동은 실패하는 경우가 없다. (쿨타임·보석 단축은 2026-08-31 삭제 — 연속 인접 이동 허용)
+   * 해제만 되고 이동은 실패하는 경우가 없다. (쿨타임·보석 단축은 2026-08-31, 인접 제한은 2026-09-23 삭제 — 어디로든 이동)
    */
   const moveResidence = (zoneId: number, opts: { release?: boolean } = {}) => {
     const prev = residence;
@@ -1048,24 +1036,15 @@ export function WorldMapView({
                     현재 위치
                   </button>
                 ) : (
-                  // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
-                  // 인접하지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
-                  // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
-                  adjacentIds && !adjacentIds.has(selected.id) ? (
-                    // 사유는 아래 고정 문구가 설명한다 — 지도를 보는 중에 헤더 토스트는 놓치기 쉽다.
-                    <span className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-center text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
-                      이동 불가
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => askMove(selected.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                    >
-                      이동
-                    </button>
-                  )
+                  // 어느 구역으로든 이동 가능(인접 제한 2026-09-23 삭제).
+                  <button
+                    type="button"
+                    onClick={() => askMove(selected.id)}
+                    disabled={pending}
+                    className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                  >
+                    이동
+                  </button>
                 ))}
               <button
                 type="button"
@@ -1261,20 +1240,6 @@ export function WorldMapView({
                   )}
                 </div>
 
-                {/* 이동 불가 사유 — 지도를 보는 중이라 헤더 토스트는 놓친다. 팝업 안에 남긴다. */}
-                {canSetResidence && selected.id !== residence && adjacentIds && !adjacentIds.has(selected.id) ? (
-                  <p className="mt-2.5 rounded-lg bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug font-medium text-amber-700 dark:text-amber-300">
-                    인접한 구역으로만 이동할 수 있습니다. 가려면{' '}
-                    {homeZoneName ? (
-                      <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
-                        {homeZoneName}
-                      </b>
-                    ) : (
-                      '현재 구역'
-                    )}
-                    에서 한 칸씩 옮겨가세요.
-                  </p>
-                ) : null}
               </div>
             </div>
           </ModalLayout>

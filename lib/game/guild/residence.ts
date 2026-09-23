@@ -1,11 +1,11 @@
 import 'server-only';
 
-import { and, eq, or, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { characters } from '@/lib/db/schema/server';
-import { zones, zoneAdjacency, guildBattleDeployments } from '@/lib/db/schema/guild';
+import { zones, guildBattleDeployments } from '@/lib/db/schema/guild';
 
 import { isConquestLocked, nextBattleKstDay } from './conquest/schedule';
 import { GuildError } from './errors';
@@ -72,26 +72,12 @@ export async function getResidenceState(userId: string, serverId: number): Promi
   };
 }
 
-/** 두 구역이 맞닿아 있는지(무방향 — 어느 쪽 컬럼에 있든 인정). */
-async function isAdjacent(tx: Tx, a: number, b: number): Promise<boolean> {
-  const [row] = await tx
-    .select({ x: zoneAdjacency.zoneA })
-    .from(zoneAdjacency)
-    .where(
-      or(
-        and(eq(zoneAdjacency.zoneA, a), eq(zoneAdjacency.zoneB, b)),
-        and(eq(zoneAdjacency.zoneA, b), eq(zoneAdjacency.zoneB, a)),
-      ),
-    )
-    .limit(1);
-  return !!row;
-}
 
 /**
  * 거주 구역 변경 — GUILD §5.5(0139 개편).
- *  ① 인접 구역으로만 (최초 배정 상태에서는 인접 무관 — 아직 살던 곳이 없다)
+ *  ① 어느 구역으로든 이동 가능 — 인접 제한은 2026-09-23 삭제(이동 쿨타임·보석 단축은 2026-08-31 삭제).
+ *     💎는 유저가 아닌 구역에 쌓이고 점령 시 이전되므로 "들고 튀기"가 없어 거리 제한이 필요 없다.
  *  ② 지금 구역에 배치/집행관으로 묶여 있으면 `release` 없이는 거부. release면 그 역할을 풀고 이동
- *  (이동 쿨타임·보석 단축은 2026-08-31 삭제 — 연속 인접 이동 허용)
  *
  * 검사·이동을 한 트랜잭션에 두고 캐릭터 행을 잠근다 — 연타로 해제만 되고 이동이 빠지는 경우가 없다.
  */
@@ -135,10 +121,6 @@ export async function setResidenceTx(
       .limit(1);
     if (!z) throw new GuildError('ZONE_NOT_FOUND');
 
-    // ① 인접 — 살던 곳이 있을 때만. 최초 배정(before=null)은 어디든 정착 가능.
-    if (before != null && !(await isAdjacent(tx, before, zoneId))) {
-      throw new GuildError('RESIDENCE_NOT_ADJACENT');
-    }
 
     // ② 구역에 묶여 있는지 — 집행관을 먼저 본다(해제 안내 문구가 다르다).
     let released: '집행관' | '공격' | '수비' | null = null;
