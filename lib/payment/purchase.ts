@@ -444,7 +444,7 @@ export async function completePurchase(
       });
       return { ok: false, code: 'TOKEN_USED' };
     }
-    // 지급 보류(중복·미성년)로 paid가 된 주문 — '구매 완료'로 답하지 않는다(재검증 B-2, 웹훅이 먼저 처리한 경우의 화면 검증).
+    // 지급 보류(중복·미성년)로 paid가 된 주문 — '구매 완료'로 답하지 않는다(웹훅이 먼저 처리한 경우의 화면 검증).
     if (order.grantSkipped) return { ok: false, code: 'NOT_GRANTED' };
     return { ok: true, already: true };
   }
@@ -630,7 +630,7 @@ export async function completePurchase(
       await raisePaymentAlert('PLAY_TOKEN_USED', {
         paymentId: `${paymentId}:${play.token.slice(0, 12)}`,
         orderId: order.id,
-        detail: `보류 결제 토큰이 먼저 묶인 주문에 다른 구매(${play.googleOrderId ?? '?'})가 옴 — 이 구매 미지급. 콘솔에서 새 주문으로 지급 또는 환불.`,
+        detail: `보류 결제 토큰이 먼저 묶인 주문에 다른 구매(${play.googleOrderId ?? '?'})가 옴 — 이 구매 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인, 성장패스면 콘솔에서 환불.`,
       });
       return { ok: false, code: 'TOKEN_USED' };
     }
@@ -644,8 +644,7 @@ export async function completePurchase(
         });
         return { ok: false, code: 'TOKEN_USED' };
       }
-      // 먼저 처리한 쪽이 지급 보류(중복·미성년)로 마감했으면 '구매 완료'가 아니다.
-      if (order.grantSkipped) return { ok: false, code: 'NOT_GRANTED' };
+      // 먼저 처리한 쪽이 지급 보류(중복·미성년)로 마감했으면 '구매 완료'가 아니다(경합 뒤 상태라 다시 읽는다).
       const [gs] = await db.select({ g: iapOrders.grantSkipped }).from(iapOrders).where(eq(iapOrders.id, order.id)).limit(1);
       if (gs?.g) return { ok: false, code: 'NOT_GRANTED' };
       return { ok: true, already: true };
@@ -729,7 +728,8 @@ export async function completePurchase(
   // 재시도한다(3일 내 미확인이면 구글이 자동 환불 → voided 동기화가 회수).
   // 지급 보류(중복 특가) 주문은 소모하지 않는다(2026-09-24 감사) — 미확인으로 두면 구글이 3일 뒤 자동 환불하고
   // play-sync voided 동기화가 환불로 마감한다(grantSkipped라 회수 없음·월누적 복원). 종전엔 소모해 운영자 수동 환불에 기댔다.
-  if (play && transitioned) {
+  // 지급 보류(중복·미성년)는 위에서 이미 return했지만, 소모하면 3일 자동 환불 안전망이 사라지므로 조건에도 명시한다.
+  if (play && transitioned && !dupSkipped && !minorExceeded) {
     try {
       await consumePlayProductPurchase(play.sku, play.token);
       await db.update(iapOrders).set({ playConsumedAt: new Date() }).where(eq(iapOrders.id, order.id));

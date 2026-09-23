@@ -382,11 +382,13 @@ function BannerCard({
 }
 
 
-/** 지급 보류·환불로 끝난 결제의 안내(웹·앱 공통) — '구매 완료'도 '결제 실패'도 아니다(2026-09-24). */
+/** 결제 확인 단계에서 지급 보류·환불로 끝난 결제의 안내(웹·앱 공통) — '구매 완료'도 '결제 실패'도 아니다.
+ *  확인 단계 전용: 주문 생성 단계의 MINOR_LIMIT(결제 전 차단)은 이 안내가 아니다. */
 function grantSkippedNotice(code: string | undefined): { title: string; body: string } | null {
-  if (code === 'DUPLICATE') return { title: '이미 가진 상품이에요', body: '같은 상품을 한 번 더 결제해서, 방금 결제는 자동으로 환불돼요.' };
-  if (code === 'NOT_GRANTED' || code === 'REFUNDED')
-    return { title: '이번 결제는 환불돼요', body: '이번 결제는 지급되지 않고 자동으로 환불돼요. 궁금한 점은 고객센터로 알려 주세요.' };
+  if (code === 'DUPLICATE') return { title: '이미 구매한 상품이에요', body: '이미 구매한 상품이라 방금 결제는 환불 처리돼요.' };
+  if (code === 'MINOR_LIMIT') return { title: '미성년 월 구매한도를 넘었어요', body: '이번 결제는 한도를 넘어 상품이 지급되지 않고 환불 처리돼요.' };
+  if (code === 'NOT_GRANTED') return { title: '지급되지 않은 결제예요', body: '이번 결제는 상품이 지급되지 않아 환불 처리돼요. 궁금한 점은 고객센터로 알려 주세요.' };
+  if (code === 'REFUNDED') return { title: '이미 환불된 결제예요', body: '이 결제는 환불되어 상품이 지급되지 않아요. 궁금한 점은 고객센터로 알려 주세요.' };
   return null;
 }
 

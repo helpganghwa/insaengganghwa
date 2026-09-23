@@ -387,9 +387,13 @@ export function BattlePassClient({
         } else if (v.code === 'NETWORK') {
           setError('결제 확인이 지연되고 있어요. 지급은 잠시 후 자동 반영됩니다.');
         } else if (v.code === 'DUPLICATE') {
-          setError('이미 가진 구간이라 방금 결제는 자동으로 환불돼요.');
-        } else if (v.code === 'NOT_GRANTED' || v.code === 'REFUNDED') {
-          setError('이번 결제는 지급되지 않고 자동으로 환불돼요.');
+          setError('이미 구매한 구간이라 방금 결제는 환불 처리돼요.');
+        } else if (v.code === 'MINOR_LIMIT') {
+          setError('미성년 월 구매한도를 넘어 이번 결제는 환불 처리돼요.');
+        } else if (v.code === 'NOT_GRANTED') {
+          setError('이번 결제는 상품이 지급되지 않아 환불 처리돼요.');
+        } else if (v.code === 'REFUNDED') {
+          setError('이미 환불된 결제예요.');
         } else {
           setError('결제 확인에 실패했습니다.');
         }
@@ -438,9 +442,13 @@ export function BattlePassClient({
           r.code === 'ALREADY_PURCHASED'
             ? '이미 구매한 구간입니다.'
             : r.code === 'DUPLICATE'
-              ? '이미 가진 구간이라 방금 결제는 자동으로 환불돼요.'
-              : r.code === 'NOT_GRANTED' || r.code === 'REFUNDED'
-                ? '이번 결제는 지급되지 않고 자동으로 환불돼요.'
+              ? '이미 구매한 구간이라 방금 결제는 환불 처리돼요.'
+              : r.code === 'NOT_GRANTED'
+                ? '이번 결제는 상품이 지급되지 않아 환불 처리돼요.'
+              : r.code === 'REFUNDED'
+                ? '이미 환불된 결제예요.'
+              : r.code === 'MINOR_LIMIT' && r.reason === 'verify'
+                ? '미성년 월 구매한도를 넘어 이번 결제는 환불 처리돼요.'
               : r.code === 'PENDING'
                 ? '결제 승인을 기다리고 있어요. 완료되면 자동으로 지급돼요.'
             : r.code === 'PAY_CLOSED'

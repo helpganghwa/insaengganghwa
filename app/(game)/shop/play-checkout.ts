@@ -89,7 +89,8 @@ const SHEET_UNAVAILABLE_MSG = '구글 플레이 결제창을 열지 못했어요
  */
 const SAMSUNG_HOST_MSG =
   '지금 이 기기에서는 앱 안 결제창이 열리지 않는 문제가 있어요. 이를 고친 앱 업데이트를 준비하고 있으니, 업데이트가 나오면 다시 시도해 주세요.';
-/** 삼성 인터넷·네이버 웨일이 띄운 앱 — 둘 다 Play 결제창을 못 연다(웨일 실측 2026-09-23 1건). */
+/** 삼성 인터넷·네이버 웨일이 띄운 앱 — 삼성은 결제창을 못 열고, 웨일은 결제창이 열려 청구까지 되지만 돌아올 때 화면을 새로
+ *  불러 결과를 잃는다(2026-09-24 청구·미지급 1건). 1.0.1(크롬 우선) 전까지 둘 다 결제를 막는다. */
 function hostedByNonChromeBrowser(): boolean {
   return /SamsungBrowser|Whale/i.test(navigator.userAgent);
 }
@@ -186,7 +187,7 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   if (!(await digitalGoodsAvailable())) {
     return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
   }
-  // 호스트 판정도 주문 생성보다 먼저(2026-09-23 감사) — 삼성 인터넷·웨일은 결제창을 못 여니 서버 액션·pending 주문·진단 없이 안내만.
+  // 호스트 판정도 주문 생성보다 먼저(2026-09-23 감사) — 삼성 인터넷·웨일은 결제를 끝까지 이어가지 못하니 서버 액션·pending 주문 없이 안내만.
   if (hostedByNonChromeBrowser()) {
     reportPlayCheckout('precheck', productId, { code: 'NON_CHROME_HOST' });
     return { ok: false, reason: 'window', message: SAMSUNG_HOST_MSG };
@@ -202,7 +203,7 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
       [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
       { total: { label: orderName, amount: { currency: 'KRW', value: String(amountKrw) } } },
     );
-    // 시트 앞에 다른 await를 두지 않는다 — 대기가 길면 사용자 활성화가 만료돼 show()가 거부된다(원인 진단은 삼성·웨일 호스트로 확정).
+    // 시트 앞에 다른 await를 두지 않는다 — 대기가 길면 사용자 활성화가 만료돼 show()가 거부된다.
     response = await request.show();
   } catch (e) {
     const err = e as { name?: string; message?: string };

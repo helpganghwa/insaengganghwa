@@ -22,6 +22,9 @@ import { raisePaymentAlert } from '@/lib/payment/alert';
 import { kstMonthString } from '@/lib/kst';
 import { beatCron } from '@/lib/cron/heartbeat';
 
+/** 지급 보류 자동 환불(C단계)의 적용 시작 — 11차 배포 시각 이후 결제만. 배포가 이보다 늦어지면 실제 배포 시각으로 올린다. */
+const GRANT_SKIPPED_AUTO_REFUND_SINCE = '2026-09-24T12:00:00+09:00';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // B 스캔 최대 200건 × 포트원 순차 조회(평시 수백 ms, 건당 타임아웃 8s)라 60s로는 부족할 수 있다.
@@ -129,8 +132,8 @@ export async function GET(req: Request) {
         paidAtPg = true;
         const r = await completePurchase(o.pid);
         if (r.ok) healed++;
-        // 환불 확정·중복 자동 환불은 지급 실패가 아니다(경합에서 진 경우 포함).
-        else if (r.code === 'REFUNDED' || r.code === 'DUPLICATE') continue;
+        // 환불 확정·지급 보류(중복·미성년, 각자 자동 환불·경보)는 지급 실패가 아니다(경합에서 진 경우 포함).
+        else if (r.code === 'REFUNDED' || r.code === 'DUPLICATE' || r.code === 'NOT_GRANTED' || r.code === 'MINOR_LIMIT') continue;
         else
           await raisePaymentAlert('PAID_NOT_GRANTED', {
             paymentId: o.pid,
@@ -273,7 +276,9 @@ export async function GET(req: Request) {
 
   // ── C. 지급 보류(중복·미성년) 웹 결제 환불 마감 ─────────────────────────────
   // 지급 보류로 paid가 된 뒤 자동 취소 전에 함수가 죽으면(타임아웃·인스턴스 종료) 청구·미지급·미환불로 남는다.
-  // Play는 소모하지 않아 3일 자동 환불이 안전망이지만 포트원은 없다(2026-09-24 재검증 B-3). 30분 지난 건을 다시 취소한다.
+  // Play는 소모하지 않아 3일 자동 환불이 안전망이지만 포트원은 없다. 30분 지난 건을 다시 취소한다.
+  // ⚠ 하한(GRANT_SKIPPED_AUTO_REFUND_SINCE): 그 전 코드는 중복 결제를 운영자가 수동 처리했다 — 이미 다른 보상으로
+  // 처리한 옛 주문을 배포 직후 자동 취소하면 보상과 환불을 둘 다 받는다. 옛 건은 경보·수동 처리로 남긴다.
   const skipped = await db
     .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
     .from(iapOrders)
@@ -284,6 +289,7 @@ export async function GET(req: Request) {
         eq(iapOrders.grantSkipped, true),
         lt(iapOrders.paidAt, sql`now() - interval '30 minutes'`),
         gt(iapOrders.paidAt, sql`now() - interval '30 days'`),
+        gt(iapOrders.paidAt, sql`${GRANT_SKIPPED_AUTO_REFUND_SINCE}::timestamptz`),
       ),
     )
     .orderBy(asc(iapOrders.paidAt))

@@ -15,6 +15,7 @@ import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
 import { periodKey } from './period';
 
 /** 즉시 보상 우편 제목 — 지급과 회수가 같은 문자열을 봐야 주문 단위 회수가 정확하다. */
+// 환불 시 수령분 경보(refund.ts)가 이 제목으로 우편을 찾는다 — 제목을 바꾸면 옛 제목도 refund.ts 조회 목록에 남길 것.
 export const PREMIUM_INSTANT_TITLE = '성장 프리미엄 — 즉시 보상';
 
 /**

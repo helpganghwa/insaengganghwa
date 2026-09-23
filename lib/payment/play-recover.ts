@@ -48,8 +48,9 @@ export async function recoverPlayPurchase(
     if (e instanceof PlayApiError && (e.status === 404 || e.status === 400)) return { ok: false, code: 'NOT_FOUND' };
     throw e;
   }
-  // 보류(2)도 아래 주문 매칭을 탄다 — completePurchase가 지급 없이 토큰만 그 주문에 묶고 PENDING을 돌려준다(재검증 C-3).
-  // 화면 검증이 전송에 실패한 보류 결제도 이렇게 묶어 두어야 완료 알림(RTDN)이 추정 없이 이 주문을 찾는다.
+  // 보류(2)는 손대지 않는다 — 화면의 첫 검증이 이미 토큰을 주문에 묶어 두었고, 결제가 끝나면 완료 알림(RTDN)·다음 복구가 지급한다.
+  // ⚠ 이 줄이 없으면 아래 'state !== 0 → CANCELLED'가 보류까지 잡아 기기가 보류 중인 구매를 소모해 버린다(2026-09-24 검수에서 발각).
+  if (state === 2) return { ok: false, code: 'PENDING' };
   if (state !== 0) return { ok: false, code: 'CANCELLED' };
 
   // ① 토큰이 이미 묶인 주문(본인 것만) — 미완 주문만 다시 시도. paid·refunded 등 끝난 주문은 손대지 않는다

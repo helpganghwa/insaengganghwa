@@ -140,7 +140,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 
 ### 5-1. 결제 복구·실패 기록(2026-09-22 사고에서)
 - **사고**: 서비스 계정이 Play Console 사용자 목록에서 빠져(9/21) 검증 `purchases.products.get`이 401 → 구글은 청구했는데 지급 실패. 클라가 시트를 `fail`로 닫아도 소모성 구매는 남아 같은 상품이 "already own"으로 막혔고, 서버엔 토큰이 없어 손댈 수 없었다(3일 뒤 자동 환불이 유일한 구제). 권한은 다시 넣은 뒤 **인앱 상품 저장→되돌리기**로 캐시가 갱신되며 풀렸다(약 5분).
-- **복구**(`lib/payment/play-recover.ts`, `recoverPlayPurchases`): 앱에서 상점을 열 때 한 번 기기의 `listPurchases()`를 서버로 보내 다시 검증·지급·소모한다. 매칭은 토큰이 묶인 주문 → 같은 SKU의 7일 내 미완 주문 → SKU로 되돌린 새 주문(성장패스 구간은 불가). 서버가 구글에 확인해 **취소됨(CANCELLED)** 이라고 답한 구매만 기기에서 `consume()`해 잠김을 푼다(보류 결제는 건드리지 않는다). 같은 SKU 미완 주문은 지금 서버·마지막 결제 시도 순으로 고른다.
+- **복구**(`lib/payment/play-recover.ts`, `recoverPlayPurchases`): 앱에서 상점을 열 때 한 번 기기의 `listPurchases()`를 서버로 보내 다시 검증·지급·소모한다. 매칭은 토큰이 묶인 주문 → 같은 SKU의 7일 내 미완 주문 → SKU로 되돌린 새 주문(성장패스 구간은 불가). 서버가 구글에 확인해 **취소됨(CANCELLED)** 이라고 답한 구매만 기기에서 `consume()`해 잠김을 푼다(보류 결제는 건드리지 않는다 — 보류 토큰은 화면의 첫 검증이 주문에 묶는다). 같은 SKU 미완 주문은 토큰 없는 것 중 마지막 결제 시도 순으로 고른다.
 - **시트는 검증 실패에도 `success`로 닫는다** — 구매 사실은 성사됐고, 지급은 복구가 다시 시도한다.
 - **실패 기록**: 시트 실패·토큰 없음·검증 실패·복구 실패를 `client_errors`(kind `play-checkout`, `sku= stage= code= name= message=`)에 남긴다. 토큰은 싣지 않는다. 어드민 client-errors 화면에서 `play-checkout`으로 거른다.
 - 서비스 계정 401이 다시 나면: ① 사용자 목록에 계정이 있는지 → ② 계정 권한 4종(앱 정보 보기·재무 데이터 보기·주문 관리·앱 정보 관리) → ③ 인앱 상품 저장 트릭 순.

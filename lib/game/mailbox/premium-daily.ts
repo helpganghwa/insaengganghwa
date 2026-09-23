@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { PREMIUM } from '@/lib/game/shop/catalog';
 
-/** 일일 보상 우편 제목 — 환불 시 수령분 경보(refund.ts)가 이 제목으로 찾는다. 바꾸면 함께 바뀐다. */
+/** 일일 보상 우편 제목 — 환불 시 수령분 경보(refund.ts)가 이 제목으로 찾는다. 제목을 바꾸면 옛 제목도 refund.ts 조회 목록에 남길 것(이미 보낸 우편을 못 찾는다). */
 export const PREMIUM_DAILY_TITLE = '성장 프리미엄 — 오늘의 보상';
 
 /**
