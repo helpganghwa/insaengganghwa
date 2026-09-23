@@ -79,6 +79,8 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
 }
 
 const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
+const SHEET_UNAVAILABLE_MSG =
+  '구글 플레이 결제창을 열 수 없어요. Play 스토어 앱을 최신으로 업데이트하고 기기를 다시 시작한 뒤 시도해 주세요. 계속 안 되면 브라우저에서 ganghwa.app에 접속해 결제할 수 있어요.';
 
 /**
  * Play 결제 실패 기록(2026-09-22) — 결제 시트가 왜 실패했는지 서버에는 아무 흔적이 없었다(한 유저가
@@ -189,7 +191,12 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     // AbortError를 쓰고 메시지만 다르다("User closed the Payment Request UI" = 취소). 오늘 실유저 3명이
     // 1초 간격으로 47번 시도했는데 취소·미지원으로 분류돼 서버엔 흔적이 없었다.
     reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
-    if (err?.name === 'AbortError') return { ok: false, reason: 'cancel', code: 'ABORT' };
+    if (err?.name === 'AbortError') {
+      // 유저가 닫은 것("User closed the Payment Request UI")만 조용히 취소. 그 밖의 AbortError("Invalid state.",
+      // RESULT_CANCELED 등)는 결제 앱이 시트를 못 연 것이라 안내를 띄운다(2026-09-23: 실유저 실패 76회가 전부 이 경우).
+      if (/closed|cancel/i.test(err?.message ?? '')) return { ok: false, reason: 'cancel', code: 'ABORT' };
+      return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };
+    }
     // 'unsupported context'는 앱 밖에서 Digital Goods를 부를 때 크롬이 주는 말이다 — 날것 그대로
     // 유저에게 보이면 안 된다(2026-09-12 실제 노출).
     if (err?.name === 'NotSupportedError' || /not supported|unsupported|digital goods/i.test(err?.message ?? '')) {

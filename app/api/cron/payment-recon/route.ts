@@ -177,7 +177,9 @@ export async function GET(req: Request) {
   const recentPaid = await db
     .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
     .from(iapOrders)
-    .where(and(eq(iapOrders.status, 'paid'), gt(iapOrders.paidAt, sql`now() - interval '3 days'`)))
+    // Play 주문(provider='play')은 포트원에 없어 getPortonePayment가 404를 내며 10분마다 오류 로그를 남겼다(2026-09-22~23,
+    // 3건 반복). Play 환불 회수는 play-sync의 voidedpurchases 경로가 맡는다.
+    .where(and(eq(iapOrders.status, 'paid'), ne(iapOrders.provider, 'play'), gt(iapOrders.paidAt, sql`now() - interval '3 days'`)))
     // 오래된 것 우선(asc) — 환불 미회수가 가장 오래 방치된 주문부터(기아 방지, 감사 M-4).
     .orderBy(asc(iapOrders.paidAt))
     .limit(REFUND_SCAN_LIMIT);

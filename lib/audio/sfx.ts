@@ -7,6 +7,8 @@
 // 자동재생 정책: AudioContext는 첫 사용자 제스처 후 resume — playSfx/unlockSfx 모두 제스처 맥락에서 호출.
 
 const STORAGE_KEY = 'ig:sound';
+import { assetUrl, hasAsset } from '@/lib/asset-versions';
+
 const BASE = '/audio/sfx';
 const SFX_VOLUME = 0.85; // 효과음 기준 음량(전경) — 또렷하게 들리도록.
 const EXT = 'webm'; // 작은 용량·넓은 지원. m4a로 바꾸려면 여기 + 파일 확장자만 교체.
@@ -84,7 +86,13 @@ function load(name: SfxName): Promise<AudioBuffer | null> {
   if (inflight) return inflight;
   const audioCtx = getAudioContext();
   if (!audioCtx) return Promise.resolve(null);
-  const p = fetch(`${BASE}/${name}.${EXT}`)
+  // 빌드 매니페스트(asset-versions, audio/sfx 스캔)에 없는 파일은 요청하지 않는다 — 샘플이 없는 지금은 트랙마다
+  // 404 콘솔 오류가 남았다(2026-09-23 감사). 파일을 넣고 빌드하면 해시가 붙어 자동으로 켜진다.
+  if (!hasAsset(`${BASE}/${name}.${EXT}`)) {
+    buffers.set(name, null);
+    return Promise.resolve(null);
+  }
+  const p = fetch(assetUrl(`${BASE}/${name}.${EXT}`))
     .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error('404'))))
     .then((buf) => audioCtx.decodeAudioData(buf))
     .then((b) => {
