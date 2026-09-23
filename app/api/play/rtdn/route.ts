@@ -90,20 +90,22 @@ export async function POST(req: Request) {
       console.info('[play-rtdn] retry later', o.sku, e.message);
       return new Response('later', { status: 500 });
     }
+    // 서비스 계정 인증 실패 — 구매 조회 401·403, 또는 토큰 발급 실패(키 삭제·폐기면 400 invalid_grant, play-api가
+    // 'token ' 접두로 던진다). 구매 문제가 아니므로 알림을 버리지 않고 재전송하며, 원인을 경보 1건으로 드러낸다.
+    const authFail = e instanceof PlayApiError && ([401, 403].includes(e.status) || e.message.startsWith('token '));
     // 영구 실패(잘못된·다른 앱의 토큰: 400·404·410)는 재전송해도 같다 — 경보만 남기고 끝낸다. 나머지(인증·구글 5xx·DB)는 재전송.
-    if (e instanceof PlayApiError && [400, 404, 410].includes(e.status)) {
+    if (e instanceof PlayApiError && !authFail && [400, 404, 410].includes(e.status)) {
       await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
         paymentId: `rtdn:err:${o.purchaseToken.slice(0, 16)}`,
         detail: `구매 조회 실패 ${e.status}(${o.sku}) — ${e.message.slice(0, 200)}`,
       });
       return new Response(null, { status: 204 });
     }
-    // 인증 실패(서비스 계정 권한 — 09-21 play-sync 401과 같은 유형)는 재전송만 7일 반복되고 지급이 멈춘다 — 경보로 드러낸다
-    // (미해결인 동안 1건만 — 같은 키).
-    if (e instanceof PlayApiError && [401, 403].includes(e.status)) {
+    // (09-21 play-sync 401과 같은 유형 — 재전송만 7일 반복되고 지급이 멈추므로 미해결인 동안 1건만, 같은 키.)
+    if (authFail) {
       await raisePaymentAlert('PLAY_RTDN_FAILED', {
         paymentId: 'rtdn:auth',
-        detail: `구글 API 인증 실패 ${e.status} — 서비스 계정 권한 확인 필요(완료 알림 지급이 멈춤, 재전송 중).`,
+        detail: `구글 API 인증 실패 ${(e as PlayApiError).status}${(e as Error).message.startsWith('token ') ? '(토큰 발급)' : ''} — 서비스 계정 키·권한 확인 필요(완료 알림 지급이 멈춤, 재전송 중).`,
       }).catch(() => undefined);
     }
     console.error('[play-rtdn] failed', o.sku, (e as Error).message);

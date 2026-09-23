@@ -440,7 +440,7 @@ export async function completePurchase(
       await raisePaymentAlert('PLAY_TOKEN_USED', {
         paymentId: `${paymentId}:${opts.playPurchaseToken.slice(0, 12)}`,
         orderId: order.id,
-        detail: `이미 지급된 주문(${order.playSku})에 다른 구매 토큰이 옴 — 두 번째 구매 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
+        detail: `이미 지급된 주문(${order.playSku})에 다른 구매 토큰이 옴 — 두 번째 구매 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장 프리미엄(활성 중)·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
       });
       return { ok: false, code: 'TOKEN_USED' };
     }
@@ -630,7 +630,7 @@ export async function completePurchase(
       await raisePaymentAlert('PLAY_TOKEN_USED', {
         paymentId: `${paymentId}:${play.token.slice(0, 12)}`,
         orderId: order.id,
-        detail: `보류 결제 토큰이 먼저 묶인 주문에 다른 구매(${play.googleOrderId ?? '?'})가 옴 — 이 구매 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
+        detail: `보류 결제 토큰이 먼저 묶인 주문에 다른 구매(${play.googleOrderId ?? '?'})가 옴 — 이 구매 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장 프리미엄(활성 중)·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
       });
       return { ok: false, code: 'TOKEN_USED' };
     }
@@ -640,7 +640,7 @@ export async function completePurchase(
         await raisePaymentAlert('PLAY_TOKEN_USED', {
           paymentId: `${paymentId}:${play.token.slice(0, 12)}`,
           orderId: order.id,
-          detail: `같은 주문에 두 구매가 동시에 옴 — 이 구매(${play.googleOrderId ?? '?'}) 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
+          detail: `같은 주문에 두 구매가 동시에 옴 — 이 구매(${play.googleOrderId ?? '?'}) 미지급. 상점 상품이면 다음 상점 복구가 새 주문으로 지급하니 먼저 지급 여부 확인(어드민 도구 dryRun으로 토큰 묶임 확인), 1회·주기 상품·성장 프리미엄(활성 중)·성장패스면 콘솔에서 환불. 우편 등 수동 지급은 복구와 겹쳐 2중 지급이 되니 하지 말 것.`,
         });
         return { ok: false, code: 'TOKEN_USED' };
       }
