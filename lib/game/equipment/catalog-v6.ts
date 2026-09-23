@@ -30,7 +30,7 @@ export const CATALOG_V6: CatalogItem[] = [
     tone: '위트',
     lore: '흰 나무 절굿공이는 손잡이에 실 한 가닥 감지 않아도 손에서 미끄러지지 않는다. 달에서 내려온 뒤로 한 번도 떡을 찧지 못했지만, 결을 따라 흐르는 달빛만은 여전하다. 언젠가 다시 절구를 만나면 첫 소리를 낼 준비가 늘 되어 있다.',
     art: 'a smooth polished pale wooden pestle held diagonally, thick rounded head and plain smooth grip with no wrapping, soft moonlight sheen, pixel art',
-    wornDesc: 'a Korean wooden rice-cake pestle (jeolgutgongi) held upright in one hand: a long pale wooden pestle with a thick rounded bulging end at the top and another thick rounded bulging end at the bottom, joined by a much slimmer narrow waist in the middle where the hand grips it, so the outline swells wide at both ends and pinches thin at the center, a tiny rabbit face carved on the upper bulge, plain smooth unvarnished pale wood from end to end',
+    wornDesc: 'a long thick wooden stick held upright in one hand, a Korean rice-cake pestle: the stick is thickest at its two ends and gradually becomes thinner toward the middle, the outline tapering smoothly and evenly from each thick end into the slimmer center, both ends rounded and blunt, a tiny rabbit face carved on the upper end, plain smooth unvarnished pale wood all over',
   },
   {
     key: 'chuseok_jade_hanbok',

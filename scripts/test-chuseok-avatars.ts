@@ -123,7 +123,14 @@ export const COMBOS6: Combo[] = [
   { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
   { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
 ];
-const SETS: Record<number, Combo[]> = { 1: COMBOS1, 2: COMBOS2, 3: COMBOS3, 4: COMBOS4, 5: COMBOS5, 6: COMBOS6 };
+/** 7차(09-23) — 절굿공이만: 'pestle' 곤봉 해석을 피해 '양 끝 같은 크기의 둥근 나무 덩이 + 곧은 자루'로. */
+export const COMBOS7: Combo[] = [
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+];
+/** 8차(09-23) — 절굿공이만: 양 끝이 두껍고 가운데로 갈수록 서서히 얇아지는 나무 막대기(사용자 표현). 7차는 실수로 '덩이 두 개' 문구로 돌았다. */
+export const COMBOS8: Combo[] = COMBOS7;
+const SETS: Record<number, Combo[]> = { 1: COMBOS1, 2: COMBOS2, 3: COMBOS3, 4: COMBOS4, 5: COMBOS5, 6: COMBOS6, 7: COMBOS7, 8: COMBOS8 };
 export const COMBOS: Combo[] = SETS[SET] ?? COMBOS1;
 
 /** 후보를 이 프로세스의 카탈로그·스프라이트 표에만 더한다(파일·DB 변경 없음). */
