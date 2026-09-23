@@ -45,7 +45,7 @@ function rankAccent(rank: number, me: boolean): { text: string } {
 
 /**
  * 순위 한 줄 — 대난투 순위 행과 같은 구성(우측 얼굴 배경 + 좌→우 그라데이션, 1~3등 메달). 순위 오른쪽에 장비 타일
- * (초월 테두리 + 단계, 1~3등은 해방 애니), 닉네임 옆엔 길드 문양만, 그 오른쪽에 대표 칭호(채팅 행과 같은 배치). 구분선 없음.
+ * (초월 테두리 + 단계, 1~3등은 해방 애니), 닉네임 옆엔 길드 문양만, 그 오른쪽에 대표 칭호(채팅 행과 같은 배치). 구분선 없음. 내 행은 '나' 배지 대신 앰버 테두리(2026-09-23).
  * 링크 없음(2026-09-23).
  */
 function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
@@ -53,7 +53,7 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
   const accent = rankAccent(r.rank, r.me);
   const at = fmtTime(r.reachedAt);
   return (
-    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3 last:border-b-0">
+    <li className={`relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3 last:border-b-0 ${r.me ? 'ring-1 ring-inset ring-amber-400/70' : ''}`}>
       {r.avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -79,7 +79,6 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
             <span className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
             {r.guildEmblemUrl ? <GuildEmblemImg src={r.guildEmblemUrl} size={12} className="shrink-0 self-center" /> : null}
             <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-            {r.me ? <span className="shrink-0 rounded bg-amber-500/25 px-1 text-[8.5px] font-black text-amber-300">나</span> : null}
           </div>
           {at ? <div className="truncate text-[9.5px] tabular-nums text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{at} 도달</div> : null}
         </div>

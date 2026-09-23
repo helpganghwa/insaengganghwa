@@ -164,7 +164,7 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
                     받기
                   </button>
                 ) : (
-                  <span className="text-zinc-500">{ov.total >= l.at ? '기간 종료' : `${n(l.at - ov.total)} 더`}</span>
+                  <span className="text-zinc-500">{ov.total >= l.at ? '기간 종료' : `${n(l.at - ov.total)} 남음`}</span>
                 )}
               </span>
             </li>
