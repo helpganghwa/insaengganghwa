@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
+import { serverNow } from '@/lib/client/server-clock';
+import { CHUSEOK_ITEM_CODES, chuseokItemsOpen } from '@/lib/game/chuseok/config';
 import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
 import { isModalHistoryState, isModalPop } from '@/lib/ui/modal-history';
 
@@ -12,7 +14,9 @@ const SAFETY_MS = 4000; // 멈춤 방지 자동 해제
 const POP_SAFETY_MS = 1500;
 
 function pick(prev?: string | null): string | null {
-  return ATLAS_CODES[Math.floor(Math.random() * ATLAS_CODES.length)] ?? prev ?? null;
+  // 추석 6종은 개방(서버 시각) 전엔 로딩 그림에서도 뺀다 — 칭호 목록처럼 미리 새지 않게(2026-09-23 감사).
+  const pool = chuseokItemsOpen(serverNow()) ? ATLAS_CODES : ATLAS_CODES.filter((c) => !CHUSEOK_ITEM_CODES.includes(c));
+  return pool[Math.floor(Math.random() * pool.length)] ?? prev ?? null;
 }
 
 /**
