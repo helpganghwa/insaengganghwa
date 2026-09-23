@@ -232,7 +232,7 @@ const WorldMap = memo(function WorldMap({
           style={{ imageRendering: 'pixelated' }}
         />
         {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과.
-            어두운 외곽선 + 따뜻한 앰버 본선(밝은·어두운 지형 모두에서 또렷). 선택 구역의 길은 강조. */}
+            어두운 외곽선 + 연한 회색 본선, 선택 구역의 길만 노란색으로 강조(거주 이동 인접 제한이 없어 '갈 수 있는 길' 구분은 없다). */}
         <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"

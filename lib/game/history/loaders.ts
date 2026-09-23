@@ -275,7 +275,7 @@ async function buildStory(
       eras.push({ startIdx: i, endIdx: kstDays.length - 1, guildId: best, name: nameOn(best, kstDays[i]!), color: colorOf(best), summary: '', closing: '' });
       eraOpen.push({ prev: leader, margin: bestN - second });
       // 등수 표현 대신 시대 어휘로(연대기 문체 규칙과 같게 — 2026-09-18 검수).
-      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: fillJosa(`새 시대 — ${nameOn(best, kstDays[i]!)}#{가} ${nameOn(leader, kstDays[i]!)}#{를} 제치고 가장 넓은 영토를 쥠`), short: '새 시대' });
+      if (leader != null) push(kstDays[i]!, { kind: 'leader', label: fillJosa(`새 시대, ${nameOn(best, kstDays[i]!)}#{가} ${nameOn(leader, kstDays[i]!)}#{를} 제치고 가장 넓은 영토를 쥠`), short: '새 시대' });
       leader = best;
     }
   }

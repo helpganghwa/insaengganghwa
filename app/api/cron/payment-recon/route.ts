@@ -10,7 +10,7 @@
  * 인증: isCronAuthorized(CRON_SECRET Bearer 또는 x-vercel-cron). 각 주문 PortOne 조회는
  *  개별 try로 격리 — 1건 실패가 전체 run을 막지 않게.
  */
-import { and, asc, eq, gt, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
@@ -82,7 +82,7 @@ export async function GET(req: Request) {
       userId: iapOrders.userId,
     })
     .from(iapOrders)
-    .where(and(eq(iapOrders.status, 'pending'), ne(iapOrders.provider, 'play'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
+    .where(and(eq(iapOrders.status, 'pending'), eq(iapOrders.provider, 'portone'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
     // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
     // 주문이 영원히 스캔 밖에 남는 기아 발생(감사 M-4).
     .orderBy(asc(iapOrders.createdAt))
@@ -179,7 +179,7 @@ export async function GET(req: Request) {
     .from(iapOrders)
     // Play 주문(provider='play')은 포트원에 없어 getPortonePayment가 404를 내며 10분마다 오류 로그를 남겼다(2026-09-22~23,
     // 3건 반복). Play 환불 회수는 play-sync의 voidedpurchases 경로가 맡는다.
-    .where(and(eq(iapOrders.status, 'paid'), ne(iapOrders.provider, 'play'), gt(iapOrders.paidAt, sql`now() - interval '3 days'`)))
+    .where(and(eq(iapOrders.status, 'paid'), eq(iapOrders.provider, 'portone'), gt(iapOrders.paidAt, sql`now() - interval '3 days'`)))
     // 오래된 것 우선(asc) — 환불 미회수가 가장 오래 방치된 주문부터(기아 방지, 감사 M-4).
     .orderBy(asc(iapOrders.paidAt))
     .limit(REFUND_SCAN_LIMIT);

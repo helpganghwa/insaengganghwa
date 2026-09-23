@@ -369,7 +369,7 @@ export function BattlePassClient({
     if (returnCode) {
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setError(`${payFailTitle()} — ${payFailBody(returnMessage)}`);
+        setError(`${payFailTitle()}. ${payFailBody(returnMessage)}`);
       }
       return;
     }
@@ -385,7 +385,7 @@ export function BattlePassClient({
           // 응답 재렌더가 프리미엄 해금 갱신을 커버.
           setNotice({ icon: '🎖️', title: '성장패스 구매 완료', body: '프리미엄 보상이 해금되었습니다. 지나온 구간 보상도 함께 받을 수 있어요.' });
         } else if (v.code === 'NETWORK') {
-          setError('결제 확인 지연 — 지급은 잠시 후 자동 반영됩니다.');
+          setError('결제 확인이 지연되고 있어요. 지급은 잠시 후 자동 반영됩니다.');
         } else {
           setError('결제 확인에 실패했습니다.');
         }
@@ -421,8 +421,8 @@ export function BattlePassClient({
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.
       } else if (r.reason === 'window') {
-        // 결제창 실패 — PG 사유 그대로(침묵하면 무반응으로 보인다, 2026-07-31).
-        setError(`결제에 실패했어요 — ${r.message}`);
+        // 결제창 실패 — 안내 문장 그대로(침묵하면 무반응으로 보인다, 2026-07-31). message는 이미 완결된 한국어 문장.
+        setError(r.message);
       } else if (r.reason === 'unsupported') {
         // 앱 표식은 있는데 Digital Goods API가 없는 환경(커스텀탭 폴백·구버전 크롬).
         setError(r.message);
@@ -443,7 +443,7 @@ export function BattlePassClient({
                       // 못한다 — 자동 반영이 오지 않는다(ShopTabs와 같은 근거, 6차 검수).
                       viaPlay
                       ? '결제 확인이 서버에 전달되지 않았어요. 지급이 없으면 고객센터로 알려 주세요.'
-                      : '결제 확인이 지연되고 있어요 — 지급은 잠시 후 자동 반영됩니다.'
+                      : '결제 확인이 지연되고 있어요. 지급은 잠시 후 자동 반영됩니다.'
                     : '요청이 전송되지 않았어요. 연결을 확인해 주세요.'
                   : '결제에 실패했습니다.',
         );

@@ -111,19 +111,19 @@ const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 // 전투 내레이션 풀 — 라운드별 결정적 선택(round % len)으로 다양하게(렌더 순수성 유지).
 const KILLED_MSGS: ((a: string, t: string, d: string) => string)[] = [
   (a, t, d) =>
-    `${a}의 일격이 ${josa(`${t}#{을}`)} 꿰뚫는다. ${d}의 치명타 — ${t}, 모래 위에 무너지다.`,
+    `${a}의 일격이 ${josa(`${t}#{을}`)} 꿰뚫는다. ${d}의 치명타. ${t}, 모래 위에 무너지다.`,
   (a, t, d) => `${a}의 마지막 공격! ${d}의 피해로 ${josa(`${t}#{이}`)} 쓰러진다.`,
   (a, t, d) => `${t}, ${a}의 ${d} 일격을 버티지 못하고 무릎 꿇는다.`,
-  (a, t, d) => `${josa(`${a}#{이}`)} 결정타를 꽂는다. ${d} — ${t}, 아레나에서 탈락.`,
+  (a, t, d) => `${josa(`${a}#{이}`)} 결정타를 꽂는다. ${d} 피해. ${t}, 아레나에서 탈락.`,
   (a, t, d) => `섬광 같은 ${a}의 공격. ${josa(`${t}#{이}`)} ${d}의 피해와 함께 스러진다.`,
   (a, t, d) => `${a}의 분노가 ${josa(`${t}#{을}`)} 덮친다. ${d} 치명타로 결착.`,
 ];
 const SURVIVE_MSGS: ((a: string, t: string, d: string, hp: string) => string)[] = [
   (a, t, d, hp) => `${a}, ${t}에게 ${d}의 피해를 새긴다. 남은 생명력 ${hp}, 아직 쓰러지지 않는다.`,
-  (a, t, d, hp) => `${a}의 공격이 ${josa(`${t}#{을}`)} 강타! ${d} 피해 — ${t}, 체력 ${hp}로 버틴다.`,
+  (a, t, d, hp) => `${a}의 공격이 ${josa(`${t}#{을}`)} 강타! ${d} 피해. ${t}, 체력 ${josa(`${hp}#{으로}`)} 버틴다.`,
   (a, t, d, hp) => `${t}, ${a}의 ${d} 공격을 이 악물고 견딘다. (체력 ${hp})`,
-  (a, t, d, hp) => `${josa(`${a}#{이}`)} ${d}의 일격을 날린다. ${t}, 체력 ${hp}로 반격을 노린다.`,
-  (a, t, d, hp) => `격렬한 공방! ${a}의 ${d} 피해에도 ${josa(`${t}#{은}`)} 체력 ${hp}로 살아남는다.`,
+  (a, t, d, hp) => `${josa(`${a}#{이}`)} ${d}의 일격을 날린다. ${t}, 체력 ${josa(`${hp}#{으로}`)} 반격을 노린다.`,
+  (a, t, d, hp) => `격렬한 공방! ${a}의 ${d} 피해에도 ${josa(`${t}#{은}`)} 체력 ${josa(`${hp}#{으로}`)} 살아남는다.`,
   (a, t, d, hp) => `${a}의 맹공 ${d}. ${t}, 남은 ${hp}의 생명으로 맞선다.`,
 ];
 
@@ -321,7 +321,7 @@ function FightStage({
   const dmgStr = fight.dmg.toLocaleString();
   const hpStr = Math.max(0, fight.hpAfter).toLocaleString();
   const narration = isFinal
-    ? `${fight.atkName}의 최후의 일격! 마지막 한 명까지 쓰러뜨리고 대난투를 제패하다 — 우승!`
+    ? `${fight.atkName}의 최후의 일격! 마지막 한 명까지 쓰러뜨리고 대난투를 제패하다. 우승!`
     : killed
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
       : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(

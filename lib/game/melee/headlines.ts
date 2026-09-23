@@ -7,7 +7,7 @@
  * 원칙: 이름이 붙는 사건은 긍정·중립 프레임. 이모지 없음. 이름은 배틀 시점 닉네임 스냅샷.
  */
 import { MELEE_HP_MULT } from '@/lib/game/balance';
-import { josa as fillJosa } from 'josa';
+import { getJosaPicker } from 'josa';
 
 export type HeadlineParticipant = {
   userId: string;
@@ -117,7 +117,8 @@ const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
  * 둘째 인자가 받침형 조사(이·을·과…)이고 셋째는 호출부 가독성용이라 판정에는 쓰지 않는다.
  */
 export function josa(word: string, withBatchim: string, _without: string): string {
-  return fillJosa(`${word}#{${withBatchim}}`);
+  if (!word.trim()) return word; // 빈 값이면 조사를 붙이지 않는다(자리표시가 새는 것 방지)
+  return word + getJosaPicker(withBatchim)(word);
 }
 /** 기본 닉네임(미변경) 패턴 — 주인공으로 나오면 읽는 맛이 떨어져 감점. */
 const DEFAULT_NICK = /^대장장이[0-9a-z]{4}$/;

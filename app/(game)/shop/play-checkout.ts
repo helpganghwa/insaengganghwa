@@ -89,38 +89,45 @@ const SHEET_UNAVAILABLE_MSG = '구글 플레이 결제창을 열지 못했어요
  */
 const SAMSUNG_HOST_MSG =
   '지금 이 기기에서는 앱 안 결제창이 열리지 않는 문제가 있어요. 이를 고친 앱 업데이트를 준비하고 있으니, 업데이트가 나오면 다시 시도해 주세요.';
-function hostedBySamsungInternet(): boolean {
-  return /SamsungBrowser/i.test(navigator.userAgent);
+/** 삼성 인터넷·네이버 웨일이 띄운 앱 — 둘 다 Play 결제창을 못 연다(웨일 실측 2026-09-23 1건). */
+function hostedByNonChromeBrowser(): boolean {
+  return /SamsungBrowser|Whale/i.test(navigator.userAgent);
 }
 
 /** 시트 직전 진단 요약(직후 실패 기록에 함께 붙인다). */
 let lastSheetDiag = '';
 async function playSheetDiagnostics(sku: string, request: PaymentRequest): Promise<{ canMakePayment: boolean | null; summary: string }> {
-  const parts: string[] = [];
-  let canMakePayment: boolean | null = null;
+  let chromePart = 'chrome=?';
   try {
     const brands = (navigator as Navigator & { userAgentData?: { brands?: { brand: string; version: string }[] } }).userAgentData?.brands ?? [];
     const chrome = brands.find((b) => /chrome/i.test(b.brand));
-    parts.push(`chrome=${chrome?.version ?? '?'}`);
+    chromePart = `chrome=${chrome?.version ?? '?'}`;
   } catch {
-    parts.push('chrome=?');
+    /* noop */
   }
-  try {
-    const w = window as DigitalGoodsWindow;
-    const svc = w.getDigitalGoodsService ? await w.getDigitalGoodsService(PLAY_BILLING_METHOD) : null;
-    const [item] = svc ? await svc.getDetails([sku]) : [];
-    parts.push(`details=${item ? `${item.price.currency} ${item.price.value}` : 'none'}`);
-  } catch (e) {
-    parts.push(`details=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`);
-  }
-  try {
-    canMakePayment = await request.canMakePayment();
-    parts.push(`canMakePayment=${canMakePayment}`);
-  } catch (e) {
-    parts.push(`canMakePayment=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`);
-  }
-  lastSheetDiag = parts.join(' ');
-  return { canMakePayment, summary: lastSheetDiag };
+  // 두 조회는 서로 독립이라 병렬로(2026-09-23 감사) — 시트 앞 대기가 길어지면 사용자 활성화가 만료돼 show()가 거부된다.
+  const [detailsPart, cmp] = await Promise.all([
+    (async () => {
+      try {
+        const w = window as DigitalGoodsWindow;
+        const svc = w.getDigitalGoodsService ? await w.getDigitalGoodsService(PLAY_BILLING_METHOD) : null;
+        const [item] = svc ? await svc.getDetails([sku]) : [];
+        return `details=${item ? `${item.price.currency} ${item.price.value}` : 'none'}`;
+      } catch (e) {
+        return `details=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`;
+      }
+    })(),
+    (async (): Promise<{ v: boolean | null; part: string }> => {
+      try {
+        const v = await request.canMakePayment();
+        return { v, part: `canMakePayment=${v}` };
+      } catch (e) {
+        return { v: null, part: `canMakePayment=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}` };
+      }
+    })(),
+  ]);
+  lastSheetDiag = [chromePart, detailsPart, cmp.part].join(' ');
+  return { canMakePayment: cmp.v, summary: lastSheetDiag };
 }
 
 /**
@@ -214,6 +221,11 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   if (!(await digitalGoodsAvailable())) {
     return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
   }
+  // 호스트 판정도 주문 생성보다 먼저(2026-09-23 감사) — 삼성 인터넷·웨일은 결제창을 못 여니 서버 액션·pending 주문·진단 없이 안내만.
+  if (hostedByNonChromeBrowser()) {
+    reportPlayCheckout('precheck', productId, { code: 'NON_CHROME_HOST' });
+    return { ok: false, reason: 'window', message: SAMSUNG_HOST_MSG };
+  }
   const r = await createPlayOrderAction(productId).catch(() => null);
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };
   if (r.status !== 'success') return { ok: false, reason: 'create', code: r.code };
@@ -227,25 +239,22 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     );
     // 진단(2026-09-23): 실유저 8명 76회가 시트 단계 AbortError "Invalid state."로 끝나는데 원인이 안 잡힌다.
     // 시트를 열기 전에 상품 조회·canMakePayment·크롬 버전을 기록해 실패 기기의 공통점을 찾는다. 기록은 best-effort.
+    lastSheetDiag = ''; // 이전 시도의 진단이 이번 실패에 붙지 않게
     const diag = await playSheetDiagnostics(sku, request);
-    if (hostedBySamsungInternet()) {
-      reportPlayCheckout('precheck', sku, { code: 'SAMSUNG_HOST', message: diag.summary });
-      return { ok: false, reason: 'window', message: SAMSUNG_HOST_MSG };
-    }
-    if (diag.canMakePayment === false) {
-      reportPlayCheckout('precheck', sku, { code: 'CANNOT_PAY', message: diag.summary });
-      return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };
-    }
+    // canMakePayment=false는 기록만(2026-09-23 감사) — 정상 Chrome이 오판하면 결제가 전부 막힌다. 실제 실패는 아래 catch가 잡는다.
+    if (diag.canMakePayment === false) reportPlayCheckout('precheck', sku, { code: 'CANNOT_PAY', message: diag.summary });
     response = await request.show();
   } catch (e) {
     const err = e as { name?: string; message?: string };
     // 거부는 전부 기록한다(2026-09-22) — 크롬은 유저 취소와 결제 앱 오류(상품 없음·판매자 미설정 등)에 같은
     // AbortError를 쓰고 메시지만 다르다("User closed the Payment Request UI" = 취소). 오늘 실유저 3명이
     // 1초 간격으로 47번 시도했는데 취소·미지원으로 분류돼 서버엔 흔적이 없었다.
-    reportPlayCheckout('sheet', sku, { name: err?.name, message: `${err?.message ?? ''} | ${lastSheetDiag}` });
+    // 진단을 앞에, 원문을 뒤에 — fingerprint가 message 앞부분으로 잡혀 원문이 길면 진단 값이 묶였다(2026-09-23 감사).
+    reportPlayCheckout('sheet', sku, { name: err?.name, message: `${lastSheetDiag} | ${err?.message ?? ''}` });
     if (err?.name === 'AbortError') {
-      // 유저가 닫은 것("User closed the Payment Request UI")만 조용히 취소. 그 밖의 AbortError("Invalid state.",
-      // RESULT_CANCELED 등)는 결제 앱이 시트를 못 연 것이라 안내를 띄운다(2026-09-23: 실유저 실패 76회가 전부 이 경우).
+      // 유저가 닫은 것("User closed the Payment Request UI")과 결제 앱이 RESULT_CANCELED로 끝난 것은 조용히 취소로 둔다 —
+      // Chrome은 유저 취소와 결제 앱 실패(상품 없음·미검증 앱 등)를 같은 RESULT_CANCELED로 주어 구분할 수 없고, 기록은 위에서
+      // 이미 남겼다. "Invalid state."(삼성 인터넷 호스트) 같은 나머지 AbortError만 안내를 띄운다(2026-09-23 감사).
       if (/closed|cancel/i.test(err?.message ?? '')) return { ok: false, reason: 'cancel', code: 'ABORT' };
       return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };
     }
@@ -254,7 +263,8 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     if (err?.name === 'NotSupportedError' || /not supported|unsupported|digital goods/i.test(err?.message ?? '')) {
       return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
     }
-    return { ok: false, reason: 'window', message: err?.message ?? '결제 시트를 열지 못했어요.' };
+    // 원문(영문)은 위 기록에만 남기고 유저에겐 한국어 안내만(2026-09-23 감사).
+    return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };
   }
 
   const token = (response.details as { purchaseToken?: string } | undefined)?.purchaseToken ?? '';

@@ -72,7 +72,6 @@ export async function getResidenceState(userId: string, serverId: number): Promi
   };
 }
 
-
 /**
  * 거주 구역 변경 — GUILD §5.5(0139 개편).
  *  ① 어느 구역으로든 이동 가능 — 인접 제한은 2026-09-23 삭제(이동 쿨타임·보석 단축은 2026-08-31 삭제).
@@ -120,7 +119,6 @@ export async function setResidenceTx(
       .where(and(eq(zones.id, zoneId), eq(zones.serverId, serverId)))
       .limit(1);
     if (!z) throw new GuildError('ZONE_NOT_FOUND');
-
 
     // ② 구역에 묶여 있는지 — 집행관을 먼저 본다(해제 안내 문구가 다르다).
     let released: '집행관' | '공격' | '수비' | null = null;

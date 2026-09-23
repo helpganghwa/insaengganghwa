@@ -39,7 +39,7 @@ function battle(parts: HeadlineParticipant[], date = '2026-09-03', finaleEvents:
 const codes = (c: Headline[]) => c.map((x) => x.code);
 
 describe('melee headlines — 조사', () => {
-  it('받침에 맞춰 이/가·을/를·과/와를 고르고, 로마자·판정 불가는 병기한다', () => {
+  it('받침 판정 — 숫자·영문·기호 끝도 조사를 고른다', () => {
     expect(josa('슷파', '이', '가')).toBe('슷파가');
     expect(josa('무인', '이', '가')).toBe('무인이');
     expect(josa('Res', '을', '를')).toBe('Res를');

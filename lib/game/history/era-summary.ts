@@ -1,4 +1,5 @@
 import 'server-only';
+import { getJosaPicker } from 'josa';
 
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -172,11 +173,8 @@ const UNITS: Record<string, number> = { 한: 1, 두: 2, 세: 3, 네: 4, 다섯: 
 const TENS: Record<string, number> = { 열: 10, 스물: 20, 서른: 30, 마흔: 40, 쉰: 50 };
 const KO_COUNT = /(스물|서른|마흔|쉰|열)?(한|두|세|네|다섯|여섯|일곱|여덟|아홉)?\s?곳/g;
 
-const hasBatchim = (s: string) => {
-  const c = s.charCodeAt(s.length - 1);
-  return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
-};
-const josa = (name: string, pair: [string, string]) => (hasBatchim(name) ? pair[0] : pair[1]);
+// 조사 — josa 패키지 판정(ㄹ받침·숫자·로마자, 2026-09-23). pair[0]=받침형(은·이·을·으로).
+const josa = (name: string, pair: [string, string]) => getJosaPicker(pair[0])(name);
 
 function factLines(f: EraFacts): string {
   const md = (d: string) => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`;

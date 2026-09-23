@@ -40,8 +40,8 @@ keytool -list -v -keystore android.keystore -alias upload | grep SHA256   # 업�
 cd mobile/android
 bubblewrap build                    # twa-manifest.json 사용 → app-release-bundle.aab / app-release-signed.apk
 ```
-- 프롬프트 3개(프로젝트 재생성 / 변경 적용 / versionName)에 답하면 서명까지 진행된다. 비밀번호는 `BUBBLEWRAP_KEYSTORE_PASSWORD`·`BUBBLEWRAP_KEY_PASSWORD` 환경변수로도 넘길 수 있다.
-- ⚠ `minSdkVersion`은 **23**이어야 한다(twa-manifest.json). Bubblewrap 기본값 21로 두면 Play 결제 라이브러리와 충돌해 `Manifest merger failed : uses-sdk:minSdkVersion 21 cannot be smaller than version 23 declared in library [com.google.androidbrowserhelper:billing]`로 빌드가 깨진다.
+- 프롬프트(프로젝트 재생성 / 변경 적용 / versionName)에 답하면 서명까지 진행된다. ⚠ **"변경 적용(apply changes)"은 반드시 No** — 기본값 Yes라 Enter를 치면 `app/`을 다시 만들어 `patches/` 적용본(Chrome 고정 LauncherActivity·아이콘 배경·터치스크린)이 지워지고 versionCode가 또 오른다. 버전·minSdk는 `app/build.gradle`에 손으로 반영한다. 비밀번호는 `BUBBLEWRAP_KEYSTORE_PASSWORD`·`BUBBLEWRAP_KEY_PASSWORD` 환경변수로도 넘길 수 있다.
+- ⚠ `minSdkVersion`은 **24**여야 한다(twa-manifest.json·app/build.gradle, 2026-09-23). Play 자동 보호(Integrity)가 24 이상을 요구해 23은 업로드가 거부되고, Bubblewrap 기본값 21은 Play 결제 라이브러리와 충돌해 `Manifest merger failed : uses-sdk:minSdkVersion 21 cannot be smaller than version 23 …`로 빌드가 깨진다.
 - `app/`·`gradlew`·`build.gradle` 등 생성물은 커밋하지 않는다(정본은 twa-manifest.json, .gitignore 처리).
 - 웹 매니페스트가 바뀌면 `bubblewrap update`로 twa-manifest.json을 재동기화한 뒤 빌드.
 - ⚠ **`bubblewrap update` 직후 `startUrl`을 반드시 확인**한다. 이 명령은 웹 매니페스트의 `start_url`(`/`)을
@@ -52,7 +52,7 @@ bubblewrap build                    # twa-manifest.json 사용 → app-release-b
 
 ## 빌드 뒤 손봐야 하는 생성물(2026-09-11 전수조사)
 
-`bubblewrap build`는 `app/` 아래를 매번 새로 만든다. 아래 두 가지는 생성 직후 고친 뒤 빌드해야 한다.
+`bubblewrap build`는 "변경 적용"에 Yes로 답했을 때만 `app/` 아래를 새로 만든다(평소엔 No로 답해 패치 적용본을 유지). 재생성했다면 아래 두 가지와 `patches/LauncherActivity.java`를 다시 적용한 뒤 빌드해야 한다.
 
 1. **런처 아이콘 배경** — `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`의 배경 레이어가
    `@android:color/white`로 박혀 있다. 브랜드 색이 어두워서 안드 12+ 시스템 스플래시에 흰 배경이

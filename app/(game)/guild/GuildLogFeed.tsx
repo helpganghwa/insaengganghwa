@@ -79,9 +79,10 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'levelup':
       return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)} 달성했습니다</>;
     case 'tax_collect':
-      return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}{getJosaPicker('을')(String(amt))} 수금했습니다</>;
+      // 💎는 '다이아'로 읽으므로 뒤 조사는 '를' 고정 — 숫자로 판정하면 줄마다 달라진다(2026-09-23 결정).
+      return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}를 수금했습니다</>;
     case 'tax_distribute':
-      return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}{getJosaPicker('을')(String(amt))} 지급했습니다</>;
+      return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}를 지급했습니다</>;
     case 'zone_capture':
       return <>{zone} 구역을 {hl('점령', C.emerald)}했습니다</>;
     case 'zone_lost':

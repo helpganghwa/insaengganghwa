@@ -1,3 +1,4 @@
+// ⚠ 2026-09-23: 결과 폴더(public/sprites/chuseok-ui)는 정본 선정 뒤 삭제됐다. 재실행하면 전부 새로(유료) 생성되니 돌리지 말 것.
 /**
  * 한가위 이벤트 UI 그림 — Pixellab pixflux(key3). 송편 아이콘(투명 배경)과 홈 배너 배경.
  *   실행: GEN_KEY=3 bun run scripts/gen-chuseok-ui.ts [--only=a,b]   결과: public/sprites/chuseok-ui/*.png (있으면 건너뜀)

@@ -1003,7 +1003,7 @@ export function DeployBoard({
                   tone="ghost"
                   onClick={() => {
                     setPlan(null);
-                                  }}
+                  }}
                 >
                   취소
                 </ModalButton>
@@ -1037,7 +1037,7 @@ export function DeployBoard({
                     <b className={`font-bold ${plan.role === 'attack' ? 'text-red-500' : 'text-sky-500'}`}>
                       {plan.role === 'attack' ? '공격' : '수비'}
                     </b>
-                    로 배치됩니다.
+                    {getJosaPicker('으로')(plan.role === 'attack' ? '공격' : '수비')} 배치됩니다.
                   </span>
                 </li>
               )}

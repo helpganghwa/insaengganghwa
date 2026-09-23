@@ -9,7 +9,7 @@ import { ASSET_VERSIONS } from './asset-versions.generated';
 
 /** 빌드 시점에 존재해 해시가 등록된 자산인가 — 없는 파일을 요청해 404 콘솔 오류를 내지 않으려는 용도(효과음 등). */
 export function hasAsset(path: string): boolean {
-  return path in ASSET_VERSIONS;
+  return Object.prototype.hasOwnProperty.call(ASSET_VERSIONS, path);
 }
 
 /** `assetUrl('/sprites/ui/btn-enhance.png')` → `/sprites/ui/btn-enhance.png?v=ab3f12c8`. */
