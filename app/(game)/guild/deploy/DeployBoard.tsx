@@ -228,16 +228,6 @@ export function DeployBoard({
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
   const [selectedId, setSelectedId] = useState<number | null>(initialZoneId ?? residence?.zoneId ?? null);
   const homeZoneId = residence?.zoneId ?? null;
-  // 이동 가능 구역 — 거주지와 인접한 곳. 거주 미설정이면 어디든 정착 가능.
-  const adjacentToHome = useMemo(() => {
-    if (homeZoneId == null) return null;
-    const set = new Set<number>();
-    for (const { a, b } of adjacency) {
-      if (a === homeZoneId) set.add(b);
-      else if (b === homeZoneId) set.add(a);
-    }
-    return set;
-  }, [adjacency, homeZoneId]);
   /** 배치 확인 팝업 — 이동·해제·배치를 한 번에 안내하고 한 번에 실행한다. */
   const [plan, setPlan] = useState<{
     zoneId: number;
@@ -346,10 +336,7 @@ export function DeployBoard({
     if (!selected || !selectedRole) return;
     const me = members.find((x) => x.userId === myUserId);
     if (!me) return;
-    const needsMove = selected.id !== homeZoneId;
-    if (needsMove && adjacentToHome && !adjacentToHome.has(selected.id)) {
-      return showError('인접한 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
-    }
+    const needsMove = selected.id !== homeZoneId; // 거주 이동에 인접 제한 없음(2026-09-23 삭제)
     const release = me.execZoneId
       ? `${me.execZoneName} 집행관`
       : me.depZoneId
@@ -372,9 +359,6 @@ export function DeployBoard({
     if (!selected || selected.id === homeZoneId) return;
     const me = members.find((x) => x.userId === myUserId);
     if (!me) return;
-    if (adjacentToHome && !adjacentToHome.has(selected.id)) {
-      return showError('인접한 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
-    }
     const release = me.execZoneId
       ? `${me.execZoneName} 집행관`
       : me.depZoneId
@@ -555,18 +539,13 @@ export function DeployBoard({
         const za = zoneById.get(a);
         const zb = zoneById.get(b);
         if (!za || !zb) return null;
-        // 3단계 — ① 내가 이동할 수 있는 길(거주지에 인접) ② 길드 관련(우리 소유·공격 가능끼리) ③ 그 외.
-        // 세계지도와 같은 색 규칙을 쓰되, 길드 관련은 중간 밝기로 둬 이동 가능 길이 먼저 읽히게 한다.
-        const tier = homeZoneId != null && (a === homeZoneId || b === homeZoneId)
-          ? 'walk'
-          : usable(a) && usable(b)
-            ? 'guild'
-            : 'dim';
+        // 2단계 — ① 길드 관련(우리 소유·공격 가능끼리) ② 그 외. 거주 이동 인접 제한이 없어(2026-09-23 삭제) '이동 가능 길' 단계는 두지 않는다.
+        const tier = usable(a) && usable(b) ? 'guild' : 'dim';
         return { a, b, x1: za.mapX, y1: za.mapY, x2: zb.mapX, y2: zb.mapY, tier };
       })
       .filter((e): e is NonNullable<typeof e> => e != null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adjacency, zoneById, ownedIds, attackable, homeZoneId]);
+  }, [adjacency, zoneById, ownedIds, attackable]);
 
   return (
     <div className="flex min-h-full shrink-0 flex-col">
@@ -607,8 +586,8 @@ export function DeployBoard({
               x2={e.x2}
               y2={e.y2}
               stroke="#000000"
-              strokeOpacity={e.tier === 'walk' ? 0.42 : e.tier === 'guild' ? 0.32 : 0.22}
-              strokeWidth={e.tier === 'walk' ? 1 : e.tier === 'guild' ? 0.85 : 0.7}
+              strokeOpacity={e.tier === 'guild' ? 0.32 : 0.22}
+              strokeWidth={e.tier === 'guild' ? 0.85 : 0.7}
               strokeLinecap="round"
             />
           ))}
@@ -619,9 +598,9 @@ export function DeployBoard({
               y1={e.y1}
               x2={e.x2}
               y2={e.y2}
-              stroke={e.tier === 'walk' ? '#fde047' : e.tier === 'guild' ? '#fcd34d' : '#cbd5e1'}
-              strokeOpacity={e.tier === 'walk' ? 0.95 : e.tier === 'guild' ? 0.55 : 0.4}
-              strokeWidth={e.tier === 'walk' ? 0.72 : 0.5}
+              stroke={e.tier === 'guild' ? '#fcd34d' : '#cbd5e1'}
+              strokeOpacity={e.tier === 'guild' ? 0.55 : 0.4}
+              strokeWidth={0.5}
               strokeLinecap="round"
             />
           ))}
@@ -753,9 +732,7 @@ export function DeployBoard({
             {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
             {selected.id !== homeZoneId && (
               <p className="mt-1.5 text-[10px] font-medium leading-snug text-amber-600 dark:text-amber-400">
-                {adjacentToHome && !adjacentToHome.has(selected.id)
-                  ? '인접한 구역이 아니라 이동할 수 없습니다.'
-                  : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
+                배치하면 거주지도 이 구역으로 옮겨집니다.
               </p>
             )}
 

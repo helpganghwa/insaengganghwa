@@ -241,8 +241,7 @@ const WorldMap = memo(function WorldMap({
           {(() => {
             const isSel = (e: { a: number; b: number }) =>
               selectedId != null && (e.a === selectedId || e.b === selectedId);
-            // 거주 이동에 인접 제한이 없어(2026-09-23 삭제) 모든 길을 이동 가능한 모양으로 그린다.
-            const isWalk = (_e: { a: number; b: number }) => true;
+            // 거주 이동에 인접 제한이 없어(2026-09-23 삭제) 길은 전부 같은 연한 선으로 그리고 선택 구역의 길만 강조한다.
             return (
               <>
                 {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
@@ -254,12 +253,12 @@ const WorldMap = memo(function WorldMap({
                     x2={e.x2}
                     y2={e.y2}
                     stroke="#000000"
-                    strokeOpacity={isWalk(e) ? 0.42 : 0.26}
-                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 1 : 0.75}
+                    strokeOpacity={0.26}
+                    strokeWidth={isSel(e) ? 1.2 : 0.75}
                     strokeLinecap="round"
                   />
                 ))}
-                {/* 2) 본선 — 비선택(따뜻한 앰버, 중간 강도) */}
+                {/* 2) 본선 — 비선택(연한 회색) */}
                 {edges
                   .filter((e) => !isSel(e))
                   .map((e) => (
@@ -269,9 +268,9 @@ const WorldMap = memo(function WorldMap({
                       y1={e.y1}
                       x2={e.x2}
                       y2={e.y2}
-                      stroke={isWalk(e) ? '#fde047' : '#cbd5e1'}
-                      strokeOpacity={isWalk(e) ? 0.95 : 0.45}
-                      strokeWidth={isWalk(e) ? 0.72 : 0.5}
+                      stroke="#cbd5e1"
+                      strokeOpacity={0.45}
+                      strokeWidth={0.5}
                       strokeLinecap="round"
                     />
                   ))}
