@@ -30,7 +30,7 @@ export const CATALOG_V6: CatalogItem[] = [
     tone: '위트',
     lore: '흰 나무 절굿공이는 손잡이에 실 한 가닥 감지 않아도 손에서 미끄러지지 않는다. 달에서 내려온 뒤로 한 번도 떡을 찧지 못했지만, 결을 따라 흐르는 달빛만은 여전하다. 언젠가 다시 절구를 만나면 첫 소리를 낼 준비가 늘 되어 있다.',
     art: 'a smooth polished pale wooden pestle held diagonally, thick rounded head and plain smooth grip with no wrapping, soft moonlight sheen, pixel art',
-    wornDesc: 'a Korean wooden rice-cake pestle (jeolgutgongi) held upright in one hand: a long, thick, straight pale wooden pole with an even cylindrical body and rounded blunt ends, the upper end a little thicker, a tiny rabbit face carved near the upper end, plain smooth unvarnished pale wood from end to end',
+    wornDesc: 'a Korean wooden rice-cake pestle (jeolgutgongi) held upright in one hand: a long pale wooden pestle with a thick rounded bulging end at the top and another thick rounded bulging end at the bottom, joined by a much slimmer narrow waist in the middle where the hand grips it, so the outline swells wide at both ends and pinches thin at the center, a tiny rabbit face carved on the upper bulge, plain smooth unvarnished pale wood from end to end',
   },
   {
     key: 'chuseok_jade_hanbok',
@@ -41,7 +41,7 @@ export const CATALOG_V6: CatalogItem[] = [
     lore: '미색 저고리에 진홍 옷고름을 길게 늘이고, 색동 소매 아래로 진홍 치마가 넓게 퍼진다. 치맛단에는 금박으로 꽃을 한 줄 둘렀다. 걸을 때마다 단이 흔들려 꽃이 피었다 지는데, 멈춰 서면 한꺼번에 만개한다.',
     art: 'a Korean hanbok with an ivory jeogori jacket, a long crimson goreum ribbon, multicolored striped sleeves, and a deep crimson full chima skirt with a gold-leaf floral band along the hem, elegant, pixel art',
     wornDesc: 'a Korean hanbok: an ivory short jacket with multicolored striped sleeves and a long crimson ribbon tie, over a long full deep-crimson skirt with a gold floral band along the hem',
-    wornDescMale: 'a men\'s hanbok, Korean traditional clothing, every piece of it hanbok: a hanbok jeogori, an ivory jacket with a white collar band, its front closed by a crimson goreum, the hanbok\'s wide flat ribbon tied in a single loop at the chest with two long tails hanging straight down, multicolored striped cuffs at the sleeve ends; hanbok baji, wide loose deep-crimson trousers gathered and tied at the ankles; a hanbok durumagi, a long deep-crimson Korean overrobe with full sleeves worn over the jacket, closed at the chest by its own crimson goreum ribbon and hanging straight down to the shins, a gold floral band along its hem; flat black traditional hanbok cloth shoes',
+    wornDescMale: 'Men\'s Hanbok, Korean traditional men\'s clothing, every piece of it hanbok, with a short upper body and long trousers: a hanbok jeogori, an ivory hip-length jacket with a white collar band, its front closed by a crimson goreum, the hanbok\'s wide flat ribbon tied in a single loop at the chest with two long tails hanging straight down, multicolored striped cuffs at the sleeve ends; over the jacket a hanbok baeja, a deep-crimson sleeveless hip-length vest with a gold floral band along its hem; hanbok baji, wide loose deep-crimson trousers with the legs fully visible from hip to ankle, gathered and tied at the ankles with cloth cords; flat black traditional hanbok cloth shoes',
   },
   {
     key: 'chuseok_rabbit_suit',

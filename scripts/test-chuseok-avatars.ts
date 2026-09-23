@@ -116,7 +116,15 @@ export const COMBOS5: Combo[] = [
   { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
   { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
 ];
-export const COMBOS: Combo[] = SET === 5 ? COMBOS5 : SET === 4 ? COMBOS4 : SET === 3 ? COMBOS3 : SET === 2 ? COMBOS2 : COMBOS1;
+/** 6차(09-23) — 5차 지적: 남성 한복이 여성 한복처럼(두루마기가 치마로 읽힘) → 저고리·배자·바지, 절굿공이는 양 끝 굵고 가운데 잘록한 형태. 남성 한복 2·절굿공이 3. */
+export const COMBOS6: Combo[] = [
+  { gender: 'male', weapon: 'chuseok_moon_wand', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+];
+const SETS: Record<number, Combo[]> = { 1: COMBOS1, 2: COMBOS2, 3: COMBOS3, 4: COMBOS4, 5: COMBOS5, 6: COMBOS6 };
+export const COMBOS: Combo[] = SETS[SET] ?? COMBOS1;
 
 /** 후보를 이 프로세스의 카탈로그·스프라이트 표에만 더한다(파일·DB 변경 없음). */
 function injectCandidates(): void {
