@@ -48,7 +48,7 @@
 | code | 부위 | 이름 | 벌 |
 |---|---|---|---|
 | chuseok_moon_wand | 무기 | 달그림자 완드 | 한복(flower) |
-| chuseok_jade_hanbok | 방어구 | 달구름 옥색 한복 | 한복 |
+| chuseok_jade_hanbok | 방어구 | 금박 꽃단 한복 | 한복 |
 | chuseok_bok_pouch | 장신구 | 한가위 복주머니 | 한복 |
 | chuseok_rabbit_pestle | 무기 | 달빛 절굿공이 | 달토끼(moon) |
 | chuseok_rabbit_suit | 방어구 | 보송한 토끼 인형 옷 | 달토끼 |

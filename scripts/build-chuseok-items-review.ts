@@ -20,7 +20,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 /** 카탈로그 code → 애니 후보 id(Pixellab 객체를 만든 후보 키). scripts/catalog-v3-codemap.json과 같다. */
 const CAND: Record<string, string> = {
   chuseok_moon_wand: 'chuseok_moon_wand_full',
-  chuseok_jade_hanbok: 'chuseok_hanbok_v2',
+  chuseok_jade_hanbok: 'chuseok_hanbok_v3',
   chuseok_bok_pouch: 'chuseok_bok_pouch',
   chuseok_rabbit_pestle: 'chuseok_rabbit_pestle_v14',
   chuseok_rabbit_suit: 'chuseok_rabbit_suit_v15',

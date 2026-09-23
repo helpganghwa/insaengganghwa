@@ -3,7 +3,7 @@ import type { CatalogItem } from './catalog';
 /**
  * 6차 편성(2026-09-22) — 한가위 6종(docs/CHUSEOK.md). 슬롯당 2종을 더해 40 → 42(아이템당 보급 확률 2.5% → 약 2.38%).
  *
- * 두 벌로 나뉜다 — 한복(달그림자 완드·달구름 옥색 한복·한가위 복주머니)과 달토끼(달빛 절굿공이·보송한 토끼
+ * 두 벌로 나뉜다 — 한복(달그림자 완드·금박 꽃단 한복·한가위 복주머니)과 달토끼(달빛 절굿공이·보송한 토끼
  * 인형 옷·접힌 토끼 귀 머리띠). 한가위 강화 대회 칭호가 벌마다 붙는다(신월·반월·만월 / 매화·작약·모란).
  * 지역은 '일반'(파견 시너지·필터·위키 문구를 건드리지 않는다). 그림은 scripts/gen-chuseok-cand.ts로 뽑아
  * 선택 폼에서 고른 것(scripts/build-chuseok-pick.ts). 등급·성능 없음(GDD §3.1).
@@ -35,13 +35,13 @@ export const CATALOG_V6: CatalogItem[] = [
   {
     key: 'chuseok_jade_hanbok',
     slot: 'armor',
-    nameKo: '달구름 옥색 한복',
+    nameKo: '금박 꽃단 한복',
     region: '일반',
     tone: '아름다운',
-    lore: '옥색 저고리에 진홍 치마를 받쳐 입고, 치마 자락에는 금박으로 달과 구름을 찍었다. 걸음마다 구름이 달을 스치고, 멈추면 달이 구름 뒤에서 조용히 떠오른다. 하늘의 달이 구름에 가린 밤에도 이 치마의 달만은 늘 밝다.',
-    art: 'a Korean hanbok with a pale jade-green jeogori jacket and a deep crimson full chima skirt printed with gold-leaf moon and cloud patterns, multicolored striped sleeves, elegant, pixel art',
-    wornDesc: 'a Korean hanbok: a pale jade-green short jacket with multicolored striped sleeves over a long full deep-crimson skirt printed with gold moon and cloud patterns',
-    wornDescMale: 'a Korean hanbok for men: a pale jade-green jacket with multicolored striped sleeves and a long deep-crimson overcoat printed with gold moon and cloud patterns',
+    lore: '미색 저고리에 진홍 옷고름을 길게 늘이고, 색동 소매 아래로 진홍 치마가 넓게 퍼진다. 치맛단에는 금박으로 꽃을 한 줄 둘렀다. 걸을 때마다 단이 흔들려 꽃이 피었다 지는데, 멈춰 서면 한꺼번에 만개한다.',
+    art: 'a Korean hanbok with an ivory jeogori jacket, a long crimson goreum ribbon, multicolored striped sleeves, and a deep crimson full chima skirt with a gold-leaf floral band along the hem, elegant, pixel art',
+    wornDesc: 'a Korean hanbok: an ivory short jacket with multicolored striped sleeves and a long crimson ribbon tie, over a long full deep-crimson skirt with a gold floral band along the hem',
+    wornDescMale: 'a Korean hanbok for men: an ivory jacket with multicolored striped sleeves and a crimson ribbon tie, with a long deep-crimson overcoat bearing a gold floral band along the hem',
   },
   {
     key: 'chuseok_rabbit_suit',

@@ -87,7 +87,7 @@
     "volcano_ashglass_goggles": "재를 막는 눈",
     "general_wing_hairclip": "백은 깃 머리핀",
     "chuseok_moon_wand_full": "완드는 고정, 머리의 금빛 보름달만 숨 쉬듯 밝아졌다 어두워지고 오색 술이 살짝 흔들림",
-    "chuseok_hanbok_v2": "정지한 한복, 저고리 앞에 늘어진 옷고름만 아주 살짝 흔들림(11번째 채택본), 소매·치마·금박 무늬는 그대로",
+    "chuseok_hanbok_v3": "정지한 한복, 저고리 앞에 길게 늘어진 진홍 옷고름만 아주 살짝 흔들림, 팔·소매·치마·금박 꽃 띠는 완전히 그대로, 빛 효과 없음",
     "chuseok_bok_pouch": "거의 완전 정지, 아주 미세한 움직임만: 늘어진 술이 아주 살짝 흔들림, 몸통은 꽉 찬 채 완전 정지",
     "chuseok_rabbit_pestle_v14": "절굿공이는 고정, 매끈한 나무를 따라 흰 달빛 광택이 천천히 흐르고 머리 주위에 작은 반짝임이 떠오름",
     "chuseok_rabbit_suit_v15": "움직임을 최소로 한 대기 애니, 두 손만 천천히 쥐었다 펴짐(12번째 채택본)",
@@ -178,7 +178,7 @@
     "oni_slayer_odachi": "an odachi frozen exactly in place — the sword itself is identical in every frame, a still image that never moves, rotates, sways or shifts; the only thing that changes is a deep crimson aura brightening and dimming around it with faint ember motes rising through it",
     "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom",
     "chuseok_moon_wand_full": "the wand stays completely fixed and motionless; only the golden full moon at its head brightens and dims slowly like breathing, the dark rabbit silhouette inside it stays still, and the colorful silk tassels sway very gently",
-    "chuseok_hanbok_v2": "static hanbok; only the long ribbon ties hanging down the front of the jacket sway very slightly; the sleeves, the skirt and the gold patterns stay completely still; no sparkles, no light effects",
+    "chuseok_hanbok_v3": "static hanbok; only the long crimson ribbon ties hanging down the front of the jacket sway very slightly; the arms, the striped sleeves, the skirt and the gold floral band stay completely still and rigid; no sparkles, no light effects",
     "chuseok_bok_pouch": "almost completely still, extremely subtle animation; only the hanging tassel sways very slightly, a tiny barely noticeable motion; the bag stays solid and perfectly still",
     "chuseok_rabbit_pestle_v14": "the pestle stays completely fixed and motionless; a soft white moonlight sheen slides slowly along the smooth wood from the grip to the head, and a few tiny pale sparkles drift up around the head",
     "chuseok_rabbit_suit_v15": "minimal idle animation of a rabbit costume; the costume stays as still as possible; the only motion is the two paws slowly clenching and unclenching; nothing else moves",
@@ -199,8 +199,5 @@
   "stripFloor": [
     "general_beastmaster_hide",
     "chuseok_rabbit_ears_v4"
-  ],
-  "bandTop": {
-    "chuseok_hanbok_v2": 130
-  }
+  ]
 }
