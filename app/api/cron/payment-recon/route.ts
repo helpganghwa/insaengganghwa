@@ -15,7 +15,7 @@ import { and, asc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
-import { cancelPortonePayment, getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
+import { getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { retryGrantSkippedRefund } from '@/lib/payment/grant-skipped-refund';
@@ -281,7 +281,7 @@ export async function GET(req: Request) {
   // ── C. 지급 보류(중복·미성년) 결제 환불 마감 ─────────────────────────────
   // 지급 보류로 paid가 된 뒤 자동 환불 전에 함수가 죽으면(타임아웃·인스턴스 종료) 청구·미지급·미환불로 남는다.
   // 포트원은 다른 안전망이 없고, Play도 '미확인 구매는 3일 뒤 구글 자동 환불'이 TWA 흐름에서 실측되지 않았다.
-  // 그래서 둘 다 30분 지난 건을 다시 환불한다(Play는 구글 환불 API 성공 직후 환불 확정으로 마감).
+  // 그래서 둘 다 30분 지난 건을 다시 환불한다(Play는 구글 상태를 먼저 보고, 아직 구매 완료일 때만 환불 API — grant-skipped-refund.ts).
   // ⚠ 하한(GRANT_SKIPPED_AUTO_REFUND_SINCE): 그 전 코드는 중복 결제를 운영자가 수동 처리했다 — 이미 다른 보상으로
   // 처리한 옛 주문을 배포 직후 자동 취소하면 보상과 환불을 둘 다 받는다. 옛 건은 경보·수동 처리로 남긴다.
   const skipped = await db
@@ -298,7 +298,12 @@ export async function GET(req: Request) {
         gt(iapOrders.paidAt, sql`${GRANT_SKIPPED_AUTO_REFUND_SINCE}::timestamptz`),
       ),
     )
-    .orderBy(asc(iapOrders.paidAt))
+    // 이미 재시도 실패 경보가 난 건은 뒤로 — 계속 실패하는 건(부분 취소·구글 거부 등)이 한도 20을 차지해
+    // 경보 없이 남은 새 건(인라인 환불 전에 함수가 죽은 결제)을 굶기지 않게.
+    .orderBy(
+      sql`exists(select 1 from payment_alerts a where a.payment_id = 'skipped-refund:' || ${iapOrders.portoneOrderId})`,
+      asc(iapOrders.paidAt),
+    )
     .limit(20);
   const skippedOut = { scanned: 0, refunded: 0 };
   for (const o of skipped) {

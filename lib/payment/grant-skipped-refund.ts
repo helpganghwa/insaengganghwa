@@ -1,5 +1,10 @@
 import 'server-only';
 
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { paymentAlerts } from '@/lib/db/schema/payment';
+
 import { raisePaymentAlert } from './alert';
 import { refundPlayOrder } from './play-api';
 import { cancelPortonePayment, getPortonePayment } from './portone';
@@ -15,6 +20,14 @@ export async function retryGrantSkippedRefund(o: {
   provider: string;
   playOrderId: string | null;
 }): Promise<boolean> {
+  // 환불 사유 — 미성년 한도 초과 건은 청소년 보호 통계에 잡히게 'minor_protection'(인라인 경로와 같게).
+  // 미성년 건은 지급 보류 때 MINOR_LIMIT_EXCEEDED 경보를 남기므로 그것으로 가른다(나머지는 중복 결제 'error').
+  const [minor] = await db
+    .select({ id: paymentAlerts.id })
+    .from(paymentAlerts)
+    .where(and(eq(paymentAlerts.kind, 'MINOR_LIMIT_EXCEEDED'), eq(paymentAlerts.paymentId, o.pid)))
+    .limit(1);
+  const reason = minor ? ('minor_protection' as const) : ('error' as const);
   // 구글 환불 API까지 성공했는지 — 이후 예외면 '환불 필요'가 아니라 '마감만 지연'이다.
   let playRefundCalled = false;
   try {
@@ -22,17 +35,17 @@ export async function retryGrantSkippedRefund(o: {
     if (o.provider === 'play') {
       // 먼저 구글 상태로 마감을 시도한다 — 이미 환불된 주문(인라인 환불 뒤 마감만 실패, 운영자 콘솔 환불)에
       // 환불 API를 다시 부르면 오류로 거짓 경보가 난다. 아직 구매 완료 상태(NOT_CANCELLED)일 때만 환불한다.
-      r = await refundPurchase(o.pid, { reason: 'error' });
+      r = await refundPurchase(o.pid, { reason });
       if (!r.ok && r.code === 'NOT_CANCELLED') {
         if (!o.playOrderId) throw new Error('구글 주문번호 없음');
         await refundPlayOrder(o.playOrderId, true);
         playRefundCalled = true;
-        r = await refundPurchase(o.pid, { reason: 'error', playVoided: true });
+        r = await refundPurchase(o.pid, { reason, playVoided: true });
       }
     } else {
       const pay = await getPortonePayment(o.pid);
       if (pay.status === 'PAID') await cancelPortonePayment(o.pid, '지급 보류 결제 자동 환불(재시도)');
-      r = await refundPurchase(o.pid, { reason: 'error' });
+      r = await refundPurchase(o.pid, { reason });
     }
     if (r.ok) return true;
     await raisePaymentAlert('REFUND_RECLAIM_FAILED', {

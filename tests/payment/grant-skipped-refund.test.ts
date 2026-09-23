@@ -126,6 +126,16 @@ describe.skipIf(skip)('지급 보류 Play 결제 — 환불 재시도(정산 C�
     expect(await skippedAlerts(pid)).toHaveLength(0);
   });
 
+  it('미성년 한도 건이면 환불 사유를 minor_protection으로 남긴다', async () => {
+    const { pid, id, o } = await stuckOrder('GPA.gs-minor');
+    // 미성년 지급 보류 때 남는 경보를 흉내 낸다(정리는 order_id로 함께 지워진다).
+    await testDb.execute(sql`insert into payment_alerts (kind, severity, payment_id, order_id, detail) values ('MINOR_LIMIT_EXCEEDED', 'high', ${pid}, ${id.toString()}::bigint, 'test')`);
+    mockRefund.mockResolvedValue(undefined);
+    expect(await retryGrantSkippedRefund(o)).toBe(true);
+    const r = (await testDb.execute(sql`select reason::text reason from iap_refunds where order_id = ${id.toString()}::bigint`)) as unknown as { reason: string }[];
+    expect(r.map((x) => x.reason)).toEqual(['minor_protection']);
+  });
+
   it('환불 API가 또 실패하면 paid로 두고 콘솔 환불 경보 1회', async () => {
     const { pid, id, o } = await stuckOrder('GPA.gs-fail');
     mockRefund.mockRejectedValue(new Error('boom'));

@@ -98,6 +98,14 @@ export async function POST(req: Request) {
       });
       return new Response(null, { status: 204 });
     }
+    // 인증 실패(서비스 계정 권한 — 09-21 play-sync 401과 같은 유형)는 재전송만 7일 반복되고 지급이 멈춘다 — 경보로 드러낸다
+    // (미해결인 동안 1건만 — 같은 키).
+    if (e instanceof PlayApiError && [401, 403].includes(e.status)) {
+      await raisePaymentAlert('PLAY_RTDN_FAILED', {
+        paymentId: 'rtdn:auth',
+        detail: `구글 API 인증 실패 ${e.status} — 서비스 계정 권한 확인 필요(완료 알림 지급이 멈춤, 재전송 중).`,
+      }).catch(() => undefined);
+    }
     console.error('[play-rtdn] failed', o.sku, (e as Error).message);
     return new Response('retry', { status: 500 });
   }
