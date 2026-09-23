@@ -164,7 +164,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 **처리**(`app/api/play/rtdn/route.ts` → `lib/payment/play-rtdn.ts`):
 - 인증 = Pub/Sub 푸시 OIDC 토큰(구글 공개키 서명·발급자·audience `https://ganghwa.app/api/play/rtdn`·발급 서비스 계정 = Play 서비스 계정 이메일). 뚫려도 구매는 구글 API로 재검증한다.
 - ONE_TIME_PRODUCT_PURCHASED(1)만 처리. 취소·환불은 기존 play-sync(voided)가 맡는다.
-- ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리) ② 없으면 같은 SKU·토큰 없는 미완 주문 중 구매 시각 [-15분, +2분]에 생성된 것이 **정확히 1건일 때만** `completePurchase`(재검증·지급·소모). 0건·여러 건이면 지급하지 않고 결제 경보 `PLAY_RTDN_UNMATCHED` → 콘솔 확인 뒤 `/api/admin/play-complete-order`.
+- ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리) ② 없으면 같은 SKU·토큰 없는 pending 주문 중 구매 시각 [-6시간 10분, +2분]에 생성된 것(주문 재사용 창 6시간과 맞춤)이 **정확히 1건일 때만** `completePurchase`(재검증·지급·소모). 프로모·리워드 구매(purchaseType 1·2)는 자동 지급하지 않는다. 0건·여러 건이면 지급하지 않고 결제 경보 `PLAY_RTDN_UNMATCHED` → 콘솔 확인 뒤 `/api/admin/play-complete-order`.
 - 화면 경로와 동시에 와도 같은 주문·토큰이라 1회만 지급(FOR UPDATE + paid 가드). 일시 오류는 500으로 Pub/Sub 재전송.
 
 **설정(운영자, 코드 배포 뒤)**:
