@@ -70,6 +70,8 @@ export async function recoverPlayPurchase(
     .where(
       and(
         eq(iapOrders.userId, userId),
+        // 지금 서버의 주문만 — 다른 서버의 옛 주문에 붙으면 재화가 다른 캐릭터로 간다(2026-09-24 감사).
+        eq(iapOrders.serverId, serverId),
         eq(iapOrders.provider, 'play'),
         eq(iapOrders.playSku, sku),
         inArray(iapOrders.status, ['pending', 'expired']),

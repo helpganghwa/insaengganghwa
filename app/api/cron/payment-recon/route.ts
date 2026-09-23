@@ -50,6 +50,8 @@ function kstHourKey(): string {
 // 최신 결제의 환불 백스톱이 밀린다(asc 기아 방지 정렬의 대가). 600 = 하루 200건 × 3일,
 // 건당 ~0.3s 순차 조회라 캡까지 가도 ~3분(maxDuration 300s 안).
 const REFUND_SCAN_LIMIT = 600;
+/** 장기 환불 스윕 1회 분량 — 04시대 6회 × 300 = 1,800건(30일 포트원 paid 규모 1,100건대). */
+const LONG_SWEEP_BATCH = 300;
 // 이탈 pending 종결 기준 — 카드 단독 구성(가상계좌 미사용)이라 결제창 세션은 길어야 수십 분.
 // 6h면 충분히 보수적이면서 어드민 결제내역에 죽은 '대기'가 하루 종일 쌓이지 않는다(2026-07-31).
 const PENDING_EXPIRE_MS = 6 * 60 * 60 * 1000;
@@ -67,7 +69,12 @@ export async function GET(req: Request) {
     .update(iapOrders)
     .set({ status: 'expired' })
     .where(
-      and(eq(iapOrders.status, 'pending'), eq(iapOrders.provider, 'play'), lt(iapOrders.createdAt, new Date(Date.now() - PENDING_EXPIRE_MS))),
+      // 기준은 마지막 결제 시도 시각(0215, 없으면 생성 시각) — 재사용 주문은 생성이 6시간 전이어도 방금 결제창을 열었을 수 있다.
+      and(
+        eq(iapOrders.status, 'pending'),
+        eq(iapOrders.provider, 'play'),
+        lt(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`, new Date(Date.now() - PENDING_EXPIRE_MS)),
+      ),
     )
     .returning({ userId: iapOrders.userId });
   out.playExpired = playExpired.length;
@@ -110,9 +117,11 @@ export async function GET(req: Request) {
     expiredUsers.add(o.userId);
   };
   for (const o of pending) {
+    let paidAtPg = false;
     try {
       const pay = await getPortonePayment(o.pid);
       if (pay.status === 'PAID') {
+        paidAtPg = true;
         const r = await completePurchase(o.pid);
         if (r.ok) healed++;
         else
@@ -133,6 +142,14 @@ export async function GET(req: Request) {
       }
       console.error('[payment-recon] A pending check failed', o.pid, e);
       aErrors += 1;
+      // PG는 PAID인데 지급 처리가 예외로 끝났다 — 콘솔 로그만으론 아무도 모른다(2026-09-24 감사).
+      if (paidAtPg) {
+        await raisePaymentAlert('PAID_NOT_GRANTED', {
+          paymentId: o.pid,
+          orderId: o.id,
+          detail: `PG는 PAID인데 지급 처리 중 예외 — ${(e as Error)?.message ?? e}. 즉시 수동 확인 필요.`,
+        }).catch(() => undefined);
+      }
     }
   }
   out.orphanPending = {
@@ -202,6 +219,48 @@ export async function GET(req: Request) {
     }
   }
   out.refundBackstop = { scanned: recentPaid.length, reclaimed, capped: recentPaid.length === REFUND_SCAN_LIMIT };
+
+  // ── B2. 장기 환불 스윕(3~30일 전 paid, 매일 KST 04시대) ─────────────────────────
+  // 결제 3일 뒤 콘솔·카드사 취소에서 웹훅 재시도가 모두 실패하면 B(3일 창)가 못 잡아 영구 미회수였다(2026-09-24 감사).
+  // 04:00~04:59의 6회 실행이 300건씩 나눠 본다(오프셋 = 그 시간 안의 실행 순번). 건당 ~0.3s라 한 회 ~90초.
+  const nowUtc = new Date();
+  const longSweep = { scanned: 0, reclaimed: 0 };
+  if (nowUtc.getUTCHours() === (4 + 24 - 9) % 24) {
+    const slot = Math.floor(nowUtc.getUTCMinutes() / 10);
+    const older = await db
+      .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
+      .from(iapOrders)
+      .where(
+        and(
+          eq(iapOrders.status, 'paid'),
+          eq(iapOrders.provider, 'portone'),
+          gt(iapOrders.paidAt, sql`now() - interval '30 days'`),
+          lt(iapOrders.paidAt, sql`now() - interval '3 days'`),
+        ),
+      )
+      .orderBy(asc(iapOrders.paidAt))
+      .offset(slot * LONG_SWEEP_BATCH)
+      .limit(LONG_SWEEP_BATCH);
+    for (const o of older) {
+      longSweep.scanned++;
+      try {
+        const pay = await getPortonePayment(o.pid);
+        if (pay.status === 'CANCELLED') {
+          const r = await refundPurchase(o.pid);
+          if (r.ok) longSweep.reclaimed++;
+          else
+            await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
+              paymentId: o.pid,
+              orderId: o.id,
+              detail: `PG는 CANCELLED인데 회수 실패(code=${r.code}, 장기 스윕). 수동 회수 필요.`,
+            });
+        }
+      } catch (e) {
+        console.error('[payment-recon] B2 long sweep failed', o.pid, e);
+      }
+    }
+  }
+  out.refundLongSweep = longSweep;
   // 캡 도달 = 미스캔 주문이 존재할 수 있는 상태 — 응답 JSON에만 남기지 않고 알림(중복은 미해결 1회 게이트).
   if (pending.length === ORPHAN_PENDING_LIMIT || recentPaid.length === REFUND_SCAN_LIMIT) {
     await raisePaymentAlert('RECON_SCAN_CAPPED', {

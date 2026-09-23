@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { iapOrders, iapRefunds, monthlyPurchaseLimits } from '@/lib/db/schema/payment';
+import { iapOrders, iapRefunds, monthlyPurchaseLimits, patronMilestoneGrants } from '@/lib/db/schema/payment';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
@@ -14,6 +14,7 @@ import { reclaimProductGrant } from '@/lib/game/shop/grant';
 import { PREMIUM, shopGrant } from '@/lib/game/shop/catalog';
 import { reclaimBpSegment } from '@/lib/game/battlepass';
 import { revokeMileageForOrder } from '@/lib/game/points/wallet';
+import { reachedMilestones } from '@/lib/game/patron/milestones';
 
 import { raisePaymentAlert } from './alert';
 import { getPlayProductPurchase } from './play-api';
@@ -173,7 +174,17 @@ export function formatClawbackShortfall(p: ClawbackPreview): string {
  *  · 웹훅/크론 = PG에서 이미 취소가 끝난 뒤 도착하므로 막으면 "환불됐는데 재화도 남는" 상태가 된다.
  *    → 회수는 가능한 만큼 하고, 부족분을 clawback_done=false + REFUND_CLAWBACK_SHORT 알림으로 남긴다.
  */
-export async function refundPurchase(paymentId: string): Promise<RefundResult> {
+/** 환불 사유(iap_refunds.reason) — 기본 'user'. 미성년 자동 환불은 'minor_protection', 운영 오류 보정은 'error'. */
+export type RefundReason = 'user' | 'minor_protection' | 'error';
+
+/** 성장 프리미엄 우편 제목 — 이미 수령한 몫은 자동 회수 대상이 아니라 환불 시 경보로 드러낸다. */
+const PREMIUM_MAIL_TITLES = ['성장 프리미엄 — 즉시 보상', '성장 프리미엄 — 오늘의 보상'];
+
+export async function refundPurchase(
+  paymentId: string,
+  /** playVoided: 구글 voided 목록에서 온 호출 — 목록이 곧 구글의 환불·무효 확정이라 구매 상태 재확인을 건너뛴다. */
+  opts: { reason?: RefundReason; playVoided?: boolean } = {},
+): Promise<RefundResult> {
   const [order] = await db
     .select({
       id: iapOrders.id,
@@ -197,8 +208,10 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
   if (order.provider === 'play') {
     // 구글 서버 권위 — purchaseState 1(취소됨)일 때만 회수. 토큰이 없는 pending 주문은 회수할 것도 없다.
     if (!order.playSku || !order.playPurchaseToken) return { ok: false, code: 'NOT_CANCELLED' };
-    const p = await getPlayProductPurchase(order.playSku, order.playPurchaseToken);
-    if (p.purchaseState !== 1) return { ok: false, code: 'NOT_CANCELLED' };
+    if (!opts.playVoided) {
+      const p = await getPlayProductPurchase(order.playSku, order.playPurchaseToken);
+      if (p.purchaseState !== 1) return { ok: false, code: 'NOT_CANCELLED' };
+    }
   } else {
     // 포트원 서버 권위 — 실제 전체 취소 상태인지 재확인.
     const pay = await getPortonePayment(paymentId);
@@ -209,7 +222,7 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
   const paidMonth = kstMonthString(order.paidAt ?? order.createdAt);
 
   // 부족분은 tx 밖으로 반환 — 알림은 커밋 후 발화(롤백 시 허위 알림 방지 + 잠금 보유 중 외부 HTTP 금지).
-  const short = await db.transaction(async (tx): Promise<ClawbackPreview | null> => {
+  const outcome = await db.transaction(async (tx): Promise<{ shortPreview: ClawbackPreview | null; unrecovered: string[] } | null> => {
     const [locked] = await tx
       .select({ status: iapOrders.status, grantSkipped: iapOrders.grantSkipped })
       .from(iapOrders)
@@ -219,6 +232,8 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
     const wasPaid = locked.status === 'paid';
     let clawbackDone = false;
     let shortPreview: ClawbackPreview | null = null;
+    // 자동 회수하지 않는 몫(마일리지 부족·프리미엄 수령분·후원 구간 보상) — 조용히 남기지 않고 경보로 드러낸다(2026-09-24 감사).
+    const unrecovered: string[] = [];
 
     await tx.update(iapOrders).set({ status: 'refunded' }).where(eq(iapOrders.id, order.id));
 
@@ -244,9 +259,11 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
       // 월누적 다음, 재화 앞(completePurchase의 적립 위치와 동일).
       // best-effort 세이브포인트(점검 반영) — 회수 실패가 환불 처리를 막으면 안 된다(누락은 소급 스크립트가 짝을 맞춘다).
       try {
-        await tx.transaction((sp) => revokeMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
+        const m = await tx.transaction((sp) => revokeMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
+        if (m.credited > 0 && m.taken < m.credited) unrecovered.push(`마일리지 ${m.credited - m.taken}점 부족(이미 사용)`);
       } catch (e) {
         console.error(`[points] 마일리지 회수 실패 user=${order.userId} order=${order.id}`, e);
+        unrecovered.push(`마일리지 회수 실패(${(e as Error)?.message ?? e})`);
       }
 
       // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
@@ -278,7 +295,48 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
         // 실제로 전액 회수됐을 때만 done — 부족분이 있으면 미회수 채권으로 남긴다(감사 C2).
         clawbackDone = preview.sufficient;
         if (!preview.sufficient) shortPreview = preview;
+        // 성장 프리미엄: 미수령 우편은 reclaim이 지우지만 **이미 받은** 즉시·일일 보상은 자동 회수하지 않는다(운영 판단).
+        if (order.productCode === PREMIUM.id && order.paidAt) {
+          const claimed = await tx
+            .select({ payload: mailbox.payload })
+            .from(mailbox)
+            .where(
+              and(
+                eq(mailbox.userId, order.userId),
+                eq(mailbox.serverId, order.serverId),
+                inArray(mailbox.title, PREMIUM_MAIL_TITLES),
+                isNotNull(mailbox.claimedAt),
+                gte(mailbox.createdAt, order.paidAt),
+              ),
+            );
+          if (claimed.length > 0) {
+            let d = 0;
+            let b = 0;
+            for (const c of claimed) {
+              const p = (c.payload ?? {}) as { diamond?: number; boxes?: Record<string, number> };
+              d += Number(p.diamond ?? 0);
+              b += Object.values(p.boxes ?? {}).reduce((a, x) => a + Number(x), 0);
+            }
+            unrecovered.push(`성장 프리미엄 수령분 ${claimed.length}통(💎${num(d)} 📦${num(b)}) 미회수`);
+          }
+        }
       }
+      // 후원 구간 보상: 환불로 누적 결제액이 구간 아래로 내려가도 이미 준 우편은 자동 회수하지 않는다(운영 판단).
+      // 지급보류 주문도 누적에 들어갔으므로 grantSkipped와 무관하게 본다.
+      {
+        const [sum] = await tx
+          .select({ paid: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::bigint` })
+          .from(iapOrders)
+          .where(and(eq(iapOrders.userId, order.userId), eq(iapOrders.status, 'paid')));
+        const stillReached = new Set(reachedMilestones(Number(sum?.paid ?? 0)).map((m) => m.krw));
+        const grants = await tx
+          .select({ krw: patronMilestoneGrants.milestoneKrw })
+          .from(patronMilestoneGrants)
+          .where(eq(patronMilestoneGrants.userId, order.userId));
+        const over = grants.map((g) => g.krw).filter((k) => !stillReached.has(k)).sort((a, b) => a - b);
+        if (over.length > 0) unrecovered.push(`후원 구간 보상 ${over.map((k) => `${num(k / 10_000)}만`).join('·')} 구간이 환불 뒤 누적액보다 높음(지급분 미회수)`);
+      }
+      if (unrecovered.length > 0) clawbackDone = false;
       // 환불 안내 우편(notice, 보상 없음). 웹훅·어드민 환불 공통.
       await tx.insert(mailbox).values({
         userId: order.userId,
@@ -296,12 +354,20 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
     await tx.insert(iapRefunds).values({
       orderId: order.id,
       userId: order.userId,
-      reason: 'user',
+      reason: opts.reason ?? 'user',
       amountKrw: order.amountKrw,
       clawbackDone,
     });
-    return shortPreview;
+    return { shortPreview, unrecovered };
   });
+  const short = outcome?.shortPreview ?? null;
+  if (outcome && outcome.unrecovered.length > 0) {
+    await raisePaymentAlert('REFUND_EXTRA_UNRECOVERED', {
+      paymentId,
+      orderId: order.id,
+      detail: `환불 완료, 자동 회수하지 않은 몫: ${outcome.unrecovered.join(' / ')} — user=${order.userId} server=${order.serverId} product=${order.productCode}. 회수 여부 운영 판단.`,
+    });
+  }
 
   if (short) {
     await raisePaymentAlert('REFUND_CLAWBACK_SHORT', {

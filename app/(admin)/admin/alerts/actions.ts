@@ -73,7 +73,9 @@ export async function retryAlertAction(alertId: string) {
   if (!a.paymentId) return { status: 'error', code: 'NO_PAYMENT' } as const;
 
   let ok = false;
-  if (a.kind === 'PAID_NOT_GRANTED' || a.kind === 'COMPLETE_EXCEPTION') {
+  // COMPLETE_EXCEPTION(중복 결제 지급 보류·Play 소모 실패)은 재시도 대상이 아니다 — completePurchase가 이미 paid라
+  // already로 성공해 사고가 거짓 해결됐다(2026-09-24 감사). 환불·소모는 각자의 경로(콘솔 환불·play-sync)가 맡는다.
+  if (a.kind === 'PAID_NOT_GRANTED') {
     const r = await completePurchase(a.paymentId);
     ok = r.ok;
   } else if (a.kind === 'REFUND_RECLAIM_FAILED') {

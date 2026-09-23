@@ -626,7 +626,7 @@ export async function completePurchase(
       });
     }
     const { refundPurchase } = await import('./refund');
-    await refundPurchase(paymentId).catch((e) =>
+    await refundPurchase(paymentId, { reason: 'minor_protection' }).catch((e) =>
       console.error('[purchase] minor-limit auto refund failed', paymentId, e),
     );
     return { ok: false, code: 'MINOR_LIMIT' };

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -44,6 +44,8 @@ export async function retryPlayConsume(limit = 50): Promise<{ scanned: number; c
         eq(iapOrders.grantSkipped, false),
       ),
     )
+    // 오래된 것부터 — 정렬이 없으면 실패가 반복되는 행이 limit을 점유해 다른 주문 소모가 밀린다(감사 C4).
+    .orderBy(asc(iapOrders.paidAt))
     .limit(limit);
   let consumed = 0;
   let failed = 0;
@@ -92,6 +94,11 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
       // (2026-09-12 실측 시점 Play paid 주문 0건 — 알림 임계는 사례가 쌓인 뒤에 정한다).
       unknown++;
       console.warn('[play-sync] 주문 미매칭 voided 구매', v.purchaseToken.slice(0, 12));
+      // 지급된 적 없는 구매의 환불(청구·미지급 뒤 3일 자동 환불 등)이면 조치할 것은 없지만, 매칭이 새는 신호일 수도 있어 남긴다.
+      await raisePaymentAlert('PLAY_VOIDED_UNMATCHED', {
+        paymentId: `voided:${v.orderId ?? v.purchaseToken.slice(0, 16)}`,
+        detail: `구글 환불·무효 구매 ${v.orderId ?? '?'}가 우리 주문과 연결되지 않음 — 지급 이력이 없으면 조치 불필요, 있으면 수동 회수.`,
+      }).catch(() => undefined);
       continue;
     }
     if (order.status === 'refunded') {
@@ -99,12 +106,19 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
       continue;
     }
     try {
-      const r = await refundPurchase(order.pid);
+      // voided 목록 자체가 구글의 환불·무효 확정이다 — 지불거절(chargeback) 등은 구매 상태가 1이 아닐 수 있어
+      // 상태 재확인에 막히면 29일 동안 매번 실패로 남았다(2026-09-24 감사). 목록을 권위로 인정한다.
+      const r = await refundPurchase(order.pid, { playVoided: true });
       if (r.ok && !r.already) refunded++;
       else if (r.ok) already++;
       else {
         failed++;
         console.warn('[play-sync] refund not applied', order.pid, r.code);
+        await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
+          paymentId: order.pid,
+          orderId: order.id,
+          detail: `구글 voided인데 회수 미적용(code=${r.code}) — 수동 확인 필요.`,
+        }).catch(() => undefined);
       }
     } catch (e) {
       failed++;
@@ -153,6 +167,7 @@ export async function syncPlayCancelledRecent(
         gte(iapOrders.paidAt, sql`now() - interval '${sql.raw(String(CANCEL_CHECK_WINDOW_HOURS))} hours'`),
       ),
     )
+    .orderBy(asc(iapOrders.paidAt))
     .limit(limit);
   let refunded = 0;
   let failed = 0;
