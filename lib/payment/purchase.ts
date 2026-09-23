@@ -391,7 +391,7 @@ export async function createPlayOrder(userId: string, serverId: number, productI
 
 export type CompleteResult =
   | { ok: true; already: boolean }
-  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' };
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' | 'NOT_GRANTED' };
 
 /**
  * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
@@ -421,6 +421,7 @@ export async function completePurchase(
       provider: iapOrders.provider,
       playSku: iapOrders.playSku,
       playPurchaseToken: iapOrders.playPurchaseToken,
+      grantSkipped: iapOrders.grantSkipped,
     })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
@@ -443,6 +444,8 @@ export async function completePurchase(
       });
       return { ok: false, code: 'TOKEN_USED' };
     }
+    // 지급 보류(중복·미성년)로 paid가 된 주문 — '구매 완료'로 답하지 않는다(재검증 B-2, 웹훅이 먼저 처리한 경우의 화면 검증).
+    if (order.grantSkipped) return { ok: false, code: 'NOT_GRANTED' };
     return { ok: true, already: true };
   }
 
@@ -501,6 +504,7 @@ export async function completePurchase(
   /** 잠금 뒤 본 상태 — 동시 호출에서 진 쪽이 성공(already:false)으로 답하지 않게 한다. */
   let lockedStatus: string | null = null;
   let lockedToken: string | null = null;
+  let tokenConflict = false;
   let dupSkipped = false;
   let transitioned = false;
   await db.transaction(async (tx) => {
@@ -515,6 +519,11 @@ export async function completePurchase(
     lockedStatus = locked?.status ?? null;
     lockedToken = locked?.token ?? null;
     if (!locked || (locked.status !== 'pending' && locked.status !== 'expired')) return;
+    // 보류 결제로 **다른** 토큰이 먼저 묶인 미완 주문 — 덮어쓰면 그 보류 결제가 주인을 잃는다(재검증 B-1). 전이하지 않는다.
+    if (play && locked.token && locked.token !== play.token) {
+      tokenConflict = true;
+      return;
+    }
 
     await tx
       .update(iapOrders)
@@ -617,6 +626,14 @@ export async function completePurchase(
 
   // 동시 호출에서 진 쪽 — 전이하지 못했다. 이미 지급됐으면 already, 환불 확정이면 지급 없음(성공으로 답하지 않는다).
   if (!transitioned) {
+    if (tokenConflict && play) {
+      await raisePaymentAlert('PLAY_TOKEN_USED', {
+        paymentId: `${paymentId}:${play.token.slice(0, 12)}`,
+        orderId: order.id,
+        detail: `보류 결제 토큰이 먼저 묶인 주문에 다른 구매(${play.googleOrderId ?? '?'})가 옴 — 이 구매 미지급. 콘솔에서 새 주문으로 지급 또는 환불.`,
+      });
+      return { ok: false, code: 'TOKEN_USED' };
+    }
     if (lockedStatus === 'paid') {
       // 경합 상대가 **다른** 구매 토큰으로 이 주문을 먼저 지급했다면 이 구매는 미지급이다(재검증 B-3).
       if (play && lockedToken && lockedToken !== play.token) {
@@ -627,6 +644,10 @@ export async function completePurchase(
         });
         return { ok: false, code: 'TOKEN_USED' };
       }
+      // 먼저 처리한 쪽이 지급 보류(중복·미성년)로 마감했으면 '구매 완료'가 아니다.
+      if (order.grantSkipped) return { ok: false, code: 'NOT_GRANTED' };
+      const [gs] = await db.select({ g: iapOrders.grantSkipped }).from(iapOrders).where(eq(iapOrders.id, order.id)).limit(1);
+      if (gs?.g) return { ok: false, code: 'NOT_GRANTED' };
       return { ok: true, already: true };
     }
     if (lockedStatus === 'refunded') return { ok: false, code: 'REFUNDED' };
@@ -654,13 +675,13 @@ export async function completePurchase(
     } catch (e) {
       console.error('[purchase] duplicate auto refund failed', order.provider, paymentId, e);
     }
-    await raisePaymentAlert(refunded ? 'COMPLETE_EXCEPTION' : 'REFUND_RECLAIM_FAILED', {
+    // 자동 환불까지 끝난 건은 조치할 것이 없다 — 경보 없이 로그만('진짜 오류만' 경보 원칙).
+    if (refunded) console.info(`[purchase] 중복 결제 자동 환불 완료 ${paymentId} (${order.productCode} · 서버 ${order.serverId})`);
+    else await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
       paymentId,
       orderId: order.id,
-      detail: refunded
-        ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 두 번째 지급 차단 후 자동 환불 완료. 확인만 하면 된다.`
-        : cancelledAtPg
-          ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — ${play ? '구글 환불' : 'PG 취소'}은 됐고 주문 마감만 지연(취소 반영 대기). 웹훅·정산 크론이 곧 마감한다 — 확인만.`
+      detail: cancelledAtPg
+          ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — ${play ? '구글 환불' : 'PG 취소'}은 됐고 주문 마감만 지연(취소 반영 대기). ${play ? 'play-sync(환불 동기화)가' : '웹훅·정산 크론이'} 곧 마감한다 — 확인만.`
           : `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불 필요(기존 지급분은 회수되지 않으니 안심하고 환불).`,
     });
     // 화면엔 '구매 완료'가 아니라 중복·환불을 알린다(재검증 C-4). 지급·환불 처리는 위에서 끝났다.
@@ -708,7 +729,7 @@ export async function completePurchase(
   // 재시도한다(3일 내 미확인이면 구글이 자동 환불 → voided 동기화가 회수).
   // 지급 보류(중복 특가) 주문은 소모하지 않는다(2026-09-24 감사) — 미확인으로 두면 구글이 3일 뒤 자동 환불하고
   // play-sync voided 동기화가 환불로 마감한다(grantSkipped라 회수 없음·월누적 복원). 종전엔 소모해 운영자 수동 환불에 기댔다.
-  if (play && transitioned && !dupSkipped) {
+  if (play && transitioned) {
     try {
       await consumePlayProductPurchase(play.sku, play.token);
       await db.update(iapOrders).set({ playConsumedAt: new Date() }).where(eq(iapOrders.id, order.id));

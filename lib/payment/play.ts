@@ -94,12 +94,6 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
       // (2026-09-12 실측 시점 Play paid 주문 0건 — 알림 임계는 사례가 쌓인 뒤에 정한다).
       unknown++;
       console.warn('[play-sync] 주문 미매칭 voided 구매', v.purchaseToken.slice(0, 12));
-      // 지급된 적 없는 구매의 환불(청구·미지급 뒤 3일 자동 환불 등)이면 조치할 것은 없지만, 매칭이 새는 신호일 수도 있어 남긴다.
-      await raisePaymentAlert('PLAY_VOIDED_UNMATCHED', {
-        paymentId: `voided:${v.orderId ?? v.purchaseToken.slice(0, 16)}`,
-        detail: `구글 환불·무효 구매 ${v.orderId ?? '?'}가 우리 주문과 연결되지 않음 — 지급 이력이 없으면 조치 불필요, 있으면 수동 회수.`,
-        onceEver: true,
-      }).catch(() => undefined);
       continue;
     }
     if (order.status === 'refunded') {

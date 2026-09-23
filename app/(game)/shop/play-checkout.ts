@@ -94,41 +94,6 @@ function hostedByNonChromeBrowser(): boolean {
   return /SamsungBrowser|Whale/i.test(navigator.userAgent);
 }
 
-/** 시트 직전 진단 요약(직후 실패 기록에 함께 붙인다). */
-let lastSheetDiag = '';
-async function playSheetDiagnostics(sku: string, request: PaymentRequest): Promise<{ canMakePayment: boolean | null; summary: string }> {
-  let chromePart = 'chrome=?';
-  try {
-    const brands = (navigator as Navigator & { userAgentData?: { brands?: { brand: string; version: string }[] } }).userAgentData?.brands ?? [];
-    const chrome = brands.find((b) => /chrome/i.test(b.brand));
-    chromePart = `chrome=${chrome?.version ?? '?'}`;
-  } catch {
-    /* noop */
-  }
-  // 두 조회는 서로 독립이라 병렬로(2026-09-23 감사) — 시트 앞 대기가 길어지면 사용자 활성화가 만료돼 show()가 거부된다.
-  const [detailsPart, cmp] = await Promise.all([
-    (async () => {
-      try {
-        const w = window as DigitalGoodsWindow;
-        const svc = w.getDigitalGoodsService ? await w.getDigitalGoodsService(PLAY_BILLING_METHOD) : null;
-        const [item] = svc ? await svc.getDetails([sku]) : [];
-        return `details=${item ? `${item.price.currency} ${item.price.value}` : 'none'}`;
-      } catch (e) {
-        return `details=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}`;
-      }
-    })(),
-    (async (): Promise<{ v: boolean | null; part: string }> => {
-      try {
-        const v = await request.canMakePayment();
-        return { v, part: `canMakePayment=${v}` };
-      } catch (e) {
-        return { v: null, part: `canMakePayment=err:${(e as Error)?.message?.slice(0, 60) ?? '?'}` };
-      }
-    })(),
-  ]);
-  lastSheetDiag = [chromePart, detailsPart, cmp.part].join(' ');
-  return { canMakePayment: cmp.v, summary: lastSheetDiag };
-}
 
 /**
  * Play 결제 실패 기록(2026-09-22) — 결제 시트가 왜 실패했는지 서버에는 아무 흔적이 없었다(한 유저가
@@ -237,20 +202,14 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
       [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
       { total: { label: orderName, amount: { currency: 'KRW', value: String(amountKrw) } } },
     );
-    // 진단(2026-09-23): 실유저 8명 76회가 시트 단계 AbortError "Invalid state."로 끝나는데 원인이 안 잡힌다.
-    // 시트를 열기 전에 상품 조회·canMakePayment·크롬 버전을 기록해 실패 기기의 공통점을 찾는다. 기록은 best-effort.
-    lastSheetDiag = ''; // 이전 시도의 진단이 이번 실패에 붙지 않게
-    const diag = await playSheetDiagnostics(sku, request);
-    // canMakePayment=false는 기록만(2026-09-23 감사) — 정상 Chrome이 오판하면 결제가 전부 막힌다. 실제 실패는 아래 catch가 잡는다.
-    if (diag.canMakePayment === false) reportPlayCheckout('precheck', sku, { code: 'CANNOT_PAY', message: diag.summary });
+    // 시트 앞에 다른 await를 두지 않는다 — 대기가 길면 사용자 활성화가 만료돼 show()가 거부된다(원인 진단은 삼성·웨일 호스트로 확정).
     response = await request.show();
   } catch (e) {
     const err = e as { name?: string; message?: string };
     // 거부는 전부 기록한다(2026-09-22) — 크롬은 유저 취소와 결제 앱 오류(상품 없음·판매자 미설정 등)에 같은
     // AbortError를 쓰고 메시지만 다르다("User closed the Payment Request UI" = 취소). 오늘 실유저 3명이
     // 1초 간격으로 47번 시도했는데 취소·미지원으로 분류돼 서버엔 흔적이 없었다.
-    // 진단을 앞에, 원문을 뒤에 — fingerprint가 message 앞부분으로 잡혀 원문이 길면 진단 값이 묶였다(2026-09-23 감사).
-    reportPlayCheckout('sheet', sku, { name: err?.name, message: `${lastSheetDiag} | ${err?.message ?? ''}` });
+    reportPlayCheckout('sheet', sku, { name: err?.name, message: err?.message });
     if (err?.name === 'AbortError') {
       // 유저가 닫은 것("User closed the Payment Request UI")과 결제 앱이 RESULT_CANCELED로 끝난 것은 조용히 취소로 둔다 —
       // Chrome은 유저 취소와 결제 앱 실패(상품 없음·미검증 앱 등)를 같은 RESULT_CANCELED로 주어 구분할 수 없고, 기록은 위에서

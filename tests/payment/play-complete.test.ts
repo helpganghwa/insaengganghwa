@@ -114,6 +114,19 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
     expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
   });
 
+  it('보류 토큰이 먼저 묶인 주문에 다른 구매 토큰이 오면 덮어쓰지 않고 TOKEN_USED', async () => {
+    const pid = newPid('conf');
+    const id = await insertOrder(pid);
+    made.push(id);
+    const t1 = newToken('conf1');
+    mockGet.mockResolvedValue({ purchaseState: 2, consumptionState: 0 });
+    expect(await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: t1 })).toEqual({ ok: false, code: 'PENDING' });
+    mockGet.mockResolvedValue(purchased('GPA.conf2'));
+    expect(await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: newToken('conf2') })).toEqual({ ok: false, code: 'TOKEN_USED' });
+    expect(await readOrder(id)).toMatchObject({ s: 'pending', t: t1 });
+    expect(await readDiamond()).toBe(baseline);
+  });
+
   it('취소된 구매면 지급하지 않는다(NOT_PAID, 토큰도 묶지 않음)', async () => {
     const pid = newPid('np');
     const id = await insertOrder(pid);

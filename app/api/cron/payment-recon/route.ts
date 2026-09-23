@@ -15,7 +15,7 @@ import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
-import { getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
+import { cancelPortonePayment, getPortonePayment, PortonePaymentNotFoundError } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { raisePaymentAlert } from '@/lib/payment/alert';
@@ -270,6 +270,51 @@ export async function GET(req: Request) {
     }
   }
   out.refundLongSweep = longSweep;
+
+  // ── C. 지급 보류(중복·미성년) 웹 결제 환불 마감 ─────────────────────────────
+  // 지급 보류로 paid가 된 뒤 자동 취소 전에 함수가 죽으면(타임아웃·인스턴스 종료) 청구·미지급·미환불로 남는다.
+  // Play는 소모하지 않아 3일 자동 환불이 안전망이지만 포트원은 없다(2026-09-24 재검증 B-3). 30분 지난 건을 다시 취소한다.
+  const skipped = await db
+    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
+    .from(iapOrders)
+    .where(
+      and(
+        eq(iapOrders.status, 'paid'),
+        eq(iapOrders.provider, 'portone'),
+        eq(iapOrders.grantSkipped, true),
+        lt(iapOrders.paidAt, sql`now() - interval '30 minutes'`),
+        gt(iapOrders.paidAt, sql`now() - interval '30 days'`),
+      ),
+    )
+    .orderBy(asc(iapOrders.paidAt))
+    .limit(20);
+  const skippedOut = { scanned: 0, refunded: 0 };
+  for (const o of skipped) {
+    if (timeUp()) break;
+    skippedOut.scanned++;
+    try {
+      const pay = await getPortonePayment(o.pid);
+      if (pay.status === 'PAID') await cancelPortonePayment(o.pid, '지급 보류 결제 자동 환불(재시도)');
+      const r = await refundPurchase(o.pid, { reason: 'error' });
+      if (r.ok) skippedOut.refunded++;
+      else
+        await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
+          paymentId: `skipped-refund:${o.pid}`,
+          orderId: o.id,
+          detail: `지급 보류(중복·미성년) 웹 결제의 환불 마감 실패(code=${r.code}) — 포트원 콘솔에서 취소 확인 필요.`,
+          onceEver: true,
+        });
+    } catch (e) {
+      console.error('[payment-recon] C skipped refund failed', o.pid, e);
+      await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
+        paymentId: `skipped-refund:${o.pid}`,
+        orderId: o.id,
+        detail: `지급 보류(중복·미성년) 웹 결제의 자동 환불 재시도 실패 — ${(e as Error)?.message ?? e}. 포트원 콘솔에서 취소 필요.`,
+        onceEver: true,
+      }).catch(() => undefined);
+    }
+  }
+  out.grantSkippedRefund = skippedOut;
   // 캡 도달 = 미스캔 주문이 존재할 수 있는 상태 — 응답 JSON에만 남기지 않고 알림(중복은 미해결 1회 게이트).
   if (pending.length === ORPHAN_PENDING_LIMIT || recentPaid.length === REFUND_SCAN_LIMIT) {
     await raisePaymentAlert('RECON_SCAN_CAPPED', {

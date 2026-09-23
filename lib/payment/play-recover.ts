@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -48,7 +48,8 @@ export async function recoverPlayPurchase(
     if (e instanceof PlayApiError && (e.status === 404 || e.status === 400)) return { ok: false, code: 'NOT_FOUND' };
     throw e;
   }
-  if (state === 2) return { ok: false, code: 'PENDING' };
+  // 보류(2)도 아래 주문 매칭을 탄다 — completePurchase가 지급 없이 토큰만 그 주문에 묶고 PENDING을 돌려준다(재검증 C-3).
+  // 화면 검증이 전송에 실패한 보류 결제도 이렇게 묶어 두어야 완료 알림(RTDN)이 추정 없이 이 주문을 찾는다.
   if (state !== 0) return { ok: false, code: 'CANCELLED' };
 
   // ① 토큰이 이미 묶인 주문(본인 것만) — 미완 주문만 다시 시도. paid·refunded 등 끝난 주문은 손대지 않는다
@@ -70,10 +71,10 @@ export async function recoverPlayPurchase(
     .where(
       and(
         eq(iapOrders.userId, userId),
-        // 지금 서버의 주문만 — 다른 서버의 옛 주문에 붙으면 재화가 다른 캐릭터로 간다(2026-09-24 감사).
-        eq(iapOrders.serverId, serverId),
         eq(iapOrders.provider, 'play'),
         eq(iapOrders.playSku, sku),
+        // 다른 토큰이 이미 묶인 주문(보류 선결합)은 제외 — 덮어쓰면 그 보류 결제가 주인을 잃는다(재검증 B-1).
+        isNull(iapOrders.playPurchaseToken),
         inArray(iapOrders.status, ['pending', 'expired']),
         gte(iapOrders.createdAt, sql`now() - interval '${sql.raw(String(LOOKBACK_DAYS))} days'`),
       ),

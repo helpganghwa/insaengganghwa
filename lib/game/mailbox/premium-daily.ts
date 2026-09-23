@@ -5,6 +5,9 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { PREMIUM } from '@/lib/game/shop/catalog';
 
+/** 일일 보상 우편 제목 — 환불 시 수령분 경보(refund.ts)가 이 제목으로 찾는다. 바꾸면 함께 바뀐다. */
+export const PREMIUM_DAILY_TITLE = '성장 프리미엄 — 오늘의 보상';
+
 /**
  * 성장 프리미엄 일일 보상 — 활성 프리미엄 보유자에게 KST 자정 기준 1회 자동 우편 발송.
  * lazy(layout에서 호출, cron 의존 X). 일반 일일 보급(ensureDailyMail)과 별개 채널.
@@ -44,7 +47,7 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
     select ${userId}::uuid,
            ${serverId},
            'reward'::mailbox_type,
-           '성장 프리미엄 — 오늘의 보상',
+           ${PREMIUM_DAILY_TITLE},
            '성장 프리미엄 일일 보상이 도착했습니다. 30일 안에 받으세요.',
            '성장 프리미엄',
            ${PAYLOAD}::jsonb,

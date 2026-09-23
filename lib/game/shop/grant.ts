@@ -15,7 +15,7 @@ import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
 import { periodKey } from './period';
 
 /** 즉시 보상 우편 제목 — 지급과 회수가 같은 문자열을 봐야 주문 단위 회수가 정확하다. */
-const PREMIUM_INSTANT_TITLE = '성장 프리미엄 — 즉시 보상';
+export const PREMIUM_INSTANT_TITLE = '성장 프리미엄 — 즉시 보상';
 
 /**
  * 상점 지급 — dev 테스트 즉시구매(dev-purchase)와 실결제(payment) **공용 단일 진실 원천**.

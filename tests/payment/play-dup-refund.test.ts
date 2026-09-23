@@ -103,6 +103,8 @@ describe.skipIf(skip)('중복 결제(1회 특가) — 지급 차단 후 즉시 �
     expect(o.c).toBeNull();
     expect(mockConsume).not.toHaveBeenCalled();
     expect(await readDiamond()).toBe(baseline);
+    // 환불 확정 주문에 재검증이 와도 재지급 없이 REFUNDED.
+    expect(await completePurchase(pid, TEST_USER_ID)).toEqual({ ok: false, code: 'REFUNDED' });
   });
 
   it('구글 환불 API가 실패하면 paid·지급보류·미소모로 남기고 경보(3일 자동 환불이 안전망)', async () => {
@@ -120,6 +122,8 @@ describe.skipIf(skip)('중복 결제(1회 특가) — 지급 차단 후 즉시 �
     expect(await readDiamond()).toBe(baseline);
     const a = (await testDb.execute(sql`select kind from payment_alerts where order_id = ${id.toString()}::bigint`)) as unknown as { kind: string }[];
     expect(a.map((x) => x.kind)).toContain('REFUND_RECLAIM_FAILED');
+    // 다시 확인해도(웹훅·화면 재검증) '구매 완료'로 답하지 않는다.
+    expect(await completePurchase(pid, TEST_USER_ID)).toEqual({ ok: false, code: 'NOT_GRANTED' });
   });
 });
 

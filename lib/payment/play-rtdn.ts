@@ -118,7 +118,9 @@ async function finish(paymentId: string, userId: string, token: string, googleOr
   // 미성년 한도 초과는 completePurchase가 자동 환불·경보(MINOR_LIMIT_EXCEEDED)까지 한다 — 지급 실패로 중복 경보하지 않는다.
   if (r.code === 'MINOR_LIMIT') return { kind: 'minor_limit', paymentId };
   // 중복 결제는 completePurchase가 자동 환불·경보까지 끝냈다.
-  if (r.code === 'DUPLICATE') return { kind: 'ignored', reason: 'duplicate auto-refunded' };
+  if (r.code === 'DUPLICATE' || r.code === 'NOT_GRANTED') return { kind: 'ignored', reason: 'grant skipped (duplicate/minor)' };
+  // TOKEN_USED는 completePurchase가 이미 PLAY_TOKEN_USED로 알렸다. REFUNDED는 환불 확정 — 지급 실패가 아니다. PENDING은 보류 결제.
+  if (r.code === 'TOKEN_USED' || r.code === 'REFUNDED' || r.code === 'PENDING') return { kind: 'ignored', reason: r.code };
   await raisePaymentAlert('PLAY_RTDN_FAILED', {
     paymentId,
     detail: `RTDN 지급 실패 ${r.code} — 구글 주문 ${googleOrderId ?? '?'}`,

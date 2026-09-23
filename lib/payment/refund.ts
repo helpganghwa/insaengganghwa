@@ -10,7 +10,8 @@ import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { bpTierReward } from '@/lib/game/balance';
 import { kstMonthString } from '@/lib/kst';
-import { reclaimProductGrant } from '@/lib/game/shop/grant';
+import { PREMIUM_INSTANT_TITLE, reclaimProductGrant } from '@/lib/game/shop/grant';
+import { PREMIUM_DAILY_TITLE } from '@/lib/game/mailbox/premium-daily';
 import { PREMIUM, shopGrant } from '@/lib/game/shop/catalog';
 import { reclaimBpSegment } from '@/lib/game/battlepass';
 import { revokeMileageForOrder } from '@/lib/game/points/wallet';
@@ -178,7 +179,7 @@ export function formatClawbackShortfall(p: ClawbackPreview): string {
 export type RefundReason = 'user' | 'minor_protection' | 'error';
 
 /** 성장 프리미엄 우편 제목 — 이미 수령한 몫은 자동 회수 대상이 아니라 환불 시 경보로 드러낸다. */
-const PREMIUM_MAIL_TITLES = ['성장 프리미엄 — 즉시 보상', '성장 프리미엄 — 오늘의 보상'];
+const PREMIUM_MAIL_TITLES = [PREMIUM_INSTANT_TITLE, PREMIUM_DAILY_TITLE];
 
 export async function refundPurchase(
   paymentId: string,

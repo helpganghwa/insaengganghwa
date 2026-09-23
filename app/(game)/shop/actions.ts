@@ -160,7 +160,7 @@ export async function recentPayResultAction(): Promise<{
   const [rows, prof] = await Promise.all([
     db.execute(sql`
       select portone_order_id as payment_id, product_code, paid_at from iap_orders
-      where user_id = ${u}::uuid and status = 'paid' and paid_at > now() - interval '15 minutes'
+      where user_id = ${u}::uuid and status = 'paid' and not grant_skipped and paid_at > now() - interval '15 minutes'
         and server_id = ${serverId}
         and client_notified_at is null
       order by paid_at desc limit 1

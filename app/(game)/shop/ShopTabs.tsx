@@ -381,6 +381,15 @@ function BannerCard({
   );
 }
 
+
+/** 지급 보류·환불로 끝난 결제의 안내(웹·앱 공통) — '구매 완료'도 '결제 실패'도 아니다(2026-09-24). */
+function grantSkippedNotice(code: string | undefined): { title: string; body: string } | null {
+  if (code === 'DUPLICATE') return { title: '이미 가진 상품이에요', body: '같은 상품을 한 번 더 결제해서, 방금 결제는 자동으로 환불돼요.' };
+  if (code === 'NOT_GRANTED' || code === 'REFUNDED')
+    return { title: '이번 결제는 환불돼요', body: '이번 결제는 지급되지 않고 자동으로 환불돼요. 궁금한 점은 고객센터로 알려 주세요.' };
+  return null;
+}
+
 export function ShopTabs({
   free: initialFree,
   isAdmin,
@@ -604,6 +613,8 @@ export function ShopTabs({
             title: '결제 확인이 지연되고 있어요',
             body: '결제는 정상 접수됐고 지급은 잠시 후 자동으로 반영됩니다. 10분이 지나도 반영되지 않으면 고객센터로 문의해 주세요.',
           });
+        } else if (grantSkippedNotice(v.code)) {
+          setPayNotice(grantSkippedNotice(v.code)!);
         } else if (v.code === 'AMOUNT_MISMATCH') {
           setPayNotice({
             title: '결제 금액이 맞지 않아요',
@@ -696,8 +707,8 @@ export function ShopTabs({
       } else if (r.reason === 'unsupported') {
         // 앱 표식은 있는데 Digital Goods API가 없는 환경(구버전 크롬 등).
         setPayNotice({ title: '앱에서만 결제할 수 있어요', body: r.message });
-      } else if (r.reason === 'verify' && r.code === 'DUPLICATE') {
-        setPayNotice({ title: '이미 가진 상품이에요', body: '같은 상품을 한 번 더 결제해서, 방금 결제는 자동으로 환불돼요.' });
+      } else if (r.reason === 'verify' && grantSkippedNotice(r.code)) {
+        setPayNotice(grantSkippedNotice(r.code)!);
       } else if (viaPlay && r.reason === 'verify' && r.code === 'PENDING') {
         setPayNotice({ title: '결제 승인을 기다리고 있어요', body: '결제가 완료되면 자동으로 지급돼요. 구글 결제 내역에서 진행 상황을 볼 수 있어요.' });
       } else if (viaPlay && r.reason === 'verify' && r.code !== 'NETWORK') {
