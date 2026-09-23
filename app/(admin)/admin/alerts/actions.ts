@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { adminActions } from '@/lib/db/schema/ops';
-import { paymentAlerts } from '@/lib/db/schema/payment';
+import { iapOrders, paymentAlerts } from '@/lib/db/schema/payment';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 
@@ -73,9 +73,11 @@ export async function retryAlertAction(alertId: string) {
   if (!a.paymentId) return { status: 'error', code: 'NO_PAYMENT' } as const;
 
   let ok = false;
-  // COMPLETE_EXCEPTION(중복 결제 지급 보류·Play 소모 실패)은 재시도 대상이 아니다 — completePurchase가 이미 paid라
-  // already로 성공해 사고가 거짓 해결됐다(2026-09-24 감사). 환불·소모는 각자의 경로(콘솔 환불·play-sync)가 맡는다.
-  if (a.kind === 'PAID_NOT_GRANTED') {
+  // 지급 재시도는 주문이 아직 미완(pending·expired)일 때만 — 이미 paid면 completePurchase가 already로 성공해
+  // 중복 결제·소모 실패 경보가 거짓 해결됐다(2026-09-24 감사). 웹훅의 'PAID인데 지급 예외'(COMPLETE_EXCEPTION)는 미완이라 재시도된다.
+  if (a.kind === 'PAID_NOT_GRANTED' || a.kind === 'COMPLETE_EXCEPTION') {
+    const [o] = await db.select({ status: iapOrders.status }).from(iapOrders).where(eq(iapOrders.portoneOrderId, a.paymentId)).limit(1);
+    if (!o || (o.status !== 'pending' && o.status !== 'expired')) return { status: 'error', code: 'NOT_RETRYABLE' } as const;
     const r = await completePurchase(a.paymentId);
     ok = r.ok;
   } else if (a.kind === 'REFUND_RECLAIM_FAILED') {

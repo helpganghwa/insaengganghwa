@@ -2,7 +2,7 @@ import { createPublicKey, createVerify } from 'node:crypto';
 
 import { raisePaymentAlert } from '@/lib/payment/alert';
 import { PlayApiError, playPackageName, playServiceAccountEmail } from '@/lib/payment/play-api';
-import { handleOneTimePurchase } from '@/lib/payment/play-rtdn';
+import { handleOneTimePurchase, RtdnRetryLater } from '@/lib/payment/play-rtdn';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,6 +85,11 @@ export async function POST(req: Request) {
     console.log('[play-rtdn]', o.sku, JSON.stringify(out));
     return new Response(null, { status: 204 });
   } catch (e) {
+    if (e instanceof RtdnRetryLater) {
+      // 구매 직후 — 정상 경로가 먼저 끝나도록 재전송을 기다린다(구독에 지수 백오프 10초~10분 설정).
+      console.info('[play-rtdn] retry later', o.sku, e.message);
+      return new Response('later', { status: 500 });
+    }
     // 영구 실패(잘못된·다른 앱의 토큰: 400·404·410)는 재전송해도 같다 — 경보만 남기고 끝낸다. 나머지(인증·구글 5xx·DB)는 재전송.
     if (e instanceof PlayApiError && [400, 404, 410].includes(e.status)) {
       await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {

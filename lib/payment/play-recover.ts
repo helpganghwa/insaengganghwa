@@ -78,7 +78,8 @@ export async function recoverPlayPurchase(
         gte(iapOrders.createdAt, sql`now() - interval '${sql.raw(String(LOOKBACK_DAYS))} days'`),
       ),
     )
-    .orderBy(desc(iapOrders.createdAt))
+    // 마지막 결제 시도 순(0215) — 성장패스처럼 가격 SKU를 공유하면 가장 최근에 결제창을 연 주문이 이 구매다.
+    .orderBy(desc(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`))
     .limit(1);
   if (pending) return finish(pending.paymentId, userId, purchaseToken);
 

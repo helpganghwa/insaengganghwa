@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, iapRefunds, monthlyPurchaseLimits, patronMilestoneGrants } from '@/lib/db/schema/payment';
@@ -182,7 +182,7 @@ const PREMIUM_MAIL_TITLES = ['성장 프리미엄 — 즉시 보상', '성장 �
 
 export async function refundPurchase(
   paymentId: string,
-  /** playVoided: 구글 voided 목록에서 온 호출 — 목록이 곧 구글의 환불·무효 확정이라 구매 상태 재확인을 건너뛴다. */
+  /** playVoided: 구글 환불이 이미 확정된 호출(voided 목록, 또는 방금 성공한 환불 API) — 구매 상태 재확인을 건너뛴다. */
   opts: { reason?: RefundReason; playVoided?: boolean } = {},
 ): Promise<RefundResult> {
   const [order] = await db
@@ -260,7 +260,7 @@ export async function refundPurchase(
       // best-effort 세이브포인트(점검 반영) — 회수 실패가 환불 처리를 막으면 안 된다(누락은 소급 스크립트가 짝을 맞춘다).
       try {
         const m = await tx.transaction((sp) => revokeMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
-        if (m.credited > 0 && m.taken < m.credited) unrecovered.push(`마일리지 ${m.credited - m.taken}점 부족(이미 사용)`);
+        if (!m.already && m.credited > 0 && m.taken < m.credited) unrecovered.push(`마일리지 ${m.credited - m.taken}점 부족(이미 사용)`);
       } catch (e) {
         console.error(`[points] 마일리지 회수 실패 user=${order.userId} order=${order.id}`, e);
         unrecovered.push(`마일리지 회수 실패(${(e as Error)?.message ?? e})`);
@@ -306,14 +306,18 @@ export async function refundPurchase(
                 eq(mailbox.serverId, order.serverId),
                 inArray(mailbox.title, PREMIUM_MAIL_TITLES),
                 isNotNull(mailbox.claimedAt),
+                // 이 주문의 드립 창(구매 후 31일)만 — 다음 프리미엄 주문의 우편이 섞이지 않게.
                 gte(mailbox.createdAt, order.paidAt),
+                lt(mailbox.createdAt, new Date(order.paidAt.getTime() + 31 * 24 * 3_600_000)),
               ),
             );
           if (claimed.length > 0) {
             let d = 0;
             let b = 0;
             for (const c of claimed) {
-              const p = (c.payload ?? {}) as { diamond?: number; boxes?: Record<string, number> };
+              // payload가 jsonb 문자열로 저장된 옛 행도 있다(premium-daily의 JSON.stringify::jsonb) — 둘 다 읽는다.
+              const raw = typeof c.payload === 'string' ? (JSON.parse(c.payload) as unknown) : c.payload;
+              const p = (raw ?? {}) as { diamond?: number; boxes?: Record<string, number> };
               d += Number(p.diamond ?? 0);
               b += Object.values(p.boxes ?? {}).reduce((a, x) => a + Number(x), 0);
             }
@@ -328,12 +332,15 @@ export async function refundPurchase(
           .select({ paid: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::bigint` })
           .from(iapOrders)
           .where(and(eq(iapOrders.userId, order.userId), eq(iapOrders.status, 'paid')));
-        const stillReached = new Set(reachedMilestones(Number(sum?.paid ?? 0)).map((m) => m.krw));
+        // 이번 환불로 **새로** 누적액 아래로 내려간 구간만(환불 전 도달 ∖ 환불 후 도달) — 예전 환불분까지 다시 나열하지 않는다.
+        const after = Number(sum?.paid ?? 0);
+        const stillReached = new Set(reachedMilestones(after).map((m) => m.krw));
+        const wasReached = new Set(reachedMilestones(after + Number(order.amountKrw)).map((m) => m.krw));
         const grants = await tx
           .select({ krw: patronMilestoneGrants.milestoneKrw })
           .from(patronMilestoneGrants)
           .where(eq(patronMilestoneGrants.userId, order.userId));
-        const over = grants.map((g) => g.krw).filter((k) => !stillReached.has(k)).sort((a, b) => a - b);
+        const over = grants.map((g) => g.krw).filter((k) => wasReached.has(k) && !stillReached.has(k)).sort((a, b) => a - b);
         if (over.length > 0) unrecovered.push(`후원 구간 보상 ${over.map((k) => `${num(k / 10_000)}만`).join('·')} 구간이 환불 뒤 누적액보다 높음(지급분 미회수)`);
       }
       if (unrecovered.length > 0) clawbackDone = false;

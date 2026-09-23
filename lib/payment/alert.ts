@@ -63,7 +63,8 @@ const SEV_EMOJI: Record<Severity, string> = { critical: '🔴', high: '🟠', wa
  */
 export async function raisePaymentAlert(
   kind: PaymentAlertKind,
-  opts: { detail: string; paymentId?: string; orderId?: bigint },
+  /** onceEver: 해결 처리된 같은 (kind, paymentId)가 있어도 다시 울리지 않는다 — 매 주기 같은 목록을 훑는 크론용. */
+  opts: { detail: string; paymentId?: string; orderId?: bigint; onceEver?: boolean },
 ): Promise<boolean> {
   const paymentId = opts.paymentId ?? '';
   const severity = SEVERITY[kind];
@@ -81,7 +82,7 @@ export async function raisePaymentAlert(
         and(
           eq(paymentAlerts.kind, kind),
           eq(paymentAlerts.paymentId, paymentId),
-          eq(paymentAlerts.resolved, false),
+          ...(opts.onceEver ? [] : [eq(paymentAlerts.resolved, false)]),
         ),
       )
       .limit(1);

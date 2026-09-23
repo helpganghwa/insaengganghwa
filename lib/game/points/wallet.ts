@@ -70,7 +70,7 @@ export async function creditMileageForOrder(
 export async function revokeMileageForOrder(
   dbx: Dbx,
   p: { userId: string; orderId: bigint | number | string },
-): Promise<{ credited: number; taken: number }> {
+): Promise<{ credited: number; taken: number; already?: boolean }> {
   const ref = `order:${String(p.orderId)}`;
   // 회수는 **적립된 그 서버** 지갑에서 — 적립 행이 서버를 들고 있다(0211 이전 행은 0211이 채웠다).
   const [c] = (await dbx.execute(sql`
@@ -92,7 +92,7 @@ export async function revokeMileageForOrder(
     on conflict (kind, ref) where ref is not null do nothing
     returning id
   `)) as unknown as { id: string }[];
-  if (r.length === 0) return { credited, taken: 0 }; // 이미 회수됨
+  if (r.length === 0) return { credited, taken: 0, already: true }; // 이미 회수됨
   if (taken > 0) {
     await dbx.execute(sql`
       update mileage_wallets set balance = balance - ${taken}

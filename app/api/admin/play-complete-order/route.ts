@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!/^GPA\.[\d-]+$/.test(orderId) || !paymentId) return Response.json({ ok: false, error: 'BAD_INPUT' }, { status: 400 });
 
   const [order] = await db
-    .select({ userId: iapOrders.userId, status: iapOrders.status, provider: iapOrders.provider, playSku: iapOrders.playSku, amountKrw: iapOrders.amountKrw, token: iapOrders.playPurchaseToken, createdAt: iapOrders.createdAt })
+    .select({ userId: iapOrders.userId, status: iapOrders.status, provider: iapOrders.provider, playSku: iapOrders.playSku, amountKrw: iapOrders.amountKrw, token: iapOrders.playPurchaseToken, createdAt: iapOrders.createdAt, checkoutAt: iapOrders.playCheckoutAt })
     .from(iapOrders)
     .where(eq(iapOrders.portoneOrderId, paymentId))
     .limit(1);
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     purchaseTime: p?.purchaseTimeMillis ? new Date(Number(p.purchaseTimeMillis)).toISOString() : null,
     purchaseType: p?.purchaseType ?? null,
     orderCreatedAt: order.createdAt.toISOString(),
+    orderCheckoutAt: order.checkoutAt?.toISOString() ?? null,
   };
   if (!token) return Response.json({ ok: false, error: 'NO_TOKEN', ...summary }, { status: 409 });
   if (!googleProduct || googleProduct !== order.playSku) return Response.json({ ok: false, error: 'SKU_MISMATCH', ...summary }, { status: 409 });

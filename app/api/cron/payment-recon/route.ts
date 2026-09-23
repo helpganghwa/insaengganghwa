@@ -60,6 +60,9 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   const out: Record<string, unknown> = {};
+  // 마감 시각 — 포트원 조회가 느려도(건당 최대 8초) maxDuration 300초 안에 D·하트비트까지 끝내도록 루프를 끊는다.
+  const deadline = Date.now() + 240_000;
+  const timeUp = () => Date.now() > deadline;
 
   // ── A0. Play 이탈 pending 일괄 만료 ────────────────────────────────────
   // Play 주문은 PG 조회가 없어 만료만 하면 된다. 건별 스캔(limit 50)에 태우면 결제 시트가 바로 닫히는
@@ -73,7 +76,8 @@ export async function GET(req: Request) {
       and(
         eq(iapOrders.status, 'pending'),
         eq(iapOrders.provider, 'play'),
-        lt(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`, new Date(Date.now() - PENDING_EXPIRE_MS)),
+        // ⚠ sql 식과 비교할 땐 Date를 그대로 넘기면 드라이버가 인코딩하지 못한다(테스트에서 발각) — ISO 문자열 + 캐스트.
+        lt(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`, sql`${new Date(Date.now() - PENDING_EXPIRE_MS).toISOString()}::timestamptz`),
       ),
     )
     .returning({ userId: iapOrders.userId });
@@ -117,6 +121,7 @@ export async function GET(req: Request) {
     expiredUsers.add(o.userId);
   };
   for (const o of pending) {
+    if (timeUp()) break;
     let paidAtPg = false;
     try {
       const pay = await getPortonePayment(o.pid);
@@ -202,6 +207,7 @@ export async function GET(req: Request) {
     .limit(REFUND_SCAN_LIMIT);
   let reclaimed = 0;
   for (const o of recentPaid) {
+    if (timeUp()) break;
     try {
       const pay = await getPortonePayment(o.pid);
       if (pay.status === 'CANCELLED') {
@@ -242,6 +248,7 @@ export async function GET(req: Request) {
       .offset(slot * LONG_SWEEP_BATCH)
       .limit(LONG_SWEEP_BATCH);
     for (const o of older) {
+      if (timeUp()) break;
       longSweep.scanned++;
       try {
         const pay = await getPortonePayment(o.pid);

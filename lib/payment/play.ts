@@ -98,6 +98,7 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
       await raisePaymentAlert('PLAY_VOIDED_UNMATCHED', {
         paymentId: `voided:${v.orderId ?? v.purchaseToken.slice(0, 16)}`,
         detail: `구글 환불·무효 구매 ${v.orderId ?? '?'}가 우리 주문과 연결되지 않음 — 지급 이력이 없으면 조치 불필요, 있으면 수동 회수.`,
+        onceEver: true,
       }).catch(() => undefined);
       continue;
     }
@@ -118,6 +119,7 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
           paymentId: order.pid,
           orderId: order.id,
           detail: `구글 voided인데 회수 미적용(code=${r.code}) — 수동 확인 필요.`,
+          onceEver: true,
         }).catch(() => undefined);
       }
     } catch (e) {

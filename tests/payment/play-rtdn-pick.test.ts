@@ -5,23 +5,23 @@ vi.mock('@/lib/db/client', () => ({ db: {} }));
 
 import { pickRtdnCandidate } from '@/lib/payment/play-rtdn';
 
-const T = Date.parse('2026-09-23T15:24:06Z');
-const row = (id: string, iso: string | null) => ({ paymentId: id, checkoutAt: iso ? new Date(iso) : null });
+const row = (id: string, status: string, hasToken = false) => ({ paymentId: id, userId: 'u', status, hasToken });
 
-describe('RTDN 주문 매칭 — 정확히 1건일 때만', () => {
-  it('구매 직전 주문 1건이면 그 주문', () => {
-    expect(pickRtdnCandidate([row('a', '2026-09-23T15:24:00Z')], T)?.paymentId).toBe('a');
+describe('RTDN 판정 — 범위 안 같은 SKU 주문이 정확히 1건이고 토큰 없는 미완일 때만', () => {
+  it('미완 1건이면 그 주문', () => {
+    expect(pickRtdnCandidate([row('a', 'pending')])?.paymentId).toBe('a');
+    expect(pickRtdnCandidate([row('a', 'expired')])?.paymentId).toBe('a');
   });
-  it('창 밖(결제 시도 15분 넘게 전·2분 넘게 뒤)은 후보가 아니다', () => {
-    expect(pickRtdnCandidate([row('old', '2026-09-23T15:08:00Z'), row('late', '2026-09-23T15:27:00Z')], T)).toBeNull();
+  it('주문이 2건 이상이면(상태와 무관) 지급하지 않는다', () => {
+    expect(pickRtdnCandidate([row('mine', 'paid', true), row('other', 'pending')])).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'pending'), row('b', 'pending')])).toBeNull();
   });
-  it('결제 시도 시각이 없는 옛 주문(0215 이전)은 후보가 아니다', () => {
-    expect(pickRtdnCandidate([row('legacy', null)], T)).toBeNull();
+  it('1건이어도 이미 토큰이 있거나 끝난 주문이면 지급하지 않는다', () => {
+    expect(pickRtdnCandidate([row('a', 'paid', true)])).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'refunded', true)])).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'pending', true)])).toBeNull();
   });
-  it('창 안에 두 건이면 지급하지 않는다(경보로)', () => {
-    expect(pickRtdnCandidate([row('a', '2026-09-23T15:23:00Z'), row('b', '2026-09-23T15:24:00Z')], T)).toBeNull();
-  });
-  it('후보가 없으면 null', () => {
-    expect(pickRtdnCandidate([], T)).toBeNull();
+  it('0건이면 null', () => {
+    expect(pickRtdnCandidate([])).toBeNull();
   });
 });

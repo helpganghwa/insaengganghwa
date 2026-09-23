@@ -22,7 +22,7 @@ vi.mock('@/lib/payment/play-api', () => ({
 
 import { consumePlayProductPurchase, getPlayProductPurchase } from '@/lib/payment/play-api';
 import { completePurchase } from '@/lib/payment/purchase';
-import { handleOneTimePurchase } from '@/lib/payment/play-rtdn';
+import { handleOneTimePurchase, RtdnRetryLater } from '@/lib/payment/play-rtdn';
 
 import { endTestDb, resyncTestMileage, sql, testDb } from '../db';
 
@@ -41,12 +41,13 @@ const DIAMOND = 290;
 let seq = 0;
 const newPid = (tag: string) => `gp-rtdntest_${tag}_${++seq}_${process.pid}`;
 const newToken = (tag: string) => `rtdntok_${tag}_${seq}_${process.pid}_${Date.now()}`;
+// 기본 구매 시각 = 5분 전(처리 대기 3분이 지난 알림).
 const purchase = (o: { orderId: string; atMs?: number; purchaseType?: number }) => ({
   purchaseState: 0,
   consumptionState: 0,
   acknowledgementState: 0,
   orderId: o.orderId,
-  purchaseTimeMillis: String(o.atMs ?? Date.now()),
+  purchaseTimeMillis: String(o.atMs ?? Date.now() - 5 * 60_000),
   ...(o.purchaseType != null ? { purchaseType: o.purchaseType } : {}),
 });
 
@@ -129,7 +130,7 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     expect((await readOrder(id)).s).toBe('paid');
   });
 
-  it('창 안 후보가 2건이면 아무에게도 지급하지 않고 경보', async () => {
+  it('같은 상품 주문이 2건이면(두 유저·같은 유저 무관) 아무에게도 지급하지 않고 경보', async () => {
     const a = await insertOrder(newPid('amb-a'));
     const b = await insertOrder(newPid('amb-b'));
     made.push(a, b);
@@ -142,14 +143,44 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     expect(await alertCount('rtdn:GPA.rtdn-amb')).toBe(1);
   });
 
-  it('결제 시도 시각이 창 밖(20분 전)이거나 없으면 후보가 아니다 → 지급 없음·경보', async () => {
-    const old = await insertOrder(newPid('old'), { checkoutAgoMs: 20 * 60_000 });
-    const legacy = await insertOrder(newPid('legacy'), { checkoutAgoMs: null });
-    made.push(old, legacy);
-    alertPrefixes.push('rtdn:GPA.rtdn-none');
-    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-none' }));
-    expect(await handleOneTimePurchase(SKU, newToken('none'))).toMatchObject({ kind: 'unmatched', candidates: 0 });
+  it('본인 주문이 이미 지급(paid)된 뒤 같은 주문으로 두 번째 구매 + 남의 미완 1건 → 남에게 지급하지 않는다(감사 A1a)', async () => {
+    const mine = newPid('a1a-mine');
+    const mineId = await insertOrder(mine);
+    const other = await insertOrder(newPid('a1a-other'));
+    made.push(mineId, other);
+    alertPrefixes.push('rtdn:GPA.rtdn-a1a-2');
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-a1a-1' }));
+    expect((await completePurchase(mine, TEST_USER_ID, { playPurchaseToken: newToken('a1a-1') })).ok).toBe(true);
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-a1a-2' }));
+    expect(await handleOneTimePurchase(SKU, newToken('a1a-2'))).toMatchObject({ kind: 'unmatched', candidates: 2 });
+    expect((await readOrder(other)).s).toBe('pending');
+    expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
+  });
+
+  it('결제창을 오래 열어 둔 본인 주문(16분 전) + 남의 미완 1건 → 경보(감사 A1b)', async () => {
+    const mine = await insertOrder(newPid('a1b-mine'), { checkoutAgoMs: 21 * 60_000 });
+    const other = await insertOrder(newPid('a1b-other'), { checkoutAgoMs: 60_000 });
+    made.push(mine, other);
+    alertPrefixes.push('rtdn:GPA.rtdn-a1b');
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-a1b' }));
+    expect(await handleOneTimePurchase(SKU, newToken('a1b'))).toMatchObject({ kind: 'unmatched', candidates: 2 });
     expect(await readDiamond()).toBe(baseline);
+  });
+
+  it('결제 시도 시각이 없는 옛 주문은 생성 시각으로 센다(coalesce) — 1건이면 그 주문', async () => {
+    const pid = newPid('legacy');
+    const id = await insertOrder(pid, { checkoutAgoMs: null });
+    made.push(id);
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-legacy' }));
+    expect(await handleOneTimePurchase(SKU, newToken('legacy'))).toMatchObject({ kind: 'granted', paymentId: pid });
+  });
+
+  it('구매 직후(3분 안)는 처리하지 않고 재전송을 기다린다', async () => {
+    const id = await insertOrder(newPid('grace'));
+    made.push(id);
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-grace', atMs: Date.now() - 30_000 }));
+    await expect(handleOneTimePurchase(SKU, newToken('grace'))).rejects.toBeInstanceOf(RtdnRetryLater);
+    expect((await readOrder(id)).s).toBe('pending');
   });
 
   it('테스트·프로모 구매(purchaseType 0·1)는 후보가 1건이어도 자동 지급하지 않는다', async () => {
@@ -177,6 +208,7 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-mis' }));
     expect((await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: newToken('mis1') })).ok).toBe(true);
     expect(await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: newToken('mis2') })).toEqual({ ok: false, code: 'TOKEN_USED' });
+    expect(await alertCount(`${pid}:`)).toBe(1); // 두 번째 구매 미지급은 경보로 드러난다
     expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
   });
 

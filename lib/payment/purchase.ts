@@ -358,7 +358,8 @@ export async function createPlayOrder(userId: string, serverId: number, productI
         eq(iapOrders.productCode, productId),
         eq(iapOrders.status, 'pending'),
         isNull(iapOrders.playPurchaseToken),
-        gt(iapOrders.createdAt, sql`now() - interval '6 hours'`),
+        // 마지막 결제 시도 기준(0215) — recon A0 만료 기준과 같게 맞춘다(재사용 주문의 생성 시각은 오래됐을 수 있다).
+        gt(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`, sql`now() - interval '6 hours'`),
       ),
     )
     .orderBy(desc(iapOrders.createdAt))
@@ -427,6 +428,13 @@ export async function completePurchase(
   if (order.status === 'paid') {
     // 이미 지급된 주문에 **다른** 구매 토큰이 오면 성공으로 답하지 않는다(2026-09-24 감사) — 새 구매는 지급되지 않았다.
     if (order.provider === 'play' && opts.playPurchaseToken && order.playPurchaseToken && opts.playPurchaseToken !== order.playPurchaseToken) {
+      // 같은 주문으로 두 번째 구매가 성사된 경우(여러 기기에서 같은 재사용 주문) — 두 번째 구매는 아직 지급되지 않았다.
+      // 조용히 거부하면 구매자가 영구 미지급으로 남으므로 경보로 드러낸다. RTDN도 이 경우는 애매함으로 경보한다.
+      await raisePaymentAlert('PLAY_TOKEN_USED', {
+        paymentId: `${paymentId}:${opts.playPurchaseToken.slice(0, 12)}`,
+        orderId: order.id,
+        detail: `이미 지급된 주문(${order.playSku})에 다른 구매 토큰이 옴 — 두 번째 구매 미지급. 콘솔에서 구글 주문번호를 찾아 새 주문으로 지급 또는 환불.`,
+      });
       return { ok: false, code: 'TOKEN_USED' };
     }
     return { ok: true, already: true };
@@ -475,6 +483,8 @@ export async function completePurchase(
 
   const kstMonth = kstMonthString();
   let minorExceeded = false;
+  /** 잠금 뒤 본 상태 — 동시 호출에서 진 쪽이 성공(already:false)으로 답하지 않게 한다. */
+  let lockedStatus: string | null = null;
   let dupSkipped = false;
   let transitioned = false;
   await db.transaction(async (tx) => {
@@ -486,6 +496,7 @@ export async function completePurchase(
       .for('update');
     // pending(+recon이 24h 종결한 expired의 늦은 결제)에서만 지급 전이 — paid(이미 지급)·
     // refunded(환불 확정)를 다시 paid로 되돌려 재지급하는 레이스를 차단.
+    lockedStatus = locked?.status ?? null;
     if (!locked || (locked.status !== 'pending' && locked.status !== 'expired')) return;
 
     await tx
@@ -586,15 +597,37 @@ export async function completePurchase(
     }
   });
 
+  // 동시 호출에서 진 쪽 — 전이하지 못했다. 이미 지급됐으면 already, 환불 확정이면 지급 없음(성공으로 답하지 않는다).
+  if (!transitioned) {
+    if (lockedStatus === 'paid') return { ok: true, already: true };
+    return { ok: false, code: 'NOT_PAID' };
+  }
+
   if (dupSkipped) {
-    // tx 커밋 후 발화(잠금 보유 중 외부 HTTP 금지 + 롤백 시 허위 알림 방지) — 기존에는
-    // grant.ts가 tx 안에서 알림을 쐈다(2026-07-07 전수감사 A-묶음).
-    await raisePaymentAlert('COMPLETE_EXCEPTION', {
+    // 중복 결제 — 지급은 이미 막혔다. 결제분을 **즉시 자동 환불**한다(2026-09-24 감사: 종전엔 운영자 수동 환불에 기대
+    // 방치되면 결제만 성사된 채 남았고, Play는 소모하지 않으면 공유 가격 SKU가 3일 잠겼다). grant_skipped라 회수는 없고
+    // 월누적·마일리지만 복원된다. 취소가 실패하면 경보(Play는 미소모라 3일 뒤 구글 자동 환불이 안전망).
+    let refunded = false;
+    try {
+      if (play) {
+        if (!play.googleOrderId) throw new Error('구글 주문번호 없음');
+        await refundPlayOrder(play.googleOrderId, true);
+      } else {
+        await cancelPortonePayment(paymentId, '중복 결제 자동 환불');
+      }
+      const { refundPurchase } = await import('./refund');
+      // 방금 환불 API가 성공했다 — 구글 구매 상태 반영이 늦어도 기다리지 않는다(Play는 환불 확정으로 본다).
+      const rr = await refundPurchase(paymentId, { reason: 'error', playVoided: !!play });
+      refunded = rr.ok;
+    } catch (e) {
+      console.error('[purchase] duplicate auto refund failed', order.provider, paymentId, e);
+    }
+    await raisePaymentAlert(refunded ? 'COMPLETE_EXCEPTION' : 'REFUND_RECLAIM_FAILED', {
       paymentId,
       orderId: order.id,
-      detail:
-        `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 두 번째 지급 차단·grant_skipped 마킹. ` +
-        `중복 결제분은 환불해도 기존 지급분이 회수되지 않으니 안심하고 환불 처리.`,
+      detail: refunded
+        ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 두 번째 지급 차단 후 자동 환불 완료. 확인만 하면 된다.`
+        : `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불 필요(기존 지급분은 회수되지 않으니 안심하고 환불).`,
     });
   }
 
@@ -609,6 +642,7 @@ export async function completePurchase(
     // 실제 취소를 **먼저** — refundPurchase는 PG/구글이 취소 상태일 때만 회수·월누적
     // 복원을 하는 사후 정합화 함수라, 선행 취소 없이는 no-op이 된다(어드민 환불 경로와 동일 순서).
     // 취소 실패는 삼켜 recon B / play-sync 백스톱에 맡긴다(refundPurchase가 NOT_CANCELLED로 빠져도 알림은 남음).
+    let cancelled = false;
     try {
       if (play) {
         if (!play.googleOrderId) throw new Error('구글 주문번호 없음');
@@ -616,6 +650,7 @@ export async function completePurchase(
       } else {
         await cancelPortonePayment(paymentId, '미성년 월 한도 초과 자동 환불');
       }
+      cancelled = true;
     } catch (e) {
       console.error('[purchase] minor-limit cancel failed', order.provider, paymentId, e);
       // 취소 실패는 경보로 드러낸다(2026-09-24 감사) — Play는 미소모로 두므로 3일 뒤 구글 자동 환불이 안전망, 포트원은 수동 취소 필요.
@@ -626,7 +661,8 @@ export async function completePurchase(
       });
     }
     const { refundPurchase } = await import('./refund');
-    await refundPurchase(paymentId, { reason: 'minor_protection' }).catch((e) =>
+    // 환불 API가 성공했으면 구글 상태 반영 지연을 기다리지 않는다. 실패했으면 상태 확인에 맡긴다(미취소면 NOT_CANCELLED로 빠짐).
+    await refundPurchase(paymentId, { reason: 'minor_protection', playVoided: !!play && cancelled }).catch((e) =>
       console.error('[purchase] minor-limit auto refund failed', paymentId, e),
     );
     return { ok: false, code: 'MINOR_LIMIT' };
