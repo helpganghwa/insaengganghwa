@@ -433,6 +433,10 @@ export function BattlePassClient({
         setError(
           r.code === 'ALREADY_PURCHASED'
             ? '이미 구매한 구간입니다.'
+            : r.code === 'DUPLICATE'
+              ? '이미 가진 구간이라 방금 결제는 자동으로 환불돼요.'
+              : r.code === 'PENDING'
+                ? '결제 승인을 기다리고 있어요. 완료되면 자동으로 지급돼요.'
             : r.code === 'PAY_CLOSED'
               ? '아직 결제가 열리지 않았습니다.'
               : r.code === 'MINOR_LIMIT'

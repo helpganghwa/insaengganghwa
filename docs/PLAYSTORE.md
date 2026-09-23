@@ -140,7 +140,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 
 ### 5-1. 결제 복구·실패 기록(2026-09-22 사고에서)
 - **사고**: 서비스 계정이 Play Console 사용자 목록에서 빠져(9/21) 검증 `purchases.products.get`이 401 → 구글은 청구했는데 지급 실패. 클라가 시트를 `fail`로 닫아도 소모성 구매는 남아 같은 상품이 "already own"으로 막혔고, 서버엔 토큰이 없어 손댈 수 없었다(3일 뒤 자동 환불이 유일한 구제). 권한은 다시 넣은 뒤 **인앱 상품 저장→되돌리기**로 캐시가 갱신되며 풀렸다(약 5분).
-- **복구**(`lib/payment/play-recover.ts`, `recoverPlayPurchases`): 앱에서 상점을 열 때 한 번 기기의 `listPurchases()`를 서버로 보내 다시 검증·지급·소모한다. 매칭은 토큰이 묶인 주문 → 같은 SKU의 7일 내 미완 주문 → SKU로 되돌린 새 주문(성장패스 구간은 불가). 서버가 `NOT_PAID`(취소·환불)라고 답하면 기기에서 `consume()`해 잠김만 푼다.
+- **복구**(`lib/payment/play-recover.ts`, `recoverPlayPurchases`): 앱에서 상점을 열 때 한 번 기기의 `listPurchases()`를 서버로 보내 다시 검증·지급·소모한다. 매칭은 토큰이 묶인 주문 → 같은 SKU의 7일 내 미완 주문 → SKU로 되돌린 새 주문(성장패스 구간은 불가). 서버가 구글에 확인해 **취소됨(CANCELLED)** 이라고 답한 구매만 기기에서 `consume()`해 잠김을 푼다(보류 결제는 건드리지 않는다). 같은 SKU 미완 주문은 지금 서버·마지막 결제 시도 순으로 고른다.
 - **시트는 검증 실패에도 `success`로 닫는다** — 구매 사실은 성사됐고, 지급은 복구가 다시 시도한다.
 - **실패 기록**: 시트 실패·토큰 없음·검증 실패·복구 실패를 `client_errors`(kind `play-checkout`, `sku= stage= code= name= message=`)에 남긴다. 토큰은 싣지 않는다. 어드민 client-errors 화면에서 `play-checkout`으로 거른다.
 - 서비스 계정 401이 다시 나면: ① 사용자 목록에 계정이 있는지 → ② 계정 권한 4종(앱 정보 보기·재무 데이터 보기·주문 관리·앱 정보 관리) → ③ 인앱 상품 저장 트릭 순.
@@ -167,7 +167,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 - 인증 = Pub/Sub 푸시 OIDC 토큰(구글 공개키 서명·발급자·audience `https://ganghwa.app/api/play/rtdn`·발급 서비스 계정 = Play 서비스 계정 이메일). 뚫려도 구매는 구글 API로 재검증한다.
 - ONE_TIME_PRODUCT_PURCHASED(1)만 처리. 취소·환불은 기존 play-sync(voided)가 맡는다.
 - 원칙: **확실할 때만 자동 지급, 애매하면 경보(수동)** — 구매와 우리 유저를 잇는 값이 없어 추정이 틀리면 남에게 지급된다.
-- ⓪ 구매 후 3분은 처리하지 않고 500으로 재전송을 기다린다(화면 검증·상점 복구가 먼저 토큰을 묶게). ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리). ② 없으면 같은 SKU의 Play 주문을 **상태·토큰·유저 무관**하게 마지막 결제 시도 시각(`coalesce(play_checkout_at, created_at)`, 0215) 기준 구매 [-6시간 10분, 지금]에서 세어 **정확히 1건이고 토큰 없는 미완(pending·expired)일 때만** `completePurchase`(재검증·지급·소모). 본인 주문은 이 범위 안에 반드시 있으므로(재사용·오래 열린 결제창·같은 주문의 두 번째 구매 포함) 다른 주문이 하나라도 있으면 경보로 빠진다. ③ 테스트·프로모·리워드(purchaseType 0·1·2) 자동 지급 제외. 경보 `PLAY_RTDN_UNMATCHED` → 콘솔에서 구매자 확인 뒤 `/api/admin/play-complete-order`.
+- ⓪ 구매 후 3분은 처리하지 않고 500으로 재전송을 기다린다(화면 검증·상점 복구가 먼저 토큰을 묶게). ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리). ② 없으면 같은 SKU의 Play 주문을 **상태·토큰·유저 무관**하게 마지막 결제 시도 시각(`coalesce(play_checkout_at, created_at)`, 0215) 기준 구매 [-6시간 10분, 지금]에서 세어 **정확히 1건이고 토큰 없는 미완(pending·expired)일 때만** `completePurchase`(재검증·지급·소모). 본인 주문은 이 범위 안에 있으므로(재사용·오래 열린 결제창·같은 주문의 두 번째 구매 포함) 다른 주문이 하나라도 있으면 경보로 빠진다. 이 전제를 지키기 위해 주문 재사용은 같은 SKU·금액일 때만 하고, 보류 결제는 첫 검증 때 토큰을 주문에 먼저 묶는다(완료 알림이 ①로 처리). 구매 시각이 없는 알림은 자동 지급하지 않는다. ③ 테스트·프로모·리워드(purchaseType 0·1·2) 자동 지급 제외. 경보 `PLAY_RTDN_UNMATCHED` → 콘솔에서 구매자 확인 뒤 `/api/admin/play-complete-order`.
 - 화면 경로와 동시에 와도 같은 주문·토큰이라 1회만 지급(FOR UPDATE + paid 가드). 일시 오류는 500으로 Pub/Sub 재전송.
 
 **배포 순서**: 0215 마이그레이션(프로덕션) → **적용 여부를 SQL로 확인**(`select 1 from information_schema.columns where table_name='iap_orders' and column_name='play_checkout_at'`) → 코드 배포 → 아래 설정. ⚠ 0215 없이 코드를 배포하면 Drizzle insert가 모든 컬럼을 명시하므로 **웹(포트원)·앱(Play) 결제 주문 생성이 전부 실패**하고, 정산 크론(payment-recon)도 첫 단계에서 멈춘다.

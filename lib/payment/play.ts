@@ -116,7 +116,8 @@ export async function syncPlayVoided(): Promise<{ voided: number; refunded: numb
         failed++;
         console.warn('[play-sync] refund not applied', order.pid, r.code);
         await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
-          paymentId: order.pid,
+          // 다른 경로(중복·미성년 취소 실패)의 같은 주문 경보와 분리 — 해결 처리 뒤 voided 회수 실패가 가려지지 않게.
+          paymentId: `voided-fail:${order.pid}`,
           orderId: order.id,
           detail: `구글 voided인데 회수 미적용(code=${r.code}) — 수동 확인 필요.`,
           onceEver: true,

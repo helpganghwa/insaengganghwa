@@ -114,15 +114,32 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
     expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
   });
 
-  it('구매 상태가 아니면(취소·보류) 지급하지 않는다', async () => {
+  it('취소된 구매면 지급하지 않는다(NOT_PAID, 토큰도 묶지 않음)', async () => {
     const pid = newPid('np');
     const id = await insertOrder(pid);
     made.push(id);
-    mockGet.mockResolvedValue({ purchaseState: 2, consumptionState: 0 });
+    mockGet.mockResolvedValue({ purchaseState: 1, consumptionState: 0 });
     const r = await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: newToken('np') });
     expect(r).toEqual({ ok: false, code: 'NOT_PAID' });
-    expect((await readOrder(id)).s).toBe('pending');
+    expect(await readOrder(id)).toMatchObject({ s: 'pending', t: null });
     expect(await readDiamond()).toBe(baseline);
+  });
+
+  it('보류 결제면 지급하지 않고 토큰만 주문에 묶는다(PENDING) → 완료 뒤 같은 토큰으로 지급', async () => {
+    const pid = newPid('pend');
+    const id = await insertOrder(pid);
+    made.push(id);
+    const token = newToken('pend');
+    mockGet.mockResolvedValue({ purchaseState: 2, consumptionState: 0 });
+    expect(await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: token })).toEqual({ ok: false, code: 'PENDING' });
+    expect(await readOrder(id)).toMatchObject({ s: 'pending', t: token });
+    expect(await readDiamond()).toBe(baseline);
+    // 결제 완료 — 저장된 토큰으로(복구·RTDN과 같은 경로) 지급.
+    mockGet.mockResolvedValue(purchased('GPA.pend'));
+    mockConsume.mockResolvedValue(undefined);
+    expect(await completePurchase(pid, TEST_USER_ID)).toEqual({ ok: true, already: false });
+    expect(await readOrder(id)).toMatchObject({ s: 'paid', t: token });
+    expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
   });
 
   it('같은 토큰으로 두 번째 주문을 지급하려 하면 TOKEN_USED', async () => {

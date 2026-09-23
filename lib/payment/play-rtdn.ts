@@ -60,7 +60,14 @@ export async function handleOneTimePurchase(sku: string, purchaseToken: string, 
   }
   const g = await getPlayProductPurchase(sku, purchaseToken);
   if (g.purchaseState !== 0) return { kind: 'ignored', reason: `purchaseState ${g.purchaseState}` };
-  const purchaseTimeMs = Number(g.purchaseTimeMillis ?? now);
+  // 구매 시각이 없으면 대기 판정이 매번 '방금'이 되어 영원히 재전송된다(재검증 B-5) — 자동 지급하지 않고 경보.
+  if (!g.purchaseTimeMillis) {
+    const [b] = await db.select({ paymentId: iapOrders.portoneOrderId, userId: iapOrders.userId, status: iapOrders.status }).from(iapOrders).where(eq(iapOrders.playPurchaseToken, purchaseToken)).limit(1);
+    if (b) return b.status === 'pending' || b.status === 'expired' ? finish(b.paymentId, b.userId, purchaseToken, g.orderId) : { kind: 'already', paymentId: b.paymentId };
+    await raisePaymentAlert('PLAY_RTDN_UNMATCHED', { paymentId: `rtdn:${g.orderId ?? purchaseToken.slice(0, 16)}`, detail: `구매 시각 없는 구매 알림(${sku}, ${g.orderId ?? '?'}) — 자동 지급하지 않음. 콘솔에서 확인.` });
+    return { kind: 'unmatched', candidates: 0 };
+  }
+  const purchaseTimeMs = Number(g.purchaseTimeMillis);
 
   const [bound] = await db
     .select({ paymentId: iapOrders.portoneOrderId, userId: iapOrders.userId, status: iapOrders.status })
@@ -110,6 +117,8 @@ async function finish(paymentId: string, userId: string, token: string, googleOr
   if (r.ok) return { kind: 'granted', paymentId, already: r.already };
   // 미성년 한도 초과는 completePurchase가 자동 환불·경보(MINOR_LIMIT_EXCEEDED)까지 한다 — 지급 실패로 중복 경보하지 않는다.
   if (r.code === 'MINOR_LIMIT') return { kind: 'minor_limit', paymentId };
+  // 중복 결제는 completePurchase가 자동 환불·경보까지 끝냈다.
+  if (r.code === 'DUPLICATE') return { kind: 'ignored', reason: 'duplicate auto-refunded' };
   await raisePaymentAlert('PLAY_RTDN_FAILED', {
     paymentId,
     detail: `RTDN 지급 실패 ${r.code} — 구글 주문 ${googleOrderId ?? '?'}`,

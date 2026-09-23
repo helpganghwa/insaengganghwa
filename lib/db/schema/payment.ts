@@ -63,7 +63,7 @@ export const iapOrders = pgTable(
     playOrderId: text('play_order_id'),
     /** 소모(consume=확인) 시각 — 없으면 play-sync가 재시도(3일 미확인 자동환불 방지). */
     playConsumedAt: timestamp('play_consumed_at', { withTimezone: true }),
-    /** 마지막 결제 시도 시각(0215) — 주문 생성·재사용 때마다 갱신. RTDN 매칭 기준(재사용 주문은 created_at이 최대 6시간 전). */
+    /** 마지막 결제 시도 시각(0215) — 주문 생성·재사용 때마다 갱신. RTDN 판정·재사용·recon 만료가 coalesce(이것, created_at)을 쓴다. */
     playCheckoutAt: timestamp('play_checkout_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

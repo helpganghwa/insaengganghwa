@@ -129,6 +129,8 @@ export async function GET(req: Request) {
         paidAtPg = true;
         const r = await completePurchase(o.pid);
         if (r.ok) healed++;
+        // 환불 확정·중복 자동 환불은 지급 실패가 아니다(경합에서 진 경우 포함).
+        else if (r.code === 'REFUNDED' || r.code === 'DUPLICATE') continue;
         else
           await raisePaymentAlert('PAID_NOT_GRANTED', {
             paymentId: o.pid,
