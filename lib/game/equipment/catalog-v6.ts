@@ -3,7 +3,7 @@ import type { CatalogItem } from './catalog';
 /**
  * 6차 편성(2026-09-22) — 한가위 6종(docs/CHUSEOK.md). 슬롯당 2종을 더해 40 → 42(아이템당 보급 확률 2.5% → 약 2.38%).
  *
- * 두 벌로 나뉜다 — 한복(달그림자 완드·금박 꽃단 한복·한가위 복주머니)과 달토끼(달빛 절굿공이·보송한 토끼
+ * 두 벌로 나뉜다 — 한복(달그림자 완드·금박 꽃단 한복·한가위 복주머니)과 달토끼(보름달 떡메·보송한 토끼
  * 인형 옷·접힌 토끼 귀 머리띠). 한가위 강화 대회 칭호가 벌마다 붙는다(신월·반월·만월 / 매화·작약·모란).
  * 지역은 '일반'(파견 시너지·필터·위키 문구를 건드리지 않는다). 그림은 scripts/gen-chuseok-cand.ts로 뽑아
  * 선택 폼에서 고른 것(scripts/build-chuseok-pick.ts). 등급·성능 없음(GDD §3.1).
@@ -25,12 +25,12 @@ export const CATALOG_V6: CatalogItem[] = [
   {
     key: 'chuseok_rabbit_pestle',
     slot: 'weapon',
-    nameKo: '달빛 절굿공이',
+    nameKo: '보름달 떡메',
     region: '일반',
     tone: '위트',
-    lore: '흰 나무 절굿공이는 손잡이에 실 한 가닥 감지 않아도 손에서 미끄러지지 않는다. 달에서 내려온 뒤로 한 번도 떡을 찧지 못했지만, 결을 따라 흐르는 달빛만은 여전하다. 언젠가 다시 절구를 만나면 첫 소리를 낼 준비가 늘 되어 있다.',
-    art: 'a smooth polished pale wooden pestle held diagonally, thick rounded head and plain smooth grip with no wrapping, soft moonlight sheen, pixel art',
-    wornDesc: 'a long thick wooden stick held upright in one hand, a Korean rice-cake pestle: the stick is thickest at its two ends and gradually becomes thinner toward the middle, the outline tapering smoothly and evenly from each thick end into the slimmer center, both ends rounded and blunt, a tiny rabbit face carved on the upper end, plain smooth unvarnished pale wood all over',
+    lore: '네모난 나무 머리에 보름달과 그 앞에 선 토끼를 새겼다. 자루에는 붉은 끈을 감고 술을 달았다. 달에서 떡을 찧던 그 떡메라는 말이 있는데, 확인할 길은 없다. 다만 내리치면 소리가 유난히 멀리, 달까지 닿을 듯이 울린다.',
+    art: 'a large pale wooden rice-cake mallet with a squared barrel head carved with a white moon rabbit before a golden full moon, a long wooden handle wrapped in red cord with small red tassels, pixel art',
+    wornDesc: 'a large pale wooden rice-cake mallet held in one hand: a big squared wooden barrel head set crosswise on the end of a long straight wooden handle, the flat side of the head carved with a white rabbit standing before a golden full moon, the lower half of the handle wrapped in red cord with two small red tassels hanging from it',
   },
   {
     key: 'chuseok_jade_hanbok',
@@ -51,7 +51,7 @@ export const CATALOG_V6: CatalogItem[] = [
     tone: '희망',
     lore: '온통 흰 털로 지은 한 벌짜리 옷이다. 손목과 발목에 복슬한 털 깃이 있고 발바닥은 분홍이다. 입으면 발소리가 사라지고 몸이 조금 가벼워진다. 달까지 뛰어오를 만큼은 아니지만, 그래도 어제보다는 한 뼘 높이 뛴다.',
     art: 'a plush white full-body rabbit costume suit with a round open neckline, fluffy fur cuffs at wrists and ankles, big padded feet with pink paw pads, a fluffy round cotton tail, soft and cuddly, pixel art',
-    wornDesc: 'a loose, baggy, oversized plush white one-piece rabbit costume covering the whole body from the neck down, thick soft padded fluffy fur that hides the body shape, big round mitten paws with pink pads in place of hands, big soft padded paw feet with pink pads, a round white cotton tail',
+    wornDesc: 'a loose, baggy, oversized white plush rabbit kigurumi onesie several sizes too big, covering the whole body from the neck down to the paws in one piece, thick padded fluffy fur hanging in slack folds that completely hides the body shape, the arms and legs wide padded tubes of fur, big round mitten paws with pink pads in place of hands, big soft padded paw feet with pink pads, a round white cotton tail',
   },
   {
     key: 'chuseok_bok_pouch',

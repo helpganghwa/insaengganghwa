@@ -22,7 +22,7 @@ const CAND: Record<string, string> = {
   chuseok_moon_wand: 'chuseok_moon_wand_full',
   chuseok_jade_hanbok: 'chuseok_hanbok_v3',
   chuseok_bok_pouch: 'chuseok_bok_pouch',
-  chuseok_rabbit_pestle: 'chuseok_rabbit_pestle_v14',
+  chuseok_rabbit_pestle: 'chuseok_moonrabbit_mallet',
   chuseok_rabbit_suit: 'chuseok_rabbit_suit_v15',
   chuseok_rabbit_ears: 'chuseok_rabbit_ears_v4',
 };

@@ -89,7 +89,7 @@
     "chuseok_moon_wand_full": "완드는 고정, 머리의 금빛 보름달만 숨 쉬듯 밝아졌다 어두워지고 오색 술이 살짝 흔들림",
     "chuseok_hanbok_v3": "정지한 한복, 저고리 앞에 길게 늘어진 진홍 옷고름만 아주 살짝 흔들림, 팔·소매·치마·금박 꽃 띠는 완전히 그대로, 빛 효과 없음",
     "chuseok_bok_pouch": "거의 완전 정지, 아주 미세한 움직임만: 늘어진 술이 아주 살짝 흔들림, 몸통은 꽉 찬 채 완전 정지",
-    "chuseok_rabbit_pestle_v14": "절굿공이는 고정, 매끈한 나무를 따라 흰 달빛 광택이 천천히 흐르고 머리 주위에 작은 반짝임이 떠오름",
+    "chuseok_moonrabbit_mallet": "떡메는 고정, 머리에 새긴 금빛 보름달만 숨 쉬듯 천천히 밝아졌다 어두워지고 자루의 붉은 술이 아주 살짝 흔들림",
     "chuseok_rabbit_suit_v15": "움직임을 최소로 한 대기 애니, 두 손만 천천히 쥐었다 펴짐(12번째 채택본)",
     "chuseok_rabbit_ears_v4": "머리띠는 고정, 빛·반짝임 없음, 접힌 귀가 천천히 펴져 섰다가 다시 접히고 다른 귀는 그대로"
   },
@@ -180,7 +180,7 @@
     "chuseok_moon_wand_full": "the wand stays completely fixed and motionless; only the golden full moon at its head brightens and dims slowly like breathing, the dark rabbit silhouette inside it stays still, and the colorful silk tassels sway very gently",
     "chuseok_hanbok_v3": "static hanbok; only the long crimson ribbon ties hanging down the front of the jacket sway very slightly; the arms, the striped sleeves, the skirt and the gold floral band stay completely still and rigid; no sparkles, no light effects",
     "chuseok_bok_pouch": "almost completely still, extremely subtle animation; only the hanging tassel sways very slightly, a tiny barely noticeable motion; the bag stays solid and perfectly still",
-    "chuseok_rabbit_pestle_v14": "the pestle stays completely fixed and motionless; a soft white moonlight sheen slides slowly along the smooth wood from the grip to the head, and a few tiny pale sparkles drift up around the head",
+    "chuseok_moonrabbit_mallet": "the mallet stays completely fixed and motionless; only the golden full moon carved on its head brightens and dims slowly like breathing, and the two small red tassels on the handle sway very slightly; the rabbit carving, the wood and the cord stay perfectly still; no sparkles",
     "chuseok_rabbit_suit_v15": "minimal idle animation of a rabbit costume; the costume stays as still as possible; the only motion is the two paws slowly clenching and unclenching; nothing else moves",
     "chuseok_rabbit_ears_v4": "the headband stays fixed; no glow, no sparkle, no flashing; the folded ear slowly unfolds to stand upright and then folds back down again, while the other ear stays perfectly still"
   },

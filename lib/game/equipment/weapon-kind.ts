@@ -30,7 +30,7 @@ export type WeaponKind = {
 const BY_KEY: Record<string, WeaponKind> = {
   // ── 한가위(2026-09, catalog-v6) ──
   chuseok_moon_wand: { noun: 'magic wand (a short rod topped with a glowing moon disc)' },
-  chuseok_rabbit_pestle: { noun: 'thick wooden stick (a long wooden pestle stick, thick at both ends and gradually thinner toward the middle)' },
+  chuseok_rabbit_pestle: { noun: 'wooden mallet (a large rice-cake pounding hammer, a squared wooden head crosswise on a long handle)' },
   // ── 한손검·도 ──
   kingdom_ribbon_rapier: { noun: 'rapier (a slender one-handed sword)' },
   vampire_blood_rapier: { noun: 'rapier (a slender one-handed sword)' },
