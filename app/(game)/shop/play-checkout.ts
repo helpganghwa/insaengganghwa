@@ -79,8 +79,19 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
 }
 
 const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
-const SHEET_UNAVAILABLE_MSG =
-  '구글 플레이 결제창을 열 수 없어요. Chrome 앱과 Play 스토어 앱을 최신으로 업데이트하고 기기를 다시 시작한 뒤 시도해 주세요. 계속 안 되면 브라우저에서 ganghwa.app에 접속해 결제할 수 있어요.';
+// 앱 안 결제는 앱 안에서 해결한다(2026-09-23 사용자 결정) — 브라우저 결제나 다른 앱 설치를 권하지 않는다.
+const SHEET_UNAVAILABLE_MSG = '구글 플레이 결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.';
+/**
+ * 삼성 인터넷이 앱을 띄운 경우(2026-09-23 실측: 실패 76회 전부 SamsungBrowser/28·30 UA, 성공은 Chrome).
+ * 기본 브라우저가 삼성 인터넷이면 안드로이드가 Play 앱(TWA)을 삼성 인터넷으로 열고, 삼성 인터넷은 Digital Goods 상품 조회까지는
+ * 되지만 구글 결제창(PaymentRequest)을 열지 못한다. 근본 해결은 앱이 TWA 제공자를 Chrome으로 고정하는 것(mobile/android
+ * LauncherActivity.createTwaLauncher, 앱 업데이트 필요). 그때까지는 시트를 열지 않고 업데이트 안내만 한다.
+ */
+const SAMSUNG_HOST_MSG =
+  '지금 이 기기에서는 앱 안 결제창이 열리지 않는 문제가 있어요. 이를 고친 앱 업데이트를 준비하고 있으니, 업데이트가 나오면 다시 시도해 주세요.';
+function hostedBySamsungInternet(): boolean {
+  return /SamsungBrowser/i.test(navigator.userAgent);
+}
 
 /** 시트 직전 진단 요약(직후 실패 기록에 함께 붙인다). */
 let lastSheetDiag = '';
@@ -217,6 +228,10 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     // 진단(2026-09-23): 실유저 8명 76회가 시트 단계 AbortError "Invalid state."로 끝나는데 원인이 안 잡힌다.
     // 시트를 열기 전에 상품 조회·canMakePayment·크롬 버전을 기록해 실패 기기의 공통점을 찾는다. 기록은 best-effort.
     const diag = await playSheetDiagnostics(sku, request);
+    if (hostedBySamsungInternet()) {
+      reportPlayCheckout('precheck', sku, { code: 'SAMSUNG_HOST', message: diag.summary });
+      return { ok: false, reason: 'window', message: SAMSUNG_HOST_MSG };
+    }
     if (diag.canMakePayment === false) {
       reportPlayCheckout('precheck', sku, { code: 'CANNOT_PAY', message: diag.summary });
       return { ok: false, reason: 'window', message: SHEET_UNAVAILABLE_MSG };

@@ -133,7 +133,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
   한도가 걸린다. `payment-recon`의 미성년 점검도 `identity_verifications` 조인이라 미인증 계정은
   탐지선 밖이다.
 - **서비스 계정 키** — Vercel env 서버 전용. 로컬에 두지 않는다(푸시 키 사고 교훈, [push-send-local-vapid-incident]).
-- **Digital Goods API 가용성** — Chrome 101+ TWA에서만. 삼성 브라우저 기본 기기는 TWA가 Chrome을 강제하므로 문제없음.
+- **Digital Goods API 가용성** — Chrome 101+ TWA에서만. ⚠ **삼성 인터넷이 기본 브라우저인 기기는 TWA가 삼성 인터넷으로 열린다**(2026-09-23 실측: Play 결제 실패 76회 전부 SamsungBrowser UA). 삼성 인터넷은 상품 조회는 되지만 결제창(PaymentRequest)을 열지 못해 AbortError "Invalid state."/RESULT_CANCELED로 끝난다. 웹은 SamsungBrowser UA면 시트를 열지 않고 기본 브라우저를 Chrome으로 바꾸도록 안내(`SAMSUNG_HOST_MSG`), 앱은 TWA 제공자를 Chrome으로 고정하는 수정이 필요.
 - **환불** — Google이 처리. voided purchases 동기화가 회수의 유일한 경로이므로 cron 하트비트 필수.
 
 ### 5-1. 결제 복구·실패 기록(2026-09-22 사고에서)
