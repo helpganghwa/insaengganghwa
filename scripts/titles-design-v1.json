@@ -433,6 +433,49 @@
       "orb": true,
       "pt": "petal",
       "pc": 6
+    },
+    "set_moon_miller": {
+      "fx": "lunarflow"
+    },
+    "set_gilt_maiden": {
+      "fx": "roseflow",
+      "pt": "petal"
+    },
+    "set_mallet_master": {
+      "fx": "honeyflow"
+    },
+    "set_rabbit_mage": {
+      "fx": "moonlight",
+      "pt": "stardust"
+    },
+    "fullmoon_mallet_master": {
+      "fx": "goldglow"
+    },
+    "bok_pouch_master": {
+      "fx": "gildedflow"
+    },
+    "set_moonshadow_seer": {
+      "fx": "stardrift",
+      "pt": "stardust"
+    },
+    "set_forest_miller": {
+      "color": "#d9b36c"
+    },
+    "set_crimson_guard": {
+      "fx": "royalflow"
+    },
+    "set_frog_rabbit": {
+      "color": "#86efac"
+    },
+    "set_bok_wanderer": {
+      "color": "#e2c79a"
+    },
+    "set_lotus_maiden": {
+      "color": "#f79cb9",
+      "pt": "petal"
+    },
+    "set_cloud_rabbit": {
+      "color": "#c7d2fe"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

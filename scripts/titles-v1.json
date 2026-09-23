@@ -4615,5 +4615,122 @@
     "cond": "2026 추석 강화 대회 한복 장비 1등(아이템 하나면 충분)",
     "hidden": false,
     "diff": "한정"
+  },
+  {
+    "code": "set_moon_miller",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "달의 방아꾼",
+    "cond": "보름달 떡메 + 토끼 인형 옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_gilt_maiden",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "금박 규수",
+    "cond": "달그림자 완드 + 금박 꽃단 한복 + 복주머니를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_mallet_master",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "떡메 명인",
+    "cond": "보름달 떡메 + 금박 꽃단 한복 + 복주머니를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_rabbit_mage",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "토끼 마법사",
+    "cond": "달그림자 완드 + 토끼 인형 옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "fullmoon_mallet_master",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "보름달의 주인",
+    "cond": "보름달 떡메를 +100 이상으로 장착",
+    "hidden": true,
+    "diff": "어려움"
+  },
+  {
+    "code": "bok_pouch_master",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "만복",
+    "cond": "복주머니를 +100 이상으로 장착",
+    "hidden": true,
+    "diff": "어려움"
+  },
+  {
+    "code": "set_moonshadow_seer",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "달그림자 예언자",
+    "cond": "달그림자 완드 + 성좌의 망토 + 대답하지 않는 나침반을 +50 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_forest_miller",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "숲의 방앗간지기",
+    "cond": "보름달 떡메 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_crimson_guard",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "청홍 호위무사",
+    "cond": "청홍 쌍검 + 금박 꽃단 한복 + 진홍 봉황선을 +50 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_frog_rabbit",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "개구리 토끼",
+    "cond": "퉤! 하는 대롱 + 토끼 인형 옷 + 반딧불 충전기를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_bok_wanderer",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "복짐 나그네",
+    "cond": "돌아오는 뼈 + 모래바람의 겹옷 + 복주머니를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_lotus_maiden",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "수련 아씨",
+    "cond": "피어나는 삼지창 + 금박 꽃단 한복 + 수련 화관을 +50 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
+  },
+  {
+    "code": "set_cloud_rabbit",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "구름 토끼",
+    "cond": "두근 화살 + 구름 갑옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+    "hidden": true,
+    "diff": "중간"
   }
 ]

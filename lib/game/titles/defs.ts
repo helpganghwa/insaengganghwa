@@ -5478,6 +5478,141 @@ export const TITLE_DEFS: TitleDef[] = [
    orb: true,
    glow: true
   }
+ },
+ {
+  code: "set_moon_miller",
+  kind: "permanent",
+  label: "달의 방아꾼",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "lunarflow"
+  }
+ },
+ {
+  code: "set_gilt_maiden",
+  kind: "permanent",
+  label: "금박 규수",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "roseflow",
+   pt: "petal"
+  }
+ },
+ {
+  code: "set_mallet_master",
+  kind: "permanent",
+  label: "떡메 명인",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "honeyflow"
+  }
+ },
+ {
+  code: "set_rabbit_mage",
+  kind: "permanent",
+  label: "토끼 마법사",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "moonlight",
+   pt: "stardust"
+  }
+ },
+ {
+  code: "fullmoon_mallet_master",
+  kind: "permanent",
+  label: "보름달의 주인",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "goldglow",
+   glow: true
+  }
+ },
+ {
+  code: "bok_pouch_master",
+  kind: "permanent",
+  label: "만복",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "gildedflow",
+   glow: true
+  }
+ },
+ {
+  code: "set_moonshadow_seer",
+  kind: "permanent",
+  label: "달그림자 예언자",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "stardrift",
+   pt: "stardust"
+  }
+ },
+ {
+  code: "set_forest_miller",
+  kind: "permanent",
+  label: "숲의 방앗간지기",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#d9b36c"
+  }
+ },
+ {
+  code: "set_crimson_guard",
+  kind: "permanent",
+  label: "청홍 호위무사",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   fx: "royalflow"
+  }
+ },
+ {
+  code: "set_frog_rabbit",
+  kind: "permanent",
+  label: "개구리 토끼",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#86efac"
+  }
+ },
+ {
+  code: "set_bok_wanderer",
+  kind: "permanent",
+  label: "복짐 나그네",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#e2c79a"
+  }
+ },
+ {
+  code: "set_lotus_maiden",
+  kind: "permanent",
+  label: "수련 아씨",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#f79cb9"
+  }
+ },
+ {
+  code: "set_cloud_rabbit",
+  kind: "permanent",
+  label: "구름 토끼",
+  hidden: true,
+  cat: "아이템 발동",
+  style: {
+   color: "#c7d2fe"
+  }
  }
 ] as const;
 

@@ -5064,6 +5064,184 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "추석",
   cond: "2026 추석 강화 대회 한복 장비 1등(아이템 하나면 충분)",
   diff: "한정"
+ },
+ {
+  code: "set_moon_miller",
+  cat: "아이템 발동",
+  cond: "보름달 떡메 + 토끼 인형 옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_rabbit_pestle",
+    "chuseok_rabbit_suit",
+    "chuseok_rabbit_ears"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_gilt_maiden",
+  cat: "아이템 발동",
+  cond: "달그림자 완드 + 금박 꽃단 한복 + 복주머니를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_moon_wand",
+    "chuseok_jade_hanbok",
+    "chuseok_bok_pouch"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_mallet_master",
+  cat: "아이템 발동",
+  cond: "보름달 떡메 + 금박 꽃단 한복 + 복주머니를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_rabbit_pestle",
+    "chuseok_jade_hanbok",
+    "chuseok_bok_pouch"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_rabbit_mage",
+  cat: "아이템 발동",
+  cond: "달그림자 완드 + 토끼 인형 옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_moon_wand",
+    "chuseok_rabbit_suit",
+    "chuseok_rabbit_ears"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "fullmoon_mallet_master",
+  cat: "아이템 발동",
+  cond: "보름달 떡메를 +100 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_rabbit_pestle"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "bok_pouch_master",
+  cat: "아이템 발동",
+  cond: "복주머니를 +100 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_bok_pouch"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "set_moonshadow_seer",
+  cat: "아이템 발동",
+  cond: "달그림자 완드 + 성좌의 망토 + 대답하지 않는 나침반을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_moon_wand",
+    "astrologer_starmap_coat",
+    "kingdom_riddle_astrolabe"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_forest_miller",
+  cat: "아이템 발동",
+  cond: "보름달 떡메 + 숲지기의 한 벌 + 약초꾼의 버섯 모자를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_rabbit_pestle",
+    "forest_ranger_outfit",
+    "swamp_mushroom_hat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_crimson_guard",
+  cat: "아이템 발동",
+  cond: "청홍 쌍검 + 금박 꽃단 한복 + 진홍 봉황선을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_court_twin_sabers",
+    "chuseok_jade_hanbok",
+    "kingdom_court_fan"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_frog_rabbit",
+  cat: "아이템 발동",
+  cond: "퉤! 하는 대롱 + 토끼 인형 옷 + 반딧불 충전기를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_frog_blowgun",
+    "chuseok_rabbit_suit",
+    "marsh_frog_jar"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_bok_wanderer",
+  cat: "아이템 발동",
+  cond: "돌아오는 뼈 + 모래바람의 겹옷 + 복주머니를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_hunter_boomerang",
+    "desert_nomad_robes",
+    "chuseok_bok_pouch"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_lotus_maiden",
+  cat: "아이템 발동",
+  cond: "피어나는 삼지창 + 금박 꽃단 한복 + 수련 화관을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "swamp_lotus_trident",
+    "chuseok_jade_hanbok",
+    "swamp_lily_crown"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_cloud_rabbit",
+  cat: "아이템 발동",
+  cond: "두근 화살 + 구름 갑옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "angel_cherub_bow",
+    "angel_cherub_armor",
+    "chuseok_rabbit_ears"
+   ],
+   min: 30
+  }
  }
 ] as const;
 
