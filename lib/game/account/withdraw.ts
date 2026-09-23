@@ -56,6 +56,10 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   catalog_items: '전역', servers: '전역', zones: '전역', zone_adjacency: '전역',
   system_mode: '전역', cron_heartbeats: '크론 dead-man 원장', schema_migrations: '마이그레이션 원장',
   enhance_totals: '전역 누적 집계 스냅샷 1행(0198) — 유저 축이 없고 크론이 재계산해 자가치유',
+  chuseok_contest_results: '추석 강화 대회 정산 결과(0214) — 확정 순위 기록, 탈퇴자는 화면에 "(탈퇴)"로 표시',
+  chuseok_songpyeon: '추석 송편 지갑(0213) — 원장 캐시, 이벤트 종료 뒤 일괄 정리. 순위·수령은 withdrawn_at으로 이미 제외',
+  chuseok_songpyeon_ledger: '추석 송편 원장(0213) — 강화 성공 적립·교환 감사 기록, 이벤트 종료 뒤 일괄 정리',
+  chuseok_songpyeon_claims: '추석 송편 도달 보상 수령 기록(0213) — 재가입 재수령 방지(이벤트 한정)',
 };
 
 export async function withdrawAccount(userId: string): Promise<void> {

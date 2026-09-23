@@ -18,4 +18,8 @@ export const PENDING_CODES = new Set<string>([]);
  *  - new_record: rank-leader 크론(world/event.ts) — max 1위 값의 **경신** 관측 순간 지급.
  *    "현재 1위" 판정(rank_max와 동일 술어)으로는 cond의 "경신"이 아니다.
  */
-export const EVENT_HOOK_CODES = new Set<string>(['comeback', 'apex_shoot', 'new_record']);
+export const EVENT_HOOK_CODES = new Set<string>([
+  'comeback', 'apex_shoot', 'new_record',
+  // 추석 강화 대회 순위 칭호(2026-09) — 어드민 정산(lib/game/chuseok/contest.ts settleContest)이 지급.
+  'chuseok26_moon1', 'chuseok26_moon2', 'chuseok26_moon3', 'chuseok26_flower1', 'chuseok26_flower2', 'chuseok26_flower3',
+]);

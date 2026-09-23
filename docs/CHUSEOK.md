@@ -6,7 +6,7 @@
 
 | 구간 | 시각(KST) | 비고 |
 |---|---|---|
-| 출시·적립 시작 | 2026-09-24 00:00 (**확정**, 2026-09-22 사용자 결정) | 코드는 9/23 배포, 6종 개방은 자정에 크론이 자동 |
+| 출시·적립 시작 | 2026-09-24 00:00 (**확정**, 2026-09-22 사용자 결정) | 코드는 9/23 배포, 6종 노출·추첨은 서버 시각으로 정각에 열리고 크론(00:02~00:07)은 DB 플래그·공시 스냅샷만 뒷정리 |
 | 대회·적립 마감 | 2026-09-30 23:59:59 | 이후 강화 성공은 송편이 되지 않는다 |
 | 정산 | 10/1 어드민 확인 후 지급 | 순위 보상·칭호 |
 | 결과 노출·수령·교환 마감 | 2026-10-03 23:59:59 | 남은 송편은 소멸(화면 안내) |
@@ -49,9 +49,9 @@
 |---|---|---|---|
 | chuseok_moon_wand | 무기 | 달그림자 완드 | 한복(flower) |
 | chuseok_jade_hanbok | 방어구 | 금박 꽃단 한복 | 한복 |
-| chuseok_bok_pouch | 장신구 | 한가위 복주머니 | 한복 |
+| chuseok_bok_pouch | 장신구 | 복주머니 | 한복 |
 | chuseok_rabbit_pestle | 무기 | 보름달 떡메 | 달토끼(moon) |
-| chuseok_rabbit_suit | 방어구 | 보송한 토끼 인형 옷 | 달토끼 |
+| chuseok_rabbit_suit | 방어구 | 토끼 인형 옷 | 달토끼 |
 | chuseok_rabbit_ears | 장신구 | 접힌 토끼 귀 머리띠 | 달토끼 |
 
 - 정본 `lib/game/equipment/catalog-v6.ts`. 지역 '일반', 기존 아이템과 같은 취급(보급 균등 추첨 풀에 합류 → 슬롯당 40→42종, 아이템당 2.5%→약 2.38%).
@@ -71,10 +71,18 @@
 
 - 9/24·25·26 15:00 KST에 전 유저 우편 💎1,000·📦30(3슬롯 10개씩) + 푸시. 어드민 우편의 **예약 전송**(0123)으로 운영자가 등록한다(3통). 문안은 운영자 게시 초안 참조.
 
-## 8. 배포 체크리스트 (9/23)
+## 8. 배포 체크리스트 (9/23) — 2026-09-23 감사 반영
 
-1. master(핫픽스 3건) 병합 → 스테이징 확인.
-2. 프로덕션 DB: `apply-migration 0213`, `0214` → `seed-catalog`(6종 active=false, 슬롯 42종 중 40 활성) → 프로덕션 배포(push master).
-3. Vercel preview env `CHUSEOK_START_ISO` 삭제(스테이징 앞당김용) — 프로덕션엔 없어야 한다.
-4. 9/23 00:00 전 확률 공시·개발자 노트 게시(운영자). 9/24 00:00 크론 개방 확인(`probability_snapshots` 새 행, 확률 공시 페이지 42종).
-5. 예약 우편 3통 등록(15:00). 10/1 정산·지급, 10/3 종료.
+이 브랜치에는 10차 업데이트(feat/update-small-10, 마이그레이션 0206~0211)가 함께 들어 있어 프로덕션에는 **0206~0211·0213·0214가 모두 미적용**이다(0212는 적용됨, 재실행 금지). 순서를 어기면 로그인(0210)·결제 마일리지(0211)·예약 우편 크론(0208, 추석 우편 93~95 포함)·묶음 푸시(0206)가 깨진다. 대난투·점령전 크론(23:00~00:05)과 00:00 개방을 피해 **22:30 전에 코드 배포까지** 마친다. 적용 도구는 전부 `bun run scripts/apply-migration.ts <file> PROD_DATABASE_URL`(파일 전체가 한 트랜잭션, lock_timeout 없음 → 실행 직전 `pg_stat_activity`에 오래 열린 트랜잭션이 없는지 확인).
+
+1. **병합**: `git merge --no-ff origin/master`(Play 결제 핫픽스 4건, 충돌 0 확인) → `bun run typecheck && bun run build` → master-dev 푸시 → 스테이징 health `dpl` 변경 확인.
+2. **코드 전 마이그레이션(프로덕션)**: `0206_push_pending_server_key` → `0208_scheduled_mail_server` → `0210_server_recommended` → `0211_mileage_wallets` → `0213_chuseok_songpyeon` → `0214_chuseok_contest_results`.
+3. **카탈로그 시드(프로덕션)**: `seed-catalog.ts`는 `DIRECT_URL ?? DATABASE_URL`(스테이징)만 읽으므로 셸에서 DIRECT_URL을 프로덕션 값으로 덮어 실행한다. 검증: 6종 행 존재·`active=false`, 슬롯별 활성 40/40/40, 전체 weapon 48·armor 42·accessory 42. **시드 → 배포 순서**를 지킨다(배포 뒤 시드하면 `active-catalog-v2` 캐시에 6종이 빠진 채 00:00을 넘겨 공시 40종·추첨 42종이 어긋나는 창이 생김. 어긋났으면 catalog 태그 revalidate).
+4. **코드 배포**: `git push origin HEAD:master` → `vercel ls --prod` Ready → `https://ganghwa.app/api/health`의 `dpl`이 `dpl_5pTPL93…`에서 바뀌었는지 확인(인스턴트 롤백 이력이 있으면 자동 승격이 안 될 수 있음 → `vercel promote`).
+5. **배포 직후**: `0211` 재실행(배포 창 사이 적립 보정, 멱등) → 프로덕션 `cron_heartbeats`에 `daily-stats` 행 `last_success_at=now()` upsert(없으면 워치독 오탐) → 로그인·결제 화면·`/event/chuseok`(개방 전이라 홈 리다이렉트)·예약 우편 93~95의 `server_id`(null=전 서버) 확인.
+6. **9/24 00:00~00:10**: 보급 풀·확률 공시 42종(2.38%) 확인, 00:07까지 `probability_snapshots` 새 행(effective_at 9/24 00:00 KST, note "추석 6종 개방", `jsonb_typeof='object'`)과 `catalog_items` 6종 `active=true` 확인. 없으면 `scripts/record-probability-snapshot.ts --confirm`으로 수동 기록.
+7. **안정 확인 뒤(9/24 낮 이후, 되돌릴 일이 없을 때)**: `0207_nickname_owner` → `0209_push_pending_pk_swap` 각 **한 번만**(0209는 재실행 시 실패, 둘 다 적용 뒤에는 옛 코드로 롤백 불가).
+8. **스테이징 정리**: preview env `CHUSEOK_START_ISO` 삭제(`vercel env rm CHUSEOK_START_ISO preview master-dev`, 프로덕션엔 원래 없음), 스테이징 `seed-catalog`로 6종 이름 동기화, 테스트 픽스처 복원.
+9. **운영자**: 확률 공시·업데이트/이벤트 공지 게시 확인(공지 #42·#43은 새 이름으로 이미 게시됨), 10/1 정산·지급, 10/3 종료.
+
+**롤백**: 인스턴트 롤백 → health `dpl` 확인 → 9/24 00:02 이후라면 `update catalog_items set active=false where code like 'chuseok_%'` + catalog 태그 revalidate(옛 아틀라스에 그림이 없어 이미지가 깨짐). 0207·0209 적용 전이어야 안전하다.

@@ -37,7 +37,7 @@ function SongpyeonIcon({ size = 16 }: { size?: number }) {
 
 /**
  * 송편 세그먼트 — 누적·사용 가능 한 카드 → 도달 보상(세로 트랙) → 교환(상자·다이아 별도 버튼 + 수량 팝업).
- * 수령·교환은 낙관 갱신 없이 서버 응답으로 상태를 바꾼다(금액이 크고 한 번에 한 번이라 지연 체감이 작다).
+ * 수령·교환은 낙관 갱신(즉시 반영, 실패 시 롤백 — ALREADY는 서버 값으로 맞춤).
  */
 export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
   const [ov, setOv] = useState(initial);

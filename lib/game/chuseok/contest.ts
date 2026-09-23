@@ -70,7 +70,12 @@ export type ContestBoard = {
 
 type RawRow = { code: string; user_id: string; nickname: string; level: number; transcend: number; reached_at: string | null };
 
-/** 기준 시각의 아이템별 참가 행 — 정지·탈퇴 계정 제외. */
+/**
+ * 기준 시각의 아이템별 참가 행 — 정지·탈퇴 계정 제외.
+ * 단계는 기준 시각 이전 마지막 강화 기록의 to_level, 도달 시각은 **그 단계에 도달한 마지막 성공(success·mega) 기록**의
+ * created_at이다(2026-09-23 감사 H1: 마지막 기록을 그대로 쓰면 '유지'가 88%라 방치한 선착이 뒤늦은 시도 한 번에 밀렸다).
+ * 하락 뒤 다시 올라오면 다시 도달한 시각, 강화 기록이 없으면 획득 시각.
+ */
 async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
   const codes = CHUSEOK_CONTEST_ITEMS.map((i) => i.code);
   const cutoff = new Date(cutoffMs).toISOString();
@@ -78,7 +83,7 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
     select ci.code, ue.user_id::text as user_id, c.nickname,
            coalesce(l.to_level, 0)::int as level,
            ue.transcend_level::int as transcend,
-           coalesce(l.created_at, ue.first_acquired_at) as reached_at
+           coalesce(r.created_at, ue.first_acquired_at) as reached_at
       from user_equipment ue
       join catalog_items ci on ci.id = ue.catalog_item_id
        and ci.code = any(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
@@ -91,6 +96,12 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
          where el.user_equipment_id = ue.id and el.created_at <= ${cutoff}::timestamptz
          order by el.created_at desc limit 1
       ) l on true
+      left join lateral (
+        select el.created_at from enhancement_logs el
+         where el.user_equipment_id = ue.id and el.created_at <= ${cutoff}::timestamptz
+           and el.result in ('success', 'mega') and el.to_level = l.to_level
+         order by el.created_at desc limit 1
+      ) r on true
      where ue.server_id = ${serverId} and ue.first_acquired_at <= ${cutoff}::timestamptz
   `)) as unknown as RawRow[];
   const by = new Map<string, RankInput[]>();
@@ -185,8 +196,14 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
      order by r.catalog_code, r.rank
   `)) as unknown as { code: string; rank: number; user_id: string; level: number; reached_at: string | null; nickname: string | null; transcend: number }[];
   if (rows.length === 0) return null;
+  // 결과 표는 1~10등뿐이라 순위 밖 참가자의 '내 자리'는 마감 시각 기준으로 다시 계산한다(2026-09-23 감사 M2:
+  // 비우면 보유 장비인데 '아직 이 장비가 없어요'로 보였다). 결과 표에 있으면 그 행이 우선.
+  const outside = userId && CHUSEOK_CONTEST_ITEMS.some((i) => !rows.some((r) => r.code === i.code && r.user_id === userId))
+    ? await loadRows(serverId, CHUSEOK_ACCRUE_END_MS)
+    : null;
   return CHUSEOK_CONTEST_ITEMS.map((i) => {
     const mine = rows.find((r) => r.code === i.code && r.user_id === userId);
+    const mineOutside = !mine && outside ? rankRows(outside.get(i.code) ?? []).find((r) => r.userId === userId) ?? null : null;
     return {
       code: i.code,
       name: NAME_BY_CODE.get(i.code) ?? i.code,
@@ -197,7 +214,9 @@ async function loadSettled(serverId: number, userId: string | null): Promise<Boa
         .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), transcend: Number(r.transcend ?? 0), reachedAt: r.reached_at, me: r.user_id === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
       mine: mine
         ? { rank: Number(mine.rank), level: Number(mine.level), reachedAt: mine.reached_at, nextTierEnd: null, reward: rankRewardFor(Number(mine.rank)) }
-        : null,
+        : mineOutside
+          ? { rank: mineOutside.rank, level: mineOutside.level, reachedAt: iso(mineOutside.reachedAt), nextTierEnd: null, reward: rankRewardFor(mineOutside.rank) }
+          : null,
       participants: rows.filter((r) => r.code === i.code).length,
     };
   });

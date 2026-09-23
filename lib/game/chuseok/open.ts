@@ -23,21 +23,27 @@ import { CHUSEOK_START_ISO, CHUSEOK_START_MS } from './config';
 export async function openChuseokCatalogIfDue(now = Date.now()): Promise<{ opened: number; snapshotId: string | null }> {
   if (now < CHUSEOK_START_MS) return { opened: 0, snapshotId: null };
   const codes = [...CHUSEOK_ITEM_KEYS];
-  const rows = (await db.execute(sql`
-    update catalog_items set active = true
-     where active = false and code = any(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
-    returning code
-  `)) as unknown as { code: string }[];
-  if (rows.length === 0) return { opened: 0, snapshotId: null };
+  // 플래그와 공시 스냅샷은 한 트랜잭션 — 따로 두면 스냅샷 insert가 실패했을 때 다음 틱엔 켤 행이 없어 §33 기록이
+  // 영영 빠진다(2026-09-23 감사 L1).
+  const out = await db.transaction(async (tx) => {
+    const rows = (await tx.execute(sql`
+      update catalog_items set active = true
+       where active = false and code = any(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
+      returning code
+    `)) as unknown as { code: string }[];
+    if (rows.length === 0) return null;
+    // 공시 스냅샷 — scripts/record-probability-snapshot.ts와 같은 단일 출처(buildProbabilityPayloadCore).
+    const slotCounts = (await tx.execute(sql`
+      select slot, count(*)::int as n from catalog_items where active = true group by slot order by slot
+    `)) as unknown as { slot: string; n: number }[];
+    const payload = { ...buildProbabilityPayloadCore(slotCounts), note: `추석 6종 개방(${rows.map((r) => r.code).join(', ')})` };
+    const [snap] = (await tx.execute(sql`
+      insert into probability_snapshots (effective_at, payload) values (${CHUSEOK_START_ISO}::timestamptz, ${JSON.stringify(payload)}::jsonb) returning id
+    `)) as unknown as { id: string }[];
+    return { opened: rows.length, snapshotId: snap?.id ?? null };
+  });
+  if (!out) return { opened: 0, snapshotId: null };
   revalidateTag('catalog', 'max');
-  // 공시 스냅샷 — scripts/record-probability-snapshot.ts와 같은 단일 출처(buildProbabilityPayloadCore).
-  const slotCounts = (await db.execute(sql`
-    select slot, count(*)::int as n from catalog_items where active = true group by slot order by slot
-  `)) as unknown as { slot: string; n: number }[];
-  const payload = { ...buildProbabilityPayloadCore(slotCounts), note: `추석 6종 개방(${rows.map((r) => r.code).join(', ')})` };
-  const [snap] = (await db.execute(sql`
-    insert into probability_snapshots (effective_at, payload) values (${CHUSEOK_START_ISO}::timestamptz, ${JSON.stringify(payload)}::jsonb) returning id
-  `)) as unknown as { id: string }[];
-  console.log(`[chuseok-open] 개방 ${rows.length}종, 공시 스냅샷 id=${snap?.id ?? '?'}`);
-  return { opened: rows.length, snapshotId: snap?.id ?? null };
+  console.log(`[chuseok-open] 개방 ${out.opened}종, 공시 스냅샷 id=${out.snapshotId ?? '?'}`);
+  return out;
 }
