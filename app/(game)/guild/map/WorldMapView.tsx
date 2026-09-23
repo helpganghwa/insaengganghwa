@@ -11,6 +11,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
+import { WikiLink } from '@/components/WikiLink';
 import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
@@ -780,9 +781,21 @@ export function WorldMapView({
           <>
         {hasChronicle ? (
           <div className="mb-2 flex items-center justify-between gap-1.5">
-            {/* 다시 보기 — 왼쪽 끝, 이모지 없음(2026-07-16 확정). 미노출 시에도 우측 탭 정렬 유지용 스페이서. */}
-            {!replayActive &&
-            ((chronicleTab === 'today' && canReplay) || (chronicleTab === 'yesterday' && canReplayYesterday)) ? (
+            {/* 왼쪽 끝 — [전체] 탭에서는 역사 위키 텍스트 링크(새 창, 2026-09-23), 어제/오늘은 다시 보기(이모지 없음, 2026-07-16 확정).
+                둘 다 아닐 때도 우측 탭 정렬 유지용 스페이서. */}
+            {chronicleTab === 'full' ? (
+              <WikiLink
+                path="/history"
+                query={serverId !== 1 ? `?s=${serverId}` : ''}
+                className="inline-flex items-center gap-0.5 px-0.5 text-[11px] font-bold text-zinc-500 underline decoration-dotted underline-offset-2 active:opacity-60 dark:text-zinc-400"
+              >
+                역사 위키
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 17L17 7M8 7h9v9" />
+                </svg>
+              </WikiLink>
+            ) : !replayActive &&
+              ((chronicleTab === 'today' && canReplay) || (chronicleTab === 'yesterday' && canReplayYesterday)) ? (
               <button
                 type="button"
                 onClick={() => startReplay(chronicleTab === 'yesterday' ? 'yesterday' : 'today')}
