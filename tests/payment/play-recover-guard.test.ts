@@ -37,7 +37,8 @@ const mockComplete = vi.mocked(completePurchase);
 const mockCreate = vi.mocked(createPlayOrder);
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';
 const skip = !TEST_USER_ID;
-const SKU = 'dia_small';
+// 거의 팔리지 않는 최고가 SKU — 스테이징에 실제 미완 주문이 섞여 거짓 결과가 나지 않게.
+const SKU = 'dia_mega';
 let seq = 0;
 
 describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(DB 통합)', () => {
@@ -47,7 +48,7 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
   let otherProfile = '';
 
   beforeAll(async () => {
-    const r = (await testDb.execute(sql`select id::text id from profiles where id <> ${TEST_USER_ID}::uuid limit 1`)) as unknown as { id: string }[];
+    const r = (await testDb.execute(sql`select id::text id from profiles where id <> ${TEST_USER_ID}::uuid order by id limit 1`)) as unknown as { id: string }[];
     otherProfile = r[0]!.id;
   });
 
@@ -68,7 +69,7 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
     made.push(pid);
     await testDb.execute(sql`
       insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, provider, play_sku, created_at, play_checkout_at)
-      values (1, ${userId}::uuid, ${pid}, 'small', 6000::bigint, 0::bigint, 'pending', 'play', ${SKU},
+      values (1, ${userId}::uuid, ${pid}, 'mega', 68000::bigint, 0::bigint, 'pending', 'play', ${SKU},
         ${new Date(pt + createdOff).toISOString()}::timestamptz, ${new Date(pt + checkoutOff).toISOString()}::timestamptz)`);
     return pid;
   }
@@ -103,11 +104,30 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
   it('주인 본인은 다시 눌러 시도 시각이 밀린 주문이라도, 다른 유저 주문이 창에 있어도 자기 주문으로 복구된다', async () => {
     const pt = Date.now() - 30 * 60_000;
     const own = await order(TEST_USER_ID, pt, -60_000, 20 * 60_000);
-    await order(otherProfile, pt, -2 * 3_600_000, -2 * 3_600_000);
+    await order(otherProfile, pt, -10 * 60_000, -10 * 60_000);
     const gid = google(pt);
     const tok = `tok-recguard-${seq}`;
     expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, tok)).toEqual({ ok: true, already: false, paymentId: own });
     expect(mockComplete).toHaveBeenCalledWith(own, TEST_USER_ID, { playPurchaseToken: tok });
+    expect(await alertCount(gid)).toBe(0);
+  });
+
+  it('복구 유저 자신의 주문이 창 밖이고 다른 유저가 구매 직전에 연 주문이 있으면 막는다', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    await order(TEST_USER_ID, pt, -8 * 3_600_000, -8 * 3_600_000);
+    await order(otherProfile, pt, -5 * 60_000, -5 * 60_000);
+    const gid = google(pt);
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it('다른 유저가 몇 시간 전에 버린 결제창(구매 직전 아님)은 막지 않는다', async () => {
+    const pt = Date.now() - 10 * 60_000;
+    await order(TEST_USER_ID, pt, -2 * 3_600_000, -2 * 3_600_000);
+    const gid = google(pt);
+    mockCreate.mockResolvedValue({ paymentId: 'gp-recguard-new2' } as Awaited<ReturnType<typeof createPlayOrder>>);
+    expect(await recoverPlayPurchase(randomUUID(), 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: true, already: false, paymentId: 'gp-recguard-new2' });
     expect(await alertCount(gid)).toBe(0);
   });
 
