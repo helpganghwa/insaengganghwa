@@ -27,7 +27,9 @@ export type PaymentAlertKind =
   | 'PAYMENT_FAILED' // 中: PG가 알려준 결제 실패(시간 버킷 단위 집계)
   | 'COMPLETE_EXCEPTION' // 高: 지급 처리 중 예외
   | 'PARTIAL_CANCELLED' // 中: 부분취소(수동 처리 필요)
-  | 'RECON_SCAN_CAPPED'; // 高: recon 스캔이 limit에 걸림(백로그 초과 — 미스캔 주문 존재 가능)
+  | 'RECON_SCAN_CAPPED' // 高: recon 스캔이 limit에 걸림(백로그 초과 — 미스캔 주문 존재 가능)
+  | 'PLAY_RTDN_UNMATCHED' // 高: 구글이 알려 온 결제를 우리 주문과 하나로 맞추지 못함(0건·여러 건) — 콘솔 확인 후 어드민 도구로 지급
+  | 'PLAY_RTDN_FAILED'; // 高: 알림으로 맞춘 주문의 지급 처리 실패
 
 type Severity = 'critical' | 'high' | 'warn';
 
@@ -43,6 +45,8 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   PAYMENT_FAILED: 'warn',
   PARTIAL_CANCELLED: 'warn',
   RECON_SCAN_CAPPED: 'high',
+  PLAY_RTDN_UNMATCHED: 'high',
+  PLAY_RTDN_FAILED: 'high',
 };
 
 const SEV_EMOJI: Record<Severity, string> = { critical: '🔴', high: '🟠', warn: '🟡' };
