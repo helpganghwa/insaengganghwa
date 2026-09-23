@@ -130,7 +130,7 @@ export async function finalizeEnhance(jobId: string): Promise<
       status: 'success';
       result: Omit<
         ResolveResult,
-        'jobId' | 'userEquipmentId' | 'slotLane' | 'userId' | 'serverId' | 'catalogItemId'
+        'jobId' | 'userEquipmentId' | 'slotLane' | 'userId' | 'serverId' | 'catalogItemId' | 'resolvedAt'
       >;
       requeued: boolean;
       /** 재등록 성공 시 다음 잡 정보(없으면 null — MAX 도달 등). */
