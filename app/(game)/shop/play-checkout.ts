@@ -79,6 +79,12 @@ export async function playPriceLabel(sku: string): Promise<string | null> {
 }
 
 const UNSUPPORTED_MSG = '플레이스토어에서 설치한 앱에서만 결제할 수 있어요.';
+// 앱 안 결제는 앱 안에서 해결한다(2026-09-23 사용자 결정) — 브라우저 결제나 다른 앱 설치를 권하지 않는다.
+const NON_CHROME_HOST_MSG =
+  '지금 이 기기에서는 앱 안 결제창이 열리지 않는 문제가 있어요. 이를 고친 앱 업데이트를 준비하고 있으니, 업데이트가 나오면 다시 시도해 주세요.';
+function hostedByNonChromeBrowser(): boolean {
+  return /SamsungBrowser|Whale/i.test(navigator.userAgent);
+}
 
 /**
  * Play 결제 실패 기록(2026-09-22) — 결제 시트가 왜 실패했는지 서버에는 아무 흔적이 없었다(한 유저가
@@ -170,6 +176,12 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   // (2026-09-12 실측 19건). 여기서 막히면 서버에 아무 흔적도 남지 않는다.
   if (!(await digitalGoodsAvailable())) {
     return { ok: false, reason: 'unsupported', message: UNSUPPORTED_MSG };
+  }
+  // 삼성 인터넷·네이버 웨일이 띄운 앱은 주문을 만들기 전에 막는다(2026-09-24 핫픽스). 삼성은 결제창을 못 열고,
+  // 웨일은 결제창이 열려 청구까지 되지만 돌아올 때 화면을 새로 불러 결과를 잃는다(청구·미지급 1건 발생).
+  if (hostedByNonChromeBrowser()) {
+    reportPlayCheckout('precheck', productId, { code: 'NON_CHROME_HOST' });
+    return { ok: false, reason: 'window', message: NON_CHROME_HOST_MSG };
   }
   const r = await createPlayOrderAction(productId).catch(() => null);
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };

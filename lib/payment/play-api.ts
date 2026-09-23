@@ -129,6 +129,21 @@ export async function consumePlayProductPurchase(sku: string, purchaseToken: str
   );
 }
 
+/**
+ * orders.get 응답(필요한 필드만, 2026-09-24) — 구글 주문번호(GPA.…)로 구매 토큰을 되찾는다.
+ * 결제창 결과가 화면에 돌아오지 못해 서버에 토큰이 없는 주문(웨일 호스트 재로딩 등)을 어드민이 마무리할 때 쓴다.
+ */
+export type PlayOrder = {
+  orderId: string;
+  purchaseToken?: string;
+  state?: string;
+  lineItems?: { productId?: string }[];
+};
+
+export async function getPlayOrder(orderId: string): Promise<PlayOrder> {
+  return call<PlayOrder>(`/orders/${encodeURIComponent(orderId)}`);
+}
+
 /** 구글 주문 환불(revoke=true면 권한도 회수). 미성년 한도 초과 자동 환불·어드민 환불이 쓴다. */
 export async function refundPlayOrder(orderId: string, revoke = true): Promise<void> {
   await call<unknown>(`/orders/${encodeURIComponent(orderId)}:refund?revoke=${revoke ? 'true' : 'false'}`, {
