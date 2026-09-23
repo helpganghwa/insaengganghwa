@@ -51,6 +51,8 @@ function tokenFor(pid: string): string {
 const A = JSON.parse(readFileSync(join(ROOT, 'scripts/anim3-prompts.json'), 'utf8')) as {
   items: Record<string, string>; fixFloorDefault?: number; fixFloor?: Record<string, number>;
   fixAmp?: Record<string, number>; fixLock?: Record<string, number[]>; fixLockBody?: Record<string, boolean>; stripFloor?: string[];
+  /** 보간 모드 끝 프레임 경로(pid별). 시작은 pool 그림. */
+  interp?: Record<string, string>;
 };
 const floorFor = (pid: string) => A.fixFloor?.[pid] ?? A.fixFloorDefault ?? 0;
 const ampFor = (pid: string) => A.fixAmp?.[pid] ?? 1;
@@ -72,8 +74,23 @@ const manifest: { cell: number; items: Record<string, { frames: number }> } = ex
 
 let VERBOSE = true;
 
-async function postAnim(oid: string, action: string, TOK: string): Promise<string | null> {
-  const body = { animation_description: action, mode: 'v3', frame_count: FRAME_COUNT };
+/**
+ * 보간 모드(v3): 시작 프레임(원본 pool 그림)과 끝 프레임(예: Pixellab 인페인트로 손만 쥔 그림)을 주면 그 사이만 만든다.
+ * 두 프레임이 같은 부분은 원리상 움직이지 않는다 — "한 부위만 움직이고 나머지는 정지"가 프롬프트로는 안 될 때(2026-09-23 추석 6종).
+ * anim3-prompts.json `interp: { <pid>: "<끝 프레임 png 경로>" }`. 시작 프레임은 public/sprites/pool/<pid>.png.
+ */
+function interpFrames(pid: string): { custom_start_frame_base64: string; end_frame_base64: string } | null {
+  const endPath = A.interp?.[pid];
+  if (!endPath) return null;
+  const startPath = join(ROOT, 'public/sprites/pool', `${pid}.png`);
+  if (!existsSync(startPath) || !existsSync(endPath)) { console.error(`  ${pid}: 보간 프레임 없음(${startPath} / ${endPath})`); return null; }
+  return { custom_start_frame_base64: readFileSync(startPath).toString('base64'), end_frame_base64: readFileSync(endPath).toString('base64') };
+}
+
+async function postAnim(oid: string, action: string, TOK: string, pid?: string): Promise<string | null> {
+  const interp = pid ? interpFrames(pid) : null;
+  const body = { animation_description: action, mode: 'v3', frame_count: FRAME_COUNT, ...(interp ?? {}) };
+  if (interp && pid) console.error(`  ${pid}: 보간 모드(시작=pool, 끝=${A.interp?.[pid]})`);
   for (let a = 0; a < 5; a++) {
     let r: Response; try {
       r = await fetch(`${PIX}/objects/${oid}/animations`, {
@@ -135,7 +152,7 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
       process.stderr.write(`· resume ${pid} (raw ${fi}프레임 재사용 — 재발주 없음)\n`);
     } else {
       const TOK = tokenFor(pid);
-      const jobId = await postAnim(oid, action, TOK);
+      const jobId = await postAnim(oid, action, TOK, pid);
       if (!jobId) { fail.push(`${pid}(POST)`); return; }
       const images = await pollJob(jobId, TOK);
       if (!images || !images.length) { fail.push(`${pid}(폴링)`); return; }

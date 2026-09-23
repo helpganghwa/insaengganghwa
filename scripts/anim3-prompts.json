@@ -87,10 +87,10 @@
     "volcano_ashglass_goggles": "재를 막는 눈",
     "general_wing_hairclip": "백은 깃 머리핀",
     "chuseok_moon_wand_full": "완드는 고정, 머리의 금빛 보름달만 숨 쉬듯 밝아졌다 어두워지고 오색 술이 살짝 흔들림",
-    "chuseok_hanbok_v2": "한복 전체 고정, 소매·팔 움직임 없음, 치마 천 색은 그대로, 치맛자락의 금박 달·구름 무늬가 등불처럼 차례로 또렷하게 금빛으로 빛남",
-    "chuseok_bok_pouch": "주머니 몸통·토끼와 절구 자수·달·구름은 매 프레임 그대로(불투명, 구멍·노이즈 없음), 비단 술과 매듭 끈만 아주 살짝 천천히 흔들림",
+    "chuseok_hanbok_v2": "완전히 정지한 한복(소매·치마 불변), 밝은 부분은 치맛자락의 기존 금박 달·구름 자수뿐이며 그것만 천천히 따뜻하게 밝아졌다 어두워짐, 다른 곳에 별·점·빛 입자 없음",
+    "chuseok_bok_pouch": "거의 완전 정지, 아주 미세한 움직임만: 늘어진 술이 아주 살짝 흔들림, 몸통은 꽉 찬 채 완전 정지",
     "chuseok_rabbit_pestle_v14": "절굿공이는 고정, 매끈한 나무를 따라 흰 달빛 광택이 천천히 흐르고 머리 주위에 작은 반짝임이 떠오름",
-    "chuseok_rabbit_suit_v15": "옷·다리·등의 솜꼬리는 조금도 움직이지 않고 완전히 고정, 복슬한 두 손만 천천히 쥐었다 펴짐, 빛·반짝임 없음",
+    "chuseok_rabbit_suit_v15": "사진처럼 완전히 정지한 토끼 옷, 두 손만 천천히 쥐었다 펴짐, 몸·꼬리는 움직이지 않음(6번째 프롬프트 재사용)",
     "chuseok_rabbit_ears_v4": "머리띠는 고정, 빛·반짝임 없음, 접힌 귀가 천천히 펴져 섰다가 다시 접히고 다른 귀는 그대로"
   },
   "items": {
@@ -178,10 +178,10 @@
     "oni_slayer_odachi": "an odachi frozen exactly in place — the sword itself is identical in every frame, a still image that never moves, rotates, sways or shifts; the only thing that changes is a deep crimson aura brightening and dimming around it with faint ember motes rising through it",
     "druid_thorn_staff": "the bramble staff is completely fixed, rigid and motionless — the shaft does not move, sway or shift at all; only the deep red rose at its crown slowly unfurls petal by petal into full bloom",
     "chuseok_moon_wand_full": "the wand stays completely fixed and motionless; only the golden full moon at its head brightens and dims slowly like breathing, the dark rabbit silhouette inside it stays still, and the colorful silk tassels sway very gently",
-    "chuseok_hanbok_v2": "the whole hanbok stays completely fixed and motionless and the sleeves and arms never move; the crimson skirt fabric keeps the same colour; the gold-leaf moon and cloud patterns along the skirt hem glow brightly, pulsing with warm golden light one after another like lanterns, clearly visible; no movement of the fabric",
-    "chuseok_bok_pouch": "the pouch body, the gold rabbit-and-mortar embroidery, the moon and the clouds stay exactly the same in every frame, solid and fully opaque with no holes or noise; only the silk tassel and the knot cords sway very gently and slowly; no glints, no sparkles",
+    "chuseok_hanbok_v2": "the hanbok hangs completely still, sleeves and skirt do not move; the only bright areas are the existing gold moon and cloud embroidery along the skirt hem, which slowly glows warmer and dims again; no stars, no dots, no light particles anywhere else",
+    "chuseok_bok_pouch": "almost completely still, extremely subtle animation; only the hanging tassel sways very slightly, a tiny barely noticeable motion; the bag stays solid and perfectly still",
     "chuseok_rabbit_pestle_v14": "the pestle stays completely fixed and motionless; a soft white moonlight sheen slides slowly along the smooth wood from the grip to the head, and a few tiny pale sparkles drift up around the head",
-    "chuseok_rabbit_suit_v15": "the suit is completely fixed in place; the body, legs and the round cotton tail on the back never move at all, not even slightly; the only motion is the two fluffy paws slowly clenching into fists and opening again; no glow, no sparkles",
+    "chuseok_rabbit_suit_v15": "static rabbit costume, completely still like a photo; only the two paws slowly open and close; the body and the tail never move",
     "chuseok_rabbit_ears_v4": "the headband stays fixed; no glow, no sparkle, no flashing; the folded ear slowly unfolds to stand upright and then folds back down again, while the other ear stays perfectly still"
   },
   "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",

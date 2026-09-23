@@ -30,12 +30,15 @@ import { rankRows, type RankInput, type RankedRow } from './rank';
  * 대회 중(accrue)은 기준 시각 = 지금(= 현재 enhance_level과 같다). 마감 뒤는 기준 시각 = 마감.
  */
 const NAME_BY_CODE = new Map(CATALOG_V6.map((c) => [c.key, c.nameKo]));
+const SLOT_BY_CODE = new Map(CATALOG_V6.map((c) => [c.key, c.slot]));
 
 export type BoardRow = {
   rank: number;
   userId: string;
   nickname: string;
   level: number;
+  /** 초월 단계 — 장비 타일 테두리(길드원 목록과 같은 표시). */
+  transcend: number;
   reachedAt: string | null;
   me: boolean;
   /** 행 배경 아바타(활성 프로필 정면 프레임)와 얼굴 박스 — 대난투 순위 행과 같은 표시(2026-09-23). 없으면 null. */
@@ -51,6 +54,7 @@ export type BoardRow = {
 export type BoardItem = {
   code: string;
   name: string;
+  slot: 'weapon' | 'armor' | 'accessory';
   set: 'moon' | 'flower';
   rows: BoardRow[];
   /** 내 자리(순위 밖이어도) — 없으면 미참가. */
@@ -64,7 +68,7 @@ export type ContestBoard = {
   items: BoardItem[];
 };
 
-type RawRow = { code: string; user_id: string; nickname: string; level: number; reached_at: string | null };
+type RawRow = { code: string; user_id: string; nickname: string; level: number; transcend: number; reached_at: string | null };
 
 /** 기준 시각의 아이템별 참가 행 — 정지·탈퇴 계정 제외. */
 async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
@@ -73,6 +77,7 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
   const rows = (await db.execute(sql`
     select ci.code, ue.user_id::text as user_id, c.nickname,
            coalesce(l.to_level, 0)::int as level,
+           ue.transcend_level::int as transcend,
            coalesce(l.created_at, ue.first_acquired_at) as reached_at
       from user_equipment ue
       join catalog_items ci on ci.id = ue.catalog_item_id
@@ -91,7 +96,7 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
   const by = new Map<string, RankInput[]>();
   for (const r of rows) {
     const list = by.get(r.code) ?? [];
-    list.push({ userId: r.user_id, nickname: r.nickname, level: Number(r.level), reachedAt: r.reached_at ? Date.parse(r.reached_at) : null });
+    list.push({ userId: r.user_id, nickname: r.nickname, level: Number(r.level), transcend: Number(r.transcend ?? 0), reachedAt: r.reached_at ? Date.parse(r.reached_at) : null });
     by.set(r.code, list);
   }
   return by;
@@ -104,8 +109,9 @@ function toItem(code: string, set: 'moon' | 'flower', ranked: RankedRow[], userI
   return {
     code,
     name: NAME_BY_CODE.get(code) ?? code,
+    slot: SLOT_BY_CODE.get(code) ?? 'weapon',
     set,
-    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, reachedAt: iso(r.reachedAt), me: r.userId === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
+    rows: ranked.slice(0, CHUSEOK_RANK_LIMIT).map((r) => ({ rank: r.rank, userId: r.userId, nickname: r.nickname, level: r.level, transcend: r.transcend ?? 0, reachedAt: iso(r.reachedAt), me: r.userId === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
     mine: mineRow
       ? { rank: mineRow.rank, level: mineRow.level, reachedAt: iso(mineRow.reachedAt), nextTierEnd: nextRewardTierEnd(mineRow.rank), reward: rankRewardFor(mineRow.rank) }
       : null,
@@ -133,7 +139,7 @@ export async function getContestBoard(serverId: number, userId: string | null, a
 async function attachDecor(serverId: number, items: BoardItem[]): Promise<BoardItem[]> {
   const ids = [...new Set(items.flatMap((i) => i.rows.map((r) => r.userId)))];
   if (ids.length === 0) return items;
-  type Decor = Omit<BoardRow, 'rank' | 'userId' | 'nickname' | 'level' | 'reachedAt' | 'me'>;
+  type Decor = Omit<BoardRow, 'rank' | 'userId' | 'nickname' | 'level' | 'transcend' | 'reachedAt' | 'me'>;
   const map = new Map<string, Decor>();
   try {
     const [rows, guilds] = await Promise.all([
@@ -169,22 +175,26 @@ async function attachDecor(serverId: number, items: BoardItem[]): Promise<BoardI
 
 async function loadSettled(serverId: number, userId: string | null): Promise<BoardItem[] | null> {
   const rows = (await db.execute(sql`
-    select r.catalog_code as code, r.rank, r.user_id::text as user_id, r.level, r.reached_at, c.nickname
+    select r.catalog_code as code, r.rank, r.user_id::text as user_id, r.level, r.reached_at, c.nickname,
+           coalesce(ue.transcend_level, 0)::int as transcend
       from chuseok_contest_results r
       left join characters c on c.user_id = r.user_id and c.server_id = r.server_id
+      left join catalog_items ci on ci.code = r.catalog_code
+      left join user_equipment ue on ue.user_id = r.user_id and ue.server_id = r.server_id and ue.catalog_item_id = ci.id
      where r.server_id = ${serverId}
      order by r.catalog_code, r.rank
-  `)) as unknown as { code: string; rank: number; user_id: string; level: number; reached_at: string | null; nickname: string | null }[];
+  `)) as unknown as { code: string; rank: number; user_id: string; level: number; reached_at: string | null; nickname: string | null; transcend: number }[];
   if (rows.length === 0) return null;
   return CHUSEOK_CONTEST_ITEMS.map((i) => {
     const mine = rows.find((r) => r.code === i.code && r.user_id === userId);
     return {
       code: i.code,
       name: NAME_BY_CODE.get(i.code) ?? i.code,
+      slot: SLOT_BY_CODE.get(i.code) ?? 'weapon',
       set: i.set,
       rows: rows
         .filter((r) => r.code === i.code)
-        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), reachedAt: r.reached_at, me: r.user_id === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
+        .map((r) => ({ rank: Number(r.rank), userId: r.user_id, nickname: r.nickname ?? '(탈퇴)', level: Number(r.level), transcend: Number(r.transcend ?? 0), reachedAt: r.reached_at, me: r.user_id === userId, avatar: null, faceBox: null, guildName: null, guildEmblemUrl: null, titleCode: null, executorZone: null, executorZoneRegion: null })),
       mine: mine
         ? { rank: Number(mine.rank), level: Number(mine.level), reachedAt: mine.reached_at, nextTierEnd: null, reward: rankRewardFor(Number(mine.rank)) }
         : null,

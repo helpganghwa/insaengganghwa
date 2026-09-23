@@ -11,7 +11,6 @@ import {
   SONGPYEON_EXCHANGE,
   SONGPYEON_EXCHANGE_MAX_PER_ACTION,
   SONGPYEON_LADDER,
-  nextLadderStep,
   type SongpyeonExchangeKind,
 } from '@/lib/game/chuseok/config';
 import type { SongpyeonOverview } from '@/lib/game/chuseok/songpyeon';
@@ -49,7 +48,6 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
   const { optimisticAdjust } = useDiamondActions();
 
   const claimedSet = useMemo(() => new Set(ov.claimed), [ov.claimed]);
-  const next = nextLadderStep(ov.total);
   const open = ov.phase === 'accrue' || ov.phase === 'claim';
   const closedText =
     ov.phase === 'before' ? '대회가 시작되면 강화에 성공할 때마다 송편이 쌓여요.' : ov.phase === 'ended' ? '추석 송편은 끝났어요.' : null;
@@ -116,22 +114,20 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
           <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-amber-200">
             <SongpyeonIcon size={28} /> {n(ov.total)}
           </b>
-          <small className="text-[10px] text-zinc-500">{next ? `다음 보상까지 ${n(next.remain)}` : '모든 단계 도달'}</small>
         </div>
         <span className="h-9 w-px bg-zinc-800" />
         <div className="flex flex-col">
           <span className="text-[10.5px] text-zinc-400">사용 가능</span>
-          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-amber-200">
+          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-emerald-300">
             <SongpyeonIcon size={28} /> {n(ov.available)}
           </b>
-          <small className="text-[10px] text-zinc-500">교환에 쓴 {n(ov.spent)}</small>
         </div>
       </div>
       {closedText ? <p className="mt-2 text-[11px] text-zinc-500">{closedText}</p> : null}
 
       {/* 도달 보상 */}
       <p className="mb-1.5 mt-4 text-[12.5px] font-bold">
-        도달 보상 <small className="ml-1.5 font-medium text-zinc-400">누적 송편으로 따져요. 교환에 써도 줄지 않아요.</small>
+        도달 보상
       </p>
       <ol className="relative ml-2 flex flex-col gap-1.5 border-l-2 border-zinc-800 pl-[18px]">
         {SONGPYEON_LADDER.map((l) => {
@@ -178,18 +174,18 @@ export function SongpyeonPanel({ initial }: { initial: SongpyeonOverview }) {
 
       {/* 교환 */}
       <p className="mb-1.5 mt-4 text-[12.5px] font-bold">
-        교환 <small className="ml-1.5 font-medium text-zinc-400">사용 가능 송편으로 바꿔요</small>
+        교환
       </p>
       <div className="grid grid-cols-2 gap-2">
         {(
           [
-            { kind: 'box' as const, title: `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개`, sub: `${n(SONGPYEON_EXCHANGE.box.songpyeon)} 송편 · 한도 없음` },
-            { kind: 'diamond' as const, title: `💎 ${SONGPYEON_EXCHANGE.diamond.diamond}`, sub: `${n(SONGPYEON_EXCHANGE.diamond.songpyeon)} 송편 · 한도 없음` },
+            { kind: 'box' as const, title: `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개`, sub: `${n(SONGPYEON_EXCHANGE.box.songpyeon)} 송편` },
+            { kind: 'diamond' as const, title: `💎 ${SONGPYEON_EXCHANGE.diamond.diamond}`, sub: `${n(SONGPYEON_EXCHANGE.diamond.songpyeon)} 송편` },
           ] as const
         ).map((x) => {
           const need = SONGPYEON_EXCHANGE[x.kind].songpyeon - ov.available;
           // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
-          const sub = !open ? `${x.sub.split(' · ')[0]} · 기간 종료` : need > 0 ? `${n(need)} 더 모으면 교환할 수 있어요` : x.sub;
+          const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? `${n(need)} 더 모으면 교환할 수 있어요` : x.sub;
           return (
             <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
               <b className="text-[13px]">{x.title}</b>
@@ -242,7 +238,6 @@ function ExchangeModal({
     <ModalShell onClose={onClose} onSubmit={submit} label="송편 교환">
       <ModalLayout
         title={kind === 'diamond' ? `💎 ${n(SONGPYEON_EXCHANGE.diamond.diamond)} 교환` : `📦 상자 ${SONGPYEON_EXCHANGE.box.boxes}개 교환`}
-        subtitle={`한 번에 ${n(def.songpyeon)} 송편 · 한도 없음`}
         footer={
           <>
             <ModalButton tone="neutral" onClick={onClose}>
@@ -262,9 +257,14 @@ function ExchangeModal({
           <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className={stepBtn}>
             +
           </button>
-          <button type="button" onClick={() => setCount(max)} className="text-[11px] tabular-nums text-zinc-400 underline-offset-2 active:underline">
-            최대 {n(max)}
-          </button>
+          <span className="flex flex-col gap-1">
+            <button type="button" onClick={() => setCount(max)} className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10.5px] tabular-nums text-zinc-300 active:opacity-80">
+              최대 {n(max)}
+            </button>
+            <button type="button" onClick={() => setCount(1)} className="rounded-md bg-zinc-800 px-2 py-0.5 text-[10.5px] tabular-nums text-zinc-300 active:opacity-80">
+              최소
+            </button>
+          </span>
         </div>
         <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 text-[12px]">
           <dt className="text-zinc-400">받는 것</dt>

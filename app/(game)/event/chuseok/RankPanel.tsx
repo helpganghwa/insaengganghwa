@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { meleeFaceCropStyle } from '@/components/faceCrop';
-import { GuildBadge } from '@/components/GuildBadge';
+import { GuildEmblemImg } from '@/components/GuildEmblemImg';
+import { hasRarityBorder, rarityBorderStyle } from '@/components/RarityFrame';
+import { TranscendSprite } from '@/components/TranscendSprite';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { TitleTag } from '@/components/TitleTag';
@@ -41,15 +43,20 @@ function rankAccent(rank: number, me: boolean): { text: string; line: string } {
   return me ? { text: 'text-amber-300', line: 'bg-amber-600/50' } : { text: 'text-zinc-300', line: 'bg-zinc-700/60' };
 }
 
-/** 순위 한 줄 — 대난투 순위 행과 같은 구성(우측 얼굴 배경 + 좌→우 그라데이션, 1~3등 메달, 닉네임·길드 마크·칭호). 링크 없음. */
-function Row({ r }: { r: BoardRow }) {
+/**
+ * 순위 한 줄 — 대난투 순위 행과 같은 구성(우측 얼굴 배경 + 좌→우 그라데이션, 1~3등 메달). 닉네임 옆엔 길드 문양만,
+ * 그 오른쪽에 대표 칭호(채팅 행과 같은 배치). 맨 오른쪽엔 길드원 목록과 같은 장비 타일(초월 테두리 + 단계, 1~3등은 해방 애니).
+ * 링크 없음(2026-09-23).
+ */
+function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
   const medal = r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : null;
   const accent = rankAccent(r.rank, r.me);
   const at = fmtTime(r.reachedAt);
   return (
     <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3 last:border-b-0">
       {r.avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
+        // 장비 타일 자리만큼 왼쪽으로(right-12) — 타일이 얼굴을 가리지 않게.
+        <div className="pointer-events-none absolute inset-y-0 right-12 w-32">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
         </div>
@@ -62,17 +69,22 @@ function Row({ r }: { r: BoardRow }) {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
             <span className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nickname}</span>
-            {r.guildName ? (
-              <GuildBadge emblemUrl={r.guildEmblemUrl} name={r.guildName} size={11} className="min-w-0 shrink text-[9.5px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-            ) : null}
+            {r.guildEmblemUrl ? <GuildEmblemImg src={r.guildEmblemUrl} size={12} className="shrink-0 self-center" /> : null}
+            <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
             {r.me ? <span className="shrink-0 rounded bg-amber-500/25 px-1 text-[8.5px] font-black text-amber-300">나</span> : null}
           </div>
-          <div className="flex min-w-0 items-center gap-1.5 text-[9.5px] text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            <TitleTag code={r.titleCode} executorZone={r.executorZone} executorZoneRegion={r.executorZoneRegion} still className="max-w-[45%] truncate" />
-            <b className="font-mono text-[12px] font-black tabular-nums text-amber-200">+{n(r.level)}</b>
-            {at ? <span className="truncate tabular-nums">{at} 도달</span> : null}
-          </div>
+          {at ? <div className="truncate text-[9.5px] tabular-nums text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{at} 도달</div> : null}
         </div>
+        {/* 장비 타일 — 길드원 목록과 같은 표시. 1~3등은 해방(championRank)으로 후광·애니. */}
+        <span
+          className={`relative flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5 ${
+            hasRarityBorder(r.transcend) ? '' : 'border-zinc-600'
+          }`}
+          style={rarityBorderStyle(r.transcend)}
+        >
+          <TranscendSprite code={item.code} slot={item.slot} level={r.transcend} championRank={r.rank <= 3 ? r.rank : null} size={28} frameless />
+          <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/70 px-0.5 text-[8px] font-bold leading-tight text-amber-300">+{n(r.level)}</span>
+        </span>
       </div>
     </li>
   );
@@ -149,7 +161,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         {item.rows.length === 0 ? (
           <li className="px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 강화하면 순위에 올라요.</li>
         ) : (
-          item.rows.map((r) => <Row key={r.rank} r={r} />)
+          item.rows.map((r) => <Row key={r.rank} r={r} item={item} />)
         )}
       </ol>
       {board.phase === 'claim' ? (

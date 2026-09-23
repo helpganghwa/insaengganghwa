@@ -8,6 +8,8 @@
 export type RankInput = {
   userId: string;
   nickname: string;
+  /** 초월 단계(표시용, 순위 규칙과 무관) — 현황판 장비 타일의 테두리. */
+  transcend?: number;
   level: number;
   /** ms epoch — null이면 맨 뒤. */
   reachedAt: number | null;
