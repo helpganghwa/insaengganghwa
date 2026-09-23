@@ -21,9 +21,9 @@ config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
 const KEY_IDX = 3;
-/** --set=2 → 2차(사극·민담 코스튬) 조합. 출력 폴더도 따로. */
-const SET = process.argv.includes('--set=2') ? 2 : 1;
-const OUT = join(process.cwd(), 'scripts', 'out', SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
+/** --set=2 → 2차(사극·민담 코스튬) 조합, --set=3 → 확정 6종(카탈로그 정본, 주입 없음). 출력 폴더도 따로. */
+const SET = process.argv.includes('--set=4') ? 4 : process.argv.includes('--set=3') ? 3 : process.argv.includes('--set=2') ? 2 : 1;
+const OUT = join(process.cwd(), 'scripts', 'out', SET >= 3 ? `chuseok-avatars-${SET}` : SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** 생성된 그림을 보고 쓴 착용 묘사(영문) — compose가 이미지와 함께 읽는다. */
@@ -90,7 +90,26 @@ export const COMBOS2: Combo[] = [
   { gender: 'female', weapon: 'chuseok_golden_axe', armor: 'chuseok_hanbok', accessory: 'chuseok_heungnip' },
   { gender: 'male', weapon: 'chuseok_golden_axe', armor: 'chuseok_hanbok', accessory: 'chuseok_sangmo' },
 ];
-export const COMBOS: Combo[] = SET === 2 ? COMBOS2 : COMBOS1;
+/** 3차(09-23) — 확정 6종을 카탈로그 정본(wornDesc·wornDescMale·로어·스프라이트)으로 입힌다. 세트 완성형 남녀 + 교차 조합,
+ *  한복 방어구는 남성 2회(치마→남성 정본 번역 확인이 목적). */
+export const COMBOS3: Combo[] = [
+  { gender: 'female', weapon: 'chuseok_moon_wand', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'male', weapon: 'chuseok_moon_wand', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'male', weapon: 'chuseok_moon_wand', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
+  { gender: 'female', weapon: 'chuseok_moon_wand', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
+];
+/** 4차(09-23) — 3차 지적 3건(남성 한복이 한복으로 안 보임·절굿공이 형태 편차·여성 토끼 옷이 슈트로 축소) 문구 수정 뒤 재검증. */
+export const COMBOS4: Combo[] = [
+  { gender: 'male', weapon: 'chuseok_moon_wand', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
+];
+export const COMBOS: Combo[] = SET === 4 ? COMBOS4 : SET === 3 ? COMBOS3 : SET === 2 ? COMBOS2 : COMBOS1;
 
 /** 후보를 이 프로세스의 카탈로그·스프라이트 표에만 더한다(파일·DB 변경 없음). */
 function injectCandidates(): void {
@@ -132,7 +151,7 @@ async function main(): Promise<void> {
     COMBOS.forEach((c, i) => console.log(`${i + 1}. ${c.gender === 'male' ? '남' : '여'} ${c.weapon} · ${c.armor} · ${c.accessory}`));
     return;
   }
-  injectCandidates();
+  if (SET < 3) injectCandidates(); // 3차부터는 카탈로그 정본을 그대로 쓴다.
   mkdirSync(OUT, { recursive: true });
   const key = pixellabKeyByIdx(KEY_IDX);
   // 1) 발주 — 조합마다 Claude 합성 + Pixellab POST(순차, 429 백오프).

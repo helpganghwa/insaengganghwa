@@ -30,7 +30,7 @@ export const CATALOG_V6: CatalogItem[] = [
     tone: '위트',
     lore: '흰 나무 절굿공이는 손잡이에 실 한 가닥 감지 않아도 손에서 미끄러지지 않는다. 달에서 내려온 뒤로 한 번도 떡을 찧지 못했지만, 결을 따라 흐르는 달빛만은 여전하다. 언젠가 다시 절구를 만나면 첫 소리를 낼 준비가 늘 되어 있다.',
     art: 'a smooth polished pale wooden pestle held diagonally, thick rounded head and plain smooth grip with no wrapping, soft moonlight sheen, pixel art',
-    wornDesc: 'a long smooth pale wooden pestle held in one hand like a club, thick rounded head, plain unwrapped grip',
+    wornDesc: 'a long straight pale wooden pestle shaped like a slim baseball bat, held upright in one hand: a narrow rounded grip at the bottom that widens into a thicker smooth cylindrical head at the top, a tiny rabbit face carved near the tip, plain smooth wood with a soft satin sheen all the way along',
   },
   {
     key: 'chuseok_jade_hanbok',
@@ -41,7 +41,7 @@ export const CATALOG_V6: CatalogItem[] = [
     lore: '미색 저고리에 진홍 옷고름을 길게 늘이고, 색동 소매 아래로 진홍 치마가 넓게 퍼진다. 치맛단에는 금박으로 꽃을 한 줄 둘렀다. 걸을 때마다 단이 흔들려 꽃이 피었다 지는데, 멈춰 서면 한꺼번에 만개한다.',
     art: 'a Korean hanbok with an ivory jeogori jacket, a long crimson goreum ribbon, multicolored striped sleeves, and a deep crimson full chima skirt with a gold-leaf floral band along the hem, elegant, pixel art',
     wornDesc: 'a Korean hanbok: an ivory short jacket with multicolored striped sleeves and a long crimson ribbon tie, over a long full deep-crimson skirt with a gold floral band along the hem',
-    wornDescMale: 'a Korean hanbok for men: an ivory jacket with multicolored striped sleeves and a crimson ribbon tie, with a long deep-crimson overcoat bearing a gold floral band along the hem',
+    wornDescMale: 'a traditional Korean men\'s hanbok in Joseon style: an ivory jeogori jacket with a white collar band and a long crimson goreum ribbon tied at the chest, multicolored striped cuffs at the sleeve ends, wide loose deep-crimson baji trousers gathered and tied at the ankles, a long deep-crimson durumagi coat with full sleeves worn open over the jacket, a gold floral band along the coat hem, flat black traditional cloth shoes',
   },
   {
     key: 'chuseok_rabbit_suit',
@@ -51,7 +51,7 @@ export const CATALOG_V6: CatalogItem[] = [
     tone: '희망',
     lore: '온통 흰 털로 지은 한 벌짜리 옷이다. 손목과 발목에 복슬한 털 깃이 있고 발바닥은 분홍이다. 입으면 발소리가 사라지고 몸이 조금 가벼워진다. 달까지 뛰어오를 만큼은 아니지만, 그래도 어제보다는 한 뼘 높이 뛴다.',
     art: 'a plush white full-body rabbit costume suit with a round open neckline, fluffy fur cuffs at wrists and ankles, big padded feet with pink paw pads, a fluffy round cotton tail, soft and cuddly, pixel art',
-    wornDesc: 'a plush white one-piece rabbit costume suit covering the body, fluffy fur cuffs at the wrists and ankles, big soft padded feet with pink pads, a round white cotton tail',
+    wornDesc: 'a loose, baggy, oversized plush white one-piece rabbit costume covering the whole body from the neck down, thick soft padded fluffy fur that hides the body shape, big round mitten paws with pink pads in place of hands, big soft padded paw feet with pink pads, a round white cotton tail',
   },
   {
     key: 'chuseok_bok_pouch',
