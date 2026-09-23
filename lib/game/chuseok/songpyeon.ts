@@ -36,7 +36,7 @@ export async function accrueSongpyeon(
   dbx: DbLike = db,
 ): Promise<number> {
   const pts = Math.floor(p.level);
-  if (pts <= 0) return 0;
+  if (!Number.isFinite(pts) || pts <= 0) return 0;
   const at = p.at ?? new Date();
   if (chuseokPhase(at) !== 'accrue') return 0;
   const ref = `job:${String(p.jobId)}`;

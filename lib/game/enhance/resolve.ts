@@ -9,6 +9,7 @@ import {
   levelAfterFail, enhanceReadyGraceMs } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { accrueSongpyeon } from '@/lib/game/chuseok/songpyeon';
+import { recordError } from '@/lib/ops/record-error';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { sendMilestoneMail } from '@/lib/game/milestone-mail';
@@ -214,6 +215,8 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
  */
 export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
   const { userId, serverId, catalogItemId, fromLevel, toLevel, outcome } = r;
+  // 송편 적립 국면 판정용 시각 — 앞선 사후처리(지표·세금·해방 재계산)에 수백 ms가 걸려 마감 경계에서 어긋나지 않게 먼저 잡는다(2026-09-23).
+  const postAt = new Date();
 
   // 리더보드 증분 갱신(v2) — 레벨이 변했을 때만(성공·메가·하락). 유저 1명 스코프 재계산.
   if (toLevel !== fromLevel) {
@@ -240,9 +243,15 @@ export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
     // 한가위 송편(2026-09, lib/game/chuseok) — 성공·mega마다 도달 단계만큼 적립. 기간 밖이면 0,
     // 같은 잡은 원장 ref로 한 번만. 실패해도 강화 결과 불변(값을 남겨 수동 적립 가능).
     try {
-      await accrueSongpyeon({ userId, serverId, jobId: r.jobId, level: toLevel });
+      await accrueSongpyeon({ userId, serverId, jobId: r.jobId, level: toLevel, at: postAt });
     } catch (e) {
-      console.error(`[enhance.resolve] 송편 적립 실패 job=${String(r.jobId)} user=${userId} level=${toLevel}`, e);
+      console.error(`[enhance.resolve] 송편 적립 실패 job=${String(r.jobId)} user=${userId} server=${serverId} level=${toLevel} at=${postAt.toISOString()}`, e);
+      // 무음 실패 방지(2026-09-23 감사) — 어드민 오류 화면에서 보이게. 수동 적립 근거(job·level·at)는 위 로그.
+      try {
+        await recordError({ kind: 'chuseok-accrue', message: `job=${String(r.jobId)} user=${userId} server=${serverId} level=${toLevel} ${(e as Error)?.message ?? ''}` });
+      } catch {
+        // 기록 실패는 무시.
+      }
     }
   }
 

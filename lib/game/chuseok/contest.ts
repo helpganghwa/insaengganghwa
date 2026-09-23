@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 
 import { db } from '@/lib/db/client';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -77,7 +78,7 @@ type RawRow = { code: string; user_id: string; nickname: string; level: number; 
  * 방치한 선착이 뒤늦은 시도 한 번에 밀렸고, "L에 도달한 성공 기록"만 찾으면 mega로 L을 건너뛴 뒤 하락으로 L에 내려온 장비가
  * 기록이 없어 획득 시각으로 떨어져 모두를 앞질렀다. 하락 뒤 다시 올라오면 다시 오른 시각, +0이거나 기록이 없으면 획득 시각.
  */
-async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
+async function loadRowsUncached(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
   const codes = CHUSEOK_CONTEST_ITEMS.map((i) => i.code);
   const cutoff = new Date(cutoffMs).toISOString();
   const rows = (await db.execute(sql`
@@ -116,6 +117,24 @@ async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string,
     by.set(r.code, list);
   }
   return by;
+}
+
+/**
+ * 현황판용 참가 행 캐시(2026-09-23 동적 감사 권고) — 요청마다 user_equipment 전체 스캔 + lateral 2개(약 120ms)를 돌리면
+ * 00:00 직후·마감 직전 동시 요청에서 풀(max 8)이 밀려 4초 타임아웃을 넘긴다. 유저와 무관한 서버별 목록이라 20초로 캐시하고,
+ * 대회 중엔 cutoff를 20초 버킷으로 내려 키를 고정한다(화면은 최대 20초 늦게 반영). 정산은 loadRowsUncached로 정확한 값을 쓴다.
+ */
+const BOARD_BUCKET_MS = 20_000;
+const loadRowsCachedInner = unstable_cache(
+  async (serverId: number, cutoffMs: number) => Object.fromEntries(await loadRowsUncached(serverId, cutoffMs)),
+  ['chuseok-board-rows-v1'],
+  { revalidate: 20, tags: ['chuseok-board'] },
+);
+async function loadRows(serverId: number, cutoffMs: number): Promise<Map<string, RankInput[]>> {
+  // Next 서버 런타임 밖(스크립트·vitest)에서는 unstable_cache가 incrementalCache 부재로 throw — 캐시 없이 정확한 값.
+  if (!process.env.NEXT_RUNTIME) return loadRowsUncached(serverId, cutoffMs);
+  const bucketed = cutoffMs >= CHUSEOK_ACCRUE_END_MS ? CHUSEOK_ACCRUE_END_MS : Math.floor(cutoffMs / BOARD_BUCKET_MS) * BOARD_BUCKET_MS;
+  return new Map(Object.entries(await loadRowsCachedInner(serverId, bucketed)));
 }
 
 const iso = (ms: number | null) => (ms == null ? null : new Date(ms).toISOString());
@@ -240,7 +259,7 @@ export type SettleResult =
  */
 export async function settleContest(serverId: number, adminId: string, at = Date.now()): Promise<SettleResult> {
   if (chuseokPhase(at) === 'accrue' || chuseokPhase(at) === 'before') return { ok: false, reason: 'NOT_ENDED' };
-  const by = await loadRows(serverId, CHUSEOK_ACCRUE_END_MS);
+  const by = await loadRowsUncached(serverId, CHUSEOK_ACCRUE_END_MS);
   return db.transaction(async (tx) => {
     const [ex] = (await tx.execute(sql`
       select count(*)::int as n from chuseok_contest_results where server_id = ${serverId}

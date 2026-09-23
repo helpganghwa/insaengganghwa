@@ -32,8 +32,14 @@ export default async function ChuseokEventPage({
   const initial = parseTab((await searchParams).tab);
   const serverId = await getActiveServerId();
   const [songpyeon, board] = await Promise.all([
-    withTimeout(getSongpyeonOverview(userId, serverId), 3500, 'chuseok.songpyeon').catch(() => null),
-    withTimeout(getContestBoard(serverId, userId), 4000, 'chuseok.board').catch(() => null),
+    withTimeout(getSongpyeonOverview(userId, serverId), 3500, 'chuseok.songpyeon').catch((e: unknown) => {
+      console.warn('[chuseok.page] songpyeon overview failed', e);
+      return null;
+    }),
+    withTimeout(getContestBoard(serverId, userId), 4000, 'chuseok.board').catch((e: unknown) => {
+      console.warn('[chuseok.page] board failed', e);
+      return null;
+    }),
   ]);
 
   if (!songpyeon || !board) {

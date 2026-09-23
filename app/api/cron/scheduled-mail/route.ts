@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
 import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
+import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
 
 export const runtime = 'nodejs';
@@ -110,6 +111,7 @@ export async function GET(req: Request) {
       await openChuseokCatalogIfDue();
     } catch (e) {
       console.error('[scheduled-mail] chuseok-open failed', e);
+      await raiseOpsAlert('추석 6종 개방 실패', `openChuseokCatalogIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
     }
     // ── 예약 공지 발행(0158) ── 우편과 독립 — 여기서 터져도 위 우편 발송 결과는 지킨다.
     let announcementsPublished = 0;
@@ -145,6 +147,8 @@ export async function GET(req: Request) {
     return Response.json({ ok: true, dispatched: due.length, mailed: sent, announcementsPublished });
   } catch (e) {
     console.error('[scheduled-mail]', e);
+    // 우편은 sent_at을 먼저 찍고 적재하므로 여기서 죽으면 그 통은 재발송되지 않는다 — 경보로 알려 어드민 재발송(2026-09-23 감사).
+    await raiseOpsAlert('예약 우편 크론 실패', `scheduled-mail: ${(e as Error)?.message ?? String(e)} — 어드민에서 해당 우편 발송 여부 확인`).catch(() => undefined);
     return Response.json({ ok: false }, { status: 500 });
   }
 }

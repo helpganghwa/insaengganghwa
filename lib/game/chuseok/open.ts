@@ -13,7 +13,7 @@ import { CHUSEOK_START_ISO, CHUSEOK_START_MS } from './config';
  * 한가위 6종 자동 개방(2026-09-22 사용자 결정: "자정 플래그로 자동 적용").
  *
  * seed-catalog가 active=false로 넣어 둔 6종을 시작 시각(CHUSEOK_START_ISO, 9/24 00:00 KST)이 지나면 켠다.
- * 켜는 순서 = 게임산업법 §33 절차(docs/CHUSEOK.md, memory): 공지는 24시간 전에 운영자가 냈고, 여기서
+ * 켜는 순서 = 게임산업법 §33 절차(docs/CHUSEOK.md, memory): 확률 변경 공지(#41 예고 9/22·#42 수치 9/23)는 운영자가 냈고, 여기서
  *  ① catalog_items.active=true → ② 'catalog' 캐시 무효화(확률 공시·보급 풀이 같은 순간 바뀐다) →
  *  ③ probability_snapshots에 공시 전문 기록(활성 수 반영 뒤). 멱등 — 켤 것이 없으면 아무것도 안 한다.
  * 예약 발행 크론(5분 주기)이 매번 부르므로 플래그는 00:02~00:07에 켜진다. **노출·추첨은 플래그가 아니라 서버 시각**
