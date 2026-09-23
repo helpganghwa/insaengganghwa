@@ -8,7 +8,7 @@ import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
 import { CANDIDATES } from './gen-chuseok-cand';
 
 const ROOT = process.cwd();
-const SET = process.argv.includes('--set=4') ? 4 : process.argv.includes('--set=3') ? 3 : process.argv.includes('--set=2') ? 2 : 1;
+const SET = Number(process.argv.find((a) => a.startsWith('--set='))?.slice(6) ?? 1);
 const OUT_DIR = join(ROOT, 'scripts', 'out', SET >= 3 ? `chuseok-avatars-${SET}` : SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
 const out = process.argv.slice(2).find((a) => !a.startsWith('--'));
 if (!out) {
@@ -69,7 +69,7 @@ const html = `<title>${title}</title>
 </style>
 <div class="wrap">
   <h1>${title}</h1>
-  <p class="lead">실서버와 같은 생성 과정(장비 그림을 보고 AI가 설명을 조립한 뒤 Pixellab이 그림)으로 만든 시험 아바타 ${made}개입니다. 조합마다 입힌 장비 세 개를 아래에 두었습니다. ${SET === 4 ? '착용 묘사를 고친 뒤 다시 만든 4개입니다. 남성 한복 2개, 절굿공이 3개, 여성 토끼 인형 옷 2개가 들어 있습니다.' : SET === 3 ? '확정 6종을 카탈로그 정본 그대로 입혔습니다. 한복 세트와 달토끼 세트는 남녀 완성형으로, 나머지는 교차 조합이며 한복 방어구는 남성에게 두 번 입혀 치마가 남성 한복으로 옮겨지는지 봅니다.' : SET === 2 ? '왕 · 무관 · 저승사자 · 선비 코스튬을 완성형으로 넣고, 새 방어구는 남녀로 한 번씩 입혔습니다.' : '방어구 세 종은 남녀로 한 번씩, 무기와 장신구는 고루 섞었습니다.'}</p>
+  <p class="lead">실서버와 같은 생성 과정(장비 그림을 보고 AI가 설명을 조립한 뒤 Pixellab이 그림)으로 만든 시험 아바타 ${made}개입니다. 조합마다 입힌 장비 세 개를 아래에 두었습니다. ${SET === 5 ? '절굿공이 비유를 없애고 남성 한복을 hanbok으로 명명한 뒤 다시 만든 4개입니다. 남성 한복 2개, 절굿공이 3개가 들어 있습니다.' : SET === 4 ? '착용 묘사를 고친 뒤 다시 만든 4개입니다. 남성 한복 2개, 절굿공이 3개, 여성 토끼 인형 옷 2개가 들어 있습니다.' : SET === 3 ? '확정 6종을 카탈로그 정본 그대로 입혔습니다. 한복 세트와 달토끼 세트는 남녀 완성형으로, 나머지는 교차 조합이며 한복 방어구는 남성에게 두 번 입혀 치마가 남성 한복으로 옮겨지는지 봅니다.' : SET === 2 ? '왕 · 무관 · 저승사자 · 선비 코스튬을 완성형으로 넣고, 새 방어구는 남녀로 한 번씩 입혔습니다.' : '방어구 세 종은 남녀로 한 번씩, 무기와 장신구는 고루 섞었습니다.'}</p>
   <div class="grid">${cards.join('')}</div>
 </div>
 `;

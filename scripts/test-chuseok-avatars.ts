@@ -22,7 +22,7 @@ config({ path: '.env', override: false });
 
 const KEY_IDX = 3;
 /** --set=2 → 2차(사극·민담 코스튬) 조합, --set=3 → 확정 6종(카탈로그 정본, 주입 없음). 출력 폴더도 따로. */
-const SET = process.argv.includes('--set=4') ? 4 : process.argv.includes('--set=3') ? 3 : process.argv.includes('--set=2') ? 2 : 1;
+const SET = Number(process.argv.find((a) => a.startsWith('--set='))?.slice(6) ?? 1);
 const OUT = join(process.cwd(), 'scripts', 'out', SET >= 3 ? `chuseok-avatars-${SET}` : SET === 2 ? 'chuseok-avatars-2' : 'chuseok-avatars');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -109,7 +109,14 @@ export const COMBOS4: Combo[] = [
   { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
   { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_bok_pouch' },
 ];
-export const COMBOS: Combo[] = SET === 4 ? COMBOS4 : SET === 3 ? COMBOS3 : SET === 2 ? COMBOS2 : COMBOS1;
+/** 5차(09-23) — 4차 지적: 절굿공이가 야구방망이로, 남성 한복 두루마기가 망토로. 비유 제거·'hanbok' 명명 뒤 재검증(남성 한복 2·절굿공이 3). */
+export const COMBOS5: Combo[] = [
+  { gender: 'male', weapon: 'chuseok_moon_wand', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'male', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_rabbit_ears' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_jade_hanbok', accessory: 'chuseok_bok_pouch' },
+  { gender: 'female', weapon: 'chuseok_rabbit_pestle', armor: 'chuseok_rabbit_suit', accessory: 'chuseok_rabbit_ears' },
+];
+export const COMBOS: Combo[] = SET === 5 ? COMBOS5 : SET === 4 ? COMBOS4 : SET === 3 ? COMBOS3 : SET === 2 ? COMBOS2 : COMBOS1;
 
 /** 후보를 이 프로세스의 카탈로그·스프라이트 표에만 더한다(파일·DB 변경 없음). */
 function injectCandidates(): void {
