@@ -152,3 +152,32 @@ describe('factIssues — 09-24 교정 규칙(17~23)', () => {
     expect(has(verb4, /'넘어갔다' 표현/)).toBe(false);
   });
 });
+
+/** 09-24 기준선 점검에서 나온 검증기 오탐 3건 — 정상 문장이 재생성을 부르지 않게. */
+describe('factIssues — 09-24 오탐 회귀', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['검은 첨봉', '드래곤 화산'], ['포자 습지', '슬라임 늪'], ['설원 신전', '잊힌 신전']]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [{ nickname: '지인', count: 4 }, { nickname: '악마사냥꾼', count: 3 }],
+    headcountZones: ['검은 첨봉', '포자 습지'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    // Winners: 얻음 1·잃음 2·현재 22·직전 23 + 지형 형세 조각 수 4.
+    guildCounts: new Map([['로제', [6, 0, 15, 9]], ['Winners', [1, 2, 22, 23, 4]]]),
+    battleZones: [],
+    captureBy: new Map(),
+    regionCounts: new Map([['로제', new Map([['잊힌 신전', { gain: 4, loss: 0, after: 4, before: 0 }]])]]),
+  };
+  it('지역을 앞세운 수는 길드 전체 수와 대조하지 않는다', () => {
+    expect(factIssues(`이렇게 {g|로제|25}는 잊힌 신전에서 네 곳을 거둬들였다.`, c).some((i) => /구역 수 '4곳'/.test(i))).toBe(false);
+  });
+  it('지형 형세의 조각 수는 허용', () => {
+    expect(factIssues(`{g|Winners|17}는 스물두 곳을 지녔지만 조각은 네 곳으로 흩어졌다.`, c).some((i) => /구역 수/.test(i))).toBe(false);
+  });
+  it('한 문장에 인물이 둘이면 처치 수는 바로 앞 인물 것으로 본다', () => {
+    const sent = `{z|검은 첨봉|1}에서 {u|지인|go7OSj6U}이 홀로 들어가 넷을 베었고, {z|포자 습지|23}에서는 {u|악마사냥꾼|qhVn7xlU}이 셋을 쓰러뜨렸다.`;
+    expect(factIssues(sent, c).some((i) => /쓰러뜨린 수/.test(i))).toBe(false);
+    const wrong = `{z|포자 습지|23}에서는 {u|악마사냥꾼|qhVn7xlU}이 넷을 쓰러뜨렸다.`;
+    expect(factIssues(wrong, c).some((i) => /악마사냥꾼\} 이\(가\) 쓰러뜨린 수는 3/.test(i))).toBe(true);
+  });
+});

@@ -1314,6 +1314,13 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     const ls = losses.get(g) ?? 0;
     guildCounts.set(g, [gn, ls, after, after - gn + ls]);
   }
+  // 지형 형세의 조각 수('4개 조각', '3→4개 조각')도 그 길드 문장에 나올 수 있는 수다(09-24 오탐: '조각은 네 곳으로').
+  for (const line of (topoLines ?? '').split('\n')) {
+    const g = line.match(/길드 「([^」]+)」/)?.[1];
+    if (!g) continue;
+    const nums = [...line.matchAll(/(\d+)(?:→(\d+))?개 조각/g)].flatMap((m) => [Number(m[1]), ...(m[2] ? [Number(m[2])] : [])]);
+    if (nums.length) guildCounts.set(g, [...(guildCounts.get(g) ?? []), ...nums]);
+  }
   const factCtx: FactCheckContext = {
     zoneRegion: new Map(zoneRows.map((z) => [z.name, (REGION_META as Record<string, { label: string }>)[z.region]?.label ?? z.region])),
     regionLabels: REGION_KO_VALUES,

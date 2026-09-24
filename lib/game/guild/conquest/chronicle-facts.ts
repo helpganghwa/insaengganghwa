@@ -248,7 +248,11 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         // 수(단독 서수+조사 꼴)도 활약 횟수와 같아야 한다. '여섯을 모아'처럼 상대가 모은 수는 활약이
         // 아니므로 '베|쓰러|눕|처치|잡|무너' 동사가 바로 뒤따르는 경우만 본다.
         const HEAD_UNIT: Record<string, number> = { 하나: 1, 둘: 2, 셋: 3, 넷: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
-        for (const k of plain.matchAll(/(하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열)(?:을|를)\s?(?:모두\s?|전부\s?|다\s?)?(베|쓰러|눕|처치|잡|무너)/g)) {
+        // 한 문장에 인물이 둘 이상이면 처치 표현은 바로 앞의 인물 것이다(09-24 오탐: 지인의 '넷을 베며'를 뒤의 악마사냥꾼에 대조).
+        const uMarks = [...sent.matchAll(MARKER)].filter((m) => m[1] === 'u').map((m) => ({ at: m.index!, name: m[2]!.trim() }));
+        for (const k of plainAligned(sent).matchAll(/(하나|둘|셋|넷|다섯|여섯|일곱|여덟|아홉|열)(?:을|를)\s?(?:모두\s?|전부\s?|다\s?)?(베|쓰러|눕|처치|잡|무너)/g)) {
+          const owner = [...uMarks].reverse().find((u) => u.at < k.index!);
+          if (owner && owner.name !== t.name) continue;
           const n = HEAD_UNIT[k[1]!]!;
           if (n !== count) {
             issues.push(`{u|${t.name}} 이(가) 쓰러뜨린 수는 ${count}인데 문장은 '${k[1]}${k[0].slice(k[1]!.length, k[1]!.length + 1)} ${k[2]}…'로 적었다 — 개인 활약 목록의 수로 고친다: ${q(sent)}`);
@@ -315,7 +319,16 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       if (guilds.length === 1) {
         const allowed = ctx.guildCounts.get(guilds[0]!);
         if (allowed) {
-          for (const n of parseZoneCounts(plain)) {
+          // 지역을 앞세운 수('잊힌 신전에서 네 곳')는 13번(지역별 수)이 본다 — 여기서 길드 전체 수와 대조하면 오탐(09-24).
+          const regionScoped = new Set<number>();
+          if (ctx.regionCounts) {
+            for (const m of aligned.matchAll(ZONE_COUNT)) {
+              const near = mentions.some((r) => r.at < m.index! && m.index! - r.at <= 30 && !aligned.slice(r.at, m.index!).includes(','));
+              const n = parseZoneCounts(m[0])[0];
+              if (near && n !== undefined) regionScoped.add(n);
+            }
+          }
+          for (const n of parseZoneCounts(plain).filter((x) => !regionScoped.has(x))) {
             if (!allowed.includes(n)) {
               issues.push(`{g|${guilds[0]}} 의 구역 수 '${n}곳'이 사실표와 다르다(가능한 수: ${[...new Set(allowed)].join('·')}) — '길드별 보유 증감'대로 고친다: ${q(sent)}`);
             }
