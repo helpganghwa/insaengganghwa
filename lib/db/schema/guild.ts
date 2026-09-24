@@ -330,6 +330,9 @@ export const worldChronicle = pgTable(
     guildRefs: jsonb('guild_refs').$type<ChronicleGuildRef[]>(),
     /** 헤드라인 후보(0193) — 생성 시 문형이 다른 3~5개(첫 항목=채택안). 검수 화면에서 골라 쓴다. 이전 행은 null. */
     headlineCandidates: jsonb('headline_candidates').$type<string[]>(),
+    /** 생성 원본(0216) — AI가 처음 쓴 본문·제목. 운영자 교정 뒤에도 남아 수정량을 잰다. 이전 행은 null. */
+    generatedText: text('generated_text'),
+    generatedHeadline: text('generated_headline'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],

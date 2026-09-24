@@ -1850,7 +1850,7 @@ async function generateLocked(
   }
   await db
     .insert(worldChronicle)
-    .values({ serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates })
+    .values({ serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates, generatedText: today, generatedHeadline: headline })
     .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }
