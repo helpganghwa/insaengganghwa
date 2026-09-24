@@ -78,7 +78,7 @@ describe.skipIf(skip)('정산 크론 전 단계 — 스테이징 DB 통합', () 
     const res = await GET(new Request('http://x/api/cron/payment-recon', { headers: { authorization: 'Bearer recon-test-secret' } }));
     vi.useRealTimers();
     expect(res.status).toBe(200);
-    const out = (await res.json()) as Record<string, any>;
+    const out = (await res.json()) as { refundLongSweep: { scanned: number }; grantSkippedRefund: { refunded: number } };
 
     const st = async (k: string) =>
       ((await testDb.execute(sql`select status::text s from iap_orders where portone_order_id = ${pid(k)}`)) as unknown as { s: string }[])[0]!.s;
