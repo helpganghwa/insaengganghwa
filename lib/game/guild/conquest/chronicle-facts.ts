@@ -16,6 +16,10 @@
  *  7. 산수 — 길드 하나만 나오는 문장의 'N곳'은 그 길드의 얻은 수·잃은 수·현재 보유·직전 보유 중 하나여야 한다.
  *  11~16(2026-09-17 실오류) — 동시 진행에 순서 만들기 · '어제 차지했던'의 귀속 · 지역별 수 · 짧은 복귀 공백의 '오랫동안' ·
  *     쓰러진 인물을 버틴 주어로 · 석권 서수('세 번째로 완성한').
+ *  17~23(2026-09-24 운영자 교정) — 'X 지역 밖의 {z|X 지역 구역}' · 서로 다른 길드를 '합세·연합'으로 묶기 ·
+ *     사실표와 다른 보유 일수('나흘째') · 첫 등장이 아닌 길드에 '대륙에 이름을 알렸다' · 사실표 지형 형세에 없는
+ *     '조각·비지' · 석권 현황에 없는 길드의 '석권' · 같은 표현의 과도한 반복. 17~22는 사실표에 근거가 있으면 통과한다
+ *     (09-24에 사람이 '근거 없음'으로 지운 '나흘째·첫 등장·N개 조각·석권 유지'가 실제로는 사실표에 있었다).
  *
  * 순수 함수 — 테스트 tests/guild/chronicle-fact-issues.test.ts(09-10 실제 오류 본문으로 회귀).
  */
@@ -47,6 +51,16 @@ export type FactCheckContext = {
   shortGapGuilds?: string[];
   /** (09-17) 개인 활약 중 그날 끝내 쓰러진 인물 — '지켜냈다·버텼다'의 주어로 쓰면 안 된다. */
   fellFeats?: string[];
+  /** (09-24) 소유권이 바뀐 구역 → 잃은 길드가 쥐고 있던 일수(사실표 '…부터 N일 동안'). 없으면 19번 검사 생략. */
+  heldDays?: Map<string, number>;
+  /** (09-24) 구역과 무관하게 사실표에 나오는 일수(석권 유지 N일째·복귀 N일 만 등). */
+  otherDays?: number[];
+  /** (09-24) 첫 등장 길드(사실표 '첫 구역을 확보하며 대륙에 이름을 알림'). 없으면 20번 검사 생략. */
+  debutGuilds?: string[];
+  /** (09-24) 사실표 '지형 형세'에 나온 길드(조각·비지 서술 근거). 없으면 21번 검사 생략. */
+  topoGuilds?: string[];
+  /** (09-24) 사실표 '지역 석권 현황'에 나온 길드(유지·붕괴·성립). 없으면 22번 검사 생략. */
+  sweepGuilds?: string[];
 };
 
 const MARKER = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}/g;
@@ -122,6 +136,32 @@ const SURVIVED = /지켜냈|지켰|버텨냈|버텼|살아남|끝까지 남/;
 const FELL_WORD = /쓰러졌|쓰러지고|쓰러지며|전사했|숨을 거|눈을 감|끝내 무너/;
 /** 16 — 석권 서수. */
 const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완성|장악|석권|지배|손에 넣)/;
+
+/** 18 — 동맹 표현(길드 사이 동맹 제도는 없다 — 같은 구역을 노린 길드들은 서로 경쟁한 것). */
+const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|합류/;
+/** 19 — 보유·지속 일수(2일 이상). '하루 만에'는 6번 규칙이 본다. */
+const DURATION = /(이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘|(\d+)\s?일)\s?(?:째|동안|간)/g;
+const DAY_WORD: Record<string, number> = { 이틀: 2, 사흘: 3, 나흘: 4, 닷새: 5, 엿새: 6, 이레: 7, 여드레: 8, 아흐레: 9, 열흘: 10 };
+/** 20 — 첫 등장 표현. */
+const DEBUT = /대륙에 이름을 알|첫 등장|처음으로 (?:구역|땅|영토|깃발)|첫 (?:영토|깃발|구역을)/;
+/** 21 — 지형 형세 표현. */
+const TOPO = /조각|비지|별도의? 거점|떨어진 (?:곳|땅|거점|영토)|고립/;
+/** 22 — 지역 석권 표현. */
+const SWEEP = /석권|전역을|통째로|전부 쥐|모두 쥐/;
+/**
+ * 23 — 같은 표현의 과도한 반복(09-24: '지키는 이 없던'이 세 번). 빈 구역 묘사는 세 번째부터, 결과 동사는
+ * 다섯 번째부터 잡는다(점령 10건 넘는 날에도 동사가 모자라지 않게 여유를 둔다).
+ */
+const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[] = [
+  { re: /지키는 이 없/g, label: '지키는 이 없던', max: 2, alt: '비어 있던·수비를 두지 않은·주인이 비운' },
+  { re: /비어 있/g, label: '비어 있던', max: 2, alt: '지키는 이 없던·수비를 두지 않은' },
+  { re: /수비 없/g, label: '수비 없는', max: 2, alt: '비어 있던·지키는 이 없던' },
+  { re: /넘어갔|넘어가/g, label: '넘어갔다', max: 4, alt: '손에 들어갔다·차지가 되었다·내주었다' },
+  { re: /차지했|차지한|차지가/g, label: '차지했다', max: 4, alt: '가져갔다·손에 넣었다·빼앗았다' },
+  { re: /가져갔|가져간/g, label: '가져갔다', max: 4, alt: '차지했다·손에 넣었다·거둬 갔다' },
+  { re: /손에 넣|손에 쥐/g, label: '손에 넣었다', max: 3, alt: '차지했다·가져갔다' },
+  { re: /판도에서/g, label: '판도에서 …', max: 2, alt: '영토를 모두 잃었다·깃발을 내렸다·자취를 감췄다' },
+];
 
 /** 13 — 위치 앞에서 가장 가까운 주어 길드({g|G} 바로 뒤에 은·는·이·가·도). */
 function subjectGuildBefore(sent: string, pos: number): string | null {
@@ -349,6 +389,52 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       const ord = plain.match(SWEEP_ORDINAL);
       if (ord) issues.push(`지역 석권에 '${ord[0]}' 같은 순번을 붙였다 — 사실표 '지역 석권 현황'의 이력만 쓰고 서수는 뺀다: ${q(sent)}`);
 
+      // 17. 'X 지역 밖의 {z|X 지역 구역}' — 부정어 '밖'을 지역 검사(3번)가 못 봐 통과했다(09-24 '화산 밖의 검은 첨봉').
+      for (const m of mentions) {
+        // 정식 이름('드래곤 화산') 또는 별칭('화산') 바로 뒤에 '밖·바깥'이 오는 경우만.
+        const last = m.label.split(/\s+/).pop()!;
+        const head = aligned.slice(m.at, m.at + m.label.length + 4);
+        if (!(head.startsWith(m.label) ? /^\s?(?:밖|바깥)/.test(head.slice(m.label.length)) : head.startsWith(last) && /^\s?(?:밖|바깥)/.test(head.slice(last.length)))) continue;
+        for (const zp of zonePos) {
+          if (zp.at > m.at && ctx.zoneRegion.get(zp.name) === m.label) {
+            issues.push(`{z|${zp.name}} 은(는) ${m.label} 지역인데 '${m.label} 밖'으로 썼다 — 지역 표기를 정리대로 고친다: ${q(sent)}`);
+          }
+        }
+      }
+
+      // 18. 동맹 표현 — 같은 구역을 노린 길드들은 서로 경쟁했다(09-24 '민초와 프로미스나인까지 합세한').
+      const ally = plain.match(ALLIANCE);
+      if (ally && guilds.length >= 2) {
+        issues.push(`길드 사이에 동맹은 없다 — '${ally[0]}'로 여러 길드를 한편처럼 묶었다. 같은 구역을 함께 노린 길드들은 서로 경쟁했으니 '몰렸다·맞붙었다·경합했다'로 고친다: ${q(sent)}`);
+      }
+
+      // 19. 보유 일수 — 사실표의 '…부터 N일 동안 쥐고 있던 곳'·'석권 N일째'·'N일 만의 복귀'와 같아야 한다.
+      if (ctx.heldDays) {
+        for (const m of aligned.matchAll(DURATION)) {
+          const n = m[2] ? Number(m[2]) : DAY_WORD[m[1]!]!;
+          const near = [...new Set([...zones, ...(lastZone ? [lastZone] : [])])];
+          const allowed = new Set<number>([...near.map((z) => ctx.heldDays!.get(z)).filter((d): d is number => d != null), ...(ctx.otherDays ?? [])]);
+          if (!allowed.has(n)) {
+            issues.push(`'${m[0].trim()}'는 사실표의 보유·지속 일수와 다르다${allowed.size ? `(사실표: ${[...allowed].sort((a, b) => a - b).join('·')}일)` : '(이 구역엔 일수 정보 없음)'} — 사실표에 적힌 일수만 쓰거나 기간 표현을 뺀다: ${q(sent)}`);
+          }
+        }
+      }
+
+      // 20. 첫 등장 — 사실표가 첫 등장으로 적은 길드에만.
+      if (ctx.debutGuilds && DEBUT.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.debutGuilds!.includes(g))) {
+        issues.push(`${guilds.map((g) => `{g|${g}}`).join('·')} 은(는) 사실표의 첫 등장 길드가 아니다 — '대륙에 이름을 알렸다·첫 등장'은 빼고, 복귀면 '돌아왔다'로 쓴다: ${q(sent)}`);
+      }
+
+      // 21. 지형 형세 — '조각·비지·별도 거점'은 사실표 지형 형세에 나온 길드만.
+      if (ctx.topoGuilds && TOPO.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.topoGuilds!.includes(g))) {
+        issues.push(`${guilds.map((g) => `{g|${g}}`).join('·')} 의 영토 모양(조각·비지)은 사실표 '지형 형세'에 없다 — 그 서술을 뺀다: ${q(sent)}`);
+      }
+
+      // 22. 석권 — 사실표 '지역 석권 현황'에 나온 길드만.
+      if (ctx.sweepGuilds && SWEEP.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.sweepGuilds!.includes(g))) {
+        issues.push(`${guilds.map((g) => `{g|${g}}`).join('·')} 은(는) 사실표 '지역 석권 현황'에 없다 — 석권·전역 표현을 뺀다: ${q(sent)}`);
+      }
+
       if (zones.length > 0) {
         lastZone = zones[zones.length - 1]!;
         prevZones = zones;
@@ -368,6 +454,11 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   once(/하루 만에/g, '하루 만에');
   once(/어제[^.]*내주었던/g, '어제 … 내주었던');
   once(/다시 노렸다/g, '다시 노렸다');
+  // 23. 같은 표현의 과도한 반복.
+  for (const f of REPEAT_FAMILIES) {
+    const n = (whole.match(f.re) ?? []).length;
+    if (n > f.max) issues.push(`'${f.label}' 표현이 ${n}번 나온다 — ${f.max}번까지만 쓰고 나머지는 '${f.alt}'처럼 바꿔 쓰거나, 같은 말을 되풀이하는 문장을 합친다.`);
+  }
   // 회고는 한 문장까지(2026-09-13 사용자 지시 — 종전 세 문장은 '어제 언급이 너무 잦다'는 평의 원인).
   if (retroSentences > 1)
     issues.push(

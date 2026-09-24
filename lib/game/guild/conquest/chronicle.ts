@@ -1360,6 +1360,22 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     })(),
     shortGapGuilds,
     fellFeats: summary.feats.filter((f) => f.fell === true).map((f) => f.nickname),
+    // 09-24 — 사실표에 근거가 있는 기간·첫 등장·지형·석권 서술을 가려내는 기준(chronicle-facts.ts 19~22).
+    heldDays: new Map(
+      summary.captures.flatMap((c) => {
+        if (!c.from || histBefore.get(c.zone) !== c.from) return [];
+        const since = holdingSince(snaps, c.zone, c.from, kstDay);
+        return since ? [[c.zone, daysBetween(since, kstDay)] as const] : [];
+      }),
+    ),
+    // 석권 'N일째·N일 만'·복귀 'N일 만' 같은 구역 무관 일수 — 사실표 문장에서 그대로 읽는다(표시 문구와 한 곳에서 맞물림).
+    otherDays: [...digest.matchAll(/(\d+)일(?:째| 만| 동안)/g)].map((m) => Number(m[1])),
+    debutGuilds: milestones.flatMap((l) => {
+      const m = l.match(/길드 「([^」]+)」 이\(가\) (?:첫 구역을 확보|대륙 최초로)/);
+      return m ? [m[1]!] : [];
+    }),
+    topoGuilds: [...(topoLines ?? '').matchAll(/길드 「([^」]+)」/g)].map((m) => m[1]!),
+    sweepGuilds: [...new Set(sweepLines.flatMap((l) => [...l.matchAll(/「([^」]+)」/g)].map((m) => m[1]!)))],
   };
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──

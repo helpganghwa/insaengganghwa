@@ -88,3 +88,67 @@ describe('연대기 사실 검증기', () => {
     expect(factIssues(bad, ctx).some((i) => /\{z\|재의 길목\} 은\(는\) 어제 기록이 없는 구역/.test(i))).toBe(true);
   });
 });
+
+/**
+ * 09-24 운영자 교정 회귀(17~23) — 그날 생성본의 실제 오류('합세'·'화산 밖')는 잡고, 사실표에 근거가 있는
+ * '나흘째·첫 등장·N개 조각·석권 유지'는 통과해야 한다(그날 사람이 이 넷을 근거 없다며 지웠다가 틀렸다).
+ */
+describe('factIssues — 09-24 교정 규칙(17~23)', () => {
+  const c24: FactCheckContext = {
+    zoneRegion: new Map([
+      ['설원 신전', '잊힌 신전'], ['검은 첨봉', '드래곤 화산'], ['포자 습지', '슬라임 늪'],
+      ['형광 수렁', '슬라임 늪'], ['독성 늪지', '슬라임 늪'],
+    ]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [],
+    headcountZones: ['설원 신전'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map(),
+    heldDays: new Map([['형광 수렁', 4], ['독성 늪지', 3]]),
+    otherDays: [2, 7],
+    debutGuilds: ['탕후루'],
+    topoGuilds: ['로제', '케케케', 'Winners'],
+    sweepGuilds: ['Winners'],
+  };
+  const has = (text: string, re: RegExp) => factIssues(text, c24).some((i) => re.test(i));
+
+  it('17 — 그 지역 구역에 "지역 밖"을 붙이면 잡고, 다른 지역 구역이면 통과', () => {
+    expect(has(`화산 밖의 {z|검은 첨봉|1}을 {g|로제|25}가 두드렸다.`, /드래곤 화산 밖/)).toBe(true);
+    expect(has(`화산 밖의 {z|포자 습지|23}을 {g|로제|25}가 두드렸다.`, /밖'으로 썼다/)).toBe(false);
+    expect(has(`드래곤 화산의 {z|검은 첨봉|1}을 {g|로제|25}가 두드렸다.`, /밖'으로 썼다/)).toBe(false);
+  });
+
+  it('18 — 여러 길드를 합세·연합으로 묶으면 잡고, 몰렸다·맞붙었다는 통과', () => {
+    expect(has(`{g|민초|28}와 {g|프로미스나인|23}까지 합세한 가운데 {g|로제|25}가 {z|설원 신전|13}을 차지했다.`, /동맹은 없다/)).toBe(true);
+    expect(has(`{g|민초|28}와 {g|로제|25}가 {z|설원 신전|13}에 몰려 맞붙었다.`, /동맹은 없다/)).toBe(false);
+  });
+
+  it('19 — 사실표 보유 일수와 같으면 통과, 다르면 잡는다', () => {
+    expect(has(`{z|형광 수렁|24}은 나흘째 지키던 {g|Winners|17}의 손을 떠났다.`, /보유·지속 일수/)).toBe(false);
+    expect(has(`{z|독성 늪지|22}는 닷새 동안 지키던 {g|Winners|17}의 손을 떠났다.`, /보유·지속 일수/)).toBe(true);
+    // 구역 무관 일수(석권 7일째)는 통과.
+    expect(has(`{g|Winners|17}는 왕국 석권을 7일째 이어 갔다.`, /보유·지속 일수/)).toBe(false);
+  });
+
+  it('20 — 첫 등장은 사실표의 첫 등장 길드에만', () => {
+    expect(has(`{g|탕후루|43}는 이 한 곳으로 처음 대륙에 이름을 알렸다.`, /첫 등장 길드가 아니다/)).toBe(false);
+    expect(has(`{g|레지스탕스|36}는 이 한 곳으로 대륙에 이름을 알렸다.`, /첫 등장 길드가 아니다/)).toBe(true);
+  });
+
+  it('21·22 — 조각·석권은 사실표에 나온 길드만', () => {
+    expect(has(`{g|케케케|27}는 영토가 한 조각으로 줄었다.`, /지형 형세'에 없다/)).toBe(false);
+    expect(has(`{g|탕후루|43}는 영토가 두 조각으로 갈라졌다.`, /지형 형세'에 없다/)).toBe(true);
+    expect(has(`{g|Winners|17}는 왕국 석권을 유지했다.`, /석권 현황'에 없다/)).toBe(false);
+    expect(has(`{g|로제|25}는 신전을 통째로 쥐었다.`, /석권 현황'에 없다/)).toBe(true);
+  });
+
+  it('23 — 빈 구역 묘사는 세 번째부터, 결과 동사는 다섯 번째부터 잡는다', () => {
+    const empty3 = `{z|형광 수렁|24}은 지키는 이 없던 땅이다. {z|독성 늪지|22}도 지키는 이 없던 땅이다. {z|설원 신전|13}도 지키는 이 없던 신전이다.`;
+    expect(has(empty3, /'지키는 이 없던' 표현이 3번/)).toBe(true);
+    const verb4 = `A가 넘어갔다. B가 넘어갔다. C가 넘어갔다. D가 넘어갔다.`;
+    expect(has(verb4, /'넘어갔다' 표현/)).toBe(false);
+  });
+});
