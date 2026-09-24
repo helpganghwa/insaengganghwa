@@ -10,7 +10,7 @@ import { kstDateString } from '@/lib/kst';
 import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/guild/map/chronicle-tokens';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
-import { factIssues, type FactCheckContext } from './chronicle-facts';
+import { factIssues, headlineIssues, type FactCheckContext } from './chronicle-facts';
 import { acquireChronicleLock } from './chronicle-lock';
 import { daysBetween, holdingSince, koDate, lastWipeDay, ownersBefore, replayOwnership, sweepPeriods, type OwnershipEvent } from './chronicle-history';
 import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from './chronicle-options';
@@ -1680,7 +1680,7 @@ async function generateLocked(
   let truncations = 0;
   // 가장 나은 시도(2026-09-24) — 종전엔 3번째 시도를 위반이 남아도 그대로 채택해, 1차보다 나빠진 3차가 실리기도 했다.
   // 위반 점수(마커 3·연출 순서 2·사실 1)가 가장 낮은 시도를 고른다. 동점이면 먼저 나온 쪽(피드백 전 문체가 더 자연스럽다).
-  type Cand = { score: number; candT: string; candH: string; headlines: unknown; viol: string[]; orderIssues: string[]; facts: string[] };
+  type Cand = { score: number; candT: string; candH: string; headlines: unknown; viol: string[]; orderIssues: string[]; facts: string[]; heads: string[] };
   let best: Cand | null = null;
   const adopt = (c: Cand) => {
     if (c.viol.length > 0) console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${c.viol.join(', ')}`);
@@ -1690,10 +1690,16 @@ async function generateLocked(
     headline = enrichMarkers(enforceMarkers(c.candH));
     // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
     const rawList = Array.isArray(c.headlines) ? c.headlines : [];
+    // 제목 후보도 검사한다(09-24) — 없는 인물·근거 없는 탈환·석권 서수가 든 후보는 검수자에게 내놓지 않는다.
     const cleaned = rawList
       .filter((h): h is string => typeof h === 'string')
       .map((h) => enrichMarkers(enforceMarkers(correctMarkers(fixBraces(h.trim())))))
-      .filter((h) => h.length > 0 && h.length <= 120);
+      .filter((h) => h.length > 0 && h.length <= 120 && headlineIssues(h, factCtx).length === 0);
+    // 채택 제목에 위반이 남았고 깨끗한 후보가 있으면 후보로 바꾼다.
+    if (c.heads.length > 0 && cleaned.length > 0) {
+      console.warn(`[chronicle] 제목 위반 잔존 — 깨끗한 후보로 교체: ${c.heads.join(' / ')}`);
+      headline = cleaned[0]!;
+    }
     headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
   };
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -1751,7 +1757,8 @@ async function generateLocked(
     const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
     const orderIssues = replayOrderIssues(candT, battleZones);
     const facts = factIssues(candT, factCtx);
-    const cand: Cand = { score: viol.length * 3 + orderIssues.length * 2 + facts.length, candT, candH, headlines: parsed.headlines, viol, orderIssues, facts };
+    const heads = bigChange ? headlineIssues(candH, factCtx) : [];
+    const cand: Cand = { score: viol.length * 3 + orderIssues.length * 2 + facts.length + heads.length, candT, candH, headlines: parsed.headlines, viol, orderIssues, facts, heads };
     if (candT && (!bigChange || candH) && (!best || cand.score < best.score)) best = cand;
     if (cand.score === 0 || attempt === 2) {
       if (cand.score > 0 && best && best !== cand) console.warn(`[chronicle] 재시도 소진 — 마지막(점수 ${cand.score})보다 나은 앞 시도(점수 ${best.score}) 채택`);
@@ -1766,6 +1773,7 @@ async function generateLocked(
       feedback.push(
         `사실표와 어긋나는 문장이 있다(코드가 사실표와 대조한 결과라 예외 없이 고친다):\n${facts.map((f) => `- ${f}`).join('\n')}`,
       );
+    if (heads.length > 0) feedback.push(`제목(headline)이 사실표와 어긋난다:\n${heads.map((f) => `- ${f}`).join('\n')}`);
     if (viol.length > 0)
       feedback.push(
         `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
@@ -1804,7 +1812,7 @@ async function generateLocked(
     `[chronicle] usage ${kstDay} s${serverId} calls=${usage.calls} in=${usage.input} out=${usage.output} cacheRead=${usage.cacheRead} cacheWrite=${usage.cacheWrite}`,
   );
   if (opts.dryRun) {
-    const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, factCtx)];
+    const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, factCtx), ...headlineIssues(headline, factCtx)];
     return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest, usage, issues } };
   }
   await db

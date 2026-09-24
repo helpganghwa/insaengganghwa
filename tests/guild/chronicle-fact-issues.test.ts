@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { factIssues, parseZoneCounts, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
+import { factIssues, headlineIssues, parseZoneCounts, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
 
 /**
  * 연대기 사실 검증기(2026-09-10) — 09-10 실제 생성 본문(운영자 검수에서 걸린 오류 4종 + 회고 반복)으로 회귀.
@@ -204,5 +204,36 @@ describe('factIssues — 09-24 최종 시험 오탐 회귀', () => {
   it('소유격 길드는 어제 가져간 쪽으로 보지 않는다', () => {
     expect(factIssues(`{z|검은 첨봉|1}에서는 {g|로제|25}의 공세를 받아냈는데, 그 땅은 어제 손에 넣은 곳이다.`, c).some((i) => /어제 .*차지한 구역이 아니다/.test(i))).toBe(false);
     expect(factIssues(`{z|검은 첨봉|1}은 어제 {g|로제|25}가 차지했던 곳이다.`, c).some((i) => /차지한 구역이 아니다/.test(i))).toBe(true);
+  });
+});
+
+describe('headlineIssues — 제목 검사(09-24)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['설원 신전', '잊힌 신전'], ['감시 망루', '오크 부락'], ['변경 초소', '오크 부락']]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [{ nickname: 'Eclipse', count: 2 }],
+    headcountZones: [],
+    recaptureZones: ['설원 신전', '감시 망루'],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map(),
+    debutGuilds: ['탕후루'],
+    sweepGuilds: ['Winners'],
+  };
+  it('정상 제목은 통과', () => {
+    for (const h of [
+      '{g|로제|25}, 하루 만에 되찾은 {z|설원 신전|13}',
+      '{u|Eclipse|FXt19nCy}, 홀로 {z|변경 초소|33}를 빼앗다',
+      '{g|탕후루|43}의 첫 깃발, {g|세계수|29}의 마지막 깃발',
+      '{g|Winners|17}, 왕국 석권을 이어 가다',
+    ])
+      expect(headlineIssues(h, c)).toEqual([]);
+  });
+  it('없는 인물·근거 없는 탈환·첫 깃발·석권을 잡는다', () => {
+    expect(headlineIssues('{u|악마|x}, 셋을 베다', c).length).toBe(1);
+    expect(headlineIssues('{g|로제|25}, {z|변경 초소|33}를 되찾다', c).length).toBe(1);
+    expect(headlineIssues('{g|레지스탕스|36}의 첫 깃발', c).length).toBe(1);
+    expect(headlineIssues('{g|로제|25}, 신전 석권', c).length).toBe(1);
   });
 });

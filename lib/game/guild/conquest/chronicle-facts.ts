@@ -550,3 +550,44 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
 
   return [...new Set(issues)];
 }
+
+/**
+ * 제목 검사(2026-09-24) — 본문 검사(factIssues)는 문단·구역 누락·귀속처럼 본문 전체를 전제로 한 규칙이 많아
+ * 한 줄 제목에 그대로 쓰면 오탐이 난다. 제목에서도 틀리면 안 되는 것만 본다: 없는 인물, 근거 없는 '되찾다',
+ * 석권 서수, 첫 등장 아닌 길드의 첫 깃발, 동맹 표현, 석권 현황에 없는 길드의 석권.
+ */
+export function headlineIssues(headline: string, ctx: FactCheckContext): string[] {
+  const h = headline.trim();
+  if (!h) return [];
+  const issues: string[] = [];
+  const toks = tokens(h);
+  const plain = plainText(h);
+  const guilds = [...new Set(toks.filter((t) => t.kind === 'g').map((t) => t.name))];
+  const zones = toks.filter((t) => t.kind === 'z').map((t) => t.name);
+  const feats = new Set(ctx.feats.map((f) => f.nickname));
+  for (const t of toks.filter((x) => x.kind === 'u')) {
+    if (!feats.has(t.name)) issues.push(`제목의 {u|${t.name}} 은(는) 개인 활약 목록에 없는 인물이다: 「${h}」`);
+  }
+  if (RECAPTURE.test(plain)) {
+    const recapture = new Set(ctx.recaptureZones);
+    // 구역이 없으면 지역 단위 탈환('되찾은 슬라임 늪')이라 판정할 구역이 없다 — 허용 구역이 하나도 없는 날만 잡는다.
+    if (zones.length > 0 ? zones.some((z) => !recapture.has(z)) : recapture.size === 0) {
+      issues.push(`제목의 '되찾다·탈환'은 어제 잃은 구역을 오늘 되찾은 경우에만 쓴다: 「${h}」`);
+    }
+  }
+  if (SWEEP_ORDINAL.test(plain)) issues.push(`제목에 석권 순번('세 번째로' 등)을 붙였다: 「${h}」`);
+  // '{g|G}의 첫 깃발' 꼴은 바로 아래 규칙이 그 길드를 정확히 본다(대비형 제목엔 길드가 둘이라 여기선 못 가린다).
+  const firstFlagForm = /\}의 첫 깃발/.test(h);
+  if (ctx.debutGuilds && !firstFlagForm && DEBUT.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.debutGuilds!.includes(g))) {
+    issues.push(`제목의 '첫 등장·대륙에 이름'은 첫 등장 길드에만 쓴다: 「${h}」`);
+  }
+  if (/첫 깃발/.test(plain) && ctx.debutGuilds) {
+    const first = h.match(/\{g\|([^}|]+)(?:\|[^}]*)?\}의 첫 깃발/)?.[1]?.trim();
+    if (first && !ctx.debutGuilds.includes(first)) issues.push(`제목의 '{g|${first}}의 첫 깃발'은 첫 등장 길드가 아니다: 「${h}」`);
+  }
+  if (ALLIANCE.test(plain) && guilds.length >= 2) issues.push(`제목에 길드 사이 동맹 표현을 썼다: 「${h}」`);
+  if (ctx.sweepGuilds && SWEEP.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.sweepGuilds!.includes(g))) {
+    issues.push(`제목의 석권·전역 표현은 석권 현황에 나온 길드에만 쓴다: 「${h}」`);
+  }
+  return issues;
+}
