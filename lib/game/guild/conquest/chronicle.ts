@@ -11,6 +11,7 @@ import { parseChronicleSegments, pastContextZoneKeysRaw } from '@/app/(game)/gui
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 import { factIssues, type FactCheckContext } from './chronicle-facts';
+import { acquireChronicleLock } from './chronicle-lock';
 import { daysBetween, holdingSince, koDate, lastWipeDay, ownersBefore, replayOwnership, sweepPeriods, type OwnershipEvent } from './chronicle-history';
 import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from './chronicle-options';
 
@@ -725,12 +726,11 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
 - **'가장 많은 사람이 몰린 전투'가 있으면 그날의 큰 싸움으로 다룬다** — 공격 길드별 인원과 수비 인원, 결과를 그대로 쓴다(예: '여섯을 보내고 하나를 보태 일곱으로 몰아쳤지만 셋이 막아냈다'). 수비 인원에는 집행관이 섞여 있으므로 '수비수 둘과 집행관 하나'처럼 나누어 쓰지 않는다.
 - **'열세 방어'가 있으면 그날의 활약으로 세운다** — 적은 수로 더 많은 공격을 받아내고 지켜낸 전투다. 인원을 대비시켜 한두 문장으로 쓰고('셋이 일곱을 막아냈다'), 길드를 주어로 삼는다. 개인 활약이 함께 있으면 둘을 같은 문단에 묶되 같은 말을 두 번 하지 않는다.
-- **인원수를 쓸 수 있는 전투는 '가장 많은 사람이 몰린 전투'와 '열세 방어' 둘뿐이다.** 그 밖의 구역에는 인원수를 지어내지 말 것.
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
 - **'■ 어제와 이어지는 사실'은 그날 헤드라인 소재이거나 가장 큰 사건일 때만 **한 문장**으로 잇는다(2026-09-13 사용자 지시 — 회고가 잦으면 오늘 이야기가 묻힌다). 나머지는 회고 없이 오늘 일만 쓴다. 이을 때는 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
 - **인물 마커({u|})는 정리의 '개인 활약'에 적힌 인물만 쓴다.** 로스터·지난 기록·짐작으로 다른 사람 이름을 꺼내지 말 것(2026-09-10: 목록에 없는 인물의 활약을 지어낸 사건). 활약 횟수도 목록 숫자 그대로.
-- **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'와 '열세 방어'에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다 — 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
-- **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. 연속성 항목이 여럿이면 '갓 얻은 땅', '잃은 지 하루 된 땅', '곧바로 다시 주인이 바뀌었다', '전날 잃은'처럼 표현을 바꿔 잇고, 세 문장 넘게 회고로 채우지 말 것.
+- **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'·'열세 방어'·'열세 점령'·개인 활약이 나온 구역에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다. 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
+- **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. '어제·전날'이 든 회고 문장은 본문 전체에서 한 문장만 쓰고, 나머지 연속성은 '갓 얻은 땅', '곧바로 다시 주인이 바뀌었다'처럼 회고 없이 오늘 일로 쓴다.
 - **점령전은 모든 구역에서 같은 시각에 벌어진다.** 구역과 구역 사이에 '곧이어·뒤이어·그 직후·그러자' 같은 순서를 만들지 말고 '같은 날·한편'으로 잇는다(2026-09-17).
 - **지역 석권 이력은 '■ 지역 석권 현황'에 적힌 것만 쓴다.** 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓰거나, '세 번째로 완성한·차례로 지배했던' 같은 서수·이력을 지어 붙이지 말 것. '다시 장악'이 적혀 있으면 그 기간·일수를 그대로 써도 좋다.
 - **'X 지역에서 N곳'의 N은 점령 줄의 '지역별' 수만 쓴다.** 길드 전체 획득 수를 한 지역의 수로 옮기지 말 것.
@@ -1605,12 +1605,22 @@ export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDa
   return out;
 }
 
+export type ChroniclePreview = {
+  today: string;
+  headline: string;
+  headlineCandidates: string[];
+  digest: string;
+  usage: { calls: number; input: number; output: number; cacheRead: number; cacheWrite: number };
+  /** 채택본의 검사 결과(마커·연출 순서·사실) — dryRun 비교용. */
+  issues: string[];
+};
+
 export async function generateAndStoreChronicle(
   kstDay: string,
   serverId: number,
   /** dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04). */
   opts: { dryRun?: boolean } = {},
-): Promise<{ created: boolean; reason?: string; preview?: { today: string; headline: string; headlineCandidates: string[]; digest: string } }> {
+): Promise<{ created: boolean; reason?: string; preview?: ChroniclePreview }> {
   const [existing] = await db
     .select({ kstDay: worldChronicle.kstDay })
     .from(worldChronicle)
@@ -1618,7 +1628,31 @@ export async function generateAndStoreChronicle(
     .limit(1);
   if (existing && !opts.dryRun) return { created: false, reason: 'already' };
 
+  // 같은 (서버, 날짜)를 동시에 두 번 생성하지 않는다(23시대 5분 틱이 앞 틱의 생성 중에 또 들어오던 문제).
+  const release = opts.dryRun ? async () => {} : await acquireChronicleLock(serverId, kstDay);
+  if (!release) return { created: false, reason: 'in-progress' };
+  try {
+    return await generateLocked(kstDay, serverId, opts);
+  } finally {
+    await release();
+  }
+}
+
+async function generateLocked(
+  kstDay: string,
+  serverId: number,
+  opts: { dryRun?: boolean },
+): Promise<{ created: boolean; reason?: string; preview?: ChroniclePreview }> {
   const pack = await buildChronicleFactPack(kstDay, serverId);
+  // 토큰 사용량(09-24) — 호출마다 합산해 생성 끝에 한 줄로 남긴다(비용·캐시 적중을 로그로 보려고).
+  const usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const track = (u: { input_tokens?: number | null; output_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null } | undefined) => {
+    usage.calls += 1;
+    usage.input += u?.input_tokens ?? 0;
+    usage.output += u?.output_tokens ?? 0;
+    usage.cacheRead += u?.cache_read_input_tokens ?? 0;
+    usage.cacheWrite += u?.cache_creation_input_tokens ?? 0;
+  };
   if (!pack) return { created: false, reason: 'no-event' };
   const { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange } = pack;
   const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = await buildMarkerTools(summary, zoneRows, idByName, serverId);
@@ -1652,6 +1686,24 @@ export async function generateAndStoreChronicle(
   let headlineCandidates: string[] = [];
   // 잘림 횟수 — 직전 시도가 max_tokens에서 끊겼으면 다음 시도의 상한을 올린다(chronicleMaxTokens).
   let truncations = 0;
+  // 가장 나은 시도(2026-09-24) — 종전엔 3번째 시도를 위반이 남아도 그대로 채택해, 1차보다 나빠진 3차가 실리기도 했다.
+  // 위반 점수(마커 3·연출 순서 2·사실 1)가 가장 낮은 시도를 고른다. 동점이면 먼저 나온 쪽(피드백 전 문체가 더 자연스럽다).
+  type Cand = { score: number; candT: string; candH: string; headlines: unknown; viol: string[]; orderIssues: string[]; facts: string[] };
+  let best: Cand | null = null;
+  const adopt = (c: Cand) => {
+    if (c.viol.length > 0) console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${c.viol.join(', ')}`);
+    if (c.orderIssues.length > 0) console.warn(`[chronicle] 연출 순서 위반 잔존(재시도 소진): ${c.orderIssues.join(', ')}`);
+    if (c.facts.length > 0) console.warn(`[chronicle] 사실 검증 위반 잔존(재시도 소진) ${c.facts.length}건:\n${c.facts.join('\n')}`);
+    today = enrichMarkers(enforceMarkers(c.candT));
+    headline = enrichMarkers(enforceMarkers(c.candH));
+    // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
+    const rawList = Array.isArray(c.headlines) ? c.headlines : [];
+    const cleaned = rawList
+      .filter((h): h is string => typeof h === 'string')
+      .map((h) => enrichMarkers(enforceMarkers(correctMarkers(fixBraces(h.trim())))))
+      .filter((h) => h.length > 0 && h.length <= 120);
+    headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
+  };
   for (let attempt = 0; attempt < 3; attempt++) {
     const maxTokens = chronicleMaxTokens(truncations);
     const res = await client().messages.create({
@@ -1663,6 +1715,7 @@ export async function generateAndStoreChronicle(
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });
+    track(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
     const truncated = res.stop_reason === 'max_tokens';
@@ -1675,7 +1728,15 @@ export async function generateAndStoreChronicle(
       );
       // 잘림과 깨진 JSON을 구분한다(2026-09-15) — 잘림은 상한 문제라 상한을 올리고 더 짧게 쓰라고 하고,
       // 깨진 JSON은 같은 내용을 JSON만으로 다시 쓰라고 한다. 로그·에러 코드도 갈라 원인이 바로 보이게.
-      if (attempt === 2) throw new Error(`${truncated ? 'CHRONICLE_TRUNCATED' : 'CHRONICLE_PARSE_FAIL'}: ${raw.slice(0, 200)}`);
+      if (attempt === 2) {
+        // 앞 시도 중 쓸 만한 것이 있으면 그것을 채택한다(마지막 응답이 깨졌다고 전부 버리지 않는다).
+        if (best) {
+          console.warn(`[chronicle] 마지막 응답 파싱 실패 — 앞 시도 중 최선(점수 ${best.score}) 채택`);
+          adopt(best);
+          break;
+        }
+        throw new Error(`${truncated ? 'CHRONICLE_TRUNCATED' : 'CHRONICLE_PARSE_FAIL'}: ${raw.slice(0, 200)}`);
+      }
       if (truncated) {
         truncations += 1;
         console.warn(`[chronicle] 출력 잘림(max_tokens ${maxTokens}) → 상한 ${chronicleMaxTokens(truncations)}로 재생성(attempt ${attempt + 1})`);
@@ -1698,21 +1759,11 @@ export async function generateAndStoreChronicle(
     const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
     const orderIssues = replayOrderIssues(candT, battleZones);
     const facts = factIssues(candT, factCtx);
-    if ((viol.length === 0 && orderIssues.length === 0 && facts.length === 0) || attempt === 2) {
-      if (viol.length > 0) {
-        console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${viol.join(', ')}`);
-      }
-      if (orderIssues.length > 0) console.warn(`[chronicle] 연출 순서 위반 잔존(재시도 소진): ${orderIssues.join(', ')}`);
-      if (facts.length > 0) console.warn(`[chronicle] 사실 검증 위반 잔존(재시도 소진) ${facts.length}건:\n${facts.join('\n')}`);
-      today = enrichMarkers(enforceMarkers(candT));
-      headline = enrichMarkers(enforceMarkers(candH));
-      // 헤드라인 후보(0193) — 첫 항목은 채택안, 나머지는 문형이 다른 대안. 마커 보정만 하고 검수는 하지 않는다.
-      const rawList = Array.isArray(parsed.headlines) ? parsed.headlines : [];
-      const cleaned = rawList
-        .filter((h): h is string => typeof h === 'string')
-        .map((h) => enrichMarkers(enforceMarkers(correctMarkers(fixBraces(h.trim())))))
-        .filter((h) => h.length > 0 && h.length <= 120);
-      headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
+    const cand: Cand = { score: viol.length * 3 + orderIssues.length * 2 + facts.length, candT, candH, headlines: parsed.headlines, viol, orderIssues, facts };
+    if (candT && (!bigChange || candH) && (!best || cand.score < best.score)) best = cand;
+    if (cand.score === 0 || attempt === 2) {
+      if (cand.score > 0 && best && best !== cand) console.warn(`[chronicle] 재시도 소진 — 마지막(점수 ${cand.score})보다 나은 앞 시도(점수 ${best.score}) 채택`);
+      adopt(best ?? cand);
       break;
     }
     console.warn(
@@ -1747,7 +1798,8 @@ export async function generateAndStoreChronicle(
   try {
     const res = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: 2600,
+      // 출력 = 본문 전체 + changes라 초안 상한(3,200~5,200)보다 길다 — 종전 2,600은 큰 날 잘려 조용히 버려졌다(09-24 점검).
+      max_tokens: 5200,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
       thinking: { type: 'disabled' },
@@ -1762,6 +1814,7 @@ export async function generateAndStoreChronicle(
         },
       ],
     });
+    track(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
     const parsed = parseModelJson<{
@@ -1769,6 +1822,9 @@ export async function generateAndStoreChronicle(
       headline?: string;
       changes?: ChronicleReviewNote[];
     }>(raw);
+    if (!parsed) {
+      console.warn(`[chronicle] 재검수 응답 파싱 실패 — 초안 유지(stop=${res.stop_reason}, rawLen=${raw.length})`);
+    }
     if (parsed) {
       const revT = enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
       const revH = bigChange
@@ -1802,7 +1858,13 @@ export async function generateAndStoreChronicle(
   // 폴백을 타면 동명 재창설 시 문양이 새 길드로 바뀐다. 길드 수만큼이라 크기도 유계다.
   const guildRefs: ChronicleGuildRef[] = [...guildRefByName.values()];
 
-  if (opts.dryRun) return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest } };
+  console.info(
+    `[chronicle] usage ${kstDay} s${serverId} calls=${usage.calls} in=${usage.input} out=${usage.output} cacheRead=${usage.cacheRead} cacheWrite=${usage.cacheWrite}`,
+  );
+  if (opts.dryRun) {
+    const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, factCtx)];
+    return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest, usage, issues } };
+  }
   await db
     .insert(worldChronicle)
     .values({ serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates })

@@ -19,6 +19,7 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   // 23:00(KST) 실행 → 오늘 KST 날짜가 곧 전투일. 결과는 저장만, 공개는 24:00.
   const battleDay = kstDateString(new Date());
+  const startedAt = Date.now();
   try {
     const results = [];
     // per-server 에러격리(감사 G1) — 한 서버 실패가 뒤 서버 처리를 막지 않도록 격리. 멱등이라
@@ -31,6 +32,12 @@ export async function GET(req: Request) {
         // 자정에 시계 기준으로 개방 → 00:00:00 정각에 크론 지터 없이 보임. 멱등(행 있으면
         // skip)이라 다중 tick 안전. 실패는 무해 — 00시대 conquest-chronicle 백필이 생성.
         try {
+          // 시간 예산(09-24) — 생성 한 번이 수 분 걸릴 수 있어, 앞 서버에서 이미 많이 썼으면 다음 틱(5분 뒤)에 넘긴다.
+          // 넘기면 이번 틱은 정산만 하고 끝나 함수 시간 초과로 heartbeat를 놓치는 일이 없다.
+          if (Date.now() - startedAt > 120_000) {
+            console.warn('[conquest-run] 시간 예산 초과 — 연대기 사전 생성은 다음 틱으로', sid);
+            continue;
+          }
           await generateAndStoreChronicle(battleDay, sid);
         } catch (ce) {
           console.warn('[conquest-run] chronicle pregen 실패(00시대 백필로 강등)', sid, ce);
