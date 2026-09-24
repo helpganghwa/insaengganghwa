@@ -1284,9 +1284,17 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const prevDay = addDaysToKstDay(kstDay, -1);
   const y = await aggregateConquestDay(prevDay, serverId);
   const continuity = continuityFacts(summary, y);
+  // 회고는 한 문장만 허용되는데(검증기 6번) 항목이 여럿이면 모델이 둘 이상을 회고로 써 매일 재생성을 불렀다(09-24 시험).
+  // 코드가 한 가지를 골라 표시하고 나머지는 회고 없이 쓰게 한다.
+  const retroPick = pickRetroFact(continuity, summary.crowds.map((c) => c.zone), summary.feats.flatMap((f) => f.zones));
+  const continuityLines = continuity.map((l, i) =>
+    i === retroPick
+      ? `${l}\n  ★ 회고 문장('어제·전날')은 이 사실 하나에만 쓴다`
+      : `${l}\n  → 회고 없이 오늘 일로만 쓴다('갓 얻은 땅·곧바로 다시 주인이 바뀐'처럼, '어제·전날' 금지)`,
+  );
   if (continuity.length > 0)
     digestSections.push(
-      `■ 어제와 이어지는 사실(코드가 어제 정리와 대조해 확정 — 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현 허용):\n${continuity.join('\n')}`,
+      `■ 어제와 이어지는 사실(코드가 어제 정리와 대조해 확정 — 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현 허용):\n${continuityLines.join('\n')}`,
     );
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
@@ -1579,6 +1587,23 @@ async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: Chronicle
  * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
  * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
  */
+/**
+ * 회고로 쓸 연속성 사실 하나 고르기(09-24) — 하루 만의 탈환 > 하루 만의 상실 > 어제 얻은 땅의 방어. 같은 순위면
+ * 가장 많은 사람이 몰린 곳 > 개인 활약이 나온 곳 > 먼저 나온 것. 항목이 없으면 -1.
+ */
+export function pickRetroFact(lines: string[], crowdZones: string[], featZones: string[]): number {
+  if (lines.length === 0) return -1;
+  const zoneOf = (l: string) => l.match(/구역 「([^」]+)」/)?.[1] ?? '';
+  const rank = (l: string) => (/되찾음/.test(l) ? 0 : /잃음/.test(l) ? 1 : 2);
+  const bonus = (l: string) => (crowdZones.includes(zoneOf(l)) ? 0 : featZones.includes(zoneOf(l)) ? 1 : 2);
+  let best = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const [a, b] = [lines[i]!, lines[best]!];
+    if (rank(a) < rank(b) || (rank(a) === rank(b) && bonus(a) < bonus(b))) best = i;
+  }
+  return best;
+}
+
 export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDaySummary): string[] {
   const out: string[] = [];
   const yCap = new Map(yesterday.captures.map((c) => [c.zone, c] as const));

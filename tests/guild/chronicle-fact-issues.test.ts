@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { factIssues, headlineIssues, parseZoneCounts, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
+import { pickRetroFact } from '@/lib/game/guild/conquest/chronicle';
 
 /**
  * 연대기 사실 검증기(2026-09-10) — 09-10 실제 생성 본문(운영자 검수에서 걸린 오류 4종 + 회고 반복)으로 회귀.
@@ -235,5 +236,19 @@ describe('headlineIssues — 제목 검사(09-24)', () => {
     expect(headlineIssues('{g|로제|25}, {z|변경 초소|33}를 되찾다', c).length).toBe(1);
     expect(headlineIssues('{g|레지스탕스|36}의 첫 깃발', c).length).toBe(1);
     expect(headlineIssues('{g|로제|25}, 신전 석권', c).length).toBe(1);
+  });
+});
+
+describe('pickRetroFact — 회고로 쓸 연속성 사실 하나(09-24)', () => {
+  const lines = [
+    '· 구역 「침묵의 회랑」: 길드 「티모집사」 이(가) 어제 얻은 땅을 하루 만에 「로제」 에게 잃음',
+    '· 구역 「검은 첨봉」: 길드 「Winners」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄',
+    '· 구역 「감시 망루」: 어제 길드 「세계수」 이(가) 「케케케」 에게서 빼앗았던 곳을 오늘 「케케케」 이(가) 되찾음 — 하루 만의 탈환',
+    '· 구역 「설원 신전」: 어제 길드 「GunsNRos」 이(가) 「로제」 에게서 빼앗았던 곳을 오늘 「로제」 이(가) 되찾음 — 하루 만의 탈환',
+  ];
+  it('탈환 우선, 같은 순위면 가장 많은 사람이 몰린 곳', () => {
+    expect(pickRetroFact(lines, ['설원 신전'], [])).toBe(3);
+    expect(pickRetroFact(lines, [], [])).toBe(2);
+    expect(pickRetroFact([], [], [])).toBe(-1);
   });
 });
