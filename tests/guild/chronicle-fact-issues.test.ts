@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { factIssues, headlineIssues, parseZoneCounts, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
-import { isLightFactIssue, pickRetroFact } from '@/lib/game/guild/conquest/chronicle';
+import { deRetro, isLightFactIssue, pickRetroFact } from '@/lib/game/guild/conquest/chronicle';
 
 /**
  * 연대기 사실 검증기(2026-09-10) — 09-10 실제 생성 본문(운영자 검수에서 걸린 오류 4종 + 회고 반복)으로 회귀.
@@ -259,5 +259,31 @@ describe('isLightFactIssue — 조기 종료 판정(09-24)', () => {
     expect(isLightFactIssue('줄표(—)가 2번 나온다 — 줄표 없이')).toBe(true);
     expect(isLightFactIssue("'어제·전날' 회고 문장이 2개다 — 한 문장만")).toBe(false);
     expect(isLightFactIssue('{g|로제} 의 구역 수 \'4곳\'이 사실표와 다르다')).toBe(false);
+  });
+});
+
+describe('factIssues — 활약 인물의 처치 수는 인원수 규칙에서 빼기(09-24)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['타락한 성소', '타락 천사 부유섬'], ['황금 회랑', '타락 천사 부유섬']]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [{ nickname: '스타', count: 4 }],
+    headcountZones: ['타락한 성소'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map(),
+  };
+  it('앞 문장이 다른 구역이어도 활약 인물의 처치 수는 인원수 위반이 아니다', () => {
+    const text = `{g|민초|28}는 {z|황금 회랑|49}을 두드렸다. {u|스타|JJCedyNU}가 이 구역에서 넷을 처치하며 공세를 막아냈다.`;
+    expect(factIssues(text, c).some((i) => /사람 수 표현/.test(i))).toBe(false);
+  });
+});
+
+describe('deRetro — 고르지 않은 연속성 줄에서 회고 낱말 빼기(09-24)', () => {
+  it('탈환·상실·방어 문구에서 어제를 뺀다', () => {
+    expect(deRetro('· 구역 「설원 신전」: 어제 길드 「GunsNRos」 이(가) 「로제」 에게서 빼앗았던 곳을 오늘 「로제」 이(가) 되찾음 — 하루 만의 탈환')).not.toMatch(/어제/);
+    expect(deRetro('· 구역 「침묵의 회랑」: 길드 「티모집사」 이(가) 어제 얻은 땅을 하루 만에 「로제」 에게 잃음')).not.toMatch(/어제/);
+    expect(deRetro('· 구역 「검은 첨봉」: 길드 「Winners」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄')).not.toMatch(/어제/);
   });
 });

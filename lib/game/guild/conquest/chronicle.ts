@@ -19,6 +19,8 @@ import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveMod
 // 문체는 직전 검수 완료본을 참고로 준다. 모델을 올리는 것보다 이 두 장치가 확실해 기존 모델을 유지한다
 // (상위 모델은 환경별 접근 권한이 달라 하루 한 번뿐인 생성이 통째로 실패할 위험도 있다).
 const MODEL_ID = 'claude-sonnet-5';
+/** 초안 추론 켜기(시험용 스위치) — 기본 끔. */
+const DRAFT_THINKING = process.env.CHRONICLE_THINKING === 'adaptive';
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -686,7 +688,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
   - ★중요★ '점령전 정리'에서 「」로 감싼 이름은 바로 앞의 분류(길드/구역/인물)를 그대로 따른다: '길드 「X」'는 반드시 {g|X}, '구역 「X」'는 반드시 {z|X}, '인물 「X」'는 반드시 {u|X}. 구역 이름을 절대 {g|}(길드)로 쓰지 말 것 — 구역명과 길드명은 서로 다르며 혼동하면 안 된다. 공격의 주어는 '길드', 목적어는 '구역'이다.
 - 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등).
 - 시간을 가리키는 지시어('그날·이날·오늘·그 날·하루·당일' 등)를 쓰지 말 것. 특히 문단·문장을 그런 단어로 시작하지 말고, 바로 사건·길드·구역으로 시작한다. 오늘 일어난 일은 '오늘' 대신 '이번 점령전·이번에' 또는 그냥 동사로 서술한다.
-- 단, 전날과의 연속성을 말할 때는 '어제·전날·이전'을 써도 된다(흐름 표현용). 이때도 현재 일은 '오늘'이 아니라 '이번에·이번 점령전'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해").
+- 단, 전날과의 연속성은 '■ 어제와 이어지는 사실'에서 ★로 표시된 한 가지에만 '어제·전날'을 쓴다(본문 전체에서 한 문장). 현재 일은 '오늘'이 아니라 '이번에·이번 점령전'로 받는다(예: "이번에 두 곳을 더해 다섯 곳이 되었다").
 - '인생강화'라는 단어, 이모지·이모티콘 절대 금지. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
 - 주어진 '점령전 정리'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
 - **공격한 길드(공격 측)는 반드시 '공격 측' 목록을 그대로 따른다.** 그 목록에 적힌 길드만이 공격한 길드다. 소유 길드(방어 측)가 공격했다고 절대 쓰지 말 것 — 방어 측은 공격을 '받아낸' 쪽이다. '공격 측' 항목 자체가 없으면 공격 주체를 서술하지 말 것.
@@ -1287,10 +1289,9 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // 회고는 한 문장만 허용되는데(검증기 6번) 항목이 여럿이면 모델이 둘 이상을 회고로 써 매일 재생성을 불렀다(09-24 시험).
   // 코드가 한 가지를 골라 표시하고 나머지는 회고 없이 쓰게 한다.
   const retroPick = pickRetroFact(continuity, summary.crowds.map((c) => c.zone), summary.feats.flatMap((f) => f.zones));
+  // 고르지 않은 사실은 문구 자체에서 '어제'를 뺀다 — 줄에 '어제 손에 넣은 땅'이 있으면 모델이 그대로 옮겨 회고가 둘이 됐다(09-24 시험).
   const continuityLines = continuity.map((l, i) =>
-    i === retroPick
-      ? `${l}\n  ★ 회고 문장('어제·전날')은 이 사실 하나에만 쓴다`
-      : `${l}\n  → 회고 없이 오늘 일로만 쓴다('갓 얻은 땅·곧바로 다시 주인이 바뀐'처럼, '어제·전날' 금지)`,
+    i === retroPick ? `${l}\n  ★ 회고 문장('어제·전날')은 이 사실 하나에만 쓴다` : `${deRetro(l)}\n  → '어제·전날' 없이 오늘 일로 쓴다`,
   );
   if (continuity.length > 0)
     digestSections.push(
@@ -1596,6 +1597,14 @@ export function isLightFactIssue(issue: string): boolean {
  * 회고로 쓸 연속성 사실 하나 고르기(09-24) — 하루 만의 탈환 > 하루 만의 상실 > 어제 얻은 땅의 방어. 같은 순위면
  * 가장 많은 사람이 몰린 곳 > 개인 활약이 나온 곳 > 먼저 나온 것. 항목이 없으면 -1.
  */
+/** 연속성 줄에서 회고 낱말을 뺀 문구 — 사실(하루 만의 탈환·상실·방어)은 그대로 두고 표현만 오늘 일로 바꾼다. */
+export function deRetro(line: string): string {
+  return line
+    .replace(/어제 길드 「([^」]+)」 이\(가\) 「([^」]+)」 에게서 빼앗았던 곳을 오늘 「([^」]+)」 이\(가\) 되찾음/, '「$1」 에게 갓 빼앗겼던 곳을 「$3」 이(가) 곧바로 되찾음')
+    .replace('어제 얻은 땅을 하루 만에', '갓 얻은 땅을 곧바로')
+    .replace('어제 손에 넣은 땅을 오늘 지켜냄', '갓 손에 넣은 땅을 지켜냄');
+}
+
 export function pickRetroFact(lines: string[], crowdZones: string[], featZones: string[]): number {
   if (lines.length === 0) return -1;
   const zoneOf = (l: string) => l.match(/구역 「([^」]+)」/)?.[1] ?? '';
@@ -1736,10 +1745,10 @@ async function generateLocked(
     const maxTokens = chronicleMaxTokens(truncations);
     const res = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: maxTokens,
-      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
-      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: { type: 'disabled' },
+      // 추론(thinking)은 기본 끔 — 7/20 짧은 예산이 추론에 다 쓰여 본문이 빈 사고. 시험용으로 CHRONICLE_THINKING=adaptive면
+      // 켜고 추론 몫 상한을 넉넉히 더한다(09-24 비교: scripts/chronicle-eval.ts).
+      max_tokens: DRAFT_THINKING ? maxTokens + 12_000 : maxTokens,
+      thinking: DRAFT_THINKING ? { type: 'adaptive' } : { type: 'disabled' },
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });

@@ -265,9 +265,13 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       // 2. 인원수
       // '곳'으로 구역을 세는 문장에 사람 이야기가 없으면 그 안의 수사는 전부 땅이다(집계 문단).
       const countsZones = /곳/.test(plain) && !PEOPLE_WORD.test(plain);
+      // 개인 활약 인물이 주어인 처치 표현('{u|스타}가 넷을 처치')은 1번 규칙이 활약 수와 대조한다 — 여기서 구역 문맥으로 또 보면
+      // '이 구역에서'처럼 구역 마커 없이 쓴 문장이 앞 문장의 다른 구역에 묶여 오탐(09-24).
+      const featInSent = toks.some((t) => t.kind === 'u' && featByNick.has(t.name));
       const heads = [...aligned.matchAll(HEADCOUNT)]
         .filter((m) => {
           if (countsZones) return false;
+          if (featInSent && /^\s?(?:모두\s?|전부\s?|다\s?)?(?:베|쓰러|눕|처치|잡|무너)/.test(aligned.slice(m.index! + m[0].length))) return false;
           if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 6), m.index!))) return false;
           const z = zoneAt(m.index!);
           return !(z && headcount.has(z));
