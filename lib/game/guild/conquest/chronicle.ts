@@ -1587,6 +1587,11 @@ async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: Chronicle
  * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
  * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
  */
+/** 가벼운 위반 — 같은 표현 반복(검증기 6·23)·줄표(24). 사실은 틀리지 않았고 운영자가 한눈에 고칠 수 있다. */
+export function isLightFactIssue(issue: string): boolean {
+  return /표현이 \d+번 나온다|줄표\(—\)/.test(issue);
+}
+
 /**
  * 회고로 쓸 연속성 사실 하나 고르기(09-24) — 하루 만의 탈환 > 하루 만의 상실 > 어제 얻은 땅의 방어. 같은 순위면
  * 가장 많은 사람이 몰린 곳 > 개인 활약이 나온 곳 > 먼저 나온 것. 항목이 없으면 -1.
@@ -1785,7 +1790,10 @@ async function generateLocked(
     const heads = bigChange ? headlineIssues(candH, factCtx) : [];
     const cand: Cand = { score: viol.length * 3 + orderIssues.length * 2 + facts.length + heads.length, candT, candH, headlines: parsed.headlines, viol, orderIssues, facts, heads };
     if (candT && (!bigChange || candH) && (!best || cand.score < best.score)) best = cand;
-    if (cand.score === 0 || attempt === 2) {
+    // 조기 종료(09-24) — 남은 게 가벼운 문체 위반(같은 표현 반복·줄표)뿐이면 재생성하지 않는다. 사실·마커·연출 순서는
+    // 그대로 재시도한다. 재생성 한 번이 호출 한 번(본문 전체 출력)이라, 가벼운 위반 때문에 비용·시간을 들이지 않는다.
+    const lightOnly = viol.length === 0 && orderIssues.length === 0 && heads.length === 0 && facts.length <= 2 && facts.every(isLightFactIssue);
+    if (cand.score === 0 || lightOnly || attempt === 2) {
       if (cand.score > 0 && best && best !== cand) console.warn(`[chronicle] 재시도 소진 — 마지막(점수 ${cand.score})보다 나은 앞 시도(점수 ${best.score}) 채택`);
       adopt(best ?? cand);
       break;

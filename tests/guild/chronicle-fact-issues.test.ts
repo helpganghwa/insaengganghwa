@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { factIssues, headlineIssues, parseZoneCounts, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
-import { pickRetroFact } from '@/lib/game/guild/conquest/chronicle';
+import { isLightFactIssue, pickRetroFact } from '@/lib/game/guild/conquest/chronicle';
 
 /**
  * 연대기 사실 검증기(2026-09-10) — 09-10 실제 생성 본문(운영자 검수에서 걸린 오류 4종 + 회고 반복)으로 회귀.
@@ -250,5 +250,14 @@ describe('pickRetroFact — 회고로 쓸 연속성 사실 하나(09-24)', () =>
     expect(pickRetroFact(lines, ['설원 신전'], [])).toBe(3);
     expect(pickRetroFact(lines, [], [])).toBe(2);
     expect(pickRetroFact([], [], [])).toBe(-1);
+  });
+});
+
+describe('isLightFactIssue — 조기 종료 판정(09-24)', () => {
+  it('반복·줄표만 가볍다', () => {
+    expect(isLightFactIssue("'지키는 이 없던' 표현이 3번 나온다 — 2번까지만 쓰고")).toBe(true);
+    expect(isLightFactIssue('줄표(—)가 2번 나온다 — 줄표 없이')).toBe(true);
+    expect(isLightFactIssue("'어제·전날' 회고 문장이 2개다 — 한 문장만")).toBe(false);
+    expect(isLightFactIssue('{g|로제} 의 구역 수 \'4곳\'이 사실표와 다르다')).toBe(false);
   });
 });
