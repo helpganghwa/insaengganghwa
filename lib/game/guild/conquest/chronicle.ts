@@ -642,9 +642,8 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
 export type { ChronicleReviewNote, ChronicleFeedbackKey, ChronicleImproveModel } from './chronicle-options';
 export { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS } from './chronicle-options';
 
-const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. 이야기꾼이 쓴 초안을 두 기준으로 재검수한다.
-
-[1. 사실 검증 — 사실표가 유일한 진실]
+/** 다듬기(검수 개선·생성 끝 다듬기)가 지키는 사실 규칙 — 코드 검증기가 못 보는 서술 뉘앙스 위주. */
+const FACT_RULES = `[사실 검증 — 사실표가 유일한 진실]
 - 초안의 모든 수치(구역 수·조각 수·보유 수·순위)·소유·귀속 주장을 사실표와 대조한다.
 - 불일치는 사실표 기준으로 고친다. 사실표에 없는 수치·사건은 지어내지 말고 그 대목을 사실표 범위로 줄인다.
 - 특히: 길드별 공격/점령 구역 수를 다른 길드 것과 합치지 말 것, 일부 구역을 잃어도 남은 영토가 있으면 '사라졌다/자리를 잃었다'류 소멸 표현 금지.
@@ -668,18 +667,7 @@ const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. �
 - 산수 주의: '어제 X곳' 뒤에 'N곳을 더해 K곳'처럼 쓴 문장은 X+N=K가 성립해야 한다 — 상실이 있어 안 맞으면 사실표 '길드별 보유 증감'대로 얻은 수와 잃은 수를 함께 쓰는 문장으로 고쳐라.
 - 서사 응집: 같은 길드·같은 지역의 이야기가 여러 문단에 쪼개져 흐름이 끊기면 한 곳에 모아 재배열하라(사실 불변, 순서만 정리).
 - 사실표에 분단/통합/비지 신호가 없는데 조각·분산을 논평하거나, 나뉜 영토를 '아직 하나가 아니다'류 약점으로 단정한 문장은 삭제하거나 중립으로 고쳐라.
-
-[2. 문장 퇴고 — 읽는 재미]
-- 어색한 문장·번역투·같은 단어의 단조로운 반복(예: 같은 수사가 세 문단 연속)을 다듬는다.
-- 이야기의 긴장과 흐름(사건→결과→의미→형세)을 살리되, 잘 쓰인 문장은 건드리지 않는다. 과장·미사여구 추가 금지 — 다듬기지 다시 쓰기가 아니다.
-- 전체 길이는 초안의 ±20% 안에서 유지한다.
-
-[마커 — 절대 규칙]
-- 길드={g|이름}, 인물={u|닉} 또는 {u|닉|코드}, 개별 구역={z|이름}. 모든 이름은 등장할 때마다 마커로 감싼다. 마커 문법을 새로 만들거나 깨뜨리지 말 것.
-
-출력은 JSON 하나만: {"today": string, "headline": string, "changes": [{"kind": "fact"|"style", "before": string, "after": string, "reason": string}]}
-- changes의 before/after는 바뀐 구절만 짧게(전문 아님). 수정이 없으면 원문 그대로 + changes: [].
-- headline은 초안에 있을 때만 다듬고, 초안이 빈 문자열이면 빈 문자열 유지.`;
+`;
 
 const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 이야기꾼이다. 길드들이 구역을 두고 벌인 일을 말하듯이 풀어 전한다.
 
@@ -737,6 +725,8 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **잃은 구역의 보유 기간은 점령 줄의 표기를 따른다.** '어제 막 차지했던 곳'이 붙은 구역만 어제 차지한 땅이고, 'N일 동안 쥐고 있던 곳'을 함께 묶어 '어제 차지했던 곳들'로 쓰지 말 것.
 - **개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물은 '자리를 지켜냈다·버텼다'의 주어로 쓰지 않는다.** 쓰러뜨린 뒤 쓰러졌고, 자리는 길드가 지켰다는 식으로 나눠 쓴다.
 - **'같은 지역의 {z|X}'는 정리의 (X 지역) 표기가 실제로 같을 때만.** 구역을 지역으로 묶기 전에 표기를 다시 확인한다(2026-09-10: 오크 부락 구역을 잊힌 신전 문장에 묶은 사건).
+- 첫 문장은 '■ 규모'의 싸움 수·주인이 바뀐 곳 수와 가장 큰 격전지로 연다(09-24 운영자 교정 문체).
+- 사실표에 적힌 보유 기간·첫 등장·조각·비지·지역 석권은 근거가 있는 사실이니 살려 쓴다. 같은 구역을 노린 길드들은 서로 경쟁했다(동맹 없음, '합세·연합' 금지).
 - 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
@@ -1229,6 +1219,8 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // 먹이면 모델이 성실하게 "눈에 띄는 활약은 없었다"류 부재 서술을 생성해 템플릿 티가 난다.
   // 안 보여주면 못 쓴다 + baseContent의 부재 서술 금지 규칙이 이중 방어.
   const digestSections: string[] = [];
+  // 규모(09-24) — 첫 문장('열네 번의 싸움이 벌어져 열 곳의 주인이 바뀐')의 근거. 종전엔 사실표에 없어 모델이 세거나 빼먹었다.
+  digestSections.push(`■ 규모: 싸움이 벌어진 구역 ${summary.battleCount}곳, 그중 주인이 바뀐 곳 ${summary.captures.length}곳`);
   if (summary.attacks.length > 0) digestSections.push(`■ 공격 측(구역을 공격한 길드):\n${atkLines}`);
   if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별):\n${capLines}`);
   if (summary.defenses.length > 0)
@@ -1662,29 +1654,22 @@ async function generateLocked(
   };
   if (!pack) return { created: false, reason: 'no-event' };
   const { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange } = pack;
-  const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = await buildMarkerTools(summary, zoneRows, idByName, serverId);
+  const tools = await buildMarkerTools(summary, zoneRows, idByName, serverId);
+  const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = tools;
 
+  // 규칙은 SYSTEM_PROMPT 한 곳에만 둔다(09-24) — 종전엔 여기 2,300자가 SYSTEM과 겹쳐 두 곳이 어긋났다. 여기는 날마다 바뀌는 지시만.
   const baseContent =
     `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
-    `공격한 길드는 '공격 측' 목록만 따라라 — 소유(방어) 길드가 공격했다고 쓰지 말 것. 방어 측은 공격을 받아낸 쪽이다. '처치'가 많은 인물도 방어 측일 수 있으니 처치 수로 공격 측을 단정하지 말 것.\n` +
-    `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
-    `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
-    `정리에 없는 항목(개인 활약·방어·형세 등)은 그 화제를 아예 다루지 말 것 — "~는 없었다"류 부재 언급 금지(있는 사건만으로 서사).\n` +
-    `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 점령전'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
-    `'되찾다·탈환·수복·다시 가져오다' 같은 재획득 표현은 '■ 어제와 이어지는 사실'에 '하루 만의 탈환'으로 적힌 구역에만 쓴다 — 그 외에는 정리에 직전 소유만 있고 그 이전 이력이 없으므로 '빼앗다·차지하다·가져가다'로만 쓴다(2026-07-18 잿빛 첨석 오서술).\n` +
-    `구역의 소속 지역은 정리의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 점령을 한 지역 이름으로 묶지 말 것('왕국 전역에서'는 전부 왕국 지역일 때만, 여러 지역에 걸치면 '대륙 전역에서').\n` +
-    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). 반대로 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역은 실제 교전 끝에 함락된 것이다 — 이런 구역을 '지키는 병력이 없었다'·무혈·무저항으로 쓰면 안 되고, 저항을 뚫고 차지한 것으로 서술한다. '배치한 수비 없이 집행관 혼자'가 붙은 구역은 그 중간이다 — 교전은 있었으니 무혈로 쓰지 말되, 길드가 수비를 배치한 적은 없으므로 '수비를 세웠다'로도 쓰지 말고 '집행관 혼자 맞섰다'로 서술한다. '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
-          `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
     (bigChange
-      ? `이번 점령전는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다 — 어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지. headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`
-      : `이번 점령전는 역사에 남을 날이 아님 — headline은 반드시 빈 문자열(""), headlines는 빈 배열([])로 둔다.\n`) +
-    `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지). **어제·지난 역사 등 과거 맥락으로 언급하는 이름도 예외 없이 마커** — 예: 전날 밀려난 길드 'X'를 회상하며 언급할 때도 {g|X}.\n\n` +
+      ? `이번 점령전은 역사에 남는 날이다. headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다(어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지). headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`
+      : `이번 점령전은 역사에 남을 날이 아니다. headline은 반드시 빈 문자열(""), headlines는 빈 배열([])로 둔다.\n`) +
     `위 규칙대로 JSON({today, headline, headlines})만 출력하라.`;
 
   // ── 생성 + 검증 재시도(최대 3회) — 위반(마커 없는 이름)을 피드백으로 재생성 유도. ──
   // 재시도로도 남으면 enforceMarkers가 결정론 백스톱(동명 모호만 최종 잔존 가능, warn).
-  const messages: { role: 'user' | 'assistant'; content: string }[] = [
-    { role: 'user', content: baseContent },
+  // 첫 요청(사실표·맥락·규칙, 수천 토큰)에 캐시를 건다 — 재시도 2·3회차가 같은 앞부분을 캐시로 읽어 입력 비용이 1/10이 된다.
+  const messages: Anthropic.Messages.MessageParam[] = [
+    { role: 'user', content: [{ type: 'text', text: baseContent, cache_control: { type: 'ephemeral' } }] },
   ];
   // 연출 순서 검증 대상 — 오늘 점령·방어가 있었던 구역(회고 문장에만 등장하면 리플레이가 건너뛴다).
   const battleZones = [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])];
@@ -1793,71 +1778,21 @@ async function generateLocked(
       );
     messages.push(
       { role: 'assistant', content: raw },
-      { role: 'user', content: feedback.join('\n\n') + '\n\n같은 내용을 처음부터 끝까지 다시 JSON({today, headline, headlines})으로만 출력하라.' },
+      // 지적한 문장만 고치게 한다(09-24) — 통째로 다시 쓰게 하면 멀쩡하던 문장에서 새 오류가 생기고 문체도 흔들렸다.
+      {
+        role: 'user',
+        content:
+          feedback.join('\n\n') +
+          '\n\n위에서 지적한 문장만 고치고, 지적받지 않은 문장은 한 글자도 바꾸지 마라. 고친 본문 전체를 JSON({today, headline, headlines})으로만 출력하라.',
+      },
     );
   }
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
-  // ── AI 재검수 패스(2026-07-15) — 사실 대조(사실표=digest·현황) + 문장 퇴고. best-effort:
-  // 실패·마커 위반 시 초안 유지. 사실표는 코드가 계산한 값이라 "코드가 AI를 검사"하는 구조.
-  let reviewNotes: ChronicleReviewNote[] = [];
-  try {
-    const res = await client().messages.create({
-      model: MODEL_ID,
-      // 출력 = 본문 전체 + changes라 초안 상한(3,200~5,200)보다 길다 — 종전 2,600은 큰 날 잘려 조용히 버려졌다(09-24 점검).
-      max_tokens: 5200,
-      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
-      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: { type: 'disabled' },
-      system: [{ type: 'text', text: REVIEW_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages: [
-        {
-          role: 'user',
-          content:
-            `[사실표 — 유일한 진실]\n${digest}\n\n${context}\n\n[초안]\n` +
-            JSON.stringify({ today, headline }) +
-            `\n\n재검수 결과를 JSON으로만 출력하라.`,
-        },
-      ],
-    });
-    track(res.usage);
-    const block = res.content.find((b) => b.type === 'text');
-    const raw = block && 'text' in block ? block.text : '';
-    const parsed = parseModelJson<{
-      today?: string;
-      headline?: string;
-      changes?: ChronicleReviewNote[];
-    }>(raw);
-    if (!parsed) {
-      console.warn(`[chronicle] 재검수 응답 파싱 실패 — 초안 유지(stop=${res.stop_reason}, rawLen=${raw.length})`);
-    }
-    if (parsed) {
-      const revT = enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
-      const revH = bigChange
-        ? enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
-        : '';
-      const viol = [...findViolations(revT), ...(bigChange ? findViolations(revH) : [])];
-      const revOrder = replayOrderIssues(revT, battleZones);
-      const revFacts = factIssues(revT, factCtx);
-      if (revOrder.length > replayOrderIssues(today, battleZones).length) {
-        console.warn(`[chronicle] 재검수본 폐기(연출 순서 위반 증가: ${revOrder.join(', ')}) — 초안 유지`);
-      } else if (revFacts.length > factIssues(today, factCtx).length) {
-        console.warn(`[chronicle] 재검수본 폐기(사실 검증 위반 증가 ${revFacts.length}건) — 초안 유지:\n${revFacts.join('\n')}`);
-      } else if (revT && viol.length === 0 && (!bigChange || revH)) {
-        today = revT;
-        headline = revH;
-        if (bigChange) headlineCandidates = [...new Set([revH, ...headlineCandidates])].slice(0, 5);
-        reviewNotes = (parsed.changes ?? [])
-          .filter((c) => c && (c.kind === 'fact' || c.kind === 'style') && c.after)
-          .slice(0, 12);
-      } else {
-        console.warn(`[chronicle] 재검수본 폐기(빈 본문 또는 마커 위반 ${viol.length}건) — 초안 유지`);
-      }
-    }
-  } catch (e) {
-    console.warn(`[chronicle] 재검수 실패 — 초안 유지: ${(e as Error).message}`);
-  }
+  // 자동 다듬기 패스는 두지 않는다(09-24 시험: 여섯 번 중 다섯 번이 연출 순서·사실 위반을 늘려 버려졌다 — 비용만 들었다).
+  // 사실은 위 검증 루프가, 구성·중복·흐름은 운영자가 검수 화면의 '개선'(polishChronicle)으로 필요할 때만 다듬는다.
+  const reviewNotes: ChronicleReviewNote[] = [];
 
   // 길드 표시값 스냅샷(0141) — 그 서버에 **그 시점 존재한 길드 전부**를 담는다.
   // 본문에 등장한 길드만 담으면 리플레이가 문양을 못 찾는다: 리플레이는 본문과 무관하게 그날
@@ -1923,11 +1858,6 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
 
 // ── 검수 개선 패스(2026-09-15) — 운영자가 고른 방향대로 현재 텍스트를 고친다. 저장하지 않는다(화면이 교체·저장). ──
 
-/** 재검수 프롬프트의 [1. 사실 검증] 블록만 떼어 재사용 — 규칙이 한 곳에서만 자란다. */
-const FACT_RULES = REVIEW_SYSTEM_PROMPT.slice(
-  REVIEW_SYSTEM_PROMPT.indexOf('[1. 사실 검증'),
-  REVIEW_SYSTEM_PROMPT.indexOf('[2. 문장 퇴고'),
-);
 const IMPROVE_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. 운영자가 고른 개선 방향대로 현재 본문을 고친다.
 
 ${FACT_RULES}
@@ -1996,6 +1926,32 @@ export async function improveChronicleText(input: {
   if (note) asks.push(`- 운영자 지시: ${note.slice(0, 300)}`);
   if (asks.length === 0) return { ok: false, reason: '개선 방향을 하나 이상 고르세요.', issuesBefore };
   const wantHeadline = input.feedback.includes('headline');
+  return polishChronicle({ digest, context, today: input.today, headline: input.headline, asks, wantHeadline, model: input.model, tools, factCtx, battleZones, issuesBefore });
+}
+
+type MarkerTools = Awaited<ReturnType<typeof buildMarkerTools>>;
+
+/**
+ * 다듬기 공용 핵심(09-24) — 검수 화면의 '개선' 버튼과 생성 끝의 다듬기 패스가 같은 프롬프트·채택 판정을 쓴다.
+ * 종전 생성은 별도 재검수 프롬프트(사실 20여 항목·문체 3줄)를 돌렸는데, 사실은 코드 검증기가 맡고 운영자가 매일
+ * 고치는 건 중복·흐름·구성이라 목표가 어긋났다. 채택 판정: 마커 위반 0, 연출 순서·사실 위반이 늘지 않을 것.
+ */
+async function polishChronicle(p: {
+  digest: string;
+  context: string;
+  today: string;
+  headline: string;
+  asks: string[];
+  wantHeadline: boolean;
+  model: ChronicleImproveModel;
+  tools: MarkerTools;
+  factCtx: FactCheckContext;
+  battleZones: string[];
+  issuesBefore: string[];
+  track?: (u: Anthropic.Messages.Usage) => void;
+}): Promise<ChronicleImproveResult> {
+  const { digest, context, asks, wantHeadline, tools, factCtx, battleZones, issuesBefore } = p;
+  const input = { today: p.today, headline: p.headline, model: p.model };
 
   const userContent =
     `[사실표 — 유일한 진실]\n${digest}\n\n${context}\n\n[요청된 개선 방향]\n${asks.join('\n')}\n\n[현재 본문]\n` +
@@ -2015,6 +1971,7 @@ export async function improveChronicleText(input: {
       system: [{ type: 'text', text: IMPROVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });
+    p.track?.(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
     parsed = parseModelJson<{ today?: string; headline?: string; changes?: ChronicleReviewNote[] }>(raw);

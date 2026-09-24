@@ -181,3 +181,28 @@ describe('factIssues — 09-24 오탐 회귀', () => {
     expect(factIssues(wrong, c).some((i) => /악마사냥꾼\} 이\(가\) 쓰러뜨린 수는 3/.test(i))).toBe(true);
   });
 });
+
+describe('factIssues — 09-24 최종 시험 오탐 회귀', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['대설봉', '잊힌 신전'], ['대리석 성소', '잊힌 신전'], ['성좌의 폐허', '잊힌 신전'], ['검은 첨봉', '드래곤 화산']]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [],
+    headcountZones: [],
+    recaptureZones: [],
+    yesterdayZones: ['검은 첨봉'],
+    guildCounts: new Map([['케케케', [1, 4, 10, 13]]]),
+    battleZones: [],
+    captureBy: new Map(),
+    yesterdayCaptureBy: new Map([['검은 첨봉', 'Winners']]),
+  };
+  it("'구역을 하나도'는 인원수가 아니다", () => {
+    expect(factIssues(`{g|케케케|27}는 구역을 하나도 얻지 못한 채 {z|대설봉|12}을 두드렸다.`, c).some((i) => /사람 수/.test(i))).toBe(false);
+  });
+  it("나열한 구역을 받는 '두 곳 모두'는 길드 보유 수가 아니다", () => {
+    expect(factIssues(`{g|케케케|27}로부터 {z|대리석 성소|14}와 {z|성좌의 폐허|16}를 빼앗았는데 두 곳 모두 수비가 약했다.`, c).some((i) => /구역 수/.test(i))).toBe(false);
+  });
+  it('소유격 길드는 어제 가져간 쪽으로 보지 않는다', () => {
+    expect(factIssues(`{z|검은 첨봉|1}에서는 {g|로제|25}의 공세를 받아냈는데, 그 땅은 어제 손에 넣은 곳이다.`, c).some((i) => /어제 .*차지한 구역이 아니다/.test(i))).toBe(false);
+    expect(factIssues(`{z|검은 첨봉|1}은 어제 {g|로제|25}가 차지했던 곳이다.`, c).some((i) => /차지한 구역이 아니다/.test(i))).toBe(true);
+  });
+});

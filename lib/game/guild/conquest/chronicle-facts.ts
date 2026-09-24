@@ -95,6 +95,8 @@ export function parseZoneCounts(plain: string): number[] {
     // '한두 곳'처럼 어림수는 건너뛴다.
     const before = plain.slice(Math.max(0, m.index! - 1), m.index!);
     if (m[2] && !m[1] && /[한두세]/.test(before)) continue;
+    // '한 곳도 잃지 않았다'는 0곳이다(09-24 오탐).
+    if (m[2] === '한' && !m[1] && /^\s?도/.test(plain.slice(m.index! + m[0].length))) continue;
     out.push((m[1] ? TENS[m[1]]! : 0) + (m[2] ? UNIT[m[2]]! : 0));
   }
   for (const m of plain.matchAll(/(\d+)\s?곳/g)) out.push(Number(m[1]));
@@ -110,7 +112,7 @@ const HEADCOUNT = /(?<![가-힣])(?:(?:하나|한|두|세|네|다섯|여섯|일�
  *  · "하나를 얻고 하나를 잃어" — 같은 문장이 '곳'으로 세고 있고 사람 이야기가 없다
  * 이걸 안 빼면 정상 문장이 매일 재생성 피드백을 타 연대기가 공회전한다.
  */
-const THING_BEFORE = /(구역|거점|땅|자리|깃발|곳|지역)\s?$/;
+const THING_BEFORE = /(구역|거점|땅|자리|깃발|곳|지역)(?:을|를|은|는|이|가|도)?\s?$/;
 /** 사람 이야기 표지 — 하나라도 있으면 '곳' 문장이어도 인원수 검사를 그대로 한다. */
 const PEOPLE_WORD = /명|사람|수비|공격|병력|베|쓰러|눕|처치|막아|맞서|버[티틴]/;
 
@@ -266,7 +268,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       const heads = [...aligned.matchAll(HEADCOUNT)]
         .filter((m) => {
           if (countsZones) return false;
-          if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 4), m.index!))) return false;
+          if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 6), m.index!))) return false;
           const z = zoneAt(m.index!);
           return !(z && headcount.has(z));
         })
@@ -281,14 +283,20 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       //    '같은 지역의 {z|Z}'는 앞선 지역 언급(없으면 앞 문장에서 이어진 지역)과 같아야 한다.
       const mentions = regionMentions(aligned, aliases);
       const regions = [...new Set(mentions.map((m) => m.label))];
-      const sameRegionAt = [...aligned.matchAll(/같은 (지역|화산|늪|부락|신전|섬|왕국)/g)].map((m) => m.index!);
+      const sameMatches = [...aligned.matchAll(/같은 (지역|화산|늪|부락|신전|섬|왕국)/g)].map((m) => ({ at: m.index!, word: m[1]! }));
       for (const zp of zonePos) {
         const r = ctx.zoneRegion.get(zp.name);
         if (!r) continue;
         let governing: string | null = null;
         for (const m of mentions) if (m.at < zp.at) governing = m.label;
-        const viaSame = sameRegionAt.some((at) => at < zp.at && !mentions.some((m) => m.at > at && m.at < zp.at));
-        if (viaSame && !governing) governing = lastRegion;
+        // '같은 섬·같은 늪'처럼 지역 낱말이 붙으면 그 낱말이 가리키는 지역이 기준이다 — 앞 문맥의 다른 지역(왕국)으로
+        // 이으면 오탐(09-24 '왕국의 {z|기사 연무장}… 같은 섬의 {z|타락한 성소}').
+        const sameHit = [...sameMatches].reverse().find((sm) => sm.at < zp.at && !mentions.some((m) => m.at > sm.at && m.at < zp.at));
+        const viaSame = !!sameHit;
+        if (sameHit && sameHit.word !== '지역') {
+          const byWord = ctx.regionLabels.find((l) => (l.split(/\s+/).pop() ?? '').endsWith(sameHit.word));
+          if (byWord) governing = byWord;
+        } else if (viaSame && !governing) governing = lastRegion;
         if (governing && governing !== r) {
           issues.push(`{z|${zp.name}} 은(는) ${r} 지역인데 문장은 ${governing} 지역으로 묶었다 — 지역 표기를 정리대로 고친다: ${q(sent)}`);
         }
@@ -328,7 +336,9 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
               if (near && n !== undefined) regionScoped.add(n);
             }
           }
-          for (const n of parseZoneCounts(plain).filter((x) => !regionScoped.has(x))) {
+          // '{z|A}와 {z|B}를 … 두 곳 모두'처럼 문장에 나열한 구역을 받는 수는 길드 보유 수가 아니다(09-24 오탐).
+          const enumerated = /곳\s?(?:모두|다|전부|다같이)/.test(plain) ? zones.length : -1;
+          for (const n of parseZoneCounts(plain).filter((x) => !regionScoped.has(x) && x !== enumerated)) {
             if (!allowed.includes(n)) {
               issues.push(`{g|${guilds[0]}} 의 구역 수 '${n}곳'이 사실표와 다르다(가능한 수: ${[...new Set(allowed)].join('·')}) — '길드별 보유 증감'대로 고친다: ${q(sent)}`);
             }
@@ -346,10 +356,13 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       //     구역 마커가 없고 '그 땅들·그곳들·모두'로 받으면 앞 문장의 구역 전부를 가리킨다(09-17: 넷 중 둘만 어제 차지).
       if (ctx.yesterdayCaptureBy && RETRO.test(plain) && RETRO_TAKEN.test(plain)) {
         const targets = zones.length > 0 ? zones : PLURAL_REF.test(plain) ? prevZones : lastZone ? [lastZone] : [];
+        // 주어 길드({g|G}은·는·이·가·도)만 본다 — '{g|로제}의 공세를 받아냈는데, 그 땅은 어제 손에 넣은'처럼 소유격 길드는
+        // 어제 가져간 쪽이 아니다(09-24 오탐). 주어가 없으면 그 구역이 어제 누군가에게 넘어간 곳이기만 하면 된다.
+        const subjects = [...sent.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도)(?![가-힣])/g)].map((m) => m[1]!.trim());
         const wrong = targets.filter((z) => {
           const by = ctx.yesterdayCaptureBy!.get(z);
           if (!by) return true;
-          return guilds.length > 0 && !guilds.includes(by);
+          return subjects.length > 0 && !subjects.includes(by);
         });
         if (wrong.length > 0) {
           issues.push(
@@ -467,6 +480,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   once(/하루 만에/g, '하루 만에');
   once(/어제[^.]*내주었던/g, '어제 … 내주었던');
   once(/다시 노렸다/g, '다시 노렸다');
+  // 24. 줄표 — SYSTEM이 금지하는데 검사가 없어 새어 나왔다(09-24 점검). 유저 글에 줄표를 쓰지 않는 운영 방침과 같다.
+  if (/—/.test(text)) issues.push(`줄표(—)가 ${(text.match(/—/g) ?? []).length}번 나온다 — 줄표 없이 새 문장이나 쉼표로 잇는다.`);
   // 23. 같은 표현의 과도한 반복.
   for (const f of REPEAT_FAMILIES) {
     const n = (whole.match(f.re) ?? []).length;
