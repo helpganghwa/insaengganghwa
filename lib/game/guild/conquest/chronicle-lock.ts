@@ -3,7 +3,7 @@ import 'server-only';
 import { Redis } from '@upstash/redis';
 
 /**
- * 연대기 생성 잠금(2026-09-24) — 23시대 conquest-run은 5분마다 돌고 생성 한 번이 LLM 2~4회(최대 수 분)라,
+ * 연대기 생성 잠금(2026-09-24) — 23시대 conquest-run은 5분마다 돌고 생성 한 번이 LLM 1~3회(최대 수 분)라,
  * 앞 틱이 아직 생성 중일 때 다음 틱이 같은 (서버, 날짜)를 또 생성했다. 저장은 onConflictDoNothing이라 먼저 끝난
  * 쪽만 남고 나머지 LLM 호출은 버려졌다(비용·함수 시간 낭비).
  *

@@ -659,7 +659,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
 export type { ChronicleReviewNote, ChronicleFeedbackKey, ChronicleImproveModel } from './chronicle-options';
 export { CHRONICLE_FEEDBACK, CHRONICLE_IMPROVE_MODELS } from './chronicle-options';
 
-/** 다듬기(검수 개선·생성 끝 다듬기)가 지키는 사실 규칙 — 코드 검증기가 못 보는 서술 뉘앙스 위주. */
+/** 검수 개선('개선' 버튼)이 지키는 사실 규칙 — 코드 검증기가 못 보는 서술 뉘앙스 위주. */
 const FACT_RULES = `[사실 검증 — 사실표가 유일한 진실]
 - 초안의 모든 수치(구역 수·조각 수·보유 수·순위)·소유·귀속 주장을 사실표와 대조한다.
 - 불일치는 사실표 기준으로 고친다. 사실표에 없는 수치·사건은 지어내지 말고 그 대목을 사실표 범위로 줄인다.
@@ -1641,21 +1641,11 @@ async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: Chronicle
   return { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers };
 }
 
-/**
- * 어제 정리와 오늘 정리를 대조해 **코드가 확정하는 연속성 사실**(2026-09-04). 검수 때 매번 손보던 대목 —
- * 하루 만의 탈환(어제 A가 B에게서 빼앗은 구역을 오늘 B가 되찾음), 어제 얻은 땅의 하루 만 상실, 어제 얻은
- * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
- * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
- */
 /** 가벼운 위반 — 같은 표현 반복(검증기 6·23)·줄표(24). 사실은 틀리지 않았고 운영자가 한눈에 고칠 수 있다. */
 export function isLightFactIssue(issue: string): boolean {
   return /표현이 \d+번 나온다|줄표\(—\)/.test(issue);
 }
 
-/**
- * 회고로 쓸 연속성 사실 하나 고르기(09-24) — 하루 만의 탈환 > 하루 만의 상실 > 어제 얻은 땅의 방어. 같은 순위면
- * 가장 많은 사람이 몰린 곳 > 개인 활약이 나온 곳 > 먼저 나온 것. 항목이 없으면 -1.
- */
 /** 연속성 줄에서 회고 낱말을 뺀 문구 — 사실(하루 만의 탈환·상실·방어)은 그대로 두고 표현만 오늘 일로 바꾼다. */
 export function deRetro(line: string): string {
   return line
@@ -1664,6 +1654,10 @@ export function deRetro(line: string): string {
     .replace('어제 손에 넣은 땅을 오늘 지켜냄', '갓 손에 넣은 땅을 지켜냄');
 }
 
+/**
+ * 회고로 쓸 연속성 사실 하나 고르기(09-24) — 하루 만의 탈환 > 하루 만의 상실 > 어제 얻은 땅의 방어. 같은 순위면
+ * 가장 많은 사람이 몰린 곳 > 개인 활약이 나온 곳 > 먼저 나온 것. 항목이 없으면 -1.
+ */
 export function pickRetroFact(lines: string[], crowdZones: string[], featZones: string[]): number {
   if (lines.length === 0) return -1;
   const zoneOf = (l: string) => l.match(/구역 「([^」]+)」/)?.[1] ?? '';
@@ -1677,6 +1671,12 @@ export function pickRetroFact(lines: string[], crowdZones: string[], featZones: 
   return best;
 }
 
+/**
+ * 어제 정리와 오늘 정리를 대조해 **코드가 확정하는 연속성 사실**(2026-09-04). 검수 때 매번 손보던 대목 —
+ * 하루 만의 탈환(어제 A가 B에게서 빼앗은 구역을 오늘 B가 되찾음), 어제 얻은 땅의 하루 만 상실, 어제 얻은
+ * 땅을 오늘 지켜냄. 모델은 이 항목에 적힌 구역에만 '되찾다·하루 만에' 표현을 쓸 수 있다(그 외 과거 이력은
+ * 정리에 없으므로 여전히 금지). 순수 함수 — 테스트 tests/guild/chronicle-continuity.test.ts.
+ */
 export function continuityFacts(today: ConquestDaySummary, yesterday: ConquestDaySummary): string[] {
   const out: string[] = [];
   const yCap = new Map(yesterday.captures.map((c) => [c.zone, c] as const));
@@ -2089,7 +2089,7 @@ export async function improveChronicleText(input: {
 type MarkerTools = Awaited<ReturnType<typeof buildMarkerTools>>;
 
 /**
- * 다듬기 공용 핵심(09-24) — 검수 화면의 '개선' 버튼과 생성 끝의 다듬기 패스가 같은 프롬프트·채택 판정을 쓴다.
+ * 다듬기 핵심(09-24) — 검수 화면의 '개선' 버튼이 쓰는 프롬프트·채택 판정(생성 끝 자동 다듬기는 두지 않는다).
  * 종전 생성은 별도 재검수 프롬프트(사실 20여 항목·문체 3줄)를 돌렸는데, 사실은 코드 검증기가 맡고 운영자가 매일
  * 고치는 건 중복·흐름·구성이라 목표가 어긋났다. 채택 판정: 마커 위반 0, 연출 순서·사실 위반이 늘지 않을 것.
  */
@@ -2105,7 +2105,6 @@ async function polishChronicle(p: {
   factCtx: FactCheckContext;
   battleZones: string[];
   issuesBefore: string[];
-  track?: (u: Anthropic.Messages.Usage) => void;
 }): Promise<ChronicleImproveResult> {
   const { digest, context, asks, wantHeadline, tools, factCtx, battleZones, issuesBefore } = p;
   const input = { today: p.today, headline: p.headline, model: p.model };
@@ -2128,7 +2127,6 @@ async function polishChronicle(p: {
       system: [{ type: 'text', text: IMPROVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });
-    p.track?.(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
     parsed = parseModelJson<{ today?: string; headline?: string; changes?: ChronicleReviewNote[] }>(raw);
