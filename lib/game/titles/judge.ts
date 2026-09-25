@@ -744,7 +744,13 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 최초 이정표(2026-09-26) — milestone_firsts의 내 순위(fr_<key> = 1~3, 없으면 0). 기록은 first-milestones.ts 한 경로.
     // 이 조회 하나의 실패(표 미적용 등)가 판정 전체를 멈추지 않게 — 기록이 없으면 순위 0으로 본다.
     () =>
-      db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`).catch((e: unknown) => {
+      // 지금 캐릭터가 생긴 뒤의 도달만 인정 — 탈퇴해도 순위 행은 남기므로(재충원 방지), 재가입한 새 캐릭터가
+      // 예전 순위 칭호를 달고 시작하지 않게(user_titles를 지우는 것과 같은 원칙).
+      db.execute(sql`
+        select mf.milestone, mf.rank from milestone_firsts mf
+        join characters c on c.user_id = mf.user_id and c.server_id = mf.server_id
+        where mf.user_id=${u} and mf.server_id=${s} and mf.reached_at >= c.created_at
+      `).catch((e: unknown) => {
         console.warn('[titles] milestone_firsts 조회 실패 — 최초 이정표 순위 0으로 판정', (e as Error).message);
         return [];
       }),

@@ -152,7 +152,7 @@ const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완�
 
 /** 18 — 동맹 표현(길드 사이 동맹 제도는 없다 — 같은 구역을 노린 길드들은 서로 경쟁한 것). */
 // '합류'는 넓게 보되 길드원 가입 묘사('새로 합류한 이들')만 뺀다(09-26).
-const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|(?<!새로\s?)합류(?!한\s?(?:이|사람|길드원|인원|신입|모험가))/;
+const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|(?<!새로\s?)합류(?!한\s?(?:이들|이가|사람|길드원|인원|신입|모험가))/;
 /** 18 보강(09-26) — '{g|A} 넷과 {g|B} 하나가 함께 들이닥쳤다'처럼 두 길드를 주어로 묶은 '함께 …'(09-25 초안 두 곳).
  *  구역 둘을 묶은 '{z|X}와 {z|Y}를 함께 노렸다'는 해당 없다(09-21 게시본 오탐). */
 const ALLIANCE_TOGETHER = /(?:\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과|,)\s?)+\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
@@ -503,7 +503,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       }
 
       // 21. 지형 형세 — '조각·비지·별도 거점'은 사실표 지형 형세에 나온 길드만.
-      if (ctx.topoGuilds && TOPO.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.topoGuilds!.includes(g))) {
+      if (ctx.topoGuilds && (TOPO.test(plain) || /고립된? \{z\|/.test(sent)) && guilds.length > 0 && !guilds.some((g) => ctx.topoGuilds!.includes(g))) {
         issues.push(`${guilds.map((g) => `{g|${g}}`).join('·')} 의 영토 모양(조각·비지)은 사실표 '지형 형세'에 없다 — 그 서술을 뺀다: ${q(sent)}`);
       }
 

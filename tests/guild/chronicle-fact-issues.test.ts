@@ -380,9 +380,11 @@ describe('오탐 좁힘(09-26 전수조사)', () => {
     expect(factIssues('{g|케케케}는 {g|로제}에 합류해 분화구를 노렸다.', c).some((i) => i.includes('동맹'))).toBe(true);
     expect(factIssues('{g|로제}와 {g|케케케}가 합류해 공격했다.', c).some((i) => i.includes('동맹'))).toBe(true);
     expect(factIssues('{g|로제} 쪽에 합류한 {g|케케케}가 분화구를 쳤다.', c).some((i) => i.includes('동맹'))).toBe(true);
+    expect(factIssues('{g|케케케}가 {g|로제}에 합류한 이후 둘은 분화구를 쳤다.', c).some((i) => i.includes('동맹'))).toBe(true);
   });
   it("영토를 두고 쓴 '고립'은 여전히 형세로 본다", () => {
     expect(has('{g|로제}의 영토는 섬처럼 고립되었다.', '형세')).toBe(true);
     expect(has('{g|로제}는 고립된 두 구역을 지켰다.', '형세')).toBe(true);
+    expect(has('{g|로제}는 고립된 {z|분노의 분화구}를 지켰다.', '형세')).toBe(true);
   });
 });

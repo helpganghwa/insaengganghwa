@@ -1800,6 +1800,8 @@ async function generateLocked(
         break;
       }
       if (attempt === 2) throw e;
+      // 과부하·연결 오류는 잠깐 쉬고 다시(SDK 재시도 백오프 대신). 시간 초과였다면 남은 시간이 이미 줄어 있다.
+      if (!(e instanceof Anthropic.APIConnectionTimeoutError)) await new Promise((r) => setTimeout(r, Math.min(4_000, Math.max(0, deadline - Date.now() - GEN_MIN_ATTEMPT_MS))));
       continue;
     }
     track(res.usage);
