@@ -43,7 +43,7 @@ afterAll(async () => {
 });
 
 describe('송편 규칙(순수)', () => {
-  it('사다리는 2026-09-22 확정 수치 그대로이고 상자는 3의 배수', () => {
+  it('사다리는 확정 수치 그대로(1~6단계 09-22, 7~9단계 09-26)이고 상자는 3의 배수', () => {
     expect(SONGPYEON_LADDER.map((l) => [l.at, l.diamond, l.boxes])).toEqual([
       [500, 250, 15],
       [1000, 500, 30],
@@ -51,6 +51,9 @@ describe('송편 규칙(순수)', () => {
       [10000, 2000, 90],
       [20000, 4000, 150],
       [30000, 8000, 300],
+      [50000, 8000, 300],
+      [70000, 8000, 300],
+      [100000, 8000, 300],
     ]);
     for (const l of SONGPYEON_LADDER) expect(l.boxes % 3).toBe(0);
     expect(SONGPYEON_EXCHANGE.box).toEqual({ songpyeon: 300, boxes: 3 });
@@ -70,7 +73,8 @@ describe('송편 규칙(순수)', () => {
   it('다음 단계 안내', () => {
     expect(nextLadderStep(0)).toEqual({ at: 500, remain: 500 });
     expect(nextLadderStep(1000)).toEqual({ at: 3000, remain: 2000 });
-    expect(nextLadderStep(30000)).toBeNull();
+    expect(nextLadderStep(30000)).toEqual({ at: 50000, remain: 20000 });
+    expect(nextLadderStep(100000)).toBeNull();
   });
 });
 
@@ -108,7 +112,7 @@ describe.skipIf(skip)('송편 통합(롤백 tx)', () => {
       expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 1, IN, tx)).toEqual({ ok: false, reason: 'ALREADY' });
       expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 2, IN, tx)).toEqual({ ok: false, reason: 'NOT_REACHED' });
       // 결과 기간에도 받을 수 있고, 종료 뒤엔 안 된다.
-      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 9, AFTER, tx)).toEqual({ ok: false, reason: 'UNKNOWN_STEP' });
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 10, AFTER, tx)).toEqual({ ok: false, reason: 'UNKNOWN_STEP' });
       expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 2, new Date(CHUSEOK_CLAIM_END_MS + 1), tx)).toEqual({ ok: false, reason: 'CLOSED' });
       const o = await getSongpyeonOverview(TEST_USER_ID, SERVER_ID, IN, tx);
       expect(o.claimed).toEqual([1]);

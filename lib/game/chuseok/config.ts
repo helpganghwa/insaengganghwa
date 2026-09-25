@@ -41,6 +41,10 @@ export const SONGPYEON_LADDER: readonly { step: number; at: number; diamond: num
   { step: 4, at: 10_000, diamond: 2_000, boxes: 90 },
   { step: 5, at: 20_000, diamond: 4_000, boxes: 150 },
   { step: 6, at: 30_000, diamond: 8_000, boxes: 300 },
+  // 3만 이후는 같은 보상 반복 — 더 모으면 한 번 더(2026-09-26 확정). 누적 기준이라 이미 넘긴 분도 바로 받는다.
+  { step: 7, at: 50_000, diamond: 8_000, boxes: 300 },
+  { step: 8, at: 70_000, diamond: 8_000, boxes: 300 },
+  { step: 9, at: 100_000, diamond: 8_000, boxes: 300 },
 ];
 
 /** 교환 상품 — 사용 가능 송편으로 바꾼다. 한도 없음(사용자 확정). */
