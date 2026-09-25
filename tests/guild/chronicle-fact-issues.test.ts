@@ -421,5 +421,11 @@ describe('기존 오탐 정리(09-26 게시본)', () => {
   it('관계절 속 길드는 지역별 수의 주어가 아니다', () => {
     expect(iss('{g|케케케}는 {g|로제}가 비워 둔 오크 부락에서 한 곳을 더 얻었다.').some((i) => i.includes('지역 수'))).toBe(false);
     expect(iss('{g|케케케}는 오크 부락에서 세 곳을 더 얻었다.').some((i) => i.includes('지역 수'))).toBe(true);
+    // 은/는 주제어나 다른 주어가 없는 관계절은 그대로 주어로 본다(과소 탐지 방지)
+    expect(iss('{g|로제}는 지키던 오크 부락에서 세 곳을 잃었다.').some((i) => i.includes('지역 수'))).toBe(true);
+    expect(iss('{g|로제}가 지키던 오크 부락에서 세 곳을 잃었다.').some((i) => i.includes('지역 수'))).toBe(true);
+  });
+  it('회고어가 수보다 뒤에 오면 오늘 인원수로 본다', () => {
+    expect(iss('{g|로제}는 다섯이 몰려들던 {z|오크 대요새}를 내줬고, 어제와는 달랐다.').some((i) => i.includes('사람 수'))).toBe(true);
   });
 });

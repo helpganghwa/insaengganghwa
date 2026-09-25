@@ -187,14 +187,19 @@ const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[]
 /** 13 — 위치 앞에서 가장 가까운 주어 길드({g|G} 바로 뒤에 은·는·이·가·도). */
 function subjectGuildBefore(sent: string, pos: number): string | null {
   let found: string | null = null;
-  for (const m of sent.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도)(?![가-힣])/g)) {
+  let relative: string | null = null;
+  for (const m of sent.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(은|는|이|가|도)(?![가-힣])/g)) {
     if (m.index! >= pos) continue;
-    // 관계절('{g|로제}가 비워 둔 …', '{g|A}가 지키던 …')의 길드는 그 뒤 수의 주어가 아니다(09-26 게시본 오탐).
+    // 관계절('… {g|로제}가 비워 둔 …', '{g|A}가 지키던 …')의 이/가 길드는 그 뒤 수의 주어가 아니다(09-26 게시본 오탐).
+    // 은/는 주제어('{g|로제}는 지키던 …')는 관계절이 뒤따라도 주어다. 다른 주어가 없으면 건너뛴 길드로 되돌린다.
     const tail = sent.slice(m.index! + m[0].length, pos);
-    if (/^\s?(?:[가-힣]+\s)?[가-힣]*(?:둔|던|놓은|남긴|비운)\s/.test(tail)) continue;
+    if ((m[2] === '이' || m[2] === '가') && /^\s?(?:[가-힣]+\s)?[가-힣]*(?:둔|던|놓은|남긴|비운)\s/.test(tail)) {
+      relative = m[1]!.trim();
+      continue;
+    }
     found = m[1]!.trim();
   }
-  return found;
+  return found ?? relative;
 }
 
 /** 지역 별칭 — 라벨의 마지막 낱말('드래곤 화산'→'화산'). 같은 별칭이 둘 이상이면 별칭은 쓰지 않는다. */
@@ -297,7 +302,10 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
           if (featInSent && /^\s?(?:모두\s?|전부\s?|다\s?)?(?:베|쓰러|눕|처치|잡|무너)/.test(aligned.slice(m.index! + m[0].length))) return false;
           if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 6), m.index!))) return false;
           // 회고 속 어제 일('어제 {g|로제}가 셋을 베며 지켜냈던')의 수는 오늘 인원수가 아니다(09-26 게시본 오탐).
-          if (RETRO.test(plain) && /던/.test(aligned.slice(m.index!, m.index! + m[0].length + 15))) return false;
+          {
+            const r = aligned.search(RETRO);
+            if (r >= 0 && r < m.index! && /던/.test(aligned.slice(m.index!, m.index! + m[0].length + 15))) return false;
+          }
           const z = zoneAt(m.index!);
           return !(z && headcount.has(z));
         })
