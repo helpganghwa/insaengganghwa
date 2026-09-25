@@ -287,3 +287,46 @@ describe('deRetro — 고르지 않은 연속성 줄에서 회고 낱말 빼기(
     expect(deRetro('· 구역 「검은 첨봉」: 길드 「Winners」 이(가) 어제 손에 넣은 땅을 오늘 지켜냄')).not.toMatch(/어제/);
   });
 });
+
+describe('factIssues — 09-25 초안 교정 반영(09-26): 함께·경합 상대·비운 주인·새 이름·기간 과다', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['감시 망루', '오크 부락'], ['대설봉', '잊힌 신전'], ['설원 신전', '잊힌 신전'], ['고사목 숲', '슬라임 늪'], ['타락한 성소', '타락 천사 부유섬'], ['타락의 심연', '타락 천사 부유섬']]),
+    regionLabels: ['왕국', '드래곤 화산', '잊힌 신전', '슬라임 늪', '오크 부락', '타락 천사 부유섬'],
+    feats: [],
+    headcountZones: ['감시 망루'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map(),
+    debutGuilds: [],
+    attackers: new Map([['대설봉', ['티모집사', '로제']], ['설원 신전', ['민초', 'Winners']], ['감시 망루', ['로제', '세계수']]]),
+    unguarded: new Map([['설원 신전', '로제']]),
+  };
+  const has = (text: string, re: RegExp) => factIssues(text, c).some((i) => re.test(i));
+
+  it("두 길드를 주어로 묶은 '함께 들이닥쳤다·함께 노렸다'는 동맹 표현이다", () => {
+    expect(has('오크 부락의 {z|감시 망루|36}에 {g|로제|25} 넷과 {g|세계수|29} 하나가 함께 들이닥쳤다.', /동맹은 없다/)).toBe(true);
+    expect(has('{g|로제|25}와 {g|케케케|27}가 함께 노렸지만 막혔다.', /동맹은 없다/)).toBe(true);
+  });
+  it("구역 둘을 묶은 '함께'는 동맹이 아니다(09-21 게시본)", () => {
+    expect(has('{g|민초|28}가 {g|Winners|17}의 {z|타락한 성소|47}와 {z|타락의 심연|48}을 함께 노렸다.', /동맹은 없다/)).toBe(false);
+  });
+  it('경합 상대는 그 구역을 공격한 길드여야 한다 — 문장에 구역이 여럿이어도 가장 가까운 구역 기준', () => {
+    const t = '{g|로제|25}는 {z|고사목 숲|29}을 빼앗고, 잊힌 신전에서도 {g|Winners|17}와 경합해 {z|대설봉|12}을 차지했다.';
+    expect(has(t, /경합 상대가 아니다/)).toBe(true);
+    expect(has('{g|티모집사|31}와 경합한 끝에 {z|대설봉|12}을 차지했다.', /경합 상대가 아니다/)).toBe(false);
+  });
+  it("병력을 두지 않은 주인과 '맞붙었다'는 없던 싸움이다", () => {
+    expect(has('{g|Winners|17}는 {z|설원 신전|13}을 두고 {g|로제|25}와 다시 맞붙어 그 땅을 빼앗았다.', /병력을 두지 않아/)).toBe(true);
+    expect(has('{g|Winners|17}는 {g|민초|28}와 맞붙어 {z|설원 신전|13}을 가져갔다.', /병력을 두지 않아/)).toBe(false);
+  });
+  it("첫 등장 길드가 없는 날의 '새로운 이름도 등장했다'", () => {
+    expect(has('슬라임 늪에서는 새로운 이름도 등장했다.', /새로 등장한 길드가 없다/)).toBe(true);
+  });
+  it('보유 기간 언급은 두 번까지', () => {
+    const three = '{z|대설봉|12}은 이틀 동안, {z|고사목 숲|29}은 아흐레 동안 쥐던 곳이다. 석권은 사흘째 이어졌다.';
+    expect(has(three, /보유·지속 기간을 3번/)).toBe(true);
+    expect(has('{z|고사목 숲|29}은 아흐레 동안 쥐던 곳이다. 석권은 사흘째 이어졌다.', /보유·지속 기간을/)).toBe(false);
+  });
+});

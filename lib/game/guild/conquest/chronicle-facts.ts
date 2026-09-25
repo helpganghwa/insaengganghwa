@@ -61,7 +61,16 @@ export type FactCheckContext = {
   topoGuilds?: string[];
   /** (09-24) 사실표 '지역 석권 현황'에 나온 길드(유지·붕괴·성립). 없으면 22번 검사 생략. */
   sweepGuilds?: string[];
+  /** (09-26) 구역 → 그 구역을 공격한 길드. '{g|G}와 경합'의 상대 검사. 없으면 25번 검사 생략. */
+  attackers?: Map<string, string[]>;
+  /** (09-26) 주인이 병력을 두지 않아(집행관도 없음) 싸움 없이 넘어간 구역 → 이전 주인. '{g|주인}과 맞붙었다' 검사. */
+  unguarded?: Map<string, string>;
 };
+
+/** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
+const RIVAL = /\{g\|([^}|]+)(?:\|[^}]*)?\}(?:와|과)(?:의)?\s?(?:다시\s?)?(경합|맞붙|맞서|맞선)/g;
+/** 27 — 보유·지속 기간 표현은 하루 글에 이 횟수까지(09-25 운영자 '며칠 차지했다는 언급이 너무 많다'). */
+const DURATION_MAX = 2;
 
 const MARKER = /\{([guz])\|([^}|]+)(?:\|[^}]*)?\}/g;
 
@@ -141,11 +150,14 @@ const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완�
 
 /** 18 — 동맹 표현(길드 사이 동맹 제도는 없다 — 같은 구역을 노린 길드들은 서로 경쟁한 것). */
 const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|합류/;
+/** 18 보강(09-26) — '{g|A} 넷과 {g|B} 하나가 함께 들이닥쳤다'처럼 두 길드를 주어로 묶은 '함께 …'(09-25 초안 두 곳).
+ *  구역 둘을 묶은 '{z|X}와 {z|Y}를 함께 노렸다'는 해당 없다(09-21 게시본 오탐). */
+const ALLIANCE_TOGETHER = /\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과)\s?\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
 /** 19 — 보유·지속 일수(2일 이상). '하루 만에'는 6번 규칙이 본다. */
 const DURATION = /(이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘|(\d+)\s?일)\s?(?:째|동안|간)/g;
 const DAY_WORD: Record<string, number> = { 이틀: 2, 사흘: 3, 나흘: 4, 닷새: 5, 엿새: 6, 이레: 7, 여드레: 8, 아흐레: 9, 열흘: 10 };
 /** 20 — 첫 등장 표현. */
-const DEBUT = /대륙에 이름을 알|첫 등장|처음으로 (?:구역|땅|영토|깃발)|첫 (?:영토|깃발|구역을)/;
+const DEBUT = /대륙에 이름을 알|첫 등장|처음으로 (?:구역|땅|영토|깃발)|첫 (?:영토|깃발|구역을)|새로운 이름|새 이름|새 얼굴/;
 /** 21 — 지형 형세 표현. */
 const TOPO = /조각|비지|별도의? 거점|떨어진 (?:곳|땅|거점|영토)|고립/;
 /** 22 — 지역 석권 표현. */
@@ -433,7 +445,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       }
 
       // 18. 동맹 표현 — 같은 구역을 노린 길드들은 서로 경쟁했다(09-24 '민초와 프로미스나인까지 합세한').
-      const ally = plain.match(ALLIANCE);
+      const ally = plain.match(ALLIANCE) ?? sent.match(ALLIANCE_TOGETHER)?.[0].match(/함께\s?\S+/);
       if (ally && guilds.length >= 2) {
         issues.push(`길드 사이에 동맹은 없다 — '${ally[0]}'로 여러 길드를 한편처럼 묶었다. 같은 구역을 함께 노린 길드들은 서로 경쟁했으니 '몰렸다·맞붙었다·경합했다'로 고친다: ${q(sent)}`);
       }
@@ -450,9 +462,34 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         }
       }
 
+      // 25·26. 경합 상대 — 경합은 같은 구역을 노린 공격 길드끼리의 일이다(09-25 초안 'Winners와 경합해 대설봉을
+      //  Winners에게서' — 실제 상대는 티모집사). 병력 없이 비운 주인과 '맞붙었다'도 없던 싸움이다(설원 신전).
+      if (ctx.attackers) {
+        // 대상 구역 = 그 표현에 가장 가까운 구역 마커(앞뒤 글자 거리). 문장에 구역이 없으면 앞 문장의 구역.
+        const zpos = [...sent.matchAll(/\{z\|([^}|]+)(?:\|[^}]*)?\}/g)].map((m) => ({ name: m[1]!.trim(), s: m.index!, e: m.index! + m[0].length }));
+        for (const m of sent.matchAll(RIVAL)) {
+          const ms = m.index!;
+          const me = ms + m[0].length;
+          const near = zpos.length
+            ? zpos.reduce((a, b) => (Math.min(Math.abs(ms - b.e), Math.abs(b.s - me)) < Math.min(Math.abs(ms - a.e), Math.abs(a.s - me)) ? b : a)).name
+            : lastZone;
+          const z = near;
+          const atk = z ? ctx.attackers.get(z) : undefined;
+          if (z && atk) {
+            const g = m[1]!.trim();
+            if (m[2] === '경합' && !atk.includes(g)) {
+              issues.push(`{g|${g}} 은(는) {z|${z}}의 경합 상대가 아니다(그 구역을 공격한 길드: ${atk.map((a) => `{g|${a}}`).join('·')}) — 경합은 공격한 길드끼리 쓰고, 주인은 '지키던·빼앗긴' 쪽으로 쓴다: ${q(sent)}`);
+            } else if (m[2] !== '경합' && ctx.unguarded?.get(z) === g && !atk.includes(g)) {
+              issues.push(`{g|${g}} 은(는) {z|${z}}에 병력을 두지 않아 싸움이 없었다 — '맞붙었다·맞섰다' 대신 '비워 둔·지키는 이 없던'으로 쓴다: ${q(sent)}`);
+            }
+          }
+        }
+      }
+
       // 20. 첫 등장 — 사실표가 첫 등장으로 적은 길드에만.
-      if (ctx.debutGuilds && DEBUT.test(plain) && guilds.length > 0 && !guilds.some((g) => ctx.debutGuilds!.includes(g))) {
-        issues.push(`${guilds.map((g) => `{g|${g}}`).join('·')} 은(는) 사실표의 첫 등장 길드가 아니다 — '대륙에 이름을 알렸다·첫 등장'은 빼고, 복귀면 '돌아왔다'로 쓴다: ${q(sent)}`);
+      //  길드 없이 '새로운 이름도 등장했다'만 쓴 문장은 그날 첫 등장 길드가 없을 때 잡는다(09-25 초안 — 실제는 복귀).
+      if (ctx.debutGuilds && DEBUT.test(plain) && (guilds.length > 0 ? !guilds.some((g) => ctx.debutGuilds!.includes(g)) : ctx.debutGuilds.length === 0)) {
+        issues.push(guilds.length ? `${guilds.map((g) => `{g|${g}}`).join('·')} 은(는) 사실표의 첫 등장 길드가 아니다 — '대륙에 이름을 알렸다·첫 등장'은 빼고, 복귀면 '돌아왔다'로 쓴다: ${q(sent)}` : `그날 새로 등장한 길드가 없다 — '새로운 이름·첫 등장'은 빼고, 복귀한 길드면 '돌아왔다'로 쓴다: ${q(sent)}`);
       }
 
       // 21. 지형 형세 — '조각·비지·별도 거점'은 사실표 지형 형세에 나온 길드만.
@@ -487,6 +524,10 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   // 24. 줄표 — SYSTEM이 금지하는데 검사가 없어 새어 나왔다(09-24 점검). 유저 글에 줄표를 쓰지 않는 운영 방침과 같다.
   if (/—/.test(text)) issues.push(`줄표(—)가 ${(text.match(/—/g) ?? []).length}번 나온다 — 줄표 없이 새 문장이나 쉼표로 잇는다.`);
   // 23. 같은 표현의 과도한 반복.
+  // 27. 보유 기간 과다 — 사실이 맞아도 '며칠 동안 쥐고 있던'이 이어지면 글이 날짜 나열이 된다(09-25 운영자 교정).
+  const durations = [...plainText(text).matchAll(DURATION)].length;
+  if (durations > DURATION_MAX)
+    issues.push(`보유·지속 기간을 ${durations}번 언급했다 — 그날 의미가 큰 ${DURATION_MAX}곳(오래 쥔 땅을 잃음·석권·복귀 등)만 남기고 나머지 문장에서는 기간을 뺀다.`);
   for (const f of REPEAT_FAMILIES) {
     const n = (whole.match(f.re) ?? []).length;
     if (n > f.max) issues.push(`'${f.label}' 표현이 ${n}번 나온다 — ${f.max}번까지만 쓰고 나머지는 '${f.alt}'처럼 바꿔 쓰거나, 같은 말을 되풀이하는 문장을 합친다.`);

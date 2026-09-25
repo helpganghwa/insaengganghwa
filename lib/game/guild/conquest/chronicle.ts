@@ -1384,6 +1384,9 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     }),
     topoGuilds: [...(topoLines ?? '').matchAll(/길드 「([^」]+)」/g)].map((m) => m[1]!),
     sweepGuilds: [...new Set(sweepLines.flatMap((l) => [...l.matchAll(/「([^」]+)」/g)].map((m) => m[1]!)))],
+    // 09-26 — 경합 상대 검사(25)·병력 없던 주인과 '맞붙었다' 검사(26).
+    attackers: new Map([...attackersByZone].map(([z, set]) => [z, [...set]] as const)),
+    unguarded: new Map(summary.captures.filter((c) => c.from && c.defenders === 0).map((c) => [c.zone, c.from!] as const)),
   };
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
