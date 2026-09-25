@@ -7,6 +7,7 @@ import { guilds, guildMembers, guildLeaveLog, guildJoinRequests } from '@/lib/db
 
 import { GUILD_REJOIN_LOCK_HOURS, guildCapacity } from './balance';
 import { logGuildAudit } from './audit';
+import { restoreContribution } from './contribution-stash';
 import { GuildError } from './errors';
 
 /**
@@ -62,6 +63,7 @@ export function joinGuild(input: { userId: string; guildId: bigint }): Promise<v
     await tx
       .insert(guildMembers)
       .values({ userId: input.userId, serverId: g.serverId, guildId: input.guildId, role: 'member' });
+    await restoreContribution(tx, input.userId, g.serverId, input.guildId); // 같은 길드 재가입이면 이전 기여도 복원(0217)
     await logGuildAudit(tx, {
       serverId: g.serverId,
       guildId: input.guildId,

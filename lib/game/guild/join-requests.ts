@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
+import { restoreContribution } from './contribution-stash';
 import {
   GUILD_JOIN_REQUEST_TTL_DAYS,
   GUILD_REAPPLY_COOLDOWN_HOURS,
@@ -162,6 +163,7 @@ export async function approveJoinRequest(input: {
     await tx
       .insert(guildMembers)
       .values({ userId: input.requestUserId, serverId: input.serverId, guildId, role: 'member' });
+    await restoreContribution(tx, input.requestUserId, input.serverId, guildId); // 같은 길드 재가입이면 이전 기여도 복원(0217)
     await logGuildAudit(tx, {
       serverId: input.serverId,
       guildId,

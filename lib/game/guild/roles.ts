@@ -7,6 +7,7 @@ import { guilds, guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
 import { GUILD_MAX_VICE } from './balance';
+import { stashContribution } from './contribution-stash';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { GuildError } from './errors';
 import { GUILD_PERM, GUILD_PERM_DEFAULT, hasGuildPerm, type GuildPermKey } from './permissions';
@@ -118,6 +119,7 @@ export function kickMember(input: {
     if (target.role === 'vice' && actor.role !== 'leader') throw new GuildError('FORBIDDEN');
 
     await clearConquestRoleOnExit(tx, input.targetUserId, input.serverId); // 잔류 집행관·미정산 배치 정리
+    await stashContribution(tx, input.targetUserId, input.serverId); // 재가입 시 이어 붙일 기여도 보관(0217)
     await tx.delete(guildMembers).where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.insert(guildLeaveLog).values({ userId: input.targetUserId, serverId: input.serverId });
     await logGuildAudit(tx, {

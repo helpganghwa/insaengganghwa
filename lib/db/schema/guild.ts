@@ -177,6 +177,29 @@ export const guildLeaveLog = pgTable(
   (t) => [index('guild_leave_user_idx').on(t.userId, t.leftAt)],
 );
 
+/**
+ * 길드 기여도 보관(0217) — 탈퇴·추방 때 그 길드에서 쌓은 기여도를 남겨 두었다가 같은 길드에 재가입하면
+ * 되돌려 넣는다(contribution-stash.ts). 길드 해산 시 함께 삭제(cascade).
+ */
+export const guildContributionStash = pgTable(
+  'guild_contribution_stash',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    contributionPoints: bigint('contribution_points', { mode: 'bigint' }).notNull().default(sql`0`),
+    leftAt: timestamp('left_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.serverId, t.guildId] }),
+    index('guild_contribution_stash_guild_idx').on(t.guildId),
+  ],
+);
+
 /** §5.2·§5.6 zones — 총 50(시드 고정 id). 좌표만(인접은 zone_adjacency). owner/executor nullable=중립. */
 export const zones = pgTable(
   'zones',

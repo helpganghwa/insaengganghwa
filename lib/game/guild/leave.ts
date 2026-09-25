@@ -7,6 +7,7 @@ import { guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
+import { stashContribution } from './contribution-stash';
 import { neutralizeAndDeleteGuild } from './disband';
 import { GuildError } from './errors';
 
@@ -44,6 +45,7 @@ export function leaveGuild(input: { userId: string; serverId: number }): Promise
     }
 
     await clearConquestRoleOnExit(tx, input.userId, input.serverId); // 잔류 집행관·미정산 배치 정리
+    await stashContribution(tx, input.userId, input.serverId); // 재가입 시 이어 붙일 기여도 보관(0217)
     await tx
       .delete(guildMembers)
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)));
