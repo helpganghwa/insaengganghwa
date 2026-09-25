@@ -53,13 +53,13 @@ describe('연대기 사실 검증기', () => {
     expect(has(/사람 수 표현\([^)]*둘을[\s\S]*수비수 둘을 세워/)).toBe(true); // 분노의 분화구
     expect(has(/사람 수 표현\(한 명\)/)).toBe(true); // 검은 첨봉
     expect(has(/\{z\|모닥불 평원\} 은\(는\) 오크 부락 지역인데 문장은 잊힌 신전/)).toBe(true);
-    expect(has(/\{z\|분노의 분화구\} 은\(는\) 어제 잃은 길드가 오늘 노린 구역이 아니라/)).toBe(true);
+    expect(has(/\{z\|분노의 분화구\} 은\(는\) 최근\(7일 안\) 잃은 길드가 오늘 노린 구역이 아니라/)).toBe(true);
     expect(has(/'하루 만에' 표현이 2번/)).toBe(true);
     expect(has(/'어제 … 내주었던' 표현이 2번/)).toBe(true);
     expect(has(/'다시 노렸다' 표현이 2번/)).toBe(true);
     // 연기 평원(최다 인원 전투)의 '수비수 둘'과 '되찾았고'는 허용 — 위반 목록에 없어야 한다.
     expect(has(/사람 수 표현\([^)]*둘을[^)]*\)[\s\S]*수비수 둘을 뚫고/)).toBe(false);
-    expect(has(/\{z\|연기 평원\} 은\(는\) 어제 잃은/)).toBe(false);
+    expect(has(/\{z\|연기 평원\} 은\(는\) 최근\(7일 안\) 잃은/)).toBe(false);
   });
 
   it('검수 완료본은 1~7번 위반 0 — 남는 건 회고 상한뿐(2026-09-13 정책 변경)', () => {
@@ -386,5 +386,40 @@ describe('오탐 좁힘(09-26 전수조사)', () => {
     expect(has('{g|로제}의 영토는 섬처럼 고립되었다.', '형세')).toBe(true);
     expect(has('{g|로제}는 고립된 두 구역을 지켰다.', '형세')).toBe(true);
     expect(has('{g|로제}는 고립된 {z|분노의 분화구}를 지켰다.', '형세')).toBe(true);
+  });
+});
+
+describe('기존 오탐 정리(09-26 게시본)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['오크 대요새', '오크 부락'], ['약탈자 야영지', '오크 부락']]),
+    regionLabels: ['오크 부락'],
+    feats: [],
+    headcountZones: [],
+    recaptureZones: [],
+    yesterdayZones: ['약탈자 야영지'],
+    guildCounts: new Map([['로제', [0, 1, 2, 3]], ['케케케', [1, 0, 10, 9]]]),
+    battleZones: [],
+    captureBy: new Map([['오크 대요새', { winner: '로제', from: '케케케' }]]),
+    yesterdayCaptureBy: new Map([['약탈자 야영지', '로제']]),
+    regionCounts: new Map([
+      ['로제', new Map([['오크 부락', { gain: 0, loss: 1, after: 1, before: 2 }]])],
+      ['케케케', new Map([['오크 부락', { gain: 1, loss: 0, after: 5, before: 4 }]])],
+    ]),
+  };
+  const iss = (t: string) => factIssues(t, c);
+  it("'어제부터 비워 둔'은 어제 사건 회고·어제 차지 귀속이 아니다", () => {
+    const r = iss('{g|케케케}가 어제부터 비워 둔 {z|오크 대요새}를 {g|로제}가 가져갔다.');
+    expect(r.some((i) => i.includes('어제 기록이 없는'))).toBe(false);
+    expect(r.some((i) => i.includes('차지한 구역이 아니다'))).toBe(false);
+  });
+  it("회고 속 어제 인원수·'지켜냈던'은 오늘 일로 보지 않는다", () => {
+    expect(iss('{z|약탈자 야영지}는 어제 {g|로제}가 셋을 베며 지켜냈던 곳이다.').some((i) => i.includes('사람 수'))).toBe(false);
+    expect(iss('{z|오크 대요새}는 어제 {g|로제}가 지켜냈던 땅이다.').some((i) => i.includes('지켜낸 것처럼'))).toBe(false);
+    // 오늘 일은 그대로 잡는다
+    expect(iss('{g|로제}는 {z|오크 대요새}를 지켜냈다.').some((i) => i.includes('지켜낸 것처럼'))).toBe(true);
+  });
+  it('관계절 속 길드는 지역별 수의 주어가 아니다', () => {
+    expect(iss('{g|케케케}는 {g|로제}가 비워 둔 오크 부락에서 한 곳을 더 얻었다.').some((i) => i.includes('지역 수'))).toBe(false);
+    expect(iss('{g|케케케}는 오크 부락에서 세 곳을 더 얻었다.').some((i) => i.includes('지역 수'))).toBe(true);
   });
 });

@@ -585,7 +585,13 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     where server_id = ${serverId} and type = 'zone_abandoned'
       and detail->>'battleDay' = ${kstDay}
   `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
-  const pendingAbandonedRows = (await db.execute(sql`
+  // 예정 계산은 그날이 가장 최근 전투일일 때만 — 뒤로 전투가 더 있는 지난 날짜에 지금의 소유·집행관으로 계산하면
+  // 일어나지 않은 방치를 만들어 낸다(09-26). 지난 날짜는 (1) 이벤트가 전부다.
+  const [later] = (await db.execute(sql`
+    select 1 as x from conquest_battles where server_id = ${serverId} and battle_kst_day > ${kstDay} limit 1
+  `)) as unknown as { x: number }[];
+  const pendingPossible = !later;
+  const pendingAbandonedRows = !pendingPossible ? [] : (await db.execute(sql`
     select g.name as gname, z.name as zname
     from zones z join guilds g on g.id = z.owner_guild_id
     where z.server_id = ${serverId}
@@ -807,6 +813,42 @@ export async function chroniclePregenStatus(kstDay: string, serverId: number): P
  * 그날의 사실표(2026-09-15 분리) — 생성(generateAndStoreChronicle)과 검수 개선(improveChronicleText)이 같은 표를 쓴다.
  * 사건이 없는 날(isNotable=false)은 null. 내용은 분리 전 생성 함수 본문 그대로.
  */
+/**
+ * 소유 변화 이벤트 전부(점령전 승자·방치 중립화·해산) — 날짜순 재생(chronicle-history.ts)의 입력.
+ * 해산 중립화는 연대기 창(전날 23시~당일 23시)과 같게 KST+1시간의 날짜로 묶는다.
+ * 호출부가 날짜로 자른다(그날까지 = 이력, 그 뒤 = '지난 날짜' 판정).
+ */
+async function loadOwnershipEvents(serverId: number): Promise<OwnershipEvent[]> {
+  const wnHist = await winnerNameFragments();
+  const histBattleRows = (await db.execute(sql`
+    select cb.battle_kst_day::text as day, z.name as zone, ${wnHist.winner('g', 'cb')} as guild
+    from conquest_battles cb
+    join zones z on z.id = cb.zone_id
+    left join guilds g on g.id = cb.winner_guild_id
+    where cb.server_id = ${serverId} and ${wnHist.hasWinner('cb')}
+  `)) as unknown as { day: string; zone: string; guild: string | null }[];
+  const histNeutralRows = (await db.execute(sql`
+    select we.detail->>'battleDay' as day, zn as zone
+    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
+    where we.server_id = ${serverId} and we.type = 'zone_neutralized'
+    union all
+    select to_char(((we.created_at at time zone 'Asia/Seoul') + interval '1 hour')::date, 'YYYY-MM-DD') as day, zn as zone
+    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
+    where we.server_id = ${serverId} and we.type = 'guild_disband'
+  `)) as unknown as { day: string | null; zone: string }[];
+  return [
+    ...histNeutralRows.filter((r) => r.day).map((r) => ({ day: r.day!, zone: r.zone, guild: null, kind: 'neutral' as const })),
+    ...histBattleRows.map((r) => ({ day: r.day, zone: r.zone, guild: r.guild, kind: 'battle' as const })),
+  ];
+}
+
+/** 그 날짜 **끝**(그날 공개 뒤)의 소유 — 그날까지의 마지막 스냅샷. */
+function ownersAtOrBefore(snaps: ReturnType<typeof replayOwnership>, day: string): Map<string, string | null> {
+  let last: (typeof snaps)[number] | null = null;
+  for (const s of snaps) if (s.day <= day) last = s;
+  return last ? last.owners : new Map();
+}
+
 async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const summary = await aggregateConquestDay(kstDay, serverId);
   if (!isNotable(summary)) return null;
@@ -814,27 +856,8 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // ── 소유 이력(chronicle-history.ts) — 석권 성립·붕괴, 복귀까지의 공백, 잃은 구역의 보유 기간. ──
   // 전투 직전 상태만 알던 사실표가 이력을 모델 추측에 맡겨 "차례로 지배·세 번째 완성·오랫동안·어제 차지했던"을
   // 지어냈다(09-17). 해산 중립화는 연대기 창(전날 23시~당일 23시)과 같게 KST+1시간의 날짜로 묶는다.
-  const wnHist = await winnerNameFragments();
-  const histBattleRows = (await db.execute(sql`
-    select cb.battle_kst_day::text as day, z.name as zone, ${wnHist.winner('g', 'cb')} as guild
-    from conquest_battles cb
-    join zones z on z.id = cb.zone_id
-    left join guilds g on g.id = cb.winner_guild_id
-    where cb.server_id = ${serverId} and cb.battle_kst_day <= ${kstDay} and ${wnHist.hasWinner('cb')}
-  `)) as unknown as { day: string; zone: string; guild: string | null }[];
-  const histNeutralRows = (await db.execute(sql`
-    select we.detail->>'battleDay' as day, zn as zone
-    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
-    where we.server_id = ${serverId} and we.type = 'zone_neutralized' and (we.detail->>'battleDay') <= ${kstDay}
-    union all
-    select to_char(((we.created_at at time zone 'Asia/Seoul') + interval '1 hour')::date, 'YYYY-MM-DD') as day, zn as zone
-    from world_events we, jsonb_array_elements_text(coalesce(we.detail->'zones', '[]'::jsonb)) zn
-    where we.server_id = ${serverId} and we.type = 'guild_disband'
-  `)) as unknown as { day: string | null; zone: string }[];
-  const ownershipEvents: OwnershipEvent[] = [
-    ...histNeutralRows.filter((r) => r.day).map((r) => ({ day: r.day!, zone: r.zone, guild: null, kind: 'neutral' as const })),
-    ...histBattleRows.map((r) => ({ day: r.day, zone: r.zone, guild: r.guild, kind: 'battle' as const })),
-  ];
+  const allEvents = await loadOwnershipEvents(serverId);
+  const ownershipEvents = allEvents.filter((e) => e.day <= kstDay);
   const snaps = replayOwnership(ownershipEvents);
   const histBefore = ownersBefore(snaps, kstDay);
 
@@ -983,6 +1006,16 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     from zones z left join guilds g on g.id = z.owner_guild_id
     where z.server_id = ${serverId}
   `)) as unknown as { id: number; name: string; region: string; owner: string | null }[];
+  // 지난 날짜(그 뒤로 소유가 바뀐 구역이 있는 날)는 DB의 **지금** 소유가 아니라 **그날 끝** 소유를 기준으로 한다(09-26).
+  // 지금 소유로 계산하면 다음 날들의 점령까지 섞여 보유 수·지역 수·석권·형세가 어긋났다(게시본 재검사에서 매번 1곳 차이).
+  // 그 뒤로 바뀐 구역만 이력 재생 값으로 바꾸고, 안 바뀐 구역은 DB 값 그대로(재생과 DB가 어긋나는 수동 복원분 보호).
+  {
+    const changedLater = new Set(allEvents.filter((e) => e.day > kstDay).map((e) => e.zone));
+    if (changedLater.size > 0) {
+      const endOfDay = ownersAtOrBefore(snaps, kstDay);
+      for (const z of zoneRows) if (changedLater.has(z.name)) z.owner = endOfDay.get(z.name) ?? null;
+    }
+  }
   const adjRows = (await db.execute(sql`
     select za.zone_a::int as a, za.zone_b::int as b
     from zone_adjacency za join zones z on z.id = za.zone_a
@@ -1318,12 +1351,18 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     gains.set(c.winner, (gains.get(c.winner) ?? 0) + 1);
     if (c.from) losses.set(c.from, (losses.get(c.from) ?? 0) + 1);
   }
+  // 방치로 잃은 구역(중립화)도 잃은 수다 — 빼면 '두 곳을 잃어 3곳에서 1곳'이 '가능한 수 0·1'로 오판된다(09-26).
+  for (const n of summary.neutralized) losses.set(n.guildName, (losses.get(n.guildName) ?? 0) + n.zones.length);
+  // 최근 7일(오늘 전) 안에 그 길드가 그 구역을 쥐고 있었는지 — 오늘 직전 주인과 같으면 '되찾음'이 아니다.
+  const recentSnaps = snaps.filter((s) => s.day < kstDay && daysBetween(s.day, kstDay) <= 7);
+  const heldWithin7 = (zone: string, guild: string) =>
+    (histBefore.get(zone) ?? null) !== guild && recentSnaps.some((s) => s.owners.get(zone) === guild);
   const guildCounts = new Map<string, number[]>();
-  for (const g of new Set([...afterCounts.keys(), ...gains.keys(), ...losses.keys()])) {
+  for (const g of new Set([...afterCounts.keys(), ...beforeCounts.keys(), ...gains.keys(), ...losses.keys()])) {
     const after = afterCounts.get(g) ?? 0;
     const gn = gains.get(g) ?? 0;
     const ls = losses.get(g) ?? 0;
-    guildCounts.set(g, [gn, ls, after, after - gn + ls]);
+    guildCounts.set(g, [gn, ls, after, beforeCounts.get(g) ?? after - gn + ls]);
   }
   // 지형 형세의 조각 수('4개 조각', '3→4개 조각')도 그 길드 문장에 나올 수 있는 수다(09-24 오탐: '조각은 네 곳으로').
   for (const line of (topoLines ?? '').split('\n')) {
@@ -1345,10 +1384,17 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       ...summary.underdogCaptures.map((u) => u.zone),
       ...summary.feats.flatMap((f) => f.zones),
     ],
-    // '되찾다' 허용 = 어제 그 구역을 잃은 길드가 오늘 그 구역을 노렸거나 차지함(시도·실패 포함).
-    recaptureZones: y.captures
-      .filter((yc) => yc.from && (attackersByZone.get(yc.zone)?.has(yc.from) || summary.captures.some((c) => c.zone === yc.zone && c.winner === yc.from)))
-      .map((yc) => yc.zone),
+    // '되찾다' 허용 = 최근 그 구역을 잃은 길드가 오늘 그 구역을 노렸거나 차지함(시도·실패 포함).
+    // 어제 잃은 것만 보던 때는 '이틀 전 잃었던 곳을 되찾'이 막혔다(09-26) — 소유 이력으로 7일 안에 쥐고 있던 길드까지.
+    recaptureZones: [
+      ...new Set([
+        ...y.captures
+          .filter((yc) => yc.from && (attackersByZone.get(yc.zone)?.has(yc.from) || summary.captures.some((c) => c.zone === yc.zone && c.winner === yc.from)))
+          .map((yc) => yc.zone),
+        ...[...attackersByZone].filter(([z, gs]) => [...gs].some((g) => heldWithin7(z, g))).map(([z]) => z),
+        ...summary.captures.filter((c) => heldWithin7(c.zone, c.winner)).map((c) => c.zone),
+      ]),
+    ],
     yesterdayZones: [...y.captures.map((c) => c.zone), ...y.defenses.map((d) => d.zone)],
     guildCounts,
     // 그날 전투가 있었던 구역 전부 — 하나라도 본문에서 빠지면 재생성 피드백으로 잡는다.

@@ -134,6 +134,8 @@ function plainAligned(s: string): string {
 
 const RECAPTURE = /되찾|탈환|수복|되돌려|돌려받|도로 가져|다시 가져|다시 손에/;
 const RETRO = /어제|전날/;
+/** '어제부터 비워 둔 {z|X}' — 오늘까지 이어진 공백 묘사라 어제 사건 회고(5·12번)가 아니다(09-26 게시본 오탐). */
+const RETRO_VACANT = /(?:어제|전날)부터\s?(?:비워|비어|비운|비었|방치)/g;
 /** 11 — 구역 사이 순서 표현. */
 const SEQUENCE = /곧이어|뒤이어|그 직후|그러자/;
 /** 12 — 회고 문장의 '가져간' 동사(잃은 쪽 회고 '어제 내주었던'은 5번 규칙이 본다). */
@@ -186,7 +188,11 @@ const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[]
 function subjectGuildBefore(sent: string, pos: number): string | null {
   let found: string | null = null;
   for (const m of sent.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도)(?![가-힣])/g)) {
-    if (m.index! < pos) found = m[1]!.trim();
+    if (m.index! >= pos) continue;
+    // 관계절('{g|로제}가 비워 둔 …', '{g|A}가 지키던 …')의 길드는 그 뒤 수의 주어가 아니다(09-26 게시본 오탐).
+    const tail = sent.slice(m.index! + m[0].length, pos);
+    if (/^\s?(?:[가-힣]+\s)?[가-힣]*(?:둔|던|놓은|남긴|비운)\s/.test(tail)) continue;
+    found = m[1]!.trim();
   }
   return found;
 }
@@ -290,6 +296,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
           if (countsZones) return false;
           if (featInSent && /^\s?(?:모두\s?|전부\s?|다\s?)?(?:베|쓰러|눕|처치|잡|무너)/.test(aligned.slice(m.index! + m[0].length))) return false;
           if (THING_BEFORE.test(aligned.slice(Math.max(0, m.index! - 6), m.index!))) return false;
+          // 회고 속 어제 일('어제 {g|로제}가 셋을 베며 지켜냈던')의 수는 오늘 인원수가 아니다(09-26 게시본 오탐).
+          if (RETRO.test(plain) && /던/.test(aligned.slice(m.index!, m.index! + m[0].length + 15))) return false;
           const z = zoneAt(m.index!);
           return !(z && headcount.has(z));
         })
@@ -327,13 +335,14 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       for (const m of aligned.matchAll(new RegExp(RECAPTURE.source, 'g'))) {
         const z = zoneAt(m.index!);
         if (z && !recapture.has(z)) {
-          issues.push(`{z|${z}} 은(는) 어제 잃은 길드가 오늘 노린 구역이 아니라 '되찾다·탈환·도로 가져가다'를 쓸 수 없다 — '빼앗다·차지하다·넘겨받다'로 고친다: ${q(sent)}`);
+          issues.push(`{z|${z}} 은(는) 최근(7일 안) 잃은 길드가 오늘 노린 구역이 아니라 '되찾다·탈환·도로 가져가다'를 쓸 수 없다 — '빼앗다·차지하다·넘겨받다'로 고친다: ${q(sent)}`);
         }
       }
 
       // 5. 회고 — 문장에 구역 마커가 있으면 그중 하나라도 어제 기록이 있으면 통과("전날 잃은 {z|X}"처럼 구역이 뒤에 오는 꼴),
       //    없으면 앞 문장에서 이어진 구역으로 판정("그곳은 어제 …").
-      if (RETRO.test(plain)) {
+      const retroPlain = plain.replace(RETRO_VACANT, '');
+      if (RETRO.test(retroPlain)) {
         retroSentences += 1;
         if (zones.length > 0) {
           if (!zones.some((z) => yesterday.has(z))) {
@@ -375,7 +384,9 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
 
       // 12. '어제 … 차지했던'의 귀속 — 가리키는 구역이 전부 어제 그 길드가 가져간 곳이어야 한다.
       //     구역 마커가 없고 '그 땅들·그곳들·모두'로 받으면 앞 문장의 구역 전부를 가리킨다(09-17: 넷 중 둘만 어제 차지).
-      if (ctx.yesterdayCaptureBy && RETRO.test(plain) && RETRO_TAKEN.test(plain)) {
+      // 차지 동사가 회고어 **뒤**에 와야 '어제 … 차지했던'이다 — '… {g|A}가 가져갔다. 어제부터 …'의 오늘 동사는 아니다.
+      const retroAt = retroPlain.search(RETRO);
+      if (ctx.yesterdayCaptureBy && retroAt >= 0 && RETRO_TAKEN.test(retroPlain.slice(retroAt))) {
         const targets = zones.length > 0 ? zones : PLURAL_REF.test(plain) ? prevZones : lastZone ? [lastZone] : [];
         // 주어 길드({g|G}은·는·이·가·도)만 본다 — '{g|로제}의 공세를 받아냈는데, 그 땅은 어제 손에 넣은'처럼 소유격 길드는
         // 어제 가져간 쪽이 아니다(09-24 오탐). 주어가 없으면 그 구역이 어제 누군가에게 넘어간 곳이기만 하면 된다.
@@ -577,7 +588,9 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         const c = ctx.captureBy.get(z);
         if (!c) continue;
         const segment = aligned.slice(k > 0 ? zmarks[k - 1]!.end : 0, k + 1 < zmarks.length ? zmarks[k + 1]!.at : aligned.length);
-        if (gs.has(c.winner) && HELD.test(segment)) {
+        // 회고 속 '지켜냈던'(어제 일)은 오늘 주체 혼동이 아니다(09-26 게시본 오탐).
+        const heldToday = [...segment.matchAll(new RegExp(HELD.source, 'g'))].some((h) => !(segment[h.index! + h[0].length] === '던' && RETRO.test(segment)));
+        if (gs.has(c.winner) && heldToday) {
           issues.push(
             `{z|${z}} 은(는) {g|${c.winner}} 이(가) ${c.from ? `{g|${c.from}} 에게서 ` : ''}**빼앗은** 구역인데 지켜낸 것처럼 썼다 — '차지했다·가져갔다·손에 넣었다'로 고친다: ${
               sent.length > 60 ? sent.slice(0, 60) + '…' : sent
