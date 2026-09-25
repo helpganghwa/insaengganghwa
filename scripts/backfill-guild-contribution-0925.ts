@@ -20,6 +20,11 @@ const sql = postgres(process.env.DATABASE_URL!, { prepare: false, max: 1 });
 type Row = { user_id: string; server_id: number; guild_id: string; nickname: string; guild: string; now_cp: string; min_donations: number };
 
 const run = async (tx: postgres.TransactionSql) => {
+  // 기여도 보관 기능(0217 코드)이 배포된 뒤 누가 탈퇴·재가입하면 그 기간은 보관분으로 이미 복원된다 —
+  // 이 스크립트가 다시 세면 이중 계산. 보관 행이 하나라도 생겼으면 기능이 이미 동작 중이므로 멈춘다.
+  // 실행 순서: 0217 적용 → 이 스크립트(--apply) → 코드 배포.
+  const [live] = await tx`select 1 from guild_contribution_stash limit 1`;
+  if (live && !process.argv.includes('--force')) throw new Error('보관 행이 이미 있음 — 기능 배포 뒤라 이중 계산 위험(확인 후 --force)');
   const rows = (await tx`
     with cur as (
       select m.user_id, m.server_id, m.guild_id, m.joined_at, m.contribution_points cp from guild_members m

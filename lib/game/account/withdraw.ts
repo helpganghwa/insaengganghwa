@@ -109,6 +109,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from guild_battle_deployments where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_leave_log where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_members where user_id = ${uid}`);
+    await tx.execute(sql`delete from guild_contribution_stash where user_id = ${uid}`); // 0217 기여도 보관분 — 재가입 복원 차단
 
     // 신고(내가 한 신고 + 내 프로필 대상 신고) → user_profiles보다 먼저.
     await tx.execute(

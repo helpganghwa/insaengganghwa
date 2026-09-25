@@ -872,6 +872,8 @@ export function MeleeResult({
         ...w,
         atkSeq: role === 0 ? mySeq : truncated ? null : w.atkSeq,
         defSeq: role === 1 ? mySeq : truncated ? null : w.defSeq,
+        // 윈도 행의 공격자 HP는 윈도 안 피격만 추적해 잘린 판에선 '가득'으로 나온다 — 내 공격이면 개인 기록 기준.
+        fight: role === 0 && truncated ? { ...w.fight, atkHp: atkHpNow } : w.fight,
       };
     }
 

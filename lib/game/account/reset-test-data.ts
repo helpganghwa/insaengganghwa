@@ -43,6 +43,7 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from guild_battle_deployments`);
     await tx.execute(sql`delete from guild_join_requests`);
     await tx.execute(sql`delete from guild_leave_log`);
+    await tx.execute(sql`delete from guild_contribution_stash`); // 0217
     await tx.execute(sql`delete from guild_members`);
     // zones는 소유만이 아니라 **점령 상태 전체**를 리셋(전수 감사 2026-08-21) — owner만 지우면
     // 테스트 계정 UUID가 박힌 유령 집행관(방치 중립화 영구 면제), 테스트 세수(tax_diamond —

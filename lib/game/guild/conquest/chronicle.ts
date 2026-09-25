@@ -1670,6 +1670,15 @@ export async function generateAndStoreChronicle(
   const release = opts.dryRun ? async () => {} : await acquireChronicleLock(serverId, kstDay);
   if (!release) return { created: false, reason: 'in-progress' };
   try {
+    // 잠금을 잡는 사이 앞 틱이 저장을 끝내고 풀었을 수 있다 — 잠금 안에서 다시 본다(중복 생성 비용 방지).
+    if (!opts.dryRun) {
+      const [again] = await db
+        .select({ kstDay: worldChronicle.kstDay })
+        .from(worldChronicle)
+        .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
+        .limit(1);
+      if (again) return { created: false, reason: 'already' };
+    }
     return await generateLocked(kstDay, serverId, opts);
   } finally {
     await release();

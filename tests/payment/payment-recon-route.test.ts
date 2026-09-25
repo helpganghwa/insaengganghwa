@@ -41,10 +41,11 @@ describe.skipIf(skip)('정산 크론 전 단계 — 스테이징 DB 통합', () 
         insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, provider, play_sku, grant_skipped, created_at, paid_at, play_checkout_at)
         values (1, ${TEST_USER_ID}::uuid, ${pid(k)}, 'starter', 1500::bigint, 0::bigint, ${status}::iap_status, ${provider}, ${extra.playSku ?? null}, ${extra.gs ?? false},
           now() - ${extra.created}::interval, ${extra.paid ? sql`now() - ${extra.paid}::interval` : null}, ${extra.checkout ? sql`now() - ${extra.checkout}::interval` : null})`);
-    // A0: Play 이탈 주문 — 마지막 결제 시도 20시간 전 → 만료.
-    await ins('a0', 'pending', 'play', { created: '20 hours', checkout: '20 hours', playSku: 'dia_starter' });
+    // A0: Play 이탈 주문 — 마지막 결제 시도 2일 전 → 만료. 크론 시계를 '오늘 04:05'(최대 24시간 전)로 돌리므로
+    //  그보다 확실히 오래돼야 실행 시각과 무관하게 만료 대상이다(20시간이면 저녁 실행에서 만료 기준을 못 넘었다).
+    await ins('a0', 'pending', 'play', { created: '2 days', checkout: '2 days', playSku: 'dia_starter' });
     // A: 포트원 이탈 주문 — PG에 결제 시도 없음(404) → 만료.
-    await ins('a', 'pending', 'portone', { created: '20 hours' });
+    await ins('a', 'pending', 'portone', { created: '2 days' });
     // B: 최근 결제 — PG도 PAID → 손대지 않음.
     await ins('b', 'paid', 'portone', { created: '1 day', paid: '1 day' });
     // B2: 10일 전 결제 — PG도 PAID → 스캔만.

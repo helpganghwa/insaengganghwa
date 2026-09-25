@@ -48,7 +48,7 @@ const WIPE_TABLES = [
   'raid_attacks', 'raid_rewards', 'raid_participants', 'raid_join_requests', 'raid_invites', 'raid_daily_counts', 'raids',
   'melee_participants', 'melee_battles',
   'guild_audit_log', 'world_chronicle', 'guild_tax_distributions', 'conquest_battles',
-  'guild_battle_deployments', 'guild_leave_log', 'guild_join_requests', 'guild_members',
+  'guild_battle_deployments', 'guild_leave_log', 'guild_join_requests', 'guild_contribution_stash', 'guild_members',
   'guild_emblems', 'guilds', // zones.owner_guild_id → set null 자동
   'friend_links',
   'shares', 'referral_attributions',
