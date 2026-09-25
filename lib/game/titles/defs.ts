@@ -5613,6 +5613,150 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    color: "#c7d2fe"
   }
+ },
+ {
+  code: "first_enh500_1",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladegold",
+   alt: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh500_2",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladesilver",
+   alt: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_enh500_3",
+  kind: "permanent",
+  label: "일기당천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladebronze",
+   alt: "一騎當千",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_1",
+  kind: "permanent",
+  label: "절대무적",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladegold",
+   alt: "絶對無敵",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_2",
+  kind: "permanent",
+  label: "절대무적",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladesilver",
+   alt: "絶對無敵",
+   glow: true
+  }
+ },
+ {
+  code: "first_sum20k_3",
+  kind: "permanent",
+  label: "절대무적",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladebronze",
+   alt: "絶對無敵",
+   glow: true
+  }
+ },
+ {
+  code: "first_t30_1",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladegold",
+   alt: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_t30_2",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladesilver",
+   alt: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_t30_3",
+  kind: "permanent",
+  label: "천외천",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladebronze",
+   alt: "天外天",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_1",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladegold",
+   alt: "天下第一",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_2",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladesilver",
+   alt: "天下第一",
+   glow: true
+  }
+ },
+ {
+  code: "first_combat10m_3",
+  kind: "permanent",
+  label: "천하제일",
+  hidden: false,
+  cat: "기록",
+  style: {
+   fx: "bladebronze",
+   alt: "天下第一",
+   glow: true
+  }
  }
 ] as const;
 

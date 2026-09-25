@@ -10,6 +10,16 @@
 export const PENDING_CODES = new Set<string>([]);
 
 /**
+ * 보유자에게만 보이는 코드 — 최초 이정표(first_<key>_<rank>, 서버에서 처음 넘은 세 사람).
+ * 자리가 셋뿐이라 대부분은 영영 못 얻는다. 목록·분모에 두면 발견 게이지가 채워질 수 없고,
+ * 이름이 보이면 "무엇이 있는지"가 드러나 기록의 의외성이 사라진다(2026-09-26 확정, 잠금 a).
+ * 판정은 그대로 돈다 — 얻는 순간 목록에 나타난다.
+ */
+export function isOwnerOnlyCode(code: string): boolean {
+  return /^first_[a-z0-9]+_[123]$/.test(code); // 접두만 보면 일반 칭호 first_bitter(첫 쓴맛)까지 숨는다
+}
+
+/**
  * 판정 밖 **이벤트 훅**에서 직접 지급되는 코드 — 커버리지 감사 시 "누락"으로 오인 금지.
  *  - comeback: 출석 수령 트랜잭션(checkin/claim.ts) — 공백 증거(lastClaimedKstDay)가
  *    수령으로 소멸하므로 판정으로는 불가능, 훅 지급이 유일한 경로.

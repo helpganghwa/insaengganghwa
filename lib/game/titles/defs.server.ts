@@ -5242,6 +5242,78 @@ export const TITLE_SECRETS: TitleSecret[] = [
    ],
    min: 30
   }
+ },
+ {
+  code: "first_enh500_1",
+  cat: "기록",
+  cond: "서버에서 처음으로 +500 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh500_2",
+  cat: "기록",
+  cond: "서버에서 두 번째로 +500 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_enh500_3",
+  cat: "기록",
+  cond: "서버에서 세 번째로 +500 도달",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_1",
+  cat: "기록",
+  cond: "서버에서 처음으로 합산 강화 20,000 달성",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_2",
+  cat: "기록",
+  cond: "서버에서 두 번째로 합산 강화 20,000 달성",
+  diff: "한정"
+ },
+ {
+  code: "first_sum20k_3",
+  cat: "기록",
+  cond: "서버에서 세 번째로 합산 강화 20,000 달성",
+  diff: "한정"
+ },
+ {
+  code: "first_t30_1",
+  cat: "기록",
+  cond: "서버에서 처음으로 한 장비를 초월 30단계까지",
+  diff: "한정"
+ },
+ {
+  code: "first_t30_2",
+  cat: "기록",
+  cond: "서버에서 두 번째로 한 장비를 초월 30단계까지",
+  diff: "한정"
+ },
+ {
+  code: "first_t30_3",
+  cat: "기록",
+  cond: "서버에서 세 번째로 한 장비를 초월 30단계까지",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_1",
+  cat: "기록",
+  cond: "서버에서 처음으로 전투력 10,000,000 달성",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_2",
+  cat: "기록",
+  cond: "서버에서 두 번째로 전투력 10,000,000 달성",
+  diff: "한정"
+ },
+ {
+  code: "first_combat10m_3",
+  cat: "기록",
+  cond: "서버에서 세 번째로 전투력 10,000,000 달성",
+  diff: "한정"
  }
 ] as const;
 

@@ -144,3 +144,25 @@ type TitleDef = {
 - **1위 길드 임원 2종 신설**(조건부·공개·어려움): `guild_top_leader` **맹주**(길드 랭킹 1위 길드의 길드장인 동안) · `guild_top_vice` **군사**(부길드장인 동안). 이펙트 `breathgold`(breath의 금색판). 판정 = 명가(grank 1) + 직책(judge gleader/gvice), 표시 재검증 display.ts 동일 조건.
 - 폐기: 개인 5위·10위 칭호(통합·부문별 모두), 추가 14종 이펙트 변경(현행 유지 — 단, 어려움인 별의 바다·폭식은 hardFx 순환으로 stardrift·honeyflow가 붙는다). 505 → **507종**.
 - 점검 반영(2026-09-08): 별의 바다·폭식을 `special`에 고정 — 어려움 hardFx는 코드 정렬 순환이라 신규가 끼면 기존 보유 칭호(보급왕·만물상·삼시세끼·창고지기·초월자)의 이펙트가 밀린다. 신규 어려움 칭호는 앞으로도 `special`에 고정할 것. 불꽃 계열(`.fx-blaze*`)에 `background-position:0 100%` 기본값 — reduced-motion·정지 프레임에서 그라데이션 윗단(거의 흰색)만 보이던 문제.
+
+## 최초 이정표 칭호 (2026-09-26)
+
+서버에서 이정표를 **처음 넘은 세 사람**에게 금·은·동. 코드 `first_<key>_<rank>`, 카테고리 기록 · 영구 · 한정. 이름은 셋이 같고 재질만 다르다.
+
+| key | 기준 | 이름 |
+|---|---|---|
+| enh500 | 최고 강화 +500 | 일기당천 一騎當千 |
+| sum20k | 합산 강화 20,000 | 절대무적 絶對無敵 |
+| t30 | 한 장비 초월 30 | 천외천 天外天 |
+| combat10m | 전투력 10,000,000 | 천하제일 天下第一 |
+
+- 조건 문구: "서버에서 처음으로 / 두 번째로 / 세 번째로 …". 서버마다 따로 센다.
+- **보유자에게만 보인다** — 자리가 셋뿐이라 미보유자의 목록·발견 게이지 분모에서 뺀다(`pending.ts isOwnerOnlyCode`, `judge.ts isHiddenPendingTitle`·`HIDDEN_UNLESS_OWNED_CODES`). 위키 총수에서도 뺀다. 판정은 그대로 돌아 얻는 순간 나타난다.
+- 이펙트 **검기**(`bladegold` / `bladesilver` / `bladebronze`, 금 #ffc21a · 은 #c9dcff · 동 #ff7f2e): 6.8초 주기로 한글 ↔ 한자가 바뀐다. 전환마다 왼쪽 아래 → 오른쪽 위 사선이 글자 가운데를 가르고, 이전 글자는 위·아래 두 조각으로 벌어지며 사라지고, 다음 글자는 곧바로 온전히 보인 채 광택이 한 번 지나간다. 정지 모드(`.ttag-still`)·reduced-motion은 한글 정지. 마크업은 `TitleTag.tsx BladeLabel`(스타일 `alt` = 한자).
+- 서체 궁서: 조선궁서체(조선일보 무료 배포, 웹 임베딩 허용)를 필요한 글자만 서브셋한 `app/fonts/ChosunGs-titles.woff2`, `app/layout.tsx` next/font/local `--font-gungseo`(preload 없음). 기기 내장 궁서가 없어 웹폰트가 유일한 경로.
+  - **이름이 바뀌면 서브셋 재생성**: `python3 -m fontTools.subset ChosunGs.woff --text="일기당천一騎當千절대무적絶對無敵천외천天外天천하제일天下第一" --flavor=woff2 --no-hinting --desubroutinize --output-file=app/fonts/ChosunGs-titles.woff2`. 원본 woff는 `cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGs.woff`.
+- 임계 정본 `lib/game/balance.ts FIRST_MILESTONES`. 기록 정본 `milestone_firsts`(0218, SCHEMA §13). 기록 경로는 하나 — `refreshEnhanceMetrics`가 max·sum·combat·최고 초월을 구한 뒤 커밋 밖에서 `recordFirstMilestones`(이정표별 advisory 락, 멱등, 넷째 없음).
+- 판정: judge 지표 `fr_<key>`(1~3, 없으면 0) → 규칙 `first_<key>_<rank>: fr_<key> === rank`.
+- 소급: 배포 전 이미 넘긴 사람은 `scripts/first-milestones-backfill.ts`가 실제로 넘은 순서대로 넣는다(강화·초월은 로그 시각, 합산·전투력은 로그 재생). 순서 0218 → 소급 `--apply` → 코드 배포.
+- 운영 원칙: 공지·우편 없음, 조건은 위키·공지에 적지 않는다. 탈퇴로 빈 순위는 다시 채우지 않는다. 다음 단계는 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가한다.
+- 총 **538종**.

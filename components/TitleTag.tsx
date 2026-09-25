@@ -49,6 +49,35 @@ function SpreadParticles({ count }: { count: number }) {
   return <>{items}</>;
 }
 
+/** 검기 칭호 — 한 단어를 칼선 위·아래 두 조각 + 통글자 + 빛 스침 한 겹으로(각각 같은 글자, CSS가 박자별로 보이고 숨김). */
+function BladeWord({ text }: { text: string }) {
+  return (
+    <span className="w">
+      <b className="sd up">{text}</b>
+      <b className="sd dn">{text}</b>
+      <b className="all">{text}</b>
+      <b className="sh" aria-hidden>
+        {text}
+      </b>
+    </span>
+  );
+}
+function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
+  return (
+    <span className={`fx fx-blade fx-${fx}`}>
+      <span className="cut" aria-hidden />
+      <span className="txt">
+        <span className="ko">
+          <BladeWord text={ko} />
+        </span>
+        <span className="hj2" aria-hidden>
+          <BladeWord text={hj} />
+        </span>
+      </span>
+    </span>
+  );
+}
+
 /** 글자 단위 분리(style.split) — 문자별 애니메이션(후원 상위 2단계 '호흡'). 공백은 nbsp로 폭 유지. */
 function SplitLabel({ label }: { label: string }) {
   return (
@@ -153,6 +182,9 @@ export function TitleTag({
         ),
       )}
     </span>
+  ) : def.style.fx?.startsWith('blade') && def.style.alt ? (
+    // 최초 이정표(2026-09-26) — 검기: 칼선이 글자를 가르고 위·아래 두 조각이 흩어지며 한글 ⇄ 한자가 바뀐다(title-fx.css .fx-blade).
+    <BladeLabel fx={def.style.fx} ko={label} hj={def.style.alt} />
   ) : def.style.fx && (def.style.alt || def.style.orb) ? (
     // 글자 오른쪽 아이콘(.orb: 달·꽃, 2026-09-22 한가위 칭호). alt가 있으면 두 겹 라벨(.fx-dual) — 한글 위에
     // 한자를 겹쳐 두고 달이 밝아질 때 마스크로 한자가 드러난다(title-fx.css). 정적 모드·reduced-motion은 한글만.

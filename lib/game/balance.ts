@@ -852,6 +852,20 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
   return Math.min(9900 + c * 10000, BP_SEGMENT_PRICE_CAP_KRW);
 }
 
+/* ═══════════════════════ 최초 이정표 (정본: docs/TITLES.md "최초 이정표 칭호", 2026-09-26) ═══════════════════════ */
+/**
+ * 서버에서 처음 넘은 세 사람에게 칭호(first_<key>_1~3 = 금·은·동, 서버별). 값은 리더보드 증분 갱신이 계산하는 유저 값과 같은 정의:
+ * max = 보유 장비 최고 강화, combat = 전투력(combatPowerFromOwned), transcend = 장비 최고 초월 단계, sum = 합산 강화.
+ * 기준 4종·이름은 2026-09-26 사용자 확정(일기당천·절대무적·천외천·천하제일). 배포 전 도달분은 소급(scripts/first-milestones-backfill.ts).
+ */
+export type FirstMilestoneMetric = 'max' | 'combat' | 'transcend' | 'sum';
+export const FIRST_MILESTONES: readonly { key: string; metric: FirstMilestoneMetric; value: number }[] = [
+  { key: 'enh500', metric: 'max', value: 500 },
+  { key: 'sum20k', metric: 'sum', value: 20_000 },
+  { key: 't30', metric: 'transcend', value: 30 },
+  { key: 'combat10m', metric: 'combat', value: 10_000_000 },
+] as const;
+
 /* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
 /* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
 

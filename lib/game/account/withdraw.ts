@@ -110,6 +110,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from guild_leave_log where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_members where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_contribution_stash where user_id = ${uid}`); // 0217 기여도 보관분 — 재가입 복원 차단
+    await tx.execute(sql`delete from milestone_firsts where user_id = ${uid}`); // 0218 최초 이정표(FK cascade지만 명시 — 빈 순위는 다시 채우지 않는다)
 
     // 신고(내가 한 신고 + 내 프로필 대상 신고) → user_profiles보다 먼저.
     await tx.execute(

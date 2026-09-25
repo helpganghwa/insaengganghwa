@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { headers } from 'next/headers';
 import { Geist, Geist_Mono, Noto_Serif_KR } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import '@/components/title-fx.css';
 import { AppSessionMark } from '@/components/AppSessionMark';
@@ -25,6 +26,14 @@ const serifKr = Noto_Serif_KR({
   variable: '--font-serif-kr',
   weight: '700',
   subsets: ['latin'],
+  preload: false,
+  display: 'swap',
+});
+// 궁서(2026-09-26) — 최초 이정표 칭호 전용. 조선궁서체(조선일보 무료 배포, 개인·기업 무료·웹 임베딩 허용)를 칭호에 쓰는
+// 글자만 서브셋(9KB). 이름이 바뀌면 docs/TITLES.md '최초 이정표 칭호'의 절차로 재서브셋.
+const gungseo = localFont({
+  src: './fonts/ChosunGs-titles.woff2',
+  variable: '--font-gungseo',
   preload: false,
   display: 'swap',
 });
@@ -203,7 +212,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="ko"
       translate="no"
-      className={`notranslate dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} h-full overscroll-none antialiased`}
+      className={`notranslate dark ${geistSans.variable} ${geistMono.variable} ${serifKr.variable} ${gungseo.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {/*

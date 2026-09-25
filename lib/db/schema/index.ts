@@ -28,3 +28,4 @@ export * from './announcement'; // §20 공지사항 (게시판 — 어드민 �
 export * from './leaderboard'; // §21 리더보드 사전계산 스냅샷 (cron 재계산 — 읽기 경량화)
 export * from './points';
 export * from './chuseok'; // §22 한가위 이벤트 — 송편(강화 성공 적립), 0213
+export * from './milestone-firsts'; // §13 최초 이정표 기록(0218) — 서버·이정표별 첫 세 사람

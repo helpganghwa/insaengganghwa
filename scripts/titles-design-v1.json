@@ -476,6 +476,54 @@
     },
     "set_cloud_rabbit": {
       "color": "#c7d2fe"
+    },
+    "first_enh500_1": {
+      "fx": "bladegold",
+      "alt": "一騎當千"
+    },
+    "first_enh500_2": {
+      "fx": "bladesilver",
+      "alt": "一騎當千"
+    },
+    "first_enh500_3": {
+      "fx": "bladebronze",
+      "alt": "一騎當千"
+    },
+    "first_sum20k_1": {
+      "fx": "bladegold",
+      "alt": "絶對無敵"
+    },
+    "first_sum20k_2": {
+      "fx": "bladesilver",
+      "alt": "絶對無敵"
+    },
+    "first_sum20k_3": {
+      "fx": "bladebronze",
+      "alt": "絶對無敵"
+    },
+    "first_t30_1": {
+      "fx": "bladegold",
+      "alt": "天外天"
+    },
+    "first_t30_2": {
+      "fx": "bladesilver",
+      "alt": "天外天"
+    },
+    "first_t30_3": {
+      "fx": "bladebronze",
+      "alt": "天外天"
+    },
+    "first_combat10m_1": {
+      "fx": "bladegold",
+      "alt": "天下第一"
+    },
+    "first_combat10m_2": {
+      "fx": "bladesilver",
+      "alt": "天下第一"
+    },
+    "first_combat10m_3": {
+      "fx": "bladebronze",
+      "alt": "天下第一"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

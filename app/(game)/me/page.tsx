@@ -20,7 +20,7 @@ import { profileHref } from '@/lib/game/profile/href';
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { TitleTag } from '@/components/TitleTag';
-import { PENDING_CODES, visibleTitleTotal } from '@/lib/game/titles/judge';
+import { HIDDEN_UNLESS_OWNED_CODES, visibleTitleTotal } from '@/lib/game/titles/judge';
 import { maybeJudgeTitlesForBadge } from '@/lib/game/titles/judge';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
@@ -110,9 +110,9 @@ export default async function ProfilePage() {
           -- 새 칭호(0187) — 아직 확인하지 않은 획득분. 메뉴 배지(친구 요청과 같은 붉은 숫자).
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId} and seen_at is null) as titles_new,
           -- 판정이 아직 없는 칭호 중 **이미 보유한** 수 — 발견 게이지 분모가 도달 가능해야 한다
-          -- (visibleTitleTotal 주석). 미보유 PENDING은 목록·분모 양쪽에서 빠진다.
+          -- (visibleTitleTotal 주석). 미보유 PENDING·보유자 전용(최초 이정표)은 목록·분모 양쪽에서 빠진다.
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}
-             and title_code = any(array[${sql.join([...PENDING_CODES].map((c) => sql`${c}`), sql`, `)}]::text[])) as titles_pending_owned,
+             and title_code = any(array[${sql.join(HIDDEN_UNLESS_OWNED_CODES.map((c) => sql`${c}`), sql`, `)}]::text[])) as titles_pending_owned,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
