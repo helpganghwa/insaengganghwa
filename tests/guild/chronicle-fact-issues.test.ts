@@ -330,3 +330,26 @@ describe('factIssues — 09-25 초안 교정 반영(09-26): 함께·경합 상�
     expect(has('{z|고사목 숲|29}은 아흐레 동안 쥐던 곳이다. 석권은 사흘째 이어졌다.', /보유·지속 기간을/)).toBe(false);
   });
 });
+
+describe('factIssues — D판 시험에서 놓친 표현(09-26)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['대설봉', '잊힌 신전'], ['얼음 여울', '잊힌 신전']]),
+    regionLabels: ['잊힌 신전'],
+    feats: [],
+    headcountZones: [],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map(),
+    attackers: new Map([['대설봉', ['티모집사', '로제']]]),
+  };
+  it("'{g|A}와 {g|B}의 경합'에서 A가 공격 길드가 아니면 잡는다", () => {
+    const iss = factIssues('{g|로제|25}는 {z|대설봉|12}을 {g|Winners|17}와 {g|티모집사|31}의 경합을 뚫고 손에 넣었다.', c);
+    expect(iss.some((i) => /\{g\|Winners\} 은\(는\) \{z\|대설봉\}의 경합 상대가 아니다/.test(i))).toBe(true);
+    expect(iss.some((i) => /\{g\|티모집사\} 은\(는\)/.test(i))).toBe(false);
+  });
+  it("'A와 B, C가 함께 노린'도 동맹 표현이다", () => {
+    expect(factIssues('{g|레지스탕스|36}와 {g|로제|25}, {g|케케케|27}가 함께 노린 그 땅에서 버텼다.', c).some((i) => /동맹은 없다/.test(i))).toBe(true);
+  });
+});

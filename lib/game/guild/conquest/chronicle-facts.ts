@@ -69,6 +69,8 @@ export type FactCheckContext = {
 
 /** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
 const RIVAL = /\{g\|([^}|]+)(?:\|[^}]*)?\}(?:와|과)(?:의)?\s?(?:다시\s?)?(경합|맞붙|맞서|맞선)/g;
+/** 25 보강 — '{g|A}와 {g|B}의 경합'(09-26 D판 시험 — A가 주인이었다). */
+const RIVAL_PAIR = /\{g\|([^}|]+)(?:\|[^}]*)?\}(?:와|과)\s?\{g\|([^}|]+)(?:\|[^}]*)?\}의\s?경합/g;
 /** 27 — 보유·지속 기간 표현은 하루 글에 이 횟수까지(09-25 운영자 '며칠 차지했다는 언급이 너무 많다'). */
 const DURATION_MAX = 2;
 
@@ -152,7 +154,7 @@ const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완�
 const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|합류/;
 /** 18 보강(09-26) — '{g|A} 넷과 {g|B} 하나가 함께 들이닥쳤다'처럼 두 길드를 주어로 묶은 '함께 …'(09-25 초안 두 곳).
  *  구역 둘을 묶은 '{z|X}와 {z|Y}를 함께 노렸다'는 해당 없다(09-21 게시본 오탐). */
-const ALLIANCE_TOGETHER = /\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과)\s?\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
+const ALLIANCE_TOGETHER = /(?:\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과|,)\s?)+\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
 /** 19 — 보유·지속 일수(2일 이상). '하루 만에'는 6번 규칙이 본다. */
 const DURATION = /(이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘|(\d+)\s?일)\s?(?:째|동안|간)/g;
 const DAY_WORD: Record<string, number> = { 이틀: 2, 사흘: 3, 나흘: 4, 닷새: 5, 엿새: 6, 이레: 7, 여드레: 8, 아흐레: 9, 열흘: 10 };
@@ -467,19 +469,24 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       if (ctx.attackers) {
         // 대상 구역 = 그 표현에 가장 가까운 구역 마커(앞뒤 글자 거리). 문장에 구역이 없으면 앞 문장의 구역.
         const zpos = [...sent.matchAll(/\{z\|([^}|]+)(?:\|[^}]*)?\}/g)].map((m) => ({ name: m[1]!.trim(), s: m.index!, e: m.index! + m[0].length }));
-        for (const m of sent.matchAll(RIVAL)) {
-          const ms = m.index!;
-          const me = ms + m[0].length;
+        // 표현 하나당 {길드, 동사, 위치}. 'A와 B의 경합'은 A·B 둘 다 경합 상대로 본다.
+        const hits = [
+          ...[...sent.matchAll(RIVAL)].map((m) => ({ g: m[1]!.trim(), verb: m[2]!, s: m.index!, e: m.index! + m[0].length })),
+          ...[...sent.matchAll(RIVAL_PAIR)].flatMap((m) => [m[1]!, m[2]!].map((g) => ({ g: g.trim(), verb: '경합', s: m.index!, e: m.index! + m[0].length }))),
+        ];
+        for (const h of hits) {
+          const ms = h.s;
+          const me = h.e;
           const near = zpos.length
             ? zpos.reduce((a, b) => (Math.min(Math.abs(ms - b.e), Math.abs(b.s - me)) < Math.min(Math.abs(ms - a.e), Math.abs(a.s - me)) ? b : a)).name
             : lastZone;
           const z = near;
           const atk = z ? ctx.attackers.get(z) : undefined;
           if (z && atk) {
-            const g = m[1]!.trim();
-            if (m[2] === '경합' && !atk.includes(g)) {
+            const g = h.g;
+            if (h.verb === '경합' && !atk.includes(g)) {
               issues.push(`{g|${g}} 은(는) {z|${z}}의 경합 상대가 아니다(그 구역을 공격한 길드: ${atk.map((a) => `{g|${a}}`).join('·')}) — 경합은 공격한 길드끼리 쓰고, 주인은 '지키던·빼앗긴' 쪽으로 쓴다: ${q(sent)}`);
-            } else if (m[2] !== '경합' && ctx.unguarded?.get(z) === g && !atk.includes(g)) {
+            } else if (h.verb !== '경합' && ctx.unguarded?.get(z) === g && !atk.includes(g)) {
               issues.push(`{g|${g}} 은(는) {z|${z}}에 병력을 두지 않아 싸움이 없었다 — '맞붙었다·맞섰다' 대신 '비워 둔·지키는 이 없던'으로 쓴다: ${q(sent)}`);
             }
           }
