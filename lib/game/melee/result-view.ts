@@ -185,6 +185,7 @@ export async function buildMeleeResultView(
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
         cp: meleeParticipants.cpSnapshot,
+        attackCount: meleeParticipants.attackCount,
         defenseCount: meleeParticipants.defenseCount,
         // 공격 성공(킬) = 나를 killer로 기록한 참가자 수 — finale(마지막 N라운드)과 달리
         // 전체 전투 기준 정확값(포디움의 finale 집계와 의미 동일, 범위만 전판).
@@ -234,6 +235,9 @@ export async function buildMeleeResultView(
     myAvatar: avatarOf.get(userId) ?? null,
     myPublicCode: meRow?.code ?? null,
     myCp: meRow ? Number(meRow.cp) : 0,
+    // 내 전투 순번 기준 — myEvents는 최근 MELEE_MY_EVENTS_MAX건만 남으므로 전판 총횟수로 앞선 수를 복원.
+    myAttackCount: meRow?.attackCount ?? 0,
+    myDefenseCount: meRow?.defenseCount ?? 0,
     totalRounds: battle.totalRounds,
     finale: { roster: replayRoster, events: finale.events },
   };

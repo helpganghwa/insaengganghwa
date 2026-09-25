@@ -65,6 +65,9 @@ export type MeleeResultView = {
   /** 내 공개 코드 — 내 전투 리플레이에서 내 아바타 → 프로필 상세. */
   myPublicCode: string | null;
   myCp: number;
+  /** 전판 총 공격·방어(피격) 횟수 — 내 전투 순번 계산용. */
+  myAttackCount: number;
+  myDefenseCount: number;
   /** 리플레이 로스터 — 서버가 아바타·코드·길드를 요소에 병합해 내린다(감사 C: 평행 배열
    *  3종 폐지). events는 로스터 인덱스 참조라 userId는 전송하지 않는다. */
   finale: {
@@ -566,10 +569,10 @@ function RoundCard({
   tgt: string;
   dmg: number;
   hp: number;
-  /** 공격자의 누적 공격 횟수(이 라운드 기준). */
-  atkSeq: number;
-  /** 방어자의 누적 방어(피격) 횟수. */
-  defSeq: number;
+  /** 공격자의 누적 공격 횟수(이 라운드 기준). null = 정확히 알 수 없음(순번 생략). */
+  atkSeq: number | null;
+  /** 방어자의 누적 방어(피격) 횟수. null = 정확히 알 수 없음. */
+  defSeq: number | null;
   /** 탈락 시 그 타겟의 최종 등수(있으면 "N위" 표기). */
   tgtRank?: number;
   me?: string;
@@ -600,7 +603,9 @@ function RoundCard({
               <span className={`font-bold ${isMe(atk) ? 'text-amber-300' : 'text-white'}`}>
                 {atk}
               </span>
-              <span className="text-zinc-500">의 {atkSeq.toLocaleString()}번째 공격</span>
+              <span className="text-zinc-500">
+                {atkSeq != null ? `의 ${atkSeq.toLocaleString()}번째 공격` : '의 공격'}
+              </span>
             </span>
             <span className="ml-auto shrink-0 font-mono text-[11px] font-semibold text-red-300">
               -{dmg.toLocaleString()}
@@ -612,7 +617,9 @@ function RoundCard({
               <span className={`font-bold ${isMe(tgt) ? 'text-amber-300' : 'text-zinc-200'}`}>
                 {tgt}
               </span>
-              <span className="text-zinc-500">의 {defSeq.toLocaleString()}번째 방어</span>
+              <span className="text-zinc-500">
+                {defSeq != null ? `의 ${defSeq.toLocaleString()}번째 방어` : '의 방어'}
+              </span>
             </span>
             <span className="ml-auto shrink-0 text-[11px]">
               {killed ? (
@@ -727,6 +734,8 @@ export function MeleeResult({
     myAvatar,
     myPublicCode,
     myCp,
+    myAttackCount,
+    myDefenseCount,
   } = view;
   /** publicCode로 프로필 상세 경로. 없으면 null(링크 없음 — 닉네임 폴백 금지). */
   const hrefOf = (handle: string | null | undefined) =>
@@ -768,14 +777,14 @@ export function MeleeResult({
     tgt: string;
     dmg: number;
     hp: number;
-    atkSeq: number;
-    defSeq: number;
+    atkSeq: number | null;
+    defSeq: number | null;
     tgtRank?: number;
     fight: Fight;
   };
   // 파생 로그 useMemo(2026-08-07 렌더 감사) — 무한스크롤 append·탭 전환마다 수천 이벤트를
   // 재순회하던 것 차단. deps는 전부 RSC props/원시값이라 identity 안정.
-  const { logData, myFiltered, myFallback } = useMemo(() => {
+  const { logData, myData } = useMemo(() => {
   // 누적 공격/방어 횟수(리플레이 윈도 내 시간순). 미절단이면 절대값, 절단이면 윈도 기준.
   const atkSeqMap = new Map<number, number>();
   const defSeqMap = new Map<number, number>();
@@ -826,45 +835,61 @@ export function MeleeResult({
       },
     };
   });
-  // 내 전투 = 전체 전투(finale)에서 내가 공격자/타겟인 라운드만 "필터" — 전체와 완전 동일(상대 아바타·HP·등수 일관).
-  const myFiltered: Row[] = myNickname
-    ? logData.filter((r) => r.atk === myNickname || r.tgt === myNickname)
-    : [];
-
-  // 폴백 — finale 윈도 밖(초대규모 절단 시 내 라운드가 윈도 밖)이면 per-user myEvents로 복원.
-  //  닉네임→로스터 메타(아바타·코드)로 상대 프로필 복원 + 내 HP 추적(공격 시 잔여 HP 표시).
+  // 내 전투 — 저장된 개인 기록(myEvents)이 정본. finale은 마지막 MELEE_REPLAY_ROUNDS 라운드만 담아
+  //  그것만 필터하면 앞선 전투가 빠지고 순번도 윈도 기준으로 틀린다(09-25 보리 문의: 시작 HP 2.86M인데
+  //  윈도 첫 방어가 HP 4만으로 보여 '체력이 낮게 시작'으로 오해). 윈도 안 라운드는 finale 행으로 채워
+  //  상대 아바타·길드·생존자 수를 전체 전투와 일치시키고, 윈도 밖은 myEvents로 복원한다.
   const byNick = new Map<string, { avatar: string | null; code: string | null }>();
   finale.roster.forEach((r) => byNick.set(r.nickname, { avatar: r.avatar, code: r.code }));
   const myMax = myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
+  // 순번 — myEvents는 최근 MELEE_MY_EVENTS_MAX건만 남으므로 전판 총횟수에서 목록 밖(앞선) 수를 더한다.
+  const listAtk = myEvents.filter((e) => e[0] === 0).length;
+  const listDef = myEvents.length - listAtk;
+  // 목록이 전판을 다 담았는지 — 아니면 첫 피격 전의 내 HP를 알 수 없다.
+  const complete = myAttackCount + myDefenseCount <= myEvents.length;
   // 객체 프로퍼티 변이 — 클로저 변수 재할당은 react-hooks 규칙이 useMemo 안이라도 막는다.
-  const myHpBox = { v: myMax ?? 0 };
-  const myAtkSeqMap = new Map<string, number>();
-  const myDefSeqMap = new Map<string, number>();
-  const myFallback: Row[] = myEvents.map((e, i) => {
+  const my = {
+    hp: complete ? myMax : undefined,
+    atk: Math.max(0, myAttackCount - listAtk),
+    def: Math.max(0, myDefenseCount - listDef),
+  };
+  const meHref = hrefOf(myPublicCode);
+  const myRows: Row[] = myEvents.map((e, i) => {
     const [role, opp, dmg, hp] = e;
     const round = e[4] ?? i + 1;
     const atk = role === 0 ? myNickname : opp;
     const tgt = role === 0 ? opp : myNickname;
-    const atkSeq = (myAtkSeqMap.get(atk) ?? 0) + 1;
-    myAtkSeqMap.set(atk, atkSeq);
-    const defSeq = (myDefSeqMap.get(tgt) ?? 0) + 1;
-    myDefSeqMap.set(tgt, defSeq);
+    if (role === 0) my.atk += 1;
+    else my.def += 1;
+    const mySeq = role === 0 ? my.atk : my.def;
+    const atkHpNow = role === 0 ? my.hp : undefined;
+    if (role === 1) my.hp = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
+
+    // finale 윈도 안이면 전체 전투의 같은 라운드 행을 그대로 쓴다(상대 순번은 미절단일 때만 정확).
+    const w = e[4] != null ? logData[round - finaleStart - 1] : undefined;
+    if (w && w.round === round && w.atk === atk && w.tgt === tgt) {
+      return {
+        ...w,
+        atkSeq: role === 0 ? mySeq : truncated ? null : w.atkSeq,
+        defSeq: role === 1 ? mySeq : truncated ? null : w.defSeq,
+      };
+    }
+
     const oppMeta = byNick.get(opp);
     const oppAvatar = oppMeta?.avatar ?? DEFAULT_AVATAR;
     // publicCode를 못 찾으면(상대가 finale 로스터 윈도 밖) 닉네임 폴백 대신 링크 없음 —
     // 프로필 링크는 항상 publicCode 기반(닉은 변경·서버별이라 불안정). href.ts 원칙 일관.
     const oppHref = hrefOf(oppMeta?.code ?? null);
-    const meHref = hrefOf(myPublicCode);
-    const atkHpNow = role === 0 ? (myMax != null ? myHpBox.v : undefined) : undefined;
-    const row: Row = {
-      key: i,
+    return {
+      key: round,
       round,
       atk,
       tgt,
       dmg,
       hp,
-      atkSeq,
-      defSeq,
+      // 상대의 순번은 윈도 밖에선 알 수 없다 → 생략.
+      atkSeq: role === 0 ? mySeq : null,
+      defSeq: role === 1 ? mySeq : null,
       tgtRank: role === 1 && hp <= 0 ? me?.rank : undefined,
       fight: {
         round,
@@ -879,21 +904,22 @@ export function MeleeResult({
         dmg,
         hpAfter: hp,
         tgtMaxHp: role === 1 ? myMax : undefined,
-        // 윈도 밖 라운드는 생존자수 미상 → 라벨 숨김(undefined). 과거엔 me.rank로 폴백해 "생존 N"에
-        // 등수가 잘못 표시되던 버그 제거.
+        // 윈도 밖 라운드는 생존자수 미상 → 라벨 숨김(undefined).
         survivors: aliveByRound.get(round),
       },
     };
-    if (role === 1) myHpBox.v = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
-    return row;
   });
+  // 개인 기록이 없는 경우(참가 행 누락 등)에만 finale 필터로 대신한다.
+  const myFiltered: Row[] =
+    myRows.length === 0 && myNickname
+      ? logData.filter((r) => r.atk === myNickname || r.tgt === myNickname)
+      : [];
 
-  return { logData, myFiltered, myFallback };
+  return { logData, myData: myRows.length > 0 ? myRows : myFiltered };
     // aliveByRound·roster* 등은 위 RSC props에서 파생 — 원본 deps로 충분.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finale, roster, finaleStart, myEvents, myNickname, myCp]);
+  }, [finale, roster, finaleStart, myEvents, myNickname, myCp, myAttackCount, myDefenseCount]);
 
-  const myData = myFiltered.length > 0 ? myFiltered : myFallback;
   const rows = tab === 'log' ? logData : myData;
   const displayRows = [...rows].reverse(); // 최신 라운드가 위로
 
