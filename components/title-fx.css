@@ -309,5 +309,5 @@
 .fx-blade .cut{position:absolute;inset:-.05em -.3em;z-index:3;clip-path:polygon(0 calc(62% - .018em),100% calc(38% - .018em),100% calc(38% + .018em),0 calc(62% + .018em));filter:drop-shadow(0 0 .08em var(--c))}
 .fx-blade .cut::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--c) 55%,transparent) 20%,var(--hot) 55%,#fff 82%,transparent 100%);transform-origin:0 50%;animation:blCutdraw 6.8s linear infinite}
 @keyframes blCutdraw{0%,26%{transform:scaleX(0);opacity:0}26.1%{transform:scaleX(0);opacity:1;animation-timing-function:cubic-bezier(.55,0,.45,1)}31%{transform:scaleX(1);opacity:1;animation-timing-function:cubic-bezier(.22,.61,.36,1)}44%{transform:scaleX(1);opacity:0}44.1%,76%{transform:scaleX(0);opacity:0}76.1%{transform:scaleX(0);opacity:1;animation-timing-function:cubic-bezier(.55,0,.45,1)}81%{transform:scaleX(1);opacity:1;animation-timing-function:cubic-bezier(.22,.61,.36,1)}94%,100%{transform:scaleX(1);opacity:0}}
-.ttag-still .fx-blade .hj2,.ttag-still .fx-blade .sh,.ttag-still .fx-blade .cut{display:none}
-@media (prefers-reduced-motion: reduce){.ttag .fx-blade .hj2,.ttag .fx-blade .sh,.ttag .fx-blade .cut{display:none}.ttag .fx-blade b{animation:none !important}}
+.ttag-still .fx-blade .hj2,.ttag-still .fx-blade .sh,.ttag-still .fx-blade .cut,.ttag-still .fx-blade .sd{display:none}
+@media (prefers-reduced-motion: reduce){.ttag .fx-blade .hj2,.ttag .fx-blade .sh,.ttag .fx-blade .cut,.ttag .fx-blade .sd{display:none}.ttag .fx-blade b{animation:none !important}}

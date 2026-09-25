@@ -15,7 +15,7 @@ const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = url && token ? new Redis({ url, token }) : null;
 
-/** 생성 한 번의 상한(새 시도 시작 마감 120초 + 시도 하나 최악 ~110초) + 여유. 함수가 죽어도 이 시간 뒤 자동 해제. */
+/** 생성 한 번의 상한(생성 루프 마감 225초) + 여유. 함수가 죽어도 이 시간 뒤 자동 해제. */
 const LOCK_TTL_SEC = 290;
 
 /** 잠금을 잡으면 해제 함수를, 이미 다른 실행이 잡고 있으면 null을 돌려준다. */

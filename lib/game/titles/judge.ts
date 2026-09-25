@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { expeditionSlotsFor, FIRST_MILESTONES } from '@/lib/game/balance';
+import { expeditionSlotsFor } from '@/lib/game/balance';
+import { firstRanksFrom } from '@/lib/game/titles/first-milestones';
 
 import { sql } from 'drizzle-orm';
 
@@ -58,14 +59,6 @@ export function visibleTitleTotal(ownedHiddenCount: number): number {
 }
 
 type Metrics = Record<string, number>;
-
-/** 최초 이정표 순위 지표(fr_<key> = 1~3, 없으면 0) — milestone_firsts 행에서. 정본·기록은 first-milestones.ts. */
-function firstRanksFrom(rows: { milestone: string; rank: unknown }[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const m of FIRST_MILESTONES) out['fr_' + m.key] = 0;
-  for (const r of rows) out['fr_' + r.milestone] = Number(r.rank);
-  return out;
-}
 
 const CATALOG_KEY_BY_ID = new Map<number, string>(); // catalog_items.id → key (지연 로드)
 let catalogLoadedAt = 0;
@@ -750,7 +743,11 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
     // 최초 이정표(2026-09-26) — milestone_firsts의 내 순위(fr_<key> = 1~3, 없으면 0). 기록은 first-milestones.ts 한 경로.
     // 이 조회 하나의 실패(표 미적용 등)가 판정 전체를 멈추지 않게 — 기록이 없으면 순위 0으로 본다.
-    () => db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`).catch(() => []),
+    () =>
+      db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`).catch((e: unknown) => {
+        console.warn('[titles] milestone_firsts 조회 실패 — 최초 이정표 순위 0으로 판정', (e as Error).message);
+        return [];
+      }),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.

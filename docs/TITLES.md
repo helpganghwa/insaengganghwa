@@ -164,5 +164,5 @@ type TitleDef = {
 - 임계 정본 `lib/game/balance.ts FIRST_MILESTONES`. 기록 정본 `milestone_firsts`(0218, SCHEMA §13). 기록 경로는 하나 — `refreshEnhanceMetrics`가 max·sum·combat·최고 초월을 구한 뒤 커밋 밖에서 `recordFirstMilestones`(이정표별 advisory 락, 멱등, 넷째 없음).
 - 판정: judge 지표 `fr_<key>`(1~3, 없으면 0) → 규칙 `first_<key>_<rank>: fr_<key> === rank`.
 - 소급: 배포 전 이미 넘긴 사람은 `scripts/first-milestones-backfill.ts`가 실제로 넘은 순서대로 넣는다(강화·초월은 로그 시각, 합산·전투력은 로그 재생). 순서 0218 → 소급 `--apply` → 코드 배포.
-- 운영 원칙: 공지·우편 없음, 조건은 위키·공지에 적지 않는다. 탈퇴로 빈 순위는 다시 채우지 않는다. 다음 단계는 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가한다.
+- 운영 원칙: 공지·우편 없음, 조건은 위키·공지에 적지 않는다. 탈퇴해도 기록은 남겨 빈 순위를 다시 채우지 않는다(칭호만 사라짐). 다음 단계는 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가한다.
 - 총 **538종**.

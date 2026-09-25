@@ -140,7 +140,7 @@ export default function Doc() {
           <DocLink slug="conquest" hash="executor">집행관</DocLink>과{' '}
           <DocLink slug="conquest" hash="deploy">배치</DocLink>가 함께 풀린다.
         </LI>
-        <LI>탈퇴하면 그 길드에 쌓은 기여도는 사라지며, 다시 가입해도 0에서 시작한다.</LI>
+        <LI>탈퇴하거나 추방돼도 그 길드에 쌓은 기여도는 남아 있어, 같은 길드에 다시 가입하면 이어서 쌓인다. 다른 길드에 가입하면 0에서 시작하고, 길드가 해산되면 남아 있던 기여도도 사라진다.</LI>
         <LI>
           길드장은 위임하거나 해산해야 탈퇴할 수 있다.
           <Fn n={4} />

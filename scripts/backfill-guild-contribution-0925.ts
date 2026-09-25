@@ -30,9 +30,16 @@ const run = async (tx: postgres.TransactionSql) => {
   if (tbl?.t) {
     const [live] = await tx`select 1 from guild_contribution_stash limit 1`;
     if (live && !process.argv.includes('--force')) throw new Error('보관 행이 이미 있음 — 기능 배포 뒤라 이중 계산 위험(확인 후 --force)');
-    const [mig] = await tx`select applied_at from schema_migrations where filename = '0217_guild_contribution_stash.sql'`;
-    if (!mig) throw new Error('0217 적용 기록 없음 — apply-migration으로 적용했는지 확인');
-    cutoff = new Date(mig.applied_at as string);
+    // 원장 applied_at은 재적용하면 now()로 갱신된다 — 0217을 다시 적용했다면 --cutoff=<처음 적용 시각 ISO>로 못 박는다.
+    const forced = process.argv.find((a) => a.startsWith('--cutoff='))?.slice('--cutoff='.length);
+    if (forced) {
+      cutoff = new Date(forced);
+      if (Number.isNaN(cutoff.getTime())) throw new Error(`--cutoff 형식 오류: ${forced}`);
+    } else {
+      const [mig] = await tx`select applied_at from schema_migrations where filename = '0217_guild_contribution_stash.sql'`;
+      if (!mig) throw new Error('0217 적용 기록 없음 — apply-migration으로 적용했는지 확인');
+      cutoff = new Date(mig.applied_at as string);
+    }
   } else if (APPLY) throw new Error('guild_contribution_stash 없음 — 0217을 먼저 적용');
   console.log(`탈퇴 기준 시각 < ${cutoff.toISOString()}`);
   const rows = (await tx`

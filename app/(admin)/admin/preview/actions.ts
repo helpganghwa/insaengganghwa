@@ -72,7 +72,7 @@ export async function updateChronicleAction(input: {
 /**
  * 연대기 재생성(2026-07-30) — 생성 결과가 이상하면 검수 창에서 주사위를 다시 굴린다.
  * 지우지 않고 새 결과로 **덮어쓴다**(replace) — 생성이 실패하거나 함수가 시간 초과로 끊겨도 기존 행이 그대로 남는다.
- * LLM 1~3회(호출당 최대 55초)라 수십 초~몇 분 걸린다 — 버튼 쪽에서 진행 표시 필수.
+ * LLM 1~3회(생성 루프 최대 225초)라 수십 초~몇 분 걸린다 — 버튼 쪽에서 진행 표시 필수.
  */
 export async function regenerateChronicleAction(input: {
   serverId: number;

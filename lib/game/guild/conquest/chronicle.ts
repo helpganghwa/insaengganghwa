@@ -26,13 +26,17 @@ let _client: Anthropic | null = null;
 function client(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY missing');
-  // 호출 하나가 함수 시간(크론 300초·어드민 300초)을 통째로 먹지 않게 — SDK 기본(10분·재시도 2회)이면
-  // 함수가 강제 종료돼 잠금·heartbeat가 남는다. 55초 × (1 + 재시도 1).
-  return (_client ??= new Anthropic({ apiKey: key, timeout: 55_000, maxRetries: 1 }));
+  return (_client ??= new Anthropic({ apiKey: key }));
 }
 
-/** 새 시도를 시작하는 마감 — 이 뒤엔 앞 시도 중 최선을 채택한다(시도 하나 최악 ~110초 + 이 값 < 함수 300초 − 호출 전 준비). */
-const GEN_START_BUDGET_MS = 120_000;
+/**
+ * 생성 루프 전체 마감(시작부터) — 함수 한도 300초 안에서 준비·저장 몫을 남긴다. 호출마다 남은 시간을 timeout으로
+ * 주고(재시도 없음 — 재시도는 루프의 다음 시도가 맡는다), 마감에 닿으면 앞 시도 중 최선을 채택한다.
+ * 비스트리밍 호출은 생성이 끝나야 응답이 오므로 timeout = 생성 시간 상한이다(09-25 실측 호출당 ~35초).
+ */
+const GEN_DEADLINE_MS = 225_000;
+/** 남은 시간이 이보다 적으면 새 시도를 시작하지 않는다(짧은 제한으로 부르면 거의 확실히 잘려 버려진다). */
+const GEN_MIN_ATTEMPT_MS = 45_000;
 
 /** 그날 점령전 요약 — AI 입력용 구조화 신호(점령/방어/최초점령/영토순위/개인 활약). */
 export type ConquestDaySummary = {
@@ -1762,23 +1766,42 @@ async function generateLocked(
     }
     headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
   };
-  const genStartedAt = Date.now();
+  const deadline = Date.now() + GEN_DEADLINE_MS;
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0 && best && Date.now() - genStartedAt > GEN_START_BUDGET_MS) {
-      console.warn(`[chronicle] 시간 예산 소진 — 앞 시도 중 최선(점수 ${best.score}) 채택`);
-      adopt(best);
-      break;
+    const remaining = deadline - Date.now();
+    if (remaining < GEN_MIN_ATTEMPT_MS) {
+      if (best) {
+        console.warn(`[chronicle] 시간 마감 — 앞 시도 중 최선(점수 ${best.score}) 채택`);
+        adopt(best);
+        break;
+      }
+      throw new Error('CHRONICLE_TIMEOUT');
     }
     const maxTokens = chronicleMaxTokens(truncations);
-    const res = await client().messages.create({
-      model: MODEL_ID,
-      // 추론(thinking)은 기본 끔 — 7/20 짧은 예산이 추론에 다 쓰여 본문이 빈 사고. 시험용으로 CHRONICLE_THINKING=adaptive면
-      // 켜고 추론 몫 상한을 넉넉히 더한다(09-24 비교: scripts/chronicle-eval.ts).
-      max_tokens: DRAFT_THINKING ? maxTokens + 12_000 : maxTokens,
-      thinking: DRAFT_THINKING ? { type: 'adaptive' } : { type: 'disabled' },
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages,
-    });
+    let res: Anthropic.Message;
+    try {
+      res = await client().messages.create(
+        {
+          model: MODEL_ID,
+          // 추론(thinking)은 기본 끔 — 7/20 짧은 예산이 추론에 다 쓰여 본문이 빈 사고. 시험용으로 CHRONICLE_THINKING=adaptive면
+          // 켜고 추론 몫 상한을 넉넉히 더한다(09-24 비교: scripts/chronicle-eval.ts).
+          max_tokens: DRAFT_THINKING ? maxTokens + 12_000 : maxTokens,
+          thinking: DRAFT_THINKING ? { type: 'adaptive' } : { type: 'disabled' },
+          system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+          messages,
+        },
+        { timeout: remaining, maxRetries: 0 },
+      );
+    } catch (e) {
+      // 호출 실패(시간 초과·연결·과부하)가 앞 시도의 결과까지 버리게 두지 않는다 — 있으면 채택, 없으면 시간이 남는 한 다시.
+      console.warn(`[chronicle] 호출 실패(attempt ${attempt + 1}): ${(e as Error).message}`);
+      if (best) {
+        adopt(best);
+        break;
+      }
+      if (attempt === 2) throw e;
+      continue;
+    }
     track(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';

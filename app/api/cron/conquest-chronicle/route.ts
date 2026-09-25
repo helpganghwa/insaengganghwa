@@ -29,7 +29,7 @@ const MAX_DAYS_PER_TICK = 3;
 // 서버 수 × 3일이 됐다. 백필 1일치는 LLM을 두 번 부르므로 서버가 둘만 돼도 종전 60초를 넘겨
 // 함수가 강제 종료되고, 마지막 줄의 beatCron에 닿지 못해 dead-man 오탐까지 따라왔다.
 // maxDuration을 올리고(일일 크론이라 비용 영향 없음) 그 안에서 시간으로 끊는다.
-// 생성 하나가 최악 ~230초(새 시도 시작 마감 120초 + 시도 하나 ~110초)라, 새 생성은 60초 안에만 시작한다.
+// 생성 하나가 최대 225초(chronicle.ts GEN_DEADLINE_MS)라, 새 생성은 60초 안에만 시작한다.
 // 남은 날은 다음 틱(5분 간격)이 이어받는다.
 const TIME_BUDGET_MS = 60_000;
 
@@ -39,8 +39,11 @@ export async function GET(req: Request) {
   const kstDay = kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
   const startedAt = Date.now();
   try {
-    const results = [];
+    const results: Record<string, unknown>[] = [];
     let budgetHit = false;
+    // 두 단계(09-26) — 모든 서버의 공개·우편을 먼저 끝내고, LLM 생성은 뒤에서 몰아 한다. 서버 루프 안에서 생성하면
+    // 둘째 서버의 공개가 앞 서버의 생성(최대 수 분) 뒤로 밀려 함수 시간 초과에 걸린다.
+    const genQueue: { sid: number; day: string; entry: Record<string, unknown> }[] = [];
     // per-server 에러격리(감사 G1) — 한 서버 공개 실패가 뒤 서버 소유권·보상 우편 누락으로 번지지 않도록. 멱등 재시도 안전.
     for (const sid of await openServerIds()) {
       // 예산을 넘겼어도 서버 루프는 끊지 않는다 — 뒤 서버의 **공개**는 해야 한다(아래에서 LLM만 건너뜀).
@@ -130,26 +133,43 @@ export async function GET(req: Request) {
             day === kstDay
               ? await carryOverDefenders(sid, day).catch(() => ({ carried: 0 }))
               : { carried: 0 };
-          results.push({
+          const entry: Record<string, unknown> = {
             serverId: sid,
             kstDay: day,
             revealed: rev.revealed,
             mailed: rev.mailed,
             abandoned: abandoned.abandoned,
             carried: carry.carried,
-            ...(overBudget
-              ? { created: false, reason: 'budget' }
-              : await generateAndStoreChronicle(day, sid)),
-          });
-          if (overBudget) budgetHit = true;
+          };
+          results.push(entry);
+          if (overBudget) {
+            Object.assign(entry, { created: false, reason: 'budget' });
+            budgetHit = true;
+          } else genQueue.push({ sid, day, entry });
         }
       } catch (se) {
         console.error('[conquest-chronicle] server', sid, se);
         results.push({ serverId: sid, error: (se as Error).message });
       }
     }
+    // 공개 단계가 성공이면 heartbeat — 생성이 길어져 함수가 끊겨도 공개 크론 정지로 오인하지 않게.
+    if (results.every((r) => !('error' in r))) await beatCron('conquest-chronicle'); // 성공 시에만 — 공개 크론 정지를 dead-man이 감지
+
+    for (const q of genQueue) {
+      // 시간 예산은 LLM에만 건다 — 넘기면 다음 틱이 멱등으로 이어받는다.
+      if (Date.now() - startedAt > TIME_BUDGET_MS) {
+        Object.assign(q.entry, { created: false, reason: 'budget' });
+        budgetHit = true;
+        continue;
+      }
+      try {
+        Object.assign(q.entry, await generateAndStoreChronicle(q.day, q.sid));
+      } catch (ge) {
+        console.error('[conquest-chronicle] generate', q.sid, q.day, ge);
+        Object.assign(q.entry, { error: (ge as Error).message });
+      }
+    }
     const ok = results.every((r) => !('error' in r));
-    if (ok) await beatCron('conquest-chronicle'); // 성공 시에만 — 공개 크론 정지를 dead-man이 감지
     return Response.json({ ok, kstDay, budgetHit, results, kind: 'conquest-chronicle' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-chronicle]', e);

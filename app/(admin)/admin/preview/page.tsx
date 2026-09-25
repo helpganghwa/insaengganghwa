@@ -19,7 +19,7 @@ import { MeleeRerunButton } from './MeleeRerunButton';
  *  · 점령전 연대기: 23:05 생성 → 자정 공개. 검수 창 23:05~24:00(공개 후 수정도 즉시 반영).
  */
 export const dynamic = 'force-dynamic';
-// 재생성 액션이 LLM을 1~3회(호출당 최대 55초) 부른다 — 기본 예산이면 도중에 끊긴다.
+// 재생성 액션이 LLM을 1~3회 부른다(생성 루프 최대 225초) — 기본 예산이면 도중에 끊긴다.
 export const maxDuration = 300;
 
 // 항목별 **서버마다** 최근 2개만 — 검수 대상은 항상 최신분(2026-07-15), 과거분은 스크롤 노이즈.

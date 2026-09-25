@@ -2,7 +2,7 @@
 --  - milestone: enh500 | sum20k | t30 | combat10m (lib/game/balance.ts FIRST_MILESTONES).
 --  - rank 1~3 = 도달 순서. (server_id, milestone, rank) PK로 넷째는 못 들어온다. 같은 유저는 이정표당 1행.
 --  - 기록은 리더보드 증분 갱신(refreshEnhanceMetrics) 커밋 뒤 best-effort, 이정표별 advisory 락으로 직렬화.
---  - 탈퇴는 명시 삭제(withdraw.ts). 빈 순위는 다시 채우지 않는다(다음 도달자는 max(rank)+1 → 3 초과면 기록 없음).
+--  - 탈퇴해도 행을 남긴다(withdraw.ts 보존 목록) — 빈 순위를 다시 채우지 않게(다음 도달자는 max(rank)+1 → 3 초과면 기록 없음).
 --  - 신설 테이블이라 코드보다 먼저 적용해도 무해. 순서: 0218 적용 → scripts/first-milestones-backfill.ts --apply → 코드 배포.
 --  (스테이징에는 9/9 시안의 같은 테이블이 이미 있을 수 있다 — if not exists로 그대로 둔다.)
 begin;

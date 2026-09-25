@@ -52,13 +52,18 @@ export async function recordFirstMilestones(
   });
 }
 
+/** milestone_firsts 행 → judge.ts 지표(fr_<key> = 1~3, 없으면 0). 판정과 테스트가 같은 함수를 쓴다. */
+export function firstRanksFrom(rows: { milestone: string; rank: unknown }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const m of FIRST_MILESTONES) out['fr_' + m.key] = 0;
+  for (const r of rows) out['fr_' + r.milestone] = Number(r.rank);
+  return out;
+}
+
 /** 유저의 이정표 순위 — judge.ts 지표(fr_<key> = 1~3, 없으면 0). */
 export async function loadFirstRanks(userId: string, serverId: number, runner: Pick<typeof db, 'execute'> = db): Promise<Record<string, number>> {
   const rows = (await runner.execute(sql`
     select milestone, rank from milestone_firsts where user_id = ${userId}::uuid and server_id = ${serverId}
   `)) as unknown as { milestone: string; rank: unknown }[];
-  const out: Record<string, number> = {};
-  for (const m of FIRST_MILESTONES) out['fr_' + m.key] = 0;
-  for (const r of rows) out['fr_' + r.milestone] = Number(r.rank);
-  return out;
+  return firstRanksFrom(rows);
 }

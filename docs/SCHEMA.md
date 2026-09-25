@@ -377,4 +377,4 @@ create table milestone_firsts (
 ```
 
 - 쓰기는 `lib/game/titles/first-milestones.ts recordFirstMilestones` 한 경로(리더보드 증분 갱신 커밋 뒤 best-effort, 이정표별 advisory 락, 유저당 1행 멱등, rank = max+1이 3을 넘으면 기록 없음). 배포 전 도달분은 `scripts/first-milestones-backfill.ts`.
-- 탈퇴는 명시 삭제(withdraw.ts), 빈 순위는 재충원하지 않는다.
+- 탈퇴해도 행을 지우지 않는다(withdraw.ts WITHDRAW_PRESERVED) — 지우면 max(rank)+1이 빈 순위를 다시 내줘 "처음으로"가 사실과 달라진다. 칭호는 user_titles 삭제로 사라진다.

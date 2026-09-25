@@ -5282,19 +5282,19 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "first_t30_1",
   cat: "기록",
-  cond: "서버에서 처음으로 한 장비를 초월 30단계까지",
+  cond: "서버에서 처음으로 한 장비 초월 30단계 도달",
   diff: "한정"
  },
  {
   code: "first_t30_2",
   cat: "기록",
-  cond: "서버에서 두 번째로 한 장비를 초월 30단계까지",
+  cond: "서버에서 두 번째로 한 장비 초월 30단계 도달",
   diff: "한정"
  },
  {
   code: "first_t30_3",
   cat: "기록",
-  cond: "서버에서 세 번째로 한 장비를 초월 30단계까지",
+  cond: "서버에서 세 번째로 한 장비 초월 30단계 도달",
   diff: "한정"
  },
  {
