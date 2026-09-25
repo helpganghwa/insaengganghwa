@@ -90,7 +90,7 @@ export default function Doc() {
         head={['때', '벌어지는 일']}
         rows={[
           // 9시·10시는 대난투 실행·발표 크론 일정(vercel.json melee-run UTC 0시 / melee-reveal UTC 1시).
-          ['9시', '대난투. 전투력이 있으면 자동으로 참가된다.'],
+          ['9시', '대난투. 전투력이 있고 최근 30일 안에 접속했다면 자동으로 참가된다.'],
           ['10시', '대난투 결과 발표. 보상이 우편으로 지급되고 결과를 볼 수 있다.'],
           [
             <>{fmtInt(CONQUEST_BATTLE_KST_HOUR)}시</>,
@@ -187,7 +187,7 @@ export default function Doc() {
             <>
               <DocLink slug="melee">대난투</DocLink>
             </>,
-            '매일 아침 전원이 자동 참가하는 난투. 등수대로 보상이 지급된다.',
+            '매일 아침 최근 30일 안에 접속한 전원이 자동 참가하는 난투. 등수대로 보상이 지급된다.',
           ],
           [
             <>

@@ -8,7 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
-import { meleeBonus, meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+import { MELEE_ACTIVE_DAYS, meleeBonus, meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
 
@@ -70,6 +70,8 @@ export async function runMelee(serverId: number, opts: RunMeleeOptions = {}): Pr
 
   // 참가 자격: **전투력 > 0**(장비 보유로 CP가 잡히는 유저)이면 자동 참가. CP 0 = 미참가.
   //  정지 계정 제외 — 리더보드와 동일 정책(정지 중 자동 참가·보상 수령 차단).
+  //  최근 MELEE_ACTIVE_DAYS일 안에 이 서버에 접속한 캐릭터만(09-25) — 떠난 계정이 순위·보상 구간을 차지하지 않게.
+  //  기준은 실행 시각(now()) — 재실행(발표 전 같은 날)도 사실상 같은 명단.
   //  keyset 청크(감사 P1) — 서버 전 장비를 한 번에 메모리로 끌면 유저 수 비례 OOM.
   //  유저 id 순으로 잘라 배치당 장비만 적재, 누적은 {uid, cp}만.
   const BATCH = 2000;
@@ -81,7 +83,9 @@ export async function runMelee(serverId: number, opts: RunMeleeOptions = {}): Pr
              json_agg(json_build_array(ei.catalog_item_id, ei.enhance_level, ei.transcend_level)) items
       from user_equipment ei
       join profiles p on p.id = ei.user_id
+      join characters c on c.user_id = ei.user_id and c.server_id = ei.server_id
       where ei.server_id = ${serverId}
+        and c.last_seen_at >= now() - make_interval(days => ${MELEE_ACTIVE_DAYS})
         and ei.user_id > ${after}::uuid
         and (p.banned_at is null or (p.ban_until is not null and p.ban_until <= now()))
       group by ei.user_id
