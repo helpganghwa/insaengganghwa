@@ -749,7 +749,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
     `),
     // 최초 이정표(2026-09-26) — milestone_firsts의 내 순위(fr_<key> = 1~3, 없으면 0). 기록은 first-milestones.ts 한 경로.
-    () => db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`),
+    // 이 조회 하나의 실패(표 미적용 등)가 판정 전체를 멈추지 않게 — 기록이 없으면 순위 0으로 본다.
+    () => db.execute(sql`select milestone, rank from milestone_firsts where user_id=${u} and server_id=${s}`).catch(() => []),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.

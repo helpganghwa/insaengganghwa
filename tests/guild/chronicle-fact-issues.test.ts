@@ -353,3 +353,30 @@ describe('factIssues — D판 시험에서 놓친 표현(09-26)', () => {
     expect(factIssues('{g|레지스탕스|36}와 {g|로제|25}, {g|케케케|27}가 함께 노린 그 땅에서 버텼다.', c).some((i) => /동맹은 없다/.test(i))).toBe(true);
   });
 });
+
+describe('오탐 좁힘(09-26 전수조사)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['분노의 분화구', '드래곤 화산']]),
+    regionLabels: ['드래곤 화산'],
+    feats: [],
+    headcountZones: [],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map([['로제', [0, 1, 3, 2]], ['케케케', [1, 0, 2, 3]]]),
+    battleZones: [],
+    captureBy: new Map(),
+    debutGuilds: [],
+    topoGuilds: [],
+  };
+  const has = (t: string, kw: string) => factIssues(t, c).some((i) => i.includes(kw));
+  it("'새 이름으로'(개명 안내)·'처음으로 땅을 내주며'(첫 상실)는 첫 등장이 아니다", () => {
+    expect(has('{g|로제}는 새 이름으로 맞은 첫 점령전에서 {z|분노의 분화구}를 지켰다.', '첫 등장')).toBe(false);
+    expect(has('{g|로제}는 처음으로 땅을 내주며 한 곳을 잃었다.', '첫 등장')).toBe(false);
+    expect(has('{g|로제}라는 새로운 이름이 대륙에 등장했다.', '첫 등장')).toBe(true);
+  });
+  it("인물 묘사의 '고립'·길드원 '합류'는 형세·동맹이 아니다", () => {
+    expect(has('{g|로제}의 집행관은 고립된 채 끝까지 버텼다.', '형세')).toBe(false);
+    expect(factIssues('{g|로제}에 새로 합류한 이들이 {g|케케케}와 맞붙었다.', c).some((i) => i.includes('동맹'))).toBe(false);
+    expect(factIssues('{g|케케케}는 {g|로제}에 합류해 분화구를 노렸다.', c).some((i) => i.includes('동맹'))).toBe(true);
+  });
+});

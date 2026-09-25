@@ -25,6 +25,12 @@ let sql: postgres.TransactionSql = undefined as unknown as postgres.TransactionS
 
 type Hit = { userId: string; at: Date; how: string };
 
+// 제재 중(라이브 훅 isActivelyBanned와 같은 술어)은 기록하지 않는다.
+const BANNED_SQL = `select 1 from profiles p where p.id = l.user_id and p.banned_at is not null and (p.ban_until is null or p.ban_until > now())`;
+// 합산·전투력은 '지금 넘은 사람'이 아니라 '넘은 적이 있는 사람'을 찾는다 — 강화 하락으로 소급 직전에 임계 아래로
+// 내려간 1등을 놓치지 않게 후보를 넓히고, 재생에서 실제로 넘은 시각이 있는 사람만 채택한다.
+const CAND_RATIO = 0.8;
+
 async function nick(userId: string, serverId: number): Promise<string> {
   const [r] = await sql`select nickname from characters where user_id = ${userId}::uuid and server_id = ${serverId}`;
   return r?.nickname ?? userId.slice(0, 8);
@@ -32,7 +38,9 @@ async function nick(userId: string, serverId: number): Promise<string> {
 
 async function fromLogs(table: 'enhancement_logs' | 'transcend_logs', col: 'to_level' | 'to_t', serverId: number, value: number): Promise<Hit[]> {
   const rows = await sql.unsafe(
-    `select user_id::text as user_id, min(created_at) as at from ${table} where server_id = $1 and ${col} >= $2 group by user_id order by at asc limit 3`,
+    `select l.user_id::text as user_id, min(l.created_at) as at from ${table} l
+       where l.server_id = $1 and l.${col} >= $2 and not exists (${BANNED_SQL})
+       group by l.user_id order by at asc limit 3`,
     [serverId, value],
   );
   return rows.map((r) => ({ userId: r.user_id as string, at: new Date(r.at as string), how: table }));
@@ -41,8 +49,9 @@ async function fromLogs(table: 'enhancement_logs' | 'transcend_logs', col: 'to_l
 /** 합산·전투력 — 현재 값이 임계 이상인 유저만 로그 재생. */
 async function fromReplay(metric: 'sum' | 'combat', serverId: number, value: number): Promise<Hit[]> {
   const cands = await sql`
-    select user_id::text as user_id, value::bigint as value, updated_at from leaderboard_ranks
-    where server_id = ${serverId} and metric = ${metric} and value >= ${value}`;
+    select l.user_id::text as user_id, l.value::bigint as value, l.updated_at from leaderboard_ranks l
+    where l.server_id = ${serverId} and l.metric = ${metric} and l.value >= ${Math.floor(value * CAND_RATIO)}
+      and not exists (${sql.unsafe(BANNED_SQL)})`;
   const out: Hit[] = [];
   for (const c of cands) {
     const uid = c.user_id as string;
@@ -71,7 +80,8 @@ async function fromReplay(metric: 'sum' | 'combat', serverId: number, value: num
         break;
       }
     }
-    out.push({ userId: uid, at: found ?? new Date(c.updated_at as string), how: found ? 'replay' : '추정(leaderboard.updated_at)' });
+    if (found) out.push({ userId: uid, at: found, how: 'replay' });
+    else if (Number(c.value) >= value) out.push({ userId: uid, at: new Date(c.updated_at as string), how: '추정(leaderboard.updated_at)' });
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, 3);
 }

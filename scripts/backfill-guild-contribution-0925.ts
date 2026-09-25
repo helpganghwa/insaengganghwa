@@ -23,8 +23,18 @@ const run = async (tx: postgres.TransactionSql) => {
   // 기여도 보관 기능(0217 코드)이 배포된 뒤 누가 탈퇴·재가입하면 그 기간은 보관분으로 이미 복원된다 —
   // 이 스크립트가 다시 세면 이중 계산. 보관 행이 하나라도 생겼으면 기능이 이미 동작 중이므로 멈춘다.
   // 실행 순서: 0217 적용 → 이 스크립트(--apply) → 코드 배포.
-  const [live] = await tx`select 1 from guild_contribution_stash limit 1`;
-  if (live && !process.argv.includes('--force')) throw new Error('보관 행이 이미 있음 — 기능 배포 뒤라 이중 계산 위험(확인 후 --force)');
+  // 보관 행 검사만으로는 부족하다 — 재가입하면 보관 행이 지워져 표가 다시 빈다. 그래서 세는 탈퇴도
+  // 0217 적용 시각(schema_migrations) 이전으로 못 박는다. 0217 전 미리보기는 지금 시각까지 본다.
+  const [tbl] = await tx`select to_regclass('public.guild_contribution_stash') as t`;
+  let cutoff: Date = new Date();
+  if (tbl?.t) {
+    const [live] = await tx`select 1 from guild_contribution_stash limit 1`;
+    if (live && !process.argv.includes('--force')) throw new Error('보관 행이 이미 있음 — 기능 배포 뒤라 이중 계산 위험(확인 후 --force)');
+    const [mig] = await tx`select applied_at from schema_migrations where filename = '0217_guild_contribution_stash.sql'`;
+    if (!mig) throw new Error('0217 적용 기록 없음 — apply-migration으로 적용했는지 확인');
+    cutoff = new Date(mig.applied_at as string);
+  } else if (APPLY) throw new Error('guild_contribution_stash 없음 — 0217을 먼저 적용');
+  console.log(`탈퇴 기준 시각 < ${cutoff.toISOString()}`);
   const rows = (await tx`
     with cur as (
       select m.user_id, m.server_id, m.guild_id, m.joined_at, m.contribution_points cp from guild_members m
@@ -32,7 +42,7 @@ const run = async (tx: postgres.TransactionSql) => {
       select c.user_id, c.server_id, c.guild_id, a.created_at ex
         from cur c join guild_audit_log a on a.guild_id = c.guild_id and a.server_id = c.server_id
          and ((a.action = 'leave' and a.actor_user_id = c.user_id) or (a.action = 'kick' and a.target_user_id = c.user_id))
-       where a.created_at < c.joined_at
+       where a.created_at < c.joined_at and a.created_at < ${cutoff}
     ), periods as (
       select e.*, coalesce((select max(j.created_at) from guild_audit_log j where j.guild_id = e.guild_id and j.action = 'join'
                and j.actor_user_id = e.user_id and j.created_at < e.ex), g.created_at) st
@@ -59,8 +69,13 @@ const run = async (tx: postgres.TransactionSql) => {
     const tag = done ? '이미 복원' : add === 0 ? '복원 없음' : APPLY ? '복원' : '복원 예정';
     console.log(`${tag}\t${r.nickname}\t${r.guild}\t현재 ${r.now_cp} → ${Number(r.now_cp) + (done ? 0 : add)}\t(+${add}, 최소 기부 ${r.min_donations}회)`);
     if (!APPLY || done || add === 0) continue;
-    await tx`update guild_members set contribution_points = contribution_points + ${add}
-              where user_id = ${r.user_id}::uuid and server_id = ${r.server_id} and guild_id = ${r.guild_id}::bigint`;
+    const upd = await tx`update guild_members set contribution_points = contribution_points + ${add}
+              where user_id = ${r.user_id}::uuid and server_id = ${r.server_id} and guild_id = ${r.guild_id}::bigint returning 1`;
+    // 조회와 반영 사이에 떠났으면 반영된 게 없다 — '복원됨' 기록을 남기지 않는다(다음 실행이 다시 판단).
+    if (upd.length === 0) {
+      console.log(`  ↳ 건너뜀: ${r.nickname} 지금 그 길드에 없음`);
+      continue;
+    }
     await tx`insert into admin_actions (admin_user_id, action, target_type, target_id, payload)
              values (${admin.id}, 'guild_contribution_restore', 'guild_member', ${key},
                      ${sql.json({ added: add, minDonations: r.min_donations, before: r.now_cp, reason: 'inquiry #331 — 재가입 전 기여도 최소치 복원' })})`;

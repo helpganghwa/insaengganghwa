@@ -129,15 +129,16 @@ export async function refreshEnhanceMetrics(userId: string, serverId: number): P
     return { myMax, mySum, myCombat, myMaxT };
   });
   if (!done) return;
-  // 피드 발화는 커밋 후(락 밖) — 외부 파급을 락 보유 시간에 얹지 않는다.
-  await claimMilestone(userId, serverId, 'sum', done.mySum);
-  await claimMilestone(userId, serverId, 'combat', done.myCombat);
   // 최초 이정표(2026-09-26) — 네 축 값이 모두 여기 있으므로 한 번에. 실패해도 다음 갱신이 다시 시도(멱등).
+  // 피드 발화보다 먼저 — 그쪽 예외로 건너뛰면 강화 하락으로 값이 내려간 뒤엔 그 도달을 다시 못 잡는다.
   try {
     await recordFirstMilestones(userId, serverId, { max: done.myMax, sum: done.mySum, combat: done.myCombat, transcend: done.myMaxT });
   } catch {
     // best-effort
   }
+  // 피드 발화는 커밋 후(락 밖) — 외부 파급을 락 보유 시간에 얹지 않는다.
+  await claimMilestone(userId, serverId, 'sum', done.mySum);
+  await claimMilestone(userId, serverId, 'combat', done.myCombat);
 }
 
 /**

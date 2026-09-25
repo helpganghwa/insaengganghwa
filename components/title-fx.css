@@ -278,7 +278,7 @@
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
-.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after{animation-play-state:paused !important}
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after,.chat-scrolling .ttag .fx-blade b{animation-play-state:paused !important}
 }
 /* 최초 이정표 칭호(2026-09-26 확정) — 검기: 왼쪽 아래→오른쪽 위 가는 칼선이 글자 중심을 가르고, 위·아래 두 조각이
    흩어지는 동안 새 글자(한글 ⇄ 한자)가 곧바로 온전히 드러남. 6.8초 박자에 두 번(31%·81%). 파티클 없음.

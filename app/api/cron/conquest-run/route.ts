@@ -34,7 +34,8 @@ export async function GET(req: Request) {
         try {
           // 시간 예산(09-24) — 생성 한 번이 수 분 걸릴 수 있어, 앞 서버에서 이미 많이 썼으면 다음 틱(5분 뒤)에 넘긴다.
           // 넘기면 이번 틱은 정산만 하고 끝나 함수 시간 초과로 heartbeat를 놓치는 일이 없다.
-          if (Date.now() - startedAt > 120_000) {
+          // 생성은 새 시도 시작 마감 120초 + 시도 하나 최악 ~110초라, 여기서 60초를 넘겼으면 300초 안에 못 끝낼 수 있다.
+          if (Date.now() - startedAt > 60_000) {
             console.warn('[conquest-run] 시간 예산 초과 — 연대기 사전 생성은 다음 틱으로', sid);
             continue;
           }

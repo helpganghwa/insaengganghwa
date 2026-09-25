@@ -13,3 +13,5 @@ create table if not exists guild_contribution_stash (
   primary key (user_id, server_id, guild_id)
 );
 create index if not exists guild_contribution_stash_guild_idx on guild_contribution_stash (guild_id);
+-- 새 표는 RLS를 켠다(0113 규칙) — 앱은 서버 롤로만 접근하고, 공개 롤에는 정책이 없어 전부 막힌다.
+alter table guild_contribution_stash enable row level security;

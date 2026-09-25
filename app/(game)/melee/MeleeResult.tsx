@@ -196,7 +196,8 @@ function Fighter({
   hpBefore?: number;
   maxHp?: number;
 }) {
-  const dead = maxHp != null && (hp ?? 0) <= 0;
+  // HP를 모르면(잘린 개인 기록의 첫 피격 전 등) 쓰러짐으로 보지 않는다.
+  const dead = maxHp != null && hp != null && hp <= 0;
   // HP 바: 피격 전 → 후로 애니메이션(시각적 감소).
   const [pct, setPct] = useState(maxHp ? clampPct(((hpBefore ?? hp ?? 0) / maxHp) * 100) : 0);
   useEffect(() => {
@@ -873,7 +874,8 @@ export function MeleeResult({
         atkSeq: role === 0 ? mySeq : truncated ? null : w.atkSeq,
         defSeq: role === 1 ? mySeq : truncated ? null : w.defSeq,
         // 윈도 행의 공격자 HP는 윈도 안 피격만 추적해 잘린 판에선 '가득'으로 나온다 — 내 공격이면 개인 기록 기준.
-        fight: role === 0 && truncated ? { ...w.fight, atkHp: atkHpNow } : w.fight,
+        // HP를 모르면 최대치도 비워 바를 숨긴다(0%로 그리면 쓰러진 것처럼 보인다).
+        fight: role === 0 && truncated ? { ...w.fight, atkHp: atkHpNow, atkMaxHp: atkHpNow == null ? undefined : w.fight.atkMaxHp } : w.fight,
       };
     }
 
@@ -899,7 +901,7 @@ export function MeleeResult({
         atkAvatar: role === 0 ? (myAvatar ?? DEFAULT_AVATAR) : oppAvatar,
         atkHref: role === 0 ? meHref : oppHref,
         atkHp: atkHpNow,
-        atkMaxHp: role === 0 ? myMax : undefined,
+        atkMaxHp: role === 0 && atkHpNow != null ? myMax : undefined,
         tgtName: tgt,
         tgtAvatar: role === 0 ? oppAvatar : (myAvatar ?? DEFAULT_AVATAR),
         tgtHref: role === 0 ? oppHref : meHref,

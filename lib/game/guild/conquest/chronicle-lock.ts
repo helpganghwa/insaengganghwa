@@ -15,13 +15,14 @@ const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = url && token ? new Redis({ url, token }) : null;
 
-/** 생성 한 번의 상한(초안 3회 + 다듬기 1회, 호출당 최대 ~60초) + 여유. 함수가 죽어도 이 시간 뒤 자동 해제. */
+/** 생성 한 번의 상한(새 시도 시작 마감 120초 + 시도 하나 최악 ~110초) + 여유. 함수가 죽어도 이 시간 뒤 자동 해제. */
 const LOCK_TTL_SEC = 290;
 
 /** 잠금을 잡으면 해제 함수를, 이미 다른 실행이 잡고 있으면 null을 돌려준다. */
 export async function acquireChronicleLock(serverId: number, kstDay: string): Promise<(() => Promise<void>) | null> {
   if (!redis) return async () => {};
-  const key = `chronicle:gen:${serverId}:${kstDay}`;
+  // 스테이징(preview)과 프로덕션이 같은 Redis를 쓴다 — 환경을 키에 넣지 않으면 스테이징 재생성이 프로덕션 사전 생성을 막는다.
+  const key = `chronicle:gen:${process.env.VERCEL_ENV ?? 'local'}:${serverId}:${kstDay}`;
   const owner = crypto.randomUUID();
   try {
     const ok = await redis.set(key, owner, { nx: true, ex: LOCK_TTL_SEC });

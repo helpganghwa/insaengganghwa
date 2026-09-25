@@ -71,8 +71,8 @@ export async function updateChronicleAction(input: {
 
 /**
  * 연대기 재생성(2026-07-30) — 생성 결과가 이상하면 검수 창에서 주사위를 다시 굴린다.
- * 삭제 후 생성이 실패하면 자정 공개가 비어버리므로, 기존 행을 백업해 두고 실패 시 복원한다.
- * LLM 2회 호출(초안+재검수)이라 40초 안팎 걸린다 — 버튼 쪽에서 진행 표시 필수.
+ * 지우지 않고 새 결과로 **덮어쓴다**(replace) — 생성이 실패하거나 함수가 시간 초과로 끊겨도 기존 행이 그대로 남는다.
+ * LLM 1~3회(호출당 최대 55초)라 수십 초~몇 분 걸린다 — 버튼 쪽에서 진행 표시 필수.
  */
 export async function regenerateChronicleAction(input: {
   serverId: number;
@@ -80,25 +80,19 @@ export async function regenerateChronicleAction(input: {
 }): Promise<Result> {
   try {
     await requireAdmin();
-    const [backup] = await db
-      .select()
+    const [cur] = await db
+      .select({ kstDay: worldChronicle.kstDay })
       .from(worldChronicle)
       .where(
         and(eq(worldChronicle.serverId, input.serverId), eq(worldChronicle.kstDay, input.kstDay)),
       )
       .limit(1);
-    if (!backup) return { status: 'error', message: '해당 일자 연대기가 없습니다.' };
-    await db
-      .delete(worldChronicle)
-      .where(
-        and(eq(worldChronicle.serverId, input.serverId), eq(worldChronicle.kstDay, input.kstDay)),
-      );
+    if (!cur) return { status: 'error', message: '해당 일자 연대기가 없습니다.' };
     try {
-      const r = await generateAndStoreChronicle(input.kstDay, input.serverId);
+      const r = await generateAndStoreChronicle(input.kstDay, input.serverId, { replace: true });
+      if (r.reason === 'in-progress') return { status: 'error', message: '다른 생성이 진행 중입니다. 잠시 뒤 다시 시도해 주세요.' };
       if (!r.created) throw new Error(r.reason ?? 'not-created');
     } catch (e) {
-      // 복원 — 재생성 실패가 연대기 소실이 되면 안 된다.
-      await db.insert(worldChronicle).values(backup).onConflictDoNothing();
       console.error('[admin.preview] chronicle regen', (e as Error).message);
       return { status: 'error', message: '재생성에 실패해 기존 내용을 유지했습니다.' };
     }

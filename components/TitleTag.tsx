@@ -53,8 +53,12 @@ function SpreadParticles({ count }: { count: number }) {
 function BladeWord({ text }: { text: string }) {
   return (
     <span className="w">
-      <b className="sd up">{text}</b>
-      <b className="sd dn">{text}</b>
+      <b className="sd up" aria-hidden>
+        {text}
+      </b>
+      <b className="sd dn" aria-hidden>
+        {text}
+      </b>
       <b className="all">{text}</b>
       <b className="sh" aria-hidden>
         {text}

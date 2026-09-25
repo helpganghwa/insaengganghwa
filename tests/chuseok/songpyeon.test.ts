@@ -122,6 +122,21 @@ describe.skipIf(skip)('송편 통합(롤백 tx)', () => {
     });
   });
 
+  it('7~9단계(09-26 추가): 정확히 5만이면 7단계를 받고, 8·9단계는 미도달 — 10만에서 9단계까지', async () => {
+    await inRollback(async (tx) => {
+      const job = `t-${Date.now()}`;
+      await accrueSongpyeon({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: job, level: 50_000, at: IN }, tx);
+      const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 7, IN, tx)).toEqual({ ok: true, step: 7, diamond: 8_000, boxes: 300 });
+      expect(await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID)).toBe(before + 8_000n);
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 8, IN, tx)).toEqual({ ok: false, reason: 'NOT_REACHED' });
+      await accrueSongpyeon({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: `${job}-b`, level: 50_000, at: IN }, tx);
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 8, IN, tx)).toEqual({ ok: true, step: 8, diamond: 8_000, boxes: 300 });
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 9, AFTER, tx)).toEqual({ ok: true, step: 9, diamond: 8_000, boxes: 300 });
+      expect(await claimSongpyeonStep(TEST_USER_ID, SERVER_ID, 9, AFTER, tx)).toEqual({ ok: false, reason: 'ALREADY' });
+    });
+  });
+
   it('교환: 부족 거절 → 다이아 교환은 사용 가능만 줄고 누적은 그대로 → 상자 교환 → 개수 검증', async () => {
     await inRollback(async (tx) => {
       const job = `t-${Date.now()}`;

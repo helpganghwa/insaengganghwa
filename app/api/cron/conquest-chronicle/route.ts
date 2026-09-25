@@ -29,7 +29,9 @@ const MAX_DAYS_PER_TICK = 3;
 // 서버 수 × 3일이 됐다. 백필 1일치는 LLM을 두 번 부르므로 서버가 둘만 돼도 종전 60초를 넘겨
 // 함수가 강제 종료되고, 마지막 줄의 beatCron에 닿지 못해 dead-man 오탐까지 따라왔다.
 // maxDuration을 올리고(일일 크론이라 비용 영향 없음) 그 안에서 시간으로 끊는다.
-const TIME_BUDGET_MS = 240_000;
+// 생성 하나가 최악 ~230초(새 시도 시작 마감 120초 + 시도 하나 ~110초)라, 새 생성은 60초 안에만 시작한다.
+// 남은 날은 다음 틱(5분 간격)이 이어받는다.
+const TIME_BUDGET_MS = 60_000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });

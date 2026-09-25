@@ -17,5 +17,7 @@ create table if not exists milestone_firsts (
   unique (server_id, milestone, user_id)
 );
 create index if not exists milestone_firsts_user_idx on milestone_firsts (user_id, server_id);
+-- 새 표는 RLS를 켠다(0113 규칙) — 앱은 서버 롤로만 접근하고, 공개 롤에는 정책이 없어 전부 막힌다.
+alter table milestone_firsts enable row level security;
 
 commit;

@@ -1,3 +1,5 @@
+import { FIRST_MILESTONES } from '@/lib/game/balance'; // 상수만 있는 모듈 — 의존 0 원칙 유지
+
 /**
  * 아직 판정 로직이 없는 코드 — 구현 시 제거. 사유는 주석으로.
  *
@@ -15,8 +17,10 @@ export const PENDING_CODES = new Set<string>([]);
  * 이름이 보이면 "무엇이 있는지"가 드러나 기록의 의외성이 사라진다(2026-09-26 확정, 잠금 a).
  * 판정은 그대로 돈다 — 얻는 순간 목록에 나타난다.
  */
+const OWNER_ONLY = new Set(FIRST_MILESTONES.flatMap((m) => [1, 2, 3].map((r) => `first_${m.key}_${r}`)));
 export function isOwnerOnlyCode(code: string): boolean {
-  return /^first_[a-z0-9]+_[123]$/.test(code); // 접두만 보면 일반 칭호 first_bitter(첫 쓴맛)까지 숨는다
+  // 이정표 정본에서 만든 목록으로만 — 모양(first_*_N)으로 보면 일반 칭호 first_bitter(첫 쓴맛) 같은 것까지 숨는다.
+  return OWNER_ONLY.has(code);
 }
 
 /**

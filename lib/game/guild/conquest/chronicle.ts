@@ -26,8 +26,13 @@ let _client: Anthropic | null = null;
 function client(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY missing');
-  return (_client ??= new Anthropic({ apiKey: key }));
+  // 호출 하나가 함수 시간(크론 300초·어드민 300초)을 통째로 먹지 않게 — SDK 기본(10분·재시도 2회)이면
+  // 함수가 강제 종료돼 잠금·heartbeat가 남는다. 55초 × (1 + 재시도 1).
+  return (_client ??= new Anthropic({ apiKey: key, timeout: 55_000, maxRetries: 1 }));
 }
+
+/** 새 시도를 시작하는 마감 — 이 뒤엔 앞 시도 중 최선을 채택한다(시도 하나 최악 ~110초 + 이 값 < 함수 300초 − 호출 전 준비). */
+const GEN_START_BUDGET_MS = 120_000;
 
 /** 그날 점령전 요약 — AI 입력용 구조화 신호(점령/방어/최초점령/영토순위/개인 활약). */
 export type ConquestDaySummary = {
@@ -1660,22 +1665,25 @@ export type ChroniclePreview = {
 export async function generateAndStoreChronicle(
   kstDay: string,
   serverId: number,
-  /** dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04). */
-  opts: { dryRun?: boolean } = {},
+  /**
+   * dryRun — DB에 저장하지 않고 생성 결과만 돌려준다(프롬프트 점검용, 2026-09-04).
+   * replace — 있는 행을 새 결과로 덮어쓴다(어드민 재생성). 지우고 만들면 생성이 중간에 끊길 때 연대기가 사라진다.
+   */
+  opts: { dryRun?: boolean; replace?: boolean } = {},
 ): Promise<{ created: boolean; reason?: string; preview?: ChroniclePreview }> {
   const [existing] = await db
     .select({ kstDay: worldChronicle.kstDay })
     .from(worldChronicle)
     .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
     .limit(1);
-  if (existing && !opts.dryRun) return { created: false, reason: 'already' };
+  if (existing && !opts.dryRun && !opts.replace) return { created: false, reason: 'already' };
 
   // 같은 (서버, 날짜)를 동시에 두 번 생성하지 않는다(23시대 5분 틱이 앞 틱의 생성 중에 또 들어오던 문제).
   const release = opts.dryRun ? async () => {} : await acquireChronicleLock(serverId, kstDay);
   if (!release) return { created: false, reason: 'in-progress' };
   try {
     // 잠금을 잡는 사이 앞 틱이 저장을 끝내고 풀었을 수 있다 — 잠금 안에서 다시 본다(중복 생성 비용 방지).
-    if (!opts.dryRun) {
+    if (!opts.dryRun && !opts.replace) {
       const [again] = await db
         .select({ kstDay: worldChronicle.kstDay })
         .from(worldChronicle)
@@ -1692,7 +1700,7 @@ export async function generateAndStoreChronicle(
 async function generateLocked(
   kstDay: string,
   serverId: number,
-  opts: { dryRun?: boolean },
+  opts: { dryRun?: boolean; replace?: boolean },
 ): Promise<{ created: boolean; reason?: string; preview?: ChroniclePreview }> {
   const pack = await buildChronicleFactPack(kstDay, serverId);
   // 토큰 사용량(09-24) — 호출마다 합산해 생성 끝에 한 줄로 남긴다(비용·캐시 적중을 로그로 보려고).
@@ -1754,7 +1762,13 @@ async function generateLocked(
     }
     headlineCandidates = bigChange ? [...new Set([headline, ...cleaned].filter(Boolean))].slice(0, 5) : [];
   };
+  const genStartedAt = Date.now();
   for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0 && best && Date.now() - genStartedAt > GEN_START_BUDGET_MS) {
+      console.warn(`[chronicle] 시간 예산 소진 — 앞 시도 중 최선(점수 ${best.score}) 채택`);
+      adopt(best);
+      break;
+    }
     const maxTokens = chronicleMaxTokens(truncations);
     const res = await client().messages.create({
       model: MODEL_ID,
@@ -1870,10 +1884,19 @@ async function generateLocked(
     const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, factCtx), ...headlineIssues(headline, factCtx)];
     return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest, usage, issues } };
   }
-  await db
-    .insert(worldChronicle)
-    .values({ serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates, generatedText: today, generatedHeadline: headline })
-    .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
+  const row = { serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates, generatedText: today, generatedHeadline: headline };
+  if (opts.replace) {
+    // 새로 만든 것과 같은 상태로(운영자 수정본도 새 원본으로 바뀐다 — 재생성의 뜻).
+    await db
+      .insert(worldChronicle)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [worldChronicle.serverId, worldChronicle.kstDay],
+        set: { todayText: today, headline, reviewNotes, guildRefs, headlineCandidates, generatedText: today, generatedHeadline: headline, createdAt: sql`now()` },
+      });
+    return { created: true };
+  }
+  await db.insert(worldChronicle).values(row).onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }
 
