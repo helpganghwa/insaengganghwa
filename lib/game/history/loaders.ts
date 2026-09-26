@@ -298,6 +298,34 @@ async function buildStory(
   }
   // 집계 사건: 최대 영토(차트 길드만), 대륙에서 사라짐(>0 → 0), 과반(첫 도달).
   const vanishes: { dayIdx: number; gid: number }[] = [];
+  /** 진행 중인 장의 '지금 판도'와 '귀환' — 마지막 날 주인·뒤쫓는 길드의 보유(사흘 전 대비), 장 안에서 사라졌다 돌아온 길드. */
+  const ongoingExtras = (leader: number, startIdx: number, endIdx: number): Pick<EraFacts, 'now' | 'returns'> => {
+    const back = Math.max(startIdx, endIdx - 3);
+    const count = (gid: number, i: number) => byGuild.get(gid)?.[i] ?? 0;
+    let runner: number | null = null;
+    for (const gid of byGuild.keys()) if (gid !== leader && count(gid, endIdx) > 0 && (runner == null || count(gid, endIdx) > count(runner, endIdx))) runner = gid;
+    const day = kstDays[endIdx]!;
+    // 귀환 — 이 장 안에 다시 깃발을 세운 날. 사라진 건 앞 장이어도 된다(9/5에 사라졌다 9/25에 돌아온 프로미스나인).
+    const returns: NonNullable<EraFacts['returns']> = [];
+    for (const [gid, arr] of byGuild) {
+      for (let i = Math.max(startIdx, 1); i <= endIdx; i++) {
+        if (arr[i]! > 0 && arr[i - 1] === 0 && vanishes.some((v) => v.gid === gid && v.dayIdx < i)) {
+          returns.push({ day: kstDays[i]!, guild: nameOn(gid, kstDays[i]!) });
+        }
+      }
+    }
+    returns.sort((a, b) => a.day.localeCompare(b.day));
+    return {
+      now: {
+        day,
+        leaderCount: count(leader, endIdx),
+        leaderBefore: count(leader, back),
+        sinceDay: kstDays[back]!,
+        runner: runner == null ? null : { guild: nameOn(runner, day), count: count(runner, endIdx), before: count(runner, back) },
+      },
+      returns,
+    };
+  };
   const half = Math.ceil(zoneRows.length / 2);
   for (const g of ids) {
     const arr = byGuild.get(g)!;
@@ -423,6 +451,9 @@ async function buildStory(
       ].map((s) => JSON.parse(s) as { day: string; guild: string }),
       closing: next ? { next: plainName(next.guildId, kstDays[next.startIdx]!), peak, to: arr[next.startIdx]! } : null,
       headlines: kstDays.slice(era.startIdx, era.endIdx + 1).map((kd) => stripIds(headlineOf.get(kd) ?? '')).filter(Boolean),
+      // 진행 중인 장만(09-26) — 주인 중심 항목(석권·최대·소멸)만으로는 최근 며칠의 흐름(추격·귀환)이 사실표에 없어,
+      // 새로 써도 글이 며칠 전에서 멈춘 것처럼 읽혔다. 끝난 장에는 넣지 않는다(사실표 해시가 바뀌어 제안이 다시 생기지 않게).
+      ...(next ? {} : ongoingExtras(era.guildId, era.startIdx, era.endIdx)),
     });
   });
   return { story: { guilds: guildsOut, counts, eras, events }, ownersByDay, guildsById, nameAliases, eraFacts };

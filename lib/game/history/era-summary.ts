@@ -39,6 +39,10 @@ export type EraFacts = {
   closing: { next: string; peak: number; to: number } | null;
   /** 그 시대 날들의 헤드라인(마커 유지) — 분위기 참고용. 여기 마커로 나온 길드는 요약에서도 마커로 쓸 수 있다. */
   headlines: string[];
+  /** 진행 중인 장만 — 마지막 날의 판도: 주인·뒤쫓는 길드의 보유와 사흘 전(sinceDay) 보유. */
+  now?: { day: string; leaderCount: number; leaderBefore: number; sinceDay: string; runner: { guild: string; count: number; before: number } | null };
+  /** 진행 중인 장만 — 장 안에서 사라졌다가 다시 깃발을 세운 길드(돌아온 날). */
+  returns?: { day: string; guild: string }[];
 };
 
 export type EraNarrative = { summary: string; closing: string };
@@ -67,6 +71,7 @@ const SYSTEM = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 
 
 출력은 JSON 하나만: {"summary": string, "closing": string}
 - summary: 이 시대를 여는 글. 4~6문장, 200~380자. 첫 문장은 시대가 어떻게 시작됐는지(누가 누구를 밀어내고 앞자리에 섰는지, 첫 장이면 첫 깃발), 이어서 그 시대에 있었던 일(석권·최대 영토·개명·사라진 길드·헤드라인에 남은 굵직한 사건), 있는 것만. 나열이 아니라 흐름이 있는 이야기로. **사건은 [사실]의 날짜 순서대로** 쓴다(최대 영토가 개명 뒤라면 개명을 먼저). **시대가 어떻게 끝났는지(누구에게 넘겼는지, 마지막 보유 수)는 summary에 쓰지 않는다** — 그건 closing의 몫이라 겹치면 같은 말이 두 번 나온다.
+- 진행 중인 장이면(사실에 '지금'이 있으면) summary의 마지막 문장은 '지금'의 판도로 맺는다 — 주인의 현재 보유와 뒤를 쫓는 길드의 움직임(사흘 사이 늘었는지 줄었는지)을 [사실]의 수로. 최근 며칠의 헤드라인 사건도 연표 뒤에 이어서 담아, 글이 며칠 전에서 멈춘 것처럼 읽히지 않게 한다.
 - closing: [사실]에 '끝'이 있을 때만 한 문장(며칠 만에 누구에게 넘겼는지, 보유 수 변화). 없으면 빈 문자열.`;
 
 const FORBIDDEN = /1위|2위|3위|순위|선두|1등|—|인생강화|[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
@@ -82,6 +87,8 @@ export function allowedGuildNames(facts: EraFacts): Set<string> {
     ...facts.sweeps.map((s) => s.guild),
     ...facts.vanished.map((v) => v.guild),
     ...(facts.closing ? [facts.closing.next] : []),
+    ...(facts.now?.runner ? [facts.now.runner.guild] : []),
+    ...(facts.returns ?? []).map((r) => r.guild),
   ]);
   for (const h of facts.headlines) for (const m of h.matchAll(GUILD_MARKER)) names.add(m[1]!.trim());
   return names;
@@ -152,6 +159,17 @@ export function validateNarrative(text: string, facts: EraFacts, kind: 'summary'
     allowedNumbers.add(facts.closing.peak);
     allowedNumbers.add(facts.closing.to);
   }
+  if (facts.now) {
+    pushDate(facts.now.day);
+    pushDate(facts.now.sinceDay);
+    allowedNumbers.add(facts.now.leaderCount);
+    allowedNumbers.add(facts.now.leaderBefore);
+    if (facts.now.runner) {
+      allowedNumbers.add(facts.now.runner.count);
+      allowedNumbers.add(facts.now.runner.before);
+    }
+  }
+  for (const r of facts.returns ?? []) pushDate(r.day);
   for (const m of plain.matchAll(/\d+/g)) if (!allowedNumbers.has(Number(m[0]))) return `unknown number ${m[0]}`;
   // 날짜 순서 — 'N월 M일'이 앞뒤로 거꾸로 나오면 이야기 흐름이 꼬인다(09-18 검수: 9월 10일 개명 뒤에 9월 8일 개명).
   let prevKey = 0;
@@ -192,10 +210,18 @@ function factLines(f: EraFacts): string {
     timeline.push({ day: f.peakDay, order: 3, text: `최대 영토 — ${G(who, ['이', '가'])} ${f.peak}곳을 쥠(이 장의 최대)` });
   }
   for (const v of f.vanished) timeline.push({ day: v.day, order: 4, text: `소멸 — ${G(v.guild, ['이', '가'])} 마지막 구역을 잃고 대륙에서 사라짐` });
+  for (const r of f.returns ?? []) timeline.push({ day: r.day, order: 5, text: `귀환 — 사라졌던 ${G(r.guild, ['이', '가'])} 다시 깃발을 세움` });
   timeline.sort((a, b) => a.day.localeCompare(b.day) || a.order - b.order);
   if (timeline.length > 0) {
     L.push('연표(날짜순 — 이 순서대로 쓸 것):');
     for (const e of timeline) L.push(`· ${md(e.day)} ${e.text}`);
+  }
+  if (f.now) {
+    const r = f.now.runner;
+    L.push(
+      `지금(${md(f.now.day)} 기준): ${G(f.leaderAtEnd)} ${f.now.leaderCount}곳(${md(f.now.sinceDay)} ${f.now.leaderBefore}곳)` +
+        (r ? `, 뒤를 쫓는 ${G(r.guild)} ${r.count}곳(${md(f.now.sinceDay)} ${r.before}곳)` : ''),
+    );
   }
   if (f.closing) L.push(`끝: ${f.days}일 만에 ${G(f.leaderAtEnd, ['이', '가'])} ${G(f.closing.next)}에게 가장 넓은 영토를 내줌. ${G(f.leaderAtEnd)}의 영토는 ${f.closing.peak}곳에서 ${f.closing.to}곳으로`);
   return L.join('\n');
