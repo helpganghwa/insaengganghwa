@@ -29,6 +29,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 
 import { pickRandomHairLength, pickRandomPose, pickRandomRace } from './compose';
 import { hasGeneratedCustomAvatar } from './queue';
+import { getAvatarGenPause } from './gen-pause';
 import { CreateProfileJobError } from './errors';
 
 // 유저 입력은 gender만 (2026-05-28). hair color/style·pose 폐기, expression·race는 서버 random.
@@ -48,6 +49,8 @@ export async function createProfileJob(
 ): Promise<CreateProfileJobResult> {
   const userId = await getSessionUserId();
   if (!userId) throw new CreateProfileJobError('UNAUTHORIZED');
+  // 일시 중지면 차감·잡 생성 전에 막는다(외부 서비스 장애 중 실패-환불 반복 방지).
+  if ((await getAvatarGenPause()).paused) throw new CreateProfileJobError('PAUSED');
   const serverId = await getActiveServerId();
 
   // 프로필 최대 PROFILE_MAX개 — 초과 시 생성 차단(기본 2개 포함).

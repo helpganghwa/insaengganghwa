@@ -12,6 +12,8 @@ import { listServers } from '@/lib/game/servers';
 import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
 import { AdminAvatarViewer } from './AdminAvatarViewer';
+import { AvatarGenPauseToggle } from './AvatarGenPauseToggle';
+import { getAvatarGenPause } from '@/lib/game/profile/gen-pause';
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
 
@@ -51,6 +53,7 @@ export default async function AdminProfileGenPage({
   const searching = q.length > 0;
   const srvFilter = parseServerFilter(sp.srv);
   const servers = await listServers();
+  const genPause = await getAvatarGenPause();
   const srvQs = srvFilter != null ? `&srv=${srvFilter}` : ''; // 날짜·상태 네비가 서버 필터 보존
   // 날짜 필터(KST 하루). 기본 = 오늘(KST). createdAt(UTC timestamptz)을 KST 일자 범위로 조회.
   const kstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -140,6 +143,7 @@ export default async function AdminProfileGenPage({
       <h1 className="text-lg font-bold">🎨 아바타 생성 내역 ({rows.length})</h1>
       {/* 검색 — 유저코드/닉네임/거래(job)ID. 검색 중엔 날짜·필터 숨김. */}
       <AdminSearch basePath="/admin/profile-gen" initialQuery={q} />
+      <AvatarGenPauseToggle paused={genPause.paused} note={genPause.note} />
       <ServerFilter
         basePath="/admin/profile-gen"
         servers={servers}

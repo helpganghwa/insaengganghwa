@@ -10,6 +10,7 @@ import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipmen
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { PROFILE_GENERATION_DIAMOND, profileGenPrice } from '@/lib/game/balance';
 import { getMyProfileQueueInfo, hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
+import { getAvatarGenPause } from '@/lib/game/profile/gen-pause';
 
 import { CreateProfileForm } from './CreateProfileForm';
 
@@ -55,6 +56,7 @@ export default async function CreateProfilePage() {
   const profileCount = _r?.[3]?.[0]?.n ?? 0;
   const hasCustom = _r?.[4] ?? false;
   const price = profileGenPrice(hasCustom);
+  const pause = await getAvatarGenPause();
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
   const equippedSlots = (['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
@@ -81,6 +83,8 @@ export default async function CreateProfilePage() {
         profileCount={profileCount}
         equipped={equippedSlots}
         queue={queueInfo}
+        paused={pause.paused}
+        pauseNote={pause.note}
       />
       </div>
     </>
