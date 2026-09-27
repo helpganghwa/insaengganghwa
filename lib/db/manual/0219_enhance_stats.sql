@@ -367,4 +367,14 @@ begin
   return n;
 end $$;
 
+-- 외부 API(RPC)로 부를 이유가 없다 — 앱은 서버 롤로만 부른다.
+revoke execute on function enhance_stats_init(uuid, smallint) from public, anon, authenticated;
+revoke execute on function enhance_equip_init(bigint, uuid, smallint) from public, anon, authenticated;
+revoke execute on function enhance_stats_next(enhance_stats, enhance_result, int, int, bigint, bigint, bigint, timestamptz) from public, anon, authenticated;
+revoke execute on function enhance_equip_next(enhance_equip_stats, enhance_result, int, int, timestamptz) from public, anon, authenticated;
+revoke execute on function enhance_stats_save(enhance_stats) from public, anon, authenticated;
+revoke execute on function enhance_equip_save(enhance_equip_stats) from public, anon, authenticated;
+revoke execute on function enhance_stats_apply(uuid, smallint, bigint, bigint, enhance_result, int, int, bigint, bigint, bigint, timestamptz) from public, anon, authenticated;
+revoke execute on function enhance_stats_rebuild(uuid, smallint, bigint) from public, anon, authenticated;
+
 commit;
