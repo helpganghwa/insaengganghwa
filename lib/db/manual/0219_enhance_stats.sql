@@ -12,8 +12,8 @@
 --  - ready=false면 누적값을 믿지 않는다. 기존 유저는 첫 수령 때 ready=false 행이 생기고, 재구성(백필 스크립트
 --    또는 칭호 판정 진입 시 자가 복구)이 전체 기록으로 다시 세워 ready=true로 만든다. 기록이 없는 신규 유저는
 --    첫 수령부터 ready=true.
---  - 동시성: 반영·재구성 모두 enhance_stats 행 락을 먼저 잡는다. 재구성 중 들어온 수령은 락을 기다렸다가
---    재구성 결과 위에 반영된다(재구성이 못 본 미커밋 로그 = 그 수령 자신).
+--  - 동시성: 반영은 enhance_stats 행 락을 잡고 한다. 재구성은 락 없이 대부분을 센 뒤 짧게 락을 잡고 나머지를
+--    이어 센다(재구성 함수 주석). 재구성 마무리 중 들어온 수령은 락을 기다렸다가 결과 위에 반영된다.
 --  - 반영이 실패해도 강화 수령은 실패하지 않는다 — 예외를 삼키고 그 행을 ready=false로 돌려 다음 판정 때 재구성.
 --
 -- 순서: 0219 적용 → 코드 배포(resolve.ts가 enhance_stats_apply를 부른다 — 함수가 없으면 수령이 실패하므로
@@ -322,48 +322,93 @@ begin
 end $$;
 
 -- ── 전체 기록으로 재구성(백필·자가 복구). p_upto_id는 검증용(그 id까지만 센다). 반환 = 센 로그 수. ──
+-- 두 단계: ① 락 없이 지금까지의 기록(id ≤ m)을 센다 ② 유저 행 락을 잡고 그사이 커밋된 기록(id > m)만 이어 센다.
+-- 락을 ①까지 잡으면 기록이 수백만 건인 유저의 재구성 동안 그 유저의 수령이 전부 락을 기다리며 DB 연결을 붙잡는다.
+-- ①이 못 본 기록(①의 조회 시점에 미커밋이던 낮은 id)이 있으면 락을 쥔 채 ①을 다시 한다 — 락을 쥔 동안엔
+-- 이 유저의 수령이 커밋되지 못하므로(수령 문장의 반영 함수가 이 락을 기다린다) 두 번째는 반드시 맞는다.
+-- 이미 ready인 행은 건드리지 않는다(p_upto_id 검증 호출 제외) — 같은 유저의 재구성은 advisory 락으로 한 줄로 세운다.
 create or replace function enhance_stats_rebuild(p_user uuid, p_server smallint, p_upto_id bigint default null)
 returns int language plpgsql as $$
 declare
   s enhance_stats;
   e enhance_equip_stats;
   r record;
-  cur_ue bigint := null;
-  n int := 0;
+  cur_ue bigint;
+  n int;
+  m bigint;
+  seen int;
+  locked boolean := false;
 begin
-  -- 행 락을 먼저 잡는다 — 이 동안 들어오는 수령은 기다렸다가 재구성 결과 위에 반영된다.
-  insert into enhance_stats (user_id, server_id, ready) values (p_user, p_server, false)
-  on conflict (user_id, server_id) do update set ready = false;
+  perform pg_advisory_xact_lock(hashtext('enhance_stats_rebuild'), hashtext(p_user::text || ':' || p_server::text));
+  if p_upto_id is null and exists(
+    select 1 from enhance_stats where user_id = p_user and server_id = p_server and ready) then
+    return 0; -- 앞선 재구성이 끝냈다
+  end if;
 
-  s := enhance_stats_init(p_user, p_server);
+  loop
+    select max(id) into m from enhancement_logs
+    where user_id = p_user and server_id = p_server and (p_upto_id is null or id <= p_upto_id);
+    m := coalesce(m, 0);
+
+    s := enhance_stats_init(p_user, p_server);
+    n := 0;
+    for r in
+      select id, result, from_level, to_level, elapsed_ms, reduced_ms, overdue_ms, created_at
+      from enhancement_logs
+      where user_id = p_user and server_id = p_server and id <= m
+      order by id
+    loop
+      s := enhance_stats_next(s, r.result, r.from_level, r.to_level, r.elapsed_ms, r.reduced_ms, r.overdue_ms, r.created_at);
+      s.last_log_id := r.id;
+      n := n + 1;
+    end loop;
+
+    delete from enhance_equip_stats where user_id = p_user and server_id = p_server;
+    cur_ue := null;
+    for r in
+      select user_equipment_id as ueid, result, from_level, to_level, created_at
+      from enhancement_logs
+      where user_id = p_user and server_id = p_server and id <= m
+      order by user_equipment_id, id
+    loop
+      if cur_ue is distinct from r.ueid then
+        if cur_ue is not null then perform enhance_equip_save(e); end if;
+        e := enhance_equip_init(r.ueid, p_user, p_server);
+        cur_ue := r.ueid;
+      end if;
+      e := enhance_equip_next(e, r.result, r.from_level, r.to_level, r.created_at);
+    end loop;
+    if cur_ue is not null then perform enhance_equip_save(e); end if;
+
+    if not locked then
+      insert into enhance_stats (user_id, server_id, ready) values (p_user, p_server, false)
+      on conflict (user_id, server_id) do nothing;
+      perform 1 from enhance_stats where user_id = p_user and server_id = p_server for update;
+      locked := true;
+    end if;
+    select count(*) into seen from enhancement_logs
+    where user_id = p_user and server_id = p_server and id <= m;
+    exit when seen = n;
+  end loop;
+
+  -- ② 락을 쥔 뒤: ① 이후 커밋된 기록을 이어 센다(수령 경로와 같은 순서·같은 함수)
   for r in
-    select id, result, from_level, to_level, elapsed_ms, reduced_ms, overdue_ms, created_at
+    select id, user_equipment_id as ueid, result, from_level, to_level, elapsed_ms, reduced_ms, overdue_ms, created_at
     from enhancement_logs
-    where user_id = p_user and server_id = p_server and (p_upto_id is null or id <= p_upto_id)
+    where user_id = p_user and server_id = p_server and id > m and (p_upto_id is null or id <= p_upto_id)
     order by id
   loop
     s := enhance_stats_next(s, r.result, r.from_level, r.to_level, r.elapsed_ms, r.reduced_ms, r.overdue_ms, r.created_at);
     s.last_log_id := r.id;
     n := n + 1;
+    select * into e from enhance_equip_stats where user_equipment_id = r.ueid;
+    if not found then e := enhance_equip_init(r.ueid, p_user, p_server); end if;
+    e := enhance_equip_next(e, r.result, r.from_level, r.to_level, r.created_at);
+    perform enhance_equip_save(e);
   end loop;
+
   s.ready := true;
   perform enhance_stats_save(s);
-
-  delete from enhance_equip_stats where user_id = p_user and server_id = p_server;
-  for r in
-    select user_equipment_id as ueid, result, from_level, to_level, created_at
-    from enhancement_logs
-    where user_id = p_user and server_id = p_server and (p_upto_id is null or id <= p_upto_id)
-    order by user_equipment_id, id
-  loop
-    if cur_ue is distinct from r.ueid then
-      if cur_ue is not null then perform enhance_equip_save(e); end if;
-      e := enhance_equip_init(r.ueid, p_user, p_server);
-      cur_ue := r.ueid;
-    end if;
-    e := enhance_equip_next(e, r.result, r.from_level, r.to_level, r.created_at);
-  end loop;
-  if cur_ue is not null then perform enhance_equip_save(e); end if;
   return n;
 end $$;
 
