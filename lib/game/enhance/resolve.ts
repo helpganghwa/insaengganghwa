@@ -180,8 +180,16 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
              ${durationMs}::bigint, ${reducedMs}::bigint, ${rolled}, ${overdueMs}::bigint
       from j
       returning id
+    ),
+    -- 칭호 판정용 강화 누적(0219) — 같은 문장이라 로그와 함께 커밋된다. 함수 안에서 실패를 삼키므로
+    -- 수령을 막지 않는다(실패 시 그 행을 재구성 대상으로 돌림). 최종 select가 참조해야 실행된다.
+    st as (
+      select enhance_stats_apply(j.user_id, j.server_id, j.user_equipment_id, lg.id,
+               ${outcome}::enhance_result, ${fromLevel}, ${toLevel}, ${elapsedMs}::bigint,
+               ${reducedMs}::bigint, ${overdueMs}::bigint, now()) as ok
+      from j, lg
     )
-    select (select count(*) from j)::int as applied
+    select (select count(*) from j)::int as applied, (select count(*) from st)::int as stats
   `)) as unknown as Row[];
 
   if (Number(w[0]?.applied ?? 0) === 0) {

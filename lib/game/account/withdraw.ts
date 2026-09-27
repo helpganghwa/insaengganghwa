@@ -130,6 +130,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
 
     // 강화/초월/보급 이력·상태.
     await tx.execute(sql`delete from enhancement_logs where user_id = ${uid}`);
+    await tx.execute(sql`delete from enhance_stats where user_id = ${uid}`);
+    await tx.execute(sql`delete from enhance_equip_stats where user_id = ${uid}`);
     await tx.execute(sql`delete from gem_time_reductions where user_id = ${uid}`);
     await tx.execute(sql`delete from enhancement_jobs where user_id = ${uid}`);
     await tx.execute(sql`delete from transcend_logs where user_id = ${uid}`);
