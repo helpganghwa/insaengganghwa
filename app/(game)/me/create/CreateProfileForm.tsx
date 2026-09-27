@@ -48,6 +48,8 @@ export function CreateProfileForm({
   profileCount,
   equipped,
   queue,
+  paused,
+  pauseNote,
 }: {
   diamond: string;
   price: number;
@@ -56,6 +58,9 @@ export function CreateProfileForm({
   profileCount: number;
   equipped: EquippedSlot[];
   queue: ProfileQueueInfo | null;
+  /** 운영자 일시 중지(gen-pause) — 버튼을 잠그고 안내를 띄운다. 서버도 같은 스위치로 막는다. */
+  paused: boolean;
+  pauseNote: string | null;
 }) {
   const router = useRouter();
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
@@ -104,7 +109,7 @@ export function CreateProfileForm({
   const enough = balance >= BigInt(price);
   const inProgress = queue !== null;
   // 부족(enough)은 더 이상 disabled 사유가 아님 — 클릭 시 충전 유도 팝업(2026-08-22).
-  const disabled = pending || inProgress || !allEquipped;
+  const disabled = pending || inProgress || !allEquipped || paused;
 
   const onClick = () => {
     if (disabled) return;
@@ -191,6 +196,14 @@ export function CreateProfileForm({
 
   return (
     <div className="space-y-4">
+      {paused ? (
+        <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 dark:border-amber-700/50 dark:bg-amber-950/30">
+          <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">아바타 생성을 잠시 멈췄어요</div>
+          <p className="mt-1 break-keep text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/80">
+            {pauseNote || '생성 서비스 점검으로 지금은 새 아바타를 만들 수 없어요. 다시 열리면 이 화면에서 바로 이용할 수 있어요.'}
+          </p>
+        </div>
+      ) : null}
       {/* 성별 선택 */}
       <section>
         <div className="mb-2 text-xs font-medium text-zinc-500">성별</div>
@@ -293,7 +306,7 @@ export function CreateProfileForm({
             : 'bg-violet-600 text-white'
         }`}
       >
-        {pending ? '요청 중…' : !allEquipped ? '장비 3종 장착 필요' : '아바타 생성'}
+        {pending ? '요청 중…' : paused ? '생성 일시 중지 중' : !allEquipped ? '장비 3종 장착 필요' : '아바타 생성'}
       </button>
 
       {/* 확인 팝업 — 차감·소요시간·환불 조건을 한자리에서 알리고 확정받는다. */}

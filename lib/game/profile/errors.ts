@@ -8,7 +8,9 @@ export type CreateProfileJobErrorCode =
   | 'NO_EQUIPMENT'
   | 'INSUFFICIENT_DIAMOND'
   | 'PROFILE_GEN_IN_PROGRESS'
-  | 'PROFILE_LIMIT';
+  | 'PROFILE_LIMIT'
+  /** 운영자가 아바타 생성을 일시 중지함(gen-pause.ts — 외부 생성 서비스 장애 등). */
+  | 'PAUSED';
 
 export class CreateProfileJobError extends Error {
   constructor(public code: CreateProfileJobErrorCode) {

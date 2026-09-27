@@ -12,6 +12,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
 import { adminActions } from '@/lib/db/schema/ops';
 import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
+import { setAvatarGenPause } from '@/lib/game/profile/gen-pause';
 
 /**
  * 통과 아바타 회수 + 다이아 환불 (분쟁 처리).
@@ -201,5 +202,25 @@ export async function adminConfirmReview(jobId: string): Promise<{ ok: boolean; 
     .set({ adminDecision: 'confirm', adminReviewedAt: new Date() })
     .where(eq(profileGenerationJobs.id, jid));
   revalidatePath('/admin/profile-gen');
+  return { ok: true };
+}
+
+/**
+ * 아바타 생성 일시 중지 전환(gen-pause.ts) — 외부 생성 서비스 장애 때 새 요청을 막는다.
+ * 이미 들어간 잡은 그대로 진행되고 실패하면 기존 경로가 환불한다. 전환마다 admin_actions에 남긴다.
+ */
+export async function setAvatarGenPauseAction(paused: boolean, note: string): Promise<{ ok: boolean }> {
+  const adminUserId = await requireAdmin();
+  const trimmed = note.trim().slice(0, 200) || null;
+  await setAvatarGenPause(paused, adminUserId, trimmed);
+  await db.insert(adminActions).values({
+    adminUserId,
+    action: paused ? 'avatar_gen_pause' : 'avatar_gen_resume',
+    targetType: 'system_mode',
+    targetId: 'avatar_gen',
+    payload: { note: trimmed },
+  });
+  revalidatePath('/admin/profile-gen');
+  revalidatePath('/me/create');
   return { ok: true };
 }
