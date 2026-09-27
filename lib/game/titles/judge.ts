@@ -10,6 +10,15 @@ import { CHALLENGES } from '@/lib/game/challenges/defs';
 import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
+import {
+  clean20Sql,
+  enhCountsSql,
+  enhDeepSql,
+  enhEquipSql,
+  enhRunsSql,
+  enhancedOnDaySql,
+  first100DaysSql,
+} from './enhance-metrics';
 import { TITLE_SECRETS } from './defs.server';
 
 /**
@@ -135,56 +144,32 @@ async function runLimited<T>(thunks: (() => Promise<T>)[], limit: number): Promi
   return out;
 }
 
+/**
+ * 강화 누적 행(0219)을 믿을 수 있게 — 없거나 ready=false면 전체 기록으로 재구성한다.
+ * 백필 전 기존 유저·반영 실패로 내려간 행의 자가 복구 경로. 백필 뒤엔 행 하나 조회로 끝난다.
+ */
+async function ensureEnhanceStats(userId: string, serverId: number): Promise<void> {
+  const [row] = (await db.execute(sql`
+    select ready from enhance_stats where user_id=${userId}::uuid and server_id=${serverId}
+  `)) as unknown as { ready: boolean }[];
+  if (row?.ready) return;
+  await db.execute(sql`select enhance_stats_rebuild(${userId}::uuid, ${serverId}::smallint)`);
+}
+
 async function collectMetrics(userId: string, serverId: number): Promise<Metrics> {
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
+  await ensureEnhanceStats(userId, serverId);
 
   // ⚠ 이름 순서는 아래 배열 **순서와 1:1**이다. 중간에 쿼리를 끼워 넣고 이름을 끝에 붙이면
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
   const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, firsts] = await runLimited([
-    // 강화 로그 집계
-    () => db.execute(sql`
-      select count(*)::int as total,
-             count(*) filter (where result in ('success','mega'))::int as ok,
-             count(*) filter (where result='mega')::int as mega,
-             count(*) filter (where result='down')::int as down,
-             count(*) filter (where result='down' and from_level % 10 = 9)::int as down9,
-             count(*) filter (where result='down' and from_level = 199)::int as cliff,
-             count(*) filter (where result='mega' and to_level = 100)::int as crown,
-             count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) between 3 and 4)::int as owl,
-             count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) between 5 and 6)::int as early,
-             count(*) filter (where extract(isodow from created_at ${sql.raw(KST)}) in (6,7))::int as weekend,
-             count(*) filter (where extract(isodow from created_at ${sql.raw(KST)})=5 and extract(hour from created_at ${sql.raw(KST)}) >= 20)::int as friday,
-             count(*) filter (where extract(isodow from created_at ${sql.raw(KST)})=1 and result='down')::int as monday_down,
-             count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) between 18 and 20)::int as evening,
-             count(*) filter (where extract(hour from created_at ${sql.raw(KST)}) = 12)::int as lunch,
-             -- 실대기 5분 이내(자연 단시간 + 보석 단축 포함) — cond "대기 5분 이내의 강화"와 1:1(감사 H3)
-             count(*) filter (where elapsed_ms <= 300000)::int as five_min_cnt,
-             -- 만기 후 방치 수령(0166 overdue_ms) — 컬럼 도입(2026-08-21) 이후 수령분만 집계(과거 행은 null)
-             count(*) filter (where overdue_ms >= 86400000)::int as aging_cnt,
-             count(*) filter (where overdue_ms >= 604800000)::int as carefree_cnt
-      from enhancement_logs where user_id=${u} and server_id=${s}
-    `),
-    // 연속(스트릭) — gaps & islands. 결과별 최장 연속 + 하락 직후 성공 연속.
-    () => db.execute(sql`
-      with seq as (
-        select result, row_number() over (order by id) rn,
-               lag(result) over (order by id) prev,
-               row_number() over (partition by result order by id) rk
-        from enhancement_logs where user_id=${u} and server_id=${s}
-      ), grp as (
-        select result, rn - rk as g from seq
-      ), runs as (
-        select result, count(*)::int len from grp group by result, g
-      )
-      select coalesce(max(len) filter (where result in ('success','mega')),0)::int as win_run,
-             coalesce(max(len) filter (where result='down'),0)::int as down_run,
-             coalesce(max(len) filter (where result='hold'),0)::int as hold_run,
-             coalesce(max(len) filter (where result='mega'),0)::int as mega_run
-      from runs
-    `),
+    // 강화 횟수·시간대 — 누적 표(0219). 정의는 enhance_stats_next.
+    () => db.execute(enhCountsSql(u, s)),
+    // 같은 결과 최장 연속 — 누적 표(0219).
+    () => db.execute(enhRunsSql(u, s)),
     // 장비 레벨·초월·도감·장비별 특수
     () => db.execute(sql`
       select coalesce(max(max_enhance_level),0)::int as max_lv,
@@ -461,11 +446,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from codex_champions where user_id=${u} and server_id=${s} and rank=1) as champions,
              (select count(*)::int from codex_champions cc join catalog_items ci on ci.id=cc.catalog_item_id
                where cc.user_id=${u} and cc.server_id=${s} and cc.rank<=3 and ci.slot='weapon') as lib_weapons,
-             -- +100 "최초 도달" 시각은 enhancement_logs가 정본 — max_enhance_reached_at은 신기록마다
-             -- 갱신되는 파생값이라 blitz 영구 미획득·late_bloomer 오활성을 냈다(감사 2026-08-25 발견 2).
-             (select coalesce(extract(epoch from (select min(created_at) from enhancement_logs
-               where user_id=${u} and server_id=${s} and to_level>=100)
-               - (select created_at from characters where user_id=${u} and server_id=${s}))/86400,999))::int as first100_days,
+             -- +100 "최초 도달" 시각은 로그가 정본(max_enhance_reached_at은 신기록마다 갱신되는 파생값이라
+             -- blitz 영구 미획득·late_bloomer 오활성을 냈다, 감사 2026-08-25 발견 2) — 로그에서 누적한 first100_at.
+             ${first100DaysSql(u, s)} as first100_days,
              (select count(*)::int from catalog_items where active) as catalog_total,
              -- 거주·아바타·기부·집행관 이력(0166) — 캐릭터 행 1개에서 한 번에.
              -- 거주/아바타 경과는 대상이 실제로 있을 때만(백필이 created_at을 채워 두므로 게이트 필수).
@@ -566,9 +549,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
            today as (select (now() ${sql.raw(KST)})::date d)
       select coalesce((select case when mx >= (select d from today) - 1 then len else 0 end from ccur),0) as checkin_streak,
              coalesce((select case when mx >= (select d from today) - 1 then len else 0 end from rcur),0) as raid_streak,
-             (select (count(*)=20 and count(*) filter (where result='down')=0)::int
-                from (select result from enhancement_logs where user_id=${u} and server_id=${s}
-                      order by id desc limit 20) t20) as clean20,
+             ${clean20Sql(u, s)} as clean20,
              coalesce((select (mp.final_rank=1)::int from melee_participants mp
                join melee_battles mb on mb.id=mp.battle_id
                where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed'
@@ -586,66 +567,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                where server_id=${s} and (created_at ${sql.raw(KST)})::date = (select d from today) - 1
                group by 1 order by 2 desc, 1 limit 1) rk),0) as y_open_top
     `),
-    // 강화 심화(판정 3차) — 일단위 집계·연속일·심야/출퇴근 패턴·장비별 누적
-    () => db.execute(sql`
-      with l as (select id, user_equipment_id ueid, result, to_level, from_level fl, created_at ca,
-                        (created_at ${sql.raw(KST)})::date dd,
-                        extract(hour from created_at ${sql.raw(KST)})::int hh
-                 from enhancement_logs where user_id=${u} and server_id=${s})
-      select
-        coalesce((select max(c) from (select count(*) c from l group by dd) t),0)::int as enh_day_max,
-        coalesce((select max(len) from (select count(*) len from (
-            select dd - (row_number() over (order by dd))::int g from (select distinct dd from l) d) r
-          group by g) x),0)::int as enh_day_run,
-        coalesce((select max(c) from (select count(*) c from l where hh<6 group by dd) t),0)::int as night_day_max,
-        (select count(*)::int from (select dd from l group by dd having bool_and(hh<6)) t) as insomnia_days,
-        (select count(*)::int from (select dd from l group by dd having bool_or(hh=9) and bool_or(hh=18)) t) as commuter_days,
-        coalesce((select max(c) from (select count(*) c from l group by ueid) t),0)::int as eq_max_cnt,
-        -- 칠전팔기 — "딛고" = +100 **최초 도달 이전**의 하락 7회(같은 장비). 도달 후 하락은
-        -- 미포함(감사 2026-08-25 발견 6 — 순서 미강제로 문구보다 관대했음).
-        (select exists(
-           select 1 from (select ueid, min(ca) filter (where to_level>=100) f100 from l group by ueid) t
-           where t.f100 is not null
-             and (select count(*) from l d where d.ueid=t.ueid and d.result='down' and d.ca < t.f100) >= 7
-         ))::int as seven_falls_ok,
-        -- 환생 — "+199에서 하락한 **그 장비**를 다시 +200까지"(같은 장비·순서 강제, 감사 2026-08-25 발견 6).
-        (select exists(
-           select 1 from l d where d.fl=199 and d.result='down'
-             and exists(select 1 from l u2 where u2.ueid=d.ueid and u2.to_level>=200 and u2.ca > d.ca)
-         ))::int as reinc_ok,
-        (select count(*)::int from enhancement_logs
-           where user_id=${u} and server_id=${s} and elapsed_ms <= 60000 and reduced_ms > 0) as lightning_cnt,
-        (select exists(select 1 from enhancement_logs l1
-           where l1.user_id=${u} and l1.server_id=${s} and l1.from_level=1
-             and l1.created_at > (select min(created_at) from enhancement_logs
-               where user_id=${u} and server_id=${s} and to_level>=100)))::int as beginner_ok,
-        (select exists(
-           with runs as (select rn, result, rn - row_number() over (order by rn) g
-                         from (select result, row_number() over (order by id) rn from l) t
-                         where result in ('success','mega')),
-                agg as (select min(rn) start_rn, count(*) len from runs group by g)
-           select 1 from agg a
-           join (select result, row_number() over (order by id) rn from l) prev on prev.rn = a.start_rn - 1
-           where prev.result='down' and a.len>=10))::int as phoenix_ok
-    `),
-    // 무하락 90→100(정밀) + 무단축 +50(보석 단축 이력 대조)
-    () => db.execute(sql`
-      with l as (select id, user_equipment_id ueid, to_level, result, created_at
-                 from enhancement_logs where user_id=${u} and server_id=${s}),
-           f as (select ueid, min(id) fid from l where to_level>=100 group by 1),
-           n as (select l.ueid, max(l.id) lid from l join f on f.ueid=l.ueid
-                 where l.to_level=90 and l.id<=f.fid group by 1),
-           bad as (select distinct l.ueid from l join f on f.ueid=l.ueid join n on n.ueid=l.ueid
-                   where l.id between n.lid and f.fid and l.result='down'),
-           f50 as (select ueid, min(created_at) t50 from l where to_level>=50 group by 1),
-           red as (select ej.user_equipment_id ueid, gtr.created_at
-                   from gem_time_reductions gtr join enhancement_jobs ej on ej.id=gtr.job_id
-                   where gtr.user_id=${u} and gtr.server_id=${s})
-      select (exists(select 1 from f join n on n.ueid=f.ueid
-                left join bad b on b.ueid=f.ueid where b.ueid is null))::int as flawless_ok,
-             (exists(select 1 from f50 where not exists(
-                select 1 from red where red.ueid=f50.ueid and red.created_at <= f50.t50)))::int as pure_ok
-    `),
+    // 강화 심화(판정 3차) — 일단위·연속일·심야/출퇴근·장비별 누적·순서 조건. 누적 표(0219).
+    () => db.execute(enhDeepSql(u, s)),
+    // 무하락 90→100(정밀) + 무단축 +50(보석 단축 이력 대조) — 누적 표(0219).
+    () => db.execute(enhEquipSql(u, s)),
     // 보급 심화 — 3연속 동일·하루 3슬롯 일수
     () => db.execute(sql`
       with sl as (select catalog_item_id cid, slot, (created_at ${sql.raw(KST)})::date dd,
@@ -699,20 +624,19 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         (select count(distinct ra.raid_id)::int from raid_attacks ra join raids r on r.id=ra.raid_id
            where ra.user_id=${u} and r.server_id=${s}
              and extract(isodow from ra.created_at ${sql.raw(KST)}) in (6,7)) as weekend_raid_cnt,
+        -- 강화일은 날짜 범위로 묻는다(0219 — 로그 전체의 날짜를 뽑지 않는다).
         (select exists(
            select 1
-           from (select distinct (created_at ${sql.raw(KST)})::date dd from enhancement_logs
-                 where user_id=${u} and server_id=${s}) e
-           join (select distinct (created_at ${sql.raw(KST)})::date dd from supply_open_logs
-                 where user_id=${u} and server_id=${s}) sp on sp.dd=e.dd
-           join rd on rd.dd=e.dd
+           from (select distinct (created_at ${sql.raw(KST)})::date dd from supply_open_logs
+                 where user_id=${u} and server_id=${s}) sp
+           join rd on rd.dd=sp.dd
            join (select distinct mb.battle_date dd from melee_participants mp
                  join melee_battles mb on mb.id=mp.battle_id
-                 where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed') m on m.dd=e.dd))::int as fullcourse_ok,
+                 where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed') m on m.dd=sp.dd
+           where ${enhancedOnDaySql(u, s, sql`sp.dd`)}))::int as fullcourse_ok,
         (select exists(
            select 1 from characters c where c.user_id=${u} and c.server_id=${s} and (
-             exists(select 1 from enhancement_logs el where el.user_id=${u} and el.server_id=${s}
-                    and (el.created_at ${sql.raw(KST)})::date = (c.created_at ${sql.raw(KST)})::date + 99)
+             ${enhancedOnDaySql(u, s, sql`(c.created_at ${sql.raw(KST)})::date + 99`)}
              or exists(select 1 from supply_open_logs so where so.user_id=${u} and so.server_id=${s}
                     and (so.created_at ${sql.raw(KST)})::date = (c.created_at ${sql.raw(KST)})::date + 99)
              or exists(select 1 from checkin_claim_logs cc where cc.user_id=${u} and cc.server_id=${s}

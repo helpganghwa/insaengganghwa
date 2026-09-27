@@ -238,10 +238,14 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       return Number(r?.len ?? 0) >= (code === 'streak_king' ? 30 : 7);
     }
     if (code === 'smooth_sail') {
+      // 누적 행(0219)이 준비돼 있으면 끝에서부터 무하락 연속으로, 아니면 로그 최근 20건으로.
       const [r] = (await db.execute(sql`
-        select (count(*)=20 and count(*) filter (where result='down')=0)::int as ok
-        from (select result from enhancement_logs where user_id=${u} and server_id=${s}
-              order by id desc limit 20) t
+        select coalesce(
+          (select (nodown_run >= 20)::int from enhance_stats
+            where user_id=${u} and server_id=${s} and ready),
+          (select (count(*)=20 and count(*) filter (where result='down')=0)::int
+             from (select result from enhancement_logs where user_id=${u} and server_id=${s}
+                   order by id desc limit 20) t)) as ok
       `)) as unknown as { ok: number }[];
       return Number(r?.ok) === 1;
     }
