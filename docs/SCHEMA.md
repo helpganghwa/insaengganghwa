@@ -120,7 +120,7 @@
 | `enhance_stats` | (user_id, server_id) | 횟수·시간대 횟수·결과별 최장 연속·최근 무하락 연속·하락 뒤 성공 연속·하루 최다·연속 강화일·최초 +100 시각 등. `ready`가 참일 때만 믿는다 |
 | `enhance_equip_stats` | user_equipment_id | 장비별 누적 수·최초 +50/+100 시각·칠전팔기·환생·무하락 90→100 |
 
-- 한 로그 반영 규칙은 DB 함수 `enhance_stats_next`·`enhance_equip_next` 두 곳에만 있다. 수령(`resolve.ts` RT2가 로그 insert와 같은 문장에서 `enhance_stats_apply`)과 재구성(`enhance_stats_rebuild`)이 같은 함수를 쓴다.
+- 한 로그 반영 규칙은 DB 함수 `enhance_stats_next`·`enhance_equip_next` 두 곳에만 있다. 수령(`enhancement_logs` insert 트리거가 같은 문장에서 `enhance_stats_apply`, 0220 — 어느 배포가 넣든 반영)과 재구성(`enhance_stats_rebuild`)이 같은 함수를 쓴다.
 - 기록이 있는데 행이 없던 유저는 `ready=false`로 시작하고, 재구성(백필 `scripts/enhance-stats-backfill.ts` 또는 칭호 판정 진입 시 자가 복구)이 전체 기록으로 다시 세운다.
 - 반영 실패는 수령을 막지 않는다 — 그 행을 `ready=false`로 돌려 다음 판정 때 재구성.
 - 판정 쪽 읽기는 `lib/game/titles/enhance-metrics.ts`.
