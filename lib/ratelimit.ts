@@ -18,6 +18,7 @@ export type RlBucket =
   | 'chuseok'
   | 'enhanceCancel'
   | 'expedition'
+  | 'tower'
   | 'gacha'
   | 'inventory'
   | 'raid'
@@ -43,6 +44,7 @@ export type RlBucket =
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
+  tower: [12, '10 s'], // 도전·장착 공용 — 전투 재생이 몇 초라 정상 플레이는 여유, 연타 봇 차단
   expedition: [20, '10 s'], // 보드 재동기 포함 전 액션 공용 — 정상 플레이 여유, 연타 봇 차단
 
   // 취소 전용 — 슬롯 전멸 사건(2026-07-06) 재발 가드(버그성 취소 루프 감속).

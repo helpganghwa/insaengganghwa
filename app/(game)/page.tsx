@@ -44,7 +44,7 @@ import { WorldTicker } from './WorldTicker';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 7카드 — 월드맵/파견(최상단) + 대난투/레이드/보급/상점/우편함. 길드·인벤토리는 바텀네비로(길드 카드는 2026-08-30 파견에 자리 양보).
+// 메뉴 8카드 — 월드맵/파견(최상단) + 무한의 탑/대난투/레이드/보급/상점/우편함. 길드·인벤토리는 바텀네비로(길드 카드는 2026-08-30 파견에 자리 양보).
 const MENU = [
   {
     href: '/guild/map',
@@ -60,6 +60,14 @@ const MENU = [
     desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
     bg: '/sprites/hub/expedition.png',
     tint: '#1f2a16',
+    scale: 1,
+  },
+  {
+    href: '/tower',
+    label: '무한의 탑',
+    desc: '한 층씩 끝없이',
+    bg: '/sprites/tower/bg/list.png',
+    tint: '#1b2440',
     scale: 1,
   },
   {

@@ -73,6 +73,18 @@ html {
 
   /* 레이드 달성 보상 도달 — 보상 카드의 해당 칩이 2.4초 황금 발광 1회(2026-09-03 결정: 토스트+칩 발광만). */
   --animate-milestone-glow: milestone-glow 2.4s ease-in-out;
+  /* 무한의 탑 결과 팝업 — 도장 찍히듯 등장, 특별층 보상 상자 흔들림. */
+  --animate-stamp-in: stamp-in 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+  --animate-wiggle: wiggle 1s ease-in-out infinite;
+  @keyframes stamp-in {
+    from { transform: scale(1.6) rotate(-3deg); }
+    to { transform: scale(1) rotate(-3deg); }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-6deg); }
+    75% { transform: rotate(6deg); }
+  }
   @keyframes milestone-glow {
     0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); background-color: rgba(245, 158, 11, 0.25); }
     20%  { box-shadow: 0 0 12px 3px rgba(245, 158, 11, 0.75); background-color: rgba(245, 158, 11, 0.6); }

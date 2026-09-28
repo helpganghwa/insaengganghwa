@@ -43,7 +43,7 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   raid_participants: '참가·피해 기록 — 페이즈 판정 원천(total_damage 합). PII 없음', raid_attacks: '공격 로그 — 피해 이력·감사. PII 없음',
   guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
   admin_mail_logs: '운영 발송 감사',
-  milestone_firsts: '최초 이정표 순위(0218) — 지우면 다음 도달자가 빈 순위를 받아 "처음으로"가 사실과 달라진다. user_id 외 PII 없음. 재가입 캐릭터는 judge가 reached_at >= characters.created_at만 인정해 칭호가 되살아나지 않음', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
+  milestone_firsts: '최초 이정표 순위(0218) — 지우면 다음 도달자가 빈 순위를 받아 "처음으로"가 사실과 달라진다. user_id 외 PII 없음. 재가입 캐릭터는 judge가 reached_at >= characters.created_at만 인정해 칭호가 되살아나지 않음', tower_pools: '무한의 탑 주간 요구 장비(0222) — 서버 단위 표, 유저 데이터 없음', tower_specials: '무한의 탑 특별층 지정 장비(0222) — 서버 단위 표, 유저 데이터 없음', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
   chat_messages: '공개 채널 7일 보존 정책(크론 정리) — 귓속말만 즉시 파기(0155 주석)',
   chat_reports: 'chat_messages 정리 주기와 동행', chat_blocks: '차단 목록 유지 — 재가입 시에도 차단 관계 보수적 유지',
   whisper_reports: 'whisper_messages 명시 삭제의 CASCADE로 소멸 — 직접 삭제 불필요',
@@ -131,6 +131,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // 강화/초월/보급 이력·상태.
     await tx.execute(sql`delete from enhancement_logs where user_id = ${uid}`);
     await tx.execute(sql`delete from enhance_stats where user_id = ${uid}`);
+    await tx.execute(sql`delete from tower_battles where user_id = ${uid}`);
+    await tx.execute(sql`delete from tower_progress where user_id = ${uid}`);
     await tx.execute(sql`delete from enhance_equip_stats where user_id = ${uid}`);
     await tx.execute(sql`delete from gem_time_reductions where user_id = ${uid}`);
     await tx.execute(sql`delete from enhancement_jobs where user_id = ${uid}`);

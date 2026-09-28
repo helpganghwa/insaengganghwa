@@ -88,6 +88,8 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     await tx.execute(sql`delete from battlepass_state where user_id ${uid}`);
     await tx.execute(sql`delete from enhancement_logs where user_id ${uid}`);
     await tx.execute(sql`delete from enhance_stats where user_id ${uid}`);
+    await tx.execute(sql`delete from tower_battles where user_id ${uid}`);
+    await tx.execute(sql`delete from tower_progress where user_id ${uid}`);
     await tx.execute(sql`delete from enhance_equip_stats where user_id ${uid}`);
     await tx.execute(sql`delete from gem_time_reductions where user_id ${uid}`);
     await tx.execute(sql`delete from enhancement_jobs where user_id ${uid}`);
