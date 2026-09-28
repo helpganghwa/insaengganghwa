@@ -16,6 +16,7 @@ const MSG: Record<string, string> = {
   TOP_REACHED: '지금 열린 가장 높은 층까지 올랐어요.',
   NO_CHARACTER: '이 서버에 캐릭터가 없어요.',
   BAD_AVATAR: '고른 아바타를 찾을 수 없어요.',
+  POOL_CHANGED: '이번 주 요구 장비가 바뀌었어요. 화면을 새로 불러왔으니 장비를 확인하고 다시 도전해 주세요.',
   NO_POWER: '이 층의 요구 장비를 하나도 장착하지 않았어요. 요구 장비를 먼저 장착해 주세요.',
   NOT_FOUND: '장비를 찾을 수 없습니다.',
   SLOT_TAKEN: '같은 부위를 방금 다른 곳에서 장착했어요. 다시 시도해 주세요.',
@@ -27,7 +28,7 @@ const MSG: Record<string, string> = {
 };
 const err = makeErr(MSG);
 
-export async function towerChallengeAction(floor: number, profileId: string | null) {
+export async function towerChallengeAction(floor: number, profileId: string | null, idemKey: string, week: string) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'tower')) return err('RATE_LIMITED');
@@ -35,11 +36,14 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
   if (b) return err(b);
   try {
     const serverId = await getActiveServerId();
-    const r: TowerChallengeResult = await challengeTower(u, serverId, Math.floor(Number(floor)), profileId);
+    const r: TowerChallengeResult = await challengeTower(u, serverId, Math.floor(Number(floor)), profileId, { idemKey, week });
     revalidatePath('/tower');
     return { status: 'success' as const, result: r };
   } catch (e) {
-    if (e instanceof TowerError) return err(e.code);
+    if (e instanceof TowerError) {
+      if (e.code === 'POOL_CHANGED') revalidatePath('/tower');
+      return err(e.code);
+    }
     console.error('[tower.challenge]', e);
     return err('UNKNOWN');
   }

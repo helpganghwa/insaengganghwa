@@ -15,15 +15,16 @@ const prefersReduced = () => typeof window !== 'undefined' && window.matchMedia(
 /**
  * 전투 재생(TOWER.md §7) — 서버가 만든 턴 기록을 한 줄씩 보여 준다.
  * 세계지도 역사 재생처럼 영역 어디든 누르면 끝까지 건너뛰고, 끝난 뒤 헤더 "다시 보기"로 처음부터(또는 결정적 턴부터).
+ * 전투력·배율은 서버가 실제로 싸운 값(result)을 그대로 보여 준다.
  */
-export function TowerBattle({ result, info, avatarSouth, towerCp, mult, onList, onNext, onGear }: {
+export function TowerBattle({ result, info, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
   result: TowerChallengeResult;
   info: TowerFloorInfo;
   avatarSouth: string | null;
-  towerCp: number;
-  mult: number;
+  retrying: boolean;
   onList: () => void;
   onNext: () => void;
+  onRetry: () => void;
   onGear: () => void;
 }) {
   const total = result.turns.length;
@@ -70,18 +71,24 @@ export function TowerBattle({ result, info, avatarSouth, towerCp, mult, onList, 
   const last = shown > 0 ? result.turns[shown - 1]! : null;
   const meHp = last ? last.meHp : 100;
   const monHp = last ? last.monHp : 100;
-  const keyIdx = Math.max(0, result.turns.findIndex((t) => t.turn === result.keyTurn));
+  const keyIdx = Math.min(Math.max(0, result.keyIndex), Math.max(0, total - 1));
   const keyTurn = result.turns[keyIdx];
 
   return (
     <main className="flex-1 overflow-y-auto bg-zinc-950 px-3 pt-2 pb-6 text-zinc-100">
       <div className="mb-2 flex items-center justify-between">
-        <b className="text-[14px]">{result.floor}층 전투</b>
+        <button type="button" onClick={onList} className="text-[14px] font-extrabold">‹ {result.floor}층 전투</button>
         {ended ? (
-          <button type="button" onClick={() => play(0)} className="text-[11.5px] font-extrabold text-amber-300">다시 보기</button>
-        ) : <span />}
+          <span className="flex gap-3 text-[11.5px] font-extrabold">
+            <button type="button" onClick={() => play(0)} className="text-amber-300">다시 보기</button>
+            {!popup ? <button type="button" onClick={() => setPopup(true)} className="text-zinc-200">결과</button> : null}
+          </span>
+        ) : (
+          <button type="button" onClick={finish} className="text-[11.5px] font-extrabold text-zinc-300">건너뛰기</button>
+        )}
       </div>
-      <button type="button" onClick={() => (ended ? undefined : finish())} className="block w-full text-left" aria-label="전투 건너뛰기">
+      {/* 재생 영역 어디를 눌러도 건너뛰기(마우스·터치 편의) — 키보드는 헤더의 건너뛰기 버튼 */}
+      <div onClick={() => (ended ? undefined : finish())} className="block w-full cursor-pointer text-left">
         <div className="relative h-[160px] overflow-hidden rounded-xl border border-zinc-800 bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl(`/sprites/tower/scene/${info.scene}.png`)})`, ...PIX }}>
           <div className="absolute inset-0 bg-black/35" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -116,7 +123,7 @@ export function TowerBattle({ result, info, avatarSouth, towerCp, mult, onList, 
           })}
         </div>
         {!ended ? <p className="mt-1 text-[9.5px] text-zinc-500">탭하면 건너뛰기</p> : null}
-      </button>
+      </div>
 
       {popup ? (
         <ResultPopup
@@ -124,12 +131,12 @@ export function TowerBattle({ result, info, avatarSouth, towerCp, mult, onList, 
           info={info}
           keyLine={keyTurn ? towerTurnLine(keyTurn, info.name) : null}
           keyTag={keyTurn?.event ? TOWER_EVENT_TAG[keyTurn.event] : null}
-          towerCp={towerCp}
-          mult={mult}
+          retrying={retrying}
           onReplayKey={() => play(keyIdx)}
           onClose={() => setPopup(false)}
           onList={onList}
           onNext={onNext}
+          onRetry={onRetry}
           onGear={onGear}
         />
       ) : null}
@@ -137,17 +144,17 @@ export function TowerBattle({ result, info, avatarSouth, towerCp, mult, onList, 
   );
 }
 
-function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey, onClose, onList, onNext, onGear }: {
+function ResultPopup({ result, info, keyLine, keyTag, retrying, onReplayKey, onClose, onList, onNext, onRetry, onGear }: {
   result: TowerChallengeResult;
   info: TowerFloorInfo;
   keyLine: string | null;
   keyTag: { label: string; cls: string } | null;
-  towerCp: number;
-  mult: number;
+  retrying: boolean;
   onReplayKey: () => void;
   onClose: () => void;
   onList: () => void;
   onNext: () => void;
+  onRetry: () => void;
   onGear: () => void;
 }) {
   const special = towerIsSpecial(result.floor);
@@ -195,11 +202,11 @@ function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey
             </>
           }
         >
-          <button type="button" onClick={skip} className="flex w-full flex-col gap-2 text-left">
+          {/* 누르면 연출을 끝 상태로(마우스·터치 편의) — 버튼은 연출이 끝나면 열리니 키보드도 막히지 않는다 */}
+          <div onClick={skip} className="flex w-full flex-col gap-2 text-left">
             {special && !opened ? (
-              <span
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setOpened(true);
@@ -210,7 +217,7 @@ function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey
                 <img src={assetUrl('/sprites/tower/mon/chest.png')} alt="" className="h-14 w-14 motion-safe:animate-wiggle" style={PIX} />
                 <b className="mt-1 text-[13px] text-amber-300">눌러서 열기</b>
                 <span className="text-[10px] text-zinc-400">특별층 보상 상자</span>
-              </span>
+              </button>
             ) : null}
             {stage >= 1 && opened ? (
               <span className="flex items-center justify-between rounded-lg bg-zinc-100 px-3 py-2 text-[11.5px] dark:bg-zinc-950">
@@ -227,10 +234,10 @@ function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey
             {stage >= 2 && result.floor < TOWER_FLOORS ? (
               <span className="flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-[11.5px] dark:bg-zinc-950">
                 <span className="h-7 w-10 flex-none rounded bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl(`/sprites/tower/scene/${nextInfo.scene}.png`)})` }} />
-                <span><b className="block">{nextFloor}층의 문이 열렸다</b><span className="text-[10px] text-zinc-500">{special ? '새 구간이 열렸어요 · 요구 장비가 바뀝니다' : '???'}</span></span>
+                <span><b className="block">{nextFloor}층의 문이 열렸다</b><span className="text-[10px] text-zinc-500">{special ? '새 구간이 열렸어요 · 요구 장비가 바뀝니다' : `다음 상대 · ${nextInfo.name}`}</span></span>
               </span>
             ) : null}
-          </button>
+          </div>
         </ModalLayout>
       </ModalShell>
     );
@@ -242,8 +249,8 @@ function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey
         subtitle={`${result.floor}층 · ${info.name}`}
         footer={
           <>
-            <ModalButton tone="ghost" onClick={onGear}>장비 · 아바타</ModalButton>
-            <ModalButton tone="primary" grow={2} onClick={onGear} disabled={result.attemptsLeft <= 0}>{result.attemptsLeft > 0 ? '다시 도전' : '오늘 도전 끝'}</ModalButton>
+            <ModalButton tone="ghost" onClick={result.attemptsLeft > 0 ? onGear : onList}>{result.attemptsLeft > 0 ? '장비 · 아바타' : '목록'}</ModalButton>
+            <ModalButton tone="primary" grow={2} onClick={onRetry} disabled={result.attemptsLeft <= 0 || retrying}>{result.attemptsLeft <= 0 ? '오늘 도전 끝' : retrying ? '도전 중…' : '다시 도전'}</ModalButton>
           </>
         }
       >
@@ -261,7 +268,7 @@ function ResultPopup({ result, info, keyLine, keyTag, towerCp, mult, onReplayKey
           </div>
           <div className="flex items-center justify-between rounded-lg bg-zinc-100 px-3 py-2 text-[11.5px] dark:bg-zinc-950">
             <span className="text-zinc-500">탑 전투력</span>
-            <b className="tabular-nums">{n(towerCp)} <span className="text-[10px] font-normal text-zinc-500">· 선택 아바타 ×{mult.toFixed(2)}</span></b>
+            <b className="tabular-nums">{n(result.towerCp)} <span className="text-[10px] font-normal text-zinc-500">· 선택 아바타 ×{result.mult.toFixed(2)}</span></b>
           </div>
         </div>
       </ModalLayout>

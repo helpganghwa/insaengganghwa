@@ -37,6 +37,9 @@ create table if not exists tower_battles (
   created_at timestamptz not null default now()
 );
 create index if not exists tower_battles_user_idx on tower_battles (user_id, server_id, created_at desc);
+-- 중복 요청 방지(CLAUDE §3.4) — 같은 키로 다시 오면 저장된 결과를 돌려준다(진 판 재전송이 도전 2회를 빼지 않게).
+alter table tower_battles add column if not exists idem_key text;
+create unique index if not exists tower_battles_idem_uq on tower_battles (user_id, idem_key) where idem_key is not null;
 alter table tower_battles enable row level security;
 
 create table if not exists tower_pools (

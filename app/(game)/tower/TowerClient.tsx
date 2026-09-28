@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
@@ -39,8 +39,17 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const next = Math.min(TOWER_FLOORS, board.best + 1);
   const topped = board.best >= TOWER_FLOORS;
   const [picked, setPicked] = useState<number | null>(null);
-  const [view, setView] = useState<'list' | 'detail'>('list');
+  // 층 상세는 주소(?v=d)로 — 휴대폰 뒤로 가기가 홈이 아니라 목록으로 돌아오게.
+  const sp = useSearchParams();
+  const view: 'list' | 'detail' = sp.get('v') === 'd' ? 'detail' : 'list';
+  const setView = (v: 'list' | 'detail') => (v === 'detail' ? router.push('/tower?v=d') : router.push('/tower'));
   const [openSection, setOpenSection] = useState(towerSection(next));
+  // 돌파로 다음 구간에 들어서면 펼친 구간도 따라간다(렌더 중 조정 — effect 없이).
+  const [seenNext, setSeenNext] = useState(next);
+  if (seenNext !== next) {
+    setSeenNext(next);
+    setOpenSection(towerSection(next));
+  }
   const [sheet, setSheet] = useState<null | 'equip' | 'avatar'>(null);
   const [equipTab, setEquipTab] = useState<TowerSlot>('weapon');
   const [battle, setBattle] = useState<TowerChallengeResult | null>(null);
@@ -72,7 +81,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           loadout: lo,
         };
       })
-      .sort((x, y) => y.mult - x.mult || y.now.total - x.now.total);
+      .sort((x, y) => y.best - x.best || y.mult - x.mult);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, next]);
   const [avatarId, setAvatarId] = useState<string | null>(() => {
@@ -84,21 +93,26 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
   const doEquip = (ueids: string[]) =>
     start(async () => {
+      // 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 다시 불러온다(CLAUDE §11.7).
       for (const id of ueids) {
         const r = await towerEquipAction(id);
         if (r.status !== 'success') {
           setMsg(r.message);
+          router.refresh();
           break;
         }
       }
-      router.refresh();
     });
 
+  // 도전 한 번 = 키 하나. 응답을 못 받고 다시 눌러도 같은 키면 서버가 앞선 결과를 돌려준다(도전 이중 차감 방지).
   const challenge = () =>
     start(async () => {
       setMsg(null);
-      const r = await towerChallengeAction(next, avatar?.id ?? null);
-      if (r.status !== 'success') return setMsg(r.message);
+      const r = await towerChallengeAction(next, avatar?.id ?? null, crypto.randomUUID(), board.week);
+      if (r.status !== 'success') {
+        setBattle(null);
+        return setMsg(r.message);
+      }
       setBattle(r.result);
     });
 
@@ -106,26 +120,21 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const info = towerFloorInfo(battle.floor);
     return (
       <TowerBattle
+        key={battle.battleId}
         result={battle}
         info={info}
         avatarSouth={avatar?.south ?? null}
-        towerCp={cpNow.total}
-        mult={avatar?.mult ?? 1}
+        retrying={pending}
         onList={() => {
           setBattle(null);
-          setView('list');
           setPicked(null);
-          router.refresh();
+          router.replace('/tower');
         }}
-        onNext={() => {
-          setBattle(null);
-          setView('detail');
-          router.refresh();
-        }}
+        onNext={() => setBattle(null)}
+        onRetry={challenge}
         onGear={() => {
           setBattle(null);
-          setView('detail');
-          router.refresh();
+          setSheet('equip');
         }}
       />
     );
@@ -139,7 +148,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     return (
       <main className="flex-1 overflow-y-auto bg-zinc-950 px-3 pt-2 pb-6 text-zinc-100">
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={() => setView('list')} className="text-[14px] font-extrabold">‹ {next}층</button>
+          <button type="button" onClick={() => router.back()} className="text-[14px] font-extrabold">‹ {next}층</button>
           <span className="text-[11px] text-zinc-400">오늘 도전 <Dots left={board.attemptsLeft} /></span>
         </div>
         <div className="relative h-[180px] overflow-hidden rounded-xl border border-zinc-800 bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl(`/sprites/tower/scene/${info.scene}.png`)})`, ...PIX }}>
@@ -220,7 +229,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             <div className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl bg-zinc-900 p-3 text-zinc-100">
               <div className="flex items-baseline justify-between">
                 <b className="text-[14px]">선택 아바타</b>
-                <span className="text-[10px] text-zinc-500">배율 높은 순 · 지금 장착 기준</span>
+                <span className="text-[10px] text-zinc-500">맞췄을 때 탑 전투력 높은 순</span>
               </div>
               <div className="mt-2 flex flex-col gap-1.5">
                 {avatarRows.map((a) => {
@@ -233,7 +242,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                         {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
                         <span className="min-w-0 flex-1 leading-tight">
                           <b className="block text-[12px]">{a.isDefault ? '기본 아바타 · 항상 ×1' : a.now.doubledCount > 0 ? `장착과 맞는 장비 ${a.now.doubledCount}개` : '장착과 맞는 장비 없음'}</b>
-                          <span className="block truncate text-[10px] text-zinc-400">탑 전투력 {n(a.now.total)}{canBetter ? ` · 이 아바타 장비로 맞추면 ${n(a.best)}` : ''}</span>
+                          <span className="block truncate text-[10px] text-zinc-400">지금 {n(a.now.total)}{canBetter ? (a.isDefault ? ` · 가장 센 요구 장비로 장착하면 ${n(a.best)}` : ` · 이 아바타 장비로 맞추면 ${n(a.best)}`) : ''}</span>
                         </span>
                         <b className={`text-[14px] ${a.mult > 1 ? 'text-sky-300' : 'text-zinc-500'}`}>×{a.mult.toFixed(2)}</b>
                       </button>
@@ -251,7 +260,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                           }}
                           className="mx-2 mb-2 w-[calc(100%-16px)] rounded-lg border border-amber-600/60 bg-amber-950/40 py-1.5 text-[11px] font-extrabold text-amber-200"
                         >
-                          이 아바타 장비로 맞춰 장착 · {n(a.best)}
+                          {a.isDefault ? '가장 센 요구 장비로 장착' : '이 아바타 장비로 맞춰 장착'} · {n(a.best)}
                         </button>
                       ) : null}
                     </div>
@@ -275,13 +284,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const heroInfo = hero ? towerFloorInfo(hero) : null;
   const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
   return (
-    <main className="relative flex-1 overflow-y-auto text-zinc-100">
-      <div className="pointer-events-none fixed inset-x-0 top-0 mx-auto h-full max-w-[390px] bg-cover bg-top" style={{ backgroundImage: `url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }} />
-      <div className="pointer-events-none fixed inset-x-0 top-0 mx-auto h-full max-w-[390px] bg-gradient-to-b from-black/10 via-black/35 to-zinc-950/90" />
+    <main className="relative flex-1 overflow-y-auto bg-zinc-950 text-zinc-100">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-cover bg-top" style={{ backgroundImage: `url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-gradient-to-b from-black/10 via-black/35 to-zinc-950" />
       <div className="relative px-3 pb-6">
         <div className="flex items-center justify-between pt-2">
-          <b className="text-[15px] drop-shadow">무한의 탑</b>
-          <span className="text-[11px] text-zinc-200">오늘 도전 <Dots left={board.attemptsLeft} /></span>
+          <b className="rounded-md bg-black/45 px-2 py-0.5 text-[14px]">무한의 탑</b>
+          <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100">오늘 도전 <Dots left={board.attemptsLeft} /></span>
         </div>
 
         {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
@@ -400,7 +409,10 @@ function EquipList({ board, slot, rule, avatarKeys, pending, onEquip }: {
   onEquip: (ueid: string) => void;
 }) {
   const ownedByKey = new Map(board.items.map((i) => [i.key, i]));
-  const keys = rule.allowed === null ? board.items.filter((i) => i.slot === slot).map((i) => i.key) : [...rule.allowed].filter((k) => board.catalog[k]?.slot === slot);
+  // 입문 특별층(10층)은 모든 장비 + 지정 장비 — 지정 장비는 없어도 목록에 보여 준다.
+  const keys = rule.allowed === null
+    ? [...new Set([...board.items.filter((i) => i.slot === slot).map((i) => i.key), ...[...(rule.doubleable ?? [])].filter((k) => board.catalog[k]?.slot === slot)])]
+    : [...rule.allowed].filter((k) => board.catalog[k]?.slot === slot);
   const rows = keys
     .map((k) => {
       const it = ownedByKey.get(k) ?? null;

@@ -35,8 +35,8 @@ export type TowerTurn = {
 export type TowerBattleResult = {
   win: boolean;
   turns: TowerTurn[];
-  /** 승패를 가른 턴(실패 팝업 "결정적인 순간") — 가장 큰 변수 턴, 없으면 마지막 턴. */
-  keyTurn: number;
+  /** 승패를 가른 줄(turns 배열 위치, 실패 팝업 "결정적인 순간") — 이긴 쪽 변수 중 가장 큰 피해, 없으면 마지막 줄. */
+  keyIndex: number;
 };
 
 /** 전투 상수 — 승률 곡선은 docs/TOWER.md §4 표. 바꾸면 표도 다시 잰다. */
@@ -81,8 +81,9 @@ export function simulateTowerBattle(opts: {
   let revived = false;
   const roll = (bp: number) => rng() < bp;
   const spread = () => 1 + ((rng() / 9999) * 2 - 1) * (B.spreadBp / 10000);
-  const myHit = () => B.baseHit * Math.pow(r, B.steep) * spread();
-  const monHit = () => (r > 0 ? (B.baseHit / Math.pow(r, B.steep)) * spread() : B.hp);
+  // 피해는 상대의 남은 체력까지만 — 전투력 차이가 크면 계산상 수십억이 나와 기록·화면이 무의미해진다(승패·확률은 같음).
+  const myHit = () => Math.min(B.baseHit * Math.pow(r, B.steep) * spread(), Math.max(0, mon));
+  const monHit = () => Math.min(r > 0 ? (B.baseHit / Math.pow(r, B.steep)) * spread() : B.hp, Math.max(0, me));
   const round = (x: number) => Math.round(x * 10) / 10;
 
   const push = (turn: number, actor: 'me' | 'mon', damage: number, event: TowerBattleEvent | null) =>
@@ -91,11 +92,11 @@ export function simulateTowerBattle(opts: {
   const meAct = (turn: number, first: boolean) => {
     if (roll(B.missBp)) return push(turn, 'me', 0, 'miss');
     const crit = roll(B.critBp);
-    const dmg = myHit() * (crit ? B.critMul : 1);
+    const dmg = Math.min(myHit() * (crit ? B.critMul : 1), mon);
     mon -= dmg;
     push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null);
     if (mon > 0 && opts.doubledCount >= 2 && roll(B.resonanceBp)) {
-      const extra = myHit() * B.resonanceMul;
+      const extra = Math.min(myHit() * B.resonanceMul, mon);
       mon -= extra;
       push(turn, 'me', extra, 'resonance');
     }
@@ -106,7 +107,7 @@ export function simulateTowerBattle(opts: {
       enraged = roll(B.enrageBp);
     }
     if (roll(B.missBp)) return push(turn, 'mon', 0, 'miss');
-    const dmg = monHit() * (enraged ? B.enrageMul : 1);
+    const dmg = Math.min(monHit() * (enraged ? B.enrageMul : 1), me);
     me -= dmg;
     if (me <= 0 && !revived && roll(B.reviveBp)) {
       revived = true;
@@ -116,7 +117,7 @@ export function simulateTowerBattle(opts: {
       push(turn, 'mon', dmg, enraged ? 'enrage' : first ? 'first_strike' : null);
     }
     if (me > 0 && mon > 0 && roll(B.counterBp)) {
-      const c = myHit() * B.counterMul;
+      const c = Math.min(myHit() * B.counterMul, mon);
       mon -= c;
       push(turn, 'me', c, 'counter');
     }
@@ -134,9 +135,15 @@ export function simulateTowerBattle(opts: {
   }
   const win = mon <= 0 && me > 0;
   // 결정적인 순간 — 진 판은 몬스터 쪽 변수(광폭화 등) 중 가장 큰 피해, 이긴 판은 내 쪽 변수 중 가장 큰 피해.
+  // 진 판은 몬스터 쪽 변수만(기사회생은 내가 버틴 장면이라 패배 원인이 아니다).
   const side = win ? 'me' : 'mon';
-  let key = turns.length ? turns[turns.length - 1]!.turn : 1;
+  let key = Math.max(0, turns.length - 1);
   let bestDmg = -1;
-  for (const x of turns) if (x.actor === side && x.event && x.event !== 'miss' && x.damage > bestDmg) { bestDmg = x.damage; key = x.turn; }
-  return { win, turns, keyTurn: key };
+  turns.forEach((x, i) => {
+    if (x.actor === side && x.event && x.event !== 'miss' && x.event !== 'revive' && x.damage > bestDmg) {
+      bestDmg = x.damage;
+      key = i;
+    }
+  });
+  return { win, turns, keyIndex: key };
 }

@@ -78,7 +78,7 @@ export function bestLoadout(
   const best = { weapon: -1, armor: -1, accessory: -1 } as Record<TowerSlot, number>;
   for (const [key, o] of owned) {
     const r = towerCp([{ slot: o.slot, key, cp: o.cp }], rule, avatarKeys);
-    if (r.total > best[o.slot]) {
+    if (r.total > 0 && r.total > best[o.slot]) {
       best[o.slot] = r.total;
       out[o.slot] = key;
     }

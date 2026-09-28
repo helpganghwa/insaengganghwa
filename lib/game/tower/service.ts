@@ -13,8 +13,11 @@ import { TOWER_SLOTS, drawPool, floorRule, towerCp, type EquippedPiece, type Flo
 /** 서버 권위 RNG(CLAUDE §3.1). */
 const cryptoRng10k: Rng10k = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 10000;
 
+/** 정지 중 계정 제외(리더보드 activeBannedIds와 같은 술어) — pr = profiles 별칭. */
+const NOT_BANNED = sql`not (pr.banned_at is not null and (pr.ban_until is null or pr.ban_until > now()))`;
+
 export class TowerError extends Error {
-  constructor(public code: 'NOT_NEXT_FLOOR' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER') {
+  constructor(public code: 'NOT_NEXT_FLOOR' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED') {
     super(code);
     this.name = 'TowerError';
   }
@@ -59,6 +62,7 @@ export async function towerPools(serverId: number, at: Date = new Date()): Promi
     if (needPools) {
       for (let s = 2; s <= sections; s++) {
         const p = drawPool(cat, cryptoRng10k);
+        if (!p.weapon.length || !p.armor.length || !p.accessory.length) continue; // 카탈로그 시드 전 — 풀 없이(×0) 둔다
         await db.execute(sql`
           insert into tower_pools (server_id, week_start, section, weapon, armor, accessory)
           values (${serverId}, ${week}::date, ${s}, ${textArray(p.weapon)}, ${textArray(p.armor)}, ${textArray(p.accessory)})
@@ -68,6 +72,7 @@ export async function towerPools(serverId: number, at: Date = new Date()): Promi
     if (needSp) {
       for (let s = 1; s <= sections; s++) {
         const p = drawPool(cat, cryptoRng10k, 1);
+        if (!p.weapon[0] || !p.armor[0] || !p.accessory[0]) continue;
         await db.execute(sql`
           insert into tower_specials (server_id, section, weapon, armor, accessory)
           values (${serverId}, ${s}, ${p.weapon[0]!}, ${p.armor[0]!}, ${p.accessory[0]!})
@@ -109,10 +114,10 @@ export async function towerBoard(userId: string, serverId: number) {
     >,
     db.execute(sql`
       select ue.id::text as ueid, ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level,
-             ue.transcend_level as transcend, ue.equipped_slot is not null as equipped
+             ue.transcend_level as transcend, ue.equipped_slot is not null as equipped, ci.active
       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-      where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ci.active`) as unknown as Promise<
-      { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean }[]
+      where ue.user_id=${userId}::uuid and ue.server_id=${serverId}`) as unknown as Promise<
+      { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[]
     >,
     db.execute(sql`
       select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot,
@@ -124,7 +129,8 @@ export async function towerBoard(userId: string, serverId: number) {
     db.execute(sql`
       select tp.user_id::text as user_id, c.nickname, tp.best_floor, tp.best_at
       from tower_progress tp join characters c on c.user_id = tp.user_id and c.server_id = tp.server_id
-      where tp.server_id=${serverId} and tp.best_floor > 0
+      join profiles pr on pr.id = tp.user_id
+      where tp.server_id=${serverId} and tp.best_floor > 0 and ${NOT_BANNED}
       order by tp.best_floor desc, tp.best_at asc limit 20`) as unknown as Promise<
       { user_id: string; nickname: string; best_floor: number; best_at: string }[]
     >,
@@ -132,12 +138,19 @@ export async function towerBoard(userId: string, serverId: number) {
   ]);
   const p = prog[0];
   const best = Number(p?.best_floor ?? 0);
-  const items: TowerOwnedItem[] = owned.map((o) => ({
-    ...o,
+  // 내 전투력은 헤더와 같은 기준(보유 전체 — 퇴역 장비 포함), 탑 목록·장착은 활성 장비만(퇴역 장비는 요구 장비가 될 수 없다).
+  const all = owned.map((o) => ({
+    ueid: o.ueid,
+    key: o.key,
+    name: o.name,
+    slot: o.slot,
+    equipped: o.equipped,
+    active: o.active,
     level: Number(o.level),
     transcend: Number(o.transcend),
     cp: pieceCombatPower(Number(o.level), Number(o.transcend)),
   }));
+  const items: TowerOwnedItem[] = all.filter((o) => o.active).map(({ active: _a, ...o }) => o);
   const av: TowerAvatar[] = avatars.map((a) => {
     const snap = (a.equipment_snapshot && typeof a.equipment_snapshot === 'object' ? a.equipment_snapshot : {}) as Record<string, unknown>;
     const keys = a.is_default ? [] : ['weaponKey', 'armorKey', 'accessoryKey'].map((k) => snap[k]).filter((v): v is string => typeof v === 'string');
@@ -150,8 +163,9 @@ export async function towerBoard(userId: string, serverId: number) {
     from generate_series(${from}::int, ${Math.min(TOWER_FLOORS, from + 2 * TOWER_SECTION - 1)}::int) f`)) as unknown as { floor: number; n: number }[];
   const [myRank] = best > 0
     ? ((await db.execute(sql`
-        select (count(*) + 1)::int as r from tower_progress t
-        where t.server_id=${serverId} and (t.best_floor > ${best} or (t.best_floor = ${best} and t.best_at < ${p!.best_at}::timestamptz))`)) as unknown as { r: number }[])
+        select (count(*) + 1)::int as r from tower_progress t join profiles pr on pr.id = t.user_id
+        where t.server_id=${serverId} and ${NOT_BANNED}
+          and (t.best_floor > ${best} or (t.best_floor = ${best} and t.best_at < ${p!.best_at}::timestamptz))`)) as unknown as { r: number }[])
     : [];
   return {
     week,
@@ -161,7 +175,7 @@ export async function towerBoard(userId: string, serverId: number) {
     lastProfileId: p?.last_profile_id ?? null,
     items,
     avatars: av,
-    myCombatPower: items.reduce((a, i) => a + i.cp, 0),
+    myCombatPower: all.reduce((a, i) => a + i.cp, 0),
     pools: Object.fromEntries(pools) as Record<number, SlotKeys>,
     specials: Object.fromEntries(specials) as Record<number, SlotKeys>,
     clears: Object.fromEntries(clears.map((c) => [c.floor, c.n])) as Record<number, number>,
@@ -177,19 +191,35 @@ export type TowerChallengeResult = {
   battleId: string;
   floor: number;
   win: boolean;
-  keyTurn: number;
+  keyIndex: number;
   turns: TowerTurn[];
   reward: { diamond: number; boxes: number } | null;
   attemptsLeft: number;
   best: number;
+  /** 서버가 실제로 싸운 탑 전투력·배율(×1 기준 대비) — 전투·실패 화면은 이 값을 그대로 보여 준다. */
+  towerCp: number;
+  mult: number;
 };
+
+type BattleRow = { id: string; floor: number; win: boolean; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
 
 /**
  * 도전 — 진행도 행을 잠그고(동시 도전·중복 보상 차단) 지금 층·남은 도전을 검사, 서버에서 전투를 판정한다.
  * 이기면 최고 층 갱신 + 첫 돌파 보상(지금 층만 도전 가능하므로 항상 첫 돌파), 지면 오늘 진 횟수 +1.
+ * idemKey — 같은 키로 다시 오면(재전송) 저장된 결과를 돌려준다(CLAUDE §3.4). week — 화면이 본 주가 지금 주와 다르면
+ * (월요일 0시를 넘겨 화면을 열어 둔 채 도전) 도전을 빼지 않고 POOL_CHANGED.
  */
-export async function challengeTower(userId: string, serverId: number, floor: number, profileId: string | null, rng: Rng10k = cryptoRng10k): Promise<TowerChallengeResult> {
-  const { pools, specials } = await towerPools(serverId);
+export async function challengeTower(
+  userId: string,
+  serverId: number,
+  floor: number,
+  profileId: string | null,
+  opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k } = {},
+): Promise<TowerChallengeResult> {
+  const rng = opts.rng ?? cryptoRng10k;
+  const { pools, specials, week } = await towerPools(serverId);
+  if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
+  const idem = opts.idemKey && /^[A-Za-z0-9-]{8,64}$/.test(opts.idemKey) ? opts.idemKey : null;
   return db.transaction(async (tx) => {
     const ch = (await tx.execute(sql`select 1 from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as unknown[];
     if (!ch.length) throw new TowerError('NO_CHARACTER');
@@ -198,6 +228,20 @@ export async function challengeTower(userId: string, serverId: number, floor: nu
       select best_floor, loss_day::text as loss_day, losses from tower_progress
       where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
     const best = Number(p!.best_floor);
+    if (idem) {
+      // 행 락 뒤에 찾으므로 같은 키의 동시 요청도 앞선 결과를 본다.
+      const [prev] = (await tx.execute(sql`
+        select id::text as id, floor, win, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
+        from tower_battles where user_id=${userId}::uuid and idem_key=${idem}`)) as unknown as BattleRow[];
+      if (prev) {
+        const left = attemptsLeft(p!.loss_day, Number(p!.losses));
+        return {
+          battleId: prev.id, floor: Number(prev.floor), win: prev.win, keyIndex: Number(prev.key_turn), turns: prev.turns,
+          reward: prev.reward, attemptsLeft: left, best, towerCp: Number(prev.tower_cp),
+          mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1,
+        };
+      }
+    }
     if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
     if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
     const left = attemptsLeft(p!.loss_day, Number(p!.losses));
@@ -214,13 +258,15 @@ export async function challengeTower(userId: string, serverId: number, floor: nu
         keys = new Set(['weaponKey', 'armorKey', 'accessoryKey'].map((k) => s[k]).filter((v): v is string => typeof v === 'string'));
       }
     }
+    // 활성 장비만 — 화면(towerBoard)과 같은 기준. 퇴역 장비는 요구 장비가 될 수 없다.
     const eqRows = (await tx.execute(sql`
       select ci.code as key, ci.slot::text as slot, ue.enhance_level as level, ue.transcend_level as transcend
       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-      where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ue.equipped_slot is not null`)) as unknown as { key: string; slot: TowerSlot; level: number; transcend: number }[];
+      where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ue.equipped_slot is not null and ci.active`)) as unknown as { key: string; slot: TowerSlot; level: number; transcend: number }[];
     const eq: EquippedPiece[] = eqRows.map((r) => ({ slot: r.slot, key: r.key, cp: pieceCombatPower(Number(r.level), Number(r.transcend)) }));
     const rule = ruleFor(floor, pools, specials);
     const cp = towerCp(eq, rule, keys);
+    const base = towerCp(eq, rule, new Set()).total;
     // 탑 전투력 0(요구 장비를 하나도 장착하지 않음) — 한 턴 만에 지고 도전만 날아가니 막는다.
     if (cp.total <= 0) throw new TowerError('NO_POWER');
     const req = towerRequirement(floor);
@@ -242,10 +288,11 @@ export async function challengeTower(userId: string, serverId: number, floor: nu
         where user_id=${userId}::uuid and server_id=${serverId}`);
       newLeft = left - 1;
     }
+    const pieces = cp.pieces.map((x, i) => (i === 0 ? { ...x, base } : x));
     const [row] = (await tx.execute(sql`
-      insert into tower_battles (user_id, server_id, floor, win, tower_cp, requirement, profile_id, pieces, turns, key_turn, reward)
+      insert into tower_battles (user_id, server_id, floor, win, tower_cp, requirement, profile_id, pieces, turns, key_turn, reward, idem_key)
       values (${userId}::uuid, ${serverId}, ${floor}, ${battle.win}, ${cp.total}, ${req}, ${profileId}::uuid,
-              ${JSON.stringify(cp.pieces)}::jsonb, ${JSON.stringify(battle.turns)}::jsonb, ${battle.keyTurn}, ${reward ? JSON.stringify(reward) : null}::jsonb)
+              ${JSON.stringify(pieces)}::jsonb, ${JSON.stringify(battle.turns)}::jsonb, ${battle.keyIndex}, ${reward ? JSON.stringify(reward) : null}::jsonb, ${idem})
       returning id::text as id`)) as unknown as { id: string }[];
     if (reward) {
       if (reward.diamond > 0) await walletAdd(tx, userId, serverId, reward.diamond, 'tower', `tower:${floor}`);
@@ -258,7 +305,10 @@ export async function challengeTower(userId: string, serverId: number, floor: nu
         }
       }
     }
-    return { battleId: row!.id, floor, win: battle.win, keyTurn: battle.keyTurn, turns: battle.turns, reward, attemptsLeft: newLeft, best: battle.win ? floor : best };
+    return {
+      battleId: row!.id, floor, win: battle.win, keyIndex: battle.keyIndex, turns: battle.turns, reward,
+      attemptsLeft: newLeft, best: battle.win ? floor : best, towerCp: cp.total, mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1,
+    };
   });
 }
 

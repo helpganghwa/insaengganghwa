@@ -74,7 +74,7 @@ describe('탑 전투력', () => {
     const lo = bestLoadout(owned, floorRule(57, pool, specials), new Set(['w1']));
     expect(lo.weapon).toBe('w1'); // 100×2 > 150
     expect(lo.armor).toBe('a1');
-    expect(lo.accessory).toBe('zz'); // 요구 장비가 없으면 ×0이라도 그 부위 최강(0점 동률 중 첫)
+    expect(lo.accessory).toBeNull(); // 요구 장비가 없으면 고르지 않는다(×0 장비로 바꿔 끼우지 않음)
   });
 });
 
@@ -111,11 +111,17 @@ describe('전투', () => {
     expect(hi).toBe(200);
     expect(lo).toBe(0);
   });
+  it('피해는 남은 체력을 넘지 않는다(전투력 차이가 커도)', () => {
+    const r = simulateTowerBattle({ towerCp: 96242, requirement: 15, doubledCount: 2, rng: rngOf(3) });
+    expect(r.win).toBe(true);
+    for (const t of r.turns) expect(t.damage).toBeLessThanOrEqual(100);
+  });
   it('턴 기록의 마지막 체력이 승패와 맞는다', () => {
     const r = simulateTowerBattle({ towerCp: 100, requirement: 100, doubledCount: 2, rng: rngOf(42) });
     const last = r.turns[r.turns.length - 1]!;
     if (r.win) expect(last.monHp).toBe(0);
     else expect(last.meHp === 0 || r.turns.length > 0).toBe(true);
-    expect(r.keyTurn).toBeGreaterThanOrEqual(1);
+    expect(r.keyIndex).toBeGreaterThanOrEqual(0);
+    expect(r.keyIndex).toBeLessThan(r.turns.length);
   });
 });
