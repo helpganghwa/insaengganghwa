@@ -1065,3 +1065,49 @@ export function mileageForKrw(krw: number): number {
   if (!Number.isFinite(krw) || krw <= 0) return 0;
   return Math.floor(krw / MILEAGE_KRW_PER_POINT);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §13. 무한의 탑 (docs/TOWER.md) — 2026-09-28 확정
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 지금 열린 층 수(확장 시 늘린다). 10층마다 특별층. */
+export const TOWER_FLOORS = 100;
+export const TOWER_SECTION = 10;
+/** 하루 도전(진 판만 차감) — KST 자정 초기화. */
+export const TOWER_DAILY_ATTEMPTS = 3;
+/** 구간별 요구 장비 수(부위당). 1구간(1~10층)은 모든 장비. */
+export const TOWER_POOL_PER_SLOT = 10;
+/** 요구 장비이면서 고른 아바타를 만들 때도 쓴 장비의 배율. */
+export const TOWER_AVATAR_MULT = 2;
+
+/**
+ * 층 요구치 = 11 × 1.1175^(n−1). 시뮬레이션 곡선(1층 10, 100층 599,280 = 1위 특별층 시너지 중앙값)에
+ * ×1.1 — 하루 3번·매일 재도전이면 일주일에 요구치의 약 90%로도 넘기 때문(TOWER.md §3·§4).
+ */
+export const TOWER_REQ_BASE = 11;
+export const TOWER_REQ_RATIO = 1.1175;
+export function towerRequirement(floor: number): number {
+  return Math.round(TOWER_REQ_BASE * Math.pow(TOWER_REQ_RATIO, Math.max(0, floor - 1)));
+}
+export function towerIsSpecial(floor: number): boolean {
+  return floor % TOWER_SECTION === 0;
+}
+/** 층 → 구간 번호(1부터). 1~10층 = 1. */
+export function towerSection(floor: number): number {
+  return Math.floor((floor - 1) / TOWER_SECTION) + 1;
+}
+
+/** 구간별 첫 돌파 보상(TOWER.md §5) — 인덱스 = 구간 − 1. 📦는 3의 배수(부위당 ⅓). */
+const TOWER_NORMAL_DIA = [20, 40, 60, 100, 150, 250, 420, 700, 1050, 1500] as const;
+const TOWER_FIFTH_BOX = [6, 6, 12, 12, 18, 30, 42, 60, 120, 180] as const;
+const TOWER_SPECIAL_DIA = [200, 400, 600, 1000, 1600, 2800, 4800, 8000, 12500, 30000] as const;
+const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720] as const;
+
+export type TowerReward = { diamond: number; boxes: number };
+/** 층의 첫 돌파 보상. 일반 층 💎, 구간 5번째 층은 💎+📦, 특별층 💎+📦. */
+export function towerReward(floor: number): TowerReward {
+  const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(floor)) - 1;
+  if (towerIsSpecial(floor)) return { diamond: TOWER_SPECIAL_DIA[i]!, boxes: TOWER_SPECIAL_BOX[i]! };
+  const inSection = ((floor - 1) % TOWER_SECTION) + 1;
+  return { diamond: TOWER_NORMAL_DIA[i]!, boxes: inSection === 5 ? TOWER_FIFTH_BOX[i]! : 0 };
+}

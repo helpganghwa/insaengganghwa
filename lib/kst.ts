@@ -32,6 +32,14 @@ export function kstDateString(at: Date = new Date()): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+/** 그 주 월요일 `YYYY-MM-DD`(KST) — 무한의 탑 요구 장비 주간 교체 키(월요일 0시). */
+export function kstWeekStartString(at: Date = new Date()): string {
+  const k = new Date(at.getTime() + KST_OFFSET_MS);
+  const dow = (k.getUTCDay() + 6) % 7; // 월=0 … 일=6
+  const mon = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate() - dow));
+  return `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, '0')}-${String(mon.getUTCDate()).padStart(2, '0')}`;
+}
+
 /** KST 벽시계 시(0~23) — 점령전 23:00 잠금 등 시각 분기. */
 export function kstHour(at: Date = new Date()): number {
   return new Date(at.getTime() + KST_OFFSET_MS).getUTCHours();
