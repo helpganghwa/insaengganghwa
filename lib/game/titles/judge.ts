@@ -666,13 +666,12 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and crit) as exp_crit,
              coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
     `),
-    // 무한의 탑(2026-09-29) — 최고 층 · 기사회생/공명이 터진 승리 · 무패로 가장 많이 이긴 하루 · 기본 아바타 최고 층 ·
+    // 무한의 탑(2026-09-29) — 기사회생/공명이 터진 승리 · 무패로 가장 많이 이긴 하루 · 기본 아바타 최고 층 ·
     // 같은 층에서 진 횟수 중 끝내 이긴 층의 최대. 표 미적용(프로덕션 반영 전) 실패가 판정 전체를 멈추지 않게 0으로 본다.
     () =>
       db.execute(sql`
         with b as (select tb.floor, tb.win, tb.turns, tb.profile_id, tb.created_at from tower_battles tb where tb.user_id=${u} and tb.server_id=${s})
-        select coalesce((select best_floor from tower_progress where user_id=${u} and server_id=${s}), 0)::int as tw_best,
-               (select count(*) from b where win and turns @> '[{"event":"revive"}]'::jsonb)::int as tw_revive_wins,
+        select (select count(*) from b where win and turns @> '[{"event":"revive"}]'::jsonb)::int as tw_revive_wins,
                (select count(*) from b where win and turns @> '[{"event":"resonance"}]'::jsonb)::int as tw_reso_wins,
                coalesce((select max(w) from (select count(*) filter (where win) as w from b
                  group by (created_at at time zone 'Asia/Seoul')::date having bool_and(win)) d), 0)::int as tw_flawless_day,
@@ -743,7 +742,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_crit: n(ex.exp_crit),
     exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
     // 무한의 탑(2026-09-29)
-    tw_best: n(tw.tw_best), tw_revive_wins: n(tw.tw_revive_wins), tw_reso_wins: n(tw.tw_reso_wins),
+    tw_revive_wins: n(tw.tw_revive_wins), tw_reso_wins: n(tw.tw_reso_wins),
     tw_flawless_day: n(tw.tw_flawless_day), tw_bare_best: n(tw.tw_bare_best), tw_grit: n(tw.tw_grit),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
@@ -801,11 +800,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
-  // 무한의 탑(2026-09-29) — 층 도달 4종 + 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
-  tower_10: (m) => m.tw_best >= 10,
-  tower_50: (m) => m.tw_best >= 50,
-  tower_80: (m) => m.tw_best >= 80,
-  tower_100: (m) => m.tw_best >= 100,
+  // 무한의 탑(2026-09-29) — 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
   tower_revive: (m) => m.tw_revive_wins >= 1,
   tower_resonance: (m) => m.tw_reso_wins >= 10,
   tower_flawless: (m) => m.tw_flawless_day >= 10,
