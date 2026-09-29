@@ -1081,13 +1081,24 @@ export const TOWER_POOL_PER_SLOT = 10;
 export const TOWER_AVATAR_MULT = 2;
 
 /**
- * 층 요구치 = 11 × 1.1175^(n−1). 시뮬레이션 곡선(1층 10, 100층 599,280 = 1위 특별층 시너지 중앙값)에
- * ×1.1 — 하루 3번·매일 재도전이면 일주일에 요구치의 약 90%로도 넘기 때문(TOWER.md §3·§4).
+ * 층 요구치 — 구간 계단식(TOWER.md §3). 구간 첫 층 = 11 × 3.1^(구간−1), 구간 안 일반층은 한 층마다 ×1.09로 완만하게,
+ * 특별층(10의 배수)은 바로 앞 층의 ×1.45로 가파르게. 특별층이 구간의 벽이 되고, 다음 구간 첫 층은 다시 그 위(×1.07).
+ * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 지정 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
+ * 1층 11 · 10층 32 · 50층 2,935 · 90층 271,060 · 99층 579,509 · 100층 672,230.
  */
 export const TOWER_REQ_BASE = 11;
-export const TOWER_REQ_RATIO = 1.1175;
+export const TOWER_REQ_SECTION_RATIO = 3.1;
+export const TOWER_REQ_FLOOR_RATIO = 1.09;
+export const TOWER_REQ_SPECIAL_MULT = 1.45;
+export const TOWER_REQ_TOP_MULT = 1.16;
 export function towerRequirement(floor: number): number {
-  return Math.round(TOWER_REQ_BASE * Math.pow(TOWER_REQ_RATIO, Math.max(0, floor - 1)));
+  const f = Math.max(1, floor);
+  const k = (f - 1) % TOWER_SECTION; // 구간 안 위치 0~9(9 = 특별층)
+  const start = TOWER_REQ_BASE * Math.pow(TOWER_REQ_SECTION_RATIO, Math.floor((f - 1) / TOWER_SECTION));
+  const v = k < TOWER_SECTION - 1
+    ? start * Math.pow(TOWER_REQ_FLOOR_RATIO, k)
+    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * (f === TOWER_FLOORS ? TOWER_REQ_TOP_MULT : TOWER_REQ_SPECIAL_MULT);
+  return Math.round(v);
 }
 export function towerIsSpecial(floor: number): boolean {
   return floor % TOWER_SECTION === 0;
