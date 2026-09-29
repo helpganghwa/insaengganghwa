@@ -52,6 +52,10 @@ export default function Doc() {
             '완료한 파견의 보상으로 지급된다.',
           ],
           [
+            <><DocLink slug="tower" hash="reward">무한의 탑</DocLink></>,
+            '층을 처음 돌파할 때 지급된다.',
+          ],
+          [
             <><DocLink slug="friends">친구 초대</DocLink></>,
             '초대한 사람이 가입하면 우편으로 지급된다.',
           ],

@@ -191,6 +191,12 @@ export default function Doc() {
           ],
           [
             <>
+              <DocLink slug="tower">무한의 탑</DocLink>
+            </>,
+            '한 층씩 층 주인을 쓰러뜨리며 오른다. 층마다 첫 돌파 보상, 가장 높이 오른 층으로 순위.',
+          ],
+          [
+            <>
               <DocLink slug="diamond">다이아</DocLink>
             </>,
             '유료 재화. 얻는 곳과 쓰는 곳.',
