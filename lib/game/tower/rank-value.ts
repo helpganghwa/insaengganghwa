@@ -17,7 +17,7 @@ export function towerFloorFromRankValue(value: number): number {
   return Math.floor(value / TOWER_RANK_SCALE);
 }
 
-/** 같은 식의 SQL 조각(스냅샷·증분 공용) — tower_progress 별칭을 받는다. */
+/** 같은 식의 SQL 조각(스냅샷·증분 공용) — tower_progress 별칭을 받는다. 초 단위 내림은 JS towerRankValue와 같다. */
 export function towerRankValueSql(alias: string): string {
-  return `(${alias}.best_floor::bigint * ${TOWER_RANK_SCALE} + (${TOWER_RANK_SCALE - 1} - extract(epoch from ${alias}.best_at)::bigint))`;
+  return `(${alias}.best_floor::bigint * ${TOWER_RANK_SCALE} + (${TOWER_RANK_SCALE - 1} - floor(extract(epoch from ${alias}.best_at))::bigint))`;
 }

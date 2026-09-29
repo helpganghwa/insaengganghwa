@@ -135,7 +135,9 @@ export async function towerBoard(userId: string, serverId: number) {
       coalesce((select json_agg(x) from (select section, weapon, armor, accessory from tower_specials where server_id=${serverId}) x), '[]'::json) as specials,
       (select (count(*) + 1)::int from tower_progress t join profiles pr on pr.id = t.user_id, me
         where me.best_floor > 0 and t.server_id=${serverId} and ${NOT_BANNED}
-          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor and t.best_at < me.best_at))) as my_rank`)) as unknown as {
+          -- 랭킹 표(rank-value.ts)와 같은 기준 — 도달 시각은 초 단위(같은 초면 같은 등수)
+          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
+            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))) as my_rank`)) as unknown as {
     prog: { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null } | null;
     owned: { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[];
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];

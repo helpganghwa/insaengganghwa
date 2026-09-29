@@ -165,11 +165,11 @@ async function rankByValue(
 export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower'];
 
 /**
- * 5개 지표를 한 번에 — 랭킹 화면의 탭 전환을 무왕복으로 만들기 위한 페이로드.
+ * 6개 지표를 한 번에 — 랭킹 화면의 탭 전환을 무왕복으로 만들기 위한 페이로드.
  *
  * 지표별로 따로 부르면 (Top + 내값 + 내순위) × 5 + 프로필 = 20왕복이 된다. 여기서는
  * Top만 지표별로 남기고(각각 인덱스 limit 스캔이라 저렴) **내 순위 5종을 1쿼리로**,
- * **프로필·길드 batch도 5지표 합집합 1회로** 접어 7왕복으로 끝낸다 — 지표 1개만 읽던
+ * **프로필·길드 batch도 6지표 합집합 1회로** 접어 7왕복으로 끝낸다 — 지표 1개만 읽던
  * 기존(4왕복)에 비해 소폭 늘지만, 탭을 누를 때마다 발생하던 페이지 전체 재요청
  * (layout 재렌더 포함)이 사라진다(2026-07-31).
  */
@@ -185,7 +185,7 @@ async function loadSharedTops(serverId: number) {
   const hit = sharedTopsCache.get(serverId);
   if (hit && Date.now() - hit.at < SHARED_TOPS_TTL_MS) return hit;
   const tops = await Promise.all(LEADERBOARD_METRICS.map((m) => safeTop(m, serverId, TOP)));
-  // 프로필·길드는 5지표 합집합에 대해 1회만 — 지표 간 인물이 겹쳐 중복 조회가 크다.
+  // 프로필·길드는 6지표 합집합에 대해 1회만 — 지표 간 인물이 겹쳐 중복 조회가 크다.
   const seen = new Map<string, LeaderboardEntry>();
   for (const list of tops) for (const e of list) if (!seen.has(e.userId)) seen.set(e.userId, e);
   const decorated = await attachProfiles(serverId, [...seen.values()]);
@@ -244,7 +244,7 @@ export async function getLeaderboardTop(
   return decorateTop(tops[i]!, byUser);
 }
 
-/** 내 순위 5지표 — 값(내 행)과 순위(값 초과 개수+1)를 지표별 1행으로 한 번에. */
+/** 내 순위 6지표 — 값(내 행)과 순위(값 초과 개수+1)를 지표별 1행으로 한 번에. */
 async function myRanksAll(
   serverId: number,
   userId: string,

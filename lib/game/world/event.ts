@@ -25,7 +25,7 @@ export type WorldEventType =
   | 'zone_abandoned' // 방치 판정 구역(0180, 소유 유지·세금 보너스 제외) — detail { guildName, zones: string[], battleDay }. 연대기 전용
   | 'guild_power_1' // 길드 전투력 1위 교체 — detail { guildName }
   | 'guild_zone_1' // 길드 점령지 1위 교체 — detail { guildName }
-  | 'rank_leader' // 랭킹 5종 유저 1위 교체 — detail { metric, value }
+  | 'rank_leader' // 랭킹 6종 유저 1위 교체 — detail { metric, value }
   | 'personal_milestone'; // 개인 기록 마일스톤(합산강화/전투력/레이드/대난투) — detail { metric, milestone }
 
 /** 홈 월드 피드 1건 — actor 닉네임·공개코드 해소(프로필 링크 = 코드+서버). */
@@ -173,7 +173,7 @@ async function getWorldFeedUncached(serverId: number, limit = 40): Promise<World
 const LEADER_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower'];
 
 /**
- * 랭킹 5종 유저 1위 교체 감지(일일 cron) — metric별 현재 1위를 ranking_leaders와 비교해 바뀌면
+ * 랭킹 6종 유저 1위 교체 감지(일일 cron) — metric별 현재 1위를 ranking_leaders와 비교해 바뀌면
  * world_events(rank_leader) 기록 후 갱신. 첫 관측(저장 없음)은 기록 없이 시드만(초기 스팸 방지).
  */
 export async function runRankingLeaders(serverId: number): Promise<number> {
