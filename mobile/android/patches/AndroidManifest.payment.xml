@@ -1,12 +1,12 @@
 <!-- 결제창 부활 방지(2026-09-29) — app/src/main/AndroidManifest.xml에 손으로 반영하는 정본 조각(README "결제창 부활 방지" 참조).
      ① <manifest>에 xmlns:tools="http://schemas.android.com/tools" 추가
-     ② Bubblewrap이 만든 provider.PaymentActivity 선언을 아래 .SafePaymentActivity 선언으로 교체(PAY 필터가 둘이면 안 된다)
+     ② Bubblewrap이 만든 provider.PaymentActivity 선언을 아래 .GanghwaPaymentActivity 선언으로 교체(PAY 필터가 둘이면 안 된다)
      ③ 아래 ProxyBillingActivity·V2 두 선언을 </application> 안에 추가 -->
-        <!-- 결제창 부활 방지(2026-09-29, patches/SafePaymentActivity.java·README) — 되살아난 결제 화면은 결제를 새로 열지 않고,
+        <!-- 결제 화면(2026-09-29, patches/GanghwaPaymentActivity.java·README) — 결제 귀속 표식을 싣고, 되살아난 결제 화면은 결제를 새로 열지 않고,
              아이콘으로 앱을 다시 켜면 남아 있던 결제 화면(구글 쪽 Proxy 포함)을 닫는다. 설정 변경으로 재생성되지 않게
              configChanges를 넓힌다(UI 없는 화면이라 무해). stateNotNeeded 금지. -->
         <activity
-            android:name=".SafePaymentActivity"
+            android:name=".GanghwaPaymentActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale|locale|layoutDirection"
             android:finishOnTaskLaunch="true"

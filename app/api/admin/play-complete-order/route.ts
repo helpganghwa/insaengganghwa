@@ -51,6 +51,9 @@ export async function POST(req: Request) {
     googleState: g.state ?? null, googleProduct, ourSku: order.playSku, ourStatus: order.status, amountKrw: String(order.amountKrw), hasToken: !!token,
     purchaseTime: p?.purchaseTimeMillis ? new Date(Number(p.purchaseTimeMillis)).toISOString() : null,
     purchaseType: p?.purchaseType ?? null,
+    // 결제 귀속 표식(1.0.3 앱) — profileId가 우리 주문번호(gp-…)여야 한다. 1.0.2 이하 앱의 구매는 null.
+    attributedOrder: p?.obfuscatedExternalProfileId ?? null,
+    attributedAccount: p?.obfuscatedExternalAccountId ?? null,
     orderCreatedAt: order.createdAt.toISOString(),
     orderCheckoutAt: order.checkoutAt?.toISOString() ?? null,
   };
