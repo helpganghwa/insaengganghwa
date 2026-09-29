@@ -165,6 +165,8 @@ export async function recoverPlayPurchases(): Promise<PlayRecoverSummary> {
     }
     // 구글 쪽 결제 보류(편의점 결제 등) — 건드리지 않는다. 결제가 끝나면 다음 진입에서 다시 온다.
     if (r.code === 'PENDING') continue;
+    // 같은 기기의 다른 게임 계정이 산 구매(결제 귀속 표식으로 확인) — 서버가 그 주인에게 지급했거나 처리 중이다. 실패가 아니다.
+    if (r.code === 'OTHER_ACCOUNT') continue;
     // 구글이 취소·환불됐다고 답한 구매 — 지급 없이 기기 소모로 잠김만 푼다(서버가 구글에 확인한 결과).
     if (r.code === 'CANCELLED' && typeof svc.consume === 'function') {
       try {
@@ -196,12 +198,14 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
   const r = await createPlayOrderAction(productId).catch(() => null);
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };
   if (r.status !== 'success') return { ok: false, reason: 'create', code: r.code };
-  const { paymentId, sku, orderName, amountKrw } = r.order;
+  const { paymentId, sku, accountId, orderName, amountKrw } = r.order;
 
   let response: PaymentResponse;
   try {
+    // accountId·orderId = 결제 귀속 표식(docs/PLAYSTORE.md) — 1.0.3 앱이 구글 결제에 실어 모든 결제를 이 주문에 묶는다.
+    // 1.0.2 이하 앱의 결제 화면은 모르는 키를 읽지 않으므로 함께 보내도 무해하다.
     const request = new PaymentRequest(
-      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
+      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku, accountId, orderId: paymentId } }],
       { total: { label: orderName, amount: { currency: 'KRW', value: String(amountKrw) } } },
     );
     // 시트 앞에 다른 await를 두지 않는다 — 대기가 길면 사용자 활성화가 만료돼 show()가 거부된다.

@@ -184,7 +184,12 @@ const PREMIUM_MAIL_TITLES = [PREMIUM_INSTANT_TITLE, PREMIUM_DAILY_TITLE];
 export async function refundPurchase(
   paymentId: string,
   /** playVoided: 구글 환불이 이미 확정된 호출(voided 목록, 또는 방금 성공한 환불 API) — 구매 상태 재확인을 건너뛴다. */
-  opts: { reason?: RefundReason; playVoided?: boolean } = {},
+  opts: {
+    reason?: RefundReason;
+    playVoided?: boolean;
+    /** 환불 안내 우편 문구 덮어쓰기 — 중복 결제 자동 환불처럼 사유를 알려야 하는 경우(기본은 일반 환불 안내). */
+    notice?: { title: string; body: string };
+  } = {},
 ): Promise<RefundResult> {
   const [order] = await db
     .select({
@@ -366,8 +371,10 @@ export async function refundPurchase(
         userId: order.userId,
         serverId: order.serverId,
         type: 'notice',
-        title: '결제 환불 안내',
-        body: `결제(₩${Number(order.amountKrw).toLocaleString('ko-KR')})가 환불 처리되었습니다. 지급되었던 재화가 있다면 함께 회수됩니다. 문의는 고객센터로 연락 주세요.`,
+        title: opts.notice?.title ?? '결제 환불 안내',
+        body:
+          opts.notice?.body ??
+          `결제(₩${Number(order.amountKrw).toLocaleString('ko-KR')})가 환불 처리되었습니다. 지급되었던 재화가 있다면 함께 회수됩니다. 문의는 고객센터로 연락 주세요.`,
         senderLabel: '인생강화',
         payload: {},
       });

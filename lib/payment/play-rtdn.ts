@@ -7,6 +7,7 @@ import { iapOrders } from '@/lib/db/schema/payment';
 
 import { raisePaymentAlert } from './alert';
 import { getPlayProductPurchase } from './play-api';
+import { settleAttributedPurchase, type AttributedOutcome } from './play-attribution';
 import { isKnownPlaySku } from './play-sku';
 import { completePurchase } from './purchase';
 
@@ -39,7 +40,9 @@ export type RtdnOutcome =
   | { kind: 'granted'; paymentId: string; already: boolean }
   | { kind: 'unmatched'; candidates: number }
   | { kind: 'failed'; paymentId: string; code: string }
-  | { kind: 'minor_limit'; paymentId: string };
+  | { kind: 'minor_limit'; paymentId: string }
+  /** 결제 귀속 표식으로 처리한 결과(play-attribution.ts). */
+  | { kind: 'attributed'; outcome: AttributedOutcome };
 
 type Row = { paymentId: string; userId: string; status: string; hasToken: boolean };
 
@@ -60,15 +63,6 @@ export async function handleOneTimePurchase(sku: string, purchaseToken: string, 
   }
   const g = await getPlayProductPurchase(sku, purchaseToken);
   if (g.purchaseState !== 0) return { kind: 'ignored', reason: `purchaseState ${g.purchaseState}` };
-  // 구매 시각이 없으면 대기 판정이 매번 '방금'이 되어 영원히 재전송된다(재검증 B-5) — 자동 지급하지 않고 경보.
-  if (!g.purchaseTimeMillis) {
-    const [b] = await db.select({ paymentId: iapOrders.portoneOrderId, userId: iapOrders.userId, status: iapOrders.status }).from(iapOrders).where(eq(iapOrders.playPurchaseToken, purchaseToken)).limit(1);
-    if (b) return b.status === 'pending' || b.status === 'expired' ? finish(b.paymentId, b.userId, purchaseToken, g.orderId) : { kind: 'already', paymentId: b.paymentId };
-    await raisePaymentAlert('PLAY_RTDN_UNMATCHED', { paymentId: `rtdn:${g.orderId ?? purchaseToken.slice(0, 16)}`, detail: `구매 시각 없는 구매 알림(${sku}, ${g.orderId ?? '?'}) — 자동 지급하지 않음. 콘솔에서 확인.` });
-    return { kind: 'unmatched', candidates: 0 };
-  }
-  const purchaseTimeMs = Number(g.purchaseTimeMillis);
-
   const [bound] = await db
     .select({ paymentId: iapOrders.portoneOrderId, userId: iapOrders.userId, status: iapOrders.status })
     .from(iapOrders)
@@ -78,6 +72,17 @@ export async function handleOneTimePurchase(sku: string, purchaseToken: string, 
     if (bound.status !== 'pending' && bound.status !== 'expired') return { kind: 'already', paymentId: bound.paymentId };
     return finish(bound.paymentId, bound.userId, purchaseToken, g.orderId);
   }
+  // 결제 귀속 표식(1.0.3 앱, 2026-09-29) — 아직 묶이지 않은 토큰이 주문번호·계정을 싣고 왔으면 추정 없이 그 주문으로 처리한다.
+  // 유예·후보 규칙·purchaseType 제한이 필요 없다: 화면 검증과 겹쳐도 같은 주문·같은 토큰이라 completePurchase가 1회만 지급한다.
+  const attributed = await settleAttributedPurchase(sku, purchaseToken, g);
+  if (attributed) return { kind: 'attributed', outcome: attributed };
+  // 구매 시각이 없으면 대기 판정이 매번 '방금'이 되어 영원히 재전송된다(재검증 B-5) — 표식 없는 구매는 자동 지급하지 않고 경보.
+  if (!g.purchaseTimeMillis) {
+    await raisePaymentAlert('PLAY_RTDN_UNMATCHED', { paymentId: `rtdn:${g.orderId ?? purchaseToken.slice(0, 16)}`, detail: `구매 시각 없는 구매 알림(${sku}, ${g.orderId ?? '?'}) — 자동 지급하지 않음. 콘솔에서 확인.` });
+    return { kind: 'unmatched', candidates: 0 };
+  }
+  const purchaseTimeMs = Number(g.purchaseTimeMillis);
+
   // ⓪ 정상 경로가 끝날 시간을 준다.
   if (now - purchaseTimeMs < RTDN_GRACE_MS) throw new RtdnRetryLater(`grace ${Math.round((now - purchaseTimeMs) / 1000)}s`);
 

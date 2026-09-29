@@ -7,6 +7,7 @@ import { iapOrders } from '@/lib/db/schema/payment';
 
 import { raisePaymentAlert } from './alert';
 import { getPlayProductPurchase, PlayApiError, type PlayProductPurchase } from './play-api';
+import { settleAttributedPurchase } from './play-attribution';
 import { isKnownPlaySku, productIdForPlaySku } from './play-sku';
 import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult } from './purchase';
 
@@ -35,7 +36,7 @@ export type RecoverResult =
    * CANCELLED = 구글이 취소·환불됐다고 답한 구매(지급 없음, 클라가 기기 consume으로 잠김만 푼다).
    * PENDING = 구글 쪽 결제 보류(편의점 결제 등) — 손대지 않는다. NOT_FOUND = 그 SKU의 구매가 아님.
    */
-  | { ok: false; code: 'UNKNOWN_SKU' | 'NO_ORDER' | 'CANCELLED' | 'PENDING' | 'NOT_FOUND' | CompleteFailCode };
+  | { ok: false; code: 'UNKNOWN_SKU' | 'NO_ORDER' | 'CANCELLED' | 'PENDING' | 'NOT_FOUND' | 'OTHER_ACCOUNT' | CompleteFailCode };
 
 const LOOKBACK_DAYS = 7;
 
@@ -62,6 +63,27 @@ export async function recoverPlayPurchase(
   // ⚠ 이 줄이 없으면 아래 'state !== 0 → CANCELLED'가 보류까지 잡아 기기가 보류 중인 구매를 소모해 버린다(2026-09-24 검수에서 발각).
   if (state === 2) return { ok: false, code: 'PENDING' };
   if (state !== 0) return { ok: false, code: 'CANCELLED' };
+
+  // 결제 귀속 표식(1.0.3 앱, 2026-09-29) — 구매가 가리키는 주문으로 처리한다. 지급 대상은 요청자가 아니라 **주문 주인**이다
+  // (같은 기기의 다른 게임 계정이 산 구매가 listPurchases에 보여도 그 주인에게 간다). 아래 추정 경로는 표식 없는 구매 전용.
+  const a = await settleAttributedPurchase(sku, purchaseToken, g);
+  if (a) {
+    switch (a.kind) {
+      case 'granted':
+        return a.userId === userId ? { ok: true, already: a.already, paymentId: a.paymentId } : { ok: false, code: 'OTHER_ACCOUNT' };
+      case 'pending':
+      case 'deferred':
+        return { ok: false, code: 'PENDING' };
+      case 'not_granted':
+        return a.userId === userId ? { ok: false, code: a.code } : { ok: false, code: 'OTHER_ACCOUNT' };
+      case 'refunded':
+        // 구글 환불로 구매가 취소됐다 — 클라가 기기 소모로 잠김을 푼다(지급 없음).
+        return { ok: false, code: 'CANCELLED' };
+      case 'refund_failed':
+        // 환불 호출 실패 — 경보를 남겼다. 기기는 소모하지 않는다(3일 자동 환불·정산 크론 재시도가 남는다).
+        return { ok: false, code: 'NO_ORDER' };
+    }
+  }
 
   // ① 토큰이 이미 묶인 주문(본인 것만) — 미완 주문만 다시 시도. paid·refunded 등 끝난 주문은 손대지 않는다
   //   (completePurchase는 전이가 없어도 ok를 돌려주므로 여기서 걸러야 "반영됐어요"가 헛뜨지 않는다).
