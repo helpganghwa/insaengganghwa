@@ -17,6 +17,7 @@ import * as conquest from './docs/conquest';
 import * as friends from './docs/friends';
 import * as avatar from './docs/avatar';
 import * as expedition from './docs/expedition';
+import * as tower from './docs/tower';
 import * as shop from './docs/shop';
 import * as titles from './docs/titles';
 
@@ -59,6 +60,7 @@ const MODULES = [
   codex,
   raid,
   melee,
+  tower,
   ranking,
   guild,
   guildRoles,
