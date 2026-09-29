@@ -8,6 +8,7 @@ vi.mock('@/lib/payment/play-api', () => ({
   consumePlayProductPurchase: vi.fn(),
   refundPlayOrder: vi.fn(),
   listPlayVoidedPurchases: vi.fn(),
+  getPlayOrder: vi.fn(),
   PlayApiError: class PlayApiError extends Error {
     constructor(
       public status: number,
@@ -18,16 +19,17 @@ vi.mock('@/lib/payment/play-api', () => ({
   },
 }));
 
-import { consumePlayProductPurchase, getPlayProductPurchase, listPlayVoidedPurchases } from '@/lib/payment/play-api';
+import { consumePlayProductPurchase, getPlayOrder, getPlayProductPurchase, listPlayVoidedPurchases } from '@/lib/payment/play-api';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
-import { syncPlayVoided } from '@/lib/payment/play';
+import { syncPlayCancelledRecent, syncPlayVoided } from '@/lib/payment/play';
 
 import { endTestDb, resyncTestMileage, sql, testDb } from '../db';
 
 const mockGet = vi.mocked(getPlayProductPurchase);
 const mockConsume = vi.mocked(consumePlayProductPurchase);
 const mockVoided = vi.mocked(listPlayVoidedPurchases);
+const mockOrder = vi.mocked(getPlayOrder);
 
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';
 const skip = !TEST_USER_ID;
@@ -72,6 +74,7 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
     mockGet.mockReset();
     mockConsume.mockReset();
     mockVoided.mockReset();
+    mockOrder.mockReset();
   });
 
   afterEach(async () => {
@@ -225,6 +228,44 @@ describe.skipIf(skip)('Play 결제 — completePurchase/refund/voided 동기화 
     expect(r).toMatchObject({ voided: 2, refunded: 1, unknown: 1, failed: 0 });
     expect((await readOrder(id)).s).toBe('refunded');
     expect(await readDiamond()).toBe(baseline);
+  });
+
+  it('취소 확인: 구매 상태는 아직 완료여도 주문이 REFUNDED면 회수, PROCESSED면 그대로, 부분 환불은 경보만', async () => {
+    // 창 안의 다른 paid 주문(스테이징 잔여)도 같이 훑이므로 — 이 테스트 주문의 토큰일 때만 상태를 바꿔 준다.
+    const mk = async (tag: string, gpa: string) => {
+      const pid = newPid(tag);
+      const id = await insertOrder(pid);
+      made.push(id);
+      const token = newToken(tag);
+      mockGet.mockResolvedValue(purchased(gpa));
+      mockConsume.mockResolvedValue(undefined);
+      expect((await completePurchase(pid, TEST_USER_ID, { playPurchaseToken: token })).ok).toBe(true);
+      return { pid, id, token, gpa };
+    };
+    const refunded = await mk('ord-rf', 'GPA.ord-rf');
+    const processed = await mk('ord-ok', 'GPA.ord-ok');
+    const partial = await mk('ord-pt', 'GPA.ord-pt');
+    const afterGrant = await readDiamond();
+
+    mockGet.mockImplementation(async () => purchased()); // 구매 조회는 전부 아직 완료(0) — 콘솔 환불 직후의 실측 모양
+    mockOrder.mockImplementation(async (orderId: string) => ({
+      orderId,
+      state: orderId === refunded.gpa ? 'REFUNDED' : orderId === partial.gpa ? 'PARTIALLY_REFUNDED' : 'PROCESSED',
+    }));
+    const r = await syncPlayCancelledRecent();
+    expect(r.failed).toBe(0);
+    expect((await readOrder(refunded.id)).s).toBe('refunded');
+    expect((await readOrder(processed.id)).s).toBe('paid');
+    expect((await readOrder(partial.id)).s).toBe('paid');
+    expect(afterGrant - (await readDiamond())).toBe(BigInt(DIAMOND)); // 환불된 한 건만 회수
+    const al = (await testDb.execute(sql`select count(*)::int n from payment_alerts where payment_id = ${'play-partial:' + partial.pid}`)) as unknown as { n: number }[];
+    expect(al[0]!.n).toBe(1);
+
+    // 다시 돌려도 이미 회수한 주문은 건드리지 않고, 부분 환불 경보도 한 번뿐.
+    await syncPlayCancelledRecent();
+    expect(afterGrant - (await readDiamond())).toBe(BigInt(DIAMOND));
+    const al2 = (await testDb.execute(sql`select count(*)::int n from payment_alerts where payment_id = ${'play-partial:' + partial.pid}`)) as unknown as { n: number }[];
+    expect(al2[0]!.n).toBe(1);
   });
 });
 

@@ -96,6 +96,8 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API}/${encodeURIComponent(playPackageName())}${path}`, {
     ...init,
     headers: { ...(init.headers ?? {}), authorization: `Bearer ${token}`, accept: 'application/json' },
+    // 응답이 멈추면 크론·RTDN 한 번이 함수 한도까지 묶인다(2026-09-29 검수) — 15초에서 끊고 호출부의 재시도에 맡긴다.
+    signal: init.signal ?? AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new PlayApiError(res.status, `${path} ${res.status} ${(await res.text()).slice(0, 300)}`);
   const text = await res.text();

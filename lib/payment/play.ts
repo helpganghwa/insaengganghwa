@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -8,6 +8,7 @@ import { iapOrders } from '@/lib/db/schema/payment';
 import { raisePaymentAlert } from './alert';
 import {
   consumePlayProductPurchase,
+  getPlayOrder,
   getPlayProductPurchase,
   listPlayVoidedPurchases,
   playConfigured,
@@ -138,6 +139,11 @@ export async function playOrderSummary(orderId: bigint): Promise<{ playOrderId: 
 /**
  * 최근 결제분 취소 여부 직접 조회 — voided purchases 목록에만 기대지 않기 위한 보조 경로.
  *
+ * 두 단계로 본다(2026-09-29). ① 구매 조회(products.get) purchaseState 1 → 취소. ② 아니면 주문 조회(orders.get) state가
+ * REFUNDED·CANCELED면 취소. 콘솔에서 환불한 **이미 소모된** 구매는 ①이 한동안 0(구매 완료)으로 남고 voided 목록 반영도 늦어
+ * 회수가 수 시간 밀렸다(09-29 실측: 12:18 콘솔 환불, orders.get은 12:21에 이미 REFUNDED, 12:24 크론은 둘 다 못 잡음).
+ * PARTIALLY_REFUNDED는 회수 금액을 정할 수 없어 자동 회수하지 않고 경보만 남긴다(주문당 1회).
+ *
  * 2026-09-11 첫 Play 환불에서 구글 구매 상태는 곧바로 '취소됨'(purchaseState 1)이 됐는데
  * voided 목록은 비어 있었다. 목록 반영이 늦거나 일부 환불이 빠지면 회수가 통째로 누락되므로,
  * 최근 주문만 토큰으로 직접 확인한다. 30일 voided 스윕은 그대로 두어 오래된 건을 받친다.
@@ -146,13 +152,21 @@ export async function playOrderSummary(orderId: bigint): Promise<{ playOrderId: 
  * voided 경로와 겹쳐도 두 번 회수되지 않는다. 구글 상태 재확인도 그쪽에서 한 번 더 한다.
  */
 const CANCEL_CHECK_WINDOW_HOURS = 48;
+/**
+ * 한 번에 확인하는 주문 수 상한 — 창 안 결제를 **전부** 봐야 한다. 오래된 순이라 상한에 걸리면 가장 최근 결제(콘솔 환불이
+ * 가장 흔한 쪽)부터 빠진다. 50이던 시절 48시간 결제가 70건이라 최신 20건이 확인되지 않았다(09-29).
+ * 호출은 주문당 최대 2회(구매·주문 조회) — 200건이면 10분에 400회, 하루 할당량(20만) 안.
+ */
+const CANCEL_CHECK_LIMIT = 200;
+/** 이 단계에 쓰는 시간 상한 — 함수 한도(300초) 안에서 다른 단계·하트비트 몫을 남긴다. 넘으면 남은 행은 다음 회차(10분 뒤)가 본다. */
+const CANCEL_CHECK_BUDGET_MS = 240_000;
 
 export async function syncPlayCancelledRecent(
-  limit = 50,
+  limit = CANCEL_CHECK_LIMIT,
 ): Promise<{ scanned: number; refunded: number; failed: number }> {
   if (!playConfigured()) return { scanned: 0, refunded: 0, failed: 0 };
   const rows = await db
-    .select({ sku: iapOrders.playSku, token: iapOrders.playPurchaseToken, pid: iapOrders.portoneOrderId })
+    .select({ id: iapOrders.id, sku: iapOrders.playSku, token: iapOrders.playPurchaseToken, pid: iapOrders.portoneOrderId, playOrderId: iapOrders.playOrderId })
     .from(iapOrders)
     .where(
       and(
@@ -164,15 +178,41 @@ export async function syncPlayCancelledRecent(
         gte(iapOrders.paidAt, sql`now() - interval '${sql.raw(String(CANCEL_CHECK_WINDOW_HOURS))} hours'`),
       ),
     )
-    .orderBy(asc(iapOrders.paidAt))
+    // 최신 결제부터 — 콘솔 환불은 대개 방금 한 결제에 몰린다. 시간·상한에 걸려 빠지는 쪽이 오래된 결제가 되게 한다.
+    .orderBy(desc(iapOrders.paidAt))
     .limit(limit);
+  const deadline = Date.now() + CANCEL_CHECK_BUDGET_MS;
+  // 상한에 닿았으면 최근 결제 일부를 못 봤다 — 조용히 넘기지 않고 로그로 드러낸다(상한을 올릴 신호).
+  if (rows.length >= limit) console.warn(`[play-sync] cancelled check capped at ${limit} — 최근 결제 일부 미확인`);
   let refunded = 0;
   let failed = 0;
   for (const r of rows) {
+    if (Date.now() > deadline) {
+      console.warn(`[play-sync] cancelled check time budget reached — 남은 ${rows.length - rows.indexOf(r)}건은 다음 회차`);
+      break;
+    }
     try {
       const p = await getPlayProductPurchase(r.sku!, r.token!);
-      if (p.purchaseState !== 1) continue; // 0 구매완료 · 2 보류 — 회수 대상 아님.
-      const res = await refundPurchase(r.pid);
+      let res: Awaited<ReturnType<typeof refundPurchase>>;
+      if (p.purchaseState === 1) {
+        res = await refundPurchase(r.pid);
+      } else {
+        // 구매 상태가 아직 취소가 아니어도 주문이 환불·취소됐을 수 있다(소모된 구매의 콘솔 환불). 주문번호가 없으면 확인할 길이 없다.
+        if (!r.playOrderId) continue;
+        const o = await getPlayOrder(r.playOrderId);
+        if (o.state === 'PARTIALLY_REFUNDED') {
+          await raisePaymentAlert('PARTIAL_CANCELLED', {
+            paymentId: `play-partial:${r.pid}`,
+            orderId: r.id,
+            detail: `구글 주문 ${r.playOrderId} 부분 환불 — 회수 금액을 정할 수 없어 자동 회수하지 않음. 콘솔에서 환불 금액 확인 뒤 수동 처리.`,
+            onceEver: true,
+          }).catch(() => undefined);
+          continue;
+        }
+        if (o.state !== 'REFUNDED' && o.state !== 'CANCELED') continue; // 구매 완료·환불 대기 등 — 회수 대상 아님.
+        // 주문 조회가 구글의 환불 확정이다 — 구매 상태 재확인(아직 0)에 막히지 않게 playVoided로 넘긴다.
+        res = await refundPurchase(r.pid, { playVoided: true });
+      }
       if (res.ok && !res.already) refunded++;
       else if (!res.ok) {
         failed++;
