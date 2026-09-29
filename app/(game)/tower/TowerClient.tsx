@@ -8,7 +8,7 @@ import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
-import { avatarMultiplier, floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
+import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
@@ -121,9 +121,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     return board.avatars
       .map((a) => {
         const keys = new Set(a.keys);
-        return { ...a, mult: avatarMultiplier(equipped, rule, keys), now: towerCp(equipped, rule, keys) };
+        return { ...a, now: towerCp(equipped, rule, keys) };
       })
-      .sort((x, y) => y.now.total - x.now.total || y.mult - x.mult);
+      .sort((x, y) => y.now.total - x.now.total || y.now.doubledCount - x.now.doubledCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, items, next]);
   const [avatarId, setAvatarId] = useState<string | null>(() => {
@@ -256,11 +256,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
                       <span className="min-w-0 flex-1 leading-tight">
-                        <b className="block text-[12px]">{a.isDefault ? '기본 아바타' : a.now.doubledCount > 0 ? `맞는 장비 ${a.now.doubledCount}개` : '맞는 장비 없음'}</b>
+                        <b className="block text-[12px]">{a.isDefault ? '기본 아바타' : '나만의 아바타'}</b>
                         <span className="text-[10px] text-zinc-400">{sel ? '선택 중' : '누르면 선택'}</span>
                       </span>
+                      {/* 배율(×2.00) 대신 맞는 장비 수 — 배율은 장비마다 붙는 것이라 아바타 쪽 숫자가 전체에 곱해지는 것처럼 읽혔다. */}
                       <span className="flex-none text-right leading-tight">
-                        <b className={`block text-[14px] tabular-nums ${a.mult > 1 ? 'text-sky-300' : 'text-zinc-400'}`}>×{a.mult.toFixed(2)}</b>
+                        <b className={`block text-[13px] tabular-nums ${a.now.doubledCount > 0 ? 'text-sky-300' : 'text-zinc-400'}`}>맞는 장비 {a.now.doubledCount}/3</b>
                         <span className="text-[10.5px] tabular-nums text-zinc-300">탑 전투력 <b className="text-amber-300">{n(a.now.total)}</b></span>
                       </span>
                     </button>
@@ -280,7 +281,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const special = towerIsSpecial(next);
     const allGear = sec === 1 && !special; // 1~9층 — 모든 장비
     const counts = poolCounts(board, items, rule);
-    const base = towerCp(equipped, rule, new Set()).total; // 아바타 없이(×1) — 요구 장비 아님(×0)은 빠진다
     // 착용 가능 장비 버튼 왼쪽 그림 — 부위마다 풀 안에서 내가 가진 가장 센 장비(없거나 같으면 그중 하나, 주마다 고정).
     const owned = new Map(items.map((i) => [i.key, i.cp]));
     const preview = TOWER_SLOTS.map((s) => {
@@ -327,7 +327,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           </button>
         </div>
 
-        {/* 내 장착 — 장비별 전투력(×배율)과 '기본 합 × 아바타 배율 = 탑 전투력'이 한눈에(2차 피드백 7). */}
+        {/* 내 장착 — 장비별 탑 기준 전투력(×2·×1 반영)과 그 합 = 탑 전투력, 아바타는 맞는 장비 수(N/3)만. */}
         <div className="mt-2 flex-none rounded-xl border border-zinc-800 px-2.5 py-2">
           <div className="flex items-start gap-2">
             {TOWER_SLOTS.map((s) => {
@@ -341,7 +341,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       <span className={`absolute -bottom-1 -right-1 rounded px-0.5 text-[9px] font-black ${p.mult === 2 ? 'bg-amber-600 text-amber-950' : p.mult === 0 ? 'bg-red-900 text-red-200' : 'bg-zinc-800 text-zinc-300'}`}>×{p.mult}</span>
                     ) : null}
                   </span>
-                  <span className={`text-[10px] font-bold tabular-nums ${p?.mult === 0 ? 'text-red-300' : 'text-zinc-300'}`}>{p ? (p.mult === 0 ? '제외' : n(p.cp)) : '-'}</span>
+                  <span className={`text-[10px] font-bold tabular-nums ${p?.mult === 0 ? 'text-red-300' : p?.mult === 2 ? 'text-amber-300' : 'text-zinc-300'}`}>{p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}</span>
                 </button>
               );
             })}
@@ -350,15 +350,22 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {avatar?.south ? <img src={avatar.south} alt="" className="h-11 w-auto flex-none" style={PIX} /> : null}
               <span className="leading-tight">
-                <span className="block text-[10px] text-zinc-400">아바타 배율</span>
-                <b className="block text-[16px] text-sky-300">×{(avatar?.mult ?? 1).toFixed(2)}</b>
+                <span className="block text-[10px] text-zinc-400">맞는 장비</span>
+                <b className={`block text-[16px] tabular-nums ${cpNow.doubledCount > 0 ? 'text-sky-300' : 'text-zinc-400'}`}>{cpNow.doubledCount}/3</b>
                 <span className="text-[10.5px] font-bold text-zinc-300">변경 ›</span>
               </span>
             </button>
           </div>
           <div className="mt-1.5 flex items-baseline justify-between border-t border-zinc-800/80 pt-1.5 text-[11px] tabular-nums text-zinc-400">
-            <span>
-              기본 {n(base)} <span className="text-zinc-600">×</span> <b className="text-sky-300">{(avatar?.mult ?? 1).toFixed(2)}</b> <span className="text-zinc-600">=</span>
+            {/* 장비별 탑 기준 전투력(×2·×1 반영)을 그대로 더한다 — ×2는 장비 칸 배지에만(아바타가 전체에 곱해지는 오해 방지). */}
+            <span className="min-w-0 truncate">
+              {TOWER_SLOTS.map((sl) => cpNow.pieces.find((p) => p.slot === sl)).filter((p) => !!p && p.mult > 0).map((p, i) => (
+                <span key={p!.slot}>
+                  {i ? <span className="text-zinc-600"> + </span> : null}
+                  <span className={p!.mult === 2 ? 'text-amber-300' : ''}>{n(p!.score)}</span>
+                </span>
+              ))}
+              {cpNow.pieces.some((p) => p.mult > 0) ? <span className="text-zinc-600"> =</span> : '요구 장비 없음'}
             </span>
             <span>탑 전투력 <b className="text-[15px] text-amber-300">{n(cpNow.total)}</b></span>
           </div>
