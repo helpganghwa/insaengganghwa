@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, gt, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
@@ -33,6 +33,7 @@ import { hasCharacterOn } from '@/lib/game/server-guard';
 import { getPortonePayment, cancelPortonePayment } from './portone';
 import { isKnownMinor, purchaseGate, type PurchaseChannel } from './purchase-gate';
 import { consumePlayProductPurchase, getPlayProductPurchase, playConfigured, refundPlayOrder } from './play-api';
+import { playAccountId } from './play-ids';
 import { playSkuFor } from './play-sku';
 
 /**
@@ -331,6 +332,8 @@ export type CreatedPlayOrder = {
   paymentId: string;
   /** Play 인앱 상품 ID — 클라가 PaymentRequest data.sku로 넘긴다. */
   sku: string;
+  /** 결제 귀속 계정 표식(play-ids.ts) — 클라가 data.accountId로 넘기고 앱이 obfuscatedAccountId로 싣는다. 주문번호(paymentId)는 obfuscatedProfileId. */
+  accountId: string;
   orderName: string;
   amountKrw: number;
 };
@@ -344,35 +347,23 @@ export async function createPlayOrder(userId: string, serverId: number, productI
   const sku = playSkuFor(productId);
   if (!sku) throw new PurchaseError('UNKNOWN_PRODUCT');
   const { krw, orderName, diamondGranted } = await resolveOrder(userId, serverId, productId, 'play');
-  // 같은 상품의 살아 있는 pending(토큰 없음·6h 내)이 있으면 재사용한다(2026-09-22). Play 시트가 바로 닫히는
-  // 환경에서는 탭마다 주문이 새로 쌓여(실측: 유저 3명 47건) recon 스캔(limit 50)을 점유하고 캡 경보가 울렸다.
-  // 재사용해도 검증은 주문번호+토큰으로 그 주문을 찾아 지급하므로 경로는 같고, 금액·상품이 같아 검사도 같다.
-  const [reuse] = await db
-    .select({ paymentId: iapOrders.portoneOrderId })
-    .from(iapOrders)
+  // 결제창 1개 = 주문 1개(2026-09-29). 종전엔 같은 상품의 살아 있는 pending을 재사용했는데, 그러면 한 주문에 정당한 결제
+  // 두 건(결과 유실 뒤 재구매)이 붙어 어느 쪽이 의도인지 가릴 수 없었다. 대신 같은 상품의 토큰 없는 옛 pending을 만료로
+  // 정리해 쌓이지 않게 한다(재사용의 원래 목적 — 결제창이 바로 닫히는 환경의 pending 누적·recon 점유). 만료 주문도 늦은
+  // 결제가 오면 completePurchase가 expired→paid로 지급하고, 귀속 표식이 있으면 RTDN이 정확히 그 주문을 찾는다.
+  await db
+    .update(iapOrders)
+    .set({ status: 'expired' })
     .where(
       and(
         eq(iapOrders.userId, userId),
         eq(iapOrders.serverId, serverId),
         eq(iapOrders.provider, 'play'),
         eq(iapOrders.productCode, productId),
-        // 같은 SKU·금액일 때만 재사용 — 성장패스 가격이 바뀌면 SKU가 달라지는데 옛 주문을 재사용하면 검증·복구가 모두
-        // 실패하고 RTDN이 본인 주문을 못 세어 남의 주문에 지급될 수 있었다(2026-09-24 재검증 B-1).
-        eq(iapOrders.playSku, sku),
-        eq(iapOrders.amountKrw, BigInt(krw)),
         eq(iapOrders.status, 'pending'),
         isNull(iapOrders.playPurchaseToken),
-        // 마지막 결제 시도 기준(0215) — recon A0 만료 기준과 같게 맞춘다(재사용 주문의 생성 시각은 오래됐을 수 있다).
-        gt(sql`coalesce(${iapOrders.playCheckoutAt}, ${iapOrders.createdAt})`, sql`now() - interval '6 hours'`),
       ),
-    )
-    .orderBy(desc(iapOrders.createdAt))
-    .limit(1);
-  if (reuse) {
-    // 결제 시도 시각 갱신(0215) — RTDN이 이 값으로 구매자 본인 주문을 찾는다.
-    await db.update(iapOrders).set({ playCheckoutAt: new Date() }).where(eq(iapOrders.portoneOrderId, reuse.paymentId));
-    return { paymentId: reuse.paymentId, sku, orderName, amountKrw: krw };
-  }
+    );
   const paymentId = `gp-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
     serverId,
@@ -386,12 +377,12 @@ export async function createPlayOrder(userId: string, serverId: number, productI
     playSku: sku,
     playCheckoutAt: new Date(),
   });
-  return { paymentId, sku, orderName, amountKrw: krw };
+  return { paymentId, sku, accountId: playAccountId(userId), orderName, amountKrw: krw };
 }
 
 export type CompleteResult =
   | { ok: true; already: boolean }
-  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' | 'NOT_GRANTED' };
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' | 'NOT_GRANTED' | 'ORDER_MISMATCH' };
 
 /**
  * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
@@ -473,6 +464,14 @@ export async function completePurchase(
     // 구글 서버 권위 — SKU가 조회 경로에 들어가므로 다른 상품의 토큰이면 404(throw). purchaseState 0(구매완료)만 지급.
     // 금액은 SKU가 담당(콘솔 등록가 = 카탈로그 KRW)이라 별도 금액 대조가 없다.
     const p = await getPlayProductPurchase(order.playSku, token);
+    // 결제 귀속 표식(2026-09-29, play-ids.ts) — 구매에 표식이 있으면 **이 주문·이 주문 주인**의 구매일 때만 여기서 처리한다.
+    // 어긋나면 지급·토큰 묶기 없이 끝내고, RTDN·상점 복구가 표식이 가리키는 주문으로 처리한다(중복이면 자동 환불).
+    if (
+      p.obfuscatedExternalProfileId &&
+      (p.obfuscatedExternalProfileId !== paymentId || p.obfuscatedExternalAccountId !== playAccountId(order.userId))
+    ) {
+      return { ok: false, code: 'ORDER_MISMATCH' };
+    }
     if (p.purchaseState === 2) {
       // 보류 결제(편의점·계좌 등) — 지급은 결제가 끝난 뒤. 토큰만 이 주문에 먼저 묶어 둔다(2026-09-24 재검증 B-2):
       // 완료 알림(RTDN)·상점 복구가 '토큰이 묶인 주문'으로 정확히 이 주문을 찾는다(시각 추정으로 남에게 가지 않게).

@@ -31,6 +31,7 @@ export type PaymentAlertKind =
   | 'PLAY_RTDN_UNMATCHED' // 高: 구글이 알려 온 결제를 우리 주문과 하나로 맞추지 못함(0건·여러 건) — 콘솔 확인 후 어드민 도구로 지급
   | 'PLAY_RTDN_FAILED' // 高: 알림으로 맞춘 주문의 지급 처리 실패
   | 'PLAY_TOKEN_USED' // 高: 한 Play 구매 토큰이 두 주문으로 옴 — 잘못 묶였을 수 있음
+  | 'PLAY_ATTRIBUTION_MISMATCH' // 高: 결제 귀속 표식이 주문·계정·상품과 어긋남(변조·데이터 손실 신호) — 지급 없이 자동 환불
   | 'REFUND_EXTRA_UNRECOVERED'; // 高: 환불됐지만 자동 회수하지 않는 몫(프리미엄 수령분·후원 구간·마일리지 부족)이 남음
 
 type Severity = 'critical' | 'high' | 'warn';
@@ -50,6 +51,7 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   PLAY_RTDN_UNMATCHED: 'high',
   PLAY_RTDN_FAILED: 'high',
   PLAY_TOKEN_USED: 'high',
+  PLAY_ATTRIBUTION_MISMATCH: 'high',
   REFUND_EXTRA_UNRECOVERED: 'high',
 };
 

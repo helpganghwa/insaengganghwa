@@ -118,6 +118,9 @@ export type PlayProductPurchase = {
   quantity?: number;
   regionCode?: string;
   productId?: string;
+  /** 결제 귀속 표식(play-ids.ts) — 구매 때 앱이 실은 값. 1.0.3 이전 앱의 구매엔 없다. */
+  obfuscatedExternalAccountId?: string;
+  obfuscatedExternalProfileId?: string;
 };
 
 export async function getPlayProductPurchase(sku: string, purchaseToken: string): Promise<PlayProductPurchase> {

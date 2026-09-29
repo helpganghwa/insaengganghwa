@@ -167,7 +167,7 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 - 인증 = Pub/Sub 푸시 OIDC 토큰(구글 공개키 서명·발급자·audience `https://ganghwa.app/api/play/rtdn`·발급 서비스 계정 = Play 서비스 계정 이메일). 뚫려도 구매는 구글 API로 재검증한다.
 - ONE_TIME_PRODUCT_PURCHASED(1)만 처리. 취소·환불은 기존 play-sync(voided)가 맡는다.
 - 원칙: **확실할 때만 자동 지급, 애매하면 경보(수동)** — 구매와 우리 유저를 잇는 값이 없어 추정이 틀리면 남에게 지급된다.
-- ⓪ 구매 후 3분은 처리하지 않고 500으로 재전송을 기다린다(화면 검증·상점 복구가 먼저 토큰을 묶게). ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리). ② 없으면 같은 SKU의 Play 주문을 **상태·토큰·유저 무관**하게 마지막 결제 시도 시각(`coalesce(play_checkout_at, created_at)`, 0215) 기준 구매 [-6시간 10분, 지금]에서 세어 **정확히 1건이고 토큰 없는 미완(pending·expired)일 때만** `completePurchase`(재검증·지급·소모). 본인 주문은 이 범위 안에 있으므로(재사용·오래 열린 결제창·같은 주문의 두 번째 구매 포함) 다른 주문이 하나라도 있으면 경보로 빠진다. 이 전제를 지키기 위해 주문 재사용은 같은 SKU·금액일 때만 하고, 보류 결제는 첫 검증 때 토큰을 주문에 먼저 묶는다(완료 알림이 ①로 처리). 구매 시각이 없는 알림은 자동 지급하지 않는다. ③ 테스트·프로모·리워드(purchaseType 0·1·2) 자동 지급 제외. 경보 `PLAY_RTDN_UNMATCHED` → 콘솔에서 구매자 확인 뒤 `/api/admin/play-complete-order`.
+- ⓪ 구매 후 3분은 처리하지 않고 500으로 재전송을 기다린다(화면 검증·상점 복구가 먼저 토큰을 묶게). ① 토큰이 묶인 주문이 있으면 그 주문(미완이면 마무리). ② 없으면 같은 SKU의 Play 주문을 **상태·토큰·유저 무관**하게 마지막 결제 시도 시각(`coalesce(play_checkout_at, created_at)`, 0215) 기준 구매 [-6시간 10분, 지금]에서 세어 **정확히 1건이고 토큰 없는 미완(pending·expired)일 때만** `completePurchase`(재검증·지급·소모). 본인 주문은 이 범위 안에 있으므로(재사용·오래 열린 결제창·같은 주문의 두 번째 구매 포함) 다른 주문이 하나라도 있으면 경보로 빠진다. 이 전제를 지키기 위해 보류 결제는 첫 검증 때 토큰을 주문에 먼저 묶는다(완료 알림이 ①로 처리). 구매 시각이 없는 알림은 자동 지급하지 않는다. ③ 테스트·프로모·리워드(purchaseType 0·1·2) 자동 지급 제외. 경보 `PLAY_RTDN_UNMATCHED` → 콘솔에서 구매자 확인 뒤 `/api/admin/play-complete-order`.
 - 화면 경로와 동시에 와도 같은 주문·토큰이라 1회만 지급(FOR UPDATE + paid 가드). 일시 오류는 500으로 Pub/Sub 재전송.
 
 **배포 순서**: 0215 마이그레이션(프로덕션) → **적용 여부를 SQL로 확인**(`select 1 from information_schema.columns where table_name='iap_orders' and column_name='play_checkout_at'`) → **지급 보류 주문 재조회**(`BEGIN READ ONLY`로 `select count(*) from iap_orders where status='paid' and grant_skipped and paid_at >= '2026-09-24 00:00+09'` — 0건이 아니면 운영자 처리 방식을 확인하고 정산 크론 `GRANT_SKIPPED_AUTO_REFUND_SINCE`를 배포 시각으로 올린다. 옛 코드는 중복 결제를 수동 처리했으므로 다른 보상을 준 건을 자동 환불하면 둘 다 받는다) → 코드 배포 → 아래 설정. ⚠ 0215 없이 코드를 배포하면 Drizzle insert가 모든 컬럼을 명시하므로 **웹(포트원)·앱(Play) 결제 주문 생성이 전부 실패**하고, 정산 크론(payment-recon)도 첫 단계에서 멈춘다.
@@ -178,3 +178,22 @@ bun --conditions react-server scripts/play-products.ts --apply   # 누락분 생
 3. 구독 생성: 전송 유형 **푸시**, **payload unwrapping 끔**(켜면 메시지 형식이 달라 모든 알림을 놓친다), **재시도 정책 = 지수 백오프(최소 10초·최대 600초)**(구매 후 3분 대기를 500으로 처리하므로 즉시 재시도면 폭주), 엔드포인트 `https://ganghwa.app/api/play/rtdn`, **인증 사용** → 서비스 계정 = Play 서비스 계정, 대상(audience) = 엔드포인트와 같은 URL. 토큰 생성 권한 안내가 뜨면 허용.
 4. Play Console → 수익 창출 설정 → 실시간 개발자 알림: 주제 `projects/<프로젝트 ID>/topics/play-rtdn` 입력 → 저장 → **테스트 알림 보내기(필수)** → Vercel 로그 `[play-rtdn] test notification` 확인. 인증 설정이 틀리면 모든 알림이 403으로 조용히 버려지므로 이 확인 없이 끝내지 않는다.
 5. 첫 실제 사례에서 구매의 `acknowledgementState`를 확인한다 — 미확인 구매 3일 자동 환불이 여러 안전망(중복·미성년 취소 실패·애매한 RTDN)의 전제다.
+
+## 결제 귀속 표식 — 모든 Play 결제를 주문에 묶기(2026-09-29, 앱 1.0.3)
+
+**왜**: 구글 결제창은 우리 웹페이지의 결제 요청이 사라진 뒤에도 남거나 되살아날 수 있고, 거기서 확인하면 청구는 되지만 결과가 서버에 오지 않는다(09-29 앱을 켜자마자 뜬 결제창으로 ₩68,000 청구·미지급). 서버가 받는 것은 RTDN의 구매 토큰뿐이라 누구의 어느 주문인지 추정해야 했고, 같은 상품 주문이 여럿이면 판단을 포기했다(`PLAY_RTDN_UNMATCHED`).
+
+**방식**: 결제마다 구글 `BillingFlowParams`에 두 값을 싣는다. 구글은 구매 조회(`purchases.products.get`)에 그대로 돌려준다.
+- `obfuscatedAccountId` = `playAccountId(userId)` — `sha256("ganghwa-play:" + userId)`의 base64url 43자. 개인정보 원문을 싣지 않는다(구글 규칙: 64자 이하·PII 금지).
+- `obfuscatedProfileId` = 우리 주문번호(`gp-<uuid>`, 39자). 구글 규칙상 profileId는 accountId와 함께만 쓴다.
+- 경로: 웹 `PaymentRequest` data `{sku, accountId, orderId}` → 앱 결제 화면(`patches/PaymentActivity`, 1.0.3) → `setObfuscatedAccountId/ProfileId`. 1.0.2 이하 앱은 추가 필드를 무시한다(라이브러리가 모르는 키를 읽지 않음) → 웹·서버를 먼저 배포해도 안전.
+
+**서버 판정**(`lib/payment/play-attribution.ts`, 표식은 조회 열쇠일 뿐 권위가 아니다 — 모두 구글 응답 기준):
+- profileId로 주문을 찾고 `provider='play'`·`play_sku = 구매 SKU`·`playAccountId(주문 유저) = accountId`를 확인한다. 하나라도 어긋나면 **불일치** → 지급하지 않고 구글 환불(권한 회수) + 경보 `PLAY_ATTRIBUTION_MISMATCH`.
+- 주문이 미완(pending·expired, 토큰 없거나 같은 토큰)이면 **그 주문 주인에게 지급**(`completePurchase`). 되살아난 결제창이라도 사용자가 확인했고 주문이 살아 있으므로 정상 결제다. 지급 대상은 요청자가 아니라 항상 주문 주인이다(같은 기기의 다른 게임 계정 문제 해소).
+- 주문이 이미 다른 토큰으로 지급·환불됐거나 다른 토큰이 묶여 있으면 **중복 청구** → 지급 보류 주문 행(`paid`·`grant_skipped`·토큰 묶음·월누적 가산)을 새로 기록한 뒤 구글 환불(`orders.refund`, revoke) → `refundPurchase`로 마감(월누적 복원) + 우편 "중복 결제 자동 환불 안내". 환불 호출이 실패해도 행이 남아 정산 크론 C단계(지급 보류 환불 재시도)·미소모 3일 자동 환불이 받친다.
+- 처리 위치: RTDN(유예 3분·후보 규칙·purchaseType 제한 없이 즉시), 상점 복구(주문 주인이 다른 계정이면 `OTHER_ACCOUNT`로 끝, 기기는 소모하지 않음), 화면 검증(`completePurchase`는 표식이 있으면 넘어온 주문번호·계정과 맞을 때만 지급, 아니면 `ORDER_MISMATCH` — RTDN이 정확한 주문으로 처리).
+- 표식이 없는 구매(1.0.2 이하 앱)는 종전 규칙 그대로. 다만 주문 재사용을 폐지해 탭마다 주문 행이 생기므로(옛 행은 만료), RTDN의 '같은 SKU 주문이 전체에서 정확히 1건' 조건을 채우기 어려워 **옛 앱의 결과 유실 결제는 대부분 `PLAY_RTDN_UNMATCHED` 수동 경보로 빠진다**(전환기). 상점 재진입 복구(②)는 영향 없다. 1.0.3 보급률이 오르면 사라진다.
+
+**주문 재사용 폐지**: 결제창 1개 = 주문 1개. 새 주문을 만들 때 같은 유저·서버·상품의 토큰 없는 pending을 `expired`로 정리해 쌓이지 않게 한다(만료 주문도 늦은 결제는 지급된다). 재사용하면 한 주문에 정당한 결제 두 건이 붙어 의도를 가릴 수 없다.
+
