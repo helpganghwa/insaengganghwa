@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { josa } from 'josa';
 
+import { BackTitle } from '@/components/BackNav';
+
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import type { TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_EVENT_TAG, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
@@ -26,10 +28,13 @@ function hpColor(pct: number): string {
  *  · 아래: 턴 기록이 쌓이고, 끝나면 결과가 팝업 대신 기록 끝에 결말로 붙는다.
  * 재생 중엔 기록을 누르거나 '건너뛰기'로 끝까지, 끝나면 '다시 보기'(실패는 결정적 순간부터도).
  * result가 null이면 도전 직후 — 서버 판정을 기다리는 동안 무대를 먼저 보여 준다(낙관적 전환).
+ * 양쪽 이름 아래에 전투력(나=탑 전투력, 층 주인=그 층 요구치)을 둔다(2차 피드백 1).
  */
-export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
+export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
   floor: number;
   result: TowerChallengeResult | null;
+  /** 판정 전(낙관적 전환) 보여 줄 내 탑 전투력 — 결과가 오면 결과 값을 쓴다. */
+  myCp: number;
   avatarSouth: string | null;
   retrying: boolean;
   onList: () => void;
@@ -99,6 +104,26 @@ export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNe
 
   return (
     <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+      {/* 공통 뒤로가기 헤더 — 뒤로는 목록으로(같은 주소 안의 화면 전환). 오른쪽은 건너뛰기/다시 보기. */}
+      <BackTitle
+        title={`${floor}층 전투`}
+        onBack={onList}
+        className="flex-none px-3 pt-1.5"
+        right={
+          <button
+            type="button"
+            onClick={() => {
+              if (!result) return;
+              if (ended) play(0);
+              else finish();
+            }}
+            disabled={!result}
+            className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] font-bold text-zinc-300 disabled:opacity-50"
+          >
+            {!result ? '준비 중' : ended ? '다시 보기' : '건너뛰기'}
+          </button>
+        }
+      />
       {/* 무대 — 대난투처럼 고정(스크롤 영향 없음). 누르면 건너뛰기. */}
       <div
         onClick={() => (result && !ended ? finish() : undefined)}
@@ -114,24 +139,12 @@ export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNe
           <span className="text-center font-mono tracking-wider text-amber-200">{cur ? `${cur.turn} TURN` : 'READY'}</span>
           <span />
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!result) return;
-            if (ended) play(0);
-            else finish();
-          }}
-          disabled={!result}
-          className="absolute right-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm disabled:opacity-50"
-        >
-          {!result ? '준비 중' : ended ? '다시 보기' : '건너뛰기'}
-        </button>
 
         <div className="relative z-10 grid h-[168px] grid-cols-2 items-end">
           <div className="flex justify-center">
             <Fighter
               name="나"
+              cp={result?.towerCp ?? myCp}
               img={avatarSouth}
               side="l"
               role={cur?.actor === 'mon' ? 'def' : 'atk'}
@@ -146,6 +159,7 @@ export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNe
           <div className="flex justify-center">
             <Fighter
               name={info.name}
+              cp={towerRequirement(floor)}
               img={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
               side="r"
               role={cur?.actor === 'mon' ? 'atk' : 'def'}
@@ -164,14 +178,6 @@ export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNe
             {narration}
           </p>
         </div>
-      </div>
-
-      {/* 컨트롤 줄 */}
-      <div className="flex h-9 flex-none items-center justify-between border-b border-zinc-800 px-3 text-[10.5px]">
-        <button type="button" onClick={onList} className="font-extrabold text-zinc-300">‹ 목록</button>
-        <span className="text-zinc-400">
-          {result ? <>탑 전투력 <b className="text-amber-300 tabular-nums">{n(result.towerCp)}</b> · ×{result.mult.toFixed(2)}</> : '전투 준비 중'}
-        </span>
       </div>
 
       {/* 턴 기록 — 아래로 쌓인다(대난투 라운드 카드식). 끝나면 결말이 이어 붙는다. */}
@@ -261,8 +267,9 @@ export function TowerBattle({ floor, result, avatarSouth, retrying, onList, onNe
 }
 
 /** 무대 위 한쪽(대난투 Fighter와 같은 문법) — 라벨·이름·몸·체력바. 맞으면 흔들리고 머리 위로 피해량. */
-function Fighter({ name, img, side, role, hit, stepKey, dmg, hp, hpBefore, down }: {
+function Fighter({ name, cp, img, side, role, hit, stepKey, dmg, hp, hpBefore, down }: {
   name: string;
+  cp: number;
   img: string | null;
   side: 'l' | 'r';
   role: 'atk' | 'def';
@@ -285,8 +292,9 @@ function Fighter({ name, img, side, role, hit, stepKey, dmg, hp, hpBefore, down 
   return (
     <div className="flex w-40 flex-col items-center gap-0.5">
       <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'}`}>{attacking ? '공격' : '방어'}</span>
-      <span className="max-w-[150px] truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
-      <div key={hit ? `h${stepKey}` : 'idle'} className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${hit ? 'animate-hit-shake' : ''}`}>
+      <span className="max-w-[150px] truncate text-[11px] leading-tight font-bold text-white drop-shadow">{name}</span>
+      <span className="text-[10px] leading-none text-zinc-300 tabular-nums drop-shadow">전투력 <b className="text-amber-300">{n(cp)}</b></span>
+      <div key={hit ? `h${stepKey}` : 'idle'} className={`relative h-[100px] w-40 transition-transform duration-200 ${lunge} ${hit ? 'animate-hit-shake' : ''}`}>
         {dmg != null ? (
           <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{Math.round(dmg)}</div>
         ) : null}
