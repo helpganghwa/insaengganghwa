@@ -5775,40 +5775,6 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "tower_10",
-  kind: "permanent",
-  label: "잿빛을 걷은 자",
-  hidden: false,
-  cat: "무한의 탑",
-  style: {
-   color: "#b9c2d0"
-  }
- },
- {
-  code: "tower_80",
-  kind: "permanent",
-  label: "하늘 문턱",
-  hidden: false,
-  cat: "무한의 탑",
-  style: {
-   fx: "tideflow",
-   pt: "abyss"
-  }
- },
- {
-  code: "tower_100",
-  kind: "permanent",
-  label: "무한의 정점",
-  hidden: false,
-  cat: "무한의 탑",
-  style: {
-   fx: "goldglow",
-   pt: "stardust",
-   pc: 6,
-   glow: true
-  }
- },
- {
   code: "tower_revive",
   kind: "permanent",
   label: "한 줌의 숨",

@@ -165,15 +165,12 @@ type TitleDef = {
 - 판정: judge 지표 `fr_<key>`(1~3, 없으면 0) → 규칙 `first_<key>_<rank>: fr_<key> === rank`.
 - 소급: 배포 전 이미 넘긴 사람은 `scripts/first-milestones-backfill.ts`가 실제로 넘은 순서대로 넣는다(강화·초월은 로그 시각, 합산·전투력은 로그 재생). 순서 0218 → 소급 `--apply` → 코드 배포.
 - 운영 원칙: 공지·우편 없음, 조건은 위키·공지에 적지 않는다. 탈퇴해도 기록은 남겨 빈 순위를 다시 채우지 않는다(칭호만 사라짐). 다음 단계는 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가한다.
-- 총 **547종**.
+- 총 **544종**.
 
-## 무한의 탑 (2026-09-29, 9종)
+## 무한의 탑 (2026-09-29, 6종)
 
 | 코드 | 이름 | 조건 | 종류 | 연출 |
 |---|---|---|---|---|
-| `tower_10` | 잿빛을 걷은 자 | 10층 돌파 | 영구 | 색 |
-| `tower_80` | 하늘 문턱 | 80층 돌파 | 영구 | `tideflow` + 파티클 `abyss` |
-| `tower_100` | 무한의 정점 | 100층 돌파 | 영구 | `goldglow` + 파티클 `stardust` 6개 + 발광 |
 | `tower_revive` | 한 줌의 숨 | 기사회생이 터진 전투에서 승리 | 영구·숨김 | `lunarflow` |
 | `tower_resonance` | 울림을 아는 자 | 공명(장착 3개 모두 ×2)이 발동한 전투 10승 | 영구·숨김 | `aurora` |
 | `tower_flawless` | 거침없는 발걸음 | 하루에 한 번도 지지 않고 10층 이상 돌파(KST 하루) | 영구·숨김 | `trailflow` |
@@ -181,6 +178,6 @@ type TitleDef = {
 | `tower_grit` | 벽 앞의 끈기 | 같은 층에서 9번 진 뒤 그 층 돌파 | 영구·숨김 | `steelshine` |
 | `rank_tower` | 탑의 주인 | 무한의 탑 랭킹 1위인 동안 | 조건부 | 대륙의 주인과 같은 불꽃, 청록(`blazeteal`) · 탑·주인에만 · 발광 |
 
-- 판정 원천: `tower_progress.best_floor`, `tower_battles`(승패·층·아바타·턴 기록의 `revive`/`resonance` 이벤트). judge의 탑 조회는 표가 없을 때 0으로 떨어져 판정 전체를 멈추지 않는다.
+- 판정 원천: `tower_battles`(승패·층·아바타·턴 기록의 `revive`/`resonance` 이벤트). judge의 탑 조회는 표가 없을 때 0으로 떨어져 판정 전체를 멈추지 않는다.
 - 오관왕 → **육관왕**(코드 `pentagon` 유지): 5종 기준으로 얻은 기존 보유자는 `title_legacy_locks`(0223)에 잠겨 발견은 유지하되 비활성 — 목록 '비활성', 대표 장착 불가, 대표여도 표시 안 함. 새 조건을 한 번 채우면 judge가 잠금을 지워 영구 활성. 잠글 수 있는 코드는 `lib/game/titles/legacy-lock.ts LEGACY_LOCKABLE`.
 - 랭킹 1위와 조합 칭호는 랭킹 6종 기준: 육관왕(`pentagon`, 6종 모두 10위 이내), 무관의 제왕(`uncrowned`, 6종 모두 2~3위), 왕좌의 그림자(`throne_shadow`, 아무 랭킹 2위).

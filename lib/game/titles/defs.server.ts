@@ -5322,24 +5322,6 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "어려움"
  },
  {
-  code: "tower_10",
-  cat: "무한의 탑",
-  cond: "무한의 탑 10층 돌파",
-  diff: "쉬움"
- },
- {
-  code: "tower_80",
-  cat: "무한의 탑",
-  cond: "무한의 탑 80층 돌파",
-  diff: "어려움"
- },
- {
-  code: "tower_100",
-  cat: "무한의 탑",
-  cond: "무한의 탑 100층 돌파",
-  diff: "어려움"
- },
- {
   code: "tower_revive",
   cat: "무한의 탑",
   cond: "기사회생이 터진 탑 전투에서 승리",
