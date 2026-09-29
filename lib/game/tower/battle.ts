@@ -48,7 +48,8 @@ export const TOWER_BATTLE = {
   steep: 2.2,
   /** 피해 흔들림 ±(bp/10000). */
   spreadBp: 1000,
-  maxTurns: 14,
+  /** 넘기면 패배 — 사실상 체력으로 끝나도록 넉넉히(2026-09-29, 14 → 100). */
+  maxTurns: 100,
   firstStrikeBp: 5000, // 몬스터가 먼저 칠 확률
   critBp: 1200,
   critMul: 1.6,
@@ -58,7 +59,7 @@ export const TOWER_BATTLE = {
   enrageBp: 5500, // 몬스터 체력 35% 아래로 처음 떨어질 때 광폭화할 확률
   enrageAt: 35,
   enrageMul: 1.5,
-  resonanceBp: 1500, // ×2 장비 2개 이상일 때 내 턴마다 추가 타격 확률
+  resonanceBp: 1500, // 장착 3개가 모두 ×2(아바타 배율 최대)일 때 내 턴마다 추가 타격 확률
   resonanceMul: 0.5,
   reviveBp: 1200, // 쓰러질 때 한 번 버틸 확률
 } as const;
@@ -66,7 +67,7 @@ export const TOWER_BATTLE = {
 export function simulateTowerBattle(opts: {
   towerCp: number;
   requirement: number;
-  /** 고른 아바타와 맞는(×2) 장착 장비 수 — 2개 이상이면 공명 발동 가능. */
+  /** 고른 아바타와 맞는(×2) 장착 장비 수 — 3개 모두(아바타 배율 최대)면 공명 발동 가능. */
   doubledCount: number;
   rng: Rng10k;
 }): TowerBattleResult {
@@ -95,7 +96,7 @@ export function simulateTowerBattle(opts: {
     const dmg = Math.min(myHit() * (crit ? B.critMul : 1), mon);
     mon -= dmg;
     push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null);
-    if (mon > 0 && opts.doubledCount >= 2 && roll(B.resonanceBp)) {
+    if (mon > 0 && opts.doubledCount >= 3 && roll(B.resonanceBp)) {
       const extra = Math.min(myHit() * B.resonanceMul, mon);
       mon -= extra;
       push(turn, 'me', extra, 'resonance');

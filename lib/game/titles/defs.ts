@@ -5845,8 +5845,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "무한의 탑",
   style: {
-   fx: "trailflow",
-   pt: "spark"
+   fx: "trailflow"
   }
  },
  {
@@ -5856,8 +5855,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: true,
   cat: "무한의 탑",
   style: {
-   fx: "bronzeshine",
-   pt: "dust"
+   fx: "bronzeshine"
   }
  },
  {
