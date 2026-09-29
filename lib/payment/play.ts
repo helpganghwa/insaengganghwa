@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -158,6 +158,8 @@ const CANCEL_CHECK_WINDOW_HOURS = 48;
  * 호출은 주문당 최대 2회(구매·주문 조회) — 200건이면 10분에 400회, 하루 할당량(20만) 안.
  */
 const CANCEL_CHECK_LIMIT = 200;
+/** 이 단계에 쓰는 시간 상한 — 함수 한도(300초) 안에서 다른 단계·하트비트 몫을 남긴다. 넘으면 남은 행은 다음 회차(10분 뒤)가 본다. */
+const CANCEL_CHECK_BUDGET_MS = 240_000;
 
 export async function syncPlayCancelledRecent(
   limit = CANCEL_CHECK_LIMIT,
@@ -176,13 +178,19 @@ export async function syncPlayCancelledRecent(
         gte(iapOrders.paidAt, sql`now() - interval '${sql.raw(String(CANCEL_CHECK_WINDOW_HOURS))} hours'`),
       ),
     )
-    .orderBy(asc(iapOrders.paidAt))
+    // 최신 결제부터 — 콘솔 환불은 대개 방금 한 결제에 몰린다. 시간·상한에 걸려 빠지는 쪽이 오래된 결제가 되게 한다.
+    .orderBy(desc(iapOrders.paidAt))
     .limit(limit);
+  const deadline = Date.now() + CANCEL_CHECK_BUDGET_MS;
   // 상한에 닿았으면 최근 결제 일부를 못 봤다 — 조용히 넘기지 않고 로그로 드러낸다(상한을 올릴 신호).
   if (rows.length >= limit) console.warn(`[play-sync] cancelled check capped at ${limit} — 최근 결제 일부 미확인`);
   let refunded = 0;
   let failed = 0;
   for (const r of rows) {
+    if (Date.now() > deadline) {
+      console.warn(`[play-sync] cancelled check time budget reached — 남은 ${rows.length - rows.indexOf(r)}건은 다음 회차`);
+      break;
+    }
     try {
       const p = await getPlayProductPurchase(r.sku!, r.token!);
       let res: Awaited<ReturnType<typeof refundPurchase>>;
