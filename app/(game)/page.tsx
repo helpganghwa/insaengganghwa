@@ -68,7 +68,7 @@ const MENU = [
     href: '/tower',
     label: '무한의 탑',
     desc: '한 층씩 끝없이', // 실제 문구는 towerDesc(최고 돌파 층)로 동적 대체
-    bg: '/sprites/tower/bg/inner-archive.png',
+    bg: '/sprites/tower/bg/list.png',
     tint: '#1b2440',
     scale: 1,
   },

@@ -81,12 +81,15 @@ export function BackTitle({
   kicker,
   right,
   fallback = '/',
+  onBack,
   className = '',
 }: {
   title: React.ReactNode;
   kicker?: React.ReactNode;
   right?: React.ReactNode;
   fallback?: string;
+  /** 뒤로가기 대신 할 동작(선택) — 한 주소 안에서 화면을 바꾸는 곳(무한의 탑 전투 → 목록 등). */
+  onBack?: () => void;
   className?: string;
 }) {
   const goBack = useGoBack(fallback);
@@ -94,7 +97,7 @@ export function BackTitle({
     <div className={`flex items-center gap-1.5 ${className}`}>
       <button
         type="button"
-        onClick={goBack}
+        onClick={onBack ?? goBack}
         aria-label="뒤로가기"
         className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"
       >
