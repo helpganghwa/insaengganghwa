@@ -19,6 +19,7 @@ import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipmen
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
+import { towerFloorFromRankValue } from '@/lib/game/tower/rank-value';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
@@ -274,7 +275,7 @@ async function KpiRowWithRanks({
     getMyCountRanks(userId, serverId),
   ]);
   return (
-    <section className="-mt-3 grid grid-cols-5 gap-1">
+    <section className="-mt-3 grid grid-cols-6 gap-1">
       <KpiCard label="전투력" value={fmtCompact(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
       <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
       <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
@@ -287,6 +288,11 @@ async function KpiRowWithRanks({
         label="대난투"
         value={fmtCompact(counts.melee?.value ?? 0)}
         rank={rankBadgeStreamed(counts.melee?.rank)}
+      />
+      <KpiCard
+        label="무한의 탑"
+        value={counts.tower ? `${towerFloorFromRankValue(counts.tower.value)}층` : '—'}
+        rank={rankBadgeStreamed(counts.tower?.rank)}
       />
     </section>
   );
@@ -302,12 +308,13 @@ function KpiRowFallback({
   maxEnhance: number;
 }) {
   return (
-    <section className="-mt-3 grid grid-cols-5 gap-1">
+    <section className="-mt-3 grid grid-cols-6 gap-1">
       <KpiCard label="전투력" value={fmtCompact(total)} rank="—" />
       <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank="—" />
       <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank="—" />
       <KpiCard label="레이드" value="—" rank="—" />
       <KpiCard label="대난투" value="—" rank="—" />
+      <KpiCard label="무한의 탑" value="—" rank="—" />
     </section>
   );
 }

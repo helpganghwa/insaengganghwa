@@ -46,6 +46,7 @@ const METRIC_LABEL: Record<string, string> = {
   combat: '전투력',
   raid: '레이드 처치',
   melee: '대난투', // 2026-07-22 개편 — 랭킹=누적 포인트('대난투 1위'로 표기)
+  tower: '무한의 탑',
 };
 
 function amountOf(detail: Record<string, unknown> | null): string {

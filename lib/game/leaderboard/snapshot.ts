@@ -11,6 +11,7 @@ import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
 import { claimMilestone } from '@/lib/game/leaderboard/incremental';
+import { towerRankValueSql } from '@/lib/game/tower/rank-value';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import type { LeaderboardMetric } from './queries';
 
@@ -120,6 +121,16 @@ async function meleeRows(serverId: number): Promise<Row[]> {
     .map((x) => ({ userId: x.user_id, value: Number(x.value) }));
 }
 
+/** tower = 최고 층·도달 시각 합성값(rank-value.ts) — 높은 층 먼저, 같은 층이면 먼저 도달한 사람. */
+async function towerRows(serverId: number): Promise<Row[]> {
+  const r = await db.execute(sql`
+    select tp.user_id::text as user_id, ${sql.raw(towerRankValueSql('tp'))} as value
+    from tower_progress tp
+    where tp.server_id = ${serverId} and tp.best_floor > 0 and tp.best_at is not null
+  `);
+  return (r as unknown as { user_id: string; value: string }[]).map((x) => ({ userId: x.user_id, value: Number(x.value) }));
+}
+
 /** 현재 활성 정지 계정 id 집합 — bannedAt 있고 banUntil이 없거나 아직 안 지남(ban.ts와 동일 판정). */
 async function activeBannedIds(): Promise<Set<string>> {
   const rows = await db
@@ -137,6 +148,7 @@ const ROWS_FN: Record<LeaderboardMetric, (sid: number) => Promise<Row[]>> = {
   combat: combatRows,
   raid: raidRows,
   melee: meleeRows,
+  tower: towerRows,
 };
 const METRICS = Object.keys(ROWS_FN) as LeaderboardMetric[];
 

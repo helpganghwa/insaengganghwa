@@ -8,7 +8,7 @@ import {
 import { LeaderboardBoard } from './LeaderboardBoard';
 
 function parse(t: string | undefined): LeaderboardMetric {
-  return t === 'sum' || t === 'combat' || t === 'raid' || t === 'melee' ? t : 'max';
+  return t === 'sum' || t === 'combat' || t === 'raid' || t === 'melee' || t === 'tower' ? t : 'max';
 }
 
 /**

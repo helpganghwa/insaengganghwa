@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { GuildBadge } from '@/components/GuildBadge';
 import { profileHref } from '@/lib/game/profile/href';
+import { towerFloorFromRankValue } from '@/lib/game/tower/rank-value';
 import type {
   LeaderboardEntry,
   LeaderboardMetric,
@@ -20,6 +21,7 @@ const LABEL: Record<LeaderboardMetric, string> = {
   combat: '전투력',
   raid: '레이드 처치',
   melee: '대난투', // 2026-07-22 개편 — 값=감쇠 랭킹 포인트(반감기 14일)
+  tower: '무한의 탑',
 };
 // 탭별 산정 기준 캡션 — 내 순위 카드 아래 상시 표시(A안, 2026-07-22).
 const CRITERIA: Record<LeaderboardMetric, string> = {
@@ -28,6 +30,7 @@ const CRITERIA: Record<LeaderboardMetric, string> = {
   combat: '보유 장비 전체의 전투력을 더한 값이에요.',
   raid: '처치에 성공한 레이드에 참여한 횟수예요.',
   melee: '대난투 순위로 얻는 랭킹 포인트에요. 최근 성적일수록 크게 반영돼요.',
+  tower: '무한의 탑에서 가장 높이 오른 층이에요. 같은 층이면 먼저 오른 사람이 앞서요.',
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
@@ -36,10 +39,11 @@ const BG: Record<LeaderboardMetric, string> = {
   combat: '/sprites/hof-bg.png?v=3',
   raid: '/sprites/hof-bg.png?v=3',
   melee: '/sprites/hof-bg.png?v=3',
+  tower: '/sprites/hof-bg.png?v=3',
 };
-// 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
-function fmt(v: number): string {
-  return v.toLocaleString('ko-KR');
+// 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출. 탑은 합성값(rank-value.ts)에서 층만 꺼내 'N층'.
+function fmt(v: number, metric: LeaderboardMetric): string {
+  return metric === 'tower' ? `${towerFloorFromRankValue(v)}층` : v.toLocaleString('ko-KR');
 }
 
 export type LeaderboardPayloads = Record<
@@ -88,7 +92,7 @@ const BoardHeader = memo(function BoardHeader({
         }
         right={
           <span className="font-mono text-[12.5px] font-bold tabular-nums text-amber-500">
-            {mine ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}` : '기록 없음'}
+            {mine ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value, metric)}` : '기록 없음'}
           </span>
         }
       />
@@ -247,7 +251,7 @@ export function LeaderboardBoard({
                         )}
                       </div>
                       <span className="text-pixel-outline pb-0 font-mono text-[11px] font-bold text-amber-200 tabular-nums">
-                        {fmt(entry.value)}
+                        {fmt(entry.value, metric)}
                       </span>
                     </Link>
                   );
@@ -310,7 +314,7 @@ export function LeaderboardBoard({
                           ) : null}
                         </span>
                         <span className="font-mono text-sm text-amber-200 tabular-nums">
-                          {fmt(e.value)}
+                          {fmt(e.value, metric)}
                         </span>
                       </Link>
                     </li>
@@ -331,7 +335,7 @@ export function LeaderboardBoard({
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">나</span>
               <span className="font-mono text-sm font-bold text-amber-200 tabular-nums">
-                {fmt(mine.value)}
+                {fmt(mine.value, metric)}
               </span>
             </section>
           ) : null}

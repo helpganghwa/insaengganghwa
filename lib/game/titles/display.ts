@@ -77,7 +77,7 @@ const EQUIP_STATE_CODES = ['balance_master', 'full_armed', 'star_holder'];
 
 /** 판정 2차 조건부 — 표시 시점 재검증이 표적 쿼리로 가능한 코드. */
 const HEAVY_CONDITIONALS = new Set([
-  'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'throne_shadow', 'uncrowned', 'rising_star',
+  'rank_combat', 'rank_max', 'rank_sum', 'rank_raid', 'rank_melee', 'rank_tower', 'throne_shadow', 'uncrowned', 'rising_star',
   'broke_now', 'rich_apex', 'top_patron', 'guild_top', 'guild_flag',
   'guild_top_leader', 'guild_top_vice', // 1위 길드 길드장·부길드장(2026-09-08)
   'no_guild_30', // 무소속(2026-08-21 조건부 전환) — 가입 시 즉시 해제·탈퇴 7일 후 재활성
@@ -93,7 +93,7 @@ const HEAVY_CONDITIONALS = new Set([
 ]);
 
 const RANK_METRIC: Record<string, string> = {
-  rank_combat: 'combat', rank_max: 'max', rank_sum: 'sum', rank_raid: 'raid', rank_melee: 'melee',
+  rank_combat: 'combat', rank_max: 'max', rank_sum: 'sum', rank_raid: 'raid', rank_melee: 'melee', rank_tower: 'tower',
 };
 const KST = `at time zone 'Asia/Seoul'`;
 
@@ -128,7 +128,7 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
                  where lr.server_id=${s} and lr.metric=m.metric and lr.value > m.value)::int as pos
         from leaderboard_ranks m where m.server_id=${s} and m.user_id=${u}
       `)) as unknown as { metric: string; pos: number }[];
-      const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
+      const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999 };
       for (const r of rows) pos[r.metric] = Number(r.pos);
       const metric = RANK_METRIC[code];
       if (metric) return pos[metric] === 1;
@@ -297,7 +297,7 @@ const FX_OG: Record<string, string> = {
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
   noblesseflow: '#6ea8e0', blaze: '#ff6a1a', blazegreen: '#3fc25a', blazegold: '#f5c33a',
   // 개인 1위 불꽃 팔레트 + 1위 길드 임원(2026-09-08)
-  blazesteel: '#5fa8e6', blazecrimson: '#e03050', blazeviolet: '#9a5fe0', breathgold: '#e5c07b',
+  blazesteel: '#5fa8e6', blazecrimson: '#e03050', blazeviolet: '#9a5fe0', blazeteal: '#22c3c9', breathgold: '#e5c07b',
   starlight: '#f5d76e', iceflow: '#9fd4f0',
   // 최초 이정표 검기(2026-09-26) — 금·은·동 단색
   bladegold: '#ffc21a', bladesilver: '#c9dcff', bladebronze: '#ff7f2e',

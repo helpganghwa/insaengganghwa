@@ -165,7 +165,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, firsts] = await runLimited([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts] = await runLimited([
     // 강화 횟수·시간대 — 누적 표(0219). 정의는 enhance_stats_next.
     () => db.execute(enhCountsSql(u, s)),
     // 같은 결과 최장 연속 — 누적 표(0219).
@@ -665,6 +665,24 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              (select count(*)::int from expeditions where user_id=${u} and server_id=${s} and status='claimed' and crit) as exp_crit,
              coalesce((select sum(enhance_level) from user_equipment where user_id=${u} and server_id=${s}), 0)::int as exp_enh_sum
     `),
+    // 무한의 탑(2026-09-29) — 최고 층 · 기사회생/공명이 터진 승리 · 무패로 가장 많이 이긴 하루 · 기본 아바타 최고 층 ·
+    // 같은 층에서 진 횟수 중 끝내 이긴 층의 최대. 표 미적용(프로덕션 반영 전) 실패가 판정 전체를 멈추지 않게 0으로 본다.
+    () =>
+      db.execute(sql`
+        with b as (select tb.floor, tb.win, tb.turns, tb.profile_id, tb.created_at from tower_battles tb where tb.user_id=${u} and tb.server_id=${s})
+        select coalesce((select best_floor from tower_progress where user_id=${u} and server_id=${s}), 0)::int as tw_best,
+               (select count(*) from b where win and turns @> '[{"event":"revive"}]'::jsonb)::int as tw_revive_wins,
+               (select count(*) from b where win and turns @> '[{"event":"resonance"}]'::jsonb)::int as tw_reso_wins,
+               coalesce((select max(w) from (select count(*) filter (where win) as w from b
+                 group by (created_at at time zone 'Asia/Seoul')::date having bool_and(win)) d), 0)::int as tw_flawless_day,
+               coalesce((select max(b.floor) from b left join user_profiles up on up.id = b.profile_id
+                 where b.win and (b.profile_id is null or coalesce((up.options->>'isDefault')::boolean, false))), 0)::int as tw_bare_best,
+               coalesce((select max(l) from (select count(*) filter (where not win) as l, bool_or(win) as w from b group by floor) f
+                 where f.w), 0)::int as tw_grit
+      `).catch((e: unknown) => {
+        console.warn('[titles] 무한의 탑 조회 실패 — 탑 칭호 0으로 판정', (e as Error).message);
+        return [];
+      }),
     // 최초 이정표(2026-09-26) — milestone_firsts의 내 순위(fr_<key> = 1~3, 없으면 0). 기록은 first-milestones.ts 한 경로.
     // 이 조회 하나의 실패(표 미적용 등)가 판정 전체를 멈추지 않게 — 기록이 없으면 순위 0으로 본다.
     () =>
@@ -688,10 +706,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   const e = g(enh), st = g(streaks), lv = g(levels), sp = g(supply), tr = g(transcend), dy = g(daily),
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
-    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped),
+    e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped), tw = g(tower),
     lgr = g(lg), ghs = g(gh), ft = g(f3);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
-  const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999 };
+  const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999 };
   let combatValue = 0;
   for (const r of ranks as unknown as { metric: string; value: unknown; pos: unknown }[]) {
     pos[r.metric] = n(r.pos);
@@ -723,6 +741,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 파견(2026-08-30)
     exp_claims: n(ex.exp_claims), exp_regions: n(ex.exp_regions), exp_crit: n(ex.exp_crit),
     exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
+    // 무한의 탑(2026-09-29)
+    tw_best: n(tw.tw_best), tw_revive_wins: n(tw.tw_revive_wins), tw_reso_wins: n(tw.tw_reso_wins),
+    tw_flawless_day: n(tw.tw_flawless_day), tw_bare_best: n(tw.tw_bare_best), tw_grit: n(tw.tw_grit),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
@@ -730,7 +751,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
     aging_cnt: n(e.aging_cnt), carefree_cnt: n(e.carefree_cnt),
     // ── 판정 2차 ──
-    p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!,
+    p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!, p_tower: pos.tower!,
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
@@ -779,6 +800,16 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
+  // 무한의 탑(2026-09-29) — 층 도달 4종 + 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
+  tower_10: (m) => m.tw_best >= 10,
+  tower_50: (m) => m.tw_best >= 50,
+  tower_80: (m) => m.tw_best >= 80,
+  tower_100: (m) => m.tw_best >= 100,
+  tower_revive: (m) => m.tw_revive_wins >= 1,
+  tower_resonance: (m) => m.tw_reso_wins >= 10,
+  tower_flawless: (m) => m.tw_flawless_day >= 10,
+  tower_bare: (m) => m.tw_bare_best >= 30,
+  tower_grit: (m) => m.tw_grit >= 9,
   // 최초 이정표(2026-09-26) — 서버에서 처음 넘은 세 사람(금·은·동). 순위는 milestone_firsts(정본), 영구.
   first_enh500_1: (m) => m.fr_enh500 === 1,
   first_enh500_2: (m) => m.fr_enh500 === 2,
@@ -917,7 +948,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   monday: (m) => m.monday_down >= 10,
   evening_life: (m) => m.evening >= 100,
   // ── 판정 2차: 랭킹 순간·기록 ──
-  pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10,
+  // 랭킹 6종(2026-09-29 무한의 탑 추가) 모두 10위 이내.
+  pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10 && m.p_tower <= 10,
   // new_record — 판정이 아니라 이벤트 훅: rank-leader 크론(world/event.ts)이 max 1위
   // **교체**를 관측한 순간 지급(첫 관측 시드는 제외 — 오픈 직후 남발 방지). EVENT_HOOK_CODES.
   // 재화·전투력 순간값 — 판정 시점(칭호 화면 진입 등)에 그 값이면 발견. 훅 보강은 후속.
@@ -1039,7 +1071,8 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.p_sum === 1) out.add('rank_sum');
   if (mm.p_raid === 1) out.add('rank_raid');
   if (mm.p_melee === 1) out.add('rank_melee');
-  const allPos = [mm.p_max, mm.p_sum, mm.p_combat, mm.p_raid, mm.p_melee];
+  if (mm.p_tower === 1) out.add('rank_tower');
+  const allPos = [mm.p_max, mm.p_sum, mm.p_combat, mm.p_raid, mm.p_melee, mm.p_tower];
   if (allPos.some((p) => p === 2)) out.add('throne_shadow');
   if (allPos.every((p) => p! >= 2 && p! <= 3)) out.add('uncrowned');
   if (mm.days <= 30 && mm.p_combat <= 100) out.add('rising_star');

@@ -170,7 +170,7 @@ async function getWorldFeedUncached(serverId: number, limit = 40): Promise<World
   }));
 }
 
-const LEADER_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee'];
+const LEADER_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower'];
 
 /**
  * 랭킹 5종 유저 1위 교체 감지(일일 cron) — metric별 현재 1위를 ranking_leaders와 비교해 바뀌면

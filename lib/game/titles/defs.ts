@@ -1163,7 +1163,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "pentagon",
   kind: "permanent",
-  label: "오관왕",
+  label: "육관왕",
   hidden: true,
   cat: "조합",
   style: {
@@ -5756,6 +5756,118 @@ export const TITLE_DEFS: TitleDef[] = [
    fx: "bladebronze",
    alt: "天下第一",
    glow: true
+  }
+ },
+ {
+  code: "rank_tower",
+  kind: "conditional",
+  label: "탑의 주인",
+  hidden: false,
+  cat: "랭킹 1위",
+  style: {
+   fx: "blazeteal",
+   fxOnly: [
+    "탑",
+    "주인"
+   ],
+   plainColor: "#b8bcc6",
+   glow: true
+  }
+ },
+ {
+  code: "tower_10",
+  kind: "permanent",
+  label: "잿빛을 걷은 자",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   color: "#b9c2d0"
+  }
+ },
+ {
+  code: "tower_50",
+  kind: "permanent",
+  label: "폭풍의 한가운데",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   fx: "iceflow"
+  }
+ },
+ {
+  code: "tower_80",
+  kind: "permanent",
+  label: "심연에서 돌아온 자",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   fx: "tideflow",
+   pt: "abyss"
+  }
+ },
+ {
+  code: "tower_100",
+  kind: "permanent",
+  label: "무한의 정점",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   fx: "goldglow",
+   pt: "stardust",
+   pc: 6,
+   glow: true
+  }
+ },
+ {
+  code: "tower_revive",
+  kind: "permanent",
+  label: "한 줌의 숨",
+  hidden: true,
+  cat: "무한의 탑",
+  style: {
+   fx: "lunarflow"
+  }
+ },
+ {
+  code: "tower_resonance",
+  kind: "permanent",
+  label: "울림을 아는 자",
+  hidden: true,
+  cat: "무한의 탑",
+  style: {
+   fx: "aurora"
+  }
+ },
+ {
+  code: "tower_flawless",
+  kind: "permanent",
+  label: "거침없는 발걸음",
+  hidden: true,
+  cat: "무한의 탑",
+  style: {
+   fx: "trailflow",
+   pt: "spark"
+  }
+ },
+ {
+  code: "tower_bare",
+  kind: "permanent",
+  label: "맨몸의 등반가",
+  hidden: true,
+  cat: "무한의 탑",
+  style: {
+   fx: "bronzeshine",
+   pt: "dust"
+  }
+ },
+ {
+  code: "tower_grit",
+  kind: "permanent",
+  label: "벽 앞의 끈기",
+  hidden: true,
+  cat: "무한의 탑",
+  style: {
+   fx: "steelshine"
   }
  }
 ] as const;

@@ -6,6 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { makeErr } from '@/lib/game/action-result';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
+import { refreshTowerMetric } from '@/lib/game/leaderboard/incremental';
 import { getActiveServerId } from '@/lib/game/servers';
 import { challengeTower, TowerError, type TowerChallengeResult } from '@/lib/game/tower/service';
 import { rateLimited } from '@/lib/ratelimit';
@@ -37,6 +38,8 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
   try {
     const serverId = await getActiveServerId();
     const r: TowerChallengeResult = await challengeTower(u, serverId, Math.floor(Number(floor)), profileId, { idemKey, week });
+    // 랭킹 반영(커밋 뒤, 실패해도 도전은 유효 — 매시 스냅샷이 다시 맞춘다).
+    if (r.win) await refreshTowerMetric(u, serverId);
     revalidatePath('/tower');
     return { status: 'success' as const, result: r };
   } catch (e) {

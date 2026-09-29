@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { josa } from 'josa';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { sounds } from '@/lib/game/sound';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import type { TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_EVENT_TAG, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
@@ -80,6 +81,17 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [shown, ended]);
+  // 효과음 — 대난투와 같은 소리: 한 줄마다 타격음, 쓰러뜨린 한 방은 KO, 돌파하면 팡파레(설정의 효과음 끄기를 따른다).
+  useEffect(() => {
+    const t = shown > 0 ? turns[shown - 1] : null;
+    if (!t || t.damage <= 0) return;
+    if (t.monHp <= 0 || t.meHp <= 0) sounds.meleeKo();
+    else sounds.meleeHit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown]);
+  useEffect(() => {
+    if (ended && result?.win) sounds.meleeVictory();
+  }, [ended, result?.win]);
 
   const cur: TowerTurn | null = shown > 0 ? turns[shown - 1]! : null;
   const prev: TowerTurn | null = shown > 1 ? turns[shown - 2]! : null;
