@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerReward, towerSection } from '@/lib/game/balance';
@@ -18,12 +19,12 @@ const n = (v: number) => v.toLocaleString('ko-KR');
 const itemSrc = (slot: TowerSlot, key: string) => assetUrl(`/sprites/${slot}/${key}.png`);
 const PIX = { imageRendering: 'pixelated' as const };
 
-function Dots({ left }: { left: number }) {
+/** 오늘 남은 도전 — 'N/3', 다 쓰면 N(0)만 빨간색. */
+function Attempts({ left }: { left: number }) {
   return (
-    <span className="tracking-[2px]">
-      {Array.from({ length: TOWER_DAILY_ATTEMPTS }, (_, i) => (
-        <span key={i} className={i < left ? 'text-amber-400' : 'text-zinc-700'}>●</span>
-      ))}
+    <span className="tabular-nums">
+      오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-amber-300'}>{left}</b>
+      <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
     </span>
   );
 }
@@ -54,23 +55,29 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [equipTab, setEquipTab] = useState<TowerSlot>('weapon');
   const [battle, setBattle] = useState<TowerChallengeResult | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // 낙관적 장착(부위 → 장착할 장비) — 누르는 즉시 화면에 반영하고, 실패하면 되돌린다. 성공하면 액션의 재렌더가 같은 상태를 준다.
+  const [optEquip, setOptEquip] = useState<Partial<Record<TowerSlot, string>>>({});
+  const items = useMemo(
+    () => board.items.map((i) => (optEquip[i.slot] ? { ...i, equipped: i.ueid === optEquip[i.slot] } : i)),
+    [board.items, optEquip],
+  );
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
   const specials = useMemo(() => new Map(Object.entries(board.specials).map(([k, v]) => [Number(k), v as SlotKeys])), [board.specials]);
   const ruleOf = (f: number) => floorRule(f, pools.get(towerSection(f)) ?? null, specials.get(towerSection(f)) ?? null);
 
-  const equipped: EquippedPiece[] = board.items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
+  const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
   const rule = ruleOf(next);
 
   // 아바타 — 목록은 배율 높은 순. 처음엔 마지막에 고른 아바타, 없으면 배율 최고.
   const avatarRows = useMemo(() => {
-    const owned = new Map(board.items.map((i) => [i.key, { slot: i.slot, cp: i.cp }]));
+    const owned = new Map(items.map((i) => [i.key, { slot: i.slot, cp: i.cp }]));
     return board.avatars
       .map((a) => {
         const keys = new Set(a.keys);
         const lo = bestLoadout(owned, rule, keys);
         const loPieces = TOWER_SLOTS.flatMap((s) => {
-          const it = lo[s] ? board.items.find((i) => i.key === lo[s]) : null;
+          const it = lo[s] ? items.find((i) => i.key === lo[s]) : null;
           return it ? [{ slot: s, key: it.key, cp: it.cp }] : [];
         });
         return {
@@ -83,7 +90,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       })
       .sort((x, y) => y.best - x.best || y.mult - x.mult);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board, next]);
+  }, [board, items, next]);
   const [avatarId, setAvatarId] = useState<string | null>(() => {
     const last = board.lastProfileId && board.avatars.some((a) => a.id === board.lastProfileId) ? board.lastProfileId : null;
     return last ?? avatarRows[0]?.id ?? null;
@@ -91,18 +98,30 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const avatar = avatarRows.find((a) => a.id === avatarId) ?? avatarRows[0] ?? null;
   const cpNow = avatar?.now ?? towerCp(equipped, rule, new Set());
 
-  const doEquip = (ueids: string[]) =>
+  const doEquip = (ueids: string[]) => {
+    // 낙관적 반영 — 누르는 즉시 장착 표시(탑 전투력·배율도 즉시 다시 계산된다).
+    const opt: Partial<Record<TowerSlot, string>> = {};
+    for (const id of ueids) {
+      const it = board.items.find((i) => i.ueid === id);
+      if (it) opt[it.slot] = id;
+    }
+    setOptEquip((o) => ({ ...o, ...opt }));
+    setMsg(null);
     start(async () => {
-      // 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 다시 불러온다(CLAUDE §11.7).
+      // 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
+      let failed = false;
       for (const id of ueids) {
-        const r = await towerEquipAction(id);
+        const r = await towerEquipAction(id).catch(() => ({ status: 'error' as const, message: '장착하지 못했어요. 잠시 후 다시 시도해 주세요.' }));
         if (r.status !== 'success') {
           setMsg(r.message);
-          router.refresh();
+          failed = true;
           break;
         }
       }
+      setOptEquip({});
+      if (failed) router.refresh();
     });
+  };
 
   // 도전 한 번 = 키 하나. 응답을 못 받고 다시 눌러도 같은 키면 서버가 앞선 결과를 돌려준다(도전 이중 차감 방지).
   const challenge = () =>
@@ -149,7 +168,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       <main className="flex-1 overflow-y-auto bg-zinc-950 px-3 pt-2 pb-6 text-zinc-100">
         <div className="mb-2 flex items-center justify-between">
           <button type="button" onClick={() => router.back()} className="text-[14px] font-extrabold">‹ {next}층</button>
-          <span className="text-[11px] text-zinc-400">오늘 도전 <Dots left={board.attemptsLeft} /></span>
+          <span className="text-[11px] text-zinc-300"><Attempts left={board.attemptsLeft} /></span>
         </div>
         <div className="relative h-[180px] overflow-hidden rounded-xl border border-zinc-800 bg-cover bg-center" style={{ backgroundImage: `url(${assetUrl(`/sprites/tower/scene/${info.scene}.png`)})`, ...PIX }}>
           <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 to-transparent" />
@@ -207,31 +226,35 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         </button>
 
         {sheet === 'equip' ? (
-          <ModalShell onClose={() => setSheet(null)} label="요구 장비" align="bottom" className="w-full max-w-[390px]">
-            <div className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl bg-zinc-900 p-3 text-zinc-100">
-              <div className="flex items-baseline justify-between">
-                <b className="text-[14px]">요구 장비</b>
-                <span className="text-[10px] text-zinc-500">{reqText}</span>
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-1">
+          <ModalShell onClose={() => setSheet(null)} label="요구 장비">
+            <ModalLayout
+              title="요구 장비"
+              subtitle={reqText}
+              bodyPad="sm"
+              maxBodyClass="max-h-[56vh]"
+              footer={<ModalButton tone="ghost" onClick={() => setSheet(null)}>닫기</ModalButton>}
+            >
+              <div className="grid grid-cols-3 gap-1">
                 {TOWER_SLOTS.map((s) => (
                   <button key={s} type="button" onClick={() => setEquipTab(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold ${equipTab === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>{SLOT_KO[s]}</button>
                 ))}
               </div>
-              <EquipList board={board} slot={equipTab} rule={rule} avatarKeys={new Set(avatar?.keys ?? [])} pending={pending} onEquip={(id) => doEquip([id])} />
-              <p className="mt-2 text-[10px] text-zinc-500">누르면 장착 · ×2는 고른 아바타를 만들 때도 쓴 장비</p>
-            </div>
+              <EquipList board={board} items={items} slot={equipTab} rule={rule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} />
+              <p className="mt-2 px-1 text-[10px] text-zinc-500">누르면 장착 · ×2는 고른 아바타를 만들 때도 쓴 장비</p>
+            </ModalLayout>
           </ModalShell>
         ) : null}
 
         {sheet === 'avatar' ? (
-          <ModalShell onClose={() => setSheet(null)} label="선택 아바타" align="bottom" className="w-full max-w-[390px]">
-            <div className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl bg-zinc-900 p-3 text-zinc-100">
-              <div className="flex items-baseline justify-between">
-                <b className="text-[14px]">선택 아바타</b>
-                <span className="text-[10px] text-zinc-500">맞췄을 때 탑 전투력 높은 순</span>
-              </div>
-              <div className="mt-2 flex flex-col gap-1.5">
+          <ModalShell onClose={() => setSheet(null)} label="선택 아바타">
+            <ModalLayout
+              title="선택 아바타"
+              subtitle="맞췄을 때 탑 전투력 높은 순"
+              bodyPad="sm"
+              maxBodyClass="max-h-[56vh]"
+              footer={<ModalButton tone="ghost" onClick={() => setSheet(null)}>닫기</ModalButton>}
+            >
+              <div className="flex flex-col gap-1.5">
                 {avatarRows.map((a) => {
                   const sel = a.id === avatar?.id;
                   const canBetter = a.best > a.now.total;
@@ -249,11 +272,10 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       {sel && canBetter ? (
                         <button
                           type="button"
-                          disabled={pending}
                           onClick={() => {
                             const ids = TOWER_SLOTS.flatMap((s) => {
                               const key = a.loadout[s];
-                              const it = key ? board.items.find((i) => i.key === key && !i.equipped) : null;
+                              const it = key ? items.find((i) => i.key === key && !i.equipped) : null;
                               return it ? [it.ueid] : [];
                             });
                             doEquip(ids);
@@ -271,8 +293,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                 ＋ 요구 장비를 장착하고 아바타 만들기
                 <span className="text-[10px] font-bold text-amber-200/80">아바타 생성 ›</span>
               </a>
-              <p className="mt-2 text-[10px] text-zinc-500">아바타는 지금 장착한 장비로 만들어져요. 먼저 요구 장비를 장착하면 그 장비가 ×2가 되는 아바타가 됩니다.</p>
-            </div>
+              <p className="mt-2 px-1 text-[10px] text-zinc-500">아바타는 지금 장착한 장비로 만들어져요. 먼저 요구 장비를 장착하면 그 장비가 ×2가 되는 아바타가 됩니다.</p>
+            </ModalLayout>
           </ModalShell>
         ) : null}
       </main>
@@ -290,7 +312,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       <div className="relative px-3 pb-6">
         <div className="flex items-center justify-between pt-2">
           <b className="rounded-md bg-black/45 px-2 py-0.5 text-[14px]">무한의 탑</b>
-          <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100">오늘 도전 <Dots left={board.attemptsLeft} /></span>
+          <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={board.attemptsLeft} /></span>
         </div>
 
         {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
@@ -303,10 +325,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     {towerIsSpecial(hero) ? '✦ ' : ''}{hero}층{towerIsSpecial(hero) ? ' · 특별층' : ''} · {hero <= board.best ? '돌파함' : hero === next ? '도전 가능' : '잠김'}
                   </div>
                   <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
-                  <div className="mt-1 space-y-0.5 text-[10.5px]">
-                    <div><span className="inline-block w-[52px] text-zinc-400">첫 돌파</span>{rewardText(hero)}</div>
-                    <div><span className="inline-block w-[52px] text-zinc-400">요구 장비</span>{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
-                      <span className="inline-flex gap-0.5 align-middle">
+                  {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
+                  <div className="mt-1 text-[10.5px]">
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">첫 돌파</span>{rewardText(hero)}</div>
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">요구 장비</span>{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
+                      <span className="inline-flex gap-0.5">
                         {TOWER_SLOTS.map((s) => {
                           const k = specials.get(towerSection(hero))?.[s]?.[0];
                           // eslint-disable-next-line @next/next/no-img-element
@@ -314,15 +337,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                         })}
                       </span>
                     ) : `${(towerSection(hero) - 1) * 10 + 1}~${towerSection(hero) * 10}층 · 부위별 10개`}</div>
-                    <div><span className="inline-block w-[52px] text-zinc-400">이 층 돌파</span>{board.clears[hero] !== undefined ? `서버 ${n(board.clears[hero]!)}명` : '-'}</div>
                   </div>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className="h-[96px] w-auto self-end drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]" style={PIX} />
               </div>
-              {hero === next && !topped ? (
-                <button type="button" onClick={() => setView('detail')} className="mt-2 rounded-lg bg-amber-500 px-3 py-1.5 text-[11.5px] font-black text-amber-950">층 상세</button>
-              ) : null}
             </div>
           ) : (
             <div className="pb-2 pl-1 drop-shadow-[0_2px_3px_rgba(0,0,0,.9)]">
@@ -376,18 +395,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           })}
         </div>
 
-        {board.ranking.length ? (
-          <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/80 p-3">
-            <b className="text-[12px]">탑 순위</b>
-            <ol className="mt-1.5 space-y-1 text-[11.5px]">
-              {board.ranking.slice(0, 5).map((r, i) => (
-                <li key={r.userId} className="flex justify-between"><span><b className="mr-2 text-amber-300">{i + 1}</b>{r.nickname}</span><span className="tabular-nums text-zinc-300">{r.floor}층</span></li>
-              ))}
-            </ol>
-            <p className="mt-1.5 text-[9.5px] text-zinc-500">같은 층이면 먼저 도달한 사람이 앞에 섭니다.</p>
-          </div>
-        ) : null}
-
         {!topped ? (
           <button type="button" onClick={() => setView('detail')} className="sticky bottom-3 mt-4 w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
             {next}층 도전
@@ -400,18 +407,18 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   );
 }
 
-function EquipList({ board, slot, rule, avatarKeys, pending, onEquip }: {
+function EquipList({ board, items, slot, rule, avatarKeys, onEquip }: {
   board: TowerBoard;
+  items: TowerBoard['items'];
   slot: TowerSlot;
   rule: ReturnType<typeof floorRule>;
   avatarKeys: ReadonlySet<string>;
-  pending: boolean;
   onEquip: (ueid: string) => void;
 }) {
-  const ownedByKey = new Map(board.items.map((i) => [i.key, i]));
+  const ownedByKey = new Map(items.map((i) => [i.key, i]));
   // 입문 특별층(10층)은 모든 장비 + 지정 장비 — 지정 장비는 없어도 목록에 보여 준다.
   const keys = rule.allowed === null
-    ? [...new Set([...board.items.filter((i) => i.slot === slot).map((i) => i.key), ...[...(rule.doubleable ?? [])].filter((k) => board.catalog[k]?.slot === slot)])]
+    ? [...new Set([...items.filter((i) => i.slot === slot).map((i) => i.key), ...[...(rule.doubleable ?? [])].filter((k) => board.catalog[k]?.slot === slot)])]
     : [...rule.allowed].filter((k) => board.catalog[k]?.slot === slot);
   const rows = keys
     .map((k) => {
@@ -426,7 +433,7 @@ function EquipList({ board, slot, rule, avatarKeys, pending, onEquip }: {
         <button
           key={r.key}
           type="button"
-          disabled={!r.it || r.it.equipped || pending}
+          disabled={!r.it || r.it.equipped}
           onClick={() => r.it && onEquip(r.it.ueid)}
           className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${r.it?.equipped ? 'border-amber-500 bg-amber-950/40' : 'border-zinc-800 bg-zinc-950'} ${!r.it ? 'opacity-40' : ''}`}
         >
