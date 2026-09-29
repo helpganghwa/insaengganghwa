@@ -39,6 +39,7 @@ const KST = `at time zone 'Asia/Seoul'`;
 export { PENDING_CODES, EVENT_HOOK_CODES, isOwnerOnlyCode } from './pending';
 import { isOwnerOnlyCode, PENDING_CODES } from './pending';
 import { guildCollectiveCodes } from './guild-facts';
+import { LEGACY_LOCKABLE, legacyLockedTitles } from './legacy-lock';
 
 /**
  * 이 칭호를 목록·분모에서 감출지 — 판정이 없는데 아직 보유하지도 않은 것.
@@ -1146,6 +1147,15 @@ export async function discoverTitles(
   const active = await activeConditionals(userId, serverId, m);
   for (const code of active) achieved.add(code);
 
+  // 조건이 강화된 칭호의 옛 보유자 잠금(0223) — 새 조건을 채웠으면 푼다. 표 미적용이어도 판정은 계속.
+  const unlock = [...achieved].filter((c) => LEGACY_LOCKABLE.has(c));
+  if (unlock.length) {
+    await db
+      .execute(sql`delete from title_legacy_locks where user_id=${userId}::uuid and server_id=${serverId}
+        and title_code = any(array[${sql.join(unlock.map((c) => sql`${c}`), sql`, `)}]::text[])`)
+      .catch(() => undefined);
+  }
+
   const inserted: string[] = [];
   if (achieved.size) {
     const codes = [...achieved];
@@ -1201,6 +1211,7 @@ export async function representativeEligible(userId: string, serverId: number, c
   // 조건부로 오판해 장착 즉시 롤백되는 버그를 만들었다(2026-08-05).
   const def = TITLE_BY_CODE.get(code);
   if (!def) return false;
+  if (LEGACY_LOCKABLE.has(code) && (await legacyLockedTitles(userId, serverId)).has(code)) return false;
   if (def.kind !== 'conditional') return true;
   // 최다 케이스 표적 검증(칭호 감사 3-a) — 장비 상태형·집행관은 장착 1~2쿼리로 끝난다.
   // 지표 27쿼리 전체 수집은 랭킹·스트릭 등 나머지 조건부에만. (아이템 발동 칭호는 영구형이라 위에서 이미 통과한다.)

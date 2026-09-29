@@ -10,6 +10,7 @@ import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
 import { discoverTitles, isHiddenPendingTitle } from '@/lib/game/titles/judge';
+import { legacyLockedTitles } from '@/lib/game/titles/legacy-lock';
 import { getClaimedTitleMilestones, summarizeTitleRewards } from '@/lib/game/titles/rewards';
 
 import { TitlesClient, type TitleRow } from './TitlesClient';
@@ -51,13 +52,15 @@ export default async function TitlesPage() {
       // 멱등 발견 판정 — active 동봉 반환(지표 수집 1회로 발견+활성 모두 해결).
       // 원장 조회는 판정 **다음**이어야 한다(이번 발견분이 실려야 함).
       const { active } = await discoverTitles(userId, serverId);
+      // 옛 기준 보유자 잠금(0223, 육관왕) — 판정 뒤에 읽어야 이번에 푼 잠금이 반영된다.
+      const locked = await legacyLockedTitles(userId, serverId);
       const ledger = (await db.execute(sql`
         select title_code, earned_at, seen_at, reward_claimed_at from user_titles where user_id=${userId}::uuid and server_id=${serverId}
       `)) as unknown as { title_code: string; earned_at: Date; seen_at: Date | null; reward_claimed_at: Date | null }[];
       // 발견 보상(0191) — 달성 상자 수령 기록. 원장과 함께 요약해 "받을 보상" 바를 만든다.
       const claimedMilestones = await getClaimedTitleMilestones(userId, serverId).catch(() => [] as number[]);
       const rep = await repP;
-      return { ledger, active, rep: rep[0], claimedMilestones };
+      return { ledger, active, locked, rep: rep[0], claimedMilestones };
     })(),
     8000,
     'titles.page',
@@ -84,6 +87,7 @@ export default async function TitlesPage() {
   const rewardPending = new Set((r?.ledger ?? []).filter((l) => l.reward_claimed_at == null).map((l) => l.title_code));
   const reward = summarizeTitleRewards(r?.ledger ?? [], r?.claimedMilestones ?? []);
   const active = r?.active ?? new Set<string>();
+  const locked = r?.locked ?? new Set<string>();
 
   // 새 칭호 확인 처리(0187) — 이 화면을 한 번 보면 확인된 것으로 본다. 응답을 보낸 **뒤**(after) 전부
   // seen_at=now(): 이번 렌더는 NEW를 보여주고 다음 진입부터는 사라진다. 행 탭 개별 확인은 클라 표시만
@@ -115,7 +119,7 @@ export default async function TitlesPage() {
       discovered,
       // 발견일 — 목록엔 표시하지 않고 상세 팝업에서만 노출(사용자 확정). KST 표기(§3.8).
       earnedAt: earnedAt ? kstDateString(new Date(earnedAt)) : null,
-      activeNow: discovered && (!isConditional || active.has(d.code)),
+      activeNow: discovered && (!isConditional || active.has(d.code)) && !locked.has(d.code),
       isNew: discovered && unseen.has(d.code),
       rewardPending: discovered && rewardPending.has(d.code),
     };

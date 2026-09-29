@@ -183,4 +183,5 @@ type TitleDef = {
 | `rank_tower` | 탑의 주인 | 무한의 탑 랭킹 1위인 동안 | 조건부 | 대륙의 주인과 같은 불꽃, 청록(`blazeteal`) · 탑·주인에만 · 발광 |
 
 - 판정 원천: `tower_progress.best_floor`, `tower_battles`(승패·층·아바타·턴 기록의 `revive`/`resonance` 이벤트). judge의 탑 조회는 표가 없을 때 0으로 떨어져 판정 전체를 멈추지 않는다.
+- 오관왕 → **육관왕**(코드 `pentagon` 유지): 5종 기준으로 얻은 기존 보유자는 `title_legacy_locks`(0223)에 잠겨 발견은 유지하되 비활성 — 목록 '비활성', 대표 장착 불가, 대표여도 표시 안 함. 새 조건을 한 번 채우면 judge가 잠금을 지워 영구 활성. 잠글 수 있는 코드는 `lib/game/titles/legacy-lock.ts LEGACY_LOCKABLE`.
 - 랭킹 1위와 조합 칭호는 랭킹 6종 기준: 육관왕(`pentagon`, 6종 모두 10위 이내), 무관의 제왕(`uncrowned`, 6종 모두 2~3위), 왕좌의 그림자(`throne_shadow`, 아무 랭킹 2위).
