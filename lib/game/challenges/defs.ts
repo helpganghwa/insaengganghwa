@@ -38,7 +38,7 @@ export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string
   { id: 'world', icon: '🗺️', label: '세계지도' },
   { id: 'avatar', icon: '✨', label: '아바타' },
   { id: 'expedition', icon: '🏕️', label: '파견' },
-  { id: 'tower', icon: '🗼', label: '무한의 탑' },
+  { id: 'tower', icon: '🌀', label: '무한의 탑' },
   { id: 'shop', icon: '🎁', label: '상점' },
 ];
 
