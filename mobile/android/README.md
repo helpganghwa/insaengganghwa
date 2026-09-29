@@ -85,7 +85,7 @@ bubblewrap build                    # twa-manifest.json 사용 → app-release-b
 2. 결제창에서 취소 → 웹이 취소로 처리, 남은 화면 없음(`adb shell dumpsys activity activities | grep -A3 ganghwa`).
 3. 결제창을 띄운 채 홈 → **아이콘**으로 재진입 → 결제창·결제 화면이 모두 사라짐.
 4. 같은 절차를 **최근 앱**으로 재진입 → 결제창이 남을 수 있음(한계). 확인하면 상점 재진입 시 복구가 지급하는지 확인.
-5. 개발자 옵션 "활동 유지 안 함" 켜고 결제창 → 홈 → 재진입 → logcat에 `SafePayment: restored`와 `Could not parse product ID.`가 한 번, 새 결제창 없음.
+5. 개발자 옵션 "활동 유지 안 함" 켜고 결제창 → 홈 → 재진입 → logcat에 `PaymentResult: Restored instance; refusing to start a new billing flow.`(W)가 한 번, 새 결제창 없음.
 6. 결제창이 떠 있는 채 다크 모드 전환·글꼴 크기 변경 → 결제 화면 재생성 로그 없음, 결제 완료 후 정상 지급.
 7. 보류 결제(테스트 카드 "느린 결제") → 보류 유지, 완료 뒤 지급.
 8. `adb shell am kill app.ganghwa.game` 뒤 재진입해 결제 재시도 정상.

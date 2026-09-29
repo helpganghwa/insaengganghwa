@@ -132,9 +132,15 @@ async function refundDuplicate(order: OrderRow, sku: string, token: string, g: P
         });
     });
   } catch (e) {
-    // 같은 토큰이 이미 다른 행에 묶였다 — 동시에 온 다른 경로가 먼저 처리했다(환불도 그쪽이 한다).
+    // 같은 토큰이 이미 다른 행에 묶였다 — 동시에 온 다른 경로가 먼저 기록했거나, 앞선 시도의 환불 호출이 실패해 행만 남았다.
+    // **실제로 환불 확정(refunded)일 때만** 환불됨으로 답한다. 아니면(paid·지급 보류) 환불이 아직이다 — '환불됨'으로 답하면
+    // 상점 복구가 기기에서 구매를 소모해 3일 자동 환불 안전망이 사라진다(Fable 검수 09-29). 재환불은 정산 크론 C단계가 맡는다.
     const [bound] = await db.select({ status: iapOrders.status }).from(iapOrders).where(eq(iapOrders.playPurchaseToken, token)).limit(1);
-    if (bound) return { kind: 'refunded', reason: 'duplicate', userId: order.userId };
+    if (bound) {
+      return bound.status === 'refunded'
+        ? { kind: 'refunded', reason: 'duplicate', userId: order.userId }
+        : { kind: 'refund_failed', reason: 'duplicate', userId: order.userId };
+    }
     throw e;
   }
 

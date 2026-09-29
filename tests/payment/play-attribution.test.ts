@@ -244,6 +244,28 @@ describe.skipIf(skip)('결제 귀속 표식 — RTDN·복구·검증(DB 통합)'
     expect(mockRefund).not.toHaveBeenCalled();
   });
 
+  it('중복 환불 호출이 실패하면 지급 보류 행만 남고, 이후 상점 복구는 환불됨이 아니라 NO_ORDER(기기 소모 금지)', async () => {
+    const pid = newPid('dupfail');
+    const first = newToken('dupfail-first');
+    const id = await insertOrder(pid, { status: 'paid', token: first });
+    made.push(id);
+    tokens.push(first);
+    const second = newToken('dupfail-second');
+    tokens.push(second);
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.attr-dupfail', profileId: pid }));
+    mockRefund.mockRejectedValueOnce(new Error('boom'));
+
+    const out = await handleOneTimePurchase(SKU, second);
+    expect(out).toMatchObject({ kind: 'attributed', outcome: { kind: 'refund_failed', reason: 'duplicate' } });
+    const row = (await testDb.execute(sql`select status::text s, grant_skipped g, portone_order_id pid from iap_orders where play_purchase_token = ${second}`)) as unknown as { s: string; g: boolean; pid: string }[];
+    expect(row[0]).toMatchObject({ s: 'paid', g: true }); // 정산 크론 C단계가 다시 환불할 행
+    alertPrefixes.push(row[0]!.pid); // 환불 실패 경보는 새 행의 주문번호로 남는다 — 그 한 건만 지운다
+
+    // 상점 복구(표식 경로) — 행이 이미 있어도 환불 확정이 아니므로 CANCELLED(기기 소모)로 답하면 안 된다.
+    expect(await recoverPlayPurchase(TEST_USER_ID, SERVER_ID, SKU, second)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await readDiamond()).toBe(baselineDiamond);
+  });
+
   it('화면 검증: 구매 표식이 다른 주문을 가리키면 ORDER_MISMATCH — 토큰을 묶지 않는다', async () => {
     const a = newPid('va');
     const b = newPid('vb');
