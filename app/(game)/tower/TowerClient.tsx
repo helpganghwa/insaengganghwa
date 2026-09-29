@@ -7,7 +7,7 @@ import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { avatarMultiplier, floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
@@ -282,7 +282,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           <span className="absolute right-2.5 top-2 rounded-full bg-black/60 px-2.5 py-0.5 text-[11px] font-bold">돌파 {rewardText(next)}</span>
           <div className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
           <div className="absolute inset-x-3 bottom-[64px]">
-            <h1 className="text-[18px] font-black leading-tight">{info.name}</h1>
+            {/* 층 주인 전투력(=그 층 요구치) — 이름 옆 한 줄(줄이 늘지 않게). */}
+            <h1 className="flex items-baseline gap-2 text-[18px] font-black leading-tight">
+              <span className="min-w-0 truncate">{info.name}</span>
+              <span className="flex-none text-[12px] font-bold tabular-nums text-red-300">전투력 {n(towerRequirement(next))}</span>
+            </h1>
             <p className="mt-0.5 text-[11.5px] text-zinc-300">{info.line}</p>
           </div>
           <button type="button" onClick={() => openPool(next)} className="absolute inset-x-2 bottom-2 flex items-center gap-2.5 rounded-xl border border-amber-500/45 bg-zinc-950/70 px-2.5 py-2 text-left backdrop-blur-[2px]">
@@ -373,6 +377,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
                   {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
                   <div className="mt-1 text-[10.5px]">
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b></div>
                     <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">돌파</span>{rewardText(hero)}</div>
                     <div className="flex h-6 items-center">
                       <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
@@ -428,7 +433,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                 </button>
                 {open ? (
                   <div className="px-3 pb-3">
-                    {/* 층 칸(3차 피드백 1·3·4) — 돌파=초록 ✓·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦.
+                    {/* 층 칸(3차 피드백 1·3·4) — 돌파=초록 칸·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦.
                         위 구간 머리의 장면 띠가 positioned라 칸 선택 테두리를 덮지 않게 grid도 relative + 위 여백. */}
                     <div className="relative grid grid-cols-5 gap-1.5 pt-2">
                       {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
@@ -450,7 +455,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                                     : 'border border-zinc-800 bg-zinc-950'
                             } ${picked === f ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-950' : ''}`}
                           >
-                            {st === 'd' ? <span className="absolute right-0.5 top-0 text-[9px] font-black text-emerald-300">✓</span> : null}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)}
