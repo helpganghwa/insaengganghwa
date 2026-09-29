@@ -5785,19 +5785,9 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
-  code: "tower_50",
-  kind: "permanent",
-  label: "폭풍의 한가운데",
-  hidden: false,
-  cat: "무한의 탑",
-  style: {
-   fx: "iceflow"
-  }
- },
- {
   code: "tower_80",
   kind: "permanent",
-  label: "심연에서 돌아온 자",
+  label: "하늘 문턱",
   hidden: false,
   cat: "무한의 탑",
   style: {

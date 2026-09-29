@@ -5328,12 +5328,6 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "쉬움"
  },
  {
-  code: "tower_50",
-  cat: "무한의 탑",
-  cond: "무한의 탑 50층 돌파",
-  diff: "중간"
- },
- {
   code: "tower_80",
   cat: "무한의 탑",
   cond: "무한의 탑 80층 돌파",

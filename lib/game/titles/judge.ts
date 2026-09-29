@@ -801,9 +801,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
-  // 무한의 탑(2026-09-29) — 층 도달 4종 + 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
+  // 무한의 탑(2026-09-29) — 층 도달 3종(10·80·100층) + 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
   tower_10: (m) => m.tw_best >= 10,
-  tower_50: (m) => m.tw_best >= 50,
   tower_80: (m) => m.tw_best >= 80,
   tower_100: (m) => m.tw_best >= 100,
   tower_revive: (m) => m.tw_revive_wins >= 1,
