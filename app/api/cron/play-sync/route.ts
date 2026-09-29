@@ -12,7 +12,8 @@ import { retryPlayConsume, syncPlayCancelledRecent, syncPlayVoided } from '@/lib
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+// 300초(2026-09-29) — 취소 확인이 최근 결제 전부(최대 200건 × 구매·주문 조회 2회)를 순서대로 보므로 120초로는 빠듯하다.
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
