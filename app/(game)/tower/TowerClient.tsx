@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -8,7 +8,7 @@ import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerReward, towerSection } from '@/lib/game/balance';
-import { avatarMultiplier, bestLoadout, floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
+import { avatarMultiplier, floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
@@ -92,7 +92,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [battle, setBattle] = useState<TowerChallengeResult | 'pending' | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   // 낙관적 장착(부위 → 장착할 장비) — 누르는 즉시 화면에 반영하고, 실패하면 되돌린다. 성공하면 액션의 재렌더가 같은 상태를 준다.
-  const [optEquip, setOptEquip] = useState<Partial<Record<TowerSlot, string>>>({});
+  // useOptimistic — 액션과 그 재렌더가 한 트랜잭션으로 끝날 때까지 유지돼, 종전처럼 응답 직후 옛 장착이 잠깐 돌아오는 깜빡임이 없다.
+  const [optEquip, addOptEquip] = useOptimistic<Partial<Record<TowerSlot, string>>, Partial<Record<TowerSlot, string>>>({}, (o, add) => ({ ...o, ...add }));
   const items = useMemo(
     () => board.items.map((i) => (optEquip[i.slot] ? { ...i, equipped: i.ueid === optEquip[i.slot] } : i)),
     [board.items, optEquip],
@@ -105,26 +106,15 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
   const rule = ruleOf(next);
 
-  // 아바타 — 목록은 배율 높은 순. 처음엔 마지막에 고른 아바타, 없으면 배율 최고.
+  // 아바타 — 지금 장착 그대로 이 아바타를 골랐을 때의 배율·탑 전투력(3차 피드백 6: 최대치 표시 없음), 탑 전투력 높은 순.
+  // 처음엔 마지막에 고른 아바타, 없으면 맨 위.
   const avatarRows = useMemo(() => {
-    const owned = new Map(items.map((i) => [i.key, { slot: i.slot, cp: i.cp }]));
     return board.avatars
       .map((a) => {
         const keys = new Set(a.keys);
-        const lo = bestLoadout(owned, rule, keys);
-        const loPieces = TOWER_SLOTS.flatMap((s) => {
-          const it = lo[s] ? items.find((i) => i.key === lo[s]) : null;
-          return it ? [{ slot: s, key: it.key, cp: it.cp }] : [];
-        });
-        return {
-          ...a,
-          mult: avatarMultiplier(equipped, rule, keys),
-          now: towerCp(equipped, rule, keys),
-          best: towerCp(loPieces, rule, keys).total,
-          loadout: lo,
-        };
+        return { ...a, mult: avatarMultiplier(equipped, rule, keys), now: towerCp(equipped, rule, keys) };
       })
-      .sort((x, y) => y.best - x.best || y.mult - x.mult);
+      .sort((x, y) => y.now.total - x.now.total || y.mult - x.mult);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, items, next]);
   const [avatarId, setAvatarId] = useState<string | null>(() => {
@@ -141,9 +131,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       const it = board.items.find((i) => i.ueid === id);
       if (it) opt[it.slot] = id;
     }
-    setOptEquip((o) => ({ ...o, ...opt }));
     setMsg(null);
     start(async () => {
+      addOptEquip(opt);
       // 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
       let failed = false;
       for (const id of ueids) {
@@ -154,7 +144,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           break;
         }
       }
-      setOptEquip({});
       if (failed) router.refresh();
     });
   };
@@ -217,7 +206,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               }
               bodyPad="sm"
               maxBodyClass="max-h-[58vh]"
-              footer={<ModalButton tone="ghost" onClick={() => setSheet(null)}>닫기</ModalButton>}
+              footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
             >
               <div className="grid grid-cols-3 gap-1">
                 {TOWER_SLOTS.map((s) => (
@@ -235,51 +224,35 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           <ModalShell onClose={() => setSheet(null)} label="선택 아바타">
             <ModalLayout
               title="선택 아바타"
-              subtitle="맞췄을 때 탑 전투력 높은 순"
+              subtitle="지금 장착한 장비로 싸울 때 · 탑 전투력 높은 순"
               bodyPad="sm"
               maxBodyClass="max-h-[56vh]"
-              footer={<ModalButton tone="ghost" onClick={() => setSheet(null)}>닫기</ModalButton>}
+              footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
             >
               <div className="flex flex-col gap-1.5">
                 {avatarRows.map((a) => {
                   const sel = a.id === avatar?.id;
-                  const canBetter = a.best > a.now.total;
                   return (
-                    <div key={a.id} className={`rounded-xl border ${sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'}`}>
-                      <button type="button" onClick={() => setAvatarId(a.id)} className="flex h-[52px] w-full items-center gap-2.5 px-2.5 text-left">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
-                        <span className="min-w-0 flex-1 leading-tight">
-                          <b className="block text-[12px]">{a.isDefault ? '기본 아바타 · 항상 ×1' : a.now.doubledCount > 0 ? `장착과 맞는 장비 ${a.now.doubledCount}개` : '장착과 맞는 장비 없음'}</b>
-                          <span className="block truncate text-[10px] text-zinc-400">지금 {n(a.now.total)}{canBetter ? (a.isDefault ? ` · 가장 센 요구 장비로 장착하면 ${n(a.best)}` : ` · 이 아바타 장비로 맞추면 ${n(a.best)}`) : ''}</span>
-                        </span>
-                        <b className={`text-[14px] ${a.mult > 1 ? 'text-sky-300' : 'text-zinc-500'}`}>×{a.mult.toFixed(2)}</b>
-                      </button>
-                      {sel && canBetter ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const ids = TOWER_SLOTS.flatMap((s) => {
-                              const key = a.loadout[s];
-                              const it = key ? items.find((i) => i.key === key && !i.equipped) : null;
-                              return it ? [it.ueid] : [];
-                            });
-                            doEquip(ids);
-                          }}
-                          className="mx-2 mb-2 w-[calc(100%-16px)] rounded-lg border border-amber-600/60 bg-amber-950/40 py-1.5 text-[11px] font-extrabold text-amber-200"
-                        >
-                          {a.isDefault ? '가장 센 요구 장비로 장착' : '이 아바타 장비로 맞춰 장착'} · {n(a.best)}
-                        </button>
-                      ) : null}
-                    </div>
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAvatarId(a.id)}
+                      className={`flex h-[56px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left ${sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
+                      <span className="min-w-0 flex-1 leading-tight">
+                        <b className="block text-[12px]">{a.isDefault ? '기본 아바타' : a.now.doubledCount > 0 ? `맞는 장비 ${a.now.doubledCount}개` : '맞는 장비 없음'}</b>
+                        <span className="text-[10px] text-zinc-400">{sel ? '선택 중' : '누르면 선택'}</span>
+                      </span>
+                      <span className="flex-none text-right leading-tight">
+                        <b className={`block text-[14px] tabular-nums ${a.mult > 1 ? 'text-sky-300' : 'text-zinc-400'}`}>×{a.mult.toFixed(2)}</b>
+                        <span className="text-[10.5px] tabular-nums text-zinc-300">탑 전투력 <b className="text-amber-300">{n(a.now.total)}</b></span>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
-              <a href="/me/create" className="mt-2 flex items-center justify-between rounded-xl border border-dashed border-amber-700 bg-amber-950/25 px-3 py-2 text-[11.5px] font-extrabold text-amber-300">
-                ＋ 요구 장비를 장착하고 아바타 만들기
-                <span className="text-[10px] font-bold text-amber-200/80">아바타 생성 ›</span>
-              </a>
-              <p className="mt-2 px-1 text-[10px] text-zinc-500">아바타는 지금 장착한 장비로 만들어져요. 먼저 요구 장비를 장착하면 그 장비가 ×2가 되는 아바타가 됩니다.</p>
             </ModalLayout>
           </ModalShell>
         ) : null}
@@ -418,7 +391,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   </div>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className="h-[96px] w-auto self-end drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]" style={PIX} />
+                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
               </div>
             </div>
           ) : (
@@ -455,21 +428,39 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                 </button>
                 {open ? (
                   <div className="px-3 pb-3">
-                    {/* 층 칸 — 그 층 몬스터 + 층 번호. 돌파=흐리게, 도전 가능=금색 테두리, 잠김=어둡게. */}
-                    <div className="grid grid-cols-5 gap-1">
+                    {/* 층 칸(3차 피드백 1·3·4) — 돌파=초록 ✓·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦.
+                        위 구간 머리의 장면 띠가 positioned라 칸 선택 테두리를 덮지 않게 grid도 relative + 위 여백. */}
+                    <div className="relative grid grid-cols-5 gap-1.5 pt-2">
                       {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
                         const st = f <= best ? 'd' : f === next ? 'c' : 'l';
+                        const sp = towerIsSpecial(f);
                         return (
                           <button
                             key={f}
                             type="button"
                             onClick={() => setPicked(picked === f ? null : f)}
-                            aria-label={`${f}층 ${towerFloorInfo(f).name}`}
-                            className={`flex flex-col items-center rounded-md border pt-1 pb-0.5 ${st === 'c' ? 'border-amber-500 bg-amber-950/60' : towerIsSpecial(f) ? 'border-amber-800/70 bg-zinc-900' : 'border-zinc-800 bg-zinc-900'} ${picked === f ? 'ring-2 ring-white' : ''}`}
+                            aria-label={`${f}층 ${st === 'l' ? '잠김' : towerFloorInfo(f).name}`}
+                            className={`relative flex flex-col items-center rounded-md pt-1 pb-0.5 ${
+                              st === 'd'
+                                ? 'border border-emerald-700/70 bg-emerald-950/55'
+                                : st === 'c'
+                                  ? 'border-2 border-amber-400 bg-amber-900/45 shadow-[0_0_10px_rgba(245,158,11,.5)]'
+                                  : sp
+                                    ? 'border border-rose-800/80 bg-rose-950/30'
+                                    : 'border border-zinc-800 bg-zinc-950'
+                            } ${picked === f ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-950' : ''}`}
                           >
+                            {st === 'd' ? <span className="absolute right-0.5 top-0 text-[9px] font-black text-emerald-300">✓</span> : null}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)} alt="" className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-45 grayscale' : st === 'l' ? 'brightness-50' : ''}`} style={PIX} />
-                            <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300/80' : st === 'c' ? 'text-amber-300' : 'text-zinc-500'}`}>{f}</span>
+                            <img
+                              src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)}
+                              alt=""
+                              className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-50 grayscale' : st === 'l' ? 'opacity-30 brightness-0 invert' : ''}`}
+                              style={PIX}
+                            />
+                            <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300' : st === 'c' ? 'text-amber-200' : sp ? 'text-rose-300' : 'text-zinc-500'}`}>
+                              {sp ? '✦' : ''}{f}
+                            </span>
                           </button>
                         );
                       })}
