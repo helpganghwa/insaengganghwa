@@ -22,6 +22,8 @@ import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 import { RAID_MAX_PARTICIPANTS,
   expeditionSlotsFor,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
+  TOWER_DAILY_ATTEMPTS,
+  TOWER_FLOORS,
 } from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -65,8 +67,8 @@ const MENU = [
   {
     href: '/tower',
     label: '무한의 탑',
-    desc: '한 층씩 끝없이',
-    bg: '/sprites/tower/bg/list.png',
+    desc: '한 층씩 끝없이', // 실제 문구는 towerDesc(최고 돌파 층)로 동적 대체
+    bg: '/sprites/tower/bg/inner-archive.png',
     tint: '#1b2440',
     scale: 1,
   },
@@ -147,6 +149,7 @@ export default async function HomePage() {
   let meleeDesc = '매일 9시 개시';
   let expeditionDesc = '원정대를 보내보세요';
   let expeditionCanSend = false;
+  let towerDesc = '한 층씩 끝없이';
   let raidJoinable = 0;
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
@@ -271,7 +274,11 @@ export default async function HomePage() {
               as chron_day,
             (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
               order by kst_day desc limit 1)
-              as chron_headline
+              as chron_headline,
+            -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
+            (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
+            (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
+               where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_losses
           from (select (now() at time zone 'Asia/Seoul') kst) n
           left join melee_battles b on b.battle_date = n.kst::date and b.server_id = ${serverId}
           left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = ${serverId}
@@ -303,6 +310,8 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
+        tower_best: number | null;
+        tower_losses: number | null;
       }>;
 
       if (row) {
@@ -322,6 +331,10 @@ export default async function HomePage() {
         expeditionDesc = `오늘 파견 ${expSent}/${expOpen}`;
         expeditionCanSend = expSent < expOpen;
         if (expClaimable > 0) counts['/expedition'] = expClaimable;
+        // 무한의 탑 — 설명은 최고 돌파 층, 배지는 오늘 남은 도전(다 오르면 배지 없음).
+        const towerBest = Number(row.tower_best ?? 0);
+        towerDesc = towerBest > 0 ? `${towerBest}층 돌파` : '1층부터 도전';
+        if (towerBest < TOWER_FLOORS) counts['/tower'] = Math.max(0, TOWER_DAILY_ATTEMPTS - Number(row.tower_losses ?? 0));
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())
@@ -477,6 +490,8 @@ export default async function HomePage() {
               ? meleeDesc
               : m.href === '/expedition'
                 ? expeditionDesc
+                : m.href === '/tower'
+                  ? towerDesc
                 : m.href === '/raid' && raidJoinable > 0
                   ? `참여 가능 레이드 ${raidJoinable}`
                   : m.desc;
