@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -72,6 +72,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const sp = useSearchParams();
   const view: 'list' | 'detail' = sp.get('v') === 'd' ? 'detail' : 'list';
   const setView = (v: 'list' | 'detail') => (v === 'detail' ? router.push('/tower?v=d') : router.push('/tower'));
+  const [openSection, setOpenSection] = useState(towerSection(next));
+  // 돌파로 다음 구간에 들어서면 펼친 구간도 따라간다(렌더 중 조정 — effect 없이).
+  const [seenNext, setSeenNext] = useState(next);
+  if (seenNext !== next) {
+    setSeenNext(next);
+    setOpenSection(towerSection(next));
+  }
   const [sheet, setSheet] = useState<null | 'equip' | 'avatar'>(null);
   // 착용 가능 장비 팝업이 보여 줄 층 — 상세에선 도전할 층, 목록에선 고른 층(2차 피드백 5).
   const [sheetFloor, setSheetFloor] = useState<number | null>(null);
@@ -368,159 +375,122 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     );
   }
 
-  // ── 층 목록(등반로) ─────────────────────────────────────
-  // 아래 1층에서 위로 오르는 지그재그 길(시안 C). 구간(10층)마다 그 장소의 장면을 배경으로 깔고, 층마다 그 층 몬스터를 발판에 세운다.
-  // 지금 구간까지 보여 주고, 그 위 구간은 잠긴 문 한 줄. 아래 시트는 고른 층(기본 = 도전할 층) 정보와 도전 버튼.
-  const shownFloor = picked ?? next;
-  const shownInfo = towerFloorInfo(shownFloor);
-  const curSec = towerSection(next);
-  const gateSec = curSec < Math.ceil(TOWER_FLOORS / TOWER_SECTION) && !topped ? curSec + 1 : null;
+  // ── 층 목록 ─────────────────────────────────────────────
+  const hero = picked ?? null;
+  const heroInfo = hero ? towerFloorInfo(hero) : null;
+  const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
   return (
-    <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-zinc-950 text-zinc-100">
-      <BackTitle title="무한의 탑" className="flex-none px-3 pt-1.5" right={<span className="text-[11px] text-zinc-300"><Attempts left={attemptsLeft} /></span>} />
+    // 배경은 화면 자체의 배경으로(2차 피드백 3) — 종전의 760px 절대 배치 배경이 내용보다 길어 쓸데없는 스크롤을 만들었다.
+    <main
+      className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain bg-zinc-950 bg-cover bg-top text-zinc-100"
+      style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/inner-archive.png')})`, ...PIX }}
+    >
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-1.5">
+        <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
 
-      <div data-climb className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {gateSec ? (
-          <div className="border-b border-zinc-800 bg-gradient-to-b from-zinc-800 to-zinc-900 px-3 py-3.5 text-center text-[11px] text-zinc-400">
-            🔒 {(gateSec - 1) * TOWER_SECTION + 1}층 · {towerFloorInfo((gateSec - 1) * TOWER_SECTION + 1).theme} · {(gateSec - 1) * TOWER_SECTION}층 수문장을 넘으면 열린다
-          </div>
-        ) : null}
-        {Array.from({ length: curSec }, (_, i) => curSec - i).map((sec) => (
-          <ClimbLeg
-            key={sec}
-            sec={sec}
-            best={best}
-            next={next}
-            picked={shownFloor}
-            avatarSouth={avatar?.south ?? null}
-            onPick={(f) => setPicked(f === next ? null : f)}
-          />
-        ))}
-        <div className="flex h-10 items-center justify-center border-t-2 border-stone-700 bg-stone-900 text-[11px] text-stone-400">탑 입구</div>
-      </div>
-
-      {/* 고른 층 — 줄마다 높이 고정(층을 바꿔도 시트가 흔들리지 않게). */}
-      <div className="flex-none border-t border-zinc-700 bg-zinc-950 px-3 py-2">
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={assetUrl(`/sprites/tower/mon/${shownInfo.sprite}.png`)} alt="" className="h-14 w-14 flex-none object-contain" style={PIX} />
-          <div className="min-w-0 flex-1 text-[10.5px]">
-            <div className="h-4 font-black text-amber-300">
-              {towerIsSpecial(shownFloor) ? '✦ ' : ''}{shownFloor}층 · {shownInfo.theme}
-              <span className="ml-1 font-bold text-zinc-400">{shownFloor <= best ? '돌파함' : shownFloor === next ? '도전 가능' : '잠김'}</span>
+        {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
+        <div className="relative mt-2 flex h-[200px] flex-col justify-end">
+          {heroInfo && hero ? (
+            <div className="rounded-2xl border border-white/10 bg-black/55 p-3 backdrop-blur-[2px]">
+              <div className="flex gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10.5px] font-black text-amber-300">
+                    {towerIsSpecial(hero) ? '✦ ' : ''}{hero}층{towerIsSpecial(hero) ? ' · 특별층' : ''} · {hero <= best ? '돌파함' : hero === next ? '도전 가능' : '잠김'}
+                  </div>
+                  <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
+                  {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
+                  <div className="mt-1 text-[10.5px]">
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">돌파</span>{rewardText(hero)}</div>
+                    <div className="flex h-6 items-center">
+                      <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
+                      <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
+                      <span className="inline-flex gap-0.5">
+                        {TOWER_SLOTS.map((s) => {
+                          const k = specials.get(towerSection(hero))?.[s]?.[0];
+                          // eslint-disable-next-line @next/next/no-img-element
+                          return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
+                        })}
+                      </span>
+                    ) : `${(towerSection(hero) - 1) * 10 + 1}~${towerSection(hero) * 10}층 · 부위별 10개`}</span>
+                      {/* 줄 높이 안에 들어가는 작은 버튼 — 층을 바꿔도 카드가 흔들리지 않게(2차 피드백 5). */}
+                      <button type="button" onClick={() => openPool(hero)} className="ml-1 h-5 flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
+                    </div>
+                  </div>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className="h-[96px] w-auto self-end drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]" style={PIX} />
+              </div>
             </div>
-            <b className="block h-5 truncate text-[14px] leading-5">{shownInfo.name}</b>
-            <div className="flex h-5 items-center"><span className="w-[48px] flex-none text-zinc-400">돌파</span>{rewardText(shownFloor)}</div>
-            <div className="flex h-5 items-center">
-              <span className="w-[48px] flex-none text-zinc-400">요구 장비</span>
-              <span className="min-w-0 flex-1 truncate">
-                {towerSection(shownFloor) === 1 && !towerIsSpecial(shownFloor) ? '모든 장비' : towerIsSpecial(shownFloor) ? (
-                  <span className="inline-flex gap-0.5">
-                    {TOWER_SLOTS.map((s) => {
-                      const k = specials.get(towerSection(shownFloor))?.[s]?.[0];
-                      // eslint-disable-next-line @next/next/no-img-element
-                      return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-4 w-4 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
-                    })}
-                  </span>
-                ) : `${rangeText(shownFloor)} · 부위별 10개`}
-              </span>
-              <button type="button" onClick={() => openPool(shownFloor)} className="ml-1 h-[18px] flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
-            </div>
-          </div>
-          {topped ? (
-            <span className="w-[72px] flex-none text-center text-[11px] text-zinc-400">최고층 도달</span>
-          ) : shownFloor === next ? (
-            <button type="button" onClick={() => setView('detail')} className="h-12 w-[72px] flex-none rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950 shadow-lg">
-              도전
-            </button>
           ) : (
-            <button type="button" onClick={() => setPicked(null)} className="h-12 w-[72px] flex-none rounded-xl border border-zinc-700 text-[11px] font-bold leading-tight text-zinc-300">
-              {next}층으로
-            </button>
+            <div className="pb-2 pl-1 drop-shadow-[0_2px_3px_rgba(0,0,0,.9)]">
+              <div className="text-[11px] text-zinc-200">최고 도달</div>
+              <div className="text-[32px] font-black leading-none">{best}층</div>
+              <div className="mt-1 text-[11px] text-amber-300">{board.myRank ? `서버 ${board.myRank}위` : '아직 기록 없음'}</div>
+            </div>
           )}
         </div>
+
+        {/* 구간 카드 */}
+        <div className="mt-3 flex flex-col gap-1.5">
+          {Array.from({ length: sections }, (_, i) => sections - i).map((sec) => {
+            const lo = (sec - 1) * TOWER_SECTION + 1;
+            const hi = sec * TOWER_SECTION;
+            const done = best >= hi;
+            const locked = best + 1 < lo;
+            const cleared = Math.max(0, Math.min(TOWER_SECTION, best - lo + 1));
+            const open = openSection === sec;
+            if (locked && sec > towerSection(next) + 1) return null; // 다음 구간까지만 보여 준다
+            return (
+              <div key={sec} className={`overflow-hidden rounded-xl border bg-zinc-950/80 backdrop-blur-[2px] ${sec === towerSection(next) ? 'border-amber-600/60' : 'border-zinc-800'}`}>
+                {/* 구간 머리 — 그 장소의 장면을 띠로 깔고 장소 이름. 잠긴 구간은 어둡게. */}
+                <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between overflow-hidden px-3 text-left">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
+                  <span className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+                  <span className="relative leading-tight">
+                    <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
+                    <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
+                  </span>
+                  <span className={`relative text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>{done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}</span>
+                </button>
+                {open ? (
+                  <div className="px-3 pb-3">
+                    {/* 층 칸 — 그 층 몬스터 + 층 번호. 돌파=흐리게, 도전 가능=금색 테두리, 잠김=어둡게. */}
+                    <div className="grid grid-cols-5 gap-1">
+                      {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
+                        const st = f <= best ? 'd' : f === next ? 'c' : 'l';
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setPicked(picked === f ? null : f)}
+                            aria-label={`${f}층 ${towerFloorInfo(f).name}`}
+                            className={`flex flex-col items-center rounded-md border pt-1 pb-0.5 ${st === 'c' ? 'border-amber-500 bg-amber-950/60' : towerIsSpecial(f) ? 'border-amber-800/70 bg-zinc-900' : 'border-zinc-800 bg-zinc-900'} ${picked === f ? 'ring-2 ring-white' : ''}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)} alt="" className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-45 grayscale' : st === 'l' ? 'brightness-50' : ''}`} style={PIX} />
+                            <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300/80' : st === 'c' ? 'text-amber-300' : 'text-zinc-500'}`}>{f}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        {!topped ? (
+          <button type="button" onClick={() => setView('detail')} className="sticky bottom-0 mt-auto w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
+            {next}층 도전
+          </button>
+        ) : (
+          <p className="mt-auto text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
+        )}
       </div>
       {popups}
     </main>
-  );
-}
-
-// 등반로 한 구간 — 발판 10개의 위치(아래 1번째 → 위 10번째). x는 %, 10번째(수문장)는 가운데 위.
-const LEG_H = 680;
-const LEG_X = [50, 74, 82, 60, 34, 18, 42, 20, 74, 50];
-const legY = (k: number) => LEG_H - 46 - k * 64;
-
-function ClimbLeg({ sec, best, next, picked, avatarSouth, onPick }: {
-  sec: number;
-  best: number;
-  next: number;
-  picked: number;
-  avatarSouth: string | null;
-  onPick: (floor: number) => void;
-}) {
-  const lo = (sec - 1) * TOWER_SECTION + 1;
-  const theme = towerFloorInfo(lo).theme;
-  const curRef = useRef<HTMLButtonElement>(null);
-  // 처음 열 때(또 돌파로 다음 층이 바뀔 때) 지금 층이 화면 가운데쯤 오게 — 등반로 스크롤 상자만 움직인다(DOM만 만지므로 effect).
-  useEffect(() => {
-    const el = curRef.current;
-    const box = el?.closest<HTMLElement>('[data-climb]');
-    if (el && box) box.scrollTop += el.getBoundingClientRect().top - box.getBoundingClientRect().top - box.clientHeight * 0.55;
-  }, [next]);
-  const pts = LEG_X.map((x, k) => `${x},${legY(k)}`);
-  const doneTo = Math.max(0, Math.min(TOWER_SECTION, best - lo + 2)); // 돌파한 발판 + 지금 발판까지 잇는다
-  return (
-    <section className="relative overflow-hidden" style={{ height: LEG_H }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={PIX} />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950/90 via-black/20 to-black/55" />
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 100 ${LEG_H}`} preserveAspectRatio="none" aria-hidden>
-        <polyline points={pts.join(' ')} fill="none" stroke="rgba(255,255,255,.28)" strokeWidth="3" strokeDasharray="2 7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        {doneTo > 1 ? <polyline points={pts.slice(0, doneTo).join(' ')} fill="none" stroke="rgb(245,165,36)" strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke" /> : null}
-      </svg>
-      <div className="absolute bottom-3 left-3 z-10 drop-shadow-[0_1px_3px_rgba(0,0,0,.9)]">
-        <b className="block text-[15px] font-black">{theme}</b>
-        <span className="text-[10.5px] text-zinc-300">{lo}~{lo + TOWER_SECTION - 1}층</span>
-      </div>
-      {LEG_X.map((x, k) => {
-        const f = lo + k;
-        const info = towerFloorInfo(f);
-        const st = f <= best ? 'd' : f === next ? 'c' : 'l';
-        const boss = towerIsSpecial(f);
-        return (
-          <button
-            key={f}
-            ref={st === 'c' ? curRef : undefined}
-            type="button"
-            onClick={() => onPick(f)}
-            aria-label={`${f}층 ${info.name}`}
-            className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-            style={{ left: `${x}%`, top: legY(k) }}
-          >
-            <span className="relative">
-              {st === 'c' && avatarSouth ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarSouth} alt="" className="absolute bottom-0 right-[78%] h-12 w-auto max-w-none drop-shadow-[0_2px_3px_rgba(0,0,0,.9)]" style={PIX} />
-              ) : null}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
-                alt=""
-                className={`${boss ? 'h-20 w-20' : 'h-12 w-12'} object-contain drop-shadow-[0_2px_3px_rgba(0,0,0,.9)] ${st === 'd' ? 'opacity-60 grayscale' : st === 'l' ? 'brightness-[.55]' : ''}`}
-                style={PIX}
-              />
-            </span>
-            <span
-              className={`-mt-1 min-w-[26px] rounded-full border px-1.5 text-center text-[10.5px] font-black tabular-nums ${
-                st === 'd' ? 'border-amber-300/40 bg-amber-500 text-amber-950' : st === 'c' ? 'animate-pulse border-amber-300 bg-amber-50 text-amber-800 shadow-[0_0_12px_3px_rgba(245,165,36,.7)]' : 'border-white/15 bg-zinc-900/85 text-zinc-400'
-              } ${picked === f ? 'ring-2 ring-white' : ''}`}
-            >
-              {boss ? `${f}층 수문장` : f}
-            </span>
-          </button>
-        );
-      })}
-    </section>
   );
 }
 
