@@ -78,6 +78,11 @@ export function towerTurnLine(t: TowerTurn, monName: string): string {
   return `${monName}의 공격을 받았다.`;
 }
 
+/** 전투 기록의 결말 한 줄(B2 — 결과 팝업 대신 기록 끝에 붙는다). 이름 뒤 조사는 josa로. */
+export function towerResultLine(win: boolean, monName: string, turns: number): string {
+  return win ? josa(`${turns}턴 만에 ${monName}#{이} 쓰러졌다.`) : josa(`${monName}#{을} 넘지 못하고 물러났다.`);
+}
+
 /** 변수 태그 라벨·색(재생 화면). */
 export const TOWER_EVENT_TAG: Record<TowerBattleEvent, { label: string; cls: string }> = {
   first_strike: { label: '선제', cls: 'bg-orange-900 text-orange-200' },
