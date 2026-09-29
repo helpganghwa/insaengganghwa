@@ -104,85 +104,82 @@ function attemptsLeft(lossDay: string | null, losses: number, at: Date = new Dat
   return lossDay === kstDateString(at) ? Math.max(0, TOWER_DAILY_ATTEMPTS - losses) : TOWER_DAILY_ATTEMPTS;
 }
 
+/**
+ * 탑 화면 데이터 — 한 번의 쿼리로(진행도·보유 장비·아바타·카탈로그·이번 주 요구 장비·지정 장비·내 순위).
+ * 종전엔 7개 쿼리를 한꺼번에 병렬로 보내 레이아웃 쿼리와 겹치면 커넥션이 몰려, 풀러 쪽에서 쿼리가 멈춘 채
+ * statement timeout(2분)까지 가는 일이 스테이징에서 반복됐다(돌파 뒤 다음 층 이동 오류). 요구 장비가 아직
+ * 추첨되지 않은 주(그 주 첫 접근)만 towerPools로 추첨·저장한다.
+ */
 export async function towerBoard(userId: string, serverId: number) {
-  const [{ pools, specials, week }, prog, owned, avatars, ranks, catalog] = await Promise.all([
-    towerPools(serverId),
-    db.execute(sql`
+  const week = kstWeekStartString();
+  const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
+  const [row] = (await db.execute(sql`
+    with me as (
       select best_floor, best_at, loss_day::text as loss_day, losses, last_profile_id::text as last_profile_id
-      from tower_progress where user_id=${userId}::uuid and server_id=${serverId}`) as unknown as Promise<
-      { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null }[]
-    >,
-    db.execute(sql`
-      select ue.id::text as ueid, ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level,
-             ue.transcend_level as transcend, ue.equipped_slot is not null as equipped, ci.active
-      from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-      where ue.user_id=${userId}::uuid and ue.server_id=${serverId}`) as unknown as Promise<
-      { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[]
-    >,
-    db.execute(sql`
-      select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot,
-             coalesce((up.options->>'isDefault')::boolean, false) as is_default
-      from user_profiles up where up.user_id=${userId}::uuid and up.server_id=${serverId}
-      order by is_default desc, up.created_at desc`) as unknown as Promise<
-      { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[]
-    >,
-    db.execute(sql`
-      select tp.user_id::text as user_id, c.nickname, tp.best_floor, tp.best_at
-      from tower_progress tp join characters c on c.user_id = tp.user_id and c.server_id = tp.server_id
-      join profiles pr on pr.id = tp.user_id
-      where tp.server_id=${serverId} and tp.best_floor > 0 and ${NOT_BANNED}
-      order by tp.best_floor desc, tp.best_at asc limit 20`) as unknown as Promise<
-      { user_id: string; nickname: string; best_floor: number; best_at: string }[]
-    >,
-    activeCatalog(),
-  ]);
-  const p = prog[0];
+      from tower_progress where user_id=${userId}::uuid and server_id=${serverId}
+    )
+    select
+      (select row_to_json(me) from me) as prog,
+      coalesce((select json_agg(o) from (
+        select ue.id::text as ueid, ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level,
+               ue.transcend_level as transcend, ue.equipped_slot is not null as equipped, ci.active
+        from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+        where ue.user_id=${userId}::uuid and ue.server_id=${serverId}) o), '[]'::json) as owned,
+      coalesce((select json_agg(a order by a.is_default desc, a.created_at desc) from (
+        select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot,
+               coalesce((up.options->>'isDefault')::boolean, false) as is_default, up.created_at
+        from user_profiles up where up.user_id=${userId}::uuid and up.server_id=${serverId}) a), '[]'::json) as avatars,
+      coalesce((select json_agg(c order by c.id) from (select id, code, slot::text as slot, name from catalog_items where active) c), '[]'::json) as catalog,
+      coalesce((select json_agg(p) from (select section, weapon, armor, accessory from tower_pools
+        where server_id=${serverId} and week_start=${week}::date) p), '[]'::json) as pools,
+      coalesce((select json_agg(x) from (select section, weapon, armor, accessory from tower_specials where server_id=${serverId}) x), '[]'::json) as specials,
+      (select (count(*) + 1)::int from tower_progress t join profiles pr on pr.id = t.user_id, me
+        where me.best_floor > 0 and t.server_id=${serverId} and ${NOT_BANNED}
+          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor and t.best_at < me.best_at))) as my_rank`)) as unknown as {
+    prog: { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null } | null;
+    owned: { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[];
+    avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
+    catalog: { code: string; slot: TowerSlot; name: string }[];
+    pools: { section: number; weapon: string[]; armor: string[]; accessory: string[] }[];
+    specials: { section: number; weapon: string; armor: string; accessory: string }[];
+    my_rank: number | null;
+  }[];
+  const r = row!;
+  // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
+  const drawn = r.pools.length < sections - 1 || r.specials.length < sections ? await towerPools(serverId) : null;
+  const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.section), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
+  const specials = drawn?.specials ?? new Map(r.specials.map((x) => [Number(x.section), { weapon: [x.weapon], armor: [x.armor], accessory: [x.accessory] }]));
+  const p = r.prog;
   const best = Number(p?.best_floor ?? 0);
-  // 내 전투력은 헤더와 같은 기준(보유 전체 — 퇴역 장비 포함), 탑 목록·장착은 활성 장비만(퇴역 장비는 요구 장비가 될 수 없다).
-  const all = owned.map((o) => ({
-    ueid: o.ueid,
-    key: o.key,
-    name: o.name,
-    slot: o.slot,
-    equipped: o.equipped,
-    active: o.active,
-    level: Number(o.level),
-    transcend: Number(o.transcend),
-    cp: pieceCombatPower(Number(o.level), Number(o.transcend)),
-  }));
-  const items: TowerOwnedItem[] = all.filter((o) => o.active).map(({ active: _a, ...o }) => o);
-  const av: TowerAvatar[] = avatars.map((a) => {
+  const items: TowerOwnedItem[] = r.owned
+    .filter((o) => o.active)
+    .map((o) => ({
+      ueid: o.ueid,
+      key: o.key,
+      name: o.name,
+      slot: o.slot,
+      equipped: o.equipped,
+      level: Number(o.level),
+      transcend: Number(o.transcend),
+      cp: pieceCombatPower(Number(o.level), Number(o.transcend)),
+    }));
+  const av: TowerAvatar[] = r.avatars.map((a) => {
     const snap = (a.equipment_snapshot && typeof a.equipment_snapshot === 'object' ? a.equipment_snapshot : {}) as Record<string, unknown>;
     const keys = a.is_default ? [] : ['weaponKey', 'armorKey', 'accessoryKey'].map((k) => snap[k]).filter((v): v is string => typeof v === 'string');
     return { id: a.id, south: a.south, keys, isDefault: a.is_default };
   });
-  // 서버 돌파 수 — 그 층 이상 도달한 사람 수(층 목록 정보 영역). 지금 구간 + 다음 구간.
-  const from = Math.max(1, (towerSection(best + 1) - 1) * TOWER_SECTION + 1);
-  const clears = (await db.execute(sql`
-    select f::int as floor, (select count(*)::int from tower_progress t where t.server_id=${serverId} and t.best_floor >= f) as n
-    from generate_series(${from}::int, ${Math.min(TOWER_FLOORS, from + 2 * TOWER_SECTION - 1)}::int) f`)) as unknown as { floor: number; n: number }[];
-  const [myRank] = best > 0
-    ? ((await db.execute(sql`
-        select (count(*) + 1)::int as r from tower_progress t join profiles pr on pr.id = t.user_id
-        where t.server_id=${serverId} and ${NOT_BANNED}
-          and (t.best_floor > ${best} or (t.best_floor = ${best} and t.best_at < ${p!.best_at}::timestamptz))`)) as unknown as { r: number }[])
-    : [];
   return {
-    week,
+    week: drawn?.week ?? week,
     best,
-    bestAt: p?.best_at ?? null,
     attemptsLeft: attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0)),
     lastProfileId: p?.last_profile_id ?? null,
     items,
     avatars: av,
-    myCombatPower: all.reduce((a, i) => a + i.cp, 0),
     pools: Object.fromEntries(pools) as Record<number, SlotKeys>,
     specials: Object.fromEntries(specials) as Record<number, SlotKeys>,
-    clears: Object.fromEntries(clears.map((c) => [c.floor, c.n])) as Record<number, number>,
-    ranking: ranks.map((r) => ({ userId: r.user_id, nickname: r.nickname, floor: Number(r.best_floor), at: r.best_at })),
-    myRank: myRank?.r ?? null,
+    myRank: best > 0 && r.my_rank != null ? Number(r.my_rank) : null,
     /** 활성 카탈로그 key → 이름·부위 — 요구 장비 중 없는 장비도 이름을 보여 준다. */
-    catalog: Object.fromEntries(catalog.map((c) => [c.code, { name: c.name, slot: c.slot }])) as Record<string, { name: string; slot: TowerSlot }>,
+    catalog: Object.fromEntries(r.catalog.map((c) => [c.code, { name: c.name, slot: c.slot }])) as Record<string, { name: string; slot: TowerSlot }>,
   };
 }
 export type TowerBoard = Awaited<ReturnType<typeof towerBoard>>;

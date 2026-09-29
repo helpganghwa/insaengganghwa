@@ -23,7 +23,7 @@ describe('무한의 탑 수치', () => {
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.09, 2);
     expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 맨 위 층만 낮은 벽
-    for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThanOrEqual(towerRequirement(f - 1));
+    for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThan(towerRequirement(f - 1));
   });
   it('보상 합계 💎100,510 · 📦1,998, 상자는 3의 배수', () => {
     let d = 0, b = 0;
