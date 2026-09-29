@@ -54,7 +54,10 @@ function renewText(week: string, now = Date.now()): string {
 
 export function TowerClient({ board }: { board: TowerBoard }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
+  // 장착은 낙관적 반영(useOptimistic) 때문에 트랜지션 안에서. 도전은 트랜지션 밖에서 자체 busy로 —
+  // 트랜지션 안에서 부르면 액션이 끝나도 라우터 갱신이 붙잡혀 pending이 풀리지 않아, 돌파 뒤 다음 층 도전 버튼이 막혔다.
+  const [, start] = useTransition();
+  const [busy, setBusy] = useState(false);
   // 방금 끝난 전투의 결과(최고 층·남은 도전)를 먼저 쓴다 — 돌파 뒤 'N층으로'가 서버 재렌더보다 먼저 눌려도 다음 층이 맞게
   // (2차 피드백 9: 7층 돌파 → '8층으로'가 7층 상세로 가던 문제). 새 board가 오면 그 값으로 돌아간다(렌더 중 조정).
   const [local, setLocal] = useState<{ best: number; attemptsLeft: number } | null>(null);
@@ -90,6 +93,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [equipTab, setEquipTab] = useState<TowerSlot>('weapon');
   // 'pending' = 도전을 누른 직후 — 서버 판정을 기다리는 동안 전투 화면을 먼저 띄운다(낙관적 전환).
   const [battle, setBattle] = useState<TowerChallengeResult | 'pending' | null>(null);
+  // 브라우저 뒤로가기로 주소(?v=d)가 바뀌면 끝난 전투 화면도 닫는다 — 전투는 헤더가 없어 주소와 화면이 어긋나지 않게(렌더 중 조정).
+  const [seenView, setSeenView] = useState(view);
+  if (seenView !== view) {
+    setSeenView(view);
+    if (battle && battle !== 'pending') setBattle(null);
+  }
   const [msg, setMsg] = useState<string | null>(null);
   // 낙관적 장착(부위 → 장착할 장비) — 누르는 즉시 화면에 반영하고, 실패하면 되돌린다. 성공하면 액션의 재렌더가 같은 상태를 준다.
   // useOptimistic — 액션과 그 재렌더가 한 트랜잭션으로 끝날 때까지 유지돼, 종전처럼 응답 직후 옛 장착이 잠깐 돌아오는 깜빡임이 없다.
@@ -149,18 +158,23 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   };
 
   // 도전 한 번 = 키 하나. 응답을 못 받고 다시 눌러도 같은 키면 서버가 앞선 결과를 돌려준다(도전 이중 차감 방지).
-  const challenge = () => {
+  const challenge = async () => {
+    if (busy) return;
     setMsg(null);
+    setBusy(true);
     setBattle('pending');
-    start(async () => {
-      const r = await towerChallengeAction(next, avatar?.id ?? null, crypto.randomUUID(), board.week).catch(() => null);
-      if (!r || r.status !== 'success') {
-        setBattle(null);
-        return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
-      }
-      setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft });
-      setBattle(r.result);
-    });
+    // 판정 대기는 30초까지 — 헤더 없는 전투 화면에 '준비 중'으로 갇히지 않게 실패로 돌린다(같은 키로 다시 누르면 서버가 앞선 결과를 준다).
+    const r = await Promise.race([
+      towerChallengeAction(next, avatar?.id ?? null, crypto.randomUUID(), board.week).catch(() => null),
+      new Promise<null>((res) => setTimeout(() => res(null), 30_000)),
+    ]);
+    setBusy(false);
+    if (!r || r.status !== 'success') {
+      setBattle(null);
+      return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }
+    setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft });
+    setBattle(r.result);
   };
 
   if (battle) {
@@ -172,7 +186,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         result={res}
         myCp={cpNow.total}
         avatarSouth={avatar?.south ?? null}
-        retrying={pending}
+        retrying={busy}
         onList={() => {
           setBattle(null);
           setPicked(null);
@@ -267,7 +281,14 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const allGear = sec === 1 && !special; // 1~9층 — 모든 장비
     const counts = poolCounts(board, items, rule);
     const base = towerCp(equipped, rule, new Set()).total; // 아바타 없이(×1) — 요구 장비 아님(×0)은 빠진다
-    const preview = TOWER_SLOTS.map((s) => poolKeys(board, items, s, rule)[0]).filter((k): k is string => !!k);
+    // 착용 가능 장비 버튼 왼쪽 그림 — 부위마다 풀 안에서 내가 가진 가장 센 장비(없거나 같으면 그중 하나, 주마다 고정).
+    const owned = new Map(items.map((i) => [i.key, i.cp]));
+    const preview = TOWER_SLOTS.map((s) => {
+      const keys = poolKeys(board, items, s, rule);
+      const top = Math.max(-1, ...keys.map((k) => owned.get(k) ?? -1));
+      const cands = keys.filter((k) => (owned.get(k) ?? -1) === top);
+      return cands.length ? cands[pickIndex(`${board.week}:${next}:${s}`, cands.length)] : undefined;
+    }).filter((k): k is string => !!k);
     return (
       // 스크롤 없이 한 화면(1차 피드백 2) — 장면이 남는 높이를 차지하고, 하단 카드·버튼은 고정 높이.
       <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-zinc-950 px-3 pt-1.5 pb-3 text-zinc-100">
@@ -343,7 +364,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           </div>
         </div>
         {msg ? <p className="mt-1.5 flex-none text-center text-[11.5px] text-red-300">{msg}</p> : null}
-        <button type="button" disabled={pending || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge} className="mt-2 h-[46px] w-full flex-none rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950 disabled:opacity-50">
+        <button type="button" disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge} className="mt-2 h-[46px] w-full flex-none rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950 disabled:opacity-50">
           {attemptsLeft <= 0 ? '오늘 도전을 모두 썼어요' : cpNow.total <= 0 ? '착용 가능 장비를 먼저 장착해 주세요' : '도전'}
         </button>
 
@@ -360,7 +381,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     // 배경은 화면 자체의 배경으로(2차 피드백 3) — 종전의 760px 절대 배치 배경이 내용보다 길어 쓸데없는 스크롤을 만들었다.
     <main
       className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain bg-zinc-950 bg-cover bg-top text-zinc-100"
-      style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/inner-archive.png')})`, ...PIX }}
+      style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }}
     >
       <div className="flex flex-1 flex-col px-3 pb-3 pt-1.5">
         <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
@@ -490,6 +511,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 }
 
 type PoolItem = TowerBoard['items'][number];
+
+/** 문자열 → 0..n-1 고정 인덱스 — 서버·브라우저 렌더가 같은 값을 내도록 Math.random 대신 쓴다. */
+function pickIndex(seed: string, n: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return (h >>> 0) % n;
+}
 
 /** 그 부위의 착용 가능 장비 키 — 입문(allowed=null)은 보유 장비 전부 + 10층 지정 장비. */
 function poolKeys(board: TowerBoard, items: PoolItem[], slot: TowerSlot, rule: ReturnType<typeof floorRule>): string[] {

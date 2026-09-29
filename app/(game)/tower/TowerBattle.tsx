@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { josa } from 'josa';
 
-import { BackTitle } from '@/components/BackNav';
-
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import type { TowerTurn } from '@/lib/game/tower/battle';
@@ -26,7 +24,7 @@ function hpColor(pct: number): string {
  * 전투 화면(TOWER.md §7, 시안 B2 + 대난투식 무대) — 서버가 만든 턴 기록을 한 줄씩 재생한다.
  *  · 위: 대난투처럼 고정 무대 — 나(왼쪽)·층 주인(오른쪽), 공격/방어 라벨·체력바·피격 흔들림·피해량, 무대 아래 지금 줄의 해설.
  *  · 아래: 턴 기록이 쌓이고, 끝나면 결과가 팝업 대신 기록 끝에 결말로 붙는다.
- * 재생 중엔 기록을 누르거나 '건너뛰기'로 끝까지, 끝나면 '다시 보기'(실패는 결정적 순간부터도).
+ * 헤더·건너뛰기 없이 끝까지 재생한다(대난투 전투 화면과 같은 문법). 진 판은 결말에서 결정적 순간부터 다시 볼 수 있다.
  * result가 null이면 도전 직후 — 서버 판정을 기다리는 동안 무대를 먼저 보여 준다(낙관적 전환).
  * 양쪽 이름 아래에 전투력(나=탑 전투력, 층 주인=그 층 요구치)을 둔다(2차 피드백 1).
  */
@@ -104,31 +102,8 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
 
   return (
     <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-zinc-950 text-zinc-100">
-      {/* 공통 뒤로가기 헤더 — 뒤로는 목록으로(같은 주소 안의 화면 전환). 오른쪽은 건너뛰기/다시 보기. */}
-      <BackTitle
-        title={`${floor}층 전투`}
-        onBack={onList}
-        className="flex-none px-3 pt-1.5"
-        right={
-          <button
-            type="button"
-            onClick={() => {
-              if (!result) return;
-              if (ended) play(0);
-              else finish();
-            }}
-            disabled={!result}
-            className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] font-bold text-zinc-300 disabled:opacity-50"
-          >
-            {!result ? '준비 중' : ended ? '다시 보기' : '건너뛰기'}
-          </button>
-        }
-      />
-      {/* 무대 — 대난투처럼 고정(스크롤 영향 없음). 누르면 건너뛰기. */}
-      <div
-        onClick={() => (result && !ended ? finish() : undefined)}
-        className="relative h-60 flex-none overflow-hidden border-b border-amber-900/50"
-      >
+      {/* 무대 — 대난투처럼 헤더 없이 고정(스크롤 영향 없음). 건너뛰기 없음 — 끝까지 재생한다. */}
+      <div className="relative h-60 flex-none overflow-hidden border-b border-amber-900/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(`/sprites/tower/scene/${info.scene}.png`)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={PIX} />
         <div className="pointer-events-none absolute inset-0 bg-black/45" />
@@ -181,7 +156,7 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
       </div>
 
       {/* 턴 기록 — 아래로 쌓인다(대난투 라운드 카드식). 끝나면 결말이 이어 붙는다. */}
-      <div ref={logRef} onClick={() => (result && !ended ? finish() : undefined)} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div ref={logRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <ul>
           {turns.slice(0, shown).map((t, i) => {
             const tag = t.event ? TOWER_EVENT_TAG[t.event] : null;
@@ -232,7 +207,7 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
               {keyTurn ? (
                 <div className="mt-0.5 text-[11.5px] text-zinc-300">
                   결정적인 순간 · {keyTurn.turn}턴 {towerTurnLine(keyTurn, info.name)}{' '}
-                  <button type="button" onClick={(e) => { e.stopPropagation(); play(keyIdx); }} className="font-extrabold text-amber-400">그 장면 다시 보기 ›</button>
+                  <button type="button" onClick={() => play(keyIdx)} className="font-extrabold text-amber-400">그 장면 다시 보기 ›</button>
                 </div>
               ) : null}
               <div className="text-[11.5px] text-zinc-400">오늘 도전 <Left left={left} /></div>
@@ -243,20 +218,20 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
 
       <div className="flex h-[62px] flex-none gap-2 border-t border-zinc-800 px-3 py-2">
         {!result || !ended ? (
-          <button type="button" disabled={!result} onClick={finish} className="flex-1 rounded-xl border border-zinc-700 text-[13px] font-extrabold text-zinc-300 disabled:opacity-50">
-            {result ? '건너뛰기' : '전투 준비 중…'}
-          </button>
+          <div className="flex flex-1 items-center justify-center rounded-xl border border-zinc-800 text-[13px] font-bold text-zinc-500">
+            {result ? '전투 중…' : '전투 준비 중…'}
+          </div>
         ) : win ? (
           <>
             <button type="button" onClick={onList} className="flex-1 rounded-xl border border-zinc-700 text-[13px] font-extrabold text-zinc-300">목록</button>
             {floor < TOWER_FLOORS ? (
-              <button type="button" onClick={onNext} className="flex-[2] rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950">{nextFloor}층으로</button>
+              <button type="button" onClick={onNext} className="flex-1 rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950">{nextFloor}층으로</button>
             ) : null}
           </>
         ) : (
           <>
             <button type="button" onClick={left > 0 ? onGear : onList} className="flex-1 rounded-xl border border-zinc-700 text-[13px] font-extrabold text-zinc-300">{left > 0 ? '장비·아바타' : '목록'}</button>
-            <button type="button" onClick={onRetry} disabled={left <= 0 || retrying} className="flex-[2] rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950 disabled:opacity-50">
+            <button type="button" onClick={onRetry} disabled={left <= 0 || retrying} className="flex-1 rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 text-[14px] font-black text-amber-950 disabled:opacity-50">
               {left <= 0 ? '오늘 도전 끝' : retrying ? '도전 중…' : '다시 도전'}
             </button>
           </>
