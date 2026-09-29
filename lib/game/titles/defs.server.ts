@@ -647,7 +647,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "pentagon",
   cat: "조합",
-  cond: "랭킹 5종 모두 10위 이내에 드는 순간",
+  cond: "랭킹 6종 모두 10위 이내에 드는 순간",
   diff: "어려움"
  },
  {
@@ -2973,7 +2973,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "uncrowned",
   cat: "조건부",
-  cond: "랭킹 5종 모두 2~3위(1위는 없이)인 동안",
+  cond: "랭킹 6종 모두 2~3위(1위는 없이)인 동안",
   diff: "어려움"
  },
  {
@@ -5314,6 +5314,66 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "기록",
   cond: "서버에서 세 번째로 전투력 10,000,000 달성",
   diff: "한정"
+ },
+ {
+  code: "rank_tower",
+  cat: "랭킹 1위",
+  cond: "무한의 탑 랭킹 1위인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "tower_10",
+  cat: "무한의 탑",
+  cond: "무한의 탑 10층 돌파",
+  diff: "쉬움"
+ },
+ {
+  code: "tower_50",
+  cat: "무한의 탑",
+  cond: "무한의 탑 50층 돌파",
+  diff: "중간"
+ },
+ {
+  code: "tower_80",
+  cat: "무한의 탑",
+  cond: "무한의 탑 80층 돌파",
+  diff: "어려움"
+ },
+ {
+  code: "tower_100",
+  cat: "무한의 탑",
+  cond: "무한의 탑 100층 돌파",
+  diff: "어려움"
+ },
+ {
+  code: "tower_revive",
+  cat: "무한의 탑",
+  cond: "기사회생이 터진 탑 전투에서 승리",
+  diff: "중간"
+ },
+ {
+  code: "tower_resonance",
+  cat: "무한의 탑",
+  cond: "공명이 발동한 탑 전투에서 10번 승리",
+  diff: "중간"
+ },
+ {
+  code: "tower_flawless",
+  cat: "무한의 탑",
+  cond: "하루에 한 번도 지지 않고 탑 10층 이상 돌파",
+  diff: "어려움"
+ },
+ {
+  code: "tower_bare",
+  cat: "무한의 탑",
+  cond: "기본 아바타로 무한의 탑 30층 돌파",
+  diff: "어려움"
+ },
+ {
+  code: "tower_grit",
+  cat: "무한의 탑",
+  cond: "같은 층에서 9번 진 뒤 그 층 돌파",
+  diff: "중간"
  }
 ] as const;
 

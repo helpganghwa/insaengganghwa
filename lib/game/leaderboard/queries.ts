@@ -16,7 +16,7 @@ import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**. 읽기는 사전계산 스냅샷(leaderboard_ranks,
  * cron이 N분마다 재계산)에서 — 유저 수와 무관하게 인덱스 조회. 무거운 전 유저 집계는 snapshot.ts(cron).
  */
-export type LeaderboardMetric = 'max' | 'sum' | 'combat' | 'raid' | 'melee';
+export type LeaderboardMetric = 'max' | 'sum' | 'combat' | 'raid' | 'melee' | 'tower';
 export type LeaderboardEntry = {
   userId: string;
   nickname: string;
@@ -162,7 +162,7 @@ async function rankByValue(
     );
   return { value: myValue, rank: (c?.n ?? 0) + 1 };
 }
-export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee'];
+export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower'];
 
 /**
  * 5개 지표를 한 번에 — 랭킹 화면의 탭 전환을 무왕복으로 만들기 위한 페이로드.
@@ -292,14 +292,15 @@ export async function getMyRanks(userId: string, serverId: number): Promise<MyRa
   return { max: all.max, sum: all.sum, combat: all.combat };
 }
 
-/** 프로필 상세용 — 레이드 처치·대난투 우승 본인 순위. */
-export type MyCountRanks = { raid: MyRankSnap; melee: MyRankSnap };
+/** 프로필 상세용 — 레이드 처치·대난투·무한의 탑 본인 순위(탑 값은 층·도달 시각 합성값, rank-value.ts). */
+export type MyCountRanks = { raid: MyRankSnap; melee: MyRankSnap; tower: MyRankSnap };
 export async function getMyCountRanks(userId: string, serverId: number): Promise<MyCountRanks> {
-  const [raid, melee] = await Promise.all([
+  const [raid, melee, tower] = await Promise.all([
     safeMyRank('raid', serverId, userId),
     safeMyRank('melee', serverId, userId),
+    safeMyRank('tower', serverId, userId),
   ]);
-  return { raid, melee };
+  return { raid, melee, tower };
 }
 
 /**

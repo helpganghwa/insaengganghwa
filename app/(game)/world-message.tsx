@@ -27,6 +27,7 @@ const METRIC_LABEL: Record<string, string> = {
   combat: '전투력',
   raid: '레이드 처치',
   melee: '대난투', // 2026-07-22 개편 — 랭킹=누적 포인트('대난투 1위'로 표기)
+  tower: '무한의 탑',
 };
 
 /** 유저 토큰 — link=true면 프로필 링크(피드용), false면 일반 강조 텍스트(티커=바 전체가 링크라 중첩 a 금지). */

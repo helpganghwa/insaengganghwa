@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { LeaderboardEntry, LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 import { GuildBadge } from '@/components/GuildBadge';
 import { profileHref } from '@/lib/game/profile/href';
+import { towerFloorFromRankValue } from '@/lib/game/tower/rank-value';
 
 /**
  * 홈 §1 — Top 3 명예의 전당 카드(클라이언트). 5종 덱을 미리 받아 표시 타입을 state로 소유 →
@@ -165,7 +166,7 @@ export function RankingDeck({
                   ) : null}
                 </div>
                 <span className="pb-0 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
-                  {entry.value.toLocaleString('ko-KR')}
+                  {metric === 'tower' ? `${towerFloorFromRankValue(entry.value)}층` : entry.value.toLocaleString('ko-KR')}
                 </span>
               </Link>
             );

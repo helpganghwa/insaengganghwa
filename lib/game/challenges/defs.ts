@@ -1,7 +1,7 @@
 /**
- * 도전 과제 정의 — 34종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가, 08-30 파견 3종 추가).
+ * 도전 과제 정의 — 36종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가, 08-30 파견 3종, 09-29 무한의 탑 2종 추가).
  * 게임의 모든 루프를 정확히 한 바퀴 돌게 만드는 일회성 온보딩 리워드.
- * 보상 합계: 과제 💎6,950+📦60 + 완료 보너스 💎1,000+📦75 = 총 💎7,950·📦135.
+ * 보상 합계: 과제 💎7,250+📦60 + 완료 보너스 💎1,000+📦75 = 총 💎8,250·📦135.
  * ⚠ 합계는 아래 배열에서 손으로 센 값이라 수치를 고치면 함께 고친다 — 이 줄이 옛 값
  * (💎17,700)으로 남아 있었고, 그 값이 튜토리얼 완료 팝업에 그대로 베껴져 실지급보다 큰
  * 보상이 신규 유저에게 광고됐다(2026-08-11). 화면에 쓸 숫자는 반드시 상수에서 파생시킬 것.
@@ -10,7 +10,7 @@
  * 달성 판정 SQL은 status.ts(상태 파생), 예외 5종은 challenge_events 마킹.
  */
 export type ChallengeGroup =
-  | 'supply' | 'equip' | 'enhance' | 'daily' | 'growth' | 'app' | 'social' | 'guild' | 'raid' | 'world' | 'avatar' | 'shop' | 'expedition';
+  | 'supply' | 'equip' | 'enhance' | 'daily' | 'growth' | 'app' | 'social' | 'guild' | 'raid' | 'world' | 'avatar' | 'shop' | 'expedition' | 'tower';
 
 export type ChallengeDef = {
   id: string;
@@ -38,6 +38,7 @@ export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string
   { id: 'world', icon: '🗺️', label: '세계지도' },
   { id: 'avatar', icon: '✨', label: '아바타' },
   { id: 'expedition', icon: '🏕️', label: '파견' },
+  { id: 'tower', icon: '🗼', label: '무한의 탑' },
   { id: 'shop', icon: '🎁', label: '상점' },
 ];
 
@@ -73,6 +74,9 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'exp_first_start', group: 'expedition', label: '첫 파견 보내기', diamond: 100, go: '/expedition', guide: '파견에서 카드를 눌러 아바타를 배정해 보내면 달성돼요.' },
   { id: 'exp_first_claim', group: 'expedition', label: '첫 파견 보상 받기', diamond: 200, go: '/expedition', guide: '파견이 끝난 카드를 눌러 보상을 수령하면 달성돼요.' },
   { id: 'exp_refresh', group: 'expedition', label: '파견 새로고침 하기', diamond: 100, go: '/expedition', guide: '파견 화면 위쪽의 새로고침 버튼으로 대기 중인 파견을 바꿔 보면 달성돼요 — 하루 3회는 무료!' },
+  // 무한의 탑(2026-09-29 확정 2종): 첫 도전(승패 무관) + 10층 첫 수문장 — 둘 다 상태 파생.
+  { id: 'tower_first', group: 'tower', label: '무한의 탑 도전하기', diamond: 100, go: '/tower', guide: '무한의 탑에서 아무 층이나 한 번 도전하면 달성돼요 — 이기든 지든 인정!' },
+  { id: 'tower_floor10', group: 'tower', label: '첫 수문장 쓰러뜨리기', diamond: 200, go: '/tower', guide: '무한의 탑 10층을 지키는 수문장을 쓰러뜨리면 달성돼요.' },
   { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 500, boxes: 15, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
   { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 100, go: '/shop', guide: '상점 일일 탭에서 무료 선물을 받으면 달성돼요.' },
   { id: 'shop_weekly', group: 'shop', label: '주간 무료 선물 받기', diamond: 100, go: '/shop?tab=weekly', guide: '상점 주간 탭에서 무료 선물을 받으면 달성돼요.' },

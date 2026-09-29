@@ -11,6 +11,7 @@ import { sendMilestoneMail } from '@/lib/game/milestone-mail';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { meleeDecayedPointsSumSql } from '@/lib/game/melee/points';
+import { towerRankValueSql } from '@/lib/game/tower/rank-value';
 import { recordFirstMilestones } from '@/lib/game/titles/first-milestones';
 
 /**
@@ -217,6 +218,27 @@ export async function bumpMeleePoints(
   }
 }
 
+/**
+ * 무한의 탑 — 최고 층·도달 시각을 합성값(rank-value.ts)으로 반영. 돌파(최고 층 갱신) 직후 호출.
+ * tower_progress 원천에서 다시 읽으므로 호출 순서가 뒤바뀌어도 최종값이 맞다. 0층이면 행 제거.
+ */
+export async function refreshTowerMetric(userId: string, serverId: number): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await lockUser(tx, userId);
+      if (await isActivelyBanned(tx, userId)) return;
+      const [r] = (await tx.execute(sql`
+        select ${sql.raw(towerRankValueSql('tp'))} as v from tower_progress tp
+        where tp.user_id = ${userId}::uuid and tp.server_id = ${serverId} and tp.best_floor > 0 and tp.best_at is not null
+      `)) as unknown as { v: string }[];
+      if (r) await upsertValue(tx, userId, serverId, 'tower', Number(r.v));
+      else await tx.execute(sql`delete from leaderboard_ranks where server_id = ${serverId} and metric = 'tower' and user_id = ${userId}::uuid`);
+    });
+  } catch (e) {
+    console.warn('[lb.tower]', userId, e);
+  }
+}
+
 /** 카운트 메트릭 원천 재계산 — 스냅샷과 동일 술어(유저 1명 스코프). */
 async function recountCountMetric(
   dbx: Dbx,
@@ -276,4 +298,5 @@ export async function restoreUserBoards(userId: string, serverId: number): Promi
   const meleeCnt = await recountCountMetric(db, userId, serverId, 'melee');
   if (raidCnt > 0) await upsertValue(db, userId, serverId, 'raid', raidCnt);
   if (meleeCnt > 0) await upsertValue(db, userId, serverId, 'melee', meleeCnt);
+  await refreshTowerMetric(userId, serverId);
 }
