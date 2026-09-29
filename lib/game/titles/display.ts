@@ -7,6 +7,7 @@ import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { TITLE_BY_CODE } from './defs';
 import { GUILD_COLLECTIVE_CODES, guildCollectiveCodesCached } from './guild-facts';
+import { LEGACY_LOCKABLE, legacyLockedTitles } from './legacy-lock';
 
 /**
  * 표시용 대표 칭호 해석 — 핫패스(헤더 등)에서 쓰는 **경량** 활성 검증.
@@ -29,6 +30,8 @@ export async function resolveRepTitle(
 
   const def = TITLE_BY_CODE.get(repCode);
   if (!def) return null;
+  // 옛 기준 보유자 잠금(0223, 육관왕) — 잠긴 동안은 대표여도 숨긴다(이 코드일 때만 1쿼리).
+  if (LEGACY_LOCKABLE.has(repCode) && (await legacyLockedTitles(userId, serverId)).has(repCode)) return null;
   if (def.kind !== 'conditional') return repCode;
 
   if (def.style.executor) return executorZone ? repCode : null;
@@ -350,6 +353,7 @@ export async function resolveRepTitlesBatch(
   const needEquip: { userId: string; code: string }[] = [];
   const needLib: { userId: string; code: string }[] = [];
   const needHeavy: { userId: string; code: string }[] = [];
+  const needLock: string[] = []; // 옛 기준 보유자 잠금(0223) 확인 대상 — 해당 코드를 단 유저만
 
   for (const e of entries) {
     if (!e.repCode) {
@@ -358,6 +362,7 @@ export async function resolveRepTitlesBatch(
     }
     const def = TITLE_BY_CODE.get(e.repCode);
     if (!def) { out.set(e.userId, null); continue; }
+    if (LEGACY_LOCKABLE.has(e.repCode)) needLock.push(e.userId);
     if (def.kind !== 'conditional') { out.set(e.userId, e.repCode); continue; }
     if (def.style.executor) { out.set(e.userId, e.executorZone ? e.repCode : null); continue; }
     if (EQUIP_STATE_CODES.includes(e.repCode)) {
@@ -430,5 +435,15 @@ export async function resolveRepTitlesBatch(
     }
   }
 
+  if (needLock.length) {
+    const rows = (await db
+      .execute(sql`
+        select user_id::text as uid, title_code from title_legacy_locks
+        where server_id=${serverId}
+          and user_id in (select unnest(array[${sql.join(needLock.map((i) => sql`${i}`), sql`, `)}]::uuid[]))
+      `)
+      .catch(() => [])) as unknown as { uid: string; title_code: string }[];
+    for (const r of rows) if (out.get(r.uid) === r.title_code) out.set(r.uid, null);
+  }
   return out;
 }

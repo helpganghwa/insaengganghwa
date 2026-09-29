@@ -68,7 +68,7 @@ const MENU = [
     href: '/tower',
     label: '무한의 탑',
     desc: '한 층씩 끝없이', // 실제 문구는 towerDesc(최고 돌파 층)로 동적 대체
-    bg: '/sprites/tower/bg/list.png',
+    bg: '/sprites/tower/bg/home.png', // 가로형 탑 입구(2026-09-29, Pixellab Pro 512×176)
     tint: '#1b2440',
     scale: 1,
   },
