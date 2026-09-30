@@ -205,7 +205,7 @@ export function TowerBattle({ floor, result, myCp, avatarSouth, retrying, onList
             <div className="mx-3 my-2 rounded-r-lg border-l-[3px] border-emerald-400 bg-emerald-950/40 px-2.5 py-1.5">
               <b className="text-[13px] text-emerald-300">돌파 — {towerResultLine(true, info.name, turns[total - 1]?.turn ?? total)}</b>
               {result.reward ? (
-                <div className="mt-0.5 text-[11.5px]">돌파 보상 <b>💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''}</b> · 오늘 도전 <Left left={left} /> 그대로</div>
+                <div className="mt-0.5 text-[11.5px]">돌파 보상 <b>💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''}</b> · 목록에서 받을 수 있어요 · 오늘 도전 <Left left={left} /> 그대로</div>
               ) : null}
               {floor < TOWER_FLOORS ? (
                 <div className="text-[11.5px] text-zinc-400">{nextFloor}층의 문이 열렸다 · 다음 상대 {towerFloorInfo(nextFloor).name}</div>

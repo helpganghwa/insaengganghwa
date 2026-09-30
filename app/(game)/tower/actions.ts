@@ -8,7 +8,7 @@ import { makeErr } from '@/lib/game/action-result';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
 import { refreshTowerMetric } from '@/lib/game/leaderboard/incremental';
 import { getActiveServerId } from '@/lib/game/servers';
-import { challengeTower, TowerError, type TowerChallengeResult } from '@/lib/game/tower/service';
+import { challengeTower, claimTowerRewards, TowerError, type TowerChallengeResult } from '@/lib/game/tower/service';
 import { rateLimited } from '@/lib/ratelimit';
 
 const MSG: Record<string, string> = {
@@ -66,6 +66,24 @@ export async function towerEquipAction(userEquipmentId: string) {
   } catch (e) {
     if (e instanceof EquipError) return err(e.code);
     console.error('[tower.equip]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 돌파 보상 받기 — floor를 주면 그 층만, 없으면 받을 수 있는 층 전부. 이미 받은 층은 건너뛴다(서버 멱등). */
+export async function towerClaimAction(floor: number | null) {
+  const u = await getSessionUserId();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'tower')) return err('RATE_LIMITED');
+  const b = await actionBlock();
+  if (b) return err(b);
+  try {
+    const serverId = await getActiveServerId();
+    const r = await claimTowerRewards(u, serverId, floor == null ? null : [Math.floor(Number(floor))]);
+    revalidatePath('/tower');
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    console.error('[tower.claim]', e);
     return err('UNKNOWN');
   }
 }

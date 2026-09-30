@@ -132,6 +132,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from enhancement_logs where user_id = ${uid}`);
     await tx.execute(sql`delete from enhance_stats where user_id = ${uid}`);
     await tx.execute(sql`delete from tower_battles where user_id = ${uid}`);
+    await tx.execute(sql`delete from tower_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from tower_progress where user_id = ${uid}`);
     await tx.execute(sql`delete from title_legacy_locks where user_id = ${uid}`);
     await tx.execute(sql`delete from enhance_equip_stats where user_id = ${uid}`);

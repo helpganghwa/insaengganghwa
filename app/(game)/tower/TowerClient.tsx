@@ -4,6 +4,7 @@ import { useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
@@ -12,7 +13,7 @@ import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, typ
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
-import { towerChallengeAction, towerEquipAction } from './actions';
+import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
 import { TowerBattle } from './TowerBattle';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -100,6 +101,39 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (battle && battle !== 'pending') setBattle(null);
   }
   const [msg, setMsg] = useState<string | null>(null);
+  const { showError, showHeaderToast } = useResourceToast();
+  // 돌파 보상 — 전투에서 주지 않고 목록에서 받는다(층별·모두 받기). 누르는 즉시 받은 것으로 보이고, 실패하면 되돌린다.
+  const [claimedLocal, setClaimedLocal] = useState<ReadonlySet<number>>(new Set());
+  const [claiming, setClaiming] = useState(false);
+  // 돌파 직후(서버 재렌더 전)에도 방금 돌파한 층이 받을 보상으로 보이게 — best까지 board.unclaimed에 없는 층을 더한다.
+  const unclaimed = useMemo(() => {
+    const out = new Set(board.unclaimed);
+    for (let f = board.best + 1; f <= best; f++) out.add(f);
+    for (const f of claimedLocal) out.delete(f);
+    return out;
+  }, [board.unclaimed, board.best, best, claimedLocal]);
+  const claim = async (floor: number | null) => {
+    if (claiming) return;
+    const target = floor == null ? [...unclaimed] : unclaimed.has(floor) ? [floor] : [];
+    if (!target.length) return;
+    setClaiming(true);
+    setClaimedLocal((s) => new Set([...s, ...target]));
+    const r = await towerClaimAction(floor).catch(() => null);
+    setClaiming(false);
+    if (!r || r.status !== 'success') {
+      setClaimedLocal((s) => new Set([...s].filter((f) => !target.includes(f))));
+      showError(r?.message ?? '보상을 받지 못했어요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    const rewards: { icon: string; amount: number }[] = [];
+    if (r.diamond > 0) rewards.push({ icon: '💎', amount: r.diamond });
+    if (r.boxes > 0) rewards.push({ icon: '📦', amount: r.boxes });
+    if (rewards.length) showHeaderToast({ title: r.floors.length === 1 ? `${r.floors[0]}층 돌파 보상` : `돌파 보상 ${r.floors.length}개 층`, rewards });
+  };
+  const pendingSum = [...unclaimed].reduce((a, f) => {
+    const r = towerReward(f);
+    return { diamond: a.diamond + r.diamond, boxes: a.boxes + r.boxes };
+  }, { diamond: 0, boxes: 0 });
   // 낙관적 장착(부위 → 장착할 장비) — 누르는 즉시 화면에 반영하고, 실패하면 되돌린다. 성공하면 액션의 재렌더가 같은 상태를 준다.
   // useOptimistic — 액션과 그 재렌더가 한 트랜잭션으로 끝날 때까지 유지돼, 종전처럼 응답 직후 옛 장착이 잠깐 돌아오는 깜빡임이 없다.
   const [optEquip, addOptEquip] = useOptimistic<Partial<Record<TowerSlot, string>>, Partial<Record<TowerSlot, string>>>({}, (o, add) => ({ ...o, ...add }));
@@ -406,7 +440,15 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
                   <div className="mt-1 text-[10.5px]">
                     <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b></div>
-                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">돌파</span>{rewardText(hero)}</div>
+                    <div className="flex h-6 items-center">
+                      <span className="w-[52px] flex-none text-zinc-400">돌파</span>
+                      <span className="min-w-0 flex-1 truncate">{rewardText(hero)}</span>
+                      {unclaimed.has(hero) ? (
+                        <button type="button" onClick={() => claim(hero)} disabled={claiming} className="ml-1 h-5 flex-none rounded-md bg-amber-500 px-2 text-[10px] font-black leading-none text-amber-950 disabled:opacity-50">받기</button>
+                      ) : hero <= best ? (
+                        <span className="ml-1 flex-none text-[10px] font-bold text-zinc-500">받음</span>
+                      ) : null}
+                    </div>
                     <div className="flex h-6 items-center">
                       <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
                       <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
@@ -436,6 +478,19 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           )}
         </div>
 
+        {/* 받을 돌파 보상 — 모두 받기(층별은 층을 눌러 위 카드에서). */}
+        {unclaimed.size > 0 ? (
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-600/50 bg-zinc-950/85 px-3 py-2 backdrop-blur-[2px]">
+            <span className="min-w-0 flex-1 leading-tight">
+              <b className="block text-[12px]">받을 돌파 보상 <span className="tabular-nums text-amber-300">{unclaimed.size}</span>개 층</b>
+              <span className="text-[10.5px] tabular-nums text-zinc-300">💎 {n(pendingSum.diamond)}{pendingSum.boxes ? ` · 📦 ${n(pendingSum.boxes)}` : ''}</span>
+            </span>
+            <button type="button" onClick={() => claim(null)} disabled={claiming} className="h-8 flex-none rounded-lg bg-amber-500 px-3 text-[12px] font-black text-amber-950 disabled:opacity-50">
+              {claiming ? '받는 중…' : '모두 받기'}
+            </button>
+          </div>
+        ) : null}
+
         {/* 구간 카드 */}
         <div className="mt-3 flex flex-col gap-1.5">
           {Array.from({ length: sections }, (_, i) => sections - i).map((sec) => {
@@ -457,7 +512,10 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
                     <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
                   </span>
-                  <span className={`relative text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>{done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}</span>
+                  <span className={`relative flex items-center gap-1.5 text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>
+                    {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).some((f) => unclaimed.has(f)) ? <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="받을 보상 있음" /> : null}
+                    {done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}
+                  </span>
                 </button>
                 {open ? (
                   <div className="px-3 pb-3">
@@ -493,6 +551,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                             <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300' : st === 'c' ? 'text-amber-200' : sp ? 'text-rose-300' : 'text-zinc-500'}`}>
                               {sp ? '✦' : ''}{f}
                             </span>
+                            {unclaimed.has(f) ? <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,.9)]" aria-label="받을 보상 있음" /> : null}
                           </button>
                         );
                       })}
