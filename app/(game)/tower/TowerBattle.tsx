@@ -137,15 +137,10 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-/** 한 층의 지난 도전 — 진 횟수, 가장 가까웠던 판의 층 주인 남은 체력 비율(0~1). */
-export type TowerFloorLog = { losses: number; closest: number | null };
-
-export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, streak, floorLog, onList, onNext, onRetry }: {
+export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, streak, onList, onNext, onRetry }: {
   floor: number;
   /** 목록으로 나가지 않고 이어서 돌파한 층 수(이 판 포함) — 2 이상이면 결말에 '연속 돌파 N층째'. */
   streak: number;
-  /** 이 판 전까지의 이 층 기록 — 진 판 결말에 'N번째 물러남 · 가장 가까웠던 판'. */
-  floorLog: TowerFloorLog;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
@@ -275,19 +270,11 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             ) : (
               <>
                 <b className="text-[13px] text-red-300">물러남</b>
-                {/* 얼마나 가까웠나 — 승률 대신 실제 결과(이 판 포함 이 층 기록). */}
+                {/* 얼마나 가까웠나 — 이 판에서 층 주인에게 남은 체력. */}
                 {(() => {
                   const last = turns[total - 1];
                   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
-                  const now = last && monMax > 0 ? last.monHp / monMax : null;
-                  const closest = [now, floorLog.closest].filter((x): x is number => x != null).reduce((a, b) => Math.min(a, b), Infinity);
-                  return (
-                    <div>
-                      {now != null ? <>층 주인 HP {pctText(now)} 남기고 물러남 · </> : null}
-                      이 층 {floorLog.losses + 1}번째
-                      {floorLog.losses > 0 && Number.isFinite(closest) ? <span className="text-zinc-400"> · 가장 가까웠던 판 HP {pctText(closest)}</span> : null}
-                    </div>
-                  );
+                  return last && monMax > 0 ? <div>층 주인 HP {pctText(last.monHp / monMax)} 남기고 물러남</div> : null;
                 })()}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
               </>

@@ -9,13 +9,13 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
-import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerStage, type TowerFloorLog } from './TowerBattle';
+import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerStage } from './TowerBattle';
 import { TowerSkillTags } from './TowerSkills';
 import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
 
@@ -70,12 +70,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeft = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const myRank = local?.myRank ?? board.myRank;
-  // 연속 돌파 수(목록으로 나가면 0) · 이 층 지난 도전 — board.floorLog는 board.best+1 층의 값, 그 뒤 진 판은 localLog로 더한다.
+  // 연속 돌파 수(목록으로 나가면 0).
   const [streak, setStreak] = useState(0);
-  const [localLog, setLocalLog] = useState<{ floor: number; log: TowerFloorLog } | null>(null);
-  const [battleLog, setBattleLog] = useState<TowerFloorLog>({ losses: 0, closest: null });
-  const floorLogOf = (f: number): TowerFloorLog =>
-    localLog?.floor === f ? localLog.log : f === board.best + 1 ? board.floorLog : { losses: 0, closest: null };
   const next = Math.min(TOWER_FLOORS, best + 1);
   const topped = best >= TOWER_FLOORS;
   const [picked, setPicked] = useState<number | null>(null);
@@ -242,7 +238,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (busy) return;
     setMsg(null);
     setBusy(true);
-    setBattleLog(floorLogOf(next));
     setBattle('pending');
     // 같은 층의 응답 없는 도전은 같은 키로 — 30초를 넘겨 실패로 보였어도 서버가 이미 처리했으면 그 결과를 돌려받아
     // 도전이 두 번 빠지지 않는다(09-30 감사 L2). 응답(성공·거절)을 받으면 다음 도전은 새 키.
@@ -262,19 +257,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
-    // 연속 돌파(목록으로 나가지 않고 이어서) · 이 층 지난 도전 기록(진 판이면 1 더하고 가장 가까웠던 판 갱신) — 다시 그리지 않고 여기서.
+    // 연속 돌파(목록으로 나가지 않고 이어서) — 다시 그리지 않고 여기서.
     setStreak(r.result.win ? streak + 1 : 0);
-    // 재전송(저장된 결과)이면 그 패배는 이미 서버 기록(board.floorLog)에 있을 수 있어 다시 더하지 않는다.
-    if (!r.result.win && !r.result.replayed) {
-      const last = r.result.turns[r.result.turns.length - 1];
-      const monMax = towerRequirement(r.result.floor) * TOWER_HP_MULT;
-      const now = last && monMax > 0 ? last.monHp / monMax : null;
-      const prev = floorLogOf(r.result.floor);
-      setLocalLog({
-        floor: r.result.floor,
-        log: { losses: prev.losses + 1, closest: [prev.closest, now].filter((x): x is number => x != null).reduce<number | null>((a, b) => (a == null ? b : Math.min(a, b)), null) },
-      });
-    }
     setBattle(r.result);
   };
 
@@ -291,7 +275,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         avatarSouth={avatar?.south ?? null}
         retrying={busy}
         streak={streak}
-        floorLog={battleLog}
         onList={() => {
           setStreak(0);
           setBattle(null);
@@ -390,16 +373,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
         {/* 무대 아래 — 텍스트 RPG식 줄 구성(전투에선 이 자리에 기록이 쌓인다). */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
-          {/* 이 층 지난 도전 — 진 적이 있을 때만. 승률 대신 실제 결과(가장 가까웠던 판의 층 주인 남은 체력). */}
-          {(() => {
-            const lg = floorLogOf(next);
-            return lg.losses > 0 ? (
-              <p className="mt-2 text-[11.5px] text-zinc-400">
-                이 층 <b className="text-zinc-200">{lg.losses}번</b> 물러남
-                {lg.closest != null ? <> · 가장 가까웠던 판 층 주인 HP <b className="text-red-300">{lg.closest > 0 ? Math.max(1, Math.round(lg.closest * 100)) : 0}%</b></> : null}
-              </p>
-            ) : null;
-          })()}
           {/* 내 장비 — 부위마다 한 줄: 그림 · 이름·강화 · 배율 설명 · 이 층 기준 전투력(×2 금색, ×0 제외). */}
           <div className="mt-2.5 mb-1 flex items-baseline justify-between">
             <span className="text-[11px] font-bold text-zinc-500">내 장비</span>

@@ -3,7 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, TOWER_SECTION, pieceCombatPower, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -166,11 +166,6 @@ export async function towerBoard(userId: string, serverId: number) {
           -- 랭킹 표(rank-value.ts)와 같은 기준 — 도달 시각은 초 단위(같은 초면 같은 등수)
           and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
             and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))) as my_rank,
-      -- 지금 도전할 층의 지난 도전(진 판만 있다) — 횟수와 가장 가까웠던 판의 층 주인 남은 체력 비율(층 화면의 '이 층 N번 물러남').
-      (select json_build_object('losses', count(*)::int,
-          'closest', min((b.turns->-1->>'monHp')::float8 / nullif(b.requirement::float8 * ${TOWER_HP_MULT}, 0)))
-        from tower_battles b, (select coalesce((select best_floor from me), 0) + 1 as f) nf
-        where b.user_id=${userId}::uuid and b.server_id=${serverId} and b.floor = nf.f and not b.win) as floor_log,
       -- 돌파했지만 아직 받지 않은 층(목록의 돌파 보상 받기)
       coalesce((select json_agg(f order by f) from me, generate_series(1, me.best_floor) f
         where not exists (select 1 from tower_claims c where c.user_id=${userId}::uuid and c.server_id=${serverId} and c.floor = f)), '[]'::json) as unclaimed`)) as unknown as {
@@ -184,7 +179,6 @@ export async function towerBoard(userId: string, serverId: number) {
     specials: { section: number; weapon: string; armor: string; accessory: string }[];
     my_rank: number | null;
     unclaimed: number[];
-    floor_log: { losses: number; closest: number | null } | null;
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
@@ -227,8 +221,6 @@ export async function towerBoard(userId: string, serverId: number) {
     myRank: best > 0 && r.my_rank != null ? Number(r.my_rank) : null,
     /** 돌파했지만 아직 받지 않은 층(오름차순). */
     unclaimed: r.unclaimed.map(Number),
-    /** 지금 도전할 층의 지난 도전 — 진 횟수, 가장 가까웠던 판의 층 주인 남은 체력(0~1). */
-    floorLog: { losses: Number(r.floor_log?.losses ?? 0), closest: r.floor_log?.closest != null ? Number(r.floor_log.closest) : null },
     /** 활성 카탈로그 key → 이름·부위 — 요구 장비 중 없는 장비도 이름을 보여 준다. */
     catalog: Object.fromEntries(r.catalog.map((c) => [c.code, { name: c.name, slot: c.slot }])) as Record<string, { name: string; slot: TowerSlot }>,
   };
