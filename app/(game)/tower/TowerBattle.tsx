@@ -380,11 +380,16 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
   hpBefore: number;
   down: boolean;
 }) {
-  // 체력바: 이전 → 지금으로 줄어드는 연출.
+  // 체력바: 이전 → 지금으로 줄어드는 연출. 차오를 때(다시 보기로 되감기 등)는 애니메이션 없이 바로.
   const [pct, setPct] = useState(hpBefore);
+  const [instant, setInstant] = useState(true);
   useEffect(() => {
+    setInstant(true);
     setPct(hpBefore);
-    const id = requestAnimationFrame(() => setPct(hp));
+    const id = requestAnimationFrame(() => {
+      setInstant(hp >= hpBefore);
+      setPct(hp);
+    });
     return () => cancelAnimationFrame(id);
   }, [hp, hpBefore, stepKey]);
   const motion = act ? (side === 'l' ? 'animate-lunge-r' : 'animate-lunge-l') : hit ? 'animate-hit-shake' : '';
@@ -414,7 +419,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
       </div>
       {/* 체력바 — 몸 아래(대난투와 같은 자리). */}
       <div className="isolate mt-0.5 h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/50">
-        <div className={`h-full ${hpColor(pct)}`} style={{ width: `${Math.max(0, pct)}%`, transition: 'width 650ms ease-out' }} />
+        <div className={`h-full ${hpColor(pct)}`} style={{ width: `${Math.max(0, pct)}%`, transition: instant ? 'none' : 'width 650ms ease-out' }} />
       </div>
     </div>
   );
