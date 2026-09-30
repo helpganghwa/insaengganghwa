@@ -4,7 +4,8 @@
  * 대난투와 같은 문법: 체력 = 전투력 × TOWER_HP_MULT(8), 한 번 피해 = 공격자 전투력 × U(0.5, 1.2).
  * 체력 배수가 커서 비슷한 상대와는 평균 9턴을 싸운다(전투력 차이가 3배 넘으면 몇 턴 만에 끝남).
  * 같은 전투력이어도 결과가 갈리게 하는 건 판마다의 변수(선제·급소·빗나감·반격·광폭화·공명·기사회생)다.
- * 이 모델은 승률 곡선이 완만해(요구치 0.9배 20% · 1.1배 85%) 요구치 곡선을 그에 맞춰 올려 두었다(balance.ts TOWER_REQ_BASE).
+ * 이 모델은 승률 곡선이 완만해 요구치 곡선을 그에 맞춰 두었다(balance.ts TOWER_REQ_BASE). 변수(급소·광폭화·몬스터 특성 등)를
+ * 바꾸면 승률 곡선이 바뀌므로 몬테카를로로 층 도달 분포를 다시 맞춘다.
  *
  * 결과와 턴 기록은 서버가 한 번에 만든다 — 클라이언트는 기록을 재생만 한다(CLAUDE §3.1).
  */
@@ -48,7 +49,7 @@ export const TOWER_BATTLE = {
   /** 넘기면 패배 — 배수 8에서 비슷한 상대 최대 15턴 안팎이라 사실상 닿지 않는다. */
   maxTurns: 100,
   firstStrikeBp: 5000, // 몬스터가 먼저 칠 확률
-  critBp: 1200,
+  critBp: 1200, // 급소 — 양쪽 모두(몬스터 급소는 2026-09-30 추가, 곡선 시작값 64→62로 분포 유지)
   critMul: 1.6,
   missBp: 700,
   counterBp: 800,
@@ -113,15 +114,17 @@ export function simulateTowerBattle(opts: {
       enraged = roll(B.enrageBp);
     }
     if (roll(B.missBp)) return push(turn, 'mon', 0, 'miss');
+    // 몬스터도 급소가 있다(2026-09-30) — 광폭화와 겹치면 두 배율을 곱한다. 기록 표시는 급소가 우선.
+    const crit = roll(B.critBp);
     const raw = monRaw();
-    const dmg = raw * (enraged ? B.enrageMul : 1);
+    const dmg = raw * (enraged ? B.enrageMul : 1) * (crit ? B.critMul : 1);
     me -= dmg;
     if (me <= 0 && !revived && roll(B.reviveBp)) {
       revived = true;
       me = 1;
       push(turn, 'mon', dmg, 'revive');
     } else {
-      push(turn, 'mon', dmg, enraged ? 'enrage' : first ? 'first_strike' : null, enraged ? raw : undefined);
+      push(turn, 'mon', dmg, crit ? 'critical' : enraged ? 'enrage' : first ? 'first_strike' : null, crit || enraged ? raw : undefined);
     }
     if (me > 0 && mon > 0 && roll(B.counterBp)) {
       const raw2 = myRaw();

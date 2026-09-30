@@ -14,11 +14,11 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
-  it('곡선: 1층 64, 10층 159, 100층 724,374, 오름차순·특별층이 구간의 벽', () => {
-    expect(towerRequirement(1)).toBe(64);
-    expect(towerRequirement(10)).toBe(159);
-    expect(towerRequirement(50)).toBe(7433);
-    expect(towerRequirement(100)).toBe(724374);
+  it('곡선: 1층 62, 10층 154, 100층 701,737, 오름차순·특별층이 구간의 벽', () => {
+    expect(towerRequirement(1)).toBe(62);
+    expect(towerRequirement(10)).toBe(154);
+    expect(towerRequirement(50)).toBe(7201);
+    expect(towerRequirement(100)).toBe(701737);
     // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.09)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
@@ -161,12 +161,25 @@ describe('전투', () => {
       for (const t of simulateTowerBattle({ towerCp: 105, requirement: 100, doubledCount: 3, rng: rngOf(i + 11) }).turns) {
         if (t.event === 'critical' || t.event === 'enrage' || t.event === 'counter' || t.event === 'resonance') {
           expect(t.raw).toBeDefined();
-          const mul = t.event === 'critical' ? 1.6 : t.event === 'enrage' ? 1.5 : 0.5;
+          // 몬스터 급소는 광폭화와 겹칠 수 있다(×1.6×1.5).
+          const mul = t.event === 'critical' ? (t.actor === 'mon' ? 1.6 * 1.5 : 1.6) : t.event === 'enrage' ? 1.5 : 0.5;
           expect(t.damage).toBeLessThanOrEqual(Math.round(t.raw! * mul) + 1);
           seen++;
         } else expect(t.raw).toBeUndefined();
       }
     }
     expect(seen).toBeGreaterThan(50);
+  });
+  it('몬스터도 급소가 있다 — 몬스터 줄에 critical이 나오고 피해가 변수 전보다 크다', () => {
+    let monCrit = 0;
+    for (let i = 0; i < 300; i++) {
+      for (const t of simulateTowerBattle({ towerCp: 100, requirement: 100, doubledCount: 0, rng: rngOf(i + 501) }).turns) {
+        if (t.actor === 'mon' && t.event === 'critical') {
+          monCrit++;
+          expect(t.damage).toBeGreaterThanOrEqual(Math.round(t.raw! * 1.6) - 1);
+        }
+      }
+    }
+    expect(monCrit).toBeGreaterThan(20);
   });
 });
