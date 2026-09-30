@@ -41,7 +41,7 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
     ['숯 도롱뇽', '등에서 잿불이 깜빡이는 새까만 도롱뇽.', ['burn']],
     ['불씨 나방', '날개에 식어 가는 불씨 무늬가 있는 나방.', []],
     ['쇳물 슬라임', '식다 만 쇳물로 된 슬라임, 겉은 검고 속은 붉다.', ['burn']],
-    ['풀무 두꺼비', '몸이 가죽 풀무처럼 부풀었다 꺼지는 두꺼비.', []],
+    ['불똥 참새', '날개를 털 때마다 불똥이 튀는 통통한 잿빛 참새.', []],
     ['녹 사냥개', '녹슨 철판을 덧대어 기운 기계 사냥개.', []],
     ['쇠 전갈', '집게가 대장간 집게처럼 생긴 쇠 전갈.', []],
     ['모루 거북', '등껍질이 모루인 느린 거북.', ['steel']],
@@ -171,7 +171,7 @@ export type TowerFloorInfo = {
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
-const ART_SECTIONS = new Set([1, 2]);
+const ART_SECTIONS = new Set([1, 2, 3]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
