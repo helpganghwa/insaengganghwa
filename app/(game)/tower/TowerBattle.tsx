@@ -56,7 +56,7 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
   return (
     <>
-      <section className="relative h-[222px] flex-none overflow-hidden">
+      <section className="relative h-[234px] flex-none overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(`/sprites/tower/scene/${info.scene}.png`)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={PIX} />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/5 via-30% to-black/40" />
@@ -100,6 +100,8 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
           hp={cur ? pctOf(cur.meHp, meMax) : 100}
           hpBefore={prev ? pctOf(prev.meHp, meMax) : 100}
           down={ended && !fight!.win}
+          hpAbs={cur ? cur.meHp : meMax}
+          hpMax={meMax}
         />
         <Fighter
           side="r"
@@ -114,6 +116,8 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
           hp={cur ? pctOf(cur.monHp, monMax) : 100}
           hpBefore={prev ? pctOf(prev.monHp, monMax) : 100}
           down={ended && !!fight?.win}
+          hpAbs={cur ? cur.monHp : monMax}
+          hpMax={monMax}
         />
       </section>
 
@@ -319,7 +323,18 @@ function Ev({ c, children }: { c: string; children: React.ReactNode }) {
 }
 
 /** 체력·피해 표시 — 기록은 %p(0~100)를 정수로. 0보다 크면 최소 1(쓰러진 것처럼 보이지 않게). */
-const hpNum = (v: number) => n(v > 0 ? Math.max(1, Math.round(v)) : 0);
+const hpNum = (v: number) => compact(v > 0 ? Math.max(1, Math.round(v)) : 0);
+
+/**
+ * 큰 수 줄여 쓰기 — 체력이 전투력의 8배라 상위권은 억 단위. 1만 이상은 '3.2만'·'1.77억'(소수점 끝 0은 뺀다), 그 아래는 쉼표.
+ * 무대의 HP와 기록의 피해·HP가 같은 표기를 쓴다.
+ */
+function compact(v: number): string {
+  const trim = (x: number, d: number) => x.toFixed(d).replace(/\.?0+$/, '');
+  if (v >= 1e8) return `${trim(v / 1e8, 2)}억`;
+  if (v >= 1e4) return `${trim(v / 1e4, 1)}만`;
+  return n(v);
+}
 /** 절대 체력 → 체력바 %. */
 const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (hp / max) * 100)) : 0);
 
@@ -386,7 +401,7 @@ function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: bo
  * 무대 위 한쪽(대난투 Fighter 문법) — 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바. 자리·크기 고정.
  * 공격한 쪽은 빛 + 짧게 튀었다 제자리, 맞으면 흔들리고 피해량이 뜬다.
  */
-function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down }: {
+function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down, hpAbs, hpMax }: {
   side: 'l' | 'r';
   name: string;
   sub: React.ReactNode;
@@ -399,6 +414,9 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
   hp: number;
   hpBefore: number;
   down: boolean;
+  /** 체력바 아래 '남은 / 최대' 표시용 절대값. */
+  hpAbs: number;
+  hpMax: number;
 }) {
   // 체력바: 이전 → 지금으로 줄어드는 연출. 차오를 때(다시 보기로 되감기 등)는 애니메이션 없이 바로.
   const [pct, setPct] = useState(hpBefore);
@@ -423,7 +441,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
       </span>
       <div key={`${stepKey}${act ? 'a' : hit ? 'h' : ''}`} className={`relative mt-0.5 h-[100px] w-36 ${motion}`}>
         {dmg != null ? (
-          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{n(Math.round(dmg))}</div>
+          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{compact(Math.round(dmg))}</div>
         ) : null}
         <div className="h-full w-full transition-[opacity,filter] duration-500 ease-out" style={{ opacity: down ? 0.3 : 1, filter: down ? 'grayscale(1)' : 'none' }}>
           {img ? (
@@ -441,6 +459,10 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
       <div className="isolate mt-0.5 h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/50">
         <div className={`h-full ${hpColor(pct)}`} style={{ width: `${Math.max(0, pct)}%`, transition: instant ? 'none' : 'width 650ms ease-out' }} />
       </div>
+      {/* 남은 / 최대 HP — 바와 함께 줄어든다(기록의 남은 HP와 같은 표기). */}
+      <span className="text-[9.5px] leading-none tabular-nums text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
+        {hpNum(hpAbs)} / {compact(Math.round(hpMax))}
+      </span>
     </div>
   );
 }
