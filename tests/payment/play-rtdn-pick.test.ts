@@ -6,12 +6,13 @@ vi.mock('@/lib/db/client', () => ({ db: {} }));
 import { pickRtdnCandidate } from '@/lib/payment/play-rtdn';
 
 const T = 1_000_000_000_000; // 구매 시각
-const row = (id: string, status: string, o: { hasToken?: boolean; userId?: string; productCode?: string; lastTryMs?: number } = {}) => ({
+const row = (id: string, status: string, o: { hasToken?: boolean; userId?: string; productCode?: string; serverId?: number; lastTryMs?: number } = {}) => ({
   paymentId: id,
   userId: o.userId ?? 'u',
   status,
   hasToken: o.hasToken ?? false,
   productCode: o.productCode ?? 'bp_enhance_0',
+  serverId: o.serverId ?? 1,
   lastTryMs: o.lastTryMs ?? T - 60_000,
 });
 
@@ -28,8 +29,13 @@ describe('RTDN 판정 — 범위 안 주문이 모두 한 유저 것이고 미�
     ];
     expect(pickRtdnCandidate(rows, T)?.paymentId).toBe('first');
   });
-  it('같은 유저의 이미 지급된 주문(토큰 있음)은 건너뛰고 미완 주문으로', () => {
+  it('같은 유저의 이미 지급된 주문(토큰 있음)은 건너뛰고 미완 주문으로 — 토큰이 안 묶였으니 그 결제는 지급된 주문의 것이 아니다', () => {
     expect(pickRtdnCandidate([row('paid', 'paid', { hasToken: true }), row('open', 'pending')], T)?.paymentId).toBe('open');
+    // 다른 구간(상품)을 이미 산 뒤 새 구간의 미완 주문 1건
+    expect(pickRtdnCandidate([row('p1', 'paid', { hasToken: true, productCode: 'bp_enhance_1' }), row('p0', 'pending')], T)?.paymentId).toBe('p0');
+  });
+  it('같은 유저·같은 상품이어도 서버가 둘이면 지급하지 않는다', () => {
+    expect(pickRtdnCandidate([row('s1', 'pending', { serverId: 1 }), row('s2', 'pending', { serverId: 2 })], T)).toBeNull();
   });
   it('다른 유저 주문이 하나라도 있으면 지급하지 않는다(누구 구매인지 모름)', () => {
     expect(pickRtdnCandidate([row('mine', 'paid', { hasToken: true }), row('other', 'pending', { userId: 'v' })], T)).toBeNull();
@@ -43,8 +49,9 @@ describe('RTDN 판정 — 범위 안 주문이 모두 한 유저 것이고 미�
     expect(pickRtdnCandidate([row('a', 'refunded', { hasToken: true })], T)).toBeNull();
     expect(pickRtdnCandidate([row('a', 'pending', { hasToken: true })], T)).toBeNull();
   });
-  it('구매 시각 이전 결제창이 없으면(시계 오차 너머) 가장 최근 것', () => {
-    expect(pickRtdnCandidate([row('a', 'pending', { lastTryMs: T + 120_000 }), row('b', 'pending', { lastTryMs: T + 300_000 })], T)?.paymentId).toBe('b');
+  it('구매 시각(+5초) 이전에 연 결제창이 없으면 추정하지 않는다(진짜 주문이 후보에 없다)', () => {
+    expect(pickRtdnCandidate([row('a', 'pending', { lastTryMs: T + 120_000 }), row('b', 'pending', { lastTryMs: T + 300_000 })], T)).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'pending', { lastTryMs: T + 4_000 })], T)?.paymentId).toBe('a'); // 시계 오차 5초 안
   });
   it('0건이면 null', () => {
     expect(pickRtdnCandidate([], T)).toBeNull();

@@ -23,12 +23,12 @@ import { completePurchase } from './purchase';
  *     자동 매칭은 정말로 결과가 사라진 건에만 쓰인다.
  *  ① 토큰이 이미 주문에 묶였으면 그 주문만(미완이면 마무리).
  *  ② 아니면 같은 SKU의 Play 주문을 **상태·토큰과 무관하게** 구매 시각 기준 [-6시간 10분, 지금] 범위
- *     (마지막 결제 시도 시각 = coalesce(play_checkout_at, created_at))에서 센다. 6시간은 createPlayOrder의 재사용 창이다 —
- *     구매자 본인 주문은 이 범위 안에 반드시 있으므로(재사용·오래 열린 결제창·같은 주문의 두 번째 구매 포함),
+ *     (마지막 결제 시도 시각 = coalesce(play_checkout_at, created_at))에서 센다. 6시간은 결제 대사 크론이 Play 미완 주문을
+ *     만료시키는 시간(+크론 간격)이고, 결제창은 주문을 만들 때 열리므로 구매자 본인 주문은 이 범위 안에 반드시 있다.
  *     **범위 안 주문이 모두 한 유저의 것일 때만** 그 유저에게 지급한다(다른 유저 주문이 하나라도 있으면 누구 구매인지 모른다).
- *     그 유저의 토큰 없는 미완(pending·expired) 주문 중 **상품이 하나로 정해질 때만**(성장패스 구간은 가격 SKU를 공유) —
- *     구매 시각 직전에 연 결제창 순으로 고른다. 같은 유저가 결제창을 여러 번 열어 미완 주문이 여럿 생긴 경우(09-30 베르
- *     ₩9,900 수동 지급)도 자동으로 처리된다.
+ *     그 유저의 토큰 없는 미완(pending·expired) 주문 중 **상품·서버가 하나로 정해질 때만**(성장패스 구간은 가격 SKU를 공유) —
+ *     구매 시각(+5초) 이전에 연 결제창 중 가장 최근 것(없으면 진짜 주문이 후보에 없다는 뜻이라 경보).
+ *     같은 유저가 결제창을 여러 번 열어 미완 주문이 여럿 생긴 경우(09-30 ₩9,900 수동 지급 건)도 자동으로 처리된다.
  *  ③ 테스트·프로모·리워드(purchaseType 0·1·2)는 우리 결제창을 거치지 않았을 수 있어 자동 지급하지 않는다.
  */
 export const RTDN_LOOKBACK_MS = (6 * 60 + 10) * 60_000;
@@ -47,7 +47,7 @@ export type RtdnOutcome =
   /** 결제 귀속 표식으로 처리한 결과(play-attribution.ts). */
   | { kind: 'attributed'; outcome: AttributedOutcome };
 
-type Row = { paymentId: string; userId: string; status: string; hasToken: boolean; productCode: string; lastTryMs: number };
+type Row = { paymentId: string; userId: string; status: string; hasToken: boolean; productCode: string; serverId: number; lastTryMs: number };
 
 /**
  * 결제창 시각과 구글 구매 시각 사이 시계 오차 허용(서버·구글 시계 차) — 작게. 결제창을 연 뒤 결제를 마치기까지 수 초는 걸리므로
@@ -56,17 +56,18 @@ type Row = { paymentId: string; userId: string; status: string; hasToken: boolea
 const CLOCK_SKEW_MS = 5_000;
 
 /**
- * 후보 판정(순수) — 범위 안 같은 SKU 주문이 모두 한 유저의 것이고, 그중 토큰 없는 미완 주문의 상품이 하나로 정해질 때만.
- * 여럿이면 구매 시각(+시계 오차) 이전에 마지막으로 연 결제창, 없으면 가장 최근 것. 아니면 null(경보).
+ * 후보 판정(순수) — 범위 안 같은 SKU 주문이 모두 한 유저의 것이고, 그중 토큰 없는 미완 주문의 (상품, 서버)가 하나로 정해질 때만.
+ * 여럿이면 구매 시각(+시계 오차) 이전에 마지막으로 연 결제창. 그런 창이 없거나 조건이 안 맞으면 null(경보).
  */
 export function pickRtdnCandidate<T extends Row>(rows: T[], purchaseTimeMs: number): T | null {
   if (!rows.length) return null;
   if (new Set(rows.map((r) => r.userId)).size !== 1) return null;
   const open = rows.filter((r) => !r.hasToken && (r.status === 'pending' || r.status === 'expired'));
   if (!open.length) return null;
-  if (new Set(open.map((r) => r.productCode)).size !== 1) return null;
-  const byLatest = [...open].sort((a, b) => b.lastTryMs - a.lastTryMs);
-  return byLatest.find((r) => r.lastTryMs <= purchaseTimeMs + CLOCK_SKEW_MS) ?? byLatest[0]!;
+  if (new Set(open.map((r) => `${r.productCode}@${r.serverId}`)).size !== 1) return null;
+  // 구매 뒤에 연 결제창은 그 구매의 창일 수 없다 — 구매 전 창이 하나도 없으면 진짜 주문이 후보에 없다는 뜻이라 추정하지 않는다.
+  const before = open.filter((r) => r.lastTryMs <= purchaseTimeMs + CLOCK_SKEW_MS).sort((a, b) => b.lastTryMs - a.lastTryMs);
+  return before[0] ?? null;
 }
 
 export async function handleOneTimePurchase(sku: string, purchaseToken: string, now = Date.now()): Promise<RtdnOutcome> {
@@ -112,6 +113,7 @@ export async function handleOneTimePurchase(sku: string, purchaseToken: string, 
         status: iapOrders.status,
         token: iapOrders.playPurchaseToken,
         productCode: iapOrders.productCode,
+        serverId: iapOrders.serverId,
         lastTryMs: sql<string>`(extract(epoch from ${lastTry}) * 1000)::bigint::text`,
       })
       .from(iapOrders)
@@ -125,7 +127,7 @@ export async function handleOneTimePurchase(sku: string, purchaseToken: string, 
       )
   ).map((r) => ({
     paymentId: r.paymentId, userId: r.userId, status: r.status, hasToken: r.token != null,
-    productCode: r.productCode, lastTryMs: Number(r.lastTryMs),
+    productCode: r.productCode, serverId: Number(r.serverId), lastTryMs: Number(r.lastTryMs),
   }));
   const pick = notOurCheckout ? null : pickRtdnCandidate(rows, purchaseTimeMs);
   if (!pick) {
