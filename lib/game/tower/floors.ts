@@ -21,7 +21,7 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
     ['회랑 도마뱀', '벽을 타고 오르내리는 잿빛 도마뱀, 꼬리가 몸보다 길다.', []],
     ['돌비늘 뱀', '비늘이 작은 돌 조각처럼 겹쳐 난 굵은 뱀.', []],
     ['깨진 가고일', '뿔 하나가 부러진 작은 돌 가고일, 날개를 반쯤 편 채 웅크렸다.', []],
-    ['회랑 사냥개', '해진 가죽 목줄을 찬 마른 회색 사냥개.', []],
+    ['촛대 미믹', '녹슨 청동 촛대가 네 발로 걸어 다니며, 받침 틈으로 이빨을 드러낸다.', []],
     ['조각난 골렘', '떨어져 나간 벽돌을 이어 붙여 만든 작은 돌 골렘.', []],
     ['돌사자 수호상', '금 간 틈으로 희미한 빛이 새어 나오는 거대한 돌사자.', ['steel']],
   ] },
@@ -161,15 +161,17 @@ export type TowerFloorInfo = {
   guardian: boolean;
   /** 몬스터 스킬(0~4개). */
   skills: TowerSkill[];
-  /** /sprites/tower/mon/<sprite>.png — 층별 그림이 나오기 전 시안용 4종. */
+  /** /sprites/tower/mon/<sprite>.png — 층별 그림(f<층>), 아직 없는 구간은 시안용 4종. */
   sprite: string;
-  /** /sprites/tower/scene/<scene>.png — 수문장 층은 왕좌, 그 밖은 구간마다 번갈아. */
+  /** /sprites/tower/scene/<scene>.png — 구간 배경(sec<NN>), 아직 없는 구간은 시안용(수문장 왕좌·구간마다 번갈아). */
   scene: string;
   /** 생김새 한 줄 — 대기 화면 해설. */
   line: string;
 };
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
+/** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
+const ART_SECTIONS = new Set([1]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
@@ -182,8 +184,8 @@ export function towerFloorInfo(floor: number): TowerFloorInfo {
     theme: s.theme,
     guardian,
     skills,
-    sprite: guardian ? 'golem' : PLACEHOLDER[floor % PLACEHOLDER.length]!,
-    scene: guardian ? 'throne' : section % 2 === 0 ? 'hall' : 'crystal',
+    sprite: ART_SECTIONS.has(section + 1) ? `f${floor}` : guardian ? 'golem' : PLACEHOLDER[floor % PLACEHOLDER.length]!,
+    scene: ART_SECTIONS.has(section + 1) ? `sec${String(section + 1).padStart(2, '0')}` : guardian ? 'throne' : section % 2 === 0 ? 'hall' : 'crystal',
     line: desc,
   };
 }

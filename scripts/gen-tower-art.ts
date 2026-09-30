@@ -1,9 +1,9 @@
 /**
  * 무한의 탑 몬스터·구간 배경 생성(Pixellab v2 REST, PIXELLAB_API_KEY_2) — docs/TOWER.md §9 제작 계획.
- *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~10> [--only=bg,guardian,mons,compare] [--force]
- * 산출: scripts/tower-art/out/sec<NN>/<key>/<i>.png(후보) + manifest.json. 이미 있으면 건너뛴다(재개형, --force로 다시).
- * 비용: 배경 = 고급(generate-image-v2) 400×240 1장, 수문장 = 고급 160px 후보 4장, 일반 9종 = 빠른 모델(pixen) 128px 후보 3장씩,
- *       compare = 일반 1종(9번째)을 고급 128px 후보 4장으로도 만들어 모델 비교.
+ *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~10> [--only=bg,mons] [--force]
+ * 산출: scripts/tower-art/out/v3/sec<NN>/<key>/<i>.png(후보) + manifest.json. 이미 있으면 건너뛴다(재개형, --force로 다시).
+ * 비용(호출 한 번 ≈ 26 gen, 크기에 따라 한 번에 나오는 장수만 다르다): 배경 = 고급(generate-image-v2) 400×240 1장,
+ *   몬스터 = 고급 + 기준 그림(style_image = 레이드 슬라임 왕, 윤곽·세밀도·음영만 따르고 색은 구간 팔레트) 128px(수문장 160px) 한 번에 4장.
  * 주문문은 외형만(감각·서사 금지), 고급스러움 우선, 원색 지양 — 구간 팔레트를 말로 덧붙인다.
  */
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
@@ -14,8 +14,12 @@ if (!KEY) throw new Error('PIXELLAB_API_KEY_2 없음');
 const API = 'https://api.pixellab.ai/v2';
 const args = process.argv.slice(2);
 const sec = Number(args[0]);
-const only = (args.find((a) => a.startsWith('--only='))?.slice(7) ?? 'bg,guardian,mons,compare').split(',');
+const only = (args.find((a) => a.startsWith('--only='))?.slice(7) ?? 'bg,mons').split(',');
 const force = args.includes('--force');
+// 특정 층만(--floors=1,4) · 결과 키 꼬리표(--tag=r2 → f1-r2, 다시 만들기 회차를 따로 보관).
+const floorsArg = args.find((a) => a.startsWith('--floors='))?.slice(9);
+const onlyFloors = floorsArg ? new Set(floorsArg.split(',').map(Number)) : null;
+const tag = args.find((a) => a.startsWith('--tag='))?.slice(6) ?? '';
 
 type Mon = { floor: number; name: string; desc: string; art: string; guardian: boolean };
 type Sec = { theme: string; palette: string[]; mons: Mon[] };
@@ -33,9 +37,15 @@ const PALETTE_WORDS: Record<number, string> = {
 
 const STYLE_MON =
   'pixel art game monster sprite, full body, three-quarter view facing right, clean readable silhouette, refined elegant detailed pixel art, muted desaturated colors, no text';
+// 전체이용가 톤(09-30 1구간 검수): 사실적인 동물 그림은 징그럽고, 너무 단순하게 하면 디테일이 죽는다 —
+// 디테일(질감·음영)은 기준 그림 그대로, 비율·표정만 판타지 게임 몬스터처럼 살짝 과장해 덜 사실적으로.
+const STYLE_FRIENDLY =
+  'fantasy game monster, slightly stylized and exaggerated proportions, expressive eyes, detailed pixel art rendering with rich texture and shading, not photorealistic, not creepy, all-ages';
+// 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀).
+const STURDY_LEGS = 'sturdy legs instead of thin spindly legs';
 const STYLE_BG = 'pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge';
 
-const outDir = join('scripts/tower-art/out', `sec${String(sec).padStart(2, '0')}`);
+const outDir = join('scripts/tower-art/out/v3', `sec${String(sec).padStart(2, '0')}`);
 mkdirSync(outDir, { recursive: true });
 const manPath = join(outDir, 'manifest.json');
 const manifest: Record<string, { kind: string; prompt: string; files: string[] }> = existsSync(manPath) ? JSON.parse(readFileSync(manPath, 'utf8')) : {};
@@ -80,39 +90,33 @@ function write(key: string, kind: string, prompt: string, b64s: string[]) {
 }
 const done = (key: string) => !force && manifest[key]?.files?.length;
 
-async function pro(key: string, prompt: string, w: number, h: number, noBg: boolean) {
+// 몬스터 그림체 기준 — 레이드 슬라임 왕(사용자 선택 09-30). 색은 따르지 않는다(구간 팔레트).
+const STYLE_REF = readFileSync('public/sprites/boss/slime_king.png').toString('base64');
+async function pro(key: string, prompt: string, w: number, h: number, noBg: boolean, styled = false) {
   if (done(key)) return console.log(`- ${key} 이미 있음`);
-  const r = await call('/generate-image-v2', { description: prompt, image_size: { width: w, height: h }, no_background: noBg });
-  const id = r.background_job_id ?? r.id;
-  write(key, 'pro', prompt, images(await poll(id)));
-}
-async function pixen(key: string, prompt: string, n: number) {
-  if (done(key)) return console.log(`- ${key} 이미 있음`);
-  const out: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const r = await call('/create-image-pixen', {
-      description: prompt, image_size: { width: 128, height: 128 }, no_background: true,
-      direction: 'east', detail: 'highly detailed', outline: 'selective outline',
-    });
-    out.push(...images(r));
-    await sleep(800);
+  const body: Record<string, unknown> = { description: prompt, image_size: { width: w, height: h }, no_background: noBg };
+  if (styled) {
+    body.style_image = { image: { type: 'base64', base64: STYLE_REF, format: 'png' }, size: { width: 128, height: 128 } };
+    body.style_options = { color_palette: false, outline: true, detail: true, shading: true };
   }
-  write(key, 'pixen', prompt, out);
+  const r = await call('/generate-image-v2', body);
+  const id = r.background_job_id ?? r.id;
+  write(key, styled ? 'pro+style' : 'pro', prompt, images(await poll(id)));
 }
-
 const pal = PALETTE_WORDS[sec] ?? 'muted desaturated palette';
 const tasks: Promise<void>[] = [];
-if (only.includes('bg')) tasks.push(pro('bg', `${BG[sec]}, ${pal}, ${STYLE_BG}`, 400, 240, false));
-const guardian = S.mons.find((m) => m.guardian)!;
-if (only.includes('guardian')) tasks.push(pro(`f${guardian.floor}`, `${guardian.art}, large imposing boss, ${pal}, ${STYLE_MON}`, 160, 160, true));
-if (only.includes('compare')) {
-  const m = S.mons[8]!;
-  tasks.push(pro(`f${m.floor}-pro`, `${m.art}, ${pal}, ${STYLE_MON}`, 128, 128, true));
-}
+if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${pal}, ${STYLE_BG}`, 400, 240, false));
 if (only.includes('mons')) {
-  tasks.push((async () => {
-    for (const m of S.mons.filter((x) => !x.guardian)) await pixen(`f${m.floor}`, `${m.art}, ${pal}, ${STYLE_MON}`, 3);
-  })());
+  // 두 줄로 나눠 동시에 2개씩(429 여유).
+  const mons = S.mons.filter((m) => !onlyFloors || onlyFloors.has(m.floor));
+  for (const lane of [mons.filter((_, i) => i % 2 === 0), mons.filter((_, i) => i % 2 === 1)]) {
+    tasks.push((async () => {
+      for (const m of lane) {
+        const size = m.guardian ? 160 : 128;
+        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|snake|serpent|eel|slime|fish|whale|jelly/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
+      }
+    })());
+  }
 }
 const res = await Promise.allSettled(tasks);
 for (const r of res) if (r.status === 'rejected') console.error('실패:', (r.reason as Error).message);
