@@ -1,6 +1,6 @@
 /**
  * 1위 교체 감지 cron — 준실시간(15분). world_events(rank_leader/guild_*_1) 기록.
- *  - 유저 랭킹 5종(최고·합산강화·전투력·레이드·대난투): runRankingLeaders (첫 관측은 시드만).
+ *  - 유저 랭킹 6종(최고·합산강화·전투력·레이드·대난투·무한의 탑): runRankingLeaders (첫 관측은 시드만).
  *  - 길드 전투력·점령지 1위: runGuildLeaders (피드 자체를 직전 1위 상태로 사용).
  *
  * guild-rank-achv(일일)에서 분리 — 길드 top3 업적 로깅은 일일 유지, 1위 교체만 짧은 주기로.

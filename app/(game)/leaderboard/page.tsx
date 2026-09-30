@@ -12,7 +12,7 @@ function parse(t: string | undefined): LeaderboardMetric {
 }
 
 /**
- * 랭킹 — 5지표를 한 번에 받아 탭 전환은 클라에서(무왕복, 2026-07-31).
+ * 랭킹 — 6지표를 한 번에 받아 탭 전환은 클라에서(무왕복, 2026-07-31).
  * `?tab=`은 RankingDeck 등에서 오는 깊은 링크의 **초기** 탭으로만 쓰인다.
  */
 export default async function LeaderboardPage({

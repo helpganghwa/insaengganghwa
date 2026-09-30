@@ -310,7 +310,8 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
           ) : win ? (
             <>
               <SecondaryButton onClick={onList}>목록</SecondaryButton>
-              {floor < TOWER_FLOORS ? <PrimaryButton onClick={onNext}>{nextFloor}층으로</PrimaryButton> : <PrimaryButton disabled>꼭대기</PrimaryButton>}
+              {/* 꼭대기 층을 돌파하면 다음 층 대신 탑 랭킹으로. */}
+              {floor < TOWER_FLOORS ? <PrimaryButton onClick={onNext}>{nextFloor}층으로</PrimaryButton> : <PrimaryButton onClick={() => router.push('/leaderboard?tab=tower')}>랭킹 보기</PrimaryButton>}
             </>
           ) : (
             <>
@@ -396,7 +397,7 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
       body = <><Ev c="text-red-400">광폭화</Ev> {josa(`${monName}#{이}`)} 날뛴다. 피해 {grew ? <>{raw} → </> : null}{D}{grew ? <span className="text-zinc-500"> (×{B.enrageMul})</span> : null}</>;
       break;
     case 'revive':
-      body = <>{monName}의 공격 {D} — <Ev c="text-emerald-300">기사회생!</Ev> 쓰러지기 직전 다시 일어섰다.</>;
+      body = <>{monName}의 공격 {D}. <Ev c="text-emerald-300">기사회생!</Ev> 쓰러지기 직전 다시 일어섰다.</>;
       break;
     case 'first_strike':
       body = mine

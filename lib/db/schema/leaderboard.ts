@@ -41,7 +41,7 @@ export const leaderboardRanks = pgTable(
   'leaderboard_ranks',
   {
     serverId: smallint('server_id').notNull(),
-    /** max|sum|combat|raid|melee */
+    /** max|sum|combat|raid|melee|tower */
     metric: text('metric').notNull(),
     userId: uuid('user_id').notNull(),
     value: bigint('value', { mode: 'number' }).notNull(),

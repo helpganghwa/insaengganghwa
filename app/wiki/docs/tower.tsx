@@ -101,7 +101,7 @@ export default function Doc() {
         head={['변수', '내용']}
         rows={[
           ['선제', `층 주인이 먼저 공격할 확률 ${bpPct(TOWER_BATTLE.firstStrikeBp)}`],
-          ['급소', `${bpPct(TOWER_BATTLE.critBp)} 확률로 피해 ×${TOWER_BATTLE.critMul}(양쪽 모두)`],
+          ['급소', `내 공격이 ${bpPct(TOWER_BATTLE.critBp)} 확률로 피해 ×${TOWER_BATTLE.critMul}`],
           ['빗나감', `${bpPct(TOWER_BATTLE.missBp)} 확률로 공격이 빗나감(양쪽 모두)`],
           ['반격', `층 주인의 공격 뒤 ${bpPct(TOWER_BATTLE.counterBp)} 확률로 내가 반격(피해 ×${TOWER_BATTLE.counterMul})`],
           [

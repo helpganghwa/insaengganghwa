@@ -392,3 +392,26 @@ create table milestone_firsts (
 
 - 쓰기는 `lib/game/titles/first-milestones.ts recordFirstMilestones` 한 경로(리더보드 증분 갱신 커밋 뒤 best-effort, 이정표별 advisory 락, 유저당 1행 멱등, rank = max+1이 3을 넘으면 기록 없음). 배포 전 도달분은 `scripts/first-milestones-backfill.ts`.
 - 탈퇴해도 행을 지우지 않는다(withdraw.ts WITHDRAW_PRESERVED) — 지우면 max(rank)+1이 빈 순위를 다시 내줘 "처음으로"가 사실과 달라진다. 칭호는 user_titles 삭제로 사라지고, 판정은 `reached_at >= characters.created_at`인 행만 보므로 재가입한 새 캐릭터에게 돌아오지 않는다.
+
+## 14. 무한의 탑 (0222·0223, docs/TOWER.md)
+
+### 14.1 tower_progress (유저·서버당 1행)
+- PK (user_id, server_id). `best_floor`·`best_at`(순위 동률 = 먼저 도달), `loss_day`(KST)·`losses`(그날 진 횟수, 하루 3번), `last_profile_id`(마지막 고른 아바타).
+- 도전은 이 행을 upsert로 잠가 동시 도전·중복 차감을 막는다. 탈퇴 시 삭제.
+
+### 14.2 tower_battles (도전 1번 = 1행)
+- 층·승패·탑 전투력·요구치·아바타·장착 3개(`pieces`)·턴 기록(`turns`, 절대 체력·피해·변수·`raw`)·결정적 턴·보상 안내·`idem_key`.
+- 부분 유니크 (user_id, server_id, idem_key) — 같은 키 재전송은 저장된 결과를 돌려준다. 탈퇴 시 삭제.
+
+### 14.3 tower_claims (받은 돌파 보상)
+- PK (user_id, server_id, floor) — 한 층 한 번. 최고 층 이하 중 여기 없는 층이 받을 보상. 탈퇴 시 삭제.
+
+### 14.4 tower_pools (서버·주·층별 요구 장비)
+- PK (server_id, week_start, floor), 11~100층 부위별 10개. 그 주 첫 접근(캐릭터가 있는 서버만) 때 추첨·박제, 재추첨 없음. 서버 단위 표(탈퇴와 무관).
+
+### 14.5 tower_specials (서버·구간별 특별층 지정 장비)
+- PK (server_id, section), 부위별 1개. 한 번 정하면 고정(퇴역 시 행 삭제 → 다음 접근 때 그 구간만 재추첨, TOWER.md §2).
+
+### 14.6 title_legacy_locks (0223)
+- 조건이 바뀐 칭호(육관왕)의 기존 보유자 잠금 — 새 조건을 채우면 자동 해제. 탈퇴 시 삭제.
+
