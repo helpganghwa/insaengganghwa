@@ -52,7 +52,7 @@
     "floor": 6,
     "name": "돌비늘 뱀",
     "desc": "비늘이 작은 돌 조각처럼 겹쳐 난 굵은 뱀.",
-    "art": "thick snake with scales like small overlapping grey stone chips, coiled",
+    "art": "thick legless snake with scales like small overlapping grey stone chips, coiled body, no legs, no limbs",
     "guardian": false,
     "skills": []
    },
@@ -66,9 +66,9 @@
    },
    {
     "floor": 8,
-    "name": "회랑 사냥개",
-    "desc": "해진 가죽 목줄을 찬 마른 회색 사냥개.",
-    "art": "lean grey hound wearing a worn leather collar",
+    "name": "촛대 미믹",
+    "desc": "녹슨 청동 촛대가 네 발로 걸어 다니며, 받침 틈으로 이빨을 드러낸다.",
+    "art": "bronze candelabra mimic monster walking on four short sturdy clawed feet, a toothy grin in its base, three small lit candles on top with hardened dripping wax",
     "guardian": false,
     "skills": []
    },
