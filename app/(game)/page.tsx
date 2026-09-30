@@ -46,7 +46,8 @@ import { WorldTicker } from './WorldTicker';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 8카드 — 월드맵/파견(최상단) + 무한의 탑/대난투/레이드/보급/상점/우편함. 길드·인벤토리는 바텀네비로(길드 카드는 2026-08-30 파견에 자리 양보).
+// 메뉴 9카드 + 게시판 = 10칸(2열 짝수) — 월드맵/파견(최상단) + 무한의 탑/대난투/레이드/길드/보급/상점/우편함. 무한의 탑이 들어와 홀수가 되어
+// 길드 카드를 다시 넣었다(2026-09-30, 08-30엔 파견에 자리 양보). 인벤토리는 바텀네비로.
 const MENU = [
   {
     href: '/guild/map',
@@ -87,6 +88,14 @@ const MENU = [
     desc: '보스 도전',
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
+    scale: 1,
+  },
+  {
+    href: '/guild',
+    label: '길드',
+    desc: '함께 성장·점령',
+    bg: '/sprites/hub/guild.png',
+    tint: '#2a2012',
     scale: 1,
   },
   {
@@ -480,7 +489,7 @@ export default async function HomePage() {
         {hidePaid ? null : <BattlePassBanner />}
       </HomeBannerCarousel>
       <div className="grid grid-cols-2 gap-2.5">
-        {MENU.map((m, i) => {
+        {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
           const isMeleeChamp = m.href === '/melee' && meleeChampion;
@@ -499,8 +508,8 @@ export default async function HomePage() {
             (m.href === '/raid' && raidJoinable > 0) || (m.href === '/expedition' && expeditionCanSend); // 강조색
           return (
             <Fragment key={m.href}>
-              {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
-              {i === 6 && (
+              {/* 게시판 카드 — 상점 뒤·우편함 앞. */}
+              {m.href === '/mail' && (
                 <AnnouncementBoard serverId={serverId} items={announcements} tint="#2b2147" holdPopup={tutorialActive} myVotes={myPollVotes} />
               )}
               <Link prefetch={false}
