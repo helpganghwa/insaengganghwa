@@ -385,7 +385,10 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
       body = mine ? <>내 공격이 빗나갔다.</> : <>{monName}의 공격이 빗나갔다.</>;
       break;
     case 'critical':
-      body = <><Ev c="text-amber-300">급소!</Ev> {monName}의 빈틈을 꿰뚫었다. 피해 {grew ? <>{raw} → </> : null}{D}{grew ? <span className="text-zinc-500"> (×{B.critMul})</span> : null}</>;
+      // 몬스터 급소는 광폭화와 겹칠 수 있어 배율을 실제 비율로 보여 준다(×1.6 또는 ×2.4).
+      body = mine
+        ? <><Ev c="text-amber-300">급소!</Ev> {monName}의 빈틈을 꿰뚫었다. 피해 {grew ? <>{raw} → </> : null}{D}{grew ? <span className="text-zinc-500"> (×{B.critMul})</span> : null}</>
+        : <><Ev c="text-red-400">급소!</Ev> {josa(`${monName}#{이}`)} 급소를 찔렀다. 피해 {grew ? <>{raw} → </> : null}{D}{grew && rawNum ? <span className="text-zinc-500"> (×{Math.round((dNum / rawNum) * 10) / 10})</span> : null}</>;
       break;
     case 'resonance':
       body = <><Ev c="text-sky-300">공명!</Ev> 아바타와 장비가 함께 울려 추가 피해 {D}{half ? <span className="text-zinc-500"> ({raw}의 절반)</span> : null}</>;
