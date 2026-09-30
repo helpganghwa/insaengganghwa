@@ -62,6 +62,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     setLocal(null);
   }
   const best = Math.max(board.best, local?.best ?? 0);
+  const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeft = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const next = Math.min(TOWER_FLOORS, best + 1);
   const topped = best >= TOWER_FLOORS;
@@ -247,6 +248,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       <TowerBattle
         key={res ? res.battleId : 'pending'}
         floor={res ? res.floor : next}
+        me={me}
         result={res}
         myCp={cpNow.total}
         attemptsBefore={attemptsLeft}
@@ -349,7 +351,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const counts = poolCounts(board, items, rule);
     return (
       <main className={FLOOR_MAIN}>
-        <TowerStage floor={next} info={info} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
+        <TowerStage floor={next} info={info} me={me} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
 
         {/* 무대 아래 — 텍스트 RPG식 줄 구성(전투에선 이 자리에 기록이 쌓인다). */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
@@ -431,8 +433,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain bg-zinc-950 bg-cover bg-top text-zinc-100"
       style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }}
     >
-      <div className="flex flex-1 flex-col px-3 pb-3 pt-1.5">
-        <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
+      <div className="flex flex-1 flex-col px-3 pb-3">
+        {/* 헤더는 스크롤해도 위에 고정 — 아래 그림·카드 위로 지나가도 읽히게 반투명 바탕. */}
+        <div className="sticky top-0 z-20 -mx-3 bg-zinc-950/75 px-3 pt-1.5 pb-1 backdrop-blur-sm">
+          <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
+        </div>
 
         {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
         <div className="relative mt-2 flex h-[200px] flex-col justify-end">
@@ -440,8 +445,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             <div className="rounded-2xl border border-white/10 bg-black/55 p-3 backdrop-blur-[2px]">
               <div className="flex gap-3">
                 <div className="min-w-0 flex-1">
+                  {/* 층 번호만(상태·특별층 글자는 칸 색·✦로 이미 보인다). */}
                   <div className="text-[10.5px] font-black text-amber-300">
-                    {towerIsSpecial(hero) ? '✦ ' : ''}{hero}층{towerIsSpecial(hero) ? ' · 특별층' : ''} · {hero <= best ? '돌파함' : hero === next ? '도전 가능' : '잠김'}
+                    {towerIsSpecial(hero) ? '✦ ' : ''}{hero}층
                   </div>
                   <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
                   {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
@@ -466,7 +472,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                           return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
                         })}
                       </span>
-                    ) : '이 층만 · 부위별 10개'}</span>
+                    ) : '부위별 10개'}</span>
                       {/* 줄 높이 안에 들어가는 작은 버튼 — 층을 바꿔도 카드가 흔들리지 않게(2차 피드백 5). */}
                       <button type="button" onClick={() => openPool(hero)} className="ml-1 h-5 flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
                     </div>
@@ -570,13 +576,16 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           })}
         </div>
 
-        {!topped ? (
-          <button type="button" onClick={() => setView('detail')} className="sticky bottom-0 mt-auto w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
-            {next}층 도전
-          </button>
-        ) : (
-          <p className="mt-auto text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
-        )}
+        {/* 아래 버튼 — 스크롤해도 바닥에 붙고, 위로 어둡게 번지는 띠로 마지막 카드와 간격을 둔다. */}
+        <div className="sticky bottom-0 z-10 -mx-3 mt-auto bg-gradient-to-t from-zinc-950 from-60% to-transparent px-3 pt-6">
+          {!topped ? (
+            <button type="button" onClick={() => setView('detail')} className="w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
+              {next}층 도전
+            </button>
+          ) : (
+            <p className="text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
+          )}
+        </div>
       </div>
       {popups}
     </main>

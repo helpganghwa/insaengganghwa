@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { josa } from 'josa';
 
 import { BackFab } from '@/components/BackNav';
+import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import { TOWER_BATTLE, type TowerTurn } from '@/lib/game/tower/battle';
-import { towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
+import { TOWER_KIND_KO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
 
 import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
@@ -21,14 +22,18 @@ export const FLOOR_ROW = 'border-b border-white/[.07]';
 
 type Fight = { cur: TowerTurn | null; prev: TowerTurn | null; shown: number; ended: boolean; win: boolean };
 
+/** 무대 위 내 표시 — 대난투처럼 닉네임 · 길드(문양+이름). */
+export type TowerMe = { nickname: string; guild: { name: string; emblemUrl: string | null } | null };
+
 /**
- * 무대 — 상세·전투 공통. 장면이 화면 맨 위부터 깔리고, 그 안 위쪽에 뒤로가기 · 층·장소 · 몬스터 이름 · 오늘 도전(전투 중엔 N턴),
- * 아래쪽에 나 ↔ 층 주인(자리·발 높이 고정: 전투력 칩 · 체력바 · 몸). 무대 바로 아래 한 줄 = 전투력 · 돌파 보상, 그 아래 해설.
- * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다.
+ * 무대 — 상세·전투 공통. 장면이 화면 맨 위부터 깔리고, 위쪽에 뒤로가기 · 층·장소 · 돌파 보상 · 오늘 도전(전투 중엔 N턴).
+ * 아래쪽에 나 ↔ 층 주인(대난투 문법: 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
+ * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다. 무대 아래는 해설 한 칸.
  */
-export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
+export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
   floor: number;
   info: TowerFloorInfo;
+  me: TowerMe;
   meImg: string | null;
   meCp: number;
   left: number;
@@ -47,23 +52,22 @@ export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backL
   const sp = towerIsSpecial(floor);
   return (
     <>
-      <section className="relative h-[256px] flex-none overflow-hidden">
+      <section className="relative h-[222px] flex-none overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(`/sprites/tower/scene/${info.scene}.png`)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={PIX} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/75 via-black/5 to-black/55" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/5 via-30% to-black/40" />
         {hitTarget ? <div key={`f${shown}`} className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500/50 mix-blend-screen" /> : null}
 
-        <div className="absolute inset-x-0 top-0 z-10 flex items-start gap-2.5 px-3 pt-2.5">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-start gap-2.5 px-3 pt-2">
           <BackFab fallback="/tower" onClick={onBack} disabled={backLocked} className="flex-none" />
-          <div className="min-w-0 flex-1 pt-0.5 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
-            <div className="truncate text-[11px] text-zinc-300">
-              {sp ? <span className="text-red-300">✦ </span> : null}
-              {floor}층 · {info.theme}
-              {sp ? <span className="text-red-300"> · 특별층</span> : null}
+          <div className="min-w-0 flex-1 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
+            <div className="truncate">
+              <b className="text-[15px] font-black text-white">{sp ? <span className="text-red-300">✦ </span> : null}{floor}층</b>
+              <span className="text-[11px] text-zinc-300"> · {info.theme}</span>
             </div>
-            <b className="block truncate text-[16px] font-black text-white">{info.name}</b>
+            <div className="text-[11px] text-zinc-300">돌파 {rewardText(floor)}</div>
           </div>
-          <div className="flex-none pt-0.5 text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
+          <div className="flex-none text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
             <div>
               오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-white'}>{left}</b>
               <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
@@ -74,6 +78,15 @@ export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backL
 
         <Fighter
           side="l"
+          name={me.nickname || '나'}
+          sub={
+            me.guild ? (
+              <>
+                <GuildBadge emblemUrl={me.guild.emblemUrl} size={10} className="shrink-0" />
+                <span className="truncate text-amber-100/85">{me.guild.name}</span>
+              </>
+            ) : null
+          }
           cp={meCp}
           img={meImg}
           act={!!cur && !ended && cur.actor === 'me'}
@@ -86,6 +99,8 @@ export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backL
         />
         <Fighter
           side="r"
+          name={info.name}
+          sub={<span className="truncate text-zinc-300">{TOWER_KIND_KO[info.kind]}</span>}
           cp={towerRequirement(floor)}
           img={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
           act={!!cur && !ended && cur.actor === 'mon'}
@@ -98,14 +113,9 @@ export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backL
         />
       </section>
 
-      {/* 무대 아래 — 전투력 · 돌파 보상 한 줄, 그 아래 해설(대기엔 층 서술, 전투 중엔 지금 줄, 끝나면 결말). 2줄 고정. */}
-      <div className={`flex-none px-4 pt-2 pb-2.5 ${FLOOR_ROW}`}>
-        <div className="text-[12px] tabular-nums text-zinc-400">
-          전투력 <b className="text-red-300">{n(towerRequirement(floor))}</b>
-          <span className="px-1.5 text-zinc-600">·</span>
-          돌파 <span className="text-zinc-200">{rewardText(floor)}</span>
-        </div>
-        <p className={`mt-1 line-clamp-2 min-h-[2.6em] text-[12px] leading-snug break-keep ${tone === 'win' ? 'font-bold text-emerald-300' : tone === 'lose' ? 'font-bold text-red-300' : tone === 'idle' ? 'text-zinc-400' : 'text-zinc-100'}`}>
+      {/* 해설 한 칸 — 대기엔 층 서술, 전투 중엔 지금 줄, 끝나면 결말. 높이 고정(2줄까지, 한 줄이면 가운데). */}
+      <div className={`flex h-12 flex-none items-center px-4 ${FLOOR_ROW}`}>
+        <p className={`line-clamp-2 text-[12px] leading-snug break-keep ${tone === 'win' ? 'font-bold text-emerald-300' : tone === 'lose' ? 'font-bold text-red-300' : tone === 'idle' ? 'text-zinc-400' : 'text-zinc-100'}`}>
           {narration}
         </p>
       </div>
@@ -118,8 +128,9 @@ export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backL
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 진 판은 결정적 순간부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
+export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
   floor: number;
+  me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
   result: TowerChallengeResult | null;
@@ -205,6 +216,7 @@ export function TowerBattle({ floor, result, myCp, attemptsBefore, avatarSouth, 
       <TowerStage
         floor={floor}
         info={info}
+        me={me}
         meImg={avatarSouth}
         meCp={result?.towerCp ?? myCp}
         left={result ? left : attemptsBefore}
@@ -352,9 +364,14 @@ function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: bo
   );
 }
 
-/** 무대 위 한쪽 — 자리·크기 고정(전투력 칩 · 체력바 · 몸). 공격한 쪽은 빛 + 짧게 튀었다 제자리, 맞으면 흔들리고 피해량이 뜬다. */
-function Fighter({ side, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down }: {
+/**
+ * 무대 위 한쪽(대난투 Fighter 문법) — 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바. 자리·크기 고정.
+ * 공격한 쪽은 빛 + 짧게 튀었다 제자리, 맞으면 흔들리고 피해량이 뜬다.
+ */
+function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down }: {
   side: 'l' | 'r';
+  name: string;
+  sub: React.ReactNode;
   cp: number;
   img: string | null;
   act: boolean;
@@ -374,12 +391,14 @@ function Fighter({ side, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down }: 
   }, [hp, hpBefore, stepKey]);
   const motion = act ? (side === 'l' ? 'animate-lunge-r' : 'animate-lunge-l') : hit ? 'animate-hit-shake' : '';
   return (
-    <div className={`absolute bottom-3 flex w-36 flex-col items-center gap-1 ${side === 'l' ? 'left-[6%]' : 'right-[6%]'}`}>
-      <span className={`rounded-full bg-black/60 px-2 py-0.5 text-[10.5px] font-black tabular-nums ${side === 'l' ? 'text-amber-300' : 'text-red-300'}`}>{n(cp)}</span>
-      <div className="isolate h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
-        <div className={`h-full ${hpColor(pct)}`} style={{ width: `${Math.max(0, pct)}%`, transition: 'width 650ms ease-out' }} />
-      </div>
-      <div key={`${stepKey}${act ? 'a' : hit ? 'h' : ''}`} className={`relative h-[100px] w-36 ${motion}`}>
+    <div className={`absolute bottom-2 flex w-36 flex-col items-center gap-0.5 ${side === 'l' ? 'left-[5%]' : 'right-[5%]'}`}>
+      <span className="max-w-full truncate text-[11px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{name}</span>
+      {/* 길드(문양+이름) / 몬스터 특성 — 없어도 높이 고정. */}
+      <span className="flex h-3 max-w-full items-center gap-0.5 text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{sub}</span>
+      <span className={`text-[10px] leading-none font-bold tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,.9)] ${side === 'l' ? 'text-amber-300' : 'text-red-300'}`}>
+        <span className="font-normal text-zinc-300">전투력 </span>{n(cp)}
+      </span>
+      <div key={`${stepKey}${act ? 'a' : hit ? 'h' : ''}`} className={`relative mt-0.5 h-[100px] w-36 ${motion}`}>
         {dmg != null ? (
           <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{Math.round(dmg)}</div>
         ) : null}
@@ -394,7 +413,10 @@ function Fighter({ side, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down }: 
             />
           ) : null}
         </div>
-        <div className="pointer-events-none absolute -bottom-0.5 left-1/2 -z-10 h-2 w-20 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
+      </div>
+      {/* 체력바 — 몸 아래(대난투와 같은 자리). */}
+      <div className="isolate mt-0.5 h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/50">
+        <div className={`h-full ${hpColor(pct)}`} style={{ width: `${Math.max(0, pct)}%`, transition: 'width 650ms ease-out' }} />
       </div>
     </div>
   );
