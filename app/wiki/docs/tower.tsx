@@ -1,7 +1,10 @@
 import {
   TOWER_AVATAR_MULT,
   TOWER_DAILY_ATTEMPTS,
+  TOWER_DMG_MAX,
+  TOWER_DMG_MIN,
   TOWER_FLOORS,
+  TOWER_HP_MULT,
   TOWER_POOL_PER_SLOT,
   TOWER_SECTION,
   towerRequirement,
@@ -88,8 +91,8 @@ export default function Doc() {
       <UL>
         <LI>도전하면 서버가 전투를 판정하고, 화면은 그 기록을 차례로 보여 준다.</LI>
         <LI>
-          나와 층 주인 모두 체력 100%에서 시작한다. 탑 전투력이 층 주인 전투력보다 높을수록 내 공격은 세지고 층 주인의
-          공격은 약해진다.
+          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 층 주인은 층 주인 전투력). 한 번 공격하면 자기 전투력의
+          {TOWER_DMG_MIN * 100}~{TOWER_DMG_MAX * 100}%만큼 피해를 준다.
         </LI>
         <LI>최대 {TOWER_BATTLE.maxTurns}턴까지 싸우고, 그때까지 층 주인을 쓰러뜨리지 못하면 진다.</LI>
       </UL>
