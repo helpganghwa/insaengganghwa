@@ -260,7 +260,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
               <>
-                <b className="block text-[13px] text-emerald-300">돌파{streak >= 2 ? <span className="font-bold text-amber-300"> · 연속 돌파 {streak}층째</span> : null}</b>
+                <b className="block text-[13px] text-emerald-300">승리{streak >= 2 ? <span className="font-bold text-amber-300"> · 연속 돌파 {streak}층째</span> : null}</b>
                 {result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
@@ -269,12 +269,12 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
               </>
             ) : (
               <>
-                <b className="text-[13px] text-red-300">물러남</b>
+                <b className="text-[13px] text-red-300">패배</b>
                 {/* 얼마나 가까웠나 — 이 판에서 층 주인에게 남은 체력. */}
                 {(() => {
                   const last = turns[total - 1];
                   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
-                  return last && monMax > 0 ? <div>층 주인 HP {pctText(last.monHp / monMax)} 남기고 물러남</div> : null;
+                  return last && monMax > 0 ? <div>층 주인 HP {pctText(last.monHp / monMax)} 남음</div> : null;
                 })()}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
               </>
