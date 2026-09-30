@@ -62,7 +62,7 @@ const STYLE_FRIENDLY =
   'fantasy game monster, slightly stylized and exaggerated proportions, expressive eyes, detailed pixel art rendering with rich texture and shading, not photorealistic, not creepy, all-ages';
 // 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀).
 const STURDY_LEGS = 'sturdy legs instead of thin spindly legs';
-const STYLE_BG = 'symmetrical composition, centered front view, pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge, full bleed, no white borders, no vignette, no fade to white at the edges';
+const STYLE_BG = 'symmetrical composition, centered front view, pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge, full bleed, no white or grey borders, no side margins, no vignette, no fade at the edges, scene continues to the left and right edges';
 
 const outDir = join('scripts/tower-art/out/v3', `sec${String(sec).padStart(2, '0')}`);
 mkdirSync(outDir, { recursive: true });
@@ -134,7 +134,7 @@ if (only.includes('mons')) {
     tasks.push((async () => {
       for (const m of lane) {
         const size = m.guardian ? 160 : 128;
-        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
+        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly|seahorse|squid|octopus|nautilus/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
       }
     })());
   }
