@@ -282,8 +282,9 @@ export async function settleContest(serverId: number, adminId: string, at = Date
         rowsN++;
         const per = reward.boxes / 3;
         const payload = JSON.stringify({ diamond: reward.diamond, boxes: { weapon: per, armor: per, accessory: per } });
-        const title = `추석 강화 대회 ${r.rank}등 보상`;
-        const body = josa(`${name} 강화 대회에서 ${r.rank}등을 하셨습니다. 마감 시각 기준 +${r.level.toLocaleString('ko-KR')} 단계였습니다.\n보상으로 💎${reward.diamond.toLocaleString('ko-KR')}#{과} 📦${reward.boxes}개를 드립니다.${titles.length ? ' 칭호는 칭호 화면에서 확인해 주세요.' : ''}`);
+        // 문안(10-01 사용자 확정, '다'체) — 통보체 대신 자연스러운 안내.
+        const title = `추석 강화 대회 ${r.rank}등 보상이 도착했습니다`;
+        const body = josa(`${name} 강화 대회에서 +${r.level.toLocaleString('ko-KR')} 단계로 ${r.rank}등을 차지하셨습니다.\n순위 보상으로 💎${reward.diamond.toLocaleString('ko-KR')}#{과} 📦${reward.boxes}개를 보내 드립니다.${titles.length ? ' 한정 칭호도 함께 드렸으니 칭호 화면에서 확인하실 수 있습니다.' : ''}\n대회에 함께해 주셔서 감사합니다.`);
         await tx.execute(sql`
           insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
           values (${r.userId}::uuid, ${serverId}, 'admin'::mailbox_type, ${title}, ${body}, '추석 강화 대회', ${payload}::jsonb)
