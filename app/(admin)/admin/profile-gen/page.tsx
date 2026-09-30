@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { and, desc, eq, gte, ilike, lt, or, type SQL } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -13,6 +14,7 @@ import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
 import { AdminAvatarViewer } from './AdminAvatarViewer';
 import { AvatarGenPauseToggle } from './AvatarGenPauseToggle';
+import { PixellabUsage } from './PixellabUsage';
 import { getAvatarGenPause } from '@/lib/game/profile/gen-pause';
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
@@ -144,6 +146,10 @@ export default async function AdminProfileGenPage({
       {/* 검색 — 유저코드/닉네임/거래(job)ID. 검색 중엔 날짜·필터 숨김. */}
       <AdminSearch basePath="/admin/profile-gen" initialQuery={q} />
       <AvatarGenPauseToggle paused={genPause.paused} note={genPause.note} />
+      {/* Pixellab 키별 남은 사용량 — 외부 조회라 스트리밍(페이지 첫 표시를 막지 않게). */}
+      <Suspense fallback={<div className="h-[92px] animate-pulse rounded-lg bg-zinc-900" />}>
+        <PixellabUsage />
+      </Suspense>
       <ServerFilter
         basePath="/admin/profile-gen"
         servers={servers}

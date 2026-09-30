@@ -24,6 +24,11 @@ function envKey(idx: number, env: NodeJS.ProcessEnv): string | undefined {
   return v && v.trim() ? v : undefined;
 }
 
+/** 그 인덱스의 키가 이 배포에 있으면 키, 없으면 null(폴백 없음) — 키별 잔여 사용량 조회처럼 '그 키 자체'가 필요한 곳. */
+export function pixellabKeyIfSet(idx: number, env: NodeJS.ProcessEnv = process.env): string | null {
+  return envKey(idx, env) ?? null;
+}
+
 /** 이 배포에서 쓸 수 있는 키 인덱스(오름차순). key1이 없으면 빈 배열 — 호출부가 'missing'으로 처리. */
 export function configuredPixellabKeyIdxs(env: NodeJS.ProcessEnv = process.env): number[] {
   if (!envKey(1, env)) return [];
