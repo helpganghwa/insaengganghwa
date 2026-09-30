@@ -1081,14 +1081,14 @@ export const TOWER_POOL_PER_SLOT = 10;
 export const TOWER_AVATAR_MULT = 2;
 
 /**
- * 층 요구치 — 구간 계단식(TOWER.md §3). 구간 첫 층 = 11 × 3.1^(구간−1), 구간 안 일반층은 한 층마다 ×1.09로 완만하게,
- * 특별층(10의 배수)은 바로 앞 층의 ×1.45로 가파르게. 특별층이 구간의 벽이 되고, 다음 구간 첫 층은 다시 그 위(×1.07).
+ * 층 요구치 — 구간 계단식(TOWER.md §3). 구간 첫 층 = 60 × 2.613^(구간−1), 구간 안 일반층은 한 층마다 ×1.07로 완만하게,
+ * 특별층(10의 배수)은 바로 앞 층의 ×1.45로 가파르게. 특별층이 구간의 벽이 되고, 다음 구간 첫 층은 다시 그 위(약 ×1.05).
+ * 1층 60 — 실서버 신규 유저 장비 분포 기준(가입 7일 이내 중앙이 첫날 10층 전후에서 막히게, 09-30). 곡선 끝(100층)은 그대로.
  * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 지정 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
- * 1층 11 · 10층 32 · 50층 2,935 · 90층 271,060 · 99층 579,509 · 100층 672,230.
  */
-export const TOWER_REQ_BASE = 11;
-export const TOWER_REQ_SECTION_RATIO = 3.1;
-export const TOWER_REQ_FLOOR_RATIO = 1.09;
+export const TOWER_REQ_BASE = 60;
+export const TOWER_REQ_SECTION_RATIO = 2.613;
+export const TOWER_REQ_FLOOR_RATIO = 1.07;
 export const TOWER_REQ_SPECIAL_MULT = 1.45;
 export const TOWER_REQ_TOP_MULT = 1.16;
 export function towerRequirement(floor: number): number {
