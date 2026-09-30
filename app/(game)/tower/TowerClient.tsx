@@ -55,7 +55,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [busy, setBusy] = useState(false);
   // 방금 끝난 전투의 결과(최고 층·남은 도전)를 먼저 쓴다 — 돌파 뒤 'N층으로'가 서버 재렌더보다 먼저 눌려도 다음 층이 맞게
   // (2차 피드백 9: 7층 돌파 → '8층으로'가 7층 상세로 가던 문제). 새 board가 오면 그 값으로 돌아간다(렌더 중 조정).
-  const [local, setLocal] = useState<{ best: number; attemptsLeft: number } | null>(null);
+  // 도전은 화면을 다시 그리지 않으므로(액션 응답으로 반영) 이 값이 목록·상세의 최신값이다. 다음에 새로 그려진 board는 도전 뒤에 읽은 것이라 그대로 믿는다.
+  const [local, setLocal] = useState<{ best: number; attemptsLeft: number; myRank: number | null } | null>(null);
   const [seenBoard, setSeenBoard] = useState(board);
   if (seenBoard !== board) {
     setSeenBoard(board);
@@ -64,13 +65,16 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const best = Math.max(board.best, local?.best ?? 0);
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeft = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
+  const myRank = local?.myRank ?? board.myRank;
   const next = Math.min(TOWER_FLOORS, best + 1);
   const topped = best >= TOWER_FLOORS;
   const [picked, setPicked] = useState<number | null>(null);
   // 층 상세는 주소(?v=d)로 — 휴대폰 뒤로 가기가 홈이 아니라 목록으로 돌아오게.
   const sp = useSearchParams();
   const view: 'list' | 'detail' = sp.get('v') === 'd' ? 'detail' : 'list';
-  const setView = (v: 'list' | 'detail') => (v === 'detail' ? router.push('/tower?v=d') : router.push('/tower'));
+  // 주소만 바꾼다(history API) — router.push는 같은 페이지를 서버에서 다시 그려(탑 데이터+레이아웃 쿼리) 전환마다 왕복이 생겼다.
+  // Next가 history.pushState를 useSearchParams와 맞춰 주어 휴대폰 뒤로 가기도 그대로 목록으로 돌아온다.
+  const setView = (v: 'list' | 'detail') => window.history.pushState(null, '', v === 'detail' ? '/tower?v=d' : '/tower');
   const [openSection, setOpenSection] = useState(towerSection(next));
   // 돌파로 다음 구간에 들어서면 펼친 구간도 따라간다(렌더 중 조정 — effect 없이).
   const [seenNext, setSeenNext] = useState(next);
@@ -97,7 +101,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   }
   const [msg, setMsg] = useState<string | null>(null);
   const { showError, showHeaderToast } = useResourceToast();
-  const { optimisticAdjust } = useDiamondActions();
+  const { optimisticAdjust, setBase } = useDiamondActions();
   // 돌파 보상 — 전투에서 주지 않고 목록에서 받는다(층별·모두 받기). 누르는 즉시 받은 것으로 보이고, 실패하면 되돌린다.
   const [claimedLocal, setClaimedLocal] = useState<ReadonlySet<number>>(new Set());
   const [claiming, setClaiming] = useState(false);
@@ -119,6 +123,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     optimisticAdjust(BigInt(dia));
     const r = await towerClaimAction(floor).catch(() => null);
     setClaiming(false);
+    // 화면을 다시 그리지 않으므로 헤더 다이아는 서버 잔액으로 맞춘다(낙관 값이 어긋났어도 여기서 정확해진다).
+    if (r?.status === 'success' && r.diamondBalance != null) setBase(BigInt(r.diamondBalance));
     if (!r || r.status !== 'success') {
       optimisticAdjust(BigInt(-dia));
       setClaimedLocal((s) => new Set([...s].filter((f) => !target.includes(f))));
@@ -208,17 +214,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     setMsg(null);
     start(async () => {
       addOptEquip(opt);
-      // 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
-      let failed = false;
-      for (const id of ueids) {
-        const r = await towerEquipAction(id).catch(() => ({ status: 'error' as const, message: '장착하지 못했어요. 잠시 후 다시 시도해 주세요.' }));
-        if (r.status !== 'success') {
-          setMsg(r.message);
-          failed = true;
-          break;
-        }
+      // 여러 개(자동 장착)도 한 번의 요청 — 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
+      const r = await towerEquipAction(ueids).catch(() => ({ status: 'error' as const, message: '장착하지 못했어요. 잠시 후 다시 시도해 주세요.' }));
+      if (r.status !== 'success') {
+        setMsg(r.message);
+        router.refresh();
       }
-      if (failed) router.refresh();
     });
   };
 
@@ -238,7 +239,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       setBattle(null);
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
-    setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft });
+    setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
     setBattle(r.result);
   };
 
@@ -257,7 +258,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         onList={() => {
           setBattle(null);
           setPicked(null);
-          router.replace('/tower');
+          window.history.replaceState(null, '', '/tower');
         }}
         onNext={() => setBattle(null)}
         onRetry={challenge}
@@ -482,7 +483,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             <div className="pb-2 pl-1 drop-shadow-[0_2px_3px_rgba(0,0,0,.9)]">
               <div className="text-[11px] text-zinc-200">최고 도달</div>
               <div className="text-[32px] font-black leading-none">{best}층</div>
-              <div className="mt-1 text-[11px] text-amber-300">{board.myRank ? `서버 ${board.myRank}위` : '아직 기록 없음'}</div>
+              <div className="mt-1 text-[11px] text-amber-300">{myRank ? `서버 ${myRank}위` : '아직 기록 없음'}</div>
             </div>
           )}
         </div>

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { makeErr } from '@/lib/game/action-result';
-import { equipItem, EquipError } from '@/lib/game/equipment/equip';
+import { equipItems, EquipError } from '@/lib/game/equipment/equip';
 import { refreshTowerMetric } from '@/lib/game/leaderboard/incremental';
 import { getActiveServerId } from '@/lib/game/servers';
 import { challengeTower, claimTowerRewards, TowerError, type TowerChallengeResult } from '@/lib/game/tower/service';
@@ -40,7 +40,8 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
     const r: TowerChallengeResult = await challengeTower(u, serverId, Math.floor(Number(floor)), profileId, { idemKey, week });
     // 랭킹 반영(커밋 뒤, 실패해도 도전은 유효 — 매시 스냅샷이 다시 맞춘다).
     if (r.win) await refreshTowerMetric(u, serverId);
-    revalidatePath('/tower');
+    // 화면을 다시 그리지 않는다(CLAUDE §11.7) — 최고 층·남은 도전·순위는 응답(result)으로 화면이 바로 반영하고,
+    // 레이아웃(헤더 다이아·전투력)은 도전으로 바뀌지 않는다. 다른 화면에 갔다 오면 새로 불러온다.
     return { status: 'success' as const, result: r };
   } catch (e) {
     if (e instanceof TowerError) {
@@ -52,15 +53,18 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
   }
 }
 
-/** 탑 화면에서 바로 장착 — 게임 전체 장착과 같다(TOWER.md §2). */
-export async function towerEquipAction(userEquipmentId: string) {
+/** 탑 화면에서 바로 장착 — 게임 전체 장착과 같다(TOWER.md §2). 여러 개(자동 장착)도 한 번의 요청·한 트랜잭션으로. */
+export async function towerEquipAction(userEquipmentIds: string[]) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'tower')) return err('RATE_LIMITED');
   const b = await actionBlock();
   if (b) return err(b);
   try {
-    await equipItem(u, BigInt(userEquipmentId));
+    const ids = [...new Set(userEquipmentIds)].slice(0, 3);
+    if (!ids.length || !ids.every((id) => /^\d+$/.test(id))) return err('NOT_FOUND');
+    await equipItems(u, ids.map((id) => BigInt(id)));
+    // 헤더 전투력(레이아웃)이 장착으로 바뀌므로 여기는 다시 그린다 — 자동 장착도 1번.
     revalidatePath('/tower');
     return { status: 'success' as const };
   } catch (e) {
@@ -80,7 +84,7 @@ export async function towerClaimAction(floor: number | null) {
   try {
     const serverId = await getActiveServerId();
     const r = await claimTowerRewards(u, serverId, floor == null ? null : [Math.floor(Number(floor))]);
-    revalidatePath('/tower');
+    // 다시 그리지 않는다 — 받은 층은 화면이 이미 지웠고, 헤더 다이아는 응답의 잔액(diamondBalance)으로 맞춘다.
     return { status: 'success' as const, ...r };
   } catch (e) {
     console.error('[tower.claim]', e);

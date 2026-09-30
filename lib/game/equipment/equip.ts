@@ -24,49 +24,69 @@ export async function equipItem(userId: string, userEquipmentId: bigint): Promis
   }
 }
 
-function equipItemTx(userId: string, userEquipmentId: bigint): Promise<void> {
-  return db.transaction(async (tx) => {
-    const [equip] = await tx
-      .select({
-        id: userEquipment.id,
-        serverId: userEquipment.serverId,
-        catalogItemId: userEquipment.catalogItemId,
-        slot: catalogItems.slot,
-      })
-      .from(userEquipment)
-      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
-      .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
-      .for('update');
-    if (!equip) throw new EquipError('NOT_FOUND');
+/**
+ * 여러 장비를 한 트랜잭션으로 장착(무한의 탑 자동 장착) — 부위마다 equipItem과 같은 처리, 요청·재렌더 1번.
+ * 같은 부위가 두 번 오면 뒤의 것이 이긴다(앞 것을 해제하고 교체).
+ */
+export async function equipItems(userId: string, userEquipmentIds: bigint[]): Promise<void> {
+  if (!userEquipmentIds.length) return;
+  try {
+    await db.transaction(async (tx) => {
+      for (const id of userEquipmentIds) await equipInTx(tx, userId, id);
+    });
+  } catch (e) {
+    if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
+    throw e;
+  }
+}
 
-    // 같은 슬롯 기존 장착 해제(부분 UNIQUE 충돌 방지) → 대상 장착, 단일 tx.
-    const prev = await tx
-      .update(userEquipment)
-      .set({ equippedSlot: null })
-      .where(
-        and(
-          eq(userEquipment.userId, userId),
-          eq(userEquipment.serverId, equip.serverId),
-          eq(userEquipment.equippedSlot, equip.slot),
-        ),
-      )
-      .returning({ catalogItemId: userEquipment.catalogItemId });
-    await tx
-      .update(userEquipment)
-      .set({ equippedSlot: equip.slot })
-      .where(eq(userEquipment.id, userEquipmentId));
-    // 이력(0176) — 같은 장비 재장착(prev==대상)은 변화가 없으므로 남기지 않는다.
-    const fromId = prev[0]?.catalogItemId ?? null;
-    if (fromId !== equip.catalogItemId) {
-      await tx.insert(equipmentChangeLogs).values({
-        userId,
-        serverId: equip.serverId,
-        slot: equip.slot,
-        fromCatalogItemId: fromId,
-        toCatalogItemId: equip.catalogItemId,
-      });
-    }
-  });
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+function equipItemTx(userId: string, userEquipmentId: bigint): Promise<void> {
+  return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId));
+}
+
+async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint): Promise<void> {
+  const [equip] = await tx
+    .select({
+      id: userEquipment.id,
+      serverId: userEquipment.serverId,
+      catalogItemId: userEquipment.catalogItemId,
+      slot: catalogItems.slot,
+    })
+    .from(userEquipment)
+    .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
+    .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
+    .for('update');
+  if (!equip) throw new EquipError('NOT_FOUND');
+
+  // 같은 슬롯 기존 장착 해제(부분 UNIQUE 충돌 방지) → 대상 장착, 단일 tx.
+  const prev = await tx
+    .update(userEquipment)
+    .set({ equippedSlot: null })
+    .where(
+      and(
+        eq(userEquipment.userId, userId),
+        eq(userEquipment.serverId, equip.serverId),
+        eq(userEquipment.equippedSlot, equip.slot),
+      ),
+    )
+    .returning({ catalogItemId: userEquipment.catalogItemId });
+  await tx
+    .update(userEquipment)
+    .set({ equippedSlot: equip.slot })
+    .where(eq(userEquipment.id, userEquipmentId));
+  // 이력(0176) — 같은 장비 재장착(prev==대상)은 변화가 없으므로 남기지 않는다.
+  const fromId = prev[0]?.catalogItemId ?? null;
+  if (fromId !== equip.catalogItemId) {
+    await tx.insert(equipmentChangeLogs).values({
+      userId,
+      serverId: equip.serverId,
+      slot: equip.slot,
+      fromCatalogItemId: fromId,
+      toCatalogItemId: equip.catalogItemId,
+    });
+  }
 }
 
 export async function unequipItem(userId: string, userEquipmentId: bigint): Promise<void> {

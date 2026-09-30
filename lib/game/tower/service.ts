@@ -96,6 +96,23 @@ export async function towerPools(serverId: number, at: Date = new Date()): Promi
 }
 
 /** pools = 층별 요구 장비(층 → 부위별), specials = 구간별 특별층 지정 장비(구간 → 부위별). */
+/**
+ * 요구 장비 캐시 — 그 주 층별 풀과 특별층 지정 장비는 한 번 박제되면 바뀌지 않아(재추첨 없음) 인스턴스 메모리에 둔다.
+ * 도전마다 풀 조회 2번을 없앤다. 다 뽑힌 상태만 담고(카탈로그 시드 전 등 빈 풀은 다시 읽는다), 주가 바뀌면 키가 달라진다.
+ */
+const poolCache = new Map<string, Awaited<ReturnType<typeof towerPools>>>();
+async function towerPoolsCached(serverId: number) {
+  const key = `${serverId}:${kstWeekStartString()}`;
+  const hit = poolCache.get(key);
+  if (hit) return hit;
+  const v = await towerPools(serverId);
+  if (v.pools.size >= POOL_FLOORS.length && v.specials.size >= Math.ceil(TOWER_FLOORS / TOWER_SECTION)) {
+    if (poolCache.size > 16) poolCache.clear();
+    poolCache.set(key, v);
+  }
+  return v;
+}
+
 export function ruleFor(floor: number, pools: Map<number, SlotKeys>, specials: Map<number, SlotKeys>): FloorRule {
   return floorRule(floor, pools.get(floor) ?? null, specials.get(towerSection(floor)) ?? null);
 }
@@ -216,6 +233,8 @@ export type TowerChallengeResult = {
   /** 서버가 실제로 싸운 탑 전투력·배율(×1 기준 대비) — 전투·실패 화면은 이 값을 그대로 보여 준다. */
   towerCp: number;
   mult: number;
+  /** 이긴 판의 서버 순위(목록 머리 줄) — 진 판·재전송은 null(그대로 둔다). */
+  myRank: number | null;
 };
 
 type BattleRow = { id: string; floor: number; win: boolean; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
@@ -235,53 +254,60 @@ export async function challengeTower(
   opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k } = {},
 ): Promise<TowerChallengeResult> {
   const rng = opts.rng ?? cryptoRng10k;
-  const { pools, specials, week } = await towerPools(serverId);
+  const { pools, specials, week } = await towerPoolsCached(serverId);
   if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
   const idem = opts.idemKey && /^[A-Za-z0-9-]{8,64}$/.test(opts.idemKey) ? opts.idemKey : null;
+  // 왕복 최소화(CLAUDE §11.4): ① 캐릭터 확인+진행도 생성+행 잠금 ② (재전송 확인) ③ 아바타+장착 ④ 진행도 갱신+전투 저장(+이기면 순위).
   return db.transaction(async (tx) => {
-    const ch = (await tx.execute(sql`select 1 from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as unknown[];
-    if (!ch.length) throw new TowerError('NO_CHARACTER');
-    await tx.execute(sql`insert into tower_progress (user_id, server_id) values (${userId}::uuid, ${serverId}) on conflict do nothing`);
+    // ① 캐릭터가 있을 때만 진행도 행을 만들고, 있든 없든 do update로 행을 잠근 채 돌려받는다(없으면 캐릭터 없음).
     const [p] = (await tx.execute(sql`
-      select best_floor, loss_day::text as loss_day, losses from tower_progress
-      where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
-    const best = Number(p!.best_floor);
+      insert into tower_progress (user_id, server_id)
+      select ${userId}::uuid, ${serverId} where exists (select 1 from characters where user_id=${userId}::uuid and server_id=${serverId})
+      on conflict (user_id, server_id) do update set server_id = excluded.server_id
+      returning best_floor, loss_day::text as loss_day, losses`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
+    if (!p) throw new TowerError('NO_CHARACTER');
+    const best = Number(p.best_floor);
     if (idem) {
-      // 행 락 뒤에 찾으므로 같은 키의 동시 요청도 앞선 결과를 본다.
+      // ② 행 잠금 뒤 새 문장으로 찾아야 같은 키의 동시 요청도 앞선 결과를 본다(같은 문장에 넣으면 잠금 전 스냅샷이라 못 본다).
       const [prev] = (await tx.execute(sql`
         select id::text as id, floor, win, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
         from tower_battles where user_id=${userId}::uuid and idem_key=${idem}`)) as unknown as BattleRow[];
       if (prev) {
-        const left = attemptsLeft(p!.loss_day, Number(p!.losses));
+        const left = attemptsLeft(p.loss_day, Number(p.losses));
         return {
           battleId: prev.id, floor: Number(prev.floor), win: prev.win, keyIndex: Number(prev.key_turn), turns: prev.turns,
           reward: prev.reward, attemptsLeft: left, best, towerCp: Number(prev.tower_cp),
-          mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1,
+          mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1, myRank: null,
         };
       }
     }
     if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
     if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
-    const left = attemptsLeft(p!.loss_day, Number(p!.losses));
+    const left = attemptsLeft(p.loss_day, Number(p.losses));
     if (left <= 0) throw new TowerError('NO_ATTEMPTS');
 
+    // ③ 고른 아바타 + 장착 장비(활성만 — 화면(towerBoard)과 같은 기준, 퇴역 장비는 요구 장비가 될 수 없다).
+    const [g] = (await tx.execute(sql`
+      select
+        ${profileId ? sql`(select json_build_object('snap', equipment_snapshot, 'isDefault', coalesce((options->>'isDefault')::boolean, false))
+          from user_profiles where id=${profileId}::uuid and user_id=${userId}::uuid and server_id=${serverId})` : sql`null`} as avatar,
+        coalesce((select json_agg(e) from (
+          select ci.code as key, ci.slot::text as slot, ue.enhance_level as level, ue.transcend_level as transcend
+          from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+          where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ue.equipped_slot is not null and ci.active) e), '[]'::json) as eq`)) as unknown as {
+      avatar: { snap: unknown; isDefault: boolean } | null;
+      eq: { key: string; slot: TowerSlot; level: number; transcend: number }[];
+    }[];
     let keys = new Set<string>();
     if (profileId) {
-      const [a] = (await tx.execute(sql`
-        select equipment_snapshot, coalesce((options->>'isDefault')::boolean, false) as is_default
-        from user_profiles where id=${profileId}::uuid and user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { equipment_snapshot: unknown; is_default: boolean }[];
-      if (!a) throw new TowerError('BAD_AVATAR');
-      if (!a.is_default && a.equipment_snapshot && typeof a.equipment_snapshot === 'object') {
-        const s = a.equipment_snapshot as Record<string, unknown>;
+      if (!g!.avatar) throw new TowerError('BAD_AVATAR');
+      const snap = g!.avatar.snap;
+      if (!g!.avatar.isDefault && snap && typeof snap === 'object') {
+        const s = snap as Record<string, unknown>;
         keys = new Set(['weaponKey', 'armorKey', 'accessoryKey'].map((k) => s[k]).filter((v): v is string => typeof v === 'string'));
       }
     }
-    // 활성 장비만 — 화면(towerBoard)과 같은 기준. 퇴역 장비는 요구 장비가 될 수 없다.
-    const eqRows = (await tx.execute(sql`
-      select ci.code as key, ci.slot::text as slot, ue.enhance_level as level, ue.transcend_level as transcend
-      from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-      where ue.user_id=${userId}::uuid and ue.server_id=${serverId} and ue.equipped_slot is not null and ci.active`)) as unknown as { key: string; slot: TowerSlot; level: number; transcend: number }[];
-    const eq: EquippedPiece[] = eqRows.map((r) => ({ slot: r.slot, key: r.key, cp: pieceCombatPower(Number(r.level), Number(r.transcend)) }));
+    const eq: EquippedPiece[] = g!.eq.map((r) => ({ slot: r.slot, key: r.key, cp: pieceCombatPower(Number(r.level), Number(r.transcend)) }));
     const rule = ruleFor(floor, pools, specials);
     const cp = towerCp(eq, rule, keys);
     const base = towerCp(eq, rule, new Set()).total;
@@ -290,31 +316,38 @@ export async function challengeTower(
     const req = towerRequirement(floor);
     const battle = simulateTowerBattle({ towerCp: cp.total, requirement: req, doubledCount: cp.doubledCount, rng });
 
-    let reward: { diamond: number; boxes: number } | null = null;
-    let newLeft = left;
-    if (battle.win) {
-      reward = towerReward(floor);
-      await tx.execute(sql`
-        update tower_progress set best_floor=${floor}, best_at=now(), last_profile_id=${profileId}::uuid, updated_at=now()
-        where user_id=${userId}::uuid and server_id=${serverId}`);
-    } else {
-      const today = kstDateString();
-      await tx.execute(sql`
-        update tower_progress set
-          losses = case when loss_day = ${today}::date then losses + 1 else 1 end,
-          loss_day = ${today}::date, last_profile_id=${profileId}::uuid, updated_at=now()
-        where user_id=${userId}::uuid and server_id=${serverId}`);
-      newLeft = left - 1;
-    }
+    const reward: { diamond: number; boxes: number } | null = battle.win ? towerReward(floor) : null;
+    const today = kstDateString();
     const pieces = cp.pieces.map((x, i) => (i === 0 ? { ...x, base } : x));
+    // ④ 진행도 갱신과 전투 저장을 한 문장으로(데이터 변경 CTE).
     const [row] = (await tx.execute(sql`
+      with up as (
+        update tower_progress set
+          ${battle.win
+            ? sql`best_floor=${floor}, best_at=now(),`
+            : sql`losses = case when loss_day = ${today}::date then losses + 1 else 1 end, loss_day = ${today}::date,`}
+          last_profile_id=${profileId}::uuid, updated_at=now()
+        where user_id=${userId}::uuid and server_id=${serverId}
+      )
       insert into tower_battles (user_id, server_id, floor, win, tower_cp, requirement, profile_id, pieces, turns, key_turn, reward, idem_key)
       values (${userId}::uuid, ${serverId}, ${floor}, ${battle.win}, ${cp.total}, ${req}, ${profileId}::uuid,
               ${JSON.stringify(pieces)}::jsonb, ${JSON.stringify(battle.turns)}::jsonb, ${battle.keyIndex}, ${reward ? JSON.stringify(reward) : null}::jsonb, ${idem})
       returning id::text as id`)) as unknown as { id: string }[];
+    // 이긴 판만 — 목록 머리 줄의 서버 순위를 액션 응답에 실어 준다(화면을 다시 그리지 않아도 맞게). towerBoard my_rank와 같은 기준.
+    let myRank: number | null = null;
+    if (battle.win) {
+      const [rk] = (await tx.execute(sql`
+        with me as (select best_floor, best_at from tower_progress where user_id=${userId}::uuid and server_id=${serverId})
+        select (count(*) + 1)::int as r from tower_progress t join profiles pr on pr.id = t.user_id, me
+        where t.server_id=${serverId} and ${NOT_BANNED}
+          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
+            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))`)) as unknown as { r: number }[];
+      myRank = rk ? Number(rk.r) : null;
+    }
     return {
       battleId: row!.id, floor, win: battle.win, keyIndex: battle.keyIndex, turns: battle.turns, reward,
-      attemptsLeft: newLeft, best: battle.win ? floor : best, towerCp: cp.total, mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1,
+      attemptsLeft: battle.win ? left : left - 1, best: battle.win ? floor : best, towerCp: cp.total,
+      mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1, myRank,
     };
   });
 }
@@ -323,7 +356,7 @@ export async function challengeTower(
  * 돌파 보상 받기 — floors = 받을 층(null이면 받을 수 있는 층 전부). 진행도 행을 잠그고 돌파한 층(best_floor 이하)만,
  * tower_claims에 넣은 층만 지급한다(기본 키 충돌 = 이미 받음 → 건너뜀, 이중 수령 없음). 다이아는 한 번에 합쳐 원장 1줄.
  */
-export async function claimTowerRewards(userId: string, serverId: number, floors: number[] | null): Promise<{ floors: number[]; diamond: number; boxes: number }> {
+export async function claimTowerRewards(userId: string, serverId: number, floors: number[] | null): Promise<{ floors: number[]; diamond: number; boxes: number; diamondBalance: string | null }> {
   return db.transaction(async (tx) => {
     const [p] = (await tx.execute(sql`
       select best_floor from tower_progress where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { best_floor: number }[];
@@ -331,7 +364,7 @@ export async function claimTowerRewards(userId: string, serverId: number, floors
     const want = floors === null
       ? Array.from({ length: best }, (_, i) => i + 1)
       : [...new Set(floors.map((f) => Math.floor(Number(f))))].filter((f) => f >= 1 && f <= best);
-    if (!want.length) return { floors: [], diamond: 0, boxes: 0 };
+    if (!want.length) return { floors: [], diamond: 0, boxes: 0, diamondBalance: null };
     const got = (await tx.execute(sql`
       insert into tower_claims (user_id, server_id, floor)
       select ${userId}::uuid, ${serverId}, f from unnest(${sql`array[${sql.join(want.map((f) => sql`${f}`), sql`, `)}]::int[]`}) f
@@ -354,7 +387,9 @@ export async function claimTowerRewards(userId: string, serverId: number, floors
           on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${per}`);
       }
     }
-    return { floors: done, diamond, boxes };
+    // 받은 뒤 잔액 — 화면이 다시 그리지 않고 헤더 다이아를 이 값으로 맞춘다(bigint는 문자열로).
+    const [bal] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
+    return { floors: done, diamond, boxes, diamondBalance: bal?.d ?? null };
   });
 }
 
