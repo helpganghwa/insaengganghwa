@@ -124,6 +124,9 @@ export async function towerBoard(userId: string, serverId: number) {
     )
     select
       (select row_to_json(me) from me) as prog,
+      (select nickname from characters where user_id=${userId}::uuid and server_id=${serverId}) as nickname,
+      (select json_build_object('name', g.name, 'emblemUrl', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id
+        where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1) as guild,
       coalesce((select json_agg(o) from (
         select ue.id::text as ueid, ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level,
                ue.transcend_level as transcend, ue.equipped_slot is not null as equipped, ci.active
@@ -146,6 +149,8 @@ export async function towerBoard(userId: string, serverId: number) {
       coalesce((select json_agg(f order by f) from me, generate_series(1, me.best_floor) f
         where not exists (select 1 from tower_claims c where c.user_id=${userId}::uuid and c.server_id=${serverId} and c.floor = f)), '[]'::json) as unclaimed`)) as unknown as {
     prog: { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null } | null;
+    nickname: string | null;
+    guild: { name: string; emblemUrl: string | null } | null;
     owned: { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[];
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
     catalog: { code: string; slot: TowerSlot; name: string }[];
@@ -183,6 +188,9 @@ export async function towerBoard(userId: string, serverId: number) {
     best,
     attemptsLeft: attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0)),
     lastProfileId: p?.last_profile_id ?? null,
+    /** 무대 위 내 이름(대난투처럼 닉네임·길드). */
+    nickname: r.nickname ?? '',
+    guild: r.guild ?? null,
     items,
     avatars: av,
     pools: Object.fromEntries(pools) as Record<number, SlotKeys>,

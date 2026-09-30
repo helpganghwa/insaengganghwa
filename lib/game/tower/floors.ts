@@ -8,6 +8,9 @@ import type { TowerBattleEvent, TowerTurn } from './battle';
 
 export type MonsterKind = 'beast' | 'undead' | 'mage' | 'guardian';
 
+/** 몬스터 특성 표시(무대 위 이름 아래). 수문장 스킬이 붙으면 여기에 더한다. */
+export const TOWER_KIND_KO: Record<MonsterKind, string> = { beast: '야수', undead: '망자', mage: '술사', guardian: '수문장' };
+
 /** 구간마다 1~9층 + 특별층(10번째) 이름. kind는 그림(몬스터 스프라이트)과 서술 결을 정한다. */
 const SECTIONS: { theme: string; mons: [string, MonsterKind][] }[] = [
   { theme: '잿빛 회랑', mons: [['잿빛 늑대', 'beast'], ['녹슨 해골병', 'undead'], ['떠돌이 주술사', 'mage'], ['굶주린 늑대 무리', 'beast'], ['무덤을 지키는 해골', 'undead'], ['견습 마법사', 'mage'], ['은빛 갈기 늑대', 'beast'], ['해골 창병', 'undead'], ['촛불 마녀', 'mage'], ['회랑의 수문장', 'guardian']] },
