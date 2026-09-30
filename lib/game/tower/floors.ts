@@ -87,14 +87,14 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
   ] },
   { theme: '바랜 왕궁', mons: [
     ['금박 쥐', '떨어진 금박 조각을 망토처럼 두른 쥐.', []],
-    ['금화 슬라임', '금화 여러 닢이 박힌 말랑한 황금빛 슬라임.', []],
+    ['찻주전자 미믹', '금테 두른 도자기 찻주전자가 뚜껑을 들썩이며 이빨을 드러낸다.', []],
     ['보물상자 미믹', '금테 두른 상자가 뚜껑을 열자 이빨이 드러난다.', []],
     ['흡혈 박쥐', '붉은 눈의 커다란 왕궁 박쥐.', ['drain']],
     ['보석 새끼용', '제 몸보다 큰 보석을 끌어안고 다니는 작은 새끼 용.', []],
     ['상아 코끼리', '금박 덮개를 두른 상아빛 코끼리, 긴 코를 치켜들고 있다.', ['awe']],
     ['황금 구미호', '금빛 꼬리 아홉 개를 부채처럼 펼친 여우.', []],
     ['황금 표범', '금빛 반점이 박힌 날렵한 표범.', ['multi']],
-    ['갑주 군마', '금박이 벗겨진 갑주를 두른 말.', ['steel']],
+    ['룩 골렘', '체스판의 성 모양 말이 돌 몸으로 걸어 다닌다.', ['steel']],
     ['옥좌 사자', '등에 부서진 옥좌를 짊어진 거대한 황금 사자.', ['awe', 'drain']],
   ] },
   { theme: '가라앉은 신전', mons: [
@@ -171,7 +171,7 @@ export type TowerFloorInfo = {
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
-const ART_SECTIONS = new Set([1, 2, 3, 4, 5, 6]);
+const ART_SECTIONS = new Set([1, 2, 3, 4, 5, 6, 7]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
