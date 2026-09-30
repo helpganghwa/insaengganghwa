@@ -70,8 +70,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeft = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const myRank = local?.myRank ?? board.myRank;
-  // 연속 돌파 수(목록으로 나가면 0).
-  const [streak, setStreak] = useState(0);
   const next = Math.min(TOWER_FLOORS, best + 1);
   const topped = best >= TOWER_FLOORS;
   const [picked, setPicked] = useState<number | null>(null);
@@ -257,8 +255,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
-    // 연속 돌파(목록으로 나가지 않고 이어서) — 다시 그리지 않고 여기서.
-    setStreak(r.result.win ? streak + 1 : 0);
     setBattle(r.result);
   };
 
@@ -274,9 +270,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         attemptsBefore={attemptsLeft}
         avatarSouth={avatar?.south ?? null}
         retrying={busy}
-        streak={streak}
         onList={() => {
-          setStreak(0);
           setBattle(null);
           setPicked(null);
           window.history.replaceState(null, '', '/tower');
