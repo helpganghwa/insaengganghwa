@@ -65,6 +65,9 @@ html {
   --animate-hit-flash: hit-flash 0.32s ease-out forwards;
   --animate-crit-flash: crit-flash 0.5s ease-out forwards;
   --animate-dmg-float: dmg-float 0.8s ease-out forwards;
+  /* 무한의 탑 — 공격한 쪽이 짧게 튀었다 제자리로(자리는 고정, 레이아웃에 영향 없음). */
+  --animate-lunge-r: lunge-r 0.36s ease-out;
+  --animate-lunge-l: lunge-l 0.36s ease-out;
   --animate-phase-up: phase-up 0.6s ease-out;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
@@ -246,6 +249,14 @@ html {
     0% { opacity: 0; transform: translate(-50%, 0) scale(0.85); }
     20% { opacity: 1; transform: translate(-50%, -8px) scale(1.1); }
     100% { opacity: 0; transform: translate(-50%, -64px) scale(1); }
+  }
+  @keyframes lunge-r {
+    0%, 100% { transform: translateX(0); }
+    40% { transform: translateX(10px); }
+  }
+  @keyframes lunge-l {
+    0%, 100% { transform: translateX(0); }
+    40% { transform: translateX(-10px); }
   }
   @keyframes phase-up {
     0% { transform: scale(1); filter: brightness(1); }

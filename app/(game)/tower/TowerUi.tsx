@@ -32,20 +32,20 @@ export function rewardText(floor: number) {
 export function AttemptsChip({ left }: { left: number }) {
   return (
     <span className="rounded-full border border-[rgba(168,145,107,.28)] bg-black/45 px-2.5 py-0.5 text-[11px] tabular-nums text-zinc-200">
-      오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-amber-300'}>{left}</b>
+      오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-zinc-50'}>{left}</b>
       <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
     </span>
   );
 }
 
-/** 층 머리 줄 — 'N층 · 장소 (· 특별층)'. 목록 층 카드·층 화면 무대 위가 같은 모양. */
+/** 층 머리 줄 — 'N층 · 장소 (· 특별층)'. 목록 층 카드·층 화면 무대 위가 같은 모양. 색 역할: 머리 줄은 회색, 특별층 표시만 빨강. */
 export function FloorKicker({ floor, info, extra }: { floor: number; info: TowerFloorInfo; extra?: React.ReactNode }) {
   const sp = towerIsSpecial(floor);
   return (
-    <span className="min-w-0 truncate text-[10.5px] font-black text-amber-300">
-      {sp ? '✦ ' : ''}
+    <span className="min-w-0 truncate text-[10.5px] font-bold text-zinc-300">
+      {sp ? <span className="text-red-300">✦ </span> : null}
       {floor}층 · {info.theme}
-      {sp ? ' · 특별층' : ''}
+      {sp ? <span className="text-red-300"> · 특별층</span> : null}
       {extra ? <> · {extra}</> : null}
     </span>
   );
