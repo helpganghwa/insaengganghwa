@@ -430,14 +430,14 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   return (
     // 배경은 화면 자체의 배경으로(2차 피드백 3) — 종전의 760px 절대 배치 배경이 내용보다 길어 쓸데없는 스크롤을 만들었다.
     <main
-      className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain bg-zinc-950 bg-cover bg-top text-zinc-100"
+      className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-zinc-950 bg-cover bg-top text-zinc-100"
       style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }}
     >
-      <div className="flex flex-1 flex-col px-3 pb-3">
-        {/* 헤더는 스크롤해도 위에 고정 — 아래 그림·카드 위로 지나가도 읽히게 반투명 바탕. */}
-        <div className="sticky top-0 z-20 -mx-3 bg-zinc-950/75 px-3 pt-1.5 pb-1 backdrop-blur-sm">
-          <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
-        </div>
+      {/* 헤더는 스크롤 영역 밖에 고정(바탕 투명) — 내용만 그 아래에서 스크롤된다. */}
+      <div className="flex-none px-3 pt-1.5 pb-1">
+        <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3">
 
         {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
         <div className="relative mt-2 flex h-[200px] flex-col justify-end">

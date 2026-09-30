@@ -247,9 +247,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
               <>
-                <b className="text-[13px] text-emerald-300">돌파</b>
-                <div>{floor < TOWER_FLOORS ? `${nextFloor}층의 문이 열렸다. 다음 상대는 ${towerFloorInfo(nextFloor).name}.` : '지금 열린 가장 높은 층까지 올랐다.'}</div>
-                <div className="text-zinc-400">오늘 도전 <Left left={left} /> 그대로</div>
+                <b className="block text-[13px] text-emerald-300">돌파</b>
                 {result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
