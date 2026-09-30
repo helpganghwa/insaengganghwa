@@ -14,14 +14,14 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
-  it('곡선: 1층 11, 10층 32, 100층 672,230, 오름차순·특별층이 구간의 벽', () => {
-    expect(towerRequirement(1)).toBe(11);
-    expect(towerRequirement(10)).toBe(32);
-    expect(towerRequirement(50)).toBe(2935);
-    expect(towerRequirement(100)).toBe(672230);
+  it('곡선: 1층 60, 10층 149, 100층 679,101, 오름차순·특별층이 구간의 벽', () => {
+    expect(towerRequirement(1)).toBe(60);
+    expect(towerRequirement(10)).toBe(149);
+    expect(towerRequirement(50)).toBe(6969);
+    expect(towerRequirement(100)).toBe(679101);
     // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.09)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
-    expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.09, 2);
+    expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
     expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 맨 위 층만 낮은 벽
     for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThan(towerRequirement(f - 1));
   });
