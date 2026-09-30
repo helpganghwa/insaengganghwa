@@ -103,9 +103,9 @@
   "mons": [
    {
     "floor": 11,
-    "name": "은빛 좀벌레",
-    "desc": "책장 사이를 기어 다니는 손바닥만 한 은빛 좀벌레.",
-    "art": "single large silver silverfish insect with long antennae",
+    "name": "잉크 슬라임",
+    "desc": "엎질러진 잉크병에서 흘러나온 검푸른 슬라임, 머리에 깃펜 하나가 꽂혀 있다.",
+    "art": "round dark blue-black ink slime with a single feather quill stuck in its top, two dot eyes, glossy opaque body, no legs",
     "guardian": false,
     "skills": []
    },
@@ -121,7 +121,7 @@
     "floor": 13,
     "name": "책 미믹",
     "desc": "덮인 표지 사이로 이빨과 혀를 내민 두꺼운 책.",
-    "art": "thick old closed book monster with sharp teeth and a tongue between its covers",
+    "art": "thick old closed book monster with sharp teeth and a tongue between its covers, floating book, no legs, no feet, no limbs",
     "guardian": false,
     "skills": []
    },
@@ -622,7 +622,7 @@
     "floor": 63,
     "name": "보물상자 미믹",
     "desc": "금테 두른 상자가 뚜껑을 열자 이빨이 드러난다.",
-    "art": "gold-trimmed treasure chest mimic with sharp teeth and a tongue",
+    "art": "gold-trimmed treasure chest mimic with sharp teeth and a tongue, no legs, no feet",
     "guardian": false,
     "skills": []
    },
@@ -869,7 +869,7 @@
     "floor": 87,
     "name": "괘종시계 미믹",
     "desc": "문짝이 열리며 이빨이 드러나는 키 큰 괘종시계.",
-    "art": "tall grandfather clock mimic with teeth behind its door",
+    "art": "tall grandfather clock mimic with teeth behind its door, no legs, no feet",
     "guardian": false,
     "skills": [
      "stop"

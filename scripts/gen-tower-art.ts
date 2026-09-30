@@ -20,6 +20,8 @@ const force = args.includes('--force');
 const floorsArg = args.find((a) => a.startsWith('--floors='))?.slice(9);
 const onlyFloors = floorsArg ? new Set(floorsArg.split(',').map(Number)) : null;
 const tag = args.find((a) => a.startsWith('--tag='))?.slice(6) ?? '';
+// 동시에 만들 몬스터 수(--lanes=4). 429는 call()이 물러났다 다시 시도한다.
+const lanes = Math.max(1, Math.min(6, Number(args.find((a) => a.startsWith('--lanes='))?.slice(8) ?? 4)));
 
 type Mon = { floor: number; name: string; desc: string; art: string; guardian: boolean };
 type Sec = { theme: string; palette: string[]; mons: Mon[] };
@@ -30,11 +32,28 @@ if (!S) throw new Error('구간 번호 1~10');
 // 구간별 배경 주문문(외형만) — 1단계 테마 설정의 재질·색.
 const BG: Record<number, string> = {
   1: 'interior of an ancient grey stone corridor inside a great tower, weathered stone walls and worn flagstone floor, arched stone ceiling, rows of rusted iron candle holders with hardened dripping wax and small warm candle flames, faded tattered grey banners on the walls, soft dust in the air',
+  2: 'interior of an old tower library hall covered in frost, tall wooden bookshelves with frosted old books, thin ice on the stone floor, frozen reading desks, pale cold light from a high arched window, scattered faded paper',
+  3: 'interior of an old blacksmith forge inside a tower, cooling furnaces with dim embers, anvils and hanging iron tools, rust and soot on stone walls, faint orange glow, worn stone floor',
+  4: 'interior of a ruined glass greenhouse garden inside a tower, broken glass panes in iron frames, overgrown moss and dry vines, pale white flowers, soft mist over mossy stone paths',
+  5: 'open stone terrace high on a tower under an overcast sky, stone balustrade, drifting clouds and wind-blown banners, pale grey lilac sky, worn flagstones',
+  6: 'interior of an old observatory room at the top of a tower, large brass telescope and armillary instruments, star charts on the walls, open dome showing a deep navy starry sky',
+  7: 'interior of a faded royal throne hall inside a tower, ivory marble floor, tall pillars with peeling gold leaf, faded red curtains, dim chandeliers',
+  8: 'interior of a sunken temple inside a tower half flooded with murky teal water, broken stone pillars with faded coral growing on them, shafts of dim light through the water surface',
+  9: 'interior of a stopped clock tower, huge bronze gears and clock mechanisms, a giant clock face seen from behind, dust in the air, wooden beams and stone walls',
+  10: 'sanctuary above the clouds at the top of a tower, white marble floor and pillars, pale gold ornaments, soft sunlight, sea of clouds below and bright sky',
 };
 const PALETTE_WORDS: Record<number, string> = {
   1: 'muted desaturated palette of warm grey, taupe and dim amber candlelight',
+  2: 'muted desaturated palette of frosty blue grey and faded paper beige',
+  3: 'muted desaturated palette of soot black, rust brown and dim ember orange',
+  4: 'muted desaturated palette of moss green, dry vine brown and misty white',
+  5: 'muted desaturated palette of overcast grey and pale ash lilac',
+  6: 'muted desaturated palette of deep navy and faded brass',
+  7: 'muted desaturated palette of ivory, faded gold and dull crimson',
+  8: 'muted desaturated palette of murky teal and faded coral',
+  9: 'muted desaturated palette of aged bronze, dusty brown and warm grey',
+  10: 'muted palette of pearl white, pale gold and soft sky blue',
 };
-
 const STYLE_MON =
   'pixel art game monster sprite, full body, three-quarter view facing right, clean readable silhouette, refined elegant detailed pixel art, muted desaturated colors, no text';
 // 전체이용가 톤(09-30 1구간 검수): 사실적인 동물 그림은 징그럽고, 너무 단순하게 하면 디테일이 죽는다 —
@@ -43,7 +62,7 @@ const STYLE_FRIENDLY =
   'fantasy game monster, slightly stylized and exaggerated proportions, expressive eyes, detailed pixel art rendering with rich texture and shading, not photorealistic, not creepy, all-ages';
 // 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀).
 const STURDY_LEGS = 'sturdy legs instead of thin spindly legs';
-const STYLE_BG = 'pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge';
+const STYLE_BG = 'symmetrical composition, centered front view, pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge, full bleed, no white borders, no vignette, no fade to white at the edges';
 
 const outDir = join('scripts/tower-art/out/v3', `sec${String(sec).padStart(2, '0')}`);
 mkdirSync(outDir, { recursive: true });
@@ -107,13 +126,13 @@ const pal = PALETTE_WORDS[sec] ?? 'muted desaturated palette';
 const tasks: Promise<void>[] = [];
 if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${pal}, ${STYLE_BG}`, 400, 240, false));
 if (only.includes('mons')) {
-  // 두 줄로 나눠 동시에 2개씩(429 여유).
+  // lanes줄로 나눠 동시에 lanes개씩.
   const mons = S.mons.filter((m) => !onlyFloors || onlyFloors.has(m.floor));
-  for (const lane of [mons.filter((_, i) => i % 2 === 0), mons.filter((_, i) => i % 2 === 1)]) {
+  for (const lane of Array.from({ length: lanes }, (_, k) => mons.filter((_, i) => i % lanes === k))) {
     tasks.push((async () => {
       for (const m of lane) {
         const size = m.guardian ? 160 : 128;
-        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|snake|serpent|eel|slime|fish|whale|jelly/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
+        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
       }
     })());
   }
