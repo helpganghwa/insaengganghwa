@@ -35,7 +35,7 @@ const BG: Record<number, string> = {
   2: 'interior of an old tower library hall covered in frost, tall wooden bookshelves with frosted old books, thin ice on the stone floor, frozen reading desks, pale cold light from a high arched window, scattered faded paper',
   3: 'interior of an old blacksmith forge inside a tower, cooling furnaces with dim embers, anvils and hanging iron tools, rust and soot on stone walls, faint orange glow, worn stone floor',
   4: 'interior of a ruined glass greenhouse garden inside a tower, broken glass panes in iron frames, overgrown moss and dry vines, pale white flowers, soft mist over mossy stone paths',
-  5: 'open stone terrace high on a tower under an overcast sky, stone balustrade, drifting clouds and wind-blown banners, pale grey lilac sky, worn flagstones',
+  5: 'a stone balcony terrace built into the side of a tall round tower, the curved tower wall with a large arched doorway rising behind, stone balustrade in front opening to an overcast sky with drifting clouds far below, wind-blown banners on the tower wall, pale grey lilac sky, worn flagstones',
   6: 'interior of an old observatory room at the top of a tower, large brass telescope and armillary instruments, star charts on the walls, open dome showing a deep navy starry sky',
   7: 'interior of a faded royal throne hall inside a tower, ivory marble floor, tall pillars with peeling gold leaf, faded red curtains, dim chandeliers',
   8: 'interior of a sunken temple inside a tower half flooded with murky teal water, broken stone pillars with faded coral growing on them, shafts of dim light through the water surface',
