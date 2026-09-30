@@ -397,21 +397,39 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             const p = cpNow.pieces.find((x) => x.slot === s);
             const it = p ? items.find((i) => i.equipped && i.slot === s) : undefined;
             return (
-              <button key={s} type="button" onClick={() => openPool(next, s)} className={`flex w-full items-center gap-2.5 py-1.5 text-left ${FLOOR_ROW}`}>
-                <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${p?.mult === 2 ? 'border-amber-500/80 bg-amber-950/50' : p?.mult === 0 ? 'border-zinc-800 bg-zinc-900 opacity-50' : 'border-zinc-700 bg-zinc-900'}`}>
+              // 적용 상태를 한눈에 — ×2(아바타와 같은 요구 장비) 금색 줄·칩, ×1(요구 장비) 초록 칩, ×0(이 층 요구 장비 아님) 흐리게·빨간 칩.
+              <button
+                key={s}
+                type="button"
+                onClick={() => openPool(next, s)}
+                className={`-mx-4 flex w-[calc(100%+2rem)] items-center gap-2.5 border-l-2 py-1.5 pr-4 pl-3.5 text-left ${FLOOR_ROW} ${
+                  p?.mult === 2 ? 'border-l-amber-400 bg-amber-500/10' : p?.mult === 1 ? 'border-l-emerald-500/70' : 'border-l-red-500/60 bg-red-950/15'
+                }`}
+              >
+                <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${p?.mult === 2 ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : p?.mult === 0 ? 'border-zinc-800 bg-zinc-900 opacity-40 grayscale' : 'border-emerald-700/70 bg-zinc-900'}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {p ? <img src={itemSrc(s, p.key)} alt="" className="h-7 w-7" style={PIX} /> : null}
                 </span>
-                <span className="min-w-0 flex-1 leading-tight">
+                <span className={`min-w-0 flex-1 leading-tight ${p?.mult === 0 || !p ? 'opacity-60' : ''}`}>
                   <span className="block truncate text-[12px] text-zinc-100">
                     {p ? (board.catalog[p.key]?.name ?? p.key) : <span className="text-zinc-500">{SLOT_KO[s]} 없음</span>}
                     {it ? <span className="text-zinc-500"> +{it.level}{it.transcend ? ` · 초월 ${it.transcend}` : ''}</span> : null}
                   </span>
-                  <span className={`text-[10.5px] ${p?.mult === 2 ? 'text-amber-300/90' : p?.mult === 0 ? 'text-red-300/90' : 'text-zinc-500'}`}>
-                    {SLOT_KO[s]} · {!p ? '장착 없음' : p.mult === 2 ? '×2 아바타와 같은 요구 장비' : p.mult === 1 ? '×1 요구 장비' : '×0 이 층 요구 장비 아님'}
+                  <span className="mt-0.5 flex items-center gap-1 text-[10.5px] text-zinc-500">
+                    <span
+                      className={`rounded px-1 text-[9.5px] leading-[1.5] font-black ${
+                        p?.mult === 2 ? 'bg-amber-400 text-amber-950' : p?.mult === 1 ? 'bg-emerald-600/80 text-emerald-50' : 'border border-red-500/60 text-red-300'
+                      }`}
+                    >
+                      {!p ? '없음' : p.mult === 2 ? '×2 아바타' : p.mult === 1 ? '×1 적용' : '×0 미적용'}
+                    </span>
+                    {SLOT_KO[s]}
+                    {p?.mult === 0 ? ' · 이 층 요구 장비 아님' : null}
                   </span>
                 </span>
-                <b className={`flex-none text-[12.5px] tabular-nums ${p?.mult === 2 ? 'text-amber-300' : p?.mult === 0 ? 'text-zinc-600' : 'text-zinc-200'}`}>{p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}</b>
+                <b className={`flex-none tabular-nums ${p?.mult === 2 ? 'text-[13px] text-amber-300' : p?.mult === 0 || !p ? 'text-[12px] text-red-300/80' : 'text-[12.5px] text-zinc-100'}`}>
+                  {p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}
+                </b>
               </button>
             );
           })}

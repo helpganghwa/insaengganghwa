@@ -81,7 +81,8 @@ export function simulateTowerBattle(opts: {
   let revived = false;
   const roll = (bp: number) => rng() < bp;
   const u = () => TOWER_DMG_MIN + (rng() / 9999) * (TOWER_DMG_MAX - TOWER_DMG_MIN);
-  // 한 번 피해(변수 전) — 공격자 전투력 × U. 변수 배율과 남은 체력 상한은 쓰는 쪽에서.
+  // 한 번 피해(변수 전) — 공격자 전투력 × U, 변수 배율은 쓰는 쪽에서. 남은 체력으로 자르지 않는다 — 마지막 일격도 실제 피해 그대로
+  // 보여 준다(전투력 차이가 크면 최대 체력보다 큰 숫자). 체력은 기록할 때 0 아래로 내려가지 않는다(승패 판정은 같다).
   const myRaw = () => myCp * u();
   const monRaw = () => monCp * u();
   const round = (x: number) => Math.round(x);
@@ -96,12 +97,12 @@ export function simulateTowerBattle(opts: {
     if (roll(B.missBp)) return push(turn, 'me', 0, 'miss');
     const crit = roll(B.critBp);
     const raw = myRaw();
-    const dmg = Math.min(raw * (crit ? B.critMul : 1), mon);
+    const dmg = raw * (crit ? B.critMul : 1);
     mon -= dmg;
     push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null, crit ? raw : undefined);
     if (mon > 0 && opts.doubledCount >= 3 && roll(B.resonanceBp)) {
       const raw2 = myRaw();
-      const extra = Math.min(raw2 * B.resonanceMul, mon);
+      const extra = raw2 * B.resonanceMul;
       mon -= extra;
       push(turn, 'me', extra, 'resonance', raw2);
     }
@@ -113,7 +114,7 @@ export function simulateTowerBattle(opts: {
     }
     if (roll(B.missBp)) return push(turn, 'mon', 0, 'miss');
     const raw = monRaw();
-    const dmg = Math.min(raw * (enraged ? B.enrageMul : 1), me);
+    const dmg = raw * (enraged ? B.enrageMul : 1);
     me -= dmg;
     if (me <= 0 && !revived && roll(B.reviveBp)) {
       revived = true;
@@ -124,7 +125,7 @@ export function simulateTowerBattle(opts: {
     }
     if (me > 0 && mon > 0 && roll(B.counterBp)) {
       const raw2 = myRaw();
-      const c = Math.min(raw2 * B.counterMul, mon);
+      const c = raw2 * B.counterMul;
       mon -= c;
       push(turn, 'me', c, 'counter', raw2);
     }

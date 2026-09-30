@@ -117,10 +117,11 @@ describe('전투', () => {
     expect(hi).toBe(200);
     expect(lo).toBe(0);
   });
-  it('피해는 남은 체력을 넘지 않는다(전투력 차이가 커도)', () => {
+  it('피해는 자르지 않고 실제 값 그대로(전투력 차이가 크면 상대 최대 체력보다 큼), 체력은 0 아래로 내려가지 않는다', () => {
     const r = simulateTowerBattle({ towerCp: 96242, requirement: 15, doubledCount: 2, rng: rngOf(3) });
     expect(r.win).toBe(true);
-    for (const t of r.turns) expect(t.damage).toBeLessThanOrEqual(15 * TOWER_HP_MULT);
+    expect(Math.max(...r.turns.map((t) => t.damage))).toBeGreaterThan(15 * TOWER_HP_MULT);
+    for (const t of r.turns) expect(Math.min(t.meHp, t.monHp)).toBeGreaterThanOrEqual(0);
   });
   it('체력 = 전투력 × 배수 — 비슷한 상대와는 여러 턴(평균 6~12턴)', () => {
     const first = simulateTowerBattle({ towerCp: 1000, requirement: 1000, doubledCount: 0, rng: rngOf(5) }).turns[0]!;
