@@ -10,7 +10,8 @@ import {
   towerRequirement,
   towerReward,
 } from '@/lib/game/balance';
-import { TOWER_BATTLE } from '@/lib/game/tower/battle';
+import { TOWER_BATTLE, type TowerSkill } from '@/lib/game/tower/battle';
+import { TOWER_SKILL_INFO } from '@/lib/game/tower/floors';
 
 import type { WikiDocMeta } from '../registry';
 import { bpPct } from '../fmt';
@@ -26,6 +27,7 @@ export const meta: WikiDocMeta = {
     { id: 'gear', label: '요구 장비' },
     { id: 'power', label: '탑 전투력' },
     { id: 'battle', label: '전투' },
+    { id: 'skill', label: '몬스터 스킬' },
     { id: 'floor', label: '층 주인 전투력' },
     { id: 'reward', label: '돌파 보상' },
     { id: 'ranking', label: '순위' },
@@ -114,6 +116,19 @@ export default function Doc() {
           ],
           ['기사회생', `내가 쓰러질 때 한 번 ${bpPct(TOWER_BATTLE.reviveBp)} 확률로 체력 1로 버팀`],
         ]}
+      />
+
+      <H2 id="skill">몬스터 스킬</H2>
+      <UL>
+        <LI>11층부터 일부 층 주인이 스킬을 쓴다. 구간마다 새 스킬이 하나씩 나오고, 그 구간 수문장(10층마다)도 같은 스킬을 쓴다.</LI>
+        <LI>수문장은 위로 갈수록 스킬이 늘어 100층 수문장은 네 개를 쓴다.</LI>
+        <LI>스킬이 있는 층은 층 주인 전투력이 같아도 다른 층보다 넘기 어렵다.</LI>
+        <LI>층 화면에서 층 주인 이름 아래 스킬을 누르면 설명이 나온다.</LI>
+      </UL>
+      <Tbl
+        firstColNowrap
+        head={['스킬', '내용']}
+        rows={(Object.keys(TOWER_SKILL_INFO) as TowerSkill[]).map((k) => [`${TOWER_SKILL_INFO[k].icon} ${TOWER_SKILL_INFO[k].name}`, TOWER_SKILL_INFO[k].desc])}
       />
 
       <H2 id="floor">층 주인 전투력</H2>

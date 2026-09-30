@@ -1,83 +1,230 @@
 /**
- * 무한의 탑 층 데이터 — 몬스터 이름·장면·서술·전투 문장(docs/TOWER.md §7·§9).
- * 클라이언트에서도 쓰는 순수 모듈(서버 전용 값 없음). 그림은 시안용 4종을 돌려 쓰고 이름만 층마다 다르다.
+ * 무한의 탑 층 데이터 — 몬스터 이름·설명·스킬·장면(docs/TOWER.md §4·§7·§9).
+ * 클라이언트에서도 쓰는 순수 모듈(서버 전용 값 없음). 정본 목록은 scripts/tower-art/monsters.json(그림 주문문 포함)이고,
+ * 여기엔 화면·전투에 쓰는 이름·설명·스킬만 옮겨 둔다. 그림은 층별 그림이 나오기 전까지 시안용 4종을 돌려 쓴다.
  */
 import { josa } from 'josa';
 
-import type { TowerBattleEvent, TowerTurn } from './battle';
+import { TOWER_SKILL, type TowerBattleEvent, type TowerSkill, type TowerTurn } from './battle';
 
-export type MonsterKind = 'beast' | 'undead' | 'mage' | 'guardian';
-
-/** 몬스터 특성 표시(무대 위 이름 아래). 수문장 스킬이 붙으면 여기에 더한다. */
-export const TOWER_KIND_KO: Record<MonsterKind, string> = { beast: '야수', undead: '망자', mage: '술사', guardian: '수문장' };
-
-/** 구간마다 1~9층 + 특별층(10번째) 이름. kind는 그림(몬스터 스프라이트)과 서술 결을 정한다. */
-const SECTIONS: { theme: string; mons: [string, MonsterKind][] }[] = [
-  { theme: '잿빛 회랑', mons: [['잿빛 늑대', 'beast'], ['녹슨 해골병', 'undead'], ['떠돌이 주술사', 'mage'], ['굶주린 늑대 무리', 'beast'], ['무덤을 지키는 해골', 'undead'], ['견습 마법사', 'mage'], ['은빛 갈기 늑대', 'beast'], ['해골 창병', 'undead'], ['촛불 마녀', 'mage'], ['회랑의 수문장', 'guardian']] },
-  { theme: '푸른 수정실', mons: [['수정 늑대', 'beast'], ['수정에 갇힌 기사', 'undead'], ['서리 점술사', 'mage'], ['푸른 송곳니 무리', 'beast'], ['얼어붙은 파수병', 'undead'], ['수정 주술사', 'mage'], ['달빛 늑대', 'beast'], ['빙결 해골 궁수', 'undead'], ['수정의 대마법사', 'mage'], ['수정 수문장', 'guardian']] },
-  { theme: '타오르는 대장간', mons: [['들불 늑대', 'beast'], ['재가 된 병사', 'undead'], ['불씨 술사', 'mage'], ['화염 갈기 무리', 'beast'], ['타버린 창병', 'undead'], ['잿불 마녀', 'mage'], ['용암 늑대', 'beast'], ['숯검정 해골', 'undead'], ['화염의 대주술사', 'mage'], ['불꽃 수문장', 'guardian']] },
-  { theme: '안개 낀 수렁', mons: [['안개 늑대', 'beast'], ['늪의 망자', 'undead'], ['독초 주술사', 'mage'], ['안개 속 무리', 'beast'], ['이끼 낀 해골', 'undead'], ['늪지 마녀', 'mage'], ['그림자 늑대', 'beast'], ['수렁의 창병', 'undead'], ['안개의 대마녀', 'mage'], ['수렁 수문장', 'guardian']] },
-  { theme: '폭풍의 테라스', mons: [['폭풍 늑대', 'beast'], ['번개 맞은 기사', 'undead'], ['뇌운 술사', 'mage'], ['천둥 갈기 무리', 'beast'], ['폭풍 해골병', 'undead'], ['벼락 마녀', 'mage'], ['구름 늑대왕', 'beast'], ['천둥 창병', 'undead'], ['폭풍의 현자', 'mage'], ['폭풍 수문장', 'guardian']] },
-  { theme: '별빛 관측소', mons: [['별빛 늑대', 'beast'], ['별을 잃은 기사', 'undead'], ['성좌 점술사', 'mage'], ['유성 무리', 'beast'], ['별가루 해골', 'undead'], ['혜성 늑대', 'beast'], ['어둠 마법사', 'mage'], ['은하 창병', 'undead'], ['성운의 대마녀', 'mage'], ['수문장 골렘', 'guardian']] },
-  { theme: '황금 왕궁', mons: [['황금 늑대', 'beast'], ['왕궁 근위 해골', 'undead'], ['궁정 마술사', 'mage'], ['금빛 갈기 무리', 'beast'], ['옥좌의 망자', 'undead'], ['연금술사', 'mage'], ['사자 갈기 늑대', 'beast'], ['황금 창병', 'undead'], ['대연금술사', 'mage'], ['황금 수문장', 'guardian']] },
-  { theme: '가라앉은 신전', mons: [['심연 늑대', 'beast'], ['심해의 망자', 'undead'], ['파도 주술사', 'mage'], ['해일 무리', 'beast'], ['산호 해골', 'undead'], ['조수 마녀', 'mage'], ['바다 늑대왕', 'beast'], ['심연 창병', 'undead'], ['심연의 예언자', 'mage'], ['심연 수문장', 'guardian']] },
-  { theme: '멈춘 시계탑', mons: [['태초의 늑대', 'beast'], ['잊힌 왕의 기사', 'undead'], ['시간 술사', 'mage'], ['영겁의 무리', 'beast'], ['먼지가 된 해골', 'undead'], ['시계탑 마녀', 'mage'], ['달을 삼킨 늑대', 'beast'], ['영원의 창병', 'undead'], ['시간의 대현자', 'mage'], ['영겁의 수문장', 'guardian']] },
-  { theme: '구름 위 첨탑', mons: [['하늘 늑대', 'beast'], ['탑의 첫 번째 기사', 'undead'], ['빛의 주술사', 'mage'], ['구름 위 무리', 'beast'], ['빛바랜 성기사', 'undead'], ['새벽 마녀', 'mage'], ['천공의 늑대왕', 'beast'], ['탑을 지킨 창병', 'undead'], ['탑의 대현자', 'mage'], ['무한의 수문장', 'guardian']] },
+/**
+ * 구간마다 1~9층 + 수문장(10번째) — [이름, 설명(생김새), 스킬].
+ * 스킬 배치: 1~9층 없음, 11층부터 구간마다 새 스킬 하나를 일반층 몇 마리가 먼저 쓰고 수문장이 같은 스킬로 문을 지킨다.
+ * 수문장 스킬은 1개(10·20층) → 4개(100층), 즉사는 100층에만. 요구치는 보정하지 않아 스킬 층이 그만큼 어렵다(TOWER.md §4).
+ */
+const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
+  { theme: '잿빛 회랑', mons: [
+    ['먼지쥐', '꼬리 끝에 굳은 촛농을 매단 채 돌 틈을 오가는 회색 쥐.', []],
+    ['촛불 박쥐', '날개 끝에 작은 불씨를 달고 회랑 천장을 맴도는 박쥐.', []],
+    ['촛농 슬라임', '녹은 촛농이 뭉쳐 생긴 말랑한 슬라임, 머리에 심지 하나가 타고 있다.', []],
+    ['돌틈 거미', '등껍질이 회랑 돌과 같은 무늬라 가만히 있으면 보이지 않는 거미.', []],
+    ['회랑 도마뱀', '벽을 타고 오르내리는 잿빛 도마뱀, 꼬리가 몸보다 길다.', []],
+    ['돌비늘 뱀', '비늘이 작은 돌 조각처럼 겹쳐 난 굵은 뱀.', []],
+    ['깨진 가고일', '뿔 하나가 부러진 작은 돌 가고일, 날개를 반쯤 편 채 웅크렸다.', []],
+    ['회랑 사냥개', '해진 가죽 목줄을 찬 마른 회색 사냥개.', []],
+    ['조각난 골렘', '떨어져 나간 벽돌을 이어 붙여 만든 작은 돌 골렘.', []],
+    ['돌사자 수호상', '금 간 틈으로 희미한 빛이 새어 나오는 거대한 돌사자.', ['steel']],
+  ] },
+  { theme: '서리 내린 서고', mons: [
+    ['은빛 좀벌레', '책장 사이를 기어 다니는 손바닥만 한 은빛 좀벌레.', []],
+    ['서고 올빼미', '깃털 끝이 하얗게 언 커다란 회색 올빼미.', []],
+    ['책 미믹', '덮인 표지 사이로 이빨과 혀를 내민 두꺼운 책.', []],
+    ['서리 족제비', '눈 쌓인 서가 위를 달리는 흰 족제비.', []],
+    ['서리 여우', '꼬리 끝이 얼어붙은 은회색 여우.', ['freeze']],
+    ['얼음 박쥐', '날개막에 성에가 낀 푸른 박쥐.', []],
+    ['서리 늑대', '갈기에 고드름이 맺힌 회청색 늑대.', ['freeze']],
+    ['책장 미믹', '문을 열면 이빨이 줄지어 드러나는 작은 책장.', []],
+    ['얼음 가고일', '온몸에 서리가 앉은 가고일, 날개 끝이 얼음으로 굳었다.', ['freeze']],
+    ['서리 드레이크', '등에 얼음 가시가 돋은 날개 없는 용.', ['freeze']],
+  ] },
+  { theme: '잿불 대장간', mons: [
+    ['숯 도롱뇽', '등에서 잿불이 깜빡이는 새까만 도롱뇽.', ['burn']],
+    ['불씨 나방', '날개에 식어 가는 불씨 무늬가 있는 나방.', []],
+    ['쇳물 슬라임', '식다 만 쇳물로 된 슬라임, 겉은 검고 속은 붉다.', ['burn']],
+    ['풀무 두꺼비', '몸이 가죽 풀무처럼 부풀었다 꺼지는 두꺼비.', []],
+    ['녹 사냥개', '녹슨 철판을 덧대어 기운 기계 사냥개.', []],
+    ['쇠 전갈', '집게가 대장간 집게처럼 생긴 쇠 전갈.', []],
+    ['모루 거북', '등껍질이 모루인 느린 거북.', ['steel']],
+    ['잿불 뱀', '비늘 틈마다 잿불이 남은 검은 뱀.', []],
+    ['용광로 황소', '배 속에 잿불이 이글거리는 쇠 황소.', []],
+    ['용광로 골렘', '가슴에 용광로를 품은 거대한 쇠 골렘.', ['burn', 'steel']],
+  ] },
+  { theme: '안개 정원', mons: [
+    ['이끼 토끼', '등에 이끼가 소복이 자란 토끼.', []],
+    ['가시 고슴도치', '가시 대신 마른 덩굴 가시가 돋은 고슴도치.', []],
+    ['버섯 괴물', '넓은 갓 아래 작은 두 발로 걷는 버섯.', ['regen']],
+    ['덩굴 뱀', '초록 덩굴이 엉켜 뱀이 되었다, 머리에 흰 꽃 한 송이.', []],
+    ['이끼 달팽이', '이끼 덮인 껍데기를 이고 다니는 커다란 달팽이.', []],
+    ['식인 꽃', '커다란 꽃잎 속에 이빨이 줄지어 난 꽃.', []],
+    ['가시 멧돼지', '등에 가시덩굴이 돋은 멧돼지.', ['steel']],
+    ['이끼 곰', '온몸이 두꺼운 이끼로 덮인 곰.', ['regen']],
+    ['덩굴 사슴', '뿔이 마른 덩굴과 흰 꽃으로 된 사슴.', []],
+    ['고목 거북', '등에 오래된 나무 한 그루가 자란 거대한 거북.', ['regen', 'steel']],
+  ] },
+  { theme: '바람 테라스', mons: [
+    ['돌풍 제비', '꼬리깃이 칼날처럼 갈라진 잿빛 제비.', ['multi']],
+    ['번개 족제비', '털끝에 잔 번개가 튀는 족제비.', ['multi']],
+    ['코카트리스', '수탉 머리에 뱀 꼬리를 단 괴물, 볏이 붉다.', []],
+    ['폭풍 산양', '굽은 뿔에 바람이 휘감긴 산양.', []],
+    ['바람 사냥개', '털이 바람결대로 흩날리는 날렵한 사냥개.', []],
+    ['깃털 뱀', '잿빛 깃털로 덮인 날개 달린 뱀.', []],
+    ['폭풍 매', '발톱 둘레에 잔 번개가 도는 커다란 매.', ['multi']],
+    ['와이번', '두 다리와 날개가 달린 잿빛 비룡.', []],
+    ['바람 그리핀', '잿빛 라일락색 날개의 그리핀.', []],
+    ['폭풍 천마', '구름을 발굽에 감고 달리는 날개 달린 말.', ['multi', 'freeze']],
+  ] },
+  { theme: '별 관측소', mons: [
+    ['별나방', '짙은 남색 날개에 별점 무늬가 박힌 나방.', []],
+    ['황동 부엉이', '렌즈 눈을 단 황동 태엽 부엉이.', ['reflect']],
+    ['밤하늘 고양이', '검은 털 속에 작은 별이 반짝이는 고양이.', []],
+    ['혜성 여우', '꼬리가 혜성처럼 길게 빛나는 여우.', []],
+    ['황동 거미', '관측 기구에서 떨어져 나온 황동 기계 거미.', ['reflect']],
+    ['별빛 가오리', '지느러미에 별자리가 새겨진 채 허공을 헤엄치는 가오리.', []],
+    ['운석 거북', '등껍질이 거친 운석인 거북.', ['steel']],
+    ['성좌 늑대', '털에 별자리 선이 흐르는 늑대.', ['multi']],
+    ['별빛 그리핀', '깃털 끝에 별가루가 묻은 남색 그리핀.', []],
+    ['별빛 키메라', '사자·염소·뱀 머리가 함께 달린 남색 키메라.', ['reflect', 'multi']],
+  ] },
+  { theme: '바랜 왕궁', mons: [
+    ['금박 쥐', '떨어진 금박 조각을 망토처럼 두른 쥐.', []],
+    ['보석 딱정벌레', '등에 바랜 보석이 박힌 딱정벌레.', []],
+    ['보물상자 미믹', '금테 두른 상자가 뚜껑을 열자 이빨이 드러난다.', []],
+    ['흡혈 박쥐', '붉은 눈의 커다란 왕궁 박쥐.', ['drain']],
+    ['왕관 두꺼비', '작은 왕관을 쓴 통통한 두꺼비.', []],
+    ['황금 공작', '금박 판으로 된 꼬리 깃을 부채처럼 펼친 공작.', ['awe']],
+    ['황금 코브라', '목을 넓게 펼친 금빛 비늘 코브라.', []],
+    ['황금 표범', '금빛 반점이 박힌 날렵한 표범.', ['multi']],
+    ['갑주 군마', '금박이 벗겨진 갑주를 두른 말.', ['steel']],
+    ['옥좌 사자', '등에 부서진 옥좌를 짊어진 거대한 황금 사자.', ['awe', 'drain']],
+  ] },
+  { theme: '가라앉은 신전', mons: [
+    ['산호 게', '등에 바랜 산호가 자란 게.', []],
+    ['가시 복어', '잔뜩 부풀어 가시를 세운 복어.', ['reflect']],
+    ['종 소라게', '신전 종을 껍데기 삼아 쓴 소라게.', []],
+    ['심해 뱀장어', '기둥을 휘감은 긴 뱀장어.', ['seal']],
+    ['진주 조개', '입을 벌리면 진주가 빛나는 거대한 조개.', ['steel']],
+    ['등불 아귀', '이마의 등불로 어둠을 비추는 아귀.', ['awe']],
+    ['사당 거북', '등에 작은 사당을 이고 다니는 바다거북.', []],
+    ['산호 바다뱀', '산호 가시가 돋은 바다뱀.', ['drain']],
+    ['신전 해마', '투구 같은 머리를 한 커다란 해마.', []],
+    ['심연의 크라켄', '촉수에 신전 기둥 조각을 감은 크라켄.', ['seal', 'drain', 'multi']],
+  ] },
+  { theme: '멈춘 시계탑', mons: [
+    ['태엽 쥐', '등에 작은 태엽 열쇠가 꽂힌 쥐.', []],
+    ['청동 박쥐', '날개뼈가 청동 막대로 된 박쥐.', ['drain']],
+    ['톱니 딱정벌레', '등껍질이 맞물린 톱니바퀴인 딱정벌레.', ['steel']],
+    ['모래시계 거미', '몸통이 모래시계인 거미.', ['stop']],
+    ['톱니 사냥개', '청동 톱니바퀴로 짜 맞춘 사냥개.', []],
+    ['청동 올빼미', '두 눈이 시계판인 청동 올빼미.', ['reflect']],
+    ['괘종시계 미믹', '문짝이 열리며 이빨이 드러나는 키 큰 괘종시계.', ['stop']],
+    ['태엽 전갈', '꼬리 끝이 시곗바늘인 청동 전갈.', ['multi']],
+    ['청동 황소', '가슴에 멈춘 시계판을 단 청동 황소.', []],
+    ['태엽 용', '등에 거대한 톱니바퀴를 단 청동 용.', ['stop', 'steel', 'reflect']],
+  ] },
+  { theme: '구름 위 성소', mons: [
+    ['구름 양', '털이 뭉게구름인 양.', []],
+    ['날개 고양이', '등에 작은 흰 날개가 달린 고양이.', []],
+    ['은빛 늑대', '달빛처럼 흰 털의 늑대.', ['awe']],
+    ['진주 학', '깃털이 진주빛으로 빛나는 학.', ['rebirth']],
+    ['진주 비늘 뱀', '진주빛 비늘의 긴 뱀.', []],
+    ['빛의 사슴', '뿔에서 옅은 빛이 흘러내리는 하얀 사슴.', ['regen']],
+    ['구름 고래', '구름 사이를 헤엄치는 하얀 고래.', ['steel']],
+    ['성소 사자', '날개 달린 하얀 사자.', ['multi']],
+    ['성소 기린', '진주빛 비늘과 옅은 금 갈기의 기린.', ['rebirth']],
+    ['여섯 날개 백룡', '여섯 날개를 펼친 진주빛 용.', ['death', 'rebirth', 'regen', 'freeze']],
+  ] },
 ];
 
-const SPRITE: Record<MonsterKind, string> = { beast: 'wolves', undead: 'skeleton', mage: 'sorcerer', guardian: 'golem' };
+/** 스킬 표시·설명 — 무대 라벨(이모지+이름)과 설명 팝업. 설명의 수치는 battle.ts TOWER_SKILL에서 읽는다. */
+const K = TOWER_SKILL;
+export const TOWER_SKILL_INFO: Record<TowerSkill, { icon: string; name: string; desc: string }> = {
+  steel: { icon: '🛡', name: '강철 피부', desc: `전투 시작 후 내 공격 ${K.steel.hits}번은 피해가 절반` },
+  freeze: { icon: '❄', name: '빙결', desc: `공격이 맞으면 ${K.freeze.bp / 100}% 확률로 나를 ${K.freeze.minTurns}~${K.freeze.maxTurns}턴 얼림(그동안 공격 못 함)` },
+  burn: { icon: '🔥', name: '화상', desc: `맞으면 ${K.burn.turns}턴 동안 내 차례마다 체력이 ${K.burn.pct}%씩 탄다` },
+  drain: { icon: '🩸', name: '흡혈', desc: `준 피해의 ${K.drain.pct}%만큼 체력을 회복` },
+  multi: { icon: '⚡', name: '연속 공격', desc: `공격 뒤 ${K.multi.bp / 100}% 확률로 한 번 더 공격(피해 ×${K.multi.mul})` },
+  reflect: { icon: '🪞', name: '반사', desc: `내 급소 피해의 ${K.reflect.pct}%가 나에게 되돌아옴` },
+  regen: { icon: '🌿', name: '재생', desc: `차례마다 체력을 ${K.regen.pct}%씩 회복` },
+  seal: { icon: '⛓', name: '봉인', desc: '내 급소·공명·반격이 발동하지 않음' },
+  stop: { icon: '⏳', name: '시간 정지', desc: `체력 ${K.stop.at}% 아래에서 처음 맞힐 때 한 번, ${K.stop.turns}턴 동안 나만 멈춤` },
+  death: { icon: '💀', name: '즉사', desc: `공격할 때 ${K.death.bp / 100}% 확률로 내 체력을 0으로(기사회생으로 버틸 수 있음)` },
+  rebirth: { icon: '✨', name: '부활', desc: `쓰러질 때 한 번 체력 ${K.rebirth.pct}%로 다시 일어남` },
+  awe: { icon: '👁', name: '위압', desc: `전투 시작 ${K.awe.turns}턴 동안 내 피해 ×${K.awe.mul}` },
+};
 
 export type TowerFloorInfo = {
   floor: number;
   name: string;
-  kind: MonsterKind;
   /** 구간 이름(장면 제목 줄). */
   theme: string;
-  /** /sprites/tower/mon/<sprite>.png */
+  /** 수문장(구간 10번째 층). */
+  guardian: boolean;
+  /** 몬스터 스킬(0~4개). */
+  skills: TowerSkill[];
+  /** /sprites/tower/mon/<sprite>.png — 층별 그림이 나오기 전 시안용 4종. */
   sprite: string;
-  /** /sprites/tower/scene/<scene>.png — 특별층은 왕좌, 그 밖은 구간마다 번갈아. */
+  /** /sprites/tower/scene/<scene>.png — 수문장 층은 왕좌, 그 밖은 구간마다 번갈아. */
   scene: string;
+  /** 생김새 한 줄 — 대기 화면 해설. */
   line: string;
 };
 
-const LINES: Record<MonsterKind, string[]> = {
-  beast: ['낮은 으르렁거림이 계단 아래까지 울린다.', '번뜩이는 눈이 어둠 속에서 하나둘 늘어난다.', '발톱이 돌바닥을 긁는 소리가 가까워진다.'],
-  undead: ['녹슨 갑옷이 삐걱이며 몸을 일으킨다.', '텅 빈 눈구멍이 천천히 이쪽을 향한다.', '뼈마디가 부딪치는 소리가 복도를 채운다.'],
-  mage: ['지팡이 끝에 푸른 불꽃이 피어오른다.', '낮은 주문이 벽을 타고 흘러내린다.', '허공에 빛나는 문양이 하나둘 떠오른다.'],
-  guardian: ['거대한 문 앞에서 수문장이 천천히 눈을 뜬다.', '바닥이 울리며 수문장이 한 걸음 내딛는다.'],
-};
+const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
-  const s = SECTIONS[Math.min(SECTIONS.length - 1, Math.floor((floor - 1) / 10))]!;
-  const [name, kind] = s.mons[(floor - 1) % 10]!;
-  const lines = LINES[kind];
-  const section = Math.floor((floor - 1) / 10);
+  const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
+  const s = SECTIONS[section]!;
+  const [name, desc, skills] = s.mons[(Math.max(1, floor) - 1) % 10]!;
+  const guardian = floor % 10 === 0;
   return {
     floor,
     name,
-    kind,
     theme: s.theme,
-    sprite: SPRITE[kind],
-    scene: kind === 'guardian' ? 'throne' : section % 2 === 0 ? 'hall' : 'crystal',
-    line: lines[floor % lines.length]!,
+    guardian,
+    skills,
+    sprite: guardian ? 'golem' : PLACEHOLDER[floor % PLACEHOLDER.length]!,
+    scene: guardian ? 'throne' : section % 2 === 0 ? 'hall' : 'crystal',
+    line: desc,
   };
 }
 
-/** 턴 한 줄 서술 — 재생 화면·실패 팝업 "결정적인 순간". 이름 뒤 조사는 josa로. */
+/** 층 몬스터 스킬 — 서버 전투 판정용(towerFloorInfo와 같은 표). */
+export function towerFloorSkills(floor: number): TowerSkill[] {
+  return towerFloorInfo(floor).skills;
+}
+
+/** 턴 한 줄 서술 — 재생 중 무대 아래 해설. 몬스터 스킬이 붙은 줄은 스킬 장면을 먼저. 이름 뒤 조사는 josa로. */
 export function towerTurnLine(t: TowerTurn, monName: string): string {
   const ev: TowerBattleEvent | null = t.event;
+  const sk = new Set(t.skills ?? []);
   if (t.actor === 'me') {
+    if (sk.has('freeze') && ev === 'skill') return '몸이 얼어붙어 움직이지 못한다.';
+    if (sk.has('stop') && ev === 'skill') return '시간이 멈춰 움직이지 못한다.';
     if (ev === 'miss') return '휘두른 칼끝이 허공을 가른다.';
     if (ev === 'critical') return `${monName}의 빈틈을 정확히 꿰뚫었다.`;
     if (ev === 'resonance') return '아바타와 장비가 함께 울리며 한 번 더 몰아친다.';
     if (ev === 'counter') return '막아 낸 틈을 타 되받아쳤다.';
+    if (sk.has('steel')) return '단단한 몸에 막혀 힘이 절반만 들어갔다.';
+    if (sk.has('awe')) return josa(`${monName}의 기세에 눌려 힘이 실리지 않는다.`);
     if (ev === 'first_strike') return '먼저 거리를 좁혀 첫 일격을 넣었다.';
     return josa(`${monName}#{을} 몰아붙였다.`);
   }
+  if (ev === 'revive') return '쓰러지기 직전, 다시 일어섰다.';
+  if (ev === 'skill') {
+    if (sk.has('regen')) return `${monName}의 상처가 조금씩 아문다.`;
+    if (sk.has('burn')) return '화상으로 몸이 타들어 간다.';
+    if (sk.has('reflect')) return '급소를 찌른 충격이 그대로 되돌아왔다.';
+    if (sk.has('rebirth')) return josa(`쓰러졌던 ${monName}#{이} 다시 일어섰다.`);
+    if (sk.has('death')) return josa(`${monName}의 일격이 숨통을 노린다.`);
+    if (sk.has('multi')) return josa(`${monName}#{이} 한 번 더 몰아친다.`);
+  }
+  if (sk.has('freeze')) return '차가운 일격에 몸이 얼어붙었다.';
+  if (sk.has('stop')) return josa(`${monName}#{이} 시간을 멈췄다.`);
+  if (sk.has('burn')) return '불붙은 일격에 몸이 타오른다.';
+  if (sk.has('drain')) return josa(`${monName}#{이} 피를 빨아 상처를 메운다.`);
   if (ev === 'miss') return `${monName}의 공격이 빗나갔다.`;
   if (ev === 'first_strike') return josa(`${monName}#{이} 먼저 달려든다.`);
   if (ev === 'enrage') return josa(`궁지에 몰린 ${monName}#{이} 광폭해졌다.`);
-  if (ev === 'revive') return '쓰러지기 직전, 다시 일어섰다.';
   return `${monName}의 공격을 받았다.`;
 }
 
@@ -85,14 +232,3 @@ export function towerTurnLine(t: TowerTurn, monName: string): string {
 export function towerResultLine(win: boolean, monName: string, turns: number): string {
   return win ? josa(`${turns}턴 만에 ${monName}#{이} 쓰러졌다.`) : josa(`${monName}#{을} 넘지 못하고 물러났다.`);
 }
-
-/** 변수 태그 라벨·색(재생 화면). */
-export const TOWER_EVENT_TAG: Record<TowerBattleEvent, { label: string; cls: string }> = {
-  first_strike: { label: '선제', cls: 'bg-orange-900 text-orange-200' },
-  critical: { label: '급소', cls: 'bg-amber-900 text-amber-200' },
-  miss: { label: '빗나감', cls: 'bg-zinc-800 text-zinc-400' },
-  counter: { label: '반격', cls: 'bg-purple-950 text-purple-200' },
-  enrage: { label: '광폭화', cls: 'bg-red-900 text-red-200' },
-  resonance: { label: '공명', cls: 'bg-sky-950 text-sky-200' },
-  revive: { label: '기사회생', cls: 'bg-emerald-950 text-emerald-200' },
-};
