@@ -17,14 +17,15 @@ function useGoBack(fallback: string): () => void {
 }
 
 /** A안 — 반투명 유리 원형 ‹ 버튼(몰입형: /u·레이드 전투). 위치는 호출부 className으로 지정. */
-export function BackFab({ fallback = '/', className = '' }: { fallback?: string; className?: string }) {
+export function BackFab({ fallback = '/', className = '', onClick, disabled }: { fallback?: string; className?: string; onClick?: () => void; disabled?: boolean }) {
   const goBack = useGoBack(fallback);
   return (
     <button
       type="button"
-      onClick={goBack}
+      onClick={onClick ?? goBack}
+      disabled={disabled}
       aria-label="뒤로가기"
-      className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl font-bold leading-none text-white backdrop-blur-sm active:bg-black/60 ${className}`}
+      className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl font-bold leading-none text-white backdrop-blur-sm active:bg-black/60 disabled:opacity-30 ${className}`}
     >
       ‹
     </button>

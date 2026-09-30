@@ -9,17 +9,27 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
-import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerFloorHeader, TowerStage } from './TowerBattle';
-import { ActionBar, AttemptsChip, FloorKicker, PANEL, PIX, PrimaryButton, SecondaryButton, n, pageBg, rewardText } from './TowerUi';
+import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerStage } from './TowerBattle';
+import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const itemSrc = (slot: TowerSlot, key: string) => assetUrl(`/sprites/${slot}/${key}.png`);
+
+/** 오늘 남은 도전 — 'N/3', 다 쓰면 N(0)만 빨간색. */
+function Attempts({ left }: { left: number }) {
+  return (
+    <span className="tabular-nums">
+      오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-amber-300'}>{left}</b>
+      <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
+    </span>
+  );
+}
 
 /** 착용 가능 장비의 층 — 요구 장비는 층마다 다르다(1~9층은 모든 장비). 특별층은 지정 장비만 ×2. */
 function rangeText(floor: number): string {
@@ -270,7 +280,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               subtitle={
                 <>
                   {rangeText(pf)}
-                  {towerSection(pf) === 1 && !towerIsSpecial(pf) ? '' : <span suppressHydrationWarning> · {renewText(board.week)}</span>} · 탑 전투력 <b className="text-amber-300">{n(cpNow.total)}</b>
+                  {towerSection(pf) === 1 && !towerIsSpecial(pf) ? '' : <span suppressHydrationWarning> · {renewText(board.week)}</span>} · 전투력 <b className="text-amber-300">{n(cpNow.total)}</b>
                 </>
               }
               bodyPad="sm"
@@ -293,7 +303,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           <ModalShell onClose={() => setSheet(null)} label="선택 아바타">
             <ModalLayout
               title="선택 아바타"
-              subtitle="지금 장착한 장비로 싸울 때 · 탑 전투력 높은 순"
+              subtitle="지금 장착한 장비로 싸울 때 · 전투력 높은 순"
               bodyPad="sm"
               maxBodyClass="max-h-[56vh]"
               footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
@@ -317,7 +327,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       {/* 배율(×2.00) 대신 맞는 장비 수 — 배율은 장비마다 붙는 것이라 아바타 쪽 숫자가 전체에 곱해지는 것처럼 읽혔다. */}
                       <span className="flex-none text-right leading-tight">
                         <b className={`block text-[13px] tabular-nums ${a.now.doubledCount > 0 ? 'text-sky-300' : 'text-zinc-400'}`}>맞는 장비 {a.now.doubledCount}/3</b>
-                        <span className="text-[10.5px] tabular-nums text-zinc-300">탑 전투력 <b className="text-amber-300">{n(a.now.total)}</b></span>
+                        <span className="text-[10.5px] tabular-nums text-zinc-300">전투력 <b className="text-amber-300">{n(a.now.total)}</b></span>
                       </span>
                     </button>
                   );
@@ -330,86 +340,71 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   );
 
   // ── 층 화면(상세) ─────────────────────────────────────────
-  // 전투와 같은 헤더·무대 패널 — 도전하면 이 자리에서 그대로 싸운다(장비 패널 자리에 턴 기록).
+  // 전투와 같은 무대 — 도전하면 이 자리에서 그대로 싸운다(장비 자리에 턴 기록).
   if (view === 'detail' && !topped) {
     const info = towerFloorInfo(next);
     const sec = towerSection(next);
     const special = towerIsSpecial(next);
     const allGear = sec === 1 && !special; // 1~9층 — 모든 장비
     const counts = poolCounts(board, items, rule);
-    // 착용 가능 장비 줄 왼쪽 그림 — 부위마다 풀 안에서 내가 가진 가장 센 장비(없거나 같으면 그중 하나, 주마다 고정).
-    const owned = new Map(items.map((i) => [i.key, i.cp]));
-    const preview = TOWER_SLOTS.map((s) => {
-      const keys = poolKeys(board, items, s, rule);
-      const top = Math.max(-1, ...keys.map((k) => owned.get(k) ?? -1));
-      const cands = keys.filter((k) => (owned.get(k) ?? -1) === top);
-      return cands.length ? cands[pickIndex(`${board.week}:${next}:${s}`, cands.length)] : undefined;
-    }).filter((k): k is string => !!k);
     return (
       <main className={FLOOR_MAIN}>
-        <TowerFloorHeader floor={next} left={attemptsLeft} />
-        <TowerStage floor={next} info={info} meImg={avatar?.south ?? null} meCp={cpNow.total} narration={info.line} />
+        <TowerStage floor={next} info={info} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
 
-        {/* 무대 아래 — 여백 없이 줄로 나눈 구역(전투에선 이 자리에 기록이 쌓인다). */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
-          {/* 착용 가능 장비 */}
-          <button type="button" onClick={() => openPool(next)} className={`${FLOOR_ROW} flex flex-none items-center gap-2.5 px-3 py-2 text-left`}>
-            <span className="flex flex-none">
-              {preview.map((k, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={k} src={itemSrc(board.catalog[k]?.slot as TowerSlot, k)} alt="" className={`h-6 w-6 ${i ? '-ml-1.5' : ''}`} style={PIX} />
-              ))}
-            </span>
-            <span className="min-w-0 flex-1 leading-tight">
-              <b className="block text-[12.5px]">착용 가능 장비</b>
-              <span className="block truncate text-[10px] text-zinc-400">
-                {allGear ? '' : <><span suppressHydrationWarning>{renewText(board.week)}</span> · </>}보유 {counts.owned}/{counts.total}
-              </span>
-            </span>
-            <span className="text-[11px] font-bold text-amber-300">보기 ›</span>
-          </button>
-
-          {/* 내 장착 — 장비별 탑 기준 전투력(×2·×1 반영)과 그 합 = 탑 전투력, 아바타는 맞는 장비 수(N/3)만. */}
-          <div className={`${FLOOR_ROW} flex-none px-3 py-2`}>
-            <div className="flex items-start gap-2">
-              {TOWER_SLOTS.map((s) => {
-                const p = cpNow.pieces.find((x) => x.slot === s);
-                return (
-                  <button key={s} type="button" onClick={() => openPool(next, s)} aria-label={`${SLOT_KO[s]} 착용 가능 장비`} className="flex w-[54px] flex-none flex-col items-center gap-0.5">
-                    <span className={`relative flex h-10 w-10 items-center justify-center rounded-lg border ${p?.mult === 2 ? 'border-amber-500 bg-amber-950/60' : p?.mult === 0 ? 'border-red-900 bg-zinc-900 opacity-60' : 'border-zinc-700 bg-zinc-900'}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {p ? <img src={itemSrc(s, p.key)} alt="" className="h-8 w-8" style={PIX} /> : <span className="text-[9px] text-zinc-500">{SLOT_KO[s]}</span>}
-                      {p ? (
-                        <span className={`absolute -bottom-1 -right-1 rounded px-0.5 text-[9px] font-black ${p.mult === 2 ? 'bg-amber-600 text-amber-950' : p.mult === 0 ? 'bg-red-900 text-red-200' : 'bg-zinc-800 text-zinc-300'}`}>×{p.mult}</span>
-                      ) : null}
-                    </span>
-                    <span className={`text-[10px] font-bold tabular-nums ${p?.mult === 0 ? 'text-red-300' : p?.mult === 2 ? 'text-amber-300' : 'text-zinc-300'}`}>{p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}</span>
-                  </button>
-                );
-              })}
-              <span className="mx-0.5 h-12 w-px flex-none self-center bg-[rgba(168,145,107,.2)]" />
-              {/* 아바타 그림은 위 무대에 — 여기는 맞는 장비 수와 변경만. */}
-              <button type="button" onClick={() => setSheet('avatar')} className="flex min-w-0 flex-1 flex-col justify-center self-center text-left leading-tight">
-                <span className="text-[10px] text-zinc-400">아바타 · 맞는 장비</span>
-                <b className={`text-[16px] tabular-nums ${cpNow.doubledCount > 0 ? 'text-sky-300' : 'text-zinc-400'}`}>{cpNow.doubledCount}/3</b>
-                <span className="text-[10.5px] font-bold text-zinc-300">변경 ›</span>
-              </button>
-            </div>
-            <div className="mt-1.5 flex items-baseline justify-between border-t border-[rgba(168,145,107,.18)] pt-1.5 text-[11px] tabular-nums text-zinc-400">
-              {/* 장비별 탑 기준 전투력(×2·×1 반영)을 그대로 더한다 — ×2는 장비 칸 배지에만(아바타가 전체에 곱해지는 오해 방지). */}
-              <span className="min-w-0 truncate">
-                {TOWER_SLOTS.map((sl) => cpNow.pieces.find((p) => p.slot === sl)).filter((p) => !!p && p.mult > 0).map((p, i) => (
-                  <span key={p!.slot}>
-                    {i ? <span className="text-zinc-600"> + </span> : null}
-                    <span className={p!.mult === 2 ? 'text-amber-300' : ''}>{n(p!.score)}</span>
-                  </span>
-                ))}
-                {cpNow.pieces.some((p) => p.mult > 0) ? <span className="text-zinc-600"> =</span> : '요구 장비 없음'}
-              </span>
-              <span>탑 전투력 <b className="text-[15px] text-amber-300">{n(cpNow.total)}</b></span>
-            </div>
+        {/* 무대 아래 — 텍스트 RPG식 줄 구성(전투에선 이 자리에 기록이 쌓인다). */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
+          {/* 내 장비 — 부위마다 한 줄: 그림 · 이름·강화 · 배율 설명 · 이 층 기준 전투력(×2 금색, ×0 제외). */}
+          <div className="mt-2.5 mb-1 flex items-baseline justify-between">
+            <span className="text-[11px] font-bold text-zinc-500">내 장비</span>
+            <button type="button" onClick={() => openPool(next)} className="text-[11px] text-zinc-400">
+              착용 가능 장비 <b className="text-zinc-200">{counts.owned}/{counts.total}</b>
+              {allGear ? null : <span suppressHydrationWarning> · {renewText(board.week)}</span>}
+              <span className="font-bold text-amber-300"> 보기 ›</span>
+            </button>
           </div>
-          {msg ? <p className="flex-none py-2 text-center text-[11.5px] text-red-300">{msg}</p> : null}
+          {TOWER_SLOTS.map((s) => {
+            const p = cpNow.pieces.find((x) => x.slot === s);
+            const it = p ? items.find((i) => i.equipped && i.slot === s) : undefined;
+            return (
+              <button key={s} type="button" onClick={() => openPool(next, s)} className={`flex w-full items-center gap-2.5 py-1.5 text-left ${FLOOR_ROW}`}>
+                <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${p?.mult === 2 ? 'border-amber-500/80 bg-amber-950/50' : p?.mult === 0 ? 'border-zinc-800 bg-zinc-900 opacity-50' : 'border-zinc-700 bg-zinc-900'}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p ? <img src={itemSrc(s, p.key)} alt="" className="h-7 w-7" style={PIX} /> : null}
+                </span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block truncate text-[12px] text-zinc-100">
+                    {p ? (board.catalog[p.key]?.name ?? p.key) : <span className="text-zinc-500">{SLOT_KO[s]} 없음</span>}
+                    {it ? <span className="text-zinc-500"> +{it.level}{it.transcend ? ` · 초월 ${it.transcend}` : ''}</span> : null}
+                  </span>
+                  <span className={`text-[10.5px] ${p?.mult === 2 ? 'text-amber-300/90' : p?.mult === 0 ? 'text-red-300/90' : 'text-zinc-500'}`}>
+                    {SLOT_KO[s]} · {!p ? '장착 없음' : p.mult === 2 ? '×2 아바타와 같은 요구 장비' : p.mult === 1 ? '×1 요구 장비' : '×0 이 층 요구 장비 아님'}
+                  </span>
+                </span>
+                <b className={`flex-none text-[12.5px] tabular-nums ${p?.mult === 2 ? 'text-amber-300' : p?.mult === 0 ? 'text-zinc-600' : 'text-zinc-200'}`}>{p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}</b>
+              </button>
+            );
+          })}
+          {/* 아바타 — 그림은 위 무대에. 맞는 장비 수와 변경만. */}
+          <button type="button" onClick={() => setSheet('avatar')} className={`flex w-full items-center py-2 text-left text-[12px] ${FLOOR_ROW}`}>
+            <span className="flex-1 text-zinc-400">
+              아바타 · 맞는 장비 <b className={cpNow.doubledCount > 0 ? 'text-sky-300' : 'text-zinc-300'}>{cpNow.doubledCount}/3</b>
+            </span>
+            <span className="font-bold text-amber-300">변경 ›</span>
+          </button>
+          {/* 합 — 장비별 이 층 기준 전투력을 그대로 더한 값 = 이 층에서 싸우는 전투력. */}
+          <div className="flex items-baseline justify-between py-2 text-[12px] tabular-nums">
+            <span className="min-w-0 truncate text-zinc-500">
+              {TOWER_SLOTS.map((sl) => cpNow.pieces.find((p) => p.slot === sl)).filter((p) => !!p && p.mult > 0).map((p, i) => (
+                <span key={p!.slot}>
+                  {i ? ' + ' : ''}
+                  <span className={p!.mult === 2 ? 'text-amber-300/90' : ''}>{n(p!.score)}</span>
+                </span>
+              ))}
+              {cpNow.pieces.some((p) => p.mult > 0) ? ' =' : '요구 장비 없음'}
+            </span>
+            <span className="flex-none pl-2 text-zinc-400">전투력 <b className="text-[14px] text-amber-300">{n(cpNow.total)}</b></span>
+          </div>
+          {msg ? <p className="py-1 text-center text-[11.5px] text-red-300">{msg}</p> : null}
         </div>
 
         <div className="flex-none px-3 pt-2 pb-3">
@@ -427,153 +422,161 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   }
 
   // ── 층 목록 ─────────────────────────────────────────────
-  // 위 층 카드 = 고른 층(없으면 도전할 층). 최고 도달·순위는 헤더 위 줄.
-  const hero = picked ?? (topped ? TOWER_FLOORS : next);
-  const heroInfo = towerFloorInfo(hero);
-  const heroLocked = hero > next;
+  const hero = picked ?? null;
+  const heroInfo = hero ? towerFloorInfo(hero) : null;
   const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
   return (
-    <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain text-zinc-100" style={pageBg(towerFloorInfo(next).scene)}>
-      <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-1.5">
-        <BackTitle
-          title="무한의 탑"
-          kicker={best > 0 ? `최고 ${best}층${board.myRank ? ` · 서버 ${board.myRank}위` : ''}` : '아직 기록 없음'}
-          right={<AttemptsChip left={attemptsLeft} />}
-        />
+    // 배경은 화면 자체의 배경으로(2차 피드백 3) — 종전의 760px 절대 배치 배경이 내용보다 길어 쓸데없는 스크롤을 만들었다.
+    <main
+      className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-y-auto overscroll-contain bg-zinc-950 bg-cover bg-top text-zinc-100"
+      style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.1), rgba(0,0,0,.35) 45%, rgb(9,9,11) 92%), url(${assetUrl('/sprites/tower/bg/list.png')})`, ...PIX }}
+    >
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-1.5">
+        <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} /></span>} />
 
-        {/* 층 카드 — 줄마다 높이 고정(층을 바꿔도 카드가 흔들리지 않게). */}
-        <div className={`${PANEL} flex gap-3 p-3`}>
-          <div className="min-w-0 flex-1">
-            <div className="flex">
-              <FloorKicker floor={hero} info={heroInfo} extra={hero <= best ? '돌파함' : hero === next ? '도전 가능' : '잠김'} />
-            </div>
-            <b className="block truncate text-[16px] font-black leading-tight">{heroLocked ? '???' : heroInfo.name}</b>
-            <div className="mt-1 text-[10.5px]">
-              <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b></div>
-              <div className="flex h-6 items-center">
-                <span className="w-[52px] flex-none text-zinc-400">돌파</span>
-                <span className="min-w-0 flex-1 truncate">{rewardText(hero)}</span>
-                {unclaimed.has(hero) ? (
-                  <button type="button" onClick={() => claim(hero)} disabled={claiming} className="ml-1 h-5 flex-none rounded-md bg-amber-500 px-2 text-[10px] font-black leading-none text-amber-950 disabled:opacity-50">받기</button>
-                ) : hero <= best ? (
-                  <span className="ml-1 flex-none text-[10px] font-bold text-zinc-500">받음</span>
-                ) : null}
+        {/* 위쪽 정보 영역 — 기본은 최고 도달, 층을 누르면 그 층 카드 */}
+        <div className="relative mt-2 flex h-[200px] flex-col justify-end">
+          {heroInfo && hero ? (
+            <div className="rounded-2xl border border-white/10 bg-black/55 p-3 backdrop-blur-[2px]">
+              <div className="flex gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10.5px] font-black text-amber-300">
+                    {towerIsSpecial(hero) ? '✦ ' : ''}{hero}층{towerIsSpecial(hero) ? ' · 특별층' : ''} · {hero <= best ? '돌파함' : hero === next ? '도전 가능' : '잠김'}
+                  </div>
+                  <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
+                  {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
+                  <div className="mt-1 text-[10.5px]">
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b></div>
+                    <div className="flex h-6 items-center">
+                      <span className="w-[52px] flex-none text-zinc-400">돌파</span>
+                      <span className="min-w-0 flex-1 truncate">{rewardText(hero)}</span>
+                      {unclaimed.has(hero) ? (
+                        <button type="button" onClick={() => claim(hero)} disabled={claiming} className="ml-1 h-5 flex-none rounded-md bg-amber-500 px-2 text-[10px] font-black leading-none text-amber-950 disabled:opacity-50">받기</button>
+                      ) : hero <= best ? (
+                        <span className="ml-1 flex-none text-[10px] font-bold text-zinc-500">받음</span>
+                      ) : null}
+                    </div>
+                    <div className="flex h-6 items-center">
+                      <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
+                      <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
+                      <span className="inline-flex gap-0.5">
+                        {TOWER_SLOTS.map((s) => {
+                          const k = specials.get(towerSection(hero))?.[s]?.[0];
+                          // eslint-disable-next-line @next/next/no-img-element
+                          return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
+                        })}
+                      </span>
+                    ) : '이 층만 · 부위별 10개'}</span>
+                      {/* 줄 높이 안에 들어가는 작은 버튼 — 층을 바꿔도 카드가 흔들리지 않게(2차 피드백 5). */}
+                      <button type="button" onClick={() => openPool(hero)} className="ml-1 h-5 flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
+                    </div>
+                  </div>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
               </div>
-              <div className="flex h-6 items-center">
-                <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
-                <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
-                  <span className="inline-flex gap-0.5">
-                    {TOWER_SLOTS.map((s) => {
-                      const k = specials.get(towerSection(hero))?.[s]?.[0];
-                      // eslint-disable-next-line @next/next/no-img-element
-                      return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
-                    })}
-                  </span>
-                ) : '이 층만 · 부위별 10개'}</span>
-                <button type="button" onClick={() => openPool(hero)} className="ml-1 h-5 flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
-              </div>
             </div>
-          </div>
-          {/* 몬스터 — 받침 그림자 위에. 잠긴 층은 실루엣. */}
-          <div className="relative flex w-[72px] flex-none items-end justify-center">
-            <span className="absolute bottom-0 left-1/2 h-2 w-14 -translate-x-1/2 rounded-[50%] bg-black/60 blur-[3px]" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`relative h-16 w-auto ${heroLocked ? 'opacity-35 brightness-0 invert' : ''}`} style={PIX} />
-          </div>
+          ) : (
+            <div className="pb-2 pl-1 drop-shadow-[0_2px_3px_rgba(0,0,0,.9)]">
+              <div className="text-[11px] text-zinc-200">최고 도달</div>
+              <div className="text-[32px] font-black leading-none">{best}층</div>
+              <div className="mt-1 text-[11px] text-amber-300">{board.myRank ? `서버 ${board.myRank}위` : '아직 기록 없음'}</div>
+            </div>
+          )}
         </div>
 
         {/* 받을 돌파 보상 — 모두 받기(층별은 층을 눌러 위 카드에서). */}
         {unclaimed.size > 0 ? (
-          <div className={`${PANEL} flex items-center gap-2 px-3 py-2`}>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-600/50 bg-zinc-950/85 px-3 py-2 backdrop-blur-[2px]">
             <span className="min-w-0 flex-1 leading-tight">
               <b className="block text-[12px]">받을 돌파 보상 <span className="tabular-nums text-amber-300">{unclaimed.size}</span>개 층</b>
               <span className="text-[10.5px] tabular-nums text-zinc-300">💎 {n(pendingSum.diamond)}{pendingSum.boxes ? ` · 📦 ${n(pendingSum.boxes)}` : ''}</span>
             </span>
-            <button type="button" onClick={() => claim(null)} disabled={claiming} className="h-8 flex-none rounded-lg bg-gradient-to-b from-[#e7a93a] to-[#c98622] px-3 text-[12px] font-black text-[#2a1a05] disabled:opacity-50">
+            <button type="button" onClick={() => claim(null)} disabled={claiming} className="h-8 flex-none rounded-lg bg-amber-500 px-3 text-[12px] font-black text-amber-950 disabled:opacity-50">
               {claiming ? '받는 중…' : '모두 받기'}
             </button>
           </div>
         ) : null}
 
-        {/* 구간 패널 */}
-        {Array.from({ length: sections }, (_, i) => sections - i).map((sec) => {
-          const lo = (sec - 1) * TOWER_SECTION + 1;
-          const hi = sec * TOWER_SECTION;
-          const done = best >= hi;
-          const locked = best + 1 < lo;
-          const cleared = Math.max(0, Math.min(TOWER_SECTION, best - lo + 1));
-          const open = openSection === sec;
-          if (locked && sec > towerSection(next) + 1) return null; // 다음 구간까지만 보여 준다
-          return (
-            <div key={sec} className={`${PANEL} overflow-hidden ${sec === towerSection(next) ? 'ring-1 ring-amber-500/40' : ''}`}>
-              {/* 구간 머리 — 그 장소의 장면 띠 + 장소 이름. 잠긴 구간은 어둡게. */}
-              <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-10 w-full items-center justify-between overflow-hidden px-3 text-left">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
-                <span className="absolute inset-0 bg-gradient-to-r from-[rgba(18,17,16,.92)] via-[rgba(18,17,16,.6)] to-[rgba(18,17,16,.25)]" />
-                <span className="relative leading-tight">
-                  <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
-                  <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
-                </span>
-                <span className={`relative flex items-center gap-1.5 text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>
-                  {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).some((f) => unclaimed.has(f)) ? <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="받을 보상 있음" /> : null}
-                  {done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}
-                </span>
-              </button>
-              {open ? (
-                <div className="px-3 pb-3">
-                  {/* 층 칸 — 돌파=초록 칸·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦, 받을 보상=금색 점.
-                      위 구간 머리의 장면 띠가 positioned라 칸 선택 테두리를 덮지 않게 grid도 relative + 위 여백. */}
-                  <div className="relative grid grid-cols-5 gap-1.5 pt-2">
-                    {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
-                      const st = f <= best ? 'd' : f === next ? 'c' : 'l';
-                      const sp = towerIsSpecial(f);
-                      return (
-                        <button
-                          key={f}
-                          type="button"
-                          onClick={() => setPicked(picked === f ? null : f)}
-                          aria-label={`${f}층 ${st === 'l' ? '잠김' : towerFloorInfo(f).name}`}
-                          className={`relative flex flex-col items-center rounded-md pt-1 pb-0.5 ${
-                            st === 'd'
-                              ? 'border border-emerald-700/70 bg-emerald-950/55'
-                              : st === 'c'
-                                ? 'border-2 border-amber-400 bg-amber-900/45 shadow-[0_0_10px_rgba(245,158,11,.5)]'
-                                : sp
-                                  ? 'border border-rose-800/80 bg-rose-950/30'
-                                  : 'border border-zinc-800 bg-zinc-950/80'
-                          } ${picked === f ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-950' : ''}`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)}
-                            alt=""
-                            className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-50 grayscale' : st === 'l' ? 'opacity-30 brightness-0 invert' : ''}`}
-                            style={PIX}
-                          />
-                          <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300' : st === 'c' ? 'text-amber-200' : sp ? 'text-rose-300' : 'text-zinc-500'}`}>
-                            {sp ? '✦' : ''}{f}
-                          </span>
-                          {unclaimed.has(f) ? <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,.9)]" aria-label="받을 보상 있음" /> : null}
-                        </button>
-                      );
-                    })}
+        {/* 구간 카드 */}
+        <div className="mt-3 flex flex-col gap-1.5">
+          {Array.from({ length: sections }, (_, i) => sections - i).map((sec) => {
+            const lo = (sec - 1) * TOWER_SECTION + 1;
+            const hi = sec * TOWER_SECTION;
+            const done = best >= hi;
+            const locked = best + 1 < lo;
+            const cleared = Math.max(0, Math.min(TOWER_SECTION, best - lo + 1));
+            const open = openSection === sec;
+            if (locked && sec > towerSection(next) + 1) return null; // 다음 구간까지만 보여 준다
+            return (
+              <div key={sec} className={`overflow-hidden rounded-xl border bg-zinc-950/80 backdrop-blur-[2px] ${sec === towerSection(next) ? 'border-amber-600/60' : 'border-zinc-800'}`}>
+                {/* 구간 머리 — 그 장소의 장면을 띠로 깔고 장소 이름. 잠긴 구간은 어둡게. */}
+                <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between overflow-hidden px-3 text-left">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
+                  <span className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+                  <span className="relative leading-tight">
+                    <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
+                    <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
+                  </span>
+                  <span className={`relative flex items-center gap-1.5 text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>
+                    {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).some((f) => unclaimed.has(f)) ? <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="받을 보상 있음" /> : null}
+                    {done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}
+                  </span>
+                </button>
+                {open ? (
+                  <div className="px-3 pb-3">
+                    {/* 층 칸(3차 피드백 1·3·4) — 돌파=초록 칸·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦.
+                        위 구간 머리의 장면 띠가 positioned라 칸 선택 테두리를 덮지 않게 grid도 relative + 위 여백. */}
+                    <div className="relative grid grid-cols-5 gap-1.5 pt-2">
+                      {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
+                        const st = f <= best ? 'd' : f === next ? 'c' : 'l';
+                        const sp = towerIsSpecial(f);
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setPicked(picked === f ? null : f)}
+                            aria-label={`${f}층 ${st === 'l' ? '잠김' : towerFloorInfo(f).name}`}
+                            className={`relative flex flex-col items-center rounded-md pt-1 pb-0.5 ${
+                              st === 'd'
+                                ? 'border border-emerald-700/70 bg-emerald-950/55'
+                                : st === 'c'
+                                  ? 'border-2 border-amber-400 bg-amber-900/45 shadow-[0_0_10px_rgba(245,158,11,.5)]'
+                                  : sp
+                                    ? 'border border-rose-800/80 bg-rose-950/30'
+                                    : 'border border-zinc-800 bg-zinc-950'
+                            } ${picked === f ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-950' : ''}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)}
+                              alt=""
+                              className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-50 grayscale' : st === 'l' ? 'opacity-30 brightness-0 invert' : ''}`}
+                              style={PIX}
+                            />
+                            <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300' : st === 'c' ? 'text-amber-200' : sp ? 'text-rose-300' : 'text-zinc-500'}`}>
+                              {sp ? '✦' : ''}{f}
+                            </span>
+                            {unclaimed.has(f) ? <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,.9)]" aria-label="받을 보상 있음" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-
-        <div className="sticky bottom-0 mt-auto pt-1">
-          {!topped ? (
-            <ActionBar>
-              <PrimaryButton onClick={() => setView('detail')}>{next}층 도전</PrimaryButton>
-            </ActionBar>
-          ) : (
-            <p className="text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
-          )}
+                ) : null}
+              </div>
+            );
+          })}
         </div>
+
+        {!topped ? (
+          <button type="button" onClick={() => setView('detail')} className="sticky bottom-0 mt-auto w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
+            {next}층 도전
+          </button>
+        ) : (
+          <p className="mt-auto text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
+        )}
       </div>
       {popups}
     </main>
@@ -581,13 +584,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 }
 
 type PoolItem = TowerBoard['items'][number];
-
-/** 문자열 → 0..n-1 고정 인덱스 — 서버·브라우저 렌더가 같은 값을 내도록 Math.random 대신 쓴다. */
-function pickIndex(seed: string, n: number): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return (h >>> 0) % n;
-}
 
 /** 그 부위의 착용 가능 장비 키 — 입문(allowed=null)은 보유 장비 전부 + 10층 지정 장비. */
 function poolKeys(board: TowerBoard, items: PoolItem[], slot: TowerSlot, rule: ReturnType<typeof floorRule>): string[] {

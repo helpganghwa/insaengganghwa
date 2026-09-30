@@ -130,4 +130,18 @@ describe('전투', () => {
     expect(r.keyIndex).toBeGreaterThanOrEqual(0);
     expect(r.keyIndex).toBeLessThan(r.turns.length);
   });
+  it('변수 줄에는 변수 전 피해(raw)가 남고, 피해 = min(raw × 배율, 남은 체력)', () => {
+    let seen = 0;
+    for (let i = 0; i < 300; i++) {
+      for (const t of simulateTowerBattle({ towerCp: 105, requirement: 100, doubledCount: 3, rng: rngOf(i + 11) }).turns) {
+        if (t.event === 'critical' || t.event === 'enrage' || t.event === 'counter' || t.event === 'resonance') {
+          expect(t.raw).toBeDefined();
+          const mul = t.event === 'critical' ? 1.6 : t.event === 'enrage' ? 1.5 : 0.5;
+          expect(t.damage).toBeLessThanOrEqual(Math.round(t.raw! * mul * 10) / 10 + 0.15);
+          seen++;
+        } else expect(t.raw).toBeUndefined();
+      }
+    }
+    expect(seen).toBeGreaterThan(50);
+  });
 });
