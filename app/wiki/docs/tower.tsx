@@ -21,14 +21,14 @@ export const meta: WikiDocMeta = {
   slug: 'tower',
   cat: '경쟁',
   title: '무한의 탑',
-  summary: `한 층씩 층 주인을 쓰러뜨리며 오르는 콘텐츠. 층마다 첫 돌파 보상, 가장 높이 오른 층으로 서버 순위.`,
+  summary: `한 층씩 몬스터를 쓰러뜨리며 오르는 콘텐츠. 층마다 첫 돌파 보상, 가장 높이 오른 층으로 서버 순위.`,
   sections: [
     { id: 'flow', label: '진행' },
     { id: 'gear', label: '요구 장비' },
     { id: 'power', label: '탑 전투력' },
     { id: 'battle', label: '전투' },
     { id: 'skill', label: '몬스터 스킬' },
-    { id: 'floor', label: '층 주인 전투력' },
+    { id: 'floor', label: '몬스터 전투력' },
     { id: 'reward', label: '돌파 보상' },
     { id: 'ranking', label: '순위' },
   ],
@@ -48,7 +48,7 @@ export default function Doc() {
           하루 {TOWER_DAILY_ATTEMPTS}번 도전할 수 있고, <b>이기면 횟수가 줄지 않는다</b>. 진 판만 한 번씩 줄어들며
           자정(한국 시간)에 다시 채워진다.
         </LI>
-        <LI>{TOWER_SECTION}층마다 특별층이 있다. 특별층의 층 주인은 그 구간을 지키는 수문장이다.</LI>
+        <LI>{TOWER_SECTION}층마다 특별층이 있다. 특별층의 몬스터는 그 구간을 지키는 수문장이다.</LI>
       </UL>
 
       <H2 id="gear">요구 장비</H2>
@@ -93,22 +93,22 @@ export default function Doc() {
       <UL>
         <LI>도전하면 서버가 전투를 판정하고, 화면은 그 기록을 차례로 보여 준다.</LI>
         <LI>
-          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 층 주인은 층 주인 전투력). 한 번 공격하면 자기 전투력의
+          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 몬스터는 몬스터 전투력). 한 번 공격하면 자기 전투력의
           {TOWER_DMG_MIN * 100}~{TOWER_DMG_MAX * 100}%만큼 피해를 준다.
         </LI>
-        <LI>최대 {TOWER_BATTLE.maxTurns}턴까지 싸우고, 그때까지 층 주인을 쓰러뜨리지 못하면 진다.</LI>
+        <LI>최대 {TOWER_BATTLE.maxTurns}턴까지 싸우고, 그때까지 몬스터를 쓰러뜨리지 못하면 진다.</LI>
       </UL>
       <Tbl
         firstColNowrap
         head={['변수', '내용']}
         rows={[
-          ['선제', `층 주인이 먼저 공격할 확률 ${bpPct(TOWER_BATTLE.firstStrikeBp)}`],
+          ['선제', `몬스터가 먼저 공격할 확률 ${bpPct(TOWER_BATTLE.firstStrikeBp)}`],
           ['급소', `${bpPct(TOWER_BATTLE.critBp)} 확률로 피해 ×${TOWER_BATTLE.critMul}(양쪽 모두)`],
           ['빗나감', `${bpPct(TOWER_BATTLE.missBp)} 확률로 공격이 빗나감(양쪽 모두)`],
-          ['반격', `층 주인의 공격 뒤 ${bpPct(TOWER_BATTLE.counterBp)} 확률로 내가 반격(피해 ×${TOWER_BATTLE.counterMul})`],
+          ['반격', `몬스터의 공격 뒤 ${bpPct(TOWER_BATTLE.counterBp)} 확률로 내가 반격(피해 ×${TOWER_BATTLE.counterMul})`],
           [
             '광폭화',
-            `층 주인의 체력이 ${TOWER_BATTLE.enrageAt}% 아래로 처음 떨어질 때 ${bpPct(TOWER_BATTLE.enrageBp)} 확률, 이후 층 주인 피해 ×${TOWER_BATTLE.enrageMul}`,
+            `몬스터의 체력이 ${TOWER_BATTLE.enrageAt}% 아래로 처음 떨어질 때 ${bpPct(TOWER_BATTLE.enrageBp)} 확률, 이후 몬스터 피해 ×${TOWER_BATTLE.enrageMul}`,
           ],
           [
             '공명',
@@ -120,10 +120,10 @@ export default function Doc() {
 
       <H2 id="skill">몬스터 스킬</H2>
       <UL>
-        <LI>11층부터 일부 층 주인이 스킬을 쓴다. 구간마다 새 스킬이 하나씩 나오고, 그 구간 수문장(10층마다)도 같은 스킬을 쓴다.</LI>
+        <LI>11층부터 일부 몬스터가 스킬을 쓴다. 구간마다 새 스킬이 하나씩 나오고, 그 구간 수문장(10층마다)도 같은 스킬을 쓴다.</LI>
         <LI>수문장은 위로 갈수록 스킬이 늘어 100층 수문장은 네 개를 쓴다.</LI>
-        <LI>스킬이 있는 층은 층 주인 전투력이 같아도 다른 층보다 넘기 어렵다.</LI>
-        <LI>층 화면에서 층 주인 이름 아래 스킬을 누르면 설명이 나온다.</LI>
+        <LI>스킬이 있는 층은 몬스터 전투력이 같아도 다른 층보다 넘기 어렵다.</LI>
+        <LI>층 화면에서 몬스터 이름 아래 스킬을 누르면 설명이 나온다.</LI>
       </UL>
       <Tbl
         firstColNowrap
@@ -131,12 +131,12 @@ export default function Doc() {
         rows={(Object.keys(TOWER_SKILL_INFO) as TowerSkill[]).map((k) => [`${TOWER_SKILL_INFO[k].icon} ${TOWER_SKILL_INFO[k].name}`, TOWER_SKILL_INFO[k].desc])}
       />
 
-      <H2 id="floor">층 주인 전투력</H2>
+      <H2 id="floor">몬스터 전투력</H2>
       <UL>
         <LI>구간 안의 일반 층은 완만하게 오르고, 특별층에서 크게 뛴다.</LI>
-        <LI>층 목록과 층 상세에서 그 층 주인의 전투력을 볼 수 있다.</LI>
+        <LI>층 목록과 층 상세에서 그 층 몬스터의 전투력을 볼 수 있다.</LI>
       </UL>
-      <Tbl head={['층', '층 주인 전투력']} rows={SAMPLE_FLOORS.map((f) => [`${f}층`, n(towerRequirement(f))])} />
+      <Tbl head={['층', '몬스터 전투력']} rows={SAMPLE_FLOORS.map((f) => [`${f}층`, n(towerRequirement(f))])} />
 
       <H2 id="reward">돌파 보상</H2>
       <UL>
