@@ -29,7 +29,7 @@ export type TowerMe = { nickname: string; guild: { name: string; emblemUrl: stri
 
 /**
  * 무대 — 상세·전투 공통. 장면이 화면 맨 위부터 깔리고, 위쪽에 뒤로가기 · 층·장소 · 돌파 보상 · 오늘 도전(전투 중엔 N턴).
- * 아래쪽에 나 ↔ 층 주인(대난투 문법: 이름 · 길드/스킬 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
+ * 아래쪽에 나 ↔ 몬스터(대난투 문법: 이름 · 길드/스킬 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
  * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다. 무대 아래는 해설 한 칸.
  */
 export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
@@ -195,7 +195,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [shown, ended]);
   // 효과음 — 대난투와 같은 소리: 한 줄마다 타격음, 쓰러뜨린 한 방은 KO, 돌파하면 팡파레(설정의 효과음 끄기를 따른다).
-  // 급소는 치명타 소리, 층 주인이 처음 광폭해지는 줄은 으르렁 소리로 기록을 보지 않아도 알 수 있게.
+  // 급소는 치명타 소리, 몬스터가 처음 광폭해지는 줄은 으르렁 소리로 기록을 보지 않아도 알 수 있게.
   useEffect(() => {
     const t = shown > 0 ? turns[shown - 1] : null;
     if (!t) return;
@@ -270,11 +270,11 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             ) : (
               <>
                 <b className="text-[13px] text-red-300">패배</b>
-                {/* 얼마나 가까웠나 — 이 판에서 층 주인에게 남은 체력. */}
+                {/* 얼마나 가까웠나 — 이 판에서 몬스터에게 남은 체력. */}
                 {(() => {
                   const last = turns[total - 1];
                   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
-                  return last && monMax > 0 ? <div>층 주인 HP {pctText(last.monHp / monMax)} 남음</div> : null;
+                  return last && monMax > 0 ? <div>{info.name} HP {pctText(last.monHp / monMax)} 남음</div> : null;
                 })()}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
               </>
@@ -348,7 +348,7 @@ const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, 
 
 /**
  * 기록 한 줄(텍스트 RPG) — 누가 · 변수 · 피해(바뀐 경우 'raw → 피해') · 남은 HP. 게이지 없이 글만.
- * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록은 바뀐 값만 보여 준다.
+ * 나=금색 ▸, 몬스터=빨강 ▸. raw가 없는 옛 기록은 바뀐 값만 보여 준다.
  * memo — 재생 중 한 줄씩 늘 때 이미 나온 줄은 다시 그리지 않는다.
  */
 const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: string }) {
