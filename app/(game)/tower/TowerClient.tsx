@@ -16,6 +16,7 @@ import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service'
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
 import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerStage, type TowerFloorLog } from './TowerBattle';
+import { TowerSkillTags } from './TowerSkills';
 import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -514,7 +515,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   <b className="block text-[18px] leading-tight">{heroInfo.name}</b>
                   {/* 줄마다 높이 고정 — 층마다 요구 장비가 글자/아이콘으로 바뀌어도 카드가 흔들리지 않게. */}
                   <div className="mt-1 text-[10.5px]">
-                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b></div>
+                    <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b><TowerSkillTags floor={hero} className="ml-1.5 h-5 text-[10px]" /></div>
                     <div className="flex h-6 items-center">
                       <span className="w-[52px] flex-none text-zinc-400">돌파</span>
                       <span className="min-w-0 flex-1 truncate">{rewardText(hero)}</span>

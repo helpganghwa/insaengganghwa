@@ -13,70 +13,82 @@
     "name": "먼지쥐",
     "desc": "꼬리 끝에 굳은 촛농을 매단 채 돌 틈을 오가는 회색 쥐.",
     "art": "small grey rat with a blob of hardened candle wax on its tail tip",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 2,
     "name": "촛불 박쥐",
-    "desc": "날개 끝에 작은 불씨를 달고 회랑 천장을 맴돈다.",
+    "desc": "날개 끝에 작은 불씨를 달고 회랑 천장을 맴도는 박쥐.",
     "art": "small dark bat with tiny amber ember specks on its wing tips",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 3,
-    "name": "촛농 방울",
-    "desc": "녹아내린 촛농이 뭉쳐 굴러다니는 말랑한 덩어리, 머리에 심지가 꽂혀 있다.",
-    "art": "small round blob creature of pale melted candle wax with a lit wick on top",
-    "guardian": false
+    "name": "촛농 슬라임",
+    "desc": "녹은 촛농이 뭉쳐 생긴 말랑한 슬라임, 머리에 심지 하나가 타고 있다.",
+    "art": "round pale wax slime with a single small lit wick on top, two dot eyes",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 4,
     "name": "돌틈 거미",
-    "desc": "등껍질이 회랑 돌과 똑같은 무늬라 가만히 있으면 보이지 않는다.",
+    "desc": "등껍질이 회랑 돌과 같은 무늬라 가만히 있으면 보이지 않는 거미.",
     "art": "ash grey spider with a stone-textured shell",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 5,
-    "name": "떠도는 등불",
-    "desc": "주인 없이 복도를 떠다니는 녹슨 등불 하나, 끊어진 사슬이 흔들린다.",
-    "art": "a single floating rusty iron lantern with a faint flame inside and a short broken chain hanging below, no creature, no hands",
-    "guardian": false
+    "name": "회랑 도마뱀",
+    "desc": "벽을 타고 오르내리는 잿빛 도마뱀, 꼬리가 몸보다 길다.",
+    "art": "lean ash grey lizard with a long tail, clinging pose",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 6,
-    "name": "쇠사슬 뱀",
-    "desc": "녹슨 쇠사슬 고리들이 이어져 뱀처럼 기어 다닌다.",
-    "art": "snake made of linked rusty iron chain rings",
-    "guardian": false
+    "name": "돌비늘 뱀",
+    "desc": "비늘이 작은 돌 조각처럼 겹쳐 난 굵은 뱀.",
+    "art": "thick snake with scales like small overlapping grey stone chips, coiled",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 7,
     "name": "깨진 가고일",
     "desc": "뿔 하나가 부러진 작은 돌 가고일, 날개를 반쯤 편 채 웅크렸다.",
     "art": "small crouching stone gargoyle with one broken horn and half-open wings",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 8,
-    "name": "갑옷 게",
-    "desc": "버려진 투구를 등껍질 삼아 쓴 커다란 게.",
-    "art": "large crab using an old dented knight helmet as its shell",
-    "guardian": false
-   },
-   {
-    "floor": 9,
     "name": "회랑 사냥개",
     "desc": "해진 가죽 목줄을 찬 마른 회색 사냥개.",
     "art": "lean grey hound wearing a worn leather collar",
-    "guardian": false
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 9,
+    "name": "조각난 골렘",
+    "desc": "떨어져 나간 벽돌을 이어 붙여 만든 작은 돌 골렘.",
+    "art": "small stone golem made of mismatched grey bricks, stubby arms, glowing amber eyes",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 10,
     "name": "돌사자 수호상",
     "desc": "금 간 틈으로 희미한 빛이 새어 나오는 거대한 돌사자.",
     "art": "huge stone lion guardian statue come to life, cracks glowing faint amber",
-    "guardian": true
+    "guardian": true,
+    "skills": [
+     "steel"
+    ]
    }
   ]
  },
@@ -91,73 +103,91 @@
   "mons": [
    {
     "floor": 11,
-    "name": "책벌레 떼",
-    "desc": "펼쳐진 책 위에 모여 종이를 갉는 은빛 벌레들.",
-    "art": "cluster of small silver bookworms crawling on an old open book",
-    "guardian": false
+    "name": "은빛 좀벌레",
+    "desc": "책장 사이를 기어 다니는 손바닥만 한 은빛 좀벌레.",
+    "art": "single large silver silverfish insect with long antennae",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 12,
-    "name": "종이학 무리",
-    "desc": "접힌 종이로 된 학들이 떼 지어 난다.",
-    "art": "flock of folded paper cranes in flight",
-    "guardian": false
+    "name": "서고 올빼미",
+    "desc": "깃털 끝이 하얗게 언 커다란 회색 올빼미.",
+    "art": "large grey owl with frost-white feather tips",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 13,
-    "name": "잉크 방울",
-    "desc": "잉크병에서 흘러나온 동그란 먹물 덩어리, 눈 두 개가 반짝인다.",
-    "art": "round blob of dark ink with two small shining eyes, spilling from an inkwell",
-    "guardian": false
+    "name": "책 미믹",
+    "desc": "덮인 표지 사이로 이빨과 혀를 내민 두꺼운 책.",
+    "art": "thick old closed book monster with sharp teeth and a tongue between its covers",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 14,
-    "name": "서리 마도서",
-    "desc": "표지에 서리가 앉은 채 스스로 펼쳐지는 책.",
-    "art": "floating open spellbook with frost on its leather cover, pages fluttering",
-    "guardian": false
+    "name": "서리 족제비",
+    "desc": "눈 쌓인 서가 위를 달리는 흰 족제비.",
+    "art": "slender white weasel with frosted fur",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 15,
     "name": "서리 여우",
     "desc": "꼬리 끝이 얼어붙은 은회색 여우.",
-    "art": "silver grey fox with a frost-covered tail tip",
-    "guardian": false
+    "art": "silver grey fox with an icy frozen tail tip",
+    "guardian": false,
+    "skills": [
+     "freeze"
+    ]
    },
    {
     "floor": 16,
-    "name": "양피지 뱀",
-    "desc": "말린 양피지가 풀리며 뱀처럼 기어 다닌다.",
-    "art": "serpent formed from a long unrolling parchment scroll",
-    "guardian": false
+    "name": "얼음 박쥐",
+    "desc": "날개막에 성에가 낀 푸른 박쥐.",
+    "art": "pale blue bat with frost-covered wing membranes",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 17,
-    "name": "서고 올빼미",
-    "desc": "깃털 끝이 하얗게 언 커다란 회색 올빼미.",
-    "art": "large grey owl with frost-white feather tips, perched",
-    "guardian": false
+    "name": "서리 늑대",
+    "desc": "갈기에 고드름이 맺힌 회청색 늑대.",
+    "art": "blue grey wolf with small icicles hanging from its mane",
+    "guardian": false,
+    "skills": [
+     "freeze"
+    ]
    },
    {
     "floor": 18,
     "name": "책장 미믹",
-    "desc": "책 사이에 숨어 있다 이빨을 드러내는 작은 책장.",
-    "art": "small wooden bookcase mimic with teeth and a long tongue",
-    "guardian": false
+    "desc": "문을 열면 이빨이 줄지어 드러나는 작은 책장.",
+    "art": "small wooden bookcase mimic with rows of teeth where the shelves are",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 19,
-    "name": "얼음 촛대",
-    "desc": "가지마다 푸른 얼음 불꽃이 켜진 채 걸어 다니는 촛대.",
-    "art": "walking silver candelabra with pale icy flames on each arm, small metal legs",
-    "guardian": false
+    "name": "얼음 가고일",
+    "desc": "온몸에 서리가 앉은 가고일, 날개 끝이 얼음으로 굳었다.",
+    "art": "stone gargoyle covered in frost with wings tipped in ice",
+    "guardian": false,
+    "skills": [
+     "freeze"
+    ]
    },
    {
     "floor": 20,
-    "name": "책더미 거수",
-    "desc": "쌓아 올린 책으로 몸을 이룬 네발짐승, 등에 커다란 열쇠 꾸러미가 걸렸다.",
-    "art": "huge four-legged beast built from stacked old books and dark wood, a big ring of keys hanging on its back",
-    "guardian": true
+    "name": "서리 드레이크",
+    "desc": "등에 얼음 가시가 돋은 날개 없는 용.",
+    "art": "wingless frost drake with ice spikes along its back, blue grey scales",
+    "guardian": true,
+    "skills": [
+     "freeze"
+    ]
    }
   ]
  },
@@ -174,71 +204,90 @@
     "floor": 21,
     "name": "숯 도롱뇽",
     "desc": "등에서 잿불이 깜빡이는 새까만 도롱뇽.",
-    "art": "charcoal-black salamander with dim ember cracks along its back",
-    "guardian": false
+    "art": "black salamander with glowing embers flickering on its back",
+    "guardian": false,
+    "skills": [
+     "burn"
+    ]
    },
    {
     "floor": 22,
     "name": "불씨 나방",
     "desc": "날개에 식어 가는 불씨 무늬가 있는 나방.",
-    "art": "moth with dim ember patterns on dark wings",
-    "guardian": false
+    "art": "single moth with fading ember patterns on its wings",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 23,
-    "name": "쇠찌꺼기",
-    "desc": "식어 가는 쇠찌꺼기가 뭉쳐 굴러다닌다.",
-    "art": "lumpy blob of cooling iron slag with dim orange seams",
-    "guardian": false
+    "name": "쇳물 슬라임",
+    "desc": "식다 만 쇳물로 된 슬라임, 겉은 검고 속은 붉다.",
+    "art": "slime made of half-cooled molten iron, dark crust with glowing red core",
+    "guardian": false,
+    "skills": [
+     "burn"
+    ]
    },
    {
     "floor": 24,
     "name": "풀무 두꺼비",
     "desc": "몸이 가죽 풀무처럼 부풀었다 꺼지는 두꺼비.",
-    "art": "toad whose body is a leather bellows",
-    "guardian": false
+    "art": "toad whose body looks like a leather bellows",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 25,
     "name": "녹 사냥개",
     "desc": "녹슨 철판을 덧대어 기운 기계 사냥개.",
-    "art": "mechanical hound patched together with rusty iron plates",
-    "guardian": false
+    "art": "mechanical hound patched with rusty iron plates",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 26,
-    "name": "집게 전갈",
-    "desc": "집게가 대장간 집게인 쇠 전갈.",
-    "art": "iron scorpion whose pincers are blacksmith tongs",
-    "guardian": false
+    "name": "쇠 전갈",
+    "desc": "집게가 대장간 집게처럼 생긴 쇠 전갈.",
+    "art": "iron scorpion with pincers shaped like blacksmith tongs",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 27,
     "name": "모루 거북",
     "desc": "등껍질이 모루인 느린 거북.",
-    "art": "tortoise whose shell is a blacksmith anvil",
-    "guardian": false
+    "art": "slow tortoise whose shell is a blacksmith anvil",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 28,
-    "name": "쇳물 뱀",
-    "desc": "식은 쇳물이 굳어 뱀 모양이 되었다.",
-    "art": "snake made of hardened dark metal with faint glowing seams",
-    "guardian": false
+    "name": "잿불 뱀",
+    "desc": "비늘 틈마다 잿불이 남은 검은 뱀.",
+    "art": "black snake with glowing embers between its scales",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 29,
     "name": "용광로 황소",
     "desc": "배 속에 잿불이 이글거리는 쇠 황소.",
-    "art": "iron bull with a dim glowing furnace in its belly",
-    "guardian": false
+    "art": "iron bull with a glowing furnace in its belly",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 30,
-    "name": "풀무 거수",
-    "desc": "등에 거대한 풀무를 짊어진 녹슨 쇠 짐승.",
-    "art": "giant rusted iron beast with a huge bellows on its back, dim ember glow",
-    "guardian": true
+    "name": "용광로 골렘",
+    "desc": "가슴에 용광로를 품은 거대한 쇠 골렘.",
+    "art": "huge iron golem with an open glowing furnace in its chest",
+    "guardian": true,
+    "skills": [
+     "burn",
+     "steel"
+    ]
    }
   ]
  },
@@ -256,70 +305,89 @@
     "name": "이끼 토끼",
     "desc": "등에 이끼가 소복이 자란 토끼.",
     "art": "rabbit with soft moss growing on its back",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 32,
-    "name": "안개 나방",
-    "desc": "날개가 안개처럼 흐릿한 커다란 나방.",
-    "art": "large moth with misty translucent grey-green wings",
-    "guardian": false
+    "name": "가시 고슴도치",
+    "desc": "가시 대신 마른 덩굴 가시가 돋은 고슴도치.",
+    "art": "hedgehog with dry thorny vine spines",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 33,
-    "name": "버섯 꼬마",
-    "desc": "넓은 갓을 쓴 작은 버섯 생물.",
-    "art": "small mushroom creature with a wide cap and tiny legs",
-    "guardian": false
+    "name": "버섯 괴물",
+    "desc": "넓은 갓 아래 작은 두 발로 걷는 버섯.",
+    "art": "walking mushroom creature with a wide cap and two small feet",
+    "guardian": false,
+    "skills": [
+     "regen"
+    ]
    },
    {
     "floor": 34,
-    "name": "마른 덩굴 뱀",
-    "desc": "마른 덩굴이 엉켜 뱀이 되었다.",
-    "art": "snake made of twisted dry vines",
-    "guardian": false
+    "name": "덩굴 뱀",
+    "desc": "초록 덩굴이 엉켜 뱀이 되었다, 머리에 흰 꽃 한 송이.",
+    "art": "snake made of twisted green vines with a white flower on its head",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 35,
-    "name": "유리 달팽이",
-    "desc": "금 간 온실 유리를 등껍질로 이고 다니는 달팽이.",
-    "art": "snail carrying a cracked greenhouse glass dome as its shell",
-    "guardian": false
+    "name": "이끼 달팽이",
+    "desc": "이끼 덮인 껍데기를 이고 다니는 커다란 달팽이.",
+    "art": "large snail with a moss-covered shell",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 36,
-    "name": "꽃잎 사마귀",
-    "desc": "바랜 꽃잎을 날개처럼 펼친 사마귀.",
-    "art": "mantis with faded petal-like wings",
-    "guardian": false
+    "name": "식인 꽃",
+    "desc": "커다란 꽃잎 속에 이빨이 줄지어 난 꽃.",
+    "art": "carnivorous plant monster with a big flower head full of teeth, leafy stem",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 37,
     "name": "가시 멧돼지",
     "desc": "등에 가시덩굴이 돋은 멧돼지.",
-    "art": "boar with thorny vines growing along its back",
-    "guardian": false
+    "art": "wild boar with thorny vines growing on its back",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 38,
     "name": "이끼 곰",
     "desc": "온몸이 두꺼운 이끼로 덮인 곰.",
-    "art": "bear covered in thick moss",
-    "guardian": false
+    "art": "bear covered entirely in thick moss",
+    "guardian": false,
+    "skills": [
+     "regen"
+    ]
    },
    {
     "floor": 39,
     "name": "덩굴 사슴",
     "desc": "뿔이 마른 덩굴과 흰 꽃으로 된 사슴.",
-    "art": "stag with antlers of dry vines and small pale flowers",
-    "guardian": false
+    "art": "deer with antlers made of dry vines and small white flowers",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 40,
     "name": "고목 거북",
     "desc": "등에 오래된 나무 한 그루가 자란 거대한 거북.",
-    "art": "giant turtle with an ancient gnarled tree growing on its shell, moss and pale flowers",
-    "guardian": true
+    "art": "giant tortoise with an old tree growing on its shell",
+    "guardian": true,
+    "skills": [
+     "regen",
+     "steel"
+    ]
    }
   ]
  },
@@ -334,73 +402,92 @@
   "mons": [
    {
     "floor": 41,
-    "name": "바람 참새",
-    "desc": "무리 지어 소용돌이치며 날아드는 회색 참새들.",
-    "art": "flock of small grey sparrows swirling together",
-    "guardian": false
+    "name": "돌풍 제비",
+    "desc": "꼬리깃이 칼날처럼 갈라진 잿빛 제비.",
+    "art": "grey swallow with blade-like forked tail feathers",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 42,
-    "name": "천막 유령",
-    "desc": "해진 천막 천이 바람에 부풀어 모습을 갖췄다.",
-    "art": "ghost formed from a tattered billowing canvas cloth",
-    "guardian": false
+    "name": "번개 족제비",
+    "desc": "털끝에 잔 번개가 튀는 족제비.",
+    "art": "weasel with small sparks of lightning on its fur tips",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 43,
-    "name": "풍향계 수탉",
-    "desc": "테라스 난간에서 떨어져 나온 쇠 풍향계 수탉.",
-    "art": "iron weathervane rooster come to life",
-    "guardian": false
+    "name": "코카트리스",
+    "desc": "수탉 머리에 뱀 꼬리를 단 괴물, 볏이 붉다.",
+    "art": "cockatrice, rooster body with a serpent tail and a red comb",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 44,
-    "name": "구름 해파리",
-    "desc": "테라스 위를 떠다니는 흐린 구름 해파리.",
-    "art": "floating cloud-like jellyfish with long trailing tendrils",
-    "guardian": false
+    "name": "폭풍 산양",
+    "desc": "굽은 뿔에 바람이 휘감긴 산양.",
+    "art": "mountain goat with large curled horns",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 45,
-    "name": "번개 족제비",
-    "desc": "털끝에 잔 번개가 튀는 족제비.",
-    "art": "weasel with faint sparks of lightning on its fur",
-    "guardian": false
-   },
-   {
-    "floor": 46,
     "name": "바람 사냥개",
     "desc": "털이 바람결대로 흩날리는 날렵한 사냥개.",
     "art": "sleek hound with fur streaming in the wind",
-    "guardian": false
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 46,
+    "name": "깃털 뱀",
+    "desc": "잿빛 깃털로 덮인 날개 달린 뱀.",
+    "art": "winged serpent covered in grey feathers",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 47,
-    "name": "깃털 뱀",
-    "desc": "잿빛 깃털로 덮인 날개 달린 뱀.",
-    "art": "winged serpent covered in ash grey feathers",
-    "guardian": false
+    "name": "폭풍 매",
+    "desc": "발톱 둘레에 잔 번개가 도는 커다란 매.",
+    "art": "large hawk with small lightning sparks around its talons",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 48,
-    "name": "폭풍 매",
-    "desc": "발톱 둘레에 잔 번개가 도는 커다란 매.",
-    "art": "large hawk with faint lightning around its talons",
-    "guardian": false
+    "name": "와이번",
+    "desc": "두 다리와 날개가 달린 잿빛 비룡.",
+    "art": "grey wyvern with two legs and large wings",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 49,
     "name": "바람 그리핀",
     "desc": "잿빛 라일락색 날개의 그리핀.",
-    "art": "griffin with grey lilac wings",
-    "guardian": false
+    "art": "griffin with ash lilac wings",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 50,
     "name": "폭풍 천마",
     "desc": "구름을 발굽에 감고 달리는 날개 달린 말.",
-    "art": "majestic winged horse with clouds swirling around its hooves",
-    "guardian": true
+    "art": "winged horse with small clouds around its hooves",
+    "guardian": true,
+    "skills": [
+     "multi",
+     "freeze"
+    ]
    }
   ]
  },
@@ -417,71 +504,92 @@
     "floor": 51,
     "name": "별나방",
     "desc": "짙은 남색 날개에 별점 무늬가 박힌 나방.",
-    "art": "moth with star-dot patterns on dark indigo wings",
-    "guardian": false
+    "art": "moth with deep navy wings dotted with star specks",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 52,
     "name": "황동 부엉이",
-    "desc": "황동 태엽으로 움직이는 부엉이.",
-    "art": "brass clockwork owl",
-    "guardian": false
+    "desc": "렌즈 눈을 단 황동 태엽 부엉이.",
+    "art": "brass clockwork owl with round glass lens eyes",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
    },
    {
     "floor": 53,
-    "name": "행성 구슬",
-    "desc": "작은 행성들이 서로를 돌며 떠다니는 구슬 무리.",
-    "art": "small floating brass orrery with little planets orbiting each other",
-    "guardian": false
+    "name": "밤하늘 고양이",
+    "desc": "검은 털 속에 작은 별이 반짝이는 고양이.",
+    "art": "black cat with tiny stars twinkling in its fur",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 54,
     "name": "혜성 여우",
     "desc": "꼬리가 혜성처럼 길게 빛나는 여우.",
-    "art": "fox with a long softly glowing comet-like tail",
-    "guardian": false
+    "art": "fox with a long glowing comet-like tail",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 55,
-    "name": "망원경 거미",
-    "desc": "다리가 황동 망원경 대로 된 거미.",
-    "art": "spider whose legs are brass telescope tubes",
-    "guardian": false
+    "name": "황동 거미",
+    "desc": "관측 기구에서 떨어져 나온 황동 기계 거미.",
+    "art": "brass mechanical spider",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
    },
    {
     "floor": 56,
-    "name": "밤하늘 고양이",
-    "desc": "검은 털 속에 작은 별이 반짝이는 고양이.",
-    "art": "black cat with tiny stars twinkling in its fur",
-    "guardian": false
+    "name": "별빛 가오리",
+    "desc": "지느러미에 별자리가 새겨진 채 허공을 헤엄치는 가오리.",
+    "art": "manta ray with constellation patterns on its fins, floating",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 57,
     "name": "운석 거북",
     "desc": "등껍질이 거친 운석인 거북.",
     "art": "tortoise with a rough meteorite rock shell",
-    "guardian": false
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 58,
-    "name": "별빛 가오리",
-    "desc": "지느러미에 별자리가 새겨진 채 허공을 헤엄치는 가오리.",
-    "art": "manta ray swimming through the air with constellation patterns on its fins",
-    "guardian": false
+    "name": "성좌 늑대",
+    "desc": "털에 별자리 선이 흐르는 늑대.",
+    "art": "wolf with glowing constellation lines in its fur",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 59,
-    "name": "성좌 늑대",
-    "desc": "털에 별자리 선이 흐르는 늑대.",
-    "art": "wolf with glowing constellation lines across its dark fur",
-    "guardian": false
+    "name": "별빛 그리핀",
+    "desc": "깃털 끝에 별가루가 묻은 남색 그리핀.",
+    "art": "navy blue griffin with star dust on its feather tips",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 60,
-    "name": "천구의 수호자",
-    "desc": "몸이 거대한 황동 천구의인 기계 수호자.",
-    "art": "giant brass armillary sphere construct guardian with rings and legs",
-    "guardian": true
+    "name": "별빛 키메라",
+    "desc": "사자·염소·뱀 머리가 함께 달린 남색 키메라.",
+    "art": "chimera with lion, goat and serpent heads, deep navy fur with star specks",
+    "guardian": true,
+    "skills": [
+     "reflect",
+     "multi"
+    ]
    }
   ]
  },
@@ -498,71 +606,92 @@
     "floor": 61,
     "name": "금박 쥐",
     "desc": "떨어진 금박 조각을 망토처럼 두른 쥐.",
-    "art": "rat wearing scraps of gold leaf like a cape",
-    "guardian": false
+    "art": "rat wearing a scrap of gold leaf like a cape",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 62,
     "name": "보석 딱정벌레",
     "desc": "등에 바랜 보석이 박힌 딱정벌레.",
-    "art": "beetle with faded gemstones set in its shell",
-    "guardian": false
+    "art": "beetle with a faded gemstone set in its shell",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 63,
-    "name": "휘장 뱀",
-    "desc": "빛바랜 붉은 휘장이 뱀처럼 기어 다닌다.",
-    "art": "serpent formed from a faded red velvet curtain",
-    "guardian": false
+    "name": "보물상자 미믹",
+    "desc": "금테 두른 상자가 뚜껑을 열자 이빨이 드러난다.",
+    "art": "gold-trimmed treasure chest mimic with sharp teeth and a tongue",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 64,
-    "name": "샹들리에 박쥐",
-    "desc": "깨진 샹들리에에 매달려 사는 커다란 박쥐.",
-    "art": "large bat hanging from a broken crystal chandelier",
-    "guardian": false
+    "name": "흡혈 박쥐",
+    "desc": "붉은 눈의 커다란 왕궁 박쥐.",
+    "art": "large bat with red eyes and dark velvet wings",
+    "guardian": false,
+    "skills": [
+     "drain"
+    ]
    },
    {
     "floor": 65,
     "name": "왕관 두꺼비",
     "desc": "작은 왕관을 쓴 통통한 두꺼비.",
-    "art": "plump toad wearing a small tarnished crown",
-    "guardian": false
+    "art": "plump toad wearing a small crown",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 66,
-    "name": "태엽 공작",
-    "desc": "꼬리 깃이 금박 판으로 된 태엽 공작.",
-    "art": "clockwork peacock with tail feathers of pale gold plates",
-    "guardian": false
+    "name": "황금 공작",
+    "desc": "금박 판으로 된 꼬리 깃을 부채처럼 펼친 공작.",
+    "art": "peacock fanning tail feathers made of gold leaf plates",
+    "guardian": false,
+    "skills": [
+     "awe"
+    ]
    },
    {
     "floor": 67,
-    "name": "액자 미믹",
-    "desc": "눈을 뜬 채 이빨을 드러내는 빈 금박 액자.",
-    "art": "ornate empty gilded picture frame mimic with eyes and teeth",
-    "guardian": false
+    "name": "황금 코브라",
+    "desc": "목을 넓게 펼친 금빛 비늘 코브라.",
+    "art": "golden scaled cobra with its hood spread",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 68,
-    "name": "근위 사자",
-    "desc": "옅은 금 목걸이를 찬 사자.",
-    "art": "lion wearing a pale gold collar",
-    "guardian": false
+    "name": "황금 표범",
+    "desc": "금빛 반점이 박힌 날렵한 표범.",
+    "art": "sleek leopard with golden spots",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 69,
     "name": "갑주 군마",
     "desc": "금박이 벗겨진 갑주를 두른 말.",
-    "art": "war horse in peeling pale gold barding",
-    "guardian": false
+    "art": "horse wearing worn gilded barding armor",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 70,
     "name": "옥좌 사자",
     "desc": "등에 부서진 옥좌를 짊어진 거대한 황금 사자.",
-    "art": "giant pale gold lion carrying a broken throne on its back",
-    "guardian": true
+    "art": "huge golden lion carrying a broken throne on its back",
+    "guardian": true,
+    "skills": [
+     "awe",
+     "drain"
+    ]
    }
   ]
  },
@@ -579,71 +708,95 @@
     "floor": 71,
     "name": "산호 게",
     "desc": "등에 바랜 산호가 자란 게.",
-    "art": "crab with faded coral growing on its shell",
-    "guardian": false
+    "art": "crab with faded coral growing on its back",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 72,
-    "name": "물이끼 해파리",
-    "desc": "이끼색 촉수를 늘어뜨린 해파리.",
-    "art": "pale jellyfish with moss-green tendrils",
-    "guardian": false
+    "name": "가시 복어",
+    "desc": "잔뜩 부풀어 가시를 세운 복어.",
+    "art": "puffed up pufferfish with spikes, floating",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
    },
    {
     "floor": 73,
-    "name": "물방울 정령",
-    "desc": "눈이 달린 동그란 물방울.",
-    "art": "round floating water droplet spirit with small eyes",
-    "guardian": false
+    "name": "종 소라게",
+    "desc": "신전 종을 껍데기 삼아 쓴 소라게.",
+    "art": "hermit crab using a temple bell as its shell",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 74,
-    "name": "종 소라게",
-    "desc": "신전 종을 껍데기 삼아 쓴 소라게.",
-    "art": "hermit crab using an old temple bell as its shell",
-    "guardian": false
-   },
-   {
-    "floor": 75,
     "name": "심해 뱀장어",
     "desc": "기둥을 휘감은 긴 뱀장어.",
     "art": "long deep sea eel coiled",
-    "guardian": false
+    "guardian": false,
+    "skills": [
+     "seal"
+    ]
+   },
+   {
+    "floor": 75,
+    "name": "진주 조개",
+    "desc": "입을 벌리면 진주가 빛나는 거대한 조개.",
+    "art": "giant clam with a glowing pearl inside",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 76,
-    "name": "진주 조개",
-    "desc": "입을 벌리면 진주가 빛나는 거대한 조개.",
-    "art": "giant clam opening to reveal a glowing pearl",
-    "guardian": false
+    "name": "등불 아귀",
+    "desc": "이마의 등불로 어둠을 비추는 아귀.",
+    "art": "anglerfish with a glowing lure on its forehead",
+    "guardian": false,
+    "skills": [
+     "awe"
+    ]
    },
    {
     "floor": 77,
     "name": "사당 거북",
     "desc": "등에 작은 사당을 이고 다니는 바다거북.",
     "art": "sea turtle carrying a small shrine on its shell",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 78,
-    "name": "등불 아귀",
-    "desc": "이마의 등불로 어둠을 비추는 아귀.",
-    "art": "anglerfish with a glowing lantern lure",
-    "guardian": false
+    "name": "산호 바다뱀",
+    "desc": "산호 가시가 돋은 바다뱀.",
+    "art": "sea serpent with coral spikes",
+    "guardian": false,
+    "skills": [
+     "drain"
+    ]
    },
    {
     "floor": 79,
-    "name": "산호 바다뱀",
-    "desc": "산호 가시가 돋은 바다뱀.",
-    "art": "sea serpent with faded coral spikes",
-    "guardian": false
+    "name": "신전 해마",
+    "desc": "투구 같은 머리를 한 커다란 해마.",
+    "art": "large seahorse with a helmet-like head crest",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 80,
     "name": "심연의 크라켄",
     "desc": "촉수에 신전 기둥 조각을 감은 크라켄.",
-    "art": "kraken with tentacles wrapped around broken temple pillars",
-    "guardian": true
+    "art": "kraken holding broken temple pillar pieces in its tentacles",
+    "guardian": true,
+    "skills": [
+     "seal",
+     "drain",
+     "multi"
+    ]
    }
   ]
  },
@@ -660,71 +813,97 @@
     "floor": 81,
     "name": "태엽 쥐",
     "desc": "등에 작은 태엽 열쇠가 꽂힌 쥐.",
-    "art": "clockwork mouse with a wind-up key on its back",
-    "guardian": false
+    "art": "rat with a small wind-up key in its back",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 82,
-    "name": "시계추 박쥐",
-    "desc": "날개가 시계추 모양인 청동 박쥐.",
-    "art": "bat with pendulum-shaped bronze wings",
-    "guardian": false
+    "name": "청동 박쥐",
+    "desc": "날개뼈가 청동 막대로 된 박쥐.",
+    "art": "bat with bronze rod wing bones",
+    "guardian": false,
+    "skills": [
+     "drain"
+    ]
    },
    {
     "floor": 83,
     "name": "톱니 딱정벌레",
     "desc": "등껍질이 맞물린 톱니바퀴인 딱정벌레.",
-    "art": "beetle whose shell is interlocking bronze gears",
-    "guardian": false
+    "art": "beetle whose shell is made of interlocking gears",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 84,
     "name": "모래시계 거미",
     "desc": "몸통이 모래시계인 거미.",
-    "art": "spider with an hourglass body",
-    "guardian": false
+    "art": "spider whose body is an hourglass",
+    "guardian": false,
+    "skills": [
+     "stop"
+    ]
    },
    {
     "floor": 85,
     "name": "톱니 사냥개",
     "desc": "청동 톱니바퀴로 짜 맞춘 사냥개.",
-    "art": "hound built of bronze gears",
-    "guardian": false
+    "art": "hound built from bronze gears",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 86,
     "name": "청동 올빼미",
     "desc": "두 눈이 시계판인 청동 올빼미.",
-    "art": "bronze owl whose eyes are clock faces",
-    "guardian": false
+    "art": "bronze owl with clock faces for eyes",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
    },
    {
     "floor": 87,
-    "name": "시계판 미믹",
-    "desc": "이빨을 드러낸 채 바늘이 제멋대로 도는 시계.",
-    "art": "clock mimic with teeth and spinning hands",
-    "guardian": false
+    "name": "괘종시계 미믹",
+    "desc": "문짝이 열리며 이빨이 드러나는 키 큰 괘종시계.",
+    "art": "tall grandfather clock mimic with teeth behind its door",
+    "guardian": false,
+    "skills": [
+     "stop"
+    ]
    },
    {
     "floor": 88,
     "name": "태엽 전갈",
     "desc": "꼬리 끝이 시곗바늘인 청동 전갈.",
-    "art": "bronze scorpion with a clock-hand tail",
-    "guardian": false
+    "art": "bronze scorpion with a clock hand stinger",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 89,
     "name": "청동 황소",
     "desc": "가슴에 멈춘 시계판을 단 청동 황소.",
     "art": "bronze bull with a stopped clock face on its chest",
-    "guardian": false
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 90,
     "name": "태엽 용",
     "desc": "등에 거대한 톱니바퀴를 단 청동 용.",
-    "art": "bronze clockwork dragon with giant gears on its back",
-    "guardian": true
+    "art": "bronze dragon with a huge gear on its back",
+    "guardian": true,
+    "skills": [
+     "stop",
+     "steel",
+     "reflect"
+    ]
    }
   ]
  },
@@ -741,71 +920,98 @@
     "floor": 91,
     "name": "구름 양",
     "desc": "털이 뭉게구름인 양.",
-    "art": "sheep with fluffy cloud wool",
-    "guardian": false
+    "art": "sheep with fluffy cloud-like wool",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 92,
-    "name": "빛 방울",
-    "desc": "작은 날개가 달린 진주빛 빛 방울.",
-    "art": "small orb of soft pearl light with tiny wings",
-    "guardian": false
+    "name": "날개 고양이",
+    "desc": "등에 작은 흰 날개가 달린 고양이.",
+    "art": "white cat with small feathered wings",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 93,
-    "name": "날개 종",
-    "desc": "옅은 금빛 날개가 달려 떠다니는 종.",
-    "art": "floating pale gold bell with small white wings",
-    "guardian": false
+    "name": "은빛 늑대",
+    "desc": "달빛처럼 흰 털의 늑대.",
+    "art": "silver white wolf",
+    "guardian": false,
+    "skills": [
+     "awe"
+    ]
    },
    {
     "floor": 94,
     "name": "진주 학",
     "desc": "깃털이 진주빛으로 빛나는 학.",
-    "art": "crane with pearlescent feathers",
-    "guardian": false
+    "art": "crane with pearly shimmering feathers",
+    "guardian": false,
+    "skills": [
+     "rebirth"
+    ]
    },
    {
     "floor": 95,
-    "name": "진주 뱀",
+    "name": "진주 비늘 뱀",
     "desc": "진주빛 비늘의 긴 뱀.",
-    "art": "long serpent with pearlescent scales",
-    "guardian": false
+    "art": "long snake with pearly scales",
+    "guardian": false,
+    "skills": []
    },
    {
     "floor": 96,
     "name": "빛의 사슴",
     "desc": "뿔에서 옅은 빛이 흘러내리는 하얀 사슴.",
-    "art": "white stag with softly glowing antlers",
-    "guardian": false
+    "art": "white deer with softly glowing antlers",
+    "guardian": false,
+    "skills": [
+     "regen"
+    ]
    },
    {
     "floor": 97,
     "name": "구름 고래",
-    "desc": "구름 사이를 헤엄치는 고래.",
-    "art": "whale made of clouds",
-    "guardian": false
+    "desc": "구름 사이를 헤엄치는 하얀 고래.",
+    "art": "white whale swimming in the sky",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
    },
    {
     "floor": 98,
     "name": "성소 사자",
     "desc": "날개 달린 하얀 사자.",
     "art": "white winged lion",
-    "guardian": false
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
    },
    {
     "floor": 99,
     "name": "성소 기린",
     "desc": "진주빛 비늘과 옅은 금 갈기의 기린.",
-    "art": "qilin with pearlescent scales and a pale gold mane",
-    "guardian": false
+    "art": "qilin with pearly scales and a pale gold mane",
+    "guardian": false,
+    "skills": [
+     "rebirth"
+    ]
    },
    {
     "floor": 100,
     "name": "여섯 날개 백룡",
     "desc": "여섯 날개를 펼친 진주빛 용.",
-    "art": "majestic white dragon with six pearl feathered wings",
-    "guardian": true
+    "art": "pearl white dragon with six spread wings",
+    "guardian": true,
+    "skills": [
+     "death",
+     "rebirth",
+     "regen",
+     "freeze"
+    ]
    }
   ]
  }

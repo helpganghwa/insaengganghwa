@@ -8,6 +8,7 @@ import { walletAdd } from '@/lib/game/wallet';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
 import { simulateTowerBattle, type TowerTurn } from './battle';
+import { towerFloorSkills } from './floors';
 import { TOWER_SLOTS, drawPool, floorRule, towerCp, type EquippedPiece, type FloorRule, type Rng10k, type SlotKeys, type TowerSlot } from './engine';
 
 /** 서버 권위 RNG(CLAUDE §3.1). */
@@ -341,7 +342,7 @@ export async function challengeTower(
     // 탑 전투력 0(요구 장비를 하나도 장착하지 않음) — 한 턴 만에 지고 도전만 날아가니 막는다.
     if (cp.total <= 0) throw new TowerError('NO_POWER');
     const req = towerRequirement(floor);
-    const battle = simulateTowerBattle({ towerCp: cp.total, requirement: req, doubledCount: cp.doubledCount, rng });
+    const battle = simulateTowerBattle({ towerCp: cp.total, requirement: req, doubledCount: cp.doubledCount, skills: towerFloorSkills(floor), rng });
 
     const reward: { diamond: number; boxes: number } | null = battle.win ? towerReward(floor) : null;
     const today = kstDateString();

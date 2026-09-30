@@ -7,10 +7,11 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
-import { TOWER_BATTLE, type TowerTurn } from '@/lib/game/tower/battle';
-import { TOWER_KIND_KO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
+import { TOWER_BATTLE, type TowerSkill, type TowerTurn } from '@/lib/game/tower/battle';
+import { TOWER_SKILL_INFO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
 
+import { TowerSkillTags } from './TowerSkills';
 import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
 
 const STEP_MS = 700;
@@ -28,7 +29,7 @@ export type TowerMe = { nickname: string; guild: { name: string; emblemUrl: stri
 
 /**
  * 무대 — 상세·전투 공통. 장면이 화면 맨 위부터 깔리고, 위쪽에 뒤로가기 · 층·장소 · 돌파 보상 · 오늘 도전(전투 중엔 N턴).
- * 아래쪽에 나 ↔ 층 주인(대난투 문법: 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
+ * 아래쪽에 나 ↔ 층 주인(대난투 문법: 이름 · 길드/스킬 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
  * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다. 무대 아래는 해설 한 칸.
  */
 export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
@@ -106,7 +107,7 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
         <Fighter
           side="r"
           name={info.name}
-          sub={<span className="truncate text-zinc-300">{TOWER_KIND_KO[info.kind]}</span>}
+          sub={<TowerSkillTags floor={floor} className="text-[9.5px]" />}
           cp={towerRequirement(floor)}
           img={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
           act={!!cur && !ended && cur.actor === 'mon'}
@@ -379,8 +380,32 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
   // 배율이 붙어 피해가 커진 경우만 'raw → 피해'(급소·광폭화). 반격·공명은 절반이라 '(raw의 절반)'.
   const grew = rawNum != null && dNum > rawNum;
   const half = rawNum != null && Math.abs(dNum - rawNum * 0.5) <= Math.max(1, rawNum * 0.01);
+  // 몬스터 스킬 — 이 줄에 붙은 스킬 이름(아이콘 포함)과, 몬스터가 회복한 체력.
+  const sk = t.skills ?? [];
+  const S = (k: TowerSkill) => <Ev c="text-rose-300">{TOWER_SKILL_INFO[k].icon} {TOWER_SKILL_INFO[k].name}</Ev>;
+  const heal = t.heal ? <span className="text-emerald-300/90"> (+{hpNum(t.heal)})</span> : null;
+  // 내 공격이 강철 피부·위압으로 줄어든 경우 — 'raw → 피해 (강철 피부)'.
+  const shrunk = mine && rawNum != null && dNum < rawNum && sk.length ? (
+    <span className="text-zinc-500"> ({sk.map((k) => TOWER_SKILL_INFO[k].name).join('·')})</span>
+  ) : null;
+  // 몬스터 공격에 붙은 스킬(빙결·화상·시간 정지·흡혈) — 줄 끝에 이어 붙인다.
+  const riders = !mine && t.event !== 'skill' && sk.length ? (
+    <> · {sk.map((k, i) => <span key={k}>{i ? ' ' : ''}{S(k)}</span>)}{heal}</>
+  ) : null;
   let body: React.ReactNode;
   switch (t.event) {
+    case 'skill': {
+      const k = sk[0];
+      if (mine) body = <>{k ? S(k) : null} {k === 'stop' ? '시간이 멈춰 움직이지 못한다.' : '몸이 얼어붙어 움직이지 못한다.'}</>;
+      else if (k === 'regen') body = <>{S(k)} {monName}의 상처가 아문다.{heal}</>;
+      else if (k === 'rebirth') body = <>{S(k)} {josa(`${monName}#{이}`)} 다시 일어섰다.{heal}</>;
+      else if (k === 'burn') body = <>{S(k)} 몸이 타들어 간다. 피해 {D}</>;
+      else if (k === 'reflect') body = <>{S(k)} 급소의 충격이 되돌아왔다. 피해 {D}</>;
+      else if (k === 'death') body = <>{S(k)} {josa(`${monName}#{이}`)} 숨통을 끊었다. 피해 {D}</>;
+      else if (k === 'multi') body = <>{S(k)} {josa(`${monName}#{이}`)} 한 번 더 몰아쳤다. 피해 {D}{sk.includes('drain') ? <> · {S('drain')}{heal}</> : null}</>;
+      else body = <>{josa(`${monName}#{이}`)} 스킬을 썼다.</>;
+      break;
+    }
     case 'miss':
       body = mine ? <>내 공격이 빗나갔다.</> : <>{monName}의 공격이 빗나갔다.</>;
       break;
@@ -404,18 +429,20 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
       break;
     case 'first_strike':
       body = mine
-        ? <><Ev c="text-orange-300">선제!</Ev> 먼저 거리를 좁혀 첫 일격. 피해 {D}</>
+        ? <><Ev c="text-orange-300">선제!</Ev> 먼저 거리를 좁혀 첫 일격. 피해 {shrunk ? <>{raw} → </> : null}{D}</>
         : <><Ev c="text-orange-300">선제!</Ev> {josa(`${monName}#{이}`)} 먼저 달려들었다. 피해 {D}</>;
       break;
     default:
       // 전투력 차가 커서 피해가 0.1%p도 안 되면 0으로 기록된다 — '피해 0' 대신 통하지 않았다고.
       if (t.damage <= 0) body = mine ? <>공격했지만 통하지 않았다.</> : <>{josa(`${monName}#{이}`)} 공격했지만 통하지 않았다.</>;
-      else body = mine ? <>{josa(`${monName}#{을}`)} 공격했다. 피해 {D}</> : <>{josa(`${monName}#{이}`)} 공격했다. 피해 {D}</>;
+      else body = mine ? <>{josa(`${monName}#{을}`)} 공격했다. 피해 {shrunk ? <>{raw} → </> : null}{D}</> : <>{josa(`${monName}#{이}`)} 공격했다. 피해 {D}</>;
   }
   return (
     <p className={`py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200 ${(mine && t.monHp <= 0) || (!mine && t.meHp <= 0) ? 'font-bold' : ''}`}>
       <span className={mine ? 'text-amber-400' : 'text-red-400'}>▸ </span>
       {body}
+      {shrunk}
+      {riders}
       {hp}
       {/* 마지막 일격 — 쓰러뜨린 줄·쓰러진 줄을 강조해 결말과 이어지게. */}
       {mine && t.damage > 0 && t.monHp <= 0 ? <Ev c="text-emerald-300"> 쓰러뜨렸다!</Ev> : null}
@@ -461,7 +488,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
   return (
     <div className={`absolute bottom-2 flex w-36 flex-col items-center gap-0.5 ${side === 'l' ? 'left-[5%]' : 'right-[5%]'}`}>
       <span className="max-w-full truncate text-[11px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{name}</span>
-      {/* 길드(문양+이름) / 몬스터 특성 — 없어도 높이 고정. */}
+      {/* 길드(문양+이름) / 몬스터 스킬(누르면 설명) — 없어도 높이 고정. */}
       <span className="flex h-3 max-w-full items-center gap-0.5 text-[9.5px] drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{sub}</span>
       <span className={`text-[10px] leading-none font-bold tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,.9)] ${side === 'l' ? 'text-amber-300' : 'text-red-300'}`}>
         <span className="font-normal text-zinc-300">전투력 </span>{n(cp)}
