@@ -10,6 +10,7 @@ import { getPlayProductPurchase, PlayApiError, type PlayProductPurchase } from '
 import { settleAttributedPurchase } from './play-attribution';
 import { isKnownPlaySku, productIdForPlaySku } from './play-sku';
 import { completePurchase, createPlayOrder, PurchaseError, type CompleteResult } from './purchase';
+import { RTDN_LOOKBACK_MS } from './play-rtdn';
 
 /**
  * Play 결제 복구(2026-09-22) — 구글에는 구매가 살아 있는데 우리 서버가 지급하지 못한 건을 되살린다.
@@ -127,7 +128,12 @@ export async function recoverPlayPurchase(
   // ② 같은 SKU의 최근 미완 주문 — 구매 전에 만든 주문 먼저(구매 뒤 같은 가격의 다른 성장패스 구간을 눌러 생긴 주문을 고르지 않게),
   //   그다음 마지막 결제 시도 순(0215: 가격 SKU를 공유하면 가장 최근에 결제창을 연 주문이 이 구매).
   const candidates = await db
-    .select({ paymentId: iapOrders.portoneOrderId, productCode: iapOrders.productCode })
+    .select({
+      paymentId: iapOrders.portoneOrderId,
+      productCode: iapOrders.productCode,
+      // 이 구매의 결제창이었을 수 있는 주문 — 구매 전에 만들었고 마지막 결제 시도가 구매 전 6시간 10분 안(RTDN과 같은 창).
+      plausible: sql<boolean>`(${iapOrders.createdAt} <= ${ts(pt + 5_000)} and ${lastTry} >= ${ts(pt - RTDN_LOOKBACK_MS)})`,
+    })
     .from(iapOrders)
     .where(
       and(
@@ -169,12 +175,14 @@ export async function recoverPlayPurchase(
     });
     return { ok: false, code: 'NO_ORDER' };
   }
-  // 가격 SKU를 공유하는 상품(성장패스 구간)의 미완 주문이 둘 이상이면 어느 상품의 구매인지 가릴 수 없다 — RTDN과 같은 기준으로
-  // 추정 지급하지 않고 경보(2026-09-30 검수). 기기는 소모하지 않으므로 운영자가 어드민 도구로 맞는 주문에 지급한다.
-  if (new Set(candidates.map((c) => c.productCode)).size > 1) {
+  // 이 구매의 결제창이었을 수 있는 미완 주문이 가격 SKU를 공유하는 여러 상품(성장패스 구간)에 걸쳐 있으면 어느 상품의 구매인지
+  // 가릴 수 없다 — RTDN과 같은 기준으로 추정 지급하지 않고 경보(2026-09-30 검수). 며칠 전에 버린 다른 구간 결제창은 보지 않는다
+  // (구매 시점에 가능했던 주문만). 기기는 소모하지 않으므로 운영자가 어드민 도구로 맞는 주문에 지급한다.
+  const plausibleProducts = new Set(candidates.filter((c) => c.plausible).map((c) => c.productCode));
+  if (plausibleProducts.size > 1) {
     await raisePaymentAlert('PLAY_RTDN_UNMATCHED', {
       paymentId: `recover:${g.orderId ?? purchaseToken.slice(0, 16)}`,
-      detail: `상점 복구: 구글 주문 ${g.orderId ?? '?'}(${sku})의 후보 미완 주문이 여러 상품(${[...new Set(candidates.map((c) => c.productCode))].join(', ')})이라 어느 상품의 구매인지 가릴 수 없다(복구 유저 ${userId}) — 지급하지 않음. 콘솔에서 확인 뒤 /api/admin/play-complete-order로 지급(3일 안에 처리하지 않으면 구글 자동 환불).`,
+      detail: `상점 복구: 구글 주문 ${g.orderId ?? '?'}(${sku})의 후보 미완 주문이 여러 상품(${[...plausibleProducts].join(', ')})이라 어느 상품의 구매인지 가릴 수 없다(복구 유저 ${userId}) — 지급하지 않음. 콘솔에서 확인 뒤 /api/admin/play-complete-order로 지급(3일 안에 처리하지 않으면 구글 자동 환불).`,
       onceEver: true,
     });
     return { ok: false, code: 'NO_ORDER' };
