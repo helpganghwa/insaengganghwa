@@ -612,9 +612,9 @@
    },
    {
     "floor": 62,
-    "name": "금화 슬라임",
-    "desc": "금화 여러 닢이 박힌 말랑한 황금빛 슬라임.",
-    "art": "round golden slime with several gold coins embedded in its body, two dot eyes, glossy opaque body, no legs",
+    "name": "찻주전자 미믹",
+    "desc": "금테 두른 도자기 찻주전자가 뚜껑을 들썩이며 이빨을 드러낸다.",
+    "art": "gold-trimmed white porcelain teapot mimic with sharp teeth under its lifted lid, floating, no legs, no feet",
     "guardian": false,
     "skills": []
    },
@@ -674,9 +674,9 @@
    },
    {
     "floor": 69,
-    "name": "갑주 군마",
-    "desc": "금박이 벗겨진 갑주를 두른 말.",
-    "art": "horse wearing worn gilded barding armor",
+    "name": "룩 골렘",
+    "desc": "체스판의 성 모양 말이 돌 몸으로 걸어 다닌다.",
+    "art": "stone golem shaped like a chess rook castle tower piece, crenellated top, short sturdy stone legs, small glowing eyes in its tower window",
     "guardian": false,
     "skills": [
      "steel"
