@@ -17,7 +17,7 @@ const cryptoRng10k: Rng10k = () => crypto.getRandomValues(new Uint32Array(1))[0]
 const NOT_BANNED = sql`not (pr.banned_at is not null and (pr.ban_until is null or pr.ban_until > now()))`;
 
 export class TowerError extends Error {
-  constructor(public code: 'NOT_NEXT_FLOOR' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED') {
+  constructor(public code: 'NOT_NEXT_FLOOR' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED' | 'POOL_MISSING') {
     super(code);
     this.name = 'TowerError';
   }
@@ -184,7 +184,8 @@ export async function towerBoard(userId: string, serverId: number) {
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
-  const drawn = r.pools.length < POOL_FLOORS.length || r.specials.length < sections ? await towerPools(serverId) : null;
+  // 캐릭터가 없는 서버(쿠키 조작 등)면 추첨하지 않는다(감사 M2) — 화면은 page가 캐릭터 없음으로 처리.
+  const drawn = r.nickname != null && (r.pools.length < POOL_FLOORS.length || r.specials.length < sections) ? await towerPools(serverId) : null;
   const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
   const specials = drawn?.specials ?? new Map(r.specials.map((x) => [Number(x.section), { weapon: [x.weapon], armor: [x.armor], accessory: [x.accessory] }]));
   const p = r.prog;
@@ -262,8 +263,6 @@ export async function challengeTower(
   opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k } = {},
 ): Promise<TowerChallengeResult> {
   const rng = opts.rng ?? cryptoRng10k;
-  const { pools, specials, week } = await towerPoolsCached(serverId);
-  if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
   const idem = opts.idemKey && /^[A-Za-z0-9-]{8,64}$/.test(opts.idemKey) ? opts.idemKey : null;
   // 왕복 최소화(CLAUDE §11.4): ① 캐릭터 확인+진행도 생성+행 잠금 ② (재전송 확인) ③ 아바타+장착 ④ 진행도 갱신+전투 저장(+이기면 순위).
   return db.transaction(async (tx) => {
@@ -275,11 +274,17 @@ export async function challengeTower(
       returning best_floor, loss_day::text as loss_day, losses`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
     if (!p) throw new TowerError('NO_CHARACTER');
     const best = Number(p.best_floor);
+    // 요구 장비는 캐릭터를 확인한 뒤에 — 쿠키로 아무 서버 번호를 보내 없는 서버의 풀을 추첨·저장하게 만들 수 없게(09-30 감사 M2).
+    // 추첨은 별도 연결로 돌지만 인스턴스 캐시가 대부분을 흡수한다(한 주에 한 번 추첨).
+    const { pools, specials, week } = await towerPoolsCached(serverId);
+    if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
+    // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
+    if (pools.size < POOL_FLOORS.length || specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) throw new TowerError('POOL_MISSING');
     if (idem) {
       // ② 행 잠금 뒤 새 문장으로 찾아야 같은 키의 동시 요청도 앞선 결과를 본다(같은 문장에 넣으면 잠금 전 스냅샷이라 못 본다).
       const [prev] = (await tx.execute(sql`
         select id::text as id, floor, win, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
-        from tower_battles where user_id=${userId}::uuid and idem_key=${idem}`)) as unknown as BattleRow[];
+        from tower_battles where user_id=${userId}::uuid and server_id=${serverId} and idem_key=${idem}`)) as unknown as BattleRow[];
       if (prev) {
         const left = attemptsLeft(p.loss_day, Number(p.losses));
         return {
