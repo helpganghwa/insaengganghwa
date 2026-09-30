@@ -230,5 +230,5 @@ export function towerTurnLine(t: TowerTurn, monName: string): string {
 
 /** 전투 기록의 결말 한 줄(B2 — 결과 팝업 대신 기록 끝에 붙는다). 이름 뒤 조사는 josa로. */
 export function towerResultLine(win: boolean, monName: string, turns: number): string {
-  return win ? josa(`${turns}턴 만에 ${monName}#{이} 쓰러졌다.`) : josa(`${monName}#{을} 넘지 못하고 물러났다.`);
+  return win ? josa(`${turns}턴 만에 ${monName}#{이} 쓰러졌다.`) : `${monName}에게 패배했다.`;
 }
