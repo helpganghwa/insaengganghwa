@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { josa } from 'josa';
 
@@ -341,8 +341,9 @@ const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, 
 /**
  * 기록 한 줄(텍스트 RPG) — 누가 · 변수 · 피해(바뀐 경우 'raw → 피해') · 남은 HP. 게이지 없이 글만.
  * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록·상한에 걸린 피해는 바뀐 값만 보여 준다.
+ * memo — 재생 중 한 줄씩 늘 때 이미 나온 줄은 다시 그리지 않는다.
  */
-function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: boolean }) {
+const LogLine = memo(function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: boolean }) {
   const B = TOWER_BATTLE;
   const mine = t.actor === 'me';
   const d = hpNum(t.damage);
@@ -395,7 +396,7 @@ function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: bo
       {hp}
     </p>
   );
-}
+});
 
 /**
  * 무대 위 한쪽(대난투 Fighter 문법) — 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바. 자리·크기 고정.
