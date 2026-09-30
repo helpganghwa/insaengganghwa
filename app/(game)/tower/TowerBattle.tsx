@@ -137,10 +137,8 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, streak, onList, onNext, onRetry }: {
+export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
   floor: number;
-  /** 목록으로 나가지 않고 이어서 돌파한 층 수(이 판 포함) — 2 이상이면 결말에 '연속 돌파 N층째'. */
-  streak: number;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
@@ -260,7 +258,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
               <>
-                <b className="block text-[13px] text-emerald-300">승리{streak >= 2 ? <span className="font-bold text-amber-300"> · 연속 돌파 {streak}층째</span> : null}</b>
+                <b className="block text-[13px] text-emerald-300">승리</b>
                 {result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
@@ -482,7 +480,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
       </span>
       <div key={`${stepKey}${act ? 'a' : hit ? 'h' : ''}`} className={`relative mt-0.5 h-[100px] w-36 ${motion}`}>
         {dmg != null ? (
-          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{compact(Math.round(dmg))}</div>
+          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 whitespace-nowrap font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{compact(Math.round(dmg))}</div>
         ) : null}
         <div className="h-full w-full transition-[opacity,filter] duration-500 ease-out" style={{ opacity: down ? 0.3 : 1, filter: down ? 'grayscale(1)' : 'none' }}>
           {img ? (
