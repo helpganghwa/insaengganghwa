@@ -210,6 +210,12 @@ const synth = {
       tone(ac, { freq: 140, freqEnd: 45, type: 'sawtooth', dur: 0.16, vol: 0.2 });
       noise(ac, { dur: 0.18, vol: 0.16, filter: 'lowpass', freq: 1200, freqEnd: 200, delay: 0.02 });
     }),
+  // 무한의 탑 — 층 주인이 광폭해질 때 낮게 으르렁(급소는 레이드 치명타 소리를 쓴다).
+  towerEnrage: () =>
+    play((ac) => {
+      tone(ac, { freq: 90, freqEnd: 55, type: 'sawtooth', dur: 0.35, vol: 0.18 });
+      noise(ac, { dur: 0.3, vol: 0.12, filter: 'lowpass', freq: 500, freqEnd: 150, delay: 0.03 });
+    }),
   meleeVictory: () =>
     play((ac) => {
       // 챔피언 팡파레 — 브라스풍(saw) 상승 + 밝은 지속음.
@@ -272,6 +278,7 @@ export const sounds = {
   meleeHit: voice('melee-hit', synth.meleeHit),
   meleeKo: voice('melee-ko', synth.meleeKo),
   meleeVictory: voice('melee-victory', synth.meleeVictory),
+  towerEnrage: voice('tower-enrage', synth.towerEnrage),
   // 보상/알림
   coin: voice('coin', synth.coin),
   gem: voice('gem', synth.coin),
