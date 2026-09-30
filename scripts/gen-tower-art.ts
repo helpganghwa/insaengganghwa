@@ -124,7 +124,9 @@ async function pro(key: string, prompt: string, w: number, h: number, noBg: bool
 }
 const pal = PALETTE_WORDS[sec] ?? 'muted desaturated palette';
 const tasks: Promise<void>[] = [];
-if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${pal}, ${STYLE_BG}`, 400, 240, false));
+// 탑 안이라는 게 보이게(09-30 3구간 검수: '탑 느낌이 안 든다') — 둥근 벽·나선 계단·높은 창 밖 하늘. 5·10구간은 이미 탑 꼭대기라 제외.
+const TOWER_CUE = 'inside a tall round fantasy tower, curved circular stone walls, part of a spiral staircase winding upward along the wall, tall narrow arched windows showing open sky far outside';
+if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${sec === 5 || sec === 10 ? '' : `${TOWER_CUE}, `}${pal}, ${STYLE_BG}`, 400, 240, false));
 if (only.includes('mons')) {
   // lanes줄로 나눠 동시에 lanes개씩.
   const mons = S.mons.filter((m) => !onlyFloors || onlyFloors.has(m.floor));

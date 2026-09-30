@@ -230,9 +230,9 @@
    },
    {
     "floor": 24,
-    "name": "풀무 두꺼비",
-    "desc": "몸이 가죽 풀무처럼 부풀었다 꺼지는 두꺼비.",
-    "art": "toad whose body looks like a leather bellows",
+    "name": "불똥 참새",
+    "desc": "날개를 털 때마다 불똥이 튀는 통통한 잿빛 참새.",
+    "art": "plump round ash grey sparrow with small glowing ember sparks falling from its wings, cute small bird",
     "guardian": false,
     "skills": []
    },
