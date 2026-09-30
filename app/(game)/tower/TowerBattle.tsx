@@ -134,7 +134,7 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
 /**
  * 전투(TOWER.md §7) — 층 화면(상세)과 같은 무대에서 그대로 이어 싸운다(화면 전환 없음).
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
- * 건너뛰기 없이 끝까지 재생, 진 판은 결정적 순간부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
+ * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
 export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
   floor: number;
@@ -205,8 +205,6 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
 
   const cur: TowerTurn | null = shown > 0 ? turns[shown - 1]! : null;
   const prev: TowerTurn | null = shown > 1 ? turns[shown - 2]! : null;
-  const keyIdx = Math.min(Math.max(0, result?.keyIndex ?? 0), Math.max(0, total - 1));
-  const keyTurn = turns[keyIdx];
   const win = !!result?.win;
   const nextFloor = Math.min(TOWER_FLOORS, floor + 1);
   const left = result?.attemptsLeft ?? 0;
@@ -248,7 +246,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
                 <span className="h-px flex-1 bg-white/[.08]" />
               </div>
             ) : null}
-            <LogLine t={t} monName={info.name} mark={done && !win && i === keyIdx} />
+            <LogLine t={t} monName={info.name} />
           </div>
         ))}
         {done ? (
@@ -265,12 +263,6 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             ) : (
               <>
                 <b className="text-[13px] text-red-300">물러남</b>
-                {keyTurn ? (
-                  <div>
-                    결정적인 순간 · {keyTurn.turn}턴 {towerTurnLine(keyTurn, info.name)}{' '}
-                    <button type="button" onClick={() => play(keyIdx)} className="font-bold text-amber-300">그 장면 다시 보기 ›</button>
-                  </div>
-                ) : null}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
               </>
             )}
@@ -343,7 +335,7 @@ const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, 
  * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록·상한에 걸린 피해는 바뀐 값만 보여 준다.
  * memo — 재생 중 한 줄씩 늘 때 이미 나온 줄은 다시 그리지 않는다.
  */
-const LogLine = memo(function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: boolean }) {
+const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: string }) {
   const B = TOWER_BATTLE;
   const mine = t.actor === 'me';
   const d = hpNum(t.damage);
@@ -390,7 +382,7 @@ const LogLine = memo(function LogLine({ t, monName, mark }: { t: TowerTurn; monN
       else body = mine ? <>{josa(`${monName}#{을}`)} 공격했다. 피해 {D}</> : <>{josa(`${monName}#{이}`)} 공격했다. 피해 {D}</>;
   }
   return (
-    <p className={`py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200 ${mark ? 'rounded bg-red-950/50 px-1' : ''}`}>
+    <p className="py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200">
       <span className={mine ? 'text-amber-400' : 'text-red-400'}>▸ </span>
       {body}
       {hp}
