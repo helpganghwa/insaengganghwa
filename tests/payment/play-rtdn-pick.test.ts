@@ -5,23 +5,48 @@ vi.mock('@/lib/db/client', () => ({ db: {} }));
 
 import { pickRtdnCandidate } from '@/lib/payment/play-rtdn';
 
-const row = (id: string, status: string, hasToken = false) => ({ paymentId: id, userId: 'u', status, hasToken });
+const T = 1_000_000_000_000; // 구매 시각
+const row = (id: string, status: string, o: { hasToken?: boolean; userId?: string; productCode?: string; lastTryMs?: number } = {}) => ({
+  paymentId: id,
+  userId: o.userId ?? 'u',
+  status,
+  hasToken: o.hasToken ?? false,
+  productCode: o.productCode ?? 'bp_enhance_0',
+  lastTryMs: o.lastTryMs ?? T - 60_000,
+});
 
-describe('RTDN 판정 — 범위 안 같은 SKU 주문이 정확히 1건이고 토큰 없는 미완일 때만', () => {
+describe('RTDN 판정 — 범위 안 주문이 모두 한 유저 것이고 미완 주문의 상품이 하나로 정해질 때만', () => {
   it('미완 1건이면 그 주문', () => {
-    expect(pickRtdnCandidate([row('a', 'pending')])?.paymentId).toBe('a');
-    expect(pickRtdnCandidate([row('a', 'expired')])?.paymentId).toBe('a');
+    expect(pickRtdnCandidate([row('a', 'pending')], T)?.paymentId).toBe('a');
+    expect(pickRtdnCandidate([row('a', 'expired')], T)?.paymentId).toBe('a');
   });
-  it('주문이 2건 이상이면(상태와 무관) 지급하지 않는다', () => {
-    expect(pickRtdnCandidate([row('mine', 'paid', true), row('other', 'pending')])).toBeNull();
-    expect(pickRtdnCandidate([row('a', 'pending'), row('b', 'pending')])).toBeNull();
+  it('같은 유저가 결제창을 여러 번 연 경우 — 구매 직전에 연 결제창(09-30 베르 사례)', () => {
+    const rows = [
+      row('first', 'expired', { lastTryMs: T - 7_000 }), // 구매 7초 전에 연 창 = 실제로 결제한 창
+      row('second', 'expired', { lastTryMs: T + 44_000 }),
+      row('third', 'pending', { lastTryMs: T + 54_000 + 60_000 }),
+    ];
+    expect(pickRtdnCandidate(rows, T)?.paymentId).toBe('first');
   });
-  it('1건이어도 이미 토큰이 있거나 끝난 주문이면 지급하지 않는다', () => {
-    expect(pickRtdnCandidate([row('a', 'paid', true)])).toBeNull();
-    expect(pickRtdnCandidate([row('a', 'refunded', true)])).toBeNull();
-    expect(pickRtdnCandidate([row('a', 'pending', true)])).toBeNull();
+  it('같은 유저의 이미 지급된 주문(토큰 있음)은 건너뛰고 미완 주문으로', () => {
+    expect(pickRtdnCandidate([row('paid', 'paid', { hasToken: true }), row('open', 'pending')], T)?.paymentId).toBe('open');
+  });
+  it('다른 유저 주문이 하나라도 있으면 지급하지 않는다(누구 구매인지 모름)', () => {
+    expect(pickRtdnCandidate([row('mine', 'paid', { hasToken: true }), row('other', 'pending', { userId: 'v' })], T)).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'pending'), row('b', 'pending', { userId: 'v' })], T)).toBeNull();
+  });
+  it('같은 유저여도 미완 주문의 상품이 둘 이상이면(가격 SKU 공유 구간) 지급하지 않는다', () => {
+    expect(pickRtdnCandidate([row('a', 'pending', { productCode: 'bp_enhance_0' }), row('b', 'pending', { productCode: 'bp_transcend_0' })], T)).toBeNull();
+  });
+  it('미완 주문이 없으면(모두 토큰 있음·끝남) 지급하지 않는다', () => {
+    expect(pickRtdnCandidate([row('a', 'paid', { hasToken: true })], T)).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'refunded', { hasToken: true })], T)).toBeNull();
+    expect(pickRtdnCandidate([row('a', 'pending', { hasToken: true })], T)).toBeNull();
+  });
+  it('구매 시각 이전 결제창이 없으면(시계 오차 너머) 가장 최근 것', () => {
+    expect(pickRtdnCandidate([row('a', 'pending', { lastTryMs: T + 120_000 }), row('b', 'pending', { lastTryMs: T + 300_000 })], T)?.paymentId).toBe('b');
   });
   it('0건이면 null', () => {
-    expect(pickRtdnCandidate([])).toBeNull();
+    expect(pickRtdnCandidate([], T)).toBeNull();
   });
 });
