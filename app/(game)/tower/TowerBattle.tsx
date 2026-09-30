@@ -359,7 +359,7 @@ const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, 
 
 /**
  * 기록 한 줄(텍스트 RPG) — 누가 · 변수 · 피해(바뀐 경우 'raw → 피해') · 남은 HP. 게이지 없이 글만.
- * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록·상한에 걸린 피해는 바뀐 값만 보여 준다.
+ * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록은 바뀐 값만 보여 준다.
  * memo — 재생 중 한 줄씩 늘 때 이미 나온 줄은 다시 그리지 않는다.
  */
 const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: string }) {
@@ -375,7 +375,7 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
   ) : (
     <span className="text-zinc-500"> · 내 HP <b className="font-bold text-zinc-300">{hpNum(t.meHp)}</b></span>
   );
-  // 배율이 붙어 피해가 커진 경우만 'raw → 피해'(남은 체력 상한에 걸리면 커진 값이 의미 없다).
+  // 배율이 붙어 피해가 커진 경우만 'raw → 피해'(급소·광폭화). 반격·공명은 절반이라 '(raw의 절반)'.
   const grew = rawNum != null && dNum > rawNum;
   const half = rawNum != null && Math.abs(dNum - rawNum * 0.5) <= Math.max(1, rawNum * 0.01);
   let body: React.ReactNode;

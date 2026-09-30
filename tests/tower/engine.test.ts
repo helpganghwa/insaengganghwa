@@ -48,6 +48,19 @@ describe('무한의 탑 수치', () => {
 });
 
 describe('탑 전투력', () => {
+  it('요구 장비가 없으면(추첨 전·실패) 모두 ×0 — fail-closed(09-30 감사 M1)', () => {
+    const none = floorRule(57, null, specials);
+    expect(towerCp(eq('w1', 'a1', 'c1'), none, new Set()).total).toBe(0);
+    // 특별층은 지정 장비만(풀이 없어도 지정 장비는 쓸 수 있다)
+    const sp = floorRule(60, null, specials);
+    expect([...sp.allowed!].sort()).toEqual(['a9', 'c9', 'w9']);
+    expect(towerCp(eq('w9', 'a1', 'c1'), sp, new Set()).pieces.map((p) => p.mult)).toEqual([1, 0, 0]);
+    // 10층(1구간 특별층)은 모든 장비, 지정 장비가 없으면 ×2 없음
+    const ten = floorRule(10, pool, null);
+    expect(ten.allowed).toBeNull();
+    expect(ten.doubleable!.size).toBe(0);
+  });
+
   it('1~10층(특별층 제외)은 모든 장비 ×1, 아바타 장비면 ×2', () => {
     const rule = floorRule(5, pool, specials);
     expect(towerCp(eq('x', 'y', 'z'), rule, new Set()).total).toBe(300);
@@ -142,7 +155,7 @@ describe('전투', () => {
     expect(r.keyIndex).toBeGreaterThanOrEqual(0);
     expect(r.keyIndex).toBeLessThan(r.turns.length);
   });
-  it('변수 줄에는 변수 전 피해(raw)가 남고, 피해 = min(raw × 배율, 남은 체력)', () => {
+  it('변수 줄에는 변수 전 피해(raw)가 남고, 피해 = raw × 배율(남은 체력으로 자르지 않음)', () => {
     let seen = 0;
     for (let i = 0; i < 300; i++) {
       for (const t of simulateTowerBattle({ towerCp: 105, requirement: 100, doubledCount: 3, rng: rngOf(i + 11) }).turns) {

@@ -62,7 +62,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [seenBoard, setSeenBoard] = useState(board);
   if (seenBoard !== board) {
     setSeenBoard(board);
-    setLocal(null);
+    // 새 board가 도전 결과를 이미 담고 있을 때만 버린다 — 도전 직전에 시작된 장착의 재렌더가 늦게 오면 최고 층이 뒤로 가지 않게(재검수 #3).
+    if (!local || board.best >= local.best) setLocal(null);
   }
   const best = Math.max(board.best, local?.best ?? 0);
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
@@ -132,7 +133,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const r = await towerClaimAction(floor).catch(() => null);
     setClaiming(false);
     // 화면을 다시 그리지 않으므로 헤더 다이아는 서버 잔액으로 맞춘다(낙관 값이 어긋났어도 여기서 정확해진다).
-    if (r?.status === 'success' && r.diamondBalance != null) setBase(BigInt(r.diamondBalance));
+    if (r?.status === 'success') {
+      if (r.diamondBalance != null) setBase(BigInt(r.diamondBalance));
+      // 서버 기준 받을 층이 없었으면(이미 받음 등) 먼저 올린 다이아를 되돌린다(재검수 #4).
+      else optimisticAdjust(BigInt(-dia));
+    }
     if (!r || r.status !== 'success') {
       optimisticAdjust(BigInt(-dia));
       setClaimedLocal((s) => new Set([...s].filter((f) => !target.includes(f))));
@@ -251,14 +256,15 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (r) idemRef.current = null;
     if (!r || r.status !== 'success') {
       setBattle(null);
-      // 응답이 없었으면 서버가 처리했을 수 있다 — 화면 값(최고 층·남은 도전)을 서버와 다시 맞춘다.
-      if (!r) router.refresh();
+      // 응답이 없었거나 '지금 층이 아님'이면 화면 값이 서버와 어긋난 것 — 최고 층·남은 도전을 서버와 다시 맞춘다.
+      if (!r || r.code === 'NOT_NEXT_FLOOR') router.refresh();
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
     // 연속 돌파(목록으로 나가지 않고 이어서) · 이 층 지난 도전 기록(진 판이면 1 더하고 가장 가까웠던 판 갱신) — 다시 그리지 않고 여기서.
     setStreak(r.result.win ? streak + 1 : 0);
-    if (!r.result.win) {
+    // 재전송(저장된 결과)이면 그 패배는 이미 서버 기록(board.floorLog)에 있을 수 있어 다시 더하지 않는다.
+    if (!r.result.win && !r.result.replayed) {
       const last = r.result.turns[r.result.turns.length - 1];
       const monMax = towerRequirement(r.result.floor) * TOWER_HP_MULT;
       const now = last && monMax > 0 ? last.monHp / monMax : null;
