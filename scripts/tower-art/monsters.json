@@ -67,7 +67,7 @@
    {
     "floor": 8,
     "name": "촛대 미믹",
-    "desc": "녹슨 청동 촛대가 네 발로 걸어 다니며, 받침 틈으로 이빨을 드러낸다.",
+    "desc": "낡은 촛대가 네 발로 걸어 다니며, 받침 틈으로 이빨을 드러낸다.",
     "art": "bronze candelabra mimic monster walking on four short sturdy clawed feet, a toothy grin in its base, three small lit candles on top with hardened dripping wax",
     "guardian": false,
     "skills": []
@@ -120,7 +120,7 @@
    {
     "floor": 13,
     "name": "책 미믹",
-    "desc": "덮인 표지 사이로 이빨과 혀를 내민 두꺼운 책.",
+    "desc": "표지에 눈이 박힌 두꺼운 책, 덮인 틈으로 이빨과 혀를 내민다.",
     "art": "thick old closed book monster with sharp teeth and a tongue between its covers, floating book, no legs, no feet, no limbs",
     "guardian": false,
     "skills": []
@@ -247,7 +247,7 @@
    {
     "floor": 26,
     "name": "쇠 전갈",
-    "desc": "집게가 대장간 집게처럼 생긴 쇠 전갈.",
+    "desc": "검붉게 녹슨 쇠 껍질로 덮인 전갈, 집게가 유난히 크다.",
     "art": "iron scorpion with pincers shaped like blacksmith tongs",
     "guardian": false,
     "skills": []
@@ -363,7 +363,7 @@
    {
     "floor": 38,
     "name": "이끼 곰",
-    "desc": "온몸이 두꺼운 이끼로 덮인 곰.",
+    "desc": "온몸이 두꺼운 이끼로 덮인 곰, 머리에 작은 관을 얹었다.",
     "art": "bear covered entirely in thick moss",
     "guardian": false,
     "skills": [
@@ -431,7 +431,7 @@
    {
     "floor": 44,
     "name": "폭풍 산양",
-    "desc": "굽은 뿔에 바람이 휘감긴 산양.",
+    "desc": "크게 말린 뿔에 흰 털이 바람결대로 흩날리는 산양.",
     "art": "mountain goat with large curled horns",
     "guardian": false,
     "skills": []
@@ -465,7 +465,7 @@
    {
     "floor": 48,
     "name": "번개 해태",
-    "desc": "갈기 끝마다 잔 번개가 튀는 돌빛 해태, 탑의 문을 지키던 짐승이다.",
+    "desc": "소용돌이 갈기에 뿔 하나가 돋은 돌빛 해태, 탑의 문을 지키던 짐승이다.",
     "art": "haetae, a Korean mythical guardian lion-like beast with a curly mane and a single small horn, stone grey body, small lightning sparks crackling from the tips of its mane",
     "guardian": false,
     "skills": []
@@ -481,7 +481,7 @@
    {
     "floor": 50,
     "name": "폭풍 천마",
-    "desc": "구름을 발굽에 감고 달리는 날개 달린 말.",
+    "desc": "은빛 날개를 활짝 편 천마, 이마에 작은 관이 솟았다.",
     "art": "winged horse with small clouds around its hooves",
     "guardian": true,
     "skills": [
@@ -762,17 +762,17 @@
    },
    {
     "floor": 77,
-    "name": "사당 거북",
-    "desc": "등에 작은 사당을 이고 다니는 바다거북.",
-    "art": "sea turtle carrying a small shrine on its shell",
+    "name": "신전 우파루파",
+    "desc": "산호빛 아가미를 활짝 펼친 통통한 우파루파.",
+    "art": "chubby axolotl with frilly coral pink external gills fanned out, cute smiling face, short legs",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 78,
-    "name": "신전 상어",
-    "desc": "등지느러미에 바랜 산호가 자란 상어.",
-    "art": "shark with faded coral growing on its dorsal fin, swimming",
+    "name": "흡혈 오징어",
+    "desc": "붉은 망토 같은 막을 두른 심해 오징어.",
+    "art": "deep sea vampire squid with a dark red cloak-like web between its arms, glowing eyes, floating",
     "guardian": false,
     "skills": [
      "drain"
@@ -782,7 +782,7 @@
     "floor": 79,
     "name": "신전 해마",
     "desc": "투구 같은 머리를 한 커다란 해마.",
-    "art": "large seahorse with a helmet-like head crest",
+    "art": "large seahorse with a helmet-like head crest, curled tail, floating upright in water, no legs, no feet",
     "guardian": false,
     "skills": []
    },
