@@ -35,6 +35,7 @@ export type SfxName =
   | 'melee-hit'
   | 'melee-ko'
   | 'melee-victory'
+  | 'tower-enrage'
   // 보상/알림
   | 'coin'
   | 'gem'

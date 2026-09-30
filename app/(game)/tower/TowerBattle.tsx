@@ -136,8 +136,15 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
+/** 한 층의 지난 도전 — 진 횟수, 가장 가까웠던 판의 층 주인 남은 체력 비율(0~1). */
+export type TowerFloorLog = { losses: number; closest: number | null };
+
+export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, streak, floorLog, onList, onNext, onRetry }: {
   floor: number;
+  /** 목록으로 나가지 않고 이어서 돌파한 층 수(이 판 포함) — 2 이상이면 결말에 '연속 돌파 N층째'. */
+  streak: number;
+  /** 이 판 전까지의 이 층 기록 — 진 판 결말에 'N번째 물러남 · 가장 가까웠던 판'. */
+  floorLog: TowerFloorLog;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
@@ -192,10 +199,14 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
   }, [shown, ended]);
   // 효과음 — 대난투와 같은 소리: 한 줄마다 타격음, 쓰러뜨린 한 방은 KO, 돌파하면 팡파레(설정의 효과음 끄기를 따른다).
+  // 급소는 치명타 소리, 층 주인이 처음 광폭해지는 줄은 으르렁 소리로 기록을 보지 않아도 알 수 있게.
   useEffect(() => {
     const t = shown > 0 ? turns[shown - 1] : null;
-    if (!t || t.damage <= 0) return;
+    if (!t) return;
+    if (t.event === 'enrage' && !turns.slice(0, shown - 1).some((x) => x.event === 'enrage')) sounds.towerEnrage();
+    if (t.damage <= 0) return;
     if (t.monHp <= 0 || t.meHp <= 0) sounds.meleeKo();
+    else if (t.event === 'critical') sounds.raidCrit();
     else sounds.meleeHit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown]);
@@ -253,7 +264,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
               <>
-                <b className="block text-[13px] text-emerald-300">돌파</b>
+                <b className="block text-[13px] text-emerald-300">돌파{streak >= 2 ? <span className="font-bold text-amber-300"> · 연속 돌파 {streak}층째</span> : null}</b>
                 {result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
@@ -263,6 +274,20 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             ) : (
               <>
                 <b className="text-[13px] text-red-300">물러남</b>
+                {/* 얼마나 가까웠나 — 승률 대신 실제 결과(이 판 포함 이 층 기록). */}
+                {(() => {
+                  const last = turns[total - 1];
+                  const monMax = towerRequirement(floor) * TOWER_HP_MULT;
+                  const now = last && monMax > 0 ? last.monHp / monMax : null;
+                  const closest = [now, floorLog.closest].filter((x): x is number => x != null).reduce((a, b) => Math.min(a, b), Infinity);
+                  return (
+                    <div>
+                      {now != null ? <>층 주인 HP {pctText(now)} 남기고 물러남 · </> : null}
+                      이 층 {floorLog.losses + 1}번째
+                      {floorLog.losses > 0 && Number.isFinite(closest) ? <span className="text-zinc-400"> · 가장 가까웠던 판 HP {pctText(closest)}</span> : null}
+                    </div>
+                  );
+                })()}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
               </>
             )}
@@ -327,6 +352,8 @@ function compact(v: number): string {
   if (v >= 1e4) return `${trim(v / 1e4, 1)}만`;
   return n(v);
 }
+/** 남은 체력 비율(0~1) → 'N%'. 0보다 크면 최소 1%(쓰러진 것처럼 보이지 않게). */
+const pctText = (r: number) => `${r > 0 ? Math.max(1, Math.round(r * 100)) : 0}%`;
 /** 절대 체력 → 체력바 %. */
 const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (hp / max) * 100)) : 0);
 
@@ -382,10 +409,13 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
       else body = mine ? <>{josa(`${monName}#{을}`)} 공격했다. 피해 {D}</> : <>{josa(`${monName}#{이}`)} 공격했다. 피해 {D}</>;
   }
   return (
-    <p className="py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200">
+    <p className={`py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200 ${(mine && t.monHp <= 0) || (!mine && t.meHp <= 0) ? 'font-bold' : ''}`}>
       <span className={mine ? 'text-amber-400' : 'text-red-400'}>▸ </span>
       {body}
       {hp}
+      {/* 마지막 일격 — 쓰러뜨린 줄·쓰러진 줄을 강조해 결말과 이어지게. */}
+      {mine && t.damage > 0 && t.monHp <= 0 ? <Ev c="text-emerald-300"> 쓰러뜨렸다!</Ev> : null}
+      {!mine && t.meHp <= 0 ? <Ev c="text-red-300"> 쓰러졌다.</Ev> : null}
     </p>
   );
 });
