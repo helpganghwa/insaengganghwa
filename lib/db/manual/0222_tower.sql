@@ -3,6 +3,7 @@
 --  - tower_battles: 도전 한 번 = 한 행. 결과·턴 기록을 서버가 만들어 박제 — 전투 화면·다시 보기의 원본.
 --  - tower_pools: (서버, 주 시작 월요일, 구간) 부위별 요구 장비. 그 주 첫 접근 때 서버 RNG로 추첨해 박제(재추첨 없음).
 --  - tower_specials: (서버, 구간) 특별층 지정 장비 3개. 한 번 정하면 고정.
+--  - tower_claims: 받은 돌파 보상(유저, 서버, 층). 돌파는 전투에서 하고, 보상은 목록에서 따로(개별·일괄) 받는다.
 -- 신설 표라 코드보다 먼저 적용해도 무해.
 begin;
 
@@ -64,5 +65,15 @@ create table if not exists tower_specials (
   primary key (server_id, section)
 );
 alter table tower_specials enable row level security;
+
+-- 돌파 보상 수령 — 한 층 한 번(기본 키가 이중 수령을 막는다). 돌파한 층(best_floor 이하) 중 이 표에 없는 층이 받을 보상.
+create table if not exists tower_claims (
+  user_id uuid not null references profiles(id) on delete cascade,
+  server_id smallint not null,
+  floor int not null,
+  claimed_at timestamptz not null default now(),
+  primary key (user_id, server_id, floor)
+);
+alter table tower_claims enable row level security;
 
 commit;

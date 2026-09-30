@@ -137,7 +137,10 @@ export async function towerBoard(userId: string, serverId: number) {
         where me.best_floor > 0 and t.server_id=${serverId} and ${NOT_BANNED}
           -- 랭킹 표(rank-value.ts)와 같은 기준 — 도달 시각은 초 단위(같은 초면 같은 등수)
           and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
-            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))) as my_rank`)) as unknown as {
+            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))) as my_rank,
+      -- 돌파했지만 아직 받지 않은 층(목록의 돌파 보상 받기)
+      coalesce((select json_agg(f order by f) from me, generate_series(1, me.best_floor) f
+        where not exists (select 1 from tower_claims c where c.user_id=${userId}::uuid and c.server_id=${serverId} and c.floor = f)), '[]'::json) as unclaimed`)) as unknown as {
     prog: { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null } | null;
     owned: { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[];
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
@@ -145,6 +148,7 @@ export async function towerBoard(userId: string, serverId: number) {
     pools: { section: number; weapon: string[]; armor: string[]; accessory: string[] }[];
     specials: { section: number; weapon: string; armor: string; accessory: string }[];
     my_rank: number | null;
+    unclaimed: number[];
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
@@ -180,6 +184,8 @@ export async function towerBoard(userId: string, serverId: number) {
     pools: Object.fromEntries(pools) as Record<number, SlotKeys>,
     specials: Object.fromEntries(specials) as Record<number, SlotKeys>,
     myRank: best > 0 && r.my_rank != null ? Number(r.my_rank) : null,
+    /** 돌파했지만 아직 받지 않은 층(오름차순). */
+    unclaimed: r.unclaimed.map(Number),
     /** 활성 카탈로그 key → 이름·부위 — 요구 장비 중 없는 장비도 이름을 보여 준다. */
     catalog: Object.fromEntries(r.catalog.map((c) => [c.code, { name: c.name, slot: c.slot }])) as Record<string, { name: string; slot: TowerSlot }>,
   };
@@ -204,7 +210,8 @@ type BattleRow = { id: string; floor: number; win: boolean; tower_cp: number; tu
 
 /**
  * 도전 — 진행도 행을 잠그고(동시 도전·중복 보상 차단) 지금 층·남은 도전을 검사, 서버에서 전투를 판정한다.
- * 이기면 최고 층 갱신 + 첫 돌파 보상(지금 층만 도전 가능하므로 항상 첫 돌파), 지면 오늘 진 횟수 +1.
+ * 이기면 최고 층 갱신, 지면 오늘 진 횟수 +1. 돌파 보상은 여기서 주지 않는다 — 목록에서 따로 받는다(claimTowerRewards).
+ * reward = 그 층의 돌파 보상(받을 보상 안내용, 지급 기록 아님).
  * idemKey — 같은 키로 다시 오면(재전송) 저장된 결과를 돌려준다(CLAUDE §3.4). week — 화면이 본 주가 지금 주와 다르면
  * (월요일 0시를 넘겨 화면을 열어 둔 채 도전) 도전을 빼지 않고 POOL_CHANGED.
  */
@@ -293,21 +300,49 @@ export async function challengeTower(
       values (${userId}::uuid, ${serverId}, ${floor}, ${battle.win}, ${cp.total}, ${req}, ${profileId}::uuid,
               ${JSON.stringify(pieces)}::jsonb, ${JSON.stringify(battle.turns)}::jsonb, ${battle.keyIndex}, ${reward ? JSON.stringify(reward) : null}::jsonb, ${idem})
       returning id::text as id`)) as unknown as { id: string }[];
-    if (reward) {
-      if (reward.diamond > 0) await walletAdd(tx, userId, serverId, reward.diamond, 'tower', `tower:${floor}`);
-      if (reward.boxes > 0) {
-        const per = Math.floor(reward.boxes / 3);
-        for (const slot of TOWER_SLOTS) {
-          await tx.execute(sql`
-            insert into user_supply_boxes (user_id, server_id, slot, count) values (${userId}::uuid, ${serverId}, ${slot}, ${per})
-            on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${per}`);
-        }
-      }
-    }
     return {
       battleId: row!.id, floor, win: battle.win, keyIndex: battle.keyIndex, turns: battle.turns, reward,
       attemptsLeft: newLeft, best: battle.win ? floor : best, towerCp: cp.total, mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1,
     };
+  });
+}
+
+/**
+ * 돌파 보상 받기 — floors = 받을 층(null이면 받을 수 있는 층 전부). 진행도 행을 잠그고 돌파한 층(best_floor 이하)만,
+ * tower_claims에 넣은 층만 지급한다(기본 키 충돌 = 이미 받음 → 건너뜀, 이중 수령 없음). 다이아는 한 번에 합쳐 원장 1줄.
+ */
+export async function claimTowerRewards(userId: string, serverId: number, floors: number[] | null): Promise<{ floors: number[]; diamond: number; boxes: number }> {
+  return db.transaction(async (tx) => {
+    const [p] = (await tx.execute(sql`
+      select best_floor from tower_progress where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { best_floor: number }[];
+    const best = Number(p?.best_floor ?? 0);
+    const want = floors === null
+      ? Array.from({ length: best }, (_, i) => i + 1)
+      : [...new Set(floors.map((f) => Math.floor(Number(f))))].filter((f) => f >= 1 && f <= best);
+    if (!want.length) return { floors: [], diamond: 0, boxes: 0 };
+    const got = (await tx.execute(sql`
+      insert into tower_claims (user_id, server_id, floor)
+      select ${userId}::uuid, ${serverId}, f from unnest(${sql`array[${sql.join(want.map((f) => sql`${f}`), sql`, `)}]::int[]`}) f
+      on conflict do nothing
+      returning floor`)) as unknown as { floor: number }[];
+    const done = got.map((g) => Number(g.floor)).sort((a, b) => a - b);
+    let diamond = 0;
+    let boxes = 0;
+    for (const f of done) {
+      const r = towerReward(f);
+      diamond += r.diamond;
+      boxes += r.boxes;
+    }
+    if (diamond > 0) await walletAdd(tx, userId, serverId, diamond, 'tower', done.length === 1 ? `tower:${done[0]}` : `tower:${done[0]}-${done[done.length - 1]}x${done.length}`);
+    if (boxes > 0) {
+      const per = Math.floor(boxes / 3);
+      for (const slot of TOWER_SLOTS) {
+        await tx.execute(sql`
+          insert into user_supply_boxes (user_id, server_id, slot, count) values (${userId}::uuid, ${serverId}, ${slot}, ${per})
+          on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${per}`);
+      }
+    }
+    return { floors: done, diamond, boxes };
   });
 }
 
