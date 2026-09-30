@@ -4,7 +4,7 @@ import { pixellabBalances } from '@/lib/game/profile/pixellab-balance';
 export async function PixellabUsage() {
   const rows = await pixellabBalances();
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="space-y-2">
       {rows.map((b) => {
         const pct = b.remaining != null && b.total ? Math.max(0, Math.min(100, (b.remaining / b.total) * 100)) : 0;
         const low = pct < 15;
