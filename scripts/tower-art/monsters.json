@@ -352,9 +352,9 @@
    },
    {
     "floor": 37,
-    "name": "가시 멧돼지",
-    "desc": "등에 가시덩굴이 돋은 멧돼지.",
-    "art": "wild boar with thorny vines growing on its back",
+    "name": "솔방울 천산갑",
+    "desc": "비늘이 커다란 솔방울처럼 겹겹이 덮인 천산갑, 놀라면 공처럼 몸을 만다.",
+    "art": "round pangolin whose overlapping scales look like a big pine cone, small cute face, curled tail",
     "guardian": false,
     "skills": [
      "steel"

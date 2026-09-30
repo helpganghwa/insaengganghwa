@@ -56,7 +56,7 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
     ['덩굴 뱀', '초록 덩굴이 엉켜 뱀이 되었다, 머리에 흰 꽃 한 송이.', []],
     ['이끼 달팽이', '이끼 덮인 껍데기를 이고 다니는 커다란 달팽이.', []],
     ['식인 꽃', '커다란 꽃잎 속에 이빨이 줄지어 난 꽃.', []],
-    ['가시 멧돼지', '등에 가시덩굴이 돋은 멧돼지.', ['steel']],
+    ['솔방울 천산갑', '비늘이 커다란 솔방울처럼 겹겹이 덮인 천산갑, 놀라면 공처럼 몸을 만다.', ['steel']],
     ['이끼 곰', '온몸이 두꺼운 이끼로 덮인 곰.', ['regen']],
     ['덩굴 사슴', '뿔이 마른 덩굴과 흰 꽃으로 된 사슴.', []],
     ['고목 거북', '등에 오래된 나무 한 그루가 자란 거대한 거북.', ['regen', 'steel']],
@@ -171,7 +171,7 @@ export type TowerFloorInfo = {
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
-const ART_SECTIONS = new Set([1, 2, 3]);
+const ART_SECTIONS = new Set([1, 2, 3, 4]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
