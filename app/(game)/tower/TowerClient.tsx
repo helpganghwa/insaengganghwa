@@ -316,7 +316,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               subtitle={
                 <>
                   {rangeText(pf)}
-                  {towerSection(pf) === 1 && !towerIsSpecial(pf) ? '' : <span suppressHydrationWarning> · {renewText(board.week)}</span>} · 전투력 <b className="text-amber-300">{n(cpNow.total)}</b>
+                  {towerSection(pf) === 1 ? '' : <span suppressHydrationWarning> · {renewText(board.week)}</span>} · 전투력 <b className="text-amber-300">{n(cpNow.total)}</b>
                 </>
               }
               bodyPad="sm"
@@ -380,8 +380,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   if (view === 'detail' && !topped) {
     const info = towerFloorInfo(next);
     const sec = towerSection(next);
-    const special = towerIsSpecial(next);
-    const allGear = sec === 1 && !special; // 1~9층 — 모든 장비
+    // 1구간(1~10층)은 주간 갱신이 없다 — 1~9층은 모든 장비, 10층은 모든 장비 + 바뀌지 않는 지정 장비.
+    const noRenew = sec === 1;
     const counts = poolCounts(board, items, rule);
     return (
       <main className={FLOOR_MAIN}>
@@ -404,7 +404,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             <span className="text-[11px] font-bold text-zinc-500">내 장비</span>
             <button type="button" onClick={() => openPool(next)} className="text-[11px] text-zinc-400">
               착용 가능 장비 <b className="text-zinc-200">{counts.owned}/{counts.total}</b>
-              {allGear ? null : <span suppressHydrationWarning> · {renewText(board.week)}</span>}
+              {noRenew ? null : <span suppressHydrationWarning> · {renewText(board.week)}</span>}
               <span className="font-bold text-amber-300"> 보기 ›</span>
             </button>
           </div>
@@ -473,7 +473,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
         <div className="flex-none px-3 pt-2 pb-3">
           <ActionBar>
-            <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착 중'}</SecondaryButton>
+            <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착됨'}</SecondaryButton>
             <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
               {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : '도전'}
             </PrimaryButton>
@@ -645,7 +645,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               {next}층 도전
             </button>
           ) : (
-            <p className="text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
+            // 꼭대기(지금 열린 가장 높은 층)까지 오른 유저 — 도전할 층이 없으니 안내 한 줄과 탑 랭킹으로.
+            <>
+              <p className="mb-2 text-center text-[12px] text-zinc-300">지금 열린 가장 높은 층까지 올랐어요.</p>
+              <button type="button" onClick={() => router.push('/leaderboard?tab=tower')} className="w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
+                무한의 탑 랭킹 보기
+              </button>
+            </>
           )}
         </div>
       </div>

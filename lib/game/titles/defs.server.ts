@@ -5336,7 +5336,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "tower_flawless",
   cat: "무한의 탑",
-  cond: "하루에 한 번도 지지 않고 탑 10층 이상 돌파",
+  cond: "하루(한국 시간) 동안 한 번도 지지 않고 탑 10개 층 돌파",
   diff: "어려움"
  },
  {

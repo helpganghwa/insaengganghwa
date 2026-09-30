@@ -20,6 +20,7 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
   let saved: { best_floor: number; best_at: string | null; loss_day: string | null; losses: number; last_profile_id: string | null } | null = null;
   let diamond = '0';
   let claims: { floor: number; at: string }[] = [];
+  let boxes: { slot: string; count: number }[] = [];
 
   beforeAll(async () => {
     const [p] = (await testDb.execute(sql`select best_floor, best_at, loss_day::text as loss_day, losses, last_profile_id::text as last_profile_id
@@ -27,6 +28,7 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     saved = p ?? null;
     const [c] = (await testDb.execute(sql`select diamond::text d from characters where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { d: string }[];
     diamond = c!.d;
+    boxes = (await testDb.execute(sql`select slot::text as slot, count from user_supply_boxes where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { slot: string; count: number }[];
     // 0층·오늘 진 판 0에서 시작, 이 테스트 전의 수령 기록은 잠시 치워 둔다(끝나면 되돌림).
     await testDb.execute(sql`insert into tower_progress (user_id, server_id) values (${TEST_USER_ID}::uuid, ${S}) on conflict do nothing`);
     await testDb.execute(sql`update tower_progress set best_floor=0, best_at=null, losses=0, loss_day=null where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
@@ -47,6 +49,10 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
         loss_day=${saved.loss_day}::date, last_profile_id=${saved.last_profile_id}::uuid where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
     } else {
       await testDb.execute(sql`delete from tower_progress where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    }
+    // 상자는 맨 끝에(앞 단계가 실패해도 진행도·다이아는 먼저 되돌아가게).
+    for (const b of boxes) {
+      await testDb.execute(sql`update user_supply_boxes set count=${b.count} where user_id=${TEST_USER_ID}::uuid and server_id=${S} and slot::text=${b.slot}`);
     }
     await endTestDb();
   });
@@ -117,5 +123,34 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     expect(r.battleId).not.toBe(other!.id);
     expect(r.floor).toBe(2);
     expect(r.win).toBe(false);
+  });
+  it('주가 바뀐 화면의 도전은 POOL_CHANGED(차감 없음)', async () => {
+    await expect(challengeTower(TEST_USER_ID, S, 2, null, { idemKey: key(), week: '2000-01-03', rng: WIN })).rejects.toMatchObject({ code: 'POOL_CHANGED' });
+  });
+
+  it('어제 진 기록은 오늘 도전 수에 들어가지 않는다(KST 자정 초기화)', async () => {
+    await testDb.execute(sql`update tower_progress set losses=3, loss_day=(now() at time zone 'Asia/Seoul')::date - 1
+      where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    const r = await challengeTower(TEST_USER_ID, S, 2, null, { idemKey: key(), rng: LOSE });
+    expect(r.attemptsLeft).toBe(2);
+  });
+
+  it('꼭대기까지 오르면 TOP_REACHED', async () => {
+    await testDb.execute(sql`update tower_progress set best_floor=100, losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    await expect(challengeTower(TEST_USER_ID, S, 101, null, { idemKey: key(), rng: WIN })).rejects.toMatchObject({ code: 'TOP_REACHED' });
+  });
+
+  it('5층 보상 받기 — 💎와 보급 상자(부위마다 3분의 1)', async () => {
+    await testDb.execute(sql`update tower_progress set best_floor=5 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    const before = (await testDb.execute(sql`select slot::text as slot, count from user_supply_boxes where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { slot: string; count: number }[];
+    const r = await claimTowerRewards(TEST_USER_ID, S, [5]);
+    expect(r.floors).toEqual([5]);
+    expect(r.boxes).toBe(6);
+    const after = (await testDb.execute(sql`select slot::text as slot, count from user_supply_boxes where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { slot: string; count: number }[];
+    for (const slot of ['weapon', 'armor', 'accessory']) {
+      const b = before.find((x) => x.slot === slot)?.count ?? 0;
+      const a = after.find((x) => x.slot === slot)?.count ?? 0;
+      expect(a - b).toBe(2);
+    }
   });
 });

@@ -9,7 +9,7 @@ import { profileHref } from '@/lib/game/profile/href';
 import { towerFloorFromRankValue } from '@/lib/game/tower/rank-value';
 
 /**
- * 홈 §1 — Top 3 명예의 전당 카드(클라이언트). 5종 덱을 미리 받아 표시 타입을 state로 소유 →
+ * 홈 §1 — Top 3 명예의 전당 카드(클라이언트). 6종 덱을 미리 받아 표시 타입을 state로 소유 →
  * 하이드레이션 후 재랜덤 없음(깜박임 제거). 첫 타입은 서버가 고른 랜덤(initialIndex).
  * 헤더 ◀/▶로 타입 전환(미리 받은 데이터라 즉시), 타이틀은 해당 랭킹 진입.
  */

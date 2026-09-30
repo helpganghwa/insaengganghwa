@@ -39,7 +39,7 @@ function user(code: string | null, nick: string | null, serverId: number): React
   );
 }
 
-// 개인 랭킹 5종 1위 — 메트릭 라벨(월드 로그와 동일 문구).
+// 개인 랭킹 6종 1위 — 메트릭 라벨(월드 로그와 동일 문구).
 const METRIC_LABEL: Record<string, string> = {
   max: '최고 강화',
   sum: '합산 강화',

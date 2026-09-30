@@ -3,7 +3,7 @@
  * 직전 랭크와 변동 시에만 기록(중복 방지). 인증 = CRON_SECRET / x-vercel-cron.
  *
  * 길드 전투력·점령지 1위 교체 시 월드 피드(guild_power_1/guild_zone_1)도 여기서 기록(일일).
- * 유저 랭킹 5종 1위 교체는 준실시간(15분)이라 별도 cron(/api/cron/rank-leader)으로 분리됨.
+ * 유저 랭킹 6종 1위 교체는 준실시간(15분)이라 별도 cron(/api/cron/rank-leader)으로 분리됨.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { openServerIds } from '@/lib/game/server-list';

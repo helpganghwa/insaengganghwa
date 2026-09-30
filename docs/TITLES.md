@@ -173,7 +173,7 @@ type TitleDef = {
 |---|---|---|---|---|
 | `tower_revive` | 한 줌의 숨 | 기사회생이 터진 전투에서 승리 | 영구·숨김 | `lunarflow` |
 | `tower_resonance` | 울림을 아는 자 | 공명(장착 3개 모두 ×2)이 발동한 전투 10승 | 영구·숨김 | `aurora` |
-| `tower_flawless` | 거침없는 발걸음 | 하루에 한 번도 지지 않고 10층 이상 돌파(KST 하루) | 영구·숨김 | `trailflow` |
+| `tower_flawless` | 거침없는 발걸음 | 하루(KST) 동안 한 번도 지지 않고 10개 층 돌파 | 영구·숨김 | `trailflow` |
 | `tower_bare` | 맨몸의 등반가 | 기본 아바타로 30층 돌파 | 영구·숨김 | `bronzeshine` |
 | `tower_grit` | 벽 앞의 끈기 | 같은 층에서 9번 진 뒤 그 층 돌파 | 영구·숨김 | `steelshine` |
 | `rank_tower` | 탑의 주인 | 무한의 탑 랭킹 1위인 동안 | 조건부 | 대륙의 주인과 같은 불꽃, 청록(`blazeteal`) · 탑·주인에만 · 발광 |
