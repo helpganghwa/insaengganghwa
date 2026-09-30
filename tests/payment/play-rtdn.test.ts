@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // 구글 API만 mock — 매칭·지급·토큰 바인딩·경보는 실제 DB 경로(스테이징 테스트 계정, afterEach가 전부 되돌림).
 vi.mock('@/lib/payment/play-api', () => ({
@@ -51,11 +51,17 @@ const purchase = (o: { orderId: string; atMs?: number; purchaseType?: number }) 
   ...(o.purchaseType != null ? { purchaseType: o.purchaseType } : {}),
 });
 
-async function insertOrder(pid: string, o: { status?: 'pending' | 'expired'; checkoutAgoMs?: number | null } = {}): Promise<bigint> {
-  const checkout = o.checkoutAgoMs === null ? null : new Date(Date.now() - (o.checkoutAgoMs ?? 5_000)).toISOString();
+// '다른 유저' 주문용 — 스테이징의 테스트 계정이 아닌 아무 프로필(주문 행만 잠깐 만들고 afterEach가 지운다, 지급되지 않음).
+let OTHER_USER_ID = '';
+async function insertOrder(pid: string, o: { status?: 'pending' | 'expired'; checkoutAgoMs?: number | null; userId?: string; product?: string } = {}): Promise<bigint> {
+  // 기본 = 구매(5분 전)보다 1분 앞서 연 결제창 — 결제창은 구매 전에 열리므로(구매 뒤에 연 창은 후보가 아니다).
+  // 결제 시도 시각이 없는 옛 주문(null)은 만든 시각으로 센다 — 만든 시각도 구매 전(6분 전)으로 둔다.
+  const agoMs = o.checkoutAgoMs === undefined ? 6 * 60_000 : o.checkoutAgoMs;
+  const checkout = agoMs === null ? null : new Date(Date.now() - agoMs).toISOString();
+  const created = new Date(Date.now() - Math.max(agoMs ?? 0, 6 * 60_000)).toISOString();
   const r = (await testDb.execute(sql`
-    insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, provider, play_sku, play_checkout_at)
-    values (${SERVER_ID}, ${TEST_USER_ID}::uuid, ${pid}, ${PRODUCT}, ${AMOUNT}::bigint, ${DIAMOND}::bigint, ${o.status ?? 'pending'}, 'play', ${SKU}, ${checkout}::timestamptz)
+    insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, provider, play_sku, play_checkout_at, created_at)
+    values (${SERVER_ID}, ${o.userId ?? TEST_USER_ID}::uuid, ${pid}, ${o.product ?? PRODUCT}, ${AMOUNT}::bigint, ${DIAMOND}::bigint, ${o.status ?? 'pending'}, 'play', ${SKU}, ${checkout}::timestamptz, ${created}::timestamptz)
     returning id::text id`)) as unknown as { id: string }[];
   return BigInt(r[0]!.id);
 }
@@ -76,6 +82,16 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
   let baseline = 0n;
   const made: bigint[] = [];
   const alertPrefixes: string[] = [];
+
+  beforeAll(async () => {
+    const r = (await testDb.execute(sql`select id::text id from profiles where id <> ${TEST_USER_ID}::uuid order by created_at limit 1`)) as unknown as { id: string }[];
+    OTHER_USER_ID = r[0]!.id;
+  });
+
+  afterAll(async () => {
+    // 경보 prefix를 등록하지 않은 테스트가 예상 밖 경보를 남겨도 스테이징에 쌓이지 않게(검수 권고).
+    await testDb.execute(sql`delete from payment_alerts where payment_id like ${'rtdn:GPA.rtdn-%'}`);
+  });
 
   beforeEach(async () => {
     baseline = await readDiamond();
@@ -130,9 +146,21 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     expect((await readOrder(id)).s).toBe('paid');
   });
 
-  it('같은 상품 주문이 2건이면(두 유저·같은 유저 무관) 아무에게도 지급하지 않고 경보', async () => {
+  it('같은 유저가 결제창을 여러 번 열어 미완 주문이 2건 → 구매 직전에 연 주문에 1회 지급(09-30 베르 사례)', async () => {
+    const early = newPid('same-early');
+    const a = await insertOrder(early, { status: 'expired', checkoutAgoMs: 5 * 60_000 + 7_000 }); // 구매(5분 전) 7초 전에 연 창
+    const b = await insertOrder(newPid('same-late'), { checkoutAgoMs: 4 * 60_000 }); // 구매 뒤에 연 창
+    made.push(a, b);
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-same' }));
+    expect(await handleOneTimePurchase(SKU, newToken('same'))).toMatchObject({ kind: 'granted', paymentId: early });
+    expect((await readOrder(a)).s).toBe('paid');
+    expect((await readOrder(b)).s).toBe('pending');
+    expect((await readDiamond()) - baseline).toBe(BigInt(DIAMOND));
+  });
+
+  it('같은 상품 주문이 두 유저에 걸쳐 있으면 아무에게도 지급하지 않고 경보', async () => {
     const a = await insertOrder(newPid('amb-a'));
-    const b = await insertOrder(newPid('amb-b'));
+    const b = await insertOrder(newPid('amb-b'), { userId: OTHER_USER_ID });
     made.push(a, b);
     alertPrefixes.push('rtdn:GPA.rtdn-amb');
     mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-amb' }));
@@ -143,10 +171,22 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     expect(await alertCount('rtdn:GPA.rtdn-amb')).toBe(1);
   });
 
+  it('같은 유저여도 가격 SKU를 공유하는 두 상품의 미완 주문이면 지급하지 않고 경보', async () => {
+    const a = await insertOrder(newPid('prod-a'));
+    const b = await insertOrder(newPid('prod-b'), { product: 'd1_other' });
+    made.push(a, b);
+    alertPrefixes.push('rtdn:GPA.rtdn-prod');
+    mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-prod' }));
+    expect(await handleOneTimePurchase(SKU, newToken('prod'))).toMatchObject({ kind: 'unmatched', candidates: 2 });
+    expect((await readOrder(a)).s).toBe('pending');
+    expect((await readOrder(b)).s).toBe('pending');
+    expect(await readDiamond()).toBe(baseline);
+  });
+
   it('본인 주문이 이미 지급(paid)된 뒤 같은 주문으로 두 번째 구매 + 남의 미완 1건 → 남에게 지급하지 않는다(감사 A1a)', async () => {
     const mine = newPid('a1a-mine');
     const mineId = await insertOrder(mine);
-    const other = await insertOrder(newPid('a1a-other'));
+    const other = await insertOrder(newPid('a1a-other'), { userId: OTHER_USER_ID });
     made.push(mineId, other);
     alertPrefixes.push('rtdn:GPA.rtdn-a1a-2');
     mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-a1a-1' }));
@@ -159,11 +199,13 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
 
   it('결제창을 오래 열어 둔 본인 주문(16분 전) + 남의 미완 1건 → 경보(감사 A1b)', async () => {
     const mine = await insertOrder(newPid('a1b-mine'), { checkoutAgoMs: 21 * 60_000 });
-    const other = await insertOrder(newPid('a1b-other'), { checkoutAgoMs: 60_000 });
+    const other = await insertOrder(newPid('a1b-other'), { checkoutAgoMs: 60_000, userId: OTHER_USER_ID });
     made.push(mine, other);
     alertPrefixes.push('rtdn:GPA.rtdn-a1b');
     mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-a1b' }));
     expect(await handleOneTimePurchase(SKU, newToken('a1b'))).toMatchObject({ kind: 'unmatched', candidates: 2 });
+    expect((await readOrder(mine)).s).toBe('pending');
+    expect((await readOrder(other)).s).toBe('pending');
     expect(await readDiamond()).toBe(baseline);
   });
 

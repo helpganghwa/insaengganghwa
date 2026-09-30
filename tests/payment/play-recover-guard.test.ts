@@ -64,12 +64,12 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
   });
 
   // 토큰 없는 pending 주문. createdAt·checkoutAt은 구매 시각 기준 오프셋(ms, 음수=구매 전).
-  async function order(userId: string, pt: number, createdOff: number, checkoutOff: number) {
+  async function order(userId: string, pt: number, createdOff: number, checkoutOff: number, product = 'mega') {
     const pid = `gp-recguard_${++seq}_${process.pid}`;
     made.push(pid);
     await testDb.execute(sql`
       insert into iap_orders (server_id, user_id, portone_order_id, product_code, amount_krw, diamond_granted, status, provider, play_sku, created_at, play_checkout_at)
-      values (1, ${userId}::uuid, ${pid}, 'mega', 68000::bigint, 0::bigint, 'pending', 'play', ${SKU},
+      values (1, ${userId}::uuid, ${pid}, ${product}, 68000::bigint, 0::bigint, 'pending', 'play', ${SKU},
         ${new Date(pt + createdOff).toISOString()}::timestamptz, ${new Date(pt + checkoutOff).toISOString()}::timestamptz)`);
     return pid;
   }
@@ -109,6 +109,26 @@ describe.skipIf(skip)('상점 복구 — 다른 게임 계정의 구매 보호(D
     const tok = `tok-recguard-${seq}`;
     expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, tok)).toEqual({ ok: true, already: false, paymentId: own });
     expect(mockComplete).toHaveBeenCalledWith(own, TEST_USER_ID, { playPurchaseToken: tok });
+    expect(await alertCount(gid)).toBe(0);
+  });
+
+  it('같은 가격 SKU의 두 상품 결제창을 구매 전에 모두 열었으면(성장패스 구간) 어느 상품인지 가릴 수 없어 막는다', async () => {
+    const pt = Date.now() - 30 * 60_000;
+    await order(TEST_USER_ID, pt, -3 * 60_000, -3 * 60_000, 'mega');
+    await order(TEST_USER_ID, pt, -60_000, -60_000, 'mega_twin');
+    const gid = google(pt);
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, `tok-recguard-${seq}`)).toEqual({ ok: false, code: 'NO_ORDER' });
+    expect(await alertCount(gid)).toBe(1);
+    expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it('며칠 전에 버린 다른 상품 결제창은 상관없다 — 구매 직전 주문으로 복구', async () => {
+    const pt = Date.now() - 30 * 60_000;
+    await order(TEST_USER_ID, pt, -3 * 86_400_000, -3 * 86_400_000, 'mega_twin');
+    const own = await order(TEST_USER_ID, pt, -60_000, -60_000, 'mega');
+    const gid = google(pt);
+    const tok = `tok-recguard-${seq}`;
+    expect(await recoverPlayPurchase(TEST_USER_ID, 1, SKU, tok)).toEqual({ ok: true, already: false, paymentId: own });
     expect(await alertCount(gid)).toBe(0);
   });
 
