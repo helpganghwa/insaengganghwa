@@ -10,7 +10,7 @@ export const TOWER_SLOTS: readonly TowerSlot[] = ['weapon', 'armor', 'accessory'
 /** 부위별 카탈로그 key 목록. */
 export type SlotKeys = Record<TowerSlot, string[]>;
 
-/** 그 층에서 쓰는 요구 장비 — 일반 층은 구간 풀, 특별층은 구간 풀 + 지정 장비(×2는 지정 장비만). */
+/** 그 층에서 쓰는 요구 장비 — 일반 층은 그 층 풀, 특별층은 그 층 풀 + 지정 장비(×2는 지정 장비만). */
 export type FloorRule = {
   floor: number;
   /** null = 모든 장비(1~10층 입문 구간). */
@@ -26,7 +26,7 @@ export function floorRule(floor: number, pool: SlotKeys | null, specials: SlotKe
     const p = flat(pool);
     return { floor, allowed: p, doubleable: p };
   }
-  // 특별층 — 구간 요구 장비(1구간이면 전부) + 지정 장비를 장착할 수 있고, ×2는 지정 장비만.
+  // 특별층 — 그 층 요구 장비(1구간이면 전부) + 지정 장비를 장착할 수 있고, ×2는 지정 장비만.
   const sp = flat(specials) ?? new Set<string>();
   const base = towerSection(floor) === 1 ? null : flat(pool);
   const allowed = base ? new Set([...base, ...sp]) : null;

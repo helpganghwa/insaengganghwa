@@ -40,32 +40,39 @@ function bySlot(rows: CatalogRow[]): SlotKeys {
   return out;
 }
 
+/** 요구 장비를 층마다 뽑는 층 — 1구간(1~10층)은 모든 장비라 11층부터. */
+const POOL_FLOORS = Array.from({ length: TOWER_FLOORS - TOWER_SECTION }, (_, i) => TOWER_SECTION + 1 + i);
+
 /**
- * 그 주 요구 장비(2구간부터) · 특별층 지정 장비를 보장하고 읽는다. 없으면 서버 RNG로 추첨해 insert(동시 첫 접근은
- * on conflict로 한 쪽만 남는다 — 먼저 박제된 것을 다시 읽으므로 모두 같은 풀을 본다).
+ * 그 주 층별 요구 장비(11층부터) · 특별층 지정 장비(구간마다)를 보장하고 읽는다. 없으면 서버 RNG로 추첨해 insert(동시 첫 접근은
+ * on conflict로 한 쪽만 남는다 — 먼저 박제된 것을 다시 읽으므로 모두 같은 풀을 본다). 층별 풀은 한 번의 insert로(90층 왕복 없이).
  */
 export async function towerPools(serverId: number, at: Date = new Date()): Promise<{ week: string; pools: Map<number, SlotKeys>; specials: Map<number, SlotKeys> }> {
   const week = kstWeekStartString(at);
   const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
-  let [poolRows, spRows] = await Promise.all([
-    db.execute(sql`select section, weapon, armor, accessory from tower_pools where server_id=${serverId} and week_start=${week}::date`) as unknown as Promise<
-      { section: number; weapon: string[]; armor: string[]; accessory: string[] }[]
-    >,
-    db.execute(sql`select section, weapon, armor, accessory from tower_specials where server_id=${serverId}`) as unknown as Promise<
-      { section: number; weapon: string; armor: string; accessory: string }[]
-    >,
-  ]);
-  const needPools = poolRows.length < sections - 1;
+  const read = () =>
+    Promise.all([
+      db.execute(sql`select floor, weapon, armor, accessory from tower_pools where server_id=${serverId} and week_start=${week}::date`) as unknown as Promise<
+        { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[]
+      >,
+      db.execute(sql`select section, weapon, armor, accessory from tower_specials where server_id=${serverId}`) as unknown as Promise<
+        { section: number; weapon: string; armor: string; accessory: string }[]
+      >,
+    ]);
+  let [poolRows, spRows] = await read();
+  const needPools = poolRows.length < POOL_FLOORS.length;
   const needSp = spRows.length < sections;
   if (needPools || needSp) {
     const cat = bySlot(await activeCatalog());
     if (needPools) {
-      for (let s = 2; s <= sections; s++) {
-        const p = drawPool(cat, cryptoRng10k);
-        if (!p.weapon.length || !p.armor.length || !p.accessory.length) continue; // 카탈로그 시드 전 — 풀 없이(×0) 둔다
+      const have = new Set(poolRows.map((r) => Number(r.floor)));
+      const rows = POOL_FLOORS.filter((f) => !have.has(f))
+        .map((f) => ({ f, p: drawPool(cat, cryptoRng10k) }))
+        .filter(({ p }) => p.weapon.length && p.armor.length && p.accessory.length); // 카탈로그 시드 전 — 풀 없이(×0) 둔다
+      if (rows.length) {
         await db.execute(sql`
-          insert into tower_pools (server_id, week_start, section, weapon, armor, accessory)
-          values (${serverId}, ${week}::date, ${s}, ${textArray(p.weapon)}, ${textArray(p.armor)}, ${textArray(p.accessory)})
+          insert into tower_pools (server_id, week_start, floor, weapon, armor, accessory)
+          values ${sql.join(rows.map(({ f, p }) => sql`(${serverId}, ${week}::date, ${f}, ${textArray(p.weapon)}, ${textArray(p.armor)}, ${textArray(p.accessory)})`), sql`, `)}
           on conflict do nothing`);
       }
     }
@@ -79,21 +86,18 @@ export async function towerPools(serverId: number, at: Date = new Date()): Promi
           on conflict do nothing`);
       }
     }
-    [poolRows, spRows] = await Promise.all([
-      db.execute(sql`select section, weapon, armor, accessory from tower_pools where server_id=${serverId} and week_start=${week}::date`) as unknown as Promise<typeof poolRows>,
-      db.execute(sql`select section, weapon, armor, accessory from tower_specials where server_id=${serverId}`) as unknown as Promise<typeof spRows>,
-    ]);
+    [poolRows, spRows] = await read();
   }
   return {
     week,
-    pools: new Map(poolRows.map((r) => [Number(r.section), { weapon: r.weapon, armor: r.armor, accessory: r.accessory }])),
+    pools: new Map(poolRows.map((r) => [Number(r.floor), { weapon: r.weapon, armor: r.armor, accessory: r.accessory }])),
     specials: new Map(spRows.map((r) => [Number(r.section), { weapon: [r.weapon], armor: [r.armor], accessory: [r.accessory] }])),
   };
 }
 
+/** pools = 층별 요구 장비(층 → 부위별), specials = 구간별 특별층 지정 장비(구간 → 부위별). */
 export function ruleFor(floor: number, pools: Map<number, SlotKeys>, specials: Map<number, SlotKeys>): FloorRule {
-  const s = towerSection(floor);
-  return floorRule(floor, pools.get(s) ?? null, specials.get(s) ?? null);
+  return floorRule(floor, pools.get(floor) ?? null, specials.get(towerSection(floor)) ?? null);
 }
 
 export type TowerOwnedItem = { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; cp: number; equipped: boolean };
@@ -130,7 +134,7 @@ export async function towerBoard(userId: string, serverId: number) {
                coalesce((up.options->>'isDefault')::boolean, false) as is_default, up.created_at
         from user_profiles up where up.user_id=${userId}::uuid and up.server_id=${serverId}) a), '[]'::json) as avatars,
       coalesce((select json_agg(c order by c.id) from (select id, code, slot::text as slot, name from catalog_items where active) c), '[]'::json) as catalog,
-      coalesce((select json_agg(p) from (select section, weapon, armor, accessory from tower_pools
+      coalesce((select json_agg(p) from (select floor, weapon, armor, accessory from tower_pools
         where server_id=${serverId} and week_start=${week}::date) p), '[]'::json) as pools,
       coalesce((select json_agg(x) from (select section, weapon, armor, accessory from tower_specials where server_id=${serverId}) x), '[]'::json) as specials,
       (select (count(*) + 1)::int from tower_progress t join profiles pr on pr.id = t.user_id, me
@@ -145,15 +149,15 @@ export async function towerBoard(userId: string, serverId: number) {
     owned: { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; equipped: boolean; active: boolean }[];
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
     catalog: { code: string; slot: TowerSlot; name: string }[];
-    pools: { section: number; weapon: string[]; armor: string[]; accessory: string[] }[];
+    pools: { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[];
     specials: { section: number; weapon: string; armor: string; accessory: string }[];
     my_rank: number | null;
     unclaimed: number[];
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
-  const drawn = r.pools.length < sections - 1 || r.specials.length < sections ? await towerPools(serverId) : null;
-  const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.section), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
+  const drawn = r.pools.length < POOL_FLOORS.length || r.specials.length < sections ? await towerPools(serverId) : null;
+  const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
   const specials = drawn?.specials ?? new Map(r.specials.map((x) => [Number(x.section), { weapon: [x.weapon], armor: [x.armor], accessory: [x.accessory] }]));
   const p = r.prog;
   const best = Number(p?.best_floor ?? 0);
