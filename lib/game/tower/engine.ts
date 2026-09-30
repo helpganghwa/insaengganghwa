@@ -20,14 +20,15 @@ export type FloorRule = {
 };
 
 export function floorRule(floor: number, pool: SlotKeys | null, specials: SlotKeys | null): FloorRule {
-  const flat = (k: SlotKeys | null) => (k ? new Set(TOWER_SLOTS.flatMap((s) => k[s])) : null);
+  // 풀이 없으면(추첨 전·실패) 빈 집합 = 모두 ×0(fail-closed) — null은 '모든 장비'라 요구 장비 제한이 통째로 풀린다(09-30 감사 M1).
+  const flat = (k: SlotKeys | null) => new Set(k ? TOWER_SLOTS.flatMap((s) => k[s]) : []);
   if (towerSection(floor) === 1 && !towerIsSpecial(floor)) return { floor, allowed: null, doubleable: null };
   if (!towerIsSpecial(floor)) {
     const p = flat(pool);
     return { floor, allowed: p, doubleable: p };
   }
   // 특별층 — 그 층 요구 장비(1구간이면 전부) + 지정 장비를 장착할 수 있고, ×2는 지정 장비만.
-  const sp = flat(specials) ?? new Set<string>();
+  const sp = flat(specials);
   const base = towerSection(floor) === 1 ? null : flat(pool);
   const allowed = base ? new Set([...base, ...sp]) : null;
   return { floor, allowed, doubleable: sp };

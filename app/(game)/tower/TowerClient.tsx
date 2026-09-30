@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useOptimistic, useState, useTransition } from 'react';
+import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -53,6 +53,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   // 트랜지션 안에서 부르면 액션이 끝나도 라우터 갱신이 붙잡혀 pending이 풀리지 않아, 돌파 뒤 다음 층 도전 버튼이 막혔다.
   const [, start] = useTransition();
   const [busy, setBusy] = useState(false);
+  // 결과를 받기 전까지 유지하는 도전 요청 키(층별) — 응답 없이 끝난 도전을 다시 누르면 같은 키로 보낸다.
+  const idemRef = useRef<{ floor: number; key: string } | null>(null);
   // 방금 끝난 전투의 결과(최고 층·남은 도전)를 먼저 쓴다 — 돌파 뒤 'N층으로'가 서버 재렌더보다 먼저 눌려도 다음 층이 맞게
   // (2차 피드백 9: 7층 돌파 → '8층으로'가 7층 상세로 가던 문제). 새 board가 오면 그 값으로 돌아간다(렌더 중 조정).
   // 도전은 화면을 다시 그리지 않으므로(액션 응답으로 반영) 이 값이 목록·상세의 최신값이다. 다음에 새로 그려진 board는 도전 뒤에 읽은 것이라 그대로 믿는다.
@@ -236,14 +238,21 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     setBusy(true);
     setBattleLog(floorLogOf(next));
     setBattle('pending');
-    // 판정 대기는 30초까지 — 헤더 없는 전투 화면에 '준비 중'으로 갇히지 않게 실패로 돌린다(같은 키로 다시 누르면 서버가 앞선 결과를 준다).
+    // 같은 층의 응답 없는 도전은 같은 키로 — 30초를 넘겨 실패로 보였어도 서버가 이미 처리했으면 그 결과를 돌려받아
+    // 도전이 두 번 빠지지 않는다(09-30 감사 L2). 응답(성공·거절)을 받으면 다음 도전은 새 키.
+    if (idemRef.current?.floor !== next) idemRef.current = { floor: next, key: crypto.randomUUID() };
+    const key = idemRef.current.key;
+    // 판정 대기는 30초까지 — 헤더 없는 전투 화면에 '준비 중'으로 갇히지 않게 실패로 돌린다.
     const r = await Promise.race([
-      towerChallengeAction(next, avatar?.id ?? null, crypto.randomUUID(), board.week).catch(() => null),
+      towerChallengeAction(next, avatar?.id ?? null, key, board.week).catch(() => null),
       new Promise<null>((res) => setTimeout(() => res(null), 30_000)),
     ]);
     setBusy(false);
+    if (r) idemRef.current = null;
     if (!r || r.status !== 'success') {
       setBattle(null);
+      // 응답이 없었으면 서버가 처리했을 수 있다 — 화면 값(최고 층·남은 도전)을 서버와 다시 맞춘다.
+      if (!r) router.refresh();
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
