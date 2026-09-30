@@ -28,11 +28,11 @@ export async function equipItem(userId: string, userEquipmentId: bigint): Promis
  * 여러 장비를 한 트랜잭션으로 장착(무한의 탑 자동 장착) — 부위마다 equipItem과 같은 처리, 요청·재렌더 1번.
  * 같은 부위가 두 번 오면 뒤의 것이 이긴다(앞 것을 해제하고 교체).
  */
-export async function equipItems(userId: string, userEquipmentIds: bigint[]): Promise<void> {
+export async function equipItems(userId: string, userEquipmentIds: bigint[], serverId?: number): Promise<void> {
   if (!userEquipmentIds.length) return;
   try {
     await db.transaction(async (tx) => {
-      for (const id of userEquipmentIds) await equipInTx(tx, userId, id);
+      for (const id of userEquipmentIds) await equipInTx(tx, userId, id, serverId);
     });
   } catch (e) {
     if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
@@ -46,7 +46,8 @@ function equipItemTx(userId: string, userEquipmentId: bigint): Promise<void> {
   return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId));
 }
 
-async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint): Promise<void> {
+/** serverId를 주면 그 서버 장비만(아니면 NOT_FOUND) — 무한의 탑처럼 지금 서버 장비만 다루는 곳. */
+async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint, serverId?: number): Promise<void> {
   const [equip] = await tx
     .select({
       id: userEquipment.id,
@@ -58,7 +59,7 @@ async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint): Promi
     .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
     .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
     .for('update');
-  if (!equip) throw new EquipError('NOT_FOUND');
+  if (!equip || (serverId != null && equip.serverId !== serverId)) throw new EquipError('NOT_FOUND');
 
   // 같은 슬롯 기존 장착 해제(부분 UNIQUE 충돌 방지) → 대상 장착, 단일 tx.
   const prev = await tx

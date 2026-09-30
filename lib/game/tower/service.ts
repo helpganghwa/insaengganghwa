@@ -101,15 +101,18 @@ export async function towerPools(serverId: number, at: Date = new Date()): Promi
  * 도전마다 풀 조회 2번을 없앤다. 다 뽑힌 상태만 담고(카탈로그 시드 전 등 빈 풀은 다시 읽는다), 주가 바뀌면 키가 달라진다.
  */
 const poolCache = new Map<string, Awaited<ReturnType<typeof towerPools>>>();
+const poolKey = (serverId: number, week: string = kstWeekStartString()) => `${serverId}:${week}`;
+/** 다 뽑힌 풀만 캐시에 담는다(빈 풀은 다음에 다시 읽는다). towerBoard가 읽은 풀도 여기로 — 도전의 콜드 경로를 줄인다. */
+function rememberPools(serverId: number, v: Awaited<ReturnType<typeof towerPools>>) {
+  if (v.pools.size < POOL_FLOORS.length || v.specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) return;
+  if (poolCache.size > 16) poolCache.clear();
+  poolCache.set(poolKey(serverId, v.week), v);
+}
 async function towerPoolsCached(serverId: number) {
-  const key = `${serverId}:${kstWeekStartString()}`;
-  const hit = poolCache.get(key);
+  const hit = poolCache.get(poolKey(serverId));
   if (hit) return hit;
   const v = await towerPools(serverId);
-  if (v.pools.size >= POOL_FLOORS.length && v.specials.size >= Math.ceil(TOWER_FLOORS / TOWER_SECTION)) {
-    if (poolCache.size > 16) poolCache.clear();
-    poolCache.set(key, v);
-  }
+  rememberPools(serverId, v);
   return v;
 }
 
@@ -188,6 +191,7 @@ export async function towerBoard(userId: string, serverId: number) {
   const drawn = r.nickname != null && (r.pools.length < POOL_FLOORS.length || r.specials.length < sections) ? await towerPools(serverId) : null;
   const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
   const specials = drawn?.specials ?? new Map(r.specials.map((x) => [Number(x.section), { weapon: [x.weapon], armor: [x.armor], accessory: [x.accessory] }]));
+  rememberPools(serverId, { week: drawn?.week ?? week, pools, specials });
   const p = r.prog;
   const best = Number(p?.best_floor ?? 0);
   const items: TowerOwnedItem[] = r.owned
@@ -244,6 +248,8 @@ export type TowerChallengeResult = {
   mult: number;
   /** 이긴 판의 서버 순위(목록 머리 줄) — 진 판·재전송은 null(그대로 둔다). */
   myRank: number | null;
+  /** 같은 요청 키로 다시 와서 저장된 결과를 돌려준 경우 — 화면이 기록을 두 번 세지 않게. */
+  replayed?: boolean;
 };
 
 type BattleRow = { id: string; floor: number; win: boolean; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
@@ -264,6 +270,16 @@ export async function challengeTower(
 ): Promise<TowerChallengeResult> {
   const rng = opts.rng ?? cryptoRng10k;
   const idem = opts.idemKey && /^[A-Za-z0-9-]{8,64}$/.test(opts.idemKey) ? opts.idemKey : null;
+  // 요구 장비는 트랜잭션 **밖**에서 — 진행도 행을 잠근 트랜잭션 안에서 풀 커넥션을 또 잡으면, 캐시가 빈 인스턴스에 도전이
+  // 몰릴 때 커넥션이 서로를 기다려 풀 전체가 멈춘다(09-30 재검수 #1). 캐시에 없을 때만 캐릭터를 먼저 확인하고 추첨한다 —
+  // 쿠키로 아무 서버 번호를 보내 없는 서버의 풀을 만들게 할 수 없게(감사 M2). tx에서 읽지 않는다(롤백되면 캐시가 어긋난다).
+  let pw = poolCache.get(poolKey(serverId));
+  if (!pw) {
+    const ch = (await db.execute(sql`select 1 from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as unknown[];
+    if (!ch.length) throw new TowerError('NO_CHARACTER');
+    pw = await towerPoolsCached(serverId);
+  }
+  const { pools, specials, week } = pw;
   // 왕복 최소화(CLAUDE §11.4): ① 캐릭터 확인+진행도 생성+행 잠금 ② (재전송 확인) ③ 아바타+장착 ④ 진행도 갱신+전투 저장(+이기면 순위).
   return db.transaction(async (tx) => {
     // ① 캐릭터가 있을 때만 진행도 행을 만들고, 있든 없든 do update로 행을 잠근 채 돌려받는다(없으면 캐릭터 없음).
@@ -274,12 +290,6 @@ export async function challengeTower(
       returning best_floor, loss_day::text as loss_day, losses`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
     if (!p) throw new TowerError('NO_CHARACTER');
     const best = Number(p.best_floor);
-    // 요구 장비는 캐릭터를 확인한 뒤에 — 쿠키로 아무 서버 번호를 보내 없는 서버의 풀을 추첨·저장하게 만들 수 없게(09-30 감사 M2).
-    // 추첨은 별도 연결로 돌지만 인스턴스 캐시가 대부분을 흡수한다(한 주에 한 번 추첨).
-    const { pools, specials, week } = await towerPoolsCached(serverId);
-    if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
-    // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
-    if (pools.size < POOL_FLOORS.length || specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) throw new TowerError('POOL_MISSING');
     if (idem) {
       // ② 행 잠금 뒤 새 문장으로 찾아야 같은 키의 동시 요청도 앞선 결과를 본다(같은 문장에 넣으면 잠금 전 스냅샷이라 못 본다).
       const [prev] = (await tx.execute(sql`
@@ -290,10 +300,14 @@ export async function challengeTower(
         return {
           battleId: prev.id, floor: Number(prev.floor), win: prev.win, keyIndex: Number(prev.key_turn), turns: prev.turns,
           reward: prev.reward, attemptsLeft: left, best, towerCp: Number(prev.tower_cp),
-          mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1, myRank: null,
+          mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1, myRank: null, replayed: true,
         };
       }
     }
+    // 재전송 확인 뒤에 — 주 경계를 넘겨 다시 온 같은 도전도 저장된 결과를 받는다(재검수 #2).
+    if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
+    // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
+    if (pools.size < POOL_FLOORS.length || specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) throw new TowerError('POOL_MISSING');
     if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
     if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
     const left = attemptsLeft(p.loss_day, Number(p.losses));
@@ -404,19 +418,6 @@ export async function claimTowerRewards(userId: string, serverId: number, floors
     const [bal] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
     return { floors: done, diamond, boxes, diamondBalance: bal?.d ?? null };
   });
-}
-
-/** 다시 보기 — 내 전투만. */
-export async function towerBattle(userId: string, serverId: number, id: string) {
-  if (!/^\d+$/.test(id)) return null;
-  const [b] = (await db.execute(sql`
-    select id::text as id, floor, win, tower_cp, requirement, profile_id::text as profile_id, pieces, turns, key_turn, reward,
-           (select up.rotations->>'south' from user_profiles up where up.id = tb.profile_id) as south
-    from tower_battles tb where id=${id}::bigint and user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as {
-    id: string; floor: number; win: boolean; tower_cp: number; requirement: number; profile_id: string | null;
-    pieces: unknown; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; south: string | null;
-  }[];
-  return b ?? null;
 }
 
 export { towerIsSpecial };

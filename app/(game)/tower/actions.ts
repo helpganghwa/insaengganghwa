@@ -39,6 +39,7 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
   try {
     // 입력 형식 검사(감사 L3) — 잘못된 값이 트랜잭션 안(잠금 뒤)에서 uuid 캐스트 오류를 내지 않게.
     if (!Number.isInteger(floor) || floor < 1) return err('NOT_NEXT_FLOOR');
+    if (typeof week !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return err('POOL_CHANGED');
     if (profileId != null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) return err('BAD_AVATAR');
     const serverId = await getActiveServerId();
     const r: TowerChallengeResult = await challengeTower(u, serverId, floor, profileId, { idemKey, week });
@@ -67,7 +68,8 @@ export async function towerEquipAction(userEquipmentIds: string[]) {
   try {
     const ids = [...new Set(userEquipmentIds)].slice(0, 3);
     if (!ids.length || !ids.every((id) => /^\d+$/.test(id))) return err('NOT_FOUND');
-    await equipItems(u, ids.map((id) => BigInt(id)));
+    // 지금 서버의 장비만(탑 화면은 지금 서버 장비만 보여 준다) — 다른 서버 장비 id가 와도 NOT_FOUND.
+    await equipItems(u, ids.map((id) => BigInt(id)), await getActiveServerId());
     // 헤더 전투력(레이아웃)이 장착으로 바뀌므로 여기는 다시 그린다 — 자동 장착도 1번.
     revalidatePath('/tower');
     return { status: 'success' as const };

@@ -70,8 +70,6 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     const b = await challengeTower(TEST_USER_ID, S, 1, null, { idemKey: k, rng: LOSE });
     expect(b.battleId).toBe(a.battleId);
     expect(b.win).toBe(true);
-    // 같은 키는 다른 서버에서 옛 결과를 돌려주지 않는다(서버별 멱등).
-    await expect(challengeTower(TEST_USER_ID, NO_SERVER, 1, null, { idemKey: k, rng: WIN })).rejects.toMatchObject({ code: 'NO_CHARACTER' });
   });
 
   it('진 판: 도전 1 차감, 같은 키 재전송·동시 요청은 한 번만 차감', async () => {
@@ -108,5 +106,16 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     expect(x.diamond + y.diamond).toBe(20);
     expect((await claimTowerRewards(TEST_USER_ID, S, null)).floors).toEqual([]);
     expect((await claimTowerRewards(TEST_USER_ID, S, [5, -1, 0, 1e9])).floors).toEqual([]);
+  });
+  it('같은 요청 키라도 다른 서버의 전투 결과는 돌려주지 않는다(서버별 멱등)', async () => {
+    await testDb.execute(sql`update tower_progress set losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    const k = key();
+    const [other] = (await testDb.execute(sql`
+      insert into tower_battles (user_id, server_id, floor, win, tower_cp, requirement, pieces, turns, key_turn, idem_key)
+      values (${TEST_USER_ID}::uuid, 2, 30, true, 1, 1, '[]'::jsonb, '[]'::jsonb, 0, ${k}) returning id::text as id`)) as unknown as { id: string }[];
+    const r = await challengeTower(TEST_USER_ID, S, 2, null, { idemKey: k, rng: LOSE });
+    expect(r.battleId).not.toBe(other!.id);
+    expect(r.floor).toBe(2);
+    expect(r.win).toBe(false);
   });
 });
