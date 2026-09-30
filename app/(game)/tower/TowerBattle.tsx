@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { josa } from 'josa';
 
 import { BackFab } from '@/components/BackNav';
@@ -143,6 +145,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
   onRetry: () => void;
   onGear: () => void;
 }) {
+  const router = useRouter();
   const info: TowerFloorInfo = towerFloorInfo(floor);
   const turns = result?.turns ?? [];
   const total = turns.length;
@@ -264,6 +267,10 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
                   </div>
                 ) : null}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
+                {/* 전투력이 모자라 진 판 — 강화 화면으로 바로(도전이 남아 있을 때도 글 링크로). */}
+                {left > 0 ? (
+                  <Link href="/enhance" className="font-bold text-amber-300">강화하러 가기 ›</Link>
+                ) : null}
               </>
             )}
           </div>
@@ -285,10 +292,18 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             </>
           ) : (
             <>
-              <SecondaryButton onClick={left > 0 ? onGear : onList}>{left > 0 ? '장비·아바타' : '목록'}</SecondaryButton>
-              <PrimaryButton onClick={onRetry} disabled={left <= 0 || retrying}>
-                {left <= 0 ? '오늘 도전 끝' : retrying ? '도전 중…' : '다시 도전'}
-              </PrimaryButton>
+              {left > 0 ? (
+                <>
+                  <SecondaryButton onClick={onGear}>장비·아바타</SecondaryButton>
+                  <PrimaryButton onClick={onRetry} disabled={retrying}>{retrying ? '도전 중…' : '다시 도전'}</PrimaryButton>
+                </>
+              ) : (
+                // 오늘 도전을 다 쓴 패배 — 할 수 있는 다음 일은 강화.
+                <>
+                  <SecondaryButton onClick={onList}>목록</SecondaryButton>
+                  <PrimaryButton onClick={() => router.push('/enhance')}>강화하러 가기</PrimaryButton>
+                </>
+              )}
             </>
           )}
         </ActionBar>
