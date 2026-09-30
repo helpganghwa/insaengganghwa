@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { josa } from 'josa';
 
@@ -130,7 +129,7 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 진 판은 결정적 순간부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
+export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
   floor: number;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
@@ -143,7 +142,6 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
   onList: () => void;
   onNext: () => void;
   onRetry: () => void;
-  onGear: () => void;
 }) {
   const router = useRouter();
   const info: TowerFloorInfo = towerFloorInfo(floor);
@@ -267,12 +265,12 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
                   </div>
                 ) : null}
                 <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
-                {/* 전투력이 모자라 진 판 — 강화 화면으로 바로(도전이 남아 있을 때도 글 링크로). */}
-                {left > 0 ? (
-                  <Link href="/enhance" className="font-bold text-amber-300">강화하러 가기 ›</Link>
-                ) : null}
               </>
             )}
+            {/* 기록 전체를 처음부터 다시 재생(판정은 그대로, 보기만). */}
+            <button type="button" onClick={() => play(0)} className="mt-1 block text-[11.5px] font-bold text-zinc-400">
+              처음부터 다시 보기 ›
+            </button>
           </div>
         ) : null}
       </div>
@@ -294,7 +292,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             <>
               {left > 0 ? (
                 <>
-                  <SecondaryButton onClick={onGear}>장비·아바타</SecondaryButton>
+                  <SecondaryButton onClick={() => router.push('/enhance')}>강화하러 가기</SecondaryButton>
                   <PrimaryButton onClick={onRetry} disabled={retrying}>{retrying ? '도전 중…' : '다시 도전'}</PrimaryButton>
                 </>
               ) : (

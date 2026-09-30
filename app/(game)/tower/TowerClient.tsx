@@ -261,10 +261,6 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         }}
         onNext={() => setBattle(null)}
         onRetry={challenge}
-        onGear={() => {
-          setBattle(null);
-          openPool(next);
-        }}
       />
     );
   }
