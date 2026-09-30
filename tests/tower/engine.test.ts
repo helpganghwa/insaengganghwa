@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TOWER_FLOORS, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { simulateTowerBattle } from '@/lib/game/tower/battle';
 import { avatarMultiplier, bestLoadout, drawPool, floorRule, towerCp, type EquippedPiece, type SlotKeys } from '@/lib/game/tower/engine';
 import { kstWeekStartString } from '@/lib/kst';
@@ -14,11 +14,11 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
-  it('곡선: 1층 60, 10층 149, 100층 679,101, 오름차순·특별층이 구간의 벽', () => {
-    expect(towerRequirement(1)).toBe(60);
-    expect(towerRequirement(10)).toBe(149);
-    expect(towerRequirement(50)).toBe(6969);
-    expect(towerRequirement(100)).toBe(679101);
+  it('곡선: 1층 64, 10층 159, 100층 724,374, 오름차순·특별층이 구간의 벽', () => {
+    expect(towerRequirement(1)).toBe(64);
+    expect(towerRequirement(10)).toBe(159);
+    expect(towerRequirement(50)).toBe(7433);
+    expect(towerRequirement(100)).toBe(724374);
     // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.09)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
@@ -120,7 +120,18 @@ describe('전투', () => {
   it('피해는 남은 체력을 넘지 않는다(전투력 차이가 커도)', () => {
     const r = simulateTowerBattle({ towerCp: 96242, requirement: 15, doubledCount: 2, rng: rngOf(3) });
     expect(r.win).toBe(true);
-    for (const t of r.turns) expect(t.damage).toBeLessThanOrEqual(100);
+    for (const t of r.turns) expect(t.damage).toBeLessThanOrEqual(15 * TOWER_HP_MULT);
+  });
+  it('체력 = 전투력 × 배수 — 비슷한 상대와는 여러 턴(평균 6~12턴)', () => {
+    const first = simulateTowerBattle({ towerCp: 1000, requirement: 1000, doubledCount: 0, rng: rngOf(5) }).turns[0]!;
+    expect(Math.max(first.meHp, first.monHp)).toBeLessThanOrEqual(1000 * TOWER_HP_MULT);
+    let sum = 0;
+    for (let i = 0; i < 400; i++) {
+      const t = simulateTowerBattle({ towerCp: 1000, requirement: 1000, doubledCount: 0, rng: rngOf(i + 101) }).turns;
+      sum += t[t.length - 1]!.turn;
+    }
+    expect(sum / 400).toBeGreaterThan(6);
+    expect(sum / 400).toBeLessThan(12);
   });
   it('턴 기록의 마지막 체력이 승패와 맞는다', () => {
     const r = simulateTowerBattle({ towerCp: 100, requirement: 100, doubledCount: 2, rng: rngOf(42) });
@@ -137,7 +148,7 @@ describe('전투', () => {
         if (t.event === 'critical' || t.event === 'enrage' || t.event === 'counter' || t.event === 'resonance') {
           expect(t.raw).toBeDefined();
           const mul = t.event === 'critical' ? 1.6 : t.event === 'enrage' ? 1.5 : 0.5;
-          expect(t.damage).toBeLessThanOrEqual(Math.round(t.raw! * mul * 10) / 10 + 0.15);
+          expect(t.damage).toBeLessThanOrEqual(Math.round(t.raw! * mul) + 1);
           seen++;
         } else expect(t.raw).toBeUndefined();
       }

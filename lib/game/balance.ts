@@ -1075,18 +1075,28 @@ export const TOWER_FLOORS = 100;
 export const TOWER_SECTION = 10;
 /** 하루 도전(진 판만 차감) — KST 자정 초기화. */
 export const TOWER_DAILY_ATTEMPTS = 3;
-/** 구간별 요구 장비 수(부위당). 1구간(1~10층)은 모든 장비. */
+/** 층별 요구 장비 수(부위당, 11층부터 층마다). 1구간(1~10층)은 모든 장비. */
 export const TOWER_POOL_PER_SLOT = 10;
 /** 요구 장비이면서 고른 아바타를 만들 때도 쓴 장비의 배율. */
 export const TOWER_AVATAR_MULT = 2;
 
 /**
- * 층 요구치 — 구간 계단식(TOWER.md §3). 구간 첫 층 = 60 × 2.613^(구간−1), 구간 안 일반층은 한 층마다 ×1.07로 완만하게,
+ * 전투(TOWER.md §4, 대난투 문법) — 체력 = 전투력 × TOWER_HP_MULT, 한 번 피해 = 공격자 전투력 × U(DMG_MIN, DMG_MAX).
+ * 배수 8 = 비슷한 상대(요구치 1배)와 평균 9턴(최대 15턴 안팎) — 전투력 차이가 있어도 볼 만큼 싸우게(09-30 결정).
+ * 피해 범위는 대난투와 같은 값이지만 탑 전용 상수 — 바꾸면 승률 곡선이 바뀌어 요구치를 다시 맞춰야 한다.
+ */
+export const TOWER_HP_MULT = 8;
+export const TOWER_DMG_MIN = 0.5;
+export const TOWER_DMG_MAX = 1.2;
+
+/**
+ * 층 요구치 — 구간 계단식(TOWER.md §3). 구간 첫 층 = 64 × 2.613^(구간−1), 구간 안 일반층은 한 층마다 ×1.07로 완만하게,
  * 특별층(10의 배수)은 바로 앞 층의 ×1.45로 가파르게. 특별층이 구간의 벽이 되고, 다음 구간 첫 층은 다시 그 위(약 ×1.05).
- * 1층 60 — 실서버 신규 유저 장비 분포 기준(가입 7일 이내 중앙이 첫날 10층 전후에서 막히게, 09-30). 곡선 끝(100층)은 그대로.
+ * 1층 64 — 실서버 장비 분포 몬테카를로로 층 도달 분포를 맞춘 값(09-30). 대난투식 전투(TOWER_HP_MULT)는 승률 곡선이 완만해
+ * 약한 쪽이 가끔 뚫는 만큼 곡선 전체를 ×1.067 올려 분포를 같게 했다.
  * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 지정 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
  */
-export const TOWER_REQ_BASE = 60;
+export const TOWER_REQ_BASE = 64;
 export const TOWER_REQ_SECTION_RATIO = 2.613;
 export const TOWER_REQ_FLOOR_RATIO = 1.07;
 export const TOWER_REQ_SPECIAL_MULT = 1.45;

@@ -6,7 +6,7 @@ import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import { TOWER_BATTLE, type TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_KIND_KO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
@@ -51,6 +51,9 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
   const ended = !!fight?.ended;
   const hitTarget: 'me' | 'mon' | null = cur && cur.damage > 0 ? (cur.actor === 'me' ? 'mon' : 'me') : null;
   const sp = towerIsSpecial(floor);
+  // 기록의 체력은 절대값(전투력 × TOWER_HP_MULT) — 체력바는 최대 대비 비율로.
+  const meMax = meCp * TOWER_HP_MULT;
+  const monMax = towerRequirement(floor) * TOWER_HP_MULT;
   return (
     <>
       <section className="relative h-[222px] flex-none overflow-hidden">
@@ -94,8 +97,8 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
           hit={hitTarget === 'me'}
           stepKey={shown}
           dmg={hitTarget === 'me' ? cur!.damage : null}
-          hp={cur ? cur.meHp : 100}
-          hpBefore={prev ? prev.meHp : 100}
+          hp={cur ? pctOf(cur.meHp, meMax) : 100}
+          hpBefore={prev ? pctOf(prev.meHp, meMax) : 100}
           down={ended && !fight!.win}
         />
         <Fighter
@@ -108,8 +111,8 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
           hit={hitTarget === 'mon'}
           stepKey={shown}
           dmg={hitTarget === 'mon' ? cur!.damage : null}
-          hp={cur ? cur.monHp : 100}
-          hpBefore={prev ? prev.monHp : 100}
+          hp={cur ? pctOf(cur.monHp, monMax) : 100}
+          hpBefore={prev ? pctOf(prev.monHp, monMax) : 100}
           down={ended && !!fight?.win}
         />
       </section>
@@ -316,7 +319,9 @@ function Ev({ c, children }: { c: string; children: React.ReactNode }) {
 }
 
 /** 체력·피해 표시 — 기록은 %p(0~100)를 정수로. 0보다 크면 최소 1(쓰러진 것처럼 보이지 않게). */
-const hpNum = (v: number) => (v > 0 ? Math.max(1, Math.round(v)) : 0);
+const hpNum = (v: number) => n(v > 0 ? Math.max(1, Math.round(v)) : 0);
+/** 절대 체력 → 체력바 %. */
+const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (hp / max) * 100)) : 0);
 
 /**
  * 기록 한 줄(텍스트 RPG) — 누가 · 변수 · 피해(바뀐 경우 'raw → 피해') · 남은 HP. 게이지 없이 글만.
@@ -327,6 +332,8 @@ function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: bo
   const mine = t.actor === 'me';
   const d = hpNum(t.damage);
   const raw = t.raw != null ? hpNum(t.raw) : null;
+  const dNum = Math.round(t.damage);
+  const rawNum = t.raw != null ? Math.round(t.raw) : null;
   const D = <b className={mine ? 'text-amber-300' : 'text-red-300'}>{d}</b>;
   const hp = mine ? (
     <span className="text-zinc-500"> · {monName} HP <b className="font-bold text-zinc-300">{hpNum(t.monHp)}</b></span>
@@ -334,8 +341,8 @@ function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: bo
     <span className="text-zinc-500"> · 내 HP <b className="font-bold text-zinc-300">{hpNum(t.meHp)}</b></span>
   );
   // 배율이 붙어 피해가 커진 경우만 'raw → 피해'(남은 체력 상한에 걸리면 커진 값이 의미 없다).
-  const grew = raw != null && d > raw;
-  const half = raw != null && Math.abs(t.damage - (t.raw ?? 0) * 0.5) < 0.6;
+  const grew = rawNum != null && dNum > rawNum;
+  const half = rawNum != null && Math.abs(dNum - rawNum * 0.5) <= Math.max(1, rawNum * 0.01);
   let body: React.ReactNode;
   switch (t.event) {
     case 'miss':
@@ -416,7 +423,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
       </span>
       <div key={`${stepKey}${act ? 'a' : hit ? 'h' : ''}`} className={`relative mt-0.5 h-[100px] w-36 ${motion}`}>
         {dmg != null ? (
-          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{Math.round(dmg)}</div>
+          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">-{n(Math.round(dmg))}</div>
         ) : null}
         <div className="h-full w-full transition-[opacity,filter] duration-500 ease-out" style={{ opacity: down ? 0.3 : 1, filter: down ? 'grayscale(1)' : 'none' }}>
           {img ? (
