@@ -896,7 +896,7 @@
    {
     "floor": 90,
     "name": "모래시계 거상",
-    "desc": "몸통이 멈춘 모래시계인 청동 태엽 거상, 두 팔에 거울처럼 빛나는 방패를 들었다.",
+    "desc": "몸통이 멈춘 모래시계인 청동 태엽 거상, 두 팔에 둥근 방패를 들었다.",
     "art": "colossal bronze clockwork giant construct whose torso is a huge hourglass with frozen suspended sand, heavy riveted bronze armor plates, gears turning at its joints, a large mirror-polished round shield on each arm, glowing eyes, no face features beyond eyes",
     "guardian": true,
     "skills": [
@@ -993,7 +993,7 @@
    {
     "floor": 99,
     "name": "성소 기린",
-    "desc": "진주빛 비늘과 옅은 금 갈기의 기린.",
+    "desc": "진주빛 비늘에 금빛 사슴뿔이 돋은 기린, 흰 갈기가 구름처럼 흩날린다.",
     "art": "qilin with pearly scales and a pale gold mane",
     "guardian": false,
     "skills": [
