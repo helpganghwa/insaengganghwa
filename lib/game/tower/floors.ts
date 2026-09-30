@@ -118,16 +118,16 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
     ['시계추 골렘', '가슴 속 거울 같은 시계추가 흔들리는 청동 골렘.', ['reflect']],
     ['괘종시계 미믹', '문짝이 열리며 이빨이 드러나는 키 큰 괘종시계.', ['stop']],
     ['태엽 전갈', '꼬리 끝이 시곗바늘인 청동 전갈.', ['multi']],
-    ['청동 황소', '가슴에 멈춘 시계판을 단 청동 황소.', []],
-    ['태엽 용', '등에 거대한 톱니바퀴를 단 청동 용.', ['stop', 'steel', 'reflect']],
+    ['태엽 펭귄', '등에 태엽 열쇠가 꽂힌 뒤뚱뒤뚱한 청동 펭귄.', []],
+    ['모래시계 거상', '몸통이 멈춘 모래시계인 청동 태엽 거상, 두 팔에 거울처럼 빛나는 방패를 들었다.', ['stop', 'steel', 'reflect']],
   ] },
   { theme: '구름 위 성소', mons: [
     ['구름 양', '털이 뭉게구름인 양.', []],
     ['날개 고양이', '등에 작은 흰 날개가 달린 고양이.', []],
-    ['은빛 늑대', '달빛처럼 흰 털의 늑대.', ['awe']],
+    ['백호', '줄무늬가 옅은 금빛으로 빛나는 하얀 호랑이, 매서운 눈으로 노려본다.', ['awe']],
     ['진주 유니콘', '진주빛 갈기와 옅은 금빛 뿔을 가진 유니콘.', ['rebirth']],
     ['꿈먹는 바쿠', '코끝으로 꿈을 빨아들이는 별무늬 바쿠.', []],
-    ['빛의 사슴', '뿔에서 옅은 빛이 흘러내리는 하얀 사슴.', ['regen']],
+    ['별꽃 슬라임', '머리에 작은 흰 별꽃이 핀 진주빛 슬라임.', ['regen']],
     ['구름 고래', '구름 사이를 헤엄치는 하얀 고래.', ['steel']],
     ['성소 사자', '날개 달린 하얀 사자.', ['multi']],
     ['성소 기린', '진주빛 비늘과 옅은 금 갈기의 기린.', ['rebirth']],
@@ -171,7 +171,7 @@ export type TowerFloorInfo = {
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
-const ART_SECTIONS = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+const ART_SECTIONS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
