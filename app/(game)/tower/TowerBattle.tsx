@@ -1,54 +1,40 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { josa } from 'josa';
 
-import { BackTitle } from '@/components/BackNav';
+import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerRequirement } from '@/lib/game/balance';
-import type { TowerTurn } from '@/lib/game/tower/battle';
-import { TOWER_EVENT_TAG, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
+import { TOWER_BATTLE, type TowerTurn } from '@/lib/game/tower/battle';
+import { towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
 
-import { ActionBar, AttemptsChip, FloorKicker, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
+import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
 
 const STEP_MS = 700;
 const prefersReduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** 층 화면(상세·전투) 바탕 — 풀스크린, 장면 그림은 무대에만. */
+/** 층 화면(상세·전투) — 헤더 없이 장면이 맨 위부터, 그 아래는 텍스트 RPG식 줄 구성. */
 export const FLOOR_MAIN = 'flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col overflow-hidden bg-[#100f0e] text-zinc-100';
 /** 무대 아래 구역 구분선. */
-export const FLOOR_ROW = 'border-b border-[rgba(168,145,107,.18)]';
-
-/** 층 화면 헤더 — 상세·전투 공통(뒤로 · N층 · 준비/턴 · 오늘 도전). 전투 중엔 뒤로 가기가 잠긴다. */
-export function TowerFloorHeader({ floor, left, turn, onBack, locked }: { floor: number; left: number; turn?: string | null; onBack?: () => void; locked?: boolean }) {
-  return (
-    <div className={`flex-none px-3 pt-1.5 pb-1 ${locked ? '[&>div>button:first-child]:pointer-events-none [&>div>button:first-child]:opacity-30' : ''}`}>
-      <BackTitle
-        title={`${floor}층`}
-        fallback="/tower"
-        onBack={onBack}
-        right={
-          <span className="flex items-center gap-1.5">
-            {turn ? <span className="rounded-full border border-[rgba(168,145,107,.28)] bg-black/45 px-2 py-0.5 text-[11px] font-bold tabular-nums text-zinc-200">{turn}</span> : null}
-            <AttemptsChip left={left} />
-          </span>
-        }
-      />
-    </div>
-  );
-}
+export const FLOOR_ROW = 'border-b border-white/[.07]';
 
 type Fight = { cur: TowerTurn | null; prev: TowerTurn | null; shown: number; ended: boolean; win: boolean };
 
 /**
- * 무대 — 상세·전투 공통, 풀스크린. 위 층 정보(머리 줄 · 몬스터 이름 · 빨강 전투력 칩 · 돌파 보상 칩) + 장면 창 + 해설 한 줄.
- * 나·층 주인 자리와 발 높이는 고정 — 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다.
+ * 무대 — 상세·전투 공통. 장면이 화면 맨 위부터 깔리고, 그 안 위쪽에 뒤로가기 · 층·장소 · 몬스터 이름 · 오늘 도전(전투 중엔 N턴),
+ * 아래쪽에 나 ↔ 층 주인(자리·발 높이 고정: 전투력 칩 · 체력바 · 몸). 무대 바로 아래 한 줄 = 전투력 · 돌파 보상, 그 아래 해설.
+ * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다.
  */
-export function TowerStage({ floor, info, meImg, meCp, fight, narration, tone = 'idle' }: {
+export function TowerStage({ floor, info, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
   floor: number;
   info: TowerFloorInfo;
   meImg: string | null;
   meCp: number;
+  left: number;
+  turn?: string | null;
+  onBack?: () => void;
+  backLocked?: boolean;
   fight?: Fight;
   narration: string;
   tone?: 'idle' | 'play' | 'win' | 'lose';
@@ -56,63 +42,81 @@ export function TowerStage({ floor, info, meImg, meCp, fight, narration, tone = 
   const cur = fight?.cur ?? null;
   const prev = fight?.prev ?? null;
   const shown = fight?.shown ?? 0;
+  const ended = !!fight?.ended;
   const hitTarget: 'me' | 'mon' | null = cur && cur.damage > 0 ? (cur.actor === 'me' ? 'mon' : 'me') : null;
+  const sp = towerIsSpecial(floor);
   return (
-    <section className={`flex-none ${FLOOR_ROW}`}>
-      <div className="flex items-end gap-2 border-t border-[rgba(168,145,107,.18)] px-3 py-1.5">
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className="flex"><FloorKicker floor={floor} info={info} /></div>
-          <b className="block truncate text-[15px] font-black">{info.name}</b>
-        </div>
-        <div className="flex flex-none flex-col items-end gap-1">
-          <span className="rounded-full border border-red-400/40 bg-black/40 px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-red-300">전투력 {n(towerRequirement(floor))}</span>
-          <span className="rounded-full border border-[rgba(168,145,107,.28)] bg-black/40 px-2 py-0.5 text-[10.5px] font-bold tabular-nums text-zinc-200">돌파 {rewardText(floor)}</span>
-        </div>
-      </div>
-      <div className="relative h-[204px] overflow-hidden">
+    <>
+      <section className="relative h-[256px] flex-none overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(`/sprites/tower/scene/${info.scene}.png`)} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={PIX} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 to-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/75 via-black/5 to-black/55" />
         {hitTarget ? <div key={`f${shown}`} className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500/50 mix-blend-screen" /> : null}
+
+        <div className="absolute inset-x-0 top-0 z-10 flex items-start gap-2.5 px-3 pt-2.5">
+          <BackFab fallback="/tower" onClick={onBack} disabled={backLocked} className="flex-none" />
+          <div className="min-w-0 flex-1 pt-0.5 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
+            <div className="truncate text-[11px] text-zinc-300">
+              {sp ? <span className="text-red-300">✦ </span> : null}
+              {floor}층 · {info.theme}
+              {sp ? <span className="text-red-300"> · 특별층</span> : null}
+            </div>
+            <b className="block truncate text-[16px] font-black text-white">{info.name}</b>
+          </div>
+          <div className="flex-none pt-0.5 text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
+            <div>
+              오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-white'}>{left}</b>
+              <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
+            </div>
+            {turn ? <div className="font-bold text-zinc-100">{turn}</div> : null}
+          </div>
+        </div>
+
         <Fighter
           side="l"
           cp={meCp}
           img={meImg}
-          act={!!cur && !fight?.ended && cur.actor === 'me'}
+          act={!!cur && !ended && cur.actor === 'me'}
           hit={hitTarget === 'me'}
           stepKey={shown}
           dmg={hitTarget === 'me' ? cur!.damage : null}
           hp={cur ? cur.meHp : 100}
           hpBefore={prev ? prev.meHp : 100}
-          down={!!fight?.ended && !fight.win}
+          down={ended && !fight!.win}
         />
         <Fighter
           side="r"
           cp={towerRequirement(floor)}
           img={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
-          act={!!cur && !fight?.ended && cur.actor === 'mon'}
+          act={!!cur && !ended && cur.actor === 'mon'}
           hit={hitTarget === 'mon'}
           stepKey={shown}
           dmg={hitTarget === 'mon' ? cur!.damage : null}
           hp={cur ? cur.monHp : 100}
           hpBefore={prev ? prev.monHp : 100}
-          down={!!fight?.ended && fight.win}
+          down={ended && !!fight?.win}
         />
-      </div>
-      {/* 해설 — 장면 위가 아니라 무대 아래 줄(밝은 장면에서도 읽히게). 대기엔 층 서술, 전투 중엔 지금 줄, 끝나면 결말. 2줄 고정. */}
-      <div className="flex h-10 items-center justify-center bg-black/30 px-4">
-        <p className={`line-clamp-2 text-center text-[11.5px] leading-snug break-keep ${tone === 'win' ? 'font-bold text-emerald-300' : tone === 'lose' ? 'font-bold text-red-300' : tone === 'idle' ? 'text-zinc-400' : 'text-zinc-100'}`}>
+      </section>
+
+      {/* 무대 아래 — 전투력 · 돌파 보상 한 줄, 그 아래 해설(대기엔 층 서술, 전투 중엔 지금 줄, 끝나면 결말). 2줄 고정. */}
+      <div className={`flex-none px-4 pt-2 pb-2.5 ${FLOOR_ROW}`}>
+        <div className="text-[12px] tabular-nums text-zinc-400">
+          전투력 <b className="text-red-300">{n(towerRequirement(floor))}</b>
+          <span className="px-1.5 text-zinc-600">·</span>
+          돌파 <span className="text-zinc-200">{rewardText(floor)}</span>
+        </div>
+        <p className={`mt-1 line-clamp-2 min-h-[2.6em] text-[12px] leading-snug break-keep ${tone === 'win' ? 'font-bold text-emerald-300' : tone === 'lose' ? 'font-bold text-red-300' : tone === 'idle' ? 'text-zinc-400' : 'text-zinc-100'}`}>
           {narration}
         </p>
       </div>
-    </section>
+    </>
   );
 }
 
 /**
- * 전투(TOWER.md §7) — 층 화면(상세)과 같은 헤더·무대에서 그대로 이어 싸운다(화면 전환 없음).
- * 상세의 장비 자리에 데미지 중심 기록이 쌓이고, 끝나면 결말 상자가 붙는다. 건너뛰기 없이 끝까지 재생,
- * 진 판은 결말에서 결정적 순간부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대를 먼저 보여 준다(낙관적 전환).
+ * 전투(TOWER.md §7) — 층 화면(상세)과 같은 무대에서 그대로 이어 싸운다(화면 전환 없음).
+ * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
+ * 건너뛰기 없이 끝까지 재생, 진 판은 결정적 순간부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
 export function TowerBattle({ floor, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry, onGear }: {
   floor: number;
@@ -198,51 +202,61 @@ export function TowerBattle({ floor, result, myCp, attemptsBefore, avatarSouth, 
 
   return (
     <main className={FLOOR_MAIN}>
-      <TowerFloorHeader floor={floor} left={result ? left : attemptsBefore} turn={cur ? `${cur.turn}턴` : '준비'} onBack={done ? onList : undefined} locked={!done} />
       <TowerStage
         floor={floor}
         info={info}
         meImg={avatarSouth}
         meCp={result?.towerCp ?? myCp}
+        left={result ? left : attemptsBefore}
+        turn={cur ? `${cur.turn}턴` : '준비'}
+        onBack={onList}
+        backLocked={!done}
         fight={{ cur, prev, shown, ended, win }}
         narration={narration}
         tone={!done ? 'play' : win ? 'win' : 'lose'}
       />
 
-      {/* 기록 — 상세의 장비 자리. 한 줄 = 누가 · 얼마(큰 숫자) · 맞은 쪽 체력 막대(깎인 만큼 밝게) · 남은 체력, 아래에 짧은 서술. */}
-      <div ref={logRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {!result ? <p className="py-6 text-center text-[11.5px] text-zinc-500">전투를 준비하는 중…</p> : null}
-        <ul>
-          {turns.slice(0, shown).map((t, i) => (
-            <LogRow key={i} t={t} first={i === 0 || turns[i - 1]!.turn !== t.turn} monName={info.name} mark={done && !win && i === keyIdx} />
-          ))}
-        </ul>
-        {done ? (
-          win ? (
-            <div className="mx-3 my-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2">
-              <b className="block text-[13px] text-emerald-300">돌파</b>
-              <div className="text-[11.5px] text-zinc-300">
-                {floor < TOWER_FLOORS ? `${nextFloor}층의 문이 열렸다 · 다음 상대 ${towerFloorInfo(nextFloor).name}` : '지금 열린 가장 높은 층까지 올랐다.'}
+      {/* 기록 — 상세의 장비 자리. 턴마다 구분하고 한 줄에 누가 · 무슨 변수로 · 피해가 얼마로 · 남은 HP가 얼마인지. */}
+      <div ref={logRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3">
+        {!result ? <p className="py-5 text-center text-[12px] text-zinc-500">전투를 준비하는 중…</p> : null}
+        {turns.slice(0, shown).map((t, i) => (
+          <div key={i}>
+            {i === 0 || turns[i - 1]!.turn !== t.turn ? (
+              <div className="mt-2.5 mb-1 flex items-center gap-2 text-[10.5px] font-bold text-zinc-500">
+                <span className="h-px flex-1 bg-white/[.08]" />
+                {t.turn}턴
+                <span className="h-px flex-1 bg-white/[.08]" />
               </div>
-              <div className="text-[11.5px] text-zinc-400">오늘 도전 <Left left={left} /> 그대로</div>
-              {result.reward ? (
-                <button type="button" onClick={onList} className="mt-1 text-[11.5px] font-bold text-amber-300">
-                  돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <div className="mx-3 my-2.5 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2">
-              <b className="block text-[13px] text-red-300">물러남</b>
-              {keyTurn ? (
-                <div className="text-[11.5px] text-zinc-300">
-                  결정적인 순간 · {keyTurn.turn}턴 {towerTurnLine(keyTurn, info.name)}{' '}
-                  <button type="button" onClick={() => play(keyIdx)} className="font-bold text-amber-300">그 장면 다시 보기 ›</button>
-                </div>
-              ) : null}
-              <div className="text-[11.5px] text-zinc-400">오늘 도전 <Left left={left} /></div>
-            </div>
-          )
+            ) : null}
+            <LogLine t={t} monName={info.name} mark={done && !win && i === keyIdx} />
+          </div>
+        ))}
+        {done ? (
+          <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
+            {win ? (
+              <>
+                <b className="text-[13px] text-emerald-300">돌파</b>
+                <div>{floor < TOWER_FLOORS ? `${nextFloor}층의 문이 열렸다. 다음 상대는 ${towerFloorInfo(nextFloor).name}.` : '지금 열린 가장 높은 층까지 올랐다.'}</div>
+                <div className="text-zinc-400">오늘 도전 <Left left={left} /> 그대로</div>
+                {result.reward ? (
+                  <button type="button" onClick={onList} className="font-bold text-amber-300">
+                    돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <b className="text-[13px] text-red-300">물러남</b>
+                {keyTurn ? (
+                  <div>
+                    결정적인 순간 · {keyTurn.turn}턴 {towerTurnLine(keyTurn, info.name)}{' '}
+                    <button type="button" onClick={() => play(keyIdx)} className="font-bold text-amber-300">그 장면 다시 보기 ›</button>
+                  </div>
+                ) : null}
+                <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
+              </>
+            )}
+          </div>
         ) : null}
       </div>
 
@@ -273,36 +287,68 @@ export function TowerBattle({ floor, result, myCp, attemptsBefore, avatarSouth, 
   );
 }
 
-/** 기록 한 줄 — 데미지 중심. 나=금색, 적=빨강. 막대는 맞은 쪽 체력(남은 만큼 + 이번에 깎인 만큼 밝게). */
-function LogRow({ t, first, monName, mark }: { t: TowerTurn; first: boolean; monName: string; mark: boolean }) {
+/** 기록 속 변수 이름(급소!·광폭화 등) — 변수마다 색. */
+function Ev({ c, children }: { c: string; children: React.ReactNode }) {
+  return <b className={c}>{children}</b>;
+}
+
+/** 체력·피해 표시 — 기록은 %p(0~100)를 정수로. 0보다 크면 최소 1(쓰러진 것처럼 보이지 않게). */
+const hpNum = (v: number) => (v > 0 ? Math.max(1, Math.round(v)) : 0);
+
+/**
+ * 기록 한 줄(텍스트 RPG) — 누가 · 변수 · 피해(바뀐 경우 'raw → 피해') · 남은 HP. 게이지 없이 글만.
+ * 나=금색 ▸, 층 주인=빨강 ▸. raw가 없는 옛 기록·상한에 걸린 피해는 바뀐 값만 보여 준다.
+ */
+function LogLine({ t, monName, mark }: { t: TowerTurn; monName: string; mark: boolean }) {
+  const B = TOWER_BATTLE;
   const mine = t.actor === 'me';
-  const tag = t.event ? TOWER_EVENT_TAG[t.event] : null;
-  const after = Math.max(0, mine ? t.monHp : t.meHp);
-  const before = Math.min(100, after + Math.max(0, t.damage));
+  const d = hpNum(t.damage);
+  const raw = t.raw != null ? hpNum(t.raw) : null;
+  const D = <b className={mine ? 'text-amber-300' : 'text-red-300'}>{d}</b>;
+  const hp = mine ? (
+    <span className="text-zinc-500"> · {monName} HP <b className="font-bold text-zinc-300">{hpNum(t.monHp)}</b></span>
+  ) : (
+    <span className="text-zinc-500"> · 내 HP <b className="font-bold text-zinc-300">{hpNum(t.meHp)}</b></span>
+  );
+  // 배율이 붙어 피해가 커진 경우만 'raw → 피해'(남은 체력 상한에 걸리면 커진 값이 의미 없다).
+  const grew = raw != null && d > raw;
+  const half = raw != null && Math.abs(t.damage - (t.raw ?? 0) * 0.5) < 0.6;
+  let body: React.ReactNode;
+  switch (t.event) {
+    case 'miss':
+      body = mine ? <>내 공격이 빗나갔다.</> : <>{monName}의 공격이 빗나갔다.</>;
+      break;
+    case 'critical':
+      body = <><Ev c="text-amber-300">급소!</Ev> {monName}의 빈틈을 꿰뚫었다. 피해 {grew ? <>{raw} → </> : null}{D}{grew ? <span className="text-zinc-500"> (×{B.critMul})</span> : null}</>;
+      break;
+    case 'resonance':
+      body = <><Ev c="text-sky-300">공명!</Ev> 아바타와 장비가 함께 울려 추가 피해 {D}{half ? <span className="text-zinc-500"> ({raw}의 절반)</span> : null}</>;
+      break;
+    case 'counter':
+      body = <><Ev c="text-purple-300">반격!</Ev> 막아 낸 틈을 타 되받아쳤다. 피해 {D}{half ? <span className="text-zinc-500"> ({raw}의 절반)</span> : null}</>;
+      break;
+    case 'enrage':
+      body = <><Ev c="text-red-400">광폭화</Ev> {josa(`${monName}#{이}`)} 날뛴다. 피해 {grew ? <>{raw} → </> : null}{D}{grew ? <span className="text-zinc-500"> (×{B.enrageMul})</span> : null}</>;
+      break;
+    case 'revive':
+      body = <>{monName}의 공격 {D} — <Ev c="text-emerald-300">기사회생!</Ev> 쓰러지기 직전 다시 일어섰다.</>;
+      break;
+    case 'first_strike':
+      body = mine
+        ? <><Ev c="text-orange-300">선제!</Ev> 먼저 거리를 좁혀 첫 일격. 피해 {D}</>
+        : <><Ev c="text-orange-300">선제!</Ev> {josa(`${monName}#{이}`)} 먼저 달려들었다. 피해 {D}</>;
+      break;
+    default:
+      // 전투력 차가 커서 피해가 0.1%p도 안 되면 0으로 기록된다 — '피해 0' 대신 통하지 않았다고.
+      if (t.damage <= 0) body = mine ? <>공격했지만 통하지 않았다.</> : <>{josa(`${monName}#{이}`)} 공격했지만 통하지 않았다.</>;
+      else body = mine ? <>{josa(`${monName}#{을}`)} 공격했다. 피해 {D}</> : <>{josa(`${monName}#{이}`)} 공격했다. 피해 {D}</>;
+  }
   return (
-    <li className={`grid grid-cols-[30px_1fr_58px] items-center gap-2 border-b border-[rgba(168,145,107,.1)] px-3 py-1.5 ${mark ? 'bg-red-950/40' : ''}`}>
-      <span className="text-center text-[10.5px] font-bold tabular-nums text-zinc-500">{first ? `${t.turn}턴` : ''}</span>
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`flex-none rounded px-1 text-[9.5px] font-black ${mine ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>{mine ? '나' : '적'}</span>
-          {/* 맞은 쪽 체력 — 남은 만큼(흐리게) + 이번에 깎인 만큼(밝게). */}
-          <span className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800">
-            <span className={`absolute inset-y-0 left-0 ${mine ? 'bg-red-400/45' : 'bg-emerald-400/45'}`} style={{ width: `${after}%` }} />
-            <span className={`absolute inset-y-0 ${mine ? 'bg-amber-300' : 'bg-red-400'}`} style={{ left: `${after}%`, width: `${before - after}%` }} />
-          </span>
-          {tag ? <span className={`flex-none rounded px-1 text-[9.5px] font-black ${tag.cls}`}>{tag.label}</span> : null}
-        </div>
-        <p className="mt-0.5 truncate text-[10.5px] text-zinc-400">{towerTurnLine(t, monName)}</p>
-      </div>
-      <span className="text-right leading-tight">
-        {t.damage > 0 ? (
-          <b className={`block text-[15px] font-black tabular-nums ${mine ? 'text-amber-300' : 'text-red-300'}`}>-{Math.round(t.damage)}</b>
-        ) : (
-          <b className="block text-[11px] text-zinc-500">{t.event === 'miss' ? '빗나감' : '-'}</b>
-        )}
-        <span className="text-[9.5px] tabular-nums text-zinc-500">{mine ? '적' : '나'} {Math.round(after)}%</span>
-      </span>
-    </li>
+    <p className={`py-0.5 text-[12px] leading-relaxed break-keep text-zinc-200 ${mark ? 'rounded bg-red-950/50 px-1' : ''}`}>
+      <span className={mine ? 'text-amber-400' : 'text-red-400'}>▸ </span>
+      {body}
+      {hp}
+    </p>
   );
 }
 

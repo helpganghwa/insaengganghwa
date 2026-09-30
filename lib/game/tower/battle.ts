@@ -26,6 +26,8 @@ export type TowerTurn = {
   actor: 'me' | 'mon';
   /** 이번 행동으로 상대가 잃은 체력(%p). 빗나감은 0. */
   damage: number;
+  /** 변수(급소·광폭화·반격·공명)가 붙기 전 한 번의 피해(%p) — 기록에 'raw → damage'로 보여 준다. 변수 없는 줄·옛 기록엔 없음. */
+  raw?: number;
   event: TowerBattleEvent | null;
   /** 행동 뒤 양쪽 체력(0~100). 재생 화면의 체력 바. */
   meHp: number;
@@ -83,23 +85,29 @@ export function simulateTowerBattle(opts: {
   const roll = (bp: number) => rng() < bp;
   const spread = () => 1 + ((rng() / 9999) * 2 - 1) * (B.spreadBp / 10000);
   // 피해는 상대의 남은 체력까지만 — 전투력 차이가 크면 계산상 수십억이 나와 기록·화면이 무의미해진다(승패·확률은 같음).
-  const myHit = () => Math.min(B.baseHit * Math.pow(r, B.steep) * spread(), Math.max(0, mon));
-  const monHit = () => Math.min(r > 0 ? (B.baseHit / Math.pow(r, B.steep)) * spread() : B.hp, Math.max(0, me));
+  // 흔들림까지 들어간 한 번의 피해(상한 전) — 변수 배율과 남은 체력 상한은 쓰는 쪽에서.
+  const myRaw = () => B.baseHit * Math.pow(r, B.steep) * spread();
+  const monRaw = () => (r > 0 ? (B.baseHit / Math.pow(r, B.steep)) * spread() : B.hp);
   const round = (x: number) => Math.round(x * 10) / 10;
 
-  const push = (turn: number, actor: 'me' | 'mon', damage: number, event: TowerBattleEvent | null) =>
-    turns.push({ turn, actor, damage: round(damage), event, meHp: round(Math.max(0, me)), monHp: round(Math.max(0, mon)) });
+  const push = (turn: number, actor: 'me' | 'mon', damage: number, event: TowerBattleEvent | null, raw?: number) =>
+    turns.push({
+      turn, actor, damage: round(damage), event, meHp: round(Math.max(0, me)), monHp: round(Math.max(0, mon)),
+      ...(raw != null ? { raw: round(Math.min(raw, B.hp)) } : {}),
+    });
 
   const meAct = (turn: number, first: boolean) => {
     if (roll(B.missBp)) return push(turn, 'me', 0, 'miss');
     const crit = roll(B.critBp);
-    const dmg = Math.min(myHit() * (crit ? B.critMul : 1), mon);
+    const raw = myRaw();
+    const dmg = Math.min(raw * (crit ? B.critMul : 1), mon);
     mon -= dmg;
-    push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null);
+    push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null, crit ? raw : undefined);
     if (mon > 0 && opts.doubledCount >= 3 && roll(B.resonanceBp)) {
-      const extra = Math.min(myHit() * B.resonanceMul, mon);
+      const raw2 = myRaw();
+      const extra = Math.min(raw2 * B.resonanceMul, mon);
       mon -= extra;
-      push(turn, 'me', extra, 'resonance');
+      push(turn, 'me', extra, 'resonance', raw2);
     }
   };
   const monAct = (turn: number, first: boolean) => {
@@ -108,19 +116,21 @@ export function simulateTowerBattle(opts: {
       enraged = roll(B.enrageBp);
     }
     if (roll(B.missBp)) return push(turn, 'mon', 0, 'miss');
-    const dmg = Math.min(monHit() * (enraged ? B.enrageMul : 1), me);
+    const raw = monRaw();
+    const dmg = Math.min(raw * (enraged ? B.enrageMul : 1), me);
     me -= dmg;
     if (me <= 0 && !revived && roll(B.reviveBp)) {
       revived = true;
       me = 1;
       push(turn, 'mon', dmg, 'revive');
     } else {
-      push(turn, 'mon', dmg, enraged ? 'enrage' : first ? 'first_strike' : null);
+      push(turn, 'mon', dmg, enraged ? 'enrage' : first ? 'first_strike' : null, enraged ? raw : undefined);
     }
     if (me > 0 && mon > 0 && roll(B.counterBp)) {
-      const c = Math.min(myHit() * B.counterMul, mon);
+      const raw2 = myRaw();
+      const c = Math.min(raw2 * B.counterMul, mon);
       mon -= c;
-      push(turn, 'me', c, 'counter');
+      push(turn, 'me', c, 'counter', raw2);
     }
   };
 
