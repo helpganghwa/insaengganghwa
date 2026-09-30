@@ -4,6 +4,7 @@ import { useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
@@ -14,7 +15,7 @@ import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
-import { TowerBattle, TowerFloorHeader, TowerStage } from './TowerBattle';
+import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerFloorHeader, TowerStage } from './TowerBattle';
 import { ActionBar, AttemptsChip, FloorKicker, PANEL, PIX, PrimaryButton, SecondaryButton, n, pageBg, rewardText } from './TowerUi';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -85,6 +86,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   }
   const [msg, setMsg] = useState<string | null>(null);
   const { showError, showHeaderToast } = useResourceToast();
+  const { optimisticAdjust } = useDiamondActions();
   // 돌파 보상 — 전투에서 주지 않고 목록에서 받는다(층별·모두 받기). 누르는 즉시 받은 것으로 보이고, 실패하면 되돌린다.
   const [claimedLocal, setClaimedLocal] = useState<ReadonlySet<number>>(new Set());
   const [claiming, setClaiming] = useState(false);
@@ -101,9 +103,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (!target.length) return;
     setClaiming(true);
     setClaimedLocal((s) => new Set([...s, ...target]));
+    // 헤더 다이아도 누르는 즉시 올린다(서버 재렌더가 실제 잔액으로 맞춘다). 실패하면 되돌린다.
+    const dia = target.reduce((a, f) => a + towerReward(f).diamond, 0);
+    optimisticAdjust(BigInt(dia));
     const r = await towerClaimAction(floor).catch(() => null);
     setClaiming(false);
     if (!r || r.status !== 'success') {
+      optimisticAdjust(BigInt(-dia));
       setClaimedLocal((s) => new Set([...s].filter((f) => !target.includes(f))));
       showError(r?.message ?? '보상을 받지 못했어요. 잠시 후 다시 시도해 주세요.');
       return;
@@ -340,13 +346,14 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       return cands.length ? cands[pickIndex(`${board.week}:${next}:${s}`, cands.length)] : undefined;
     }).filter((k): k is string => !!k);
     return (
-      <main className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col gap-2 overflow-hidden px-3 pt-1.5 pb-3 text-zinc-100" style={pageBg(info.scene)}>
+      <main className={FLOOR_MAIN}>
         <TowerFloorHeader floor={next} left={attemptsLeft} />
         <TowerStage floor={next} info={info} meImg={avatar?.south ?? null} meCp={cpNow.total} narration={info.line} />
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain">
+        {/* 무대 아래 — 여백 없이 줄로 나눈 구역(전투에선 이 자리에 기록이 쌓인다). */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
           {/* 착용 가능 장비 */}
-          <button type="button" onClick={() => openPool(next)} className={`${PANEL} flex flex-none items-center gap-2.5 px-3 py-2 text-left`}>
+          <button type="button" onClick={() => openPool(next)} className={`${FLOOR_ROW} flex flex-none items-center gap-2.5 px-3 py-2 text-left`}>
             <span className="flex flex-none">
               {preview.map((k, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -363,7 +370,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           </button>
 
           {/* 내 장착 — 장비별 탑 기준 전투력(×2·×1 반영)과 그 합 = 탑 전투력, 아바타는 맞는 장비 수(N/3)만. */}
-          <div className={`${PANEL} flex-none px-3 py-2`}>
+          <div className={`${FLOOR_ROW} flex-none px-3 py-2`}>
             <div className="flex items-start gap-2">
               {TOWER_SLOTS.map((s) => {
                 const p = cpNow.pieces.find((x) => x.slot === s);
@@ -402,15 +409,17 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               <span>탑 전투력 <b className="text-[15px] text-amber-300">{n(cpNow.total)}</b></span>
             </div>
           </div>
-          {msg ? <p className="flex-none text-center text-[11.5px] text-red-300">{msg}</p> : null}
+          {msg ? <p className="flex-none py-2 text-center text-[11.5px] text-red-300">{msg}</p> : null}
         </div>
 
-        <ActionBar>
-          <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착 중'}</SecondaryButton>
-          <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
-            {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : '도전'}
-          </PrimaryButton>
-        </ActionBar>
+        <div className="flex-none px-3 pt-2 pb-3">
+          <ActionBar>
+            <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착 중'}</SecondaryButton>
+            <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
+              {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : '도전'}
+            </PrimaryButton>
+          </ActionBar>
+        </div>
 
         {popups}
       </main>
