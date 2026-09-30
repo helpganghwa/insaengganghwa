@@ -15,15 +15,14 @@ import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service'
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
 import { TowerBattle, TowerFloorHeader, TowerStage } from './TowerBattle';
-import { ActionBar, AttemptsChip, FloorKicker, PANEL, PIX, PrimaryButton, n, pageBg, rewardText } from './TowerUi';
+import { ActionBar, AttemptsChip, FloorKicker, PANEL, PIX, PrimaryButton, SecondaryButton, n, pageBg, rewardText } from './TowerUi';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const itemSrc = (slot: TowerSlot, key: string) => assetUrl(`/sprites/${slot}/${key}.png`);
 
-/** 착용 가능 장비의 층 범위 — 특별층은 지정 장비만 ×2. */
+/** 착용 가능 장비의 층 — 요구 장비는 층마다 다르다(1~9층은 모든 장비). 특별층은 지정 장비만 ×2. */
 function rangeText(floor: number): string {
-  const sec = towerSection(floor);
-  return `${(sec - 1) * TOWER_SECTION + 1}~${sec * TOWER_SECTION}층${towerIsSpecial(floor) ? ' · 지정 장비만 ×2' : ''}`;
+  return `${floor}층${towerIsSpecial(floor) ? ' · 지정 장비만 ×2' : ''}`;
 }
 
 /** 요구 장비 갱신까지 남은 시간 — 매주 월요일 0시(KST). week = 이번 주 월요일(YYYY-MM-DD). */
@@ -128,7 +127,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
   const specials = useMemo(() => new Map(Object.entries(board.specials).map(([k, v]) => [Number(k), v as SlotKeys])), [board.specials]);
-  const ruleOf = (f: number) => floorRule(f, pools.get(towerSection(f)) ?? null, specials.get(towerSection(f)) ?? null);
+  // 요구 장비는 층마다(pools: 층 → 부위별), 특별층 지정 장비는 구간마다(specials: 구간 → 부위별).
+  const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null, specials.get(towerSection(f)) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
   const rule = ruleOf(next);
@@ -150,6 +150,36 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   });
   const avatar = avatarRows.find((a) => a.id === avatarId) ?? avatarRows[0] ?? null;
   const cpNow = avatar?.now ?? towerCp(equipped, rule, new Set());
+
+  // 자동 장착 — 그 층 요구 장비 중 부위별 가장 센 장비 + 그 조합이 가장 센 아바타(요구 장비가 층마다 바뀌어 층마다 다시 맞추는 수고를 던다).
+  const autoPlan = useMemo(() => {
+    let top: { avatarId: string | null; ueids: string[]; total: number } | null = null;
+    for (const a of avatarRows.length ? avatarRows : [null]) {
+      const keys = new Set(a?.keys ?? []);
+      let total = 0;
+      const ueids: string[] = [];
+      for (const s of TOWER_SLOTS) {
+        let pick: { ueid: string; equipped: boolean; sc: number } | null = null;
+        for (const it of items) {
+          if (it.slot !== s) continue;
+          const sc = towerCp([{ slot: s, key: it.key, cp: it.cp }], rule, keys).pieces[0]!.score;
+          if (!pick || sc > pick.sc || (sc === pick.sc && it.equipped)) pick = { ueid: it.ueid, equipped: it.equipped, sc };
+        }
+        if (pick && pick.sc > 0) {
+          total += pick.sc;
+          if (!pick.equipped) ueids.push(pick.ueid);
+        }
+      }
+      if (!top || total > top.total) top = { avatarId: a?.id ?? null, ueids, total };
+    }
+    return top;
+  }, [avatarRows, items, rule]);
+  const autoBetter = !!autoPlan && autoPlan.total > cpNow.total;
+  const autoEquip = () => {
+    if (!autoPlan || !autoBetter) return;
+    if (autoPlan.avatarId) setAvatarId(autoPlan.avatarId);
+    if (autoPlan.ueids.length) doEquip(autoPlan.ueids);
+  };
 
   const doEquip = (ueids: string[]) => {
     // 낙관적 반영 — 누르는 즉시 장착 표시(탑 전투력·배율도 즉시 다시 계산된다).
@@ -376,8 +406,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         </div>
 
         <ActionBar>
+          <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착 중'}</SecondaryButton>
           <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
-            {attemptsLeft <= 0 ? '오늘 도전을 모두 썼어요' : cpNow.total <= 0 ? '착용 가능 장비를 먼저 장착해 주세요' : '도전'}
+            {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : '도전'}
           </PrimaryButton>
         </ActionBar>
 
@@ -429,7 +460,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
                     })}
                   </span>
-                ) : `${(towerSection(hero) - 1) * 10 + 1}~${towerSection(hero) * 10}층 · 부위별 10개`}</span>
+                ) : '이 층만 · 부위별 10개'}</span>
                 <button type="button" onClick={() => openPool(hero)} className="ml-1 h-5 flex-none rounded-md border border-amber-600/60 px-1.5 text-[10px] font-bold leading-none text-amber-200">보기</button>
               </div>
             </div>
