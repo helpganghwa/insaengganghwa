@@ -26,7 +26,7 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
     ['돌사자 수호상', '금 간 틈으로 희미한 빛이 새어 나오는 거대한 돌사자.', ['steel']],
   ] },
   { theme: '서리 내린 서고', mons: [
-    ['은빛 좀벌레', '책장 사이를 기어 다니는 손바닥만 한 은빛 좀벌레.', []],
+    ['잉크 슬라임', '엎질러진 잉크병에서 흘러나온 검푸른 슬라임, 머리에 깃펜 하나가 꽂혀 있다.', []],
     ['서고 올빼미', '깃털 끝이 하얗게 언 커다란 회색 올빼미.', []],
     ['책 미믹', '덮인 표지 사이로 이빨과 혀를 내민 두꺼운 책.', []],
     ['서리 족제비', '눈 쌓인 서가 위를 달리는 흰 족제비.', []],
@@ -171,7 +171,7 @@ export type TowerFloorInfo = {
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
-const ART_SECTIONS = new Set([1]);
+const ART_SECTIONS = new Set([1, 2]);
 
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
