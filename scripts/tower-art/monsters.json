@@ -725,7 +725,7 @@
    {
     "floor": 73,
     "name": "항아리 문어",
-    "desc": "신전 항아리에 몸을 숨기고 다리만 내민 작은 문어.",
+    "desc": "신전 항아리에서 머리를 내밀고 다리를 늘어뜨린 작은 문어.",
     "art": "small cute octopus peeking out of an old temple clay jar, a few tentacles curling over the rim",
     "guardian": false,
     "skills": []
@@ -743,7 +743,7 @@
    {
     "floor": 75,
     "name": "진주 조개",
-    "desc": "입을 벌리면 진주가 빛나는 거대한 조개.",
+    "desc": "짧은 네 발로 걸어 다니는 거대한 조개, 벌어진 입 안에서 진주가 빛난다.",
     "art": "giant clam with a glowing pearl inside",
     "guardian": false,
     "skills": [
