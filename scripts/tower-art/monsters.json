@@ -887,17 +887,17 @@
    },
    {
     "floor": 89,
-    "name": "청동 황소",
-    "desc": "가슴에 멈춘 시계판을 단 청동 황소.",
-    "art": "bronze bull with a stopped clock face on its chest",
+    "name": "태엽 펭귄",
+    "desc": "등에 태엽 열쇠가 꽂힌 뒤뚱뒤뚱한 청동 펭귄.",
+    "art": "chubby bronze clockwork penguin with a wind-up key in its back, waddling pose",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 90,
-    "name": "태엽 용",
-    "desc": "등에 거대한 톱니바퀴를 단 청동 용.",
-    "art": "bronze dragon with a huge gear on its back",
+    "name": "모래시계 거상",
+    "desc": "몸통이 멈춘 모래시계인 청동 태엽 거상, 두 팔에 거울처럼 빛나는 방패를 들었다.",
+    "art": "colossal bronze clockwork giant construct whose torso is a huge hourglass with frozen suspended sand, heavy riveted bronze armor plates, gears turning at its joints, a large mirror-polished round shield on each arm, glowing eyes, no face features beyond eyes",
     "guardian": true,
     "skills": [
      "stop",
@@ -934,9 +934,9 @@
    },
    {
     "floor": 93,
-    "name": "은빛 늑대",
-    "desc": "달빛처럼 흰 털의 늑대.",
-    "art": "silver white wolf",
+    "name": "백호",
+    "desc": "줄무늬가 옅은 금빛으로 빛나는 하얀 호랑이, 매서운 눈으로 노려본다.",
+    "art": "white tiger with faintly glowing pale gold stripes, fierce glaring eyes, powerful stance",
     "guardian": false,
     "skills": [
      "awe"
@@ -962,9 +962,9 @@
    },
    {
     "floor": 96,
-    "name": "빛의 사슴",
-    "desc": "뿔에서 옅은 빛이 흘러내리는 하얀 사슴.",
-    "art": "white deer with softly glowing antlers",
+    "name": "별꽃 슬라임",
+    "desc": "머리에 작은 흰 별꽃이 핀 진주빛 슬라임.",
+    "art": "round pearly white slime with a small white star-shaped flower blooming on its head, two dot eyes, glossy opaque body, no legs",
     "guardian": false,
     "skills": [
      "regen"
@@ -1004,7 +1004,7 @@
     "floor": 100,
     "name": "여섯 날개 백룡",
     "desc": "여섯 날개를 펼친 진주빛 용.",
-    "art": "pearl white dragon with six spread wings",
+    "art": "pearl white dragon with six large feathered wings clearly spread wide in three pairs, all six wings fully visible, majestic long neck and horns, glowing eyes",
     "guardian": true,
     "skills": [
      "death",

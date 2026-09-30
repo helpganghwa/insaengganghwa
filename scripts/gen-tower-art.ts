@@ -40,7 +40,7 @@ const BG: Record<number, string> = {
   7: 'interior of a faded royal throne hall inside a tower, ivory marble floor, tall pillars with peeling gold leaf, faded red curtains, dim chandeliers',
   8: 'interior of a sunken temple inside a tower half flooded with murky teal water, broken stone pillars with faded coral growing on them, shafts of dim light through the water surface',
   9: 'interior of a stopped clock tower, huge bronze gears and clock mechanisms, a giant clock face seen from behind, dust in the air, wooden beams and stone walls',
-  10: 'sanctuary above the clouds at the top of a tower, white marble floor and pillars, pale gold ornaments, soft sunlight, sea of clouds below and bright sky',
+  10: 'sanctuary on the very top floor of a tall round tower, curved white marble tower walls with tall arched openings showing a sea of clouds far below, a spiral staircase rising up from the floor below, white marble floor and pillars, pale gold ornaments, soft sunlight',
 };
 const PALETTE_WORDS: Record<number, string> = {
   1: 'muted desaturated palette of warm grey, taupe and dim amber candlelight',
@@ -60,6 +60,9 @@ const STYLE_MON =
 // 디테일(질감·음영)은 기준 그림 그대로, 비율·표정만 판타지 게임 몬스터처럼 살짝 과장해 덜 사실적으로.
 const STYLE_FRIENDLY =
   'fantasy game monster, slightly stylized and exaggerated proportions, expressive eyes, detailed pixel art rendering with rich texture and shading, not photorealistic, not creepy, all-ages';
+// 수문장(10층마다) — 친근한 톤 대신 보스다운 위압감(09-30 90층 검수: '보스인데 포스가 없다'). 전체이용가는 유지.
+const STYLE_BOSS =
+  'fearsome imposing boss monster, massive heavy build, glowing eyes, dramatic powerful silhouette, menacing stance, detailed pixel art rendering with rich texture and shading, not gory, all-ages';
 // 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀).
 const STURDY_LEGS = 'sturdy legs instead of thin spindly legs';
 const STYLE_BG = 'symmetrical composition, centered front view, pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge, full bleed, no white or grey borders, no side margins, no vignette, no fade at the edges, scene continues to the left and right edges';
@@ -134,7 +137,7 @@ if (only.includes('mons')) {
     tasks.push((async () => {
       for (const m of lane) {
         const size = m.guardian ? 160 : 128;
-        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}${m.guardian ? ', large imposing boss' : ''}, ${STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly|seahorse|squid|octopus|nautilus/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
+        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}, ${m.guardian ? STYLE_BOSS : STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly|seahorse|squid|octopus|nautilus/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
       }
     })());
   }
