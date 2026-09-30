@@ -148,7 +148,7 @@ export default function Doc() {
       <UL>
         <LI>
           가장 높이 돌파한 층으로 서버 순위를 매기고, 같은 층이면 먼저 오른 사람이 앞선다.{' '}
-          <DocLink slug="ranking">랭킹</DocLink>의 무한탑 탭에서 볼 수 있다.
+          <DocLink slug="ranking">랭킹</DocLink>의 무한의 탑 탭에서 볼 수 있다.
         </LI>
         <LI>1위는 칭호 &ldquo;탑의 주인&rdquo;을 단다(1위를 내주면 사라진다).</LI>
       </UL>

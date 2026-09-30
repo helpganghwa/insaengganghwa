@@ -33,11 +33,14 @@ const SIZE = {
   },
 } as const;
 
+const GRID = { 2: 'grid grid-cols-2', 3: 'grid grid-cols-3', 4: 'grid grid-cols-4' } as const;
+
 export function Tabs<K extends string>({
   items,
   value,
   onChange,
   size = 'md',
+  cols,
   className = '',
 }: {
   items: readonly TabItem<K>[];
@@ -45,13 +48,15 @@ export function Tabs<K extends string>({
   onChange: (key: K) => void;
   /** md = 페이지 · sm = 팝업/시트 */
   size?: 'md' | 'sm';
+  /** 한 줄 칸 수 — 주면 여러 줄 격자(항목이 많아 한 줄이 빽빽할 때, 예: 랭킹 6지표 = 3칸 2줄). 없으면 한 줄 균등 분할. */
+  cols?: 2 | 3 | 4;
   className?: string;
 }) {
   const s = SIZE[size];
   return (
     <div
       role="tablist"
-      className={`flex bg-zinc-100 dark:bg-zinc-900 ${s.box} ${className}`}
+      className={`${cols ? GRID[cols] : 'flex'} bg-zinc-100 dark:bg-zinc-900 ${s.box} ${className}`}
     >
       {items.map((t) => {
         const on = t.key === value;

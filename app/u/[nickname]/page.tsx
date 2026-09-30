@@ -275,7 +275,7 @@ async function KpiRowWithRanks({
     getMyCountRanks(userId, serverId),
   ]);
   return (
-    <section className="-mt-3 grid grid-cols-6 gap-1">
+    <section className="-mt-3 grid grid-cols-3 gap-1.5">
       <KpiCard label="전투력" value={fmtCompact(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
       <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
       <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
@@ -308,7 +308,7 @@ function KpiRowFallback({
   maxEnhance: number;
 }) {
   return (
-    <section className="-mt-3 grid grid-cols-6 gap-1">
+    <section className="-mt-3 grid grid-cols-3 gap-1.5">
       <KpiCard label="전투력" value={fmtCompact(total)} rank="—" />
       <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank="—" />
       <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank="—" />
@@ -637,10 +637,10 @@ function KpiCard({
 }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
-      <div className="truncate text-[7.5px] font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="truncate text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
         {label}
       </div>
-      <div className="mt-0.5 font-mono text-[11px] font-bold tabular-nums text-zinc-50">{value}</div>
+      <div className="mt-0.5 font-mono text-[12px] font-bold tabular-nums text-zinc-50">{value}</div>
       <div className="mt-0.5 font-mono text-[9px] tabular-nums text-amber-300">{rank}</div>
     </div>
   );

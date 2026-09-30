@@ -9,7 +9,7 @@ const TABS: { key: LeaderboardMetric; label: string }[] = [
   { key: 'combat', label: '전투력' },
   { key: 'raid', label: '레이드' },
   { key: 'melee', label: '대난투' },
-  { key: 'tower', label: '무한탑' }, // 6칸 — '무한의 탑'은 360폭 기기에서 말줄임(칸 ≈50px)
+  { key: 'tower', label: '무한의 탑' },
 ];
 
 /**
@@ -24,6 +24,6 @@ export function LeaderboardTabs({
   active: LeaderboardMetric;
   onChange: (m: LeaderboardMetric) => void;
 }) {
-  // 6개 — 공용 탭은 truncate + flex-1이라 균등 분할·말줄임이 그대로 적용된다(360폭 한 칸 ≈50px, 12.5px 네 글자까지).
-  return <Tabs items={TABS} value={active} onChange={onChange} />;
+  // 6개를 한 줄에 두면 빽빽해(360폭 한 칸 ≈50px) 3칸 2줄로(2026-09-30). 칸이 넓어져 '무한의 탑'도 줄이지 않는다.
+  return <Tabs items={TABS} value={active} onChange={onChange} cols={3} />;
 }
