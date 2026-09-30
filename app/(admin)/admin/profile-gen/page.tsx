@@ -46,16 +46,30 @@ const DECISION_KO: Record<string, string> = {
 export default async function AdminProfileGenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; date?: string; q?: string; srv?: string }>;
+  searchParams: Promise<{ status?: string; date?: string; q?: string; srv?: string; tab?: string }>;
 }) {
   // 진입 가드는 (admin)/layout.tsx 일원화.
   const { status, date } = await searchParams;
   const sp = await searchParams;
+  // 생성 관리 탭 — 일시 중지·키 사용량은 이 탭을 열 때만 불러온다(내역 탭은 외부 조회 없음).
+  if (sp.tab === 'ctrl') {
+    const genPause = await getAvatarGenPause();
+    return (
+      <div className="mx-auto w-full max-w-[860px] space-y-3 px-4 py-6 text-zinc-100">
+        <h1 className="text-lg font-bold">🎨 아바타 생성 관리</h1>
+        <GenTabs current="ctrl" />
+        <AvatarGenPauseToggle paused={genPause.paused} note={genPause.note} />
+        {/* Pixellab 키별 남은 사용량 — 외부 조회라 스트리밍(탭 첫 표시를 막지 않게). */}
+        <Suspense fallback={<div className="h-[260px] animate-pulse rounded-lg bg-zinc-900" />}>
+          <PixellabUsage />
+        </Suspense>
+      </div>
+    );
+  }
   const q = sp.q?.trim() ?? '';
   const searching = q.length > 0;
   const srvFilter = parseServerFilter(sp.srv);
   const servers = await listServers();
-  const genPause = await getAvatarGenPause();
   const srvQs = srvFilter != null ? `&srv=${srvFilter}` : ''; // 날짜·상태 네비가 서버 필터 보존
   // 날짜 필터(KST 하루). 기본 = 오늘(KST). createdAt(UTC timestamptz)을 KST 일자 범위로 조회.
   const kstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -144,12 +158,8 @@ export default async function AdminProfileGenPage({
     <div className="mx-auto w-full max-w-[860px] space-y-3 px-4 py-6 text-zinc-100">
       <h1 className="text-lg font-bold">🎨 아바타 생성 내역 ({rows.length})</h1>
       {/* 검색 — 유저코드/닉네임/거래(job)ID. 검색 중엔 날짜·필터 숨김. */}
+      <GenTabs current="jobs" />
       <AdminSearch basePath="/admin/profile-gen" initialQuery={q} />
-      <AvatarGenPauseToggle paused={genPause.paused} note={genPause.note} />
-      {/* Pixellab 키별 남은 사용량 — 외부 조회라 스트리밍(페이지 첫 표시를 막지 않게). */}
-      <Suspense fallback={<div className="h-[92px] animate-pulse rounded-lg bg-zinc-900" />}>
-        <PixellabUsage />
-      </Suspense>
       <ServerFilter
         basePath="/admin/profile-gen"
         servers={servers}
@@ -326,6 +336,27 @@ export default async function AdminProfileGenPage({
           );
         })
       )}
+    </div>
+  );
+}
+
+/** 내역 | 관리 탭 — 링크 이동이라 탭을 누를 때마다 서버에서 최신 상태를 새로 읽는다. */
+function GenTabs({ current }: { current: 'jobs' | 'ctrl' }) {
+  const tabs = [
+    { k: 'jobs', ko: '생성 내역', href: '/admin/profile-gen' },
+    { k: 'ctrl', ko: '생성 관리', href: '/admin/profile-gen?tab=ctrl' },
+  ] as const;
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-900 p-1 text-sm">
+      {tabs.map((t) => (
+        <a
+          key={t.k}
+          href={t.href}
+          className={`rounded-md py-1.5 text-center font-bold ${current === t.k ? 'bg-zinc-700 text-zinc-50' : 'text-zinc-500'}`}
+        >
+          {t.ko}
+        </a>
+      ))}
     </div>
   );
 }
