@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, ne, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
@@ -85,6 +85,13 @@ export function requestAvatarReturn(input: {
         paidDiamond: paid,
       })
       .returning({ id: avatarReturnRequests.id });
+
+    // 반환 요청된 아바타는 생성 검수(/admin/profile-gen)에서 보지 않는다 — 반환 검토에서 보므로 미검수 잡을 '확인'으로 닫는다(10-01).
+    // 삭제보다 먼저 — 삭제되면 잡의 user_profile_id가 null이 돼 연결이 끊긴다.
+    await tx
+      .update(profileGenerationJobs)
+      .set({ adminDecision: 'confirm', adminReviewedAt: sql`now()` })
+      .where(and(eq(profileGenerationJobs.userProfileId, profileId), isNull(profileGenerationJobs.adminReviewedAt)));
 
     // 대표 승계 → 삭제(deleteProfile과 동일 순서 — FK set null이 먼저 풀리면 승계 조건이 0행).
     const [next] = await tx
