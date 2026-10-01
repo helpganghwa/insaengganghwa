@@ -15,7 +15,6 @@ import { TOWER_SLOTS, drawPool, floorRule, towerCp, type EquippedPiece, type Flo
 /** 서버 권위 RNG(CLAUDE §3.1). */
 const cryptoRng10k: Rng10k = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 10000;
 
-/** 정지 중 계정 제외(리더보드 activeBannedIds와 같은 술어) — pr = profiles 별칭. */
 
 export class TowerError extends Error {
   constructor(public code: 'NOT_NEXT_FLOOR' | 'NOT_CLEARED' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED' | 'POOL_MISSING') {
