@@ -5350,6 +5350,24 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "무한의 탑",
   cond: "같은 층에서 9번 진 뒤 그 층 돌파",
   diff: "중간"
+ },
+ {
+  code: "tower_f10",
+  cat: "무한의 탑",
+  cond: "무한의 탑 10층 돌파",
+  diff: "쉬움"
+ },
+ {
+  code: "tower_f60",
+  cat: "무한의 탑",
+  cond: "무한의 탑 60층 돌파",
+  diff: "중간"
+ },
+ {
+  code: "tower_f100",
+  cat: "무한의 탑",
+  cond: "무한의 탑 100층 돌파",
+  diff: "어려움"
  }
 ] as const;
 

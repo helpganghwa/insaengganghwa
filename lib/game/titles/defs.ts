@@ -5823,6 +5823,37 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "steelshine"
   }
+ },
+ {
+  code: "tower_f10",
+  kind: "permanent",
+  label: "탐험가",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   color: "#8fbf8f"
+  }
+ },
+ {
+  code: "tower_f60",
+  kind: "permanent",
+  label: "별빛 수집가",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   fx: "starwave",
+   split: true
+  }
+ },
+ {
+  code: "tower_f100",
+  kind: "permanent",
+  label: "백룡학살자",
+  hidden: false,
+  cat: "무한의 탑",
+  style: {
+   fx: "dragonlux"
+  }
  }
 ] as const;
 

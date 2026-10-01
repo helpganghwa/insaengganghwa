@@ -679,7 +679,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                coalesce((select max(b.floor) from b left join user_profiles up on up.id = b.profile_id
                  where b.win and (b.profile_id is null or coalesce((up.options->>'isDefault')::boolean, false))), 0)::int as tw_bare_best,
                coalesce((select max(l) from (select count(*) filter (where not win) as l, bool_or(win) as w from b where not hunt group by floor) f
-                 where f.w), 0)::int as tw_grit
+                 where f.w), 0)::int as tw_grit,
+               -- 층 도달 칭호(10-01) — 진행도의 최고 도달 층(오르기로만 오름, 토벌은 올리지 않는다)
+               (select coalesce(max(best_floor), 0) from tower_progress where user_id=${u} and server_id=${s})::int as tw_best
       `).catch((e: unknown) => {
         console.warn('[titles] 무한의 탑 조회 실패 — 탑 칭호 0으로 판정', (e as Error).message);
         return [];
@@ -744,7 +746,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     exp_slots: expeditionSlotsFor(n(ex.exp_enh_sum)),
     // 무한의 탑(2026-09-29)
     tw_revive_wins: n(tw.tw_revive_wins), tw_reso_wins: n(tw.tw_reso_wins),
-    tw_flawless_day: n(tw.tw_flawless_day), tw_bare_best: n(tw.tw_bare_best), tw_grit: n(tw.tw_grit),
+    tw_flawless_day: n(tw.tw_flawless_day), tw_bare_best: n(tw.tw_bare_best), tw_grit: n(tw.tw_grit), tw_best: n(tw.tw_best),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
@@ -807,6 +809,10 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   tower_flawless: (m) => m.tw_flawless_day >= 10,
   tower_bare: (m) => m.tw_bare_best >= 30,
   tower_grit: (m) => m.tw_grit >= 9,
+  // 층 도달 3종(2026-10-01) — 보이는 칭호, 영구. 최고 도달 층 기준(서버별).
+  tower_f10: (m) => m.tw_best >= 10,
+  tower_f60: (m) => m.tw_best >= 60,
+  tower_f100: (m) => m.tw_best >= 100,
   // 최초 이정표(2026-09-26) — 서버에서 처음 넘은 세 사람(금·은·동). 순위는 milestone_firsts(정본), 영구.
   first_enh500_1: (m) => m.fr_enh500 === 1,
   first_enh500_2: (m) => m.fr_enh500 === 2,
