@@ -52,26 +52,33 @@ function AvatarGear({ slot, k, on, size = 'sm', badge = false }: { slot: TowerSl
  */
 function useCachedImages(urls: readonly (string | null)[]): ReadonlyMap<string, string> {
   const [map, setMap] = useState<ReadonlyMap<string, string>>(new Map());
-  const key = urls.filter(Boolean).join('|');
+  // 최대 20장(앞쪽 = 최근 아바타) — 아바타가 많은 계정이 들어올 때마다 전부 받지 않게. 나머지는 원래 URL로 그린다.
+  const key = urls.filter(Boolean).slice(0, 20).join('|');
   useEffect(() => {
     let alive = true;
     const created: string[] = [];
     (async () => {
+      const next = new Map<string, string>();
       for (const u of key ? key.split('|') : []) {
         try {
           const r = await fetch(u);
-          if (!r.ok || !alive) continue;
-          const o = URL.createObjectURL(await r.blob());
+          if (!alive) return;
+          if (!r.ok) continue;
+          const blob = await r.blob();
+          if (!alive) return; // 기다리는 사이 화면을 떠났으면 만들지 않는다(해제 누락 방지)
+          const o = URL.createObjectURL(blob);
           created.push(o);
-          setMap((prev) => new Map(prev).set(u, o));
+          next.set(u, o);
         } catch {
           /* CORS·네트워크 실패 — 원래 URL로 그린다 */
         }
       }
+      if (alive) setMap(next); // 한 번에 반영(장마다 화면을 다시 그리지 않게)
     })();
     return () => {
       alive = false;
       for (const o of created) URL.revokeObjectURL(o);
+      setMap(new Map()); // 해제한 주소가 남아 그림이 깨지지 않게
     };
   }, [key]);
   return map;
@@ -255,7 +262,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   });
   const avatar = avatarRows.find((a) => a.id === avatarId) ?? avatarRows[0] ?? null;
   const cachedImg = useCachedImages(useMemo(() => board.avatars.map((a) => a.south), [board.avatars]));
-  // 도전할 층의 착용 가능 장비 그림을 미리 받아 둔다(≤30장, 7일 캐시) — 장착 직후 줄 아이콘이 늦게 바뀌지 않게.
+  // 도전할 층의 착용 가능 장비 그림을 미리 받아 둔다(최대 40장, 7일 캐시) — 장착 직후 줄 아이콘이 늦게 바뀌지 않게.
   useEffect(() => {
     const keys = rule.allowed ? [...rule.allowed].slice(0, 40) : [];
     for (const k of keys) {

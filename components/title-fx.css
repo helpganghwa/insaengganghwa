@@ -280,7 +280,7 @@
 /* 스크롤 중 일시정지 — 목록 컨테이너에 .chat-scrolling(useScrollFxPause)이 붙는 동안 칭호
    애니메이션을 현재 프레임에서 멈춤(2026-08-24) — 효과는 전부 살리되 스크롤 페인트 경합만 제거.
    longhand !important라 인라인 animation 축약(play-state:running 암시)도 이긴다. */
-.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after,.chat-scrolling .ttag .fx-blade b{animation-play-state:paused !important}
+.chat-scrolling .ttag span,.chat-scrolling .ttag span::before,.chat-scrolling .ttag span::after,.chat-scrolling .ttag .pt>i,.chat-scrolling .ttag .orb,.chat-scrolling .ttag .orb::after,.chat-scrolling .ttag .fx-blade b,.chat-scrolling .ttag .fx-starwave b{animation-play-state:paused !important}
 }
 /* 최초 이정표 칭호(2026-09-26 확정) — 검기: 왼쪽 아래→오른쪽 위 가는 칼선이 글자 중심을 가르고, 위·아래 두 조각이
    흩어지는 동안 새 글자(한글 ⇄ 한자)가 곧바로 온전히 드러남. 6.8초 박자에 두 번(31%·81%). 파티클 없음.
@@ -317,6 +317,7 @@
 /* 무한의 탑 층 도달 칭호 3종(2026-10-01 확정, 시안 12차) — 후광·파티클 없음. 10층 탐험가는 단색(#8fbf8f, defs.style.color). */
 /* 60층 별빛 수집가 — 밝은 금 글자가 왼쪽부터 0.13초 간격으로 흰 테두리와 함께 반짝(글자 단위 split, --i는 SplitLabel이 준다) */
 @keyframes stw{0%,100%{color:#ffc62e;-webkit-text-stroke:0 transparent}6%{color:#fff;-webkit-text-stroke:.35px #fff}16%{color:#ffc62e;-webkit-text-stroke:0 transparent}}
+.fx-starwave{color:#ffc62e} /* 정적 모드·동작 줄이기에서도 금색 유지 */
 .fx-starwave b{display:inline-block;font-weight:inherit;animation:stw 2.4s ease-out infinite;animation-delay:calc(var(--i, 0) * .13s)}
 /* 100층 백룡학살자 — 위 은빛 / 아래 하늘·파랑이 또렷이 갈라진 바탕. 글자 복제 층(attr data-t) 두 개를 위·아래 반으로 잘라
    가는 빛줄기가 위는 →, 아래는 ← 동시에 4.5초 주기(2.9초 이동)로 지나간다. 쉬는 동안 띠는 글자 밖(120% / -30%)에 있고

@@ -296,6 +296,8 @@ const FX_OG: Record<string, string> = {
   yinyang: '#f5d76e', silk: '#d88ca0', breath: '#b9c2cc', obsidian: '#8a84a0', pearl: '#e0d8f0',
   inkwash: '#b8bec8', candle: '#f0c890', firstlight: '#e8cf9a', jade: '#8fd4ae', rimlight: '#f0e2b0',
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
+  // 무한의 탑 층 도달(2026-10-01)
+  starwave: '#ffc62e', dragonlux: '#bfe3ff',
   // 길드 칭호(2026-09-01)
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
   noblesseflow: '#6ea8e0', blaze: '#ff6a1a', blazegreen: '#3fc25a', blazegold: '#f5c33a',

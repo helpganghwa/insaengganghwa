@@ -524,6 +524,39 @@
     "first_combat10m_3": {
       "fx": "bladebronze",
       "alt": "天下第一"
+    },
+    "rank_tower": {
+      "fx": "blazeteal",
+      "fxOnly": [
+        "탑",
+        "주인"
+      ],
+      "plainColor": "#b8bcc6"
+    },
+    "tower_revive": {
+      "fx": "lunarflow"
+    },
+    "tower_resonance": {
+      "fx": "aurora"
+    },
+    "tower_flawless": {
+      "fx": "trailflow"
+    },
+    "tower_bare": {
+      "fx": "bronzeshine"
+    },
+    "tower_grit": {
+      "fx": "steelshine"
+    },
+    "tower_f10": {
+      "color": "#8fbf8f"
+    },
+    "tower_f60": {
+      "fx": "starwave",
+      "split": true
+    },
+    "tower_f100": {
+      "fx": "dragonlux"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
