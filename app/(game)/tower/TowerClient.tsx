@@ -601,14 +601,15 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                 {/* 그 장소의 장면을 카드 전체에 깔고(접히면 머리 띠만큼, 펼치면 층 칸 뒤까지) 왼쪽을 어둡게. 잠긴 구간은 어둡게. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
-                <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30" />
+                <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10" />
                 {/* 구간 머리 — 장소 이름·층 범위·진행. */}
                 <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between px-3 text-left">
-                  <span className="relative leading-tight">
+                  {/* 장면을 많이 비치게 덮개를 옅게 둔 대신 글자에 그림자 — 밝은 장면 위에서도 읽힌다. */}
+                  <span className="relative leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,.95)]">
                     <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
                     <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
                   </span>
-                  <span className={`relative flex items-center gap-1.5 text-[10.5px] font-bold ${done ? 'text-emerald-300' : locked ? 'text-zinc-400' : 'tabular-nums text-amber-200'}`}>
+                  <span className={`relative flex items-center gap-1.5 text-[10.5px] font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,.95)] ${done ? 'text-emerald-300' : locked ? 'text-zinc-300' : 'tabular-nums text-amber-200'}`}>
                     {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).some((f) => unclaimed.has(f)) ? <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="받을 보상 있음" /> : null}
                     {done ? '완료' : locked ? '잠김' : `${cleared} / ${TOWER_SECTION}`}
                   </span>
@@ -634,7 +635,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                                   ? 'border-2 border-amber-400 bg-amber-900/45 shadow-[0_0_10px_rgba(245,158,11,.5)]'
                                   : sp
                                     ? 'border border-rose-800/80 bg-rose-950/30'
-                                    : 'border border-zinc-800 bg-zinc-950'
+                                    : 'border border-zinc-800 bg-zinc-950/70'
                             } ${picked === f ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-950' : ''}`}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
