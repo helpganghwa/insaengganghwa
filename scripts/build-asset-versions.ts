@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 const PUB = join(process.cwd(), 'public');
 
 // 자주 변경되는 자산 폴더. 자산 추가 시 여기 path 추가.
-const SCAN_DIRS = ['sprites/ui', 'sprites/hub', 'sprites/boss', 'sprites/characters', 'sprites/shop', 'sprites/checkin', 'sprites/guild', 'sprites/guild-menu', 'sprites/anim', 'sprites/expedition/mon', 'sprites/expedition/bg', 'sprites/chuseok', 'og', 'audio/sfx'];
+const SCAN_DIRS = ['sprites/ui', 'sprites/hub', 'sprites/boss', 'sprites/characters', 'sprites/shop', 'sprites/checkin', 'sprites/guild', 'sprites/guild-menu', 'sprites/anim', 'sprites/expedition/mon', 'sprites/expedition/bg', 'sprites/tower/mon', 'sprites/tower/scene', 'sprites/tower/bg', 'sprites/chuseok', 'og', 'audio/sfx'];
 // 자산이 아닌 문서(README.md 등)는 맵에 넣지 않는다.
 const SKIP_EXT = ['.md', '.txt'];
 // atlas 단일 자산도 포함(원자적 갱신).

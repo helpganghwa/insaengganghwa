@@ -20,7 +20,7 @@ describe('무한의 탑 수치', () => {
     expect(towerRequirement(10)).toBe(154);
     expect(towerRequirement(50)).toBe(7201);
     expect(towerRequirement(100)).toBe(701737);
-    // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.09)
+    // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.07)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
     expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 맨 위 층만 낮은 벽
