@@ -9,7 +9,6 @@ import { decideAvatarReturn } from './actions';
 export function AdminReturnActions({ requestId, paid }: { requestId: string; paid: number }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [note, setNote] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
   const decide = (outcome: 'full' | 'half') => {
@@ -23,7 +22,7 @@ export function AdminReturnActions({ requestId, paid }: { requestId: string; pai
     )
       return;
     startTransition(async () => {
-      const r = await decideAvatarReturn(requestId, outcome, note || undefined);
+      const r = await decideAvatarReturn(requestId, outcome);
       if (r.status === 'error') {
         setErr(r.code === 'ALREADY_REFUNDED_BY_REVIEW' ? '생성검수에서 이미 환불된 아바타 — 지급 없이 종결했습니다' : r.code === 'NOT_FOUND_OR_DECIDED' ? '이미 처리된 요청입니다' : r.code);
         return;
@@ -34,12 +33,6 @@ export function AdminReturnActions({ requestId, paid }: { requestId: string; pai
 
   return (
     <div className="flex flex-col gap-1.5">
-      <input
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="메모(선택)"
-        className="w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
-      />
       <div className="flex gap-1.5">
         <button
           type="button"
