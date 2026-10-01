@@ -7,7 +7,10 @@ import {
   TOWER_HP_MULT,
   TOWER_POOL_PER_SLOT,
   TOWER_SECTION,
-  towerHuntReward,
+  TOWER_HUNT_BOX_BP,
+  TOWER_HUNT_DOUBLE_BP,
+  towerHuntBox,
+  towerHuntRange,
   towerRequirement,
   towerReward,
 } from '@/lib/game/balance';
@@ -168,11 +171,19 @@ export default function Doc() {
           오르기와 같은 하루 {TOWER_DAILY_ATTEMPTS}번에서 쓰며, <b>토벌은 이겨도 한 번 줄어든다</b>. 전투는 오르기와 같다(같은
           요구 장비·같은 몬스터 스킬).
         </LI>
-        <LI>이기면 그 자리에서 💎를 받는다. 최고 층과 순위는 바뀌지 않는다.</LI>
+        <LI>이기면 그 자리에서 전리품을 받는다. 💎는 구간 범위 안에서 정해지고, 최고 층과 순위는 바뀌지 않는다.</LI>
+        <LI>
+          {bpPct(TOWER_HUNT_DOUBLE_BP)} 확률로 💎가 두 배가 되고, 따로 {bpPct(TOWER_HUNT_BOX_BP)} 확률로{' '}
+          <DocLink slug="supply">보급 상자</DocLink>를 함께 받는다(부위마다 3분의 1씩). 둘이 한 판에 함께 나올 수도 있다.
+        </LI>
       </UL>
       <Tbl
-        head={['구간', '토벌 💎']}
-        rows={Array.from({ length: sections }, (_, i) => [`${i * TOWER_SECTION + 1}~${(i + 1) * TOWER_SECTION}층`, n(towerHuntReward(i * TOWER_SECTION + 1))])}
+        head={['구간', '토벌 💎', '상자 📦']}
+        rows={Array.from({ length: sections }, (_, i) => {
+          const f = i * TOWER_SECTION + 1;
+          const r = towerHuntRange(f);
+          return [`${f}~${(i + 1) * TOWER_SECTION}층`, r.min === r.max ? n(r.min) : `${n(r.min)}~${n(r.max)}`, n(towerHuntBox(f))];
+        })}
       />
 
       <H2 id="ranking">순위</H2>

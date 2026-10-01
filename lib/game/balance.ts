@@ -1127,12 +1127,26 @@ const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720] as const;
 
 export type TowerReward = { diamond: number; boxes: number };
 /**
- * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎, 그 층 구간 일반층 첫 돌파 💎의 10분의 1(10-01 사용자 확정, 상자 없음).
- * 하루 3번 모두 토벌해도 꼭대기 구간 450💎 — 무료 유입(하루 약 454💎)을 넘지 않게. 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
+ * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎, 평균 = 그 층 구간 일반층 첫 돌파 💎의 10분의 1(10-01 사용자 확정).
+ * 하루 3번 모두 토벌해도 꼭대기 구간 평균 450💎 — 무료 유입(하루 약 454💎)을 넘지 않게. 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
  */
 export function towerHuntReward(floor: number): number {
   const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(Math.max(1, floor))) - 1;
   return Math.floor(TOWER_NORMAL_DIA[i]! / 10);
+}
+/** 토벌 💎 범위 — 평균의 ±20%(`TOWER_HUNT_SPREAD`), 반올림. 그 안에서 고르게 굴린다(10-01 사용자 확정). */
+export const TOWER_HUNT_SPREAD = 0.2;
+export function towerHuntRange(floor: number): { min: number; max: number } {
+  const avg = towerHuntReward(floor);
+  return { min: Math.round(avg * (1 - TOWER_HUNT_SPREAD)), max: Math.round(avg * (1 + TOWER_HUNT_SPREAD)) };
+}
+/** 토벌 💎 더블 확률(만분율) — 굴린 💎 ×2. */
+export const TOWER_HUNT_DOUBLE_BP = 1000;
+/** 토벌 상자 확률(만분율)과 구간별 상자 수(3의 배수, 부위마다 3분의 1) — 구간 5번째 층 첫 돌파 📦의 약 4분의 1. */
+export const TOWER_HUNT_BOX_BP = 500;
+const TOWER_HUNT_BOX = [3, 3, 3, 3, 6, 9, 12, 15, 30, 45] as const;
+export function towerHuntBox(floor: number): number {
+  return TOWER_HUNT_BOX[Math.min(TOWER_HUNT_BOX.length, towerSection(Math.max(1, floor))) - 1]!;
 }
 /** 층의 첫 돌파 보상. 일반 층 💎, 구간 5번째 층은 💎+📦, 특별층 💎+📦. */
 export function towerReward(floor: number): TowerReward {

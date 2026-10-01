@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { towerHuntReward } from '@/lib/game/balance';
+import { towerHuntBox, towerHuntRange, towerHuntReward } from '@/lib/game/balance';
 import { claimTowerRewards, challengeTower, TowerError } from '@/lib/game/tower/service';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -177,5 +177,17 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     expect(l.attemptsLeft).toBe(1);
     const [p] = (await testDb.execute(sql`select best_floor from tower_progress where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { best_floor: number }[];
     expect(p!.best_floor).toBe(2);
+  });
+  it('토벌 전리품: 범위 최소 ×2 더블·상자(부위마다 3분의 1) — 굴림 0이면 셋 다 터진다', async () => {
+    await testDb.execute(sql`update tower_progress set best_floor=2, losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    const before = (await testDb.execute(sql`select slot::text as slot, count from user_supply_boxes where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { slot: string; count: number }[];
+    const r = await challengeTower(TEST_USER_ID, S, 2, null, { idemKey: key(), rng: WIN, hunt: true, bonusRng: () => 0 });
+    expect(r.reward).toEqual({ diamond: towerHuntRange(2).min * 2, boxes: towerHuntBox(2), double: true });
+    const after = (await testDb.execute(sql`select slot::text as slot, count from user_supply_boxes where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { slot: string; count: number }[];
+    for (const slot of ['weapon', 'armor', 'accessory']) {
+      const b = before.find((x) => x.slot === slot)?.count ?? 0;
+      const a = after.find((x) => x.slot === slot)?.count ?? 0;
+      expect(a - b).toBe(towerHuntBox(2) / 3);
+    }
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { towerReward } from '@/lib/game/balance';
+import { towerHuntRange, towerReward } from '@/lib/game/balance';
 
 /** 무한의 탑 층 화면(상세·전투) 공통 조각 — 픽셀 그림 표시·숫자·보상 문구·버튼 줄. */
 export const PIX = { imageRendering: 'pixelated' as const };
@@ -9,6 +9,12 @@ export const n = (v: number) => v.toLocaleString('ko-KR');
 export function rewardText(floor: number) {
   const r = towerReward(floor);
   return `💎 ${n(r.diamond)}${r.boxes ? ` · 📦 ${r.boxes}` : ''}`;
+}
+
+/** 토벌 💎 범위 — 위아래가 같으면 한 값. */
+export function huntText(floor: number) {
+  const { min, max } = towerHuntRange(floor);
+  return `💎${min === max ? n(min) : `${n(min)}~${n(max)}`}`;
 }
 
 /** 아래 고정 버튼 줄 — 높이 44, 주 버튼 금색·보조 버튼 테두리. 두 개면 같은 크기. */

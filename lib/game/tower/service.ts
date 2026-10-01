@@ -3,7 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -233,7 +233,8 @@ export type TowerChallengeResult = {
   win: boolean;
   keyIndex: number;
   turns: TowerTurn[];
-  reward: { diamond: number; boxes: number } | null;
+  /** 토벌은 실제 지급분 — double = 💎 더블이 터진 판(diamond는 이미 ×2), boxes = 상자가 터진 판의 상자 수. */
+  reward: TowerBattleReward | null;
   attemptsLeft: number;
   best: number;
   /** 서버가 실제로 싸운 탑 전투력·배율(×1 기준 대비) — 전투·실패 화면은 이 값을 그대로 보여 준다. */
@@ -249,7 +250,9 @@ export type TowerChallengeResult = {
   diamondBalance?: string | null;
 };
 
-type BattleRow = { id: string; floor: number; win: boolean; hunt: boolean | null; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
+export type TowerBattleReward = { diamond: number; boxes: number; double?: boolean };
+
+type BattleRow = { id: string; floor: number; win: boolean; hunt: boolean | null; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: TowerBattleReward | null; base_cp: number | null };
 
 /**
  * 도전 — 진행도 행을 잠그고(동시 도전·중복 보상 차단) 지금 층·남은 도전을 검사, 서버에서 전투를 판정한다.
@@ -263,7 +266,7 @@ export async function challengeTower(
   serverId: number,
   floor: number,
   profileId: string | null,
-  opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k; hunt?: boolean } = {},
+  opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k; hunt?: boolean; bonusRng?: Rng10k } = {},
 ): Promise<TowerChallengeResult> {
   const hunt = !!opts.hunt;
   const rng = opts.rng ?? cryptoRng10k;
@@ -348,7 +351,7 @@ export async function challengeTower(
     const battle = simulateTowerBattle({ towerCp: cp.total, requirement: req, doubledCount: cp.doubledCount, skills: towerFloorSkills(floor), rng });
 
     // 오르기 = 첫 돌파 보상(목록에서 받기), 토벌 = 이긴 판마다 💎(이 트랜잭션에서 바로 지급).
-    const reward: { diamond: number; boxes: number } | null = !battle.win ? null : hunt ? { diamond: towerHuntReward(floor), boxes: 0 } : towerReward(floor);
+    const reward: TowerBattleReward | null = !battle.win ? null : hunt ? rollHuntReward(floor, opts.bonusRng ?? rng) : towerReward(floor);
     // 토벌은 이겨도 도전 1회를 쓴다(오르기는 진 판만).
     const spend = hunt || !battle.win;
     const today = kstDateString();
@@ -371,6 +374,7 @@ export async function challengeTower(
     let diamondBalance: string | null = null;
     if (hunt && reward && reward.diamond > 0) {
       await walletAdd(tx, userId, serverId, reward.diamond, 'tower', `tower-hunt:${row!.id}`);
+      if (reward.boxes > 0) await addBoxes(tx, userId, serverId, reward.boxes);
       const [c] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
       diamondBalance = c?.d ?? null;
     }
@@ -389,6 +393,27 @@ export async function challengeTower(
       mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1, myRank, hunt, diamondBalance,
     };
   });
+}
+
+/**
+ * 토벌 승리 보상 — 서버 RNG로(CLAUDE §3.1) 💎를 범위 안에서 고르게, 10% 더블(굴린 값 ×2), 5% 상자(구간별 고정 수). 셋은 따로 굴린다.
+ */
+function rollHuntReward(floor: number, rng: Rng10k): TowerBattleReward {
+  const { min, max } = towerHuntRange(floor);
+  const base = min + Math.floor((rng() * (max - min + 1)) / 10000);
+  const double = rng() < TOWER_HUNT_DOUBLE_BP;
+  const boxes = rng() < TOWER_HUNT_BOX_BP ? towerHuntBox(floor) : 0;
+  return { diamond: double ? base * 2 : base, boxes, double };
+}
+
+/** 보급 상자 지급 — 부위마다 3분의 1씩(상자 수는 늘 3의 배수). */
+async function addBoxes(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], userId: string, serverId: number, boxes: number) {
+  const per = Math.floor(boxes / 3);
+  for (const slot of TOWER_SLOTS) {
+    await tx.execute(sql`
+      insert into user_supply_boxes (user_id, server_id, slot, count) values (${userId}::uuid, ${serverId}, ${slot}, ${per})
+      on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${per}`);
+  }
 }
 
 /**
@@ -418,14 +443,7 @@ export async function claimTowerRewards(userId: string, serverId: number, floors
       boxes += r.boxes;
     }
     if (diamond > 0) await walletAdd(tx, userId, serverId, diamond, 'tower', done.length === 1 ? `tower:${done[0]}` : `tower:${done[0]}-${done[done.length - 1]}x${done.length}`);
-    if (boxes > 0) {
-      const per = Math.floor(boxes / 3);
-      for (const slot of TOWER_SLOTS) {
-        await tx.execute(sql`
-          insert into user_supply_boxes (user_id, server_id, slot, count) values (${userId}::uuid, ${serverId}, ${slot}, ${per})
-          on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${per}`);
-      }
-    }
+    if (boxes > 0) await addBoxes(tx, userId, serverId, boxes);
     // 받은 뒤 잔액 — 화면이 다시 그리지 않고 헤더 다이아를 이 값으로 맞춘다(bigint는 문자열로).
     const [bal] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
     return { floors: done, diamond, boxes, diamondBalance: bal?.d ?? null };
