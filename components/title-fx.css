@@ -313,3 +313,17 @@
 @keyframes blCutdraw{0%,26%{transform:scaleX(0);opacity:0}26.1%{transform:scaleX(0);opacity:1;animation-timing-function:cubic-bezier(.55,0,.45,1)}31%{transform:scaleX(1);opacity:1;animation-timing-function:cubic-bezier(.22,.61,.36,1)}44%{transform:scaleX(1);opacity:0}44.1%,76%{transform:scaleX(0);opacity:0}76.1%{transform:scaleX(0);opacity:1;animation-timing-function:cubic-bezier(.55,0,.45,1)}81%{transform:scaleX(1);opacity:1;animation-timing-function:cubic-bezier(.22,.61,.36,1)}94%,100%{transform:scaleX(1);opacity:0}}
 .ttag-still .fx-blade .hj2,.ttag-still .fx-blade .sh,.ttag-still .fx-blade .cut,.ttag-still .fx-blade .sd{display:none}
 @media (prefers-reduced-motion: reduce){.ttag .fx-blade .hj2,.ttag .fx-blade .sh,.ttag .fx-blade .cut,.ttag .fx-blade .sd{display:none}.ttag .fx-blade b{animation:none !important}}
+
+/* 무한의 탑 층 도달 칭호 3종(2026-10-01 확정, 시안 12차) — 후광·파티클 없음. 10층 탐험가는 단색(#8fbf8f, defs.style.color). */
+/* 60층 별빛 수집가 — 밝은 금 글자가 왼쪽부터 0.13초 간격으로 흰 테두리와 함께 반짝(글자 단위 split, --i는 SplitLabel이 준다) */
+@keyframes stw{0%,100%{color:#ffc62e;-webkit-text-stroke:0 transparent}6%{color:#fff;-webkit-text-stroke:.35px #fff}16%{color:#ffc62e;-webkit-text-stroke:0 transparent}}
+.fx-starwave b{display:inline-block;font-weight:inherit;animation:stw 2.4s ease-out infinite;animation-delay:calc(var(--i, 0) * .13s)}
+/* 100층 백룡학살자 — 위 은빛 / 아래 하늘·파랑이 또렷이 갈라진 바탕. 글자 복제 층(attr data-t) 두 개를 위·아래 반으로 잘라
+   가는 빛줄기가 위는 →, 아래는 ← 동시에 4.5초 주기(2.9초 이동)로 지나간다. 쉬는 동안 띠는 글자 밖(120% / -30%)에 있고
+   배경을 반복하지 않아 잔상이 없다(no-repeat). 정적 모드(.ttag-still)는 애니메이션이 꺼지며 띠는 글자 밖에 머문다. */
+.fx-dragonlux{position:relative;display:inline-block;color:transparent;background-image:linear-gradient(180deg,#eef3f8 0%,#d8e2ec 44%,#ffffff 49%,#2fb0ff 51%,#0a7fd6 72%,#8fd6ff 100%);-webkit-background-clip:text;background-clip:text}
+.fx-dragonlux::before,.fx-dragonlux::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;color:transparent;background-image:linear-gradient(104deg,transparent 40%,rgba(255,255,255,.18) 46%,rgba(255,255,255,.95) 49.5%,rgba(255,255,255,.95) 50.5%,rgba(255,255,255,.18) 54%,transparent 60%);background-size:280% 100%;background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;pointer-events:none;animation-duration:4.5s;animation-timing-function:cubic-bezier(.45,0,.3,1);animation-iteration-count:infinite}
+.fx-dragonlux::before{clip-path:inset(0 0 50% 0);animation-name:dlx-lr}
+.fx-dragonlux::after{clip-path:inset(50% 0 0 0);animation-name:dlx-rl}
+@keyframes dlx-lr{0%,35%{background-position:120% 0}100%{background-position:-30% 0}}
+@keyframes dlx-rl{0%,35%{background-position:-30% 0}100%{background-position:120% 0}}

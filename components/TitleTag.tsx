@@ -198,7 +198,8 @@ export function TitleTag({
       <i className="orb" aria-hidden />
     </span>
   ) : def.style.fx ? (
-    <span className={`fx fx-${def.style.fx}`}>
+    // data-t — 글자 복제 층(::before/::after content:attr)이 필요한 fx(백룡학살자 광택)용. 다른 fx엔 영향 없음.
+    <span className={`fx fx-${def.style.fx}`} data-t={label}>
       {def.style.split ? <SplitLabel label={label} /> : label}
     </span>
   ) : def.style.prefix ? (
