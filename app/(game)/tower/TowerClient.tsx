@@ -113,6 +113,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   if (seenNext !== next) {
     setSeenNext(next);
     setOpenSection(towerSection(next));
+    setPicked(null); // 방금 돌파한 층이 고른 채 남아 아래 버튼이 'N층 토벌'로 바뀌지 않게
   }
   const [sheet, setSheet] = useState<null | 'equip' | 'avatar'>(null);
   // 착용 가능 장비 팝업이 보여 줄 층 — 상세에선 도전할 층, 목록에선 고른 층(2차 피드백 5).
@@ -125,6 +126,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [equipTab, setEquipTab] = useState<TowerSlot>('weapon');
   // 'pending' = 도전을 누른 직후 — 서버 판정을 기다리는 동안 전투 화면을 먼저 띄운다(낙관적 전환).
   const [battle, setBattle] = useState<TowerChallengeResult | 'pending' | null>(null);
+  /** 지금 보내는 판(층·토벌 여부) — 판정 대기 화면이 주소가 아니라 실제 보낸 판을 그린다. */
+  const [inflight, setInflight] = useState<{ floor: number; hunt: boolean } | null>(null);
   // 브라우저 뒤로가기로 주소(?v=d)가 바뀌면 끝난 전투 화면도 닫는다 — 전투는 헤더가 없어 주소와 화면이 어긋나지 않게(렌더 중 조정).
   const [seenView, setSeenView] = useState(view);
   if (seenView !== view) {
@@ -259,20 +262,24 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   };
 
   // 도전 한 번 = 키 하나. 응답을 못 받고 다시 눌러도 같은 키면 서버가 앞선 결과를 돌려준다(도전 이중 차감 방지).
-  const challenge = async () => {
+  const challenge = async (again?: { floor: number; hunt: boolean }) => {
     if (busy) return;
+    // 재시도('다시 도전/토벌')는 직전 결과의 층·토벌 여부를 그대로 — 판정 대기 중 뒤로가기로 주소(?f=)가 지워져도 오르기로 바뀌지 않게.
+    const floor = again?.floor ?? target;
+    const isHunt = again?.hunt ?? huntFloor != null;
+    setInflight({ floor, hunt: isHunt });
     setMsg(null);
     setBusy(true);
     setBattle('pending');
     // 같은 층의 응답 없는 도전은 같은 키로 — 30초를 넘겨 실패로 보였어도 서버가 이미 처리했으면 그 결과를 돌려받아
     // 도전이 두 번 빠지지 않는다(09-30 감사 L2). 응답(성공·거절)을 받으면 다음 도전은 새 키.
     // 키는 (층, 토벌 여부)마다 — 같은 층의 오르기와 토벌이 같은 키를 쓰지 않게.
-    const idemFloor = huntFloor != null ? -target : target;
+    const idemFloor = isHunt ? -floor : floor;
     if (idemRef.current?.floor !== idemFloor) idemRef.current = { floor: idemFloor, key: crypto.randomUUID() };
     const key = idemRef.current.key;
     // 판정 대기는 30초까지 — 헤더 없는 전투 화면에 '준비 중'으로 갇히지 않게 실패로 돌린다.
     const r = await Promise.race([
-      towerChallengeAction(target, avatar?.id ?? null, key, board.week, huntFloor != null).catch(() => null),
+      towerChallengeAction(floor, avatar?.id ?? null, key, board.week, isHunt).catch(() => null),
       new Promise<null>((res) => setTimeout(() => res(null), 30_000)),
     ]);
     setBusy(false);
@@ -295,8 +302,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     return (
       <TowerBattle
         key={res ? res.battleId : 'pending'}
-        floor={res ? res.floor : target}
-        hunt={res ? !!res.hunt : huntFloor != null}
+        floor={res ? res.floor : (inflight?.floor ?? target)}
+        hunt={res ? !!res.hunt : (inflight?.hunt ?? huntFloor != null)}
         me={me}
         result={res}
         myCp={cpNow.total}
@@ -309,7 +316,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           window.history.replaceState(null, '', '/tower');
         }}
         onNext={() => setBattle(null)}
-        onRetry={challenge}
+        onRetry={() => challenge(res ? { floor: res.floor, hunt: !!res.hunt } : undefined)}
       />
     );
   }
@@ -495,7 +502,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         <div className="flex-none px-3 pt-2 pb-3">
           <ActionBar>
             <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착됨'}</SecondaryButton>
-            <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
+            <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={() => challenge()}>
               {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : huntFloor != null ? '토벌' : '도전'}
             </PrimaryButton>
           </ActionBar>
