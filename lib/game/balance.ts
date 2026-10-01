@@ -1075,8 +1075,9 @@ export const TOWER_FLOORS = 100;
 export const TOWER_SECTION = 10;
 /** 하루 도전(진 판만 차감) — KST 자정 초기화. */
 export const TOWER_DAILY_ATTEMPTS = 3;
-/** 층별 요구 장비 수(부위당, 11층부터 층마다). 1구간(1~10층)은 모든 장비. */
+/** 층별 요구 장비 수(부위당, 11층부터 층마다 매주) — 일반 층 10개, 특별층 1개. 1구간(1~10층)은 모든 장비. */
 export const TOWER_POOL_PER_SLOT = 10;
+export const TOWER_SPECIAL_POOL_PER_SLOT = 1;
 /** 요구 장비이면서 고른 아바타를 만들 때도 쓴 장비의 배율. */
 export const TOWER_AVATAR_MULT = 2;
 
@@ -1095,7 +1096,7 @@ export const TOWER_DMG_MAX = 1.2;
  * 1층 62 — 실서버 장비 분포 몬테카를로로 층 도달 분포를 맞춘 값(09-30). 대난투식 전투(TOWER_HP_MULT)는 승률 곡선이 완만해
  * 곡선 전체를 올렸고(60→64), 몬스터 급소를 넣으면서(같은 날) 몬스터가 세진 만큼 ÷1.035 낮췄다(64→62, 승률 곡선 동일 확인).
  * ⚠ 전투 변수(급소·광폭화·몬스터 특성·배수)를 바꾸면 이 값을 다시 맞춘다.
- * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 지정 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
+ * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 그 주 특별층 요구 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
  */
 export const TOWER_REQ_BASE = 62;
 export const TOWER_REQ_SECTION_RATIO = 2.613;

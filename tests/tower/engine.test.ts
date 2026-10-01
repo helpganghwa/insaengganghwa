@@ -7,7 +7,7 @@ import { TOWER_SKILL_INFO, towerFloorInfo, towerFloorSkills } from '@/lib/game/t
 import { kstWeekStartString } from '@/lib/kst';
 
 const pool: SlotKeys = { weapon: ['w1', 'w2'], armor: ['a1', 'a2'], accessory: ['c1', 'c2'] };
-const specials: SlotKeys = { weapon: ['w9'], armor: ['a9'], accessory: ['c9'] };
+const special: SlotKeys = { weapon: ['w9'], armor: ['a9'], accessory: ['c9'] };
 const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
   { slot: 'weapon', key: w, cp },
   { slot: 'armor', key: a, cp },
@@ -50,37 +50,32 @@ describe('무한의 탑 수치', () => {
 
 describe('탑 전투력', () => {
   it('요구 장비가 없으면(추첨 전·실패) 모두 ×0 — fail-closed(09-30 감사 M1)', () => {
-    const none = floorRule(57, null, specials);
-    expect(towerCp(eq('w1', 'a1', 'c1'), none, new Set()).total).toBe(0);
-    // 특별층은 지정 장비만(풀이 없어도 지정 장비는 쓸 수 있다)
-    const sp = floorRule(60, null, specials);
-    expect([...sp.allowed!].sort()).toEqual(['a9', 'c9', 'w9']);
-    expect(towerCp(eq('w9', 'a1', 'c1'), sp, new Set()).pieces.map((p) => p.mult)).toEqual([1, 0, 0]);
-    // 10층(1구간 특별층)은 모든 장비, 지정 장비가 없으면 ×2 없음
-    const ten = floorRule(10, pool, null);
-    expect(ten.allowed).toBeNull();
-    expect(ten.doubleable!.size).toBe(0);
+    expect(towerCp(eq('w1', 'a1', 'c1'), floorRule(57, null), new Set()).total).toBe(0);
+    expect(towerCp(eq('w9', 'a9', 'c9'), floorRule(60, null), new Set()).total).toBe(0);
   });
 
-  it('1~10층(특별층 제외)은 모든 장비 ×1, 아바타 장비면 ×2', () => {
-    const rule = floorRule(5, pool, specials);
-    expect(towerCp(eq('x', 'y', 'z'), rule, new Set()).total).toBe(300);
-    expect(towerCp(eq('x', 'y', 'z'), rule, new Set(['x', 'y'])).total).toBe(500);
+  it('1~10층(10층 포함)은 모든 장비 ×1, 아바타 장비면 ×2', () => {
+    for (const f of [5, 10]) {
+      const rule = floorRule(f, null);
+      expect(rule.allowed).toBeNull();
+      expect(towerCp(eq('x', 'y', 'z'), rule, new Set()).total).toBe(300);
+      expect(towerCp(eq('x', 'y', 'z'), rule, new Set(['x', 'y'])).total).toBe(500);
+    }
   });
   it('일반 층: 요구 장비 아님 ×0 · 요구 장비 ×1 · 아바타에도 쓰임 ×2', () => {
-    const rule = floorRule(57, pool, specials);
+    const rule = floorRule(57, pool);
     const r = towerCp(eq('w1', 'a2', 'zz'), rule, new Set(['w1']));
     expect(r.pieces.map((p) => p.mult)).toEqual([2, 1, 0]);
     expect(r.total).toBe(300);
     expect(r.doubledCount).toBe(1);
   });
-  it('특별층: 구간 요구 장비 ×1, 지정 장비만 아바타와 맞으면 ×2', () => {
-    const rule = floorRule(60, pool, specials);
-    const r = towerCp(eq('w1', 'a9', 'zz'), rule, new Set(['w1', 'a9']));
-    expect(r.pieces.map((p) => p.mult)).toEqual([1, 2, 0]);
+  it('특별층: 그 층 요구 장비(부위마다 1개)만 — 아바타와 맞으면 ×2, 나머지는 ×0', () => {
+    const rule = floorRule(60, special);
+    const r = towerCp(eq('w9', 'a9', 'c1'), rule, new Set(['w9']));
+    expect(r.pieces.map((p) => p.mult)).toEqual([2, 1, 0]);
   });
   it('기본 아바타는 항상 ×1, 아바타 배율 = 아바타 ÷ ×1', () => {
-    const rule = floorRule(57, pool, specials);
+    const rule = floorRule(57, pool);
     expect(avatarMultiplier(eq('w1', 'a1', 'c1'), rule, new Set())).toBe(1);
     expect(avatarMultiplier(eq('w1', 'a1', 'c1'), rule, new Set(['w1', 'a1']))).toBe(1.67);
   });
@@ -91,7 +86,7 @@ describe('탑 전투력', () => {
       ['a1', { slot: 'armor' as const, cp: 100 }],
       ['zz', { slot: 'accessory' as const, cp: 999 }],
     ]);
-    const lo = bestLoadout(owned, floorRule(57, pool, specials), new Set(['w1']));
+    const lo = bestLoadout(owned, floorRule(57, pool), new Set(['w1']));
     expect(lo.weapon).toBe('w1'); // 100×2 > 150
     expect(lo.armor).toBe('a1');
     expect(lo.accessory).toBeNull(); // 요구 장비가 없으면 고르지 않는다(×0 장비로 바꿔 끼우지 않음)

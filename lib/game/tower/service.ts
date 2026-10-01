@@ -3,7 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_POOL_PER_SLOT, TOWER_SECTION, TOWER_SPECIAL_POOL_PER_SLOT, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -45,67 +45,42 @@ function bySlot(rows: CatalogRow[]): SlotKeys {
 const POOL_FLOORS = Array.from({ length: TOWER_FLOORS - TOWER_SECTION }, (_, i) => TOWER_SECTION + 1 + i);
 
 /**
- * 그 주 층별 요구 장비(11층부터) · 특별층 지정 장비(구간마다)를 보장하고 읽는다. 없으면 서버 RNG로 추첨해 insert(동시 첫 접근은
+ * 그 주 층별 요구 장비(11층부터 — 일반 층 부위별 10개, 특별층 부위별 1개)를 보장하고 읽는다. 없으면 서버 RNG로 추첨해 insert(동시 첫 접근은
  * on conflict로 한 쪽만 남는다 — 먼저 박제된 것을 다시 읽으므로 모두 같은 풀을 본다). 층별 풀은 한 번의 insert로(90층 왕복 없이).
  */
-export async function towerPools(serverId: number, at: Date = new Date()): Promise<{ week: string; pools: Map<number, SlotKeys>; specials: Map<number, SlotKeys> }> {
+export async function towerPools(serverId: number, at: Date = new Date()): Promise<{ week: string; pools: Map<number, SlotKeys> }> {
   const week = kstWeekStartString(at);
-  const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
   const read = () =>
-    Promise.all([
-      db.execute(sql`select floor, weapon, armor, accessory from tower_pools where server_id=${serverId} and week_start=${week}::date`) as unknown as Promise<
-        { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[]
-      >,
-      db.execute(sql`select section, weapon, armor, accessory from tower_specials where server_id=${serverId}`) as unknown as Promise<
-        { section: number; weapon: string; armor: string; accessory: string }[]
-      >,
-    ]);
-  let [poolRows, spRows] = await read();
-  const needPools = poolRows.length < POOL_FLOORS.length;
-  const needSp = spRows.length < sections;
-  if (needPools || needSp) {
+    db.execute(sql`select floor, weapon, armor, accessory from tower_pools where server_id=${serverId} and week_start=${week}::date`) as unknown as Promise<
+      { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[]
+    >;
+  let poolRows = await read();
+  if (poolRows.length < POOL_FLOORS.length) {
     const cat = bySlot(await activeCatalog());
-    if (needPools) {
-      const have = new Set(poolRows.map((r) => Number(r.floor)));
-      const rows = POOL_FLOORS.filter((f) => !have.has(f))
-        .map((f) => ({ f, p: drawPool(cat, cryptoRng10k) }))
-        .filter(({ p }) => p.weapon.length && p.armor.length && p.accessory.length); // 카탈로그 시드 전 — 풀 없이(×0) 둔다
-      if (rows.length) {
-        await db.execute(sql`
-          insert into tower_pools (server_id, week_start, floor, weapon, armor, accessory)
-          values ${sql.join(rows.map(({ f, p }) => sql`(${serverId}, ${week}::date, ${f}, ${textArray(p.weapon)}, ${textArray(p.armor)}, ${textArray(p.accessory)})`), sql`, `)}
-          on conflict do nothing`);
-      }
+    const have = new Set(poolRows.map((r) => Number(r.floor)));
+    const rows = POOL_FLOORS.filter((f) => !have.has(f))
+      .map((f) => ({ f, p: drawPool(cat, cryptoRng10k, towerIsSpecial(f) ? TOWER_SPECIAL_POOL_PER_SLOT : TOWER_POOL_PER_SLOT) }))
+      .filter(({ p }) => p.weapon.length && p.armor.length && p.accessory.length); // 카탈로그 시드 전 — 풀 없이(×0) 둔다
+    if (rows.length) {
+      await db.execute(sql`
+        insert into tower_pools (server_id, week_start, floor, weapon, armor, accessory)
+        values ${sql.join(rows.map(({ f, p }) => sql`(${serverId}, ${week}::date, ${f}, ${textArray(p.weapon)}, ${textArray(p.armor)}, ${textArray(p.accessory)})`), sql`, `)}
+        on conflict do nothing`);
     }
-    if (needSp) {
-      for (let s = 1; s <= sections; s++) {
-        const p = drawPool(cat, cryptoRng10k, 1);
-        if (!p.weapon[0] || !p.armor[0] || !p.accessory[0]) continue;
-        await db.execute(sql`
-          insert into tower_specials (server_id, section, weapon, armor, accessory)
-          values (${serverId}, ${s}, ${p.weapon[0]!}, ${p.armor[0]!}, ${p.accessory[0]!})
-          on conflict do nothing`);
-      }
-    }
-    [poolRows, spRows] = await read();
+    poolRows = await read();
   }
-  return {
-    week,
-    pools: new Map(poolRows.map((r) => [Number(r.floor), { weapon: r.weapon, armor: r.armor, accessory: r.accessory }])),
-    specials: new Map(spRows.map((r) => [Number(r.section), { weapon: [r.weapon], armor: [r.armor], accessory: [r.accessory] }])),
-  };
+  return { week, pools: new Map(poolRows.map((r) => [Number(r.floor), { weapon: r.weapon, armor: r.armor, accessory: r.accessory }])) };
 }
 
-/** pools = 층별 요구 장비(층 → 부위별), specials = 구간별 특별층 지정 장비(구간 → 부위별). */
 /**
- * 요구 장비 캐시 — 그 주 층별 풀과 특별층 지정 장비는 한 번 박제되면 바뀌지 않아(재추첨 없음) 인스턴스 메모리에 둔다.
- * 도전마다 풀 조회 2번을 없앤다. 다 뽑힌 상태만 담고(카탈로그 시드 전 등 빈 풀은 다시 읽는다), 주가 바뀌면 키가 달라진다.
+ * 요구 장비 캐시 — 그 주 층별 풀은 한 번 박제되면 바뀌지 않아(재추첨 없음) 인스턴스 메모리에 둔다.
+ * 도전마다 풀 조회를 없앤다. 다 뽑힌 상태만 담고(카탈로그 시드 전 등 빈 풀은 다시 읽는다), 주가 바뀌면 키가 달라진다.
  */
 const poolCache = new Map<string, Awaited<ReturnType<typeof towerPools>>>();
 const poolKey = (serverId: number, week: string = kstWeekStartString()) => `${serverId}:${week}`;
 /** 다 뽑힌 풀만 캐시에 담는다(빈 풀은 다음에 다시 읽는다). towerBoard가 읽은 풀도 여기로 — 도전의 콜드 경로를 줄인다. */
 function rememberPools(serverId: number, v: Awaited<ReturnType<typeof towerPools>>) {
-  if (v.pools.size < POOL_FLOORS.length || v.specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) return;
+  if (v.pools.size < POOL_FLOORS.length) return;
   if (poolCache.size > 16) poolCache.clear();
   poolCache.set(poolKey(serverId, v.week), v);
 }
@@ -117,8 +92,8 @@ async function towerPoolsCached(serverId: number) {
   return v;
 }
 
-export function ruleFor(floor: number, pools: Map<number, SlotKeys>, specials: Map<number, SlotKeys>): FloorRule {
-  return floorRule(floor, pools.get(floor) ?? null, specials.get(towerSection(floor)) ?? null);
+export function ruleFor(floor: number, pools: Map<number, SlotKeys>): FloorRule {
+  return floorRule(floor, pools.get(floor) ?? null);
 }
 
 export type TowerOwnedItem = { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; cp: number; equipped: boolean };
@@ -130,14 +105,13 @@ function attemptsLeft(lossDay: string | null, losses: number, at: Date = new Dat
 }
 
 /**
- * 탑 화면 데이터 — 한 번의 쿼리로(진행도·보유 장비·아바타·카탈로그·이번 주 요구 장비·지정 장비·내 순위).
+ * 탑 화면 데이터 — 한 번의 쿼리로(진행도·보유 장비·아바타·카탈로그·이번 주 요구 장비·내 순위).
  * 종전엔 7개 쿼리를 한꺼번에 병렬로 보내 레이아웃 쿼리와 겹치면 커넥션이 몰려, 풀러 쪽에서 쿼리가 멈춘 채
  * statement timeout(2분)까지 가는 일이 스테이징에서 반복됐다(돌파 뒤 다음 층 이동 오류). 요구 장비가 아직
  * 추첨되지 않은 주(그 주 첫 접근)만 towerPools로 추첨·저장한다.
  */
 export async function towerBoard(userId: string, serverId: number) {
   const week = kstWeekStartString();
-  const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
   const [row] = (await db.execute(sql`
     with me as (
       select best_floor, best_at, loss_day::text as loss_day, losses, last_profile_id::text as last_profile_id
@@ -160,7 +134,6 @@ export async function towerBoard(userId: string, serverId: number) {
       coalesce((select json_agg(c order by c.id) from (select id, code, slot::text as slot, name from catalog_items where active) c), '[]'::json) as catalog,
       coalesce((select json_agg(p) from (select floor, weapon, armor, accessory from tower_pools
         where server_id=${serverId} and week_start=${week}::date) p), '[]'::json) as pools,
-      coalesce((select json_agg(x) from (select section, weapon, armor, accessory from tower_specials where server_id=${serverId}) x), '[]'::json) as specials,
       (select (count(*) + 1)::int from tower_progress t join profiles pr on pr.id = t.user_id, me
         where me.best_floor > 0 and t.server_id=${serverId} and ${NOT_BANNED}
           -- 랭킹 표(rank-value.ts)와 같은 기준 — 도달 시각은 초 단위(같은 초면 같은 등수)
@@ -176,17 +149,15 @@ export async function towerBoard(userId: string, serverId: number) {
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
     catalog: { code: string; slot: TowerSlot; name: string }[];
     pools: { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[];
-    specials: { section: number; weapon: string; armor: string; accessory: string }[];
     my_rank: number | null;
     unclaimed: number[];
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
   // 캐릭터가 없는 서버(쿠키 조작 등)면 추첨하지 않는다(감사 M2) — 화면은 page가 캐릭터 없음으로 처리.
-  const drawn = r.nickname != null && (r.pools.length < POOL_FLOORS.length || r.specials.length < sections) ? await towerPools(serverId) : null;
+  const drawn = r.nickname != null && r.pools.length < POOL_FLOORS.length ? await towerPools(serverId) : null;
   const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
-  const specials = drawn?.specials ?? new Map(r.specials.map((x) => [Number(x.section), { weapon: [x.weapon], armor: [x.armor], accessory: [x.accessory] }]));
-  rememberPools(serverId, { week: drawn?.week ?? week, pools, specials });
+  rememberPools(serverId, { week: drawn?.week ?? week, pools });
   const p = r.prog;
   const best = Number(p?.best_floor ?? 0);
   const items: TowerOwnedItem[] = r.owned
@@ -217,7 +188,6 @@ export async function towerBoard(userId: string, serverId: number) {
     items,
     avatars: av,
     pools: Object.fromEntries(pools) as Record<number, SlotKeys>,
-    specials: Object.fromEntries(specials) as Record<number, SlotKeys>,
     myRank: best > 0 && r.my_rank != null ? Number(r.my_rank) : null,
     /** 돌파했지만 아직 받지 않은 층(오름차순). */
     unclaimed: r.unclaimed.map(Number),
@@ -280,7 +250,7 @@ export async function challengeTower(
     if (!ch.length) throw new TowerError('NO_CHARACTER');
     pw = await towerPoolsCached(serverId);
   }
-  const { pools, specials, week } = pw;
+  const { pools, week } = pw;
   // 왕복 최소화(CLAUDE §11.4): ① 캐릭터 확인+진행도 생성+행 잠금 ② (재전송 확인) ③ 아바타+장착 ④ 진행도 갱신+전투 저장(+이기면 순위).
   return db.transaction(async (tx) => {
     // ① 캐릭터가 있을 때만 진행도 행을 만들고, 있든 없든 do update로 행을 잠근 채 돌려받는다(없으면 캐릭터 없음).
@@ -309,7 +279,7 @@ export async function challengeTower(
     // 재전송 확인 뒤에 — 주 경계를 넘겨 다시 온 같은 도전도 저장된 결과를 받는다(재검수 #2).
     if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
     // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
-    if (pools.size < POOL_FLOORS.length || specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) throw new TowerError('POOL_MISSING');
+    if (pools.size < POOL_FLOORS.length) throw new TowerError('POOL_MISSING');
     if (hunt) {
       // 토벌 — 이미 돌파한 층만(그 주 요구 장비·스킬 그대로). 꼭대기까지 오른 뒤에도 할 수 있다.
       if (floor < 1 || floor > best) throw new TowerError('NOT_CLEARED');
@@ -342,7 +312,7 @@ export async function challengeTower(
       }
     }
     const eq: EquippedPiece[] = g!.eq.map((r) => ({ slot: r.slot, key: r.key, cp: pieceCombatPower(Number(r.level), Number(r.transcend)) }));
-    const rule = ruleFor(floor, pools, specials);
+    const rule = ruleFor(floor, pools);
     const cp = towerCp(eq, rule, keys);
     const base = towerCp(eq, rule, new Set()).total;
     // 탑 전투력 0(요구 장비를 하나도 장착하지 않음) — 한 턴 만에 지고 도전만 날아가니 막는다.

@@ -5,6 +5,7 @@ import {
   TOWER_HP_MULT,
   TOWER_POOL_PER_SLOT,
   TOWER_SECTION,
+  TOWER_SPECIAL_POOL_PER_SLOT,
   towerHuntBox,
   towerHuntRange,
   towerRequirement,
@@ -54,8 +55,8 @@ export default function Doc() {
       <H2 id="gear">요구 장비</H2>
       <UL>
         <LI>
-          {TOWER_SECTION + 1}층부터는 층마다 부위별 {TOWER_POOL_PER_SLOT}개의 요구 장비가 정해진다.
-          요구 장비가 아닌 장비는 탑에서 힘을 쓰지 못한다.
+          {TOWER_SECTION + 1}층부터는 층마다 부위별 {TOWER_POOL_PER_SLOT}개의 요구 장비가 정해진다. 특별층은 부위별{' '}
+          {TOWER_SPECIAL_POOL_PER_SLOT}개뿐이다. 요구 장비가 아닌 장비는 탑에서 힘을 쓰지 못한다.
         </LI>
         <LI>1~{TOWER_SECTION}층은 모든 장비를 쓸 수 있다.</LI>
         <LI>

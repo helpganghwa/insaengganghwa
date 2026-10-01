@@ -2,7 +2,7 @@
  * 무한의 탑 순수 엔진(docs/TOWER.md §2) — 탑 전투력·배율, 아바타 배율, 요구 장비 추첨.
  * DB/IO 없음(단위 테스트 대상). 수치 정본은 balance.ts TOWER_*.
  */
-import { TOWER_AVATAR_MULT, TOWER_POOL_PER_SLOT, towerIsSpecial, towerSection } from '@/lib/game/balance';
+import { TOWER_AVATAR_MULT, TOWER_POOL_PER_SLOT, towerSection } from '@/lib/game/balance';
 
 export type TowerSlot = 'weapon' | 'armor' | 'accessory';
 export const TOWER_SLOTS: readonly TowerSlot[] = ['weapon', 'armor', 'accessory'];
@@ -10,28 +10,17 @@ export const TOWER_SLOTS: readonly TowerSlot[] = ['weapon', 'armor', 'accessory'
 /** 부위별 카탈로그 key 목록. */
 export type SlotKeys = Record<TowerSlot, string[]>;
 
-/** 그 층에서 쓰는 요구 장비 — 일반 층은 그 층 풀, 특별층은 그 층 풀 + 지정 장비(×2는 지정 장비만). */
+/** 그 층에서 쓰는 요구 장비 — 11층부터 층마다 그 주 풀(일반 층 부위별 10개, 특별층 부위별 1개). */
 export type FloorRule = {
   floor: number;
   /** null = 모든 장비(1~10층 입문 구간). */
   allowed: ReadonlySet<string> | null;
-  /** ×2가 될 수 있는 장비 — 일반 층은 allowed 전체(null이면 전부), 특별층은 지정 장비만. */
-  doubleable: ReadonlySet<string> | null;
 };
 
-export function floorRule(floor: number, pool: SlotKeys | null, specials: SlotKeys | null): FloorRule {
+export function floorRule(floor: number, pool: SlotKeys | null): FloorRule {
+  if (towerSection(floor) === 1) return { floor, allowed: null };
   // 풀이 없으면(추첨 전·실패) 빈 집합 = 모두 ×0(fail-closed) — null은 '모든 장비'라 요구 장비 제한이 통째로 풀린다(09-30 감사 M1).
-  const flat = (k: SlotKeys | null) => new Set(k ? TOWER_SLOTS.flatMap((s) => k[s]) : []);
-  if (towerSection(floor) === 1 && !towerIsSpecial(floor)) return { floor, allowed: null, doubleable: null };
-  if (!towerIsSpecial(floor)) {
-    const p = flat(pool);
-    return { floor, allowed: p, doubleable: p };
-  }
-  // 특별층 — 그 층 요구 장비(1구간이면 전부) + 지정 장비를 장착할 수 있고, ×2는 지정 장비만.
-  const sp = flat(specials);
-  const base = towerSection(floor) === 1 ? null : flat(pool);
-  const allowed = base ? new Set([...base, ...sp]) : null;
-  return { floor, allowed, doubleable: sp };
+  return { floor, allowed: new Set(pool ? TOWER_SLOTS.flatMap((s) => pool[s]) : []) };
 }
 
 export type EquippedPiece = { slot: TowerSlot; key: string; cp: number };
@@ -48,7 +37,7 @@ export function towerCp(
 ): { total: number; pieces: PieceScore[]; doubledCount: number } {
   const pieces = equipped.map((p) => {
     const ok = rule.allowed === null || rule.allowed.has(p.key);
-    const dbl = ok && avatarKeys.has(p.key) && (rule.doubleable === null || rule.doubleable.has(p.key));
+    const dbl = ok && avatarKeys.has(p.key);
     const mult: 0 | 1 | 2 = !ok ? 0 : dbl ? (TOWER_AVATAR_MULT as 2) : 1;
     return { ...p, mult, score: p.cp * mult };
   });
