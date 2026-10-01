@@ -3,7 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, pieceCombatPower, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -18,7 +18,7 @@ const cryptoRng10k: Rng10k = () => crypto.getRandomValues(new Uint32Array(1))[0]
 const NOT_BANNED = sql`not (pr.banned_at is not null and (pr.ban_until is null or pr.ban_until > now()))`;
 
 export class TowerError extends Error {
-  constructor(public code: 'NOT_NEXT_FLOOR' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED' | 'POOL_MISSING') {
+  constructor(public code: 'NOT_NEXT_FLOOR' | 'NOT_CLEARED' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED' | 'POOL_MISSING') {
     super(code);
     this.name = 'TowerError';
   }
@@ -243,9 +243,13 @@ export type TowerChallengeResult = {
   myRank: number | null;
   /** 같은 요청 키로 다시 와서 저장된 결과를 돌려준 경우 — 화면이 기록을 두 번 세지 않게. */
   replayed?: boolean;
+  /** 토벌(돌파한 층 재도전) 판 — 이기면 reward.diamond를 그 자리에서 지급(목록 받기 없음), 최고 층·순위는 그대로. */
+  hunt?: boolean;
+  /** 토벌로 다이아가 들어온 뒤의 잔액(헤더 다이아를 맞춘다). 그 밖에는 null. */
+  diamondBalance?: string | null;
 };
 
-type BattleRow = { id: string; floor: number; win: boolean; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
+type BattleRow = { id: string; floor: number; win: boolean; hunt: boolean | null; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: { diamond: number; boxes: number } | null; base_cp: number | null };
 
 /**
  * 도전 — 진행도 행을 잠그고(동시 도전·중복 보상 차단) 지금 층·남은 도전을 검사, 서버에서 전투를 판정한다.
@@ -259,8 +263,9 @@ export async function challengeTower(
   serverId: number,
   floor: number,
   profileId: string | null,
-  opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k } = {},
+  opts: { idemKey?: string | null; week?: string | null; rng?: Rng10k; hunt?: boolean } = {},
 ): Promise<TowerChallengeResult> {
+  const hunt = !!opts.hunt;
   const rng = opts.rng ?? cryptoRng10k;
   const idem = opts.idemKey && /^[A-Za-z0-9-]{8,64}$/.test(opts.idemKey) ? opts.idemKey : null;
   // 요구 장비는 트랜잭션 **밖**에서 — 진행도 행을 잠근 트랜잭션 안에서 풀 커넥션을 또 잡으면, 캐시가 빈 인스턴스에 도전이
@@ -286,7 +291,7 @@ export async function challengeTower(
     if (idem) {
       // ② 행 잠금 뒤 새 문장으로 찾아야 같은 키의 동시 요청도 앞선 결과를 본다(같은 문장에 넣으면 잠금 전 스냅샷이라 못 본다).
       const [prev] = (await tx.execute(sql`
-        select id::text as id, floor, win, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
+        select id::text as id, floor, win, hunt, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
         from tower_battles where user_id=${userId}::uuid and server_id=${serverId} and idem_key=${idem}`)) as unknown as BattleRow[];
       if (prev) {
         const left = attemptsLeft(p.loss_day, Number(p.losses));
@@ -294,6 +299,7 @@ export async function challengeTower(
           battleId: prev.id, floor: Number(prev.floor), win: prev.win, keyIndex: Number(prev.key_turn), turns: prev.turns,
           reward: prev.reward, attemptsLeft: left, best, towerCp: Number(prev.tower_cp),
           mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1, myRank: null, replayed: true,
+          hunt: !!prev.hunt, diamondBalance: null,
         };
       }
     }
@@ -301,8 +307,13 @@ export async function challengeTower(
     if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
     // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
     if (pools.size < POOL_FLOORS.length || specials.size < Math.ceil(TOWER_FLOORS / TOWER_SECTION)) throw new TowerError('POOL_MISSING');
-    if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
-    if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
+    if (hunt) {
+      // 토벌 — 이미 돌파한 층만(그 주 요구 장비·스킬 그대로). 꼭대기까지 오른 뒤에도 할 수 있다.
+      if (floor < 1 || floor > best) throw new TowerError('NOT_CLEARED');
+    } else {
+      if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
+      if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
+    }
     const left = attemptsLeft(p.loss_day, Number(p.losses));
     if (left <= 0) throw new TowerError('NO_ATTEMPTS');
 
@@ -336,26 +347,34 @@ export async function challengeTower(
     const req = towerRequirement(floor);
     const battle = simulateTowerBattle({ towerCp: cp.total, requirement: req, doubledCount: cp.doubledCount, skills: towerFloorSkills(floor), rng });
 
-    const reward: { diamond: number; boxes: number } | null = battle.win ? towerReward(floor) : null;
+    // 오르기 = 첫 돌파 보상(목록에서 받기), 토벌 = 이긴 판마다 💎(이 트랜잭션에서 바로 지급).
+    const reward: { diamond: number; boxes: number } | null = !battle.win ? null : hunt ? { diamond: towerHuntReward(floor), boxes: 0 } : towerReward(floor);
+    // 토벌은 이겨도 도전 1회를 쓴다(오르기는 진 판만).
+    const spend = hunt || !battle.win;
     const today = kstDateString();
     const pieces = cp.pieces.map((x, i) => (i === 0 ? { ...x, base } : x));
     // ④ 진행도 갱신과 전투 저장을 한 문장으로(데이터 변경 CTE).
     const [row] = (await tx.execute(sql`
       with up as (
         update tower_progress set
-          ${battle.win
-            ? sql`best_floor=${floor}, best_at=now(),`
-            : sql`losses = case when loss_day = ${today}::date then losses + 1 else 1 end, loss_day = ${today}::date,`}
+          ${!hunt && battle.win ? sql`best_floor=${floor}, best_at=now(),` : sql``}
+          ${spend ? sql`losses = case when loss_day = ${today}::date then losses + 1 else 1 end, loss_day = ${today}::date,` : sql``}
           last_profile_id=${profileId}::uuid, updated_at=now()
         where user_id=${userId}::uuid and server_id=${serverId}
       )
-      insert into tower_battles (user_id, server_id, floor, win, tower_cp, requirement, profile_id, pieces, turns, key_turn, reward, idem_key)
-      values (${userId}::uuid, ${serverId}, ${floor}, ${battle.win}, ${cp.total}, ${req}, ${profileId}::uuid,
+      insert into tower_battles (user_id, server_id, floor, win, hunt, tower_cp, requirement, profile_id, pieces, turns, key_turn, reward, idem_key)
+      values (${userId}::uuid, ${serverId}, ${floor}, ${battle.win}, ${hunt}, ${cp.total}, ${req}, ${profileId}::uuid,
               ${JSON.stringify(pieces)}::jsonb, ${JSON.stringify(battle.turns)}::jsonb, ${battle.keyIndex}, ${reward ? JSON.stringify(reward) : null}::jsonb, ${idem})
       returning id::text as id`)) as unknown as { id: string }[];
     // 이긴 판만 — 목록 머리 줄의 서버 순위를 액션 응답에 실어 준다(화면을 다시 그리지 않아도 맞게). towerBoard my_rank와 같은 기준.
     let myRank: number | null = null;
-    if (battle.win) {
+    let diamondBalance: string | null = null;
+    if (hunt && reward && reward.diamond > 0) {
+      await walletAdd(tx, userId, serverId, reward.diamond, 'tower', `tower-hunt:${row!.id}`);
+      const [c] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
+      diamondBalance = c?.d ?? null;
+    }
+    if (battle.win && !hunt) {
       const [rk] = (await tx.execute(sql`
         with me as (select best_floor, best_at from tower_progress where user_id=${userId}::uuid and server_id=${serverId})
         select (count(*) + 1)::int as r from tower_progress t join profiles pr on pr.id = t.user_id, me
@@ -366,8 +385,8 @@ export async function challengeTower(
     }
     return {
       battleId: row!.id, floor, win: battle.win, keyIndex: battle.keyIndex, turns: battle.turns, reward,
-      attemptsLeft: battle.win ? left : left - 1, best: battle.win ? floor : best, towerCp: cp.total,
-      mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1, myRank,
+      attemptsLeft: spend ? left - 1 : left, best: !hunt && battle.win ? floor : best, towerCp: cp.total,
+      mult: base > 0 ? Math.round((cp.total / base) * 100) / 100 : 1, myRank, hunt, diamondBalance,
     };
   });
 }

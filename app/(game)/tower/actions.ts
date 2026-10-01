@@ -13,6 +13,7 @@ import { rateLimited } from '@/lib/ratelimit';
 
 const MSG: Record<string, string> = {
   NOT_NEXT_FLOOR: '지금 도전할 수 있는 층이 아니에요. 화면을 새로 고쳐 주세요.',
+  NOT_CLEARED: '아직 돌파하지 않은 층은 토벌할 수 없어요.',
   NO_ATTEMPTS: '오늘 도전을 모두 썼어요. 내일 다시 도전할 수 있어요.',
   TOP_REACHED: '지금 열린 가장 높은 층까지 올랐어요.',
   NO_CHARACTER: '이 서버에 캐릭터가 없어요.',
@@ -30,7 +31,8 @@ const MSG: Record<string, string> = {
 };
 const err = makeErr(MSG);
 
-export async function towerChallengeAction(floor: number, profileId: string | null, idemKey: string, week: string) {
+/** 도전 — hunt=true면 토벌(돌파한 층 재도전, 이기면 💎 바로 지급·이겨도 도전 1회 소모). */
+export async function towerChallengeAction(floor: number, profileId: string | null, idemKey: string, week: string, hunt = false) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'tower')) return err('RATE_LIMITED');
@@ -42,9 +44,9 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
     if (typeof week !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return err('POOL_CHANGED');
     if (profileId != null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) return err('BAD_AVATAR');
     const serverId = await getActiveServerId();
-    const r: TowerChallengeResult = await challengeTower(u, serverId, floor, profileId, { idemKey, week });
+    const r: TowerChallengeResult = await challengeTower(u, serverId, floor, profileId, { idemKey, week, hunt: hunt === true });
     // 랭킹 반영(커밋 뒤, 실패해도 도전은 유효 — 매시 스냅샷이 다시 맞춘다).
-    if (r.win) await refreshTowerMetric(u, serverId);
+    if (r.win && !r.hunt) await refreshTowerMetric(u, serverId);
     // 화면을 다시 그리지 않는다(CLAUDE §11.7) — 최고 층·남은 도전·순위는 응답(result)으로 화면이 바로 반영하고,
     // 레이아웃(헤더 다이아·전투력)은 도전으로 바뀌지 않는다. 다른 화면에 갔다 오면 새로 불러온다.
     return { status: 'success' as const, result: r };

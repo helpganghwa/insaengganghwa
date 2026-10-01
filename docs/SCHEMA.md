@@ -400,7 +400,7 @@ create table milestone_firsts (
 - 도전은 이 행을 upsert로 잠가 동시 도전·중복 차감을 막는다. 탈퇴 시 삭제.
 
 ### 14.2 tower_battles (도전 1번 = 1행)
-- 층·승패·탑 전투력·요구치·아바타·장착 3개(`pieces`)·턴 기록(`turns`, 절대 체력·피해·변수·`raw`)·결정적 턴·보상 안내·`idem_key`.
+- 층·승패·탑 전투력·요구치·아바타·장착 3개(`pieces`)·턴 기록(`turns`, 절대 체력·피해·변수·`raw`)·결정적 턴·보상 안내·`idem_key`·`hunt`(토벌 판 — 최고 층·순위에 반영하지 않음, 보상 💎는 전투 때 바로 지급).
 - 부분 유니크 (user_id, server_id, idem_key) — 같은 키 재전송은 저장된 결과를 돌려준다. 탈퇴 시 삭제.
 
 ### 14.3 tower_claims (받은 돌파 보상)

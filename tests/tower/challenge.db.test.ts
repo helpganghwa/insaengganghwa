@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { towerHuntReward } from '@/lib/game/balance';
 import { claimTowerRewards, challengeTower, TowerError } from '@/lib/game/tower/service';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -42,7 +43,7 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
     for (const c of claims) {
       await testDb.execute(sql`insert into tower_claims (user_id, server_id, floor, claimed_at) values (${TEST_USER_ID}::uuid, ${S}, ${c.floor}, ${c.at}::timestamptz)`);
     }
-    await testDb.execute(sql`delete from diamond_ledger where user_id=${TEST_USER_ID}::uuid and ref like 'tower:%' and created_at >= ${started.toISOString()}::timestamptz`);
+    await testDb.execute(sql`delete from diamond_ledger where user_id=${TEST_USER_ID}::uuid and (ref like 'tower:%' or ref like 'tower-hunt:%') and created_at >= ${started.toISOString()}::timestamptz`);
     await testDb.execute(sql`update characters set diamond=${diamond}::bigint where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
     if (saved) {
       await testDb.execute(sql`update tower_progress set best_floor=${saved.best_floor}, best_at=${saved.best_at}::timestamptz, losses=${saved.losses},
@@ -152,5 +153,29 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
       const a = after.find((x) => x.slot === slot)?.count ?? 0;
       expect(a - b).toBe(2);
     }
+  });
+  it('토벌: 돌파한 층만 — 이겨도 도전 1 차감·💎 즉시 지급, 최고 층은 그대로', async () => {
+    await testDb.execute(sql`update tower_progress set best_floor=2, losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    await expect(challengeTower(TEST_USER_ID, S, 3, null, { idemKey: key(), rng: WIN, hunt: true })).rejects.toMatchObject({ code: 'NOT_CLEARED' });
+    const [c0] = (await testDb.execute(sql`select diamond::text d from characters where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { d: string }[];
+    const k = key();
+    const a = await challengeTower(TEST_USER_ID, S, 2, null, { idemKey: k, rng: WIN, hunt: true });
+    expect(a.win).toBe(true);
+    expect(a.hunt).toBe(true);
+    expect(a.best).toBe(2);
+    expect(a.attemptsLeft).toBe(2);
+    expect(a.reward?.diamond).toBe(towerHuntReward(2));
+    expect(BigInt(a.diamondBalance!)).toBe(BigInt(c0!.d) + BigInt(towerHuntReward(2)));
+    // 같은 키 재전송은 다시 지급하지 않는다.
+    const b = await challengeTower(TEST_USER_ID, S, 2, null, { idemKey: k, rng: WIN, hunt: true });
+    expect(b.battleId).toBe(a.battleId);
+    const [c1] = (await testDb.execute(sql`select diamond::text d from characters where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { d: string }[];
+    expect(BigInt(c1!.d)).toBe(BigInt(c0!.d) + BigInt(towerHuntReward(2)));
+    // 진 토벌도 1 차감, 보상 없음.
+    const l = await challengeTower(TEST_USER_ID, S, 1, null, { idemKey: key(), rng: LOSE, hunt: true });
+    expect(l.win).toBe(false);
+    expect(l.attemptsLeft).toBe(1);
+    const [p] = (await testDb.execute(sql`select best_floor from tower_progress where user_id=${TEST_USER_ID}::uuid and server_id=${S}`)) as unknown as { best_floor: number }[];
+    expect(p!.best_floor).toBe(2);
   });
 });

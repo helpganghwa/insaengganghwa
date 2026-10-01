@@ -7,6 +7,7 @@ import {
   TOWER_HP_MULT,
   TOWER_POOL_PER_SLOT,
   TOWER_SECTION,
+  towerHuntReward,
   towerRequirement,
   towerReward,
 } from '@/lib/game/balance';
@@ -30,6 +31,7 @@ export const meta: WikiDocMeta = {
     { id: 'skill', label: '몬스터 스킬' },
     { id: 'floor', label: '몬스터 전투력' },
     { id: 'reward', label: '돌파 보상' },
+    { id: 'hunt', label: '토벌' },
     { id: 'ranking', label: '순위' },
   ],
 };
@@ -157,6 +159,20 @@ export default function Doc() {
             n(towerReward(hi).boxes),
           ];
         })}
+      />
+
+      <H2 id="hunt">토벌</H2>
+      <UL>
+        <LI>이미 돌파한 층은 다시 싸워 💎를 받을 수 있다. 탑 목록에서 층을 누르고 [토벌]을 누른다.</LI>
+        <LI>
+          오르기와 같은 하루 {TOWER_DAILY_ATTEMPTS}번에서 쓰며, <b>토벌은 이겨도 한 번 줄어든다</b>. 전투는 오르기와 같다(같은
+          요구 장비·같은 몬스터 스킬).
+        </LI>
+        <LI>이기면 그 자리에서 💎를 받는다. 최고 층과 순위는 바뀌지 않는다.</LI>
+      </UL>
+      <Tbl
+        head={['구간', '토벌 💎']}
+        rows={Array.from({ length: sections }, (_, i) => [`${i * TOWER_SECTION + 1}~${(i + 1) * TOWER_SECTION}층`, n(towerHuntReward(i * TOWER_SECTION + 1))])}
       />
 
       <H2 id="ranking">순위</H2>

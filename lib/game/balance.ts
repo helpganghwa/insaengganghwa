@@ -1127,6 +1127,14 @@ const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720] as const;
 
 export type TowerReward = { diamond: number; boxes: number };
 /** 층의 첫 돌파 보상. 일반 층 💎, 구간 5번째 층은 💎+📦, 특별층 💎+📦. */
+/**
+ * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎, 그 층 구간 일반층 첫 돌파 💎의 절반(10-01 사용자 확정, 상자 없음).
+ * 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5).
+ */
+export function towerHuntReward(floor: number): number {
+  const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(Math.max(1, floor))) - 1;
+  return Math.floor(TOWER_NORMAL_DIA[i]! / 2);
+}
 export function towerReward(floor: number): TowerReward {
   const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(floor)) - 1;
   if (towerIsSpecial(floor)) return { diamond: TOWER_SPECIAL_DIA[i]!, boxes: TOWER_SPECIAL_BOX[i]! };
