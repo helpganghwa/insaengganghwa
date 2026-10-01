@@ -18,6 +18,29 @@ import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
+type SortBy = 'enhance' | 'transcend' | 'name';
+type SortDir = 'desc' | 'asc';
+/** 정렬 기준·방향은 기기마다 기억한다(유저 요청 10-01 #RlFLazF5) — localStorage, 읽기·쓰기 실패는 기본값. */
+const SORT_KEY = 'ig:enhance-pick-sort';
+function loadSort(): { by: SortBy; dir: SortDir } {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(SORT_KEY) : null;
+    const v = raw ? (JSON.parse(raw) as { by?: string; dir?: string }) : null;
+    const by: SortBy = v?.by === 'transcend' || v?.by === 'name' ? v.by : 'enhance';
+    const dir: SortDir = v?.dir === 'asc' ? 'asc' : 'desc';
+    return { by, dir };
+  } catch {
+    return { by: 'enhance', dir: 'desc' };
+  }
+}
+function saveSort(v: { by: SortBy; dir: SortDir }) {
+  try {
+    window.localStorage.setItem(SORT_KEY, JSON.stringify(v));
+  } catch {
+    /* 비공개 창 등 — 저장 못 해도 이번 팝업 안에서는 적용된다 */
+  }
+}
+
 export type EnhanceCandidate = {
   id: string;
   code: string;
@@ -80,17 +103,25 @@ function EnhanceSlotPicker({
   const { showError } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // 정렬 — 인벤토리와 동일 3종(2026-07-19). 동률 2차 기준도 동일.
-  const [sortBy, setSortBy] = useState<'enhance' | 'transcend' | 'name'>('enhance');
-  const sorted = useMemo(() => {
-    return [...candidates].sort((a, b) => {
-      if (sortBy === 'enhance')
-        return b.enhanceLevel - a.enhanceLevel || b.transcendLevel - a.transcendLevel || a.name.localeCompare(b.name, 'ko');
-      if (sortBy === 'transcend')
-        return b.transcendLevel - a.transcendLevel || b.enhanceLevel - a.enhanceLevel || a.name.localeCompare(b.name, 'ko');
-      return a.name.localeCompare(b.name, 'ko');
+  // 정렬 — 인벤토리와 동일 3종(2026-07-19) + 방향. 동률 2차 기준도 동일(방향은 숫자 기준에만, 이름 동률은 늘 가나다).
+  // 팝업은 클릭 뒤에만 그려지므로(서버 렌더 없음) 초기값을 저장소에서 바로 읽는다.
+  const [sort, setSort] = useState<{ by: SortBy; dir: SortDir }>(loadSort);
+  const setSortPart = (part: Partial<{ by: SortBy; dir: SortDir }>) =>
+    setSort((prev) => {
+      const next = { ...prev, ...part };
+      saveSort(next);
+      return next;
     });
-  }, [candidates, sortBy]);
+  const sorted = useMemo(() => {
+    const d = sort.dir === 'asc' ? -1 : 1;
+    return [...candidates].sort((a, b) => {
+      if (sort.by === 'enhance')
+        return d * (b.enhanceLevel - a.enhanceLevel) || d * (b.transcendLevel - a.transcendLevel) || a.name.localeCompare(b.name, 'ko');
+      if (sort.by === 'transcend')
+        return d * (b.transcendLevel - a.transcendLevel) || d * (b.enhanceLevel - a.enhanceLevel) || a.name.localeCompare(b.name, 'ko');
+      return d * -1 * a.name.localeCompare(b.name, 'ko');
+    });
+  }, [candidates, sort]);
 
   const pick = (id: string) => {
     if (pending) return;
@@ -125,12 +156,12 @@ function EnhanceSlotPicker({
       <ModalLayout
         title={`${SLOT_LABEL[slot]} 강화 등록`}
         subtitle={
-          <span className="inline-flex items-center gap-1.5">
-            탭하면 빈 슬롯에 자동 등록
-            {/* 정렬 셀렉트 — 인벤토리와 동일 스타일(커스텀 ▼, iOS 색상·크롬 위치 이슈 회피). */}
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            탭하면 빈 슬롯에 등록
+            {/* 정렬 셀렉트 — 인벤토리와 동일 스타일(커스텀 ▼, iOS 색상·크롬 위치 이슈 회피). 기준·방향은 기기에 기억. */}
             <ZoomSafeSelect
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              value={sort.by}
+              onChange={(e) => setSortPart({ by: e.target.value as SortBy })}
               aria-label="정렬 기준"
               wrapClassName="inline-block h-[26px] w-[84px] shrink-0 align-middle"
               className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
@@ -138,6 +169,16 @@ function EnhanceSlotPicker({
               <option value="enhance">강화순</option>
               <option value="transcend">초월순</option>
               <option value="name">이름순</option>
+            </ZoomSafeSelect>
+            <ZoomSafeSelect
+              value={sort.dir}
+              onChange={(e) => setSortPart({ dir: e.target.value as SortDir })}
+              aria-label="정렬 방향"
+              wrapClassName="inline-block h-[26px] w-[92px] shrink-0 align-middle"
+              className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+            >
+              <option value="desc">내림차순</option>
+              <option value="asc">오름차순</option>
             </ZoomSafeSelect>
           </span>
         }
