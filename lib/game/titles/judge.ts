@@ -668,16 +668,17 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     `),
     // 무한의 탑(2026-09-29) — 기사회생/공명이 터진 승리 · 무패로 가장 많이 이긴 하루 · 기본 아바타 최고 층 ·
     // 같은 층에서 진 횟수 중 끝내 이긴 층의 최대. 표 미적용(프로덕션 반영 전) 실패가 판정 전체를 멈추지 않게 0으로 본다.
+    // 토벌(hunt) 판은 '무패 하루'·'n패 뒤 돌파'에서 뺀다(10-01) — 돌파한 층을 토벌로 일부러 져서 n패를 채우거나 토벌 승리를 돌파로 세지 않게.
     () =>
       db.execute(sql`
-        with b as (select tb.floor, tb.win, tb.turns, tb.profile_id, tb.created_at from tower_battles tb where tb.user_id=${u} and tb.server_id=${s})
+        with b as (select tb.floor, tb.win, tb.turns, tb.profile_id, tb.created_at, tb.hunt from tower_battles tb where tb.user_id=${u} and tb.server_id=${s})
         select (select count(*) from b where win and turns @> '[{"event":"revive"}]'::jsonb)::int as tw_revive_wins,
                (select count(*) from b where win and turns @> '[{"event":"resonance"}]'::jsonb)::int as tw_reso_wins,
-               coalesce((select max(w) from (select count(*) filter (where win) as w from b
+               coalesce((select max(w) from (select count(*) filter (where win) as w from b where not hunt
                  group by (created_at at time zone 'Asia/Seoul')::date having bool_and(win)) d), 0)::int as tw_flawless_day,
                coalesce((select max(b.floor) from b left join user_profiles up on up.id = b.profile_id
                  where b.win and (b.profile_id is null or coalesce((up.options->>'isDefault')::boolean, false))), 0)::int as tw_bare_best,
-               coalesce((select max(l) from (select count(*) filter (where not win) as l, bool_or(win) as w from b group by floor) f
+               coalesce((select max(l) from (select count(*) filter (where not win) as l, bool_or(win) as w from b where not hunt group by floor) f
                  where f.w), 0)::int as tw_grit
       `).catch((e: unknown) => {
         console.warn('[titles] 무한의 탑 조회 실패 — 탑 칭호 0으로 판정', (e as Error).message);
