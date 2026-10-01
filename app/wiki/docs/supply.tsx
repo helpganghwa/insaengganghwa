@@ -85,6 +85,10 @@ export default function Doc() {
         <LI>
           <DocLink slug="melee">대난투</DocLink>: 순위 보상.
         </LI>
+        <LI>
+          <DocLink slug="tower">무한의 탑</DocLink>: 구간 다섯 번째 층과 특별층을 처음 돌파할 때, 토벌에서 이기면 일정
+          확률로 지급된다.
+        </LI>
         <LI>성장패스: 초월 패스의 단계 보상.</LI>
         <LI>
           <DocLink slug="friends">친구 초대</DocLink>와 기록 달성 우편.

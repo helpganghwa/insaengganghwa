@@ -1,14 +1,10 @@
 import {
   TOWER_AVATAR_MULT,
   TOWER_DAILY_ATTEMPTS,
-  TOWER_DMG_MAX,
-  TOWER_DMG_MIN,
   TOWER_FLOORS,
   TOWER_HP_MULT,
   TOWER_POOL_PER_SLOT,
   TOWER_SECTION,
-  TOWER_HUNT_BOX_BP,
-  TOWER_HUNT_DOUBLE_BP,
   towerHuntBox,
   towerHuntRange,
   towerRequirement,
@@ -25,7 +21,7 @@ export const meta: WikiDocMeta = {
   slug: 'tower',
   cat: '경쟁',
   title: '무한의 탑',
-  summary: `한 층씩 몬스터를 쓰러뜨리며 오르는 콘텐츠. 층마다 첫 돌파 보상, 가장 높이 오른 층으로 서버 순위.`,
+  summary: `한 층씩 몬스터를 쓰러뜨리며 탑을 오르는 콘텐츠.`,
   sections: [
     { id: 'flow', label: '진행' },
     { id: 'gear', label: '요구 장비' },
@@ -35,7 +31,6 @@ export const meta: WikiDocMeta = {
     { id: 'floor', label: '몬스터 전투력' },
     { id: 'reward', label: '돌파 보상' },
     { id: 'hunt', label: '토벌' },
-    { id: 'ranking', label: '순위' },
   ],
 };
 
@@ -51,9 +46,9 @@ export default function Doc() {
         <LI>지금 열린 층은 1~{TOWER_FLOORS}층이다. 가장 높이 돌파한 층의 바로 다음 층에만 도전할 수 있다.</LI>
         <LI>
           하루 {TOWER_DAILY_ATTEMPTS}번 도전할 수 있고, <b>이기면 횟수가 줄지 않는다</b>. 진 판만 한 번씩 줄어들며
-          자정(한국 시간)에 다시 채워진다.
+          자정에 다시 채워진다. 단, 토벌은 이겨도 한 번 줄어든다.
         </LI>
-        <LI>{TOWER_SECTION}층마다 특별층이 있다. 특별층의 몬스터는 그 구간을 지키는 수문장이다.</LI>
+        <LI>{TOWER_SECTION}층마다 특별층이 있다.</LI>
       </UL>
 
       <H2 id="gear">요구 장비</H2>
@@ -62,11 +57,10 @@ export default function Doc() {
           {TOWER_SECTION + 1}층부터는 층마다 부위별 {TOWER_POOL_PER_SLOT}개의 요구 장비가 정해진다.
           요구 장비가 아닌 장비는 탑에서 힘을 쓰지 못한다.
         </LI>
-        <LI>1~{TOWER_SECTION - 1}층과 {TOWER_SECTION}층은 모든 장비를 쓸 수 있다.</LI>
-        <LI>요구 장비는 매주 월요일 0시(한국 시간)에 서버 전체가 함께 바뀐다. 층 화면의 [자동 장착]을 누르면 그 층 요구 장비 중 가장 센 조합으로 장착하고 아바타도 골라 준다.</LI>
+        <LI>1~{TOWER_SECTION}층은 모든 장비를 쓸 수 있다.</LI>
         <LI>
-          특별층에는 부위마다 <b>지정 장비</b>가 하나씩 있고, 한 번 정해지면 바뀌지 않는다. 특별층에서도 그 층의 요구
-          장비를 쓸 수 있다.
+          요구 장비는 매주 월요일 0시에 모든 층이 바뀐다. 층 화면의 [자동 장착]을 누르면 그 층 요구 장비 중 가장 센
+          조합으로 장착하고 아바타도 자동으로 골라 준다.
         </LI>
         <LI>탑 화면에서 착용 가능 장비를 바로 장착할 수 있다. 장착은 게임 전체에 그대로 반영된다.</LI>
       </UL>
@@ -78,8 +72,7 @@ export default function Doc() {
         </LI>
         <LI>
           <DocLink slug="avatar">아바타</DocLink>를 골라 탑에 오를 수 있다. 그 아바타를 만들 때 입었던 장비가 지금
-          장착과 겹치면, 겹치는 장비만 ×{TOWER_AVATAR_MULT}가 된다. 탑 화면의 &ldquo;맞는 장비 N/3&rdquo;이 겹치는
-          개수다.
+          장착과 겹치면, 겹치는 장비만 전투력이 ×{TOWER_AVATAR_MULT}가 된다.
         </LI>
         <LI>기본 아바타는 만들 때 입은 장비가 없어 모든 장비가 ×1이다.</LI>
       </UL>
@@ -90,19 +83,15 @@ export default function Doc() {
           ['요구 장비이고, 고른 아바타를 만들 때도 입었던 장비', `×${TOWER_AVATAR_MULT}`],
           ['요구 장비', '×1'],
           ['요구 장비가 아님', '×0 (전투력에 들어가지 않음)'],
-          ['특별층', `지정 장비만 ×${TOWER_AVATAR_MULT}가 될 수 있고, 나머지 요구 장비는 ×1`],
         ]}
       />
 
       <H2 id="battle">전투</H2>
       <UL>
-        <LI>도전하면 서버가 전투를 판정하고, 화면은 그 기록을 차례로 보여 준다.</LI>
-        <LI>
-          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 몬스터는 몬스터 전투력). 한 번 공격하면 자기 전투력의{' '}
-          {TOWER_DMG_MIN * 100}~{TOWER_DMG_MAX * 100}%만큼 피해를 준다.
-        </LI>
+        <LI>체력은 전투력의 {TOWER_HP_MULT}배다.</LI>
         <LI>최대 {TOWER_BATTLE.maxTurns}턴까지 싸우고, 그때까지 몬스터를 쓰러뜨리지 못하면 진다.</LI>
       </UL>
+
       <Tbl
         firstColNowrap
         head={['변수', '내용']}
@@ -125,9 +114,7 @@ export default function Doc() {
 
       <H2 id="skill">몬스터 스킬</H2>
       <UL>
-        <LI>11층부터 일부 몬스터가 스킬을 쓴다. 구간마다 새 스킬이 하나씩 나오고, 그 구간 수문장(10층마다)도 같은 스킬을 쓴다.</LI>
-        <LI>수문장은 위로 갈수록 스킬이 늘어 100층 수문장은 네 개를 쓴다.</LI>
-        <LI>스킬이 있는 층은 몬스터 전투력이 같아도 다른 층보다 넘기 어렵다.</LI>
+        <LI>11층부터 일부 몬스터가 스킬을 쓴다.</LI>
         <LI>층 화면에서 몬스터 이름 아래 스킬을 누르면 설명이 나온다.</LI>
       </UL>
       <Tbl
@@ -137,17 +124,12 @@ export default function Doc() {
       />
 
       <H2 id="floor">몬스터 전투력</H2>
-      <UL>
-        <LI>구간 안의 일반 층은 완만하게 오르고, 특별층에서 크게 뛴다.</LI>
-        <LI>층 목록과 층 상세에서 그 층 몬스터의 전투력을 볼 수 있다.</LI>
-      </UL>
       <Tbl head={['층', '몬스터 전투력']} rows={SAMPLE_FLOORS.map((f) => [`${f}층`, n(towerRequirement(f))])} />
 
       <H2 id="reward">돌파 보상</H2>
       <UL>
         <LI>층마다 한 번 받는다. 돌파한 층의 보상은 탑 목록에서 층을 눌러 하나씩 받거나 [모두 받기]로 한꺼번에 받는다.</LI>
-        <LI>일반 층은 💎, 구간의 다섯 번째 층은 💎와 📦, 특별층은 💎와 📦를 함께 받는다.</LI>
-        <LI>📦는 <DocLink slug="supply">보급 상자</DocLink>로, 부위마다 3분의 1씩 나뉜다.</LI>
+        <LI>일반 층은 💎, 구간의 다섯 번째 층과 특별층은 💎와 📦를 함께 받는다.</LI>
       </UL>
       <Tbl
         head={['구간', '일반 층 💎', '5번째 층 📦', '특별층 💎', '특별층 📦']}
@@ -166,15 +148,15 @@ export default function Doc() {
 
       <H2 id="hunt">토벌</H2>
       <UL>
-        <LI>이미 돌파한 층은 다시 싸워 💎를 받을 수 있다. 탑 목록에서 층을 누르고 [토벌]을 누른다.</LI>
+        <LI>이미 돌파한 층은 다시 도전해 💎를 받을 수 있다. 탑 목록에서 층을 누르고 [토벌]을 누른다.</LI>
         <LI>
-          오르기와 같은 하루 {TOWER_DAILY_ATTEMPTS}번에서 쓰며, <b>토벌은 이겨도 한 번 줄어든다</b>. 전투는 오르기와 같다(같은
+          오르기와 같은 하루 {TOWER_DAILY_ATTEMPTS}번에서 쓰며, <b>토벌은 이겨도 한 번 줄어든다</b>. 전투는 돌파와 같다(같은
           요구 장비·같은 몬스터 스킬).
         </LI>
-        <LI>이기면 그 자리에서 전리품을 받는다. 💎는 구간 범위 안에서 정해지고, 최고 층과 순위는 바뀌지 않는다.</LI>
+        <LI>이기면 전투 화면에서 즉시 전리품을 받는다. 💎는 구간 범위 안에서 정해진다.</LI>
         <LI>
-          {bpPct(TOWER_HUNT_DOUBLE_BP)} 확률로 💎가 두 배가 되고, 따로 {bpPct(TOWER_HUNT_BOX_BP)} 확률로{' '}
-          <DocLink slug="supply">보급 상자</DocLink>를 함께 받는다(부위마다 3분의 1씩). 둘이 한 판에 함께 나올 수도 있다.
+          일정 확률로 💎가 두 배가 되고, 일정 확률로 <DocLink slug="supply">보급 상자</DocLink>를 함께 받는다. 한 판에
+          함께 나올 수도 있다.
         </LI>
       </UL>
       <Tbl
@@ -185,15 +167,6 @@ export default function Doc() {
           return [`${f}~${(i + 1) * TOWER_SECTION}층`, r.min === r.max ? n(r.min) : `${n(r.min)}~${n(r.max)}`, n(towerHuntBox(f))];
         })}
       />
-
-      <H2 id="ranking">순위</H2>
-      <UL>
-        <LI>
-          가장 높이 돌파한 층으로 서버 순위를 매기고, 같은 층이면 먼저 오른 사람이 앞선다.{' '}
-          <DocLink slug="ranking">랭킹</DocLink>의 무한의 탑 탭에서 볼 수 있다.
-        </LI>
-        <LI>1위는 칭호 &ldquo;탑의 주인&rdquo;을 단다(1위를 내주면 사라진다).</LI>
-      </UL>
     </>
   );
 }
