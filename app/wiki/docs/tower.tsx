@@ -154,18 +154,22 @@ export default function Doc() {
           오르기와 같은 하루 {TOWER_DAILY_ATTEMPTS}번에서 쓰며, <b>토벌은 이겨도 한 번 줄어든다</b>. 전투는 돌파와 같다(같은
           요구 장비·같은 몬스터 스킬).
         </LI>
-        <LI>이기면 전투 화면에서 즉시 전리품을 받는다. 💎는 구간 범위 안에서 정해진다.</LI>
+        <LI>이기면 전투 화면에서 즉시 전리품을 받는다. 💎는 높은 층일수록 많고, 그 층의 범위 안에서 정해진다.</LI>
         <LI>
           일정 확률로 💎가 두 배가 되고, 일정 확률로 <DocLink slug="supply">보급 상자</DocLink>를 함께 받는다. 한 판에
           함께 나올 수도 있다.
         </LI>
       </UL>
       <Tbl
-        head={['구간', '토벌 💎', '상자 📦']}
+        head={['구간', '첫 층 💎', '아홉째 층 💎', '특별층 💎', '상자 📦']}
         rows={Array.from({ length: sections }, (_, i) => {
-          const f = i * TOWER_SECTION + 1;
-          const r = towerHuntRange(f);
-          return [`${f}~${(i + 1) * TOWER_SECTION}층`, r.min === r.max ? n(r.min) : `${n(r.min)}~${n(r.max)}`, n(towerHuntBox(f))];
+          const lo = i * TOWER_SECTION + 1;
+          const hi = (i + 1) * TOWER_SECTION;
+          const rng = (f: number) => {
+            const r = towerHuntRange(f);
+            return r.min === r.max ? n(r.min) : `${n(r.min)}~${n(r.max)}`;
+          };
+          return [`${lo}~${hi}층`, rng(lo), rng(hi - 1), rng(hi), n(towerHuntBox(lo))];
         })}
       />
     </>

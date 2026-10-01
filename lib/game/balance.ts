@@ -1128,12 +1128,16 @@ const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720] as const;
 
 export type TowerReward = { diamond: number; boxes: number };
 /**
- * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎, 평균 = 그 층 구간 일반층 첫 돌파 💎의 10분의 1(10-01 사용자 확정).
- * 하루 3번 모두 토벌해도 꼭대기 구간 평균 450💎 — 무료 유입(하루 약 454💎)을 넘지 않게. 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
+ * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎. 구간 기준값 = 그 구간 일반층 첫 돌파 💎의 10분의 1(10-01 사용자 확정)이고,
+ * 구간 안에서 층마다 조금씩 오른다(`TOWER_HUNT_FLOOR_FACTORS`: 첫 층 0.8 → 9번째 층 1.2, 특별층 1.3 — 구간 평균은 기준값과 거의 같다).
+ * 꼭대기(100층)만 하루 3번 토벌해도 평균 585💎 — 무료 유입(하루 약 454💎) 언저리. 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
  */
+export const TOWER_HUNT_FLOOR_FACTORS = [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.3] as const;
 export function towerHuntReward(floor: number): number {
-  const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(Math.max(1, floor))) - 1;
-  return Math.floor(TOWER_NORMAL_DIA[i]! / 10);
+  const f = Math.max(1, floor);
+  const i = Math.min(TOWER_NORMAL_DIA.length, towerSection(f)) - 1;
+  const pos = ((f - 1) % TOWER_SECTION) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  return Math.round((TOWER_NORMAL_DIA[i]! / 10) * TOWER_HUNT_FLOOR_FACTORS[pos]);
 }
 /** 토벌 💎 범위 — 평균의 ±20%(`TOWER_HUNT_SPREAD`), 반올림. 그 안에서 고르게 굴린다(10-01 사용자 확정). */
 export const TOWER_HUNT_SPREAD = 0.2;
