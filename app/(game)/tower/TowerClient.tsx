@@ -75,7 +75,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const router = useRouter();
   // 장착은 낙관적 반영(useOptimistic) 때문에 트랜지션 안에서. 도전은 트랜지션 밖에서 자체 busy로 —
   // 트랜지션 안에서 부르면 액션이 끝나도 라우터 갱신이 붙잡혀 pending이 풀리지 않아, 돌파 뒤 다음 층 도전 버튼이 막혔다.
-  const [, start] = useTransition();
+  const [equipPending, start] = useTransition();
   const [busy, setBusy] = useState(false);
   // 결과를 받기 전까지 유지하는 도전 요청 키(층별) — 응답 없이 끝난 도전을 다시 누르면 같은 키로 보낸다.
   const idemRef = useRef<{ floor: number; key: string } | null>(null);
@@ -105,8 +105,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const target = huntFloor ?? next;
   // 주소만 바꾼다(history API) — router.push는 같은 페이지를 서버에서 다시 그려(탑 데이터+레이아웃 쿼리) 전환마다 왕복이 생겼다.
   // Next가 history.pushState를 useSearchParams와 맞춰 주어 휴대폰 뒤로 가기도 그대로 목록으로 돌아온다.
-  const setView = (v: 'list' | 'detail', huntAt?: number) =>
+  // 상세 진입은 기록을 하나 쌓는다 — 전투 뒤 '목록'은 그 기록을 되돌려(back) 목록에서 뒤로가기가 두 번 되지 않게(10-01).
+  const pushedDetail = useRef(false);
+  const setView = (v: 'list' | 'detail', huntAt?: number) => {
+    if (v === 'detail') pushedDetail.current = true;
     window.history.pushState(null, '', v === 'detail' ? (huntAt ? `/tower?v=d&f=${huntAt}` : '/tower?v=d') : '/tower');
+  };
   const [openSection, setOpenSection] = useState(towerSection(next));
   // 돌파로 다음 구간에 들어서면 펼친 구간도 따라간다(렌더 중 조정 — effect 없이).
   const [seenNext, setSeenNext] = useState(next);
@@ -192,7 +196,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
-  const rule = ruleOf(target);
+  // 매 렌더 새 Set을 만들면 아래 자동 장착 메모가 늘 다시 계산된다 — 풀·층이 바뀔 때만.
+  const rule = useMemo(() => floorRule(target, pools.get(target) ?? null), [pools, target]);
 
   // 아바타 — 지금 장착 그대로 이 아바타를 골랐을 때의 배율·탑 전투력(3차 피드백 6: 최대치 표시 없음), 탑 전투력 높은 순.
   // 처음엔 마지막에 고른 아바타, 없으면 맨 위.
@@ -313,7 +318,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         onList={() => {
           setBattle(null);
           setPicked(null);
-          window.history.replaceState(null, '', '/tower');
+          if (view === 'detail' && pushedDetail.current) {
+            pushedDetail.current = false;
+            window.history.back(); // 상세 진입 기록을 되돌린다 — 주소가 /tower가 되며 seenView 조정이 전투 화면도 닫는다
+          } else {
+            window.history.replaceState(null, '', '/tower'); // 직접 링크로 들어온 상세는 되돌릴 기록이 없다
+          }
         }}
         onNext={() => setBattle(null)}
         onRetry={() => challenge(res ? { floor: res.floor, hunt: !!res.hunt } : undefined)}
@@ -348,7 +358,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   </button>
                 ))}
               </div>
-              <PoolList board={board} items={items} slot={equipTab} rule={pRule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} />
+              <PoolList board={board} items={items} slot={equipTab} rule={pRule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} disabled={equipPending} />
             </ModalLayout>
           </ModalShell>
         ) : null}
@@ -501,7 +511,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
         <div className="flex-none px-3 pt-2 pb-3">
           <ActionBar>
-            <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착됨'}</SecondaryButton>
+            <SecondaryButton disabled={!autoBetter || busy || equipPending} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착됨'}</SecondaryButton>
             <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={() => challenge()}>
               {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : huntFloor != null ? '토벌' : '도전'}
             </PrimaryButton>
@@ -608,7 +618,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               <div key={sec} className={`relative overflow-hidden rounded-xl border bg-zinc-950/80 backdrop-blur-[2px] ${sec === towerSection(next) ? 'border-amber-600/60' : 'border-zinc-800'}`}>
                 {/* 그 장소의 장면을 카드 전체에 깔고(접히면 머리 띠만큼, 펼치면 층 칸 뒤까지) 왼쪽을 어둡게. 잠긴 구간은 어둡게. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
+                <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden decoding="async" className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/10" />
                 {/* 구간 머리 — 장소 이름·층 범위·진행. */}
                 <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between px-3 text-left">
@@ -650,6 +660,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                             <img
                               src={assetUrl(`/sprites/tower/mon/${towerFloorInfo(f).sprite}.png`)}
                               alt=""
+                              decoding="async"
                               className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-50 grayscale' : st === 'l' ? 'opacity-30 brightness-0 invert' : ''}`}
                               style={PIX}
                             />
@@ -722,13 +733,15 @@ function poolCounts(board: TowerBoard, items: PoolItem[], rule: ReturnType<typeo
  * 착용 가능 장비 목록(시안 A3) — 한 줄에 강화·초월, 기본 전투력 × 탑 배율 = 탑 기준 전투력, 장착 버튼까지.
  * 별도 상세 팝업 없이 여기서 바로 장착(낙관적). 순서: 장착 중 → 보유(탑 기준 전투력 높은 순) → 미보유.
  */
-function PoolList({ board, items, slot, rule, avatarKeys, onEquip }: {
+function PoolList({ board, items, slot, rule, avatarKeys, onEquip, disabled = false }: {
   board: TowerBoard;
   items: PoolItem[];
   slot: TowerSlot;
   rule: ReturnType<typeof floorRule>;
   avatarKeys: ReadonlySet<string>;
   onEquip: (ueid: string) => void;
+  /** 장착 요청 중 — 연타로 같은 요청이 겹치지 않게. */
+  disabled?: boolean;
 }) {
   const ownedByKey = new Map(items.map((i) => [i.key, i]));
   const rows = poolKeys(board, items, slot, rule)
@@ -761,7 +774,7 @@ function PoolList({ board, items, slot, rule, avatarKeys, onEquip }: {
           {r.it?.equipped ? (
             <span className="w-[52px] flex-none text-center text-[10.5px] font-black text-amber-300">장착 중</span>
           ) : r.it ? (
-            <button type="button" onClick={() => onEquip(r.it!.ueid)} className="w-[52px] flex-none rounded-lg bg-amber-500 py-1.5 text-[11px] font-black text-amber-950">장착</button>
+            <button type="button" onClick={() => onEquip(r.it!.ueid)} disabled={disabled} className="w-[52px] flex-none rounded-lg bg-amber-500 py-1.5 text-[11px] font-black text-amber-950 disabled:opacity-50">장착</button>
           ) : (
             <span className="w-[52px] flex-none text-center text-[10px] text-zinc-500">미보유</span>
           )}

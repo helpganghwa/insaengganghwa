@@ -268,11 +268,17 @@ export async function challengeTower(
         from tower_battles where user_id=${userId}::uuid and server_id=${serverId} and idem_key=${idem}`)) as unknown as BattleRow[];
       if (prev) {
         const left = attemptsLeft(p.loss_day, Number(p.losses));
+        // 토벌 승리의 재전송 — 전리품은 이미 들어갔으니 지금 잔액을 실어 헤더 다이아를 맞춘다(10-01).
+        let diamondBalance: string | null = null;
+        if (prev.hunt && prev.win) {
+          const [c] = (await tx.execute(sql`select diamond::text as d from characters where user_id=${userId}::uuid and server_id=${serverId}`)) as unknown as { d: string }[];
+          diamondBalance = c?.d ?? null;
+        }
         return {
           battleId: prev.id, floor: Number(prev.floor), win: prev.win, keyIndex: Number(prev.key_turn), turns: prev.turns,
           reward: prev.reward, attemptsLeft: left, best, towerCp: Number(prev.tower_cp),
           mult: prev.base_cp ? Math.round((Number(prev.tower_cp) / prev.base_cp) * 100) / 100 : 1, myRank: null, replayed: true,
-          hunt: !!prev.hunt, diamondBalance: null,
+          hunt: !!prev.hunt, diamondBalance,
         };
       }
     }
