@@ -98,7 +98,7 @@ export default function Doc() {
       <UL>
         <LI>도전하면 서버가 전투를 판정하고, 화면은 그 기록을 차례로 보여 준다.</LI>
         <LI>
-          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 몬스터는 몬스터 전투력). 한 번 공격하면 자기 전투력의
+          체력은 전투력의 {TOWER_HP_MULT}배다(나는 탑 전투력, 몬스터는 몬스터 전투력). 한 번 공격하면 자기 전투력의{' '}
           {TOWER_DMG_MIN * 100}~{TOWER_DMG_MAX * 100}%만큼 피해를 준다.
         </LI>
         <LI>최대 {TOWER_BATTLE.maxTurns}턴까지 싸우고, 그때까지 몬스터를 쓰러뜨리지 못하면 진다.</LI>
