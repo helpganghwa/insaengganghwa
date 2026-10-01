@@ -505,9 +505,11 @@ export function RaidSlots({
         )}
       </div>
 
-      {/* 참여 가능한 레이드 — 초대·친구·길드 통합(중복 제거·유리한 경로 선택은 page에서).
-          행 클릭 = 상세 관전(참가/요청은 상세에서). */}
-      <RaidListSection title="참여 가능한 레이드" raids={openRaids} nowIso={nowIso} />
+      {/* 참여 가능한 레이드 — 초대·친구·길드 세 칸(유저 요청 10-01). 같은 레이드는 page가 중복을 없애고
+          가장 유리한 경로 하나를 고른 뒤라, 그 경로의 칸에만 한 번 뜬다. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
+      <RaidListSection title="초대받은 레이드" raids={openRaids.filter((f) => f.via === 'invite')} nowIso={nowIso} />
+      <RaidListSection title="친구 레이드" raids={openRaids.filter((f) => f.via === 'friend')} nowIso={nowIso} />
+      <RaidListSection title="길드 레이드" raids={openRaids.filter((f) => f.via === 'guild')} nowIso={nowIso} />
 
       {picking ? (
         // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).
