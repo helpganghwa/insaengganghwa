@@ -560,16 +560,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-none flex-col items-end justify-end gap-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[88px] w-auto ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
-                  {/* 토벌 — 돌파한 층만. 이기면 💎(오르기와 같은 하루 도전을 쓰고, 이겨도 1회). */}
-                  {hero <= best ? (
-                    <button type="button" onClick={() => setView('detail', hero)} className="h-6 rounded-md bg-rose-700 px-2 text-[10.5px] font-black leading-none text-rose-50">
-                      토벌 {huntText(hero)}
-                    </button>
-                  ) : null}
-                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
               </div>
             </div>
           ) : (
@@ -668,7 +660,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
         {/* 아래 버튼 — 스크롤해도 바닥에 붙고, 위로 어둡게 번지는 띠로 마지막 카드와 간격을 둔다. */}
         <div className="sticky bottom-0 z-10 -mx-3 mt-auto bg-gradient-to-t from-zinc-950 from-60% to-transparent px-3 pt-6">
-          {!topped ? (
+          {hero != null && hero <= best ? (
+            // 돌파한 층을 골랐으면 그 층 토벌 — 이기면 💎(오르기와 같은 하루 도전을 쓰고, 이겨도 1회).
+            <button type="button" onClick={() => setView('detail', hero)} className="w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
+              {hero}층 토벌 <span className="text-[11.5px] font-bold opacity-80">{huntText(hero)}</span>
+            </button>
+          ) : !topped ? (
             <button type="button" onClick={() => setView('detail')} className="w-full rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 py-3 text-[14px] font-black text-amber-950 shadow-lg">
               {next}층 도전
             </button>
