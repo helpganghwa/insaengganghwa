@@ -221,8 +221,8 @@ export function simulateTowerBattle(opts: {
     const dmg = raw * (crit ? B.critMul : 1) * m.mul;
     mon -= dmg;
     push(turn, 'me', dmg, crit ? 'critical' : first ? 'first_strike' : null, { raw: crit || m.sk.length ? raw : undefined, skills: m.sk });
-    // 반사 — 내 급소 피해 일부가 되돌아온다.
-    if (crit && has.has('reflect') && me > 0) {
+    // 반사 — 내 급소 피해 일부가 되돌아온다. 그 급소로 몬스터를 쓰러뜨렸으면 없다(10-01: 쓰러뜨린 한 방이 반사로 패배가 되던 문제).
+    if (crit && has.has('reflect') && me > 0 && mon > 0) {
       const back = (dmg * K.reflect.pct) / 100;
       me -= back;
       const saved = tryRevive();
