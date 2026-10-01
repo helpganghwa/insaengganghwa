@@ -4,6 +4,8 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { towerBoard } from '@/lib/game/tower/service';
 
+import { RefreshOnResume } from '@/components/RefreshOnResume';
+
 import { TowerClient } from './TowerClient';
 
 export const metadata: Metadata = { title: '무한의 탑' };
@@ -15,5 +17,11 @@ export default async function TowerPage() {
   const serverId = await getActiveServerId();
   if (!userId) return null;
   const board = await towerBoard(userId, serverId);
-  return <TowerClient board={board} />;
+  // 화면을 열어 둔 채 자정·월요일 0시를 넘기거나 다른 기기에서 도전을 쓴 뒤 돌아오면 다시 불러온다.
+  return (
+    <>
+      <RefreshOnResume />
+      <TowerClient board={board} />
+    </>
+  );
 }

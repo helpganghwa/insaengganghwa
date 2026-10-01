@@ -115,7 +115,7 @@ export default function Doc() {
 
       <H2 id="skill">몬스터 스킬</H2>
       <UL>
-        <LI>11층부터 일부 몬스터가 스킬을 쓴다.</LI>
+        <LI>{TOWER_SECTION}층 수문장부터 일부 몬스터가 스킬을 쓴다.</LI>
         <LI>층 화면에서 몬스터 이름 아래 스킬을 누르면 설명이 나온다.</LI>
       </UL>
       <Tbl

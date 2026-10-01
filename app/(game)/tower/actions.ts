@@ -53,6 +53,8 @@ export async function towerChallengeAction(floor: number, profileId: string | nu
   } catch (e) {
     if (e instanceof TowerError) {
       if (e.code === 'POOL_CHANGED') revalidatePath('/tower');
+      // 평소엔 안 나는 거절(추첨 실패·캐릭터 없음·전투력 0·아바타 불일치)만 로그 — 출시 당일 추첨 실패를 바로 알 수 있게.
+      if (e.code === 'POOL_MISSING' || e.code === 'NO_CHARACTER' || e.code === 'NO_POWER' || e.code === 'BAD_AVATAR') console.warn('[tower.challenge]', e.code, u, floor, hunt);
       return err(e.code);
     }
     console.error('[tower.challenge]', e);

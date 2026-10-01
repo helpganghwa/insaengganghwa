@@ -252,7 +252,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       // 여러 개(자동 장착)도 한 번의 요청 — 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
       const r = await towerEquipAction(ueids).catch(() => ({ status: 'error' as const, message: '장착하지 못했어요. 잠시 후 다시 시도해 주세요.' }));
       if (r.status !== 'success') {
-        setMsg(r.message);
+        showError(r.message); // 팝업 뒤·목록 화면에서도 보이게 헤더 공통 토스트로
         router.refresh();
       }
     });
@@ -280,7 +280,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (!r || r.status !== 'success') {
       setBattle(null);
       // 응답이 없었거나 '지금 층이 아님'이면 화면 값이 서버와 어긋난 것 — 최고 층·남은 도전을 서버와 다시 맞춘다.
-      if (!r || r.code === 'NOT_NEXT_FLOOR' || r.code === 'NOT_CLEARED') router.refresh();
+      // 다른 기기에서 도전을 다 썼거나 아바타가 사라진 경우도 포함 — 메시지만 띄우면 버튼이 고착된다.
+      if (!r || ['NOT_NEXT_FLOOR', 'NOT_CLEARED', 'NO_ATTEMPTS', 'NO_POWER', 'TOP_REACHED', 'BAD_AVATAR'].includes(r.code)) router.refresh();
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
@@ -295,7 +296,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       <TowerBattle
         key={res ? res.battleId : 'pending'}
         floor={res ? res.floor : target}
-        hunt={huntFloor != null}
+        hunt={res ? !!res.hunt : huntFloor != null}
         me={me}
         result={res}
         myCp={cpNow.total}
