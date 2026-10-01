@@ -28,17 +28,19 @@ function avatarKeyOf(keys: readonly string[], slot: TowerSlot, catalog: TowerBoa
 }
 
 /** 아바타 장비 아이콘 — 지금 장착과 같아 ×2가 되면 내 장비 ×2처럼 금색 테두리·빛, 아니면 흐리게. */
-function AvatarGear({ slot, k, on, size = 'sm' }: { slot: TowerSlot; k: string | undefined; on: boolean; size?: 'sm' | 'xs' }) {
+function AvatarGear({ slot, k, on, size = 'sm', badge = false }: { slot: TowerSlot; k: string | undefined; on: boolean; size?: 'sm' | 'xs'; badge?: boolean }) {
   const box = size === 'sm' ? 'h-7 w-7' : 'h-6 w-6';
   const im = size === 'sm' ? 'h-[22px] w-[22px]' : 'h-[19px] w-[19px]';
   return (
     <span
-      className={`flex flex-none items-center justify-center rounded-[5px] border ${box} ${
+      className={`relative flex flex-none items-center justify-center rounded-[5px] border ${box} ${
         on ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : 'border-zinc-700 bg-zinc-900 opacity-40 grayscale'
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {k ? <img src={itemSrc(slot, k)} alt="" className={im} style={PIX} /> : null}
+      {/* ×2 딱지 — 내 장비 줄의 '×2 아바타' 칩과 같은 색. */}
+      {badge && on ? <span className="absolute -top-1.5 -right-1.5 rounded-[3px] bg-amber-400 px-[3px] text-[8.5px] leading-[1.45] font-black text-amber-950">×2</span> : null}
     </span>
   );
 }
@@ -449,25 +451,29 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     {p?.mult === 0 ? ' · 이 층 요구 장비 아님' : null}
                   </span>
                 </span>
-                {/* 그 부위의 아바타 장비 — 같아서 ×2면 금색 선으로 이어 빛나고, 아니면 흐리게(기본 아바타는 없음). */}
-                {avatar && !avatar.isDefault ? (
-                  <span className="flex flex-none items-center">
-                    <span className={`h-[2px] w-2.5 ${p?.mult === 2 ? 'bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,.9)]' : 'bg-zinc-700'}`} />
-                    <AvatarGear slot={s} k={avatarKeyOf(avatar.keys, s, board.catalog)} on={p?.mult === 2} size="xs" />
-                  </span>
-                ) : null}
                 <b className={`flex-none tabular-nums ${p?.mult === 2 ? 'text-[13px] text-amber-300' : p?.mult === 0 || !p ? 'text-[12px] text-red-300/80' : 'text-[12.5px] text-zinc-100'}`}>
                   {p ? (p.mult === 0 ? '제외' : n(p.score)) : '-'}
                 </b>
               </button>
             );
           })}
-          {/* 아바타 — 작은 그림 · '아바타' · 변경. 맞는 장비는 위 장비 줄마다 짝으로 보인다. */}
+          {/* 아바타 — '아바타' · 작은 그림 · 만들 때 입은 장비 3칸(지금 장착과 같아 ×2면 금색 빛·×2 딱지, 아니면 흐리게) · 변경. */}
           <button type="button" onClick={() => setSheet('avatar')} className={`flex w-full items-center gap-2 py-1.5 text-left text-[12px] ${FLOOR_ROW}`}>
+            <span className="flex-none text-zinc-400">아바타</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {avatar?.south ? <img src={avatar.south} alt="" className="h-7 w-auto" style={PIX} /> : null}
-            <span className="flex-1 text-zinc-400">{avatar?.isDefault ? '기본 아바타' : '아바타'}</span>
-            <span className="font-bold text-amber-300">변경 ›</span>
+            {avatar?.south ? <img src={avatar.south} alt="" className="h-8 w-auto" style={PIX} /> : null}
+            {avatar && !avatar.isDefault ? (
+              <span className="flex items-center gap-1.5 pl-0.5">
+                {TOWER_SLOTS.map((s) => {
+                  const k = avatarKeyOf(avatar.keys, s, board.catalog);
+                  const p = cpNow.pieces.find((x) => x.slot === s);
+                  return <AvatarGear key={s} slot={s} k={k} on={!!k && p?.key === k && p.mult === 2} badge />;
+                })}
+              </span>
+            ) : (
+              <span className="text-[10.5px] text-zinc-500">만들 때 입은 장비 없음</span>
+            )}
+            <span className="ml-auto font-bold text-amber-300">변경 ›</span>
           </button>
           {/* 합 — 장비별 이 층 기준 전투력을 그대로 더한 값 = 이 층에서 싸우는 전투력. */}
           <div className="flex items-baseline justify-between py-2 text-[12px] tabular-nums">
