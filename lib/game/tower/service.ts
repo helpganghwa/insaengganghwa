@@ -9,13 +9,13 @@ import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
 import { simulateTowerBattle, type TowerTurn } from './battle';
 import { towerFloorSkills } from './floors';
+import { towerRankValueSql } from './rank-value';
 import { TOWER_SLOTS, drawPool, floorRule, towerCp, type EquippedPiece, type FloorRule, type Rng10k, type SlotKeys, type TowerSlot } from './engine';
 
 /** 서버 권위 RNG(CLAUDE §3.1). */
 const cryptoRng10k: Rng10k = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 10000;
 
 /** 정지 중 계정 제외(리더보드 activeBannedIds와 같은 술어) — pr = profiles 별칭. */
-const NOT_BANNED = sql`not (pr.banned_at is not null and (pr.ban_until is null or pr.ban_until > now()))`;
 
 export class TowerError extends Error {
   constructor(public code: 'NOT_NEXT_FLOOR' | 'NOT_CLEARED' | 'NO_ATTEMPTS' | 'TOP_REACHED' | 'NO_CHARACTER' | 'BAD_AVATAR' | 'NO_POWER' | 'POOL_CHANGED' | 'POOL_MISSING') {
@@ -132,13 +132,15 @@ export async function towerBoard(userId: string, serverId: number) {
                coalesce((up.options->>'isDefault')::boolean, false) as is_default, up.created_at
         from user_profiles up where up.user_id=${userId}::uuid and up.server_id=${serverId}) a), '[]'::json) as avatars,
       coalesce((select json_agg(c order by c.id) from (select id, code, slot::text as slot, name from catalog_items where active) c), '[]'::json) as catalog,
+      -- 요구 장비는 다음 구간까지만(10-01) — 목록이 보여 주는 범위(도전할 구간 + 1)와 같다. 그 너머는 화면이 들어설 때 다시 불러온다.
       coalesce((select json_agg(p) from (select floor, weapon, armor, accessory from tower_pools
-        where server_id=${serverId} and week_start=${week}::date) p), '[]'::json) as pools,
-      (select (count(*) + 1)::int from tower_progress t join profiles pr on pr.id = t.user_id, me
-        where me.best_floor > 0 and t.server_id=${serverId} and ${NOT_BANNED}
-          -- 랭킹 표(rank-value.ts)와 같은 기준 — 도달 시각은 초 단위(같은 초면 같은 등수)
-          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
-            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))) as my_rank,
+        where server_id=${serverId} and week_start=${week}::date
+          and floor <= ((coalesce((select best_floor from me), 0) / ${TOWER_SECTION}) + 2) * ${TOWER_SECTION}) p), '[]'::json) as pools,
+      -- 내 순위 = 랭킹 표(leaderboard_ranks, 돌파 직후 증분 반영·매시 스냅샷)에서 내 값보다 큰 행 수 + 1 — 인덱스 한 번(10-01, 종전 전 유저 조인).
+      -- 밴 유저는 밴 시점에 표에서 빠지고, 내 행이 아직 옛 값이어도 '나보다 큰 값'만 세므로 결과는 같다.
+      (select (count(*) + 1)::int from leaderboard_ranks lr, me
+        where me.best_floor > 0 and lr.server_id=${serverId} and lr.metric='tower'
+          and lr.value > ${sql.raw(towerRankValueSql('me'))}) as my_rank,
       -- 돌파했지만 아직 받지 않은 층(목록의 돌파 보상 받기)
       coalesce((select json_agg(f order by f) from me, generate_series(1, me.best_floor) f
         where not exists (select 1 from tower_claims c where c.user_id=${userId}::uuid and c.server_id=${serverId} and c.floor = f)), '[]'::json) as unclaimed`)) as unknown as {
@@ -155,7 +157,10 @@ export async function towerBoard(userId: string, serverId: number) {
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
   // 캐릭터가 없는 서버(쿠키 조작 등)면 추첨하지 않는다(감사 M2) — 화면은 page가 캐릭터 없음으로 처리.
-  const drawn = r.nickname != null && r.pools.length < POOL_FLOORS.length ? await towerPools(serverId) : null;
+  // 그 주 첫 접근(아직 추첨 전)만 추첨 — 보드는 다음 구간까지만 받으므로 그 범위의 행 수로 판단한다.
+  const bestNow = Number(r.prog?.best_floor ?? 0);
+  const expectPools = Math.min((Math.floor(bestNow / TOWER_SECTION) + 2) * TOWER_SECTION, TOWER_FLOORS) - TOWER_SECTION;
+  const drawn = r.nickname != null && r.pools.length < expectPools ? await towerPools(serverId) : null;
   const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
   rememberPools(serverId, { week: drawn?.week ?? week, pools });
   const p = r.prog;
@@ -355,12 +360,11 @@ export async function challengeTower(
       diamondBalance = c?.d ?? null;
     }
     if (battle.win && !hunt) {
+      // 랭킹 표에서 내 값보다 큰 행 수 + 1(towerBoard my_rank와 같은 기준, 10-01) — 전 유저 조인 대신 인덱스 한 번.
       const [rk] = (await tx.execute(sql`
         with me as (select best_floor, best_at from tower_progress where user_id=${userId}::uuid and server_id=${serverId})
-        select (count(*) + 1)::int as r from tower_progress t join profiles pr on pr.id = t.user_id, me
-        where t.server_id=${serverId} and ${NOT_BANNED}
-          and (t.best_floor > me.best_floor or (t.best_floor = me.best_floor
-            and floor(extract(epoch from t.best_at)) < floor(extract(epoch from me.best_at))))`)) as unknown as { r: number }[];
+        select (count(*) + 1)::int as r from leaderboard_ranks lr, me
+        where lr.server_id=${serverId} and lr.metric='tower' and lr.value > ${sql.raw(towerRankValueSql('me'))}`)) as unknown as { r: number }[];
       myRank = rk ? Number(rk.r) : null;
     }
     return {

@@ -18,6 +18,7 @@ import { TierChip } from './TierChip';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
+import { Tabs } from '@/components/ui/Tabs';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useServerClock } from '@/lib/client/use-server-clock';
@@ -218,11 +219,12 @@ function ShareModeRow({
  * 통합 목록(2026-07-31) — 초대·친구·길드를 한 섹션에 모으고 관계는 배지로 구분한다.
  * 섹션을 나누면 친구이자 길드원인 개설자의 레이드가 중복 노출되고, 우선순위를 고정하면
  * 더 유리한 참가 경로(자유 참여)를 버리게 된다. 경로 선택은 page가 이미 끝냈다. */
-function RaidListSection({ title, raids, nowIso }: { title: string; raids: FriendRaid[]; nowIso: string }) {
-  if (raids.length === 0) return null;
+function RaidListSection({ title, raids, nowIso, emptyText }: { title: string; raids: FriendRaid[]; nowIso: string; emptyText?: string }) {
+  if (raids.length === 0)
+    return emptyText ? <p className="rounded-lg border border-dashed border-zinc-800 py-4 text-center text-[12px] text-zinc-500">{emptyText}</p> : null;
   return (
-    <section className="mt-5">
-      <h2 className="mb-2 text-[12px] font-bold text-zinc-500">{title}</h2>
+    <section className={title ? 'mt-5' : ''}>
+      {title ? <h2 className="mb-2 text-[12px] font-bold text-zinc-500">{title}</h2> : null}
       <div className="space-y-2">
         {raids.map((f) => (
           <Link prefetch={false}
@@ -332,6 +334,8 @@ export function RaidSlots({
 }) {
   const router = useRouter();
   const { showError } = useResourceToast();
+  // 참여 가능한 레이드 세그먼트(전체/초대/길드/친구) — 화면 안 상태(기본 전체).
+  const [seg, setSeg] = useState<'all' | 'invite' | 'guild' | 'friend'>('all');
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
@@ -505,11 +509,26 @@ export function RaidSlots({
         )}
       </div>
 
-      {/* 참여 가능한 레이드 — 초대·친구·길드 세 칸(유저 요청 10-01). 같은 레이드는 page가 중복을 없애고
-          가장 유리한 경로 하나를 고른 뒤라, 그 경로의 칸에만 한 번 뜬다. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
-      <RaidListSection title="초대받은 레이드" raids={openRaids.filter((f) => f.via === 'invite')} nowIso={nowIso} />
-      <RaidListSection title="친구 레이드" raids={openRaids.filter((f) => f.via === 'friend')} nowIso={nowIso} />
-      <RaidListSection title="길드 레이드" raids={openRaids.filter((f) => f.via === 'guild')} nowIso={nowIso} />
+      {/* 참여 가능한 레이드 — 세그먼트 전체/초대/길드/친구(유저 요청 10-01). 같은 레이드는 page가 중복을 없애고
+          가장 유리한 경로 하나를 고른 뒤라, 그 경로의 세그먼트에만 한 번 뜬다. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
+      {openRaids.length > 0 ? (
+        <section className="mt-5">
+          <h2 className="mb-2 text-[12px] font-bold text-zinc-500">참여 가능한 레이드</h2>
+          <Tabs
+            size="sm"
+            value={seg}
+            onChange={setSeg}
+            items={[
+              { key: 'all', label: `전체 ${openRaids.length}` },
+              { key: 'invite', label: `초대 ${openRaids.filter((f) => f.via === 'invite').length}` },
+              { key: 'guild', label: `길드 ${openRaids.filter((f) => f.via === 'guild').length}` },
+              { key: 'friend', label: `친구 ${openRaids.filter((f) => f.via === 'friend').length}` },
+            ]}
+            className="mb-2"
+          />
+          <RaidListSection title="" raids={seg === 'all' ? openRaids : openRaids.filter((f) => f.via === seg)} nowIso={nowIso} emptyText={`${seg === 'invite' ? '초대받은' : seg === 'guild' ? '길드' : '친구'} 레이드가 없어요`} />
+        </section>
+      ) : null}
 
       {picking ? (
         // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).
