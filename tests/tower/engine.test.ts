@@ -244,6 +244,19 @@ describe('몬스터 스킬', () => {
     for (const t of hits) expect(t.meHp === 0 || (t.event === 'revive' && t.meHp === 1)).toBe(true);
     expect(winRate(['death'], 1000)).toBeLessThan(1);
   });
+  it('반사 — 급소로 몬스터를 쓰러뜨린 한 방에는 반사가 없다(동시 0으로 지지 않는다)', () => {
+    let kills = 0;
+    for (let i = 0; i < 2000; i++) {
+      const r = run(['reflect'], i + 1, 300);
+      const t = r.turns;
+      const k = t.findIndex((x) => x.actor === 'me' && x.monHp === 0);
+      if (k < 0) continue;
+      kills++;
+      expect(t.slice(k + 1).some((x) => x.skills?.includes('reflect'))).toBe(false);
+      expect(r.win).toBe(t[t.length - 1]!.meHp > 0);
+    }
+    expect(kills).toBeGreaterThan(100);
+  });
   it('위압 — 처음 몇 턴의 내 피해만 줄어든다', () => {
     for (const t of lines(['awe'])) if (t.skills?.includes('awe')) expect(t.turn).toBeLessThanOrEqual(TOWER_SKILL.awe.turns);
   });
