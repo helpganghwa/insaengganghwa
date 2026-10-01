@@ -73,7 +73,9 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
               <b className="text-[15px] font-black text-white">{sp ? <span className="text-red-300">✦ </span> : null}{floor}층</b>
               <span className="text-[11px] text-zinc-300"> · {info.theme}</span>
             </div>
-            <div className="text-[11px] text-zinc-300">{hunt ? `토벌 ${huntText(floor)}` : `돌파 ${rewardText(floor)}${towerFloorTitle(floor) ? ' · 칭호' : ''}`}</div>
+            <div className="text-[11px] text-zinc-300">
+              {hunt ? `토벌 ${huntText(floor)}` : <>돌파 {rewardText(floor)}{towerFloorTitle(floor) ? <> · 칭호 <TitleTag code={towerFloorTitle(floor)} /></> : null}</>}
+            </div>
           </div>
           <div className="flex-none text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
             <div>
@@ -266,14 +268,6 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
         ))}
         {/* 토벌 승리 — 마지막 기록 줄에 전리품(이 판에서 이미 지급됨). 더블·상자가 터지면 강조. */}
         {done && hunt && win && result.reward ? <HuntLoot reward={result.reward} monName={info.name} /> : null}
-        {/* 층 도달 칭호(10·60·100층) — 오르기 승리 기록 끝에 한 줄. 발견·보상은 칭호 화면에서(판정은 거기서 한다). */}
-        {done && !hunt && win && towerFloorTitle(floor) ? (
-          <div className="mt-1.5 text-[12px] leading-relaxed">
-            <span className="text-amber-300">▸ </span>
-            <b className="text-amber-200">✦ 칭호 <TitleTag code={towerFloorTitle(floor)} /> 획득!</b>
-            <span className="text-zinc-500"> · 칭호 화면에서 확인</span>
-          </div>
-        ) : null}
         {done ? (
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
@@ -283,7 +277,10 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
                   <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
                 ) : result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
-                    돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
+                    돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''}
+                    {/* 층 도달 칭호(10·60·100층) — 조건이 찼다는 안내. 발견·보상은 칭호 화면에서. */}
+                    {towerFloorTitle(floor) ? <> · 칭호 <TitleTag code={towerFloorTitle(floor)} /></> : null}
+                    {' '}· 목록에서 받기 ›
                   </button>
                 ) : null}
               </>
