@@ -41,7 +41,7 @@ const DIAMOND = 290;
 let seq = 0;
 const newPid = (tag: string) => `gp-rtdntest_${tag}_${++seq}_${process.pid}`;
 const newToken = (tag: string) => `rtdntok_${tag}_${seq}_${process.pid}_${Date.now()}`;
-// 기본 구매 시각 = 5분 전(처리 대기 3분이 지난 알림).
+// 기본 구매 시각 = 5분 전(처리 대기 90초가 지난 알림).
 const purchase = (o: { orderId: string; atMs?: number; purchaseType?: number }) => ({
   purchaseState: 0,
   consumptionState: 0,
@@ -217,7 +217,7 @@ describe.skipIf(skip)('RTDN — 구글 알림으로 주문 매칭·지급(DB 통
     expect(await handleOneTimePurchase(SKU, newToken('legacy'))).toMatchObject({ kind: 'granted', paymentId: pid });
   });
 
-  it('구매 직후(3분 안)는 처리하지 않고 재전송을 기다린다', async () => {
+  it('구매 직후(90초 안)는 처리하지 않고 재전송을 기다린다', async () => {
     const id = await insertOrder(newPid('grace'));
     made.push(id);
     mockGet.mockResolvedValue(purchase({ orderId: 'GPA.rtdn-grace', atMs: Date.now() - 30_000 }));

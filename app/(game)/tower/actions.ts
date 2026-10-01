@@ -74,8 +74,8 @@ export async function towerEquipAction(userEquipmentIds: string[]) {
     if (!ids.length || !ids.every((id) => /^\d+$/.test(id))) return err('NOT_FOUND');
     // 지금 서버의 장비만(탑 화면은 지금 서버 장비만 보여 준다) — 다른 서버 장비 id가 와도 NOT_FOUND.
     await equipItems(u, ids.map((id) => BigInt(id)), await getActiveServerId());
-    // 헤더 전투력(레이아웃)이 장착으로 바뀌므로 여기는 다시 그린다 — 자동 장착도 1번.
-    revalidatePath('/tower');
+    // 화면을 다시 그리지 않는다(10-01, CLAUDE §11.7) — 헤더 전투력은 보유 장비 전체 합(layout-data equip_stats)이라 장착으로
+    // 바뀌지 않고, 탑 화면은 응답을 받으면 장착 상태를 스스로 확정한다. 종전엔 층마다 자동 장착 때 레이아웃+보드(~90KB)가 다시 나갔다.
     return { status: 'success' as const };
   } catch (e) {
     if (e instanceof EquipError) return err(e.code);

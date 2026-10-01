@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -186,13 +186,28 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   // 낙관적 장착(부위 → 장착할 장비) — 누르는 즉시 화면에 반영하고, 실패하면 되돌린다. 성공하면 액션의 재렌더가 같은 상태를 준다.
   // useOptimistic — 액션과 그 재렌더가 한 트랜잭션으로 끝날 때까지 유지돼, 종전처럼 응답 직후 옛 장착이 잠깐 돌아오는 깜빡임이 없다.
   const [optEquip, addOptEquip] = useOptimistic<Partial<Record<TowerSlot, string>>, Partial<Record<TowerSlot, string>>>({}, (o, add) => ({ ...o, ...add }));
+  // 장착 확정 상태 — 액션이 화면을 다시 그리지 않으므로(10-01) 성공 응답을 받으면 여기에 남긴다. 보드가 새로 오면(다른 화면에 갔다 옴·refresh) 비운다.
+  const [confirmedEquip, setConfirmedEquip] = useState<Partial<Record<TowerSlot, string>>>({});
+  if (seenBoard !== board && Object.keys(confirmedEquip).length) setConfirmedEquip({}); // 보드가 새로 오면 확정 장착도 비운다(위 seenBoard 조정과 같은 렌더)
   const items = useMemo(
-    () => board.items.map((i) => (optEquip[i.slot] ? { ...i, equipped: i.ueid === optEquip[i.slot] } : i)),
-    [board.items, optEquip],
+    () =>
+      board.items.map((i) => {
+        const cur = optEquip[i.slot] ?? confirmedEquip[i.slot];
+        return cur ? { ...i, equipped: i.ueid === cur } : i;
+      }),
+    [board.items, optEquip, confirmedEquip],
   );
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
-  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개).
+  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 서버는 다음 구간까지만 보내므로(10-01, 보드 −60%)
+  // 돌파로 그 너머 구간에 들어서면 한 번 다시 불러온다(층마다 한 번만 — 풀이 아직 없는 주에 반복되지 않게).
+  const refreshedFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (next > TOWER_SECTION && !pools.has(next) && refreshedFor.current !== next) {
+      refreshedFor.current = next;
+      router.refresh();
+    }
+  }, [next, pools, router]);
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
@@ -259,6 +274,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       addOptEquip(opt);
       // 여러 개(자동 장착)도 한 번의 요청 — 성공 응답은 액션이 화면을 새로 그려 주니 실패했을 때만 되돌리고 다시 불러온다(CLAUDE §11.7).
       const r = await towerEquipAction(ueids).catch(() => ({ status: 'error' as const, message: '장착하지 못했어요. 잠시 후 다시 시도해 주세요.' }));
+      if (r.status === 'success') setConfirmedEquip((prev) => ({ ...prev, ...opt })); // 낙관값이 풀리기 전에 확정 — 깜빡임 없음
       if (r.status !== 'success') {
         showError(r.message); // 팝업 뒤·목록 화면에서도 보이게 헤더 공통 토스트로
         router.refresh();
