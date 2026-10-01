@@ -1,17 +1,18 @@
 'use client';
 
-import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
+import { TitleTag } from '@/components/TitleTag';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
-import { towerFloorInfo } from '@/lib/game/tower/floors';
+import { towerFloorInfo, towerFloorTitle } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
@@ -43,6 +44,37 @@ function AvatarGear({ slot, k, on, size = 'sm', badge = false }: { slot: TowerSl
       {badge && on ? <span className="absolute -top-1.5 -right-1.5 rounded-[3px] bg-amber-400 px-[3px] text-[8.5px] leading-[1.45] font-black text-amber-950">×2</span> : null}
     </span>
   );
+}
+
+/**
+ * 아바타 그림 메모리 캐시(10-01) — 저장소가 아바타 PNG를 no-cache로 내려 줘 아바타를 바꿀 때마다 다시 받아 늦게 바뀌었다.
+ * 화면에 들어올 때 보유 아바타 그림을 한 번씩 받아 blob URL로 들고 있으면 바꾸는 즉시 그려진다. 받지 못한 것은 원래 URL로.
+ */
+function useCachedImages(urls: readonly (string | null)[]): ReadonlyMap<string, string> {
+  const [map, setMap] = useState<ReadonlyMap<string, string>>(new Map());
+  const key = urls.filter(Boolean).join('|');
+  useEffect(() => {
+    let alive = true;
+    const created: string[] = [];
+    (async () => {
+      for (const u of key ? key.split('|') : []) {
+        try {
+          const r = await fetch(u);
+          if (!r.ok || !alive) continue;
+          const o = URL.createObjectURL(await r.blob());
+          created.push(o);
+          setMap((prev) => new Map(prev).set(u, o));
+        } catch {
+          /* CORS·네트워크 실패 — 원래 URL로 그린다 */
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+      for (const o of created) URL.revokeObjectURL(o);
+    };
+  }, [key]);
+  return map;
 }
 
 /** 오늘 남은 도전 — 'N/3', 다 쓰면 N(0)만 빨간색. */
@@ -222,6 +254,16 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     return last ?? avatarRows[0]?.id ?? null;
   });
   const avatar = avatarRows.find((a) => a.id === avatarId) ?? avatarRows[0] ?? null;
+  const cachedImg = useCachedImages(useMemo(() => board.avatars.map((a) => a.south), [board.avatars]));
+  // 도전할 층의 착용 가능 장비 그림을 미리 받아 둔다(≤30장, 7일 캐시) — 장착 직후 줄 아이콘이 늦게 바뀌지 않게.
+  useEffect(() => {
+    const keys = rule.allowed ? [...rule.allowed].slice(0, 40) : [];
+    for (const k of keys) {
+      const slot = board.catalog[k]?.slot;
+      if (slot) new Image().src = itemSrc(slot, k);
+    }
+  }, [rule, board.catalog]);
+  const img = (u: string | null | undefined) => (u ? (cachedImg.get(u) ?? u) : null);
   const cpNow = avatar?.now ?? towerCp(equipped, rule, new Set());
 
   // 자동 장착 — 그 층 요구 장비 중 부위별 가장 센 장비 + 그 조합이 가장 센 아바타(요구 장비가 층마다 바뀌어 층마다 다시 맞추는 수고를 던다).
@@ -321,7 +363,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         result={res}
         myCp={cpNow.total}
         attemptsBefore={attemptsLeft}
-        avatarSouth={avatar?.south ?? null}
+        avatarSouth={img(avatar?.south)}
         retrying={busy}
         onList={() => {
           setBattle(null);
@@ -391,7 +433,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                       className={`flex h-[56px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left ${sel ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'}`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
+                      {a.south ? <img src={img(a.south) ?? a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
                       {/* 이름 아래 아바타를 만들 때 입은 장비 — 지금 장착과 같아 ×2가 되는 장비만 금색으로 빛난다. */}
                       <span className="min-w-0 flex-1 leading-tight">
                         <b className="block text-[12px]">{a.isDefault ? '기본 아바타' : '나만의 아바타'}</b>
@@ -430,7 +472,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     const counts = poolCounts(board, items, rule);
     return (
       <main className={FLOOR_MAIN}>
-        <TowerStage floor={target} hunt={huntFloor != null} info={info} me={me} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
+        <TowerStage floor={target} hunt={huntFloor != null} info={info} me={me} meImg={img(avatar?.south)} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
 
         {/* 무대 아래 — 텍스트 RPG식 줄 구성(전투에선 이 자리에 기록이 쌓인다). */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
@@ -487,7 +529,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           <button type="button" onClick={() => setSheet('avatar')} className={`flex w-full items-center gap-2 py-1.5 text-left text-[12px] ${FLOOR_ROW}`}>
             <span className="flex-none text-zinc-400">아바타</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {avatar?.south ? <img src={avatar.south} alt="" className="h-8 w-auto" style={PIX} /> : null}
+            {avatar?.south ? <img src={img(avatar.south) ?? avatar.south} alt="" className="h-8 w-auto" style={PIX} /> : null}
             {avatar && !avatar.isDefault ? (
               <span className="flex items-center gap-1.5 pl-0.5">
                 {TOWER_SLOTS.map((s) => {
@@ -563,7 +605,11 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     <div className="flex h-6 items-center"><span className="w-[52px] flex-none text-zinc-400">전투력</span><b className="tabular-nums text-red-300">{n(towerRequirement(hero))}</b><TowerSkillTags floor={hero} className="ml-1.5 h-5 text-[10px]" /></div>
                     <div className="flex h-6 items-center">
                       <span className="w-[52px] flex-none text-zinc-400">돌파</span>
-                      <span className="min-w-0 flex-1 truncate">{rewardText(hero)}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {rewardText(hero)}
+                        {/* 층 도달 칭호(10·60·100층) — 처음 돌파하면 조건이 찬다(발견은 칭호 화면에서). */}
+                        {towerFloorTitle(hero) ? <> · 칭호 <TitleTag code={towerFloorTitle(hero)} /></> : null}
+                      </span>
                       {unclaimed.has(hero) ? (
                         <button type="button" onClick={() => claim(hero)} disabled={claiming} className="ml-1 h-5 flex-none rounded-md bg-amber-500 px-2 text-[10px] font-black leading-none text-amber-950 disabled:opacity-50">받기</button>
                       ) : hero <= best ? (
