@@ -407,11 +407,8 @@ create table milestone_firsts (
 - PK (user_id, server_id, floor) — 한 층 한 번. 최고 층 이하 중 여기 없는 층이 받을 보상. 탈퇴 시 삭제.
 
 ### 14.4 tower_pools (서버·주·층별 요구 장비)
-- PK (server_id, week_start, floor), 11~100층 부위별 10개. 그 주 첫 접근(캐릭터가 있는 서버만) 때 추첨·박제, 재추첨 없음. 서버 단위 표(탈퇴와 무관).
+- PK (server_id, week_start, floor), 11~100층 부위별 10개(특별층 1개). 그 주 첫 접근(캐릭터가 있는 서버만) 때 추첨·박제, 재추첨 없음. 서버 단위 표(탈퇴와 무관).
 
-### 14.5 tower_specials (서버·구간별 특별층 지정 장비)
-- PK (server_id, section), 부위별 1개. 한 번 정하면 고정(퇴역 시 행 삭제 → 다음 접근 때 그 구간만 재추첨, TOWER.md §2).
-
-### 14.6 title_legacy_locks (0223)
+### 14.5 title_legacy_locks (0223)
 - 조건이 바뀐 칭호(육관왕)의 기존 보유자 잠금 — 새 조건을 채우면 자동 해제. 탈퇴 시 삭제.
 

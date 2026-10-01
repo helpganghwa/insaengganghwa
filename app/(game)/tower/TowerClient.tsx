@@ -32,9 +32,9 @@ function Attempts({ left }: { left: number }) {
   );
 }
 
-/** 착용 가능 장비의 층 — 요구 장비는 층마다 다르다(1~9층은 모든 장비). 특별층은 지정 장비만 ×2. */
+/** 착용 가능 장비의 층 — 요구 장비는 층마다 다르다(1~10층은 모든 장비). 특별층은 부위마다 1개. */
 function rangeText(floor: number): string {
-  return `${floor}층${towerIsSpecial(floor) ? ' · 지정 장비만 ×2' : ''}`;
+  return `${floor}층${towerIsSpecial(floor) && towerSection(floor) > 1 ? ' · 부위마다 1개' : ''}`;
 }
 
 /** 요구 장비 갱신까지 남은 시간 — 매주 월요일 0시(KST). week = 이번 주 월요일(YYYY-MM-DD). */
@@ -162,9 +162,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   );
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
-  const specials = useMemo(() => new Map(Object.entries(board.specials).map(([k, v]) => [Number(k), v as SlotKeys])), [board.specials]);
-  // 요구 장비는 층마다(pools: 층 → 부위별), 특별층 지정 장비는 구간마다(specials: 구간 → 부위별).
-  const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null, specials.get(towerSection(f)) ?? null);
+  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개).
+  const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
   const rule = ruleOf(target);
@@ -368,7 +367,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   if (view === 'detail' && (huntFloor != null || !topped)) {
     const info = towerFloorInfo(target);
     const sec = towerSection(target);
-    // 1구간(1~10층)은 주간 갱신이 없다 — 1~9층은 모든 장비, 10층은 모든 장비 + 바뀌지 않는 지정 장비.
+    // 1구간(1~10층)은 모든 장비라 주간 갱신이 없다.
     const noRenew = sec === 1;
     const counts = poolCounts(board, items, rule);
     return (
@@ -504,10 +503,10 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     </div>
                     <div className="flex h-6 items-center">
                       <span className="w-[52px] flex-none text-zinc-400">요구 장비</span>
-                      <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 && !towerIsSpecial(hero) ? '모든 장비' : towerIsSpecial(hero) ? (
+                      <span className="min-w-0 flex-1 truncate">{towerSection(hero) === 1 ? '모든 장비' : towerIsSpecial(hero) ? (
                       <span className="inline-flex gap-0.5">
                         {TOWER_SLOTS.map((s) => {
-                          const k = specials.get(towerSection(hero))?.[s]?.[0];
+                          const k = pools.get(hero)?.[s]?.[0];
                           // eslint-disable-next-line @next/next/no-img-element
                           return k ? <img key={s} src={itemSrc(s, k)} alt="" title={board.catalog[k]?.name} className="h-5 w-5 rounded border border-amber-700 bg-zinc-900" style={PIX} /> : null;
                         })}
@@ -648,10 +647,10 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
 type PoolItem = TowerBoard['items'][number];
 
-/** 그 부위의 착용 가능 장비 키 — 입문(allowed=null)은 보유 장비 전부 + 10층 지정 장비. */
+/** 그 부위의 착용 가능 장비 키 — 입문(allowed=null)은 보유 장비 전부. */
 function poolKeys(board: TowerBoard, items: PoolItem[], slot: TowerSlot, rule: ReturnType<typeof floorRule>): string[] {
   return rule.allowed === null
-    ? [...new Set([...items.filter((i) => i.slot === slot).map((i) => i.key), ...[...(rule.doubleable ?? [])].filter((k) => board.catalog[k]?.slot === slot)])]
+    ? [...new Set(items.filter((i) => i.slot === slot).map((i) => i.key))]
     : [...rule.allowed].filter((k) => board.catalog[k]?.slot === slot);
 }
 
