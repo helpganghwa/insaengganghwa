@@ -80,7 +80,7 @@ export default function Doc() {
       <H2 id="rank">랭킹</H2>
       <UL>
         <LI>
-          랭킹 지표는 최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 다섯 가지. 지표별 기준은{' '}
+          랭킹 지표는 최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 · 무한의 탑 여섯 가지. 지표별 기준은{' '}
           <DocLink slug="ranking" hash="metric">랭킹</DocLink> 문서에 있다.
         </LI>
         <LI>

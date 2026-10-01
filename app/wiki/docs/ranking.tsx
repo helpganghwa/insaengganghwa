@@ -63,7 +63,7 @@ export default function Doc() {
           [
             '무한의 탑',
             <>
-              <DocLink slug="tower">무한의 탑</DocLink>에서 가장 높이 돌파한 층. 같은 층이면 먼저 오른 사람이 앞
+              <DocLink slug="tower">무한의 탑</DocLink>에서 가장 높이 돌파한 층(같은 층이면 먼저 오른 사람이 앞선다)
             </>,
           ],
         ]}
