@@ -9,7 +9,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
@@ -76,9 +76,14 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   // 층 상세는 주소(?v=d)로 — 휴대폰 뒤로 가기가 홈이 아니라 목록으로 돌아오게.
   const sp = useSearchParams();
   const view: 'list' | 'detail' = sp.get('v') === 'd' ? 'detail' : 'list';
+  // 토벌(돌파한 층 재도전) — 층 화면 주소에 층 번호(?v=d&f=N)가 있고 이미 돌파한 층이면 그 층을 토벌한다. 없으면 오르기(다음 층).
+  const fParam = Number(sp.get('f'));
+  const huntFloor = view === 'detail' && Number.isInteger(fParam) && fParam >= 1 && fParam <= best ? fParam : null;
+  const target = huntFloor ?? next;
   // 주소만 바꾼다(history API) — router.push는 같은 페이지를 서버에서 다시 그려(탑 데이터+레이아웃 쿼리) 전환마다 왕복이 생겼다.
   // Next가 history.pushState를 useSearchParams와 맞춰 주어 휴대폰 뒤로 가기도 그대로 목록으로 돌아온다.
-  const setView = (v: 'list' | 'detail') => window.history.pushState(null, '', v === 'detail' ? '/tower?v=d' : '/tower');
+  const setView = (v: 'list' | 'detail', huntAt?: number) =>
+    window.history.pushState(null, '', v === 'detail' ? (huntAt ? `/tower?v=d&f=${huntAt}` : '/tower?v=d') : '/tower');
   const [openSection, setOpenSection] = useState(towerSection(next));
   // 돌파로 다음 구간에 들어서면 펼친 구간도 따라간다(렌더 중 조정 — effect 없이).
   const [seenNext, setSeenNext] = useState(next);
@@ -162,7 +167,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null, specials.get(towerSection(f)) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
-  const rule = ruleOf(next);
+  const rule = ruleOf(target);
 
   // 아바타 — 지금 장착 그대로 이 아바타를 골랐을 때의 배율·탑 전투력(3차 피드백 6: 최대치 표시 없음), 탑 전투력 높은 순.
   // 처음엔 마지막에 고른 아바타, 없으면 맨 위.
@@ -174,7 +179,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
       })
       .sort((x, y) => y.now.total - x.now.total || y.now.doubledCount - x.now.doubledCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board, items, next]);
+  }, [board, items, target]);
   const [avatarId, setAvatarId] = useState<string | null>(() => {
     const last = board.lastProfileId && board.avatars.some((a) => a.id === board.lastProfileId) ? board.lastProfileId : null;
     return last ?? avatarRows[0]?.id ?? null;
@@ -239,11 +244,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     setBattle('pending');
     // 같은 층의 응답 없는 도전은 같은 키로 — 30초를 넘겨 실패로 보였어도 서버가 이미 처리했으면 그 결과를 돌려받아
     // 도전이 두 번 빠지지 않는다(09-30 감사 L2). 응답(성공·거절)을 받으면 다음 도전은 새 키.
-    if (idemRef.current?.floor !== next) idemRef.current = { floor: next, key: crypto.randomUUID() };
+    // 키는 (층, 토벌 여부)마다 — 같은 층의 오르기와 토벌이 같은 키를 쓰지 않게.
+    const idemFloor = huntFloor != null ? -target : target;
+    if (idemRef.current?.floor !== idemFloor) idemRef.current = { floor: idemFloor, key: crypto.randomUUID() };
     const key = idemRef.current.key;
     // 판정 대기는 30초까지 — 헤더 없는 전투 화면에 '준비 중'으로 갇히지 않게 실패로 돌린다.
     const r = await Promise.race([
-      towerChallengeAction(next, avatar?.id ?? null, key, board.week).catch(() => null),
+      towerChallengeAction(target, avatar?.id ?? null, key, board.week, huntFloor != null).catch(() => null),
       new Promise<null>((res) => setTimeout(() => res(null), 30_000)),
     ]);
     setBusy(false);
@@ -251,10 +258,12 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     if (!r || r.status !== 'success') {
       setBattle(null);
       // 응답이 없었거나 '지금 층이 아님'이면 화면 값이 서버와 어긋난 것 — 최고 층·남은 도전을 서버와 다시 맞춘다.
-      if (!r || r.code === 'NOT_NEXT_FLOOR') router.refresh();
+      if (!r || r.code === 'NOT_NEXT_FLOOR' || r.code === 'NOT_CLEARED') router.refresh();
       return setMsg(r?.message ?? '도전하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
     setLocal({ best: r.result.best, attemptsLeft: r.result.attemptsLeft, myRank: r.result.myRank ?? local?.myRank ?? null });
+    // 토벌 보상은 서버가 바로 지급 — 헤더 다이아를 서버 잔액으로 맞춘다(화면을 다시 그리지 않는다).
+    if (r.result.hunt && r.result.diamondBalance != null) setBase(BigInt(r.result.diamondBalance));
     setBattle(r.result);
   };
 
@@ -263,7 +272,8 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     return (
       <TowerBattle
         key={res ? res.battleId : 'pending'}
-        floor={res ? res.floor : next}
+        floor={res ? res.floor : target}
+        hunt={huntFloor != null}
         me={me}
         result={res}
         myCp={cpNow.total}
@@ -282,7 +292,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   }
 
   // 팝업(목록·상세 공용) — 착용 가능 장비는 sheetFloor 기준(상세=도전할 층, 목록=고른 층).
-  const pf = sheetFloor ?? next;
+  const pf = sheetFloor ?? target;
   const pRule = ruleOf(pf);
   const pCounts = poolCounts(board, items, pRule);
   const popups = (
@@ -355,22 +365,22 @@ export function TowerClient({ board }: { board: TowerBoard }) {
 
   // ── 층 화면(상세) ─────────────────────────────────────────
   // 전투와 같은 무대 — 도전하면 이 자리에서 그대로 싸운다(장비 자리에 턴 기록).
-  if (view === 'detail' && !topped) {
-    const info = towerFloorInfo(next);
-    const sec = towerSection(next);
+  if (view === 'detail' && (huntFloor != null || !topped)) {
+    const info = towerFloorInfo(target);
+    const sec = towerSection(target);
     // 1구간(1~10층)은 주간 갱신이 없다 — 1~9층은 모든 장비, 10층은 모든 장비 + 바뀌지 않는 지정 장비.
     const noRenew = sec === 1;
     const counts = poolCounts(board, items, rule);
     return (
       <main className={FLOOR_MAIN}>
-        <TowerStage floor={next} info={info} me={me} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
+        <TowerStage floor={target} hunt={huntFloor != null} info={info} me={me} meImg={avatar?.south ?? null} meCp={cpNow.total} left={attemptsLeft} narration={info.line} />
 
         {/* 무대 아래 — 텍스트 RPG식 줄 구성(전투에선 이 자리에 기록이 쌓인다). */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
           {/* 내 장비 — 부위마다 한 줄: 그림 · 이름·강화 · 배율 설명 · 이 층 기준 전투력(×2 금색, ×0 제외). */}
           <div className="mt-2.5 mb-1 flex items-baseline justify-between">
             <span className="text-[11px] font-bold text-zinc-500">내 장비</span>
-            <button type="button" onClick={() => openPool(next)} className="text-[11px] text-zinc-400">
+            <button type="button" onClick={() => openPool(target)} className="text-[11px] text-zinc-400">
               착용 가능 장비 <b className="text-zinc-200">{counts.owned}/{counts.total}</b>
               {noRenew ? null : <span suppressHydrationWarning> · {renewText(board.week)}</span>}
               <span className="font-bold text-amber-300"> 보기 ›</span>
@@ -384,7 +394,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               <button
                 key={s}
                 type="button"
-                onClick={() => openPool(next, s)}
+                onClick={() => openPool(target, s)}
                 className={`-mx-4 flex w-[calc(100%+2rem)] items-center gap-2.5 border-l-2 py-1.5 pr-4 pl-3.5 text-left ${FLOOR_ROW} ${
                   p?.mult === 2 ? 'border-l-amber-400 bg-amber-500/10' : p?.mult === 1 ? 'border-l-emerald-500/70' : 'border-l-red-500/60 bg-red-950/15'
                 }`}
@@ -443,7 +453,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
           <ActionBar>
             <SecondaryButton disabled={!autoBetter || busy} onClick={autoEquip}>{autoBetter ? '자동 장착' : '최적 장착됨'}</SecondaryButton>
             <PrimaryButton disabled={busy || attemptsLeft <= 0 || cpNow.total <= 0} onClick={challenge}>
-              {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : '도전'}
+              {attemptsLeft <= 0 ? '오늘 도전 끝' : cpNow.total <= 0 ? '요구 장비 없음' : huntFloor != null ? '토벌' : '도전'}
             </PrimaryButton>
           </ActionBar>
         </div>
@@ -508,8 +518,16 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                     </div>
                   </div>
                 </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
+                <div className="flex flex-none flex-col items-end justify-end gap-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[88px] w-auto ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
+                  {/* 토벌 — 돌파한 층만. 이기면 💎(오르기와 같은 하루 도전을 쓰고, 이겨도 1회). */}
+                  {hero <= best ? (
+                    <button type="button" onClick={() => setView('detail', hero)} className="h-6 rounded-md bg-rose-700 px-2 text-[10.5px] font-black leading-none text-rose-50">
+                      토벌 💎{n(towerHuntReward(hero))}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           ) : (

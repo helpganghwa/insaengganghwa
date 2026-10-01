@@ -6,7 +6,7 @@ import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerHuntReward, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import { TOWER_BATTLE, type TowerSkill, type TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult } from '@/lib/game/tower/service';
@@ -32,8 +32,10 @@ export type TowerMe = { nickname: string; guild: { name: string; emblemUrl: stri
  * 아래쪽에 나 ↔ 몬스터(대난투 문법: 이름 · 길드/스킬 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
  * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다. 무대 아래는 해설 한 칸.
  */
-export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
+export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
   floor: number;
+  /** 토벌(돌파한 층 재도전) — 보상 줄을 토벌 다이아로. */
+  hunt?: boolean;
   info: TowerFloorInfo;
   me: TowerMe;
   meImg: string | null;
@@ -70,7 +72,7 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
               <b className="text-[15px] font-black text-white">{sp ? <span className="text-red-300">✦ </span> : null}{floor}층</b>
               <span className="text-[11px] text-zinc-300"> · {info.theme}</span>
             </div>
-            <div className="text-[11px] text-zinc-300">돌파 {rewardText(floor)}</div>
+            <div className="text-[11px] text-zinc-300">{hunt ? `토벌 💎 ${n(towerHuntReward(floor))}` : `돌파 ${rewardText(floor)}`}</div>
           </div>
           <div className="flex-none text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
             <div>
@@ -137,8 +139,10 @@ export function TowerStage({ floor, info, me, meImg, meCp, left, turn, onBack, b
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
+export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
   floor: number;
+  /** 토벌 판 — 이기면 보상이 바로 지급되고, 다음 층 대신 같은 층을 다시 토벌. */
+  hunt?: boolean;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
@@ -226,6 +230,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
     <main className={FLOOR_MAIN}>
       <TowerStage
         floor={floor}
+        hunt={hunt}
         info={info}
         me={me}
         meImg={avatarSouth}
@@ -259,7 +264,12 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
             {win ? (
               <>
                 <b className="block text-[13px] text-emerald-300">승리</b>
-                {result.reward ? (
+                {hunt ? (
+                  <>
+                    {result.reward ? <div className="font-bold text-amber-300">토벌 보상 💎 {n(result.reward.diamond)} 받음</div> : null}
+                    <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
+                  </>
+                ) : result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
                   </button>
@@ -293,6 +303,16 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
               <SecondaryButton disabled>목록</SecondaryButton>
               <PrimaryButton disabled>{result ? '전투 중…' : '전투 준비 중…'}</PrimaryButton>
             </>
+          ) : win && hunt ? (
+            // 토벌 승리 — 같은 층을 다시 토벌하거나(도전이 남았으면) 강화로.
+            <>
+              <SecondaryButton onClick={onList}>목록</SecondaryButton>
+              {left > 0 ? (
+                <PrimaryButton onClick={onRetry} disabled={retrying}>{retrying ? '토벌 중…' : '다시 토벌'}</PrimaryButton>
+              ) : (
+                <PrimaryButton onClick={() => router.push('/enhance')}>강화하러 가기</PrimaryButton>
+              )}
+            </>
           ) : win ? (
             <>
               <SecondaryButton onClick={onList}>목록</SecondaryButton>
@@ -304,7 +324,7 @@ export function TowerBattle({ floor, me, result, myCp, attemptsBefore, avatarSou
               {left > 0 ? (
                 <>
                   <SecondaryButton onClick={() => router.push('/enhance')}>강화하러 가기</SecondaryButton>
-                  <PrimaryButton onClick={onRetry} disabled={retrying}>{retrying ? '도전 중…' : '다시 도전'}</PrimaryButton>
+                  <PrimaryButton onClick={onRetry} disabled={retrying}>{retrying ? (hunt ? '토벌 중…' : '도전 중…') : hunt ? '다시 토벌' : '다시 도전'}</PrimaryButton>
                 </>
               ) : (
                 // 오늘 도전을 다 쓴 패배 — 할 수 있는 다음 일은 강화.

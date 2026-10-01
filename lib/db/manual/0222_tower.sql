@@ -40,6 +40,8 @@ create table if not exists tower_battles (
 create index if not exists tower_battles_user_idx on tower_battles (user_id, server_id, created_at desc);
 -- 중복 요청 방지(CLAUDE §3.4) — 같은 키로 다시 오면 저장된 결과를 돌려준다(진 판 재전송이 도전 2회를 빼지 않게).
 alter table tower_battles add column if not exists idem_key text;
+-- 토벌(돌파한 층 재도전) 판 표시(10-01) — 최고 층·순위에 반영하지 않는 판.
+alter table tower_battles add column if not exists hunt boolean not null default false;
 -- 서버별로 — 같은 키가 다른 서버의 결과를 돌려주지 않게(09-30 감사 L1). 옛 (user, key) 인덱스는 지운다.
 drop index if exists tower_battles_idem_uq;
 create unique index if not exists tower_battles_idem_srv_uq on tower_battles (user_id, server_id, idem_key) where idem_key is not null;
