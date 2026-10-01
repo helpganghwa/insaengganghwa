@@ -597,12 +597,13 @@ export function TowerClient({ board }: { board: TowerBoard }) {
             const open = openSection === sec;
             if (locked && sec > towerSection(next) + 1) return null; // 다음 구간까지만 보여 준다
             return (
-              <div key={sec} className={`overflow-hidden rounded-xl border bg-zinc-950/80 backdrop-blur-[2px] ${sec === towerSection(next) ? 'border-amber-600/60' : 'border-zinc-800'}`}>
-                {/* 구간 머리 — 그 장소의 장면을 띠로 깔고 장소 이름. 잠긴 구간은 어둡게. */}
-                <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between overflow-hidden px-3 text-left">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
-                  <span className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+              <div key={sec} className={`relative overflow-hidden rounded-xl border bg-zinc-950/80 backdrop-blur-[2px] ${sec === towerSection(next) ? 'border-amber-600/60' : 'border-zinc-800'}`}>
+                {/* 그 장소의 장면을 카드 전체에 깔고(접히면 머리 띠만큼, 펼치면 층 칸 뒤까지) 왼쪽을 어둡게. 잠긴 구간은 어둡게. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl(`/sprites/tower/scene/${towerFloorInfo(lo).scene}.png`)} alt="" aria-hidden className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${locked ? 'brightness-[.35] grayscale' : done ? 'brightness-75 grayscale-[.6]' : ''}`} style={PIX} />
+                <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30" />
+                {/* 구간 머리 — 장소 이름·층 범위·진행. */}
+                <button type="button" onClick={() => setOpenSection(open ? 0 : sec)} className="relative flex h-11 w-full items-center justify-between px-3 text-left">
                   <span className="relative leading-tight">
                     <b className="block text-[13px]">{towerFloorInfo(lo).theme}</b>
                     <span className="text-[10px] text-zinc-300">{lo} ~ {hi}층</span>
@@ -613,9 +614,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   </span>
                 </button>
                 {open ? (
-                  <div className="px-3 pb-3">
+                  <div className="relative px-3 pb-3">
                     {/* 층 칸(3차 피드백 1·3·4) — 돌파=초록 칸·흐린 몬스터, 도전=금색 두꺼운 테두리·빛, 잠김=몬스터 실루엣만, 특별층=붉은 ✦.
-                        위 구간 머리의 장면 띠가 positioned라 칸 선택 테두리를 덮지 않게 grid도 relative + 위 여백. */}
+                        장면이 카드 전체에 깔려 있어 칸 배경은 반투명으로 장면이 비친다. */}
                     <div className="relative grid grid-cols-5 gap-1.5 pt-2">
                       {Array.from({ length: TOWER_SECTION }, (_, j) => lo + j).map((f) => {
                         const st = f <= best ? 'd' : f === next ? 'c' : 'l';
