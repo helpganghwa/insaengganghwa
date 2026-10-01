@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -199,15 +199,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   );
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
-  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 서버는 다음 구간까지만 보내므로(10-01, 보드 −60%)
-  // 돌파로 그 너머 구간에 들어서면 한 번 다시 불러온다(층마다 한 번만 — 풀이 아직 없는 주에 반복되지 않게).
-  const refreshedFor = useRef<number | null>(null);
-  useEffect(() => {
-    if (next > TOWER_SECTION && !pools.has(next) && refreshedFor.current !== next) {
-      refreshedFor.current = next;
-      router.refresh();
-    }
-  }, [next, pools, router]);
+  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 그 주 90층 전부를 받는다(일부만 받는 안은 10-01 롤백).
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));
