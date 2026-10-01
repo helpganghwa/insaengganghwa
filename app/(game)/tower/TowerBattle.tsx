@@ -161,6 +161,8 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
   const total = turns.length;
   const [shown, setShown] = useState(0);
   const [ended, setEnded] = useState(false);
+  // 한 번 끝까지 재생된 판 — '처음부터 다시 보기' 중에도 결과는 이미 확정이라 목록·뒤로가기·버튼을 잠그지 않는다(10-01).
+  const [finishedOnce, setFinishedOnce] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -172,6 +174,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
     stop();
     setShown(total);
     setEnded(true);
+    setFinishedOnce(true);
   }, [total]);
   const play = useCallback(
     (from = 0) => {
@@ -218,6 +221,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
   const nextFloor = Math.min(TOWER_FLOORS, floor + 1);
   const left = result?.attemptsLeft ?? 0;
   const done = !!result && ended;
+  const unlocked = done || (!!result && finishedOnce);
   const narration = !result
     ? josa(`${info.name}#{와} 마주 섰다. 전투를 준비하는 중…`)
     : ended
@@ -238,7 +242,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
         left={result ? left : attemptsBefore}
         turn={cur ? `${cur.turn}턴` : '준비'}
         onBack={onList}
-        backLocked={!done}
+        backLocked={!unlocked}
         fight={{ cur, prev, shown, ended, win }}
         narration={narration}
         tone={!done ? 'play' : win ? 'win' : 'lose'}
@@ -297,7 +301,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
       {/* 버튼 줄 — 늘 두 칸(왼쪽 보조 · 오른쪽 주). 판정·재생 중엔 둘 다 잠김. */}
       <div className="flex-none px-3 pt-2 pb-3">
         <ActionBar>
-          {!done ? (
+          {!unlocked ? (
             <>
               <SecondaryButton disabled>목록</SecondaryButton>
               <PrimaryButton disabled>{result ? '전투 중…' : '전투 준비 중…'}</PrimaryButton>
