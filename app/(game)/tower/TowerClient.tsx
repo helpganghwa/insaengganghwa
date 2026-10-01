@@ -9,7 +9,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { BackTitle } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
@@ -17,7 +17,7 @@ import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service'
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
 import { FLOOR_MAIN, FLOOR_ROW, TowerBattle, TowerStage } from './TowerBattle';
 import { TowerSkillTags } from './TowerSkills';
-import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
+import { ActionBar, PIX, PrimaryButton, SecondaryButton, huntText, n, rewardText } from './TowerUi';
 
 const SLOT_KO: Record<TowerSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const itemSrc = (slot: TowerSlot, key: string) => assetUrl(`/sprites/${slot}/${key}.png`);
@@ -524,7 +524,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   {/* 토벌 — 돌파한 층만. 이기면 💎(오르기와 같은 하루 도전을 쓰고, 이겨도 1회). */}
                   {hero <= best ? (
                     <button type="button" onClick={() => setView('detail', hero)} className="h-6 rounded-md bg-rose-700 px-2 text-[10.5px] font-black leading-none text-rose-50">
-                      토벌 💎{n(towerHuntReward(hero))}
+                      토벌 {huntText(hero)}
                     </button>
                   ) : null}
                 </div>

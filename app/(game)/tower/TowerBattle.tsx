@@ -6,13 +6,13 @@ import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerHuntReward, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
 import { TOWER_BATTLE, type TowerSkill, type TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo } from '@/lib/game/tower/floors';
-import type { TowerChallengeResult } from '@/lib/game/tower/service';
+import type { TowerBattleReward, TowerChallengeResult } from '@/lib/game/tower/service';
 
 import { TowerSkillTags } from './TowerSkills';
-import { ActionBar, PIX, PrimaryButton, SecondaryButton, n, rewardText } from './TowerUi';
+import { ActionBar, PIX, PrimaryButton, SecondaryButton, huntText, n, rewardText } from './TowerUi';
 
 const STEP_MS = 700;
 const prefersReduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -72,7 +72,7 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
               <b className="text-[15px] font-black text-white">{sp ? <span className="text-red-300">✦ </span> : null}{floor}층</b>
               <span className="text-[11px] text-zinc-300"> · {info.theme}</span>
             </div>
-            <div className="text-[11px] text-zinc-300">{hunt ? `토벌 💎 ${n(towerHuntReward(floor))}` : `돌파 ${rewardText(floor)}`}</div>
+            <div className="text-[11px] text-zinc-300">{hunt ? `토벌 ${huntText(floor)}` : `돌파 ${rewardText(floor)}`}</div>
           </div>
           <div className="flex-none text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
             <div>
@@ -259,16 +259,15 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
             <LogLine t={t} monName={info.name} />
           </div>
         ))}
+        {/* 토벌 승리 — 마지막 기록 줄에 전리품(이 판에서 이미 지급됨). 더블·상자가 터지면 강조. */}
+        {done && hunt && win && result.reward ? <HuntLoot reward={result.reward} monName={info.name} /> : null}
         {done ? (
           <div className="mt-3 border-t border-white/[.08] pt-2.5 text-[12px] leading-relaxed text-zinc-300">
             {win ? (
               <>
                 <b className="block text-[13px] text-emerald-300">승리</b>
                 {hunt ? (
-                  <>
-                    {result.reward ? <div className="font-bold text-amber-300">토벌 보상 💎 {n(result.reward.diamond)} 받음</div> : null}
-                    <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
-                  </>
+                  <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
                 ) : result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''} · 목록에서 받기 ›
@@ -369,6 +368,28 @@ const pctOf = (hp: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, 
  * 나=금색 ▸, 몬스터=빨강 ▸. raw가 없는 옛 기록은 바뀐 값만 보여 준다.
  * memo — 재생 중 한 줄씩 늘 때 이미 나온 줄은 다시 그리지 않는다.
  */
+/** 토벌 전리품 줄 — 평소 💎 한 줄, 더블이면 그 줄을 강조, 상자가 터지면 한 줄 더. */
+function HuntLoot({ reward, monName }: { reward: TowerBattleReward; monName: string }) {
+  return (
+    <div className="mt-1.5 space-y-0.5 text-[12px] leading-relaxed">
+      <div>
+        <span className="text-amber-300">▸ </span>
+        {reward.double ? (
+          <b className="text-amber-200">✦ 대박! {monName}의 전리품이 두 배 — 💎{n(reward.diamond)}</b>
+        ) : (
+          <span className="text-zinc-200">{monName}의 전리품 <b className="text-amber-300">💎{n(reward.diamond)}</b></span>
+        )}
+      </div>
+      {reward.boxes > 0 ? (
+        <div>
+          <span className="text-amber-300">▸ </span>
+          <b className="text-sky-200">✦ {josa(`${monName}#{이}`)} 숨겨 둔 보급 상자 📦{n(reward.boxes)} 발견!</b>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: string }) {
   const B = TOWER_BATTLE;
   const mine = t.actor === 'me';

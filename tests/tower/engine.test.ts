@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_HP_MULT, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { simulateTowerBattle, TOWER_SKILL, type TowerSkill } from '@/lib/game/tower/battle';
 import { avatarMultiplier, bestLoadout, drawPool, floorRule, towerCp, type EquippedPiece, type SlotKeys } from '@/lib/game/tower/engine';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerFloorSkills } from '@/lib/game/tower/floors';
@@ -294,3 +294,13 @@ describe('층 몬스터·스킬 배치', () => {
   });
 });
 
+
+describe('토벌 보상 표', () => {
+  it('💎 범위는 평균 ±20%(반올림), 상자는 3의 배수', () => {
+    expect(towerHuntRange(1)).toEqual({ min: 2, max: 2 });
+    expect(towerHuntRange(15)).toEqual({ min: 3, max: 5 });
+    expect(towerHuntRange(100)).toEqual({ min: 120, max: 180 });
+    for (let f = 1; f <= 100; f++) expect(towerHuntBox(f) % 3).toBe(0);
+    expect(towerHuntBox(95)).toBe(45);
+  });
+});
