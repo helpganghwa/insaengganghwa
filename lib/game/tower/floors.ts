@@ -135,21 +135,21 @@ const SECTIONS: { theme: string; mons: [string, string, TowerSkill[]][] }[] = [
   ] },
 ];
 
-/** 스킬 표시·설명 — 무대 라벨(이모지+이름)과 설명 팝업. 설명의 수치는 battle.ts TOWER_SKILL에서 읽는다. */
+/** 스킬 표시·설명 — 무대 라벨(이모지+이름)과 설명 팝업. 스킬을 쓰는 몬스터 기준 '확률 + 동작'(상대 = 나). 수치는 battle.ts TOWER_SKILL에서 읽는다. */
 const K = TOWER_SKILL;
 export const TOWER_SKILL_INFO: Record<TowerSkill, { icon: string; name: string; desc: string }> = {
-  steel: { icon: '🛡', name: '강철 피부', desc: `전투 시작 후 내 공격 ${K.steel.hits}번은 피해가 절반` },
-  freeze: { icon: '❄', name: '빙결', desc: `공격이 맞으면 ${K.freeze.bp / 100}% 확률로 나를 ${K.freeze.minTurns}~${K.freeze.maxTurns}턴 얼림(그동안 공격 못 함)` },
-  burn: { icon: '🔥', name: '화상', desc: `맞으면 ${K.burn.turns}턴 동안 내 차례마다 체력이 ${K.burn.pct}%씩 탄다` },
-  drain: { icon: '🩸', name: '흡혈', desc: `준 피해의 ${K.drain.pct}%만큼 체력을 회복` },
-  multi: { icon: '⚡', name: '연속 공격', desc: `공격 뒤 ${K.multi.bp / 100}% 확률로 한 번 더 공격(피해 ×${K.multi.mul})` },
-  reflect: { icon: '🪞', name: '반사', desc: `내 급소 피해의 ${K.reflect.pct}%가 나에게 되돌아옴` },
-  regen: { icon: '🌿', name: '재생', desc: `차례마다 체력을 ${K.regen.pct}%씩 회복` },
-  seal: { icon: '⛓', name: '봉인', desc: '내 급소·공명·반격이 발동하지 않음' },
-  stop: { icon: '⏳', name: '시간 정지', desc: `체력 ${K.stop.at}% 아래에서 처음 맞힐 때 한 번, ${K.stop.turns}턴 동안 나만 멈춤` },
-  death: { icon: '💀', name: '즉사', desc: `공격할 때 ${K.death.bp / 100}% 확률로 내 체력을 0으로(기사회생으로 버틸 수 있음)` },
-  rebirth: { icon: '✨', name: '부활', desc: `쓰러질 때 한 번 체력 ${K.rebirth.pct}%로 다시 일어남` },
-  awe: { icon: '👁', name: '위압', desc: `전투 시작 ${K.awe.turns}턴 동안 내 피해 ×${K.awe.mul}` },
+  steel: { icon: '🛡', name: '강철 피부', desc: `전투 시작 후 받는 피해 ${K.steel.hits}번을 절반으로 줄임` },
+  freeze: { icon: '❄', name: '빙결', desc: `공격 적중 시 ${K.freeze.bp / 100}% 확률로 빙결, 빙결 시 상대 ${K.freeze.minTurns}~${K.freeze.maxTurns}턴 행동 불가` },
+  burn: { icon: '🔥', name: '화상', desc: `공격 적중 시 화상, 화상 시 ${K.burn.turns}턴 동안 상대 최대 체력의 ${K.burn.pct}%씩 피해` },
+  drain: { icon: '🩸', name: '흡혈', desc: `준 피해의 ${K.drain.pct}%만큼 체력 회복` },
+  multi: { icon: '⚡', name: '연속 공격', desc: `공격 후 ${K.multi.bp / 100}% 확률로 추가 공격(피해 ×${K.multi.mul})` },
+  reflect: { icon: '🪞', name: '반사', desc: `받은 급소 피해의 ${K.reflect.pct}%를 상대에게 되돌림` },
+  regen: { icon: '🌿', name: '재생', desc: `매 턴 최대 체력의 ${K.regen.pct}% 회복` },
+  seal: { icon: '⛓', name: '봉인', desc: '상대의 급소·공명·반격 봉인' },
+  stop: { icon: '⏳', name: '시간 정지', desc: `체력 ${K.stop.at}% 이하에서 첫 적중 시 시간 정지, 상대 ${K.stop.turns}턴 행동 불가(한 번)` },
+  death: { icon: '💀', name: '즉사', desc: `공격 시 ${K.death.bp / 100}% 확률로 즉사(상대 기사회생 시 체력 1로 버팀)` },
+  rebirth: { icon: '✨', name: '부활', desc: `쓰러질 때 한 번 체력 ${K.rebirth.pct}%로 부활` },
+  awe: { icon: '👁', name: '위압', desc: `전투 시작 ${K.awe.turns}턴 동안 상대 피해 ×${K.awe.mul}` },
 };
 
 export type TowerFloorInfo = {
