@@ -492,7 +492,7 @@ UI(2026-07-22 개편): /checkin 페이지 폐기 → **홈 자동 팝업**(황�
 |------|----|
 | 층 | 1~100층(`TOWER_FLOORS`), 10층마다 특별층(`TOWER_SECTION`) |
 | 도전 | 하루 3번(`TOWER_DAILY_ATTEMPTS`, KST 자정 초기화) — 오르기는 진 판만 차감, 토벌은 이겨도 차감. 다이아 추가 도전 없음 |
-| 토벌 | 돌파한 층 재도전, 이기면 💎 = 평균(구간 일반 층 첫 돌파 💎 ÷ 10, `towerHuntReward`: 2·4·6·10·15·25·42·70·105·150)의 ±20%(`TOWER_HUNT_SPREAD`) 균등 · 10% 더블(`TOWER_HUNT_DOUBLE_BP`) · 5% 📦(`TOWER_HUNT_BOX_BP`, `towerHuntBox`: 3·3·3·3·6·9·12·15·30·45) |
+| 토벌 | 돌파한 층 재도전, 이기면 💎 = 그 층 평균(구간 기준값 = 구간 일반 층 첫 돌파 💎 ÷ 10: 2·4·6·10·15·25·42·70·105·150 × 층 계수 `TOWER_HUNT_FLOOR_FACTORS` 0.8~1.2, 특별층 1.3, `towerHuntReward`)의 ±20%(`TOWER_HUNT_SPREAD`) 균등 · 10% 더블(`TOWER_HUNT_DOUBLE_BP`) · 5% 📦(`TOWER_HUNT_BOX_BP`, `towerHuntBox`: 3·3·3·3·6·9·12·15·30·45) |
 | 요구 장비 | 층마다(11층부터) 부위별 10개(`TOWER_POOL_PER_SLOT`), 특별층은 부위별 1개(`TOWER_SPECIAL_POOL_PER_SLOT`), 매주 월요일 0시(KST) 서버 전체 교체. 1~10층은 모든 장비 |
 | 배율 | 요구 장비이면서 고른 아바타를 만들 때 쓴 장비 ×2(`TOWER_AVATAR_MULT`) · 요구 장비 ×1 · 요구 장비 아님 ×0(특별층 포함 모든 층 같음) |
 

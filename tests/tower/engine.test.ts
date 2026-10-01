@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TOWER_FLOORS, TOWER_HP_MULT, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_HP_MULT, towerHuntBox, towerHuntRange, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { simulateTowerBattle, TOWER_SKILL, type TowerSkill } from '@/lib/game/tower/battle';
 import { avatarMultiplier, bestLoadout, drawPool, floorRule, towerCp, type EquippedPiece, type SlotKeys } from '@/lib/game/tower/engine';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerFloorSkills } from '@/lib/game/tower/floors';
@@ -291,10 +291,20 @@ describe('층 몬스터·스킬 배치', () => {
 
 
 describe('토벌 보상 표', () => {
-  it('💎 범위는 평균 ±20%(반올림), 상자는 3의 배수', () => {
+  it('💎 범위는 그 층 평균 ±20%(반올림), 구간 안에서 층마다 오르고 특별층이 최대, 구간 평균 ≈ 기준값, 상자는 3의 배수', () => {
     expect(towerHuntRange(1)).toEqual({ min: 2, max: 2 });
     expect(towerHuntRange(15)).toEqual({ min: 3, max: 5 });
-    expect(towerHuntRange(100)).toEqual({ min: 120, max: 180 });
+    expect(towerHuntRange(91)).toEqual({ min: 96, max: 144 });
+    expect(towerHuntRange(100)).toEqual({ min: 156, max: 234 });
+    for (let sec = 1; sec <= 10; sec++) {
+      const lo = (sec - 1) * 10 + 1;
+      const vals = Array.from({ length: 10 }, (_, j) => towerHuntReward(lo + j));
+      for (let j = 1; j < 10; j++) expect(vals[j]!).toBeGreaterThanOrEqual(vals[j - 1]!);
+      expect(vals[9]!).toBe(Math.max(...vals));
+      const base = towerReward(lo).diamond / 10;
+      expect(vals.reduce((a, b) => a + b, 0) / 10).toBeGreaterThan(base * 0.95);
+      expect(vals.reduce((a, b) => a + b, 0) / 10).toBeLessThan(base * 1.1);
+    }
     for (let f = 1; f <= 100; f++) expect(towerHuntBox(f) % 3).toBe(0);
     expect(towerHuntBox(95)).toBe(45);
   });
