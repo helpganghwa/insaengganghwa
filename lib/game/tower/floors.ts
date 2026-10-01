@@ -173,6 +173,12 @@ const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
 const ART_SECTIONS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
+/** 층 도달 칭호(10-01) — 그 층을 처음 돌파하면 조건이 차는 칭호 코드(defs.ts). 목록 카드·무대·승리 기록에서 안내한다. */
+export const TOWER_FLOOR_TITLES: Readonly<Record<number, string>> = { 10: 'tower_f10', 60: 'tower_f60', 100: 'tower_f100' };
+export function towerFloorTitle(floor: number): string | null {
+  return TOWER_FLOOR_TITLES[floor] ?? null;
+}
+
 export function towerFloorInfo(floor: number): TowerFloorInfo {
   const section = Math.min(SECTIONS.length - 1, Math.max(0, Math.floor((floor - 1) / 10)));
   const s = SECTIONS[section]!;
