@@ -276,17 +276,17 @@ async function KpiRowWithRanks({
   ]);
   return (
     <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard label="전투력" value={fmtCompact(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
-      <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
-      <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
+      <KpiCard label="전투력" value={fmtFull(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
+      <KpiCard label="최고" value={fmtFull(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
+      <KpiCard label="합산" value={fmtFull(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
       <KpiCard
         label="레이드"
-        value={fmtCompact(counts.raid?.value ?? 0)}
+        value={fmtFull(counts.raid?.value ?? 0)}
         rank={rankBadgeStreamed(counts.raid?.rank)}
       />
       <KpiCard
         label="대난투"
-        value={fmtCompact(counts.melee?.value ?? 0)}
+        value={fmtFull(counts.melee?.value ?? 0)}
         rank={rankBadgeStreamed(counts.melee?.rank)}
       />
       <KpiCard
@@ -309,9 +309,9 @@ function KpiRowFallback({
 }) {
   return (
     <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard label="전투력" value={fmtCompact(total)} rank="—" />
-      <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank="—" />
-      <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank="—" />
+      <KpiCard label="전투력" value={fmtFull(total)} rank="—" />
+      <KpiCard label="최고" value={fmtFull(maxEnhance)} rank="—" />
+      <KpiCard label="합산" value={fmtFull(sumEnhance)} rank="—" />
       <KpiCard label="레이드" value="—" rank="—" />
       <KpiCard label="대난투" value="—" rank="—" />
       <KpiCard label="무한의 탑" value="—" rank="—" />
@@ -324,12 +324,9 @@ function KpiRowFallback({
  * 전체 유저(90s) + 누적 성공/유지/하락(10분). 색 톤으로 의미 구분.
  * <Suspense> stream — 첫 페인트 차단 없음.
  */
-function fmtCompact(n: number): string {
-  // 1,238,902 → "124만" — 가로 4타일 폭 90px 안에 들어가야 가독.
-  return new Intl.NumberFormat('ko-KR', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(n);
+function fmtFull(n: number): string {
+  // 3칸 2줄(2026-09-30)로 카드 폭이 110px쯤 되어 축약 없이 전부 보여 준다(10-01) — 전투력 8자리도 숫자 폰트 12px로 들어간다.
+  return n.toLocaleString('ko-KR');
 }
 
 // 실시간 인생강화 통계 카드(EnhanceStatsCard/Fallback)는 로그인과 공용 → components/EnhanceStatsCard.tsx
