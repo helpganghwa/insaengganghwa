@@ -683,11 +683,12 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         const owner = ctx.defendedBy?.get(z.name);
         const atk = ctx.attackers?.get(z.name) ?? [];
         if (owner) {
-          // '각각 {g|A}와 {g|B}의 공격'은 A·B 모두를 공격 길드로 본다(구역마다 하나씩 짝지어 말한 것).
-          const each = seg.match(/각각([\s\S]*?)의\s?(?:공격|공세)/);
-          const named = each
-            ? [...each[1]!.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}/g)].map((m) => m[1]!.trim())
-            : [...seg.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}의\s?(?:공격|공세)/g)].map((m) => m[1]!.trim());
+          // '{g|A}와 {g|B}의 공격'·'각각 A와 B의 공격'은 A·B 모두를 공격 길드로 본다. 같은 절에 구역을 '과·와'로 묶어
+          // 말하면('{z|X}과 {z|Y}에서는 … {g|로제}의 공세를') 공격 표현이 다음 구역 뒤에 오므로 절 전체에서 찾는다(10-03).
+          const clause = sent.slice(commaBefore >= 0 ? commaBefore + 2 : 0, commaAfter >= 0 ? commaAfter : sent.length);
+          const named = [...clause.matchAll(/((?:\{g\|[^}]+\}\s?(?:와|과|,)\s?)*\{g\|[^}]+\})의\s?(?:공격|공세|손길|발길|기세)/g)].flatMap((m) =>
+            [...m[1]!.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}/g)].map((x) => x[1]!.trim()),
+          );
           if (named.length > 0 && atk.length > 0 && !named.some((g) => atk.includes(g)))
             issues.push(`{z|${z.name}} 을(를) 공격한 길드는 ${atk.map((g) => `{g|${g}}`).join('·')}인데 문장은 ${[...new Set(named)].map((g) => `{g|${g}}`).join('·')}의 공격으로 썼다 — 정리의 공격 측대로 고친다: ${q2}`);
           const dv = seg.slice(zEnd).match(/받아내|받아냈|막아내|막아냈|막아섰|지켜 내|지켜내|지켜 냈|지켜냈|지켰|돌려세|물리쳤|물러서지 않/);
@@ -738,6 +739,13 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         // 33. 수비가 있던 곳을 비어 있던 곳처럼 — 홀로 맞선 수비라도 교전은 있었다(10-02 '약탈자 야영지 … 수비 없는 틈').
         if (ctx.guardedCaptures?.has(z.name) && /수비 없|지키는 이 없|비어 있|비워 둔|무혈|빈 틈|빈틈/.test(seg) && !/혼자|홀로|한 명|하나뿐|단 한|외로이|배치한 수비 없이|수비 없이 맞선/.test(seg))
           issues.push(`{z|${z.name}} 은(는) 수비가 맞서 싸운 끝에 넘어간 곳인데 비어 있던 곳처럼 썼다 — '홀로 맞선 수비를 넘어'처럼 고친다: ${q2}`);
+        // 35. 빼앗은 상대 — '{g|X}에게서·로부터 … {z|Z}'의 X가 실제 이전 주인이 아니면 잡는다(10-03 '로제에게서 형광 수렁을' — 실제 민초).
+        const capFrom = ctx.captureBy.get(z.name)?.from;
+        if (capFrom && !retro) {
+          const fromNamed = [...seg.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:에게서|로부터|으로부터|한테서)/g)].map((m) => m[1]!.trim());
+          if (fromNamed.length > 0 && !fromNamed.includes(capFrom))
+            issues.push(`{z|${z.name}} 은(는) {g|${capFrom}} 에게서 가져온 곳인데 {g|${fromNamed[0]}} 에게서 가져온 것처럼 썼다 — 정리의 이전 주인대로 고친다: ${q2}`);
+        }
         const cap = ctx.captureBy.get(z.name);
         if (cap && !retro) {
           // 관형형('손에 넣은 지·가져간 땅')은 수식이지 점령 서술이 아니다 — 끝맺는 꼴만 본다.
