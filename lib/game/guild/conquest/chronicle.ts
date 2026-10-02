@@ -1521,6 +1521,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     attackers: new Map([...attackersByZone].map(([z, set]) => [z, [...set]] as const)),
     unguarded: new Map(summary.captures.filter((c) => c.from && c.defenders === 0).map((c) => [c.zone, c.from!] as const)),
     defendedBy: new Map(summary.defenses.map((d) => [d.zone, d.owner] as const)),
+    guardedCaptures: new Set(summary.captures.filter((c) => c.from && c.defenders > 0).map((c) => c.zone)),
     zoneCounts: new Map([
       ...summary.crowds.map((c) => [c.zone, { defenders: c.defenders, attackers: new Map(c.attackers.map((a) => [a.guild, a.n] as const)) }] as const),
       ...summary.underdogDefenses.map((u) => [u.zone, { defenders: u.defenders, attackers: new Map(u.attackers.map((a) => [a.guild, a.n] as const)) }] as const),

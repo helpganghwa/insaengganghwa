@@ -70,6 +70,8 @@ export type FactCheckContext = {
   defendedBy?: Map<string, string>;
   /** (10-02) 인원이 확정된 전투(사람이 몰린 전투·열세 방어·열세 점령)의 수비 수·공격 길드별 수 — 인원수 과장 검사(31). */
   zoneCounts?: Map<string, { defenders: number; attackers: Map<string, number> }>;
+  /** (10-02) 수비(집행관 포함)가 맞서 싸운 끝에 넘어간 점령 구역 — '비어 있던' 서술 금지(33). */
+  guardedCaptures?: Set<string>;
 };
 
 /** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
@@ -620,9 +622,12 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         const z = zmarks[k]!.name;
         const c = ctx.captureBy.get(z);
         if (!c) continue;
-        const segment = aligned.slice(k > 0 ? zmarks[k - 1]!.end : 0, k + 1 < zmarks.length ? zmarks[k + 1]!.at : aligned.length);
-        // 회고 속 '지켜냈던'(어제 일)은 오늘 주체 혼동이 아니다(09-26 게시본 오탐).
-        const heldToday = [...segment.matchAll(new RegExp(HELD.source, 'g'))].some((h) => !(segment[h.index! + h[0].length] === '던' && RETRO.test(segment)));
+        // 10-02 — 쉼표로 나뉜 다른 절의 '지켰고'를 끌어오지 않게 그 구역이 든 절로 좁힌다.
+        const cb = aligned.lastIndexOf(', ', zmarks[k]!.at);
+        const ca = aligned.indexOf(', ', zmarks[k]!.end);
+        const segment = aligned.slice(Math.max(k > 0 ? zmarks[k - 1]!.end : 0, cb >= 0 ? cb + 2 : 0), Math.min(k + 1 < zmarks.length ? zmarks[k + 1]!.at : aligned.length, ca >= 0 ? ca : aligned.length));
+        // 회고 속 '지켜냈던'(어제 일)은 오늘 주체 혼동이 아니다(09-26 게시본 오탐). '지켰지만'은 지킨 쪽이 진 서술이다(10-02).
+        const heldToday = [...segment.matchAll(new RegExp(HELD.source, 'g'))].some((h) => !(segment[h.index! + h[0].length] === '던' && RETRO.test(segment)) && segment.slice(h.index! + h[0].length, h.index! + h[0].length + 2) !== '지만');
         if (gs.has(c.winner) && heldToday) {
           issues.push(
             `{z|${z}} 은(는) {g|${c.winner}} 이(가) ${c.from ? `{g|${c.from}} 에게서 ` : ''}**빼앗은** 구역인데 지켜낸 것처럼 썼다 — '차지했다·가져갔다·손에 넣었다'로 고친다: ${
@@ -651,15 +656,22 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         // 구간 안에서 verbAt 앞의 주어 길드 — 구역을 꾸미는 관계절('{g|로제}가 지켜 온 {z|X}')의 길드는 주어가 아니다.
         const subjectIn = (verbAt: number): string | null => {
           let found: string | null = null;
+          // 관형형 뒤의 이·가 길드('{g|A}가 얻은 지 얼마 안 된 {z|X}')는 수식일 가능성이 커 다른 주어가 없을 때만 쓴다.
+          let weak: string | null = null;
           for (const m of seg.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(은|는|이|가|도)(?![가-힣])/g)) {
             const end = m.index! + m[0].length;
             if (end > verbAt) break;
             const tail = seg.slice(end, m.index! < zAt ? zAt : verbAt);
             if (m.index! < zAt && /(?:온|던|둔|운|놓은|남긴)\s[^{]*$/.test(tail)) continue;
-            // '{g|로제}가 갓 얻은 땅을'처럼 이·가 뒤 말이 관형형이면 수식절이지 주어가 아니다.
-            if ((m[2] === '이' || m[2] === '가') && /^\s?(?:\S+\s){0,2}\S*(?:온|던|둔|운|은|놓은|남긴)\s/.test(seg.slice(end, verbAt))) continue;
+            const adn = (m[2] === '이' || m[2] === '가') && /^\s?(?:\S+\s){0,4}\S*[온던둔운은낸한간된린친진인른선쓴든준본]\s/.test(m.index! < zAt ? tail : seg.slice(end, verbAt));
+            if (adn && m.index! > zAt) continue;
+            if (adn) {
+              weak = m[1]!.trim();
+              continue;
+            }
             found = m[1]!.trim();
           }
+          found ??= weak;
           // 길드 뒤에 인물 주어가 따로 있으면('{g|Winners}의 {u|악마}가 … 지켰다') 길드 주어로 판단하지 않는다.
           if (found && /\{u\|[^}]+\}(?:은|는|이|가)(?![가-힣])/.test(seg.slice(0, verbAt))) return null;
           return found;
@@ -719,6 +731,9 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
               issues.push(`{z|${z.name}} 의 인원은 수비 ${cnt.defenders}명, 공격 ${[...cnt.attackers].map(([g, n]) => `{g|${g}} ${n}명`).join('·')}인데 '${c.text.replace(/\{g\|([^}|]+)(?:\|[^}]*)?\}/g, '$1')}'라고 썼다 — 사실표 인원대로 고친다: ${q2}`);
           }
         }
+        // 33. 수비가 있던 곳을 비어 있던 곳처럼 — 홀로 맞선 수비라도 교전은 있었다(10-02 '약탈자 야영지 … 수비 없는 틈').
+        if (ctx.guardedCaptures?.has(z.name) && /수비 없|지키는 이 없|비어 있|비워 둔|무혈|빈 틈|빈틈/.test(seg) && !/혼자|홀로|한 명|하나뿐|단 한|외로이|배치한 수비 없이|수비 없이 맞선/.test(seg))
+          issues.push(`{z|${z.name}} 은(는) 수비가 맞서 싸운 끝에 넘어간 곳인데 비어 있던 곳처럼 썼다 — '홀로 맞선 수비를 넘어'처럼 고친다: ${q2}`);
         const cap = ctx.captureBy.get(z.name);
         if (cap && !retro) {
           // 관형형('손에 넣은 지·가져간 땅')은 수식이지 점령 서술이 아니다 — 끝맺는 꼴만 본다.
