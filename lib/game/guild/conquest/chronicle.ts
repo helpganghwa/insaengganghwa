@@ -94,6 +94,23 @@ export type ConquestDaySummary = {
   crowds: { zone: string; region: string; owner: string | null; defenders: number; attackers: { guild: string; n: number }[]; total: number; held: boolean }[];
 };
 
+/**
+ * 기간의 본문 표현(10-02 사용자 지시) — 연대기 본문에는 보유 기간·날짜 숫자를 쓰지 않고 은유로 쓴다.
+ * 사실표엔 숫자(검증 근거)와 함께 이 표현을 실어, 모델이 기간을 짐작해 '오래'를 붙이지 않게 한다.
+ */
+export function tenureWord(days: number): string {
+  if (days <= 1) return '갓 손에 넣은';
+  if (days <= 4) return '손에 넣은 지 얼마 되지 않은';
+  if (days <= 9) return '한동안 지켜 온';
+  return '오래 지켜 온';
+}
+export function sweepWord(days: number): string {
+  return days <= 4 ? '갓 이룬' : days <= 9 ? '한동안 이어 온' : '오래 이어 온';
+}
+export function gapWord(days: number): string {
+  return days <= 1 ? '하루 만에' : days <= 3 ? '얼마 지나지 않아' : '오랜만에';
+}
+
 /** 복귀 공백이 이 일수 이하면 '오랫동안'류 표현을 막는다(09-17 민초: 하루 비었다 돌아옴). */
 export const COMEBACK_SHORT_GAP_DAYS = 3;
 
@@ -689,7 +706,10 @@ const FACT_RULES = `[사실 검증 — 사실표가 유일한 진실]
 const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 이야기꾼이다. 길드들이 구역을 두고 벌인 일을 말하듯이 풀어 전한다.
 
 규칙:
-- 한국어. 듣는 사람에게 전말을 차근차근 들려주듯 자연스러운 구어체. 다만 과장·감탄 남발·영웅 서사시·미사여구 도배는 금지(담담하되 말하듯).
+- 한국어. 듣는 사람에게 전말을 들려주듯 자연스러운 구어체로, 사실표 안의 장면을 생생하게 살려 풍부하고 흥미롭게 쓴다(같은 인원의 엇갈린 결말, 적은 수의 반전, 한 사람의 활약, 되찾은 땅, 돌아온 길드처럼 '■ 이야깃거리'와 사실표에 있는 대비·반전을 살린다). 다만 없는 사실을 꾸미는 과장, 감탄사 남발, 미사여구 도배는 금지.
+- **긍정적인 시선으로 쓴다(10-02 사용자 지시).** 패배와 상실보다 각 길드가 얻고 지켜 낸 것을 중심에 둔다. '잃었다·무너졌다·몰락·사라졌다·자취를 감췄다·빼앗겼다·그쳤다·밀려났다' 같은 부정적 표현 대신 '내주었다·넘어갔다·자리를 넘겼다'처럼 담담하게 쓰고, 영토를 모두 내준 길드도 '이번에는 판도에서 물러나 다음을 기약하게 되었다'처럼 쓴다.
+- **보유 기간·날짜는 숫자로 쓰지 않는다(10-02 사용자 지시).** 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 손에 넣은·한동안 지켜 온·오래 지켜 온·곧바로)을 쓴다. 기간을 짐작해 '오래'를 붙이지 말고 사실표의 본문 표현만 따른다.
+- **같은 표현을 되풀이하지 않는다.** '자리를 지켰다·받아냈다·막아냈다·지켜 냈다·되찾았다·깃발' 같은 말이 이어지면 문장을 합치거나 다른 말로 바꾼다.
 - 문장에 '— '(줄표·대시)를 절대 쓰지 않는다. 부연은 새 문장이나 쉼표, 괄호로 잇는다.
 - '전투'라는 단어는 지양하고 '점령전'으로 쓴다. '전투'는 유저 부대가 실제로 맞붙어 싸우는 장면(개인 활약·교전 묘사)에만 쓴다.
 - 등수(1위·2위·순위·선두 등) 표현을 쓰지 않는다. 판도는 '가장 세력이 큰', '가장 넓은 영토를 지닌', '가장 강력한' 같은 질적 표현으로 서술한다.
@@ -737,23 +757,25 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'·'열세 방어'·'열세 점령'·개인 활약이 나온 구역에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다. 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
 - **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. '어제·전날'이 든 회고 문장은 본문 전체에서 한 문장만 쓰고, 나머지 연속성은 '갓 얻은 땅', '곧바로 다시 주인이 바뀌었다'처럼 회고 없이 오늘 일로 쓴다.
 - **점령전은 모든 구역에서 같은 시각에 벌어진다.** 구역과 구역 사이에 '곧이어·뒤이어·그 직후·그러자' 같은 순서를 만들지 말고 '같은 날·한편'으로 잇는다(2026-09-17).
-- **지역 석권 이력은 '■ 지역 석권 현황'에 적힌 것만 쓴다.** 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓰거나, '세 번째로 완성한·차례로 지배했던' 같은 서수·이력을 지어 붙이지 말 것. '다시 장악'이 적혀 있으면 그 기간·일수를 그대로 써도 좋다.
+- **지역 석권 이력은 '■ 지역 석권 현황'에 적힌 것만 쓴다.** 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓰거나, '세 번째로 완성한·차례로 지배했던' 같은 서수·이력을 지어 붙이지 말 것. '다시 장악'이 적혀 있어도 기간·일수 숫자는 쓰지 말고 사실표의 '본문 표현'을 따른다.
 - **'X 지역에서 N곳'의 N은 점령 줄의 '지역별' 수만 쓴다.** 길드 전체 획득 수를 한 지역의 수로 옮기지 말 것.
 - **잃은 구역의 보유 기간은 점령 줄의 표기를 따른다.** '어제 막 차지했던 곳'이 붙은 구역만 어제 차지한 땅이고, 'N일 동안 쥐고 있던 곳'을 함께 묶어 '어제 차지했던 곳들'로 쓰지 말 것.
 - **개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물은 '자리를 지켜냈다·버텼다'의 주어로 쓰지 않는다.** 쓰러뜨린 뒤 쓰러졌고, 자리는 길드가 지켰다는 식으로 나눠 쓴다.
 - **'같은 지역의 {z|X}'는 정리의 (X 지역) 표기가 실제로 같을 때만.** 구역을 지역으로 묶기 전에 표기를 다시 확인한다(2026-09-10: 오크 부락 구역을 잊힌 신전 문장에 묶은 사건).
-- 첫 문장은 '■ 규모'의 싸움 수·주인이 바뀐 곳 수와 가장 큰 격전지로 연다(09-24 운영자 교정 문체).
-- 사실표에 적힌 보유 기간·첫 등장·조각·비지·지역 석권은 근거가 있는 사실이니 살려 쓴다. 같은 구역을 노린 길드들은 서로 경쟁했다(동맹 없음, '합세·연합' 금지).
-- 반드시 JSON만 출력: {"today": "...", "headline": "...", "headlines": ["...", "..."]}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
+- 첫 문단은 '■ 규모'의 싸움 수·주인이 바뀐 곳 수로 열고, 곧바로 그날의 주제(theme)를 내건다(10-02 운영자 교정 문체).
+- 사실표에 적힌 첫 등장·조각·비지·지역 석권은 근거가 있는 사실이니 살려 쓰고, 보유 기간은 숫자 없이 '본문 표현'으로만 쓴다. 같은 구역을 노린 길드들은 서로 경쟁했다(동맹 없음, '합세·연합' 금지).
+- 반드시 JSON만 출력: {"theme": "...", "beats": ["..."], "today": "...", "headline": "...", "headlines": ["...", "..."]}.
+  - theme: **본문을 쓰기 전에 먼저 정한다.** 그날을 관통하는 핵심 주제 한 줄(예: '대공세와 그에 맞선 수비', '두 지역을 함께 덮은 깃발'). '■ 이야깃거리'와 사실표에서 그날 가장 특별한 흐름을 고르고, 직전 기록과 같은 구성이 되지 않게 한다.
+  - beats: theme을 끌고 갈 중심 장면 3~4개(사실표에 있는 사건만 — 대비되는 두 전장, 열세를 뒤집은 활약, 되찾은 땅·돌아온 길드, 지역 석권 등). today는 theme을 중심축으로 beats를 차례로 이어 쓴다. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
     · 누가 어느 구역을 점령했고 누가 막아냈는지 — 점령과 방어를 구분해서.
     · 무엇이 승패를 갈랐고 누가 활약했는지 — 개인 활약(feats)과 전투가 갈린 지점.
     · 그래서 이번 점령전 이후 대륙의 형세가 어떻게 되었는지(가장 세력이 큰 길드·기세를 질적으로, 등수 없이, 과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(3~6문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
-    문단 순서(운영자 교정본 기준): 첫 문단은 규모(싸움이 벌어진 곳·주인이 바뀐 곳의 수)와 가장 많은 사람이 몰린 전투로 연다. 이어서 그날 가장 크게 움직인 길드(얻은 곳과 지켜낸 곳), 그 길드와 땅을 주고받은 길드, 땅을 잃은 길드, 사라지거나 돌아온 길드 순으로 길드마다 한 문단에 모은다. 마지막 문단은 '이번 점령전으로'로 시작해 길드별 보유 증감만 담는다.
+    문단 순서(10-02 운영자 교정본 기준): 첫 문단은 규모(싸움이 벌어진 곳·주인이 바뀐 곳의 수)와 theme으로 연다. 이어지는 문단은 beats를 따라 이야기가 자연스럽게 이어지게 배치하고, 같은 길드·같은 지역의 사건은 한 문단에 모은다(문단마다 그 문단의 주인공이 분명하게). 돌아온 길드·물러난 길드는 짧게 한 문단에 묶어도 좋다. 마지막 문단은 '이번 점령전으로'로 시작해 길드별 보유 증감만 담는다.
     사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
-  - headline: 그날을 대표하는 한 줄(25자 내외, 마커 포함, 말하듯이). 소재는 아래 우선순위로 고른다 — ① '■ 어제와 이어지는 사실'의 하루 만의 탈환·상실 ② 영토 소멸(마지막 구역 상실) ③ 열세 방어(적은 수로 지켜냄)·개인 활약 ④ 신흥 세력의 첫 구역 ⑤ 그날 새로 완성한 지역 전체 장악 ⑥ 3곳 이상 확장. 문형은 여섯 가지 중 하나를 고른다: 선언형("{g|A}, 왕국 전역을 지배하다") · 반전형("{g|A}, 하루 만에 되찾은 슬라임 늪") · 인물형("{u|B}, {z|성문}에서 넷을 베다") · 몰락형("{g|C}, 마지막 깃발을 내리다") · 대비형("{g|A}의 첫 깃발, {g|C}의 마지막 깃발") · 숫자형("열 곳 중 열 곳, {g|A}가 늪을 완성하다"). '[지난 역사]'의 최근 7일 헤드라인과 문형·핵심 동사가 겹치지 않게 하고, 같은 지역의 '전역을 지배하다'는 7일 안에 되풀이하지 말 것(다시 완성한 날은 반전형으로). 첫 등장·복귀·소멸 길드는 그날 두 번째로 큰 사건일 때만 ', {g|이름} 첫 등장'처럼 짧게 덧붙이고, 아니면 본문에서만 다룬다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.
+  - headline: 그날을 대표하는 한 줄(25자 내외, 마커 포함, 말하듯이). 소재는 theme을 대표하는 것으로 고르되 아래 우선순위를 참고한다 — ① theme의 중심 사건 ② '■ 어제와 이어지는 사실'의 하루 만의 탈환 ③ 열세 방어(적은 수로 지켜냄)·개인 활약 ④ 그날 새로 완성한 지역 전체 장악 ⑤ 돌아온 길드·신흥 세력의 첫 구역 ⑥ 3곳 이상 확장. 영토를 모두 내준 길드를 제목의 주인공으로 삼지 않는다(10-02 긍정 톤). 문형은 다섯 가지 중 하나를 고른다: 선언형("{g|A}, 왕국 전역을 지배하다") · 반전형("{g|A}, 하루 만에 되찾은 슬라임 늪") · 인물형("{u|B}, 홀로 여섯을 막아서다") · 대비형("{g|A}의 대공세, {g|B}의 반격") · 숫자형("열 곳 중 열 곳, {g|A}가 늪을 완성하다"). '[지난 역사]'의 최근 7일 헤드라인과 문형·핵심 동사가 겹치지 않게 하고, 같은 지역의 '전역을 지배하다'는 7일 안에 되풀이하지 말 것(다시 완성한 날은 반전형으로). 첫 등장·복귀·소멸 길드는 그날 두 번째로 큰 사건일 때만 ', {g|이름} 첫 등장'처럼 짧게 덧붙이고, 아니면 본문에서만 다룬다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.
   - headlines: headline 후보 3~5개(첫 항목은 headline과 같은 문장). 나머지는 서로 다른 문형·다른 소재로 쓴다 — 검수자가 고르거나 고쳐 쓸 재료다. headline이 빈 문자열이면 빈 배열([]).`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
@@ -778,6 +800,51 @@ export function replayOrderIssues(text: string, battleZones: string[]): string[]
     }),
   );
   return battleZones.filter((z) => mentioned.has(z) && !fires.has(z));
+}
+
+/**
+ * 이야깃거리(10-02) — 그날 사실표에서 이야기의 축이 될 만한 것을 고른다. ① 같은 길드가 같은 인원으로 두 곳을 쳤는데
+ * 결과가 갈림 ② 가장 많은 곳으로 공세를 펼친 길드 ③ 가장 넓게 발을 뻗은 길드 ④ 한 길드가 두 지역 이상을 석권한 상태
+ * ⑤ 단 한 사람으로 빼앗은 땅. 인원수는 사람이 몰린 전투·열세 방어·열세 점령에서 확정된 것만 쓴다.
+ */
+export function storyHooks(s: ConquestDaySummary, sweepsAfter: { region: string; guild: string }[]): string[] {
+  const out: string[] = [];
+  const winnerOf = new Map(s.captures.map((c) => [c.zone, c.winner] as const));
+  const sized: { zone: string; region: string; guild: string; n: number; won: boolean }[] = [];
+  for (const c of s.crowds) for (const a of c.attackers) sized.push({ zone: c.zone, region: c.region, guild: a.guild, n: a.n, won: winnerOf.get(c.zone) === a.guild });
+  for (const u of s.underdogDefenses) for (const a of u.attackers) sized.push({ zone: u.zone, region: u.region, guild: a.guild, n: a.n, won: false });
+  for (const u of s.underdogCaptures) sized.push({ zone: u.zone, region: u.region, guild: u.winner, n: u.attackers, won: true });
+  const seenPair = new Set<string>();
+  for (const a of sized)
+    for (const b of sized) {
+      if (a.guild !== b.guild || a.n !== b.n || a.zone === b.zone || !a.won || b.won || a.n < 2) continue;
+      const key = `${a.guild}|${a.zone}|${b.zone}`;
+      if (seenPair.has(key)) continue;
+      seenPair.add(key);
+      out.push(`· 같은 인원, 엇갈린 결말: 길드 「${a.guild}」 이(가) ${a.n}명씩 나선 구역 「${a.zone}」(${a.region} 지역)에서는 점령, 「${b.zone}」(${b.region} 지역)에서는 막힘`);
+    }
+  const atkBy = new Map<string, Set<string>>();
+  for (const a of s.attacks) atkBy.set(a.guild, new Set([...(atkBy.get(a.guild) ?? []), a.zone]));
+  const topAtk = [...atkBy].sort((x, y) => y[1].size - x[1].size);
+  if (topAtk[0] && topAtk[0][1].size >= 4 && (topAtk[1]?.[1].size ?? 0) < topAtk[0][1].size)
+    out.push(`· 공세의 중심: 길드 「${topAtk[0][0]}」 이(가) 가장 많은 ${topAtk[0][1].size}곳으로 공격을 보냄`);
+  const capBy = new Map<string, { n: number; regions: Set<string> }>();
+  for (const c of s.captures) {
+    const o = capBy.get(c.winner) ?? { n: 0, regions: new Set<string>() };
+    o.n += 1;
+    o.regions.add(c.region);
+    capBy.set(c.winner, o);
+  }
+  const topCap = [...capBy].sort((x, y) => y[1].n - x[1].n);
+  if (topCap[0] && topCap[0][1].n >= 3 && (topCap[1]?.[1].n ?? 0) < topCap[0][1].n)
+    out.push(`· 가장 넓게 발을 뻗은 길드: 「${topCap[0][0]}」 — ${topCap[0][1].regions.size}개 지역에 걸쳐 ${topCap[0][1].n}곳 점령`);
+  const sweepBy = new Map<string, string[]>();
+  for (const w of sweepsAfter) sweepBy.set(w.guild, [...(sweepBy.get(w.guild) ?? []), w.region]);
+  for (const [g, regions] of sweepBy)
+    if (regions.length >= 2) out.push(`· 여러 지역을 함께 덮은 깃발: 길드 「${g}」 이(가) ${regions.join('·')} 지역을 모두 쥔 상태`);
+  for (const u of s.underdogCaptures)
+    if (u.attackers === 1) out.push(`· 단 한 사람의 점령: 길드 「${u.winner}」 의 한 명이 구역 「${u.zone}」(${u.region} 지역)의 수비 ${u.defenders}명을 뚫고 차지`);
+  return out;
 }
 
 export function isNotable(s: ConquestDaySummary): boolean {
@@ -894,7 +961,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       const tenureNote = since
         ? held <= 1
           ? ` · 「${c.from}」 이(가) 어제 막 차지했던 곳`
-          : ` · 「${c.from}」 이(가) ${koDate(since)}부터 ${held}일 동안 쥐고 있던 곳('어제 차지했던'으로 쓰지 말 것)`
+          : ` · 「${c.from}」 이(가) ${koDate(since)}부터 ${held}일 동안 쥐고 있던 곳('어제 차지했던'으로 쓰지 말 것 · 본문 표현: '${tenureWord(held)}')`
         : '';
       return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote}${tenureNote})`;
     }
@@ -1158,7 +1225,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     const trusted = histMatches(ids);
     const ongoing = trusted ? pastSweeps.find((s) => s.region === region && s.brokenOn === null && s.guild === bG) : undefined;
     if (bG && aG === bG) {
-      sweepLines.push(`· ${label}: 「${bG}」 석권 유지${ongoing ? `(${koDate(ongoing.from)}부터 ${daysBetween(ongoing.from, kstDay)}일째)` : ''}`);
+      sweepLines.push(`· ${label}: 「${bG}」 석권 유지${ongoing ? `(${koDate(ongoing.from)}부터 ${daysBetween(ongoing.from, kstDay)}일째 · 본문 표현: '${sweepWord(daysBetween(ongoing.from, kstDay))}')` : ''}`);
     } else if (bG) {
       const lostZones = ids.filter((id) => afterOwner.get(id) !== bG).map((id) => `「${nameById.get(id)}」`);
       sweepLines.push(
@@ -1172,7 +1239,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
         ? pastSweeps.filter((s) => s.region === region && s.guild === aG && s.brokenOn).at(-1)
         : undefined;
       const hist = prev
-        ? ` — ${koDate(prev.from)}부터 ${daysBetween(prev.from, prev.brokenOn!)}일 동안 쥐었다가 ${koDate(prev.brokenOn!)}에 흩어진 지역을 ${daysBetween(prev.brokenOn!, kstDay)}일 만에 다시 장악`
+        ? ` — ${koDate(prev.from)}부터 ${daysBetween(prev.from, prev.brokenOn!)}일 동안 쥐었다가 ${koDate(prev.brokenOn!)}에 흩어진 지역을 ${daysBetween(prev.brokenOn!, kstDay)}일 만에 다시 장악(본문 표현: '${gapWord(daysBetween(prev.brokenOn!, kstDay))} 다시')`
         : trusted
           ? ' — 이력상 이 길드의 첫 석권 지역'
           : '';
@@ -1215,7 +1282,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
         veterans.has(g)
           ? `· 길드 「${g}」 이(가) 영토를 모두 잃었던 처지에서 다시 구역을 확보하며 판도에 복귀(재기 — 과거에 영토를 가졌던 길드다. '첫 등장'·'대륙에 이름을 알렸다' 표현 금지, '돌아왔다'류로${
               gapDays !== null
-                ? `. 영토를 모두 잃은 ${koDate(wipedOn!)} 이후 ${gapDays}일 만의 복귀${gapDays <= COMEBACK_SHORT_GAP_DAYS ? " — '오랫동안·오래·한동안·긴 공백' 표현 금지" : ''}`
+                ? `. 영토를 모두 잃은 ${koDate(wipedOn!)} 이후 ${gapDays}일 만의 복귀(본문 표현: '${gapWord(gapDays)} 돌아왔다')${gapDays <= COMEBACK_SHORT_GAP_DAYS ? " — '오랫동안·오래·한동안·긴 공백' 표현 금지" : ''}`
                 : ''
             })`
           : beforeCounts.size === 0
@@ -1263,6 +1330,12 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // 빈 섹션은 digest에서 **통째로 제외**(2026-07-12 피드백) — '· (없음)' 플레이스홀더를
   // 먹이면 모델이 성실하게 "눈에 띄는 활약은 없었다"류 부재 서술을 생성해 템플릿 티가 난다.
   // 안 보여주면 못 쓴다 + baseContent의 부재 서술 금지 규칙이 이중 방어.
+  // 이야깃거리(10-02) — 사실표 안의 대비·반전·두드러진 움직임을 코드가 골라 준다. 새 사실이 아니라 위 항목들을
+  // 엮은 것이고, 모델이 그날의 주제(theme)와 중심 장면(beats)을 고르는 재료다.
+  const hookLines = storyHooks(summary, [...regionZoneIds].flatMap(([region, ids]) => {
+    const g = soleOwner(afterOwner, ids);
+    return g ? [{ region: regionKo(region), guild: g }] : [];
+  }));
   const digestSections: string[] = [];
   // 규모(09-24) — 첫 문장('열네 번의 싸움이 벌어져 열 곳의 주인이 바뀐')의 근거. 종전엔 사실표에 없어 모델이 세거나 빼먹었다.
   digestSections.push(`■ 규모: 싸움이 벌어진 구역 ${summary.battleCount}곳, 그중 주인이 바뀐 곳 ${summary.captures.length}곳`);
@@ -1283,6 +1356,8 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       `■ 열세 점령(수비보다 적은 인원으로 들어가 빼앗은 전투 — 열세 방어와 같은 무게의 활약. 인원수를 써도 되는 자리다):\n${underdogCapLines}`,
     );
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
+  if (hookLines.length > 0)
+    digestSections.push(`■ 이야깃거리(위 사실들을 엮은 것 — 주제와 중심 장면을 고르는 재료. 새 사실을 더하지 말 것):\n${hookLines.join('\n')}`);
   if (topoLines)
     digestSections.push(
       `■ 지형 형세(지도 분석 — 형세 서술 근거. 조각은 지역 경계와 무관하게 맞닿은 구역끼리 묶은 것이다. 한 지역 안의 영토가 갈라졌다고 옮기지 말고 조각 구성대로 쓸 것):\n${topoLines}`,
@@ -1773,7 +1848,7 @@ async function generateLocked(
     (bigChange
       ? `이번 점령전은 역사에 남는 날이다. headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다(어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지). headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`
       : `이번 점령전은 역사에 남을 날이 아니다. headline은 반드시 빈 문자열(""), headlines는 빈 배열([])로 둔다.\n`) +
-    `위 규칙대로 JSON({today, headline, headlines})만 출력하라.`;
+    `위 규칙대로 먼저 theme과 beats를 정한 뒤 JSON({theme, beats, today, headline, headlines})만 출력하라.`;
 
   // ── 생성 + 검증 재시도(최대 3회) — 위반(마커 없는 이름)을 피드백으로 재생성 유도. ──
   // 재시도로도 남으면 enforceMarkers가 결정론 백스톱(동명 모호만 최종 잔존 가능, warn).
