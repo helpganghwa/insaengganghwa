@@ -48,7 +48,7 @@ describe('storyHooks — 이야깃거리(10-02)', () => {
     expect(tenureWord(8)).toBe('한동안 지켜 온');
     expect(tenureWord(22)).toBe('오래 지켜 온');
     expect(sweepWord(15)).toBe('오래 이어 온');
-    expect(gapWord(1)).toBe('하루 만에');
+    expect(gapWord(1)).toBe('곧바로');
     expect(gapWord(2)).toBe('얼마 지나지 않아');
   });
 });
@@ -82,6 +82,10 @@ describe('factIssues 28~30 — 주체 뒤바뀜·부정 표현·집행관(10-02 
   });
   it('인물 주어·수식절은 길드 주어로 보지 않는다(옛 게시본 오탐)', () => {
     expect(has('슬라임 늪의 {z|썩은 잔교|25}에는 {g|케케케|27}와 {g|로제|25}가 하나씩 들어왔지만, {g|Winners|17}의 {u|악마|lPCpQ1MM}가 혼자 둘을 모두 쓰러뜨리고 자리를 지켰다.', /지켜 낸 길드는/)).toBe(false);
+  });
+  it('영토 조각 수는 쓰지 않는다(10-03)', () => {
+    expect(has('{g|로제|25}는 열다섯 곳이 되었고 영토도 여섯 조각으로 나뉘었다.', /영토 조각 수를 1번/)).toBe(true);
+    expect(has('{g|로제|25}의 영토는 여러 갈래로 나뉘었다.', /영토 조각 수/)).toBe(false);
   });
   it('부정적 표현·집행관은 고쳐 쓰게 한다(가벼운 위반 아님)', () => {
     const t = '{g|로제|25}는 뼈아픈 하루를 보냈고, 집행관 혼자 맞섰다.';

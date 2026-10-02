@@ -54,9 +54,9 @@ describe('연대기 사실 검증기', () => {
     expect(has(/사람 수 표현\(한 명\)/)).toBe(true); // 검은 첨봉
     expect(has(/\{z\|모닥불 평원\} 은\(는\) 오크 부락 지역인데 문장은 잊힌 신전/)).toBe(true);
     expect(has(/\{z\|분노의 분화구\} 은\(는\) 최근\(7일 안\) 잃은 길드가 오늘 노린 구역이 아니라/)).toBe(true);
-    expect(has(/'하루 만에' 표현이 2번/)).toBe(true);
-    expect(has(/'어제 … 내주었던' 표현이 2번/)).toBe(true);
-    expect(has(/'다시 노렸다' 표현이 2번/)).toBe(true);
+    expect(has(/'하루 만에'을\(를\) 2번 썼다/)).toBe(true);
+    expect(has(/'어제 … 내주었던'을\(를\) 2번 썼다/)).toBe(true);
+    expect(has(/'다시 노렸다'을\(를\) 2번 썼다/)).toBe(true);
     // 연기 평원(최다 인원 전투)의 '수비수 둘'과 '되찾았고'는 허용 — 위반 목록에 없어야 한다.
     expect(has(/사람 수 표현\([^)]*둘을[^)]*\)[\s\S]*수비수 둘을 뚫고/)).toBe(false);
     expect(has(/\{z\|연기 평원\} 은\(는\) 최근\(7일 안\) 잃은/)).toBe(false);

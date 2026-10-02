@@ -565,7 +565,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   const whole = plainText(text);
   const once = (re: RegExp, label: string) => {
     const n = (whole.match(re) ?? []).length;
-    if (n > 1) issues.push(`'${label}' 표현이 ${n}번 나온다 — 한 번만 쓰고 나머지는 '갓 얻은 땅·잃은 지 하루 된·곧바로 다시 주인이 바뀐'처럼 바꿔 쓴다.`);
+    if (n > 1) issues.push(`'${label}'을(를) ${n}번 썼다 — 회고 표현은 본문 전체에서 한 번만 쓰고 나머지는 '곧바로·이내·갓 얻은 땅'처럼 바꿔 쓴다.`);
   };
   once(/하루 만에/g, '하루 만에');
   once(/어제[^.]*내주었던/g, '어제 … 내주었던');
@@ -578,9 +578,13 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   if (durations > DURATION_MAX)
     issues.push(`보유·지속 기간이나 날짜를 숫자로 ${durations}번 썼다 — 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 얻은·얻은 지 얼마 안 된·한동안 지켜 온·오래 지켜 온·곧바로)으로 바꾼다.`);
   // 29. 부정적 표현(10-02 긍정 톤 지시) — 가벼운 위반이 아니라 고쳐 쓰게 한다('잃었던 처지'처럼 지난 일을 말하는 관형형은 허용).
-  const negs = [...plainText(text).matchAll(/무너졌|무너지|몰락|사라졌|자취를 감|빼앗겼|잃었(?!던)|잃고|잃어|밀려났|그쳤|뼈아픈|쓰라린|지키지 못/g)].map((m) => m[0]);
+  const negs = [...plainText(text).matchAll(/무너졌|무너지|몰락|사라졌|자취를 감|빼앗겼|잃었(?!던)|잃고|잃어|밀려났|그쳤|뼈아픈|쓰라린|지키지 못|흩어졌|흩어져 나|흩어지/g)].map((m) => m[0]);
   if (negs.length > 0)
     issues.push(`부정적 표현을 ${negs.length}번 썼다(${[...new Set(negs)].join('·')}) — '내주었다·넘어갔다·자리를 넘겼다·이번에는 물러나 다음을 기약했다'처럼 담담하고 긍정적으로 바꾼다.`);
+  // 34. 영토 조각 수(10-03 사용자 지시) — 형세 서술에 'N개 조각·여섯 조각'처럼 수를 붙이지 않는다.
+  const pieces = [...plainText(text).matchAll(/(?:\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s?(?:개의?\s?)?조각/g)].map((m) => m[0]);
+  if (pieces.length > 0)
+    issues.push(`영토 조각 수를 ${pieces.length}번 썼다(${[...new Set(pieces)].join('·')}) — 수를 빼고 '여러 갈래로 나뉜·떨어진 새 거점'처럼 쓴다.`);
   // 30. 집행관(10-02) — 운영 용어라 이야기에서 빼고 '홀로 맞선 수비·한 명의 수비'로 쓴다.
   const execs = (plainText(text).match(/집행관/g) ?? []).length;
   if (execs > 0) issues.push(`'집행관'을 ${execs}번 썼다 — 이야기에서는 '홀로 맞선 수비·남아 있던 한 명'처럼 쓰고 '집행관'이라는 말은 뺀다.`);
