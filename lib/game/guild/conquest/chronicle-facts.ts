@@ -450,7 +450,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       }
 
       // 14. 짧은 복귀 공백 — 하루이틀 비었다 돌아온 길드에 '오랫동안'을 붙이지 않는다(09-17 민초).
-      if (ctx.shortGapGuilds && LONG_GAP.test(plain)) {
+      // 보유 기간을 꾸미는 '한동안 지켜 온·오래 이어 온'(10-02 본문 표현)은 복귀 공백 서술이 아니다.
+      if (ctx.shortGapGuilds && LONG_GAP.test(plain.replace(/(?:한동안|오래|오랫동안)\s?(?:지켜|이어|쥐고)\s?(?:온|오던|있던)/g, ''))) {
         const g = guilds.find((x) => ctx.shortGapGuilds!.includes(x));
         if (g) issues.push(`{g|${g}} 은(는) 영토를 잃은 지 며칠 만에 돌아왔는데 긴 공백처럼 썼다 — '오랫동안·한동안'을 빼고 사실표의 복귀 일수대로 쓴다: ${q(sent)}`);
       }
@@ -569,7 +570,7 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   // 27. 보유 기간 과다 — 사실이 맞아도 '며칠 동안 쥐고 있던'이 이어지면 글이 날짜 나열이 된다(09-25 운영자 교정).
   const durations = [...plainText(text).matchAll(DURATION)].length + [...plainText(text).matchAll(DATE_SINCE)].length;
   if (durations > DURATION_MAX)
-    issues.push(`보유·지속 기간이나 날짜를 숫자로 ${durations}번 썼다 — 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 손에 넣은·한동안 지켜 온·오래 지켜 온·곧바로)으로 바꾼다.`);
+    issues.push(`보유·지속 기간이나 날짜를 숫자로 ${durations}번 썼다 — 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 얻은·얻은 지 얼마 안 된·한동안 지켜 온·오래 지켜 온·곧바로)으로 바꾼다.`);
   // 29. 부정적 표현(10-02 긍정 톤 지시) — 가벼운 위반이 아니라 고쳐 쓰게 한다('잃었던 처지'처럼 지난 일을 말하는 관형형은 허용).
   const negs = [...plainText(text).matchAll(/무너졌|무너지|몰락|사라졌|자취를 감|빼앗겼|잃었(?!던)|잃고|잃어|밀려났|그쳤|뼈아픈|쓰라린|지키지 못/g)].map((m) => m[0]);
   if (negs.length > 0)
@@ -678,7 +679,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         }
         const cap = ctx.captureBy.get(z.name);
         if (cap && !retro) {
-          const cv = seg.slice(zEnd).match(/가져갔|가져왔|가져가며|차지했|차지하|손에 넣|빼앗았|거두|거둬|거둔/);
+          // 관형형('손에 넣은 지·가져간 땅')은 수식이지 점령 서술이 아니다 — 끝맺는 꼴만 본다.
+          const cv = seg.slice(zEnd).match(/가져갔|가져왔|가져가며|차지했|차지하(?!던)|손에 넣(?![은던])|빼앗았(?!던)|거두(?!던)|거둬/);
           if (cv && cv.index != null && seg[zEnd + cv.index + cv[0].length] !== '던') {
             const subj = subjectIn(zEnd + cv.index);
             if (subj && subj !== cap.winner)

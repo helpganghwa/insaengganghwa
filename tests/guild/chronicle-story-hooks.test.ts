@@ -43,7 +43,8 @@ describe('storyHooks — 이야깃거리(10-02)', () => {
     expect(hooks.some((h) => h.includes('단 한 사람의 점령') && h.includes('「얼음 여울」'))).toBe(true);
   });
   it('기간은 숫자 대신 은유 표현으로 준다', () => {
-    expect(tenureWord(1)).toBe('갓 손에 넣은');
+    expect(tenureWord(1)).toBe('갓 얻은');
+    expect(tenureWord(3)).toBe('얻은 지 얼마 안 된');
     expect(tenureWord(8)).toBe('한동안 지켜 온');
     expect(tenureWord(22)).toBe('오래 지켜 온');
     expect(sweepWord(15)).toBe('오래 이어 온');
