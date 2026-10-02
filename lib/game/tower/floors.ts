@@ -167,7 +167,16 @@ export type TowerFloorInfo = {
   scene: string;
   /** 생김새 한 줄 — 대기 화면 해설. */
   line: string;
+  /** 그림을 좌우로 뒤집어 그린다 — 몬스터가 왼쪽(내 캐릭터 쪽)을 보게(NO_FLIP 표). */
+  flip: boolean;
 };
+
+/**
+ * 몬스터 그림을 좌우로 뒤집지 **않는** 층(10-02 사용자 결정, 결정 폼 8vP5hqk9) — 그 밖의 층은 모두 뒤집어 그린다.
+ * 그림 파일은 그대로 두고 층 목록·층 화면·전투가 이 표 하나로 뒤집는다(대부분 원본이 오른쪽을 봐서, 뒤집으면
+ * 내 캐릭터가 있는 왼쪽을 본다). 그림을 새로 뽑으면 이 표도 다시 본다.
+ */
+const NO_FLIP = new Set([1, 2, 67, 74, 75, 78]);
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
@@ -193,7 +202,13 @@ export function towerFloorInfo(floor: number): TowerFloorInfo {
     sprite: ART_SECTIONS.has(section + 1) ? `f${floor}` : guardian ? 'golem' : PLACEHOLDER[floor % PLACEHOLDER.length]!,
     scene: ART_SECTIONS.has(section + 1) ? `sec${String(section + 1).padStart(2, '0')}` : guardian ? 'throne' : section % 2 === 0 ? 'hall' : 'crystal',
     line: desc,
+    flip: ART_SECTIONS.has(section + 1) && !NO_FLIP.has(floor),
   };
+}
+
+/** 몬스터 그림 좌우 뒤집기 스타일(TowerFloorInfo.flip). */
+export function towerMonFlip(info: Pick<TowerFloorInfo, 'flip'>): { transform?: string } {
+  return info.flip ? { transform: 'scaleX(-1)' } : {};
 }
 
 /** 층 몬스터 스킬 — 서버 전투 판정용(towerFloorInfo와 같은 표). */

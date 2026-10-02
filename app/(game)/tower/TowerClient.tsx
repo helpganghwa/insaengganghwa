@@ -12,7 +12,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
-import { towerFloorInfo, towerFloorTitle } from '@/lib/game/tower/floors';
+import { towerFloorInfo, towerFloorTitle, towerMonFlip } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
 
 import { towerChallengeAction, towerClaimAction, towerEquipAction } from './actions';
@@ -640,7 +640,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                   </div>
                 </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={PIX} />
+                <img src={assetUrl(`/sprites/tower/mon/${heroInfo.sprite}.png`)} alt="" className={`h-[96px] w-auto self-end ${hero > next ? 'opacity-35 brightness-0 invert' : 'drop-shadow-[0_2px_2px_rgba(0,0,0,.8)]'}`} style={{ ...PIX, ...towerMonFlip(heroInfo) }} />
               </div>
             </div>
           ) : (
@@ -723,7 +723,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
                               alt=""
                               decoding="async"
                               className={`h-8 w-8 object-contain ${st === 'd' ? 'opacity-50 grayscale' : st === 'l' ? 'opacity-30 brightness-0 invert' : ''}`}
-                              style={PIX}
+                              style={{ ...PIX, ...towerMonFlip(towerFloorInfo(f)) }}
                             />
                             <span className={`text-[10.5px] font-black tabular-nums ${st === 'd' ? 'text-emerald-300' : st === 'c' ? 'text-amber-200' : sp ? 'text-rose-300' : 'text-zinc-500'}`}>
                               {sp ? '✦' : ''}{f}
