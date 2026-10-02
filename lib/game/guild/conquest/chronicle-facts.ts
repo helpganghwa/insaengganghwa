@@ -66,6 +66,8 @@ export type FactCheckContext = {
   attackers?: Map<string, string[]>;
   /** (09-26) 주인이 병력을 두지 않아(집행관도 없음) 싸움 없이 넘어간 구역 → 이전 주인. '{g|주인}과 맞붙었다' 검사. */
   unguarded?: Map<string, string>;
+  /** (10-02) 방어 성공 구역 → 지켜 낸 소유 길드. 공격·수비 주체를 뒤바꾼 문장 검사(28). */
+  defendedBy?: Map<string, string>;
 };
 
 /** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
@@ -193,8 +195,6 @@ const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[]
   { re: /지켜 냈|지켜냈|지켜 내|지켜내/g, label: '지켜 냈다', max: 3, alt: '버텨 냈다·내주지 않았다' },
   { re: /되찾/g, label: '되찾았다', max: 3, alt: '다시 손에 넣었다·돌려받았다' },
   { re: /깃발/g, label: '깃발', max: 4, alt: '이름·세력·발자취' },
-  // 10-02 — 부정적 표현(긍정 톤 지시). 가벼운 위반으로 세어 검수 화면에 보이게만 한다.
-  { re: /무너졌|무너지|몰락|사라졌|자취를 감|빼앗겼|잃었|잃고|잃어|밀려났|그쳤/g, label: '부정적 표현(잃다·무너지다·사라지다 등)', max: 1, alt: '내주었다·넘어갔다·자리를 넘겼다' },
 ];
 
 /** 13 — 위치 앞에서 가장 가까운 주어 길드({g|G} 바로 뒤에 은·는·이·가·도). */
@@ -570,6 +570,13 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   const durations = [...plainText(text).matchAll(DURATION)].length + [...plainText(text).matchAll(DATE_SINCE)].length;
   if (durations > DURATION_MAX)
     issues.push(`보유·지속 기간이나 날짜를 숫자로 ${durations}번 썼다 — 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 손에 넣은·한동안 지켜 온·오래 지켜 온·곧바로)으로 바꾼다.`);
+  // 29. 부정적 표현(10-02 긍정 톤 지시) — 가벼운 위반이 아니라 고쳐 쓰게 한다('잃었던 처지'처럼 지난 일을 말하는 관형형은 허용).
+  const negs = [...plainText(text).matchAll(/무너졌|무너지|몰락|사라졌|자취를 감|빼앗겼|잃었(?!던)|잃고|잃어|밀려났|그쳤|뼈아픈|쓰라린|지키지 못/g)].map((m) => m[0]);
+  if (negs.length > 0)
+    issues.push(`부정적 표현을 ${negs.length}번 썼다(${[...new Set(negs)].join('·')}) — '내주었다·넘어갔다·자리를 넘겼다·이번에는 물러나 다음을 기약했다'처럼 담담하고 긍정적으로 바꾼다.`);
+  // 30. 집행관(10-02) — 운영 용어라 이야기에서 빼고 '홀로 맞선 수비·한 명의 수비'로 쓴다.
+  const execs = (plainText(text).match(/집행관/g) ?? []).length;
+  if (execs > 0) issues.push(`'집행관'을 ${execs}번 썼다 — 이야기에서는 '홀로 맞선 수비·남아 있던 한 명'처럼 쓰고 '집행관'이라는 말은 뺀다.`);
   for (const f of REPEAT_FAMILIES) {
     const n = (whole.match(f.re) ?? []).length;
     if (n > f.max) issues.push(`'${f.label}' 표현이 ${n}번 나온다 — ${f.max}번까지만 쓰고 나머지는 '${f.alt}'처럼 바꿔 쓰거나, 같은 말을 되풀이하는 문장을 합친다.`);
@@ -619,6 +626,66 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
           );
         }
       }
+    }
+    // 28. 공격·수비 주체 뒤바뀜(10-02 시험: 이야기를 풍부하게 쓰다가 '잊힌 숲길에서 Winners가 로제의 공격을 받아냈다'
+    //     — 실제는 로제가 지킴, '타락한 성소 … 로제의 공격' — 실제 공격은 Slay, 전날 일을 오늘 '로제가 가져갔다'로 씀).
+    //     구역마다 그 구역 구간(앞 구역 마커 뒤 ~ 다음 구역 마커 앞)만 본다 — 한 문장에 여러 구역이 이어질 때 오탐 방지.
+    for (const sent of sentences(para)) {
+      const retro = RETRO.test(sent);
+      const zm = [...sent.matchAll(MARKER)].filter((m) => m[1] === 'z').map((m) => ({ at: m.index!, end: m.index! + m[0].length, name: m[2]!.trim() }));
+      const q2 = sent.length > 60 ? sent.slice(0, 60) + '…' : sent;
+      zm.forEach((z, k) => {
+        // 구간 = 그 구역이 든 절(쉼표로 나뉜 앞뒤 절의 '~의 공격'·주어를 끌어오지 않게) ∩ 이웃 구역 마커 사이.
+        const commaBefore = sent.lastIndexOf(', ', z.at);
+        const commaAfter = sent.indexOf(', ', z.end);
+        const segStart = Math.max(k > 0 ? zm[k - 1]!.end : 0, commaBefore >= 0 ? commaBefore + 2 : 0);
+        const segEnd = Math.min(k + 1 < zm.length ? zm[k + 1]!.at : sent.length, commaAfter >= 0 ? commaAfter : sent.length);
+        const seg = sent.slice(segStart, segEnd);
+        const zAt = z.at - segStart;
+        const zEnd = z.end - segStart;
+        // 구간 안에서 verbAt 앞의 주어 길드 — 구역을 꾸미는 관계절('{g|로제}가 지켜 온 {z|X}')의 길드는 주어가 아니다.
+        const subjectIn = (verbAt: number): string | null => {
+          let found: string | null = null;
+          for (const m of seg.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(은|는|이|가|도)(?![가-힣])/g)) {
+            const end = m.index! + m[0].length;
+            if (end > verbAt) break;
+            const tail = seg.slice(end, m.index! < zAt ? zAt : verbAt);
+            if (m.index! < zAt && /(?:온|던|둔|운|놓은|남긴)\s[^{]*$/.test(tail)) continue;
+            // '{g|로제}가 갓 얻은 땅을'처럼 이·가 뒤 말이 관형형이면 수식절이지 주어가 아니다.
+            if ((m[2] === '이' || m[2] === '가') && /^\s?(?:\S+\s){0,2}\S*(?:온|던|둔|운|은|놓은|남긴)\s/.test(seg.slice(end, verbAt))) continue;
+            found = m[1]!.trim();
+          }
+          // 길드 뒤에 인물 주어가 따로 있으면('{g|Winners}의 {u|악마}가 … 지켰다') 길드 주어로 판단하지 않는다.
+          if (found && /\{u\|[^}]+\}(?:은|는|이|가)(?![가-힣])/.test(seg.slice(0, verbAt))) return null;
+          return found;
+        };
+        const owner = ctx.defendedBy?.get(z.name);
+        const atk = ctx.attackers?.get(z.name) ?? [];
+        if (owner) {
+          // '각각 {g|A}와 {g|B}의 공격'은 A·B 모두를 공격 길드로 본다(구역마다 하나씩 짝지어 말한 것).
+          const each = seg.match(/각각([\s\S]*?)의\s?(?:공격|공세)/);
+          const named = each
+            ? [...each[1]!.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}/g)].map((m) => m[1]!.trim())
+            : [...seg.matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}의\s?(?:공격|공세)/g)].map((m) => m[1]!.trim());
+          if (named.length > 0 && atk.length > 0 && !named.some((g) => atk.includes(g)))
+            issues.push(`{z|${z.name}} 을(를) 공격한 길드는 ${atk.map((g) => `{g|${g}}`).join('·')}인데 문장은 ${[...new Set(named)].map((g) => `{g|${g}}`).join('·')}의 공격으로 썼다 — 정리의 공격 측대로 고친다: ${q2}`);
+          const dv = seg.slice(zEnd).match(/받아내|받아냈|막아내|막아냈|막아섰|지켜 내|지켜내|지켜 냈|지켜냈|지켰|돌려세|물리쳤|물러서지 않/);
+          if (dv && dv.index != null && !/각각/.test(seg)) {
+            const subj = subjectIn(zEnd + dv.index);
+            if (subj && subj !== owner)
+              issues.push(`{z|${z.name}} 을(를) 지켜 낸 길드는 {g|${owner}} 인데 {g|${subj}} 이(가) 지킨 것처럼 썼다 — 공격한 쪽과 지킨 쪽을 정리대로 고친다: ${q2}`);
+          }
+        }
+        const cap = ctx.captureBy.get(z.name);
+        if (cap && !retro) {
+          const cv = seg.slice(zEnd).match(/가져갔|가져왔|가져가며|차지했|차지하|손에 넣|빼앗았|거두|거둬|거둔/);
+          if (cv && cv.index != null && seg[zEnd + cv.index + cv[0].length] !== '던') {
+            const subj = subjectIn(zEnd + cv.index);
+            if (subj && subj !== cap.winner)
+              issues.push(`{z|${z.name}} 을(를) 이번에 가져간 길드는 {g|${cap.winner}} 인데 {g|${subj}} 이(가) 가져간 것처럼 썼다 — 정리대로 고친다(전날 일이면 '어제'로 회고 한 문장만): ${q2}`);
+          }
+        }
+      });
     }
     // 귀속 — 이 문단이 그 구역을 처음 다룬다면 승자와 이전 주인이 같은 문단 안에 있어야 한다.
     for (const z of new Set(tokens(para).filter((t) => t.kind === 'z').map((t) => t.name))) {
