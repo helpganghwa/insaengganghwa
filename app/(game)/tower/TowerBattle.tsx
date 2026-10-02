@@ -115,6 +115,7 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
           sub={<TowerSkillTags floor={floor} className="text-[9.5px]" />}
           cp={towerRequirement(floor)}
           img={assetUrl(`/sprites/tower/mon/${info.sprite}.png`)}
+          flip={info.flip}
           act={!!cur && !ended && cur.actor === 'mon'}
           hit={hitTarget === 'mon'}
           stepKey={shown}
@@ -491,8 +492,10 @@ const LogLine = memo(function LogLine({ t, monName }: { t: TowerTurn; monName: s
  * 무대 위 한쪽(대난투 Fighter 문법) — 이름 · 길드/특성 · 전투력 · 몸 · 몸 아래 체력바. 자리·크기 고정.
  * 공격한 쪽은 빛 + 짧게 튀었다 제자리, 맞으면 흔들리고 피해량이 뜬다.
  */
-function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefore, down, hpAbs, hpMax }: {
+function Fighter({ side, name, sub, cp, img, flip, act, hit, stepKey, dmg, hp, hpBefore, down, hpAbs, hpMax }: {
   side: 'l' | 'r';
+  /** 그림을 좌우로 뒤집는다 — 몬스터 그림 방향표(towerFloorInfo.flip). */
+  flip?: boolean;
   name: string;
   sub: React.ReactNode;
   cp: number;
@@ -540,7 +543,7 @@ function Fighter({ side, name, sub, cp, img, act, hit, stepKey, dmg, hp, hpBefor
               src={img}
               alt=""
               className={`h-full w-full object-contain object-bottom ${act ? 'drop-shadow-[0_0_6px_rgba(251,191,36,.85)]' : 'drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]'}`}
-              style={{ ...PIX, transform: `scaleX(${side === 'r' ? -1 : 1})`, transformOrigin: 'center bottom' }}
+              style={{ ...PIX, transform: `scaleX(${flip ? -1 : 1})`, transformOrigin: 'center bottom' }}
             />
           ) : null}
         </div>
