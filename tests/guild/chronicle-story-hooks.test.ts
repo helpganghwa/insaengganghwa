@@ -90,3 +90,33 @@ describe('factIssues 28~30 — 주체 뒤바뀜·부정 표현·집행관(10-02 
     expect(has('영토를 모두 잃었던 {g|티모집사|31}가 돌아왔다.', /부정적 표현/)).toBe(false);
   });
 });
+
+describe('factIssues 31·32 — 공격 동사 주체·인원수 과장(10-02 3차 초안 실오류)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['감시 망루', '오크 부락'], ['검은 깃털 제단', '타락 천사 부유섬'], ['모닥불 평원', '오크 부락']]),
+    regionLabels: ['오크 부락', '타락 천사 부유섬'],
+    feats: [],
+    headcountZones: ['감시 망루', '모닥불 평원'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map(),
+    battleZones: [],
+    captureBy: new Map([['감시 망루', { winner: '로제', from: 'Winners' }], ['검은 깃털 제단', { winner: 'Winners', from: '로제' }]]),
+    attackers: new Map([['감시 망루', ['로제']], ['검은 깃털 제단', ['Winners']], ['모닥불 평원', ['로제']]]),
+    defendedBy: new Map([['모닥불 평원', 'Winners']]),
+    zoneCounts: new Map([
+      ['감시 망루', { defenders: 1, attackers: new Map([['로제', 6]]) }],
+      ['모닥불 평원', { defenders: 1, attackers: new Map([['로제', 6]]) }],
+    ]),
+  };
+  const has = (t: string, re: RegExp) => factIssues(t, c).some((i) => re.test(i));
+  it('공격 측이 아닌 길드를 공격 동사의 주어로 쓰면 잡는다', () => {
+    expect(has('{g|로제|25}가 수비를 세우지 못한 {z|검은 깃털 제단|50}을 두드렸으나 {g|Winners|17}가 다시 가져갔다.', /공격한 것처럼/)).toBe(true);
+    expect(has('{g|Winners|17}가 {z|검은 깃털 제단|50}을 두드려 곧바로 되찾았다.', /공격한 것처럼/)).toBe(false);
+  });
+  it('인원이 확정된 전투의 수를 틀리게 쓰면 잡는다', () => {
+    expect(has('오크 부락의 {z|감시 망루|36}에서는 양쪽 모두 6명을 투입한 접전이 벌어졌다.', /인원은 수비 1명/)).toBe(true);
+    expect(has('{z|모닥불 평원|40}에는 {g|로제|25} 여섯이 몰려왔지만 {u|악마|lPCpQ1MM}가 모두 쓰러뜨렸다.', /인원은/)).toBe(false);
+    expect(has('{z|모닥불 평원|40}에는 {g|로제|25} 일곱이 몰려왔다.', /인원은 수비 1명, 공격 \{g\|로제\} 6명/)).toBe(true);
+  });
+});

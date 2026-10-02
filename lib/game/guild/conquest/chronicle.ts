@@ -1521,6 +1521,11 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     attackers: new Map([...attackersByZone].map(([z, set]) => [z, [...set]] as const)),
     unguarded: new Map(summary.captures.filter((c) => c.from && c.defenders === 0).map((c) => [c.zone, c.from!] as const)),
     defendedBy: new Map(summary.defenses.map((d) => [d.zone, d.owner] as const)),
+    zoneCounts: new Map([
+      ...summary.crowds.map((c) => [c.zone, { defenders: c.defenders, attackers: new Map(c.attackers.map((a) => [a.guild, a.n] as const)) }] as const),
+      ...summary.underdogDefenses.map((u) => [u.zone, { defenders: u.defenders, attackers: new Map(u.attackers.map((a) => [a.guild, a.n] as const)) }] as const),
+      ...summary.underdogCaptures.map((u) => [u.zone, { defenders: u.defenders, attackers: new Map([[u.winner, u.attackers] as const]) }] as const),
+    ]),
   };
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──

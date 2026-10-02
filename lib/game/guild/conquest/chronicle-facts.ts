@@ -68,6 +68,8 @@ export type FactCheckContext = {
   unguarded?: Map<string, string>;
   /** (10-02) 방어 성공 구역 → 지켜 낸 소유 길드. 공격·수비 주체를 뒤바꾼 문장 검사(28). */
   defendedBy?: Map<string, string>;
+  /** (10-02) 인원이 확정된 전투(사람이 몰린 전투·열세 방어·열세 점령)의 수비 수·공격 길드별 수 — 인원수 과장 검사(31). */
+  zoneCounts?: Map<string, { defenders: number; attackers: Map<string, number> }>;
 };
 
 /** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
@@ -166,6 +168,8 @@ const ALLIANCE_TOGETHER = /(?:\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과|,)\s?)+\{
 const DURATION = /(이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘|(\d+)\s?일)\s?(?:째|동안|간)/g;
 /** 날짜 기점 표현(10-02) — '9월 24일부터' 같은 날짜도 기간 숫자로 본다. */
 const DATE_SINCE = /\d{1,2}월\s?\d{1,2}일\s?(?:부터|이후|이래)/g;
+/** 수 낱말(10-02 인원수 검사). '한·두·세·네'는 '명' 앞 관형 수사. */
+const KO_NUM: Record<string, number> = { 하나: 1, 한: 1, 둘: 2, 두: 2, 셋: 3, 세: 3, 넷: 4, 네: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
 const DAY_WORD: Record<string, number> = { 이틀: 2, 사흘: 3, 나흘: 4, 닷새: 5, 엿새: 6, 이레: 7, 여드레: 8, 아흐레: 9, 열흘: 10 };
 /** 20 — 첫 등장 표현. */
 // '처음으로 땅을 내주며'(첫 상실)와 이름을 바꾼 날 사실표가 시키는 '새 이름으로'는 첫 등장이 아니다(09-26).
@@ -675,6 +679,44 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
             const subj = subjectIn(zEnd + dv.index);
             if (subj && subj !== owner)
               issues.push(`{z|${z.name}} 을(를) 지켜 낸 길드는 {g|${owner}} 인데 {g|${subj}} 이(가) 지킨 것처럼 썼다 — 공격한 쪽과 지킨 쪽을 정리대로 고친다: ${q2}`);
+          }
+        }
+        // 31. 공격 동사의 주체 — '{g|로제}가 {z|X}를 두드렸다'에서 로제가 그 구역의 공격 측이 아니면 잡는다(10-02 3차 초안).
+        if (atk.length > 0 && !retro) {
+          const av = seg.slice(zEnd).match(/두드렸|두드려|두드리|노렸|노려|공격했|공격해|공격에 나|쳐들어|밀려들|몰려들|몰려왔/);
+          if (av && av.index != null) {
+            const subj = subjectIn(zEnd + av.index);
+            if (subj && !atk.includes(subj))
+              issues.push(`{z|${z.name}} 을(를) 공격한 길드는 ${atk.map((g) => `{g|${g}}`).join('·')}인데 {g|${subj}} 이(가) 공격한 것처럼 썼다 — 정리의 공격 측대로 고친다: ${q2}`);
+          }
+        }
+        // 32. 인원수 과장 — 인원이 확정된 전투에서 길드 옆에 붙은 수·'양쪽 모두 N'·'수비 N'이 사실표와 다르면 잡는다(10-02 '양쪽 모두 6명').
+        const cnt = ctx.zoneCounts?.get(z.name);
+        if (cnt) {
+          const num = (w: string): number | null => {
+            const m = w.match(/^(\d+)/);
+            if (m) return Number(m[1]);
+            return KO_NUM[w] ?? null;
+          };
+          const NUMW = '(\\d+|하나|한|둘|두|셋|세|넷|네|다섯|여섯|일곱|여덟|아홉|열)';
+          const claims: { who: string; n: number; text: string }[] = [];
+          const both = seg.match(new RegExp(`양쪽\\s?(?:모두|다)?\\s?${NUMW}\\s?명?`));
+          if (both) claims.push({ who: '*', n: num(both[1]!) ?? -1, text: both[0] });
+          for (const m of seg.matchAll(new RegExp(`\\{g\\|([^}|]+)(?:\\|[^}]*)?\\}(?:의 수비)?\\s${NUMW}(?:\\s?명)?(?=[이가을를은는만씩으]|\\s|$)`, 'g')))
+            claims.push({ who: m[1]!.trim(), n: num(m[2]!) ?? -1, text: m[0] });
+          const owner2 = ctx.defendedBy?.get(z.name) ?? ctx.captureBy.get(z.name)?.from ?? null;
+          for (const c of claims) {
+            if (c.n < 0) continue;
+            const ok =
+              c.who === '*'
+                ? cnt.defenders === c.n && [...cnt.attackers.values()].every((n) => n === c.n)
+                : c.who === owner2
+                  ? cnt.defenders === c.n
+                  : cnt.attackers.has(c.who)
+                    ? cnt.attackers.get(c.who) === c.n
+                    : true;
+            if (!ok)
+              issues.push(`{z|${z.name}} 의 인원은 수비 ${cnt.defenders}명, 공격 ${[...cnt.attackers].map(([g, n]) => `{g|${g}} ${n}명`).join('·')}인데 '${c.text.replace(/\{g\|([^}|]+)(?:\|[^}]*)?\}/g, '$1')}'라고 썼다 — 사실표 인원대로 고친다: ${q2}`);
           }
         }
         const cap = ctx.captureBy.get(z.name);
