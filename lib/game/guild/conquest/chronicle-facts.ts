@@ -147,7 +147,7 @@ const RETRO = /어제|전날|하루 전/;
 /** '어제부터 비워 둔 {z|X}' — 오늘까지 이어진 공백 묘사라 어제 사건 회고(5·12번)가 아니다(09-26 게시본 오탐). */
 const RETRO_VACANT = /(?:어제|전날|하루 전)부터\s?(?:비워|비어|비운|비었|방치)/g;
 /** 11 — 구역 사이 순서 표현. */
-const SEQUENCE = /곧이어|뒤이어|그 직후|그러자/;
+const SEQUENCE = /곧이어|뒤이어|그 직후|그러자|차례로/; // 차례로(10-03 묶음 문장 '공격을 차례로 받아내며')
 /** 12 — 회고 문장의 '가져간' 동사(잃은 쪽 회고 '어제 내주었던'은 5번 규칙이 본다). */
 const RETRO_TAKEN = /차지했|차지한|빼앗았|빼앗은|손에 넣|가져갔|가져간/;
 /** 12 — 앞 문장의 여러 구역을 한꺼번에 받는 말. */
@@ -711,6 +711,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
             if (m.index! < zAt && /(?:온|던|둔|운|놓은|남긴)\s[^{]*$/.test(tail)) continue;
             const adn = (m[2] === '이' || m[2] === '가') && /^\s?(?:\S+\s){0,4}\S*[온던둔운은낸한간된린친진인른선쓴든준본]\s/.test(m.index! < zAt ? tail : seg.slice(end, verbAt));
             if (adn && m.index! > zAt) continue;
+            // '{g|A}가 노린 {z|X}'의 A는 공격 쪽 수식이다 — 약한 주어로도 쓰지 않는다(10-03 1대1 방어 묶음 문장).
+            if (adn && m.index! < zAt && /^\s?(?:노린|노렸던|공격한|두드린|넘본)\s/.test(tail)) continue;
             if (adn) {
               weak = m[1]!.trim();
               continue;

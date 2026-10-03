@@ -50,7 +50,8 @@ export type ConquestDaySummary = {
    * (2026-09-13 검은 첨봉: 케케케 배치 0·집행관 예수만 자동 방어였는데 "수비를 세워 맞섰으나"로 나갔다). */
   captures: { zone: string; region: string; winner: string; from: string | null; firstCapture: boolean; defenders: number; deployedDefenders: number }[];
   /** 방어 성공(소유 길드 유지). defenders/deployedDefenders는 captures와 같은 기준(집행관 단독 방어 구분용). */
-  defenses: { zone: string; region: string; owner: string; defenders: number; deployedDefenders: number }[];
+  /** foes — 그 전투의 공격 측 인원(로스터에서 소유 길드 외). 1대1 방어를 짧게 묶는 데 쓴다(10-03). */
+  defenses: { zone: string; region: string; owner: string; defenders: number; deployedDefenders: number; foes?: number }[];
   /** 영토 순위(그날 이후 보유 구역 수, 상위). */
   standings: { guild: string; zones: number }[];
   /** 공격 측 — 그날 각 구역을 공격한(role=attack 배치) 길드(구역×길드 distinct). */
@@ -343,6 +344,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
           owner: b.prev_owner,
           defenders: parts.filter((r) => r.guildName === b.prev_owner).length,
           deployedDefenders: Number(b.deployed_defenders ?? 0),
+          foes: parts.filter((r) => r.guildName !== b.prev_owner).length,
         });
       continue;
     }
@@ -372,6 +374,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         owner: b.winner,
         defenders: parts.filter((r) => r.guildName === b.winner).length,
         deployedDefenders: Number(b.deployed_defenders ?? 0),
+        foes: parts.filter((r) => r.guildName !== b.winner).length,
       });
     }
     // 로스터 기준 인원(배치 + 집행관 자동 방어). 소유 길드 소속 = 수비, 그 외 = 공격(길드별).
@@ -767,6 +770,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - **방어에 성공한 길드는 싸운 길드다.** '방어' 목록에 있는 길드를 '다투지 않았다·싸우지 않았다·조용히 지냈다'로 쓰면 오류 — 공격 배치가 없었으면 '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 이번 행동으로 쓴다(2026-09-04 검수).
+- **'■ 짧게 묶을 방어'가 있으면 그 구역들은 지킨 길드별로 한 문장씩만 쓴다** — 예: '{g|로제}는 {g|케케케}가 노린 드래곤 화산의 {z|그을린 고목}과 {g|민초}가 노린 잊힌 신전의 {z|설원 신전}을 지켰다'. 구역마다 따로 문장을 세우거나 이 구역들로 문단 하나를 길게 채우지 말고, 이야기의 중심 장면으로도 쓰지 않는다. 지역 이름은 구역마다 붙여 '같은 지역'으로 잇지 않는다.
 - **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
 - **'가장 많은 사람이 몰린 전투'가 있으면 그날의 큰 싸움으로 다룬다** — 공격 길드별 인원과 수비 인원, 결과를 그대로 쓴다(예: '여섯을 보내고 하나를 보태 일곱으로 몰아쳤지만 셋이 막아냈다'). 수비 인원에는 집행관이 섞여 있으므로 '수비수 둘과 집행관 하나'처럼 나누어 쓰지 않는다.
 - **'열세 방어'가 있으면 그날의 활약으로 세운다** — 적은 수로 더 많은 공격을 받아내고 지켜낸 전투다. 인원을 대비시켜 한두 문장으로 쓰고('셋이 일곱을 막아냈다'), 길드를 주어로 삼는다. 개인 활약이 함께 있으면 둘을 같은 문단에 묶되 같은 말을 두 번 하지 않는다.
@@ -1359,6 +1363,29 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     const g = soleOwner(afterOwner, ids);
     return g ? [{ region: regionKo(region), guild: g }] : [];
   }));
+  // 짧게 묶을 방어(10-03) — 1대1로 지켜 낸 곳이 많은 날(10-03: 9곳)엔 구역마다 문장을 세우다 본문 끝이 나열 문단이 되고,
+  // 주체를 바꿔 쓰는 오류도 거기서 났다(잿빛 첨석). 지킨 길드별로 미리 묶어 주고 한 문장씩만 쓰게 한다. 활약·사람이 몰린 전투·
+  // 열세 방어 구역은 이야기 장면이라 빼고, 묶을 곳이 3곳 이상일 때만 둔다.
+  const storyZones = new Set([
+    ...summary.feats.flatMap((f) => f.zones),
+    ...summary.crowds.map((c) => c.zone),
+    ...summary.underdogDefenses.map((u) => u.zone),
+  ]);
+  const quiet = summary.defenses.filter((d) => d.defenders === 1 && d.foes === 1 && !storyZones.has(d.zone));
+  const quietLines =
+    quiet.length < 3
+      ? ''
+      : [...new Set(quiet.map((d) => d.owner))]
+          .map((owner) => {
+            const items = quiet
+              .filter((d) => d.owner === owner)
+              .map((d) => {
+                const atk = [...new Set(summary.attacks.filter((a) => a.zone === d.zone && a.guild !== owner).map((a) => a.guild))];
+                return `「${d.zone}」(${d.region}, 공격 ${atk.map((g) => `「${g}」`).join('·')})`;
+              });
+            return `· 길드 「${owner}」 이(가) 지킴: ${items.join(', ')}`;
+          })
+          .join('\n');
   const digestSections: string[] = [];
   // 규모(09-24) — 첫 문장('열네 번의 싸움이 벌어져 열 곳의 주인이 바뀐')의 근거. 종전엔 사실표에 없어 모델이 세거나 빼먹었다.
   digestSections.push(`■ 규모: 싸움이 벌어진 구역 ${summary.battleCount}곳, 그중 주인이 바뀐 곳 ${summary.captures.length}곳`);
@@ -1366,6 +1393,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별):\n${capLines}`);
   if (summary.defenses.length > 0)
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
+  if (quietLines) digestSections.push(`■ 짧게 묶을 방어(1대1로 지켜 낸 곳 — 구역마다 문장을 따로 세우지 말고, 지킨 길드별로 한 문장에 묶어 한 번만 쓸 것):\n${quietLines}`);
   if (crowdLines)
     digestSections.push(
       `■ 그날 가장 많은 사람이 몰린 전투(${CROWD_MIN}명 이상인 곳 중 한 곳 — 수비 인원에는 집행관 자동 방어가 포함되어 있으니 따로 나누지 말 것):\n${crowdLines}`,
@@ -1795,8 +1823,12 @@ async function repairFactSentences(
     track(res.usage);
     const block = res.content.find((b) => b.type === 'text');
     const parsed = parseModelJson<{ fixes?: { before?: unknown; after?: unknown }[] }>(block && 'text' in block ? block.text : '');
-    if (!parsed || !Array.isArray(parsed.fixes)) return null;
+    if (!parsed || !Array.isArray(parsed.fixes)) {
+      console.warn('[chronicle] 문장 고치기 — 응답 파싱 실패');
+      return null;
+    }
     const out = applySentenceFixes(text, parsed.fixes);
+    if (out === text) console.warn(`[chronicle] 문장 고치기 — 본문과 맞는 원문 문장이 없어 바꾸지 않음(제안 ${parsed.fixes.length}건)`);
     return out === text ? null : out;
   } catch (e) {
     console.warn(`[chronicle] 문장 고치기 호출 실패: ${(e as Error).message}`);
