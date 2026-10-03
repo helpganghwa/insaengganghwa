@@ -420,7 +420,10 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       }
 
       // 7. 산수
-      if (guilds.length === 1) {
+      // 문장에 나온 유일한 길드가 '{g|X}에게서·로부터'(빼앗긴 쪽)이면 수의 주인은 앞 문장의 주어다 — 대조하지 않는다
+      // (10-03 '…을 {g|로제}에게서 가져왔고 … 세 곳에 깃발을 꽂았다'의 세 곳은 Winners).
+      const sourceOnly = guilds.length === 1 && !new RegExp(`\\{g\\|${guilds[0]!.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\|[^}]*)?\\}(?!\\s?(?:에게서|로부터|에게))`).test(sent);
+      if (guilds.length === 1 && !sourceOnly) {
         const allowed = ctx.guildCounts.get(guilds[0]!);
         if (allowed) {
           // 지역을 앞세운 수('잊힌 신전에서 네 곳')는 13번(지역별 수)이 본다 — 여기서 길드 전체 수와 대조하면 오탐(09-24).

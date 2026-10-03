@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { gapWord, storyHooks, sweepWord, tenureWord, type ConquestDaySummary } from '@/lib/game/guild/conquest/chronicle';
+import { applySentenceFixes, gapWord, storyHooks, sweepWord, tenureWord, type ConquestDaySummary } from '@/lib/game/guild/conquest/chronicle';
 import { factIssues, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
 
 /** 10-02 점령전 모양 — 로제가 감시 망루(점령)와 모닥불 평원(막힘)에 여섯씩, 얼음 여울은 한 명이 빼앗음. */
@@ -177,6 +177,17 @@ describe('factIssues 37·38 — 동료와 함께 싸운 인물·길드와 같은
   it('길드와 같은 이름의 인물은 소속 길드를 붙인다', () => {
     expect(has('{z|연기 평원|10}에서는 {u|민초|RV6TJpLO}가 끝까지 쓰러지지 않았다.', /이름이 같다/)).toBe(true);
     expect(has('{z|연기 평원|10}에서는 {g|Winners|17}의 {u|민초|RV6TJpLO}가 끝까지 쓰러지지 않았다.', /이름이 같다/)).toBe(false);
+  });
+});
+
+describe('applySentenceFixes — 오류 남은 문장만 고치기(10-03)', () => {
+  const t = '{z|잿빛 첨석|38}에서는 {g|로제|25}가 땅을 지켰다. {z|붉은 막사|39}에서는 {g|케케케|27}가 막아섰다.';
+  it('원문 문장이 정확히 한 번 있을 때만 그 자리만 바꾼다', () => {
+    const out = applySentenceFixes(t, [{ before: '{z|잿빛 첨석|38}에서는 {g|로제|25}가 땅을 지켰다.', after: '{z|잿빛 첨석|38}에서는 {g|Winners|17}가 {g|로제|25}의 공격을 물리쳤다.' }]);
+    expect(out).toBe('{z|잿빛 첨석|38}에서는 {g|Winners|17}가 {g|로제|25}의 공격을 물리쳤다. {z|붉은 막사|39}에서는 {g|케케케|27}가 막아섰다.');
+  });
+  it('본문에 없거나 형식이 틀린 짝은 무시한다', () => {
+    expect(applySentenceFixes(t, [{ before: '없는 문장.', after: 'x' }, { before: 1, after: 'y' }])).toBe(t);
   });
 });
 

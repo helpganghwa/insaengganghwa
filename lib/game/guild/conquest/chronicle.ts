@@ -1751,6 +1751,59 @@ export function isLightFactIssue(issue: string): boolean {
   return /표현이 \d+번 나온다|줄표\(—\)/.test(issue);
 }
 
+/**
+ * 오류 남은 문장만 고치기(10-03) — 재생성 3번 뒤에도 사실 위반이 남은 문장만 다시 쓰게 한다(10-03 잿빛 첨석:
+ * 지킨 길드를 바꿔 쓴 문장이 세 번 모두 남았다). 본문 전체를 다시 쓰던 다듬기 패스(09-24 기각 — 위반이 늘었다)와 달리
+ * 위반 문장의 원문·수정문 짝만 받아 그 자리만 바꾼다. 원문이 본문에 정확히 한 번 있을 때만 바꾸고, 채택은 호출부가
+ * 위반이 줄었는지로 판단한다.
+ */
+export function applySentenceFixes(text: string, fixes: { before?: unknown; after?: unknown }[]): string {
+  let out = text;
+  for (const f of fixes) {
+    if (typeof f.before !== 'string' || typeof f.after !== 'string') continue;
+    const before = f.before.trim();
+    const after = f.after.trim();
+    if (!before || before === after || out.split(before).length !== 2) continue;
+    out = out.replace(before, after);
+  }
+  return out;
+}
+
+async function repairFactSentences(
+  text: string,
+  issues: string[],
+  digest: string,
+  timeoutMs: number,
+  track: (u: Anthropic.Usage | undefined) => void,
+): Promise<string | null> {
+  try {
+    const res = await client().messages.create(
+      {
+        model: MODEL_ID,
+        max_tokens: 3000,
+        thinking: { type: 'disabled' },
+        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        messages: [
+          {
+            role: 'user',
+            content: `${digest}\n\n[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
+          },
+        ],
+      },
+      { timeout: timeoutMs, maxRetries: 0 },
+    );
+    track(res.usage);
+    const block = res.content.find((b) => b.type === 'text');
+    const parsed = parseModelJson<{ fixes?: { before?: unknown; after?: unknown }[] }>(block && 'text' in block ? block.text : '');
+    if (!parsed || !Array.isArray(parsed.fixes)) return null;
+    const out = applySentenceFixes(text, parsed.fixes);
+    return out === text ? null : out;
+  } catch (e) {
+    console.warn(`[chronicle] 문장 고치기 호출 실패: ${(e as Error).message}`);
+    return null;
+  }
+}
+
 /** 연속성 줄에서 회고 낱말을 뺀 문구 — 사실(하루 만의 탈환·상실·방어)은 그대로 두고 표현만 오늘 일로 바꾼다. */
 export function deRetro(line: string): string {
   return line
@@ -2042,6 +2095,31 @@ async function generateLocked(
   }
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
+
+  // 오류 남은 문장만 고치기(10-03) — 재생성으로도 남은 사실 위반(가벼운 반복·줄표 제외)이 있으면 그 문장만 고친다(최대 두 번 —
+  // 시험에서 한 번에 2→1건씩 줄었다). 위반이 줄고 마커·연출 순서 위반이 늘지 않을 때만 받는다. 함수 한도(300초) 안에서만
+  // (재생성 마감 뒤 최대 45초).
+  for (let round = 0; round < 2; round++) {
+    const left = factIssues(today, factCtx).filter((f) => !isLightFactIssue(f));
+    const budget = Math.min(60_000, deadline + 45_000 - Date.now());
+    if (left.length === 0 || budget <= 15_000) break;
+    {
+      const fixed = await repairFactSentences(today, left, digest, budget, track);
+      if (fixed) {
+        const after = factIssues(fixed, factCtx).filter((f) => !isLightFactIssue(f));
+        const worse =
+          findViolations(fixed).length > findViolations(today).length ||
+          replayOrderIssues(fixed, battleZones).length > replayOrderIssues(today, battleZones).length;
+        if (!worse && after.length < left.length) {
+          console.info(`[chronicle] 문장 고치기 채택 — 사실 위반 ${left.length}→${after.length}건`);
+          today = enrichMarkers(enforceMarkers(fixed));
+        } else {
+          console.warn(`[chronicle] 문장 고치기 기각 — 사실 위반 ${left.length}→${after.length}건${worse ? ', 마커·순서 위반 증가' : ''}`);
+          break;
+        }
+      } else break;
+    }
+  }
 
   // 자동 다듬기 패스는 두지 않는다(09-24 시험: 여섯 번 중 다섯 번이 연출 순서·사실 위반을 늘려 버려졌다 — 비용만 들었다).
   // 사실은 위 검증 루프가, 구성·중복·흐름은 운영자가 검수 화면의 '개선'(polishChronicle)으로 필요할 때만 다듬는다.
