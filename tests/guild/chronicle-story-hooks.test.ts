@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { applySentenceFixes, gapWord, storyHooks, sweepWord, tenureWord, type ConquestDaySummary } from '@/lib/game/guild/conquest/chronicle';
+import { applySentenceFixes, insertQuietParagraph, quietParagraph, gapWord, storyHooks, sweepWord, tenureWord, type ConquestDaySummary } from '@/lib/game/guild/conquest/chronicle';
 import { factIssues, type FactCheckContext } from '@/lib/game/guild/conquest/chronicle-facts';
 
 /** 10-02 점령전 모양 — 로제가 감시 망루(점령)와 모닥불 평원(막힘)에 여섯씩, 얼음 여울은 한 명이 빼앗음. */
@@ -192,6 +192,54 @@ describe('applySentenceFixes — 오류 남은 문장만 고치기(10-03)', () =
   });
   it('본문에 없거나 형식이 틀린 짝은 무시한다', () => {
     expect(applySentenceFixes(t, [{ before: '없는 문장.', after: 'x' }, { before: 1, after: 'y' }])).toBe(t);
+  });
+});
+
+describe('quietParagraph — 1대1 방어 묶음 문단(10-03)', () => {
+  const items = [
+    { owner: '로제', zone: '그을린 고목', region: '드래곤 화산', attacker: '케케케' },
+    { owner: '로제', zone: '설원 신전', region: '잊힌 신전', attacker: '민초' },
+    { owner: 'Winners', zone: '잿빛 첨석', region: '오크 부락', attacker: '로제' },
+  ];
+  it('지킨 길드별로 한 문장, 공격 길드는 각각 짝지어 쓴다', () => {
+    const p = quietParagraph(items, '2026-10-03');
+    expect(p).toContain('{g|로제}는 드래곤 화산의 {z|그을린 고목}, 잊힌 신전의 {z|설원 신전}에서 각각 {g|케케케}·{g|민초}의 공격을');
+    expect(p).toContain('{g|Winners}는 오크 부락의 {z|잿빛 첨석}에서 {g|로제}의 공격을');
+  });
+  it('3곳 미만이면 쓰지 않는다', () => {
+    expect(quietParagraph(items.slice(0, 2), '2026-10-03')).toBe('');
+  });
+  it('정산 문단 앞에 끼우고, 모델이 이미 쓴 구역은 뺀다', () => {
+    const body = '첫 문단.\n\n{z|그을린 고목|8} 이야기.\n\n이번 점령전으로 끝.';
+    const out = insertQuietParagraph(body, [...items, { owner: 'Winners', zone: '타락의 심연', region: '타락 천사 부유섬', attacker: 'Slay' }], '2026-10-03');
+    const paras = out.split('\n\n');
+    expect(paras[paras.length - 1]).toBe('이번 점령전으로 끝.');
+    expect(paras[paras.length - 2]).not.toContain('그을린 고목');
+    expect(paras[paras.length - 2]).toContain('{z|타락의 심연}');
+  });
+});
+
+describe('factIssues 39 — 자동 묶음 구역을 본문에 씀(10-03)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['그을린 고목', '드래곤 화산']]), regionLabels: ['드래곤 화산'], feats: [], headcountZones: [], recaptureZones: [],
+    yesterdayZones: [], guildCounts: new Map(), battleZones: [], captureBy: new Map(), autoZones: ['그을린 고목'],
+  };
+  it('언급하면 잡고, 없으면 통과', () => {
+    expect(factIssues('{g|로제|25}는 {z|그을린 고목|8}을 지켰다.', c).some((i) => /묶음 문단으로 덧붙이는/.test(i))).toBe(true);
+    expect(factIssues('{g|로제|25}는 땅을 지켰다.', c).some((i) => /묶음 문단으로 덧붙이는/.test(i))).toBe(false);
+  });
+});
+
+describe('factIssues 40 — 영토 소멸 서술의 주인(10-03)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map(), regionLabels: [], feats: [], headcountZones: [], recaptureZones: [],
+    yesterdayZones: [], guildCounts: new Map(), battleZones: [], captureBy: new Map(), wipedGuilds: ['세계수'],
+  };
+  const has = (t: string) => factIssues(t, c).some((i) => /영토가 남아 있다/.test(i));
+  it('영토가 남은 길드에 쓰면 잡고, 실제로 잃은 길드·지난 일 관형형은 통과', () => {
+    expect(has('{g|민초|28}는 이로써 이번엔 판도에서 물러나 다음을 기약하게 되었다.')).toBe(true);
+    expect(has('{g|세계수|29}는 마지막 땅을 내주고 이번에는 판도에서 물러나 다음을 기약하게 되었다.')).toBe(false);
+    expect(has('영토를 모두 내주었던 {g|레지스탕스|36}가 곧바로 판도에 돌아왔다.')).toBe(false);
   });
 });
 

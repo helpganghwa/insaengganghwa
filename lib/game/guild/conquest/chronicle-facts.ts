@@ -51,6 +51,10 @@ export type FactCheckContext = {
   regionCounts?: Map<string, Map<string, { gain: number; loss: number; after: number; before: number }>>;
   /** (09-17) 영토를 잃은 지 며칠 안 돼 돌아온 길드 — '오랫동안·한동안'을 붙이면 안 된다. */
   shortGapGuilds?: string[];
+  /** (10-03) 이번에 영토를 모두 잃은 길드 — 이 길드만 '판도에서 물러나·영토가 모두 비었다'의 주어가 될 수 있다. 없으면 검사 생략. */
+  wipedGuilds?: string[];
+  /** (10-03) 코드가 묶음 문단으로 덧붙이는 1대1 방어 구역 — 모델 본문에 나오면 안 된다(나열 문단·중복의 원인). 생성 단계에서만 준다. */
+  autoZones?: string[];
   /** (09-17) 개인 활약 중 그날 끝내 쓰러진 인물 — '지켜냈다·버텼다'의 주어로 쓰면 안 된다. */
   fellFeats?: string[];
   /** (09-24) 소유권이 바뀐 구역 → 잃은 길드가 쥐고 있던 일수(사실표 '…부터 N일 동안'). 없으면 19번 검사 생략. */
@@ -164,7 +168,7 @@ const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완�
 
 /** 18 — 동맹 표현(길드 사이 동맹 제도는 없다 — 같은 구역을 노린 길드들은 서로 경쟁한 것). */
 // '합류'는 넓게 보되 길드원 가입 묘사('새로 합류한 이들')만 뺀다(09-26).
-const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|(?<!새로\s?)합류(?!한\s?(?:이들|이가|사람|길드원|인원|신입|모험가))/;
+const ALLIANCE = /합세|가세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|(?<!새로\s?)합류(?!한\s?(?:이들|이가|사람|길드원|인원|신입|모험가))/;
 /** 18 보강(09-26) — '{g|A} 넷과 {g|B} 하나가 함께 들이닥쳤다'처럼 두 길드를 주어로 묶은 '함께 …'(09-25 초안 두 곳).
  *  구역 둘을 묶은 '{z|X}와 {z|Y}를 함께 노렸다'는 해당 없다(09-21 게시본 오탐). */
 // 10-03 — '{g|A}와 {g|B}가 함께 {g|C}를 밀어붙였다'처럼 목적어가 끼면 놓쳤다.
@@ -639,6 +643,29 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
     issues.push(
       `'어제·전날' 회고 문장이 ${retroSentences}개다 — **한 문장**만 남기고 나머지 연속성은 회고 표현 없이 오늘 일로만 쓴다.`,
     );
+
+  // 40. 영토 소멸 서술의 주인 — '{g|민초}는 … 판도에서 물러나 다음을 기약하게 되었다'(10-03 시험: 민초는 세 곳이 남았다).
+  if (ctx.wipedGuilds) {
+    const WIPE = /판도에서 물러나|영토가 모두 (?:비|사라)|영토를 모두 (?:내주|비우|잃)(?!었던)|마지막 (?:땅|구역)(?:까지)?(?:을|를)? 내주/;
+    for (const sent of sentences(text)) {
+      const w = plainAligned(sent).search(WIPE);
+      if (w < 0) continue;
+      const gs = [...sent.slice(0, w).matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도)(?![가-힣])/g)].map((m) => m[1]!.trim());
+      const subj = gs[gs.length - 1];
+      if (subj && !ctx.wipedGuilds.includes(subj))
+        issues.push(`{g|${subj}} 은(는) 영토가 남아 있다 — '판도에서 물러나·영토가 모두 비었다'는 이번에 영토를 모두 잃은 길드에만 쓴다: 「${sent.length > 60 ? sent.slice(0, 60) + '…' : sent}」`);
+    }
+  }
+
+  // 39. 자동 묶음 구역을 본문에 씀(10-03 시험: 지시를 어기고 '이 밖에 … 각자 자리를 지켜냈다'로 나열).
+  if (ctx.autoZones?.length) {
+    const used = new Set(tokens(text).filter((t) => t.kind === 'z').map((t) => t.name));
+    const dup = ctx.autoZones.filter((z) => used.has(z));
+    if (dup.length > 0)
+      issues.push(
+        `${dup.map((z) => `{z|${z}}`).join(', ')} 은(는) 코드가 묶음 문단으로 덧붙이는 구역이다 — 본문에서 이 구역들을 언급한 부분을 빼고, 그 자리를 나열로 채우지 말 것.`,
+      );
+  }
 
   // 8. 구역 누락 — 그날 전투가 있었던 구역은 전부 본문에 나와야 한다. 빠지면 그 전투가
   //    통째로 없던 일이 된다(2026-09-13: 19전투 중 3곳이 빠져 Winners 방어전 일부가 사라졌다).

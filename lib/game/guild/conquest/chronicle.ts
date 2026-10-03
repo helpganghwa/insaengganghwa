@@ -1,6 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
+import { josa } from 'josa';
 import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { winnerNameFragments } from './winner-name';
@@ -770,7 +771,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - **방어에 성공한 길드는 싸운 길드다.** '방어' 목록에 있는 길드를 '다투지 않았다·싸우지 않았다·조용히 지냈다'로 쓰면 오류 — 공격 배치가 없었으면 '공격에 나서지 않고 {z|X}를 지켰다'처럼 방어를 그 길드의 이번 행동으로 쓴다(2026-09-04 검수).
-- **'■ 짧게 묶을 방어'가 있으면 그 구역들은 지킨 길드별로 한 문장씩만 쓴다** — 예: '{g|로제}는 {g|케케케}가 노린 드래곤 화산의 {z|그을린 고목}과 {g|민초}가 노린 잊힌 신전의 {z|설원 신전}을 지켰다'. 구역마다 따로 문장을 세우거나 이 구역들로 문단 하나를 길게 채우지 말고, 이야기의 중심 장면으로도 쓰지 않는다. 지역 이름은 구역마다 붙여 '같은 지역'으로 잇지 않는다.
+- **'■ 자동으로 덧붙는 방어 문단'에 적힌 구역은 본문에 한 번도 쓰지 않는다** — 코드가 그 구역들의 결과를 한 문단으로 정산 문단 앞에 붙인다. 정산 문단('이번 점령전으로…')은 반드시 마지막 문단으로 따로 둔다.
 - **'공격 측' 목록의 길드는 하나도 빠뜨리지 않는다** — 실패한 공격도 어느 구역을 노렸고 누가 막았는지 한 번은 쓴다. 같은 날 영토를 잃은 길드의 실패한 공격은 시도와 상실을 한 흐름으로 잇는다(2026-09-04 검수: 마지막 땅을 잃은 길드가 같은 날 다른 구역을 노린 사실이 빠짐).
 - **'가장 많은 사람이 몰린 전투'가 있으면 그날의 큰 싸움으로 다룬다** — 공격 길드별 인원과 수비 인원, 결과를 그대로 쓴다(예: '여섯을 보내고 하나를 보태 일곱으로 몰아쳤지만 셋이 막아냈다'). 수비 인원에는 집행관이 섞여 있으므로 '수비수 둘과 집행관 하나'처럼 나누어 쓰지 않는다.
 - **'열세 방어'가 있으면 그날의 활약으로 세운다** — 적은 수로 더 많은 공격을 받아내고 지켜낸 전투다. 인원을 대비시켜 한두 문장으로 쓰고('셋이 일곱을 막아냈다'), 길드를 주어로 삼는다. 개인 활약이 함께 있으면 둘을 같은 문단에 묶되 같은 말을 두 번 하지 않는다.
@@ -1296,10 +1297,14 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     : [];
   const veterans = new Set(veteranRows.map((r) => r.name));
   const shortGapGuilds: string[] = [];
+  const wipedGuilds: string[] = [];
   for (const g of new Set([...beforeCounts.keys(), ...afterCounts.keys()])) {
     const b = beforeCounts.get(g) ?? 0;
     const a = afterCounts.get(g) ?? 0;
-    if (b > 0 && a === 0) milestones.push(`· 길드 「${g}」 영토 소멸(마지막 구역 상실)`);
+    if (b > 0 && a === 0) {
+      milestones.push(`· 길드 「${g}」 영토 소멸(마지막 구역 상실)`);
+      wipedGuilds.push(g);
+    }
     // 복귀 공백(09-17) — 하루 비었다 돌아온 길드를 "오랫동안 영토를 갖지 못했던"으로 쓴 사고.
     const wipedOn = b === 0 && a > 0 && veterans.has(g) ? lastWipeDay(snaps, g, kstDay) : null;
     const gapDays = wipedOn ? daysBetween(wipedOn, kstDay) : null;
@@ -1363,29 +1368,9 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     const g = soleOwner(afterOwner, ids);
     return g ? [{ region: regionKo(region), guild: g }] : [];
   }));
-  // 짧게 묶을 방어(10-03) — 1대1로 지켜 낸 곳이 많은 날(10-03: 9곳)엔 구역마다 문장을 세우다 본문 끝이 나열 문단이 되고,
-  // 주체를 바꿔 쓰는 오류도 거기서 났다(잿빛 첨석). 지킨 길드별로 미리 묶어 주고 한 문장씩만 쓰게 한다. 활약·사람이 몰린 전투·
-  // 열세 방어 구역은 이야기 장면이라 빼고, 묶을 곳이 3곳 이상일 때만 둔다.
-  const storyZones = new Set([
-    ...summary.feats.flatMap((f) => f.zones),
-    ...summary.crowds.map((c) => c.zone),
-    ...summary.underdogDefenses.map((u) => u.zone),
-  ]);
-  const quiet = summary.defenses.filter((d) => d.defenders === 1 && d.foes === 1 && !storyZones.has(d.zone));
-  const quietLines =
-    quiet.length < 3
-      ? ''
-      : [...new Set(quiet.map((d) => d.owner))]
-          .map((owner) => {
-            const items = quiet
-              .filter((d) => d.owner === owner)
-              .map((d) => {
-                const atk = [...new Set(summary.attacks.filter((a) => a.zone === d.zone && a.guild !== owner).map((a) => a.guild))];
-                return `「${d.zone}」(${d.region}, 공격 ${atk.map((g) => `「${g}」`).join('·')})`;
-              });
-            return `· 길드 「${owner}」 이(가) 지킴: ${items.join(', ')}`;
-          })
-          .join('\n');
+  // 1대1 방어 묶음 문단(10-03) — 코드가 만들어 정산 문단 앞에 붙인다(quietDefenses·quietParagraph 주석 참조).
+  const quiet = quietDefenses(summary);
+  const quietText = quietParagraph(quiet, kstDay);
   const digestSections: string[] = [];
   // 규모(09-24) — 첫 문장('열네 번의 싸움이 벌어져 열 곳의 주인이 바뀐')의 근거. 종전엔 사실표에 없어 모델이 세거나 빼먹었다.
   digestSections.push(`■ 규모: 싸움이 벌어진 구역 ${summary.battleCount}곳, 그중 주인이 바뀐 곳 ${summary.captures.length}곳`);
@@ -1393,7 +1378,10 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별):\n${capLines}`);
   if (summary.defenses.length > 0)
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
-  if (quietLines) digestSections.push(`■ 짧게 묶을 방어(1대1로 지켜 낸 곳 — 구역마다 문장을 따로 세우지 말고, 지킨 길드별로 한 문장에 묶어 한 번만 쓸 것):\n${quietLines}`);
+  if (quietText)
+    digestSections.push(
+      `■ 자동으로 덧붙는 방어 문단(아래 구역들은 본문에 쓰지 말 것 — 코드가 이 문단을 마지막 '이번 점령전으로' 문단 바로 앞에 그대로 붙인다. 이 구역들은 이야기 장면으로도 쓰지 않는다):\n${quiet.map((d) => `「${d.zone}」`).join(', ')}`,
+    );
   if (crowdLines)
     digestSections.push(
       `■ 그날 가장 많은 사람이 몰린 전투(${CROWD_MIN}명 이상인 곳 중 한 곳 — 수비 인원에는 집행관 자동 방어가 포함되어 있으니 따로 나누지 말 것):\n${crowdLines}`,
@@ -1549,6 +1537,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       return m;
     })(),
     shortGapGuilds,
+    wipedGuilds,
     fellFeats: summary.feats.filter((f) => f.fell === true).map((f) => f.nickname),
     // 09-24 — 사실표에 근거가 있는 기간·첫 등장·지형·석권 서술을 가려내는 기준(chronicle-facts.ts 19~22).
     heldDays: new Map(
@@ -1637,7 +1626,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     styleBlock;
 
   const bigChange = milestones.length > 0 || specialFeat;
-  return { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange };
+  return { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange, quiet, quietText };
 }
 export type ChronicleFactPack = NonNullable<Awaited<ReturnType<typeof buildChronicleFactPack>>>;
 
@@ -1777,6 +1766,65 @@ async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: Chronicle
 /** 가벼운 위반 — 같은 표현 반복(검증기 6·23)·줄표(24). 사실은 틀리지 않았고 운영자가 한눈에 고칠 수 있다. */
 export function isLightFactIssue(issue: string): boolean {
   return /표현이 \d+번 나온다|줄표\(—\)/.test(issue);
+}
+
+/**
+ * 1대1 방어 묶음(10-03) — 수비 한 명이 공격 한 명을 막아 낸 곳. 22곳이 싸운 날(10-03: 이런 곳만 9곳) 모델이 구역마다
+ * 문장을 세우다 본문 끝이 나열 문단이 되고, 주체를 바꿔 쓰는 오류(잿빛 첨석)도 거기서 났다. 그래서 이 구역들은 모델에게
+ * 맡기지 않고 코드가 사실 그대로 한 문단으로 쓴다. 활약·사람이 몰린 전투·열세 방어 구역은 이야기 장면이라 뺀다.
+ */
+export type QuietDefense = { owner: string; zone: string; region: string; attacker: string };
+export function quietDefenses(s: ConquestDaySummary): QuietDefense[] {
+  const story = new Set([...s.feats.flatMap((f) => f.zones), ...s.crowds.map((c) => c.zone), ...s.underdogDefenses.map((u) => u.zone)]);
+  return s.defenses.flatMap((d) => {
+    if (d.defenders !== 1 || d.foes !== 1 || story.has(d.zone)) return [];
+    const atk = [...new Set(s.attacks.filter((a) => a.zone === d.zone && a.guild !== d.owner).map((a) => a.guild))];
+    return atk.length === 1 ? [{ owner: d.owner, zone: d.zone, region: d.region, attacker: atk[0]! }] : [];
+  });
+}
+
+/** 묶음 문단 — 3곳 이상일 때만. 여는 문장·동사는 날짜로 돌려 매일 같은 문구가 되지 않게 한다. */
+export function quietParagraph(items: QuietDefense[], kstDay: string, min = 3): string {
+  if (items.length === 0 || items.length < min) return '';
+  let seed = 0;
+  for (const ch of kstDay) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+  const openers = [
+    '이 밖에도 여러 곳에서 수비가 이어졌다.',
+    '크게 드러나지 않은 수비도 곳곳에서 빛났다.',
+    '조용히 땅을 지켜 낸 곳도 여럿이었다.',
+  ];
+  const verbs = ['막아섰다', '돌려세웠다', '물리쳤다', '막아 냈다', '버텨 냈다'];
+  const owners = [...new Set(items.map((d) => d.owner))].sort(
+    (a, b) => items.filter((d) => d.owner === b).length - items.filter((d) => d.owner === a).length,
+  );
+  const topic = (g: string) => `{g|${g}}${josa(`${g}#{은}`).slice(g.length)}`;
+  const lines = owners.map((o, i) => {
+    const mine = items.filter((d) => d.owner === o);
+    const verb = verbs[(seed + i) % verbs.length]!;
+    let prevRegion = '';
+    const places = mine.map((d) => {
+      const head = d.region === prevRegion ? '' : `${d.region}의 `;
+      prevRegion = d.region;
+      return `${head}{z|${d.zone}}`;
+    });
+    if (mine.length === 1) return `${topic(o)} ${places[0]}에서 {g|${mine[0]!.attacker}}의 공격을 ${verb}.`;
+    const atks = [...new Set(mine.map((d) => d.attacker))];
+    const who = atks.length === 1 ? `{g|${atks[0]}}의 공격을 모두` : `각각 ${mine.map((d) => `{g|${d.attacker}}`).join('·')}의 공격을`;
+    return `${topic(o)} ${places.join(', ')}에서 ${who} ${verb}.`;
+  });
+  return [openers[seed % openers.length]!, ...lines].join(' ');
+}
+
+/** 묶음 문단을 마지막 정산 문단('이번 점령전으로…') 앞에 끼운다. 모델이 이미 쓴 구역은 문단에서 뺀다(중복 방지). */
+export function insertQuietParagraph(text: string, items: QuietDefense[], kstDay: string): string {
+  const mentioned = new Set([...text.matchAll(/\{z\|([^}|]+)/g)].map((m) => m[1]!.trim()));
+  // 묶음을 쓸지는 사실표 단계(3곳 이상)에서 정했다 — 모델이 일부를 써 버렸어도 남은 곳은 한 곳이라도 붙인다(누락 방지).
+  const para = quietParagraph(items.filter((d) => !mentioned.has(d.zone)), kstDay, 1);
+  if (!para) return text;
+  const paras = text.split(/\n\n+/);
+  const at = paras.length > 1 && /^이번 점령전으로/.test(paras[paras.length - 1]!.trim()) ? paras.length - 1 : paras.length;
+  paras.splice(at, 0, para);
+  return paras.join('\n\n');
 }
 
 /**
@@ -1953,7 +2001,10 @@ async function generateLocked(
     usage.cacheWrite += u?.cache_creation_input_tokens ?? 0;
   };
   if (!pack) return { created: false, reason: 'no-event' };
-  const { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange } = pack;
+  const { summary, zoneRows, idByName, milestones, digest, factCtx: fullCtx, context, bigChange, quietText } = pack;
+  // 덧붙일 묶음 문단의 구역은 모델 본문에서 빠지는 게 정상이다 — 생성·고치기 단계의 누락 검사에서 뺀다(최종 검사는 fullCtx).
+  const quietZones = new Set(quietText ? pack.quiet.map((d) => d.zone) : []);
+  const factCtx: FactCheckContext = { ...fullCtx, battleZones: fullCtx.battleZones.filter((z) => !quietZones.has(z)), autoZones: [...quietZones] };
   const tools = await buildMarkerTools(summary, zoneRows, idByName, serverId);
   const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = tools;
 
@@ -2153,6 +2204,9 @@ async function generateLocked(
     }
   }
 
+  // 1대1 방어 묶음 문단(10-03) — 모델 본문이 끝난 뒤 코드가 붙인다. 마커 id는 enrichMarkers가 채운다.
+  if (quietText) today = enrichMarkers(enforceMarkers(insertQuietParagraph(today, pack.quiet, kstDay)));
+
   // 자동 다듬기 패스는 두지 않는다(09-24 시험: 여섯 번 중 다섯 번이 연출 순서·사실 위반을 늘려 버려졌다 — 비용만 들었다).
   // 사실은 위 검증 루프가, 구성·중복·흐름은 운영자가 검수 화면의 '개선'(polishChronicle)으로 필요할 때만 다듬는다.
   const reviewNotes: ChronicleReviewNote[] = [];
@@ -2167,7 +2221,7 @@ async function generateLocked(
     `[chronicle] usage ${kstDay} s${serverId} calls=${usage.calls} in=${usage.input} out=${usage.output} cacheRead=${usage.cacheRead} cacheWrite=${usage.cacheWrite}`,
   );
   if (opts.dryRun) {
-    const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, factCtx), ...headlineIssues(headline, factCtx)];
+    const issues = [...findViolations(today), ...replayOrderIssues(today, battleZones), ...factIssues(today, fullCtx), ...headlineIssues(headline, fullCtx)];
     return { created: false, reason: 'dry-run', preview: { today, headline, headlineCandidates, digest, usage, issues } };
   }
   const row = { serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs, headlineCandidates, generatedText: today, generatedHeadline: headline };
