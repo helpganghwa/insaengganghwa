@@ -71,7 +71,8 @@ export type ConquestDaySummary = {
    *    (09-10 검수: 뉴비·냐옹 모두 공격자 1명). 이제 **끝까지 살아남은 사람의 서로 다른 공격자 수**만 센다.
    */
   /** fell — 그날 전투에서 끝내 쓰러졌는지(true)·끝까지 살아남았는지(false)·모름(null, 이전 전투 기록). 09-17 추가. */
-  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[]; fell: boolean | null }[];
+  /** kills — 그날 실제로 쓰러뜨린 수('수비' 활약도 처치 수는 따로 있다). allies — 활약 구역 전투에서 함께 싸운 같은 길드 인원(집행관 포함, 본인 제외 · 10-03 연기 평원: 셋이 지킨 전투를 혼자 버틴 것처럼 썼다). */
+  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; kills: number; allies: number; zones: string[]; fell: boolean | null }[];
   /**
    * 열세 방어(2026-09-10) — 수비 인원이 공격 인원보다 적은데 **지켜낸** 전투. 사람 단위 활약이 과장되기 쉬운 자리를
    * 팀 단위 사실로 대신한다(09-09 그을린 고목: 셋이 일곱을 막아냄). 인원은 crowds와 같은 기준으로
@@ -316,8 +317,19 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const survives = new Map<string, { nick: string; guild: string; atk: Set<string>; zones: Set<string> }>();
   const kills = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
 
+  /** 사람별·구역별 같은 길드 동료 수(본인 제외) — 활약 문구의 '혼자/동료 N명과'. */
+  const alliesOf = new Map<string, Map<string, number>>();
   for (const b of battles) {
     const parts = participantsOf(b);
+    {
+      const side = new Map<string, number>();
+      for (const pt of parts) side.set(pt.guildName, (side.get(pt.guildName) ?? 0) + 1);
+      for (const pt of parts) {
+        const m = alliesOf.get(pt.userId) ?? new Map<string, number>();
+        m.set(b.zone, (side.get(pt.guildName) ?? 1) - 1);
+        alliesOf.set(pt.userId, m);
+      }
+    }
     for (const pt of parts) {
       const prev = fellOf.get(pt.userId);
       fellOf.set(pt.userId, prev === true || pt.fell === true ? true : prev === null || pt.fell === null ? null : false);
@@ -554,6 +566,8 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     guild: v.guild,
     kind: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? ('처치' as const) : ('수비' as const),
     count: v.kills >= 2 || (v.kills > 0 && v.held < FEAT_MIN) ? v.kills : v.held,
+    kills: v.kills,
+    allies: Math.max(0, ...[...v.zones].map((z) => alliesOf.get(uid)?.get(z) ?? 0)),
     zones: [...v.zones],
     fell: fellOf.get(uid) ?? null,
   }));
@@ -758,6 +772,8 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **'열세 방어'가 있으면 그날의 활약으로 세운다** — 적은 수로 더 많은 공격을 받아내고 지켜낸 전투다. 인원을 대비시켜 한두 문장으로 쓰고('셋이 일곱을 막아냈다'), 길드를 주어로 삼는다. 개인 활약이 함께 있으면 둘을 같은 문단에 묶되 같은 말을 두 번 하지 않는다.
 - **개인 활약(feats)은 한 문단의 정점으로 세운다** — 인물 마커, 활약 구역, 처치·수비 수, 그 구역을 노린 '공격 측' 길드(여럿이면 '두 길드의 공세')와 그 활약이 지켜낸 것을 한두 문장에 담는다. 종속절에 끼워 넣지 말고 그 인물이 주어인 문장으로 쓴다.
 - **'■ 어제와 이어지는 사실'은 그날 헤드라인 소재이거나 가장 큰 사건일 때만 **한 문장**으로 잇는다(2026-09-13 사용자 지시 — 회고가 잦으면 오늘 이야기가 묻힌다). 나머지는 회고 없이 오늘 일만 쓴다. 이을 때는 구역 마커 위치 규칙을 지킨다.** 지도 연출은 구역 마커가 **처음 등장하는 문장**에서 그 구역의 전투를 재생하고, '어제·전날·하루 만에' 같은 회고 표현이 든 문장의 마커는 건너뛴다(연출이 서술보다 앞서 터지는 것을 막기 위해). 그래서 ① 구역 마커의 첫 등장은 **오늘 그 구역에서 벌어진 행동을 말하는 문장**(노렸다·공격했다·다툼이 벌어졌다·맞섰다·밀려들었다)에 두고, 그 문장에는 회고 표현을 넣지 않는다. ② 회고는 앞뒤 문장에서 구역 이름 대신 '그 땅·그곳·이 구역'으로 받아 잇는다 — "그 땅은 어제 {g|X}에게 내주었던 곳이다", "어제 손에 넣은 땅이었다". ③ 결과(차지했다·되찾았다·지켜냈다·넘어갔다)는 행동 문장 뒤에 온다. 예: "{g|왕실}이 {z|흑요석 보루}를 다시 노렸다. 어제 {g|케프리}에게 내주었던 땅이다. {g|케프리}는 이번에도 방어 병력을 세우지 못했고, {g|왕실}은 하루 만에 그곳을 되찾았다." '되찾다·탈환' 표현은 이 항목에 적힌 구역에만 허용한다. 길드 기준 '처음 차지한'은 정리에 첫 등장으로 적힌 경우에만 쓰고, 아니면 '어제 손에 넣은'으로 쓴다.
+- **개인 활약의 '같은 길드 N명과 함께 싸움'은 동료가 있던 전투다** — 그 인물을 '홀로·혼자'로 쓰지 말고 '동료와 함께 지켰다·뚫었다'로 쓴다. '혼자 싸움'으로 적힌 인물만 '홀로'를 쓴다(10-03 연기 평원: 셋이 지킨 전투를 한 사람이 버틴 것처럼 썼다). '수비' 활약의 '서로 다른 N명'은 받아낸 공격자 수이고 쓰러뜨린 수는 '본인 처치'다 — 둘을 섞지 말 것.
+- **길드와 이름이 같은 인물은 소속 길드를 붙인다** — '{g|Winners}의 {u|민초}'처럼. 그냥 '{u|민초}가 지켰다'로 쓰면 길드 민초의 이야기로 읽힌다.
 - **인물 마커({u|})는 정리의 '개인 활약'에 적힌 인물만 쓴다.** 로스터·지난 기록·짐작으로 다른 사람 이름을 꺼내지 말 것(2026-09-10: 목록에 없는 인물의 활약을 지어낸 사건). 활약 횟수도 목록 숫자 그대로.
 - **사람 수(수비수 둘·수비 한 명·넷이·일곱을)는 '가장 많은 사람이 몰린 전투'·'열세 방어'·'열세 점령'·개인 활약이 나온 구역에만 쓴다.** 정리의 '수비수 N명' 표기는 교전이 있었는지 판단하는 근거일 뿐 옮겨 적는 숫자가 아니다. 다른 구역은 '수비를 세워 맞섰지만·수비를 뚫고'처럼 수 없이 쓴다.
 - **회고 표현은 되풀이하지 않는다.** '어제 … 내주었던', '하루 만에', '다시 노렸다'는 본문 전체에서 각각 한 번까지. '어제·전날'이 든 회고 문장은 본문 전체에서 한 문장만 쓰고, 나머지 연속성은 '갓 얻은 땅', '곧바로 다시 주인이 바뀌었다'처럼 회고 없이 오늘 일로 쓴다.
@@ -1060,7 +1076,9 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
   // 활약 구역 명시(2026-07-20 피드백) — 어느 구역 전투에서의 활약인지 서술할 수 있게.
   const featZones = (f: (typeof summary.feats)[number]) =>
-    f.zones.length > 0 ? ` — 구역 ${f.zones.map((z) => `「${z}」`).join(', ')} 전투에서` : '';
+    (f.zones.length > 0 ? ` — 구역 ${f.zones.map((z) => `「${z}」`).join(', ')} 전투에서` : '') +
+    // 함께 싸운 같은 길드 인원(10-03) — 셋이 지킨 전투의 한 사람을 '홀로 버텼다'로 쓰지 않게.
+    (f.allies > 0 ? ` — 같은 길드 ${f.allies}명과 함께 싸움('홀로·혼자' 금지, 동료와 함께 지켰다·뚫었다로 쓸 것)` : ' — 같은 길드 동료 없이 혼자 싸움');
   const featLines =
     summary.feats
       .map((f) =>
@@ -1068,7 +1086,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
           ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)${featZones(f)}${
               f.fell === true ? ' — 본인은 끝내 쓰러짐(버텼다·지켜냈다의 주어로 쓰지 말 것)' : f.fell === false ? ' — 끝까지 살아남음' : ''
             }`
-          : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 서로 다른 ${f.count}명의 공격을 받아내고 끝까지 살아남음${featZones(f)}`,
+          : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 서로 다른 ${f.count}명의 공격을 받아내고 끝까지 살아남음(본인 처치 ${f.kills}명 — 받아낸 공격 수와 처치 수를 섞지 말 것)${featZones(f)}`,
       )
       .join('\n') || '· (없음)';
   // ── 지형 형세(지도 분석) — 인접 그래프로 길드 영토의 연결 조각 수 변화(분단/통합/비지) 감지
@@ -1454,7 +1472,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const factCtx: FactCheckContext = {
     zoneRegion: new Map(zoneRows.map((z) => [z.name, (REGION_META as Record<string, { label: string }>)[z.region]?.label ?? z.region])),
     regionLabels: REGION_KO_VALUES,
-    feats: summary.feats.map((f) => ({ nickname: f.nickname, count: f.count })),
+    feats: summary.feats.map((f) => ({ nickname: f.nickname, count: f.count, kills: f.kills, alone: f.allies === 0 })),
     // 인원수 서술 허용 구역(2026-09-13 확장) — 최다 인원 1곳 · 열세 방어 · 열세 점령 ·
     // **개인 활약이 나온 구역**. 활약한 사람을 쓸 수 있는데 그가 몇을 쓰러뜨렸는지를 못 쓰면
     // "둘을 베고 전사했다"가 검증에 걸려 서술이 밋밋해진다(09-13 변경 초소).

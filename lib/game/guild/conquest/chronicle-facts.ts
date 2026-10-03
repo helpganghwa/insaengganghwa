@@ -31,7 +31,8 @@ export type FactCheckContext = {
   /** 지역 라벨 전체(REGION_META label). */
   regionLabels: string[];
   /** 개인 활약 — 등장 가능한 인물과 횟수. */
-  feats: { nickname: string; count: number }[];
+  /** kills — 실제 처치 수('수비' 활약의 count는 받아낸 공격자 수라 처치 표현과 대조하면 안 된다, 10-03). alone — 같은 길드 동료 없이 혼자 싸웠는지. */
+  feats: { nickname: string; count: number; kills?: number; alone?: boolean }[];
   /** 인원수 서술이 허용되는 구역 — 가장 많은 사람이 몰린 전투·열세 방어·열세 점령·개인 활약이 나온 구역(09-10, 09-13 확장). */
   headcountZones: string[];
   /** '되찾다'류가 허용되는 구역(최근 7일 안에 그 구역을 쥐었던 길드가 오늘 그 구역을 노림). */
@@ -166,7 +167,8 @@ const SWEEP_ORDINAL = /(?:두|세|네|다섯|여섯)\s?번째(?:로)?\s?(?:완�
 const ALLIANCE = /합세|연합해|연합한|연합을|손잡|손을 잡|힘을 합|동맹|(?<!새로\s?)합류(?!한\s?(?:이들|이가|사람|길드원|인원|신입|모험가))/;
 /** 18 보강(09-26) — '{g|A} 넷과 {g|B} 하나가 함께 들이닥쳤다'처럼 두 길드를 주어로 묶은 '함께 …'(09-25 초안 두 곳).
  *  구역 둘을 묶은 '{z|X}와 {z|Y}를 함께 노렸다'는 해당 없다(09-21 게시본 오탐). */
-const ALLIANCE_TOGETHER = /(?:\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과|,)\s?)+\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
+// 10-03 — '{g|A}와 {g|B}가 함께 {g|C}를 밀어붙였다'처럼 목적어가 끼면 놓쳤다.
+const ALLIANCE_TOGETHER = /(?:\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:와|과|,)\s?)+\{g\|[^}]+\}(?:\s?[가-힣]+)?(?:이|가|는|은)\s?함께\s?(?:\{[gz]\|[^}]+\}\s?(?:을|를)\s?)?(?:들이|밀고|밀어붙|노[리렸린]|몰아|몰려|쳐들|공격|두드|덮)/;
 /** 19 — 보유·지속 일수(2일 이상). '하루 만에'는 6번 규칙이 본다. */
 const DURATION = /(이틀|사흘|나흘|닷새|엿새|이레|여드레|아흐레|열흘|(\d+)\s?일)\s?(?:째|동안|간)/g;
 /** 날짜 기점 표현(10-02) — '9월 24일부터' 같은 날짜도 기간 숫자로 본다. */
@@ -255,6 +257,9 @@ function regionMentions(aligned: string, aliases: Map<string, string>): { at: nu
 export function factIssues(text: string, ctx: FactCheckContext): string[] {
   const issues: string[] = [];
   const featByNick = new Map(ctx.feats.map((f) => [f.nickname, f.count] as const));
+  const featInfo = new Map(ctx.feats.map((f) => [f.nickname, f] as const));
+  // 38 — 길드와 이름이 같은 인물(10-03 Winners의 '민초' ↔ 길드 민초).
+  const guildNames = new Set([...ctx.guildCounts.keys(), ...[...(ctx.attackers?.values() ?? [])].flat(), ...(ctx.defendedBy?.values() ?? [])]);
   const headcount = new Set(ctx.headcountZones);
   const recapture = new Set(ctx.recaptureZones);
   const yesterday = new Set(ctx.yesterdayZones);
@@ -304,8 +309,28 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
           const owner = [...uMarks].reverse().find((u) => u.at < k.index!);
           if (owner && owner.name !== t.name) continue;
           const n = HEAD_UNIT[k[1]!]!;
-          if (n !== count) {
-            issues.push(`{u|${t.name}} 이(가) 쓰러뜨린 수는 ${count}인데 문장은 '${k[1]}${k[0].slice(k[1]!.length, k[1]!.length + 1)} ${k[2]}…'로 적었다 — 개인 활약 목록의 수로 고친다: ${q(sent)}`);
+          const killed = featInfo.get(t.name)?.kills ?? count;
+          if (n !== killed) {
+            issues.push(`{u|${t.name}} 이(가) 쓰러뜨린 수는 ${killed}인데 문장은 '${k[1]}${k[0].slice(k[1]!.length, k[1]!.length + 1)} ${k[2]}…'로 적었다 — 개인 활약 목록의 수로 고친다: ${q(sent)}`);
+          }
+        }
+        // 37. 동료와 함께 싸운 사람을 '홀로·혼자'로(10-03 연기 평원 — 셋이 지킨 전투). 그 인물 마커부터 다음 인물 마커 전까지.
+        if (featInfo.get(t.name)?.alone === false) {
+          const me = uMarks.find((u) => u.name === t.name);
+          if (me) {
+            const next = uMarks.find((u) => u.at > me.at);
+            const seg = plainAligned(sent).slice(me.at, next ? next.at : undefined);
+            if (/홀로|혼자|단신|한 몸으로/.test(seg)) {
+              issues.push(`{u|${t.name}} 은(는) 같은 길드 동료와 함께 싸웠다 — '홀로·혼자'를 빼고 '동료와 함께'로 쓴다: ${q(sent)}`);
+            }
+          }
+        }
+        // 38. 길드와 이름이 같은 인물은 소속 길드를 붙인다('{g|Winners}의 {u|민초}') — 없으면 길드 민초의 이야기로 읽힌다.
+        if (guildNames.has(t.name)) {
+          const me = uMarks.find((u) => u.name === t.name);
+          const before = me ? sent.slice(Math.max(0, me.at - 40), me.at) : '';
+          if (me && !/\{g\|[^}]+\}\s?의\s?$|같은 길드의\s?$/.test(before)) {
+            issues.push(`{u|${t.name}} 은(는) 길드 {g|${t.name}} 와(과) 이름이 같다 — '{g|소속 길드}의 {u|${t.name}}'처럼 소속을 붙여 쓴다: ${q(sent)}`);
           }
         }
       }

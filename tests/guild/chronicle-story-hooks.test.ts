@@ -147,3 +147,36 @@ describe('factIssues 31·32 — 공격 동사 주체·인원수 과장(10-02 3�
     expect(has('{z|모닥불 평원|40}에는 {g|로제|25} 일곱이 몰려왔다.', /인원은 수비 1명, 공격 \{g\|로제\} 6명/)).toBe(true);
   });
 });
+
+describe('factIssues 37·38 — 동료와 함께 싸운 인물·길드와 같은 이름(10-03 연기 평원)', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['연기 평원', '드래곤 화산'], ['얼음 여울', '잊힌 신전']]),
+    regionLabels: ['드래곤 화산', '잊힌 신전'],
+    feats: [{ nickname: '민초', count: 3, kills: 1, alone: false }, { nickname: '일등이고싶던', count: 3, kills: 3, alone: true }],
+    headcountZones: ['연기 평원', '얼음 여울'],
+    recaptureZones: [],
+    yesterdayZones: [],
+    guildCounts: new Map([['민초', [3]], ['Winners', [23]], ['로제', [15]], ['케케케', [7]]]),
+    battleZones: [],
+    captureBy: new Map(),
+    attackers: new Map([['연기 평원', ['로제']], ['얼음 여울', ['케케케']]]),
+    defendedBy: new Map([['연기 평원', 'Winners'], ['얼음 여울', '로제']]),
+  };
+  const has = (t: string, re: RegExp) => factIssues(t, c).some((i) => re.test(i));
+  it('수비 활약의 처치 수는 받아낸 공격자 수가 아니라 실제 처치와 대조한다', () => {
+    expect(has('{z|연기 평원|10}에서는 {g|Winners|17}의 {u|민초|RV6TJpLO}가 하나를 쓰러뜨렸다.', /쓰러뜨린 수는/)).toBe(false);
+    expect(has('{z|연기 평원|10}에서는 {g|Winners|17}의 {u|민초|RV6TJpLO}가 셋을 쓰러뜨렸다.', /쓰러뜨린 수는 1/)).toBe(true);
+  });
+  it('동료와 함께 싸운 사람을 홀로로 쓰면 잡는다', () => {
+    expect(has('{z|연기 평원|10}에서는 {g|Winners|17}의 {u|민초|RV6TJpLO}가 홀로 {g|로제|25}의 공격을 받아냈다.', /동료와 함께 싸웠다/)).toBe(true);
+    expect(has('{z|얼음 여울|20}에서는 {g|로제|25}의 {u|일등이고싶던|AOplrkIa}이 홀로 셋을 쓰러뜨렸다.', /동료와 함께 싸웠다/)).toBe(false);
+  });
+  it("'A와 B가 함께 C를 밀어붙였다'는 동맹 표현으로 잡는다", () => {
+    expect(factIssues('{z|연기 평원|10}에서는 {g|로제|25}와 {g|케케케|27}가 함께 {g|Winners|17}를 밀어붙였다.', c).some((i) => /동맹은 없다/.test(i))).toBe(true);
+  });
+  it('길드와 같은 이름의 인물은 소속 길드를 붙인다', () => {
+    expect(has('{z|연기 평원|10}에서는 {u|민초|RV6TJpLO}가 끝까지 쓰러지지 않았다.', /이름이 같다/)).toBe(true);
+    expect(has('{z|연기 평원|10}에서는 {g|Winners|17}의 {u|민초|RV6TJpLO}가 끝까지 쓰러지지 않았다.', /이름이 같다/)).toBe(false);
+  });
+});
+
