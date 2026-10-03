@@ -100,6 +100,14 @@ describe('factIssues 28~30 — 주체 뒤바뀜·부정 표현·집행관(10-02 
     expect(has(t, /'집행관'을 1번/)).toBe(true);
     expect(has('영토를 모두 잃었던 {g|티모집사|31}가 돌아왔다.', /부정적 표현/)).toBe(false);
   });
+  it("'같은 지역' 뒤 다른 지역 이름·'하루 전' 회고 반복을 잡는다(10-03)", () => {
+    const c3 = { ...c, zoneRegion: new Map([...c.zoneRegion, ['약탈자 야영지', '오크 부락']]), regionLabels: [...c.regionLabels, '오크 부락'] };
+    const t = '부유섬의 {z|황금 회랑|49}은 {g|Winners|17}가 지켰다. 같은 지역에서는 오크 부락의 {z|약탈자 야영지|35}도 지켜졌다.';
+    expect(factIssues(t, c3).some((i) => /'같은 지역'이라고 했는데/.test(i))).toBe(true);
+    const ok = '부유섬의 {z|황금 회랑|49}은 {g|Winners|17}가 지켰다. 같은 지역의 {z|타락한 성소|47}도 지켜졌다.';
+    expect(factIssues(ok, c3).some((i) => /'같은 지역'이라고 했는데/.test(i))).toBe(false);
+    expect(has('하루 전 손이 바뀐 땅이 많았다. {g|로제|25}는 어제 가져간 곳을 지켰다.', /회고 문장이 2개/)).toBe(true);
+  });
 });
 
 describe('factIssues 31·32 — 공격 동사 주체·인원수 과장(10-02 3차 초안 실오류)', () => {

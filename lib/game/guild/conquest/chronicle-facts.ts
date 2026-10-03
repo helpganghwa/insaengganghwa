@@ -141,9 +141,10 @@ function plainAligned(s: string): string {
 }
 
 const RECAPTURE = /되찾|탈환|수복|되돌려|돌려받|도로 가져|다시 가져|다시 손에/;
-const RETRO = /어제|전날/;
+// '하루 전'도 어제 회고다 — 빠져 있어 10-03 시험 생성에서 회고 문장이 두 번 나와도 통과했다.
+const RETRO = /어제|전날|하루 전/;
 /** '어제부터 비워 둔 {z|X}' — 오늘까지 이어진 공백 묘사라 어제 사건 회고(5·12번)가 아니다(09-26 게시본 오탐). */
-const RETRO_VACANT = /(?:어제|전날)부터\s?(?:비워|비어|비운|비었|방치)/g;
+const RETRO_VACANT = /(?:어제|전날|하루 전)부터\s?(?:비워|비어|비운|비었|방치)/g;
 /** 11 — 구역 사이 순서 표현. */
 const SEQUENCE = /곧이어|뒤이어|그 직후|그러자/;
 /** 12 — 회고 문장의 '가져간' 동사(잃은 쪽 회고 '어제 내주었던'은 5번 규칙이 본다). */
@@ -355,6 +356,19 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
         } else if (viaSame && !governing) governing = lastRegion;
         if (governing && governing !== r) {
           issues.push(`{z|${zp.name}} 은(는) ${r} 지역인데 문장은 ${governing} 지역으로 묶었다 — 지역 표기를 정리대로 고친다: ${q(sent)}`);
+        }
+      }
+      // 36. '같은 지역에서는 오크 부락의 {z|X}' — 뒤에 지역 이름을 다시 적으면 3번은 그 이름만 보고 통과한다.
+      //     '같은 지역'이 가리키는 앞 문맥 지역과 뒤에 적은 지역이 다르면 잡는다(10-03 시험: 부유섬 문장 다음).
+      for (const sm of sameMatches) {
+        if (sm.word !== '지역') continue;
+        const after = mentions.find((m) => m.at > sm.at);
+        if (!after) continue;
+        const before = [...mentions].reverse().find((m) => m.at < sm.at)?.label
+          ?? [...zonePos].reverse().find((zp) => zp.at < sm.at && ctx.zoneRegion.has(zp.name))?.name;
+        const prev = before && ctx.zoneRegion.has(before) ? ctx.zoneRegion.get(before)! : before ?? lastRegion;
+        if (prev && prev !== after.label) {
+          issues.push(`'같은 지역'이라고 했는데 앞 문맥은 ${prev}, 뒤에 적은 곳은 ${after.label}이다 — '같은 지역'을 빼고 지역 이름으로 쓴다: ${q(sent)}`);
         }
       }
 
