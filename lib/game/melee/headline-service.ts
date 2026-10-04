@@ -169,6 +169,7 @@ export async function buildHeadlineHistory(serverId: number, battleDate: string)
 
   let pair = new Map<string, number>();
   let same = new Map<string, { killer: string; days: number }>();
+  let top10 = new Map<string, number>();
   let prevDate: string | null = null;
   for (const r of recent) {
     const consecutive = prevDate === prevDay(r.d);
@@ -185,12 +186,16 @@ export async function buildHeadlineHistory(serverId: number, battleDate: string)
     }
     pair = pairNext;
     same = sameNext;
+    const top10Next = new Map<string, number>();
+    for (const x of rows) if (Number(x.final_rank) <= 10) top10Next.set(x.user_id, (consecutive ? top10.get(x.user_id) ?? 0 : 0) + 1);
+    top10 = top10Next;
     prevDate = r.d;
   }
   const last = recent[recent.length - 1]!;
   if (last.d === prevDay(battleDate)) {
     h.pairStreak = pair;
     h.sameKillerStreak = same;
+    h.top10Streak = top10;
     const rows = byBattle.get(last.id) ?? [];
     const ranks = new Map(rows.map((x) => [x.user_id, Number(x.final_rank)]));
     const killerOf = new Map<string, string>();

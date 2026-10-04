@@ -76,6 +76,8 @@ export type HeadlineHistory = {
   pairStreak: Map<string, number>;
   /** 피처치자 → 같은 처치자에게 연속으로 당한 일수(직전 배틀 기준) */
   sameKillerStreak: Map<string, { killer: string; days: number }>;
+  /** 직전 배틀까지 연속 Top10 일수(10-04 top10_streak). 없으면 0. */
+  top10Streak: Map<string, number>;
   /** 어제 자동 선택된 코드(같은 종류 연속 방지 감점) */
   usedYesterdayCodes: Set<string>;
   /** 어제 헤드라인 주인공(같은 사람 연일 노출 감점) */
@@ -103,6 +105,7 @@ export function emptyHistory(): HeadlineHistory {
     yesterday: null,
     pairStreak: new Map(),
     sameKillerStreak: new Map(),
+    top10Streak: new Map(),
     usedYesterdayCodes: new Set(),
     usedYesterdaySubjects: new Set(),
   };
@@ -124,6 +127,39 @@ export function josa(word: string, withBatchim: string, _without: string): strin
 const DEFAULT_NICK = /^대장장이[0-9a-z]{4}$/;
 const KILL_MILESTONES = [50, 100, 200, 500, 1000];
 const WIN_MILESTONES = new Set([5, 10, 20, 30, 50, 100]);
+const PODIUM_MILESTONES = [5, 10, 20, 30, 50, 100];
+/**
+ * 종류별 선택 점수 재산정(10-04) — 프로덕션 9/3~10/4 배틀 32회 중 운영자가 직접 고른 29회의 선택률로 정했다.
+ * target = 1 + 3 × (선택 + 0.5) / (등장 + 1), base = 종전 평균 점수. 같은 종류 안의 크기 차이는 절반만 남긴다(add 참조).
+ * 백테스트: 운영자 선택 재현 37% → 54%. 등장 3회 미만인 종류는 표본이 적어 넣지 않았다(종전 점수 유지).
+ */
+const HEADLINE_PREF: Record<string, { target: number; base: number }> = {
+  record_kills: { target: 3.62, base: 3.0 },
+  win_streak: { target: 3.16, base: 3.46 },
+  same_killer_streak: { target: 2.97, base: 2.5 },
+  record_defenses: { target: 2.88, base: 3.0 },
+  revenge: { target: 2.58, base: 2.0 },
+  career_kills_ms: { target: 2.45, base: 2.43 },
+  reclaim: { target: 2.39, base: 2.32 },
+  hunter_crowned: { target: 2.23, base: 3.0 },
+  champion_hunter: { target: 1.9, base: 1.5 },
+  master_crowned: { target: 1.9, base: 1.0 },
+  rank_jump: { target: 1.8, base: 2.44 },
+  top_kills_today: { target: 1.72, base: 1.8 },
+  career_wins: { target: 1.57, base: 1.71 },
+  rematch: { target: 1.56, base: 3.0 },
+  record_attacks: { target: 1.38, base: 3.0 },
+  no_attack_top10: { target: 1.38, base: 1.0 },
+  crown_returned: { target: 1.3, base: 1.5 },
+  rivals: { target: 1.29, base: 3.41 },
+  eternal_second: { target: 1.26, base: 3.73 },
+  podium_guild_sweep: { target: 1.26, base: 3.0 },
+  newbie_top10: { target: 1.17, base: 2.0 },
+  slayer_champ: { target: 1.15, base: 2.0 },
+  giant_kill: { target: 1.06, base: 2.04 },
+  rank_gap_max: { target: 1.06, base: 1.42 },
+  tank_survivor: { target: 1.05, base: 1.43 },
+};
 /** 이력이 이만큼 쌓인 뒤에만 '역대'·'최초' 계열을 낸다(첫 며칠은 전부 기록이라 의미 없음). */
 const MIN_BATTLES_FOR_RECORDS = 3;
 
@@ -173,7 +209,10 @@ export function generateHeadlines(
   const add = (code: string, category: HeadlineCategory, score: number, text: string, subjects: string[]) => {
     // 기본 닉네임 주인공은 감점(읽는 맛) — 사건 자체는 남긴다(검수에서 고를 수 있게).
     const dull = subjects.some((u) => DEFAULT_NICK.test(byId.get(u)?.nickname ?? ''));
-    out.push({ code, category, score: dull ? score - 1 : score, text, subjects });
+    // 운영자 선택 기준 재산정(10-04) — 종류별 평균을 선택률 목표로 옮기고, 같은 종류 안의 크기 차이는 절반만 남긴다.
+    const pref = HEADLINE_PREF[code];
+    const s = pref ? pref.target + 0.5 * (score - pref.base) : score;
+    out.push({ code, category, score: dull ? s - 1 : s, text, subjects });
   };
 
   /* ── 우승·왕관 ── */
@@ -234,7 +273,13 @@ export function generateHeadlines(
     const yc = byId.get(y.championUserId);
     if (yc && yc.rank > 1) {
       const killer = yc.killerUserId ? byId.get(yc.killerUserId) : null;
-      if (killer && killer.userId === champ.userId) {
+      // 연속 우승 중이던 어제 챔피언을 멈춘 경우(10-04 신규) — 운영자가 즐겨 고른 연속 우승·천적 줄의 반대편 이야기.
+      const ycStreak = statsOf(h, yc.userId).winStreak;
+      if (killer && ycStreak >= 2) {
+        if (killer.userId === champ.userId)
+          add('streak_ended', 'crown', 3.4, `${cName}, ${yc.nickname}의 ${ycStreak}일 연속 우승을 끊고 정상`, [champ.userId, yc.userId]);
+        else add('streak_ended', 'crown', 2.9, `${killer.nickname}, ${yc.nickname}의 ${ycStreak}일 연속 우승 행진을 멈춤(${fmt(killer.rank)}위)`, [killer.userId, yc.userId]);
+      } else if (killer && killer.userId === champ.userId) {
         add('hunter_crowned', 'crown', 3, `${cName}, 어제 챔피언 ${josa(yc.nickname, '을', '를')} 직접 꺾고 우승`, [champ.userId, yc.userId]);
       } else {
         add('crown_returned', 'crown', 1.5, `어제 챔피언 ${yc.nickname}, 오늘 ${fmt(yc.eliminatedRound ?? 0)}라운드에 ${killer ? `${killer.nickname}에게 ` : ''}탈락(${fmt(yc.rank)}위)`, [yc.userId]);
@@ -351,7 +396,20 @@ export function generateHeadlines(
       add('rematch', 'drama', 3, `어제 결승의 두 사람 ${cName}·${second.nickname}, 오늘도 결승에서 만남`, [champ.userId, second.userId]);
   }
   if (y) {
+    // 천적 탈출(10-04 신규) — 이틀 이상 연속으로 자신을 쓰러뜨린 상대를 오늘 꺾음. 복수(하루)의 긴 판.
+    let escaped = false;
     for (const [kid, victims] of kills) {
+      const k = byId.get(kid)!;
+      const sk = h.sameKillerStreak.get(k.userId);
+      const v = sk && sk.days >= 2 ? victims.find((vv) => vv.userId === sk.killer) : undefined;
+      if (v && sk) {
+        add('nemesis_broken', 'drama', 3.2, `${sk.days}일 연속 자신을 쓰러뜨린 ${josa(v.nickname, '을', '를')} 드디어 꺾은 ${k.nickname}`, [k.userId, v.userId]);
+        escaped = true;
+        break;
+      }
+    }
+    for (const [kid, victims] of kills) {
+      if (escaped) break;
       const k = byId.get(kid)!;
       const v = victims.find((vv) => y.killerOf.get(k.userId) === vv.userId);
       if (v) { add('revenge', 'drama', 2, `어제 자신을 꺾은 ${josa(v.nickname, '을', '를')} 오늘 쓰러뜨린 ${k.nickname}`, [k.userId, v.userId]); break; }
@@ -393,6 +451,33 @@ export function generateHeadlines(
     if (p.rank > 10) break;
     const s = statsOf(h, p.userId);
     if (s.entries > 0 && p.accountAgeDays != null && p.accountAgeDays <= 7) { add('newbie_top10', 'growth', 2, `가입 ${p.accountAgeDays + 1}일차 ${p.nickname}, ${p.rank}위`, [p.userId]); break; }
+  }
+
+  /* ── 10-04 신규: 꾸준함·이정표 ── */
+  {
+    // 연속 Top10 — 가장 긴 1명. 우승자는 우승 줄이 따로 있어 제외.
+    let best: { p: HeadlineParticipant; days: number } | null = null;
+    for (const p of byRank) {
+      if (p.rank > 10) break;
+      if (p.rank === 1) continue;
+      const days = (yesterdayIsPrev ? h.top10Streak.get(p.userId) ?? 0 : 0) + 1;
+      if (days >= 3 && (!best || days > best.days)) best = { p, days };
+    }
+    if (best) add('top10_streak', 'record', 2.4 + Math.min(0.8, best.days * 0.08), `${best.p.nickname}, ${best.days}일 연속 Top10(오늘 ${best.p.rank}위)`, [best.p.userId]);
+  }
+  for (const p of byRank) {
+    if (p.rank > 3) break;
+    const before = statsOf(h, p.userId).podiums;
+    if (PODIUM_MILESTONES.includes(before + 1)) { add('podium_milestone', 'record', 2.5, `${p.nickname}, 통산 ${before + 1}번째 시상대(${p.rank}위)`, [p.userId]); break; }
+  }
+  for (const p of byRank) {
+    if (p.rank > 10) break;
+    if (p.rank === 1) continue;
+    const s = statsOf(h, p.userId);
+    if (s.entries >= 5 && s.bestRank != null && p.rank < s.bestRank) {
+      add('personal_best', 'growth', 2.4 + (p.rank <= 3 ? 0.3 : 0), `${p.nickname}, ${s.entries + 1}번째 참가에서 개인 최고 ${p.rank}위`, [p.userId]);
+      break;
+    }
   }
 
   return { candidates: out, picks: pickHeadlines(out, h) };
@@ -480,6 +565,9 @@ export function applyBattleToHistory(h: HeadlineHistory, b: HeadlineBattle, part
   }
   h.pairStreak = pairNext;
   h.sameKillerStreak = skNext;
+  const t10 = new Map<string, number>();
+  for (const p of parts) if (p.rank <= 10) t10.set(p.userId, (wasYesterday ? h.top10Streak.get(p.userId) ?? 0 : 0) + 1);
+  h.top10Streak = t10;
   const podium = [...parts].sort((a, c) => a.rank - c.rank).slice(0, 3).map((p) => p.userId);
   h.yesterday = { date: b.date, championUserId: b.championUserId, ranks: new Map(parts.map((p) => [p.userId, p.rank])), killerOf, podium };
   h.usedYesterdayCodes = new Set(picks.map((p) => p.code));

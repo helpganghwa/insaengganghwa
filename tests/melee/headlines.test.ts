@@ -94,7 +94,13 @@ describe('melee headlines — 탐지', () => {
     const c = codes(candidates);
     expect(c).toContain('win_streak');
     expect(c).toContain('rematch');
-    expect(c).toContain('revenge');
+    // u9는 4일 연속 u3에게 탈락했다 — 하루짜리 복수(revenge) 대신 천적 탈출(10-04 신규)로 나온다.
+    expect(c).toContain('nemesis_broken');
+    expect(c).not.toContain('revenge');
+    expect(candidates.find((x) => x.code === 'nemesis_broken')?.text).toContain('4일 연속');
+    // 10-04 신규 — 5일 연속 Top10, 통산 5번째 시상대.
+    expect(candidates.find((x) => x.code === 'top10_streak')?.text).toContain('5일 연속 Top10');
+    expect(candidates.find((x) => x.code === 'podium_milestone')?.text).toContain('통산 5번째 시상대');
     expect(c).toContain('eternal_second');
     expect(c).toContain('rank_jump');
     expect(candidates.find((x) => x.code === 'win_streak')?.text).toContain('5일 연속');
@@ -167,5 +173,27 @@ describe('melee headlines — 자동 선택', () => {
     expect(picks.map((p) => p.code)).toEqual(['a', 'b', 'c']);
     const picks2 = pickHeadlines([mk('a', 'crown', 3.4, ['x']), mk('b', 'upset', 3, ['y']), mk('c', 'drama', 3, ['z']), mk('d', 'record', 3, ['w'])], h);
     expect(picks2.map((p) => p.code)).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+describe('melee headlines — 10-04 신규(연속 우승 중단·개인 최고)', () => {
+  it('연속 우승 중이던 어제 챔피언을 꺾은 우승자, 개인 최고 순위', () => {
+    const h = emptyHistory();
+    const N = 30;
+    for (const d of ['2026-08-29', '2026-08-30', '2026-08-31', '2026-09-01', '2026-09-02']) {
+      const parts = Array.from({ length: N }, (_, i) => part(i + 1));
+      const b = battle(parts, d);
+      applyBattleToHistory(h, b, parts, generateHeadlines(b, parts, h).picks);
+    }
+    // 오늘: u2 우승·u1(5연속 우승 중) 2위로 u2에게 탈락, 늘 20위이던 u20이 4위
+    const today = Array.from({ length: N }, (_, i) => part(i + 1));
+    today[0] = part(1, { userId: 'u2', nickname: '유저2' });
+    today[1] = part(2, { userId: 'u1', nickname: '유저1', killerUserId: 'u2' });
+    today[3] = part(4, { userId: 'u20', nickname: '유저20' });
+    today[19] = part(20, { userId: 'u4', nickname: '유저4' });
+    const { candidates } = generateHeadlines(battle(today), today, h);
+    expect(candidates.find((x) => x.code === 'streak_ended')?.text).toBe('유저2, 유저1의 5일 연속 우승을 끊고 정상');
+    expect(codes(candidates)).not.toContain('hunter_crowned');
+    expect(candidates.find((x) => x.code === 'personal_best')?.text).toBe('유저20, 6번째 참가에서 개인 최고 4위');
   });
 });
