@@ -75,6 +75,11 @@ export async function withdrawAccount(userId: string): Promise<void> {
   const uid = sql`${userId}::uuid`;
 
   await db.transaction(async (tx) => {
+    // 잠금 대기 상한(10-04 핫픽스) — 다른 트랜잭션이 이 유저의 행을 잡고 있으면 탈퇴가 잠금을 기다리다 함수 한도(60초)에
+    // 끊겼다. 끊긴 트랜잭션은 잠금을 쥔 채 남아 재시도마다 다시 막혔다(메룽치킨 4회 연속 504). 트랜잭션 범위(SET LOCAL)라
+    // 풀러 세션으로 새지 않는다(09-23 세션 SET 사고와 다름). 넘으면 오류로 끝나 '잠시 후 다시 시도'가 뜬다.
+    await tx.execute(sql`set local lock_timeout = '8s'`);
+    await tx.execute(sql`set local statement_timeout = '30s'`);
     // FK 자식 → 부모 순서. 대부분 profiles FK라 상호 독립이나, 명시 의존만 순서 보장.
     // 레이드(2026-08-27 개편): raids·raid_participants·raid_attacks는 **지우지 않는다**. 페이즈 판정이
     // 참가자 total_damage 합이라 호스트/참가자 기록을 지우면 진행 중 레이드의 체력이 되돌아가고, 호스트
