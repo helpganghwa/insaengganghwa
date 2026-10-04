@@ -709,6 +709,8 @@ const FACT_RULES = `[사실 검증 — 사실표가 유일한 진실]
 - 연출 순서 주의: 지도 연출은 구역 마커가 처음 나오는 문장에서 재생되고, '어제·전날·하루 만에'가 든 회고 문장의 마커는 건너뛴다. 어떤 구역이 회고 표현이 든 문장에서만 마커로 등장하면, 그 구역의 오늘 행동 문장(회고 표현 없이)을 앞에 두고 회고 문장에서는 '그 땅·그곳'으로 받도록 고쳐라. 결과 문장이 행동 문장보다 앞서면 순서를 바꿔라.
 - 지역 귀속 주의: 구역의 소속 지역은 사실표의 '(X 지역)' 표기만 따른다 — 여러 지역에 걸친 사건을 한 지역 이름('왕국 전역' 등)으로 묶은 문장은 오류다(여러 지역이면 '대륙 전역'). 지역명이 등장하는 문장마다 그 문장 안의 구역 하나하나를 사실표의 '(X 지역)'과 대조하라 — 특히 한 길드가 여러 지역의 구역을 점령한 경우, 'A 지역에서는 ~' 문장 안에 다른 지역 구역이 섞여 들어간 것(예: 사실표에 '(타락 천사 부유섬 지역)'인 구역을 드래곤 화산 문장에 포함)은 오류다.
 - 최초 주장 주의: '최초·처음으로' 주장은 사실표에 그렇게 명시된 경우에만 유효하다. 지역 석권의 '세 번째로 완성한'·'차례로 지배했던' 같은 서수·이력 주장은 사실표 '■ 지역 석권 현황'에 적힌 이력만 쓸 수 있고, 거기서 '오늘 깨짐'인 석권을 아직 쥔 것처럼 쓴 문장은 오류다.
+- **읽기 쉽게 쓴다(10-04 운영자 교정)** — ① 문단 첫 문장에 그 문단의 요지(누가 무엇을 했는지)를 먼저 쓴다('가장 많이 거둔 길드는 {g|로제}였다'). ② 한 문장에는 사건 하나만 담고, 길어지면 나눈다. ③ 문장에 다른 길드가 함께 나오면 주어를 생략하지 않는다 — '{g|A}에게서 두 곳을 가져왔다'처럼 누가 누구에게서 무엇을 했는지 분명히. ④ 비유('창·방패·기세')는 글 전체에서 한두 번만.
+- **같은 꾸밈말을 되풀이하지 않는다** — '얻은 지 얼마 안 된·오래 지켜 온·끝까지'는 본문 전체에서 각각 두 번까지만. 보유 기간이 이야기에 꼭 필요한 곳에만 붙인다.
 - 동시 진행 주의: 그날의 점령전은 모든 구역에서 같은 시각에 벌어진다. '곧이어·뒤이어·그 직후·그러자'처럼 구역 사이에 순서를 만든 문장은 오류다 — 순서 없이 '같은 날·한편'으로 고쳐라.
 - 지역별 수 주의: 'X 지역에서 N곳을 늘렸다'의 N은 사실표 점령 줄의 '지역별' 수만 쓴다. 길드 전체 획득 수를 한 지역의 수로 쓰면 오류다.
 - 생존 주의: 개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물을 '자리를 지켜냈다·버텼다'의 주어로 쓴 문장은 오류다 — 쓰러뜨린 뒤 쓰러졌고 길드가 지켜냈다는 식으로 나눠 써라.
@@ -1227,6 +1229,16 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const milestones: string[] = [];
   const prevLeader = leaderOf(beforeCounts);
   const nextLeader = leaderOf(afterCounts);
+  // 선두 다툼(10-04) — 1·2위 격차 변화. 운영자가 고친 제목 '다시 좁혀진 격차'의 근거가 사실표에 없었다.
+  const rankAfter = [...afterCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const leadGapLine = (() => {
+    const [first, second] = rankAfter;
+    if (!first || !second || first[1] === second[1]) return '';
+    const gapAfter = first[1] - second[1];
+    const gapBefore = (beforeCounts.get(first[0]) ?? 0) - (beforeCounts.get(second[0]) ?? 0);
+    const trend = gapAfter < gapBefore ? '좁혀짐' : gapAfter > gapBefore ? '벌어짐' : '그대로';
+    return `· 1위 「${first[0]}」 ${first[1]}곳, 2위 「${second[0]}」 ${second[1]}곳 — 두 길드의 차이가 직전 ${gapBefore}곳에서 ${gapAfter}곳으로 ${trend}('가장 넓은 땅'은 1위 길드에만 쓸 것)`;
+  })();
   if (prevLeader && nextLeader && prevLeader !== nextLeader)
     milestones.push(`· 길드 「${nextLeader}」 이(가) 가장 넓은 영토를 지닌 길드가 됨(직전까지는 「${prevLeader}」, 등수 표현 말고 질적으로 서술)`);
   const regionZoneIds = new Map<string, number[]>();
@@ -1395,6 +1407,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       `■ 열세 점령(수비보다 적은 인원으로 들어가 빼앗은 전투 — 열세 방어와 같은 무게의 활약. 인원수를 써도 되는 자리다):\n${underdogCapLines}`,
     );
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
+  if (leadGapLine) digestSections.push(`■ 선두 다툼:\n${leadGapLine}`);
   if (hookLines.length > 0)
     digestSections.push(`■ 이야깃거리(위 사실들을 엮은 것 — 주제와 중심 장면을 고르는 재료. 새 사실을 더하지 말 것):\n${hookLines.join('\n')}`);
   if (topoLines)
@@ -1538,6 +1551,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     })(),
     shortGapGuilds,
     wipedGuilds,
+    leaderAfter: nextLeader ?? undefined,
     fellFeats: summary.feats.filter((f) => f.fell === true).map((f) => f.nickname),
     // 09-24 — 사실표에 근거가 있는 기간·첫 등장·지형·석권 서술을 가려내는 기준(chronicle-facts.ts 19~22).
     heldDays: new Map(
@@ -1845,12 +1859,39 @@ export function applySentenceFixes(text: string, fixes: { before?: unknown; afte
   return out;
 }
 
-async function repairFactSentences(
+/**
+ * 고칠 문장에 나온 구역의 사실 카드(10-04) — 사실표 전체만 주면 고치면서 다른 사실(지역)을 틀렸다('슬라임 늪의 {z|얼음 여울}').
+ * 지적·해당 문장에 나온 구역마다 지역·지킨 길드/가져간 길드·공격 길드를 한 줄로 준다.
+ */
+export function zoneFactCard(text: string, issues: string[], ctx: FactCheckContext): string {
+  const zones = new Set<string>();
+  const sents = text.split(/(?<=[.!?])\s+/);
+  for (const iss of issues) {
+    for (const m of iss.matchAll(/\{z\|([^}|]+)/g)) zones.add(m[1]!.trim());
+    const quote = /「([^」]{12,})/.exec(iss)?.[1]?.replace(/…$/, '').slice(0, 30);
+    const hit = quote ? sents.find((x) => x.includes(quote)) : undefined;
+    if (hit) for (const m of hit.matchAll(/\{z\|([^}|]+)/g)) zones.add(m[1]!.trim());
+  }
+  return [...zones]
+    .map((z) => {
+      const cap = ctx.captureBy.get(z);
+      const atk = ctx.attackers?.get(z) ?? [];
+      const region = ctx.zoneRegion.get(z) ?? '?';
+      const atkTxt = atk.length ? `공격 길드 ${atk.map((g) => `「${g}」`).join('·')}` : '공격 없음';
+      if (cap) return `· 「${z}」: ${region} 지역 · 「${cap.winner}」이(가) ${cap.from ? `「${cap.from}」에게서 ` : ''}가져감 · ${atkTxt}`;
+      const def = ctx.defendedBy?.get(z);
+      return `· 「${z}」: ${region} 지역 · ${def ? `「${def}」이(가) 지켜 냄` : '결과 정리 참조'} · ${atkTxt}`;
+    })
+    .join('\n');
+}
+
+export async function repairFactSentences(
   text: string,
   issues: string[],
   digest: string,
   timeoutMs: number,
   track: (u: Anthropic.Usage | undefined) => void,
+  card = '',
 ): Promise<string | null> {
   try {
     const res = await client().messages.create(
@@ -1862,7 +1903,7 @@ async function repairFactSentences(
         messages: [
           {
             role: 'user',
-            content: `${digest}\n\n[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
+            content: `${digest}\n\n[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}${card ? `\n\n[고칠 문장에 나온 구역의 사실 — 고친 문장의 지역·공격 길드·지킨 길드는 이대로만 쓴다]\n${card}` : ''}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 지적되지 않은 사실(지역 이름 등)은 원문 그대로 둔다. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
           },
         ],
       },
@@ -2187,7 +2228,7 @@ async function generateLocked(
     const budget = Math.min(60_000, deadline + 45_000 - Date.now());
     if (left.length === 0 || budget <= 15_000) break;
     {
-      const fixed = await repairFactSentences(today, left, digest, budget, track);
+      const fixed = await repairFactSentences(today, left, digest, budget, track, zoneFactCard(today, left, factCtx));
       if (fixed) {
         const after = factIssues(fixed, factCtx).filter((f) => !isLightFactIssue(f));
         const worse =

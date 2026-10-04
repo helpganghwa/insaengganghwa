@@ -243,3 +243,27 @@ describe('factIssues 40 — 영토 소멸 서술의 주인(10-03)', () => {
   });
 });
 
+describe('factIssues 41·42·15·11 — 10-04 생성본 실오류', () => {
+  const c: FactCheckContext = {
+    zoneRegion: new Map([['썩은 잔교', '슬라임 늪'], ['늪지 오두막', '슬라임 늪'], ['황금 회랑', '타락 천사 부유섬']]), regionLabels: ['슬라임 늪', '타락 천사 부유섬'],
+    feats: [{ nickname: '진주', count: 3, kills: 3, alone: false }], fellFeats: ['진주'], headcountZones: ['황금 회랑'], recaptureZones: [], yesterdayZones: [],
+    guildCounts: new Map(), battleZones: [], captureBy: new Map(), leaderAfter: 'Winners',
+  };
+  const has = (t: string, re: RegExp) => factIssues(t, c).some((i) => re.test(i));
+  it("'가장 넓은 땅'은 1위 길드에만", () => {
+    expect(has('{g|로제|25}는 열여덟 곳이 되며 가장 넓은 땅을 이어 갔다.', /1위 길드/)).toBe(true);
+    expect(has('가장 넓은 땅은 여전히 {g|Winners|17}의 것이다. {g|Winners|17}는 가장 넓은 땅을 지켰다.', /1위 길드/)).toBe(false);
+  });
+  it("하루 사이 주인이 두 번 바뀌었다는 오류", () => {
+    expect(has('오크 부락에서는 하루 사이에 땅의 주인이 두 번 바뀌었다.', /두 번' 바뀔 수 없다/)).toBe(true);
+  });
+  it("끝까지 버텼지만 끝내 쓰러졌다", () => {
+    expect(has('{z|황금 회랑|49}에서 {g|Winners|17}의 {u|진주|E5wCdX9V}가 셋을 쓰러뜨리며 끝까지 버텼지만 끝내 쓰러졌다.', /끝내 쓰러졌는데/)).toBe(true);
+    expect(has('{z|황금 회랑|49}에서 {g|Winners|17}의 {u|진주|E5wCdX9V}가 셋을 쓰러뜨렸지만 수의 차이를 넘지는 못했다.', /끝내 쓰러졌는데/)).toBe(false);
+  });
+  it("'…했고, 이어 {z|X}도'는 순서 표현, '오래 이어 온'은 아니다", () => {
+    expect(has('{g|세계수|29}는 {z|썩은 잔교|25}에서 승리했고, 이어 {z|늪지 오두막|26}도 거두었다.', /같은 시각/)).toBe(true);
+    expect(has('{g|Winners|17}는 오래 이어 온 왕국 석권을 지켰다.', /같은 시각/)).toBe(false);
+  });
+});
+

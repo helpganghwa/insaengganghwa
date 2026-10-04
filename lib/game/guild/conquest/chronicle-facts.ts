@@ -53,6 +53,8 @@ export type FactCheckContext = {
   shortGapGuilds?: string[];
   /** (10-03) 이번에 영토를 모두 잃은 길드 — 이 길드만 '판도에서 물러나·영토가 모두 비었다'의 주어가 될 수 있다. 없으면 검사 생략. */
   wipedGuilds?: string[];
+  /** (10-04) 이번 점령전 뒤 가장 넓은 땅을 지닌 길드(동률이면 없음) — '가장 넓은 땅'의 주인. */
+  leaderAfter?: string;
   /** (10-03) 코드가 묶음 문단으로 덧붙이는 1대1 방어 구역 — 모델 본문에 나오면 안 된다(나열 문단·중복의 원인). 생성 단계에서만 준다. */
   autoZones?: string[];
   /** (09-17) 개인 활약 중 그날 끝내 쓰러진 인물 — '지켜냈다·버텼다'의 주어로 쓰면 안 된다. */
@@ -151,7 +153,7 @@ const RETRO = /어제|전날|하루 전/;
 /** '어제부터 비워 둔 {z|X}' — 오늘까지 이어진 공백 묘사라 어제 사건 회고(5·12번)가 아니다(09-26 게시본 오탐). */
 const RETRO_VACANT = /(?:어제|전날|하루 전)부터\s?(?:비워|비어|비운|비었|방치)/g;
 /** 11 — 구역 사이 순서 표현. */
-const SEQUENCE = /곧이어|뒤이어|그 직후|그러자|차례로/; // 차례로(10-03 묶음 문장 '공격을 차례로 받아내며')
+const SEQUENCE = /곧이어|뒤이어|그 직후|그러자|차례로|(?:^|,\s)이어\s(?!온|간|갔|가|오|져|지|붙|받)/; // '…했고, 이어 {z|X}도'(10-04) // 차례로(10-03 묶음 문장 '공격을 차례로 받아내며')
 /** 12 — 회고 문장의 '가져간' 동사(잃은 쪽 회고 '어제 내주었던'은 5번 규칙이 본다). */
 const RETRO_TAKEN = /차지했|차지한|빼앗았|빼앗은|손에 넣|가져갔|가져간/;
 /** 12 — 앞 문장의 여러 구역을 한꺼번에 받는 말. */
@@ -193,6 +195,12 @@ const SWEEP = /석권|전역을|통째로|전부 쥐|모두 쥐/;
  * 다섯 번째부터 잡는다(점령 10건 넘는 날에도 동사가 모자라지 않게 여유를 둔다).
  */
 const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[] = [
+  // 10-04 — 보유 기간 꾸밈말·'끝까지'가 각각 네 번씩 나왔다.
+  { re: /얻은 지 얼마 안 된/g, label: '얻은 지 얼마 안 된', max: 2, alt: '필요한 곳에만 붙이고 나머지는 빼기' },
+  { re: /오래 지켜 온/g, label: '오래 지켜 온', max: 2, alt: '필요한 곳에만 붙이고 나머지는 빼기' },
+  { re: /끝까지/g, label: '끝까지', max: 2, alt: '끝내·마지막까지 또는 빼기' },
+  // 10-04 — 같은 길드의 퇴장을 본문 중간과 정산 문단에서 두 번 썼다.
+  { re: /판도에서 물러나/g, label: '판도에서 물러나', max: 1, alt: '정산 문단에서는 \'마지막 땅을 내줬다\'로만' },
   { re: /지키는 이 없/g, label: '지키는 이 없던', max: 2, alt: '비어 있던·수비를 두지 않은·주인이 비운' },
   { re: /비어 있/g, label: '비어 있던', max: 2, alt: '지키는 이 없던·수비를 두지 않은' },
   { re: /수비 없/g, label: '수비 없는', max: 2, alt: '비어 있던·지키는 이 없던' },
@@ -511,7 +519,8 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       // 15. 쓰러진 인물 — 끝내 쓰러진 사람을 '지켜냈다·버텼다'의 주어로 쓰지 않는다(09-17 늪지 오두막 전사).
       if (ctx.fellFeats) {
         for (const tk of toks.filter((x) => x.kind === 'u' && ctx.fellFeats!.includes(x.name))) {
-          if (SURVIVED.test(plain) && !FELL_WORD.test(plain)) {
+          // '끝까지 버텼지만 끝내 쓰러졌다'처럼 한 문장에 둘을 겹치면 앞뒤가 안 맞는다(10-04 진주).
+          if ((SURVIVED.test(plain) && !FELL_WORD.test(plain)) || /끝까지\s?(?:버텼|버텨|살아남|서 있)/.test(plain)) {
             issues.push(`{u|${tk.name}} 은(는) 그날 끝내 쓰러졌는데 버티고 지켜낸 것처럼 썼다 — 쓰러뜨린 뒤 쓰러졌다고 쓰고, 지켜낸 주어는 길드로 나눈다: ${q(sent)}`);
           }
         }
@@ -655,6 +664,23 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
       if (subj && !ctx.wipedGuilds.includes(subj))
         issues.push(`{g|${subj}} 은(는) 영토가 남아 있다 — '판도에서 물러나·영토가 모두 비었다'는 이번에 영토를 모두 잃은 길드에만 쓴다: 「${sent.length > 60 ? sent.slice(0, 60) + '…' : sent}」`);
     }
+  }
+
+  // 41. '가장 넓은 땅'의 주인 — 1위가 아닌 길드에 썼다(10-04 '{g|로제}는 … 가장 넓은 땅을 이어 갔다' — 1위는 Winners).
+  // 42. '하루 사이 주인이 두 번 바뀌었다' — 구역마다 하루 한 번만 싸운다. 어제 바뀐 것과 오늘 바뀐 것을 합쳐 쓴 오류(10-04 오크 대요새).
+  for (const sent of sentences(text)) {
+    const q3 = `「${sent.length > 60 ? sent.slice(0, 60) + '…' : sent}」`;
+    if (ctx.leaderAfter !== undefined) {
+      const w = plainAligned(sent).search(/가장 넓은 (?:땅|영토)/);
+      if (w >= 0) {
+        const gs = [...sent.slice(0, w).matchAll(/\{g\|([^}|]+)(?:\|[^}]*)?\}(?:은|는|이|가|도|의)(?![가-힣])/g)].map((m) => m[1]!.trim());
+        const subj = gs[gs.length - 1];
+        if (subj && subj !== ctx.leaderAfter)
+          issues.push(`'가장 넓은 땅'은 1위 길드 {g|${ctx.leaderAfter}} 의 것이다 — {g|${subj}} 에 쓰지 말고 사실표 '선두 다툼'대로 고친다: ${q3}`);
+      }
+    }
+    if (/두 번(?:이나)? (?:바뀌|주인이 바뀌|손이 바뀌)|주인이 두 번/.test(plainAligned(sent)))
+      issues.push(`구역의 싸움은 하루 한 번이라 주인이 '두 번' 바뀔 수 없다 — 어제 일과 오늘 일을 나눠 쓴다: ${q3}`);
   }
 
   // 39. 자동 묶음 구역을 본문에 씀(10-03 시험: 지시를 어기고 '이 밖에 … 각자 자리를 지켜냈다'로 나열).
