@@ -14,6 +14,7 @@
 //    최종 프롬프트(서버 확장 없음). 목표 1800~1950(한계까지 풍부·상세), 압축 트리거 1990, 절단 안전장치 1990.
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { NO_THINKING } from '@/lib/ai/thinking';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -23,7 +24,7 @@ import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import type { ProfileGender } from './refs';
 import type { Appearance } from './appearance-v3';
 
-const MODEL_ID = 'claude-sonnet-5';
+const MODEL_ID = 'claude-sonnet-5-5';
 const MAX_CHARS = 1990; // v3 description 한도 2000 직전 — 절단은 최후 안전장치(아래 압축 재생성이 우선).
 const SOFT_LIMIT = 1990; // 한계까지 꽉 채워 품질↑ — 목표 1800~1950, 한도(1990) 초과 시에만 압축 재생성.
 const COMPOSE_MAX_TOKENS = 1800; // ~1950자(≈500토큰) 출력 + Sonnet 5 사고 토큰 여유(1500에서도 꼬리 절단 관측 — 상향).
@@ -163,7 +164,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
     max_tokens: COMPOSE_MAX_TOKENS,
     // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
     // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-    thinking: { type: 'disabled' },
+    thinking: NO_THINKING,
     system: sys,
     messages: [{ role: 'user', content }],
   });
@@ -177,7 +178,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
       max_tokens: COMPOSE_MAX_TOKENS,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: { type: 'disabled' },
+      thinking: NO_THINKING,
       system: sys,
       messages: [
         {

@@ -108,4 +108,4 @@ STYLE (EMPHASIZE STRONGLY): MODERN 2020s Japanese TV-anime character design in h
 |------|------|
 | generate-image-v2 512px | $0.185 / 장 |
 | generate-image-v2 256px | $0.095 / 장 |
-| Claude 컴포즈 (Sonnet 5, vision 3장) | ~$0.016 / 회 |
+| Claude 컴포즈 (Sonnet 5.5, vision 3장) | ~$0.016 / 회 |

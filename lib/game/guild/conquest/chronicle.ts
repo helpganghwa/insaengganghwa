@@ -1,6 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
+import { NO_THINKING, noThinkingFor } from '@/lib/ai/thinking';
 import { josa } from 'josa';
 import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
@@ -19,7 +20,7 @@ import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveMod
 // 연대기 모델(2026-09-10 재확인) — 사실 오류는 chronicle-facts.ts 검증기가 재생성 피드백으로 잡고,
 // 문체는 직전 검수 완료본을 참고로 준다. 모델을 올리는 것보다 이 두 장치가 확실해 기존 모델을 유지한다
 // (상위 모델은 환경별 접근 권한이 달라 하루 한 번뿐인 생성이 통째로 실패할 위험도 있다).
-const MODEL_ID = 'claude-sonnet-5';
+const MODEL_ID = 'claude-sonnet-5-5';
 /** 초안 추론 켜기(시험용 스위치) — 기본 끔. */
 const DRAFT_THINKING = process.env.CHRONICLE_THINKING === 'adaptive';
 
@@ -1888,7 +1889,7 @@ export function zoneFactCard(text: string, issues: string[], ctx: FactCheckConte
 export async function repairFactSentences(
   text: string,
   issues: string[],
-  digest: string,
+  factBlock: string,
   timeoutMs: number,
   track: (u: Anthropic.Usage | undefined) => void,
   card = '',
@@ -1898,12 +1899,19 @@ export async function repairFactSentences(
       {
         model: MODEL_ID,
         max_tokens: 3000,
-        thinking: { type: 'disabled' },
+        thinking: NO_THINKING,
         system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
         messages: [
           {
             role: 'user',
-            content: `${digest}\n\n[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}${card ? `\n\n[고칠 문장에 나온 구역의 사실 — 고친 문장의 지역·공격 길드·지킨 길드는 이대로만 쓴다]\n${card}` : ''}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 지적되지 않은 사실(지역 이름 등)은 원문 그대로 둔다. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
+            content: [
+              // 생성 요청의 첫 블록과 같은 사실 블록 — 캐시로 읽힌다(사실표 수천 토큰을 다시 내지 않는다).
+              { type: 'text', text: factBlock, cache_control: { type: 'ephemeral' } },
+              {
+                type: 'text',
+                text: `[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}${card ? `\n\n[고칠 문장에 나온 구역의 사실 — 고친 문장의 지역·공격 길드·지킨 길드는 이대로만 쓴다]\n${card}` : ''}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 지적되지 않은 사실(지역 이름 등)은 원문 그대로 둔다. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
+              },
+            ],
           },
         ],
       },
@@ -2050,8 +2058,9 @@ async function generateLocked(
   const { guildRefByName, fixBraces, correctMarkers, findViolations, enforceMarkers, enrichMarkers } = tools;
 
   // 규칙은 SYSTEM_PROMPT 한 곳에만 둔다(09-24) — 종전엔 여기 2,300자가 SYSTEM과 겹쳐 두 곳이 어긋났다. 여기는 날마다 바뀌는 지시만.
+  // 사실 블록(사실표·맥락)과 지시 블록을 나눠 각각 캐시한다(10-04) — 문장 고치기 호출이 같은 사실 블록을 캐시로 읽는다.
+  const factBlock = `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n`;
   const baseContent =
-    `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
     (bigChange
       ? `이번 점령전은 역사에 남는 날이다. headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}과 '■ 어제와 이어지는 사실'을 재료로, 위 headline 규칙의 우선순위·문형대로 쓴다. 이정표가 '지역 전체 장악'이어도 구역 수 나열('6곳 장악')은 쓰지 말 것. 본문에서도 그 이정표를 구체적으로 짚는다(어느 구역을 마지막으로 그 지역 전부가 깃발 아래 놓였는지). headlines에는 문형이 서로 다른 후보 3~5개를 함께 낸다.\n`
       : `이번 점령전은 역사에 남을 날이 아니다. headline은 반드시 빈 문자열(""), headlines는 빈 배열([])로 둔다.\n`) +
@@ -2061,7 +2070,13 @@ async function generateLocked(
   // 재시도로도 남으면 enforceMarkers가 결정론 백스톱(동명 모호만 최종 잔존 가능, warn).
   // 첫 요청(사실표·맥락·규칙, 수천 토큰)에 캐시를 건다 — 재시도 2·3회차가 같은 앞부분을 캐시로 읽어 입력 비용이 1/10이 된다.
   const messages: Anthropic.Messages.MessageParam[] = [
-    { role: 'user', content: [{ type: 'text', text: baseContent, cache_control: { type: 'ephemeral' } }] },
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: factBlock, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: baseContent, cache_control: { type: 'ephemeral' } },
+      ],
+    },
   ];
   // 연출 순서 검증 대상 — 오늘 점령·방어가 있었던 구역(회고 문장에만 등장하면 리플레이가 건너뛴다).
   const battleZones = [...new Set([...summary.captures.map((c) => c.zone), ...summary.defenses.map((d) => d.zone)])];
@@ -2114,7 +2129,7 @@ async function generateLocked(
           // 추론(thinking)은 기본 끔 — 7/20 짧은 예산이 추론에 다 쓰여 본문이 빈 사고. 시험용으로 CHRONICLE_THINKING=adaptive면
           // 켜고 추론 몫 상한을 넉넉히 더한다(09-24 비교: scripts/chronicle-eval.ts).
           max_tokens: DRAFT_THINKING ? maxTokens + 12_000 : maxTokens,
-          thinking: DRAFT_THINKING ? { type: 'adaptive' } : { type: 'disabled' },
+          thinking: DRAFT_THINKING ? { type: 'adaptive' } : NO_THINKING,
           system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
           messages,
         },
@@ -2228,7 +2243,7 @@ async function generateLocked(
     const budget = Math.min(60_000, deadline + 45_000 - Date.now());
     if (left.length === 0 || budget <= 15_000) break;
     {
-      const fixed = await repairFactSentences(today, left, digest, budget, track, zoneFactCard(today, left, factCtx));
+      const fixed = await repairFactSentences(today, left, factBlock, budget, track, zoneFactCard(today, left, factCtx));
       if (fixed) {
         const after = factIssues(fixed, factCtx).filter((f) => !isLightFactIssue(f));
         const worse =
@@ -2427,13 +2442,14 @@ async function polishChronicle(p: {
 
   // Fable은 thinking 항상 켜짐(파라미터 거부) — 지정하지 않고 출력 예산만 넉넉히. Sonnet·Opus는 생성과 같이 비활성.
   // 출력 = 본문 전체 + changes 목록이라 초안 생성보다 길다 — 첫 실측(09-15) 3,200에서 잘림(rawLen 3,360). 5,000/8,000.
-  const isFable = input.model === 'claude-fable-5-1';
+  // Opus 5.5·Fable 5.1은 추론을 끌 수 없어 늘 생각한다 — 출력 상한을 넉넉히(10-04).
+  const isFable = !input.model.startsWith('claude-sonnet-');
   let parsed: { today?: string; headline?: string; changes?: ChronicleReviewNote[] } | null = null;
   for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
     const res = await client().messages.create({
       model: input.model,
       max_tokens: isFable ? 8000 : 5000,
-      ...(isFable ? {} : { thinking: { type: 'disabled' as const } }),
+      ...noThinkingFor(input.model),
       system: [{ type: 'text', text: IMPROVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });

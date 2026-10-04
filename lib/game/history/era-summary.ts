@@ -2,6 +2,7 @@ import 'server-only';
 import { getJosaPicker } from 'josa';
 
 import Anthropic from '@anthropic-ai/sdk';
+import { NO_THINKING } from '@/lib/ai/thinking';
 
 /**
  * 시대 요약 이야기(2026-09-18) — 코드가 뽑은 시대 사실(누가 언제 앞자리에 섰고, 무엇을 석권했고, 누가 사라졌고,
@@ -47,7 +48,7 @@ export type EraFacts = {
 
 export type EraNarrative = { summary: string; closing: string };
 
-const MODEL_ID = 'claude-sonnet-5';
+const MODEL_ID = 'claude-sonnet-5-5';
 let _client: Anthropic | null = null;
 function client(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -283,7 +284,7 @@ async function narrateOnce(facts: EraFacts, feedback: string): Promise<{ ok: tru
     // 첫 장은 사실이 많아(개명 셋·석권 넷·소멸 셋) 700이면 JSON이 잘린다(09-18 실측).
     max_tokens: 1400,
     // Sonnet 5는 thinking 미지정 시 adaptive 기본 — 예산을 thinking이 다 써 본문이 비었다(09-18: stop=max_tokens, blocks=thinking). 연대기와 같이 끈다.
-    thinking: { type: 'disabled' },
+    thinking: NO_THINKING,
     system: SYSTEM,
     messages: [{ role: 'user', content: userContent }],
   });

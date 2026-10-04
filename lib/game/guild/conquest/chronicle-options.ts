@@ -37,10 +37,10 @@ export const CHRONICLE_FEEDBACK = {
 } as const;
 export type ChronicleFeedbackKey = keyof typeof CHRONICLE_FEEDBACK;
 
-/** 개선 패스에 고를 수 있는 모델 — 기본은 생성과 같은 Sonnet 5. */
+/** 개선 패스에 고를 수 있는 모델 — 기본은 생성과 같은 Sonnet 5.5(10-04 각 계열 최신으로). */
 export const CHRONICLE_IMPROVE_MODELS = {
-  'claude-sonnet-5': 'Sonnet 5',
-  'claude-opus-5': 'Opus 5',
+  'claude-sonnet-5-5': 'Sonnet 5.5',
+  'claude-opus-5-5': 'Opus 5.5',
   'claude-fable-5-1': 'Fable 5.1',
 } as const;
 export type ChronicleImproveModel = keyof typeof CHRONICLE_IMPROVE_MODELS;

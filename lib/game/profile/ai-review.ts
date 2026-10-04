@@ -9,11 +9,12 @@
 
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { NO_THINKING } from '@/lib/ai/thinking';
 import sharp from 'sharp';
 import { z } from 'zod';
 
 // 검수 모델 — 미세 결함(끊긴 무기·해부학 오류 등) 검출 정확도가 중요해 Sonnet 5 사용.
-const MODEL_ID = 'claude-sonnet-5';
+const MODEL_ID = 'claude-sonnet-5-5';
 
 const REVIEW_REASONS = ['nsfw', 'violence', 'hate', 'quality'] as const;
 export type ReviewReason = (typeof REVIEW_REASONS)[number];
@@ -147,7 +148,7 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
       max_tokens: 512,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: { type: 'disabled' },
+      thinking: NO_THINKING,
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content }],
     });

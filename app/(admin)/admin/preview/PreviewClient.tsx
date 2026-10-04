@@ -169,7 +169,7 @@ export function ChronicleEditor({
   // 확정은 기존 '수정 저장'. 변경 목록·코드 검증 결과를 아래에 보여 준다. 실패는 사유만 표시하고 텍스트는 그대로.
   const [fb, setFb] = useState<Set<ChronicleFeedbackKey>>(new Set());
   const [note, setNote] = useState('');
-  const [model, setModel] = useState<ChronicleImproveModel>('claude-sonnet-5');
+  const [model, setModel] = useState<ChronicleImproveModel>('claude-sonnet-5-5');
   const [improving, setImproving] = useState(false);
   const [improveMsg, setImproveMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
   const [changes, setChanges] = useState<ChronicleReviewNote[]>([]);

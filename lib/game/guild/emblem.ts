@@ -2,6 +2,7 @@ import 'server-only';
 
 import sharp from 'sharp';
 import Anthropic from '@anthropic-ai/sdk';
+import { NO_THINKING } from '@/lib/ai/thinking';
 import { and, eq, desc, isNull, lt, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -26,7 +27,7 @@ import {
 } from './emblem-vocab';
 
 // ── AI 프롬프트 생성(Sonnet 5) — 선택값을 코히어런트한 픽셀 엠블럼 영문 프롬프트로 변환. 실패 시 템플릿 폴백. ──
-const EMBLEM_PROMPT_MODEL = 'claude-sonnet-5';
+const EMBLEM_PROMPT_MODEL = 'claude-sonnet-5-5';
 let _anthropic: Anthropic | null = null;
 function anthropic(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -64,7 +65,7 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
       max_tokens: 220,
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: { type: 'disabled' },
+      thinking: NO_THINKING,
       system: [{ type: 'text', text: EMBLEM_PROMPT_SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: [
         {
