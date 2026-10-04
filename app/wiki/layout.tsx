@@ -46,6 +46,10 @@ export default function WikiLayout({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-2">
             <WikiSearch docs={WIKI_LINKS} />
+            {/* 역사 위키(10-04) — 같은 종이 테마·같은 viewport(device-width)라 소프트 내비게이션으로 오간다. */}
+            <Link href="/history" className={`rounded-md border px-2.5 py-1 text-[12px] font-semibold ${PAPER.card} ${PAPER.hover}`}>
+              역사
+            </Link>
             {/* 게임으로는 통짜 이동 — 소프트 내비게이션은 루트 레이아웃을 다시 렌더하지 않아
                 위 viewport 재정의가 게임 화면(고정 390)까지 따라간다. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}

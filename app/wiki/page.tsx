@@ -44,6 +44,19 @@ export default function WikiIndexPage() {
             </section>
           );
         })}
+        {/* 역사 위키(10-04) — 규칙 문서가 아니라 서버별 점령전 기록이라 분류 밖에 따로 둔다. */}
+        <section>
+          <h2 style={SERIF} className={`border-b pb-1.5 text-[17px] font-bold ${PAPER.border}`}>
+            함께 보기
+          </h2>
+          <ul className="mt-3 grid grid-cols-2 gap-2">
+            <li>
+              <Link href="/history" className={`block h-full rounded-md border px-3.5 py-3 ${PAPER.card} ${PAPER.hover}`}>
+                <span className="text-[14px] font-semibold break-keep">역사 위키</span>
+              </Link>
+            </li>
+          </ul>
+        </section>
       </div>
     </WikiShell>
   );
