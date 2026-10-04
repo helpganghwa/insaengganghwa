@@ -27,6 +27,18 @@ const HeadBoxSchema = z.object({
 });
 export type HeadBox = z.infer<typeof HeadBoxSchema>;
 
+// 얼굴 기준점(2026-10-05) — 머리 박스(head)는 왕관·후광·모자·귀를 머리로 잡는 일이 잦아(7차 점검 796건 중 87건)
+// 썸네일 크롭은 눈·머리카락 꼭대기(장식 제외)·턱으로 정한다. 검수 이미지(트림·768 확대) 기준 0~1.
+const FacePointsSchema = z.object({
+  eyeL: z.tuple([z.number(), z.number()]),
+  eyeR: z.tuple([z.number(), z.number()]),
+  hairTop: z.number(),
+  chin: z.number(),
+});
+export type FacePoints = z.infer<typeof FacePointsSchema>;
+/** 원본 south 기준 얼굴 크롭 박스(components/faceCrop.ts의 FaceBox와 같은 의미 — 얼굴 중심 cx·cy, 머리 높이 h). */
+const FaceBoxSchema = z.object({ cx: z.number(), cy: z.number(), h: z.number() });
+
 /** 잡에 저장해 둔 verdict를 되읽을 때도 이 스키마로 검증한다(pipeline 재시도 경로). */
 export const ReviewVerdictSchema = z.object({
   pass: z.boolean(),
@@ -34,6 +46,10 @@ export const ReviewVerdictSchema = z.object({
   notes: z.string().default(''),
   /** 정면 머리 중심(cx,cy)·높이(h) 0~1. 모델 미반환 시 생략. */
   head: HeadBoxSchema.optional(),
+  /** 모델이 준 얼굴 기준점(검수 이미지 좌표) — 아래 faceBox 계산 재료. */
+  face: FacePointsSchema.optional(),
+  /** 얼굴 기준점으로 계산한 원본 south 좌표 크롭 박스. 있으면 파이프라인이 실루엣 감지 대신 이것을 쓴다. */
+  faceBox: FaceBoxSchema.optional(),
 });
 export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
 
@@ -79,13 +95,42 @@ For safety (nsfw/violence/hate) and aesthetic preference: when in doubt, PASS.
 
 ALSO (always, even when pass=true) locate the HEAD in the SOUTH (front) view for thumbnail face-cropping. In the SOUTH image, give the head/face bounding region as fractions 0..1 of the image: "head": { "cx": horizontal center of the head, "cy": vertical center of the head (face), "h": head height as a fraction of image height }. Measure the visible head/face only (hair counts, but ignore tall hats/horns extending far above; also IGNORE held weapons, staffs, wings or banners beside/above the character — the head is attached to the body at the top of the torso, near the horizontal center). For a typical full-body character the head is near the top-center: cx≈0.5, cy≈0.08, h≈0.14. If no south view or no visible head, omit "head".
 
+ALSO (always) give FACE POINTS in the SOUTH image as fractions 0..1 of that image (x from left, y from top): "face": { "eyeL": [x,y], "eyeR": [x,y], "hairTop": y, "chin": y }. eyeL/eyeR = the center of each eye (pupil). hairTop = the top of the HAIR/SCALP outline only — EXCLUDE crowns, tiaras, halos, hats, hoods, animal ears, horns, helmet crests and plumes, ribbons, headbands, flowers, goggles and any other headwear; if headwear covers the top of the head, estimate where the scalp top would be from the forehead. chin = the bottom tip of the chin. If no visible face, omit "face".
+
 OUTPUT — strict JSON only:
 {
   "pass": boolean,
   "reasons": ["nsfw" | "violence" | "hate" | "quality"],
   "notes": "MUST be written in KOREAN (한국어로만 작성). 1~2문장으로 실패 사유 설명(어느 뷰·어느 부위인지 포함). pass면 빈 문자열. 영어로 쓰지 말 것.",
-  "head": { "cx": 0.0-1.0, "cy": 0.0-1.0, "h": 0.0-1.0 }
+  "head": { "cx": 0.0-1.0, "cy": 0.0-1.0, "h": 0.0-1.0 },
+  "face": { "eyeL": [0.0-1.0, 0.0-1.0], "eyeR": [0.0-1.0, 0.0-1.0], "hairTop": 0.0-1.0, "chin": 0.0-1.0 }
 }`;
+
+/** 검수 이미지(트림 → 768 정사각 contain) 좌표를 원본 좌표로 되돌리는 변환. */
+type ReviewGeom = { W: number; H: number; trimL: number; trimT: number; tw: number; th: number };
+const REVIEW_SIZE = 768;
+
+/**
+ * 얼굴 기준점 → 원본 south 기준 크롭 박스. 7차 교정(10-05)과 같은 규칙:
+ *  cx = 두 눈 가운데, h = 머리카락 꼭대기~턱(0.11~0.2로 제한 — 장식 아래 두피를 낮게·포니테일 끝을 머리 위로 읽는 잡음),
+ *  cy = 눈높이 − 0.16/배율(눈이 썸네일 60% 높이에 오게, 배율 = 0.5/h를 2.2~5로 제한 — faceCropStyle과 같다).
+ * 좌표가 이미지 밖이거나 눈이 턱 아래인 등 앞뒤가 안 맞으면 null(호출부가 종전 방식으로).
+ */
+export function faceBoxFromPoints(f: FacePoints, g: ReviewGeom): { cx: number; cy: number; h: number } | null {
+  const scale = Math.min(REVIEW_SIZE / g.tw, REVIEW_SIZE / g.th);
+  const padX = (REVIEW_SIZE - g.tw * scale) / 2, padY = (REVIEW_SIZE - g.th * scale) / 2;
+  const toX = (u: number) => (g.trimL + (u * REVIEW_SIZE - padX) / scale) / g.W;
+  const toY = (v: number) => (g.trimT + (v * REVIEW_SIZE - padY) / scale) / g.H;
+  const ex = (toX(f.eyeL[0]) + toX(f.eyeR[0])) / 2;
+  const ey = (toY(f.eyeL[1]) + toY(f.eyeR[1])) / 2;
+  const top = toY(f.hairTop), chin = toY(f.chin);
+  if (![ex, ey, top, chin].every((n) => Number.isFinite(n) && n >= 0 && n <= 1)) return null;
+  if (!(top < ey && ey < chin)) return null;
+  const h = Math.min(0.2, Math.max(0.11, chin - top));
+  const s = Math.min(5, Math.max(2.2, 0.5 / h));
+  const r = (n: number) => Math.round(n * 10000) / 10000;
+  return { cx: r(ex), cy: r(Math.max(0, ey - 0.16 / s)), h: r(h) };
+}
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -119,12 +164,20 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
 
   // 각 이미지 앞에 방향 라벨 텍스트 → 같은 캐릭터의 회전 뷰임을 모델에 명시.
   const content: Anthropic.MessageParam['content'] = [];
+  let southGeom: ReviewGeom | null = null;
   for (const img of input.images) {
     // 투명 여백 트림(피사체 줌인) 후 768 nearest 업스케일 — 미세 끊긴/분리 무기 검출률↑(실측).
+    // 정면은 트림 오프셋·크기를 남겨 얼굴 기준점을 원본 좌표로 되돌린다(faceBoxFromPoints).
     let s = sharp(img.png);
-    try { s = sharp(await s.trim({ threshold: 10 }).png().toBuffer()); } catch { s = sharp(img.png); }
+    try {
+      const meta = await sharp(img.png).metadata();
+      const t = await s.trim({ threshold: 10 }).png().toBuffer({ resolveWithObject: true });
+      s = sharp(t.data);
+      if (img.direction === 'south' && meta.width && meta.height)
+        southGeom = { W: meta.width, H: meta.height, trimL: -(t.info.trimOffsetLeft ?? 0), trimT: -(t.info.trimOffsetTop ?? 0), tw: t.info.width, th: t.info.height };
+    } catch { s = sharp(img.png); }
     const up = await s
-      .resize(768, 768, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize(REVIEW_SIZE, REVIEW_SIZE, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
     content.push({ type: 'text', text: `View: ${img.direction}` });
@@ -175,6 +228,8 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   const fails = parsed.filter((v) => !v.pass);
   // 얼굴 크롭용 머리 박스 — 샘플 중 반환된 것 채택(없으면 생략, 호출부 폴백).
   const head = parsed.find((v) => v.head)?.head;
+  const face = parsed.find((v) => v.face)?.face;
+  const faceBox = face && southGeom ? faceBoxFromPoints(face, southGeom) ?? undefined : undefined;
   // any-fail — N표 중 FAIL_IF_AT_LEAST개 이상이 fail이면 최종 fail.
   const verdict: ReviewVerdict =
     fails.length >= FAIL_IF_AT_LEAST
@@ -183,8 +238,10 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
           reasons: [...new Set(fails.flatMap((v) => v.reasons))] as ReviewVerdict['reasons'],
           notes: fails.find((v) => v.notes)?.notes ?? fails[0]!.notes,
           ...(head ? { head } : {}),
+          ...(face ? { face } : {}),
+          ...(faceBox ? { faceBox } : {}),
         }
-      : { pass: true, reasons: [], notes: '', ...(head ? { head } : {}) };
+      : { pass: true, reasons: [], notes: '', ...(head ? { head } : {}), ...(face ? { face } : {}), ...(faceBox ? { faceBox } : {}) };
 
   const usage = samples.reduce(
     (acc, s) => ({

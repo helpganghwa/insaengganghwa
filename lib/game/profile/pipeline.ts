@@ -314,7 +314,8 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
           south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl,
         };
         // 얼굴 크롭 박스 — 실루엣 감지·AI 머리 박스 교차검증 + cx 런 스냅(2026-07-21 쩌내·SEB).
-        const faceBox = await reconcileFaceBox(png, await detectFaceBox(png), reviewed.head ?? null);
+        // 얼굴 기준점(눈·머리카락 꼭대기·턱)으로 계산한 박스가 있으면 그것을 쓴다(10-05 — 머리 박스·실루엣은 왕관·모자·귀에 끌림).
+        const faceBox = reviewed.faceBox ?? (await reconcileFaceBox(png, await detectFaceBox(png), reviewed.head ?? null));
         // 얼굴 썸네일 사전 생성(face-thumb.ts) — 실패해도 지급은 진행(클라가 CSS 크롭 폴백).
         try {
           const fpath = `${job.userId}/${job.characterId}/face.png`;
