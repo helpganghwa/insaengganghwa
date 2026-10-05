@@ -15,6 +15,9 @@ import {
   TOWER_HUNT_BOX_BP,
   TOWER_HUNT_DOUBLE_BP,
   TOWER_HUNT_SPREAD,
+  TOWER_FLOORS,
+  towerHuntBox,
+  towerHuntRange,
 } from './balance';
 
 export type SlotCount = { slot: string; n: number };
@@ -45,7 +48,13 @@ export function buildProbabilityPayloadCore(slotCounts: SlotCount[]) {
     supply,
     raid: { critRateBp: RAID_CRIT_RATE_BP, critMult: RAID_CRIT_MULT },
     // 무한의 탑 토벌(10-06 공시 추가) — 이긴 판마다 💎 범위 균등 · 두 배 · 상자.
-    towerHunt: { doubleBp: TOWER_HUNT_DOUBLE_BP, boxBp: TOWER_HUNT_BOX_BP, spread: TOWER_HUNT_SPREAD },
+    // 층마다 💎 범위·상자 수까지 — 공시 페이지가 보여 주는 값이 바뀌면 지문도 바뀌어 '미기록 변경'으로 잡힌다.
+    towerHunt: {
+      doubleBp: TOWER_HUNT_DOUBLE_BP,
+      boxBp: TOWER_HUNT_BOX_BP,
+      spread: TOWER_HUNT_SPREAD,
+      floors: Array.from({ length: TOWER_FLOORS }, (_, i) => ({ floor: i + 1, ...towerHuntRange(i + 1), box: towerHuntBox(i + 1) })),
+    },
   };
 }
 

@@ -347,12 +347,11 @@ export async function refundPurchase(
       // 마일리지 부족분(이미 쓴 몫) — 교환 비율(마일리지 10 = 💎25)로 다이아에서 회수한다(10-06, POINT-SHOP §5).
       // 상품 지급분 회수보다 뒤에 둔다(그쪽이 우선). 0까지만 깎고, 모자라면 미회수로 남긴다. best-effort 세이브포인트.
       if (mileageShort > 0) {
-        const dia = Math.floor(mileageShort / MILEAGE_PER_MELEE_POINT) * POINT_EXCHANGE_DIAMOND;
+        // 올림 — 1~9점 부족도 💎로 회수한다(내림이면 조용히 사라진다, 10-06 검수).
+        const dia = Math.ceil(mileageShort / MILEAGE_PER_MELEE_POINT) * POINT_EXCHANGE_DIAMOND;
         try {
-          const got = dia > 0
-            ? await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`))
-            : 0n;
-          if (got < BigInt(dia) || dia === 0) unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
+          const got = await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`));
+          if (got < BigInt(dia)) unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
         } catch (e) {
           console.error(`[points] 마일리지 부족분 다이아 회수 실패 user=${order.userId} order=${order.id}`, e);
           unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 다이아 회수 실패`);

@@ -106,7 +106,7 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
         });
         return;
       }
-      setSpent((x) => x - cost);
+      setSpent((x) => Math.max(0, x - cost));
       if (target === 'diamond') optimisticAdjust(-BigInt(pack * POINT_EXCHANGE_DIAMOND));
       showError(
         r.code === 'INSUFFICIENT_POINTS' ? `${kindKo}가 부족해요` : (commonErrTitle(r.code) ?? '교환하지 못했어요'),
@@ -209,8 +209,8 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
 }
 
 /**
- * 포인트 탭(docs/POINT-SHOP.md, 시안 V5 + 최근 적립) — 두 칸 지갑 버튼이 곧 세그먼트('대난투'/'마일리지'),
- * 아래에 안내 한 줄·최근 적립 3건·"준비중". 상품 카드 없음(사용자 확정).
+ * 포인트 탭(docs/POINT-SHOP.md §4·§5) — 두 칸 지갑 버튼이 곧 세그먼트('대난투'/'마일리지'),
+ * 아래에 교환 상품(PointExchange). 안내 문구·최근 적립/사용은 각 칸의 ⓘ 팝업.
  */
 function PointsTab({ points }: { points: PointsOverview }) {
   const [kind, setKind] = useState<PointKind>('melee');
@@ -266,7 +266,8 @@ function PointsTab({ points }: { points: PointsOverview }) {
           );
         })}
       </div>
-      <PointExchange kind={kind} balance={points[kind].balance} />
+      {/* 통화마다 따로 — 낙관 차감분이 다른 통화로 넘어가지 않게(10-06 검수). */}
+      <PointExchange key={kind} kind={kind} balance={points[kind].balance} />
 
       {info ? (
         <ModalShell onClose={() => setInfo(null)} label={`${label(info)} 안내`}>

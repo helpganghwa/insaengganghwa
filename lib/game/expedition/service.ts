@@ -107,12 +107,20 @@ async function slotsUsedUp(tx: Tx, userId: string, serverId: number, today: stri
 
 /**
  * 다시 보내기 구매 전 검사(포인트 상점 트랜잭션 안에서, 지출 전에) — 상태 행을 잠가 출발·수령과 직렬화한다.
- * 살 수 있는 칸 = 열린 칸이고, 오늘 출발 횟수를 다 썼고, 지금 진행 중이 아닌 칸(= '오늘 완료').
+ * 살 수 있는 칸 = 열린 칸이고, 오늘 출발 횟수를 다 썼고, 지금 진행 중이 아닌 칸(= '오늘 완료'). 다른 칸에 보낼 수 있는 오퍼가 있으면 안 산다.
  */
-export async function expeditionResendCheck(tx: Tx, userId: string, serverId: number, slot: number): Promise<void> {
+export async function expeditionResendCheck(tx: Tx, userId: string, serverId: number, slot: number, today: string = kstDateString()): Promise<void> {
   await lockState(tx, userId, serverId);
-  if (slot < 1 || slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
-  if (!(await slotsUsedUp(tx, userId, serverId, kstDateString())).has(slot)) throw new ExpeditionError('NO_OFFER');
+  const open = effectiveSlots(await enhanceSumOf(tx, userId, serverId));
+  if (slot < 1 || slot > open) throw new ExpeditionError('SLOT_LOCKED');
+  if (!(await slotsUsedUp(tx, userId, serverId, today)).has(slot)) throw new ExpeditionError('NO_OFFER');
+  // 아직 보낼 수 있는 파견(오퍼)이 다른 슬롯에 남아 있으면 살 필요가 없다 — 화면의 ＋ 조건과 같게(10-06 검수).
+  const [waiting] = (await tx.execute(sql`
+    select 1 from expeditions
+    where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'offer' and slot <= ${open}
+    limit 1
+  `)) as unknown as unknown[];
+  if (waiting) throw new ExpeditionError('NO_OFFER');
   const [busy] = (await tx.execute(sql`
     select 1 from expeditions
     where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status in ('offer','running')

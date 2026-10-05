@@ -110,7 +110,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         AVATAR_BUSY: '이미 파견 중인 아바타예요',
         INSUFFICIENT_DIAMOND: '다이아가 부족해요',
         NOT_READY: '아직 귀환하지 않았어요',
-        DAILY_LIMIT: '이 슬롯은 오늘 이미 보냈어요 — 내일 다시 보낼 수 있어요',
+        DAILY_LIMIT: '이 슬롯은 오늘 보낼 수 있는 횟수를 다 썼어요',
         BANNED: '이용이 제한된 계정입니다',
         MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요',
         AUTH: '로그인이 필요해요',
@@ -196,6 +196,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             : x,
         ),
         avatars: b.avatars.map((a) => (a.id === avatarId ? { ...a, busy: true } : a)),
+        startsToday: b.startsToday + 1, // 헤더 '오늘 N/M'을 출발 즉시 올린다(서버 응답 전)
       }),
       () => startExpeditionAction(s.slot, avatarId),
     );
@@ -250,6 +251,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const previewBp = assignFor?.region && selectedAv ? enhanceBonusOf(weightedSumOf(selectedAv.equipment, assignFor.region)) : 0;
 
   /** 카드 탭 — 상태별 팝업/액션(카드에는 버튼이 없다, 2026-08-28 UI 개편). */
+  // 다시 보내기(10-06, POINT-SHOP §6) — N = 오늘 출발 횟수, M = 열린 칸 + 오늘 산 횟수.
+  // ＋는 지금 보낼 수 있는 칸(오퍼)이 없고 '오늘 완료' 칸이 있을 때만, 오늘 더 살 수 있는 만큼까지.
+  const openSlots = board.slots.filter((x) => x.state !== 'locked').length + board.extraBought;
+  const sentToday = board.startsToday;
+  const resendSlots = board.slots
+    .filter((x) => x.state === 'done' && x.region)
+    .map((x) => ({ slot: x.slot, label: REGION_UI[x.region!].label }));
+  const canResend =
+    board.extraBought < POINT_EXTRA_PRICES.expedition.length &&
+    resendSlots.length > 0 &&
+    !board.slots.some((x) => x.state === 'offer');
   const onCardTap = (s: ExpeditionBoardSlot) => {
     if (pendingSlot === s.slot) return;
     if (s.state === 'locked') {
@@ -263,7 +275,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }
     // 오늘 완료(슬롯당 하루 1회, 2026-09-01) — 공용 헤더 토스트로만 안내.
     if (s.state === 'done') {
-      toast.showHeaderToast({ title: '내일 다시 보낼 수 있어요' });
+      toast.showHeaderToast({ title: canResend ? '위의 ＋로 오늘 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요' });
       return;
     }
     // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
@@ -273,17 +285,6 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   };
 
   // 페이지 타이틀 우측(2026-08-31) — 오늘 파견 N/M(보낸 기준: 오늘 KST 출발 슬롯) · 오늘 수령한 💎/📦 합계.
-  // 다시 보내기(10-06, POINT-SHOP §6) — N = 오늘 출발 횟수, M = 열린 칸 + 오늘 산 횟수.
-  // ＋는 지금 보낼 수 있는 칸(오퍼)이 없고 '오늘 완료' 칸이 있을 때만, 오늘 더 살 수 있는 만큼까지.
-  const openSlots = board.slots.filter((x) => x.state !== 'locked').length + board.extraBought;
-  const sentToday = board.startsToday;
-  const resendSlots = board.slots
-    .filter((x) => x.state === 'done' && x.region)
-    .map((x) => ({ slot: x.slot, label: REGION_UI[x.region!].label }));
-  const canResend =
-    board.extraBought < POINT_EXTRA_PRICES.expedition.length &&
-    resendSlots.length > 0 &&
-    !board.slots.some((x) => x.state === 'offer');
   return (
     <div className="space-y-2.5">
       <BackTitle
@@ -337,7 +338,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
-        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} onTap={() => onCardTap(s)} />
+        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} resendable={canResend} onTap={() => onCardTap(s)} />
       ))}
 
       {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
@@ -821,7 +822,7 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
   );
 }
 
-function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; onTap: () => void }) {
+function SlotCard({ s, pending, refreshing, enhanceSum, resendable = false, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; resendable?: boolean; onTap: () => void }) {
   if (s.state === 'locked') {
     // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
     const need = s.unlock?.enhanceSum ?? 0;
@@ -863,7 +864,7 @@ function SlotCard({ s, pending, refreshing, enhanceSum, onTap }: { s: Expedition
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status="내일 다시 보낼 수 있어요" statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+        <CardBody region={region} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status={resendable ? '＋로 오늘 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요'} statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (

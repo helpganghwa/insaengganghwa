@@ -40,9 +40,9 @@ export default function Doc() {
         <LI>슬롯마다 하루에 한 번 보낼 수 있다(자정 기준).</LI>
         <LI>보상을 받은 슬롯은 그날은 “오늘 완료”로 남고, 자정이 지나면 새 파견이 생긴다.</LI>
         <LI>
-          모든 슬롯이 “오늘 완료”이면 ‘오늘 N/M’ 옆 ＋로 슬롯 하나를 골라 다시 보낼 수 있다(하루 {POINT_EXTRA_PRICES.expedition.length}번까지,
+          지금 보낼 수 있는 파견이 없고 “오늘 완료” 슬롯이 있으면 ‘오늘 N/M’ 옆 ＋로 슬롯 하나를 골라 다시 보낼 수 있다(하루 {POINT_EXTRA_PRICES.expedition.length}번까지,
           대난투 포인트 {POINT_EXTRA_PRICES.expedition.join(' · ')} — 그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT}). 사면 그 슬롯에 새
-          파견이 바로 생긴다.
+          파견이 바로 생기며, 그날 안에 보내지 않으면 자정에 보통 파견으로 바뀐다.
         </LI>
       </UL>
 

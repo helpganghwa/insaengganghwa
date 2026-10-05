@@ -132,12 +132,15 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     const k1 = key();
     const a = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: k1 });
     expect(a).toMatchObject({ spent: 5, bought: 1, next: 10, duplicate: false });
-    // 같은 키 재전송 — 다시 사지 않는다(남은 도전이 1이라 검사에서 먼저 막혀도 지출은 없다).
-    await buyExtra(U, S, { item: 'tower', kind: 'melee', key: k1 }).catch((e: PointShopError) => expect(e.code).toBe('NOT_NEEDED'));
+    // 같은 키 재전송(응답 유실) — 검사보다 먼저 알아보고 '이미 산 구매'로 돌려준다. 다시 내지 않는다.
+    const again = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: k1 });
+    expect(again).toMatchObject({ duplicate: true, spent: 0, bought: 1 });
     expect((await now()).mp).toBe(95);
     expect(await extrasToday(testDb, U, S, 'tower')).toBe(1);
     await testDb.execute(sql`update tower_progress set losses=4 where user_id=${U}::uuid and server_id=${S}`);
-    const b = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: key() });
+    // 팝업에서 본 가격과 다르면(다른 탭에서 먼저 샀다) 사지 않는다.
+    await expect(buyExtra(U, S, { item: 'tower', kind: 'melee', key: key(), expectedPrice: 5 })).rejects.toMatchObject({ code: 'PRICE_CHANGED' });
+    const b = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: key(), expectedPrice: 10 });
     expect(b).toMatchObject({ spent: 10, bought: 2, next: null });
     await testDb.execute(sql`update tower_progress set losses=5 where user_id=${U}::uuid and server_id=${S}`);
     await expect(buyExtra(U, S, { item: 'tower', kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'MAX_REACHED' });
@@ -197,8 +200,11 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
       expect(r).toMatchObject({ spent: 5, bought: 1, slot: 1 });
       const offer = (await testDb.execute(sql`select 1 from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='offer'`)) as unknown as unknown[];
       expect(offer.length).toBe(1);
-      // 오퍼가 생긴 칸은 다시 살 수 없다(진행 가능 상태)
+      // 보낼 수 있는 오퍼가 남아 있으면(이 슬롯이든 다른 슬롯이든) 다시 살 필요가 없다
       await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 1, key: key() })).rejects.toMatchObject({ code: 'NOT_NEEDED' });
+      // (테스트 계정이 슬롯 1개뿐이면 슬롯 2는 SLOT_LOCKED — 어느 쪽이든 사지지 않아야 한다)
+      const other = await buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 2, key: key() }).catch((e: PointShopError) => e.code);
+      expect(['NOT_NEEDED', 'SLOT_LOCKED']).toContain(other);
       expect((await now()).mp).toBe(45);
     } finally {
       await testDb.execute(sql`delete from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='offer'`);

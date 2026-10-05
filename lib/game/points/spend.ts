@@ -33,7 +33,8 @@ export class PointShopError extends Error {
       | 'BAD_REQUEST'
       | 'SLOT_LOCKED'
       | 'SLOT_BUSY'
-      | 'NO_CHARACTER',
+      | 'NO_CHARACTER'
+      | 'PRICE_CHANGED',
   ) {
     super(code);
   }
@@ -104,6 +105,7 @@ export async function exchangePoints(
   serverId: number,
   input: { kind: PointKind; target: ExchangeTarget; pack: number; key: string },
 ): Promise<{ diamond: number; boxes: number; slot: SupplySlot | null; spent: number; duplicate: boolean }> {
+  if (input.kind !== 'melee' && input.kind !== 'mileage') throw new PointShopError('BAD_REQUEST');
   const pack = input.pack as PointExchangePack;
   if (!(POINT_EXCHANGE_PACKS as readonly number[]).includes(pack)) throw new PointShopError('BAD_REQUEST');
   if (input.target !== 'diamond' && !(SUPPLY_SLOTS as readonly string[]).includes(input.target)) throw new PointShopError('BAD_REQUEST');

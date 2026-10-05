@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
+
+import { josa } from 'josa';
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -14,17 +16,26 @@ import { buyExtraAction, extraQuoteAction } from '@/app/(game)/shop/point-action
 export type ResendSlot = { slot: number; label: string };
 
 const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }> = {
-  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 칸을 한 번 더 보내요. 사면 그 칸에 새 파견지가 바로 나와요.', done: '새 파견지가 나왔어요' },
+  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯을 한 번 더 보내요. 사면 그 슬롯에 새 파견지가 바로 나와요.', done: '새 파견지가 나왔어요' },
   raid: { title: '오늘 레이드 +1회', desc: '오늘 레이드(소환·참여)를 한 번 더 할 수 있어요. 동시에 진행할 수 있는 레이드도 하나 늘어나요.', done: '오늘 레이드 +1회' },
   tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 할 수 있어요. 오르기·토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 const amountIn = (kind: PointKind, pt: number) => (kind === 'mileage' ? pt * MILEAGE_PER_MELEE_POINT : pt);
-const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt` : fmt(amountIn(kind, pt)));
+/** 가격 표기 — 대난투 '5pt', 마일리지 '마일리지 50'(숫자만 두면 무엇의 50인지 모른다). */
+const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt` : `마일리지 ${fmt(amountIn(kind, pt))}`);
+/** 사기 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). pt는 '포인트'로 읽혀 '로'. */
+const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt로 사기` : josa(`${amountLabel(kind, pt)}#{으로} 사기`));
+/** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관 없음). */
+const EXPIRE: Record<PointExtraItem, string> = {
+  expedition: '새 파견지는 오늘 안에 보내 주세요. 자정이 지나면 보통 파견으로 바뀌어요.',
+  raid: '늘어난 횟수는 자정이 지나면 사라져요.',
+  tower: '산 도전은 자정이 지나면 사라져요.',
+};
 
 const ERR: Record<string, string> = {
-  INSUFFICIENT_POINTS: '포인트가 부족해요',
+  PRICE_CHANGED: '가격이 바뀌었어요. 다시 확인해 주세요',
   MAX_REACHED: '오늘은 더 살 수 없어요',
   NOT_NEEDED: '아직 남은 횟수가 있어요',
   SLOT_BUSY: '그 칸은 지금 다시 보낼 수 없어요',
@@ -61,16 +72,25 @@ export function ExtraBuyButton({
   const [kind, setKind] = useState<PointKind>('melee');
   const [slot, setSlot] = useState<number | null>(null);
   const [pending, start] = useTransition();
+  // 연타·Enter 반복으로 재렌더 전에 두 번 사지 않게 — pending은 다시 그려진 뒤에야 걸린다.
+  const busy = useRef(false);
+  // 팝업 한 번에 요청 키 하나 — 응답이 끊겨 다시 눌러도 서버가 같은 구매로 알아본다. 사면 새 키.
+  const keyRef = useRef('');
   const copy = COPY[item];
 
   const openPopup = () => {
     if (item === 'expedition' && (!slots || slots.length === 0)) {
-      showHeaderToast({ title: '다시 보낼 수 있는 칸이 없어요' });
+      showHeaderToast({ title: '다시 보낼 수 있는 슬롯이 없어요' });
       return;
     }
     setQuote(null);
     setSlot(slots?.[0]?.slot ?? null);
     setOpen(true);
+    keyRef.current = crypto.randomUUID().replace(/-/g, '');
+    loadQuote();
+  };
+
+  const loadQuote = () => {
     void extraQuoteAction(item)
       .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
       .then((r) => {
@@ -94,26 +114,30 @@ export function ExtraBuyButton({
   const enough = (k: PointKind) => !!quote?.price && balanceOf(k) >= amountIn(k, quote.price);
 
   const buy = () => {
-    if (!quote?.price || pending) return;
+    if (!quote?.price || pending || busy.current) return;
     if (!enough(kind)) {
       showError(`${KIND_KO[kind]}가 부족해요`);
       return;
     }
-    const key = crypto.randomUUID().replace(/-/g, '');
+    busy.current = true;
+    const expectedPrice = quote.price;
     start(async () => {
-      const r = await buyExtraAction({ item, kind, slot: slot ?? undefined, key }).catch(
+      const r = await buyExtraAction({ item, kind, slot: slot ?? undefined, key: keyRef.current, expectedPrice }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
+      busy.current = false;
       if (r.status === 'success') {
+        keyRef.current = crypto.randomUUID().replace(/-/g, '');
         setOpen(false);
         onBought?.();
         showHeaderToast({
           title: copy.title,
-          detail: item === 'expedition' ? `${r.slot}칸 · ${copy.done}` : `오늘 ${r.bought}/${quote.max}번 샀어요`,
+          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${quote.max}번 샀어요`,
         });
       } else {
-        showError(ERR[r.code] ?? '구매하지 못했어요');
+        showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
         if (r.code === 'MAX_REACHED' || r.code === 'NOT_NEEDED') setOpen(false);
+        if (r.code === 'PRICE_CHANGED') loadQuote();
       }
     });
   };
@@ -127,7 +151,7 @@ export function ExtraBuyButton({
         type="button"
         aria-label={`${copy.title} 사기`}
         onClick={openPopup}
-        className={`inline-flex h-[22px] w-[22px] items-center justify-center rounded-[7px] border border-amber-500/70 bg-amber-50 text-[15px] font-black leading-none text-amber-600 transition active:scale-95 dark:bg-amber-950/60 dark:text-amber-300 ${className}`}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-[7px] border border-amber-500/70 bg-amber-50 text-[15px] font-black leading-none text-amber-600 transition active:scale-95 dark:bg-amber-950/60 dark:text-amber-300 ${className}`}
       >
         ＋
       </button>
@@ -146,9 +170,7 @@ export function ExtraBuyButton({
                     ? '불러오는 중'
                     : pending
                       ? '사는 중'
-                      : item === 'expedition'
-                        ? `${slot}칸 다시 보내기 · ${amountLabel(kind, price!)}`
-                        : `${kind === 'melee' ? '' : '마일리지 '}${amountLabel(kind, price!)}로 사기`}
+                      : buyLabel(kind, price!)}
                 </ModalButton>
               </>
             }
@@ -156,7 +178,7 @@ export function ExtraBuyButton({
             <div className="space-y-3 text-[13px]">
               {item === 'expedition' && slots ? (
                 <div>
-                  <p className="mb-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">다시 보낼 칸</p>
+                  <p className="mb-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">다시 보낼 슬롯</p>
                   <div className="flex flex-wrap gap-1.5">
                     {slots.map((s) => (
                       <button
@@ -170,7 +192,7 @@ export function ExtraBuyButton({
                             : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
                         }`}
                       >
-                        {s.slot}칸
+                        슬롯 {s.slot}
                         <span className="block text-[10px] font-medium text-zinc-500 dark:text-zinc-400">{s.label}</span>
                       </button>
                     ))}
@@ -221,15 +243,13 @@ export function ExtraBuyButton({
                         {KIND_KO[k]} · 보유 {quote ? fmt(balanceOf(k)) : '—'}
                       </span>
                       <span className="text-[15px] font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
-                        {price !== null && quote ? amountLabel(k, price) : '—'}
+                        {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '—'}
                       </span>
                     </button>
                   ))}
                 </div>
               </div>
-              {item === 'tower' ? (
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">산 도전은 오늘 0시에 사라져요.</p>
-              ) : null}
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
             </div>
           </ModalLayout>
         </ModalShell>
