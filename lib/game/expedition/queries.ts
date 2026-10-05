@@ -69,12 +69,16 @@ export type ExpeditionBoard = {
   avatars: ExpeditionAvatar[];
   /** 오늘(KST) 수령한 파견 보상 합계 — 헤더 우측 표시(2026-08-31). 대성공 반영. */
   todayEarned: { diamond: number; boxes: number };
+  /** 오늘(KST) 출발한 횟수(다시 보내기 포함) — 헤더 '오늘 N/M'의 N. */
+  startsToday: number;
+  /** 오늘 산 '파견 다시 보내기' 횟수(전 칸 합, 10-06) — 헤더 M에 더하고, 더 살 수 있는지 판단. */
+  extraBought: number;
 };
 
 /** 보드 조회(읽기 전용 — 오퍼 보정은 페이지가 ensureOffers를 선행 호출). */
 export async function getExpeditionBoard(userId: string, serverId: number): Promise<ExpeditionBoard> {
   const today = kstDateString();
-  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, earnedRows, doneRows] = await Promise.all([
+  const [stateRows, active, avatarRows, activeProfile, levelRows, sumRows, earnedRows, doneRows, todayRows] = await Promise.all([
     db.execute(sql`
       select refresh_kst_day::text, refresh_today
       from expedition_state where user_id = ${userId}::uuid and server_id = ${serverId}
@@ -145,6 +149,15 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         avatar_profile_id: string | null; claimed_at: string | Date | null;
       }[]
     >,
+    // 오늘 출발 횟수 · 오늘 산 다시 보내기(10-06).
+    db.execute(sql`
+      select (select count(*)::int from expeditions
+               where user_id = ${userId}::uuid and server_id = ${serverId} and started_at is not null
+                 and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+                 and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as starts,
+             (select coalesce(sum(count), 0)::int from point_extra_buys
+               where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${today}::date and item = 'expedition') as extra
+    `) as unknown as Promise<{ starts: number; extra: number }[]>,
   ]);
   const enhanceSum = Number(sumRows[0]?.s ?? 0);
   const levelByKey = new Map(levelRows.map((r) => [r.key, Number(r.lv)]));
@@ -217,6 +230,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     enhanceSum,
     freeRefreshLeft: Math.max(0, EXPEDITION_REFRESH_FREE_PER_DAY - refreshToday),
     todayEarned: { diamond: Number(earnedRows[0]?.dia ?? 0), boxes: Number(earnedRows[0]?.boxes ?? 0) },
+    startsToday: Number(todayRows[0]?.starts ?? 0),
+    extraBought: Number(todayRows[0]?.extra ?? 0),
     refreshCost: EXPEDITION_REFRESH_COST,
     slots,
     avatars: avatarRows.map((a) => ({

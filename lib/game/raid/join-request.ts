@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { raids, raidParticipants, raidJoinRequests, raidInvites } from '@/lib/db/schema/raid';
 import { profiles } from '@/lib/db/schema/profiles';
-import { RAID_MAX_PARTICIPANTS, RAID_MAX_CONCURRENT_PER_USER } from '@/lib/game/balance';
+import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 import { RaidError, activeRaidCount, bumpDailyOrThrow } from './open';
 import { joinRaid } from './join';
 
@@ -239,8 +239,8 @@ export function decideJoinRequest(input: {
       // 서로 다른 호스트가 각자 다른 레이드에서 동시에 수락하면 락이 안 겹쳐 그대로 통과한다
       // (실측: pending 5건 동시 승인 → 5명 전원 참가, 상한 3 돌파). requesterUserId 기준으로
       // 유저별 행을 잠그는 bumpDailyOrThrow 뒤에서 세야 직렬화된다.
-      await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
-      if ((await activeRaidCount(tx, requesterUserId)) >= RAID_MAX_CONCURRENT_PER_USER) {
+      const { concurrentCap } = await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
+      if ((await activeRaidCount(tx, requesterUserId)) >= concurrentCap) {
         throw new RaidError('CONCURRENT_LIMIT');
       }
       await tx.insert(raidParticipants).values({ raidId, userId: requesterUserId });

@@ -12,6 +12,9 @@ import {
   supplyItemProbability,
   RAID_CRIT_RATE_BP,
   RAID_CRIT_MULT,
+  TOWER_HUNT_BOX_BP,
+  TOWER_HUNT_DOUBLE_BP,
+  TOWER_HUNT_SPREAD,
 } from './balance';
 
 export type SlotCount = { slot: string; n: number };
@@ -41,6 +44,8 @@ export function buildProbabilityPayloadCore(slotCounts: SlotCount[]) {
     transcend,
     supply,
     raid: { critRateBp: RAID_CRIT_RATE_BP, critMult: RAID_CRIT_MULT },
+    // 무한의 탑 토벌(10-06 공시 추가) — 이긴 판마다 💎 범위 균등 · 두 배 · 상자.
+    towerHunt: { doubleBp: TOWER_HUNT_DOUBLE_BP, boxBp: TOWER_HUNT_BOX_BP, spread: TOWER_HUNT_SPREAD },
   };
 }
 

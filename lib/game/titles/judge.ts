@@ -266,7 +266,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                     and reason not in ('avatar_refund','emblem_refund')
                     and created_at >= (select t0 from birth)),0)::bigint as dia_gained,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and reason not in ('iap','battlepass_premium','avatar_refund','emblem_refund')
+                    and reason not in ('iap','battlepass_premium','point_exchange_mileage','avatar_refund','emblem_refund')
                     and created_at >= (select t0 from birth)),0)::bigint as dia_free,
         coalesce((select max(t) from (
           select sum(v) as t from (

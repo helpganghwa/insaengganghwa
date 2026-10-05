@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_POOL_PER_SLOT, TOWER_SECTION, TOWER_SPECIAL_POOL_PER_SLOT, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerRequirement, towerReward } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
+import { extrasToday } from '@/lib/game/points/spend';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
 import { simulateTowerBattle, type TowerTurn } from './battle';
@@ -98,9 +99,25 @@ export function ruleFor(floor: number, pools: Map<number, SlotKeys>): FloorRule 
 export type TowerOwnedItem = { ueid: string; key: string; name: string; slot: TowerSlot; level: number; transcend: number; cp: number; equipped: boolean };
 export type TowerAvatar = { id: string; south: string | null; keys: string[]; isDefault: boolean };
 
-/** 오늘 남은 도전 — loss_day가 오늘(KST)이 아니면 가득. */
-function attemptsLeft(lossDay: string | null, losses: number, at: Date = new Date()): number {
-  return lossDay === kstDateString(at) ? Math.max(0, TOWER_DAILY_ATTEMPTS - losses) : TOWER_DAILY_ATTEMPTS;
+/**
+ * 오늘 남은 도전 — 하루 TOWER_DAILY_ATTEMPTS + 오늘 산 '탑 추가 도전'(10-06, POINT-SHOP §6) − 오늘 진 횟수.
+ * loss_day가 오늘(KST)이 아니면 진 횟수는 0으로 본다. extra는 오늘 날짜로 읽은 값만 넘길 것.
+ */
+function attemptsLeft(lossDay: string | null, losses: number, extra = 0, at: Date = new Date()): number {
+  const total = TOWER_DAILY_ATTEMPTS + extra;
+  return lossDay === kstDateString(at) ? Math.max(0, total - losses) : total;
+}
+
+/**
+ * '탑 추가 도전' 구매 전 검사(포인트 상점 트랜잭션 안에서) — 오늘 남은 도전이 0일 때만 산다(화면의 ＋도 이때만).
+ * 진행도 행을 잠가 전투와 직렬화한다.
+ */
+export async function towerExtraCheck(tx: Tx, userId: string, serverId: number): Promise<'needed' | 'not_needed'> {
+  const [p] = (await tx.execute(sql`
+    select loss_day::text as loss_day, losses from tower_progress
+    where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { loss_day: string | null; losses: number }[];
+  const extra = await extrasToday(tx, userId, serverId, 'tower');
+  return attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0), extra) <= 0 ? 'needed' : 'not_needed';
 }
 
 /**
@@ -118,6 +135,8 @@ export async function towerBoard(userId: string, serverId: number) {
     )
     select
       (select row_to_json(me) from me) as prog,
+      (select coalesce(sum(count), 0)::int from point_extra_buys where user_id=${userId}::uuid and server_id=${serverId}
+        and kst_date=${kstDateString()}::date and item='tower') as extra,
       (select nickname from characters where user_id=${userId}::uuid and server_id=${serverId}) as nickname,
       (select json_build_object('name', g.name, 'emblemUrl', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id
         where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1) as guild,
@@ -151,6 +170,7 @@ export async function towerBoard(userId: string, serverId: number) {
     pools: { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[];
     my_rank: number | null;
     unclaimed: number[];
+    extra: number;
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
@@ -180,7 +200,9 @@ export async function towerBoard(userId: string, serverId: number) {
   return {
     week: drawn?.week ?? week,
     best,
-    attemptsLeft: attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0)),
+    attemptsLeft: attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0), Number(row?.extra ?? 0)),
+    attemptsTotal: TOWER_DAILY_ATTEMPTS + Number(row?.extra ?? 0),
+    extraBought: Number(row?.extra ?? 0),
     lastProfileId: p?.last_profile_id ?? null,
     /** 무대 위 내 이름(대난투처럼 닉네임·길드). */
     nickname: r.nickname ?? '',
@@ -222,6 +244,7 @@ export type TowerChallengeResult = {
 
 export type TowerBattleReward = { diamond: number; boxes: number; double?: boolean };
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type BattleRow = { id: string; floor: number; win: boolean; hunt: boolean | null; tower_cp: number; turns: TowerTurn[]; key_turn: number; reward: TowerBattleReward | null; base_cp: number | null };
 
 /**
@@ -261,13 +284,14 @@ export async function challengeTower(
       returning best_floor, loss_day::text as loss_day, losses`)) as unknown as { best_floor: number; loss_day: string | null; losses: number }[];
     if (!p) throw new TowerError('NO_CHARACTER');
     const best = Number(p.best_floor);
+    const extra = await extrasToday(tx, userId, serverId, 'tower');
     if (idem) {
       // ② 행 잠금 뒤 새 문장으로 찾아야 같은 키의 동시 요청도 앞선 결과를 본다(같은 문장에 넣으면 잠금 전 스냅샷이라 못 본다).
       const [prev] = (await tx.execute(sql`
         select id::text as id, floor, win, hunt, tower_cp, turns, key_turn, reward, (pieces->0->>'base')::int as base_cp
         from tower_battles where user_id=${userId}::uuid and server_id=${serverId} and idem_key=${idem}`)) as unknown as BattleRow[];
       if (prev) {
-        const left = attemptsLeft(p.loss_day, Number(p.losses));
+        const left = attemptsLeft(p.loss_day, Number(p.losses), extra);
         // 토벌 승리의 재전송 — 전리품은 이미 들어갔으니 지금 잔액을 실어 헤더 다이아를 맞춘다(10-01).
         let diamondBalance: string | null = null;
         if (prev.hunt && prev.win) {
@@ -293,7 +317,7 @@ export async function challengeTower(
       if (best >= TOWER_FLOORS) throw new TowerError('TOP_REACHED');
       if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
     }
-    const left = attemptsLeft(p.loss_day, Number(p.losses));
+    const left = attemptsLeft(p.loss_day, Number(p.losses), extra);
     if (left <= 0) throw new TowerError('NO_ATTEMPTS');
 
     // ③ 고른 아바타 + 장착 장비(활성만 — 화면(towerBoard)과 같은 기준, 퇴역 장비는 요구 장비가 될 수 없다).

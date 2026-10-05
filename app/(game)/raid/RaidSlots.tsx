@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+
+import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -317,6 +319,7 @@ export function RaidSlots({
   slots,
   dailyUsed,
   dailyCap,
+  canBuyExtra = false,
   freeOpenLeft = 0,
   openRaids = [],
   nowIso,
@@ -325,6 +328,8 @@ export function RaidSlots({
   slots: number;
   dailyUsed: number;
   dailyCap: number;
+  /** '오늘 레이드 +1회' ＋ 노출(하루·동시 한도가 찼고 오늘 더 살 수 있을 때, 10-06). */
+  canBuyExtra?: boolean;
   /** 오늘 남은 무료 소환(하루 첫 소환 무료, 2026-09-08) — 서버가 계산(적용 시작 시각 포함). 0이면 유료. */
   freeOpenLeft?: number;
   /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
@@ -391,6 +396,7 @@ export function RaidSlots({
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>
           {dailyUsed}/{dailyCap}
         </span>
+        {canBuyExtra ? <ExtraBuyButton item="raid" className="ml-1.5 align-middle" /> : null}
         {free && !exhausted ? <span className="ml-1.5 font-semibold text-sky-500">· 오늘 첫 소환 무료</span> : null}
       </p>
       <div className="space-y-2">

@@ -33,7 +33,7 @@ export type TowerMe = { nickname: string; guild: { name: string; emblemUrl: stri
  * 아래쪽에 나 ↔ 몬스터(대난투 문법: 이름 · 길드/스킬 · 전투력 · 몸 · 몸 아래 체력바), 자리·발 높이 고정.
  * 대기(fight 없음)와 판정 전·전투 중이 같은 그림이고, 공격한 쪽만 빛나며 짧게 튀었다 제자리로 온다. 무대 아래는 해설 한 칸.
  */
-export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
+export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, total = TOWER_DAILY_ATTEMPTS, plus, turn, onBack, backLocked, fight, narration, tone = 'idle' }: {
   floor: number;
   /** 토벌(돌파한 층 재도전) — 보상 줄을 토벌 다이아로. */
   hunt?: boolean;
@@ -42,6 +42,10 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
   meImg: string | null;
   meCp: number;
   left: number;
+  /** 오늘 전체 도전(하루 3 + 오늘 산 추가 도전). */
+  total?: number;
+  /** 남은 도전 0일 때 붙일 추가 도전 ＋. */
+  plus?: React.ReactNode;
   turn?: string | null;
   onBack?: () => void;
   backLocked?: boolean;
@@ -80,7 +84,8 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
           <div className="flex-none text-right text-[11px] leading-snug tabular-nums text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">
             <div>
               오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-white'}>{left}</b>
-              <span className="text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
+              <span className="text-zinc-400">/{total}</span>
+              {left <= 0 && plus ? <span className="ml-1 inline-block align-middle">{plus}</span> : null}
             </div>
             {turn ? <div className="font-bold text-zinc-100">{turn}</div> : null}
           </div>
@@ -143,13 +148,17 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, turn, onB
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBefore, avatarSouth, retrying, onList, onNext, onRetry }: {
+export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBefore, attemptsTotal = TOWER_DAILY_ATTEMPTS, plus, avatarSouth, retrying, onList, onNext, onRetry }: {
   floor: number;
   /** 토벌 판 — 이기면 보상이 바로 지급되고, 다음 층 대신 같은 층을 다시 토벌. */
   hunt?: boolean;
   me: TowerMe;
   /** 판정 전 헤더에 보여 줄 남은 도전(결과가 오면 결과 값). */
   attemptsBefore: number;
+  /** 오늘 전체 도전 = 하루 3 + 오늘 산 추가 도전(10-06). */
+  attemptsTotal?: number;
+  /** 남은 도전이 0일 때 '오늘 도전' 옆에 붙일 추가 도전 ＋(살 수 있을 때만 호출부가 넘긴다). */
+  plus?: React.ReactNode;
   result: TowerChallengeResult | null;
   /** 판정 전(낙관적 전환) 보여 줄 내 탑 전투력 — 결과가 오면 결과 값을 쓴다. */
   myCp: number;
@@ -244,6 +253,8 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
         meImg={avatarSouth}
         meCp={result?.towerCp ?? myCp}
         left={result ? left : attemptsBefore}
+        total={attemptsTotal}
+        plus={plus}
         turn={cur ? `${cur.turn}턴` : '준비'}
         onBack={onList}
         backLocked={!unlocked}
@@ -275,7 +286,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
               <>
                 <b className="block text-[13px] text-emerald-300">승리</b>
                 {hunt ? (
-                  <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
+                  <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-block align-middle">{plus}</span> : null}</div>
                 ) : result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''}
@@ -294,7 +305,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
                   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
                   return last && monMax > 0 ? <div>{info.name} HP {pctText(last.monHp / monMax)} 남음</div> : null;
                 })()}
-                <div className="text-zinc-400">오늘 도전 <Left left={left} /></div>
+                <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-block align-middle">{plus}</span> : null}</div>
               </>
             )}
             {/* 기록 전체를 처음부터 다시 재생(판정은 그대로, 보기만). */}
@@ -568,12 +579,12 @@ function hpColor(pct: number): string {
   return 'bg-red-700';
 }
 
-/** 남은 도전 N/3 — 다 쓰면 N(0)만 빨간색. */
-function Left({ left }: { left: number }) {
+/** 남은 도전 N/전체(하루 3 + 오늘 산 추가 도전) — 다 쓰면 N(0)만 빨간색. */
+function Left({ left, total }: { left: number; total: number }) {
   return (
     <b className="tabular-nums">
       <span className={left <= 0 ? 'text-red-400' : 'text-zinc-100'}>{left}</span>
-      <span className="font-normal text-zinc-400">/{TOWER_DAILY_ATTEMPTS}</span>
+      <span className="font-normal text-zinc-400">/{total}</span>
     </b>
   );
 }

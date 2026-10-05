@@ -103,6 +103,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
       from mileage_wallets w where w.user_id = ${uid} and w.balance > 0
     `);
     await tx.execute(sql`delete from mileage_wallets where user_id = ${uid}`);
+    // 포인트 상점 추가 횟수(0226) — 그날 산 횟수 기록뿐이라 캐릭터와 함께 지운다.
+    await tx.execute(sql`delete from point_extra_buys where user_id = ${uid}`);
 
     // 길드(멤버십·신청·배치·로그). 길드장 아님은 위에서 보장.
     // 집행관 해제(전수 감사 2026-08-21) — profiles는 소프트 삭제라 FK SET NULL이 안 걸린다.

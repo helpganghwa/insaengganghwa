@@ -39,6 +39,11 @@ import {
   EXPEDITION_REGIONS,
   EXPEDITION_AS_MULT_COEF,
   EXPEDITION_AS_MULT_EXP,
+  TOWER_HUNT_BOX_BP,
+  TOWER_HUNT_DOUBLE_BP,
+  TOWER_HUNT_SPREAD,
+  towerHuntBox,
+  towerHuntRange,
   expeditionAsBonusBp,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
@@ -329,6 +334,40 @@ export default async function ProbabilityPage() {
           {EXPEDITION_AS_MULT_EXP}, 상한 없음(예: 300 → ×{(1 + expeditionAsBonusBp(300) / 10000).toFixed(2)},
           1,000 → ×{(1 + expeditionAsBonusBp(1000) / 10000).toFixed(2)}). 어떤 아바타든 보낼 수 있고 최소 조건이나
           불이익은 없습니다. 이 배율 역시 <b>수량에만</b> 적용됩니다.
+        </P>
+      </Sec>
+
+      {/* 무한의 탑 토벌 — TOWER_HUNT_* 상수·rollHuntReward와 1:1(§33). 오르기의 첫 돌파 보상은 확정값이라 추첨이 없다. */}
+      <Sec n="7" title="무한의 탑 토벌" id="tower-hunt">
+        <P>
+          이미 돌파한 층을 다시 도전하는 토벌은 <b>이긴 판마다</b> 아래 세 가지를 따로 추첨합니다. 진 판은 보상이
+          없습니다. 오르기의 첫 돌파 보상은 층마다 정해진 값이라 추첨하지 않습니다.
+        </P>
+        <Table head={['항목', '확률', '내용']}>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>다이아</Td>
+            <Td>100%</Td>
+            <Td>
+              그 층 기준값의 ±{Math.round(TOWER_HUNT_SPREAD * 100)}% 범위에서 고르게(예: 50층{' '}
+              {towerHuntRange(50).min}~{towerHuntRange(50).max}, 100층 {towerHuntRange(100).min}~{towerHuntRange(100).max})
+            </Td>
+          </tr>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>다이아 두 배</Td>
+            <Td>{pct(TOWER_HUNT_DOUBLE_BP)}</Td>
+            <Td>위에서 정해진 다이아가 2배</Td>
+          </tr>
+          <tr className="border-t border-zinc-100 dark:border-zinc-900">
+            <Td>보급 상자</Td>
+            <Td>{pct(TOWER_HUNT_BOX_BP)}</Td>
+            <Td>
+              구간별 {towerHuntBox(1)}~{towerHuntBox(100)}개(무기·방어구·장신구 각 3분의 1)
+            </Td>
+          </tr>
+        </Table>
+        <P>
+          세 추첨은 서로 독립입니다. 대난투 포인트·마일리지로 사는 <b>탑 추가 도전</b>은 도전 횟수만 늘리며 위 확률에는
+          영향을 주지 않습니다.
         </P>
       </Sec>
 

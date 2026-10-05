@@ -1066,6 +1066,36 @@ export function mileageForKrw(krw: number): number {
   return Math.floor(krw / MILEAGE_KRW_PER_POINT);
 }
 
+/**
+ * 포인트 쓰기(2026-10-05 확정, docs/POINT-SHOP.md §5·§6) — 대난투 포인트 1 = 마일리지 10.
+ * 교환: 1pt = 💎25 = 📦1(부위 직접 선택), 고정 수량 10·50·100pt, 월 한도 없음.
+ */
+export const MILEAGE_PER_MELEE_POINT = 10;
+export const POINT_EXCHANGE_DIAMOND = 25;
+export const POINT_EXCHANGE_BOX = 1;
+export const POINT_EXCHANGE_PACKS = [10, 50, 100] as const;
+export type PointExchangePack = (typeof POINT_EXCHANGE_PACKS)[number];
+
+/**
+ * 추가 횟수 — 그날 산 순서대로 값이 오른다(1 : 2 : 4). 많이 살수록 손해가 되게 해 쏠림을 막고, 월 한도는 두지 않는다.
+ * 가격은 실서버 7일 가치(파견 1회·레이드 참여 1회·탑 막힌 층 재도전)를 교환 대비 배수로 맞췄다 — 최상위 3번째까지 이득,
+ * 상위 2번째까지, 중위 1번째만, 하위는 손해(10-05 검증 보고서). 다음 날 0시(KST)에 처음 값으로.
+ * - expedition: 오늘 다녀온 칸을 한 번 더(칸마다 하루 1회 → 1 + 산 횟수)
+ * - raid: 하루 한도(RAID_DAILY_CAP)와 동시 진행 한도(RAID_MAX_CONCURRENT_PER_USER)를 함께 +1
+ * - tower: 오늘 도전 +1(오르기·토벌 공통, TOWER_DAILY_ATTEMPTS에 더함)
+ */
+export const POINT_EXTRA_PRICES = {
+  expedition: [5, 10, 20],
+  raid: [20, 40, 80],
+  tower: [5, 10],
+} as const;
+export type PointExtraItem = keyof typeof POINT_EXTRA_PRICES;
+/** 오늘 n번 산 뒤 다음 값(대난투 포인트). 더 못 사면 null. */
+export function pointExtraPrice(item: PointExtraItem, boughtToday: number): number | null {
+  const list = POINT_EXTRA_PRICES[item] as readonly number[];
+  return boughtToday >= 0 && boughtToday < list.length ? list[boughtToday]! : null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // §14. 무한의 탑 (docs/TOWER.md · BALANCE.md §14) — 2026-09-29 확정
 // ─────────────────────────────────────────────────────────────────────────────

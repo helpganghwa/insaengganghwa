@@ -80,6 +80,10 @@ export type LedgerReason =
   | 'tower'
   /** 칭호 발견 보상 수령(0191) — 칭호 화면 [모두 받기], 발견 1개당 TITLE_DISCOVERY_DIAMOND. */
   | 'title_discovery'
+  /** 포인트 교환(10-06, docs/POINT-SHOP.md §5) — 대난투 포인트 → 💎. ref=ex:<요청 키>. */
+  | 'point_exchange_melee'
+  /** 마일리지 → 💎. 결제에서 나온 재화라 칭호 '무료 획득'(dia_free)에서 결제처럼 뺀다. */
+  | 'point_exchange_mileage'
   /** 결제 환불에 따른 지급분 회수 — 잔액 부족 시 0까지만 회수하므로 실제 회수액만 기록. */
   | 'refund_clawback';
 

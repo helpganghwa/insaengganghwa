@@ -8,6 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { raids, raidParticipants, raidRewards, raidDailyCounts, raidJoinRequests } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
+  POINT_EXTRA_PRICES,
   RAID_DAILY_CAP,
   RAID_FREE_OPENS_PER_DAY,
   RAID_MAX_CONCURRENT_PER_USER,
@@ -15,6 +16,7 @@ import {
   raidTierOf,
 } from '@/lib/game/balance';
 import { getFriendIds } from '@/lib/game/friends';
+import { extrasToday } from '@/lib/game/points/spend';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import type { RaidBoss } from '@/lib/game/raid/bosses';
 import { raidFreeOpenActive } from '@/lib/game/raid/free-open';
@@ -87,6 +89,8 @@ export default async function RaidPage() {
       .select({ n: sql<number>`count(*)::int` })
       .from(raids)
       .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, serverId), gte(raids.openedAt, kstStartOfDay()))),
+    // 오늘 산 '오늘 레이드 +1회'(10-06, POINT-SHOP §6) — 하루·동시 한도에 더한다.
+    extrasToday(db, userId, serverId, 'raid'),
     ]),
     3500,
     'raid.page',
@@ -95,6 +99,7 @@ export default async function RaidPage() {
   const dailyRow = _r?.[1] ?? [];
   const pendingClaims = _r?.[2] ?? [];
   const hostedToday = Number(_r?.[3]?.[0]?.n ?? 0);
+  const raidExtra = Number(_r?.[4] ?? 0);
   // DB 타임아웃(_r null)이면 유료 표시 쪽으로 — 서버가 권위라 잘못된 '무료' 라벨만 피한다(검토 지적).
   const freeOpenLeft = _r && raidFreeOpenActive() ? Math.max(0, RAID_FREE_OPENS_PER_DAY - hostedToday) : 0;
 
@@ -164,7 +169,8 @@ export default async function RaidPage() {
   });
   const cells: RaidSlotCell[] = [...activeCells, ...pendingCells];
   // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
-  const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);
+  const concurrentCap = RAID_MAX_CONCURRENT_PER_USER + raidExtra;
+  const slotCount = Math.max(concurrentCap, cells.length);
 
   // 내가 보낸 참가 요청(pending) — 목록에 '요청중' 배지 표시용(2026-07-27 피드백 5).
   const myPendingReqIds = new Set(
@@ -330,7 +336,12 @@ export default async function RaidPage() {
         cells={cells}
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
-        dailyCap={RAID_DAILY_CAP}
+        dailyCap={RAID_DAILY_CAP + raidExtra}
+        // ＋는 하루 한도나 동시 한도가 찼을 때만(10-06 확정), 오늘 살 수 있는 만큼까지.
+        canBuyExtra={
+          raidExtra < POINT_EXTRA_PRICES.raid.length &&
+          ((dailyRow[0]?.c ?? 0) >= RAID_DAILY_CAP + raidExtra || activeCells.length >= concurrentCap)
+        }
         freeOpenLeft={freeOpenLeft}
         openRaids={openRaids}
         nowIso={new Date().toISOString()}

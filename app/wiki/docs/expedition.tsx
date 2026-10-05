@@ -8,6 +8,8 @@ import {
   EXPEDITION_SLOT_UNLOCKS,
   EXPEDITION_SYNERGY_GENERAL_MULT,
   EXPEDITION_SYNERGY_MATCH_MULT,
+  MILEAGE_PER_MELEE_POINT,
+  POINT_EXTRA_PRICES,
 } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
@@ -37,6 +39,11 @@ export default function Doc() {
         <LI>소요 시간은 항상 {EXPEDITION_HOURS}시간. 돌아온 원정대의 카드를 누르면 보상을 받는다.</LI>
         <LI>슬롯마다 하루에 한 번 보낼 수 있다(자정 기준).</LI>
         <LI>보상을 받은 슬롯은 그날은 “오늘 완료”로 남고, 자정이 지나면 새 파견이 생긴다.</LI>
+        <LI>
+          모든 슬롯이 “오늘 완료”이면 ‘오늘 N/M’ 옆 ＋로 슬롯 하나를 골라 다시 보낼 수 있다(하루 {POINT_EXTRA_PRICES.expedition.length}번까지,
+          대난투 포인트 {POINT_EXTRA_PRICES.expedition.join(' · ')} — 그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT}). 사면 그 슬롯에 새
+          파견이 바로 생긴다.
+        </LI>
       </UL>
 
       <H2 id="mission">파견과 새로고침</H2>

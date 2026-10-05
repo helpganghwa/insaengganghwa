@@ -86,6 +86,51 @@ const todayCount = (day: string | null, count: number, today: string) =>
   day === today ? count : 0;
 
 /**
+ * 오늘 출발 횟수를 다 쓴 칸 — 칸마다 하루 1회(2026-09-01, 투표 26:12) + 그 칸에 산 '다시 보내기'(10-06).
+ * 판정은 출발 시각의 KST 날짜. 규칙 적용 전 출발분(구 규칙)은 세지 않는다.
+ */
+async function slotsUsedUp(tx: Tx, userId: string, serverId: number, today: string): Promise<Set<number>> {
+  const rows = (await tx.execute(sql`
+    select s.slot, s.n, coalesce(b.count, 0)::int as extra
+    from (
+      select slot, count(*)::int as n from expeditions
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+        and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz
+      group by slot
+    ) s
+    left join point_extra_buys b on b.user_id = ${userId}::uuid and b.server_id = ${serverId}
+      and b.kst_date = ${today}::date and b.item = 'expedition' and b.slot = s.slot
+  `)) as unknown as { slot: number; n: number; extra: number }[];
+  return new Set(rows.filter((r) => Number(r.n) >= 1 + Number(r.extra)).map((r) => Number(r.slot)));
+}
+
+/**
+ * 다시 보내기 구매 전 검사(포인트 상점 트랜잭션 안에서, 지출 전에) — 상태 행을 잠가 출발·수령과 직렬화한다.
+ * 살 수 있는 칸 = 열린 칸이고, 오늘 출발 횟수를 다 썼고, 지금 진행 중이 아닌 칸(= '오늘 완료').
+ */
+export async function expeditionResendCheck(tx: Tx, userId: string, serverId: number, slot: number): Promise<void> {
+  await lockState(tx, userId, serverId);
+  if (slot < 1 || slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
+  if (!(await slotsUsedUp(tx, userId, serverId, kstDateString())).has(slot)) throw new ExpeditionError('NO_OFFER');
+  const [busy] = (await tx.execute(sql`
+    select 1 from expeditions
+    where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot} and status in ('offer','running')
+    limit 1
+  `)) as unknown as unknown[];
+  if (busy) throw new ExpeditionError('DAILY_LIMIT');
+}
+
+/** 다시 보내기 적용 — 산 칸에 새 파견지를 바로 굴린다(보관 상태 없음, 10-06). 구매 횟수는 호출부가 먼저 올린다. */
+export async function expeditionResendApply(tx: Tx, userId: string, serverId: number, slot: number, rng: Rng10k = cryptoRng10k): Promise<void> {
+  const m = rollMission(rng);
+  await tx.execute(sql`
+    insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward)
+    values (${userId}::uuid, ${serverId}, ${slot}, ${m.region}, ${LEGACY_DIFFICULTY}, ${m.durationMs}, ${JSON.stringify(m.reward)}::jsonb)
+  `);
+}
+
+/**
  * 오퍼 보정(lazy) — 화면 진입 시 호출: 실효 슬롯마다 활성 행이 없으면 롤해서 채우고,
  * 자정이 지난 offer는 재롤(전체 교체). running/claimed는 건드리지 않는다. 멱등.
  */
@@ -149,17 +194,11 @@ export function ensureOffers(userId: string, serverId: number, rng: Rng10k = cry
 
     // 슬롯당 하루 1회(2026-09-01): 오늘(KST) 이미 출발한 슬롯은 자정까지 새 오퍼를 채우지 않는다 —
     // 수령한 카드가 "오늘 완료"로 남고, 자정 이후 첫 진입에서 오퍼가 생긴다. 어제 출발해 오늘 수령한 건은 대상 아님.
-    const startedToday = new Set(
-      ((await tx.execute(sql`
-        select distinct slot from expeditions
-        where user_id = ${userId}::uuid and server_id = ${serverId}
-          and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
-          and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz
-      `)) as unknown as { slot: number }[]).map((r) => Number(r.slot)),
-    );
+    // 다시 보내기(10-06, POINT-SHOP §6) — 칸마다 하루 1 + 그 칸에 산 횟수까지. 다 쓴 칸만 '오늘 완료'로 둔다.
+    const usedUp = await slotsUsedUp(tx, userId, serverId, today);
     for (let slot = 1; slot <= slots; slot++) {
       const row = active.find((r) => r.slot === slot);
-      if (startedToday.has(slot)) {
+      if (usedUp.has(slot)) {
         // 오늘 이미 출발한 슬롯 — 남아 있는 미배정 오퍼는 치운다(구 로직이 수령 직후 만든 오퍼·오늘 새로고침분).
         // 안 치우면 오퍼 카드가 보이는데 출발은 DAILY_LIMIT로 막히는 모순(2026-08-31 스테이징 발견). 수령 카드가 '오늘 완료'로 뜬다.
         if (row?.status === 'offer') {
@@ -282,14 +321,8 @@ export function startExpedition(
     // 새 배정 게이트 — 합산 강화가 문턱 아래로 내려가면 그 슬롯은 새로 못 보낸다(진행분은 별도).
     if (slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
     // 슬롯당 하루 1회(2026-09-01, 투표 26:12) — 판정은 **출발 시각**(KST 일자). 수령은 언제든.
-    const [dup] = (await tx.execute(sql`
-      select 1 from expeditions
-      where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot}
-        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
-        and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz -- 규칙 적용 전 출발분(구 규칙)은 미집계
-      limit 1
-    `)) as unknown as unknown[];
-    if (dup) throw new ExpeditionError('DAILY_LIMIT');
+    // 다시 보내기를 산 칸은 그만큼 더 출발할 수 있다(10-06).
+    if ((await slotsUsedUp(tx, userId, serverId, kstDateString())).has(slot)) throw new ExpeditionError('DAILY_LIMIT');
 
     const [offer] = (await tx.execute(sql`
       select id::text, region, duration_ms::text, reward from expeditions

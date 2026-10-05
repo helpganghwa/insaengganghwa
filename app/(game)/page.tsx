@@ -211,10 +211,13 @@ export default async function HomePage() {
               as mail_unclaimed,
             (select count(*)::int from raid_rewards rr join raids r on r.id = rr.raid_id where rr.user_id = ${userId}::uuid and r.server_id = ${serverId} and rr.claimed_at is null)
               as raid_unclaimed,
-            -- 참여 가능 레이드(2026-07-16 고객 문의) — 남이 연 active 레이드 중 미참여, 일일 한도(5) 여유 시만.
+            -- 참여 가능 레이드(2026-07-16 고객 문의) — 남이 연 active 레이드 중 미참여, 일일 한도(5 + 오늘 산 +1회) 여유 시만.
             (select case when coalesce((select started_count from raid_daily_counts
                      where user_id = ${userId}::uuid and server_id = ${serverId}
-                       and kst_date = (now() at time zone 'Asia/Seoul')::date), 0) >= 5 then 0
+                       and kst_date = (now() at time zone 'Asia/Seoul')::date), 0)
+                   >= 5 + coalesce((select sum(count) from point_extra_buys
+                     where user_id = ${userId}::uuid and server_id = ${serverId} and item = 'raid'
+                       and kst_date = (now() at time zone 'Asia/Seoul')::date), 0) then 0
               else (select count(*)::int from raids r
                      where r.server_id = ${serverId} and r.status = 'active' and r.expire_at > now()
                        and r.host_user_id <> ${userId}::uuid
@@ -287,7 +290,10 @@ export default async function HomePage() {
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
-               where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_losses
+               where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_losses,
+            (select coalesce(sum(count), 0)::int from point_extra_buys
+               where user_id = ${userId}::uuid and server_id = ${serverId} and item = 'tower'
+                 and kst_date = (now() at time zone 'Asia/Seoul')::date) as tower_extra
           from (select (now() at time zone 'Asia/Seoul') kst) n
           left join melee_battles b on b.battle_date = n.kst::date and b.server_id = ${serverId}
           left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = ${serverId}
@@ -321,6 +327,7 @@ export default async function HomePage() {
         chron_headline: string | null;
         tower_best: number | null;
         tower_losses: number | null;
+        tower_extra: number | null;
       }>;
 
       if (row) {
@@ -343,7 +350,7 @@ export default async function HomePage() {
         // 무한의 탑 — 설명은 최고 돌파 층, 배지는 오늘 남은 도전(다 오르면 배지 없음).
         const towerBest = Number(row.tower_best ?? 0);
         towerDesc = towerBest > 0 ? `${towerBest}층 돌파` : '1층부터 도전';
-        if (towerBest < TOWER_FLOORS) counts['/tower'] = Math.max(0, TOWER_DAILY_ATTEMPTS - Number(row.tower_losses ?? 0));
+        if (towerBest < TOWER_FLOORS) counts['/tower'] = Math.max(0, TOWER_DAILY_ATTEMPTS + Number(row.tower_extra ?? 0) - Number(row.tower_losses ?? 0));
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())

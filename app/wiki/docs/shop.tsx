@@ -1,6 +1,7 @@
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
+import { MILEAGE_PER_MELEE_POINT, POINT_EXCHANGE_BOX, POINT_EXCHANGE_DIAMOND, POINT_EXCHANGE_PACKS } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
@@ -10,13 +11,14 @@ export const meta: WikiDocMeta = {
   slug: 'shop',
   cat: '계정',
   title: '상점',
-  summary: '무료 수령과 주머니, 패키지와 충전.',
+  summary: '무료 수령과 주머니, 패키지와 충전, 포인트 교환.',
   sections: [
     { id: 'free', label: '무료 수령' },
     { id: 'box', label: '주머니' },
     { id: 'package', label: '패키지' },
     { id: 'charge', label: '충전' },
     { id: 'limited', label: '한정 상품' },
+    { id: 'points', label: '포인트' },
   ],
 };
 
@@ -117,6 +119,24 @@ export default function Doc() {
         <LI>프리미엄 보상은 즉시분과 매일분 모두 우편으로 오며, 받아야 지급된다.</LI>
         <LI>매일 지급은 접속한 날에 지급된다. 접속하지 않은 날은 그날 몫이 지급되지 않는다.</LI>
         <LI>이용 중에는 배너에 남은 일수가 뜨고, 기간이 끝나면 다시 살 수 있다.</LI>
+      </UL>
+
+      <H2 id="points">포인트</H2>
+      <UL>
+        <LI>대난투 포인트는 매회 대난투 결과 순위에 따라, 마일리지는 결제 금액의 1%가 쌓인다. 둘 다 서버마다 따로 쌓인다.</LI>
+        <LI>
+          포인트 탭에서 대난투 포인트 1을 다이아 {fmtInt(POINT_EXCHANGE_DIAMOND)} 또는 보급 상자 {fmtInt(POINT_EXCHANGE_BOX)}개로
+          바꿀 수 있다. 마일리지는 {fmtInt(MILEAGE_PER_MELEE_POINT)}이 대난투 포인트 1과 같다.
+        </LI>
+        <LI>
+          한 번에 {POINT_EXCHANGE_PACKS.map((p) => fmtInt(p)).join(' · ')}포인트씩 바꾸며, 상자는 무기·방어구·장신구 중 고른다.
+          한 달에 바꿀 수 있는 양에 제한은 없다.
+        </LI>
+        <LI>
+          파견·레이드·탑의 하루 횟수를 다 쓰면 횟수 옆 ＋로 같은 포인트를 써서 횟수를 늘릴 수 있다. 같은 날 많이 살수록 값이
+          오르고, 자정에 처음 값으로 돌아간다(<DocLink slug="expedition">파견</DocLink>·<DocLink slug="raid">레이드</DocLink>·
+          <DocLink slug="tower">무한의 탑</DocLink>).
+        </LI>
       </UL>
 
     </>

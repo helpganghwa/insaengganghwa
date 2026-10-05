@@ -9,6 +9,7 @@ import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { BackTitle } from '@/components/BackNav';
+import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
@@ -24,6 +25,7 @@ import {
   EXPEDITION_BASE_AMOUNTS,
   EXPEDITION_HOURS,
   expeditionScaleBoxes,
+  POINT_EXTRA_PRICES,
 } from '@/lib/game/balance';
 import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/lib/game/expedition/queries';
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
@@ -271,8 +273,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   };
 
   // 페이지 타이틀 우측(2026-08-31) — 오늘 파견 N/M(보낸 기준: 오늘 KST 출발 슬롯) · 오늘 수령한 💎/📦 합계.
-  const openSlots = board.slots.filter((x) => x.state !== 'locked').length;
-  const sentToday = board.slots.filter((x) => x.state === 'done' || (x.state === 'running' && x.startedToday)).length;
+  // 다시 보내기(10-06, POINT-SHOP §6) — N = 오늘 출발 횟수, M = 열린 칸 + 오늘 산 횟수.
+  // ＋는 지금 보낼 수 있는 칸(오퍼)이 없고 '오늘 완료' 칸이 있을 때만, 오늘 더 살 수 있는 만큼까지.
+  const openSlots = board.slots.filter((x) => x.state !== 'locked').length + board.extraBought;
+  const sentToday = board.startsToday;
+  const resendSlots = board.slots
+    .filter((x) => x.state === 'done' && x.region)
+    .map((x) => ({ slot: x.slot, label: REGION_UI[x.region!].label }));
+  const canResend =
+    board.extraBought < POINT_EXTRA_PRICES.expedition.length &&
+    resendSlots.length > 0 &&
+    !board.slots.some((x) => x.state === 'offer');
   return (
     <div className="space-y-2.5">
       <BackTitle
@@ -283,6 +294,20 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <span>
               오늘 <b className={sentToday < openSlots ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{sentToday}/{openSlots}</b>
             </span>
+            {canResend ? (
+              <ExtraBuyButton
+                item="expedition"
+                slots={resendSlots}
+                onBought={() => {
+                  // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 칸의 새 파견지를 바로 받아 온다.
+                  void expeditionBoardAction()
+                    .catch(() => null)
+                    .then((fresh) => {
+                      if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
+                    });
+                }}
+              />
+            ) : null}
             <span className="h-3 w-px bg-zinc-300 dark:bg-zinc-700" />
             <span title="오늘 수령한 파견 보상">💎<b className="text-zinc-900 dark:text-zinc-50">{board.todayEarned.diamond.toLocaleString('ko-KR')}</b></span>
             <span>📦<b className="text-zinc-900 dark:text-zinc-50">{board.todayEarned.boxes.toLocaleString('ko-KR')}</b></span>

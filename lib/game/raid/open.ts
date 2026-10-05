@@ -18,6 +18,7 @@ import {
   type RaidTier,
 } from '@/lib/game/balance';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
+import { extrasToday } from '@/lib/game/points/spend';
 import type { RaidBoss } from './bosses';
 import { raidOpenCost } from './free-open';
 
@@ -73,8 +74,12 @@ export async function activeRaidCount(tx: Tx, userId: string) {
   return n;
 }
 
-/** 일일 한도(KST) 체크 + 증가 (open/join 공통, 호스팅+참여 합산). */
-export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number) {
+/**
+ * 일일 한도(KST) 체크 + 증가 (open/join 공통, 호스팅+참여 합산).
+ * '오늘 레이드 +1회'(10-06, POINT-SHOP §6)를 산 만큼 하루 한도와 동시 진행 한도가 함께 늘어난다 —
+ * 반환한 concurrentCap으로 호출부가 동시 한도를 검사한다(같은 잠금 뒤라 직렬화 유지).
+ */
+export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number): Promise<{ concurrentCap: number }> {
   const kstDate = kstDateString();
   // 행 존재 보장 — 그날 첫 행이 없으면 FOR UPDATE가 잠글 대상이 없어(부재 행 갭 락 없음)
   // 동시 N요청이 모두 c=0으로 캡 체크를 통과한다. 선행 upsert로 항상 잠금이 성립하게.
@@ -93,7 +98,8 @@ export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number)
       ),
     )
     .for('update');
-  if ((row?.c ?? 0) >= RAID_DAILY_CAP) throw new RaidError('DAILY_CAP_REACHED');
+  const extra = await extrasToday(tx, userId, serverId, 'raid', undefined, kstDate);
+  if ((row?.c ?? 0) >= RAID_DAILY_CAP + extra) throw new RaidError('DAILY_CAP_REACHED');
   await tx
     .update(raidDailyCounts)
     .set({ startedCount: sql`${raidDailyCounts.startedCount} + 1` })
@@ -104,6 +110,7 @@ export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number)
         eq(raidDailyCounts.kstDate, kstDate),
       ),
     );
+  return { concurrentCap: RAID_MAX_CONCURRENT_PER_USER + extra };
 }
 
 export type RaidShareMode = 'off' | 'free' | 'approval';
@@ -136,8 +143,8 @@ export function openRaid(input: {
     // 커밋된 값을 본다(READ COMMITTED). 검사 실패 시 증가분은 같은 트랜잭션이라 롤백된다.
     // 잔여 — activeRaidCount는 서버 무관 전수인데 일일 행은 서버별이라, 서로 다른 서버로
     // 동시 요청하면 직렬화되지 않는다(현재 1서버라 미발현).
-    await bumpDailyOrThrow(tx, userId, input.serverId);
-    if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
+    const { concurrentCap } = await bumpDailyOrThrow(tx, userId, input.serverId);
+    if ((await activeRaidCount(tx, userId)) >= concurrentCap) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 
@@ -191,4 +198,20 @@ export function openRaid(input: {
 
     return { raidId: raid!.id, shareCode: raid!.shareCode, cost };
   });
+}
+
+/**
+ * '오늘 레이드 +1회' 구매 전 검사(포인트 상점 트랜잭션 안에서) — 하루 한도나 동시 진행 한도가 찼을 때만 산다.
+ * 남아 있는데 사면 쓸모없는 지출이라 막는다(화면의 ＋도 이때만 보인다).
+ */
+export async function raidExtraCheck(tx: Tx, userId: string, serverId: number): Promise<'needed' | 'not_needed'> {
+  const kstDate = kstDateString();
+  const [row] = await tx
+    .select({ c: raidDailyCounts.startedCount })
+    .from(raidDailyCounts)
+    .where(and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.serverId, serverId), eq(raidDailyCounts.kstDate, kstDate)));
+  const extra = await extrasToday(tx, userId, serverId, 'raid', undefined, kstDate);
+  const dailyFull = (row?.c ?? 0) >= RAID_DAILY_CAP + extra;
+  const concurrentFull = (await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER + extra;
+  return dailyFull || concurrentFull ? 'needed' : 'not_needed';
 }

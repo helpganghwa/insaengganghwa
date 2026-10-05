@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
-import { RAID_MAX_CONCURRENT_PER_USER, RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
+import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 import { RaidError, activeRaidCount, bumpDailyOrThrow } from './open';
 
 /**
@@ -52,8 +52,8 @@ export function joinRaid(input: {
     // 레이드 행 FOR UPDATE는 **같은 레이드**로의 참가만 직렬화한다. 한 유저가 서로 다른 레이드에
     // 동시 참가하면 그 락이 안 겹쳐 잠금 없는 activeRaidCount가 전부 통과한다 — 유저별 행을
     // 잠그는 bumpDailyOrThrow 뒤로 옮겨야 직렬화된다.
-    await bumpDailyOrThrow(tx, userId, raid.serverId);
-    if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
+    const { concurrentCap } = await bumpDailyOrThrow(tx, userId, raid.serverId);
+    if ((await activeRaidCount(tx, userId)) >= concurrentCap) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 

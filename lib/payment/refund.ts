@@ -8,7 +8,8 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
-import { bpTierReward } from '@/lib/game/balance';
+import { MILEAGE_PER_MELEE_POINT, POINT_EXCHANGE_DIAMOND, bpTierReward } from '@/lib/game/balance';
+import { walletReclaim } from '@/lib/game/wallet';
 import { kstMonthString } from '@/lib/kst';
 import { PREMIUM_INSTANT_TITLE, reclaimProductGrant } from '@/lib/game/shop/grant';
 import { PREMIUM_DAILY_TITLE } from '@/lib/game/mailbox/premium-daily';
@@ -264,9 +265,10 @@ export async function refundPurchase(
       // 마일리지 회수(docs/POINT-SHOP.md) — 이 주문이 적립한 점수를 되돌린다(부족분은 원장에 기록). 잠금 순서:
       // 월누적 다음, 재화 앞(completePurchase의 적립 위치와 동일).
       // best-effort 세이브포인트(점검 반영) — 회수 실패가 환불 처리를 막으면 안 된다(누락은 소급 스크립트가 짝을 맞춘다).
+      let mileageShort = 0;
       try {
         const m = await tx.transaction((sp) => revokeMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
-        if (!m.already && m.credited > 0 && m.taken < m.credited) unrecovered.push(`마일리지 ${m.credited - m.taken}점 부족(이미 사용)`);
+        if (!m.already && m.credited > 0 && m.taken < m.credited) mileageShort = m.credited - m.taken;
       } catch (e) {
         console.error(`[points] 마일리지 회수 실패 user=${order.userId} order=${order.id}`, e);
         unrecovered.push(`마일리지 회수 실패(${(e as Error)?.message ?? e})`);
@@ -340,6 +342,20 @@ export async function refundPurchase(
             console.error('[refund] premium claimed tally failed', paymentId, e);
             unrecovered.push('성장 프리미엄 수령분 집계 실패 — 수동 확인');
           }
+        }
+      }
+      // 마일리지 부족분(이미 쓴 몫) — 교환 비율(마일리지 10 = 💎25)로 다이아에서 회수한다(10-06, POINT-SHOP §5).
+      // 상품 지급분 회수보다 뒤에 둔다(그쪽이 우선). 0까지만 깎고, 모자라면 미회수로 남긴다. best-effort 세이브포인트.
+      if (mileageShort > 0) {
+        const dia = Math.floor(mileageShort / MILEAGE_PER_MELEE_POINT) * POINT_EXCHANGE_DIAMOND;
+        try {
+          const got = dia > 0
+            ? await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`))
+            : 0n;
+          if (got < BigInt(dia) || dia === 0) unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
+        } catch (e) {
+          console.error(`[points] 마일리지 부족분 다이아 회수 실패 user=${order.userId} order=${order.id}`, e);
+          unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 다이아 회수 실패`);
         }
       }
       // 후원 구간 보상: 환불로 누적 결제액이 구간 아래로 내려가도 이미 준 우편은 자동 회수하지 않는다(운영 판단).
