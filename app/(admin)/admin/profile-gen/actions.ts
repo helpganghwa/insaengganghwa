@@ -224,3 +224,47 @@ export async function setAvatarGenPauseAction(paused: boolean, note: string): Pr
   revalidatePath('/me/create');
   return { ok: true };
 }
+
+/**
+ * 얼굴 위치 조정(2026-10-05) — 운영자가 검수 화면에서 faceBox를 직접 맞춘다(유저는 못 바꾼다).
+ * faceBox는 jsonb_build_object로 넣는다(문자열 이중 인코딩 사고 08-25·08-31). 얼굴 썸네일은 새 경로에 다시 그려
+ * 올린다 — 같은 경로 덮어쓰기는 CDN 7일 캐시에 막혀 바뀐 크롭이 안 보였다(6차 교정). 조치 기록은 남기지 않는다(사용자 결정).
+ */
+export async function adminSaveFaceBox(
+  profileId: string,
+  box: { cx: number; cy: number; h: number },
+): Promise<{ ok: boolean; msg?: string; face?: string }> {
+  await requireAdmin();
+  const ok = (n: unknown, lo: number, hi: number) => typeof n === 'number' && Number.isFinite(n) && n >= lo && n <= hi;
+  if (!/^[0-9a-f-]{36}$/i.test(profileId) || !ok(box.cx, 0, 1) || !ok(box.cy, 0, 1) || !ok(box.h, 0.04, 0.4)) {
+    return { ok: false, msg: '값이 올바르지 않습니다.' };
+  }
+  const r4 = (n: number) => Math.round(n * 10000) / 10000;
+  const fb = { cx: r4(box.cx), cy: r4(box.cy), h: r4(box.h) };
+  const [row] = await db
+    .select({ rotations: userProfiles.rotations })
+    .from(userProfiles)
+    .where(eq(userProfiles.id, profileId))
+    .limit(1);
+  const south = (row?.rotations as Record<string, string> | null)?.south;
+  const m = south?.match(/\/object\/public\/profiles\/(.+)\/south(_flip)?\.png/);
+  if (!south || !m) return { ok: false, msg: '아바타 이미지를 찾지 못했습니다.' };
+  const res = await fetch(south, { cache: 'no-store' });
+  if (!res.ok) return { ok: false, msg: `이미지를 불러오지 못했습니다(${res.status}).` };
+  const { renderFaceThumb } = await import('@/lib/game/profile/face-thumb');
+  const { serviceClient, STORAGE_BUCKET } = await import('@/lib/game/profile/pipeline');
+  const thumb = await renderFaceThumb(Buffer.from(await res.arrayBuffer()), fb);
+  const fpath = `${m[1]}/face${m[2] ?? ''}-${Date.now().toString(36)}.png`;
+  const supabase = serviceClient();
+  const up = await supabase.storage.from(STORAGE_BUCKET).upload(fpath, thumb, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
+  if (up.error) return { ok: false, msg: `썸네일 업로드 실패: ${up.error.message}` };
+  const face = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fpath).data.publicUrl;
+  await db.execute(sql`
+    update user_profiles set
+      options = jsonb_set(coalesce(options, '{}'::jsonb), '{faceBox}', jsonb_build_object('cx', ${fb.cx}::float, 'cy', ${fb.cy}::float, 'h', ${fb.h}::float)),
+      rotations = jsonb_set(rotations, '{face}', to_jsonb(${face}::text))
+    where id = ${profileId}::uuid
+  `);
+  revalidatePath('/admin/profile-gen');
+  return { ok: true, face };
+}

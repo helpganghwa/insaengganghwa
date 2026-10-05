@@ -13,6 +13,7 @@ import { listServers } from '@/lib/game/servers';
 import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
 import { AdminAvatarViewer } from './AdminAvatarViewer';
+import { AdminFaceBoxEditor } from './AdminFaceBoxEditor';
 import { AvatarGenPauseToggle } from './AvatarGenPauseToggle';
 import { PixellabUsage } from './PixellabUsage';
 import { getAvatarGenPause } from '@/lib/game/profile/gen-pause';
@@ -111,6 +112,7 @@ export default async function AdminProfileGenPage({
       nickname: characters.nickname,
       code: profiles.publicCode,
       rotations: userProfiles.rotations,
+      profileOptions: userProfiles.options,
     })
     .from(profileGenerationJobs)
     .leftJoin(
@@ -250,6 +252,14 @@ export default async function AdminProfileGenPage({
                         !Object.keys(rot).length && r.pixellabCharacterId ? String(r.id) : undefined
                       }
                     />
+                    {/* 얼굴 위치 확인·조정(10-05) — 지급된 아바타만. 앱과 같은 크롭 썸네일로 어긋남을 한눈에. */}
+                    {r.userProfileId && rot.south ? (
+                      <AdminFaceBoxEditor
+                        profileId={r.userProfileId}
+                        south={rot.south}
+                        faceBox={(r.profileOptions as { faceBox?: unknown } | null)?.faceBox ?? null}
+                      />
+                    ) : null}
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
                     {/* 헤더: AI배지 · 닉네임 */}
