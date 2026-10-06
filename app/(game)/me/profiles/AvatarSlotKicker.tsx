@@ -5,7 +5,8 @@ import { useRef, useState, useTransition } from 'react';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
-import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { ModalButton, ModalConfirmButton, ModalLayout } from '@/components/ModalLayout';
+import { PlusChip } from '@/components/ui/PlusChip';
 import { useResourceToast } from '@/components/ResourceToast';
 import { PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_STEP } from '@/lib/game/balance';
 
@@ -69,17 +70,10 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
         {fmt(count)} / {fmt(shown)}
       </span>
       {canExpand ? (
-        <button
-          type="button"
-          aria-label="아바타 보관함 늘리기"
-          onClick={() => setOpen(true)}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-[7px] border border-amber-500/70 bg-amber-50 text-[15px] font-black leading-none text-amber-600 transition active:scale-95 dark:bg-amber-950/60 dark:text-amber-300"
-        >
-          ＋
-        </button>
+        <PlusChip label="아바타 보관함 늘리기" onClick={() => setOpen(true)} className="text-zinc-500 dark:text-zinc-400" />
       ) : null}
       {open ? (
-        <ModalShell onClose={() => setOpen(false)} onSubmit={expand} label="아바타 보관함 늘리기">
+        <ModalShell onClose={() => setOpen(false)} label="아바타 보관함 늘리기">
           <ModalLayout
             title="아바타 보관함 늘리기"
             subtitle={`아바타를 ${PROFILE_SLOT_STEP}개 더 보관할 수 있어요.`}
@@ -88,9 +82,20 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
                 <ModalButton tone="ghost" onClick={() => setOpen(false)}>
                   닫기
                 </ModalButton>
-                <ModalButton tone="primary" grow={2} onClick={expand} disabled={pending}>
+                {/* 3초 재확인(10-06) — 다이아가 모자라면 무장하지 않고 공용 부족 팝업. */}
+                <ModalConfirmButton
+                  onArm={() => {
+                    if (pending) return false;
+                    if (!gate.ensure(PROFILE_SLOT_COST_DIAMOND)) {
+                      setOpen(false);
+                      return false;
+                    }
+                  }}
+                  onConfirm={expand}
+                  disabled={pending}
+                >
                   💎{fmt(PROFILE_SLOT_COST_DIAMOND)}으로 늘리기
-                </ModalButton>
+                </ModalConfirmButton>
               </>
             }
           >

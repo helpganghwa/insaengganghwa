@@ -2,6 +2,8 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
+
 /**
  * 팝업 내부 레이아웃 — 헤더 · 컨텐츠 · 푸터 3단(사이는 투명 여백).
  *
@@ -149,5 +151,39 @@ export function ModalButton({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * 팝업 푸터의 결제 버튼 — 3초 재확인(ConfirmButton). 첫 탭 = 무장(남은 초 표시), 3초 안에 다시 탭 = 실행.
+ * 다이아·포인트를 쓰는 팝업의 주 동작에 쓴다(2026-10-06: 아바타 보관함·추가 횟수). 크기·톤은 ModalButton primary와 같다.
+ * onArm이 false를 돌려주면 무장하지 않는다(잔액 부족 팝업 등).
+ */
+export function ModalConfirmButton({
+  grow = 2,
+  onConfirm,
+  onArm,
+  disabled,
+  children,
+}: {
+  grow?: number;
+  onConfirm: () => void;
+  onArm?: () => void | boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span style={{ flex: grow }} className="flex">
+      <ConfirmButton
+        onConfirm={onConfirm}
+        onArm={onArm}
+        disabled={disabled}
+        className="w-full rounded-xl bg-amber-600 py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50"
+        armedClassName="w-full rounded-xl bg-amber-700 py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50"
+        pulseClassName="bg-amber-500"
+      >
+        {(armed, left) => (armed ? `한 번 더 누르면 구매 · ${left}` : children)}
+      </ConfirmButton>
+    </span>
   );
 }

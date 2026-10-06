@@ -5,7 +5,8 @@ import { useRef, useState, useTransition } from 'react';
 import { josa } from 'josa';
 
 import { ModalShell } from '@/components/ModalShell';
-import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { ModalButton, ModalConfirmButton, ModalLayout } from '@/components/ModalLayout';
+import { PlusChip } from '@/components/ui/PlusChip';
 import { useResourceToast } from '@/components/ResourceToast';
 import { MILEAGE_PER_MELEE_POINT, POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import type { PointKind } from '@/lib/game/points/types';
@@ -147,16 +148,9 @@ export function ExtraBuyButton({
 
   return (
     <>
-      <button
-        type="button"
-        aria-label={`${copy.title} 사기`}
-        onClick={openPopup}
-        className={`inline-flex h-6 w-6 items-center justify-center rounded-[7px] border border-amber-500/70 bg-amber-50 text-[15px] font-black leading-none text-amber-600 transition active:scale-95 dark:bg-amber-950/60 dark:text-amber-300 ${className}`}
-      >
-        ＋
-      </button>
+      <PlusChip label={`${copy.title} 사기`} onClick={openPopup} className={className} />
       {open ? (
-        <ModalShell onClose={() => setOpen(false)} onSubmit={buy} label={copy.title}>
+        <ModalShell onClose={() => setOpen(false)} label={copy.title}>
           <ModalLayout
             title={copy.title}
             subtitle={copy.desc}
@@ -165,13 +159,20 @@ export function ExtraBuyButton({
                 <ModalButton tone="ghost" onClick={() => setOpen(false)}>
                   닫기
                 </ModalButton>
-                <ModalButton tone="primary" grow={2} onClick={buy} disabled={!quote || pending}>
-                  {!quote
-                    ? '불러오는 중'
-                    : pending
-                      ? '사는 중'
-                      : buyLabel(kind, price!)}
-                </ModalButton>
+                {/* 3초 재확인(10-06) — 첫 탭은 무장, 3초 안에 다시 누르면 구매. 잔액이 모자라면 무장하지 않고 토스트. */}
+                <ModalConfirmButton
+                  onArm={() => {
+                    if (!quote?.price || pending) return false;
+                    if (!enough(kind)) {
+                      showError(`${KIND_KO[kind]}가 부족해요`);
+                      return false;
+                    }
+                  }}
+                  onConfirm={buy}
+                  disabled={!quote || pending}
+                >
+                  {!quote ? '불러오는 중' : pending ? '사는 중' : buyLabel(kind, price!)}
+                </ModalConfirmButton>
               </>
             }
           >
