@@ -257,7 +257,7 @@ export function ExtraBuyButton({
         else onBought?.();
         showHeaderToast({
           title: copy.title,
-          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 샀어요`,
+          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 구매했어요`,
         });
       } else {
         // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 구매) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 들어갔을 수 있다.
