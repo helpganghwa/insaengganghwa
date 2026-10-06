@@ -448,9 +448,12 @@ export async function refundPurchase(
     });
     return { shortPreview, unrecovered, mileageDiamondShort };
   });
-  const short = outcome?.shortPreview ?? null;
-  const mileageDiamondShort = outcome?.mileageDiamondShort ?? 0;
-  if (outcome && outcome.unrecovered.length > 0) {
+  // 동시 호출에서 진 쪽 — 잠금을 기다리는 사이 다른 호출이 환불을 마쳤다. 이 호출은 아무것도 회수하지 않았으므로
+  // '새로 처리함'이 아니라 '이미 처리됨'으로 답한다(같은 환불을 두 호출이 각각 완료했다고 알리지 않게, 2026-10-06).
+  if (!outcome) return { ok: true, already: true };
+  const short = outcome.shortPreview;
+  const mileageDiamondShort = outcome.mileageDiamondShort;
+  if (outcome.unrecovered.length > 0) {
     await raisePaymentAlert('REFUND_EXTRA_UNRECOVERED', {
       paymentId,
       orderId: order.id,

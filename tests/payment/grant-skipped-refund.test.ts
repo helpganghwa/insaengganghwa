@@ -107,6 +107,26 @@ describe.skipIf(skip)('지급 보류 Play 결제 — 환불 재시도(정산 C�
   const skippedAlerts = async (pid: string) =>
     (await testDb.execute(sql`select detail from payment_alerts where payment_id = ${'skipped-refund:' + pid}`)) as unknown as { detail: string }[];
 
+  it('지급이 보류된 결제는 마일리지를 쌓지 않는다 — 자동 환불이 늦어져도 쓸 수 있는 마일리지가 생기지 않는다', async () => {
+    const readMileage = async () =>
+      Number(((await testDb.execute(sql`select balance::text b from mileage_wallets where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`)) as unknown as { b: string }[])[0]?.b ?? 0);
+    const ledger = async (id: bigint) =>
+      (await testDb.execute(sql`select ref, delta::text d from point_ledger where kind = 'mileage' and ref in (${'order:' + id.toString()}, ${'order:' + id.toString() + ':refund'})`)) as unknown as { ref: string; d: string }[];
+    const before = await readMileage();
+    // 중복 결제(₩1,000 → 예전엔 10점 적립) + 자동 환불 실패 = paid·지급 보류로 남은 상태(정산 크론이 30분 뒤 다시 환불).
+    const { id, o } = await stuckOrder('GPA.gs-mileage');
+    expect((await readOrder(id)).g).toBe(true);
+    // 그동안 교환·추가 횟수로 써 버릴 수 있는 마일리지가 있어서는 안 된다(상자로 바꾸면 환불 뒤에도 남는다).
+    expect(await ledger(id)).toHaveLength(0);
+    expect(await readMileage()).toBe(before);
+    // 뒤늦게 환불로 마감돼도 회수할 것이 없고, 회수 행도 남지 않는다.
+    mockRefund.mockResolvedValue(undefined);
+    expect(await retryGrantSkippedRefund(o)).toBe(true);
+    expect((await readOrder(id)).s).toBe('refunded');
+    expect(await ledger(id)).toHaveLength(0);
+    expect(await readMileage()).toBe(before);
+  });
+
   it('구글에서 아직 구매 완료면 환불 API를 부르고 환불로 마감', async () => {
     const { pid, id, o } = await stuckOrder('GPA.gs-live');
     mockRefund.mockResolvedValue(undefined);

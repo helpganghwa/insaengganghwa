@@ -31,10 +31,14 @@ export async function creditMeleePoints(
     returning id
   `)) as unknown as { id: string }[];
   if (r.length === 0) return false;
-  await dbx.execute(sql`
+  const upd = (await dbx.execute(sql`
     update characters set melee_points = melee_points + ${p.points}
     where user_id = ${p.userId}::uuid and server_id = ${p.serverId}
-  `);
+    returning 1
+  `)) as unknown as unknown[];
+  // 캐릭터가 없으면(발표 도중 탈퇴 등) 적립할 곳이 없다 — 던져서 방금 넣은 원장 행까지 되돌린다(호출부 트랜잭션).
+  // 안 던지면 잔액 없는 원장 행이 남아, 재가입 뒤 소급 스크립트가 그 점수를 새 캐릭터에 넣는다(2026-10-06 3차 점검).
+  if (upd.length === 0) throw new Error(`MELEE_POINTS_CHARACTER_MISSING:${p.userId}@s${p.serverId}`);
   return true;
 }
 
@@ -59,6 +63,32 @@ export async function creditMileageForOrder(
   await dbx.execute(sql`
     insert into mileage_wallets (user_id, server_id, balance) values (${p.userId}::uuid, ${p.serverId}, ${pts})
     on conflict (user_id, server_id) do update set balance = mileage_wallets.balance + ${pts}
+  `);
+  return pts;
+}
+
+/**
+ * 적립 취소 — **적립한 그 트랜잭션 안에서** 방금 넣은 적립을 없었던 일로 한다(원장 행 삭제 + 지갑에서 그만큼 뺌).
+ * 지급이 보류돼 곧 자동 환불될 결제(중복·미성년 한도 초과)에 쓴다: 그런 결제에 마일리지를 남겨 두면 환불이
+ * 끝나기 전에(환불 호출이 실패하면 수십 분~며칠) 상자·추가 횟수로 바꿔 쓸 수 있고, 그 몫은 회수되지 않는다.
+ * 적립이 지갑 행을 잠근 채라 그 사이 다른 요청이 쓸 수 없고, 커밋 전이라 바깥에서는 적립이 보인 적이 없다.
+ * ⚠ 이미 커밋된 적립에는 쓰지 말 것(그때는 revokeMileageForOrder — 쓴 몫을 부족분으로 기록한다).
+ */
+export async function uncreditMileageForOrder(
+  dbx: Dbx,
+  p: { userId: string; orderId: bigint | number | string },
+): Promise<number> {
+  const ref = `order:${String(p.orderId)}`;
+  const [c] = (await dbx.execute(sql`
+    delete from point_ledger
+     where kind = 'mileage' and ref = ${ref} and user_id = ${p.userId}::uuid and delta > 0
+    returning delta::text as d, coalesce(server_id, 1)::int as sid
+  `)) as unknown as { d: string; sid: number }[];
+  const pts = Number(c?.d ?? 0);
+  if (!c || pts <= 0) return 0;
+  await dbx.execute(sql`
+    update mileage_wallets set balance = balance - ${pts}
+     where user_id = ${p.userId}::uuid and server_id = ${c.sid}
   `);
   return pts;
 }

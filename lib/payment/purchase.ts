@@ -27,7 +27,7 @@ import { applyProductGrant } from '@/lib/game/shop/grant';
 import { grantPatronMilestones } from '@/lib/game/patron/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
-import { creditMileageForOrder } from '@/lib/game/points/wallet';
+import { creditMileageForOrder, uncreditMileageForOrder } from '@/lib/game/points/wallet';
 import { hasCharacterOn } from '@/lib/game/server-guard';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
@@ -506,6 +506,8 @@ export async function completePurchase(
   let tokenConflict = false;
   let dupSkipped = false;
   let transitioned = false;
+  /** 지급 보류 주문의 마일리지 적립 취소가 실패했다 — 환불 전까지 쓸 수 있는 마일리지가 남는다(트랜잭션 뒤 경보). */
+  let mileageDropFailed = false;
   await db.transaction(async (tx) => {
     // 주문 잠금 + 상태 재확인 — 동시 호출 중 1회만 지급(멱등 핵심).
     const [locked] = await tx
@@ -547,8 +549,9 @@ export async function completePurchase(
         set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
       })
       .returning({ total: monthlyPurchaseLimits.totalKrw });
-    // 마일리지(docs/POINT-SHOP.md) — 결제 100원당 1점, 주문당 1회(멱등). 지급 보류(미성년·중복) 주문도 결제
-    // 자체는 성사됐으므로 적립하고, 환불되면 revokeMileageForOrder가 회수한다. 잠금 순서: 월누적 다음, 재화 앞.
+    // 마일리지(docs/POINT-SHOP.md) — 결제 100원당 1점, 주문당 1회(멱등). 잠금 순서: 월누적 다음, 재화 앞.
+    // 지급 보류(미성년·중복)로 판정되면 아래에서 이 적립을 같은 트랜잭션 안에서 취소한다(dropMileage) — 곧 자동
+    // 환불될 결제에 쓸 수 있는 마일리지가 남으면, 환불이 끝나기 전에 상자·추가 횟수로 바꿔 쓸 수 있다(2026-10-06).
     // best-effort(점검 반영): 원장 테이블 부재·일시 오류가 결제 완료(paid 전이·상품 지급)를 되돌리면 안 된다.
     // ⚠ 반드시 세이브포인트(tx.transaction) — 실패한 문장 뒤 plain try/catch는 트랜잭션이 aborted 상태라
     //   이후 COMMIT이 조용히 ROLLBACK된다. 누락분은 scripts/points-backfill.ts가 멱등으로 채운다.
@@ -565,6 +568,16 @@ export async function completePurchase(
     } catch (e) {
       console.error(`[points] 마일리지 적립 실패 user=${order.userId} order=${order.id}`, e);
     }
+    // 지급 보류로 판정됐을 때 위 적립을 없던 일로 — best-effort 세이브포인트(실패해도 결제 처리는 그대로 가고,
+    // 그때는 종전처럼 환불 처리의 revokeMileageForOrder가 회수한다).
+    const dropMileage = async () => {
+      try {
+        await tx.transaction((sp) => uncreditMileageForOrder(sp, { userId: order.userId, orderId: order.id }));
+      } catch (e) {
+        console.error(`[points] 지급 보류 주문의 마일리지 적립 취소 실패 user=${order.userId} order=${order.id}`, e);
+        mileageDropFailed = true;
+      }
+    };
     if (Number(monthly?.total ?? 0n) > MINOR_MONTHLY_LIMIT_KRW) {
       // 심사(cbt) 계정은 본인인증을 면제하므로(createOrder:222) 여기서도 미성년 판정에서 빼
       // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
@@ -579,6 +592,7 @@ export async function completePurchase(
         // 지급 없이 paid — 회수 스킵 마커(0108). 없으면 환불 회수가 과거 다른 주문의
         // 지급분을 깎는다(자동 환불이 즉시 따라와도 재화 원장은 이 마커가 지킨다).
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+        await dropMileage();
         return; // paid 전이·월누적은 커밋(원장 정확) — 지급만 보류, 환불이 월누적을 복원.
       }
     }
@@ -601,6 +615,7 @@ export async function completePurchase(
       if (seg === null) {
         dupSkipped = true;
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+        await dropMileage();
       }
     } else {
       const g = await applyProductGrant(tx, order.userId, order.serverId, order.productCode, `order:${order.id}`);
@@ -608,6 +623,7 @@ export async function completePurchase(
         // 인생 특가 중복 결제 — 지급 차단됨(grant.ts 최종 게이트). 회수 스킵 마커 동일 적용.
         dupSkipped = true;
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+        await dropMileage();
       }
     }
 
@@ -650,6 +666,16 @@ export async function completePurchase(
     }
     if (lockedStatus === 'refunded') return { ok: false, code: 'REFUNDED' };
     return { ok: false, code: 'NOT_PAID' };
+  }
+
+  // 적립 취소가 실패한 지급 보류 주문 — 아래 자동 환불이 끝나기 전까지 그 마일리지를 쓸 수 있다. 환불 처리가
+  // 남은 만큼 회수하고 쓴 몫은 다이아로 회수하지만, 다이아가 넉넉하면 따로 경보가 없으므로 여기서 한 번 알린다.
+  if (mileageDropFailed) {
+    await raisePaymentAlert('COMPLETE_EXCEPTION', {
+      paymentId: `${paymentId}:mileage`,
+      orderId: order.id,
+      detail: `지급 보류(중복·미성년 한도) 주문의 마일리지 적립 취소 실패 — 자동 환불 전까지 이 주문의 마일리지(₩${Number(order.amountKrw).toLocaleString('ko-KR')}분)를 쓸 수 있다. 환불이 끝났는지와 그 사이 사용 내역(포인트 원장)을 확인.`,
+    });
   }
 
   if (dupSkipped) {

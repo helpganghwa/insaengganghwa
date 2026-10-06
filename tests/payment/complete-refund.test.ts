@@ -6,6 +6,7 @@ vi.mock('@/lib/payment/portone', () => ({ getPortonePayment: vi.fn() }));
 import { getPortonePayment } from '@/lib/payment/portone';
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
+import { creditMileageForOrder } from '@/lib/game/points/wallet';
 import { kstMonthString } from '@/lib/kst';
 
 import { endTestDb, resyncTestMileage, sql, testDb } from '../db';
@@ -57,6 +58,20 @@ async function readStatus(id: bigint): Promise<string> {
     sql`select status::text s from iap_orders where id = ${id.toString()}::bigint`,
   )) as unknown as { s: string }[];
   return r[0]!.s;
+}
+
+async function readMileage(): Promise<number> {
+  const r = (await testDb.execute(
+    sql`select balance::text b from mileage_wallets where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`,
+  )) as unknown as { b: string }[];
+  return Number(r[0]?.b ?? 0);
+}
+/** 그 주문의 마일리지 원장 행(적립·회수). */
+async function mileageRows(id: bigint): Promise<{ ref: string; d: number }[]> {
+  return (await testDb.execute(sql`
+    select ref, delta::int as d from point_ledger
+     where kind = 'mileage' and ref in (${'order:' + id.toString()}, ${'order:' + id.toString() + ':refund'})
+     order by id`)) as unknown as { ref: string; d: number }[];
 }
 
 // 이 파일이 원장에 남기는 사유 — 지급(iap)·환불 회수(refund_clawback). 다른 스위트는 쓰지 않는다.
@@ -162,6 +177,50 @@ describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통�
     expect(r.ok).toBe(true);
     expect(await readDiamond()).toBe(d0); // 회수 완료
     expect(await readStatus(id)).toBe('refunded');
+  });
+
+  // 웹훅·결제창 복귀·정산 크론이 같은 결제를 동시에 마감하러 온다 — 지급도 마일리지 적립도 한 번만.
+  it('결제 완료가 5번 겹쳐도 지급과 마일리지 적립은 한 번만', async () => {
+    const pid = newPid('race_complete');
+    const id = await insertOrder(pid);
+    mockGet.mockResolvedValue(paid(pid));
+    const d0 = await readDiamond();
+    const m0 = await readMileage();
+
+    const rs = await Promise.all(Array.from({ length: 5 }, () => completePurchase(pid)));
+    expect(rs.every((r) => r.ok)).toBe(true);
+    expect(rs.filter((r) => r.ok && !r.already)).toHaveLength(1);
+    expect(await readDiamond()).toBe(d0 + BigInt(DIAMOND));
+    expect(await readMileage()).toBe(m0 + AMOUNT / 100);
+    expect(await mileageRows(id)).toEqual([{ ref: `order:${id}`, d: AMOUNT / 100 }]);
+  });
+
+  // 웹훅과 어드민 환불·환불 동기화가 같은 환불을 동시에 처리하러 온다 — 회수도 한 번만(잔액이 두 번 깎이지 않는다).
+  it('환불이 5번 겹쳐도 상품 회수와 마일리지 회수는 한 번만', async () => {
+    const pid = newPid('race_refund');
+    const id = await insertOrder(pid);
+    const d0 = await readDiamond();
+    const m0 = await readMileage();
+    mockGet.mockResolvedValue(paid(pid));
+    expect((await completePurchase(pid)).ok).toBe(true);
+    // 회수가 두 번 돌면 드러나도록 여유분을 넣어 둔다(다이아 +1,000, 마일리지는 다른 주문 적립 100점).
+    await testDb.execute(sql`update characters set diamond = diamond + 1000 where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
+    await creditMileageForOrder(testDb, { userId: TEST_USER_ID, serverId: SERVER_ID, orderId: `other_${pid}`, amountKrw: 10_000, note: '테스트 ₩10,000' });
+
+    mockGet.mockResolvedValue(cancelled(pid));
+    const rs = await Promise.all(Array.from({ length: 5 }, () => refundPurchase(pid)));
+    expect(rs.every((r) => r.ok)).toBe(true);
+    expect(rs.filter((r) => r.ok && !r.already)).toHaveLength(1);
+    expect(await readDiamond()).toBe(d0 + 1000n); // 상품분 300만 한 번 회수
+    expect(await readMileage()).toBe(m0 + 100); // 이 주문의 15점만 한 번 회수
+    expect(await mileageRows(id)).toEqual([
+      { ref: `order:${id}`, d: AMOUNT / 100 },
+      { ref: `order:${id}:refund`, d: -(AMOUNT / 100) },
+    ]);
+    const [rf] = (await testDb.execute(
+      sql`select count(*)::int n from iap_refunds where order_id = ${id.toString()}::bigint`,
+    )) as unknown as { n: number }[];
+    expect(rf?.n).toBe(1);
   });
 
   it('환불 → 이미 쓴 마일리지는 다이아로 회수하고, 모자란 양은 결과에 담아 돌려준다', async () => {

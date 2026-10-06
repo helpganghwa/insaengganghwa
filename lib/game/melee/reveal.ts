@@ -12,7 +12,7 @@ import { accrueMeleePrizeTax } from '@/lib/game/guild/tax';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { creditMeleePoints } from '@/lib/game/points/wallet';
-import { meleePointsForRank } from '@/lib/game/balance';
+import { MELEE_REWARD_TIERS, meleePointsForRank } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 import { formatHeadlineBlock, generateAndStoreMeleeHeadlines } from './headline-service';
 
@@ -53,7 +53,59 @@ export async function revealMelee(serverId: number): Promise<{ revealed: number;
       battleIds.push(r.battleId);
     }
   }
+  // 포인트 누락 보충 — 발표가 적립 도중 끊긴 전투를 다음 틱이 채운다(아래 함수 주석). 실패는 흡수(발표를 막지 않는다).
+  await recreditMissingMeleePoints(serverId).catch((e) => console.warn('[melee.reveal] points recredit failed', e));
   return { revealed: battleIds.length, mailed, battleIds };
+}
+
+/**
+ * 대난투 포인트 누락 보충 — 최근 48시간 안에 발표된 전투에서 포인트 원장 행이 없는 참가자를 다시 적립한다.
+ * 발표는 상태 전이·우편을 먼저 커밋하고 포인트는 그 뒤에 참가자마다 따로 적립한다. 그 사이 함수가 끊기면(배포·시간
+ * 초과) 전투는 이미 revealed라 다음 틱이 건너뛰어, 남은 참가자는 우편만 받고 포인트가 조용히 빠진다. 포인트가
+ * 다이아·상자로 바뀌는 재화가 된 뒤로는 그 누락이 곧 손실이라 발표 크론이 매 틱 훑는다(2026-10-06 3차 점검).
+ * (battle, user) 멱등 키라 여러 번 돌아도 한 번만 적립된다. 캐릭터가 없는(탈퇴한) 참가자는 대상이 아니다.
+ * 참가 인원은 전투에 기록된 값(participant_count)으로 — 발표 뒤 탈퇴로 참가자 행이 줄어도 구간이 달라지지 않게
+ * (소급 스크립트 scripts/points-backfill.ts와 같은 기준).
+ */
+export async function recreditMissingMeleePoints(serverId: number): Promise<number> {
+  // 0점 구간('그 외')은 원장 행이 원래 없다 — 매 틱 그 수백 명을 읽어 버리지 않게 SQL에서 먼저 뺀다. 경계는 구간표에서
+  // 유도하고(하드코딩 금지) 1위 여유를 둔다(JS 부동소수 올림과 SQL 올림의 차이). 정확한 판정은 아래 meleePointsForRank.
+  const paying = MELEE_REWARD_TIERS.filter((t) => t.points > 0);
+  const maxRank = Math.max(0, ...paying.map((t) => t.maxRank ?? 0));
+  const maxPct = Math.max(0, ...paying.map((t) => t.pct ?? 0));
+  const rankCap =
+    MELEE_REWARD_TIERS[MELEE_REWARD_TIERS.length - 1]!.points > 0
+      ? sql``
+      : sql`and mp.final_rank <= greatest(${maxRank}::int, ceil(mb.participant_count * ${maxPct}::numeric)::int + 1)`;
+  const rows = (await db.execute(sql`
+    select mb.id::text as battle_id, mp.user_id, mp.final_rank as rank, mb.participant_count as n
+      from melee_battles mb
+      join melee_participants mp on mp.battle_id = mb.id
+     where mb.server_id = ${serverId} and mb.status = 'revealed'
+       and mb.revealed_at > now() - interval '48 hours'
+       and mp.final_rank is not null
+       ${rankCap}
+       and exists (select 1 from characters c where c.user_id = mp.user_id and c.server_id = mb.server_id)
+       and not exists (
+         select 1 from point_ledger pl
+          where pl.kind = 'melee' and pl.ref = 'melee:' || mb.id::text || ':' || mp.user_id::text
+       )
+  `)) as unknown as { battle_id: string; user_id: string; rank: number; n: number }[];
+  let credited = 0;
+  for (const r of rows) {
+    const p = meleePointsForRank(Number(r.rank), Number(r.n));
+    if (p <= 0) continue;
+    try {
+      const ok = await db.transaction((tx) =>
+        creditMeleePoints(tx, { userId: r.user_id, serverId, battleId: r.battle_id, points: p, note: `대난투 ${r.rank}위` }),
+      );
+      if (ok) credited++;
+    } catch (e) {
+      console.warn('[melee.reveal] melee points recredit failed', r.user_id, e);
+    }
+  }
+  if (credited > 0) console.warn(`[melee.reveal] 누락된 대난투 포인트 ${credited}건 보충 (서버 ${serverId})`);
+  return credited;
 }
 
 /** (server, battleDate) 배틀 1건 발표 — 조건부 플립 + 우편 + 푸시 + 업적/피드. */
@@ -147,7 +199,8 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
       console.warn('[melee.reveal] points bump failed (cron이 교정)', e),
     );
     // 대난투 포인트 지갑(docs/POINT-SHOP.md) — 랭킹 포인트와 같은 수치를 소모용 잔액에(감쇠 없음).
-    // (battle, user) 멱등 키라 재실행해도 이중 적립 없음. 실패는 흡수(발표를 막지 않음 — 소급 스크립트로 보정).
+    // (battle, user) 멱등 키라 재실행해도 이중 적립 없음. 실패는 흡수(발표를 막지 않음 — 다음 틱의
+    // recreditMissingMeleePoints가 채운다).
     // 참가자마다 별도 트랜잭션(점검 반영) — 한 트랜잭션에 N명의 characters 행을 잠그면 락 대기·교착 한 번에
     // 전투 전체 적립이 날아간다. (battle, user) 키가 각각 멱등이라 부분 실패도 소급 스크립트가 채운다.
     for (const r of rankRows) {

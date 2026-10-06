@@ -94,15 +94,18 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // 포인트 지갑(0197, 점검 반영) — 대난투 원장은 캐릭터와 함께 삭제. 마일리지 원장은 iap_orders와 동축이라
     // **남기고** 잔액만큼 상계 행(탈퇴 소멸)을 넣는다: 지우면 소급 스크립트 재실행 때 order:<id> 적립이 되살아나
     // 재가입 계정에 마일리지가 부활한다(diamond_ledger·patron_milestone_grants를 보존하는 것과 같은 원칙).
-    await tx.execute(sql`delete from point_ledger where user_id = ${uid} and kind = 'melee'`);
+    // (대난투 원장 삭제는 맨 아래 characters 삭제 **뒤에** 한다 — 아래 주석.)
     // 0211부터 마일리지는 서버별 지갑 — 지갑마다 상계 행을 넣고 지갑을 비운다(멱등 키에 서버 포함).
+    // 지갑을 **지우면서** 그 행의 잔액으로 상계 행을 만든다(한 문장). 먼저 읽고 나중에 지우면, 그 사이 커밋된 교환·
+    // 적립·환불 회수가 상계에 빠져 원장 합이 0이 되지 않는다(재가입 뒤 소급 스크립트가 그 차이를 잔액으로 되살린다).
+    // DELETE는 다른 트랜잭션이 잡은 행을 기다렸다가 최신 값을 돌려준다(2026-10-06 3차 점검).
     await tx.execute(sql`
+      with w as (delete from mileage_wallets where user_id = ${uid} returning server_id, balance)
       insert into point_ledger (user_id, server_id, kind, delta, note, ref)
       select ${uid}::uuid, w.server_id, 'mileage', -w.balance, '탈퇴 소멸',
              ${'withdraw:' + userId + ':' + Date.now()} || ':s' || w.server_id
-      from mileage_wallets w where w.user_id = ${uid} and w.balance > 0
+      from w where w.balance > 0
     `);
-    await tx.execute(sql`delete from mileage_wallets where user_id = ${uid}`);
     // 포인트 상점 추가 횟수(0226) — 그날 산 횟수 기록뿐이라 캐릭터와 함께 지운다.
     await tx.execute(sql`delete from point_extra_buys where user_id = ${uid}`);
 
@@ -206,6 +209,10 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from profile_generation_jobs where user_id = ${uid}`);
     await tx.execute(sql`delete from user_profiles where user_id = ${uid}`);
     await tx.execute(sql`delete from characters where user_id = ${uid}`);
+    // 대난투 원장은 캐릭터를 지운 **뒤에** 지운다 — 진행 중이던 교환·추가 횟수 구매·발표 적립은 캐릭터 행을 잡고 있어
+    // 위 삭제가 그 커밋을 기다린다. 먼저 지우면 그 거래의 원장 행이 삭제 뒤에 커밋돼 주인 없는 행으로 남고,
+    // 재가입 뒤 소급 스크립트가 그 점수를 새 캐릭터에 넣는다(2026-10-06 3차 점검).
+    await tx.execute(sql`delete from point_ledger where user_id = ${uid} and kind = 'melee'`);
 
     // PII 제거 마킹 — profiles 자체는 결제 보존 앵커라 유지. 활성 프로필/배경 초기화 + 탈퇴 시각.
     // 본인인증 파생 필드도 클리어(감사 F-14) — 연도 해시는 후보 ~120개라 사실상 가역이라

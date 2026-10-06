@@ -2,12 +2,15 @@
 // 합으로 다시 세운다. (kind, ref) 멱등 키라 여러 번 실행해도 안전.
 // 실시간 적립(대난투 발표·결제 완료)은 실패해도 본 흐름을 막지 않게 되어 있어, **빠진 적립을 채우는 수단이 이것뿐**이다.
 // 마일리지는 서버별(0211) — 원장 행은 그 주문의 서버를 달고, 잔액은 mileage_wallets에 세운다.
-//   실행: bun run scripts/points-backfill.ts [--apply] [--server=N] [DATABASE_URL]   (기본 dry-run·.env.local DATABASE_URL)
+//   실행: bun run scripts/points-backfill.ts [--apply [--rehearse]] [--server=N] [DATABASE_URL]   (기본 dry-run·.env.local DATABASE_URL)
+//   --rehearse  --apply와 함께: 적재·잔액 재계산을 실제로 돌려 몇 행이 바뀌는지 본 뒤 **되돌린다**(반영 없음).
+//               실제 반영과 같은 잠금을 잡으므로 이용자가 적은 시간에.
 //   --server=N  그 서버만 처리한다(적재·잔액 재계산 모두). 생략하면 전 서버. 한 서버에서만 적립이 빠졌을 때
 //               다른 서버의 잔액 행까지 잠그지 않으려고 둔다. 실행하면 먼저 그 DB의 서버 목록을 보여 준다.
 //   ⚠ 프로덕션은 URL을 명시(PROD_DATABASE_URL 값)하고 0197·0211 적용 뒤에만.
-//   ⚠ 포인트 교환·추가 횟수(2026-10-06)부터 잔액은 유저가 쓸 때마다 바뀐다. 잔액 재계산은 문장 시작 시점의 원장 합을
-//     적으므로, 그 사이 커밋된 지출이 한동안 되살아날 수 있다(다시 실행하면 맞는다). 이용자가 적은 시간에 돌리고, 끝난 뒤 한 번 더 dry-run으로 차이가 0인지 본다.
+//   ⚠ 포인트 교환·추가 횟수(2026-10-06)부터 잔액은 유저가 쓸 때마다 바뀐다. 잔액 재계산은 값이 다른 행만 먼저 잠근 뒤
+//     그 행들만 다시 계산한다(실행 중 커밋된 지출을 옛 합계로 덮어쓰지 않게 — 아래 재계산 주석). 그래도 이용자가 적은
+//     시간에 돌리고, 끝난 뒤 한 번 더 dry-run으로 '잔액 ≠ 원장 합'이 0행인지 본다(dry-run이 그 수를 출력한다).
 import postgres from 'postgres';
 import { meleePointsForRank, mileageForKrw } from '../lib/game/balance';
 import { paidProduct } from '../lib/game/shop/catalog';
@@ -21,6 +24,9 @@ function displayName(code: string): string {
 }
 
 const apply = process.argv.includes('--apply');
+const rehearse = process.argv.includes('--rehearse');
+/** 리허설 — 트랜잭션을 되돌리기 위한 표식(오류 아님). */
+class Rehearsed extends Error {}
 const srvArg = process.argv.find((a) => a.startsWith('--server='))?.slice('--server='.length);
 /** 대상 서버 — null이면 전 서버. */
 const srv: number | null = srvArg == null ? null : Number(srvArg);
@@ -53,12 +59,14 @@ async function main() {
   const orders = (await sql`
     select id::text as id, user_id, server_id, amount_krw::text as amount_krw, product_code, paid_at, status
     from iap_orders where paid_at is not null and status in ('paid', 'refunded')
+      -- 지급 보류(중복·미성년 한도 초과) 주문은 마일리지를 쌓지 않는다(2026-10-06 — 곧 자동 환불되는 결제).
+      and not grant_skipped
       and exists (select 1 from profiles p where p.id = iap_orders.user_id)
       ${orderSrv}
   `) as unknown as OrderRow[];
   const meleePts = melee.map((r) => ({ ...r, pts: meleePointsForRank(Number(r.final_rank), Number(r.n)) })).filter((r) => r.pts > 0);
   const orderPts = orders.map((o) => ({ ...o, pts: mileageForKrw(Number(o.amount_krw)) })).filter((o) => o.pts > 0);
-  console.log(`[backfill] 대난투 ${meleePts.length}건(참가자-전투) · 결제 ${orderPts.length}건(환불 ${orderPts.filter((o) => o.status === 'refunded').length}) · ${apply ? 'APPLY' : 'dry-run'}`);
+  console.log(`[backfill] 대난투 ${meleePts.length}건(참가자-전투) · 결제 ${orderPts.length}건(환불 ${orderPts.filter((o) => o.status === 'refunded').length}) · ${apply ? (rehearse ? 'APPLY 리허설(되돌림)' : 'APPLY') : 'dry-run'}`);
   // 서버별 건수·점수 — 어느 서버에 얼마가 걸려 있는지.
   const perServer = new Map<number, { melee: number; meleePts: number; orders: number; mileage: number }>();
   const slot = (sid: number) => perServer.get(sid) ?? perServer.set(sid, { melee: 0, meleePts: 0, orders: 0, mileage: 0 }).get(sid)!;
@@ -81,10 +89,28 @@ async function main() {
       if (o.status === 'paid') mile.set(k, (mile.get(k) ?? 0) + o.pts);
     }
     console.log('[backfill] 마일리지 상위 5', [...mile.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5));
+    // 지금 잔액과 원장 합이 다른 행 — 0이어야 정상(적재할 원장 행이 남아 있으면 그만큼은 --apply 뒤에 맞는다).
+    const lsrv = srv === null ? sql`` : sql`and server_id = ${srv}`;
+    const [d] = (await sql`
+      select
+        (select count(*)::int from characters c
+           join (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+                  where kind = 'melee' ${lsrv} group by 1, 2) s
+             on s.user_id = c.user_id and s.server_id = c.server_id
+          where c.melee_points is distinct from s.total) as melee_diff,
+        (select count(*)::int from mileage_wallets w
+           join (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+                  where kind = 'mileage' and server_id is not null ${lsrv} group by 1, 2) s
+             on s.user_id = w.user_id and s.server_id = w.server_id
+          where w.balance is distinct from s.total) as mileage_diff
+    `) as unknown as { melee_diff: number; mileage_diff: number }[];
+    console.log(`[backfill] 잔액 ≠ 원장 합 — 대난투 ${d?.melee_diff ?? '?'}행 · 마일리지 ${d?.mileage_diff ?? '?'}행`);
     return;
   }
   let ins = 0;
-  await sql.begin(async (tx) => {
+  let fixedMelee = 0;
+  let fixedMileage = 0;
+  const done = await sql.begin(async (tx) => {
     for (const r of meleePts) {
       const res = await tx`
         insert into point_ledger (user_id, server_id, kind, delta, note, ref, created_at)
@@ -107,21 +133,75 @@ async function main() {
         ins += r2.length;
       }
     }
-    // 잔액 = 원장 합(캐시 재계산 — 멱등). 원장이 있는 행만, 값이 다를 때만(점검 반영: 전 행 UPDATE는 두 테이블을
-    // 통째로 잠그고, 문장 스냅샷 뒤에 커밋된 실시간 적립을 덮어쓴다). 대난투 발표(KST 10시) 직후는 피해서 실행.
+    // 잔액 = 원장 합(캐시 재계산 — 멱등). 원장이 있는 행만, 값이 다를 때만 쓴다.
+    // ① 값이 다른 행만 골라 **먼저 잠그고** ② 새 문장으로 그 행들만 다시 계산한다(2026-10-06 3차 점검).
+    //   한 문장으로 하면 원장 합은 문장 시작 시점의 값인데 잔액 비교·갱신은 그 사이 커밋된 최신 행에 걸려, 실행 중에
+    //   쓴 포인트가 옛 합계로 덮여 되살아난다. 잠근 뒤에는 그 행의 잔액을 바꾸는 트랜잭션(교환·적립·환불 회수)이
+    //   커밋할 수 없으므로 ②가 읽는 원장 합과 잔액이 같은 시점이다. 다르지 않은 행은 건드리지 않는다.
+    //   0 미만으로는 세우지 않는다(0227 제약 — 원장 합이 음수면 0으로 두고 그 행은 따로 조사).
+    // 잠금 순서는 서비스 코드와 같게 — mileage_wallets 다음 characters(lib/game/points/wallet.ts 머리말).
     await tx`set local lock_timeout = '5s'`;
     const ledgerSrv = srv === null ? tx`` : tx`and server_id = ${srv}`;
-    await tx`update characters c set melee_points = s.total
-             from (select user_id, server_id, sum(delta) as total from point_ledger where kind = 'melee' ${ledgerSrv} group by 1, 2) s
-             where s.user_id = c.user_id and s.server_id = c.server_id and c.melee_points is distinct from s.total`;
-    // 마일리지 잔액 = 서버별 지갑(0211과 같은 문장). 값이 다를 때만 쓴다 — 같은 이유(실시간 적립을 덮지 않게).
-    await tx`insert into mileage_wallets (user_id, server_id, balance)
-             select user_id, server_id, greatest(0, sum(delta)) from point_ledger
-              where kind = 'mileage' and server_id is not null ${ledgerSrv} group by user_id, server_id
-             on conflict (user_id, server_id) do update set balance = excluded.balance
-              where mileage_wallets.balance is distinct from excluded.balance`;
+    const key = (r: { user_id: string; server_id: number }) => `${r.user_id}:${r.server_id}`;
+
+    // 마일리지 — 서버별 지갑.
+    const mw = (await tx`
+      select w.user_id, w.server_id from mileage_wallets w
+        join (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+               where kind = 'mileage' and server_id is not null ${ledgerSrv} group by 1, 2) s
+          on s.user_id = w.user_id and s.server_id = w.server_id
+       where w.balance is distinct from s.total
+         for update of w`) as unknown as { user_id: string; server_id: number }[];
+    if (mw.length > 0) {
+      const res = await tx`
+        update mileage_wallets w set balance = s.total
+          from (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+                 where kind = 'mileage' and server_id is not null ${ledgerSrv} group by 1, 2) s
+         where s.user_id = w.user_id and s.server_id = w.server_id
+           and (w.user_id::text || ':' || w.server_id::text) in ${tx(mw.map(key))}
+           and w.balance is distinct from s.total
+        returning 1`;
+      fixedMileage = res.length;
+    }
+    // 지갑 행이 아직 없는 경우(실시간 적립이 통째로 빠진 주문) — 새로 만든다. 그 사이 실시간 적립이 먼저 만들었으면
+    // 건드리지 않는다(그 적립은 제 몫만 더했으므로, 다음 실행의 ①이 차이를 잡아 맞춘다).
+    const made = await tx`
+      insert into mileage_wallets (user_id, server_id, balance)
+      select user_id, server_id, sum(delta) from point_ledger pl
+       where kind = 'mileage' and server_id is not null ${ledgerSrv}
+         and not exists (select 1 from mileage_wallets w where w.user_id = pl.user_id and w.server_id = pl.server_id)
+       group by user_id, server_id
+      having sum(delta) > 0
+      on conflict (user_id, server_id) do nothing
+      returning 1`;
+    fixedMileage += made.length;
+
+    // 대난투 포인트 — 캐릭터 행. 대난투 발표(KST 10시) 직후는 피해서 실행.
+    const ch = (await tx`
+      select c.user_id, c.server_id from characters c
+        join (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+               where kind = 'melee' ${ledgerSrv} group by 1, 2) s
+          on s.user_id = c.user_id and s.server_id = c.server_id
+       where c.melee_points is distinct from s.total
+         for update of c`) as unknown as { user_id: string; server_id: number }[];
+    if (ch.length > 0) {
+      const res = await tx`
+        update characters c set melee_points = s.total
+          from (select user_id, server_id, greatest(0, sum(delta)) as total from point_ledger
+                 where kind = 'melee' ${ledgerSrv} group by 1, 2) s
+         where s.user_id = c.user_id and s.server_id = c.server_id
+           and (c.user_id::text || ':' || c.server_id::text) in ${tx(ch.map(key))}
+           and c.melee_points is distinct from s.total
+        returning 1`;
+      fixedMelee = res.length;
+    }
+    if (rehearse) throw new Rehearsed();
+    return true;
+  }).catch((e) => {
+    if (e instanceof Rehearsed) return false;
+    throw e;
   });
-  console.log(`[backfill] 원장 신규 ${ins}행, 잔액 재계산 완료`);
+  console.log(`[backfill] 원장 신규 ${ins}행 · 잔액 바로잡음 — 대난투 ${fixedMelee}행 · 마일리지 ${fixedMileage}행${done ? '' : ' · 리허설이라 되돌림(반영 없음)'}`);
 }
 
 main()

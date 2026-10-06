@@ -126,7 +126,11 @@ export function PaymentsClient({
         setBlocked({ id: o.id, reason: '', ack: false });
         setMsg(`환불 차단: ${r.message}`);
       } else {
-        setMsg(`환불 실패: ${ERR_MSG[r.code] ?? r.code}`);
+        if (r.code === 'PLAY_ORDER') {
+          // Play 주문 — 여기서 환불하지 않는다. 콘솔로 가기 전에 사전 점검 내역(마일리지 사용·재화 부족)을 보여 준다.
+          const note = 'message' in r && r.message ? `⚠ ${r.message}` : '회수 점검: 부족분 없음';
+          setMsg(`${ERR_MSG.PLAY_ORDER}. ${note}`);
+        } else setMsg(`환불 실패: ${ERR_MSG[r.code] ?? r.code}`);
       }
     });
   };
@@ -265,10 +269,17 @@ export function PaymentsClient({
                   </div>
                 </div>
                 {o.status === 'paid' && o.provider === 'play' ? (
-                  // Play 주문 — 어드민 환불 경로 없음(Play 콘솔 환불 → play-sync 동기화).
-                  <span className="shrink-0 rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-600">
-                    Play 콘솔 환불
-                  </span>
+                  // Play 주문 — 어드민 환불 경로 없음(Play 콘솔 환불 → play-sync 동기화). 누르면 환불하지 않고
+                  // 회수 사전 점검(이 주문의 마일리지를 이미 썼는지·재화가 모자란지)만 보여 준다.
+                  <button
+                    type="button"
+                    onClick={() => run(o)}
+                    disabled={pendingId !== null}
+                    title="환불은 Play 콘솔에서 — 누르면 회수 점검만 합니다"
+                    className="shrink-0 rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-500 transition hover:border-zinc-600 hover:text-zinc-300 disabled:opacity-40"
+                  >
+                    {pendingId === o.id ? '점검 중…' : 'Play 콘솔 환불 · 점검'}
+                  </button>
                 ) : o.status === 'paid' ? (
                   o.bp && o.bpClaimed ? (
                     // 배틀패스 — 프리미엄 보상 수령 후 환불 불가.

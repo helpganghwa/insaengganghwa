@@ -421,3 +421,6 @@ create table milestone_firsts (
 
 ### 15.2 characters.avatar_slot_bonus
 - 아바타 보관함 늘린 칸(서버별). 한도 = 100 + 이 값(최대 200), 💎1,000에 10칸씩.
+
+### 15.3 포인트 잔액 제약 (0227)
+- `characters.melee_points >= 0`(`characters_melee_points_nonneg`) · `mileage_wallets.balance >= 0`(`mileage_wallets_balance_nonneg`). 차감은 조건부(잔액 ≥ 금액)·회수는 있는 만큼만이라 코드가 음수를 만들지 않는다 — 제약은 수동 SQL·소급 스크립트·새 코드의 실수를 그 자리에서 실패시키는 마지막 안전장치.

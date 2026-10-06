@@ -107,13 +107,21 @@ export async function buyExtra(
     const bought = rows.reduce((a, r) => a + Number(r.count), 0);
     const price = pointExtraPrice(item, bought);
 
+    // 잠금을 잡은 지금, 같은 키가 이미 처리됐는지 통화와 무관하게 한 번 더 본다 — 같은 키의 첫 요청이 잠금을 기다리는
+    // 사이 커밋했을 수 있다. 여기서 안 보면 같은 키를 다른 통화로 보낸 요청이 (kind, ref) 유니크를 비켜 한 번 더 산다.
+    const dup = await alreadyBought();
+    if (dup) return dup;
+
+    // 날짜가 넘어갔으면 사지 않는다 — day는 요청이 들어온 순간의 날짜라, 자정 직전에 들어와 자정 뒤에 처리되는
+    // 구매는 '어제' 행에 기록돼 사자마자 소멸한다. 가격 변경과 같은 방식으로 돌려보내 새 날의 값으로 다시 보게 한다.
+    const [clock] = (await tx.execute(
+      sql`select (clock_timestamp() at time zone 'Asia/Seoul')::date::text as d`,
+    )) as unknown as { d: string }[];
+    if (clock?.d !== day) throw new PointShopError('PRICE_CHANGED');
+
     // ③ 지출 — 팝업에서 본 가격과 다르면(다른 탭에서 먼저 샀다) 사지 않고 다시 보여 준다.
-    if (price === null || (input.expectedPrice !== undefined && input.expectedPrice !== price)) {
-      // 같은 키의 첫 요청이 잠금을 기다리는 사이 커밋했을 수 있다 — 그러면 가격이 바뀐 게 아니라 이미 산 구매다.
-      const dup = await alreadyBought();
-      if (dup) return dup;
-      throw new PointShopError(price === null ? 'MAX_REACHED' : 'PRICE_CHANGED');
-    }
+    if (price === null) throw new PointShopError('MAX_REACHED');
+    if (input.expectedPrice !== undefined && input.expectedPrice !== price) throw new PointShopError('PRICE_CHANGED');
     const spent = costIn(kind, price);
     const fresh = await spendPoints(tx, { userId, serverId, kind, amount: spent, note: `${ITEM_KO[item]}${item === 'expedition' ? ` (슬롯 ${slot})` : ''}`, ref });
     if (!fresh) return { item, slot, kind, spent: 0, bought, next: price, duplicate: true };

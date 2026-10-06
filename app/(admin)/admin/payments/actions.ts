@@ -29,6 +29,17 @@ import { bpSegmentClaimedAny } from '@/lib/game/battlepass';
  *  - refundPurchase가 포트원 CANCELLED 재확인 후 다이아·상자 회수(0 클램프)·주문 refunded·iap_refunds 기록.
  *    포트원이 여전히 PAID면(취소 실패) 회수하지 않고 NOT_CANCELLED 반환(재화 보존).
  */
+/** Play 주문 사전 점검 문구 — 콘솔 환불은 여기서 막지 못하므로 사실만 알린다(환불되면 환불 동기화가 회수한다). */
+function playRefundNote(p: ClawbackPreview): string {
+  const n = (v: number) => v.toLocaleString('ko-KR');
+  const parts: string[] = [];
+  if ((p.mileageShort ?? 0) > 0)
+    parts.push(`이 주문으로 쌓인 마일리지 ${n(p.mileageShort ?? 0)}점을 이미 사용(환불되면 다이아 ${n(p.mileageDiamond ?? 0)} 회수)`);
+  if (p.diamondNeed > p.diamondHave) parts.push(`다이아 회수 ${n(p.diamondNeed)} / 보유 ${n(p.diamondHave)}`);
+  if (p.boxesNeed > p.boxesHave) parts.push(`보급상자 회수 ${n(p.boxesNeed)} / 보유 ${n(p.boxesHave)}`);
+  return parts.join(' · ');
+}
+
 export async function refundOrderAction(
   orderId: string,
   opts?: { force?: boolean; forceReason?: string },
@@ -64,7 +75,19 @@ export async function refundOrderAction(
   if (order.status !== 'paid') return { status: 'error', code: 'NOT_REFUNDABLE' } as const;
   // Play 주문(0186)은 포트원 취소 경로가 없다 — 운영자가 Play 콘솔(주문 관리)에서 환불하면
   // play-sync cron(매일 03시)이 voided 목록으로 회수·refunded 처리한다.
-  if (order.provider === 'play') return { status: 'error', code: 'PLAY_ORDER' } as const;
+  // 여기서 환불을 막을 수는 없지만(콘솔에서 하므로), 이 주문의 마일리지를 이미 썼거나 회수할 재화가 모자라면
+  // 콘솔로 가기 전에 운영자가 알도록 사전 점검 내역을 함께 돌려준다(2026-10-06 — 포트원 주문과 같은 점검).
+  if (order.provider === 'play') {
+    const pv = await previewClawback(order.userId, order.serverId, order.product, {
+      orderId: order.id,
+      grantSkipped: order.grantSkipped,
+    }).catch(() => null);
+    return {
+      status: 'error',
+      code: 'PLAY_ORDER',
+      message: pv && !pv.sufficient ? playRefundNote(pv) : undefined,
+    } as const;
+  }
   // 배틀패스(성장패스)는 프리미엄 보상을 하나라도 수령했으면 환불 불가(미수령이면 환불 가능).
   // 단 grant_skipped(중복 결제로 지급이 없었던 주문)는 예외 — 이 주문이 준 것이 없으므로
   // 회수도 없고, 막아두면 운영자가 어드민 대신 PG 콘솔로 취소하게 된다. 콘솔 경로는 웹훅으로
