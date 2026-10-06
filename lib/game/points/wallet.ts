@@ -102,6 +102,34 @@ export async function revokeMileageForOrder(
   return { credited, taken };
 }
 
+/**
+ * 환불 사전 점검 — 그 주문이 적립한 마일리지 중 지금 잔액으로 회수하지 못할 점수(이미 쓴 몫). 읽기만 한다.
+ * revokeMileageForOrder와 같은 기준(적립된 서버의 지갑, 이미 회수한 주문은 0). 잠그지 않는 사전 조회라
+ * 그 사이 더 쓰면 실제 회수 때 부족분이 늘 수 있다(그때는 환불 처리가 미회수로 기록).
+ */
+export async function previewMileageShortForOrder(
+  dbx: Dbx,
+  p: { userId: string; orderId: bigint | number | string },
+): Promise<{ credited: number; short: number }> {
+  const ref = `order:${String(p.orderId)}`;
+  const [c] = (await dbx.execute(sql`
+    select delta::text as d, coalesce(server_id, 1)::int as sid
+      from point_ledger where kind = 'mileage' and ref = ${ref}
+  `)) as unknown as { d: string; sid: number }[];
+  const credited = Number(c?.d ?? 0);
+  if (!c || credited <= 0) return { credited: 0, short: 0 };
+  const [done] = (await dbx.execute(sql`
+    select 1 from point_ledger where kind = 'mileage' and ref = ${ref + ':refund'} limit 1
+  `)) as unknown as unknown[];
+  if (done) return { credited, short: 0 }; // 이미 회수한 주문
+  const [bal] = (await dbx.execute(sql`
+    select balance::text as m from mileage_wallets
+     where user_id = ${p.userId}::uuid and server_id = ${c.sid}
+  `)) as unknown as { m: string }[];
+  const have = Math.max(0, Number(bal?.m ?? 0));
+  return { credited, short: Math.max(0, credited - have) };
+}
+
 /** 상점 포인트 탭 — 잔액 2종 + 최근 적립/사용 10건씩(ⓘ 팝업 목록). 둘 다 활성 서버 기준. */
 export async function getPointsOverview(userId: string, serverId: number): Promise<PointsOverview> {
   const [bal] = (await db.execute(sql`

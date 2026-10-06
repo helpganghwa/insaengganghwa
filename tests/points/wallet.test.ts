@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { MILEAGE_KRW_PER_POINT, mileageForKrw } from '@/lib/game/balance';
+import { MILEAGE_KRW_PER_POINT, mileageForKrw, mileageShortfallDiamond } from '@/lib/game/balance';
 import { POINTS_COPY } from '@/lib/game/points/types';
-import { creditMeleePoints, creditMileageForOrder, getPointsOverview, revokeMileageForOrder } from '@/lib/game/points/wallet';
+import { creditMeleePoints, creditMileageForOrder, getPointsOverview, previewMileageShortForOrder, revokeMileageForOrder } from '@/lib/game/points/wallet';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -14,6 +14,14 @@ describe('마일리지 적립률(순수)', () => {
     expect(mileageForKrw(99)).toBe(0);
     expect(mileageForKrw(-5)).toBe(0);
     expect(POINTS_COPY.mileage).toContain('1%');
+  });
+  it('환불 때 모자란 마일리지는 10점당 💎25, 끝수는 올림', () => {
+    expect(mileageShortfallDiamond(0)).toBe(0);
+    expect(mileageShortfallDiamond(-3)).toBe(0);
+    expect(mileageShortfallDiamond(1)).toBe(25);
+    expect(mileageShortfallDiamond(10)).toBe(25);
+    expect(mileageShortfallDiamond(11)).toBe(50);
+    expect(mileageShortfallDiamond(99)).toBe(250);
   });
 });
 
@@ -78,6 +86,25 @@ describe.skipIf(skip)('포인트 지갑 — DB 통합', () => {
     expect(again.taken).toBe(0);
     const [row] = (await testDb.execute(sql`select note from point_ledger where kind='mileage' and ref=${'order:' + orderId + ':refund'}`)) as unknown as { note: string }[];
     expect(row?.note.startsWith('환불 회수')).toBe(true);
+  });
+
+  it('환불 사전 점검: 이미 쓴 마일리지만큼 부족분으로 잡히고, 회수한 주문은 0', async () => {
+    const orderId = `${TAG}_o3`;
+    // 적립 전(그런 주문 없음) — 볼 것이 없다.
+    expect(await previewMileageShortForOrder(testDb, { userId: TEST_USER_ID, orderId })).toEqual({ credited: 0, short: 0 });
+    expect(await creditMileageForOrder(testDb, { userId: TEST_USER_ID, serverId: MILE_SRV, orderId, amountKrw: 9900, note: '테스트 ₩9,900' })).toBe(99);
+    // 하나도 안 썼으면 부족 없음.
+    expect((await previewMileageShortForOrder(testDb, { userId: TEST_USER_ID, orderId })).short).toBe(Math.max(0, 99 - (base.ml + 99)));
+    // 지갑을 40점만 남김(59점을 쓴 상황) — 부족 59.
+    await testDb.execute(sql`update mileage_wallets set balance = 40 where user_id=${TEST_USER_ID}::uuid and server_id=${MILE_SRV}`);
+    expect(await previewMileageShortForOrder(testDb, { userId: TEST_USER_ID, orderId })).toEqual({ credited: 99, short: 59 });
+    // 사전 점검은 읽기만 — 잔액은 그대로.
+    expect((await balances()).ml).toBe(40);
+    // 실제 회수의 부족분과 같은 값.
+    const r = await revokeMileageForOrder(testDb, { userId: TEST_USER_ID, orderId });
+    expect(r.credited - r.taken).toBe(59);
+    // 이미 회수한 주문은 다시 잡지 않는다.
+    expect(await previewMileageShortForOrder(testDb, { userId: TEST_USER_ID, orderId })).toEqual({ credited: 99, short: 0 });
   });
 
   it('마일리지는 결제한 서버에만 쌓이고, 회수도 그 서버에서만 한다(0211)', async () => {

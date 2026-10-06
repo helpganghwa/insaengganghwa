@@ -8,14 +8,14 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
-import { MILEAGE_PER_MELEE_POINT, POINT_EXCHANGE_DIAMOND, bpTierReward } from '@/lib/game/balance';
+import { bpTierReward, mileageShortfallDiamond } from '@/lib/game/balance';
 import { walletReclaim } from '@/lib/game/wallet';
 import { kstMonthString } from '@/lib/kst';
 import { PREMIUM_INSTANT_TITLE, reclaimProductGrant } from '@/lib/game/shop/grant';
 import { PREMIUM_DAILY_TITLE } from '@/lib/game/mailbox/premium-daily';
 import { PREMIUM, shopGrant } from '@/lib/game/shop/catalog';
 import { reclaimBpSegment } from '@/lib/game/battlepass';
-import { revokeMileageForOrder } from '@/lib/game/points/wallet';
+import { previewMileageShortForOrder, revokeMileageForOrder } from '@/lib/game/points/wallet';
 import { reachedMilestones } from '@/lib/game/patron/milestones';
 
 import { raisePaymentAlert } from './alert';
@@ -36,6 +36,10 @@ export type ClawbackPreview = {
   boxesNeed: number;
   boxesHave: number;
   sufficient: boolean;
+  /** 이 주문이 적립한 마일리지 중 이미 써서 회수하지 못할 점수 — 어드민 사전 점검만 채운다. */
+  mileageShort?: number;
+  /** 그 부족분을 교환 비율로 환산해 다이아에서 회수할 양(diamondNeed에 포함돼 있다). */
+  mileageDiamond?: number;
 };
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -145,19 +149,39 @@ export async function previewClawback(
   userId: string,
   serverId: number,
   productCode: string,
+  /**
+   * orderId를 주면 이 주문이 적립한 마일리지 중 이미 쓴 몫도 함께 본다 — 환불 처리가 그 부족분을 교환 비율로
+   * 다이아에서 회수하므로(POINT-SHOP §6), 그 다이아까지 있어야 '회수 가능'이다(2026-10-06).
+   * grantSkipped(지급이 없었던 주문)는 상품 회수분이 0이지만 마일리지는 결제 자체에 붙어 적립되므로 따로 본다.
+   */
+  opts?: { orderId?: bigint | number | string; grantSkipped?: boolean },
 ): Promise<ClawbackPreview> {
-  const [need, have] = await Promise.all([
-    clawbackNeed(db, userId, serverId, productCode, false), // 사전조회 — tx 밖이라 잠그지 않는다.
+  const [productNeed, have, mileage] = await Promise.all([
+    opts?.grantSkipped
+      ? Promise.resolve({ diamond: 0, boxes: 0 })
+      : clawbackNeed(db, userId, serverId, productCode, false), // 사전조회 — tx 밖이라 잠그지 않는다.
     readHoldings(db, userId, serverId, false),
+    opts?.orderId != null
+      ? previewMileageShortForOrder(db, { userId, orderId: opts.orderId })
+      : Promise.resolve({ credited: 0, short: 0 }),
   ]);
-  return toPreview(need, have);
+  const mileageDiamond = mileageShortfallDiamond(mileage.short);
+  const preview = toPreview({ diamond: productNeed.diamond + mileageDiamond, boxes: productNeed.boxes }, have);
+  return mileageDiamond > 0 ? { ...preview, mileageShort: mileage.short, mileageDiamond } : preview;
 }
 
 /** 부족 내역 문구 — 어드민 차단 사유와 사고 알림이 같은 사실을 같은 말로 전하도록 공용. */
 export function formatClawbackShortfall(p: ClawbackPreview): string {
   const parts: string[] = [];
-  if (p.diamondNeed > p.diamondHave)
-    parts.push(`다이아 지급 ${num(p.diamondNeed)} / 보유 ${num(p.diamondHave)}`);
+  if (p.diamondNeed > p.diamondHave) {
+    // 마일리지 사용분이 섞여 있으면 내역을 나눠 보여 준다 — 무엇 때문에 모자란지 운영자가 바로 알게.
+    const md = p.mileageDiamond ?? 0;
+    parts.push(
+      md > 0
+        ? `다이아 회수 ${num(p.diamondNeed)}(상품 지급 ${num(p.diamondNeed - md)} + 이미 쓴 마일리지 ${num(p.mileageShort ?? 0)}점 환산 ${num(md)}) / 보유 ${num(p.diamondHave)}`
+        : `다이아 지급 ${num(p.diamondNeed)} / 보유 ${num(p.diamondHave)}`,
+    );
+  }
   if (p.boxesNeed > p.boxesHave)
     parts.push(`보급상자 지급 ${num(p.boxesNeed)} / 보유 ${num(p.boxesHave)}`);
   if (parts.length === 0) return '회수 가능 — 부족분 없음.';
@@ -348,7 +372,7 @@ export async function refundPurchase(
       // 상품 지급분 회수보다 뒤에 둔다(그쪽이 우선). 0까지만 깎고, 모자라면 미회수로 남긴다. best-effort 세이브포인트.
       if (mileageShort > 0) {
         // 올림 — 1~9점 부족도 💎로 회수한다(내림이면 조용히 사라진다, 10-06 검수).
-        const dia = Math.ceil(mileageShort / MILEAGE_PER_MELEE_POINT) * POINT_EXCHANGE_DIAMOND;
+        const dia = mileageShortfallDiamond(mileageShort);
         try {
           const got = await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`));
           if (got < BigInt(dia)) unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);

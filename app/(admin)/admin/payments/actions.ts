@@ -91,11 +91,14 @@ export async function refundOrderAction(
   }
 
   // 회수 사전 검사 — 부족하면 포트원 취소도 하지 않는다(되돌릴 수 없는 순서).
-  // grant_skipped 주문(특가 중복·미성년 보류)은 지급 자체가 없어 회수 대상이 아니다 —
+  // grant_skipped 주문(특가 중복·미성년 보류)은 지급 자체가 없어 상품 회수 대상이 아니다 —
   // 상품 지급량으로 잔액을 재면 "쓰지도 않은 재화"를 이유로 환불이 막힌다.
-  const preview: ClawbackPreview = order.grantSkipped
-    ? { diamondNeed: 0, diamondHave: 0, boxesNeed: 0, boxesHave: 0, sufficient: true }
-    : await previewClawback(order.userId, order.serverId, order.product);
+  // 마일리지는 결제 자체에 붙어 적립되므로 어느 주문이든 본다: 이미 쓴 몫은 환불 처리가 교환 비율로
+  // 다이아에서 회수하는데(POINT-SHOP §6), 그 다이아가 없으면 환불만 나가고 쓴 재화는 남는다(2026-10-06).
+  const preview: ClawbackPreview = await previewClawback(order.userId, order.serverId, order.product, {
+    orderId: order.id,
+    grantSkipped: order.grantSkipped,
+  });
   const reason = (opts?.forceReason ?? '').trim();
   if (!preview.sufficient) {
     if (!opts?.force)

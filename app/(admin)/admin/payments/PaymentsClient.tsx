@@ -133,7 +133,7 @@ export function PaymentsClient({
 
   const onRefund = (o: OrderRow) => {
     if (pendingId) return;
-    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자) 회수가 진행됩니다.\n회수할 재화가 부족하면 취소 전에 차단됩니다.`))
+    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자)와 적립 마일리지 회수가 진행됩니다.\n이미 쓴 마일리지는 다이아로 회수합니다(10점당 💎25).\n회수할 재화가 부족하면 취소 전에 차단됩니다.`))
       return;
     setBlocked(null);
     run(o);
