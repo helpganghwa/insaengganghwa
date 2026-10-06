@@ -12,6 +12,7 @@ import { useDiamondGate } from '@/components/DiamondGate';
 import { usePayResumeNotice, ackPayResult } from '@/components/usePayResumeNotice';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Tabs } from '@/components/ui/Tabs';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -56,10 +57,13 @@ const EX_PARTS = [
 ] as const;
 type ExTarget = 'diamond' | (typeof EX_PARTS)[number]['key'];
 
+/** 부위 이모지 — 다른 화면(자랑 카드·초월)과 같은 표기. */
+const EX_PART_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
+
 /**
- * 교환(docs/POINT-SHOP.md §5, 10-06 확정 시안 5-C) — 다른 상점 상품처럼 고정 수량 버튼. 💎 3개 · 보급 상자 3개(부위 고르기).
- * 위 지갑 칸이 통화 선택. 누르면 확인 팝업(내는 것·받는 것·남는 잔액) → 헤더 토스트. 잔액이 모자라면 버튼은 그대로, 누르면 부족 토스트.
- * 잔액은 낙관적으로 먼저 줄이고(실패 시 되돌림), 서버 액션의 재렌더가 오면 그 값을 쓴다.
+ * 교환(docs/POINT-SHOP.md §5) — 다른 상점 상품처럼 고정 수량 버튼. 💎 3개 · 보급 상자 3개(부위 고르기, 부위 이모지로 표시).
+ * 위 지갑 칸이 통화 선택. 상품을 누르면 3초 재확인(ConfirmButton) — 3초 안에 다시 누르면 교환 → 헤더 토스트(10-06, 팝업 대신).
+ * 잔액이 모자라면 무장하지 않고 부족 토스트. 잔액은 낙관적으로 먼저 줄이고(실패 시 되돌림), 서버 액션의 재렌더가 오면 그 값을 쓴다.
  */
 function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) {
   const { showHeaderToast, showError } = useResourceToast();
@@ -71,38 +75,35 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
     setSeen(balance);
     setSpent(0);
   }
-  const [confirm, setConfirm] = useState<{ target: ExTarget; pack: number } | null>(null);
   const [pending, startEx] = useTransition();
+  const busy = useRef(false);
   const have = balance - spent;
   const unit = (pack: number) => (kind === 'mileage' ? pack * MILEAGE_PER_MELEE_POINT : pack);
   const unitLabel = (pack: number) => (kind === 'melee' ? `${unit(pack)}pt` : unit(pack).toLocaleString('ko-KR'));
   const kindKo = kind === 'melee' ? '대난투 포인트' : '마일리지';
-  const getLabel = (t: ExTarget, pack: number) =>
-    t === 'diamond'
-      ? `💎 ${(pack * POINT_EXCHANGE_DIAMOND).toLocaleString('ko-KR')}`
-      : `📦 ${EX_PARTS.find((x) => x.key === t)!.label} 상자 ${pack * POINT_EXCHANGE_BOX}`;
+  const rate = kind === 'melee' ? '1포인트' : `마일리지 ${MILEAGE_PER_MELEE_POINT}`;
 
-  const pick = (target: ExTarget, pack: number) => {
+  const arm = (pack: number) => {
+    if (pending || busy.current) return false;
     if (have < unit(pack)) {
       showError(`${kindKo}가 부족해요`);
-      return;
+      return false;
     }
-    setConfirm({ target, pack });
   };
-  const run = () => {
-    if (!confirm || pending) return;
-    const { target, pack } = confirm;
+  const run = (target: ExTarget, pack: number) => {
+    if (pending || busy.current) return;
+    busy.current = true;
     const cost = unit(pack);
     const key = crypto.randomUUID().replace(/-/g, '');
-    setConfirm(null);
     setSpent((x) => x + cost);
     if (target === 'diamond') optimisticAdjust(BigInt(pack * POINT_EXCHANGE_DIAMOND));
     startEx(async () => {
       const r = await exchangeAction({ kind, target, pack, key }).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
+      busy.current = false;
       if (r.status === 'success') {
         showHeaderToast({
           title: '교환 완료',
-          rewards: [target === 'diamond' ? { icon: '💎', amount: r.diamond } : { icon: '📦', amount: r.boxes }],
+          rewards: [target === 'diamond' ? { icon: '💎', amount: r.diamond } : { icon: EX_PART_EMOJI[target], amount: r.boxes }],
         });
         return;
       }
@@ -115,18 +116,28 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
   };
 
   const good = (target: ExTarget, pack: number, icon: string, amount: number) => (
-    <button
-      key={pack}
-      type="button"
-      onClick={() => pick(target, pack)}
+    <ConfirmButton
+      key={`${target}-${pack}`}
+      onArm={() => arm(pack)}
+      onConfirm={() => run(target, pack)}
+      disabled={pending}
       className="rounded-xl border border-zinc-200 bg-white px-1.5 pb-2 pt-2.5 text-center shadow-sm transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
+      armedClassName="rounded-xl border border-amber-500 bg-amber-50 px-1.5 pb-2 pt-2.5 text-center shadow-sm transition active:scale-[0.98] dark:bg-amber-950/40"
     >
-      <span className="block text-[22px] leading-none">{icon}</span>
-      <b className="mt-1 block text-[13px] tabular-nums text-zinc-900 dark:text-zinc-50">{amount.toLocaleString('ko-KR')}</b>
-      <span className="mt-1.5 block rounded-lg bg-amber-500 py-1 text-[11.5px] font-extrabold tabular-nums text-zinc-950">
-        {unitLabel(pack)}
-      </span>
-    </button>
+      {(armed, left) => (
+        <>
+          <span className="block text-[22px] leading-none">{icon}</span>
+          <b className="mt-1 block text-[13px] tabular-nums text-zinc-900 dark:text-zinc-50">{amount.toLocaleString('ko-KR')}</b>
+          <span
+            className={`mt-1.5 block rounded-lg py-1 text-[11.5px] font-extrabold tabular-nums ${
+              armed ? 'bg-amber-700 text-white' : 'bg-amber-500 text-zinc-950'
+            }`}
+          >
+            {armed ? `한 번 더 · ${left}` : unitLabel(pack)}
+          </span>
+        </>
+      )}
+    </ConfirmButton>
   );
 
   return (
@@ -134,17 +145,16 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
       <div className="mb-1.5 mt-3 flex items-baseline justify-between">
         <b className="text-[12px] text-zinc-800 dark:text-zinc-100">다이아</b>
         <span className="text-[10.5px] text-zinc-500">
-          {kind === 'melee' ? '1pt' : `마일리지 ${MILEAGE_PER_MELEE_POINT}`} → 💎{POINT_EXCHANGE_DIAMOND}
+          {rate} → 💎{POINT_EXCHANGE_DIAMOND}
         </span>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {POINT_EXCHANGE_PACKS.map((p) =>
-          good('diamond', p, '💎', p * POINT_EXCHANGE_DIAMOND))}
+        {POINT_EXCHANGE_PACKS.map((p) => good('diamond', p, '💎', p * POINT_EXCHANGE_DIAMOND))}
       </div>
       <div className="mb-1.5 mt-4 flex items-baseline justify-between">
         <b className="text-[12px] text-zinc-800 dark:text-zinc-100">보급 상자</b>
         <span className="text-[10.5px] text-zinc-500">
-          {kind === 'melee' ? '1pt' : `마일리지 ${MILEAGE_PER_MELEE_POINT}`} → 📦{POINT_EXCHANGE_BOX} · 부위를 골라요
+          {rate} → {EX_PART_EMOJI[part]}{POINT_EXCHANGE_BOX}
         </span>
       </div>
       <div className="mb-2 flex gap-1.5">
@@ -160,50 +170,13 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
                 : 'border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400'
             }`}
           >
-            {x.label}
+            {EX_PART_EMOJI[x.key]} {x.label}
           </button>
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {POINT_EXCHANGE_PACKS.map((p) =>
-          good(part, p, '📦', p * POINT_EXCHANGE_BOX))}
+        {POINT_EXCHANGE_PACKS.map((p) => good(part, p, EX_PART_EMOJI[part], p * POINT_EXCHANGE_BOX))}
       </div>
-      <p className="mt-4 text-center text-[11px] text-zinc-500">파견·레이드·탑 추가 횟수는 각 화면의 ＋에서 살 수 있어요</p>
-
-      {confirm ? (
-        <ModalShell onClose={() => setConfirm(null)} onSubmit={run} label="교환">
-          <ModalLayout
-            title="교환할까요?"
-            footer={
-              <>
-                <ModalButton tone="ghost" onClick={() => setConfirm(null)}>
-                  닫기
-                </ModalButton>
-                <ModalButton tone="primary" grow={2} onClick={run} disabled={pending}>
-                  교환하기
-                </ModalButton>
-              </>
-            }
-          >
-            <dl className="space-y-1.5 text-[13px]">
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">내는 것</dt>
-                <dd className="font-bold tabular-nums">
-                  {kindKo} {unit(confirm.pack).toLocaleString('ko-KR')}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">받는 것</dt>
-                <dd className="font-bold tabular-nums text-amber-600 dark:text-amber-300">{getLabel(confirm.target, confirm.pack)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">남는 {kind === 'melee' ? '포인트' : '마일리지'}</dt>
-                <dd className="font-bold tabular-nums">{(have - unit(confirm.pack)).toLocaleString('ko-KR')}</dd>
-              </div>
-            </dl>
-          </ModalLayout>
-        </ModalShell>
-      ) : null}
     </div>
   );
 }

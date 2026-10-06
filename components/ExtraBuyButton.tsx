@@ -19,7 +19,7 @@ export type ResendSlot = { slot: number; label: string };
 const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }> = {
   expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯에 새 파견지를 바로 받아요.', done: '새 파견지가 나왔어요' },
   raid: { title: '오늘 레이드 +1회', desc: '소환·참여를 한 번 더, 동시 진행도 하나 늘어요.', done: '오늘 레이드 +1회' },
-  tower: { title: '탑 추가 도전', desc: '오늘 도전 한 번 더 — 오르기·토벌 모두 쓸 수 있어요.', done: '오늘 도전 +1회' },
+  tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 할 수 있어요. 오르기·토벌 모두 쓸 수 있어요.', done: '오늘 도전 +1회' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -31,8 +31,8 @@ const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)
 /** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관 없음). */
 const EXPIRE: Record<PointExtraItem, string> = {
   expedition: '자정 전에 보내 주세요',
-  raid: '자정에 사라져요',
-  tower: '자정에 사라져요',
+  raid: '자정에 초기화 돼요',
+  tower: '자정에 초기화 돼요',
 };
 
 const ERR: Record<string, string> = {
@@ -216,14 +216,14 @@ export function ExtraBuyButton({
                   >
                     <span className="flex items-baseline justify-between gap-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
                       <span className="font-semibold">{KIND_KO[k]}</span>
-                      <span className="tabular-nums">보유 {quote ? fmt(balanceOf(k)) : '—'}</span>
+                      <span className="tabular-nums">보유 {quote ? fmt(balanceOf(k)) : '…'}</span>
                     </span>
                     <span
                       className={`mt-0.5 block text-[19px] font-extrabold leading-tight tabular-nums ${
                         kind === k ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-800 dark:text-zinc-100'
                       }`}
                     >
-                      {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '—'}
+                      {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '…'}
                     </span>
                   </button>
                 ))}
