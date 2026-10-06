@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { josa } from 'josa';
 
@@ -53,12 +53,16 @@ type Quote = { melee: number; mileage: number; bought: number; max: number; pric
  * 추가 횟수 ＋ 버튼 + 공용 구매 팝업(docs/POINT-SHOP.md §6, 10-06 확정 시안) — 파견·레이드·탑이 같이 쓴다.
  * ＋를 보일지는 호출부가 정한다(기본 횟수를 다 썼을 때만). 팝업은 한 번에 한 장만 사고, 이번 가격과
  * 다음 구매 가격을 함께 보여 준다. 잔액이 모자란 통화는 흐리게만 하고 누르면 헤더 토스트(막지 않음).
- * 사면 서버 액션의 현재 경로 재렌더로 횟수가 바뀐다 — 호출부는 onBought로 낙관 표시만 맞추면 된다.
+ * 레이아웃 시프트 방지(10-06): ＋가 그려질 때 견적을 미리 받아 두고(prefetch) 팝업은 그 값으로 바로 연다(뒤에서 새로 고침).
+ * 사기는 낙관적 — 재확인 직후 팝업을 닫고 onOptimistic으로 호출부가 횟수를 먼저 올린다. 실패하면 onRollback으로 되돌리고 토스트.
+ * 성공 확정은 onBought(서버 재렌더가 같은 값을 가져온다).
  */
 export function ExtraBuyButton({
   item,
   slots,
   onBought,
+  onOptimistic,
+  onRollback,
   className = '',
   size = 'md',
 }: {
@@ -66,6 +70,10 @@ export function ExtraBuyButton({
   /** 파견만 — 다시 보낼 수 있는 칸. 비면 ＋를 눌러도 안내만. */
   slots?: ResendSlot[];
   onBought?: () => void;
+  /** 재확인 직후(서버 응답 전) — 호출부가 횟수·슬롯을 먼저 바꾼다. 파견은 고른 슬롯. */
+  onOptimistic?: (slot: number | null) => void;
+  /** 실패 시 onOptimistic을 되돌린다. */
+  onRollback?: (slot: number | null) => void;
   className?: string;
   size?: 'md' | 'sm' | 'pill';
 }) {
@@ -82,6 +90,22 @@ export function ExtraBuyButton({
   // 팝업이 열려 있는 동안만 견적 응답을 반영한다(닫은 뒤 늦게 온 답이 토스트를 띄우지 않게).
   const openRef = useRef(false);
   const copy = COPY[item];
+  // 미리 받아 둔 견적 — 팝업을 빈 칸 없이 바로 연다.
+  const cached = useRef<Quote | null>(null);
+  const fetchQuote = () =>
+    extraQuoteAction(item)
+      .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
+      .then((r) => {
+        if (r.status === 'success') cached.current = r;
+        return r;
+      });
+  useEffect(() => {
+    void fetchQuote();
+    // ＋가 처음 그려질 때 한 번(상품이 바뀌면 다시)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
+  const pickKind = (q: Quote) =>
+    setKind(q.price !== null && q.melee >= q.price ? 'melee' : q.price !== null && q.mileage >= amountIn('mileage', q.price) ? 'mileage' : 'melee');
 
   const close = () => {
     openRef.current = false;
@@ -93,33 +117,39 @@ export function ExtraBuyButton({
       showHeaderToast({ title: '다시 보낼 수 있는 슬롯이 없어요' });
       return;
     }
-    setQuote(null);
+    const c = cached.current;
+    if (c && c.price === null) {
+      showHeaderToast({ title: '오늘은 더 살 수 없어요' });
+      return;
+    }
+    setQuote(c);
+    if (c) pickKind(c); // 처음엔 살 수 있는 통화를 골라 둔다(대난투 포인트 우선)
     setSlot(slots?.[0]?.slot ?? null);
     setOpen(true);
     openRef.current = true;
     keyRef.current = crypto.randomUUID().replace(/-/g, '');
-    loadQuote();
+    loadQuote(!c);
   };
 
-  const loadQuote = () => {
-    void extraQuoteAction(item)
-      .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
-      .then((r) => {
-        if (!openRef.current) return;
-        if (r.status !== 'success') {
+  /** 새 견적 — 미리 받은 값이 있으면 조용히 갈아 끼우고(값이 같으면 화면 변화 없음), 없을 때만 오류로 닫는다. */
+  const loadQuote = (firstLoad: boolean) => {
+    void fetchQuote().then((r) => {
+      if (!openRef.current) return;
+      if (r.status !== 'success') {
+        if (firstLoad) {
           close();
           showError(ERR[r.code] ?? '불러오지 못했어요');
-          return;
         }
-        if (r.price === null) {
-          close();
-          showHeaderToast({ title: '오늘은 더 살 수 없어요' });
-          return;
-        }
-        setQuote(r);
-        // 처음엔 살 수 있는 통화를 골라 둔다(대난투 포인트 우선).
-        setKind(r.melee >= r.price ? 'melee' : r.mileage >= amountIn('mileage', r.price) ? 'mileage' : 'melee');
-      });
+        return;
+      }
+      if (r.price === null) {
+        close();
+        showHeaderToast({ title: '오늘은 더 살 수 없어요' });
+        return;
+      }
+      setQuote(r);
+      if (firstLoad) pickKind(r);
+    });
   };
 
   const balanceOf = (k: PointKind) => (quote ? (k === 'melee' ? quote.melee : quote.mileage) : 0);
@@ -133,27 +163,41 @@ export function ExtraBuyButton({
     }
     busy.current = true;
     const expectedPrice = quote.price;
+    const max = quote.max;
+    const usedSlot = slot;
+    const spent = amountIn(kind, expectedPrice);
+    const before = cached.current;
+    // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
+    close();
+    onOptimistic?.(usedSlot);
+    if (before) {
+      const bought = before.bought + 1;
+      cached.current = {
+        ...before,
+        bought,
+        price: pointExtraPrice(item, bought),
+        melee: kind === 'melee' ? before.melee - spent : before.melee,
+        mileage: kind === 'mileage' ? before.mileage - spent : before.mileage,
+      };
+    }
     start(async () => {
-      const r = await buyExtraAction({ item, kind, slot: slot ?? undefined, key: keyRef.current, expectedPrice }).catch(
+      const r = await buyExtraAction({ item, kind, slot: usedSlot ?? undefined, key: keyRef.current, expectedPrice }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;
       if (r.status === 'success') {
         keyRef.current = crypto.randomUUID().replace(/-/g, '');
-        close();
         onBought?.();
         showHeaderToast({
           title: copy.title,
-          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${quote.max}번 샀어요`,
+          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 샀어요`,
         });
       } else {
+        cached.current = before;
+        onRollback?.(usedSlot);
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
-        if (r.code === 'MAX_REACHED' || r.code === 'NOT_NEEDED') close();
-        if (r.code === 'PRICE_CHANGED') {
-          setQuote(null); // 새 값을 받기 전엔 옛 가격으로 못 누르게
-          loadQuote();
-        }
       }
+      void fetchQuote(); // 서버 값으로 다시 맞춰 둔다
     });
   };
 

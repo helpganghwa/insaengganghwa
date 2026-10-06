@@ -316,9 +316,9 @@ function Countdown({ iso, nowIso }: { iso: string; nowIso: string }) {
 
 export function RaidSlots({
   cells: cellsIn,
-  slots,
+  slots: slotsIn,
   dailyUsed,
-  dailyCap,
+  dailyCap: dailyCapIn,
   canBuyExtra = false,
   freeOpenLeft = 0,
   openRaids = [],
@@ -354,6 +354,15 @@ export function RaidSlots({
   const payCost = free ? 0 : openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
+  // '오늘 레이드 +1회' 낙관 반영(10-06) — 사는 즉시 하루 한도·칸을 하나 늘리고 ＋를 숨긴다. 서버 재렌더(새 dailyCap)가 오면 0으로.
+  const [optExtra, setOptExtra] = useState(0);
+  const [seenCap, setSeenCap] = useState(dailyCapIn);
+  if (seenCap !== dailyCapIn) {
+    setSeenCap(dailyCapIn);
+    setOptExtra(0);
+  }
+  const dailyCap = dailyCapIn + optExtra;
+  const slots = slotsIn + optExtra;
   const exhausted = dailyUsed >= dailyCap;
 
   // 소환 컨펌 3초 카운트다운(만료 자동 해제). 초기값은 arm 시 핸들러에서 set(effect 내 직접 setState 회피).
@@ -396,7 +405,14 @@ export function RaidSlots({
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>
           {dailyUsed}/{dailyCap}
         </span>
-        {canBuyExtra ? <ExtraBuyButton item="raid" className="ml-1.5 align-middle" /> : null}
+        {canBuyExtra && optExtra === 0 ? (
+          <ExtraBuyButton
+            item="raid"
+            className="ml-1.5 align-middle"
+            onOptimistic={() => setOptExtra((n) => n + 1)}
+            onRollback={() => setOptExtra((n) => Math.max(0, n - 1))}
+          />
+        ) : null}
         {free && !exhausted ? <span className="ml-1.5 font-semibold text-sky-500">· 오늘 첫 소환 무료</span> : null}
       </p>
       <div className="space-y-2">

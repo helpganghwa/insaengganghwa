@@ -127,18 +127,21 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
       onConfirm={() => run(target, pack)}
       disabled={pending}
       className="rounded-xl border border-zinc-200 bg-white px-1.5 pb-2 pt-2.5 text-center shadow-sm transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
-      armedClassName="rounded-xl border border-amber-500 bg-amber-50 px-1.5 pb-2 pt-2.5 text-center shadow-sm transition active:scale-[0.98] dark:bg-amber-950/40"
+      // 상점 상품 카드와 같은 확인 오버레이(3초) — 다시 탭하면 교환.
+      overlay={(left) => (
+        <span className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-0.5 rounded-xl bg-black/80 px-1.5 text-center backdrop-blur-[1px]">
+          <span className="text-[12px] font-extrabold tabular-nums text-amber-300">{unitLabel(pack)}</span>
+          <span className="text-[11px] font-bold leading-tight text-white break-keep">정말 교환하시겠습니까?</span>
+          <span className="text-[9.5px] leading-tight text-white/70 break-keep">교환하려면 다시 탭하세요 · {left}</span>
+        </span>
+      )}
     >
-      {(armed, left) => (
+      {() => (
         <>
           <span className="block text-[22px] leading-none">{icon}</span>
           <b className="mt-1 block text-[13px] tabular-nums text-zinc-900 dark:text-zinc-50">{amount.toLocaleString('ko-KR')}</b>
-          <span
-            className={`mt-1.5 block rounded-lg py-1 text-[11.5px] font-extrabold tabular-nums ${
-              armed ? 'bg-amber-700 text-white' : 'bg-amber-500 text-zinc-950'
-            }`}
-          >
-            {armed ? `한 번 더 · ${left}` : unitLabel(pack)}
+          <span className="mt-1.5 block rounded-lg bg-amber-500 py-1 text-[11.5px] font-extrabold tabular-nums text-zinc-950">
+            {unitLabel(pack)}
           </span>
         </>
       )}

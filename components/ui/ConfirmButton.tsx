@@ -18,6 +18,7 @@ export function ConfirmButton({
   className,
   armedClassName,
   pulseClassName,
+  overlay,
   children,
 }: {
   onConfirm: () => void;
@@ -31,6 +32,8 @@ export function ConfirmButton({
   armedClassName?: string;
   /** 무장 중 배경 펄스 오버레이 클래스(예: 'bg-sky-500'). 없으면 오버레이 없음. */
   pulseClassName?: string;
+  /** 무장 중 버튼 전체를 덮는 오버레이(상점 상품 카드의 '정말 구매하시겠습니까?' 문법). 없으면 오버레이 없음. */
+  overlay?: (left: number) => ReactNode;
   children: (armed: boolean, left: number) => ReactNode;
 }) {
   const [left, setLeft] = useState(0);
@@ -63,6 +66,7 @@ export function ConfirmButton({
         />
       ) : null}
       <span className="relative">{children(armed, left)}</span>
+      {armed && overlay ? overlay(left) : null}
     </button>
   );
 }

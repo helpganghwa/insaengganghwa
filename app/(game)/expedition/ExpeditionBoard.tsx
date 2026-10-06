@@ -262,6 +262,14 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     board.extraBought < POINT_EXTRA_PRICES.expedition.length &&
     resendSlots.length > 0 &&
     !board.slots.some((x) => x.state === 'offer');
+  // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 슬롯의 새 파견지(또는 실패 시 원래 상태)를 받아 온다.
+  const reloadBoard = () =>
+    void expeditionBoardAction()
+      .catch(() => null)
+      .then((fresh) => {
+        if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
+      });
+
   const onCardTap = (s: ExpeditionBoardSlot) => {
     if (pendingSlot === s.slot) return;
     if (s.state === 'locked') {
@@ -299,14 +307,16 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
               <ExtraBuyButton
                 item="expedition"
                 slots={resendSlots}
-                onBought={() => {
-                  // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 칸의 새 파견지를 바로 받아 온다.
-                  void expeditionBoardAction()
-                    .catch(() => null)
-                    .then((fresh) => {
-                      if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
-                    });
-                }}
+                // 낙관 반영(10-06) — 사는 즉시 그 슬롯을 '새 파견 찾는 중'으로, 헤더 M을 하나 올린다(＋는 오퍼가 생겨 숨는다).
+                onOptimistic={(slot) =>
+                  setBoard((b) => ({
+                    ...b,
+                    extraBought: b.extraBought + 1,
+                    slots: b.slots.map((x) => (x.slot === slot ? { ...x, state: 'offer', reward: undefined } : x)),
+                  }))
+                }
+                onRollback={() => reloadBoard()}
+                onBought={() => reloadBoard()}
               />
             ) : null}
             <span className="h-3 w-px bg-zinc-300 dark:bg-zinc-700" />

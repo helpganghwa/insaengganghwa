@@ -131,7 +131,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   }
   const best = Math.max(board.best, local?.best ?? 0);
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
-  const attemptsLeft = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
+  const attemptsLeftBase = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const myRank = local?.myRank ?? board.myRank;
   const next = Math.min(TOWER_FLOORS, best + 1);
   const topped = best >= TOWER_FLOORS;
@@ -172,15 +172,32 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [battle, setBattle] = useState<TowerChallengeResult | 'pending' | null>(null);
   // 탑 추가 도전(10-06, POINT-SHOP §6) — 오늘 전체 = 하루 3 + 산 횟수. ＋는 남은 도전이 0이고 오늘 더 살 수 있을 때만.
   // 사면 서버 액션의 재렌더로 board가 바뀌고, 이미 열린 전투 결과 화면의 남은 도전도 하나 올린다.
-  const attemptsTotal = board.attemptsTotal;
-  const canBuyExtra = board.extraBought < POINT_EXTRA_PRICES.tower.length;
-  const onExtraBought = () => setBattle((b) => (b && b !== 'pending' ? { ...b, attemptsLeft: b.attemptsLeft + 1 } : b));
+
+  // 탑 추가 도전 낙관 반영(10-06) — 사는 즉시 남은 도전·전체를 하나 올린다. 새 board(extraBought 변화)가 오면 0으로.
+  const [optExtra, setOptExtra] = useState(0);
+  const [seenExtra, setSeenExtra] = useState(board.extraBought);
+  if (seenExtra !== board.extraBought) {
+    setSeenExtra(board.extraBought);
+    setOptExtra(0);
+  }
+  const attemptsLeft = attemptsLeftBase + optExtra;
+  const attemptsTotal = board.attemptsTotal + optExtra;
+  const canBuyExtra = board.extraBought + optExtra < POINT_EXTRA_PRICES.tower.length;
+  const bumpBattle = (d: number) => setBattle((b) => (b && b !== 'pending' ? { ...b, attemptsLeft: Math.max(0, b.attemptsLeft + d) } : b));
+  const extraHandlers = {
+    onOptimistic: () => {
+      setOptExtra((n) => n + 1);
+      bumpBattle(1);
+    },
+    onRollback: () => {
+      setOptExtra((n) => Math.max(0, n - 1));
+      bumpBattle(-1);
+    },
+  };
   // 목록 머리 — 어두운 알약 밖, 같은 알약 모양의 ＋(알약 안에 넣으면 높이가 들쭉날쭉했다, 10-06 지적).
-  const extraPlusPill = canBuyExtra ? (
-    <ExtraBuyButton item="tower" onBought={onExtraBought} size="pill" />
-  ) : null;
-  // 전투 화면 머리·결과 줄 — 11px 글자 줄 안이라 작은 ＋.
-  const extraPlus = canBuyExtra ? <ExtraBuyButton item="tower" onBought={onExtraBought} size="sm" /> : null;
+  const extraPlusPill = canBuyExtra ? <ExtraBuyButton item="tower" size="pill" {...extraHandlers} /> : null;
+  // 전투 결과 줄 — 11px 글자 줄 안이라 작은 ＋.
+  const extraPlus = canBuyExtra ? <ExtraBuyButton item="tower" size="sm" {...extraHandlers} /> : null;
   /** 지금 보내는 판(층·토벌 여부) — 판정 대기 화면이 주소가 아니라 실제 보낸 판을 그린다. */
   const [inflight, setInflight] = useState<{ floor: number; hunt: boolean } | null>(null);
   // 브라우저 뒤로가기로 주소(?v=d)가 바뀌면 끝난 전투 화면도 닫는다 — 전투는 헤더가 없어 주소와 화면이 어긋나지 않게(렌더 중 조정).
