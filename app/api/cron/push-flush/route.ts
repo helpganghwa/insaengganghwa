@@ -70,6 +70,10 @@ export async function GET(req: Request) {
             -- not null이고 키의 일부라, 다른 서버 묶음은 그 서버로 돌아올 때까지 남는다.
             and pp2.server_id = p2.last_server_id
             and (
+              -- 묶음 대기 중 '즉시'로 바꾼 유저의 남은 묶음 — 즉시 모드는 더 쌓이지 않으니 바로 보낸다.
+              -- 빠뜨리면 하루 정리(24시간)까지 남아 대시보드 '푸시 적체'로 잡혔다(2026-10-06).
+              p2.push_enhance_mode = 'instant'
+              or
               (p2.push_enhance_mode = 'batched'    and pp2.first_at + interval '30 minutes' <= now())
               or
               (p2.push_enhance_mode = 'batched_1h' and pp2.first_at + interval '60 minutes' <= now())
