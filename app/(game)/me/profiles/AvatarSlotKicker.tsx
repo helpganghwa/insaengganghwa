@@ -33,7 +33,8 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
   const busy = useRef(false);
   // 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 늘렸을 수 있어, 한도가 그대로인 동안은
   // 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 💎를 두 번 받지 않는다). 한도가 바뀌었으면 그 구매는 들어간 것.
-  const unsettled = useRef<{ key: string; limit: number } | null>(null);
+  // 오래된 키(10분)는 버린다 — 한참 뒤의 구매가 옛 요청의 재전송으로 처리되지 않게.
+  const unsettled = useRef<{ key: string; limit: number; at: number } | null>(null);
   // 산 직후 서버 재렌더가 오기 전까지 보여 줄 한도 — 새 limit이 오면 그 값을 쓴다.
   const [optimistic, setOptimistic] = useState<number | null>(null);
   const [seen, setSeen] = useState(limit);
@@ -54,7 +55,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
     busy.current = true;
     setOpen(false);
     const prev = unsettled.current;
-    const key = prev && prev.limit === limit ? prev.key : crypto.randomUUID().replace(/-/g, '');
+    const key = prev && prev.limit === limit && Date.now() - prev.at < 10 * 60_000 ? prev.key : crypto.randomUUID().replace(/-/g, '');
     const before = optimistic;
     optimisticAdjust(-BigInt(PROFILE_SLOT_COST_DIAMOND));
     setOptimistic(next);
@@ -69,15 +70,19 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
         return;
       }
       const unknown = r.code === 'NETWORK' || r.code === 'UNKNOWN';
-      unsettled.current = unknown ? { key, limit } : null;
+      unsettled.current = unknown ? { key, limit, at: Date.now() } : null;
       optimisticAdjust(BigInt(PROFILE_SLOT_COST_DIAMOND));
       setOptimistic(before); // 직전 표시값으로(앞선 구매의 낙관값을 지우지 않게)
       // 결과를 모르면 화면을 서버 값으로 다시 맞춘다 — 서버에서는 늘렸을 수 있다.
-      if (unknown) resyncWhenOnline(() => router.refresh());
+      if (unknown) resyncWhenOnline('route', () => router.refresh());
       if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(PROFILE_SLOT_COST_DIAMOND);
       else if (r.code === 'SLOT_MAX') showError(`보관함은 최대 ${PROFILE_MAX}칸까지 늘릴 수 있어요`);
       else if (r.code === 'RATE_LIMITED') showError('요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.');
-      else if (r.code === 'NETWORK') showError('요청이 전송되지 않았어요. 연결을 확인해 주세요.');
+      else if (r.code === 'MAINTENANCE') showError('서버 점검 중입니다. 잠시 후 다시 시도해 주세요.');
+      else if (r.code === 'BANNED') showError('이용이 제한된 계정입니다.');
+      // 응답을 못 받은 경우 — 서버에서는 처리됐을 수 있어 '전송되지 않았다'고 말하지 않는다.
+      else if (r.code === 'NETWORK') showError('결과를 확인하지 못했어요. 연결을 확인해 주세요.');
+      else if (r.code === 'UNKNOWN') showError('결과를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.');
       else showError('보관함을 늘리지 못했어요');
     });
   };

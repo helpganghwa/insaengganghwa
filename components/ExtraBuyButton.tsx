@@ -48,37 +48,61 @@ const ERR: Record<string, string> = {
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정입니다.',
-  NETWORK: '요청이 전송되지 않았어요. 연결을 확인해 주세요.',
+  // 응답을 못 받은 경우 — 서버에서는 처리됐을 수 있어 '전송되지 않았다'고 말하지 않는다.
+  NETWORK: '결과를 확인하지 못했어요. 연결을 확인해 주세요.',
+  UNKNOWN: '결과를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.',
 };
 
 type Quote = { melee: number; mileage: number; bought: number; max: number; price: number | null };
 
 // 견적은 상품별로 화면 전체가 같이 쓴다 — 탑은 머리·층 상세·전투 결과에 ＋가 따로 그려지는데, 그때마다 서버 액션을
-// 보내면 바로 뒤에 누른 도전·공격이 그 뒤에 줄을 선다(서버 액션은 한 번에 하나씩 나간다). 받은 지 얼마 안 된 값은 다시 받지 않는다.
+// 보내면 요청만 늘고 바로 뒤에 누른 도전·공격이 그 뒤에 줄을 설 수 있다. 받은 지 얼마 안 된 값은 다시 받지 않는다.
 const QUOTE_FRESH_MS = 30_000;
-const sharedQuote: Partial<Record<PointExtraItem, { q: Quote; at: number }>> = {};
+type QuoteEntry = { q: Quote; at: number; day: string };
+const sharedQuote: Partial<Record<PointExtraItem, QuoteEntry>> = {};
+// 가장 나중에 보낸 요청의 답만 받아 둔다 — 구매 전에 떠난 조회가 늦게 와서 구매 뒤 값을 덮지 않게.
+const quoteSeq: Partial<Record<PointExtraItem, number>> = {};
+const bumpQuoteSeq = (item: PointExtraItem) => (quoteSeq[item] = (quoteSeq[item] ?? 0) + 1);
 const quoteInflight: Partial<Record<PointExtraItem, ReturnType<typeof requestQuote>>> = {};
-const requestQuote = (item: PointExtraItem) =>
-  extraQuoteAction(item)
+const requestQuote = (item: PointExtraItem) => {
+  const seq = bumpQuoteSeq(item);
+  return extraQuoteAction(item)
     .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
     .then((r) => {
-      if (r.status === 'success') sharedQuote[item] = { q: r, at: Date.now() };
+      if (r.status === 'success' && quoteSeq[item] === seq) sharedQuote[item] = { q: r, at: Date.now(), day: kstDateString() };
       return r;
     });
-/** 같은 상품의 요청이 이미 나가 있으면 그 응답을 같이 기다린다. */
-const fetchSharedQuote = (item: PointExtraItem) => {
+};
+/** 같은 상품의 요청이 이미 나가 있으면 그 응답을 같이 기다린다. fresh = 나가 있는 요청과 상관없이 새로 받는다(구매 직후). */
+const fetchSharedQuote = (item: PointExtraItem, fresh = false) => {
   const going = quoteInflight[item];
-  if (going) return going;
+  if (going && !fresh) return going;
   const p = requestQuote(item).finally(() => {
     if (quoteInflight[item] === p) delete quoteInflight[item];
   });
   quoteInflight[item] = p;
   return p;
 };
-// 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 샀을 수 있어, 다음 구매가 같은 번째면
-// 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 두 번 받지 않는다). 견적의 '오늘 산 횟수'가 달라졌으면 그 구매는
-// 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 둔다.
-const unsettledKey: Partial<Record<PointExtraItem, { key: string; bought: number; day: string }>> = {};
+/** 오늘 받아 둔 견적만 쓴다 — 자정이 지나면 가격·산 횟수가 처음으로 돌아간다. */
+const cachedQuote = (item: PointExtraItem): QuoteEntry | undefined => {
+  const e = sharedQuote[item];
+  return e && e.day === kstDateString() ? e : undefined;
+};
+// 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 샀을 수 있어, 다음 구매가 같은 번째·같은
+// 슬롯이면 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 두 번 받지 않는다). 견적의 '오늘 산 횟수'가 달라졌으면 그
+// 구매는 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 두고, 오래된 키(10분)·어제 키는 버린다.
+const UNSETTLED_TTL_MS = 10 * 60_000;
+type Unsettled = { key: string; bought: number; slot: number | null; day: string; at: number };
+const unsettledKey: Partial<Record<PointExtraItem, Unsettled>> = {};
+const unsettledOf = (item: PointExtraItem): Unsettled | null => {
+  const u = unsettledKey[item];
+  if (!u) return null;
+  if (u.day !== kstDateString() || Date.now() - u.at > UNSETTLED_TTL_MS) {
+    delete unsettledKey[item];
+    return null;
+  }
+  return u;
+};
 const newKey = () => crypto.randomUUID().replace(/-/g, '');
 /** 결과를 알 수 없는 실패(응답이 끊겼거나 서버 오류) — 서버에서는 이미 샀을 수 있다. */
 const uncertain = (code: string) => code === 'NETWORK' || code === 'UNKNOWN';
@@ -123,10 +147,10 @@ export function ExtraBuyButton({
   // 팝업이 열려 있는 동안만 견적 응답을 반영한다(닫은 뒤 늦게 온 답이 토스트를 띄우지 않게).
   const openRef = useRef(false);
   const copy = COPY[item];
-  const fetchQuote = () => fetchSharedQuote(item);
+  const fetchQuote = (fresh = false) => fetchSharedQuote(item, fresh);
   useEffect(() => {
     // ＋가 그려질 때 — 받아 둔 값이 없거나 오래됐을 때만 미리 받는다(팝업을 빈 칸 없이 바로 열기 위해).
-    const have = sharedQuote[item];
+    const have = cachedQuote(item);
     if (!have || Date.now() - have.at > QUOTE_FRESH_MS) void fetchSharedQuote(item);
   }, [item]);
   const pickKind = (q: Quote) =>
@@ -142,10 +166,13 @@ export function ExtraBuyButton({
       showHeaderToast({ title: '다시 보낼 수 있는 슬롯이 없어요' });
       return;
     }
-    const entry = sharedQuote[item];
-    // 오래된 '오늘은 더 못 삼'은 믿지 않는다(자정이 지나 다시 살 수 있다) — 그때는 새로 받아 판단한다.
+    const entry = cachedQuote(item);
+    // 오래된 '오늘은 더 못 삼'은 믿지 않는다 — 그때는 새로 받아 판단한다.
     const expired = !!entry && entry.q.price === null && Date.now() - entry.at > QUOTE_FRESH_MS;
-    const c = entry && !expired ? entry.q : null;
+    // 결과를 모르는 구매가 남아 있으면 받아 둔 견적으로 열지 않는다 — 같은 키를 다시 쓸지는 서버의 새 '산 횟수'로
+    // 정해야 한다(옛 횟수로 열면 이미 들어간 구매를 한 번 더 '산 것'처럼 보여 주게 된다).
+    const settling = unsettledOf(item) !== null;
+    const c = entry && !expired && !settling ? entry.q : null;
     if (c && c.price === null) {
       showHeaderToast({ title: '오늘은 더 살 수 없어요' });
       return;
@@ -155,17 +182,18 @@ export function ExtraBuyButton({
     setSlot(slots?.[0]?.slot ?? null);
     setOpen(true);
     openRef.current = true;
-    loadQuote(!c);
+    loadQuote(!c, settling);
   };
 
   /** 새 견적 — 미리 받은 값이 있으면 조용히 갈아 끼우고(값이 같으면 화면 변화 없음), 없을 때만 오류로 닫는다. */
-  const loadQuote = (firstLoad: boolean) => {
-    void fetchQuote().then((r) => {
+  const loadQuote = (firstLoad: boolean, fresh = false) => {
+    void fetchQuote(fresh).then((r) => {
       if (!openRef.current) return;
       if (r.status !== 'success') {
         if (firstLoad) {
           close();
-          showError(ERR[r.code] ?? '불러오지 못했어요');
+          // 견적 조회 실패 — 구매가 아니라 '결과를 확인하지 못했다'는 문구를 쓰지 않는다.
+          showError(r.code === 'NETWORK' ? '불러오지 못했어요. 연결을 확인해 주세요.' : (uncertain(r.code) ? '불러오지 못했어요' : (ERR[r.code] ?? '불러오지 못했어요')));
         }
         return;
       }
@@ -194,18 +222,19 @@ export function ExtraBuyButton({
     const usedSlot = slot;
     const spent = amountIn(kind, expectedPrice);
     const before = sharedQuote[item];
-    // 결과를 모르는 채 끝난 같은 번째 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
-    const prev = unsettledKey[item];
-    const day = kstDateString(); // 어제 남은 키를 오늘 구매에 다시 쓰지 않게
-    const key = prev && prev.bought === quote.bought && prev.day === day ? prev.key : newKey();
-    const attempt = { key, bought: quote.bought, day };
+    // 결과를 모르는 채 끝난 같은 번째·같은 슬롯 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
+    const prev = unsettledOf(item);
+    const key = prev && prev.bought === quote.bought && prev.slot === usedSlot ? prev.key : newKey();
+    const attempt: Unsettled = { key, bought: quote.bought, slot: usedSlot, day: kstDateString(), at: Date.now() };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
     onOptimistic?.(usedSlot);
     if (before) {
       const bought = before.q.bought + 1;
+      bumpQuoteSeq(item); // 구매 전에 떠난 조회의 답이 아래 값을 덮지 않게
       sharedQuote[item] = {
         at: before.at,
+        day: before.day,
         q: {
           ...before.q,
           bought,
@@ -222,7 +251,10 @@ export function ExtraBuyButton({
       busy.current = false;
       if (r.status === 'success') {
         delete unsettledKey[item];
-        onBought?.();
+        // 같은 키의 재전송(앞선 요청이 이미 들어가 있었다) — 그 구매는 서버 값으로 화면에 이미 반영됐거나 곧 반영되므로,
+        // 이번 낙관 반영은 되돌린다(안 되돌리면 횟수가 하나 더 올라간 채 남는다).
+        if (r.duplicate) onRollback?.(usedSlot);
+        else onBought?.();
         showHeaderToast({
           title: copy.title,
           detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 샀어요`,
@@ -235,9 +267,9 @@ export function ExtraBuyButton({
         else delete sharedQuote[item];
         onRollback?.(usedSlot);
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
-        if (uncertain(r.code)) resyncWhenOnline(() => router.refresh());
+        if (uncertain(r.code)) resyncWhenOnline('route', () => router.refresh());
       }
-      void fetchQuote(); // 서버 값으로 다시 맞춰 둔다
+      void fetchQuote(true); // 서버 값으로 다시 맞춰 둔다(구매 전에 떠난 조회와 섞이지 않게 새로)
     });
   };
 

@@ -85,6 +85,9 @@ export async function buyExtra(
         await towerExtraLock(tx, userId, serverId);
       }
     } catch (e) {
+      // 규칙 위반(PointShopError)일 때만 재확인한다 — DB 오류(교착·잠금 시간 초과)면 트랜잭션이 이미 중단돼
+      // 다음 조회가 25P02로 죽고, 로그에는 그 오류만 남아 원래 원인이 사라진다.
+      if (!(e instanceof PointShopError)) throw e;
       const dup = await alreadyBought();
       if (dup) return dup;
       throw e;

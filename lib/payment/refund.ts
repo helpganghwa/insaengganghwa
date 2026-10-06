@@ -23,8 +23,11 @@ import { getPlayProductPurchase } from './play-api';
 import { getPortonePayment } from './portone';
 import { parseBpProduct } from './purchase';
 
-/** 회수하지 못한 잔여분(= 유저가 이미 소비한 유상분). 0이면 전액 회수 성공. */
-export type ClawbackShortfall = { diamond: number; boxes: number };
+/**
+ * 회수하지 못한 잔여분(= 유저가 이미 소비한 유상분). 0이면 전액 회수 성공.
+ * mileageDiamond = 이미 쓴 마일리지를 다이아로 회수하려다 모자란 양(상품 지급분 부족 diamond와 별개 — 합이 총 미회수 다이아).
+ */
+export type ClawbackShortfall = { diamond: number; boxes: number; mileageDiamond?: number };
 
 export type RefundResult =
   | { ok: true; already: boolean; short?: ClawbackShortfall }
@@ -253,7 +256,7 @@ export async function refundPurchase(
   const paidMonth = kstMonthString(order.paidAt ?? order.createdAt);
 
   // 부족분은 tx 밖으로 반환 — 알림은 커밋 후 발화(롤백 시 허위 알림 방지 + 잠금 보유 중 외부 HTTP 금지).
-  const outcome = await db.transaction(async (tx): Promise<{ shortPreview: ClawbackPreview | null; unrecovered: string[] } | null> => {
+  const outcome = await db.transaction(async (tx): Promise<{ shortPreview: ClawbackPreview | null; unrecovered: string[]; mileageDiamondShort: number } | null> => {
     const [locked] = await tx
       .select({ status: iapOrders.status, grantSkipped: iapOrders.grantSkipped })
       .from(iapOrders)
@@ -265,6 +268,8 @@ export async function refundPurchase(
     let shortPreview: ClawbackPreview | null = null;
     // 자동 회수하지 않는 몫(마일리지 부족·프리미엄 수령분·후원 구간 보상) — 조용히 남기지 않고 경보로 드러낸다(2026-09-24 감사).
     const unrecovered: string[] = [];
+    // 이미 쓴 마일리지를 다이아로 회수하려다 모자란 양 — 어드민 환불 결과에 그대로 알린다(사전 점검이 본 숫자와 짝).
+    let mileageDiamondShort = 0;
 
     await tx.update(iapOrders).set({ status: 'refunded' }).where(eq(iapOrders.id, order.id));
 
@@ -368,16 +373,20 @@ export async function refundPurchase(
           }
         }
       }
-      // 마일리지 부족분(이미 쓴 몫) — 교환 비율(마일리지 10 = 💎25)로 다이아에서 회수한다(10-06, POINT-SHOP §5).
+      // 마일리지 부족분(이미 쓴 몫) — 교환 비율(마일리지 10 = 💎25)로 다이아에서 회수한다(10-06, POINT-SHOP §6).
       // 상품 지급분 회수보다 뒤에 둔다(그쪽이 우선). 0까지만 깎고, 모자라면 미회수로 남긴다. best-effort 세이브포인트.
       if (mileageShort > 0) {
         // 올림 — 1~9점 부족도 💎로 회수한다(내림이면 조용히 사라진다, 10-06 검수).
         const dia = mileageShortfallDiamond(mileageShort);
         try {
           const got = await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`));
-          if (got < BigInt(dia)) unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
+          if (got < BigInt(dia)) {
+            mileageDiamondShort = dia - Number(got);
+            unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
+          }
         } catch (e) {
           console.error(`[points] 마일리지 부족분 다이아 회수 실패 user=${order.userId} order=${order.id}`, e);
+          mileageDiamondShort = dia;
           unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 다이아 회수 실패`);
         }
       }
@@ -428,9 +437,10 @@ export async function refundPurchase(
       amountKrw: order.amountKrw,
       clawbackDone,
     });
-    return { shortPreview, unrecovered };
+    return { shortPreview, unrecovered, mileageDiamondShort };
   });
   const short = outcome?.shortPreview ?? null;
+  const mileageDiamondShort = outcome?.mileageDiamondShort ?? 0;
   if (outcome && outcome.unrecovered.length > 0) {
     await raisePaymentAlert('REFUND_EXTRA_UNRECOVERED', {
       paymentId,
@@ -451,8 +461,12 @@ export async function refundPurchase(
       short: {
         diamond: Math.max(0, short.diamondNeed - short.diamondHave),
         boxes: Math.max(0, short.boxesNeed - short.boxesHave),
+        ...(mileageDiamondShort > 0 ? { mileageDiamond: mileageDiamondShort } : {}),
       },
     };
   }
+  // 상품 지급분은 다 회수했지만 이미 쓴 마일리지의 다이아 환산분이 모자란 경우 — 알림(REFUND_EXTRA_UNRECOVERED)은 위에서 나갔고,
+  // 호출부(어드민)에도 같은 숫자를 돌려준다. 안 돌려주면 강제 환불 뒤 화면이 '전액 회수'처럼 보인다.
+  if (mileageDiamondShort > 0) return { ok: true, already: false, short: { diamond: 0, boxes: 0, mileageDiamond: mileageDiamondShort } };
   return { ok: true, already: false };
 }

@@ -68,7 +68,8 @@ const EX_PART_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } 
  */
 // 결과를 모르는 채 끝난 교환의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 교환됐을 수 있어, 잔액이 그대로인 동안
 // 같은 상품을 다시 누르면 같은 키로 보낸다(서버가 같은 교환으로 알아보고 두 번 받지 않는다). 잔액이 바뀌었으면 새 키.
-const unsettledExchange = new Map<string, { key: string; balance: number }>();
+// 오래된 키(10분)는 버린다 — 잔액이 우연히 같은 값으로 돌아온 한참 뒤의 교환이 옛 요청의 재전송으로 처리되지 않게.
+const unsettledExchange = new Map<string, { key: string; balance: number; at: number }>();
 
 function PointExchange({
   kind,
@@ -113,7 +114,7 @@ function PointExchange({
     busy.current = true;
     const id = `${kind}-${target}-${pack}`;
     const prev = unsettledExchange.get(id);
-    const key = prev && prev.balance === balance ? prev.key : crypto.randomUUID().replace(/-/g, '');
+    const key = prev && prev.balance === balance && Date.now() - prev.at < 10 * 60_000 ? prev.key : crypto.randomUUID().replace(/-/g, '');
     onSpend(cost);
     if (target === 'diamond') optimisticAdjust(BigInt(pack * POINT_EXCHANGE_DIAMOND));
     startEx(async () => {
@@ -132,14 +133,21 @@ function PointExchange({
       }
       // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 교환) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 교환됐을 수 있다.
       const unknown = r.code === 'NETWORK' || r.code === 'UNKNOWN';
-      if (unknown) unsettledExchange.set(id, { key, balance });
+      if (unknown) unsettledExchange.set(id, { key, balance, at: Date.now() });
       else unsettledExchange.delete(id);
       onSpend(-cost);
       if (target === 'diamond') optimisticAdjust(-BigInt(pack * POINT_EXCHANGE_DIAMOND));
       showError(
-        r.code === 'INSUFFICIENT_POINTS' ? `${kindKo}가 부족해요` : (commonErrTitle(r.code) ?? '교환하지 못했어요'),
+        r.code === 'INSUFFICIENT_POINTS'
+          ? `${kindKo}가 부족해요`
+          : // 응답을 못 받은 경우 — 서버에서는 교환됐을 수 있어 '전송되지 않았다'고 말하지 않는다.
+            r.code === 'NETWORK'
+            ? '결과를 확인하지 못했어요. 연결을 확인해 주세요.'
+            : r.code === 'UNKNOWN'
+              ? '결과를 확인하지 못했어요. 잠시 후 다시 확인해 주세요.'
+              : (commonErrTitle(r.code) ?? '교환하지 못했어요'),
       );
-      if (unknown) resyncWhenOnline(() => router.refresh());
+      if (unknown) resyncWhenOnline('route', () => router.refresh());
     });
   };
 

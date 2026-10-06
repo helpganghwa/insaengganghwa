@@ -44,7 +44,7 @@ export async function expandAvatarSlots(
       .for('update');
     if (!locked) throw new AvatarSlotError('NO_CHARACTER');
     // 같은 요청 키(응답 유실 뒤 재전송)는 이미 산 것 — 두 번 결제하지 않는다(CLAUDE §3.4).
-    const [prev] = (await tx.execute(sql`select 1 from diamond_ledger where reason = 'avatar_slot' and ref = ${ref} limit 1`)) as unknown as unknown[];
+    const [prev] = (await tx.execute(sql`select 1 from diamond_ledger where user_id = ${userId}::uuid and reason = 'avatar_slot' and ref = ${ref} limit 1`)) as unknown as unknown[];
     // 잔액을 함께 돌려준다 — 재전송 판정이어도 화면의 💎가 서버 값에 정확히 맞게.
     if (prev) return { limit: profileSlotLimit(locked.bonus), duplicate: true, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
     const rows = await tx

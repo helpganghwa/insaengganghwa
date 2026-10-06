@@ -33,7 +33,6 @@ export class PointShopError extends Error {
       | 'BAD_REQUEST'
       | 'SLOT_LOCKED'
       | 'SLOT_BUSY'
-      | 'NO_CHARACTER'
       | 'PRICE_CHANGED',
   ) {
     super(code);

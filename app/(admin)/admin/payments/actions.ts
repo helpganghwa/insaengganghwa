@@ -168,7 +168,9 @@ export async function refundOrderAction(
     forced: !preview.sufficient,
     // 미회수 잔액 — 운영자가 즉시 후속 조치(채권/제재)를 판단할 수 있게 그대로 알린다.
     message: r.short
-      ? `환불 완료 — 회수하지 못한 잔액: 다이아 ${r.short.diamond.toLocaleString('ko-KR')} · 상자 ${r.short.boxes.toLocaleString('ko-KR')}(미회수로 기록·알림 발송)`
+      ? `환불 완료 — 회수하지 못한 잔액: 다이아 ${(r.short.diamond + (r.short.mileageDiamond ?? 0)).toLocaleString('ko-KR')}${
+          r.short.mileageDiamond ? `(그중 이미 쓴 마일리지 환산분 ${r.short.mileageDiamond.toLocaleString('ko-KR')})` : ''
+        } · 상자 ${r.short.boxes.toLocaleString('ko-KR')}(미회수로 기록·알림 발송)`
       : undefined,
   } as const;
 }

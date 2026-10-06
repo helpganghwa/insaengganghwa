@@ -99,7 +99,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`
       insert into point_ledger (user_id, server_id, kind, delta, note, ref)
       select ${uid}::uuid, w.server_id, 'mileage', -w.balance, '탈퇴 소멸',
-             ${'withdraw:' + uid + ':' + Date.now()} || ':s' || w.server_id
+             ${'withdraw:' + userId + ':' + Date.now()} || ':s' || w.server_id
       from mileage_wallets w where w.user_id = ${uid} and w.balance > 0
     `);
     await tx.execute(sql`delete from mileage_wallets where user_id = ${uid}`);

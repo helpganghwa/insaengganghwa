@@ -6,6 +6,8 @@
 //   --server=N  그 서버만 처리한다(적재·잔액 재계산 모두). 생략하면 전 서버. 한 서버에서만 적립이 빠졌을 때
 //               다른 서버의 잔액 행까지 잠그지 않으려고 둔다. 실행하면 먼저 그 DB의 서버 목록을 보여 준다.
 //   ⚠ 프로덕션은 URL을 명시(PROD_DATABASE_URL 값)하고 0197·0211 적용 뒤에만.
+//   ⚠ 포인트 교환·추가 횟수(2026-10-06)부터 잔액은 유저가 쓸 때마다 바뀐다. 잔액 재계산은 문장 시작 시점의 원장 합을
+//     적으므로, 그 사이 커밋된 지출이 한동안 되살아날 수 있다(다시 실행하면 맞는다). 이용자가 적은 시간에 돌리고, 끝난 뒤 한 번 더 dry-run으로 차이가 0인지 본다.
 import postgres from 'postgres';
 import { meleePointsForRank, mileageForKrw } from '../lib/game/balance';
 import { paidProduct } from '../lib/game/shop/catalog';

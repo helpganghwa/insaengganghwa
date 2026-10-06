@@ -10,6 +10,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { BackTitle } from '@/components/BackNav';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
+import { resyncWhenOnline } from '@/lib/client/resync';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
@@ -263,18 +264,32 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     resendSlots.length > 0 &&
     !board.slots.some((x) => x.state === 'offer');
   // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 슬롯의 새 파견지(또는 실패 시 원래 상태)를 받아 온다.
-  const reloadBoard = () =>
+  /** 서버 보드로 갈아 끼운다. 받아 왔으면 true. */
+  const reloadBoard = (): Promise<boolean> =>
     expeditionBoardAction()
       .catch(() => null)
       .then((fresh) => {
-        if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
+        if (fresh && fresh.ok && fresh.board) {
+          setBoard(fresh.board);
+          return true;
+        }
+        return false;
       });
   // 다시 보내기를 사는 동안 — 되돌릴 보드와 잠가 둘 슬롯. 새 파견지를 받기 전에는 그 카드를 누를 수 없게 한다
   // (이전 지역·시간으로 배정 팝업이 열려, 보낸 파견이 화면과 다른 곳으로 가던 문제 — 10-06 최종 검수).
+  // 수령·출발이 쓰는 pendingSlot과 따로 둔다 — 한 값을 같이 쓰면 다른 슬롯의 수령이 이 잠금을 풀어 버린다(10-06 2차 검수).
   const resendPrev = useRef<ExpeditionBoard | null>(null);
+  const [resendSlot, setResendSlot] = useState<number | null>(null);
+  /** 다시 보내기 뒤 보드 재조회 — 못 받아 오면(연결 끊김) 연결이 돌아온 뒤 다시 받는다. 산 파견지가 안 보인 채 남지 않게. */
+  const settleResend = () =>
+    void reloadBoard()
+      .then((ok) => {
+        if (!ok) resyncWhenOnline('expedition-board', () => void reloadBoard());
+      })
+      .finally(() => setResendSlot(null));
 
   const onCardTap = (s: ExpeditionBoardSlot) => {
-    if (pendingSlot === s.slot) return;
+    if (pendingSlot === s.slot || resendSlot === s.slot) return;
     if (s.state === 'locked') {
       toast.showHeaderToast({ title: `합산 강화 ${(s.unlock?.enhanceSum ?? 0).toLocaleString('ko-KR')} 달성 시 열려요` });
       return;
@@ -313,7 +328,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 // 낙관 반영(10-06) — 사는 즉시 그 슬롯을 '새 파견 찾는 중'으로, 헤더 M을 하나 올린다(＋는 오퍼가 생겨 숨는다).
                 onOptimistic={(slot) => {
                   resendPrev.current = board;
-                  setPendingSlot(slot);
+                  setResendSlot(slot);
                   setBoard((b) => ({
                     ...b,
                     extraBought: b.extraBought + 1,
@@ -324,11 +339,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                   // 원래 보드로 먼저 되돌리고(재조회가 실패해도 가짜 오퍼가 남지 않게) 서버 값으로 다시 맞춘다.
                   if (resendPrev.current) setBoard(resendPrev.current);
                   resendPrev.current = null;
-                  void reloadBoard().finally(() => setPendingSlot(null));
+                  settleResend();
                 }}
                 onBought={() => {
                   resendPrev.current = null;
-                  void reloadBoard().finally(() => setPendingSlot(null));
+                  settleResend();
                 }}
               />
             ) : null}
@@ -361,7 +376,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
-        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} resendable={canResend} onTap={() => onCardTap(s)} />
+        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot || resendSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} resendable={canResend} onTap={() => onCardTap(s)} />
       ))}
 
       {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
@@ -380,7 +395,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <ModalButton tone="ghost" onClick={() => setAssignSlot(null)}>
                   닫기
                 </ModalButton>
-                <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
+                <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot || resendSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
                   파견 보내기
                 </ModalButton>
               </>

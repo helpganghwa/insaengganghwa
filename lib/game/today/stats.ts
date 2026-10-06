@@ -129,7 +129,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         where user_id = ${userId}::uuid and server_id = ${serverId} and created_at >= ${KST_DAY_START}
       ),
       raids_today as (
-        -- 참여 횟수 = 일일 한도 카운터(호스팅+참여 합산, 최대 5) — 공격 횟수(레이드당 다회)와 다름
+        -- 참여 횟수 = 일일 한도 카운터(호스팅+참여 합산, 기본 5 + 그날 산 '오늘 레이드 +1회') — 공격 횟수(레이드당 다회)와 다름
         -- (2026-07-16: 공격 수를 세어 '참여 10회'로 표기되던 버그).
         select coalesce((select started_count from raid_daily_counts
           where user_id = ${userId}::uuid and server_id = ${serverId}

@@ -27,7 +27,7 @@ const MSG: Record<string, string> = {
   NO_EQUIPMENT: '무기·방어구·장신구 3종을 모두 장착해야 합니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   PROFILE_GEN_IN_PROGRESS: '이미 아바타를 생성하고 있어요. 완료 후 다시 시도해 주세요.',
-  PROFILE_LIMIT: '아바타 보관함이 가득 찼어요. 아바타 관리에서 보관함을 늘릴 수 있어요.',
+  PROFILE_LIMIT: '아바타 보관함이 가득 찼어요.',
   RATE_LIMITED: '아바타 생성은 한 시간에 30개까지 가능합니다. 잠시 후 다시 시도해 주세요.',
   PAUSED: '지금은 아바타 생성을 잠시 멈췄어요. 다시 열리면 이용해 주세요.',
   UNKNOWN: '알 수 없는 오류가 발생했습니다.',

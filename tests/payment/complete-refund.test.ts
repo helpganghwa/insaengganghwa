@@ -163,4 +163,33 @@ describe.skipIf(skip)('머니경로 — completePurchase/refundPurchase DB 통�
     expect(await readDiamond()).toBe(d0); // 회수 완료
     expect(await readStatus(id)).toBe('refunded');
   });
+
+  it('환불 → 이미 쓴 마일리지는 다이아로 회수하고, 모자란 양은 결과에 담아 돌려준다', async () => {
+    const pid = newPid('refund_mileage');
+    const id = await insertOrder(pid);
+
+    mockGet.mockResolvedValue(paid(pid));
+    expect((await completePurchase(pid)).ok).toBe(true);
+    // ₩1,500 → 마일리지 15점 적립. 전부 써 버린 상황(지갑 0) → 부족 15점 = 💎50(10점당 25, 올림).
+    const [w] = (await testDb.execute(
+      sql`select balance::int b from mileage_wallets where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`,
+    )) as unknown as { b: number }[];
+    expect(w?.b).toBeGreaterThanOrEqual(15);
+    await testDb.execute(sql`update mileage_wallets set balance = 0 where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`);
+    // 다이아는 상품 지급분(300) + 20만 남김 → 상품분은 다 회수되고, 마일리지 환산 50 중 20만 회수된다.
+    await testDb.execute(
+      sql`update characters set diamond = ${DIAMOND + 20} where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}`,
+    );
+
+    mockGet.mockResolvedValue(cancelled(pid));
+    const r = await refundPurchase(pid);
+    expect(r).toEqual({ ok: true, already: false, short: { diamond: 0, boxes: 0, mileageDiamond: 30 } });
+    expect(await readDiamond()).toBe(0n);
+    expect(await readStatus(id)).toBe('refunded');
+    // 전액 회수가 아니므로 환불 기록은 clawback_done = false.
+    const [rf] = (await testDb.execute(
+      sql`select clawback_done from iap_refunds where order_id = ${id.toString()}::bigint`,
+    )) as unknown as { clawback_done: boolean }[];
+    expect(rf?.clawback_done).toBe(false);
+  });
 });

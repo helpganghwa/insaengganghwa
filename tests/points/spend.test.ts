@@ -139,12 +139,10 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     expect(again).toMatchObject({ duplicate: true, spent: 0, bought: 1 });
     expect((await now()).mp).toBe(95);
     expect(await extrasToday(testDb, U, S, 'tower')).toBe(1);
-    await testDb.execute(sql`update tower_progress set losses=4 where user_id=${U}::uuid and server_id=${S}`);
     // 팝업에서 본 가격과 다르면(다른 탭에서 먼저 샀다) 사지 않는다.
     await expect(buyExtra(U, S, { item: 'tower', kind: 'melee', key: key(), expectedPrice: 5 })).rejects.toMatchObject({ code: 'PRICE_CHANGED' });
     const b = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: key(), expectedPrice: 10 });
     expect(b).toMatchObject({ spent: 10, bought: 2, next: null });
-    await testDb.execute(sql`update tower_progress set losses=5 where user_id=${U}::uuid and server_id=${S}`);
     await expect(buyExtra(U, S, { item: 'tower', kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'MAX_REACHED' });
     expect((await now()).mp).toBe(85);
   });

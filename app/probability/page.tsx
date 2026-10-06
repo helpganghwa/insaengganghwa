@@ -295,6 +295,10 @@ export default async function ProbabilityPage() {
           <b>미션이 열리는 순간(생성·새로고침 시)</b> 아래 셋 중 하나로 확정 추첨되어 카드에 그대로
           표시됩니다 — 수령 시점의 추첨은 대성공 판정 하나뿐입니다. 아래 수량은 파견 1회분 기본값입니다.
         </P>
+        <P>
+          대난투 포인트·마일리지로 사는 <b>파견 다시 보내기</b>는 그날 그 슬롯을 한 번 더 보낼 수 있게 할 뿐이며, 새로 받는
+          파견도 아래와 같은 확률로 추첨됩니다.
+        </P>
         <Table head={['본상', '확률', '기본 수량(배율 전)']}>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
             <Td>보급 상자만</Td>
