@@ -1,8 +1,6 @@
 import {
   RAID_BASE_ATTACKS,
   RAID_CRIT_RATE_BP,
-  MILEAGE_PER_MELEE_POINT,
-  POINT_EXTRA_PRICES,
   RAID_DAILY_CAP,
   RAID_DURATION_OPTIONS_MS,
   RAID_MAX_CONCURRENT_PER_USER,
@@ -185,9 +183,8 @@ export default function Doc() {
           <Fn n={3} />
         </LI>
         <LI>
-          횟수 옆 ＋로 &lsquo;오늘 레이드 +1회&rsquo;를 하루 {fmtInt(POINT_EXTRA_PRICES.raid.length)}번까지
-          살 수 있다. 대난투 포인트 {POINT_EXTRA_PRICES.raid.join(' · ')}(그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT})이며,
-          하루 횟수와 동시 진행 칸이 함께 하나씩 늘어난다. 쓰지 않은 추가 횟수는 자정 초기화 때 소멸한다.
+          횟수 옆 ＋로 대난투 포인트나 마일리지를 써서 레이드 횟수를 추가로 살 수 있다. 하루 횟수와 동시 진행 칸이
+          함께 하나씩 늘어난다. 쓰지 않은 추가 횟수는 자정 초기화 때 소멸한다.
         </LI>
         <LI>
           동시에 진행할 수 있는 레이드는 {fmtInt(RAID_MAX_CONCURRENT_PER_USER)}개이며, 직접 소환한

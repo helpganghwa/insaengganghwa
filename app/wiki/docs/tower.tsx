@@ -1,7 +1,5 @@
 import {
   TOWER_AVATAR_MULT,
-  MILEAGE_PER_MELEE_POINT,
-  POINT_EXTRA_PRICES,
   TOWER_DAILY_ATTEMPTS,
   TOWER_FLOORS,
   TOWER_HP_MULT,
@@ -52,8 +50,7 @@ export default function Doc() {
           자정에 다시 채워진다. 단, 토벌은 이겨도 한 번 줄어든다.
         </LI>
         <LI>
-          &lsquo;오늘 도전&rsquo; 옆 ＋로 추가 도전을 하루 {POINT_EXTRA_PRICES.tower.length}번까지 살 수 있다. 대난투
-          포인트 {POINT_EXTRA_PRICES.tower.join(' · ')}(그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT})이며, 오르기·토벌 어디에나 쓸 수 있다.
+          &lsquo;오늘 도전&rsquo; 옆 ＋로 대난투 포인트나 마일리지를 써서 추가 도전을 살 수 있다. 오르기·토벌 어디에나 쓸 수 있고,
           쓰지 않은 추가 도전은 자정 초기화 때 소멸한다.
         </LI>
         <LI>{TOWER_SECTION}층마다 특별층이 있다.</LI>
