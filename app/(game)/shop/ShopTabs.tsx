@@ -46,7 +46,7 @@ const TABS: { key: Tab; label: string; free: FreeSlot | null }[] = [
   { key: 'weekly', label: '주간', free: 'weekly' },
   { key: 'monthly', label: '월간', free: 'monthly' },
   { key: 'charge', label: '충전', free: 'signup' },
-  // 포인트(2026-09-08, docs/POINT-SHOP.md) — 대난투 포인트·마일리지 잔액과 최근 적립. 상품은 준비중.
+  // 포인트(docs/POINT-SHOP.md) — 대난투 포인트·마일리지 잔액·최근 적립과 💎·보급 상자 교환(§5).
   { key: 'points', label: '포인트', free: null },
 ];
 
@@ -92,8 +92,13 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
   };
   const run = (target: ExTarget, pack: number) => {
     if (pending || busy.current) return;
-    busy.current = true;
     const cost = unit(pack);
+    // 무장한 사이 다른 카드로 이미 썼을 수 있다 — 실행 직전에 잔액을 다시 본다.
+    if (have < cost) {
+      showError(`${kindKo}가 부족해요`);
+      return;
+    }
+    busy.current = true;
     const key = crypto.randomUUID().replace(/-/g, '');
     setSpent((x) => x + cost);
     if (target === 'diamond') optimisticAdjust(BigInt(pack * POINT_EXCHANGE_DIAMOND));

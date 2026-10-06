@@ -22,6 +22,7 @@ import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 import { RAID_MAX_PARTICIPANTS,
   expeditionSlotsFor,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
+  RAID_DAILY_CAP,
   TOWER_DAILY_ATTEMPTS,
   TOWER_FLOORS,
 } from '@/lib/game/balance';
@@ -215,7 +216,7 @@ export default async function HomePage() {
             (select case when coalesce((select started_count from raid_daily_counts
                      where user_id = ${userId}::uuid and server_id = ${serverId}
                        and kst_date = (now() at time zone 'Asia/Seoul')::date), 0)
-                   >= 5 + coalesce((select sum(count) from point_extra_buys
+                   >= ${RAID_DAILY_CAP} + coalesce((select sum(count) from point_extra_buys
                      where user_id = ${userId}::uuid and server_id = ${serverId} and item = 'raid'
                        and kst_date = (now() at time zone 'Asia/Seoul')::date), 0) then 0
               else (select count(*)::int from raids r
@@ -247,11 +248,15 @@ export default async function HomePage() {
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and status = 'running' and complete_at > now()) as exp_running,
-            -- 오늘(KST) 출발한 슬롯 수 — 슬롯당 하루 1회(2026-09-01) '오늘 파견 N/M'의 N(보낸 기준).
-            (select count(distinct slot)::int from expeditions
+            -- 오늘(KST) 출발 횟수 — '오늘 파견 N/M'의 N(보낸 기준, 다시 보내기 포함 — 파견 화면 헤더와 같은 값).
+            (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
                  and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as exp_started_today,
+            -- 오늘 산 '파견 다시 보내기'(10-06) — 열린 슬롯에 더해 '오늘 파견 N/M'의 M.
+            (select coalesce(sum(count), 0)::int from point_extra_buys
+               where user_id = ${userId}::uuid and server_id = ${serverId} and item = 'expedition'
+                 and kst_date = (now() at time zone 'Asia/Seoul')::date) as exp_extra,
             -- 파견 대기 칸 수 계산용 — 열린 슬롯(계정 합산 강화) - 진행 - 완료.
             (select coalesce(sum(enhance_level), 0)::int from user_equipment
                where user_id = ${userId}::uuid and server_id = ${serverId}) as exp_enhance_sum,
@@ -315,6 +320,7 @@ export default async function HomePage() {
         exp_claimable: number;
         exp_running: number; exp_started_today: number;
         exp_enhance_sum: number;
+        exp_extra: number | null;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
         melee_champ: string | null;
@@ -342,7 +348,7 @@ export default async function HomePage() {
         const expClaimable = row.exp_claimable ?? 0;
         // 카드 문구(2026-08-31): '오늘 파견 N/M' — N = 오늘 출발한 슬롯(보낸 기준), M = 열린 슬롯. 남았으면 강조색.
         // 수령할 완료 파견은 숫자 배지(counts)로.
-        const expOpen = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0));
+        const expOpen = Math.max(0, expeditionSlotsFor(row.exp_enhance_sum ?? 0)) + Number(row.exp_extra ?? 0);
         const expSent = Math.min(expOpen, Number(row.exp_started_today ?? 0));
         expeditionDesc = `오늘 파견 ${expSent}/${expOpen}`;
         expeditionCanSend = expSent < expOpen;

@@ -275,7 +275,7 @@ export async function reorderProfiles(ids: string[]): Promise<ActionState> {
 }
 
 /** 아바타 보관함 늘리기(2026-10-06) — 💎1,000에 10칸, 최대 200칸, 서버별. */
-export async function expandAvatarSlotsAction(): Promise<
+export async function expandAvatarSlotsAction(key: string): Promise<
   { status: 'ok'; limit: number } | { status: 'error'; code: string }
 > {
   const userId = await getSessionUserId();
@@ -284,7 +284,7 @@ export async function expandAvatarSlotsAction(): Promise<
   const __b = await actionBlock();
   if (__b) return { status: 'error', code: __b };
   try {
-    const r = await expandAvatarSlots(userId, await getActiveServerId());
+    const r = await expandAvatarSlots(userId, await getActiveServerId(), key);
     revalidatePath('/me/profiles');
     revalidatePath('/me');
     return { status: 'ok', limit: r.limit };

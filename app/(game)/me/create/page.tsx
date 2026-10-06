@@ -8,7 +8,8 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { PROFILE_GENERATION_DIAMOND, profileGenPrice } from '@/lib/game/balance';
+import { PROFILE_BASE_SLOTS, PROFILE_GENERATION_DIAMOND, profileGenPrice } from '@/lib/game/balance';
+import { avatarSlotLimit } from '@/lib/game/profile/slots';
 import { getMyProfileQueueInfo, hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 import { getAvatarGenPause } from '@/lib/game/profile/gen-pause';
 
@@ -46,6 +47,8 @@ export default async function CreateProfilePage() {
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId))),
     // 첫생성 할인 판정 — 성공 생성 이력(accepted/admin-grant), 삭제로 리셋 불가.
     hasGeneratedCustomAvatar(userId, serverId),
+    // 보관 한도(기본 100 + 늘린 칸, 10-06) — 가득 찼을 때 요청 전에 안내.
+    avatarSlotLimit(userId, serverId),
     ]),
     3500,
     'me.create.page',
@@ -54,6 +57,7 @@ export default async function CreateProfilePage() {
   const equipped = _r?.[1] ?? [];
   const queueInfo = _r?.[2] ?? null;
   const profileCount = _r?.[3]?.[0]?.n ?? 0;
+  const profileLimit = _r?.[5] ?? PROFILE_BASE_SLOTS;
   const hasCustom = _r?.[4] ?? false;
   const price = profileGenPrice(hasCustom);
   const pause = await getAvatarGenPause();
@@ -81,6 +85,7 @@ export default async function CreateProfilePage() {
         basePrice={PROFILE_GENERATION_DIAMOND}
         firstGenDiscount={!hasCustom}
         profileCount={profileCount}
+        profileLimit={profileLimit}
         equipped={equippedSlots}
         queue={queueInfo}
         paused={pause.paused}

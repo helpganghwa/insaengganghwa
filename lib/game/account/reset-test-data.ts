@@ -36,6 +36,7 @@ export async function resetTestAccountsGameData(): Promise<{ users: number; guil
     // 만들므로 아래 테이블들과 무교차: 봉인 기간의 길드·레이드·대난투·점령전·채팅·월드
     // 피드·연대기는 테스트 계정만 만들 수 있었다(일반 카카오 콜백 차단).
     const [guildCount] = (await tx.execute(sql`select count(*)::int n from guilds`)) as unknown as { n: number }[];
+    await tx.execute(sql`delete from point_extra_buys`);
     await tx.execute(sql`delete from guild_emblem_escrows`);
     await tx.execute(sql`delete from guild_audit_log`);
     await tx.execute(sql`delete from guild_tax_distributions`);

@@ -46,6 +46,7 @@ export function CreateProfileForm({
   basePrice,
   firstGenDiscount,
   profileCount,
+  profileLimit,
   equipped,
   queue,
   paused,
@@ -56,6 +57,8 @@ export function CreateProfileForm({
   basePrice: number;
   firstGenDiscount: boolean;
   profileCount: number;
+  /** 보관 한도(기본 100 + 늘린 칸). */
+  profileLimit: number;
   equipped: EquippedSlot[];
   queue: ProfileQueueInfo | null;
   /** 운영자 일시 중지(gen-pause) — 버튼을 잠그고 안내를 띄운다. 서버도 같은 스위치로 막는다. */
@@ -116,8 +119,12 @@ export function CreateProfileForm({
     // 요청 전 선검사 — 보유 상한 초과 시 즉시 안내(서버 왕복·confirm 없이).
     // ⚠ 상한 검사가 부족 게이트보다 먼저 — 생성 자체가 불가능한 유저를 충전으로 유도하지
     // 않는다(적대 검수).
-    if (profileCount >= PROFILE_MAX) {
-      showError(`프로필은 최대 ${PROFILE_MAX}개까지 보유할 수 있어요`);
+    if (profileCount >= profileLimit) {
+      showError(
+        profileLimit >= PROFILE_MAX
+          ? `아바타는 최대 ${PROFILE_MAX}개까지 보유할 수 있어요`
+          : '아바타 보관함이 가득 찼어요. 아바타 관리에서 늘릴 수 있어요',
+      );
       return;
     }
     if (!gate.ensure(price)) return; // 부족 → 충전 유도 팝업

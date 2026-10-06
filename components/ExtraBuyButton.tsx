@@ -79,7 +79,14 @@ export function ExtraBuyButton({
   const busy = useRef(false);
   // 팝업 한 번에 요청 키 하나 — 응답이 끊겨 다시 눌러도 서버가 같은 구매로 알아본다. 사면 새 키.
   const keyRef = useRef('');
+  // 팝업이 열려 있는 동안만 견적 응답을 반영한다(닫은 뒤 늦게 온 답이 토스트를 띄우지 않게).
+  const openRef = useRef(false);
   const copy = COPY[item];
+
+  const close = () => {
+    openRef.current = false;
+    setOpen(false);
+  };
 
   const openPopup = () => {
     if (item === 'expedition' && (!slots || slots.length === 0)) {
@@ -89,6 +96,7 @@ export function ExtraBuyButton({
     setQuote(null);
     setSlot(slots?.[0]?.slot ?? null);
     setOpen(true);
+    openRef.current = true;
     keyRef.current = crypto.randomUUID().replace(/-/g, '');
     loadQuote();
   };
@@ -97,13 +105,14 @@ export function ExtraBuyButton({
     void extraQuoteAction(item)
       .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
       .then((r) => {
+        if (!openRef.current) return;
         if (r.status !== 'success') {
-          setOpen(false);
+          close();
           showError(ERR[r.code] ?? '불러오지 못했어요');
           return;
         }
         if (r.price === null) {
-          setOpen(false);
+          close();
           showHeaderToast({ title: '오늘은 더 살 수 없어요' });
           return;
         }
@@ -131,7 +140,7 @@ export function ExtraBuyButton({
       busy.current = false;
       if (r.status === 'success') {
         keyRef.current = crypto.randomUUID().replace(/-/g, '');
-        setOpen(false);
+        close();
         onBought?.();
         showHeaderToast({
           title: copy.title,
@@ -139,8 +148,11 @@ export function ExtraBuyButton({
         });
       } else {
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
-        if (r.code === 'MAX_REACHED' || r.code === 'NOT_NEEDED') setOpen(false);
-        if (r.code === 'PRICE_CHANGED') loadQuote();
+        if (r.code === 'MAX_REACHED' || r.code === 'NOT_NEEDED') close();
+        if (r.code === 'PRICE_CHANGED') {
+          setQuote(null); // 새 값을 받기 전엔 옛 가격으로 못 누르게
+          loadQuote();
+        }
       }
     });
   };
@@ -152,17 +164,19 @@ export function ExtraBuyButton({
     <>
       <PlusChip label={`${copy.title} 사기`} onClick={openPopup} className={className} size={size} />
       {open ? (
-        <ModalShell onClose={() => setOpen(false)} label={copy.title}>
+        <ModalShell onClose={close} label={copy.title}>
           <ModalLayout
             title={copy.title}
             subtitle={copy.desc}
             footer={
               <>
-                <ModalButton tone="ghost" onClick={() => setOpen(false)}>
+                <ModalButton tone="ghost" onClick={close}>
                   닫기
                 </ModalButton>
                 {/* 3초 재확인(10-06) — 첫 탭은 무장, 3초 안에 다시 누르면 구매. 잔액이 모자라면 무장하지 않고 토스트. */}
                 <ModalConfirmButton
+                  // 통화·슬롯을 바꾸면 3초 재확인을 처음부터(무장한 채 다른 통화로 사지 않게).
+                  key={`${kind}-${slot ?? 0}`}
                   onArm={() => {
                     if (!quote?.price || pending) return false;
                     if (!enough(kind)) {
@@ -189,7 +203,7 @@ export function ExtraBuyButton({
                       role="radio"
                       aria-checked={slot === s.slot}
                       onClick={() => setSlot(s.slot)}
-                      className={`flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold whitespace-nowrap transition ${
+                      className={`min-w-[30%] flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold break-keep transition ${
                         slot === s.slot
                           ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
                           : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'

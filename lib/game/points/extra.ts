@@ -51,28 +51,38 @@ export async function buyExtra(
   return db.transaction(async (tx) => {
     // ⓪ 같은 키로 다시 온 요청(응답 유실 뒤 재전송) — 이미 산 구매다. 콘텐츠 검사보다 먼저 봐야 한다:
     //    산 뒤엔 한도가 풀려 있어 검사가 NOT_NEEDED로 막고, 산 사람이 '아직 남았다'는 오류를 보게 된다.
-    const [prev] = (await tx.execute(sql`select 1 from point_ledger where kind = ${kind} and ref = ${ref}`)) as unknown as unknown[];
-    if (prev) {
+    // 통화와 무관하게 ref로 찾는다(오류 뒤 통화를 바꿔 같은 키로 다시 눌러도 같은 구매).
+    const alreadyBought = async () => {
+      const [prev] = (await tx.execute(sql`select 1 from point_ledger where ref = ${ref} limit 1`)) as unknown as unknown[];
+      if (!prev) return null;
       const bought = await extrasToday(tx, userId, serverId, item, undefined, day);
-      return { item, slot, kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true };
-    }
+      return { item, slot, kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true } satisfies ExtraBuyResult;
+    };
+    const dup0 = await alreadyBought();
+    if (dup0) return dup0;
 
-    // ① 콘텐츠 검사 — 지금 한도가 찼을 때만(화면의 ＋와 같은 조건). 지출 전에 막아 쓸모없는 구매를 없앤다.
-    if (item === 'expedition') {
-      try {
-        await expeditionResendCheck(tx, userId, serverId, slot, day);
-      } catch (e) {
-        if (e instanceof ExpeditionError) {
-          if (e.code === 'SLOT_LOCKED') throw new PointShopError('SLOT_LOCKED');
-          if (e.code === 'DAILY_LIMIT') throw new PointShopError('SLOT_BUSY');
-          throw new PointShopError('NOT_NEEDED');
+    // ① 콘텐츠 검사 — 실패하면 같은 키의 첫 요청이 그새 커밋했는지 한 번 더 본다(잠금 대기 뒤라 이제 보인다).
+    try {
+      if (item === 'expedition') {
+        try {
+          await expeditionResendCheck(tx, userId, serverId, slot, day);
+        } catch (e) {
+          if (e instanceof ExpeditionError) {
+            if (e.code === 'SLOT_LOCKED') throw new PointShopError('SLOT_LOCKED');
+            if (e.code === 'DAILY_LIMIT') throw new PointShopError('SLOT_BUSY');
+            throw new PointShopError('NOT_NEEDED');
+          }
+          throw e;
         }
-        throw e;
+      } else if (item === 'raid') {
+        if ((await raidExtraCheck(tx, userId, serverId, day)) === 'not_needed') throw new PointShopError('NOT_NEEDED');
+      } else if ((await towerExtraCheck(tx, userId, serverId, day)) === 'not_needed') {
+        throw new PointShopError('NOT_NEEDED');
       }
-    } else if (item === 'raid') {
-      if ((await raidExtraCheck(tx, userId, serverId, day)) === 'not_needed') throw new PointShopError('NOT_NEEDED');
-    } else if ((await towerExtraCheck(tx, userId, serverId, day)) === 'not_needed') {
-      throw new PointShopError('NOT_NEEDED');
+    } catch (e) {
+      const dup = await alreadyBought();
+      if (dup) return dup;
+      throw e;
     }
 
     // ② 오늘 구매 행 — 만들고 그 상품의 오늘 행 전부를 잠근다(파견은 칸이 달라도 가격은 상품 전체 횟수로).

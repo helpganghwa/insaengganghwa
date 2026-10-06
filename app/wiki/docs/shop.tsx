@@ -1,3 +1,5 @@
+import { josa } from 'josa';
+
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
@@ -126,7 +128,7 @@ export default function Doc() {
         <LI>대난투 포인트는 매회 대난투 결과 순위에 따라, 마일리지는 결제 금액의 1%가 쌓인다. 둘 다 서버마다 따로 쌓인다.</LI>
         <LI>
           포인트 탭에서 대난투 포인트 1을 다이아 {fmtInt(POINT_EXCHANGE_DIAMOND)} 또는 보급 상자 {fmtInt(POINT_EXCHANGE_BOX)}개로
-          바꿀 수 있다. 마일리지는 {fmtInt(MILEAGE_PER_MELEE_POINT)}이 대난투 포인트 1과 같다.
+          바꿀 수 있다. {josa(`마일리지 ${fmtInt(MILEAGE_PER_MELEE_POINT)}#{이}`)} 대난투 포인트 1과 같다.
         </LI>
         <LI>
           한 번에 {POINT_EXCHANGE_PACKS.map((p) => fmtInt(p)).join(' · ')}포인트씩 바꾸며, 상자는 무기·방어구·장신구 중 고른다.
