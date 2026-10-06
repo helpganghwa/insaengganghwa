@@ -40,7 +40,7 @@ const EXPIRE: Record<PointExtraItem, string> = {
 
 const ERR: Record<string, string> = {
   PRICE_CHANGED: '가격이 바뀌었어요. 다시 확인해 주세요',
-  MAX_REACHED: '오늘은 더 살 수 없어요',
+  MAX_REACHED: '오늘은 더 구매할 수 없어요',
   // 파견만 — 보낼 수 있는 파견이 남아 있으면 다시 보내기를 사지 않는다(탑·레이드는 남아 있어도 살 수 있다).
   NOT_NEEDED: '지금 보낼 수 있는 파견이 있어요',
   SLOT_BUSY: '그 슬롯은 지금 다시 보낼 수 없어요',
@@ -174,7 +174,7 @@ export function ExtraBuyButton({
     const settling = unsettledOf(item) !== null;
     const c = entry && !expired && !settling ? entry.q : null;
     if (c && c.price === null) {
-      showHeaderToast({ title: '오늘은 더 살 수 없어요' });
+      showHeaderToast({ title: '오늘은 더 구매할 수 없어요' });
       return;
     }
     setQuote(c);
@@ -199,7 +199,7 @@ export function ExtraBuyButton({
       }
       if (r.price === null) {
         close();
-        showHeaderToast({ title: '오늘은 더 살 수 없어요' });
+        showHeaderToast({ title: '오늘은 더 구매할 수 없어요' });
         return;
       }
       setQuote(r);
