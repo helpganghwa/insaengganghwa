@@ -3,7 +3,6 @@ import { josa } from 'josa';
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
 import { MINOR_MONTHLY_LIMIT_KRW } from '@/lib/legal/content';
-import { MILEAGE_PER_MELEE_POINT, POINT_EXCHANGE_BOX, POINT_EXCHANGE_DIAMOND, POINT_EXCHANGE_PACKS } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
 import { fmtInt } from '../fmt';
@@ -126,14 +125,7 @@ export default function Doc() {
       <H2 id="points">포인트</H2>
       <UL>
         <LI>대난투 포인트는 매회 대난투 결과 순위에 따라, 마일리지는 결제 금액의 1%가 쌓인다. 둘 다 서버마다 따로 쌓인다.</LI>
-        <LI>
-          포인트 탭에서 대난투 포인트 1을 다이아 {fmtInt(POINT_EXCHANGE_DIAMOND)} 또는 보급 상자 {fmtInt(POINT_EXCHANGE_BOX)}개로
-          바꿀 수 있다. {josa(`마일리지 ${fmtInt(MILEAGE_PER_MELEE_POINT)}#{이}`)} 대난투 포인트 1과 같다.
-        </LI>
-        <LI>
-          한 번에 {POINT_EXCHANGE_PACKS.map((p) => fmtInt(p)).join(' · ')}포인트씩 바꾸며, 상자는 무기·방어구·장신구 중 고른다.
-          한 달에 바꿀 수 있는 양에 제한은 없다.
-        </LI>
+        <LI>포인트 탭에서 대난투 포인트나 마일리지를 다이아 또는 보급 상자로 바꿀 수 있다. 상자는 무기·방어구·장신구 중 고른다.</LI>
         <LI>
           파견·레이드·탑은 횟수 옆 ＋로 같은 포인트를 써서 횟수를 추가로 구매할 수 있다. 쓰지 않은 추가 횟수는 자정이 지나면
           사라진다(<DocLink slug="expedition">파견</DocLink>·<DocLink slug="raid">레이드</DocLink>·

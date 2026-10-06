@@ -99,7 +99,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
         <ModalShell onClose={() => setOpen(false)} label="아바타 보관함 늘리기">
           <ModalLayout
             title="아바타 보관함 늘리기"
-            subtitle={`아바타를 ${PROFILE_SLOT_STEP}개 더 보관할 수 있어요.`}
+            subtitle={`보관함을 ${PROFILE_SLOT_STEP}칸 더 늘려요.`}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setOpen(false)}>

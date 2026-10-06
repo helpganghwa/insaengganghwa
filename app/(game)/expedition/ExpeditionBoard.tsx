@@ -301,7 +301,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }
     // 오늘 완료(슬롯당 하루 1회, 2026-09-01) — 공용 헤더 토스트로만 안내.
     if (s.state === 'done') {
-      toast.showHeaderToast({ title: canResend ? '위 ＋를 눌러 오늘 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요' });
+      toast.showHeaderToast({ title: canResend ? '위쪽 ＋를 누르면 오늘 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요' });
       return;
     }
     // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
