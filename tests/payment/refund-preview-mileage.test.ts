@@ -1,7 +1,7 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { mileageShortfallDiamond } from '@/lib/game/balance';
-import { creditMileageForOrder } from '@/lib/game/points/wallet';
+import { creditMileageForOrder, revokeMileageForOrder } from '@/lib/game/points/wallet';
 import { formatClawbackShortfall, previewClawback } from '@/lib/payment/refund';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -72,5 +72,26 @@ describe.skipIf(!U)('환불 사전 점검 — 마일리지 사용분(DB 통합)'
     // 지급이 있었던 주문이면 상품 지급분 위에 더해진다.
     const full = await previewClawback(U, 1, 'first_special', { orderId });
     expect(full.diamondNeed).toBe(legacy.diamondNeed + 150);
+  });
+  // 탈퇴하면 마일리지는 소멸한다. 그 계정이 재가입한 뒤 옛 결제가 환불되면 그 적립분은 지갑에 없으므로 '쓴 몫'과
+  // 똑같이 부족분으로 본다(새 캐릭터의 다이아에서 회수, 어드민은 강제 환불로만 — 2026-10-06 운영 결정).
+  it('탈퇴로 소멸한 마일리지도 쓴 몫과 똑같이 부족분으로 잡힌다(재가입 계정의 옛 결제)', async () => {
+    const orderId = `${TAG}_p2`;
+    expect(await creditMileageForOrder(testDb, { userId: U, serverId: MILE_SRV, orderId, amountKrw: 39_900, note: '테스트 ₩39,900' })).toBe(399);
+    // 탈퇴 처리와 같은 모양 — 지갑을 지우면서 그 잔액만큼 소멸 행을 넣는다(원장 합 0, 지갑 행 없음).
+    await testDb.execute(sql`
+      with w as (delete from mileage_wallets where user_id=${U}::uuid and server_id=${MILE_SRV} returning server_id, balance)
+      insert into point_ledger (user_id, server_id, kind, delta, note, ref)
+      select ${U}::uuid, w.server_id, 'mileage', -w.balance, '탈퇴 소멸', ${'withdraw:' + TAG} from w where w.balance > 0`);
+
+    const p = await previewClawback(U, 1, 'first_special', { orderId, grantSkipped: true });
+    expect(p.mileageShort).toBe(399);
+    expect(p.mileageDiamond).toBe(mileageShortfallDiamond(399));
+    expect(p.mileageDiamond).toBe(1000);
+    expect(p.sufficient).toBe(false); // 일반 환불은 막히고 강제 환불로만 진행된다
+
+    // 실제 회수도 같은 판정 — 가져갈 잔액이 없어 전부 부족분이 된다.
+    const rv = await testDb.transaction((tx) => revokeMileageForOrder(tx as never, { userId: U, orderId }));
+    expect(rv).toEqual({ credited: 399, taken: 0 });
   });
 });
