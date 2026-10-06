@@ -20,22 +20,22 @@ import { buyExtraAction, extraQuoteAction } from '@/app/(game)/shop/point-action
 export type ResendSlot = { slot: number; label: string };
 
 const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }> = {
-  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯에 새 파견지를 바로 받아요.', done: '새 파견지가 나왔어요' },
-  raid: { title: '오늘 레이드 +1회', desc: '소환·참여를 한 번 더, 동시 진행도 하나 늘어요.', done: '오늘 레이드 +1회' },
-  tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 할 수 있어요. 오르기·토벌 모두 쓸 수 있어요.', done: '오늘 도전 +1회' },
+  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯에 새 파견지를 받아요.', done: '새 파견지가 나왔어요' },
+  raid: { title: '오늘 레이드 +1회', desc: '소환이나 참여를 한 번 더 할 수 있고, 동시에 진행할 수 있는 레이드도 하나 늘어요.', done: '오늘 레이드 +1회' },
+  tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 해요. 오르기와 토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 const amountIn = (kind: PointKind, pt: number) => (kind === 'mileage' ? pt * MILEAGE_PER_MELEE_POINT : pt);
 /** 가격 표기 — 대난투 '5pt', 마일리지 '마일리지 50'(숫자만 두면 무엇의 50인지 모른다). */
-const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt` : `마일리지 ${fmt(amountIn(kind, pt))}`);
-/** 사기 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). pt는 '포인트'로 읽혀 '로'. */
-const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt로 사기` : josa(`${amountLabel(kind, pt)}#{으로} 사기`));
+const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}포인트` : `마일리지 ${fmt(amountIn(kind, pt))}`);
+/** 구매 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). 대난투는 'N포인트로'. */
+const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}포인트로 구매` : josa(`${amountLabel(kind, pt)}#{으로} 구매`));
 /** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관·환불 없음, 10-06 확정). */
 const EXPIRE: Record<PointExtraItem, string> = {
-  expedition: '보내지 않은 추가 파견은 자정 초기화 때 소멸돼요',
-  raid: '쓰지 않은 추가 횟수는 자정 초기화 때 소멸돼요',
-  tower: '쓰지 않은 추가 도전은 자정 초기화 때 소멸돼요',
+  expedition: '보내지 않은 추가 파견은 자정이 지나면 사라져요',
+  raid: '쓰지 않은 추가 횟수는 자정이 지나면 사라져요',
+  tower: '쓰지 않은 추가 도전은 자정이 지나면 사라져요',
 };
 
 const ERR: Record<string, string> = {
@@ -278,7 +278,7 @@ export function ExtraBuyButton({
 
   return (
     <>
-      <PlusChip label={`${copy.title} 사기`} onClick={openPopup} className={className} size={size} />
+      <PlusChip label={`${copy.title} 구매`} onClick={openPopup} className={className} size={size} />
       {open ? (
         <ModalShell onClose={close} label={copy.title}>
           <ModalLayout
@@ -303,7 +303,7 @@ export function ExtraBuyButton({
                   onConfirm={buy}
                   disabled={!quote || pending}
                 >
-                  {!quote ? '불러오는 중' : pending ? '사는 중' : buyLabel(kind, price!)}
+                  {!quote ? '불러오는 중' : pending ? '구매 중' : buyLabel(kind, price!)}
                 </ModalConfirmButton>
               </>
             }
@@ -353,7 +353,7 @@ export function ExtraBuyButton({
                         kind === k ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-800 dark:text-zinc-100'
                       }`}
                     >
-                      {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '…'}
+                      {price !== null && quote ? (k === 'melee' ? `${fmt(price)}포인트` : fmt(amountIn(k, price))) : '…'}
                     </span>
                   </button>
                 ))}

@@ -92,7 +92,7 @@ function PointExchange({
   const busy = useRef(false);
   const have = balance - spent;
   const unit = (pack: number) => (kind === 'mileage' ? pack * MILEAGE_PER_MELEE_POINT : pack);
-  const unitLabel = (pack: number) => (kind === 'melee' ? `${unit(pack)}pt` : unit(pack).toLocaleString('ko-KR'));
+  const unitLabel = (pack: number) => (kind === 'melee' ? `${unit(pack)}포인트` : unit(pack).toLocaleString('ko-KR'));
   const kindKo = kind === 'melee' ? '대난투 포인트' : '마일리지';
   const rate = kind === 'melee' ? '1포인트' : `마일리지 ${MILEAGE_PER_MELEE_POINT}`;
 
