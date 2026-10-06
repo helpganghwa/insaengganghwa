@@ -630,7 +630,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
               <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100">
                 <Attempts left={attemptsLeft} total={attemptsTotal} />
               </span>
-              {attemptsLeft <= 0 ? extraPlusPill : null}
+              {extraPlusPill}
             </span>
           }
         />

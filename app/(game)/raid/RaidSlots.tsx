@@ -319,7 +319,7 @@ export function RaidSlots({
   slots: slotsIn,
   dailyUsed,
   dailyCap: dailyCapIn,
-  canBuyExtra = false,
+  extraLeft = 0,
   freeOpenLeft = 0,
   openRaids = [],
   nowIso,
@@ -328,8 +328,8 @@ export function RaidSlots({
   slots: number;
   dailyUsed: number;
   dailyCap: number;
-  /** '오늘 레이드 +1회' ＋ 노출(하루·동시 한도가 찼고 오늘 더 살 수 있을 때, 10-06). */
-  canBuyExtra?: boolean;
+  /** 오늘 더 살 수 있는 '오늘 레이드 +1회' 수 — 0보다 크면 ＋를 보인다(10-06). */
+  extraLeft?: number;
   /** 오늘 남은 무료 소환(하루 첫 소환 무료, 2026-09-08) — 서버가 계산(적용 시작 시각 포함). 0이면 유료. */
   freeOpenLeft?: number;
   /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
@@ -354,7 +354,7 @@ export function RaidSlots({
   const payCost = free ? 0 : openCost;
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
-  // '오늘 레이드 +1회' 낙관 반영(10-06) — 사는 즉시 하루 한도·칸을 하나 늘리고 ＋를 숨긴다. 서버 재렌더(새 dailyCap)가 오면 0으로.
+  // '오늘 레이드 +1회' 낙관 반영(10-06) — 사는 즉시 하루 한도·칸을 하나 늘린다. 서버 재렌더(새 dailyCap)가 오면 0으로.
   const [optExtra, setOptExtra] = useState(0);
   const [seenCap, setSeenCap] = useState(dailyCapIn);
   if (seenCap !== dailyCapIn) {
@@ -405,7 +405,7 @@ export function RaidSlots({
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>
           {dailyUsed}/{dailyCap}
         </span>
-        {canBuyExtra && optExtra === 0 ? (
+        {extraLeft - optExtra > 0 ? (
           <ExtraBuyButton
             item="raid"
             className="ml-1.5 align-middle"

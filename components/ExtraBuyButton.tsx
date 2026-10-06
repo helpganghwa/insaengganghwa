@@ -30,9 +30,9 @@ const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(
 const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt로 사기` : josa(`${amountLabel(kind, pt)}#{으로} 사기`));
 /** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관 없음). */
 const EXPIRE: Record<PointExtraItem, string> = {
-  expedition: '자정 전에 보내 주세요',
-  raid: '자정에 초기화 돼요',
-  tower: '자정에 초기화 돼요',
+  expedition: '자정에 초기화돼요',
+  raid: '자정에 초기화돼요',
+  tower: '자정에 초기화돼요',
 };
 
 const ERR: Record<string, string> = {

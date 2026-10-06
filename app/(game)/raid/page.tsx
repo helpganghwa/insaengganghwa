@@ -337,11 +337,8 @@ export default async function RaidPage() {
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP + raidExtra}
-        // ＋는 하루 한도나 동시 한도가 찼을 때만(10-06 확정), 오늘 살 수 있는 만큼까지.
-        canBuyExtra={
-          raidExtra < POINT_EXTRA_PRICES.raid.length &&
-          ((dailyRow[0]?.c ?? 0) >= RAID_DAILY_CAP + raidExtra || activeCells.length >= concurrentCap)
-        }
+        // ＋는 남은 횟수와 상관없이 오늘 더 살 수 있으면 늘 보인다(10-06).
+        extraLeft={POINT_EXTRA_PRICES.raid.length - raidExtra}
         freeOpenLeft={freeOpenLeft}
         openRaids={openRaids}
         nowIso={new Date().toISOString()}
