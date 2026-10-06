@@ -88,19 +88,23 @@ const todayCount = (day: string | null, count: number, today: string) =>
 /**
  * 오늘 출발 횟수를 다 쓴 칸 — 칸마다 하루 1회(2026-09-01, 투표 26:12) + 그 칸에 산 '다시 보내기'(10-06).
  * 판정은 출발 시각의 KST 날짜. 규칙 적용 전 출발분(구 규칙)은 세지 않는다.
+ * today = null이면 DB 트랜잭션 시각(now())의 KST 날짜로 센다 — 출발은 started_at = now()로 찍으므로 판정과 기록이 같은
+ * 시각을 본다. 앱 시계로 세면 자정 직전에 시작해 잠금을 기다린 출발이 '새 날'로 판정되고 '어제'로 찍혀, 그 칸을
+ * 다음 날 한 번 더 보낼 수 있다(10-06 최종 검수).
  */
-async function slotsUsedUp(tx: Tx, userId: string, serverId: number, today: string): Promise<Set<number>> {
+async function slotsUsedUp(tx: Tx, userId: string, serverId: number, today: string | null): Promise<Set<number>> {
+  const day = today === null ? sql`(now() at time zone 'Asia/Seoul')::date` : sql`${today}::date`;
   const rows = (await tx.execute(sql`
     select s.slot, s.n, coalesce(b.count, 0)::int as extra
     from (
       select slot, count(*)::int as n from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId}
-        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
+        and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${day}
         and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz
       group by slot
     ) s
     left join point_extra_buys b on b.user_id = ${userId}::uuid and b.server_id = ${serverId}
-      and b.kst_date = ${today}::date and b.item = 'expedition' and b.slot = s.slot
+      and b.kst_date = ${day} and b.item = 'expedition' and b.slot = s.slot
   `)) as unknown as { slot: number; n: number; extra: number }[];
   return new Set(rows.filter((r) => Number(r.n) >= 1 + Number(r.extra)).map((r) => Number(r.slot)));
 }
@@ -329,8 +333,8 @@ export function startExpedition(
     // 새 배정 게이트 — 합산 강화가 문턱 아래로 내려가면 그 슬롯은 새로 못 보낸다(진행분은 별도).
     if (slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId))) throw new ExpeditionError('SLOT_LOCKED');
     // 슬롯당 하루 1회(2026-09-01, 투표 26:12) — 판정은 **출발 시각**(KST 일자). 수령은 언제든.
-    // 다시 보내기를 산 칸은 그만큼 더 출발할 수 있다(10-06).
-    if ((await slotsUsedUp(tx, userId, serverId, kstDateString())).has(slot)) throw new ExpeditionError('DAILY_LIMIT');
+    // 다시 보내기를 산 칸은 그만큼 더 출발할 수 있다(10-06). 날짜는 DB 시각으로(started_at = now()와 같은 기준).
+    if ((await slotsUsedUp(tx, userId, serverId, null)).has(slot)) throw new ExpeditionError('DAILY_LIMIT');
 
     const [offer] = (await tx.execute(sql`
       select id::text, region, duration_ms::text, reward from expeditions

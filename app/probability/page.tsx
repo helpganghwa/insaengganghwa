@@ -39,9 +39,11 @@ import {
   EXPEDITION_REGIONS,
   EXPEDITION_AS_MULT_COEF,
   EXPEDITION_AS_MULT_EXP,
+  TOWER_FLOORS,
   TOWER_HUNT_BOX_BP,
   TOWER_HUNT_DOUBLE_BP,
   TOWER_HUNT_SPREAD,
+  TOWER_SECTION,
   towerHuntBox,
   towerHuntRange,
   expeditionAsBonusBp,
@@ -347,10 +349,7 @@ export default async function ProbabilityPage() {
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
             <Td>다이아</Td>
             <Td>100%</Td>
-            <Td>
-              그 층 기준값의 ±{Math.round(TOWER_HUNT_SPREAD * 100)}% 범위에서 고르게(예: 50층{' '}
-              {towerHuntRange(50).min}~{towerHuntRange(50).max}, 100층 {towerHuntRange(100).min}~{towerHuntRange(100).max})
-            </Td>
+            <Td>층마다 정해진 범위 안에서 고르게(아래 층별 표)</Td>
           </tr>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
             <Td>다이아 두 배</Td>
@@ -360,15 +359,63 @@ export default async function ProbabilityPage() {
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
             <Td>보급 상자</Td>
             <Td>{pct(TOWER_HUNT_BOX_BP)}</Td>
-            <Td>
-              구간별 {towerHuntBox(1)}~{towerHuntBox(100)}개(무기·방어구·장신구 각 3분의 1)
-            </Td>
+            <Td>구간마다 정해진 개수(아래 층별 표, 무기·방어구·장신구 각 3분의 1)</Td>
           </tr>
         </Table>
         <P>
           세 추첨은 서로 독립입니다. 대난투 포인트·마일리지로 사는 <b>탑 추가 도전</b>은 도전 횟수만 늘리며 위 확률에는
           영향을 주지 않습니다.
         </P>
+        <P>
+          다이아 범위는 층마다 정해진 기준값에서 ±{Math.round(TOWER_HUNT_SPREAD * 100)}%를 반올림한 값입니다. 낮은 층은
+          반올림 때문에 폭이 좁거나 없습니다(예: 1층 {towerHuntRange(1).min}~{towerHuntRange(1).max}). 범위 안의 값은 고르게
+          나옵니다(만분율로 나눠 뽑아, 값마다 확률 차이는 0.01%p 이하).
+        </P>
+        {/* 구간 요약 — 구간 첫 층과 특별층(구간 마지막 층)의 범위. 전 층 값은 아래 접힌 표. */}
+        <Table head={['구간', '첫 층 다이아', '특별층 다이아', '상자']}>
+          {Array.from({ length: TOWER_FLOORS / TOWER_SECTION }, (_, i) => {
+            const first = i * TOWER_SECTION + 1;
+            const last = first + TOWER_SECTION - 1;
+            const a = towerHuntRange(first);
+            const b = towerHuntRange(last);
+            return (
+              <tr key={first} className="border-t border-zinc-100 dark:border-zinc-900">
+                <Td>
+                  {first}~{last}층
+                </Td>
+                <Td>
+                  {a.min}~{a.max}
+                </Td>
+                <Td>
+                  {b.min}~{b.max}
+                </Td>
+                <Td>{towerHuntBox(first)}개</Td>
+              </tr>
+            );
+          })}
+        </Table>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-[11.5px] font-semibold text-zinc-600 dark:text-zinc-300">
+            층별 전체 보기(1~{TOWER_FLOORS}층)
+          </summary>
+          <div className="mt-1.5">
+            <Table head={['층', '다이아(최소~최대)', '상자']}>
+              {Array.from({ length: TOWER_FLOORS }, (_, i) => {
+                const f = i + 1;
+                const r = towerHuntRange(f);
+                return (
+                  <tr key={f} className="border-t border-zinc-100 dark:border-zinc-900">
+                    <Td>{f}층</Td>
+                    <Td>
+                      {r.min}~{r.max}
+                    </Td>
+                    <Td>{towerHuntBox(f)}개</Td>
+                  </tr>
+                );
+              })}
+            </Table>
+          </div>
+        </details>
       </Sec>
 
     </main>

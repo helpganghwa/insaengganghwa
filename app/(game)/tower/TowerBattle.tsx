@@ -44,7 +44,7 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, total = T
   left: number;
   /** 오늘 전체 도전(하루 3 + 오늘 산 추가 도전). */
   total?: number;
-  /** 남은 도전 0일 때 붙일 추가 도전 ＋. */
+  /** '오늘 도전' 옆에 붙일 추가 도전 ＋(오늘 더 살 수 있을 때만 호출부가 넘긴다). */
   plus?: React.ReactNode;
   turn?: string | null;
   onBack?: () => void;
@@ -157,7 +157,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
   attemptsBefore: number;
   /** 오늘 전체 도전 = 하루 3 + 오늘 산 추가 도전(10-06). */
   attemptsTotal?: number;
-  /** 남은 도전이 0일 때 결과 줄 '오늘 도전' 옆에 붙일 추가 도전 ＋(살 수 있을 때만 호출부가 넘긴다). 머리에는 두지 않는다(＋가 두 개 보였다). */
+  /** 결과 줄 '오늘 도전' 옆에 붙일 추가 도전 ＋(오늘 더 살 수 있을 때만 호출부가 넘긴다). 머리에는 두지 않는다(＋가 두 개 보였다). */
   plus?: React.ReactNode;
   result: TowerChallengeResult | null;
   /** 판정 전(낙관적 전환) 보여 줄 내 탑 전투력 — 결과가 오면 결과 값을 쓴다. */

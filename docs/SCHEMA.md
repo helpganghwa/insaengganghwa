@@ -412,3 +412,12 @@ create table milestone_firsts (
 ### 14.5 title_legacy_locks (0223)
 - 조건이 바뀐 칭호(육관왕)의 기존 보유자 잠금 — 새 조건을 채우면 자동 해제. 탈퇴 시 삭제.
 
+---
+
+## 15. 포인트 상점 추가 횟수 (0226, docs/POINT-SHOP.md §6)
+
+### 15.1 point_extra_buys (유저·서버·날짜·상품·칸당 1행)
+- `user_id` · `server_id` · `kst_date` date · `item`(expedition | raid | tower) · `slot` smallint(파견 칸, 나머지는 0) · `count` — PK 전 칸. 그날 산 추가 횟수. 다음 구매 가격과 각 콘텐츠의 하루 한도(레이드 하루·동시, 탑 남은 도전, 파견 칸별 출발)가 오늘 행을 더해 판정한다. 날짜가 바뀌면 새 행이라 따로 초기화하지 않는다. 탈퇴 시 삭제.
+
+### 15.2 characters.avatar_slot_bonus
+- 아바타 보관함 늘린 칸(서버별). 한도 = 100 + 이 값(최대 200), 💎1,000에 10칸씩.

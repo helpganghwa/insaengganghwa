@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { josa } from 'josa';
 
@@ -9,6 +10,7 @@ import { useDiamondGate } from '@/components/DiamondGate';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalButton, ModalConfirmButton, ModalLayout } from '@/components/ModalLayout';
 import { PlusChip } from '@/components/ui/PlusChip';
+import { resyncWhenOnline } from '@/lib/client/resync';
 import { useResourceToast } from '@/components/ResourceToast';
 import { PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_STEP } from '@/lib/game/balance';
 
@@ -22,14 +24,16 @@ const fmt = (n: number) => n.toLocaleString('ko-KR');
  * 다이아는 낙관적으로 먼저 깎고(실패 시 되돌림), 한도는 서버 액션의 재렌더로 바뀐다(그 전까지 낙관 표시).
  */
 export function AvatarSlotKicker({ count, limit }: { count: number; limit: number }) {
+  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamondActions();
+  const { optimisticAdjust, setBase } = useDiamondActions();
   const gate = useDiamondGate();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const busy = useRef(false);
-  // 팝업 한 번에 요청 키 하나 — 응답이 끊겨 다시 눌러도 서버가 같은 구매로 알아본다.
-  const keyRef = useRef('');
+  // 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 늘렸을 수 있어, 한도가 그대로인 동안은
+  // 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 💎를 두 번 받지 않는다). 한도가 바뀌었으면 그 구매는 들어간 것.
+  const unsettled = useRef<{ key: string; limit: number } | null>(null);
   // 산 직후 서버 재렌더가 오기 전까지 보여 줄 한도 — 새 limit이 오면 그 값을 쓴다.
   const [optimistic, setOptimistic] = useState<number | null>(null);
   const [seen, setSeen] = useState(limit);
@@ -49,18 +53,27 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
     }
     busy.current = true;
     setOpen(false);
+    const prev = unsettled.current;
+    const key = prev && prev.limit === limit ? prev.key : crypto.randomUUID().replace(/-/g, '');
+    const before = optimistic;
     optimisticAdjust(-BigInt(PROFILE_SLOT_COST_DIAMOND));
     setOptimistic(next);
     start(async () => {
-      const r = await expandAvatarSlotsAction(keyRef.current).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
+      const r = await expandAvatarSlotsAction(key).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       busy.current = false;
       if (r.status === 'ok') {
-        keyRef.current = crypto.randomUUID().replace(/-/g, '');
+        unsettled.current = null;
+        // 헤더 💎를 서버 잔액으로 맞춘다 — 같은 키의 재전송(앞선 요청이 이미 들어가 있었다)이어도 두 번 깎여 보이지 않게.
+        setBase(BigInt(r.diamondBalance));
         showHeaderToast({ title: '아바타 보관함', detail: `${fmt(r.limit)}칸으로 늘었어요` });
         return;
       }
+      const unknown = r.code === 'NETWORK' || r.code === 'UNKNOWN';
+      unsettled.current = unknown ? { key, limit } : null;
       optimisticAdjust(BigInt(PROFILE_SLOT_COST_DIAMOND));
-      setOptimistic(null);
+      setOptimistic(before); // 직전 표시값으로(앞선 구매의 낙관값을 지우지 않게)
+      // 결과를 모르면 화면을 서버 값으로 다시 맞춘다 — 서버에서는 늘렸을 수 있다.
+      if (unknown) resyncWhenOnline(() => router.refresh());
       if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(PROFILE_SLOT_COST_DIAMOND);
       else if (r.code === 'SLOT_MAX') showError(`보관함은 최대 ${PROFILE_MAX}칸까지 늘릴 수 있어요`);
       else if (r.code === 'RATE_LIMITED') showError('요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.');
@@ -75,10 +88,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
         {fmt(count)} / {fmt(shown)}
       </span>
       {canExpand ? (
-        <PlusChip label="아바타 보관함 늘리기" onClick={() => {
-            keyRef.current = crypto.randomUUID().replace(/-/g, '');
-            setOpen(true);
-          }} />
+        <PlusChip label="아바타 보관함 늘리기" onClick={() => setOpen(true)} />
       ) : null}
       {open ? (
         <ModalShell onClose={() => setOpen(false)} label="아바타 보관함 늘리기">

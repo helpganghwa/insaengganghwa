@@ -201,20 +201,15 @@ export function openRaid(input: {
 }
 
 /**
- * '오늘 레이드 +1회' 구매 전 검사(포인트 상점 트랜잭션 안에서) — 하루 한도나 동시 진행 한도가 찼을 때만 산다.
- * 남아 있는데 사면 쓸모없는 지출이라 막는다(화면의 ＋도 이때만 보인다).
+ * '오늘 레이드 +1회' 구매 전 잠금(포인트 상점 트랜잭션 안에서) — 소환·참여와 같은 그날 횟수 행을 먼저 잠근다
+ * (bumpDailyOrThrow와 같은 순서 — 구매와 소환·참여가 서로의 한도를 엇갈려 읽지 않게).
+ * 한도가 남아 있어도 살 수 있다(10-06 확정 — ＋는 늘 보이고, 안 쓴 추가 횟수는 자정에 소멸).
  */
-export async function raidExtraCheck(tx: Tx, userId: string, serverId: number, kstDate: string = kstDateString()): Promise<'needed' | 'not_needed'> {
-  // 소환·참여와 같은 행을 먼저 잠근다(bumpDailyOrThrow와 같은 순서) — 잠그지 않으면 두 탭이 동시에 사도 둘 다 '찼다'를 보고
-  // 통과해, 한 번이면 될 것을 두 번 산다(10-06 검수).
+export async function raidExtraLock(tx: Tx, userId: string, serverId: number, kstDate: string = kstDateString()): Promise<void> {
   await tx.insert(raidDailyCounts).values({ userId, serverId, kstDate, startedCount: 0 }).onConflictDoNothing();
-  const [row] = await tx
+  await tx
     .select({ c: raidDailyCounts.startedCount })
     .from(raidDailyCounts)
     .where(and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.serverId, serverId), eq(raidDailyCounts.kstDate, kstDate)))
     .for('update');
-  const extra = await extrasToday(tx, userId, serverId, 'raid', undefined, kstDate);
-  const dailyFull = (row?.c ?? 0) >= RAID_DAILY_CAP + extra;
-  const concurrentFull = (await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER + extra;
-  return dailyFull || concurrentFull ? 'needed' : 'not_needed';
 }

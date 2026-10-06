@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { resyncWhenOnline } from '@/lib/client/resync';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { MILEAGE_PER_MELEE_POINT, POINT_EXCHANGE_BOX, POINT_EXCHANGE_DIAMOND, POINT_EXCHANGE_PACKS } from '@/lib/game/balance';
 import { useDiamondValue, useDiamondActions } from '@/components/DiamondContext';
@@ -65,16 +66,27 @@ const EX_PART_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } 
  * 위 지갑 칸이 통화 선택. 상품을 누르면 3초 재확인(ConfirmButton) — 3초 안에 다시 누르면 교환 → 헤더 토스트(10-06, 팝업 대신).
  * 잔액이 모자라면 무장하지 않고 부족 토스트. 잔액은 낙관적으로 먼저 줄이고(실패 시 되돌림), 서버 액션의 재렌더가 오면 그 값을 쓴다.
  */
-function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) {
+// 결과를 모르는 채 끝난 교환의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 교환됐을 수 있어, 잔액이 그대로인 동안
+// 같은 상품을 다시 누르면 같은 키로 보낸다(서버가 같은 교환으로 알아보고 두 번 받지 않는다). 잔액이 바뀌었으면 새 키.
+const unsettledExchange = new Map<string, { key: string; balance: number }>();
+
+function PointExchange({
+  kind,
+  balance,
+  spent,
+  onSpend,
+}: {
+  kind: PointKind;
+  /** 서버 잔액. */
+  balance: number;
+  /** 낙관 차감분 — 위 지갑 숫자와 같이 쓰려고 부모가 들고 있다. */
+  spent: number;
+  onSpend: (delta: number) => void;
+}) {
+  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
-  const { optimisticAdjust } = useDiamondActions();
+  const { optimisticAdjust, setBase } = useDiamondActions();
   const [part, setPart] = useState<(typeof EX_PARTS)[number]['key']>('weapon');
-  const [spent, setSpent] = useState(0);
-  const [seen, setSeen] = useState(balance);
-  if (seen !== balance) {
-    setSeen(balance);
-    setSpent(0);
-  }
   const [pending, startEx] = useTransition();
   const busy = useRef(false);
   const have = balance - spent;
@@ -99,24 +111,35 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
       return;
     }
     busy.current = true;
-    const key = crypto.randomUUID().replace(/-/g, '');
-    setSpent((x) => x + cost);
+    const id = `${kind}-${target}-${pack}`;
+    const prev = unsettledExchange.get(id);
+    const key = prev && prev.balance === balance ? prev.key : crypto.randomUUID().replace(/-/g, '');
+    onSpend(cost);
     if (target === 'diamond') optimisticAdjust(BigInt(pack * POINT_EXCHANGE_DIAMOND));
     startEx(async () => {
       const r = await exchangeAction({ kind, target, pack, key }).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       busy.current = false;
       if (r.status === 'success') {
+        unsettledExchange.delete(id);
+        // 같은 키의 재전송(앞선 요청이 이미 처리돼 있었다) — 이번 낙관 차감은 되돌리고, 💎는 서버 잔액으로 맞춘다.
+        if (r.duplicate) onSpend(-cost);
+        if (r.diamondBalance != null) setBase(BigInt(r.diamondBalance));
         showHeaderToast({
           title: '교환 완료',
           rewards: [target === 'diamond' ? { icon: '💎', amount: r.diamond } : { icon: EX_PART_EMOJI[target], amount: r.boxes }],
         });
         return;
       }
-      setSpent((x) => Math.max(0, x - cost));
+      // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 교환) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 교환됐을 수 있다.
+      const unknown = r.code === 'NETWORK' || r.code === 'UNKNOWN';
+      if (unknown) unsettledExchange.set(id, { key, balance });
+      else unsettledExchange.delete(id);
+      onSpend(-cost);
       if (target === 'diamond') optimisticAdjust(-BigInt(pack * POINT_EXCHANGE_DIAMOND));
       showError(
         r.code === 'INSUFFICIENT_POINTS' ? `${kindKo}가 부족해요` : (commonErrTitle(r.code) ?? '교환하지 못했어요'),
       );
+      if (unknown) resyncWhenOnline(() => router.refresh());
     });
   };
 
@@ -152,7 +175,7 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
     <div className="pb-2">
       <div className="mb-1.5 mt-3 flex items-baseline justify-between">
         <b className="text-[12px] text-zinc-800 dark:text-zinc-100">다이아</b>
-        <span className="text-[10.5px] text-zinc-500">
+        <span className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
           {rate} → 💎{POINT_EXCHANGE_DIAMOND}
         </span>
       </div>
@@ -161,7 +184,7 @@ function PointExchange({ kind, balance }: { kind: PointKind; balance: number }) 
       </div>
       <div className="mb-1.5 mt-4 flex items-baseline justify-between">
         <b className="text-[12px] text-zinc-800 dark:text-zinc-100">보급 상자</b>
-        <span className="text-[10.5px] text-zinc-500">
+        <span className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
           {rate} → {EX_PART_EMOJI[part]}{POINT_EXCHANGE_BOX}
         </span>
       </div>
@@ -198,6 +221,17 @@ function PointsTab({ points }: { points: PointsOverview }) {
   // 안내 팝업(2026-09-08 사용자 확정) — 적립 규칙 문구와 최근 적립/사용 내역은 본문에 두지 않고 ⓘ로 연다.
   const [info, setInfo] = useState<PointKind | null>(null);
   const label = (k: PointKind) => (k === 'melee' ? '대난투 포인트' : '마일리지');
+  // 낙관 차감 — 교환하는 즉시 지갑 숫자도 같이 줄인다(실패하면 되돌림). 서버 잔액이 새로 오면 그 통화의 차감분은 버린다.
+  const [spent, setSpent] = useState({ melee: 0, mileage: 0 });
+  const [seen, setSeen] = useState({ melee: points.melee.balance, mileage: points.mileage.balance });
+  if (seen.melee !== points.melee.balance || seen.mileage !== points.mileage.balance) {
+    setSeen({ melee: points.melee.balance, mileage: points.mileage.balance });
+    setSpent((s) => ({
+      melee: seen.melee !== points.melee.balance ? 0 : s.melee,
+      mileage: seen.mileage !== points.mileage.balance ? 0 : s.mileage,
+    }));
+  }
+  const spend = (k: PointKind) => (delta: number) => setSpent((s) => ({ ...s, [k]: Math.max(0, s[k] + delta) }));
   return (
     <div>
       <div className="mb-2.5 flex gap-2">
@@ -230,7 +264,7 @@ function PointsTab({ points }: { points: PointsOverview }) {
                     {label(k)}
                   </span>
                   <span className="text-[18px] font-extrabold tabular-nums text-white text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                    {points[k].balance.toLocaleString('ko-KR')}
+                    {Math.max(0, points[k].balance - spent[k]).toLocaleString('ko-KR')}
                   </span>
                 </div>
               </button>
@@ -248,7 +282,7 @@ function PointsTab({ points }: { points: PointsOverview }) {
         })}
       </div>
       {/* 통화마다 따로 — 낙관 차감분이 다른 통화로 넘어가지 않게(10-06 검수). */}
-      <PointExchange key={kind} kind={kind} balance={points[kind].balance} />
+      <PointExchange key={kind} kind={kind} balance={points[kind].balance} spent={spent[kind]} onSpend={spend(kind)} />
 
       {info ? (
         <ModalShell onClose={() => setInfo(null)} label={`${label(info)} 안내`}>

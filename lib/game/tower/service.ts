@@ -109,16 +109,13 @@ function attemptsLeft(lossDay: string | null, losses: number, extra = 0, at: Dat
 }
 
 /**
- * '탑 추가 도전' 구매 전 검사(포인트 상점 트랜잭션 안에서) — 오늘 남은 도전이 0일 때만 산다(화면의 ＋도 이때만).
- * 진행도 행을 잠가 전투와 직렬화한다.
+ * '탑 추가 도전' 구매 전 잠금(포인트 상점 트랜잭션 안에서) — 진행도 행을 잠가 전투와 직렬화한다.
+ * 남은 도전이 있어도 살 수 있다(10-06 확정 — ＋는 늘 보이고, 안 쓴 추가 도전은 자정에 소멸).
  */
-export async function towerExtraCheck(tx: Tx, userId: string, serverId: number, day: string = kstDateString()): Promise<'needed' | 'not_needed'> {
-  const [p] = (await tx.execute(sql`
-    select loss_day::text as loss_day, losses from tower_progress
-    where user_id=${userId}::uuid and server_id=${serverId} for update`)) as unknown as { loss_day: string | null; losses: number }[];
-  const extra = await extrasToday(tx, userId, serverId, 'tower', undefined, day);
-  const losses = p?.loss_day === day ? Number(p?.losses ?? 0) : 0;
-  return TOWER_DAILY_ATTEMPTS + extra - losses <= 0 ? 'needed' : 'not_needed';
+export async function towerExtraLock(tx: Tx, userId: string, serverId: number): Promise<void> {
+  await tx.execute(sql`
+    select 1 from tower_progress
+    where user_id=${userId}::uuid and server_id=${serverId} for update`);
 }
 
 /**

@@ -56,6 +56,10 @@ export default function Doc() {
             '층을 처음 돌파하거나 토벌에서 이기면 지급된다.',
           ],
           [
+            <><DocLink slug="shop" hash="points">포인트 교환</DocLink></>,
+            '대난투 포인트와 마일리지를 다이아로 바꾼다.',
+          ],
+          [
             <><DocLink slug="friends">친구 초대</DocLink></>,
             '초대한 사람이 가입하면 우편으로 지급된다.',
           ],
@@ -90,6 +94,10 @@ export default function Doc() {
           [
             <><DocLink slug="avatar" hash="cost">아바타 생성</DocLink></>,
             '요청과 동시에 차감.',
+          ],
+          [
+            <><DocLink slug="avatar" hash="manage">아바타 보관함</DocLink></>,
+            '보관할 수 있는 아바타 수를 늘린다.',
           ],
           [
             <><DocLink slug="guild" hash="create">길드</DocLink></>,

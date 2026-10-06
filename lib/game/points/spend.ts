@@ -14,7 +14,7 @@ import {
   type SupplySlot,
 } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
-import { walletAdd } from '@/lib/game/wallet';
+import { getWalletDiamond, walletAdd } from '@/lib/game/wallet';
 
 import type { PointKind } from './types';
 
@@ -104,7 +104,7 @@ export async function exchangePoints(
   userId: string,
   serverId: number,
   input: { kind: PointKind; target: ExchangeTarget; pack: number; key: string },
-): Promise<{ diamond: number; boxes: number; slot: SupplySlot | null; spent: number; duplicate: boolean }> {
+): Promise<{ diamond: number; boxes: number; slot: SupplySlot | null; spent: number; duplicate: boolean; diamondBalance: string | null }> {
   if (input.kind !== 'melee' && input.kind !== 'mileage') throw new PointShopError('BAD_REQUEST');
   const pack = input.pack as PointExchangePack;
   if (!(POINT_EXCHANGE_PACKS as readonly number[]).includes(pack)) throw new PointShopError('BAD_REQUEST');
@@ -117,21 +117,23 @@ export async function exchangePoints(
   const ref = `ex:${userId}:${input.key}`;
   const note = diamond > 0 ? `교환 💎${diamond.toLocaleString('ko-KR')}` : `교환 📦${boxes} (${SLOT_KO[slot!]})`;
 
-  const duplicate = await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const fresh = await spendPoints(tx, { userId, serverId, kind: input.kind, amount: spent, note, ref });
-    if (!fresh) return true;
-    if (diamond > 0) {
-      await walletAdd(tx, userId, serverId, diamond, input.kind === 'melee' ? 'point_exchange_melee' : 'point_exchange_mileage', ref);
-    } else {
-      await tx.execute(sql`
-        insert into user_supply_boxes (user_id, server_id, slot, count)
-        values (${userId}::uuid, ${serverId}, ${slot}, ${boxes})
-        on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${boxes}
-      `);
+    if (fresh) {
+      if (diamond > 0) {
+        await walletAdd(tx, userId, serverId, diamond, input.kind === 'melee' ? 'point_exchange_melee' : 'point_exchange_mileage', ref);
+      } else {
+        await tx.execute(sql`
+          insert into user_supply_boxes (user_id, server_id, slot, count)
+          values (${userId}::uuid, ${serverId}, ${slot}, ${boxes})
+          on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${boxes}
+        `);
+      }
     }
-    return false;
+    // 💎 교환은 처리 뒤 잔액을 함께 돌려준다 — 같은 키의 재전송(이미 처리된 요청)이어도 화면이 서버 값에 정확히 맞게.
+    const diamondBalance = diamond > 0 ? (await getWalletDiamond(tx, userId, serverId)).toString() : null;
+    return { diamond, boxes, slot, spent, duplicate: !fresh, diamondBalance };
   });
-  return { diamond, boxes, slot, spent, duplicate };
 }
 
 const SLOT_KO: Record<SupplySlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };

@@ -264,11 +264,14 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     !board.slots.some((x) => x.state === 'offer');
   // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 슬롯의 새 파견지(또는 실패 시 원래 상태)를 받아 온다.
   const reloadBoard = () =>
-    void expeditionBoardAction()
+    expeditionBoardAction()
       .catch(() => null)
       .then((fresh) => {
         if (fresh && fresh.ok && fresh.board) setBoard(fresh.board);
       });
+  // 다시 보내기를 사는 동안 — 되돌릴 보드와 잠가 둘 슬롯. 새 파견지를 받기 전에는 그 카드를 누를 수 없게 한다
+  // (이전 지역·시간으로 배정 팝업이 열려, 보낸 파견이 화면과 다른 곳으로 가던 문제 — 10-06 최종 검수).
+  const resendPrev = useRef<ExpeditionBoard | null>(null);
 
   const onCardTap = (s: ExpeditionBoardSlot) => {
     if (pendingSlot === s.slot) return;
@@ -308,15 +311,25 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 item="expedition"
                 slots={resendSlots}
                 // 낙관 반영(10-06) — 사는 즉시 그 슬롯을 '새 파견 찾는 중'으로, 헤더 M을 하나 올린다(＋는 오퍼가 생겨 숨는다).
-                onOptimistic={(slot) =>
+                onOptimistic={(slot) => {
+                  resendPrev.current = board;
+                  setPendingSlot(slot);
                   setBoard((b) => ({
                     ...b,
                     extraBought: b.extraBought + 1,
                     slots: b.slots.map((x) => (x.slot === slot ? { ...x, state: 'offer', reward: undefined } : x)),
-                  }))
-                }
-                onRollback={() => reloadBoard()}
-                onBought={() => reloadBoard()}
+                  }));
+                }}
+                onRollback={() => {
+                  // 원래 보드로 먼저 되돌리고(재조회가 실패해도 가짜 오퍼가 남지 않게) 서버 값으로 다시 맞춘다.
+                  if (resendPrev.current) setBoard(resendPrev.current);
+                  resendPrev.current = null;
+                  void reloadBoard().finally(() => setPendingSlot(null));
+                }}
+                onBought={() => {
+                  resendPrev.current = null;
+                  void reloadBoard().finally(() => setPendingSlot(null));
+                }}
               />
             ) : null}
             <span className="h-3 w-px bg-zinc-300 dark:bg-zinc-700" />

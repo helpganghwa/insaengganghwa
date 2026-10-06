@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_STEP, profileSlotLimit } from '@/lib/game/balance';
-import { walletTrySpend } from '@/lib/game/wallet';
+import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
 
 export class AvatarSlotError extends Error {
   constructor(public code: 'SLOT_MAX' | 'INSUFFICIENT_DIAMOND' | 'NO_CHARACTER' | 'BAD_REQUEST') {
@@ -28,7 +28,11 @@ export async function avatarSlotLimit(userId: string, serverId: number): Promise
  * 칸 증가(상한 조건부 UPDATE)와 다이아 차감(조건부)을 한 트랜잭션에서 — 어느 쪽이든 실패하면 통째로 되돌린다.
  * 조건부 UPDATE가 행을 잠그므로 연타·동시 요청도 상한을 넘지 못한다.
  */
-export async function expandAvatarSlots(userId: string, serverId: number, key: string): Promise<{ limit: number; duplicate: boolean }> {
+export async function expandAvatarSlots(
+  userId: string,
+  serverId: number,
+  key: string,
+): Promise<{ limit: number; duplicate: boolean; diamondBalance: string }> {
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(key)) throw new AvatarSlotError('BAD_REQUEST');
   const ref = `slot:${userId}:${key}`;
   return db.transaction(async (tx) => {
@@ -41,7 +45,8 @@ export async function expandAvatarSlots(userId: string, serverId: number, key: s
     if (!locked) throw new AvatarSlotError('NO_CHARACTER');
     // 같은 요청 키(응답 유실 뒤 재전송)는 이미 산 것 — 두 번 결제하지 않는다(CLAUDE §3.4).
     const [prev] = (await tx.execute(sql`select 1 from diamond_ledger where reason = 'avatar_slot' and ref = ${ref} limit 1`)) as unknown as unknown[];
-    if (prev) return { limit: profileSlotLimit(locked.bonus), duplicate: true };
+    // 잔액을 함께 돌려준다 — 재전송 판정이어도 화면의 💎가 서버 값에 정확히 맞게.
+    if (prev) return { limit: profileSlotLimit(locked.bonus), duplicate: true, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
     const rows = await tx
       .update(characters)
       // 10칸씩 늘리되 최대 200칸까지만 — 옛 기능(07-20)이 남긴 10의 배수가 아닌 값도 마지막 구매에서 200에 맞춘다.
@@ -57,6 +62,6 @@ export async function expandAvatarSlots(userId: string, serverId: number, key: s
     if (rows.length === 0) throw new AvatarSlotError('SLOT_MAX');
     const paid = await walletTrySpend(tx, userId, serverId, PROFILE_SLOT_COST_DIAMOND, 'avatar_slot', ref);
     if (!paid) throw new AvatarSlotError('INSUFFICIENT_DIAMOND');
-    return { limit: profileSlotLimit(rows[0]!.bonus), duplicate: false };
+    return { limit: profileSlotLimit(rows[0]!.bonus), duplicate: false, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
   });
 }

@@ -9,28 +9,30 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import { buyExtra } from '@/lib/game/points/extra';
-import { PointShopError, exchangePoints, extrasToday, type ExchangeTarget } from '@/lib/game/points/spend';
+import { PointShopError, exchangePoints, type ExchangeTarget } from '@/lib/game/points/spend';
 import type { PointKind } from '@/lib/game/points/types';
 import { getActiveServerId } from '@/lib/game/servers';
+import { kstDateString } from '@/lib/kst';
 import { rateLimited } from '@/lib/ratelimit';
 
 /** 추가 횟수 팝업이 열릴 때 — 두 통화 잔액·오늘 산 횟수·이번 가격(대난투 포인트). 조회만. */
 export async function extraQuoteAction(item: PointExtraItem) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
-  if (!Object.hasOwn(POINT_EXTRA_PRICES, item)) return { status: 'error', code: 'BAD_REQUEST' } as const;
+  if (typeof item !== 'string' || !Object.hasOwn(POINT_EXTRA_PRICES, item)) return { status: 'error', code: 'BAD_REQUEST' } as const;
   const serverId = await getActiveServerId();
-  const [[bal], bought] = await Promise.all([
-    db.execute(sql`
-      select coalesce((select melee_points from characters where user_id = ${u}::uuid and server_id = ${serverId}), 0)::int as mp,
-             coalesce((select balance from mileage_wallets where user_id = ${u}::uuid and server_id = ${serverId}), 0)::int as ml
-    `) as unknown as Promise<{ mp: number; ml: number }[]>,
-    extrasToday(db, u, serverId, item),
-  ]);
+  // 한 번의 왕복으로(잔액 둘 + 오늘 산 횟수) — ＋가 보이는 화면마다 불리는 조회라 커넥션을 하나만 쓴다.
+  const [row] = (await db.execute(sql`
+    select coalesce((select melee_points from characters where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as mp,
+           coalesce((select balance from mileage_wallets where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as ml,
+           (select coalesce(sum(count), 0)::int from point_extra_buys
+             where user_id = ${u}::uuid and server_id = ${serverId} and kst_date = ${kstDateString()}::date and item = ${item}) as bought
+  `)) as unknown as { mp: string; ml: string; bought: number }[];
+  const bought = Number(row?.bought ?? 0);
   return {
     status: 'success',
-    melee: Number(bal?.mp ?? 0),
-    mileage: Number(bal?.ml ?? 0),
+    melee: Number(row?.mp ?? 0),
+    mileage: Number(row?.ml ?? 0),
     bought,
     max: POINT_EXTRA_PRICES[item].length,
     price: pointExtraPrice(item, bought),

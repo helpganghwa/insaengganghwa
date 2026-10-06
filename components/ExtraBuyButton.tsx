@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { josa } from 'josa';
 
@@ -10,6 +11,8 @@ import { PlusChip } from '@/components/ui/PlusChip';
 import { useResourceToast } from '@/components/ResourceToast';
 import { MILEAGE_PER_MELEE_POINT, POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import type { PointKind } from '@/lib/game/points/types';
+import { resyncWhenOnline } from '@/lib/client/resync';
+import { kstDateString } from '@/lib/kst';
 
 import { buyExtraAction, extraQuoteAction } from '@/app/(game)/shop/point-actions';
 
@@ -38,9 +41,10 @@ const EXPIRE: Record<PointExtraItem, string> = {
 const ERR: Record<string, string> = {
   PRICE_CHANGED: '가격이 바뀌었어요. 다시 확인해 주세요',
   MAX_REACHED: '오늘은 더 살 수 없어요',
-  NOT_NEEDED: '아직 남은 횟수가 있어요',
-  SLOT_BUSY: '그 칸은 지금 다시 보낼 수 없어요',
-  SLOT_LOCKED: '아직 열리지 않은 칸이에요',
+  // 파견만 — 보낼 수 있는 파견이 남아 있으면 다시 보내기를 사지 않는다(탑·레이드는 남아 있어도 살 수 있다).
+  NOT_NEEDED: '지금 보낼 수 있는 파견이 있어요',
+  SLOT_BUSY: '그 슬롯은 지금 다시 보낼 수 없어요',
+  SLOT_LOCKED: '아직 열리지 않은 슬롯이에요',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정입니다.',
@@ -49,10 +53,40 @@ const ERR: Record<string, string> = {
 
 type Quote = { melee: number; mileage: number; bought: number; max: number; price: number | null };
 
+// 견적은 상품별로 화면 전체가 같이 쓴다 — 탑은 머리·층 상세·전투 결과에 ＋가 따로 그려지는데, 그때마다 서버 액션을
+// 보내면 바로 뒤에 누른 도전·공격이 그 뒤에 줄을 선다(서버 액션은 한 번에 하나씩 나간다). 받은 지 얼마 안 된 값은 다시 받지 않는다.
+const QUOTE_FRESH_MS = 30_000;
+const sharedQuote: Partial<Record<PointExtraItem, { q: Quote; at: number }>> = {};
+const quoteInflight: Partial<Record<PointExtraItem, ReturnType<typeof requestQuote>>> = {};
+const requestQuote = (item: PointExtraItem) =>
+  extraQuoteAction(item)
+    .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
+    .then((r) => {
+      if (r.status === 'success') sharedQuote[item] = { q: r, at: Date.now() };
+      return r;
+    });
+/** 같은 상품의 요청이 이미 나가 있으면 그 응답을 같이 기다린다. */
+const fetchSharedQuote = (item: PointExtraItem) => {
+  const going = quoteInflight[item];
+  if (going) return going;
+  const p = requestQuote(item).finally(() => {
+    if (quoteInflight[item] === p) delete quoteInflight[item];
+  });
+  quoteInflight[item] = p;
+  return p;
+};
+// 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 샀을 수 있어, 다음 구매가 같은 번째면
+// 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 두 번 받지 않는다). 견적의 '오늘 산 횟수'가 달라졌으면 그 구매는
+// 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 둔다.
+const unsettledKey: Partial<Record<PointExtraItem, { key: string; bought: number; day: string }>> = {};
+const newKey = () => crypto.randomUUID().replace(/-/g, '');
+/** 결과를 알 수 없는 실패(응답이 끊겼거나 서버 오류) — 서버에서는 이미 샀을 수 있다. */
+const uncertain = (code: string) => code === 'NETWORK' || code === 'UNKNOWN';
+
 /**
  * 추가 횟수 ＋ 버튼 + 공용 구매 팝업(docs/POINT-SHOP.md §6, 10-06 확정 시안) — 파견·레이드·탑이 같이 쓴다.
- * ＋를 보일지는 호출부가 정한다(기본 횟수를 다 썼을 때만). 팝업은 한 번에 한 장만 사고, 이번 가격과
- * 다음 구매 가격을 함께 보여 준다. 잔액이 모자란 통화는 흐리게만 하고 누르면 헤더 토스트(막지 않음).
+ * ＋를 보일지는 호출부가 정한다(탑·레이드는 오늘 더 살 수 있는 동안 늘, 파견은 다시 보낼 칸이 있을 때).
+ * 팝업은 한 번에 한 장만 사고, 이번 가격과 다음 구매 가격을 함께 보여 준다. 잔액이 모자란 통화는 흐리게만 하고 누르면 헤더 토스트(막지 않음).
  * 레이아웃 시프트 방지(10-06): ＋가 그려질 때 견적을 미리 받아 두고(prefetch) 팝업은 그 값으로 바로 연다(뒤에서 새로 고침).
  * 사기는 낙관적 — 재확인 직후 팝업을 닫고 onOptimistic으로 호출부가 횟수를 먼저 올린다. 실패하면 onRollback으로 되돌리고 토스트.
  * 성공 확정은 onBought(서버 재렌더가 같은 값을 가져온다).
@@ -77,6 +111,7 @@ export function ExtraBuyButton({
   className?: string;
   size?: 'md' | 'sm' | 'pill';
 }) {
+  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [open, setOpen] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -85,24 +120,14 @@ export function ExtraBuyButton({
   const [pending, start] = useTransition();
   // 연타·Enter 반복으로 재렌더 전에 두 번 사지 않게 — pending은 다시 그려진 뒤에야 걸린다.
   const busy = useRef(false);
-  // 팝업 한 번에 요청 키 하나 — 응답이 끊겨 다시 눌러도 서버가 같은 구매로 알아본다. 사면 새 키.
-  const keyRef = useRef('');
   // 팝업이 열려 있는 동안만 견적 응답을 반영한다(닫은 뒤 늦게 온 답이 토스트를 띄우지 않게).
   const openRef = useRef(false);
   const copy = COPY[item];
-  // 미리 받아 둔 견적 — 팝업을 빈 칸 없이 바로 연다.
-  const cached = useRef<Quote | null>(null);
-  const fetchQuote = () =>
-    extraQuoteAction(item)
-      .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
-      .then((r) => {
-        if (r.status === 'success') cached.current = r;
-        return r;
-      });
+  const fetchQuote = () => fetchSharedQuote(item);
   useEffect(() => {
-    void fetchQuote();
-    // ＋가 처음 그려질 때 한 번(상품이 바뀌면 다시)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // ＋가 그려질 때 — 받아 둔 값이 없거나 오래됐을 때만 미리 받는다(팝업을 빈 칸 없이 바로 열기 위해).
+    const have = sharedQuote[item];
+    if (!have || Date.now() - have.at > QUOTE_FRESH_MS) void fetchSharedQuote(item);
   }, [item]);
   const pickKind = (q: Quote) =>
     setKind(q.price !== null && q.melee >= q.price ? 'melee' : q.price !== null && q.mileage >= amountIn('mileage', q.price) ? 'mileage' : 'melee');
@@ -117,7 +142,10 @@ export function ExtraBuyButton({
       showHeaderToast({ title: '다시 보낼 수 있는 슬롯이 없어요' });
       return;
     }
-    const c = cached.current;
+    const entry = sharedQuote[item];
+    // 오래된 '오늘은 더 못 삼'은 믿지 않는다(자정이 지나 다시 살 수 있다) — 그때는 새로 받아 판단한다.
+    const expired = !!entry && entry.q.price === null && Date.now() - entry.at > QUOTE_FRESH_MS;
+    const c = entry && !expired ? entry.q : null;
     if (c && c.price === null) {
       showHeaderToast({ title: '오늘은 더 살 수 없어요' });
       return;
@@ -127,7 +155,6 @@ export function ExtraBuyButton({
     setSlot(slots?.[0]?.slot ?? null);
     setOpen(true);
     openRef.current = true;
-    keyRef.current = crypto.randomUUID().replace(/-/g, '');
     loadQuote(!c);
   };
 
@@ -166,36 +193,49 @@ export function ExtraBuyButton({
     const max = quote.max;
     const usedSlot = slot;
     const spent = amountIn(kind, expectedPrice);
-    const before = cached.current;
+    const before = sharedQuote[item];
+    // 결과를 모르는 채 끝난 같은 번째 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
+    const prev = unsettledKey[item];
+    const day = kstDateString(); // 어제 남은 키를 오늘 구매에 다시 쓰지 않게
+    const key = prev && prev.bought === quote.bought && prev.day === day ? prev.key : newKey();
+    const attempt = { key, bought: quote.bought, day };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
     onOptimistic?.(usedSlot);
     if (before) {
-      const bought = before.bought + 1;
-      cached.current = {
-        ...before,
-        bought,
-        price: pointExtraPrice(item, bought),
-        melee: kind === 'melee' ? before.melee - spent : before.melee,
-        mileage: kind === 'mileage' ? before.mileage - spent : before.mileage,
+      const bought = before.q.bought + 1;
+      sharedQuote[item] = {
+        at: before.at,
+        q: {
+          ...before.q,
+          bought,
+          price: pointExtraPrice(item, bought),
+          melee: kind === 'melee' ? before.q.melee - spent : before.q.melee,
+          mileage: kind === 'mileage' ? before.q.mileage - spent : before.q.mileage,
+        },
       };
     }
     start(async () => {
-      const r = await buyExtraAction({ item, kind, slot: usedSlot ?? undefined, key: keyRef.current, expectedPrice }).catch(
+      const r = await buyExtraAction({ item, kind, slot: usedSlot ?? undefined, key, expectedPrice }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;
       if (r.status === 'success') {
-        keyRef.current = crypto.randomUUID().replace(/-/g, '');
+        delete unsettledKey[item];
         onBought?.();
         showHeaderToast({
           title: copy.title,
           detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 샀어요`,
         });
       } else {
-        cached.current = before;
+        // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 구매) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 들어갔을 수 있다.
+        if (uncertain(r.code)) unsettledKey[item] = attempt;
+        else delete unsettledKey[item];
+        if (before) sharedQuote[item] = before;
+        else delete sharedQuote[item];
         onRollback?.(usedSlot);
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
+        if (uncertain(r.code)) resyncWhenOnline(() => router.refresh());
       }
       void fetchQuote(); // 서버 값으로 다시 맞춰 둔다
     });
@@ -219,8 +259,8 @@ export function ExtraBuyButton({
                 </ModalButton>
                 {/* 3초 재확인(10-06) — 첫 탭은 무장, 3초 안에 다시 누르면 구매. 잔액이 모자라면 무장하지 않고 토스트. */}
                 <ModalConfirmButton
-                  // 통화·슬롯을 바꾸면 3초 재확인을 처음부터(무장한 채 다른 통화로 사지 않게).
-                  key={`${kind}-${slot ?? 0}`}
+                  // 통화·슬롯을 바꾸거나 가격이 새로 고쳐지면 3초 재확인을 처음부터(무장한 채 다른 값으로 사지 않게).
+                  key={`${kind}-${slot ?? 0}-${price ?? 0}`}
                   onArm={() => {
                     if (!quote?.price || pending) return false;
                     if (!enough(kind)) {

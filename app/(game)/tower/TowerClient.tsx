@@ -170,7 +170,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const [equipTab, setEquipTab] = useState<TowerSlot>('weapon');
   // 'pending' = 도전을 누른 직후 — 서버 판정을 기다리는 동안 전투 화면을 먼저 띄운다(낙관적 전환).
   const [battle, setBattle] = useState<TowerChallengeResult | 'pending' | null>(null);
-  // 탑 추가 도전(10-06, POINT-SHOP §6) — 오늘 전체 = 하루 3 + 산 횟수. ＋는 남은 도전이 0이고 오늘 더 살 수 있을 때만.
+  // 탑 추가 도전(10-06, POINT-SHOP §6) — 오늘 전체 = 하루 3 + 산 횟수. ＋는 남은 도전과 상관없이 오늘 더 살 수 있는 동안 늘 보인다.
   // 사면 서버 액션의 재렌더로 board가 바뀌고, 이미 열린 전투 결과 화면의 남은 도전도 하나 올린다.
 
   // 탑 추가 도전 낙관 반영(10-06) — 사는 즉시 남은 도전·전체를 하나 올린다. 새 board(extraBought 변화)가 오면 0으로.

@@ -5,8 +5,8 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import { ExpeditionError, expeditionResendApply, expeditionResendCheck } from '@/lib/game/expedition/service';
-import { raidExtraCheck } from '@/lib/game/raid/open';
-import { towerExtraCheck } from '@/lib/game/tower/service';
+import { raidExtraLock } from '@/lib/game/raid/open';
+import { towerExtraLock } from '@/lib/game/tower/service';
 import { kstDateString } from '@/lib/kst';
 
 import { PointShopError, costIn, extrasToday, spendPoints } from './spend';
@@ -29,8 +29,9 @@ const ITEM_KO: Record<PointExtraItem, string> = { expedition: '파견 다시 보
 
 /**
  * 추가 횟수 사기(docs/POINT-SHOP.md §6) — 한 번에 한 장. 가격 = 오늘 이 상품을 산 횟수로 정한 값(POINT_EXTRA_PRICES).
- * 한 트랜잭션: 콘텐츠 검사(잠금) → 오늘 구매 행 잠금 → 지출(멱등 키) → 횟수 +1 → 적용(파견은 새 파견지).
- * 잠금 순서: 콘텐츠 행(expedition_state·tower_progress) → point_extra_buys → mileage_wallets → characters.
+ * 한 트랜잭션: 콘텐츠 잠금(파견은 검사까지) → 오늘 구매 행 잠금 → 지출(멱등 키) → 횟수 +1 → 적용(파견은 새 파견지).
+ * 탑·레이드는 횟수가 남아 있어도 살 수 있다(10-06 확정). 파견만 '오늘 다녀온 칸이 있고 보낼 파견이 없을 때'로 막는다.
+ * 잠금 순서: 콘텐츠 행(expedition_state·raid_daily_counts·tower_progress) → point_extra_buys → mileage_wallets → characters.
  * key = 클라가 구매 시도마다 만든 값 — 같은 요청이 두 번 와도 한 번만 산다.
  */
 export async function buyExtra(
@@ -39,7 +40,8 @@ export async function buyExtra(
   input: { item: PointExtraItem; kind: PointKind; slot?: number; key: string; expectedPrice?: number },
 ): Promise<ExtraBuyResult> {
   const { item, kind } = input;
-  if (!Object.hasOwn(POINT_EXTRA_PRICES, item)) throw new PointShopError('BAD_REQUEST');
+  // 문자열만 — 배열(['raid'])은 hasOwn을 통과하면서 아래 분기는 빗나간다(10-06 최종 검수).
+  if (typeof item !== 'string' || !Object.hasOwn(POINT_EXTRA_PRICES, item)) throw new PointShopError('BAD_REQUEST');
   if (kind !== 'melee' && kind !== 'mileage') throw new PointShopError('BAD_REQUEST');
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(input.key)) throw new PointShopError('BAD_REQUEST');
   const slot = item === 'expedition' ? Number(input.slot) : 0;
@@ -50,10 +52,13 @@ export async function buyExtra(
 
   return db.transaction(async (tx) => {
     // ⓪ 같은 키로 다시 온 요청(응답 유실 뒤 재전송) — 이미 산 구매다. 콘텐츠 검사보다 먼저 봐야 한다:
-    //    산 뒤엔 한도가 풀려 있어 검사가 NOT_NEEDED로 막고, 산 사람이 '아직 남았다'는 오류를 보게 된다.
+    //    파견은 산 뒤엔 그 칸에 오퍼가 생겨 검사가 NOT_NEEDED로 막고, 산 사람이 오류를 보게 된다.
     // 통화와 무관하게 ref로 찾는다(오류 뒤 통화를 바꿔 같은 키로 다시 눌러도 같은 구매).
+    // kind를 함께 줘야 (kind, ref) 유니크 인덱스를 탄다 — ref만으로는 원장 전체를 훑는다.
     const alreadyBought = async () => {
-      const [prev] = (await tx.execute(sql`select 1 from point_ledger where ref = ${ref} limit 1`)) as unknown as unknown[];
+      const [prev] = (await tx.execute(
+        sql`select 1 from point_ledger where kind in ('melee', 'mileage') and ref = ${ref} limit 1`,
+      )) as unknown as unknown[];
       if (!prev) return null;
       const bought = await extrasToday(tx, userId, serverId, item, undefined, day);
       return { item, slot, kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true } satisfies ExtraBuyResult;
@@ -61,7 +66,7 @@ export async function buyExtra(
     const dup0 = await alreadyBought();
     if (dup0) return dup0;
 
-    // ① 콘텐츠 검사 — 실패하면 같은 키의 첫 요청이 그새 커밋했는지 한 번 더 본다(잠금 대기 뒤라 이제 보인다).
+    // ① 콘텐츠 잠금(파견은 검사까지) — 실패하면 같은 키의 첫 요청이 그새 커밋했는지 한 번 더 본다(잠금 대기 뒤라 이제 보인다).
     try {
       if (item === 'expedition') {
         try {
@@ -75,9 +80,9 @@ export async function buyExtra(
           throw e;
         }
       } else if (item === 'raid') {
-        if ((await raidExtraCheck(tx, userId, serverId, day)) === 'not_needed') throw new PointShopError('NOT_NEEDED');
-      } else if ((await towerExtraCheck(tx, userId, serverId, day)) === 'not_needed') {
-        throw new PointShopError('NOT_NEEDED');
+        await raidExtraLock(tx, userId, serverId, day);
+      } else {
+        await towerExtraLock(tx, userId, serverId);
       }
     } catch (e) {
       const dup = await alreadyBought();
@@ -100,10 +105,14 @@ export async function buyExtra(
     const price = pointExtraPrice(item, bought);
 
     // ③ 지출 — 팝업에서 본 가격과 다르면(다른 탭에서 먼저 샀다) 사지 않고 다시 보여 준다.
-    if (price === null) throw new PointShopError('MAX_REACHED');
-    if (input.expectedPrice !== undefined && input.expectedPrice !== price) throw new PointShopError('PRICE_CHANGED');
+    if (price === null || (input.expectedPrice !== undefined && input.expectedPrice !== price)) {
+      // 같은 키의 첫 요청이 잠금을 기다리는 사이 커밋했을 수 있다 — 그러면 가격이 바뀐 게 아니라 이미 산 구매다.
+      const dup = await alreadyBought();
+      if (dup) return dup;
+      throw new PointShopError(price === null ? 'MAX_REACHED' : 'PRICE_CHANGED');
+    }
     const spent = costIn(kind, price);
-    const fresh = await spendPoints(tx, { userId, serverId, kind, amount: spent, note: `${ITEM_KO[item]}${item === 'expedition' ? ` (${slot}칸)` : ''}`, ref });
+    const fresh = await spendPoints(tx, { userId, serverId, kind, amount: spent, note: `${ITEM_KO[item]}${item === 'expedition' ? ` (슬롯 ${slot})` : ''}`, ref });
     if (!fresh) return { item, slot, kind, spent: 0, bought, next: price, duplicate: true };
 
     // ④ 횟수 +1 → ⑤ 적용.

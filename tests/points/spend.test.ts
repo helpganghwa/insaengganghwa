@@ -76,6 +76,9 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     const again = await exchangePoints(U, S, { kind: 'melee', target: 'diamond', pack: 10, key: k });
     expect(again.duplicate).toBe(true);
     const s = await now();
+    // 처리 뒤 잔액을 함께 돌려준다 — 재전송 판정이어도 같은 서버 잔액(화면이 두 번 더해 보이지 않게).
+    expect(r.diamondBalance).toBe(s.dia);
+    expect(again.diamondBalance).toBe(s.dia);
     expect(s.mp).toBe(90);
     expect(BigInt(s.dia) - BigInt(base.dia)).toBe(250n);
     const [l] = (await testDb.execute(sql`select count(*)::int as n from diamond_ledger where user_id=${U}::uuid and reason='point_exchange_melee' and ref like ${'%' + k}`)) as unknown as { n: number }[];
@@ -123,12 +126,11 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     }
   });
 
-  it('탑 추가 도전: 남은 도전 0일 때만, 5 → 10pt, 2번까지', async () => {
+  it('탑 추가 도전: 남은 도전이 있어도 살 수 있다, 5 → 10pt, 2번까지', async () => {
     if (!base.tower) return; // 테스트 계정에 탑 진행도가 없으면 건너뜀
     await setMp(100);
+    // 남은 도전이 1 있는 상태(3번 중 2번 짐) — ＋는 늘 보이고 서버도 막지 않는다(10-06 확정).
     await testDb.execute(sql`update tower_progress set loss_day=${today}::date, losses=2 where user_id=${U}::uuid and server_id=${S}`);
-    await expect(buyExtra(U, S, { item: 'tower', kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'NOT_NEEDED' });
-    await testDb.execute(sql`update tower_progress set losses=3 where user_id=${U}::uuid and server_id=${S}`);
     const k1 = key();
     const a = await buyExtra(U, S, { item: 'tower', kind: 'melee', key: k1 });
     expect(a).toMatchObject({ spent: 5, bought: 1, next: 10, duplicate: false });
@@ -147,15 +149,16 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     expect((await now()).mp).toBe(85);
   });
 
-  it('레이드 +1회: 한도가 찼을 때만, 산 만큼 하루 한도가 늘어난다', async () => {
+  it('레이드 +1회: 한도가 남아 있어도 살 수 있다, 산 만큼 하루·동시 한도가 늘어난다', async () => {
     await setMp(200);
+    // 5번 중 4번 쓴 상태(1번 남음) — ＋는 늘 보이고 서버도 막지 않는다(10-06 확정).
     await testDb.execute(sql`
       insert into raid_daily_counts (user_id, server_id, kst_date, started_count) values (${U}::uuid, ${S}, ${today}::date, 4)
       on conflict (user_id, server_id, kst_date) do update set started_count = 4`);
-    await expect(buyExtra(U, S, { item: 'raid', kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'NOT_NEEDED' });
-    await testDb.execute(sql`update raid_daily_counts set started_count=5 where user_id=${U}::uuid and server_id=${S} and kst_date=${today}::date`);
     const r = await buyExtra(U, S, { item: 'raid', kind: 'melee', key: key() });
     expect(r).toMatchObject({ spent: 20, bought: 1, next: 40 });
+    // 다 쓴 뒤에도 6번째가 통과한다.
+    await testDb.execute(sql`update raid_daily_counts set started_count=5 where user_id=${U}::uuid and server_id=${S} and kst_date=${today}::date`);
     // 6번째가 통과하고 동시 한도도 하나 늘어난다 — 확인 후 되돌린다(롤백).
     const cap = await testDb
       .transaction(async (tx) => {
@@ -165,6 +168,13 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
       .catch((e: { c?: { concurrentCap: number } }) => e.c);
     expect(cap?.concurrentCap).toBe(6);
     expect((await now()).mp).toBe(180);
+  });
+
+  it('상품 이름은 문자열만 — 배열로 감싼 값은 받지 않는다', async () => {
+    await setMp(100);
+    await expect(buyExtra(U, S, { item: ['raid'] as never, kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(buyExtra(U, S, { item: ['expedition'] as never, kind: 'melee', slot: 1, key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect((await now()).mp).toBe(100);
   });
 
   it('잔액 부족이면 횟수도 지출도 그대로', async () => {

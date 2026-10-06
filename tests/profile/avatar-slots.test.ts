@@ -35,7 +35,7 @@ describe.skipIf(!U)('아바타 보관함 늘리기 — DB 통합(스테이징 �
 
   it('💎1,000에 10칸, 다이아·칸이 함께 바뀐다', async () => {
     await testDb.execute(sql`update characters set avatar_slot_bonus=0, diamond=2500 where user_id=${U}::uuid and server_id=${S}`);
-    expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 110, duplicate: false });
+    expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 110, duplicate: false, diamondBalance: String(2500 - PROFILE_SLOT_COST_DIAMOND) });
     const [c] = (await testDb.execute(sql`select avatar_slot_bonus as b, diamond::int as d from characters where user_id=${U}::uuid and server_id=${S}`)) as unknown as { b: number; d: number }[];
     expect(c).toEqual({ b: 10, d: 2500 - PROFILE_SLOT_COST_DIAMOND });
   });
