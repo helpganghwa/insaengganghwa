@@ -1,4 +1,3 @@
-import { josa } from 'josa';
 
 import { BOX, CASH, DIAMONDS, FIRST_SPECIAL, PREMIUM, type Period } from '@/lib/game/shop/catalog';
 import { FREE_REWARDS, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free-rewards';
