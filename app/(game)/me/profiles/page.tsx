@@ -3,7 +3,7 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { PROFILE_MAX } from '@/lib/game/balance';
+import { profileSlotLimit } from '@/lib/game/balance';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
@@ -12,6 +12,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { snapshotEquipment } from '@/lib/game/expedition/engine';
 
+import { AvatarSlotKicker } from './AvatarSlotKicker';
 import { ProfileSelector } from './ProfileSelector';
 import type { EquippedNow } from './equip-plan';
 
@@ -37,7 +38,7 @@ export default async function ProfileSelectPage() {
       // 유저가 정한 순서(0200) — 0(미배치·새 아바타)이 맨 앞, 같은 값끼리는 최신순.
       .orderBy(asc(userProfiles.sortOrder), desc(userProfiles.createdAt)),
     db
-      .select({ activeProfileId: characters.activeProfileId })
+      .select({ activeProfileId: characters.activeProfileId, slotBonus: characters.avatarSlotBonus })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
@@ -63,7 +64,11 @@ export default async function ProfileSelectPage() {
   return (
     <>
       <div className="px-4 pb-3 pt-3">
-        <PageHeader title="아바타 관리" fallback="/me" kicker={`${list.length} / ${PROFILE_MAX}`} />
+        <PageHeader
+          title="아바타 관리"
+          fallback="/me"
+          right={<AvatarSlotKicker count={list.length} limit={profileSlotLimit(p[0]?.slotBonus ?? 0)} />}
+        />
       </div>
       <div className="space-y-4 px-4 pb-6">
       {list.length === 0 ? (

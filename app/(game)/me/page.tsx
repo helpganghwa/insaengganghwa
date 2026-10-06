@@ -13,7 +13,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
-import { PROFILE_MAX } from '@/lib/game/balance';
+import { profileSlotLimit } from '@/lib/game/balance';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
 
@@ -68,6 +68,7 @@ export default async function ProfilePage() {
     codex_got: number;
     codex_total: number;
     titles_found: number;
+    avatar_slot_bonus: number | null;
     titles_pending_owned: number;
     titles_new: number;
     equipment: {
@@ -107,6 +108,7 @@ export default async function ProfilePage() {
             where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}) as codex_got,
           (select count(*)::int from catalog_items where active) as codex_total,
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId}) as titles_found,
+          (select avatar_slot_bonus from characters where user_id = ${userId}::uuid and server_id = ${serverId}) as avatar_slot_bonus,
           -- 새 칭호(0187) — 아직 확인하지 않은 획득분. 메뉴 배지(친구 요청과 같은 붉은 숫자).
           (select count(*)::int from user_titles where user_id = ${userId}::uuid and server_id = ${serverId} and seen_at is null) as titles_new,
           -- 판정이 아직 없는 칭호 중 **이미 보유한** 수 — 발견 게이지 분모가 도달 가능해야 한다
@@ -169,7 +171,7 @@ export default async function ProfilePage() {
    */
   const MENU_STATUS: Record<string, string | null> = {
     '/friends': friendCount > 0 ? `${friendCount}명` : null,
-    '/me/profiles': `${myProfiles.length} / ${PROFILE_MAX}`,
+    '/me/profiles': `${myProfiles.length} / ${profileSlotLimit(Number(row?.avatar_slot_bonus ?? 0))}`,
     '/me/codex': codexTotal > 0 ? `${codexGot} / ${codexTotal}` : null,
     '/me/titles': `${titlesFound} / ${titlesTotal}`,
     '/leaderboard': null,

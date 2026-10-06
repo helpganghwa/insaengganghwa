@@ -11,6 +11,7 @@ import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
 import { reorderUserProfiles } from '@/lib/game/profile/reorder';
+import { AvatarSlotError, expandAvatarSlots } from '@/lib/game/profile/slots';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -271,4 +272,25 @@ export async function reorderProfiles(ids: string[]): Promise<ActionState> {
 
   revalidatePath('/me/profiles');
   return { status: 'ok' };
+}
+
+/** 아바타 보관함 늘리기(2026-10-06) — 💎1,000에 10칸, 최대 200칸, 서버별. */
+export async function expandAvatarSlotsAction(): Promise<
+  { status: 'ok'; limit: number } | { status: 'error'; code: string }
+> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', code: 'UNAUTHENTICATED' };
+  if (await rateLimited(userId, 'profileEdit')) return { status: 'error', code: 'RATE_LIMITED' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b };
+  try {
+    const r = await expandAvatarSlots(userId, await getActiveServerId());
+    revalidatePath('/me/profiles');
+    revalidatePath('/me');
+    return { status: 'ok', limit: r.limit };
+  } catch (e) {
+    if (e instanceof AvatarSlotError) return { status: 'error', code: e.code };
+    console.error('[profile.expandSlots]', e);
+    return { status: 'error', code: 'UNKNOWN' };
+  }
 }

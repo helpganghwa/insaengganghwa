@@ -305,7 +305,7 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 | 항목 | 값 | 비고 |
 |---|---|---|
 | 1회 생성 비용 | **1,000 다이아** | AI 검토 비용 포함. 첫 아바타(성공한 커스텀 0개)는 **50% 할인 500** — 신규 훅킹. 거절·환불은 할인 미소진. 무과금 반복 유입 기준 ≈ 2.2일치(첫 생성 1.1일치) |
-| 보유 가능 프로필 수 | 최대 100 (`PROFILE_MAX`) | 다이아 비용 자체가 어뷰징 차단 |
+| 보유 가능 프로필 수 | 서버별 기본 100칸(`PROFILE_BASE_SLOTS`), 💎1,000에 10칸씩 최대 200칸(`PROFILE_MAX`, 늘린 칸 = `characters.avatar_slot_bonus`) | 다이아 비용 자체가 어뷰징 차단 |
 | 동시 생성 중인 작업 | **유저당 1건** | 활성 큐 있으면 신규 차단(§3.2 UNIQUE) |
 | AI 검토 응답 SLA | < 30초 (Claude vision ~5초 + 다운로드·DB) | |
 | AI 검토 통과율 목표 | 95%+ | 미만이면 prompt·기준 튜닝 |

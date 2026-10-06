@@ -23,7 +23,8 @@ import { isUniqueViolation } from '@/lib/db/errors';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
-import { PROFILE_MAX, profileGenPrice } from '@/lib/game/balance';
+import { profileGenPrice } from '@/lib/game/balance';
+import { avatarSlotLimit } from '@/lib/game/profile/slots';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 
@@ -53,12 +54,15 @@ export async function createProfileJob(
   if ((await getAvatarGenPause()).paused) throw new CreateProfileJobError('PAUSED');
   const serverId = await getActiveServerId();
 
-  // 프로필 최대 PROFILE_MAX개 — 초과 시 생성 차단(기본 2개 포함).
-  const [pc] = await db
-    .select({ n: count() })
-    .from(userProfiles)
-    .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)));
-  if ((pc?.n ?? 0) >= PROFILE_MAX) throw new CreateProfileJobError('PROFILE_LIMIT');
+  // 보관 한도 = 기본 100칸 + 늘린 칸(서버별, 최대 PROFILE_MAX) — 초과 시 생성 차단(기본 2개 포함).
+  const [[pc], limit] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(userProfiles)
+      .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId))),
+    avatarSlotLimit(userId, serverId),
+  ]);
+  if ((pc?.n ?? 0) >= limit) throw new CreateProfileJobError('PROFILE_LIMIT');
 
   const parsed = ProfileOptionsSchema.safeParse(rawOptions);
   if (!parsed.success) throw new CreateProfileJobError('INVALID_OPTIONS');
