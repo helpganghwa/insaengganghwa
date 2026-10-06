@@ -85,15 +85,12 @@ function useCachedImages(urls: readonly (string | null)[]): ReadonlyMap<string, 
   return map;
 }
 
-/** 오늘 남은 도전 — 'N/전체'(하루 3 + 오늘 산 추가 도전), 다 쓰면 N(0)만 빨간색 + 추가 도전 ＋(살 수 있을 때). */
-function Attempts({ left, total, plus }: { left: number; total: number; plus?: React.ReactNode }) {
+/** 오늘 남은 도전 — 'N/전체'(하루 3 + 오늘 산 추가 도전), 다 쓰면 N(0)만 빨간색. ＋는 알약 밖(extraPlusPill). */
+function Attempts({ left, total }: { left: number; total: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 tabular-nums">
-      <span>
-        오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-amber-300'}>{left}</b>
-        <span className="text-zinc-400">/{total}</span>
-      </span>
-      {left <= 0 && plus ? plus : null}
+    <span className="tabular-nums">
+      오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-amber-300'}>{left}</b>
+      <span className="text-zinc-400">/{total}</span>
     </span>
   );
 }
@@ -176,13 +173,14 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   // 탑 추가 도전(10-06, POINT-SHOP §6) — 오늘 전체 = 하루 3 + 산 횟수. ＋는 남은 도전이 0이고 오늘 더 살 수 있을 때만.
   // 사면 서버 액션의 재렌더로 board가 바뀌고, 이미 열린 전투 결과 화면의 남은 도전도 하나 올린다.
   const attemptsTotal = board.attemptsTotal;
-  const extraPlus =
-    board.extraBought < POINT_EXTRA_PRICES.tower.length ? (
-      <ExtraBuyButton
-        item="tower"
-        onBought={() => setBattle((b) => (b && b !== 'pending' ? { ...b, attemptsLeft: b.attemptsLeft + 1 } : b))}
-      />
-    ) : null;
+  const canBuyExtra = board.extraBought < POINT_EXTRA_PRICES.tower.length;
+  const onExtraBought = () => setBattle((b) => (b && b !== 'pending' ? { ...b, attemptsLeft: b.attemptsLeft + 1 } : b));
+  // 목록 머리 — 어두운 알약 밖, 같은 알약 모양의 ＋(알약 안에 넣으면 높이가 들쭉날쭉했다, 10-06 지적).
+  const extraPlusPill = canBuyExtra ? (
+    <ExtraBuyButton item="tower" onBought={onExtraBought} size="pill" />
+  ) : null;
+  // 전투 화면 머리·결과 줄 — 11px 글자 줄 안이라 작은 ＋.
+  const extraPlus = canBuyExtra ? <ExtraBuyButton item="tower" onBought={onExtraBought} size="sm" /> : null;
   /** 지금 보내는 판(층·토벌 여부) — 판정 대기 화면이 주소가 아니라 실제 보낸 판을 그린다. */
   const [inflight, setInflight] = useState<{ floor: number; hunt: boolean } | null>(null);
   // 브라우저 뒤로가기로 주소(?v=d)가 바뀌면 끝난 전투 화면도 닫는다 — 전투는 헤더가 없어 주소와 화면이 어긋나지 않게(렌더 중 조정).
@@ -608,7 +606,17 @@ export function TowerClient({ board }: { board: TowerBoard }) {
     >
       {/* 헤더는 스크롤 영역 밖에 고정(바탕 투명) — 내용만 그 아래에서 스크롤된다. */}
       <div className="flex-none px-3 pt-1.5 pb-1">
-        <BackTitle title="무한의 탑" right={<span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100"><Attempts left={attemptsLeft} total={attemptsTotal} plus={extraPlus} /></span>} />
+        <BackTitle
+          title="무한의 탑"
+          right={
+            <span className="inline-flex items-center gap-1">
+              <span className="rounded-md bg-black/55 px-2 py-0.5 text-[11px] text-zinc-100">
+                <Attempts left={attemptsLeft} total={attemptsTotal} />
+              </span>
+              {attemptsLeft <= 0 ? extraPlusPill : null}
+            </span>
+          }
+        />
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pb-3">
 

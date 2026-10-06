@@ -85,7 +85,7 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, total = T
             <div>
               오늘 도전 <b className={left <= 0 ? 'text-red-400' : 'text-white'}>{left}</b>
               <span className="text-zinc-400">/{total}</span>
-              {left <= 0 && plus ? <span className="ml-1 inline-block align-middle">{plus}</span> : null}
+              {left <= 0 && plus ? <span className="ml-1 inline-flex align-[-2px]">{plus}</span> : null}
             </div>
             {turn ? <div className="font-bold text-zinc-100">{turn}</div> : null}
           </div>
@@ -286,7 +286,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
               <>
                 <b className="block text-[13px] text-emerald-300">승리</b>
                 {hunt ? (
-                  <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-block align-middle">{plus}</span> : null}</div>
+                  <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-flex align-[-2px]">{plus}</span> : null}</div>
                 ) : result.reward ? (
                   <button type="button" onClick={onList} className="font-bold text-amber-300">
                     돌파 보상 💎 {n(result.reward.diamond)}{result.reward.boxes ? ` · 📦 ${result.reward.boxes}` : ''}
@@ -305,7 +305,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
                   const monMax = towerRequirement(floor) * TOWER_HP_MULT;
                   return last && monMax > 0 ? <div>{info.name} HP {pctText(last.monHp / monMax)} 남음</div> : null;
                 })()}
-                <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-block align-middle">{plus}</span> : null}</div>
+                <div className="text-zinc-400">오늘 도전 <Left left={left} total={attemptsTotal} />{left <= 0 && plus ? <span className="ml-1.5 inline-flex align-[-2px]">{plus}</span> : null}</div>
               </>
             )}
             {/* 기록 전체를 처음부터 다시 재생(판정은 그대로, 보기만). */}

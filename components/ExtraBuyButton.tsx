@@ -17,9 +17,9 @@ import { buyExtraAction, extraQuoteAction } from '@/app/(game)/shop/point-action
 export type ResendSlot = { slot: number; label: string };
 
 const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }> = {
-  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯을 한 번 더 보내요. 사면 그 슬롯에 새 파견지가 바로 나와요.', done: '새 파견지가 나왔어요' },
-  raid: { title: '오늘 레이드 +1회', desc: '오늘 레이드(소환·참여)를 한 번 더 할 수 있어요. 동시에 진행할 수 있는 레이드도 하나 늘어나요.', done: '오늘 레이드 +1회' },
-  tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 할 수 있어요. 오르기·토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
+  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯에 새 파견지를 바로 받아요.', done: '새 파견지가 나왔어요' },
+  raid: { title: '오늘 레이드 +1회', desc: '소환·참여를 한 번 더, 동시 진행도 하나 늘어요.', done: '오늘 레이드 +1회' },
+  tower: { title: '탑 추가 도전', desc: '오늘 도전 한 번 더 — 오르기·토벌 모두 쓸 수 있어요.', done: '오늘 도전 +1회' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -30,9 +30,9 @@ const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(
 const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt로 사기` : josa(`${amountLabel(kind, pt)}#{으로} 사기`));
 /** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관 없음). */
 const EXPIRE: Record<PointExtraItem, string> = {
-  expedition: '새 파견지는 오늘 안에 보내 주세요. 자정이 지나면 보통 파견으로 바뀌어요.',
-  raid: '늘어난 횟수는 자정이 지나면 사라져요.',
-  tower: '산 도전은 자정이 지나면 사라져요.',
+  expedition: '자정 전에 보내 주세요',
+  raid: '자정에 사라져요',
+  tower: '자정에 사라져요',
 };
 
 const ERR: Record<string, string> = {
@@ -60,12 +60,14 @@ export function ExtraBuyButton({
   slots,
   onBought,
   className = '',
+  size = 'md',
 }: {
   item: PointExtraItem;
   /** 파견만 — 다시 보낼 수 있는 칸. 비면 ＋를 눌러도 안내만. */
   slots?: ResendSlot[];
   onBought?: () => void;
   className?: string;
+  size?: 'md' | 'sm' | 'pill';
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const [open, setOpen] = useState(false);
@@ -148,7 +150,7 @@ export function ExtraBuyButton({
 
   return (
     <>
-      <PlusChip label={`${copy.title} 사기`} onClick={openPopup} className={className} />
+      <PlusChip label={`${copy.title} 사기`} onClick={openPopup} className={className} size={size} />
       {open ? (
         <ModalShell onClose={() => setOpen(false)} label={copy.title}>
           <ModalLayout
@@ -176,81 +178,79 @@ export function ExtraBuyButton({
               </>
             }
           >
-            <div className="space-y-3 text-[13px]">
+            <div className="space-y-2.5 text-[13px]">
               {item === 'expedition' && slots ? (
-                <div>
-                  <p className="mb-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">다시 보낼 슬롯</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {slots.map((s) => (
-                      <button
-                        key={s.slot}
-                        type="button"
-                        aria-pressed={slot === s.slot}
-                        onClick={() => setSlot(s.slot)}
-                        className={`min-w-[30%] flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold transition ${
-                          slot === s.slot
-                            ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
-                            : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200'
-                        }`}
-                      >
-                        슬롯 {s.slot}
-                        <span className="block text-[10px] font-medium text-zinc-500 dark:text-zinc-400">{s.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex items-end justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/60">
-                <div>
-                  <p className="text-[10.5px] font-semibold text-zinc-500 dark:text-zinc-400">이번 가격</p>
-                  <p className="text-[22px] font-extrabold tabular-nums text-amber-600 dark:text-amber-300">
-                    {quote && price !== null ? amountLabel(kind, price) : '—'}
-                  </p>
-                </div>
-                <p className="text-right text-[11px] leading-[1.5] text-zinc-500 dark:text-zinc-400">
-                  오늘{' '}
-                  <b className="tabular-nums text-zinc-800 dark:text-zinc-100">
-                    {quote?.bought ?? 0}/{quote?.max ?? POINT_EXTRA_PRICES[item].length}
-                  </b>
-                  번 샀어요
-                  <br />
-                  {next !== null ? (
-                    <>
-                      다음 구매 <b className="tabular-nums text-zinc-800 dark:text-zinc-100">{amountLabel(kind, next)}</b>
-                    </>
-                  ) : (
-                    '오늘 마지막 구매'
-                  )}
-                </p>
-              </div>
-
-              <div>
-                <p className="mb-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400">무엇으로 살까요</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['melee', 'mileage'] as const).map((k) => (
+                // 다시 보낼 슬롯 — 한 줄 칩(슬롯 번호 · 지역).
+                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="다시 보낼 슬롯">
+                  {slots.map((s) => (
                     <button
-                      key={k}
+                      key={s.slot}
                       type="button"
-                      aria-pressed={kind === k}
-                      onClick={() => setKind(k)}
-                      className={`rounded-xl border px-3 py-2 text-left transition ${
-                        kind === k
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/50'
-                          : 'border-zinc-200 dark:border-zinc-700'
-                      } ${quote && !enough(k) ? 'opacity-50' : ''}`}
+                      role="radio"
+                      aria-checked={slot === s.slot}
+                      onClick={() => setSlot(s.slot)}
+                      className={`flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold whitespace-nowrap transition ${
+                        slot === s.slot
+                          ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                          : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'
+                      }`}
                     >
-                      <span className="block text-[10px] text-zinc-500 dark:text-zinc-400">
-                        {KIND_KO[k]} · 보유 {quote ? fmt(balanceOf(k)) : '—'}
-                      </span>
-                      <span className="text-[15px] font-extrabold tabular-nums text-zinc-900 dark:text-zinc-50">
-                        {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '—'}
-                      </span>
+                      슬롯 {s.slot} <span className="font-medium opacity-70">· {s.label}</span>
                     </button>
                   ))}
                 </div>
+              ) : null}
+
+              {/* 통화 두 칸 — 칸마다 그 통화로 낼 값(크게)과 보유(작게). 고른 칸이 곧 이번 가격. */}
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="결제 수단">
+                {(['melee', 'mileage'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={kind === k}
+                    onClick={() => setKind(k)}
+                    className={`rounded-xl border px-3 py-2 text-left transition ${
+                      kind === k ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/50' : 'border-zinc-200 dark:border-zinc-700'
+                    } ${quote && !enough(k) ? 'opacity-45' : ''}`}
+                  >
+                    <span className="flex items-baseline justify-between gap-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                      <span className="font-semibold">{KIND_KO[k]}</span>
+                      <span className="tabular-nums">보유 {quote ? fmt(balanceOf(k)) : '—'}</span>
+                    </span>
+                    <span
+                      className={`mt-0.5 block text-[19px] font-extrabold leading-tight tabular-nums ${
+                        kind === k ? 'text-amber-600 dark:text-amber-300' : 'text-zinc-800 dark:text-zinc-100'
+                      }`}
+                    >
+                      {price !== null && quote ? (k === 'melee' ? `${fmt(price)}pt` : fmt(amountIn(k, price))) : '—'}
+                    </span>
+                  </button>
+                ))}
               </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
+
+              {/* 오늘 몇 번째인지 · 다음 값 · 소멸 — 한 줄. */}
+              <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+                <span>
+                  오늘{' '}
+                  <b className="tabular-nums text-zinc-700 dark:text-zinc-200">
+                    {(quote?.bought ?? 0) + 1}/{quote?.max ?? POINT_EXTRA_PRICES[item].length}
+                  </b>
+                  번째
+                </span>
+                <span aria-hidden>·</span>
+                <span>
+                  {next !== null ? (
+                    <>
+                      다음 <b className="tabular-nums text-zinc-700 dark:text-zinc-200">{amountLabel(kind, next)}</b>
+                    </>
+                  ) : (
+                    '오늘 마지막'
+                  )}
+                </span>
+                <span aria-hidden>·</span>
+                <span>{EXPIRE[item]}</span>
+              </p>
             </div>
           </ModalLayout>
         </ModalShell>
