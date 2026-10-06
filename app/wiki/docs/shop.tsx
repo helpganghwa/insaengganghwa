@@ -135,8 +135,8 @@ export default function Doc() {
           한 달에 바꿀 수 있는 양에 제한은 없다.
         </LI>
         <LI>
-          파견·레이드·탑의 하루 횟수를 다 쓰면 횟수 옆 ＋로 같은 포인트를 써서 횟수를 늘릴 수 있다. 같은 날 많이 살수록 값이
-          오르고, 자정에 처음 값으로 돌아간다(<DocLink slug="expedition">파견</DocLink>·<DocLink slug="raid">레이드</DocLink>·
+          파견·레이드·탑의 횟수 옆 ＋로 같은 포인트를 써서 횟수를 늘릴 수 있다. 같은 날 많이 살수록 값이
+          오르고, 자정에 처음 값으로 돌아간다. 산 횟수는 그날 안에 써야 하며 쓰지 않은 것은 자정 초기화 때 소멸한다(<DocLink slug="expedition">파견</DocLink>·<DocLink slug="raid">레이드</DocLink>·
           <DocLink slug="tower">무한의 탑</DocLink>).
         </LI>
       </UL>

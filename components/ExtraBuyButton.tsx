@@ -28,11 +28,11 @@ const amountIn = (kind: PointKind, pt: number) => (kind === 'mileage' ? pt * MIL
 const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt` : `마일리지 ${fmt(amountIn(kind, pt))}`);
 /** 사기 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). pt는 '포인트'로 읽혀 '로'. */
 const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}pt로 사기` : josa(`${amountLabel(kind, pt)}#{으로} 사기`));
-/** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관 없음). */
+/** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관·환불 없음, 10-06 확정). */
 const EXPIRE: Record<PointExtraItem, string> = {
-  expedition: '자정에 초기화돼요',
-  raid: '자정에 초기화돼요',
-  tower: '자정에 초기화돼요',
+  expedition: '보내지 않은 추가 파견은 자정 초기화 때 소멸돼요',
+  raid: '쓰지 않은 추가 횟수는 자정 초기화 때 소멸돼요',
+  tower: '쓰지 않은 추가 도전은 자정 초기화 때 소멸돼요',
 };
 
 const ERR: Record<string, string> = {
@@ -287,7 +287,7 @@ export function ExtraBuyButton({
                 ))}
               </div>
 
-              {/* 오늘 몇 번째인지 · 다음 값 · 소멸 — 한 줄. */}
+              {/* 오늘 몇 번째인지 · 다음 값 — 한 줄, 아래에 자정 소멸 안내. */}
               <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
                 <span>
                   오늘{' '}
@@ -306,9 +306,8 @@ export function ExtraBuyButton({
                     '오늘 마지막'
                   )}
                 </span>
-                <span aria-hidden>·</span>
-                <span>{EXPIRE[item]}</span>
               </p>
+              <p className="-mt-1 text-center text-[11px] text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
             </div>
           </ModalLayout>
         </ModalShell>

@@ -52,9 +52,9 @@ export default function Doc() {
           자정에 다시 채워진다. 단, 토벌은 이겨도 한 번 줄어든다.
         </LI>
         <LI>
-          도전을 다 쓰면 &lsquo;오늘 도전&rsquo; 옆 ＋로 추가 도전을 하루 {POINT_EXTRA_PRICES.tower.length}번까지 살 수 있다. 대난투
-          포인트 {POINT_EXTRA_PRICES.tower.join(' · ')}(그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT})이며, 오르기·토벌 어디에나 쓰고
-          자정에 초기화된다.
+          &lsquo;오늘 도전&rsquo; 옆 ＋로 추가 도전을 하루 {POINT_EXTRA_PRICES.tower.length}번까지 살 수 있다. 대난투
+          포인트 {POINT_EXTRA_PRICES.tower.join(' · ')}(그날 산 순서, 마일리지는 ×{MILEAGE_PER_MELEE_POINT})이며, 오르기·토벌 어디에나 쓸 수 있다.
+          쓰지 않은 추가 도전은 자정 초기화 때 소멸한다.
         </LI>
         <LI>{TOWER_SECTION}층마다 특별층이 있다.</LI>
       </UL>
