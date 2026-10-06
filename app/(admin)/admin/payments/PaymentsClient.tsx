@@ -133,7 +133,7 @@ export function PaymentsClient({
 
   const onRefund = (o: OrderRow) => {
     if (pendingId) return;
-    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자)와 적립 마일리지 회수가 진행됩니다.\n이미 쓴 마일리지는 다이아로 회수합니다(10점당 💎25).\n회수할 재화가 부족하면 취소 전에 차단됩니다.`))
+    if (!window.confirm(`환불할까요?\n\n${o.nickname ?? '?'} · ${o.product} · ${won(o.krw)}\n\n포트원 결제 취소 + 지급 재화(다이아·상자)와 적립 마일리지 회수가 진행됩니다.\n회수할 재화가 부족하거나 이 주문의 마일리지를 이미 썼으면 취소 전에 차단됩니다(강제 환불로만 진행).`))
       return;
     setBlocked(null);
     run(o);
@@ -291,8 +291,9 @@ export function PaymentsClient({
                 {blocked?.id === o.id ? (
                   <div className="mt-2 space-y-2 rounded-lg border border-amber-700/50 bg-amber-950/30 p-2.5">
                     <p className="text-[11px] leading-relaxed text-amber-200">
-                      회수할 재화가 부족해 포트원 취소를 하지 않았습니다(결제 유지 중). 약관상 이미
-                      사용한 재화는 청약철회가 제한됩니다 — 그래도 진행하려면 사유를 남기세요.
+                      회수할 재화가 부족하거나 이 주문의 마일리지를 이미 사용해 포트원 취소를 하지
+                      않았습니다(결제 유지 중). 약관상 이미 사용한 재화는 청약철회가 제한됩니다 — 그래도
+                      진행하려면 사유를 남기세요. 진행하면 쓴 마일리지는 다이아로 회수합니다(10점당 💎25).
                     </p>
                     <label className="flex items-center gap-2 text-[11px] text-amber-200">
                       <input

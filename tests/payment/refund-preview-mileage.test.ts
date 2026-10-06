@@ -7,16 +7,23 @@ import { formatClawbackShortfall, previewClawback } from '@/lib/payment/refund';
 import { endTestDb, sql, testDb } from '../db';
 
 /**
- * 어드민 환불 사전 점검이 '이미 쓴 마일리지'를 다이아로 환산해 회수 필요량에 더하는지(2026-10-06).
- * 빠져 있으면 점검은 통과하는데 환불 뒤 다이아 회수가 모자라 '미회수' 알림만 남는다.
+ * 어드민 환불 사전 점검 — 이 주문의 마일리지를 이미 썼으면 다이아가 넉넉해도 '회수 가능'이 아니다(강제 환불로만 진행,
+ * 2026-10-06 운영 결정). 쓴 몫은 다이아로 환산해 회수 필요량에 더해 보여 준다.
  */
 describe('환불 사전 점검 문구(순수)', () => {
-  it('마일리지 사용분이 섞이면 내역을 나눠 적는다', () => {
+  it('마일리지 사용분이 섞이면 내역을 나눠 적고, 강제 환불로만 진행한다고 알린다', () => {
     const msg = formatClawbackShortfall({ diamondNeed: 5150, diamondHave: 5000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59, mileageDiamond: 150 });
-    expect(msg).toContain('다이아 회수 5,150');
-    expect(msg).toContain('상품 지급 5,000');
-    expect(msg).toContain('이미 쓴 마일리지 59점 환산 150');
-    expect(msg).toContain('보유 5,000');
+    expect(msg).toContain('회수할 재화가 부족합니다');
+    expect(msg).toContain('다이아 회수 5,150(상품 지급 5,000 + 마일리지 환산 150) / 보유 5,000');
+    expect(msg).toContain('마일리지 59점을 이미 사용(환불하면 다이아 150 회수)');
+    expect(msg).toContain('강제 환불로만 진행할 수 있습니다');
+  });
+  it('다이아가 넉넉해도 마일리지를 썼으면 차단 문구가 나온다', () => {
+    const msg = formatClawbackShortfall({ diamondNeed: 5150, diamondHave: 9000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59, mileageDiamond: 150 });
+    expect(msg).toContain('마일리지를 이미 사용한 주문입니다');
+    expect(msg).toContain('마일리지 59점을 이미 사용(환불하면 다이아 150 회수)');
+    expect(msg).toContain('강제 환불로만 진행할 수 있습니다');
+    expect(msg).not.toContain('회수할 재화가 부족합니다');
   });
   it('마일리지 사용분이 없으면 종전 문구 그대로', () => {
     const msg = formatClawbackShortfall({ diamondNeed: 5000, diamondHave: 10, boxesNeed: 0, boxesHave: 0, sufficient: false });
@@ -56,7 +63,8 @@ describe.skipIf(!U)('환불 사전 점검 — 마일리지 사용분(DB 통합)'
     expect(p.mileageDiamond).toBe(150);
     expect(p.diamondNeed).toBe(150);
     expect(p.boxesNeed).toBe(0);
-    expect(p.sufficient).toBe(p.diamondHave >= 150);
+    // 다이아가 얼마가 있든, 쓴 마일리지가 있으면 '회수 가능'이 아니다 — 강제 환불로만.
+    expect(p.sufficient).toBe(false);
 
     // 주문 번호를 주지 않으면(종전 호출) 마일리지는 보지 않는다.
     const legacy = await previewClawback(U, 1, 'first_special');

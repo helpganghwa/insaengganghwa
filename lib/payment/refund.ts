@@ -153,8 +153,10 @@ export async function previewClawback(
   serverId: number,
   productCode: string,
   /**
-   * orderId를 주면 이 주문이 적립한 마일리지 중 이미 쓴 몫도 함께 본다 — 환불 처리가 그 부족분을 교환 비율로
-   * 다이아에서 회수하므로(POINT-SHOP §6), 그 다이아까지 있어야 '회수 가능'이다(2026-10-06).
+   * orderId를 주면 이 주문이 적립한 마일리지 중 이미 쓴 몫도 함께 본다(2026-10-06).
+   * **쓴 몫이 조금이라도 있으면 '회수 가능'으로 보지 않는다** — 다이아가 넉넉해도 강제 환불(사유 기록)로만 진행한다
+   * (운영 결정: 마일리지로 바꾼 상자·추가 횟수는 회수되지 않아, 쓰고 환불받는 반복을 사람이 한 번 보고 넘기게).
+   * 환불이 진행되면 그 부족분은 교환 비율로 다이아에서 회수한다(POINT-SHOP §6) — diamondNeed에는 그 양까지 넣어 보여 준다.
    * grantSkipped(지급이 없었던 주문)는 상품 회수분이 0이지만 마일리지는 결제 자체에 붙어 적립되므로 따로 본다.
    */
   opts?: { orderId?: bigint | number | string; grantSkipped?: boolean },
@@ -170,7 +172,7 @@ export async function previewClawback(
   ]);
   const mileageDiamond = mileageShortfallDiamond(mileage.short);
   const preview = toPreview({ diamond: productNeed.diamond + mileageDiamond, boxes: productNeed.boxes }, have);
-  return mileageDiamond > 0 ? { ...preview, mileageShort: mileage.short, mileageDiamond } : preview;
+  return mileage.short > 0 ? { ...preview, sufficient: false, mileageShort: mileage.short, mileageDiamond } : preview;
 }
 
 /** 부족 내역 문구 — 어드민 차단 사유와 사고 알림이 같은 사실을 같은 말로 전하도록 공용. */
@@ -181,12 +183,19 @@ export function formatClawbackShortfall(p: ClawbackPreview): string {
     const md = p.mileageDiamond ?? 0;
     parts.push(
       md > 0
-        ? `다이아 회수 ${num(p.diamondNeed)}(상품 지급 ${num(p.diamondNeed - md)} + 이미 쓴 마일리지 ${num(p.mileageShort ?? 0)}점 환산 ${num(md)}) / 보유 ${num(p.diamondHave)}`
+        ? `다이아 회수 ${num(p.diamondNeed)}(상품 지급 ${num(p.diamondNeed - md)} + 마일리지 환산 ${num(md)}) / 보유 ${num(p.diamondHave)}`
         : `다이아 지급 ${num(p.diamondNeed)} / 보유 ${num(p.diamondHave)}`,
     );
   }
   if (p.boxesNeed > p.boxesHave)
     parts.push(`보급상자 지급 ${num(p.boxesNeed)} / 보유 ${num(p.boxesHave)}`);
+  // 이 주문의 마일리지를 이미 쓴 경우(어드민 사전 점검만) — 재화가 넉넉해도 강제 환불로만 진행한다.
+  const ms = p.mileageShort ?? 0;
+  if (ms > 0) {
+    const used = `이 주문으로 쌓인 마일리지 ${num(ms)}점을 이미 사용(환불하면 다이아 ${num(p.mileageDiamond ?? 0)} 회수)`;
+    const head = parts.length > 0 ? `회수할 재화가 부족합니다 — ${parts.join(' · ')} · ${used}` : `마일리지를 이미 사용한 주문입니다 — ${used}`;
+    return `${head}. 약관상 이미 사용·소모한 재화는 청약철회가 제한됩니다(환불 정책 §1·§6). 강제 환불로만 진행할 수 있습니다.`;
+  }
   if (parts.length === 0) return '회수 가능 — 부족분 없음.';
   return `회수할 재화가 부족합니다 — ${parts.join(' · ')}. 약관상 이미 사용·소모한 재화는 청약철회가 제한됩니다(환불 정책 §1).`;
 }
