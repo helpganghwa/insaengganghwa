@@ -447,8 +447,9 @@ const WorldMap = memo(function WorldMap({
                   <img
                     src={assetUrl(worldBossSpriteUrl(boss.region))}
                     alt={boss.name}
-                    className="block h-[30px] w-[30px] max-w-none animate-marker-bob object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.9)]"
-                    style={{ imageRendering: 'pixelated' }}
+                    className="block h-[30px] w-[30px] max-w-none animate-marker-bob object-contain"
+                    // 검은 외곽선 두 겹 + 금빛 글로우 — 왕성처럼 밝은 지형 위에서도 그림이 묻히지 않게(10-07 로컬 확인).
+                    style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 4px rgba(251,191,36,0.9))' }}
                   />
                 </span>
               )}
