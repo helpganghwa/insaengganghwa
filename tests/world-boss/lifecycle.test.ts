@@ -4,6 +4,7 @@ import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossPartyReward, 
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
+import { getWorldBossMapState } from '@/lib/game/world-boss/queries';
 import { activateDueBosses, ensureTodayBoss, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -91,6 +92,10 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(rows.find((r) => r.id === later)!.status).toBe('scheduled');
     const ev = await q<{ n: number }>(sql`select count(*)::int as n from world_events where type='world_boss_spawn' and detail->>'bossId'=${due}`);
     expect(ev[0]!.n).toBe(1);
+    // 지도 상태(세계지도 마커·띠·시트 카드) — 출현한 보스만 들어오고, 예정은 빠진다.
+    const map = await getWorldBossMapState(S, T);
+    expect(map.active.find((b) => b.id === due)).toMatchObject({ zoneId: ZONE, region: 'volcano', stage: 0, into: 0, recruiting: 0, departed: 0, mine: 'none' });
+    expect(map.active.some((b) => b.id === later)).toBe(false);
   });
 
   it('원정대: 점령 길드원만 만들고, 누구나 신청하고, 대장이 수락·출발하며, 보스 하나에 1인 1번', async () => {
@@ -98,6 +103,9 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(await code(createParty({ userId: G, serverId: S, bossId: boss }))).toBe('NOT_OWNER_GUILD');
     const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_IN_PARTY');
+    // 지도 상태 — 모집 중 원정대 1, 대장은 'recruiting', 아직 신청 안 한 사람은 'none'.
+    expect((await getWorldBossMapState(S, T)).active.find((b) => b.id === boss)).toMatchObject({ recruiting: 1, departed: 0, mine: 'recruiting' });
+    expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('none');
 
     await requestJoin({ userId: G, serverId: S, partyId });
     expect(await code(requestJoin({ userId: G, serverId: S, partyId }))).toBe('ALREADY_REQUESTED');
@@ -114,7 +122,9 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const key = crypto.randomUUID();
     if (isConquestLocked()) {
       expect(await code(departParty({ leaderUserId: T, serverId: S, partyId, departKey: key }))).toBe('LOCKED');
-      return; // 23~01시(KST)에는 출발 자체를 막는다 — 나머지는 창 밖에서 확인
+      // 23~01시(KST)에는 출발 자체를 막는다 — 나머지는 창 밖에서 확인. 모집 중 원정대를 남기면 뒤의 '주인 변경' 집계(해산 1건)가 2가 되므로 접고 나간다.
+      expect(await leaveParty({ userId: T, serverId: S, partyId })).toEqual({ disbanded: true });
+      return;
     }
     const r = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: key });
     expect(r.duplicate).toBe(false);
@@ -143,7 +153,11 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_FOUGHT');
     const [bt] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(bt!.t)).toBe(r.damage); // 재전송으로 피해가 두 번 더해지지 않는다
-  });
+    // 지도 상태 — 출발한 원정대 1, 둘 다 'fought', 누적 피해·단계 진행이 같이 내려온다.
+    const after = (await getWorldBossMapState(S, G)).active.find((b) => b.id === boss);
+    expect(after).toMatchObject({ recruiting: 0, departed: 1, mine: 'fought', totalDamage: String(r.damage) });
+    expect(after!.into + after!.stage).toBeGreaterThan(0);
+  }, 20_000); // 원격 스테이징 DB에 왕복이 많다(원정대 흐름 + 지도 상태 조회 3회)
 
   it('단계: 출발 피해로 단계를 넘기면 보스 단계·전리품이 절대값으로 갱신된다', async () => {
     if (isConquestLocked()) return;
@@ -201,6 +215,11 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(mail[0]!.n).toBe(1);
     expect(await settleLeftBosses(S)).toEqual([]); // 두 번 돌려도 다시 정산하지 않는다
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('BOSS_NOT_ACTIVE');
+    // 지도 상태 — 떠난 보스는 active에서 빠지고 48시간 기록(구역당 가장 최근 하나)에 주인 길드·전리품이 남는다.
+    const map = await getWorldBossMapState(S, T);
+    expect(map.active.some((b) => b.id === boss)).toBe(false);
+    const [gname] = await q<{ name: string }>(sql`select name from guilds where id=${guildId}::bigint`);
+    expect(map.left.find((l) => l.zoneId === ZONE)).toMatchObject({ bossId: boss, settledGuildName: gname!.name, lootDiamond: loot.diamond, lootBoxes: loot.boxes });
   });
 
   it('정산: 떠날 때 중립이면 전리품은 소멸한다', async () => {

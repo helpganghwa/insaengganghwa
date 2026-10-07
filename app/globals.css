@@ -59,6 +59,7 @@ html {
      @theme 안 @keyframes가 트리셰이크돼 누락된다(utility 참조 시에만 emit). */
   --animate-marker-bob: marker-bob 2s ease-in-out infinite;
   --animate-marker-pin-glow: marker-pin-glow 1.5s ease-in-out infinite;
+  --animate-wb-ring: wb-ring 1.6s ease-in-out infinite;
   /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
   --animate-hit-shake: hit-shake 0.32s ease-in-out;
   --animate-crit-shake: crit-shake 0.5s ease-in-out;
@@ -116,6 +117,11 @@ html {
   }
   /* 내 위치 핀 글로우 펄스(transform은 인라인 rotate 유지 — box-shadow만 애니메이트) */
   /* 핀 글로우 — 색은 --pin-glow/--pin-glow-hi로 주입(기본 앰버). 선택 핀은 파란 계열로 덮어쓴다. */
+  /* 월드보스가 머무는 구역 노드 — 금빛 테두리 맥동(docs/WORLD-BOSS.md §9) */
+  @keyframes wb-ring {
+    0%, 100% { box-shadow: 0 0 0 2px #fbbf24, 0 0 6px 2px rgba(251,191,36,0.45); }
+    50% { box-shadow: 0 0 0 2px #fde68a, 0 0 12px 4px rgba(251,191,36,0.85); }
+  }
   @keyframes marker-pin-glow {
     0%, 100% { box-shadow: 0 0 3px 0 var(--pin-glow, rgba(245,158,11,0.65)), 0 1px 2px rgba(0,0,0,0.55); }
     50% { box-shadow: 0 0 8px 2px var(--pin-glow-hi, rgba(251,191,36,0.95)), 0 1px 2px rgba(0,0,0,0.55); }

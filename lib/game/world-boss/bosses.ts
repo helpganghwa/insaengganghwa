@@ -28,3 +28,11 @@ export function worldBossName(region: string): string {
 export function worldBossRegionLabel(region: string): string {
   return isWorldBossRegion(region) ? REGION_META[region].label : '';
 }
+
+/**
+ * 보스 그림 경로 — 지역마다 한 장(`public/sprites/world-boss/<region>.png`, 128px).
+ * 지금은 레이드 보스 그림을 복사한 자리 표시(10-07) — 전용 그림은 시안 확정 뒤 Pixellab으로 생성해 같은 경로에 덮어쓴다.
+ */
+export function worldBossSpriteUrl(region: string): string {
+  return `/sprites/world-boss/${isWorldBossRegion(region) ? region : 'volcano'}.png`;
+}

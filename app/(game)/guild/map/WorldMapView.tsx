@@ -15,6 +15,11 @@ import { WikiLink } from '@/components/WikiLink';
 import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
+import { josa } from 'josa';
+import { kstStartOfDay } from '@/lib/kst';
+import { formatCompactKR } from '@/lib/ui/format-number';
+import { worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
+import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from '@/lib/game/world-boss/map-types';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
 import {
@@ -166,6 +171,21 @@ function hmsFrom(ms: number): string {
   return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** 월드보스 남은 시간 — 띠·카드용 분 단위 표기("19시간 12분 남음" / "12분 남음"). 떠나는 시각이 지나면 크론 정산 전까지 '곧 떠나요'. */
+function wbRemain(ms: number): string {
+  const m = Math.ceil(ms / 60_000);
+  if (m <= 0) return '곧 떠나요';
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}시간 ${m % 60}분 남음` : `${m}분 남음`;
+}
+/** 떠난 날 표기 — KST 날짜 차이로 오늘/어제/그제(기록은 48시간만 남으니 그 너머는 없다). */
+function wbDayWord(leftAt: number, now: number): string {
+  const d = Math.round((kstStartOfDay(new Date(now)).getTime() - kstStartOfDay(new Date(leftAt)).getTime()) / 86_400_000);
+  return d <= 0 ? '오늘' : d === 1 ? '어제' : '그제';
+}
+const WB_EMPTY: WorldBossMapBoss[] = [];
+const WB_EMPTY_LEFT: WorldBossMapLeft[] = [];
+
 /**
  * 지도 본체(2026-08-07 렌더 감사) — memo 분리. 이전엔 selectedId·팝업·연대기 탭·컨펌 카운트 등
  * UI state 하나만 바뀌어도 노드 50개+간선 SVG 3패스+문양 img가 통째로 재조정됐다.
@@ -178,6 +198,7 @@ const WorldMap = memo(function WorldMap({
   mapSrc,
   edges,
   zones,
+  bosses,
   selectedId,
   residence,
   replayActive,
@@ -195,6 +216,8 @@ const WorldMap = memo(function WorldMap({
   mapSrc: string;
   edges: EdgeSeg[];
   zones: Zone[];
+  /** 머무는 월드보스(2026-10-07) — 노드 위 보스 그림·금빛 테두리·단계 배지, 지도 위 띠. 리플레이 중엔 숨긴다. */
+  bosses: WorldBossMapBoss[];
   selectedId: number | null;
   residence: number | null;
   replayActive: boolean;
@@ -209,8 +232,46 @@ const WorldMap = memo(function WorldMap({
   onSelect: (zoneId: number) => void;
   setReplayLayer: (el: HTMLDivElement | null) => void;
 }) {
+  const bossByZone = useMemo(() => new Map(bosses.map((b) => [b.zoneId, b] as const)), [bosses]);
+  const zoneNameById = useMemo(() => new Map(zones.map((z) => [z.id, z.name] as const)), [zones]);
   return (
     <>
+      {/* 월드보스 띠(docs/WORLD-BOSS.md §9 — C안) — 보스가 머무는 동안만, 지도 **바로 위** 한 줄(지도 안에 겹치면 꼭대기
+          한가운데의 대설봉 노드가 가려진다). 누르면 그 구역 시트가 열린다. 리플레이 중엔 숨김. */}
+      {bosses.length > 0 && !replayActive && (
+        <div className="flex shrink-0 flex-col gap-1 border-b border-amber-500/30 bg-zinc-950 px-1.5 py-1.5">
+          <Ticker intervalMs={60_000}>
+            {(now) =>
+              bosses.slice(0, 3).map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => onSelect(b.zoneId)}
+                  className="flex w-full items-center gap-2 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-950/70 to-zinc-900 px-2.5 py-1.5 text-left active:opacity-80"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={assetUrl(worldBossSpriteUrl(b.region))}
+                    alt=""
+                    className="h-7 w-7 shrink-0 object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.8)]"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="truncate text-[11px] font-extrabold text-amber-300">
+                      월드보스 · {b.name}
+                      <span className="ml-1 font-semibold text-amber-200/80">{zoneNameById.get(b.zoneId) ?? ''}</span>
+                    </span>
+                    <span className="truncate text-[9.5px] text-zinc-200">
+                      {b.stage}단계 · 💎{b.lootDiamond.toLocaleString('ko-KR')} 📦{b.lootBoxes} · {wbRemain(b.leaveAt - now)} · 원정대 {b.recruiting}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-base leading-none text-amber-300">›</span>
+                </button>
+              ))
+            }
+          </Ticker>
+        </div>
+      )}
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
           위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
@@ -341,6 +402,7 @@ const WorldMap = memo(function WorldMap({
               : z.ownerEmblemColor;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
+          const boss = replayActive ? undefined : bossByZone.get(z.id);
           return (
             <button
               key={z.id}
@@ -352,11 +414,11 @@ const WorldMap = memo(function WorldMap({
               style={{
                 left: `${z.mapX}%`,
                 top: `${z.mapY}%`,
-                zIndex: isResidence ? 20 : owned ? 10 : 1,
+                zIndex: boss ? 25 : isResidence ? 20 : owned ? 10 : 1,
               }}
             >
               <span
-                className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
+                className={`relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition ${boss ? 'animate-wb-ring' : ''}`}
                 style={{
                   // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
                   // 중립: 어두운 배경 + 흐린 지역색.
@@ -365,7 +427,8 @@ const WorldMap = memo(function WorldMap({
                       ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
                       : 'transparent'
                     : 'rgba(10,12,20,0.45)',
-                  boxShadow: owned ? `0 0 4px ${color}88` : 'none',
+                  // 보스가 머무는 구역은 금빛 테두리 맥동(animate-wb-ring)이 box-shadow를 맡는다.
+                  boxShadow: boss ? undefined : owned ? `0 0 4px ${color}88` : 'none',
                   outline: `1px solid ${color}${owned ? '' : '88'}`,
                   // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
                   outlineOffset: 0,
@@ -377,9 +440,21 @@ const WorldMap = memo(function WorldMap({
                   <GuildEmblemImg key={emblemUrl} src={emblemUrl} className="h-full w-full object-contain" />
                 ) : null}
               </span>
+              {/* 월드보스 — 네모 위에 떠 있는 보스 그림(부유). 내 위치 핀과 겹치면 핀을 오른쪽 위로 비킨다. */}
+              {boss && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1.5 -translate-x-1/2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={assetUrl(worldBossSpriteUrl(boss.region))}
+                    alt={boss.name}
+                    className="block h-[30px] w-[30px] max-w-none animate-marker-bob object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.9)]"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </span>
+              )}
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
+                <span className={`pointer-events-none absolute bottom-full -mb-1 -translate-x-1/2 ${boss ? 'left-full' : 'left-1/2'}`}>
                   <span className="block animate-marker-bob">
                     <span
                       className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
@@ -401,6 +476,12 @@ const WorldMap = memo(function WorldMap({
                   style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
                 >
                   {nodeShowGuild ? z.ownerGuildName : z.name}
+                </span>
+              )}
+              {/* 월드보스 배지 — 라벨 아래 '단계 · 쌓인 다이아' */}
+              {boss && (
+                <span className="pointer-events-none absolute left-1/2 top-full mt-[5px] -translate-x-1/2 whitespace-nowrap rounded-sm border border-amber-600/70 bg-[#1a1407] px-[3px] text-[6px] font-extrabold leading-[1.5] text-amber-300">
+                  {boss.stage}단계 · 💎{boss.lootDiamond.toLocaleString('ko-KR')}
                 </span>
               )}
             </button>
@@ -425,6 +506,8 @@ export function WorldMapView({
   embedded = false,
   taxOfficerGuildId = null,
   taxNextCooldownMin = TAX_COLLECT_COOLDOWN_MIN,
+  myGuildId = null,
+  worldBoss = null,
 }: {
   mapSrc: string;
   /** 지금 수금하면 걸리는 쿨다운(분, 서버 계산) — 전환 규칙상 적용 시작 전이면 72h, 이후면 48h. 안내 문구용. */
@@ -439,6 +522,10 @@ export function WorldMapView({
   myUserId: string | null;
   /** 내가 수금 권한자(taxCollect)인 길드 id — 그 길드 구역은 집행관이 아니어도 대리 수금 버튼이 뜬다(2026-09-08). */
   taxOfficerGuildId?: string | null;
+  /** 내 길드 id — 월드보스 카드의 '원정대 만들기'는 구역 주인 길드원에게만(2026-10-07). */
+  myGuildId?: string | null;
+  /** 월드보스 지도 상태 — 머무는 보스·떠난 지 48시간 안인 기록. 조회 실패·없음이면 null. */
+  worldBoss?: WorldBossMapState | null;
   serverId: number;
   chronicle: { today: string | null; yesterday: string | null; yesterdayDay: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
@@ -458,6 +545,10 @@ export function WorldMapView({
   const [moveAsk, setMoveAsk] = useState<{ kind: 'release'; zoneId: number } | null>(null);
   const [moveLock, setMoveLock] = useState(residenceProp?.lock ?? null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 월드보스(2026-10-07) — 구역별 머무는 보스·떠난 기록. 지도(마커·띠)와 구역 시트 카드가 같이 쓴다.
+  const wbActive = worldBoss?.active ?? WB_EMPTY;
+  const bossByZone = useMemo(() => new Map(wbActive.map((b) => [b.zoneId, b] as const)), [wbActive]);
+  const leftByZone = useMemo(() => new Map((worldBoss?.left ?? WB_EMPTY_LEFT).map((l) => [l.zoneId, l] as const)), [worldBoss]);
   // 구역 팝업 복원(2026-07-21) — 집행관 프로필로 이동 후 뒤로가기 시 팝업 유지(채팅창 패턴).
   // 이동 직전 sessionStorage에 구역 id를 남기고, 마운트 시 1회 소비해 재오픈.
   // useLayoutEffect — 페인트 전 복원(닫힌 화면 한 프레임 깜빡임 제거, 2026-07-22).
@@ -737,6 +828,7 @@ export function WorldMapView({
         mapSrc={mapSrc}
         edges={edges}
         zones={zones}
+        bosses={wbActive}
         selectedId={selectedId}
         residence={residence}
         replayActive={replayActive}
@@ -1143,6 +1235,103 @@ export function WorldMapView({
                   <span className="text-zinc-300 dark:text-zinc-700">·</span>
                   <span>거주 {selected.residentCount.toLocaleString('ko-KR')}명</span>
                 </div>
+
+                {/* 월드보스 카드(docs/WORLD-BOSS.md §9) — 보스가 머무는 동안만. 떠난 뒤 48시간은 기록 한 줄. */}
+                {(() => {
+                  const boss = bossByZone.get(selected.id);
+                  if (boss) {
+                    const canCreate = myGuildId != null && selected.ownerGuildId === myGuildId && boss.mine === 'none';
+                    const pct = boss.need > 0 ? Math.min(100, Math.max(0, (boss.into / boss.need) * 100)) : 0;
+                    const remember = () => {
+                      try {
+                        sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
+                      } catch {
+                        // 저장 실패 시 복원만 생략
+                      }
+                    };
+                    return (
+                      <div className="mt-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-50 to-white p-2.5 dark:border-amber-700/50 dark:from-amber-950/40 dark:to-zinc-900/60">
+                        <div className="flex gap-2.5">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={assetUrl(worldBossSpriteUrl(boss.region))}
+                            alt=""
+                            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-[13.5px] font-extrabold text-amber-700 dark:text-amber-300">{boss.name}</span>
+                              <Ticker intervalMs={60_000}>
+                                {(now) => <span className="shrink-0 text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">{wbRemain(boss.leaveAt - now)}</span>}
+                              </Ticker>
+                            </div>
+                            <div className="mt-1.5 h-[7px] overflow-hidden rounded-full bg-amber-200/60 dark:bg-amber-900/50">
+                              <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" style={{ width: `${pct}%` }} />
+                            </div>
+                            <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-[10.5px] text-zinc-600 dark:text-zinc-300">
+                              <span>
+                                {boss.stage}단계 · 다음까지 {formatCompactKR(boss.into)} / {formatCompactKR(boss.need)}
+                              </span>
+                              <span className="font-semibold">
+                                💎{boss.lootDiamond.toLocaleString('ko-KR')} 📦{boss.lootBoxes} 쌓임
+                              </span>
+                            </div>
+                            <div className="mt-0.5 text-[10.5px] text-zinc-500">
+                              원정대 {boss.recruiting}개 모집 중 · 출발 {boss.departed} · 누적 피해 {formatCompactKR(Number(boss.totalDamage))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <Link
+                            prefetch={false}
+                            href={`/world-boss/${boss.id}`}
+                            onClick={remember}
+                            className="flex-1 rounded-lg bg-amber-500 py-2 text-center text-[12.5px] font-bold text-white"
+                          >
+                            {boss.mine === 'fought' ? '내 원정 결과' : boss.mine === 'recruiting' ? '내 원정대' : '원정대 보기'}
+                          </Link>
+                          {canCreate && (
+                            <Link
+                              prefetch={false}
+                              href={`/world-boss/${boss.id}?create=1`}
+                              onClick={remember}
+                              className="flex-1 rounded-lg border border-amber-500/60 py-2 text-center text-[12.5px] font-bold text-amber-700 dark:text-amber-300"
+                            >
+                              원정대 만들기
+                            </Link>
+                          )}
+                        </div>
+                        <p className="mt-1.5 text-[10px] text-zinc-500">
+                          {selected.ownerGuildName ? `만들기는 ${selected.ownerGuildName} 길드원만 · ` : ''}참가는 누구나 · 보스 하나에 1인 1번
+                        </p>
+                      </div>
+                    );
+                  }
+                  const left = leftByZone.get(selected.id);
+                  if (!left) return null;
+                  return (
+                    <Ticker intervalMs={60_000}>
+                      {(now) => (
+                        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-[10.5px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={assetUrl(worldBossSpriteUrl(left.region))}
+                            alt=""
+                            className="h-4 w-4 shrink-0 object-contain opacity-70"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <span className="min-w-0">
+                            {wbDayWord(left.leftAt, now)} {josa(`${left.name}#{이}`)} 떠나며{' '}
+                            {left.settledGuildName
+                              ? `${left.settledGuildName} 금고에 💎${left.lootDiamond.toLocaleString('ko-KR')} 📦${left.lootBoxes.toLocaleString('ko-KR')}`
+                              : '남긴 전리품은 주인이 없어 사라졌어요'}
+                          </span>
+                        </div>
+                      )}
+                    </Ticker>
+                  );
+                })()}
 
                 {/* 세금 카드 — 세율(탭 → 안내 모달) + 누적 + 수금 게이지·버튼 */}
                 <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">

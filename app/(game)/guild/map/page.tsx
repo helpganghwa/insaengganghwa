@@ -6,6 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
 import { getWorldmapZones, getResidenceState, getChronicle, getZoneAdjacency, getConquestReplay } from '@/lib/game/guild';
+import { getWorldBossMapState } from '@/lib/game/world-boss/queries';
 
 import { ChronicleReadMark } from './ChronicleReadMark';
 import { WorldMapView } from './WorldMapView';
@@ -20,7 +21,7 @@ export default async function WorldMapPage() {
   // 모든 쿼리를 .catch로 방어 — 풀러 클라 커넥션 포화(EMAXCONN) 등 일시 DB 실패에도 페이지가
   // 통째로 크래시되지 않고 degrade(빈 맵·거주지 미표시). getResidence 미방어로 전체 렌더가
   // 터지던 문제 방지(2026-07-13, digest 3878315197).
-  const [zones, residence, chronicle, replay, adjacency, perm] = await Promise.all([
+  const [zones, residence, chronicle, replay, adjacency, perm, worldBoss] = await Promise.all([
     getWorldmapZones(serverId).catch(() => []),
     userId
       ? getResidenceState(userId, serverId).catch(() => null)
@@ -30,6 +31,8 @@ export default async function WorldMapPage() {
     getZoneAdjacency(serverId).catch(() => []),
     // 수금 권한자(taxCollect)면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
     userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
+    // 월드보스(2026-10-07) — 머무는 보스(마커·띠·시트 카드)와 떠난 지 48시간 안인 기록. 실패하면 표시만 생략.
+    getWorldBossMapState(serverId, userId).catch(() => null),
   ]);
   const taxOfficerGuildId =
     perm && hasGuildPerm(perm.role, perm.permissions, 'taxCollect') ? perm.guildId.toString() : null;
@@ -49,6 +52,8 @@ export default async function WorldMapPage() {
       canSetResidence={userId != null}
       myUserId={userId}
       taxOfficerGuildId={taxOfficerGuildId}
+      myGuildId={perm?.guildId.toString() ?? null}
+      worldBoss={worldBoss}
       serverId={serverId}
       chronicle={chronicle}
       replay={replay}

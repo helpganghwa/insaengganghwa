@@ -164,6 +164,8 @@ export type GuildTaxDistribution = 'equal' | 'target';
 export const WORLD_BOSS_SPAWN_KST_HOURS = { from: 9, to: 21 } as const;
 /** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. */
 export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
+/** 떠난 뒤 구역 시트에 기록 한 줄을 남기는 시간(ms) — 머무는 시간과 같은 48시간(사용자 확정 10-07). */
+export const WORLD_BOSS_LEFT_NOTE_MS = 48 * 60 * 60 * 1000;
 /** 원정대 최대 인원(대장 포함). 최소 인원 제한 없음. */
 export const WORLD_BOSS_PARTY_MAX = 10;
 /**
