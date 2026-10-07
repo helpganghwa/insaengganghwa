@@ -59,6 +59,8 @@ export const profiles = pgTable('profiles', {
   pushGuildJoin: boolean('push_guild_join').notNull().default(true),
   /** 파견 귀환 알림(0181). */
   pushExpedition: boolean('push_expedition').notNull().default(true),
+  /** 월드보스 알림(0228) — 출현·원정대·결과·전리품. */
+  pushWorldBoss: boolean('push_world_boss').notNull().default(true),
   /** 대표 칭호 code(0149, TITLES.md §4) — null=미장착. 조건부는 표시 시점 재검증. */
   /** @deprecated 칭호 서버별화(0152)로 characters.representative_title_code로 이관 — 읽기/쓰기 금지, 추후 드랍. */
   representativeTitleCode: text('representative_title_code'),

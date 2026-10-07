@@ -84,8 +84,10 @@ export const guilds = pgTable('guilds', {
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */
   level: integer('level').notNull().default(0),
   xp: bigint('xp', { mode: 'bigint' }).notNull().default(sql`0`),
-  /** 집행관 수금으로 누적된 미분배 세금 💎(집행관 90% 몫). */
+  /** 집행관 수금으로 누적된 미분배 세금 💎(집행관 90% 몫). 월드보스 전리품 💎도 여기로(집행관 몫 없음, 0228). */
   taxPoolDiamond: bigint('tax_pool_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
+  /** 금고의 보급 상자(부위 무관 총량, 3의 배수) — 월드보스 전리품(0228). 분배 때 부위별 1/3씩. */
+  taxPoolBoxes: integer('tax_pool_boxes').notNull().default(0),
   leaderUserId: uuid('leader_user_id')
     .notNull()
     .references(() => profiles.id),

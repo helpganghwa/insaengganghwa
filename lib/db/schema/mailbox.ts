@@ -49,6 +49,7 @@ export const mailboxTypeEnum = pgEnum('mailbox_type', [
   'guild',
   /** 예약·미사용(inert) — 강화 결과는 인페이지 토스트+완료 푸시로 통지, 우편 미사용(0087로 DB에 값만 존재). */
   'enhance_result',
+  'world_boss', // 0229 — 원정대 보상·길드 전리품 결과
 ]);
 
 /**

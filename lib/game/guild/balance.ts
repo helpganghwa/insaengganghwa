@@ -157,3 +157,66 @@ export const GUILD_ZONE_TAX_BONUS = 0.01;
 export const GUILD_FULL_REGION_TAX_BONUS = 0.25;
 /** 분배 방식. */
 export type GuildTaxDistribution = 'equal' | 'target';
+
+// ── 월드보스 (docs/WORLD-BOSS.md) ──
+// 수치는 자리 표시(사용자 결정: 구현 뒤 스테이징에서 조정). 구조·규칙은 확정.
+/** 출현 시각 창(KST 시, [from, to)) — 그날 0시에 이 창 안의 분 단위 시각을 추첨한다. */
+export const WORLD_BOSS_SPAWN_KST_HOURS = { from: 9, to: 21 } as const;
+/** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. */
+export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
+/** 원정대 최대 인원(대장 포함). 최소 인원 제한 없음. */
+export const WORLD_BOSS_PARTY_MAX = 10;
+/**
+ * 단계 체력(서버 공통 — 누구 땅이든 같다). 단계 k(1부터)를 넘기는 데 BASE × GROWTH^(k-1) 피해.
+ * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.
+ */
+export const WORLD_BOSS_STAGE_BASE_HP = 3_000_000;
+export const WORLD_BOSS_STAGE_GROWTH = 1.1;
+/** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 금고로(집행관 몫 없음). 상자는 3의 배수. */
+export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 100, boxes: 6 } as const;
+export const WORLD_BOSS_LOOT_STAGE_CAP = 30;
+/** 단계마다 떠날 때 주인 길드가 받는 길드 경험치. */
+export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
+/**
+ * 원정대 보상(원정대원 전원 동일, 전투 직후 우편) — 그 원정대가 넣은 피해 구간. 상자는 3의 배수(부위별 1/3).
+ * 오름차순 — 피해가 minDamage 이상인 마지막 구간을 준다. 0 이상이라 한 번이라도 싸우면 첫 구간은 받는다.
+ */
+export const WORLD_BOSS_PARTY_REWARDS: readonly { minDamage: number; diamond: number; boxes: number }[] = [
+  { minDamage: 0, diamond: 30, boxes: 3 },
+  { minDamage: 5_000_000, diamond: 60, boxes: 6 },
+  { minDamage: 20_000_000, diamond: 100, boxes: 9 },
+  { minDamage: 60_000_000, diamond: 150, boxes: 15 },
+];
+
+/** 단계 k(1부터)를 넘기는 데 필요한 피해. */
+export function worldBossStageHp(stage: number): number {
+  return Math.round(WORLD_BOSS_STAGE_BASE_HP * Math.pow(WORLD_BOSS_STAGE_GROWTH, Math.max(0, stage - 1)));
+}
+/** 누적 피해 → 넘긴 단계 수와 현재 단계 진행(into/need). 단계는 끝이 없다. */
+export function worldBossStageFor(totalDamage: number): { stage: number; into: number; need: number } {
+  let stage = 0;
+  let rest = Math.max(0, Math.floor(totalDamage));
+  let need = worldBossStageHp(1);
+  // 보호 상한 — 피해가 비정상적으로 커도 루프가 끝난다(10,000단계 ≈ BASE × 1.1^10000, 실제로는 닿지 않는다).
+  while (rest >= need && stage < 10_000) {
+    rest -= need;
+    stage++;
+    need = worldBossStageHp(stage + 1);
+  }
+  return { stage, into: rest, need };
+}
+/** 단계 수 → 쌓이는 길드 전리품(상한 단계까지만). */
+export function worldBossLootFor(stage: number): { diamond: number; boxes: number } {
+  const n = Math.max(0, Math.min(stage, WORLD_BOSS_LOOT_STAGE_CAP));
+  return { diamond: n * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: n * WORLD_BOSS_LOOT_PER_STAGE.boxes };
+}
+/** 원정대 피해 → 원정대원 1인 보상. */
+export function worldBossPartyReward(damage: number): { diamond: number; boxes: number } {
+  let pick = WORLD_BOSS_PARTY_REWARDS[0]!;
+  for (const t of WORLD_BOSS_PARTY_REWARDS) if (damage >= t.minDamage) pick = t;
+  return { diamond: pick.diamond, boxes: pick.boxes };
+}
+/** 원정대원 1인의 평균 공격 횟수 = (인원 + 1) ÷ 2 — 모집 화면 안내용. */
+export function worldBossExpectedAttacks(members: number): number {
+  return members <= 0 ? 0 : (members + 1) / 2;
+}

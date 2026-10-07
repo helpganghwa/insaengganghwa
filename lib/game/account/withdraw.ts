@@ -41,6 +41,9 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   support_inquiries: '분쟁 추적(본문 보존·이미지만 파기 — 함수 내 update)',
   raids: '레이드 엔티티 — 호스트 탈퇴 후에도 참가자를 위해 진행·정산 유지(2026-08-27). 호스트 표시는 characters 부재로 "탈퇴한 대장장이"',
   raid_participants: '참가·피해 기록 — 페이즈 판정 원천(total_damage 합). PII 없음', raid_attacks: '공격 로그 — 피해 이력·감사. PII 없음',
+  world_bosses: '월드보스 엔티티(서버 단위, 유저 축 없음, 0228)',
+  world_boss_parties: '원정대 기록 — 대장이 탈퇴해도 다른 원정대원의 전투 기록·보상 근거(레이드와 같은 원칙). 모집 중이던 것은 탈퇴 훅이 해산 처리, 표시는 "탈퇴한 대장장이"',
+  world_boss_party_members: '원정대 참가·피해 기록 — 보스 누적 피해·원정대 보상의 원천. PII 없음',
   guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
   admin_mail_logs: '운영 발송 감사',
   milestone_firsts: '최초 이정표 순위(0218) — 지우면 다음 도달자가 빈 순위를 받아 "처음으로"가 사실과 달라진다. user_id 외 PII 없음. 재가입 캐릭터는 judge가 reached_at >= characters.created_at만 인정해 칭호가 되살아나지 않음', tower_pools: '무한의 탑 주간 요구 장비(0222) — 서버 단위 표, 유저 데이터 없음', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
@@ -89,6 +92,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raid_invites where invitee_user_id = ${uid} or inviter_user_id = ${uid}`);
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
+    await tx.execute(sql`delete from world_boss_join_requests where user_id = ${uid}`); // 월드보스 참가 신청(0228) — 본인 귀속
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);
     await tx.execute(sql`delete from platform_daily where user_id = ${uid}`); // 0199 플랫폼별 접속(통계) — 개인 활동 기록이라 파기
     // 포인트 지갑(0197, 점검 반영) — 대난투 원장은 캐릭터와 함께 삭제. 마일리지 원장은 iap_orders와 동축이라
