@@ -34,7 +34,7 @@ function playRefundNote(p: ClawbackPreview): string {
   const n = (v: number) => v.toLocaleString('ko-KR');
   const parts: string[] = [];
   if ((p.mileageShort ?? 0) > 0)
-    parts.push(`이 주문으로 쌓인 마일리지 ${n(p.mileageShort ?? 0)}점을 이미 사용(환불되면 다이아 ${n(p.mileageDiamond ?? 0)} 회수)`);
+    parts.push(`이 주문으로 쌓인 마일리지 ${n(p.mileageShort ?? 0)}점을 이미 사용(환불돼도 회수되지 않음)`);
   if (p.diamondNeed > p.diamondHave) parts.push(`다이아 회수 ${n(p.diamondNeed)} / 보유 ${n(p.diamondHave)}`);
   if (p.boxesNeed > p.boxesHave) parts.push(`보급상자 회수 ${n(p.boxesNeed)} / 보유 ${n(p.boxesHave)}`);
   return parts.join(' · ');
@@ -192,9 +192,9 @@ export async function refundOrderAction(
     forced: !preview.sufficient,
     // 미회수 잔액 — 운영자가 즉시 후속 조치(채권/제재)를 판단할 수 있게 그대로 알린다.
     message: r.short
-      ? `환불 완료 — 회수하지 못한 잔액: 다이아 ${(r.short.diamond + (r.short.mileageDiamond ?? 0)).toLocaleString('ko-KR')}${
-          r.short.mileageDiamond ? `(그중 이미 쓴 마일리지 환산분 ${r.short.mileageDiamond.toLocaleString('ko-KR')})` : ''
-        } · 상자 ${r.short.boxes.toLocaleString('ko-KR')}(미회수로 기록·알림 발송)`
+      ? `환불 완료 — 회수하지 못한 잔액: 다이아 ${r.short.diamond.toLocaleString('ko-KR')} · 상자 ${r.short.boxes.toLocaleString('ko-KR')}${
+          r.short.mileage ? ` · 이미 쓴 마일리지 ${r.short.mileage.toLocaleString('ko-KR')}점` : ''
+        }(미회수로 기록·알림 발송)`
       : undefined,
   } as const;
 }

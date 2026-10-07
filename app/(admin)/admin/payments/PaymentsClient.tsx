@@ -304,7 +304,7 @@ export function PaymentsClient({
                     <p className="text-[11px] leading-relaxed text-amber-200">
                       회수할 재화가 부족하거나 이 주문의 마일리지를 이미 사용해 포트원 취소를 하지
                       않았습니다(결제 유지 중). 약관상 이미 사용한 재화는 청약철회가 제한됩니다 — 그래도
-                      진행하려면 사유를 남기세요. 진행하면 쓴 마일리지는 다이아로 회수합니다(10점당 💎25).
+                      진행하려면 사유를 남기세요. 쓴 마일리지는 회수되지 않습니다.
                     </p>
                     <label className="flex items-center gap-2 text-[11px] text-amber-200">
                       <input

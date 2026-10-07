@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { MILEAGE_KRW_PER_POINT, mileageForKrw, mileageShortfallDiamond } from '@/lib/game/balance';
+import { MILEAGE_KRW_PER_POINT, mileageForKrw } from '@/lib/game/balance';
 import { POINTS_COPY } from '@/lib/game/points/types';
 import { creditMeleePoints, creditMileageForOrder, getPointsOverview, previewMileageShortForOrder, revokeMileageForOrder } from '@/lib/game/points/wallet';
 
@@ -14,14 +14,6 @@ describe('마일리지 적립률(순수)', () => {
     expect(mileageForKrw(99)).toBe(0);
     expect(mileageForKrw(-5)).toBe(0);
     expect(POINTS_COPY.mileage).toContain('1%');
-  });
-  it('환불 때 모자란 마일리지는 10점당 💎25, 끝수는 올림', () => {
-    expect(mileageShortfallDiamond(0)).toBe(0);
-    expect(mileageShortfallDiamond(-3)).toBe(0);
-    expect(mileageShortfallDiamond(1)).toBe(25);
-    expect(mileageShortfallDiamond(10)).toBe(25);
-    expect(mileageShortfallDiamond(11)).toBe(50);
-    expect(mileageShortfallDiamond(99)).toBe(250);
   });
 });
 

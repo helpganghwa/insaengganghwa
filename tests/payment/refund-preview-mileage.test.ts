@@ -1,6 +1,5 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
-import { mileageShortfallDiamond } from '@/lib/game/balance';
 import { creditMileageForOrder, revokeMileageForOrder } from '@/lib/game/points/wallet';
 import { formatClawbackShortfall, previewClawback } from '@/lib/payment/refund';
 
@@ -8,22 +7,22 @@ import { endTestDb, sql, testDb } from '../db';
 
 /**
  * 어드민 환불 사전 점검 — 이 주문의 마일리지를 이미 썼으면 다이아가 넉넉해도 '회수 가능'이 아니다(강제 환불로만 진행,
- * 2026-10-06 운영 결정). 쓴 몫은 다이아로 환산해 회수 필요량에 더해 보여 준다.
+ * 2026-10-06 운영 결정). 쓴 몫은 다이아로 회수하지 않는다(10-07) — 회수 필요량에 더하지 않고 점수만 보여 준다.
  */
 describe('환불 사전 점검 문구(순수)', () => {
-  it('마일리지 사용분이 섞이면 내역을 나눠 적고, 강제 환불로만 진행한다고 알린다', () => {
-    const msg = formatClawbackShortfall({ diamondNeed: 5150, diamondHave: 5000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59, mileageDiamond: 150 });
+  it('재화도 모자라고 마일리지도 썼으면 둘 다 적고, 강제 환불로만 진행한다고 알린다', () => {
+    const msg = formatClawbackShortfall({ diamondNeed: 5000, diamondHave: 4000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59 });
     expect(msg).toContain('회수할 재화가 부족합니다');
-    expect(msg).toContain('다이아 회수 5,150(상품 지급 5,000 + 마일리지 환산 150) / 보유 5,000');
-    expect(msg).toContain('마일리지 59점을 이미 사용(환불하면 다이아 150 회수)');
+    expect(msg).toContain('다이아 지급 5,000 / 보유 4,000');
+    expect(msg).toContain('마일리지 59점을 이미 사용(환불해도 회수되지 않음)');
     expect(msg).toContain('강제 환불로만 진행할 수 있습니다');
   });
-  it('다이아가 넉넉해도 마일리지를 썼으면 차단 문구가 나온다', () => {
-    const msg = formatClawbackShortfall({ diamondNeed: 5150, diamondHave: 9000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59, mileageDiamond: 150 });
+  it('다이아가 넉넉해도 마일리지를 썼으면 차단 문구가 나오고, 다이아 환산은 말하지 않는다', () => {
+    const msg = formatClawbackShortfall({ diamondNeed: 5000, diamondHave: 9000, boxesNeed: 0, boxesHave: 0, sufficient: false, mileageShort: 59 });
     expect(msg).toContain('마일리지를 이미 사용한 주문입니다');
-    expect(msg).toContain('마일리지 59점을 이미 사용(환불하면 다이아 150 회수)');
     expect(msg).toContain('강제 환불로만 진행할 수 있습니다');
     expect(msg).not.toContain('회수할 재화가 부족합니다');
+    expect(msg).not.toContain('다이아 1');
   });
   it('마일리지 사용분이 없으면 종전 문구 그대로', () => {
     const msg = formatClawbackShortfall({ diamondNeed: 5000, diamondHave: 10, boxesNeed: 0, boxesHave: 0, sufficient: false });
@@ -55,13 +54,11 @@ describe.skipIf(!U)('환불 사전 점검 — 마일리지 사용분(DB 통합)'
     expect(untouched.mileageShort).toBeUndefined();
     expect(untouched.sufficient).toBe(true);
 
-    // 59점을 쓴 상황(지갑에 40점만 남김) → 부족 59점 = 💎150.
+    // 59점을 쓴 상황(지갑에 40점만 남김) → 부족 59점. 다이아로 회수하지 않으므로 회수 필요량은 그대로 0.
     await testDb.execute(sql`update mileage_wallets set balance = 40 where user_id=${U}::uuid and server_id=${MILE_SRV}`);
     const p = await previewClawback(U, 1, 'first_special', { orderId, grantSkipped: true });
     expect(p.mileageShort).toBe(59);
-    expect(p.mileageDiamond).toBe(mileageShortfallDiamond(59));
-    expect(p.mileageDiamond).toBe(150);
-    expect(p.diamondNeed).toBe(150);
+    expect(p.diamondNeed).toBe(0);
     expect(p.boxesNeed).toBe(0);
     // 다이아가 얼마가 있든, 쓴 마일리지가 있으면 '회수 가능'이 아니다 — 강제 환불로만.
     expect(p.sufficient).toBe(false);
@@ -69,12 +66,13 @@ describe.skipIf(!U)('환불 사전 점검 — 마일리지 사용분(DB 통합)'
     // 주문 번호를 주지 않으면(종전 호출) 마일리지는 보지 않는다.
     const legacy = await previewClawback(U, 1, 'first_special');
     expect(legacy.mileageShort).toBeUndefined();
-    // 지급이 있었던 주문이면 상품 지급분 위에 더해진다.
+    // 지급이 있었던 주문이어도 회수 필요량은 상품 지급분뿐이다(쓴 마일리지는 더하지 않는다).
     const full = await previewClawback(U, 1, 'first_special', { orderId });
-    expect(full.diamondNeed).toBe(legacy.diamondNeed + 150);
+    expect(full.diamondNeed).toBe(legacy.diamondNeed);
+    expect(full.mileageShort).toBe(59);
   });
   // 탈퇴하면 마일리지는 소멸한다. 그 계정이 재가입한 뒤 옛 결제가 환불되면 그 적립분은 지갑에 없으므로 '쓴 몫'과
-  // 똑같이 부족분으로 본다(새 캐릭터의 다이아에서 회수, 어드민은 강제 환불로만 — 2026-10-06 운영 결정).
+  // 똑같이 부족분으로 본다(다이아로 회수하지 않고, 어드민은 강제 환불로만 — 2026-10-06·10-07 운영 결정).
   it('탈퇴로 소멸한 마일리지도 쓴 몫과 똑같이 부족분으로 잡힌다(재가입 계정의 옛 결제)', async () => {
     const orderId = `${TAG}_p2`;
     expect(await creditMileageForOrder(testDb, { userId: U, serverId: MILE_SRV, orderId, amountKrw: 39_900, note: '테스트 ₩39,900' })).toBe(399);
@@ -86,8 +84,7 @@ describe.skipIf(!U)('환불 사전 점검 — 마일리지 사용분(DB 통합)'
 
     const p = await previewClawback(U, 1, 'first_special', { orderId, grantSkipped: true });
     expect(p.mileageShort).toBe(399);
-    expect(p.mileageDiamond).toBe(mileageShortfallDiamond(399));
-    expect(p.mileageDiamond).toBe(1000);
+    expect(p.diamondNeed).toBe(0);
     expect(p.sufficient).toBe(false); // 일반 환불은 막히고 강제 환불로만 진행된다
 
     // 실제 회수도 같은 판정 — 가져갈 잔액이 없어 전부 부족분이 된다.

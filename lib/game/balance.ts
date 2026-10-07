@@ -1086,13 +1086,6 @@ export const POINT_EXCHANGE_DIAMOND = 25;
 export const POINT_EXCHANGE_BOX = 1;
 export const POINT_EXCHANGE_PACKS = [10, 50, 100] as const;
 export type PointExchangePack = (typeof POINT_EXCHANGE_PACKS)[number];
-/**
- * 환불 때 이미 써서 모자란 마일리지를 다이아로 회수할 양 — 교환 비율(마일리지 10 = 💎25) 그대로, 10점 미만 끝수는 올림
- * (내리면 1~9점 부족이 조용히 사라진다). 환불 처리와 어드민 환불 사전 점검이 같은 식을 쓴다.
- */
-export function mileageShortfallDiamond(short: number): number {
-  return short > 0 ? Math.ceil(short / MILEAGE_PER_MELEE_POINT) * POINT_EXCHANGE_DIAMOND : 0;
-}
 
 /**
  * 추가 횟수 — 그날 산 순서대로 값이 오른다(1 : 2 : 4). 많이 살수록 손해가 되게 해 쏠림을 막고, 월 한도는 두지 않는다.

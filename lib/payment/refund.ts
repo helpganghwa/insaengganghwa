@@ -8,8 +8,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
-import { bpTierReward, mileageShortfallDiamond } from '@/lib/game/balance';
-import { walletReclaim } from '@/lib/game/wallet';
+import { bpTierReward } from '@/lib/game/balance';
 import { kstMonthString } from '@/lib/kst';
 import { PREMIUM_INSTANT_TITLE, reclaimProductGrant } from '@/lib/game/shop/grant';
 import { PREMIUM_DAILY_TITLE } from '@/lib/game/mailbox/premium-daily';
@@ -25,9 +24,10 @@ import { parseBpProduct } from './purchase';
 
 /**
  * 회수하지 못한 잔여분(= 유저가 이미 소비한 유상분). 0이면 전액 회수 성공.
- * mileageDiamond = 이미 쓴 마일리지를 다이아로 회수하려다 모자란 양(상품 지급분 부족 diamond와 별개 — 합이 총 미회수 다이아).
+ * mileage = 그 결제로 쌓인 마일리지 중 이미 써서 회수하지 못한 점수. 다이아로 바꿔 회수하지 않는다(10-07 운영 결정 —
+ * 약관에는 '이미 사용한 경우 환불이 제한될 수 있다'만 적는다). 운영자가 보고 판단하도록 숫자만 돌려준다.
  */
-export type ClawbackShortfall = { diamond: number; boxes: number; mileageDiamond?: number };
+export type ClawbackShortfall = { diamond: number; boxes: number; mileage?: number };
 
 export type RefundResult =
   | { ok: true; already: boolean; short?: ClawbackShortfall }
@@ -41,8 +41,6 @@ export type ClawbackPreview = {
   sufficient: boolean;
   /** 이 주문이 적립한 마일리지 중 이미 써서 회수하지 못할 점수 — 어드민 사전 점검만 채운다. */
   mileageShort?: number;
-  /** 그 부족분을 교환 비율로 환산해 다이아에서 회수할 양(diamondNeed에 포함돼 있다). */
-  mileageDiamond?: number;
 };
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -156,7 +154,7 @@ export async function previewClawback(
    * orderId를 주면 이 주문이 적립한 마일리지 중 이미 쓴 몫도 함께 본다(2026-10-06).
    * **쓴 몫이 조금이라도 있으면 '회수 가능'으로 보지 않는다** — 다이아가 넉넉해도 강제 환불(사유 기록)로만 진행한다
    * (운영 결정: 마일리지로 바꾼 상자·추가 횟수는 회수되지 않아, 쓰고 환불받는 반복을 사람이 한 번 보고 넘기게).
-   * 환불이 진행되면 그 부족분은 교환 비율로 다이아에서 회수한다(POINT-SHOP §6) — diamondNeed에는 그 양까지 넣어 보여 준다.
+   * 쓴 몫은 다이아로 바꿔 회수하지 않는다(10-07) — 회수 필요량에도 넣지 않는다.
    * grantSkipped(지급이 없었던 주문)는 상품 회수분이 0이지만 마일리지는 결제 자체에 붙어 적립되므로 따로 본다.
    */
   opts?: { orderId?: bigint | number | string; grantSkipped?: boolean },
@@ -170,34 +168,25 @@ export async function previewClawback(
       ? previewMileageShortForOrder(db, { userId, orderId: opts.orderId })
       : Promise.resolve({ credited: 0, short: 0 }),
   ]);
-  const mileageDiamond = mileageShortfallDiamond(mileage.short);
-  const preview = toPreview({ diamond: productNeed.diamond + mileageDiamond, boxes: productNeed.boxes }, have);
-  return mileage.short > 0 ? { ...preview, sufficient: false, mileageShort: mileage.short, mileageDiamond } : preview;
+  const preview = toPreview(productNeed, have);
+  return mileage.short > 0 ? { ...preview, sufficient: false, mileageShort: mileage.short } : preview;
 }
 
 /** 부족 내역 문구 — 어드민 차단 사유와 사고 알림이 같은 사실을 같은 말로 전하도록 공용. */
 export function formatClawbackShortfall(p: ClawbackPreview): string {
   const parts: string[] = [];
-  if (p.diamondNeed > p.diamondHave) {
-    // 마일리지 사용분이 섞여 있으면 내역을 나눠 보여 준다 — 무엇 때문에 모자란지 운영자가 바로 알게.
-    const md = p.mileageDiamond ?? 0;
-    parts.push(
-      md > 0
-        ? `다이아 회수 ${num(p.diamondNeed)}(상품 지급 ${num(p.diamondNeed - md)} + 마일리지 환산 ${num(md)}) / 보유 ${num(p.diamondHave)}`
-        : `다이아 지급 ${num(p.diamondNeed)} / 보유 ${num(p.diamondHave)}`,
-    );
-  }
+  if (p.diamondNeed > p.diamondHave) parts.push(`다이아 지급 ${num(p.diamondNeed)} / 보유 ${num(p.diamondHave)}`);
   if (p.boxesNeed > p.boxesHave)
     parts.push(`보급상자 지급 ${num(p.boxesNeed)} / 보유 ${num(p.boxesHave)}`);
   // 이 주문의 마일리지를 이미 쓴 경우(어드민 사전 점검만) — 재화가 넉넉해도 강제 환불로만 진행한다.
   const ms = p.mileageShort ?? 0;
   if (ms > 0) {
-    const used = `이 주문으로 쌓인 마일리지 ${num(ms)}점을 이미 사용(환불하면 다이아 ${num(p.mileageDiamond ?? 0)} 회수)`;
+    const used = `이 주문으로 쌓인 마일리지 ${num(ms)}점을 이미 사용(환불해도 회수되지 않음)`;
     const head = parts.length > 0 ? `회수할 재화가 부족합니다 — ${parts.join(' · ')} · ${used}` : `마일리지를 이미 사용한 주문입니다 — ${used}`;
-    return `${head}. 약관상 이미 사용·소모한 재화는 청약철회가 제한됩니다(환불 정책 §1·§6). 강제 환불로만 진행할 수 있습니다.`;
+    return `${head}. 약관상 이미 사용한 마일리지가 있으면 환불이 제한될 수 있습니다(환불·청약철회 안내). 강제 환불로만 진행할 수 있습니다.`;
   }
   if (parts.length === 0) return '회수 가능 — 부족분 없음.';
-  return `회수할 재화가 부족합니다 — ${parts.join(' · ')}. 약관상 이미 사용·소모한 재화는 청약철회가 제한됩니다(환불 정책 §1).`;
+  return `회수할 재화가 부족합니다 — ${parts.join(' · ')}. 약관상 이미 사용·소모한 재화는 청약철회가 제한됩니다(환불·청약철회 안내).`;
 }
 
 /**
@@ -265,7 +254,7 @@ export async function refundPurchase(
   const paidMonth = kstMonthString(order.paidAt ?? order.createdAt);
 
   // 부족분은 tx 밖으로 반환 — 알림은 커밋 후 발화(롤백 시 허위 알림 방지 + 잠금 보유 중 외부 HTTP 금지).
-  const outcome = await db.transaction(async (tx): Promise<{ shortPreview: ClawbackPreview | null; unrecovered: string[]; mileageDiamondShort: number } | null> => {
+  const outcome = await db.transaction(async (tx): Promise<{ shortPreview: ClawbackPreview | null; unrecovered: string[]; mileageUnrecovered: number } | null> => {
     const [locked] = await tx
       .select({ status: iapOrders.status, grantSkipped: iapOrders.grantSkipped })
       .from(iapOrders)
@@ -277,8 +266,8 @@ export async function refundPurchase(
     let shortPreview: ClawbackPreview | null = null;
     // 자동 회수하지 않는 몫(마일리지 부족·프리미엄 수령분·후원 구간 보상) — 조용히 남기지 않고 경보로 드러낸다(2026-09-24 감사).
     const unrecovered: string[] = [];
-    // 이미 쓴 마일리지를 다이아로 회수하려다 모자란 양 — 어드민 환불 결과에 그대로 알린다(사전 점검이 본 숫자와 짝).
-    let mileageDiamondShort = 0;
+    // 이미 써서 회수하지 못한 마일리지 — 어드민 환불 결과에 그대로 알린다(사전 점검이 본 숫자와 짝).
+    let mileageUnrecovered = 0;
 
     await tx.update(iapOrders).set({ status: 'refunded' }).where(eq(iapOrders.id, order.id));
 
@@ -382,22 +371,11 @@ export async function refundPurchase(
           }
         }
       }
-      // 마일리지 부족분(이미 쓴 몫) — 교환 비율(마일리지 10 = 💎25)로 다이아에서 회수한다(10-06, POINT-SHOP §6).
-      // 상품 지급분 회수보다 뒤에 둔다(그쪽이 우선). 0까지만 깎고, 모자라면 미회수로 남긴다. best-effort 세이브포인트.
+      // 마일리지 부족분(이미 쓴 몫) — 다이아로 바꿔 회수하지 않는다(10-07 운영 결정: 약관은 '이미 사용한 경우 환불이
+      // 제한될 수 있다'만 적는다). 미회수로 기록하고 경보로 알려, 운영자가 보고 판단하게 한다.
       if (mileageShort > 0) {
-        // 올림 — 1~9점 부족도 💎로 회수한다(내림이면 조용히 사라진다, 10-06 검수).
-        const dia = mileageShortfallDiamond(mileageShort);
-        try {
-          const got = await tx.transaction((sp) => walletReclaim(sp, order.userId, order.serverId, dia, 'refund_clawback', `order:${order.id}:mileage`));
-          if (got < BigInt(dia)) {
-            mileageDiamondShort = dia - Number(got);
-            unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 💎${num(dia)} 중 ${num(Number(got))} 회수`);
-          }
-        } catch (e) {
-          console.error(`[points] 마일리지 부족분 다이아 회수 실패 user=${order.userId} order=${order.id}`, e);
-          mileageDiamondShort = dia;
-          unrecovered.push(`마일리지 ${mileageShort}점 부족(이미 사용) — 다이아 회수 실패`);
-        }
+        mileageUnrecovered = mileageShort;
+        unrecovered.push(`마일리지 ${num(mileageShort)}점 이미 사용 — 미회수(다이아로 회수하지 않음)`);
       }
       // 후원 구간 보상: 환불로 누적 결제액이 구간 아래로 내려가도 이미 준 우편은 자동 회수하지 않는다(운영 판단).
       // 지급보류 주문도 누적에 들어갔으므로 grantSkipped와 무관하게 본다.
@@ -446,13 +424,13 @@ export async function refundPurchase(
       amountKrw: order.amountKrw,
       clawbackDone,
     });
-    return { shortPreview, unrecovered, mileageDiamondShort };
+    return { shortPreview, unrecovered, mileageUnrecovered };
   });
   // 동시 호출에서 진 쪽 — 잠금을 기다리는 사이 다른 호출이 환불을 마쳤다. 이 호출은 아무것도 회수하지 않았으므로
   // '새로 처리함'이 아니라 '이미 처리됨'으로 답한다(같은 환불을 두 호출이 각각 완료했다고 알리지 않게, 2026-10-06).
   if (!outcome) return { ok: true, already: true };
   const short = outcome.shortPreview;
-  const mileageDiamondShort = outcome.mileageDiamondShort;
+  const mileageUnrecovered = outcome.mileageUnrecovered;
   if (outcome.unrecovered.length > 0) {
     await raisePaymentAlert('REFUND_EXTRA_UNRECOVERED', {
       paymentId,
@@ -473,12 +451,12 @@ export async function refundPurchase(
       short: {
         diamond: Math.max(0, short.diamondNeed - short.diamondHave),
         boxes: Math.max(0, short.boxesNeed - short.boxesHave),
-        ...(mileageDiamondShort > 0 ? { mileageDiamond: mileageDiamondShort } : {}),
+        ...(mileageUnrecovered > 0 ? { mileage: mileageUnrecovered } : {}),
       },
     };
   }
-  // 상품 지급분은 다 회수했지만 이미 쓴 마일리지의 다이아 환산분이 모자란 경우 — 알림(REFUND_EXTRA_UNRECOVERED)은 위에서 나갔고,
+  // 상품 지급분은 다 회수했지만 이미 쓴 마일리지가 남은 경우 — 알림(REFUND_EXTRA_UNRECOVERED)은 위에서 나갔고,
   // 호출부(어드민)에도 같은 숫자를 돌려준다. 안 돌려주면 강제 환불 뒤 화면이 '전액 회수'처럼 보인다.
-  if (mileageDiamondShort > 0) return { ok: true, already: false, short: { diamond: 0, boxes: 0, mileageDiamond: mileageDiamondShort } };
+  if (mileageUnrecovered > 0) return { ok: true, already: false, short: { diamond: 0, boxes: 0, mileage: mileageUnrecovered } };
   return { ok: true, already: false };
 }
