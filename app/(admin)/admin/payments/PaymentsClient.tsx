@@ -232,8 +232,9 @@ export function PaymentsClient({
               >
                 <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-bold">{o.nickname ?? '(알수없음)'}</span>
+                  {/* 좁은 화면에서 말줄임 대신 줄바꿈 — 환불 대상 식별이 먼저다(10-07 운영 요청). */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="break-all text-sm font-bold">{o.nickname ?? '(알수없음)'}</span>
                     {o.code ? (
                       <span className="shrink-0 font-mono text-[10px] text-sky-400">#{o.code}</span>
                     ) : null}
@@ -244,17 +245,17 @@ export function PaymentsClient({
                     </span>
                     <ServerBadge serverId={o.serverId} />
                   </div>
-                  <div className="mt-0.5 truncate text-[11px] text-zinc-400">
+                  <div className="mt-0.5 break-keep text-[11px] text-zinc-400">
                     {o.productName} · {won(o.krw)}
                     {o.diamond > 0 ? ` · 💎${o.diamond.toLocaleString('ko-KR')}` : ''}
                   </div>
-                  <div className="truncate font-mono text-[10px] text-zinc-600">{o.product}</div>
+                  <div className="break-all font-mono text-[10px] text-zinc-600">{o.product}</div>
                   {/* 거래번호 — 포트원 콘솔 대조용. 클릭 시 복사. */}
                   <button
                     type="button"
                     onClick={() => copyTxn(o.portoneOrderId)}
                     title="거래번호 복사"
-                    className="mt-0.5 block max-w-full truncate text-left font-mono text-[10px] text-zinc-500 hover:text-zinc-300"
+                    className="mt-0.5 block max-w-full break-all text-left font-mono text-[10px] text-zinc-500 hover:text-zinc-300"
                   >
                     {copiedId === o.portoneOrderId ? '복사됨 ✓ ' : '거래 '}
                     {o.portoneOrderId}
