@@ -11,7 +11,6 @@
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron, getStaleCrons, markStaleAlerted } from '@/lib/cron/heartbeat';
-import { refreshEnhanceTotals } from '@/lib/game/stats/queries';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 
 export const runtime = 'nodejs';
@@ -51,25 +50,9 @@ export async function GET(req: Request) {
   // beat 호출은 조건 없이 유지 — warm이 beat를 멈추면 /api/health/deep이 503(cron-system-down)을
   // 내는데, 워치독 함수 하나가 깨진 것과 크론 시스템 전체 정지는 다른 사건이다(오알림 방지).
   //
-  // ⚠ 부가 작업(아래 통계 스냅샷)보다 **먼저** 온다. warm은 크론 전체의 dead-man이라, 얹은 일이
+  // ⚠ 부가 작업이 생기면 그보다 **먼저** 온다. warm은 크론 전체의 dead-man이라, 얹은 일이
   // 늦어지는 동안 하트비트가 밀리면 감시가 그만큼 둔해진다(자가 검수 2026-09-12에서 순서 교정).
   await beatCron('warm', watchdog);
-
-  // 누적 강화 통계 스냅샷(0198) — 10분 지난 경우에만 전수 집계. 별도 크론을 늘리지 않고 매분 도는
-  // warm에 얹되, 실패·지연이 워치독을 건드리면 안 되므로 타임아웃 + 삼킴. 값이 조금 늦어도 무해하다.
-  try {
-    const done = await Promise.race([
-      refreshEnhanceTotals(),
-      new Promise<null>((r) => setTimeout(() => r(null), 6000)),
-    ]);
-    out.enhanceTotals = done === null ? 'timeout' : done ? 'refreshed' : 'fresh';
-  } catch (e) {
-    // ⚠ 응답 본문은 아무도 안 읽는다(위 워치독 주석과 같은 이유). 0198 미적용 같은 상태를
-    // 알아차릴 신호가 필요하므로 로그로도 남긴다 — 그래야 통계 카드가 조용히 "—"가 된 이유를
-    // 추적할 수 있다(7차 검수).
-    out.enhanceTotals = `ERR ${(e as Error).message.slice(0, 80)}`;
-    console.error('[warm] 누적 통계 스냅샷 실패 — 0198 적용 여부 확인', e);
-  }
 
   return Response.json({ ms: Date.now() - t0, ...out });
 }

@@ -20,7 +20,6 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
 import { towerFloorFromRankValue } from '@/lib/game/tower/rank-value';
-import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
@@ -319,17 +318,11 @@ function KpiRowFallback({
   );
 }
 
-/**
- * "지금 인생강화는" 카드 — grow 풍 가로 4타일.
- * 전체 유저(90s) + 누적 성공/유지/하락(10분). 색 톤으로 의미 구분.
- * <Suspense> stream — 첫 페인트 차단 없음.
- */
 function fmtFull(n: number): string {
   // 3칸 2줄(2026-09-30)로 카드 폭이 110px쯤 되어 축약 없이 전부 보여 준다(10-01) — 전투력 8자리도 숫자 폰트 12px로 들어간다.
   return n.toLocaleString('ko-KR');
 }
 
-// 실시간 인생강화 통계 카드(EnhanceStatsCard/Fallback)는 로그인과 공용 → components/EnhanceStatsCard.tsx
 
 
 export default async function PublicProfilePage({
@@ -536,11 +529,6 @@ export default async function PublicProfilePage({
             </ul>
           </section>
         ) : null}
-
-        {/* ── 누적 통계("지금 인생강화는") — CTA 직전 사회적 증거. ── */}
-        <Suspense fallback={<EnhanceStatsFallback />}>
-          <EnhanceStatsCard />
-        </Suspense>
 
         {/* ── CTA 분기 — 모두 동일 폭·패딩, 디자인 강조만 다름. ── */}
         {mode === 'guest' ? (

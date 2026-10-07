@@ -13,8 +13,6 @@ import { CbtEndedNotice } from './CbtEndedNotice';
 // 클라이언트 참조로 평가돼 Date.parse가 NaN(시간 게이트 무력화, 2026-08-21 검증에서 검출).
 import { OPEN_AT_ISO } from '@/lib/launch';
 import { listServersPublic, recommendedServerId } from '@/lib/game/server-select';
-import { Suspense } from 'react';
-import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { ServerPicker } from './ServerPicker';
 import { isTwa } from '@/lib/platform';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
@@ -199,16 +197,6 @@ export default async function LoginPage({
             <p className="text-sm text-red-600 dark:text-red-400">{loginErrorMessage(error)}</p>
           )
         ) : null}
-
-        {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트).
-            종료 화면에선 결산 명판이 같은 역할이라 숨김(라이브 집계 중복 + wipe 후 0으로 보임). */}
-        {cbtEnded && !reviewLogin ? null : (
-          <div className="mt-5 w-full">
-            <Suspense fallback={<EnhanceStatsFallback />}>
-              <EnhanceStatsCard />
-            </Suspense>
-          </div>
-        )}
 
         {/* 게임 소개 — 검색·AI 크롤러가 읽는 유일한 공개 설명(SEO 검수 A1, 2026-07-15).
             스크롤 아래 배치라 로그인 전환 동선 무영향. h1은 사이트 전체에서 이 페이지가 대문. */}
