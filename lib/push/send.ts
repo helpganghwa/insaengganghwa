@@ -56,7 +56,9 @@ export type PushPayload = {
     | 'guild_join'
     | 'admin'
     /** 파견 귀환(2026-08-25) — push_expedition 토글(0181, 2026-08-30): 하루 최대 슬롯 수만큼 오는 고빈도라 강화 완료처럼 개인 설정. */
-    | 'expedition';
+    | 'expedition'
+    /** 월드보스(0228) — 출현·원정대 신청/수락/결과·전리품. push_world_boss 토글. */
+    | 'world_boss';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
    * 무음 교체해 "알림이 안 온다"고 느껴지던 문제 방지(2026-06-01). tag가 항상
@@ -104,6 +106,7 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   chat_mention: profiles.pushChatMention,
   guild_join: profiles.pushGuildJoin,
   expedition: profiles.pushExpedition,
+  world_boss: profiles.pushWorldBoss,
 };
 
 /**

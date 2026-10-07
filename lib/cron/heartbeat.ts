@@ -28,6 +28,7 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   'profile-poll': 12 * MIN, // 2분 — 아바타 발주 백스톱
   'push-flush': 20 * MIN, // 5분
   'settle-raid': 20 * MIN, // 5분 — 레이드 정산
+  'world-boss': 20 * MIN, // 5분 — 월드보스 예약·출현·정산(2026-10-07 등재 — 배포 직후 prod 시드 필요)
   'payment-recon': 40 * MIN, // 10분 — 결제 백스톱(최중요)
   'scheduled-mail': 20 * MIN, // 5분 — 예약 우편 + 예약 공지 발행(0158). 정지=예약한 시각에
   //   공지가 안 나간다(오픈 공지를 여기 맡기므로 무성 실패가 곧 오픈 사고, 2026-08-10 등재)

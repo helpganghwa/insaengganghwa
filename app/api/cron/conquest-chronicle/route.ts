@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
 import { revealConquest, carryOverDefenders, markAbandonedZones } from '@/lib/game/guild/conquest/run';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
+import { syncWorldBossOwners } from '@/lib/game/world-boss/party';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
@@ -124,6 +125,7 @@ export async function GET(req: Request) {
               : { abandoned: 0 };
           // 소유 변동(점령)·방치 플래그 반영 — 독점 세금 보너스 배율 재계산(하루 1회). 강화 누적은 저장값만 읽음.
           await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
+          await syncWorldBossOwners(sid).catch((e: unknown) => console.warn('[conquest-chronicle] syncWorldBossOwners', e)); // WORLD-BOSS §5
           // 공개(소유권 플립)·방치 판정 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
           if (rev.revealed > 0 || abandoned.abandoned > 0) revalidateTag(`world-feed:s${sid}`, 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.

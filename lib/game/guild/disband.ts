@@ -7,6 +7,7 @@ import { guilds, guildMembers, guildLeaveLog, zones } from '@/lib/db/schema/guil
 
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
+import { syncWorldBossOwners } from '@/lib/game/world-boss/party';
 import { recalcTaxBonus } from './tax';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -49,6 +50,8 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
   await tx.delete(guilds).where(eq(guilds.id, guildId)); // guild_members ON DELETE CASCADE
   // 해산으로 구역이 중립화됐으니 나머지 길드의 독점 세금 보너스(B안)도 재계산(완전장악 상태 변동 반영).
   if (g?.serverId != null) await recalcTaxBonus(g.serverId, tx);
+  // 해산으로 중립이 된 구역의 월드보스 — 이 길드의 모집 중 원정대 해산(WORLD-BOSS §5). 보스 자체는 남아 다음 주인이 이어간다.
+  if (g?.serverId != null) await syncWorldBossOwners(g.serverId, tx);
 }
 
 /**
