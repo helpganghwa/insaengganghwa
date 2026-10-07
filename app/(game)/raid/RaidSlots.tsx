@@ -11,7 +11,6 @@ import { useRouter } from 'next/navigation';
 import {
   RAID_TIERS,
   RAID_TIER_CODES,
-  RAID_WINDOW_MS,
   RAID_DURATION_OPTIONS_MS,
   raidMilestoneList,
   type RaidTier,
@@ -28,6 +27,7 @@ import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-s
 import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
+import { DEFAULT_RAID_OPEN_PREFS, type RaidOpenPrefs } from '@/lib/game/raid/open-prefs';
 
 /**
  * 슬롯 셀 — 활성 레이드와 정산 대기(미수령 보상)를 한 목록에서 표현(grow 패턴).
@@ -321,6 +321,7 @@ export function RaidSlots({
   dailyCap: dailyCapIn,
   extraLeft = 0,
   freeOpenLeft = 0,
+  openPrefs = DEFAULT_RAID_OPEN_PREFS,
   openRaids = [],
   nowIso,
 }: {
@@ -332,6 +333,8 @@ export function RaidSlots({
   extraLeft?: number;
   /** 오늘 남은 무료 소환(하루 첫 소환 무료, 2026-09-08) — 서버가 계산(적용 시작 시각 포함). 0이면 유료. */
   freeOpenLeft?: number;
+  /** 소환 화면 기본값 — 마지막으로 직접 연 레이드의 난이도·시간·공개 범위(서버 기록, 10-07). */
+  openPrefs?: RaidOpenPrefs;
   /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
   openRaids?: FriendRaid[];
   /** 서버 렌더 시각 — 보정 시계의 출발점. */
@@ -344,10 +347,11 @@ export function RaidSlots({
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
-  const [friendShare, setFriendShare] = useState<ShareMode>('off');
-  const [guildShare, setGuildShare] = useState<ShareMode>('off');
-  const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
-  const [tier, setTier] = useState<RaidTier>('easy'); // 기본 쉬움(가장 싸고 손해 없는 선택)
+  // 처음 값 = 마지막으로 직접 연 레이드의 설정(10-07 건의 — 매번 다시 고르다 잘못 여는 일). 연 적이 없으면 쉬움·6시간·공개 안 함.
+  const [friendShare, setFriendShare] = useState<ShareMode>(openPrefs.friendShare);
+  const [guildShare, setGuildShare] = useState<ShareMode>(openPrefs.guildShare);
+  const [durationMs, setDurationMs] = useState<number>(openPrefs.durationMs);
+  const [tier, setTier] = useState<RaidTier>(openPrefs.tier);
   const openCost = RAID_TIERS[tier].openCost;
   // 무료 소환이 남았으면 이번 소환은 0 — 버튼·부제·부족 게이트 전부 payCost 기준.
   const free = freeOpenLeft > 0;

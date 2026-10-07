@@ -59,6 +59,7 @@ export default function Doc() {
           진행 시간은 소환할 때 {RAID_DURATION_OPTIONS_MS.map((ms) => fmtMs(ms)).join(' · ')} 중에서
           고른다.
         </LI>
+        <LI>소환 화면은 마지막으로 소환한 레이드의 난이도·진행 시간·공개 범위로 시작한다.</LI>
         <LI>
           보스 {fmtInt(RAID_BOSS_CODES.length)}종은 생김새와 이야기만 다르며, 체력·공격 규칙·보상은
           같다.

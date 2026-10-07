@@ -20,6 +20,7 @@ import { extrasToday } from '@/lib/game/points/spend';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import type { RaidBoss } from '@/lib/game/raid/bosses';
 import { raidFreeOpenActive } from '@/lib/game/raid/free-open';
+import { raidOpenPrefsFrom } from '@/lib/game/raid/open-prefs';
 
 import { getReceivedInvites } from '@/lib/game/raid/invite';
 
@@ -91,6 +92,18 @@ export default async function RaidPage() {
       .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, serverId), gte(raids.openedAt, kstStartOfDay()))),
     // 오늘 산 '오늘 레이드 +1회'(10-06, POINT-SHOP §6) — 하루·동시 한도에 더한다.
     extrasToday(db, userId, serverId, 'raid'),
+    // 마지막으로 직접 연 레이드의 설정(10-07) — 소환 화면이 그 난이도·시간·공개 범위로 시작한다(open-prefs.ts).
+    db
+      .select({
+        tier: raids.tier,
+        friendShare: raids.friendShare,
+        guildShare: raids.guildShare,
+        windowMs: sql<number>`(extract(epoch from (${raids.expireAt} - ${raids.openedAt})) * 1000)::float8`,
+      })
+      .from(raids)
+      .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, serverId)))
+      .orderBy(sql`${raids.openedAt} desc`)
+      .limit(1),
     ]),
     3500,
     'raid.page',
@@ -100,6 +113,7 @@ export default async function RaidPage() {
   const pendingClaims = _r?.[2] ?? [];
   const hostedToday = Number(_r?.[3]?.[0]?.n ?? 0);
   const raidExtra = Number(_r?.[4] ?? 0);
+  const openPrefs = raidOpenPrefsFrom(_r?.[5]?.[0]);
   // DB 타임아웃(_r null)이면 유료 표시 쪽으로 — 서버가 권위라 잘못된 '무료' 라벨만 피한다(검토 지적).
   const freeOpenLeft = _r && raidFreeOpenActive() ? Math.max(0, RAID_FREE_OPENS_PER_DAY - hostedToday) : 0;
 
@@ -340,6 +354,7 @@ export default async function RaidPage() {
         // ＋는 남은 횟수와 상관없이 오늘 더 살 수 있으면 늘 보인다(10-06).
         extraLeft={POINT_EXTRA_PRICES.raid.length - raidExtra}
         freeOpenLeft={freeOpenLeft}
+        openPrefs={openPrefs}
         openRaids={openRaids}
         nowIso={new Date().toISOString()}
       />
