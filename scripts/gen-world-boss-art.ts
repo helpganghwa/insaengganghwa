@@ -1,6 +1,6 @@
 /**
  * 월드보스 그림·배경 생성(Pixellab v2 REST, PIXELLAB_API_KEY_2) — docs/WORLD-BOSS.md §9, 컨셉 '부서진 칼날의 거신'(2026-10-08 사용자 선택).
- *   bun --env-file=.env.local scripts/gen-world-boss-art.ts [--only=boss,bg] [--tag=r1] [--force]
+ *   bun --env-file=.env.local scripts/gen-world-boss-art.ts [--only=boss,bg|r2] [--tag=r1] [--force]
  * 산출: scripts/world-boss-art/out/<tag>/<key>/<i>.png + manifest.json(재개형). 무한의 탑과 같은 방식 —
  *   보스 = 고급(generate-image-v2) + 기준 그림(레이드 슬라임 왕: 윤곽·세밀도·음영만, 색은 따르지 않음) 160px 한 번에 4장, 두 번.
  *   배경 = 고급 400×240 1장, 두 번. 주문문은 외형만(감각·서사 금지), 고급스러움 우선, 원색 지양.
@@ -70,7 +70,19 @@ async function pro(key: string, prompt: string, w: number, h: number, noBg: bool
   save();
   console.log(`✓ ${key} ${files.length}장`);
 }
+// 2차(10-08 사용자): 정면·비인간형·더 웅장하고 강해 보이게, 컨셉별 1장씩(256px — 한 번에 한 장).
+const STYLE_FRONT =
+  'pixel art game boss sprite, full body, perfectly symmetrical front view facing the viewer, centered, colossal scale, majestic and overwhelming presence, clean readable silhouette, refined elegant detailed pixel art, muted desaturated colors, no text';
+const R2: Record<string, string> = {
+  beast:
+    'colossal four-legged behemoth beast made of countless shattered swords and broken armor plates, a glowing molten core heart visible in its chest, a great mane and crown of broken blades, massive horns formed from fused greatswords, heavy clawed forelegs planted wide, glowing ember eyes',
+  core:
+    'enormous floating sphere of molten metal with a blazing ember core, surrounded by several slowly orbiting rings of broken swords and spear tips, shattered shield fragments drifting around it, a single great glowing eye in the center of the core, heat shimmer',
+  beetle:
+    'gigantic armored beetle colossus with a massive horn made of fused greatswords, layered carapace of broken blades and cracked shield plates, glowing molten orange seams between the plates, six heavy legs planted wide, glowing ember eyes',
+};
 const tasks: Promise<void>[] = [];
+if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
 const res = await Promise.allSettled(tasks);
