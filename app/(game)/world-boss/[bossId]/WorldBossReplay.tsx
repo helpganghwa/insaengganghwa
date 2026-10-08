@@ -3,7 +3,8 @@
 /**
  * 월드보스 전투 재생(docs/WORLD-BOSS.md §3·§9) — 저장된 전투 기록(finale)을 한 칸씩 보여 준다.
  * 2026-10-08 리뷰 반영: 화면 가운데 배치(아래 절반이 비었다), 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 칸 회색,
- * 라운드가 바뀌면 큰 라운드 표시. 공격마다 뽑은 보상(복권)이 그 칸 위로 튀어나오고, 큰 당첨은 '대박'으로 띄운다.
+ * 라운드가 바뀌면 큰 라운드 표시. 공격마다 뽑은 보상(복권)이 튀어나오고, 큰 당첨(💎300+ · 📦90+)은 글자 없이
+ * 효과로만 강조한다(금빛 번쩍임·광선·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지).
  * 탭하면 2.5배속, 건너뛰기로 바로 결과. 결과는 서버가 출발 순간 정한 그대로라 재생만 한다.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -82,6 +83,9 @@ export function WorldBossReplay({
           <button type="button" className="relative flex flex-1 flex-col justify-center overflow-hidden text-left" onClick={() => setFast((f) => !f)} aria-label="빠르게 보기">
             {/* 보스가 칠 때 화면 전체가 붉게 번쩍인다 */}
             {struck && <span key={`f${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-red-600/30" />}
+            {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
+              <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-amber-300/35" />
+            )}
             <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+12px)] flex items-center justify-between px-4 text-[11px]">
               <span className="text-zinc-400">
                 생존 <b className="text-zinc-100">{st.alive}</b>/{roster.length}
@@ -102,15 +106,19 @@ export function WorldBossReplay({
                 className={`relative h-full w-full object-contain ${hit ? 'animate-wb-shake' : ''} ${struck ? 'scale-110' : ''} transition-transform duration-150`}
                 style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(251,191,36,0.55))' }}
               />
-              {/* 이번 공격에서 나온 보상 — 큰 당첨(💎300+ · 📦90+)은 '대박' */}
+              {/* 이번 공격에서 나온 보상 — 큰 당첨은 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
+              {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
+                <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(251,191,36,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(251,191,36,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(251,191,36,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(251,191,36,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(251,191,36,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(251,191,36,0.55)_320deg,transparent_340deg)]" />
+              )}
               {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
                 <span
                   key={`g${idx}`}
                   className={`absolute left-1/2 top-14 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
-                    st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90 ? 'bg-amber-400 text-[17px] text-amber-950 shadow-[0_0_18px_rgba(251,191,36,0.9)]' : 'bg-black/70 text-[13px] text-amber-200'
+                    st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90
+                      ? 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-[19px] text-amber-950 shadow-[0_0_24px_6px_rgba(251,191,36,0.85)] ring-2 ring-yellow-100'
+                      : 'bg-black/70 text-[13px] text-amber-200'
                   }`}
                 >
-                  {st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90 ? '대박! ' : ''}
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
                 </span>
               )}
