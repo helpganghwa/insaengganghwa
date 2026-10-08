@@ -117,6 +117,21 @@ const R5: Record<string, string> = {
   resting: `${STAG_BODY}, lying down calmly like a guardian sphinx facing the viewer, both front legs folded neatly in front of its chest, body resting on the ground behind, head held high, no other legs visible`,
 };
 if (only.includes('r5')) for (const [k, d] of Object.entries(R5)) tasks.push(pro(`r5-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL4}, ${STYLE_FRONT}`, 256, 256, true, true));
+// 6차(10-08 사용자 선택 2·3·5): 불사조 · 여섯 땅의 키메라 · 일식의 짐승 — 각 1장, 근엄·웅장.
+const R6: Record<string, string> = {
+  phoenix:
+    'colossal majestic phoenix facing the viewer with both great wings spread wide and perfectly symmetrical, body and feathers made of living flame in deep crimson, ember orange and pale gold, a crest of flame feathers like a crown, long flowing tail feathers of fire falling beneath, glowing white gold eyes, sparks drifting around',
+  chimera:
+    'colossal majestic chimera seated upright like a heraldic guardian facing the viewer, exactly four legs with the two front legs straight together and the hind legs folded beneath, a lion head with a great golden mane, tall frost crystal horns, broad obsidian dragon wings with glowing ember veins spread symmetrically, pale feathered angel wings folded beneath them, small ivory tusks, glowing eyes',
+  eclipse:
+    'colossal eclipse entity floating in the sky, an enormous black sun disc with a blazing pale gold corona of flames radiating outward in a perfect circle, a calm majestic beast face with glowing white eyes formed within the dark disc, a ring of small orbiting stars and floating stone fragments around it',
+};
+const PAL6: Record<string, string> = {
+  phoenix: 'refined palette of deep crimson, ember orange and pale gold, elegant and luxurious',
+  chimera: 'refined palette of gold, frost blue, obsidian black and ivory, elegant and luxurious',
+  eclipse: 'refined palette of deep black, pale gold and soft white starlight, elegant and luxurious',
+};
+if (only.includes('r6')) for (const [k, d] of Object.entries(R6)) tasks.push(pro(`r6-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL6[k]}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
