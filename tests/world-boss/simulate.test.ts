@@ -15,7 +15,7 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
   });
 
   it('빈 원정대는 피해 0·라운드 0', () => {
-    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], finale: { roster: [], events: [], rounds: 0, totalDamage: 0 } });
+    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], finale: { roster: [], events: [], drops: [], rounds: 0, totalDamage: 0 } });
   });
 
   it('라운드마다 생존자 전원이 한 번씩 공격하고 보스가 한 명을 쓰러뜨린다 → 라운드 수 = 인원, 공격 횟수 합 = n(n+1)/2', () => {
@@ -67,5 +67,23 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     for (let s = 0; s < N; s++) sum += simulateWorldBoss([strong, ...Array.from({ length: 9 }, (_, i) => unit(i + 1, 10))], `avg-${s}`).members[0]!.attacks;
     expect(sum / N).toBeGreaterThan(4.5);
     expect(sum / N).toBeLessThan(6.5);
+  });
+
+  it('공격마다 보상 하나: drops는 events와 짝, 쓰러짐은 [0,0], 원정대원 합계와 같다', () => {
+    const us = Array.from({ length: 10 }, (_, i) => unit(i, 5_000 * (i + 1)));
+    const r = simulateWorldBoss(us, 'worldboss:drops');
+    const drops = r.finale.drops!;
+    expect(drops).toHaveLength(r.finale.events.length);
+    const sum = new Map<number, { d: number; b: number }>();
+    r.finale.events.forEach(([a], k) => {
+      const [d, b] = drops[k]!;
+      if (a < 0) return expect([d, b]).toEqual([0, 0]);
+      expect(d > 0 && b > 0).toBe(false);
+      const s = sum.get(a) ?? { d: 0, b: 0 };
+      sum.set(a, { d: s.d + d, b: s.b + b });
+    });
+    r.members.forEach((m, i) => expect({ d: m.diamond, b: m.boxes }).toEqual(sum.get(i) ?? { d: 0, b: 0 }));
+    // 보상 난수는 전투와 따로 — 같은 시드면 전투 기록이 그대로.
+    expect(simulateWorldBoss(us, 'worldboss:drops').finale.events).toEqual(r.finale.events);
   });
 });

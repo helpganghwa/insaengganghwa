@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossPartyReward, worldBossStageHp } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { distributeGuildBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
@@ -147,7 +147,9 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(r.rounds).toBe(2); // 2명 → 2라운드
     expect(r.damage).toBeGreaterThan(0);
     expect(r.stageFrom).toBe(0);
-    expect(r.reward).toEqual(worldBossPartyReward(r.damage));
+    // 보상 = 공격마다 뽑은 것의 합(복권) — finale.drops 합과 같다.
+    const dropSum = (r.finale!.drops ?? []).reduce((s, [d, b]) => ({ diamond: s.diamond + d, boxes: s.boxes + b }), { diamond: 0, boxes: 0 });
+    expect(r.reward).toEqual(dropSum);
     expect(r.finale?.roster.map((x) => x.userId)).toEqual([T, G]);
     // 참가자 행·보스 누적 피해·우편.
     const mem = await q<{ user_id: string; attacks: number; damage: string; fell_round: number | null }>(sql`select user_id::text as user_id, attacks, damage::text as damage, fell_round from world_boss_party_members where party_id=${partyId}::bigint order by joined_at`);
@@ -157,10 +159,21 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const [b] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(b!.t)).toBe(r.damage);
     const mails = await q<{ user_id: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`select user_id::text as user_id, payload from mailbox where type='world_boss' and title='월드보스 원정 보상' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
-    expect(mails).toHaveLength(2);
+    // 원정대원마다 자기 공격에서 뽑은 만큼(꽝뿐이면 우편 없음).
+    const perUser = new Map<string, { diamond: number; boxes: number }>();
+    r.finale!.events.forEach(([a], k) => {
+      if (a < 0) return;
+      const uid = r.finale!.roster[a]!.userId;
+      const [d, b] = r.finale!.drops![k]!;
+      const s = perUser.get(uid) ?? { diamond: 0, boxes: 0 };
+      perUser.set(uid, { diamond: s.diamond + d, boxes: s.boxes + b });
+    });
+    const expectMail = [...perUser].filter(([, v]) => v.diamond > 0 || v.boxes > 0);
+    expect(mails).toHaveLength(expectMail.length);
     for (const m of mails) {
-      expect(m.payload.diamond).toBe(r.reward.diamond);
-      expect(Object.values(m.payload.boxes).reduce((a, v) => a + v, 0)).toBe(r.reward.boxes);
+      const want = perUser.get(m.user_id)!;
+      expect(m.payload.diamond).toBe(want.diamond);
+      expect(Object.values(m.payload.boxes).reduce((a, v) => a + v, 0)).toBe(want.boxes);
     }
     // 같은 키 재전송 = 같은 결과, 다른 키 = 이미 출발, 1인 1번.
     const again = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: key });

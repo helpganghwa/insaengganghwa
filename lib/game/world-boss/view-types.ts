@@ -84,11 +84,14 @@ export type WorldBossBattle = {
   finale: {
     roster: { userId: string; nickname: string; cp: number; guildName: string | null }[];
     events: [number, number, number, number][];
+    /** events와 짝 — 공격마다 뽑은 [다이아, 상자](쓰러짐은 [0,0]). 옛 기록엔 없다. */
+    drops?: [number, number][];
     rounds: number;
     totalDamage: number;
   };
   stageFrom: number;
   stageTo: number;
+  /** 원정대 전체 획득 합(공격마다 뽑은 보상의 합 — 원정대원마다 몫이 다르다). */
   reward: { diamond: number; boxes: number };
   /** 원정대원 얼굴 썸네일(userId → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
   avatars: Record<string, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;

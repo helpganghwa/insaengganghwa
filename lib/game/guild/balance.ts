@@ -172,23 +172,43 @@ export const WORLD_BOSS_PARTY_MAX = 10;
  * 단계 체력(서버 공통 — 누구 땅이든 같다). 단계 k(1부터)를 넘기는 데 BASE × GROWTH^(k-1) 피해.
  * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.
  */
-export const WORLD_BOSS_STAGE_BASE_HP = 3_000_000;
+export const WORLD_BOSS_STAGE_BASE_HP = 4_000_000; // 2026-10-08 실서버 시뮬로 확정(Winners 약 20·로제 17·Phoenix 14단계)
 export const WORLD_BOSS_STAGE_GROWTH = 1.1;
 /** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 금고로(집행관 몫 없음). 상자는 3의 배수. */
-export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 100, boxes: 6 } as const;
+export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 150, boxes: 12 } as const; // 2026-10-08 확정(L1)
 export const WORLD_BOSS_LOOT_STAGE_CAP = 30;
 /** 단계마다 떠날 때 주인 길드가 받는 길드 경험치. */
 export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
 /**
- * 원정대 보상(원정대원 전원 동일, 전투 직후 우편) — 그 원정대가 넣은 피해 구간. 상자는 3의 배수(부위별 1/3).
- * 오름차순 — 피해가 minDamage 이상인 마지막 구간을 준다. 0 이상이라 한 번이라도 싸우면 첫 구간은 받는다.
+ * 공격마다 뽑는 보상(복권, 2026-10-08 사용자 확정) — 원정대원이 공격할 때마다 이 표에서 **하나만** 나온다(다이아 또는 상자 또는 꽝).
+ * 피해량과 무관. 확률은 십만분율(합 100,000). 상자는 부위 3종 균등이라 3의 배수. 확률표는 화면에 표시하지 않는다(사용자 결정).
+ * 기대값(공격 1회) 💎9.25 📦1.89 — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎49 📦10.
  */
-export const WORLD_BOSS_PARTY_REWARDS: readonly { minDamage: number; diamond: number; boxes: number }[] = [
-  { minDamage: 0, diamond: 30, boxes: 3 },
-  { minDamage: 5_000_000, diamond: 60, boxes: 6 },
-  { minDamage: 20_000_000, diamond: 100, boxes: 9 },
-  { minDamage: 60_000_000, diamond: 150, boxes: 15 },
+export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number; p: number }[] = [
+  { diamond: 0, boxes: 0, p: 50_000 }, // 꽝 50%
+  { diamond: 5, boxes: 0, p: 16_000 },
+  { diamond: 20, boxes: 0, p: 9_000 },
+  { diamond: 50, boxes: 0, p: 4_500 },
+  { diamond: 100, boxes: 0, p: 2_000 },
+  { diamond: 300, boxes: 0, p: 600 },
+  { diamond: 1000, boxes: 0, p: 60 }, // 0.06%
+  { diamond: 0, boxes: 3, p: 11_000 },
+  { diamond: 0, boxes: 9, p: 4_500 },
+  { diamond: 0, boxes: 30, p: 1_800 },
+  { diamond: 0, boxes: 90, p: 480 },
+  { diamond: 0, boxes: 300, p: 60 }, // 0.06%
 ];
+export const WORLD_BOSS_ATTACK_DROP_TOTAL = 100_000;
+
+/** [0,1) 난수 하나 → 공격 1회 보상. 서버 시드 RNG에서만 부른다(CLAUDE §3.1). */
+export function worldBossRollDrop(r: number): { diamond: number; boxes: number } {
+  let x = Math.floor(Math.max(0, Math.min(0.999999999, r)) * WORLD_BOSS_ATTACK_DROP_TOTAL);
+  for (const d of WORLD_BOSS_ATTACK_DROPS) {
+    if (x < d.p) return { diamond: d.diamond, boxes: d.boxes };
+    x -= d.p;
+  }
+  return { diamond: 0, boxes: 0 };
+}
 
 /** 단계 k(1부터)를 넘기는 데 필요한 피해. */
 export function worldBossStageHp(stage: number): number {
@@ -211,12 +231,6 @@ export function worldBossStageFor(totalDamage: number): { stage: number; into: n
 export function worldBossLootFor(stage: number): { diamond: number; boxes: number } {
   const n = Math.max(0, Math.min(stage, WORLD_BOSS_LOOT_STAGE_CAP));
   return { diamond: n * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: n * WORLD_BOSS_LOOT_PER_STAGE.boxes };
-}
-/** 원정대 피해 → 원정대원 1인 보상. */
-export function worldBossPartyReward(damage: number): { diamond: number; boxes: number } {
-  let pick = WORLD_BOSS_PARTY_REWARDS[0]!;
-  for (const t of WORLD_BOSS_PARTY_REWARDS) if (damage >= t.minDamage) pick = t;
-  return { diamond: pick.diamond, boxes: pick.boxes };
 }
 /** 원정대원 1인의 평균 공격 횟수 = (인원 + 1) ÷ 2 — 모집 화면 안내용. */
 export function worldBossExpectedAttacks(members: number): number {

@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   WORLD_BOSS_LOOT_PER_STAGE,
   WORLD_BOSS_LOOT_STAGE_CAP,
-  WORLD_BOSS_PARTY_REWARDS,
+  WORLD_BOSS_ATTACK_DROPS,
+  WORLD_BOSS_ATTACK_DROP_TOTAL,
   WORLD_BOSS_STAGE_BASE_HP,
   WORLD_BOSS_STAGE_GROWTH,
   worldBossExpectedAttacks,
   worldBossLootFor,
-  worldBossPartyReward,
+  worldBossRollDrop,
   worldBossStageFor,
   worldBossStageHp,
 } from '@/lib/game/guild/balance';
@@ -38,16 +39,31 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     expect(WORLD_BOSS_LOOT_PER_STAGE.boxes % 3).toBe(0);
   });
 
-  it('원정대 보상은 피해 구간의 마지막 것, 0 피해도 첫 구간, 상자는 전부 3의 배수', () => {
-    expect(worldBossPartyReward(0)).toEqual({ diamond: WORLD_BOSS_PARTY_REWARDS[0]!.diamond, boxes: WORLD_BOSS_PARTY_REWARDS[0]!.boxes });
-    const last = WORLD_BOSS_PARTY_REWARDS[WORLD_BOSS_PARTY_REWARDS.length - 1]!;
-    expect(worldBossPartyReward(last.minDamage)).toEqual({ diamond: last.diamond, boxes: last.boxes });
-    expect(worldBossPartyReward(last.minDamage * 100)).toEqual({ diamond: last.diamond, boxes: last.boxes });
-    for (let i = 1; i < WORLD_BOSS_PARTY_REWARDS.length; i++) {
-      expect(WORLD_BOSS_PARTY_REWARDS[i]!.minDamage).toBeGreaterThan(WORLD_BOSS_PARTY_REWARDS[i - 1]!.minDamage);
-      expect(worldBossPartyReward(WORLD_BOSS_PARTY_REWARDS[i]!.minDamage - 1)).toEqual({ diamond: WORLD_BOSS_PARTY_REWARDS[i - 1]!.diamond, boxes: WORLD_BOSS_PARTY_REWARDS[i - 1]!.boxes });
+  it('공격 보상 표: 확률 합 100%, 한 칸은 다이아 또는 상자 하나만, 상자는 3의 배수, 꽝 50%, 극악 0.06%', () => {
+    expect(WORLD_BOSS_ATTACK_DROPS.reduce((s, d) => s + d.p, 0)).toBe(WORLD_BOSS_ATTACK_DROP_TOTAL);
+    for (const d of WORLD_BOSS_ATTACK_DROPS) {
+      expect(d.diamond > 0 && d.boxes > 0).toBe(false);
+      expect(d.boxes % 3).toBe(0);
     }
-    for (const t of WORLD_BOSS_PARTY_REWARDS) expect(t.boxes % 3).toBe(0);
+    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.diamond === 0 && d.boxes === 0)!.p).toBe(50_000);
+    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.diamond === 1000)!.p).toBe(60);
+    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.boxes === 300)!.p).toBe(60);
+    // 기대값(공격 1회) 💎9.25 📦1.89 — 시안·메모와 같은 값.
+    const ev = WORLD_BOSS_ATTACK_DROPS.reduce((s, d) => ({ dia: s.dia + (d.diamond * d.p) / WORLD_BOSS_ATTACK_DROP_TOTAL, box: s.box + (d.boxes * d.p) / WORLD_BOSS_ATTACK_DROP_TOTAL }), { dia: 0, box: 0 });
+    expect(ev.dia).toBeCloseTo(9.25, 2);
+    expect(ev.box).toBeCloseTo(1.89, 2);
+  });
+
+  it('뽑기 경계: 0은 꽝, 1에 가까우면 마지막 칸, 칸 경계가 정확하다', () => {
+    expect(worldBossRollDrop(0)).toEqual({ diamond: 0, boxes: 0 });
+    expect(worldBossRollDrop(0.4999999)).toEqual({ diamond: 0, boxes: 0 });
+    expect(worldBossRollDrop(0.5)).toEqual({ diamond: 5, boxes: 0 });
+    expect(worldBossRollDrop(0.9999999)).toEqual({ diamond: 0, boxes: 300 });
+    let acc = 0;
+    for (const d of WORLD_BOSS_ATTACK_DROPS) {
+      expect(worldBossRollDrop(acc / WORLD_BOSS_ATTACK_DROP_TOTAL)).toEqual({ diamond: d.diamond, boxes: d.boxes });
+      acc += d.p;
+    }
   });
 
   it('1인 평균 공격 횟수 = (인원 + 1) ÷ 2', () => {

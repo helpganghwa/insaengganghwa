@@ -3,7 +3,8 @@
 /**
  * 월드보스 전투 재생(docs/WORLD-BOSS.md §3·§9) — 저장된 전투 기록(finale)을 한 칸씩 보여 준다.
  * 2026-10-08 리뷰 반영: 화면 가운데 배치(아래 절반이 비었다), 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 칸 회색,
- * 라운드가 바뀌면 큰 라운드 표시. 탭하면 2.5배속, 건너뛰기로 바로 결과. 결과는 서버가 출발 순간 정한 그대로라 재생만 한다.
+ * 라운드가 바뀌면 큰 라운드 표시. 공격마다 뽑은 보상(복권)이 그 칸 위로 튀어나오고, 큰 당첨은 '대박'으로 띄운다.
+ * 탭하면 2.5배속, 건너뛰기로 바로 결과. 결과는 서버가 출발 순간 정한 그대로라 재생만 한다.
  */
 import { useEffect, useMemo, useState } from 'react';
 
@@ -27,6 +28,7 @@ export function WorldBossReplay({
   onClose: () => void;
 }) {
   const { roster, events } = battle.finale;
+  const drops = battle.finale.drops ?? [];
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [idx, setIdx] = useState(reduced ? events.length : 0); // 적용된 이벤트 수
   const [fast, setFast] = useState(false);
@@ -43,6 +45,8 @@ export function WorldBossReplay({
   // 지금까지 적용된 이벤트로 상태를 다시 계산(최대 65칸이라 매 단계 전부 다시 세도 가볍다).
   const st = useMemo(() => {
     const dmg = new Array<number>(roster.length).fill(0);
+    const gotD = new Array<number>(roster.length).fill(0);
+    const gotB = new Array<number>(roster.length).fill(0);
     const atk = new Array<number>(roster.length).fill(0);
     const fell = new Array<number | null>(roster.length).fill(null);
     let total = 0;
@@ -53,14 +57,17 @@ export function WorldBossReplay({
         dmg[a]! += d;
         atk[a]!++;
         total = aux;
+        gotD[a]! += drops[k]?.[0] ?? 0;
+        gotB[a]! += drops[k]?.[1] ?? 0;
       } else {
         fell[t] = aux;
         round = aux + 1;
       }
     }
     const last = idx > 0 ? events[idx - 1]! : null;
-    return { dmg, atk, fell, total, round: Math.min(round, battle.finale.rounds), last, alive: fell.filter((f) => f == null).length };
-  }, [idx, events, roster.length, battle.finale.rounds]);
+    const lastDrop = idx > 0 ? (drops[idx - 1] ?? null) : null;
+    return { dmg, atk, fell, gotD, gotB, total, round: Math.min(round, battle.finale.rounds), last, lastDrop, alive: fell.filter((f) => f == null).length };
+  }, [idx, events, drops, roster.length, battle.finale.rounds]);
 
   const ranked = useMemo(() => roster.map((m, i) => ({ ...m, i })).sort((a, b) => st.dmg[b.i]! - st.dmg[a.i]!), [roster, st.dmg]);
   const moved = battle.stageTo - battle.stageFrom;
@@ -95,6 +102,18 @@ export function WorldBossReplay({
                 className={`relative h-full w-full object-contain ${hit ? 'animate-wb-shake' : ''} ${struck ? 'scale-110' : ''} transition-transform duration-150`}
                 style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(251,191,36,0.55))' }}
               />
+              {/* 이번 공격에서 나온 보상 — 큰 당첨(💎300+ · 📦90+)은 '대박' */}
+              {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
+                <span
+                  key={`g${idx}`}
+                  className={`absolute left-1/2 top-14 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
+                    st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90 ? 'bg-amber-400 text-[17px] text-amber-950 shadow-[0_0_18px_rgba(251,191,36,0.9)]' : 'bg-black/70 text-[13px] text-amber-200'
+                  }`}
+                >
+                  {st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90 ? '대박! ' : ''}
+                  {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
+                </span>
+              )}
               {hit && st.last && (
                 <span key={`d${idx}`} className="absolute left-1/2 top-4 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[22px] font-black text-white [text-shadow:0_0_8px_#f59e0b,0_1px_2px_#000]">
                   {formatCompactKR(st.last[2])}
@@ -125,6 +144,13 @@ export function WorldBossReplay({
                     )}
                     <span className="w-full truncate text-center font-bold">{m.nickname}</span>
                     <span className="font-mono tabular-nums text-zinc-400">{formatCompactKR(st.dmg[i]!)}</span>
+                    {(st.gotD[i]! > 0 || st.gotB[i]! > 0) && (
+                      <span className="w-full truncate text-center text-[8.5px] font-bold text-amber-300">
+                        {st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : ''}
+                        {st.gotD[i]! > 0 && st.gotB[i]! > 0 ? ' ' : ''}
+                        {st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''}
+                      </span>
+                    )}
                     {fellR != null && <span className="absolute right-0.5 top-0.5 rounded bg-red-900/80 px-0.5 text-[7.5px] text-red-200">쓰러짐</span>}
                   </div>
                 );
@@ -163,11 +189,11 @@ export function WorldBossReplay({
             )}
           </div>
           <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-950/50 px-3 py-2.5">
-            <span className="text-[12px] text-zinc-300">모두에게</span>
+            <span className="text-[12px] text-zinc-300">원정대 획득</span>
             <b className="text-[17px] text-amber-200">
-              💎{battle.reward.diamond.toLocaleString('ko-KR')} 📦{battle.reward.boxes}
+              💎{battle.reward.diamond.toLocaleString('ko-KR')} 📦{battle.reward.boxes.toLocaleString('ko-KR')}
             </b>
-            <span className="text-[10.5px] text-zinc-500">우편 도착</span>
+            <span className="text-[10.5px] text-zinc-500">각자 몫은 우편으로</span>
           </div>
           <table className="mt-3 w-full text-[11px]">
             <thead>
@@ -175,7 +201,7 @@ export function WorldBossReplay({
                 <th className="py-1 font-semibold">원정대원</th>
                 <th className="py-1 text-right font-semibold">공격</th>
                 <th className="py-1 text-right font-semibold">피해</th>
-                <th className="py-1 text-right font-semibold">버틴 라운드</th>
+                <th className="py-1 text-right font-semibold">획득</th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +213,11 @@ export function WorldBossReplay({
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums">{st.atk[m.i]}</td>
                   <td className={`py-1.5 text-right font-mono tabular-nums ${r === 0 ? 'text-amber-300' : ''}`}>{formatCompactKR(st.dmg[m.i]!)}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">{st.fell[m.i] ?? '-'}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums text-amber-200">
+                    {st.gotD[m.i]! > 0 || st.gotB[m.i]! > 0
+                      ? [st.gotD[m.i]! > 0 ? `💎${st.gotD[m.i]}` : '', st.gotB[m.i]! > 0 ? `📦${st.gotB[m.i]}` : ''].filter(Boolean).join(' ')
+                      : <span className="text-zinc-600">꽝</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -6,7 +6,9 @@ import { josa } from 'josa';
 import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
-import { WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossPartyReward, worldBossStageFor } from '@/lib/game/guild/balance';
+import { randomUUID } from 'node:crypto';
+
+import { WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossStageFor } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -209,12 +211,14 @@ export type DepartResult = {
   rounds: number;
   stageFrom: number;
   stageTo: number;
+  /** 원정대 전체가 공격마다 뽑은 보상의 합(원정대원마다 다르다 — 각자 몫은 finale.drops). */
   reward: { diamond: number; boxes: number };
   finale: WorldBossFinale | null;
 };
 
 /**
- * 출발 — 대장만, 점령전 잠금(23~01시)이 아닐 때. 결과는 여기서 한 번에 정한다(시드 = 원정대 id).
+ * 출발 — 대장만, 점령전 잠금(23~01시)이 아닐 때. 결과는 여기서 한 번에 정한다. 시드에 서버 난수를 섞는다 — 공격마다
+ * 뽑는 보상(복권)을 원정대 id만으로 미리 계산해 출발 시점을 고르는 일을 막는다(CLAUDE §3.1).
  * 같은 departKey 재전송은 저장된 결과를 돌려준다(한 번만 출발).
  */
 export async function departParty(input: { leaderUserId: string; serverId: number; partyId: string; departKey: string }): Promise<DepartResult> {
@@ -268,7 +272,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     const units: WorldBossUnit[] = members.map((m) => ({
       userId: m.uid, nickname: m.nickname, cp: Math.max(1, Math.round(combatPowerFromOwned(owned.get(m.uid) ?? []))), guildId: m.gid, guildName: m.gname,
     }));
-    const sim = simulateWorldBoss(units, `worldboss:${party.id}`);
+    const sim = simulateWorldBoss(units, `worldboss:${party.id}:${randomUUID()}`);
 
     // 보스 누적 피해 → 단계·전리품(절대값으로 다시 계산 — 증분 누적의 어긋남 방지).
     const [tot] = (await tx.execute(sql`
@@ -279,7 +283,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
       const loot = worldBossLootFor(stageTo);
       await tx.execute(sql`update world_bosses set stage = ${stageTo}, loot_diamond = ${loot.diamond}::bigint, loot_boxes = ${loot.boxes} where id = ${b.id}::bigint`);
     }
-    const reward = worldBossPartyReward(sim.totalDamage);
+    const reward = sim.members.reduce((s, m) => ({ diamond: s.diamond + m.diamond, boxes: s.boxes + m.boxes }), { diamond: 0, boxes: 0 });
 
     for (const m of sim.members) {
       await tx.execute(sql`
@@ -294,23 +298,26 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
        where id = ${party.id}::bigint and status = 'recruiting'`);
     await tx.execute(sql`delete from world_boss_join_requests where party_id = ${party.id}::bigint`);
 
-    // 원정대 보상 우편 — 전원 동일. 상자는 부위별 1/3.
-    const per = Math.floor(reward.boxes / 3);
-    const payload = JSON.stringify({ diamond: reward.diamond, boxes: { weapon: per, armor: per, accessory: per } });
-    const body = josa(
+    // 보상 우편 — 원정대원마다 공격에서 뽑은 만큼(복권). 아무것도 못 뽑은 사람은 우편 없음(결과 화면에서 확인).
+    const fight = josa(
       `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혔어요(${stageFrom}단계 → ${stageTo}단계).`,
     );
-    await tx.execute(sql`
-      insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
-      select m.user_id, ${input.serverId}, 'world_boss'::mailbox_type, '월드보스 원정 보상', ${body}, '월드보스', ${payload}::jsonb, now() + interval '30 days'
-        from world_boss_party_members m where m.party_id = ${party.id}::bigint`);
+    for (const m of sim.members) {
+      if (m.diamond <= 0 && m.boxes <= 0) continue;
+      const per = Math.floor(m.boxes / 3);
+      const payload = JSON.stringify({ diamond: m.diamond, boxes: { weapon: per, armor: per, accessory: per } });
+      const body = `${fight} ${m.attacks}번 공격해 얻은 보상이에요.`;
+      await tx.execute(sql`
+        insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
+        values (${m.userId}::uuid, ${input.serverId}, 'world_boss'::mailbox_type, '월드보스 원정 보상', ${body}, '월드보스', ${payload}::jsonb, now() + interval '30 days')`);
+    }
 
     return { partyId: party.id, duplicate: false, damage: sim.totalDamage, rounds: sim.rounds, stageFrom, stageTo, reward, finale: sim.finale, memberIds: ids, zoneName: zone?.name ?? '', bossName };
   });
   if (!result.duplicate && result.memberIds.length > 0) {
     await sendPushToUsers(result.memberIds, {
       title: '원정대 결과',
-      body: `${result.zoneName}의 ${result.bossName}에게 ${result.damage.toLocaleString('ko-KR')} 피해를 입혔어요. 보상 우편이 도착했어요.`,
+      body: `${result.zoneName}의 ${result.bossName}에게 ${result.damage.toLocaleString('ko-KR')} 피해를 입혔어요. 공격마다 얻은 보상을 확인하세요.`,
       url: `/world-boss/party/${result.partyId}`,
       tag: `world-boss-party-${result.partyId}`,
       category: 'world_boss',

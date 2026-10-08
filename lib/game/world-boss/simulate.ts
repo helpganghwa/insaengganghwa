@@ -9,8 +9,10 @@
  *  - 공격: [공격자, -1, 피해, 누적 피해]
  *  - 쓰러짐: [-1, 대상, 0, 라운드]
  * 원정대는 최대 10명이라 라운드 ≤ 10, 튜플 ≤ 65개 — 링버퍼가 필요 없다.
+ * 공격마다 보상을 하나 뽑는다(복권 — 다이아 또는 상자 또는 꽝, balance.ts WORLD_BOSS_ATTACK_DROPS). 피해와 따로 노는
+ * 난수 줄기(seed + ':drop')를 써서, 보상 표를 바꿔도 전투 흐름은 그대로다. drops[k]는 events[k]와 짝(쓰러짐은 [0,0]).
  */
-import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN } from '@/lib/game/guild/balance';
+import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, worldBossRollDrop } from '@/lib/game/guild/balance';
 import { makeRng } from '@/lib/game/melee/rng';
 
 export const WORLD_BOSS_LOCAL = -1;
@@ -30,11 +32,13 @@ export type WorldBossFinale = {
   roster: Array<{ userId: string; nickname: string; cp: number; guildId: string | null; guildName: string | null }>;
   /** [공격자, 대상, 피해, 보조값] — 공격은 대상 -1·보조값 = 누적 피해, 쓰러짐은 공격자 -1·보조값 = 라운드. */
   events: Array<[number, number, number, number]>;
+  /** events와 같은 길이 — 공격이면 그 공격에서 나온 [다이아, 상자], 쓰러짐이면 [0, 0]. 옛 기록엔 없다. */
+  drops?: Array<[number, number]>;
   rounds: number;
   totalDamage: number;
 };
 
-export type WorldBossMemberResult = { userId: string; attacks: number; damage: number; fellRound: number | null };
+export type WorldBossMemberResult = { userId: string; attacks: number; damage: number; fellRound: number | null; diamond: number; boxes: number };
 
 export type WorldBossSimResult = {
   totalDamage: number;
@@ -46,9 +50,13 @@ export type WorldBossSimResult = {
 export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string): WorldBossSimResult {
   const n = units.length;
   const roster = units.map((u) => ({ userId: u.userId, nickname: u.nickname, cp: u.cp, guildId: u.guildId, guildName: u.guildName }));
-  if (n === 0) return { totalDamage: 0, rounds: 0, members: [], finale: { roster, events: [], rounds: 0, totalDamage: 0 } };
+  if (n === 0) return { totalDamage: 0, rounds: 0, members: [], finale: { roster, events: [], drops: [], rounds: 0, totalDamage: 0 } };
 
   const rng = makeRng(seed);
+  const dropRng = makeRng(`${seed}:drop`);
+  const dia = new Float64Array(n);
+  const box = new Float64Array(n);
+  const drops: NonNullable<WorldBossFinale['drops']> = [];
   const attacks = new Int32Array(n);
   const damage = new Float64Array(n);
   const fell = new Int32Array(n).fill(0); // 0 = 생존, k = k라운드에 쓰러짐
@@ -67,12 +75,17 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string)
       damage[i]! += dmg;
       total += dmg;
       events.push([i, WORLD_BOSS_LOCAL, dmg, total]);
+      const dr = worldBossRollDrop(dropRng());
+      dia[i]! += dr.diamond;
+      box[i]! += dr.boxes;
+      drops.push([dr.diamond, dr.boxes]);
     }
     // ② 보스가 한 명을 무작위로 한 방에.
     const k = Math.floor(rng() * alive.length);
     const victim = alive[k]!;
     fell[victim] = round;
     events.push([WORLD_BOSS_LOCAL, victim, 0, round]);
+    drops.push([0, 0]);
     alive = alive.filter((i) => i !== victim);
   }
 
@@ -81,6 +94,8 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string)
     attacks: attacks[i]!,
     damage: Math.round(damage[i]!),
     fellRound: fell[i]! > 0 ? fell[i]! : null,
+    diamond: dia[i]!,
+    boxes: box[i]!,
   }));
-  return { totalDamage: Math.round(total), rounds: round, members, finale: { roster, events, rounds: round, totalDamage: Math.round(total) } };
+  return { totalDamage: Math.round(total), rounds: round, members, finale: { roster, events, drops, rounds: round, totalDamage: Math.round(total) } };
 }

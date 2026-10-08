@@ -496,7 +496,7 @@ function DepartedSummary({ p }: { p: WorldBossPartyCard }) {
         )}
       </p>
       <p className="mt-0.5 text-[10.5px] text-zinc-500">
-        원정대원 모두 💎{p.rewardDiamond} 📦{p.rewardBoxes}
+        원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
       </p>
     </div>
   );
