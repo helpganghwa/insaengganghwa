@@ -192,6 +192,18 @@ if (only.includes('r8-forest'))
     'a burned ancient forest clearing, tall charred black tree trunks and bare scorched branches on both sides, the ground covered in soft grey ash with small glowing embers, a huge round nest woven from charred branches in the center of the clearing with faint embers glowing inside it, thin smoke drifting, soft hazy golden morning light shining through the gaps between the trees from behind, refined palette of charcoal, ash grey, warm hazy gold and small ember orange, elegant and luxurious, ' + STYLE_BG,
     400, 240, false, false,
   ));
+if (only.includes('r8-forest2'))
+  tasks.push(pro(
+    'r8-forest2',
+    'a burned ancient forest clearing, tall charred black tree trunks and bare scorched branches framing both sides, an open empty clearing in the center with flat ground covered in soft grey ash and small glowing embers, fallen charred logs near the edges, thin smoke drifting, soft hazy golden morning light shining through the gaps between the trees from behind, refined palette of charcoal, ash grey, warm hazy gold and small ember orange, elegant and luxurious, ' + STYLE_BG,
+    400, 240, false, false,
+  ));
+if (only.includes('r8-forest3'))
+  tasks.push(pro(
+    'r8-forest3',
+    'a freshly burned ancient forest clearing, tall charred black tree trunks framing both sides with glowing orange ember cracks still smoldering in their bark, an open empty clearing in the center, ash-covered ground scattered with many glowing embers and small smoldering patches, floating sparks rising in the air, thin smoke drifting, soft hazy golden morning light shining through the gaps between the trees from behind, refined palette of charcoal, ash grey, warm hazy gold and ember orange, elegant and luxurious, ' + STYLE_BG,
+    400, 240, false, false,
+  ));
 if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
