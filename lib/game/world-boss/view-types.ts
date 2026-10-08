@@ -25,6 +25,9 @@ export type WorldBossPerson = {
   code: string | null;
   guildName: string | null;
   combat: number;
+  /** 활성 프로필 정면 그림 + 얼굴 박스(친구 목록과 같은 썸네일 크롭). 없으면 null. */
+  avatarSrc: string | null;
+  faceBox: { cx: number; cy: number; h: number } | null;
 };
 
 /** 내 원정대(소속일 때) — 참가 순 원정대원 + (대장이면) 대기 중 신청. */
@@ -87,4 +90,6 @@ export type WorldBossBattle = {
   stageFrom: number;
   stageTo: number;
   reward: { diamond: number; boxes: number };
+  /** 원정대원 얼굴 썸네일(userId → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
+  avatars: Record<string, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;
 };

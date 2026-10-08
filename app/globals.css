@@ -61,6 +61,9 @@ html {
   --animate-marker-pin-glow: marker-pin-glow 1.5s ease-in-out infinite;
   --animate-wb-ring: wb-ring 1.6s ease-in-out infinite;
   --animate-wb-float: wb-float 0.6s ease-out forwards;
+  --animate-wb-shake: wb-shake 0.28s ease-in-out;
+  --animate-wb-flash: wb-flash 0.45s ease-out forwards;
+  --animate-wb-round: wb-round 0.5s ease-out;
   /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
   --animate-hit-shake: hit-shake 0.32s ease-in-out;
   --animate-crit-shake: crit-shake 0.5s ease-in-out;
@@ -119,6 +122,20 @@ html {
   /* 내 위치 핀 글로우 펄스(transform은 인라인 rotate 유지 — box-shadow만 애니메이트) */
   /* 핀 글로우 — 색은 --pin-glow/--pin-glow-hi로 주입(기본 앰버). 선택 핀은 파란 계열로 덮어쓴다. */
   /* 월드보스가 머무는 구역 노드 — 금빛 테두리 맥동(docs/WORLD-BOSS.md §9) */
+  /* 월드보스 전투 재생 — 맞을 때 흔들림 · 보스가 칠 때 붉은 번쩍임 · 라운드 표시 */
+  @keyframes wb-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px) rotate(-1.5deg); }
+    75% { transform: translateX(5px) rotate(1.5deg); }
+  }
+  @keyframes wb-flash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes wb-round {
+    0% { opacity: 0; transform: scale(1.6); }
+    100% { opacity: 1; transform: scale(1); }
+  }
   /* 월드보스 전투 재생 — 피해 숫자가 떠오르며 사라짐 */
   @keyframes wb-float {
     0% { opacity: 0; transform: translate(-50%, 6px); }

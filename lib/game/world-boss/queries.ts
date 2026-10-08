@@ -7,6 +7,7 @@ import 'server-only';
 import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { profilesByIds } from '@/lib/game/friends';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { guilds } from '@/lib/db/schema/guild';
@@ -62,6 +63,11 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
         .innerJoin(worldBossParties, eq(worldBossParties.id, worldBossPartyMembers.partyId))
         .where(and(eq(worldBossPartyMembers.userId, userId), inArray(worldBossPartyMembers.bossId, ids)));
       for (const r of m) mine.set(r.bossId.toString(), r.status === 'departed' ? 'fought' : 'recruiting');
+      // 신청 대기(소속이 없을 때만) — 시트 안내 문구 분기용.
+      const pend = (await db.execute(sql`
+        select distinct p.boss_id::text as b from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+         where r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' and p.boss_id = any(${`{${ids.join(',')}}`}::bigint[])`)) as unknown as { b: string }[];
+      for (const r of pend) if (!mine.has(r.b)) mine.set(r.b, 'pending');
     }
   }
 
@@ -146,8 +152,13 @@ async function peopleOn(serverId: number, userIds: string[]): Promise<Map<string
   ]);
   const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
   for (const r of eqRows) (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({ catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl });
+  const faces = new Map((await profilesByIds(ids, serverId).catch(() => [])).map((f) => [f.userId, f] as const));
   for (const r of rows) {
-    out.set(r.uid, { userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, combat: Math.round(combatPowerFromOwned(owned.get(r.uid) ?? [])) });
+    const f = faces.get(r.uid);
+    out.set(r.uid, {
+      userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, combat: Math.round(combatPowerFromOwned(owned.get(r.uid) ?? [])),
+      avatarSrc: f?.profileSouth ?? null, faceBox: f?.faceBox ?? null,
+    });
   }
   return out;
 }
@@ -211,7 +222,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           : Promise.resolve([] as { uid: string }[]),
       ]);
       const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)]);
-      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0 };
+      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0, avatarSrc: null, faceBox: null };
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
@@ -248,7 +259,11 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
     reward_diamond: number; reward_boxes: number; leader: string | null;
   }[];
   if (!r?.finale) return null;
+  const faces = await profilesByIds(r.finale.roster.map((m) => m.userId), serverId).catch(() => []);
+  const avatars: import('./view-types').WorldBossBattle['avatars'] = {};
+  for (const f of faces) avatars[f.userId] = { src: f.profileSouth, box: f.faceBox ?? null };
   return {
+    avatars,
     partyId: r.id,
     leaderNickname: r.leader ?? '알 수 없음',
     finale: r.finale,

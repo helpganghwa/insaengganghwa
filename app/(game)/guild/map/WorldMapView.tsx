@@ -17,7 +17,6 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import { josa } from 'josa';
 import { kstStartOfDay } from '@/lib/kst';
-import { formatCompactKR } from '@/lib/ui/format-number';
 import { worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from '@/lib/game/world-boss/map-types';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
@@ -237,37 +236,46 @@ const WorldMap = memo(function WorldMap({
   return (
     <>
       {/* 월드보스 띠(docs/WORLD-BOSS.md §9 — C안) — 보스가 머무는 동안만, 지도 **바로 위** 한 줄(지도 안에 겹치면 꼭대기
-          한가운데의 대설봉 노드가 가려진다). 누르면 그 구역 시트가 열린다. 리플레이 중엔 숨김. */}
-      {bosses.length > 0 && !replayActive && (
-        <div className="flex shrink-0 flex-col gap-1 border-b border-amber-500/30 bg-zinc-950 px-1.5 py-1.5">
+          한가운데의 대설봉 노드가 가려진다). 누르면 그 구역 시트가 열린다. 리플레이 중에도 보인다(리뷰 10-08: 하루 첫 진입의
+          자동 리플레이 동안 보스를 못 봤다) — 리플레이 중엔 지도 위 마커만 숨긴다. 보스가 둘 이상이면 한 줄 안에 나란히. */}
+      {bosses.length > 0 && (
+        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-amber-500/30 bg-zinc-950 px-1.5 py-1.5">
           <Ticker intervalMs={60_000}>
             {(now) =>
-              bosses.slice(0, 3).map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => onSelect(b.zoneId)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-950/70 to-zinc-900 px-2.5 py-1.5 text-left active:opacity-80"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={assetUrl(worldBossSpriteUrl(b.region))}
-                    alt=""
-                    className="h-7 w-7 shrink-0 object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.8)]"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                    <span className="truncate text-[11px] font-extrabold text-amber-300">
-                      월드보스 · {b.name}
-                      <span className="ml-1 font-semibold text-amber-200/80">{zoneNameById.get(b.zoneId) ?? ''}</span>
+              bosses.slice(0, 3).map((b) => {
+                const one = bosses.length === 1;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => onSelect(b.zoneId)}
+                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-950/70 to-zinc-900 px-2 py-1 text-left active:opacity-80 ${
+                      one ? 'w-full' : 'flex-1 basis-0'
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={assetUrl(worldBossSpriteUrl(b.region))}
+                      alt=""
+                      className="h-7 w-7 shrink-0 object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.8)]"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                      <span className="truncate text-[11px] font-extrabold text-amber-300">
+                        {one ? `${b.name} · ` : ''}
+                        {zoneNameById.get(b.zoneId) ?? ''}
+                        <span className="ml-1 font-semibold text-amber-200/80">{b.stage}단계</span>
+                      </span>
+                      <span className="truncate text-[9.5px] text-zinc-300">
+                        {one
+                          ? `💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes} 쌓임 · ${wbRemain(b.leaveAt - now)}${b.recruiting > 0 ? ` · 모집 ${b.recruiting}` : ''}`
+                          : wbRemain(b.leaveAt - now)}
+                      </span>
                     </span>
-                    <span className="truncate text-[9.5px] text-zinc-200">
-                      {b.stage}단계 · 💎{b.lootDiamond.toLocaleString('ko-KR')} 📦{b.lootBoxes} · {wbRemain(b.leaveAt - now)} · 원정대 {b.recruiting}
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-base leading-none text-amber-300">›</span>
-                </button>
-              ))
+                    {one && <span aria-hidden className="text-base leading-none text-amber-300">›</span>}
+                  </button>
+                );
+              })
             }
           </Ticker>
         </div>
@@ -282,6 +290,19 @@ const WorldMap = memo(function WorldMap({
           replayActive ? 'sticky top-0 z-10' : ''
         }`}
       >
+        {/* 리플레이 중 월드보스 알약(리뷰 10-08) — 리플레이가 지도를 화면 위에 붙여 띠가 그 뒤로 밀린다. 지도 왼쪽 위 모서리는
+            노드가 없는 자리(가장 위 노드가 y 6%)라 여기에 작게 띄운다. 누르면 그 구역 시트. */}
+        {replayActive && bosses.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onSelect(bosses[0]!.zoneId)}
+            className="absolute left-1.5 top-1.5 z-30 flex items-center gap-1 rounded-full border border-amber-400/60 bg-black/70 py-0.5 pl-0.5 pr-2 text-[10px] font-bold text-amber-300 backdrop-blur-sm"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetUrl(worldBossSpriteUrl(bosses[0]!.region))} alt="" className="h-4 w-4 object-contain" style={{ imageRendering: 'pixelated' }} />
+            월드보스 {bosses.length > 1 ? `${bosses.length}` : `· ${zoneNameById.get(bosses[0]!.zoneId) ?? ''}`}
+          </button>
+        )}
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -471,7 +492,7 @@ const WorldMap = memo(function WorldMap({
                 </span>
               )}
               {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
-              {(nodeShowGuild ? z.ownerGuildName : z.name) && (
+              {!boss && (nodeShowGuild ? z.ownerGuildName : z.name) && (
                 <span
                   className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
                   style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
@@ -479,10 +500,10 @@ const WorldMap = memo(function WorldMap({
                   {nodeShowGuild ? z.ownerGuildName : z.name}
                 </span>
               )}
-              {/* 월드보스 배지 — 라벨 아래 '단계 · 쌓인 다이아' */}
+              {/* 월드보스 배지 — 구역 라벨 자리를 대신한다(리뷰 10-08: 라벨 아래에 따로 달면 아래 구역 라벨을 덮었다). */}
               {boss && (
-                <span className="pointer-events-none absolute left-1/2 top-full mt-[5px] -translate-x-1/2 whitespace-nowrap rounded-sm border border-amber-600/70 bg-[#1a1407] px-[3px] text-[6px] font-extrabold leading-[1.5] text-amber-300">
-                  {boss.stage}단계 · 💎{boss.lootDiamond.toLocaleString('ko-KR')}
+                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border border-amber-600/70 bg-[#1a1407] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-amber-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                  {nodeShowGuild ? z.ownerGuildName : z.name} · {boss.stage}단계
                 </span>
               )}
             </button>
@@ -1250,62 +1271,71 @@ export function WorldMapView({
                         // 저장 실패 시 복원만 생략
                       }
                     };
+                    // 상태별 한 줄 안내 + 버튼 하나(리뷰 10-08: 0 나열·고정 안내·버튼 둘이 시트를 길게 만들었다).
+                    const isMine = myGuildId != null && selected.ownerGuildId === myGuildId;
+                    const hint =
+                      boss.mine === 'fought'
+                        ? '이 보스와는 이미 싸웠어요'
+                        : boss.mine === 'recruiting'
+                          ? '내 원정대가 모집 중이에요'
+                          : boss.mine === 'pending'
+                            ? '신청한 원정대의 수락을 기다리는 중이에요'
+                            : canCreate
+                              ? '우리 땅의 보스예요 · 원정대를 만들어 출발하세요'
+                              : boss.recruiting > 0
+                                ? `모집 중 원정대 ${boss.recruiting}곳 · 신청하면 함께 싸울 수 있어요`
+                                : selected.ownerGuildName
+                                  ? `${selected.ownerGuildName} 길드원이 원정대를 만들면 신청할 수 있어요`
+                                  : '주인이 없는 땅이라 원정대를 만들 수 없어요';
+                    const cta =
+                      boss.mine === 'fought'
+                        ? '내 전투 결과'
+                        : boss.mine === 'recruiting'
+                          ? '내 원정대'
+                          : boss.mine === 'pending'
+                            ? '신청한 원정대'
+                            : canCreate
+                              ? '원정대 만들기'
+                              : '원정대 보기';
                     return (
                       <div className="mt-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-50 to-white p-2.5 dark:border-amber-700/50 dark:from-amber-950/40 dark:to-zinc-900/60">
-                        <div className="flex gap-2.5">
+                        <div className="flex items-center gap-2.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={assetUrl(worldBossSpriteUrl(boss.region))}
                             alt=""
-                            className="h-14 w-14 shrink-0 object-contain drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
-                            style={{ imageRendering: 'pixelated' }}
+                            className="h-11 w-11 shrink-0 object-contain"
+                            style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(251,191,36,0.6))' }}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline justify-between gap-2">
-                              <span className="truncate text-[13.5px] font-extrabold text-amber-700 dark:text-amber-300">{boss.name}</span>
+                              <span className="truncate text-[13px] font-extrabold text-amber-700 dark:text-amber-300">
+                                {boss.name} <span className="font-bold text-amber-600/80 dark:text-amber-200/80">{boss.stage}단계</span>
+                              </span>
                               <Ticker intervalMs={60_000}>
                                 {(now) => <span className="shrink-0 text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">{wbRemain(boss.leaveAt - now)}</span>}
                               </Ticker>
                             </div>
-                            <div className="mt-1.5 h-[7px] overflow-hidden rounded-full bg-amber-200/60 dark:bg-amber-900/50">
+                            <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-amber-200/60 dark:bg-amber-900/50">
                               <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" style={{ width: `${pct}%` }} />
                             </div>
-                            <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-[10.5px] text-zinc-600 dark:text-zinc-300">
-                              <span>
-                                {boss.stage}단계 · 다음까지 {formatCompactKR(boss.into)} / {formatCompactKR(boss.need)}
-                              </span>
-                              <span className="font-semibold">
-                                💎{boss.lootDiamond.toLocaleString('ko-KR')} 📦{boss.lootBoxes} 쌓임
-                              </span>
-                            </div>
-                            <div className="mt-0.5 text-[10.5px] text-zinc-500">
-                              원정대 {boss.recruiting}개 모집 중 · 출발 {boss.departed} · 누적 피해 {formatCompactKR(Number(boss.totalDamage))}
+                            <div className="mt-1 text-[10.5px] font-semibold text-zinc-600 dark:text-zinc-300">
+                              💎{boss.lootDiamond.toLocaleString('ko-KR')} 📦{boss.lootBoxes} 쌓임
+                              <span className="font-normal text-zinc-500"> · 떠날 때 {isMine ? '우리' : (selected.ownerGuildName ?? '주인')} 금고로</span>
                             </div>
                           </div>
                         </div>
-                        <div className="mt-2 flex gap-2">
+                        <div className="mt-2 flex items-center gap-2">
+                          <p className="min-w-0 flex-1 text-[10.5px] leading-snug text-zinc-500">{hint}</p>
                           <Link
                             prefetch={false}
                             href={`/world-boss/${boss.id}`}
                             onClick={remember}
-                            className="flex-1 rounded-lg bg-amber-500 py-2 text-center text-[12.5px] font-bold text-white"
+                            className="shrink-0 rounded-lg bg-amber-500 px-3 py-2 text-center text-[12px] font-bold text-white"
                           >
-                            {boss.mine === 'fought' ? '내 원정 결과' : boss.mine === 'recruiting' ? '내 원정대' : '원정대 보기'}
+                            {cta}
                           </Link>
-                          {canCreate && (
-                            <Link
-                              prefetch={false}
-                              href={`/world-boss/${boss.id}`}
-                              onClick={remember}
-                              className="flex-1 rounded-lg border border-amber-500/60 py-2 text-center text-[12.5px] font-bold text-amber-700 dark:text-amber-300"
-                            >
-                              원정대 만들기
-                            </Link>
-                          )}
                         </div>
-                        <p className="mt-1.5 text-[10px] text-zinc-500">
-                          {selected.ownerGuildName ? `만들기는 ${selected.ownerGuildName} 길드원만 · ` : ''}참가는 누구나 · 보스 하나에 1인 1번
-                        </p>
                       </div>
                     );
                   }

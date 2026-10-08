@@ -2,7 +2,7 @@
  * 월드보스 지도 표시용 타입 — 순수 모듈(클라이언트 컴포넌트가 import). 값은 queries.ts(server-only)가 만든다.
  * 숫자는 전부 ms/number로 내려 클라에서 bigint·Date를 다루지 않게 한다(docs/WORLD-BOSS.md §9).
  */
-export type WorldBossMine = 'none' | 'recruiting' | 'fought';
+export type WorldBossMine = 'none' | 'pending' | 'recruiting' | 'fought';
 
 export type WorldBossMapBoss = {
   id: string;
@@ -22,7 +22,7 @@ export type WorldBossMapBoss = {
   /** 모집 중 원정대 수 · 출발한 원정대 수. */
   recruiting: number;
   departed: number;
-  /** 내 상태 — 모집 중 원정대 소속 / 이미 출발(보스 하나에 1인 1번) / 없음. 비로그인은 'none'. */
+  /** 내 상태 — 신청 대기 / 모집 중 원정대 소속 / 이미 출발(보스 하나에 1인 1번) / 없음. 비로그인은 'none'. */
   mine: WorldBossMine;
 };
 

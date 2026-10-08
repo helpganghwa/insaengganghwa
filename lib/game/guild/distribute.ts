@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildTaxDistributions, guildAuditLog } from '@/lib/db/schema/guild';
@@ -224,14 +224,15 @@ export function distributeGuildTaxManual(input: {
  * 상자는 부위 3종을 똑같이 나눠 주므로 사람마다 3의 배수로만 준다.
  * - equal: 길드원 N명에게 1인 floor(pool / 3N) × 3개씩. 남는 상자는 금고에 남는다.
  * - target: 한 사람에게 floor(pool / 3) × 3개 전부.
+ * - top: 기여 높은 순으로 한 사람에 3개씩, 상자가 떨어질 때까지(상자가 길드원 수 × 3보다 적을 때 — 리뷰 10-08).
  * 지급은 보상 우편(payload.boxes), 활동 로그 'loot_distribute'(detail.boxes).
  */
 export function distributeGuildBoxes(input: {
   leaderUserId: string;
   serverId: number;
-  mode: 'equal' | 'target';
+  mode: 'equal' | 'target' | 'top';
   targetUserId?: string;
-}): Promise<{ total: number; perMember: number | null }> {
+}): Promise<{ total: number; perMember: number | null; recipients: number }> {
   return db.transaction(async (tx) => {
     const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
     const gid = leader.guildId;
@@ -250,6 +251,18 @@ export function distributeGuildBoxes(input: {
       const give = Math.floor(pool / 3) * 3;
       if (give <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
       rows = [{ userId: input.targetUserId, boxes: give }];
+    } else if (input.mode === 'top') {
+      const k = Math.floor(pool / 3);
+      if (k <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
+      // 기여 높은 순(분배 화면 목록과 같은 순서), 같으면 먼저 들어온 순.
+      const ms = await tx
+        .select({ u: guildMembers.userId })
+        .from(guildMembers)
+        .where(eq(guildMembers.guildId, gid))
+        .orderBy(desc(guildMembers.contributionPoints), guildMembers.joinedAt)
+        .limit(k);
+      if (ms.length === 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
+      rows = ms.map((m) => ({ userId: m.u, boxes: 3 }));
     } else {
       const members = await tx.select({ u: guildMembers.userId }).from(guildMembers).where(eq(guildMembers.guildId, gid));
       const per = members.length > 0 ? Math.floor(pool / (3 * members.length)) * 3 : 0;
@@ -282,6 +295,6 @@ export function distributeGuildBoxes(input: {
         detail: { boxes: r.boxes, mode: input.mode },
       })),
     );
-    return { total, perMember: input.mode === 'equal' ? rows[0]!.boxes : null };
+    return { total, perMember: input.mode === 'target' ? null : rows[0]!.boxes, recipients: rows.length };
   });
 }

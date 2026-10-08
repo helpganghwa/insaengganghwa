@@ -262,7 +262,7 @@ export function PushSettings(props: {
       />
       <Toggle
         label="월드보스"
-        hint="우리 땅에 보스가 나타날 때 · 원정대 신청·수락·결과 · 전리품"
+        hint="보스 출현 · 원정대 소식 · 전리품"
         on={worldBoss}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('world_boss', v)}

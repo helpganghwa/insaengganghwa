@@ -529,17 +529,17 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
 }
 
 /** 금고 상자(월드보스 전리품) 분배 — 똑같이 나누기 또는 한 사람에게. */
-export async function distributeBoxesAction(mode: 'equal' | 'target', targetUserId?: string) {
+export async function distributeBoxesAction(mode: 'equal' | 'target' | 'top', targetUserId?: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
-  if (mode !== 'equal' && mode !== 'target') return { status: 'error', code: 'UNKNOWN' } as const;
+  if (mode !== 'equal' && mode !== 'target' && mode !== 'top') return { status: 'error', code: 'UNKNOWN' } as const;
   try {
     const r = await distributeGuildBoxes({ leaderUserId: u, serverId: await getActiveServerId(), mode, targetUserId });
     revalidatePath('/guild');
     revalidatePath('/guild/distribute');
-    return { status: 'success', total: r.total, perMember: r.perMember } as const;
+    return { status: 'success', total: r.total, perMember: r.perMember, recipients: r.recipients } as const;
   } catch (e) {
     return fail(e, 'distributeBoxes');
   }
