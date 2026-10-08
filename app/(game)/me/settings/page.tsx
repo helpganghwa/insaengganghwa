@@ -49,6 +49,7 @@ export default async function SettingsPage() {
         pushChatMention: profiles.pushChatMention,
         pushGuildJoin: profiles.pushGuildJoin,
         pushExpedition: profiles.pushExpedition,
+        pushWorldBoss: profiles.pushWorldBoss,
         pushEnhanceMode: profiles.pushEnhanceMode,
       })
       .from(profiles)
@@ -91,6 +92,7 @@ export default async function SettingsPage() {
             initialChatMention={p?.pushChatMention ?? true}
             initialGuildJoin={p?.pushGuildJoin ?? true}
             initialExpedition={p?.pushExpedition ?? true}
+            initialWorldBoss={p?.pushWorldBoss ?? true}
             initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
           />
         </Section>

@@ -84,6 +84,8 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}를 수금했습니다</>;
     case 'tax_distribute':
       return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}를 지급했습니다</>;
+    case 'loot_distribute':
+      return <>{target}님에게 전리품 {hl(`📦${Number(e.detail?.boxes ?? 0).toLocaleString('ko-KR')}`, C.sky)}를 지급했습니다</>;
     case 'zone_capture':
       return <>{zone} 구역을 {hl('점령', C.emerald)}했습니다</>;
     case 'zone_lost':

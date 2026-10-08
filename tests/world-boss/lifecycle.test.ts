@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossPartyReward, worldBossStageHp } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
+import { distributeGuildBoxes } from '@/lib/game/guild/distribute';
+import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
@@ -62,6 +64,8 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     await testDb.execute(sql`delete from world_bosses where server_id=${S} and kst_day < '2001-01-01'`);
     await testDb.execute(sql`delete from mailbox where type='world_boss' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from world_events where server_id=${S} and type like 'world_boss_%' and created_at >= ${t0.toISOString()}`);
+    await testDb.execute(sql`delete from mailbox where title='길드 전리품 분배' and created_at >= ${t0.toISOString()}`);
+    await testDb.execute(sql`delete from guild_audit_log where action='loot_distribute' and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`update zones set owner_guild_id=${zoneOwnerBefore}::bigint where id=${ZONE}`);
     if (guildBefore) await testDb.execute(sql`update guilds set tax_pool_diamond=${guildBefore.pool}::bigint, tax_pool_boxes=${guildBefore.boxes}, level=${guildBefore.level}, xp=${guildBefore.xp}::bigint where id=${guildId}::bigint`);
     await endTestDb();
@@ -251,6 +255,26 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const [gname] = await q<{ name: string }>(sql`select name from guilds where id=${guildId}::bigint`);
     expect(map.left.find((l) => l.zoneId === ZONE)).toMatchObject({ bossId: boss, settledGuildName: gname!.name, lootDiamond: loot.diamond, lootBoxes: loot.boxes });
   });
+
+  it('금고 상자 분배: 똑같이(3의 배수·남는 상자는 금고에) / 한 사람에게 / 부족하면 거절', async () => {
+    const [{ n }] = await q<{ n: number }>(sql`select count(*)::int as n from guild_members where guild_id=${guildId}::bigint`);
+    await testDb.execute(sql`update guilds set tax_pool_boxes=${3 * n * 2 + 2} where id=${guildId}::bigint`);
+    const eq = await distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'equal' });
+    expect(eq).toEqual({ total: 6 * n, perMember: 6 });
+    const pool = async () => (await q<{ b: number }>(sql`select tax_pool_boxes as b from guilds where id=${guildId}::bigint`))[0]!.b;
+    expect(await pool()).toBe(2);
+    const [mail] = await q<{ payload: { boxes: Record<string, number> } }>(sql`select payload from mailbox where user_id=${T}::uuid and title='길드 전리품 분배' and created_at >= ${t0.toISOString()} order by id desc limit 1`);
+    expect(mail!.payload.boxes).toEqual({ weapon: 2, armor: 2, accessory: 2 });
+    // 2개 남음 → 똑같이·한 사람 모두 3개 단위가 안 돼 거절.
+    const errCode = async (p: Promise<unknown>) => { try { await p; return 'OK'; } catch (e) { return e instanceof GuildError ? e.code : 'THROWN'; } };
+    expect(await errCode(distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'equal' }))).toBe('NOTHING_TO_DISTRIBUTE');
+    await testDb.execute(sql`update guilds set tax_pool_boxes=10 where id=${guildId}::bigint`);
+    expect(await distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'target', targetUserId: T })).toEqual({ total: 9, perMember: null });
+    expect(await pool()).toBe(1);
+    expect(await errCode(distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'target', targetUserId: G }))).toBe('TARGET_NOT_IN_GUILD');
+    const [{ logs }] = await q<{ logs: number }>(sql`select count(*)::int as logs from guild_audit_log where guild_id=${guildId}::bigint and action='loot_distribute' and created_at >= ${t0.toISOString()}`);
+    expect(logs).toBe(n + 1);
+  }, 20_000);
 
   it('정산: 떠날 때 중립이면 전리품은 소멸한다', async () => {
     const boss = await makeBoss('2000-01-07', { leaveOffsetMs: -1000, stage: 1, totalDamage: worldBossStageHp(1) });

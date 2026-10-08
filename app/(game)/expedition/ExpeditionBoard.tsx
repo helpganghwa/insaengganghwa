@@ -573,7 +573,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             title="파견 귀환"
             subtitle={
               <>
-                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 원정대가 돌아왔습니다
+                <span style={{ color: REGION_UI[claimPopup.region].color }}>{REGION_UI[claimPopup.region].label}</span> 파견대가 돌아왔습니다
               </>
             }
             bodyPad="sm"

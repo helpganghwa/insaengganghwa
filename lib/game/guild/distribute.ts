@@ -218,3 +218,70 @@ export function distributeGuildTaxManual(input: {
     return { total };
   });
 }
+
+/**
+ * 금고 상자(전리품) 분배 — 월드보스 전리품(docs/WORLD-BOSS.md §4)이 tax_pool_boxes에 쌓인다. 분배 권한(taxDistribute) 필요.
+ * 상자는 부위 3종을 똑같이 나눠 주므로 사람마다 3의 배수로만 준다.
+ * - equal: 길드원 N명에게 1인 floor(pool / 3N) × 3개씩. 남는 상자는 금고에 남는다.
+ * - target: 한 사람에게 floor(pool / 3) × 3개 전부.
+ * 지급은 보상 우편(payload.boxes), 활동 로그 'loot_distribute'(detail.boxes).
+ */
+export function distributeGuildBoxes(input: {
+  leaderUserId: string;
+  serverId: number;
+  mode: 'equal' | 'target';
+  targetUserId?: string;
+}): Promise<{ total: number; perMember: number | null }> {
+  return db.transaction(async (tx) => {
+    const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
+    const gid = leader.guildId;
+    const [g] = await tx.select({ pool: guilds.taxPoolBoxes, name: guilds.name }).from(guilds).where(eq(guilds.id, gid)).for('update');
+    const pool = g?.pool ?? 0;
+
+    let rows: { userId: string; boxes: number }[];
+    if (input.mode === 'target') {
+      if (!input.targetUserId) throw new GuildError('INVALID_TARGET');
+      const [t] = await tx
+        .select({ u: guildMembers.userId })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
+        .limit(1);
+      if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
+      const give = Math.floor(pool / 3) * 3;
+      if (give <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
+      rows = [{ userId: input.targetUserId, boxes: give }];
+    } else {
+      const members = await tx.select({ u: guildMembers.userId }).from(guildMembers).where(eq(guildMembers.guildId, gid));
+      const per = members.length > 0 ? Math.floor(pool / (3 * members.length)) * 3 : 0;
+      if (per <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
+      rows = members.map((m) => ({ userId: m.u, boxes: per }));
+    }
+    const total = rows.reduce((s, r) => s + r.boxes, 0);
+
+    const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
+    const who = meta.actorNick ? `${meta.actorNick}님이` : '길드에서';
+    await tx.insert(mailbox).values(
+      rows.map((r) => ({
+        userId: r.userId,
+        serverId: input.serverId,
+        type: 'reward' as const,
+        title: '길드 전리품 분배',
+        body: `${meta.guildName} 금고의 전리품 상자를 ${who} 나눠 주었어요. 📦${r.boxes}개(부위별 ${r.boxes / 3}개)`,
+        senderLabel: '길드',
+        payload: { boxes: { weapon: r.boxes / 3, armor: r.boxes / 3, accessory: r.boxes / 3 } },
+      })),
+    );
+    await tx.update(guilds).set({ taxPoolBoxes: sql`${guilds.taxPoolBoxes} - ${total}` }).where(eq(guilds.id, gid));
+    await tx.insert(guildAuditLog).values(
+      rows.map((r) => ({
+        serverId: input.serverId,
+        guildId: gid,
+        actorUserId: input.leaderUserId,
+        action: 'loot_distribute' as const,
+        targetUserId: r.userId,
+        detail: { boxes: r.boxes, mode: input.mode },
+      })),
+    );
+    return { total, perMember: input.mode === 'equal' ? rows[0]!.boxes : null };
+  });
+}

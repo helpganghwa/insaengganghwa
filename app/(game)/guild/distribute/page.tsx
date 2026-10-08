@@ -56,6 +56,7 @@ export default async function DistributePage({
         initialTab={initialTab}
         collect={collect}
         pool={canDistribute ? guild.taxPoolDiamond.toString() : '0'}
+        poolBoxes={canDistribute ? guild.taxPoolBoxes : 0}
         members={members}
         canDistribute={canDistribute}
       />

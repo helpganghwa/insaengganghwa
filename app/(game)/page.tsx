@@ -61,7 +61,7 @@ const MENU = [
   {
     href: '/expedition',
     label: '파견',
-    desc: '원정대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
+    desc: '파견대를 보내보세요', // 실제 문구는 expeditionDesc(보드 상태)로 동적 대체
     bg: '/sprites/hub/expedition.png',
     tint: '#1f2a16',
     scale: 1,
@@ -157,7 +157,7 @@ export default async function HomePage() {
   //  발표 전: 진행 전("오늘 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 9시 개시';
-  let expeditionDesc = '원정대를 보내보세요';
+  let expeditionDesc = '파견대를 보내보세요';
   let expeditionCanSend = false;
   let towerDesc = '한 층씩 끝없이';
   let raidJoinable = 0;

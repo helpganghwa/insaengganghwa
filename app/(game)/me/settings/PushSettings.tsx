@@ -32,7 +32,7 @@ import {
  */
 
 // 일일 보급·대난투는 상시 발송(끄기 불가) — 설정 토글에서 제외.
-type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join' | 'expedition';
+type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention' | 'guild_join' | 'expedition' | 'world_boss';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
@@ -44,6 +44,7 @@ export function PushSettings(props: {
   initialChatMention: boolean;
   initialGuildJoin: boolean;
   initialExpedition: boolean;
+  initialWorldBoss: boolean;
   initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export function PushSettings(props: {
   const [chatMention, setChatMention] = useState(props.initialChatMention);
   const [guildJoin, setGuildJoin] = useState(props.initialGuildJoin);
   const [expedition, setExpedition] = useState(props.initialExpedition);
+  const [worldBoss, setWorldBoss] = useState(props.initialWorldBoss);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
@@ -130,6 +132,7 @@ export function PushSettings(props: {
       chat_mention: setChatMention,
       guild_join: setGuildJoin,
       expedition: setExpedition,
+      world_boss: setWorldBoss,
     };
     const setLocal = setterMap[cat];
     setLocal(next);
@@ -252,10 +255,17 @@ export function PushSettings(props: {
       />
       <Toggle
         label="파견 귀환"
-        hint="원정대가 돌아와 보상을 받을 수 있을 때"
+        hint="파견대가 돌아와 보상을 받을 수 있을 때"
         on={expedition}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('expedition', v)}
+      />
+      <Toggle
+        label="월드보스"
+        hint="우리 땅에 보스가 나타날 때 · 원정대 신청·수락·결과 · 전리품"
+        on={worldBoss}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('world_boss', v)}
       />
       <Toggle
         label="길드 가입 신청"

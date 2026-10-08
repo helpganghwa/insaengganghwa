@@ -31,7 +31,7 @@ const MAP: Record<string, string> = {
   NOT_EXECUTOR: '해당 구역의 집행관이 아닙니다.',
   COLLECT_COOLDOWN: '아직 수금할 수 없습니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',
-  NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
+  NOTHING_TO_DISTRIBUTE: '분배할 다이아나 상자가 부족합니다.',
   DISTRIBUTE_OVER_POOL: '분배 총액이 세금을 초과합니다.',
   ZONE_NOT_OWNED: '자기 길드 소유 구역만 수비할 수 있습니다.',
   CANNOT_ATTACK_OWN: '자기 길드 구역은 공격할 수 없습니다.',

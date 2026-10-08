@@ -55,8 +55,8 @@ export async function GET(req: Request) {
     for (const [userId, e] of byUser) {
       const body =
         e.regions.length === 1
-          ? `${e.regions[0]} 원정대가 돌아왔어요 — 보상을 수령하세요!`
-          : `원정대 ${e.regions.length}팀이 돌아왔어요(${[...new Set(e.regions)].join('·')}) — 보상을 수령하세요!`;
+          ? `${e.regions[0]} 파견대가 돌아왔어요 — 보상을 수령하세요!`
+          : `파견대 ${e.regions.length}팀이 돌아왔어요(${[...new Set(e.regions)].join('·')}) — 보상을 수령하세요!`;
       try {
         await sendPushToUser(userId, { title: '파견 귀환', body, url: '/expedition', tag: 'expedition', category: 'expedition' });
         sent++;

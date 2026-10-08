@@ -27,6 +27,7 @@ export type GuildAuditAction =
   | 'levelup'
   | 'tax_collect'
   | 'tax_distribute'
+  | 'loot_distribute' // 금고 상자(월드보스 전리품) 지급 — detail { boxes, mode }
   | 'zone_capture'
   | 'zone_lost'
   // 업적 피드 — 멤버(강화 100단위·초월 개인기록 갱신(11+)·대난투 1~3위) + 길드(전투력·점령지 랭킹 1~3위).
