@@ -170,6 +170,13 @@ if (only.includes('r8-volcano'))
     'a wide volcanic plain buried under thick layers of grey ash, glowing rivers of molten lava winding across the ground toward the viewer, cracked dark rock and drifting ash, distant smoking volcano peaks on the horizon, a bright glowing sky of warm red orange and gold lit by the lava, soft ash clouds, refined palette of ash grey, deep charcoal, molten orange and warm gold, elegant and luxurious, ' + STYLE_BG,
     400, 240, false, false,
   ));
+// 8차 추가 2(10-09 사용자): 화산은 여러 개가 아니라 하나만 — 멀리 가운데 큰 화산 하나.
+if (only.includes('r8-volcano2'))
+  tasks.push(pro(
+    'r8-volcano2',
+    'a wide volcanic plain buried under thick layers of grey ash, glowing rivers of molten lava winding across the ground toward the viewer, cracked dark rock and drifting ash, a single great volcano standing alone far in the distance at the center of the horizon with a column of smoke, no other mountains or peaks, flat open horizon on both sides, a bright glowing sky of warm red orange and gold lit by the lava, soft ash clouds, refined palette of ash grey, deep charcoal, molten orange and warm gold, elegant and luxurious, ' + STYLE_BG,
+    400, 240, false, false,
+  ));
 if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
