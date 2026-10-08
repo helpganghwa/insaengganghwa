@@ -132,6 +132,27 @@ const PAL6: Record<string, string> = {
   eclipse: 'refined palette of deep black, pale gold and soft white starlight, elegant and luxurious',
 };
 if (only.includes('r6')) for (const [k, d] of Object.entries(R6)) tasks.push(pro(`r6-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL6[k]}, ${STYLE_FRONT}`, 256, 256, true, true));
+// 7차(10-08 사용자): 불사조 여러 스타일 — 각 1장. 모두 정면 대칭 날개.
+const PHX = 'colossal majestic phoenix facing the viewer with both great wings spread wide and perfectly symmetrical, glowing eyes';
+const R7: Record<string, [string, string]> = {
+  bonghwang: [
+    `${PHX}, an elegant oriental fenghuang phoenix with very long flowing ornate tail plumes curling beneath it, a graceful crest, feathers in crimson and rich gold with jade green accents, soft golden flames along the wing edges`,
+    'refined palette of crimson, rich gold and jade green, elegant and luxurious',
+  ],
+  blueflame: [
+    `${PHX}, body and feathers made of sacred blue and white flame, a crown of pale blue fire feathers, long tail of cool blue flames falling beneath, small floating embers of white light`,
+    'refined palette of sapphire blue, icy white and pale silver, elegant and luxurious',
+  ],
+  ash: [
+    `${PHX}, rising from ashes, feathers of dark charcoal and ash grey with glowing ember cracks and molten orange edges, flakes of ash and sparks drifting upward, a smoldering crest`,
+    'refined palette of charcoal, ash grey and glowing ember orange, elegant and luxurious',
+  ],
+  armored: [
+    `${PHX}, a war phoenix wearing ornate gold armor plates on its chest, head and wing joints, flame feathers in crimson and orange between the armor, a long tail of fire beneath, a regal crested helm`,
+    'refined palette of crimson, burnished gold and ember orange, elegant and luxurious',
+  ],
+};
+if (only.includes('r7')) for (const [k, [d, pal]] of Object.entries(R7)) tasks.push(pro(`r7-${k}`, `${d}, ${STYLE_SOLEMN}, ${pal}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
