@@ -257,3 +257,20 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
     reward: { diamond: r.reward_diamond, boxes: r.reward_boxes },
   };
 }
+
+/**
+ * 그날 점령전 공개(자정) 때 보스가 머물던 구역 — 연대기 사실표용. 출현이 그날 23시(전투 마감) 이전이고 떠남이 다음 날 0시 이후.
+ * 상태가 아니라 시각으로 고른다 — 연대기를 나중에 다시 만들어도 같은 구역이 잡히게. 단계·전리품은 지금 값(사전 생성 23시 기준이면 그 시각 값).
+ */
+export async function worldBossesAtConquestReveal(serverId: number, kstDay: string): Promise<import('./chronicle-facts').WorldBossAtZone[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(kstDay)) return [];
+  const rows = (await db.execute(sql`
+    select z.name as zone, b.region, b.stage, b.loot_diamond::text as ld, b.loot_boxes
+      from world_bosses b join zones z on z.id = b.zone_id
+     where b.server_id = ${serverId} and b.status <> 'scheduled'
+       and b.spawn_at <= (${kstDay}::date + time '23:00') at time zone 'Asia/Seoul'
+       and b.leave_at > ((${kstDay}::date + 1)::timestamp) at time zone 'Asia/Seoul'`)) as unknown as {
+    zone: string; region: string; stage: number; ld: string; loot_boxes: number;
+  }[];
+  return rows.map((r) => ({ zone: r.zone, name: worldBossName(r.region), stage: r.stage, lootDiamond: Number(r.ld), lootBoxes: r.loot_boxes }));
+}
