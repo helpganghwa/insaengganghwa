@@ -93,6 +93,22 @@ const R3: Record<string, string> = {
 };
 const PAL3 = 'muted refined palette of ivory marble, aged bronze and warm gold, elegant and luxurious';
 if (only.includes('r3')) for (const [k, d] of Object.entries(R3)) tasks.push(pro(`r3-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL3}, ${STYLE_FRONT}`, 256, 256, true, true));
+// 4차(10-08 사용자 선택): 별을 두른 신수(성운의 사슴왕) — 근엄·웅장, 몬스터와 배경 따로. 보라(부유섬)는 피한다.
+const STYLE_SOLEMN =
+  'majestic solemn divine beast, dignified calm noble gaze, sacred and awe-inspiring presence, grand imposing scale, glowing eyes, detailed pixel art rendering with rich texture and shading, all-ages';
+const R4: Record<string, string> = {
+  stag:
+    'colossal celestial stag king standing on four legs, enormous branching antlers shaped like constellations with glowing star points at the tips, a flowing mane of soft nebula mist and stardust, body of deep midnight blue fur with fine silver starlight patterns, pale gold ornaments on its brow and chest, crystal hooves',
+  crowned:
+    'colossal sacred stag king standing on four legs, towering crown-like antlers of pale gold and silver with small floating stars between the branches, a radiant ring of starlight behind its head like a halo, long mane flowing like the milky way, deep navy and silver body with constellation markings',
+};
+const PAL4 = 'refined palette of deep navy, silver starlight and pale gold, elegant and luxurious, no purple';
+const BG4 =
+  'a vast ancient sky sanctuary on a high plateau at night, a great ring of tall weathered standing stones, a sea of clouds far below, an immense starry night sky with bright constellations and a soft pale aurora, a plain round stone altar in the center, distant mountain peaks above the clouds';
+if (only.includes('r4')) {
+  for (const [k, d] of Object.entries(R4)) tasks.push(pro(`r4-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL4}, ${STYLE_FRONT}`, 256, 256, true, true));
+  tasks.push(pro('r4-bg', `${BG4}, ${PAL4}, ${STYLE_BG}`, 400, 240, false, false));
+}
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
