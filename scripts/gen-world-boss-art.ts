@@ -82,6 +82,17 @@ const R2: Record<string, string> = {
     'gigantic armored beetle colossus with a massive horn made of fused greatswords, layered carapace of broken blades and cracked shield plates, glowing molten orange seams between the plates, six heavy legs planted wide, glowing ember eyes',
 };
 const tasks: Promise<void>[] = [];
+// 3차(10-08 사용자 선택): 황금 사자 거상 — 정면·네 발, 대리석·청동 바탕에 금 상감(왕국 황금 그리폰과 색 겹침 피함).
+const R3: Record<string, string> = {
+  marble:
+    'colossal awakened lion statue standing on four legs, body of pale white marble with fine gold inlay patterns, a great flowing mane carved from marble edged with gold, glowing amber eyes, faint cracks of golden light across the stone, an ancient stone pedestal fragment under its paws',
+  bronze:
+    'colossal majestic lion guardian standing on four legs, body of dark aged bronze with polished gold trim, a huge radiant mane shaped like a sunburst halo of gold, a small gemstone crown on its brow, glowing eyes, heavy armored paws',
+  temple:
+    'ancient colossal temple guardian lion standing on four legs, weathered grey stone body overgrown with a little moss, deep cracks glowing with molten gold light, a heavy carved mane with gold ornaments, glowing golden eyes, stone collar with a large round gold medallion',
+};
+const PAL3 = 'muted refined palette of ivory marble, aged bronze and warm gold, elegant and luxurious';
+if (only.includes('r3')) for (const [k, d] of Object.entries(R3)) tasks.push(pro(`r3-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL3}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
