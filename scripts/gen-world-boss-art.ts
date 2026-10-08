@@ -153,6 +153,17 @@ const R7: Record<string, [string, string]> = {
   ],
 };
 if (only.includes('r7')) for (const [k, [d, pal]] of Object.entries(R7)) tasks.push(pro(`r7-${k}`, `${d}, ${STYLE_SOLEMN}, ${pal}, ${STYLE_FRONT}`, 256, 256, true, true));
+// 8차(10-08 사용자 선택: 잿불 불사조) — 배경 3장. 불사조가 어두워 하늘은 밝은 새벽·노을빛으로 뒤를 밝힌다. 용암 없음(화산 지역과 구분).
+const BG8: Record<string, string> = {
+  sanctuary:
+    'an ancient ruined stone sanctuary covered in soft grey ash, a wide circular stone altar in the center, broken tall pillars on both sides, fine ash drifting in the air, a bright warm dawn glow rising on the horizon behind the altar, pale golden sky fading to soft grey clouds',
+  nest:
+    'a vast ashen plain with a giant ring shaped stone altar like a great nest in the center, small sparks and embers rising gently from it, scattered weathered stones, a wide glowing sunset sky of warm gold and soft rose behind, thin clouds',
+  ruins:
+    'ruins of an ancient temple floating above a sea of clouds, broken arches and pillars dusted with grey ash, fine ash drifting on the wind, an enormous setting sun low on the horizon behind the ruins, warm golden light and soft lilac grey clouds',
+};
+const PAL8 = 'muted refined palette of ash grey, warm gold and soft ember orange light, elegant and luxurious, no lava';
+if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
