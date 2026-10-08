@@ -185,6 +185,13 @@ const R8B: Record<string, string> = {
     'a wide plain of silver grey ash, glowing rivers of molten orange lava winding across it toward the viewer, a single broad volcano with a wide flat caldera alone far away at the center of the horizon, gentle smoke, soft dawn sky of pale gold and cool blue grey, calm and solemn light, refined palette of silver ash grey, pale gold and molten orange, elegant and luxurious, no red sky, no dark night sky',
 };
 if (only.includes('r8b')) for (const [k, d] of Object.entries(R8B)) tasks.push(pro(`r8b-${k}`, `${d}, ${STYLE_BG}`, 400, 240, false, false));
+// 8차 추가 4(10-09 사용자): 불탄 숲속의 둥지. 어두운 보스가 묻히지 않게 숲 사이로 흐린 금빛 햇살.
+if (only.includes('r8-forest'))
+  tasks.push(pro(
+    'r8-forest',
+    'a burned ancient forest clearing, tall charred black tree trunks and bare scorched branches on both sides, the ground covered in soft grey ash with small glowing embers, a huge round nest woven from charred branches in the center of the clearing with faint embers glowing inside it, thin smoke drifting, soft hazy golden morning light shining through the gaps between the trees from behind, refined palette of charcoal, ash grey, warm hazy gold and small ember orange, elegant and luxurious, ' + STYLE_BG,
+    400, 240, false, false,
+  ));
 if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
