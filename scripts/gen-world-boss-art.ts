@@ -163,6 +163,13 @@ const BG8: Record<string, string> = {
     'ruins of an ancient temple floating above a sea of clouds, broken arches and pillars dusted with grey ash, fine ash drifting on the wind, an enormous setting sun low on the horizon behind the ruins, warm golden light and soft lilac grey clouds',
 };
 const PAL8 = 'muted refined palette of ash grey, warm gold and soft ember orange light, elegant and luxurious, no lava';
+// 8차 추가(10-09 사용자): 재가 쌓인 화산 들판 + 계속 흐르는 용암. 어두운 불사조가 묻히지 않게 하늘은 밝은 붉은 노을.
+if (only.includes('r8-volcano'))
+  tasks.push(pro(
+    'r8-volcano',
+    'a wide volcanic plain buried under thick layers of grey ash, glowing rivers of molten lava winding across the ground toward the viewer, cracked dark rock and drifting ash, distant smoking volcano peaks on the horizon, a bright glowing sky of warm red orange and gold lit by the lava, soft ash clouds, refined palette of ash grey, deep charcoal, molten orange and warm gold, elegant and luxurious, ' + STYLE_BG,
+    400, 240, false, false,
+  ));
 if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
