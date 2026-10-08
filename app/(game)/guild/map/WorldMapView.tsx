@@ -1295,7 +1295,7 @@ export function WorldMapView({
                           {canCreate && (
                             <Link
                               prefetch={false}
-                              href={`/world-boss/${boss.id}?create=1`}
+                              href={`/world-boss/${boss.id}`}
                               onClick={remember}
                               className="flex-1 rounded-lg border border-amber-500/60 py-2 text-center text-[12.5px] font-bold text-amber-700 dark:text-amber-300"
                             >

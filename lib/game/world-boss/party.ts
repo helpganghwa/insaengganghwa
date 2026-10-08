@@ -109,6 +109,12 @@ export async function requestJoin(input: { userId: string; serverId: number; par
     if (p === 'fought') throw new WorldBossError('ALREADY_FOUGHT');
     if (p === 'recruiting') throw new WorldBossError('ALREADY_IN_PARTY');
     if ((await memberCount(tx, party.id)) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
+    // 같은 보스에는 대기 중 신청 하나만(화면 시안 10-07) — 여러 대장에게 동시에 걸어 두고 먼저 받아 주는 곳으로 가는 것을 막는다.
+    const [other] = (await tx.execute(sql`
+      select 1 as x from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+       where p.boss_id = ${party.boss_id}::bigint and r.user_id = ${input.userId}::uuid and r.status = 'pending' and r.party_id <> ${party.id}::bigint
+       limit 1`)) as unknown as unknown[];
+    if (other) throw new WorldBossError('ALREADY_REQUESTED');
     const ins = (await tx.execute(sql`
       insert into world_boss_join_requests (party_id, user_id) values (${party.id}::bigint, ${input.userId}::uuid)
       on conflict (party_id, user_id) do nothing returning user_id`)) as unknown as unknown[];

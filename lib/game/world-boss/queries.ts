@@ -7,12 +7,15 @@ import 'server-only';
 import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { userEquipment } from '@/lib/db/schema/equipment';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { guilds } from '@/lib/db/schema/guild';
 import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/schema/world-boss';
 import { WORLD_BOSS_LEFT_NOTE_MS, worldBossStageFor } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
+import type { WorldBossDetail, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
@@ -118,4 +121,118 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
     });
   }
   return { active, left };
+}
+
+// ── 보스 상세(/world-boss/<id>) ──────────────────────────────────────────────
+
+
+/** 사람들(원정대원·신청자) — 닉네임·공개 코드·길드·장비 전투력. 한 화면에 20명 남짓이라 즉석 계산. */
+async function peopleOn(serverId: number, userIds: string[]): Promise<Map<string, WorldBossPerson>> {
+  const out = new Map<string, WorldBossPerson>();
+  if (userIds.length === 0) return out;
+  const ids = [...new Set(userIds)];
+  const [rows, eqRows] = await Promise.all([
+    db.execute(sql`
+      select c.user_id::text as uid, c.nickname, p.public_code as code, g.name as gname
+        from characters c
+        join profiles p on p.id = c.user_id
+        left join guild_members gm on gm.user_id = c.user_id and gm.server_id = c.server_id
+        left join guilds g on g.id = gm.guild_id
+       where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null }[]>,
+    db
+      .select({ uid: userEquipment.userId, cid: userEquipment.catalogItemId, el: userEquipment.enhanceLevel, tl: userEquipment.transcendLevel })
+      .from(userEquipment)
+      .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids))),
+  ]);
+  const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+  for (const r of eqRows) (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({ catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl });
+  for (const r of rows) {
+    out.set(r.uid, { userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, combat: Math.round(combatPowerFromOwned(owned.get(r.uid) ?? [])) });
+  }
+  return out;
+}
+
+/** 보스 상세 — 없거나 다른 서버면 null. 해산된 원정대는 보이지 않는다(모집 중·출발만). */
+export async function getWorldBossDetail(bossId: string, serverId: number, userId: string | null): Promise<WorldBossDetail | null> {
+  if (!/^\d+$/.test(bossId)) return null;
+  const [b] = (await db.execute(sql`
+    select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.status, b.spawn_at, b.leave_at,
+           b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes,
+           z.owner_guild_id::text as owner_id, og.name as owner_name, sg.name as settled_name
+      from world_bosses b join zones z on z.id = b.zone_id
+      left join guilds og on og.id = z.owner_guild_id
+      left join guilds sg on sg.id = b.settled_guild_id
+     where b.id = ${bossId}::bigint`)) as unknown as {
+    id: string; server_id: number; zone_id: number; zone_name: string; region: string; status: 'scheduled' | 'active' | 'left';
+    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number;
+    owner_id: string | null; owner_name: string | null; settled_name: string | null;
+  }[];
+  if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
+
+  const partyRows = (await db.execute(sql`
+    select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, p.created_at, p.departed_at,
+           p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes,
+           (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
+      from world_boss_parties p
+      left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+      left join guilds g on g.id = p.guild_id
+     where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
+     order by p.created_at`)) as unknown as {
+    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; created_at: Date | string; departed_at: Date | string | null;
+    damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
+  }[];
+  const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
+  const parties: WorldBossPartyCard[] = partyRows.map((p) => ({
+    id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, memberCount: p.n,
+    createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
+    stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
+  }));
+
+  let me: WorldBossMe | null = null;
+  let myParty: WorldBossMyParty | null = null;
+  const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
+  if (userId) {
+    const [[mem], [req], [gm]] = await Promise.all([
+      db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
+                      where m.boss_id = ${bossId}::bigint and m.user_id = ${userId}::uuid limit 1`) as unknown as Promise<{ pid: string; status: 'recruiting' | 'departed'; leader: string }[]>,
+      db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+                      where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' limit 1`) as unknown as Promise<{ pid: string }[]>,
+      db.execute(sql`select guild_id::text as g from guild_members where user_id = ${userId}::uuid and server_id = ${serverId}`) as unknown as Promise<{ g: string }[]>,
+    ]);
+    const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
+    const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : req ? 'pending' : 'none';
+    me = { userId, state, pendingPartyId: req?.pid ?? null, canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild };
+    if (mem) {
+      const isLeader = mem.leader === userId;
+      const [memIds, reqIds] = await Promise.all([
+        db.execute(sql`select user_id::text as uid from world_boss_party_members where party_id = ${mem.pid}::bigint order by joined_at, user_id`) as unknown as Promise<{ uid: string }[]>,
+        isLeader && mem.status === 'recruiting'
+          ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
+          : Promise.resolve([] as { uid: string }[]),
+      ]);
+      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)]);
+      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0 };
+      myParty = {
+        partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
+        members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
+        requests: reqIds.map((r) => person(r.uid)),
+      };
+    }
+  }
+
+  const total = Number(b.total);
+  const st = worldBossStageFor(total);
+  return {
+    id: b.id, serverId: b.server_id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, name: worldBossName(b.region),
+    status: active ? 'active' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
+    stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
+    ownerGuildName: b.owner_name, settledGuildName: b.settled_name, parties, me, myParty,
+  };
+}
+
+/** 원정대 id → 보스 id(푸시 딥링크 /world-boss/party/<id> 변환용). */
+export async function worldBossIdOfParty(partyId: string, serverId: number): Promise<string | null> {
+  if (!/^\d+$/.test(partyId)) return null;
+  const [r] = (await db.execute(sql`select boss_id::text as b from world_boss_parties where id = ${partyId}::bigint and server_id = ${serverId}`)) as unknown as { b: string }[];
+  return r?.b ?? null;
 }

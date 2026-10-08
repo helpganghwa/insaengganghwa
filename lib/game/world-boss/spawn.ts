@@ -92,7 +92,7 @@ export async function activateDueBosses(serverId: number): Promise<Activated[]> 
       await sendPushToUsers(members.map((m) => m.user_id), {
         title: '월드보스 출현',
         body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요. 원정대를 꾸려 보세요.`),
-        url: '/world-boss',
+        url: '/guild/map',
         tag: `world-boss-${b.id}`,
         category: 'world_boss',
       }).catch((e) => console.warn('[world-boss] spawn push failed', b.id, e));

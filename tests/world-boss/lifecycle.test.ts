@@ -3,8 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossPartyReward, worldBossStageHp } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
-import { clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
-import { getWorldBossMapState } from '@/lib/game/world-boss/queries';
+import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
+import { getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { activateDueBosses, ensureTodayBoss, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -106,9 +106,20 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     // 지도 상태 — 모집 중 원정대 1, 대장은 'recruiting', 아직 신청 안 한 사람은 'none'.
     expect((await getWorldBossMapState(S, T)).active.find((b) => b.id === boss)).toMatchObject({ recruiting: 1, departed: 0, mine: 'recruiting' });
     expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('none');
+    // 상세 — 대장은 내 원정대(대장)·만들기 불가, 신청 전 참가자는 참가 전.
+    const dl = await getWorldBossDetail(boss, S, T);
+    expect(dl?.me).toMatchObject({ state: 'member', canCreate: false, isOwnerGuild: true });
+    expect(dl?.myParty).toMatchObject({ partyId, isLeader: true, status: 'recruiting' });
+    expect(dl?.myParty?.members.map((m) => m.userId)).toEqual([T]);
+    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'none', canCreate: false, isOwnerGuild: false });
+    expect(await getWorldBossDetail(boss, S + 1, T)).toBeNull(); // 다른 서버
+    expect(await worldBossIdOfParty(partyId, S)).toBe(boss);
 
     await requestJoin({ userId: G, serverId: S, partyId });
     expect(await code(requestJoin({ userId: G, serverId: S, partyId }))).toBe('ALREADY_REQUESTED');
+    // 대장 화면 — 대기 중 신청이 보인다. 신청자는 'pending'.
+    expect((await getWorldBossDetail(boss, S, T))?.myParty?.requests.map((r) => r.userId)).toEqual([G]);
+    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'pending', pendingPartyId: partyId });
     expect(await code(decideJoin({ leaderUserId: G, serverId: S, partyId, userId: G, accept: true }))).toBe('NOT_LEADER');
     await decideJoin({ leaderUserId: T, serverId: S, partyId, userId: G, accept: true });
     expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(2);
@@ -170,6 +181,19 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(b!.stage).toBe(r.stageTo);
     expect({ diamond: Number(b!.d), boxes: b!.bx }).toEqual(worldBossLootFor(r.stageTo));
   });
+
+  it('신청: 같은 보스에는 대기 중 신청 하나만 — 취소하면 다른 원정대에 신청할 수 있다', async () => {
+    const boss = await makeBoss('2000-01-08');
+    const { partyId: p1 } = await createParty({ userId: T, serverId: S, bossId: boss });
+    // 두 번째 모집 중 원정대(참가자 행 없이 직접 — 주인 길드원이 테스트 계정 하나뿐이라).
+    const [p2] = await q<{ id: string }>(sql`insert into world_boss_parties (boss_id, server_id, leader_user_id, guild_id) values (${boss}::bigint, ${S}, ${T}::uuid, ${guildId}::bigint) returning id::text as id`);
+    await requestJoin({ userId: G, serverId: S, partyId: p1 });
+    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('ALREADY_REQUESTED');
+    await cancelJoinRequest({ userId: G, partyId: p1 });
+    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('OK');
+    // 모집 중 원정대를 남기면 뒤의 '주인 변경' 해산 집계가 어긋난다 — 보스째 지운다(원정대·신청은 cascade).
+    await testDb.execute(sql`delete from world_bosses where id=${boss}::bigint`);
+  }, 20_000);
 
   it('주인 변경: 구역을 빼앗기면 이전 주인의 모집 중 원정대는 해산되고 참가자는 다시 참가할 수 있다', async () => {
     const boss = await makeBoss('2000-01-05');

@@ -1,0 +1,75 @@
+/**
+ * 월드보스 상세 화면(/world-boss/<id>) 데이터 모양 — 순수 모듈(클라이언트가 import). 값은 queries.ts가 만든다.
+ * 숫자는 number/문자열로만 내려 클라에서 bigint·Date를 다루지 않는다.
+ */
+export type WorldBossPartyCard = {
+  id: string;
+  status: 'recruiting' | 'departed';
+  leaderNickname: string;
+  guildName: string | null;
+  memberCount: number;
+  createdAt: number;
+  /** 출발한 원정대만 — 피해·라운드·단계 구간·1인 보상. */
+  departedAt: number | null;
+  damage: number;
+  rounds: number;
+  stageFrom: number | null;
+  stageTo: number | null;
+  rewardDiamond: number;
+  rewardBoxes: number;
+};
+
+export type WorldBossPerson = {
+  userId: string;
+  nickname: string;
+  code: string | null;
+  guildName: string | null;
+  combat: number;
+};
+
+/** 내 원정대(소속일 때) — 참가 순 원정대원 + (대장이면) 대기 중 신청. */
+export type WorldBossMyParty = {
+  partyId: string;
+  status: 'recruiting' | 'departed';
+  isLeader: boolean;
+  leaderUserId: string;
+  members: (WorldBossPerson & { isLeader: boolean })[];
+  requests: WorldBossPerson[];
+};
+
+/**
+ * 내 상태 — none(참가 전) · pending(신청 대기, partyId) · member(모집 중 원정대 소속) · fought(이 보스와 이미 싸움).
+ * canCreate = 구역 주인 길드원이고 참가 전·신청 대기 아님·보스가 머무는 중.
+ */
+export type WorldBossMe = {
+  userId: string;
+  state: 'none' | 'pending' | 'member' | 'fought';
+  pendingPartyId: string | null;
+  canCreate: boolean;
+  /** 내 길드가 구역 주인인가 — '만들기는 ○○ 길드원만' 안내 분기. */
+  isOwnerGuild: boolean;
+};
+
+export type WorldBossDetail = {
+  id: string;
+  serverId: number;
+  zoneId: number;
+  zoneName: string;
+  region: string;
+  name: string;
+  status: 'scheduled' | 'active' | 'left';
+  spawnAt: number;
+  leaveAt: number;
+  totalDamage: number;
+  stage: number;
+  into: number;
+  need: number;
+  lootDiamond: number;
+  lootBoxes: number;
+  /** 지금 구역 주인(머무는 동안) — 떠날 때 이 길드 금고로. 떠난 뒤엔 정산 받은 길드. */
+  ownerGuildName: string | null;
+  settledGuildName: string | null;
+  parties: WorldBossPartyCard[];
+  me: WorldBossMe | null;
+  myParty: WorldBossMyParty | null;
+};
