@@ -109,6 +109,14 @@ if (only.includes('r4')) {
   for (const [k, d] of Object.entries(R4)) tasks.push(pro(`r4-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL4}, ${STYLE_FRONT}`, 256, 256, true, true));
   tasks.push(pro('r4-bg', `${BG4}, ${PAL4}, ${STYLE_BG}`, 400, 240, false, false));
 }
+// 5차(10-08): 정면 네발짐승은 뒷다리가 앞다리 사이로 겹쳐 다리가 많아 보였다(사용자). 선 자세는 다리 수를 못박고, 엎드린 자세를 함께.
+const STAG_BODY =
+  'colossal celestial stag king, enormous branching antlers shaped like constellations with glowing star points at the tips, a flowing mane of soft nebula mist and stardust, body of deep midnight blue fur with fine silver starlight patterns, pale gold crown ornament on its brow and a pale gold breastplate ornament on its chest';
+const R5: Record<string, string> = {
+  standing: `${STAG_BODY}, standing still facing the viewer, exactly four legs in total, only the two front legs visible straight and parallel under the chest, the two hind legs hidden behind the body, crystal hooves`,
+  resting: `${STAG_BODY}, lying down calmly like a guardian sphinx facing the viewer, both front legs folded neatly in front of its chest, body resting on the ground behind, head held high, no other legs visible`,
+};
+if (only.includes('r5')) for (const [k, d] of Object.entries(R5)) tasks.push(pro(`r5-${k}`, `${d}, ${STYLE_SOLEMN}, ${PAL4}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
 if (only.includes('bg')) for (const k of ['bg-a', 'bg-b']) tasks.push(pro(k, `${BG}, ${PAL}, ${STYLE_BG}`, 400, 240, false, false));
