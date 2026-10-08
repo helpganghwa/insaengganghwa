@@ -13,6 +13,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
+import { getWorldBossBattle } from '@/lib/game/world-boss/queries';
 
 const MSG: Record<string, string> = {
   NOT_FOUND: '원정대를 찾을 수 없어요.',
@@ -123,5 +124,18 @@ export async function departPartyAction(bossId: string, partyId: string, departK
     return { status: 'success' as const, result: r };
   } catch (e) {
     return fail(e, 'depart');
+  }
+}
+
+/** 출발 카드 '전투 보기' — 저장된 전투 기록(누구나 볼 수 있다, 같은 서버). */
+export async function getBattleAction(partyId: string) {
+  const u = await getSessionUserId();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const b = await getWorldBossBattle(partyId, await getActiveServerId());
+    if (!b) return err('NOT_FOUND');
+    return { status: 'success' as const, battle: b };
+  } catch (e) {
+    return fail(e, 'battle');
   }
 }

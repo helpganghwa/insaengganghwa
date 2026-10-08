@@ -4,7 +4,7 @@ import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossPartyReward, 
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
-import { getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
+import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { activateDueBosses, ensureTodayBoss, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -168,6 +168,12 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const after = (await getWorldBossMapState(S, G)).active.find((b) => b.id === boss);
     expect(after).toMatchObject({ recruiting: 0, departed: 1, mine: 'fought', totalDamage: String(r.damage) });
     expect(after!.into + after!.stage).toBeGreaterThan(0);
+    // 전투 기록(재생용) — 출발 결과와 같은 기록, 다른 서버에선 없음.
+    const battle = await getWorldBossBattle(partyId, S);
+    expect(battle).toMatchObject({ partyId, stageFrom: r.stageFrom, stageTo: r.stageTo, reward: r.reward });
+    expect(battle!.finale.totalDamage).toBe(r.damage);
+    expect(battle!.finale.roster.map((x) => x.userId)).toEqual([T, G]);
+    expect(await getWorldBossBattle(partyId, S + 1)).toBeNull();
   }, 20_000); // 원격 스테이징 DB에 왕복이 많다(원정대 흐름 + 지도 상태 조회 3회)
 
   it('단계: 출발 피해로 단계를 넘기면 보스 단계·전리품이 절대값으로 갱신된다', async () => {

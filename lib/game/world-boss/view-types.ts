@@ -73,3 +73,18 @@ export type WorldBossDetail = {
   me: WorldBossMe | null;
   myParty: WorldBossMyParty | null;
 };
+
+/** 출발한 원정대의 전투 기록 — 재생 화면(WorldBossReplay)이 쓴다. finale은 simulate.ts의 WorldBossFinale과 같은 모양. */
+export type WorldBossBattle = {
+  partyId: string;
+  leaderNickname: string;
+  finale: {
+    roster: { userId: string; nickname: string; cp: number; guildName: string | null }[];
+    events: [number, number, number, number][];
+    rounds: number;
+    totalDamage: number;
+  };
+  stageFrom: number;
+  stageTo: number;
+  reward: { diamond: number; boxes: number };
+};

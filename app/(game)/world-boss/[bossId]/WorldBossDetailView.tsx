@@ -3,7 +3,7 @@
 /**
  * 월드보스 상세 화면(시안 XnUD7HzvFRnJFUPZth5UGE, 2026-10-08 확정) — 보스 히어로·단계·전리품 → 내 원정대 패널(핀)
  * → [모집 중 | 출발] 원정대 카드 → 아래 고정 버튼(원정대 만들기). 액션은 서버 액션이 현재 경로를 재렌더해 props로
- * 새 상태가 내려오므로 router.refresh를 부르지 않는다(CLAUDE §11.7). 전투 재생은 다음 단계 — 지금은 결과 카드.
+ * 새 상태가 내려오므로 router.refresh를 부르지 않는다(CLAUDE §11.7). 출발 직후와 '전투 보기'는 WorldBossReplay로 재생.
  */
 import Link from 'next/link';
 import { useMemo, useRef, useState, useTransition } from 'react';
@@ -16,13 +16,16 @@ import { Ticker } from '@/components/Ticker';
 import { WORLD_BOSS_PARTY_MAX, worldBossExpectedAttacks } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import type { WorldBossDetail, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
+import type { WorldBossBattle, WorldBossDetail, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
+
+import { WorldBossReplay } from './WorldBossReplay';
 
 import {
   cancelRequestAction,
   createPartyAction,
   decideJoinAction,
   departPartyAction,
+  getBattleAction,
   leavePartyAction,
   requestJoinAction,
 } from '../actions';
@@ -53,7 +56,7 @@ export function WorldBossDetailView({
   const [pending, start] = useTransition();
   const [tab, setTab] = useState<'recruiting' | 'departed'>('recruiting');
   const [departAsk, setDepartAsk] = useState(false);
-  const [result, setResult] = useState<{ damage: number; rounds: number; stageFrom: number; stageTo: number; reward: { diamond: number; boxes: number } } | null>(null);
+  const [replay, setReplay] = useState<WorldBossBattle | null>(null);
   // 출발 멱등 키 — 같은 원정대에 한 번 만들어 재전송해도 같은 결과(서버 depart_key).
   const departKey = useRef<string | null>(null);
 
@@ -83,9 +86,20 @@ export function WorldBossDetailView({
       const r = await departPartyAction(d.id, mp.partyId, key).catch(() => null);
       if (!r) return showError('지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.');
       if (r.status === 'error') return showError(r.message);
-      setResult(r.result);
+      const f = r.result.finale;
+      if (f) {
+        setReplay({ partyId: r.result.partyId, leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '', finale: f, stageFrom: r.result.stageFrom, stageTo: r.result.stageTo, reward: r.result.reward });
+      }
     });
   };
+
+  const openBattle = (partyId: string) =>
+    start(async () => {
+      const r = await getBattleAction(partyId).catch(() => null);
+      if (!r) return showError('지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.');
+      if (r.status === 'error') return showError(r.message);
+      setReplay(r.battle);
+    });
 
   return (
     <div className="flex-1 pb-28">
@@ -234,7 +248,7 @@ export function WorldBossDetailView({
           ) : (
             (() => {
               const card = d.parties.find((p) => p.id === mp.partyId);
-              return card ? <DepartedSummary p={card} mine /> : null;
+              return card ? <DepartedSummary p={card} mine onBattle={() => openBattle(card.id)} /> : null;
             })()
           )}
         </section>
@@ -316,7 +330,7 @@ export function WorldBossDetailView({
           departed.map((p) => (
             <div key={p.id} className={`rounded-xl border bg-zinc-900 p-2.5 ${p.id === mp?.partyId ? 'border-amber-500/55' : 'border-zinc-800'}`}>
               <PartyHead p={p} />
-              <DepartedSummary p={p} />
+              <DepartedSummary p={p} onBattle={() => openBattle(p.id)} />
             </div>
           ))
         )}
@@ -375,29 +389,8 @@ export function WorldBossDetailView({
         </ModalShell>
       )}
 
-      {/* 출발 결과(전투 재생은 다음 단계) */}
-      {result && (
-        <ModalShell onClose={() => setResult(null)} label="원정대 결과">
-          <ModalLayout title="원정대 결과" subtitle={`${result.rounds}라운드`} footer={<ModalButton tone="primary" onClick={() => setResult(null)}>확인</ModalButton>}>
-            <div className="text-center">
-              <p className="text-[12px] text-zinc-500">피해</p>
-              <p className="text-[26px] font-black text-amber-600 dark:text-amber-300">{won(result.damage)}</p>
-              <p className="text-[12px] text-zinc-600 dark:text-zinc-300">
-                {result.stageTo > result.stageFrom ? (
-                  <>
-                    보스 {result.stageFrom}단계 → <b>{result.stageTo}단계</b>
-                  </>
-                ) : (
-                  `보스 ${result.stageTo}단계 그대로`
-                )}
-              </p>
-              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[12.5px] dark:bg-amber-950/40">
-                모두에게 <b>💎{won(result.reward.diamond)} 📦{result.reward.boxes}</b> · 우편으로 보냈어요
-              </p>
-            </div>
-          </ModalLayout>
-        </ModalShell>
-      )}
+      {/* 전투 재생(출발 직후·전투 보기) — 끝나면 결과 카드 */}
+      {replay && <WorldBossReplay battle={replay} bossName={d.name} spriteSrc={spriteSrc} onClose={() => setReplay(null)} />}
     </div>
   );
 }
@@ -427,7 +420,7 @@ function PartyHead({ p }: { p: WorldBossPartyCard }) {
   );
 }
 
-function DepartedSummary({ p, mine = false }: { p: WorldBossPartyCard; mine?: boolean }) {
+function DepartedSummary({ p, mine = false, onBattle }: { p: WorldBossPartyCard; mine?: boolean; onBattle?: () => void }) {
   const moved = (p.stageTo ?? 0) - (p.stageFrom ?? 0);
   return (
     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -438,6 +431,11 @@ function DepartedSummary({ p, mine = false }: { p: WorldBossPartyCard; mine?: bo
       <span className="rounded-full border border-amber-500/50 px-2 py-px text-[9.5px] text-amber-300">
         💎{p.rewardDiamond} 📦{p.rewardBoxes}
       </span>
+      {onBattle && (
+        <button type="button" onClick={onBattle} className="rounded-lg border border-amber-500/45 bg-zinc-800 px-2.5 py-1 text-[11px] font-bold text-amber-300">
+          {mine ? '내 전투 보기' : '전투 보기'}
+        </button>
+      )}
     </div>
   );
 }

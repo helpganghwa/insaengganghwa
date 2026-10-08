@@ -236,3 +236,24 @@ export async function worldBossIdOfParty(partyId: string, serverId: number): Pro
   const [r] = (await db.execute(sql`select boss_id::text as b from world_boss_parties where id = ${partyId}::bigint and server_id = ${serverId}`)) as unknown as { b: string }[];
   return r?.b ?? null;
 }
+
+/** 출발한 원정대의 전투 기록(재생용). 다른 서버·미출발·기록 없음이면 null. */
+export async function getWorldBossBattle(partyId: string, serverId: number): Promise<import('./view-types').WorldBossBattle | null> {
+  if (!/^\d+$/.test(partyId)) return null;
+  const [r] = (await db.execute(sql`
+    select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader
+      from world_boss_parties p left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+     where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.status = 'departed'`)) as unknown as {
+    id: string; finale: import('./view-types').WorldBossBattle['finale'] | null; stage_from: number | null; stage_to: number | null;
+    reward_diamond: number; reward_boxes: number; leader: string | null;
+  }[];
+  if (!r?.finale) return null;
+  return {
+    partyId: r.id,
+    leaderNickname: r.leader ?? '알 수 없음',
+    finale: r.finale,
+    stageFrom: r.stage_from ?? 0,
+    stageTo: r.stage_to ?? 0,
+    reward: { diamond: r.reward_diamond, boxes: r.reward_boxes },
+  };
+}
