@@ -177,6 +177,14 @@ if (only.includes('r8-volcano2'))
     'a wide volcanic plain buried under thick layers of grey ash, glowing rivers of molten lava winding across the ground toward the viewer, cracked dark rock and drifting ash, a single great volcano standing alone far in the distance at the center of the horizon with a column of smoke, no other mountains or peaks, flat open horizon on both sides, a bright glowing sky of warm red orange and gold lit by the lava, soft ash clouds, refined palette of ash grey, deep charcoal, molten orange and warm gold, elegant and luxurious, ' + STYLE_BG,
     400, 240, false, false,
   ));
+// 8차 추가 3(10-09 사용자): 화산이되 드래곤 화산(어두운 남색·보라 노을 하늘의 검붉은 화산 / 용암 동굴)과 겹치지 않게 — 밝고 옅은 하늘.
+const R8B: Record<string, string> = {
+  whiteash:
+    'a wide plain covered in thick pale white ash like a snowfield, glowing rivers of molten orange lava winding through the white ash toward the viewer, a single great volcano alone far away at the center of the horizon with a soft column of pale grey smoke, clear pale blue grey daytime sky with thin high clouds, bright and airy, refined palette of ash white, pale slate blue and molten orange, elegant and luxurious, no red sky, no dark night sky',
+  dawn:
+    'a wide plain of silver grey ash, glowing rivers of molten orange lava winding across it toward the viewer, a single broad volcano with a wide flat caldera alone far away at the center of the horizon, gentle smoke, soft dawn sky of pale gold and cool blue grey, calm and solemn light, refined palette of silver ash grey, pale gold and molten orange, elegant and luxurious, no red sky, no dark night sky',
+};
+if (only.includes('r8b')) for (const [k, d] of Object.entries(R8B)) tasks.push(pro(`r8b-${k}`, `${d}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r8')) for (const [k, d] of Object.entries(BG8)) tasks.push(pro(`r8-${k}`, `${d}, ${PAL8}, ${STYLE_BG}`, 400, 240, false, false));
 if (only.includes('r2')) for (const [k, d] of Object.entries(R2)) tasks.push(pro(`r2-${k}`, `${d}, ${STYLE_BOSS.replace('sturdy legs, ', '')}, ${PAL}, ${STYLE_FRONT}`, 256, 256, true, true));
 if (only.includes('boss')) for (const k of ['boss-a', 'boss-b']) tasks.push(pro(k, `${BOSS}, ${STYLE_BOSS}, ${PAL}, ${STYLE_MON}`, 160, 160, true, true));
