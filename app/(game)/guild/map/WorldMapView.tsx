@@ -14,9 +14,8 @@ import { ModalShell } from '@/components/ModalShell';
 import { WikiLink } from '@/components/WikiLink';
 import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { WorldBossSprite } from '@/components/WorldBossSprite';
+import { WorldBossZoneCard } from './WorldBossZoneCard';
 import { assetUrl } from '@/lib/asset-versions';
-import { josa } from 'josa';
 import { kstStartOfDay } from '@/lib/kst';
 import { worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from '@/lib/game/world-boss/map-types';
@@ -1220,21 +1219,7 @@ export function WorldMapView({
                         // 저장 실패 시 복원만 생략
                       }
                     };
-                    // 상태별 한 줄 안내 + 버튼 하나(리뷰 10-08: 0 나열·고정 안내·버튼 둘이 시트를 길게 만들었다).
-                    const hint =
-                      boss.mine === 'fought'
-                        ? '이 보스와는 이미 싸웠어요'
-                        : boss.mine === 'recruiting'
-                          ? '내 원정대가 모집 중이에요'
-                          : boss.mine === 'pending'
-                            ? '신청한 원정대의 수락을 기다리는 중이에요'
-                            : canCreate
-                              ? '우리 땅의 보스예요 · 원정대를 만들어 출발하세요'
-                              : boss.recruiting > 0
-                                ? `모집 중 원정대 ${boss.recruiting}곳 · 신청하면 함께 싸울 수 있어요`
-                                : selected.ownerGuildName
-                                  ? `${selected.ownerGuildName} 길드원이 원정대를 만들면 신청할 수 있어요`
-                                  : '주인이 없는 땅이라 원정대를 만들 수 없어요';
+                    // 버튼 하나 — 주인 길드원·다른 유저 모두 같은 카드(C안, 10-09), 버튼 이름만 상황에 맞게.
                     const cta =
                       boss.mine === 'fought'
                         ? '내 전투 결과'
@@ -1246,68 +1231,37 @@ export function WorldMapView({
                               ? '원정대 만들기'
                               : '원정대 보기';
                     return (
-                      <div className="mt-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-50 to-white p-2.5 dark:border-amber-700/50 dark:from-amber-950/40 dark:to-zinc-900/60">
-                        <div className="flex items-center gap-2.5">
-                          <WorldBossSprite
-                            region={boss.region}
-                            alt=""
-                            className="h-11 w-11 shrink-0"
-                            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(251,191,36,0.6))' }}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="truncate text-[13px] font-extrabold text-amber-700 dark:text-amber-300">
-                                {boss.name} <span className="font-bold text-amber-600/80 dark:text-amber-200/80">{boss.stage}단계</span>
-                              </span>
-                              <Ticker intervalMs={60_000}>
-                                {(now) => <span className="shrink-0 text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">{wbRemain(boss.leaveAt - now)}</span>}
-                              </Ticker>
-                            </div>
-                            <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-amber-200/60 dark:bg-amber-900/50">
-                              <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" style={{ width: `${pct}%` }} />
-                            </div>
-                            <div className="mt-1 text-[10.5px] font-semibold text-zinc-600 dark:text-zinc-300">
-                              💎{boss.lootDiamond.toLocaleString('ko-KR')} 📦{boss.lootBoxes} 쌓임
-                              <span className="font-normal text-zinc-500"> · 종료 때 점령 길드 금고로</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2">
-                          <p className="min-w-0 flex-1 text-[10.5px] leading-snug text-zinc-500">{hint}</p>
-                          <Link
-                            prefetch={false}
-                            href={`/world-boss/${boss.id}`}
-                            onClick={remember}
-                            className="shrink-0 rounded-lg bg-amber-500 px-3 py-2 text-center text-[12px] font-bold text-white"
-                          >
-                            {cta}
-                          </Link>
-                        </div>
-                      </div>
+                      <WorldBossZoneCard
+                        mode="active"
+                        name={boss.name}
+                        region={boss.region}
+                        stage={boss.stage}
+                        lootDiamond={boss.lootDiamond}
+                        lootBoxes={boss.lootBoxes}
+                        leaveAt={boss.leaveAt}
+                        pct={pct}
+                        cta={cta}
+                        remainText={(now) => wbRemain(boss.leaveAt - now)}
+                        href={`/world-boss/${boss.id}`}
+                        onOpen={remember}
+                      />
                     );
                   }
                   const left = leftByZone.get(selected.id);
                   if (!left) return null;
+                  // 원정 종료 뒤 48시간 — 같은 크기의 카드를 흑백·정지로(C안, 10-09).
                   return (
-                    <Ticker intervalMs={60_000}>
-                      {(now) => (
-                        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-[10.5px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={assetUrl(worldBossSpriteUrl(left.region))}
-                            alt=""
-                            className="h-4 w-4 shrink-0 object-contain opacity-70"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                          <span className="min-w-0">
-                            {wbDayWord(left.leftAt, now)} {josa(`${left.name}#{이}`)} 재로 흩어지며{' '}
-                            {left.settledGuildName
-                              ? josa(`${left.settledGuildName} 금고에 💎${left.lootDiamond.toLocaleString('ko-KR')} 📦${left.lootBoxes.toLocaleString('ko-KR')}#{을} 남겼어요.`)
-                              : '전리품은 주인이 없어 사라졌어요.'}
-                          </span>
-                        </div>
-                      )}
-                    </Ticker>
+                    <WorldBossZoneCard
+                      mode="left"
+                      name={left.name}
+                      region={left.region}
+                      stage={left.stage}
+                      lootDiamond={left.lootDiamond}
+                      lootBoxes={left.lootBoxes}
+                      settledGuildName={left.settledGuildName}
+                      leftWhen={(now) => `${wbDayWord(left.leftAt, now)} 재로 흩어졌어요`}
+                      href={`/world-boss/${left.bossId}`}
+                    />
                   );
                 })()}
 

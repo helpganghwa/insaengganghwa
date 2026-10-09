@@ -33,6 +33,8 @@ export type WorldBossMapLeft = {
   region: string;
   name: string;
   leftAt: number;
+  /** 종료 때 단계(최종). */
+  stage: number;
   settledGuildName: string | null;
   lootDiamond: number;
   lootBoxes: number;
