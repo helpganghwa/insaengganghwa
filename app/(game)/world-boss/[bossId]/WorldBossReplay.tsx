@@ -101,7 +101,7 @@ export function WorldBossReplay({
   }, [idx, hit, reduced]);
 
   return (
-    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-zinc-950 text-zinc-100" role="dialog" aria-label="원정대 전투">
+    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-label="원정대 전투">
       {!done ? (
         <>
           {/* 위 — 무대(배경 + 보스). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
@@ -116,20 +116,20 @@ export function WorldBossReplay({
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}
             {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
-              <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-amber-300/35" />
+              <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-orange-300/35" />
             )}
             <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+10px)] z-10 flex items-center justify-between px-3 text-[11px]">
-              <span className="rounded-full bg-black/60 px-2 py-0.5 text-zinc-300">
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-300">
                 생존 <b className="text-white">{st.alive}</b>/{roster.length}
               </span>
               {/* 라운드 — 바뀔 때마다 크게 */}
-              <span key={`r${st.round}`} className="animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-amber-300">
+              <span key={`r${st.round}`} className="animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-orange-300">
                 {st.round}라운드
               </span>
-              <span className="rounded-full bg-black/60 px-2 py-0.5 text-zinc-400">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-400">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
             </div>
             <div className="absolute left-1/2 top-[52%] h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2">
-              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_65%)]" />
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.22),transparent_65%)]" />
               {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림(다시 붙이지 않아 대기 애니가 끊기지 않는다),
                   보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
               <div ref={shakeRef} className="relative h-full w-full">
@@ -137,15 +137,15 @@ export function WorldBossReplay({
                   alt={bossName}
                   attack={struck ? idx : null}
                   className="h-full w-full"
-                  style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(251,191,36,0.45))' }}
+                  style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(249,115,22,0.45))' }}
                 />
               </div>
               {/* 이번 공격에서 나온 보상 — 큰 당첨은 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
               {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
-                <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(251,191,36,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(251,191,36,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(251,191,36,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(251,191,36,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(251,191,36,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(251,191,36,0.55)_320deg,transparent_340deg)]" />
+                <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(249,115,22,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(249,115,22,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(249,115,22,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(249,115,22,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(249,115,22,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(249,115,22,0.55)_320deg,transparent_340deg)]" />
               )}
               {hit && st.last && (
-                <span key={`d${idx}`} className="absolute left-1/2 top-2 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#f59e0b,0_1px_2px_#000,0_0_2px_#000]">
+                <span key={`d${idx}`} className="absolute left-1/2 top-2 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#ea580c,0_1px_2px_#000,0_0_2px_#000]">
                   {formatCompactKR(st.last[2])}
                 </span>
               )}
@@ -154,8 +154,8 @@ export function WorldBossReplay({
                   key={`g${idx}`}
                   className={`absolute left-1/2 top-12 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
                     st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90
-                      ? 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-[19px] text-amber-950 shadow-[0_0_24px_6px_rgba(251,191,36,0.85)] ring-2 ring-yellow-100'
-                      : 'bg-black/70 text-[13px] text-amber-200'
+                      ? 'bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 text-[19px] text-orange-50 shadow-[0_0_24px_6px_rgba(249,115,22,0.85)] ring-2 ring-amber-100'
+                      : 'bg-black/70 text-[13px] text-orange-200'
                   }`}
                 >
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
@@ -164,16 +164,16 @@ export function WorldBossReplay({
             </div>
             {/* 보스 이름 · 원정대 피해 — 무대 아래쪽 어두운 띠 위 */}
             <div className="absolute inset-x-0 bottom-2 z-10 flex items-baseline justify-between px-3">
-              <span className="text-[14px] font-extrabold text-amber-200 [text-shadow:0_1px_3px_#000]">{bossName}</span>
-              <span className="text-[11px] text-zinc-300 [text-shadow:0_1px_3px_#000]">
-                원정대 피해 <b className="font-mono text-[16px] text-amber-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
+              <span className="text-[14px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">{bossName}</span>
+              <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
+                원정대 피해 <b className="font-mono text-[16px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
               </span>
             </div>
           </button>
 
           {/* 아래 — 원정대원 목록(참가 순). 지금 공격하는 대원 줄이 빛나고 화면 안으로 따라온다. */}
           <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-            <div className="sticky top-0 z-10 flex items-center bg-zinc-950 py-1.5 text-[10.5px] text-zinc-500">
+            <div className="sticky top-0 z-10 flex items-center bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
               <span className="flex-1">원정대원 {roster.length}명</span>
               <span className="w-10 text-right">공격</span>
               <span className="w-16 text-right">피해</span>
@@ -193,29 +193,29 @@ export function WorldBossReplay({
                     rowRefs.current[i] = el;
                   }}
                   className={`mb-1 flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${
-                    isStruck ? 'border-red-500 bg-red-950/70' : isHit ? 'border-amber-400 bg-amber-900/40' : 'border-zinc-800 bg-zinc-900'
+                    isStruck ? 'border-red-500 bg-red-950/70' : isHit ? 'border-orange-400 bg-orange-900/40' : 'border-stone-800 bg-stone-900'
                   } ${fellR != null && !isStruck ? 'opacity-45' : ''}`}
                 >
                   {f.src ? (
-                    <Avatar src={f.src} box={f.box} size={`h-8 w-8 shrink-0 rounded-full bg-zinc-800 ${fellR != null && !isStruck ? 'grayscale' : ''}`} />
+                    <Avatar src={f.src} box={f.box} size={`h-8 w-8 shrink-0 rounded-full bg-stone-800 ${fellR != null && !isStruck ? 'grayscale' : ''}`} />
                   ) : (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-[12px] font-black">{m.nickname.slice(0, 1)}</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-800 text-[12px] font-black">{m.nickname.slice(0, 1)}</span>
                   )}
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block truncate text-[12px] font-bold">
                       <span>
-                        {m.nickname === battle.leaderNickname && <span className="mr-0.5 text-amber-300">★</span>}
+                        {m.nickname === battle.leaderNickname && <span className="mr-0.5 text-orange-300">★</span>}
                         {m.nickname}
                       </span>
                     </span>
-                    <span className="flex min-w-0 items-center gap-1 text-[10px] text-zinc-500">
+                    <span className="flex min-w-0 items-center gap-1 text-[10px] text-stone-500">
                       <span className="truncate">{fellR != null ? <span className="text-red-300">{fellR}라운드에 쓰러짐</span> : (m.guildName ?? '무소속')}</span>
                       {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
                       {slots.length > 0 && (
                         <span
                           key={`w${idx}`}
                           className={`flex shrink-0 animate-wb-round items-center gap-0.5 rounded-full px-1.5 text-[11px] ${
-                            slots.length >= 2 ? 'bg-amber-400 text-amber-950 ring-1 ring-yellow-100 shadow-[0_0_10px_2px_rgba(251,191,36,0.6)]' : 'bg-amber-500/25 text-amber-200 ring-1 ring-amber-500/60'
+                            slots.length >= 2 ? 'bg-orange-400 text-orange-50 ring-1 ring-amber-100 shadow-[0_0_10px_2px_rgba(249,115,22,0.6)]' : 'bg-orange-500/25 text-orange-200 ring-1 ring-orange-500/60'
                           }`}
                         >
                           약점
@@ -226,23 +226,23 @@ export function WorldBossReplay({
                       )}
                     </span>
                   </span>
-                  <span className="w-10 text-right font-mono text-[11px] tabular-nums text-zinc-400">{st.atk[i]}</span>
-                  <span className={`w-16 text-right font-mono text-[11.5px] tabular-nums ${isHit ? 'font-bold text-amber-300' : 'text-zinc-200'}`}>{formatCompactKR(st.dmg[i]!)}</span>
-                  <span className="w-16 truncate text-right text-[10.5px] font-bold text-amber-300">
+                  <span className="w-10 text-right font-mono text-[11px] tabular-nums text-stone-400">{st.atk[i]}</span>
+                  <span className={`w-16 text-right font-mono text-[11.5px] tabular-nums ${isHit ? 'font-bold text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</span>
+                  <span className="w-16 truncate text-right text-[10.5px] font-bold text-orange-300">
                     {st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : ''}
                     {st.gotD[i]! > 0 && st.gotB[i]! > 0 ? ' ' : ''}
                     {st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''}
-                    {st.gotD[i]! === 0 && st.gotB[i]! === 0 ? <span className="font-normal text-zinc-600">-</span> : null}
+                    {st.gotD[i]! === 0 && st.gotB[i]! === 0 ? <span className="font-normal text-stone-600">-</span> : null}
                   </span>
                 </div>
               );
             })}
-            <p className="mt-1 text-center text-[10px] text-zinc-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
+            <p className="mt-1 text-center text-[10px] text-stone-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
           </div>
           <button
             type="button"
             onClick={() => setIdx(events.length)}
-            className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-zinc-700 py-2.5 text-[12.5px] font-bold text-zinc-300"
+            className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
           >
             건너뛰기
           </button>
@@ -251,28 +251,28 @@ export function WorldBossReplay({
         <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
           {/* 결과 — 보스·단계 상승을 크게, 표는 아래 */}
           <div className="flex flex-col items-center text-center">
-            <WorldBossSprite alt="" className="h-24 w-24" style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(251,191,36,0.5))' }} />
-            <p className="text-[12px] text-zinc-400">{battle.leaderNickname} 원정대 · {battle.finale.rounds}라운드</p>
-            <p className="mt-1 text-[30px] font-black leading-tight text-amber-300">{battle.finale.totalDamage.toLocaleString('ko-KR')}</p>
-            <p className="text-[11px] text-zinc-500">원정대 피해</p>
+            <WorldBossSprite alt="" className="h-24 w-24" style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(249,115,22,0.5))' }} />
+            <p className="text-[12px] text-stone-400">{battle.leaderNickname} 원정대 · {battle.finale.rounds}라운드</p>
+            <p className="mt-1 text-[30px] font-black leading-tight text-orange-300">{battle.finale.totalDamage.toLocaleString('ko-KR')}</p>
+            <p className="text-[11px] text-stone-500">원정대 피해</p>
             {moved > 0 ? (
-              <p className="mt-2 animate-wb-round rounded-full bg-amber-500/15 px-3 py-1 text-[14px] font-extrabold text-amber-200 ring-1 ring-amber-500/50">
-                {bossName} {battle.stageTo}단계까지 <span className="text-amber-300">+{moved}단계</span>
+              <p className="mt-2 animate-wb-round rounded-full bg-orange-500/15 px-3 py-1 text-[14px] font-extrabold text-orange-200 ring-1 ring-orange-500/50">
+                {bossName} {battle.stageTo}단계까지 <span className="text-orange-300">+{moved}단계</span>
               </p>
             ) : (
-              <p className="mt-2 text-[12px] text-zinc-400">보스 {battle.stageTo}단계 그대로</p>
+              <p className="mt-2 text-[12px] text-stone-400">보스 {battle.stageTo}단계 그대로</p>
             )}
           </div>
-          <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-950/50 px-3 py-2.5">
-            <span className="text-[12px] text-zinc-300">원정대 획득</span>
-            <b className="text-[17px] text-amber-200">
+          <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-orange-950/50 px-3 py-2.5">
+            <span className="text-[12px] text-stone-300">원정대 획득</span>
+            <b className="text-[17px] text-orange-200">
               💎{battle.reward.diamond.toLocaleString('ko-KR')} 📦{battle.reward.boxes.toLocaleString('ko-KR')}
             </b>
-            <span className="text-[10.5px] text-zinc-500">각자 몫은 우편으로</span>
+            <span className="text-[10.5px] text-stone-500">각자 몫은 우편으로</span>
           </div>
           <table className="mt-3 w-full text-[11px]">
             <thead>
-              <tr className="text-left text-zinc-500">
+              <tr className="text-left text-stone-500">
                 <th className="py-1 font-semibold">원정대원</th>
                 <th className="py-1 text-right font-semibold">공격</th>
                 <th className="py-1 text-right font-semibold">피해</th>
@@ -281,17 +281,17 @@ export function WorldBossReplay({
             </thead>
             <tbody>
               {ranked.map((m, r) => (
-                <tr key={m.userId} className="border-t border-zinc-800">
+                <tr key={m.userId} className="border-t border-stone-800">
                   <td className="max-w-[140px] truncate py-1.5">
-                    <span className={`mr-1 font-mono ${r === 0 ? 'text-amber-300' : 'text-zinc-600'}`}>{r + 1}</span>
+                    <span className={`mr-1 font-mono ${r === 0 ? 'text-orange-300' : 'text-stone-600'}`}>{r + 1}</span>
                     {m.nickname}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums">{st.atk[m.i]}</td>
-                  <td className={`py-1.5 text-right font-mono tabular-nums ${r === 0 ? 'text-amber-300' : ''}`}>{formatCompactKR(st.dmg[m.i]!)}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums text-amber-200">
+                  <td className={`py-1.5 text-right font-mono tabular-nums ${r === 0 ? 'text-orange-300' : ''}`}>{formatCompactKR(st.dmg[m.i]!)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums text-orange-200">
                     {st.gotD[m.i]! > 0 || st.gotB[m.i]! > 0
                       ? [st.gotD[m.i]! > 0 ? `💎${st.gotD[m.i]}` : '', st.gotB[m.i]! > 0 ? `📦${st.gotB[m.i]}` : ''].filter(Boolean).join(' ')
-                      : <span className="text-zinc-600">꽝</span>}
+                      : <span className="text-stone-600">꽝</span>}
                   </td>
                 </tr>
               ))}
@@ -305,11 +305,11 @@ export function WorldBossReplay({
                 setFast(false);
                 setIdx(0);
               }}
-              className="flex-1 rounded-lg border border-zinc-700 py-2.5 text-[12.5px] font-bold text-zinc-300"
+              className="flex-1 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
             >
               다시 보기
             </button>
-            <button type="button" onClick={onClose} className="flex-[2] rounded-lg bg-amber-500 py-2.5 text-[13px] font-extrabold text-amber-950">
+            <button type="button" onClick={onClose} className="flex-[2] rounded-lg bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50">
               확인
             </button>
           </div>

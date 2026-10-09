@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * 월드보스 상세 화면(docs/WORLD-BOSS.md §9). 위에서부터: 히어로 → 단계·전리품 한 장 → **지금 할 일**(상태별: 만들기·신청 대기·
- * 내 원정대 패널·안내) → [모집 중 | 출발] 원정대 카드. 2026-10-08 리뷰 반영: 아래 고정 버튼이 채팅 미니바에 가려 행동 영역을
- * 본문 위쪽으로 올렸고, 원정대원은 얼굴 칸 2열로 압축했다. 액션은 서버 액션이 현재 경로를 재렌더해 새 상태가 props로 온다
+ * 월드보스 상세 화면(docs/WORLD-BOSS.md §9). 위에서부터: 무대 히어로(이름·단계·전리품·남은 시간을 무대 안에) · 전리품 안내 한 줄 ·
+ * 약점/내 장착 · 지금 할 일(신청 대기·안내) · 내 원정대 · [모집 중 | 출발] 원정대 카드, 그리고 지금 누를 버튼 하나를 바닥에 고정한다
+ * (만들기 / 출발 / 내 전투 다시 보기). 고정 버튼은 채팅 미니바 높이(--chat-dock-h)만큼 띄워 가리지 않는다. 액션은 서버 액션이 현재 경로를 재렌더해 새 상태가 props로 온다
  * (router.refresh 없음, CLAUDE §11.7). 출발 직후와 '전투 보기'는 WorldBossReplay로 재생.
  */
 import Link from 'next/link';
@@ -120,78 +120,74 @@ export function WorldBossDetailView({
     });
 
   return (
-    <div className="flex-1 pb-24">
-      {/* 히어로 — 보스 무대(불씨가 남은 숲, 2026-10-09 출현 구역 배경에서 교체) + 보스 그림 + 이름·구역·주인·남은 시간 */}
-      <div className="relative h-[150px] overflow-hidden bg-zinc-950">
-        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-black/10" />
+    <div className="flex-1 pb-4">
+      {/* 히어로 — 무대(B안, 10-10): 보스 가운데 · 위 이름 · 아래 단계/진행률/전리품/남은 시간. 색은 보스 팔레트(잿빛 + 불씨 주황). */}
+      <div className="relative h-[200px] overflow-hidden bg-stone-950">
+        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className={active ? '' : 'grayscale opacity-70'} />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.6)_0%,transparent_30%,transparent_55%,rgba(12,10,9,0.95)_100%)]" />
         <BackFab fallback="/guild/map" className="absolute left-3 top-3 z-10" />
         {active ? (
           <WorldBossSprite
             region={d.region}
             alt={d.name}
-            className="absolute bottom-2 left-3 h-24 w-24"
-            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(251,191,36,0.6))' }}
+            className="absolute left-1/2 top-[46%] z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
+            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(234,88,12,0.6))' }}
           />
         ) : (
-          // 떠난 보스는 정지 그림을 흐리게(움직이면 아직 머무는 것처럼 읽힌다).
+          // 원정이 끝난 보스는 정지 그림을 흐리게(움직이면 아직 머무는 것처럼 읽힌다).
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={spriteSrc}
             alt={d.name}
-            className="absolute bottom-2 left-3 h-24 w-24 object-contain opacity-60 grayscale"
+            className="absolute left-1/2 top-[46%] z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2 object-contain opacity-60 grayscale"
             style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
           />
         )}
-        <div className="absolute bottom-3 left-[118px] right-3 flex flex-col">
-          <h1 className="truncate text-[19px] font-extrabold text-amber-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">{d.name}</h1>
-          <p className="truncate text-[11px] text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+        <div className="absolute left-[52px] right-3 top-3 z-[2] flex flex-col">
+          <span className="flex items-center gap-1.5">
+            <span className={`rounded-[4px] px-1 text-[9px] font-extrabold leading-[1.5] ${active ? 'bg-orange-700/90 text-orange-50' : 'bg-stone-700 text-stone-200'}`}>
+              {active ? '월드보스' : '원정 종료'}
+            </span>
+            <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{d.name}</h1>
+          </span>
+          <span className="truncate text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             {d.zoneName}
-            {active ? (owner ? ` · ${owner} 땅 · ` : ' · 주인 없음 · ') : ' · '}
-            {active ? (
-              <Ticker intervalMs={60_000}>{(now) => <span className="text-amber-300">{remain(d.leaveAt - now)}</span>}</Ticker>
-            ) : (
-              <span className="text-zinc-400">원정 종료</span>
-            )}
-          </p>
+            {owner ? ` · ${owner} 땅` : ' · 주인 없음'}
+          </span>
         </div>
-      </div>
-
-      {/* 단계 · 전리품 — 한 장 */}
-      <div className="mx-3 mt-3 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[11px] text-zinc-500">{active ? '지금' : '최종'}</span>
-          <span className="text-[11px] text-zinc-500">쌓인 전리품</span>
-        </div>
-        <div className="flex items-baseline justify-between gap-2">
-          <b className="text-[22px] font-black text-amber-300">{d.stage}단계</b>
-          <b className="text-[16px] font-extrabold text-amber-200">
-            💎{won(d.lootDiamond)} 📦{d.lootBoxes}
-          </b>
-        </div>
-        {active && (
-          <>
-            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-amber-900/40">
-              <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="mt-1 flex justify-between text-[10.5px] text-zinc-500">
-              <span>{d.stage + 1}단계까지</span>
-              <span className="font-mono tabular-nums">
-                {formatCompactKR(d.into)} / {formatCompactKR(d.need)}
+        <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
+          <span className="flex flex-col">
+            <b className={`text-[28px] font-black leading-none [text-shadow:0_1px_3px_#000] ${active ? 'text-orange-400' : 'text-stone-300'}`}>
+              {active ? `${d.stage}단계` : `최종 ${d.stage}단계`}
+            </b>
+            {active && (
+              <span className="mt-1 text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
+                {d.stage + 1}단계까지 <b className="text-orange-300">{Math.floor(pct)}%</b>
               </span>
-            </div>
-          </>
-        )}
-        <p className="mt-1.5 border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-400">
-          {active
-            ? owner
-              ? josa(`원정이 종료되는 순간 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요. 지금 주인은 ${owner} 길드예요.`)
-              : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
-            : owner
-              ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
-              : '종료 때 주인이 없어 전리품은 사라졌어요.'}
-        </p>
+            )}
+          </span>
+          <span className="flex flex-col items-end">
+            <b className="text-[13px] font-extrabold text-stone-100 [text-shadow:0_1px_2px_#000]">
+              💎{won(d.lootDiamond)} 📦{d.lootBoxes}
+            </b>
+            {active ? (
+              <Ticker intervalMs={60_000}>{(now) => <span className="text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">{remain(d.leaveAt - now)}</span>}</Ticker>
+            ) : (
+              <span className="text-[10.5px] text-stone-400">원정 종료</span>
+            )}
+          </span>
+        </div>
       </div>
+      {/* 전리품 안내 — 한 줄 */}
+      <p className="mx-3 mt-2 text-[10.5px] leading-snug text-stone-400">
+        {active
+          ? owner
+            ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요.`)
+            : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
+          : owner
+            ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+            : '종료 때 주인이 없어 전리품은 사라졌어요.'}
+      </p>
 
       {/* 약점 · 내 장착 */}
       {active && (
@@ -211,32 +207,22 @@ export function WorldBossDetailView({
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
           ) : me.state === 'pending' ? (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-500/45 bg-amber-950/30 px-3 py-2.5">
-              <span className="min-w-0 flex-1 text-[12px] text-amber-100">
+            <div className="flex items-center gap-2 rounded-xl border border-orange-500/45 bg-orange-950/30 px-3 py-2.5">
+              <span className="min-w-0 flex-1 text-[12px] text-orange-100">
                 <b>{pendingParty ? `${pendingParty.leaderNickname} 원정대` : '원정대'}</b>에 신청했어요
-                <span className="block text-[10.5px] text-amber-200/70">원정대장이 수락하면 알림으로 알려 드려요</span>
+                <span className="block text-[10.5px] text-orange-200/70">원정대장이 수락하면 알림으로 알려 드려요</span>
               </span>
               <button
                 type="button"
                 disabled={pending}
                 onClick={() => me.pendingPartyId && run(() => cancelRequestAction(d.id, me.pendingPartyId!), { title: '신청을 취소했어요' })}
-                className="shrink-0 rounded-lg border border-amber-500/45 bg-zinc-900 px-3 py-1.5 text-[11.5px] font-bold text-amber-300 disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-orange-500/45 bg-stone-900 px-3 py-1.5 text-[11.5px] font-bold text-orange-300 disabled:opacity-40"
               >
                 신청 취소
               </button>
             </div>
           ) : me.canCreate ? (
-            <div>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run(() => createPartyAction(d.id), { title: '원정대를 만들었어요', detail: '함께 갈 사람을 기다려요' })}
-                className="w-full rounded-xl bg-amber-500 py-3 text-[14px] font-extrabold text-amber-950 disabled:opacity-40"
-              >
-                원정대 만들기
-              </button>
-              <p className="mt-1 text-center text-[10.5px] text-zinc-500">우리 땅의 보스예요 · 최대 10명 · 보스 하나에 1번</p>
-            </div>
+            <p className="text-center text-[10.5px] text-stone-500">우리 땅의 보스예요 · 최대 10명 · 보스 하나에 1번</p>
           ) : me.state === 'fought' ? (
             <Notice>이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.</Notice>
           ) : (
@@ -250,13 +236,13 @@ export function WorldBossDetailView({
 
       {/* 내 원정대 패널 */}
       {mp && (
-        <section className="mx-3 mt-3 rounded-xl border border-amber-500/45 bg-zinc-900 p-3">
+        <section className="mx-3 mt-3 rounded-xl border border-orange-500/45 bg-stone-900 p-3">
           <div className="mb-2 flex items-center gap-1.5">
-            <b className="text-[13px] text-zinc-100">내 원정대</b>
-            <span className={`rounded-full px-1.5 py-px text-[9.5px] font-extrabold ${mp.isLeader ? 'bg-amber-500 text-amber-950' : 'bg-zinc-700 text-zinc-200'}`}>
+            <b className="text-[13px] text-stone-100">내 원정대</b>
+            <span className={`rounded-full px-1.5 py-px text-[9.5px] font-extrabold ${mp.isLeader ? 'bg-orange-700 text-orange-50' : 'bg-stone-700 text-stone-200'}`}>
               {mp.isLeader ? '원정대장' : '원정대원'}
             </span>
-            <span className="ml-auto font-mono text-[11px] font-extrabold tabular-nums text-amber-300">
+            <span className="ml-auto font-mono text-[11px] font-extrabold tabular-nums text-orange-300">
               {mp.members.length}/{WORLD_BOSS_PARTY_MAX}
             </span>
           </div>
@@ -266,29 +252,29 @@ export function WorldBossDetailView({
             ))}
             {mp.status === 'recruiting' &&
               Array.from({ length: Math.max(0, Math.min(2, WORLD_BOSS_PARTY_MAX - mp.members.length)) }, (_, i) => (
-                <div key={`e${i}`} className="flex h-10 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[10.5px] text-zinc-600">
+                <div key={`e${i}`} className="flex h-10 items-center justify-center rounded-lg border border-dashed border-stone-700 text-[10.5px] text-stone-600">
                   빈 자리
                 </div>
               ))}
           </div>
 
           {mp.isLeader && mp.status === 'recruiting' && mp.requests.length > 0 && (
-            <div className="mt-2.5 border-t border-dashed border-zinc-700 pt-2">
-              <b className="text-[11px] text-amber-300">신청 {mp.requests.length}건</b>
+            <div className="mt-2.5 border-t border-dashed border-stone-700 pt-2">
+              <b className="text-[11px] text-orange-300">신청 {mp.requests.length}건</b>
               {mp.requests.map((r) => (
                 <div key={r.userId} className="mt-1.5 flex items-center gap-2">
-                  <Avatar src={r.avatarSrc} box={r.faceBox} size="h-8 w-8 rounded-full bg-zinc-800" />
-                  <span className="min-w-0 flex-1 truncate text-[12px] text-zinc-200">
+                  <Avatar src={r.avatarSrc} box={r.faceBox} size="h-8 w-8 rounded-full bg-stone-800" />
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-stone-200">
                     {r.nickname}
-                    <span className="ml-1 text-[10px] text-zinc-500">
-                      {r.guildName ?? '무소속'} · {formatCompactKR(r.combat)}{r.weakCount > 0 && <span className="text-amber-400"> · 약점 {r.weakCount}</span>}
+                    <span className="ml-1 text-[10px] text-stone-500">
+                      {r.guildName ?? '무소속'} · {formatCompactKR(r.combat)}{r.weakCount > 0 && <span className="text-orange-400"> · 약점 {r.weakCount}</span>}
                     </span>
                   </span>
                   <button
                     type="button"
                     disabled={pending || mp.members.length >= WORLD_BOSS_PARTY_MAX}
                     onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, true))}
-                    className="rounded-md bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-amber-950 disabled:opacity-40"
+                    className="rounded-md bg-orange-700 px-2.5 py-1 text-[11px] font-bold text-orange-50 disabled:opacity-40"
                   >
                     수락
                   </button>
@@ -296,7 +282,7 @@ export function WorldBossDetailView({
                     type="button"
                     disabled={pending}
                     onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, false))}
-                    className="rounded-md bg-zinc-800 px-2.5 py-1 text-[11px] font-bold text-zinc-400 disabled:opacity-40"
+                    className="rounded-md bg-stone-800 px-2.5 py-1 text-[11px] font-bold text-stone-400 disabled:opacity-40"
                   >
                     거절
                   </button>
@@ -307,10 +293,10 @@ export function WorldBossDetailView({
 
           {mp.status === 'recruiting' ? (
             <>
-              <p className="mt-2.5 text-[10.5px] text-zinc-400">
+              <p className="mt-2.5 text-[10.5px] text-stone-400">
                 {mp.isLeader ? (
                   <>
-                    지금 {mp.members.length}명이면 1명당 평균 <b className="text-amber-300">{fmtAvg(worldBossExpectedAttacks(mp.members.length))}번</b> 공격해요
+                    지금 {mp.members.length}명이면 1명당 평균 <b className="text-orange-300">{fmtAvg(worldBossExpectedAttacks(mp.members.length))}번</b> 공격해요
                     {mp.members.length < WORLD_BOSS_PARTY_MAX && ` · 10명이면 ${fmtAvg(worldBossExpectedAttacks(WORLD_BOSS_PARTY_MAX))}번`}
                   </>
                 ) : (
@@ -318,30 +304,20 @@ export function WorldBossDetailView({
                 )}
               </p>
               {mp.isLeader ? (
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' })}
-                    className="rounded-lg border border-zinc-700 px-3 py-2.5 text-[12px] font-bold text-zinc-400 disabled:opacity-40"
-                  >
-                    해산
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending || !active}
-                    onClick={() => (mp.members.length < WORLD_BOSS_PARTY_MAX ? setDepartAsk(true) : depart())}
-                    className="flex-1 rounded-lg bg-amber-500 py-2.5 text-[13.5px] font-extrabold text-amber-950 disabled:opacity-40"
-                  >
-                    출발
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' })}
+                  className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400 disabled:opacity-40"
+                >
+                  해산
+                </button>
               ) : (
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대에서 나왔어요' })}
-                  className="mt-2 w-full rounded-lg border border-zinc-700 py-2 text-[12px] font-bold text-zinc-400 disabled:opacity-40"
+                  className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400 disabled:opacity-40"
                 >
                   나가기
                 </button>
@@ -351,16 +327,8 @@ export function WorldBossDetailView({
             (() => {
               const card = d.parties.find((p) => p.id === mp.partyId);
               return card ? (
-                <div className="mt-2.5 rounded-lg bg-amber-950/40 px-2.5 py-2">
+                <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
                   <DepartedSummary p={card} />
-                  <button
-                    type="button"
-                    onClick={() => openBattle(card.id)}
-                    disabled={pending}
-                    className="mt-2 w-full rounded-lg border border-amber-500/50 py-2 text-[12px] font-bold text-amber-300 disabled:opacity-40"
-                  >
-                    내 전투 다시 보기
-                  </button>
                 </div>
               ) : null;
             })()
@@ -369,7 +337,7 @@ export function WorldBossDetailView({
       )}
 
       {/* 원정대 목록 — 모집 중 / 출발 */}
-      <div className="mx-3 mt-4 flex gap-1 rounded-xl bg-zinc-900 p-1">
+      <div className="mx-3 mt-4 flex gap-1 rounded-xl bg-stone-900 p-1">
         {(
           [
             ['recruiting', `모집 중 ${recruiting.length}`],
@@ -381,7 +349,7 @@ export function WorldBossDetailView({
             type="button"
             onClick={() => setTab(k)}
             aria-pressed={tab === k}
-            className={`flex-1 rounded-lg py-1.5 text-[11.5px] font-bold ${tab === k ? 'bg-amber-500 text-amber-950' : 'text-zinc-400'}`}
+            className={`flex-1 rounded-lg py-1.5 text-[11.5px] font-bold ${tab === k ? 'bg-orange-700 text-orange-50' : 'text-stone-400'}`}
           >
             {label}
           </button>
@@ -409,15 +377,15 @@ export function WorldBossDetailView({
               const full = p.memberCount >= WORLD_BOSS_PARTY_MAX;
               const canRequest = active && me?.state === 'none' && !full;
               return (
-                <div key={p.id} className={`rounded-xl border bg-zinc-900 p-2.5 ${isPending ? 'border-amber-500/55' : 'border-zinc-800'}`}>
+                <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending ? 'border-orange-500/55' : 'border-stone-800'}`}>
                   <PartyHead p={p} />
                   <div className="my-1.5 flex gap-[3px]">
                     {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => (
-                      <i key={i} className={`h-[5px] flex-1 rounded-sm ${i < p.memberCount ? 'bg-amber-500' : 'bg-zinc-800'}`} />
+                      <i key={i} className={`h-[5px] flex-1 rounded-sm ${i < p.memberCount ? 'bg-orange-700' : 'bg-stone-800'}`} />
                     ))}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 text-[10.5px] text-zinc-400">
+                    <span className="min-w-0 flex-1 text-[10.5px] text-stone-400">
                       {full ? '가득 찼어요' : isPending ? '수락을 기다리는 중' : `지금 가면 1명당 평균 ${fmtAvg(worldBossExpectedAttacks(p.memberCount + 1))}번 공격`}
                     </span>
                     {canRequest && (
@@ -425,7 +393,7 @@ export function WorldBossDetailView({
                         type="button"
                         disabled={pending}
                         onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '원정대장이 수락하면 알려 드려요' })}
-                        className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11.5px] font-bold text-amber-950 disabled:opacity-40"
+                        className="rounded-lg bg-orange-700 px-3 py-1.5 text-[11.5px] font-bold text-orange-50 disabled:opacity-40"
                       >
                         참가 신청
                       </button>
@@ -444,15 +412,50 @@ export function WorldBossDetailView({
               type="button"
               onClick={() => openBattle(p.id)}
               disabled={pending}
-              className={`rounded-xl border bg-zinc-900 p-2.5 text-left disabled:opacity-60 ${p.id === mp?.partyId ? 'border-amber-500/55' : 'border-zinc-800'}`}
+              className={`rounded-xl border bg-stone-900 p-2.5 text-left disabled:opacity-60 ${p.id === mp?.partyId ? 'border-orange-500/55' : 'border-stone-800'}`}
             >
               <PartyHead p={p} />
               <DepartedSummary p={p} />
-              <span className="mt-1 block text-right text-[10.5px] font-bold text-amber-300">전투 보기 ›</span>
+              <span className="mt-1 block text-right text-[10.5px] font-bold text-orange-300">전투 보기 ›</span>
             </button>
           ))
         )}
       </div>
+
+      {/* 하단 고정 — 지금 누를 버튼 하나(만들기 / 출발 / 내 전투 다시 보기). 스크롤해도 바닥에 붙는다. */}
+      {(() => {
+        const myCard = mp ? d.parties.find((p) => p.id === mp.partyId) : undefined;
+        // 종류만 고르고 실제 동작은 클릭 때 고른다(렌더 중 ref를 쥔 함수를 만들지 않도록).
+        const kind: 'create' | 'depart' | 'replay' | null =
+          active && !mp && me && me.state !== 'pending' && me.canCreate
+            ? 'create'
+            : mp?.isLeader && mp.status === 'recruiting' && active
+              ? 'depart'
+              : mp && mp.status !== 'recruiting' && myCard
+                ? 'replay'
+                : null;
+        const go = () => {
+          if (kind === 'create') run(() => createPartyAction(d.id), { title: '원정대를 만들었어요', detail: '함께 갈 사람을 기다려요' });
+          else if (kind === 'depart' && mp) {
+            if (mp.members.length < WORLD_BOSS_PARTY_MAX) setDepartAsk(true);
+            else depart();
+          } else if (kind === 'replay' && myCard) openBattle(myCard.id);
+        };
+        const c = kind && { label: kind === 'create' ? '원정대 만들기' : kind === 'depart' ? '출발' : '내 전투 다시 보기', sub: kind === 'depart' && mp ? `${mp.members.length}명` : '' };
+        return c ? (
+          <div style={{ bottom: 'var(--chat-dock-h, 0px)' }} className="sticky z-10 mt-3 bg-gradient-to-t from-stone-950 from-60% to-transparent px-3 pb-3 pt-5">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={go}
+              className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 shadow-lg shadow-black/50 disabled:opacity-40"
+            >
+              {c.label}
+              {c.sub && <span className="ml-1 text-[12px] font-bold text-orange-200/90">· {c.sub}</span>}
+            </button>
+          </div>
+        ) : null;
+      })()}
 
       {/* 10명 미만 출발 확인 */}
       {departAsk && mp && (
@@ -469,11 +472,11 @@ export function WorldBossDetailView({
               </>
             }
           >
-            <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            <p className="text-[12.5px] leading-relaxed text-stone-600 dark:text-stone-300">
               사람이 많을수록 다 같이 오래 버텨요. 10명이 모이면 한 사람이 평균 {fmtAvg(worldBossExpectedAttacks(WORLD_BOSS_PARTY_MAX))}번,
               지금은 {fmtAvg(worldBossExpectedAttacks(mp.members.length))}번 공격할 수 있어요.
             </p>
-            <p className="mt-1.5 text-[11.5px] text-zinc-500">출발하면 되돌릴 수 없어요.</p>
+            <p className="mt-1.5 text-[11.5px] text-stone-500">출발하면 되돌릴 수 없어요.</p>
           </ModalLayout>
         </ModalShell>
       )}
@@ -484,14 +487,14 @@ export function WorldBossDetailView({
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2.5 text-[11.5px] leading-relaxed text-zinc-400">{children}</p>;
+  return <p className="rounded-xl border border-stone-800 bg-stone-900/70 px-3 py-2.5 text-[11.5px] leading-relaxed text-stone-400">{children}</p>;
 }
 
 function Empty({ title, sub }: { title: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-zinc-800 px-3 py-4 text-center">
-      <p className="text-[12px] text-zinc-400">{title}</p>
-      {sub && <p className="mt-0.5 text-[10.5px] text-zinc-600">{sub}</p>}
+    <div className="rounded-xl border border-dashed border-stone-800 px-3 py-4 text-center">
+      <p className="text-[12px] text-stone-400">{title}</p>
+      {sub && <p className="mt-0.5 text-[10.5px] text-stone-600">{sub}</p>}
     </div>
   );
 }
@@ -499,9 +502,9 @@ function Empty({ title, sub }: { title: string; sub?: string }) {
 function PartyHead({ p }: { p: WorldBossPartyCard }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <b className="truncate text-[12.5px] text-zinc-100">{p.leaderNickname} 원정대</b>
-      {p.guildName && <span className="truncate text-[10px] text-zinc-500">{p.guildName}</span>}
-      <span className="ml-auto shrink-0 font-mono text-[11px] font-extrabold tabular-nums text-amber-300">
+      <b className="truncate text-[12.5px] text-stone-100">{p.leaderNickname} 원정대</b>
+      {p.guildName && <span className="truncate text-[10px] text-stone-500">{p.guildName}</span>}
+      <span className="ml-auto shrink-0 font-mono text-[11px] font-extrabold tabular-nums text-orange-300">
         {p.status === 'departed' ? `${p.memberCount}명` : `${p.memberCount}/${WORLD_BOSS_PARTY_MAX}`}
       </span>
     </div>
@@ -513,17 +516,17 @@ function DepartedSummary({ p }: { p: WorldBossPartyCard }) {
   const moved = (p.stageTo ?? 0) - (p.stageFrom ?? 0);
   return (
     <div className="mt-1">
-      <p className="text-[11px] text-zinc-300">
-        피해 <b className="text-amber-200">{formatCompactKR(p.damage)}</b> · {p.rounds}라운드 ·{' '}
+      <p className="text-[11px] text-stone-300">
+        피해 <b className="text-orange-200">{formatCompactKR(p.damage)}</b> · {p.rounds}라운드 ·{' '}
         {moved > 0 ? (
           <>
-            <b className="text-amber-300">{p.stageTo}단계</b>까지 +{moved}
+            <b className="text-orange-300">{p.stageTo}단계</b>까지 +{moved}
           </>
         ) : (
           '단계 그대로'
         )}
       </p>
-      <p className="mt-0.5 text-[10.5px] text-zinc-500">
+      <p className="mt-0.5 text-[10.5px] text-stone-500">
         원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
       </p>
     </div>
@@ -533,19 +536,19 @@ function DepartedSummary({ p }: { p: WorldBossPartyCard }) {
 function MemberChip({ p, serverId, leader }: { p: WorldBossPerson; serverId: number; leader: boolean }) {
   const body = (
     <>
-      <Avatar src={p.avatarSrc} box={p.faceBox} size="h-8 w-8 rounded-full bg-zinc-800" />
+      <Avatar src={p.avatarSrc} box={p.faceBox} size="h-8 w-8 rounded-full bg-stone-800" />
       <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate text-[11.5px] font-bold text-zinc-100">
-          {leader && <span className="mr-0.5 text-amber-300">★</span>}
+        <span className="block truncate text-[11.5px] font-bold text-stone-100">
+          {leader && <span className="mr-0.5 text-orange-300">★</span>}
           {p.nickname}
         </span>
-        <span className="block truncate text-[9.5px] text-zinc-500">
-          {p.guildName ?? '무소속'} · {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-amber-400"> · 약점 {p.weakCount}</span>}
+        <span className="block truncate text-[9.5px] text-stone-500">
+          {p.guildName ?? '무소속'} · {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-orange-400"> · 약점 {p.weakCount}</span>}
         </span>
       </span>
     </>
   );
-  const cls = `flex h-10 items-center gap-1.5 rounded-lg px-1.5 ${leader ? 'bg-amber-950/50 ring-1 ring-amber-500/40' : 'bg-zinc-800/60'}`;
+  const cls = `flex h-10 items-center gap-1.5 rounded-lg px-1.5 ${leader ? 'bg-orange-950/50 ring-1 ring-orange-500/40' : 'bg-stone-800/60'}`;
   return p.code ? (
     <Link prefetch={false} href={profileHref(p.code, serverId)} className={cls}>
       {body}
