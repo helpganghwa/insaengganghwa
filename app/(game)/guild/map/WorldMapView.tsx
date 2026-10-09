@@ -364,7 +364,8 @@ const WorldMap = memo(function WorldMap({
               : z.ownerEmblemColor;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
-          const boss = replayActive ? undefined : bossByZone.get(z.id);
+          // 월드보스 표시는 세계지도 탭에서만 — 점령현황 탭(nodeShowGuild)은 길드 정보만 고정(10-09 사용자).
+          const boss = replayActive || nodeShowGuild ? undefined : bossByZone.get(z.id);
           return (
             <button
               key={z.id}
@@ -436,23 +437,20 @@ const WorldMap = memo(function WorldMap({
                 </span>
               )}
               {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과.
-                  월드보스 구역은 3초씩 이 라벨 ↔ '월드보스 출현'(문양·테두리와 같은 박자). */}
-              {(boss || (nodeShowGuild ? z.ownerGuildName : z.name)) && (
-                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap">
-                  {(nodeShowGuild ? z.ownerGuildName : z.name) && (
-                    <span
-                      className={`block rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)] ${boss ? 'wb-alt-a' : ''}`}
-                      style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
-                    >
-                      {nodeShowGuild ? z.ownerGuildName : z.name}
-                    </span>
-                  )}
-                  {boss && (
-                    <span className="wb-alt-b absolute left-1/2 top-0 -translate-x-1/2 rounded-sm border border-orange-500/80 bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
-                      월드보스 출현
-                    </span>
-                  )}
+                  월드보스 구역(세계지도 탭)은 '월드보스 출현'으로 고정 — 칸 안의 문양만 3초씩 보스 그림과 번갈아 바뀐다(10-09). */}
+              {boss ? (
+                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border border-orange-500/80 bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                  월드보스 출현
                 </span>
+              ) : (
+                (nodeShowGuild ? z.ownerGuildName : z.name) && (
+                  <span
+                    className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                    style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
+                  >
+                    {nodeShowGuild ? z.ownerGuildName : z.name}
+                  </span>
+                )
               )}
             </button>
           );

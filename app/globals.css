@@ -500,8 +500,8 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
   .wbb-ember { mix-blend-mode: screen; filter: drop-shadow(0 0 2px #ff7a1a); animation: wbs-emb 2.6s ease-in-out infinite; }
   .wbb-shaft { background: radial-gradient(ellipse 45% 70% at 50% 8%, rgba(255, 214, 140, 0.32), transparent 70%); mix-blend-mode: screen; animation: wbb-shaft 6s ease-in-out infinite; }
   .wb-vignette { background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(150, 24, 12, 0.45) 100%); }
-  /* 지도 구역 — 보스가 머무는 구역은 점령전 배치 지도의 라벨 토글처럼 3초씩 번갈아 바뀐다(10-09 사용자):
-     앞 3초 = 길드 문양·구역명(평소), 뒤 3초 = 보스 그림·'월드보스 출현'·불꽃 테두리. 한 주기 6초를 CSS로만 돌려 지도를 다시 그리지 않는다. */
+  /* 지도 구역(세계지도 탭) — 보스가 머무는 구역은 라벨 '월드보스 출현' 고정, 칸 안만 3초씩 번갈아 바뀐다(10-09 사용자):
+     앞 3초 = 길드 문양, 뒤 3초 = 보스 그림 + 금빛 테두리. 한 주기 6초를 CSS로만 돌려 지도를 다시 그리지 않는다. */
   .wb-alt-a { animation: wb-alt-a 6s linear infinite; }
   .wb-alt-b { animation: wb-alt-b 6s linear infinite; }
   .wb-zone-flame { animation: wb-zone-alt 6s linear infinite; }
