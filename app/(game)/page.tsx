@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
 
+import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -175,6 +176,7 @@ export default async function HomePage() {
   let latestChronicleDay: string | null = null;
   /** 그날 헤드라인(마커 제거 평문) — 있으면 티저 문구로 사용, 없으면 '새로운 역사가 쓰였다'. */
   let chronicleHeadline: string | null = null;
+  let worldBossStage: number | null = null;
   const conquestTargetMs = (() => {
     const n = new Date();
     const t = new Date(n);
@@ -292,6 +294,9 @@ export default async function HomePage() {
             (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
               order by kst_day desc limit 1)
               as chron_headline,
+            -- 지금 머무는 월드보스 단계(docs/WORLD-BOSS.md §9) — 세계지도 카드에 보스·불씨 테두리. 없으면 null.
+            (select b.stage from world_bosses b where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
+              order by b.spawn_at desc limit 1) as wb_stage,
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
@@ -331,6 +336,7 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
+        wb_stage: number | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -371,6 +377,7 @@ export default async function HomePage() {
         // 23시대(23:00~24:00) = 점령전 진행중(DB 시계 권위).
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
+        worldBossStage = row.wb_stage == null ? null : Number(row.wb_stage);
         // 헤드라인 마커({g|이름}·{z|이름}·{u|닉|코드}) → 평문. 카드 desc의 truncate가 말줄임 처리.
         chronicleHeadline =
           row.chron_headline?.replace(/\{[gzu]\|([^}|]+)(?:\|[^}]*)?\}/g, '$1').trim() || null;
@@ -529,7 +536,7 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+              className={`relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98] ${isWorldmapCard && worldBossStage != null ? 'wb-card-glow' : ''}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -544,6 +551,14 @@ export default async function HomePage() {
                   transformOrigin: 'center',
                 }}
               />
+              {/* 월드보스가 머무는 동안 — 오른쪽 위에 작은 보스(제목·연대기 줄은 아래 그라데이션이라 겹치지 않는다). */}
+              {isWorldmapCard && worldBossStage != null ? (
+                <WorldBossSprite
+                  alt="월드보스"
+                  className="absolute right-1 top-0.5 z-[1] h-8 w-8"
+                  style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 4px rgba(249,115,22,0.9))' }}
+                />
+              ) : null}
               {badge ? (
                 <span
                   aria-label={`알림 ${count}건`}
@@ -584,6 +599,7 @@ export default async function HomePage() {
                       serverId={serverId}
                       chronicleDay={latestChronicleDay}
                       chronicleHeadline={chronicleHeadline}
+                      worldBossStage={worldBossStage}
                       nowIso={new Date().toISOString()}
                     />
                   ) : descHot ? (

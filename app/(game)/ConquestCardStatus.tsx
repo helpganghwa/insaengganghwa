@@ -11,6 +11,7 @@ export const chronicleReadKey = (serverId: number) => `ig:chron-read:s${serverId
  *  - 진행 중(23시대): '점령전 진행중'
  *  - 새 연대기 미열람 + 헤드라인 있음: 헤드라인 티저(강조색). 헤드라인이 없으면 카운트다운
  *    돌아가면 밋밋하다는 피드백(2026-07-20). 세계지도 방문 시 열람 처리(ChronicleReadMark).
+ *  - 월드보스가 머무는 중: '월드보스 출현 · N단계'(강조색).
  *  - 그 외: '다음 점령전까지 N시간 M분' 라이브 카운트다운(1초 갱신).
  * targetMs는 서버가 계산한 다음 23:00의 UTC epoch(ms) — 마운트 후 클라 클럭으로 계산(하이드레이션 안전).
  */
@@ -20,6 +21,7 @@ export function ConquestCardStatus({
   serverId,
   chronicleDay,
   chronicleHeadline,
+  worldBossStage = null,
   nowIso,
 }: {
   inProgress: boolean;
@@ -28,6 +30,8 @@ export function ConquestCardStatus({
   chronicleDay: string | null;
   /** 그날 헤드라인(평문) — 있으면 티저 문구로 우선 사용(부모 div의 truncate가 말줄임). */
   chronicleHeadline: string | null;
+  /** 지금 머무는 월드보스 단계(없으면 null) — 새 연대기 티저 다음 순위로, 카운트다운 대신 보인다. */
+  worldBossStage?: number | null;
   /** 서버 렌더 시각 — 보정 시계의 출발점(lib/client/use-server-clock 주석). */
   nowIso: string;
 }) {
@@ -90,6 +94,8 @@ export function ConquestCardStatus({
         </span>
       </span>
     );
+  if (worldBossStage != null)
+    return <span className="font-extrabold text-orange-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">월드보스 출현 · {worldBossStage}단계</span>;
   if (now == null) return <>다음 점령전까지</>; // 마운트 전 — 서버 렌더 폴백(하이드레이션 안전)
   const rem = Math.max(0, targetMs - now);
   const h = Math.floor(rem / 3_600_000);

@@ -233,54 +233,8 @@ const WorldMap = memo(function WorldMap({
   setReplayLayer: (el: HTMLDivElement | null) => void;
 }) {
   const bossByZone = useMemo(() => new Map(bosses.map((b) => [b.zoneId, b] as const)), [bosses]);
-  const zoneNameById = useMemo(() => new Map(zones.map((z) => [z.id, z.name] as const)), [zones]);
   return (
     <>
-      {/* 월드보스 띠(docs/WORLD-BOSS.md §9 — C안) — 보스가 머무는 동안만, 지도 **바로 위** 한 줄(지도 안에 겹치면 꼭대기
-          한가운데의 대설봉 노드가 가려진다). 누르면 그 구역 시트가 열린다. 리플레이 중에도 보인다(리뷰 10-08: 하루 첫 진입의
-          자동 리플레이 동안 보스를 못 봤다) — 리플레이 중엔 지도 위 마커만 숨긴다. 보스가 둘 이상이면 한 줄 안에 나란히. */}
-      {bosses.length > 0 && (
-        <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-amber-500/30 bg-zinc-950 px-1.5 py-1.5">
-          <Ticker intervalMs={60_000}>
-            {(now) =>
-              bosses.slice(0, 3).map((b) => {
-                const one = bosses.length === 1;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => onSelect(b.zoneId)}
-                    className={`flex min-w-0 items-center gap-2 rounded-xl border border-amber-400/50 bg-gradient-to-r from-amber-950/70 to-zinc-900 px-2 py-1 text-left active:opacity-80 ${
-                      one ? 'w-full' : 'flex-1 basis-0'
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={assetUrl(worldBossSpriteUrl(b.region))}
-                      alt=""
-                      className="h-7 w-7 shrink-0 object-contain drop-shadow-[0_0_4px_rgba(251,191,36,0.8)]"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                    <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                      <span className="truncate text-[11px] font-extrabold text-amber-300">
-                        {one ? `${b.name} · ` : ''}
-                        {zoneNameById.get(b.zoneId) ?? ''}
-                        <span className="ml-1 font-semibold text-amber-200/80">{b.stage}단계</span>
-                      </span>
-                      <span className="truncate text-[9.5px] text-zinc-300">
-                        {one
-                          ? `💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes} 쌓임 · ${wbRemain(b.leaveAt - now)}${b.recruiting > 0 ? ` · 모집 ${b.recruiting}` : ''}`
-                          : wbRemain(b.leaveAt - now)}
-                      </span>
-                    </span>
-                    {one && <span aria-hidden className="text-base leading-none text-amber-300">›</span>}
-                  </button>
-                );
-              })
-            }
-          </Ticker>
-        </div>
-      )}
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
           위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
@@ -291,19 +245,6 @@ const WorldMap = memo(function WorldMap({
           replayActive ? 'sticky top-0 z-10' : ''
         }`}
       >
-        {/* 리플레이 중 월드보스 알약(리뷰 10-08) — 리플레이가 지도를 화면 위에 붙여 띠가 그 뒤로 밀린다. 지도 왼쪽 위 모서리는
-            노드가 없는 자리(가장 위 노드가 y 6%)라 여기에 작게 띄운다. 누르면 그 구역 시트. */}
-        {replayActive && bosses.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onSelect(bosses[0]!.zoneId)}
-            className="absolute left-1.5 top-1.5 z-30 flex items-center gap-1 rounded-full border border-amber-400/60 bg-black/70 py-0.5 pl-0.5 pr-2 text-[10px] font-bold text-amber-300 backdrop-blur-sm"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={assetUrl(worldBossSpriteUrl(bosses[0]!.region))} alt="" className="h-4 w-4 object-contain" style={{ imageRendering: 'pixelated' }} />
-            월드보스 {bosses.length > 1 ? `${bosses.length}` : `· ${zoneNameById.get(bosses[0]!.zoneId) ?? ''}`}
-          </button>
-        )}
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -440,7 +381,7 @@ const WorldMap = memo(function WorldMap({
               }}
             >
               <span
-                className={`relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition ${boss ? 'animate-wb-ring' : ''}`}
+                className={`relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition ${boss ? 'wb-zone-flame' : ''}`}
                 style={{
                   // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
                   // 중립: 어두운 배경 + 흐린 지역색.
@@ -449,7 +390,7 @@ const WorldMap = memo(function WorldMap({
                       ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
                       : 'transparent'
                     : 'rgba(10,12,20,0.45)',
-                  // 보스가 머무는 구역은 금빛 테두리 맥동(animate-wb-ring)이 box-shadow를 맡는다.
+                  // 보스가 머무는 구역은 불꽃 테두리 맥동(wb-zone-flame)이 box-shadow를 맡는다.
                   boxShadow: boss ? undefined : owned ? `0 0 4px ${color}88` : 'none',
                   outline: `1px solid ${color}${owned ? '' : '88'}`,
                   // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
@@ -462,17 +403,22 @@ const WorldMap = memo(function WorldMap({
                   <GuildEmblemImg key={emblemUrl} src={emblemUrl} className="h-full w-full object-contain" />
                 ) : null}
               </span>
-              {/* 월드보스 — 네모 위에 떠 있는 보스 그림(부유). 내 위치 핀과 겹치면 핀을 오른쪽 위로 비킨다. */}
+              {/* 월드보스 — 네모 위에 떠 있는 보스(대기 애니 + 불씨 맥동, 부유) + 작은 불티. 상단 띠 없이 지도 안에서만 보이므로
+                  눈에 띄되 이웃 구역·라벨을 덮지 않게 크기는 34px로 두고, 빛은 네모 테두리와 보스 둘레에만 둔다(10-09). */}
               {boss && (
                 <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1.5 -translate-x-1/2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={assetUrl(worldBossSpriteUrl(boss.region))}
-                    alt={boss.name}
-                    className="block h-[30px] w-[30px] max-w-none animate-marker-bob object-contain"
-                    // 검은 외곽선 두 겹 + 금빛 글로우 — 왕성처럼 밝은 지형 위에서도 그림이 묻히지 않게(10-07 로컬 확인).
-                    style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 4px rgba(251,191,36,0.9))' }}
-                  />
+                  <span className="relative block animate-marker-bob">
+                    <WorldBossSprite
+                      region={boss.region}
+                      alt={boss.name}
+                      className="h-[34px] w-[34px]"
+                      // 검은 외곽선 두 겹 + 불빛 — 왕성처럼 밝은 지형 위에서도 묻히지 않게.
+                      style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(249,115,22,0.95))' }}
+                    />
+                    <span aria-hidden className="wb-spark left-[4px] bottom-[6px]" style={{ animationDelay: '0s' }} />
+                    <span aria-hidden className="wb-spark right-[5px] bottom-[10px]" style={{ animationDelay: '0.6s' }} />
+                    <span aria-hidden className="wb-spark left-[15px] bottom-[2px]" style={{ animationDelay: '1.2s' }} />
+                  </span>
                 </span>
               )}
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
