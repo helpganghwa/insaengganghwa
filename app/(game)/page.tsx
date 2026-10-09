@@ -536,7 +536,7 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              className={`relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98] ${isWorldmapCard && worldBossStage != null ? 'wb-card-glow' : ''}`}
+              className={`relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

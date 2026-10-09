@@ -399,31 +399,29 @@ const WorldMap = memo(function WorldMap({
               >
                 {/* 점령 길드 문양(있으면) — 리플레이 중엔 override 소유 길드의 문양 */}
                 {/* 파일이 사라진 옛 문양(리플레이·타임랩스의 스냅샷 URL)은 깨진 아이콘 대신 길드 색 박스만 남긴다(2026-09-14). */}
-                {owned && emblemUrl ? (
+                {boss ? (
+                  <>
+                    {/* 월드보스 구역 — 3초씩 문양 ↔ 보스 그림(.wb-alt-a/b, 라벨·테두리와 같은 박자) */}
+                    {owned && emblemUrl ? (
+                      <span className="wb-alt-a absolute inset-0">
+                        <GuildEmblemImg key={emblemUrl} src={emblemUrl} className="h-full w-full object-contain" />
+                      </span>
+                    ) : null}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={assetUrl(worldBossSpriteUrl(boss.region))}
+                      alt={boss.name}
+                      className="wb-alt-b absolute inset-0 h-full w-full bg-black/60 object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  </>
+                ) : owned && emblemUrl ? (
                   <GuildEmblemImg key={emblemUrl} src={emblemUrl} className="h-full w-full object-contain" />
                 ) : null}
               </span>
-              {/* 월드보스 — 네모 위에 떠 있는 보스(대기 애니 + 불씨 맥동, 부유) + 작은 불티. 상단 띠 없이 지도 안에서만 보이므로
-                  눈에 띄되 이웃 구역·라벨을 덮지 않게 크기는 34px로 두고, 빛은 네모 테두리와 보스 둘레에만 둔다(10-09). */}
-              {boss && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1.5 -translate-x-1/2">
-                  <span className="relative block animate-marker-bob">
-                    <WorldBossSprite
-                      region={boss.region}
-                      alt={boss.name}
-                      className="h-[34px] w-[34px]"
-                      // 검은 외곽선 두 겹 + 불빛 — 왕성처럼 밝은 지형 위에서도 묻히지 않게.
-                      style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(249,115,22,0.95))' }}
-                    />
-                    <span aria-hidden className="wb-spark left-[4px] bottom-[6px]" style={{ animationDelay: '0s' }} />
-                    <span aria-hidden className="wb-spark right-[5px] bottom-[10px]" style={{ animationDelay: '0.6s' }} />
-                    <span aria-hidden className="wb-spark left-[15px] bottom-[2px]" style={{ animationDelay: '1.2s' }} />
-                  </span>
-                </span>
-              )}
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
-                <span className={`pointer-events-none absolute bottom-full -mb-1 -translate-x-1/2 ${boss ? 'left-full' : 'left-1/2'}`}>
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
                   <span className="block animate-marker-bob">
                     <span
                       className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
@@ -438,19 +436,23 @@ const WorldMap = memo(function WorldMap({
                   </span>
                 </span>
               )}
-              {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
-              {!boss && (nodeShowGuild ? z.ownerGuildName : z.name) && (
-                <span
-                  className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                  style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
-                >
-                  {nodeShowGuild ? z.ownerGuildName : z.name}
-                </span>
-              )}
-              {/* 월드보스 배지 — 구역 라벨 자리를 대신한다(리뷰 10-08: 라벨 아래에 따로 달면 아래 구역 라벨을 덮었다). */}
-              {boss && (
-                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border border-amber-600/70 bg-[#1a1407] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-amber-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
-                  {nodeShowGuild ? z.ownerGuildName : z.name} · {boss.stage}단계
+              {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과.
+                  월드보스 구역은 3초씩 이 라벨 ↔ '월드보스 출현'(문양·테두리와 같은 박자). */}
+              {(boss || (nodeShowGuild ? z.ownerGuildName : z.name)) && (
+                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap">
+                  {(nodeShowGuild ? z.ownerGuildName : z.name) && (
+                    <span
+                      className={`block rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)] ${boss ? 'wb-alt-a' : ''}`}
+                      style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
+                    >
+                      {nodeShowGuild ? z.ownerGuildName : z.name}
+                    </span>
+                  )}
+                  {boss && (
+                    <span className="wb-alt-b absolute left-1/2 top-0 -translate-x-1/2 rounded-sm border border-orange-500/80 bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                      월드보스 출현
+                    </span>
+                  )}
                 </span>
               )}
             </button>
