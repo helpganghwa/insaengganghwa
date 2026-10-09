@@ -474,7 +474,7 @@ export function WorldMapView({
   embedded = false,
   taxOfficerGuildId = null,
   taxNextCooldownMin = TAX_COLLECT_COOLDOWN_MIN,
-  myGuildId = null,
+  myGuildId: _myGuildId = null,
   worldBoss = null,
 }: {
   mapSrc: string;
@@ -1208,7 +1208,6 @@ export function WorldMapView({
                 {(() => {
                   const boss = bossByZone.get(selected.id);
                   if (boss) {
-                    const canCreate = myGuildId != null && selected.ownerGuildId === myGuildId && boss.mine === 'none';
                     const pct = boss.need > 0 ? Math.min(100, Math.max(0, (boss.into / boss.need) * 100)) : 0;
                     const remember = () => {
                       try {
@@ -1217,17 +1216,6 @@ export function WorldMapView({
                         // 저장 실패 시 복원만 생략
                       }
                     };
-                    // 버튼 하나 — 주인 길드원·다른 유저 모두 같은 카드(C안, 10-09), 버튼 이름만 상황에 맞게.
-                    const cta =
-                      boss.mine === 'fought'
-                        ? '내 전투 결과'
-                        : boss.mine === 'recruiting'
-                          ? '내 원정대'
-                          : boss.mine === 'pending'
-                            ? '신청한 원정대'
-                            : canCreate
-                              ? '원정대 만들기'
-                              : '원정대 보기';
                     return (
                       <WorldBossZoneCard
                         mode="active"
@@ -1238,7 +1226,6 @@ export function WorldMapView({
                         lootBoxes={boss.lootBoxes}
                         leaveAt={boss.leaveAt}
                         pct={pct}
-                        cta={cta}
                         remainText={(now) => wbRemain(boss.leaveAt - now)}
                         href={`/world-boss/${boss.id}`}
                         onOpen={remember}
