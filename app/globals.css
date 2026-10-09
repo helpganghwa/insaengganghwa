@@ -483,3 +483,31 @@ html {
 [data-app-shell] { transition: filter 150ms ease; }
 html.ig-modal-open [data-app-shell] { filter: blur(4px); }
 @media (prefers-reduced-motion: reduce) { [data-app-shell] { transition: none; } }
+
+/* ── 월드보스 그림·무대(components/WorldBossSprite·WorldBossBackdrop) ─────────────────────
+ * Tailwind 유틸이 아닌 평범한 클래스라 트리 셰이킹되지 않는다. 띠는 9프레임(900%) 왕복,
+ * 불씨 띠는 같은 박자로 돌아 맥동이 몸에 붙는다. .wbs에는 position을 두지 않는다(유틸 absolute를 덮어 버림 — 위치는 컴포넌트가 붙인다). 공격 = 다가오기 + 불씨 플레어(밝기 1.15 — 1.8은 노랗게 튐). */
+@layer components {
+  .wbs { aspect-ratio: 1 / 1; }
+  .wbs-breath, .wbs-lunge, .wbs-pulse, .wbs-strip { position: absolute; inset: 0; }
+  .wbs-breath { animation: wbs-breath 4.2s ease-in-out infinite; }
+  .wbs-lunge { transform-origin: 50% 85%; }
+  .wbs-strip { background-size: 900% 100%; background-repeat: no-repeat; image-rendering: pixelated; animation: wbs-pp 1.17s steps(9, jump-none) infinite alternate; }
+  .wbs-pulse { animation: wbs-emb 1.9s ease-in-out 0.4s infinite; }
+  .wbs-ember { mix-blend-mode: screen; filter: drop-shadow(0 0 3px #ff8a2a); }
+  .wbs-atk { animation: wbs-lunge 0.9s cubic-bezier(0.3, 0, 0.2, 1); }
+  .wbs-atk .wbs-pulse { animation: wbs-flare 0.9s ease-out; }
+  .wbb-ember { mix-blend-mode: screen; filter: drop-shadow(0 0 2px #ff7a1a); animation: wbs-emb 2.6s ease-in-out infinite; }
+  .wbb-shaft { background: radial-gradient(ellipse 45% 70% at 50% 8%, rgba(255, 214, 140, 0.32), transparent 70%); mix-blend-mode: screen; animation: wbb-shaft 6s ease-in-out infinite; }
+  .wb-vignette { background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(150, 24, 12, 0.45) 100%); }
+}
+@keyframes wbs-pp { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+@keyframes wbs-emb { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes wbs-breath { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5%); } }
+@keyframes wbs-lunge { 0% { transform: scale(1) translateY(0); } 25% { transform: scale(0.97) translateY(1.5%); } 42% { transform: scale(1.13) translateY(-2%); } 70% { transform: scale(1.04); } 100% { transform: scale(1) translateY(0); } }
+@keyframes wbs-flare { 0% { opacity: 0.4; filter: none; } 40% { opacity: 1; filter: brightness(1.15) drop-shadow(0 0 5px #e8621a); } 100% { opacity: 0.5; filter: none; } }
+@keyframes wbb-shaft { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft { animation: none; }
+  .wbs-pulse, .wbb-ember { opacity: 0.5; }
+}

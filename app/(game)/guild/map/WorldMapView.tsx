@@ -14,6 +14,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { WikiLink } from '@/components/WikiLink';
 import { GuildEmblemImg } from '@/components/GuildEmblemImg';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { josa } from 'josa';
 import { kstStartOfDay } from '@/lib/kst';
@@ -1300,12 +1301,11 @@ export function WorldMapView({
                     return (
                       <div className="mt-2 rounded-lg border border-amber-500/40 bg-gradient-to-br from-amber-50 to-white p-2.5 dark:border-amber-700/50 dark:from-amber-950/40 dark:to-zinc-900/60">
                         <div className="flex items-center gap-2.5">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={assetUrl(worldBossSpriteUrl(boss.region))}
+                          <WorldBossSprite
+                            region={boss.region}
                             alt=""
-                            className="h-11 w-11 shrink-0 object-contain"
-                            style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(251,191,36,0.6))' }}
+                            className="h-11 w-11 shrink-0"
+                            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 5px rgba(251,191,36,0.6))' }}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline justify-between gap-2">

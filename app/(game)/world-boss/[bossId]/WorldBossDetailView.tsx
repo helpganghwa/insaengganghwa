@@ -15,10 +15,14 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
 import { Ticker } from '@/components/Ticker';
+import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
+import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { WORLD_BOSS_PARTY_MAX, worldBossExpectedAttacks } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle, WorldBossDetail, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
+import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { Avatar } from '../../friends/Avatar';
 import {
@@ -49,14 +53,12 @@ export function WorldBossDetailView({
   serverId,
   spriteSrc,
   bgSrc,
-  bossBgSrc,
 }: {
   detail: WorldBossDetail;
   serverId: number;
   spriteSrc: string;
+  /** 보스 전용 배경(불씨가 남은 숲) — 히어로와 전투 재생 무대에 함께 쓴다. */
   bgSrc: string;
-  /** 보스 전용 배경 — 전투 재생 무대. */
-  bossBgSrc: string;
 }) {
   const { showError, showHeaderToast } = useResourceToast();
   const [pending, start] = useTransition();
@@ -117,19 +119,28 @@ export function WorldBossDetailView({
 
   return (
     <div className="flex-1 pb-24">
-      {/* 히어로 — 출현 구역 배경 + 보스 그림 + 이름·구역·주인·남은 시간 */}
+      {/* 히어로 — 보스 무대(불씨가 남은 숲, 2026-10-09 출현 구역 배경에서 교체) + 보스 그림 + 이름·구역·주인·남은 시간 */}
       <div className="relative h-[150px] overflow-hidden bg-zinc-950">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
+        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} />
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-black/10" />
         <BackFab fallback="/guild/map" className="absolute left-3 top-3 z-10" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={spriteSrc}
-          alt={d.name}
-          className={`absolute bottom-2 left-3 h-24 w-24 object-contain ${active ? '' : 'opacity-60 grayscale'}`}
-          style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(251,191,36,0.6))' }}
-        />
+        {active ? (
+          <WorldBossSprite
+            region={d.region}
+            alt={d.name}
+            className="absolute bottom-2 left-3 h-24 w-24"
+            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(251,191,36,0.6))' }}
+          />
+        ) : (
+          // 떠난 보스는 정지 그림을 흐리게(움직이면 아직 머무는 것처럼 읽힌다).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={spriteSrc}
+            alt={d.name}
+            className="absolute bottom-2 left-3 h-24 w-24 object-contain opacity-60 grayscale"
+            style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
+          />
+        )}
         <div className="absolute bottom-3 left-[118px] right-3 flex flex-col">
           <h1 className="truncate text-[19px] font-extrabold text-amber-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">{d.name}</h1>
           <p className="truncate text-[11px] text-zinc-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
@@ -453,7 +464,7 @@ export function WorldBossDetailView({
         </ModalShell>
       )}
 
-      {replay && <WorldBossReplay battle={replay} bossName={d.name} spriteSrc={spriteSrc} bgSrc={bossBgSrc} onClose={() => setReplay(null)} />}
+      {replay && <WorldBossReplay battle={replay} bossName={d.name} bgSrc={bgSrc} onClose={() => setReplay(null)} />}
     </div>
   );
 }

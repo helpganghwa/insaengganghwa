@@ -7,8 +7,12 @@
  * 효과로만 강조한다(금빛 번쩍임·광선·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지).
  * 탭하면 2.5배속, 건너뛰기로 바로 결과. 결과는 서버가 출발 순간 정한 그대로라 재생만 한다.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
+import { WorldBossSprite } from '@/components/WorldBossSprite';
+import { assetUrl } from '@/lib/asset-versions';
+import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
 
@@ -20,13 +24,11 @@ const STEP_FALL_MS = 900;
 export function WorldBossReplay({
   battle,
   bossName,
-  spriteSrc,
   bgSrc,
   onClose,
 }: {
   battle: WorldBossBattle;
   bossName: string;
-  spriteSrc: string;
   bgSrc: string;
   onClose: () => void;
 }) {
@@ -78,17 +80,26 @@ export function WorldBossReplay({
   const hit = st.last && st.last[0] >= 0;
   const face = (userId: string) => battle.avatars?.[userId] ?? { src: null, box: null };
 
+  // 대원이 칠 때 보스 흔들림 — Web Animations로 그 자리에서만 흔들어 대기 애니(띠)가 처음으로 돌아가지 않게 한다.
+  const shakeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hit || reduced) return;
+    shakeRef.current?.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }],
+      { duration: 280, easing: 'ease-in-out' },
+    );
+  }, [idx, hit, reduced]);
+
   return (
     <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-zinc-950 text-zinc-100" role="dialog" aria-label="원정대 전투">
       {!done ? (
         <>
           <button type="button" className="relative flex flex-1 flex-col justify-center overflow-hidden text-left" onClick={() => setFast((f) => !f)} aria-label="빠르게 보기">
             {/* 보스 무대 — 글자가 읽히도록 어둡게 깔고 위아래를 바닥색으로 녹인다 */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={bgSrc} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60" style={{ imageRendering: 'pixelated' }} />
+            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-70" />
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#09090b_0%,transparent_22%,transparent_60%,#09090b_100%)]" />
-            {/* 보스가 칠 때 화면 전체가 붉게 번쩍인다 */}
-            {struck && <span key={`f${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-red-600/30" />}
+            {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
+            {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}
             {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
               <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-amber-300/35" />
             )}
@@ -104,14 +115,16 @@ export function WorldBossReplay({
             </p>
             <div className="relative mx-auto mt-2 h-[180px] w-[180px]">
               <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_65%)]" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={hit ? `h${idx}` : 'b'}
-                src={spriteSrc}
-                alt={bossName}
-                className={`relative h-full w-full object-contain ${hit ? 'animate-wb-shake' : ''} ${struck ? 'scale-110' : ''} transition-transform duration-150`}
-                style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(251,191,36,0.55))' }}
-              />
+              {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림(다시 붙이지 않아 대기 애니가 끊기지 않는다),
+                  보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
+              <div ref={shakeRef} className="relative h-full w-full">
+                <WorldBossSprite
+                  alt={bossName}
+                  attack={struck ? idx : null}
+                  className="h-full w-full"
+                  style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(251,191,36,0.45))' }}
+                />
+              </div>
               {/* 이번 공격에서 나온 보상 — 큰 당첨은 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
               {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
                 <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(251,191,36,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(251,191,36,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(251,191,36,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(251,191,36,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(251,191,36,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(251,191,36,0.55)_320deg,transparent_340deg)]" />
@@ -184,13 +197,7 @@ export function WorldBossReplay({
         <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
           {/* 결과 — 보스·단계 상승을 크게, 표는 아래 */}
           <div className="flex flex-col items-center text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={spriteSrc}
-              alt=""
-              className="h-24 w-24 object-contain"
-              style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(251,191,36,0.5))' }}
-            />
+            <WorldBossSprite alt="" className="h-24 w-24" style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(251,191,36,0.5))' }} />
             <p className="text-[12px] text-zinc-400">{battle.leaderNickname} 원정대 · {battle.finale.rounds}라운드</p>
             <p className="mt-1 text-[30px] font-black leading-tight text-amber-300">{battle.finale.totalDamage.toLocaleString('ko-KR')}</p>
             <p className="text-[11px] text-zinc-500">원정대 피해</p>

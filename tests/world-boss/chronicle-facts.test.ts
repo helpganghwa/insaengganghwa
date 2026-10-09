@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { worldBossDigestLines } from '@/lib/game/world-boss/chronicle-facts';
 
-const boss = (zone: string, stage = 3) => ({ zone, name: '대륙의 재앙', stage, lootDiamond: stage * 100, lootBoxes: stage * 6 });
+const boss = (zone: string, stage = 3) => ({ zone, name: '잿불의 불사조', stage, lootDiamond: stage * 100, lootBoxes: stage * 6 });
 
 describe('연대기 월드보스 줄', () => {
   it('보스가 머무는 구역이 점령되면 전리품째 넘어감, 지키면 계속 쥠 — 보스 없는 구역은 줄이 없다', () => {
