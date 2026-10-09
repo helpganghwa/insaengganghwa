@@ -19,13 +19,13 @@ export function WorldBossZoneCard(
     | (Common & { mode: 'left'; leftWhen: (now: number) => string; settledGuildName: string | null }),
 ) {
   const left = props.mode === 'left';
-  // 한 장의 무대(10-10 사용자): 숲 배경 안에 이름·단계·남은 시간·전리품·진행 막대·버튼을 모두 담는다. 버튼은 '보스 토벌'로 통일.
+  // 한 장의 무대(10-10 사용자): 보스 왼쪽 · 정보 가운데 · 작은 '보스 토벌' 버튼 오른쪽. 색은 보스(잿빛 + 불씨 주황)에 맞춘다.
   return (
-    <div className={`relative mt-2 h-[92px] overflow-hidden rounded-[12px] border bg-zinc-950 ${left ? 'border-zinc-700 grayscale' : 'border-amber-500/50'}`}>
+    <div className={`relative mt-2 h-[92px] overflow-hidden rounded-[12px] border bg-stone-950 ${left ? 'border-zinc-700 grayscale' : 'border-orange-800/70'}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={assetUrl(worldBossBgUrl(props.region))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
-      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.25)_0%,rgba(0,0,0,0.7)_34%,rgba(0,0,0,0.6)_75%,rgba(0,0,0,0.7)_100%)]" />
-      {/* 보스 — 왼쪽 끝(정보·버튼과 겹치지 않게, 10-10) */}
+      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.72)_34%,rgba(12,10,9,0.62)_75%,rgba(12,10,9,0.72)_100%)]" />
+      {/* 보스 — 왼쪽 끝 */}
       {left ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -39,46 +39,44 @@ export function WorldBossZoneCard(
           region={props.region}
           alt=""
           className="absolute -bottom-2 left-0 z-[1] h-[88px] w-[88px]"
-          style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(251,146,60,0.7))' }}
+          style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(234,88,12,0.65))' }}
         />
       )}
-      {/* 칩 — 보스 그림 왼쪽 위 모서리 */}
-      <span
-        className={`absolute left-1.5 top-1.5 z-[2] whitespace-nowrap rounded-full px-1.5 text-[9px] font-extrabold ${left ? 'bg-zinc-700 text-zinc-200' : 'border border-orange-400/70 bg-black/70 text-orange-300'}`}
-      >
-        {left ? '원정 종료' : '월드보스'}
-      </span>
       {/* 정보 — 보스 오른쪽 */}
-      <div className="absolute inset-y-2 left-[90px] right-[80px] z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
-        <b className={`truncate whitespace-nowrap text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-amber-200'}`}>{props.name}</b>
-        <span className={`text-[18px] font-black leading-none [text-shadow:0_1px_3px_#000] ${left ? 'text-zinc-300' : 'text-amber-400'}`}>
+      <div className="absolute inset-y-2 left-[90px] right-[66px] z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
+        <span className="flex min-w-0 items-center gap-1">
+          <span className={`shrink-0 rounded-[4px] px-1 text-[8.5px] font-extrabold leading-[1.5] ${left ? 'bg-zinc-700 text-zinc-300' : 'bg-orange-700/85 text-orange-50'}`}>
+            {left ? '원정 종료' : '월드보스'}
+          </span>
+          <b className={`truncate text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-stone-100'}`}>{props.name}</b>
+        </span>
+        <span className={`text-[18px] font-black leading-none [text-shadow:0_1px_3px_#000] ${left ? 'text-zinc-300' : 'text-orange-400'}`}>
           {left ? `최종 ${props.stage}단계` : `${props.stage}단계`}
         </span>
         <Ticker intervalMs={60_000}>
           {(now) => (
-            <span className={`text-[10px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-400' : 'text-amber-100'}`}>{left ? props.leftWhen(now) : props.remainText(now)}</span>
+            <span className={`text-[10px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-400' : 'text-stone-300'}`}>{left ? props.leftWhen(now) : props.remainText(now)}</span>
           )}
         </Ticker>
-        <span className="flex items-center gap-1.5 text-[10.5px] font-bold text-zinc-100 [text-shadow:0_1px_2px_#000]">
+        <span className={`flex items-center gap-1.5 text-[10.5px] font-bold [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-300' : 'text-stone-100'}`}>
           <span>💎{props.lootDiamond.toLocaleString('ko-KR')}</span>
           <span>📦{props.lootBoxes.toLocaleString('ko-KR')}</span>
-          {left && (
-            <span className="truncate text-[9.5px] font-normal text-zinc-300">{props.settledGuildName ? `${props.settledGuildName} 금고로` : '주인 없어 사라짐'}</span>
-          )}
         </span>
       </div>
-      {/* 버튼 — 오른쪽 */}
+      {/* 버튼 — 오른쪽 가운데, 작게 */}
       <Link
         prefetch={false}
         href={props.href}
         onClick={props.onOpen}
-        className={`absolute bottom-2.5 right-2 z-[2] rounded-lg px-2.5 py-1.5 text-center text-[11.5px] font-extrabold shadow-[0_2px_6px_rgba(0,0,0,0.6)] ${left ? 'bg-zinc-600 text-zinc-100' : 'bg-amber-500 text-amber-950'}`}
+        className={`absolute right-2 top-1/2 z-[2] -translate-y-1/2 rounded-md px-2 py-1 text-center text-[10.5px] font-bold ${
+          left ? 'bg-zinc-700 text-zinc-200 ring-1 ring-zinc-500/60' : 'bg-orange-800/90 text-orange-50 ring-1 ring-orange-500/60'
+        }`}
       >
         보스 토벌
       </Link>
       {/* 진행 막대 — 아래 가장자리(종료 뒤엔 회색으로 가득) */}
-      <div className={`absolute inset-x-0 bottom-0 z-[3] h-[3px] ${left ? 'bg-zinc-700' : 'bg-amber-950/70'}`}>
-        <div className={`h-full ${left ? 'bg-zinc-500' : 'bg-gradient-to-r from-amber-500 to-yellow-300'}`} style={{ width: `${left ? 100 : props.pct}%` }} />
+      <div className={`absolute inset-x-0 bottom-0 z-[3] h-[3px] ${left ? 'bg-zinc-700' : 'bg-stone-800'}`}>
+        <div className={`h-full ${left ? 'bg-zinc-500' : 'bg-gradient-to-r from-red-700 via-orange-500 to-amber-300'}`} style={{ width: `${left ? 100 : props.pct}%` }} />
       </div>
     </div>
   );
