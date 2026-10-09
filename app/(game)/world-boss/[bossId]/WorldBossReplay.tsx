@@ -34,6 +34,7 @@ export function WorldBossReplay({
 }) {
   const { roster, events } = battle.finale;
   const drops = battle.finale.drops ?? [];
+  const weakBits = battle.finale.weak ?? [];
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [idx, setIdx] = useState(reduced ? events.length : 0); // 적용된 이벤트 수
   const [fast, setFast] = useState(false);
@@ -139,6 +140,19 @@ export function WorldBossReplay({
                   }`}
                 >
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
+                </span>
+              )}
+              {/* 약점 적중 — 맞힌 부위 아이콘. 두 부위 이상이면 금빛 테두리(보상 운이 좋아진 공격, 글자 없이 효과로만). */}
+              {hit && (weakBits[idx - 1] ?? 0) > 0 && (
+                <span
+                  key={`w${idx}`}
+                  className={`absolute bottom-[-10px] left-1/2 z-10 flex -translate-x-1/2 animate-wb-round items-center gap-1 rounded-full px-2 py-0.5 text-[14px] ${
+                    [1, 2, 4].filter((b) => (weakBits[idx - 1]! & b) !== 0).length >= 2 ? 'bg-amber-400/90 ring-2 ring-yellow-100 shadow-[0_0_14px_4px_rgba(251,191,36,0.7)]' : 'bg-black/70 ring-1 ring-amber-500/60'
+                  }`}
+                >
+                  {[1, 2, 4].filter((b) => (weakBits[idx - 1]! & b) !== 0).map((b) => (
+                    <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
+                  ))}
                 </span>
               )}
               {hit && st.last && (

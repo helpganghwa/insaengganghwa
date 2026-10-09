@@ -14,6 +14,10 @@ import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle } from '@/lib/game/world-boss/queries';
+import { bestLoadoutOf, currentPhase, knownWeakOf } from '@/lib/game/world-boss/loadout';
+import { EquipError, equipItems } from '@/lib/game/equipment/equip';
+import { db } from '@/lib/db/client';
+import { sql } from 'drizzle-orm';
 
 const MSG: Record<string, string> = {
   NOT_FOUND: '원정대를 찾을 수 없어요.',
@@ -33,6 +37,7 @@ const MSG: Record<string, string> = {
   RATE_LIMITED: '요청이 너무 빨라요. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정이에요.',
+  ALREADY_EQUIPPED: '이미 가장 좋은 조합으로 장착하고 있어요.',
 };
 const err = makeErr(MSG);
 
@@ -137,5 +142,29 @@ export async function getBattleAction(partyId: string) {
     return { status: 'success' as const, battle: b };
   } catch (e) {
     return fail(e, 'battle');
+  }
+}
+
+/**
+ * 약점에 맞춰 장착 — 공개된 약점과 아바타 보너스까지 계산한 부위별 가장 좋은 장비로 한 번에(docs/WORLD-BOSS.md §3).
+ * 장착은 게임 전체에 적용된다(탑과 같은 장착). 판정은 서버가 다시 계산하므로 클라가 보낸 값은 없다.
+ */
+export async function equipBestAction(bossId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!/^\d+$/.test(bossId)) return err('NOT_FOUND');
+  try {
+    const [b] = (await db.execute(sql`select stage, server_id, status from world_bosses where id = ${bossId}::bigint`)) as unknown as { stage: number; server_id: number; status: string }[];
+    if (!b || b.server_id !== g.sid) return err('NOT_FOUND');
+    if (b.status !== 'active') return err('BOSS_NOT_ACTIVE');
+    const known = new Set((await knownWeakOf(bossId, currentPhase(b.stage).index)).map((w) => w.code));
+    const best = await bestLoadoutOf(g.sid, g.u, known);
+    if (!best) return err('ALREADY_EQUIPPED');
+    await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid);
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof EquipError) return err('UNKNOWN');
+    return fail(e, 'equipBest');
   }
 }

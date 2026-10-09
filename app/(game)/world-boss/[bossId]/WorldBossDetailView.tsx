@@ -30,10 +30,12 @@ import {
   createPartyAction,
   decideJoinAction,
   departPartyAction,
+  equipBestAction,
   getBattleAction,
   leavePartyAction,
   requestJoinAction,
 } from '../actions';
+import { WeakPanel } from './WeakPanel';
 import { WorldBossReplay } from './WorldBossReplay';
 
 type ActionRes = { status: 'success' } | { status: 'error'; message: string };
@@ -191,6 +193,18 @@ export function WorldBossDetailView({
         </p>
       </div>
 
+      {/* 약점 · 내 장착 */}
+      {active && (
+        <WeakPanel
+          phase={d.phase}
+          weakKnown={d.weakKnown}
+          weakTotal={d.weakTotal}
+          mine={d.mine}
+          pending={pending}
+          onEquipBest={() => run(() => equipBestAction(d.id), { title: '약점에 맞춰 장착했어요' })}
+        />
+      )}
+
       {/* 지금 할 일 — 상태별 */}
       {active && !mp && (
         <div className="mx-3 mt-3">
@@ -267,7 +281,7 @@ export function WorldBossDetailView({
                   <span className="min-w-0 flex-1 truncate text-[12px] text-zinc-200">
                     {r.nickname}
                     <span className="ml-1 text-[10px] text-zinc-500">
-                      {r.guildName ?? '무소속'} · {formatCompactKR(r.combat)}
+                      {r.guildName ?? '무소속'} · {formatCompactKR(r.combat)}{r.weakCount > 0 && <span className="text-amber-400"> · 약점 {r.weakCount}</span>}
                     </span>
                   </span>
                   <button
@@ -526,7 +540,7 @@ function MemberChip({ p, serverId, leader }: { p: WorldBossPerson; serverId: num
           {p.nickname}
         </span>
         <span className="block truncate text-[9.5px] text-zinc-500">
-          {p.guildName ?? '무소속'} · {formatCompactKR(p.combat)}
+          {p.guildName ?? '무소속'} · {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-amber-400"> · 약점 {p.weakCount}</span>}
         </span>
       </span>
     </>

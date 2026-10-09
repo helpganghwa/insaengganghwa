@@ -8,13 +8,12 @@ import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profilesByIds } from '@/lib/game/friends';
-import { userEquipment } from '@/lib/db/schema/equipment';
-import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { guilds } from '@/lib/db/schema/guild';
 import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/schema/world-boss';
-import { WORLD_BOSS_LEFT_NOTE_MS, worldBossStageFor } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_PER_SLOT, worldBossStageFor } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
+import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
 import type { WorldBossDetail, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
@@ -132,12 +131,12 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
 // ── 보스 상세(/world-boss/<id>) ──────────────────────────────────────────────
 
 
-/** 사람들(원정대원·신청자) — 닉네임·공개 코드·길드·장비 전투력. 한 화면에 20명 남짓이라 즉석 계산. */
-async function peopleOn(serverId: number, userIds: string[]): Promise<Map<string, WorldBossPerson>> {
+/** 사람들(원정대원·신청자) — 닉네임·공개 코드·길드·월드보스 전투력(장착 3개 + 보너스). 한 화면에 20명 남짓이라 즉석 계산. */
+async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<string>): Promise<Map<string, WorldBossPerson>> {
   const out = new Map<string, WorldBossPerson>();
   if (userIds.length === 0) return out;
   const ids = [...new Set(userIds)];
-  const [rows, eqRows] = await Promise.all([
+  const [rows, lo] = await Promise.all([
     db.execute(sql`
       select c.user_id::text as uid, c.nickname, p.public_code as code, g.name as gname
         from characters c
@@ -145,18 +144,15 @@ async function peopleOn(serverId: number, userIds: string[]): Promise<Map<string
         left join guild_members gm on gm.user_id = c.user_id and gm.server_id = c.server_id
         left join guilds g on g.id = gm.guild_id
        where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null }[]>,
-    db
-      .select({ uid: userEquipment.userId, cid: userEquipment.catalogItemId, el: userEquipment.enhanceLevel, tl: userEquipment.transcendLevel })
-      .from(userEquipment)
-      .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids))),
+    loadoutsOf(serverId, ids, known),
   ]);
-  const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
-  for (const r of eqRows) (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({ catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl });
   const faces = new Map((await profilesByIds(ids, serverId).catch(() => [])).map((f) => [f.userId, f] as const));
   for (const r of rows) {
     const f = faces.get(r.uid);
+    const l = lo.get(r.uid);
     out.set(r.uid, {
-      userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, combat: Math.round(combatPowerFromOwned(owned.get(r.uid) ?? [])),
+      userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname,
+      combat: l?.power ?? 0, weakCount: l?.weakCount ?? 0, avatarCount: l?.avatarCount ?? 0,
       avatarSrc: f?.profileSouth ?? null, faceBox: f?.faceBox ?? null,
     });
   }
@@ -201,7 +197,11 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
 
   let me: WorldBossMe | null = null;
   let myParty: WorldBossMyParty | null = null;
+  let mine: WorldBossDetail['mine'] = null;
   const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
+  const phase = currentPhase(b.stage);
+  const weakKnown = await knownWeakOf(b.id, phase.index);
+  const known = new Set(weakKnown.map((w) => w.code));
   if (userId) {
     const [[mem], [req], [gm]] = await Promise.all([
       db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
@@ -221,13 +221,19 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
           : Promise.resolve([] as { uid: string }[]),
       ]);
-      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)]);
-      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0, avatarSrc: null, faceBox: null };
+      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known);
+      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null };
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
         requests: reqIds.map((r) => person(r.uid)),
       };
+    }
+    // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
+    if (active && state !== 'fought') {
+      const [lo, best] = await Promise.all([loadoutsOf(serverId, [userId], known), bestLoadoutOf(serverId, userId, known)]);
+      const l = lo.get(userId);
+      if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
     }
   }
 
@@ -238,6 +244,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     status: active ? 'active' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
     stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
     ownerGuildName: b.owner_name, settledGuildName: b.settled_name, parties, me, myParty,
+    phase, weakKnown, weakTotal: WORLD_BOSS_WEAK_PER_SLOT * 3, mine,
   };
 }
 

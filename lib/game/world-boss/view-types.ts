@@ -24,7 +24,11 @@ export type WorldBossPerson = {
   nickname: string;
   code: string | null;
   guildName: string | null;
+  /** 월드보스 전투력 — 장착 3개 + 아바타·공개된 약점 보너스(docs/WORLD-BOSS.md §3). */
   combat: number;
+  /** 공개된 약점을 장착한 부위 수 · 아바타 보너스를 받는 부위 수(0~3). */
+  weakCount: number;
+  avatarCount: number;
   /** 활성 프로필 정면 그림 + 얼굴 박스(친구 목록과 같은 썸네일 크롭). 없으면 null. */
   avatarSrc: string | null;
   faceBox: { cx: number; cy: number; h: number } | null;
@@ -75,6 +79,14 @@ export type WorldBossDetail = {
   parties: WorldBossPartyCard[];
   me: WorldBossMe | null;
   myParty: WorldBossMyParty | null;
+  /** 지금 공격 중인 단계의 페이즈(5단계마다). */
+  phase: { index: number; from: number; to: number };
+  /** 이 페이즈에서 맞혀서 공개된 약점(발견자 이름). 공개 전 약점은 아무도 모른다. */
+  weakKnown: import('./loadout').KnownWeak[];
+  /** 페이즈 약점 총수(부위별 10 × 3). */
+  weakTotal: number;
+  /** 내 장착 상태와 제안 — 보스가 머무는 중이고 캐릭터가 있을 때만. */
+  mine: { loadout: import('./loadout').Loadout; best: { power: number; pieces: import('./loadout').LoadoutPiece[] } | null } | null;
 };
 
 /** 출발한 원정대의 전투 기록 — 재생 화면(WorldBossReplay)이 쓴다. finale은 simulate.ts의 WorldBossFinale과 같은 모양. */
@@ -86,6 +98,8 @@ export type WorldBossBattle = {
     events: [number, number, number, number][];
     /** events와 짝 — 공격마다 뽑은 [다이아, 상자](쓰러짐은 [0,0]). 옛 기록엔 없다. */
     drops?: [number, number][];
+    /** events와 짝 — 공격에서 약점을 맞힌 부위 비트(무기 1·방어구 2·장신구 4). 옛 기록엔 없다. */
+    weak?: number[];
     rounds: number;
     totalDamage: number;
   };
