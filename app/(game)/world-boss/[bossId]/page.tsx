@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
-import { worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
+import { worldBossBgUrl, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 import { getWorldBossDetail } from '@/lib/game/world-boss/queries';
 
 import { WorldBossDetailView } from './WorldBossDetailView';
@@ -22,6 +22,7 @@ export default async function WorldBossPage({ params }: { params: Promise<{ boss
       serverId={serverId}
       spriteSrc={assetUrl(worldBossSpriteUrl(detail.region))}
       bgSrc={assetUrl(`/sprites/guild/region/${detail.region}.png`)}
+      bossBgSrc={assetUrl(worldBossBgUrl(detail.region))}
     />
   );
 }

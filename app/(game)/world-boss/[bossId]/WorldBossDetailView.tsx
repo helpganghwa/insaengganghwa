@@ -49,11 +49,14 @@ export function WorldBossDetailView({
   serverId,
   spriteSrc,
   bgSrc,
+  bossBgSrc,
 }: {
   detail: WorldBossDetail;
   serverId: number;
   spriteSrc: string;
   bgSrc: string;
+  /** 보스 전용 배경 — 전투 재생 무대. */
+  bossBgSrc: string;
 }) {
   const { showError, showHeaderToast } = useResourceToast();
   const [pending, start] = useTransition();
@@ -450,7 +453,7 @@ export function WorldBossDetailView({
         </ModalShell>
       )}
 
-      {replay && <WorldBossReplay battle={replay} bossName={d.name} spriteSrc={spriteSrc} onClose={() => setReplay(null)} />}
+      {replay && <WorldBossReplay battle={replay} bossName={d.name} spriteSrc={spriteSrc} bgSrc={bossBgSrc} onClose={() => setReplay(null)} />}
     </div>
   );
 }

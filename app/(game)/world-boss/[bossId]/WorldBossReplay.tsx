@@ -21,11 +21,13 @@ export function WorldBossReplay({
   battle,
   bossName,
   spriteSrc,
+  bgSrc,
   onClose,
 }: {
   battle: WorldBossBattle;
   bossName: string;
   spriteSrc: string;
+  bgSrc: string;
   onClose: () => void;
 }) {
   const { roster, events } = battle.finale;
@@ -81,6 +83,10 @@ export function WorldBossReplay({
       {!done ? (
         <>
           <button type="button" className="relative flex flex-1 flex-col justify-center overflow-hidden text-left" onClick={() => setFast((f) => !f)} aria-label="빠르게 보기">
+            {/* 보스 무대 — 글자가 읽히도록 어둡게 깔고 위아래를 바닥색으로 녹인다 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={bgSrc} alt="" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-60" style={{ imageRendering: 'pixelated' }} />
+            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#09090b_0%,transparent_22%,transparent_60%,#09090b_100%)]" />
             {/* 보스가 칠 때 화면 전체가 붉게 번쩍인다 */}
             {struck && <span key={`f${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-red-600/30" />}
             {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
