@@ -83,6 +83,15 @@ export function WorldBossReplay({
 
   // 대원이 칠 때 보스 흔들림 — Web Animations로 그 자리에서만 흔들어 대기 애니(띠)가 처음으로 돌아가지 않게 한다.
   const shakeRef = useRef<HTMLDivElement>(null);
+  // 목록 — 지금 공격하는(또는 쓰러지는) 대원 줄을 화면 안으로.
+  const listRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  useEffect(() => {
+    const ev = idx > 0 ? events[idx - 1] : null;
+    if (!ev) return;
+    const who = ev[0] >= 0 ? ev[0] : ev[1];
+    rowRefs.current[who]?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+  }, [idx, events, reduced]);
   useEffect(() => {
     if (!hit || reduced) return;
     shakeRef.current?.animate(
@@ -95,26 +104,31 @@ export function WorldBossReplay({
     <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-zinc-950 text-zinc-100" role="dialog" aria-label="원정대 전투">
       {!done ? (
         <>
-          <button type="button" className="relative flex flex-1 flex-col justify-center overflow-hidden text-left" onClick={() => setFast((f) => !f)} aria-label="빠르게 보기">
-            {/* 보스 무대 — 글자가 읽히도록 어둡게 깔고 위아래를 바닥색으로 녹인다 */}
-            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-70" />
-            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,#09090b_0%,transparent_22%,transparent_60%,#09090b_100%)]" />
+          {/* 위 — 무대(배경 + 보스). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
+          <button
+            type="button"
+            className="relative h-[46%] min-h-[290px] shrink-0 overflow-hidden text-left"
+            onClick={() => setFast((f) => !f)}
+            aria-label="빠르게 보기"
+          >
+            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-85" />
+            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_70%,#09090b_100%)]" />
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}
             {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
               <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-amber-300/35" />
             )}
-            <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+12px)] flex items-center justify-between px-4 text-[11px]">
-              <span className="text-zinc-400">
-                생존 <b className="text-zinc-100">{st.alive}</b>/{roster.length}
+            <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+10px)] z-10 flex items-center justify-between px-3 text-[11px]">
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-zinc-300">
+                생존 <b className="text-white">{st.alive}</b>/{roster.length}
               </span>
-              <span className="text-zinc-500">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
+              {/* 라운드 — 바뀔 때마다 크게 */}
+              <span key={`r${st.round}`} className="animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-amber-300">
+                {st.round}라운드
+              </span>
+              <span className="rounded-full bg-black/60 px-2 py-0.5 text-zinc-400">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
             </div>
-            {/* 라운드 — 바뀔 때마다 크게 */}
-            <p key={`r${st.round}`} className="animate-wb-round text-center text-[13px] font-black tracking-widest text-amber-300">
-              {st.round}라운드
-            </p>
-            <div className="relative mx-auto mt-2 h-[180px] w-[180px]">
+            <div className="absolute left-1/2 top-[52%] h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2">
               <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.22),transparent_65%)]" />
               {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림(다시 붙이지 않아 대기 애니가 끊기지 않는다),
                   보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
@@ -130,10 +144,15 @@ export function WorldBossReplay({
               {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
                 <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(251,191,36,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(251,191,36,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(251,191,36,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(251,191,36,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(251,191,36,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(251,191,36,0.55)_320deg,transparent_340deg)]" />
               )}
+              {hit && st.last && (
+                <span key={`d${idx}`} className="absolute left-1/2 top-2 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#f59e0b,0_1px_2px_#000,0_0_2px_#000]">
+                  {formatCompactKR(st.last[2])}
+                </span>
+              )}
               {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
                 <span
                   key={`g${idx}`}
-                  className={`absolute left-1/2 top-14 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
+                  className={`absolute left-1/2 top-12 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
                     st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90
                       ? 'bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 text-[19px] text-amber-950 shadow-[0_0_24px_6px_rgba(251,191,36,0.85)] ring-2 ring-yellow-100'
                       : 'bg-black/70 text-[13px] text-amber-200'
@@ -142,67 +161,88 @@ export function WorldBossReplay({
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
                 </span>
               )}
-              {/* 약점 적중 — 맞힌 부위 아이콘. 두 부위 이상이면 금빛 테두리(보상 운이 좋아진 공격, 글자 없이 효과로만). */}
-              {hit && (weakBits[idx - 1] ?? 0) > 0 && (
-                <span
-                  key={`w${idx}`}
-                  className={`absolute bottom-[-10px] left-1/2 z-10 flex -translate-x-1/2 animate-wb-round items-center gap-1 rounded-full px-2 py-0.5 text-[14px] ${
-                    [1, 2, 4].filter((b) => (weakBits[idx - 1]! & b) !== 0).length >= 2 ? 'bg-amber-400/90 ring-2 ring-yellow-100 shadow-[0_0_14px_4px_rgba(251,191,36,0.7)]' : 'bg-black/70 ring-1 ring-amber-500/60'
-                  }`}
-                >
-                  {[1, 2, 4].filter((b) => (weakBits[idx - 1]! & b) !== 0).map((b) => (
-                    <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
-                  ))}
-                </span>
-              )}
-              {hit && st.last && (
-                <span key={`d${idx}`} className="absolute left-1/2 top-4 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[22px] font-black text-white [text-shadow:0_0_8px_#f59e0b,0_1px_2px_#000]">
-                  {formatCompactKR(st.last[2])}
-                </span>
-              )}
             </div>
-            <p className="mt-1 text-center text-[15px] font-extrabold text-amber-200">{bossName}</p>
-            <p className="mt-0.5 text-center text-[12px] text-zinc-400">
-              원정대 피해 <b className="font-mono text-[17px] text-amber-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
-            </p>
-            <div className="mx-3 mt-5 grid grid-cols-5 gap-1.5">
-              {roster.map((m, i) => {
-                const fellR = st.fell[i];
-                const isHit = st.last && st.last[0] === i;
-                const isStruck = struck && st.last![1] === i;
-                const f = face(m.userId);
-                return (
-                  <div
-                    key={m.userId}
-                    className={`relative flex flex-col items-center gap-0.5 rounded-lg border px-0.5 pb-1 pt-1.5 text-[9.5px] transition ${
-                      isStruck ? 'border-red-500 bg-red-950/70' : isHit ? 'scale-105 border-amber-400 bg-amber-900/50' : 'border-zinc-800 bg-zinc-900'
-                    } ${fellR != null && !isStruck ? 'opacity-35 grayscale' : ''}`}
-                  >
-                    {f.src ? (
-                      <Avatar src={f.src} box={f.box} size="h-9 w-9 rounded-full bg-zinc-800" />
-                    ) : (
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 text-[13px] font-black">{m.nickname.slice(0, 1)}</span>
-                    )}
-                    <span className="w-full truncate text-center font-bold">{m.nickname}</span>
-                    <span className="font-mono tabular-nums text-zinc-400">{formatCompactKR(st.dmg[i]!)}</span>
-                    {(st.gotD[i]! > 0 || st.gotB[i]! > 0) && (
-                      <span className="w-full truncate text-center text-[8.5px] font-bold text-amber-300">
-                        {st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : ''}
-                        {st.gotD[i]! > 0 && st.gotB[i]! > 0 ? ' ' : ''}
-                        {st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''}
-                      </span>
-                    )}
-                    {fellR != null && <span className="absolute right-0.5 top-0.5 rounded bg-red-900/80 px-0.5 text-[7.5px] text-red-200">쓰러짐</span>}
-                  </div>
-                );
-              })}
+            {/* 보스 이름 · 원정대 피해 — 무대 아래쪽 어두운 띠 위 */}
+            <div className="absolute inset-x-0 bottom-2 z-10 flex items-baseline justify-between px-3">
+              <span className="text-[14px] font-extrabold text-amber-200 [text-shadow:0_1px_3px_#000]">{bossName}</span>
+              <span className="text-[11px] text-zinc-300 [text-shadow:0_1px_3px_#000]">
+                원정대 피해 <b className="font-mono text-[16px] text-amber-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
+              </span>
             </div>
-            <p className="mx-6 mt-4 text-center text-[10px] text-zinc-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
           </button>
+
+          {/* 아래 — 원정대원 목록(참가 순). 지금 공격하는 대원 줄이 빛나고 화면 안으로 따라온다. */}
+          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+            <div className="sticky top-0 z-10 flex items-center bg-zinc-950 py-1.5 text-[10.5px] text-zinc-500">
+              <span className="flex-1">원정대원 {roster.length}명</span>
+              <span className="w-10 text-right">공격</span>
+              <span className="w-16 text-right">피해</span>
+              <span className="w-16 text-right">획득</span>
+            </div>
+            {roster.map((m, i) => {
+              const fellR = st.fell[i];
+              const isHit = !!hit && st.last![0] === i;
+              const isStruck = !!struck && st.last![1] === i;
+              const f = face(m.userId);
+              const bits = isHit ? (weakBits[idx - 1] ?? 0) : 0;
+              const slots = [1, 2, 4].filter((b) => (bits & b) !== 0);
+              return (
+                <div
+                  key={m.userId}
+                  ref={(el) => {
+                    rowRefs.current[i] = el;
+                  }}
+                  className={`mb-1 flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${
+                    isStruck ? 'border-red-500 bg-red-950/70' : isHit ? 'border-amber-400 bg-amber-900/40' : 'border-zinc-800 bg-zinc-900'
+                  } ${fellR != null && !isStruck ? 'opacity-45' : ''}`}
+                >
+                  {f.src ? (
+                    <Avatar src={f.src} box={f.box} size={`h-8 w-8 shrink-0 rounded-full bg-zinc-800 ${fellR != null && !isStruck ? 'grayscale' : ''}`} />
+                  ) : (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-[12px] font-black">{m.nickname.slice(0, 1)}</span>
+                  )}
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate text-[12px] font-bold">
+                      <span>
+                        {m.nickname === battle.leaderNickname && <span className="mr-0.5 text-amber-300">★</span>}
+                        {m.nickname}
+                      </span>
+                    </span>
+                    <span className="flex min-w-0 items-center gap-1 text-[10px] text-zinc-500">
+                      <span className="truncate">{fellR != null ? <span className="text-red-300">{fellR}라운드에 쓰러짐</span> : (m.guildName ?? '무소속')}</span>
+                      {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
+                      {slots.length > 0 && (
+                        <span
+                          key={`w${idx}`}
+                          className={`flex shrink-0 animate-wb-round items-center gap-0.5 rounded-full px-1.5 text-[11px] ${
+                            slots.length >= 2 ? 'bg-amber-400 text-amber-950 ring-1 ring-yellow-100 shadow-[0_0_10px_2px_rgba(251,191,36,0.6)]' : 'bg-amber-500/25 text-amber-200 ring-1 ring-amber-500/60'
+                          }`}
+                        >
+                          약점
+                          {slots.map((b) => (
+                            <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="w-10 text-right font-mono text-[11px] tabular-nums text-zinc-400">{st.atk[i]}</span>
+                  <span className={`w-16 text-right font-mono text-[11.5px] tabular-nums ${isHit ? 'font-bold text-amber-300' : 'text-zinc-200'}`}>{formatCompactKR(st.dmg[i]!)}</span>
+                  <span className="w-16 truncate text-right text-[10.5px] font-bold text-amber-300">
+                    {st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : ''}
+                    {st.gotD[i]! > 0 && st.gotB[i]! > 0 ? ' ' : ''}
+                    {st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''}
+                    {st.gotD[i]! === 0 && st.gotB[i]! === 0 ? <span className="font-normal text-zinc-600">-</span> : null}
+                  </span>
+                </div>
+              );
+            })}
+            <p className="mt-1 text-center text-[10px] text-zinc-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
+          </div>
           <button
             type="button"
             onClick={() => setIdx(events.length)}
-            className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] rounded-lg border border-zinc-700 py-2.5 text-[12.5px] font-bold text-zinc-300"
+            className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-zinc-700 py-2.5 text-[12.5px] font-bold text-zinc-300"
           >
             건너뛰기
           </button>
