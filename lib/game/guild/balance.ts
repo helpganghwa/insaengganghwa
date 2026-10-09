@@ -172,7 +172,8 @@ export const WORLD_BOSS_PARTY_MAX = 10;
  * 단계 체력(서버 공통 — 누구 땅이든 같다). 단계 k(1부터)를 넘기는 데 BASE × GROWTH^(k-1) 피해.
  * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.
  */
-export const WORLD_BOSS_STAGE_BASE_HP = 4_000_000; // 2026-10-08 실서버 시뮬로 확정(Winners 약 20·로제 17·Phoenix 14단계)
+// 실서버 시뮬로 확정(장착 3개 + 아바타 + 약점 기준, Winners 20.4·로제 17.7·Phoenix 14.6단계 — docs/WORLD-BOSS.md §3).
+export const WORLD_BOSS_STAGE_BASE_HP = 650_000;
 export const WORLD_BOSS_STAGE_GROWTH = 1.1;
 /** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 금고로(집행관 몫 없음). 상자는 3의 배수. */
 export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 150, boxes: 12 } as const; // 2026-10-08 확정(L1)
@@ -200,15 +201,46 @@ export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number;
 ];
 export const WORLD_BOSS_ATTACK_DROP_TOTAL = 100_000;
 
-/** [0,1) 난수 하나 → 공격 1회 보상. 서버 시드 RNG에서만 부른다(CLAUDE §3.1). */
-export function worldBossRollDrop(r: number): { diamond: number; boxes: number } {
+/** [0,1) 난수 하나 → 공격 1회 보상(lucky = 약점 2개 이상 적중). 서버 시드 RNG에서만 부른다(CLAUDE §3.1). */
+export function worldBossRollDrop(r: number, lucky = false): { diamond: number; boxes: number } {
   let x = Math.floor(Math.max(0, Math.min(0.999999999, r)) * WORLD_BOSS_ATTACK_DROP_TOTAL);
+  if (lucky) {
+    // 행운: 앞 35%는 꽝, 나머지 65%를 꽝이 아닌 칸(50%)에 비율대로 펼친다.
+    const miss = WORLD_BOSS_ATTACK_DROPS[0]!.p;
+    if (x < WORLD_BOSS_LUCKY_MISS_P) return { diamond: 0, boxes: 0 };
+    x = miss + Math.floor(((x - WORLD_BOSS_LUCKY_MISS_P) * (WORLD_BOSS_ATTACK_DROP_TOTAL - miss)) / (WORLD_BOSS_ATTACK_DROP_TOTAL - WORLD_BOSS_LUCKY_MISS_P));
+  }
   for (const d of WORLD_BOSS_ATTACK_DROPS) {
     if (x < d.p) return { diamond: d.diamond, boxes: d.boxes };
     x -= d.p;
   }
   return { diamond: 0, boxes: 0 };
 }
+
+/**
+ * 원정대원 전투력(2026-10-09 사용자 확정 — docs/WORLD-BOSS.md §3).
+ * 장착한 장비 3개 각각 = 장비 전투력 × (1 + 아바타 보너스 + 약점 보너스), 둘은 더한다.
+ *  - 아바타 보너스: 대표 아바타를 만들 때 입은 장비와 같은 부위 장비면 +50%. 약점 장비로 갈아입은 부위도 유지한다
+ *    (아바타를 다시 만들 부담 없이 약점을 맞춰 입게 — 시뮬에서 정찰 가치를 살리는 조건).
+ *  - 약점 보너스: 그 순간 보스 페이즈의 약점 장비면 +100%.
+ */
+export const WORLD_BOSS_AVATAR_BONUS = 0.5;
+export const WORLD_BOSS_WEAK_BONUS = 1.0;
+/** 페이즈 = 5단계마다(공격 중인 단계 1~5 → 0, 6~10 → 1 …). 약점은 소환 때 페이즈마다 부위별 10개를 뽑아 고정한다. */
+export const WORLD_BOSS_PHASE_STAGES = 5;
+export const WORLD_BOSS_WEAK_PER_SLOT = 10;
+/** 뽑아 두는 페이즈 수 — 마지막 페이즈 뒤로는 마지막 약점이 이어진다(30단계 상한 + 여유). */
+export const WORLD_BOSS_PHASES = 7;
+/** 공격 중인 단계(1부터) → 페이즈 인덱스. */
+export function worldBossPhaseOf(attackingStage: number): number {
+  return Math.min(WORLD_BOSS_PHASES - 1, Math.floor(Math.max(0, attackingStage - 1) / WORLD_BOSS_PHASE_STAGES));
+}
+/**
+ * 약점 적중 행운(2026-10-09 확정): 한 공격에서 약점 장비를 2개 이상 맞히면 공격 보상 꽝이 50% → 35%.
+ * 나머지 칸은 비율 그대로 늘린다(65/50 = 1.3배). 부위별 10개라 1개 적중은 아무 장비로도 흔해(공격 58%) 2개 이상으로 둔다.
+ */
+export const WORLD_BOSS_LUCKY_MIN_WEAK = 2;
+export const WORLD_BOSS_LUCKY_MISS_P = 35_000;
 
 /** 단계 k(1부터)를 넘기는 데 필요한 피해. */
 export function worldBossStageHp(stage: number): number {

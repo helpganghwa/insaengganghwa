@@ -7,6 +7,9 @@ import {
   WORLD_BOSS_ATTACK_DROP_TOTAL,
   WORLD_BOSS_STAGE_BASE_HP,
   WORLD_BOSS_STAGE_GROWTH,
+  WORLD_BOSS_LUCKY_MISS_P,
+  WORLD_BOSS_PHASES,
+  worldBossPhaseOf,
   worldBossExpectedAttacks,
   worldBossLootFor,
   worldBossRollDrop,
@@ -71,5 +74,26 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     expect(worldBossExpectedAttacks(5)).toBe(3);
     expect(worldBossExpectedAttacks(10)).toBe(5.5);
     expect(worldBossExpectedAttacks(0)).toBe(0);
+  });
+
+  it('페이즈: 5단계마다 바뀌고 마지막 페이즈에서 멈춘다', () => {
+    expect(worldBossPhaseOf(1)).toBe(0);
+    expect(worldBossPhaseOf(5)).toBe(0);
+    expect(worldBossPhaseOf(6)).toBe(1);
+    expect(worldBossPhaseOf(30)).toBe(5);
+    expect(worldBossPhaseOf(999)).toBe(WORLD_BOSS_PHASES - 1);
+    expect(worldBossPhaseOf(0)).toBe(0);
+  });
+
+  it('행운 뽑기: 꽝 35%, 나머지 칸은 비율 그대로(1.3배)', () => {
+    expect(worldBossRollDrop(0, true)).toEqual({ diamond: 0, boxes: 0 });
+    expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL - 1e-7, true)).toEqual({ diamond: 0, boxes: 0 });
+    expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL, true)).toEqual({ diamond: 5, boxes: 0 });
+    expect(worldBossRollDrop(0.9999999, true)).toEqual({ diamond: 0, boxes: 300 });
+    // 고른 격자로 기대값을 재면 일반의 1.3배 언저리
+    let d = 0, b = 0; const N = 200_000;
+    for (let i = 0; i < N; i++) { const r = worldBossRollDrop((i + 0.5) / N, true); d += r.diamond; b += r.boxes; }
+    expect(d / N).toBeCloseTo(9.25 * 1.3, 0);
+    expect(b / N).toBeCloseTo(1.89 * 1.3, 1);
   });
 });
