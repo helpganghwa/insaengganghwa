@@ -171,12 +171,12 @@ function hmsFrom(ms: number): string {
   return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** 월드보스 남은 시간 — 띠·카드용 분 단위 표기("19시간 12분 남음" / "12분 남음"). 떠나는 시각이 지나면 크론 정산 전까지 '곧 떠나요'. */
+/** 원정 마감까지 남은 시간 — 카드용 분 단위("마감까지 19시간 12분"). 마감 시각이 지나면 크론 정산 전까지 '곧 원정 마감'. */
 function wbRemain(ms: number): string {
   const m = Math.ceil(ms / 60_000);
-  if (m <= 0) return '곧 떠나요';
+  if (m <= 0) return '곧 원정 마감';
   const h = Math.floor(m / 60);
-  return h > 0 ? `${h}시간 ${m % 60}분 남음` : `${m}분 남음`;
+  return h > 0 ? `마감까지 ${h}시간 ${m % 60}분` : `마감까지 ${m}분`;
 }
 /** 떠난 날 표기 — KST 날짜 차이로 오늘/어제/그제(기록은 48시간만 남으니 그 너머는 없다). */
 function wbDayWord(leftAt: number, now: number): string {
@@ -1267,7 +1267,7 @@ export function WorldMapView({
                             </div>
                             <div className="mt-1 text-[10.5px] font-semibold text-zinc-600 dark:text-zinc-300">
                               💎{boss.lootDiamond.toLocaleString('ko-KR')} 📦{boss.lootBoxes} 쌓임
-                              <span className="font-normal text-zinc-500"> · 떠날 때 {isMine ? '우리' : (selected.ownerGuildName ?? '주인')} 금고로</span>
+                              <span className="font-normal text-zinc-500"> · 마감 때 {isMine ? '우리' : (selected.ownerGuildName ?? '주인')} 금고로</span>
                             </div>
                           </div>
                         </div>
@@ -1299,10 +1299,10 @@ export function WorldMapView({
                             style={{ imageRendering: 'pixelated' }}
                           />
                           <span className="min-w-0">
-                            {wbDayWord(left.leftAt, now)} {josa(`${left.name}#{이}`)} 떠나며{' '}
+                            {wbDayWord(left.leftAt, now)} {josa(`${left.name}#{이}`)} 재로 흩어지며{' '}
                             {left.settledGuildName
-                              ? `${left.settledGuildName} 금고에 💎${left.lootDiamond.toLocaleString('ko-KR')} 📦${left.lootBoxes.toLocaleString('ko-KR')}`
-                              : '남긴 전리품은 주인이 없어 사라졌어요'}
+                              ? josa(`${left.settledGuildName} 금고에 💎${left.lootDiamond.toLocaleString('ko-KR')} 📦${left.lootBoxes.toLocaleString('ko-KR')}#{을} 남겼어요.`)
+                              : '전리품은 주인이 없어 사라졌어요.'}
                           </span>
                         </div>
                       )}

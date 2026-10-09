@@ -150,7 +150,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
                               level = ${next.level}, xp = ${next.xp.toString()}::bigint
              where id = ${b.owner}::bigint`);
           const body =
-            `${b.zone_name}의 ${bossName}#{이} 떠났어요. ${b.stage}단계까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
+            `${b.zone_name}의 ${bossName}#{이} 재로 흩어졌어요. ${b.stage}단계까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
             `길드 관리의 세금 분배에서 나눌 수 있어요.`;
           await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
@@ -181,7 +181,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
       const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${settled.guildId}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
         title: '월드보스 전리품',
-        body: josa(`${settled.zoneName}의 ${worldBossName(settled.region)}#{이} 떠나며 길드 금고에 💎${settled.lootDiamond.toLocaleString('ko-KR')}·📦${settled.lootBoxes.toLocaleString('ko-KR')} 전리품을 남겼어요.`),
+        body: josa(`${settled.zoneName}의 ${worldBossName(settled.region)}#{이} 재로 흩어지며 길드 금고에 💎${settled.lootDiamond.toLocaleString('ko-KR')}·📦${settled.lootBoxes.toLocaleString('ko-KR')} 전리품을 남겼어요.`),
         url: '/guild/distribute',
         tag: `world-boss-left-${settled.id}`,
         category: 'world_boss',

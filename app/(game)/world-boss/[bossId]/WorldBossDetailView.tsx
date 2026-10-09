@@ -43,9 +43,9 @@ const FAIL = '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주
 
 function remain(ms: number): string {
   const m = Math.ceil(ms / 60_000);
-  if (m <= 0) return '곧 떠나요';
+  if (m <= 0) return '곧 원정 마감';
   const h = Math.floor(m / 60);
-  return h > 0 ? `${h}시간 ${m % 60}분 남음` : `${m}분 남음`;
+  return h > 0 ? `마감까지 ${h}시간 ${m % 60}분` : `마감까지 ${m}분`;
 }
 const fmtAvg = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const won = (n: number) => n.toLocaleString('ko-KR');
@@ -151,7 +151,7 @@ export function WorldBossDetailView({
             {active ? (
               <Ticker intervalMs={60_000}>{(now) => <span className="text-amber-300">{remain(d.leaveAt - now)}</span>}</Ticker>
             ) : (
-              <span className="text-zinc-400">떠났어요</span>
+              <span className="text-zinc-400">원정 마감</span>
             )}
           </p>
         </div>
@@ -185,11 +185,11 @@ export function WorldBossDetailView({
         <p className="mt-1.5 border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-400">
           {active
             ? owner
-              ? `보스가 떠나는 순간 ${d.zoneName}을 가진 길드의 금고로 들어가요. 지금은 ${owner}예요.`
-              : '지금은 주인이 없어 원정대를 만들 수 없어요. 떠날 때도 주인이 없으면 전리품은 사라져요.'
+              ? josa(`원정이 마감되는 순간 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요. 지금 주인은 ${owner} 길드예요.`)
+              : '지금은 주인이 없어 원정대를 만들 수 없어요. 마감 때도 주인이 없으면 전리품은 사라져요.'
             : owner
-              ? josa(`${owner} 금고에 전리품을 남기고 떠났어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
-              : '떠날 때 주인이 없어 전리품은 사라졌어요.'}
+              ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+              : '마감 때 주인이 없어 전리품은 사라졌어요.'}
         </p>
       </div>
 
@@ -392,7 +392,7 @@ export function WorldBossDetailView({
         {tab === 'recruiting' ? (
           recruiting.length === 0 ? (
             <Empty
-              title={!active ? '보스가 떠나 모집이 끝났어요' : '모집 중인 원정대가 없어요'}
+              title={!active ? '원정이 마감돼 모집이 끝났어요' : '모집 중인 원정대가 없어요'}
               sub={
                 !active
                   ? undefined

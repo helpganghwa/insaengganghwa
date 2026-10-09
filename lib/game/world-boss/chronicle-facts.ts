@@ -19,7 +19,7 @@ export function worldBossDigestLines(
     const b = byZone.get(c.zone);
     if (!b) continue;
     out.push(
-      `· 구역 「${c.zone}」에 월드보스 「${b.name}」이(가) 머물고 있었음(${lootText(b)}) — 길드 「${c.winner}」 이(가) 이 구역을 점령해, 보스가 떠날 때 전리품은 「${c.winner}」 금고로 들어감${c.from ? `(이전 주인 「${c.from}」)` : ''}`,
+      `· 구역 「${c.zone}」에 월드보스 「${b.name}」이(가) 머물고 있었음(${lootText(b)}) — 길드 「${c.winner}」 이(가) 이 구역을 점령해, 원정이 마감될 때 전리품은 「${c.winner}」 금고로 들어감${c.from ? `(이전 주인 「${c.from}」)` : ''}`,
     );
   }
   for (const d of defenses) {

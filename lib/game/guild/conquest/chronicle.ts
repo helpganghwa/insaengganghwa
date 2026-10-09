@@ -1398,7 +1398,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const wbLines = worldBossDigestLines(summary.captures, summary.defenses, await worldBossesAtConquestReveal(serverId, kstDay).catch(() => []));
   if (wbLines.length > 0)
     digestSections.push(
-      `■ 월드보스가 머무는 구역(보스는 단계마다 전리품을 쌓고, 떠나는 순간 그 구역 주인 길드의 금고로 들어간다. 이 항목의 구역에만 보스·전리품을 한 문장으로 덧붙일 수 있다. 보스와의 싸움은 점령전 전투가 아니니 점령전 전투처럼 쓰지 말고, 단계·전리품 수치는 이 값만 쓸 것):\n${wbLines.join('\n')}`,
+      `■ 월드보스가 머무는 구역(보스는 단계마다 전리품을 쌓고, 원정이 마감되는 순간(보스가 재로 흩어지는 순간) 그 구역 주인 길드의 금고로 들어간다. 이 항목의 구역에만 보스·전리품을 한 문장으로 덧붙일 수 있다. 보스와의 싸움은 점령전 전투가 아니니 점령전 전투처럼 쓰지 말고, 단계·전리품 수치는 이 값만 쓸 것):\n${wbLines.join('\n')}`,
     );
   if (quietText)
     digestSections.push(
