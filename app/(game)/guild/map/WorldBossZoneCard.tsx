@@ -15,7 +15,7 @@ type Common = { name: string; region: string; stage: number; lootDiamond: number
 
 export function WorldBossZoneCard(
   props:
-    | (Common & { mode: 'active'; leaveAt: number; pct: number; remainText: (now: number) => string })
+    | (Common & { mode: 'active'; leaveAt: number; remainText: (now: number) => string })
     | (Common & { mode: 'left'; leftWhen: (now: number) => string; settledGuildName: string | null }),
 ) {
   const left = props.mode === 'left';
@@ -25,25 +25,25 @@ export function WorldBossZoneCard(
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={assetUrl(worldBossBgUrl(props.region))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
       <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.72)_34%,rgba(12,10,9,0.62)_75%,rgba(12,10,9,0.72)_100%)]" />
-      {/* 보스 — 왼쪽 끝 */}
+      {/* 보스 — 왼쪽 끝, 위아래 정중앙(10-10) */}
       {left ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={assetUrl(worldBossSpriteUrl(props.region))}
           alt=""
-          className="absolute -bottom-2 left-0 z-[1] h-[88px] w-[88px] object-contain opacity-80"
+          className="absolute left-0 top-1/2 z-[1] h-[84px] w-[84px] -translate-y-1/2 object-contain opacity-80"
           style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
         />
       ) : (
         <WorldBossSprite
           region={props.region}
           alt=""
-          className="absolute -bottom-2 left-0 z-[1] h-[88px] w-[88px]"
+          className="absolute left-0 top-1/2 z-[1] h-[84px] w-[84px] -translate-y-1/2"
           style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(234,88,12,0.65))' }}
         />
       )}
       {/* 정보 — 보스 오른쪽 */}
-      <div className="absolute inset-y-2 left-[90px] right-[66px] z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
+      <div className="absolute inset-y-2 left-[88px] right-[66px] z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
         <span className="flex min-w-0 items-center gap-1">
           <span className={`shrink-0 rounded-[4px] px-1 text-[8.5px] font-extrabold leading-[1.5] ${left ? 'bg-zinc-700 text-zinc-300' : 'bg-orange-700/85 text-orange-50'}`}>
             {left ? '원정 종료' : '월드보스'}
@@ -74,10 +74,6 @@ export function WorldBossZoneCard(
       >
         보스 토벌
       </Link>
-      {/* 진행 막대 — 아래 가장자리(종료 뒤엔 회색으로 가득) */}
-      <div className={`absolute inset-x-0 bottom-0 z-[3] h-[3px] ${left ? 'bg-zinc-700' : 'bg-stone-800'}`}>
-        <div className={`h-full ${left ? 'bg-zinc-500' : 'bg-gradient-to-r from-red-700 via-orange-500 to-amber-300'}`} style={{ width: `${left ? 100 : props.pct}%` }} />
-      </div>
     </div>
   );
 }

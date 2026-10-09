@@ -1208,7 +1208,6 @@ export function WorldMapView({
                 {(() => {
                   const boss = bossByZone.get(selected.id);
                   if (boss) {
-                    const pct = boss.need > 0 ? Math.min(100, Math.max(0, (boss.into / boss.need) * 100)) : 0;
                     const remember = () => {
                       try {
                         sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
@@ -1225,7 +1224,6 @@ export function WorldMapView({
                         lootDiamond={boss.lootDiamond}
                         lootBoxes={boss.lootBoxes}
                         leaveAt={boss.leaveAt}
-                        pct={pct}
                         remainText={(now) => wbRemain(boss.leaveAt - now)}
                         href={`/world-boss/${boss.id}`}
                         onOpen={remember}
