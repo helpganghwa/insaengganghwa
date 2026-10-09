@@ -24,32 +24,33 @@ export function WorldBossZoneCard(
     <div className={`relative mt-2 h-[92px] overflow-hidden rounded-[12px] border bg-zinc-950 ${left ? 'border-zinc-700 grayscale' : 'border-amber-500/50'}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={assetUrl(worldBossBgUrl(props.region))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
-      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.85)_0%,rgba(0,0,0,0.55)_45%,rgba(0,0,0,0.15)_70%,rgba(0,0,0,0.6)_100%)]" />
-      {/* 보스 — 가운데 오른쪽(버튼 자리와 겹치지 않게) */}
+      <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.25)_0%,rgba(0,0,0,0.7)_34%,rgba(0,0,0,0.6)_75%,rgba(0,0,0,0.7)_100%)]" />
+      {/* 보스 — 왼쪽 끝(정보·버튼과 겹치지 않게, 10-10) */}
       {left ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={assetUrl(worldBossSpriteUrl(props.region))}
           alt=""
-          className="absolute -bottom-2 right-[66px] z-[1] h-[88px] w-[88px] object-contain opacity-80"
+          className="absolute -bottom-2 left-0 z-[1] h-[88px] w-[88px] object-contain opacity-80"
           style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
         />
       ) : (
         <WorldBossSprite
           region={props.region}
           alt=""
-          className="absolute -bottom-2 right-[66px] z-[1] h-[88px] w-[88px]"
+          className="absolute -bottom-2 left-0 z-[1] h-[88px] w-[88px]"
           style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(251,146,60,0.7))' }}
         />
       )}
-      {/* 정보 — 왼쪽 */}
-      <div className="absolute inset-y-2 left-2.5 z-[2] flex max-w-[52%] flex-col justify-between">
-        <span className="flex items-center gap-1">
-          <span className={`rounded-full px-1.5 text-[9px] font-extrabold ${left ? 'bg-zinc-700 text-zinc-200' : 'border border-orange-400/70 bg-black/60 text-orange-300'}`}>
-            {left ? '원정 종료' : '월드보스'}
-          </span>
-          <b className={`text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-amber-200'}`}>{props.name}</b>
-        </span>
+      {/* 칩 — 보스 그림 왼쪽 위 모서리 */}
+      <span
+        className={`absolute left-1.5 top-1.5 z-[2] whitespace-nowrap rounded-full px-1.5 text-[9px] font-extrabold ${left ? 'bg-zinc-700 text-zinc-200' : 'border border-orange-400/70 bg-black/70 text-orange-300'}`}
+      >
+        {left ? '원정 종료' : '월드보스'}
+      </span>
+      {/* 정보 — 보스 오른쪽 */}
+      <div className="absolute inset-y-2 left-[90px] right-[80px] z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
+        <b className={`truncate whitespace-nowrap text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-amber-200'}`}>{props.name}</b>
         <span className={`text-[18px] font-black leading-none [text-shadow:0_1px_3px_#000] ${left ? 'text-zinc-300' : 'text-amber-400'}`}>
           {left ? `최종 ${props.stage}단계` : `${props.stage}단계`}
         </span>
@@ -61,9 +62,9 @@ export function WorldBossZoneCard(
         <span className="flex items-center gap-1.5 text-[10.5px] font-bold text-zinc-100 [text-shadow:0_1px_2px_#000]">
           <span>💎{props.lootDiamond.toLocaleString('ko-KR')}</span>
           <span>📦{props.lootBoxes.toLocaleString('ko-KR')}</span>
-          <span className="truncate text-[9.5px] font-normal text-zinc-300">
-            {left ? (props.settledGuildName ? `${props.settledGuildName} 금고로` : '주인 없어 사라짐') : '점령 길드 금고로'}
-          </span>
+          {left && (
+            <span className="truncate text-[9.5px] font-normal text-zinc-300">{props.settledGuildName ? `${props.settledGuildName} 금고로` : '주인 없어 사라짐'}</span>
+          )}
         </span>
       </div>
       {/* 버튼 — 오른쪽 */}
