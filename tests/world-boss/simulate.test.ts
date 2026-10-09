@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN } from '@/lib/game/guild/balance';
+import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_STAGE_BASE_HP } from '@/lib/game/guild/balance';
 import { WORLD_BOSS_LOCAL, simulateWorldBoss, type WorldBossUnit } from '@/lib/game/world-boss/simulate';
 
-const unit = (i: number, cp: number): WorldBossUnit => ({ userId: `u${i}`, nickname: `n${i}`, cp, guildId: null, guildName: null });
+const unit = (i: number, cp: number): WorldBossUnit => ({ userId: `u${i}`, nickname: `n${i}`, items: [{ slot: 'weapon', code: `w${i}`, cp, av: false }], hasAvatar: false, guildId: null, guildName: null });
+const cpOf = (u: WorldBossUnit) => u.items.reduce((a, x) => a + x.cp, 0);
+const phases = (codes: { weapon?: string[]; armor?: string[]; accessory?: string[] }, n = 7) =>
+  Array.from({ length: n }, () => ({ weapon: codes.weapon ?? [], armor: codes.armor ?? [], accessory: codes.accessory ?? [] }));
 
 describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
   it('같은 입력·시드면 같은 결과(결정론)', () => {
@@ -15,7 +18,7 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
   });
 
   it('빈 원정대는 피해 0·라운드 0', () => {
-    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], finale: { roster: [], events: [], drops: [], rounds: 0, totalDamage: 0 } });
+    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster: [], events: [], drops: [], weak: [], rounds: 0, totalDamage: 0 } });
   });
 
   it('라운드마다 생존자 전원이 한 번씩 공격하고 보스가 한 명을 쓰러뜨린다 → 라운드 수 = 인원, 공격 횟수 합 = n(n+1)/2', () => {
@@ -39,7 +42,7 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     let running = 0;
     for (const [a, t, dmg, aux] of r.finale.events) {
       if (t === WORLD_BOSS_LOCAL) {
-        const cp = us[a]!.cp;
+        const cp = cpOf(us[a]!);
         expect(dmg).toBeGreaterThanOrEqual(Math.max(1, Math.floor(cp * CONQUEST_DMG_MIN)));
         expect(dmg).toBeLessThanOrEqual(Math.ceil(cp * CONQUEST_DMG_MAX));
         running += dmg;
@@ -85,5 +88,61 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     r.members.forEach((m, i) => expect({ d: m.diamond, b: m.boxes }).toEqual(sum.get(i) ?? { d: 0, b: 0 }));
     // 보상 난수는 전투와 따로 — 같은 시드면 전투 기록이 그대로.
     expect(simulateWorldBoss(us, 'worldboss:drops').finale.events).toEqual(r.finale.events);
+  });
+
+  it('아바타 +50%·약점 +100%는 더하고, 약점 장비로 갈아입은 부위도 커스텀 아바타면 아바타 보너스를 유지한다', () => {
+    const base: WorldBossUnit = { userId: 'a', nickname: 'a', items: [{ slot: 'weapon', code: 'w', cp: 1000, av: false }], hasAvatar: false, guildId: null, guildName: null };
+    const ratio = (u: WorldBossUnit, weak = phases({})) => simulateWorldBoss([u], 'x', { startDamage: 0, weak }).totalDamage / simulateWorldBoss([base], 'x').totalDamage;
+    expect(ratio({ ...base, items: [{ ...base.items[0]!, av: true }], hasAvatar: true })).toBeCloseTo(1.5, 2);
+    expect(ratio(base, phases({ weapon: ['w'] }))).toBeCloseTo(2, 2); // 기본 아바타 + 약점
+    expect(ratio({ ...base, hasAvatar: true }, phases({ weapon: ['w'] }))).toBeCloseTo(2.5, 2); // 아바타 장비는 아니지만 약점이라 유지
+    expect(ratio({ ...base, items: [{ ...base.items[0]!, av: true }], hasAvatar: true }, phases({ weapon: ['w'] }))).toBeCloseTo(2.5, 2);
+  });
+
+  it('장착 장비가 없으면 피해 0이지만 공격 보상은 뽑고, 난수 흐름은 같다', () => {
+    const naked: WorldBossUnit = { userId: 'z', nickname: 'z', items: [], hasAvatar: false, guildId: null, guildName: null };
+    const r = simulateWorldBoss([naked, unit(1, 1000)], 'naked');
+    expect(r.members[0]!.damage).toBe(0);
+    expect(r.members[0]!.attacks).toBeGreaterThan(0);
+    const r2 = simulateWorldBoss([unit(0, 5), unit(1, 1000)], 'naked');
+    expect(r2.finale.events.map((e) => [e[0], e[1]])).toEqual(r.finale.events.map((e) => [e[0], e[1]]));
+  });
+
+  it('페이즈는 공격 순간의 단계로 정한다 — 출발 전 누적 피해가 5단계를 넘었으면 2페이즈 약점이 적용된다', () => {
+    const u = unit(1, 1000);
+    const weak = Array.from({ length: 7 }, (_, i) => ({ weapon: i === 1 ? ['w1'] : [], armor: [], accessory: [] }));
+    const fresh = simulateWorldBoss([u], 'ph', { startDamage: 0, weak });
+    let five = 0;
+    for (let k = 1; k <= 5; k++) five += Math.round(WORLD_BOSS_STAGE_BASE_HP * 1.1 ** (k - 1));
+    const later = simulateWorldBoss([u], 'ph', { startDamage: five + 1, weak });
+    expect(fresh.finale.weak).toEqual([0, 0]);
+    expect(later.finale.weak![0]).toBe(1);
+    expect(later.totalDamage).toBeGreaterThan(fresh.totalDamage * 1.9);
+    expect(later.reveals).toEqual([{ phase: 1, slot: 'weapon', code: 'w1', unit: 0 }]);
+  });
+
+  it('처음 맞힌 약점만 공개 목록에 한 번 담기고, 부위 비트가 기록된다', () => {
+    const a: WorldBossUnit = { userId: 'a', nickname: 'a', items: [{ slot: 'weapon', code: 'W', cp: 10, av: false }, { slot: 'armor', code: 'A', cp: 10, av: false }], hasAvatar: false, guildId: null, guildName: null };
+    const b: WorldBossUnit = { ...a, userId: 'b', nickname: 'b' };
+    const r = simulateWorldBoss([a, b], 'rv', { startDamage: 0, weak: phases({ weapon: ['W'], armor: ['A'] }) });
+    expect(r.reveals.map((x) => [x.code, x.unit])).toEqual([['W', 0], ['A', 0]]);
+    r.finale.events.forEach(([att], k) => expect(r.finale.weak![k]).toBe(att >= 0 ? 3 : 0));
+    expect(r.members[0]!.weakHits).toBe(2 * r.members[0]!.attacks);
+  });
+
+  it('약점 2개 이상 맞힌 공격은 꽝이 줄어든다(행운)', () => {
+    const two: WorldBossUnit = { userId: 't', nickname: 't', items: [{ slot: 'weapon', code: 'W', cp: 10, av: false }, { slot: 'armor', code: 'A', cp: 10, av: false }], hasAvatar: false, guildId: null, guildName: null };
+    let missLucky = 0, missPlain = 0, n = 0;
+    for (let s = 0; s < 400; s++) {
+      const team = Array.from({ length: 10 }, (_, i) => ({ ...two, userId: `t${i}` }));
+      const lucky = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: phases({ weapon: ['W'], armor: ['A'] }) });
+      const plain = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: phases({ weapon: ['W'] }) });
+      lucky.finale.events.forEach(([a], k) => { if (a < 0) return; n++; if (lucky.finale.drops![k]![0] + lucky.finale.drops![k]![1] === 0) missLucky++; });
+      plain.finale.events.forEach(([a], k) => { if (a < 0) return; if (plain.finale.drops![k]![0] + plain.finale.drops![k]![1] === 0) missPlain++; });
+    }
+    expect(missLucky / n).toBeGreaterThan(0.32);
+    expect(missLucky / n).toBeLessThan(0.38);
+    expect(missPlain / n).toBeGreaterThan(0.47);
+    expect(missPlain / n).toBeLessThan(0.53);
   });
 });

@@ -9,6 +9,7 @@ import { sendPushToUsers } from '@/lib/push/send';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 
 import { worldBossName } from './bosses';
+import { drawWeakForNewBoss } from './weak-server';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
@@ -54,9 +55,11 @@ export async function ensureTodayBoss(
   if (zonesRows.length === 0) return { created: false, skipped: 'no_owned_zone' };
   const pick = zonesRows[rngU32() % zonesRows.length]!;
 
+  // 페이즈별 약점은 소환 때 고정(docs/WORLD-BOSS.md §3) — 정찰한 정보가 그 보스가 머무는 동안 유효하다.
+  const weak = await drawWeakForNewBoss(db);
   const [ins] = (await db.execute(sql`
-    insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id)
-    values (${serverId}, ${pick.id}, ${pick.region}, ${kstDay}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled', ${pick.owner}::bigint)
+    insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak)
+    values (${serverId}, ${pick.id}, ${pick.region}, ${kstDay}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled', ${pick.owner}::bigint, ${JSON.stringify(weak)}::jsonb)
     on conflict (server_id, kst_day) do nothing
     returning id::text as id
   `)) as unknown as { id: string }[];

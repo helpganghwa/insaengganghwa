@@ -1,20 +1,21 @@
 import 'server-only';
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
-import { userEquipment } from '@/lib/db/schema/equipment';
-import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { randomUUID } from 'node:crypto';
 
+import { pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossStageFor } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { sendPushToUsers } from '@/lib/push/send';
 
 import { worldBossName } from './bosses';
 import { WorldBossError } from './errors';
-import { simulateWorldBoss, type WorldBossFinale, type WorldBossUnit } from './simulate';
+import { simulateWorldBoss, type WorldBossFinale, type WorldBossItem, type WorldBossUnit } from './simulate';
+import type { WeakSlot } from './weak';
+import { ensureBossWeak } from './weak-server';
 
 /**
  * 원정대(docs/WORLD-BOSS.md §2·§3·§4) — 만들기·참가 신청·수락/거절·나가기·출발.
@@ -227,7 +228,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     // 잠금 순서: 보스 → 원정대. 보스를 먼저 잠가 같은 보스의 동시 출발이 단계 계산에서 직렬화되게.
     const [pre] = (await tx.execute(sql`select boss_id::text as b from world_boss_parties where id = ${input.partyId}::bigint`)) as unknown as { b: string }[];
     if (!pre) throw new WorldBossError('NOT_FOUND');
-    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, zone_id from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; zone_id: number }[];
+    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, zone_id, total_damage::text as total_damage, weak from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; zone_id: number; total_damage: string; weak: unknown }[];
     const party = await lockParty(tx, input.partyId);
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
@@ -248,31 +249,43 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     if (!b || b.status !== 'active' || new Date(b.leave_at).getTime() <= Date.now()) throw new WorldBossError('BOSS_NOT_ACTIVE');
     if (isConquestLocked()) throw new WorldBossError('LOCKED');
 
-    // 참가자(참가 순) + 닉네임·길드 + 장비 전투력 스냅샷(점령전과 같은 계산).
+    // 참가자(참가 순) + 닉네임·길드 + 대표 아바타(만들 때 입은 장비) — 전투력 규칙은 docs/WORLD-BOSS.md §3.
     const members = (await tx.execute(sql`
-      select m.user_id::text as uid, c.nickname, gm.guild_id::text as gid, g.name as gname
+      select m.user_id::text as uid, c.nickname, gm.guild_id::text as gid, g.name as gname,
+             up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default
         from world_boss_party_members m
         join characters c on c.user_id = m.user_id and c.server_id = m.server_id
+        left join user_profiles up on up.id = c.active_profile_id
         left join guild_members gm on gm.user_id = m.user_id and gm.server_id = m.server_id
         left join guilds g on g.id = gm.guild_id
-       where m.party_id = ${party.id}::bigint order by m.joined_at, m.user_id`)) as unknown as { uid: string; nickname: string; gid: string | null; gname: string | null }[];
+       where m.party_id = ${party.id}::bigint order by m.joined_at, m.user_id`)) as unknown as {
+      uid: string; nickname: string; gid: string | null; gname: string | null; snap: unknown; is_default: boolean;
+    }[];
     if (members.length === 0) throw new WorldBossError('NOT_MEMBER');
     const ids = members.map((m) => m.uid);
-    const eqRows = await tx
-      .select({ uid: userEquipment.userId, cid: userEquipment.catalogItemId, el: userEquipment.enhanceLevel, tl: userEquipment.transcendLevel })
-      .from(userEquipment)
-      .where(and(eq(userEquipment.serverId, input.serverId), inArray(userEquipment.userId, ids)));
-    const owned = new Map<string, OwnedRow[]>();
+    // 출발 순간 장착한 장비(부위당 하나) — 전투력 스냅샷.
+    const eqRows = (await tx.execute(sql`
+      select ue.user_id::text as uid, ci.code, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl
+        from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+       where ue.server_id = ${input.serverId} and ue.equipped_slot is not null
+         and ue.user_id in (select user_id from world_boss_party_members where party_id = ${party.id}::bigint)`)) as unknown as {
+      uid: string; code: string; slot: string; el: number; tl: number;
+    }[];
+    const equipped = new Map<string, { slot: WeakSlot; code: string; cp: number }[]>();
     for (const r of eqRows) {
-      const row: OwnedRow = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
-      const arr = owned.get(r.uid);
-      if (arr) arr.push(row);
-      else owned.set(r.uid, [row]);
+      if (r.slot !== 'weapon' && r.slot !== 'armor' && r.slot !== 'accessory') continue;
+      const arr = equipped.get(r.uid) ?? [];
+      arr.push({ slot: r.slot, code: r.code, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))) });
+      equipped.set(r.uid, arr);
     }
-    const units: WorldBossUnit[] = members.map((m) => ({
-      userId: m.uid, nickname: m.nickname, cp: Math.max(1, Math.round(combatPowerFromOwned(owned.get(m.uid) ?? []))), guildId: m.gid, guildName: m.gname,
-    }));
-    const sim = simulateWorldBoss(units, `worldboss:${party.id}:${randomUUID()}`);
+    const units: WorldBossUnit[] = members.map((m) => {
+      const snap = (!m.is_default && m.snap && typeof m.snap === 'object' ? m.snap : null) as Record<string, unknown> | null;
+      const avatarKey = (slot: WeakSlot) => (snap ? snap[`${slot}Key`] : undefined);
+      const items: WorldBossItem[] = (equipped.get(m.uid) ?? []).map((it) => ({ ...it, av: !!snap && avatarKey(it.slot) === it.code }));
+      return { userId: m.uid, nickname: m.nickname, items, hasAvatar: !!snap && typeof snap.weaponKey === 'string', guildId: m.gid, guildName: m.gname };
+    });
+    const weak = await ensureBossWeak(tx, b.id, b.weak);
+    const sim = simulateWorldBoss(units, `worldboss:${party.id}:${randomUUID()}`, { startDamage: Number(b.total_damage), weak });
 
     // 보스 누적 피해 → 단계·전리품(절대값으로 다시 계산 — 증분 누적의 어긋남 방지).
     const [tot] = (await tx.execute(sql`
@@ -285,6 +298,14 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     }
     const reward = sim.members.reduce((s, m) => ({ diamond: s.diamond + m.diamond, boxes: s.boxes + m.boxes }), { diamond: 0, boxes: 0 });
 
+    // 처음 맞힌 약점 공개 — 보스 행을 잠근 채라 원정대끼리 순서가 정해지고, 이미 공개된 것은 그대로(먼저 맞힌 사람이 발견자).
+    for (const r of sim.reveals) {
+      const who = units[r.unit]!;
+      await tx.execute(sql`
+        insert into world_boss_weak_reveals (boss_id, phase, code, slot, finder_user_id, finder_nickname, party_id)
+        values (${b.id}::bigint, ${r.phase}, ${r.code}, ${r.slot}, ${who.userId}::uuid, ${who.nickname}, ${party.id}::bigint)
+        on conflict (boss_id, phase, code) do nothing`);
+    }
     for (const m of sim.members) {
       await tx.execute(sql`
         update world_boss_party_members set attacks = ${m.attacks}, damage = ${m.damage}::bigint, fell_round = ${m.fellRound}

@@ -12,6 +12,7 @@ import { profiles } from './profiles';
 export type WorldBossStatus = 'scheduled' | 'active' | 'left';
 export type WorldBossPartyStatus = 'recruiting' | 'departed' | 'disbanded';
 export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected';
+export type WorldBossWeakPhase = { weapon: string[]; armor: string[]; accessory: string[] };
 
 /** 보스 1마리 = 1행. (server_id, kst_day) 유니크 = 서버마다 하루 1마리. */
 export const worldBosses = pgTable(
@@ -42,6 +43,8 @@ export const worldBosses = pgTable(
     /** 떠날 때 전리품을 받은 길드(그 시점 구역 주인). 중립이면 null = 전리품 소멸. */
     settledGuildId: bigint('settled_guild_id', { mode: 'bigint' }).references(() => guilds.id, { onDelete: 'set null' }),
     settledAt: timestamp('settled_at', { withTimezone: true }),
+    /** 페이즈별 약점 장비(0230) — 원소 하나 = 페이즈 하나 {weapon, armor, accessory: code[]}. 소환 때 고정, 비면 첫 출발 때 채운다. */
+    weak: jsonb('weak').$type<WorldBossWeakPhase[]>().notNull().default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('world_bosses_server_day_uq').on(t.serverId, t.kstDay), index('world_bosses_server_status_idx').on(t.serverId, t.status)],
@@ -133,3 +136,21 @@ export const worldBossJoinRequests = pgTable(
 export type WorldBoss = typeof worldBosses.$inferSelect;
 export type WorldBossParty = typeof worldBossParties.$inferSelect;
 export type WorldBossPartyMember = typeof worldBossPartyMembers.$inferSelect;
+
+/** 맞혀서 공개된 약점(0230) — (보스, 페이즈, 장비) 하나에 한 행. 처음 맞힌 대원 이름을 남긴다(보상 없음). */
+export const worldBossWeakReveals = pgTable(
+  'world_boss_weak_reveals',
+  {
+    bossId: bigint('boss_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => worldBosses.id, { onDelete: 'cascade' }),
+    phase: smallint('phase').notNull(),
+    code: text('code').notNull(),
+    slot: text('slot').notNull(),
+    finderUserId: uuid('finder_user_id').references(() => profiles.id, { onDelete: 'set null' }),
+    finderNickname: text('finder_nickname').notNull(),
+    partyId: bigint('party_id', { mode: 'bigint' }).references(() => worldBossParties.id, { onDelete: 'set null' }),
+    revealedAt: timestamp('revealed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.bossId, t.phase, t.code] })],
+);
