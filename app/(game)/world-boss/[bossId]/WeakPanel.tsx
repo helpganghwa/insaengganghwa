@@ -101,7 +101,7 @@ export function WeakPanel({
               onClick={onEquipBest}
               className="mt-2 w-full rounded-lg border border-amber-500/60 bg-amber-500/15 py-2 text-[12.5px] font-extrabold text-amber-200 disabled:opacity-40"
             >
-              약점에 맞춰 장착 · {formatCompactKR(mine.loadout.power)} → {formatCompactKR(mine.best.power)}
+              약점에 맞춰 장착 · 전투력 {formatCompactKR(mine.best.power)}
             </button>
           )}
           {mine.best && <p className="mt-1 text-center text-[10px] text-zinc-500">장착은 게임 전체에 적용돼요</p>}

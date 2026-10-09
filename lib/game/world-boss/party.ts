@@ -166,7 +166,7 @@ export async function decideJoin(input: { leaderUserId: string; serverId: number
   if (input.accept) {
     await sendPushToUsers([input.userId], {
       title: '원정대 참가',
-      body: '원정대에 들어갔어요. 대장이 출발을 누르면 전투가 시작돼요.',
+      body: '원정대에 들어갔어요. 원정대장이 출발을 누르면 전투가 시작돼요.',
       url: `/world-boss/party/${input.partyId}`,
       tag: `world-boss-party-${input.partyId}`,
       category: 'world_boss',
@@ -321,7 +321,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
 
     // 보상 우편 — 원정대원마다 공격에서 뽑은 만큼(복권). 아무것도 못 뽑은 사람은 우편 없음(결과 화면에서 확인).
     const fight = josa(
-      `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혔어요(${stageFrom}단계 → ${stageTo}단계).`,
+      `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혀 ${stageFrom}단계에서 ${stageTo}단계까지 올렸어요.`,
     );
     for (const m of sim.members) {
       if (m.diamond <= 0 && m.boxes <= 0) continue;

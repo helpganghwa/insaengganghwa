@@ -43,9 +43,9 @@ const FAIL = '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주
 
 function remain(ms: number): string {
   const m = Math.ceil(ms / 60_000);
-  if (m <= 0) return '곧 원정 마감';
+  if (m <= 0) return '곧 원정 종료';
   const h = Math.floor(m / 60);
-  return h > 0 ? `마감까지 ${h}시간 ${m % 60}분` : `마감까지 ${m}분`;
+  return h > 0 ? `종료까지 ${h}시간 ${m % 60}분` : `종료까지 ${m}분`;
 }
 const fmtAvg = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const won = (n: number) => n.toLocaleString('ko-KR');
@@ -151,7 +151,7 @@ export function WorldBossDetailView({
             {active ? (
               <Ticker intervalMs={60_000}>{(now) => <span className="text-amber-300">{remain(d.leaveAt - now)}</span>}</Ticker>
             ) : (
-              <span className="text-zinc-400">원정 마감</span>
+              <span className="text-zinc-400">원정 종료</span>
             )}
           </p>
         </div>
@@ -185,11 +185,11 @@ export function WorldBossDetailView({
         <p className="mt-1.5 border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-400">
           {active
             ? owner
-              ? josa(`원정이 마감되는 순간 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요. 지금 주인은 ${owner} 길드예요.`)
-              : '지금은 주인이 없어 원정대를 만들 수 없어요. 마감 때도 주인이 없으면 전리품은 사라져요.'
+              ? josa(`원정이 종료되는 순간 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요. 지금 주인은 ${owner} 길드예요.`)
+              : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
             : owner
               ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
-              : '마감 때 주인이 없어 전리품은 사라졌어요.'}
+              : '종료 때 주인이 없어 전리품은 사라졌어요.'}
         </p>
       </div>
 
@@ -214,7 +214,7 @@ export function WorldBossDetailView({
             <div className="flex items-center gap-2 rounded-xl border border-amber-500/45 bg-amber-950/30 px-3 py-2.5">
               <span className="min-w-0 flex-1 text-[12px] text-amber-100">
                 <b>{pendingParty ? `${pendingParty.leaderNickname} 원정대` : '원정대'}</b>에 신청했어요
-                <span className="block text-[10.5px] text-amber-200/70">대장이 수락하면 알림으로 알려 드려요</span>
+                <span className="block text-[10.5px] text-amber-200/70">원정대장이 수락하면 알림으로 알려 드려요</span>
               </span>
               <button
                 type="button"
@@ -254,7 +254,7 @@ export function WorldBossDetailView({
           <div className="mb-2 flex items-center gap-1.5">
             <b className="text-[13px] text-zinc-100">내 원정대</b>
             <span className={`rounded-full px-1.5 py-px text-[9.5px] font-extrabold ${mp.isLeader ? 'bg-amber-500 text-amber-950' : 'bg-zinc-700 text-zinc-200'}`}>
-              {mp.isLeader ? '대장' : '원정대원'}
+              {mp.isLeader ? '원정대장' : '원정대원'}
             </span>
             <span className="ml-auto font-mono text-[11px] font-extrabold tabular-nums text-amber-300">
               {mp.members.length}/{WORLD_BOSS_PARTY_MAX}
@@ -314,7 +314,7 @@ export function WorldBossDetailView({
                     {mp.members.length < WORLD_BOSS_PARTY_MAX && ` · 10명이면 ${fmtAvg(worldBossExpectedAttacks(WORLD_BOSS_PARTY_MAX))}번`}
                   </>
                 ) : (
-                  '대장이 출발을 누르면 바로 싸워요. 결과와 보상은 우편으로 와요.'
+                  '원정대장이 출발을 누르면 바로 싸워요. 결과와 보상은 우편으로 와요.'
                 )}
               </p>
               {mp.isLeader ? (
@@ -392,7 +392,7 @@ export function WorldBossDetailView({
         {tab === 'recruiting' ? (
           recruiting.length === 0 ? (
             <Empty
-              title={!active ? '원정이 마감돼 모집이 끝났어요' : '모집 중인 원정대가 없어요'}
+              title={!active ? '원정이 종료돼 모집이 끝났어요' : '모집 중인 원정대가 없어요'}
               sub={
                 !active
                   ? undefined
@@ -424,7 +424,7 @@ export function WorldBossDetailView({
                       <button
                         type="button"
                         disabled={pending}
-                        onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '대장이 수락하면 알려 드려요' })}
+                        onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '원정대장이 수락하면 알려 드려요' })}
                         className="rounded-lg bg-amber-500 px-3 py-1.5 text-[11.5px] font-bold text-amber-950 disabled:opacity-40"
                       >
                         참가 신청
@@ -517,7 +517,7 @@ function DepartedSummary({ p }: { p: WorldBossPartyCard }) {
         피해 <b className="text-amber-200">{formatCompactKR(p.damage)}</b> · {p.rounds}라운드 ·{' '}
         {moved > 0 ? (
           <>
-            {p.stageFrom}→<b className="text-amber-300">{p.stageTo}단계</b>
+            <b className="text-amber-300">{p.stageTo}단계</b>까지 +{moved}
           </>
         ) : (
           '단계 그대로'

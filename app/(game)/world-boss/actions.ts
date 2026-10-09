@@ -21,7 +21,7 @@ import { sql } from 'drizzle-orm';
 
 const MSG: Record<string, string> = {
   NOT_FOUND: '원정대를 찾을 수 없어요.',
-  BOSS_NOT_ACTIVE: '원정이 이미 마감됐어요.',
+  BOSS_NOT_ACTIVE: '원정이 이미 종료됐어요.',
   NOT_OWNER_GUILD: '원정대는 이 구역을 가진 길드원만 만들 수 있어요.',
   NO_CHARACTER: '이 서버에 캐릭터가 없어요.',
   ALREADY_IN_PARTY: '이미 이 보스의 원정대에 들어가 있어요.',
