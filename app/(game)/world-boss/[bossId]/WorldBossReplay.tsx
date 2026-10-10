@@ -73,8 +73,8 @@ const PHASE_PALETTE = [
 const seedOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 type LootTier = 'small' | 'good' | 'jackpot';
-/** 보상 등급 — jackpot(💎300+·📦90+)은 금빛 광선, good(💎50+·📦30+)은 호박색 강조, 나머지는 어두운 알약(10-11 사용자: 높은 보상은 더 눈에 띄게). */
-const lootTier = (d: number, b: number): LootTier => (d >= 300 || b >= 90 ? 'jackpot' : d >= 50 || b >= 30 ? 'good' : 'small');
+/** 보상 등급(10-11 표 상향 기준) — jackpot(💎900+·📦180+)은 금빛 광선, good(💎150+·📦60+)은 호박색, 나머지(💎15·60 / 📦6·18)는 수수하게. 높은 보상은 더 눈에 띄게(사용자). */
+const lootTier = (d: number, b: number): LootTier => (d >= 900 || b >= 180 ? 'jackpot' : d >= 150 || b >= 60 ? 'good' : 'small');
 type LogLine = { key: string; kind: 'round' | 'atk' | 'boss' | 'phase' | 'result'; text: string; dmg?: number; loot?: string; lootTier?: LootTier; weak?: number; /** phase 줄 — 돌파한 페이즈(색은 게이지 팔레트와 같게). */ stage?: number };
 
 export function WorldBossReplay({

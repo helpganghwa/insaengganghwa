@@ -186,18 +186,19 @@ export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
  * 기대값(공격 1회) 💎9.25 📦1.89 — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎49 📦10.
  */
 export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number; p: number }[] = [
-  { diamond: 0, boxes: 0, p: 50_000 }, // 꽝 50%
-  { diamond: 5, boxes: 0, p: 16_000 },
-  { diamond: 20, boxes: 0, p: 9_000 },
-  { diamond: 50, boxes: 0, p: 4_500 },
-  { diamond: 100, boxes: 0, p: 2_000 },
-  { diamond: 300, boxes: 0, p: 600 },
-  { diamond: 1000, boxes: 0, p: 60 }, // 0.06%
-  { diamond: 0, boxes: 3, p: 11_000 },
-  { diamond: 0, boxes: 9, p: 4_500 },
-  { diamond: 0, boxes: 30, p: 1_800 },
-  { diamond: 0, boxes: 90, p: 480 },
-  { diamond: 0, boxes: 300, p: 60 }, // 0.06%
+  // 10-11 상향(사용자: 평균 3~5배) — 꽝 50%→30%(당첨 칸은 비율 그대로 1.4배), 다이아 3배, 상자 2배. 기대값 공격 1회 💎38.85 📦5.28(전 💎9.25 📦1.89).
+  { diamond: 0, boxes: 0, p: 30_000 }, // 꽝 30%
+  { diamond: 15, boxes: 0, p: 22_400 },
+  { diamond: 60, boxes: 0, p: 12_600 },
+  { diamond: 150, boxes: 0, p: 6_300 },
+  { diamond: 300, boxes: 0, p: 2_800 },
+  { diamond: 900, boxes: 0, p: 840 },
+  { diamond: 3000, boxes: 0, p: 84 }, // 0.084%
+  { diamond: 0, boxes: 6, p: 15_400 },
+  { diamond: 0, boxes: 18, p: 6_300 },
+  { diamond: 0, boxes: 60, p: 2_520 },
+  { diamond: 0, boxes: 180, p: 672 },
+  { diamond: 0, boxes: 600, p: 84 }, // 0.084%
 ];
 export const WORLD_BOSS_ATTACK_DROP_TOTAL = 100_000;
 
@@ -237,11 +238,11 @@ export function worldBossPhaseOf(attackingStage: number): number {
   return Math.min(WORLD_BOSS_PHASES - 1, Math.floor(Math.max(0, attackingStage - 1) / WORLD_BOSS_PHASE_STAGES));
 }
 /**
- * 약점 적중 행운(2026-10-09 확정): 한 공격에서 약점 장비를 2개 이상 맞히면 공격 보상 꽝이 50% → 35%.
- * 나머지 칸은 비율 그대로 늘린다(65/50 = 1.3배). 부위별 10개라 1개 적중은 아무 장비로도 흔해(공격 58%) 2개 이상으로 둔다.
+ * 약점 적중 행운(2026-10-09 확정, 10-11 표 상향에 맞춰 조정): 한 공격에서 약점 장비를 2개 이상 맞히면 공격 보상 꽝이 30% → 21%(×0.7, 종전 50→35와 같은 비율).
+ * 나머지 칸은 비율 그대로 늘린다(79/70 ≈ 1.13배). 부위별 10개라 1개 적중은 아무 장비로도 흔해(공격 58%) 2개 이상으로 둔다.
  */
 export const WORLD_BOSS_LUCKY_MIN_WEAK = 2;
-export const WORLD_BOSS_LUCKY_MISS_P = 35_000;
+export const WORLD_BOSS_LUCKY_MISS_P = 21_000;
 
 /** 단계 k(1부터)를 넘기는 데 필요한 피해. */
 export function worldBossStageHp(stage: number): number {
@@ -279,7 +280,7 @@ export const WORLD_BOSS_TRAIT = {
   wandererMult: 1.5, // 떠도는 바람 — 무소속 대원
   wideWeak: 20, // 넓어진 약점 — 부위별 약점 수
   fatalWeak: 5, fatalWeakBonus: 2.0, // 치명 약점 — 부위별 5개, 약점 보너스 +200%(전투력 3배)
-  goldenMissDelta: -10_000, // 황금 깃털 — 꽝 50% → 40%(행운도 35% → 25%)
+  goldenMissDelta: -10_000, // 황금 깃털 — 꽝 30% → 20%(행운도 21% → 11%)
   heavyLoot: 1.15, // 무거운 보물 — 단계 전리품 +15%(체력은 그대로)
 } as const;
 export const WORLD_BOSS_TRAIT_SLOT_P = 0.7;
@@ -291,7 +292,7 @@ export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
   { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 ×${WORLD_BOSS_TRAIT.wandererMult}` },
   { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
   { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 ${1 + WORLD_BOSS_TRAIT.fatalWeakBonus}배` },
-  { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 50% → ${50 + WORLD_BOSS_TRAIT.goldenMissDelta / 1000}%` },
+  { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 ${WORLD_BOSS_ATTACK_DROPS[0]!.p / 1000}% → ${(WORLD_BOSS_ATTACK_DROPS[0]!.p + WORLD_BOSS_TRAIT.goldenMissDelta) / 1000}%` },
   { code: 'heavy_treasure', group: 'boss', icon: '💰', name: '무거운 보물', effect: `페이즈 전리품 +${Math.round((WORLD_BOSS_TRAIT.heavyLoot - 1) * 100)}%` },
 ];
 export function worldBossTraitDef(code: string): WorldBossTraitDef | undefined {

@@ -140,10 +140,10 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
       lucky.finale.events.forEach(([a], k) => { if (a < 0) return; n++; if (lucky.finale.drops![k]![0] + lucky.finale.drops![k]![1] === 0) missLucky++; });
       plain.finale.events.forEach(([a], k) => { if (a < 0) return; if (plain.finale.drops![k]![0] + plain.finale.drops![k]![1] === 0) missPlain++; });
     }
-    expect(missLucky / n).toBeGreaterThan(0.32);
-    expect(missLucky / n).toBeLessThan(0.38);
-    expect(missPlain / n).toBeGreaterThan(0.47);
-    expect(missPlain / n).toBeLessThan(0.53);
+    expect(missLucky / n).toBeGreaterThan(0.18);
+    expect(missLucky / n).toBeLessThan(0.24);
+    expect(missPlain / n).toBeGreaterThan(0.27);
+    expect(missPlain / n).toBeLessThan(0.33);
   });
 
   it('특성: 구성 배율은 전원 피해에, 떠도는 바람은 무소속에게만, 치명 약점은 약점 보너스 3배, 황금 깃털은 꽝이 준다', () => {
@@ -169,14 +169,14 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     const fatal = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak, traits: ['fatal_weak'] });
     expect(fatal.members[0]!.damage / normal.members[0]!.damage).toBeCloseTo((1 + WORLD_BOSS_TRAIT.fatalWeakBonus) / 2, 2);
     expect(fatal.members[1]!.damage).toBe(normal.members[1]!.damage);
-    // 황금 깃털 — 많은 원정대로 꽝 비율 ≈ 40%
+    // 황금 깃털 — 많은 원정대로 꽝 비율 ≈ 20%(30% − 10%p)
     let miss = 0, n = 0;
     for (let s = 0; s < 150; s++) {
       const r = simulateWorldBoss(Array.from({ length: 10 }, (_, i) => unit(i, 10_000)), `worldboss:g${s}`, { startDamage: 0, weak: [], traits: ['golden_feather'] });
       r.finale.events.forEach(([a], k) => { if (a < 0) return; n++; if (r.finale.drops![k]![0] + r.finale.drops![k]![1] === 0) miss++; });
     }
-    expect(miss / n).toBeGreaterThan(0.37);
-    expect(miss / n).toBeLessThan(0.43);
+    expect(miss / n).toBeGreaterThan(0.17);
+    expect(miss / n).toBeLessThan(0.23);
   });
 });
 
