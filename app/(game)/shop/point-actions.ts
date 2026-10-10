@@ -42,7 +42,7 @@ export async function extraQuoteAction(item: PointExtraItem) {
 const PAGE: Record<PointExtraItem, string> = { expedition: '/expedition', raid: '/raid', tower: '/tower' };
 
 /** 추가 횟수 한 장 사기(docs/POINT-SHOP.md §6). key = 구매 시도마다 클라가 만든 값(재전송 한 번만). */
-export async function buyExtraAction(input: { item: PointExtraItem; kind: PointKind; slot?: number; key: string; expectedPrice?: number }) {
+export async function buyExtraAction(input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number }) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;

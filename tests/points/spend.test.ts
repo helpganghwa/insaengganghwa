@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { POINT_EXTRA_PRICES, pointExtraPrice } from '@/lib/game/balance';
+import { ensureOffers } from '@/lib/game/expedition/service';
 import { buyExtra } from '@/lib/game/points/extra';
 import { PointShopError, costIn, exchangePoints, extrasToday, spendPoints } from '@/lib/game/points/spend';
 import { bumpDailyOrThrow } from '@/lib/game/raid/open';
@@ -171,7 +172,11 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
   it('상품 이름은 문자열만 — 배열로 감싼 값은 받지 않는다', async () => {
     await setMp(100);
     await expect(buyExtra(U, S, { item: ['raid'] as never, kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(buyExtra(U, S, { item: ['expedition'] as never, kind: 'melee', slot: 1, key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(buyExtra(U, S, { item: ['expedition'] as never, kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    // 장 수는 1~하루 최대, 파견만 2장 이상.
+    await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', qty: 0, key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', qty: 4, key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(buyExtra(U, S, { item: 'raid', kind: 'melee', qty: 2, key: key() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect((await now()).mp).toBe(100);
   });
 
@@ -185,38 +190,61 @@ describe.skipIf(skip)('포인트 쓰기 — DB 통합(스테이징 테스트 계
     expect((await now()).mp).toBe(3);
   });
 
-  it('파견 다시 보내기: 오늘 완료 칸만, 사면 그 칸에 새 파견지', async () => {
-    const busy = (await testDb.execute(sql`select 1 from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='running'`)) as unknown as unknown[];
-    if (busy.length > 0) return; // 진행 중이면 건드리지 않는다
+  it('추가 파견(10-10): 언제든 살 수 있고, 산 만큼 추가 칸(6번부터)에 새 파견지 · 한 번에 여러 칸 · 하루 3칸 · 같은 키는 한 번만', async () => {
     await setMp(50);
-    await testDb.execute(sql`delete from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='offer'`);
-    // 아직 오늘 안 보낸 칸 → 살 필요 없음
-    const startedToday = (await testDb.execute(sql`
-      select 1 from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and started_at is not null
-        and (started_at at time zone 'Asia/Seoul')::date = ${today}::date`)) as unknown as unknown[];
-    let fakeId: string | null = null;
-    if (startedToday.length === 0) {
-      await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 1, key: key() })).rejects.toMatchObject({ code: 'NOT_NEEDED' });
-      const [f] = (await testDb.execute(sql`
-        insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward, status, started_at, complete_at, claimed_at, final_reward)
-        values (${U}::uuid, ${S}, 1, 'swamp', 'normal', 28800000, '{"kind":"dia","diamond":1}'::jsonb, 'claimed', now(), now(), now(), '{"kind":"dia","diamond":1}'::jsonb)
-        returning id::text as id`)) as unknown as { id: string }[];
-      fakeId = f!.id;
-    }
+    const offersAbove = async () =>
+      ((await testDb.execute(sql`select slot from expeditions where user_id=${U}::uuid and server_id=${S} and slot > 5 and status='offer' order by slot`)) as unknown as { slot: number }[]).map((r) => Number(r.slot));
+    const clean = () => testDb.execute(sql`delete from expeditions where user_id=${U}::uuid and server_id=${S} and slot > 5 and status='offer'`);
+    await clean();
     try {
-      const r = await buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 1, key: key() });
-      expect(r).toMatchObject({ spent: 5, bought: 1, slot: 1 });
-      const offer = (await testDb.execute(sql`select 1 from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='offer'`)) as unknown as unknown[];
-      expect(offer.length).toBe(1);
-      // 보낼 수 있는 오퍼가 남아 있으면(이 슬롯이든 다른 슬롯이든) 다시 살 필요가 없다
-      await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 1, key: key() })).rejects.toMatchObject({ code: 'NOT_NEEDED' });
-      // (테스트 계정이 슬롯 1개뿐이면 슬롯 2는 SLOT_LOCKED — 어느 쪽이든 사지지 않아야 한다)
-      const other = await buyExtra(U, S, { item: 'expedition', kind: 'melee', slot: 2, key: key() }).catch((e: PointShopError) => e.code);
-      expect(['NOT_NEEDED', 'SLOT_LOCKED']).toContain(other);
+      // 보낼 파견이 남아 있어도(오퍼가 있어도) 산다 — 옛 '다시 보내기'의 NOT_NEEDED 없음.
+      const k1 = key();
+      const r1 = await buyExtra(U, S, { item: 'expedition', kind: 'melee', key: k1 });
+      expect(r1).toMatchObject({ spent: 5, bought: 1, qty: 1, duplicate: false });
+      expect(r1.slots).toHaveLength(1);
+      expect(r1.slots[0]).toBeGreaterThan(5);
+      expect(await offersAbove()).toEqual(r1.slots);
+      // 같은 키 재전송 — 사지 않고 '이미 산 구매'로.
+      const again = await buyExtra(U, S, { item: 'expedition', kind: 'melee', key: k1 });
+      expect(again).toMatchObject({ duplicate: true, spent: 0, bought: 1, qty: 0 });
       expect((await now()).mp).toBe(45);
+      // 한 번에 2칸 — 값은 그날 산 순서대로 합(10 + 20), 칸 번호는 비어 있는 번호로 겹치지 않게.
+      const r2 = await buyExtra(U, S, { item: 'expedition', kind: 'melee', qty: 2, key: key(), expectedPrice: 30 });
+      expect(r2).toMatchObject({ spent: 30, bought: 3, qty: 2, next: null });
+      expect(r2.slots).toHaveLength(2);
+      expect(new Set([...r1.slots, ...r2.slots]).size).toBe(3);
+      expect(await offersAbove()).toEqual([...r1.slots, ...r2.slots].sort((a, b) => a - b));
+      expect(await extrasToday(testDb, U, S, 'expedition')).toBe(3);
+      // 하루 3칸 — 4번째는 없다.
+      await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', key: key() })).rejects.toMatchObject({ code: 'MAX_REACHED' });
+      expect((await now()).mp).toBe(15);
     } finally {
-      await testDb.execute(sql`delete from expeditions where user_id=${U}::uuid and server_id=${S} and slot=1 and status='offer'`);
-      if (fakeId) await testDb.execute(sql`delete from expeditions where id=${fakeId}::bigint`);
+      await clean();
+    }
+  });
+
+  it('추가 파견: 팝업에서 본 값과 다르면(다른 탭에서 먼저 샀다) 사지 않는다', async () => {
+    await setMp(50);
+    await expect(buyExtra(U, S, { item: 'expedition', kind: 'melee', qty: 2, key: key(), expectedPrice: 5 })).rejects.toMatchObject({ code: 'PRICE_CHANGED' });
+    expect(await extrasToday(testDb, U, S, 'expedition')).toBe(0);
+    expect((await now()).mp).toBe(50);
+  });
+
+  it('추가 파견: 어제 산 미출발 오퍼는 진입(ensureOffers) 때 사라지고, 오늘 산 오퍼는 남는다', async () => {
+    const [stale] = (await testDb.execute(sql`
+      insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward, rolled_at)
+      select ${U}::uuid, ${S}, 99, 'swamp', 'normal', 28800000, '{"kind":"dia","diamond":1}'::jsonb, now() - interval '1 day'
+      where not exists (select 1 from expeditions where user_id=${U}::uuid and server_id=${S} and slot=99 and status in ('offer','running'))
+      returning id::text as id`)) as unknown as { id: string }[];
+    if (!stale) return; // 99번 칸이 쓰이는 중이면 건드리지 않는다
+    await setMp(50);
+    try {
+      const r = await buyExtra(U, S, { item: 'expedition', kind: 'melee', key: key() });
+      await ensureOffers(U, S);
+      const left = (await testDb.execute(sql`select slot from expeditions where user_id=${U}::uuid and server_id=${S} and slot in (99, ${r.slots[0]!}) and status='offer'`)) as unknown as { slot: number }[];
+      expect(left.map((x) => Number(x.slot))).toEqual(r.slots);
+    } finally {
+      await testDb.execute(sql`delete from expeditions where user_id=${U}::uuid and server_id=${S} and slot > 5 and status='offer'`);
     }
   });
 });

@@ -252,17 +252,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const previewBp = assignFor?.region && selectedAv ? enhanceBonusOf(weightedSumOf(selectedAv.equipment, assignFor.region)) : 0;
 
   /** 카드 탭 — 상태별 팝업/액션(카드에는 버튼이 없다, 2026-08-28 UI 개편). */
-  // 다시 보내기(10-06, POINT-SHOP §6) — N = 오늘 출발 횟수, M = 열린 칸 + 오늘 산 횟수.
-  // ＋는 지금 보낼 수 있는 칸(오퍼)이 없고 '오늘 완료' 칸이 있을 때만, 오늘 더 살 수 있는 만큼까지.
-  const openSlots = board.slots.filter((x) => x.state !== 'locked').length + board.extraBought;
+  // 추가 파견(10-10, POINT-SHOP §6) — N = 오늘 출발 횟수, M = 열린 칸 + 오늘 산 칸 수(추가 카드는 M에 이미 들어 있어 따로 세지 않는다).
+  // ＋는 레이드처럼 오늘 더 살 수 있는 동안 늘(보낼 파견이 남아 있어도 칸을 더 여는 것).
+  const openSlots = board.slots.filter((x) => x.state !== 'locked' && !x.extra).length + board.extraBought;
   const sentToday = board.startsToday;
-  const resendSlots = board.slots
-    .filter((x) => x.state === 'done' && x.region)
-    .map((x) => ({ slot: x.slot, label: REGION_UI[x.region!].label }));
-  const canResend =
-    board.extraBought < POINT_EXTRA_PRICES.expedition.length &&
-    resendSlots.length > 0 &&
-    !board.slots.some((x) => x.state === 'offer');
+  const canBuyExtra = board.extraBought < POINT_EXTRA_PRICES.expedition.length;
   // 보드는 화면 상태라 서버 재렌더로 바뀌지 않는다 — 산 슬롯의 새 파견지(또는 실패 시 원래 상태)를 받아 온다.
   /** 서버 보드로 갈아 끼운다. 받아 왔으면 true. */
   const reloadBoard = (): Promise<boolean> =>
@@ -275,21 +269,17 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         }
         return false;
       });
-  // 다시 보내기를 사는 동안 — 되돌릴 보드와 잠가 둘 슬롯. 새 파견지를 받기 전에는 그 카드를 누를 수 없게 한다
-  // (이전 지역·시간으로 배정 팝업이 열려, 보낸 파견이 화면과 다른 곳으로 가던 문제 — 10-06 최종 검수).
-  // 수령·출발이 쓰는 pendingSlot과 따로 둔다 — 한 값을 같이 쓰면 다른 슬롯의 수령이 이 잠금을 풀어 버린다(10-06 2차 검수).
-  const resendPrev = useRef<ExpeditionBoard | null>(null);
-  const [resendSlot, setResendSlot] = useState<number | null>(null);
-  /** 다시 보내기 뒤 보드 재조회 — 못 받아 오면(연결 끊김) 연결이 돌아온 뒤 다시 받는다. 산 파견지가 안 보인 채 남지 않게. */
-  const settleResend = () =>
-    void reloadBoard()
-      .then((ok) => {
-        if (!ok) resyncWhenOnline('expedition-board', () => void reloadBoard());
-      })
-      .finally(() => setResendSlot(null));
+  // 추가 파견을 사는 동안 — 되돌릴 보드. 산 칸은 서버 보드를 받기 전까지 '새 파견 찾는 중' 자리 카드(음수 slot, 누를 수 없음)로 둔다
+  // (옛 다시 보내기 시절, 이전 지역으로 배정 팝업이 열려 보낸 파견이 화면과 다른 곳으로 가던 문제 — 10-06 최종 검수).
+  const extraPrev = useRef<ExpeditionBoard | null>(null);
+  /** 추가 파견 뒤 보드 재조회 — 못 받아 오면(연결 끊김) 연결이 돌아온 뒤 다시 받는다. 산 파견지가 안 보인 채 남지 않게. */
+  const settleExtra = () =>
+    void reloadBoard().then((ok) => {
+      if (!ok) resyncWhenOnline('expedition-board', () => void reloadBoard());
+    });
 
   const onCardTap = (s: ExpeditionBoardSlot) => {
-    if (pendingSlot === s.slot || resendSlot === s.slot) return;
+    if (pendingSlot === s.slot || s.slot < 0) return;
     if (s.state === 'locked') {
       toast.showHeaderToast({ title: `합산 강화 ${(s.unlock?.enhanceSum ?? 0).toLocaleString('ko-KR')} 달성 시 열려요` });
       return;
@@ -301,7 +291,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     }
     // 오늘 완료(슬롯당 하루 1회, 2026-09-01) — 공용 헤더 토스트로만 안내.
     if (s.state === 'done') {
-      toast.showHeaderToast({ title: canResend ? '위쪽 ＋를 누르면 오늘 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요' });
+      toast.showHeaderToast({ title: canBuyExtra ? '위쪽 ＋를 누르면 추가 파견을 열 수 있어요' : '내일 다시 보낼 수 있어요' });
       return;
     }
     // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
@@ -321,29 +311,28 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
             <span>
               오늘 <b className={sentToday < openSlots ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-zinc-50'}>{sentToday}/{openSlots}</b>
             </span>
-            {canResend ? (
+            {canBuyExtra ? (
               <ExtraBuyButton
                 item="expedition"
-                slots={resendSlots}
-                // 낙관 반영(10-06) — 사는 즉시 그 슬롯을 '새 파견 찾는 중'으로, 헤더 M을 하나 올린다(＋는 오퍼가 생겨 숨는다).
-                onOptimistic={(slot) => {
-                  resendPrev.current = board;
-                  setResendSlot(slot);
-                  setBoard((b) => ({
-                    ...b,
-                    extraBought: b.extraBought + 1,
-                    slots: b.slots.map((x) => (x.slot === slot ? { ...x, state: 'offer', reward: undefined } : x)),
-                  }));
+                // 낙관 반영(10-10) — 사는 즉시 산 칸 수만큼 자리 카드를 열린 칸 뒤(잠긴 칸 앞)에 두고 헤더 M을 올린다. 서버 보드를 받으면 진짜 카드로.
+                onOptimistic={(qty) => {
+                  extraPrev.current = board;
+                  setBoard((b) => {
+                    const holders: ExpeditionBoardSlot[] = Array.from({ length: qty }, (_, i) => ({ slot: -(i + 1), state: 'offer', extra: true }));
+                    const at = b.slots.findIndex((x) => x.state === 'locked');
+                    const slots = at < 0 ? [...b.slots, ...holders] : [...b.slots.slice(0, at), ...holders, ...b.slots.slice(at)];
+                    return { ...b, extraBought: b.extraBought + qty, slots };
+                  });
                 }}
                 onRollback={() => {
-                  // 원래 보드로 먼저 되돌리고(재조회가 실패해도 가짜 오퍼가 남지 않게) 서버 값으로 다시 맞춘다.
-                  if (resendPrev.current) setBoard(resendPrev.current);
-                  resendPrev.current = null;
-                  settleResend();
+                  // 원래 보드로 먼저 되돌리고(재조회가 실패해도 가짜 카드가 남지 않게) 서버 값으로 다시 맞춘다.
+                  if (extraPrev.current) setBoard(extraPrev.current);
+                  extraPrev.current = null;
+                  settleExtra();
                 }}
                 onBought={() => {
-                  resendPrev.current = null;
-                  settleResend();
+                  extraPrev.current = null;
+                  settleExtra();
                 }}
               />
             ) : null}
@@ -376,7 +365,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
       {board.slots.map((s) => (
-        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot || resendSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} resendable={canResend} onTap={() => onCardTap(s)} />
+        <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} canBuyExtra={canBuyExtra} onTap={() => onCardTap(s)} />
       ))}
 
       {/* 원정대원 선택 — 미니 카드(선택 대원 기준 확정 보상) + 아바타 그리드 + [닫기 · 다른 미션 · 파견 보내기] */}
@@ -395,7 +384,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                 <ModalButton tone="ghost" onClick={() => setAssignSlot(null)}>
                   닫기
                 </ModalButton>
-                <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot || resendSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
+                <ModalButton tone="contrast" disabled={!selectedAvatar || pendingSlot === assignFor.slot} onClick={() => selectedAvatar && doStart(assignFor, selectedAvatar)}>
                   파견 보내기
                 </ModalButton>
               </>
@@ -860,7 +849,15 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
   );
 }
 
-function SlotCard({ s, pending, refreshing, enhanceSum, resendable = false, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; resendable?: boolean; onTap: () => void }) {
+function SlotCard({ s, pending, refreshing, enhanceSum, canBuyExtra = false, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; canBuyExtra?: boolean; onTap: () => void }) {
+  // 추가 파견을 산 직후 자리 카드(10-10) — 서버가 굴린 파견지를 받기 전. 같은 112px, 점선. 누를 수 없다.
+  if (s.slot < 0 || !s.region) {
+    return (
+      <div className="flex h-[112px] w-full items-center justify-center rounded-xl border border-dashed border-amber-500/60 bg-amber-500/5 text-[12px] font-bold text-amber-700 dark:text-amber-300">
+        새 파견 찾는 중…
+      </div>
+    );
+  }
   if (s.state === 'locked') {
     // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
     const need = s.unlock?.enhanceSum ?? 0;
@@ -895,18 +892,25 @@ function SlotCard({ s, pending, refreshing, enhanceSum, resendable = false, onTa
       </button>
     );
   }
-  const region = s.region!;
+  const region = s.region;
   const hours = s.hours ?? 0;
   const bonus = s.reqBonusBp ?? 0;
+  // 추가 파견 칸 표식(10-10) — 헤더 왼쪽 작은 칩. 번호는 보이지 않는다.
+  const extraChip = s.extra ? (
+    <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-amber-500 px-1.5 py-px text-[9px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">추가 파견</span>
+  ) : null;
   return (
     <button type="button" onClick={onTap} disabled={pending} className={`block w-full text-left transition active:scale-[0.99] ${pending ? 'opacity-70' : ''}`}>
       {s.state === 'done' ? (
         // 오늘 완료(2026-09-01) — 수령한 파견 정보(아바타·받은 보상)를 그대로 두고 리본 + 문구만 얹는다.
-        <CardBody region={region} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status={resendable ? '＋를 눌러 한 번 더 보낼 수 있어요' : '내일 다시 보낼 수 있어요'} statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+        <CardBody region={region} monTier={monTierOf(s.baseReward ?? s.reward)} avatarSouth={s.avatarSouth ?? null} reward={s.reward} status={s.extra ? '오늘 다녀왔어요' : canBuyExtra ? '＋를 눌러 추가 파견을 열 수 있어요' : '내일 다시 보낼 수 있어요'} statusCls="text-amber-300" bonusText={null} progress={0} mutedBg mutedMon mutedAvatar>
+          {extraChip}
           <div className="pointer-events-none absolute -right-7 top-3 rotate-[38deg] bg-amber-500 px-8 py-0.5 text-[9.5px] font-black text-black shadow-[0_1px_3px_rgba(0,0,0,.6)]">오늘 완료</div>
         </CardBody>
       ) : s.state === 'offer' ? (
-        <CardBody region={region} monTier={monTierOf(s.reward)} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon />
+        <CardBody region={region} monTier={monTierOf(s.reward)} avatarSouth={null} reward={s.reward} status={refreshing || !s.reward ? '새 파견 찾는 중…' : '파견 대기'} bonusText={null} progress={0} mutedBg mutedMon>
+          {extraChip}
+        </CardBody>
       ) : (
         <Ticker>
           {(now) => {
@@ -925,7 +929,9 @@ function SlotCard({ s, pending, refreshing, enhanceSum, resendable = false, onTa
                 bonusText={`×${(1 + bonus / 10000).toFixed(2)}`}
                 progress={progress}
                 glow={done}
-              />
+              >
+                {extraChip}
+              </CardBody>
             );
           }}
         </Ticker>

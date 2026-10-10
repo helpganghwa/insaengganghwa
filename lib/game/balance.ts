@@ -882,6 +882,11 @@ export const FIRST_MILESTONES: readonly { key: string; metric: FirstMilestoneMet
 
 /** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09 추가. */
 export const EXPEDITION_SLOTS = 5;
+/**
+ * 추가 파견 칸(2026-10-10, POINT-SHOP §6) — 대난투 포인트·마일리지로 산 '오늘만 쓰는' 칸. 해금 칸(1~EXPEDITION_SLOTS) 뒤 번호(6부터)를
+ * 쓰며, 번호는 산 순서가 아니라 그때 비어 있는 가장 작은 번호(어제 산 칸의 진행 중 파견이 번호를 쥐고 있을 수 있다). 화면에는 번호 대신 '추가 파견'.
+ */
+export const isExtraExpeditionSlot = (slot: number): boolean => slot > EXPEDITION_SLOTS;
 
 /** 파견지 6종 — zones.region 코드 재사용(전부 즉시 개방, 게이트 없음). */
 export type ExpeditionRegion = 'swamp' | 'orc' | 'kingdom' | 'temple' | 'volcano' | 'angel';

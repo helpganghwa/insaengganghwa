@@ -250,12 +250,12 @@ export default async function HomePage() {
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and status = 'running' and complete_at > now()) as exp_running,
-            -- 오늘(KST) 출발 횟수 — '오늘 파견 N/M'의 N(보낸 기준, 다시 보내기 포함 — 파견 화면 헤더와 같은 값).
+            -- 오늘(KST) 출발 횟수 — '오늘 파견 N/M'의 N(보낸 기준, 추가 파견 포함 — 파견 화면 헤더와 같은 값).
             (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId}
                  and started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
                  and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as exp_started_today,
-            -- 오늘 산 '파견 다시 보내기'(10-06) — 열린 슬롯에 더해 '오늘 파견 N/M'의 M.
+            -- 오늘 산 '추가 파견' 칸 수(10-10) — 열린 슬롯에 더해 '오늘 파견 N/M'의 M.
             (select coalesce(sum(count), 0)::int from point_extra_buys
                where user_id = ${userId}::uuid and server_id = ${serverId} and item = 'expedition'
                  and kst_date = (now() at time zone 'Asia/Seoul')::date) as exp_extra,

@@ -19,6 +19,8 @@ export type ExpeditionBoardSlot = {
   slot: number;
   /** done = 오늘 출발·수령 완료(슬롯당 하루 1회) — 수령한 카드를 자정까지 그대로 보여준다. */
   state: 'locked' | 'offer' | 'running' | 'done';
+  /** 추가 파견 칸(10-10, slot > EXPEDITION_SLOTS) — 포인트로 산 오늘만 쓰는 칸. 열린 칸 뒤·잠긴 칸 앞에 놓인다. 번호는 화면에 안 보인다. */
+  extra?: boolean;
   /** 오늘(KST) 출발했는지 — 헤더 '오늘 N/M'(보낸 기준). done은 항상 true. */
   startedToday?: boolean;
   /** locked 전용 — 해금 조건(계정 합산 강화). */
@@ -69,9 +71,9 @@ export type ExpeditionBoard = {
   avatars: ExpeditionAvatar[];
   /** 오늘(KST) 수령한 파견 보상 합계 — 헤더 우측 표시(2026-08-31). 대성공 반영. */
   todayEarned: { diamond: number; boxes: number };
-  /** 오늘(KST) 출발한 횟수(다시 보내기 포함) — 헤더 '오늘 N/M'의 N. */
+  /** 오늘(KST) 출발한 횟수(추가 파견 포함) — 헤더 '오늘 N/M'의 N. */
   startsToday: number;
-  /** 오늘 산 '파견 다시 보내기' 횟수(전 칸 합, 10-06) — 헤더 M에 더하고, 더 살 수 있는지 판단. */
+  /** 오늘 산 추가 파견 장 수(10-10; 전환 당일 옛 '다시 보내기' 포함) — 헤더 M에 더하고, 더 살 수 있는지 판단. */
   extraBought: number;
 };
 
@@ -87,7 +89,8 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       select slot, status, region, duration_ms::text, reward, final_reward,
              complete_at, synergy_bp, req_bonus_bp, avatar_profile_id::text,
              (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = ${today}::date
-              and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as started_today
+              and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz) as started_today,
+             (rolled_at at time zone 'Asia/Seoul')::date = ${today}::date as rolled_today
       from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and status in ('offer','running')
       order by slot
@@ -96,7 +99,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         slot: number; status: 'offer' | 'running'; region: ExpeditionRegion; duration_ms: string;
         reward: ExpeditionReward; final_reward: ExpeditionReward | null;
         complete_at: string | Date | null; synergy_bp: number; req_bonus_bp: number;
-        avatar_profile_id: string | null; started_today: boolean | null;
+        avatar_profile_id: string | null; started_today: boolean | null; rolled_today: boolean | null;
       }[]
     >,
     db.execute(sql`
@@ -149,7 +152,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
         avatar_profile_id: string | null; claimed_at: string | Date | null;
       }[]
     >,
-    // 오늘 출발 횟수 · 오늘 산 다시 보내기(10-06).
+    // 오늘 출발 횟수 · 오늘 산 추가 파견(10-10).
     db.execute(sql`
       select (select count(*)::int from expeditions
                where user_id = ${userId}::uuid and server_id = ${serverId} and started_at is not null
@@ -173,55 +176,68 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
   const faceById = new Map(avatarRows.map((a) => [a.id, faceOf(a)]));
   const southById = new Map(avatarRows.map((a) => [a.id, a.south]));
 
-  const slots: ExpeditionBoardSlot[] = [];
+  /** 한 칸의 카드 — 활성 행(오퍼·진행)이 없으면 오늘 완료 카드, 그것도 없으면 null(오늘 이미 출발했거나 ensureOffers 미선행). */
+  const cardOf = (slot: number, extra: boolean): ExpeditionBoardSlot | null => {
+    const row = active.find((r) => r.slot === slot);
+    if (!row) {
+      const d = doneRows.find((r) => r.slot === slot);
+      if (!d) return null;
+      const base = d.final_reward ?? d.reward;
+      return {
+        slot,
+        extra,
+        state: 'done',
+        startedToday: true,
+        region: d.region,
+        hours: Math.round(Number(d.duration_ms) / 3_600_000),
+        reward: d.crit ? applyCrit(base) : base,
+        baseReward: d.reward, // 몬스터 단계(보상 크기)는 배율 전 오퍼 롤 기준 — 카드 생애 동안 불변
+        avatarId: d.avatar_profile_id,
+        avatarFace: d.avatar_profile_id ? (faceById.get(d.avatar_profile_id) ?? null) : null,
+        avatarSouth: d.avatar_profile_id ? (southById.get(d.avatar_profile_id) ?? null) : null,
+      };
+    }
+    const hours = Math.round(Number(row.duration_ms) / 3_600_000);
+    if (row.status === 'offer') {
+      // 추가 파견 오퍼는 산 날에만(어제 것은 ensureOffers가 치운다 — 그 전에 그려지면 숨긴다).
+      if (extra && !row.rolled_today) return null;
+      return { slot, extra, state: 'offer', region: row.region, hours, reward: row.reward };
+    }
+    return {
+      slot,
+      extra,
+      state: 'running',
+      startedToday: !!row.started_today,
+      region: row.region,
+      hours,
+      reward: row.final_reward ?? row.reward,
+      baseReward: row.reward,
+      completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
+      synergyBp: row.synergy_bp,
+      reqBonusBp: row.req_bonus_bp,
+      avatarId: row.avatar_profile_id,
+      avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
+      avatarSouth: row.avatar_profile_id ? (southById.get(row.avatar_profile_id) ?? null) : null,
+    };
+  };
+
+  const opened: ExpeditionBoardSlot[] = [];
+  const locked: ExpeditionBoardSlot[] = [];
   for (let slot = 1; slot <= EXPEDITION_SLOTS; slot++) {
     const row = active.find((r) => r.slot === slot);
     // 닫힌 슬롯: 진행 중(running) 파견이 남아 있으면 그대로 보여준다(합산 강화 하락 케이스 — 수령까지 유지).
     if (slot > eff && row?.status !== 'running') {
       const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot)!;
-      slots.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
+      locked.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
       continue;
     }
-    if (!row) {
-      const d = doneRows.find((r) => r.slot === slot);
-      if (d) {
-        const base = d.final_reward ?? d.reward;
-        slots.push({
-          slot,
-          state: 'done',
-          startedToday: true,
-          region: d.region,
-          hours: Math.round(Number(d.duration_ms) / 3_600_000),
-          reward: d.crit ? applyCrit(base) : base,
-          baseReward: d.reward, // 몬스터 단계(보상 크기)는 배율 전 오퍼 롤 기준 — 카드 생애 동안 불변
-          avatarId: d.avatar_profile_id,
-          avatarFace: d.avatar_profile_id ? (faceById.get(d.avatar_profile_id) ?? null) : null,
-          avatarSouth: d.avatar_profile_id ? (southById.get(d.avatar_profile_id) ?? null) : null,
-        });
-      }
-      continue; // 오퍼 없음 = 오늘 이미 출발(자정까지) 또는 ensureOffers 미선행(다음 렌더에서 채워짐)
-    }
-    const hours = Math.round(Number(row.duration_ms) / 3_600_000);
-    if (row.status === 'offer') {
-      slots.push({ slot, state: 'offer', region: row.region, hours, reward: row.reward });
-    } else {
-      slots.push({
-        slot,
-        state: 'running',
-        startedToday: !!row.started_today,
-        region: row.region,
-        hours,
-        reward: row.final_reward ?? row.reward,
-        baseReward: row.reward,
-        completeAtIso: row.complete_at ? new Date(row.complete_at).toISOString() : undefined,
-        synergyBp: row.synergy_bp,
-        reqBonusBp: row.req_bonus_bp,
-        avatarId: row.avatar_profile_id,
-        avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
-        avatarSouth: row.avatar_profile_id ? (southById.get(row.avatar_profile_id) ?? null) : null,
-      });
-    }
+    const card = cardOf(slot, false);
+    if (card) opened.push(card);
   }
+  // 추가 파견 칸(10-10) — 오늘 산 오퍼·진행 중(어제 산 것도 수령까지)·오늘 완료. 열린 칸 뒤, 잠긴 칸 앞.
+  const extraSlots = [...new Set([...active, ...doneRows].map((r) => Number(r.slot)).filter((n) => n > EXPEDITION_SLOTS))].sort((a, b) => a - b);
+  const extras = extraSlots.map((slot) => cardOf(slot, true)).filter((c): c is ExpeditionBoardSlot => c !== null);
+  const slots: ExpeditionBoardSlot[] = [...opened, ...extras, ...locked];
 
   const refreshToday = st.refresh_kst_day === today ? st.refresh_today : 0;
   return {

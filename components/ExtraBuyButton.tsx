@@ -16,11 +16,8 @@ import { kstDateString } from '@/lib/kst';
 
 import { buyExtraAction, extraQuoteAction } from '@/app/(game)/shop/point-actions';
 
-/** 파견 다시 보내기 — 팝업에서 고를 칸(오늘 다녀온 칸). */
-export type ResendSlot = { slot: number; label: string };
-
 const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }> = {
-  expedition: { title: '파견 다시 보내기', desc: '오늘 다녀온 슬롯에 새 파견지를 받아요.', done: '새 파견지가 나왔어요' },
+  expedition: { title: '추가 파견', desc: '오늘만 쓰는 파견 칸을 열어요. 사는 즉시 새 파견지가 나오고, 새로고침에도 함께 바뀌어요.', done: '새 파견지가 나왔어요' },
   raid: { title: '오늘 레이드 +1회', desc: '소환이나 참여를 한 번 더 할 수 있고, 동시에 진행할 수 있는 레이드도 하나 늘어요.', done: '오늘 레이드 +1회' },
   tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 해요. 오르기와 토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
 };
@@ -41,10 +38,6 @@ const EXPIRE: Record<PointExtraItem, string> = {
 const ERR: Record<string, string> = {
   PRICE_CHANGED: '가격이 바뀌었어요. 다시 확인해 주세요',
   MAX_REACHED: '오늘은 더 구매할 수 없어요',
-  // 파견만 — 보낼 수 있는 파견이 남아 있으면 다시 보내기를 사지 않는다(탑·레이드는 남아 있어도 살 수 있다).
-  NOT_NEEDED: '지금 보낼 수 있는 파견이 있어요',
-  SLOT_BUSY: '그 슬롯은 지금 다시 보낼 수 없어요',
-  SLOT_LOCKED: '아직 열리지 않은 슬롯이에요',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정입니다.',
@@ -74,6 +67,36 @@ const requestQuote = (item: PointExtraItem) => {
     });
 };
 /** 같은 상품의 요청이 이미 나가 있으면 그 응답을 같이 기다린다. fresh = 나가 있는 요청과 상관없이 새로 받는다(구매 직후). */
+/**
+ * 구매 직후 받아 둔 견적을 낙관적으로 맞춘다(산 장 수만큼 횟수·다음 값·잔액) — 다음에 ＋를 열 때 서버 답을 기다리지 않게.
+ * 모듈 변수 갱신은 컴포넌트 밖 함수에서만(React 컴파일러 불변 규칙).
+ */
+const bumpSharedQuoteAfterBuy = (item: PointExtraItem, qty: number, kind: PointKind, spent: number) => {
+  const before = sharedQuote[item];
+  if (!before) return;
+  const bought = before.q.bought + qty;
+  bumpQuoteSeq(item); // 구매 전에 떠난 조회의 답이 아래 값을 덮지 않게
+  sharedQuote[item] = {
+    at: before.at,
+    day: before.day,
+    q: {
+      ...before.q,
+      bought,
+      price: pointExtraPrice(item, bought),
+      melee: kind === 'melee' ? before.q.melee - spent : before.q.melee,
+      mileage: kind === 'mileage' ? before.q.mileage - spent : before.q.mileage,
+    },
+  };
+};
+/** 구매 실패 — 낙관적으로 바꾼 견적을 되돌린다(없었으면 비운다). */
+const restoreSharedQuote = (item: PointExtraItem, before: QuoteEntry | undefined) => {
+  if (before) sharedQuote[item] = before;
+  else delete sharedQuote[item];
+};
+const rememberUnsettled = (item: PointExtraItem, u: Unsettled | null) => {
+  if (u) unsettledKey[item] = u;
+  else delete unsettledKey[item];
+};
 const fetchSharedQuote = (item: PointExtraItem, fresh = false) => {
   const going = quoteInflight[item];
   if (going && !fresh) return going;
@@ -92,7 +115,7 @@ const cachedQuote = (item: PointExtraItem): QuoteEntry | undefined => {
 // 슬롯이면 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 두 번 받지 않는다). 견적의 '오늘 산 횟수'가 달라졌으면 그
 // 구매는 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 두고, 오래된 키(10분)·어제 키는 버린다.
 const UNSETTLED_TTL_MS = 10 * 60_000;
-type Unsettled = { key: string; bought: number; slot: number | null; day: string; at: number };
+type Unsettled = { key: string; bought: number; qty: number; day: string; at: number };
 const unsettledKey: Partial<Record<PointExtraItem, Unsettled>> = {};
 const unsettledOf = (item: PointExtraItem): Unsettled | null => {
   const u = unsettledKey[item];
@@ -109,15 +132,15 @@ const uncertain = (code: string) => code === 'NETWORK' || code === 'UNKNOWN';
 
 /**
  * 추가 횟수 ＋ 버튼 + 공용 구매 팝업(docs/POINT-SHOP.md §6, 10-06 확정 시안) — 파견·레이드·탑이 같이 쓴다.
- * ＋를 보일지는 호출부가 정한다(탑·레이드는 오늘 더 살 수 있는 동안 늘, 파견은 다시 보낼 칸이 있을 때).
- * 팝업은 한 번에 한 장만 사고, 이번 가격과 다음 구매 가격을 함께 보여 준다. 잔액이 모자란 통화는 흐리게만 하고 누르면 헤더 토스트(막지 않음).
+ * ＋를 보일지는 호출부가 정한다(셋 다 오늘 더 살 수 있는 동안 늘 — 파견도 10-10부터 레이드처럼).
+ * 탑·레이드는 한 번에 한 장, 파견은 장 수(1~오늘 남은 장)를 골라 한 번에 산다(값은 그날 산 순서대로 합산). 이번 가격과 다음 구매 가격을
+ * 함께 보여 준다. 잔액이 모자란 통화는 흐리게만 하고 누르면 헤더 토스트(막지 않음).
  * 레이아웃 시프트 방지(10-06): ＋가 그려질 때 견적을 미리 받아 두고(prefetch) 팝업은 그 값으로 바로 연다(뒤에서 새로 고침).
  * 사기는 낙관적 — 재확인 직후 팝업을 닫고 onOptimistic으로 호출부가 횟수를 먼저 올린다. 실패하면 onRollback으로 되돌리고 토스트.
  * 성공 확정은 onBought(서버 재렌더가 같은 값을 가져온다).
  */
 export function ExtraBuyButton({
   item,
-  slots,
   onBought,
   onOptimistic,
   onRollback,
@@ -125,13 +148,11 @@ export function ExtraBuyButton({
   size = 'md',
 }: {
   item: PointExtraItem;
-  /** 파견만 — 다시 보낼 수 있는 칸. 비면 ＋를 눌러도 안내만. */
-  slots?: ResendSlot[];
   onBought?: () => void;
-  /** 재확인 직후(서버 응답 전) — 호출부가 횟수·슬롯을 먼저 바꾼다. 파견은 고른 슬롯. */
-  onOptimistic?: (slot: number | null) => void;
-  /** 실패 시 onOptimistic을 되돌린다. */
-  onRollback?: (slot: number | null) => void;
+  /** 재확인 직후(서버 응답 전) — 호출부가 횟수를 먼저 올린다. 인자 = 이번에 산 장 수(파견만 2 이상). */
+  onOptimistic?: (qty: number) => void;
+  /** 실패 시 onOptimistic을 되돌린다(같은 장 수). */
+  onRollback?: (qty: number) => void;
   className?: string;
   size?: 'md' | 'sm' | 'pill';
 }) {
@@ -140,7 +161,8 @@ export function ExtraBuyButton({
   const [open, setOpen] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [kind, setKind] = useState<PointKind>('melee');
-  const [slot, setSlot] = useState<number | null>(null);
+  // 장 수 — 파견만 고른다(1~오늘 남은 장). 탑·레이드는 1.
+  const [qty, setQty] = useState(1);
   const [pending, start] = useTransition();
   // 연타·Enter 반복으로 재렌더 전에 두 번 사지 않게 — pending은 다시 그려진 뒤에야 걸린다.
   const busy = useRef(false);
@@ -162,10 +184,6 @@ export function ExtraBuyButton({
   };
 
   const openPopup = () => {
-    if (item === 'expedition' && (!slots || slots.length === 0)) {
-      showHeaderToast({ title: '다시 보낼 수 있는 슬롯이 없어요' });
-      return;
-    }
     const entry = cachedQuote(item);
     // 오래된 '오늘은 더 못 삼'은 믿지 않는다 — 그때는 새로 받아 판단한다.
     const expired = !!entry && entry.q.price === null && Date.now() - entry.at > QUOTE_FRESH_MS;
@@ -179,7 +197,7 @@ export function ExtraBuyButton({
     }
     setQuote(c);
     if (c) pickKind(c); // 처음엔 살 수 있는 통화를 골라 둔다(대난투 포인트 우선)
-    setSlot(slots?.[0]?.slot ?? null);
+    setQty(1);
     setOpen(true);
     openRef.current = true;
     loadQuote(!c, settling);
@@ -208,64 +226,60 @@ export function ExtraBuyButton({
   };
 
   const balanceOf = (k: PointKind) => (quote ? (k === 'melee' ? quote.melee : quote.mileage) : 0);
-  const enough = (k: PointKind) => !!quote?.price && balanceOf(k) >= amountIn(k, quote.price);
+  /** qty장 값 합(대난투 포인트) — 그날 산 순서대로(bought+1번째부터). 한 장이라도 못 사면 null. */
+  const totalFor = (n: number): number | null => {
+    if (!quote) return null;
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const p = pointExtraPrice(item, quote.bought + i);
+      if (p === null) return null;
+      sum += p;
+    }
+    return sum;
+  };
+  const total = totalFor(qty);
+  const enough = (k: PointKind) => total !== null && total > 0 && balanceOf(k) >= amountIn(k, total);
 
   const buy = () => {
-    if (!quote?.price || pending || busy.current) return;
+    if (!quote?.price || total === null || pending || busy.current) return;
     if (!enough(kind)) {
       showError(`${KIND_KO[kind]}가 부족해요`);
       return;
     }
     busy.current = true;
-    const expectedPrice = quote.price;
+    const expectedPrice = total;
     const max = quote.max;
-    const usedSlot = slot;
+    const usedQty = qty;
     const spent = amountIn(kind, expectedPrice);
     const before = sharedQuote[item];
-    // 결과를 모르는 채 끝난 같은 번째·같은 슬롯 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
+    // 결과를 모르는 채 끝난 같은 번째·같은 장 수 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
     const prev = unsettledOf(item);
-    const key = prev && prev.bought === quote.bought && prev.slot === usedSlot ? prev.key : newKey();
-    const attempt: Unsettled = { key, bought: quote.bought, slot: usedSlot, day: kstDateString(), at: Date.now() };
+    const key = prev && prev.bought === quote.bought && prev.qty === usedQty ? prev.key : newKey();
+    const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: Date.now() };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
-    onOptimistic?.(usedSlot);
-    if (before) {
-      const bought = before.q.bought + 1;
-      bumpQuoteSeq(item); // 구매 전에 떠난 조회의 답이 아래 값을 덮지 않게
-      sharedQuote[item] = {
-        at: before.at,
-        day: before.day,
-        q: {
-          ...before.q,
-          bought,
-          price: pointExtraPrice(item, bought),
-          melee: kind === 'melee' ? before.q.melee - spent : before.q.melee,
-          mileage: kind === 'mileage' ? before.q.mileage - spent : before.q.mileage,
-        },
-      };
-    }
+    onOptimistic?.(usedQty);
+    bumpSharedQuoteAfterBuy(item, usedQty, kind, spent);
     start(async () => {
-      const r = await buyExtraAction({ item, kind, slot: usedSlot ?? undefined, key, expectedPrice }).catch(
+      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;
       if (r.status === 'success') {
-        delete unsettledKey[item];
+        rememberUnsettled(item, null);
         // 같은 키의 재전송(앞선 요청이 이미 들어가 있었다) — 그 구매는 서버 값으로 화면에 이미 반영됐거나 곧 반영되므로,
         // 이번 낙관 반영은 되돌린다(안 되돌리면 횟수가 하나 더 올라간 채 남는다).
-        if (r.duplicate) onRollback?.(usedSlot);
+        if (r.duplicate) onRollback?.(usedQty);
         else onBought?.();
         showHeaderToast({
           title: copy.title,
-          detail: item === 'expedition' ? `슬롯 ${r.slot} · ${copy.done}` : `오늘 ${r.bought}/${max}번 구매했어요`,
+          detail: item === 'expedition' ? `${r.qty > 1 ? `${r.qty}칸 · ` : ''}${copy.done}` : `오늘 ${r.bought}/${max}번 구매했어요`,
         });
       } else {
         // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 구매) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 들어갔을 수 있다.
-        if (uncertain(r.code)) unsettledKey[item] = attempt;
-        else delete unsettledKey[item];
-        if (before) sharedQuote[item] = before;
-        else delete sharedQuote[item];
-        onRollback?.(usedSlot);
+        rememberUnsettled(item, uncertain(r.code) ? attempt : null);
+        restoreSharedQuote(item, before);
+        onRollback?.(usedQty);
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
         if (uncertain(r.code)) resyncWhenOnline('route', () => router.refresh());
       }
@@ -273,8 +287,10 @@ export function ExtraBuyButton({
     });
   };
 
-  const price = quote?.price ?? null;
-  const next = quote && price !== null ? pointExtraPrice(item, quote.bought + 1) : null;
+  // 이번 가격 = 고른 장 수의 합, 다음 = 그 뒤 한 장 값.
+  const price = total;
+  const next = quote && price !== null ? pointExtraPrice(item, quote.bought + qty) : null;
+  const remaining = quote ? Math.max(0, quote.max - quote.bought) : 0;
 
   return (
     <>
@@ -291,8 +307,8 @@ export function ExtraBuyButton({
                 </ModalButton>
                 {/* 3초 재확인(10-06) — 첫 탭은 무장, 3초 안에 다시 누르면 구매. 잔액이 모자라면 무장하지 않고 토스트. */}
                 <ModalConfirmButton
-                  // 통화·슬롯을 바꾸거나 가격이 새로 고쳐지면 3초 재확인을 처음부터(무장한 채 다른 값으로 사지 않게).
-                  key={`${kind}-${slot ?? 0}-${price ?? 0}`}
+                  // 통화·장 수를 바꾸거나 가격이 새로 고쳐지면 3초 재확인을 처음부터(무장한 채 다른 값으로 사지 않게).
+                  key={`${kind}-${qty}-${price ?? 0}`}
                   onArm={() => {
                     if (!quote?.price || pending) return false;
                     if (!enough(kind)) {
@@ -309,23 +325,23 @@ export function ExtraBuyButton({
             }
           >
             <div className="space-y-2.5 text-[13px]">
-              {item === 'expedition' && slots ? (
-                // 다시 보낼 슬롯 — 한 줄 칩(슬롯 번호 · 지역).
-                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="다시 보낼 슬롯">
-                  {slots.map((s) => (
+              {item === 'expedition' && remaining > 1 ? (
+                // 장 수 — 한 줄 칩(1~오늘 남은 장). 한 번에 여러 칸을 열어야 새로고침 한 번에 전부 바뀐다(10-10, 유저 건의).
+                <div className="flex gap-1.5" role="radiogroup" aria-label="칸 수">
+                  {Array.from({ length: remaining }, (_, i) => i + 1).map((n) => (
                     <button
-                      key={s.slot}
+                      key={n}
                       type="button"
                       role="radio"
-                      aria-checked={slot === s.slot}
-                      onClick={() => setSlot(s.slot)}
-                      className={`min-w-[30%] flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold break-keep transition ${
-                        slot === s.slot
+                      aria-checked={qty === n}
+                      onClick={() => setQty(n)}
+                      className={`flex-1 rounded-lg border px-2 py-1.5 text-center text-[12px] font-bold break-keep transition ${
+                        qty === n
                           ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
                           : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'
                       }`}
                     >
-                      슬롯 {s.slot} <span className="font-medium opacity-70">· {s.label}</span>
+                      {n}칸 <span className="font-medium tabular-nums opacity-70">· {totalFor(n) !== null ? fmt(amountIn(kind, totalFor(n)!)) : '…'}</span>
                     </button>
                   ))}
                 </div>
@@ -364,7 +380,8 @@ export function ExtraBuyButton({
                 <span>
                   오늘{' '}
                   <b className="tabular-nums text-zinc-700 dark:text-zinc-200">
-                    {(quote?.bought ?? 0) + 1}/{quote?.max ?? POINT_EXTRA_PRICES[item].length}
+                    {(quote?.bought ?? 0) + 1}
+                    {qty > 1 ? `~${(quote?.bought ?? 0) + qty}` : ''}/{quote?.max ?? POINT_EXTRA_PRICES[item].length}
                   </b>
                   번째
                 </span>
