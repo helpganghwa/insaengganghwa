@@ -521,6 +521,8 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
   .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft, .wb-zone-flame, .wb-zone-label, .wb-alt-a, .wb-alt-b { animation: none; }
   /* 전투 재생 효과(피해 숫자·번쩍임·라운드·일지 줄·광선)도 멈춘다 */
   [class*="animate-wb-"] { animation: none !important; }
+  /* 투명해지며 끝나는 효과(번쩍임·광선·피해 숫자)는 멈추면 불투명 첫 프레임으로 남으므로 숨긴다(10-11 재검사) */
+  .animate-wb-flash, .animate-wb-jackpot, .animate-wb-num { opacity: 0 !important; }
   .wb-alt-a { opacity: 0; }
   .wb-zone-flame { box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 8px 3px rgba(251, 191, 36, 0.85); }
   .wb-zone-label { border-color: rgba(253, 230, 138, 1); box-shadow: 0 0 4px 1.5px rgba(251, 191, 36, 0.85); }

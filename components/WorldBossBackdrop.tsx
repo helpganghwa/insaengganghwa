@@ -35,13 +35,14 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: 
         raf = requestAnimationFrame(tick); // 30fps면 충분한 불티
         return;
       }
+      const k = last ? Math.min(3, (now - last) / 16.7) : 1; // 60Hz 한 프레임 기준 경과 비율 — 프레임을 줄여도 속도는 그대로(10-11 재검사)
       last = now;
       g.clearRect(0, 0, 400, 240);
       for (let i = 0; i < ps.length; i++) {
         const p = ps[i]!;
-        p.x += p.vx + Math.sin((p.life + i * 13) / 30) * 0.15;
-        p.y += p.vy;
-        p.life++;
+        p.x += (p.vx + Math.sin((p.life + i * 13) / 30) * 0.15) * k;
+        p.y += p.vy * k;
+        p.life += k;
         if (p.life > p.max || p.y < -4) {
           ps[i] = spawn();
           continue;

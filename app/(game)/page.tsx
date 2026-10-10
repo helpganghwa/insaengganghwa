@@ -300,7 +300,6 @@ export default async function HomePage() {
             (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
               order by kst_day desc limit 1)
               as chron_headline,
-            -- 지금 머무는 월드보스 단계(docs/WORLD-BOSS.md §9) — 세계지도 카드에 보스·불씨 테두리. 없으면 null.
             -- 홈 무대 배너 재료 — 구역·주인 길드·페이즈·떠나는 시각·모집 중 원정대 수(가장 최근 보스 하나).
             (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))

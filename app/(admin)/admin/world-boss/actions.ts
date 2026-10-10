@@ -14,7 +14,7 @@ export type SpawnActionResult = SpawnResult | { ok: false; code: 'BAD_SERVER' | 
  * 월드보스 소환 — 어드민. mode 'now' = 즉시, 'at' = atLocal(datetime-local, KST 'YYYY-MM-DDThh:mm')에 예약.
  * allowOverlap = 화면에서 "동시에 2마리" 확인을 거친 뒤 true로 다시 부른다(처음엔 false → OVERLAP이면 묻는다).
  */
-export async function spawnWorldBossAction(input: { serverId: number; zoneId: number; mode: 'now' | 'at'; atLocal: string; allowOverlap: boolean; bossCode: string }): Promise<SpawnActionResult> {
+export async function spawnWorldBossAction(input: { serverId: number; zoneId: number; mode: 'now' | 'at'; atLocal: string; allowOverlap: boolean; allowNearMidnight?: boolean; bossCode: string }): Promise<SpawnActionResult> {
   const adminId = await requireAdmin();
   const serverId = Math.trunc(Number(input.serverId));
   if (!(await openServerIds()).includes(serverId)) return { ok: false, code: 'BAD_SERVER' };
@@ -26,7 +26,7 @@ export async function spawnWorldBossAction(input: { serverId: number; zoneId: nu
     at = new Date(iso);
   }
   if (!Number.isInteger(input.zoneId) || input.zoneId <= 0) return { ok: false, code: 'ZONE_NOT_FOUND' };
-  const r = await spawnWorldBossByAdmin({ serverId, zoneId: input.zoneId, spawnAt: at, adminUserId: adminId, allowOverlap: input.allowOverlap === true, bossCode: input.bossCode });
+  const r = await spawnWorldBossByAdmin({ serverId, zoneId: input.zoneId, spawnAt: at, adminUserId: adminId, allowOverlap: input.allowOverlap === true, allowNearMidnight: input.allowNearMidnight === true, bossCode: input.bossCode });
   if (r.ok) {
     revalidatePath('/admin/world-boss');
     // 즉시 출현은 세계 피드·지도 캐시에 바로 보이게(크론의 출현 처리와 같은 무효화).

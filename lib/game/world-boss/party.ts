@@ -39,22 +39,26 @@ type BossRow = { id: string; server_id: number; zone_id: number; region: string;
  * 보스 행 잠금 — 잠금 순서는 언제나 **보스 → 원정대**(출발·정산과 같은 순서, 어긋나면 교착). 보스 행 자체를 고치지 않는
  * 신청·수락·초대는 FOR SHARE로 잡아 서로는 막지 않고 출발(FOR UPDATE)과만 줄을 선다. 종료 판정은 DB 시계(now())로 — 정산과 같은 시계.
  */
-async function lockActiveBoss(tx: Tx, bossId: string, mode: 'update' | 'share' = 'update'): Promise<BossRow> {
+async function lockActiveBoss(tx: Tx, bossId: string, mode: 'update' | 'share' = 'update', requireActive = true): Promise<BossRow> {
   const lock = mode === 'share' ? sql`for share of b` : sql`for update of b`;
   const [b] = (await tx.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, b.region::text as region, b.status, b.leave_at, (b.leave_at > now()) as alive, z.owner_guild_id::text as owner, z.name as zone_name
       from world_bosses b join zones z on z.id = b.zone_id where b.id = ${bossId}::bigint ${lock}
   `)) as unknown as (BossRow & { alive: boolean })[];
   if (!b) throw new WorldBossError('NOT_FOUND');
-  if (b.status !== 'active' || !b.alive) throw new WorldBossError('BOSS_NOT_ACTIVE');
+  if (requireActive && (b.status !== 'active' || !b.alive)) throw new WorldBossError('BOSS_NOT_ACTIVE');
   return b;
 }
 
-/** 보스(FOR SHARE) → 원정대(FOR UPDATE) 순서로 잠근다 — 신청·수락·초대·초대 응답이 전부 이 순서를 쓴다. */
-async function lockBossThenParty(tx: Tx, partyId: string): Promise<{ boss: BossRow; party: PartyRow }> {
+/**
+ * 보스 → 원정대 순서로 잠근다 — 신청·수락·초대·초대 응답이 전부 이 순서를 쓴다.
+ * 대원을 넣는 수락 경로는 보스를 FOR UPDATE로(같은 사람을 두 대장이 동시에 수락하면 대원 insert와 신청 정리가 서로를 기다리는 교착 — 10-11 재검사),
+ * 신청·초대·거절은 FOR SHARE로 서로 막지 않는다. 거절은 보스가 떠난 뒤(정산 전 최대 5분)에도 되게 requireActive=false.
+ */
+async function lockBossThenParty(tx: Tx, partyId: string, mode: 'update' | 'share' = 'share', requireActive = true): Promise<{ boss: BossRow; party: PartyRow }> {
   const [pre] = (await tx.execute(sql`select boss_id::text as b from world_boss_parties where id = ${partyId}::bigint`)) as unknown as { b: string }[];
   if (!pre) throw new WorldBossError('NOT_FOUND');
-  const boss = await lockActiveBoss(tx, pre.b, 'share');
+  const boss = await lockActiveBoss(tx, pre.b, mode, requireActive);
   const party = await lockParty(tx, partyId);
   return { boss, party };
 }
@@ -63,7 +67,8 @@ async function lockBossThenParty(tx: Tx, partyId: string): Promise<{ boss: BossR
 async function clearOtherAsks(tx: Tx, bossId: string, userId: string, keepPartyId: string | null): Promise<void> {
   await tx.execute(sql`
     delete from world_boss_join_requests r using world_boss_parties p
-     where p.id = r.party_id and p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid`);
+     where p.id = r.party_id and p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid
+       and (${keepPartyId}::bigint is null or r.party_id <> ${keepPartyId}::bigint)`);
   await tx.execute(sql`
     delete from world_boss_invites i using world_boss_parties p
      where p.id = i.party_id and p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending'
@@ -186,7 +191,7 @@ export async function requestJoin(input: { userId: string; serverId: number; par
 /** 수락·거절 — 대장만. 수락은 인원·1인 1번을 다시 검사한다. */
 export async function decideJoin(input: { leaderUserId: string; serverId: number; partyId: string; userId: string; accept: boolean }): Promise<void> {
   await db.transaction(async (tx) => {
-    const { party } = await lockBossThenParty(tx, input.partyId);
+    const { party } = await lockBossThenParty(tx, input.partyId, input.accept ? 'update' : 'share', input.accept);
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
     if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
@@ -420,7 +425,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
 /**
  * 구역 주인이 바뀌어도(자정 공개·중립화) 모집 중 원정대는 그대로 둔다(10-11 사용자 결정). 만들 자격은 만들 때만 보고,
  * 참가는 누구나이며 전리품은 떠나는 순간의 주인 금고로 가므로 새 주인이 손해 볼 게 없다. 출발도 주인을 읽지 않아
- * 점령전 잠금(23~01시)과 무관하다. 길드 해산은 guild_id cascade로 그 길드의 원정대 행이 함께 지워진다.
+ * 점령전 잠금(23~01시)과 무관하다. 길드 해산은 모집 중 원정대만 정리하고 출발 기록은 남긴다(0236).
  */
 
 /** 길드 이탈(탈퇴·추방) 또는 계정 탈퇴(serverId null = 전 서버) — 그 사람이 대장인 모집 중 원정대 해산. 참가자로 있는 건 그대로(참가는 누구나). */
@@ -497,7 +502,7 @@ export async function cancelInvite(input: { leaderUserId: string; serverId: numb
 /** 초대 응답 — 수락하면 바로 참가(수락 검사는 decideJoin과 같다), 거절은 줄만 닫는다. 수락하면 대장에게 푸시. */
 export async function respondInvite(input: { userId: string; serverId: number; partyId: string; accept: boolean }): Promise<void> {
   const done = await db.transaction(async (tx) => {
-    const { party } = await lockBossThenParty(tx, input.partyId);
+    const { party } = await lockBossThenParty(tx, input.partyId, input.accept ? 'update' : 'share', input.accept);
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     const [inv] = (await tx.execute(sql`
       select status from world_boss_invites where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid for update`)) as unknown as { status: string }[];
@@ -517,8 +522,9 @@ export async function respondInvite(input: { userId: string; serverId: number; p
       throw new WorldBossError('ALREADY_IN_PARTY');
     }
     await tx.execute(sql`update world_boss_invites set status = 'accepted', decided_at = now() where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
-    // 같은 보스의 다른 신청·대기 초대는 지운다 — 이미 들어갔으니 다른 대장 화면에 남아 있으면 안 된다.
+    // 같은 보스의 다른 신청·대기 초대는 지운다 — 이미 들어갔으니 다른 대장 화면에 남아 있으면 안 된다. 이 원정대에 걸어 둔 내 신청도.
     await clearOtherAsks(tx, party.boss_id, input.userId, party.id);
+    await tx.execute(sql`delete from world_boss_join_requests where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
     return { leader: party.leader, bossId: party.boss_id };
   });
   if (done) {

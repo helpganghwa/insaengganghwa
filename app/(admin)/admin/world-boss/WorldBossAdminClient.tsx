@@ -56,10 +56,10 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
   const zone = server?.zones.find((z) => z.id === zoneId);
   const liveCount = server?.bosses.filter((b) => b.status !== 'left').length ?? 0;
 
-  const submit = (allowOverlap: boolean) => {
+  const submit = (allowOverlap: boolean, allowNearMidnight = false) => {
     if (zoneId === '') return setMsg({ tone: 'err', text: '구역을 골라 주세요.' });
     start(async () => {
-      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap, bossCode });
+      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap, allowNearMidnight, bossCode });
       if (r.ok) {
         setMsg({ tone: 'ok', text: r.status === 'active' ? `${r.zoneName}에 소환했어요 — 지금 출현, ${kst(r.leaveAt)} 종료.` : `${r.zoneName}에 예약했어요 — ${kst(r.spawnAt)} 출현, ${kst(r.leaveAt)} 종료.` });
         setZoneId('');
@@ -67,7 +67,7 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
       }
       if (r.code === 'NEAR_MIDNIGHT') {
         // 떠나는 시각이 자정 공개 창에 걸림 — 정산이 공개 뒤에 돌면 새 주인이 전리품을 받는다. 알고도 소환할지 묻는다.
-        if (window.confirm(`종료 시각 ${kst(r.leaveAt)}이 점령전 자정 공개(23:50~00:10)에 걸려요.\n정산이 공개 뒤에 돌면 새 주인이 전리품을 받을 수 있어요. 그래도 소환할까요?`)) submit(true);
+        if (window.confirm(`종료 시각 ${kst(r.leaveAt)}이 점령전 자정 공개(23:50~00:10)에 걸려요.\n정산이 공개 뒤에 돌면 새 주인이 전리품을 받을 수 있어요. 그래도 소환할까요?`)) submit(allowOverlap, true);
         else setMsg({ tone: 'err', text: '소환하지 않았어요.' });
         return;
       }
@@ -75,7 +75,7 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
         // 동시에 2마리 — 한 번 더 묻고 진행(10-11 사용자).
         const lines = r.overlapping.map((o: SpawnOverlap) => `· ${o.zoneName} — ${STATUS_KO[o.status]?.label ?? o.status}, ${kst(o.spawnAt)} ~ ${kst(o.leaveAt)}`).join('\n');
         const n = r.overlapping.length;
-        if (window.confirm(`이미 출현 중·예정인 보스가 ${n}마리 있어요.\n\n${lines}\n\n머무는 시간이 겹쳐 동시에 ${n + 1}마리가 돼요. 그래도 소환할까요?`)) submit(true);
+        if (window.confirm(`이미 출현 중·예정인 보스가 ${n}마리 있어요.\n\n${lines}\n\n머무는 시간이 겹쳐 동시에 ${n + 1}마리가 돼요. 그래도 소환할까요?`)) submit(true, allowNearMidnight);
         else setMsg({ tone: 'err', text: '소환하지 않았어요.' });
         return;
       }

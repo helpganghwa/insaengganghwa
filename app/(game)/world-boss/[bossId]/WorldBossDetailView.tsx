@@ -338,7 +338,7 @@ export function WorldBossDetailView({
           weakTotal={d.weakTotal}
           weakBonus={d.weakBonus}
           mine={d.mine}
-          // me.person은 원정대 참가 전에만 채워진다(낙관 그리기용) — 참가 중이면 내 원정대 명단의 내 항목에서(10-11 사용자: 👤 노출 버그).
+          // me.person은 참가 전과 모집 중 내 원정대에서 채워진다(낙관 그리기용) — 참가 중이면 내 원정대 명단의 내 항목에서(10-11 사용자: 👤 노출 버그).
           avatarSrc={me?.person?.avatarSrc ?? mp?.members.find((x) => x.userId === me?.userId)?.avatarSrc ?? null}
           onEquipBest={() => run(() => equipBestAction(d.id), { title: '추천 장비를 장착했어요' }, { t: 'equipBest' })}
         />

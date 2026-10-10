@@ -48,6 +48,12 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
     .where(eq(zones.ownerGuildId, guildId));
   // 월드보스(0236): 이 길드가 만든 **모집 중** 원정대는 해산(대원·신청·초대 삭제). 출발한 원정대 기록은 남기고 guild_id만 null이 된다(FK set null) —
   // 종전 cascade는 출발 기록까지 지워 (boss_id, user_id) 유니크가 풀렸다(같은 보스 재참가, 10-11 감사).
+  // 잠금 순서는 보스 → 원정대(party.ts와 같게): 길드 행 삭제의 FK set null이 world_bosses(spawn_owner·settled)를 잠그므로 보스를 먼저 잡는다(10-11 재검사).
+  await tx.execute(sql`
+    select id from world_bosses
+     where spawn_owner_guild_id = ${guildId} or settled_guild_id = ${guildId}
+        or id in (select boss_id from world_boss_parties where guild_id = ${guildId} and status = 'recruiting')
+     order by id for update`);
   const dis = (await tx.execute(sql`
     update world_boss_parties set status = 'disbanded', disband_reason = 'leader_left' where guild_id = ${guildId} and status = 'recruiting' returning id`)) as unknown as { id: string }[];
   if (dis.length > 0) {

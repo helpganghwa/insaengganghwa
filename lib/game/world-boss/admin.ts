@@ -104,6 +104,8 @@ export async function spawnWorldBossByAdmin(input: {
   allowOverlap: boolean;
   /** 보스 종류(레지스트리 코드). 없으면 기본 종류. */
   bossCode?: WorldBossKindCode;
+  /** 종료 시각이 자정 공개 창에 걸려도 소환(화면에서 확인을 거친 뒤 true). 겹침 확인(allowOverlap)과는 별개. */
+  allowNearMidnight?: boolean;
 }): Promise<SpawnResult> {
   const now = new Date();
   // 즉시는 1초 전으로 적어 activateDueBosses(spawn_at <= now())가 바로 집는다.
@@ -113,7 +115,7 @@ export async function spawnWorldBossByAdmin(input: {
   const leaveAt = new Date(spawnAt.getTime() + WORLD_BOSS_STAY_MS);
   // 떠나는 시각이 점령전 자정 공개 창(23:50~00:10 KST)에 걸리면 정산 크론(5분 틱)이 공개 뒤에 돌아 새 주인이 전리품을 받을 수 있다(10-11 감사) — 확인을 거쳐야 소환.
   const kstMin = ((leaveAt.getTime() + 9 * HOUR) % (24 * HOUR)) / 60000;
-  if ((kstMin >= 23 * 60 + 50 || kstMin < 10) && !input.allowOverlap) return { ok: false, code: 'NEAR_MIDNIGHT', leaveAt: leaveAt.toISOString() };
+  if ((kstMin >= 23 * 60 + 50 || kstMin < 10) && !input.allowNearMidnight) return { ok: false, code: 'NEAR_MIDNIGHT', leaveAt: leaveAt.toISOString() };
 
   const result = await db.transaction(async (tx): Promise<SpawnResult> => {
     // 구역 행 잠금 — 같은 구역에 동시에 두 번 소환하는 경쟁을 직렬화한다.
