@@ -17,6 +17,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
+import { sounds } from '@/lib/game/sound';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
@@ -138,10 +139,35 @@ export function WorldBossReplay({
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
     return () => clearTimeout(t);
   }, [done]);
+  // 효과음(설정의 효과음 끄기를 따른다) — 열리거나 다시 재생하면 불사조 울음, 대원 타격은 거체 타격음, 약점을 맞히면 균열음,
+  // 날갯짓에 쓰러지면 바람+쓰러짐. 좋은/대박 전리품은 타격 뒤 따로 울려 귀로도 구분된다. 건너뛰기는 마지막 한 번만 울린다.
+  useEffect(() => {
+    if (idx === 0 && events.length > 0) sounds.worldBossRoar();
+    const ev = idx > 0 ? events[idx - 1] : null;
+    if (!ev) return;
+    if (ev[0] < 0) {
+      sounds.worldBossSweep();
+      return;
+    }
+    if ((weakBits[idx - 1] ?? 0) !== 0) sounds.worldBossWeak();
+    else sounds.worldBossHit();
+    const drop = drops[idx - 1];
+    if (!drop) return;
+    const tier = lootTier(drop[0], drop[1]);
+    if (tier === 'jackpot') sounds.worldBossJackpot();
+    else if (tier === 'good') sounds.worldBossLoot();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx]);
+  // 정산 줄이 올라올 때 팡파레, 페이즈를 올렸으면 징이 뒤따른다.
+  useEffect(() => {
+    if (!resultShown) return;
+    sounds.worldBossVictory();
+    if (battle.stageTo - battle.stageFrom > 0) sounds.worldBossPhase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultShown]);
   // 무대 오버레이 — 라운드 줄은 빼고 마지막 3줄(라운드는 상단 중앙 알약이 맡는다, 10-11 사용자). 명단 아래 전체 일지에는 라운드 머리를 남긴다.
   const shown = lines.filter((l) => l.kind !== 'round').slice(-3);
 
-  const moved = battle.stageTo - battle.stageFrom;
   const struck = st.last && st.last[0] < 0;
   const hit = st.last && st.last[0] >= 0;
   const face = (userId: string) => battle.avatars?.[userId] ?? { src: null, box: null };
