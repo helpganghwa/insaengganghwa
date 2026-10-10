@@ -32,8 +32,36 @@ const STEP_FALL_MS = 2000;
 const RESULT_DELAY_MS = 1400;
 /** 라운드 전환 쉼 — 쓰러짐 연출이 지난 뒤 새 라운드 첫 공격 이만큼 전에 라운드 알약만 바뀐다(10-11 사용자). */
 const ROUND_BEAT_MS = 600;
-/** 일지 동사 — 공격 순서대로 돌려 쓴다(무기 종류는 기록에 없어 두루 맞는 말만). */
-const VERBS = ['휘두른다', '내리친다', '꽂아 넣는다', '후려친다', '찔러 넣는다'];
+/** 일지 문장 풀 — 같은 문장만 반복되면 재미없어(10-11 사용자) 공격·반격마다 다른 문장을 고른다(기록마다 자리가 달라지게 원정대 id로 섞는다).
+ * 무기 이름이 기록돼 있으면(10-11부터) 무기 문장, 없으면(옛 기록) 맨손 문장. josa 표기(#{을} 등)는 조사 라이브러리가 받침에 맞춘다. */
+const ATTACK_LINES: ((nick: string, weapon: string) => string)[] = [
+  (n, w) => `${n}, ${w}#{을} 휘두른다`,
+  (n, w) => `${n}#{이} ${w}#{을} 번뜩이며 파고든다`,
+  (n, w) => `${n}, 틈을 노려 ${w}#{을} 찔러 넣는다`,
+  (n, w) => `${n}의 ${w}#{이} 깃털을 가르며 꽂힌다`,
+  (n, w) => `${n}, 잿불을 뚫고 ${w}#{을} 내리꽂는다`,
+  (n, w) => `${n}#{이} ${w}#{을} 크게 휘둘러 후려친다`,
+  (n, w) => `${n}, ${w}#{을} 움켜쥐고 몸통을 노린다`,
+  (n, w) => `${n}#{이} 날개 사이로 ${w}#{을} 꽂아 넣는다`,
+];
+const BARE_ATTACK_LINES: ((nick: string) => string)[] = [
+  (n) => `${n}#{이} 일격을 날린다`,
+  (n) => `${n}#{이} 몸통을 노려 내리친다`,
+  (n) => `${n}, 틈을 노려 찔러 든다`,
+  (n) => `${n}#{이} 잿불을 뚫고 달려든다`,
+];
+const BOSS_LINES: ((boss: string, nick: string) => string)[] = [
+  (b, n) => `${b}의 날갯짓 — 잿불이 ${n}#{을} 덮쳤다. 쓰러짐`,
+  (b, n) => `${b}#{이} 울부짖으며 불덩이를 토해 냈다 — ${n} 쓰러짐`,
+  (_, n) => `${n}#{이} 잿불 폭풍에 휩쓸려 쓰러졌다`,
+  (b, n) => `${b}의 발톱이 ${n}#{을} 낚아챘다 — 쓰러짐`,
+  (_, n) => `잿더미가 솟구쳐 ${n}#{을} 삼켰다. 쓰러짐`,
+  (b, n) => `${b}의 꼬리 깃이 불꽃을 흩뿌려 ${n}#{이} 쓰러졌다`,
+  (b, n) => `${n}, ${b}의 눈빛에 묶인 채 잿불에 휘감겼다 — 쓰러짐`,
+  (_, n) => `불타는 깃털 소나기 — ${n}#{이} 버티지 못하고 쓰러졌다`,
+];
+/** 문자열 → 작은 정수(기록마다 문장 자리를 다르게). */
+const seedOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 type LootTier = 'small' | 'good' | 'jackpot';
 /** 보상 등급 — jackpot(💎300+·📦90+)은 금빛 광선, good(💎50+·📦30+)은 호박색 강조, 나머지는 어두운 알약(10-11 사용자: 높은 보상은 더 눈에 띄게). */
@@ -102,19 +130,21 @@ export function WorldBossReplay({
   const lines = useMemo(() => {
     const out: LogLine[] = [{ key: 'r1', kind: 'round', text: '1라운드' }];
     const dmgSum: number[] = [];
+    const seed = seedOf(battle.partyId);
+    // 같은 사람이 연달아 같은 문장을 쓰지 않도록 k에 소수를 곱해 돌린다.
+    const pick = <T,>(pool: T[], k: number): T => pool[(seed + k * 7) % pool.length]!;
     for (let k = 0; k < idx; k++) {
       const [a, t, d, aux] = events[k]!;
       if (a >= 0) {
         const m = roster[a]!;
         const weapon = m.items?.find((i) => i.slot === 'weapon')?.name;
-        const verb = VERBS[k % VERBS.length]!;
         const drop = drops[k];
         const wb = weakBits[k] ?? 0;
         dmgSum[a] = (dmgSum[a] ?? 0) + d;
         out.push({
           key: `e${k}`,
           kind: 'atk',
-          text: weapon ? josa(`${m.nickname}, ${weapon}#{을} ${verb}`) : josa(`${m.nickname}#{이} 일격을 날린다`),
+          text: josa(weapon ? pick(ATTACK_LINES, k)(m.nickname, weapon) : pick(BARE_ATTACK_LINES, k)(m.nickname)),
           dmg: d,
           loot: drop && drop[0] > 0 ? `💎${drop[0].toLocaleString('ko-KR')}` : drop && drop[1] > 0 ? `📦${drop[1]}` : undefined,
           lootTier: drop ? lootTier(drop[0], drop[1]) : undefined,
@@ -122,7 +152,7 @@ export function WorldBossReplay({
         });
       } else {
         const m = roster[t]!;
-        out.push({ key: `e${k}`, kind: 'boss', text: josa(`${bossName}의 날갯짓 — 잿불이 ${m.nickname}#{을} 덮쳤다. 쓰러짐`) });
+        out.push({ key: `e${k}`, kind: 'boss', text: josa(pick(BOSS_LINES, k)(bossName, m.nickname)) });
         if (aux + 1 <= battle.finale.rounds && k < events.length - 1) out.push({ key: `r${aux + 1}`, kind: 'round', text: `${aux + 1}라운드` });
       }
     }
@@ -137,14 +167,15 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
     return () => clearTimeout(t);
   }, [done]);
   // 효과음 — 탑·대난투처럼 있는 소리로만(10-11 사용자: 울음·출정 같은 전용음 없음, 설정의 효과음 끄기를 따른다):
-  // 대원 타격=레이드 타격, 약점 적중=치명타, 날갯짓에 쓰러짐=KO, 좋은 전리품=보석, 대박=강화 대박 팡파레(타격 뒤에 이어 울린다). 건너뛰기는 마지막 한 번만.
+  // 대원 타격=레이드 타격(약점 적중도 같은 소리 — 특수음은 보상에만), 날갯짓에 쓰러짐=KO,
+  // 보상을 뽑으면 타격 뒤에 이어 울린다: 작은 전리품=보석, 좋은 전리품=보상 팡파레, 대박=강화 대박 팡파레. 건너뛰기는 마지막 한 번만.
   useEffect(() => {
     const ev = idx > 0 ? events[idx - 1] : null;
     if (!ev) return;
@@ -152,13 +183,13 @@ export function WorldBossReplay({
       sounds.meleeKo();
       return;
     }
-    if ((weakBits[idx - 1] ?? 0) !== 0) sounds.raidCrit();
-    else sounds.raidHit();
+    sounds.raidHit();
     const drop = drops[idx - 1];
-    if (!drop) return;
+    if (!drop || (drop[0] <= 0 && drop[1] <= 0)) return;
     const tier = lootTier(drop[0], drop[1]);
     if (tier === 'jackpot') sounds.enhanceJackpot();
-    else if (tier === 'good') sounds.gem();
+    else if (tier === 'good') sounds.reward();
+    else sounds.gem();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx]);
   // 정산 줄이 올라올 때 팡파레(레이드 승리), 페이즈를 올렸으면 레벨업 소리가 뒤따른다.
@@ -323,19 +354,18 @@ export function WorldBossReplay({
             {/* 머리는 행보다 위(z-20) — 행 안의 z-10 글자가 같은 스택에서 머리를 덮던 문제(10-11 사용자). 행은 isolate로 자기 스택을 만든다. */}
             <div className="sticky top-0 z-20 flex items-center justify-between bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
               <span>원정대원 {roster.length}명</span>
-              {phase ? (
+              {phase && (
                 <span>
                   원정대 피해 <b className="font-mono text-[12px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
                 </span>
-              ) : (
-                <span>공격 · 피해 · 획득</span>
               )}
             </div>
             <ul className="overflow-hidden rounded-xl border border-stone-800">
               {roster.map((m, i) => {
                 const fellR = st.fell[i];
-                const isHit = !!hit && st.last![0] === i;
-                const isStruck = !!struck && st.last![1] === i;
+                // 끝나면 마지막 타격·반격 강조는 걷는다 — 마지막에 쓰러진 대원도 다른 대원처럼 흑백이 된다(10-11 사용자).
+                const isHit = !done && !!hit && st.last![0] === i;
+                const isStruck = !done && !!struck && st.last![1] === i;
                 const f = face(m.userId);
                 const weakNow = isHit ? lastWeak : 0;
                 const down = fellR != null && !isStruck;

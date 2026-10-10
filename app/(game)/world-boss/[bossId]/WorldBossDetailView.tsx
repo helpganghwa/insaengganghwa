@@ -931,7 +931,7 @@ function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPer
         <>
           <span className="block font-mono text-[9px] text-orange-200 tabular-nums">{formatCompactKR(p.result.damage)}</span>
           <span className={`block whitespace-nowrap text-[9px] tabular-nums ${p.result.diamond > 0 || p.result.boxes > 0 ? 'text-orange-300' : 'text-stone-600'}`}>
-            {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond}` : '', p.result.boxes > 0 ? `📦${p.result.boxes}` : ''].filter(Boolean).join(' ') : '꽝'}
+            {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond}` : '', p.result.boxes > 0 ? `📦${p.result.boxes}` : ''].filter(Boolean).join(' ') : '미획득'}
           </span>
         </>
       ) : (

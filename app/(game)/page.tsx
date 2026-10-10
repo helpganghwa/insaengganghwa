@@ -34,6 +34,8 @@ import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { ChuseokBanner } from './ChuseokBanner';
+import { WorldBossHomeBanner, type WorldBossHomeBannerData } from './WorldBossHomeBanner';
+import { worldBossName } from '@/lib/game/world-boss/bosses';
 import { CheckinPopupGate } from './CheckinPopup';
 import { RankingTop3Card } from './RankingTop3Card';
 import { WorldTicker } from './WorldTicker';
@@ -178,6 +180,7 @@ export default async function HomePage() {
   let chronicleHeadline: string | null = null;
   let worldBossStage: number | null = null;
   let worldBossZone: string | null = null; // 보스가 머무는 구역 이름 — 카드 설명 '○○에 월드보스 출현'
+  let worldBossBanner: WorldBossHomeBannerData | null = null; // 홈 무대 배너(docs/WORLD-BOSS.md §9) — 보스가 머무는 동안
   const conquestTargetMs = (() => {
     const n = new Date();
     const t = new Date(n);
@@ -301,6 +304,12 @@ export default async function HomePage() {
             (select z.name from world_bosses b join zones z on z.id = b.zone_id
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
               order by b.spawn_at desc limit 1) as wb_zone,
+            -- 홈 무대 배너 재료 — 구역·주인 길드·페이즈·떠나는 시각·모집 중 원정대 수(가장 최근 보스 하나).
+            (select json_build_object('id', b.id::text, 'region', b.region, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
+                      'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
+               from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
+              where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
+              order by b.spawn_at desc limit 1) as wb_banner,
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
@@ -342,6 +351,7 @@ export default async function HomePage() {
         chron_headline: string | null;
         wb_stage: number | null;
         wb_zone: string | null;
+        wb_banner: { id: string; region: string; zone: string; owner: string | null; stage: number; leaveAt: string; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -384,6 +394,13 @@ export default async function HomePage() {
         latestChronicleDay = row.chron_day ?? null;
         worldBossStage = row.wb_stage == null ? null : Number(row.wb_stage);
         worldBossZone = row.wb_zone ?? null;
+        if (row.wb_banner) {
+          const wb = row.wb_banner;
+          worldBossBanner = {
+            id: wb.id, region: wb.region, name: worldBossName(wb.region), zone: wb.zone, owner: wb.owner, stage: Number(wb.stage),
+            hoursLeft: Math.max(0, Math.floor((new Date(wb.leaveAt).getTime() - new Date().getTime()) / 3_600_000)), recruiting: Number(wb.recruiting),
+          };
+        }
         // 헤드라인 마커({g|이름}·{z|이름}·{u|닉|코드}) → 평문. 카드 desc의 truncate가 말줄임 처리.
         chronicleHeadline =
           row.chron_headline?.replace(/\{[gzu]\|([^}|]+)(?:\|[^}]*)?\}/g, '$1').trim() || null;
@@ -508,6 +525,8 @@ export default async function HomePage() {
           </Link>
         );
       })()}
+      {/* 월드보스 출현 배너 — 보스가 머무는 동안 캐러셀 위(10-11 사용자: 홈에서 바로 들어갈 입구). */}
+      {worldBossBanner && <WorldBossHomeBanner b={worldBossBanner} />}
       <HomeBannerCarousel>
         {userId && chuseokOn ? <ChuseokBanner claimable={chuseokClaimable} phase={chuseokPh} /> : null}
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
