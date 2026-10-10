@@ -191,11 +191,6 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
   }[];
   const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
-  const parties: WorldBossPartyCard[] = partyRows.map((p) => ({
-    id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, intro: p.intro, memberCount: p.n,
-    createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
-    stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
-  }));
 
   let me: WorldBossMe | null = null;
   let myParty: WorldBossMyParty | null = null;
@@ -204,6 +199,34 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const phase = currentPhase(b.stage);
   const weakKnown = await knownWeakOf(b.id, phase.index);
   const known = new Set(weakKnown.map((w) => w.code));
+
+  // 모집 중 원정대 명단(10-10 사용자: 목록에서 누가 있는지·합산 전투력이 보이게) — 전투력은 공개된 약점 기준이라 known 뒤에 센다.
+  // 완료된 원정대는 명단을 싣지 않는다(지금 전투력은 그 전투와 무관, 전투 보기가 있다).
+  const recruitingIds = partyRows.filter((p) => p.status === 'recruiting').map((p) => p.id);
+  const roster =
+    recruitingIds.length > 0
+      ? ((await db.execute(sql`
+          select party_id::text as pid, user_id::text as uid from world_boss_party_members
+           where party_id = any(${`{${recruitingIds.join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string }[])
+      : [];
+  const rosterPeople = await peopleOn(serverId, roster.map((r) => r.uid), known);
+  const membersOf = (p: { id: string; leader: string }) =>
+    roster
+      .filter((r) => r.pid === p.id)
+      .map((r) => {
+        const x = rosterPeople.get(r.uid);
+        return { userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: x?.combat ?? 0, isLeader: r.uid === p.leader };
+      })
+      .sort((x, y) => Number(y.isLeader) - Number(x.isLeader)); // 대장 먼저(안정 정렬이라 나머지는 참가 순 유지)
+  const parties: WorldBossPartyCard[] = partyRows.map((p) => {
+    const members = membersOf(p);
+    return {
+      id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, intro: p.intro,
+      members, combatSum: members.reduce((s, m) => s + m.combat, 0), memberCount: p.n,
+      createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
+      stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
+    };
+  });
   if (userId) {
     const [[mem], [req], [gm]] = await Promise.all([
       db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id

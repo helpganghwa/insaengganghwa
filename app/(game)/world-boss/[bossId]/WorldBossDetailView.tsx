@@ -301,9 +301,6 @@ export function WorldBossDetailView({
 
           {mp.status === 'recruiting' ? (
             <>
-              <p className="mt-2.5 text-[10.5px] text-stone-400">
-                {mp.isLeader ? '출발을 누르면 바로 싸워요. 결과와 보상은 우편으로 와요.' : '원정대장이 출발을 누르면 바로 싸워요. 결과와 보상은 우편으로 와요.'}
-              </p>
               {mp.isLeader ? (
                 <button
                   type="button"
@@ -377,6 +374,17 @@ export function WorldBossDetailView({
                 <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending ? 'border-orange-500/55' : 'border-stone-800'}`}>
                   <PartyHead p={p} />
                   {p.intro && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{p.intro}</p>}
+                  {/* 명단 — 대장 먼저, 이름 + 전투력(10-10 사용자: 누가 있는지·수치를 컴팩트하게). */}
+                  {p.members.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {p.members.map((m) => (
+                        <span key={m.userId} className="rounded-md bg-stone-800/80 px-1.5 py-0.5 text-[10px] leading-tight text-stone-300">
+                          {m.isLeader && <span className="mr-0.5 text-orange-300">★</span>}
+                          {m.nickname} <span className="text-stone-500">{formatCompactKR(m.combat)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="my-1.5 flex gap-[3px]">
                     {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => (
                       <i key={i} className={`h-[5px] flex-1 rounded-sm ${i < p.memberCount ? 'bg-orange-700' : 'bg-stone-800'}`} />
@@ -384,9 +392,16 @@ export function WorldBossDetailView({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 text-[10.5px] text-stone-400">
-                      {full ? '가득 찼어요' : isPending ? '수락을 기다리는 중' : '원정대원을 모으고 있어요'}
+                      합산 전투력 <b className="text-orange-300">{formatCompactKR(p.combatSum)}</b>
                     </span>
-                    {canRequest && (
+                    {/* 신청한 원정대는 버튼이 '신청 완료'(비활성)로 바뀐다 — 취소는 위 신청 카드에서(10-10 사용자). */}
+                    {isPending ? (
+                      <button type="button" disabled className="rounded-lg bg-stone-800 px-3 py-1.5 text-[11.5px] font-bold text-stone-500">
+                        신청 완료
+                      </button>
+                    ) : full ? (
+                      <span className="text-[10.5px] text-stone-500">가득 찼어요</span>
+                    ) : canRequest ? (
                       <button
                         type="button"
                         disabled={pending}
@@ -395,7 +410,7 @@ export function WorldBossDetailView({
                       >
                         참가 신청
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
@@ -433,10 +448,9 @@ export function WorldBossDetailView({
                 : null;
         const go = () => {
           if (kind === 'create') setCreateAsk(true);
-          else if (kind === 'depart' && mp) {
-            if (mp.members.length < WORLD_BOSS_PARTY_MAX) setDepartAsk(true);
-            else depart();
-          } else if (kind === 'replay' && myCard) openBattle(myCard.id);
+          // 출발은 인원과 무관하게 확인 팝업(명단·합산 전투력을 되읽어 준다, 10-10 사용자).
+          else if (kind === 'depart' && mp) setDepartAsk(true);
+          else if (kind === 'replay' && myCard) openBattle(myCard.id);
         };
         const c = kind && { label: kind === 'create' ? '원정대 만들기' : kind === 'depart' ? '출발' : '내 전투 다시 보기', sub: kind === 'depart' && mp ? `${mp.members.length}명` : '' };
         return c ? (
@@ -454,22 +468,37 @@ export function WorldBossDetailView({
         ) : null;
       })()}
 
-      {/* 10명 미만 출발 확인 */}
+      {/* 출발 확인 — 명단·합산 전투력을 되읽어 준다. 버튼은 취소/출발 같은 크기(10-10 사용자). */}
       {departAsk && mp && (
         <ModalShell onClose={() => setDepartAsk(false)} onSubmit={depart} label="출발 확인">
           <ModalLayout
             title="지금 출발할까요?"
             subtitle={`원정대 ${mp.members.length}명`}
+            maxBodyClass="max-h-[46vh]"
             footer={
               <>
-                <ModalButton onClick={() => setDepartAsk(false)}>더 기다리기</ModalButton>
-                <ModalButton tone="primary" grow={2} onClick={depart} disabled={pending}>
+                <ModalButton onClick={() => setDepartAsk(false)}>취소</ModalButton>
+                <ModalButton tone="primary" onClick={depart} disabled={pending}>
                   출발
                 </ModalButton>
               </>
             }
           >
-            <p className="text-[12.5px] leading-relaxed text-stone-600 dark:text-stone-300">사람이 많을수록 다 같이 오래 버텨요.</p>
+            <ul className="space-y-1">
+              {mp.members.map((m) => (
+                <li key={m.userId} className="flex items-center justify-between gap-2 text-[12.5px]">
+                  <span className="truncate text-stone-600 dark:text-stone-300">
+                    {m.isLeader && <span className="mr-0.5 text-orange-500">★</span>}
+                    {m.nickname}
+                  </span>
+                  <span className="shrink-0 font-mono font-bold tabular-nums">{formatCompactKR(m.combat)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 flex items-center justify-between border-t border-zinc-200 pt-2 text-[12px] dark:border-zinc-700">
+              <span className="text-stone-500">합산 전투력</span>
+              <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
+            </p>
             <p className="mt-1.5 text-[11.5px] text-stone-500">출발하면 되돌릴 수 없어요.</p>
           </ModalLayout>
         </ModalShell>
@@ -484,7 +513,7 @@ export function WorldBossDetailView({
             footer={
               <>
                 <ModalButton onClick={() => setCreateAsk(false)}>취소</ModalButton>
-                <ModalButton tone="primary" grow={2} onClick={create} disabled={pending}>
+                <ModalButton tone="primary" onClick={create} disabled={pending}>
                   만들기
                 </ModalButton>
               </>
