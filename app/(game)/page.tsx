@@ -301,11 +301,6 @@ export default async function HomePage() {
               order by kst_day desc limit 1)
               as chron_headline,
             -- 지금 머무는 월드보스 단계(docs/WORLD-BOSS.md §9) — 세계지도 카드에 보스·불씨 테두리. 없으면 null.
-            (select b.stage from world_bosses b where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
-              order by b.spawn_at desc limit 1) as wb_stage,
-            (select z.name from world_bosses b join zones z on z.id = b.zone_id
-              where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
-              order by b.spawn_at desc limit 1) as wb_zone,
             -- 홈 무대 배너 재료 — 구역·주인 길드·페이즈·떠나는 시각·모집 중 원정대 수(가장 최근 보스 하나).
             (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
@@ -351,8 +346,6 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
-        wb_stage: number | null;
-        wb_zone: string | null;
         wb_banner: { id: string; region: string; bossCode: string; zone: string; owner: string | null; stage: number; leaveAt: string; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
@@ -394,8 +387,9 @@ export default async function HomePage() {
         // 23시대(23:00~24:00) = 점령전 진행중(DB 시계 권위).
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
-        worldBossStage = row.wb_stage == null ? null : Number(row.wb_stage);
-        worldBossZone = row.wb_zone ?? null;
+        // 세계지도 카드의 보스 표시도 배너와 같은 보스 행에서(같은 보스를 세 번 읽던 것을 하나로, 10-11 감사). 배너 닫힘 쿠키와 무관.
+        worldBossStage = row.wb_banner ? Number(row.wb_banner.stage) : null;
+        worldBossZone = row.wb_banner?.zone ?? null;
         // 닫아 둔 보스(쿠키)면 렌더 전에 거른다 — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
         const closedBossId = (await cookies()).get(WORLD_BOSS_BANNER_COOKIE)?.value;
         if (row.wb_banner && row.wb_banner.id !== closedBossId) {

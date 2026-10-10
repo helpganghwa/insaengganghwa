@@ -24,7 +24,18 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: 
       return p;
     });
     let raf = 0;
-    const tick = () => {
+    let visible = true; // 화면 안에 있고 탭이 보일 때만 그린다(10-11 감사: 히어로·팝업·재생 무대가 동시에 돌았다)
+    let last = 0;
+    const tick = (now: number) => {
+      if (!visible || document.hidden) {
+        raf = 0;
+        return;
+      }
+      if (now - last < 33) {
+        raf = requestAnimationFrame(tick); // 30fps면 충분한 불티
+        return;
+      }
+      last = now;
       g.clearRect(0, 0, 400, 240);
       for (let i = 0; i < ps.length; i++) {
         const p = ps[i]!;
@@ -41,8 +52,22 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: 
       }
       raf = requestAnimationFrame(tick);
     };
-    tick();
-    return () => cancelAnimationFrame(raf);
+    const start = () => {
+      if (raf === 0 && visible && !document.hidden) raf = requestAnimationFrame(tick);
+    };
+    const io = new IntersectionObserver(([e]) => {
+      visible = !!e?.isIntersecting;
+      if (visible) start();
+    });
+    io.observe(c);
+    const onVis = () => start();
+    document.addEventListener('visibilitychange', onVis);
+    start();
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (

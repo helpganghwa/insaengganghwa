@@ -4,7 +4,7 @@
  * 다른 컨셉의 보스가 더해진다는 전제(10-11 사용자)로 이름·그림·이야기 문장을 **종류 코드**(world_bosses.boss_code, 0235)로 찾는다.
  * 출현 구역의 지역(region)은 지역색·구역 꾸밈에만 쓰고 보스 종류와는 무관하다 — 어느 땅에 나타나도 같은 종류면 같은 보스.
  *
- * 종류를 더하는 절차: ① 그림 5종(정지 256px·대기 띠 9프레임·불씨 띠·배경 400×240·배경 빛) ② 아래 표에 항목 추가(이름·경로·문장 풀·사라짐 표현)
+ * 종류를 더하는 절차: ① 그림 5종(정지 256px·대기 띠 9프레임·불씨 띠·배경 400×240·배경 빛 — 전부 무손실 webp) ② 아래 표에 항목 추가(이름·경로·문장 풀·사라짐 표현)
  * ③ 어드민 소환 화면의 종류 선택지는 WORLD_BOSS_KIND_OPTIONS가 자동으로 늘린다 ④ 칭호는 공통 칭호 + 종류별 '첫 ○○ 토벌'(docs/WORLD-BOSS.md).
  * 이름·문장 모음은 💎📦 외 이모지·줄표를 쓰지 않는다(10-11 사용자). josa 표기(#{을} 등)는 호출부가 josa()로 풀어 쓴다.
  */
@@ -38,11 +38,11 @@ export type WorldBossKind = {
 const EMBER_PHOENIX: WorldBossKind = {
   code: 'ember_phoenix',
   name: '잿불의 불사조',
-  sprite: '/sprites/world-boss/boss.png',
+  sprite: '/sprites/world-boss/boss.webp', // 무손실 webp(10-11: png 58KB → 19KB)
   anim: '/sprites/world-boss/boss__anim.webp',
   ember: '/sprites/world-boss/boss__ember.webp',
-  bg: '/sprites/world-boss/bg.png',
-  bgEmber: '/sprites/world-boss/bg__ember.png',
+  bg: '/sprites/world-boss/bg.webp', // 무손실 webp(72KB → 26KB)
+  bgEmber: '/sprites/world-boss/bg__ember.webp',
   lines: {
     attack: [
       (n, w) => `${n}, ${w}#{을} 휘두른다`,
