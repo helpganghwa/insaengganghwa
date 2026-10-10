@@ -10,22 +10,23 @@ import { worldBossAnimUrl, worldBossEmberUrl } from '@/lib/game/world-boss/bosse
  * 움직임 줄이기 설정이면 globals.css에서 전부 멈추고 0번 프레임(정지 그림)만 보인다.
  */
 export function WorldBossSprite({
-  region,
+  kind,
   alt,
   attack = null,
   className = '',
   style,
 }: {
-  region?: string;
+  /** 보스 종류 코드(lib/game/world-boss/bosses.ts). */
+  kind?: string | null;
   alt: string;
   attack?: number | string | null;
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const strip = `url(${assetUrl(worldBossAnimUrl(region))})`;
+  const strip = `url(${assetUrl(worldBossAnimUrl(kind))})`;
   // 안쪽 층이 absolute라 기준 상자가 필요하다 — 호출부가 absolute/fixed로 놓으면 그대로 두고, 아니면 relative를 붙인다.
   const pos = /(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative ';
-  const ember = `url(${assetUrl(worldBossEmberUrl(region))})`;
+  const ember = `url(${assetUrl(worldBossEmberUrl(kind))})`;
   return (
     <div role="img" aria-label={alt} className={`wbs ${pos}${className}`} style={style}>
       <div className="wbs-breath">

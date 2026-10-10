@@ -1,4 +1,6 @@
 import { getJosaPicker, josa } from 'josa';
+
+import { worldBossKind } from '@/lib/game/world-boss/bosses';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -106,6 +108,7 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
       const zone = (d.zoneName as string) ?? '어느 땅';
       const boss = (d.bossName as string) ?? '월드보스';
       const bossId = typeof d.bossId === 'string' ? d.bossId : null;
+      const leave = worldBossKind(typeof d.bossCode === 'string' ? d.bossCode : null).lines.leave; // 종류별 '사라짐' 표현(옛 이벤트는 기본 종류)
       const body =
         e.type === 'world_boss_spawn' ? (
           <>
@@ -113,12 +116,12 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
           </>
         ) : (d.guildName as string | null) ? (
           <>
-            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 재로 흩어지며 {hb(d.guildName as string, C.guild)} 금고에 💎{Number(d.lootDiamond ?? 0).toLocaleString('ko-KR')}·📦
+            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} {leave.linking} {hb(d.guildName as string, C.guild)} 금고에 💎{Number(d.lootDiamond ?? 0).toLocaleString('ko-KR')}·📦
             {Number(d.lootBoxes ?? 0).toLocaleString('ko-KR')}를 남겼습니다
           </>
         ) : (
           <>
-            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 재로 흩어졌습니다
+            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} {leave.pastFormal}
           </>
         );
       return link && bossId ? (

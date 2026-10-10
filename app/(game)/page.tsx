@@ -307,7 +307,7 @@ export default async function HomePage() {
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
               order by b.spawn_at desc limit 1) as wb_zone,
             -- 홈 무대 배너 재료 — 구역·주인 길드·페이즈·떠나는 시각·모집 중 원정대 수(가장 최근 보스 하나).
-            (select json_build_object('id', b.id::text, 'region', b.region, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
+            (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
@@ -353,7 +353,7 @@ export default async function HomePage() {
         chron_headline: string | null;
         wb_stage: number | null;
         wb_zone: string | null;
-        wb_banner: { id: string; region: string; zone: string; owner: string | null; stage: number; leaveAt: string; recruiting: number } | null;
+        wb_banner: { id: string; region: string; bossCode: string; zone: string; owner: string | null; stage: number; leaveAt: string; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -401,7 +401,7 @@ export default async function HomePage() {
         if (row.wb_banner && row.wb_banner.id !== closedBossId) {
           const wb = row.wb_banner;
           worldBossBanner = {
-            id: wb.id, region: wb.region, name: worldBossName(wb.region), zone: wb.zone, owner: wb.owner, stage: Number(wb.stage),
+            id: wb.id, region: wb.region, bossCode: wb.bossCode, name: worldBossName(wb.bossCode), zone: wb.zone, owner: wb.owner, stage: Number(wb.stage),
             hoursLeft: Math.max(0, Math.floor((new Date(wb.leaveAt).getTime() - new Date().getTime()) / 3_600_000)), recruiting: Number(wb.recruiting),
           };
         }

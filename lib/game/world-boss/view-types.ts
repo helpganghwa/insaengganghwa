@@ -101,6 +101,8 @@ export type WorldBossDetail = {
   zoneId: number;
   zoneName: string;
   region: string;
+  /** 보스 종류 코드(lib/game/world-boss/bosses.ts). */
+  bossCode: string;
   name: string;
   status: 'scheduled' | 'active' | 'left';
   spawnAt: number;
@@ -137,6 +139,8 @@ export type WorldBossDetail = {
 export type WorldBossBattle = {
   partyId: string;
   leaderNickname: string;
+  /** 보스 종류 코드 — 재생 일지 문장 풀·배경. */
+  bossCode: string;
   finale: {
     roster: { userId: string; nickname: string; cp: number; guildName: string | null; /** 출발 때 장착(이름은 10-11부터 기록) — 재생 일지 문장용. */ items?: { slot: string; code: string; name?: string }[] }[];
     events: [number, number, number, number][];

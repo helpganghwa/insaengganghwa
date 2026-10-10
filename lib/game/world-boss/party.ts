@@ -245,12 +245,12 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     // 잠금 순서: 보스 → 원정대. 보스를 먼저 잠가 같은 보스의 동시 출발이 단계 계산에서 직렬화되게.
     const [pre] = (await tx.execute(sql`select boss_id::text as b from world_boss_parties where id = ${input.partyId}::bigint`)) as unknown as { b: string }[];
     if (!pre) throw new WorldBossError('NOT_FOUND');
-    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, zone_id, total_damage::text as total_damage, weak, traits from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; zone_id: number; total_damage: string; weak: unknown; traits: unknown }[];
+    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, boss_code::text as boss_code, zone_id, total_damage::text as total_damage, weak, traits from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; boss_code: string; zone_id: number; total_damage: string; weak: unknown; traits: unknown }[];
     const party = await lockParty(tx, input.partyId);
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
     const [zone] = (await tx.execute(sql`select name from zones where id = ${bossLocked[0]?.zone_id ?? 0}`)) as unknown as { name: string }[];
-    const bossName = worldBossName(bossLocked[0]?.region ?? '');
+    const bossName = worldBossName(bossLocked[0]?.boss_code);
     if (party.status === 'departed') {
       if (party.depart_key === input.departKey) {
         const [f] = (await tx.execute(sql`select finale from world_boss_parties where id = ${party.id}::bigint`)) as unknown as { finale: WorldBossFinale | null }[];

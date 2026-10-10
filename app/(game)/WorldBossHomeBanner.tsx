@@ -17,7 +17,10 @@ import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
  */
 export type WorldBossHomeBannerData = {
   id: string;
+  /** 출현 구역의 지역 — 구역 이름 색. */
   region: string;
+  /** 보스 종류 코드 — 그림·배경. */
+  bossCode: string;
   name: string;
   zone: string;
   owner: string | null;
@@ -63,9 +66,9 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         aria-label={`${b.zone}에 월드보스 출현 — 토벌하기`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={assetUrl(worldBossBgUrl(b.region))} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
+        <img src={assetUrl(worldBossBgUrl(b.bossCode))} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
         <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.78)_30%,rgba(12,10,9,0.7)_100%)]" />
-        <WorldBossSprite region={b.region} alt={b.name} className="absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2" />
+        <WorldBossSprite kind={b.bossCode} alt={b.name} className="absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2" />
         <span className="relative z-10 min-w-0 flex-1 leading-tight">
           <i className="mb-0.5 inline-block rounded-[3px] bg-orange-700 px-1.5 text-[8.5px] font-black not-italic text-white">월드보스 출현</i>
           <b className="block truncate text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">

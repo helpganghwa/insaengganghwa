@@ -24,8 +24,10 @@ export const worldBosses = pgTable(
     zoneId: integer('zone_id')
       .notNull()
       .references(() => zones.id, { onDelete: 'cascade' }),
-    /** 보스 종류 = 출현 구역의 지역(zone_region 값 스냅샷). 그림·이름은 지역마다 하나. */
+    /** 출현 구역의 지역(zone_region 값 스냅샷) — 지역색 등 구역 꾸밈용. 보스 종류는 bossCode. */
     region: text('region').notNull(),
+    /** 보스 종류(0235) — lib/game/world-boss/bosses.ts 레지스트리 코드. 이름·그림·이야기 문장이 여기서 갈린다. */
+    bossCode: text('boss_code').notNull().default('ember_phoenix'),
     /** 출현 시각의 날짜(KST) — 기록·조회용. */
     kstDay: date('kst_day').notNull(),
     /** 출현 시각(관리자가 즉시 또는 예약으로 지정). 이 시각 전에는 status 'scheduled'. */

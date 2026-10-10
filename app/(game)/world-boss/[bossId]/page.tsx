@@ -20,8 +20,8 @@ export default async function WorldBossPage({ params }: { params: Promise<{ boss
     <WorldBossDetailView
       detail={detail}
       serverId={serverId}
-      spriteSrc={assetUrl(worldBossSpriteUrl(detail.region))}
-      bgSrc={assetUrl(worldBossBgUrl(detail.region))}
+      spriteSrc={assetUrl(worldBossSpriteUrl(detail.bossCode))}
+      bgSrc={assetUrl(worldBossBgUrl(detail.bossCode))}
     />
   );
 }

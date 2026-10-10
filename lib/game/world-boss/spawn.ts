@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, guildXpToNext } from '@/lib/game/guild/balance';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { sendPushToUsers } from '@/lib/push/send';
-import { worldBossName } from './bosses';
+import { worldBossKind, worldBossName } from './bosses';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
@@ -17,7 +17,7 @@ import { worldBossName } from './bosses';
  * 전부 멱등 — 조건부 UPDATE라 두 틱이 겹쳐도 한 번만 적용된다.
  */
 
-type Activated = { id: string; zone_id: number; zone_name: string; region: string; owner: string | null; owner_name: string | null };
+type Activated = { id: string; zone_id: number; zone_name: string; region: string; boss_code: string; owner: string | null; owner_name: string | null };
 
 /** 출현 시각이 지난 '예정' 보스를 '출현'으로. 월드 피드 + 주인 길드원 푸시. */
 export async function activateDueBosses(serverId: number): Promise<Activated[]> {
@@ -25,16 +25,16 @@ export async function activateDueBosses(serverId: number): Promise<Activated[]> 
     with up as (
       update world_bosses b set status = 'active'
        where b.server_id = ${serverId} and b.status = 'scheduled' and b.spawn_at <= now()
-      returning b.id, b.zone_id, b.region
+      returning b.id, b.zone_id, b.region, b.boss_code
     )
-    select up.id::text as id, up.zone_id, z.name as zone_name, up.region::text as region,
+    select up.id::text as id, up.zone_id, z.name as zone_name, up.region::text as region, up.boss_code::text as boss_code,
            z.owner_guild_id::text as owner, g.name as owner_name
       from up join zones z on z.id = up.zone_id left join guilds g on g.id = z.owner_guild_id
   `)) as unknown as Activated[];
   for (const b of rows) {
-    const bossName = worldBossName(b.region);
+    const bossName = worldBossName(b.boss_code);
     // 월드 로그 + 채팅 시스템 줄(10-11 사용자: 홈 배너·팝업 대신 로그로 알림) — logWorldEvent가 피드 캐시 무효화·채팅 방송까지 한다.
-    await logWorldEvent(serverId, 'world_boss_spawn', { bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossName, guildName: b.owner_name }, b.owner ? { guildId: BigInt(b.owner) } : undefined);
+    await logWorldEvent(serverId, 'world_boss_spawn', { bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, bossName, guildName: b.owner_name }, b.owner ? { guildId: BigInt(b.owner) } : undefined);
     if (b.owner) {
       const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${b.owner}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
@@ -60,7 +60,7 @@ function applyGuildLevelUp(level: number, xp: bigint): { level: number; xp: bigi
   return { level: lv, xp: rem };
 }
 
-export type SettledBoss = { id: string; zoneId: number; zoneName: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; guildId: string | null; guildName: string | null; disbanded: number };
+export type SettledBoss = { id: string; zoneId: number; zoneName: string; region: string; bossCode: string; stage: number; lootDiamond: number; lootBoxes: number; guildId: string | null; guildName: string | null; disbanded: number };
 
 /**
  * 떠나는 시각이 지난 보스를 정산한다 — 보스마다 한 트랜잭션. 그 순간의 구역 주인 길드가 전리품(💎·📦)을
@@ -75,15 +75,16 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
   for (const { id } of due) {
     const settled = await db.transaction(async (tx) => {
       const [b] = (await tx.execute(sql`
-        select b.id::text as id, b.zone_id, b.region::text as region, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes,
+        select b.id::text as id, b.zone_id, b.region::text as region, b.boss_code::text as boss_code, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes,
                z.name as zone_name, z.owner_guild_id::text as owner, g.name as owner_name
           from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = z.owner_guild_id
          where b.id = ${id}::bigint and b.status = 'active' and b.leave_at <= now()
          for update of b
-      `)) as unknown as { id: string; zone_id: number; region: string; stage: number; loot_diamond: string; loot_boxes: number; zone_name: string; owner: string | null; owner_name: string | null }[];
+      `)) as unknown as { id: string; zone_id: number; region: string; boss_code: string; stage: number; loot_diamond: string; loot_boxes: number; zone_name: string; owner: string | null; owner_name: string | null }[];
       if (!b) return null; // 다른 틱이 먼저 정산
       const loot = { diamond: Number(b.loot_diamond), boxes: Number(b.loot_boxes) };
-      const bossName = worldBossName(b.region);
+      const bossName = worldBossName(b.boss_code);
+      const leave = worldBossKind(b.boss_code).lines.leave;
 
       if (b.owner) {
         const [g] = (await tx.execute(sql`select level, xp::text as xp from guilds where id = ${b.owner}::bigint for update`)) as unknown as { level: number; xp: string }[];
@@ -95,7 +96,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
                               level = ${next.level}, xp = ${next.xp.toString()}::bigint
              where id = ${b.owner}::bigint`);
           const body =
-            `${b.zone_name}의 ${bossName}#{이} 재로 흩어졌어요. ${b.stage}페이즈까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
+            `${b.zone_name}의 ${bossName}#{이} ${leave.pastPolite}. ${b.stage}페이즈까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
             `길드 관리의 세금 분배에서 나눌 수 있어요.`;
           await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
@@ -115,12 +116,12 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
         await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
         await tx.execute(sql`delete from world_boss_invites i using world_boss_parties p where i.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
       }
-      return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: b.owner, guildName: b.owner_name, disbanded: dis.length } satisfies SettledBoss;
+      return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: b.owner, guildName: b.owner_name, disbanded: dis.length } satisfies SettledBoss;
     });
     if (!settled) continue;
     out.push(settled);
     // 월드 로그 + 채팅 시스템 줄 — 트랜잭션 밖(best-effort). 정산이 확정된 뒤에만 알린다.
-    await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossName: worldBossName(settled.region), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
+    await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossCode: settled.bossCode, bossName: worldBossName(settled.bossCode), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
     // 원정 종료 푸시는 보내지 않는다(10-11 사용자) — 전리품 우편·월드 로그·채팅 줄로 충분하다.
   }
   return out;

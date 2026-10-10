@@ -8,6 +8,8 @@ export type WorldBossMapBoss = {
   id: string;
   zoneId: number;
   region: string;
+  /** 보스 종류 코드(레지스트리) — 그림·이야기 문장. */
+  bossCode: string;
   name: string;
   spawnAt: number;
   leaveAt: number;
@@ -33,6 +35,8 @@ export type WorldBossMapLeft = {
   bossId: string;
   zoneId: number;
   region: string;
+  /** 보스 종류 코드(레지스트리) — 그림·이야기 문장. */
+  bossCode: string;
   name: string;
   leftAt: number;
   /** 종료 때 단계(최종). */

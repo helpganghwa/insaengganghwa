@@ -409,7 +409,7 @@ const WorldMap = memo(function WorldMap({
                     ) : null}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={assetUrl(worldBossSpriteUrl(boss.region))}
+                      src={assetUrl(worldBossSpriteUrl(boss.bossCode))}
                       alt={boss.name}
                       className="wb-alt-b absolute inset-0 h-full w-full bg-black/60 object-contain"
                       style={{ imageRendering: 'pixelated' }}
@@ -1214,7 +1214,7 @@ export function WorldMapView({
                       <WorldBossZoneCard
                         mode="active"
                         name={boss.name}
-                        region={boss.region}
+                        bossCode={boss.bossCode}
                         stage={boss.stage}
                         lootDiamond={boss.lootDiamond}
                         lootBoxes={boss.lootBoxes}
@@ -1232,7 +1232,7 @@ export function WorldMapView({
                     <WorldBossZoneCard
                       mode="left"
                       name={left.name}
-                      region={left.region}
+                      bossCode={left.bossCode}
                       stage={left.stage}
                       lootDiamond={left.lootDiamond}
                       lootBoxes={left.lootBoxes}

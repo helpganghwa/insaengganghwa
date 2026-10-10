@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import { worldBossTraitDef } from '@/lib/game/guild/balance';
 import type { AdminWorldBossBoard, SpawnOverlap } from '@/lib/game/world-boss/admin';
+import { DEFAULT_WORLD_BOSS_KIND, WORLD_BOSS_KIND_OPTIONS } from '@/lib/game/world-boss/bosses';
 
 import { ServerBadge } from '../ServerBadge';
 import { cancelWorldBossAction, spawnWorldBossAction } from './actions';
@@ -44,6 +45,7 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
   const router = useRouter();
   const [serverId, setServerId] = useState(board[0]?.serverId ?? 1);
   const [zoneId, setZoneId] = useState<number | ''>('');
+  const [bossCode, setBossCode] = useState<string>(DEFAULT_WORLD_BOSS_KIND);
   const [mode, setMode] = useState<'now' | 'at'>('now');
   const [atLocal, setAtLocal] = useState(defaultAtLocal);
   const [pending, start] = useTransition();
@@ -56,7 +58,7 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
   const submit = (allowOverlap: boolean) => {
     if (zoneId === '') return setMsg({ tone: 'err', text: '구역을 골라 주세요.' });
     start(async () => {
-      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap });
+      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap, bossCode });
       if (r.ok) {
         setMsg({ tone: 'ok', text: r.status === 'active' ? `${r.zoneName}에 소환했어요 — 지금 출현, ${kst(r.leaveAt)} 종료.` : `${r.zoneName}에 예약했어요 — ${kst(r.spawnAt)} 출현, ${kst(r.leaveAt)} 종료.` });
         setZoneId('');
@@ -114,6 +116,16 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
           </div>
           <p className="mt-1 text-[11px] text-zinc-500">🔥 = 보스가 있는 구역(선택 불가) · 문양 = 점령 길드 · 테두리 색 = 지역</p>
         </div>
+        <label className="block text-xs text-zinc-400">
+          보스 종류
+          <select className={`${field} mt-1`} value={bossCode} onChange={(e) => setBossCode(e.target.value)}>
+            {WORLD_BOSS_KIND_OPTIONS.map((k) => (
+              <option key={k.code} value={k.code}>
+                {k.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="block text-xs text-zinc-400">
           고른 구역
           <select className={`${field} mt-1`} value={zoneId} onChange={(e) => setZoneId(e.target.value === '' ? '' : Number(e.target.value))}>

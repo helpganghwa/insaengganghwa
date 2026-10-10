@@ -11,7 +11,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 
-type Common = { name: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; traits?: { code: string; icon: string; name: string }[] };
+type Common = { name: string; /** 보스 종류 코드 — 그림·배경. */ bossCode: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; traits?: { code: string; icon: string; name: string }[] };
 
 export function WorldBossZoneCard(
   props:
@@ -28,20 +28,20 @@ export function WorldBossZoneCard(
       className={`relative mt-2 block h-[92px] overflow-hidden rounded-[12px] border bg-stone-950 active:opacity-90 ${left ? 'border-zinc-700 grayscale' : 'border-orange-800/70'}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={assetUrl(worldBossBgUrl(props.region))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
+      <img src={assetUrl(worldBossBgUrl(props.bossCode))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
       <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.72)_34%,rgba(12,10,9,0.62)_75%,rgba(12,10,9,0.72)_100%)]" />
       {/* 보스 — 왼쪽 끝, 위아래 정중앙(10-10) */}
       {left ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={assetUrl(worldBossSpriteUrl(props.region))}
+          src={assetUrl(worldBossSpriteUrl(props.bossCode))}
           alt=""
           className="absolute left-0 top-1/2 z-[1] h-[84px] w-[84px] -translate-y-1/2 object-contain opacity-80"
           style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
         />
       ) : (
         <WorldBossSprite
-          region={props.region}
+          kind={props.bossCode}
           alt=""
           className="absolute left-0 top-1/2 z-[1] h-[84px] w-[84px] -translate-y-1/2"
           style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(234,88,12,0.65))' }}

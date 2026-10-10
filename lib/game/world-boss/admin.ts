@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { adminActions } from '@/lib/db/schema/ops';
 import { WORLD_BOSS_STAY_MS, drawWorldBossTraits, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
+import { DEFAULT_WORLD_BOSS_KIND, type WorldBossKindCode, worldBossName } from './bosses';
 import { kstDateString } from '@/lib/kst';
 
 import { activateDueBosses } from './spawn';
@@ -28,6 +29,8 @@ export type AdminBossRow = {
   zoneId: number;
   zoneName: string;
   region: string;
+  bossCode: string;
+  bossName: string;
   status: 'scheduled' | 'active' | 'left';
   stage: number;
   spawnAt: string;
@@ -61,21 +64,21 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
          where z.server_id = ${serverId}
          order by z.region, z.name`) as unknown as Promise<{ id: number; name: string; region: string; map_x: number | string; map_y: number | string; owner_name: string | null; owner_emblem: string | null; owner_color: string | null; busy: boolean }[]>,
       db.execute(sql`
-        (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
+        (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.boss_code::text as boss_code, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
            from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = z.owner_guild_id
           where b.server_id = ${serverId} and b.status in ('scheduled', 'active'))
         union all
-        (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
+        (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.boss_code::text as boss_code, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
            from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = b.settled_guild_id
           where b.server_id = ${serverId} and b.status = 'left'
           order by b.leave_at desc limit 5)
-        order by spawn_at desc`) as unknown as Promise<{ id: string; zone_id: number; zone_name: string; region: string; status: AdminBossRow['status']; stage: number; spawn_at: string | Date; leave_at: string | Date; owner_name: string | null; traits: unknown }[]>,
+        order by spawn_at desc`) as unknown as Promise<{ id: string; zone_id: number; zone_name: string; region: string; boss_code: string; status: AdminBossRow['status']; stage: number; spawn_at: string | Date; leave_at: string | Date; owner_name: string | null; traits: unknown }[]>,
     ]);
     out.push({
       serverId,
       zones: zones.map((z) => ({ id: z.id, name: z.name, region: z.region, mapX: Number(z.map_x), mapY: Number(z.map_y), ownerName: z.owner_name, ownerEmblemUrl: z.owner_emblem, ownerEmblemColor: z.owner_color, busy: z.busy })),
       bosses: bosses.map((b) => ({
-        id: b.id, serverId, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, status: b.status, stage: Number(b.stage),
+        id: b.id, serverId, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, bossName: worldBossName(b.boss_code), status: b.status, stage: Number(b.stage),
         spawnAt: new Date(b.spawn_at).toISOString(), leaveAt: new Date(b.leave_at).toISOString(), ownerName: b.owner_name,
         traits: Array.isArray(b.traits) ? (b.traits as string[]) : [],
       })),
@@ -97,6 +100,8 @@ export async function spawnWorldBossByAdmin(input: {
   spawnAt: Date | null;
   adminUserId: string;
   allowOverlap: boolean;
+  /** 보스 종류(레지스트리 코드). 없으면 기본 종류. */
+  bossCode?: WorldBossKindCode;
 }): Promise<SpawnResult> {
   const now = new Date();
   // 즉시는 1초 전으로 적어 activateDueBosses(spawn_at <= now())가 바로 집는다.
@@ -129,8 +134,8 @@ export async function spawnWorldBossByAdmin(input: {
     const traits = drawWorldBossTraits(cryptoRand);
     const weak = await drawWeakForNewBoss(tx, worldBossWeakPerSlot(traits));
     const [ins] = (await tx.execute(sql`
-      insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
-      values (${input.serverId}, ${zone.id}, ${zone.region}, ${kstDateString(spawnAt)}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled',
+      insert into world_bosses (server_id, zone_id, region, boss_code, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
+      values (${input.serverId}, ${zone.id}, ${zone.region}, ${input.bossCode ?? DEFAULT_WORLD_BOSS_KIND}, ${kstDateString(spawnAt)}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled',
               ${zone.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb)
       returning id::text as id`)) as unknown as { id: string }[];
     await tx.insert(adminActions).values({

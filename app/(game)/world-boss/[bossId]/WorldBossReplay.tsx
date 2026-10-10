@@ -19,7 +19,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { type WorldBossTraitCode, worldBossLootFor, worldBossLootMult, worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
-import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
+import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
 
@@ -32,34 +32,7 @@ const STEP_FALL_MS = 2000;
 const RESULT_DELAY_MS = 1400;
 /** 라운드 전환 쉼 — 쓰러짐 연출이 지난 뒤 새 라운드 첫 공격 이만큼 전에 라운드 알약만 바뀐다(10-11 사용자). */
 const ROUND_BEAT_MS = 600;
-/** 일지 문장 풀 — 같은 문장만 반복되면 재미없어(10-11 사용자) 공격·반격마다 다른 문장을 고른다(기록마다 자리가 달라지게 원정대 id로 섞는다).
- * 무기 이름이 기록돼 있으면(10-11부터) 무기 문장, 없으면(옛 기록) 맨손 문장. josa 표기(#{을} 등)는 조사 라이브러리가 받침에 맞춘다. */
-const ATTACK_LINES: ((nick: string, weapon: string) => string)[] = [
-  (n, w) => `${n}, ${w}#{을} 휘두른다`,
-  (n, w) => `${n}#{이} ${w}#{을} 번뜩이며 파고든다`,
-  (n, w) => `${n}, 틈을 노려 ${w}#{을} 찔러 넣는다`,
-  (n, w) => `${n}의 ${w}#{이} 깃털을 가르며 꽂힌다`,
-  (n, w) => `${n}, 잿불을 뚫고 ${w}#{을} 내리꽂는다`,
-  (n, w) => `${n}#{이} ${w}#{을} 크게 휘둘러 후려친다`,
-  (n, w) => `${n}, ${w}#{을} 움켜쥐고 몸통을 노린다`,
-  (n, w) => `${n}#{이} 날개 사이로 ${w}#{을} 꽂아 넣는다`,
-];
-const BARE_ATTACK_LINES: ((nick: string) => string)[] = [
-  (n) => `${n}#{이} 일격을 날린다`,
-  (n) => `${n}#{이} 몸통을 노려 내리친다`,
-  (n) => `${n}, 틈을 노려 찔러 든다`,
-  (n) => `${n}#{이} 잿불을 뚫고 달려든다`,
-];
-const BOSS_LINES: ((boss: string, nick: string) => string)[] = [
-  (b, n) => `${b}의 날갯짓에 잿불이 ${n}#{을} 덮쳤다. 쓰러짐`,
-  (b, n) => `${b}#{이} 울부짖으며 불덩이를 토해 냈다. ${n} 쓰러짐`,
-  (_, n) => `${n}#{이} 잿불 폭풍에 휩쓸려 쓰러졌다`,
-  (b, n) => `${b}의 발톱이 ${n}#{을} 낚아챘다. 쓰러짐`,
-  (_, n) => `잿더미가 솟구쳐 ${n}#{을} 삼켰다. 쓰러짐`,
-  (b, n) => `${b}의 꼬리 깃이 불꽃을 흩뿌려 ${n}#{이} 쓰러졌다`,
-  (b, n) => `${n}, ${b}의 눈빛에 묶인 채 잿불에 휘감겨 쓰러졌다`,
-  (_, n) => `불타는 깃털 소나기에 ${n}#{이} 버티지 못하고 쓰러졌다`,
-];
+/** 일지 문장 풀은 보스 종류 레지스트리(lib/game/world-boss/bosses.ts)에 있다 — 종류마다 다른 문장, 기록마다 자리가 달라지게 원정대 id로 섞는다. */
 /** 페이즈 게이지 컬러 — 레이드 카드와 같은 6색 순환(페이즈마다 다음 색, 10-11 사용자: 레이드와 같은 방식). */
 const PHASE_PALETTE = [
   { bar: 'bg-emerald-400', text: 'text-emerald-300', glow: 'shadow-emerald-400/60' },
@@ -140,6 +113,7 @@ export function WorldBossReplay({
     const out: LogLine[] = [{ key: 'r1', kind: 'round', text: '1라운드' }];
     const dmgSum: number[] = [];
     const seed = seedOf(battle.partyId);
+    const kindLines = worldBossKind(battle.bossCode).lines;
     // 페이즈 돌파 줄(10-11 사용자) — 출발 시점 누적(finale.start)이 있는 기록만: 공격 뒤 누적이 다음 페이즈 문턱을 넘으면 한 줄.
     const start = battle.finale.start;
     let stage = start != null ? worldBossStageFor(start).stage : null;
@@ -158,7 +132,7 @@ export function WorldBossReplay({
         out.push({
           key: `e${k}`,
           kind: 'atk',
-          text: josa(weapon ? pick(ATTACK_LINES, k)(m.nickname, weapon) : pick(BARE_ATTACK_LINES, k)(m.nickname)),
+          text: josa(weapon ? pick(kindLines.attack, k)(m.nickname, weapon) : pick(kindLines.bareAttack, k)(m.nickname)),
           dmg: d,
           loot: drop && drop[0] > 0 ? `💎${drop[0].toLocaleString('ko-KR')}` : drop && drop[1] > 0 ? `📦${drop[1]}` : undefined,
           lootTier: drop ? lootTier(drop[0], drop[1]) : undefined,
@@ -175,7 +149,7 @@ export function WorldBossReplay({
         }
       } else {
         const m = roster[t]!;
-        out.push({ key: `e${k}`, kind: 'boss', text: josa(pick(BOSS_LINES, k)(bossName, m.nickname)) });
+        out.push({ key: `e${k}`, kind: 'boss', text: josa(pick(kindLines.strike, k)(bossName, m.nickname)) });
         if (aux + 1 <= battle.finale.rounds && k < events.length - 1) out.push({ key: `r${aux + 1}`, kind: 'round', text: `${aux + 1}라운드` });
       }
     }
@@ -190,7 +164,7 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, bossTraits, battle.partyId, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  }, [idx, events, roster, drops, weakBits, bossName, bossTraits, battle.partyId, battle.bossCode, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
@@ -303,7 +277,7 @@ export function WorldBossReplay({
       <>
           {/* 위 — 무대(배경 + 보스 + 일지). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <div className="relative h-[300px] shrink-0 overflow-hidden text-left">
-            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-85" />
+            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(battle.bossCode))} className="opacity-85" />
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_55%,#09090b_100%)]" />
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}

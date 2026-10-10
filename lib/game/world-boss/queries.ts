@@ -27,6 +27,7 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       id: worldBosses.id,
       zoneId: worldBosses.zoneId,
       region: worldBosses.region,
+      bossCode: worldBosses.bossCode,
       spawnAt: worldBosses.spawnAt,
       leaveAt: worldBosses.leaveAt,
       totalDamage: worldBosses.totalDamage,
@@ -80,7 +81,8 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       id,
       zoneId: r.zoneId,
       region: r.region,
-      name: worldBossName(r.region),
+      bossCode: r.bossCode,
+      name: worldBossName(r.bossCode),
       spawnAt: r.spawnAt.getTime(),
       leaveAt: r.leaveAt.getTime(),
       totalDamage: r.totalDamage.toString(),
@@ -102,6 +104,7 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       id: worldBosses.id,
       zoneId: worldBosses.zoneId,
       region: worldBosses.region,
+      bossCode: worldBosses.bossCode,
       leaveAt: worldBosses.leaveAt,
       stage: worldBosses.stage,
       lootDiamond: worldBosses.lootDiamond,
@@ -121,7 +124,8 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       bossId: r.id.toString(),
       zoneId: r.zoneId,
       region: r.region,
-      name: worldBossName(r.region),
+      bossCode: r.bossCode,
+      name: worldBossName(r.bossCode),
       leftAt: r.leaveAt.getTime(),
       stage: r.stage,
       settledGuildName: r.settledGuildName ?? null,
@@ -184,7 +188,7 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
 export async function getWorldBossDetail(bossId: string, serverId: number, userId: string | null): Promise<WorldBossDetail | null> {
   if (!/^\d+$/.test(bossId)) return null;
   const [b] = (await db.execute(sql`
-    select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.status, b.spawn_at, b.leave_at,
+    select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.boss_code, b.status, b.spawn_at, b.leave_at,
            b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes, b.traits,
            z.owner_guild_id::text as owner_id, og.name as owner_name, og.emblem_url as owner_emblem, og.emblem_color as owner_color,
            sg.name as settled_name, sg.emblem_url as settled_emblem, sg.emblem_color as settled_color
@@ -192,7 +196,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join guilds og on og.id = z.owner_guild_id
       left join guilds sg on sg.id = b.settled_guild_id
      where b.id = ${bossId}::bigint`)) as unknown as {
-    id: string; server_id: number; zone_id: number; zone_name: string; region: string; status: 'scheduled' | 'active' | 'left';
+    id: string; server_id: number; zone_id: number; zone_name: string; region: string; boss_code: string; status: 'scheduled' | 'active' | 'left';
     spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown;
     owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
     settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
@@ -330,7 +334,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const total = Number(b.total);
   const st = worldBossStageFor(total);
   return {
-    id: b.id, serverId: b.server_id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, name: worldBossName(b.region),
+    id: b.id, serverId: b.server_id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, name: worldBossName(b.boss_code),
     status: active ? 'active' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
     stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
     ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
@@ -352,11 +356,11 @@ export async function worldBossIdOfParty(partyId: string, serverId: number): Pro
 export async function getWorldBossBattle(partyId: string, serverId: number): Promise<import('./view-types').WorldBossBattle | null> {
   if (!/^\d+$/.test(partyId)) return null;
   const [r] = (await db.execute(sql`
-    select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader
-      from world_boss_parties p left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+    select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader, b.boss_code
+      from world_boss_parties p join world_bosses b on b.id = p.boss_id left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
      where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.status = 'departed'`)) as unknown as {
     id: string; finale: import('./view-types').WorldBossBattle['finale'] | null; stage_from: number | null; stage_to: number | null;
-    reward_diamond: number; reward_boxes: number; leader: string | null;
+    reward_diamond: number; reward_boxes: number; leader: string | null; boss_code: string;
   }[];
   if (!r?.finale) return null;
   const ids = r.finale.roster.map((m) => m.userId).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
@@ -382,6 +386,7 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
     guildEmblems,
     partyId: r.id,
     leaderNickname: r.leader ?? '알 수 없음',
+    bossCode: r.boss_code,
     finale: r.finale,
     stageFrom: r.stage_from ?? 0,
     stageTo: r.stage_to ?? 0,
@@ -396,14 +401,14 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
 export async function worldBossesAtConquestReveal(serverId: number, kstDay: string): Promise<import('./chronicle-facts').WorldBossAtZone[]> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(kstDay)) return [];
   const rows = (await db.execute(sql`
-    select z.name as zone, b.region, b.stage, b.loot_diamond::text as ld, b.loot_boxes
+    select z.name as zone, b.boss_code, b.stage, b.loot_diamond::text as ld, b.loot_boxes
       from world_bosses b join zones z on z.id = b.zone_id
      where b.server_id = ${serverId} and b.status <> 'scheduled'
        and b.spawn_at <= (${kstDay}::date + time '23:00') at time zone 'Asia/Seoul'
        and b.leave_at > ((${kstDay}::date + 1)::timestamp) at time zone 'Asia/Seoul'`)) as unknown as {
-    zone: string; region: string; stage: number; ld: string; loot_boxes: number;
+    zone: string; boss_code: string; stage: number; ld: string; loot_boxes: number;
   }[];
-  return rows.map((r) => ({ zone: r.zone, name: worldBossName(r.region), stage: r.stage, lootDiamond: Number(r.ld), lootBoxes: r.loot_boxes }));
+  return rows.map((r) => ({ zone: r.zone, name: worldBossName(r.boss_code), stage: r.stage, lootDiamond: Number(r.ld), lootBoxes: r.loot_boxes }));
 }
 
 /**

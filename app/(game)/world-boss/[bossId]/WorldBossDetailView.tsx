@@ -24,7 +24,7 @@ import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_M
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from '@/lib/game/world-boss/view-types';
-import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
+import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
 import {
@@ -225,6 +225,7 @@ export function WorldBossDetailView({
       setReplay({
         partyId: r.result.partyId,
         leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '',
+        bossCode: d.bossCode,
         finale: f,
         stageFrom: r.result.stageFrom,
         stageTo: r.result.stageTo,
@@ -246,12 +247,12 @@ export function WorldBossDetailView({
     <div className="flex-1 pb-4">
       {/* 히어로 — 무대(B안, 10-10): 보스 가운데 · 위 이름 · 아래 단계/진행률/전리품/남은 시간. 색은 보스 팔레트(잿빛 + 불씨 주황). */}
       <div className="relative h-[200px] overflow-hidden bg-stone-950">
-        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className={active ? '' : 'grayscale opacity-70'} />
+        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} className={active ? '' : 'grayscale opacity-70'} />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.6)_0%,transparent_30%,transparent_55%,rgba(12,10,9,0.95)_100%)]" />
         <BackFab fallback="/guild/map" className="absolute left-3 top-3 z-10" />
         {active ? (
           <WorldBossSprite
-            region={d.region}
+            kind={d.bossCode}
             alt={d.name}
             className="absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
             style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(234,88,12,0.6))' }}
@@ -324,7 +325,7 @@ export function WorldBossDetailView({
             ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 점령한 길드의 금고로 들어가요.`)
             : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
           : owner
-            ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+            ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
             : '종료 때 주인이 없어 전리품은 사라졌어요.'}
       </p>
 
@@ -626,9 +627,9 @@ export function WorldBossDetailView({
           >
             {/* 무대(시안 A, 10-10): 보스·단계·특성이 한 장에 — "어떤 보스에게 가는지". */}
             <div className="relative -mx-2 h-[96px] overflow-hidden rounded-xl bg-stone-950">
-              <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} />
+              <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} />
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.15)_0%,transparent_35%,rgba(12,10,9,0.92)_100%)]" />
-              <WorldBossSprite region={d.region} alt="" className="absolute left-1/2 top-[42%] z-[1] h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2" />
+              <WorldBossSprite kind={d.bossCode} alt="" className="absolute left-1/2 top-[42%] z-[1] h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-2 left-2.5 z-[2] [text-shadow:0_1px_2px_#000]">
                 <span className="block text-[10.5px] text-orange-200">{d.name}</span>
                 <b className="block text-[13px] text-stone-100">
