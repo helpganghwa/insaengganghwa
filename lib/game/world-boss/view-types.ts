@@ -73,6 +73,9 @@ export type WorldBossMe = {
   person: WorldBossPerson | null;
 };
 
+/** 보스 특성(0~2개) — 이름 오른쪽 칩과 설명 시트에 쓴다(docs/WORLD-BOSS.md §3.5). */
+export type WorldBossTraitView = { code: string; icon: string; name: string; effect: string; group: 'party' | 'boss' };
+
 export type WorldBossDetail = {
   id: string;
   serverId: number;
@@ -101,8 +104,12 @@ export type WorldBossDetail = {
   phase: { index: number; from: number; to: number };
   /** 이 페이즈에서 맞혀서 공개된 약점. 공개 전 약점은 아무도 모른다. */
   weakKnown: import('./loadout').KnownWeak[];
-  /** 페이즈 약점 총수(부위별 10 × 3). */
+  /** 페이즈 약점 총수(부위별 수 × 3 — 특성 넓어진·치명 약점이면 60·15). */
   weakTotal: number;
+  /** 약점 보너스(기본 1.0 = 전투력 2배, 치명 약점 2.0 = 3배). */
+  weakBonus: number;
+  /** 특성 코드(WORLD_BOSS_TRAITS) → 화면용. 없으면 빈 배열. */
+  traits: WorldBossTraitView[];
   /** 내 장착 상태와 제안 — 보스가 머무는 중이고 캐릭터가 있을 때만. */
   mine: { loadout: import('./loadout').Loadout; best: { power: number; pieces: import('./loadout').LoadoutPiece[] } | null } | null;
 };

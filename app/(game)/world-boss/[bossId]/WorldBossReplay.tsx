@@ -25,11 +25,14 @@ const STEP_FALL_MS = 900;
 export function WorldBossReplay({
   battle,
   bossName,
+  bossTraits = [],
   bgSrc,
   onClose,
 }: {
   battle: WorldBossBattle;
   bossName: string;
+  /** 보스 특성 — 이름 오른쪽 아이콘(10-10). */
+  bossTraits?: { code: string; icon: string; name: string }[];
   bgSrc: string;
   onClose: () => void;
 }) {
@@ -165,7 +168,11 @@ export function WorldBossReplay({
             </div>
             {/* 보스 이름 · 원정대 피해 — 무대 아래쪽 어두운 띠 위 */}
             <div className="absolute inset-x-0 bottom-2 z-10 flex items-baseline justify-between px-3">
-              <span className="text-[14px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">{bossName}</span>
+              <span className="flex items-center gap-1.5 text-[14px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
+                {bossName}
+                {/* 특성 아이콘 — 보스 이름 오른쪽(10-10 사용자) */}
+                {bossTraits.length > 0 && <span className="text-[12px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
+              </span>
               <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
                 원정대 피해 <b className="font-mono text-[16px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
               </span>

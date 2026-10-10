@@ -70,7 +70,7 @@ export async function loadoutsOf(serverId: number, userIds: string[], known: Rea
       .filter((r) => isSlot(r.slot))
       .map((r) => ({ ueid: r.ueid, slot: r.slot as WeakSlot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), src: spritePath(r.code), av: !!snap && snap[`${r.slot}Key`] === r.code, weak: known.has(r.code) }))
       .sort((a, b) => WEAK_SLOTS.indexOf(a.slot) - WEAK_SLOTS.indexOf(b.slot));
-    const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak), 0));
+    const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak, weakBonus), 0));
     out.set(uid, { pieces, hasAvatar: !!snap, power, weakCount: pieces.filter((p) => p.weak).length, avatarCount: pieces.filter((p) => p.av || (!!snap && p.weak)).length });
   }
   return out;

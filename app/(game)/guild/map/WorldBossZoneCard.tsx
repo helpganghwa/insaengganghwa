@@ -11,7 +11,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 
-type Common = { name: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; href: string };
+type Common = { name: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; traits?: { code: string; icon: string; name: string }[] };
 
 export function WorldBossZoneCard(
   props:
@@ -54,6 +54,12 @@ export function WorldBossZoneCard(
             {left ? '원정 종료' : '월드보스'}
           </span>
           <b className={`truncate text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-stone-100'}`}>{props.name}</b>
+          {/* 특성 아이콘 — 보스 이름 오른쪽(10-10 사용자). 상세에서 이름·효과를 본다. */}
+          {props.traits && props.traits.length > 0 && (
+            <span className="shrink-0 text-[11px]" title={props.traits.map((t) => t.name).join(' · ')}>
+              {props.traits.map((t) => t.icon).join(' ')}
+            </span>
+          )}
         </span>
         <span className={`text-[18px] font-black leading-none [text-shadow:0_1px_3px_#000] ${left ? 'text-zinc-300' : 'text-orange-400'}`}>
           {left ? `최종 ${props.stage}단계` : `${props.stage}단계`}

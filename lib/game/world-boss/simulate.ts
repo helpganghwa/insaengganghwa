@@ -15,7 +15,10 @@
  * drops[k]·weak[k]는 events[k]와 짝(쓰러짐은 [0,0]·0). weak[k] = 그 공격에서 약점을 맞힌 부위 비트(무기 1·방어구 2·장신구 4).
  * 보상 난수는 피해와 따로 노는 줄기(seed + ':drop').
  */
-import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_LUCKY_MIN_WEAK, WORLD_BOSS_WEAK_BONUS, worldBossPhaseOf, worldBossRollDrop, worldBossStageFor } from '@/lib/game/guild/balance';
+import {
+  CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_LUCKY_MIN_WEAK, type WorldBossTraitCode,
+  worldBossMissDelta, worldBossPartyTraitMult, worldBossPhaseOf, worldBossRollDrop, worldBossStageFor, worldBossUnitTraitMult, worldBossWeakBonus,
+} from '@/lib/game/guild/balance';
 import type { WorldBossWeakPhase } from '@/lib/db/schema/world-boss';
 import { makeRng } from '@/lib/game/melee/rng';
 
@@ -74,6 +77,8 @@ export type WorldBossSimContext = {
   startDamage: number;
   /** 페이즈별 약점(빈 배열이면 약점 없음). */
   weak: readonly WorldBossWeakPhase[];
+  /** 보스 특성(0~2개, docs/WORLD-BOSS.md §3.5) — 구성 배율·무소속 배율·약점 보너스·꽝 확률. 없으면 기본 규칙. */
+  traits?: readonly WorldBossTraitCode[];
 };
 
 export function baseCp(items: readonly WorldBossItem[]): number {
@@ -88,6 +93,12 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
   if (n === 0) return { totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster, events: [], drops: [], weak: [], rounds: 0, totalDamage: 0 } };
 
   const weakSets = ctx.weak.map((p) => ({ weapon: new Set(p.weapon), armor: new Set(p.armor), accessory: new Set(p.accessory) }));
+  // 특성 — 원정대 전체 배율은 출발 순간의 구성으로 한 번, 무소속 배율은 대원마다, 약점 보너스·꽝 확률은 보스 값.
+  const traits = ctx.traits ?? [];
+  const weakBonus = worldBossWeakBonus(traits);
+  const missDelta = worldBossMissDelta(traits);
+  const partyMult = worldBossPartyTraitMult(traits, units.map((u) => ({ guild: u.guildId })));
+  const unitMult = units.map((u) => worldBossUnitTraitMult(traits, u.guildId));
   const rng = makeRng(seed);
   const dropRng = makeRng(`${seed}:drop`);
   const dia = new Float64Array(n);
@@ -127,18 +138,18 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
           }
         }
         const av = it.av || (u.hasAvatar && weak);
-        eff += it.cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? WORLD_BOSS_WEAK_BONUS : 0));
+        eff += it.cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0));
       }
       // 난수는 피해가 0이어도 하나 소비한다 — 장착 여부로 뒤 공격들의 흐름이 바뀌지 않게.
       const u01 = rng();
-      const dmg = eff > 0 ? Math.max(1, Math.round(eff * (CONQUEST_DMG_MIN + u01 * (CONQUEST_DMG_MAX - CONQUEST_DMG_MIN)))) : 0;
+      const dmg = eff > 0 ? Math.max(1, Math.round(eff * partyMult * unitMult[i]! * (CONQUEST_DMG_MIN + u01 * (CONQUEST_DMG_MAX - CONQUEST_DMG_MIN)))) : 0;
       attacks[i]!++;
       damage[i]! += dmg;
       hits[i]! += nWeak;
       total += dmg;
       events.push([i, WORLD_BOSS_LOCAL, dmg, total]);
       weakBits.push(bits);
-      const dr = worldBossRollDrop(dropRng(), nWeak >= WORLD_BOSS_LUCKY_MIN_WEAK);
+      const dr = worldBossRollDrop(dropRng(), nWeak >= WORLD_BOSS_LUCKY_MIN_WEAK, missDelta);
       dia[i]! += dr.diamond;
       box[i]! += dr.boxes;
       drops.push([dr.diamond, dr.boxes]);

@@ -1218,6 +1218,7 @@ export function WorldMapView({
                         stage={boss.stage}
                         lootDiamond={boss.lootDiamond}
                         lootBoxes={boss.lootBoxes}
+                        traits={boss.traits}
                         leaveAt={boss.leaveAt}
                         remainText={(now) => wbRemain(boss.leaveAt - now)}
                         href={`/world-boss/${boss.id}`}

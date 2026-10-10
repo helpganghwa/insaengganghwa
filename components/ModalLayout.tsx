@@ -138,8 +138,9 @@ export function ModalButton({
     success: 'bg-emerald-600 text-white',
     neutral: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200',
     contrast: 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900',
+    // 불투명 바탕(10-10 사용자: 투명하면 뒤 화면이 비쳐 가독성이 떨어졌다) — 모든 팝업의 취소 버튼이 이 톤.
     ghost:
-      'border border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400',
+      'border border-zinc-300 bg-white text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200',
   };
   return (
     <button

@@ -24,6 +24,8 @@ export type WorldBossMapBoss = {
   departed: number;
   /** 내 상태 — 신청 대기 / 모집 중 원정대 소속 / 이미 출발(보스 하나에 1인 1번) / 없음. 비로그인은 'none'. */
   mine: WorldBossMine;
+  /** 특성(0~2개) — 구역 카드의 보스 이름 오른쪽에 아이콘으로. */
+  traits: { code: string; icon: string; name: string }[];
 };
 
 /** 떠난 보스 기록(떠난 뒤 48시간 동안 구역 시트에 한 줄) — 주인이 없었으면 settledGuildName null·전리품 소멸. */

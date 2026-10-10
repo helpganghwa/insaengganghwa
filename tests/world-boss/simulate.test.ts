@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_STAGE_BASE_HP } from '@/lib/game/guild/balance';
+import { CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_STAGE_BASE_HP, WORLD_BOSS_TRAIT } from '@/lib/game/guild/balance';
 import { WORLD_BOSS_LOCAL, simulateWorldBoss, type WorldBossUnit } from '@/lib/game/world-boss/simulate';
 
 const unit = (i: number, cp: number): WorldBossUnit => ({ userId: `u${i}`, nickname: `n${i}`, items: [{ slot: 'weapon', code: `w${i}`, cp, av: false }], hasAvatar: false, guildId: null, guildName: null });
@@ -145,4 +145,38 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     expect(missPlain / n).toBeGreaterThan(0.47);
     expect(missPlain / n).toBeLessThan(0.53);
   });
+
+  it('특성: 구성 배율은 전원 피해에, 떠도는 바람은 무소속에게만, 치명 약점은 약점 보너스 3배, 황금 깃털은 꽝이 준다', () => {
+    const us = [
+      { ...unit(1, 100_000), guildId: 'a', guildName: 'A' },
+      { ...unit(2, 100_000), guildId: 'b', guildName: 'B' },
+      { ...unit(3, 100_000), guildId: 'c', guildName: 'C' },
+      { ...unit(4, 100_000), guildId: null, guildName: null },
+    ];
+    const base = simulateWorldBoss(us, 'worldboss:t');
+    const ally = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak: [], traits: ['alliance'] });
+    // 같은 시드라 난수가 같고, 피해만 ×1.5(반올림 오차 안)
+    expect(ally.rounds).toBe(base.rounds);
+    expect(ally.totalDamage / base.totalDamage).toBeCloseTo(WORLD_BOSS_TRAIT.alliance3, 2);
+    const wind = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak: [], traits: ['wanderer'] });
+    wind.members.forEach((m, i) => {
+      const ratio = m.damage / base.members[i]!.damage;
+      expect(ratio).toBeCloseTo(us[i]!.guildId ? 1 : WORLD_BOSS_TRAIT.wandererMult, 2);
+    });
+    // 치명 약점 — 약점 장비(w1)만 3배
+    const weak = phases({ weapon: ['w1'] });
+    const normal = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak });
+    const fatal = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak, traits: ['fatal_weak'] });
+    expect(fatal.members[0]!.damage / normal.members[0]!.damage).toBeCloseTo((1 + WORLD_BOSS_TRAIT.fatalWeakBonus) / 2, 2);
+    expect(fatal.members[1]!.damage).toBe(normal.members[1]!.damage);
+    // 황금 깃털 — 많은 원정대로 꽝 비율 ≈ 40%
+    let miss = 0, n = 0;
+    for (let s = 0; s < 150; s++) {
+      const r = simulateWorldBoss(Array.from({ length: 10 }, (_, i) => unit(i, 10_000)), `worldboss:g${s}`, { startDamage: 0, weak: [], traits: ['golden_feather'] });
+      r.finale.events.forEach(([a], k) => { if (a < 0) return; n++; if (r.finale.drops![k]![0] + r.finale.drops![k]![1] === 0) miss++; });
+    }
+    expect(miss / n).toBeGreaterThan(0.37);
+    expect(miss / n).toBeLessThan(0.43);
+  });
 });
+

@@ -15,6 +15,7 @@ import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, currentPhase, knownWeakOf } from '@/lib/game/world-boss/loadout';
+import { parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { db } from '@/lib/db/client';
 import { sql } from 'drizzle-orm';
@@ -154,11 +155,12 @@ export async function equipBestAction(bossId: string) {
   if ('status' in g) return g;
   if (!/^\d+$/.test(bossId)) return err('NOT_FOUND');
   try {
-    const [b] = (await db.execute(sql`select stage, server_id, status from world_bosses where id = ${bossId}::bigint`)) as unknown as { stage: number; server_id: number; status: string }[];
+    const [b] = (await db.execute(sql`select stage, server_id, status, traits from world_bosses where id = ${bossId}::bigint`)) as unknown as { stage: number; server_id: number; status: string; traits: unknown }[];
     if (!b || b.server_id !== g.sid) return err('NOT_FOUND');
     if (b.status !== 'active') return err('BOSS_NOT_ACTIVE');
     const known = new Set((await knownWeakOf(bossId, currentPhase(b.stage).index)).map((w) => w.code));
-    const best = await bestLoadoutOf(g.sid, g.u, known);
+    // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
+    const best = await bestLoadoutOf(g.sid, g.u, known, worldBossWeakBonus(parseWorldBossTraits(b.traits)));
     if (!best) return err('ALREADY_EQUIPPED');
     await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid);
     rev(bossId);

@@ -22,6 +22,7 @@ import {
 } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { WorldmapRestoreGuard } from '@/components/WorldmapRestoreGuard';
 import { ChatDock } from '@/components/chat/ChatDock';
 import { AppInstallMark } from '@/components/AppInstallMark';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
@@ -190,6 +191,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         </ResourceToastProvider>
         {/* PWA 실행 감지 — 도전 과제 'app_install' 마킹(0118). */}
         <AppInstallMark />
+        {/* 세계지도 팝업 복원 키 정리 — 지도·전투 기록·프로필 밖의 화면에서는 지운다(10-10). */}
+        <WorldmapRestoreGuard />
         {/* 월드 채팅 도크(0125) — GNB 위 미니바 + 전체 패널. 튜토리얼 중/비활성 시 자체 숨김. */}
         <ChatDock />
         <Suspense fallback={<BottomNav />}>

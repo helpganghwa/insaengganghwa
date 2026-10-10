@@ -10,7 +10,7 @@ import { db } from '@/lib/db/client';
 import { profilesByIds } from '@/lib/game/friends';
 import { guilds } from '@/lib/db/schema/guild';
 import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/schema/world-boss';
-import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_PER_SLOT, worldBossStageFor } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, worldBossStageFor, worldBossTraitDef, worldBossWeakBonus, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf } from './loadout';
@@ -33,6 +33,7 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       stage: worldBosses.stage,
       lootDiamond: worldBosses.lootDiamond,
       lootBoxes: worldBosses.lootBoxes,
+      traits: worldBosses.traits,
     })
     .from(worldBosses)
     .where(and(eq(worldBosses.serverId, serverId), eq(worldBosses.status, 'active')))
@@ -91,6 +92,7 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       recruiting: c.recruiting,
       departed: c.departed,
       mine: mine.get(id) ?? 'none',
+      traits: parseWorldBossTraits(r.traits).map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name }; }),
     };
   });
 
@@ -149,7 +151,7 @@ async function namesOn(serverId: number, userIds: string[]): Promise<Map<string,
 }
 
 /** 사람들(원정대원·신청자) — 닉네임·공개 코드·길드·월드보스 전투력(장착 3개 + 보너스). 한 화면에 20명 남짓이라 즉석 계산. */
-async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<string>): Promise<Map<string, WorldBossPerson>> {
+async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<Map<string, WorldBossPerson>> {
   const out = new Map<string, WorldBossPerson>();
   if (userIds.length === 0) return out;
   const ids = [...new Set(userIds)];
@@ -161,7 +163,7 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
         left join guild_members gm on gm.user_id = c.user_id and gm.server_id = c.server_id
         left join guilds g on g.id = gm.guild_id
        where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null; gurl: string | null; gcolor: string | null }[]>,
-    loadoutsOf(serverId, ids, known),
+    loadoutsOf(serverId, ids, known, weakBonus),
   ]);
   const faces = new Map((await profilesByIds(ids, serverId).catch(() => [])).map((f) => [f.userId, f] as const));
   for (const r of rows) {
@@ -181,7 +183,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   if (!/^\d+$/.test(bossId)) return null;
   const [b] = (await db.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.status, b.spawn_at, b.leave_at,
-           b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes,
+           b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes, b.traits,
            z.owner_guild_id::text as owner_id, og.name as owner_name, og.emblem_url as owner_emblem, og.emblem_color as owner_color,
            sg.name as settled_name, sg.emblem_url as settled_emblem, sg.emblem_color as settled_color
       from world_bosses b join zones z on z.id = b.zone_id
@@ -189,7 +191,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join guilds sg on sg.id = b.settled_guild_id
      where b.id = ${bossId}::bigint`)) as unknown as {
     id: string; server_id: number; zone_id: number; zone_name: string; region: string; status: 'scheduled' | 'active' | 'left';
-    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number;
+    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown;
     owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
     settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
   }[];
@@ -216,6 +218,9 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const phase = currentPhase(b.stage);
   const weakKnown = await knownWeakOf(b.id, phase.index);
   const known = new Set(weakKnown.map((w) => w.code));
+  // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
+  const traitCodes = parseWorldBossTraits(b.traits);
+  const weakBonus = worldBossWeakBonus(traitCodes);
 
   // 원정대 명단(10-10 사용자: 목록에서 누가 있는지 보이게) — 모집 중은 전투력(공개된 약점 기준이라 known 뒤에 센다), 완료는 그 전투의 피해.
   // 완료 원정대원은 전투력이 필요 없어 이름·문양만 가볍게 읽는다(지난 보스까지 수십 팀 × 10명).
@@ -228,7 +233,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
            where party_id = any(${`{${allIds.join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string; dmg: string }[])
       : [];
   const [rosterPeople, rosterNames] = await Promise.all([
-    peopleOn(serverId, roster.filter((r) => recruitingIds.has(r.pid)).map((r) => r.uid), known),
+    peopleOn(serverId, roster.filter((r) => recruitingIds.has(r.pid)).map((r) => r.uid), known, weakBonus),
     namesOn(serverId, roster.filter((r) => !recruitingIds.has(r.pid)).map((r) => r.uid)),
   ]);
   const membersOf = (p: { id: string; leader: string }) =>
@@ -263,7 +268,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
     const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
     // 나 자신(낙관적 '내 원정대' 그리기용) — 머무는 보스에서 아직 싸우지 않았을 때만(명단에 이미 있으면 거기서 온다).
-    const mePerson = active && !mem ? ((await peopleOn(serverId, [userId], known)).get(userId) ?? null) : null;
+    const mePerson = active && !mem ? ((await peopleOn(serverId, [userId], known, weakBonus)).get(userId) ?? null) : null;
     me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: mePerson };
     if (mem) {
       const isLeader = mem.leader === userId;
@@ -273,7 +278,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
           : Promise.resolve([] as { uid: string }[]),
       ]);
-      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known);
+      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known, weakBonus);
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null };
       myParty = {
@@ -284,7 +289,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     }
     // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
     if (active && state !== 'fought') {
-      const [lo, best] = await Promise.all([loadoutsOf(serverId, [userId], known), bestLoadoutOf(serverId, userId, known)]);
+      const [lo, best] = await Promise.all([loadoutsOf(serverId, [userId], known, weakBonus), bestLoadoutOf(serverId, userId, known, weakBonus)]);
       const l = lo.get(userId);
       if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
     }
@@ -299,7 +304,8 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
     settledGuildName: b.settled_name, settledGuildEmblem: b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
     parties, me, myParty,
-    phase, weakKnown, weakTotal: WORLD_BOSS_WEAK_PER_SLOT * 3, mine,
+    phase, weakKnown, weakTotal: worldBossWeakPerSlot(traitCodes) * 3, weakBonus, mine,
+    traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name, effect: t.effect, group: t.group }; }),
   };
 }
 

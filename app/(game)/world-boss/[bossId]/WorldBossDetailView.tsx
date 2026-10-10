@@ -19,7 +19,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { Ticker } from '@/components/Ticker';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
-import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, type WorldBossTraitCode, worldBossPartyTraitMult, worldBossPartyTraitStatus, worldBossTraitDef } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle, WorldBossDetail, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
@@ -106,7 +106,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       const card: WorldBossPartyCard = {
         id: OPT_PARTY_ID, status: 'recruiting', leaderNickname: who.nickname, guildName: who.guildName, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor,
         intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, damage: 0, isLeader: true, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor }], combatSum: who.combat, memberCount: 1,
-        createdAt: Date.now(), departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0,
+        createdAt: 0, departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0, // 낙관 카드 — 시각은 서버 재렌더가 채운다(렌더 중 Date.now 금지)
       };
       return {
         ...s,
@@ -160,6 +160,7 @@ export function WorldBossDetailView({
   // 원정대 만들기 — 소개글(선택) 한 줄을 받는 팝업(10-10 사용자).
   const [createAsk, setCreateAsk] = useState(false);
   const [intro, setIntro] = useState('');
+  const [traitSheet, setTraitSheet] = useState(false);
   const [replay, setReplay] = useState<WorldBossBattle | null>(null);
   const departKey = useRef<string | null>(null); // 출발 멱등 키 — 재전송해도 같은 결과(서버 depart_key)
 
@@ -172,6 +173,10 @@ export function WorldBossDetailView({
   const owner = active ? d.ownerGuildName : d.settledGuildName;
   const ownerEmblem = active ? d.ownerGuildEmblem : d.settledGuildEmblem;
   const myCard = mp ? d.parties.find((p) => p.id === mp.partyId) : undefined;
+  // 구성 특성이 지금 내 원정대에 얼마나 적용되는지(출발 순간 서버가 같은 함수로 계산한다).
+  const traitCodes = useMemo(() => d.traits.map((t) => t.code as WorldBossTraitCode), [d.traits]);
+  const traitStatus = useMemo(() => (mp ? worldBossPartyTraitStatus(traitCodes, mp.members.map((m) => ({ guild: m.guildName }))) : []), [traitCodes, mp]);
+  const partyMult = useMemo(() => (mp ? worldBossPartyTraitMult(traitCodes, mp.members.map((m) => ({ guild: m.guildName }))) : 1), [traitCodes, mp]);
 
   const run = (fn: () => Promise<ActionRes>, ok?: { title: string; detail?: string }, p?: Patch) =>
     start(async () => {
@@ -249,6 +254,17 @@ export function WorldBossDetailView({
               {active ? '월드보스' : '원정 종료'}
             </span>
             <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{d.name}</h1>
+            {/* 특성 칩 — 보스 이름 오른쪽(10-10 사용자, A안). 탭하면 설명 시트. */}
+            {d.traits.length > 0 && (
+              <button type="button" onClick={() => setTraitSheet(true)} className="flex shrink-0 items-center gap-1" aria-label="보스 특성">
+                {d.traits.map((t) => (
+                  <span key={t.code} className="inline-flex items-center gap-0.5 rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
+                    <span aria-hidden>{t.icon}</span>
+                    {t.name}
+                  </span>
+                ))}
+              </button>
+            )}
           </span>
           <span className="flex min-w-0 items-center gap-1 text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             <span className="shrink-0">{d.zoneName} ·</span>
@@ -300,8 +316,8 @@ export function WorldBossDetailView({
           phase={d.phase}
           weakKnown={d.weakKnown}
           weakTotal={d.weakTotal}
+          weakBonus={d.weakBonus}
           mine={d.mine}
-          pending={pending}
           onEquipBest={() => run(() => equipBestAction(d.id), { title: '약점에 맞춰 장착했어요' }, { t: 'equipBest' })}
         />
       )}
@@ -315,9 +331,8 @@ export function WorldBossDetailView({
             // 원정대 만들기 — 바닥 고정 대신 제자리에. 윤곽선(속이 빈 주황 테두리 + ＋) — '준비' 단계라 채운 버튼인 출발과 구분(10-10 사용자, A안).
             <button
               type="button"
-              disabled={pending}
               onClick={() => setCreateAsk(true)}
-              className="w-full rounded-xl border border-orange-500/70 bg-transparent py-3 text-[14px] font-extrabold text-orange-300 disabled:opacity-40"
+              className="w-full rounded-xl border border-orange-500/70 bg-transparent py-3 text-[14px] font-extrabold text-orange-300"
             >
               ＋ 원정대 만들기
             </button>
@@ -350,6 +365,19 @@ export function WorldBossDetailView({
               <MemberChip key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />
             ))}
           </div>
+          {/* 구성 특성 적용 상태 — 켜진 것은 초록, 아직인 것은 회색으로 조건(시안 ②). */}
+          {mp.status === 'recruiting' && traitStatus.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {traitStatus.map((s) => {
+                const t = worldBossTraitDef(s.code)!;
+                return (
+                  <span key={s.code} className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-stone-800 text-stone-500'}`}>
+                    {t.icon} {t.name} {s.active ? `×${s.mult} 적용 중 · ${s.note}` : `— ${s.note}`}
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           {mp.isLeader && mp.status === 'recruiting' && mp.requests.length > 0 && (
             <div className="mt-2.5 border-t border-dashed border-stone-700 pt-2">
@@ -399,7 +427,7 @@ export function WorldBossDetailView({
                 </button>
                 <button
                   type="button"
-                  disabled={pending || mp.partyId === OPT_PARTY_ID}
+                  disabled={mp.partyId === OPT_PARTY_ID}
                   onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' })}
                   className="mt-1 w-full py-1.5 text-[11.5px] font-bold text-stone-500 disabled:opacity-40"
                 >
@@ -440,8 +468,8 @@ export function WorldBossDetailView({
         {(
           [
             ['recruiting', `모집 중 ${recruiting.length}`],
-            // '완료' — 출발과 동시에 결과가 정해지므로 '출발'은 진행 중처럼 읽혔다(10-10 사용자). '종료'는 보스가 떠난 것과 겹쳐 피한다.
-            ['departed', `완료 ${departed.length}`],
+            // '종료' — 출발과 동시에 결과가 정해지므로 '출발'은 진행 중처럼 읽혔다(10-10 사용자, '완료'보다 '종료').
+            ['departed', `종료 ${departed.length}`],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -459,16 +487,7 @@ export function WorldBossDetailView({
       <div className="mx-3 mt-2 flex flex-col gap-2">
         {tab === 'recruiting' ? (
           recruiting.length === 0 ? (
-            <Empty
-              title={!active ? '원정이 종료돼 모집이 끝났어요' : '모집 중인 원정대가 없어요'}
-              sub={
-                !active
-                  ? undefined
-                  : me?.canCreate
-                    ? '원정대를 만들면 다른 사람이 신청할 수 있어요.'
-                    : undefined
-              }
-            />
+            <Empty title={!active ? '원정이 종료돼 모집이 끝났어요' : '모집 중인 원정대가 없어요'} />
           ) : (
             recruiting.map((p) => {
               const isPending = me?.pendingPartyIds.includes(p.id) ?? false;
@@ -519,7 +538,7 @@ export function WorldBossDetailView({
             })
           )
         ) : departed.length === 0 ? (
-          <Empty title="아직 완료된 원정대가 없어요" />
+          <Empty title="아직 종료된 원정대가 없어요" />
         ) : (
           departed.map((p, i) => (
             // 완료 카드 — 피해 많은 순(N위) · 피해 · 원정대원(피해) · 원정대 획득. 라운드·단계·전투 보기는 두지 않는다(10-10 사용자).
@@ -566,6 +585,15 @@ export function WorldBossDetailView({
               <span className="text-stone-500">합산 전투력</span>
               <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
             </p>
+            {/* 구성 특성이 켜져 있으면 적용 뒤 합산도(시안 ②). 무소속 배율은 대원별이라 여기선 제외. */}
+            {partyMult > 1 && (
+              <p className="mt-1 flex items-center justify-between text-[11.5px] text-stone-500">
+                <span>
+                  {traitStatus.filter((s) => s.active && s.code !== 'wanderer').map((s) => `${worldBossTraitDef(s.code)!.icon} ${worldBossTraitDef(s.code)!.name} ×${s.mult}`).join(' · ')}
+                </span>
+                <b className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">{formatCompactKR(Math.round(mp.members.reduce((s, m) => s + m.combat, 0) * partyMult))}</b>
+              </p>
+            )}
           </ModalLayout>
         </ModalShell>
       )}
@@ -579,7 +607,7 @@ export function WorldBossDetailView({
             footer={
               <>
                 <ModalButton onClick={() => setCreateAsk(false)}>취소</ModalButton>
-                <ModalButton tone="primary" onClick={create} disabled={pending}>
+                <ModalButton tone="primary" onClick={create}>
                   만들기
                 </ModalButton>
               </>
@@ -601,7 +629,29 @@ export function WorldBossDetailView({
         </ModalShell>
       )}
 
-      {replay && <WorldBossReplay battle={replay} bossName={d.name} bgSrc={bgSrc} onClose={() => setReplay(null)} />}
+      {/* 특성 설명 시트 — 효과만(팁 없음, 10-10 사용자). */}
+      {traitSheet && (
+        <ModalShell onClose={() => setTraitSheet(false)} label="보스 특성">
+          <ModalLayout
+            title="이 보스의 특성"
+            footer={<ModalButton onClick={() => setTraitSheet(false)}>닫기</ModalButton>}
+          >
+            <ul className="space-y-2.5">
+              {d.traits.map((t) => (
+                <li key={t.code} className="flex items-start gap-2.5">
+                  <span className="text-[22px] leading-none">{t.icon}</span>
+                  <span className="min-w-0">
+                    <b className="block text-[13px] text-orange-600 dark:text-orange-300">{t.name}</b>
+                    <span className="block text-[12px] text-stone-600 dark:text-stone-300">{t.effect}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </ModalLayout>
+        </ModalShell>
+      )}
+
+      {replay && <WorldBossReplay battle={replay} bossName={d.name} bossTraits={d.traits} bgSrc={bgSrc} onClose={() => setReplay(null)} />}
     </div>
   );
 }
@@ -682,11 +732,12 @@ function DepartedSummary({ p, withReward = false }: { p: WorldBossPartyCard; wit
 
 /** 전신 아바타(10-10 사용자: 얼굴 크롭 대신 전신) — 파견 카드와 같은 방식, south 그림을 칸 높이에 꽉 채워 바닥 정렬. */
 function Body({ src, h }: { src: string | null; h: string }) {
+  // 정사각 칸에 object-contain — 그림 비율을 바꾸거나 옆을 자르지 않는다(10-10 점검).
   return (
-    <span className={`flex ${h} w-9 shrink-0 items-end justify-center overflow-hidden`}>
+    <span className={`flex ${h} aspect-square shrink-0 items-end justify-center`}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" decoding="async" draggable={false} className="h-full w-auto" style={{ imageRendering: 'pixelated' }} />
+        <img src={src} alt="" decoding="async" draggable={false} className="h-full w-full object-contain object-bottom" style={{ imageRendering: 'pixelated' }} />
       ) : (
         <span className="pb-1 text-base">👤</span>
       )}

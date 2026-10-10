@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { randomUUID } from 'node:crypto';
 
 import { pieceCombatPower } from '@/lib/game/balance';
-import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossStageFor } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossLootFor, worldBossLootMult, worldBossStageFor, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -235,7 +235,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     // 잠금 순서: 보스 → 원정대. 보스를 먼저 잠가 같은 보스의 동시 출발이 단계 계산에서 직렬화되게.
     const [pre] = (await tx.execute(sql`select boss_id::text as b from world_boss_parties where id = ${input.partyId}::bigint`)) as unknown as { b: string }[];
     if (!pre) throw new WorldBossError('NOT_FOUND');
-    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, zone_id, total_damage::text as total_damage, weak from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; zone_id: number; total_damage: string; weak: unknown }[];
+    const bossLocked = (await tx.execute(sql`select id::text as id, status, leave_at, region::text as region, zone_id, total_damage::text as total_damage, weak, traits from world_bosses where id = ${pre.b}::bigint for update`)) as unknown as { id: string; status: string; leave_at: string; region: string; zone_id: number; total_damage: string; weak: unknown; traits: unknown }[];
     const party = await lockParty(tx, input.partyId);
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
@@ -291,8 +291,10 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
       const items: WorldBossItem[] = (equipped.get(m.uid) ?? []).map((it) => ({ ...it, av: !!snap && avatarKey(it.slot) === it.code }));
       return { userId: m.uid, nickname: m.nickname, items, hasAvatar: !!snap && typeof snap.weaponKey === 'string', guildId: m.gid, guildName: m.gname };
     });
-    const weak = await ensureBossWeak(tx, b.id, b.weak);
-    const sim = simulateWorldBoss(units, `worldboss:${party.id}:${randomUUID()}`, { startDamage: Number(b.total_damage), weak });
+    // 특성(소환 때 고정) — 약점 수·보너스, 구성 배율, 꽝 확률, 전리품 배율이 여기서 갈린다(docs/WORLD-BOSS.md §3.5).
+    const traits = parseWorldBossTraits(b.traits);
+    const weak = await ensureBossWeak(tx, b.id, b.weak, worldBossWeakPerSlot(traits));
+    const sim = simulateWorldBoss(units, `worldboss:${party.id}:${randomUUID()}`, { startDamage: Number(b.total_damage), weak, traits });
 
     // 보스 누적 피해 → 단계·전리품(절대값으로 다시 계산 — 증분 누적의 어긋남 방지).
     const [tot] = (await tx.execute(sql`
@@ -300,7 +302,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     const stageFrom = Number(tot!.stage);
     const stageTo = worldBossStageFor(Number(tot!.t)).stage;
     if (stageTo !== stageFrom) {
-      const loot = worldBossLootFor(stageTo);
+      const loot = worldBossLootFor(stageTo, worldBossLootMult(traits));
       await tx.execute(sql`update world_bosses set stage = ${stageTo}, loot_diamond = ${loot.diamond}::bigint, loot_boxes = ${loot.boxes} where id = ${b.id}::bigint`);
     }
     const reward = sim.members.reduce((s, m) => ({ diamond: s.diamond + m.diamond, boxes: s.boxes + m.boxes }), { diamond: 0, boxes: 0 });
