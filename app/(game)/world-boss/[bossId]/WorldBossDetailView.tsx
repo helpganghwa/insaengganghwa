@@ -2,7 +2,7 @@
 
 /**
  * 월드보스 상세 화면(docs/WORLD-BOSS.md §9). 위에서부터: 무대 히어로(이름·단계·전리품·남은 시간을 무대 안에) · 전리품 안내 한 줄 ·
- * 약점/내 장착 · 지금 할 일(신청 대기·안내) · 내 원정대 · [모집 중 | 출발] 원정대 카드, 그리고 지금 누를 버튼 하나를 바닥에 고정한다
+ * 약점/내 장착 · 지금 할 일(신청 대기·안내) · 내 원정대 · [모집 중 | 완료] 원정대 카드, 그리고 지금 누를 버튼 하나를 바닥에 고정한다
  * (만들기 / 출발 / 내 전투 다시 보기). 고정 버튼은 채팅 미니바 높이(--chat-dock-h)만큼 띄워 가리지 않는다. 액션은 서버 액션이 현재 경로를 재렌더해 새 상태가 props로 온다
  * (router.refresh 없음, CLAUDE §11.7). 출발 직후와 '전투 보기'는 WorldBossReplay로 재생.
  */
@@ -339,7 +339,8 @@ export function WorldBossDetailView({
         {(
           [
             ['recruiting', `모집 중 ${recruiting.length}`],
-            ['departed', `출발 ${departed.length}`],
+            // '완료' — 출발과 동시에 결과가 정해지므로 '출발'은 진행 중처럼 읽혔다(10-10 사용자). '종료'는 보스가 떠난 것과 겹쳐 피한다.
+            ['departed', `완료 ${departed.length}`],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -401,7 +402,7 @@ export function WorldBossDetailView({
             })
           )
         ) : departed.length === 0 ? (
-          <Empty title="아직 출발한 원정대가 없어요" />
+          <Empty title="아직 완료된 원정대가 없어요" />
         ) : (
           departed.map((p) => (
             <button
