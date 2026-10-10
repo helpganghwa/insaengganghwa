@@ -4,12 +4,12 @@ import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
-import { WORLD_BOSS_GUILD_XP_PER_STAGE, WORLD_BOSS_SPAWN_KST_HOURS, WORLD_BOSS_STAY_MS, guildXpToNext } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_GUILD_XP_PER_STAGE, WORLD_BOSS_SPAWN_KST_HOURS, WORLD_BOSS_STAY_MS, drawWorldBossTraits, guildXpToNext, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 import { sendPushToUsers } from '@/lib/push/send';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 
 import { worldBossName } from './bosses';
-import { drawWeakForNewBoss } from './weak-server';
+import { cryptoRand, drawWeakForNewBoss } from './weak-server';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
@@ -55,11 +55,12 @@ export async function ensureTodayBoss(
   if (zonesRows.length === 0) return { created: false, skipped: 'no_owned_zone' };
   const pick = zonesRows[rngU32() % zonesRows.length]!;
 
-  // 페이즈별 약점은 소환 때 고정(docs/WORLD-BOSS.md §3) — 정찰한 정보가 그 보스가 머무는 동안 유효하다.
-  const weak = await drawWeakForNewBoss(db);
+  // 특성(0~2개)과 페이즈별 약점은 소환 때 고정(docs/WORLD-BOSS.md §3) — 정찰한 정보가 그 보스가 머무는 동안 유효하다. 약점 수는 특성을 따른다.
+  const traits = drawWorldBossTraits(cryptoRand);
+  const weak = await drawWeakForNewBoss(db, worldBossWeakPerSlot(traits));
   const [ins] = (await db.execute(sql`
-    insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak)
-    values (${serverId}, ${pick.id}, ${pick.region}, ${kstDay}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled', ${pick.owner}::bigint, ${JSON.stringify(weak)}::jsonb)
+    insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
+    values (${serverId}, ${pick.id}, ${pick.region}, ${kstDay}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled', ${pick.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb)
     on conflict (server_id, kst_day) do nothing
     returning id::text as id
   `)) as unknown as { id: string }[];

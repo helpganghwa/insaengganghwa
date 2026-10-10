@@ -22,10 +22,10 @@ type OwnRow = { ueid: string; code: string; name: string; slot: string; el: numb
 
 const isSlot = (s: string): s is WeakSlot => s === 'weapon' || s === 'armor' || s === 'accessory';
 
-/** 부위 하나의 월드보스 전투력(보너스 포함). 커스텀 아바타면 약점 장비 부위도 아바타 보너스를 유지한다. */
-export function piecePower(cp: number, avatarMatch: boolean, hasAvatar: boolean, weak: boolean): number {
+/** 부위 하나의 월드보스 전투력(보너스 포함). 커스텀 아바타면 약점 장비 부위도 아바타 보너스를 유지한다. weakBonus = 보스 특성(치명 약점이면 2.0). */
+export function piecePower(cp: number, avatarMatch: boolean, hasAvatar: boolean, weak: boolean, weakBonus: number = WORLD_BOSS_WEAK_BONUS): number {
   const av = avatarMatch || (hasAvatar && weak);
-  return cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? WORLD_BOSS_WEAK_BONUS : 0));
+  return cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0));
 }
 
 /** 지금 공격 중인 단계의 페이즈와 그 구간. */
@@ -45,7 +45,7 @@ export async function knownWeakOf(bossId: string, phase: number): Promise<KnownW
 }
 
 /** 사람들의 장착 상태(장착 3개 + 대표 아바타) — 공개된 약점 기준 전투력. */
-export async function loadoutsOf(serverId: number, userIds: string[], known: ReadonlySet<string>): Promise<Map<string, Loadout>> {
+export async function loadoutsOf(serverId: number, userIds: string[], known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<Map<string, Loadout>> {
   const out = new Map<string, Loadout>();
   const ids = [...new Set(userIds)].filter((x) => /^[0-9a-f-]{36}$/i.test(x));
   if (ids.length === 0) return out;
@@ -80,7 +80,7 @@ export async function loadoutsOf(serverId: number, userIds: string[], known: Rea
  * 가진 장비 중 공개된 약점·아바타 보너스까지 계산한 부위별 가장 좋은 장비 — "약점에 맞춰 장착" 버튼의 제안.
  * 지금 장착과 같으면 null.
  */
-export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>): Promise<{ ueids: string[]; power: number; pieces: LoadoutPiece[] } | null> {
+export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<{ ueids: string[]; power: number; pieces: LoadoutPiece[] } | null> {
   const [rows, [av]] = await Promise.all([
     db.execute(sql`
       select ue.id::text as ueid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl, ue.equipped_slot is not null as on_
@@ -99,7 +99,7 @@ export async function bestLoadoutOf(serverId: number, userId: string, known: Rea
     for (const r of rows) {
       if (r.slot !== slot) continue;
       const cp = pieceCombatPower(Number(r.el), Number(r.tl));
-      const v = piecePower(cp, !!snap && snap[`${slot}Key`] === r.code, !!snap, known.has(r.code));
+      const v = piecePower(cp, !!snap && snap[`${slot}Key`] === r.code, !!snap, known.has(r.code), weakBonus);
       // 같으면 지금 장착을 유지(쓸데없이 바꾸지 않게).
       if (!best || v > best.v || (v === best.v && r.on_ && !best.r.on_)) best = { r, v };
     }
@@ -109,6 +109,6 @@ export async function bestLoadoutOf(serverId: number, userId: string, known: Rea
     pieces.push({ ueid: r.ueid, slot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), src: spritePath(r.code), av: !!snap && snap[`${slot}Key`] === r.code, weak: known.has(r.code) });
   }
   if (!changed) return null;
-  const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak), 0));
+  const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak, weakBonus), 0));
   return { ueids: pieces.map((p) => p.ueid), power, pieces };
 }

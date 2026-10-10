@@ -45,6 +45,8 @@ export const worldBosses = pgTable(
     settledAt: timestamp('settled_at', { withTimezone: true }),
     /** 페이즈별 약점 장비(0230) — 원소 하나 = 페이즈 하나 {weapon, armor, accessory: code[]}. 소환 때 고정, 비면 첫 출발 때 채운다. */
     weak: jsonb('weak').$type<WorldBossWeakPhase[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 특성 코드(0232, 0~2개) — 소환 때 추첨해 고정(WORLD_BOSS_TRAITS). 옛 행은 빈 배열 = 특성 없음. */
+    traits: jsonb('traits').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('world_bosses_server_day_uq').on(t.serverId, t.kstDay), index('world_bosses_server_status_idx').on(t.serverId, t.status)],

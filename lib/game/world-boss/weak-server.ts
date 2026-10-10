@@ -22,18 +22,18 @@ export async function loadCatalogBySlot(dbx: Dbx): Promise<CatalogBySlot> {
   return out;
 }
 
-/** 새 보스용 약점 추첨. */
-export async function drawWeakForNewBoss(dbx: Dbx): Promise<WorldBossWeakPhase[]> {
-  return drawWorldBossWeak(await loadCatalogBySlot(dbx), cryptoRand);
+/** 새 보스용 약점 추첨 — perSlot은 특성(넓어진·치명 약점)에 따라 다르다(worldBossWeakPerSlot). */
+export async function drawWeakForNewBoss(dbx: Dbx, perSlot?: number): Promise<WorldBossWeakPhase[]> {
+  return drawWorldBossWeak(await loadCatalogBySlot(dbx), cryptoRand, perSlot);
 }
 
 /**
  * 보스 행의 약점 — 비어 있으면(소환 때 못 채운 옛 행) 지금 뽑아 저장한다. 호출부가 보스 행을 잠근 트랜잭션 안에서 부른다.
  */
-export async function ensureBossWeak(tx: Dbx, bossId: string, current: unknown): Promise<WorldBossWeakPhase[]> {
+export async function ensureBossWeak(tx: Dbx, bossId: string, current: unknown, perSlot?: number): Promise<WorldBossWeakPhase[]> {
   const weak = parseWeak(current);
   if (weak.length > 0) return weak;
-  const drawn = await drawWeakForNewBoss(tx);
+  const drawn = await drawWeakForNewBoss(tx, perSlot);
   await tx.execute(sql`update world_bosses set weak = ${JSON.stringify(drawn)}::jsonb where id = ${bossId}::bigint`);
   return drawn;
 }

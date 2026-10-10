@@ -175,7 +175,8 @@ export const WORLD_BOSS_PARTY_INTRO_MAX = 40;
  * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.
  */
 // 실서버 시뮬로 확정(장착 3개 + 아바타 + 약점 기준, Winners 20.4·로제 17.7·Phoenix 14.6단계 — docs/WORLD-BOSS.md §3).
-export const WORLD_BOSS_STAGE_BASE_HP = 650_000;
+// 2026-10-10 특성(0~2개 추첨) 도입으로 65만 → 75만(특성 평균 +1.3단계를 되돌려 평균 19단계 유지).
+export const WORLD_BOSS_STAGE_BASE_HP = 750_000;
 export const WORLD_BOSS_STAGE_GROWTH = 1.1;
 /** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 금고로(집행관 몫 없음). 상자는 3의 배수. */
 export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 150, boxes: 12 } as const; // 2026-10-08 확정(L1)
@@ -203,15 +204,16 @@ export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number;
 ];
 export const WORLD_BOSS_ATTACK_DROP_TOTAL = 100_000;
 
-/** [0,1) 난수 하나 → 공격 1회 보상(lucky = 약점 2개 이상 적중). 서버 시드 RNG에서만 부른다(CLAUDE §3.1). */
-export function worldBossRollDrop(r: number, lucky = false): { diamond: number; boxes: number } {
+/**
+ * [0,1) 난수 하나 → 공격 1회 보상(lucky = 약점 2개 이상 적중, missDelta = 보스 특성 '황금 깃털'의 꽝 확률 변화, 십만분율).
+ * 꽝 확률이 표와 다르면 앞 miss만큼은 꽝, 나머지를 꽝이 아닌 칸(50%)에 비율대로 펼친다. 서버 시드 RNG에서만 부른다(CLAUDE §3.1).
+ */
+export function worldBossRollDrop(r: number, lucky = false, missDelta = 0): { diamond: number; boxes: number } {
   let x = Math.floor(Math.max(0, Math.min(0.999999999, r)) * WORLD_BOSS_ATTACK_DROP_TOTAL);
-  if (lucky) {
-    // 행운: 앞 35%는 꽝, 나머지 65%를 꽝이 아닌 칸(50%)에 비율대로 펼친다.
-    const miss = WORLD_BOSS_ATTACK_DROPS[0]!.p;
-    if (x < WORLD_BOSS_LUCKY_MISS_P) return { diamond: 0, boxes: 0 };
-    x = miss + Math.floor(((x - WORLD_BOSS_LUCKY_MISS_P) * (WORLD_BOSS_ATTACK_DROP_TOTAL - miss)) / (WORLD_BOSS_ATTACK_DROP_TOTAL - WORLD_BOSS_LUCKY_MISS_P));
-  }
+  const missBase = WORLD_BOSS_ATTACK_DROPS[0]!.p;
+  const miss = Math.max(0, Math.min(WORLD_BOSS_ATTACK_DROP_TOTAL - 1, (lucky ? WORLD_BOSS_LUCKY_MISS_P : missBase) + missDelta));
+  if (x < miss) return { diamond: 0, boxes: 0 };
+  if (miss !== missBase) x = missBase + Math.floor(((x - miss) * (WORLD_BOSS_ATTACK_DROP_TOTAL - missBase)) / (WORLD_BOSS_ATTACK_DROP_TOTAL - miss));
   for (const d of WORLD_BOSS_ATTACK_DROPS) {
     if (x < d.p) return { diamond: d.diamond, boxes: d.boxes };
     x -= d.p;
@@ -261,10 +263,114 @@ export function worldBossStageFor(totalDamage: number): { stage: number; into: n
   }
   return { stage, into: rest, need };
 }
-/** 단계 수 → 쌓이는 길드 전리품(상한 단계까지만). */
-export function worldBossLootFor(stage: number): { diamond: number; boxes: number } {
+/** 단계 수 → 쌓이는 길드 전리품(상한 단계까지만). mult = 보스 특성 '무거운 보물'(상자는 3의 배수로 맞춘다). */
+export function worldBossLootFor(stage: number, mult = 1): { diamond: number; boxes: number } {
   const n = Math.max(0, Math.min(stage, WORLD_BOSS_LOOT_STAGE_CAP));
-  return { diamond: n * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: n * WORLD_BOSS_LOOT_PER_STAGE.boxes };
+  return { diamond: Math.round(n * WORLD_BOSS_LOOT_PER_STAGE.diamond * mult), boxes: Math.round((n * WORLD_BOSS_LOOT_PER_STAGE.boxes * mult) / 3) * 3 };
+}
+
+// ── 월드보스 특성(2026-10-10 사용자 확정 9종, docs/WORLD-BOSS.md §3.5) ──
+// 보스마다 소환 때 구성 칸(원정대를 어떻게 짜느냐)·보스 칸(약점·보상) 하나씩, 칸마다 WORLD_BOSS_TRAIT_SLOT_P 확률로 뽑는다(0~2개).
+export type WorldBossTraitCode = 'alliance' | 'banner' | 'elite' | 'legion' | 'wanderer' | 'wide_weak' | 'fatal_weak' | 'golden_feather' | 'heavy_treasure';
+export type WorldBossTraitDef = { code: WorldBossTraitCode; group: 'party' | 'boss'; icon: string; name: string; effect: string };
+export const WORLD_BOSS_TRAIT = {
+  alliance2: 1.2, alliance3: 1.5, // 연합 원정 — 원정대 길드 2곳 / 3곳 이상
+  bannerPer: 0.05, bannerFull: 1.5, // 한 깃발 아래 — 가장 많은 길드 1명당 +5%, 10명 같으면 ×1.5
+  eliteMax: 5, eliteMult: 2.0, // 소수 정예 — 5명 이하 출발(×1.5는 5명 원정대의 공격 횟수(3회 vs 5.5회) 손해를 못 메워 ×2.0, 10-10 시뮬)
+  legionMult: 1.3, // 대군 — 10명 꽉 채워 출발
+  wandererMult: 1.5, // 떠도는 바람 — 무소속 대원
+  wideWeak: 20, // 넓어진 약점 — 부위별 약점 수
+  fatalWeak: 5, fatalWeakBonus: 2.0, // 치명 약점 — 부위별 5개, 약점 보너스 +200%(전투력 3배)
+  goldenMissDelta: -10_000, // 황금 깃털 — 꽝 50% → 40%(행운도 35% → 25%)
+  heavyLoot: 1.15, // 무거운 보물 — 단계 전리품 +15%(체력은 그대로)
+} as const;
+export const WORLD_BOSS_TRAIT_SLOT_P = 0.7;
+export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
+  { code: 'alliance', group: 'party', icon: '🤝', name: '연합 원정', effect: `길드 2곳이면 ×${WORLD_BOSS_TRAIT.alliance2}, 3곳 이상 ×${WORLD_BOSS_TRAIT.alliance3}` },
+  { code: 'banner', group: 'party', icon: '🚩', name: '한 깃발 아래', effect: `같은 길드 1명당 +${Math.round(WORLD_BOSS_TRAIT.bannerPer * 100)}%, ${WORLD_BOSS_PARTY_MAX}명이면 ×${WORLD_BOSS_TRAIT.bannerFull}` },
+  { code: 'elite', group: 'party', icon: '🗡', name: '소수 정예', effect: `${WORLD_BOSS_TRAIT.eliteMax}명 이하로 출발하면 ×${WORLD_BOSS_TRAIT.eliteMult}` },
+  { code: 'legion', group: 'party', icon: '🛡', name: '대군', effect: `${WORLD_BOSS_PARTY_MAX}명 꽉 채워 출발하면 ×${WORLD_BOSS_TRAIT.legionMult}` },
+  { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 ×${WORLD_BOSS_TRAIT.wandererMult}` },
+  { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
+  { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 ${1 + WORLD_BOSS_TRAIT.fatalWeakBonus}배` },
+  { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 50% → ${50 + WORLD_BOSS_TRAIT.goldenMissDelta / 1000}%` },
+  { code: 'heavy_treasure', group: 'boss', icon: '💰', name: '무거운 보물', effect: `단계 전리품 +${Math.round((WORLD_BOSS_TRAIT.heavyLoot - 1) * 100)}%` },
+];
+export function worldBossTraitDef(code: string): WorldBossTraitDef | undefined {
+  return WORLD_BOSS_TRAITS.find((t) => t.code === code);
+}
+/** jsonb에서 읽은 값 → 아는 코드만(중복 제거). */
+export function parseWorldBossTraits(v: unknown): WorldBossTraitCode[] {
+  if (!Array.isArray(v)) return [];
+  const out: WorldBossTraitCode[] = [];
+  for (const x of v) if (typeof x === 'string' && worldBossTraitDef(x) && !out.includes(x as WorldBossTraitCode)) out.push(x as WorldBossTraitCode);
+  return out;
+}
+/** 소환 때 추첨 — 구성 칸·보스 칸 각각 P 확률로 하나(그 묶음 안에서 균등). 서버 난수로만(CLAUDE §3.1). */
+export function drawWorldBossTraits(rand: () => number): WorldBossTraitCode[] {
+  const out: WorldBossTraitCode[] = [];
+  for (const group of ['party', 'boss'] as const) {
+    if (rand() >= WORLD_BOSS_TRAIT_SLOT_P) continue;
+    const pool = WORLD_BOSS_TRAITS.filter((t) => t.group === group);
+    out.push(pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))]!.code);
+  }
+  return out;
+}
+export function worldBossWeakPerSlot(traits: readonly WorldBossTraitCode[]): number {
+  return traits.includes('wide_weak') ? WORLD_BOSS_TRAIT.wideWeak : traits.includes('fatal_weak') ? WORLD_BOSS_TRAIT.fatalWeak : WORLD_BOSS_WEAK_PER_SLOT;
+}
+export function worldBossWeakBonus(traits: readonly WorldBossTraitCode[]): number {
+  return traits.includes('fatal_weak') ? WORLD_BOSS_TRAIT.fatalWeakBonus : WORLD_BOSS_WEAK_BONUS;
+}
+export function worldBossLootMult(traits: readonly WorldBossTraitCode[]): number {
+  return traits.includes('heavy_treasure') ? WORLD_BOSS_TRAIT.heavyLoot : 1;
+}
+export function worldBossMissDelta(traits: readonly WorldBossTraitCode[]): number {
+  return traits.includes('golden_feather') ? WORLD_BOSS_TRAIT.goldenMissDelta : 0;
+}
+/** 무소속 대원 배율(떠도는 바람). */
+export function worldBossUnitTraitMult(traits: readonly WorldBossTraitCode[], guildId: string | null): number {
+  return traits.includes('wanderer') && !guildId ? WORLD_BOSS_TRAIT.wandererMult : 1;
+}
+/**
+ * 구성 특성의 원정대 배율과 상태 — 전투식(출발)과 화면("×1.2 적용 중 · 길드 2곳" / "5명 이하로 출발하면")이 같은 함수를 쓴다.
+ * members의 guild는 길드를 구분할 수 있는 키(id 또는 이름), 무소속은 null.
+ */
+export function worldBossPartyTraitStatus(
+  traits: readonly WorldBossTraitCode[],
+  members: readonly { guild: string | null }[],
+): { code: WorldBossTraitCode; mult: number; active: boolean; note: string }[] {
+  const n = members.length;
+  const counts = new Map<string, number>();
+  for (const m of members) if (m.guild) counts.set(m.guild, (counts.get(m.guild) ?? 0) + 1);
+  const guilds = counts.size;
+  const top = Math.max(0, ...counts.values());
+  const out: { code: WorldBossTraitCode; mult: number; active: boolean; note: string }[] = [];
+  for (const code of traits) {
+    if (code === 'alliance') {
+      const mult = guilds >= 3 ? WORLD_BOSS_TRAIT.alliance3 : guilds === 2 ? WORLD_BOSS_TRAIT.alliance2 : 1;
+      out.push({ code, mult, active: mult > 1, note: mult > 1 ? `길드 ${guilds}곳` : '길드 2곳 이상이면' });
+    } else if (code === 'banner') {
+      const mult = top >= WORLD_BOSS_PARTY_MAX ? WORLD_BOSS_TRAIT.bannerFull : 1 + WORLD_BOSS_TRAIT.bannerPer * top;
+      out.push({ code, mult: Number(mult.toFixed(2)), active: top > 0, note: top > 0 ? `같은 길드 ${top}명` : '같은 길드끼리 모이면' });
+    } else if (code === 'elite') {
+      const on = n > 0 && n <= WORLD_BOSS_TRAIT.eliteMax;
+      out.push({ code, mult: on ? WORLD_BOSS_TRAIT.eliteMult : 1, active: on, note: on ? `${n}명` : `${WORLD_BOSS_TRAIT.eliteMax}명 이하로 출발하면` });
+    } else if (code === 'legion') {
+      const on = n >= WORLD_BOSS_PARTY_MAX;
+      out.push({ code, mult: on ? WORLD_BOSS_TRAIT.legionMult : 1, active: on, note: on ? `${n}명` : `${WORLD_BOSS_PARTY_MAX}명 꽉 채우면` });
+    } else if (code === 'wanderer') {
+      const k = members.filter((m) => !m.guild).length;
+      out.push({ code, mult: k > 0 ? WORLD_BOSS_TRAIT.wandererMult : 1, active: k > 0, note: k > 0 ? `무소속 ${k}명` : '무소속 대원이 있으면' });
+    }
+  }
+  return out;
+}
+/** 구성 특성의 원정대 전체 배율(떠도는 바람은 대원별이라 제외). */
+export function worldBossPartyTraitMult(traits: readonly WorldBossTraitCode[], members: readonly { guild: string | null }[]): number {
+  return worldBossPartyTraitStatus(traits, members)
+    .filter((s) => s.code !== 'wanderer')
+    .reduce((m, s) => m * s.mult, 1);
 }
 /** 원정대원 1인의 평균 공격 횟수 = (인원 + 1) ÷ 2 — 모집 화면 안내용. */
 export function worldBossExpectedAttacks(members: number): number {
