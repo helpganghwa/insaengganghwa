@@ -26,7 +26,7 @@ import { SLOT_BIT, type WeakSlot } from './weak';
 
 export const WORLD_BOSS_LOCAL = -1;
 
-export type WorldBossItem = { slot: WeakSlot; code: string; cp: number; /** 대표 아바타를 만들 때 입은 장비와 같은가. */ av: boolean };
+export type WorldBossItem = { slot: WeakSlot; code: string; cp: number; /** 대표 아바타를 만들 때 입은 장비와 같은가. */ av: boolean; /** 장비 이름(10-11, 재생 일지 문장용). 옛 기록엔 없다. */ name?: string };
 
 export type WorldBossUnit = {
   userId: string;

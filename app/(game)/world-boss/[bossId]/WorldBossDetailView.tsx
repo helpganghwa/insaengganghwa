@@ -12,6 +12,7 @@ import { josa } from 'josa';
 import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 
 import { BackFab } from '@/components/BackNav';
+import { meleeFaceCropStyle } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ModalShell } from '@/components/ModalShell';
@@ -19,14 +20,13 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { Ticker } from '@/components/Ticker';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
-import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, type WorldBossTraitCode, worldBossPartyTraitMult, worldBossPartyTraitStatus, worldBossTraitDef } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, type WorldBossTraitCode, worldBossPartyTraitMult, worldBossPartyTraitStatus, worldBossTraitDef } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import type { WorldBossBattle, WorldBossDetail, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
+import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { Avatar } from '../../friends/Avatar';
 import {
   cancelRequestAction,
   createPartyAction,
@@ -37,6 +37,8 @@ import {
   leavePartyAction,
   requestJoinAction,
 } from '../actions';
+import { Avatar } from '../../friends/Avatar';
+import { LeaderChip } from './LeaderChip';
 import { WeakPanel } from './WeakPanel';
 import { WorldBossReplay } from './WorldBossReplay';
 
@@ -320,7 +322,8 @@ export function WorldBossDetailView({
           weakTotal={d.weakTotal}
           weakBonus={d.weakBonus}
           mine={d.mine}
-          avatarSrc={me?.person?.avatarSrc ?? null}
+          // me.person은 원정대 참가 전에만 채워진다(낙관 그리기용) — 참가 중이면 내 원정대 명단의 내 항목에서(10-11 사용자: 👤 노출 버그).
+          avatarSrc={me?.person?.avatarSrc ?? mp?.members.find((x) => x.userId === me?.userId)?.avatarSrc ?? null}
           onEquipBest={() => run(() => equipBestAction(d.id), { title: '추천 장비를 장착했어요' }, { t: 'equipBest' })}
         />
       )}
@@ -362,11 +365,12 @@ export function WorldBossDetailView({
             </span>
           </div>
           {myCard?.intro && <p className="-mt-1 mb-2 text-[11px] leading-snug text-stone-300">{myCard.intro}</p>}
-          {/* 빈 자리 표시는 두지 않는다(10-10 사용자) — 인원은 위 N/10이 말해 준다. */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {mp.members.map((m) => (
-              <MemberChip key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />
-            ))}
+          {/* 명단 — 둥근 얼굴 5×2(10-11 사용자 B안): 10칸을 늘 다 보여 빈 자리까지 한눈에. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 빈 자리는 점선 '+'(초대 기능은 논의 중). */}
+          <div className="grid grid-cols-5 gap-x-1 gap-y-2.5">
+            {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => {
+              const m = mp.members[i];
+              return m ? <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} /> : <SlotEmpty key={`e${i}`} />;
+            })}
           </div>
           {/* 구성 특성 적용 상태 — 켜진 것은 초록, 아직인 것은 회색으로 조건(시안 ②). */}
           {/* 구성 특성 — 라벨만 켜짐/꺼짐으로(10-11 사용자: 설명 없이), 누르면 특성 설명 시트. 적용 배율·합산은 출발 팝업에서. */}
@@ -601,19 +605,25 @@ export function WorldBossDetailView({
                 </div>
               )}
             </div>
-            {/* 명단 칩 — 얼굴 + 이름 + 전투력, 대장은 주황 테두리. */}
-            <div className="mt-2.5 flex flex-wrap gap-1">
-              {mp.members.map((m) => (
-                <span
-                  key={m.userId}
-                  className={`inline-flex items-center gap-1 rounded-lg bg-zinc-100 px-1.5 py-1 text-[11px] text-zinc-800 dark:bg-stone-800 dark:text-stone-100 ${m.isLeader ? 'ring-1 ring-orange-500/60' : ''}`}
-                >
-                  <Avatar src={m.avatarSrc} box={m.faceBox} size="h-[18px] w-[18px] rounded-full bg-stone-700" />
-                  {m.isLeader && <span className="text-orange-500">★</span>}
-                  {m.nickname}
-                  <span className="text-zinc-500 dark:text-stone-400">{formatCompactKR(m.combat)}</span>
+            {/* 대원 목록(P3-c, 10-11 사용자) — 대난투 순위 행처럼 얼굴을 왼쪽에 깔고 이름·원정대장 칩·길드 / 장착 3칸 + 부위 전투력 "95만 · 95만 · 95만"(보너스는 칸·글자 색으로만: 보라 아바타·주황 약점) / 오른쪽 전투력.
+                10명이면 행 66px × 10이라 명단만 안쪽 스크롤(3.5행, 아래 흐림만 — 'N명 더' 글자는 두지 않는다) — 무대·합산·버튼은 그대로(T1). 글은 개행하지 않는다(10-11 사용자). */}
+            <p className="mt-2.5 flex items-center justify-between whitespace-nowrap text-[10px] text-stone-500">
+              <span className="flex items-center gap-2.5">
+                <span className="flex items-center gap-1">
+                  <i className="inline-block h-2.5 w-2.5 rounded-[3px] border border-violet-500 bg-violet-950/60" />아바타 +{Math.round(WORLD_BOSS_AVATAR_BONUS * 100)}%
                 </span>
-              ))}
+                <span className="flex items-center gap-1">
+                  <i className="inline-block h-2.5 w-2.5 rounded-[3px] border border-orange-500 bg-orange-950/60" />약점 +{Math.round(d.weakBonus * 100)}%
+                </span>
+              </span>
+            </p>
+            <div className="relative -mx-3 mt-1">
+              <ul className="max-h-[236px] overflow-y-auto overscroll-contain rounded-lg border border-stone-800 bg-stone-950">
+                {mp.members.map((m) => (
+                  <DepartRow key={m.userId} m={m} />
+                ))}
+              </ul>
+              {mp.members.length > 3 && <span className="pointer-events-none absolute inset-x-0 bottom-0 h-9 rounded-b-lg bg-gradient-to-b from-transparent to-stone-900" />}
             </div>
             <p className="mt-2 flex items-center justify-between border-t border-zinc-200 pt-2 text-[12px] dark:border-zinc-700">
               <span className="text-stone-500">합산 전투력</span>
@@ -800,29 +810,97 @@ function Body({ src, h }: { src: string | null; h: string }) {
   );
 }
 
-function MemberChip({ p, serverId, leader }: { p: WorldBossPerson; serverId: number; leader: boolean }) {
+/** 부위 전투력 짧은 표기 — 100만 이상은 소수점 없이(143만), 그 아래는 formatCompactKR(9.6만). 한 줄에 셋이 들어가야 한다. */
+const shortKR = (n: number) => (n >= 1_000_000 ? `${Math.round(n / 10_000).toLocaleString('ko-KR')}만` : formatCompactKR(n));
+
+/** 출발 팝업 대원 행(P3-c, 10-11) — 얼굴 왼쪽(대난투 크롭) · 이름/원정대장/길드 · 장착 3칸 + 부위 전투력 · 오른쪽 합. */
+function DepartRow({ m }: { m: WorldBossMyParty['members'][number] }) {
+  return (
+    <li className="relative flex h-[66px] items-center overflow-hidden border-b border-stone-800/80 last:border-b-0">
+      {m.avatarSrc && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[80px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={m.avatarSrc} alt="" aria-hidden decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(m.faceBox)} />
+        </div>
+      )}
+      {/* 오른쪽에서 어두워지는 그라데이션 — 글자 자리 확보(대난투 행과 같은 방식, 얼굴이 왼쪽이라 방향만 반대) */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_left,#0c0a09_0%,#0c0a09_64%,rgba(12,10,9,0.1)_100%)]" />
+      <div className="relative z-10 flex w-full items-center gap-1.5 pl-[68px] pr-2">
+        <span className="min-w-0 flex-1 leading-tight">
+          <span className="flex min-w-0 items-center gap-1 text-[12.5px] font-bold text-stone-50 [text-shadow:0_1px_2px_#000]">
+            <span className="min-w-0 truncate">{m.nickname}</span>
+            {m.isLeader && <LeaderChip />}
+            <span className="min-w-0 shrink truncate text-[9.5px] font-semibold text-stone-300"><Guild p={m} size={9} /></span>
+          </span>
+          <span className="mt-1 flex items-center gap-1.5 whitespace-nowrap">
+            <span className="flex gap-[2px]">
+              {m.pieces.map((p) => (
+                <span key={p.slot} className={`flex h-5 w-5 items-center justify-center rounded-[5px] border ${p.weak ? 'border-orange-500 bg-orange-950/60' : p.av ? 'border-violet-500 bg-violet-950/50' : 'border-stone-700 bg-stone-900'}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.src ? <img src={p.src} alt="" className="h-4 w-4 object-contain" style={{ imageRendering: 'pixelated' }} /> : null}
+                </span>
+              ))}
+            </span>
+            <span className="min-w-0 overflow-hidden whitespace-nowrap font-mono text-[9.5px] tabular-nums text-stone-300 [text-shadow:0_1px_2px_#000]">
+              {m.pieces.length === 0 ? (
+                <span className="text-stone-600">장착 없음</span>
+              ) : (
+                m.pieces.map((p, i) => (
+                  <span key={p.slot}>
+                    {i > 0 && <span className="mx-px text-stone-600">·</span>}
+                    <span className={p.weak ? 'text-orange-300' : p.av ? 'text-violet-300' : ''}>{shortKR(p.cp)}</span>
+                  </span>
+                ))
+              )}
+            </span>
+          </span>
+        </span>
+        <span className="shrink-0 whitespace-nowrap text-right leading-tight">
+          <span className="block text-[9px] text-stone-500">전투력</span>
+          <b className="block font-mono text-[13px] font-black tabular-nums text-orange-300 [text-shadow:0_1px_2px_#000]">{formatCompactKR(m.combat)}</b>
+        </span>
+      </div>
+    </li>
+  );
+}
+
+/** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
+function SlotPerson({ p, serverId, leader }: { p: WorldBossPerson; serverId: number; leader: boolean }) {
   const body = (
     <>
-      <Body src={p.avatarSrc} h="h-12" />
-      <span className="min-w-0 flex-1 leading-tight">
-        <span className="block truncate text-[11.5px] font-bold text-stone-100">
-          {leader && <span className="mr-0.5 text-orange-300">★</span>}
-          {p.nickname}
-        </span>
-        {/* 약점 N은 적지 않고 적용된 전투력만(10-10 사용자) */}
-        <span className="flex min-w-0 items-center gap-1 text-[9.5px] text-stone-500">
-          <Guild p={p} size={9} />
-          <span className="shrink-0">· {formatCompactKR(p.combat)}</span>
-        </span>
+      <span className="relative">
+        <Avatar src={p.avatarSrc} box={p.faceBox} size={`h-11 w-11 rounded-full bg-stone-800 ring-2 ${leader ? 'ring-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'ring-stone-700'}`} />
+        {leader && (
+          <span className="absolute -right-1.5 -top-1.5 text-[12px] [text-shadow:0_1px_2px_#000]" aria-label="원정대장">
+            👑
+          </span>
+        )}
+        {p.guildEmblemUrl && (
+          <span className="absolute -bottom-0.5 -left-1 rounded-full bg-stone-900 p-px">
+            <GuildBadge emblemUrl={p.guildEmblemUrl} emblemColor={p.guildEmblemColor} size={11} />
+          </span>
+        )}
       </span>
+      <span className="block w-full truncate text-center text-[10.5px] font-bold text-stone-100">{p.nickname}</span>
+      <span className="block font-mono text-[9px] tabular-nums text-stone-400">{formatCompactKR(p.combat)}</span>
     </>
   );
-  const cls = `flex h-12 items-center gap-1.5 rounded-lg pl-1 pr-1.5 ${leader ? 'bg-orange-950/50 ring-1 ring-orange-500/40' : 'bg-stone-800/60'}`;
+  const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';
   return p.code ? (
     <Link prefetch={false} href={profileHref(p.code, serverId)} className={cls}>
       {body}
     </Link>
   ) : (
-    <div className={cls}>{body}</div>
+    <span className={cls}>{body}</span>
+  );
+}
+
+/** 빈 자리 — 점선 동그라미 '+'. 지금은 표시만(초대 기능은 논의 중, 10-11). */
+function SlotEmpty() {
+  return (
+    <span className="flex min-w-0 flex-col items-center gap-0.5 leading-tight">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-stone-600 text-[16px] text-stone-600">+</span>
+      <span className="text-[10px] text-stone-600">빈 자리</span>
+    </span>
   );
 }

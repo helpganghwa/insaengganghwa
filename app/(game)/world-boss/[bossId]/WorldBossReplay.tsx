@@ -2,13 +2,16 @@
 
 /**
  * 월드보스 전투 재생(docs/WORLD-BOSS.md §3·§9) — 저장된 전투 기록(finale)을 한 칸씩 보여 준다.
- * 2026-10-08 리뷰 반영: 화면 가운데 배치(아래 절반이 비었다), 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 칸 회색,
- * 라운드가 바뀌면 큰 라운드 표시. 공격마다 뽑은 보상(복권)이 튀어나오고, 큰 당첨(💎300+ · 📦90+)은 글자 없이
- * 효과로만 강조한다(금빛 번쩍임·광선·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지).
- * 탭하면 2.5배속, 건너뛰기로 바로 결과. 결과는 서버가 출발 순간 정한 그대로라 재생만 한다.
+ * 10-11 사용자 C안: 무대(300px, 너무 크지 않게) 안에서 보스가 움직이고 피해 숫자·보상이 튀며, 무대 발밑에 **텍스트 RPG식 일지**가
+ * 한 줄씩 떠오른다(▶ 공격 · ✦ 보스 · 라운드 머리). 아래는 대난투 순위 목록처럼 **얼굴을 행 오른쪽에 크게** 깐 컴팩트 행(50px).
+ * 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 행 흑백, 라운드가 바뀌면 큰 라운드 표시. 큰 당첨(💎300+ · 📦90+)은
+ * 글자 없이 효과로만(금빛 광선·번쩍임·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지). 탭하면 2.5배속, 건너뛰기로 바로 결과.
+ * 원정대장은 행·결과 표에 '원정대장' 칩으로 보인다(10-11 사용자: 어울리는 곳엔 최대한).
  */
+import { josa } from 'josa';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { meleeFaceCropStyle } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
@@ -17,10 +20,14 @@ import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
 
-import { Avatar } from '../../friends/Avatar';
+import { LeaderChip } from './LeaderChip';
 
-const STEP_ATTACK_MS = 420;
-const STEP_FALL_MS = 900;
+const STEP_ATTACK_MS = 520;
+const STEP_FALL_MS = 1000;
+/** 일지 동사 — 공격 순서대로 돌려 쓴다(무기 종류는 기록에 없어 두루 맞는 말만). */
+const VERBS = ['휘두른다', '내리친다', '꽂아 넣는다', '후려친다', '찔러 넣는다'];
+
+type LogLine = { key: string; kind: 'round' | 'atk' | 'boss'; text: string; dmg?: number; loot?: string; weak?: number };
 
 export function WorldBossReplay({
   battle,
@@ -79,17 +86,46 @@ export function WorldBossReplay({
     return { dmg, atk, fell, gotD, gotB, total, round: Math.min(round, battle.finale.rounds), last, lastDrop, alive: fell.filter((f) => f == null).length };
   }, [idx, events, drops, roster.length, battle.finale.rounds]);
 
+  // 일지(텍스트 RPG) — 적용된 이벤트를 문장으로. 무기 이름이 기록돼 있으면 "창천검을 휘두른다", 없으면(옛 기록) "일격".
+  const lines = useMemo(() => {
+    const out: LogLine[] = [{ key: 'r1', kind: 'round', text: '1라운드' }];
+    for (let k = 0; k < idx; k++) {
+      const [a, t, d, aux] = events[k]!;
+      if (a >= 0) {
+        const m = roster[a]!;
+        const weapon = m.items?.find((i) => i.slot === 'weapon')?.name;
+        const verb = VERBS[k % VERBS.length]!;
+        const drop = drops[k];
+        const wb = weakBits[k] ?? 0;
+        out.push({
+          key: `e${k}`,
+          kind: 'atk',
+          text: weapon ? josa(`${m.nickname}, ${weapon}#{을} ${verb}`) : josa(`${m.nickname}#{이} 일격을 날린다`),
+          dmg: d,
+          loot: drop && drop[0] > 0 ? `💎${drop[0].toLocaleString('ko-KR')}` : drop && drop[1] > 0 ? `📦${drop[1]}` : undefined,
+          weak: [1, 2, 4].filter((b) => (wb & b) !== 0).length,
+        });
+      } else {
+        const m = roster[t]!;
+        out.push({ key: `e${k}`, kind: 'boss', text: josa(`${bossName}의 날갯짓 — 잿불이 ${m.nickname}#{을} 덮쳤다. 쓰러짐`) });
+        if (aux + 1 <= battle.finale.rounds && k < events.length - 1) out.push({ key: `r${aux + 1}`, kind: 'round', text: `${aux + 1}라운드` });
+      }
+    }
+    return out;
+  }, [idx, events, roster, drops, weakBits, bossName, battle.finale.rounds]);
+  const shown = lines.slice(-3);
+
   const ranked = useMemo(() => roster.map((m, i) => ({ ...m, i })).sort((a, b) => st.dmg[b.i]! - st.dmg[a.i]!), [roster, st.dmg]);
   const moved = battle.stageTo - battle.stageFrom;
   const struck = st.last && st.last[0] < 0;
   const hit = st.last && st.last[0] >= 0;
   const face = (userId: string) => battle.avatars?.[userId] ?? { src: null, box: null };
+  const isLeader = (nickname: string) => nickname === battle.leaderNickname;
 
   // 대원이 칠 때 보스 흔들림 — Web Animations로 그 자리에서만 흔들어 대기 애니(띠)가 처음으로 돌아가지 않게 한다.
   const shakeRef = useRef<HTMLDivElement>(null);
-  // 목록 — 지금 공격하는(또는 쓰러지는) 대원 줄을 화면 안으로.
-  const listRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // 목록 — 지금 공격하는(또는 쓰러지는) 대원 행을 화면 안으로.
+  const rowRefs = useRef<(HTMLLIElement | null)[]>([]);
   useEffect(() => {
     const ev = idx > 0 ? events[idx - 1] : null;
     if (!ev) return;
@@ -104,24 +140,24 @@ export function WorldBossReplay({
     );
   }, [idx, hit, reduced]);
 
+  const jackpot = !!hit && !!st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90);
+
   return (
     <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-label="원정대 전투">
       {!done ? (
         <>
-          {/* 위 — 무대(배경 + 보스). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
+          {/* 위 — 무대(배경 + 보스 + 일지). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <button
             type="button"
-            className="relative h-[46%] min-h-[290px] shrink-0 overflow-hidden text-left"
+            className="relative h-[300px] shrink-0 overflow-hidden text-left"
             onClick={() => setFast((f) => !f)}
             aria-label="빠르게 보기"
           >
             <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-85" />
-            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_70%,#09090b_100%)]" />
+            <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_55%,#09090b_100%)]" />
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}
-            {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
-              <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-orange-300/35" />
-            )}
+            {jackpot && <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-orange-300/35" />}
             <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+10px)] z-10 flex items-center justify-between px-3 text-[11px]">
               <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-300">
                 생존 <b className="text-white">{st.alive}</b>/{roster.length}
@@ -132,10 +168,9 @@ export function WorldBossReplay({
               </span>
               <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-400">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
             </div>
-            <div className="absolute left-1/2 top-[52%] h-[170px] w-[170px] -translate-x-1/2 -translate-y-1/2">
+            <div className="absolute left-1/2 top-[40%] h-[140px] w-[140px] -translate-x-1/2 -translate-y-1/2">
               <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.22),transparent_65%)]" />
-              {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림(다시 붙이지 않아 대기 애니가 끊기지 않는다),
-                  보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
+              {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림, 보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
               <div ref={shakeRef} className="relative h-full w-full">
                 <WorldBossSprite
                   alt={bossName}
@@ -144,20 +179,20 @@ export function WorldBossReplay({
                   style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(249,115,22,0.45))' }}
                 />
               </div>
-              {/* 이번 공격에서 나온 보상 — 큰 당첨은 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
-              {hit && st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90) && (
+              {/* 큰 당첨 — 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
+              {jackpot && (
                 <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(249,115,22,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(249,115,22,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(249,115,22,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(249,115,22,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(249,115,22,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(249,115,22,0.55)_320deg,transparent_340deg)]" />
               )}
               {hit && st.last && (
-                <span key={`d${idx}`} className="absolute left-1/2 top-2 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#ea580c,0_1px_2px_#000,0_0_2px_#000]">
+                <span key={`d${idx}`} className="absolute left-1/2 top-1 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#ea580c,0_1px_2px_#000,0_0_2px_#000]">
                   {formatCompactKR(st.last[2])}
                 </span>
               )}
               {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
                 <span
                   key={`g${idx}`}
-                  className={`absolute left-1/2 top-12 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
-                    st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90
+                  className={`absolute left-1/2 top-10 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
+                    jackpot
                       ? 'bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 text-[19px] text-orange-50 shadow-[0_0_24px_6px_rgba(249,115,22,0.85)] ring-2 ring-amber-100'
                       : 'bg-black/70 text-[13px] text-orange-200'
                   }`}
@@ -166,92 +201,126 @@ export function WorldBossReplay({
                 </span>
               )}
             </div>
-            {/* 보스 이름 · 원정대 피해 — 무대 아래쪽 어두운 띠 위 */}
-            <div className="absolute inset-x-0 bottom-2 z-10 flex items-baseline justify-between px-3">
-              <span className="flex items-center gap-1.5 text-[14px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
+            {/* 일지 — 무대 발밑 어두운 알약 위에 마지막 3줄. 새 줄은 아래서 떠오른다. */}
+            <div className="pointer-events-none absolute inset-x-2 bottom-8 z-10 flex flex-col gap-1">
+              {shown.map((l, i) => {
+                const newest = i === shown.length - 1;
+                return (
+                  <p
+                    key={l.key}
+                    className={`overflow-hidden text-ellipsis whitespace-nowrap rounded-md px-2 py-1 text-[11.5px] leading-snug [text-shadow:0_1px_2px_#000] ${newest ? 'animate-wb-line' : ''} ${
+                      l.kind === 'round'
+                        ? 'self-center bg-black/55 px-3 text-[10.5px] tracking-widest text-stone-400'
+                        : l.kind === 'boss'
+                          ? 'border-l-2 border-red-500 bg-black/70 text-red-200'
+                          : 'bg-black/65 text-stone-100'
+                    }`}
+                  >
+                    {l.kind === 'atk' ? (
+                      <>
+                        ▶ {l.text} — <b className="font-mono text-orange-300">{formatCompactKR(l.dmg ?? 0)}</b>
+                        {l.weak ? <b className={`ml-1 ${l.weak >= 2 ? 'text-amber-200' : 'text-orange-300'}`}>약점 적중{l.weak >= 2 ? ` ×${l.weak}` : ''}!</b> : null}
+                        {l.loot ? <span className="ml-1 text-orange-200">⚑ {l.loot}</span> : null}
+                      </>
+                    ) : l.kind === 'boss' ? (
+                      <>✦ {l.text}</>
+                    ) : (
+                      <>— {l.text} —</>
+                    )}
+                  </p>
+                );
+              })}
+            </div>
+            {/* 보스 이름 · 원정대 피해 — 무대 맨 아래 */}
+            <div className="absolute inset-x-0 bottom-1.5 z-10 flex items-baseline justify-between px-3">
+              <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
                 {bossName}
-                {/* 특성 아이콘 — 보스 이름 오른쪽(10-10 사용자) */}
-                {bossTraits.length > 0 && <span className="text-[12px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
+                {bossTraits.length > 0 && <span className="text-[11px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
               </span>
               <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
-                원정대 피해 <b className="font-mono text-[16px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
+                원정대 피해 <b className="font-mono text-[15px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
               </span>
             </div>
           </button>
 
-          {/* 아래 — 원정대원 목록(참가 순). 지금 공격하는 대원 줄이 빛나고 화면 안으로 따라온다. */}
-          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-            <div className="sticky top-0 z-10 flex items-center bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
-              <span className="flex-1">원정대원 {roster.length}명</span>
-              <span className="w-10 text-right">공격</span>
-              <span className="w-16 text-right">피해</span>
-              <span className="w-16 text-right">획득</span>
+          {/* 아래 — 원정대원 목록(참가 순, 대난투 순위 행처럼 얼굴을 오른쪽에 크게). 지금 공격하는 행이 빛나고 화면 안으로 따라온다. */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
+              <span>원정대원 {roster.length}명</span>
+              <span>공격 · 피해 · 획득</span>
             </div>
-            {roster.map((m, i) => {
-              const fellR = st.fell[i];
-              const isHit = !!hit && st.last![0] === i;
-              const isStruck = !!struck && st.last![1] === i;
-              const f = face(m.userId);
-              const bits = isHit ? (weakBits[idx - 1] ?? 0) : 0;
-              const slots = [1, 2, 4].filter((b) => (bits & b) !== 0);
-              return (
-                <div
-                  key={m.userId}
-                  ref={(el) => {
-                    rowRefs.current[i] = el;
-                  }}
-                  className={`mb-1 flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${
-                    isStruck ? 'border-red-500 bg-red-950/70' : isHit ? 'border-orange-400 bg-orange-900/40' : 'border-stone-800 bg-stone-900'
-                  } ${fellR != null && !isStruck ? 'opacity-45' : ''}`}
-                >
-                  {f.src ? (
-                    <Avatar src={f.src} box={f.box} size={`h-8 w-8 shrink-0 rounded-full bg-stone-800 ${fellR != null && !isStruck ? 'grayscale' : ''}`} />
-                  ) : (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-800 text-[12px] font-black">{m.nickname.slice(0, 1)}</span>
-                  )}
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block truncate text-[12px] font-bold">
-                      <span>
-                        {m.nickname === battle.leaderNickname && <span className="mr-0.5 text-orange-300">★</span>}
-                        {m.nickname}
+            <ul className="overflow-hidden rounded-xl border border-stone-800">
+              {roster.map((m, i) => {
+                const fellR = st.fell[i];
+                const isHit = !!hit && st.last![0] === i;
+                const isStruck = !!struck && st.last![1] === i;
+                const f = face(m.userId);
+                const bits = isHit ? (weakBits[idx - 1] ?? 0) : 0;
+                const slots = [1, 2, 4].filter((b) => (bits & b) !== 0);
+                const down = fellR != null && !isStruck;
+                return (
+                  <li
+                    key={m.userId}
+                    ref={(el) => {
+                      rowRefs.current[i] = el;
+                    }}
+                    className={`relative flex h-[50px] items-center overflow-hidden border-b border-stone-800/80 last:border-b-0 ${
+                      isStruck ? 'bg-red-950/60' : isHit ? 'bg-orange-950/40' : 'bg-stone-900'
+                    } ${down ? 'opacity-60' : ''}`}
+                  >
+                    {f.src ? (
+                      <div className="pointer-events-none absolute inset-y-0 right-0 w-32">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={f.src} alt="" aria-hidden decoding="async" className={`absolute inset-0 h-full w-full ${down ? 'grayscale' : ''}`} style={meleeFaceCropStyle(f.box)} />
+                      </div>
+                    ) : null}
+                    {/* 왼쪽에서 어두워지는 그라데이션 — 글자 자리 확보(대난투 행과 같은 방식) */}
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#1c1917_0%,#1c1917_50%,rgba(28,25,23,0.15)_100%)]" />
+                    {isHit && <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-orange-400" />}
+                    {isStruck && <div className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-red-500" />}
+                    <div className="relative z-10 min-w-0 flex-1 px-2.5 leading-tight">
+                      <span className="flex min-w-0 items-center gap-1 text-[12px] font-bold text-stone-50 [text-shadow:0_1px_2px_#000]">
+                        <span className="truncate">{m.nickname}</span>
+                        {isLeader(m.nickname) && <LeaderChip />}
+                        {fellR != null && <span className="shrink-0 rounded bg-red-900/80 px-1 text-[8.5px] font-extrabold text-red-200">{fellR}R 쓰러짐</span>}
                       </span>
-                    </span>
-                    <span className="flex min-w-0 items-center gap-1 text-[10px] text-stone-500">
-                      {fellR != null ? (
-                        <span className="truncate text-red-300">{fellR}라운드에 쓰러짐</span>
-                      ) : m.guildName ? (
-                        <GuildBadge emblemUrl={battle.guildEmblems?.[m.userId]?.url ?? null} emblemColor={battle.guildEmblems?.[m.userId]?.color ?? null} name={m.guildName} size={10} className="min-w-0" />
-                      ) : (
-                        <span className="truncate">무소속</span>
-                      )}
-                      {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
-                      {slots.length > 0 && (
-                        <span
-                          key={`w${idx}`}
-                          className={`flex shrink-0 animate-wb-round items-center gap-0.5 rounded-full px-1.5 text-[11px] ${
-                            slots.length >= 2 ? 'bg-orange-400 text-orange-50 ring-1 ring-amber-100 shadow-[0_0_10px_2px_rgba(249,115,22,0.6)]' : 'bg-orange-500/25 text-orange-200 ring-1 ring-orange-500/60'
-                          }`}
-                        >
-                          약점
-                          {slots.map((b) => (
-                            <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
-                          ))}
+                      <span className="mt-0.5 flex min-w-0 items-center gap-1 whitespace-nowrap text-[10px] text-stone-400 [text-shadow:0_1px_2px_#000]">
+                        {m.guildName ? (
+                          <GuildBadge emblemUrl={battle.guildEmblems?.[m.userId]?.url ?? null} emblemColor={battle.guildEmblems?.[m.userId]?.color ?? null} name={m.guildName} size={10} className="min-w-0 max-w-[72px]" />
+                        ) : (
+                          <span className="shrink-0">무소속</span>
+                        )}
+                        <span className="shrink-0 text-stone-600">·</span>
+                        <span className="shrink-0">
+                          공격 <b className="font-mono text-stone-200">{st.atk[i]}</b> · 피해{' '}
+                          <b className={`font-mono ${isHit ? 'text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</b>
+                          {st.gotD[i]! > 0 || st.gotB[i]! > 0 ? (
+                            <>
+                              {' '}· <b className="text-orange-300">{[st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : '', st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''].filter(Boolean).join(' ')}</b>
+                            </>
+                          ) : null}
                         </span>
-                      )}
-                    </span>
-                  </span>
-                  <span className="w-10 text-right font-mono text-[11px] tabular-nums text-stone-400">{st.atk[i]}</span>
-                  <span className={`w-16 text-right font-mono text-[11.5px] tabular-nums ${isHit ? 'font-bold text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</span>
-                  <span className="w-16 truncate text-right text-[10.5px] font-bold text-orange-300">
-                    {st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : ''}
-                    {st.gotD[i]! > 0 && st.gotB[i]! > 0 ? ' ' : ''}
-                    {st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''}
-                    {st.gotD[i]! === 0 && st.gotB[i]! === 0 ? <span className="font-normal text-stone-600">-</span> : null}
-                  </span>
-                </div>
-              );
-            })}
-            <p className="mt-1 text-center text-[10px] text-stone-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
+                        {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
+                        {slots.length > 0 && (
+                          <span
+                            key={`w${idx}`}
+                            className={`flex shrink-0 animate-wb-round items-center gap-0.5 rounded-full px-1.5 text-[10px] ${
+                              slots.length >= 2 ? 'bg-orange-400 text-orange-50 ring-1 ring-amber-100 shadow-[0_0_10px_2px_rgba(249,115,22,0.6)]' : 'bg-orange-500/25 text-orange-200 ring-1 ring-orange-500/60'
+                            }`}
+                          >
+                            약점
+                            {slots.map((b) => (
+                              <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
+                            ))}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1.5 text-center text-[10px] text-stone-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
           </div>
           <button
             type="button"
@@ -263,7 +332,7 @@ export function WorldBossReplay({
         </>
       ) : (
         <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
-          {/* 결과 — 보스·단계 상승을 크게, 표는 아래 */}
+          {/* 결과 — 보스·페이즈 상승을 크게, 표는 아래 */}
           <div className="flex flex-col items-center text-center">
             <WorldBossSprite alt="" className="h-24 w-24" style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(249,115,22,0.5))' }} />
             <p className="text-[12px] text-stone-400">{battle.leaderNickname} 원정대 · {battle.finale.rounds}라운드</p>
@@ -296,9 +365,12 @@ export function WorldBossReplay({
             <tbody>
               {ranked.map((m, r) => (
                 <tr key={m.userId} className="border-t border-stone-800">
-                  <td className="max-w-[140px] truncate py-1.5">
-                    <span className={`mr-1 font-mono ${r === 0 ? 'text-orange-300' : 'text-stone-600'}`}>{r + 1}</span>
-                    {m.nickname}
+                  <td className="max-w-[150px] py-1.5">
+                    <span className="flex min-w-0 items-center gap-1">
+                      <span className={`font-mono ${r === 0 ? 'text-orange-300' : 'text-stone-600'}`}>{r + 1}</span>
+                      <span className="truncate">{m.nickname}</span>
+                      {isLeader(m.nickname) && <LeaderChip />}
+                    </span>
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums">{st.atk[m.i]}</td>
                   <td className={`py-1.5 text-right font-mono tabular-nums ${r === 0 ? 'text-orange-300' : ''}`}>{formatCompactKR(st.dmg[m.i]!)}</td>

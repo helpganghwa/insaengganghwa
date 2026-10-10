@@ -270,17 +270,17 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     const ids = members.map((m) => m.uid);
     // 출발 순간 장착한 장비(부위당 하나) — 전투력 스냅샷.
     const eqRows = (await tx.execute(sql`
-      select ue.user_id::text as uid, ci.code, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl
+      select ue.user_id::text as uid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl
         from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
        where ue.server_id = ${input.serverId} and ue.equipped_slot is not null
          and ue.user_id in (select user_id from world_boss_party_members where party_id = ${party.id}::bigint)`)) as unknown as {
-      uid: string; code: string; slot: string; el: number; tl: number;
+      uid: string; code: string; name: string; slot: string; el: number; tl: number;
     }[];
-    const equipped = new Map<string, { slot: WeakSlot; code: string; cp: number }[]>();
+    const equipped = new Map<string, { slot: WeakSlot; code: string; cp: number; name: string }[]>();
     for (const r of eqRows) {
       if (r.slot !== 'weapon' && r.slot !== 'armor' && r.slot !== 'accessory') continue;
       const arr = equipped.get(r.uid) ?? [];
-      arr.push({ slot: r.slot, code: r.code, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))) });
+      arr.push({ slot: r.slot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))) });
       equipped.set(r.uid, arr);
     }
     const units: WorldBossUnit[] = members.map((m) => {

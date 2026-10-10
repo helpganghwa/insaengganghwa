@@ -30,6 +30,9 @@ export type WorldBossPartyCard = {
   rewardBoxes: number;
 };
 
+/** 출발 팝업 행의 장착 한 칸(P3-c, 10-11) — cp는 보너스를 더한 부위 전투력, av/weak는 칸 색(보라/주황). */
+export type WorldBossPersonPiece = { slot: 'weapon' | 'armor' | 'accessory'; src: string | null; cp: number; av: boolean; weak: boolean };
+
 export type WorldBossPerson = {
   userId: string;
   nickname: string;
@@ -45,6 +48,8 @@ export type WorldBossPerson = {
   /** 활성 프로필 정면 그림 + 얼굴 박스(친구 목록과 같은 썸네일 크롭). 없으면 null. */
   avatarSrc: string | null;
   faceBox: { cx: number; cy: number; h: number } | null;
+  /** 장착 3칸(부위 순) — 출발 팝업 행. 장착이 없으면 빈 배열. */
+  pieces: WorldBossPersonPiece[];
 };
 
 /** 내 원정대(소속일 때) — 참가 순 원정대원 + (대장이면) 대기 중 신청. */
@@ -119,7 +124,7 @@ export type WorldBossBattle = {
   partyId: string;
   leaderNickname: string;
   finale: {
-    roster: { userId: string; nickname: string; cp: number; guildName: string | null }[];
+    roster: { userId: string; nickname: string; cp: number; guildName: string | null; /** 출발 때 장착(이름은 10-11부터 기록) — 재생 일지 문장용. */ items?: { slot: string; code: string; name?: string }[] }[];
     events: [number, number, number, number][];
     /** events와 짝 — 공격마다 뽑은 [다이아, 상자](쓰러짐은 [0,0]). 옛 기록엔 없다. */
     drops?: [number, number][];

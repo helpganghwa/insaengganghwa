@@ -13,7 +13,7 @@ import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/s
 import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, worldBossStageFor, worldBossTraitDef, worldBossWeakBonus, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
-import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf } from './loadout';
+import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
 import type { WorldBossDetail, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
@@ -173,6 +173,8 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
       userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, guildEmblemUrl: r.gurl, guildEmblemColor: r.gcolor,
       combat: l?.power ?? 0, weakCount: l?.weakCount ?? 0, avatarCount: l?.avatarCount ?? 0,
       avatarSrc: f?.profileSouth ?? null, faceBox: f?.faceBox ?? null,
+      // 부위 전투력 = 보너스까지 더한 값(loadout.power와 같은 식), 칸 색은 아바타(약점 장비면 유지)·약점.
+      pieces: (l?.pieces ?? []).map((p) => ({ slot: p.slot, src: p.src, cp: Math.round(piecePower(p.cp, p.av, !!l?.hasAvatar, p.weak, weakBonus)), av: p.av || (!!l?.hasAvatar && p.weak), weak: p.weak })),
     });
   }
   return out;
@@ -280,7 +282,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       ]);
       const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known, weakBonus);
       const person = (uid: string): WorldBossPerson =>
-        people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null };
+        people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),

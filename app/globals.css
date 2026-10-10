@@ -64,6 +64,7 @@ html {
   --animate-wb-shake: wb-shake 0.28s ease-in-out;
   --animate-wb-flash: wb-flash 0.45s ease-out forwards;
   --animate-wb-round: wb-round 0.5s ease-out;
+  --animate-wb-line: wb-line 0.35s ease-out forwards;
   --animate-wb-jackpot: wb-jackpot 1.1s ease-out forwards;
   /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
   --animate-hit-shake: hit-shake 0.32s ease-in-out;
@@ -142,6 +143,11 @@ html {
   @keyframes wb-round {
     0% { opacity: 0; transform: scale(1.6); }
     100% { opacity: 1; transform: scale(1); }
+  }
+  /* 월드보스 전투 재생 — 일지 줄이 아래서 떠오르며 나타남(10-11 C안) */
+  @keyframes wb-line {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
   /* 월드보스 전투 재생 — 피해 숫자가 떠오르며 사라짐 */
   @keyframes wb-float {
