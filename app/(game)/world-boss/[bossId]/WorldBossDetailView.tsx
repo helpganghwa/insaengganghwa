@@ -28,14 +28,12 @@ import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
 import {
-  cancelInviteAction,
   cancelRequestAction,
   createPartyAction,
   decideJoinAction,
   departPartyAction,
   equipBestAction,
   getBattleAction,
-  inviteAction,
   leavePartyAction,
   requestJoinAction,
   respondInviteAction,
@@ -57,8 +55,6 @@ type Patch =
   | { t: 'leave' }
   | { t: 'create'; intro: string }
   | { t: 'equipBest' }
-  | { t: 'invite'; person: WorldBossPerson }
-  | { t: 'uninvite'; userId: string }
   | { t: 'respondInvite'; partyId: string };
 
 const OPT_PARTY_ID = 'opt-create';
@@ -125,16 +121,6 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
         me: { ...me, state: 'member', pendingPartyIds: [], canCreate: false },
       };
     }
-    case 'invite': {
-      const mp = s.myParty;
-      if (!mp || mp.invites.some((x) => x.userId === p.person.userId)) return s;
-      return { ...s, myParty: { ...mp, invites: [...mp.invites, p.person] } };
-    }
-    case 'uninvite': {
-      const mp = s.myParty;
-      if (!mp) return s;
-      return { ...s, myParty: { ...mp, invites: mp.invites.filter((x) => x.userId !== p.userId) } };
-    }
     case 'respondInvite': {
       // 수락은 서버 재렌더가 내 원정대를 채운다(명단·장착을 여기서 만들 수 없다 — 낙관 적용 예외). 배너만 먼저 지운다.
       if (!me) return s;
@@ -193,7 +179,12 @@ export function WorldBossDetailView({
   const active = d.status === 'active';
   const me = d.me;
   const mp = d.myParty;
-  const recruiting = useMemo(() => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId), [d.parties, mp]);
+  // 초대받은 원정대(10-11, 레이드 방식)는 맨 앞 — 신청·수락 없이 '참가'로 바로 들어간다.
+  const invitedIds = useMemo(() => new Set((me?.invites ?? []).map((i) => i.partyId)), [me]);
+  const recruiting = useMemo(
+    () => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId).sort((a, b) => Number(invitedIds.has(b.id)) - Number(invitedIds.has(a.id))),
+    [d.parties, mp, invitedIds],
+  );
   const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
   // 다음 페이즈까지 남은 피해 — %가 아니라 남은 수치로(10-11 사용자: 모든 '%' 표기는 남은 양으로). 화면 용어는 레이드처럼 '페이즈'(코드의 stage, 10-11).
   const remainHp = Math.max(0, d.need - d.into);
@@ -354,38 +345,6 @@ export function WorldBossDetailView({
       {/* 지금 할 일 — 상태별 */}
       {active && !mp && (
         <div className="mx-3 mt-3">
-          {me && me.invites.length > 0 && (
-            // 받은 초대(10-11) — 수락하면 신청·수락 없이 바로 참가. 여러 원정대에서 올 수 있다.
-            <ul className="mb-2 space-y-1.5">
-              {me.invites.map((inv) => (
-                <li key={inv.partyId} className="flex items-center gap-2 rounded-xl border border-orange-500/50 bg-orange-950/30 px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[12px] text-stone-100">
-                    <b>{inv.leaderNickname} 원정대</b>
-                    <span className="text-stone-400">
-                      {' '}
-                      · {inv.memberCount}/{WORLD_BOSS_PARTY_MAX} · 초대했어요
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => respondInviteAction(d.id, inv.partyId, false), { title: '초대를 거절했어요' }, { t: 'respondInvite', partyId: inv.partyId })}
-                    className="shrink-0 rounded-lg border border-stone-600 px-2.5 py-1.5 text-[11.5px] font-bold text-stone-300 disabled:opacity-40"
-                  >
-                    거절
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => respondInviteAction(d.id, inv.partyId, true), { title: '원정대에 들어갔어요' }, { t: 'respondInvite', partyId: inv.partyId })}
-                    className="shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
-                  >
-                    수락
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
           ) : me.canCreate ? (
@@ -564,11 +523,12 @@ export function WorldBossDetailView({
           ) : (
             recruiting.map((p) => {
               const isPending = me?.pendingPartyIds.includes(p.id) ?? false;
+              const isInvited = invitedIds.has(p.id) && active && me?.state !== 'fought' && me?.state !== 'member';
               const full = p.memberCount >= WORLD_BOSS_PARTY_MAX;
               // 다른 원정대에 신청해 둔 채로도 더 신청할 수 있다(여러 곳 동시 신청).
               const canRequest = active && (me?.state === 'none' || me?.state === 'pending') && !full;
               return (
-                <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending ? 'border-orange-500/55' : 'border-stone-800'}`}>
+                <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending || isInvited ? 'border-orange-500/55' : 'border-stone-800'}`}>
                   <PartyHead p={p} />
                   {p.intro && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{p.intro}</p>}
                   {/* 명단 — 대장 먼저, 문양 + 이름 + 전투력(10-10 사용자: 누가 있는지·수치를 컴팩트하게). */}
@@ -582,8 +542,20 @@ export function WorldBossDetailView({
                     <span className="min-w-0 flex-1 text-[10.5px] text-stone-400">
                       합산 전투력 <b className="text-orange-300">{formatCompactKR(p.combatSum)}</b>
                     </span>
-                    {/* 신청한 원정대: '신청 완료' 표시 + 신청 취소 버튼(별도 신청 섹션 없음, 10-10 사용자). */}
-                    {isPending ? (
+                    {/* 초대받은 원정대(10-11): 레이드처럼 '참가'로 바로 들어간다(신청·수락 없음). */}
+                    {isInvited && !full ? (
+                      <>
+                        <span className="shrink-0 text-[10.5px] font-bold text-orange-300">초대받음</span>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => run(() => respondInviteAction(d.id, p.id, true), { title: '원정대에 들어갔어요' }, { t: 'respondInvite', partyId: p.id })}
+                          className="rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
+                        >
+                          참가
+                        </button>
+                      </>
+                    ) : isPending ? (
                       <>
                         <span className="shrink-0 text-[10.5px] font-bold text-orange-300">신청 완료</span>
                         <button
@@ -755,16 +727,8 @@ export function WorldBossDetailView({
 
       {/* 특성 설명 시트 — 효과만(팁 없음, 10-10 사용자). */}
       {inviteOpen && mp && (
-        <InviteSheet
-          bossId={d.id}
-          partyId={mp.partyId}
-          invited={mp.invites}
-          full={mp.members.length >= WORLD_BOSS_PARTY_MAX}
-          busy={pending}
-          onInvite={(p) => run(() => inviteAction(d.id, mp.partyId, p.userId), { title: `${p.nickname}님을 초대했어요` }, { t: 'invite', person: p })}
-          onCancel={(userId) => run(() => cancelInviteAction(d.id, mp.partyId, userId), { title: '초대를 취소했어요' }, { t: 'uninvite', userId })}
-          onClose={() => setInviteOpen(false)}
-        />
+        // 레이드 지목 초대와 같은 시트(10-11 사용자) — 초대는 곧 참여 허가. 초대/취소 뒤엔 액션의 재렌더가 '초대 중' 칸을 채운다.
+        <InviteSheet bossId={d.id} partyId={mp.partyId} participants={mp.members.length} onClose={() => setInviteOpen(false)} />
       )}
       {traitSheet && (
         <ModalShell onClose={() => setTraitSheet(false)} label="보스 특성">
@@ -966,12 +930,12 @@ function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPer
   );
 }
 
-/** 빈 자리 — 점선 동그라미 '+'. 대장(모집 중)은 눌러 초대 시트를 연다(10-11 사용자 2안). */
+/** 빈 자리 — 점선 동그라미 '+'. 대장(모집 중)은 주황 점선이고 누르면 초대 시트(10-11 사용자: 글자는 '빈 자리'만). */
 function SlotEmpty({ onClick }: { onClick?: () => void }) {
   const inner = (
     <>
       <span className={`flex h-11 w-11 items-center justify-center rounded-full border border-dashed text-[16px] ${onClick ? 'border-orange-500/60 text-orange-400' : 'border-stone-600 text-stone-600'}`}>+</span>
-      <span className={`text-[10px] ${onClick ? 'text-orange-300/80' : 'text-stone-600'}`}>{onClick ? '초대' : '빈 자리'}</span>
+      <span className="text-[10px] text-stone-600">빈 자리</span>
     </>
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';

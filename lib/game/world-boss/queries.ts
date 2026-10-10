@@ -410,13 +410,15 @@ export async function getWorldBossInvitable(serverId: number, userId: string, pa
   if (ids.length === 0) return [];
   const traits = parseWorldBossTraits(party.traits);
   const known = new Set((await knownWeakOf(party.boss_id, currentPhase(Number(party.stage)).index)).map((w) => w.code));
-  const [people, taken, invited] = await Promise.all([
+  const [people, taken, invited, faces] = await Promise.all([
     peopleOn(serverId, ids, known, worldBossWeakBonus(traits)),
     db.execute(sql`
       select m.user_id::text as uid, p.status from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
        where m.boss_id = ${party.boss_id}::bigint and m.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; status: string }[]>,
     db.execute(sql`select user_id::text as uid from world_boss_invites where party_id = ${partyId}::bigint and status = 'pending'`) as unknown as Promise<{ uid: string }[]>,
+    profilesByIds(ids, serverId).catch(() => []),
   ]);
+  const seen = new Map(faces.map((f) => [f.userId, f.lastSeenAt ?? null] as const));
   const takenMap = new Map(taken.map((t) => [t.uid, t.status] as const));
   const invitedSet = new Set(invited.map((i) => i.uid));
   const out: WorldBossInvitable[] = [];
@@ -425,7 +427,7 @@ export async function getWorldBossInvitable(serverId: number, userId: string, pa
     if (!p) continue; // 이 서버에 캐릭터가 없으면 초대할 수 없다
     const t = takenMap.get(id);
     const state: WorldBossInvitable['state'] = t === 'departed' ? 'fought' : t ? 'in_party' : invitedSet.has(id) ? 'invited' : 'ok';
-    out.push({ ...p, source: friends.has(id) && guild.has(id) ? 'both' : friends.has(id) ? 'friend' : 'guild', state });
+    out.push({ ...p, source: friends.has(id) && guild.has(id) ? 'both' : friends.has(id) ? 'friend' : 'guild', state, lastSeenAt: seen.get(id) ?? null });
   }
   const rank = { ok: 0, invited: 1, in_party: 2, fought: 3 } as const;
   return out.sort((a, b) => rank[a.state] - rank[b.state] || b.combat - a.combat || a.nickname.localeCompare(b.nickname, 'ko'));

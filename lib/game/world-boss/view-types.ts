@@ -65,7 +65,7 @@ export type WorldBossMyParty = {
 };
 
 /** 초대 후보(친구·같은 길드원) — 상태별로 버튼이 다르다. */
-export type WorldBossInvitable = WorldBossPerson & { source: 'friend' | 'guild' | 'both'; state: 'ok' | 'invited' | 'in_party' | 'fought' };
+export type WorldBossInvitable = WorldBossPerson & { source: 'friend' | 'guild' | 'both'; state: 'ok' | 'invited' | 'in_party' | 'fought'; /** 마지막 접속(ISO) — 레이드 초대 시트와 같은 접속 표시. */ lastSeenAt: string | null };
 
 /** 나에게 온 초대(대기 중) — 이 보스의 모집 중 원정대만. */
 export type WorldBossInviteIn = { partyId: string; leaderNickname: string; memberCount: number };
