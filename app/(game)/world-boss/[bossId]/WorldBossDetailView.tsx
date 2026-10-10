@@ -23,7 +23,6 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, type WorldBossTraitCode, worldBossPartyTraitMult, worldBossPartyTraitStatus, worldBossTraitDef } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import { sounds } from '@/lib/game/sound';
 import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
@@ -212,7 +211,6 @@ export function WorldBossDetailView({
 
   const depart = () => {
     if (!mp) return;
-    sounds.worldBossDepart(); // 출정 뿔피리 — 버튼 제스처 안에서(오디오 잠금 해제), 서버 응답 뒤 재생 화면의 울음이 이어진다.
     departKey.current ??= crypto.randomUUID();
     const key = departKey.current;
     setDepartAsk(false);

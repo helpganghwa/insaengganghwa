@@ -216,84 +216,6 @@ const synth = {
       tone(ac, { freq: 90, freqEnd: 55, type: 'sawtooth', dur: 0.35, vol: 0.18 });
       noise(ac, { dur: 0.3, vol: 0.12, filter: 'lowpass', freq: 500, freqEnd: 150, delay: 0.03 });
     }),
-  // 월드보스(잿불의 불사조) — 레이드·대난투보다 크고 무거운 결. 타격은 거체 울림, 약점은 쩍 갈라지는 균열,
-  // 보스의 반격은 날개 바람 + 잿불 타닥, 전리품은 타격 뒤에 따로 울려 '맞았다 → 떨어졌다'가 귀로 구분된다.
-  worldBossRoar: () =>
-    play((ac) => {
-      // 불사조 울음 — 날카로운 외침(톱니 하강 글라이드 두 겹) + 땅울림 + 날개 바람(로우패스 상향 스윕) + 잿불 타닥.
-      tone(ac, { freq: 1100, freqEnd: 520, type: 'sawtooth', dur: 0.55, vol: 0.11, attack: 0.04 });
-      tone(ac, { freq: 1650, freqEnd: 780, type: 'sawtooth', dur: 0.5, vol: 0.05, attack: 0.05, delay: 0.03 });
-      tone(ac, { freq: 95, freqEnd: 48, type: 'sawtooth', dur: 0.7, vol: 0.16, attack: 0.02 });
-      noise(ac, { dur: 0.6, vol: 0.1, filter: 'lowpass', freq: 300, freqEnd: 1800 });
-      [0.08, 0.19, 0.27, 0.41].forEach((d) => noise(ac, { dur: 0.04, vol: 0.05, filter: 'highpass', freq: 5000, delay: d }));
-    }),
-  worldBossDepart: () =>
-    play((ac) => {
-      // 출정 — 큰북 두 번 + 뿔피리(5도 상승, 톱니 두 겹 디튠으로 금관 느낌).
-      [0, 0.22].forEach((d) => {
-        tone(ac, { freq: 70, freqEnd: 40, type: 'sine', dur: 0.22, vol: 0.22, delay: d });
-        noise(ac, { dur: 0.08, vol: 0.12, filter: 'lowpass', freq: 400, delay: d });
-      });
-      tone(ac, { freq: 262, type: 'sawtooth', dur: 0.22, vol: 0.09, attack: 0.03, delay: 0.1 });
-      tone(ac, { freq: 392, type: 'sawtooth', dur: 0.55, vol: 0.1, attack: 0.03, delay: 0.3 });
-      tone(ac, { freq: 394, type: 'sawtooth', dur: 0.55, vol: 0.05, attack: 0.03, delay: 0.3 });
-    }),
-  worldBossHit: () =>
-    play((ac) => {
-      // 거체 타격 — 레이드 타격보다 낮고 길게 울린다.
-      noise(ac, { dur: 0.08, vol: 0.2, filter: 'bandpass', freq: 600, q: 0.8 });
-      tone(ac, { freq: 150, freqEnd: 55, type: 'square', dur: 0.12, vol: 0.16 });
-      tone(ac, { freq: 60, freqEnd: 40, type: 'sine', dur: 0.2, vol: 0.12, delay: 0.01 });
-    }),
-  worldBossWeak: () =>
-    play((ac) => {
-      // 약점 적중 — 쩍 갈라지는 균열(고역 노이즈) + 무거운 어택 + 균열 틈의 반짝(고음 3연).
-      noise(ac, { dur: 0.06, vol: 0.24, filter: 'bandpass', freq: 2400, q: 0.7 });
-      tone(ac, { freq: 180, freqEnd: 55, type: 'sawtooth', dur: 0.14, vol: 0.18 });
-      [2093, 2794, 3520].forEach((f, i) => tone(ac, { freq: f, type: 'sine', dur: 0.2, vol: 0.07, delay: 0.03 + i * 0.03 }));
-    }),
-  worldBossSweep: () =>
-    play((ac) => {
-      // 날갯짓 — 바람이 휙 지나가고 되돌아오는 두 스윕 + 잿불 타닥 + 대원이 쓰러지는 둔탁한 끝.
-      noise(ac, { dur: 0.3, vol: 0.18, filter: 'lowpass', freq: 400, freqEnd: 2600 });
-      noise(ac, { dur: 0.25, vol: 0.14, filter: 'lowpass', freq: 2600, freqEnd: 250, delay: 0.22 });
-      [0.12, 0.2, 0.31].forEach((d) => noise(ac, { dur: 0.04, vol: 0.06, filter: 'highpass', freq: 4500, delay: d }));
-      tone(ac, { freq: 120, freqEnd: 40, type: 'sawtooth', dur: 0.2, vol: 0.18, delay: 0.3 });
-    }),
-  worldBossLoot: () =>
-    play((ac) => {
-      // 좋은 전리품 — 타격 뒤(0.1s) 두 음 보석 종 + 글리터.
-      tone(ac, { freq: 1319, type: 'triangle', dur: 0.12, vol: 0.1, delay: 0.1 });
-      tone(ac, { freq: 1976, type: 'triangle', dur: 0.2, vol: 0.1, delay: 0.18 });
-      noise(ac, { dur: 0.2, vol: 0.04, filter: 'highpass', freq: 6000, delay: 0.18 });
-    }),
-  worldBossJackpot: () =>
-    play((ac) => {
-      // 대박 전리품 — 상승 아르페지오 + 벨 화음 + 글리터, 밑에서 낮은 종이 받친다.
-      [784, 988, 1175, 1568, 2349].forEach((f, i) => tone(ac, { freq: f, type: 'triangle', dur: 0.2, vol: 0.12, delay: 0.1 + i * 0.05 }));
-      tone(ac, { freq: 1568, type: 'sine', dur: 0.55, vol: 0.12, delay: 0.38 });
-      tone(ac, { freq: 2349, type: 'sine', dur: 0.5, vol: 0.09, delay: 0.38 });
-      tone(ac, { freq: 196, type: 'sine', dur: 0.8, vol: 0.12, delay: 0.36 });
-      noise(ac, { dur: 0.45, vol: 0.05, filter: 'highpass', freq: 4500, delay: 0.38 });
-    }),
-  worldBossVictory: () =>
-    play((ac) => {
-      // 원정 종료 팡파레 — 금관(톱니 디튠 두 겹) 4음 상승 + 밝은 지속 화음.
-      [392, 523, 659, 784].forEach((f, i) => {
-        tone(ac, { freq: f, type: 'sawtooth', dur: 0.18, vol: 0.09, delay: i * 0.08 });
-        tone(ac, { freq: f * 1.003, type: 'sawtooth', dur: 0.18, vol: 0.04, delay: i * 0.08 });
-      });
-      tone(ac, { freq: 1047, type: 'sawtooth', dur: 0.6, vol: 0.09, delay: 0.34 });
-      tone(ac, { freq: 1319, type: 'triangle', dur: 0.6, vol: 0.08, delay: 0.36 });
-      tone(ac, { freq: 1568, type: 'sine', dur: 0.55, vol: 0.06, delay: 0.38 });
-    }),
-  worldBossPhase: () =>
-    play((ac) => {
-      // 페이즈 돌파 징 — 팡파레 어택이 지난 뒤(0.5s) 낮은 배음 4개가 길게 울린다(샘플로 바꿀 땐 파일에 같은 여백을 둔다).
-      noise(ac, { dur: 0.05, vol: 0.1, filter: 'bandpass', freq: 900, q: 0.6, delay: 0.5 });
-      [147, 220, 294, 441].forEach((f, i) => tone(ac, { freq: f, type: 'sine', dur: 1.1 - i * 0.15, vol: 0.12 - i * 0.02, delay: 0.5, attack: 0.01 }));
-      tone(ac, { freq: 1176, type: 'sine', dur: 0.6, vol: 0.03, delay: 0.5 });
-    }),
   meleeVictory: () =>
     play((ac) => {
       // 챔피언 팡파레 — 브라스풍(saw) 상승 + 밝은 지속음.
@@ -357,16 +279,6 @@ export const sounds = {
   meleeKo: voice('melee-ko', synth.meleeKo),
   meleeVictory: voice('melee-victory', synth.meleeVictory),
   towerEnrage: voice('tower-enrage', synth.towerEnrage),
-  // 전투 — 월드보스
-  worldBossRoar: voice('world-boss-roar', synth.worldBossRoar),
-  worldBossDepart: voice('world-boss-depart', synth.worldBossDepart),
-  worldBossHit: voice('world-boss-hit', synth.worldBossHit),
-  worldBossWeak: voice('world-boss-weak', synth.worldBossWeak),
-  worldBossSweep: voice('world-boss-sweep', synth.worldBossSweep),
-  worldBossLoot: voice('world-boss-loot', synth.worldBossLoot),
-  worldBossJackpot: voice('world-boss-jackpot', synth.worldBossJackpot),
-  worldBossVictory: voice('world-boss-victory', synth.worldBossVictory),
-  worldBossPhase: voice('world-boss-phase', synth.worldBossPhase),
   // 보상/알림
   coin: voice('coin', synth.coin),
   gem: voice('gem', synth.coin),

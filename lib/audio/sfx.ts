@@ -36,16 +36,6 @@ export type SfxName =
   | 'melee-ko'
   | 'melee-victory'
   | 'tower-enrage'
-  // 전투 — 월드보스(잿불의 불사조)
-  | 'world-boss-roar'
-  | 'world-boss-depart'
-  | 'world-boss-hit'
-  | 'world-boss-weak'
-  | 'world-boss-sweep'
-  | 'world-boss-loot'
-  | 'world-boss-jackpot'
-  | 'world-boss-victory'
-  | 'world-boss-phase'
   // 보상/알림
   | 'coin'
   | 'gem'
