@@ -124,7 +124,7 @@ export function WeakPanel({
         </span>
       </div>
       {weakKnown.length === 0 ? (
-        <p className="mt-1 text-[11px] text-stone-400">아직 없어요. 약점 장비로 공격하면 하나씩 드러나요.</p>
+        <p className="mt-1 text-[11px] text-stone-400">밝혀진 약점이 아직 없어요. 약점 장비로 공격하면 하나씩 드러나요.</p>
       ) : (
         // 그림만 한 줄 가로 스크롤(10-10 사용자) — 이름은 title로. 휠로도 넘어가고 얇은 스크롤바를 보여 PC에서도 스크롤되는 것이 보인다.
         <div ref={rowRef} className="-mx-3 mt-1.5 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-color:#57534e_transparent] [scrollbar-width:thin]">

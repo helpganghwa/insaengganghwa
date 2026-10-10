@@ -15,7 +15,7 @@ import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, w
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
-import type { WorldBossBattle, WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
+import type { WorldBossBattle, WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
@@ -295,30 +295,29 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)], known, weakBonus);
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
-      myParty = {
-        partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
-        members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
-        requests: reqIds.map((r) => person(r.uid)),
-        invites: invIds.map((r) => person(r.uid)),
-        myResult: null,
-      };
+      // 출발한 원정대 — 대원별 결과(준 피해·뽑은 보상)를 전투 기록에서 센다(우편과 같은 값). 얼굴 아래에 보인다(10-11 사용자).
+      const results = new Map<string, WorldBossMemberResult>();
       if (mem.status === 'departed') {
-        // 내 결과 — 전투 기록에서 내 공격 수·피해·뽑은 보상을 센다(우편과 같은 값).
         const [f] = (await db.execute(sql`select finale from world_boss_parties where id = ${mem.pid}::bigint`)) as unknown as { finale: WorldBossBattle['finale'] | null }[];
         const fin = f?.finale;
-        const me = fin?.roster.findIndex((m) => m.userId === userId) ?? -1;
-        if (fin && me >= 0) {
-          let attacks = 0, damage = 0, diamond = 0, boxes = 0;
-          fin.events.forEach(([a, , d], k) => {
-            if (a !== me) return;
-            attacks += 1;
-            damage += d;
-            diamond += fin.drops?.[k]?.[0] ?? 0;
-            boxes += fin.drops?.[k]?.[1] ?? 0;
-          });
-          myParty.myResult = { attacks, damage, diamond, boxes };
-        }
+        fin?.events.forEach(([a, , d], k) => {
+          const uid = a >= 0 ? fin.roster[a]?.userId : undefined;
+          if (!uid) return;
+          const r = results.get(uid) ?? { damage: 0, diamond: 0, boxes: 0 };
+          r.damage += d;
+          r.diamond += fin.drops?.[k]?.[0] ?? 0;
+          r.boxes += fin.drops?.[k]?.[1] ?? 0;
+          results.set(uid, r);
+        });
       }
+      myParty = {
+        partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
+        members: memIds
+          .map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader, result: mem.status === 'departed' ? (results.get(r.uid) ?? { damage: 0, diamond: 0, boxes: 0 }) : undefined }))
+          .sort((x, y) => Number(y.isLeader) - Number(x.isLeader)), // 대장 먼저(10-11 사용자), 나머지는 참가 순(안정 정렬)
+        requests: reqIds.map((r) => person(r.uid)),
+        invites: invIds.map((r) => person(r.uid)),
+      };
     }
     // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
     if (active && state !== 'fought') {

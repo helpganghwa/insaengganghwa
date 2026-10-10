@@ -58,13 +58,15 @@ export type WorldBossMyParty = {
   status: 'recruiting' | 'departed';
   isLeader: boolean;
   leaderUserId: string;
-  members: (WorldBossPerson & { isLeader: boolean })[];
+  /** 대장이 맨 앞, 나머지는 참가 순. 출발한 원정대는 대원마다 결과(준 피해·뽑은 보상, 전투 기록에서 센다)가 붙는다. */
+  members: (WorldBossPerson & { isLeader: boolean; result?: WorldBossMemberResult })[];
   requests: WorldBossPerson[];
   /** 대장이 보낸 대기 중 초대(10-11) — 빈 자리에 '초대 중'으로 보인다. 대장일 때만 채운다. */
   invites: WorldBossPerson[];
-  /** 출발한 내 원정대에서 내 결과(10-11 사용자: 피해 아래 개인 보상) — 전투 기록(finale)에서 센다. 모집 중이면 null. */
-  myResult: { attacks: number; damage: number; diamond: number; boxes: number } | null;
 };
+
+/** 출발한 원정대의 대원 결과 — 얼굴 아래 '준 피해 · 보상'(우편과 같은 값). */
+export type WorldBossMemberResult = { damage: number; diamond: number; boxes: number };
 
 /** 초대 후보(친구·같은 길드원) — 상태별로 버튼이 다르다. */
 export type WorldBossInvitable = WorldBossPerson & { source: 'friend' | 'guild' | 'both'; state: 'ok' | 'invited' | 'in_party' | 'fought'; /** 마지막 접속(ISO) — 레이드 초대 시트와 같은 접속 표시. */ lastSeenAt: string | null };

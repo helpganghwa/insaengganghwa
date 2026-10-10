@@ -23,7 +23,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, type WorldBossTraitCode, worldBossPartyTraitMult, worldBossPartyTraitStatus, worldBossTraitDef } from '@/lib/game/guild/balance';
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from '@/lib/game/world-boss/view-types';
+import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from '@/lib/game/world-boss/view-types';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -117,7 +117,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       return {
         ...s,
         parties: [...s.parties, card],
-        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [], invites: [], myResult: null },
+        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [], invites: [] },
         me: { ...me, state: 'member', pendingPartyIds: [], canCreate: false },
       };
     }
@@ -481,19 +481,6 @@ export function WorldBossDetailView({
               <>
                 <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
                   <DepartedSummary p={myCard} withReward />
-                  {/* 내 결과(10-11 사용자): 피해 아래 개인 보상 — 공격 수·내 피해·뽑은 보상(우편과 같은 값). */}
-                  {mp.myResult && (
-                    <p className="mt-1 flex items-center justify-between whitespace-nowrap border-t border-orange-900/50 pt-1 text-[11px] text-stone-300">
-                      <span>
-                        내 공격 <b className="font-mono text-stone-100">{mp.myResult.attacks}</b>회 · 피해 <b className="font-mono text-orange-200">{formatCompactKR(mp.myResult.damage)}</b>
-                      </span>
-                      <b className="text-orange-300">
-                        {mp.myResult.diamond > 0 || mp.myResult.boxes > 0
-                          ? [mp.myResult.diamond > 0 ? `💎${mp.myResult.diamond.toLocaleString('ko-KR')}` : '', mp.myResult.boxes > 0 ? `📦${mp.myResult.boxes}` : ''].filter(Boolean).join(' ')
-                          : '꽝'}
-                      </b>
-                    </p>
-                  )}
                 </div>
                 <button
                   type="button"
@@ -614,7 +601,7 @@ export function WorldBossDetailView({
               <DepartedSummary p={p} />
               <Roster members={p.members} value="damage" />
               <p className="mt-1.5 text-[10.5px] text-stone-500">
-                원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+                원정대 총획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
               </p>
             </div>
           ))
@@ -845,7 +832,7 @@ function DepartedSummary({ p, withReward = false }: { p: WorldBossPartyCard; wit
       </p>
       {withReward && (
         <p className="mt-0.5 text-[10.5px] text-stone-500">
-          원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+          원정대 총획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
         </p>
       )}
     </div>
@@ -922,7 +909,7 @@ function DepartRow({ m }: { m: WorldBossMyParty['members'][number] }) {
 }
 
 /** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
-function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPerson; serverId: number; leader: boolean; inviting?: boolean }) {
+function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPerson & { result?: WorldBossMemberResult }; serverId: number; leader: boolean; inviting?: boolean }) {
   const body = (
     <>
       <span className="relative">
@@ -939,7 +926,17 @@ function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPer
         )}
       </span>
       <span className={`block w-full truncate text-center text-[10.5px] font-bold ${inviting ? 'text-stone-400' : 'text-stone-100'}`}>{p.nickname}</span>
-      <span className={`block text-[9px] tabular-nums ${inviting ? 'text-orange-300/80' : 'font-mono text-stone-400'}`}>{inviting ? '초대 중' : formatCompactKR(p.combat)}</span>
+      {/* 모집 중엔 전투력, 출발한 뒤엔 준 피해 + 뽑은 보상(10-11 사용자: 아바타/닉네임/준 피해/보상). */}
+      {p.result ? (
+        <>
+          <span className="block font-mono text-[9px] text-orange-200 tabular-nums">{formatCompactKR(p.result.damage)}</span>
+          <span className={`block whitespace-nowrap text-[9px] tabular-nums ${p.result.diamond > 0 || p.result.boxes > 0 ? 'text-orange-300' : 'text-stone-600'}`}>
+            {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond}` : '', p.result.boxes > 0 ? `📦${p.result.boxes}` : ''].filter(Boolean).join(' ') : '꽝'}
+          </span>
+        </>
+      ) : (
+        <span className={`block text-[9px] tabular-nums ${inviting ? 'text-orange-300/80' : 'font-mono text-stone-400'}`}>{inviting ? '초대 중' : formatCompactKR(p.combat)}</span>
+      )}
     </>
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';

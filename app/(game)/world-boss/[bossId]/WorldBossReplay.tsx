@@ -130,7 +130,7 @@ export function WorldBossReplay({
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
       out.push({ key: 'end', kind: 'round', text: '원정 종료' });
       out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `보스 ${battle.stageTo}페이즈 그대로`}` });
-      out.push({ key: 'res2', kind: 'result', text: `원정대 획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
+      out.push({ key: 'res2', kind: 'result', text: `원정대 총획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
@@ -283,7 +283,8 @@ export function WorldBossReplay({
 
           {/* 아래 — 원정대원 목록(참가 순, 대난투 순위 행처럼 얼굴을 오른쪽에 크게). 지금 공격하는 행이 빛나고 화면 안으로 따라온다. */}
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
+            {/* 머리는 행보다 위(z-20) — 행 안의 z-10 글자가 같은 스택에서 머리를 덮던 문제(10-11 사용자). 행은 isolate로 자기 스택을 만든다. */}
+            <div className="sticky top-0 z-20 flex items-center justify-between bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
               <span>원정대원 {roster.length}명</span>
               <span>공격 · 피해 · 획득</span>
             </div>
@@ -302,7 +303,7 @@ export function WorldBossReplay({
                     ref={(el) => {
                       rowRefs.current[i] = el;
                     }}
-                    className={`relative flex h-[50px] items-center overflow-hidden border-b border-stone-800/80 last:border-b-0 ${
+                    className={`relative isolate flex h-[50px] items-center overflow-hidden border-b border-stone-800/80 last:border-b-0 ${
                       isStruck ? 'bg-red-950/60' : isHit ? 'bg-orange-950/40' : 'bg-stone-900'
                     } ${down ? 'opacity-60' : ''}`}
                   >
