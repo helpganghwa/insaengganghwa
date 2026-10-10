@@ -18,7 +18,7 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
   });
 
   it('빈 원정대는 피해 0·라운드 0', () => {
-    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster: [], events: [], drops: [], weak: [], rounds: 0, totalDamage: 0 } });
+    expect(simulateWorldBoss([], 's')).toEqual({ totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster: [], events: [], drops: [], weak: [], rounds: 0, totalDamage: 0, start: 0 } });
   });
 
   it('라운드마다 생존자 전원이 한 번씩 공격하고 보스가 한 명을 쓰러뜨린다 → 라운드 수 = 인원, 공격 횟수 합 = n(n+1)/2', () => {

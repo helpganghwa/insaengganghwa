@@ -17,6 +17,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
+import { worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
@@ -27,8 +28,10 @@ import { LeaderChip } from './LeaderChip';
 // 재생 간격 — 10-11 사용자: 처음(520/1000)의 2배로 느리게.
 const STEP_ATTACK_MS = 1040;
 const STEP_FALL_MS = 2000;
-/** 마지막 전투 줄 뒤 정산 줄까지 기다리는 시간. */
+/** 마지막 전투 줄 뒤 정산 줄까지 기다리는 시간(건너뛰기는 바로). */
 const RESULT_DELAY_MS = 1400;
+/** 라운드 전환 쉼 — 쓰러짐 연출이 지난 뒤 새 라운드 첫 공격 이만큼 전에 라운드 알약만 바뀐다(10-11 사용자). */
+const ROUND_BEAT_MS = 600;
 /** 일지 동사 — 공격 순서대로 돌려 쓴다(무기 종류는 기록에 없어 두루 맞는 말만). */
 const VERBS = ['휘두른다', '내리친다', '꽂아 넣는다', '후려친다', '찔러 넣는다'];
 
@@ -165,6 +168,17 @@ export function WorldBossReplay({
     if (battle.stageTo - battle.stageFrom > 0) window.setTimeout(() => sounds.levelup(), 450);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultShown]);
+  // 라운드 알약은 보스 반격(쓰러짐) 연출이 지난 뒤에 바뀐다 — 첫 공격 ROUND_BEAT_MS 전에 알약만 커져 전환이 읽힌다. 되감으면(다시 재생) 바로.
+  const [shownRound, setShownRound] = useState(1);
+  useEffect(() => {
+    if (st.round === shownRound) return;
+    const t = setTimeout(() => setShownRound(st.round), st.round < shownRound || done ? 0 : STEP_FALL_MS - ROUND_BEAT_MS);
+    return () => clearTimeout(t);
+  }, [st.round, shownRound, done]);
+  // 이번 공격이 맞힌 약점 부위 수 — 무대 숫자·명단 숫자의 스타일로만 드러낸다(10-11 사용자: 글자·배지 없음).
+  const lastWeak = idx > 0 && st.last && st.last[0] >= 0 ? [1, 2, 4].filter((b) => ((weakBits[idx - 1] ?? 0) & b) !== 0).length : 0;
+  // 페이즈 게이지 — 출발 시점 보스 누적(finale.start)이 기록된 전투만(옛 기록은 원정대 피해 합계로 대신).
+  const phase = battle.finale.start != null ? worldBossStageFor(battle.finale.start + st.total) : null;
   // 무대 오버레이 — 라운드 줄은 빼고 마지막 3줄(라운드는 상단 중앙 알약이 맡는다, 10-11 사용자). 명단 아래 전체 일지에는 라운드 머리를 남긴다.
   const shown = lines.filter((l) => l.kind !== 'round').slice(-3);
 
@@ -208,8 +222,8 @@ export function WorldBossReplay({
                 생존 <b className="text-white">{st.alive}</b>/{roster.length}
               </span>
               {/* 라운드 — 좌우 정중앙(10-11 사용자), 바뀔 때마다 크게 */}
-              <span key={`r${st.round}`} className="absolute left-1/2 -translate-x-1/2 animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-orange-300">
-                {st.round}라운드
+              <span key={`r${shownRound}`} className="absolute left-1/2 -translate-x-1/2 animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-orange-300">
+                {shownRound}라운드
               </span>
             </div>
             <div className="absolute left-1/2 top-[40%] h-[140px] w-[140px] -translate-x-1/2 -translate-y-1/2">
@@ -227,20 +241,30 @@ export function WorldBossReplay({
               {jackpot && (
                 <span key={`j${idx}`} className="pointer-events-none absolute -inset-10 animate-wb-jackpot rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgba(249,115,22,0.55)_20deg,transparent_40deg,transparent_60deg,rgba(249,115,22,0.55)_80deg,transparent_100deg,transparent_120deg,rgba(249,115,22,0.55)_140deg,transparent_160deg,transparent_180deg,rgba(249,115,22,0.55)_200deg,transparent_220deg,transparent_240deg,rgba(249,115,22,0.55)_260deg,transparent_280deg,transparent_300deg,rgba(249,115,22,0.55)_320deg,transparent_340deg)]" />
               )}
+              {/* 피해 숫자 — 보스 머리 위 한 자리(10-11 사용자). 약점을 맞히면 숫자 스타일로만(호박색 빛, 두 부위 이상은 더 크고 밝게). */}
               {hit && st.last && (
-                <span key={`d${idx}`} className="absolute left-1/2 top-1 -translate-x-1/2 animate-wb-float whitespace-nowrap text-[24px] font-black text-white [text-shadow:0_0_8px_#ea580c,0_1px_2px_#000,0_0_2px_#000]">
+                <span
+                  key={`d${idx}`}
+                  className={`absolute left-1/2 -top-2.5 -translate-x-1/2 animate-wb-num whitespace-nowrap font-mono font-black tabular-nums ${
+                    lastWeak >= 2
+                      ? 'text-[26px] text-amber-100 [text-shadow:0_0_14px_#fbbf24,0_0_4px_#f59e0b,0_1px_2px_#000]'
+                      : lastWeak === 1
+                        ? 'text-[23px] text-amber-200 [text-shadow:0_0_10px_#f59e0b,0_1px_2px_#000]'
+                        : 'text-[22px] text-white [text-shadow:0_0_8px_#ea580c,0_1px_2px_#000,0_0_2px_#000]'
+                  }`}
+                >
                   {formatCompactKR(st.last[2])}
                 </span>
               )}
               {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
                 <span
                   key={`g${idx}`}
-                  className={`absolute left-1/2 top-10 -translate-x-1/2 animate-wb-round whitespace-nowrap rounded-full px-2.5 py-0.5 font-black ${
+                  className={`absolute left-[calc(100%-6px)] top-[54px] animate-wb-round whitespace-nowrap rounded-full font-black ${
                     jackpot
-                      ? 'bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 text-[19px] text-orange-50 shadow-[0_0_24px_6px_rgba(249,115,22,0.85)] ring-2 ring-amber-100'
+                      ? 'bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 px-2.5 py-0.5 text-[15px] text-orange-950 shadow-[0_0_18px_4px_rgba(249,115,22,0.8)] ring-1 ring-amber-100'
                       : lootTier(st.lastDrop[0], st.lastDrop[1]) === 'good'
-                        ? 'bg-amber-500/90 text-[15px] text-amber-50 shadow-[0_0_14px_3px_rgba(251,191,36,0.6)] ring-1 ring-amber-200'
-                        : 'bg-black/70 text-[13px] text-orange-200'
+                        ? 'bg-amber-500/95 px-2 py-0.5 text-[12.5px] text-amber-50 shadow-[0_0_10px_2px_rgba(251,191,36,0.55)]'
+                        : 'border border-stone-600 bg-stone-950/85 px-2 py-0.5 text-[11.5px] text-stone-300'
                   }`}
                 >
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
@@ -254,7 +278,7 @@ export function WorldBossReplay({
                 return (
                   <p
                     key={l.key}
-                    className={`overflow-hidden text-ellipsis whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12px] leading-snug [text-shadow:0_1px_2px_#000] ${newest ? 'animate-wb-line' : ''} ${
+                    className={`flex items-center gap-2 overflow-hidden whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12px] leading-snug [text-shadow:0_1px_2px_#000] ${newest ? 'animate-wb-line' : ''} ${
                       l.kind === 'round'
                         ? 'self-center bg-black/60 px-3 text-[11px] tracking-widest text-stone-300'
                         : l.kind === 'boss'
@@ -269,16 +293,29 @@ export function WorldBossReplay({
                 );
               })}
             </div>
-            {/* 보스 이름 · 원정대 피해 — 무대 맨 아래 */}
-            <div className="absolute inset-x-0 bottom-1.5 z-10 flex items-baseline justify-between px-3">
+            {/* 보스 이름 · 페이즈 게이지(지금 페이즈·다음까지, 바닥 3px 바) — 무대 맨 아래. 원정대 피해 합계는 명단 머리로 옮겼다. 출발 누적이 없는 옛 기록은 합계를 여기 둔다. */}
+            <div className={`absolute inset-x-0 z-10 flex items-baseline justify-between px-3 ${phase ? 'bottom-[7px]' : 'bottom-1.5'}`}>
               <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
                 {bossName}
                 {bossTraits.length > 0 && <span className="text-[11px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
               </span>
-              <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
-                원정대 피해 <b className="font-mono text-[15px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
-              </span>
+              {phase ? (
+                <span className="whitespace-nowrap text-[10.5px] text-stone-300 [text-shadow:0_1px_3px_#000]">
+                  <b className="font-mono text-[13px] text-orange-300 tabular-nums">{phase.stage}</b>페이즈 · 다음까지{' '}
+                  <b className="font-mono text-[12px] text-orange-200 tabular-nums">{formatCompactKR(Math.max(0, phase.need - phase.into))}</b>
+                </span>
+              ) : (
+                <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
+                  원정대 피해 <b className="font-mono text-[15px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
+                </span>
+              )}
             </div>
+            {phase && (
+              <div className="absolute inset-x-0 bottom-0 z-10 h-[3px] bg-black/60">
+                {/* 페이즈가 오르면 key가 바뀌어 0에서 다시 찬다(뒤로 줄어드는 애니 없음). */}
+                <div key={`pb${phase.stage}`} className="h-full bg-gradient-to-r from-orange-500 to-amber-300 transition-[width] duration-500 ease-out" style={{ width: `${Math.min(100, (phase.into / Math.max(1, phase.need)) * 100)}%` }} />
+              </div>
+            )}
           </div>
 
           {/* 아래 — 원정대원 목록(참가 순, 대난투 순위 행처럼 얼굴을 오른쪽에 크게). 지금 공격하는 행이 빛나고 화면 안으로 따라온다. */}
@@ -286,7 +323,13 @@ export function WorldBossReplay({
             {/* 머리는 행보다 위(z-20) — 행 안의 z-10 글자가 같은 스택에서 머리를 덮던 문제(10-11 사용자). 행은 isolate로 자기 스택을 만든다. */}
             <div className="sticky top-0 z-20 flex items-center justify-between bg-stone-950 py-1.5 text-[10.5px] text-stone-500">
               <span>원정대원 {roster.length}명</span>
-              <span>공격 · 피해 · 획득</span>
+              {phase ? (
+                <span>
+                  원정대 피해 <b className="font-mono text-[12px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
+                </span>
+              ) : (
+                <span>공격 · 피해 · 획득</span>
+              )}
             </div>
             <ul className="overflow-hidden rounded-xl border border-stone-800">
               {roster.map((m, i) => {
@@ -294,8 +337,7 @@ export function WorldBossReplay({
                 const isHit = !!hit && st.last![0] === i;
                 const isStruck = !!struck && st.last![1] === i;
                 const f = face(m.userId);
-                const bits = isHit ? (weakBits[idx - 1] ?? 0) : 0;
-                const slots = [1, 2, 4].filter((b) => (bits & b) !== 0);
+                const weakNow = isHit ? lastWeak : 0;
                 const down = fellR != null && !isStruck;
                 return (
                   <li
@@ -335,27 +377,13 @@ export function WorldBossReplay({
                         <span className="shrink-0 text-stone-600">·</span>
                         <span className="shrink-0">
                           공격 <b className="font-mono text-stone-200">{st.atk[i]}</b> · 피해{' '}
-                          <b className={`font-mono ${isHit ? 'text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</b>
+                          <b className={`font-mono ${weakNow ? 'text-amber-200 [text-shadow:0_0_6px_#f59e0b]' : isHit ? 'text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</b>
                           {st.gotD[i]! > 0 || st.gotB[i]! > 0 ? (
                             <>
                               {' '}· <b className="text-orange-300">{[st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : '', st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''].filter(Boolean).join(' ')}</b>
                             </>
                           ) : null}
                         </span>
-                        {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
-                        {slots.length > 0 && (
-                          <span
-                            key={`w${idx}`}
-                            className={`flex shrink-0 animate-wb-round items-center gap-0.5 rounded-full px-1.5 text-[10px] ${
-                              slots.length >= 2 ? 'bg-orange-400 text-orange-50 ring-1 ring-amber-100 shadow-[0_0_10px_2px_rgba(249,115,22,0.6)]' : 'bg-orange-500/25 text-orange-200 ring-1 ring-orange-500/60'
-                            }`}
-                          >
-                            약점
-                            {slots.map((b) => (
-                              <span key={b}>{b === 1 ? '⚔' : b === 2 ? '🛡' : '💍'}</span>
-                            ))}
-                          </span>
-                        )}
                       </span>
                     </div>
                   </li>
@@ -369,8 +397,8 @@ export function WorldBossReplay({
                 {lines.map((l) => (
                   <p
                     key={l.key}
-                    className={`overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] leading-relaxed ${
-                      l.kind === 'round' ? 'mt-1 text-center text-[10.5px] tracking-widest text-stone-500' : l.kind === 'boss' ? 'text-red-200' : l.kind === 'result' ? 'font-bold text-orange-200' : 'text-stone-200'
+                    className={`flex items-center gap-2 overflow-hidden whitespace-nowrap text-[11.5px] leading-relaxed ${
+                      l.kind === 'round' ? 'mt-1 justify-center text-[10.5px] tracking-widest text-stone-500' : l.kind === 'boss' ? 'text-red-200' : l.kind === 'result' ? 'font-bold text-orange-200' : 'text-stone-200'
                     }`}
                   >
                     <LogText l={l} />
@@ -398,7 +426,10 @@ export function WorldBossReplay({
           ) : (
             <button
               type="button"
-              onClick={() => setIdx(events.length)}
+              onClick={() => {
+                setIdx(events.length);
+                setResultShown(true); // 건너뛰기는 정산까지 한 번에(10-11 사용자)
+              }}
               className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
             >
               건너뛰기
@@ -409,26 +440,32 @@ export function WorldBossReplay({
   );
 }
 
-/** 일지 한 줄의 글 — 무대 오버레이와 명단 아래 전체 일지가 같은 표현을 쓴다. 보상은 등급별 배지(jackpot ✦ 금빛 · good 호박색 · small 글자만). */
+/** 일지 한 줄 — 부모가 flex. 문장은 왼쪽에서 줄어들고(말줄임), 피해·전리품은 줄 끝에 고정돼 길어도 잘리지 않는다(10-11 사용자).
+ * 약점 적중은 숫자 스타일(호박색 빛)로만, 전리품은 등급별 칩(jackpot 금빛 · good 호박색 · small 어두운 칩). */
 function LogText({ l }: { l: LogLine }) {
   if (l.kind === 'atk') {
+    const weak = l.weak ?? 0;
     return (
       <>
-        ▶ {l.text} — <b className="font-mono text-orange-300">{formatCompactKR(l.dmg ?? 0)}</b>
-        {l.weak ? <b className={`ml-1 ${l.weak >= 2 ? 'text-amber-200' : 'text-orange-300'}`}>약점 적중{l.weak >= 2 ? ` ×${l.weak}` : ''}!</b> : null}
-        {l.loot ? (
-          l.lootTier === 'jackpot' ? (
-            <b className="ml-1.5 rounded bg-gradient-to-r from-amber-200 to-orange-400 px-1.5 text-stone-900 shadow-[0_0_8px_rgba(251,191,36,0.8)]">✦ {l.loot}</b>
-          ) : l.lootTier === 'good' ? (
-            <b className="ml-1.5 rounded bg-amber-500/30 px-1 text-amber-200 ring-1 ring-amber-400/60">⚑ {l.loot}</b>
-          ) : (
-            <span className="ml-1 text-orange-200">⚑ {l.loot}</span>
-          )
-        ) : null}
+        <span className="min-w-0 flex-1 truncate">▶ {l.text}</span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <b className={`font-mono tabular-nums ${weak >= 2 ? 'text-amber-100 [text-shadow:0_0_8px_#fbbf24]' : weak === 1 ? 'text-amber-200 [text-shadow:0_0_6px_#f59e0b]' : 'text-orange-300'}`}>
+            {formatCompactKR(l.dmg ?? 0)}
+          </b>
+          {l.loot ? (
+            l.lootTier === 'jackpot' ? (
+              <b className="rounded-full bg-gradient-to-r from-amber-200 to-orange-400 px-1.5 text-stone-900 shadow-[0_0_8px_rgba(251,191,36,0.8)]">{l.loot}</b>
+            ) : l.lootTier === 'good' ? (
+              <b className="rounded-full bg-amber-500/90 px-1.5 text-amber-50">{l.loot}</b>
+            ) : (
+              <span className="rounded-full border border-stone-600 bg-stone-950/70 px-1.5 text-stone-300">{l.loot}</span>
+            )
+          ) : null}
+        </span>
       </>
     );
   }
-  if (l.kind === 'boss') return <>✦ {l.text}</>;
-  if (l.kind === 'result') return <>★ {l.text}</>;
-  return <>— {l.text} —</>;
+  if (l.kind === 'boss') return <span className="min-w-0 flex-1 truncate">✦ {l.text}</span>;
+  if (l.kind === 'result') return <span className="min-w-0 flex-1 truncate">★ {l.text}</span>;
+  return <span className="min-w-0 truncate">{l.text}</span>;
 }

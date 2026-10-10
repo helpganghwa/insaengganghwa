@@ -58,6 +58,8 @@ export type WorldBossFinale = {
   weak?: number[];
   rounds: number;
   totalDamage: number;
+  /** 출발 시점의 보스 누적 피해 — 재생 화면의 페이즈 게이지가 start + 진행 피해로 지금 페이즈를 센다. 옛 기록엔 없다. */
+  start?: number;
 };
 
 export type WorldBossReveal = { phase: number; slot: WeakSlot; code: string; unit: number };
@@ -90,7 +92,7 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
   const roster: WorldBossRosterEntry[] = units.map((u) => ({
     userId: u.userId, nickname: u.nickname, cp: Math.round(baseCp(u.items)), guildId: u.guildId, guildName: u.guildName, items: u.items, hasAvatar: u.hasAvatar,
   }));
-  if (n === 0) return { totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster, events: [], drops: [], weak: [], rounds: 0, totalDamage: 0 } };
+  if (n === 0) return { totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster, events: [], drops: [], weak: [], rounds: 0, totalDamage: 0, start: ctx.startDamage } };
 
   const weakSets = ctx.weak.map((p) => ({ weapon: new Set(p.weapon), armor: new Set(p.armor), accessory: new Set(p.accessory) }));
   // 특성 — 원정대 전체 배율은 출발 순간의 구성으로 한 번, 무소속 배율은 대원마다, 약점 보너스·꽝 확률은 보스 값.
@@ -172,5 +174,5 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
     boxes: box[i]!,
     weakHits: hits[i]!,
   }));
-  return { totalDamage: Math.round(total), rounds: round, members, reveals, finale: { roster, events, drops, weak: weakBits, rounds: round, totalDamage: Math.round(total) } };
+  return { totalDamage: Math.round(total), rounds: round, members, reveals, finale: { roster, events, drops, weak: weakBits, rounds: round, totalDamage: Math.round(total), start: ctx.startDamage } };
 }

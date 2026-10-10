@@ -146,6 +146,8 @@ export type WorldBossBattle = {
     weak?: number[];
     rounds: number;
     totalDamage: number;
+    /** 출발 시점 보스 누적 피해 — 페이즈 게이지용. 옛 기록엔 없어 게이지를 숨긴다. */
+    start?: number;
   };
   stageFrom: number;
   stageTo: number;

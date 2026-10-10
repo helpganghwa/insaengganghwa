@@ -61,6 +61,7 @@ html {
   --animate-marker-pin-glow: marker-pin-glow 1.5s ease-in-out infinite;
   --animate-wb-ring: wb-ring 1.6s ease-in-out infinite;
   --animate-wb-float: wb-float 0.6s ease-out forwards;
+  --animate-wb-num: wb-num 0.75s ease-out forwards;
   --animate-wb-shake: wb-shake 0.28s ease-in-out;
   --animate-wb-flash: wb-flash 0.45s ease-out forwards;
   --animate-wb-round: wb-round 0.5s ease-out;
@@ -148,6 +149,13 @@ html {
   @keyframes wb-line {
     0% { opacity: 0; transform: translateY(6px); }
     100% { opacity: 1; transform: translateY(0); }
+  }
+  /* 월드보스 전투 재생 — 피해 숫자가 머리 위 한 자리에서 톡 커졌다 조금만 떠오르며 사라짐(라운드 알약과 안 겹치게 10px만) */
+  @keyframes wb-num {
+    0% { opacity: 0; transform: translate(-50%, 6px) scale(0.85); }
+    22% { opacity: 1; transform: translate(-50%, 0) scale(1.06); }
+    60% { opacity: 1; transform: translate(-50%, -3px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -12px) scale(1); }
   }
   /* 월드보스 전투 재생 — 피해 숫자가 떠오르며 사라짐 */
   @keyframes wb-float {
