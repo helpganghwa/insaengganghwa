@@ -530,19 +530,12 @@ export function WorldBossDetailView({
               return (
                 <div
                   key={p.id}
-                  className={`rounded-xl border p-2.5 ${
-                    isInvited
-                      ? 'border-orange-400 bg-orange-950/30 shadow-[0_0_14px_rgba(249,115,22,0.35)] ring-1 ring-orange-500/40'
-                      : isPending
-                        ? 'border-orange-500/55 bg-stone-900'
-                        : 'border-stone-800 bg-stone-900'
-                  }`}
+                  className={`overflow-hidden rounded-xl border bg-stone-900 p-2.5 ${isInvited ? 'border-orange-500/70' : isPending ? 'border-orange-500/55' : 'border-stone-800'}`}
                 >
-                  {/* 초대받은 원정대(10-11 사용자): 맨 앞 + 주황 테두리 발광 + 눈에 띄는 '초대받음' 칩. */}
+                  {/* 초대받은 원정대(10-11 사용자, I2 머리띠): 맨 앞 + 카드 위를 가로지르는 주황 띠(누가 초대했는지). 본문은 다른 카드와 같다. */}
                   {isInvited && (
-                    <div className="mb-1.5 flex items-center gap-1.5 whitespace-nowrap">
-                      <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-extrabold text-orange-50 shadow-[0_0_8px_rgba(249,115,22,0.6)]">✉ 초대받음</span>
-                      <span className="truncate text-[10.5px] text-orange-200">바로 참가할 수 있어요</span>
+                    <div className="-mx-2.5 -mt-2.5 mb-2 flex items-center gap-1 whitespace-nowrap bg-orange-700 px-2.5 py-1 text-[11px] font-bold text-orange-50">
+                      ✉ <b className="font-extrabold">{p.leaderNickname}</b> 원정대장이 초대했어요
                     </div>
                   )}
                   <PartyHead p={p} />
@@ -567,7 +560,7 @@ export function WorldBossDetailView({
                           onClick={() => run(() => respondInviteAction(d.id, p.id, true), { title: '원정대에 들어갔어요' }, { t: 'respondInvite', partyId: p.id })}
                           className="rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
                         >
-                          참가
+                          바로 참가
                         </button>
                       </>
                     ) : isPending ? (
