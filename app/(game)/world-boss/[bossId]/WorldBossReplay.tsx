@@ -24,8 +24,9 @@ import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
 
 import { LeaderChip } from './LeaderChip';
 
-const STEP_ATTACK_MS = 520;
-const STEP_FALL_MS = 1000;
+// 재생 간격 — 10-11 사용자: 처음(520/1000)의 2배로 느리게.
+const STEP_ATTACK_MS = 1040;
+const STEP_FALL_MS = 2000;
 /** 마지막 전투 줄 뒤 정산 줄까지 기다리는 시간. */
 const RESULT_DELAY_MS = 1400;
 /** 일지 동사 — 공격 순서대로 돌려 쓴다(무기 종류는 기록에 없어 두루 맞는 말만). */
