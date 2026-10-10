@@ -15,7 +15,7 @@ import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, w
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
-import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
+import type { WorldBossBattle, WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
@@ -300,7 +300,25 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
         requests: reqIds.map((r) => person(r.uid)),
         invites: invIds.map((r) => person(r.uid)),
+        myResult: null,
       };
+      if (mem.status === 'departed') {
+        // 내 결과 — 전투 기록에서 내 공격 수·피해·뽑은 보상을 센다(우편과 같은 값).
+        const [f] = (await db.execute(sql`select finale from world_boss_parties where id = ${mem.pid}::bigint`)) as unknown as { finale: WorldBossBattle['finale'] | null }[];
+        const fin = f?.finale;
+        const me = fin?.roster.findIndex((m) => m.userId === userId) ?? -1;
+        if (fin && me >= 0) {
+          let attacks = 0, damage = 0, diamond = 0, boxes = 0;
+          fin.events.forEach(([a, , d], k) => {
+            if (a !== me) return;
+            attacks += 1;
+            damage += d;
+            diamond += fin.drops?.[k]?.[0] ?? 0;
+            boxes += fin.drops?.[k]?.[1] ?? 0;
+          });
+          myParty.myResult = { attacks, damage, diamond, boxes };
+        }
+      }
     }
     // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
     if (active && state !== 'fought') {

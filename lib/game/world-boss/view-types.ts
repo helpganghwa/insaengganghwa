@@ -62,6 +62,8 @@ export type WorldBossMyParty = {
   requests: WorldBossPerson[];
   /** 대장이 보낸 대기 중 초대(10-11) — 빈 자리에 '초대 중'으로 보인다. 대장일 때만 채운다. */
   invites: WorldBossPerson[];
+  /** 출발한 내 원정대에서 내 결과(10-11 사용자: 피해 아래 개인 보상) — 전투 기록(finale)에서 센다. 모집 중이면 null. */
+  myResult: { attacks: number; damage: number; diamond: number; boxes: number } | null;
 };
 
 /** 초대 후보(친구·같은 길드원) — 상태별로 버튼이 다르다. */

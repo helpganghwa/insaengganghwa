@@ -117,7 +117,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       return {
         ...s,
         parties: [...s.parties, card],
-        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [], invites: [] },
+        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [], invites: [], myResult: null },
         me: { ...me, state: 'member', pendingPartyIds: [], canCreate: false },
       };
     }
@@ -381,7 +381,8 @@ export function WorldBossDetailView({
           {myCard?.intro && <p className="-mt-1 mb-2 text-[11px] leading-snug text-stone-300">{myCard.intro}</p>}
           {/* 명단 — 둥근 얼굴 5×2(10-11 사용자 B안): 10칸을 늘 다 보여 빈 자리까지 한눈에. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 빈 자리는 점선 '+'(초대 기능은 논의 중). */}
           <div className="grid grid-cols-5 gap-x-1 gap-y-2.5">
-            {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => {
+            {/* 출발한 뒤엔 빈 자리를 그리지 않는다(10-11 사용자) — 대원만. */}
+            {Array.from({ length: mp.status === 'departed' ? mp.members.length : WORLD_BOSS_PARTY_MAX }, (_, i) => {
               const m = mp.members[i];
               if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />;
               const inv = mp.invites[i - mp.members.length];
@@ -480,6 +481,19 @@ export function WorldBossDetailView({
               <>
                 <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
                   <DepartedSummary p={myCard} withReward />
+                  {/* 내 결과(10-11 사용자): 피해 아래 개인 보상 — 공격 수·내 피해·뽑은 보상(우편과 같은 값). */}
+                  {mp.myResult && (
+                    <p className="mt-1 flex items-center justify-between whitespace-nowrap border-t border-orange-900/50 pt-1 text-[11px] text-stone-300">
+                      <span>
+                        내 공격 <b className="font-mono text-stone-100">{mp.myResult.attacks}</b>회 · 피해 <b className="font-mono text-orange-200">{formatCompactKR(mp.myResult.damage)}</b>
+                      </span>
+                      <b className="text-orange-300">
+                        {mp.myResult.diamond > 0 || mp.myResult.boxes > 0
+                          ? [mp.myResult.diamond > 0 ? `💎${mp.myResult.diamond.toLocaleString('ko-KR')}` : '', mp.myResult.boxes > 0 ? `📦${mp.myResult.boxes}` : ''].filter(Boolean).join(' ')
+                          : '꽝'}
+                      </b>
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -599,17 +613,6 @@ export function WorldBossDetailView({
               <PartyHead p={p} rank={i + 1} />
               <DepartedSummary p={p} />
               <Roster members={p.members} value="damage" />
-              {/* 내 원정대면 여기서도 전투를 다시 볼 수 있다(10-11 사용자). */}
-              {p.id === mp?.partyId && (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => openBattle(p.id)}
-                  className="mt-2 w-full rounded-lg border border-orange-500/60 py-1.5 text-[11.5px] font-bold text-orange-300 disabled:opacity-40"
-                >
-                  전투 다시 보기
-                </button>
-              )}
               <p className="mt-1.5 text-[10.5px] text-stone-500">
                 원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
               </p>
