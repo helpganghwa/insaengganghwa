@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { randomUUID } from 'node:crypto';
 
 import { pieceCombatPower } from '@/lib/game/balance';
-import { WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossStageFor } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, worldBossLootFor, worldBossStageFor } from '@/lib/game/guild/balance';
 import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -64,7 +64,14 @@ async function participation(dbx: Dbx, bossId: string, userId: string): Promise<
 }
 
 /** 원정대 만들기 — 보스 구역을 점령한 길드의 길드원만. 만든 사람이 대장이자 첫 참가자. */
-export async function createParty(input: { userId: string; serverId: number; bossId: string }): Promise<{ partyId: string }> {
+/** 소개글 정리 — 공백은 한 칸으로, WORLD_BOSS_PARTY_INTRO_MAX자까지, 비면 null(안 적은 것). */
+function cleanIntro(raw: string | undefined): string | null {
+  const s = (raw ?? '').replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX);
+  return s.length > 0 ? s : null;
+}
+
+export async function createParty(input: { userId: string; serverId: number; bossId: string; intro?: string }): Promise<{ partyId: string }> {
+  const intro = cleanIntro(input.intro);
   return db.transaction(async (tx) => {
     const boss = await lockActiveBoss(tx, input.bossId);
     if (boss.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
@@ -75,8 +82,8 @@ export async function createParty(input: { userId: string; serverId: number; bos
     if (p === 'fought') throw new WorldBossError('ALREADY_FOUGHT');
     if (p === 'recruiting') throw new WorldBossError('ALREADY_IN_PARTY');
     const [party] = (await tx.execute(sql`
-      insert into world_boss_parties (boss_id, server_id, leader_user_id, guild_id)
-      values (${boss.id}::bigint, ${input.serverId}, ${input.userId}::uuid, ${boss.owner}::bigint) returning id::text as id`)) as unknown as { id: string }[];
+      insert into world_boss_parties (boss_id, server_id, leader_user_id, guild_id, intro)
+      values (${boss.id}::bigint, ${input.serverId}, ${input.userId}::uuid, ${boss.owner}::bigint, ${intro}) returning id::text as id`)) as unknown as { id: string }[];
     await tx.execute(sql`
       insert into world_boss_party_members (party_id, boss_id, user_id, server_id)
       values (${party!.id}::bigint, ${boss.id}::bigint, ${input.userId}::uuid, ${input.serverId})`);

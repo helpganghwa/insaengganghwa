@@ -59,11 +59,11 @@ function fail(e: unknown, where: string) {
   return err('UNKNOWN');
 }
 
-export async function createPartyAction(bossId: string) {
+export async function createPartyAction(bossId: string, intro?: string) {
   const g = await gate();
   if ('status' in g) return g;
   try {
-    const r = await createParty({ userId: g.u, serverId: g.sid, bossId });
+    const r = await createParty({ userId: g.u, serverId: g.sid, bossId, intro: typeof intro === 'string' ? intro : undefined });
     rev(bossId);
     return { status: 'success' as const, partyId: r.partyId };
   } catch (e) {

@@ -11,7 +11,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 
-type Common = { name: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; onOpen?: () => void };
+type Common = { name: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; href: string };
 
 export function WorldBossZoneCard(
   props:
@@ -67,7 +67,6 @@ export function WorldBossZoneCard(
       <Link
         prefetch={false}
         href={props.href}
-        onClick={props.onOpen}
         className={`absolute right-2 top-1/2 z-[2] -translate-y-1/2 rounded-md px-2 py-1 text-center text-[10.5px] font-bold ${
           left ? 'bg-zinc-700 text-zinc-200 ring-1 ring-zinc-500/60' : 'bg-orange-800/90 text-orange-50 ring-1 ring-orange-500/60'
         }`}

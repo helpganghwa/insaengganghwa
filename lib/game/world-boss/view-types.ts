@@ -7,6 +7,8 @@ export type WorldBossPartyCard = {
   status: 'recruiting' | 'departed';
   leaderNickname: string;
   guildName: string | null;
+  /** 만들 때 적은 소개글(선택, WORLD_BOSS_PARTY_INTRO_MAX자) — 모집 카드·내 원정대 패널에 보인다. */
+  intro: string | null;
   memberCount: number;
   createdAt: number;
   /** 출발한 원정대만 — 피해·라운드·단계 구간·1인 보상. */
@@ -81,7 +83,7 @@ export type WorldBossDetail = {
   myParty: WorldBossMyParty | null;
   /** 지금 공격 중인 단계의 페이즈(5단계마다). */
   phase: { index: number; from: number; to: number };
-  /** 이 페이즈에서 맞혀서 공개된 약점(발견자 이름). 공개 전 약점은 아무도 모른다. */
+  /** 이 페이즈에서 맞혀서 공개된 약점. 공개 전 약점은 아무도 모른다. */
   weakKnown: import('./loadout').KnownWeak[];
   /** 페이즈 약점 총수(부위별 10 × 3). */
   weakTotal: number;

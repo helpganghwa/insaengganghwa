@@ -168,6 +168,8 @@ export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
 export const WORLD_BOSS_LEFT_NOTE_MS = 48 * 60 * 60 * 1000;
 /** 원정대 최대 인원(대장 포함). 최소 인원 제한 없음. */
 export const WORLD_BOSS_PARTY_MAX = 10;
+/** 원정대 소개글 최대 글자 수 — 만들 때 한 줄(선택). 모집 카드 한두 줄에 들어가는 길이(2026-10-10). */
+export const WORLD_BOSS_PARTY_INTRO_MAX = 40;
 /**
  * 단계 체력(서버 공통 — 누구 땅이든 같다). 단계 k(1부터)를 넘기는 데 BASE × GROWTH^(k-1) 피해.
  * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.

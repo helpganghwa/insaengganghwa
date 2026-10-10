@@ -1207,14 +1207,9 @@ export function WorldMapView({
                 {/* 월드보스 카드(docs/WORLD-BOSS.md §9) — 보스가 머무는 동안만. 떠난 뒤 48시간은 기록 한 줄. */}
                 {(() => {
                   const boss = bossByZone.get(selected.id);
+                  // 보스 상세로 갈 때 구역 시트 복원 키(ig:worldmap-restore)는 남기지 않는다 — 돌아오거나 다음에 지도를 열 때
+                  // 시트가 저절로 열렸다(10-10 사용자). 지도는 평소 모습으로 돌아온다.
                   if (boss) {
-                    const remember = () => {
-                      try {
-                        sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
-                      } catch {
-                        // 저장 실패 시 복원만 생략
-                      }
-                    };
                     return (
                       <WorldBossZoneCard
                         mode="active"
@@ -1226,7 +1221,6 @@ export function WorldMapView({
                         leaveAt={boss.leaveAt}
                         remainText={(now) => wbRemain(boss.leaveAt - now)}
                         href={`/world-boss/${boss.id}`}
-                        onOpen={remember}
                       />
                     );
                   }

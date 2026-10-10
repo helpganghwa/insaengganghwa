@@ -177,6 +177,7 @@ export default async function HomePage() {
   /** 그날 헤드라인(마커 제거 평문) — 있으면 티저 문구로 사용, 없으면 '새로운 역사가 쓰였다'. */
   let chronicleHeadline: string | null = null;
   let worldBossStage: number | null = null;
+  let worldBossZone: string | null = null; // 보스가 머무는 구역 이름 — 카드 설명 '○○에 월드보스 출현'
   const conquestTargetMs = (() => {
     const n = new Date();
     const t = new Date(n);
@@ -297,6 +298,9 @@ export default async function HomePage() {
             -- 지금 머무는 월드보스 단계(docs/WORLD-BOSS.md §9) — 세계지도 카드에 보스·불씨 테두리. 없으면 null.
             (select b.stage from world_bosses b where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
               order by b.spawn_at desc limit 1) as wb_stage,
+            (select z.name from world_bosses b join zones z on z.id = b.zone_id
+              where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
+              order by b.spawn_at desc limit 1) as wb_zone,
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
@@ -337,6 +341,7 @@ export default async function HomePage() {
         chron_day: string | null;
         chron_headline: string | null;
         wb_stage: number | null;
+        wb_zone: string | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -378,6 +383,7 @@ export default async function HomePage() {
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
         worldBossStage = row.wb_stage == null ? null : Number(row.wb_stage);
+        worldBossZone = row.wb_zone ?? null;
         // 헤드라인 마커({g|이름}·{z|이름}·{u|닉|코드}) → 평문. 카드 desc의 truncate가 말줄임 처리.
         chronicleHeadline =
           row.chron_headline?.replace(/\{[gzu]\|([^}|]+)(?:\|[^}]*)?\}/g, '$1').trim() || null;
@@ -600,6 +606,7 @@ export default async function HomePage() {
                       chronicleDay={latestChronicleDay}
                       chronicleHeadline={chronicleHeadline}
                       worldBossStage={worldBossStage}
+                      worldBossZoneName={worldBossZone}
                       nowIso={new Date().toISOString()}
                     />
                   ) : descHot ? (

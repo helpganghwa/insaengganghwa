@@ -105,8 +105,10 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
   it('원정대: 점령 길드원만 만들고, 누구나 신청하고, 대장이 수락·출발하며, 보스 하나에 1인 1번', async () => {
     const boss = await makeBoss('2000-01-03');
     expect(await code(createParty({ userId: G, serverId: S, bossId: boss }))).toBe('NOT_OWNER_GUILD');
-    const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
+    // 소개글(0231) — 공백은 한 칸으로 정리돼 모집 카드에 실린다.
+    const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss, intro: '  약점  장비 맞춘 분\n환영해요  ' });
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_IN_PARTY');
+    expect((await getWorldBossDetail(boss, S, G))?.parties.map((p) => p.intro)).toEqual(['약점 장비 맞춘 분 환영해요']);
     // 지도 상태 — 모집 중 원정대 1, 대장은 'recruiting', 아직 신청 안 한 사람은 'none'.
     expect((await getWorldBossMapState(S, T)).active.find((b) => b.id === boss)).toMatchObject({ recruiting: 1, departed: 0, mine: 'recruiting' });
     expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('none');

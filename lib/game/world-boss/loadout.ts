@@ -15,7 +15,7 @@ import { WEAK_SLOTS, type WeakSlot } from './weak';
  */
 export type LoadoutPiece = { ueid: string; slot: WeakSlot; code: string; name: string; cp: number; src: string | null; av: boolean; weak: boolean };
 export type Loadout = { pieces: LoadoutPiece[]; hasAvatar: boolean; power: number; weakCount: number; avatarCount: number };
-export type KnownWeak = { code: string; slot: WeakSlot; name: string; src: string | null; finder: string };
+export type KnownWeak = { code: string; slot: WeakSlot; name: string; src: string | null };
 
 type EqRow = { uid: string; ueid: string; code: string; name: string; slot: string; el: number; tl: number };
 type OwnRow = { ueid: string; code: string; name: string; slot: string; el: number; tl: number; on_: boolean };
@@ -34,14 +34,14 @@ export function currentPhase(stage: number): { index: number; from: number; to: 
   return { index, from: index * 5 + 1, to: index * 5 + 5 };
 }
 
-/** 그 페이즈에서 공개된 약점(이름·그림·발견자). */
+/** 그 페이즈에서 공개된 약점(이름·그림). 처음 맞힌 대원은 표(finder_*)에만 남고 화면엔 내지 않는다(10-10 사용자 결정). */
 export async function knownWeakOf(bossId: string, phase: number): Promise<KnownWeak[]> {
   const rows = (await db.execute(sql`
-    select r.code, r.slot, coalesce(ci.name, r.code) as name, r.finder_nickname as finder
+    select r.code, r.slot, coalesce(ci.name, r.code) as name
       from world_boss_weak_reveals r left join catalog_items ci on ci.code = r.code
      where r.boss_id = ${bossId}::bigint and r.phase = ${phase}
-     order by case r.slot when 'weapon' then 0 when 'armor' then 1 else 2 end, r.revealed_at`)) as unknown as { code: string; slot: string; name: string; finder: string }[];
-  return rows.filter((r) => isSlot(r.slot)).map((r) => ({ code: r.code, slot: r.slot as WeakSlot, name: r.name, src: spritePath(r.code), finder: r.finder }));
+     order by case r.slot when 'weapon' then 0 when 'armor' then 1 else 2 end, r.revealed_at`)) as unknown as { code: string; slot: string; name: string }[];
+  return rows.filter((r) => isSlot(r.slot)).map((r) => ({ code: r.code, slot: r.slot as WeakSlot, name: r.name, src: spritePath(r.code) }));
 }
 
 /** 사람들의 장착 상태(장착 3개 + 대표 아바타) — 공개된 약점 기준 전투력. */

@@ -65,6 +65,8 @@ export const worldBossParties = pgTable(
     guildId: bigint('guild_id', { mode: 'bigint' })
       .notNull()
       .references(() => guilds.id, { onDelete: 'cascade' }),
+    /** 소개글(0231, 선택·WORLD_BOSS_PARTY_INTRO_MAX자) — 만들 때 적고 모집 카드에 보인다. */
+    intro: text('intro'),
     status: text('status').$type<WorldBossPartyStatus>().notNull().default('recruiting'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     departedAt: timestamp('departed_at', { withTimezone: true }),

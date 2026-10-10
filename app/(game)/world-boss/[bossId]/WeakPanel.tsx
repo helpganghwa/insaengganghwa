@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 약점 패널(docs/WORLD-BOSS.md §3) — 지금 페이즈에서 맞혀서 공개된 약점(발견자 이름)과 내 장착 상태.
+ * 약점 패널(docs/WORLD-BOSS.md §3) — 지금 페이즈에서 맞혀서 공개된 약점과 내 장착 상태. 누가 밝혔는지는 보이지 않는다(10-10 사용자).
  * 공개 전 약점은 아무도 모른다. "약점에 맞춰 장착"은 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합으로 바꾼다.
  */
 import type { KnownWeak, Loadout, LoadoutPiece } from '@/lib/game/world-boss/loadout';
@@ -59,17 +59,12 @@ export function WeakPanel({
           {weakKnown.map((w) => (
             <div key={w.code} className="flex w-[104px] shrink-0 items-center gap-1 rounded-lg bg-stone-800/70 px-1.5 py-1">
               <ItemImg src={w.src} className="h-7 w-7 shrink-0" />
-              <span className="min-w-0 leading-tight">
-                <span className="block truncate text-[10.5px] text-stone-200">{w.name}</span>
-                <span className="block truncate text-[9px] text-stone-500">{w.finder}</span>
-              </span>
+              <span className="line-clamp-2 min-w-0 text-[10.5px] leading-tight text-stone-200">{w.name}</span>
             </div>
           ))}
         </div>
       )}
-      <p className="mt-1.5 text-[10px] leading-snug text-stone-500">
-        약점 장비는 피해 2배 · 한 번에 2개 이상 맞히면 보상 운 상승 · {phase.to + 1}단계부터 약점이 바뀌어요
-      </p>
+      <p className="mt-1.5 text-[10px] leading-snug text-stone-500">약점 장비는 전투력 2배 · 약점 장비 2개 이상 장착 시 높은 보상 획득 확률 증가</p>
 
       {mine && (
         <div className="mt-2 flex items-center gap-2 border-t border-stone-800 pt-2.5">
@@ -102,7 +97,6 @@ export function WeakPanel({
       {mine && !mine.loadout.hasAvatar && (
         <p className="mt-1.5 text-[10px] text-stone-500">대표 아바타를 장착 장비로 만들면 그 부위가 +50%예요.</p>
       )}
-      {mine?.best && <p className="mt-1 text-[10px] text-stone-500">장착은 게임 전체에 적용돼요.</p>}
     </section>
   );
 }

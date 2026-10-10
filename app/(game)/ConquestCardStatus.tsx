@@ -22,6 +22,7 @@ export function ConquestCardStatus({
   chronicleDay,
   chronicleHeadline,
   worldBossStage = null,
+  worldBossZoneName = null,
   nowIso,
 }: {
   inProgress: boolean;
@@ -32,6 +33,8 @@ export function ConquestCardStatus({
   chronicleHeadline: string | null;
   /** 지금 머무는 월드보스 단계(없으면 null) — 새 연대기 티저 다음 순위로, 카운트다운 대신 보인다. */
   worldBossStage?: number | null;
+  /** 보스가 머무는 구역 이름 — '○○에 월드보스 출현'(10-10 사용자: 어디 나왔는지도 보이게). */
+  worldBossZoneName?: string | null;
   /** 서버 렌더 시각 — 보정 시계의 출발점(lib/client/use-server-clock 주석). */
   nowIso: string;
 }) {
@@ -95,7 +98,11 @@ export function ConquestCardStatus({
       </span>
     );
   if (worldBossStage != null)
-    return <span className="font-extrabold text-orange-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">월드보스 출현</span>;
+    return (
+      <span className="font-extrabold text-orange-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+        {worldBossZoneName ? `${worldBossZoneName}에 월드보스 출현` : '월드보스 출현'}
+      </span>
+    );
   if (now == null) return <>다음 점령전까지</>; // 마운트 전 — 서버 렌더 폴백(하이드레이션 안전)
   const rem = Math.max(0, targetMs - now);
   const h = Math.floor(rem / 3_600_000);

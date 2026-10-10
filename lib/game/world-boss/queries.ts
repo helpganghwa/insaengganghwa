@@ -179,7 +179,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
 
   const partyRows = (await db.execute(sql`
-    select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, p.created_at, p.departed_at,
+    select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, p.intro, p.created_at, p.departed_at,
            p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes,
            (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
       from world_boss_parties p
@@ -187,12 +187,12 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join guilds g on g.id = p.guild_id
      where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
      order by p.created_at`)) as unknown as {
-    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; created_at: Date | string; departed_at: Date | string | null;
+    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
     damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
   }[];
   const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
   const parties: WorldBossPartyCard[] = partyRows.map((p) => ({
-    id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, memberCount: p.n,
+    id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, intro: p.intro, memberCount: p.n,
     createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
     stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
   }));
