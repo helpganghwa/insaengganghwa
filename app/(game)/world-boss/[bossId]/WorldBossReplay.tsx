@@ -17,7 +17,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
-import { worldBossStageFor } from '@/lib/game/guild/balance';
+import { type WorldBossTraitCode, worldBossLootFor, worldBossLootMult, worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
@@ -51,14 +51,14 @@ const BARE_ATTACK_LINES: ((nick: string) => string)[] = [
   (n) => `${n}#{이} 잿불을 뚫고 달려든다`,
 ];
 const BOSS_LINES: ((boss: string, nick: string) => string)[] = [
-  (b, n) => `${b}의 날갯짓 — 잿불이 ${n}#{을} 덮쳤다. 쓰러짐`,
-  (b, n) => `${b}#{이} 울부짖으며 불덩이를 토해 냈다 — ${n} 쓰러짐`,
+  (b, n) => `${b}의 날갯짓에 잿불이 ${n}#{을} 덮쳤다. 쓰러짐`,
+  (b, n) => `${b}#{이} 울부짖으며 불덩이를 토해 냈다. ${n} 쓰러짐`,
   (_, n) => `${n}#{이} 잿불 폭풍에 휩쓸려 쓰러졌다`,
-  (b, n) => `${b}의 발톱이 ${n}#{을} 낚아챘다 — 쓰러짐`,
+  (b, n) => `${b}의 발톱이 ${n}#{을} 낚아챘다. 쓰러짐`,
   (_, n) => `잿더미가 솟구쳐 ${n}#{을} 삼켰다. 쓰러짐`,
   (b, n) => `${b}의 꼬리 깃이 불꽃을 흩뿌려 ${n}#{이} 쓰러졌다`,
-  (b, n) => `${n}, ${b}의 눈빛에 묶인 채 잿불에 휘감겼다 — 쓰러짐`,
-  (_, n) => `불타는 깃털 소나기 — ${n}#{이} 버티지 못하고 쓰러졌다`,
+  (b, n) => `${n}, ${b}의 눈빛에 묶인 채 잿불에 휘감겨 쓰러졌다`,
+  (_, n) => `불타는 깃털 소나기에 ${n}#{이} 버티지 못하고 쓰러졌다`,
 ];
 /** 페이즈 게이지 컬러 — 레이드 카드와 같은 6색 순환(페이즈마다 다음 색, 10-11 사용자: 레이드와 같은 방식). */
 const PHASE_PALETTE = [
@@ -143,6 +143,8 @@ export function WorldBossReplay({
     // 페이즈 돌파 줄(10-11 사용자) — 출발 시점 누적(finale.start)이 있는 기록만: 공격 뒤 누적이 다음 페이즈 문턱을 넘으면 한 줄.
     const start = battle.finale.start;
     let stage = start != null ? worldBossStageFor(start).stage : null;
+    // 돌파로 금고에 쌓이는 전리품(10-11 사용자: 돌파 줄에 같이) — 페이즈 누적 전리품의 차이, 특성 '무거운 보물' 배율 포함.
+    const lootMult = worldBossLootMult(bossTraits.map((t) => t.code as WorldBossTraitCode));
     // 같은 사람이 연달아 같은 문장을 쓰지 않도록 k에 소수를 곱해 돌린다.
     const pick = <T,>(pool: T[], k: number): T => pool[(seed + k * 7) % pool.length]!;
     for (let k = 0; k < idx; k++) {
@@ -165,7 +167,9 @@ export function WorldBossReplay({
         if (start != null && stage != null) {
           const ns = worldBossStageFor(start + aux).stage;
           if (ns > stage) {
-            out.push({ key: `p${k}`, kind: 'phase', text: `PHASE ${ns} 돌파`, stage: ns });
+            const before = worldBossLootFor(stage, lootMult);
+            const after = worldBossLootFor(ns, lootMult);
+            out.push({ key: `p${k}`, kind: 'phase', text: `PHASE ${ns} 돌파`, stage: ns, loot: `전리품 💎${(after.diamond - before.diamond).toLocaleString('ko-KR')} 📦${after.boxes - before.boxes}` });
             stage = ns;
           }
         }
@@ -186,7 +190,7 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  }, [idx, events, roster, drops, weakBits, bossName, bossTraits, battle.partyId, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
@@ -384,9 +388,9 @@ export function WorldBossReplay({
             </div>
             {/* 보스 이름 · 페이즈 게이지(지금 페이즈·다음까지, 바닥 3px 바) — 무대 맨 아래. 원정대 피해 합계는 명단 머리로 옮겼다. 출발 누적이 없는 옛 기록은 합계를 여기 둔다. */}
             <div className={`absolute inset-x-0 z-10 flex items-baseline justify-between px-3 ${phase ? 'bottom-[13px]' : 'bottom-1.5'} ${phaseUp ? 'animate-phase-up' : ''}`}>
-              <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
-                {bossName}
-                {bossTraits.length > 0 && <span className="text-[11px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
+              <span className="flex min-w-0 items-center gap-1.5 pr-2 text-[13px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
+                <span className="shrink-0">{bossName}</span>
+                {bossTraits.length > 0 && <span className="min-w-0 truncate text-[10px] font-medium text-stone-400">{bossTraits.map((t) => t.name).join(' · ')}</span>}
               </span>
               {phase ? (
                 <span className="whitespace-nowrap text-[10.5px] text-stone-300 [text-shadow:0_1px_3px_#000]">
@@ -543,7 +547,7 @@ function LogText({ l }: { l: LogLine }) {
     const weak = l.weak ?? 0;
     return (
       <>
-        <span className="min-w-0 flex-1 truncate">▶ {l.text}</span>
+        <span className="min-w-0 flex-1 truncate">{l.text}</span>
         <span className="flex shrink-0 items-center gap-1.5">
           <b className={`font-mono tabular-nums ${weak >= 2 ? 'text-yellow-200' : weak === 1 ? 'text-amber-300' : 'text-orange-300'}`}>
             {formatCompactKR(l.dmg ?? 0)}
@@ -561,8 +565,15 @@ function LogText({ l }: { l: LogLine }) {
       </>
     );
   }
-  if (l.kind === 'boss') return <span className="min-w-0 flex-1 truncate">✦ {l.text}</span>;
-  if (l.kind === 'phase') return <span className="min-w-0 flex-1 truncate">⚡ {l.text}</span>;
-  if (l.kind === 'result') return <span className="min-w-0 flex-1 truncate">★ {l.text}</span>;
+  // 줄 종류는 글머리 기호 대신 왼쪽 선·색으로만 구분한다(10-11 사용자: 💎📦 말고는 이모지·기호 지양).
+  if (l.kind === 'phase') {
+    return (
+      <>
+        <span className="min-w-0 flex-1 truncate">{l.text}</span>
+        {l.loot && <span className="shrink-0 text-[11px] font-bold text-stone-100">{l.loot}</span>}
+      </>
+    );
+  }
+  if (l.kind === 'boss' || l.kind === 'result') return <span className="min-w-0 flex-1 truncate">{l.text}</span>;
   return <span className="min-w-0 truncate">{l.text}</span>;
 }
