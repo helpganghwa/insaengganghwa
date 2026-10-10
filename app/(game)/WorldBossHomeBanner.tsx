@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
+import { REGION_COLOR } from '@/components/ExecutorTag';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl } from '@/lib/game/world-boss/bosses';
@@ -51,8 +52,14 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
     window.dispatchEvent(new Event(CLOSED_EVENT));
   };
   return (
-    <div className="relative isolate h-[72px] w-full overflow-hidden rounded-xl border border-orange-700/60 bg-black">
-      <Link prefetch={false} href={`/world-boss/${b.id}`} className="flex h-full w-full items-center gap-2 pl-[78px] pr-2.5 active:opacity-90" aria-label={`${b.zone}에 월드보스 출현 — 토벌하기`}>
+    <div className="relative h-[72px] w-full">
+      {/* 안쪽 상자가 둥근 모서리·배경 클립을 맡고, ✕는 바깥 상자에 붙어 모서리에 걸친다(10-11 사용자). */}
+      <Link
+        prefetch={false}
+        href={`/world-boss/${b.id}`}
+        className="relative isolate flex h-full w-full items-center gap-2 overflow-hidden rounded-xl border border-orange-700/60 bg-black pl-[78px] pr-2.5 active:opacity-90"
+        aria-label={`${b.zone}에 월드보스 출현 — 토벌하기`}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(worldBossBgUrl(b.region))} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
         <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.78)_30%,rgba(12,10,9,0.7)_100%)]" />
@@ -60,7 +67,8 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         <span className="relative z-10 min-w-0 flex-1 leading-tight">
           <i className="mb-0.5 inline-block rounded-[3px] bg-orange-700 px-1.5 text-[8.5px] font-black not-italic text-white">월드보스 출현</i>
           <b className="block truncate text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">
-            {b.zone}
+            {/* 구역 이름은 지역색(세계지도·집행관 태그와 같은 REGION_COLOR, 10-11 사용자). */}
+            <span style={{ color: REGION_COLOR[b.region] ?? '#fcd34d' }}>{b.zone}</span>
             {b.owner ? ` · 🛡 ${b.owner}` : ''}
           </b>
           <small className="block truncate text-[10px] text-stone-300 [text-shadow:0_1px_2px_#000]">
@@ -69,9 +77,9 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         </span>
         <span className="relative z-10 shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(234,88,12,0.5)]">토벌하기</span>
       </Link>
-      {/* 닫기 — 강화 슬롯 취소 X와 같은 자리(왼쪽 위)·모양. 히트 영역은 p-1.5로 32px. */}
-      <button type="button" onClick={close} className="absolute left-0 top-0 z-20 p-1.5" aria-label="월드보스 배너 닫기">
-        <span className="flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/80 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95">✕</span>
+      {/* 닫기 — 강화 슬롯 취소 X 모양을 왼쪽 위 모서리에 반쯤 걸친다. 히트 영역은 p-1.5로 32px. */}
+      <button type="button" onClick={close} className="absolute -left-[13px] -top-[13px] z-20 p-1.5" aria-label="월드보스 배너 닫기">
+        <span className="flex h-5 w-5 items-center justify-center rounded-md border border-zinc-600 bg-zinc-950 text-[11px] leading-none text-zinc-300 shadow-[0_1px_3px_rgba(0,0,0,0.8)] active:scale-95">✕</span>
       </button>
     </div>
   );

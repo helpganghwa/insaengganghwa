@@ -321,7 +321,7 @@ export function WorldBossDetailView({
       <p className="mx-3 mt-2 text-[10.5px] leading-snug text-stone-400">
         {active
           ? owner
-            ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 가진 길드의 금고로 들어가요.`)
+            ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 점령한 길드의 금고로 들어가요.`)
             : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
           : owner
             ? josa(`${d.name}#{이} 재로 흩어지며 ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)

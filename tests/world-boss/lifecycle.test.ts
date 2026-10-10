@@ -172,7 +172,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(mem.map((m) => m.fell_round).sort()).toEqual([1, 2]);
     const [b] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(b!.t)).toBe(r.damage);
-    const mails = await q<{ user_id: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`select user_id::text as user_id, payload from mailbox where type='world_boss' and title='월드보스 원정 보상' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
+    const mails = await q<{ user_id: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`select user_id::text as user_id, payload from mailbox where type='world_boss' and title like '%원정 보상' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
     // 원정대원마다 자기 공격에서 뽑은 만큼(꽝뿐이면 우편 없음).
     const perUser = new Map<string, { diamond: number; boxes: number }>();
     r.finale!.events.forEach(([a], k) => {

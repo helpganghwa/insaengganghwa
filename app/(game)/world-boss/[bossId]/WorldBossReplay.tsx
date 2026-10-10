@@ -75,7 +75,7 @@ const seedOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0))
 type LootTier = 'small' | 'good' | 'jackpot';
 /** 보상 등급 — jackpot(💎300+·📦90+)은 금빛 광선, good(💎50+·📦30+)은 호박색 강조, 나머지는 어두운 알약(10-11 사용자: 높은 보상은 더 눈에 띄게). */
 const lootTier = (d: number, b: number): LootTier => (d >= 300 || b >= 90 ? 'jackpot' : d >= 50 || b >= 30 ? 'good' : 'small');
-type LogLine = { key: string; kind: 'round' | 'atk' | 'boss' | 'result'; text: string; dmg?: number; loot?: string; lootTier?: LootTier; weak?: number };
+type LogLine = { key: string; kind: 'round' | 'atk' | 'boss' | 'phase' | 'result'; text: string; dmg?: number; loot?: string; lootTier?: LootTier; weak?: number; /** phase 줄 — 돌파한 페이즈(색은 게이지 팔레트와 같게). */ stage?: number };
 
 export function WorldBossReplay({
   battle,
@@ -140,6 +140,9 @@ export function WorldBossReplay({
     const out: LogLine[] = [{ key: 'r1', kind: 'round', text: '1라운드' }];
     const dmgSum: number[] = [];
     const seed = seedOf(battle.partyId);
+    // 페이즈 돌파 줄(10-11 사용자) — 출발 시점 누적(finale.start)이 있는 기록만: 공격 뒤 누적이 다음 페이즈 문턱을 넘으면 한 줄.
+    const start = battle.finale.start;
+    let stage = start != null ? worldBossStageFor(start).stage : null;
     // 같은 사람이 연달아 같은 문장을 쓰지 않도록 k에 소수를 곱해 돌린다.
     const pick = <T,>(pool: T[], k: number): T => pool[(seed + k * 7) % pool.length]!;
     for (let k = 0; k < idx; k++) {
@@ -159,6 +162,13 @@ export function WorldBossReplay({
           lootTier: drop ? lootTier(drop[0], drop[1]) : undefined,
           weak: [1, 2, 4].filter((b) => (wb & b) !== 0).length,
         });
+        if (start != null && stage != null) {
+          const ns = worldBossStageFor(start + aux).stage;
+          if (ns > stage) {
+            out.push({ key: `p${k}`, kind: 'phase', text: `PHASE ${ns} 돌파`, stage: ns });
+            stage = ns;
+          }
+        }
       } else {
         const m = roster[t]!;
         out.push({ key: `e${k}`, kind: 'boss', text: josa(pick(BOSS_LINES, k)(bossName, m.nickname)) });
@@ -176,7 +186,7 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
@@ -360,9 +370,11 @@ export function WorldBossReplay({
                         ? 'self-center bg-black/60 px-3 text-[11px] tracking-widest text-stone-300'
                         : l.kind === 'boss'
                           ? 'border-l-2 border-red-500 bg-black/75 text-red-200'
-                          : l.kind === 'result'
-                            ? 'border-l-2 border-orange-400 bg-orange-950/85 font-bold text-orange-100'
-                            : 'bg-black/70 text-stone-50'
+                          : l.kind === 'phase'
+                            ? `border-l-2 border-current bg-black/75 font-black ${PHASE_PALETTE[(l.stage ?? 0) % PHASE_PALETTE.length]!.text}`
+                            : l.kind === 'result'
+                              ? 'border-l-2 border-orange-400 bg-orange-950/85 font-bold text-orange-100'
+                              : 'bg-black/70 text-stone-50'
                     }`}
                   >
                     <LogText l={l} />
@@ -474,7 +486,15 @@ export function WorldBossReplay({
                   <p
                     key={l.key}
                     className={`flex items-center gap-2 overflow-hidden whitespace-nowrap text-[11.5px] leading-relaxed ${
-                      l.kind === 'round' ? 'mt-1 justify-center text-[10.5px] tracking-widest text-stone-500' : l.kind === 'boss' ? 'text-red-200' : l.kind === 'result' ? 'font-bold text-orange-200' : 'text-stone-200'
+                      l.kind === 'round'
+                        ? 'mt-1 justify-center text-[10.5px] tracking-widest text-stone-500'
+                        : l.kind === 'boss'
+                          ? 'text-red-200'
+                          : l.kind === 'phase'
+                            ? `font-black ${PHASE_PALETTE[(l.stage ?? 0) % PHASE_PALETTE.length]!.text}`
+                            : l.kind === 'result'
+                              ? 'font-bold text-orange-200'
+                              : 'text-stone-200'
                     }`}
                   >
                     <LogText l={l} />
@@ -517,7 +537,7 @@ export function WorldBossReplay({
 }
 
 /** 일지 한 줄 — 부모가 flex. 문장은 왼쪽에서 줄어들고(말줄임), 피해·전리품은 줄 끝에 고정돼 길어도 잘리지 않는다(10-11 사용자).
- * 약점 적중은 숫자 스타일(호박색 빛)로만, 전리품도 테두리·배경 없이 글자 색·빛만(jackpot 금빛 · good 호박색 · small 회색). */
+ * 약점 적중은 숫자 색으로만(한 부위 호박·두 부위 노랑, 빛 없음 — 10-11 사용자), 전리품도 테두리·배경·빛 없이 색만(jackpot 노랑 · good 호박 · small 회색). */
 function LogText({ l }: { l: LogLine }) {
   if (l.kind === 'atk') {
     const weak = l.weak ?? 0;
@@ -525,14 +545,14 @@ function LogText({ l }: { l: LogLine }) {
       <>
         <span className="min-w-0 flex-1 truncate">▶ {l.text}</span>
         <span className="flex shrink-0 items-center gap-1.5">
-          <b className={`font-mono tabular-nums ${weak >= 2 ? 'text-amber-100 [text-shadow:0_0_8px_#fbbf24]' : weak === 1 ? 'text-amber-200 [text-shadow:0_0_6px_#f59e0b]' : 'text-orange-300'}`}>
+          <b className={`font-mono tabular-nums ${weak >= 2 ? 'text-yellow-200' : weak === 1 ? 'text-amber-300' : 'text-orange-300'}`}>
             {formatCompactKR(l.dmg ?? 0)}
           </b>
           {l.loot ? (
             l.lootTier === 'jackpot' ? (
-              <b className="text-amber-100 [text-shadow:0_0_8px_#fbbf24]">{l.loot}</b>
+              <b className="text-yellow-200">{l.loot}</b>
             ) : l.lootTier === 'good' ? (
-              <b className="text-amber-200 [text-shadow:0_0_6px_#f59e0b]">{l.loot}</b>
+              <b className="text-amber-300">{l.loot}</b>
             ) : (
               <span className="text-stone-300">{l.loot}</span>
             )
@@ -542,6 +562,7 @@ function LogText({ l }: { l: LogLine }) {
     );
   }
   if (l.kind === 'boss') return <span className="min-w-0 flex-1 truncate">✦ {l.text}</span>;
+  if (l.kind === 'phase') return <span className="min-w-0 flex-1 truncate">⚡ {l.text}</span>;
   if (l.kind === 'result') return <span className="min-w-0 flex-1 truncate">★ {l.text}</span>;
   return <span className="min-w-0 truncate">{l.text}</span>;
 }

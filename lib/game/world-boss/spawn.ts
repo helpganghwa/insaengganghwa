@@ -39,8 +39,8 @@ export async function activateDueBosses(serverId: number): Promise<Activated[]> 
       const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${b.owner}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
         title: '월드보스 출현',
-        body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요. 원정대를 꾸려 보세요.`),
-        url: '/guild/map',
+        body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요.`), // 짧게(10-11 사용자 B안) — 누르면 보스 상세.
+        url: `/world-boss/${b.id}`,
         tag: `world-boss-${b.id}`,
         category: 'world_boss',
       }).catch((e) => console.warn('[world-boss] spawn push failed', b.id, e));
@@ -121,16 +121,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
     out.push(settled);
     // 월드 로그 + 채팅 시스템 줄 — 트랜잭션 밖(best-effort). 정산이 확정된 뒤에만 알린다.
     await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossName: worldBossName(settled.region), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
-    if (settled.guildId) {
-      const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${settled.guildId}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
-      await sendPushToUsers(members.map((m) => m.user_id), {
-        title: '월드보스 전리품',
-        body: josa(`${settled.zoneName}의 ${worldBossName(settled.region)}#{이} 재로 흩어지며 길드 금고에 💎${settled.lootDiamond.toLocaleString('ko-KR')}·📦${settled.lootBoxes.toLocaleString('ko-KR')} 전리품을 남겼어요.`),
-        url: '/guild/distribute',
-        tag: `world-boss-left-${settled.id}`,
-        category: 'world_boss',
-      }).catch((e) => console.warn('[world-boss] left push failed', settled.id, e));
-    }
+    // 원정 종료 푸시는 보내지 않는다(10-11 사용자) — 전리품 우편·월드 로그·채팅 줄로 충분하다.
   }
   return out;
 }

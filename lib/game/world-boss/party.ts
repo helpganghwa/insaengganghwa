@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { sql } from 'drizzle-orm';
-import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
 import { randomUUID } from 'node:crypto';
@@ -9,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossLootFor, worldBossLootMult, worldBossStageFor, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 import { sendPushToUsers } from '@/lib/push/send';
+import { formatCompactKR } from '@/lib/ui/format-number';
 
 import { worldBossName } from './bosses';
 import { WorldBossError } from './errors';
@@ -125,12 +125,15 @@ export async function requestJoin(input: { userId: string; serverId: number; par
       on conflict (party_id, user_id) do nothing returning user_id`)) as unknown as unknown[];
     if (ins.length === 0) throw new WorldBossError('ALREADY_REQUESTED');
   });
-  // 대장에게 알림(best-effort).
-  const [p] = (await db.execute(sql`select leader_user_id::text as leader from world_boss_parties where id = ${input.partyId}::bigint`)) as unknown as { leader: string }[];
+  // 대장에게 알림(best-effort) — 누가 신청했는지 이름으로(10-11 사용자: 뒤 안내 문장 없음).
+  const [p] = (await db.execute(sql`
+    select p.leader_user_id::text as leader, c.nickname
+      from world_boss_parties p left join characters c on c.user_id = ${input.userId}::uuid and c.server_id = p.server_id
+     where p.id = ${input.partyId}::bigint`)) as unknown as { leader: string; nickname: string | null }[];
   if (p) {
     await sendPushToUsers([p.leader], {
       title: '원정대 참가 신청',
-      body: '원정대에 참가 신청이 들어왔어요. 수락하면 함께 출발해요.',
+      body: `${p.nickname ?? '누군가'}님이 내 원정대에 신청했어요.`,
       url: `/world-boss/party/${input.partyId}`,
       tag: `world-boss-party-${input.partyId}`,
       category: 'world_boss',
@@ -170,9 +173,11 @@ export async function decideJoin(input: { leaderUserId: string; serverId: number
        where p.id = r.party_id and p.boss_id = ${party.boss_id}::bigint and r.user_id = ${input.userId}::uuid and r.party_id <> ${party.id}::bigint`);
   });
   if (input.accept) {
+    // 어느 원정대인지 대장 이름으로(10-11 사용자: 뒤 안내 문장 없음).
+    const [l] = (await db.execute(sql`select c.nickname from world_boss_parties p join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id where p.id = ${input.partyId}::bigint`)) as unknown as { nickname: string }[];
     await sendPushToUsers([input.userId], {
-      title: '원정대 참가',
-      body: '원정대에 들어갔어요. 원정대장이 출발을 누르면 전투가 시작돼요.',
+      title: '원정대 합류',
+      body: `${l?.nickname ?? '원정대장'} 원정대에 들어갔어요.`,
       url: `/world-boss/party/${input.partyId}`,
       tag: `world-boss-party-${input.partyId}`,
       category: 'world_boss',
@@ -229,9 +234,14 @@ export type DepartResult = {
  * 뽑는 보상(복권)을 원정대 id만으로 미리 계산해 출발 시점을 고르는 일을 막는다(CLAUDE §3.1).
  * 같은 departKey 재전송은 저장된 결과를 돌려준다(한 번만 출발).
  */
+/** 보상 우편 본문 = 결과 푸시 본문(10-11 사용자 C안): "보스 · 내 공격 N번 · 피해 X". */
+function resultLine(bossName: string, m: { attacks: number; damage: number }): string {
+  return `${bossName} · 내 공격 ${m.attacks}번 · 피해 ${formatCompactKR(m.damage)}`;
+}
+
 export async function departParty(input: { leaderUserId: string; serverId: number; partyId: string; departKey: string }): Promise<DepartResult> {
   if (!/^[0-9a-f-]{36}$/i.test(input.departKey)) throw new WorldBossError('NOT_FOUND');
-  const result = await db.transaction(async (tx): Promise<DepartResult & { memberIds: string[]; zoneName: string; bossName: string }> => {
+  const result = await db.transaction(async (tx): Promise<DepartResult & { members: { userId: string; attacks: number; damage: number }[]; zoneName: string; bossName: string }> => {
     // 잠금 순서: 보스 → 원정대. 보스를 먼저 잠가 같은 보스의 동시 출발이 단계 계산에서 직렬화되게.
     const [pre] = (await tx.execute(sql`select boss_id::text as b from world_boss_parties where id = ${input.partyId}::bigint`)) as unknown as { b: string }[];
     if (!pre) throw new WorldBossError('NOT_FOUND');
@@ -246,7 +256,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
         const [f] = (await tx.execute(sql`select finale from world_boss_parties where id = ${party.id}::bigint`)) as unknown as { finale: WorldBossFinale | null }[];
         return {
           partyId: party.id, duplicate: true, damage: Number(party.damage), rounds: party.rounds, stageFrom: party.stage_from ?? 0, stageTo: party.stage_to ?? 0,
-          reward: { diamond: party.reward_diamond, boxes: party.reward_boxes }, finale: f?.finale ?? null, memberIds: [], zoneName: zone?.name ?? '', bossName,
+          reward: { diamond: party.reward_diamond, boxes: party.reward_boxes }, finale: f?.finale ?? null, members: [], zoneName: zone?.name ?? '', bossName,
         };
       }
       throw new WorldBossError('PARTY_NOT_RECRUITING');
@@ -268,7 +278,6 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
       uid: string; nickname: string; gid: string | null; gname: string | null; snap: unknown; is_default: boolean;
     }[];
     if (members.length === 0) throw new WorldBossError('NOT_MEMBER');
-    const ids = members.map((m) => m.uid);
     // 출발 순간 장착한 장비(부위당 하나) — 전투력 스냅샷.
     const eqRows = (await tx.execute(sql`
       select ue.user_id::text as uid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl
@@ -329,31 +338,37 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     await tx.execute(sql`delete from world_boss_invites where party_id = ${party.id}::bigint`);
 
     // 보상 우편 — 원정대원마다 공격에서 뽑은 만큼(복권). 아무것도 못 뽑은 사람은 우편 없음(결과 화면에서 확인).
-    const fight = josa(
-      `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혀 ${stageFrom}페이즈에서 ${stageTo}페이즈까지 올렸어요.`,
-    );
+    // 제목 "○○ 원정 보상", 본문은 한 줄 요약(10-11 사용자: 보스 · 내 공격 N번 · 피해 X). 결과 푸시도 같은 줄을 쓴다.
+    const mailTitle = `${zone?.name ?? '월드보스'} 원정 보상`;
     for (const m of sim.members) {
       if (m.diamond <= 0 && m.boxes <= 0) continue;
       const per = Math.floor(m.boxes / 3);
       const payload = JSON.stringify({ diamond: m.diamond, boxes: { weapon: per, armor: per, accessory: per } });
-      const body = `${fight} ${m.attacks}번 공격해 얻은 보상이에요.`;
       await tx.execute(sql`
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
-        values (${m.userId}::uuid, ${input.serverId}, 'world_boss'::mailbox_type, '월드보스 원정 보상', ${body}, '월드보스', ${payload}::jsonb, now() + interval '30 days')`);
+        values (${m.userId}::uuid, ${input.serverId}, 'world_boss'::mailbox_type, ${mailTitle}, ${resultLine(bossName, m)}, '월드보스', ${payload}::jsonb, now() + interval '30 days')`);
     }
 
-    return { partyId: party.id, duplicate: false, damage: sim.totalDamage, rounds: sim.rounds, stageFrom, stageTo, reward, finale: sim.finale, memberIds: ids, zoneName: zone?.name ?? '', bossName };
+    return {
+      partyId: party.id, duplicate: false, damage: sim.totalDamage, rounds: sim.rounds, stageFrom, stageTo, reward, finale: sim.finale,
+      members: sim.members.map((m) => ({ userId: m.userId, attacks: m.attacks, damage: m.damage })), zoneName: zone?.name ?? '', bossName,
+    };
   });
-  if (!result.duplicate && result.memberIds.length > 0) {
-    await sendPushToUsers(result.memberIds, {
-      title: '원정대 결과',
-      body: `${result.zoneName}의 ${result.bossName}에게 ${result.damage.toLocaleString('ko-KR')} 피해를 입혔어요. 공격마다 얻은 보상을 확인하세요.`,
-      url: `/world-boss/party/${result.partyId}`,
-      tag: `world-boss-party-${result.partyId}`,
-      category: 'world_boss',
-    }).catch(() => {});
+  if (!result.duplicate && result.members.length > 0) {
+    // 결과 알림 — 보상 우편과 같은 한 줄(10-11 사용자), 대원마다 제 숫자라 한 명씩 보낸다(최대 10명, best-effort).
+    await Promise.all(
+      result.members.map((m) =>
+        sendPushToUsers([m.userId], {
+          title: '원정대 결과',
+          body: resultLine(result.bossName, m),
+          url: `/world-boss/party/${result.partyId}`,
+          tag: `world-boss-party-${result.partyId}`,
+          category: 'world_boss',
+        }).catch(() => {}),
+      ),
+    );
   }
-  const { memberIds: _m, zoneName: _z, bossName: _b, ...out } = result;
+  const { members: _m, zoneName: _z, bossName: _b, ...out } = result;
   return out;
 }
 
