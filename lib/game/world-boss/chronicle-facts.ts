@@ -6,7 +6,7 @@
 export type WorldBossAtZone = { zone: string; name: string; stage: number; lootDiamond: number; lootBoxes: number };
 
 const lootText = (b: WorldBossAtZone) =>
-  b.stage > 0 ? `${b.stage}단계 · 쌓인 전리품 💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')}` : '아직 0단계 · 쌓인 전리품 없음';
+  b.stage > 0 ? `${b.stage}페이즈 · 쌓인 전리품 💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')}` : '아직 0페이즈 · 쌓인 전리품 없음';
 
 export function worldBossDigestLines(
   captures: readonly { zone: string; winner: string; from: string | null }[],

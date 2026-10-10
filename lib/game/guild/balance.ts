@@ -160,9 +160,7 @@ export type GuildTaxDistribution = 'equal' | 'target';
 
 // ── 월드보스 (docs/WORLD-BOSS.md) ──
 // 수치는 자리 표시(사용자 결정: 구현 뒤 스테이징에서 조정). 구조·규칙은 확정.
-/** 출현 시각 창(KST 시, [from, to)) — 그날 0시에 이 창 안의 분 단위 시각을 추첨한다. */
-export const WORLD_BOSS_SPAWN_KST_HOURS = { from: 9, to: 21 } as const;
-/** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. */
+/** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. 소환은 관리자가 즉시·예약으로(10-11, admin.ts). */
 export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
 /** 떠난 뒤 구역 시트에 기록 한 줄을 남기는 시간(ms) — 머무는 시간과 같은 48시간(사용자 확정 10-07). */
 export const WORLD_BOSS_LEFT_NOTE_MS = 48 * 60 * 60 * 1000;
@@ -172,7 +170,7 @@ export const WORLD_BOSS_PARTY_MAX = 10;
 export const WORLD_BOSS_PARTY_INTRO_MAX = 40;
 /**
  * 단계 체력(서버 공통 — 누구 땅이든 같다). 단계 k(1부터)를 넘기는 데 BASE × GROWTH^(k-1) 피해.
- * 단계는 끝이 없고, 전리품은 WORLD_BOSS_LOOT_STAGE_CAP단계까지만 쌓인다.
+ * 단계는 끝이 없고 전리품도 상한 없이 쌓인다(10-11 사용자: 30단계 상한 삭제). 화면 용어는 레이드처럼 '페이즈'.
  */
 // 실서버 시뮬로 확정(장착 3개 + 아바타 + 약점 기준, Winners 20.4·로제 17.7·Phoenix 14.6단계 — docs/WORLD-BOSS.md §3).
 // 2026-10-10 특성(0~2개 추첨) 도입으로 65만 → 75만(특성 평균 +1.3단계를 되돌려 평균 19단계 유지).
@@ -180,7 +178,6 @@ export const WORLD_BOSS_STAGE_BASE_HP = 750_000;
 export const WORLD_BOSS_STAGE_GROWTH = 1.1;
 /** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 금고로(집행관 몫 없음). 상자는 3의 배수. */
 export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 150, boxes: 12 } as const; // 2026-10-08 확정(L1)
-export const WORLD_BOSS_LOOT_STAGE_CAP = 30;
 /** 단계마다 떠날 때 주인 길드가 받는 길드 경험치. */
 export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
 /**
@@ -233,7 +230,7 @@ export const WORLD_BOSS_WEAK_BONUS = 1.0;
 /** 페이즈 = 5단계마다(공격 중인 단계 1~5 → 0, 6~10 → 1 …). 약점은 소환 때 페이즈마다 부위별 10개를 뽑아 고정한다. */
 export const WORLD_BOSS_PHASE_STAGES = 5;
 export const WORLD_BOSS_WEAK_PER_SLOT = 10;
-/** 뽑아 두는 페이즈 수 — 마지막 페이즈 뒤로는 마지막 약점이 이어진다(30단계 상한 + 여유). */
+/** 뽑아 두는 페이즈 수 — 마지막 페이즈 뒤로는 마지막 약점이 이어진다(단계 상한은 없다, 10-11). */
 export const WORLD_BOSS_PHASES = 7;
 /** 공격 중인 단계(1부터) → 페이즈 인덱스. */
 export function worldBossPhaseOf(attackingStage: number): number {
@@ -265,7 +262,8 @@ export function worldBossStageFor(totalDamage: number): { stage: number; into: n
 }
 /** 단계 수 → 쌓이는 길드 전리품(상한 단계까지만). mult = 보스 특성 '무거운 보물'(상자는 3의 배수로 맞춘다). */
 export function worldBossLootFor(stage: number, mult = 1): { diamond: number; boxes: number } {
-  const n = Math.max(0, Math.min(stage, WORLD_BOSS_LOOT_STAGE_CAP));
+  // 상한 없음(10-11 사용자: 30페이즈 상한 기획 삭제, 상한 없이 운영).
+  const n = Math.max(0, stage);
   return { diamond: Math.round(n * WORLD_BOSS_LOOT_PER_STAGE.diamond * mult), boxes: Math.round((n * WORLD_BOSS_LOOT_PER_STAGE.boxes * mult) / 3) * 3 };
 }
 
@@ -294,7 +292,7 @@ export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
   { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
   { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 ${1 + WORLD_BOSS_TRAIT.fatalWeakBonus}배` },
   { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 50% → ${50 + WORLD_BOSS_TRAIT.goldenMissDelta / 1000}%` },
-  { code: 'heavy_treasure', group: 'boss', icon: '💰', name: '무거운 보물', effect: `단계 전리품 +${Math.round((WORLD_BOSS_TRAIT.heavyLoot - 1) * 100)}%` },
+  { code: 'heavy_treasure', group: 'boss', icon: '💰', name: '무거운 보물', effect: `페이즈 전리품 +${Math.round((WORLD_BOSS_TRAIT.heavyLoot - 1) * 100)}%` },
 ];
 export function worldBossTraitDef(code: string): WorldBossTraitDef | undefined {
   return WORLD_BOSS_TRAITS.find((t) => t.code === code);

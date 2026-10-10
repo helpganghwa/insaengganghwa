@@ -4,69 +4,17 @@ import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
-import { WORLD_BOSS_GUILD_XP_PER_STAGE, WORLD_BOSS_SPAWN_KST_HOURS, WORLD_BOSS_STAY_MS, drawWorldBossTraits, guildXpToNext, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_GUILD_XP_PER_STAGE, guildXpToNext } from '@/lib/game/guild/balance';
 import { sendPushToUsers } from '@/lib/push/send';
-import { kstDateString, kstStartOfDay } from '@/lib/kst';
-
 import { worldBossName } from './bosses';
-import { cryptoRand, drawWeakForNewBoss } from './weak-server';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
- *  ① ensureTodayBoss: 그날 행이 없으면 출현 시각(09~21시 분 단위)과 점령 구역을 추첨해 '예정'으로 만든다.
- *  ② activateDueBosses: 출현 시각이 지난 '예정' → '출현'(월드 피드 + 주인 길드 푸시).
- *  ③ settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 금고에 전리품·길드 경험치, 우편)
+ *  ① activateDueBosses: 출현 시각이 지난 '예정' → '출현'(월드 피드 + 주인 길드 푸시). 소환 자체는 관리자(admin.ts, 10-11)가 한다.
+ *  ② settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 금고에 전리품·길드 경험치, 우편)
  *     → '떠남'. 출발하지 않은 원정대는 해산.
- * 전부 멱등 — 조건부 UPDATE·유니크 키라 두 틱이 겹쳐도 한 번만 적용된다.
+ * 전부 멱등 — 조건부 UPDATE라 두 틱이 겹쳐도 한 번만 적용된다.
  */
-
-const HOUR = 60 * 60 * 1000;
-
-function rngU32(): number {
-  return crypto.getRandomValues(new Uint32Array(1))[0]!;
-}
-
-/** 그날 보스가 없으면 만든다. 창(09~21시)이 지났거나 점령 구역이 없으면 그날은 건너뛴다. */
-export async function ensureTodayBoss(
-  serverId: number,
-  now: Date = new Date(),
-): Promise<{ created: boolean; bossId?: string; skipped?: 'exists' | 'window_passed' | 'no_owned_zone' | 'race' }> {
-  const kstDay = kstDateString(now);
-  const [exists] = (await db.execute(sql`select id::text as id from world_bosses where server_id = ${serverId} and kst_day = ${kstDay}::date`)) as unknown as { id: string }[];
-  if (exists) return { created: false, bossId: exists.id, skipped: 'exists' };
-
-  const dayStart = kstStartOfDay(now).getTime();
-  const windowStart = dayStart + WORLD_BOSS_SPAWN_KST_HOURS.from * HOUR;
-  const windowEnd = dayStart + WORLD_BOSS_SPAWN_KST_HOURS.to * HOUR;
-  // 크론이 늦게 떴어도 남은 창 안에서 뽑는다(분 단위 올림). 창이 지났으면 그날은 없다.
-  const lower = Math.ceil(Math.max(now.getTime(), windowStart) / 60_000) * 60_000;
-  if (lower >= windowEnd) return { created: false, skipped: 'window_passed' };
-  const minutes = Math.floor((windowEnd - lower) / 60_000);
-  const spawnAt = new Date(lower + (rngU32() % minutes) * 60_000);
-  const leaveAt = new Date(spawnAt.getTime() + WORLD_BOSS_STAY_MS);
-
-  // 점령된 구역 중 보스가 없는(예정·출현 중이 아닌) 곳에서 균등 추첨 — 구역 수 비례(쏠림은 의도, 완화 없음).
-  const zonesRows = (await db.execute(sql`
-    select z.id, z.region::text as region, z.owner_guild_id::text as owner
-      from zones z
-     where z.server_id = ${serverId} and z.owner_guild_id is not null
-       and not exists (select 1 from world_bosses b where b.zone_id = z.id and b.status in ('scheduled', 'active'))
-  `)) as unknown as { id: number; region: string; owner: string }[];
-  if (zonesRows.length === 0) return { created: false, skipped: 'no_owned_zone' };
-  const pick = zonesRows[rngU32() % zonesRows.length]!;
-
-  // 특성(0~2개)과 페이즈별 약점은 소환 때 고정(docs/WORLD-BOSS.md §3) — 정찰한 정보가 그 보스가 머무는 동안 유효하다. 약점 수는 특성을 따른다.
-  const traits = drawWorldBossTraits(cryptoRand);
-  const weak = await drawWeakForNewBoss(db, worldBossWeakPerSlot(traits));
-  const [ins] = (await db.execute(sql`
-    insert into world_bosses (server_id, zone_id, region, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
-    values (${serverId}, ${pick.id}, ${pick.region}, ${kstDay}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled', ${pick.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb)
-    on conflict (server_id, kst_day) do nothing
-    returning id::text as id
-  `)) as unknown as { id: string }[];
-  if (!ins) return { created: false, skipped: 'race' };
-  return { created: true, bossId: ins.id };
-}
 
 type Activated = { id: string; zone_id: number; zone_name: string; region: string; owner: string | null; owner_name: string | null };
 
@@ -151,7 +99,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
                               level = ${next.level}, xp = ${next.xp.toString()}::bigint
              where id = ${b.owner}::bigint`);
           const body =
-            `${b.zone_name}의 ${bossName}#{이} 재로 흩어졌어요. ${b.stage}단계까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
+            `${b.zone_name}의 ${bossName}#{이} 재로 흩어졌어요. ${b.stage}페이즈까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
             `길드 관리의 세금 분배에서 나눌 수 있어요.`;
           await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)

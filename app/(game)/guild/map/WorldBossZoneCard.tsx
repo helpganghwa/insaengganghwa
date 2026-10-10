@@ -62,7 +62,7 @@ export function WorldBossZoneCard(
           )}
         </span>
         <span className={`text-[18px] font-black leading-none [text-shadow:0_1px_3px_#000] ${left ? 'text-zinc-300' : 'text-orange-400'}`}>
-          {left ? `최종 ${props.stage}단계` : `${props.stage}단계`}
+          {left ? `최종 ${props.stage}페이즈` : `${props.stage}페이즈`}
         </span>
         <Ticker intervalMs={60_000}>
           {(now) => (

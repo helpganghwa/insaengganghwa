@@ -271,10 +271,10 @@ export function WorldBossReplay({
             <p className="text-[11px] text-stone-500">원정대 피해</p>
             {moved > 0 ? (
               <p className="mt-2 animate-wb-round rounded-full bg-orange-500/15 px-3 py-1 text-[14px] font-extrabold text-orange-200 ring-1 ring-orange-500/50">
-                {bossName} {battle.stageTo}단계까지 <span className="text-orange-300">+{moved}단계</span>
+                {bossName} {battle.stageTo}페이즈까지 <span className="text-orange-300">+{moved}페이즈</span>
               </p>
             ) : (
-              <p className="mt-2 text-[12px] text-stone-400">보스 {battle.stageTo}단계 그대로</p>
+              <p className="mt-2 text-[12px] text-stone-400">보스 {battle.stageTo}페이즈 그대로</p>
             )}
           </div>
           <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-orange-950/50 px-3 py-2.5">

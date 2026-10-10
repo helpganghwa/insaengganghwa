@@ -170,7 +170,7 @@ export function WorldBossDetailView({
   const mp = d.myParty;
   const recruiting = useMemo(() => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId), [d.parties, mp]);
   const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
-  // 다음 단계까지 남은 피해 — %가 아니라 남은 수치로(10-11 사용자: 모든 '%' 표기는 남은 양으로).
+  // 다음 페이즈까지 남은 피해 — %가 아니라 남은 수치로(10-11 사용자: 모든 '%' 표기는 남은 양으로). 화면 용어는 레이드처럼 '페이즈'(코드의 stage, 10-11).
   const remainHp = Math.max(0, d.need - d.into);
   const owner = active ? d.ownerGuildName : d.settledGuildName;
   const ownerEmblem = active ? d.ownerGuildEmblem : d.settledGuildEmblem;
@@ -281,11 +281,11 @@ export function WorldBossDetailView({
         <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
           <span className="flex flex-col">
             <b className={`text-[28px] font-black leading-none [text-shadow:0_1px_3px_#000] ${active ? 'text-orange-400' : 'text-stone-300'}`}>
-              {active ? `${d.stage}단계` : `최종 ${d.stage}단계`}
+              {active ? `${d.stage}페이즈` : `최종 ${d.stage}페이즈`}
             </b>
             {active && (
               <span className="mt-1 text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
-                {d.stage + 1}단계까지 <b className="text-orange-300">{formatCompactKR(remainHp)}</b>
+                다음 페이즈까지 <b className="text-orange-300">{formatCompactKR(remainHp)}</b>
               </span>
             )}
           </span>
@@ -369,14 +369,21 @@ export function WorldBossDetailView({
             ))}
           </div>
           {/* 구성 특성 적용 상태 — 켜진 것은 초록, 아직인 것은 회색으로 조건(시안 ②). */}
+          {/* 구성 특성 — 라벨만 켜짐/꺼짐으로(10-11 사용자: 설명 없이), 누르면 특성 설명 시트. 적용 배율·합산은 출발 팝업에서. */}
           {mp.status === 'recruiting' && traitStatus.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {traitStatus.map((s) => {
                 const t = worldBossTraitDef(s.code)!;
                 return (
-                  <span key={s.code} className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-stone-800 text-stone-500'}`}>
-                    {t.icon} {t.name} {s.active ? `×${s.mult} 적용 중 · ${s.note}` : `— ${s.note}`}
-                  </span>
+                  <button
+                    key={s.code}
+                    type="button"
+                    onClick={() => setTraitSheet(true)}
+                    aria-pressed={s.active}
+                    className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
+                  >
+                    {t.icon} {t.name}
+                  </button>
                 );
               })}
             </div>
@@ -581,7 +588,7 @@ export function WorldBossDetailView({
               <div className="absolute bottom-2 left-2.5 z-[2] [text-shadow:0_1px_2px_#000]">
                 <span className="block text-[10.5px] text-orange-200">{d.name}</span>
                 <b className="block text-[13px] text-stone-100">
-                  {d.stage}단계 · {d.stage + 1}단계까지 {formatCompactKR(remainHp)}
+                  {d.stage}페이즈 · 다음 페이즈까지 {formatCompactKR(remainHp)}
                 </b>
               </div>
               {d.traits.length > 0 && (
@@ -665,11 +672,8 @@ export function WorldBossDetailView({
                   <span className="ml-auto shrink-0 rounded-full bg-orange-700 px-1.5 text-[9px] font-extrabold leading-[1.6] text-orange-50">미리보기</span>
                   <span className="shrink-0 font-mono text-[11px] font-extrabold tabular-nums text-orange-300">1/{WORLD_BOSS_PARTY_MAX}</span>
                 </div>
-                {intro.trim() ? (
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{intro.replace(/\s+/g, ' ').trim()}</p>
-                ) : (
-                  <p className="mt-1 text-[11px] text-stone-600">소개글 없이 만들어요</p>
-                )}
+                {/* 소개글을 안 적으면 아무 줄도 두지 않는다(10-11 사용자). */}
+                {intro.trim() && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{intro.replace(/\s+/g, ' ').trim()}</p>}
                 <Roster
                   members={[{ userId: me.person.userId, nickname: me.person.nickname, combat: me.person.combat, damage: 0, isLeader: true, guildEmblemUrl: me.person.guildEmblemUrl, guildEmblemColor: me.person.guildEmblemColor }]}
                   value="combat"

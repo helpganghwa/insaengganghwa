@@ -6,7 +6,8 @@ import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
-import { activateDueBosses, ensureTodayBoss, settleLeftBosses } from '@/lib/game/world-boss/spawn';
+import { cancelScheduledWorldBoss, spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
+import { activateDueBosses, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
 import { endTestDb, sql, testDb } from '../db';
 
@@ -63,6 +64,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     await testDb.execute(sql`delete from world_bosses where server_id=${S} and kst_day < '2001-01-01'`);
     await testDb.execute(sql`delete from mailbox where type='world_boss' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from world_events where server_id=${S} and type like 'world_boss_%' and created_at >= ${t0.toISOString()}`);
+    await testDb.execute(sql`delete from admin_actions where admin_user_id=${T}::uuid and action in ('world_boss_spawn','world_boss_cancel') and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from mailbox where title='길드 전리품 분배' and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from guild_audit_log where action='loot_distribute' and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`update zones set owner_guild_id=${zoneOwnerBefore}::bigint where id=${ZONE}`);
@@ -70,19 +72,36 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     await endTestDb();
   });
 
-  it('예약: 그날 행은 하나만(두 번 불러도 같은 행), 창이 지났으면 건너뜀', async () => {
-    const a = await ensureTodayBoss(S);
-    const b = await ensureTodayBoss(S);
-    if (a.created) {
-      expect(b).toEqual({ created: false, bossId: a.bossId, skipped: 'exists' });
-      const [row] = await q<{ status: string; region: string }>(sql`select status, region from world_bosses where id=${a.bossId}::bigint`);
-      expect(row!.status).toBe('scheduled');
-      await testDb.execute(sql`delete from world_bosses where id=${a.bossId}::bigint`);
-    } else {
-      expect(['exists', 'window_passed', 'no_owned_zone']).toContain(a.skipped);
-      if (a.skipped === 'exists') expect(b.skipped).toBe('exists');
-    }
-  });
+  it('관리자 소환: 즉시 출현·같은 구역 중복 거절·겹치면 확인 뒤에만 두 마리·예약 취소는 예정만', async () => {
+    // 스테이징엔 다른 보스가 머물 수 있어 첫 소환부터 겹침 확인을 통과시킨다.
+    const r1 = await spawnWorldBossByAdmin({ serverId: S, zoneId: ZONE, spawnAt: null, adminUserId: T, allowOverlap: true });
+    expect(r1.ok).toBe(true);
+    if (!r1.ok) return;
+    bossIds.push(r1.bossId);
+    expect(r1.status).toBe('active');
+    const [row] = await q<{ status: string; traits: unknown }>(sql`select status, traits from world_bosses where id=${r1.bossId}::bigint`);
+    expect(row!.status).toBe('active');
+    expect(Array.isArray(row!.traits)).toBe(true);
+    expect(await spawnWorldBossByAdmin({ serverId: S, zoneId: ZONE, spawnAt: null, adminUserId: T, allowOverlap: true })).toEqual({ ok: false, code: 'ZONE_BUSY' });
+    // 다른 구역에 예약 — 머무는 시간이 겹치면 확인 없이는 OVERLAP(겹치는 목록에 r1), 확인하면 예정으로 들어간다.
+    const [other] = await q<{ id: number }>(sql`select id from zones where server_id=${S} and id<>${ZONE} and not exists (select 1 from world_bosses b where b.zone_id=zones.id and b.status in ('scheduled','active')) order by id limit 1`);
+    const at = new Date(Date.now() + 3_600_000);
+    const r2 = await spawnWorldBossByAdmin({ serverId: S, zoneId: other!.id, spawnAt: at, adminUserId: T, allowOverlap: false });
+    expect(r2.ok).toBe(false);
+    if (r2.ok) return;
+    expect(r2.code).toBe('OVERLAP');
+    if (r2.code === 'OVERLAP') expect(r2.overlapping.map((o) => o.id)).toContain(r1.bossId);
+    const r3 = await spawnWorldBossByAdmin({ serverId: S, zoneId: other!.id, spawnAt: at, adminUserId: T, allowOverlap: true });
+    expect(r3.ok).toBe(true);
+    if (!r3.ok) return;
+    bossIds.push(r3.bossId);
+    expect(r3.status).toBe('scheduled');
+    expect(await spawnWorldBossByAdmin({ serverId: S, zoneId: other!.id, spawnAt: new Date(Date.now() - 3_600_000), adminUserId: T, allowOverlap: true })).toEqual({ ok: false, code: 'PAST' });
+    // 예약 취소는 예정만 — 출현 중은 못 지운다.
+    expect(await cancelScheduledWorldBoss({ serverId: S, bossId: r1.bossId, adminUserId: T })).toBe(false);
+    expect(await cancelScheduledWorldBoss({ serverId: S, bossId: r3.bossId, adminUserId: T })).toBe(true);
+    await testDb.execute(sql`delete from world_bosses where id=${r1.bossId}::bigint`);
+  }, 20_000);
 
   it('출현: 출현 시각이 지난 예정 보스만 출현으로 바뀌고 월드 피드에 남는다', async () => {
     const due = await makeBoss('2000-01-01', { status: 'scheduled', spawnOffsetMs: -60_000 });

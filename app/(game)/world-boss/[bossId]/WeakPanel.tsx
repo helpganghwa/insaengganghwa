@@ -117,7 +117,7 @@ export function WeakPanel({
     <section className="mx-3 mt-3 rounded-xl border border-stone-800 bg-stone-900 px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <b className="text-[13px] text-stone-100">
-          약점 <span className="text-[11px] font-normal text-stone-500">{phase.from}~{phase.to}단계</span>
+          약점 <span className="text-[11px] font-normal text-stone-500">{phase.from}~{phase.to}페이즈</span>
         </b>
         <span className="text-[11px] text-stone-500">
           밝혀짐 <b className="text-orange-300">{weakKnown.length}</b>/{weakTotal}

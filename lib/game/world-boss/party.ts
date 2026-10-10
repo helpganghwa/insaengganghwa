@@ -328,7 +328,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
 
     // 보상 우편 — 원정대원마다 공격에서 뽑은 만큼(복권). 아무것도 못 뽑은 사람은 우편 없음(결과 화면에서 확인).
     const fight = josa(
-      `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혀 ${stageFrom}단계에서 ${stageTo}단계까지 올렸어요.`,
+      `${zone?.name ?? ''}의 ${bossName}#{을} 상대로 원정대가 ${sim.rounds}라운드 동안 ${sim.totalDamage.toLocaleString('ko-KR')} 피해를 입혀 ${stageFrom}페이즈에서 ${stageTo}페이즈까지 올렸어요.`,
     );
     for (const m of sim.members) {
       if (m.diamond <= 0 && m.boxes <= 0) continue;

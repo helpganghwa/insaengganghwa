@@ -14,7 +14,7 @@ export type WorldBossPartyStatus = 'recruiting' | 'departed' | 'disbanded';
 export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected';
 export type WorldBossWeakPhase = { weapon: string[]; armor: string[]; accessory: string[] };
 
-/** 보스 1마리 = 1행. (server_id, kst_day) 유니크 = 서버마다 하루 1마리. */
+/** 보스 1마리 = 1행. 관리자가 구역을 지정해 소환(10-11, 0233) — 같은 날 여러 마리 가능, 구역당 출현 중/예정은 한 마리(소환 트랜잭션이 검사). */
 export const worldBosses = pgTable(
   'world_bosses',
   {
@@ -25,9 +25,9 @@ export const worldBosses = pgTable(
       .references(() => zones.id, { onDelete: 'cascade' }),
     /** 보스 종류 = 출현 구역의 지역(zone_region 값 스냅샷). 그림·이름은 지역마다 하나. */
     region: text('region').notNull(),
-    /** 추첨한 날(KST). 0시에 그날 행을 만든다. */
+    /** 출현 시각의 날짜(KST) — 기록·조회용. */
     kstDay: date('kst_day').notNull(),
-    /** 출현 시각(09~21시 KST 무작위). 이 시각 전에는 status 'scheduled'. */
+    /** 출현 시각(관리자가 즉시 또는 예약으로 지정). 이 시각 전에는 status 'scheduled'. */
     spawnAt: timestamp('spawn_at', { withTimezone: true }).notNull(),
     /** = spawn_at + WORLD_BOSS_STAY_MS. 지나면 크론이 정산하고 'left'. */
     leaveAt: timestamp('leave_at', { withTimezone: true }).notNull(),
@@ -49,7 +49,10 @@ export const worldBosses = pgTable(
     traits: jsonb('traits').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('world_bosses_server_day_uq').on(t.serverId, t.kstDay), index('world_bosses_server_status_idx').on(t.serverId, t.status)],
+  (t) => [
+    index('world_bosses_server_day_idx').on(t.serverId, t.kstDay),
+    index('world_bosses_server_status_idx').on(t.serverId, t.status),
+  ],
 );
 
 /** 원정대 — 점령 길드원이 만든다(guild_id = 만든 시점의 구역 주인). 출발하면 전투 결과를 이 행에 담는다. */

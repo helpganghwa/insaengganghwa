@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   WORLD_BOSS_LOOT_PER_STAGE,
-  WORLD_BOSS_LOOT_STAGE_CAP,
   WORLD_BOSS_ATTACK_DROPS,
   WORLD_BOSS_ATTACK_DROP_TOTAL,
   WORLD_BOSS_STAGE_BASE_HP,
@@ -49,7 +48,8 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
   it('전리품은 단계 수만큼 쌓이고 상한 단계에서 멈춘다, 상자는 3의 배수', () => {
     expect(worldBossLootFor(0)).toEqual({ diamond: 0, boxes: 0 });
     expect(worldBossLootFor(3)).toEqual({ diamond: 3 * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: 3 * WORLD_BOSS_LOOT_PER_STAGE.boxes });
-    expect(worldBossLootFor(WORLD_BOSS_LOOT_STAGE_CAP + 10)).toEqual(worldBossLootFor(WORLD_BOSS_LOOT_STAGE_CAP));
+    // 상한 없음(10-11): 40단계도 그대로 쌓인다.
+    expect(worldBossLootFor(40)).toEqual({ diamond: 40 * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: Math.round((40 * WORLD_BOSS_LOOT_PER_STAGE.boxes) / 3) * 3 });
     expect(WORLD_BOSS_LOOT_PER_STAGE.boxes % 3).toBe(0);
   });
 

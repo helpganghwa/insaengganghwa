@@ -170,6 +170,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '정상/포화/닫힘 전환 — 포화는 신규 생성만 차단, 닫힘은 크론 순회에서 제외',
   },
   {
+    href: '/admin/world-boss',
+    icon: '🔥',
+    title: '월드보스 소환',
+    desc: '서버·구역 지정 즉시/예약 소환 · 예정 취소 · 동시에 2마리는 한 번 더 확인',
+  },
+  {
     href: '/admin/maintenance',
     icon: '🔧',
     title: '서버 점검',
