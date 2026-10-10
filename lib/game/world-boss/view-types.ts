@@ -7,6 +7,9 @@ export type WorldBossPartyCard = {
   status: 'recruiting' | 'departed';
   leaderNickname: string;
   guildName: string | null;
+  /** 길드 문양(+대표색) — 길드 이름은 항상 문양과 함께 보인다(10-10 사용자). */
+  guildEmblemUrl: string | null;
+  guildEmblemColor: string | null;
   /** 만들 때 적은 소개글(선택, WORLD_BOSS_PARTY_INTRO_MAX자) — 모집 카드·내 원정대 패널에 보인다. */
   intro: string | null;
   /** 모집 중 원정대의 명단(대장 먼저, 나머지는 참가 순) — 이름·월드보스 전투력. 완료된 원정대는 빈 배열(전투 보기로 본다). */
@@ -30,6 +33,8 @@ export type WorldBossPerson = {
   nickname: string;
   code: string | null;
   guildName: string | null;
+  guildEmblemUrl: string | null;
+  guildEmblemColor: string | null;
   /** 월드보스 전투력 — 장착 3개 + 아바타·공개된 약점 보너스(docs/WORLD-BOSS.md §3). */
   combat: number;
   /** 공개된 약점을 장착한 부위 수 · 아바타 보너스를 받는 부위 수(0~3). */
@@ -51,16 +56,19 @@ export type WorldBossMyParty = {
 };
 
 /**
- * 내 상태 — none(참가 전) · pending(신청 대기, partyId) · member(모집 중 원정대 소속) · fought(이 보스와 이미 싸움).
+ * 내 상태 — none(참가 전) · pending(신청 대기 중인 원정대가 하나 이상) · member(모집 중 원정대 소속) · fought(이 보스와 이미 싸움).
  * canCreate = 구역 주인 길드원이고 참가 전·신청 대기 아님·보스가 머무는 중.
  */
 export type WorldBossMe = {
   userId: string;
   state: 'none' | 'pending' | 'member' | 'fought';
-  pendingPartyId: string | null;
+  /** 대기 중 신청을 걸어 둔 원정대들 — 여러 곳에 동시에 신청할 수 있다(10-10). 한 곳에 수락되면 나머지는 사라진다. */
+  pendingPartyIds: string[];
   canCreate: boolean;
   /** 내 길드가 구역 주인인가 — '만들기는 ○○ 길드원만' 안내 분기. */
   isOwnerGuild: boolean;
+  /** 나(이름·길드·전투력) — 원정대를 만들 때 낙관적으로 내 원정대 패널을 바로 그리기 위해(보스가 머무는 중·캐릭터 있을 때). */
+  person: WorldBossPerson | null;
 };
 
 export type WorldBossDetail = {
@@ -79,9 +87,11 @@ export type WorldBossDetail = {
   need: number;
   lootDiamond: number;
   lootBoxes: number;
-  /** 지금 구역 주인(머무는 동안) — 떠날 때 이 길드 금고로. 떠난 뒤엔 정산 받은 길드. */
+  /** 지금 구역 주인(머무는 동안) — 떠날 때 이 길드 금고로. 떠난 뒤엔 정산 받은 길드. 이름은 문양과 함께 보인다. */
   ownerGuildName: string | null;
+  ownerGuildEmblem: { url: string | null; color: string | null } | null;
   settledGuildName: string | null;
+  settledGuildEmblem: { url: string | null; color: string | null } | null;
   parties: WorldBossPartyCard[];
   me: WorldBossMe | null;
   myParty: WorldBossMyParty | null;
@@ -113,6 +123,8 @@ export type WorldBossBattle = {
   stageTo: number;
   /** 원정대 전체 획득 합(공격마다 뽑은 보상의 합 — 원정대원마다 몫이 다르다). */
   reward: { diamond: number; boxes: number };
+  /** 길드 문양(userId → 문양·대표색) — 기록의 길드 이름과 지금 소속이 같은 사람만. 기록엔 이름만 있어 문양은 지금 것을 쓴다. */
+  guildEmblems?: Record<string, { url: string | null; color: string | null }>;
   /** 원정대원 얼굴 썸네일(userId → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
   avatars: Record<string, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;
 };

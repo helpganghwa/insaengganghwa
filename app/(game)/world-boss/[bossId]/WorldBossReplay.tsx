@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
@@ -209,7 +210,13 @@ export function WorldBossReplay({
                       </span>
                     </span>
                     <span className="flex min-w-0 items-center gap-1 text-[10px] text-stone-500">
-                      <span className="truncate">{fellR != null ? <span className="text-red-300">{fellR}라운드에 쓰러짐</span> : (m.guildName ?? '무소속')}</span>
+                      {fellR != null ? (
+                        <span className="truncate text-red-300">{fellR}라운드에 쓰러짐</span>
+                      ) : m.guildName ? (
+                        <GuildBadge emblemUrl={battle.guildEmblems?.[m.userId]?.url ?? null} emblemColor={battle.guildEmblems?.[m.userId]?.color ?? null} name={m.guildName} size={10} className="min-w-0" />
+                      ) : (
+                        <span className="truncate">무소속</span>
+                      )}
                       {/* 이번 공격의 약점 적중 — 두 부위 이상이면 금빛(보상 운이 좋아진 공격, 리뷰 R2) */}
                       {slots.length > 0 && (
                         <span

@@ -54,13 +54,12 @@ export function WeakPanel({
       {weakKnown.length === 0 ? (
         <p className="mt-1 text-[11px] text-stone-400">아직 없어요. 약점 장비로 공격하면 하나씩 드러나요.</p>
       ) : (
-        // 한 줄 가로 스크롤 — 많아져도 패널 높이가 늘지 않는다.
-        <div className="-mx-3 mt-1.5 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]">
+        // 그림만 간단히(10-10 사용자) — 이름은 title로. 줄바꿈해도 한 칸 36px라 30개여도 네 줄 안쪽.
+        <div className="mt-1.5 flex flex-wrap gap-1">
           {weakKnown.map((w) => (
-            <div key={w.code} className="flex w-[104px] shrink-0 items-center gap-1 rounded-lg bg-stone-800/70 px-1.5 py-1">
-              <ItemImg src={w.src} className="h-7 w-7 shrink-0" />
-              <span className="line-clamp-2 min-w-0 text-[10.5px] leading-tight text-stone-200">{w.name}</span>
-            </div>
+            <span key={w.code} title={w.name} className="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-800/70">
+              <ItemImg src={w.src} className="h-8 w-8" />
+            </span>
           ))}
         </div>
       )}

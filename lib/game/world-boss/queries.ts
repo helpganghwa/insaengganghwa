@@ -140,12 +140,12 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
   const ids = [...new Set(userIds)];
   const [rows, lo] = await Promise.all([
     db.execute(sql`
-      select c.user_id::text as uid, c.nickname, p.public_code as code, g.name as gname
+      select c.user_id::text as uid, c.nickname, p.public_code as code, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor
         from characters c
         join profiles p on p.id = c.user_id
         left join guild_members gm on gm.user_id = c.user_id and gm.server_id = c.server_id
         left join guilds g on g.id = gm.guild_id
-       where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null }[]>,
+       where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null; gurl: string | null; gcolor: string | null }[]>,
     loadoutsOf(serverId, ids, known),
   ]);
   const faces = new Map((await profilesByIds(ids, serverId).catch(() => [])).map((f) => [f.userId, f] as const));
@@ -153,7 +153,7 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
     const f = faces.get(r.uid);
     const l = lo.get(r.uid);
     out.set(r.uid, {
-      userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname,
+      userId: r.uid, nickname: r.nickname, code: r.code, guildName: r.gname, guildEmblemUrl: r.gurl, guildEmblemColor: r.gcolor,
       combat: l?.power ?? 0, weakCount: l?.weakCount ?? 0, avatarCount: l?.avatarCount ?? 0,
       avatarSrc: f?.profileSouth ?? null, faceBox: f?.faceBox ?? null,
     });
@@ -167,19 +167,21 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const [b] = (await db.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.status, b.spawn_at, b.leave_at,
            b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes,
-           z.owner_guild_id::text as owner_id, og.name as owner_name, sg.name as settled_name
+           z.owner_guild_id::text as owner_id, og.name as owner_name, og.emblem_url as owner_emblem, og.emblem_color as owner_color,
+           sg.name as settled_name, sg.emblem_url as settled_emblem, sg.emblem_color as settled_color
       from world_bosses b join zones z on z.id = b.zone_id
       left join guilds og on og.id = z.owner_guild_id
       left join guilds sg on sg.id = b.settled_guild_id
      where b.id = ${bossId}::bigint`)) as unknown as {
     id: string; server_id: number; zone_id: number; zone_name: string; region: string; status: 'scheduled' | 'active' | 'left';
     spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number;
-    owner_id: string | null; owner_name: string | null; settled_name: string | null;
+    owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
+    settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
   }[];
   if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
 
   const partyRows = (await db.execute(sql`
-    select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, p.intro, p.created_at, p.departed_at,
+    select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor, p.intro, p.created_at, p.departed_at,
            p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes,
            (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
       from world_boss_parties p
@@ -187,7 +189,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join guilds g on g.id = p.guild_id
      where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
      order by p.created_at`)) as unknown as {
-    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
+    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
     damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
   }[];
   const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
@@ -221,23 +223,26 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const parties: WorldBossPartyCard[] = partyRows.map((p) => {
     const members = membersOf(p);
     return {
-      id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, intro: p.intro,
+      id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, guildEmblemUrl: p.gurl, guildEmblemColor: p.gcolor, intro: p.intro,
       members, combatSum: members.reduce((s, m) => s + m.combat, 0), memberCount: p.n,
       createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
       stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
     };
   });
   if (userId) {
-    const [[mem], [req], [gm]] = await Promise.all([
+    const [[mem], reqs, [gm]] = await Promise.all([
       db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
                       where m.boss_id = ${bossId}::bigint and m.user_id = ${userId}::uuid limit 1`) as unknown as Promise<{ pid: string; status: 'recruiting' | 'departed'; leader: string }[]>,
+      // 대기 중 신청 전부(여러 곳 동시 신청, 10-10) — 모집 중인 원정대 것만.
       db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
-                      where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' limit 1`) as unknown as Promise<{ pid: string }[]>,
+                      where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' order by r.created_at`) as unknown as Promise<{ pid: string }[]>,
       db.execute(sql`select guild_id::text as g from guild_members where user_id = ${userId}::uuid and server_id = ${serverId}`) as unknown as Promise<{ g: string }[]>,
     ]);
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
-    const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : req ? 'pending' : 'none';
-    me = { userId, state, pendingPartyId: req?.pid ?? null, canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild };
+    const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
+    // 나 자신(낙관적 '내 원정대' 그리기용) — 머무는 보스에서 아직 싸우지 않았을 때만(명단에 이미 있으면 거기서 온다).
+    const mePerson = active && !mem ? ((await peopleOn(serverId, [userId], known)).get(userId) ?? null) : null;
+    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: mePerson };
     if (mem) {
       const isLeader = mem.leader === userId;
       const [memIds, reqIds] = await Promise.all([
@@ -247,7 +252,8 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           : Promise.resolve([] as { uid: string }[]),
       ]);
       const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known);
-      const person = (uid: string): WorldBossPerson => people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null };
+      const person = (uid: string): WorldBossPerson =>
+        people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null };
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
@@ -268,7 +274,9 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     id: b.id, serverId: b.server_id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, name: worldBossName(b.region),
     status: active ? 'active' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
     stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
-    ownerGuildName: b.owner_name, settledGuildName: b.settled_name, parties, me, myParty,
+    ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
+    settledGuildName: b.settled_name, settledGuildEmblem: b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
+    parties, me, myParty,
     phase, weakKnown, weakTotal: WORLD_BOSS_WEAK_PER_SLOT * 3, mine,
   };
 }
@@ -291,11 +299,27 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
     reward_diamond: number; reward_boxes: number; leader: string | null;
   }[];
   if (!r?.finale) return null;
-  const faces = await profilesByIds(r.finale.roster.map((m) => m.userId), serverId).catch(() => []);
+  const ids = r.finale.roster.map((m) => m.userId).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+  const [faces, guildRows] = await Promise.all([
+    profilesByIds(ids, serverId).catch(() => []),
+    ids.length > 0
+      ? (db.execute(sql`
+          select gm.user_id::text as uid, g.name, g.emblem_url as url, g.emblem_color as color
+            from guild_members gm join guilds g on g.id = gm.guild_id
+           where gm.server_id = ${serverId} and gm.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; name: string; url: string | null; color: string | null }[]>)
+      : Promise.resolve([]),
+  ]);
   const avatars: import('./view-types').WorldBossBattle['avatars'] = {};
   for (const f of faces) avatars[f.userId] = { src: f.profileSouth, box: f.faceBox ?? null };
+  // 길드 문양 — 기록엔 이름만 있어 지금 소속의 문양을 쓰되, 그 사이 길드를 옮긴 사람은 빼놓는다(다른 길드 문양이 붙지 않게).
+  const guildEmblems: NonNullable<import('./view-types').WorldBossBattle['guildEmblems']> = {};
+  for (const g of guildRows) {
+    const rec = r.finale.roster.find((m) => m.userId === g.uid);
+    if (rec && rec.guildName === g.name) guildEmblems[g.uid] = { url: g.url, color: g.color };
+  }
   return {
     avatars,
+    guildEmblems,
     partyId: r.id,
     leaderNickname: r.leader ?? '알 수 없음',
     finale: r.finale,

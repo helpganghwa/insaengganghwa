@@ -2,15 +2,17 @@
 
 /**
  * 월드보스 상세 화면(docs/WORLD-BOSS.md §9). 위에서부터: 무대 히어로(이름·단계·전리품·남은 시간을 무대 안에) · 전리품 안내 한 줄 ·
- * 약점/내 장착 · 지금 할 일(신청 대기·안내) · 내 원정대 · [모집 중 | 완료] 원정대 카드, 그리고 지금 누를 버튼 하나를 바닥에 고정한다
- * (만들기 / 출발 / 내 전투 다시 보기). 고정 버튼은 채팅 미니바 높이(--chat-dock-h)만큼 띄워 가리지 않는다. 액션은 서버 액션이 현재 경로를 재렌더해 새 상태가 props로 온다
- * (router.refresh 없음, CLAUDE §11.7). 출발 직후와 '전투 보기'는 WorldBossReplay로 재생.
+ * 약점/내 장착 · 지금 할 일(원정대 만들기 / 신청 대기 / 안내) · 내 원정대(출발·해산·나가기·내 전투 다시 보기는 패널 안) · [모집 중 | 완료] 원정대 카드.
+ * 바닥 고정 버튼은 두지 않는다(채팅 미니바 위에 떠서 어색했다, 10-10 사용자).
+ * 액션은 모두 **낙관적**(useOptimistic): 누르는 즉시 화면을 바꾸고 서버 액션이 현재 경로를 재렌더해 확정된 상태가 props로 온다(실패하면 토스트 + 자동 복귀).
+ * (router.refresh 없음, CLAUDE §11.7). 출발만은 결과가 서버 RNG라 낙관 없이 기다렸다가 WorldBossReplay로 재생.
  */
 import Link from 'next/link';
 import { josa } from 'josa';
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 
 import { BackFab } from '@/components/BackNav';
+import { GuildBadge } from '@/components/GuildBadge';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -40,6 +42,89 @@ import { WorldBossReplay } from './WorldBossReplay';
 type ActionRes = { status: 'success' } | { status: 'error'; message: string };
 const FAIL = '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
 
+/** 낙관적 패치 — 누르는 즉시 화면에 반영할 변화. 서버 재렌더가 오면 버려지고 확정 상태로 바뀐다. */
+type Patch =
+  | { t: 'request'; partyId: string }
+  | { t: 'cancel'; partyId: string }
+  | { t: 'decide'; userId: string; accept: boolean }
+  | { t: 'leave' }
+  | { t: 'create'; intro: string }
+  | { t: 'equipBest' };
+
+const OPT_PARTY_ID = 'opt-create';
+
+function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
+  const me = s.me;
+  const active = s.status === 'active';
+  switch (p.t) {
+    case 'request':
+      if (!me) return s;
+      return { ...s, me: { ...me, state: 'pending', pendingPartyIds: [...me.pendingPartyIds, p.partyId], canCreate: false } };
+    case 'cancel': {
+      if (!me) return s;
+      const ids = me.pendingPartyIds.filter((x) => x !== p.partyId);
+      const state = ids.length > 0 ? 'pending' : 'none';
+      return { ...s, me: { ...me, state, pendingPartyIds: ids, canCreate: active && me.isOwnerGuild && state === 'none' } };
+    }
+    case 'decide': {
+      const mp = s.myParty;
+      if (!mp) return s;
+      const req = mp.requests.find((r) => r.userId === p.userId);
+      const requests = mp.requests.filter((r) => r.userId !== p.userId);
+      if (!p.accept || !req) return { ...s, myParty: { ...mp, requests } };
+      return {
+        ...s,
+        myParty: { ...mp, requests, members: [...mp.members, { ...req, isLeader: false }] },
+        parties: s.parties.map((c) =>
+          c.id === mp.partyId
+            ? { ...c, memberCount: c.memberCount + 1, members: [...c.members, { userId: req.userId, nickname: req.nickname, combat: req.combat, isLeader: false }], combatSum: c.combatSum + req.combat }
+            : c,
+        ),
+      };
+    }
+    case 'leave': {
+      const mp = s.myParty;
+      if (!mp || !me) return s;
+      const parties = mp.isLeader
+        ? s.parties.filter((c) => c.id !== mp.partyId)
+        : s.parties.map((c) =>
+            c.id === mp.partyId
+              ? { ...c, memberCount: Math.max(0, c.memberCount - 1), members: c.members.filter((m) => m.userId !== me.userId), combatSum: c.combatSum - (c.members.find((m) => m.userId === me.userId)?.combat ?? 0) }
+              : c,
+          );
+      return { ...s, parties, myParty: null, me: { ...me, state: 'none', pendingPartyIds: [], canCreate: active && me.isOwnerGuild } };
+    }
+    case 'create': {
+      if (!me?.person) return s;
+      const who = me.person;
+      const intro = p.intro.replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX) || null;
+      const card: WorldBossPartyCard = {
+        id: OPT_PARTY_ID, status: 'recruiting', leaderNickname: who.nickname, guildName: who.guildName, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor,
+        intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, isLeader: true }], combatSum: who.combat, memberCount: 1,
+        createdAt: Date.now(), departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0,
+      };
+      return {
+        ...s,
+        parties: [...s.parties, card],
+        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [] },
+        me: { ...me, state: 'member', pendingPartyIds: [], canCreate: false },
+      };
+    }
+    case 'equipBest': {
+      const mine = s.mine;
+      if (!mine?.best) return s;
+      const pieces = mine.best.pieces;
+      return {
+        ...s,
+        mine: {
+          loadout: { ...mine.loadout, pieces, power: mine.best.power, weakCount: pieces.filter((x) => x.weak).length, avatarCount: pieces.filter((x) => x.av).length },
+          best: null,
+        },
+      };
+    }
+  }
+}
+
 function remain(ms: number): string {
   const m = Math.ceil(ms / 60_000);
   if (m <= 0) return '곧 원정 종료';
@@ -49,7 +134,7 @@ function remain(ms: number): string {
 const won = (n: number) => n.toLocaleString('ko-KR');
 
 export function WorldBossDetailView({
-  detail: d,
+  detail,
   serverId,
   spriteSrc,
   bgSrc,
@@ -62,6 +147,8 @@ export function WorldBossDetailView({
 }) {
   const { showError, showHeaderToast } = useResourceToast();
   const [pending, start] = useTransition();
+  // 낙관적 상태 — 전환(start) 안에서 patch를 먼저 적용하고 서버 액션을 기다린다. 성공하면 재렌더된 detail이, 실패하면 원래 detail이 남는다.
+  const [d, patch] = useOptimistic(detail, applyPatch);
   // 떠난 보스는 모집이 끝났으니 출발 탭을 먼저 연다(리뷰 10-08).
   const [tab, setTab] = useState<'recruiting' | 'departed'>(d.status === 'active' ? 'recruiting' : 'departed');
   const [departAsk, setDepartAsk] = useState(false);
@@ -76,13 +163,16 @@ export function WorldBossDetailView({
   const mp = d.myParty;
   const recruiting = useMemo(() => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId), [d.parties, mp]);
   const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
-  const pendingParty = me?.pendingPartyId ? d.parties.find((p) => p.id === me.pendingPartyId) : undefined;
+  // 대기 중 신청들 — 여러 원정대에 동시에 걸 수 있다(10-10 사용자).
+  const pendingParties = useMemo(() => (me ? d.parties.filter((p) => me.pendingPartyIds.includes(p.id)) : []), [d.parties, me]);
   const pct = d.need > 0 ? Math.min(100, (d.into / d.need) * 100) : 0;
   const owner = active ? d.ownerGuildName : d.settledGuildName;
+  const ownerEmblem = active ? d.ownerGuildEmblem : d.settledGuildEmblem;
   const myCard = mp ? d.parties.find((p) => p.id === mp.partyId) : undefined;
 
-  const run = (fn: () => Promise<ActionRes>, ok?: { title: string; detail?: string }) =>
+  const run = (fn: () => Promise<ActionRes>, ok?: { title: string; detail?: string }, p?: Patch) =>
     start(async () => {
+      if (p) patch(p);
       const r = await fn().catch(() => ({ status: 'error' as const, message: FAIL }));
       if (r.status === 'error') return showError(r.message);
       if (ok) showHeaderToast({ icon: '⚔️', ...ok });
@@ -90,7 +180,7 @@ export function WorldBossDetailView({
 
   const create = () => {
     setCreateAsk(false);
-    run(() => createPartyAction(d.id, intro), { title: '원정대를 만들었어요', detail: '함께 갈 사람을 기다려요' });
+    run(() => createPartyAction(d.id, intro), { title: '원정대를 만들었어요', detail: '함께 갈 사람을 기다려요' }, { t: 'create', intro });
   };
 
   const depart = () => {
@@ -137,7 +227,7 @@ export function WorldBossDetailView({
           <WorldBossSprite
             region={d.region}
             alt={d.name}
-            className="absolute left-1/2 top-[46%] z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
+            className="absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
             style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(234,88,12,0.6))' }}
           />
         ) : (
@@ -146,7 +236,7 @@ export function WorldBossDetailView({
           <img
             src={spriteSrc}
             alt={d.name}
-            className="absolute left-1/2 top-[46%] z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2 object-contain opacity-60 grayscale"
+            className="absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2 object-contain opacity-60 grayscale"
             style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
           />
         )}
@@ -157,9 +247,14 @@ export function WorldBossDetailView({
             </span>
             <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{d.name}</h1>
           </span>
-          <span className="truncate text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
-            {d.zoneName}
-            {owner ? ` · ${owner} 땅` : ' · 주인 없음'}
+          <span className="flex min-w-0 items-center gap-1 text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
+            <span className="shrink-0">{d.zoneName} ·</span>
+            {/* '○○ 땅' 대신 문양 + 길드 이름만(10-10 사용자) */}
+            {owner ? (
+              <GuildBadge emblemUrl={ownerEmblem?.url ?? null} emblemColor={ownerEmblem?.color ?? null} name={owner} size={12} className="min-w-0" />
+            ) : (
+              <span>주인 없음</span>
+            )}
           </span>
         </div>
         <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
@@ -204,7 +299,7 @@ export function WorldBossDetailView({
           weakTotal={d.weakTotal}
           mine={d.mine}
           pending={pending}
-          onEquipBest={() => run(() => equipBestAction(d.id), { title: '약점에 맞춰 장착했어요' })}
+          onEquipBest={() => run(() => equipBestAction(d.id), { title: '약점에 맞춰 장착했어요' }, { t: 'equipBest' })}
         />
       )}
 
@@ -214,22 +309,34 @@ export function WorldBossDetailView({
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
           ) : me.state === 'pending' ? (
-            <div className="flex items-center gap-2 rounded-xl border border-orange-500/45 bg-orange-950/30 px-3 py-2.5">
-              <span className="min-w-0 flex-1 text-[12px] text-orange-100">
-                <b>{pendingParty ? `${pendingParty.leaderNickname} 원정대` : '원정대'}</b>에 신청했어요
-                <span className="block text-[10.5px] text-orange-200/70">원정대장이 수락하면 알림으로 알려 드려요</span>
-              </span>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => me.pendingPartyId && run(() => cancelRequestAction(d.id, me.pendingPartyId!), { title: '신청을 취소했어요' })}
-                className="shrink-0 rounded-lg border border-orange-500/45 bg-stone-900 px-3 py-1.5 text-[11.5px] font-bold text-orange-300 disabled:opacity-40"
-              >
-                신청 취소
-              </button>
+            // 신청한 원정대마다 한 줄 + 신청 취소(여러 곳 동시 신청). 한 곳에 수락되면 나머지는 저절로 사라진다.
+            <div className="rounded-xl border border-orange-500/45 bg-orange-950/30 px-3 py-1.5">
+              {pendingParties.map((pp) => (
+                <div key={pp.id} className="flex items-center gap-2 py-1">
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-orange-100">
+                    <b>{pp.leaderNickname} 원정대</b>에 신청했어요
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => run(() => cancelRequestAction(d.id, pp.id), { title: '신청을 취소했어요' }, { t: 'cancel', partyId: pp.id })}
+                    className="shrink-0 rounded-lg border border-orange-500/45 bg-stone-900 px-3 py-1.5 text-[11.5px] font-bold text-orange-300"
+                  >
+                    신청 취소
+                  </button>
+                </div>
+              ))}
+              <span className="block pb-1 text-[10.5px] text-orange-200/70">원정대장이 수락하면 알림으로 알려 드려요{pendingParties.length > 1 ? ' · 한 곳에 수락되면 다른 신청은 사라져요' : ''}</span>
             </div>
           ) : me.canCreate ? (
-            <p className="text-center text-[10.5px] text-stone-500">우리 땅의 보스예요 · 최대 10명 · 보스 하나에 1번</p>
+            // 원정대 만들기 — 바닥 고정 대신 제자리에(10-10 사용자: 채팅 미니바 위에 떠서 어색했다).
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setCreateAsk(true)}
+              className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
+            >
+              원정대 만들기
+            </button>
           ) : me.state === 'fought' ? (
             <Notice>이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.</Notice>
           ) : (
@@ -245,7 +352,8 @@ export function WorldBossDetailView({
       {mp && (
         <section className="mx-3 mt-3 rounded-xl border border-orange-500/45 bg-stone-900 p-3">
           <div className="mb-2 flex items-center gap-1.5">
-            <b className="text-[13px] text-stone-100">내 원정대</b>
+            {/* 이름은 모집 카드와 같은 '대장 닉네임 원정대'(10-10 사용자) */}
+            <b className="truncate text-[13px] text-stone-100">{mp.members.find((m) => m.isLeader)?.nickname ?? myCard?.leaderNickname ?? ''} 원정대</b>
             <span className={`rounded-full px-1.5 py-px text-[9.5px] font-extrabold ${mp.isLeader ? 'bg-orange-700 text-orange-50' : 'bg-stone-700 text-stone-200'}`}>
               {mp.isLeader ? '원정대장' : '원정대원'}
             </span>
@@ -259,7 +367,8 @@ export function WorldBossDetailView({
               <MemberChip key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />
             ))}
             {mp.status === 'recruiting' &&
-              Array.from({ length: Math.max(0, Math.min(2, WORLD_BOSS_PARTY_MAX - mp.members.length)) }, (_, i) => (
+              // 빈 자리는 하나만(10-10 사용자)
+              Array.from({ length: Math.max(0, Math.min(1, WORLD_BOSS_PARTY_MAX - mp.members.length)) }, (_, i) => (
                 <div key={`e${i}`} className="flex h-12 items-center justify-center rounded-lg border border-dashed border-stone-700 text-[10.5px] text-stone-600">
                   빈 자리
                 </div>
@@ -272,24 +381,25 @@ export function WorldBossDetailView({
               {mp.requests.map((r) => (
                 <div key={r.userId} className="mt-1.5 flex items-center gap-2">
                   <Body src={r.avatarSrc} h="h-10" />
-                  <span className="min-w-0 flex-1 truncate text-[12px] text-stone-200">
-                    {r.nickname}
-                    <span className="ml-1 text-[10px] text-stone-500">
-                      {r.guildName ?? '무소속'} · {formatCompactKR(r.combat)}{r.weakCount > 0 && <span className="text-orange-400"> · 약점 {r.weakCount}</span>}
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate text-[12px] text-stone-200">{r.nickname}</span>
+                    <span className="flex min-w-0 items-center gap-1 text-[10px] text-stone-500">
+                      <Guild p={r} />
+                      <span className="shrink-0">· {formatCompactKR(r.combat)}</span>
                     </span>
                   </span>
                   <button
                     type="button"
-                    disabled={pending || mp.members.length >= WORLD_BOSS_PARTY_MAX}
-                    onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, true))}
+                    disabled={mp.members.length >= WORLD_BOSS_PARTY_MAX || mp.partyId === OPT_PARTY_ID}
+                    onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, true), undefined, { t: 'decide', userId: r.userId, accept: true })}
                     className="rounded-md bg-orange-700 px-2.5 py-1 text-[11px] font-bold text-orange-50 disabled:opacity-40"
                   >
                     수락
                   </button>
                   <button
                     type="button"
-                    disabled={pending}
-                    onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, false))}
+                    disabled={mp.partyId === OPT_PARTY_ID}
+                    onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, false), undefined, { t: 'decide', userId: r.userId, accept: false })}
                     className="rounded-md bg-stone-800 px-2.5 py-1 text-[11px] font-bold text-stone-400 disabled:opacity-40"
                   >
                     거절
@@ -300,32 +410,50 @@ export function WorldBossDetailView({
           )}
 
           {mp.status === 'recruiting' ? (
-            <>
-              {mp.isLeader ? (
+            mp.isLeader ? (
+              // 원정대장: 해산(작게) + 출발(크게) — 바닥 고정 대신 패널 안에(10-10 사용자). 출발은 확인 팝업(명단·합산 전투력).
+              <div className="mt-2.5 flex gap-2">
                 <button
                   type="button"
-                  disabled={pending}
-                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' })}
-                  className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400 disabled:opacity-40"
+                  disabled={pending || mp.partyId === OPT_PARTY_ID}
+                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' })}
+                  className="w-20 shrink-0 rounded-xl border border-stone-700 py-3 text-[12.5px] font-bold text-stone-400 disabled:opacity-40"
                 >
                   해산
                 </button>
-              ) : (
+                <button
+                  type="button"
+                  disabled={pending || !active || mp.partyId === OPT_PARTY_ID}
+                  onClick={() => setDepartAsk(true)}
+                  className="flex-1 rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
+                >
+                  출발 <span className="text-[12px] font-bold text-orange-200/90">· {mp.members.length}명</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대에서 나왔어요' }, { t: 'leave' })}
+                className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400"
+              >
+                나가기
+              </button>
+            )
+          ) : (
+            myCard && (
+              <>
+                <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
+                  <DepartedSummary p={myCard} />
+                </div>
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대에서 나왔어요' })}
-                  className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400 disabled:opacity-40"
+                  onClick={() => openBattle(myCard.id)}
+                  className="mt-2 w-full rounded-xl bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50 disabled:opacity-40"
                 >
-                  나가기
+                  내 전투 다시 보기
                 </button>
-              )}
-            </>
-          ) : (
-            myCard && (
-              <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
-                <DepartedSummary p={myCard} />
-              </div>
+              </>
             )
           )}
         </section>
@@ -367,9 +495,10 @@ export function WorldBossDetailView({
             />
           ) : (
             recruiting.map((p) => {
-              const isPending = me?.pendingPartyId === p.id;
+              const isPending = me?.pendingPartyIds.includes(p.id) ?? false;
               const full = p.memberCount >= WORLD_BOSS_PARTY_MAX;
-              const canRequest = active && me?.state === 'none' && !full;
+              // 다른 원정대에 신청해 둔 채로도 더 신청할 수 있다(여러 곳 동시 신청).
+              const canRequest = active && (me?.state === 'none' || me?.state === 'pending') && !full;
               return (
                 <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending ? 'border-orange-500/55' : 'border-stone-800'}`}>
                   <PartyHead p={p} />
@@ -404,9 +533,8 @@ export function WorldBossDetailView({
                     ) : canRequest ? (
                       <button
                         type="button"
-                        disabled={pending}
-                        onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '원정대장이 수락하면 알려 드려요' })}
-                        className="rounded-lg bg-orange-700 px-3 py-1.5 text-[11.5px] font-bold text-orange-50 disabled:opacity-40"
+                        onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '원정대장이 수락하면 알려 드려요' }, { t: 'request', partyId: p.id })}
+                        className="rounded-lg bg-orange-700 px-3 py-1.5 text-[11.5px] font-bold text-orange-50"
                       >
                         참가 신청
                       </button>
@@ -419,7 +547,7 @@ export function WorldBossDetailView({
         ) : departed.length === 0 ? (
           <Empty title="아직 완료된 원정대가 없어요" />
         ) : (
-          departed.map((p) => (
+          departed.map((p, i) => (
             <button
               key={p.id}
               type="button"
@@ -427,46 +555,14 @@ export function WorldBossDetailView({
               disabled={pending}
               className={`rounded-xl border bg-stone-900 p-2.5 text-left disabled:opacity-60 ${p.id === mp?.partyId ? 'border-orange-500/55' : 'border-stone-800'}`}
             >
-              <PartyHead p={p} />
+              {/* 피해 많은 순 — 순위를 앞에(10-10 사용자) */}
+              <PartyHead p={p} rank={i + 1} />
               <DepartedSummary p={p} />
               <span className="mt-1 block text-right text-[10.5px] font-bold text-orange-300">전투 보기 ›</span>
             </button>
           ))
         )}
       </div>
-
-      {/* 하단 고정 — 지금 누를 버튼 하나(만들기 / 출발 / 내 전투 다시 보기). 스크롤해도 바닥에 붙는다. */}
-      {(() => {
-        // 종류만 고르고 실제 동작은 클릭 때 고른다(렌더 중 ref를 쥔 함수를 만들지 않도록).
-        const kind: 'create' | 'depart' | 'replay' | null =
-          active && !mp && me && me.state !== 'pending' && me.canCreate
-            ? 'create'
-            : mp?.isLeader && mp.status === 'recruiting' && active
-              ? 'depart'
-              : mp && mp.status !== 'recruiting' && myCard
-                ? 'replay'
-                : null;
-        const go = () => {
-          if (kind === 'create') setCreateAsk(true);
-          // 출발은 인원과 무관하게 확인 팝업(명단·합산 전투력을 되읽어 준다, 10-10 사용자).
-          else if (kind === 'depart' && mp) setDepartAsk(true);
-          else if (kind === 'replay' && myCard) openBattle(myCard.id);
-        };
-        const c = kind && { label: kind === 'create' ? '원정대 만들기' : kind === 'depart' ? '출발' : '내 전투 다시 보기', sub: kind === 'depart' && mp ? `${mp.members.length}명` : '' };
-        return c ? (
-          <div style={{ bottom: 'var(--chat-dock-h, 0px)' }} className="sticky z-10 mt-3 bg-gradient-to-t from-stone-950 from-60% to-transparent px-3 pb-3 pt-5">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={go}
-              className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 shadow-lg shadow-black/50 disabled:opacity-40"
-            >
-              {c.label}
-              {c.sub && <span className="ml-1 text-[12px] font-bold text-orange-200/90">· {c.sub}</span>}
-            </button>
-          </div>
-        ) : null;
-      })()}
 
       {/* 출발 확인 — 명단·합산 전투력을 되읽어 준다. 버튼은 취소/출발 같은 크기(10-10 사용자). */}
       {departAsk && mp && (
@@ -499,7 +595,6 @@ export function WorldBossDetailView({
               <span className="text-stone-500">합산 전투력</span>
               <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
             </p>
-            <p className="mt-1.5 text-[11.5px] text-stone-500">출발하면 되돌릴 수 없어요.</p>
           </ModalLayout>
         </ModalShell>
       )}
@@ -553,11 +648,27 @@ function Empty({ title, sub }: { title: string; sub?: string }) {
   );
 }
 
-function PartyHead({ p }: { p: WorldBossPartyCard }) {
+/** 길드 이름은 항상 문양과 함께(10-10 사용자). 무소속은 글자만. */
+function Guild({ p, size = 10 }: { p: { guildName: string | null; guildEmblemUrl: string | null; guildEmblemColor: string | null }; size?: number }) {
+  return p.guildName ? (
+    <GuildBadge emblemUrl={p.guildEmblemUrl} emblemColor={p.guildEmblemColor} name={p.guildName} size={size} className="min-w-0" />
+  ) : (
+    <span className="truncate">무소속</span>
+  );
+}
+
+function PartyHead({ p, rank }: { p: WorldBossPartyCard; rank?: number }) {
   return (
-    <div className="flex items-baseline gap-1.5">
+    <div className="flex items-center gap-1.5">
+      {rank != null && (
+        <span className={`shrink-0 rounded px-1 text-[10px] font-extrabold leading-[1.6] ${rank === 1 ? 'bg-orange-700 text-orange-50' : 'bg-stone-800 text-stone-300'}`}>{rank}위</span>
+      )}
       <b className="truncate text-[12.5px] text-stone-100">{p.leaderNickname} 원정대</b>
-      {p.guildName && <span className="truncate text-[10px] text-stone-500">{p.guildName}</span>}
+      {p.guildName && (
+        <span className="min-w-0 text-[10px] text-stone-500">
+          <Guild p={p} />
+        </span>
+      )}
       <span className="ml-auto shrink-0 font-mono text-[11px] font-extrabold tabular-nums text-orange-300">
         {p.status === 'departed' ? `${p.memberCount}명` : `${p.memberCount}/${WORLD_BOSS_PARTY_MAX}`}
       </span>
@@ -610,8 +721,9 @@ function MemberChip({ p, serverId, leader }: { p: WorldBossPerson; serverId: num
           {leader && <span className="mr-0.5 text-orange-300">★</span>}
           {p.nickname}
         </span>
-        <span className="block truncate text-[9.5px] text-stone-500">
-          {p.guildName ?? '무소속'} · {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-orange-400"> · 약점 {p.weakCount}</span>}
+        <span className="flex min-w-0 items-center gap-1 text-[9.5px] text-stone-500">
+          <Guild p={p} size={9} />
+          <span className="shrink-0">· {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-orange-400"> · 약점 {p.weakCount}</span>}</span>
         </span>
       </span>
     </>

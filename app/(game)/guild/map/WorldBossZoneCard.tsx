@@ -20,8 +20,13 @@ export function WorldBossZoneCard(
 ) {
   const left = props.mode === 'left';
   // 한 장의 무대(10-10 사용자): 보스 왼쪽 · 정보 가운데 · 작은 '보스 토벌' 버튼 오른쪽. 색은 보스(잿빛 + 불씨 주황)에 맞춘다.
+  // 카드 전체가 링크 — 버튼뿐 아니라 어디를 눌러도 보스 상세로(10-10 사용자). 버튼은 눌림 자리를 알려 주는 모양만.
   return (
-    <div className={`relative mt-2 h-[92px] overflow-hidden rounded-[12px] border bg-stone-950 ${left ? 'border-zinc-700 grayscale' : 'border-orange-800/70'}`}>
+    <Link
+      prefetch={false}
+      href={props.href}
+      className={`relative mt-2 block h-[92px] overflow-hidden rounded-[12px] border bg-stone-950 active:opacity-90 ${left ? 'border-zinc-700 grayscale' : 'border-orange-800/70'}`}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={assetUrl(worldBossBgUrl(props.region))} alt="" className={`absolute inset-0 h-full w-full object-cover ${left ? 'opacity-55' : ''}`} style={{ imageRendering: 'pixelated' }} />
       <span className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.72)_34%,rgba(12,10,9,0.62)_75%,rgba(12,10,9,0.72)_100%)]" />
@@ -63,16 +68,14 @@ export function WorldBossZoneCard(
           <span>📦{props.lootBoxes.toLocaleString('ko-KR')}</span>
         </span>
       </div>
-      {/* 버튼 — 오른쪽 가운데, 작게 */}
-      <Link
-        prefetch={false}
-        href={props.href}
+      {/* 버튼 모양 — 오른쪽 가운데, 작게(카드 전체가 링크라 span) */}
+      <span
         className={`absolute right-2 top-1/2 z-[2] -translate-y-1/2 rounded-md px-2 py-1 text-center text-[10.5px] font-bold ${
           left ? 'bg-zinc-700 text-zinc-200 ring-1 ring-zinc-500/60' : 'bg-orange-800/90 text-orange-50 ring-1 ring-orange-500/60'
         }`}
       >
         보스 토벌
-      </Link>
-    </div>
+      </span>
+    </Link>
   );
 }

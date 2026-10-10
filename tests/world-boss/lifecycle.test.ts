@@ -125,7 +125,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(await code(requestJoin({ userId: G, serverId: S, partyId }))).toBe('ALREADY_REQUESTED');
     // 대장 화면 — 대기 중 신청이 보인다. 신청자는 'pending'.
     expect((await getWorldBossDetail(boss, S, T))?.myParty?.requests.map((r) => r.userId)).toEqual([G]);
-    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'pending', pendingPartyId: partyId });
+    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'pending', pendingPartyIds: [partyId] });
     expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('pending');
     expect(await code(decideJoin({ leaderUserId: G, serverId: S, partyId, userId: G, accept: true }))).toBe('NOT_LEADER');
     await decideJoin({ leaderUserId: T, serverId: S, partyId, userId: G, accept: true });
@@ -208,15 +208,23 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect({ diamond: Number(b!.d), boxes: b!.bx }).toEqual(worldBossLootFor(r.stageTo));
   });
 
-  it('신청: 같은 보스에는 대기 중 신청 하나만 — 취소하면 다른 원정대에 신청할 수 있다', async () => {
+  it('신청: 같은 보스의 여러 원정대에 동시에 신청할 수 있고, 한 곳에 수락되면 나머지 신청은 사라진다', async () => {
     const boss = await makeBoss('2000-01-08');
     const { partyId: p1 } = await createParty({ userId: T, serverId: S, bossId: boss });
     // 두 번째 모집 중 원정대(참가자 행 없이 직접 — 주인 길드원이 테스트 계정 하나뿐이라).
     const [p2] = await q<{ id: string }>(sql`insert into world_boss_parties (boss_id, server_id, leader_user_id, guild_id) values (${boss}::bigint, ${S}, ${T}::uuid, ${guildId}::bigint) returning id::text as id`);
     await requestJoin({ userId: G, serverId: S, partyId: p1 });
-    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('ALREADY_REQUESTED');
+    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('OK'); // 여러 곳 동시 신청(10-10)
+    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('ALREADY_REQUESTED'); // 같은 곳 두 번은 불가
+    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'pending', pendingPartyIds: [p1, p2!.id] });
     await cancelJoinRequest({ userId: G, partyId: p1 });
-    expect(await code(requestJoin({ userId: G, serverId: S, partyId: p2!.id }))).toBe('OK');
+    expect((await getWorldBossDetail(boss, S, G))?.me?.pendingPartyIds).toEqual([p2!.id]);
+    // p1에 다시 신청하고 p2가 수락하면 p1 신청은 지워진다.
+    await requestJoin({ userId: G, serverId: S, partyId: p1 });
+    await decideJoin({ leaderUserId: T, serverId: S, partyId: p2!.id, userId: G, accept: true });
+    const [left] = await q<{ n: number }>(sql`select count(*)::int as n from world_boss_join_requests r join world_boss_parties p on p.id=r.party_id where p.boss_id=${boss}::bigint and r.user_id=${G}::uuid and r.status='pending'`);
+    expect(left!.n).toBe(0);
+    expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'member', pendingPartyIds: [] });
     // 모집 중 원정대를 남기면 뒤의 '주인 변경' 해산 집계가 어긋난다 — 보스째 지운다(원정대·신청은 cascade).
     await testDb.execute(sql`delete from world_bosses where id=${boss}::bigint`);
   }, 20_000);
