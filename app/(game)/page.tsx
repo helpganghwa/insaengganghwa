@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
@@ -35,6 +36,7 @@ import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { ChuseokBanner } from './ChuseokBanner';
 import { WorldBossHomeBanner, type WorldBossHomeBannerData } from './WorldBossHomeBanner';
+import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
 import { worldBossName } from '@/lib/game/world-boss/bosses';
 import { CheckinPopupGate } from './CheckinPopup';
 import { RankingTop3Card } from './RankingTop3Card';
@@ -394,7 +396,9 @@ export default async function HomePage() {
         latestChronicleDay = row.chron_day ?? null;
         worldBossStage = row.wb_stage == null ? null : Number(row.wb_stage);
         worldBossZone = row.wb_zone ?? null;
-        if (row.wb_banner) {
+        // 닫아 둔 보스(쿠키)면 렌더 전에 거른다 — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
+        const closedBossId = (await cookies()).get(WORLD_BOSS_BANNER_COOKIE)?.value;
+        if (row.wb_banner && row.wb_banner.id !== closedBossId) {
           const wb = row.wb_banner;
           worldBossBanner = {
             id: wb.id, region: wb.region, name: worldBossName(wb.region), zone: wb.zone, owner: wb.owner, stage: Number(wb.stage),

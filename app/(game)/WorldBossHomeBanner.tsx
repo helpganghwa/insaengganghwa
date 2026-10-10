@@ -7,11 +7,13 @@ import { REGION_COLOR } from '@/components/ExecutorTag';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl } from '@/lib/game/world-boss/bosses';
+import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
 
 /**
  * 홈 — 월드보스 출현 배너(무대 배너 B2, 10-11 사용자): 보스가 머무는 동안 캐러셀 위에 72px 무대(구역 배경 + 보스 대기 애니).
  * 글은 구역 · 주인 길드 / 페이즈 · 종료까지 · 원정대 모집 중 N, 오른쪽 '토벌하기'. 어디를 눌러도 보스 상세로 간다.
- * 왼쪽 위 ✕(강화 슬롯 취소 버튼과 같은 자리·모양)로 닫으면 **그 보스가 떠날 때까지** 안 보인다(localStorage에 보스 id — 새 보스는 다시 보인다).
+ * 왼쪽 위 ✕(강화 슬롯 취소 버튼 모양, 모서리에 걸침)로 닫으면 **그 보스가 떠날 때까지** 안 보인다 — 쿠키 `ig_wb_banner_closed`에 보스 id를
+ * 적어 두면 홈 서버 컴포넌트가 렌더 전에 읽고 배너를 아예 그리지 않는다(새로고침 때 보였다 사라지는 깜빡임 없음, 10-11 사용자). 새 보스는 다시 보인다.
  */
 export type WorldBossHomeBannerData = {
   id: string;
@@ -25,7 +27,6 @@ export type WorldBossHomeBannerData = {
   recruiting: number;
 };
 
-const CLOSED_KEY = 'ig:wb-banner-closed';
 const CLOSED_EVENT = 'ig:wb-banner-closed-change';
 const subscribe = (cb: () => void) => {
   window.addEventListener(CLOSED_EVENT, cb);
@@ -33,21 +34,22 @@ const subscribe = (cb: () => void) => {
 };
 const isClosed = (id: string) => {
   try {
-    return localStorage.getItem(CLOSED_KEY) === id;
+    return document.cookie.split('; ').some((c) => c === `${WORLD_BOSS_BANNER_COOKIE}=${id}`);
   } catch {
-    return false; // 시크릿·차단 환경은 늘 보인다.
+    return false;
   }
 };
 
 export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
-  // 서버·하이드레이션은 '보임', 그 뒤 저장소 값으로 — 효과 안 setState 없이 외부 스토어로 읽는다.
+  // 서버가 쿠키로 걸러 주므로 여기 오면 '보임'이 기본. 닫는 순간만 쿠키를 다시 읽어 즉시 사라진다(효과 안 setState 없이 외부 스토어).
   const closed = useSyncExternalStore(subscribe, () => isClosed(b.id), () => false);
   if (closed) return null;
   const close = () => {
     try {
-      localStorage.setItem(CLOSED_KEY, b.id);
+      // 보스가 머무는 48시간을 넉넉히 덮는 4일. 쿠키가 막힌 환경이면 이번 화면에서만 사라진다.
+      document.cookie = `${WORLD_BOSS_BANNER_COOKIE}=${b.id}; path=/; max-age=${60 * 60 * 24 * 4}; samesite=lax`;
     } catch {
-      // 저장 실패면 이번 화면에서만 사라지지 않는다 — 다음 홈 진입 때 다시 보인다.
+      // 무시
     }
     window.dispatchEvent(new Event(CLOSED_EVENT));
   };
