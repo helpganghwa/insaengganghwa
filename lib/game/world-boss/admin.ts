@@ -91,7 +91,9 @@ export type SpawnOverlap = { id: string; zoneName: string; status: 'scheduled' |
 export type SpawnResult =
   | { ok: true; bossId: string; status: 'scheduled' | 'active'; zoneName: string; spawnAt: string; leaveAt: string }
   | { ok: false; code: 'ZONE_NOT_FOUND' | 'ZONE_BUSY' | 'PAST' | 'TOO_FAR' }
-  | { ok: false; code: 'OVERLAP'; overlapping: SpawnOverlap[] };
+  | { ok: false; code: 'OVERLAP'; overlapping: SpawnOverlap[] }
+  /** 떠나는 시각이 점령전 자정 공개 창(23:50~00:10 KST)에 걸림 — allowOverlap(확인)으로 다시 부르면 소환한다. */
+  | { ok: false; code: 'NEAR_MIDNIGHT'; leaveAt: string };
 
 export async function spawnWorldBossByAdmin(input: {
   serverId: number;
@@ -109,6 +111,9 @@ export async function spawnWorldBossByAdmin(input: {
   if (input.spawnAt && input.spawnAt.getTime() < now.getTime() - 60_000) return { ok: false, code: 'PAST' };
   if (spawnAt.getTime() > now.getTime() + WORLD_BOSS_SCHEDULE_MAX_MS) return { ok: false, code: 'TOO_FAR' };
   const leaveAt = new Date(spawnAt.getTime() + WORLD_BOSS_STAY_MS);
+  // 떠나는 시각이 점령전 자정 공개 창(23:50~00:10 KST)에 걸리면 정산 크론(5분 틱)이 공개 뒤에 돌아 새 주인이 전리품을 받을 수 있다(10-11 감사) — 확인을 거쳐야 소환.
+  const kstMin = ((leaveAt.getTime() + 9 * HOUR) % (24 * HOUR)) / 60000;
+  if ((kstMin >= 23 * 60 + 50 || kstMin < 10) && !input.allowOverlap) return { ok: false, code: 'NEAR_MIDNIGHT', leaveAt: leaveAt.toISOString() };
 
   const result = await db.transaction(async (tx): Promise<SpawnResult> => {
     // 구역 행 잠금 — 같은 구역에 동시에 두 번 소환하는 경쟁을 직렬화한다.

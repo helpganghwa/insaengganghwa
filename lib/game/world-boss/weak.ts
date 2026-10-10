@@ -41,3 +41,16 @@ export function parseWeak(v: unknown): WorldBossWeakPhase[] {
 
 /** 슬롯 비트(재생 기록용): 무기 1 · 방어구 2 · 장신구 4. */
 export const SLOT_BIT: Record<WeakSlot, number> = { weapon: 1, armor: 2, accessory: 4 };
+
+import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
+
+/** 그 부위에 아바타 보너스가 붙는가 — 커스텀 아바타면 약점 장비로 갈아입은 부위도 유지(simulate와 같은 규칙). */
+export function avatarBonusOn(avatarMatch: boolean, hasAvatar: boolean, weak: boolean): boolean {
+  return avatarMatch || (hasAvatar && weak);
+}
+
+/** 부위 하나의 월드보스 전투력(보너스 포함). weakBonus = 보스 특성(치명 약점이면 2.0). 서버(loadout)·화면(WeakPanel)이 같은 식을 쓴다. */
+export function piecePower(cp: number, avatarMatch: boolean, hasAvatar: boolean, weak: boolean, weakBonus: number = WORLD_BOSS_WEAK_BONUS): number {
+  const av = avatarBonusOn(avatarMatch, hasAvatar, weak);
+  return cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0));
+}

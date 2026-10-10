@@ -15,7 +15,7 @@ import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, currentPhase, knownWeakOf } from '@/lib/game/world-boss/loadout';
-import { parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { db } from '@/lib/db/client';
 import { sql } from 'drizzle-orm';
@@ -30,7 +30,9 @@ const MSG: Record<string, string> = {
   ALREADY_REQUESTED: '이미 이 보스의 원정대에 신청해 두었어요.',
   NO_REQUEST: '신청이 이미 처리됐어요.',
   PARTY_NOT_RECRUITING: '이미 출발했거나 해산된 원정대예요.',
-  PARTY_FULL: '원정대가 가득 찼어요(최대 10명).',
+  PARTY_FULL: `원정대가 가득 찼어요(최대 ${WORLD_BOSS_PARTY_MAX}명).`,
+  PROFANITY: '소개글에 쓸 수 없는 말이 있어요.',
+  SLOT_TAKEN: '다른 곳에서 장착이 바뀌었어요. 다시 시도해 주세요.',
   NOT_LEADER: '원정대장만 할 수 있어요.',
   NOT_MEMBER: '원정대원이 아니에요.',
   ALREADY_INVITED: '이미 초대했어요. 상대의 응답을 기다려요.',
@@ -52,6 +54,9 @@ async function gate(): Promise<{ u: string; sid: number } | ReturnType<typeof er
   if (b) return err(b);
   return { u, sid: await getActiveServerId() };
 }
+// 입력 모양 검사 — 잘못된 id는 DB 캐스트 오류(로그 소음)가 아니라 '찾을 수 없어요'로 끝낸다(10-11 감사).
+const isId = (v: unknown): v is string => typeof v === 'string' && /^\d{1,18}$/.test(v);
+const isUuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 function rev(bossId: string) {
   revalidatePath(`/world-boss/${bossId}`);
   revalidatePath('/guild/map');
@@ -65,6 +70,7 @@ function fail(e: unknown, where: string) {
 export async function createPartyAction(bossId: string, intro?: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId)) return err('NOT_FOUND');
   try {
     const r = await createParty({ userId: g.u, serverId: g.sid, bossId, intro: typeof intro === 'string' ? intro : undefined });
     rev(bossId);
@@ -77,6 +83,7 @@ export async function createPartyAction(bossId: string, intro?: string) {
 export async function requestJoinAction(bossId: string, partyId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId)) return err('NOT_FOUND');
   try {
     await requestJoin({ userId: g.u, serverId: g.sid, partyId });
     rev(bossId);
@@ -89,6 +96,7 @@ export async function requestJoinAction(bossId: string, partyId: string) {
 export async function cancelRequestAction(bossId: string, partyId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId)) return err('NOT_FOUND');
   try {
     await cancelJoinRequest({ userId: g.u, partyId });
     rev(bossId);
@@ -101,6 +109,7 @@ export async function cancelRequestAction(bossId: string, partyId: string) {
 export async function decideJoinAction(bossId: string, partyId: string, userId: string, accept: boolean) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId) || !isUuid(userId) || typeof accept !== 'boolean') return err('NOT_FOUND');
   try {
     await decideJoin({ leaderUserId: g.u, serverId: g.sid, partyId, userId, accept });
     rev(bossId);
@@ -113,6 +122,7 @@ export async function decideJoinAction(bossId: string, partyId: string, userId: 
 export async function leavePartyAction(bossId: string, partyId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId)) return err('NOT_FOUND');
   try {
     const r = await leaveParty({ userId: g.u, serverId: g.sid, partyId });
     rev(bossId);
@@ -126,6 +136,7 @@ export async function leavePartyAction(bossId: string, partyId: string) {
 export async function departPartyAction(bossId: string, partyId: string, departKey: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId) || typeof departKey !== 'string') return err('NOT_FOUND');
   try {
     const r = await departParty({ leaderUserId: g.u, serverId: g.sid, partyId, departKey });
     rev(bossId);
@@ -168,17 +179,17 @@ export async function equipBestAction(bossId: string) {
     rev(bossId);
     return { status: 'success' as const };
   } catch (e) {
-    if (e instanceof EquipError) return err('UNKNOWN');
+    if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
     return fail(e, 'equipBest');
   }
 }
 
 /** 초대 후보 목록 — 대장이 초대 시트를 열 때(10-11 사용자 2안). */
-export async function invitableAction(bossId: string, partyId: string) {
+export async function invitableAction(partyId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(partyId)) return err('NOT_FOUND');
   try {
-    void bossId;
     const people = await getWorldBossInvitable(g.sid, g.u, partyId);
     return { status: 'success' as const, people };
   } catch (e) {
@@ -189,6 +200,7 @@ export async function invitableAction(bossId: string, partyId: string) {
 export async function inviteAction(bossId: string, partyId: string, userId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId) || !isUuid(userId)) return err('NOT_FOUND');
   try {
     await inviteToParty({ leaderUserId: g.u, serverId: g.sid, partyId, userId });
     rev(bossId);
@@ -201,6 +213,7 @@ export async function inviteAction(bossId: string, partyId: string, userId: stri
 export async function cancelInviteAction(bossId: string, partyId: string, userId: string) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId) || !isUuid(userId)) return err('NOT_FOUND');
   try {
     await cancelInvite({ leaderUserId: g.u, serverId: g.sid, partyId, userId });
     rev(bossId);
@@ -214,6 +227,7 @@ export async function cancelInviteAction(bossId: string, partyId: string, userId
 export async function respondInviteAction(bossId: string, partyId: string, accept: boolean) {
   const g = await gate();
   if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId)) return err('NOT_FOUND');
   try {
     await respondInvite({ userId: g.u, serverId: g.sid, partyId, accept: accept === true });
     rev(bossId);

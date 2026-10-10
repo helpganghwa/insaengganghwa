@@ -54,7 +54,7 @@ const EMBER_PHOENIX: WorldBossKind = {
       (n, w) => `${n}, ${w}#{을} 움켜쥐고 몸통을 노린다`,
       (n, w) => `${n}#{이} 날개 사이로 ${w}#{을} 꽂아 넣는다`,
     ],
-    bareAttack: [(n) => `${n}#{이} 일격을 날린다`, (n) => `${n}#{이} 몸통을 노려 내리친다`, (n) => `${n}, 틈을 노려 찔러 든다`, (n) => `${n}#{이} 잿불을 뚫고 달려든다`],
+    bareAttack: [(n) => `${n}#{이} 일격을 날린다`, (n) => `${n}#{이} 몸통을 노려 내리친다`, (n) => `${n}, 틈을 노려 파고든다`, (n) => `${n}#{이} 잿불을 뚫고 달려든다`],
     strike: [
       (b, n) => `${b}의 날갯짓에 잿불이 ${n}#{을} 덮쳤다. 쓰러짐`,
       (b, n) => `${b}#{이} 울부짖으며 불덩이를 토해 냈다. ${n} 쓰러짐`,
@@ -82,9 +82,6 @@ export function isWorldBossKindCode(v: unknown): v is WorldBossKindCode {
 export function worldBossKind(code?: string | null): WorldBossKind {
   return isWorldBossKindCode(code) ? WORLD_BOSS_KINDS[code] : WORLD_BOSS_KINDS[DEFAULT_WORLD_BOSS_KIND];
 }
-
-/** 이름(2026-10-09 확정 '잿불의 불사조'). */
-export const WORLD_BOSS_NAME = EMBER_PHOENIX.name;
 
 export function worldBossName(code?: string | null): string {
   return worldBossKind(code).name;

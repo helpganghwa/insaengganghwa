@@ -113,7 +113,7 @@
     },
     {
       "path": "/api/cron/world-boss",
-      "schedule": "*/5 * * * *"
+      "schedule": "3-58/5 * * * *"
     }
   ]
 }

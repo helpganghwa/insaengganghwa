@@ -25,7 +25,8 @@ export async function spawnWorldBossAction(input: { serverId: number; zoneId: nu
     if (!iso) return { ok: false, code: 'BAD_TIME' };
     at = new Date(iso);
   }
-  const r = await spawnWorldBossByAdmin({ serverId, zoneId: Math.trunc(Number(input.zoneId)), spawnAt: at, adminUserId: adminId, allowOverlap: input.allowOverlap === true, bossCode: input.bossCode });
+  if (!Number.isInteger(input.zoneId) || input.zoneId <= 0) return { ok: false, code: 'ZONE_NOT_FOUND' };
+  const r = await spawnWorldBossByAdmin({ serverId, zoneId: input.zoneId, spawnAt: at, adminUserId: adminId, allowOverlap: input.allowOverlap === true, bossCode: input.bossCode });
   if (r.ok) {
     revalidatePath('/admin/world-boss');
     // 즉시 출현은 세계 피드·지도 캐시에 바로 보이게(크론의 출현 처리와 같은 무효화).

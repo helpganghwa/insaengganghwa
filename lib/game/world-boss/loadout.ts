@@ -4,10 +4,10 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { pieceCombatPower } from '@/lib/game/balance';
-import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS, worldBossPhaseOf } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PHASE_STAGES, WORLD_BOSS_WEAK_BONUS, worldBossPhaseOf } from '@/lib/game/guild/balance';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
-import { WEAK_SLOTS, type WeakSlot } from './weak';
+import { WEAK_SLOTS, type WeakSlot, piecePower } from './weak';
 
 /**
  * 월드보스 장착 상태(docs/WORLD-BOSS.md §3) — 화면용 읽기. 전투 판정은 출발 트랜잭션(party.ts)이 따로 한다.
@@ -24,16 +24,12 @@ type OwnRow = { ueid: string; code: string; name: string; slot: string; el: numb
 
 const isSlot = (s: string): s is WeakSlot => s === 'weapon' || s === 'armor' || s === 'accessory';
 
-/** 부위 하나의 월드보스 전투력(보너스 포함). 커스텀 아바타면 약점 장비 부위도 아바타 보너스를 유지한다. weakBonus = 보스 특성(치명 약점이면 2.0). */
-export function piecePower(cp: number, avatarMatch: boolean, hasAvatar: boolean, weak: boolean, weakBonus: number = WORLD_BOSS_WEAK_BONUS): number {
-  const av = avatarMatch || (hasAvatar && weak);
-  return cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0));
-}
+export { piecePower }; // 순수 식은 weak.ts(화면 WeakPanel도 같은 함수를 쓴다)
 
 /** 지금 공격 중인 단계의 페이즈와 그 구간. */
 export function currentPhase(stage: number): { index: number; from: number; to: number } {
   const index = worldBossPhaseOf(stage + 1);
-  return { index, from: index * 5 + 1, to: index * 5 + 5 };
+  return { index, from: index * WORLD_BOSS_PHASE_STAGES + 1, to: index * WORLD_BOSS_PHASE_STAGES + WORLD_BOSS_PHASE_STAGES };
 }
 
 /** 그 페이즈에서 공개된 약점(이름·그림). 처음 맞힌 대원은 표(finder_*)에만 남고 화면엔 내지 않는다(10-10 사용자 결정). */

@@ -28,7 +28,7 @@ export function WorldBossSprite({
   const pos = /(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative ';
   const ember = `url(${assetUrl(worldBossEmberUrl(kind))})`;
   return (
-    <div role="img" aria-label={alt} className={`wbs ${pos}${className}`} style={style}>
+    <div role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true} className={`wbs ${pos}${className}`} style={style}>
       <div className="wbs-breath">
         <div key={attack ?? 'idle'} className={`wbs-lunge ${attack != null ? 'wbs-atk' : ''}`}>
           <div className="wbs-strip" style={{ backgroundImage: strip }} />

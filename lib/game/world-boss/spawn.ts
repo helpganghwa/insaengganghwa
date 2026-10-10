@@ -23,7 +23,7 @@ type Activated = { id: string; zone_id: number; zone_name: string; region: strin
 export async function activateDueBosses(serverId: number): Promise<Activated[]> {
   const rows = (await db.execute(sql`
     with up as (
-      update world_bosses b set status = 'active'
+      update world_bosses b set status = 'active', spawn_owner_guild_id = (select z.owner_guild_id from zones z where z.id = b.zone_id)
        where b.server_id = ${serverId} and b.status = 'scheduled' and b.spawn_at <= now()
       returning b.id, b.zone_id, b.region, b.boss_code
     )
@@ -96,7 +96,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
                               level = ${next.level}, xp = ${next.xp.toString()}::bigint
              where id = ${b.owner}::bigint`);
           const body =
-            `${b.zone_name}의 ${bossName}#{이} ${leave.pastPolite}. ${b.stage}페이즈까지 올렸고, 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
+            `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
             `길드 관리의 세금 분배에서 나눌 수 있어요.`;
           await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)

@@ -18,6 +18,7 @@ const STATUS_KO: Record<string, { label: string; cls: string }> = {
   left: { label: '종료', cls: 'bg-zinc-700 text-zinc-300' },
 };
 const ERROR_KO: Record<string, string> = {
+  BAD_KIND: '모르는 보스 종류예요.',
   ZONE_BUSY: '그 구역엔 이미 출현 중이거나 예정인 보스가 있어요.',
   ZONE_NOT_FOUND: '구역을 찾을 수 없어요.',
   PAST: '지난 시각이에요. 즉시 소환하거나 앞 시각으로 잡아 주세요.',
@@ -62,7 +63,12 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
       if (r.ok) {
         setMsg({ tone: 'ok', text: r.status === 'active' ? `${r.zoneName}에 소환했어요 — 지금 출현, ${kst(r.leaveAt)} 종료.` : `${r.zoneName}에 예약했어요 — ${kst(r.spawnAt)} 출현, ${kst(r.leaveAt)} 종료.` });
         setZoneId('');
-        router.refresh();
+        return; // 액션이 revalidatePath로 다시 그린다(§11.7) — refresh 중복 금지
+      }
+      if (r.code === 'NEAR_MIDNIGHT') {
+        // 떠나는 시각이 자정 공개 창에 걸림 — 정산이 공개 뒤에 돌면 새 주인이 전리품을 받는다. 알고도 소환할지 묻는다.
+        if (window.confirm(`종료 시각 ${kst(r.leaveAt)}이 점령전 자정 공개(23:50~00:10)에 걸려요.\n정산이 공개 뒤에 돌면 새 주인이 전리품을 받을 수 있어요. 그래도 소환할까요?`)) submit(true);
+        else setMsg({ tone: 'err', text: '소환하지 않았어요.' });
         return;
       }
       if (r.code === 'OVERLAP') {

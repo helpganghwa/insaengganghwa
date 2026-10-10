@@ -14,7 +14,8 @@ export type WorldBossErrorCode =
   | 'NOT_MEMBER'
   | 'ALREADY_INVITED'
   | 'NO_INVITE'
-  | 'NOT_INVITABLE';
+  | 'NOT_INVITABLE'
+  | 'PROFANITY';
 
 export class WorldBossError extends Error {
   constructor(public readonly code: WorldBossErrorCode) {

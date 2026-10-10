@@ -19,6 +19,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
+import { modalHistory } from '@/lib/ui/modal-history';
 import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
@@ -65,8 +66,16 @@ export function WorldBossReplay({
   onClose: () => void;
 }) {
   const { roster, events } = battle.finale;
-  const drops = battle.finale.drops ?? [];
-  const weakBits = battle.finale.weak ?? [];
+  // 전체 화면이라 ModalShell을 안 쓴다 — 뒤로가기(안드로이드·브라우저)는 페이지를 떠나지 않고 재생만 닫는다(10-11 감사).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const h = modalHistory.open(() => onCloseRef.current());
+    return () => h.release();
+  }, []);
+  // 옛 기록(drops·weak 없음)이어도 렌더마다 새 배열을 만들지 않게(메모 의존성 안정, 10-11 감사).
+  const drops = useMemo(() => battle.finale.drops ?? [], [battle.finale.drops]);
+  const weakBits = useMemo(() => battle.finale.weak ?? [], [battle.finale.weak]);
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [idx, setIdx] = useState(reduced ? events.length : 0); // 적용된 이벤트 수
   const done = idx >= events.length;
@@ -155,9 +164,9 @@ export function WorldBossReplay({
       let top = 0;
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
       out.push({ key: 'end', kind: 'round', text: '원정 종료' });
-      out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `보스 ${battle.stageTo}페이즈 그대로`}` });
+      out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `${bossName} ${battle.stageTo}페이즈 그대로`}` });
       out.push({ key: 'res2', kind: 'result', text: `원정대 총획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
-      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
+      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${(dmgSum[top] ?? 0).toLocaleString('ko-KR')}` });
     }
     return out;
   }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.bossCode, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
@@ -189,7 +198,8 @@ export function WorldBossReplay({
   useEffect(() => {
     if (!resultShown) return;
     sounds.raidVictory();
-    if (battle.stageTo - battle.stageFrom > 0) window.setTimeout(() => sounds.levelup(), 450);
+    const t = battle.stageTo - battle.stageFrom > 0 ? window.setTimeout(() => sounds.levelup(), 450) : 0;
+    return () => window.clearTimeout(t); // 닫은 직후 레벨업 소리가 나지 않게
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultShown]);
   // 라운드 알약은 보스 반격(쓰러짐) 연출이 지난 뒤에 바뀐다 — 첫 공격 ROUND_BEAT_MS 전에 알약만 커져 전환이 읽힌다. 되감으면(다시 재생) 바로.
@@ -209,6 +219,7 @@ export function WorldBossReplay({
   const [gPct, setGPct] = useState(targetPct);
   const [phaseUp, setPhaseUp] = useState(false);
   const gaugeTok = useRef(0);
+  useEffect(() => () => { gaugeTok.current += 1; }, []); // 닫힌 뒤 sleep이 깨어나 setState 하지 않게
   useEffect(() => {
     if (!phase) return;
     const token = ++gaugeTok.current;
@@ -246,7 +257,7 @@ export function WorldBossReplay({
   const struck = st.last && st.last[0] < 0;
   const hit = st.last && st.last[0] >= 0;
   const face = (userId: string) => battle.avatars?.[userId] ?? { src: null, box: null };
-  const isLeader = (nickname: string) => nickname === battle.leaderNickname;
+  const isLeader = (userId: string) => userId === battle.leaderUserId; // 닉네임이 바뀌어도 맞게(10-11 감사)
 
   // 대원이 칠 때 보스 흔들림 — Web Animations로 그 자리에서만 흔들어 대기 애니(띠)가 처음으로 돌아가지 않게 한다.
   const shakeRef = useRef<HTMLDivElement>(null);
@@ -266,12 +277,13 @@ export function WorldBossReplay({
     );
   }, [idx, hit, reduced]);
 
-  const jackpot = !!hit && !!st.lastDrop && (st.lastDrop[0] >= 300 || st.lastDrop[1] >= 90);
+  // 대박 연출(광선·번쩍임)도 일지·효과음과 같은 기준(lootTier) — 기준이 둘이던 것을 하나로(10-11 감사).
+  const jackpot = !!hit && !!st.lastDrop && lootTier(st.lastDrop[0], st.lastDrop[1]) === 'jackpot';
 
   return (
-    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-label="원정대 전투">
+    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-modal="true" aria-label="원정대 전투">
       <>
-          {/* 위 — 무대(배경 + 보스 + 일지). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
+          {/* 위 — 무대(배경 + 보스 + 일지). 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <div className="relative h-[300px] shrink-0 overflow-hidden text-left">
             <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(battle.bossCode))} className="opacity-85" />
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_55%,#09090b_100%)]" />
@@ -427,7 +439,7 @@ export function WorldBossReplay({
                     <div className="relative z-10 min-w-0 flex-1 px-2.5 leading-tight">
                       <span className="flex min-w-0 items-center gap-1 text-[12.5px] font-bold text-stone-50 [text-shadow:0_1px_2px_#000]">
                         <span className="truncate">{m.nickname}</span>
-                        {isLeader(m.nickname) && <LeaderChip />}
+                        {isLeader(m.userId) && <LeaderChip />}
                         {fellR != null && <span className="shrink-0 rounded bg-red-900/80 px-1 text-[8.5px] font-extrabold text-red-200">{fellR}R 쓰러짐</span>}
                       </span>
                       <span className="mt-0.5 flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
@@ -442,7 +454,7 @@ export function WorldBossReplay({
                           <b className={`font-mono ${weakNow ? 'text-amber-200 [text-shadow:0_0_6px_#f59e0b]' : isHit ? 'text-orange-300' : 'text-stone-200'}`}>{formatCompactKR(st.dmg[i]!)}</b>
                           {st.gotD[i]! > 0 || st.gotB[i]! > 0 ? (
                             <>
-                              {' '}· <b className="text-orange-300">{[st.gotD[i]! > 0 ? `💎${st.gotD[i]}` : '', st.gotB[i]! > 0 ? `📦${st.gotB[i]}` : ''].filter(Boolean).join(' ')}</b>
+                              {' '}· <b className="text-orange-300">{[st.gotD[i]! > 0 ? `💎${st.gotD[i]!.toLocaleString('ko-KR')}` : '', st.gotB[i]! > 0 ? `📦${st.gotB[i]!.toLocaleString('ko-KR')}` : ''].filter(Boolean).join(' ')}</b>
                             </>
                           ) : null}
                         </span>

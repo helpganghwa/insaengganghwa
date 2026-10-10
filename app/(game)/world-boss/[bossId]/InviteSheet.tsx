@@ -49,7 +49,7 @@ export function InviteSheet({
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const r = await invitableAction(bossId, partyId).catch(() => null);
+      const r = await invitableAction(partyId).catch(() => null);
       if (!alive) return;
       if (!r || r.status !== 'success') {
         setFailed(true);

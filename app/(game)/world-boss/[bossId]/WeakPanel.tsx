@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 
 import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 import type { KnownWeak, Loadout, LoadoutPiece } from '@/lib/game/world-boss/loadout';
-import { WEAK_SLOTS, type WeakSlot } from '@/lib/game/world-boss/weak';
+import { WEAK_SLOTS, type WeakSlot, avatarBonusOn, piecePower } from '@/lib/game/world-boss/weak';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
 const SLOT_KO: Record<WeakSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -24,14 +24,14 @@ function ItemImg({ src, className = 'h-8 w-8' }: { src: string | null; className
 
 const pct = (x: number) => `+${Math.round(x * 100)}%`;
 
-/** 그 부위에 아바타 보너스가 붙는가 — 커스텀 아바타면 약점 장비 부위도 유지(loadout.ts piecePower와 같은 규칙). */
-const avatarOn = (p: LoadoutPiece, hasAvatar: boolean) => p.av || (hasAvatar && p.weak);
+/** 그 부위에 아바타 보너스가 붙는가 — 서버와 같은 순수 함수(weak.ts). */
+const avatarOn = (p: LoadoutPiece, hasAvatar: boolean) => avatarBonusOn(p.av, hasAvatar, p.weak);
 
 /** 부위 한 줄 — 탑의 '내 장비' 줄: 왼쪽 2px 띠 · 그림 칸 · 이름+강화 · 칩 · 오른쪽 부위 전투력. */
 function GearRow({ slot, p, hasAvatar, weakBonus }: { slot: WeakSlot; p: LoadoutPiece | undefined; hasAvatar: boolean; weakBonus: number }) {
   const av = !!p && avatarOn(p, hasAvatar);
   const weak = !!p?.weak;
-  const power = p ? Math.round(p.cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0))) : 0;
+  const power = p ? Math.round(piecePower(p.cp, p.av, hasAvatar, weak, weakBonus)) : 0;
   return (
     <div
       className={`-mx-3 flex items-center gap-2.5 border-l-2 py-1.5 pl-2.5 pr-3 ${
@@ -65,7 +65,7 @@ function GearRow({ slot, p, hasAvatar, weakBonus }: { slot: WeakSlot; p: Loadout
 }
 
 /** 가로 스크롤 행 — PC 마우스 휠(세로)도 가로로 흘려 보낸다(10-10 사용자). preventDefault가 필요해 React onWheel 대신 직접 등록한다. */
-function useWheelToHorizontal() {
+function useWheelToHorizontal(dep: unknown) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = ref.current;
@@ -78,7 +78,7 @@ function useWheelToHorizontal() {
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [dep]); // 행이 나중에 생겨도(약점이 처음 밝혀질 때) 다시 붙는다(10-11 감사)
   return ref;
 }
 
@@ -100,7 +100,7 @@ export function WeakPanel({
   avatarSrc: string | null;
   onEquipBest: () => void;
 }) {
-  const rowRef = useWheelToHorizontal();
+  const rowRef = useWheelToHorizontal(weakKnown.length > 0);
   // 합산 분해 — 기본(장비 3개 전투력 합) · 아바타(+50% 부위의 더해지는 값) · 약점(+100% 부위의 더해지는 값). loadout.power와 같은 식.
   const parts = (() => {
     if (!mine) return null;

@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 
+import { RefreshOnResume } from '@/components/RefreshOnResume';
+
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -17,11 +19,15 @@ export default async function WorldBossPage({ params }: { params: Promise<{ boss
   const detail = await getWorldBossDetail(bossId, serverId, userId);
   if (!detail) notFound();
   return (
-    <WorldBossDetailView
+    <>
+      {/* 푸시로 돌아오면 다시 읽는다 — 대장이 열어 둔 화면에 신청·초대 수락이 반영되게(탑·강화와 같은 방식). */}
+      <RefreshOnResume />
+      <WorldBossDetailView
       detail={detail}
       serverId={serverId}
       spriteSrc={assetUrl(worldBossSpriteUrl(detail.bossCode))}
       bgSrc={assetUrl(worldBossBgUrl(detail.bossCode))}
     />
+    </>
   );
 }

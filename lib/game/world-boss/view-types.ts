@@ -139,6 +139,8 @@ export type WorldBossDetail = {
 export type WorldBossBattle = {
   partyId: string;
   leaderNickname: string;
+  /** 대장 — 닉네임이 바뀌어도 칩이 맞게 userId로 판정. */
+  leaderUserId: string;
   /** 보스 종류 코드 — 재생 일지 문장 풀·배경. */
   bossCode: string;
   finale: {

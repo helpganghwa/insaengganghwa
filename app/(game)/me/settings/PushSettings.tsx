@@ -137,8 +137,8 @@ export function PushSettings(props: {
     const setLocal = setterMap[cat];
     setLocal(next);
     startTransition(async () => {
-      const r = await setPushCategoryAction({ category: cat, enabled: next });
-      if (!r.ok) setLocal(!next); // 실패 시 롤백
+      const r = await setPushCategoryAction({ category: cat, enabled: next }).catch(() => null);
+      if (!r?.ok) setLocal(!next); // 실패·예외 시 롤백(10-11 감사: throw면 롤백이 건너뛰었다)
     });
   }
 

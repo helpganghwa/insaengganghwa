@@ -238,8 +238,8 @@ export function DistributeBoard({
                     type="button"
                     onClick={() => giveRest(m.userId)}
                     disabled={pending}
-                    aria-label={`${m.nickname}에게 남은 전액`}
-                    className="rounded-md px-1 py-0.5 text-[9.5px] font-bold text-amber-600 disabled:opacity-40 dark:text-amber-400"
+                    aria-label={`${m.nickname}에게 남은 💎·📦 전부`}
+                    className="min-h-8 rounded-md px-1 py-0.5 text-[9.5px] font-bold text-amber-600 disabled:opacity-40 dark:text-amber-400"
                   >
                     +잔여
                   </button>
@@ -272,7 +272,7 @@ export function DistributeBoard({
       </div>
 
       <button type="button" onClick={() => setPayAsk(true)} disabled={!canPay} className="mt-2 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-40">
-        {over ? '세금을 초과했습니다' : total > 0 || totalBoxes > 0 ? `${pair(total, totalBoxes)} 지급 · ${payload.length}명` : '지급'}
+        {over ? '세금을 넘었어요' : total > 0 || totalBoxes > 0 ? `${pair(total, totalBoxes)} 지급 · ${payload.length}명` : '지급'}
       </button>
 
       {/* 지급 확인 — 세금이 한 번에 빠져나간다. 수령인·💎·📦를 되읽어 준다. */}
@@ -314,7 +314,7 @@ export function DistributeBoard({
               })}
             </ul>
             <p className="mt-3 border-t border-zinc-200 pt-2 text-[11px] text-zinc-500 dark:border-zinc-700">
-              지급 후 남는 세금 {pair(remaining, remainingBoxes)} · 되돌릴 수 없습니다.
+              지급 후 남는 세금 {pair(remaining, remainingBoxes)} · 되돌릴 수 없어요.
             </p>
           </ModalLayout>
         </ModalShell>

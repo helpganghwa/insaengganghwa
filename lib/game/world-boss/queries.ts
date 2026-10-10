@@ -43,34 +43,39 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
   const ids = rows.map((r) => r.id);
   const counts = new Map<string, { recruiting: number; departed: number }>();
   const mine = new Map<string, WorldBossMine>();
-  if (ids.length > 0) {
-    const c = await db
-      .select({ bossId: worldBossParties.bossId, status: worldBossParties.status, n: sql<number>`count(*)::int` })
-      .from(worldBossParties)
-      .where(inArray(worldBossParties.bossId, ids))
-      .groupBy(worldBossParties.bossId, worldBossParties.status);
-    for (const r of c) {
-      const k = r.bossId.toString();
-      const cur = counts.get(k) ?? { recruiting: 0, departed: 0 };
-      if (r.status === 'recruiting') cur.recruiting += r.n;
-      else if (r.status === 'departed') cur.departed += r.n;
-      counts.set(k, cur);
-    }
-    if (userId) {
-      // 해산된 원정대의 참가 행은 지워지므로(party.ts) 남은 행은 모집 중이거나 출발한 것뿐이다.
-      const m = await db
-        .select({ bossId: worldBossPartyMembers.bossId, status: worldBossParties.status })
-        .from(worldBossPartyMembers)
-        .innerJoin(worldBossParties, eq(worldBossParties.id, worldBossPartyMembers.partyId))
-        .where(and(eq(worldBossPartyMembers.userId, userId), inArray(worldBossPartyMembers.bossId, ids)));
-      for (const r of m) mine.set(r.bossId.toString(), r.status === 'departed' ? 'fought' : 'recruiting');
-      // 신청 대기(소속이 없을 때만) — 시트 안내 문구 분기용.
-      const pend = (await db.execute(sql`
-        select distinct p.boss_id::text as b from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
-         where r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' and p.boss_id = any(${`{${ids.join(',')}}`}::bigint[])`)) as unknown as { b: string }[];
-      for (const r of pend) if (!mine.has(r.b)) mine.set(r.b, 'pending');
-    }
+  // 보스 id만 있으면 되는 세 조회는 같이 기다린다(10-11 감사: 순차 4번 → 1번).
+  const [c, m, pend] = ids.length > 0
+    ? await Promise.all([
+        db
+          .select({ bossId: worldBossParties.bossId, status: worldBossParties.status, n: sql<number>`count(*)::int` })
+          .from(worldBossParties)
+          .where(inArray(worldBossParties.bossId, ids))
+          .groupBy(worldBossParties.bossId, worldBossParties.status),
+        userId
+          ? db
+              // 해산된 원정대의 참가 행은 지워지므로(party.ts) 남은 행은 모집 중이거나 출발한 것뿐이다.
+              .select({ bossId: worldBossPartyMembers.bossId, status: worldBossParties.status })
+              .from(worldBossPartyMembers)
+              .innerJoin(worldBossParties, eq(worldBossParties.id, worldBossPartyMembers.partyId))
+              .where(and(eq(worldBossPartyMembers.userId, userId), inArray(worldBossPartyMembers.bossId, ids)))
+          : Promise.resolve([]),
+        userId
+          ? (db.execute(sql`
+              select distinct p.boss_id::text as b from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+               where r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' and p.boss_id = any(${`{${ids.join(',')}}`}::bigint[])`) as unknown as Promise<{ b: string }[]>)
+          : Promise.resolve([] as { b: string }[]),
+      ])
+    : [[], [], []];
+  for (const r of c) {
+    const k = r.bossId.toString();
+    const cur = counts.get(k) ?? { recruiting: 0, departed: 0 };
+    if (r.status === 'recruiting') cur.recruiting += r.n;
+    else if (r.status === 'departed') cur.departed += r.n;
+    counts.set(k, cur);
   }
+  for (const r of m) mine.set(r.bossId.toString(), r.status === 'departed' ? 'fought' : 'recruiting');
+  // 신청 대기(소속이 없을 때만) — 시트 안내 문구 분기용.
+  for (const r of pend) if (!mine.has(r.b)) mine.set(r.b, 'pending');
 
   const active: WorldBossMapBoss[] = rows.map((r) => {
     const id = r.id.toString();
@@ -159,7 +164,7 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
   const out = new Map<string, WorldBossPerson>();
   if (userIds.length === 0) return out;
   const ids = [...new Set(userIds)];
-  const [rows, lo] = await Promise.all([
+  const [rows, lo, faceRows] = await Promise.all([
     db.execute(sql`
       select c.user_id::text as uid, c.nickname, p.public_code as code, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor
         from characters c
@@ -168,8 +173,9 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
         left join guilds g on g.id = gm.guild_id
        where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; nickname: string; code: string | null; gname: string | null; gurl: string | null; gcolor: string | null }[]>,
     loadoutsOf(serverId, ids, known, weakBonus),
+    profilesByIds(ids, serverId).catch(() => []), // 앞 둘과 무관 — 같이 기다린다(10-11 감사)
   ]);
-  const faces = new Map((await profilesByIds(ids, serverId).catch(() => [])).map((f) => [f.userId, f] as const));
+  const faces = new Map(faceRows.map((f) => [f.userId, f] as const));
   for (const r of rows) {
     const f = faces.get(r.uid);
     const l = lo.get(r.uid);
@@ -202,8 +208,15 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
   }[];
   if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
+  const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
+  const phase = currentPhase(b.stage);
+  // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
+  const traitCodes = parseWorldBossTraits(b.traits);
+  const weakBonus = worldBossWeakBonus(traitCodes);
 
-  const partyRows = (await db.execute(sql`
+  // 보스 id만 있으면 되는 조회는 전부 같이 기다린다(10-11 감사: 순차 11번 → 4번).
+  const [partyRows, weakKnown, mineRows] = await Promise.all([
+    db.execute(sql`
     select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor, p.intro, p.created_at, p.departed_at,
            p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes,
            (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
@@ -211,22 +224,35 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
       left join guilds g on g.id = p.guild_id
      where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
-     order by p.created_at`)) as unknown as {
-    id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
-    damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
-  }[];
+     order by p.created_at`) as unknown as Promise<{
+      id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
+      damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
+    }[]>,
+    knownWeakOf(b.id, phase.index),
+    userId
+      ? Promise.all([
+          db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
+                          where m.boss_id = ${bossId}::bigint and m.user_id = ${userId}::uuid limit 1`) as unknown as Promise<{ pid: string; status: 'recruiting' | 'departed'; leader: string }[]>,
+          // 대기 중 신청 전부(여러 곳 동시 신청, 10-10) — 모집 중인 원정대 것만.
+          db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+                          where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' order by r.created_at`) as unknown as Promise<{ pid: string }[]>,
+          db.execute(sql`select guild_id::text as g from guild_members where user_id = ${userId}::uuid and server_id = ${serverId}`) as unknown as Promise<{ g: string }[]>,
+          // 나에게 온 초대(10-11) — 참가 전이고 보스가 머무는 중일 때만 쓴다(아래에서 거른다).
+          db.execute(sql`
+            select i.party_id::text as pid, c.nickname as leader_nick, (select count(*)::int from world_boss_party_members m where m.party_id = i.party_id) as n
+              from world_boss_invites i join world_boss_parties p on p.id = i.party_id
+              join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+             where p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending' and p.status = 'recruiting'
+             order by i.created_at`) as unknown as Promise<{ pid: string; leader_nick: string; n: number }[]>,
+        ])
+      : Promise.resolve(null),
+  ]);
   const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
 
   let me: WorldBossMe | null = null;
   let myParty: WorldBossMyParty | null = null;
   let mine: WorldBossDetail['mine'] = null;
-  const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
-  const phase = currentPhase(b.stage);
-  const weakKnown = await knownWeakOf(b.id, phase.index);
   const known = new Set(weakKnown.map((w) => w.code));
-  // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
-  const traitCodes = parseWorldBossTraits(b.traits);
-  const weakBonus = worldBossWeakBonus(traitCodes);
 
   // 원정대 명단(10-10 사용자: 목록에서 누가 있는지 보이게) — 모집 중은 전투력(공개된 약점 기준이라 known 뒤에 센다), 완료는 그 전투의 피해.
   // 완료 원정대원은 전투력이 필요 없어 이름·문양만 가볍게 읽는다(지난 보스까지 수십 팀 × 10명).
@@ -262,29 +288,14 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
     };
   });
-  if (userId) {
-    const [[mem], reqs, [gm]] = await Promise.all([
-      db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
-                      where m.boss_id = ${bossId}::bigint and m.user_id = ${userId}::uuid limit 1`) as unknown as Promise<{ pid: string; status: 'recruiting' | 'departed'; leader: string }[]>,
-      // 대기 중 신청 전부(여러 곳 동시 신청, 10-10) — 모집 중인 원정대 것만.
-      db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
-                      where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' order by r.created_at`) as unknown as Promise<{ pid: string }[]>,
-      db.execute(sql`select guild_id::text as g from guild_members where user_id = ${userId}::uuid and server_id = ${serverId}`) as unknown as Promise<{ g: string }[]>,
-    ]);
+  if (userId && mineRows) {
+    const [[mem], reqs, [gm], invRows] = mineRows;
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
     const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
-    // 나 자신(낙관적 '내 원정대' 그리기용) — 머무는 보스에서 아직 싸우지 않았을 때만(명단에 이미 있으면 거기서 온다).
-    const mePerson = active && !mem ? ((await peopleOn(serverId, [userId], known, weakBonus)).get(userId) ?? null) : null;
     // 나에게 온 초대(10-11) — 참가 전이고 보스가 머무는 중일 때만 보인다.
-    const invitesIn: WorldBossInviteIn[] = active && !mem
-      ? ((await db.execute(sql`
-          select i.party_id::text as pid, c.nickname as leader_nick, (select count(*)::int from world_boss_party_members m where m.party_id = i.party_id) as n
-            from world_boss_invites i join world_boss_parties p on p.id = i.party_id
-            join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
-           where p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending' and p.status = 'recruiting'
-           order by i.created_at`)) as unknown as { pid: string; leader_nick: string; n: number }[]).map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) }))
-      : [];
-    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: mePerson, invites: invitesIn };
+    const invitesIn: WorldBossInviteIn[] = active && !mem ? invRows.map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) })) : [];
+    // 나 자신(낙관적 '내 원정대' 그리기용)은 명단 조회(rosterPeople)에 내 id를 끼워 한 번에 읽는다 — 아래 people 조회와 합친다.
+    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: null, invites: invitesIn };
     if (mem) {
       const isLeader = mem.leader === userId;
       const [memIds, reqIds, invIds] = await Promise.all([
@@ -297,6 +308,8 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           : Promise.resolve([] as { uid: string }[]),
       ]);
       const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)], known, weakBonus);
+      // 출발 전 내 원정대면 내 사람 정보도 여기 있다(낙관적 그리기용).
+      if (mem.status === 'recruiting') me.person = people.get(userId) ?? null;
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
       // 출발한 원정대 — 대원별 결과(준 피해·뽑은 보상)를 전투 기록에서 센다(우편과 같은 값). 얼굴 아래에 보인다(10-11 사용자).
@@ -323,11 +336,16 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
         invites: invIds.map((r) => person(r.uid)),
       };
     }
-    // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
+    // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다. 참가 전이면 내 사람 정보(낙관적 '내 원정대' 그리기용)도 같이.
     if (active && state !== 'fought') {
-      const [lo, best] = await Promise.all([loadoutsOf(serverId, [userId], known, weakBonus), bestLoadoutOf(serverId, userId, known, weakBonus)]);
+      const [lo, best, selfPeople] = await Promise.all([
+        loadoutsOf(serverId, [userId], known, weakBonus),
+        bestLoadoutOf(serverId, userId, known, weakBonus),
+        !mem ? peopleOn(serverId, [userId], known, weakBonus) : Promise.resolve(null),
+      ]);
       const l = lo.get(userId);
       if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
+      if (selfPeople) me.person = selfPeople.get(userId) ?? null;
     }
   }
 
@@ -356,11 +374,11 @@ export async function worldBossIdOfParty(partyId: string, serverId: number): Pro
 export async function getWorldBossBattle(partyId: string, serverId: number): Promise<import('./view-types').WorldBossBattle | null> {
   if (!/^\d+$/.test(partyId)) return null;
   const [r] = (await db.execute(sql`
-    select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader, b.boss_code
+    select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader, p.leader_user_id::text as leader_uid, b.boss_code
       from world_boss_parties p join world_bosses b on b.id = p.boss_id left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
      where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.status = 'departed'`)) as unknown as {
     id: string; finale: import('./view-types').WorldBossBattle['finale'] | null; stage_from: number | null; stage_to: number | null;
-    reward_diamond: number; reward_boxes: number; leader: string | null; boss_code: string;
+    reward_diamond: number; reward_boxes: number; leader: string | null; leader_uid: string; boss_code: string;
   }[];
   if (!r?.finale) return null;
   const ids = r.finale.roster.map((m) => m.userId).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
@@ -387,6 +405,7 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
     partyId: r.id,
     leaderNickname: r.leader ?? '알 수 없음',
     bossCode: r.boss_code,
+    leaderUserId: r.leader_uid,
     finale: r.finale,
     stageFrom: r.stage_from ?? 0,
     stageTo: r.stage_to ?? 0,
@@ -420,18 +439,19 @@ export async function getWorldBossInvitable(serverId: number, userId: string, pa
     select p.boss_id::text as boss_id, b.traits, b.stage from world_boss_parties p join world_bosses b on b.id = p.boss_id
      where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.leader_user_id = ${userId}::uuid`)) as unknown as { boss_id: string; traits: unknown; stage: number }[];
   if (!party) return [];
-  const [friendIds, guildRows] = await Promise.all([
+  const traits = parseWorldBossTraits(party.traits);
+  const [friendIds, guildRows, weakRows] = await Promise.all([
     getFriendIds(userId, serverId),
     db.execute(sql`
       select b.user_id::text as uid from guild_members a join guild_members b on b.guild_id = a.guild_id and b.server_id = a.server_id
        where a.server_id = ${serverId} and a.user_id = ${userId}::uuid and b.user_id <> ${userId}::uuid`) as unknown as Promise<{ uid: string }[]>,
+    knownWeakOf(party.boss_id, currentPhase(Number(party.stage)).index), // 친구·길드 조회와 무관 — 같이(10-11 감사)
   ]);
   const friends = new Set(friendIds);
   const guild = new Set(guildRows.map((r) => r.uid));
   const ids = [...new Set([...friends, ...guild])].filter((x) => x !== userId);
   if (ids.length === 0) return [];
-  const traits = parseWorldBossTraits(party.traits);
-  const known = new Set((await knownWeakOf(party.boss_id, currentPhase(Number(party.stage)).index)).map((w) => w.code));
+  const known = new Set(weakRows.map((w) => w.code));
   const [people, taken, invited, faces] = await Promise.all([
     peopleOn(serverId, ids, known, worldBossWeakBonus(traits)),
     db.execute(sql`

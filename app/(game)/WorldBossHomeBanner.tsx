@@ -63,7 +63,7 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         prefetch={false}
         href={`/world-boss/${b.id}`}
         className="relative isolate flex h-full w-full items-center gap-2 overflow-hidden rounded-xl border border-orange-700/60 bg-black pl-[78px] pr-2.5 active:opacity-90"
-        aria-label={`${b.zone}에 월드보스 출현 — 토벌하기`}
+        aria-label={`${b.zone}에 월드보스 출현, 토벌하기`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(worldBossBgUrl(b.bossCode))} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />

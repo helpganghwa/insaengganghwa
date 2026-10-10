@@ -172,9 +172,10 @@ export function WorldBossDetailView({
   const [createAsk, setCreateAsk] = useState(false);
   const [intro, setIntro] = useState('');
   const [traitSheet, setTraitSheet] = useState(false);
+  const [disbandAsk, setDisbandAsk] = useState(false); // 해산은 되돌릴 수 없어 한 번 묻는다(10-11 감사)
   const [inviteOpen, setInviteOpen] = useState(false);
   const [replay, setReplay] = useState<WorldBossBattle | null>(null);
-  const departKey = useRef<string | null>(null); // 출발 멱등 키 — 재전송해도 같은 결과(서버 depart_key)
+  const departKeys = useRef<Record<string, string>>({}); // 출발 멱등 키(원정대마다) — 재전송해도 같은 결과(서버 depart_key), 다른 원정대엔 새 키
 
   const active = d.status === 'active';
   const me = d.me;
@@ -211,8 +212,7 @@ export function WorldBossDetailView({
 
   const depart = () => {
     if (!mp) return;
-    departKey.current ??= crypto.randomUUID();
-    const key = departKey.current;
+    const key = (departKeys.current[mp.partyId] ??= crypto.randomUUID());
     setDepartAsk(false);
     start(async () => {
       const r = await departPartyAction(d.id, mp.partyId, key).catch(() => null);
@@ -225,6 +225,7 @@ export function WorldBossDetailView({
       setReplay({
         partyId: r.result.partyId,
         leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '',
+        leaderUserId: mp.leaderUserId,
         bossCode: d.bossCode,
         finale: f,
         stageFrom: r.result.stageFrom,
@@ -403,8 +404,8 @@ export function WorldBossDetailView({
                     key={s.code}
                     type="button"
                     onClick={() => setTraitSheet(true)}
-                    aria-pressed={s.active}
-                    className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'border-red-500/60 bg-red-500/15 text-red-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
+                    aria-label={`${t.name} ${s.active ? '적용 중' : '미적용'}`}
+                    className={`min-h-7 rounded-md border px-2 py-0.5 text-[10px] font-bold ${s.active ? 'border-red-500/60 bg-red-500/15 text-red-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
                   >
                     {t.icon} {t.name}
                   </button>
@@ -430,7 +431,7 @@ export function WorldBossDetailView({
                     type="button"
                     disabled={mp.members.length >= WORLD_BOSS_PARTY_MAX || mp.partyId === OPT_PARTY_ID}
                     onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, true), undefined, { t: 'decide', userId: r.userId, accept: true })}
-                    className="rounded-md bg-orange-700 px-2.5 py-1 text-[11px] font-bold text-orange-50 disabled:opacity-40"
+                    className="min-h-8 rounded-md bg-orange-700 px-3 py-1 text-[11px] font-bold text-orange-50 disabled:opacity-40"
                   >
                     수락
                   </button>
@@ -438,7 +439,7 @@ export function WorldBossDetailView({
                     type="button"
                     disabled={mp.partyId === OPT_PARTY_ID}
                     onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, false), undefined, { t: 'decide', userId: r.userId, accept: false })}
-                    className="rounded-md bg-stone-800 px-2.5 py-1 text-[11px] font-bold text-stone-400 disabled:opacity-40"
+                    className="min-h-8 rounded-md bg-stone-800 px-3 py-1 text-[11px] font-bold text-stone-400 disabled:opacity-40"
                   >
                     거절
                   </button>
@@ -461,9 +462,9 @@ export function WorldBossDetailView({
                 </button>
                 <button
                   type="button"
-                  disabled={mp.partyId === OPT_PARTY_ID}
-                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' })}
-                  className="mt-1 w-full py-1.5 text-[11.5px] font-bold text-stone-500 disabled:opacity-40"
+                  disabled={pending || mp.partyId === OPT_PARTY_ID}
+                  onClick={() => setDisbandAsk(true)}
+                  className="mt-1 min-h-8 w-full py-1.5 text-[11.5px] font-bold text-stone-500 disabled:opacity-40"
                 >
                   원정대 해산
                 </button>
@@ -581,8 +582,9 @@ export function WorldBossDetailView({
                     ) : canRequest ? (
                       <button
                         type="button"
+                        disabled={pending}
                         onClick={() => run(() => requestJoinAction(d.id, p.id), { title: '참가를 신청했어요', detail: '원정대장이 수락하면 알려 드려요' }, { t: 'request', partyId: p.id })}
-                        className="rounded-lg bg-orange-700 px-3 py-1.5 text-[11.5px] font-bold text-orange-50"
+                        className="min-h-8 rounded-lg bg-orange-700 px-3 py-1.5 text-[11.5px] font-bold text-orange-50 disabled:opacity-50"
                       >
                         참가 신청
                       </button>
@@ -610,6 +612,38 @@ export function WorldBossDetailView({
       </div>
 
       {/* 출발 확인 — 명단·합산 전투력을 되읽어 준다. 버튼은 취소/출발 같은 크기(10-10 사용자). */}
+      {disbandAsk && mp && (
+        <ModalShell
+          onClose={() => setDisbandAsk(false)}
+          onSubmit={() => {
+            setDisbandAsk(false);
+            run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' });
+          }}
+          label="원정대 해산 확인"
+        >
+          <ModalLayout
+            title="원정대를 해산할까요?"
+            subtitle="대원 모두 나가고 되돌릴 수 없어요."
+            footer={
+              <>
+                <ModalButton onClick={() => setDisbandAsk(false)}>취소</ModalButton>
+                <ModalButton
+                  tone="primary"
+                  disabled={pending}
+                  onClick={() => {
+                    setDisbandAsk(false);
+                    run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' });
+                  }}
+                >
+                  해산
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-[12px] text-stone-400">같은 보스에 다시 만들 수 있어요.</p>
+          </ModalLayout>
+        </ModalShell>
+      )}
       {departAsk && mp && (
         <ModalShell onClose={() => setDepartAsk(false)} onSubmit={depart} label="출발 확인">
           <ModalLayout
@@ -688,7 +722,7 @@ export function WorldBossDetailView({
         <ModalShell onClose={() => setCreateAsk(false)} onSubmit={create} label="원정대 만들기">
           <ModalLayout
             title="원정대 만들기"
-            subtitle="함께 갈 사람에게 보일 소개글을 적을 수 있어요 (선택)"
+            subtitle="함께 갈 사람에게 보일 소개글을 적을 수 있어요"
             footer={
               <>
                 <ModalButton onClick={() => setCreateAsk(false)}>취소</ModalButton>
@@ -704,7 +738,7 @@ export function WorldBossDetailView({
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
               maxLength={WORLD_BOSS_PARTY_INTRO_MAX}
-              placeholder="소개글을 작성해 주세요(선택)"
+              placeholder="소개글 (선택)"
               className="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[16px] leading-tight text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
             <p className="mt-1 text-right text-[10.5px] tabular-nums text-stone-500">
@@ -932,7 +966,7 @@ function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPer
         <>
           <span className="block font-mono text-[9px] text-orange-200 tabular-nums">{formatCompactKR(p.result.damage)}</span>
           <span className={`block whitespace-nowrap text-[9px] tabular-nums ${p.result.diamond > 0 || p.result.boxes > 0 ? 'text-orange-300' : 'text-stone-600'}`}>
-            {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond}` : '', p.result.boxes > 0 ? `📦${p.result.boxes}` : ''].filter(Boolean).join(' ') : '미획득'}
+            {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond.toLocaleString('ko-KR')}` : '', p.result.boxes > 0 ? `📦${p.result.boxes.toLocaleString('ko-KR')}` : ''].filter(Boolean).join(' ') : '미획득'}
           </span>
         </>
       ) : (
@@ -960,7 +994,7 @@ function SlotEmpty({ onClick }: { onClick?: () => void }) {
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';
   return onClick ? (
-    <button type="button" onClick={onClick} aria-label="빈 자리 — 초대" className={cls}>
+    <button type="button" onClick={onClick} aria-label="빈 자리, 눌러서 초대" className={cls}>
       {inner}
     </button>
   ) : (

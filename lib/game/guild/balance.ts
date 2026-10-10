@@ -183,7 +183,7 @@ export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
 /**
  * 공격마다 뽑는 보상(복권, 2026-10-08 사용자 확정) — 원정대원이 공격할 때마다 이 표에서 **하나만** 나온다(다이아 또는 상자 또는 꽝).
  * 피해량과 무관. 확률은 십만분율(합 100,000). 상자는 부위 3종 균등이라 3의 배수. 확률표는 화면에 표시하지 않는다(사용자 결정).
- * 기대값(공격 1회) 💎9.25 📦1.89 — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎49 📦10.
+ * 기대값(공격 1회) 💎38.85 📦5.28(10-11 상향) — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎204 📦28.
  */
 export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number; p: number }[] = [
   // 10-11 상향(사용자: 평균 3~5배) — 꽝 50%→30%(당첨 칸은 비율 그대로 1.4배), 다이아 3배, 상자 2배. 기대값 공격 1회 💎38.85 📦5.28(전 💎9.25 📦1.89).
@@ -291,7 +291,7 @@ export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
   { code: 'legion', group: 'party', icon: '🛡', name: '대군', effect: `${WORLD_BOSS_PARTY_MAX}명 꽉 채워 출발하면 ×${WORLD_BOSS_TRAIT.legionMult}` },
   { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 ×${WORLD_BOSS_TRAIT.wandererMult}` },
   { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
-  { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 ${1 + WORLD_BOSS_TRAIT.fatalWeakBonus}배` },
+  { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 +${Math.round(WORLD_BOSS_TRAIT.fatalWeakBonus * 100)}%` }, // +% 표기로 통일
   { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 ${WORLD_BOSS_ATTACK_DROPS[0]!.p / 1000}% → ${(WORLD_BOSS_ATTACK_DROPS[0]!.p + WORLD_BOSS_TRAIT.goldenMissDelta) / 1000}%` },
   { code: 'heavy_treasure', group: 'boss', icon: '💰', name: '무거운 보물', effect: `페이즈 전리품 +${Math.round((WORLD_BOSS_TRAIT.heavyLoot - 1) * 100)}%` },
 ];

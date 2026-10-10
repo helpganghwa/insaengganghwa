@@ -70,9 +70,8 @@ export const worldBossParties = pgTable(
     leaderUserId: uuid('leader_user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    guildId: bigint('guild_id', { mode: 'bigint' })
-      .notNull()
-      .references(() => guilds.id, { onDelete: 'cascade' }),
+    /** 만들 때의 구역 주인 길드 — 길드가 해산하면 null(0236: 출발 기록은 남긴다). */
+    guildId: bigint('guild_id', { mode: 'bigint' }).references(() => guilds.id, { onDelete: 'set null' }),
     /** 소개글(0231, 선택·WORLD_BOSS_PARTY_INTRO_MAX자) — 만들 때 적고 모집 카드에 보인다. */
     intro: text('intro'),
     status: text('status').$type<WorldBossPartyStatus>().notNull().default('recruiting'),

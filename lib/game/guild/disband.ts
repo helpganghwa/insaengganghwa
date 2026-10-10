@@ -46,10 +46,19 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
     .update(zones)
     .set({ ownerGuildId: null, executorUserId: null, capturedAt: null, taxBonus: 1 })
     .where(eq(zones.ownerGuildId, guildId));
+  // 월드보스(0236): 이 길드가 만든 **모집 중** 원정대는 해산(대원·신청·초대 삭제). 출발한 원정대 기록은 남기고 guild_id만 null이 된다(FK set null) —
+  // 종전 cascade는 출발 기록까지 지워 (boss_id, user_id) 유니크가 풀렸다(같은 보스 재참가, 10-11 감사).
+  const dis = (await tx.execute(sql`
+    update world_boss_parties set status = 'disbanded', disband_reason = 'leader_left' where guild_id = ${guildId} and status = 'recruiting' returning id`)) as unknown as { id: string }[];
+  if (dis.length > 0) {
+    await tx.execute(sql`delete from world_boss_party_members m using world_boss_parties p where m.party_id = p.id and p.guild_id = ${guildId} and p.status = 'disbanded'`);
+    await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.guild_id = ${guildId} and p.status = 'disbanded'`);
+    await tx.execute(sql`delete from world_boss_invites i using world_boss_parties p where i.party_id = p.id and p.guild_id = ${guildId} and p.status = 'disbanded'`);
+  }
   await tx.delete(guilds).where(eq(guilds.id, guildId)); // guild_members ON DELETE CASCADE
   // 해산으로 구역이 중립화됐으니 나머지 길드의 독점 세금 보너스(B안)도 재계산(완전장악 상태 변동 반영).
   if (g?.serverId != null) await recalcTaxBonus(g.serverId, tx);
-  // 월드보스: 보스는 남아 다음 주인이 이어간다. 이 길드의 원정대 행은 guild_id cascade로 함께 지워졌다(WORLD-BOSS §5).
+  // 월드보스: 보스는 남아 다음 주인이 이어간다(WORLD-BOSS §5).
 }
 
 /**
