@@ -5,6 +5,7 @@ import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, guildXpToNext } from '@/lib/game/guild/balance';
+import { logWorldEvent } from '@/lib/game/world/event';
 import { sendPushToUsers } from '@/lib/push/send';
 import { worldBossName } from './bosses';
 
@@ -32,13 +33,8 @@ export async function activateDueBosses(serverId: number): Promise<Activated[]> 
   `)) as unknown as Activated[];
   for (const b of rows) {
     const bossName = worldBossName(b.region);
-    await db
-      .execute(
-        sql`insert into world_events (server_id, type, guild_id, detail)
-            values (${serverId}, 'world_boss_spawn', ${b.owner}::bigint,
-                    ${JSON.stringify({ bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossName, guildName: b.owner_name })}::jsonb)`,
-      )
-      .catch((e) => console.warn('[world-boss] spawn event failed', b.id, e));
+    // 월드 로그 + 채팅 시스템 줄(10-11 사용자: 홈 배너·팝업 대신 로그로 알림) — logWorldEvent가 피드 캐시 무효화·채팅 방송까지 한다.
+    await logWorldEvent(serverId, 'world_boss_spawn', { bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossName, guildName: b.owner_name }, b.owner ? { guildId: BigInt(b.owner) } : undefined);
     if (b.owner) {
       const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${b.owner}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
@@ -64,7 +60,7 @@ function applyGuildLevelUp(level: number, xp: bigint): { level: number; xp: bigi
   return { level: lv, xp: rem };
 }
 
-export type SettledBoss = { id: string; zoneName: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; guildId: string | null; guildName: string | null; disbanded: number };
+export type SettledBoss = { id: string; zoneId: number; zoneName: string; region: string; stage: number; lootDiamond: number; lootBoxes: number; guildId: string | null; guildName: string | null; disbanded: number };
 
 /**
  * 떠나는 시각이 지난 보스를 정산한다 — 보스마다 한 트랜잭션. 그 순간의 구역 주인 길드가 전리품(💎·📦)을
@@ -119,14 +115,12 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
         await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
         await tx.execute(sql`delete from world_boss_invites i using world_boss_parties p where i.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
       }
-      await tx.execute(sql`
-        insert into world_events (server_id, type, guild_id, detail)
-        values (${serverId}, 'world_boss_left', ${b.owner}::bigint,
-                ${JSON.stringify({ bossId: id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossName, guildName: b.owner_name, stage: b.stage, lootDiamond: loot.diamond, lootBoxes: loot.boxes })}::jsonb)`);
-      return { id, zoneName: b.zone_name, region: b.region, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: b.owner, guildName: b.owner_name, disbanded: dis.length } satisfies SettledBoss;
+      return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: b.owner, guildName: b.owner_name, disbanded: dis.length } satisfies SettledBoss;
     });
     if (!settled) continue;
     out.push(settled);
+    // 월드 로그 + 채팅 시스템 줄 — 트랜잭션 밖(best-effort). 정산이 확정된 뒤에만 알린다.
+    await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossName: worldBossName(settled.region), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
     if (settled.guildId) {
       const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${settled.guildId}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {

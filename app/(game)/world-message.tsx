@@ -1,4 +1,4 @@
-import { getJosaPicker } from 'josa';
+import { getJosaPicker, josa } from 'josa';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -100,6 +100,35 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
       return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.orange)}에 올랐습니다</>;
     case 'personal_milestone':
       return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.red)}했습니다</>;
+    case 'world_boss_spawn':
+    case 'world_boss_left': {
+      // 월드보스(10-11 사용자: L1 글만 · 채팅 C1 회색 줄) — 구역·보스 이름만 주황, 누르면 보스 상세. 용어는 '나타났습니다' / '재로 흩어지며'(docs/WORLD-BOSS.md §1).
+      const zone = (d.zoneName as string) ?? '어느 땅';
+      const boss = (d.bossName as string) ?? '월드보스';
+      const bossId = typeof d.bossId === 'string' ? d.bossId : null;
+      const body =
+        e.type === 'world_boss_spawn' ? (
+          <>
+            {hl(zone, C.orange)}에 {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 나타났습니다
+          </>
+        ) : (d.guildName as string | null) ? (
+          <>
+            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 재로 흩어지며 {hb(d.guildName as string, C.guild)} 금고에 💎{Number(d.lootDiamond ?? 0).toLocaleString('ko-KR')}·📦
+            {Number(d.lootBoxes ?? 0).toLocaleString('ko-KR')}를 남겼습니다
+          </>
+        ) : (
+          <>
+            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 재로 흩어졌습니다
+          </>
+        );
+      return link && bossId ? (
+        <Link prefetch={false} href={`/world-boss/${bossId}`} className="hover:underline">
+          {body}
+        </Link>
+      ) : (
+        body
+      );
+    }
     default:
       return e.type;
   }

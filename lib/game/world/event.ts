@@ -26,7 +26,9 @@ export type WorldEventType =
   | 'guild_power_1' // 길드 전투력 1위 교체 — detail { guildName }
   | 'guild_zone_1' // 길드 점령지 1위 교체 — detail { guildName }
   | 'rank_leader' // 랭킹 6종 유저 1위 교체 — detail { metric, value }
-  | 'personal_milestone'; // 개인 기록 마일스톤(합산강화/전투력/레이드/대난투) — detail { metric, milestone }
+  | 'personal_milestone' // 개인 기록 마일스톤(합산강화/전투력/레이드/대난투) — detail { metric, milestone }
+  | 'world_boss_spawn' // 월드보스 출현(10-11, 월드 로그 L1·채팅 C1) — detail { bossId, zoneId, zoneName, region, bossName, guildName }. 누르면 보스 상세
+  | 'world_boss_left'; // 월드보스 원정 종료(재로 흩어짐) — detail { bossId, zoneId, zoneName, region, bossName, guildName, stage, lootDiamond, lootBoxes }
 
 /** 홈 월드 피드 1건 — actor 닉네임·공개코드 해소(프로필 링크 = 코드+서버). */
 export type WorldEventEntry = {
