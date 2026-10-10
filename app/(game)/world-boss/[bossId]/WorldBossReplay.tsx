@@ -5,7 +5,7 @@
  * 10-11 사용자 C안: 무대(300px, 너무 크지 않게) 안에서 보스가 움직이고 피해 숫자·보상이 튀며, 무대 발밑에 **텍스트 RPG식 일지**가
  * 한 줄씩 떠오른다(▶ 공격 · ✦ 보스 · 라운드 머리). 아래는 대난투 순위 목록처럼 **얼굴을 행 오른쪽에 크게** 깐 컴팩트 행(50px).
  * 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 행 흑백, 라운드가 바뀌면 큰 라운드 표시. 큰 당첨(💎300+ · 📦90+)은
- * 글자 없이 효과로만(금빛 광선·번쩍임·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지). 탭하면 2.5배속, 건너뛰기로 바로 결과.
+ * 글자 없이 효과로만(금빛 광선·번쩍임·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지). 건너뛰기로 바로 끝(2.5배속 탭은 10-11 삭제).
  * 결과 팝업은 없다(10-11 사용자) — 끝나면 결과(총 피해·페이즈·획득·최다 피해)도 일지 줄로 붙고, 명단 아래 일지 전체가 펼쳐진다. 하단은 다시 재생·나가기. 안내 문구는 두지 않는다.
  * 원정대장은 행·결과 표에 '원정대장' 칩으로 보인다(10-11 사용자: 어울리는 곳엔 최대한).
  */
@@ -25,6 +25,8 @@ import { LeaderChip } from './LeaderChip';
 
 const STEP_ATTACK_MS = 520;
 const STEP_FALL_MS = 1000;
+/** 마지막 전투 줄 뒤 정산 줄까지 기다리는 시간. */
+const RESULT_DELAY_MS = 1400;
 /** 일지 동사 — 공격 순서대로 돌려 쓴다(무기 종류는 기록에 없어 두루 맞는 말만). */
 const VERBS = ['휘두른다', '내리친다', '꽂아 넣는다', '후려친다', '찔러 넣는다'];
 
@@ -52,16 +54,17 @@ export function WorldBossReplay({
   const weakBits = battle.finale.weak ?? [];
   const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const [idx, setIdx] = useState(reduced ? events.length : 0); // 적용된 이벤트 수
-  const [fast, setFast] = useState(false);
   const done = idx >= events.length;
+  // 정산(★ 결과) 줄은 마지막 전투 줄이 끝나고 잠시 뒤에 올라온다(10-11 사용자).
+  const [resultShown, setResultShown] = useState(false);
 
   useEffect(() => {
     if (done) return;
     const ev = events[idx]!;
-    const ms = (ev[0] < 0 ? STEP_FALL_MS : STEP_ATTACK_MS) / (fast ? 2.5 : 1);
+    const ms = ev[0] < 0 ? STEP_FALL_MS : STEP_ATTACK_MS;
     const t = setTimeout(() => setIdx((i) => i + 1), ms);
     return () => clearTimeout(t);
-  }, [idx, done, fast, events]);
+  }, [idx, done, events]);
 
   // 지금까지 적용된 이벤트로 상태를 다시 계산(최대 65칸이라 매 단계 전부 다시 세도 가볍다).
   const st = useMemo(() => {
@@ -119,7 +122,7 @@ export function WorldBossReplay({
       }
     }
     // 끝나면 결과도 일지로(10-11 사용자: 결과 팝업 없이 일지·로그만으로) — 총 피해·페이즈 변화·원정대 획득·최다 피해.
-    if (idx >= events.length && events.length > 0) {
+    if (resultShown && events.length > 0) {
       const moved = battle.stageTo - battle.stageFrom;
       let top = 0;
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
@@ -129,11 +132,15 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes]);
+  }, [idx, events, roster, drops, weakBits, bossName, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [done]);
   // 무대 오버레이 — 라운드 줄은 빼고 마지막 3줄(라운드는 상단 중앙 알약이 맡는다, 10-11 사용자). 명단 아래 전체 일지에는 라운드 머리를 남긴다.
   const shown = lines.filter((l) => l.kind !== 'round').slice(-3);
 
-  const ranked = useMemo(() => roster.map((m, i) => ({ ...m, i })).sort((a, b) => st.dmg[b.i]! - st.dmg[a.i]!), [roster, st.dmg]);
   const moved = battle.stageTo - battle.stageFrom;
   const struck = st.last && st.last[0] < 0;
   const hit = st.last && st.last[0] >= 0;
@@ -164,26 +171,20 @@ export function WorldBossReplay({
     <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-label="원정대 전투">
       <>
           {/* 위 — 무대(배경 + 보스 + 일지). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
-          <button
-            type="button"
-            className="relative h-[300px] shrink-0 overflow-hidden text-left"
-            onClick={() => setFast((f) => !f)}
-            aria-label="빠르게 보기"
-          >
+          <div className="relative h-[300px] shrink-0 overflow-hidden text-left">
             <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} className="opacity-85" />
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_55%,#09090b_100%)]" />
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}
             {jackpot && <span key={`fj${idx}`} className="pointer-events-none absolute inset-0 animate-wb-flash bg-orange-300/35" />}
-            <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+10px)] z-10 flex items-center justify-between px-3 text-[11px]">
+            <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top,0px)+10px)] z-10 flex items-center px-3 text-[11px]">
               <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-300">
                 생존 <b className="text-white">{st.alive}</b>/{roster.length}
               </span>
-              {/* 라운드 — 바뀔 때마다 크게 */}
-              <span key={`r${st.round}`} className="animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-orange-300">
+              {/* 라운드 — 좌우 정중앙(10-11 사용자), 바뀔 때마다 크게 */}
+              <span key={`r${st.round}`} className="absolute left-1/2 -translate-x-1/2 animate-wb-round rounded-full bg-black/60 px-2.5 py-0.5 text-[12px] font-black tracking-widest text-orange-300">
                 {st.round}라운드
               </span>
-              <span className="rounded-full bg-black/60 px-2 py-0.5 text-stone-400">{fast ? '빠르게 ×2.5' : '탭하면 빠르게'}</span>
             </div>
             <div className="absolute left-1/2 top-[40%] h-[140px] w-[140px] -translate-x-1/2 -translate-y-1/2">
               <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.22),transparent_65%)]" />
@@ -252,7 +253,7 @@ export function WorldBossReplay({
                 원정대 피해 <b className="font-mono text-[15px] text-orange-300 tabular-nums">{st.total.toLocaleString('ko-KR')}</b>
               </span>
             </div>
-          </button>
+          </div>
 
           {/* 아래 — 원정대원 목록(참가 순, 대난투 순위 행처럼 얼굴을 오른쪽에 크게). 지금 공격하는 행이 빛나고 화면 안으로 따라온다. */}
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
@@ -356,7 +357,7 @@ export function WorldBossReplay({
               <button
                 type="button"
                 onClick={() => {
-                  setFast(false);
+                  setResultShown(false);
                   setIdx(0);
                 }}
                 className="flex-1 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
