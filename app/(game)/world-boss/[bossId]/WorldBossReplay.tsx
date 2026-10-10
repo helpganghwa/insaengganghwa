@@ -125,12 +125,13 @@ export function WorldBossReplay({
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
       out.push({ key: 'end', kind: 'round', text: '원정 종료' });
       out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `보스 ${battle.stageTo}페이즈 그대로`}` });
-      out.push({ key: 'res2', kind: 'result', text: `원정대 획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')} · 각자 몫은 우편으로` });
-      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최다 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
+      out.push({ key: 'res2', kind: 'result', text: `원정대 획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
+      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
   }, [idx, events, roster, drops, weakBits, bossName, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes]);
-  const shown = lines.slice(-3);
+  // 무대 오버레이 — 라운드 줄은 빼고 마지막 3줄(라운드는 상단 중앙 알약이 맡는다, 10-11 사용자). 명단 아래 전체 일지에는 라운드 머리를 남긴다.
+  const shown = lines.filter((l) => l.kind !== 'round').slice(-3);
 
   const ranked = useMemo(() => roster.map((m, i) => ({ ...m, i })).sort((a, b) => st.dmg[b.i]! - st.dmg[a.i]!), [roster, st.dmg]);
   const moved = battle.stageTo - battle.stageFrom;
@@ -362,7 +363,7 @@ export function WorldBossReplay({
               >
                 다시 재생
               </button>
-              <button type="button" onClick={onClose} className="flex-[1.4] rounded-lg bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50">
+              <button type="button" onClick={onClose} className="flex-1 rounded-lg bg-orange-700 py-2.5 text-[12.5px] font-extrabold text-orange-50">
                 나가기
               </button>
             </div>
