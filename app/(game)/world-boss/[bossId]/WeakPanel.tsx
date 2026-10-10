@@ -89,7 +89,7 @@ export function WeakPanel({
               className="shrink-0 rounded-lg border border-orange-500/60 bg-orange-500/15 px-2 py-1.5 text-center leading-tight disabled:opacity-40"
             >
               <span className="block text-[11px] font-extrabold text-orange-200">약점에 맞춰 장착</span>
-              <span className="block text-[9.5px] text-orange-300/80">{formatCompactKR(mine.best.power)}로</span>
+              <span className="block text-[9.5px] text-orange-300/80">{formatCompactKR(mine.best.power)}</span>
             </button>
           )}
         </div>
