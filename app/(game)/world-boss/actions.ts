@@ -147,7 +147,7 @@ export async function getBattleAction(partyId: string) {
 }
 
 /**
- * 약점에 맞춰 장착 — 공개된 약점과 아바타 보너스까지 계산한 부위별 가장 좋은 장비로 한 번에(docs/WORLD-BOSS.md §3).
+ * 추천 장비 장착 — 공개된 약점과 아바타 보너스까지 계산한 부위별 가장 좋은 장비로 한 번에(docs/WORLD-BOSS.md §3).
  * 장착은 게임 전체에 적용된다(탑과 같은 장착). 판정은 서버가 다시 계산하므로 클라가 보낸 값은 없다.
  */
 export async function equipBestAction(bossId: string) {

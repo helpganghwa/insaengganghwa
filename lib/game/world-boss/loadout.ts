@@ -77,7 +77,7 @@ export async function loadoutsOf(serverId: number, userIds: string[], known: Rea
 }
 
 /**
- * 가진 장비 중 공개된 약점·아바타 보너스까지 계산한 부위별 가장 좋은 장비 — "약점에 맞춰 장착" 버튼의 제안.
+ * 가진 장비 중 공개된 약점·아바타 보너스까지 계산한 부위별 가장 좋은 장비 — "추천 장비 장착" 버튼의 제안.
  * 지금 장착과 같으면 null.
  */
 export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<{ ueids: string[]; power: number; pieces: LoadoutPiece[] } | null> {

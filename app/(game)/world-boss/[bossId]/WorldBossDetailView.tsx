@@ -26,6 +26,7 @@ import type { WorldBossBattle, WorldBossDetail, WorldBossPartyCard, WorldBossPer
 import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
+import { Avatar } from '../../friends/Avatar';
 import {
   cancelRequestAction,
   createPartyAction,
@@ -248,23 +249,12 @@ export function WorldBossDetailView({
             style={{ imageRendering: 'pixelated', filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
           />
         )}
-        <div className="absolute left-[52px] right-3 top-3 z-[2] flex flex-col">
+        <div className={`absolute left-[52px] top-3 z-[2] flex flex-col ${d.traits.length > 0 ? 'right-[104px]' : 'right-3'}`}>
           <span className="flex items-center gap-1.5">
             <span className={`rounded-[4px] px-1 text-[9px] font-extrabold leading-[1.5] ${active ? 'bg-orange-700/90 text-orange-50' : 'bg-stone-700 text-stone-200'}`}>
               {active ? '월드보스' : '원정 종료'}
             </span>
             <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{d.name}</h1>
-            {/* 특성 칩 — 보스 이름 오른쪽(10-10 사용자, A안). 탭하면 설명 시트. */}
-            {d.traits.length > 0 && (
-              <button type="button" onClick={() => setTraitSheet(true)} className="flex shrink-0 items-center gap-1" aria-label="보스 특성">
-                {d.traits.map((t) => (
-                  <span key={t.code} className="inline-flex items-center gap-0.5 rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
-                    <span aria-hidden>{t.icon}</span>
-                    {t.name}
-                  </span>
-                ))}
-              </button>
-            )}
           </span>
           <span className="flex min-w-0 items-center gap-1 text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             <span className="shrink-0">{d.zoneName} ·</span>
@@ -276,6 +266,17 @@ export function WorldBossDetailView({
             )}
           </span>
         </div>
+        {/* 특성 칩 — 히어로 우측 상단에 세로로(10-11 사용자: 이름 오른쪽은 이름을 밀어낸다). 탭하면 설명 시트. */}
+        {d.traits.length > 0 && (
+          <button type="button" onClick={() => setTraitSheet(true)} className="absolute right-3 top-3 z-[2] flex flex-col items-end gap-1" aria-label="보스 특성">
+            {d.traits.map((t) => (
+              <span key={t.code} className="inline-flex items-center gap-0.5 rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
+                <span aria-hidden>{t.icon}</span>
+                {t.name}
+              </span>
+            ))}
+          </button>
+        )}
         <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
           <span className="flex flex-col">
             <b className={`text-[28px] font-black leading-none [text-shadow:0_1px_3px_#000] ${active ? 'text-orange-400' : 'text-stone-300'}`}>
@@ -318,7 +319,8 @@ export function WorldBossDetailView({
           weakTotal={d.weakTotal}
           weakBonus={d.weakBonus}
           mine={d.mine}
-          onEquipBest={() => run(() => equipBestAction(d.id), { title: '약점에 맞춰 장착했어요' }, { t: 'equipBest' })}
+          avatarSrc={me?.person?.avatarSrc ?? null}
+          onEquipBest={() => run(() => equipBestAction(d.id), { title: '추천 장비를 장착했어요' }, { t: 'equipBest' })}
         />
       )}
 
@@ -559,8 +561,8 @@ export function WorldBossDetailView({
         <ModalShell onClose={() => setDepartAsk(false)} onSubmit={depart} label="출발 확인">
           <ModalLayout
             title="지금 출발할까요?"
-            subtitle={`원정대 ${mp.members.length}명`}
-            maxBodyClass="max-h-[46vh]"
+            subtitle={`${mp.members.find((m) => m.isLeader)?.nickname ?? ''} 원정대 · ${mp.members.length}명`}
+            maxBodyClass="max-h-[52vh]"
             footer={
               <>
                 <ModalButton onClick={() => setDepartAsk(false)}>취소</ModalButton>
@@ -570,17 +572,41 @@ export function WorldBossDetailView({
               </>
             }
           >
-            <ul className="space-y-1">
+            {/* 무대(시안 A, 10-10): 보스·단계·특성이 한 장에 — "어떤 보스에게 가는지". */}
+            <div className="relative h-[96px] overflow-hidden rounded-xl bg-stone-950">
+              <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} />
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.15)_0%,transparent_35%,rgba(12,10,9,0.92)_100%)]" />
+              <WorldBossSprite region={d.region} alt="" className="absolute left-1/2 top-[42%] z-[1] h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-2 left-2.5 z-[2] [text-shadow:0_1px_2px_#000]">
+                <span className="block text-[10.5px] text-orange-200">{d.name}</span>
+                <b className="block text-[13px] text-stone-100">
+                  {d.stage}단계 · {d.stage + 1}단계까지 {Math.floor(pct)}%
+                </b>
+              </div>
+              {d.traits.length > 0 && (
+                <div className="absolute bottom-2 right-2.5 z-[2] text-right text-[10px] leading-snug text-stone-200 [text-shadow:0_1px_2px_#000]">
+                  {d.traits.map((t) => (
+                    <span key={t.code} className="block">
+                      {t.icon} {t.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* 명단 칩 — 얼굴 + 이름 + 전투력, 대장은 주황 테두리. */}
+            <div className="mt-2.5 flex flex-wrap gap-1">
               {mp.members.map((m) => (
-                <li key={m.userId} className="flex items-center justify-between gap-2 text-[12.5px]">
-                  <span className="truncate text-stone-600 dark:text-stone-300">
-                    {m.isLeader && <span className="mr-0.5 text-orange-500">★</span>}
-                    {m.nickname}
-                  </span>
-                  <span className="shrink-0 font-mono font-bold tabular-nums">{formatCompactKR(m.combat)}</span>
-                </li>
+                <span
+                  key={m.userId}
+                  className={`inline-flex items-center gap-1 rounded-lg bg-zinc-100 px-1.5 py-1 text-[11px] text-zinc-800 dark:bg-stone-800 dark:text-stone-100 ${m.isLeader ? 'ring-1 ring-orange-500/60' : ''}`}
+                >
+                  <Avatar src={m.avatarSrc} box={m.faceBox} size="h-[18px] w-[18px] rounded-full bg-stone-700" />
+                  {m.isLeader && <span className="text-orange-500">★</span>}
+                  {m.nickname}
+                  <span className="text-zinc-500 dark:text-stone-400">{formatCompactKR(m.combat)}</span>
+                </span>
               ))}
-            </ul>
+            </div>
             <p className="mt-2 flex items-center justify-between border-t border-zinc-200 pt-2 text-[12px] dark:border-zinc-700">
               <span className="text-stone-500">합산 전투력</span>
               <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
@@ -625,6 +651,30 @@ export function WorldBossDetailView({
             <p className="mt-1 text-right text-[10.5px] tabular-nums text-stone-500">
               {intro.length}/{WORLD_BOSS_PARTY_INTRO_MAX}
             </p>
+            {/* 미리보기(시안 A, 10-10): 다른 사람에게 보일 모집 카드를 치는 대로 보여 준다. */}
+            {me?.person && (
+              <div className="mt-2 rounded-xl border border-orange-500/40 bg-stone-950 px-2.5 py-2 text-left">
+                <div className="flex items-center gap-1.5">
+                  <b className="truncate text-[12.5px] text-stone-100">{me.person.nickname} 원정대</b>
+                  {me.person.guildName && (
+                    <span className="min-w-0 text-[10px] text-stone-500">
+                      <Guild p={me.person} />
+                    </span>
+                  )}
+                  <span className="ml-auto shrink-0 rounded-full bg-orange-700 px-1.5 text-[9px] font-extrabold leading-[1.6] text-orange-50">미리보기</span>
+                  <span className="shrink-0 font-mono text-[11px] font-extrabold tabular-nums text-orange-300">1/{WORLD_BOSS_PARTY_MAX}</span>
+                </div>
+                {intro.trim() ? (
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{intro.replace(/\s+/g, ' ').trim()}</p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-stone-600">소개글 없이 만들어요</p>
+                )}
+                <Roster
+                  members={[{ userId: me.person.userId, nickname: me.person.nickname, combat: me.person.combat, damage: 0, isLeader: true, guildEmblemUrl: me.person.guildEmblemUrl, guildEmblemColor: me.person.guildEmblemColor }]}
+                  value="combat"
+                />
+              </div>
+            )}
           </ModalLayout>
         </ModalShell>
       )}
