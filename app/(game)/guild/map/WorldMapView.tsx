@@ -437,9 +437,9 @@ const WorldMap = memo(function WorldMap({
                 </span>
               )}
               {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과.
-                  월드보스 구역(세계지도 탭)은 '월드보스 출현'으로 고정 — 칸 안의 문양만 3초씩 보스 그림과 번갈아 바뀐다(10-09). */}
+                  월드보스 구역(세계지도 탭)은 '월드보스 출현'으로 고정 — 칸 안의 문양만 3초씩 보스 그림과 번갈아 바뀌고, 보스 그림 구간엔 라벨 테두리도 칸과 같은 호박색으로 발광(.wb-zone-label, 10-11). */}
               {boss ? (
-                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border border-orange-500/80 bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300 shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                <span className="wb-zone-label pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300">
                   월드보스 출현
                 </span>
               ) : (

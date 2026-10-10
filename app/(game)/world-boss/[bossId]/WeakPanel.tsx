@@ -3,19 +3,23 @@
 /**
  * 약점 패널(docs/WORLD-BOSS.md §3) — 지금 페이즈에서 맞혀서 공개된 약점과 내 장착 상태. 누가 밝혔는지는 보이지 않는다(10-10 사용자).
  * 공개 전 약점은 아무도 모른다. "추천 장비 장착"(10-11 사용자: 약점이 없을 때도 아바타 보너스로 추천하므로 '약점에 맞춰'가 아니다)은 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합으로 바꾼다.
- * 내 장착(10-11 A안): 윗줄 = 대표 아바타 전신 + 장비 3칸(아바타 +50% 보라 · 약점 +100% 주황 배지를 따로) + 내 전투력, 아랫줄 = 합산을 기본·아바타·약점으로 나눈 분해 + "추천 장비 장착" 버튼(한 줄에 다 넣으면 390에서 배지끼리 겹치고 전투력이 잘린다).
- * 표기는 전부 +%로 통일한다(둘은 곱이 아니라 더해지므로 ×N을 섞으면 틀리게 읽힌다). weakBonus는 보스 특성(치명 약점이면 2.0 = +200%).
+ * 내 장비(10-11 사용자 T1 — 무한의 탑 '내 장비' 줄 그대로): 부위마다 한 줄(그림 · 이름+강화 · 상태 칩 · 부위 전투력) → '아바타' 줄(만들 때 입은 장비 3칸, 지금 장착과 같으면 보라 빛 + 딱지) → 합.
+ * 보너스가 둘이라 칩은 아바타(+50% 보라)·약점(+100% 주황)을 따로 달고, 줄 색은 약점 > 아바타 > 없음. 표기는 전부 +%(둘은 곱이 아니라 더해진다). weakBonus는 보스 특성(치명 약점이면 2.0 = +200%).
  */
 import { useEffect, useRef } from 'react';
 
 import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 import type { KnownWeak, Loadout, LoadoutPiece } from '@/lib/game/world-boss/loadout';
+import { WEAK_SLOTS, type WeakSlot } from '@/lib/game/world-boss/weak';
 import { formatCompactKR } from '@/lib/ui/format-number';
+
+const SLOT_KO: Record<WeakSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+const PIX = { imageRendering: 'pixelated' } as const;
 
 function ItemImg({ src, className = 'h-8 w-8' }: { src: string | null; className?: string }) {
   if (!src) return <span className={`${className} rounded bg-stone-800`} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" className={`${className} object-contain`} style={{ imageRendering: 'pixelated' }} />;
+  return <img src={src} alt="" className={`${className} object-contain`} style={PIX} />;
 }
 
 const pct = (x: number) => `+${Math.round(x * 100)}%`;
@@ -23,29 +27,40 @@ const pct = (x: number) => `+${Math.round(x * 100)}%`;
 /** 그 부위에 아바타 보너스가 붙는가 — 커스텀 아바타면 약점 장비 부위도 유지(loadout.ts piecePower와 같은 규칙). */
 const avatarOn = (p: LoadoutPiece, hasAvatar: boolean) => p.av || (hasAvatar && p.weak);
 
-function Piece({ p, hasAvatar, weakBonus }: { p: LoadoutPiece; hasAvatar: boolean; weakBonus: number }) {
-  const av = avatarOn(p, hasAvatar);
+/** 부위 한 줄 — 탑의 '내 장비' 줄: 왼쪽 2px 띠 · 그림 칸 · 이름+강화 · 칩 · 오른쪽 부위 전투력. */
+function GearRow({ slot, p, hasAvatar, weakBonus }: { slot: WeakSlot; p: LoadoutPiece | undefined; hasAvatar: boolean; weakBonus: number }) {
+  const av = !!p && avatarOn(p, hasAvatar);
+  const weak = !!p?.weak;
+  const power = p ? Math.round(p.cp * (1 + (av ? WORLD_BOSS_AVATAR_BONUS : 0) + (weak ? weakBonus : 0))) : 0;
   return (
-    <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${p.weak ? 'bg-orange-950/60 ring-1 ring-orange-500/70' : 'bg-stone-800/70'}`} title={p.name}>
-      <ItemImg src={p.src} className="h-9 w-9" />
-      {/* 배지는 위(아바타 보라)·아래(약점 주황)로 나눠 단다 — 나란히 두면 44px 칸보다 넓어 옆 칸 배지와 겹친다. */}
-      {av && <span className="absolute -top-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[3px] bg-violet-600 px-[3px] text-[8px] font-extrabold leading-[1.35] text-white">{pct(WORLD_BOSS_AVATAR_BONUS)}</span>}
-      {p.weak && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[3px] bg-orange-600 px-[3px] text-[8px] font-extrabold leading-[1.35] text-white">{pct(weakBonus)}</span>}
+    <div
+      className={`-mx-3 flex items-center gap-2.5 border-l-2 py-1.5 pl-2.5 pr-3 ${
+        weak ? 'border-l-orange-500 bg-orange-950/25' : av ? 'border-l-violet-500 bg-violet-950/15' : 'border-l-stone-700'
+      }`}
+    >
+      <span
+        className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${
+          weak ? 'border-orange-500 bg-orange-950/60 shadow-[0_0_8px_rgba(249,115,22,.35)]' : av ? 'border-violet-500 bg-violet-950/50' : 'border-stone-700 bg-stone-900'
+        } ${p ? '' : 'opacity-40'}`}
+      >
+        {p && <ItemImg src={p.src} className="h-7 w-7" />}
+      </span>
+      <span className={`min-w-0 flex-1 leading-tight ${!p || (!weak && !av) ? 'opacity-70' : ''}`}>
+        <span className="block truncate text-[12px] text-stone-100">
+          {p ? p.name : <span className="text-stone-500">{SLOT_KO[slot]} 없음</span>}
+          {p && <span className="text-stone-500"> +{p.level}{p.transcend ? ` · 초월 ${p.transcend}` : ''}</span>}
+        </span>
+        <span className="mt-0.5 flex items-center gap-1 text-[10.5px] text-stone-500">
+          {av && <span className="rounded bg-violet-600 px-1 text-[9.5px] font-black leading-[1.5] text-white">{pct(WORLD_BOSS_AVATAR_BONUS)} 아바타</span>}
+          {weak && <span className="rounded bg-orange-600 px-1 text-[9.5px] font-black leading-[1.5] text-white">{pct(weakBonus)} 약점</span>}
+          {p && !av && !weak && <span className="rounded border border-stone-700 px-1 text-[9.5px] font-black leading-[1.5] text-stone-500">보너스 없음</span>}
+          {SLOT_KO[slot]}
+        </span>
+      </span>
+      <b className={`flex-none tabular-nums ${weak ? 'text-[13px] text-orange-300' : av ? 'text-[12.5px] text-violet-300' : 'text-[12.5px] text-stone-100'}`}>
+        {p ? formatCompactKR(power) : '-'}
+      </b>
     </div>
-  );
-}
-
-/** 대표 아바타 전신 — 정사각이 아니라 세로로 긴 칸에 아래 정렬, 비율은 그대로(옆을 자르지 않는다). */
-function AvatarBody({ src }: { src: string | null }) {
-  return (
-    <span className="flex h-14 w-10 shrink-0 items-end justify-center rounded-md bg-stone-800/60" title="대표 아바타">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" decoding="async" draggable={false} className="h-full w-full object-contain object-bottom" style={{ imageRendering: 'pixelated' }} />
-      ) : (
-        <span className="pb-1 text-base">👤</span>
-      )}
-    </span>
   );
 }
 
@@ -126,49 +141,60 @@ export function WeakPanel({
 
       {mine && parts && (
         <>
-          <div className="mt-2 flex items-center gap-2 border-t border-stone-800 pt-2.5">
-            <AvatarBody src={avatarSrc} />
-            {mine.loadout.pieces.length === 0 ? (
-              <p className="flex-1 text-[11px] text-stone-400">장착한 장비가 없어요. 장착 장비 3개로 싸워요.</p>
-            ) : (
-              <div className="flex shrink-0 gap-2">
-                {mine.loadout.pieces.map((p) => (
-                  <Piece key={p.slot} p={p} hasAvatar={mine.loadout.hasAvatar} weakBonus={weakBonus} />
-                ))}
-              </div>
+          {/* 내 장비 헤더 — 탑의 '착용 가능 장비 보기 ›' 자리에 추천 장착 링크. 낙관적: 누르면 상위에서 best가 비워져 링크가 바로 사라진다. */}
+          <div className="mt-2 flex items-baseline justify-between border-t border-stone-800 pt-2.5 pb-1">
+            <span className="text-[11px] font-bold text-stone-500">내 장비</span>
+            {mine.best && (
+              <button type="button" onClick={onEquipBest} className="text-[11px] text-stone-400">
+                추천 장비 장착 <b className="font-bold text-orange-300">{formatCompactKR(mine.best.power)} ›</b>
+              </button>
             )}
-            <span className="min-w-0 flex-1 text-right leading-tight">
-              <span className="block text-[10px] text-stone-500">내 전투력</span>
-              <b className="block text-[16px] font-extrabold text-orange-300">{formatCompactKR(mine.loadout.power)}</b>
-            </span>
           </div>
-          {(mine.loadout.pieces.length > 0 || mine.best) && (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              {mine.loadout.pieces.length > 0 ? (
-                <p className="flex min-w-0 flex-wrap gap-x-2 text-[10px] text-stone-400">
-                  <span>기본 <b className="font-bold text-stone-200">{formatCompactKR(parts.base)}</b></span>
-                  <span className="text-violet-300">아바타 <b className="font-bold">+{formatCompactKR(parts.av)}</b></span>
-                  <span className="text-orange-300">약점 <b className="font-bold">+{formatCompactKR(parts.weak)}</b></span>
-                </p>
-              ) : (
-                <span />
-              )}
-              {mine.best && (
-                // 낙관적: 누르면 상위에서 best가 비워져 버튼이 바로 사라진다 — pending으로 잠그지 않는다.
-                <button
-                  type="button"
-                  onClick={onEquipBest}
-                  className="shrink-0 rounded-lg border border-orange-500/60 bg-orange-500/15 px-2 py-1 text-[11px] font-extrabold leading-tight text-orange-200"
-                >
-                  추천 장비 장착 <span className="font-bold text-orange-300/80">{formatCompactKR(mine.best.power)}</span>
-                </button>
-              )}
-            </div>
+          {WEAK_SLOTS.map((slot) => (
+            <GearRow key={slot} slot={slot} p={mine.loadout.pieces.find((x) => x.slot === slot)} hasAvatar={mine.loadout.hasAvatar} weakBonus={weakBonus} />
+          ))}
+          {/* 아바타 줄 — 탑과 같이: '아바타' · 작은 전신 · 만들 때 입은 장비 3칸(지금 장착과 같으면 보라 빛 + 딱지, 아니면 흐리게). */}
+          <div className="flex items-center gap-2 py-1.5 text-[12px]">
+            <span className="flex-none text-stone-400">아바타</span>
+            {avatarSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarSrc} alt="" decoding="async" draggable={false} className="h-8 w-auto" style={PIX} />
+            ) : (
+              <span className="text-base">👤</span>
+            )}
+            {mine.loadout.hasAvatar && mine.loadout.avatarGear.length > 0 ? (
+              <span className="flex items-center gap-1.5 pl-0.5">
+                {mine.loadout.avatarGear.map((g) => (
+                  <span
+                    key={g.slot}
+                    title={SLOT_KO[g.slot]}
+                    className={`relative flex h-[26px] w-[26px] items-center justify-center rounded-[5px] border ${
+                      g.on ? 'border-violet-500 bg-violet-950/50 shadow-[0_0_8px_rgba(139,92,246,.4)]' : 'border-stone-700 bg-stone-900 opacity-45'
+                    }`}
+                  >
+                    <ItemImg src={g.src} className="h-5 w-5" />
+                    {g.on && <span className="absolute -right-2 -top-1.5 rounded-[3px] bg-violet-600 px-[3px] text-[8px] font-black leading-[1.4] text-white">{pct(WORLD_BOSS_AVATAR_BONUS)}</span>}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="text-[10.5px] text-stone-500">만들 때 입은 장비 없음</span>
+            )}
+            <span className="ml-auto text-[10.5px] text-stone-500">{mine.loadout.hasAvatar ? `같은 장비·약점 장비면 ${pct(WORLD_BOSS_AVATAR_BONUS)}` : `대표 아바타를 만들면 ${pct(WORLD_BOSS_AVATAR_BONUS)}`}</span>
+          </div>
+          {/* 합 — 부위 전투력을 그대로 더한 값 = 월드보스에서 싸우는 전투력(공개된 약점 기준). */}
+          <div className="mt-1 flex items-baseline justify-between border-t border-dashed border-stone-700 pt-2">
+            <span className="text-[12px] text-stone-400">내 전투력</span>
+            <b className="text-[18px] font-black tabular-nums text-orange-300">{formatCompactKR(mine.loadout.power)}</b>
+          </div>
+          {mine.loadout.pieces.length > 0 && (
+            <p className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-stone-400">
+              <span>기본 <b className="font-bold text-stone-200">{formatCompactKR(parts.base)}</b></span>
+              <span className="text-violet-300">아바타 <b className="font-bold">+{formatCompactKR(parts.av)}</b></span>
+              <span className="text-orange-300">약점 <b className="font-bold">+{formatCompactKR(parts.weak)}</b></span>
+            </p>
           )}
         </>
-      )}
-      {mine && !mine.loadout.hasAvatar && (
-        <p className="mt-1.5 text-[10px] text-stone-500">대표 아바타를 장착 장비로 만들면 그 부위가 +50%예요.</p>
       )}
     </section>
   );

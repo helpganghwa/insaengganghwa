@@ -505,6 +505,8 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
   .wb-alt-a { animation: wb-alt-a 6s linear infinite; }
   .wb-alt-b { animation: wb-alt-b 6s linear infinite; }
   .wb-zone-flame { animation: wb-zone-alt 6s linear infinite; }
+  /* '월드보스 출현' 라벨 — 칸이 보스 그림으로 바뀌는 구간(50~96%)에 테두리도 같은 호박색으로 발광(10-11 사용자). */
+  .wb-zone-label { animation: wb-zone-label 6s linear infinite; }
   /* 지도 보스 주변 불티 — 2px 점 몇 개가 위로 사라진다(가리는 면적이 거의 없다). */
   .wb-spark { position: absolute; width: 2px; height: 2px; border-radius: 1px; background: #ffb347; box-shadow: 0 0 3px #ff7a1a; opacity: 0; animation: wb-spark 1.8s ease-out infinite; }
   /* 홈 세계지도 카드 — 보스가 머무는 동안 불씨 테두리 맥동. */
@@ -518,14 +520,16 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
 @keyframes wb-alt-a { 0%, 46% { opacity: 1; } 50%, 96% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes wb-alt-b { 0%, 46% { opacity: 0; } 50%, 96% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes wb-zone-alt { 0%, 46%, 100% { box-shadow: none; } 50%, 70%, 96% { box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 8px 3px rgba(251, 191, 36, 0.85); } 60%, 85% { box-shadow: 0 0 0 2px rgba(255, 251, 235, 1), 0 0 14px 6px rgba(251, 191, 36, 0.95); } }
+@keyframes wb-zone-label { 0%, 46%, 100% { border-color: rgba(249, 115, 22, 0.8); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.75); } 50%, 70%, 96% { border-color: rgba(253, 230, 138, 1); box-shadow: 0 0 4px 1.5px rgba(251, 191, 36, 0.85), 0 1px 2px rgba(0, 0, 0, 0.75); } 60%, 85% { border-color: rgba(255, 251, 235, 1); box-shadow: 0 0 7px 3px rgba(251, 191, 36, 0.95), 0 1px 2px rgba(0, 0, 0, 0.75); } }
 @keyframes wb-zone-flame { 0%, 100% { box-shadow: 0 0 0 1.5px rgba(234, 88, 12, 0.95), 0 0 5px 2px rgba(239, 68, 68, 0.55); } 50% { box-shadow: 0 0 0 2px rgba(251, 146, 60, 1), 0 0 11px 4px rgba(234, 88, 12, 0.85); } }
 @keyframes wb-spark { 0% { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
 @keyframes wb-card-glow { 0%, 100% { box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.5), 0 0 8px 1px rgba(251, 146, 60, 0.25); } 50% { box-shadow: 0 0 0 1.5px rgba(251, 146, 60, 0.95), 0 0 16px 4px rgba(251, 146, 60, 0.55); } }
 @keyframes wbb-shaft { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft, .wb-zone-flame, .wb-card-glow, .wb-alt-a, .wb-alt-b { animation: none; }
+  .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft, .wb-zone-flame, .wb-zone-label, .wb-card-glow, .wb-alt-a, .wb-alt-b { animation: none; }
   .wb-alt-a { opacity: 0; }
   .wb-zone-flame { box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 8px 3px rgba(251, 191, 36, 0.85); }
+  .wb-zone-label { border-color: rgba(253, 230, 138, 1); box-shadow: 0 0 4px 1.5px rgba(251, 191, 36, 0.85); }
   .wb-spark { display: none; }
   .wbs-pulse, .wbb-ember { opacity: 0.5; }
 }

@@ -13,8 +13,10 @@ import { WEAK_SLOTS, type WeakSlot } from './weak';
  * 월드보스 장착 상태(docs/WORLD-BOSS.md §3) — 화면용 읽기. 전투 판정은 출발 트랜잭션(party.ts)이 따로 한다.
  * 화면에서 쓰는 "약점"은 **공개된 약점만**이다(공개 전 약점은 아무도 모른다).
  */
-export type LoadoutPiece = { ueid: string; slot: WeakSlot; code: string; name: string; cp: number; src: string | null; av: boolean; weak: boolean };
-export type Loadout = { pieces: LoadoutPiece[]; hasAvatar: boolean; power: number; weakCount: number; avatarCount: number };
+export type LoadoutPiece = { ueid: string; slot: WeakSlot; code: string; name: string; cp: number; level: number; transcend: number; src: string | null; av: boolean; weak: boolean };
+/** 대표 아바타를 만들 때 입은 장비 한 칸 — on = 지금 그 부위에 같은 장비를 장착(탑 '아바타' 줄과 같은 표시, 10-11 T1). */
+export type AvatarGear = { slot: WeakSlot; code: string; src: string | null; on: boolean };
+export type Loadout = { pieces: LoadoutPiece[]; hasAvatar: boolean; avatarGear: AvatarGear[]; power: number; weakCount: number; avatarCount: number };
 export type KnownWeak = { code: string; slot: WeakSlot; name: string; src: string | null };
 
 type EqRow = { uid: string; ueid: string; code: string; name: string; slot: string; el: number; tl: number };
@@ -68,10 +70,16 @@ export async function loadoutsOf(serverId: number, userIds: string[], known: Rea
     const snap = avatar.get(uid) ?? null;
     const pieces: LoadoutPiece[] = (byUser.get(uid) ?? [])
       .filter((r) => isSlot(r.slot))
-      .map((r) => ({ ueid: r.ueid, slot: r.slot as WeakSlot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), src: spritePath(r.code), av: !!snap && snap[`${r.slot}Key`] === r.code, weak: known.has(r.code) }))
+      .map((r) => ({ ueid: r.ueid, slot: r.slot as WeakSlot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), level: Number(r.el), transcend: Number(r.tl), src: spritePath(r.code), av: !!snap && snap[`${r.slot}Key`] === r.code, weak: known.has(r.code) }))
       .sort((a, b) => WEAK_SLOTS.indexOf(a.slot) - WEAK_SLOTS.indexOf(b.slot));
     const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak, weakBonus), 0));
-    out.set(uid, { pieces, hasAvatar: !!snap, power, weakCount: pieces.filter((p) => p.weak).length, avatarCount: pieces.filter((p) => p.av || (!!snap && p.weak)).length });
+    const avatarGear: AvatarGear[] = snap
+      ? WEAK_SLOTS.flatMap((slot) => {
+          const code = snap[`${slot}Key`];
+          return typeof code === 'string' ? [{ slot, code, src: spritePath(code), on: pieces.some((p) => p.slot === slot && p.code === code) }] : [];
+        })
+      : [];
+    out.set(uid, { pieces, hasAvatar: !!snap, avatarGear, power, weakCount: pieces.filter((p) => p.weak).length, avatarCount: pieces.filter((p) => p.av || (!!snap && p.weak)).length });
   }
   return out;
 }
@@ -106,7 +114,7 @@ export async function bestLoadoutOf(serverId: number, userId: string, known: Rea
     if (!best) continue;
     if (!best.r.on_) changed = true;
     const r = best.r;
-    pieces.push({ ueid: r.ueid, slot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), src: spritePath(r.code), av: !!snap && snap[`${slot}Key`] === r.code, weak: known.has(r.code) });
+    pieces.push({ ueid: r.ueid, slot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), level: Number(r.el), transcend: Number(r.tl), src: spritePath(r.code), av: !!snap && snap[`${slot}Key`] === r.code, weak: known.has(r.code) });
   }
   if (!changed) return null;
   const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak, weakBonus), 0));
