@@ -528,7 +528,23 @@ export function WorldBossDetailView({
               // 다른 원정대에 신청해 둔 채로도 더 신청할 수 있다(여러 곳 동시 신청).
               const canRequest = active && (me?.state === 'none' || me?.state === 'pending') && !full;
               return (
-                <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending || isInvited ? 'border-orange-500/55' : 'border-stone-800'}`}>
+                <div
+                  key={p.id}
+                  className={`rounded-xl border p-2.5 ${
+                    isInvited
+                      ? 'border-orange-400 bg-orange-950/30 shadow-[0_0_14px_rgba(249,115,22,0.35)] ring-1 ring-orange-500/40'
+                      : isPending
+                        ? 'border-orange-500/55 bg-stone-900'
+                        : 'border-stone-800 bg-stone-900'
+                  }`}
+                >
+                  {/* 초대받은 원정대(10-11 사용자): 맨 앞 + 주황 테두리 발광 + 눈에 띄는 '초대받음' 칩. */}
+                  {isInvited && (
+                    <div className="mb-1.5 flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-extrabold text-orange-50 shadow-[0_0_8px_rgba(249,115,22,0.6)]">✉ 초대받음</span>
+                      <span className="truncate text-[10.5px] text-orange-200">바로 참가할 수 있어요</span>
+                    </div>
+                  )}
                   <PartyHead p={p} />
                   {p.intro && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{p.intro}</p>}
                   {/* 명단 — 대장 먼저, 문양 + 이름 + 전투력(10-10 사용자: 누가 있는지·수치를 컴팩트하게). */}
@@ -545,7 +561,6 @@ export function WorldBossDetailView({
                     {/* 초대받은 원정대(10-11): 레이드처럼 '참가'로 바로 들어간다(신청·수락 없음). */}
                     {isInvited && !full ? (
                       <>
-                        <span className="shrink-0 text-[10.5px] font-bold text-orange-300">초대받음</span>
                         <button
                           type="button"
                           disabled={pending}
