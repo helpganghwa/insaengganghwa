@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
-import { distributeGuildBoxes } from '@/lib/game/guild/distribute';
+import { distributeGuildTaxManual, splitBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
@@ -66,7 +66,8 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     await testDb.execute(sql`delete from world_events where server_id=${S} and type like 'world_boss_%' and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from admin_actions where admin_user_id=${T}::uuid and action in ('world_boss_spawn','world_boss_cancel') and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`delete from mailbox where title='길드 전리품 분배' and created_at >= ${t0.toISOString()}`);
-    await testDb.execute(sql`delete from guild_audit_log where action='loot_distribute' and created_at >= ${t0.toISOString()}`);
+    await testDb.execute(sql`delete from mailbox where title='길드 세금 분배' and user_id=${T}::uuid and created_at >= ${t0.toISOString()}`);
+    await testDb.execute(sql`delete from guild_audit_log where action in ('loot_distribute','tax_distribute') and created_at >= ${t0.toISOString()}`);
     await testDb.execute(sql`update zones set owner_guild_id=${zoneOwnerBefore}::bigint where id=${ZONE}`);
     if (guildBefore) await testDb.execute(sql`update guilds set tax_pool_diamond=${guildBefore.pool}::bigint, tax_pool_boxes=${guildBefore.boxes}, level=${guildBefore.level}, xp=${guildBefore.xp}::bigint where id=${guildId}::bigint`);
     await endTestDb();
@@ -316,30 +317,34 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(map.left.find((l) => l.zoneId === ZONE)).toMatchObject({ bossId: boss, settledGuildName: gname!.name, lootDiamond: loot.diamond, lootBoxes: loot.boxes });
   });
 
-  it('금고 상자 분배: 똑같이(3의 배수·남는 상자는 금고에) / 한 사람에게 / 부족하면 거절', async () => {
-    const [{ n }] = await q<{ n: number }>(sql`select count(*)::int as n from guild_members where guild_id=${guildId}::bigint`);
-    await testDb.execute(sql`update guilds set tax_pool_boxes=${3 * n * 2 + 2} where id=${guildId}::bigint`);
-    const eq = await distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'equal' });
-    expect(eq).toEqual({ total: 6 * n, perMember: 6, recipients: n });
-    const pool = async () => (await q<{ b: number }>(sql`select tax_pool_boxes as b from guilds where id=${guildId}::bigint`))[0]!.b;
-    expect(await pool()).toBe(2);
-    const [mail] = await q<{ payload: { boxes: Record<string, number> } }>(sql`select payload from mailbox where user_id=${T}::uuid and title='길드 전리품 분배' and created_at >= ${t0.toISOString()} order by id desc limit 1`);
-    expect(mail!.payload.boxes).toEqual({ weapon: 2, armor: 2, accessory: 2 });
-    // 2개 남음 → 똑같이·한 사람 모두 3개 단위가 안 돼 거절.
+  it('세금 상자 분배(통합): 💎와 📦를 한 번에, 상자는 1개부터(3의 배수 부위 균등 + 나머지 무작위 부위), 넘치면 거절', async () => {
+    // 부위 배분(순수) — 20 = 6·6·6 + 2개는 서로 다른 부위.
+    const p20 = splitBoxes(20, () => 0);
+    expect(p20).toEqual({ weapon: 7, armor: 7, accessory: 6 });
+    expect(splitBoxes(3)).toEqual({ weapon: 1, armor: 1, accessory: 1 });
+    expect(splitBoxes(0)).toEqual({ weapon: 0, armor: 0, accessory: 0 });
+    for (let n = 1; n <= 10; n++) {
+      const p = splitBoxes(n);
+      expect(p.weapon + p.armor + p.accessory).toBe(n);
+      expect(Math.max(p.weapon, p.armor, p.accessory) - Math.min(p.weapon, p.armor, p.accessory)).toBeLessThanOrEqual(1);
+    }
+    await testDb.execute(sql`update guilds set tax_pool_diamond=1000, tax_pool_boxes=20 where id=${guildId}::bigint`);
+    const r = await distributeGuildTaxManual({ leaderUserId: T, serverId: S, amounts: [{ userId: T, amount: 300, boxes: 8 }, { userId: T, amount: 0, boxes: 3 }] });
+    expect(r).toEqual({ total: 300n, totalBoxes: 11 });
+    const [g] = await q<{ d: string; b: number }>(sql`select tax_pool_diamond::text as d, tax_pool_boxes as b from guilds where id=${guildId}::bigint`);
+    expect(g).toEqual({ d: '700', b: 9 });
+    const [mail] = await q<{ body: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`select body, payload from mailbox where user_id=${T}::uuid and title='길드 세금 분배' and created_at >= ${t0.toISOString()} order by id desc limit 1`);
+    expect(mail!.payload.diamond).toBe(300);
+    expect(mail!.payload.boxes.weapon + mail!.payload.boxes.armor + mail!.payload.boxes.accessory).toBe(11);
+    expect(mail!.body).toContain('💎300');
+    expect(mail!.body).toMatch(/무기|방어구|장신구/);
+    // 상자만도 된다(1개부터). 넘치면 거절.
+    expect(await distributeGuildTaxManual({ leaderUserId: T, serverId: S, amounts: [{ userId: T, amount: 0, boxes: 1 }] })).toEqual({ total: 0n, totalBoxes: 1 });
     const errCode = async (p: Promise<unknown>) => { try { await p; return 'OK'; } catch (e) { return e instanceof GuildError ? e.code : 'THROWN'; } };
-    expect(await errCode(distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'equal' }))).toBe('NOTHING_TO_DISTRIBUTE');
-    await testDb.execute(sql`update guilds set tax_pool_boxes=10 where id=${guildId}::bigint`);
-    expect(await distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'target', targetUserId: T })).toEqual({ total: 9, perMember: null, recipients: 1 });
-    expect(await pool()).toBe(1);
-    expect(await errCode(distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'target', targetUserId: G }))).toBe('TARGET_NOT_IN_GUILD');
-    // 기여 순 3개씩 — 상자 7개면 2명에게 3개씩, 1개 남음. 1개뿐이면 거절.
-    await testDb.execute(sql`update guilds set tax_pool_boxes=7 where id=${guildId}::bigint`);
-    expect(await distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'top' })).toEqual({ total: Math.min(2, n) * 3, perMember: 3, recipients: Math.min(2, n) });
-    expect(await pool()).toBe(7 - Math.min(2, n) * 3);
-    await testDb.execute(sql`update guilds set tax_pool_boxes=2 where id=${guildId}::bigint`);
-    expect(await errCode(distributeGuildBoxes({ leaderUserId: T, serverId: S, mode: 'top' }))).toBe('NOTHING_TO_DISTRIBUTE');
-    const [{ logs }] = await q<{ logs: number }>(sql`select count(*)::int as logs from guild_audit_log where guild_id=${guildId}::bigint and action='loot_distribute' and created_at >= ${t0.toISOString()}`);
-    expect(logs).toBe(n + 1 + Math.min(2, n));
+    expect(await errCode(distributeGuildTaxManual({ leaderUserId: T, serverId: S, amounts: [{ userId: T, amount: 0, boxes: 9 }] }))).toBe('DISTRIBUTE_OVER_POOL');
+    expect(await errCode(distributeGuildTaxManual({ leaderUserId: T, serverId: S, amounts: [{ userId: G, amount: 1, boxes: 0 }] }))).toBe('TARGET_NOT_IN_GUILD');
+    const [{ logs }] = await q<{ logs: number }>(sql`select count(*)::int as logs from guild_audit_log where guild_id=${guildId}::bigint and action='tax_distribute' and (detail->>'boxes') is not null and created_at >= ${t0.toISOString()}`);
+    expect(logs).toBe(2);
   }, 20_000);
 
   it('정산: 떠날 때 중립이면 전리품은 소멸한다', async () => {

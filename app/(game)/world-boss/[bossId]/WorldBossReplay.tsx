@@ -17,7 +17,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossBackdrop } from '@/components/WorldBossBackdrop';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
-import { type WorldBossTraitCode, worldBossLootFor, worldBossLootMult, worldBossStageFor } from '@/lib/game/guild/balance';
+import { worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
 import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
@@ -117,8 +117,6 @@ export function WorldBossReplay({
     // 페이즈 돌파 줄(10-11 사용자) — 출발 시점 누적(finale.start)이 있는 기록만: 공격 뒤 누적이 다음 페이즈 문턱을 넘으면 한 줄.
     const start = battle.finale.start;
     let stage = start != null ? worldBossStageFor(start).stage : null;
-    // 돌파로 금고에 쌓이는 전리품(10-11 사용자: 돌파 줄에 같이) — 페이즈 누적 전리품의 차이, 특성 '무거운 보물' 배율 포함.
-    const lootMult = worldBossLootMult(bossTraits.map((t) => t.code as WorldBossTraitCode));
     // 같은 사람이 연달아 같은 문장을 쓰지 않도록 k에 소수를 곱해 돌린다.
     const pick = <T,>(pool: T[], k: number): T => pool[(seed + k * 7) % pool.length]!;
     for (let k = 0; k < idx; k++) {
@@ -141,9 +139,7 @@ export function WorldBossReplay({
         if (start != null && stage != null) {
           const ns = worldBossStageFor(start + aux).stage;
           if (ns > stage) {
-            const before = worldBossLootFor(stage, lootMult);
-            const after = worldBossLootFor(ns, lootMult);
-            out.push({ key: `p${k}`, kind: 'phase', text: `PHASE ${ns} 돌파`, stage: ns, loot: `전리품 💎${(after.diamond - before.diamond).toLocaleString('ko-KR')} 📦${after.boxes - before.boxes}` });
+            out.push({ key: `p${k}`, kind: 'phase', text: `PHASE ${ns} 돌파`, stage: ns }); // 전리품 표시는 뺐다(10-11 사용자 롤백)
             stage = ns;
           }
         }
@@ -164,7 +160,7 @@ export function WorldBossReplay({
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` });
     }
     return out;
-  }, [idx, events, roster, drops, weakBits, bossName, bossTraits, battle.partyId, battle.bossCode, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
+  }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.bossCode, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);
   useEffect(() => {
     if (!done) return;
     const t = setTimeout(() => setResultShown(true), RESULT_DELAY_MS);
@@ -540,14 +536,6 @@ function LogText({ l }: { l: LogLine }) {
     );
   }
   // 줄 종류는 글머리 기호 대신 왼쪽 선·색으로만 구분한다(10-11 사용자: 💎📦 말고는 이모지·기호 지양).
-  if (l.kind === 'phase') {
-    return (
-      <>
-        <span className="min-w-0 flex-1 truncate">{l.text}</span>
-        {l.loot && <span className="shrink-0 text-[11px] font-bold text-stone-100">{l.loot}</span>}
-      </>
-    );
-  }
-  if (l.kind === 'boss' || l.kind === 'result') return <span className="min-w-0 flex-1 truncate">{l.text}</span>;
+  if (l.kind === 'boss' || l.kind === 'phase' || l.kind === 'result') return <span className="min-w-0 flex-1 truncate">{l.text}</span>;
   return <span className="min-w-0 truncate">{l.text}</span>;
 }

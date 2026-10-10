@@ -2,7 +2,7 @@
 
 /**
  * 월드보스 상세 화면(docs/WORLD-BOSS.md §9). 위에서부터: 무대 히어로(이름·단계·전리품·남은 시간을 무대 안에) · 전리품 안내 한 줄 ·
- * 약점/내 장착 · 지금 할 일(원정대 만들기 / 신청 대기 / 안내) · 내 원정대(출발·해산·나가기·내 전투 다시 보기는 패널 안) · [모집 중 | 완료] 원정대 카드.
+ * 약점/내 장착 · 지금 할 일(원정대 만들기 / 신청 대기 / 안내) · 내 원정대(출발·해산·나가기·원정대 전투 다시 보기는 패널 안) · [모집 중 | 완료] 원정대 카드.
  * 바닥 고정 버튼은 두지 않는다(채팅 미니바 위에 떠서 어색했다, 10-10 사용자).
  * 액션은 모두 **낙관적**(useOptimistic): 누르는 즉시 화면을 바꾸고 서버 액션이 현재 경로를 재렌더해 확정된 상태가 props로 온다(실패하면 토스트 + 자동 복귀).
  * (router.refresh 없음, CLAUDE §11.7). 출발만은 결과가 서버 RNG라 낙관 없이 기다렸다가 WorldBossReplay로 재생.
@@ -489,7 +489,7 @@ export function WorldBossDetailView({
                   onClick={() => openBattle(myCard.id)}
                   className="mt-2 w-full rounded-xl bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50 disabled:opacity-40"
                 >
-                  내 전투 다시 보기
+                  원정대 전투 다시 보기
                 </button>
               </>
             )

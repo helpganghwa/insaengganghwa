@@ -25,7 +25,6 @@ import {
   collectAllZoneTax,
   distributeGuildTax,
   distributeGuildTaxManual,
-  distributeGuildBoxes,
   deployToZone,
   cancelDeployment,
   deployMember,
@@ -512,7 +511,7 @@ export async function distributeTaxAction(mode: GuildTaxDistribution, targetUser
 }
 
 /** 세금 풀 수동 분배 — 길드장. 길드원별 지정 금액 지급. */
-export async function distributeTaxManualAction(amounts: { userId: string; amount: number }[]) {
+export async function distributeTaxManualAction(amounts: { userId: string; amount: number; boxes?: number }[]) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
@@ -522,28 +521,12 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
     const r = await distributeGuildTaxManual({ leaderUserId: u, serverId: await getActiveServerId(), amounts });
     revalidatePath('/guild');
     revalidatePath('/guild/distribute');
-    return { status: 'success', total: r.total.toString() } as const;
+    return { status: 'success', total: r.total.toString(), totalBoxes: r.totalBoxes } as const;
   } catch (e) {
     return fail(e, 'distributeManual');
   }
 }
 
-/** 금고 상자(월드보스 전리품) 분배 — 똑같이 나누기 또는 한 사람에게. */
-export async function distributeBoxesAction(mode: 'equal' | 'target' | 'top', targetUserId?: string) {
-  const u = await getSessionUserId();
-  if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
-  if (mode !== 'equal' && mode !== 'target' && mode !== 'top') return { status: 'error', code: 'UNKNOWN' } as const;
-  try {
-    const r = await distributeGuildBoxes({ leaderUserId: u, serverId: await getActiveServerId(), mode, targetUserId });
-    revalidatePath('/guild');
-    revalidatePath('/guild/distribute');
-    return { status: 'success', total: r.total, perMember: r.perMember, recipients: r.recipients } as const;
-  } catch (e) {
-    return fail(e, 'distributeBoxes');
-  }
-}
 
 // ── 점령전 (§5.8) ──
 

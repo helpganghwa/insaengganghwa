@@ -15,7 +15,6 @@ import type { TaxCollectZone, TaxZoneStatus } from '@/lib/game/guild/queries';
 
 import { collectAllTaxAction, collectTaxAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
-import { BoxPoolCard } from './BoxPoolCard';
 import { DistributeBoard, type DistributeMember } from './DistributeBoard';
 
 export type TaxTab = 'collect' | 'distribute';
@@ -90,7 +89,7 @@ export function TaxBoard({
   /** 수금 권한이 없으면 null. */
   collect: CollectView | null;
   pool: string;
-  /** 금고 상자(월드보스 전리품) — 0이면 상자 카드를 숨긴다. */
+  /** 세금 상자(월드보스 전리품) — 💎와 같은 화면·같은 지급으로 나눈다(10-11 통합). 0이어도 칸은 보인다. */
   poolBoxes?: number;
   /** 분배 권한이 없으면 빈 배열(분배 화면 자체가 나오지 않는다). */
   members: DistributeMember[];
@@ -147,8 +146,7 @@ export function TaxBoard({
         <CollectPanel myUserId={myUserId} view={collect} />
       ) : (
         <>
-          {poolBoxes > 0 && <BoxPoolCard boxes={poolBoxes} members={members} />}
-          <DistributeBoard myUserId={myUserId} pool={pool} members={members} />
+          <DistributeBoard myUserId={myUserId} pool={pool} poolBoxes={poolBoxes} members={members} />
         </>
       )}
     </section>

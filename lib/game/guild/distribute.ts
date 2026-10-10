@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { randomInt } from 'node:crypto';
+
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildTaxDistributions, guildAuditLog } from '@/lib/db/schema/guild';
@@ -12,7 +14,7 @@ import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 import { assertGuildPerm } from './perm-guard';
 import type { GuildRole } from './permissions';
-import { taxMailBody } from './tax-mail';
+import { type BoxParts, taxMailBody } from './tax-mail';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -22,7 +24,7 @@ async function sendTaxMails(
   tx: Tx,
   serverId: number,
   meta: { guildName: string; actorRole: GuildRole; actorNick: string | null },
-  rows: { userId: string; amount: bigint }[],
+  rows: { userId: string; amount: bigint; boxes?: BoxParts | null }[],
 ): Promise<void> {
   if (rows.length === 0) return;
   await tx.insert(mailbox).values(
@@ -31,11 +33,30 @@ async function sendTaxMails(
       serverId,
       type: 'reward' as const,
       title: '길드 세금 분배',
-      body: taxMailBody(meta.guildName, meta.actorRole, meta.actorNick, r.amount),
+      body: taxMailBody(meta.guildName, meta.actorRole, meta.actorNick, r.amount, r.boxes),
       senderLabel: '길드',
-      payload: { diamond: Number(r.amount) },
+      // 💎와 부위별 상자를 한 통에(10-11 통합). 상자가 없으면 boxes를 싣지 않는다(옛 우편과 같은 모양).
+      payload: r.boxes ? { diamond: Number(r.amount), boxes: r.boxes } : { diamond: Number(r.amount) },
     })),
   );
+}
+
+/**
+ * 한 사람 몫의 상자 n개를 부위로 나눈다(10-10 결정) — 3의 배수는 무기·방어구·장신구에 똑같이, 나머지 1~2개는 무작위 부위(2개면 서로 다른 부위).
+ * 난수는 서버에서만(CLAUDE §3.1). 테스트는 rng를 주입한다.
+ */
+export function splitBoxes(n: number, rng: (max: number) => number = (max) => randomInt(max)): BoxParts {
+  const base = Math.floor(n / 3);
+  const parts: BoxParts = { weapon: base, armor: base, accessory: base };
+  const slots: (keyof BoxParts)[] = ['weapon', 'armor', 'accessory'];
+  let rest = n - base * 3;
+  while (rest > 0) {
+    const i = rng(slots.length);
+    parts[slots[i]!] += 1;
+    slots.splice(i, 1);
+    rest -= 1;
+  }
+  return parts;
 }
 
 /** 분배 우편 문구용 — 길드명 + 분배한 사람의 직책·닉네임(캐릭터 행이 없으면 직책만 적는다). */
@@ -150,34 +171,38 @@ export function distributeGuildTax(input: {
 }
 
 /**
- * 길드 세금 풀 수동 분배 — 길드장만. 길드원별 지정 금액(💎)을 각자에게 지급, 총액만큼 풀 차감.
- * 잔여는 풀에 carry. 분배 페이지(입력란)에서 사용.
+ * 길드 세금 수동 분배 — 분배 권한자. 길드원별 지정 💎와 📦(10-11 통합: 월드보스 전리품 상자가 세금 📦에 쌓인다)를
+ * 한 트랜잭션에서 지급하고 총액만큼 세금 💎·📦를 차감한다. 잔여는 세금에 남는다. 상자는 1개부터(부위 배분은 splitBoxes).
+ * 지급 = 보상 우편 한 통(💎 + 부위별 상자). 분배 페이지(입력란)에서 사용.
  */
 export function distributeGuildTaxManual(input: {
   leaderUserId: string;
   serverId: number;
-  amounts: { userId: string; amount: number }[];
-}): Promise<{ total: bigint }> {
+  amounts: { userId: string; amount: number; boxes?: number }[];
+}): Promise<{ total: bigint; totalBoxes: number }> {
   return db.transaction(async (tx) => {
     const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
     const gid = leader.guildId;
 
     // 거대 배열 루프 비용 방어(감사 LOW) — 정원보다 큰 입력은 잘라냄. 양수·정수만, 같은 유저 합산.
-    const byUser = new Map<string, bigint>();
+    const byUser = new Map<string, { amount: bigint; boxes: number }>();
     for (const a of input.amounts.slice(0, 100)) {
-      const amt = Math.floor(Number(a.amount));
-      if (!Number.isFinite(amt) || amt <= 0) continue;
-      byUser.set(a.userId, (byUser.get(a.userId) ?? 0n) + BigInt(amt));
+      const amt = Math.max(0, Math.floor(Number(a.amount)) || 0);
+      const bx = Math.max(0, Math.floor(Number(a.boxes ?? 0)) || 0);
+      if (amt <= 0 && bx <= 0) continue;
+      const cur = byUser.get(a.userId) ?? { amount: 0n, boxes: 0 };
+      byUser.set(a.userId, { amount: cur.amount + BigInt(amt), boxes: cur.boxes + bx });
     }
     if (byUser.size === 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-    const total = [...byUser.values()].reduce((s, v) => s + v, 0n);
+    const total = [...byUser.values()].reduce((s, v) => s + v.amount, 0n);
+    const totalBoxes = [...byUser.values()].reduce((s, v) => s + v.boxes, 0);
 
     const [g] = await tx
-      .select({ pool: guilds.taxPoolDiamond })
+      .select({ pool: guilds.taxPoolDiamond, boxes: guilds.taxPoolBoxes })
       .from(guilds)
       .where(eq(guilds.id, gid))
       .for('update');
-    if (total > g!.pool) throw new GuildError('DISTRIBUTE_OVER_POOL');
+    if (total > g!.pool || totalBoxes > g!.boxes) throw new GuildError('DISTRIBUTE_OVER_POOL');
 
     // 모든 대상이 길드원인지 검증.
     const memberRows = await tx
@@ -188,15 +213,11 @@ export function distributeGuildTaxManual(input: {
     for (const uid of byUser.keys()) if (!memberSet.has(uid)) throw new GuildError('TARGET_NOT_IN_GUILD');
 
     const metaMan = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
-    await sendTaxMails(
-      tx,
-      input.serverId,
-      metaMan,
-      [...byUser].map(([uid, amt]) => ({ userId: uid, amount: amt })),
-    );
+    const rows = [...byUser].map(([uid, v]) => ({ userId: uid, amount: v.amount, boxes: v.boxes > 0 ? splitBoxes(v.boxes) : null }));
+    await sendTaxMails(tx, input.serverId, metaMan, rows);
     await tx
       .update(guilds)
-      .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${total}` })
+      .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${total}`, taxPoolBoxes: sql`${guilds.taxPoolBoxes} - ${totalBoxes}` })
       .where(eq(guilds.id, gid));
     await tx.insert(guildTaxDistributions).values({
       guildId: gid,
@@ -206,95 +227,15 @@ export function distributeGuildTaxManual(input: {
     });
     // 활동 로그 — 지정 금액 받은 수령자 1인당 1줄. 직렬 insert → 단일 multi-row(감사 G-05).
     await tx.insert(guildAuditLog).values(
-      [...byUser].map(([uid, amt]) => ({
+      rows.map((r) => ({
         serverId: input.serverId,
         guildId: gid,
         actorUserId: input.leaderUserId,
         action: 'tax_distribute' as const,
-        targetUserId: uid,
-        detail: { amount: amt.toString(), mode: 'manual' },
-      })),
-    );
-    return { total };
-  });
-}
-
-/**
- * 금고 상자(전리품) 분배 — 월드보스 전리품(docs/WORLD-BOSS.md §4)이 tax_pool_boxes에 쌓인다. 분배 권한(taxDistribute) 필요.
- * 상자는 부위 3종을 똑같이 나눠 주므로 사람마다 3의 배수로만 준다.
- * - equal: 길드원 N명에게 1인 floor(pool / 3N) × 3개씩. 남는 상자는 금고에 남는다.
- * - target: 한 사람에게 floor(pool / 3) × 3개 전부.
- * - top: 기여 높은 순으로 한 사람에 3개씩, 상자가 떨어질 때까지(상자가 길드원 수 × 3보다 적을 때 — 리뷰 10-08).
- * 지급은 보상 우편(payload.boxes), 활동 로그 'loot_distribute'(detail.boxes).
- */
-export function distributeGuildBoxes(input: {
-  leaderUserId: string;
-  serverId: number;
-  mode: 'equal' | 'target' | 'top';
-  targetUserId?: string;
-}): Promise<{ total: number; perMember: number | null; recipients: number }> {
-  return db.transaction(async (tx) => {
-    const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
-    const gid = leader.guildId;
-    const [g] = await tx.select({ pool: guilds.taxPoolBoxes, name: guilds.name }).from(guilds).where(eq(guilds.id, gid)).for('update');
-    const pool = g?.pool ?? 0;
-
-    let rows: { userId: string; boxes: number }[];
-    if (input.mode === 'target') {
-      if (!input.targetUserId) throw new GuildError('INVALID_TARGET');
-      const [t] = await tx
-        .select({ u: guildMembers.userId })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
-        .limit(1);
-      if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
-      const give = Math.floor(pool / 3) * 3;
-      if (give <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-      rows = [{ userId: input.targetUserId, boxes: give }];
-    } else if (input.mode === 'top') {
-      const k = Math.floor(pool / 3);
-      if (k <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-      // 기여 높은 순(분배 화면 목록과 같은 순서), 같으면 먼저 들어온 순.
-      const ms = await tx
-        .select({ u: guildMembers.userId })
-        .from(guildMembers)
-        .where(eq(guildMembers.guildId, gid))
-        .orderBy(desc(guildMembers.contributionPoints), guildMembers.joinedAt)
-        .limit(k);
-      if (ms.length === 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-      rows = ms.map((m) => ({ userId: m.u, boxes: 3 }));
-    } else {
-      const members = await tx.select({ u: guildMembers.userId }).from(guildMembers).where(eq(guildMembers.guildId, gid));
-      const per = members.length > 0 ? Math.floor(pool / (3 * members.length)) * 3 : 0;
-      if (per <= 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-      rows = members.map((m) => ({ userId: m.u, boxes: per }));
-    }
-    const total = rows.reduce((s, r) => s + r.boxes, 0);
-
-    const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
-    const who = meta.actorNick ? `${meta.actorNick}님이` : '길드에서';
-    await tx.insert(mailbox).values(
-      rows.map((r) => ({
-        userId: r.userId,
-        serverId: input.serverId,
-        type: 'reward' as const,
-        title: '길드 전리품 분배',
-        body: `${meta.guildName} 금고의 전리품 상자를 ${who} 나눠 주었어요. 📦${r.boxes}개(부위별 ${r.boxes / 3}개)`,
-        senderLabel: '길드',
-        payload: { boxes: { weapon: r.boxes / 3, armor: r.boxes / 3, accessory: r.boxes / 3 } },
-      })),
-    );
-    await tx.update(guilds).set({ taxPoolBoxes: sql`${guilds.taxPoolBoxes} - ${total}` }).where(eq(guilds.id, gid));
-    await tx.insert(guildAuditLog).values(
-      rows.map((r) => ({
-        serverId: input.serverId,
-        guildId: gid,
-        actorUserId: input.leaderUserId,
-        action: 'loot_distribute' as const,
         targetUserId: r.userId,
-        detail: { boxes: r.boxes, mode: input.mode },
+        detail: r.boxes ? { amount: r.amount.toString(), boxes: r.boxes.weapon + r.boxes.armor + r.boxes.accessory, parts: r.boxes, mode: 'manual' } : { amount: r.amount.toString(), mode: 'manual' },
       })),
     );
-    return { total, perMember: input.mode === 'target' ? null : rows[0]!.boxes, recipients: rows.length };
+    return { total, totalBoxes };
   });
 }
