@@ -8,6 +8,7 @@ import type { AdminWorldBossBoard, SpawnOverlap } from '@/lib/game/world-boss/ad
 
 import { ServerBadge } from '../ServerBadge';
 import { cancelWorldBossAction, spawnWorldBossAction } from './actions';
+import { AdminZoneMap } from './AdminZoneMap';
 
 const REGION_KO: Record<string, string> = { kingdom: '왕국', marsh: '늪지', volcano: '화산', snow: '설원', academy: '학원', desert: '사막' };
 const STATUS_KO: Record<string, { label: string; cls: string }> = {
@@ -39,7 +40,7 @@ function defaultAtLocal(): string {
   return d.toISOString().slice(0, 16);
 }
 
-export function WorldBossAdminClient({ board }: { board: AdminWorldBossBoard }) {
+export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossBoard; mapSrc: string }) {
   const router = useRouter();
   const [serverId, setServerId] = useState(board[0]?.serverId ?? 1);
   const [zoneId, setZoneId] = useState<number | ''>('');
@@ -105,8 +106,16 @@ export function WorldBossAdminClient({ board }: { board: AdminWorldBossBoard }) 
             ))}
           </select>
         </label>
+        {/* 세계지도에서 고르기(10-11 사용자) — 구역 이름·점령 길드 문양·보스 유무를 보고 누른다. 아래 선택 상자는 같은 값을 보여 주는 보조. */}
+        <div className="text-xs text-zinc-400">
+          구역 — 지도에서 누르세요
+          <div className="mt-1">
+            <AdminZoneMap mapSrc={mapSrc} zones={server?.zones ?? []} selectedId={zoneId === '' ? null : zoneId} onSelect={(id) => setZoneId(id)} />
+          </div>
+          <p className="mt-1 text-[11px] text-zinc-500">🔥 = 보스가 있는 구역(선택 불가) · 문양 = 점령 길드 · 테두리 색 = 지역</p>
+        </div>
         <label className="block text-xs text-zinc-400">
-          구역
+          고른 구역
           <select className={`${field} mt-1`} value={zoneId} onChange={(e) => setZoneId(e.target.value === '' ? '' : Number(e.target.value))}>
             <option value="">구역을 고르세요</option>
             {server?.zones.map((z) => (

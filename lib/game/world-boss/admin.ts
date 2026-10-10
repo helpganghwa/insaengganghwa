@@ -35,7 +35,18 @@ export type AdminBossRow = {
   ownerName: string | null;
   traits: string[];
 };
-export type AdminZoneRow = { id: number; name: string; region: string; ownerName: string | null; busy: boolean };
+export type AdminZoneRow = {
+  id: number;
+  name: string;
+  region: string;
+  /** 세계지도 좌표(%) — 관리자 지도에서 게임 지도와 같은 자리에 찍는다. */
+  mapX: number;
+  mapY: number;
+  ownerName: string | null;
+  ownerEmblemUrl: string | null;
+  ownerEmblemColor: string | null;
+  busy: boolean;
+};
 export type AdminWorldBossBoard = { serverId: number; zones: AdminZoneRow[]; bosses: AdminBossRow[] }[];
 
 /** 관리자 화면 데이터 — 서버마다 구역(주인·보스 유무)과 보스(출현 중·예정 전부 + 최근 종료 5). */
@@ -44,11 +55,11 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
   for (const serverId of serverIds) {
     const [zones, bosses] = await Promise.all([
       db.execute(sql`
-        select z.id, z.name, z.region::text as region, g.name as owner_name,
+        select z.id, z.name, z.region::text as region, z.map_x, z.map_y, g.name as owner_name, g.emblem_url as owner_emblem, g.emblem_color as owner_color,
                exists (select 1 from world_bosses b where b.zone_id = z.id and b.status in ('scheduled', 'active')) as busy
           from zones z left join guilds g on g.id = z.owner_guild_id
          where z.server_id = ${serverId}
-         order by z.region, z.name`) as unknown as Promise<{ id: number; name: string; region: string; owner_name: string | null; busy: boolean }[]>,
+         order by z.region, z.name`) as unknown as Promise<{ id: number; name: string; region: string; map_x: number | string; map_y: number | string; owner_name: string | null; owner_emblem: string | null; owner_color: string | null; busy: boolean }[]>,
       db.execute(sql`
         (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
            from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = z.owner_guild_id
@@ -62,7 +73,7 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
     ]);
     out.push({
       serverId,
-      zones: zones.map((z) => ({ id: z.id, name: z.name, region: z.region, ownerName: z.owner_name, busy: z.busy })),
+      zones: zones.map((z) => ({ id: z.id, name: z.name, region: z.region, mapX: Number(z.map_x), mapY: Number(z.map_y), ownerName: z.owner_name, ownerEmblemUrl: z.owner_emblem, ownerEmblemColor: z.owner_color, busy: z.busy })),
       bosses: bosses.map((b) => ({
         id: b.id, serverId, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, status: b.status, stage: Number(b.stage),
         spawnAt: new Date(b.spawn_at).toISOString(), leaveAt: new Date(b.leave_at).toISOString(), ownerName: b.owner_name,
