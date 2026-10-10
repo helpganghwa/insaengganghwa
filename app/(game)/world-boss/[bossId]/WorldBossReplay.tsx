@@ -6,6 +6,7 @@
  * 한 줄씩 떠오른다(▶ 공격 · ✦ 보스 · 라운드 머리). 아래는 대난투 순위 목록처럼 **얼굴을 행 오른쪽에 크게** 깐 컴팩트 행(50px).
  * 공격 = 보스 흔들림 + 피해 숫자, 쓰러짐 = 붉은 번쩍임 + 그 행 흑백, 라운드가 바뀌면 큰 라운드 표시. 큰 당첨(💎300+ · 📦90+)은
  * 글자 없이 효과로만(금빛 광선·번쩍임·크게 — 2026-10-08 사용자: '대박!' 같은 텍스트 금지). 탭하면 2.5배속, 건너뛰기로 바로 결과.
+ * 결과는 **팝업**(10-11 사용자) — 닫으면 끝난 전투 화면(무대·일지 전체·명단)이 남고 '결과 보기'로 다시 연다. 안내 문구는 두지 않는다.
  * 원정대장은 행·결과 표에 '원정대장' 칩으로 보인다(10-11 사용자: 어울리는 곳엔 최대한).
  */
 import { josa } from 'josa';
@@ -50,6 +51,9 @@ export function WorldBossReplay({
   const [idx, setIdx] = useState(reduced ? events.length : 0); // 적용된 이벤트 수
   const [fast, setFast] = useState(false);
   const done = idx >= events.length;
+  // 결과는 팝업(10-11 사용자) — 닫으면 끝난 전투 화면(무대·일지 전체·명단)이 남아 다시 읽을 수 있다.
+  const [resultDismissed, setResultDismissed] = useState(false);
+  const resultOpen = done && !resultDismissed;
 
   useEffect(() => {
     if (done) return;
@@ -144,8 +148,7 @@ export function WorldBossReplay({
 
   return (
     <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-label="원정대 전투">
-      {!done ? (
-        <>
+      <>
           {/* 위 — 무대(배경 + 보스 + 일지). 탭하면 빠르게. 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <button
             type="button"
@@ -320,18 +323,50 @@ export function WorldBossReplay({
                 );
               })}
             </ul>
-            <p className="mt-1.5 text-center text-[10px] text-stone-500">살아 있는 원정대원이 모두 한 번씩 공격하고, 보스가 한 명을 쓰러뜨려요.</p>
+            {/* 끝난 뒤 — 일지 전체(결과 팝업을 닫고 다시 읽을 수 있게). */}
+            {done && (
+              <div className="mt-2 rounded-xl border border-stone-800 bg-stone-900/70 px-2.5 py-2">
+                <p className="mb-1 text-[10.5px] text-stone-500">전투 일지</p>
+                {lines.map((l) => (
+                  <p key={l.key} className={`overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-snug ${l.kind === 'round' ? 'mt-1 text-center text-[10px] tracking-widest text-stone-500' : l.kind === 'boss' ? 'text-red-200' : 'text-stone-200'}`}>
+                    {l.kind === 'atk' ? (
+                      <>
+                        ▶ {l.text} — <b className="font-mono text-orange-300">{formatCompactKR(l.dmg ?? 0)}</b>
+                        {l.weak ? <b className="ml-1 text-orange-300">약점 적중{l.weak >= 2 ? ` ×${l.weak}` : ''}!</b> : null}
+                        {l.loot ? <span className="ml-1 text-orange-200">⚑ {l.loot}</span> : null}
+                      </>
+                    ) : l.kind === 'boss' ? (
+                      <>✦ {l.text}</>
+                    ) : (
+                      <>— {l.text} —</>
+                    )}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => setIdx(events.length)}
-            className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
-          >
-            건너뛰기
-          </button>
+          {done ? (
+            <div className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 flex shrink-0 gap-2">
+              <button type="button" onClick={() => setResultDismissed(false)} className="flex-1 rounded-lg bg-orange-700 py-2.5 text-[12.5px] font-extrabold text-orange-50">
+                결과 보기
+              </button>
+              <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300">
+                닫기
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIdx(events.length)}
+              className="mx-4 mb-[calc(env(safe-area-inset-bottom,0px)+14px)] mt-1 shrink-0 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
+            >
+              건너뛰기
+            </button>
+          )}
         </>
-      ) : (
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+      {resultOpen && (
+        <div className="absolute inset-0 z-20 flex flex-col justify-end bg-black/70 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-[calc(env(safe-area-inset-top,0px)+40px)]" role="dialog" aria-label="전투 결과">
+        <div className="flex max-h-full flex-col overflow-y-auto rounded-2xl border border-stone-700 bg-stone-900 px-4 pb-4 pt-4">
           {/* 결과 — 보스·페이즈 상승을 크게, 표는 아래 */}
           <div className="flex flex-col items-center text-center">
             <WorldBossSprite alt="" className="h-24 w-24" style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 12px rgba(249,115,22,0.5))' }} />
@@ -383,22 +418,26 @@ export function WorldBossReplay({
               ))}
             </tbody>
           </table>
-          <span className="flex-1" />
           <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={() => {
                 setFast(false);
+                setResultDismissed(false);
                 setIdx(0);
               }}
               className="flex-1 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300"
             >
               다시 보기
             </button>
-            <button type="button" onClick={onClose} className="flex-[2] rounded-lg bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50">
+            <button type="button" onClick={() => setResultDismissed(true)} className="flex-1 rounded-lg border border-stone-700 py-2.5 text-[12.5px] font-bold text-stone-300">
+              일지 보기
+            </button>
+            <button type="button" onClick={onClose} className="flex-[1.4] rounded-lg bg-orange-700 py-2.5 text-[13px] font-extrabold text-orange-50">
               확인
             </button>
           </div>
+        </div>
         </div>
       )}
     </div>

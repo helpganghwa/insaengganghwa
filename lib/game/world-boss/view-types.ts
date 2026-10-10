@@ -60,7 +60,15 @@ export type WorldBossMyParty = {
   leaderUserId: string;
   members: (WorldBossPerson & { isLeader: boolean })[];
   requests: WorldBossPerson[];
+  /** 대장이 보낸 대기 중 초대(10-11) — 빈 자리에 '초대 중'으로 보인다. 대장일 때만 채운다. */
+  invites: WorldBossPerson[];
 };
+
+/** 초대 후보(친구·같은 길드원) — 상태별로 버튼이 다르다. */
+export type WorldBossInvitable = WorldBossPerson & { source: 'friend' | 'guild' | 'both'; state: 'ok' | 'invited' | 'in_party' | 'fought' };
+
+/** 나에게 온 초대(대기 중) — 이 보스의 모집 중 원정대만. */
+export type WorldBossInviteIn = { partyId: string; leaderNickname: string; memberCount: number };
 
 /**
  * 내 상태 — none(참가 전) · pending(신청 대기 중인 원정대가 하나 이상) · member(모집 중 원정대 소속) · fought(이 보스와 이미 싸움).
@@ -76,6 +84,8 @@ export type WorldBossMe = {
   isOwnerGuild: boolean;
   /** 나(이름·길드·전투력) — 원정대를 만들 때 낙관적으로 내 원정대 패널을 바로 그리기 위해(보스가 머무는 중·캐릭터 있을 때). */
   person: WorldBossPerson | null;
+  /** 나에게 온 대기 중 초대(참가 전일 때만). */
+  invites: WorldBossInviteIn[];
 };
 
 /** 보스 특성(0~2개) — 이름 오른쪽 칩과 설명 시트에 쓴다(docs/WORLD-BOSS.md §3.5). */

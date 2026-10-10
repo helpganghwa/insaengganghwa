@@ -12,8 +12,8 @@ import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
-import { cancelJoinRequest, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
-import { getWorldBossBattle } from '@/lib/game/world-boss/queries';
+import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
+import { getWorldBossBattle, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, currentPhase, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
@@ -33,6 +33,9 @@ const MSG: Record<string, string> = {
   PARTY_FULL: '원정대가 가득 찼어요(최대 10명).',
   NOT_LEADER: '원정대장만 할 수 있어요.',
   NOT_MEMBER: '원정대원이 아니에요.',
+  ALREADY_INVITED: '이미 초대했어요. 상대의 응답을 기다려요.',
+  NO_INVITE: '초대가 이미 처리됐어요.',
+  NOT_INVITABLE: '친구나 같은 길드원만 초대할 수 있어요.',
   UNAUTHENTICATED: '로그인이 필요해요.',
   RATE_LIMITED: '요청이 너무 빨라요. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요.',
@@ -167,5 +170,55 @@ export async function equipBestAction(bossId: string) {
   } catch (e) {
     if (e instanceof EquipError) return err('UNKNOWN');
     return fail(e, 'equipBest');
+  }
+}
+
+/** 초대 후보 목록 — 대장이 초대 시트를 열 때(10-11 사용자 2안). */
+export async function invitableAction(bossId: string, partyId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  try {
+    void bossId;
+    const people = await getWorldBossInvitable(g.sid, g.u, partyId);
+    return { status: 'success' as const, people };
+  } catch (e) {
+    return fail(e, 'invitable');
+  }
+}
+
+export async function inviteAction(bossId: string, partyId: string, userId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  try {
+    await inviteToParty({ leaderUserId: g.u, serverId: g.sid, partyId, userId });
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    return fail(e, 'invite');
+  }
+}
+
+export async function cancelInviteAction(bossId: string, partyId: string, userId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  try {
+    await cancelInvite({ leaderUserId: g.u, serverId: g.sid, partyId, userId });
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    return fail(e, 'cancelInvite');
+  }
+}
+
+/** 초대 응답 — 수락하면 바로 참가, 거절은 줄만 닫는다. */
+export async function respondInviteAction(bossId: string, partyId: string, accept: boolean) {
+  const g = await gate();
+  if ('status' in g) return g;
+  try {
+    await respondInvite({ userId: g.u, serverId: g.sid, partyId, accept: accept === true });
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    return fail(e, 'respondInvite');
   }
 }

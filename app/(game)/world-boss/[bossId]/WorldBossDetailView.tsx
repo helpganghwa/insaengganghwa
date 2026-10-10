@@ -28,16 +28,20 @@ import { worldBossBgEmberUrl } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
 import {
+  cancelInviteAction,
   cancelRequestAction,
   createPartyAction,
   decideJoinAction,
   departPartyAction,
   equipBestAction,
   getBattleAction,
+  inviteAction,
   leavePartyAction,
   requestJoinAction,
+  respondInviteAction,
 } from '../actions';
 import { Avatar } from '../../friends/Avatar';
+import { InviteSheet } from './InviteSheet';
 import { LeaderChip } from './LeaderChip';
 import { WeakPanel } from './WeakPanel';
 import { WorldBossReplay } from './WorldBossReplay';
@@ -52,7 +56,10 @@ type Patch =
   | { t: 'decide'; userId: string; accept: boolean }
   | { t: 'leave' }
   | { t: 'create'; intro: string }
-  | { t: 'equipBest' };
+  | { t: 'equipBest' }
+  | { t: 'invite'; person: WorldBossPerson }
+  | { t: 'uninvite'; userId: string }
+  | { t: 'respondInvite'; partyId: string };
 
 const OPT_PARTY_ID = 'opt-create';
 
@@ -114,9 +121,24 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       return {
         ...s,
         parties: [...s.parties, card],
-        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [] },
+        myParty: { partyId: OPT_PARTY_ID, status: 'recruiting', isLeader: true, leaderUserId: me.userId, members: [{ ...who, isLeader: true }], requests: [], invites: [] },
         me: { ...me, state: 'member', pendingPartyIds: [], canCreate: false },
       };
+    }
+    case 'invite': {
+      const mp = s.myParty;
+      if (!mp || mp.invites.some((x) => x.userId === p.person.userId)) return s;
+      return { ...s, myParty: { ...mp, invites: [...mp.invites, p.person] } };
+    }
+    case 'uninvite': {
+      const mp = s.myParty;
+      if (!mp) return s;
+      return { ...s, myParty: { ...mp, invites: mp.invites.filter((x) => x.userId !== p.userId) } };
+    }
+    case 'respondInvite': {
+      // 수락은 서버 재렌더가 내 원정대를 채운다(명단·장착을 여기서 만들 수 없다 — 낙관 적용 예외). 배너만 먼저 지운다.
+      if (!me) return s;
+      return { ...s, me: { ...me, invites: me.invites.filter((x) => x.partyId !== p.partyId) } };
     }
     case 'equipBest': {
       const mine = s.mine;
@@ -164,6 +186,7 @@ export function WorldBossDetailView({
   const [createAsk, setCreateAsk] = useState(false);
   const [intro, setIntro] = useState('');
   const [traitSheet, setTraitSheet] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [replay, setReplay] = useState<WorldBossBattle | null>(null);
   const departKey = useRef<string | null>(null); // 출발 멱등 키 — 재전송해도 같은 결과(서버 depart_key)
 
@@ -331,6 +354,38 @@ export function WorldBossDetailView({
       {/* 지금 할 일 — 상태별 */}
       {active && !mp && (
         <div className="mx-3 mt-3">
+          {me && me.invites.length > 0 && (
+            // 받은 초대(10-11) — 수락하면 신청·수락 없이 바로 참가. 여러 원정대에서 올 수 있다.
+            <ul className="mb-2 space-y-1.5">
+              {me.invites.map((inv) => (
+                <li key={inv.partyId} className="flex items-center gap-2 rounded-xl border border-orange-500/50 bg-orange-950/30 px-3 py-2">
+                  <span className="min-w-0 flex-1 truncate whitespace-nowrap text-[12px] text-stone-100">
+                    <b>{inv.leaderNickname} 원정대</b>
+                    <span className="text-stone-400">
+                      {' '}
+                      · {inv.memberCount}/{WORLD_BOSS_PARTY_MAX} · 초대했어요
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => run(() => respondInviteAction(d.id, inv.partyId, false), { title: '초대를 거절했어요' }, { t: 'respondInvite', partyId: inv.partyId })}
+                    className="shrink-0 rounded-lg border border-stone-600 px-2.5 py-1.5 text-[11.5px] font-bold text-stone-300 disabled:opacity-40"
+                  >
+                    거절
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => run(() => respondInviteAction(d.id, inv.partyId, true), { title: '원정대에 들어갔어요' }, { t: 'respondInvite', partyId: inv.partyId })}
+                    className="shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
+                  >
+                    수락
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
           ) : me.canCreate ? (
@@ -369,7 +424,11 @@ export function WorldBossDetailView({
           <div className="grid grid-cols-5 gap-x-1 gap-y-2.5">
             {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => {
               const m = mp.members[i];
-              return m ? <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} /> : <SlotEmpty key={`e${i}`} />;
+              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />;
+              const inv = mp.invites[i - mp.members.length];
+              if (inv) return <SlotPerson key={`i${inv.userId}`} p={inv} serverId={serverId} leader={false} inviting />;
+              // 빈 자리 — 대장은 눌러 초대(10-11 사용자 2안: 친구·길드원 목록에서 초대 → 상대 수락). 출발 뒤엔 그냥 표시.
+              return <SlotEmpty key={`e${i}`} onClick={mp.isLeader && mp.status === 'recruiting' && mp.partyId !== OPT_PARTY_ID ? () => setInviteOpen(true) : undefined} />;
             })}
           </div>
           {/* 구성 특성 적용 상태 — 켜진 것은 초록, 아직인 것은 회색으로 조건(시안 ②). */}
@@ -384,7 +443,7 @@ export function WorldBossDetailView({
                     type="button"
                     onClick={() => setTraitSheet(true)}
                     aria-pressed={s.active}
-                    className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
+                    className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${s.active ? 'border-red-500/60 bg-red-500/15 text-red-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
                   >
                     {t.icon} {t.name}
                   </button>
@@ -585,7 +644,7 @@ export function WorldBossDetailView({
             }
           >
             {/* 무대(시안 A, 10-10): 보스·단계·특성이 한 장에 — "어떤 보스에게 가는지". */}
-            <div className="relative h-[96px] overflow-hidden rounded-xl bg-stone-950">
+            <div className="relative -mx-2 h-[96px] overflow-hidden rounded-xl bg-stone-950">
               <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl())} />
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.15)_0%,transparent_35%,rgba(12,10,9,0.92)_100%)]" />
               <WorldBossSprite region={d.region} alt="" className="absolute left-1/2 top-[42%] z-[1] h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2" />
@@ -617,7 +676,7 @@ export function WorldBossDetailView({
                 </span>
               </span>
             </p>
-            <div className="relative -mx-3 mt-1">
+            <div className="relative -mx-2 mt-1">
               <ul className="max-h-[236px] overflow-y-auto overscroll-contain rounded-lg border border-stone-800 bg-stone-950">
                 {mp.members.map((m) => (
                   <DepartRow key={m.userId} m={m} />
@@ -625,7 +684,7 @@ export function WorldBossDetailView({
               </ul>
               {mp.members.length > 3 && <span className="pointer-events-none absolute inset-x-0 bottom-0 h-9 rounded-b-lg bg-gradient-to-b from-transparent to-stone-900" />}
             </div>
-            <p className="mt-2 flex items-center justify-between border-t border-zinc-200 pt-2 text-[12px] dark:border-zinc-700">
+            <p className="mt-2.5 flex items-center justify-between text-[12px]">
               <span className="text-stone-500">합산 전투력</span>
               <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
             </p>
@@ -695,6 +754,18 @@ export function WorldBossDetailView({
       )}
 
       {/* 특성 설명 시트 — 효과만(팁 없음, 10-10 사용자). */}
+      {inviteOpen && mp && (
+        <InviteSheet
+          bossId={d.id}
+          partyId={mp.partyId}
+          invited={mp.invites}
+          full={mp.members.length >= WORLD_BOSS_PARTY_MAX}
+          busy={pending}
+          onInvite={(p) => run(() => inviteAction(d.id, mp.partyId, p.userId), { title: `${p.nickname}님을 초대했어요` }, { t: 'invite', person: p })}
+          onCancel={(userId) => run(() => cancelInviteAction(d.id, mp.partyId, userId), { title: '초대를 취소했어요' }, { t: 'uninvite', userId })}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
       {traitSheet && (
         <ModalShell onClose={() => setTraitSheet(false)} label="보스 특성">
           <ModalLayout
@@ -865,11 +936,11 @@ function DepartRow({ m }: { m: WorldBossMyParty['members'][number] }) {
 }
 
 /** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
-function SlotPerson({ p, serverId, leader }: { p: WorldBossPerson; serverId: number; leader: boolean }) {
+function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPerson; serverId: number; leader: boolean; inviting?: boolean }) {
   const body = (
     <>
       <span className="relative">
-        <Avatar src={p.avatarSrc} box={p.faceBox} size={`h-11 w-11 rounded-full bg-stone-800 ring-2 ${leader ? 'ring-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' : 'ring-stone-700'}`} />
+        <Avatar src={p.avatarSrc} box={p.faceBox} size={`h-11 w-11 rounded-full bg-stone-800 ring-2 ${leader ? 'ring-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' : inviting ? 'ring-stone-500 opacity-50' : 'ring-stone-700'}`} />
         {leader && (
           <span className="absolute -right-1.5 -top-1.5 text-[12px] [text-shadow:0_1px_2px_#000]" aria-label="원정대장">
             👑
@@ -881,8 +952,8 @@ function SlotPerson({ p, serverId, leader }: { p: WorldBossPerson; serverId: num
           </span>
         )}
       </span>
-      <span className="block w-full truncate text-center text-[10.5px] font-bold text-stone-100">{p.nickname}</span>
-      <span className="block font-mono text-[9px] tabular-nums text-stone-400">{formatCompactKR(p.combat)}</span>
+      <span className={`block w-full truncate text-center text-[10.5px] font-bold ${inviting ? 'text-stone-400' : 'text-stone-100'}`}>{p.nickname}</span>
+      <span className={`block text-[9px] tabular-nums ${inviting ? 'text-orange-300/80' : 'font-mono text-stone-400'}`}>{inviting ? '초대 중' : formatCompactKR(p.combat)}</span>
     </>
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';
@@ -895,12 +966,20 @@ function SlotPerson({ p, serverId, leader }: { p: WorldBossPerson; serverId: num
   );
 }
 
-/** 빈 자리 — 점선 동그라미 '+'. 지금은 표시만(초대 기능은 논의 중, 10-11). */
-function SlotEmpty() {
-  return (
-    <span className="flex min-w-0 flex-col items-center gap-0.5 leading-tight">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-stone-600 text-[16px] text-stone-600">+</span>
-      <span className="text-[10px] text-stone-600">빈 자리</span>
-    </span>
+/** 빈 자리 — 점선 동그라미 '+'. 대장(모집 중)은 눌러 초대 시트를 연다(10-11 사용자 2안). */
+function SlotEmpty({ onClick }: { onClick?: () => void }) {
+  const inner = (
+    <>
+      <span className={`flex h-11 w-11 items-center justify-center rounded-full border border-dashed text-[16px] ${onClick ? 'border-orange-500/60 text-orange-400' : 'border-stone-600 text-stone-600'}`}>+</span>
+      <span className={`text-[10px] ${onClick ? 'text-orange-300/80' : 'text-stone-600'}`}>{onClick ? '초대' : '빈 자리'}</span>
+    </>
+  );
+  const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';
+  return onClick ? (
+    <button type="button" onClick={onClick} aria-label="빈 자리 — 초대" className={cls}>
+      {inner}
+    </button>
+  ) : (
+    <span className={cls}>{inner}</span>
   );
 }

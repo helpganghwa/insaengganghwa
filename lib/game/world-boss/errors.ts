@@ -11,7 +11,10 @@ export type WorldBossErrorCode =
   | 'PARTY_NOT_RECRUITING'
   | 'PARTY_FULL'
   | 'NOT_LEADER'
-  | 'NOT_MEMBER';
+  | 'NOT_MEMBER'
+  | 'ALREADY_INVITED'
+  | 'NO_INVITE'
+  | 'NOT_INVITABLE';
 
 export class WorldBossError extends Error {
   constructor(public readonly code: WorldBossErrorCode) {

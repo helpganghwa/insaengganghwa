@@ -185,6 +185,7 @@ async function disbandInTx(tx: Tx, partyId: string, reason: 'leader' | 'leader_l
   await tx.execute(sql`update world_boss_parties set status = 'disbanded', disband_reason = ${reason} where id = ${partyId}::bigint and status = 'recruiting'`);
   await tx.execute(sql`delete from world_boss_party_members where party_id = ${partyId}::bigint`);
   await tx.execute(sql`delete from world_boss_join_requests where party_id = ${partyId}::bigint`);
+  await tx.execute(sql`delete from world_boss_invites where party_id = ${partyId}::bigint`);
 }
 
 /** 나가기 — 출발 전만. 대장이 나가면 해산. */
@@ -325,6 +326,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
              reward_diamond = ${reward.diamond}, reward_boxes = ${reward.boxes}, depart_key = ${input.departKey}::uuid
        where id = ${party.id}::bigint and status = 'recruiting'`);
     await tx.execute(sql`delete from world_boss_join_requests where party_id = ${party.id}::bigint`);
+    await tx.execute(sql`delete from world_boss_invites where party_id = ${party.id}::bigint`);
 
     // 보상 우편 — 원정대원마다 공격에서 뽑은 만큼(복권). 아무것도 못 뽑은 사람은 우편 없음(결과 화면에서 확인).
     const fight = josa(
@@ -371,4 +373,109 @@ export async function clearWorldBossOnExit(tx: Tx, userId: string, serverId: num
   const ids = pgBigintArray(rows.map((r) => r.id));
   await tx.execute(sql`delete from world_boss_party_members where party_id = any(${ids}::bigint[])`);
   await tx.execute(sql`delete from world_boss_join_requests where party_id = any(${ids}::bigint[])`);
+  await tx.execute(sql`delete from world_boss_invites where party_id = any(${ids}::bigint[])`);
+}
+
+/**
+ * 초대(docs/WORLD-BOSS.md §2, 10-11 사용자 2안) — 원정대장이 친구·같은 길드원을 골라 초대하고, 상대가 수락하면 신청·수락 없이 바로 참가한다.
+ * 초대 가능 = 같은 서버에 캐릭터가 있는 친구(friend_links accepted) 또는 같은 길드원. 보스 하나에 1번·10명 상한은 보낼 때와 수락할 때 모두 검사한다.
+ * 거절한 사람은 다시 초대할 수 있다(같은 줄을 pending으로 되돌림). 대기 중 초대는 정원에 세지 않는다.
+ */
+async function isInvitable(tx: Tx, leaderUserId: string, serverId: number, userId: string): Promise<boolean> {
+  const rows = (await tx.execute(sql`
+    select 1 as x from friend_links
+     where server_id = ${serverId} and status = 'accepted'
+       and ((requester_id = ${leaderUserId}::uuid and addressee_id = ${userId}::uuid) or (requester_id = ${userId}::uuid and addressee_id = ${leaderUserId}::uuid))
+    union all
+    select 1 from guild_members a join guild_members b on b.guild_id = a.guild_id and b.server_id = a.server_id
+     where a.server_id = ${serverId} and a.user_id = ${leaderUserId}::uuid and b.user_id = ${userId}::uuid
+    limit 1`)) as unknown as unknown[];
+  return rows.length > 0;
+}
+
+export async function inviteToParty(input: { leaderUserId: string; serverId: number; partyId: string; userId: string }): Promise<void> {
+  if (input.userId === input.leaderUserId) throw new WorldBossError('NOT_INVITABLE');
+  const party = await db.transaction(async (tx) => {
+    const party = await lockParty(tx, input.partyId);
+    if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
+    if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
+    if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
+    await lockActiveBoss(tx, party.boss_id);
+    if ((await memberCount(tx, party.id)) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
+    if (!(await hasCharacter(tx, input.userId, input.serverId))) throw new WorldBossError('NO_CHARACTER');
+    if (!(await isInvitable(tx, input.leaderUserId, input.serverId, input.userId))) throw new WorldBossError('NOT_INVITABLE');
+    const p = await participation(tx, party.boss_id, input.userId);
+    if (p === 'fought') throw new WorldBossError('ALREADY_FOUGHT');
+    if (p === 'recruiting') throw new WorldBossError('ALREADY_IN_PARTY');
+    const ins = (await tx.execute(sql`
+      insert into world_boss_invites (party_id, user_id, from_user_id)
+      values (${party.id}::bigint, ${input.userId}::uuid, ${input.leaderUserId}::uuid)
+      on conflict (party_id, user_id) do update
+        set status = 'pending', created_at = now(), decided_at = null, from_user_id = excluded.from_user_id
+        where world_boss_invites.status = 'declined'
+      returning user_id`)) as unknown as unknown[];
+    if (ins.length === 0) throw new WorldBossError('ALREADY_INVITED');
+    return party;
+  });
+  const [who] = (await db.execute(sql`select nickname from characters where user_id = ${input.leaderUserId}::uuid and server_id = ${input.serverId}`)) as unknown as { nickname: string }[];
+  await sendPushToUsers([input.userId], {
+    title: '원정대 초대',
+    body: `${who?.nickname ?? '원정대장'} 원정대가 초대했어요. 수락하면 바로 함께 싸워요.`,
+    url: `/world-boss/${party.boss_id}`,
+    tag: `world-boss-invite-${party.id}`,
+    category: 'world_boss',
+  }).catch(() => {});
+}
+
+/** 초대 취소 — 대장이, 대기 중인 것만. */
+export async function cancelInvite(input: { leaderUserId: string; serverId: number; partyId: string; userId: string }): Promise<void> {
+  await db.execute(sql`
+    delete from world_boss_invites i using world_boss_parties p
+     where p.id = i.party_id and i.party_id = ${input.partyId}::bigint and i.user_id = ${input.userId}::uuid and i.status = 'pending'
+       and p.leader_user_id = ${input.leaderUserId}::uuid and p.server_id = ${input.serverId}`);
+}
+
+/** 초대 응답 — 수락하면 바로 참가(수락 검사는 decideJoin과 같다), 거절은 줄만 닫는다. 수락하면 대장에게 푸시. */
+export async function respondInvite(input: { userId: string; serverId: number; partyId: string; accept: boolean }): Promise<void> {
+  const done = await db.transaction(async (tx) => {
+    const party = await lockParty(tx, input.partyId);
+    if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
+    const [inv] = (await tx.execute(sql`
+      select status from world_boss_invites where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid for update`)) as unknown as { status: string }[];
+    if (!inv || inv.status !== 'pending') throw new WorldBossError('NO_INVITE');
+    if (!input.accept) {
+      await tx.execute(sql`update world_boss_invites set status = 'declined', decided_at = now() where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
+      return null;
+    }
+    if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
+    await lockActiveBoss(tx, party.boss_id);
+    if ((await memberCount(tx, party.id)) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
+    const ins = (await tx.execute(sql`
+      insert into world_boss_party_members (party_id, boss_id, user_id, server_id)
+      values (${party.id}::bigint, ${party.boss_id}::bigint, ${input.userId}::uuid, ${party.server_id})
+      on conflict (boss_id, user_id) do nothing returning user_id`)) as unknown as unknown[];
+    if (ins.length === 0) {
+      await tx.execute(sql`update world_boss_invites set status = 'declined', decided_at = now() where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
+      throw new WorldBossError('ALREADY_IN_PARTY');
+    }
+    await tx.execute(sql`update world_boss_invites set status = 'accepted', decided_at = now() where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
+    // 같은 보스의 다른 신청·초대는 지운다 — 이미 들어갔으니 다른 대장 화면에 남아 있으면 안 된다.
+    await tx.execute(sql`
+      delete from world_boss_join_requests r using world_boss_parties p
+       where p.id = r.party_id and p.boss_id = ${party.boss_id}::bigint and r.user_id = ${input.userId}::uuid`);
+    await tx.execute(sql`
+      delete from world_boss_invites i using world_boss_parties p
+       where p.id = i.party_id and p.boss_id = ${party.boss_id}::bigint and i.user_id = ${input.userId}::uuid and i.party_id <> ${party.id}::bigint and i.status = 'pending'`);
+    return { leader: party.leader, bossId: party.boss_id };
+  });
+  if (done) {
+    const [who] = (await db.execute(sql`select nickname from characters where user_id = ${input.userId}::uuid and server_id = ${input.serverId}`)) as unknown as { nickname: string }[];
+    await sendPushToUsers([done.leader], {
+      title: '초대 수락',
+      body: `${who?.nickname ?? '원정대원'}님이 원정대 초대를 수락했어요.`,
+      url: `/world-boss/${done.bossId}`,
+      tag: `world-boss-party-${input.partyId}`,
+      category: 'world_boss',
+    }).catch(() => {});
+  }
 }

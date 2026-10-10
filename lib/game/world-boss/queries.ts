@@ -7,7 +7,7 @@ import 'server-only';
 import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profilesByIds } from '@/lib/game/friends';
+import { getFriendIds, profilesByIds } from '@/lib/game/friends';
 import { guilds } from '@/lib/db/schema/guild';
 import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/schema/world-boss';
 import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, worldBossStageFor, worldBossTraitDef, worldBossWeakBonus, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
@@ -15,7 +15,7 @@ import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, w
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
-import type { WorldBossDetail, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
+import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
@@ -271,22 +271,35 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
     // 나 자신(낙관적 '내 원정대' 그리기용) — 머무는 보스에서 아직 싸우지 않았을 때만(명단에 이미 있으면 거기서 온다).
     const mePerson = active && !mem ? ((await peopleOn(serverId, [userId], known, weakBonus)).get(userId) ?? null) : null;
-    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: mePerson };
+    // 나에게 온 초대(10-11) — 참가 전이고 보스가 머무는 중일 때만 보인다.
+    const invitesIn: WorldBossInviteIn[] = active && !mem
+      ? ((await db.execute(sql`
+          select i.party_id::text as pid, c.nickname as leader_nick, (select count(*)::int from world_boss_party_members m where m.party_id = i.party_id) as n
+            from world_boss_invites i join world_boss_parties p on p.id = i.party_id
+            join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+           where p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending' and p.status = 'recruiting'
+           order by i.created_at`)) as unknown as { pid: string; leader_nick: string; n: number }[]).map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) }))
+      : [];
+    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: mePerson, invites: invitesIn };
     if (mem) {
       const isLeader = mem.leader === userId;
-      const [memIds, reqIds] = await Promise.all([
+      const [memIds, reqIds, invIds] = await Promise.all([
         db.execute(sql`select user_id::text as uid from world_boss_party_members where party_id = ${mem.pid}::bigint order by joined_at, user_id`) as unknown as Promise<{ uid: string }[]>,
         isLeader && mem.status === 'recruiting'
           ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
           : Promise.resolve([] as { uid: string }[]),
+        isLeader && mem.status === 'recruiting'
+          ? (db.execute(sql`select user_id::text as uid from world_boss_invites where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
+          : Promise.resolve([] as { uid: string }[]),
       ]);
-      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid)], known, weakBonus);
+      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)], known, weakBonus);
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds.map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader })),
         requests: reqIds.map((r) => person(r.uid)),
+        invites: invIds.map((r) => person(r.uid)),
       };
     }
     // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다.
@@ -374,4 +387,46 @@ export async function worldBossesAtConquestReveal(serverId: number, kstDay: stri
     zone: string; region: string; stage: number; ld: string; loot_boxes: number;
   }[];
   return rows.map((r) => ({ zone: r.zone, name: worldBossName(r.region), stage: r.stage, lootDiamond: Number(r.ld), lootBoxes: r.loot_boxes }));
+}
+
+/**
+ * 초대 후보(10-11 사용자 2안) — 대장의 친구 + 같은 길드원 중 이 서버에 캐릭터가 있는 사람. 상태: ok(초대 가능) · invited(대기 중) ·
+ * in_party(이 보스의 다른 원정대 모집 중) · fought(이미 싸움). 정렬은 초대 가능 먼저, 그다음 전투력 높은 순.
+ */
+export async function getWorldBossInvitable(serverId: number, userId: string, partyId: string): Promise<WorldBossInvitable[]> {
+  const [party] = (await db.execute(sql`
+    select p.boss_id::text as boss_id, b.traits, b.stage from world_boss_parties p join world_bosses b on b.id = p.boss_id
+     where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.leader_user_id = ${userId}::uuid`)) as unknown as { boss_id: string; traits: unknown; stage: number }[];
+  if (!party) return [];
+  const [friendIds, guildRows] = await Promise.all([
+    getFriendIds(userId, serverId),
+    db.execute(sql`
+      select b.user_id::text as uid from guild_members a join guild_members b on b.guild_id = a.guild_id and b.server_id = a.server_id
+       where a.server_id = ${serverId} and a.user_id = ${userId}::uuid and b.user_id <> ${userId}::uuid`) as unknown as Promise<{ uid: string }[]>,
+  ]);
+  const friends = new Set(friendIds);
+  const guild = new Set(guildRows.map((r) => r.uid));
+  const ids = [...new Set([...friends, ...guild])].filter((x) => x !== userId);
+  if (ids.length === 0) return [];
+  const traits = parseWorldBossTraits(party.traits);
+  const known = new Set((await knownWeakOf(party.boss_id, currentPhase(Number(party.stage)).index)).map((w) => w.code));
+  const [people, taken, invited] = await Promise.all([
+    peopleOn(serverId, ids, known, worldBossWeakBonus(traits)),
+    db.execute(sql`
+      select m.user_id::text as uid, p.status from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
+       where m.boss_id = ${party.boss_id}::bigint and m.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; status: string }[]>,
+    db.execute(sql`select user_id::text as uid from world_boss_invites where party_id = ${partyId}::bigint and status = 'pending'`) as unknown as Promise<{ uid: string }[]>,
+  ]);
+  const takenMap = new Map(taken.map((t) => [t.uid, t.status] as const));
+  const invitedSet = new Set(invited.map((i) => i.uid));
+  const out: WorldBossInvitable[] = [];
+  for (const id of ids) {
+    const p = people.get(id);
+    if (!p) continue; // 이 서버에 캐릭터가 없으면 초대할 수 없다
+    const t = takenMap.get(id);
+    const state: WorldBossInvitable['state'] = t === 'departed' ? 'fought' : t ? 'in_party' : invitedSet.has(id) ? 'invited' : 'ok';
+    out.push({ ...p, source: friends.has(id) && guild.has(id) ? 'both' : friends.has(id) ? 'friend' : 'guild', state });
+  }
+  const rank = { ok: 0, invited: 1, in_party: 2, fought: 3 } as const;
+  return out.sort((a, b) => rank[a.state] - rank[b.state] || b.combat - a.combat || a.nickname.localeCompare(b.nickname, 'ko'));
 }

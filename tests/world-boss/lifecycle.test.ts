@@ -4,7 +4,7 @@ import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossStageHp } fro
 import { distributeGuildBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
-import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
+import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { cancelScheduledWorldBoss, spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
 import { activateDueBosses, settleLeftBosses } from '@/lib/game/world-boss/spawn';
@@ -261,6 +261,31 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const [p2] = await q<{ status: string; reason: string }>(sql`select status, disband_reason as reason from world_boss_parties where id=${partyId}::bigint`);
     expect(p2).toEqual({ status: 'disbanded', reason: 'leader_left' });
   });
+
+  it('초대: 대장이 친구·길드원을 초대하고 상대가 수락하면 바로 참가, 거절 뒤 재초대·중복·권한 검사', async () => {
+    // T와 G가 친구도 같은 길드원도 아니면 잠시 친구로(끝에 되돌림).
+    const [link] = await q<{ n: number }>(sql`select count(*)::int as n from friend_links where server_id=${S} and status='accepted' and ((requester_id=${T}::uuid and addressee_id=${G}::uuid) or (requester_id=${G}::uuid and addressee_id=${T}::uuid))`);
+    const [same] = await q<{ n: number }>(sql`select count(*)::int as n from guild_members a join guild_members b on b.guild_id=a.guild_id and b.server_id=a.server_id where a.server_id=${S} and a.user_id=${T}::uuid and b.user_id=${G}::uuid`);
+    const madeLink = link!.n === 0 && same!.n === 0;
+    if (madeLink) await testDb.execute(sql`insert into friend_links (requester_id, addressee_id, status, server_id) values (${T}::uuid, ${G}::uuid, 'accepted', ${S})`);
+    try {
+      const boss = await makeBoss('2000-01-07');
+      const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
+      expect(await code(respondInvite({ userId: G, serverId: S, partyId, accept: true }))).toBe('NO_INVITE');
+      expect(await code(inviteToParty({ leaderUserId: G, serverId: S, partyId, userId: T }))).toBe('NOT_LEADER');
+      await inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G });
+      expect(await code(inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G }))).toBe('ALREADY_INVITED');
+      await respondInvite({ userId: G, serverId: S, partyId, accept: false });
+      expect((await q<{ status: string }>(sql`select status from world_boss_invites where party_id=${partyId}::bigint and user_id=${G}::uuid`))[0]!.status).toBe('declined');
+      await inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G }); // 거절 뒤 다시 초대
+      await respondInvite({ userId: G, serverId: S, partyId, accept: true });
+      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(2);
+      expect(await code(inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G }))).toBe('ALREADY_IN_PARTY');
+      await testDb.execute(sql`delete from world_bosses where id=${boss}::bigint`);
+    } finally {
+      if (madeLink) await testDb.execute(sql`delete from friend_links where requester_id=${T}::uuid and addressee_id=${G}::uuid and server_id=${S}`);
+    }
+  }, 20_000);
 
   it('정산: 떠나는 시각이 지나면 그 순간의 주인 길드 금고에 전리품·경험치가 들어가고 미출발 원정대는 해산된다', async () => {
     const stage = 2;

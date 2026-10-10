@@ -12,6 +12,7 @@ import { profiles } from './profiles';
 export type WorldBossStatus = 'scheduled' | 'active' | 'left';
 export type WorldBossPartyStatus = 'recruiting' | 'departed' | 'disbanded';
 export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected';
+export type WorldBossInviteStatus = 'pending' | 'accepted' | 'declined';
 export type WorldBossWeakPhase = { weapon: string[]; armor: string[]; accessory: string[] };
 
 /** 보스 1마리 = 1행. 관리자가 구역을 지정해 소환(10-11, 0233) — 같은 날 여러 마리 가능, 구역당 출현 중/예정은 한 마리(소환 트랜잭션이 검사). */
@@ -160,4 +161,22 @@ export const worldBossWeakReveals = pgTable(
     revealedAt: timestamp('revealed_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.bossId, t.phase, t.code] })],
+);
+
+/** 원정대 초대(0234, 10-11 사용자 2안) — 대장이 친구·길드원을 초대, 상대가 수락하면 바로 참가. 한 원정대에 한 사람 한 줄. */
+export const worldBossInvites = pgTable(
+  'world_boss_invites',
+  {
+    partyId: bigint('party_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => worldBossParties.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    fromUserId: uuid('from_user_id').references(() => profiles.id, { onDelete: 'set null' }),
+    status: text('status').$type<WorldBossInviteStatus>().notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.partyId, t.userId] }), index('world_boss_invites_user_idx').on(t.userId, t.status)],
 );

@@ -117,6 +117,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
       if (dis.length > 0) {
         await tx.execute(sql`delete from world_boss_party_members m using world_boss_parties p where m.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
         await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
+        await tx.execute(sql`delete from world_boss_invites i using world_boss_parties p where i.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
       }
       await tx.execute(sql`
         insert into world_events (server_id, type, guild_id, detail)
