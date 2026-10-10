@@ -591,6 +591,17 @@ export function WorldBossDetailView({
               <PartyHead p={p} rank={i + 1} />
               <DepartedSummary p={p} />
               <Roster members={p.members} value="damage" />
+              {/* 내 원정대면 여기서도 전투를 다시 볼 수 있다(10-11 사용자). */}
+              {p.id === mp?.partyId && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => openBattle(p.id)}
+                  className="mt-2 w-full rounded-lg border border-orange-500/60 py-1.5 text-[11.5px] font-bold text-orange-300 disabled:opacity-40"
+                >
+                  전투 다시 보기
+                </button>
+              )}
               <p className="mt-1.5 text-[10.5px] text-stone-500">
                 원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
               </p>
@@ -638,7 +649,7 @@ export function WorldBossDetailView({
             </div>
             {/* 대원 목록(P3-c, 10-11 사용자) — 대난투 순위 행처럼 얼굴을 왼쪽에 깔고 이름·원정대장 칩·길드 / 장착 3칸 + 부위 전투력 "95만 · 95만 · 95만"(보너스는 칸·글자 색으로만: 보라 아바타·주황 약점) / 오른쪽 전투력.
                 10명이면 행 66px × 10이라 명단만 안쪽 스크롤(3.5행, 아래 흐림만 — 'N명 더' 글자는 두지 않는다) — 무대·합산·버튼은 그대로(T1). 글은 개행하지 않는다(10-11 사용자). */}
-            <p className="mt-2.5 flex items-center justify-between whitespace-nowrap text-[10px] text-stone-500">
+            <p className="-mx-2 mt-2.5 flex items-center justify-between whitespace-nowrap text-[10px] text-stone-500">
               <span className="flex items-center gap-2.5">
                 <span className="flex items-center gap-1">
                   <i className="inline-block h-2.5 w-2.5 rounded-[3px] border border-violet-500 bg-violet-950/60" />아바타 +{Math.round(WORLD_BOSS_AVATAR_BONUS * 100)}%
@@ -656,13 +667,13 @@ export function WorldBossDetailView({
               </ul>
               {mp.members.length > 3 && <span className="pointer-events-none absolute inset-x-0 bottom-0 h-9 rounded-b-lg bg-gradient-to-b from-transparent to-stone-900" />}
             </div>
-            <p className="mt-2.5 flex items-center justify-between text-[12px]">
+            <p className="-mx-2 mt-2.5 flex items-center justify-between text-[12px]">
               <span className="text-stone-500">합산 전투력</span>
               <b className="font-mono tabular-nums text-orange-600 dark:text-orange-400">{formatCompactKR(mp.members.reduce((s, m) => s + m.combat, 0))}</b>
             </p>
             {/* 구성 특성이 켜져 있으면 적용 뒤 합산도(시안 ②). 무소속 배율은 대원별이라 여기선 제외. */}
             {partyMult > 1 && (
-              <p className="mt-1 flex items-center justify-between text-[11.5px] text-stone-500">
+              <p className="-mx-2 mt-1 flex items-center justify-between text-[11.5px] text-stone-500">
                 <span>
                   {traitStatus.filter((s) => s.active && s.code !== 'wanderer').map((s) => `${worldBossTraitDef(s.code)!.icon} ${worldBossTraitDef(s.code)!.name} ×${s.mult}`).join(' · ')}
                 </span>
@@ -694,7 +705,7 @@ export function WorldBossDetailView({
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
               maxLength={WORLD_BOSS_PARTY_INTRO_MAX}
-              placeholder="예) 약점 장비 맞춘 분 환영해요"
+              placeholder="소개글을 작성해 주세요(선택)"
               className="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[16px] leading-tight text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             />
             <p className="mt-1 text-right text-[10.5px] tabular-nums text-stone-500">
