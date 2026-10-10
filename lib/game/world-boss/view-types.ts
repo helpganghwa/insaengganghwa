@@ -12,9 +12,11 @@ export type WorldBossPartyCard = {
   guildEmblemColor: string | null;
   /** 만들 때 적은 소개글(선택, WORLD_BOSS_PARTY_INTRO_MAX자) — 모집 카드·내 원정대 패널에 보인다. */
   intro: string | null;
-  /** 모집 중 원정대의 명단(대장 먼저, 나머지는 참가 순) — 이름·월드보스 전투력. 완료된 원정대는 빈 배열(전투 보기로 본다). */
-  members: { userId: string; nickname: string; combat: number; isLeader: boolean }[];
-  /** 명단의 전투력 합(모집 카드 '합산 전투력'). */
+  /**
+   * 명단(대장 먼저, 나머지는 참가 순) — 모집 중은 월드보스 전투력(combat), 완료는 그 전투에서 준 피해(damage). 길드 문양은 닉네임 옆에(무소속은 없음).
+   */
+  members: { userId: string; nickname: string; combat: number; damage: number; isLeader: boolean; guildEmblemUrl: string | null; guildEmblemColor: string | null }[];
+  /** 명단의 전투력 합(모집 카드 '합산 전투력'). 완료 카드는 0. */
   combatSum: number;
   memberCount: number;
   createdAt: number;

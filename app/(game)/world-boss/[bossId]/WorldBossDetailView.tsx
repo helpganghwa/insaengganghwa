@@ -77,7 +77,12 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
         myParty: { ...mp, requests, members: [...mp.members, { ...req, isLeader: false }] },
         parties: s.parties.map((c) =>
           c.id === mp.partyId
-            ? { ...c, memberCount: c.memberCount + 1, members: [...c.members, { userId: req.userId, nickname: req.nickname, combat: req.combat, isLeader: false }], combatSum: c.combatSum + req.combat }
+            ? {
+                ...c,
+                memberCount: c.memberCount + 1,
+                members: [...c.members, { userId: req.userId, nickname: req.nickname, combat: req.combat, damage: 0, isLeader: false, guildEmblemUrl: req.guildEmblemUrl, guildEmblemColor: req.guildEmblemColor }],
+                combatSum: c.combatSum + req.combat,
+              }
             : c,
         ),
       };
@@ -100,7 +105,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       const intro = p.intro.replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX) || null;
       const card: WorldBossPartyCard = {
         id: OPT_PARTY_ID, status: 'recruiting', leaderNickname: who.nickname, guildName: who.guildName, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor,
-        intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, isLeader: true }], combatSum: who.combat, memberCount: 1,
+        intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, damage: 0, isLeader: true, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor }], combatSum: who.combat, memberCount: 1,
         createdAt: Date.now(), departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0,
       };
       return {
@@ -163,8 +168,6 @@ export function WorldBossDetailView({
   const mp = d.myParty;
   const recruiting = useMemo(() => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId), [d.parties, mp]);
   const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
-  // 대기 중 신청들 — 여러 원정대에 동시에 걸 수 있다(10-10 사용자).
-  const pendingParties = useMemo(() => (me ? d.parties.filter((p) => me.pendingPartyIds.includes(p.id)) : []), [d.parties, me]);
   const pct = d.need > 0 ? Math.min(100, (d.into / d.need) * 100) : 0;
   const owner = active ? d.ownerGuildName : d.settledGuildName;
   const ownerEmblem = active ? d.ownerGuildEmblem : d.settledGuildEmblem;
@@ -308,25 +311,6 @@ export function WorldBossDetailView({
         <div className="mx-3 mt-3">
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
-          ) : me.state === 'pending' ? (
-            // 신청한 원정대마다 한 줄 + 신청 취소(여러 곳 동시 신청). 한 곳에 수락되면 나머지는 저절로 사라진다.
-            <div className="rounded-xl border border-orange-500/45 bg-orange-950/30 px-3 py-1.5">
-              {pendingParties.map((pp) => (
-                <div key={pp.id} className="flex items-center gap-2 py-1">
-                  <span className="min-w-0 flex-1 truncate text-[12px] text-orange-100">
-                    <b>{pp.leaderNickname} 원정대</b>에 신청했어요
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => run(() => cancelRequestAction(d.id, pp.id), { title: '신청을 취소했어요' }, { t: 'cancel', partyId: pp.id })}
-                    className="shrink-0 rounded-lg border border-orange-500/45 bg-stone-900 px-3 py-1.5 text-[11.5px] font-bold text-orange-300"
-                  >
-                    신청 취소
-                  </button>
-                </div>
-              ))}
-              <span className="block pb-1 text-[10.5px] text-orange-200/70">원정대장이 수락하면 알림으로 알려 드려요{pendingParties.length > 1 ? ' · 한 곳에 수락되면 다른 신청은 사라져요' : ''}</span>
-            </div>
           ) : me.canCreate ? (
             // 원정대 만들기 — 바닥 고정 대신 제자리에(10-10 사용자: 채팅 미니바 위에 떠서 어색했다).
             <button
@@ -339,12 +323,10 @@ export function WorldBossDetailView({
             </button>
           ) : me.state === 'fought' ? (
             <Notice>이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.</Notice>
-          ) : (
-            <Notice>
-              {owner ? `원정대 만들기는 ${owner} 길드원만 할 수 있어요. ` : ''}
-              {recruiting.length > 0 ? '아래 모집 중 원정대에 신청해 보세요.' : '원정대가 생기면 여기에서 신청할 수 있어요.'}
-            </Notice>
-          )}
+          ) : !me.isOwnerGuild && owner ? (
+            // 신청 안내 문구는 두지 않는다(10-10 사용자) — 신청 상태는 각 모집 카드의 버튼이 보여 준다.
+            <Notice>원정대 만들기는 {owner} 길드원만 할 수 있어요.</Notice>
+          ) : null}
         </div>
       )}
 
@@ -362,17 +344,11 @@ export function WorldBossDetailView({
             </span>
           </div>
           {myCard?.intro && <p className="-mt-1 mb-2 text-[11px] leading-snug text-stone-300">{myCard.intro}</p>}
+          {/* 빈 자리 표시는 두지 않는다(10-10 사용자) — 인원은 위 N/10이 말해 준다. */}
           <div className="grid grid-cols-2 gap-1.5">
             {mp.members.map((m) => (
               <MemberChip key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />
             ))}
-            {mp.status === 'recruiting' &&
-              // 빈 자리는 하나만(10-10 사용자)
-              Array.from({ length: Math.max(0, Math.min(1, WORLD_BOSS_PARTY_MAX - mp.members.length)) }, (_, i) => (
-                <div key={`e${i}`} className="flex h-12 items-center justify-center rounded-lg border border-dashed border-stone-700 text-[10.5px] text-stone-600">
-                  빈 자리
-                </div>
-              ))}
           </div>
 
           {mp.isLeader && mp.status === 'recruiting' && mp.requests.length > 0 && (
@@ -411,23 +387,23 @@ export function WorldBossDetailView({
 
           {mp.status === 'recruiting' ? (
             mp.isLeader ? (
-              // 원정대장: 해산(작게) + 출발(크게) — 바닥 고정 대신 패널 안에(10-10 사용자). 출발은 확인 팝업(명단·합산 전투력).
-              <div className="mt-2.5 flex gap-2">
-                <button
-                  type="button"
-                  disabled={pending || mp.partyId === OPT_PARTY_ID}
-                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' })}
-                  className="w-20 shrink-0 rounded-xl border border-stone-700 py-3 text-[12.5px] font-bold text-stone-400 disabled:opacity-40"
-                >
-                  해산
-                </button>
+              // 원정대장: 출발(크게, 인원 없이) + 아래 작은 글자 버튼 해산(10-10 사용자). 출발은 확인 팝업(명단·합산 전투력).
+              <div className="mt-2.5">
                 <button
                   type="button"
                   disabled={pending || !active || mp.partyId === OPT_PARTY_ID}
                   onClick={() => setDepartAsk(true)}
-                  className="flex-1 rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
+                  className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
                 >
-                  출발 <span className="text-[12px] font-bold text-orange-200/90">· {mp.members.length}명</span>
+                  출발
+                </button>
+                <button
+                  type="button"
+                  disabled={pending || mp.partyId === OPT_PARTY_ID}
+                  onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' })}
+                  className="mt-1 w-full py-1.5 text-[11.5px] font-bold text-stone-500 disabled:opacity-40"
+                >
+                  원정대 해산
                 </button>
               </div>
             ) : (
@@ -443,7 +419,7 @@ export function WorldBossDetailView({
             myCard && (
               <>
                 <div className="mt-2.5 rounded-lg bg-orange-950/40 px-2.5 py-2">
-                  <DepartedSummary p={myCard} />
+                  <DepartedSummary p={myCard} withReward />
                 </div>
                 <button
                   type="button"
@@ -503,17 +479,8 @@ export function WorldBossDetailView({
                 <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${isPending ? 'border-orange-500/55' : 'border-stone-800'}`}>
                   <PartyHead p={p} />
                   {p.intro && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{p.intro}</p>}
-                  {/* 명단 — 대장 먼저, 이름 + 전투력(10-10 사용자: 누가 있는지·수치를 컴팩트하게). */}
-                  {p.members.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {p.members.map((m) => (
-                        <span key={m.userId} className="rounded-md bg-stone-800/80 px-1.5 py-0.5 text-[10px] leading-tight text-stone-300">
-                          {m.isLeader && <span className="mr-0.5 text-orange-300">★</span>}
-                          {m.nickname} <span className="text-stone-500">{formatCompactKR(m.combat)}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* 명단 — 대장 먼저, 문양 + 이름 + 전투력(10-10 사용자: 누가 있는지·수치를 컴팩트하게). */}
+                  <Roster members={p.members} value="combat" />
                   <div className="my-1.5 flex gap-[3px]">
                     {Array.from({ length: WORLD_BOSS_PARTY_MAX }, (_, i) => (
                       <i key={i} className={`h-[5px] flex-1 rounded-sm ${i < p.memberCount ? 'bg-orange-700' : 'bg-stone-800'}`} />
@@ -523,11 +490,18 @@ export function WorldBossDetailView({
                     <span className="min-w-0 flex-1 text-[10.5px] text-stone-400">
                       합산 전투력 <b className="text-orange-300">{formatCompactKR(p.combatSum)}</b>
                     </span>
-                    {/* 신청한 원정대는 버튼이 '신청 완료'(비활성)로 바뀐다 — 취소는 위 신청 카드에서(10-10 사용자). */}
+                    {/* 신청한 원정대: '신청 완료' 표시 + 신청 취소 버튼(별도 신청 섹션 없음, 10-10 사용자). */}
                     {isPending ? (
-                      <button type="button" disabled className="rounded-lg bg-stone-800 px-3 py-1.5 text-[11.5px] font-bold text-stone-500">
-                        신청 완료
-                      </button>
+                      <>
+                        <span className="shrink-0 text-[10.5px] font-bold text-orange-300">신청 완료</span>
+                        <button
+                          type="button"
+                          onClick={() => run(() => cancelRequestAction(d.id, p.id), { title: '신청을 취소했어요' }, { t: 'cancel', partyId: p.id })}
+                          className="rounded-lg border border-stone-700 px-3 py-1.5 text-[11.5px] font-bold text-stone-400"
+                        >
+                          신청 취소
+                        </button>
+                      </>
                     ) : full ? (
                       <span className="text-[10.5px] text-stone-500">가득 찼어요</span>
                     ) : canRequest ? (
@@ -548,18 +522,15 @@ export function WorldBossDetailView({
           <Empty title="아직 완료된 원정대가 없어요" />
         ) : (
           departed.map((p, i) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => openBattle(p.id)}
-              disabled={pending}
-              className={`rounded-xl border bg-stone-900 p-2.5 text-left disabled:opacity-60 ${p.id === mp?.partyId ? 'border-orange-500/55' : 'border-stone-800'}`}
-            >
-              {/* 피해 많은 순 — 순위를 앞에(10-10 사용자) */}
+            // 완료 카드 — 피해 많은 순(N위) · 피해 · 원정대원(피해) · 원정대 획득. 라운드·단계·전투 보기는 두지 않는다(10-10 사용자).
+            <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${p.id === mp?.partyId ? 'border-orange-500/55' : 'border-stone-800'}`}>
               <PartyHead p={p} rank={i + 1} />
               <DepartedSummary p={p} />
-              <span className="mt-1 block text-right text-[10.5px] font-bold text-orange-300">전투 보기 ›</span>
-            </button>
+              <Roster members={p.members} value="damage" />
+              <p className="mt-1.5 text-[10.5px] text-stone-500">
+                원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+              </p>
+            </div>
           ))
         )}
       </div>
@@ -676,24 +647,35 @@ function PartyHead({ p, rank }: { p: WorldBossPartyCard; rank?: number }) {
   );
 }
 
-/** 출발한 원정대 요약 — 두 줄(리뷰 10-08: 한 줄에 몰려 빽빽했다). */
-function DepartedSummary({ p }: { p: WorldBossPartyCard }) {
-  const moved = (p.stageTo ?? 0) - (p.stageFrom ?? 0);
+/** 명단 칩 — ★대장 먼저, 길드 문양(무소속은 없음) + 이름 + 값(모집: 전투력 · 완료: 피해). */
+function Roster({ members, value }: { members: WorldBossPartyCard['members']; value: 'combat' | 'damage' }) {
+  if (members.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {members.map((m) => (
+        <span key={m.userId} className="inline-flex items-center gap-0.5 rounded-md bg-stone-800/80 px-1.5 py-0.5 text-[10px] leading-tight text-stone-300">
+          {m.isLeader && <span className="text-orange-300">★</span>}
+          {m.guildEmblemUrl && <GuildBadge emblemUrl={m.guildEmblemUrl} emblemColor={m.guildEmblemColor} size={10} className="shrink-0" />}
+          <span>{m.nickname}</span>
+          <span className="text-stone-500">{formatCompactKR(value === 'combat' ? m.combat : m.damage)}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** 출발한 원정대 요약 — 피해만(라운드·단계 변화는 두지 않는다, 10-10 사용자). 내 원정대 패널에서는 아래에 획득도 함께. */
+function DepartedSummary({ p, withReward = false }: { p: WorldBossPartyCard; withReward?: boolean }) {
   return (
     <div className="mt-1">
       <p className="text-[11px] text-stone-300">
-        피해 <b className="text-orange-200">{formatCompactKR(p.damage)}</b> · {p.rounds}라운드 ·{' '}
-        {moved > 0 ? (
-          <>
-            <b className="text-orange-300">{p.stageTo}단계</b>까지 +{moved}
-          </>
-        ) : (
-          '단계 그대로'
-        )}
+        피해 <b className="text-orange-200">{formatCompactKR(p.damage)}</b>
       </p>
-      <p className="mt-0.5 text-[10.5px] text-stone-500">
-        원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
-      </p>
+      {withReward && (
+        <p className="mt-0.5 text-[10.5px] text-stone-500">
+          원정대 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+        </p>
+      )}
     </div>
   );
 }
@@ -721,9 +703,10 @@ function MemberChip({ p, serverId, leader }: { p: WorldBossPerson; serverId: num
           {leader && <span className="mr-0.5 text-orange-300">★</span>}
           {p.nickname}
         </span>
+        {/* 약점 N은 적지 않고 적용된 전투력만(10-10 사용자) */}
         <span className="flex min-w-0 items-center gap-1 text-[9.5px] text-stone-500">
           <Guild p={p} size={9} />
-          <span className="shrink-0">· {formatCompactKR(p.combat)}{p.weakCount > 0 && <span className="text-orange-400"> · 약점 {p.weakCount}</span>}</span>
+          <span className="shrink-0">· {formatCompactKR(p.combat)}</span>
         </span>
       </span>
     </>

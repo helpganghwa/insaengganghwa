@@ -18,10 +18,8 @@ function Piece({ p, hasAvatar }: { p: LoadoutPiece; hasAvatar: boolean }) {
   return (
     <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${p.weak ? 'bg-orange-950/60 ring-1 ring-orange-500/70' : 'bg-stone-800/70'}`} title={p.name}>
       <ItemImg src={p.src} className="h-9 w-9" />
-      <span className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 gap-px text-[8px] font-extrabold leading-[1.35]">
-        {p.weak && <span className="rounded-[3px] bg-orange-600 px-0.5 text-orange-50">약점</span>}
-        {av && <span className="rounded-[3px] bg-violet-600 px-0.5 text-white">+50%</span>}
-      </span>
+      {/* 약점은 주황 테두리로만(라벨 없음, 10-10 사용자) · 아바타 보너스만 +50% 배지 */}
+      {av && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[3px] bg-violet-600 px-0.5 text-[8px] font-extrabold leading-[1.35] text-white">+50%</span>}
     </div>
   );
 }

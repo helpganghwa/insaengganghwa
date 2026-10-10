@@ -133,6 +133,21 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
 // ── 보스 상세(/world-boss/<id>) ──────────────────────────────────────────────
 
 
+/** 이름·길드 문양만(완료 원정대 명단용) — 전투력·얼굴 없이 가볍게. */
+async function namesOn(serverId: number, userIds: string[]): Promise<Map<string, { nickname: string; guildName: string | null; guildEmblemUrl: string | null; guildEmblemColor: string | null }>> {
+  const out = new Map<string, { nickname: string; guildName: string | null; guildEmblemUrl: string | null; guildEmblemColor: string | null }>();
+  const ids = [...new Set(userIds)].filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+  if (ids.length === 0) return out;
+  const rows = (await db.execute(sql`
+    select c.user_id::text as uid, c.nickname, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor
+      from characters c
+      left join guild_members gm on gm.user_id = c.user_id and gm.server_id = c.server_id
+      left join guilds g on g.id = gm.guild_id
+     where c.server_id = ${serverId} and c.user_id = any(${`{${ids.join(',')}}`}::uuid[])`)) as unknown as { uid: string; nickname: string; gname: string | null; gurl: string | null; gcolor: string | null }[];
+  for (const r of rows) out.set(r.uid, { nickname: r.nickname, guildName: r.gname, guildEmblemUrl: r.gurl, guildEmblemColor: r.gcolor });
+  return out;
+}
+
 /** 사람들(원정대원·신청자) — 닉네임·공개 코드·길드·월드보스 전투력(장착 3개 + 보너스). 한 화면에 20명 남짓이라 즉석 계산. */
 async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<string>): Promise<Map<string, WorldBossPerson>> {
   const out = new Map<string, WorldBossPerson>();
@@ -202,22 +217,29 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const weakKnown = await knownWeakOf(b.id, phase.index);
   const known = new Set(weakKnown.map((w) => w.code));
 
-  // 모집 중 원정대 명단(10-10 사용자: 목록에서 누가 있는지·합산 전투력이 보이게) — 전투력은 공개된 약점 기준이라 known 뒤에 센다.
-  // 완료된 원정대는 명단을 싣지 않는다(지금 전투력은 그 전투와 무관, 전투 보기가 있다).
-  const recruitingIds = partyRows.filter((p) => p.status === 'recruiting').map((p) => p.id);
+  // 원정대 명단(10-10 사용자: 목록에서 누가 있는지 보이게) — 모집 중은 전투력(공개된 약점 기준이라 known 뒤에 센다), 완료는 그 전투의 피해.
+  // 완료 원정대원은 전투력이 필요 없어 이름·문양만 가볍게 읽는다(지난 보스까지 수십 팀 × 10명).
+  const allIds = partyRows.map((p) => p.id);
+  const recruitingIds = new Set(partyRows.filter((p) => p.status === 'recruiting').map((p) => p.id));
   const roster =
-    recruitingIds.length > 0
+    allIds.length > 0
       ? ((await db.execute(sql`
-          select party_id::text as pid, user_id::text as uid from world_boss_party_members
-           where party_id = any(${`{${recruitingIds.join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string }[])
+          select party_id::text as pid, user_id::text as uid, damage::text as dmg from world_boss_party_members
+           where party_id = any(${`{${allIds.join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string; dmg: string }[])
       : [];
-  const rosterPeople = await peopleOn(serverId, roster.map((r) => r.uid), known);
+  const [rosterPeople, rosterNames] = await Promise.all([
+    peopleOn(serverId, roster.filter((r) => recruitingIds.has(r.pid)).map((r) => r.uid), known),
+    namesOn(serverId, roster.filter((r) => !recruitingIds.has(r.pid)).map((r) => r.uid)),
+  ]);
   const membersOf = (p: { id: string; leader: string }) =>
     roster
       .filter((r) => r.pid === p.id)
       .map((r) => {
-        const x = rosterPeople.get(r.uid);
-        return { userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: x?.combat ?? 0, isLeader: r.uid === p.leader };
+        const x = rosterPeople.get(r.uid) ?? rosterNames.get(r.uid);
+        return {
+          userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: rosterPeople.get(r.uid)?.combat ?? 0, damage: Number(r.dmg),
+          isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null,
+        };
       })
       .sort((x, y) => Number(y.isLeader) - Number(x.isLeader)); // 대장 먼저(안정 정렬이라 나머지는 참가 순 유지)
   const parties: WorldBossPartyCard[] = partyRows.map((p) => {
