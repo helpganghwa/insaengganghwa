@@ -60,6 +60,15 @@ const BOSS_LINES: ((boss: string, nick: string) => string)[] = [
   (b, n) => `${n}, ${b}의 눈빛에 묶인 채 잿불에 휘감겼다 — 쓰러짐`,
   (_, n) => `불타는 깃털 소나기 — ${n}#{이} 버티지 못하고 쓰러졌다`,
 ];
+/** 페이즈 게이지 컬러 — 레이드 카드와 같은 6색 순환(페이즈마다 다음 색, 10-11 사용자: 레이드와 같은 방식). */
+const PHASE_PALETTE = [
+  { bar: 'bg-emerald-400', text: 'text-emerald-300', glow: 'shadow-emerald-400/60' },
+  { bar: 'bg-sky-400', text: 'text-sky-300', glow: 'shadow-sky-400/60' },
+  { bar: 'bg-violet-400', text: 'text-violet-300', glow: 'shadow-violet-400/60' },
+  { bar: 'bg-amber-400', text: 'text-amber-300', glow: 'shadow-amber-400/60' },
+  { bar: 'bg-rose-400', text: 'text-rose-300', glow: 'shadow-rose-400/60' },
+  { bar: 'bg-cyan-400', text: 'text-cyan-300', glow: 'shadow-cyan-400/60' },
+];
 /** 문자열 → 작은 정수(기록마다 문장 자리를 다르게). */
 const seedOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
@@ -210,6 +219,43 @@ export function WorldBossReplay({
   const lastWeak = idx > 0 && st.last && st.last[0] >= 0 ? [1, 2, 4].filter((b) => ((weakBits[idx - 1] ?? 0) & b) !== 0).length : 0;
   // 페이즈 게이지 — 출발 시점 보스 누적(finale.start)이 기록된 전투만(옛 기록은 원정대 피해 합계로 대신).
   const phase = battle.finale.start != null ? worldBossStageFor(battle.finale.start + st.total) : null;
+  // 레이드 카드와 같은 게이지 시퀀스: 페이즈를 넘기면 100%까지 채우고(440ms) 다음 색으로 바뀌어 0부터 다시 찬다. 건너뛰기·되감기는 바로.
+  const targetPct = phase ? Math.min(100, (phase.into / Math.max(1, phase.need)) * 100) : 0;
+  const [gPhase, setGPhase] = useState(phase?.stage ?? 0);
+  const [gPct, setGPct] = useState(targetPct);
+  const [phaseUp, setPhaseUp] = useState(false);
+  const gaugeTok = useRef(0);
+  useEffect(() => {
+    if (!phase) return;
+    const token = ++gaugeTok.current;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      if (phase.stage < gPhase || done) {
+        setGPhase(phase.stage);
+        setGPct(targetPct);
+        return;
+      }
+      let ph = gPhase;
+      while (ph < phase.stage) {
+        setGPct(100);
+        await sleep(440);
+        if (gaugeTok.current !== token) return;
+        ph += 1;
+        setGPhase(ph);
+        setGPct(0);
+        await sleep(50);
+        if (gaugeTok.current !== token) return;
+      }
+      setGPct(targetPct);
+      if (ph !== gPhase) {
+        setPhaseUp(true);
+        await sleep(650);
+        if (gaugeTok.current === token) setPhaseUp(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase?.stage, targetPct, done]);
+  const pal = PHASE_PALETTE[gPhase % PHASE_PALETTE.length]!;
   // 무대 오버레이 — 라운드 줄은 빼고 마지막 3줄(라운드는 상단 중앙 알약이 맡는다, 10-11 사용자). 명단 아래 전체 일지에는 라운드 머리를 남긴다.
   const shown = lines.filter((l) => l.kind !== 'round').slice(-3);
 
@@ -290,12 +336,12 @@ export function WorldBossReplay({
               {hit && st.lastDrop && (st.lastDrop[0] > 0 || st.lastDrop[1] > 0) && (
                 <span
                   key={`g${idx}`}
-                  className={`absolute left-[calc(100%-6px)] top-[54px] animate-wb-round whitespace-nowrap rounded-full font-black ${
+                  className={`absolute left-[calc(100%-2px)] top-[56px] animate-wb-round whitespace-nowrap font-black tabular-nums ${
                     jackpot
-                      ? 'bg-gradient-to-r from-orange-300 via-amber-200 to-orange-400 px-2.5 py-0.5 text-[15px] text-orange-950 shadow-[0_0_18px_4px_rgba(249,115,22,0.8)] ring-1 ring-amber-100'
+                      ? 'text-[17px] text-amber-100 [text-shadow:0_0_14px_#fbbf24,0_0_4px_#f59e0b,0_1px_2px_#000]'
                       : lootTier(st.lastDrop[0], st.lastDrop[1]) === 'good'
-                        ? 'bg-amber-500/95 px-2 py-0.5 text-[12.5px] text-amber-50 shadow-[0_0_10px_2px_rgba(251,191,36,0.55)]'
-                        : 'border border-stone-600 bg-stone-950/85 px-2 py-0.5 text-[11.5px] text-stone-300'
+                        ? 'text-[14px] text-amber-200 [text-shadow:0_0_8px_#f59e0b,0_1px_2px_#000]'
+                        : 'text-[12.5px] text-stone-100 [text-shadow:0_1px_2px_#000,0_0_2px_#000]'
                   }`}
                 >
                   {st.lastDrop[0] > 0 ? `💎${st.lastDrop[0].toLocaleString('ko-KR')}` : `📦${st.lastDrop[1]}`}
@@ -325,15 +371,16 @@ export function WorldBossReplay({
               })}
             </div>
             {/* 보스 이름 · 페이즈 게이지(지금 페이즈·다음까지, 바닥 3px 바) — 무대 맨 아래. 원정대 피해 합계는 명단 머리로 옮겼다. 출발 누적이 없는 옛 기록은 합계를 여기 둔다. */}
-            <div className={`absolute inset-x-0 z-10 flex items-baseline justify-between px-3 ${phase ? 'bottom-[7px]' : 'bottom-1.5'}`}>
+            <div className={`absolute inset-x-0 z-10 flex items-baseline justify-between px-3 ${phase ? 'bottom-[13px]' : 'bottom-1.5'} ${phaseUp ? 'animate-phase-up' : ''}`}>
               <span className="flex items-center gap-1.5 text-[13px] font-extrabold text-orange-200 [text-shadow:0_1px_3px_#000]">
                 {bossName}
                 {bossTraits.length > 0 && <span className="text-[11px]">{bossTraits.map((t) => t.icon).join(' ')}</span>}
               </span>
               {phase ? (
                 <span className="whitespace-nowrap text-[10.5px] text-stone-300 [text-shadow:0_1px_3px_#000]">
-                  <b className="font-mono text-[13px] text-orange-300 tabular-nums">{phase.stage}</b>페이즈 · 다음까지{' '}
-                  <b className="font-mono text-[12px] text-orange-200 tabular-nums">{formatCompactKR(Math.max(0, phase.need - phase.into))}</b>
+                  <b className={`font-mono text-[14px] tabular-nums ${pal.text}`}>PHASE {gPhase}</b>
+                  <span className="ml-1.5">다음까지</span>{' '}
+                  <b className="font-mono text-[11.5px] text-stone-100 tabular-nums">{formatCompactKR(Math.max(0, phase.need - phase.into))}</b>
                 </span>
               ) : (
                 <span className="text-[11px] text-stone-300 [text-shadow:0_1px_3px_#000]">
@@ -342,9 +389,8 @@ export function WorldBossReplay({
               )}
             </div>
             {phase && (
-              <div className="absolute inset-x-0 bottom-0 z-10 h-[3px] bg-black/60">
-                {/* 페이즈가 오르면 key가 바뀌어 0에서 다시 찬다(뒤로 줄어드는 애니 없음). */}
-                <div key={`pb${phase.stage}`} className="h-full bg-gradient-to-r from-orange-500 to-amber-300 transition-[width] duration-500 ease-out" style={{ width: `${Math.min(100, (phase.into / Math.max(1, phase.need)) * 100)}%` }} />
+              <div className="absolute inset-x-3 bottom-[5px] z-10 h-1.5 isolate overflow-hidden rounded-full bg-black/60 ring-1 ring-black/40">
+                <div key={gPhase} className={`h-full ${pal.bar} shadow-[0_0_10px] ${pal.glow}`} style={{ width: `${Math.max(2, gPct)}%`, transition: 'width 380ms ease-out' }} />
               </div>
             )}
           </div>
@@ -471,7 +517,7 @@ export function WorldBossReplay({
 }
 
 /** 일지 한 줄 — 부모가 flex. 문장은 왼쪽에서 줄어들고(말줄임), 피해·전리품은 줄 끝에 고정돼 길어도 잘리지 않는다(10-11 사용자).
- * 약점 적중은 숫자 스타일(호박색 빛)로만, 전리품은 등급별 칩(jackpot 금빛 · good 호박색 · small 어두운 칩). */
+ * 약점 적중은 숫자 스타일(호박색 빛)로만, 전리품도 테두리·배경 없이 글자 색·빛만(jackpot 금빛 · good 호박색 · small 회색). */
 function LogText({ l }: { l: LogLine }) {
   if (l.kind === 'atk') {
     const weak = l.weak ?? 0;
@@ -484,11 +530,11 @@ function LogText({ l }: { l: LogLine }) {
           </b>
           {l.loot ? (
             l.lootTier === 'jackpot' ? (
-              <b className="rounded-full bg-gradient-to-r from-amber-200 to-orange-400 px-1.5 text-stone-900 shadow-[0_0_8px_rgba(251,191,36,0.8)]">{l.loot}</b>
+              <b className="text-amber-100 [text-shadow:0_0_8px_#fbbf24]">{l.loot}</b>
             ) : l.lootTier === 'good' ? (
-              <b className="rounded-full bg-amber-500/90 px-1.5 text-amber-50">{l.loot}</b>
+              <b className="text-amber-200 [text-shadow:0_0_6px_#f59e0b]">{l.loot}</b>
             ) : (
-              <span className="rounded-full border border-stone-600 bg-stone-950/70 px-1.5 text-stone-300">{l.loot}</span>
+              <span className="text-stone-300">{l.loot}</span>
             )
           ) : null}
         </span>
