@@ -312,14 +312,14 @@ export function WorldBossDetailView({
           {!me ? (
             <Notice>로그인하면 원정대에 참가할 수 있어요.</Notice>
           ) : me.canCreate ? (
-            // 원정대 만들기 — 바닥 고정 대신 제자리에(10-10 사용자: 채팅 미니바 위에 떠서 어색했다).
+            // 원정대 만들기 — 바닥 고정 대신 제자리에. 윤곽선(속이 빈 주황 테두리 + ＋) — '준비' 단계라 채운 버튼인 출발과 구분(10-10 사용자, A안).
             <button
               type="button"
               disabled={pending}
               onClick={() => setCreateAsk(true)}
-              className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
+              className="w-full rounded-xl border border-orange-500/70 bg-transparent py-3 text-[14px] font-extrabold text-orange-300 disabled:opacity-40"
             >
-              원정대 만들기
+              ＋ 원정대 만들기
             </button>
           ) : me.state === 'fought' ? (
             <Notice>이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.</Notice>
@@ -387,13 +387,13 @@ export function WorldBossDetailView({
 
           {mp.status === 'recruiting' ? (
             mp.isLeader ? (
-              // 원정대장: 출발(크게, 인원 없이) + 아래 작은 글자 버튼 해산(10-10 사용자). 출발은 확인 팝업(명단·합산 전투력).
+              // 원정대장: 출발(크게, 인원 없이, 초록 — 주황 무대와 구분되는 '결정' 색, 발광 없음) + 아래 작은 글자 버튼 해산(10-10 사용자). 출발은 확인 팝업(명단·합산 전투력).
               <div className="mt-2.5">
                 <button
                   type="button"
                   disabled={pending || !active || mp.partyId === OPT_PARTY_ID}
                   onClick={() => setDepartAsk(true)}
-                  className="w-full rounded-xl bg-orange-700 py-3 text-[14px] font-extrabold text-orange-50 disabled:opacity-40"
+                  className="w-full rounded-xl bg-emerald-600 py-3 text-[14px] font-extrabold text-emerald-50 disabled:opacity-40"
                 >
                   출발
                 </button>
@@ -545,7 +545,7 @@ export function WorldBossDetailView({
             footer={
               <>
                 <ModalButton onClick={() => setDepartAsk(false)}>취소</ModalButton>
-                <ModalButton tone="primary" onClick={depart} disabled={pending}>
+                <ModalButton tone="success" onClick={depart} disabled={pending}>
                   출발
                 </ModalButton>
               </>
