@@ -170,7 +170,8 @@ export function WorldBossDetailView({
   const mp = d.myParty;
   const recruiting = useMemo(() => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId), [d.parties, mp]);
   const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
-  const pct = d.need > 0 ? Math.min(100, (d.into / d.need) * 100) : 0;
+  // 다음 단계까지 남은 피해 — %가 아니라 남은 수치로(10-11 사용자: 모든 '%' 표기는 남은 양으로).
+  const remainHp = Math.max(0, d.need - d.into);
   const owner = active ? d.ownerGuildName : d.settledGuildName;
   const ownerEmblem = active ? d.ownerGuildEmblem : d.settledGuildEmblem;
   const myCard = mp ? d.parties.find((p) => p.id === mp.partyId) : undefined;
@@ -284,7 +285,7 @@ export function WorldBossDetailView({
             </b>
             {active && (
               <span className="mt-1 text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
-                {d.stage + 1}단계까지 <b className="text-orange-300">{Math.floor(pct)}%</b>
+                {d.stage + 1}단계까지 <b className="text-orange-300">{formatCompactKR(remainHp)}</b>
               </span>
             )}
           </span>
@@ -580,7 +581,7 @@ export function WorldBossDetailView({
               <div className="absolute bottom-2 left-2.5 z-[2] [text-shadow:0_1px_2px_#000]">
                 <span className="block text-[10.5px] text-orange-200">{d.name}</span>
                 <b className="block text-[13px] text-stone-100">
-                  {d.stage}단계 · {d.stage + 1}단계까지 {Math.floor(pct)}%
+                  {d.stage}단계 · {d.stage + 1}단계까지 {formatCompactKR(remainHp)}
                 </b>
               </div>
               {d.traits.length > 0 && (
