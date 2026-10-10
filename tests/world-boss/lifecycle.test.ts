@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
-import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { distributeGuildBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
-import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin, syncWorldBossOwners } from '@/lib/game/world-boss/party';
+import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, leaveParty, requestJoin } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { activateDueBosses, ensureTodayBoss, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
@@ -138,12 +137,6 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
 
     expect(await code(departParty({ leaderUserId: G, serverId: S, partyId, departKey: crypto.randomUUID() }))).toBe('NOT_LEADER');
     const key = crypto.randomUUID();
-    if (isConquestLocked()) {
-      expect(await code(departParty({ leaderUserId: T, serverId: S, partyId, departKey: key }))).toBe('LOCKED');
-      // 23~01시(KST)에는 출발 자체를 막는다 — 나머지는 창 밖에서 확인. 모집 중 원정대를 남기면 뒤의 '주인 변경' 집계(해산 1건)가 2가 되므로 접고 나간다.
-      expect(await leaveParty({ userId: T, serverId: S, partyId })).toEqual({ disbanded: true });
-      return;
-    }
     const r = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: key });
     expect(r.duplicate).toBe(false);
     expect(r.rounds).toBe(2); // 2명 → 2라운드
@@ -197,7 +190,6 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
   }, 20_000); // 원격 스테이징 DB에 왕복이 많다(원정대 흐름 + 지도 상태 조회 3회)
 
   it('단계: 출발 피해로 단계를 넘기면 보스 단계·전리품이 절대값으로 갱신된다', async () => {
-    if (isConquestLocked()) return;
     const boss = await makeBoss('2000-01-04', { totalDamage: worldBossStageHp(1) - 1, stage: 0 });
     const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
     const r = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: crypto.randomUUID() });
@@ -225,29 +217,29 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const [left] = await q<{ n: number }>(sql`select count(*)::int as n from world_boss_join_requests r join world_boss_parties p on p.id=r.party_id where p.boss_id=${boss}::bigint and r.user_id=${G}::uuid and r.status='pending'`);
     expect(left!.n).toBe(0);
     expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'member', pendingPartyIds: [] });
-    // 모집 중 원정대를 남기면 뒤의 '주인 변경' 해산 집계가 어긋난다 — 보스째 지운다(원정대·신청은 cascade).
+    // 뒷정리 — 보스째 지운다(원정대·신청은 cascade).
     await testDb.execute(sql`delete from world_bosses where id=${boss}::bigint`);
   }, 20_000);
 
-  it('주인 변경: 구역을 빼앗기면 이전 주인의 모집 중 원정대는 해산되고 참가자는 다시 참가할 수 있다', async () => {
+  it('주인 변경: 구역을 빼앗겨도 모집 중 원정대는 그대로 남고, 이전 주인 길드원은 새 원정대를 못 만든다', async () => {
     const boss = await makeBoss('2000-01-05');
     const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
     await requestJoin({ userId: G, serverId: S, partyId });
     await decideJoin({ leaderUserId: T, serverId: S, partyId, userId: G, accept: true });
     await testDb.execute(sql`update zones set owner_guild_id=${OTHER_GUILD}::bigint where id=${ZONE}`);
     try {
-      expect(await syncWorldBossOwners(S)).toBe(1);
-      const [p] = await q<{ status: string; reason: string }>(sql`select status, disband_reason as reason from world_boss_parties where id=${partyId}::bigint`);
-      expect(p).toEqual({ status: 'disbanded', reason: 'owner_changed' });
-      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where boss_id=${boss}::bigint`))[0]!.n).toBe(0);
+      // 10-11 사용자 결정: 주인이 바뀌어도 원정대는 유지(만들 자격은 만들 때만, 전리품은 떠나는 순간 주인 금고로). 주인 동기화 크론은 없다.
+      const [p] = await q<{ status: string }>(sql`select status from world_boss_parties where id=${partyId}::bigint`);
+      expect(p).toEqual({ status: 'recruiting' });
+      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(2);
+      expect((await getWorldBossDetail(boss, S, T))?.me).toMatchObject({ state: 'member', canCreate: false, isOwnerGuild: false });
       expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('NOT_OWNER_GUILD');
     } finally {
       await testDb.execute(sql`update zones set owner_guild_id=${guildId}::bigint where id=${ZONE}`);
     }
-    // 되찾으면 다시 만들 수 있고, 대장 이탈 훅은 모집 중 원정대를 해산한다.
-    const again = await createParty({ userId: T, serverId: S, bossId: boss });
+    // 대장 이탈 훅은 모집 중 원정대를 해산한다.
     await testDb.transaction((tx) => clearWorldBossOnExit(tx as never, T, S));
-    const [p2] = await q<{ status: string; reason: string }>(sql`select status, disband_reason as reason from world_boss_parties where id=${again.partyId}::bigint`);
+    const [p2] = await q<{ status: string; reason: string }>(sql`select status, disband_reason as reason from world_boss_parties where id=${partyId}::bigint`);
     expect(p2).toEqual({ status: 'disbanded', reason: 'leader_left' });
   });
 

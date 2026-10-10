@@ -33,7 +33,6 @@ const MSG: Record<string, string> = {
   PARTY_FULL: '원정대가 가득 찼어요(최대 10명).',
   NOT_LEADER: '원정대장만 할 수 있어요.',
   NOT_MEMBER: '원정대원이 아니에요.',
-  LOCKED: '23시부터 다음 날 1시까지는 출발할 수 없어요.',
   UNAUTHENTICATED: '로그인이 필요해요.',
   RATE_LIMITED: '요청이 너무 빨라요. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요.',

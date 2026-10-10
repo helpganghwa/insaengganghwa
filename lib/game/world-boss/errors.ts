@@ -11,8 +11,7 @@ export type WorldBossErrorCode =
   | 'PARTY_NOT_RECRUITING'
   | 'PARTY_FULL'
   | 'NOT_LEADER'
-  | 'NOT_MEMBER'
-  | 'LOCKED';
+  | 'NOT_MEMBER';
 
 export class WorldBossError extends Error {
   constructor(public readonly code: WorldBossErrorCode) {

@@ -8,7 +8,6 @@ import { randomUUID } from 'node:crypto';
 
 import { pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossLootFor, worldBossLootMult, worldBossStageFor, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
-import { isConquestLocked } from '@/lib/game/guild/conquest/schedule';
 import { sendPushToUsers } from '@/lib/push/send';
 
 import { worldBossName } from './bosses';
@@ -182,7 +181,7 @@ export async function decideJoin(input: { leaderUserId: string; serverId: number
 }
 
 /** 모집 중 원정대 해산(트랜잭션 안) — 참가자 행·신청을 지워 다시 참가할 수 있게. */
-async function disbandInTx(tx: Tx, partyId: string, reason: 'leader' | 'leader_left' | 'owner_changed' | 'boss_left'): Promise<void> {
+async function disbandInTx(tx: Tx, partyId: string, reason: 'leader' | 'leader_left' | 'boss_left'): Promise<void> {
   await tx.execute(sql`update world_boss_parties set status = 'disbanded', disband_reason = ${reason} where id = ${partyId}::bigint and status = 'recruiting'`);
   await tx.execute(sql`delete from world_boss_party_members where party_id = ${partyId}::bigint`);
   await tx.execute(sql`delete from world_boss_join_requests where party_id = ${partyId}::bigint`);
@@ -254,7 +253,6 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
     const b = bossLocked[0];
     if (!b || b.status !== 'active' || new Date(b.leave_at).getTime() <= Date.now()) throw new WorldBossError('BOSS_NOT_ACTIVE');
-    if (isConquestLocked()) throw new WorldBossError('LOCKED');
 
     // 참가자(참가 순) + 닉네임·길드 + 대표 아바타(만들 때 입은 장비) — 전투력 규칙은 docs/WORLD-BOSS.md §3.
     const members = (await tx.execute(sql`
@@ -358,22 +356,10 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
 }
 
 /**
- * 구역 주인 동기화 — 자정 공개·길드 해산 뒤 호출. 출현 중인 보스의 모집 중 원정대 가운데 만든 길드가 더는
- * 구역 주인이 아니면 해산(owner_changed). 참가자는 다시 참가할 수 있다. 싸운 기록은 그대로.
+ * 구역 주인이 바뀌어도(자정 공개·중립화) 모집 중 원정대는 그대로 둔다(10-11 사용자 결정). 만들 자격은 만들 때만 보고,
+ * 참가는 누구나이며 전리품은 떠나는 순간의 주인 금고로 가므로 새 주인이 손해 볼 게 없다. 출발도 주인을 읽지 않아
+ * 점령전 잠금(23~01시)과 무관하다. 길드 해산은 guild_id cascade로 그 길드의 원정대 행이 함께 지워진다.
  */
-export async function syncWorldBossOwners(serverId: number, dbx: Dbx = db): Promise<number> {
-  const rows = (await dbx.execute(sql`
-    update world_boss_parties p set status = 'disbanded', disband_reason = 'owner_changed'
-      from world_bosses b join zones z on z.id = b.zone_id
-     where p.boss_id = b.id and p.status = 'recruiting' and b.server_id = ${serverId} and b.status = 'active'
-       and (z.owner_guild_id is null or z.owner_guild_id <> p.guild_id)
-    returning p.id::text as id`)) as unknown as { id: string }[];
-  if (rows.length === 0) return 0;
-  const ids = pgBigintArray(rows.map((r) => r.id));
-  await dbx.execute(sql`delete from world_boss_party_members where party_id = any(${ids}::bigint[])`);
-  await dbx.execute(sql`delete from world_boss_join_requests where party_id = any(${ids}::bigint[])`);
-  return rows.length;
-}
 
 /** 길드 이탈(탈퇴·추방) 또는 계정 탈퇴(serverId null = 전 서버) — 그 사람이 대장인 모집 중 원정대 해산. 참가자로 있는 건 그대로(참가는 누구나). */
 export async function clearWorldBossOnExit(tx: Tx, userId: string, serverId: number | null): Promise<void> {

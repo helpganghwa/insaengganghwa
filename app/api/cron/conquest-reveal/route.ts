@@ -12,7 +12,6 @@ import { revalidateTag } from 'next/cache';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { revealConquest } from '@/lib/game/guild/conquest/run';
-import { syncWorldBossOwners } from '@/lib/game/world-boss/party';
 import { syncHistoryEras } from '@/lib/game/history/loaders';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
@@ -50,8 +49,6 @@ export async function GET(req: Request) {
       const rev = await revealConquest(sid, battleDay);
       if (rev.revealed > 0) {
         await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-reveal] recalcTaxBonus', e));
-        // 월드보스 구역 주인이 바뀌었으면 이전 주인의 모집 중 원정대 해산(WORLD-BOSS §5).
-        await syncWorldBossOwners(sid).catch((e: unknown) => console.warn('[conquest-reveal] syncWorldBossOwners', e));
         revalidateTag(`world-feed:s${sid}`, 'max');
       }
       results.push({ serverId: sid, revealed: rev.revealed, mailed: rev.mailed });
