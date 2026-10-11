@@ -322,6 +322,9 @@ export default async function HomePage() {
                 (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid) then 1 else 0 end),
                 b.spawn_at desc
               limit 1) as wb_banner,
+            -- 홈 메뉴 세계지도 카드의 작은 보스 — 배너 닫기 쿠키와 무관하게 출현 중 보스(10-11 3차: 배너를 닫으면 카드 보스도 사라지던 것)
+            (select json_build_object('zone', z.name, 'stage', b.stage) from world_bosses b join zones z on z.id = b.zone_id
+              where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now() order by b.spawn_at desc limit 1) as wb_card,
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
@@ -361,6 +364,7 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
+        wb_card: { zone: string; stage: number } | null;
         wb_banner: { id: string; region: string; bossCode: string; zone: string; status: 'active' | 'left'; owner: string | null; ownerEmblem: string | null; ownerColor: string | null; stage: number; leaveAt: string; lootDiamond: string | number; lootBoxes: number; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
@@ -403,8 +407,8 @@ export default async function HomePage() {
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
         // 세계지도 카드의 보스 표시도 배너와 같은 보스 행에서(같은 보스를 세 번 읽던 것을 하나로, 10-11 감사). 배너 닫힘 쿠키와 무관.
-        worldBossStage = row.wb_banner?.status === 'active' ? Number(row.wb_banner.stage) : null; // 메뉴 카드의 작은 보스는 머무는 동안만
-        worldBossZone = row.wb_banner?.status === 'active' ? row.wb_banner.zone : null;
+        worldBossStage = row.wb_card ? Number(row.wb_card.stage) : null; // 메뉴 카드의 작은 보스는 머무는 동안만, 배너 닫기와 무관(10-11 3차)
+        worldBossZone = row.wb_card?.zone ?? null;
         // 닫아 둔 보스는 SQL에서 이미 걸렀다(쿠키 목록, 보스가 둘이면 안 닫은 쪽이 온다) — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
         if (row.wb_banner) {
           const wb = row.wb_banner;
