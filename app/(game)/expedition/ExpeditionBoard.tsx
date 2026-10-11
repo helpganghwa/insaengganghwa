@@ -850,14 +850,6 @@ function ClaimItems({ popup }: { popup: ClaimPopup }) {
 }
 
 function SlotCard({ s, pending, refreshing, enhanceSum, canBuyExtra = false, onTap }: { s: ExpeditionBoardSlot; pending: boolean; refreshing?: boolean; enhanceSum: number; canBuyExtra?: boolean; onTap: () => void }) {
-  // 추가 파견을 산 직후 자리 카드(10-10) — 서버가 굴린 파견지를 받기 전. 같은 112px, 점선. 누를 수 없다.
-  if (s.slot < 0 || !s.region) {
-    return (
-      <div className="flex h-[112px] w-full items-center justify-center rounded-xl border border-dashed border-amber-500/60 bg-amber-500/5 text-[12px] font-bold text-amber-700 dark:text-amber-300">
-        새 파견 찾는 중…
-      </div>
-    );
-  }
   if (s.state === 'locked') {
     // 잠금 — 같은 128px, 흑백 + 점선. 좌 🔒 · 중앙 3줄(필요 수치 / 달성 시 오픈 / 현재) · 우 진행 바. 배지 없음.
     const need = s.unlock?.enhanceSum ?? 0;
@@ -890,6 +882,15 @@ function SlotCard({ s, pending, refreshing, enhanceSum, canBuyExtra = false, onT
           </div>
         </div>
       </button>
+    );
+  }
+  // 추가 파견을 산 직후 자리 카드(10-10) — 서버가 굴린 파견지를 받기 전. 같은 112px, 점선. 누를 수 없다.
+  // ⚠ 잠긴 칸도 region이 없다 — 잠금 분기를 먼저 둔다(10-11 프로덕션 핫픽스: 잠긴 칸 3개가 '새 파견 찾는 중'으로 보이던 것).
+  if (s.slot < 0 || !s.region) {
+    return (
+      <div className="flex h-[112px] w-full items-center justify-center rounded-xl border border-dashed border-amber-500/60 bg-amber-500/5 text-[12px] font-bold text-amber-700 dark:text-amber-300">
+        새 파견 찾는 중…
+      </div>
     );
   }
   const region = s.region;
