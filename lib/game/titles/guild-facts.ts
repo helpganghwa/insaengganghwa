@@ -17,6 +17,7 @@ import { db } from '@/lib/db/client';
  *  - guild_zones_25       구역 25개 이상 보유
  *  - guild_no_loss_7d     최근 7일 zone_lost 0건 + 그 기간 소유 구역 전투 1회 이상(싸우고도 안 잃음)
  *  - region_owner_<r>     권역 완전장악 — recalcTaxBonus의 완전장악 판정과 동일(방치 구역 제외)
+ *  - guild_wb_loot_5      소속 길드가 월드보스 전리품을 5번 이상 받음(world_bosses.settled_guild_id, 2026-10-11 — 표 미적용이면 0)
  *
  * 1위는 **단독**만 인정(동률이면 아무도 아님) — 명가(guild_top)의 (level,xp) 사전식과 달리 2차 키 없이
  * 값이 같으면 공동 1위로 보고 비활성. 길드 미가입이면 빈 집합.
@@ -25,6 +26,7 @@ export const GUILD_COLLECTIVE_CODES: ReadonlySet<string> = new Set([
   'guild_officer', 'guild_top_contrib', 'guild_old_100',
   'guild_top_combat', 'guild_top_zones', 'guild_top_tax', 'guild_zones_25', 'guild_no_loss_7d',
   'region_owner_volcano', 'region_owner_temple', 'region_owner_swamp', 'region_owner_orc', 'region_owner_kingdom', 'region_owner_angel',
+  'guild_wb_loot_5',
 ]);
 
 type Row = {
@@ -100,6 +102,11 @@ export async function guildCollectiveCodes(userId: string, serverId: number): Pr
     const code = `region_owner_${reg}`;
     if (GUILD_COLLECTIVE_CODES.has(code)) out.add(code);
   }
+  // 월드보스 전리품 수령 횟수 — 따로 조회해 표가 없을 때(프로덕션 반영 전) 나머지 판정을 멈추지 않는다.
+  const wb = (await db.execute(sql`
+    select count(*)::int as n from world_bosses b join guild_members gm on gm.guild_id = b.settled_guild_id and gm.server_id = b.server_id
+     where gm.user_id = ${u} and gm.server_id = ${s} and b.status = 'left'`).catch(() => [])) as unknown as { n: number }[];
+  if (Number(wb[0]?.n ?? 0) >= 5) out.add('guild_wb_loot_5');
   return out;
 }
 

@@ -5857,6 +5857,119 @@ export const TITLE_DEFS: TitleDef[] = [
    fx: "dragonlux",
    glow: true
   }
+ },
+ {
+  code: "wb_first",
+  kind: "permanent",
+  label: "첫 토벌",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "rimlight"
+  }
+ },
+ {
+  code: "wb_50",
+  kind: "permanent",
+  label: "산전수전",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "pyrevert",
+   glow: true
+  }
+ },
+ {
+  code: "wb_lead_10",
+  kind: "permanent",
+  label: "재의 재앙",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "pyreglow",
+   pt: "ember"
+  }
+ },
+ {
+  code: "wb_reveal",
+  kind: "permanent",
+  label: "약점 꿰뚫기",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "steelshine"
+  }
+ },
+ {
+  code: "wb_lucky",
+  kind: "permanent",
+  label: "급소 연타",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "bloodpulse"
+  }
+ },
+ {
+  code: "wb_alliance",
+  kind: "permanent",
+  label: "연합의 깃발",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "allianceflow"
+  }
+ },
+ {
+  code: "wb_last",
+  kind: "permanent",
+  label: "홀로 남은 검",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "ashdrift"
+  }
+ },
+ {
+  code: "wb_shield",
+  kind: "permanent",
+  label: "앞장선 방패",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "breath"
+  }
+ },
+ {
+  code: "wb_merc",
+  kind: "permanent",
+  label: "떠돌이 용병",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "linenflow"
+  }
+ },
+ {
+  code: "wb_kind_ember_phoenix",
+  kind: "permanent",
+  label: "잿불 원정대",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "ashdrift",
+   pt: "ashfeather"
+  }
+ },
+ {
+  code: "guild_wb_loot_5",
+  kind: "conditional",
+  label: "잿빛 금고",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "ashgoldvault"
+  }
  }
 ] as const;
 

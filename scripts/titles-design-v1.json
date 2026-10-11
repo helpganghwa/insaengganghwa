@@ -29,7 +29,8 @@
     "아바타": "#d8a0c8",
     "헌정": "#f0a860",
     "파견": "#9ccc8a",
-    "한가위": "#e8d9a8"
+    "한가위": "#e8d9a8",
+    "월드보스": "#f0924a"
   },
   "regionKeywords": [
     {
@@ -557,6 +558,41 @@
     },
     "tower_f100": {
       "fx": "dragonlux"
+    },
+    "wb_first": {
+      "fx": "rimlight"
+    },
+    "wb_50": {
+      "fx": "pyrevert"
+    },
+    "wb_lead_10": {
+      "fx": "pyreglow",
+      "pt": "ember"
+    },
+    "wb_reveal": {
+      "fx": "steelshine"
+    },
+    "wb_lucky": {
+      "fx": "bloodpulse"
+    },
+    "wb_alliance": {
+      "fx": "allianceflow"
+    },
+    "wb_last": {
+      "fx": "ashdrift"
+    },
+    "wb_shield": {
+      "fx": "breath"
+    },
+    "wb_merc": {
+      "fx": "linenflow"
+    },
+    "wb_kind_ember_phoenix": {
+      "fx": "ashdrift",
+      "pt": "ashfeather"
+    },
+    "guild_wb_loot_5": {
+      "fx": "ashgoldvault"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
@@ -636,6 +672,9 @@
     ],
     "파견": [
       "trailflow"
+    ],
+    "월드보스": [
+      "pyreglow"
     ]
   }
 }

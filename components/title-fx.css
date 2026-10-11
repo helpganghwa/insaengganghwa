@@ -328,3 +328,13 @@
 .fx-dragonlux::after{clip-path:inset(50% 0 0 0);animation-name:dlx-rl}
 @keyframes dlx-lr{0%,35%{background-position:120% 0}100%{background-position:-30% 0}}
 @keyframes dlx-rl{0%,35%{background-position:-30% 0}100%{background-position:120% 0}}
+
+/* 월드보스 칭호 11종(2026-10-11 사용자 고르기 폼 확정) — 잿불 팔레트(불씨 주황 #f97316 · 달군 쇠 #ff5a1f · 재 #b9b0a8). 기존 flow/flowy/pulsebr/brfade 키프레임 재사용, 파티클은 재의 재앙(불씨)·잿불 원정대(잿빛 깃털)만. */
+.ttag .fx-pyreglow{background:linear-gradient(90deg,#ff9d4d,#ff5a1f,#ffe0b0,#ff5a1f,#ff9d4d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,pulsebr 2.8s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(255,120,40,.55))}
+.ttag .fx-pyrevert{background:linear-gradient(0deg,#ff9d4d,#ff5a1f,#ffe0b0,#ff5a1f,#ff9d4d);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 6s linear infinite}
+.ttag .fx-ashdrift{background:linear-gradient(90deg,#b9b0a8,#7f7670,#e2dad0,#7f7670,#b9b0a8);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite}
+.ttag .fx-allianceflow{background:linear-gradient(90deg,#ff9d4d,#6ea8e0,#7fce8a,#ff9d4d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+/* 잿빛 금고(길드) — '잿빛'은 회색 금속, '금고'는 금 광택: 한 그라데이션을 글자 폭 기준 42%에서 나눠 정적으로(길드 칭호는 채팅 목록 부담 때문에 정적). */
+.ttag .fx-ashgoldvault{background:linear-gradient(90deg,#8a7a68 0%,#c9b8a4 22%,#f2e9dc 36%,#c9b8a4 42%,#b8902e 50%,#f5d76e 66%,#fff3c4 78%,#f5d76e 88%,#8f6a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 2px rgba(245,215,110,.3))}
+/* 잿빛 깃털 — 깃털 파티클(pt-feather)의 재색 변주. */
+.ttag .pt-ashfeather>i{width:2px;height:5px;background:linear-gradient(90deg,rgba(90,80,75,.85) 42%,rgba(200,190,180,.9) 50%,rgba(90,80,75,.85) 58%);border-radius:80% 80% 50% 50%;top:-5px;animation:p-fth 5.2s ease-in-out infinite}

@@ -166,7 +166,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts] = await runLimited([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx] = await runLimited([
     // 강화 횟수·시간대 — 누적 표(0219). 정의는 enhance_stats_next.
     () => db.execute(enhCountsSql(u, s)),
     // 같은 결과 최장 연속 — 누적 표(0219).
@@ -699,6 +699,40 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         console.warn('[titles] milestone_firsts 조회 실패 — 최초 이정표 순위 0으로 판정', (e as Error).message);
         return [];
       }),
+    // 월드보스(2026-10-11, 10종) — 내가 출발한 원정대(status departed)와 그 전투 기록에서 센다. 표 미적용(프로덕션 반영 전)이면 0으로 본다.
+    //  - wb_departs 출발 수 · wb_leads 대장으로 출발 · wb_reveals 처음 밝힌 약점 수(finder) · wb_lucky 약점 2개 이상 맞힌 내 공격 수(finale.weak 비트 3·5·6·7)
+    //  - wb_alliance 길드 3곳 이상 섞인 원정대 출발(출발 시점 명단 스냅샷) · wb_last 5명 이상에서 가장 늦게 쓰러짐 · wb_shield 5명 이상에서 1라운드에 쓰러짐
+    //  - wb_merc 무소속으로 출발(스냅샷 guildId null) · wb_kind_ember 잿불의 불사조 원정 수
+    () =>
+      db.execute(sql`
+        with mine as (
+          select p.id, p.leader_user_id, p.finale, b.boss_code, m.fell_round,
+                 (select count(*)::int from world_boss_party_members x where x.party_id = p.id) as n,
+                 (select min(r.k) - 1 from jsonb_array_elements(p.finale->'roster') with ordinality r(v, k) where r.v->>'userId' = ${u}::text) as idx
+            from world_boss_party_members m
+            join world_boss_parties p on p.id = m.party_id and p.status = 'departed'
+            join world_bosses b on b.id = p.boss_id
+           where m.user_id=${u} and m.server_id=${s}
+        )
+        select (select count(*) from mine)::int as wb_departs,
+               (select count(*) from mine where leader_user_id = ${u})::int as wb_leads,
+               (select count(*) from world_boss_weak_reveals r join world_bosses b on b.id = r.boss_id
+                 where r.finder_user_id = ${u} and b.server_id = ${s})::int as wb_reveals,
+               coalesce((select sum((select count(*) from jsonb_array_elements(mine.finale->'events') with ordinality e(v, k)
+                                      join jsonb_array_elements(mine.finale->'weak') with ordinality w(v, k2) on w.k2 = e.k
+                                     where mine.idx is not null and (e.v->>0)::int = mine.idx and (w.v::text)::int in (3, 5, 6, 7)))
+                         from mine), 0)::int as wb_lucky,
+               (select count(*) from mine where (select count(distinct r.v->>'guildId') from jsonb_array_elements(mine.finale->'roster') r(v) where r.v->>'guildId' is not null) >= 3)::int as wb_alliance,
+               (select count(*) from mine where n >= 5 and fell_round is not null
+                  and fell_round = (select max(y.fell_round) from world_boss_party_members y where y.party_id = mine.id))::int as wb_last,
+               (select count(*) from mine where n >= 5 and fell_round = 1)::int as wb_shield,
+               (select count(*) from mine where exists (select 1 from jsonb_array_elements(mine.finale->'roster') r(v)
+                  where r.v->>'userId' = ${u}::text and r.v->>'guildId' is null))::int as wb_merc,
+               (select count(*) from mine where boss_code = 'ember_phoenix')::int as wb_kind_ember
+      `).catch((e: unknown) => {
+        console.warn('[titles] 월드보스 조회 실패 — 월드보스 칭호 0으로 판정', (e as Error).message);
+        return [];
+      }),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
@@ -710,7 +744,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
     e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped), tw = g(tower),
-    lgr = g(lg), ghs = g(gh), ft = g(f3);
+    lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999 };
   let combatValue = 0;
@@ -747,6 +781,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 무한의 탑(2026-09-29)
     tw_revive_wins: n(tw.tw_revive_wins), tw_reso_wins: n(tw.tw_reso_wins),
     tw_flawless_day: n(tw.tw_flawless_day), tw_bare_best: n(tw.tw_bare_best), tw_grit: n(tw.tw_grit), tw_best: n(tw.tw_best),
+    // 월드보스(2026-10-11)
+    wb_departs: n(wb.wb_departs), wb_leads: n(wb.wb_leads), wb_reveals: n(wb.wb_reveals), wb_lucky: n(wb.wb_lucky),
+    wb_alliance: n(wb.wb_alliance), wb_last: n(wb.wb_last), wb_shield: n(wb.wb_shield), wb_merc: n(wb.wb_merc), wb_kind_ember: n(wb.wb_kind_ember),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
@@ -813,6 +850,17 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   tower_f10: (m) => m.tw_best >= 10,
   tower_f60: (m) => m.tw_best >= 60,
   tower_f100: (m) => m.tw_best >= 100,
+  // 월드보스(2026-10-11) — 10종 영구. 길드 칭호 잿빛 금고(guild_wb_loot_5)는 guild-facts의 조건부.
+  wb_first: (m) => m.wb_departs >= 1,
+  wb_50: (m) => m.wb_departs >= 50,
+  wb_lead_10: (m) => m.wb_leads >= 10,
+  wb_reveal: (m) => m.wb_reveals >= 1,
+  wb_lucky: (m) => m.wb_lucky >= 10,
+  wb_alliance: (m) => m.wb_alliance >= 5,
+  wb_last: (m) => m.wb_last >= 1,
+  wb_shield: (m) => m.wb_shield >= 1,
+  wb_merc: (m) => m.wb_merc >= 10,
+  wb_kind_ember_phoenix: (m) => m.wb_kind_ember >= 1,
   // 최초 이정표(2026-09-26) — 서버에서 처음 넘은 세 사람(금·은·동). 순위는 milestone_firsts(정본), 영구.
   first_enh500_1: (m) => m.fr_enh500 === 1,
   first_enh500_2: (m) => m.fr_enh500 === 2,

@@ -165,7 +165,7 @@ type TitleDef = {
 - 판정: judge 지표 `fr_<key>`(1~3, 없으면 0) → 규칙 `first_<key>_<rank>: fr_<key> === rank`.
 - 소급: 배포 전 이미 넘긴 사람은 `scripts/first-milestones-backfill.ts`가 실제로 넘은 순서대로 넣는다(강화·초월은 로그 시각, 합산·전투력은 로그 재생). 순서 0218 → 소급 `--apply` → 코드 배포.
 - 운영 원칙: 공지·우편 없음, 조건은 위키·공지에 적지 않는다. 탈퇴해도 기록은 남겨 빈 순위를 다시 채우지 않는다(칭호만 사라짐). 다음 단계는 FIRST_MILESTONES 1행 + 칭호 3종 + 서브셋 재생성으로 추가한다.
-- 총 **547종**.
+- 총 **558종**(2026-10-11 월드보스 11종 추가).
 
 ## 무한의 탑 (2026-09-29, 6종 + 층 도달 3종 10-01)
 
@@ -184,3 +184,23 @@ type TitleDef = {
 - 판정 원천: `tower_battles`(승패·층·아바타·턴 기록의 `revive`/`resonance` 이벤트), 층 도달 3종은 `tower_progress.best_floor`(오르기로만 오르고 토벌은 올리지 않는다). judge의 탑 조회는 표가 없을 때 0으로 떨어져 판정 전체를 멈추지 않는다.
 - 오관왕 → **육관왕**(코드 `pentagon` 유지): 5종 기준으로 얻은 기존 보유자는 `title_legacy_locks`(0223)에 잠겨 발견은 유지하되 비활성 — 목록 '비활성', 대표 장착 불가, 대표여도 표시 안 함. 새 조건을 한 번 채우면 judge가 잠금을 지워 영구 활성. 잠글 수 있는 코드는 `lib/game/titles/legacy-lock.ts LEGACY_LOCKABLE`.
 - 랭킹 1위와 조합 칭호는 랭킹 6종 기준: 육관왕(`pentagon`, 6종 모두 10위 이내), 무관의 제왕(`uncrowned`, 6종 모두 2~3위), 왕좌의 그림자(`throne_shadow`, 아무 랭킹 2위).
+
+## 월드보스 (2026-10-11, 영구 10종 + 길드 조건부 1종)
+
+제출 폼(아티팩트 EaJkzkVLEa3fP9Xy3NYt8U v6)과 효과 고르기 폼(4RxySaGr5C4kEc77S6WyCx)으로 확정. 카테고리 **월드보스**(목록 묶음은 '전투'), 숨김 없이 전부 공개, 이름 8자 이내, '~자' 형식 없음. 팔레트는 보스와 같은 잿불(불씨 주황 → 달군 쇠 → 재). 새 효과는 pyreglow·pyrevert·ashdrift·allianceflow·ashgoldvault, 파티클 ashfeather(`components/title-fx.css` 끝). 판정 원천은 `world_boss_party_members`(출발한 원정대·fell_round)·`world_boss_parties.finale`(명단 스냅샷·약점 비트)·`world_boss_weak_reveals.finder_user_id`·`world_bosses.settled_guild_id`. 표가 없으면(프로덕션 반영 전) 0으로 판정해 다른 칭호를 멈추지 않는다.
+
+| 코드 | 이름 | 조건 | 종류 | 연출 |
+|---|---|---|---|---|
+| `wb_first` | 첫 토벌 | 월드보스 원정 1회 출발 | 영구·쉬움 | `rimlight`(역광, 정적) |
+| `wb_50` | 산전수전 | 원정 누적 50회 출발 | 영구·어려움 | `pyrevert`(잿불 세로 흐름) |
+| `wb_lead_10` | 재의 재앙 | 원정대장으로 10회 출발 | 영구·중간 | `pyreglow` + 불씨 파티클(`ember`) — 카테고리에서 유일한 파티클·후광 |
+| `wb_reveal` | 약점 꿰뚫기 | 약점을 처음으로 밝힘 1회 | 영구·중간 | `steelshine` |
+| `wb_lucky` | 급소 연타 | 약점 장비 2개 이상으로 맞힌 공격 10회(finale.weak 비트 3·5·6·7) | 영구·중간 | `bloodpulse` |
+| `wb_alliance` | 연합의 깃발 | 길드 3곳 이상이 섞인 원정대로 출발 5회(출발 시점 명단) | 영구·중간 | `allianceflow`(잿불·청·녹) |
+| `wb_last` | 홀로 남은 검 | 5명 이상 원정대에서 가장 늦게 쓰러짐 | 영구·중간 | `ashdrift`(재 흐름) |
+| `wb_shield` | 앞장선 방패 | 5명 이상 원정대에서 1라운드에 쓰러짐 | 영구·쉬움 | `breath`(회색 숨결) |
+| `wb_merc` | 떠돌이 용병 | 무소속으로 출발 10회(출발 시점 guildId null) | 영구·중간 | `linenflow` |
+| `wb_kind_ember_phoenix` | 잿불 원정대 | 잿불의 불사조 원정 1회 출발(boss_code) | 영구·쉬움 | `ashdrift` + 잿빛 깃털 파티클(`ashfeather`) — 종류별 칭호 틀 '<보스 별칭> 원정대' |
+| `guild_wb_loot_5` | 잿빛 금고 | 소속 길드가 전리품을 5번 이상 받은 동안(settled_guild_id) | 조건부(길드 집합, guild-facts) | `ashgoldvault`('잿빛' 회색 금속 → '금고' 금 광택, 정적) |
+
+- 뺀 후보(제출 폼): 열 번의 재앙(10회)·열 개의 균열·열 개의 칼날·스무 겹의 상처·최초 이정표 2종·모든 재앙. 다음 보스 종류가 오면 `wb_kind_<code>` 한 종을 같은 틀로 더한다.

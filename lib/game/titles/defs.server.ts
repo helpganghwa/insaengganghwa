@@ -5368,6 +5368,72 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "무한의 탑",
   cond: "무한의 탑 100층 돌파",
   diff: "어려움"
+ },
+ {
+  code: "wb_first",
+  cat: "월드보스",
+  cond: "월드보스 원정 1회 출발",
+  diff: "쉬움"
+ },
+ {
+  code: "wb_50",
+  cat: "월드보스",
+  cond: "월드보스 원정 누적 50회 출발",
+  diff: "어려움"
+ },
+ {
+  code: "wb_lead_10",
+  cat: "월드보스",
+  cond: "원정대장으로 월드보스 원정 10회 출발",
+  diff: "중간"
+ },
+ {
+  code: "wb_reveal",
+  cat: "월드보스",
+  cond: "월드보스 약점을 처음으로 밝힘 1회",
+  diff: "중간"
+ },
+ {
+  code: "wb_lucky",
+  cat: "월드보스",
+  cond: "약점 장비 2개 이상으로 월드보스를 맞힌 공격 10회",
+  diff: "중간"
+ },
+ {
+  code: "wb_alliance",
+  cat: "월드보스",
+  cond: "길드 3곳 이상이 섞인 원정대로 월드보스 원정 5회 출발",
+  diff: "중간"
+ },
+ {
+  code: "wb_last",
+  cat: "월드보스",
+  cond: "5명 이상 원정대에서 가장 늦게 쓰러짐",
+  diff: "중간"
+ },
+ {
+  code: "wb_shield",
+  cat: "월드보스",
+  cond: "5명 이상 원정대에서 1라운드에 쓰러짐",
+  diff: "쉬움"
+ },
+ {
+  code: "wb_merc",
+  cat: "월드보스",
+  cond: "무소속으로 월드보스 원정 10회 출발",
+  diff: "중간"
+ },
+ {
+  code: "wb_kind_ember_phoenix",
+  cat: "월드보스",
+  cond: "잿불의 불사조 원정 1회 출발",
+  diff: "쉬움"
+ },
+ {
+  code: "guild_wb_loot_5",
+  cat: "월드보스",
+  cond: "소속 길드가 월드보스 전리품을 5번 이상 받은 동안",
+  diff: "중간"
  }
 ] as const;
 
