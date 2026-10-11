@@ -439,11 +439,11 @@ export function WorldBossDetailView({
             {/* 출발한 뒤엔 빈 자리를 그리지 않는다(10-11 사용자) — 대원만. */}
             {Array.from({ length: mp.status === 'departed' ? mp.members.length : WORLD_BOSS_PARTY_MAX }, (_, i) => {
               const m = mp.members[i];
-              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} onKick={mp.isLeader && mp.status === 'recruiting' && !m.isLeader && mp.partyId !== OPT_PARTY_ID ? () => setKickAsk(m) : undefined} />;
+              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} onKick={active && mp.isLeader && mp.status === 'recruiting' && !m.isLeader && mp.partyId !== OPT_PARTY_ID ? () => setKickAsk(m) : undefined} />;
               const inv = mp.invites[i - mp.members.length];
               if (inv) return <SlotPerson key={`i${inv.userId}`} p={inv} serverId={serverId} leader={false} inviting />;
               // 빈 자리 — 대장은 눌러 초대(10-11 사용자 2안: 친구·길드원 목록에서 초대 → 상대 수락). 출발 뒤엔 그냥 표시.
-              return <SlotEmpty key={`e${i}`} onClick={mp.isLeader && mp.status === 'recruiting' && mp.partyId !== OPT_PARTY_ID ? () => setInviteOpen(true) : undefined} />;
+              return <SlotEmpty key={`e${i}`} onClick={active && mp.isLeader && mp.status === 'recruiting' && mp.partyId !== OPT_PARTY_ID ? () => setInviteOpen(true) : undefined} />;
             })}
           </div>
           {/* 구성 특성 — 라벨만 켜짐/꺼짐으로(10-11 사용자: 설명 없이), 누르면 특성 설명 시트. 적용 배율·합산은 출발 팝업에서. */}
@@ -524,6 +524,7 @@ export function WorldBossDetailView({
             ) : (
               <button
                 type="button"
+                disabled={pending}
                 onClick={() => run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대에서 나왔어요' }, { t: 'leave' })}
                 className="mt-2 w-full rounded-lg border border-stone-700 py-2 text-[12px] font-bold text-stone-400"
               >
@@ -582,6 +583,7 @@ export function WorldBossDetailView({
               const full = p.memberCount >= WORLD_BOSS_PARTY_MAX;
               // 다른 원정대에 신청해 둔 채로도 더 신청할 수 있다(여러 곳 동시 신청).
               const canRequest = active && (me?.state === 'none' || me?.state === 'pending') && !full;
+              const kicked = !!me?.kickedPartyIds?.includes(p.id); // 내보내진 원정대 — 신청 버튼 대신 '참가 불가'(10-11 3차)
               return (
                 <div
                   key={p.id}
@@ -623,6 +625,7 @@ export function WorldBossDetailView({
                         <span className="shrink-0 text-[10.5px] font-bold text-orange-300">신청 완료</span>
                         <button
                           type="button"
+                          disabled={pending}
                           onClick={() => run(() => cancelRequestAction(d.id, p.id), { title: '신청을 취소했어요' }, { t: 'cancel', partyId: p.id })}
                           className="min-h-8 rounded-lg border border-stone-700 px-3 py-1.5 text-[11.5px] font-bold text-stone-400"
                         >
@@ -631,6 +634,8 @@ export function WorldBossDetailView({
                       </>
                     ) : full ? (
                       <span className="text-[10.5px] text-stone-500">가득 찼어요</span>
+                    ) : kicked ? (
+                      <span className="text-[10.5px] text-stone-500">참가 불가</span>
                     ) : canRequest ? (
                       <button
                         type="button"
@@ -869,7 +874,7 @@ export function WorldBossDetailView({
       {/* 특성 설명 시트 — 효과만(팁 없음, 10-10 사용자). */}
       {inviteOpen && mp && (
         // 레이드 지목 초대와 같은 시트(10-11 사용자) — 초대는 곧 참여 허가. 초대/취소 뒤엔 액션의 재렌더가 '초대 중' 칸을 채운다.
-        <InviteSheet bossId={d.id} partyId={mp.partyId} participants={mp.members.length} onClose={() => setInviteOpen(false)} />
+        <InviteSheet bossId={d.id} partyId={mp.partyId} participants={mp.members.length + mp.invites.length} onClose={() => setInviteOpen(false)} />
       )}
       {traitSheet && (
         <ModalShell onClose={() => setTraitSheet(false)} label="보스 특성">
@@ -1061,7 +1066,7 @@ function SlotPerson({ p, serverId, leader, inviting = false, onKick }: { p: Worl
       {p.result ? (
         <>
           <span className="block font-mono text-[9px] text-orange-200 tabular-nums">{formatCompactKR(p.result.damage)}</span>
-          <span className={`block whitespace-nowrap text-[9px] tabular-nums ${p.result.diamond > 0 || p.result.boxes > 0 ? 'text-orange-300' : 'text-stone-600'}`}>
+          <span className={`block whitespace-nowrap text-[9px] tabular-nums ${p.result.diamond > 0 || p.result.boxes > 0 ? 'text-orange-300' : 'text-stone-500'}`}>
             {p.result.diamond > 0 || p.result.boxes > 0 ? [p.result.diamond > 0 ? `💎${p.result.diamond.toLocaleString('ko-KR')}` : '', p.result.boxes > 0 ? `📦${p.result.boxes.toLocaleString('ko-KR')}` : ''].filter(Boolean).join(' ') : '미획득'}
           </span>
         </>
@@ -1087,9 +1092,9 @@ function SlotPerson({ p, serverId, leader, inviting = false, onKick }: { p: Worl
         type="button"
         onClick={onKick}
         aria-label={`${p.nickname} 내보내기`}
-        className="absolute right-0.5 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-stone-800 text-[10px] font-bold leading-none text-stone-300 ring-1 ring-stone-600 active:bg-stone-700"
+        className="absolute -right-1 -top-2.5 z-10 flex h-8 w-8 items-center justify-center" // 보이는 건 20px, 히트 영역은 32px(10-11 3차: 빗나가면 프로필로 넘어갔다)
       >
-        ✕
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-stone-800 text-[10px] font-bold leading-none text-stone-300 ring-1 ring-stone-600">✕</span>
       </button>
     </span>
   );
@@ -1100,7 +1105,7 @@ function SlotEmpty({ onClick }: { onClick?: () => void }) {
   const inner = (
     <>
       <span className={`flex h-11 w-11 items-center justify-center rounded-full border border-dashed text-[16px] ${onClick ? 'border-orange-500/60 text-orange-400' : 'border-stone-600 text-stone-600'}`}>+</span>
-      <span className="text-[10px] text-stone-600">빈 자리</span>
+      <span className="text-[10px] text-stone-500">빈 자리</span>
     </>
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';

@@ -83,7 +83,7 @@ export async function bestLoadoutOf(serverId: number, userId: string, known: Rea
     db.execute(sql`
       select ue.id::text as ueid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl, ue.equipped_slot is not null as on_
         from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-       where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid and ci.active`) as unknown as Promise<OwnRow[]>,
+       where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid`) as unknown as Promise<OwnRow[]>, // 비활성(교체된 옛) 장비도 후보 — 출발 전투력과 같은 기준(10-11 3차)
     db.execute(sql`
       select up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default
         from characters c left join user_profiles up on up.id = c.active_profile_id

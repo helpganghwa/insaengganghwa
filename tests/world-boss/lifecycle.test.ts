@@ -195,6 +195,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const again = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: key });
     expect(again).toMatchObject({ duplicate: true, damage: r.damage, rounds: r.rounds, reward: r.reward });
     expect(await code(departParty({ leaderUserId: T, serverId: S, partyId, departKey: crypto.randomUUID() }))).toBe('PARTY_NOT_RECRUITING');
+    expect(await code(kickMember({ leaderUserId: T, serverId: S, partyId, userId: G }))).toBe('PARTY_NOT_RECRUITING'); // 출발 뒤엔 내보낼 수 없다(10-11 3차)
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_FOUGHT');
     const [bt] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(bt!.t)).toBe(r.damage); // 재전송으로 피해가 두 번 더해지지 않는다
@@ -292,7 +293,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
       expect(await code(kickMember({ leaderUserId: T, serverId: S, partyId, userId: G }))).toBe('NOT_MEMBER');
       expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(1);
       expect(await code(requestJoin({ userId: G, serverId: S, partyId }))).toBe('KICKED');
-      expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'none', pendingPartyIds: [] }); // 다른 원정대엔 신청할 수 있는 상태
+      expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'none', pendingPartyIds: [], kickedPartyIds: [partyId] }); // 다른 원정대엔 신청할 수 있는 상태, 카드엔 '참가 불가'(10-11 3차)
       expect((await getWorldBossDetail(boss, S, T))?.myParty?.requests).toEqual([]); // kicked 행은 신청 목록에 보이지 않는다
       // 대장이 다시 초대해 수락하면 kicked 행이 지워지고 돌아온다.
       await inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G });
@@ -303,7 +304,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     } finally {
       if (madeLink) await testDb.execute(sql`delete from friend_links where requester_id=${T}::uuid and addressee_id=${G}::uuid and server_id=${S}`);
     }
-  });
+  }, 20000); // 스테이징 왕복이 많아 기본 5초를 넘긴다(10-11 3차)
 
   it('초대: 대장이 친구·길드원을 초대하고 상대가 수락하면 바로 참가, 거절 뒤 재초대·중복·권한 검사', async () => {
     // T와 G가 친구도 같은 길드원도 아니면 잠시 친구로(끝에 되돌림).
@@ -356,7 +357,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(map.active.some((b) => b.id === boss)).toBe(false);
     const [gname] = await q<{ name: string }>(sql`select name from guilds where id=${guildId}::bigint`);
     expect(map.left.find((l) => l.zoneId === ZONE)).toMatchObject({ bossId: boss, settledGuildName: gname!.name, lootDiamond: loot.diamond, lootBoxes: loot.boxes });
-  });
+  }, 20000); // 스테이징 왕복이 많아 기본 5초를 넘긴다(10-11 3차)
 
   it('세금 상자 분배(통합): 💎와 📦를 한 번에, 상자는 1개부터(3의 배수 부위 균등 + 나머지 무작위 부위), 넘치면 거절', async () => {
     // 부위 배분(순수) — 20 = 6·6·6 + 2개는 서로 다른 부위.

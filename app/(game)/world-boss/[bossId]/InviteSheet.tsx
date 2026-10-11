@@ -107,7 +107,7 @@ export function InviteSheet({
         showError(r?.message ?? '취소하지 못했어요.');
         return;
       }
-      showHeaderToast({ title: `${c.nickname}님 초대를 취소했어요`, detail: '다시 누르면 다시 초대할 수 있어요' }); // '초대함'을 다시 누르면 취소된다는 안내(10-11 사용자)
+      showHeaderToast({ title: `${c.nickname}님 초대를 취소했어요`, detail: '누르면 다시 초대할 수 있어요' }); // '초대함'을 다시 누르면 취소된다는 안내(10-11 사용자)
       onChanged?.();
     });
   };
@@ -122,7 +122,7 @@ export function InviteSheet({
         title="원정대 초대"
         subtitle={
           <>
-            현재 <b className="font-bold text-amber-500">{participants}</b> / {WORLD_BOSS_PARTY_MAX}명 · 초대하면 상대에게 알림이 가고, 상대는 바로 참가할 수 있어요
+            대원·초대 중 <b className="font-bold text-amber-500">{participants}</b> / {WORLD_BOSS_PARTY_MAX}명 · 초대하면 상대에게 알림이 가고, 상대는 바로 참가할 수 있어요
           </>
         }
         bodyPad="sm"

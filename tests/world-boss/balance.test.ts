@@ -7,7 +7,6 @@ import {
   WORLD_BOSS_STAGE_BASE_HP,
   WORLD_BOSS_STAGE_GROWTH,
   WORLD_BOSS_LUCKY_MISS_P,
-  worldBossExpectedAttacks,
   worldBossLootFor,
   worldBossRollDrop,
   worldBossStageFor,
@@ -79,12 +78,6 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     }
   });
 
-  it('1인 평균 공격 횟수 = (인원 + 1) ÷ 2', () => {
-    expect(worldBossExpectedAttacks(1)).toBe(1);
-    expect(worldBossExpectedAttacks(5)).toBe(3);
-    expect(worldBossExpectedAttacks(10)).toBe(5.5);
-    expect(worldBossExpectedAttacks(0)).toBe(0);
-  });
 
   it('행운 뽑기: 꽝 21%, 나머지 칸은 비율 그대로(79/70배)', () => {
     expect(worldBossRollDrop(0, true)).toEqual({ diamond: 0, boxes: 0 });

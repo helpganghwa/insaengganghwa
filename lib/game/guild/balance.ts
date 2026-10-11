@@ -162,7 +162,7 @@ export type GuildTaxDistribution = 'equal' | 'target';
 // 수치는 자리 표시(사용자 결정: 구현 뒤 스테이징에서 조정). 구조·규칙은 확정.
 /** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. 소환은 관리자가 즉시·예약으로(10-11, admin.ts). */
 export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
-/** 떠난 뒤 구역 시트에 기록 한 줄을 남기는 시간(ms) — 머무는 시간과 같은 48시간(사용자 확정 10-07). */
+/** 원정 종료 뒤 입구(구역 시트 종료 카드·홈 종료 배너)를 남기는 시간(ms). */
 export const WORLD_BOSS_LEFT_NOTE_MS = 24 * 60 * 60 * 1000; // 종료 뒤 24시간(10-11 사용자: 48h → 24h) — 지도 마커(회색)·구역 시트 종료 카드·홈 종료 배너가 같이 쓴다
 /** 원정대 최대 인원(대장 포함). 최소 인원 제한 없음. */
 export const WORLD_BOSS_PARTY_MAX = 10;
@@ -279,11 +279,11 @@ export const WORLD_BOSS_TRAIT = {
 } as const;
 export const WORLD_BOSS_TRAIT_SLOT_P = 0.7;
 export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
-  { code: 'alliance', group: 'party', icon: '🤝', name: '연합 원정', effect: `길드 2곳이면 ×${WORLD_BOSS_TRAIT.alliance2}, 3곳 이상 ×${WORLD_BOSS_TRAIT.alliance3}` },
-  { code: 'banner', group: 'party', icon: '🚩', name: '한 깃발 아래', effect: `같은 길드 1명당 +${Math.round(WORLD_BOSS_TRAIT.bannerPer * 100)}%, ${WORLD_BOSS_PARTY_MAX}명이면 ×${WORLD_BOSS_TRAIT.bannerFull}` },
+  { code: 'alliance', group: 'party', icon: '🤝', name: '연합 원정', effect: `길드 2곳이면 피해 ×${WORLD_BOSS_TRAIT.alliance2}, 3곳 이상 피해 ×${WORLD_BOSS_TRAIT.alliance3}` },
+  { code: 'banner', group: 'party', icon: '🚩', name: '한 깃발 아래', effect: `같은 길드 1명당 피해 +${Math.round(WORLD_BOSS_TRAIT.bannerPer * 100)}%, ${WORLD_BOSS_PARTY_MAX}명이면 피해 ×${WORLD_BOSS_TRAIT.bannerFull}` },
   { code: 'elite', group: 'party', icon: '🗡', name: '소수 정예', effect: `${WORLD_BOSS_TRAIT.eliteMax}명 이하로 출발하면 피해 ×${WORLD_BOSS_TRAIT.eliteMult}, 공격 보상 ×${WORLD_BOSS_TRAIT.eliteRewardMult}` },
-  { code: 'legion', group: 'party', icon: '🛡', name: '대군', effect: `${WORLD_BOSS_PARTY_MAX}명 꽉 채워 출발하면 ×${WORLD_BOSS_TRAIT.legionMult}` },
-  { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 ×${WORLD_BOSS_TRAIT.wandererMult}` },
+  { code: 'legion', group: 'party', icon: '🛡', name: '대군', effect: `${WORLD_BOSS_PARTY_MAX}명 꽉 채워 출발하면 피해 ×${WORLD_BOSS_TRAIT.legionMult}` },
+  { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 피해 ×${WORLD_BOSS_TRAIT.wandererMult}` },
   { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
   { code: 'fatal_weak', group: 'boss', icon: '🧨', name: '치명 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.fatalWeak}개, 약점 장비는 전투력 +${Math.round(WORLD_BOSS_TRAIT.fatalWeakBonus * 100)}%` }, // +% 표기로 통일
   { code: 'golden_feather', group: 'boss', icon: '🪙', name: '황금 깃털', effect: `공격 보상 꽝 ${WORLD_BOSS_ATTACK_DROPS[0]!.p / 1000}% → ${(WORLD_BOSS_ATTACK_DROPS[0]!.p + WORLD_BOSS_TRAIT.goldenMissDelta) / 1000}%` },
@@ -368,8 +368,4 @@ export function worldBossPartyTraitMult(traits: readonly WorldBossTraitCode[], m
   return worldBossPartyTraitStatus(traits, members)
     .filter((s) => s.code !== 'wanderer')
     .reduce((m, s) => m * s.mult, 1);
-}
-/** 원정대원 1인의 평균 공격 횟수 = (인원 + 1) ÷ 2 — 모집 화면 안내용. */
-export function worldBossExpectedAttacks(members: number): number {
-  return members <= 0 ? 0 : (members + 1) / 2;
 }

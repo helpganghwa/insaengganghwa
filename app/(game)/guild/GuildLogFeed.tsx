@@ -84,6 +84,9 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}를 수금했습니다</>;
     case 'tax_distribute':
       return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}를 지급했습니다</>;
+    case 'world_boss_loot':
+      // 월드보스 전리품이 길드 세금에 들어옴(10-11) — 수금·분배와 같은 줄 모양.
+      return <>월드보스 전리품이 길드 세금에 들어왔습니다 · {hl(`${Number(e.detail?.diamond ?? 0).toLocaleString('ko-KR')}💎 📦${Number(e.detail?.boxes ?? 0).toLocaleString('ko-KR')}`, C.sky)}</>;
     case 'loot_distribute':
       return <>{target}님에게 전리품 {hl(`📦${Number(e.detail?.boxes ?? 0).toLocaleString('ko-KR')}`, C.sky)}를 지급했습니다</>;
     case 'zone_capture':

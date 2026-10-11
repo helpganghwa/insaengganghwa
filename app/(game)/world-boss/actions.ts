@@ -52,7 +52,7 @@ const err = makeErr(MSG);
 async function gate(): Promise<{ u: string; sid: number } | ReturnType<typeof err>> {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
-  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  if (await rateLimited(u, 'worldBoss')) return err('RATE_LIMITED');
   const b = await actionBlock();
   if (b) return err(b);
   return { u, sid: await getActiveServerId() };
@@ -73,7 +73,7 @@ function fail(e: unknown, where: string) {
 export async function createPartyAction(bossId: string, intro?: string) {
   const g = await gate();
   if ('status' in g) return g;
-  if (!isId(bossId)) return err('NOT_FOUND');
+  if (!isId(bossId)) return err('BOSS_NOT_FOUND');
   try {
     const r = await createParty({ userId: g.u, serverId: g.sid, bossId, intro: typeof intro === 'string' ? intro : undefined });
     rev(bossId);
@@ -168,11 +168,12 @@ export async function departPartyAction(bossId: string, partyId: string, departK
 
 /** 전투 다시 보기 — 저장된 전투 기록. 그 원정대원만, 같은 서버(10-11 사용자). */
 export async function getBattleAction(partyId: string) {
-  const u = await getSessionUserId();
-  if (!u) return err('UNAUTHENTICATED');
+  const g = await gate(); // 레이트리밋·점검 게이트 — 읽기 액션도 무제한 호출은 막는다(10-11 3차)
+  if ('status' in g) return g;
+  const u = g.u;
   if (!isId(partyId)) return err('NOT_FOUND');
   try {
-    const b = await getWorldBossBattle(partyId, await getActiveServerId(), u); // 그 원정대원만(10-11 사용자)
+    const b = await getWorldBossBattle(partyId, g.sid, u); // 그 원정대원만(10-11 사용자)
     if (!b) return err('NOT_FOUND');
     return { status: 'success' as const, battle: b };
   } catch (e) {

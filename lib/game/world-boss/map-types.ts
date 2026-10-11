@@ -17,7 +17,7 @@ export type WorldBossMapBoss = {
   traits: { code: string; name: string }[];
 };
 
-/** 떠난 보스 기록(떠난 뒤 48시간 동안 구역 시트에 한 줄) — 주인이 없었으면 settledGuildName null·전리품 소멸. */
+/** 종료된 보스 기록(종료 뒤 24시간 동안 구역 시트 카드) — 주인이 없었으면 settledGuildName null·전리품 소멸. */
 export type WorldBossMapLeft = {
   bossId: string;
   zoneId: number;

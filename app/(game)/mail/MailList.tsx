@@ -59,6 +59,12 @@ const TYPE_META: Record<string, TypeMeta> = {
     labelClass:
       'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
   },
+  world_boss: {
+    bar: 'bg-orange-500',
+    label: '월드보스',
+    labelClass:
+      'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300',
+  },
   profile_accepted: {
     bar: 'bg-emerald-500',
     label: '프로필 승인',

@@ -105,7 +105,7 @@ export async function guildCollectiveCodes(userId: string, serverId: number): Pr
   // 월드보스 전리품 수령 횟수 — 따로 조회해 표가 없을 때(프로덕션 반영 전) 나머지 판정을 멈추지 않는다.
   const wb = (await db.execute(sql`
     select count(*)::int as n from world_bosses b join guild_members gm on gm.guild_id = b.settled_guild_id and gm.server_id = b.server_id
-     where gm.user_id = ${u} and gm.server_id = ${s} and b.status = 'left'`).catch(() => [])) as unknown as { n: number }[];
+     where gm.user_id = ${u} and gm.server_id = ${s} and b.status = 'left' and b.stage > 0`).catch(() => [])) as unknown as { n: number }[]; // 0페이즈(전리품 0) 정산은 받은 것이 아니다(10-11 3차)
   if (Number(wb[0]?.n ?? 0) >= 5) out.add('guild_wb_loot_5');
   return out;
 }

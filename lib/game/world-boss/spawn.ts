@@ -3,6 +3,9 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
+import { afterResponse } from '@/lib/push/defer';
+import { logGuildAudit } from '@/lib/game/guild/audit';
+
 import { db } from '@/lib/db/client';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { raiseOpsAlert } from '@/lib/ops/alert';
@@ -40,9 +43,11 @@ export async function activateDueBosses(serverId: number, scope?: CronScope): Pr
   `)) as unknown as Activated[];
   for (const b of rows) {
     const bossName = worldBossName(b.boss_code);
+    try {
     // 월드 로그 + 채팅 시스템 줄(10-11 사용자: 홈 배너·팝업 대신 로그로 알림) — logWorldEvent가 피드 캐시 무효화·채팅 방송까지 한다.
     await logWorldEvent(serverId, 'world_boss_spawn', { bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, bossName, guildName: b.owner_name }, b.owner ? { guildId: BigInt(b.owner) } : undefined);
-    {
+    // 서버 전원 푸시는 응답(크론·어드민 즉시 소환) 뒤에 — 수백 건 발송이 크론 틱이나 어드민 응답을 붙잡지 않게(10-11 3차 성능 감사).
+    afterResponse(async () => {
       // 구독이 있고 지금 이 서버에 있는 사람 전부(경계규칙 1). 토글(push_world_boss)은 sendPushToUsers가 다시 거른다.
       const members = (await db.execute(sql`
         select distinct p.id::text as user_id from profiles p join push_subscriptions ps on ps.user_id = p.id
@@ -54,6 +59,10 @@ export async function activateDueBosses(serverId: number, scope?: CronScope): Pr
         tag: `world-boss-${b.id}`,
         category: 'world_boss',
       }).catch((e) => console.warn('[world-boss] spawn push failed', b.id, e));
+    });
+    } catch (e) {
+      // 한 보스의 로그·푸시 예약이 실패해도 다음 보스와 같은 틱의 정산은 계속(10-11 3차). 출현 자체는 이미 커밋됐다.
+      console.error('[world-boss] spawn side effects failed', b.id, e);
     }
   }
   return rows;
@@ -93,6 +102,7 @@ export async function settleLeftBosses(serverId: number, scope?: CronScope): Pro
 /** 보스 하나 정산(한 트랜잭션). 다른 틱이 먼저 정산했으면 null. */
 async function settleOne(serverId: number, id: string): Promise<SettledBoss | null> {
   return db.transaction(async (tx) => {
+      await tx.execute(sql`set local lock_timeout = '3s'`); // 정산도 잠금 대기 상한(10-11 3차)
       const [b] = (await tx.execute(sql`
         select b.id::text as id, b.zone_id, b.region::text as region, b.boss_code::text as boss_code, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes,
                z.name as zone_name, z.owner_guild_id::text as owner, g.name as owner_name
@@ -108,16 +118,19 @@ async function settleOne(serverId: number, id: string): Promise<SettledBoss | nu
       // 길드 행을 실제로 읽었을 때만 그 길드에 귀속한다 — 주인을 읽은 뒤 길드가 해산되면 FK 위반으로 정산이 깨졌다(10-11 재검사).
       let settledGuild: string | null = null;
       if (b.owner) {
-        const [g] = (await tx.execute(sql`select id from guilds where id = ${b.owner}::bigint for update`)) as unknown as { id: string }[];
+        // for no key update — 길드 해산(guilds KEY SHARE → 보스 FOR UPDATE)과 잠금 순서가 반대라 FOR UPDATE면 교착으로 한쪽이 중단된다(10-11 3차 감사).
+        const [g] = (await tx.execute(sql`select id from guilds where id = ${b.owner}::bigint for no key update`)) as unknown as { id: string }[];
         if (g) {
           settledGuild = b.owner;
           await tx.execute(sql`
             update guilds set tax_pool_diamond = tax_pool_diamond + ${loot.diamond}::bigint,
                               tax_pool_boxes = tax_pool_boxes + ${loot.boxes}
              where id = ${b.owner}::bigint`);
+          // 길드 활동 로그 — 전리품이 세금에 들어간 기록(10-11 3차 운영 감사: "세금에 안 들어왔어요" 대응 근거). 0페이즈도 남긴다(전리품 0).
+          await logGuildAudit(tx, { serverId, guildId: BigInt(b.owner), actorUserId: null, action: 'world_boss_loot', detail: { bossId: b.id, zoneName: b.zone_name, bossName, stage: b.stage, diamond: loot.diamond, boxes: loot.boxes } });
           const body =
             `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 세금에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 쌓였어요.\n` +
-            `길드 관리의 세금 탭에서 나눌 수 있어요.`; // '금고' 대신 '길드 세금'(10-11 사용자)
+            `길드 관리의 세금에서 확인할 수 있어요.`; // 우편은 길드원 전원에게 가므로 '나눌 수 있어요'는 권한 없는 사람에게 틀린 말(10-11 3차). '금고' 대신 '길드 세금'.
           // 0페이즈(전리품 0)면 우편은 보내지 않는다(10-11 재검사) — "💎0·📦0이 쌓였어요"는 빈 우편이다.
           if (b.stage > 0) await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)

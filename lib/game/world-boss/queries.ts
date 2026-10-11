@@ -19,11 +19,11 @@ import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from './ma
 import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
 
 /**
- * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
+ * 지도 상태 — 머무는 보스 전부(출현 순) + 종료 뒤 24시간(WORLD_BOSS_LEFT_NOTE_MS) 안인 보스(구역당 가장 최근 하나).
  * userId가 있으면 보스마다 내 상태(모집 중 원정대 소속 / 출발 완료)를 함께 준다.
  */
 export async function getWorldBossMapState(serverId: number, now = new Date()): Promise<WorldBossMapState> {
-  const rows = await db
+  const rowsP = db
     .select({
       id: worldBosses.id,
       zoneId: worldBosses.zoneId,
@@ -43,23 +43,8 @@ export async function getWorldBossMapState(serverId: number, now = new Date()): 
     .orderBy(worldBosses.spawnAt);
 
 
-  const active: WorldBossMapBoss[] = rows.map((r) => {
-    return {
-      id: r.id.toString(),
-      zoneId: r.zoneId,
-      region: r.region,
-      bossCode: r.bossCode,
-      name: worldBossName(r.bossCode),
-      leaveAt: r.leaveAt.getTime(),
-      stage: r.stage,
-      lootDiamond: Number(r.lootDiamond),
-      lootBoxes: r.lootBoxes,
-      traits: parseWorldBossTraits(r.traits).map((c) => ({ code: c, name: worldBossTraitDef(c)!.name })),
-    };
-  });
-
   const since = new Date(now.getTime() - WORLD_BOSS_LEFT_NOTE_MS);
-  const leftRows = await db
+  const leftRowsP = db
     .select({
       id: worldBosses.id,
       zoneId: worldBosses.zoneId,
@@ -75,6 +60,23 @@ export async function getWorldBossMapState(serverId: number, now = new Date()): 
     .leftJoin(guilds, eq(guilds.id, worldBosses.settledGuildId))
     .where(and(eq(worldBosses.serverId, serverId), eq(worldBosses.status, 'left'), gt(worldBosses.leaveAt, since)))
     .orderBy(desc(worldBosses.leaveAt));
+  const [rows, leftRows] = await Promise.all([rowsP, leftRowsP]); // 독립 조회 둘은 같이 기다린다(10-11 3차)
+
+  const active: WorldBossMapBoss[] = rows.map((r) => {
+    return {
+      id: r.id.toString(),
+      zoneId: r.zoneId,
+      region: r.region,
+      bossCode: r.bossCode,
+      name: worldBossName(r.bossCode),
+      leaveAt: r.leaveAt.getTime(),
+      stage: r.stage,
+      lootDiamond: Number(r.lootDiamond),
+      lootBoxes: r.lootBoxes,
+      traits: parseWorldBossTraits(r.traits).map((c) => ({ code: c, name: worldBossTraitDef(c)!.name })),
+    };
+  });
+
   const seen = new Set<number>();
   const left: WorldBossMapLeft[] = [];
   for (const r of leftRows) {
@@ -210,6 +212,9 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
               join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
              where p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending' and p.status = 'recruiting'
              order by i.created_at`) as unknown as Promise<{ pid: string; leader_nick: string; n: number }[]>,
+          // 나를 내보낸 모집 중 원정대(0239 kicked) — 카드에 '참가 신청' 대신 '참가 불가'(10-11 3차).
+          db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+                          where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'kicked' and p.status = 'recruiting'`) as unknown as Promise<{ pid: string }[]>,
         ])
       : Promise.resolve(null),
   ]);
@@ -255,13 +260,13 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   });
   const departedTotal = Number(partyRows[0]?.total_departed ?? 0); // 모든 행이 같은 값
   if (userId && mineRows) {
-    const [[mem], reqs, [gm], invRows] = mineRows;
+    const [[mem], reqs, [gm], invRows, kickedRows] = mineRows;
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
     const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
     // 나에게 온 초대(10-11) — 참가 전이고 보스가 머무는 중일 때만 보인다.
     const invitesIn: WorldBossInviteIn[] = active && !mem ? invRows.map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) })) : [];
     // 나 자신(낙관적 '내 원정대' 그리기용)은 명단 조회(rosterPeople)에 내 id를 끼워 한 번에 읽는다 — 아래 people 조회와 합친다.
-    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: null, invites: invitesIn };
+    me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), kickedPartyIds: kickedRows.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: null, invites: invitesIn };
     // 내 장착 상태는 내 원정대 조회와 무관 — 같이 기다린다(10-11 재검사 결정 ⑤: 순차 한 단계 줄임). 이미 싸웠으면 바꿔도 의미가 없어 읽지 않는다.
     const minePromise = active && state !== 'fought'
       ? Promise.all([

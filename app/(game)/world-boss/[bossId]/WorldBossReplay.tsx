@@ -169,9 +169,9 @@ export function WorldBossReplay({
       let top = 0;
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
       out.push({ key: 'end', kind: 'round', text: '원정 종료' });
-      out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `${bossName} ${battle.stageTo}페이즈 그대로`}` });
+      out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${formatCompactKR(battle.finale.totalDamage)} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `${bossName} ${battle.stageTo}페이즈 그대로`}` });
       out.push({ key: 'res2', kind: 'result', text: `원정대 총 획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
-      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${(dmgSum[top] ?? 0).toLocaleString('ko-KR')}` });
+      if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${formatCompactKR(dmgSum[top] ?? 0)}` }); // 상세와 같은 만 단위(10-11 3차)
     }
     return out;
   }, [idx, events, roster, drops, weakBits, bossName, battle.partyId, battle.bossCode, battle.finale.start, battle.finale.rounds, battle.stageFrom, battle.stageTo, battle.finale.totalDamage, battle.reward.diamond, battle.reward.boxes, resultShown]);

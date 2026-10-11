@@ -85,6 +85,8 @@ export type WorldBossMe = {
   state: 'none' | 'pending' | 'member' | 'fought';
   /** 대기 중 신청을 걸어 둔 원정대들 — 여러 곳에 동시에 신청할 수 있다(10-10). 한 곳에 수락되면 나머지는 사라진다. */
   pendingPartyIds: string[];
+  /** 나를 내보낸 모집 중 원정대(0239) — 카드에 '참가 불가'. */
+  kickedPartyIds: string[];
   canCreate: boolean;
   /** 내 길드가 구역 주인인가 — '만들기는 ○○ 길드원만' 안내 분기. */
   isOwnerGuild: boolean;

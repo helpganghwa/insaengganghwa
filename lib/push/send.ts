@@ -282,6 +282,7 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         body,
+        { timeout: 10_000 }, // 소켓 하나가 멈춰도 발송 전체(크론 120s)가 매달리지 않게(10-11 3차 감사)
       );
       ok++;
     } catch (e) {

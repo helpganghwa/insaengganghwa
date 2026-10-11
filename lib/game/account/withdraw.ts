@@ -45,6 +45,10 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   world_bosses: '월드보스 엔티티(서버 단위, 유저 축 없음, 0228)',
   world_boss_parties: '원정대 기록 — 대장이 탈퇴해도 다른 원정대원의 전투 기록·보상 근거(레이드와 같은 원칙). 모집 중이던 것은 탈퇴 훅이 해산 처리, 표시는 "탈퇴한 대장장이"',
   world_boss_party_members: '원정대 참가·피해 기록 — 보스 누적 피해·원정대 보상의 원천. PII 없음',
+  world_boss_weak_reveals: '약점 공개 기록 — 보스별 공개 상태의 원천(0230). finder_user_id·닉네임은 탈퇴 때 비운다(함수 내 update)',
+  // 아래 둘은 이 브랜치 스키마에 없는 스테이징 전용 표(다른 브랜치 마이그레이션) — 그 기능을 머지할 때 삭제/보존을 다시 분류한다(10-11 3차 감사에서 탈퇴 분류 테스트가 스테이징 표 목록으로 돌아 걸렸다).
+  familiars: '패밀리어 P1(0188, feat/familiar) — 스테이징 전용, 머지 때 재분류',
+  guild_rank_leaders: '길드 랭킹 1위 기록(다른 브랜치) — 스테이징 전용, 머지 때 재분류',
   guild_audit_log: '길드 감사 기록 — 삭제 후 잔존이 존재 목적', admin_actions: '운영 조치 감사',
   admin_mail_logs: '운영 발송 감사',
   milestone_firsts: '최초 이정표 순위(0218) — 지우면 다음 도달자가 빈 순위를 받아 "처음으로"가 사실과 달라진다. user_id 외 PII 없음. 재가입 캐릭터는 judge가 reached_at >= characters.created_at만 인정해 칭호가 되살아나지 않음', tower_pools: '무한의 탑 주간 요구 장비(0222) — 서버 단위 표, 유저 데이터 없음', payment_alerts: '결제 사고 원장', client_errors: '오류 수집(운영)',
@@ -94,6 +98,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from raid_rewards where user_id = ${uid}`);
     await tx.execute(sql`delete from raid_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from world_boss_join_requests where user_id = ${uid}`); // 월드보스 참가 신청(0228) — 본인 귀속
+    await tx.execute(sql`update world_boss_weak_reveals set finder_user_id = null, finder_nickname = '' where finder_user_id = ${uid}`); // 발견자 익명화(0230, 공개 상태는 보존)
+    await tx.execute(sql`delete from world_boss_invites where user_id = ${uid} or from_user_id = ${uid}`); // 오간 초대(0234) — 본인 귀속
     // 대장인 모집 중 원정대 해산(참가자는 다시 참가 가능). 싸운 기록은 보존(WITHDRAW_PRESERVED).
     await clearWorldBossOnExit(tx, userId, null);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);

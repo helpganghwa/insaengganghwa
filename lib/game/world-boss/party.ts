@@ -39,13 +39,18 @@ type BossRow = { id: string; server_id: number; zone_id: number; region: string;
  * 보스 행 잠금 — 잠금 순서는 언제나 **보스 → 원정대**(출발·정산과 같은 순서, 어긋나면 교착). 보스 행 자체를 고치지 않는
  * 신청·수락·초대는 FOR SHARE로 잡아 서로는 막지 않고 출발(FOR UPDATE)과만 줄을 선다. 종료 판정은 DB 시계(now())로 — 정산과 같은 시계.
  */
+/** 잠금 대기 상한(트랜잭션 범위 — 세션으로 새지 않는다). 출현 직후 몰릴 때 대기 tx가 풀러 연결을 2분씩 물고 있지 않게(10-11 3차 감사). */
+async function lockTimeout(tx: Tx): Promise<void> {
+  await tx.execute(sql`set local lock_timeout = '3s'`);
+}
 async function lockActiveBoss(tx: Tx, bossId: string, mode: 'update' | 'share' = 'update', requireActive = true): Promise<BossRow> {
+  await lockTimeout(tx);
   const lock = mode === 'share' ? sql`for share of b` : sql`for update of b`;
   const [b] = (await tx.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, b.region::text as region, b.status, b.leave_at, (b.leave_at > now()) as alive, z.owner_guild_id::text as owner, z.name as zone_name
       from world_bosses b join zones z on z.id = b.zone_id where b.id = ${bossId}::bigint ${lock}
   `)) as unknown as (BossRow & { alive: boolean })[];
-  if (!b) throw new WorldBossError('NOT_FOUND');
+  if (!b || b.status === 'scheduled') throw new WorldBossError('NOT_FOUND'); // 예정 보스는 없는 것처럼(존재 노출 방지, 10-11 3차 감사)
   if (requireActive && (b.status !== 'active' || !b.alive)) throw new WorldBossError('BOSS_NOT_ACTIVE');
   return b;
 }
@@ -67,8 +72,8 @@ async function lockBossThenParty(tx: Tx, partyId: string, mode: 'update' | 'shar
 async function clearOtherAsks(tx: Tx, bossId: string, userId: string, keepPartyId: string | null): Promise<void> {
   await tx.execute(sql`
     delete from world_boss_join_requests r using world_boss_parties p
-     where p.id = r.party_id and p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid
-       and (${keepPartyId}::bigint is null or r.party_id <> ${keepPartyId}::bigint)`);
+     where p.id = r.party_id and p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'pending'
+       and (${keepPartyId}::bigint is null or r.party_id <> ${keepPartyId}::bigint)`); // kicked 표식은 남긴다(10-11 3차: 다른 원정대 수락으로 표식이 풀리던 우회)
   await tx.execute(sql`
     delete from world_boss_invites i using world_boss_parties p
      where p.id = i.party_id and p.boss_id = ${bossId}::bigint and i.user_id = ${userId}::uuid and i.status = 'pending'
@@ -117,7 +122,7 @@ async function participation(dbx: Dbx, bossId: string, userId: string): Promise<
 
 /** 소개글 정리 — 공백은 한 칸으로, WORLD_BOSS_PARTY_INTRO_MAX자까지, 비면 null(안 적은 것). */
 function cleanIntro(raw: string | undefined): string | null {
-  const s = (raw ?? '').replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX);
+  const s = (raw ?? '').replace(/\s+/g, ' ').replace(/[\p{Cc}\p{Cf}]/gu, '').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX); // 공백(줄바꿈 포함)을 먼저 한 칸으로 만든 뒤 남은 제어·방향 문자를 지운다 // 제어·방향 문자(U+202E 등)로 금칙어를 숨기지 못하게(10-11 3차)
   return s.length > 0 ? s : null;
 }
 
@@ -147,6 +152,7 @@ export async function createParty(input: { userId: string; serverId: number; bos
 type PartyRow = { id: string; boss_id: string; server_id: number; leader: string; guild_id: string | null; status: string; depart_key: string | null; damage: string; reward_diamond: number; reward_boxes: number; stage_from: number | null; stage_to: number | null; rounds: number };
 
 async function lockParty(tx: Tx, partyId: string): Promise<PartyRow> {
+  await lockTimeout(tx);
   const [p] = (await tx.execute(sql`
     select id::text as id, boss_id::text as boss_id, server_id, leader_user_id::text as leader, guild_id::text as guild_id, status, depart_key,
            damage::text as damage, reward_diamond, reward_boxes, stage_from, stage_to, rounds
@@ -273,7 +279,7 @@ export async function leaveParty(input: { userId: string; serverId: number; part
  */
 export async function kickMember(input: { leaderUserId: string; serverId: number; partyId: string; userId: string }): Promise<void> {
   await db.transaction(async (tx) => {
-    const party = await lockParty(tx, input.partyId);
+    const { party } = await lockBossThenParty(tx, input.partyId, 'share', true); // 보스가 머무는 중에만(종료 뒤 정산 전 5분도 막는다, 10-11 3차)
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
@@ -442,16 +448,15 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     afterResponse(async () => {
       // 경계규칙 1(SERVER.md) — 지금 다른 서버에 있는 사람에겐 보내지 않는다(누르면 그 서버에 없는 원정대라 404).
       const here = new Set(await filterByActiveServer(members.map((m) => m.userId), serverId));
-      for (const m of members) {
-        if (!here.has(m.userId)) continue;
-        await sendPushToUsers([m.userId], {
+      await Promise.all(members.filter((m) => here.has(m.userId)).map((m) =>
+        sendPushToUsers([m.userId], {
           title: '원정대 결과',
           body: resultLine(bossName, m),
           url: `/world-boss/party/${partyId}`,
           tag: `world-boss-party-${partyId}`,
           category: 'world_boss',
-        }).catch(() => {});
-      }
+        }).catch(() => {}),
+      )); // 대원마다 제 숫자라 따로 보내되 한꺼번에(10-11 3차: 순차 2~3초)
     });
   }
   const { members: _m, zoneName: _z, bossName: _b, ...out } = result;
@@ -470,11 +475,19 @@ export async function clearWorldBossOnExit(tx: Tx, userId: string, serverId: num
     update world_boss_parties set status = 'disbanded', disband_reason = 'leader_left'
      where leader_user_id = ${userId}::uuid and status = 'recruiting' and (${serverId}::smallint is null or server_id = ${serverId}::smallint)
      returning id::text as id`)) as unknown as { id: string }[];
-  if (rows.length === 0) return;
-  const ids = pgBigintArray(rows.map((r) => r.id));
-  await tx.execute(sql`delete from world_boss_party_members where party_id = any(${ids}::bigint[])`);
-  await tx.execute(sql`delete from world_boss_join_requests where party_id = any(${ids}::bigint[])`);
-  await tx.execute(sql`delete from world_boss_invites where party_id = any(${ids}::bigint[])`);
+  if (rows.length > 0) {
+    const ids = pgBigintArray(rows.map((r) => r.id));
+    await tx.execute(sql`delete from world_boss_party_members where party_id = any(${ids}::bigint[])`);
+    await tx.execute(sql`delete from world_boss_join_requests where party_id = any(${ids}::bigint[])`);
+    await tx.execute(sql`delete from world_boss_invites where party_id = any(${ids}::bigint[])`);
+  }
+  if (serverId === null) {
+    // 계정 탈퇴 — 남의 모집 중 원정대에 대원으로 있던 행(정원 차지·'알 수 없음')과 나에게/내가 보낸 대기 중 초대를 지운다(10-11 3차 감사). 출발한 기록은 보존.
+    await tx.execute(sql`
+      delete from world_boss_party_members m using world_boss_parties p
+       where p.id = m.party_id and m.user_id = ${userId}::uuid and p.status = 'recruiting'`);
+    await tx.execute(sql`delete from world_boss_invites where (user_id = ${userId}::uuid or from_user_id = ${userId}::uuid) and status = 'pending'`);
+  }
 }
 
 /**
@@ -501,7 +514,9 @@ export async function inviteToParty(input: { leaderUserId: string; serverId: num
     if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
     if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
     if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
-    if ((await memberCount(tx, party.id)) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
+    // 정원은 대원 + 대기 중 초대로 센다(10-11 3차: 남은 자리보다 많이 초대하면 패널에 안 보이는 초대가 생기고 수락 순서대로 PARTY_FULL).
+    const [pend] = (await tx.execute(sql`select count(*)::int as n from world_boss_invites where party_id = ${party.id}::bigint and status = 'pending'`)) as unknown as { n: number }[];
+    if ((await memberCount(tx, party.id)) + Number(pend?.n ?? 0) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
     if (!(await hasCharacter(tx, input.userId, input.serverId))) throw new WorldBossError('NO_CHARACTER');
     if (!(await isInvitable(tx, input.leaderUserId, input.serverId, input.userId))) throw new WorldBossError('NOT_INVITABLE');
     const p = await participation(tx, party.boss_id, input.userId);
@@ -567,7 +582,7 @@ export async function respondInvite(input: { userId: string; serverId: number; p
       const [who] = (await db.execute(sql`select nickname from characters where user_id = ${input.userId}::uuid and server_id = ${input.serverId}`)) as unknown as { nickname: string }[];
       return { to: done.leader, from: input.userId, payload: {
         title: '초대 수락',
-        body: `${who?.nickname ?? '원정대원'}님이 원정대 초대를 수락했어요.`,
+        body: who?.nickname ? `${who.nickname}님이 원정대 초대를 수락했어요.` : '누군가 원정대 초대를 수락했어요.',
         url: `/world-boss/${done.bossId}`,
         tag: `world-boss-party-${input.partyId}`,
         category: 'world_boss',

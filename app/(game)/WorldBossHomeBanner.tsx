@@ -97,7 +97,7 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
           </b>
           <small className="block truncate text-[10px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             {b.ended
-              ? `최종 ${b.stage}페이즈 · 💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')} · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}` // 태그가 '원정 종료'라 '종료'를 되풀이하지 않는다(한 줄에 맞춤)
+              ? `최종 ${b.stage}페이즈 · ${b.owner ? `💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')}` : '전리품 없음'} · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}` // 태그가 '원정 종료'라 '종료'를 되풀이하지 않는다(한 줄에 맞춤)
               : `${b.stage}페이즈 · 종료까지 ${b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'} · 원정대 모집 중 ${b.recruiting}`}
           </small>
         </span>

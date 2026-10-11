@@ -46,3 +46,6 @@ public/sprites/anim3-raw/
 # 분석 스크립트 산출물(analyze-enhance·simulate-enhance) — 커밋·배포 금지(public에 두면 공개 URL이 된다)
 scripts/out/
 scripts/tower-art/out/
+# 임시 검증·캡처 스크립트와 생성 그림(10-11) — 테스트 계정 id가 들어 있어 커밋하지 않는다
+scripts/_tmp-*
+scripts/world-boss-art/

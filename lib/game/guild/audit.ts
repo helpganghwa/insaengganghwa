@@ -10,6 +10,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * 길드 홈의 "길드 로그" 섹션(getGuildActivityLog)이 이 테이블을 그대로 노출한다.
  */
 export type GuildAuditAction =
+  | 'world_boss_loot' // 월드보스 전리품이 길드 세금에 들어감(10-11)
   | 'kick'
   | 'transfer_leadership'
   | 'set_vice'

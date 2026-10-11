@@ -496,7 +496,7 @@ html.ig-modal-open [data-app-shell] .wb-zone-label::after { animation-play-state
   /* 외곽선 1px 두 겹 — 숨쉬기(transform) 층 **안쪽**에 둬 매 프레임 필터 재계산을 피한다(10-11 재검사). 글로우는 없다(경량 B). */
   .wbs-lunge { transform-origin: 50% 85%; filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000); }
   /* 재생 무대 같은 다른 층이 위를 덮는 동안 — 보이지 않는 애니는 멈춘다. */
-  .wbs-paused .wbs-breath, .wbs-paused .wbs-strip, .wbs-paused .wbs-pulse, .wbs-paused .wbb-ember { animation-play-state: paused; }
+  .wbs-paused .wbs-breath, .wbs-paused .wbs-strip, .wbs-paused .wbs-pulse, .wbs-paused .wbb-ember, .wbs-paused .wbb-shaft { animation-play-state: paused; }
   .wbs-strip { background-size: 900% 100%; background-repeat: no-repeat; image-rendering: pixelated; animation: wbs-pp 1.17s steps(9, jump-none) infinite alternate; }
   .wbs-pulse { animation: wbs-emb 1.9s ease-in-out 0.4s infinite; }
   .wbs-ember { mix-blend-mode: screen; filter: drop-shadow(0 0 3px #ff8a2a); }

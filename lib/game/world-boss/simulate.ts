@@ -84,7 +84,7 @@ export type WorldBossSimContext = {
   traits?: readonly WorldBossTraitCode[];
 };
 
-export function baseCp(items: readonly WorldBossItem[]): number {
+function baseCp(items: readonly WorldBossItem[]): number {
   return items.reduce((s, it) => s + it.cp, 0);
 }
 

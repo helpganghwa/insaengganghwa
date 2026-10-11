@@ -14,6 +14,7 @@ import { Redis } from '@upstash/redis';
  * 식별자 = userId(계정 단위). 윈도우는 정상 빠른 플레이는 통과, 봇 연타만 차단.
  */
 export type RlBucket =
+  | 'worldBoss' // 월드보스 액션(10-11 3차: 레이드 버킷과 분리)
   | 'worldBossPush' // 월드보스 신청·초대 푸시 쿨다운(10-11) — 키는 (원정대, 상대) 조합
   | 'enhance'
   | 'chuseok'
@@ -80,6 +81,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   whisperSend: [1, '2 s'],
   whisperBurst: [30, '60 s'],
   // 월드보스 참가 신청·초대 푸시 — 같은 원정대에 같은 사람이 10분 안에 다시 신청(취소→재신청 반복)하면 푸시만 생략(신청은 허용, 10-11 사용자).
+  worldBoss: [30, '10 s'],
   worldBossPush: [1, '600 s'],
 };
 
