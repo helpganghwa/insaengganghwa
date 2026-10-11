@@ -381,7 +381,9 @@ export function WorldBossDetailView({
               ? `원정이 종료됐어요. 잠시 뒤 전리품이 ${owner}의 길드 세금으로 들어가요.` // 정산(5분 크론) 전 — 주인이 비어 보이던 오표시 수정(10-11 재검사)
               : '원정이 종료됐어요. 잠시 뒤 정산돼요.'
           : owner
-            ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner}의 길드 세금에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+            ? d.lootDiamond > 0 || d.lootBoxes > 0
+              ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner}의 길드 세금에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+              : josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.pastPolite}. 누적 피해 ${formatCompactKR(d.totalDamage)}.`) // 0페이즈 — 전리품 우편·로그와 같이 '남겼어요'를 쓰지 않는다(10-11 E2E)
             : '종료 때 주인이 없어 전리품은 사라졌어요.'}
       </p>
 
