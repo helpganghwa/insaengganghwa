@@ -28,6 +28,8 @@ export type WorldBossPartyCard = {
   stageTo: number | null;
   rewardDiamond: number;
   rewardBoxes: number;
+  /** 종료 원정대의 피해 순위(전체 기준, 1부터). 모집 중은 null. */
+  rank: number | null;
 };
 
 /** 출발 팝업 행의 장착 한 칸(P3-c, 10-11) — cp는 보너스를 더한 부위 전투력, av/weak는 칸 색(보라/주황). */
@@ -118,7 +120,10 @@ export type WorldBossDetail = {
   ownerGuildEmblem: { url: string | null; color: string | null } | null;
   settledGuildName: string | null;
   settledGuildEmblem: { url: string | null; color: string | null } | null;
+  /** 모집 중 전부 + 종료는 피해 상위 5팀과 내 원정대만(10-11). 나머지는 '더 보기' 액션으로. */
   parties: WorldBossPartyCard[];
+  /** 종료 원정대 총수(상세에 실린 것보다 많으면 '더 보기'). */
+  departedTotal: number;
   me: WorldBossMe | null;
   myParty: WorldBossMyParty | null;
   /** 이 보스에서 맞혀서 공개된 약점(묶음은 보스 하나에 하나, 10-11). 공개 전 약점은 아무도 모른다. */

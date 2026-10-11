@@ -5,7 +5,7 @@ import { distributeGuildTaxManual, splitBoxes } from '@/lib/game/guild/distribut
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
-import { getWorldBossBattle, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
+import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { cancelScheduledWorldBoss, spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
 import { activateDueBosses, settleLeftBosses } from '@/lib/game/world-boss/spawn';
 
@@ -214,6 +214,12 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(memRows.reduce((a, m) => a + Number(m.diamond), 0)).toBe(r.reward.diamond);
     expect(memRows.reduce((a, m) => a + Number(m.boxes), 0)).toBe(r.reward.boxes);
     expect(memRows.reduce((a, m) => a + Number(m.dmg), 0)).toBe(r.damage);
+    // 종료 목록(10-11): 상세엔 피해 상위 5팀 + 내 원정대, 순위·총수가 함께 내려오고 '더 보기'는 남은 것만 준다.
+    const det = (await getWorldBossDetail(boss, S, G))!;
+    expect(det.departedTotal).toBe(1);
+    expect(det.parties.find((p) => p.id === partyId)).toMatchObject({ status: 'departed', rank: 1 });
+    expect(await getWorldBossDepartedMore(boss, S, [partyId])).toEqual([]);
+    expect((await getWorldBossDepartedMore(boss, S, [])).map((p) => [p.id, p.rank])).toEqual([[partyId, 1]]);
   }, 20_000); // 원격 스테이징 DB에 왕복이 많다(원정대 흐름 + 지도 상태 조회 3회)
 
   it('단계: 출발 피해로 단계를 넘기면 보스 단계·전리품이 절대값으로 갱신된다', async () => {

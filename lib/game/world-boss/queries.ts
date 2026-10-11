@@ -215,17 +215,24 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
 
   // 보스 id만 있으면 되는 조회는 전부 같이 기다린다(10-11 감사: 순차 11번 → 4번).
   const [partyRows, weakKnown, mineRows] = await Promise.all([
+    // 원정대 행 — 모집 중은 전부, 종료는 **피해 상위 5팀 + 내 원정대**만(10-11 사용자: 48시간에 수십 팀이면 명단째 수십 KB가 액션마다 다시 내려갔다). 나머지는 '더 보기'(getWorldBossDepartedMore).
     db.execute(sql`
+    with p0 as (
+      select p.*, case when p.status = 'departed' then rank() over (partition by p.status order by p.damage desc, p.id) end as rk
+        from world_boss_parties p where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
+    )
     select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor, p.intro, p.created_at, p.departed_at,
-           p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes,
-           (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
-      from world_boss_parties p
+           p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, p.rk::int as rk,
+           (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n,
+           (select count(*)::int from p0 x where x.status = 'departed') as total_departed
+      from p0 p
       left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
       left join guilds g on g.id = p.guild_id
-     where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
+     where p.status = 'recruiting' or p.rk <= ${WORLD_BOSS_DEPARTED_TOP}
+        or exists (select 1 from world_boss_party_members m where m.party_id = p.id and m.user_id = ${userId ?? null}::uuid)
      order by p.created_at`) as unknown as Promise<{
       id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
-      damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
+      damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; rk: number | null; n: number; total_departed: number;
     }[]>,
     knownWeakOf(b.id),
     userId
@@ -246,7 +253,6 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
         ])
       : Promise.resolve(null),
   ]);
-  const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
 
   let me: WorldBossMe | null = null;
   let myParty: WorldBossMyParty | null = null;
@@ -284,9 +290,10 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       id: p.id, status: p.status, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, guildEmblemUrl: p.gurl, guildEmblemColor: p.gcolor, intro: p.intro,
       members, combatSum: members.reduce((s, m) => s + m.combat, 0), memberCount: p.n,
       createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
-      stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes,
+      stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes, rank: p.rk == null ? null : Number(p.rk),
     };
   });
+  const departedTotal = Number(partyRows.find((p) => p.status === 'departed')?.total_departed ?? partyRows[0]?.total_departed ?? 0);
   if (userId && mineRows) {
     const [[mem], reqs, [gm], invRows] = mineRows;
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
@@ -343,7 +350,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
     ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
     settledGuildName: b.settled_name, settledGuildEmblem: b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
-    parties, me, myParty,
+    parties, departedTotal, me, myParty,
     weakKnown, weakTotal: worldBossWeakPerSlot(traitCodes) * 3, weakBonus, mine,
     traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name, effect: t.effect, group: t.group }; }),
   };
@@ -354,6 +361,55 @@ export async function worldBossIdOfParty(partyId: string, serverId: number): Pro
   if (!/^\d+$/.test(partyId)) return null;
   const [r] = (await db.execute(sql`select boss_id::text as b from world_boss_parties where id = ${partyId}::bigint and server_id = ${serverId}`)) as unknown as { b: string }[];
   return r?.b ?? null;
+}
+
+const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime());
+
+/** 상세에 처음 실리는 종료 원정대 수(피해 상위). 나머지는 더 보기. */
+export const WORLD_BOSS_DEPARTED_TOP = 5;
+
+/**
+ * 종료 목록 '더 보기'(10-11 사용자) — 상세에 실리지 않은 출발 원정대를 피해 순위대로(순위는 전체 기준). shownIds = 이미 화면에 있는 원정대 id.
+ */
+export async function getWorldBossDepartedMore(bossId: string, serverId: number, shownIds: string[]): Promise<WorldBossPartyCard[]> {
+  if (!/^\d+$/.test(bossId)) return [];
+  const skip = shownIds.filter((x) => /^\d+$/.test(x)).slice(0, 200);
+  const rows = (await db.execute(sql`
+    with p0 as (
+      select p.*, rank() over (order by p.damage desc, p.id) as rk
+        from world_boss_parties p where p.boss_id = ${bossId}::bigint and p.server_id = ${serverId} and p.status = 'departed'
+    )
+    select p.id::text as id, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor, p.intro, p.created_at, p.departed_at,
+           p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, p.rk::int as rk,
+           (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n
+      from p0 p
+      left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
+      left join guilds g on g.id = p.guild_id
+     where not (p.id = any(${`{${skip.join(',')}}`}::bigint[]))
+     order by p.rk`)) as unknown as {
+    id: string; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
+    damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; rk: number; n: number;
+  }[];
+  if (rows.length === 0) return [];
+  const roster = (await db.execute(sql`
+    select party_id::text as pid, user_id::text as uid, damage::text as dmg from world_boss_party_members
+     where party_id = any(${`{${rows.map((r) => r.id).join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string; dmg: string }[];
+  const names = await namesOn(serverId, roster.map((r) => r.uid));
+  return rows.map((p) => {
+    const members = roster
+      .filter((r) => r.pid === p.id)
+      .map((r) => {
+        const x = names.get(r.uid);
+        return { userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: 0, damage: Number(r.dmg), isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null };
+      })
+      .sort((x, y) => Number(y.isLeader) - Number(x.isLeader));
+    return {
+      id: p.id, status: 'departed' as const, leaderNickname: p.leader_nick ?? '알 수 없음', guildName: p.gname, guildEmblemUrl: p.gurl, guildEmblemColor: p.gcolor, intro: p.intro,
+      members, combatSum: 0, memberCount: p.n,
+      createdAt: ms(p.created_at)!, departedAt: ms(p.departed_at), damage: Number(p.damage), rounds: p.rounds,
+      stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes, rank: Number(p.rk),
+    };
+  });
 }
 
 /**

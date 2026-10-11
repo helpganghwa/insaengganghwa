@@ -13,7 +13,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
-import { getWorldBossBattle, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
+import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
@@ -181,6 +181,19 @@ export async function equipBestAction(bossId: string) {
   } catch (e) {
     if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
     return fail(e, 'equipBest');
+  }
+}
+
+/** 종료 목록 더 보기(10-11 사용자) — 상세에 실리지 않은 출발 원정대(피해 순). */
+export async function moreDepartedAction(bossId: string, shownIds: string[]) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId) || !Array.isArray(shownIds)) return err('NOT_FOUND');
+  try {
+    const parties = await getWorldBossDepartedMore(bossId, g.sid, shownIds.filter((x) => typeof x === 'string'));
+    return { status: 'success' as const, parties };
+  } catch (e) {
+    return fail(e, 'moreDeparted');
   }
 }
 

@@ -36,6 +36,7 @@ import {
   equipBestAction,
   getBattleAction,
   leavePartyAction,
+  moreDepartedAction,
   requestJoinAction,
   respondInviteAction,
 } from '../actions';
@@ -113,7 +114,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       const card: WorldBossPartyCard = {
         id: OPT_PARTY_ID, status: 'recruiting', leaderNickname: who.nickname, guildName: who.guildName, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor,
         intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, damage: 0, isLeader: true, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor }], combatSum: who.combat, memberCount: 1,
-        createdAt: 0, departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0, // 낙관 카드 — 시각은 서버 재렌더가 채운다(렌더 중 Date.now 금지)
+        createdAt: 0, departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0, rank: null, // 낙관 카드 — 시각은 서버 재렌더가 채운다(렌더 중 Date.now 금지)
       };
       return {
         ...s,
@@ -199,7 +200,23 @@ export function WorldBossDetailView({
     () => d.parties.filter((p) => p.status === 'recruiting' && p.id !== mp?.partyId).sort((a, b) => Number(invitedIds.has(b.id)) - Number(invitedIds.has(a.id))),
     [d.parties, mp, invitedIds],
   );
-  const departed = useMemo(() => d.parties.filter((p) => p.status === 'departed').sort((a, b) => b.damage - a.damage), [d.parties]);
+  // 종료 목록 — 상세엔 피해 상위 5팀 + 내 원정대만 실린다(10-11 사용자). '더 보기'로 받은 나머지는 more에 쌓고 id로 합친다(서버 재렌더로 겹쳐도 한 번만).
+  const [more, setMore] = useState<WorldBossPartyCard[]>([]);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const departed = useMemo(() => {
+    const seen = new Set<string>();
+    return [...d.parties.filter((p) => p.status === 'departed'), ...more].filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true))).sort((a, b) => b.damage - a.damage || Number(a.id) - Number(b.id));
+  }, [d.parties, more]);
+  const departedTotal = Math.max(d.departedTotal, departed.length);
+  const loadMore = () =>
+    start(async () => {
+      setMoreLoading(true);
+      const r = await moreDepartedAction(d.id, departed.map((p) => p.id)).catch(() => null);
+      setMoreLoading(false);
+      if (!r) return showError(FAIL);
+      if (r.status === 'error') return showError(r.message);
+      setMore((cur) => [...cur, ...r.parties]);
+    });
   // 다음 페이즈까지 남은 피해 — %가 아니라 남은 수치로(10-11 사용자: 모든 '%' 표기는 남은 양으로). 화면 용어는 레이드처럼 '페이즈'(코드의 stage, 10-11).
   const remainHp = Math.max(0, d.need - d.into);
   const owner = active ? d.ownerGuildName : d.settledGuildName;
@@ -519,7 +536,7 @@ export function WorldBossDetailView({
           [
             ['recruiting', `모집 중 ${recruiting.length}`],
             // '종료' — 출발과 동시에 결과가 정해지므로 '출발'은 진행 중처럼 읽혔다(10-10 사용자, '완료'보다 '종료').
-            ['departed', `종료 ${departed.length}`],
+            ['departed', `종료 ${departedTotal}`],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -615,7 +632,7 @@ export function WorldBossDetailView({
           departed.map((p, i) => (
             // 완료 카드 — 피해 많은 순(N위) · 피해 · 원정대원(피해) · 원정대 획득. 라운드·단계·전투 보기는 두지 않는다(10-10 사용자).
             <div key={p.id} className={`rounded-xl border bg-stone-900 p-2.5 ${p.id === mp?.partyId ? 'border-orange-500/55' : 'border-stone-800'}`}>
-              <PartyHead p={p} rank={i + 1} />
+              <PartyHead p={p} rank={p.rank ?? i + 1} />
               <DepartedSummary p={p} />
               <Roster members={p.members} value="damage" />
               <p className="mt-1.5 text-[10.5px] text-stone-500">
@@ -623,6 +640,16 @@ export function WorldBossDetailView({
               </p>
             </div>
           ))
+        )}
+        {tab === 'departed' && departedTotal > departed.length && (
+          <button
+            type="button"
+            disabled={moreLoading}
+            onClick={loadMore}
+            className="min-h-9 w-full rounded-xl border border-stone-700 bg-stone-900 text-[12px] font-bold text-stone-300 disabled:opacity-50"
+          >
+            {moreLoading ? '불러오는 중' : `${departedTotal - departed.length}팀 더 보기`}
+          </button>
         )}
       </div>
 
