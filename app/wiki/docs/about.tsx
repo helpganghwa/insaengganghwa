@@ -197,6 +197,12 @@ export default function Doc() {
           ],
           [
             <>
+              <DocLink slug="world-boss">월드보스</DocLink>
+            </>,
+            '월드 보스를 원정대로 토벌, 전리품은 구역을 점령한 길드에게.',
+          ],
+          [
+            <>
               <DocLink slug="diamond">다이아</DocLink>
             </>,
             '유료 재화. 얻는 곳과 쓰는 곳.',

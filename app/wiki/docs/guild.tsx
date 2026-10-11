@@ -162,7 +162,8 @@ export default function Doc() {
       </UL>
       <Warn>
         해산하면 보유 <DocLink slug="conquest" hash="abandon">구역</DocLink>이 전부 중립으로 풀리고
-        길드에 모아둔 세금은 사라지며 복구할 수 없다.
+        길드에 모아둔 세금(다이아와 상자)은 사라지며 복구할 수 없다. 모집 중이던{' '}
+        <DocLink slug="world-boss" hash="party">월드보스 원정대</DocLink>도 함께 해산된다. 이미 출발한 원정의 기록과 보상은 그대로 남는다.
       </Warn>
 
       <FnList

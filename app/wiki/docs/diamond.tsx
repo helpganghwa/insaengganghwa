@@ -45,7 +45,7 @@ export default function Doc() {
           ['성장패스', '구간을 달성할 때마다 보상.'],
           [
             <><DocLink slug="conquest" hash="tax">길드 세금</DocLink></>,
-            '길드가 수금한 다이아를 배분.',
+            <>길드가 수금한 다이아와 <DocLink slug="world-boss">월드보스</DocLink> 전리품을 배분.</>,
           ],
           [
             <><DocLink slug="expedition" hash="reward">파견</DocLink></>,

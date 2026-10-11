@@ -175,10 +175,13 @@ export default function Doc() {
           수금한 다이아 중 {bpPct(GUILD_EXECUTOR_TAX_CUT * 10_000)}는 집행관 몫으로 바로 지급되고,
           나머지 {bpPct((1 - GUILD_EXECUTOR_TAX_CUT) * 10_000)}는 길드 세금으로 모인다.
         </LI>
+        <LI>
+          <DocLink slug="world-boss">월드보스</DocLink> 전리품(💎·📦)이 그 구역을 점령한 길드의 세금으로 들어온다.
+        </LI>
       </UL>
       <Note>
         분배는 길드장과 {GUILD_PERM_META.taxDistribute.label} 권한이 있는 부길드장이 할 수 있다. 균등 · 기여 비례 · 오늘 기부자 · 직접 중에서 방식을 고르고,
-        사람별 금액은 수정할 수 있다. 지급은 보상 우편으로 이루어진다.
+        사람별 다이아와 상자는 수정할 수 있다. 상자는 무기·방어구·장신구 부위로 고르게 나뉘며, 지급은 보상 우편으로 이루어진다.
       </Note>
 
       <H2 id="abandon">방치 페널티</H2>

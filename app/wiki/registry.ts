@@ -18,6 +18,7 @@ import * as friends from './docs/friends';
 import * as avatar from './docs/avatar';
 import * as expedition from './docs/expedition';
 import * as tower from './docs/tower';
+import * as worldBoss from './docs/world-boss';
 import * as shop from './docs/shop';
 import * as titles from './docs/titles';
 
@@ -61,6 +62,7 @@ const MODULES = [
   raid,
   melee,
   tower,
+  worldBoss,
   ranking,
   guild,
   guildRoles,
