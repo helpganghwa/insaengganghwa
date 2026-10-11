@@ -1,10 +1,10 @@
 /**
- * 월드보스 페이즈 약점(docs/WORLD-BOSS.md §3) — 순수 모듈.
- * 소환 때 페이즈마다 부위별 WORLD_BOSS_WEAK_PER_SLOT개를 활성 카탈로그에서 뽑아 보스 행(weak)에 고정한다.
+ * 월드보스 약점(docs/WORLD-BOSS.md §3) — 순수 모듈.
+ * 소환 때 부위별 WORLD_BOSS_WEAK_PER_SLOT개를 활성 카탈로그에서 뽑아 보스 행(weak)에 고정한다 — 보스 하나에 한 묶음(10-11 사용자).
  * 뽑기는 서버 난수(crypto)로만 — 호출부가 [0,1) 난수 함수를 넘긴다(CLAUDE §3.1).
  */
-import { WORLD_BOSS_PHASES, WORLD_BOSS_WEAK_PER_SLOT } from '@/lib/game/guild/balance';
-import type { WorldBossWeakPhase } from '@/lib/db/schema/world-boss';
+import { WORLD_BOSS_WEAK_PER_SLOT } from '@/lib/game/guild/balance';
+import type { WorldBossWeakSet } from '@/lib/db/schema/world-boss';
 
 export type WeakSlot = 'weapon' | 'armor' | 'accessory';
 export const WEAK_SLOTS: readonly WeakSlot[] = ['weapon', 'armor', 'accessory'];
@@ -20,17 +20,13 @@ function pickN(codes: readonly string[], n: number, rand: () => number): string[
   return a.slice(0, k);
 }
 
-/** 페이즈 WORLD_BOSS_PHASES개 × 부위별 n개. 카탈로그가 n보다 작으면 있는 만큼. */
-export function drawWorldBossWeak(catalog: CatalogBySlot, rand: () => number, n: number = WORLD_BOSS_WEAK_PER_SLOT): WorldBossWeakPhase[] {
-  return Array.from({ length: WORLD_BOSS_PHASES }, () => ({
-    weapon: pickN(catalog.weapon, n, rand),
-    armor: pickN(catalog.armor, n, rand),
-    accessory: pickN(catalog.accessory, n, rand),
-  }));
+/** 묶음 하나(배열 길이 1 — 저장 형식) × 부위별 n개. 카탈로그가 n보다 작으면 있는 만큼. */
+export function drawWorldBossWeak(catalog: CatalogBySlot, rand: () => number, n: number = WORLD_BOSS_WEAK_PER_SLOT): WorldBossWeakSet[] {
+  return [{ weapon: pickN(catalog.weapon, n, rand), armor: pickN(catalog.armor, n, rand), accessory: pickN(catalog.accessory, n, rand) }];
 }
 
-/** jsonb에서 읽은 값을 안전하게 — 형식이 어긋나면 빈 배열(약점 없음). */
-export function parseWeak(v: unknown): WorldBossWeakPhase[] {
+/** jsonb에서 읽은 값을 안전하게 — 형식이 어긋나면 빈 배열(약점 없음). 옛 행(페이즈별 7개)은 첫 묶음만 쓴다. */
+export function parseWeak(v: unknown): WorldBossWeakSet[] {
   if (!Array.isArray(v)) return [];
   return v.map((p) => {
     const o = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>;

@@ -14,7 +14,7 @@ import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
-import { bestLoadoutOf, currentPhase, knownWeakOf } from '@/lib/game/world-boss/loadout';
+import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { db } from '@/lib/db/client';
@@ -171,7 +171,7 @@ export async function equipBestAction(bossId: string) {
     const [b] = (await db.execute(sql`select stage, server_id, status, traits from world_bosses where id = ${bossId}::bigint`)) as unknown as { stage: number; server_id: number; status: string; traits: unknown }[];
     if (!b || b.server_id !== g.sid) return err('NOT_FOUND');
     if (b.status !== 'active') return err('BOSS_NOT_ACTIVE');
-    const known = new Set((await knownWeakOf(bossId, currentPhase(b.stage).index)).map((w) => w.code));
+    const known = new Set((await knownWeakOf(bossId)).map((w) => w.code));
     // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
     const best = await bestLoadoutOf(g.sid, g.u, known, worldBossWeakBonus(parseWorldBossTraits(b.traits)));
     if (!best) return err('ALREADY_EQUIPPED');

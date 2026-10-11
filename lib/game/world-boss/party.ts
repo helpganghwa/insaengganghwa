@@ -364,7 +364,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     if (sim.reveals.length > 0) {
       await tx.execute(sql`
         insert into world_boss_weak_reveals (boss_id, phase, code, slot, finder_user_id, finder_nickname, party_id)
-        values ${sql.join(sim.reveals.map((r) => { const who = units[r.unit]!; return sql`(${b.id}::bigint, ${r.phase}, ${r.code}, ${r.slot}, ${who.userId}::uuid, ${who.nickname}, ${party.id}::bigint)`; }), sql`, `)}
+        values ${sql.join(sim.reveals.map((r) => { const who = units[r.unit]!; return sql`(${b.id}::bigint, 0, ${r.code}, ${r.slot}, ${who.userId}::uuid, ${who.nickname}, ${party.id}::bigint)`; }), sql`, `)}
         on conflict (boss_id, phase, code) do nothing`);
     }
     // 대원 결과는 한 문장으로(보스 행을 잠근 시간을 줄인다 — 10-11 감사).

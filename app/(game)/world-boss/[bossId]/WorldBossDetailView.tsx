@@ -333,7 +333,6 @@ export function WorldBossDetailView({
       {/* 약점 · 내 장착 */}
       {active && (
         <WeakPanel
-          phase={d.phase}
           weakKnown={d.weakKnown}
           weakTotal={d.weakTotal}
           weakBonus={d.weakBonus}

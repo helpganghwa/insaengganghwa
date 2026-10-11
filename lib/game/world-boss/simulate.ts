@@ -6,7 +6,7 @@
  *
  * 한 번의 공격 피해 = Σ(장착 장비 전투력 × (1 + 아바타 + 약점)) × U(CONQUEST_DMG_MIN, MAX).
  *  - 아바타 +50%: 대표 아바타를 만들 때 입은 장비와 같은 장비. 커스텀 아바타가 있으면 약점 장비로 갈아입은 부위도 유지.
- *  - 약점 +100%: 그 공격 순간 보스 페이즈(공격 중인 단계로 정함 — 공격마다 누적 피해로 다시 센다)의 약점 장비.
+ *  - 약점 +100%: 보스의 약점 장비(보스 하나에 한 묶음 — 10-11 사용자, 페이즈별 교체 폐지).
  *  - 약점을 2개 이상 맞힌 공격은 공격 보상 꽝이 줄어든다(행운, worldBossRollDrop lucky).
  *  - 처음 맞힌 약점은 공개 목록(reveals)에 담는다 — 호출부가 보스 단위로 처음인 것만 저장한다.
  *
@@ -17,9 +17,9 @@
  */
 import {
   CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_LUCKY_MIN_WEAK, type WorldBossTraitCode,
-  worldBossMissDelta, worldBossPartyTraitMult, worldBossPhaseOf, worldBossRewardMult, worldBossRollDrop, worldBossStageFor, worldBossUnitTraitMult, worldBossWeakBonus,
+  worldBossMissDelta, worldBossPartyTraitMult, worldBossRewardMult, worldBossRollDrop, worldBossUnitTraitMult, worldBossWeakBonus,
 } from '@/lib/game/guild/balance';
-import type { WorldBossWeakPhase } from '@/lib/db/schema/world-boss';
+import type { WorldBossWeakSet } from '@/lib/db/schema/world-boss';
 import { makeRng } from '@/lib/game/melee/rng';
 
 import { SLOT_BIT, type WeakSlot } from './weak';
@@ -62,7 +62,7 @@ export type WorldBossFinale = {
   start?: number;
 };
 
-export type WorldBossReveal = { phase: number; slot: WeakSlot; code: string; unit: number };
+export type WorldBossReveal = { slot: WeakSlot; code: string; unit: number };
 
 export type WorldBossMemberResult = { userId: string; attacks: number; damage: number; fellRound: number | null; diamond: number; boxes: number; weakHits: number };
 
@@ -75,10 +75,10 @@ export type WorldBossSimResult = {
 };
 
 export type WorldBossSimContext = {
-  /** 출발 전 보스 누적 피해 — 공격마다 이 값 + 지금까지 피해로 공격 중인 단계(→ 페이즈)를 센다. */
+  /** 출발 전 보스 누적 피해 — 기록(finale.start)에 남겨 재생 게이지가 페이즈를 센다. */
   startDamage: number;
-  /** 페이즈별 약점(빈 배열이면 약점 없음). */
-  weak: readonly WorldBossWeakPhase[];
+  /** 약점 묶음(저장 형식은 배열 — 첫 원소만 쓴다, 빈 배열이면 약점 없음). */
+  weak: readonly WorldBossWeakSet[];
   /** 보스 특성(0~2개, docs/WORLD-BOSS.md §3.5) — 구성 배율·무소속 배율·약점 보너스·꽝 확률. 없으면 기본 규칙. */
   traits?: readonly WorldBossTraitCode[];
 };
@@ -94,7 +94,8 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
   }));
   if (n === 0) return { totalDamage: 0, rounds: 0, members: [], reveals: [], finale: { roster, events: [], drops: [], weak: [], rounds: 0, totalDamage: 0, start: ctx.startDamage } };
 
-  const weakSets = ctx.weak.map((p) => ({ weapon: new Set(p.weapon), armor: new Set(p.armor), accessory: new Set(p.accessory) }));
+  const w0 = ctx.weak[0];
+  const ws = w0 ? { weapon: new Set(w0.weapon), armor: new Set(w0.armor), accessory: new Set(w0.accessory) } : null;
   // 특성 — 원정대 전체 배율은 출발 순간의 구성으로 한 번, 무소속 배율은 대원마다, 약점 보너스·꽝 확률은 보스 값.
   const traits = ctx.traits ?? [];
   const weakBonus = worldBossWeakBonus(traits);
@@ -124,8 +125,6 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
     round++;
     for (const i of alive) {
       const u = units[i]!;
-      const phase = worldBossPhaseOf(worldBossStageFor(ctx.startDamage + total).stage + 1);
-      const ws = weakSets[Math.min(phase, weakSets.length - 1)];
       let eff = 0;
       let bits = 0;
       let nWeak = 0;
@@ -134,10 +133,9 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
         if (weak) {
           nWeak++;
           bits |= SLOT_BIT[it.slot];
-          const key = `${phase}:${it.code}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            reveals.push({ phase, slot: it.slot, code: it.code, unit: i });
+          if (!seen.has(it.code)) {
+            seen.add(it.code);
+            reveals.push({ slot: it.slot, code: it.code, unit: i });
           }
         }
         const av = it.av || (u.hasAvatar && weak);

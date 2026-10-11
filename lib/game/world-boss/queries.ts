@@ -13,7 +13,7 @@ import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/s
 import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, worldBossStageFor, worldBossTraitDef, worldBossWeakBonus, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
-import { bestLoadoutOf, currentPhase, knownWeakOf, loadoutsOf, piecePower } from './loadout';
+import { bestLoadoutOf, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
 import type { WorldBossBattle, WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
 
@@ -209,7 +209,6 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   }[];
   if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
   const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
-  const phase = currentPhase(b.stage);
   // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
   const traitCodes = parseWorldBossTraits(b.traits);
   const weakBonus = worldBossWeakBonus(traitCodes);
@@ -228,7 +227,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
       damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; n: number;
     }[]>,
-    knownWeakOf(b.id, phase.index),
+    knownWeakOf(b.id),
     userId
       ? Promise.all([
           db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
@@ -358,7 +357,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
     settledGuildName: b.settled_name, settledGuildEmblem: b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
     parties, me, myParty,
-    phase, weakKnown, weakTotal: worldBossWeakPerSlot(traitCodes) * 3, weakBonus, mine,
+    weakKnown, weakTotal: worldBossWeakPerSlot(traitCodes) * 3, weakBonus, mine,
     traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name, effect: t.effect, group: t.group }; }),
   };
 }
@@ -445,7 +444,7 @@ export async function getWorldBossInvitable(serverId: number, userId: string, pa
     db.execute(sql`
       select b.user_id::text as uid from guild_members a join guild_members b on b.guild_id = a.guild_id and b.server_id = a.server_id
        where a.server_id = ${serverId} and a.user_id = ${userId}::uuid and b.user_id <> ${userId}::uuid`) as unknown as Promise<{ uid: string }[]>,
-    knownWeakOf(party.boss_id, currentPhase(Number(party.stage)).index), // 친구·길드 조회와 무관 — 같이(10-11 감사)
+    knownWeakOf(party.boss_id), // 친구·길드 조회와 무관 — 같이(10-11 감사)
   ]);
   const friends = new Set(friendIds);
   const guild = new Set(guildRows.map((r) => r.uid));

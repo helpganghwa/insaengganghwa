@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { pieceCombatPower } from '@/lib/game/balance';
-import { WORLD_BOSS_PHASE_STAGES, WORLD_BOSS_WEAK_BONUS, worldBossPhaseOf } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
 import { WEAK_SLOTS, type WeakSlot, piecePower } from './weak';
@@ -26,18 +26,12 @@ const isSlot = (s: string): s is WeakSlot => s === 'weapon' || s === 'armor' || 
 
 export { piecePower }; // 순수 식은 weak.ts(화면 WeakPanel도 같은 함수를 쓴다)
 
-/** 지금 공격 중인 단계의 페이즈와 그 구간. */
-export function currentPhase(stage: number): { index: number; from: number; to: number } {
-  const index = worldBossPhaseOf(stage + 1);
-  return { index, from: index * WORLD_BOSS_PHASE_STAGES + 1, to: index * WORLD_BOSS_PHASE_STAGES + WORLD_BOSS_PHASE_STAGES };
-}
-
-/** 그 페이즈에서 공개된 약점(이름·그림). 처음 맞힌 대원은 표(finder_*)에만 남고 화면엔 내지 않는다(10-10 사용자 결정). */
-export async function knownWeakOf(bossId: string, phase: number): Promise<KnownWeak[]> {
+/** 이 보스에서 공개된 약점(이름·그림). 묶음이 하나라 phase는 늘 0(10-11). 처음 맞힌 대원은 표(finder_*)에만 남고 화면엔 내지 않는다(10-10 사용자 결정). */
+export async function knownWeakOf(bossId: string): Promise<KnownWeak[]> {
   const rows = (await db.execute(sql`
     select r.code, r.slot, coalesce(ci.name, r.code) as name
       from world_boss_weak_reveals r left join catalog_items ci on ci.code = r.code
-     where r.boss_id = ${bossId}::bigint and r.phase = ${phase}
+     where r.boss_id = ${bossId}::bigint and r.phase = 0
      order by case r.slot when 'weapon' then 0 when 'armor' then 1 else 2 end, r.revealed_at`)) as unknown as { code: string; slot: string; name: string }[];
   return rows.filter((r) => isSlot(r.slot)).map((r) => ({ code: r.code, slot: r.slot as WeakSlot, name: r.name, src: spritePath(r.code) }));
 }

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 약점 패널(docs/WORLD-BOSS.md §3) — 지금 페이즈에서 맞혀서 공개된 약점과 내 장착 상태. 누가 밝혔는지는 보이지 않는다(10-10 사용자).
+ * 약점 패널(docs/WORLD-BOSS.md §3) — 이 보스에서 맞혀서 공개된 약점(묶음은 보스 하나에 하나, 10-11)과 내 장착 상태. 누가 밝혔는지는 보이지 않는다(10-10 사용자).
  * 공개 전 약점은 아무도 모른다. "추천 장비 장착"(10-11 사용자: 약점이 없을 때도 아바타 보너스로 추천하므로 '약점에 맞춰'가 아니다)은 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합으로 바꾼다.
  * 내 장비(10-11 사용자 T1 — 무한의 탑 '내 장비' 줄 그대로): 부위마다 한 줄(그림 · 이름+강화 · 상태 칩 · 부위 전투력) → '아바타' 줄(만들 때 입은 장비 3칸, 지금 장착과 같으면 보라 빛 + 딱지) → 합.
  * 보너스가 둘이라 칩은 아바타(+50% 보라)·약점(+100% 주황)을 따로 달고, 줄 색은 약점 > 아바타 > 없음. 표기는 전부 +%(둘은 곱이 아니라 더해진다). weakBonus는 보스 특성(치명 약점이면 2.0 = +200%).
@@ -83,7 +83,6 @@ function useWheelToHorizontal(dep: unknown) {
 }
 
 export function WeakPanel({
-  phase,
   weakKnown,
   weakTotal,
   weakBonus = WORLD_BOSS_WEAK_BONUS,
@@ -91,7 +90,6 @@ export function WeakPanel({
   avatarSrc,
   onEquipBest,
 }: {
-  phase: { index: number; from: number; to: number };
   weakKnown: KnownWeak[];
   weakTotal: number;
   weakBonus?: number;
@@ -116,9 +114,7 @@ export function WeakPanel({
   return (
     <section className="mx-3 mt-3 rounded-xl border border-stone-800 bg-stone-900 px-3 py-2.5">
       <div className="flex items-baseline justify-between gap-2">
-        <b className="text-[13px] text-stone-100">
-          약점 <span className="text-[11px] font-normal text-stone-500">{phase.from}~{phase.to}페이즈</span>
-        </b>
+        <b className="text-[13px] text-stone-100">약점</b>
         <span className="text-[11px] text-stone-500">
           밝혀짐 <b className="text-orange-300">{weakKnown.length}</b>/{weakTotal}
         </span>

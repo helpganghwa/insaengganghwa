@@ -7,8 +7,6 @@ import {
   WORLD_BOSS_STAGE_BASE_HP,
   WORLD_BOSS_STAGE_GROWTH,
   WORLD_BOSS_LUCKY_MISS_P,
-  WORLD_BOSS_PHASES,
-  worldBossPhaseOf,
   worldBossExpectedAttacks,
   worldBossLootFor,
   worldBossRollDrop,
@@ -88,15 +86,6 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     expect(worldBossExpectedAttacks(0)).toBe(0);
   });
 
-  it('페이즈: 5단계마다 바뀌고 마지막 페이즈에서 멈춘다', () => {
-    expect(worldBossPhaseOf(1)).toBe(0);
-    expect(worldBossPhaseOf(5)).toBe(0);
-    expect(worldBossPhaseOf(6)).toBe(1);
-    expect(worldBossPhaseOf(30)).toBe(5);
-    expect(worldBossPhaseOf(999)).toBe(WORLD_BOSS_PHASES - 1);
-    expect(worldBossPhaseOf(0)).toBe(0);
-  });
-
   it('행운 뽑기: 꽝 21%, 나머지 칸은 비율 그대로(79/70배)', () => {
     expect(worldBossRollDrop(0, true)).toEqual({ diamond: 0, boxes: 0 });
     expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL - 1e-7, true)).toEqual({ diamond: 0, boxes: 0 });
@@ -130,7 +119,9 @@ describe('월드보스 특성(10-10 확정 9종)', () => {
   });
 
   it('보스 특성: 약점 수·보너스·전리품·꽝 확률', () => {
-    expect(worldBossWeakPerSlot([])).toBe(10);
+    expect(worldBossWeakPerSlot([])).toBe(5); // 묶음 하나라 5(10-11 사용자)
+    expect(WORLD_BOSS_TRAIT.wideWeak).toBe(10);
+    expect(WORLD_BOSS_TRAIT.fatalWeak).toBe(3);
     expect(worldBossWeakPerSlot(['wide_weak'])).toBe(WORLD_BOSS_TRAIT.wideWeak);
     expect(worldBossWeakPerSlot(['fatal_weak'])).toBe(WORLD_BOSS_TRAIT.fatalWeak);
     expect(worldBossWeakBonus(['fatal_weak'])).toBe(WORLD_BOSS_TRAIT.fatalWeakBonus);

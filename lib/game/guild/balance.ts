@@ -224,22 +224,18 @@ export function worldBossRollDrop(r: number, lucky = false, missDelta = 0): { di
  * 장착한 장비 3개 각각 = 장비 전투력 × (1 + 아바타 보너스 + 약점 보너스), 둘은 더한다.
  *  - 아바타 보너스: 대표 아바타를 만들 때 입은 장비와 같은 부위 장비면 +50%. 약점 장비로 갈아입은 부위도 유지한다
  *    (아바타를 다시 만들 부담 없이 약점을 맞춰 입게 — 시뮬에서 정찰 가치를 살리는 조건).
- *  - 약점 보너스: 그 순간 보스 페이즈의 약점 장비면 +100%.
+ *  - 약점 보너스: 보스의 약점 장비면 +100%.
  */
 export const WORLD_BOSS_AVATAR_BONUS = 0.5;
 export const WORLD_BOSS_WEAK_BONUS = 1.0;
-/** 페이즈 = 5단계마다(공격 중인 단계 1~5 → 0, 6~10 → 1 …). 약점은 소환 때 페이즈마다 부위별 10개를 뽑아 고정한다. */
-export const WORLD_BOSS_PHASE_STAGES = 5;
-export const WORLD_BOSS_WEAK_PER_SLOT = 10;
-/** 뽑아 두는 페이즈 수 — 마지막 페이즈 뒤로는 마지막 약점이 이어진다(단계 상한은 없다, 10-11). */
-export const WORLD_BOSS_PHASES = 7;
-/** 공격 중인 단계(1부터) → 페이즈 인덱스. */
-export function worldBossPhaseOf(attackingStage: number): number {
-  return Math.min(WORLD_BOSS_PHASES - 1, Math.floor(Math.max(0, attackingStage - 1) / WORLD_BOSS_PHASE_STAGES));
-}
+/**
+ * 약점은 보스 하나에 **한 묶음**(10-11 사용자: 페이즈별 교체 폐지) — 소환 때 부위별 5개를 뽑아 48시간 내내 고정한다.
+ * 묶음이 하나라 밝혀진 약점이 누적되므로 수를 10 → 5로 줄였다(넓어진 약점 10·치명 약점 3).
+ */
+export const WORLD_BOSS_WEAK_PER_SLOT = 5;
 /**
  * 약점 적중 행운(2026-10-09 확정, 10-11 표 상향에 맞춰 조정): 한 공격에서 약점 장비를 2개 이상 맞히면 공격 보상 꽝이 30% → 21%(×0.7, 종전 50→35와 같은 비율).
- * 나머지 칸은 비율 그대로 늘린다(79/70 ≈ 1.13배). 부위별 10개라 1개 적중은 아무 장비로도 흔해(공격 58%) 2개 이상으로 둔다.
+ * 나머지 칸은 비율 그대로 늘린다(79/70 ≈ 1.13배). 1개 적중은 흔해 2개 이상으로 둔다.
  */
 export const WORLD_BOSS_LUCKY_MIN_WEAK = 2;
 export const WORLD_BOSS_LUCKY_MISS_P = 21_000;
@@ -278,8 +274,8 @@ export const WORLD_BOSS_TRAIT = {
   eliteMax: 5, eliteMult: 2.0, eliteRewardMult: 2, // 소수 정예 — 5명 이하 출발: 피해 ×2.0(×1.5는 5명 원정대의 공격 횟수(3회 vs 5.5회) 손해를 못 메워, 10-10 시뮬) + 공격 보상 ×2(공격 횟수가 줄어 개인 보상이 45% 깎이던 것을 메운다, 10-11 사용자)
   legionMult: 1.3, // 대군 — 10명 꽉 채워 출발
   wandererMult: 1.5, // 떠도는 바람 — 무소속 대원
-  wideWeak: 20, // 넓어진 약점 — 부위별 약점 수
-  fatalWeak: 5, fatalWeakBonus: 2.0, // 치명 약점 — 부위별 5개, 약점 보너스 +200%(전투력 3배)
+  wideWeak: 10, // 넓어진 약점 — 부위별 약점 수(기본 5의 2배)
+  fatalWeak: 3, fatalWeakBonus: 2.0, // 치명 약점 — 부위별 3개, 약점 보너스 +200%(전투력 3배)
   goldenMissDelta: -10_000, // 황금 깃털 — 꽝 30% → 20%(행운도 21% → 11%)
   heavyLoot: 1.15, // 무거운 보물 — 단계 전리품 +15%(체력은 그대로)
 } as const;

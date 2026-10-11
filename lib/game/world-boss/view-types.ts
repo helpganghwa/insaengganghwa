@@ -121,11 +121,9 @@ export type WorldBossDetail = {
   parties: WorldBossPartyCard[];
   me: WorldBossMe | null;
   myParty: WorldBossMyParty | null;
-  /** 지금 공격 중인 단계의 페이즈(5단계마다). */
-  phase: { index: number; from: number; to: number };
-  /** 이 페이즈에서 맞혀서 공개된 약점. 공개 전 약점은 아무도 모른다. */
+  /** 이 보스에서 맞혀서 공개된 약점(묶음은 보스 하나에 하나, 10-11). 공개 전 약점은 아무도 모른다. */
   weakKnown: import('./loadout').KnownWeak[];
-  /** 페이즈 약점 총수(부위별 수 × 3 — 특성 넓어진·치명 약점이면 60·15). */
+  /** 약점 총수(부위별 5 × 3 = 15 — 특성 넓어진·치명 약점이면 30·9). */
   weakTotal: number;
   /** 약점 보너스(기본 1.0 = 전투력 2배, 치명 약점 2.0 = 3배). */
   weakBonus: number;

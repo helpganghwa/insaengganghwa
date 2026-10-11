@@ -13,7 +13,7 @@ export type WorldBossStatus = 'scheduled' | 'active' | 'left';
 export type WorldBossPartyStatus = 'recruiting' | 'departed' | 'disbanded';
 export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected';
 export type WorldBossInviteStatus = 'pending' | 'accepted' | 'declined';
-export type WorldBossWeakPhase = { weapon: string[]; armor: string[]; accessory: string[] };
+export type WorldBossWeakSet = { weapon: string[]; armor: string[]; accessory: string[] };
 
 /** 보스 1마리 = 1행. 관리자가 구역을 지정해 소환(10-11, 0233) — 같은 날 여러 마리 가능, 구역당 출현 중/예정은 한 마리(소환 트랜잭션이 검사). */
 export const worldBosses = pgTable(
@@ -46,8 +46,8 @@ export const worldBosses = pgTable(
     /** 떠날 때 전리품을 받은 길드(그 시점 구역 주인). 중립이면 null = 전리품 소멸. */
     settledGuildId: bigint('settled_guild_id', { mode: 'bigint' }).references(() => guilds.id, { onDelete: 'set null' }),
     settledAt: timestamp('settled_at', { withTimezone: true }),
-    /** 페이즈별 약점 장비(0230) — 원소 하나 = 페이즈 하나 {weapon, armor, accessory: code[]}. 소환 때 고정, 비면 첫 출발 때 채운다. */
-    weak: jsonb('weak').$type<WorldBossWeakPhase[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 약점 장비 묶음(0230) — 보스 하나에 하나 {weapon, armor, accessory: code[]}(10-11: 페이즈별 교체 폐지). 배열인 것은 저장 형식 호환 — 옛 행은 페이즈별 7개였고 첫 묶음만 쓴다. 소환 때 고정, 비면 첫 출발 때 채운다. */
+    weak: jsonb('weak').$type<WorldBossWeakSet[]>().notNull().default(sql`'[]'::jsonb`),
     /** 특성 코드(0232, 0~2개) — 소환 때 추첨해 고정(WORLD_BOSS_TRAITS). 옛 행은 빈 배열 = 특성 없음. */
     traits: jsonb('traits').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -146,7 +146,7 @@ export type WorldBoss = typeof worldBosses.$inferSelect;
 export type WorldBossParty = typeof worldBossParties.$inferSelect;
 export type WorldBossPartyMember = typeof worldBossPartyMembers.$inferSelect;
 
-/** 맞혀서 공개된 약점(0230) — (보스, 페이즈, 장비) 하나에 한 행. 처음 맞힌 대원 이름을 남긴다(보상 없음). */
+/** 맞혀서 공개된 약점(0230) — (보스, 장비) 하나에 한 행. phase는 페이즈별 약점 시절의 PK 자리로 지금은 늘 0(10-11). 처음 맞힌 대원 이름을 남긴다(보상 없음). */
 export const worldBossWeakReveals = pgTable(
   'world_boss_weak_reveals',
   {

@@ -5,8 +5,8 @@ import { WORLD_BOSS_LOCAL, simulateWorldBoss, type WorldBossUnit } from '@/lib/g
 
 const unit = (i: number, cp: number): WorldBossUnit => ({ userId: `u${i}`, nickname: `n${i}`, items: [{ slot: 'weapon', code: `w${i}`, cp, av: false }], hasAvatar: false, guildId: null, guildName: null });
 const cpOf = (u: WorldBossUnit) => u.items.reduce((a, x) => a + x.cp, 0);
-const phases = (codes: { weapon?: string[]; armor?: string[]; accessory?: string[] }, n = 7) =>
-  Array.from({ length: n }, () => ({ weapon: codes.weapon ?? [], armor: codes.armor ?? [], accessory: codes.accessory ?? [] }));
+/** 약점 묶음 하나(저장 형식은 배열 길이 1). */
+const pool = (codes: { weapon?: string[]; armor?: string[]; accessory?: string[] }) => [{ weapon: codes.weapon ?? [], armor: codes.armor ?? [], accessory: codes.accessory ?? [] }];
 
 describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
   it('같은 입력·시드면 같은 결과(결정론)', () => {
@@ -92,11 +92,11 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
 
   it('아바타 +50%·약점 +100%는 더하고, 약점 장비로 갈아입은 부위도 커스텀 아바타면 아바타 보너스를 유지한다', () => {
     const base: WorldBossUnit = { userId: 'a', nickname: 'a', items: [{ slot: 'weapon', code: 'w', cp: 1000, av: false }], hasAvatar: false, guildId: null, guildName: null };
-    const ratio = (u: WorldBossUnit, weak = phases({})) => simulateWorldBoss([u], 'x', { startDamage: 0, weak }).totalDamage / simulateWorldBoss([base], 'x').totalDamage;
+    const ratio = (u: WorldBossUnit, weak = pool({})) => simulateWorldBoss([u], 'x', { startDamage: 0, weak }).totalDamage / simulateWorldBoss([base], 'x').totalDamage;
     expect(ratio({ ...base, items: [{ ...base.items[0]!, av: true }], hasAvatar: true })).toBeCloseTo(1.5, 2);
-    expect(ratio(base, phases({ weapon: ['w'] }))).toBeCloseTo(2, 2); // 기본 아바타 + 약점
-    expect(ratio({ ...base, hasAvatar: true }, phases({ weapon: ['w'] }))).toBeCloseTo(2.5, 2); // 아바타 장비는 아니지만 약점이라 유지
-    expect(ratio({ ...base, items: [{ ...base.items[0]!, av: true }], hasAvatar: true }, phases({ weapon: ['w'] }))).toBeCloseTo(2.5, 2);
+    expect(ratio(base, pool({ weapon: ['w'] }))).toBeCloseTo(2, 2); // 기본 아바타 + 약점
+    expect(ratio({ ...base, hasAvatar: true }, pool({ weapon: ['w'] }))).toBeCloseTo(2.5, 2); // 아바타 장비는 아니지만 약점이라 유지
+    expect(ratio({ ...base, items: [{ ...base.items[0]!, av: true }], hasAvatar: true }, pool({ weapon: ['w'] }))).toBeCloseTo(2.5, 2);
   });
 
   it('장착 장비가 없으면 피해 0이지만 공격 보상은 뽑고, 난수 흐름은 같다', () => {
@@ -108,23 +108,27 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     expect(r2.finale.events.map((e) => [e[0], e[1]])).toEqual(r.finale.events.map((e) => [e[0], e[1]]));
   });
 
-  it('페이즈는 공격 순간의 단계로 정한다 — 출발 전 누적 피해가 5단계를 넘었으면 2페이즈 약점이 적용된다', () => {
+  it('약점 묶음은 보스 하나에 하나 — 출발 전 누적 피해가 커도 같은 약점이 적용되고, 옛 행(페이즈별 여러 묶음)은 첫 묶음만 쓴다', () => {
     const u = unit(1, 1000);
-    const weak = Array.from({ length: 7 }, (_, i) => ({ weapon: i === 1 ? ['w1'] : [], armor: [], accessory: [] }));
+    const weak = pool({ weapon: ['w1'] });
     const fresh = simulateWorldBoss([u], 'ph', { startDamage: 0, weak });
     let five = 0;
     for (let k = 1; k <= 5; k++) five += Math.round(WORLD_BOSS_STAGE_BASE_HP * 1.1 ** (k - 1));
     const later = simulateWorldBoss([u], 'ph', { startDamage: five + 1, weak });
-    expect(fresh.finale.weak).toEqual([0, 0]);
+    expect(fresh.finale.weak![0]).toBe(1);
     expect(later.finale.weak![0]).toBe(1);
-    expect(later.totalDamage).toBeGreaterThan(fresh.totalDamage * 1.9);
-    expect(later.reveals).toEqual([{ phase: 1, slot: 'weapon', code: 'w1', unit: 0 }]);
+    expect(later.totalDamage).toBe(fresh.totalDamage);
+    expect(later.finale.start).toBe(five + 1);
+    expect(fresh.reveals).toEqual([{ slot: 'weapon', code: 'w1', unit: 0 }]);
+    // 옛 행: 7묶음 중 두 번째에만 약점이 있으면 첫 묶음만 보므로 약점 없음
+    const legacy = Array.from({ length: 7 }, (_, i) => ({ weapon: i === 1 ? ['w1'] : [], armor: [], accessory: [] }));
+    expect(simulateWorldBoss([u], 'ph', { startDamage: five + 1, weak: legacy }).finale.weak).toEqual([0, 0]);
   });
 
   it('처음 맞힌 약점만 공개 목록에 한 번 담기고, 부위 비트가 기록된다', () => {
     const a: WorldBossUnit = { userId: 'a', nickname: 'a', items: [{ slot: 'weapon', code: 'W', cp: 10, av: false }, { slot: 'armor', code: 'A', cp: 10, av: false }], hasAvatar: false, guildId: null, guildName: null };
     const b: WorldBossUnit = { ...a, userId: 'b', nickname: 'b' };
-    const r = simulateWorldBoss([a, b], 'rv', { startDamage: 0, weak: phases({ weapon: ['W'], armor: ['A'] }) });
+    const r = simulateWorldBoss([a, b], 'rv', { startDamage: 0, weak: pool({ weapon: ['W'], armor: ['A'] }) });
     expect(r.reveals.map((x) => [x.code, x.unit])).toEqual([['W', 0], ['A', 0]]);
     r.finale.events.forEach(([att], k) => expect(r.finale.weak![k]).toBe(att >= 0 ? 3 : 0));
     expect(r.members[0]!.weakHits).toBe(2 * r.members[0]!.attacks);
@@ -135,8 +139,8 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     let missLucky = 0, missPlain = 0, n = 0;
     for (let s = 0; s < 400; s++) {
       const team = Array.from({ length: 10 }, (_, i) => ({ ...two, userId: `t${i}` }));
-      const lucky = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: phases({ weapon: ['W'], armor: ['A'] }) });
-      const plain = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: phases({ weapon: ['W'] }) });
+      const lucky = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: pool({ weapon: ['W'], armor: ['A'] }) });
+      const plain = simulateWorldBoss(team, `lk${s}`, { startDamage: 0, weak: pool({ weapon: ['W'] }) });
       lucky.finale.events.forEach(([a], k) => { if (a < 0) return; n++; if (lucky.finale.drops![k]![0] + lucky.finale.drops![k]![1] === 0) missLucky++; });
       plain.finale.events.forEach(([a], k) => { if (a < 0) return; if (plain.finale.drops![k]![0] + plain.finale.drops![k]![1] === 0) missPlain++; });
     }
@@ -179,7 +183,7 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
       expect(ratio).toBeCloseTo(us[i]!.guildId ? 1 : WORLD_BOSS_TRAIT.wandererMult, 2);
     });
     // 치명 약점 — 약점 장비(w1)만 3배
-    const weak = phases({ weapon: ['w1'] });
+    const weak = pool({ weapon: ['w1'] });
     const normal = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak });
     const fatal = simulateWorldBoss(us, 'worldboss:t', { startDamage: 0, weak, traits: ['fatal_weak'] });
     expect(fatal.members[0]!.damage / normal.members[0]!.damage).toBeCloseTo((1 + WORLD_BOSS_TRAIT.fatalWeakBonus) / 2, 2);
