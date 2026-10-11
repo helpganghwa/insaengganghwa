@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { WORLD_BOSS_GUILD_XP_PER_STAGE, worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
+import { worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
 import { distributeGuildTaxManual, splitBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
@@ -301,7 +301,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     }
   }, 20_000);
 
-  it('정산: 떠나는 시각이 지나면 그 순간의 주인 길드 금고에 전리품·경험치가 들어가고 미출발 원정대는 해산된다', async () => {
+  it('정산: 떠나는 시각이 지나면 그 순간의 주인 길드 세금에 전리품이 들어가고(길드 경험치는 없음) 미출발 원정대는 해산된다', async () => {
     const stage = 2;
     const boss = await makeBoss('2000-01-06', { leaveOffsetMs: -1000, stage, totalDamage: worldBossStageHp(1) + worldBossStageHp(2) });
     // 떠나기 직전 만든 모집 중 원정대(lockActiveBoss는 leave_at이 지나 막히므로 직접 넣는다).
@@ -314,9 +314,8 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const loot = worldBossLootFor(stage);
     expect(Number(after.pool) - Number(before.pool)).toBe(loot.diamond);
     expect(after.boxes - before.boxes).toBe(loot.boxes);
-    // 경험치: 레벨업 임계를 넘지 않았다면 그대로 더해진다(넘으면 레벨이 오른다).
-    const gained = BigInt(after.xp) - BigInt(before.xp);
-    expect(after.level > before.level || gained === BigInt(stage * WORLD_BOSS_GUILD_XP_PER_STAGE)).toBe(true);
+    // 길드 경험치는 주지 않는다(10-11 사용자 삭제) — 레벨·경험치 그대로.
+    expect([after.level, after.xp]).toEqual([before.level, before.xp]);
     const [b] = await q<{ status: string; sg: string | null }>(sql`select status, settled_guild_id::text as sg from world_bosses where id=${boss}::bigint`);
     expect(b).toEqual({ status: 'left', sg: guildId });
     const mail = await q<{ n: number }>(sql`select count(*)::int as n from mailbox where type='world_boss' and title='월드보스 전리품' and user_id=${T}::uuid and created_at >= ${t0.toISOString()}`);

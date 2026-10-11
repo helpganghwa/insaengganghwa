@@ -4,7 +4,6 @@ import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
 import { db } from '@/lib/db/client';
-import { WORLD_BOSS_GUILD_XP_PER_STAGE, guildXpToNext } from '@/lib/game/guild/balance';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
@@ -13,7 +12,7 @@ import { worldBossKind, worldBossName } from './bosses';
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
  *  ① activateDueBosses: 출현 시각이 지난 '예정' → '출현'(월드 피드 + 그 서버 전체 푸시, 토글 켠 사람). 소환 자체는 관리자(admin.ts, 10-11)가 한다.
- *  ② settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 세금에 전리품·길드 경험치, 우편)
+ *  ② settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 세금에 전리품, 우편 — 길드 경험치는 주지 않는다, 10-11 사용자)
  *     → '떠남'. 출발하지 않은 원정대는 해산.
  * 전부 멱등 — 조건부 UPDATE라 두 틱이 겹쳐도 한 번만 적용된다.
  */
@@ -60,22 +59,11 @@ export async function activateDueBosses(serverId: number, scope?: CronScope): Pr
   return rows;
 }
 
-/** 누적 XP에 레벨 임계를 차감하며 레벨업(길드 기부와 같은 식). */
-function applyGuildLevelUp(level: number, xp: bigint): { level: number; xp: bigint } {
-  let lv = level;
-  let rem = xp;
-  while (rem >= BigInt(guildXpToNext(lv))) {
-    rem -= BigInt(guildXpToNext(lv));
-    lv += 1;
-  }
-  return { level: lv, xp: rem };
-}
-
 export type SettledBoss = { id: string; zoneId: number; zoneName: string; region: string; bossCode: string; stage: number; lootDiamond: number; lootBoxes: number; guildId: string | null; guildName: string | null; disbanded: number };
 
 /**
  * 떠나는 시각이 지난 보스를 정산한다 — 보스마다 한 트랜잭션. 그 순간의 구역 주인 길드가 전리품(💎·📦)을
- * 길드 세금으로 **바로** 받고(집행관 몫 없음, 수금 쿨타임 무관), 단계당 길드 경험치를 얻는다. 중립이면 전리품은 소멸.
+ * 길드 세금으로 **바로** 받는다(집행관 몫 없음, 수금 쿨타임 무관). 길드 경험치는 주지 않는다(10-11 사용자 삭제). 중립이면 전리품은 소멸.
  * 출발하지 않은 원정대는 해산하고 참가자·신청을 지운다(싸운 기록은 그대로).
  */
 export async function settleLeftBosses(serverId: number, scope?: CronScope): Promise<SettledBoss[]> {
@@ -120,14 +108,12 @@ async function settleOne(serverId: number, id: string): Promise<SettledBoss | nu
       // 길드 행을 실제로 읽었을 때만 그 길드에 귀속한다 — 주인을 읽은 뒤 길드가 해산되면 FK 위반으로 정산이 깨졌다(10-11 재검사).
       let settledGuild: string | null = null;
       if (b.owner) {
-        const [g] = (await tx.execute(sql`select level, xp::text as xp from guilds where id = ${b.owner}::bigint for update`)) as unknown as { level: number; xp: string }[];
+        const [g] = (await tx.execute(sql`select id from guilds where id = ${b.owner}::bigint for update`)) as unknown as { id: string }[];
         if (g) {
           settledGuild = b.owner;
-          const next = applyGuildLevelUp(Number(g.level), BigInt(g.xp) + BigInt(b.stage * WORLD_BOSS_GUILD_XP_PER_STAGE));
           await tx.execute(sql`
             update guilds set tax_pool_diamond = tax_pool_diamond + ${loot.diamond}::bigint,
-                              tax_pool_boxes = tax_pool_boxes + ${loot.boxes},
-                              level = ${next.level}, xp = ${next.xp.toString()}::bigint
+                              tax_pool_boxes = tax_pool_boxes + ${loot.boxes}
              where id = ${b.owner}::bigint`);
           const body =
             `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 세금에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 쌓였어요.\n` +

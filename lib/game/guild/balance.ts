@@ -178,8 +178,6 @@ export const WORLD_BOSS_STAGE_BASE_HP = 750_000;
 export const WORLD_BOSS_STAGE_GROWTH = 1.1;
 /** 단계마다 쌓이는 길드 전리품 — 떠날 때 그 구역 주인 길드 세금으로(집행관 몫 없음). 상자는 3의 배수. */
 export const WORLD_BOSS_LOOT_PER_STAGE = { diamond: 150, boxes: 12 } as const; // 2026-10-08 확정(L1)
-/** 단계마다 떠날 때 주인 길드가 받는 길드 경험치. */
-export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
 /**
  * 공격마다 뽑는 보상(복권, 2026-10-08 사용자 확정) — 원정대원이 공격할 때마다 이 표에서 **하나만** 나온다(다이아 또는 상자 또는 꽝).
  * 피해량과 무관. 확률은 십만분율(합 100,000). 상자는 부위 3종 균등이라 3의 배수. 확률표는 화면에 표시하지 않는다(사용자 결정).

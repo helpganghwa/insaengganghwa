@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  WORLD_BOSS_ATTACK_DROPS, WORLD_BOSS_GUILD_XP_PER_STAGE, WORLD_BOSS_LOOT_PER_STAGE, WORLD_BOSS_LUCKY_MISS_P, WORLD_BOSS_PARTY_MAX,
+  WORLD_BOSS_ATTACK_DROPS, WORLD_BOSS_LOOT_PER_STAGE, WORLD_BOSS_LUCKY_MISS_P, WORLD_BOSS_PARTY_MAX,
   WORLD_BOSS_STAGE_BASE_HP, WORLD_BOSS_STAGE_GROWTH, WORLD_BOSS_STAY_MS, WORLD_BOSS_TRAIT, WORLD_BOSS_TRAIT_SLOT_P, WORLD_BOSS_WEAK_PER_SLOT,
 } from '@/lib/game/guild/balance';
 import { WORLD_BOSS_DEPARTED_TOP } from '@/lib/game/world-boss/queries';
@@ -14,7 +14,6 @@ describe('월드보스 확정 수치', () => {
     expect(WORLD_BOSS_STAGE_BASE_HP).toBe(750_000);
     expect(WORLD_BOSS_STAGE_GROWTH).toBe(1.1);
     expect(WORLD_BOSS_LOOT_PER_STAGE).toEqual({ diamond: 150, boxes: 12 });
-    expect(WORLD_BOSS_GUILD_XP_PER_STAGE).toBe(20);
     expect(WORLD_BOSS_WEAK_PER_SLOT).toBe(5);
     expect(WORLD_BOSS_LUCKY_MISS_P).toBe(21_000);
     expect(WORLD_BOSS_TRAIT_SLOT_P).toBe(0.7);
