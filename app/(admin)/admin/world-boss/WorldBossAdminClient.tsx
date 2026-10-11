@@ -90,7 +90,7 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
       const r = await cancelWorldBossAction({ serverId, bossId }).catch(() => null);
       if (!r) return setMsg({ tone: 'err', text: '서버 오류로 처리하지 못했어요. 목록을 새로 고친 뒤 확인해 주세요.' });
       setMsg(r.ok ? { tone: 'ok', text: `${zoneName} 예약을 취소했어요.` } : { tone: 'err', text: '취소하지 못했어요. 이미 출현했거나 지워진 보스예요.' });
-      router.refresh();
+      if (!r.ok) router.refresh(); // 성공은 액션의 revalidatePath가 다시 그린다(CLAUDE §11.7) — 실패 때만 재동기화(10-11 3차)
     });
   };
 

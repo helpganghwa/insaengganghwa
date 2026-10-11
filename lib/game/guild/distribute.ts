@@ -122,6 +122,7 @@ export function distributeGuildTaxManual(input: {
       byUserId: input.leaderUserId,
       mode: 'manual',
       total,
+      boxes: totalBoxes,
     });
     // 활동 로그 — 지정 금액 받은 수령자 1인당 1줄. 직렬 insert → 단일 multi-row(감사 G-05).
     await tx.insert(guildAuditLog).values(

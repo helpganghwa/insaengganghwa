@@ -16,7 +16,7 @@ import { worldBossName } from './bosses';
 import { bestLoadoutOf, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import { parseWeak } from './weak';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from './map-types';
-import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
+import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 종료 뒤 24시간(WORLD_BOSS_LEFT_NOTE_MS) 안인 보스(구역당 가장 최근 하나).
@@ -150,7 +150,9 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
 /** 보스 상세 — 없거나 다른 서버면 null. 해산된 원정대는 보이지 않는다(모집 중·출발만). */
 export async function getWorldBossDetail(bossId: string, serverId: number, userId: string | null): Promise<WorldBossDetail | null> {
   if (!/^\d{1,18}$/.test(bossId)) return null;
-  const [b] = (await db.execute(sql`
+  // 1단계 — 보스 id·유저 id만으로 되는 조회는 전부 같이(10-11 3차 결정 ⑧: 6단계 21~24쿼리 → 2단계 ~16쿼리). 보스가 없거나 다른 서버면 결과는 버린다.
+  const [[b], partyRows, weakKnown, mineRows] = await Promise.all([
+    db.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.boss_code, b.status, b.spawn_at, b.leave_at,
            b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes, b.traits, b.weak,
            z.owner_guild_id::text as owner_id, og.name as owner_name, og.emblem_url as owner_emblem, og.emblem_color as owner_color,
@@ -158,35 +160,26 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       from world_bosses b join zones z on z.id = b.zone_id
       left join guilds og on og.id = z.owner_guild_id
       left join guilds sg on sg.id = b.settled_guild_id
-     where b.id = ${bossId}::bigint`)) as unknown as {
-    id: string; server_id: number; zone_id: number; zone_name: string; region: string; boss_code: string; status: 'scheduled' | 'active' | 'left';
-    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown; weak: unknown;
-    owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
-    settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
-  }[];
-  if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
-  const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
-  // 떠나는 시각은 지났는데 크론(5분)이 아직 정산 전 — 화면은 '정산 중'으로(주인이 비어 "전리품이 사라졌어요"로 읽히던 것, 10-11 재검사).
-  const settling = b.status === 'active' && !active;
-  // 약점 총수는 저장된 묶음 크기로(특성 계산과 저장이 어긋난 옛 행에서 '15/9' 같은 분모가 나왔다, 10-11 재검사). 묶음이 비면 특성 기준.
-  const weakSet = parseWeak(b.weak)[0];
-  const weakTotal = weakSet ? weakSet.weapon.length + weakSet.armor.length + weakSet.accessory.length : worldBossWeakPerSlot(parseWorldBossTraits(b.traits)) * 3;
-  // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
-  const traitCodes = parseWorldBossTraits(b.traits);
-  const weakBonus = worldBossWeakBonus(traitCodes);
-
-  // 보스 id만 있으면 되는 조회는 전부 같이 기다린다(10-11 감사: 순차 11번 → 4번).
-  const [partyRows, weakKnown, mineRows] = await Promise.all([
-    // 원정대 행 — 모집 중은 전부, 종료는 **피해 상위 5팀 + 내 원정대**만(10-11 사용자: 48시간에 수십 팀이면 명단째 수십 KB가 액션마다 다시 내려갔다). 나머지는 '더 보기'(getWorldBossDepartedMore).
+     where b.id = ${bossId}::bigint`) as unknown as Promise<{
+      id: string; server_id: number; zone_id: number; zone_name: string; region: string; boss_code: string; status: 'scheduled' | 'active' | 'left';
+      spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown; weak: unknown;
+      owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
+      settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
+    }[]>,
+    // 원정대 행 + 명단(json) — 모집 중은 전부, 종료는 **피해 상위 5팀 + 내 원정대**만(10-11 사용자). 나머지는 '더 보기'(getWorldBossDepartedMore).
+    // 명단은 lateral json_agg로 같은 왕복에(10-11 3차) — 대원 행의 피해·뽑은 보상(0237)까지 실어 내 원정대(출발 뒤) 결과도 여기서 읽는다.
     db.execute(sql`
     with p0 as (
-      select p.*, case when p.status = 'departed' then rank() over (partition by p.status order by p.damage desc, p.id) end as rk
+      select p.id, p.status, p.leader_user_id, p.guild_id, p.intro, p.created_at, p.departed_at, p.damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, p.server_id,
+             case when p.status = 'departed' then rank() over (partition by p.status order by p.damage desc, p.id) end as rk
         from world_boss_parties p where p.boss_id = ${bossId}::bigint and p.status in ('recruiting', 'departed')
     )
     select p.id::text as id, p.status, p.leader_user_id::text as leader, c.nickname as leader_nick, g.name as gname, g.emblem_url as gurl, g.emblem_color as gcolor, p.intro, p.created_at, p.departed_at,
            p.damage::text as damage, p.rounds, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, p.rk::int as rk,
            (select count(*)::int from world_boss_party_members m where m.party_id = p.id) as n,
-           (select count(*)::int from p0 x where x.status = 'departed') as total_departed
+           (select count(*)::int from p0 x where x.status = 'departed') as total_departed,
+           (select coalesce(json_agg(json_build_object('uid', m.user_id::text, 'dmg', m.damage::text, 'diamond', m.diamond, 'boxes', m.boxes) order by m.joined_at, m.user_id), '[]'::json)
+              from world_boss_party_members m where m.party_id = p.id) as roster
       from p0 p
       left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
       left join guilds g on g.id = p.guild_id
@@ -195,8 +188,9 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
      order by p.created_at`) as unknown as Promise<{
       id: string; status: 'recruiting' | 'departed'; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
       damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; rk: number | null; n: number; total_departed: number;
+      roster: { uid: string; dmg: string; diamond: number; boxes: number }[] | null;
     }[]>,
-    knownWeakOf(b.id),
+    knownWeakOf(bossId),
     userId
       ? Promise.all([
           db.execute(sql`select m.party_id::text as pid, p.status, p.leader_user_id::text as leader from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
@@ -215,36 +209,66 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           // 나를 내보낸 모집 중 원정대(0239 kicked) — 카드에 '참가 신청' 대신 '참가 불가'(10-11 3차).
           db.execute(sql`select r.party_id::text as pid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
                           where p.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.status = 'kicked' and p.status = 'recruiting'`) as unknown as Promise<{ pid: string }[]>,
+          // 내가 대장인 모집 중 원정대의 대기 신청·대기 초대 — 원정대 id를 몰라도 대장 조건으로 1단계에서 읽는다(10-11 3차).
+          db.execute(sql`select r.user_id::text as uid from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
+                          where p.boss_id = ${bossId}::bigint and p.leader_user_id = ${userId}::uuid and p.status = 'recruiting' and r.status = 'pending' order by r.created_at`) as unknown as Promise<{ uid: string }[]>,
+          db.execute(sql`select i.user_id::text as uid from world_boss_invites i join world_boss_parties p on p.id = i.party_id
+                          where p.boss_id = ${bossId}::bigint and p.leader_user_id = ${userId}::uuid and p.status = 'recruiting' and i.status = 'pending' order by i.created_at`) as unknown as Promise<{ uid: string }[]>,
         ])
       : Promise.resolve(null),
   ]);
+  if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
+  const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
+  // 떠나는 시각은 지났는데 크론(5분)이 아직 정산 전 — 화면은 '정산 중'으로(주인이 비어 "전리품이 사라졌어요"로 읽히던 것, 10-11 재검사).
+  const settling = b.status === 'active' && !active;
+  // 약점 총수는 저장된 묶음 크기로(특성 계산과 저장이 어긋난 옛 행에서 '15/9' 같은 분모가 나왔다, 10-11 재검사). 묶음이 비면 특성 기준.
+  const weakSet = parseWeak(b.weak)[0];
+  const weakTotal = weakSet ? weakSet.weapon.length + weakSet.armor.length + weakSet.accessory.length : worldBossWeakPerSlot(parseWorldBossTraits(b.traits)) * 3;
+  // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
+  const traitCodes = parseWorldBossTraits(b.traits);
+  const weakBonus = worldBossWeakBonus(traitCodes);
 
   let me: WorldBossMe | null = null;
   let myParty: WorldBossMyParty | null = null;
   let mine: WorldBossDetail['mine'] = null;
   const known = new Set(weakKnown.map((w) => w.code));
+  const rosterOf = (p: (typeof partyRows)[number]) => (Array.isArray(p.roster) ? p.roster : []);
 
-  // 원정대 명단(10-10 사용자: 목록에서 누가 있는지 보이게) — 모집 중은 전투력(공개된 약점 기준이라 known 뒤에 센다), 완료는 그 전투의 피해.
-  // 완료 원정대원은 전투력이 필요 없어 이름·문양만 가볍게 읽는다(지난 보스까지 수십 팀 × 10명).
-  const allIds = partyRows.map((p) => p.id);
-  const recruitingIds = new Set(partyRows.filter((p) => p.status === 'recruiting').map((p) => p.id));
-  const roster =
-    allIds.length > 0
-      ? ((await db.execute(sql`
-          select party_id::text as pid, user_id::text as uid, damage::text as dmg from world_boss_party_members
-           where party_id = any(${`{${allIds.join(',')}}`}::bigint[]) order by joined_at, user_id`)) as unknown as { pid: string; uid: string; dmg: string }[])
-      : [];
-  const [rosterPeople, rosterNames] = await Promise.all([
-    peopleOn(serverId, roster.filter((r) => recruitingIds.has(r.pid)).map((r) => r.uid), known, weakBonus),
-    namesOn(serverId, roster.filter((r) => !recruitingIds.has(r.pid)).map((r) => r.uid)),
+  // 내 상태(1단계 결과) — 2단계에서 누구의 사람 정보를 읽을지 정한다.
+  const mem = mineRows?.[0]?.[0] ?? null;
+  const reqs = mineRows?.[1] ?? [];
+  const gm = mineRows?.[2]?.[0] ?? null;
+  const invRows = mineRows?.[3] ?? [];
+  const kickedRows = mineRows?.[4] ?? [];
+  const leaderReqs = mem && mem.leader === userId && mem.status === 'recruiting' ? (mineRows?.[5] ?? []) : [];
+  const leaderInvs = mem && mem.leader === userId && mem.status === 'recruiting' ? (mineRows?.[6] ?? []) : [];
+  const state: WorldBossMe['state'] = !userId ? 'none' : mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
+  const wantMe = !!userId && active && state !== 'fought'; // 내 장착 상태·낙관 그리기용 내 사람 정보
+
+  // 2단계 — 사람 정보(이름·문양·전투력·얼굴)는 한 번에: 모집 중 명단 + 내 원정대 대원(출발 뒤 포함) + 신청자·초대 + 나. 완료 원정대원은 이름·문양만 가볍게(namesOn).
+  const peopleIds = new Set<string>();
+  for (const p of partyRows) if (p.status === 'recruiting') for (const r of rosterOf(p)) peopleIds.add(r.uid);
+  const myRow = mem ? partyRows.find((p) => p.id === mem.pid) : undefined;
+  if (myRow) for (const r of rosterOf(myRow)) peopleIds.add(r.uid);
+  for (const r of leaderReqs) peopleIds.add(r.uid);
+  for (const r of leaderInvs) peopleIds.add(r.uid);
+  if (wantMe && userId) peopleIds.add(userId);
+  const nameIds = new Set<string>();
+  for (const p of partyRows) if (p.status !== 'recruiting') for (const r of rosterOf(p)) if (!peopleIds.has(r.uid)) nameIds.add(r.uid);
+  const [people, names, lo, best] = await Promise.all([
+    peopleOn(serverId, [...peopleIds], known, weakBonus),
+    namesOn(serverId, [...nameIds]),
+    wantMe && userId ? loadoutsOf(serverId, [userId], known, weakBonus) : Promise.resolve(null),
+    wantMe && userId ? bestLoadoutOf(serverId, userId, known, weakBonus) : Promise.resolve(null),
   ]);
-  const membersOf = (p: { id: string; leader: string }) =>
-    roster
-      .filter((r) => r.pid === p.id)
+
+  // 원정대 명단(10-10 사용자: 목록에서 누가 있는지 보이게) — 모집 중은 전투력(공개된 약점 기준), 완료는 그 전투의 피해. userId는 내리지 않는다(10-11 결정 ②).
+  const membersOf = (p: (typeof partyRows)[number]) =>
+    rosterOf(p)
       .map((r) => {
-        const x = rosterPeople.get(r.uid) ?? rosterNames.get(r.uid);
+        const x = people.get(r.uid) ?? names.get(r.uid);
         return {
-          nickname: x?.nickname ?? '알 수 없음', combat: rosterPeople.get(r.uid)?.combat ?? 0, damage: Number(r.dmg),
+          nickname: x?.nickname ?? '알 수 없음', combat: people.get(r.uid)?.combat ?? 0, damage: Number(r.dmg),
           isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null,
         };
       })
@@ -260,60 +284,33 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   });
   const departedTotal = Number(partyRows[0]?.total_departed ?? 0); // 모든 행이 같은 값
   if (userId && mineRows) {
-    const [[mem], reqs, [gm], invRows, kickedRows] = mineRows;
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
-    const state: WorldBossMe['state'] = mem ? (mem.status === 'departed' ? 'fought' : 'member') : reqs.length > 0 ? 'pending' : 'none';
     // 나에게 온 초대(10-11) — 참가 전이고 보스가 머무는 중일 때만 보인다.
     const invitesIn: WorldBossInviteIn[] = active && !mem ? invRows.map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) })) : [];
-    // 나 자신(낙관적 '내 원정대' 그리기용)은 명단 조회(rosterPeople)에 내 id를 끼워 한 번에 읽는다 — 아래 people 조회와 합친다.
     me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), kickedPartyIds: kickedRows.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: null, invites: invitesIn };
-    // 내 장착 상태는 내 원정대 조회와 무관 — 같이 기다린다(10-11 재검사 결정 ⑤: 순차 한 단계 줄임). 이미 싸웠으면 바꿔도 의미가 없어 읽지 않는다.
-    const minePromise = active && state !== 'fought'
-      ? Promise.all([
-          loadoutsOf(serverId, [userId], known, weakBonus),
-          bestLoadoutOf(serverId, userId, known, weakBonus),
-          !mem ? peopleOn(serverId, [userId], known, weakBonus) : Promise.resolve(null),
-        ])
-      : null;
-    if (mem) {
+    if (wantMe) me.person = people.get(userId) ?? null; // 낙관적 '내 원정대' 그리기용(참가 전·모집 중 대원)
+    if (mem && myRow) {
       const isLeader = mem.leader === userId;
-      const [memIds, reqIds, invIds] = await Promise.all([
-        db.execute(sql`select user_id::text as uid, damage::text as dmg, diamond, boxes from world_boss_party_members where party_id = ${mem.pid}::bigint order by joined_at, user_id`) as unknown as Promise<{ uid: string; dmg: string; diamond: number; boxes: number }[]>,
-        isLeader && mem.status === 'recruiting'
-          ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
-          : Promise.resolve([] as { uid: string }[]),
-        isLeader && mem.status === 'recruiting'
-          ? (db.execute(sql`select user_id::text as uid from world_boss_invites where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
-          : Promise.resolve([] as { uid: string }[]),
-      ]);
-      // 모집 중이면 대원은 위 명단 조회(rosterPeople)에 이미 있다 — 신청자·초대만 더 읽는다(10-11 재검사 결정 ⑤). 출발한 뒤엔 명단 조회가 이름만 읽어 대원도 여기서.
-      const extra = mem.status === 'recruiting'
-        ? [...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid), ...memIds.map((r) => r.uid).filter((u) => !rosterPeople.has(u))]
-        : [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)];
-      const people = new Map(rosterPeople);
-      if (extra.length > 0) for (const [k, v] of await peopleOn(serverId, extra, known, weakBonus)) people.set(k, v);
-      // 출발 전 내 원정대면 내 사람 정보도 여기 있다(낙관적 그리기용).
-      if (mem.status === 'recruiting') me.person = people.get(userId) ?? null;
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
+      // 대원 UUID는 대장(내보내기)에게만 — 대장이 아니면 나와 대장 것만 남기고 비운다(10-11 결정 ③).
+      const uidFor = (uid: string) => (isLeader || uid === userId || uid === mem.leader ? uid : '');
       // 출발한 원정대 — 대원별 결과(준 피해·뽑은 보상)는 대원 행(0237)에 있다(우편과 같은 값). 얼굴 아래에 보인다(10-11 사용자).
-      const results = new Map<string, WorldBossMemberResult>(memIds.map((r) => [r.uid, { damage: Number(r.dmg), diamond: Number(r.diamond), boxes: Number(r.boxes) }]));
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
-        members: memIds
-          .map((r) => ({ ...person(r.uid), isLeader: r.uid === mem.leader, result: mem.status === 'departed' ? (results.get(r.uid) ?? { damage: 0, diamond: 0, boxes: 0 }) : undefined }))
+        members: rosterOf(myRow)
+          .map((r) => ({
+            ...person(r.uid), userId: uidFor(r.uid), isLeader: r.uid === mem.leader,
+            result: mem.status === 'departed' ? { damage: Number(r.dmg), diamond: Number(r.diamond ?? 0), boxes: Number(r.boxes ?? 0) } : undefined,
+          }))
           .sort((x, y) => Number(y.isLeader) - Number(x.isLeader)), // 대장 먼저(10-11 사용자), 나머지는 참가 순(안정 정렬)
-        requests: reqIds.map((r) => person(r.uid)),
-        invites: invIds.map((r) => person(r.uid)),
+        requests: leaderReqs.map((r) => person(r.uid)),
+        invites: leaderInvs.map((r) => person(r.uid)),
       };
     }
-    // 내 장착 상태(위에서 같이 기다린 것). 참가 전이면 내 사람 정보(낙관적 '내 원정대' 그리기용)도 같이.
-    if (minePromise) {
-      const [lo, best, selfPeople] = await minePromise;
-      const l = lo.get(userId);
-      if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
-      if (selfPeople) me.person = selfPeople.get(userId) ?? null;
-    }
+    // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 읽지 않는다.
+    const l = lo?.get(userId);
+    if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
   }
 
   const total = Number(b.total);
@@ -329,6 +326,14 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     weakKnown, weakTotal, weakBonus, mine,
     traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, name: t.name, effect: t.effect, group: t.group }; }),
   };
+}
+
+/** 종료 시각 타이머용 가벼운 상태 1쿼리(10-11 3차 결정 ⑧) — 바뀐 것이 확인될 때만 화면 전체를 다시 읽는다. 예정·다른 서버면 null. */
+export async function getWorldBossStatus(bossId: string, serverId: number): Promise<WorldBossDetail['status'] | null> {
+  if (!/^\d{1,18}$/.test(bossId)) return null;
+  const [r] = (await db.execute(sql`select status, (leave_at > now()) as alive from world_bosses where id = ${bossId}::bigint and server_id = ${serverId}`)) as unknown as { status: string; alive: boolean }[];
+  if (!r || r.status === 'scheduled') return null;
+  return r.status === 'left' ? 'left' : r.alive ? 'active' : 'settling';
 }
 
 /** 원정대 id → 보스 id(푸시 딥링크 /world-boss/party/<id> 변환용). */
@@ -408,9 +413,9 @@ export async function getWorldBossBattle(partyId: string, serverId: number, view
     profilesByIds(ids, serverId).catch(() => []),
     ids.length > 0
       ? (db.execute(sql`
-          select gm.user_id::text as uid, g.name, g.emblem_url as url, g.emblem_color as color
+          select gm.user_id::text as uid, g.id::text as gid, g.name, g.emblem_url as url, g.emblem_color as color
             from guild_members gm join guilds g on g.id = gm.guild_id
-           where gm.server_id = ${serverId} and gm.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; name: string; url: string | null; color: string | null }[]>)
+           where gm.server_id = ${serverId} and gm.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; gid: string; name: string; url: string | null; color: string | null }[]>)
       : Promise.resolve([]),
   ]);
   // 얼굴·문양은 명단 순번으로(UUID는 서버에서만 쓴다, 10-11 사용자).
@@ -423,7 +428,9 @@ export async function getWorldBossBattle(partyId: string, serverId: number, view
     if (f) avatars[i] = { src: f.profileSouth, box: f.faceBox ?? null };
     // 길드 문양 — 기록엔 이름만 있어 지금 소속의 문양을 쓰되, 그 사이 길드를 옮긴 사람은 빼놓는다(다른 길드 문양이 붙지 않게).
     const g = guildOf.get(m.userId);
-    if (g && m.guildName === g.name) guildEmblems[i] = { url: g.url, color: g.color };
+    // 기록의 길드 id(출발 스냅샷)로 대조 — 길드 이름을 바꿔도 문양이 남는다(10-11 3차 결정 ⑦). id가 없는 옛 기록은 이름으로.
+    const gid = (m as { guildId?: string | number | null }).guildId;
+    if (g && (gid != null ? String(gid) === g.gid : m.guildName === g.name)) guildEmblems[i] = { url: g.url, color: g.color };
   });
   const roster = r.finale.roster.map(({ userId: _uid, ...rest }) => rest);
   return {

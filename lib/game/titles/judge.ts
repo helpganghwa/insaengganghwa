@@ -712,12 +712,14 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
             from world_boss_party_members m
             join world_boss_parties p on p.id = m.party_id and p.status = 'departed'
             join world_bosses b on b.id = p.boss_id
-           where m.user_id=${u} and m.server_id=${s}
+            join characters c on c.user_id = m.user_id and c.server_id = m.server_id
+           where m.user_id=${u} and m.server_id=${s} and p.departed_at >= c.created_at -- 재가입 캐릭터는 옛 기록을 세지 않는다(최초 이정표와 같은 기준, 10-11 3차 결정 ④)
         )
         select (select count(*) from mine)::int as wb_departs,
                (select count(*) from mine where leader_user_id = ${u})::int as wb_leads,
                (select count(*) from world_boss_weak_reveals r join world_bosses b on b.id = r.boss_id
-                 where r.finder_user_id = ${u} and b.server_id = ${s})::int as wb_reveals,
+                 where r.finder_user_id = ${u} and b.server_id = ${s}
+                   and r.revealed_at >= (select cc.created_at from characters cc where cc.user_id=${u} and cc.server_id=${s}))::int as wb_reveals,
                coalesce((select sum((select count(*) from jsonb_array_elements(mine.finale->'events') with ordinality e(v, k)
                                       join jsonb_array_elements(mine.finale->'weak') with ordinality w(v, k2) on w.k2 = e.k
                                      where mine.idx is not null and (e.v->>0)::int = mine.idx and (w.v::text)::int in (3, 5, 6, 7)))

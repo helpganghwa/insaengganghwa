@@ -87,6 +87,12 @@ export function InviteSheet({
       const r = await inviteAction(bossId, partyId, c.userId).catch(() => null);
       lock(c.userId, false);
       if (!r || r.status !== 'success') {
+        if (r && 'code' in r && r.code === 'ALREADY_INVITED') {
+          // 다른 탭에서 이미 초대한 경우 — 실제 상태(초대함)와 맞게 둔다(10-11 3차 낙관 감사).
+          showHeaderToast({ title: `${c.nickname}님 초대`, detail: '이미 초대한 사람이에요' });
+          onChanged?.();
+          return;
+        }
         mark(c.userId, false);
         showError(r?.message ?? '초대에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;

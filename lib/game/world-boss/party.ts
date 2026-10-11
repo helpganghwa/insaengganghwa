@@ -229,6 +229,7 @@ export async function decideJoin(input: { leaderUserId: string; serverId: number
     await tx.execute(sql`update world_boss_join_requests set status = 'accepted', decided_at = now() where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
     // 같은 보스의 다른 원정대에 걸어 둔 신청·대기 초대는 지운다 — 이미 들어갔으니 다른 대장 화면에 남아 있으면 안 된다(여러 곳 동시 신청, 10-10).
     await clearOtherAsks(tx, party.boss_id, input.userId, party.id);
+    await tx.execute(sql`delete from world_boss_invites where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`); // 같은 원정대에 보내 둔 초대는 수락으로 끝났다(10-11 3차 낙관 감사: '대원'과 '초대 중'으로 두 번 보이던 것)
   });
   if (input.accept) {
     // 어느 원정대인지 대장 이름으로(10-11 사용자: 뒤 안내 문장 없음). 쿨다운 없음 — 신청 푸시와 키를 같이 쓰면 10분 안 수락 때 합류 알림이 빠졌다(10-11 재검사).

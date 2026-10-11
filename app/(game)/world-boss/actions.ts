@@ -13,7 +13,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError, type WorldBossErrorCode } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, kickMember, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
-import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
+import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, getWorldBossStatus } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
@@ -164,6 +164,16 @@ export async function departPartyAction(bossId: string, partyId: string, departK
   } catch (e) {
     return fail(e, 'depart');
   }
+}
+
+/** 종료 시각 타이머용 상태 1쿼리(10-11 3차) — 화면은 상태가 바뀌었을 때만 전체를 다시 읽는다. */
+export async function bossStatusAction(bossId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId)) return err('NOT_FOUND');
+  const state = await getWorldBossStatus(bossId, g.sid).catch(() => null);
+  if (!state) return err('BOSS_NOT_FOUND');
+  return { status: 'success' as const, state };
 }
 
 /** 전투 다시 보기 — 저장된 전투 기록. 그 원정대원만, 같은 서버(10-11 사용자). */

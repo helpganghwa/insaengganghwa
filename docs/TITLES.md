@@ -185,7 +185,9 @@ type TitleDef = {
 - 오관왕 → **육관왕**(코드 `pentagon` 유지): 5종 기준으로 얻은 기존 보유자는 `title_legacy_locks`(0223)에 잠겨 발견은 유지하되 비활성 — 목록 '비활성', 대표 장착 불가, 대표여도 표시 안 함. 새 조건을 한 번 채우면 judge가 잠금을 지워 영구 활성. 잠글 수 있는 코드는 `lib/game/titles/legacy-lock.ts LEGACY_LOCKABLE`.
 - 랭킹 1위와 조합 칭호는 랭킹 6종 기준: 육관왕(`pentagon`, 6종 모두 10위 이내), 무관의 제왕(`uncrowned`, 6종 모두 2~3위), 왕좌의 그림자(`throne_shadow`, 아무 랭킹 2위).
 
-## 월드보스 (2026-10-11, 영구 10종 + 길드 조건부 1종)
+## 월드보스
+
+> 판정 범위: 지금 캐릭터 생성 이후의 출발·약점 공개만 센다(탈퇴·재가입으로 되살아나지 않게 — 최초 이정표와 같은 기준, 10-11 결정 ④). 레이드 지표는 다음 업데이트에서 같은 기준으로. (2026-10-11, 영구 10종 + 길드 조건부 1종)
 
 제출 폼(아티팩트 EaJkzkVLEa3fP9Xy3NYt8U v6)과 효과 고르기 폼(4RxySaGr5C4kEc77S6WyCx)으로 확정. 카테고리 **월드보스**(목록 묶음은 '전투'), 숨김 없이 전부 공개, 이름 8자 이내, '~자' 형식 없음. 팔레트는 보스와 같은 잿불(불씨 주황 → 달군 쇠 → 재). 새 효과는 pyreglow·pyrevert·ashdrift·allianceflow·ashgoldvault, 파티클 ashfeather(`components/title-fx.css` 끝). 판정 원천은 `world_boss_party_members`(출발한 원정대·fell_round)·`world_boss_parties.finale`(명단 스냅샷·약점 비트)·`world_boss_weak_reveals.finder_user_id`·`world_bosses.settled_guild_id`. 표가 없으면(프로덕션 반영 전) 0으로 판정해 다른 칭호를 멈추지 않는다.
 

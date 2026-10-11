@@ -34,6 +34,7 @@ import {
   decideJoinAction,
   departPartyAction,
   equipBestAction,
+  bossStatusAction,
   getBattleAction,
   kickMemberAction,
   leavePartyAction,
@@ -82,9 +83,10 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       const req = mp.requests.find((r) => r.userId === p.userId);
       const requests = mp.requests.filter((r) => r.userId !== p.userId);
       if (!p.accept || !req) return { ...s, myParty: { ...mp, requests } };
+      if (mp.members.some((m) => m.userId === p.userId)) return { ...s, myParty: { ...mp, requests } }; // 재읽기와 겹쳐 두 번 붙지 않게(10-11 3차)
       return {
         ...s,
-        myParty: { ...mp, requests, members: [...mp.members, { ...req, isLeader: false }] },
+        myParty: { ...mp, requests, invites: mp.invites.filter((i) => i.userId !== p.userId), members: [...mp.members, { ...req, isLeader: false }] },
         parties: s.parties.map((c) =>
           c.id === mp.partyId
             ? {
@@ -127,7 +129,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       };
     }
     case 'create': {
-      if (!me?.person) return s;
+      if (!me?.person || s.myParty) return s; // 이미 내 원정대가 있으면(재읽기와 겹침) 낙관 카드를 또 만들지 않는다(10-11 3차)
       const who = me.person;
       const intro = p.intro.replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX) || null;
       const card: WorldBossPartyCard = {
@@ -145,18 +147,29 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
     case 'respondInvite': {
       // 수락은 서버 재렌더가 내 원정대를 채운다(명단·장착을 여기서 만들 수 없다 — 낙관 적용 예외). 배너만 먼저 지운다.
       if (!me) return s;
-      return { ...s, me: { ...me, invites: me.invites.filter((x) => x.partyId !== p.partyId) } };
+      // 기다리는 동안 '＋ 원정대 만들기'가 눌리지 않게 상태를 대원으로(10-11 3차 낙관 감사).
+      return { ...s, me: { ...me, state: 'member', canCreate: false, pendingPartyIds: [], invites: me.invites.filter((x) => x.partyId !== p.partyId) } };
     }
     case 'equipBest': {
       const mine = s.mine;
       if (!mine?.best) return s;
       const pieces = mine.best.pieces;
+      // 내 사람 정보(명단 전투력)는 같은 식(loadoutsOf)으로 계산되므로 전투력 차이를 명단·모집 카드 합산에도 바로 반영한다(10-11 3차 낙관 감사).
+      const delta = mine.best.power - mine.loadout.power;
+      const myId = me?.userId;
+      const mp = s.myParty;
+      const myNick = me?.person?.nickname ?? mp?.members.find((m) => m.userId === myId)?.nickname;
       return {
         ...s,
         mine: {
           loadout: { ...mine.loadout, pieces, power: mine.best.power, weakCount: pieces.filter((x) => x.weak).length, avatarCount: pieces.filter((x) => x.av).length },
           best: null,
         },
+        me: me?.person ? { ...me, person: { ...me.person, combat: me.person.combat + delta } } : me,
+        myParty: mp ? { ...mp, members: mp.members.map((m) => (m.userId === myId ? { ...m, combat: m.combat + delta } : m)) } : mp,
+        parties: mp && myNick
+          ? s.parties.map((c) => (c.id === mp.partyId ? { ...c, combatSum: c.combatSum + delta, members: c.members.map((m) => (m.nickname === myNick ? { ...m, combat: m.combat + delta } : m)) } : c))
+          : s.parties,
       };
     }
   }
@@ -218,11 +231,16 @@ export function WorldBossDetailView({
     else return;
     if (ms > 0x7fffffff) return;
     const t = setTimeout(() => {
-      router.refresh();
-      setTick((v) => v + 1);
+      // 상태 1쿼리로 먼저 보고 바뀌었을 때만 전체를 다시 읽는다(10-11 3차 결정 ⑧: 종료 순간 열어 둔 탭이 일제히 24쿼리씩 읽던 것).
+      bossStatusAction(d.id)
+        .then((r) => {
+          if (r.status === 'success' && r.state !== d.status) router.refresh();
+        })
+        .catch(() => {})
+        .finally(() => setTick((v) => v + 1));
     }, active && d.leaveAt <= Date.now() ? 20_000 : ms);
     return () => clearTimeout(t);
-  }, [active, settling, d.leaveAt, router, tick]);
+  }, [active, settling, d.leaveAt, d.status, d.id, router, tick]);
   const me = d.me;
   const mp = d.myParty;
   // 초대받은 원정대(10-11, 레이드 방식)는 맨 앞 — 신청·수락 없이 '참가'로 바로 들어간다.
@@ -262,7 +280,11 @@ export function WorldBossDetailView({
     start(async () => {
       if (p) patch(p);
       const r = await fn().catch(() => ({ status: 'error' as const, message: FAIL }));
-      if (r.status === 'error') return showError(r.message);
+      if (r.status === 'error') {
+        showError(r.message);
+        router.refresh(); // 실패는 대개 화면이 낡았다는 뜻(이미 처리된 신청·출발한 원정대·내보내짐) — 낙관 복귀만으로는 낡은 화면이 남는다(CLAUDE §11.7 실패 경로 재동기화, 10-11 3차)
+        return;
+      }
       if (ok) showHeaderToast(ok); // 아이콘 없음(💎📦 외 이모지 지양, 10-11 사용자)
     });
 
@@ -278,7 +300,11 @@ export function WorldBossDetailView({
     start(async () => {
       const r = await departPartyAction(d.id, mp.partyId, key).catch(() => null);
       if (!r) return showError(FAIL);
-      if (r.status === 'error') return showError(r.message);
+      if (r.status === 'error') {
+        showError(r.message);
+        router.refresh(); // 낡은 화면(이미 출발·해산) 재동기화(10-11 3차)
+        return;
+      }
       // 출발 응답은 다시 보기와 같은 재생 데이터(명단 순번·얼굴·문양, UUID 없음 — 10-11 사용자 결정 ②)를 서버가 만들어 준다.
       if (!r.result.battle) return;
       setReplay(r.result.battle);
@@ -439,7 +465,7 @@ export function WorldBossDetailView({
             {/* 출발한 뒤엔 빈 자리를 그리지 않는다(10-11 사용자) — 대원만. */}
             {Array.from({ length: mp.status === 'departed' ? mp.members.length : WORLD_BOSS_PARTY_MAX }, (_, i) => {
               const m = mp.members[i];
-              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} onKick={active && mp.isLeader && mp.status === 'recruiting' && !m.isLeader && mp.partyId !== OPT_PARTY_ID ? () => setKickAsk(m) : undefined} />;
+              if (m) return <SlotPerson key={m.userId || m.nickname} p={m} serverId={serverId} leader={m.isLeader} onKick={active && mp.isLeader && mp.status === 'recruiting' && !m.isLeader && mp.partyId !== OPT_PARTY_ID ? () => setKickAsk(m) : undefined} />;
               const inv = mp.invites[i - mp.members.length];
               if (inv) return <SlotPerson key={`i${inv.userId}`} p={inv} serverId={serverId} leader={false} inviting />;
               // 빈 자리 — 대장은 눌러 초대(10-11 사용자 2안: 친구·길드원 목록에서 초대 → 상대 수락). 출발 뒤엔 그냥 표시.
@@ -489,7 +515,7 @@ export function WorldBossDetailView({
                   </button>
                   <button
                     type="button"
-                    disabled={mp.partyId === OPT_PARTY_ID}
+                    disabled={pending || mp.partyId === OPT_PARTY_ID}
                     onClick={() => run(() => decideJoinAction(d.id, mp.partyId, r.userId, false), undefined, { t: 'decide', userId: r.userId, accept: false })}
                     className="min-h-8 rounded-md bg-stone-800 px-3 py-1 text-[11px] font-bold text-stone-400 disabled:opacity-40"
                   >
@@ -684,6 +710,7 @@ export function WorldBossDetailView({
         <ModalShell
           onClose={() => setKickAsk(null)}
           onSubmit={() => {
+            if (pending) return; // Enter 제출도 처리 중엔 막는다(10-11 3차)
             const t = kickAsk;
             setKickAsk(null);
             run(() => kickMemberAction(d.id, mp.partyId, t.userId), { title: josa(`${t.nickname}#{을} 내보냈어요`) }, { t: 'kick', userId: t.userId });
@@ -718,6 +745,7 @@ export function WorldBossDetailView({
         <ModalShell
           onClose={() => setDisbandAsk(false)}
           onSubmit={() => {
+            if (pending) return; // Enter 제출도 처리 중엔 막는다(10-11 3차)
             setDisbandAsk(false);
             run(() => leavePartyAction(d.id, mp.partyId), { title: '원정대를 해산했어요' }, { t: 'leave' });
           }}
@@ -755,8 +783,8 @@ export function WorldBossDetailView({
             footer={
               <>
                 <ModalButton onClick={() => setDepartAsk(false)}>취소</ModalButton>
-                <ModalButton tone="success" onClick={depart} disabled={pending}>
-                  출발
+                <ModalButton tone="success" onClick={depart} disabled={pending}>{/* 출발은 서버 난수 결과를 기다린다 — 진행 중 글자(10-11 3차) */}
+                  {pending ? '출발하는 중…' : '출발'}
                 </ModalButton>
               </>
             }
@@ -797,7 +825,7 @@ export function WorldBossDetailView({
             <div className="relative -mx-2 mt-1">
               <ul className="max-h-[236px] overflow-y-auto overscroll-contain rounded-lg border border-stone-800 bg-stone-950">
                 {mp.members.map((m) => (
-                  <DepartRow key={m.userId} m={m} />
+                  <DepartRow key={m.userId || m.nickname} m={m} />
                 ))}
               </ul>
               {mp.members.length > 3 && <span className="pointer-events-none absolute inset-x-0 bottom-0 h-9 rounded-b-lg bg-gradient-to-b from-transparent to-stone-900" />}
