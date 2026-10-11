@@ -85,7 +85,7 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '', paused = fa
   }, []);
 
   return (
-    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`} aria-hidden>
+    <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className} ${paused ? 'wbs-paused' : ''}`} aria-hidden>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
