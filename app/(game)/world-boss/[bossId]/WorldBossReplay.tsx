@@ -256,8 +256,8 @@ export function WorldBossReplay({
 
   const struck = st.last && st.last[0] < 0;
   const hit = st.last && st.last[0] >= 0;
-  const face = (userId: string) => battle.avatars?.[userId] ?? { src: null, box: null };
-  const isLeader = (userId: string) => userId === battle.leaderUserId; // 닉네임이 바뀌어도 맞게(10-11 감사)
+  const face = (i: number) => battle.avatars?.[i] ?? { src: null, box: null };
+  const isLeader = (i: number) => i === battle.leaderIndex; // 닉네임이 바뀌어도 맞게(10-11 감사) — 기록의 UUID는 내리지 않아 순번으로
 
   // 대원이 칠 때 보스 흔들림 — Web Animations로 그 자리에서만 흔들어 대기 애니(띠)가 처음으로 돌아가지 않게 한다.
   const shakeRef = useRef<HTMLDivElement>(null);
@@ -410,12 +410,12 @@ export function WorldBossReplay({
                 // 끝나면 마지막 타격·반격 강조는 걷는다 — 마지막에 쓰러진 대원도 다른 대원처럼 흑백이 된다(10-11 사용자).
                 const isHit = !done && !!hit && st.last![0] === i;
                 const isStruck = !done && !!struck && st.last![1] === i;
-                const f = face(m.userId);
+                const f = face(i);
                 const weakNow = isHit ? lastWeak : 0;
                 const down = fellR != null && !isStruck;
                 return (
                   <li
-                    key={m.userId}
+                    key={i}
                     ref={(el) => {
                       rowRefs.current[i] = el;
                     }}
@@ -439,12 +439,12 @@ export function WorldBossReplay({
                     <div className="relative z-10 min-w-0 flex-1 px-2.5 leading-tight">
                       <span className="flex min-w-0 items-center gap-1 text-[12.5px] font-bold text-stone-50 [text-shadow:0_1px_2px_#000]">
                         <span className="truncate">{m.nickname}</span>
-                        {isLeader(m.userId) && <LeaderChip />}
+                        {isLeader(i) && <LeaderChip />}
                         {fellR != null && <span className="shrink-0 rounded bg-red-900/80 px-1 text-[8.5px] font-extrabold text-red-200">{fellR}R 쓰러짐</span>}
                       </span>
                       <span className="mt-0.5 flex min-w-0 items-center gap-1 whitespace-nowrap text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
                         {m.guildName ? (
-                          <GuildBadge emblemUrl={battle.guildEmblems?.[m.userId]?.url ?? null} emblemColor={battle.guildEmblems?.[m.userId]?.color ?? null} name={m.guildName} size={10} className="min-w-0 max-w-[72px]" />
+                          <GuildBadge emblemUrl={battle.guildEmblems?.[i]?.url ?? null} emblemColor={battle.guildEmblems?.[i]?.color ?? null} name={m.guildName} size={10} className="min-w-0 max-w-[72px]" />
                         ) : (
                           <span className="shrink-0">무소속</span>
                         )}

@@ -201,12 +201,19 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const after = (await getWorldBossMapState(S, G)).active.find((b) => b.id === boss);
     expect(after).toMatchObject({ recruiting: 0, departed: 1, mine: 'fought', totalDamage: String(r.damage) });
     expect(after!.into + after!.stage).toBeGreaterThan(0);
-    // 전투 기록(재생용) — 출발 결과와 같은 기록, 다른 서버에선 없음.
-    const battle = await getWorldBossBattle(partyId, S);
-    expect(battle).toMatchObject({ partyId, stageFrom: r.stageFrom, stageTo: r.stageTo, reward: r.reward });
+    // 전투 기록(재생용) — 출발 결과와 같은 기록, 그 원정대원만 볼 수 있고(10-11) 다른 서버·대원 아님이면 없음. 명단에 user UUID는 내리지 않는다.
+    const battle = await getWorldBossBattle(partyId, S, G);
+    expect(battle).toMatchObject({ partyId, stageFrom: r.stageFrom, stageTo: r.stageTo, reward: r.reward, leaderIndex: 0 });
     expect(battle!.finale.totalDamage).toBe(r.damage);
-    expect(battle!.finale.roster.map((x) => x.userId)).toEqual([T, G]);
-    expect(await getWorldBossBattle(partyId, S + 1)).toBeNull();
+    expect(battle!.finale.roster.map((x) => 'userId' in x)).toEqual([false, false]);
+    expect(Object.keys(battle!.avatars).every((k) => /^\d+$/.test(k))).toBe(true);
+    expect(await getWorldBossBattle(partyId, S + 1, G)).toBeNull();
+    expect(await getWorldBossBattle(partyId, S, '00000000-0000-4000-8000-000000000000')).toBeNull();
+    // 대원 행에 보상·피해가 기록된다(0237) — 우편과 같은 값.
+    const memRows = await q<{ uid: string; dmg: string; diamond: number; boxes: number }>(sql`select user_id::text as uid, damage::text as dmg, diamond, boxes from world_boss_party_members where party_id=${partyId}::bigint order by joined_at`);
+    expect(memRows.reduce((a, m) => a + Number(m.diamond), 0)).toBe(r.reward.diamond);
+    expect(memRows.reduce((a, m) => a + Number(m.boxes), 0)).toBe(r.reward.boxes);
+    expect(memRows.reduce((a, m) => a + Number(m.dmg), 0)).toBe(r.damage);
   }, 20_000); // 원격 스테이징 DB에 왕복이 많다(원정대 흐름 + 지도 상태 조회 3회)
 
   it('단계: 출발 피해로 단계를 넘기면 보스 단계·전리품이 절대값으로 갱신된다', async () => {

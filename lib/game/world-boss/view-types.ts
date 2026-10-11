@@ -137,12 +137,13 @@ export type WorldBossDetail = {
 export type WorldBossBattle = {
   partyId: string;
   leaderNickname: string;
-  /** 대장 — 닉네임이 바뀌어도 칩이 맞게 userId로 판정. */
-  leaderUserId: string;
+  /** 대장의 명단 순번(없으면 -1) — 닉네임이 바뀌어도 칩이 맞게. 기록의 user UUID는 내리지 않는다(10-11). */
+  leaderIndex: number;
   /** 보스 종류 코드 — 재생 일지 문장 풀·배경. */
   bossCode: string;
   finale: {
-    roster: { userId: string; nickname: string; cp: number; guildName: string | null; /** 출발 때 장착(이름은 10-11부터 기록) — 재생 일지 문장용. */ items?: { slot: string; code: string; name?: string }[] }[];
+    /** 명단(출발 순) — user UUID는 서버에서 떼고 내린다(10-11): 얼굴·문양·대장은 순번으로 잇는다. */
+    roster: { nickname: string; cp: number; guildName: string | null; /** 출발 때 장착(이름은 10-11부터 기록) — 재생 일지 문장용. */ items?: { slot: string; code: string; name?: string }[] }[];
     events: [number, number, number, number][];
     /** events와 짝 — 공격마다 뽑은 [다이아, 상자](쓰러짐은 [0,0]). 옛 기록엔 없다. */
     drops?: [number, number][];
@@ -157,8 +158,8 @@ export type WorldBossBattle = {
   stageTo: number;
   /** 원정대 전체 획득 합(공격마다 뽑은 보상의 합 — 원정대원마다 몫이 다르다). */
   reward: { diamond: number; boxes: number };
-  /** 길드 문양(userId → 문양·대표색) — 기록의 길드 이름과 지금 소속이 같은 사람만. 기록엔 이름만 있어 문양은 지금 것을 쓴다. */
-  guildEmblems?: Record<string, { url: string | null; color: string | null }>;
-  /** 원정대원 얼굴 썸네일(userId → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
-  avatars: Record<string, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;
+  /** 길드 문양(명단 순번 → 문양·대표색) — 기록의 길드 이름과 지금 소속이 같은 사람만. 기록엔 이름만 있어 문양은 지금 것을 쓴다. */
+  guildEmblems?: Record<number, { url: string | null; color: string | null }>;
+  /** 원정대원 얼굴 썸네일(명단 순번 → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
+  avatars: Record<number, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;
 };

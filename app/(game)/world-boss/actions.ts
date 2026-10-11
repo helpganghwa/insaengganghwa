@@ -151,7 +151,7 @@ export async function getBattleAction(partyId: string) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   try {
-    const b = await getWorldBossBattle(partyId, await getActiveServerId());
+    const b = await getWorldBossBattle(partyId, await getActiveServerId(), u); // 그 원정대원만(10-11 사용자)
     if (!b) return err('NOT_FOUND');
     return { status: 'success' as const, battle: b };
   } catch (e) {

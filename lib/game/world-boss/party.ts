@@ -369,8 +369,8 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
     }
     // 대원 결과는 한 문장으로(보스 행을 잠근 시간을 줄인다 — 10-11 감사).
     await tx.execute(sql`
-      update world_boss_party_members m set attacks = v.attacks, damage = v.damage, fell_round = v.fell
-        from (values ${sql.join(sim.members.map((m) => sql`(${m.userId}::uuid, ${m.attacks}::int, ${m.damage}::bigint, ${m.fellRound}::int)`), sql`, `)}) as v(uid, attacks, damage, fell)
+      update world_boss_party_members m set attacks = v.attacks, damage = v.damage, fell_round = v.fell, diamond = v.dia, boxes = v.box
+        from (values ${sql.join(sim.members.map((m) => sql`(${m.userId}::uuid, ${m.attacks}::int, ${m.damage}::bigint, ${m.fellRound}::int, ${m.diamond}::int, ${m.boxes}::int)`), sql`, `)}) as v(uid, attacks, damage, fell, dia, box)
        where m.party_id = ${party.id}::bigint and m.user_id = v.uid`);
     await tx.execute(sql`
       update world_boss_parties

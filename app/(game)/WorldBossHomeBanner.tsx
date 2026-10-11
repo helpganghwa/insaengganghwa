@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
 
 import { REGION_COLOR } from '@/components/ExecutorTag';
+import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl } from '@/lib/game/world-boss/bosses';
@@ -11,7 +12,7 @@ import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
 
 /**
  * 홈 — 월드보스 출현 배너(무대 배너 B2, 10-11 사용자): 보스가 머무는 동안 캐러셀 위에 72px 무대(구역 배경 + 보스 대기 애니).
- * 글은 구역 · 주인 길드 / 페이즈 · 종료까지 · 원정대 모집 중 N, 오른쪽 '토벌하기'. 어디를 눌러도 보스 상세로 간다.
+ * 글은 구역 · 주인 길드(문양과 함께, 이모지 없음 — 10-11 사용자) / 페이즈 · 종료까지 · 원정대 모집 중 N, 오른쪽 '토벌하기'. 어디를 눌러도 보스 상세로 간다.
  * 왼쪽 위 ✕(강화 슬롯 취소 버튼 모양, 모서리에 걸침)로 닫으면 **그 보스가 떠날 때까지** 안 보인다 — 쿠키 `ig_wb_banner_closed`에 보스 id를
  * 적어 두면 홈 서버 컴포넌트가 렌더 전에 읽고 배너를 아예 그리지 않는다(새로고침 때 보였다 사라지는 깜빡임 없음, 10-11 사용자). 새 보스는 다시 보인다.
  */
@@ -24,6 +25,9 @@ export type WorldBossHomeBannerData = {
   name: string;
   zone: string;
   owner: string | null;
+  /** 주인 길드 문양(+대표색) — 길드 이름은 늘 문양과 함께(10-10 규칙). */
+  ownerEmblem: string | null;
+  ownerColor: string | null;
   stage: number;
   /** 종료까지 남은 시간(시간 단위, 내림). 0이면 '1시간 미만'. */
   hoursLeft: number;
@@ -71,10 +75,15 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         <WorldBossSprite kind={b.bossCode} alt={b.name} className="absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2" />
         <span className="relative z-10 min-w-0 flex-1 leading-tight">
           <i className="mb-0.5 inline-block rounded-[3px] bg-orange-700 px-1.5 text-[8.5px] font-black not-italic text-white">월드보스 출현</i>
-          <b className="block truncate text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">
-            {/* 구역 이름은 지역색(세계지도·집행관 태그와 같은 REGION_COLOR, 10-11 사용자). */}
-            <span style={{ color: REGION_COLOR[b.region] ?? '#fcd34d' }}>{b.zone}</span>
-            {b.owner ? ` · 🛡 ${b.owner}` : ''}
+          <b className="flex min-w-0 items-center gap-1 text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">
+            {/* 구역 이름은 지역색(세계지도·집행관 태그와 같은 REGION_COLOR, 10-11 사용자). 주인 길드는 문양과 함께(🛡 이모지였던 자리, 10-11 사용자). */}
+            <span className="shrink-0" style={{ color: REGION_COLOR[b.region] ?? '#fcd34d' }}>{b.zone}</span>
+            {b.owner && (
+              <>
+                <span className="shrink-0 text-stone-400">·</span>
+                <GuildBadge emblemUrl={b.ownerEmblem} emblemColor={b.ownerColor} name={b.owner} size={12} className="min-w-0" />
+              </>
+            )}
           </b>
           <small className="block truncate text-[10px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             {b.stage}페이즈 · 종료까지 {b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'} · 원정대 모집 중 {b.recruiting}

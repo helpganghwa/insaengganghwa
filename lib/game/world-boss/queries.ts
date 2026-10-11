@@ -298,7 +298,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     if (mem) {
       const isLeader = mem.leader === userId;
       const [memIds, reqIds, invIds] = await Promise.all([
-        db.execute(sql`select user_id::text as uid from world_boss_party_members where party_id = ${mem.pid}::bigint order by joined_at, user_id`) as unknown as Promise<{ uid: string }[]>,
+        db.execute(sql`select user_id::text as uid, damage::text as dmg, diamond, boxes from world_boss_party_members where party_id = ${mem.pid}::bigint order by joined_at, user_id`) as unknown as Promise<{ uid: string; dmg: string; diamond: number; boxes: number }[]>,
         isLeader && mem.status === 'recruiting'
           ? (db.execute(sql`select user_id::text as uid from world_boss_join_requests where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
           : Promise.resolve([] as { uid: string }[]),
@@ -311,21 +311,8 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       if (mem.status === 'recruiting') me.person = people.get(userId) ?? null;
       const person = (uid: string): WorldBossPerson =>
         people.get(uid) ?? { userId: uid, nickname: '알 수 없음', code: null, guildName: null, guildEmblemUrl: null, guildEmblemColor: null, combat: 0, weakCount: 0, avatarCount: 0, avatarSrc: null, faceBox: null, pieces: [] };
-      // 출발한 원정대 — 대원별 결과(준 피해·뽑은 보상)를 전투 기록에서 센다(우편과 같은 값). 얼굴 아래에 보인다(10-11 사용자).
-      const results = new Map<string, WorldBossMemberResult>();
-      if (mem.status === 'departed') {
-        const [f] = (await db.execute(sql`select finale from world_boss_parties where id = ${mem.pid}::bigint`)) as unknown as { finale: WorldBossBattle['finale'] | null }[];
-        const fin = f?.finale;
-        fin?.events.forEach(([a, , d], k) => {
-          const uid = a >= 0 ? fin.roster[a]?.userId : undefined;
-          if (!uid) return;
-          const r = results.get(uid) ?? { damage: 0, diamond: 0, boxes: 0 };
-          r.damage += d;
-          r.diamond += fin.drops?.[k]?.[0] ?? 0;
-          r.boxes += fin.drops?.[k]?.[1] ?? 0;
-          results.set(uid, r);
-        });
-      }
+      // 출발한 원정대 — 대원별 결과(준 피해·뽑은 보상)는 대원 행(0237)에 있다(우편과 같은 값). 얼굴 아래에 보인다(10-11 사용자).
+      const results = new Map<string, WorldBossMemberResult>(memIds.map((r) => [r.uid, { damage: Number(r.dmg), diamond: Number(r.diamond), boxes: Number(r.boxes) }]));
       myParty = {
         partyId: mem.pid, status: mem.status, isLeader, leaderUserId: mem.leader,
         members: memIds
@@ -369,14 +356,18 @@ export async function worldBossIdOfParty(partyId: string, serverId: number): Pro
   return r?.b ?? null;
 }
 
-/** 출발한 원정대의 전투 기록(재생용). 다른 서버·미출발·기록 없음이면 null. */
-export async function getWorldBossBattle(partyId: string, serverId: number): Promise<import('./view-types').WorldBossBattle | null> {
-  if (!/^\d+$/.test(partyId)) return null;
+/**
+ * 출발한 원정대의 전투 기록(재생용) — **그 원정대원만** 볼 수 있다(10-11 사용자: 장착 장비·약점 추리 노출 제한). 다른 서버·미출발·기록 없음·대원 아님이면 null.
+ * 기록의 user UUID는 클라에 내리지 않는다 — 얼굴·문양·대장은 명단 순번(인덱스)으로 잇는다.
+ */
+export async function getWorldBossBattle(partyId: string, serverId: number, viewerUserId: string): Promise<import('./view-types').WorldBossBattle | null> {
+  if (!/^\d+$/.test(partyId) || !/^[0-9a-f-]{36}$/i.test(viewerUserId)) return null;
   const [r] = (await db.execute(sql`
     select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader, p.leader_user_id::text as leader_uid, b.boss_code
       from world_boss_parties p join world_bosses b on b.id = p.boss_id left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
-     where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.status = 'departed'`)) as unknown as {
-    id: string; finale: import('./view-types').WorldBossBattle['finale'] | null; stage_from: number | null; stage_to: number | null;
+     where p.id = ${partyId}::bigint and p.server_id = ${serverId} and p.status = 'departed'
+       and exists (select 1 from world_boss_party_members m where m.party_id = p.id and m.user_id = ${viewerUserId}::uuid)`)) as unknown as {
+    id: string; finale: (Omit<import('./view-types').WorldBossBattle['finale'], 'roster'> & { roster: ({ userId: string } & import('./view-types').WorldBossBattle['finale']['roster'][number])[] }) | null; stage_from: number | null; stage_to: number | null;
     reward_diamond: number; reward_boxes: number; leader: string | null; leader_uid: string; boss_code: string;
   }[];
   if (!r?.finale) return null;
@@ -390,22 +381,27 @@ export async function getWorldBossBattle(partyId: string, serverId: number): Pro
            where gm.server_id = ${serverId} and gm.user_id = any(${`{${ids.join(',')}}`}::uuid[])`) as unknown as Promise<{ uid: string; name: string; url: string | null; color: string | null }[]>)
       : Promise.resolve([]),
   ]);
+  // 얼굴·문양은 명단 순번으로(UUID는 서버에서만 쓴다, 10-11 사용자).
+  const faceOf = new Map(faces.map((f) => [f.userId, f]));
+  const guildOf = new Map(guildRows.map((g) => [g.uid, g]));
   const avatars: import('./view-types').WorldBossBattle['avatars'] = {};
-  for (const f of faces) avatars[f.userId] = { src: f.profileSouth, box: f.faceBox ?? null };
-  // 길드 문양 — 기록엔 이름만 있어 지금 소속의 문양을 쓰되, 그 사이 길드를 옮긴 사람은 빼놓는다(다른 길드 문양이 붙지 않게).
   const guildEmblems: NonNullable<import('./view-types').WorldBossBattle['guildEmblems']> = {};
-  for (const g of guildRows) {
-    const rec = r.finale.roster.find((m) => m.userId === g.uid);
-    if (rec && rec.guildName === g.name) guildEmblems[g.uid] = { url: g.url, color: g.color };
-  }
+  r.finale.roster.forEach((m, i) => {
+    const f = faceOf.get(m.userId);
+    if (f) avatars[i] = { src: f.profileSouth, box: f.faceBox ?? null };
+    // 길드 문양 — 기록엔 이름만 있어 지금 소속의 문양을 쓰되, 그 사이 길드를 옮긴 사람은 빼놓는다(다른 길드 문양이 붙지 않게).
+    const g = guildOf.get(m.userId);
+    if (g && m.guildName === g.name) guildEmblems[i] = { url: g.url, color: g.color };
+  });
+  const roster = r.finale.roster.map(({ userId: _uid, ...rest }) => rest);
   return {
     avatars,
     guildEmblems,
     partyId: r.id,
     leaderNickname: r.leader ?? '알 수 없음',
     bossCode: r.boss_code,
-    leaderUserId: r.leader_uid,
-    finale: r.finale,
+    leaderIndex: r.finale.roster.findIndex((m) => m.userId === r.leader_uid),
+    finale: { ...r.finale, roster },
     stageFrom: r.stage_from ?? 0,
     stageTo: r.stage_to ?? 0,
     reward: { diamond: r.reward_diamond, boxes: r.reward_boxes },

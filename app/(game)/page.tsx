@@ -300,12 +300,18 @@ export default async function HomePage() {
             (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
               order by kst_day desc limit 1)
               as chron_headline,
-            -- 홈 무대 배너 재료 — 구역·주인 길드·페이즈·떠나는 시각·모집 중 원정대 수(가장 최근 보스 하나).
-            (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'stage', b.stage, 'leaveAt', b.leave_at,
+            -- 홈 무대 배너 재료 — 구역·주인 길드(문양)·페이즈·떠나는 시각·모집 중 원정대 수. 보스가 둘이면 **내가 참가할 수 있는 보스**(주인 길드원 또는 그 구역 거주 무소속, 아직 안 싸운 것) 먼저, 없으면 가장 최근(10-11 사용자).
+            (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'ownerEmblem', og.emblem_url, 'ownerColor', og.emblem_color, 'stage', b.stage, 'leaveAt', b.leave_at,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
-              order by b.spawn_at desc limit 1) as wb_banner,
+              order by
+                (case when (og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
+                        or (me.residence_zone_id = z.id and not exists (select 1 from guild_members gm where gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
+                      then 0 else 1 end),
+                (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid) then 1 else 0 end),
+                b.spawn_at desc
+              limit 1) as wb_banner,
             -- 무한의 탑(docs/TOWER.md) — 카드 설명(최고 돌파 층)·배지(오늘 남은 도전 = 하루 도전 − 오늘 진 횟수).
             (select best_floor from tower_progress where user_id = ${userId}::uuid and server_id = ${serverId}) as tower_best,
             (select case when loss_day = n.kst::date then losses else 0 end from tower_progress
@@ -345,7 +351,7 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
-        wb_banner: { id: string; region: string; bossCode: string; zone: string; owner: string | null; stage: number; leaveAt: string; recruiting: number } | null;
+        wb_banner: { id: string; region: string; bossCode: string; zone: string; owner: string | null; ownerEmblem: string | null; ownerColor: string | null; stage: number; leaveAt: string; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -394,7 +400,7 @@ export default async function HomePage() {
         if (row.wb_banner && row.wb_banner.id !== closedBossId) {
           const wb = row.wb_banner;
           worldBossBanner = {
-            id: wb.id, region: wb.region, bossCode: wb.bossCode, name: worldBossName(wb.bossCode), zone: wb.zone, owner: wb.owner, stage: Number(wb.stage),
+            id: wb.id, region: wb.region, bossCode: wb.bossCode, name: worldBossName(wb.bossCode), zone: wb.zone, owner: wb.owner, ownerEmblem: wb.ownerEmblem, ownerColor: wb.ownerColor, stage: Number(wb.stage),
             hoursLeft: Math.max(0, Math.floor((new Date(wb.leaveAt).getTime() - new Date().getTime()) / 3_600_000)), recruiting: Number(wb.recruiting),
           };
         }

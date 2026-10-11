@@ -220,14 +220,18 @@ export function WorldBossDetailView({
       if (r.status === 'error') return showError(r.message);
       const f = r.result.finale;
       if (!f) return;
+      // 얼굴·대장은 명단 순번으로(서버 재생 데이터와 같은 모양, 10-11) — 출발 결과의 명단 UUID를 내 원정대 사람 정보와 맞춘다.
       const avatars: WorldBossBattle['avatars'] = {};
-      for (const m of mp.members) avatars[m.userId] = { src: m.avatarSrc, box: m.faceBox };
+      f.roster.forEach((m, i) => {
+        const p = mp.members.find((x) => x.userId === m.userId);
+        if (p) avatars[i] = { src: p.avatarSrc, box: p.faceBox };
+      });
       setReplay({
         partyId: r.result.partyId,
         leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '',
-        leaderUserId: mp.leaderUserId,
+        leaderIndex: f.roster.findIndex((m) => m.userId === mp.leaderUserId),
         bossCode: d.bossCode,
-        finale: f,
+        finale: { ...f, roster: f.roster.map(({ userId: _uid, ...rest }) => rest) },
         stageFrom: r.result.stageFrom,
         stageTo: r.result.stageTo,
         reward: r.result.reward,

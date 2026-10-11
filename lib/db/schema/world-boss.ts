@@ -117,6 +117,9 @@ export const worldBossPartyMembers = pgTable(
     attacks: integer('attacks').notNull().default(0),
     damage: bigint('damage', { mode: 'bigint' }).notNull().default(sql`0`),
     fellRound: integer('fell_round'),
+    /** 이 대원이 뽑은 공격 보상 합(0237) — 우편과 같은 값. 화면이 finale를 다시 읽지 않게 행에 둔다. */
+    diamond: integer('diamond').notNull().default(0),
+    boxes: integer('boxes').notNull().default(0),
   },
   (t) => [
     primaryKey({ columns: [t.partyId, t.userId] }),
