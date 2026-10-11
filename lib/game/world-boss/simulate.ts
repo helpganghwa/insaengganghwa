@@ -64,12 +64,13 @@ export type WorldBossFinale = {
 
 export type WorldBossReveal = { slot: WeakSlot; code: string; unit: number };
 
-export type WorldBossMemberResult = { userId: string; attacks: number; damage: number; fellRound: number | null; diamond: number; boxes: number; weakHits: number };
+/** 시뮬 결과의 대원 한 줄 — 화면용 view-types의 WorldBossMemberResult와 이름이 겹쳐 분리(10-11 재검사). */
+export type WorldBossSimMember = { userId: string; attacks: number; damage: number; fellRound: number | null; diamond: number; boxes: number; weakHits: number };
 
 export type WorldBossSimResult = {
   totalDamage: number;
   rounds: number;
-  members: WorldBossMemberResult[];
+  members: WorldBossSimMember[];
   reveals: WorldBossReveal[];
   finale: WorldBossFinale;
 };
@@ -165,7 +166,7 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
     alive = alive.filter((i) => i !== victim);
   }
 
-  const members: WorldBossMemberResult[] = units.map((u, i) => ({
+  const members: WorldBossSimMember[] = units.map((u, i) => ({
     userId: u.userId,
     attacks: attacks[i]!,
     damage: Math.round(damage[i]!),

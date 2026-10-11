@@ -44,7 +44,7 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     expect(worldBossStageFor(Number.MAX_SAFE_INTEGER).stage).toBeGreaterThan(30); // 끝이 없되 루프는 끝난다
   });
 
-  it('전리품은 단계 수만큼 쌓이고 상한 단계에서 멈춘다, 상자는 3의 배수', () => {
+  it('전리품은 단계 수만큼 쌓인다(상한 없음), 상자는 3의 배수', () => {
     expect(worldBossLootFor(0)).toEqual({ diamond: 0, boxes: 0 });
     expect(worldBossLootFor(3)).toEqual({ diamond: 3 * WORLD_BOSS_LOOT_PER_STAGE.diamond, boxes: 3 * WORLD_BOSS_LOOT_PER_STAGE.boxes });
     // 상한 없음(10-11): 40단계도 그대로 쌓인다.

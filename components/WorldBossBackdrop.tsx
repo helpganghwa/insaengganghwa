@@ -7,8 +7,12 @@ import { useEffect, useRef } from 'react';
  * 연기·안개 레이어는 어색해 넣지 않는다(2026-10-09 사용자). 움직임 줄이기면 불티를 그리지 않고 CSS도 멈춘다.
  * 배경 그림은 400×240이라 Pixellab 애니 한도(256px)를 넘어 코드로만 움직인다.
  */
-export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: string; emberSrc: string; className?: string }) {
+export function WorldBossBackdrop({ bgSrc, emberSrc, className = '', paused = false }: { bgSrc: string; emberSrc: string; className?: string; /** 위에 재생 무대 같은 다른 층이 덮였을 때 — IntersectionObserver는 가림을 모른다(10-11 재검사). */ paused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    pausedRef.current = paused; // 렌더 중 ref 갱신은 금지(react-hooks/refs) — 효과에서 동기화, 그리기 루프는 0.4초마다 다시 읽는다
+  }, [paused]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -26,9 +30,17 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: 
     let raf = 0;
     let visible = true; // 화면 안에 있고 탭이 보일 때만 그린다(10-11 감사: 히어로·팝업·재생 무대가 동시에 돌았다)
     let last = 0;
+    let idle = 0;
     const tick = (now: number) => {
       if (!visible || document.hidden) {
         raf = 0;
+        return;
+      }
+      // 팝업 뒤(앱 셸 전체 blur)나 재생 무대 아래에서는 그리지 않는다 — 매 프레임 블러를 다시 계산하던 비용(10-11 재검사). 0.4초마다 다시 본다.
+      if (pausedRef.current || document.documentElement.classList.contains('ig-modal-open')) {
+        idle = window.setTimeout(() => {
+          raf = requestAnimationFrame(tick);
+        }, 400);
         return;
       }
       if (now - last < 33) {
@@ -67,6 +79,7 @@ export function WorldBossBackdrop({ bgSrc, emberSrc, className = '' }: { bgSrc: 
     return () => {
       io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
+      clearTimeout(idle);
       cancelAnimationFrame(raf);
     };
   }, []);

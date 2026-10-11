@@ -8,7 +8,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl } from '@/lib/game/world-boss/bosses';
-import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
+import { WORLD_BOSS_BANNER_COOKIE, WORLD_BOSS_BANNER_COOKIE_MAX, parseClosedBossIds } from '@/lib/game/world-boss/home-banner';
 
 /**
  * 홈 — 월드보스 출현 배너(무대 배너 B2, 10-11 사용자): 보스가 머무는 동안 캐러셀 위에 72px 무대(구역 배경 + 보스 대기 애니).
@@ -41,7 +41,8 @@ const subscribe = (cb: () => void) => {
 };
 const isClosed = (id: string) => {
   try {
-    return document.cookie.split('; ').some((c) => c === `${WORLD_BOSS_BANNER_COOKIE}=${id}`);
+    const raw = document.cookie.split('; ').find((c) => c.startsWith(`${WORLD_BOSS_BANNER_COOKIE}=`))?.slice(WORLD_BOSS_BANNER_COOKIE.length + 1);
+    return parseClosedBossIds(decodeURIComponent(raw ?? '')).includes(id);
   } catch {
     return false;
   }
@@ -54,7 +55,10 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
   const close = () => {
     try {
       // 보스가 머무는 48시간을 넉넉히 덮는 4일. 쿠키가 막힌 환경이면 이번 화면에서만 사라진다.
-      document.cookie = `${WORLD_BOSS_BANNER_COOKIE}=${b.id}; path=/; max-age=${60 * 60 * 24 * 4}; samesite=lax`;
+      // 보스가 둘이면 닫은 id를 목록에 더한다(하나를 닫아도 다른 보스 배너는 남게, 10-11 재검사). 최근 5개만.
+      const raw = document.cookie.split('; ').find((c) => c.startsWith(`${WORLD_BOSS_BANNER_COOKIE}=`))?.slice(WORLD_BOSS_BANNER_COOKIE.length + 1);
+      const ids = [...parseClosedBossIds(decodeURIComponent(raw ?? '')).filter((x) => x !== b.id), b.id].slice(-WORLD_BOSS_BANNER_COOKIE_MAX);
+      document.cookie = `${WORLD_BOSS_BANNER_COOKIE}=${ids.join(',')}; path=/; max-age=${60 * 60 * 24 * 4}; samesite=lax`;
     } catch {
       // 무시
     }

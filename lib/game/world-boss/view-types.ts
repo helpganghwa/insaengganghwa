@@ -116,7 +116,7 @@ export type WorldBossDetail = {
   need: number;
   lootDiamond: number;
   lootBoxes: number;
-  /** 지금 구역 주인(머무는 동안) — 떠날 때 이 길드 금고로. 떠난 뒤엔 정산 받은 길드. 이름은 문양과 함께 보인다. */
+  /** 지금 구역 주인(머무는 동안) — 떠날 때 이 길드 세금으로. 정산 중(settling)엔 곧 받을 지금 주인, 떠난 뒤엔 정산 받은 길드. 이름은 문양과 함께 보인다. */
   ownerGuildName: string | null;
   ownerGuildEmblem: { url: string | null; color: string | null } | null;
   settledGuildName: string | null;

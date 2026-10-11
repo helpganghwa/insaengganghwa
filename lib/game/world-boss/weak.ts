@@ -3,7 +3,7 @@
  * 소환 때 부위별 WORLD_BOSS_WEAK_PER_SLOT개를 활성 카탈로그에서 뽑아 보스 행(weak)에 고정한다 — 보스 하나에 한 묶음(10-11 사용자).
  * 뽑기는 서버 난수(crypto)로만 — 호출부가 [0,1) 난수 함수를 넘긴다(CLAUDE §3.1).
  */
-import { WORLD_BOSS_WEAK_PER_SLOT } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS, WORLD_BOSS_WEAK_PER_SLOT } from '@/lib/game/guild/balance';
 import type { WorldBossWeakSet } from '@/lib/db/schema/world-boss';
 
 export type WeakSlot = 'weapon' | 'armor' | 'accessory';
@@ -37,8 +37,6 @@ export function parseWeak(v: unknown): WorldBossWeakSet[] {
 
 /** 슬롯 비트(재생 기록용): 무기 1 · 방어구 2 · 장신구 4. */
 export const SLOT_BIT: Record<WeakSlot, number> = { weapon: 1, armor: 2, accessory: 4 };
-
-import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 
 /** 그 부위에 아바타 보너스가 붙는가 — 커스텀 아바타면 약점 장비로 갈아입은 부위도 유지(simulate와 같은 규칙). */
 export function avatarBonusOn(avatarMatch: boolean, hasAvatar: boolean, weak: boolean): boolean {

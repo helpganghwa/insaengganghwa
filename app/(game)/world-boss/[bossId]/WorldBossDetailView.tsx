@@ -5,7 +5,7 @@
  * 약점/내 장착 · 지금 할 일(원정대 만들기 / 신청 대기 / 안내) · 내 원정대(출발·해산·나가기·원정대 전투 다시 보기는 패널 안) · [모집 중 | 완료] 원정대 카드.
  * 바닥 고정 버튼은 두지 않는다(채팅 미니바 위에 떠서 어색했다, 10-10 사용자).
  * 액션은 모두 **낙관적**(useOptimistic): 누르는 즉시 화면을 바꾸고 서버 액션이 현재 경로를 재렌더해 확정된 상태가 props로 온다(실패하면 토스트 + 자동 복귀).
- * (router.refresh 없음, CLAUDE §11.7). 출발만은 결과가 서버 RNG라 낙관 없이 기다렸다가 WorldBossReplay로 재생.
+ * (액션 뒤 router.refresh 없음, CLAUDE §11.7 — 종료 시각·정산 중 재읽기 타이머만). 출발만은 결과가 서버 RNG라 낙관 없이 기다렸다가 WorldBossReplay로 재생.
  */
 import Link from 'next/link';
 import { josa } from 'josa';
@@ -180,18 +180,29 @@ export function WorldBossDetailView({
   const departKeys = useRef<Record<string, string>>({}); // 출발 멱등 키(원정대마다) — 재전송해도 같은 결과(서버 depart_key), 다른 원정대엔 새 키
 
   const active = d.status === 'active';
+  const settling = d.status === 'settling'; // 떠나는 시각은 지났는데 크론 정산 전(최대 5분)
   const router = useRouter();
-  // 보고 있는 중에 원정이 끝나면(10-11 사용자): 종료 시각이 지나면 한 번 새로 읽고, 종료로 바뀌면 종료 탭으로 옮긴다.
+  // 보고 있는 중에 원정이 끝나면(10-11 사용자): 종료로 바뀌는 순간 종료 탭으로 — 렌더 중 '이전 값과 비교' 패턴(effect 안 setState 대신).
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (!active) setTab('departed');
+  }
+  // 종료 시각이 지나면 한 번 새로 읽는다. 열어 둔 탭이 한꺼번에 몰리지 않게 1.5~9.5초 사이로 흩고, 새로 읽어도 아직 active(기기 시계가 빠름)면
+  // 20초 뒤 다시, '정산 중'이면 정산(5분 크론)이 끝났는지 30~45초마다 다시 본다(10-11 재검사).
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (!active) {
-      setTab('departed');
-      return;
-    }
-    const ms = d.leaveAt - Date.now() + 1500;
-    if (ms <= 0 || ms > 0x7fffffff) return;
-    const t = setTimeout(() => router.refresh(), ms);
+    let ms: number;
+    if (active) ms = Math.max(d.leaveAt - Date.now(), 0) + 1500 + Math.random() * 8000;
+    else if (settling) ms = 30_000 + Math.random() * 15_000;
+    else return;
+    if (ms > 0x7fffffff) return;
+    const t = setTimeout(() => {
+      router.refresh();
+      setTick((v) => v + 1);
+    }, active && d.leaveAt <= Date.now() ? 20_000 : ms);
     return () => clearTimeout(t);
-  }, [active, d.leaveAt, router]);
+  }, [active, settling, d.leaveAt, router, tick]);
   const me = d.me;
   const mp = d.myParty;
   // 초대받은 원정대(10-11, 레이드 방식)는 맨 앞 — 신청·수락 없이 '참가'로 바로 들어간다.
@@ -256,10 +267,17 @@ export function WorldBossDetailView({
         const p = mp.members.find((x) => x.userId === m.userId);
         if (p) avatars[i] = { src: p.avatarSrc, box: p.faceBox };
       });
+      // 길드 문양도 다시 보기와 같게(10-11 재검사) — 내 원정대 사람 정보에서.
+      const guildEmblems: NonNullable<WorldBossBattle['guildEmblems']> = {};
+      f.roster.forEach((m, i) => {
+        const p = mp.members.find((x) => x.userId === m.userId);
+        if (p?.guildEmblemUrl) guildEmblems[i] = { url: p.guildEmblemUrl, color: p.guildEmblemColor };
+      });
       setReplay({
         partyId: r.result.partyId,
         leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '',
         leaderIndex: f.roster.findIndex((m) => m.userId === mp.leaderUserId),
+        guildEmblems,
         bossCode: d.bossCode,
         finale: { ...f, roster: f.roster.map(({ userId: _uid, ...rest }) => rest) },
         stageFrom: r.result.stageFrom,
@@ -282,16 +300,15 @@ export function WorldBossDetailView({
     <div className="flex-1 pb-4">
       {/* 히어로 — 무대(B안, 10-10): 보스 가운데 · 위 이름 · 아래 단계/진행률/전리품/남은 시간. 색은 보스 팔레트(잿빛 + 불씨 주황). */}
       <div className="relative h-[200px] overflow-hidden bg-stone-950">
-        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} className={active ? '' : 'grayscale opacity-70'} />
+        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} className={active ? '' : 'grayscale opacity-70'} paused={!!replay} />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.6)_0%,transparent_30%,transparent_55%,rgba(12,10,9,0.95)_100%)]" />
         <BackFab fallback="/guild/map" className="absolute left-3 top-3 z-10" />
         {active ? (
           <WorldBossSprite
             kind={d.bossCode}
             alt={d.name}
-            className="absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
-            // 외곽선 1px 두 겹만 — 주황 글로우(10px)는 숨쉬기 애니와 겹쳐 매 프레임 재계산되는데 어두운 배경에서 보이지도 않아 뺐다(10-11 사용자, 경량 B).
-            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
+            // 외곽선은 CSS(.wbs-lunge 필터)로 — 주황 글로우는 뺐다(10-11 사용자, 경량 B). 재생 중에는 뒤에서 도는 애니를 멈춘다(wbs-paused).
+            className={`absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2 ${replay ? 'wbs-paused' : ''}`}
           />
         ) : (
           // 원정이 끝난 보스는 정지 그림을 흐리게(움직이면 아직 머무는 것처럼 읽힌다).
@@ -322,7 +339,7 @@ export function WorldBossDetailView({
         </div>
         {/* 특성 칩 — 히어로 우측 상단에 세로로(10-11 사용자: 이름 오른쪽은 이름을 밀어낸다). 탭하면 설명 시트. */}
         {d.traits.length > 0 && (
-          <button type="button" onClick={() => setTraitSheet(true)} className="absolute right-3 top-3 z-[2] flex flex-col items-end gap-1" aria-label="보스 특성">
+          <button type="button" onClick={() => setTraitSheet(true)} className="absolute right-3 top-3 z-[2] flex flex-col items-end gap-1" aria-label={`보스 특성: ${d.traits.map((t) => t.name).join(', ')}`}>
             {d.traits.map((t) => (
               <span key={t.code} className="inline-flex items-center rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
                 {t.name}
@@ -359,6 +376,10 @@ export function WorldBossDetailView({
           ? owner
             ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 점령한 길드의 세금으로 들어가요.`) // '금고'가 아니라 '길드 세금'(10-11 사용자: 세금 화면과 용어 통일)
             : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
+          : settling
+            ? owner
+              ? `원정이 종료됐어요. 잠시 뒤 전리품이 ${owner}의 길드 세금으로 들어가요.` // 정산(5분 크론) 전 — 주인이 비어 보이던 오표시 수정(10-11 재검사)
+              : '원정이 종료됐어요. 잠시 뒤 정산돼요.'
           : owner
             ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner}의 길드 세금에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
             : '종료 때 주인이 없어 전리품은 사라졌어요.'}
@@ -426,7 +447,6 @@ export function WorldBossDetailView({
               return <SlotEmpty key={`e${i}`} onClick={mp.isLeader && mp.status === 'recruiting' && mp.partyId !== OPT_PARTY_ID ? () => setInviteOpen(true) : undefined} />;
             })}
           </div>
-          {/* 구성 특성 적용 상태 — 켜진 것은 초록, 아직인 것은 회색으로 조건(시안 ②). */}
           {/* 구성 특성 — 라벨만 켜짐/꺼짐으로(10-11 사용자: 설명 없이), 누르면 특성 설명 시트. 적용 배율·합산은 출발 팝업에서. */}
           {mp.status === 'recruiting' && traitStatus.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
@@ -545,7 +565,7 @@ export function WorldBossDetailView({
             type="button"
             onClick={() => setTab(k)}
             aria-pressed={tab === k}
-            className={`flex-1 rounded-lg py-1.5 text-[11.5px] font-bold ${tab === k ? 'bg-orange-700 text-orange-50' : 'text-stone-400'}`}
+            className={`min-h-8 flex-1 rounded-lg py-1.5 text-[11.5px] font-bold ${tab === k ? 'bg-orange-700 text-orange-50' : 'text-stone-400'}`}
           >
             {label}
           </button>
@@ -594,7 +614,7 @@ export function WorldBossDetailView({
                           type="button"
                           disabled={pending}
                           onClick={() => run(() => respondInviteAction(d.id, p.id, true), { title: '원정대에 들어갔어요' }, { t: 'respondInvite', partyId: p.id })}
-                          className="rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
+                          className="min-h-8 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-extrabold text-orange-50 disabled:opacity-40"
                         >
                           바로 참가
                         </button>
@@ -605,7 +625,7 @@ export function WorldBossDetailView({
                         <button
                           type="button"
                           onClick={() => run(() => cancelRequestAction(d.id, p.id), { title: '신청을 취소했어요' }, { t: 'cancel', partyId: p.id })}
-                          className="rounded-lg border border-stone-700 px-3 py-1.5 text-[11.5px] font-bold text-stone-400"
+                          className="min-h-8 rounded-lg border border-stone-700 px-3 py-1.5 text-[11.5px] font-bold text-stone-400"
                         >
                           신청 취소
                         </button>
@@ -671,7 +691,7 @@ export function WorldBossDetailView({
               <>
                 <ModalButton onClick={() => setDisbandAsk(false)}>취소</ModalButton>
                 <ModalButton
-                  tone="primary"
+                  tone="danger"
                   disabled={pending}
                   onClick={() => {
                     setDisbandAsk(false);
@@ -925,7 +945,7 @@ function Body({ src, h }: { src: string | null; h: string }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" decoding="async" draggable={false} className="h-full w-full object-contain object-bottom" style={{ imageRendering: 'pixelated' }} />
       ) : (
-        <span className="pb-1 text-base">👤</span>
+        <span className="mb-1 h-5 w-5 rounded-full bg-stone-700" aria-hidden /> // 이모지 없이(💎📦 외 지양, 10-11)
       )}
     </span>
   );

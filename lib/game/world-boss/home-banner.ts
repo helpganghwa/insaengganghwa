@@ -3,3 +3,8 @@
  * ⚠ 'use client' 파일에서 export한 값은 서버 컴포넌트로 들어올 때 클라이언트 참조 객체가 되어 문자열이 아니다(10-11 사고) — 그래서 순수 모듈에 둔다.
  */
 export const WORLD_BOSS_BANNER_COOKIE = 'ig_wb_banner_closed';
+/** 쿠키 값은 닫은 보스 id를 쉼표로 이어 둔다(보스가 둘일 때 하나 닫으면 다른 하나는 보이게, 10-11 재검사). 최근 5개만. */
+export const WORLD_BOSS_BANNER_COOKIE_MAX = 5;
+export function parseClosedBossIds(raw: string | undefined | null): string[] {
+  return (raw ?? '').split(',').map((x) => x.trim()).filter((x) => /^\d{1,18}$/.test(x)).slice(-WORLD_BOSS_BANNER_COOKIE_MAX);
+}

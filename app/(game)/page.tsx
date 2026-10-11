@@ -36,7 +36,7 @@ import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { ChuseokBanner } from './ChuseokBanner';
 import { WorldBossHomeBanner, type WorldBossHomeBannerData } from './WorldBossHomeBanner';
-import { WORLD_BOSS_BANNER_COOKIE } from '@/lib/game/world-boss/home-banner';
+import { WORLD_BOSS_BANNER_COOKIE, parseClosedBossIds } from '@/lib/game/world-boss/home-banner';
 import { worldBossName } from '@/lib/game/world-boss/bosses';
 import { CheckinPopupGate } from './CheckinPopup';
 import { RankingTop3Card } from './RankingTop3Card';
@@ -198,6 +198,7 @@ export default async function HomePage() {
     // (이전: Promise.all 9쿼리 → 커넥션 9개 동시 요구로 콜드/포화 시 타임아웃 빈발.
     //  이제 핸드셰이크 1회·~30ms. 콜드/hang 시 가드로 무한대기 방지, CLAUDE §11.4.)
     try {
+      const closedBossIds = parseClosedBossIds((await cookies()).get(WORLD_BOSS_BANNER_COOKIE)?.value); // 닫은 배너 보스 id 목록(쿠키)
       const [row] = (await withTimeout(
         db.execute(sql`
           select
@@ -305,6 +306,7 @@ export default async function HomePage() {
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
+                and not (b.id = any(${`{${closedBossIds.join(',')}}`}::bigint[]))
               order by
                 (case when (og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
                         or (me.residence_zone_id = z.id and not exists (select 1 from guild_members gm where gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
@@ -395,9 +397,8 @@ export default async function HomePage() {
         // 세계지도 카드의 보스 표시도 배너와 같은 보스 행에서(같은 보스를 세 번 읽던 것을 하나로, 10-11 감사). 배너 닫힘 쿠키와 무관.
         worldBossStage = row.wb_banner ? Number(row.wb_banner.stage) : null;
         worldBossZone = row.wb_banner?.zone ?? null;
-        // 닫아 둔 보스(쿠키)면 렌더 전에 거른다 — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
-        const closedBossId = (await cookies()).get(WORLD_BOSS_BANNER_COOKIE)?.value;
-        if (row.wb_banner && row.wb_banner.id !== closedBossId) {
+        // 닫아 둔 보스는 SQL에서 이미 걸렀다(쿠키 목록, 보스가 둘이면 안 닫은 쪽이 온다) — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
+        if (row.wb_banner) {
           const wb = row.wb_banner;
           worldBossBanner = {
             id: wb.id, region: wb.region, bossCode: wb.bossCode, name: worldBossName(wb.bossCode), zone: wb.zone, owner: wb.owner, ownerEmblem: wb.ownerEmblem, ownerColor: wb.ownerColor, stage: Number(wb.stage),

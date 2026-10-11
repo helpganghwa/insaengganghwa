@@ -16,10 +16,10 @@ import { formatCompactKR } from '@/lib/ui/format-number';
 const SLOT_KO: Record<WeakSlot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const PIX = { imageRendering: 'pixelated' } as const;
 
-function ItemImg({ src, className = 'h-8 w-8' }: { src: string | null; className?: string }) {
-  if (!src) return <span className={`${className} rounded bg-stone-800`} />;
+function ItemImg({ src, alt = '', className = 'h-8 w-8' }: { src: string | null; alt?: string; className?: string }) {
+  if (!src) return <span className={`${className} rounded bg-stone-800`} aria-label={alt || undefined} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" className={`${className} object-contain`} style={PIX} />;
+  return <img src={src} alt={alt} className={`${className} object-contain`} style={PIX} />;
 }
 
 const pct = (x: number) => `+${Math.round(x * 100)}%`;
@@ -126,7 +126,7 @@ export function WeakPanel({
         <div ref={rowRef} className="-mx-3 mt-1.5 flex gap-1 overflow-x-auto px-3 pb-1 [scrollbar-color:#57534e_transparent] [scrollbar-width:thin]">
           {weakKnown.map((w) => (
             <span key={w.code} title={w.name} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-800/70">
-              <ItemImg src={w.src} className="h-8 w-8" />
+              <ItemImg src={w.src} alt={w.name} className="h-8 w-8" />
             </span>
           ))}
         </div>
@@ -141,7 +141,7 @@ export function WeakPanel({
           <div className="mt-2 flex items-baseline justify-between border-t border-stone-800 pt-2.5 pb-1">
             <span className="text-[11px] font-bold text-stone-500">내 장비</span>
             {mine.best && (
-              <button type="button" onClick={onEquipBest} className="text-[11px] text-stone-400">
+              <button type="button" onClick={onEquipBest} className="min-h-8 text-[11px] text-stone-400">
                 추천 장비 장착 <b className="font-bold text-orange-300">{formatCompactKR(mine.best.power)} ›</b>
               </button>
             )}
@@ -156,7 +156,7 @@ export function WeakPanel({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarSrc} alt="" decoding="async" draggable={false} className="h-8 w-auto" style={PIX} />
             ) : (
-              <span className="text-base">👤</span>
+              <span className="h-6 w-6 rounded-full bg-stone-700" aria-hidden /> // 이모지 없이(10-11)
             )}
             {mine.loadout.hasAvatar && mine.loadout.avatarGear.length > 0 ? (
               <span className="flex items-center gap-1.5 pl-0.5">

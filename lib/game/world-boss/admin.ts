@@ -164,7 +164,7 @@ export async function spawnWorldBossByAdmin(input: {
   });
   if (result.ok && !input.spawnAt) {
     // 즉시 소환 — 출현 처리(월드 피드·푸시)는 크론과 같은 함수로. 실패해도 다음 크론 틱(5분)이 집는다.
-    await activateDueBosses(input.serverId).catch((e) => console.warn('[world-boss] admin immediate activate failed', result.bossId, e));
+    await activateDueBosses(input.serverId, { onlyBossIds: [result.bossId] }).catch((e) => console.warn('[world-boss] admin immediate activate failed', result.bossId, e));
     return { ...result, status: 'active' };
   }
   return result;

@@ -21,11 +21,18 @@ import { worldBossKind, worldBossName } from './bosses';
 type Activated = { id: string; zone_id: number; zone_name: string; region: string; boss_code: string; owner: string | null; owner_name: string | null };
 
 /** 출현 시각이 지난 '예정' 보스를 '출현'으로. 월드 피드 + 그 서버에 있는 모든 유저에게 푸시(10-11 사용자: 주인 길드원만 → 알림 켠 전원). */
-export async function activateDueBosses(serverId: number): Promise<Activated[]> {
+/** 테스트·관리자 즉시 소환용 — 지정한 보스만 다룬다(스테이징 lifecycle 테스트가 실제 보스를 정산하지 않게, 10-11 재검사). 크론은 지정하지 않는다. */
+export type CronScope = { onlyBossIds?: string[] };
+function scopeSql(scope: CronScope | undefined, col: ReturnType<typeof sql>) {
+  const ids = (scope?.onlyBossIds ?? []).filter((x) => /^\d{1,18}$/.test(x));
+  return scope?.onlyBossIds ? sql`and ${col} = any(${`{${ids.join(',')}}`}::bigint[])` : sql``;
+}
+
+export async function activateDueBosses(serverId: number, scope?: CronScope): Promise<Activated[]> {
   const rows = (await db.execute(sql`
     with up as (
       update world_bosses b set status = 'active', spawn_owner_guild_id = (select z.owner_guild_id from zones z where z.id = b.zone_id)
-       where b.server_id = ${serverId} and b.status = 'scheduled' and b.spawn_at <= now()
+       where b.server_id = ${serverId} and b.status = 'scheduled' and b.spawn_at <= now() ${scopeSql(scope, sql`b.id`)}
       returning b.id, b.zone_id, b.region, b.boss_code
     )
     select up.id::text as id, up.zone_id, z.name as zone_name, up.region::text as region, up.boss_code::text as boss_code,
@@ -71,9 +78,9 @@ export type SettledBoss = { id: string; zoneId: number; zoneName: string; region
  * 길드 세금으로 **바로** 받고(집행관 몫 없음, 수금 쿨타임 무관), 단계당 길드 경험치를 얻는다. 중립이면 전리품은 소멸.
  * 출발하지 않은 원정대는 해산하고 참가자·신청을 지운다(싸운 기록은 그대로).
  */
-export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]> {
+export async function settleLeftBosses(serverId: number, scope?: CronScope): Promise<SettledBoss[]> {
   const due = (await db.execute(sql`
-    select id::text as id from world_bosses where server_id = ${serverId} and status = 'active' and leave_at <= now() order by leave_at
+    select id::text as id from world_bosses where server_id = ${serverId} and status = 'active' and leave_at <= now() ${scopeSql(scope, sql`id`)} order by leave_at
   `)) as unknown as { id: string }[];
   const out: SettledBoss[] = [];
   for (const { id } of due) {

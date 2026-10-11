@@ -1,6 +1,6 @@
 /**
  * 월드보스(docs/WORLD-BOSS.md) — 하루 1마리, 점령 구역 한 곳에 48시간. 점령 길드원이 원정대를 만들고 누구나 참가해
- * 라운드제로 맞선다. 피해가 쌓이면 단계가 오르고 전리품이 쌓이며, 떠날 때 그 구역 주인 길드의 금고로 들어간다.
+ * 라운드제로 맞선다. 피해가 쌓이면 단계가 오르고 전리품이 쌓이며, 떠날 때 그 구역 주인 길드의 세금으로 들어간다.
  * 표는 0228(0229 = 우편 종류)이 만든다 — 적용 전엔 inert.
  */
 import { sql } from 'drizzle-orm';
@@ -38,7 +38,7 @@ export const worldBosses = pgTable(
     totalDamage: bigint('total_damage', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 누적 피해로 넘긴 단계 수(서버 공통 단계표, worldBossStageFor). */
     stage: integer('stage').notNull().default(0),
-    /** 단계가 오를 때마다 쌓인 전리품 — 떠날 때 주인 길드 금고로. */
+    /** 단계가 오를 때마다 쌓인 전리품 — 떠날 때 주인 길드 세금으로. */
     lootDiamond: bigint('loot_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
     lootBoxes: integer('loot_boxes').notNull().default(0),
     /** 출현 때 구역 주인(기록용 — 떠날 때 주인과 다르면 빼앗긴 것). */

@@ -1,4 +1,7 @@
 -- 0237 대원별 공격 보상(💎·📦)을 대원 행에 기록한다(10-11 사용자 결정): 내 원정대(종료) 화면이 전투 기록(finale jsonb, 5~8KB)을 다시 읽지 않게.
+-- ⚠ 프로덕션에서는 코드 배포보다 **먼저** 적용한다 — 출발 UPDATE가 이 칸을 쓴다(없으면 출발 전체가 실패).
+begin;
+set local lock_timeout = '3s';
 alter table world_boss_party_members add column if not exists diamond integer not null default 0;
 alter table world_boss_party_members add column if not exists boxes integer not null default 0;
 -- 백필: 출발한 원정대의 기록(finale.events·drops·roster)에서 대원별 합을 센다. 다시 실행해도 같은 값이라 안전하다.
@@ -14,3 +17,4 @@ with ev as (
 )
 update world_boss_party_members m set diamond = agg.dia, boxes = agg.box
   from agg where m.party_id = agg.pid and m.user_id = agg.uid;
+commit;

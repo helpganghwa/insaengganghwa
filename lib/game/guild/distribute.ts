@@ -9,8 +9,6 @@ import { guilds, guildMembers, guildTaxDistributions, guildAuditLog } from '@/li
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { characters } from '@/lib/db/schema/server';
 
-import type { GuildTaxDistribution } from './balance';
-import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 import { assertGuildPerm } from './perm-guard';
 import type { GuildRole } from './permissions';
@@ -68,106 +66,6 @@ async function guildMailMeta(tx: Tx, guildId: bigint, actorUserId: string, serve
     .where(and(eq(characters.userId, actorUserId), eq(characters.serverId, serverId)))
     .limit(1);
   return { guildName: g?.name ?? '길드', actorRole, actorNick: c?.nick ?? null };
-}
-
-/**
- * 길드 세금 풀 분배 — GUILD §5.5. 길드장만. 분배 내역 로그 기록(공개).
- * - equal: 풀을 길드원 N으로 균등(각 floor(pool/N)), 잔여는 풀에 carry.
- * - target: 풀 전액을 특정 길드원에게.
- * 지급은 **보상 우편**(sendTaxMails) — 즉시 입금 아님(수령 시 지갑 반영).
- */
-export function distributeGuildTax(input: {
-  leaderUserId: string;
-  serverId: number;
-  mode: GuildTaxDistribution;
-  targetUserId?: string;
-}): Promise<{ total: bigint; perMember: bigint | null }> {
-  return db.transaction(async (tx) => {
-    const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
-
-    const gid = leader.guildId;
-    const [g] = await tx
-      .select({ pool: guilds.taxPoolDiamond })
-      .from(guilds)
-      .where(eq(guilds.id, gid))
-      .for('update');
-    const pool = g!.pool;
-    if (pool <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-
-    if (input.mode === 'target') {
-      if (!input.targetUserId) throw new GuildError('INVALID_TARGET');
-      const [t] = await tx
-        .select({ u: guildMembers.userId })
-        .from(guildMembers)
-        .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
-        .limit(1);
-      if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
-      const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
-      await sendTaxMails(tx, input.serverId, meta, [
-        { userId: input.targetUserId, amount: pool },
-      ]);
-      await tx.update(guilds).set({ taxPoolDiamond: 0n }).where(eq(guilds.id, gid));
-      await tx.insert(guildTaxDistributions).values({
-        guildId: gid,
-        byUserId: input.leaderUserId,
-        mode: 'target',
-        total: pool,
-        targetUserId: input.targetUserId,
-      });
-      await logGuildAudit(tx, {
-        serverId: input.serverId,
-        guildId: gid,
-        actorUserId: input.leaderUserId,
-        action: 'tax_distribute',
-        targetUserId: input.targetUserId,
-        detail: { amount: pool.toString(), mode: 'target' },
-      });
-      return { total: pool, perMember: null };
-    }
-
-    // equal — 길드원 userId 수집 후 각자 walletAdd. 차감액 = 실제 지급 합계로 일치(💎 증발 방지),
-    // 캐릭터 행 부재 멤버가 끼면 walletAdd가 명시 실패→tx 롤백(조용한 유실 대신).
-    const members = await tx
-      .select({ u: guildMembers.userId })
-      .from(guildMembers)
-      .where(eq(guildMembers.guildId, gid));
-    const n = BigInt(members.length);
-    if (n <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE');
-    const per = pool / n; // floor
-    if (per <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE'); // 풀 < 인원
-    const distributed = per * n;
-
-    const metaEq = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId, leader.role);
-    await sendTaxMails(
-      tx,
-      input.serverId,
-      metaEq,
-      members.map((m) => ({ userId: m.u, amount: per })),
-    );
-    await tx
-      .update(guilds)
-      .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${distributed}` })
-      .where(eq(guilds.id, gid));
-    await tx.insert(guildTaxDistributions).values({
-      guildId: gid,
-      byUserId: input.leaderUserId,
-      mode: 'equal',
-      total: distributed,
-    });
-    // 활동 로그 — 수령자 1인당 1줄(누구에게 N💎 지급). 최대 50인 직렬 insert → 단일 multi-row
-    // insert로(감사 G-05: 락 보유 시간 단축, tx당 왕복 N→1). revealConquest와 동일 패턴.
-    await tx.insert(guildAuditLog).values(
-      members.map((m) => ({
-        serverId: input.serverId,
-        guildId: gid,
-        actorUserId: input.leaderUserId,
-        action: 'tax_distribute' as const,
-        targetUserId: m.u,
-        detail: { amount: per.toString(), mode: 'equal' },
-      })),
-    );
-    return { total: distributed, perMember: per };
-  });
 }
 
 /**

@@ -68,6 +68,11 @@ export function WorldBossReplay({
   const { roster, events } = battle.finale;
   // 전체 화면이라 ModalShell을 안 쓴다 — 뒤로가기(안드로이드·브라우저)는 페이지를 떠나지 않고 재생만 닫는다(10-11 감사).
   const onCloseRef = useRef(onClose);
+  // 열릴 때 포커스를 안으로 — Tab이 뒤 페이지로 새지 않게(10-11 재검사).
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
   onCloseRef.current = onClose;
   useEffect(() => {
     const h = modalHistory.open(() => onCloseRef.current());
@@ -281,7 +286,17 @@ export function WorldBossReplay({
   const jackpot = !!hit && !!st.lastDrop && lootTier(st.lastDrop[0], st.lastDrop[1]) === 'jackpot';
 
   return (
-    <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100" role="dialog" aria-modal="true" aria-label="원정대 전투">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onCloseRef.current(); // PC: Esc로 닫기(뒤로가기와 같게, 10-11 재검사)
+      }}
+      className="fixed inset-0 z-50 mx-auto flex w-full max-w-[390px] flex-col bg-stone-950 text-stone-100 outline-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="원정대 전투"
+    >
       <>
           {/* 위 — 무대(배경 + 보스 + 일지). 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <div className="relative h-[300px] shrink-0 overflow-hidden text-left">
@@ -303,12 +318,7 @@ export function WorldBossReplay({
               <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.22),transparent_65%)]" />
               {/* 보스 — 대기 애니는 계속 돌고, 대원이 치면 흔들림, 보스가 치면 다가오기 + 불씨 플레어(WorldBossSprite attack) */}
               <div ref={shakeRef} className="relative h-full w-full">
-                <WorldBossSprite
-                  alt={bossName}
-                  attack={struck ? idx : null}
-                  className="h-full w-full"
-                  style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 16px rgba(249,115,22,0.45))' }}
-                />
+                <WorldBossSprite kind={battle.bossCode} alt={bossName} attack={struck ? idx : null} className="h-full w-full" />
               </div>
               {/* 큰 당첨 — 글자 없이 효과로만(금빛 광선 + 번쩍임 + 크게) */}
               {jackpot && (

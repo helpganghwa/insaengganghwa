@@ -14,7 +14,8 @@ import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
 import { DocLink, H2, LI, Tbl, UL, Warn } from '../ui';
 
-/** 월드보스(docs/WORLD-BOSS.md) — 본문은 10-11 위키 검토 폼(아티팩트 KBz8hyqHbo4GA689NXB4SH) 제출본을 그대로 옮겼다. 수치는 balance 상수에서 읽는다. */
+/** 월드보스(docs/WORLD-BOSS.md) — 본문은 10-11 위키 검토 폼(아티팩트 KBz8hyqHbo4GA689NXB4SH) 제출본을 그대로 옮겼다. 수치는 balance 상수에서 읽는다.
+ *  ⚠ 운영자가 소환한다는 사실은 유저에게 절대 노출하지 않는다(10-11 사용자) — '소환'이라는 말도 쓰지 않고 '나타난다'로만. */
 export const meta: WikiDocMeta = {
   slug: 'world-boss',
   cat: '경쟁',
@@ -96,7 +97,7 @@ export default function Doc() {
 
       <H2 id="traits">특성</H2>
       <UL>
-        <LI>보스마다 소환될 때 특성이 0~2개 붙는다.</LI>
+        <LI>보스마다 나타날 때 특성이 0~2개 붙는다.</LI>
       </UL>
       <Tbl
         head={['특성', '효과']}

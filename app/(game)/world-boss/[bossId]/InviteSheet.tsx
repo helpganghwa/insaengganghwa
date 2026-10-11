@@ -107,7 +107,7 @@ export function InviteSheet({
         showError(r?.message ?? '취소하지 못했어요.');
         return;
       }
-      showHeaderToast({ title: `${c.nickname}님 초대 취소`, detail: '초대를 취소했어요' }); // '초대함'을 다시 누르면 취소된다는 안내(10-11 사용자)
+      showHeaderToast({ title: `${c.nickname}님 초대를 취소했어요`, detail: '다시 누르면 다시 초대할 수 있어요' }); // '초대함'을 다시 누르면 취소된다는 안내(10-11 사용자)
       onChanged?.();
     });
   };
@@ -149,7 +149,7 @@ export function InviteSheet({
         {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다(레이드와 같다). */}
         <div className="mt-2 h-[44vh] overflow-y-auto">
           {failed ? (
-            <p className="flex h-full items-center justify-center text-center text-[12px] text-zinc-400">목록을 불러오지 못했어요.</p>
+            <p className="flex h-full items-center justify-center text-center text-[12px] text-zinc-400">목록을 불러오지 못했어요. 닫았다가 다시 열어 주세요.</p>
           ) : data == null ? (
             <p className="flex h-full items-center justify-center text-center text-[12px] text-zinc-400">불러오는 중…</p>
           ) : list.length === 0 ? (
@@ -191,7 +191,7 @@ export function InviteSheet({
                         type="button"
                         onClick={() => cancel(c)}
                         disabled={sending.has(c.userId)}
-                        className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 disabled:opacity-50 dark:bg-zinc-800"
+                        className="min-h-8 shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 disabled:opacity-50 dark:bg-zinc-800"
                       >
                         초대함
                       </button>
@@ -200,7 +200,7 @@ export function InviteSheet({
                         type="button"
                         onClick={() => invite(c)}
                         disabled={sending.has(c.userId) || participants >= WORLD_BOSS_PARTY_MAX}
-                        className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+                        className="min-h-8 shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
                       >
                         초대
                       </button>

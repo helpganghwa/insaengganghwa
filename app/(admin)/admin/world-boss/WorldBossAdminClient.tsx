@@ -59,7 +59,8 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
   const submit = (allowOverlap: boolean, allowNearMidnight = false) => {
     if (zoneId === '') return setMsg({ tone: 'err', text: '구역을 골라 주세요.' });
     start(async () => {
-      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap, allowNearMidnight, bossCode });
+      const r = await spawnWorldBossAction({ serverId, zoneId, mode, atLocal, allowOverlap, allowNearMidnight, bossCode }).catch(() => null);
+      if (!r) return setMsg({ tone: 'err', text: '서버 오류로 처리하지 못했어요. 목록을 새로 고친 뒤 확인해 주세요.' });
       if (r.ok) {
         setMsg({ tone: 'ok', text: r.status === 'active' ? `${r.zoneName}에 소환했어요 — 지금 출현, ${kst(r.leaveAt)} 종료.` : `${r.zoneName}에 예약했어요 — ${kst(r.spawnAt)} 출현, ${kst(r.leaveAt)} 종료.` });
         setZoneId('');
@@ -86,7 +87,8 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
   const cancel = (bossId: string, zoneName: string, spawnAt: string) => {
     if (!window.confirm(`${zoneName} ${kst(spawnAt)} 예약을 취소할까요?`)) return;
     start(async () => {
-      const r = await cancelWorldBossAction({ serverId, bossId });
+      const r = await cancelWorldBossAction({ serverId, bossId }).catch(() => null);
+      if (!r) return setMsg({ tone: 'err', text: '서버 오류로 처리하지 못했어요. 목록을 새로 고친 뒤 확인해 주세요.' });
       setMsg(r.ok ? { tone: 'ok', text: `${zoneName} 예약을 취소했어요.` } : { tone: 'err', text: '취소하지 못했어요. 이미 출현했거나 지워진 보스예요.' });
       router.refresh();
     });

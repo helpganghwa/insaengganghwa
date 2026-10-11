@@ -81,9 +81,6 @@ async function clearOtherAsks(tx: Tx, bossId: string, userId: string, keepPartyI
  * (신청 → 취소 → 재신청 반복으로 대장 알림이 울리던 것, 10-11 사용자: 신청 자체는 허용하고 푸시만 생략).
  */
 type PushPayload = Parameters<typeof sendPushToUsers>[1];
-function pushLater(toUserId: string, fromUserId: string, serverId: number, payload: PushPayload, cooldownKey?: string): void {
-  pushLaterWith(serverId, async () => ({ to: toUserId, from: fromUserId, payload }), cooldownKey);
-}
 /** 받는 사람·문구를 응답 뒤에 정한다 — 닉네임 조회 같은 문구용 SELECT가 액션 응답을 붙잡지 않게(10-11 재검사). resolve가 null이면 보내지 않는다. */
 function pushLaterWith(serverId: number, resolve: () => Promise<{ to: string; from: string; payload: PushPayload } | null>, cooldownKey?: string): void {
   afterResponse(async () => {

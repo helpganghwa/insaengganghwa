@@ -107,7 +107,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
   it('출현: 출현 시각이 지난 예정 보스만 출현으로 바뀌고 월드 피드에 남는다', async () => {
     const due = await makeBoss('2000-01-01', { status: 'scheduled', spawnOffsetMs: -60_000 });
     const later = await makeBoss('2000-01-02', { status: 'scheduled', spawnOffsetMs: 3_600_000 });
-    const act = await activateDueBosses(S);
+    const act = await activateDueBosses(S, { onlyBossIds: [due, later] }); // 스테이징의 실제 보스는 건드리지 않는다(10-11 재검사)
     expect(act.map((a) => a.id)).toContain(due);
     expect(act.map((a) => a.id)).not.toContain(later);
     const rows = await q<{ id: string; status: string }>(sql`select id::text as id, status from world_bosses where id in (${due}::bigint, ${later}::bigint) order by id`);
@@ -307,7 +307,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     // 떠나기 직전 만든 모집 중 원정대(lockActiveBoss는 leave_at이 지나 막히므로 직접 넣는다).
     await testDb.execute(sql`insert into world_boss_parties (boss_id, server_id, leader_user_id, guild_id) values (${boss}::bigint, ${S}, ${T}::uuid, ${guildId}::bigint)`);
     const before = (await q<{ pool: string; boxes: number; level: number; xp: string }>(sql`select tax_pool_diamond::text as pool, tax_pool_boxes as boxes, level, xp::text as xp from guilds where id=${guildId}::bigint`))[0]!;
-    const settled = await settleLeftBosses(S);
+    const settled = await settleLeftBosses(S, { onlyBossIds: [boss] });
     const mine = settled.find((s) => s.id === boss);
     expect(mine).toMatchObject({ guildId, stage, lootDiamond: worldBossLootFor(stage).diamond, lootBoxes: worldBossLootFor(stage).boxes, disbanded: 1 });
     const after = (await q<{ pool: string; boxes: number; level: number; xp: string }>(sql`select tax_pool_diamond::text as pool, tax_pool_boxes as boxes, level, xp::text as xp from guilds where id=${guildId}::bigint`))[0]!;
@@ -321,7 +321,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(b).toEqual({ status: 'left', sg: guildId });
     const mail = await q<{ n: number }>(sql`select count(*)::int as n from mailbox where type='world_boss' and title='월드보스 전리품' and user_id=${T}::uuid and created_at >= ${t0.toISOString()}`);
     expect(mail[0]!.n).toBe(1);
-    expect(await settleLeftBosses(S)).toEqual([]); // 두 번 돌려도 다시 정산하지 않는다
+    expect(await settleLeftBosses(S, { onlyBossIds: [boss] })).toEqual([]); // 두 번 돌려도 다시 정산하지 않는다
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('BOSS_NOT_ACTIVE');
     // 지도 상태 — 떠난 보스는 active에서 빠지고 48시간 기록(구역당 가장 최근 하나)에 주인 길드·전리품이 남는다.
     const map = await getWorldBossMapState(S, T);
@@ -365,7 +365,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     await testDb.execute(sql`update zones set owner_guild_id=null where id=${ZONE}`);
     try {
       const before = (await q<{ pool: string }>(sql`select tax_pool_diamond::text as pool from guilds where id=${guildId}::bigint`))[0]!;
-      const settled = await settleLeftBosses(S);
+      const settled = await settleLeftBosses(S, { onlyBossIds: [boss] });
       expect(settled.find((s) => s.id === boss)).toMatchObject({ guildId: null, stage: 1 });
       const after = (await q<{ pool: string }>(sql`select tax_pool_diamond::text as pool from guilds where id=${guildId}::bigint`))[0]!;
       expect(after.pool).toBe(before.pool);

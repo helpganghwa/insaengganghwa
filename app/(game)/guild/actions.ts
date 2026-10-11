@@ -23,7 +23,6 @@ import {
   setResidence,
   collectZoneTax,
   collectAllZoneTax,
-  distributeGuildTax,
   distributeGuildTaxManual,
   deployToZone,
   cancelDeployment,
@@ -51,7 +50,7 @@ import { GUILD_PERM_ORDER, hasGuildPerm, type GuildPermKey } from '@/lib/game/gu
 import { getGuild } from '@/lib/game/guild/queries';
 import { DEPLOY_VISIBILITIES, type DeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
 import { setDeployVisibility } from '@/lib/game/guild/conquest/set-deploy-visibility';
-import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
+import type { ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
 import {
   isValidEmblemSelection,
   mainColor,
@@ -492,23 +491,6 @@ export async function collectAllTaxAction() {
   }
 }
 
-export async function distributeTaxAction(mode: GuildTaxDistribution, targetUserId?: string) {
-  const u = await getSessionUserId();
-  if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
-  try {
-    const r = await distributeGuildTax({ leaderUserId: u, serverId: await getActiveServerId(), mode, targetUserId });
-    revalidatePath('/guild');
-    return {
-      status: 'success',
-      total: r.total.toString(),
-      perMember: r.perMember?.toString() ?? null,
-    } as const;
-  } catch (e) {
-    return fail(e, 'distribute');
-  }
-}
 
 /** 세금 풀 수동 분배 — 길드장. 길드원별 지정 금액 지급. */
 export async function distributeTaxManualAction(amounts: { userId: string; amount: number; boxes?: number }[]) {
