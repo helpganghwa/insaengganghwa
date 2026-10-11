@@ -441,7 +441,7 @@ export function WorldBossDetailView({
             <Notice>이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.</Notice>
           ) : !me.isOwnerGuild && owner ? (
             // 신청 안내 문구는 두지 않는다(10-10 사용자) — 신청 상태는 각 모집 카드의 버튼이 보여 준다.
-            <Notice>원정대 만들기는 {owner} 길드원만 할 수 있어요.</Notice>
+            <Notice>원정대 만들기는 구역을 점령 중인 길드의 길드원만 할 수 있어요.</Notice>
           ) : null}
         </div>
       )}
