@@ -146,6 +146,21 @@ describe('월드보스 시뮬 — 라운드제·보스 한 방(순수)', () => {
     expect(missPlain / n).toBeLessThan(0.33);
   });
 
+  it('소수 정예: 뽑은 공격 보상이 ×2 — 보상 난수 줄기는 따로라 같은 시드면 칸은 같고 양만 두 배', () => {
+    const us = [unit(1, 100_000), unit(2, 200_000), unit(3, 300_000)];
+    const plain = simulateWorldBoss(us, 'worldboss:elite', { startDamage: 0, weak: [] });
+    const elite = simulateWorldBoss(us, 'worldboss:elite', { startDamage: 0, weak: [], traits: ['elite'] });
+    expect(elite.finale.drops).toEqual(plain.finale.drops!.map(([d, b]) => [d * WORLD_BOSS_TRAIT.eliteRewardMult, b * WORLD_BOSS_TRAIT.eliteRewardMult]));
+    plain.members.forEach((m, i) => {
+      expect(elite.members[i]!.diamond).toBe(m.diamond * WORLD_BOSS_TRAIT.eliteRewardMult);
+      expect(elite.members[i]!.boxes).toBe(m.boxes * WORLD_BOSS_TRAIT.eliteRewardMult);
+      expect(elite.members[i]!.boxes % 3).toBe(0);
+    });
+    // 6명 이상이면 켜지지 않아 보상도 그대로
+    const six = Array.from({ length: 6 }, (_, i) => unit(i, 100_000));
+    expect(simulateWorldBoss(six, 'worldboss:elite6', { startDamage: 0, weak: [], traits: ['elite'] }).finale.drops).toEqual(simulateWorldBoss(six, 'worldboss:elite6').finale.drops);
+  });
+
   it('특성: 구성 배율은 전원 피해에, 떠도는 바람은 무소속에게만, 치명 약점은 약점 보너스 3배, 황금 깃털은 꽝이 준다', () => {
     const us = [
       { ...unit(1, 100_000), guildId: 'a', guildName: 'A' },

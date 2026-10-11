@@ -183,22 +183,22 @@ export const WORLD_BOSS_GUILD_XP_PER_STAGE = 20;
 /**
  * 공격마다 뽑는 보상(복권, 2026-10-08 사용자 확정) — 원정대원이 공격할 때마다 이 표에서 **하나만** 나온다(다이아 또는 상자 또는 꽝).
  * 피해량과 무관. 확률은 십만분율(합 100,000). 상자는 부위 3종 균등이라 3의 배수. 확률표는 화면에 표시하지 않는다(사용자 결정).
- * 기대값(공격 1회) 💎38.85 📦5.28(10-11 상향) — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎204 📦28.
+ * 기대값(공격 1회) 💎28.1 📦2.84 — 실서버 시뮬 1인 평균 5.25회 공격 기준 보스 하나에 💎148 📦15(10-11 감사 뒤 사용자 확정: 1인 평균 💎150·📦15 정도).
+ * 최고 칸은 낮추고 확률을 올렸다(사용자: 💎2,500 0.084% → 💎1,000 0.4%, 📦300 → 📦150 0.3%) — 250~333회에 한 번은 나오게.
  */
 export const WORLD_BOSS_ATTACK_DROPS: readonly { diamond: number; boxes: number; p: number }[] = [
-  // 10-11 상향(사용자: 평균 3~5배) — 꽝 50%→30%(당첨 칸은 비율 그대로 1.4배), 다이아 3배, 상자 2배. 기대값 공격 1회 💎38.85 📦5.28(전 💎9.25 📦1.89).
   { diamond: 0, boxes: 0, p: 30_000 }, // 꽝 30%
-  { diamond: 15, boxes: 0, p: 22_400 },
-  { diamond: 60, boxes: 0, p: 12_600 },
-  { diamond: 150, boxes: 0, p: 6_300 },
-  { diamond: 300, boxes: 0, p: 2_800 },
-  { diamond: 900, boxes: 0, p: 840 },
-  { diamond: 3000, boxes: 0, p: 84 }, // 0.084%
-  { diamond: 0, boxes: 6, p: 15_400 },
-  { diamond: 0, boxes: 18, p: 6_300 },
-  { diamond: 0, boxes: 60, p: 2_520 },
-  { diamond: 0, boxes: 180, p: 672 },
-  { diamond: 0, boxes: 600, p: 84 }, // 0.084%
+  { diamond: 10, boxes: 0, p: 21_000 },
+  { diamond: 30, boxes: 0, p: 12_000 },
+  { diamond: 80, boxes: 0, p: 7_000 },
+  { diamond: 200, boxes: 0, p: 3_400 },
+  { diamond: 500, boxes: 0, p: 1_200 },
+  { diamond: 1000, boxes: 0, p: 400 }, // 0.4%
+  { diamond: 0, boxes: 3, p: 15_500 },
+  { diamond: 0, boxes: 9, p: 6_000 },
+  { diamond: 0, boxes: 30, p: 2_500 },
+  { diamond: 0, boxes: 90, p: 700 },
+  { diamond: 0, boxes: 150, p: 300 }, // 0.3%
 ];
 export const WORLD_BOSS_ATTACK_DROP_TOTAL = 100_000;
 
@@ -275,7 +275,7 @@ export type WorldBossTraitDef = { code: WorldBossTraitCode; group: 'party' | 'bo
 export const WORLD_BOSS_TRAIT = {
   alliance2: 1.2, alliance3: 1.5, // 연합 원정 — 원정대 길드 2곳 / 3곳 이상
   bannerPer: 0.05, bannerFull: 1.5, // 한 깃발 아래 — 가장 많은 길드 1명당 +5%, 10명 같으면 ×1.5
-  eliteMax: 5, eliteMult: 2.0, // 소수 정예 — 5명 이하 출발(×1.5는 5명 원정대의 공격 횟수(3회 vs 5.5회) 손해를 못 메워 ×2.0, 10-10 시뮬)
+  eliteMax: 5, eliteMult: 2.0, eliteRewardMult: 2, // 소수 정예 — 5명 이하 출발: 피해 ×2.0(×1.5는 5명 원정대의 공격 횟수(3회 vs 5.5회) 손해를 못 메워, 10-10 시뮬) + 공격 보상 ×2(공격 횟수가 줄어 개인 보상이 45% 깎이던 것을 메운다, 10-11 사용자)
   legionMult: 1.3, // 대군 — 10명 꽉 채워 출발
   wandererMult: 1.5, // 떠도는 바람 — 무소속 대원
   wideWeak: 20, // 넓어진 약점 — 부위별 약점 수
@@ -287,7 +287,7 @@ export const WORLD_BOSS_TRAIT_SLOT_P = 0.7;
 export const WORLD_BOSS_TRAITS: readonly WorldBossTraitDef[] = [
   { code: 'alliance', group: 'party', icon: '🤝', name: '연합 원정', effect: `길드 2곳이면 ×${WORLD_BOSS_TRAIT.alliance2}, 3곳 이상 ×${WORLD_BOSS_TRAIT.alliance3}` },
   { code: 'banner', group: 'party', icon: '🚩', name: '한 깃발 아래', effect: `같은 길드 1명당 +${Math.round(WORLD_BOSS_TRAIT.bannerPer * 100)}%, ${WORLD_BOSS_PARTY_MAX}명이면 ×${WORLD_BOSS_TRAIT.bannerFull}` },
-  { code: 'elite', group: 'party', icon: '🗡', name: '소수 정예', effect: `${WORLD_BOSS_TRAIT.eliteMax}명 이하로 출발하면 ×${WORLD_BOSS_TRAIT.eliteMult}` },
+  { code: 'elite', group: 'party', icon: '🗡', name: '소수 정예', effect: `${WORLD_BOSS_TRAIT.eliteMax}명 이하로 출발하면 피해 ×${WORLD_BOSS_TRAIT.eliteMult}, 공격 보상 ×${WORLD_BOSS_TRAIT.eliteRewardMult}` },
   { code: 'legion', group: 'party', icon: '🛡', name: '대군', effect: `${WORLD_BOSS_PARTY_MAX}명 꽉 채워 출발하면 ×${WORLD_BOSS_TRAIT.legionMult}` },
   { code: 'wanderer', group: 'party', icon: '🌬', name: '떠도는 바람', effect: `무소속 대원 ×${WORLD_BOSS_TRAIT.wandererMult}` },
   { code: 'wide_weak', group: 'boss', icon: '🔓', name: '넓어진 약점', effect: `약점이 부위별 ${WORLD_BOSS_TRAIT.wideWeak}개` },
@@ -364,6 +364,10 @@ export function worldBossPartyTraitStatus(
     }
   }
   return out;
+}
+/** 공격 보상 배율 — 소수 정예가 켜진 원정대는 뽑은 보상이 ×2(다이아·상자 모두, 상자는 3의 배수가 유지된다). */
+export function worldBossRewardMult(traits: readonly WorldBossTraitCode[], members: readonly { guild: string | null }[]): number {
+  return worldBossPartyTraitStatus(traits, members).some((s) => s.code === 'elite' && s.active) ? WORLD_BOSS_TRAIT.eliteRewardMult : 1;
 }
 /** 구성 특성의 원정대 전체 배율(떠도는 바람은 대원별이라 제외). */
 export function worldBossPartyTraitMult(traits: readonly WorldBossTraitCode[], members: readonly { guild: string | null }[]): number {

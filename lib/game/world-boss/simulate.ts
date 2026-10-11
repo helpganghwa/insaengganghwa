@@ -17,7 +17,7 @@
  */
 import {
   CONQUEST_DMG_MAX, CONQUEST_DMG_MIN, WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_LUCKY_MIN_WEAK, type WorldBossTraitCode,
-  worldBossMissDelta, worldBossPartyTraitMult, worldBossPhaseOf, worldBossRollDrop, worldBossStageFor, worldBossUnitTraitMult, worldBossWeakBonus,
+  worldBossMissDelta, worldBossPartyTraitMult, worldBossPhaseOf, worldBossRewardMult, worldBossRollDrop, worldBossStageFor, worldBossUnitTraitMult, worldBossWeakBonus,
 } from '@/lib/game/guild/balance';
 import type { WorldBossWeakPhase } from '@/lib/db/schema/world-boss';
 import { makeRng } from '@/lib/game/melee/rng';
@@ -100,6 +100,7 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
   const weakBonus = worldBossWeakBonus(traits);
   const missDelta = worldBossMissDelta(traits);
   const partyMult = worldBossPartyTraitMult(traits, units.map((u) => ({ guild: u.guildId })));
+  const rewardMult = worldBossRewardMult(traits, units.map((u) => ({ guild: u.guildId }))); // 소수 정예 ×2(10-11 사용자)
   const unitMult = units.map((u) => worldBossUnitTraitMult(traits, u.guildId));
   const rng = makeRng(seed);
   const dropRng = makeRng(`${seed}:drop`);
@@ -151,7 +152,8 @@ export function simulateWorldBoss(units: readonly WorldBossUnit[], seed: string,
       total += dmg;
       events.push([i, WORLD_BOSS_LOCAL, dmg, total]);
       weakBits.push(bits);
-      const dr = worldBossRollDrop(dropRng(), nWeak >= WORLD_BOSS_LUCKY_MIN_WEAK, missDelta);
+      const r0 = worldBossRollDrop(dropRng(), nWeak >= WORLD_BOSS_LUCKY_MIN_WEAK, missDelta);
+      const dr = { diamond: r0.diamond * rewardMult, boxes: r0.boxes * rewardMult };
       dia[i]! += dr.diamond;
       box[i]! += dr.boxes;
       drops.push([dr.diamond, dr.boxes]);

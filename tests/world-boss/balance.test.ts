@@ -23,6 +23,7 @@ import {
   worldBossMissDelta,
   worldBossPartyTraitMult,
   worldBossPartyTraitStatus,
+  worldBossRewardMult,
   worldBossWeakBonus,
   worldBossWeakPerSlot,
 } from '@/lib/game/guild/balance';
@@ -53,26 +54,26 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
     expect(WORLD_BOSS_LOOT_PER_STAGE.boxes % 3).toBe(0);
   });
 
-  it('공격 보상 표: 확률 합 100%, 한 칸은 다이아 또는 상자 하나만, 상자는 3의 배수, 꽝 30%, 극악 0.084%', () => {
+  it('공격 보상 표: 확률 합 100%, 한 칸은 다이아 또는 상자 하나만, 상자는 3의 배수, 꽝 30%, 최고 칸 💎1,000 0.4%·📦150 0.3%', () => {
     expect(WORLD_BOSS_ATTACK_DROPS.reduce((s, d) => s + d.p, 0)).toBe(WORLD_BOSS_ATTACK_DROP_TOTAL);
     for (const d of WORLD_BOSS_ATTACK_DROPS) {
       expect(d.diamond > 0 && d.boxes > 0).toBe(false);
       expect(d.boxes % 3).toBe(0);
     }
     expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.diamond === 0 && d.boxes === 0)!.p).toBe(30_000);
-    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.diamond === 3000)!.p).toBe(84);
-    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.boxes === 600)!.p).toBe(84);
-    // 기대값(공격 1회) 💎38.85 📦5.28 — 10-11 상향(꽝 30%·다이아 3배·상자 2배).
+    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.diamond === 1000)!.p).toBe(400);
+    expect(WORLD_BOSS_ATTACK_DROPS.find((d) => d.boxes === 150)!.p).toBe(300);
+    // 기대값(공격 1회) 💎28.1 📦2.835 — 10-11 v2(1인 평균 5.25회 공격으로 보스당 💎148·📦15, 최고 칸은 낮추고 확률은 올림).
     const ev = WORLD_BOSS_ATTACK_DROPS.reduce((s, d) => ({ dia: s.dia + (d.diamond * d.p) / WORLD_BOSS_ATTACK_DROP_TOTAL, box: s.box + (d.boxes * d.p) / WORLD_BOSS_ATTACK_DROP_TOTAL }), { dia: 0, box: 0 });
-    expect(ev.dia).toBeCloseTo(38.85, 2);
-    expect(ev.box).toBeCloseTo(5.28, 2);
+    expect(ev.dia).toBeCloseTo(28.1, 2);
+    expect(ev.box).toBeCloseTo(2.835, 3);
   });
 
   it('뽑기 경계: 0은 꽝, 1에 가까우면 마지막 칸, 칸 경계가 정확하다', () => {
     expect(worldBossRollDrop(0)).toEqual({ diamond: 0, boxes: 0 });
     expect(worldBossRollDrop(0.2999999)).toEqual({ diamond: 0, boxes: 0 });
-    expect(worldBossRollDrop(0.3)).toEqual({ diamond: 15, boxes: 0 });
-    expect(worldBossRollDrop(0.9999999)).toEqual({ diamond: 0, boxes: 600 });
+    expect(worldBossRollDrop(0.3)).toEqual({ diamond: 10, boxes: 0 });
+    expect(worldBossRollDrop(0.9999999)).toEqual({ diamond: 0, boxes: 150 });
     let acc = 0;
     for (const d of WORLD_BOSS_ATTACK_DROPS) {
       expect(worldBossRollDrop(acc / WORLD_BOSS_ATTACK_DROP_TOTAL)).toEqual({ diamond: d.diamond, boxes: d.boxes });
@@ -99,13 +100,13 @@ describe('월드보스 상수 — 단계·전리품·원정대 보상(순수)', 
   it('행운 뽑기: 꽝 21%, 나머지 칸은 비율 그대로(79/70배)', () => {
     expect(worldBossRollDrop(0, true)).toEqual({ diamond: 0, boxes: 0 });
     expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL - 1e-7, true)).toEqual({ diamond: 0, boxes: 0 });
-    expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL, true)).toEqual({ diamond: 15, boxes: 0 });
-    expect(worldBossRollDrop(0.9999999, true)).toEqual({ diamond: 0, boxes: 600 });
+    expect(worldBossRollDrop(WORLD_BOSS_LUCKY_MISS_P / WORLD_BOSS_ATTACK_DROP_TOTAL, true)).toEqual({ diamond: 10, boxes: 0 });
+    expect(worldBossRollDrop(0.9999999, true)).toEqual({ diamond: 0, boxes: 150 });
     // 고른 격자로 기대값을 재면 일반의 79/70배 언저리
     let d = 0, b = 0; const N = 200_000;
     for (let i = 0; i < N; i++) { const r = worldBossRollDrop((i + 0.5) / N, true); d += r.diamond; b += r.boxes; }
-    expect(d / N).toBeCloseTo((38.85 * 79) / 70, 0);
-    expect(b / N).toBeCloseTo((5.28 * 79) / 70, 1);
+    expect(d / N).toBeCloseTo((28.1 * 79) / 70, 0);
+    expect(b / N).toBeCloseTo((2.835 * 79) / 70, 1);
   });
 });
 
@@ -138,10 +139,10 @@ describe('월드보스 특성(10-10 확정 9종)', () => {
     // 황금 깃털 — 꽝 20%(30% − 10%p), 나머지 칸은 비율 그대로(80/70배)
     const d = worldBossMissDelta(['golden_feather']);
     expect(worldBossRollDrop(0.199, false, d)).toEqual({ diamond: 0, boxes: 0 });
-    expect(worldBossRollDrop(0.2, false, d)).toEqual({ diamond: 15, boxes: 0 });
+    expect(worldBossRollDrop(0.2, false, d)).toEqual({ diamond: 10, boxes: 0 });
     let dia = 0; const N = 100_000;
     for (let i = 0; i < N; i++) dia += worldBossRollDrop((i + 0.5) / N, false, d).diamond;
-    expect(dia / N).toBeCloseTo((38.85 * 80) / 70, 0);
+    expect(dia / N).toBeCloseTo((28.1 * 80) / 70, 0);
   });
 
   it('구성 특성: 원정대 배율과 상태 문구', () => {
@@ -162,6 +163,10 @@ describe('월드보스 특성(10-10 확정 9종)', () => {
       { code: 'wanderer', mult: 1.5, active: true, note: '무소속 1명' },
     ]);
     expect(worldBossPartyTraitStatus(['elite'], g(Array(6).fill('a')))[0]).toMatchObject({ active: false, mult: 1, note: '5명 이하로 출발하면' });
+    // 소수 정예 공격 보상 ×2(10-11 사용자) — 켜질 때만, 다른 특성은 1
+    expect(worldBossRewardMult(['elite'], g(['a', 'b', null]))).toBe(WORLD_BOSS_TRAIT.eliteRewardMult);
+    expect(worldBossRewardMult(['elite'], g(Array(6).fill('a')))).toBe(1);
+    expect(worldBossRewardMult(['legion', 'alliance'], g(['a', 'b']))).toBe(1);
   });
 });
 

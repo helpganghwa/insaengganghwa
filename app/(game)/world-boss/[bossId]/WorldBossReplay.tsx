@@ -47,8 +47,8 @@ const PHASE_PALETTE = [
 const seedOf = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 type LootTier = 'small' | 'good' | 'jackpot';
-/** 보상 등급(10-11 표 상향 기준) — jackpot(💎900+·📦180+)은 금빛 광선, good(💎150+·📦60+)은 호박색, 나머지(💎15·60 / 📦6·18)는 수수하게. 높은 보상은 더 눈에 띄게(사용자). */
-const lootTier = (d: number, b: number): LootTier => (d >= 900 || b >= 180 ? 'jackpot' : d >= 150 || b >= 60 ? 'good' : 'small');
+/** 보상 등급(10-11 표 v2 기준) — jackpot(💎500+·📦150)은 금빛 광선, good(💎80+·📦30+)은 호박색, 나머지(💎10·30 / 📦3·9)는 수수하게. 높은 보상은 더 눈에 띄게(사용자). 소수 정예 ×2는 등급도 그만큼 올린다. */
+const lootTier = (d: number, b: number): LootTier => (d >= 500 || b >= 150 ? 'jackpot' : d >= 80 || b >= 30 ? 'good' : 'small');
 type LogLine = { key: string; kind: 'round' | 'atk' | 'boss' | 'phase' | 'result'; text: string; dmg?: number; loot?: string; lootTier?: LootTier; weak?: number; /** phase 줄 — 돌파한 페이즈(색은 게이지 팔레트와 같게). */ stage?: number };
 
 export function WorldBossReplay({
@@ -344,8 +344,8 @@ export function WorldBossReplay({
                 </span>
               )}
             </div>
-            {/* 일지 — 무대 발밑 어두운 알약 위에 마지막 3줄. 새 줄은 아래서 떠오른다. */}
-            <div className="pointer-events-none absolute inset-x-2 bottom-8 z-10 flex flex-col gap-1">
+            {/* 일지 — 무대 발밑 어두운 알약 위에 마지막 3줄. 새 줄은 아래서 떠오른다. 아래 보스 이름·페이즈 줄과는 8px 더 띄운다(10-11 사용자). */}
+            <div className="pointer-events-none absolute inset-x-2 bottom-10 z-10 flex flex-col gap-1">
               {shown.map((l, i) => {
                 const newest = i === shown.length - 1;
                 return (
