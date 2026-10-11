@@ -107,6 +107,7 @@ export function InviteSheet({
         showError(r?.message ?? '취소하지 못했어요.');
         return;
       }
+      showHeaderToast({ title: `${c.nickname}님 초대 취소`, detail: '초대를 취소했어요' }); // '초대함'을 다시 누르면 취소된다는 안내(10-11 사용자)
       onChanged?.();
     });
   };
@@ -141,6 +142,10 @@ export function InviteSheet({
           ]}
         />
 
+        {participants >= WORLD_BOSS_PARTY_MAX && (
+          // 가득 차면 초대 버튼이 꺼지는 이유를 적어 준다(10-11 사용자).
+          <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">원정대가 가득 찼어요. 자리가 나면 초대할 수 있어요.</p>
+        )}
         {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다(레이드와 같다). */}
         <div className="mt-2 h-[44vh] overflow-y-auto">
           {failed ? (

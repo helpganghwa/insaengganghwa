@@ -9,7 +9,8 @@
  */
 import Link from 'next/link';
 import { josa } from 'josa';
-import { useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 
 import { BackFab } from '@/components/BackNav';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
@@ -178,6 +179,18 @@ export function WorldBossDetailView({
   const departKeys = useRef<Record<string, string>>({}); // 출발 멱등 키(원정대마다) — 재전송해도 같은 결과(서버 depart_key), 다른 원정대엔 새 키
 
   const active = d.status === 'active';
+  const router = useRouter();
+  // 보고 있는 중에 원정이 끝나면(10-11 사용자): 종료 시각이 지나면 한 번 새로 읽고, 종료로 바뀌면 종료 탭으로 옮긴다.
+  useEffect(() => {
+    if (!active) {
+      setTab('departed');
+      return;
+    }
+    const ms = d.leaveAt - Date.now() + 1500;
+    if (ms <= 0 || ms > 0x7fffffff) return;
+    const t = setTimeout(() => router.refresh(), ms);
+    return () => clearTimeout(t);
+  }, [active, d.leaveAt, router]);
   const me = d.me;
   const mp = d.myParty;
   // 초대받은 원정대(10-11, 레이드 방식)는 맨 앞 — 신청·수락 없이 '참가'로 바로 들어간다.
@@ -202,7 +215,7 @@ export function WorldBossDetailView({
       if (p) patch(p);
       const r = await fn().catch(() => ({ status: 'error' as const, message: FAIL }));
       if (r.status === 'error') return showError(r.message);
-      if (ok) showHeaderToast({ icon: '⚔️', ...ok });
+      if (ok) showHeaderToast(ok); // 아이콘 없음(💎📦 외 이모지 지양, 10-11 사용자)
     });
 
   const create = () => {
@@ -293,8 +306,7 @@ export function WorldBossDetailView({
         {d.traits.length > 0 && (
           <button type="button" onClick={() => setTraitSheet(true)} className="absolute right-3 top-3 z-[2] flex flex-col items-end gap-1" aria-label="보스 특성">
             {d.traits.map((t) => (
-              <span key={t.code} className="inline-flex items-center gap-0.5 rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
-                <span aria-hidden>{t.icon}</span>
+              <span key={t.code} className="inline-flex items-center rounded-full border border-orange-500/50 bg-stone-900/85 px-1.5 py-px text-[10px] font-bold text-orange-200">
                 {t.name}
               </span>
             ))}
@@ -327,10 +339,10 @@ export function WorldBossDetailView({
       <p className="mx-3 mt-2 text-[10.5px] leading-snug text-stone-400">
         {active
           ? owner
-            ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 점령한 길드의 금고로 들어가요.`)
+            ? josa(`원정이 종료되는 순간 쌓인 전리품이 ${d.zoneName}#{을} 점령한 길드의 세금으로 들어가요.`) // '금고'가 아니라 '길드 세금'(10-11 사용자: 세금 화면과 용어 통일)
             : '지금은 주인이 없어 원정대를 만들 수 없어요. 종료 때도 주인이 없으면 전리품은 사라져요.'
           : owner
-            ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner} 금고에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
+            ? josa(`${d.name}#{이} ${worldBossKind(d.bossCode).lines.leave.linking} ${owner}의 길드 세금에 전리품을 남겼어요. 누적 피해 ${formatCompactKR(d.totalDamage)}.`)
             : '종료 때 주인이 없어 전리품은 사라졌어요.'}
       </p>
 
@@ -384,7 +396,7 @@ export function WorldBossDetailView({
             </span>
           </div>
           {myCard?.intro && <p className="-mt-1 mb-2 text-[11px] leading-snug text-stone-300">{myCard.intro}</p>}
-          {/* 명단 — 둥근 얼굴 5×2(10-11 사용자 B안): 10칸을 늘 다 보여 빈 자리까지 한눈에. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 빈 자리는 점선 '+'(초대 기능은 논의 중). */}
+          {/* 명단 — 둥근 얼굴 5×2(10-11 사용자 B안): 10칸을 늘 다 보여 빈 자리까지 한눈에. 원정대장은 주황 테두리 + '대장' 태그, 길드 문양은 얼굴 왼쪽 아래. 빈 자리는 점선 '+'(누르면 초대 시트). */}
           <div className="grid grid-cols-5 gap-x-1 gap-y-2.5">
             {/* 출발한 뒤엔 빈 자리를 그리지 않는다(10-11 사용자) — 대원만. */}
             {Array.from({ length: mp.status === 'departed' ? mp.members.length : WORLD_BOSS_PARTY_MAX }, (_, i) => {
@@ -410,7 +422,7 @@ export function WorldBossDetailView({
                     aria-label={`${t.name} ${s.active ? '적용 중' : '미적용'}`}
                     className={`min-h-7 rounded-md border px-2 py-0.5 text-[10px] font-bold ${s.active ? 'border-red-500/60 bg-red-500/15 text-red-300' : 'border-stone-700 bg-stone-800/60 text-stone-500'}`}
                   >
-                    {t.icon} {t.name}
+                    {t.name}
                   </button>
                 );
               })}
@@ -541,7 +553,7 @@ export function WorldBossDetailView({
                   {/* 초대받은 원정대(10-11 사용자, I2 머리띠): 맨 앞 + 카드 위를 가로지르는 주황 띠(누가 초대했는지). 본문은 다른 카드와 같다. */}
                   {isInvited && (
                     <div className="-mx-2.5 -mt-2.5 mb-2 flex items-center gap-1 whitespace-nowrap bg-orange-700 px-2.5 py-1 text-[11px] font-bold text-orange-50">
-                      ✉ <b className="font-extrabold">{p.leaderNickname}</b> 원정대장이 초대했어요
+                      <b className="font-extrabold">{p.leaderNickname}</b> 원정대장이 초대했어요
                     </div>
                   )}
                   <PartyHead p={p} />
@@ -677,7 +689,7 @@ export function WorldBossDetailView({
                 <div className="absolute bottom-2 right-2.5 z-[2] text-right text-[10px] leading-snug text-stone-200 [text-shadow:0_1px_2px_#000]">
                   {d.traits.map((t) => (
                     <span key={t.code} className="block">
-                      {t.icon} {t.name}
+                      {t.name}
                     </span>
                   ))}
                 </div>
@@ -711,7 +723,7 @@ export function WorldBossDetailView({
             {partyMult > 1 && (
               <p className="-mx-2 mt-1 flex items-center justify-between text-[11.5px] text-stone-500">
                 <span>
-                  {traitStatus.filter((s) => s.active && s.code !== 'wanderer').map((s) => `${worldBossTraitDef(s.code)!.icon} ${worldBossTraitDef(s.code)!.name} ×${s.mult}`).join(' · ')}
+                  {traitStatus.filter((s) => s.active && s.code !== 'wanderer').map((s) => `${worldBossTraitDef(s.code)!.name} ×${s.mult}`).join(' · ')}
                 </span>
                 <b className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">{formatCompactKR(Math.round(mp.members.reduce((s, m) => s + m.combat, 0) * partyMult))}</b>
               </p>
@@ -786,7 +798,6 @@ export function WorldBossDetailView({
             <ul className="space-y-2.5">
               {d.traits.map((t) => (
                 <li key={t.code} className="flex items-start gap-2.5">
-                  <span className="text-[22px] leading-none">{t.icon}</span>
                   <span className="min-w-0">
                     <b className="block text-[13px] text-orange-600 dark:text-orange-300">{t.name}</b>
                     <span className="block text-[12px] text-stone-600 dark:text-stone-300">{t.effect}</span>
@@ -946,15 +957,15 @@ function DepartRow({ m }: { m: WorldBossMyParty['members'][number] }) {
   );
 }
 
-/** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + 👑, 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
+/** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + '대장' 태그(👑는 이모지 지양으로 뺐다), 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
 function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPerson & { result?: WorldBossMemberResult }; serverId: number; leader: boolean; inviting?: boolean }) {
   const body = (
     <>
       <span className="relative">
         <Avatar src={p.avatarSrc} box={p.faceBox} size={`h-11 w-11 rounded-full bg-stone-800 ring-2 ${leader ? 'ring-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' : inviting ? 'ring-stone-500 opacity-50' : 'ring-stone-700'}`} />
         {leader && (
-          <span className="absolute -right-1.5 -top-1.5 text-[12px] [text-shadow:0_1px_2px_#000]" aria-label="원정대장">
-            👑
+          <span className="absolute -right-2 -top-1.5 rounded-full bg-orange-700 px-1 text-[8px] font-extrabold leading-[1.6] text-orange-50 shadow-[0_1px_2px_#000]" aria-label="원정대장">
+            대장
           </span>
         )}
         {p.guildEmblemUrl && (

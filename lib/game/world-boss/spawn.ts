@@ -96,8 +96,8 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
                               level = ${next.level}, xp = ${next.xp.toString()}::bigint
              where id = ${b.owner}::bigint`);
           const body =
-            `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 금고에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 들어왔어요.\n` +
-            `길드 관리의 세금 분배에서 나눌 수 있어요.`;
+            `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 세금에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 쌓였어요.\n` +
+            `길드 관리의 세금에서 나눌 수 있어요.`; // '금고' 대신 '길드 세금'(10-11 사용자)
           await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
             select gm.user_id, ${serverId}, 'world_boss'::mailbox_type, '월드보스 전리품', ${josa(body)}, '월드보스', '{}'::jsonb, now() + interval '30 days'
