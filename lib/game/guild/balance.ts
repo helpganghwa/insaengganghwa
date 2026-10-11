@@ -163,7 +163,7 @@ export type GuildTaxDistribution = 'equal' | 'target';
 /** 머무는 시간(ms) — 자정 공개를 두 번 지나 주인이 바뀔 기회가 두 번. 소환은 관리자가 즉시·예약으로(10-11, admin.ts). */
 export const WORLD_BOSS_STAY_MS = 48 * 60 * 60 * 1000;
 /** 떠난 뒤 구역 시트에 기록 한 줄을 남기는 시간(ms) — 머무는 시간과 같은 48시간(사용자 확정 10-07). */
-export const WORLD_BOSS_LEFT_NOTE_MS = 48 * 60 * 60 * 1000;
+export const WORLD_BOSS_LEFT_NOTE_MS = 24 * 60 * 60 * 1000; // 종료 뒤 24시간(10-11 사용자: 48h → 24h) — 지도 마커(회색)·구역 시트 종료 카드·홈 종료 배너가 같이 쓴다
 /** 원정대 최대 인원(대장 포함). 최소 인원 제한 없음. */
 export const WORLD_BOSS_PARTY_MAX = 10;
 /** 원정대 소개글 최대 글자 수 — 만들 때 한 줄(선택). 모집 카드 한두 줄에 들어가는 길이(2026-10-10). */

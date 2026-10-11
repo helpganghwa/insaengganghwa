@@ -32,6 +32,11 @@ export type WorldBossHomeBannerData = {
   /** 종료까지 남은 시간(시간 단위, 내림). 0이면 '1시간 미만'. */
   hoursLeft: number;
   recruiting: number;
+  /** 종료 뒤 24시간(10-11 사용자) — 흑백 '원정 종료' 띠: 최종 페이즈·전리품·N시간 전 종료, 오른쪽 '결과 보기'. owner는 전리품을 받은 길드. */
+  ended: boolean;
+  hoursAgo: number;
+  lootDiamond: number;
+  lootBoxes: number;
 };
 
 const CLOSED_EVENT = 'ig:wb-banner-closed-change';
@@ -70,15 +75,16 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
       <Link
         prefetch={false}
         href={`/world-boss/${b.id}`}
-        className="relative isolate flex h-full w-full items-center gap-2 overflow-hidden rounded-xl border border-orange-700/60 bg-black pl-[78px] pr-2.5 active:opacity-90"
-        aria-label={`${b.zone}에 월드보스 출현, 토벌하기`}
+        className={`relative isolate flex h-full w-full items-center gap-2 overflow-hidden rounded-xl border bg-black pl-[78px] pr-2.5 active:opacity-90 ${b.ended ? 'border-zinc-700' : 'border-orange-700/60'}`}
+        aria-label={b.ended ? `${b.zone} 월드보스 원정 종료, 결과 보기` : `${b.zone}에 월드보스 출현, 토벌하기`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={assetUrl(worldBossBgUrl(b.bossCode))} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
+        <img src={assetUrl(worldBossBgUrl(b.bossCode))} alt="" aria-hidden draggable={false} className={`absolute inset-0 h-full w-full object-cover ${b.ended ? 'opacity-60 grayscale' : ''}`} style={{ imageRendering: 'pixelated' }} />
         <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(12,10,9,0.2)_0%,rgba(12,10,9,0.78)_30%,rgba(12,10,9,0.7)_100%)]" />
-        <WorldBossSprite kind={b.bossCode} alt={b.name} className="absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2" />
+        {/* 종료 띠는 구역 카드처럼 흑백·정지(wbs-paused). */}
+        <WorldBossSprite kind={b.bossCode} alt={b.name} className={`absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2 ${b.ended ? 'opacity-80 grayscale wbs-paused' : ''}`} />
         <span className="relative z-10 min-w-0 flex-1 leading-tight">
-          <i className="mb-0.5 inline-block rounded-[3px] bg-orange-700 px-1.5 text-[8.5px] font-black not-italic text-white">월드보스 출현</i>
+          <i className={`mb-0.5 inline-block rounded-[3px] px-1.5 text-[8.5px] font-black not-italic text-white ${b.ended ? 'bg-zinc-700 text-zinc-200' : 'bg-orange-700'}`}>{b.ended ? '원정 종료' : '월드보스 출현'}</i>
           <b className="flex min-w-0 items-center gap-1 text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">
             {/* 구역 이름은 지역색(세계지도·집행관 태그와 같은 REGION_COLOR, 10-11 사용자). 주인 길드는 문양과 함께(🛡 이모지였던 자리, 10-11 사용자). */}
             <span className="shrink-0" style={{ color: REGION_COLOR[b.region] ?? '#fcd34d' }}>{b.zone}</span>
@@ -90,10 +96,16 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
             )}
           </b>
           <small className="block truncate text-[10px] text-stone-300 [text-shadow:0_1px_2px_#000]">
-            {b.stage}페이즈 · 종료까지 {b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'} · 원정대 모집 중 {b.recruiting}
+            {b.ended
+              ? `최종 ${b.stage}페이즈 · 💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')} · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}` // 태그가 '원정 종료'라 '종료'를 되풀이하지 않는다(한 줄에 맞춤)
+              : `${b.stage}페이즈 · 종료까지 ${b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'} · 원정대 모집 중 ${b.recruiting}`}
           </small>
         </span>
-        <span className="relative z-10 shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(234,88,12,0.5)]">토벌하기</span>
+        {b.ended ? (
+          <span className="relative z-10 shrink-0 rounded-lg bg-zinc-700 px-3 py-1.5 text-[11.5px] font-black text-zinc-100">결과 보기</span>
+        ) : (
+          <span className="relative z-10 shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(234,88,12,0.5)]">토벌하기</span>
+        )}
       </Link>
       {/* 닫기 — 강화 슬롯 취소 X 모양을 왼쪽 위 모서리에 반쯤 걸친다. 히트 영역은 p-1.5로 32px. */}
       <button type="button" onClick={close} className="absolute -left-[13px] -top-[13px] z-20 p-1.5" aria-label="월드보스 배너 닫기">

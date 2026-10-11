@@ -126,7 +126,7 @@ describe('월드보스 특성(10-10 확정 9종)', () => {
     expect(worldBossWeakPerSlot(['fatal_weak'])).toBe(WORLD_BOSS_TRAIT.fatalWeak);
     expect(worldBossWeakBonus(['fatal_weak'])).toBe(WORLD_BOSS_TRAIT.fatalWeakBonus);
     expect(worldBossLootMult(['heavy_treasure'])).toBe(WORLD_BOSS_TRAIT.heavyLoot);
-    expect(worldBossLootFor(10, worldBossLootMult(['heavy_treasure']))).toEqual({ diamond: Math.round(1500 * 1.15), boxes: Math.round((120 * 1.15) / 3) * 3 });
+    expect(worldBossLootFor(10, worldBossLootMult(['heavy_treasure']))).toEqual({ diamond: Math.round(3000 * 1.15), boxes: Math.round((240 * 1.15) / 3) * 3 }); // 10-11 전리품 ×2(💎300·📦24) 기준
     // 황금 깃털 — 꽝 20%(30% − 10%p), 나머지 칸은 비율 그대로(80/70배)
     const d = worldBossMissDelta(['golden_feather']);
     expect(worldBossRollDrop(0.199, false, d)).toEqual({ diamond: 0, boxes: 0 });

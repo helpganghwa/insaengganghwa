@@ -38,6 +38,7 @@ import { ChuseokBanner } from './ChuseokBanner';
 import { WorldBossHomeBanner, type WorldBossHomeBannerData } from './WorldBossHomeBanner';
 import { WORLD_BOSS_BANNER_COOKIE, parseClosedBossIds } from '@/lib/game/world-boss/home-banner';
 import { worldBossName } from '@/lib/game/world-boss/bosses';
+import { WORLD_BOSS_LEFT_NOTE_MS } from '@/lib/game/guild/balance';
 import { CheckinPopupGate } from './CheckinPopup';
 import { RankingTop3Card } from './RankingTop3Card';
 import { WorldTicker } from './WorldTicker';
@@ -302,12 +303,20 @@ export default async function HomePage() {
               order by kst_day desc limit 1)
               as chron_headline,
             -- 홈 무대 배너 재료 — 구역·주인 길드(문양)·페이즈·떠나는 시각·모집 중 원정대 수. 보스가 둘이면 **내 길드가 주인인 보스**(아직 안 싸운 것) 먼저, 없으면 가장 최근(10-11 사용자 — 거주 무소속 조건은 자격 규칙과 달라 뺐다).
-            (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'ownerEmblem', og.emblem_url, 'ownerColor', og.emblem_color, 'stage', b.stage, 'leaveAt', b.leave_at,
+            -- 종료 뒤 24시간(WORLD_BOSS_LEFT_NOTE_MS)은 **내가 참여한(싸운) 보스만** 흑백 '원정 종료' 배너(결과 보기, 10-11 사용자) — 출현 중 보스가 있으면 그쪽이 먼저. 종료 배너의 길드는 전리품을 받은 길드.
+            (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'status', b.status,
+                      'owner', case when b.status = 'left' then sg.name else og.name end, 'ownerEmblem', case when b.status = 'left' then sg.emblem_url else og.emblem_url end, 'ownerColor', case when b.status = 'left' then sg.emblem_color else og.emblem_color end,
+                      'stage', b.stage, 'leaveAt', b.leave_at, 'lootDiamond', b.loot_diamond, 'lootBoxes', b.loot_boxes,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
-               from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
-              where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
+               from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id left join guilds sg on sg.id = b.settled_guild_id
+              where b.server_id = ${serverId}
+                and ((b.status = 'active' and b.leave_at > now())
+                     or (b.status = 'left' and b.leave_at > now() - ${WORLD_BOSS_LEFT_NOTE_MS} * interval '1 millisecond'
+                         and exists (select 1 from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
+                                      where m.boss_id = b.id and m.user_id = ${userId}::uuid and p.status = 'departed')))
                 and not (b.id = any(${`{${closedBossIds.join(',')}}`}::bigint[]))
               order by
+                (case when b.status = 'active' then 0 else 1 end),
                 (case when og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId})
                       then 0 else 1 end),
                 (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid) then 1 else 0 end),
@@ -352,7 +361,7 @@ export default async function HomePage() {
         free_claims: [string, string][];
         chron_day: string | null;
         chron_headline: string | null;
-        wb_banner: { id: string; region: string; bossCode: string; zone: string; owner: string | null; ownerEmblem: string | null; ownerColor: string | null; stage: number; leaveAt: string; recruiting: number } | null;
+        wb_banner: { id: string; region: string; bossCode: string; zone: string; status: 'active' | 'left'; owner: string | null; ownerEmblem: string | null; ownerColor: string | null; stage: number; leaveAt: string; lootDiamond: string | number; lootBoxes: number; recruiting: number } | null;
         tower_best: number | null;
         tower_losses: number | null;
         tower_extra: number | null;
@@ -394,14 +403,16 @@ export default async function HomePage() {
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
         // 세계지도 카드의 보스 표시도 배너와 같은 보스 행에서(같은 보스를 세 번 읽던 것을 하나로, 10-11 감사). 배너 닫힘 쿠키와 무관.
-        worldBossStage = row.wb_banner ? Number(row.wb_banner.stage) : null;
-        worldBossZone = row.wb_banner?.zone ?? null;
+        worldBossStage = row.wb_banner?.status === 'active' ? Number(row.wb_banner.stage) : null; // 메뉴 카드의 작은 보스는 머무는 동안만
+        worldBossZone = row.wb_banner?.status === 'active' ? row.wb_banner.zone : null;
         // 닫아 둔 보스는 SQL에서 이미 걸렀다(쿠키 목록, 보스가 둘이면 안 닫은 쪽이 온다) — 클라이언트에서 숨기면 새로고침 때 보였다 사라진다(10-11 사용자).
         if (row.wb_banner) {
           const wb = row.wb_banner;
+          const leaveMs = new Date(wb.leaveAt).getTime();
           worldBossBanner = {
             id: wb.id, region: wb.region, bossCode: wb.bossCode, name: worldBossName(wb.bossCode), zone: wb.zone, owner: wb.owner, ownerEmblem: wb.ownerEmblem, ownerColor: wb.ownerColor, stage: Number(wb.stage),
-            hoursLeft: Math.max(0, Math.floor((new Date(wb.leaveAt).getTime() - new Date().getTime()) / 3_600_000)), recruiting: Number(wb.recruiting),
+            hoursLeft: Math.max(0, Math.floor((leaveMs - Date.now()) / 3_600_000)), recruiting: Number(wb.recruiting),
+            ended: wb.status === 'left', hoursAgo: Math.max(0, Math.floor((Date.now() - leaveMs) / 3_600_000)), lootDiamond: Number(wb.lootDiamond), lootBoxes: Number(wb.lootBoxes),
           };
         }
         // 헤드라인 마커({g|이름}·{z|이름}·{u|닉|코드}) → 평문. 카드 desc의 truncate가 말줄임 처리.

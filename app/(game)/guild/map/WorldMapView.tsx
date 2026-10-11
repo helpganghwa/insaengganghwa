@@ -17,7 +17,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { WorldBossZoneCard } from './WorldBossZoneCard';
 import { assetUrl } from '@/lib/asset-versions';
 import { kstStartOfDay } from '@/lib/kst';
-import { worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
+import { worldBossKind, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from '@/lib/game/world-boss/map-types';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
@@ -1238,7 +1238,7 @@ export function WorldMapView({
                       lootDiamond={left.lootDiamond}
                       lootBoxes={left.lootBoxes}
                       settledGuildName={left.settledGuildName}
-                      leftWhen={(now) => `${wbDayWord(left.leftAt, now)} 재로 흩어졌어요`}
+                      leftWhen={(now) => `${wbDayWord(left.leftAt, now)} ${worldBossKind(left.bossCode).lines.leave.pastPolite}`}
                       href={`/world-boss/${left.bossId}`}
                     />
                   );

@@ -172,7 +172,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const [b] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(b!.t)).toBe(r.damage);
     const mails = await q<{ user_id: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`select user_id::text as user_id, payload from mailbox where type='world_boss' and title like '%원정 보상' and user_id in (${T}::uuid, ${G}::uuid) and created_at >= ${t0.toISOString()}`);
-    // 원정대원마다 자기 공격에서 뽑은 만큼(꽝뿐이면 우편 없음).
+    // 원정대원마다 자기 공격에서 뽑은 만큼 — 꽝뿐이어도 우편은 온다(10-11 사용자: payload {} + 본문 안내).
     const perUser = new Map<string, { diamond: number; boxes: number }>();
     r.finale!.events.forEach(([a], k) => {
       if (a < 0) return;
@@ -181,12 +181,15 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
       const s = perUser.get(uid) ?? { diamond: 0, boxes: 0 };
       perUser.set(uid, { diamond: s.diamond + d, boxes: s.boxes + b });
     });
-    const expectMail = [...perUser].filter(([, v]) => v.diamond > 0 || v.boxes > 0);
-    expect(mails).toHaveLength(expectMail.length);
+    expect(mails).toHaveLength(perUser.size);
     for (const m of mails) {
       const want = perUser.get(m.user_id)!;
-      expect(m.payload.diamond).toBe(want.diamond);
-      expect(Object.values(m.payload.boxes).reduce((a, v) => a + v, 0)).toBe(want.boxes);
+      if (want.diamond > 0 || want.boxes > 0) {
+        expect(m.payload.diamond).toBe(want.diamond);
+        expect(Object.values(m.payload.boxes).reduce((a, v) => a + v, 0)).toBe(want.boxes);
+      } else {
+        expect(m.payload).toEqual({});
+      }
     }
     // 같은 키 재전송 = 같은 결과, 다른 키 = 이미 출발, 1인 1번.
     const again = await departParty({ leaderUserId: T, serverId: S, partyId, departKey: key });
