@@ -149,7 +149,8 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
     } Render the ARMOR and ACCESSORY so they stay clearly RECOGNIZABLE as the SAME items from their images — silhouette, main colors, signature ornaments — anime-styled and blended in, keeping each item's identity; keep a head-worn accessory (helmet, crown, mask, headdress, horns) ON THE HEAD, and vary placement only for hand-or-belt pieces (a fan may sit in a free hand, at the belt or as an ornament); a shield sits on one forearm, or slung across the back when the weapon fills both hands. Draw diversity from the CHARACTER (race, hair, expression, pose, base clothing, color accents, mood) while keeping the items faithful. Keep the subject a good-looking young adult in their early twenties (about 20-24) with a fresh youthful early-twenties face, in strong Japanese anime style. Write the prompt richly detailed toward the ~1900-character budget with all three items fully described, using positive affirmative wording throughout.`,
   });
 
-  const sys = [{ type: 'text' as const, text: systemPrompt(gender), cache_control: { type: 'ephemeral' as const } }];
+  // 캐시 TTL 1시간(10-12 비용 점검): 잡 간격이 5분을 넘는 비율이 성별별 48%·90%라 5분 캐시는 호출마다 다시 쓰고 있었다(쓰기 1.25배). 1시간 캐시는 쓰기 2배지만 한 시간 안에 다음 잡이 오는 비율이 98%·69%.
+  const sys = [{ type: 'text' as const, text: systemPrompt(gender), cache_control: { type: 'ephemeral' as const, ttl: '1h' as const } }];
   const clean = (r: Anthropic.Message): string => {
     const block = r.content.find((b) => b.type === 'text');
     return (block && 'text' in block ? block.text : '')

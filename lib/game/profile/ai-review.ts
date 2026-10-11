@@ -202,7 +202,8 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
       // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
       // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
       thinking: NO_THINKING,
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      // 캐시 TTL 1시간(10-12 비용 점검): 잡 간격 5분 이내 56%뿐이라 절반 가까이 캐시를 다시 쓰고 있었다. 1시간 안에 다음 잡이 오는 비율 99%.
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } }],
       messages: [{ role: 'user', content }],
     });
     const tb = res.content.find((b) => b.type === 'text');
