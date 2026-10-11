@@ -143,14 +143,16 @@ export async function spawnWorldBossByAdmin(input: {
         overlapping: live.map((b) => ({ id: b.id, zoneName: b.zone_name, status: b.status, spawnAt: new Date(b.spawn_at).toISOString(), leaveAt: new Date(b.leave_at).toISOString() })),
       };
     }
-    // 특성(0~2개)과 페이즈별 약점은 소환 때 고정(§3) — 약점 수는 특성을 따른다.
+    // 특성(0~2개)과 약점 묶음은 소환 때 고정(§3) — 약점 수는 특성을 따른다.
     const traits = drawWorldBossTraits(cryptoRand);
     const weak = await drawWeakForNewBoss(tx, worldBossWeakPerSlot(traits));
     const [ins] = (await tx.execute(sql`
       insert into world_bosses (server_id, zone_id, region, boss_code, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
-      values (${input.serverId}, ${zone.id}, ${zone.region}, ${input.bossCode ?? DEFAULT_WORLD_BOSS_KIND}, ${kstDateString(spawnAt)}::date, ${spawnAt.toISOString()}, ${leaveAt.toISOString()}, 'scheduled',
+      values (${input.serverId}, ${zone.id}, ${zone.region}, ${input.bossCode ?? DEFAULT_WORLD_BOSS_KIND}, ${kstDateString(spawnAt)}::date,
+              ${input.spawnAt ? sql`${spawnAt.toISOString()}::timestamptz` : sql`now()`},
+              ${input.spawnAt ? sql`${leaveAt.toISOString()}::timestamptz` : sql`now() + ${WORLD_BOSS_STAY_MS} * interval '1 millisecond'`}, 'scheduled',
               ${zone.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb)
-      returning id::text as id`)) as unknown as { id: string }[];
+      returning id::text as id, spawn_at, leave_at`)) as unknown as { id: string; spawn_at: string | Date; leave_at: string | Date }[]; // 즉시 소환은 DB 시계(now())로 — 앱 시계가 빠르면 바로 이어지는 출현 처리가 못 집었다(10-11 재검사)
     await tx.insert(adminActions).values({
       adminUserId: input.adminUserId,
       action: 'world_boss_spawn',
@@ -158,7 +160,7 @@ export async function spawnWorldBossByAdmin(input: {
       targetId: ins!.id,
       payload: { serverId: input.serverId, zoneId: zone.id, zoneName: zone.name, immediate: !input.spawnAt, spawnAt: spawnAt.toISOString(), leaveAt: leaveAt.toISOString(), overlapped: live.length, traits },
     });
-    return { ok: true, bossId: ins!.id, status: 'scheduled', zoneName: zone.name, spawnAt: spawnAt.toISOString(), leaveAt: leaveAt.toISOString() };
+    return { ok: true, bossId: ins!.id, status: 'scheduled', zoneName: zone.name, spawnAt: new Date(ins!.spawn_at).toISOString(), leaveAt: new Date(ins!.leave_at).toISOString() };
   });
   if (result.ok && !input.spawnAt) {
     // 즉시 소환 — 출현 처리(월드 피드·푸시)는 크론과 같은 함수로. 실패해도 다음 크론 틱(5분)이 집는다.

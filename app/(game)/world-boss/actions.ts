@@ -11,7 +11,7 @@ import { makeErr } from '@/lib/game/action-result';
 import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
-import { WorldBossError } from '@/lib/game/world-boss/errors';
+import { WorldBossError, type WorldBossErrorCode } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
@@ -20,14 +20,15 @@ import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { db } from '@/lib/db/client';
 import { sql } from 'drizzle-orm';
 
-const MSG: Record<string, string> = {
+const MSG = {
   NOT_FOUND: '원정대를 찾을 수 없어요.',
+  BOSS_NOT_FOUND: '보스를 찾을 수 없어요.',
   BOSS_NOT_ACTIVE: '원정이 이미 종료됐어요.',
   NOT_OWNER_GUILD: '원정대는 이 구역을 가진 길드원만 만들 수 있어요.',
   NO_CHARACTER: '이 서버에 캐릭터가 없어요.',
   ALREADY_IN_PARTY: '이미 이 보스의 원정대에 들어가 있어요.',
   ALREADY_FOUGHT: '이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.',
-  ALREADY_REQUESTED: '이미 이 보스의 원정대에 신청해 두었어요.',
+  ALREADY_REQUESTED: '이미 이 원정대에 신청했어요.',
   NO_REQUEST: '신청이 이미 처리됐어요.',
   PARTY_NOT_RECRUITING: '이미 출발했거나 해산된 원정대예요.',
   PARTY_FULL: `원정대가 가득 찼어요(최대 ${WORLD_BOSS_PARTY_MAX}명).`,
@@ -43,7 +44,8 @@ const MSG: Record<string, string> = {
   MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정이에요.',
   ALREADY_EQUIPPED: '이미 가장 좋은 조합으로 장착하고 있어요.',
-};
+  UNKNOWN: '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.',
+} satisfies Record<WorldBossErrorCode, string> & Record<string, string>; // 코드가 빠지면 컴파일러가 잡는다(10-11 재검사)
 const err = makeErr(MSG);
 
 async function gate(): Promise<{ u: string; sid: number } | ReturnType<typeof err>> {
@@ -146,10 +148,11 @@ export async function departPartyAction(bossId: string, partyId: string, departK
   }
 }
 
-/** 출발 카드 '전투 보기' — 저장된 전투 기록(누구나 볼 수 있다, 같은 서버). */
+/** 전투 다시 보기 — 저장된 전투 기록. 그 원정대원만, 같은 서버(10-11 사용자). */
 export async function getBattleAction(partyId: string) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
+  if (!isId(partyId)) return err('NOT_FOUND');
   try {
     const b = await getWorldBossBattle(partyId, await getActiveServerId(), u); // 그 원정대원만(10-11 사용자)
     if (!b) return err('NOT_FOUND');
@@ -166,12 +169,15 @@ export async function getBattleAction(partyId: string) {
 export async function equipBestAction(bossId: string) {
   const g = await gate();
   if ('status' in g) return g;
-  if (!/^\d+$/.test(bossId)) return err('NOT_FOUND');
+  if (!isId(bossId)) return err('BOSS_NOT_FOUND');
   try {
-    const [b] = (await db.execute(sql`select stage, server_id, status, traits from world_bosses where id = ${bossId}::bigint`)) as unknown as { stage: number; server_id: number; status: string; traits: unknown }[];
-    if (!b || b.server_id !== g.sid) return err('NOT_FOUND');
-    if (b.status !== 'active') return err('BOSS_NOT_ACTIVE');
-    const known = new Set((await knownWeakOf(bossId)).map((w) => w.code));
+    const [[b], knownRows] = await Promise.all([
+      db.execute(sql`select server_id, status, traits, (leave_at > now()) as alive from world_bosses where id = ${bossId}::bigint`) as unknown as Promise<{ server_id: number; status: string; traits: unknown; alive: boolean }[]>,
+      knownWeakOf(bossId),
+    ]);
+    if (!b || b.server_id !== g.sid) return err('BOSS_NOT_FOUND');
+    if (b.status !== 'active' || !b.alive) return err('BOSS_NOT_ACTIVE'); // 종료 판정은 DB 시계(정산과 같은 시계)
+    const known = new Set(knownRows.map((w) => w.code));
     // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
     const best = await bestLoadoutOf(g.sid, g.u, known, worldBossWeakBonus(parseWorldBossTraits(b.traits)));
     if (!best) return err('ALREADY_EQUIPPED');
@@ -188,7 +194,7 @@ export async function equipBestAction(bossId: string) {
 export async function moreDepartedAction(bossId: string, shownIds: string[]) {
   const g = await gate();
   if ('status' in g) return g;
-  if (!isId(bossId) || !Array.isArray(shownIds)) return err('NOT_FOUND');
+  if (!isId(bossId) || !Array.isArray(shownIds)) return err('BOSS_NOT_FOUND');
   try {
     const parties = await getWorldBossDepartedMore(bossId, g.sid, shownIds.filter((x) => typeof x === 'string'));
     return { status: 'success' as const, parties };

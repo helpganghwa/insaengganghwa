@@ -55,7 +55,7 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
         or id in (select boss_id from world_boss_parties where guild_id = ${guildId} and status = 'recruiting')
      order by id for update`);
   const dis = (await tx.execute(sql`
-    update world_boss_parties set status = 'disbanded', disband_reason = 'leader_left' where guild_id = ${guildId} and status = 'recruiting' returning id`)) as unknown as { id: string }[];
+    update world_boss_parties set status = 'disbanded', disband_reason = 'guild_disbanded' where guild_id = ${guildId} and status = 'recruiting' returning id`)) as unknown as { id: string }[];
   if (dis.length > 0) {
     await tx.execute(sql`delete from world_boss_party_members m using world_boss_parties p where m.party_id = p.id and p.guild_id = ${guildId} and p.status = 'disbanded'`);
     await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.guild_id = ${guildId} and p.status = 'disbanded'`);

@@ -77,7 +77,7 @@ export const worldBossParties = pgTable(
     status: text('status').$type<WorldBossPartyStatus>().notNull().default('recruiting'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     departedAt: timestamp('departed_at', { withTimezone: true }),
-    /** 해산 사유 — 'leader_left' | 'boss_left' | 'leader' ('owner_changed'는 10-11 폐지, 옛 행에만 남는다) */
+    /** 해산 사유 — 'leader'(대장이 직접) | 'leader_left'(대장 이탈·탈퇴) | 'boss_left'(원정 종료) | 'guild_disbanded'(길드 해산, 10-11) ('owner_changed'는 10-11 폐지, 옛 행에만 남는다) */
     disbandReason: text('disband_reason'),
     rounds: integer('rounds').notNull().default(0),
     damage: bigint('damage', { mode: 'bigint' }).notNull().default(sql`0`),

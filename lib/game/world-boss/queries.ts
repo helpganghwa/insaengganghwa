@@ -14,8 +14,9 @@ import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, w
 
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, knownWeakOf, loadoutsOf, piecePower } from './loadout';
+import { parseWeak } from './weak';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
-import type { WorldBossBattle, WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
+import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
@@ -37,7 +38,8 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
       traits: worldBosses.traits,
     })
     .from(worldBosses)
-    .where(and(eq(worldBosses.serverId, serverId), eq(worldBosses.status, 'active')))
+    // 떠나는 시각이 지났으면(크론이 아직 정산 전, 최대 5분) 지도에서도 '출현 중'이 아니다 — 상세·홈 배너와 같은 기준(10-11 재검사).
+    .where(and(eq(worldBosses.serverId, serverId), eq(worldBosses.status, 'active'), gt(worldBosses.leaveAt, now)))
     .orderBy(worldBosses.spawnAt);
 
   const ids = rows.map((r) => r.id);
@@ -192,10 +194,10 @@ async function peopleOn(serverId: number, userIds: string[], known: ReadonlySet<
 
 /** 보스 상세 — 없거나 다른 서버면 null. 해산된 원정대는 보이지 않는다(모집 중·출발만). */
 export async function getWorldBossDetail(bossId: string, serverId: number, userId: string | null): Promise<WorldBossDetail | null> {
-  if (!/^\d+$/.test(bossId)) return null;
+  if (!/^\d{1,18}$/.test(bossId)) return null;
   const [b] = (await db.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.region, b.boss_code, b.status, b.spawn_at, b.leave_at,
-           b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes, b.traits,
+           b.total_damage::text as total, b.stage, b.loot_diamond::text as ld, b.loot_boxes, b.traits, b.weak,
            z.owner_guild_id::text as owner_id, og.name as owner_name, og.emblem_url as owner_emblem, og.emblem_color as owner_color,
            sg.name as settled_name, sg.emblem_url as settled_emblem, sg.emblem_color as settled_color
       from world_bosses b join zones z on z.id = b.zone_id
@@ -203,12 +205,17 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       left join guilds sg on sg.id = b.settled_guild_id
      where b.id = ${bossId}::bigint`)) as unknown as {
     id: string; server_id: number; zone_id: number; zone_name: string; region: string; boss_code: string; status: 'scheduled' | 'active' | 'left';
-    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown;
+    spawn_at: Date | string; leave_at: Date | string; total: string; stage: number; ld: string; loot_boxes: number; traits: unknown; weak: unknown;
     owner_id: string | null; owner_name: string | null; owner_emblem: string | null; owner_color: string | null;
     settled_name: string | null; settled_emblem: string | null; settled_color: string | null;
   }[];
   if (!b || b.server_id !== serverId || b.status === 'scheduled') return null;
   const active = b.status === 'active' && new Date(b.leave_at).getTime() > Date.now();
+  // 떠나는 시각은 지났는데 크론(5분)이 아직 정산 전 — 화면은 '정산 중'으로(주인이 비어 "전리품이 사라졌어요"로 읽히던 것, 10-11 재검사).
+  const settling = b.status === 'active' && !active;
+  // 약점 총수는 저장된 묶음 크기로(특성 계산과 저장이 어긋난 옛 행에서 '15/9' 같은 분모가 나왔다, 10-11 재검사). 묶음이 비면 특성 기준.
+  const weakSet = parseWeak(b.weak)[0];
+  const weakTotal = weakSet ? weakSet.weapon.length + weakSet.armor.length + weakSet.accessory.length : worldBossWeakPerSlot(parseWorldBossTraits(b.traits)) * 3;
   // 특성 — 약점 보너스(치명 약점)는 전투력 계산 전부에, 약점 수(넓어진·치명)는 '밝혀짐 N/M'에.
   const traitCodes = parseWorldBossTraits(b.traits);
   const weakBonus = worldBossWeakBonus(traitCodes);
@@ -293,7 +300,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       stageFrom: p.stage_from, stageTo: p.stage_to, rewardDiamond: p.reward_diamond, rewardBoxes: p.reward_boxes, rank: p.rk == null ? null : Number(p.rk),
     };
   });
-  const departedTotal = Number(partyRows.find((p) => p.status === 'departed')?.total_departed ?? partyRows[0]?.total_departed ?? 0);
+  const departedTotal = Number(partyRows[0]?.total_departed ?? 0); // 모든 행이 같은 값
   if (userId && mineRows) {
     const [[mem], reqs, [gm], invRows] = mineRows;
     const isOwnerGuild = gm != null && b.owner_id != null && gm.g === b.owner_id;
@@ -346,19 +353,20 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
   const st = worldBossStageFor(total);
   return {
     id: b.id, serverId: b.server_id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, name: worldBossName(b.boss_code),
-    status: active ? 'active' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
+    status: active ? 'active' : settling ? 'settling' : 'left', spawnAt: ms(b.spawn_at)!, leaveAt: ms(b.leave_at)!, totalDamage: total,
     stage: b.stage, into: st.into, need: st.need, lootDiamond: Number(b.ld), lootBoxes: b.loot_boxes,
     ownerGuildName: b.owner_name, ownerGuildEmblem: b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null,
-    settledGuildName: b.settled_name, settledGuildEmblem: b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
+    // 정산 전(settling)엔 지금 주인이 곧 받을 길드 — 화면은 이 값을 '들어갈 예정'으로 보여 준다.
+    settledGuildName: settling ? b.owner_name : b.settled_name, settledGuildEmblem: settling ? (b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null) : b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
     parties, departedTotal, me, myParty,
-    weakKnown, weakTotal: worldBossWeakPerSlot(traitCodes) * 3, weakBonus, mine,
+    weakKnown, weakTotal, weakBonus, mine,
     traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name, effect: t.effect, group: t.group }; }),
   };
 }
 
 /** 원정대 id → 보스 id(푸시 딥링크 /world-boss/party/<id> 변환용). */
 export async function worldBossIdOfParty(partyId: string, serverId: number): Promise<string | null> {
-  if (!/^\d+$/.test(partyId)) return null;
+  if (!/^\d{1,18}$/.test(partyId)) return null;
   const [r] = (await db.execute(sql`select boss_id::text as b from world_boss_parties where id = ${partyId}::bigint and server_id = ${serverId}`)) as unknown as { b: string }[];
   return r?.b ?? null;
 }
@@ -369,11 +377,11 @@ const ms = (v: Date | string | null) => (v == null ? null : new Date(v).getTime(
 export const WORLD_BOSS_DEPARTED_TOP = 5;
 
 /**
- * 종료 목록 '더 보기'(10-11 사용자) — 상세에 실리지 않은 출발 원정대를 피해 순위대로(순위는 전체 기준). shownIds = 이미 화면에 있는 원정대 id.
+ * 종료 목록 '더 보기'(10-11 사용자) — 상세에 실리지 않은 출발 원정대를 피해 순위대로(순위는 전체 기준) 20팀씩. shownIds = 이미 화면에 있는 원정대 id.
  */
 export async function getWorldBossDepartedMore(bossId: string, serverId: number, shownIds: string[]): Promise<WorldBossPartyCard[]> {
   if (!/^\d+$/.test(bossId)) return [];
-  const skip = shownIds.filter((x) => /^\d+$/.test(x)).slice(0, 200);
+  const skip = shownIds.filter((x) => /^\d{1,18}$/.test(x)).slice(0, 200);
   const rows = (await db.execute(sql`
     with p0 as (
       select p.*, rank() over (order by p.damage desc, p.id) as rk
@@ -386,7 +394,8 @@ export async function getWorldBossDepartedMore(bossId: string, serverId: number,
       left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id
       left join guilds g on g.id = p.guild_id
      where not (p.id = any(${`{${skip.join(',')}}`}::bigint[]))
-     order by p.rk`)) as unknown as {
+     order by p.rk
+     limit 20`)) as unknown as {
     id: string; leader: string; leader_nick: string | null; gname: string | null; gurl: string | null; gcolor: string | null; intro: string | null; created_at: Date | string; departed_at: Date | string | null;
     damage: string; rounds: number; stage_from: number | null; stage_to: number | null; reward_diamond: number; reward_boxes: number; rk: number; n: number;
   }[];
@@ -417,7 +426,7 @@ export async function getWorldBossDepartedMore(bossId: string, serverId: number,
  * 기록의 user UUID는 클라에 내리지 않는다 — 얼굴·문양·대장은 명단 순번(인덱스)으로 잇는다.
  */
 export async function getWorldBossBattle(partyId: string, serverId: number, viewerUserId: string): Promise<import('./view-types').WorldBossBattle | null> {
-  if (!/^\d+$/.test(partyId) || !/^[0-9a-f-]{36}$/i.test(viewerUserId)) return null;
+  if (!/^\d{1,18}$/.test(partyId) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(viewerUserId)) return null;
   const [r] = (await db.execute(sql`
     select p.id::text as id, p.finale, p.stage_from, p.stage_to, p.reward_diamond, p.reward_boxes, c.nickname as leader, p.leader_user_id::text as leader_uid, b.boss_code
       from world_boss_parties p join world_bosses b on b.id = p.boss_id left join characters c on c.user_id = p.leader_user_id and c.server_id = p.server_id

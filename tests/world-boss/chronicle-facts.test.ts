@@ -14,7 +14,7 @@ describe('연대기 월드보스 줄', () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]).toContain('「왕성」');
     expect(lines[0]).toContain('3페이즈 · 쌓인 전리품 💎300 📦18');
-    expect(lines[0]).toContain('「로제」 금고로');
+    expect(lines[0]).toContain('「로제」 길드 세금으로');
     expect(lines[0]).toContain('이전 주인 「Winners」');
     expect(lines[1]).toContain('「전쟁 토템」');
     expect(lines[1]).toContain('아직 0페이즈');

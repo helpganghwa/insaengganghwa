@@ -6,20 +6,21 @@ import { josa } from 'josa';
 import { db } from '@/lib/db/client';
 import { WORLD_BOSS_GUILD_XP_PER_STAGE, guildXpToNext } from '@/lib/game/guild/balance';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
 import { worldBossKind, worldBossName } from './bosses';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
- *  ① activateDueBosses: 출현 시각이 지난 '예정' → '출현'(월드 피드 + 주인 길드 푸시). 소환 자체는 관리자(admin.ts, 10-11)가 한다.
- *  ② settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 금고에 전리품·길드 경험치, 우편)
+ *  ① activateDueBosses: 출현 시각이 지난 '예정' → '출현'(월드 피드 + 그 서버 전체 푸시, 토글 켠 사람). 소환 자체는 관리자(admin.ts, 10-11)가 한다.
+ *  ② settleLeftBosses: 떠나는 시각이 지난 '출현' → 정산(그 순간의 구역 주인 길드 세금에 전리품·길드 경험치, 우편)
  *     → '떠남'. 출발하지 않은 원정대는 해산.
  * 전부 멱등 — 조건부 UPDATE라 두 틱이 겹쳐도 한 번만 적용된다.
  */
 
 type Activated = { id: string; zone_id: number; zone_name: string; region: string; boss_code: string; owner: string | null; owner_name: string | null };
 
-/** 출현 시각이 지난 '예정' 보스를 '출현'으로. 월드 피드 + 주인 길드원 푸시. */
+/** 출현 시각이 지난 '예정' 보스를 '출현'으로. 월드 피드 + 그 서버에 있는 모든 유저에게 푸시(10-11 사용자: 주인 길드원만 → 알림 켠 전원). */
 export async function activateDueBosses(serverId: number): Promise<Activated[]> {
   const rows = (await db.execute(sql`
     with up as (
@@ -35,8 +36,11 @@ export async function activateDueBosses(serverId: number): Promise<Activated[]> 
     const bossName = worldBossName(b.boss_code);
     // 월드 로그 + 채팅 시스템 줄(10-11 사용자: 홈 배너·팝업 대신 로그로 알림) — logWorldEvent가 피드 캐시 무효화·채팅 방송까지 한다.
     await logWorldEvent(serverId, 'world_boss_spawn', { bossId: b.id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, bossName, guildName: b.owner_name }, b.owner ? { guildId: BigInt(b.owner) } : undefined);
-    if (b.owner) {
-      const members = (await db.execute(sql`select user_id from guild_members where guild_id = ${b.owner}::bigint and server_id = ${serverId}`)) as unknown as { user_id: string }[];
+    {
+      // 구독이 있고 지금 이 서버에 있는 사람 전부(경계규칙 1). 토글(push_world_boss)은 sendPushToUsers가 다시 거른다.
+      const members = (await db.execute(sql`
+        select distinct p.id::text as user_id from profiles p join push_subscriptions ps on ps.user_id = p.id
+         where p.last_server_id = ${serverId} and p.push_world_boss`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
         title: '월드보스 출현',
         body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요.`), // 짧게(10-11 사용자 B안) — 누르면 보스 상세.
@@ -64,7 +68,7 @@ export type SettledBoss = { id: string; zoneId: number; zoneName: string; region
 
 /**
  * 떠나는 시각이 지난 보스를 정산한다 — 보스마다 한 트랜잭션. 그 순간의 구역 주인 길드가 전리품(💎·📦)을
- * 금고로 **바로** 받고(집행관 몫 없음, 수금 쿨타임 무관), 단계당 길드 경험치를 얻는다. 중립이면 전리품은 소멸.
+ * 길드 세금으로 **바로** 받고(집행관 몫 없음, 수금 쿨타임 무관), 단계당 길드 경험치를 얻는다. 중립이면 전리품은 소멸.
  * 출발하지 않은 원정대는 해산하고 참가자·신청을 지운다(싸운 기록은 그대로).
  */
 export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]> {
@@ -73,7 +77,27 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
   `)) as unknown as { id: string }[];
   const out: SettledBoss[] = [];
   for (const { id } of due) {
-    const settled = await db.transaction(async (tx) => {
+    let settled: SettledBoss | null;
+    try {
+      settled = await settleOne(serverId, id);
+    } catch (e) {
+      // 보스 하나가 실패해도 나머지는 정산한다(10-11 재검사). 같은 보스가 매 틱 실패하면 운영 알림이 매번 간다 — 조용히 멈추지 않게.
+      console.error('[world-boss] settle failed', id, e);
+      await raiseOpsAlert('월드보스 정산 실패', `boss ${id} (server ${serverId}): ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
+      continue;
+    }
+    if (!settled) continue;
+    out.push(settled);
+    // 월드 로그 + 채팅 시스템 줄 — 트랜잭션 밖(best-effort). 정산이 확정된 뒤에만 알린다. 전리품 0(0페이즈)이면 로그 문구가 '남긴 전리품 없이'로 갈린다(world-message).
+    await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossCode: settled.bossCode, bossName: worldBossName(settled.bossCode), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
+    // 원정 종료 푸시는 보내지 않는다(10-11 사용자) — 전리품 우편·월드 로그·채팅 줄로 충분하다.
+  }
+  return out;
+}
+
+/** 보스 하나 정산(한 트랜잭션). 다른 틱이 먼저 정산했으면 null. */
+async function settleOne(serverId: number, id: string): Promise<SettledBoss | null> {
+  return db.transaction(async (tx) => {
       const [b] = (await tx.execute(sql`
         select b.id::text as id, b.zone_id, b.region::text as region, b.boss_code::text as boss_code, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes,
                z.name as zone_name, z.owner_guild_id::text as owner, g.name as owner_name
@@ -86,9 +110,12 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
       const bossName = worldBossName(b.boss_code);
       const leave = worldBossKind(b.boss_code).lines.leave;
 
+      // 길드 행을 실제로 읽었을 때만 그 길드에 귀속한다 — 주인을 읽은 뒤 길드가 해산되면 FK 위반으로 정산이 깨졌다(10-11 재검사).
+      let settledGuild: string | null = null;
       if (b.owner) {
         const [g] = (await tx.execute(sql`select level, xp::text as xp from guilds where id = ${b.owner}::bigint for update`)) as unknown as { level: number; xp: string }[];
         if (g) {
+          settledGuild = b.owner;
           const next = applyGuildLevelUp(Number(g.level), BigInt(g.xp) + BigInt(b.stage * WORLD_BOSS_GUILD_XP_PER_STAGE));
           await tx.execute(sql`
             update guilds set tax_pool_diamond = tax_pool_diamond + ${loot.diamond}::bigint,
@@ -97,8 +124,9 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
              where id = ${b.owner}::bigint`);
           const body =
             `${b.zone_name}의 ${bossName}#{이} 최종 ${b.stage}페이즈에서 ${leave.pastPolite}. 길드 세금에 💎${loot.diamond.toLocaleString('ko-KR')}·📦${loot.boxes.toLocaleString('ko-KR')} 전리품이 쌓였어요.\n` +
-            `길드 관리의 세금에서 나눌 수 있어요.`; // '금고' 대신 '길드 세금'(10-11 사용자)
-          await tx.execute(sql`
+            `길드 관리의 세금 탭에서 나눌 수 있어요.`; // '금고' 대신 '길드 세금'(10-11 사용자)
+          // 0페이즈(전리품 0)면 우편은 보내지 않는다(10-11 재검사) — "💎0·📦0이 쌓였어요"는 빈 우편이다.
+          if (b.stage > 0) await tx.execute(sql`
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
             select gm.user_id, ${serverId}, 'world_boss'::mailbox_type, '월드보스 전리품', ${josa(body)}, '월드보스', '{}'::jsonb, now() + interval '30 days'
               from guild_members gm where gm.guild_id = ${b.owner}::bigint and gm.server_id = ${serverId}`);
@@ -106,7 +134,7 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
       }
 
       await tx.execute(sql`
-        update world_bosses set status = 'left', settled_guild_id = ${b.owner}::bigint, settled_at = now() where id = ${id}::bigint`);
+        update world_bosses set status = 'left', settled_guild_id = ${settledGuild}::bigint, settled_at = now() where id = ${id}::bigint`);
       // 출발하지 않은 원정대 해산 — 참가자·신청도 지운다(싸운 기록은 departed 행에 남는다).
       const dis = (await tx.execute(sql`
         update world_boss_parties set status = 'disbanded', disband_reason = 'boss_left'
@@ -116,13 +144,6 @@ export async function settleLeftBosses(serverId: number): Promise<SettledBoss[]>
         await tx.execute(sql`delete from world_boss_join_requests r using world_boss_parties p where r.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
         await tx.execute(sql`delete from world_boss_invites i using world_boss_parties p where i.party_id = p.id and p.boss_id = ${id}::bigint and p.status = 'disbanded'`);
       }
-      return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: b.owner, guildName: b.owner_name, disbanded: dis.length } satisfies SettledBoss;
-    });
-    if (!settled) continue;
-    out.push(settled);
-    // 월드 로그 + 채팅 시스템 줄 — 트랜잭션 밖(best-effort). 정산이 확정된 뒤에만 알린다.
-    await logWorldEvent(serverId, 'world_boss_left', { bossId: settled.id, zoneId: settled.zoneId, zoneName: settled.zoneName, region: settled.region, bossCode: settled.bossCode, bossName: worldBossName(settled.bossCode), guildName: settled.guildName, stage: settled.stage, lootDiamond: settled.lootDiamond, lootBoxes: settled.lootBoxes }, settled.guildId ? { guildId: BigInt(settled.guildId) } : undefined);
-    // 원정 종료 푸시는 보내지 않는다(10-11 사용자) — 전리품 우편·월드 로그·채팅 줄로 충분하다.
-  }
-  return out;
+      return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, stage: Number(b.stage), lootDiamond: loot.diamond, lootBoxes: loot.boxes, guildId: settledGuild, guildName: settledGuild ? b.owner_name : null, disbanded: dis.length } satisfies SettledBoss;
+  });
 }

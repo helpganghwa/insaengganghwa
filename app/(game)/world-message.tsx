@@ -114,9 +114,9 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
           <>
             {hl(zone, C.orange)}에 {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} 나타났습니다
           </>
-        ) : (d.guildName as string | null) ? (
+        ) : (d.guildName as string | null) && (Number(d.lootDiamond ?? 0) > 0 || Number(d.lootBoxes ?? 0) > 0) ? (
           <>
-            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} {leave.linking} {hb(d.guildName as string, C.guild)} 길드 세금에 💎{Number(d.lootDiamond ?? 0).toLocaleString('ko-KR')}·📦
+            {hl(boss, C.orange)}{josa(`${boss}#{이}`).slice(boss.length)} {leave.linking} {hb(d.guildName as string, C.guild)}의 길드 세금에 💎{Number(d.lootDiamond ?? 0).toLocaleString('ko-KR')}·📦
             {Number(d.lootBoxes ?? 0).toLocaleString('ko-KR')} 전리품을 남겼습니다
           </>
         ) : (

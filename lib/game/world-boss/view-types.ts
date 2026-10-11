@@ -106,7 +106,8 @@ export type WorldBossDetail = {
   /** 보스 종류 코드(lib/game/world-boss/bosses.ts). */
   bossCode: string;
   name: string;
-  status: 'scheduled' | 'active' | 'left';
+  /** settling = 떠나는 시각은 지났는데 크론 정산 전(최대 5분) — 화면은 '정산 중'. */
+  status: 'scheduled' | 'active' | 'settling' | 'left';
   spawnAt: number;
   leaveAt: number;
   totalDamage: number;
