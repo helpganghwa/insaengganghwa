@@ -290,7 +290,8 @@ export function WorldBossDetailView({
             kind={d.bossCode}
             alt={d.name}
             className="absolute left-1/2 top-1/2 z-[1] h-[132px] w-[132px] -translate-x-1/2 -translate-y-1/2"
-            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 10px rgba(234,88,12,0.6))' }}
+            // 외곽선 1px 두 겹만 — 주황 글로우(10px)는 숨쉬기 애니와 겹쳐 매 프레임 재계산되는데 어두운 배경에서 보이지도 않아 뺐다(10-11 사용자, 경량 B).
+            style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }}
           />
         ) : (
           // 원정이 끝난 보스는 정지 그림을 흐리게(움직이면 아직 머무는 것처럼 읽힌다).

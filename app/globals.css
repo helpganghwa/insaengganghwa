@@ -501,9 +501,15 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
      앞 3초 = 길드 문양, 뒤 3초 = 보스 그림 + 금빛 테두리. 한 주기 6초를 CSS로만 돌려 지도를 다시 그리지 않는다. */
   .wb-alt-a { animation: wb-alt-a 6s linear infinite; }
   .wb-alt-b { animation: wb-alt-b 6s linear infinite; }
-  .wb-zone-flame { animation: wb-zone-alt 6s linear infinite; }
-  /* '월드보스 출현' 라벨 — 칸이 보스 그림으로 바뀌는 구간(50~96%)에 테두리도 같은 호박색으로 발광(10-11 사용자). */
-  .wb-zone-label { animation: wb-zone-label 6s linear infinite; }
+  /* 보스 구역 칸의 불꽃 테두리 — 버튼(.wb-zone-host, p-2)의 ::before 층이 칸 자리(inset 8px)에 최고점 그림자를 정적으로 그리고 opacity만 맥동한다
+     (box-shadow 값을 키프레임으로 바꾸던 것은 매 프레임 페인트 — 10-11 사용자, 경량화). 모양은 종전 최고점과 같다. */
+  .wb-zone-host { isolation: isolate; }
+  .wb-zone-host::before { content: ''; position: absolute; inset: 8px; border-radius: 4px; pointer-events: none; z-index: -1; opacity: 0;
+    box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 14px 6px rgba(251, 191, 36, 0.95); animation: wb-zone-glow 6s linear infinite; }
+  /* '월드보스 출현' 라벨 — 칸이 보스 그림으로 바뀌는 구간(50~96%)에 테두리 색이 호박색으로, 발광은 ::after 층의 opacity 맥동(10-11). */
+  .wb-zone-label { animation: wb-zone-label 6s linear infinite; isolation: isolate; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.75); }
+  .wb-zone-label::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; z-index: -1; opacity: 0;
+    box-shadow: 0 0 7px 3px rgba(251, 191, 36, 0.95); animation: wb-zone-glow 6s linear infinite; }
   /* 지도 보스 주변 불티 — 2px 점 몇 개가 위로 사라진다(가리는 면적이 거의 없다). */
   /* 홈 세계지도 카드 — 보스가 머무는 동안 불씨 테두리 맥동. */
 }
@@ -514,17 +520,19 @@ html.ig-modal-open [data-app-shell] { filter: blur(4px); }
 @keyframes wbs-flare { 0% { opacity: 0.4; filter: none; } 40% { opacity: 1; filter: brightness(1.15) drop-shadow(0 0 5px #e8621a); } 100% { opacity: 0.5; filter: none; } }
 @keyframes wb-alt-a { 0%, 46% { opacity: 1; } 50%, 96% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes wb-alt-b { 0%, 46% { opacity: 0; } 50%, 96% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes wb-zone-alt { 0%, 46%, 100% { box-shadow: none; } 50%, 70%, 96% { box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 8px 3px rgba(251, 191, 36, 0.85); } 60%, 85% { box-shadow: 0 0 0 2px rgba(255, 251, 235, 1), 0 0 14px 6px rgba(251, 191, 36, 0.95); } }
-@keyframes wb-zone-label { 0%, 46%, 100% { border-color: rgba(249, 115, 22, 0.8); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.75); } 50%, 70%, 96% { border-color: rgba(253, 230, 138, 1); box-shadow: 0 0 4px 1.5px rgba(251, 191, 36, 0.85), 0 1px 2px rgba(0, 0, 0, 0.75); } 60%, 85% { border-color: rgba(255, 251, 235, 1); box-shadow: 0 0 7px 3px rgba(251, 191, 36, 0.95), 0 1px 2px rgba(0, 0, 0, 0.75); } }
+/* 글로우 층 맥동 — 종전 box-shadow 키프레임(8px·85% ↔ 14px·95%)을 최고점 그림자의 opacity로 근사(합성기만 쓴다). */
+@keyframes wb-zone-glow { 0%, 46%, 100% { opacity: 0; } 50%, 70%, 96% { opacity: 0.7; } 60%, 85% { opacity: 1; } }
+@keyframes wb-zone-label { 0%, 46%, 100% { border-color: rgba(249, 115, 22, 0.8); } 50%, 70%, 96% { border-color: rgba(253, 230, 138, 1); } 60%, 85% { border-color: rgba(255, 251, 235, 1); } }
 @keyframes wbb-shaft { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft, .wb-zone-flame, .wb-zone-label, .wb-alt-a, .wb-alt-b { animation: none; }
+  .wbs-breath, .wbs-strip, .wbs-pulse, .wbs-atk, .wbb-ember, .wbb-shaft, .wb-zone-flame, .wb-zone-label, .wb-zone-host::before, .wb-zone-label::after, .wb-alt-a, .wb-alt-b { animation: none; }
   /* 전투 재생 효과(피해 숫자·번쩍임·라운드·일지 줄·광선)도 멈춘다 */
   [class*="animate-wb-"] { animation: none !important; }
   /* 투명해지며 끝나는 효과(번쩍임·광선·피해 숫자)는 멈추면 불투명 첫 프레임으로 남으므로 숨긴다(10-11 재검사) */
   .animate-wb-flash, .animate-wb-jackpot, .animate-wb-num { opacity: 0 !important; }
   .wb-alt-a { opacity: 0; }
-  .wb-zone-flame { box-shadow: 0 0 0 2px rgba(253, 230, 138, 1), 0 0 8px 3px rgba(251, 191, 36, 0.85); }
-  .wb-zone-label { border-color: rgba(253, 230, 138, 1); box-shadow: 0 0 4px 1.5px rgba(251, 191, 36, 0.85); }
+  .wb-zone-host::before { opacity: 0.7; }
+  .wb-zone-label { border-color: rgba(253, 230, 138, 1); }
+  .wb-zone-label::after { opacity: 0.7; }
   .wbs-pulse, .wbb-ember { opacity: 0.5; }
 }

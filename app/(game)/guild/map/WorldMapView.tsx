@@ -373,7 +373,8 @@ const WorldMap = memo(function WorldMap({
               onClick={() => onSelect(z.id)}
               aria-label={z.name}
               // p-2: 시각 노드(17px)는 그대로 두고 투명 패딩으로 터치 히트영역 확대(~33px, 오탭 완화).
-              className="absolute -translate-x-1/2 -translate-y-1/2 p-2"
+              // 보스 구역의 불꽃 테두리는 버튼의 ::before 층(.wb-zone-host)이 맡는다 — 칸(span)은 overflow-hidden이라 바깥 그림자를 못 그리고, opacity만 맥동시켜 합성기만 쓴다(10-11 사용자).
+              className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 ${boss ? 'wb-zone-host' : ''}`}
               style={{
                 left: `${z.mapX}%`,
                 top: `${z.mapY}%`,
@@ -390,7 +391,7 @@ const WorldMap = memo(function WorldMap({
                       ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
                       : 'transparent'
                     : 'rgba(10,12,20,0.45)',
-                  // 보스가 머무는 구역은 불꽃 테두리 맥동(wb-zone-flame)이 box-shadow를 맡는다.
+                  // 보스가 머무는 구역은 버튼의 ::before 글로우 층(.wb-zone-host)이 테두리를 맡는다 — 칸 자체엔 그림자 없음.
                   boxShadow: boss ? undefined : owned ? `0 0 4px ${color}88` : 'none',
                   outline: `1px solid ${color}${owned ? '' : '88'}`,
                   // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).

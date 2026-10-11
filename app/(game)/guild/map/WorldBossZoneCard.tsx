@@ -44,7 +44,7 @@ export function WorldBossZoneCard(
           kind={props.bossCode}
           alt=""
           className="absolute left-0 top-1/2 z-[1] h-[84px] w-[84px] -translate-y-1/2"
-          style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 6px rgba(234,88,12,0.65))' }}
+          style={{ filter: 'drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000)' }} // 글로우 필터는 뺐다(10-11 사용자, 경량 B)
         />
       )}
       {/* 정보 — 보스 오른쪽 */}
