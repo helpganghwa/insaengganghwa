@@ -79,6 +79,8 @@ export type FactCheckContext = {
   zoneCounts?: Map<string, { defenders: number; attackers: Map<string, number> }>;
   /** (10-02) 수비(집행관 포함)가 맞서 싸운 끝에 넘어간 점령 구역 — '비어 있던' 서술 금지(33). */
   guardedCaptures?: Set<string>;
+  /** (10-11) 최근 게시본의 첫 문장(마커를 벗긴 평문, 최신순) — 같은 틀의 도입(규모·최다 인원·격차)을 되풀이하지 않게(45). 없으면 검사 생략. */
+  recentOpenings?: string[];
 };
 
 /** 25·26 — '{g|G}와 경합·맞붙어·맞서'. */
@@ -162,6 +164,18 @@ const PLURAL_REF = /그 땅들|그곳들|이 땅들|이곳들|그 구역들|모�
 const ZONE_COUNT = /(?:스물|서른|마흔|쉰|열)?(?:한|두|세|네|다섯|여섯|일곱|여덟|아홉)?\s?곳|\d+\s?곳/g;
 /** 14 — 긴 공백 표현. */
 const LONG_GAP = /오랫동안|오래도록|오랜만|한동안|긴 공백|오래 영토/;
+/** 43 — 보유 기간·연속성 꾸밈말(10-07 사용자: 한 편에 아홉 번은 너무 잦다). 본문 전체에서 TENURE_MAX까지, 핵심 사건에만. */
+const TENURE_PHRASE = /갓 (?:얻은|손에 넣은|이룬|차지한|가져온|되찾은)|얻은 지 얼마 안 된|한동안|오래 (?:지켜|이어|쥐고) 온|오랜만에|하루 만에|얼마 지나지 않아/g;
+const TENURE_MAX = 3;
+/** 44 — '쓰러뜨리다'(10-10 사용자: "N명을 쓰러뜨리고"가 활약마다 되풀이). 핵심 두 장면까지만. */
+const KILL_VERB = /쓰러뜨/g;
+const KILL_VERB_MAX = 2;
+/** 45 — 도입 틀 비교용: 수사·숫자를 지워 '열다섯 곳에서'와 '스물한 곳에서'가 같은 틀로 보이게. */
+const NUMERAL = /(?:스물|서른|마흔|쉰|예순|열)?(?:하나|한|둘|두|셋|세|넷|네|다섯|여섯|일곱|여덟|아홉)?\s?(?=곳|명|사람|길드|지역)|\d+/g;
+/** 45 — 되풀이되기 쉬운 도입 틀: 규모 · 최다 인원 · 격차. */
+const OPENING_SCALE = /곳에서\s?(?:싸움|점령전|맞붙)|곳의 주인이 바뀌/;
+const OPENING_CROWD = /가장 많은\s?(?:사람이|[가-힣]*\s?명이|이들이)?\s?(?:몰린|몰렸|모였)/;
+const OPENING_GAP = /격차가\s?[가-힣\s]*(?:좁혀|벌어)/;
 /** 15 — 버팀·지켜냄 / 쓰러짐. */
 const SURVIVED = /지켜냈|지켰|버텨냈|버텼|살아남|끝까지 남/;
 const FELL_WORD = /쓰러졌|쓰러지고|쓰러지며|전사했|숨을 거|눈을 감|끝내 무너/;
@@ -208,7 +222,11 @@ const REPEAT_FAMILIES: { re: RegExp; label: string; max: number; alt: string }[]
   { re: /차지했|차지한|차지가/g, label: '차지했다', max: 4, alt: '가져갔다·손에 넣었다·빼앗았다' },
   { re: /가져갔|가져간/g, label: '가져갔다', max: 4, alt: '차지했다·손에 넣었다·거둬 갔다' },
   { re: /손에 넣|손에 쥐/g, label: '손에 넣었다', max: 3, alt: '차지했다·가져갔다' },
-  { re: /판도에서/g, label: '판도에서 …', max: 2, alt: '물러나 다음을 기약했다·자리를 넘겼다' },
+  { re: /판도에서/g, label: '판도에서 …', max: 2, alt: '이번에는 물러났다·자리를 넘겼다' },
+  // 10-11 — 같은 서술절("셋을 쓰러뜨리고 끝내 쓰러졌지만")이 두 사람에게 그대로 되풀이됐다.
+  { re: /끝내 쓰러/g, label: '끝내 쓰러졌다', max: 1, alt: '쓰러뜨리고도 자리는 넘어갔다·수를 감당하지 못했다' },
+  { re: /끝내/g, label: '끝내', max: 2, alt: '결국·마지막에는 또는 빼기' },
+  { re: /살아남/g, label: '살아남았다', max: 2, alt: '자리를 지켰다·버텨 냈다' },
   // 10-02 — 결과·수비 동사 반복(운영자 교정: '자리를 지켰다·받아냈다'가 문단마다 이어짐).
   { re: /자리를 지켰|자리를 지키/g, label: '자리를 지켰다', max: 2, alt: '버텨 냈다·물러서지 않았다·그 땅을 지켰다' },
   { re: /받아냈|받아내/g, label: '받아냈다', max: 3, alt: '막아섰다·돌려세웠다·버텨 냈다' },
@@ -511,9 +529,16 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
 
       // 14. 짧은 복귀 공백 — 하루이틀 비었다 돌아온 길드에 '오랫동안'을 붙이지 않는다(09-17 민초).
       // 보유 기간을 꾸미는 '한동안 지켜 온·오래 이어 온'(10-02 본문 표현)은 복귀 공백 서술이 아니다.
-      if (ctx.shortGapGuilds && LONG_GAP.test(plain.replace(/(?:한동안|오래|오랫동안)\s?(?:지켜|이어|쥐고)\s?(?:온|오던|있던)/g, ''))) {
-        const g = guilds.find((x) => ctx.shortGapGuilds!.includes(x));
-        if (g) issues.push(`{g|${g}} 은(는) 영토를 잃은 지 며칠 만에 돌아왔는데 긴 공백처럼 썼다 — '오랫동안·한동안'을 빼고 사실표의 복귀 일수대로 쓴다: ${q(sent)}`);
+      // 절 단위로 본다(10-11 게시본 오탐: '곧바로 돌아온 {g|민초}와, 오랜만에 돌아온 {g|레지스탕스}는' — '오랜만에'는 레지스탕스의 것).
+      if (ctx.shortGapGuilds) {
+        for (const clause of sent.split(/,\s*/)) {
+          if (!LONG_GAP.test(plainText(clause).replace(/(?:한동안|오래|오랫동안)\s?(?:지켜|이어|쥐고)\s?(?:온|오던|있던)/g, ''))) continue;
+          const g = tokens(clause).filter((t) => t.kind === 'g').map((t) => t.name).find((x) => ctx.shortGapGuilds!.includes(x));
+          if (g) {
+            issues.push(`{g|${g}} 은(는) 영토를 잃은 지 며칠 만에 돌아왔는데 긴 공백처럼 썼다 — '오랫동안·한동안'을 빼고 사실표의 복귀 일수대로 쓴다: ${q(sent)}`);
+            break;
+          }
+        }
       }
 
       // 15. 쓰러진 인물 — 끝내 쓰러진 사람을 '지켜냈다·버텼다'의 주어로 쓰지 않는다(09-17 늪지 오두막 전사).
@@ -646,6 +671,51 @@ export function factIssues(text: string, ctx: FactCheckContext): string[] {
   for (const f of REPEAT_FAMILIES) {
     const n = (whole.match(f.re) ?? []).length;
     if (n > f.max) issues.push(`'${f.label}' 표현이 ${n}번 나온다 — ${f.max}번까지만 쓰고 나머지는 '${f.alt}'처럼 바꿔 쓰거나, 같은 말을 되풀이하는 문장을 합친다.`);
+  }
+  // 43·44·45(10-11 운영자 교정 분석 — 9일 치 생성본은 기간 꾸밈말 5~10회, '쓰러뜨리다' 3~5회, 도입은 9일 모두 규모 문장이었다).
+  // 가벼운 위반('표현이 N번 나온다')이 아니라 재생성·문장 고치기 대상이다 — 프롬프트만으로는 줄지 않았다.
+  const qq = (x: string) => `「${x.length > 60 ? x.slice(0, 60) + '…' : x}」`;
+  const allSentences = sentences(text);
+  const tenure = (whole.match(TENURE_PHRASE) ?? []).length;
+  if (tenure > TENURE_MAX) {
+    const hit = allSentences.filter((x) => new RegExp(TENURE_PHRASE.source).test(plainText(x)));
+    issues.push(
+      `보유 기간·연속성 꾸밈말(갓 얻은·얻은 지 얼마 안 된·한동안·오래 지켜 온·오랜만에·하루 만에)을 ${tenure}번 썼다 — 핵심 사건 ${TENURE_MAX}곳까지만 남기고 나머지 문장에서는 뺀다(사실표의 '본문 표현'은 쓸 수 있는 말이지 구역마다 옮겨 적는 말이 아니다): ${hit.slice(0, 6).map(qq).join(', ')}`,
+    );
+  }
+  const kills = (whole.match(KILL_VERB) ?? []).length;
+  if (kills > KILL_VERB_MAX) {
+    const hit = allSentences.filter((x) => /쓰러뜨/.test(x));
+    issues.push(
+      `'쓰러뜨리다'를 ${kills}번 썼다 — 핵심 두 장면(가장 많은 사람이 몰린 전투·처치가 가장 많은 활약)까지만 수와 함께 쓰고, 나머지 활약은 '베어 넘기다·물리치다·꺾다·받아내다·돌려보내다'로 바꾸거나 수를 뺀다: ${hit.slice(0, 6).map(qq).join(', ')}`,
+    );
+  }
+  // '다음을 기약' — 인물 이름 '다음'(Winners)과 겹쳐 자동 마커가 붙은 사고(10-07 사용자 ⑨). 가벼운 위반으로만 알린다.
+  const nextWord = (whole.match(/다음을 기약/g) ?? []).length;
+  if (nextWord > 0) issues.push(`'다음을 기약' 표현이 ${nextWord}번 나온다 — 인물 이름 '다음'과 겹치니 '이번에는 물러났다'처럼 쓴다.`);
+  if (ctx.recentOpenings && ctx.recentOpenings.length > 0) {
+    const first = allSentences[0] ?? '';
+    const firstPlain = plainText(first);
+    const norm = (x: string) => x.replace(MARKER, '').replace(NUMERAL, '').replace(/\s+/g, '');
+    const bigrams = (x: string) => {
+      const set = new Set<string>();
+      for (let i = 0; i + 1 < x.length; i++) set.add(x.slice(i, i + 2));
+      return set;
+    };
+    const a = bigrams(norm(first));
+    let worst: { s: string; j: number } | null = null;
+    for (const r of ctx.recentOpenings) {
+      const b = bigrams(norm(r));
+      let inter = 0;
+      for (const x of a) if (b.has(x)) inter += 1;
+      const j = inter / Math.max(1, a.size + b.size - inter);
+      if (!worst || j > worst.j) worst = { s: r, j };
+    }
+    const sameFrame = [OPENING_SCALE, OPENING_CROWD, OPENING_GAP].some((re) => re.test(firstPlain) && ctx.recentOpenings!.some((r) => re.test(r)));
+    if (worst && (worst.j >= 0.5 || sameFrame))
+      issues.push(
+        `첫 문장이 최근 기록의 도입과 같은 틀이다(최근: ${qq(worst.s)}) — 규모·최다 인원·격차로 열지 말고 theme의 중심 장면(누가 어느 구역에서 무엇을 했는지)으로 연다. 규모 문장은 마지막 문단 첫머리로 옮긴다: ${qq(first)}`,
+      );
   }
   // 회고는 한 문장까지(2026-09-13 사용자 지시 — 종전 세 문장은 '어제 언급이 너무 잦다'는 평의 원인).
   if (retroSentences > 1)

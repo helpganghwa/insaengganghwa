@@ -731,9 +731,11 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 
 규칙:
 - 한국어. 듣는 사람에게 전말을 들려주듯 자연스러운 구어체로, 사실표 안의 장면을 생생하게 살려 풍부하고 흥미롭게 쓴다(같은 인원의 엇갈린 결말, 적은 수의 반전, 한 사람의 활약, 되찾은 땅, 돌아온 길드처럼 '■ 이야깃거리'와 사실표에 있는 대비·반전을 살린다). 다만 없는 사실을 꾸미는 과장, 감탄사 남발, 미사여구 도배는 금지.
-- **긍정적인 시선으로 쓴다(10-02 사용자 지시).** 패배와 상실보다 각 길드가 얻고 지켜 낸 것을 중심에 둔다. '잃었다·무너졌다·몰락·사라졌다·자취를 감췄다·빼앗겼다·그쳤다·밀려났다' 같은 부정적 표현 대신 '내주었다·넘어갔다·자리를 넘겼다'처럼 담담하게 쓰고, 영토를 모두 내준 길드도 '이번에는 판도에서 물러나 다음을 기약하게 되었다'처럼 쓴다.
+- **긍정적인 시선으로 쓴다(10-02 사용자 지시).** 패배와 상실보다 각 길드가 얻고 지켜 낸 것을 중심에 둔다. '잃었다·무너졌다·몰락·사라졌다·자취를 감췄다·빼앗겼다·그쳤다·밀려났다' 같은 부정적 표현 대신 '내주었다·넘어갔다·자리를 넘겼다'처럼 담담하게 쓰고, 영토를 모두 내준 길드도 '이번에는 판도에서 물러났다'처럼 쓴다('다음을 기약'은 쓰지 않는다 — 인물 이름과 겹친다).
 - **보유 기간·날짜는 숫자로 쓰지 않는다(10-02 사용자 지시).** 'N일 동안·N일째·N일 만·N월 N일부터' 대신 사실표의 '본문 표현'(갓 얻은·얻은 지 얼마 안 된·한동안 지켜 온·오래 지켜 온·곧바로)을 쓴다. 기간을 짐작해 '오래'를 붙이지 말고 사실표의 본문 표현만 따른다.
 - **'집행관'이라는 말은 본문에 쓰지 않는다(10-02).** 사실표의 '집행관 혼자'는 '홀로 맞선 수비·남아 있던 한 명의 수비'로 쓴다.
+- **꾸밈말은 아껴 쓴다(10-07·10-10 운영자 교정).** ① 보유 기간·연속성 꾸밈말(갓 얻은·얻은 지 얼마 안 된·한동안·오래 지켜 온·오랜만에·하루 만에)은 본문 전체에서 세 번까지, 이야기의 핵심 사건에만 붙인다. 사실표의 '본문 표현'은 쓸 수 있는 말이지 구역마다 옮겨 적는 말이 아니다. ② '쓰러뜨리다'는 두 장면(가장 많은 사람이 몰린 전투·처치가 가장 많은 활약)까지만 수와 함께 쓰고, 나머지 활약은 '베어 넘기다·물리치다·꺾다·받아내다·돌려보내다'로 쓰거나 수를 뺀다. ③ '끝내 쓰러졌다'는 한 번, '끝까지'·'끝내'·'살아남았다'는 각각 두 번까지. 같은 서술절("셋을 쓰러뜨리고 끝내 쓰러졌지만")을 두 사람에게 되풀이하지 않는다.
+- **첫 문장은 그날의 장면으로 연다(10-11 운영자 교정).** 규모(싸움 수·주인이 바뀐 수), '가장 많은 사람이 몰린 곳', 두 길드의 격차로 열지 않는다. theme의 중심 장면, 곧 누가 어느 구역에서 무엇을 했는지(인물·길드·구역)가 첫 문장에 나온다. '[최근 도입 문장]'과 같은 틀로 열지 않는다. 규모 문장은 마지막 문단 첫머리에 '이번 점령전에서는 N곳에서 싸움이 벌어져 M곳의 주인이 바뀌었다.'로 두고, 바로 '이번 점령전으로 …' 증감 문장을 잇는다.
 - **이야기를 풍부하게 쓰더라도 누가 공격했고 누가 지켰는지는 사실표 그대로다(10-02 시험에서 뒤바뀐 사고).** 구역마다 '공격 측' 목록의 길드만 공격한 쪽, '방어' 목록의 소유 길드만 지킨 쪽이다. 전날 일어난 점령을 오늘 일처럼 쓰지 않는다.
 - **영토 조각 수를 쓰지 않는다(10-03).** '여섯 조각으로 흩어졌다'처럼 수를 붙이지 말고 '여러 갈래로 나뉘었다·떨어진 새 거점을 얻었다'처럼 쓴다. 마무리 형세 문단에는 조각·흩어짐을 넣지 않는다.
 - **'하루 만에'는 본문 전체에서 한 번만 쓴다(10-03).** 회고 문장('어제·전날')도 한 문장뿐이다. 나머지 연속성은 '곧바로·이내·갓 얻은'으로 쓴다.
@@ -793,7 +795,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **잃은 구역의 보유 기간은 점령 줄의 표기를 따른다.** '어제 막 차지했던 곳'이 붙은 구역만 어제 차지한 땅이고, 'N일 동안 쥐고 있던 곳'을 함께 묶어 '어제 차지했던 곳들'로 쓰지 말 것.
 - **개인 활약에 '본인은 끝내 쓰러짐'이 붙은 인물은 '자리를 지켜냈다·버텼다'의 주어로 쓰지 않는다.** 쓰러뜨린 뒤 쓰러졌고, 자리는 길드가 지켰다는 식으로 나눠 쓴다.
 - **'같은 지역의 {z|X}'는 정리의 (X 지역) 표기가 실제로 같을 때만.** 구역을 지역으로 묶기 전에 표기를 다시 확인한다(2026-09-10: 오크 부락 구역을 잊힌 신전 문장에 묶은 사건).
-- 첫 문단은 '■ 규모'의 싸움 수·주인이 바뀐 곳 수로 열고, 곧바로 그날의 주제(theme)를 내건다(10-02 운영자 교정 문체).
+- 첫 문단은 theme의 중심 장면으로 열고(규모로 열지 않는다), '■ 규모'의 싸움 수·주인이 바뀐 곳 수는 마지막 문단 첫머리에 둔다(10-11 운영자 교정 문체).
 - 사실표에 적힌 첫 등장·조각·비지·지역 석권은 근거가 있는 사실이니 살려 쓰고, 보유 기간은 숫자 없이 '본문 표현'으로만 쓴다. 같은 구역을 노린 길드들은 서로 경쟁했다(동맹 없음, '합세·연합' 금지).
 - 반드시 JSON만 출력: {"theme": "...", "beats": ["..."], "today": "...", "headline": "...", "headlines": ["...", "..."]}.
   - theme: **본문을 쓰기 전에 먼저 정한다.** 그날을 관통하는 핵심 주제 한 줄(예: '대공세와 그에 맞선 수비', '두 지역을 함께 덮은 깃발'). '■ 이야깃거리'와 사실표에서 그날 가장 특별한 흐름을 고르고, 직전 기록과 같은 구성이 되지 않게 한다.
@@ -804,7 +806,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
     · 무엇이 승패를 갈랐고 누가 활약했는지 — 개인 활약(feats)과 전투가 갈린 지점.
     · 그래서 이번 점령전 이후 대륙의 형세가 어떻게 되었는지(가장 세력이 큰 길드·기세를 질적으로, 등수 없이, 과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(3~6문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
-    문단 순서(10-02 운영자 교정본 기준): 첫 문단은 규모(싸움이 벌어진 곳·주인이 바뀐 곳의 수)와 theme으로 연다. 이어지는 문단은 beats를 따라 이야기가 자연스럽게 이어지게 배치하고, 같은 길드·같은 지역의 사건은 한 문단에 모은다(문단마다 그 문단의 주인공이 분명하게). 돌아온 길드·물러난 길드는 짧게 한 문단에 묶어도 좋다. 마지막 문단은 '이번 점령전으로'로 시작해 길드별 보유 증감만 담는다.
+    문단 순서(10-11 운영자 교정본 기준): 첫 문단은 theme의 중심 장면으로 연다(규모·최다 인원·격차로 열지 않는다). 이어지는 문단은 beats를 따라 이야기가 자연스럽게 이어지게 배치하고, 같은 길드·같은 지역의 사건은 한 문단에 모은다(문단마다 그 문단의 주인공이 분명하게). 돌아온 길드·물러난 길드는 짧게 한 문단에 묶어도 좋다. 마지막 문단은 규모 문장('이번 점령전에서는 N곳에서 싸움이 벌어져 M곳의 주인이 바뀌었다.')으로 시작하고, 이어 '이번 점령전으로 …'로 길드별 보유 증감을 담는다.
     사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
   - headline: 그날을 대표하는 한 줄(25자 내외, 마커 포함, 말하듯이). 소재는 theme을 대표하는 것으로 고르되 아래 우선순위를 참고한다 — ① theme의 중심 사건 ② '■ 어제와 이어지는 사실'의 하루 만의 탈환 ③ 열세 방어(적은 수로 지켜냄)·개인 활약 ④ 그날 새로 완성한 지역 전체 장악 ⑤ 돌아온 길드·신흥 세력의 첫 구역 ⑥ 3곳 이상 확장. 영토를 모두 내준 길드를 제목의 주인공으로 삼지 않는다(10-02 긍정 톤). 문형은 다섯 가지 중 하나를 고른다: 선언형("{g|A}, 왕국 전역을 지배하다") · 반전형("{g|A}, 하루 만에 되찾은 슬라임 늪") · 인물형("{u|B}, 홀로 여섯을 막아서다") · 대비형("{g|A}의 대공세, {g|B}의 반격") · 숫자형("열 곳 중 열 곳, {g|A}가 늪을 완성하다"). '[지난 역사]'의 최근 7일 헤드라인과 문형·핵심 동사가 겹치지 않게 하고, 같은 지역의 '전역을 지배하다'는 7일 안에 되풀이하지 말 것(다시 완성한 날은 반전형으로). 첫 등장·복귀·소멸 길드는 그날 두 번째로 큰 사건일 때만 ', {g|이름} 첫 등장'처럼 짧게 덧붙이고, 아니면 본문에서만 다룬다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.
   - headlines: headline 후보 3~5개(첫 항목은 headline과 같은 문장). 나머지는 서로 다른 문형·다른 소재로 쓴다 — 검수자가 고르거나 고쳐 쓸 재료다. headline이 빈 문자열이면 빈 배열([]).`;
@@ -992,7 +994,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
       const tenureNote = since
         ? held <= 1
           ? ` · 「${c.from}」 이(가) 어제 막 차지했던 곳`
-          : ` · 「${c.from}」 이(가) ${koDate(since)}부터 ${held}일 동안 쥐고 있던 곳('어제 차지했던'으로 쓰지 말 것 · 본문 표현: '${tenureWord(held)}')`
+          : ` · 「${c.from}」 이(가) ${koDate(since)}부터 ${held}일 동안 쥐고 있던 곳('어제 차지했던'으로 쓰지 말 것 · 본문 표현(쓴다면): '${tenureWord(held)}')`
         : '';
       return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote}${tenureNote})`;
     }
@@ -1268,7 +1270,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
     const trusted = histMatches(ids);
     const ongoing = trusted ? pastSweeps.find((s) => s.region === region && s.brokenOn === null && s.guild === bG) : undefined;
     if (bG && aG === bG) {
-      sweepLines.push(`· ${label}: 「${bG}」 석권 유지${ongoing ? `(${koDate(ongoing.from)}부터 ${daysBetween(ongoing.from, kstDay)}일째 · 본문 표현: '${sweepWord(daysBetween(ongoing.from, kstDay))}')` : ''}`);
+      sweepLines.push(`· ${label}: 「${bG}」 석권 유지${ongoing ? `(${koDate(ongoing.from)}부터 ${daysBetween(ongoing.from, kstDay)}일째 · 본문 표현(쓴다면): '${sweepWord(daysBetween(ongoing.from, kstDay))}')` : ''}`);
     } else if (bG) {
       const lostZones = ids.filter((id) => afterOwner.get(id) !== bG).map((id) => `「${nameById.get(id)}」`);
       sweepLines.push(
@@ -1282,7 +1284,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
         ? pastSweeps.filter((s) => s.region === region && s.guild === aG && s.brokenOn).at(-1)
         : undefined;
       const hist = prev
-        ? ` — ${koDate(prev.from)}부터 ${daysBetween(prev.from, prev.brokenOn!)}일 동안 쥐었다가 ${koDate(prev.brokenOn!)}에 흩어진 지역을 ${daysBetween(prev.brokenOn!, kstDay)}일 만에 다시 장악(본문 표현: '${gapWord(daysBetween(prev.brokenOn!, kstDay))} 다시')`
+        ? ` — ${koDate(prev.from)}부터 ${daysBetween(prev.from, prev.brokenOn!)}일 동안 쥐었다가 ${koDate(prev.brokenOn!)}에 흩어진 지역을 ${daysBetween(prev.brokenOn!, kstDay)}일 만에 다시 장악(본문 표현(쓴다면): '${gapWord(daysBetween(prev.brokenOn!, kstDay))} 다시')`
         : trusted
           ? ' — 이력상 이 길드의 첫 석권 지역'
           : '';
@@ -1329,7 +1331,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
         veterans.has(g)
           ? `· 길드 「${g}」 이(가) 영토를 모두 잃었던 처지에서 다시 구역을 확보하며 판도에 복귀(재기 — 과거에 영토를 가졌던 길드다. '첫 등장'·'대륙에 이름을 알렸다' 표현 금지, '돌아왔다'류로${
               gapDays !== null
-                ? `. 영토를 모두 잃은 ${koDate(wipedOn!)} 이후 ${gapDays}일 만의 복귀(본문 표현: '${gapWord(gapDays)} 돌아왔다')${gapDays <= COMEBACK_SHORT_GAP_DAYS ? " — '오랫동안·오래·한동안·긴 공백' 표현 금지" : ''}`
+                ? `. 영토를 모두 잃은 ${koDate(wipedOn!)} 이후 ${gapDays}일 만의 복귀(본문 표현(쓴다면): '${gapWord(gapDays)} 돌아왔다')${gapDays <= COMEBACK_SHORT_GAP_DAYS ? " — '오랫동안·오래·한동안·긴 공백' 표현 금지" : ''}`
                 : ''
             })`
           : beforeCounts.size === 0
@@ -1390,7 +1392,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   // 규모(09-24) — 첫 문장('열네 번의 싸움이 벌어져 열 곳의 주인이 바뀐')의 근거. 종전엔 사실표에 없어 모델이 세거나 빼먹었다.
   digestSections.push(`■ 규모: 싸움이 벌어진 구역 ${summary.battleCount}곳, 그중 주인이 바뀐 곳 ${summary.captures.length}곳`);
   if (summary.attacks.length > 0) digestSections.push(`■ 공격 측(구역을 공격한 길드):\n${atkLines}`);
-  if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별):\n${capLines}`);
+  if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별 — 보유 기간 표현은 이야기에 꼭 필요한 두세 곳에만):\n${capLines}`);
   if (summary.defenses.length > 0)
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
   // 월드보스(docs/WORLD-BOSS.md §8, 2026-10-08) — 보스가 머무는 구역이 점령·방어되면 전리품의 주인이 걸린 싸움이 된다.
@@ -1643,16 +1645,35 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   const styleBlock = styleRef
     ? `\n\n[문체 참고 — 직전 기록 본문(검수 완료본). 문장 리듬·어휘·문단 구성만 본받고, 사실·이름·숫자·날짜는 절대 가져오지 말 것]\n${styleRef}`
     : '';
+  // 최근 도입 문장(10-11) — 게시본 7편의 첫 문장. 9일 치 생성본이 전부 규모 문장으로 열려 운영자가 매일 도입을 다시 썼다.
+  // 프롬프트('이 틀로 열지 말 것')와 검사 45(같은 틀이면 재생성)가 같이 쓴다.
+  const openRows = await db
+    .select({ todayText: worldChronicle.todayText })
+    .from(worldChronicle)
+    .where(and(eq(worldChronicle.serverId, serverId), lt(worldChronicle.kstDay, kstDay)))
+    .orderBy(desc(worldChronicle.kstDay))
+    .limit(7);
+  const recentOpenings = openRows
+    .map((r) => stripMarkers(r.todayText ?? '').split(/(?<=[.!?])\s+/)[0]?.trim() ?? '')
+    .filter((x) => x.length > 0);
+  factCtx.recentOpenings = recentOpenings;
+  const openingsBlock = recentOpenings.length
+    ? `\n\n[최근 도입 문장 — 이 틀(규모·최다 인원·격차)로 열지 말 것]\n${recentOpenings.map((x) => `· ${x}`).join('\n')}`
+    : '';
   const context =
     `[현재 영토 현황 — '정세' 문단 근거(누적 점령 결과)]\n${standLines}\n\n` +
     `[어제(${prevDay}) 점령전 결과 — 연속성 참고용]\n${yesterdayBlock}\n\n` +
     `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}` +
-    styleBlock;
+    styleBlock +
+    openingsBlock;
 
   const bigChange = milestones.length > 0 || specialFeat;
   return { summary, zoneRows, idByName, milestones, digest, factCtx, context, bigChange, quiet, quietText };
 }
 export type ChronicleFactPack = NonNullable<Awaited<ReturnType<typeof buildChronicleFactPack>>>;
+
+/** 일반 낱말과 같은 닉네임 — 평문 등장을 위반으로 보지도, 자동으로 감싸지도 않는다(10-11). */
+const COMMON_WORD_NICKS = new Set(['다음', '어제', '오늘', '이번', '하나', '둘', '수비', '공격', '전사', '깃발', '한편', '그날']);
 
 /**
  * 마커 도구(2026-09-15 분리) — 이름 집합·교정·강제·보강·위반 검출. 생성과 검수 개선이 공유.
@@ -1686,7 +1707,8 @@ async function buildMarkerTools(summary: ConquestDaySummary, zoneRows: Chronicle
     ]),
   );
   for (const z of zoneRows) zoneNames.add(z.name);
-  const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
+  // 일반 낱말과 같은 닉네임('다음')은 모델이 마커로 쓴 것만 인정한다 — 자동 마킹이 '다음을 기약'에 붙은 사고(10-07 사용자 ⑨).
+  const userNames = new Set<string>(summary.feats.map((f) => f.nickname).filter((n) => !COMMON_WORD_NICKS.has(n)));
 
   // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
   const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
@@ -1846,7 +1868,8 @@ export function insertQuietParagraph(text: string, items: QuietDefense[], kstDay
   const para = quietParagraph(items.filter((d) => !mentioned.has(d.zone)), kstDay, 1);
   if (!para) return text;
   const paras = text.split(/\n\n+/);
-  const at = paras.length > 1 && /^이번 점령전으로/.test(paras[paras.length - 1]!.trim()) ? paras.length - 1 : paras.length;
+  // 정산 문단은 '이번 점령전으로'로 시작하거나(종전), 규모 문장 뒤에 '이번 점령전으로'가 온다(10-11 도입 교정 뒤).
+  const at = paras.length > 1 && /이번 점령전으로/.test(paras[paras.length - 1]!) ? paras.length - 1 : paras.length;
   paras.splice(at, 0, para);
   return paras.join('\n\n');
 }
@@ -1918,7 +1941,7 @@ export async function repairFactSentences(
               { type: 'text', text: factBlock, cache_control: { type: 'ephemeral' } },
               {
                 type: 'text',
-                text: `[완성된 본문]\n${text}\n\n[사실표와 어긋난 문장 — 코드가 대조한 결과]\n${issues.map((i) => `- ${i}`).join('\n')}${card ? `\n\n[고칠 문장에 나온 구역의 사실 — 고친 문장의 지역·공격 길드·지킨 길드는 이대로만 쓴다]\n${card}` : ''}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 지적되지 않은 사실(지역 이름 등)은 원문 그대로 둔다. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
+                text: `[완성된 본문]\n${text}\n\n[코드 검사에 걸린 문장 — 사실표 대조·표현 규칙]\n${issues.map((i) => `- ${i}`).join('\n')}${card ? `\n\n[고칠 문장에 나온 구역의 사실 — 고친 문장의 지역·공격 길드·지킨 길드는 이대로만 쓴다]\n${card}` : ''}\n\n위 지적이 가리키는 문장만 사실표대로 고쳐라. 지적되지 않은 사실(지역 이름 등)은 원문 그대로 둔다. 나머지 문장은 건드리지 않는다. 고친 문장은 앞뒤 문장과 자연스럽게 이어지게, 마커({g|…}·{z|…}·{u|…})는 원문 그대로 쓴다. 지적된 사실을 바로잡기 어려우면 그 내용을 빼고 쓴다. JSON({"fixes":[{"before":"본문에 있는 원래 문장 그대로","after":"고친 문장"}]})만 출력하라.`,
               },
             ],
           },
@@ -2217,7 +2240,7 @@ async function generateLocked(
     const feedback: string[] = [];
     if (facts.length > 0)
       feedback.push(
-        `사실표와 어긋나는 문장이 있다(코드가 사실표와 대조한 결과라 예외 없이 고친다):\n${facts.map((f) => `- ${f}`).join('\n')}`,
+        `코드 검사에 걸린 문장이 있다(사실표 대조·표현 규칙 — 예외 없이 고친다):\n${facts.map((f) => `- ${f}`).join('\n')}`,
       );
     if (heads.length > 0) feedback.push(`제목(headline)이 사실표와 어긋난다:\n${heads.map((f) => `- ${f}`).join('\n')}`);
     if (viol.length > 0)
