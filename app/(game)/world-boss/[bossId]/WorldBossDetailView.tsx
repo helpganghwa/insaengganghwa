@@ -1052,7 +1052,7 @@ function SlotPerson({ p, serverId, leader, inviting = false, onKick }: { p: Worl
           </span>
         )}
         {p.guildEmblemUrl && (
-          <span className="absolute -bottom-0.5 -left-1 rounded-full bg-stone-900 p-px">
+          <span className="absolute -bottom-0.5 -left-1">{/* 문양만 — 배경 원·여백 없음(10-11 사용자) */}
             <GuildBadge emblemUrl={p.guildEmblemUrl} emblemColor={p.guildEmblemColor} size={11} />
           </span>
         )}
