@@ -382,7 +382,7 @@ const WorldMap = memo(function WorldMap({
               }}
             >
               <span
-                className={`relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition ${boss ? 'wb-zone-flame' : ''}`}
+                className={`relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition`}
                 style={{
                   // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
                   // 중립: 어두운 배경 + 흐린 지역색.

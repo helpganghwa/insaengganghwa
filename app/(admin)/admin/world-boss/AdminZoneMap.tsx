@@ -39,7 +39,7 @@ export function AdminZoneMap({
             style={{ left: `${z.mapX}%`, top: `${z.mapY}%`, zIndex: sel ? 30 : z.busy ? 20 : owned ? 10 : 1 }}
           >
             <span
-              className={`relative block h-[26px] w-[26px] overflow-hidden rounded-[5px] ring-1 ring-black/70 transition ${z.busy ? 'wb-zone-flame' : ''} ${
+              className={`relative block h-[26px] w-[26px] overflow-hidden rounded-[5px] ring-1 ring-black/70 transition ${
                 sel ? 'scale-125 ring-2 ring-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.85)]' : ''
               }`}
               style={{

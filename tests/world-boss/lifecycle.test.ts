@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { worldBossLootFor, worldBossStageHp } from '@/lib/game/guild/balance';
+import { worldBossLootFor, worldBossStageFor, worldBossStageHp } from '@/lib/game/guild/balance';
 import { distributeGuildTaxManual, splitBoxes } from '@/lib/game/guild/distribute';
 import { GuildError } from '@/lib/game/guild/errors';
 import { WorldBossError } from '@/lib/game/world-boss/errors';
-import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
+import { cancelJoinRequest, clearWorldBossOnExit, createParty, decideJoin, departParty, inviteToParty, kickMember, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossDetail, getWorldBossMapState, worldBossIdOfParty } from '@/lib/game/world-boss/queries';
 import { cancelScheduledWorldBoss, spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
 import { activateDueBosses, settleLeftBosses } from '@/lib/game/world-boss/spawn';
@@ -116,8 +116,8 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const ev = await q<{ n: number }>(sql`select count(*)::int as n from world_events where type='world_boss_spawn' and detail->>'bossId'=${due}`);
     expect(ev[0]!.n).toBe(1);
     // 지도 상태(세계지도 마커·띠·시트 카드) — 출현한 보스만 들어오고, 예정은 빠진다.
-    const map = await getWorldBossMapState(S, T);
-    expect(map.active.find((b) => b.id === due)).toMatchObject({ zoneId: ZONE, region: 'volcano', stage: 0, into: 0, recruiting: 0, departed: 0, mine: 'none' });
+    const map = await getWorldBossMapState(S);
+    expect(map.active.find((b) => b.id === due)).toMatchObject({ zoneId: ZONE, region: 'volcano', stage: 0, lootDiamond: 0, lootBoxes: 0 });
     expect(map.active.some((b) => b.id === later)).toBe(false);
   });
 
@@ -128,9 +128,8 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss, intro: '  약점  장비 맞춘 분\n환영해요  ' });
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_IN_PARTY');
     expect((await getWorldBossDetail(boss, S, G))?.parties.map((p) => p.intro)).toEqual(['약점 장비 맞춘 분 환영해요']);
-    // 지도 상태 — 모집 중 원정대 1, 대장은 'recruiting', 아직 신청 안 한 사람은 'none'.
-    expect((await getWorldBossMapState(S, T)).active.find((b) => b.id === boss)).toMatchObject({ recruiting: 1, departed: 0, mine: 'recruiting' });
-    expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('none');
+    // 지도 상태 — 보스가 출현 중으로 실린다(모집 수·내 상태 같은 필드는 화면이 안 써 10-11에 뺐다).
+    expect((await getWorldBossMapState(S)).active.find((b) => b.id === boss)).toMatchObject({ zoneId: 1, stage: 0 });
     // 상세 — 대장은 내 원정대(대장)·만들기 불가, 신청 전 참가자는 참가 전.
     const dl = await getWorldBossDetail(boss, S, T);
     expect(dl?.me).toMatchObject({ state: 'member', canCreate: false, isOwnerGuild: true });
@@ -145,7 +144,6 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     // 대장 화면 — 대기 중 신청이 보인다. 신청자는 'pending'.
     expect((await getWorldBossDetail(boss, S, T))?.myParty?.requests.map((r) => r.userId)).toEqual([G]);
     expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'pending', pendingPartyIds: [partyId] });
-    expect((await getWorldBossMapState(S, G)).active.find((b) => b.id === boss)?.mine).toBe('pending');
     expect(await code(decideJoin({ leaderUserId: G, serverId: S, partyId, userId: G, accept: true }))).toBe('NOT_LEADER');
     await decideJoin({ leaderUserId: T, serverId: S, partyId, userId: G, accept: true });
     expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(2);
@@ -197,10 +195,9 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('ALREADY_FOUGHT');
     const [bt] = await q<{ t: string }>(sql`select total_damage::text as t from world_bosses where id=${boss}::bigint`);
     expect(Number(bt!.t)).toBe(r.damage); // 재전송으로 피해가 두 번 더해지지 않는다
-    // 지도 상태 — 출발한 원정대 1, 둘 다 'fought', 누적 피해·단계 진행이 같이 내려온다.
-    const after = (await getWorldBossMapState(S, G)).active.find((b) => b.id === boss);
-    expect(after).toMatchObject({ recruiting: 0, departed: 1, mine: 'fought', totalDamage: String(r.damage) });
-    expect(after!.into + after!.stage).toBeGreaterThan(0);
+    // 지도 상태 — 단계·전리품이 같이 내려온다(누적 피해·내 상태 필드는 10-11에 뺐다).
+    const after = (await getWorldBossMapState(S)).active.find((b) => b.id === boss);
+    expect(after).toMatchObject({ stage: worldBossStageFor(r.damage).stage, lootDiamond: worldBossLootFor(worldBossStageFor(r.damage).stage).diamond });
     // 전투 기록(재생용) — 출발 결과와 같은 기록, 그 원정대원만 볼 수 있고(10-11) 다른 서버·대원 아님이면 없음. 명단에 user UUID는 내리지 않는다.
     const battle = await getWorldBossBattle(partyId, S, G);
     expect(battle).toMatchObject({ partyId, stageFrom: r.stageFrom, stageTo: r.stageTo, reward: r.reward, leaderIndex: 0 });
@@ -276,6 +273,35 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(p2).toEqual({ status: 'disbanded', reason: 'leader_left' });
   });
 
+  it('내보내기: 대장이 출발 전 대원을 내보내면 같은 원정대에 다시 신청할 수 없고, 다시 초대해 수락하면 풀린다', async () => {
+    const [link] = await q<{ n: number }>(sql`select count(*)::int as n from friend_links where server_id=${S} and status='accepted' and ((requester_id=${T}::uuid and addressee_id=${G}::uuid) or (requester_id=${G}::uuid and addressee_id=${T}::uuid))`);
+    const [same] = await q<{ n: number }>(sql`select count(*)::int as n from guild_members a join guild_members b on b.guild_id=a.guild_id and b.server_id=a.server_id where a.server_id=${S} and a.user_id=${T}::uuid and b.user_id=${G}::uuid`);
+    const madeLink = link!.n === 0 && same!.n === 0;
+    if (madeLink) await testDb.execute(sql`insert into friend_links (requester_id, addressee_id, status, server_id) values (${T}::uuid, ${G}::uuid, 'accepted', ${S})`);
+    try {
+      const boss = await makeBoss('2000-01-09');
+      const { partyId } = await createParty({ userId: T, serverId: S, bossId: boss });
+      await requestJoin({ userId: G, serverId: S, partyId });
+      await decideJoin({ leaderUserId: T, serverId: S, partyId, userId: G, accept: true });
+      expect(await code(kickMember({ leaderUserId: G, serverId: S, partyId, userId: T }))).toBe('NOT_LEADER');
+      expect(await code(kickMember({ leaderUserId: T, serverId: S, partyId, userId: T }))).toBe('NOT_MEMBER'); // 자기 자신은 해산으로
+      await kickMember({ leaderUserId: T, serverId: S, partyId, userId: G });
+      expect(await code(kickMember({ leaderUserId: T, serverId: S, partyId, userId: G }))).toBe('NOT_MEMBER');
+      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(1);
+      expect(await code(requestJoin({ userId: G, serverId: S, partyId }))).toBe('KICKED');
+      expect((await getWorldBossDetail(boss, S, G))?.me).toMatchObject({ state: 'none', pendingPartyIds: [] }); // 다른 원정대엔 신청할 수 있는 상태
+      expect((await getWorldBossDetail(boss, S, T))?.myParty?.requests).toEqual([]); // kicked 행은 신청 목록에 보이지 않는다
+      // 대장이 다시 초대해 수락하면 kicked 행이 지워지고 돌아온다.
+      await inviteToParty({ leaderUserId: T, serverId: S, partyId, userId: G });
+      await respondInvite({ userId: G, serverId: S, partyId, accept: true });
+      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_party_members where party_id=${partyId}::bigint`))[0]!.n).toBe(2);
+      expect((await q<{ n: number }>(sql`select count(*)::int as n from world_boss_join_requests where party_id=${partyId}::bigint and user_id=${G}::uuid`))[0]!.n).toBe(0);
+      await testDb.execute(sql`delete from world_bosses where id=${boss}::bigint`);
+    } finally {
+      if (madeLink) await testDb.execute(sql`delete from friend_links where requester_id=${T}::uuid and addressee_id=${G}::uuid and server_id=${S}`);
+    }
+  });
+
   it('초대: 대장이 친구·길드원을 초대하고 상대가 수락하면 바로 참가, 거절 뒤 재초대·중복·권한 검사', async () => {
     // T와 G가 친구도 같은 길드원도 아니면 잠시 친구로(끝에 되돌림).
     const [link] = await q<{ n: number }>(sql`select count(*)::int as n from friend_links where server_id=${S} and status='accepted' and ((requester_id=${T}::uuid and addressee_id=${G}::uuid) or (requester_id=${G}::uuid and addressee_id=${T}::uuid))`);
@@ -323,7 +349,7 @@ describe.skipIf(!T)('월드보스 — 생애·원정대(DB 통합)', () => {
     expect(await settleLeftBosses(S, { onlyBossIds: [boss] })).toEqual([]); // 두 번 돌려도 다시 정산하지 않는다
     expect(await code(createParty({ userId: T, serverId: S, bossId: boss }))).toBe('BOSS_NOT_ACTIVE');
     // 지도 상태 — 떠난 보스는 active에서 빠지고 48시간 기록(구역당 가장 최근 하나)에 주인 길드·전리품이 남는다.
-    const map = await getWorldBossMapState(S, T);
+    const map = await getWorldBossMapState(S);
     expect(map.active.some((b) => b.id === boss)).toBe(false);
     const [gname] = await q<{ name: string }>(sql`select name from guilds where id=${guildId}::bigint`);
     expect(map.left.find((l) => l.zoneId === ZONE)).toMatchObject({ bossId: boss, settledGuildName: gname!.name, lootDiamond: loot.diamond, lootBoxes: loot.boxes });

@@ -301,15 +301,14 @@ export default async function HomePage() {
             (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
               order by kst_day desc limit 1)
               as chron_headline,
-            -- 홈 무대 배너 재료 — 구역·주인 길드(문양)·페이즈·떠나는 시각·모집 중 원정대 수. 보스가 둘이면 **내가 참가할 수 있는 보스**(주인 길드원 또는 그 구역 거주 무소속, 아직 안 싸운 것) 먼저, 없으면 가장 최근(10-11 사용자).
+            -- 홈 무대 배너 재료 — 구역·주인 길드(문양)·페이즈·떠나는 시각·모집 중 원정대 수. 보스가 둘이면 **내 길드가 주인인 보스**(아직 안 싸운 것) 먼저, 없으면 가장 최근(10-11 사용자 — 거주 무소속 조건은 자격 규칙과 달라 뺐다).
             (select json_build_object('id', b.id::text, 'region', b.region, 'bossCode', b.boss_code, 'zone', z.name, 'owner', og.name, 'ownerEmblem', og.emblem_url, 'ownerColor', og.emblem_color, 'stage', b.stage, 'leaveAt', b.leave_at,
                       'recruiting', (select count(*)::int from world_boss_parties p where p.boss_id = b.id and p.status = 'recruiting'))
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id
               where b.server_id = ${serverId} and b.status = 'active' and b.leave_at > now()
                 and not (b.id = any(${`{${closedBossIds.join(',')}}`}::bigint[]))
               order by
-                (case when (og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
-                        or (me.residence_zone_id = z.id and not exists (select 1 from guild_members gm where gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}))
+                (case when og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId})
                       then 0 else 1 end),
                 (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid) then 1 else 0 end),
                 b.spawn_at desc

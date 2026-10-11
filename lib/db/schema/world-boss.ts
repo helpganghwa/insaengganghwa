@@ -11,7 +11,7 @@ import { profiles } from './profiles';
 
 export type WorldBossStatus = 'scheduled' | 'active' | 'left';
 export type WorldBossPartyStatus = 'recruiting' | 'departed' | 'disbanded';
-export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected';
+export type WorldBossJoinStatus = 'pending' | 'accepted' | 'rejected' | 'kicked'; // kicked = 대장이 내보냄(0239) — 같은 원정대 재신청 불가, 다시 초대해 수락하면 행이 지워진다
 export type WorldBossInviteStatus = 'pending' | 'accepted' | 'declined';
 export type WorldBossWeakSet = { weapon: string[]; armor: string[]; accessory: string[] };
 

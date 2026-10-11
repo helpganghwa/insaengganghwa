@@ -35,6 +35,7 @@ import {
   departPartyAction,
   equipBestAction,
   getBattleAction,
+  kickMemberAction,
   leavePartyAction,
   moreDepartedAction,
   requestJoinAction,
@@ -55,6 +56,7 @@ type Patch =
   | { t: 'cancel'; partyId: string }
   | { t: 'decide'; userId: string; accept: boolean }
   | { t: 'leave' }
+  | { t: 'kick'; userId: string }
   | { t: 'create'; intro: string }
   | { t: 'equipBest' }
   | { t: 'respondInvite'; partyId: string };
@@ -88,7 +90,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
             ? {
                 ...c,
                 memberCount: c.memberCount + 1,
-                members: [...c.members, { userId: req.userId, nickname: req.nickname, combat: req.combat, damage: 0, isLeader: false, guildEmblemUrl: req.guildEmblemUrl, guildEmblemColor: req.guildEmblemColor }],
+                members: [...c.members, { nickname: req.nickname, combat: req.combat, damage: 0, isLeader: false, guildEmblemUrl: req.guildEmblemUrl, guildEmblemColor: req.guildEmblemColor }],
                 combatSum: c.combatSum + req.combat,
               }
             : c,
@@ -98,14 +100,31 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
     case 'leave': {
       const mp = s.myParty;
       if (!mp || !me) return s;
+      const myNick = mp.members.find((m) => m.userId === me.userId)?.nickname; // 카드 명단엔 userId가 없다(10-11) — 닉네임으로 잇는다
       const parties = mp.isLeader
         ? s.parties.filter((c) => c.id !== mp.partyId)
         : s.parties.map((c) =>
             c.id === mp.partyId
-              ? { ...c, memberCount: Math.max(0, c.memberCount - 1), members: c.members.filter((m) => m.userId !== me.userId), combatSum: c.combatSum - (c.members.find((m) => m.userId === me.userId)?.combat ?? 0) }
+              ? { ...c, memberCount: Math.max(0, c.memberCount - 1), members: c.members.filter((m) => m.nickname !== myNick), combatSum: c.combatSum - (c.members.find((m) => m.nickname === myNick)?.combat ?? 0) }
               : c,
           );
       return { ...s, parties, myParty: null, me: { ...me, state: 'none', pendingPartyIds: [], canCreate: active && me.isOwnerGuild } };
+    }
+    case 'kick': {
+      // 대장이 대원을 내보냄(10-11 사용자 결정 ⑨) — 내 원정대 명단과 모집 카드(닉네임으로 잇는다)에서 뺀다.
+      const mp = s.myParty;
+      if (!mp) return s;
+      const gone = mp.members.find((m) => m.userId === p.userId);
+      if (!gone) return s;
+      return {
+        ...s,
+        myParty: { ...mp, members: mp.members.filter((m) => m.userId !== p.userId) },
+        parties: s.parties.map((c) =>
+          c.id === mp.partyId
+            ? { ...c, memberCount: Math.max(0, c.memberCount - 1), members: c.members.filter((m) => m.nickname !== gone.nickname), combatSum: c.combatSum - (c.members.find((m) => m.nickname === gone.nickname)?.combat ?? 0) }
+            : c,
+        ),
+      };
     }
     case 'create': {
       if (!me?.person) return s;
@@ -113,7 +132,7 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       const intro = p.intro.replace(/\s+/g, ' ').trim().slice(0, WORLD_BOSS_PARTY_INTRO_MAX) || null;
       const card: WorldBossPartyCard = {
         id: OPT_PARTY_ID, status: 'recruiting', leaderNickname: who.nickname, guildName: who.guildName, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor,
-        intro, members: [{ userId: who.userId, nickname: who.nickname, combat: who.combat, damage: 0, isLeader: true, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor }], combatSum: who.combat, memberCount: 1,
+        intro, members: [{ nickname: who.nickname, combat: who.combat, damage: 0, isLeader: true, guildEmblemUrl: who.guildEmblemUrl, guildEmblemColor: who.guildEmblemColor }], combatSum: who.combat, memberCount: 1,
         createdAt: 0, departedAt: null, damage: 0, rounds: 0, stageFrom: null, stageTo: null, rewardDiamond: 0, rewardBoxes: 0, rank: null, // 낙관 카드 — 시각은 서버 재렌더가 채운다(렌더 중 Date.now 금지)
       };
       return {
@@ -175,6 +194,7 @@ export function WorldBossDetailView({
   const [intro, setIntro] = useState('');
   const [traitSheet, setTraitSheet] = useState(false);
   const [disbandAsk, setDisbandAsk] = useState(false); // 해산은 되돌릴 수 없어 한 번 묻는다(10-11 감사)
+  const [kickAsk, setKickAsk] = useState<WorldBossPerson | null>(null); // 대원 내보내기 확인(10-11 사용자 결정 ⑨)
   const [inviteOpen, setInviteOpen] = useState(false);
   const [replay, setReplay] = useState<WorldBossBattle | null>(null);
   const departKeys = useRef<Record<string, string>>({}); // 출발 멱등 키(원정대마다) — 재전송해도 같은 결과(서버 depart_key), 다른 원정대엔 새 키
@@ -259,32 +279,9 @@ export function WorldBossDetailView({
       const r = await departPartyAction(d.id, mp.partyId, key).catch(() => null);
       if (!r) return showError(FAIL);
       if (r.status === 'error') return showError(r.message);
-      const f = r.result.finale;
-      if (!f) return;
-      // 얼굴·대장은 명단 순번으로(서버 재생 데이터와 같은 모양, 10-11) — 출발 결과의 명단 UUID를 내 원정대 사람 정보와 맞춘다.
-      const avatars: WorldBossBattle['avatars'] = {};
-      f.roster.forEach((m, i) => {
-        const p = mp.members.find((x) => x.userId === m.userId);
-        if (p) avatars[i] = { src: p.avatarSrc, box: p.faceBox };
-      });
-      // 길드 문양도 다시 보기와 같게(10-11 재검사) — 내 원정대 사람 정보에서.
-      const guildEmblems: NonNullable<WorldBossBattle['guildEmblems']> = {};
-      f.roster.forEach((m, i) => {
-        const p = mp.members.find((x) => x.userId === m.userId);
-        if (p?.guildEmblemUrl) guildEmblems[i] = { url: p.guildEmblemUrl, color: p.guildEmblemColor };
-      });
-      setReplay({
-        partyId: r.result.partyId,
-        leaderNickname: mp.members.find((m) => m.isLeader)?.nickname ?? '',
-        leaderIndex: f.roster.findIndex((m) => m.userId === mp.leaderUserId),
-        guildEmblems,
-        bossCode: d.bossCode,
-        finale: { ...f, roster: f.roster.map(({ userId: _uid, ...rest }) => rest) },
-        stageFrom: r.result.stageFrom,
-        stageTo: r.result.stageTo,
-        reward: r.result.reward,
-        avatars,
-      });
+      // 출발 응답은 다시 보기와 같은 재생 데이터(명단 순번·얼굴·문양, UUID 없음 — 10-11 사용자 결정 ②)를 서버가 만들어 준다.
+      if (!r.result.battle) return;
+      setReplay(r.result.battle);
     });
   };
 
@@ -442,7 +439,7 @@ export function WorldBossDetailView({
             {/* 출발한 뒤엔 빈 자리를 그리지 않는다(10-11 사용자) — 대원만. */}
             {Array.from({ length: mp.status === 'departed' ? mp.members.length : WORLD_BOSS_PARTY_MAX }, (_, i) => {
               const m = mp.members[i];
-              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} />;
+              if (m) return <SlotPerson key={m.userId} p={m} serverId={serverId} leader={m.isLeader} onKick={mp.isLeader && mp.status === 'recruiting' && !m.isLeader && mp.partyId !== OPT_PARTY_ID ? () => setKickAsk(m) : undefined} />;
               const inv = mp.invites[i - mp.members.length];
               if (inv) return <SlotPerson key={`i${inv.userId}`} p={inv} serverId={serverId} leader={false} inviting />;
               // 빈 자리 — 대장은 눌러 초대(10-11 사용자 2안: 친구·길드원 목록에서 초대 → 상대 수락). 출발 뒤엔 그냥 표시.
@@ -659,7 +656,7 @@ export function WorldBossDetailView({
               <DepartedSummary p={p} />
               <Roster members={p.members} value="damage" />
               <p className="mt-1.5 text-[10.5px] text-stone-500">
-                원정대 총획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+                원정대 총 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
               </p>
             </div>
           ))
@@ -677,6 +674,42 @@ export function WorldBossDetailView({
       </div>
 
       {/* 출발 확인 — 명단·합산 전투력을 되읽어 준다. 버튼은 취소/출발 같은 크기(10-10 사용자). */}
+      {/* 대원 내보내기 확인(10-11 사용자 결정 ⑨) — 출발 전 대장만. 내보내진 사람은 이 원정대에 다시 신청할 수 없다(다시 초대하면 돌아온다). */}
+      {kickAsk && mp && (
+        <ModalShell
+          onClose={() => setKickAsk(null)}
+          onSubmit={() => {
+            const t = kickAsk;
+            setKickAsk(null);
+            run(() => kickMemberAction(d.id, mp.partyId, t.userId), { title: josa(`${t.nickname}#{을} 내보냈어요`) }, { t: 'kick', userId: t.userId });
+          }}
+          label="대원 내보내기 확인"
+        >
+          <ModalLayout
+            title={josa(`${kickAsk.nickname}#{을} 내보낼까요?`)}
+            subtitle="내보낸 사람은 이 원정대에 다시 신청할 수 없어요. 다시 초대하면 돌아올 수 있어요."
+            footer={
+              <>
+                <ModalButton onClick={() => setKickAsk(null)}>취소</ModalButton>
+                <ModalButton
+                  tone="danger"
+                  disabled={pending}
+                  onClick={() => {
+                    const t = kickAsk;
+                    setKickAsk(null);
+                    run(() => kickMemberAction(d.id, mp.partyId, t.userId), { title: josa(`${t.nickname}#{을} 내보냈어요`) }, { t: 'kick', userId: t.userId });
+                  }}
+                >
+                  내보내기
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-[12px] text-stone-400">다른 원정대에는 신청할 수 있어요.</p>
+          </ModalLayout>
+        </ModalShell>
+      )}
+
       {disbandAsk && mp && (
         <ModalShell
           onClose={() => setDisbandAsk(false)}
@@ -825,7 +858,7 @@ export function WorldBossDetailView({
                 {/* 소개글을 안 적으면 아무 줄도 두지 않는다(10-11 사용자). */}
                 {intro.trim() && <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-stone-300">{intro.replace(/\s+/g, ' ').trim()}</p>}
                 <Roster
-                  members={[{ userId: me.person.userId, nickname: me.person.nickname, combat: me.person.combat, damage: 0, isLeader: true, guildEmblemUrl: me.person.guildEmblemUrl, guildEmblemColor: me.person.guildEmblemColor }]}
+                  members={[{ nickname: me.person.nickname, combat: me.person.combat, damage: 0, isLeader: true, guildEmblemUrl: me.person.guildEmblemUrl, guildEmblemColor: me.person.guildEmblemColor }]}
                   value="combat"
                 />
               </div>
@@ -911,7 +944,7 @@ function Roster({ members, value }: { members: WorldBossPartyCard['members']; va
   return (
     <div className="mt-1.5 flex flex-wrap gap-1">
       {members.map((m) => (
-        <span key={m.userId} className="inline-flex items-center gap-0.5 rounded-md bg-stone-800/80 px-1.5 py-0.5 text-[10px] leading-tight text-stone-300">
+        <span key={m.nickname} className="inline-flex items-center gap-0.5 rounded-md bg-stone-800/80 px-1.5 py-0.5 text-[10px] leading-tight text-stone-300">
           {m.isLeader && <span className="text-orange-300">★</span>}
           {m.guildEmblemUrl && <GuildBadge emblemUrl={m.guildEmblemUrl} emblemColor={m.guildEmblemColor} size={10} className="shrink-0" />}
           <span>{m.nickname}</span>
@@ -931,7 +964,7 @@ function DepartedSummary({ p, withReward = false }: { p: WorldBossPartyCard; wit
       </p>
       {withReward && (
         <p className="mt-0.5 text-[10.5px] text-stone-500">
-          원정대 총획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
+          원정대 총 획득 💎{p.rewardDiamond.toLocaleString('ko-KR')} 📦{p.rewardBoxes.toLocaleString('ko-KR')}
         </p>
       )}
     </div>
@@ -1008,7 +1041,7 @@ function DepartRow({ m }: { m: WorldBossMyParty['members'][number] }) {
 }
 
 /** 내 원정대 칸(10-11 B안) — 둥근 얼굴 + 이름 + 전투력. 원정대장은 주황 테두리 + '대장' 태그(👑는 이모지 지양으로 뺐다), 길드 문양은 얼굴 왼쪽 아래. 누르면 프로필. */
-function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPerson & { result?: WorldBossMemberResult }; serverId: number; leader: boolean; inviting?: boolean }) {
+function SlotPerson({ p, serverId, leader, inviting = false, onKick }: { p: WorldBossPerson & { result?: WorldBossMemberResult }; serverId: number; leader: boolean; inviting?: boolean; /** 대장(모집 중)에게만 — 얼굴 오른쪽 위 ✕로 내보내기 확인(10-11). */ onKick?: () => void }) {
   const body = (
     <>
       <span className="relative">
@@ -1039,12 +1072,27 @@ function SlotPerson({ p, serverId, leader, inviting = false }: { p: WorldBossPer
     </>
   );
   const cls = 'flex min-w-0 flex-col items-center gap-0.5 leading-tight';
-  return p.code ? (
+  const node = p.code ? (
     <Link prefetch={false} href={profileHref(p.code, serverId)} className={cls}>
       {body}
     </Link>
   ) : (
     <span className={cls}>{body}</span>
+  );
+  if (!onKick) return node;
+  // 내보내기 ✕는 프로필 링크 바깥 형제로(a 안에 button 금지) — 얼굴 오른쪽 위에 겹친다.
+  return (
+    <span className="relative block">
+      {node}
+      <button
+        type="button"
+        onClick={onKick}
+        aria-label={`${p.nickname} 내보내기`}
+        className="absolute right-0.5 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-stone-800 text-[10px] font-bold leading-none text-stone-300 ring-1 ring-stone-600 active:bg-stone-700"
+      >
+        ✕
+      </button>
+    </span>
   );
 }
 

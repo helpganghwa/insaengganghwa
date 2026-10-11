@@ -32,7 +32,7 @@ export default async function WorldMapPage() {
     // 수금 권한자(taxCollect)면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
     userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
     // 월드보스(2026-10-07) — 머무는 보스(마커·띠·시트 카드)와 떠난 지 48시간 안인 기록. 실패하면 표시만 생략.
-    getWorldBossMapState(serverId, userId).catch(() => null),
+    getWorldBossMapState(serverId).catch(() => null),
   ]);
   const taxOfficerGuildId =
     perm && hasGuildPerm(perm.role, perm.permissions, 'taxCollect') ? perm.guildId.toString() : null;

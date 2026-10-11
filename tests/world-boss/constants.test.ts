@@ -13,7 +13,7 @@ describe('월드보스 확정 수치', () => {
     expect(WORLD_BOSS_PARTY_MAX).toBe(10);
     expect(WORLD_BOSS_STAGE_BASE_HP).toBe(750_000);
     expect(WORLD_BOSS_STAGE_GROWTH).toBe(1.1);
-    expect(WORLD_BOSS_LOOT_PER_STAGE).toEqual({ diamond: 150, boxes: 12 });
+    expect(WORLD_BOSS_LOOT_PER_STAGE).toEqual({ diamond: 300, boxes: 24 });
     expect(WORLD_BOSS_WEAK_PER_SLOT).toBe(5);
     expect(WORLD_BOSS_LUCKY_MISS_P).toBe(21_000);
     expect(WORLD_BOSS_TRAIT_SLOT_P).toBe(0.7);

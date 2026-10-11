@@ -4,25 +4,25 @@
  */
 import 'server-only';
 
-import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { getFriendIds, profilesByIds } from '@/lib/game/friends';
 import { guilds } from '@/lib/db/schema/guild';
-import { worldBossParties, worldBossPartyMembers, worldBosses } from '@/lib/db/schema/world-boss';
+import { worldBosses } from '@/lib/db/schema/world-boss';
 import { WORLD_BOSS_LEFT_NOTE_MS, WORLD_BOSS_WEAK_BONUS, parseWorldBossTraits, worldBossStageFor, worldBossTraitDef, worldBossWeakBonus, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 
 import { worldBossName } from './bosses';
 import { bestLoadoutOf, knownWeakOf, loadoutsOf, piecePower } from './loadout';
 import { parseWeak } from './weak';
-import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState, WorldBossMine } from './map-types';
+import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from './map-types';
 import type { WorldBossDetail, WorldBossInvitable, WorldBossInviteIn, WorldBossMe, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from './view-types';
 
 /**
  * 지도 상태 — 머무는 보스 전부(출현 순) + 떠난 지 48시간 안인 보스(구역당 가장 최근 하나).
  * userId가 있으면 보스마다 내 상태(모집 중 원정대 소속 / 출발 완료)를 함께 준다.
  */
-export async function getWorldBossMapState(serverId: number, userId: string | null, now = new Date()): Promise<WorldBossMapState> {
+export async function getWorldBossMapState(serverId: number, now = new Date()): Promise<WorldBossMapState> {
   const rows = await db
     .select({
       id: worldBosses.id,
@@ -42,66 +42,19 @@ export async function getWorldBossMapState(serverId: number, userId: string | nu
     .where(and(eq(worldBosses.serverId, serverId), eq(worldBosses.status, 'active'), gt(worldBosses.leaveAt, now)))
     .orderBy(worldBosses.spawnAt);
 
-  const ids = rows.map((r) => r.id);
-  const counts = new Map<string, { recruiting: number; departed: number }>();
-  const mine = new Map<string, WorldBossMine>();
-  // 보스 id만 있으면 되는 세 조회는 같이 기다린다(10-11 감사: 순차 4번 → 1번).
-  const [c, m, pend] = ids.length > 0
-    ? await Promise.all([
-        db
-          .select({ bossId: worldBossParties.bossId, status: worldBossParties.status, n: sql<number>`count(*)::int` })
-          .from(worldBossParties)
-          .where(inArray(worldBossParties.bossId, ids))
-          .groupBy(worldBossParties.bossId, worldBossParties.status),
-        userId
-          ? db
-              // 해산된 원정대의 참가 행은 지워지므로(party.ts) 남은 행은 모집 중이거나 출발한 것뿐이다.
-              .select({ bossId: worldBossPartyMembers.bossId, status: worldBossParties.status })
-              .from(worldBossPartyMembers)
-              .innerJoin(worldBossParties, eq(worldBossParties.id, worldBossPartyMembers.partyId))
-              .where(and(eq(worldBossPartyMembers.userId, userId), inArray(worldBossPartyMembers.bossId, ids)))
-          : Promise.resolve([]),
-        userId
-          ? (db.execute(sql`
-              select distinct p.boss_id::text as b from world_boss_join_requests r join world_boss_parties p on p.id = r.party_id
-               where r.user_id = ${userId}::uuid and r.status = 'pending' and p.status = 'recruiting' and p.boss_id = any(${`{${ids.join(',')}}`}::bigint[])`) as unknown as Promise<{ b: string }[]>)
-          : Promise.resolve([] as { b: string }[]),
-      ])
-    : [[], [], []];
-  for (const r of c) {
-    const k = r.bossId.toString();
-    const cur = counts.get(k) ?? { recruiting: 0, departed: 0 };
-    if (r.status === 'recruiting') cur.recruiting += r.n;
-    else if (r.status === 'departed') cur.departed += r.n;
-    counts.set(k, cur);
-  }
-  for (const r of m) mine.set(r.bossId.toString(), r.status === 'departed' ? 'fought' : 'recruiting');
-  // 신청 대기(소속이 없을 때만) — 시트 안내 문구 분기용.
-  for (const r of pend) if (!mine.has(r.b)) mine.set(r.b, 'pending');
 
   const active: WorldBossMapBoss[] = rows.map((r) => {
-    const id = r.id.toString();
-    const total = Number(r.totalDamage);
-    const st = worldBossStageFor(total);
-    const c = counts.get(id) ?? { recruiting: 0, departed: 0 };
     return {
-      id,
+      id: r.id.toString(),
       zoneId: r.zoneId,
       region: r.region,
       bossCode: r.bossCode,
       name: worldBossName(r.bossCode),
-      spawnAt: r.spawnAt.getTime(),
       leaveAt: r.leaveAt.getTime(),
-      totalDamage: r.totalDamage.toString(),
       stage: r.stage,
-      into: st.into,
-      need: st.need,
       lootDiamond: Number(r.lootDiamond),
       lootBoxes: r.lootBoxes,
-      recruiting: c.recruiting,
-      departed: c.departed,
-      mine: mine.get(id) ?? 'none',
-      traits: parseWorldBossTraits(r.traits).map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name }; }),
+      traits: parseWorldBossTraits(r.traits).map((c) => ({ code: c, name: worldBossTraitDef(c)!.name })),
     };
   });
 
@@ -286,7 +239,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
       .map((r) => {
         const x = rosterPeople.get(r.uid) ?? rosterNames.get(r.uid);
         return {
-          userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: rosterPeople.get(r.uid)?.combat ?? 0, damage: Number(r.dmg),
+          nickname: x?.nickname ?? '알 수 없음', combat: rosterPeople.get(r.uid)?.combat ?? 0, damage: Number(r.dmg),
           isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null,
         };
       })
@@ -309,6 +262,14 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     const invitesIn: WorldBossInviteIn[] = active && !mem ? invRows.map((r) => ({ partyId: r.pid, leaderNickname: r.leader_nick, memberCount: Number(r.n) })) : [];
     // 나 자신(낙관적 '내 원정대' 그리기용)은 명단 조회(rosterPeople)에 내 id를 끼워 한 번에 읽는다 — 아래 people 조회와 합친다.
     me = { userId, state, pendingPartyIds: mem ? [] : reqs.map((r) => r.pid), canCreate: active && isOwnerGuild && state === 'none', isOwnerGuild, person: null, invites: invitesIn };
+    // 내 장착 상태는 내 원정대 조회와 무관 — 같이 기다린다(10-11 재검사 결정 ⑤: 순차 한 단계 줄임). 이미 싸웠으면 바꿔도 의미가 없어 읽지 않는다.
+    const minePromise = active && state !== 'fought'
+      ? Promise.all([
+          loadoutsOf(serverId, [userId], known, weakBonus),
+          bestLoadoutOf(serverId, userId, known, weakBonus),
+          !mem ? peopleOn(serverId, [userId], known, weakBonus) : Promise.resolve(null),
+        ])
+      : null;
     if (mem) {
       const isLeader = mem.leader === userId;
       const [memIds, reqIds, invIds] = await Promise.all([
@@ -320,7 +281,12 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
           ? (db.execute(sql`select user_id::text as uid from world_boss_invites where party_id = ${mem.pid}::bigint and status = 'pending' order by created_at`) as unknown as Promise<{ uid: string }[]>)
           : Promise.resolve([] as { uid: string }[]),
       ]);
-      const people = await peopleOn(serverId, [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)], known, weakBonus);
+      // 모집 중이면 대원은 위 명단 조회(rosterPeople)에 이미 있다 — 신청자·초대만 더 읽는다(10-11 재검사 결정 ⑤). 출발한 뒤엔 명단 조회가 이름만 읽어 대원도 여기서.
+      const extra = mem.status === 'recruiting'
+        ? [...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid), ...memIds.map((r) => r.uid).filter((u) => !rosterPeople.has(u))]
+        : [...memIds.map((r) => r.uid), ...reqIds.map((r) => r.uid), ...invIds.map((r) => r.uid)];
+      const people = new Map(rosterPeople);
+      if (extra.length > 0) for (const [k, v] of await peopleOn(serverId, extra, known, weakBonus)) people.set(k, v);
       // 출발 전 내 원정대면 내 사람 정보도 여기 있다(낙관적 그리기용).
       if (mem.status === 'recruiting') me.person = people.get(userId) ?? null;
       const person = (uid: string): WorldBossPerson =>
@@ -336,13 +302,9 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
         invites: invIds.map((r) => person(r.uid)),
       };
     }
-    // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 보이지 않는다. 참가 전이면 내 사람 정보(낙관적 '내 원정대' 그리기용)도 같이.
-    if (active && state !== 'fought') {
-      const [lo, best, selfPeople] = await Promise.all([
-        loadoutsOf(serverId, [userId], known, weakBonus),
-        bestLoadoutOf(serverId, userId, known, weakBonus),
-        !mem ? peopleOn(serverId, [userId], known, weakBonus) : Promise.resolve(null),
-      ]);
+    // 내 장착 상태(위에서 같이 기다린 것). 참가 전이면 내 사람 정보(낙관적 '내 원정대' 그리기용)도 같이.
+    if (minePromise) {
+      const [lo, best, selfPeople] = await minePromise;
       const l = lo.get(userId);
       if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
       if (selfPeople) me.person = selfPeople.get(userId) ?? null;
@@ -360,7 +322,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     settledGuildName: settling ? b.owner_name : b.settled_name, settledGuildEmblem: settling ? (b.owner_name ? { url: b.owner_emblem, color: b.owner_color } : null) : b.settled_name ? { url: b.settled_emblem, color: b.settled_color } : null,
     parties, departedTotal, me, myParty,
     weakKnown, weakTotal, weakBonus, mine,
-    traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, icon: t.icon, name: t.name, effect: t.effect, group: t.group }; }),
+    traits: traitCodes.map((c) => { const t = worldBossTraitDef(c)!; return { code: c, name: t.name, effect: t.effect, group: t.group }; }),
   };
 }
 
@@ -409,7 +371,7 @@ export async function getWorldBossDepartedMore(bossId: string, serverId: number,
       .filter((r) => r.pid === p.id)
       .map((r) => {
         const x = names.get(r.uid);
-        return { userId: r.uid, nickname: x?.nickname ?? '알 수 없음', combat: 0, damage: Number(r.dmg), isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null };
+        return { nickname: x?.nickname ?? '알 수 없음', combat: 0, damage: Number(r.dmg), isLeader: r.uid === p.leader, guildEmblemUrl: x?.guildEmblemUrl ?? null, guildEmblemColor: x?.guildEmblemColor ?? null };
       })
       .sort((x, y) => Number(y.isLeader) - Number(x.isLeader));
     return {

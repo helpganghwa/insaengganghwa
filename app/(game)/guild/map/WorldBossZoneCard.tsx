@@ -11,7 +11,7 @@ import { WorldBossSprite } from '@/components/WorldBossSprite';
 import { assetUrl } from '@/lib/asset-versions';
 import { worldBossBgUrl, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 
-type Common = { name: string; /** 보스 종류 코드 — 그림·배경. */ bossCode: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; traits?: { code: string; icon: string; name: string }[] };
+type Common = { name: string; /** 보스 종류 코드 — 그림·배경. */ bossCode: string; stage: number; lootDiamond: number; lootBoxes: number; href: string; traits?: { code: string; name: string }[] };
 
 export function WorldBossZoneCard(
   props:

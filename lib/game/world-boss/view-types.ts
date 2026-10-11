@@ -15,7 +15,7 @@ export type WorldBossPartyCard = {
   /**
    * 명단(대장 먼저, 나머지는 참가 순) — 모집 중은 월드보스 전투력(combat), 완료는 그 전투에서 준 피해(damage). 길드 문양은 닉네임 옆에(무소속은 없음).
    */
-  members: { userId: string; nickname: string; combat: number; damage: number; isLeader: boolean; guildEmblemUrl: string | null; guildEmblemColor: string | null }[];
+  members: { nickname: string; combat: number; damage: number; isLeader: boolean; guildEmblemUrl: string | null; guildEmblemColor: string | null }[]; // userId는 내리지 않는다(10-11 사용자 결정 ②)
   /** 명단의 전투력 합(모집 카드 '합산 전투력'). 완료 카드는 0. */
   combatSum: number;
   memberCount: number;
@@ -95,7 +95,7 @@ export type WorldBossMe = {
 };
 
 /** 보스 특성(0~2개) — 이름 오른쪽 칩과 설명 시트에 쓴다(docs/WORLD-BOSS.md §3.5). */
-export type WorldBossTraitView = { code: string; icon: string; name: string; effect: string; group: 'party' | 'boss' };
+export type WorldBossTraitView = { code: string; name: string; effect: string; group: 'party' | 'boss' };
 
 export type WorldBossDetail = {
   id: string;

@@ -61,7 +61,7 @@ export function WorldBossReplay({
   battle: WorldBossBattle;
   bossName: string;
   /** 보스 특성 — 이름 오른쪽 아이콘(10-10). */
-  bossTraits?: { code: string; icon: string; name: string }[];
+  bossTraits?: { code: string; name: string }[];
   bgSrc: string;
   onClose: () => void;
 }) {
@@ -170,7 +170,7 @@ export function WorldBossReplay({
       for (let i = 1; i < dmgSum.length; i++) if ((dmgSum[i] ?? 0) > (dmgSum[top] ?? 0)) top = i;
       out.push({ key: 'end', kind: 'round', text: '원정 종료' });
       out.push({ key: 'res1', kind: 'result', text: `원정대 피해 ${battle.finale.totalDamage.toLocaleString('ko-KR')} · ${moved > 0 ? `${bossName} ${battle.stageTo}페이즈까지 +${moved}페이즈` : `${bossName} ${battle.stageTo}페이즈 그대로`}` });
-      out.push({ key: 'res2', kind: 'result', text: `원정대 총획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
+      out.push({ key: 'res2', kind: 'result', text: `원정대 총 획득 💎${battle.reward.diamond.toLocaleString('ko-KR')} 📦${battle.reward.boxes.toLocaleString('ko-KR')}` });
       if (roster[top]) out.push({ key: 'res3', kind: 'result', text: `최대 피해 ${roster[top].nickname} ${(dmgSum[top] ?? 0).toLocaleString('ko-KR')}` });
     }
     return out;

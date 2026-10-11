@@ -12,7 +12,7 @@ import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError, type WorldBossErrorCode } from '@/lib/game/world-boss/errors';
-import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
+import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, kickMember, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
@@ -29,6 +29,7 @@ const MSG = {
   ALREADY_IN_PARTY: '이미 이 보스의 원정대에 들어가 있어요.',
   ALREADY_FOUGHT: '이 보스와는 이미 싸웠어요. 보스 하나에 1번만 참가할 수 있어요.',
   ALREADY_REQUESTED: '이미 이 원정대에 신청했어요.',
+  KICKED: '내보내진 원정대에는 다시 신청할 수 없어요.',
   NO_REQUEST: '신청이 이미 처리됐어요.',
   PARTY_NOT_RECRUITING: '이미 출발했거나 해산된 원정대예요.',
   PARTY_FULL: `원정대가 가득 찼어요(최대 ${WORLD_BOSS_PARTY_MAX}명).`,
@@ -121,6 +122,20 @@ export async function decideJoinAction(bossId: string, partyId: string, userId: 
   }
 }
 
+/** 대원 내보내기 — 대장만, 출발 전(10-11 사용자 결정 ⑨). */
+export async function kickMemberAction(bossId: string, partyId: string, userId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId) || !isId(partyId) || !isUuid(userId)) return err('NOT_FOUND');
+  try {
+    await kickMember({ leaderUserId: g.u, serverId: g.sid, partyId, userId });
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    return fail(e, 'kick');
+  }
+}
+
 export async function leavePartyAction(bossId: string, partyId: string) {
   const g = await gate();
   if ('status' in g) return g;
@@ -142,7 +157,10 @@ export async function departPartyAction(bossId: string, partyId: string, departK
   try {
     const r = await departParty({ leaderUserId: g.u, serverId: g.sid, partyId, departKey });
     rev(bossId);
-    return { status: 'success' as const, result: r };
+    // 기록(finale)의 명단 UUID는 내리지 않는다(10-11 사용자 결정 ②) — 다시 보기와 같은 재생 데이터(순번·얼굴·문양)를 서버가 만든다.
+    const { finale: _finale, ...rest } = r;
+    const battle = r.finale ? await getWorldBossBattle(partyId, g.sid, g.u) : null;
+    return { status: 'success' as const, result: { ...rest, battle } };
   } catch (e) {
     return fail(e, 'depart');
   }

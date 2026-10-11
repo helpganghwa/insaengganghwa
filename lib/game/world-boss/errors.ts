@@ -7,6 +7,7 @@ export type WorldBossErrorCode =
   | 'ALREADY_IN_PARTY'
   | 'ALREADY_FOUGHT'
   | 'ALREADY_REQUESTED'
+  | 'KICKED'
   | 'NO_REQUEST'
   | 'PARTY_NOT_RECRUITING'
   | 'PARTY_FULL'

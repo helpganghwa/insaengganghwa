@@ -171,6 +171,9 @@ export async function requestJoin(input: { userId: string; serverId: number; par
     if (p === 'fought') throw new WorldBossError('ALREADY_FOUGHT');
     if (p === 'recruiting') throw new WorldBossError('ALREADY_IN_PARTY');
     if ((await memberCount(tx, party.id)) >= WORLD_BOSS_PARTY_MAX) throw new WorldBossError('PARTY_FULL');
+    // 대장이 내보낸 사람은 이 원정대에 다시 신청할 수 없다(10-11 사용자 결정 ⑨, 0239 'kicked'). 다른 원정대는 된다.
+    const [prev] = (await tx.execute(sql`select status from world_boss_join_requests where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`)) as unknown as { status: string }[];
+    if (prev?.status === 'kicked') throw new WorldBossError('KICKED');
     // 같은 보스의 여러 원정대에 동시에 신청할 수 있다(10-10 사용자 — 종전 '대기 중 신청 하나만'은 폐기). 한 곳에 수락되면
     // 나머지 신청은 decideJoin이 지운다. 같은 원정대에 두 번은 (party_id, user_id) 유니크가 막는다.
     const ins = (await tx.execute(sql`
@@ -261,6 +264,27 @@ export async function leaveParty(input: { userId: string; serverId: number; part
     await tx.execute(sql`delete from world_boss_join_requests where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
     await tx.execute(sql`delete from world_boss_invites where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`); // 다시 초대받을 수 있게
     return { disbanded: false };
+  });
+}
+
+/**
+ * 대원 내보내기 — 대장만, 출발 전만(10-11 사용자 결정 ⑨, 확인 팝업 뒤). 내보내진 사람은 이 원정대에 다시 신청할 수 없고(신청 행 'kicked')
+ * 다른 원정대에는 신청할 수 있다. 대장이 다시 초대해 상대가 수락하면 행이 지워져 풀린다. 알림은 보내지 않는다.
+ */
+export async function kickMember(input: { leaderUserId: string; serverId: number; partyId: string; userId: string }): Promise<void> {
+  await db.transaction(async (tx) => {
+    const party = await lockParty(tx, input.partyId);
+    if (party.server_id !== input.serverId) throw new WorldBossError('NOT_FOUND');
+    if (party.status !== 'recruiting') throw new WorldBossError('PARTY_NOT_RECRUITING');
+    if (party.leader !== input.leaderUserId) throw new WorldBossError('NOT_LEADER');
+    if (input.userId === input.leaderUserId) throw new WorldBossError('NOT_MEMBER'); // 자기 자신은 해산으로
+    const del = (await tx.execute(sql`
+      delete from world_boss_party_members where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid returning user_id`)) as unknown as unknown[];
+    if (del.length === 0) throw new WorldBossError('NOT_MEMBER');
+    await tx.execute(sql`delete from world_boss_invites where party_id = ${party.id}::bigint and user_id = ${input.userId}::uuid`);
+    await tx.execute(sql`
+      insert into world_boss_join_requests (party_id, user_id, status, decided_at) values (${party.id}::bigint, ${input.userId}::uuid, 'kicked', now())
+      on conflict (party_id, user_id) do update set status = 'kicked', decided_at = now()`);
   });
 }
 
