@@ -9,6 +9,7 @@ import { pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossLootFor, worldBossLootMult, worldBossStageFor, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
 import { containsProfanity } from '@/lib/game/moderation/profanity';
 import { afterResponse } from '@/lib/push/defer';
+import { rateLimited } from '@/lib/ratelimit';
 import { filterByActiveServer, sendPushToUsers } from '@/lib/push/send';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
@@ -79,8 +80,13 @@ async function clearOtherAsks(tx: Tx, bossId: string, userId: string, keepPartyI
  * 상대에게 푸시 — 레이드 초대와 같은 경계(raid/notify.ts): 그 서버가 활성인 사람에게만, 받는 쪽이 보낸 쪽을 차단했으면 보내지 않는다
  * (초대·신청 행은 남긴다 — 차단 사실이 드러나지 않게). 응답 뒤에 돈다(afterResponse).
  */
-function pushLater(toUserId: string, fromUserId: string, serverId: number, payload: Parameters<typeof sendPushToUsers>[1]): void {
+/**
+ * 응답 뒤 푸시 — 받는 쪽이 그 서버에 있고 보낸 쪽을 차단하지 않았을 때만. cooldownKey가 있으면 같은 키로 10분 안에 또 보내지 않는다
+ * (신청 → 취소 → 재신청 반복으로 대장 알림이 울리던 것, 10-11 사용자: 신청 자체는 허용하고 푸시만 생략).
+ */
+function pushLater(toUserId: string, fromUserId: string, serverId: number, payload: Parameters<typeof sendPushToUsers>[1], cooldownKey?: string): void {
   afterResponse(async () => {
+    if (cooldownKey && (await rateLimited(cooldownKey, 'worldBossPush'))) return;
     const [target] = await filterByActiveServer([toUserId], serverId);
     if (!target) return;
     const blocked = (await db.execute(sql`select 1 as x from chat_blocks where user_id = ${toUserId}::uuid and blocked_user_id = ${fromUserId}::uuid limit 1`)) as unknown as unknown[];
@@ -184,7 +190,7 @@ export async function requestJoin(input: { userId: string; serverId: number; par
       url: `/world-boss/party/${input.partyId}`,
       tag: `world-boss-party-${input.partyId}`,
       category: 'world_boss',
-    });
+    }, `req:${input.partyId}:${input.userId}`);
   }
 }
 
@@ -225,7 +231,7 @@ export async function decideJoin(input: { leaderUserId: string; serverId: number
       url: `/world-boss/party/${input.partyId}`,
       tag: `world-boss-party-${input.partyId}`,
       category: 'world_boss',
-    });
+    }, `req:${input.partyId}:${input.userId}`);
   }
 }
 
@@ -488,7 +494,7 @@ export async function inviteToParty(input: { leaderUserId: string; serverId: num
     url: `/world-boss/${party.boss_id}`,
     tag: `world-boss-invite-${party.id}`,
     category: 'world_boss',
-  });
+  }, `inv:${party.id}:${input.userId}`);
 }
 
 /** 초대 취소 — 대장이, 대기 중인 것만. */

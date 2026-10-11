@@ -48,6 +48,8 @@ export type AdminZoneRow = {
   ownerName: string | null;
   ownerEmblemUrl: string | null;
   ownerEmblemColor: string | null;
+  /** 주인 길드 인원 — 소환 화면의 '원정대 최대 N팀 · 참가 상한 N명' 참고용(10-11 사용자). 주인 없으면 0. */
+  ownerMembers: number;
   busy: boolean;
 };
 export type AdminWorldBossBoard = { serverId: number; zones: AdminZoneRow[]; bosses: AdminBossRow[] }[];
@@ -59,10 +61,11 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
     const [zones, bosses] = await Promise.all([
       db.execute(sql`
         select z.id, z.name, z.region::text as region, z.map_x, z.map_y, g.name as owner_name, g.emblem_url as owner_emblem, g.emblem_color as owner_color,
-               exists (select 1 from world_bosses b where b.zone_id = z.id and b.status in ('scheduled', 'active')) as busy
+               exists (select 1 from world_bosses b where b.zone_id = z.id and b.status in ('scheduled', 'active')) as busy,
+               (select count(*)::int from guild_members gm where gm.guild_id = z.owner_guild_id and gm.server_id = z.server_id) as owner_members
           from zones z left join guilds g on g.id = z.owner_guild_id
          where z.server_id = ${serverId}
-         order by z.region, z.name`) as unknown as Promise<{ id: number; name: string; region: string; map_x: number | string; map_y: number | string; owner_name: string | null; owner_emblem: string | null; owner_color: string | null; busy: boolean }[]>,
+         order by z.region, z.name`) as unknown as Promise<{ id: number; name: string; region: string; map_x: number | string; map_y: number | string; owner_name: string | null; owner_emblem: string | null; owner_color: string | null; busy: boolean; owner_members: number }[]>,
       db.execute(sql`
         (select b.id::text as id, b.zone_id, z.name as zone_name, b.region::text as region, b.boss_code::text as boss_code, b.status, b.stage, b.spawn_at, b.leave_at, g.name as owner_name, b.traits
            from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = z.owner_guild_id
@@ -76,7 +79,7 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
     ]);
     out.push({
       serverId,
-      zones: zones.map((z) => ({ id: z.id, name: z.name, region: z.region, mapX: Number(z.map_x), mapY: Number(z.map_y), ownerName: z.owner_name, ownerEmblemUrl: z.owner_emblem, ownerEmblemColor: z.owner_color, busy: z.busy })),
+      zones: zones.map((z) => ({ id: z.id, name: z.name, region: z.region, mapX: Number(z.map_x), mapY: Number(z.map_y), ownerName: z.owner_name, ownerEmblemUrl: z.owner_emblem, ownerEmblemColor: z.owner_color, ownerMembers: Number(z.owner_members ?? 0), busy: z.busy })),
       bosses: bosses.map((b) => ({
         id: b.id, serverId, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, bossName: worldBossName(b.boss_code), status: b.status, stage: Number(b.stage),
         spawnAt: new Date(b.spawn_at).toISOString(), leaveAt: new Date(b.leave_at).toISOString(), ownerName: b.owner_name,
@@ -118,7 +121,8 @@ export async function spawnWorldBossByAdmin(input: {
   if ((kstMin >= 23 * 60 + 50 || kstMin < 10) && !input.allowNearMidnight) return { ok: false, code: 'NEAR_MIDNIGHT', leaveAt: leaveAt.toISOString() };
 
   const result = await db.transaction(async (tx): Promise<SpawnResult> => {
-    // 구역 행 잠금 — 같은 구역에 동시에 두 번 소환하는 경쟁을 직렬화한다.
+    // 서버 단위 잠금(10-11 사용자) — 어드민 화면을 둘 열고 다른 구역에 동시에 소환해도 겹침 확인을 차례로 거친다. 구역 행 잠금은 같은 구역 경쟁용.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${'wb-spawn:' + input.serverId}, 0))`);
     const [zone] = (await tx.execute(sql`
       select z.id, z.name, z.region::text as region, z.owner_guild_id::text as owner
         from zones z where z.id = ${input.zoneId} and z.server_id = ${input.serverId} for update`)) as unknown as { id: number; name: string; region: string; owner: string | null }[];
@@ -129,7 +133,9 @@ export async function spawnWorldBossByAdmin(input: {
        where b.server_id = ${input.serverId} and b.status in ('scheduled', 'active')
          and b.spawn_at < ${leaveAt.toISOString()}::timestamptz and b.leave_at > ${spawnAt.toISOString()}::timestamptz
        order by b.spawn_at`)) as unknown as { id: string; zone_id: number; zone_name: string; status: 'scheduled' | 'active'; spawn_at: string | Date; leave_at: string | Date }[];
-    if (live.some((b) => b.zone_id === input.zoneId)) return { ok: false, code: 'ZONE_BUSY' };
+    // 구역당 출현 중·예정은 하나(10-11 사용자: 시간이 겹치지 않는 예약도 같은 구역엔 둘 수 없다).
+    const inZone = (await tx.execute(sql`select 1 as x from world_bosses where server_id = ${input.serverId} and zone_id = ${input.zoneId} and status in ('scheduled', 'active') limit 1`)) as unknown as unknown[];
+    if (inZone.length > 0) return { ok: false, code: 'ZONE_BUSY' };
     if (live.length > 0 && !input.allowOverlap) {
       return {
         ok: false,

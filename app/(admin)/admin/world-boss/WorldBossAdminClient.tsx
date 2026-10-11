@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 
-import { worldBossTraitDef } from '@/lib/game/guild/balance';
+import { WORLD_BOSS_PARTY_MAX, worldBossTraitDef } from '@/lib/game/guild/balance';
 import type { AdminWorldBossBoard, SpawnOverlap } from '@/lib/game/world-boss/admin';
 import { DEFAULT_WORLD_BOSS_KIND, WORLD_BOSS_KIND_OPTIONS } from '@/lib/game/world-boss/bosses';
 
@@ -19,7 +19,7 @@ const STATUS_KO: Record<string, { label: string; cls: string }> = {
 };
 const ERROR_KO: Record<string, string> = {
   BAD_KIND: '모르는 보스 종류예요.',
-  ZONE_BUSY: '그 구역엔 이미 출현 중이거나 예정인 보스가 있어요.',
+  ZONE_BUSY: '그 구역엔 이미 출현 중이거나 예정인 보스가 있어요(구역당 하나).',
   ZONE_NOT_FOUND: '구역을 찾을 수 없어요.',
   PAST: '지난 시각이에요. 즉시 소환하거나 앞 시각으로 잡아 주세요.',
   TOO_FAR: '30일 안쪽으로만 예약할 수 있어요.',
@@ -147,6 +147,13 @@ export function WorldBossAdminClient({ board, mapSrc }: { board: AdminWorldBossB
         {zone && !zone.ownerName && (
           <p className="rounded-lg border border-amber-700/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
             주인 없는 구역이에요. 원정대는 구역 주인 길드원만 만들 수 있어서, 누가 점령하기 전엔 아무도 싸울 수 없어요.
+          </p>
+        )}
+        {zone?.ownerName && (
+          // 참가 상한 참고(10-11 사용자): 원정대는 주인 길드원 1인당 하나 → 최대 인원 × 팀당 10명.
+          <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300">
+            주인 길드 <b className="text-zinc-100">{zone.ownerName}</b> {zone.ownerMembers}명 → 원정대 최대 <b className="text-zinc-100">{zone.ownerMembers}팀</b> · 참가 상한{' '}
+            <b className="text-zinc-100">{(zone.ownerMembers * WORLD_BOSS_PARTY_MAX).toLocaleString('ko-KR')}명</b>(팀당 {WORLD_BOSS_PARTY_MAX}명, 거주 무소속 포함)
           </p>
         )}
         <div className="flex gap-2 text-xs">
