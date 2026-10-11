@@ -686,8 +686,7 @@ export function WorldBossDetailView({
           label="대원 내보내기 확인"
         >
           <ModalLayout
-            title={josa(`${kickAsk.nickname}#{을} 내보낼까요?`)}
-            subtitle="내보낸 사람은 이 원정대에 다시 신청할 수 없어요. 다시 초대하면 돌아올 수 있어요."
+            title={josa(`${kickAsk.nickname}#{을} 원정대에서 내보낼까요?`)}
             footer={
               <>
                 <ModalButton onClick={() => setKickAsk(null)}>취소</ModalButton>
@@ -705,7 +704,7 @@ export function WorldBossDetailView({
               </>
             }
           >
-            <p className="text-[12px] text-stone-400">다른 원정대에는 신청할 수 있어요.</p>
+            <p className="text-[12px] text-stone-400">내보낸 사람은 이 원정대에 다시 신청할 수 없지만, 다시 초대하면 참가할 수 있어요.</p>
           </ModalLayout>
         </ModalShell>
       )}
