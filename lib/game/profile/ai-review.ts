@@ -1,4 +1,4 @@
-// 프로필 자동 검토 — Claude Haiku 4.5 vision.
+// 프로필 자동 검토 — Claude vision(검수 모델은 아래 MODEL_ID).
 // 입력: 프로필 이미지(현재 정면 south 1장) + descriptionPrompt
 // 출력: { pass: boolean, reasons: ReviewReason[], notes: string }
 //
@@ -9,12 +9,15 @@
 
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
-import { NO_THINKING } from '@/lib/ai/thinking';
+import { noThinkingFor } from '@/lib/ai/thinking';
 import sharp from 'sharp';
 import { z } from 'zod';
 
-// 검수 모델 — 미세 결함(끊긴 무기·해부학 오류 등) 검출 정확도가 중요해 Sonnet 5 사용.
-const MODEL_ID = 'claude-sonnet-5-5';
+// 검수 모델 — 미세 결함(끊긴·중복 무기, 해부학 오류) 검출 정확도가 중요해 Sonnet 5.5 유지.
+// 10-12 비용 점검에서 Haiku 5.5($0.10/$0.50)를 표본 11건(승인 6·AI 리젝 5)으로 비교: 결함 검출 0/5(추론 끔)·1/5(adaptive), Sonnet은 4/5 — 전환 보류.
+// 비교 시험은 env PROFILE_REVIEW_MODEL·PROFILE_REVIEW_THINKING·PROFILE_REVIEW_SIZE로(배포 없이).
+const MODEL_ID = process.env.PROFILE_REVIEW_MODEL || 'claude-sonnet-5-5';
+const REVIEW_THINKING = process.env.PROFILE_REVIEW_THINKING === 'adaptive';
 
 const REVIEW_REASONS = ['nsfw', 'violence', 'hate', 'quality'] as const;
 export type ReviewReason = (typeof REVIEW_REASONS)[number];
@@ -28,7 +31,7 @@ const HeadBoxSchema = z.object({
 export type HeadBox = z.infer<typeof HeadBoxSchema>;
 
 // 얼굴 기준점(2026-10-05) — 머리 박스(head)는 왕관·후광·모자·귀를 머리로 잡는 일이 잦아(7차 점검 796건 중 87건)
-// 썸네일 크롭은 눈·머리카락 꼭대기(장식 제외)·턱으로 정한다. 검수 이미지(트림·768 확대) 기준 0~1.
+// 썸네일 크롭은 눈·머리카락 꼭대기(장식 제외)·턱으로 정한다. 검수 이미지(트림·REVIEW_SIZE 확대) 기준 0~1.
 const FacePointsSchema = z.object({
   eyeL: z.tuple([z.number(), z.number()]),
   eyeR: z.tuple([z.number(), z.number()]),
@@ -106,9 +109,11 @@ OUTPUT — strict JSON only:
   "face": { "eyeL": [0.0-1.0, 0.0-1.0], "eyeR": [0.0-1.0, 0.0-1.0], "hairTop": 0.0-1.0, "chin": 0.0-1.0 }
 }`;
 
-/** 검수 이미지(트림 → 768 정사각 contain) 좌표를 원본 좌표로 되돌리는 변환. */
+/** 검수 이미지(트림 → REVIEW_SIZE 정사각 contain) 좌표를 원본 좌표로 되돌리는 변환. */
 type ReviewGeom = { W: number; H: number; trimL: number; trimT: number; tw: number; th: number };
-const REVIEW_SIZE = 768;
+// 768 유지(10-12 비용 점검): 512로 낮추면 이미지 토큰 786→350(아바타당 $0.001, 월 $5)뿐인데 표본 비교(리젝 5건)에서
+// 768은 두 번 다 4/5, 512는 4/5·3/5(가는 레이피어 중복을 한 번 놓침). env는 비교 시험용(배포 없이 해상도 바꿔 재검수).
+const REVIEW_SIZE = Number(process.env.PROFILE_REVIEW_SIZE) || 768;
 
 /**
  * 얼굴 기준점 → 원본 south 기준 크롭 박스. 7차 교정(10-05)과 같은 규칙:
@@ -166,7 +171,7 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   const content: Anthropic.MessageParam['content'] = [];
   let southGeom: ReviewGeom | null = null;
   for (const img of input.images) {
-    // 투명 여백 트림(피사체 줌인) 후 768 nearest 업스케일 — 미세 끊긴/분리 무기 검출률↑(실측).
+    // 투명 여백 트림(피사체 줌인) 후 REVIEW_SIZE nearest 업스케일 — 미세 끊긴/분리 무기 검출률↑(실측).
     // 정면은 트림 오프셋·크기를 남겨 얼굴 기준점을 원본 좌표로 되돌린다(faceBoxFromPoints).
     let s = sharp(img.png);
     try {
@@ -198,10 +203,10 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   const callOnce = async () => {
     const res = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: 512,
-      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
-      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
-      thinking: NO_THINKING,
+      // 시험 스위치 PROFILE_REVIEW_THINKING=adaptive — 추론을 켜고 예산을 넉넉히(비교 시험용, 운영 기본은 끔).
+      max_tokens: REVIEW_THINKING ? 2048 : 512,
+      // thinking 미지정 시 adaptive 기본 — 짧은 예산이 thinking에 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 모델별로 명시 비활성.
+      ...(REVIEW_THINKING ? { thinking: { type: 'adaptive' as const } } : noThinkingFor(MODEL_ID)),
       // 캐시 TTL 1시간(10-12 비용 점검): 잡 간격 5분 이내 56%뿐이라 절반 가까이 캐시를 다시 쓰고 있었다. 1시간 안에 다음 잡이 오는 비율 99%.
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } }],
       messages: [{ role: 'user', content }],

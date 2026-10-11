@@ -8,7 +8,12 @@ import type Anthropic from '@anthropic-ai/sdk';
  */
 export const NO_THINKING = { type: 'between_tools' } as unknown as Anthropic.Messages.ThinkingConfigParam;
 
-/** 모델별 추론 끄기 인자 — Sonnet 계열만 끌 수 있다. */
+/** Haiku 5.5(2026-10-07)는 `disabled`를 받고 `between_tools`는 400으로 거부한다(10-12 실측). */
+export const THINKING_DISABLED: Anthropic.Messages.ThinkingConfigParam = { type: 'disabled' };
+
+/** 모델별 추론 끄기 인자 — Sonnet은 between_tools, Haiku는 disabled, Opus·Fable은 끌 수 없어 생략. */
 export function noThinkingFor(model: string): { thinking?: Anthropic.Messages.ThinkingConfigParam } {
-  return model.startsWith('claude-sonnet-') ? { thinking: NO_THINKING } : {};
+  if (model.startsWith('claude-sonnet-')) return { thinking: NO_THINKING };
+  if (model.startsWith('claude-haiku-')) return { thinking: THINKING_DISABLED };
+  return {};
 }
