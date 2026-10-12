@@ -12,6 +12,7 @@ import { kstDateString } from '@/lib/kst';
  * (server_id, created_at) 인덱스(0241)를 탄다. 자정 직후 뒤늦게 들어온 어제 기록은 10분 뒤 다시 계산할 때 반영된다.
  */
 const cache = new Map<string, { uid: string | null; at: number }>();
+const raidCache = new Map<string, { uid: string | null; at: number }>();
 const TTL_MS = 10 * 60 * 1000;
 
 export async function yesterdayOpenTop(serverId: number): Promise<string | null> {
@@ -30,5 +31,27 @@ export async function yesterdayOpenTop(serverId: number): Promise<string | null>
   // 하루가 바뀌면 키가 바뀌므로 옛 날짜 항목은 지운다(서버 수 × 1건만 남는다).
   for (const k of cache.keys()) if (!k.endsWith(kstDateString())) cache.delete(k);
   cache.set(key, { uid, at: Date.now() });
+  return uid;
+}
+
+/**
+ * 어제 레이드 피해 1위(서버별) — 칭호 raid_hero 판정·표시 공용. open_king과 같은 이유(raid_attacks 전체 스캔 7,387, 2차 검사 L3).
+ * 범위 조건은 raid_attacks(created_at) 인덱스(0242)를 탄다.
+ */
+export async function yesterdayRaidTop(serverId: number): Promise<string | null> {
+  const key = `${serverId}:${kstDateString()}`;
+  const hit = raidCache.get(key);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.uid;
+  const rows = (await db.execute(sql`
+    select ra.user_id::text as uid
+      from raid_attacks ra join raids r on r.id = ra.raid_id
+     where r.server_id = ${serverId}
+       and ra.created_at >= (((now() at time zone 'Asia/Seoul')::date - 1)::timestamp at time zone 'Asia/Seoul')
+       and ra.created_at <  (((now() at time zone 'Asia/Seoul')::date)::timestamp at time zone 'Asia/Seoul')
+     group by 1 order by sum(ra.damage) desc, 1 limit 1
+  `)) as unknown as { uid: string }[];
+  const uid = rows[0]?.uid ?? null;
+  for (const k of raidCache.keys()) if (!k.endsWith(kstDateString())) raidCache.delete(k);
+  raidCache.set(key, { uid, at: Date.now() });
   return uid;
 }

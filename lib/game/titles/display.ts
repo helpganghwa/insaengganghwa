@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { sql } from 'drizzle-orm';
-import { yesterdayOpenTop } from './open-top';
+import { yesterdayOpenTop, yesterdayRaidTop } from './open-top';
 
 import { db } from '@/lib/db/client';
 import { guildCapacity } from '@/lib/game/guild/balance';
@@ -263,13 +263,8 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       return code === 'melee_champion' ? Number(r?.win) === 1 : Number(r?.last) === 1;
     }
     if (code === 'raid_hero') {
-      const [r] = (await db.execute(sql`
-        select (rk.user_id = ${u})::int as top from (
-          select ra.user_id, sum(ra.damage) dmg from raid_attacks ra join raids r on r.id=ra.raid_id
-          where r.server_id=${s} and (ra.created_at ${sql.raw(KST)})::date = (now() ${sql.raw(KST)})::date - 1
-          group by 1 order by 2 desc, 1 limit 1) rk
-      `)) as unknown as { top: number }[];
-      return Number(r?.top) === 1;
+      // 서버×날짜 캐시(open-top.ts, 10-12) — raid_attacks 전체 스캔 자리.
+      return (await yesterdayRaidTop(serverId)) === userId;
     }
     if (code === 'open_king') {
       // 서버×날짜 캐시(open-top.ts, 10-12) — 호출마다 보급 로그 전체를 훑던 자리.

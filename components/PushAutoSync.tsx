@@ -15,7 +15,27 @@ import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscri
  * upsert로 서버 구독을 자동 복구한다. 권한이 없으면(default/denied) 아무것도 하지 않음 —
  * 권한 요청은 기존 contextual prompt가 담당(첫 방문 즉시 요청 금지 정책 유지).
  */
-export function PushAutoSync() {
+/**
+ * 알림 링크 풀기(2026-10-12 2서버) — 서버가 붙은 알림은 `/auth/switch-server?to=N&next=url`로 온다. 지금 서버와 같으면
+ * next로 소프트 이동(채팅 도크 등 위젯 이벤트도 next 기준), 다르면 쿠키를 바꿔야 하므로 전체 이동.
+ */
+function resolvePushUrl(raw: string, serverId: number): { url: string; hard: boolean } {
+  try {
+    const u = new URL(raw, location.origin);
+    if (u.pathname === '/auth/switch-server') {
+      const to = Number(u.searchParams.get('to'));
+      const next = u.searchParams.get('next') ?? '/';
+      const safeNext = next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : '/';
+      if (Number.isInteger(to) && to === serverId) return { url: safeNext, hard: false };
+      return { url: `${u.pathname}${u.search}`, hard: true };
+    }
+  } catch {
+    /* 아래 원문 그대로 */
+  }
+  return { url: raw, hard: false };
+}
+
+export function PushAutoSync({ serverId }: { serverId: number }) {
   const router = useRouter();
 
   // SW 알림 클릭 폴백 라우팅 — WindowClient.navigate()가 미제어 클라이언트/iOS PWA에서
@@ -26,14 +46,19 @@ export function PushAutoSync() {
     const onMessage = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null;
       if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//')) {
-        if (location.pathname !== d.url) router.push(d.url);
+        const r = resolvePushUrl(d.url, serverId);
+        if (r.hard) {
+          location.assign(r.url);
+          return;
+        }
+        if (location.pathname !== r.url) router.push(r.url);
         // 앱 내 위젯(채팅 도크 등)에 목적지 전달 — 같은 경로여도 쿼리 액션(?chat=)은 처리돼야 한다.
-        window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: d.url }));
+        window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: r.url }));
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
-  }, [router]);
+  }, [router, serverId]);
 
   // 알림 클릭 목적지 핸드오프 소비 — iOS PWA는 openWindow(url)가 start_url/마지막 화면으로
   // 열려 SW의 어떤 경로로도 목적지가 보장되지 않는 케이스가 있다(실서버 재현). SW가
@@ -57,8 +82,13 @@ export function PushAutoSync() {
               if (v && typeof v.url === 'string' && v.url.startsWith('/') && !v.url.startsWith('//')) {
                 store.delete('pending');
                 if (Date.now() - (v.ts ?? 0) < FRESH_MS) {
-                  if (location.pathname !== v.url) router.push(v.url);
-                  window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: v.url }));
+                  const r = resolvePushUrl(v.url, serverId);
+                  if (r.hard) {
+                    location.assign(r.url);
+                    return;
+                  }
+                  if (location.pathname !== r.url) router.push(r.url);
+                  window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: r.url }));
                 }
               }
             };
@@ -85,7 +115,7 @@ export function PushAutoSync() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
     };
-  }, [router]);
+  }, [router, serverId]);
 
   useEffect(() => {
     const support = checkPushSupport();

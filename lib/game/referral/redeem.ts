@@ -157,6 +157,7 @@ export async function attributeReferralFromShare(
       title: '친구 초대 보상',
       body: `${result.newUserNickname}님이 가입했어요! 💎 ${INVITE_DIAMOND_PER_REFERRAL} + 📦 ${INVITE_BOX_PER_REFERRAL}개 받기`,
       url: '/mail',
+      serverId: result.rewardServerId,
       tag: 'referral',
       category: 'referral',
     });

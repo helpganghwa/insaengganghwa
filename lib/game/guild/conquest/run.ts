@@ -50,6 +50,16 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
   for (const d of deps) if (d.role === 'attack') contested.add(d.zone_id);
   if (contested.size === 0) return { battleDay, resolved: 0 };
   const contestedArr = [...contested];
+  // 이미 그날 경합 구역 전부가 저장돼 있으면 시뮬 없이 끝낸다(10-12 2차 검사 C5) — 23시대 5분 틱마다 전체 시뮬(서버 1 실측 약 45초)을
+  // 되풀이해, 2서버면 정산만 90초가 되어 연대기 사전 생성의 60초 예산을 모든 틱에서 넘겼다. 일부만 저장된 날(중간 실패)은 그대로 진행한다.
+  {
+    const [done] = (await db.execute(sql`
+      select count(*)::int as n from conquest_battles
+       where server_id = ${serverId} and battle_kst_day = ${battleDay}
+         and zone_id in (${sql.join(contestedArr.map((z) => sql`${z}`), sql`, `)})
+    `)) as unknown as { n: number }[];
+    if (done && Number(done.n) >= contestedArr.length) return { battleDay, resolved: 0 };
+  }
 
   // 경합 구역 정보(소유·집행관).
   // ⚠ Drizzle는 JS 배열 `${arr}`를 `($1,$2,…)` 튜플로 펼친다 — `= any(${arr})`는

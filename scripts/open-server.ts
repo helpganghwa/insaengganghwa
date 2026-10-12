@@ -31,6 +31,11 @@ const positional = process.argv.slice(4).filter((a) => !a.startsWith('--'));
 const statusFlag = flags.find((f) => f.startsWith('--status='))?.slice('--status='.length) ?? 'open';
 const dryRun = flags.includes('--dry-run');
 const force = flags.includes('--force');
+const unknownFlags = flags.filter((f) => !f.startsWith('--status=') && f !== '--dry-run' && f !== '--force');
+if (unknownFlags.length > 0) {
+  console.error(`모르는 옵션: ${unknownFlags.join(' ')} (오타로 실제 오픈되는 것을 막기 위해 중단)`);
+  process.exit(1);
+}
 if (!Number.isInteger(serverId) || serverId < 2 || !name || !['open', 'full', 'closed'].includes(statusFlag)) {
   console.error('사용: bun run scripts/open-server.ts <serverId(2+)> <이름> [ENV_NAME] [--status=open|full|closed] [--dry-run] [--force]');
   console.error('  ENV_NAME 생략 시 DIRECT_URL(스테이징). 프로덕션은 PROD_DATABASE_URL을 명시한다.');

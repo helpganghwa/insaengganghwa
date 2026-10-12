@@ -30,6 +30,7 @@ import { SpritePreloader } from '@/components/SpritePreloader';
 import { SfxUnlock } from '@/components/audio/SfxUnlock';
 import { BgmPlayer } from '@/components/audio/BgmPlayer';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
+import { ServerSync } from '@/components/ServerSync';
 import { PushAutoSync } from '@/components/PushAutoSync';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
 import { GameRatingSplash } from '@/components/GameRatingSplash';
@@ -152,7 +153,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   }
 
   // 헤더/네비 데이터 — 여기서 await하지 않음(Suspense 스트리밍). 두 자식이 같은 promise 공유.
-  const layoutData = getActiveServerId().then((sid) => loadLayoutData(userId, sid));
+  const layoutData = getActiveServerId().then((sid) => loadLayoutData(userId, sid, { explicitServer: cookieStore.get('srv') != null }));
 
   return (
     <DiamondProvider>
@@ -168,7 +169,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         {/* 배경음 — 설정('ig:bgm') 기본 OFF라 켠 기기에서만 소리가 난다. */}
         <BgmPlayer track="forge-dawn" />
         <PresenceHeartbeat />
-        <PushAutoSync />
+        <PushAutoSync serverId={dailySid} />
+        <ServerSync serverId={dailySid} />
         <KakaoSdkLoader />
         <RouteTransitionOverlay />
         {/* 게임물 등급 표시(§33) — 진입(세션1회)·온라인 1시간 반복 모두 헤더 슬라이드 토스트 4초. 포털 렌더. */}

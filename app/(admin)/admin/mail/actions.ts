@@ -105,12 +105,20 @@ export async function sendMailToUserAction(opts: {
         deliverySid = opts.serverId;
       }
       if (deliverySid == null) {
-        const [rp] = await tx
-          .select({ sid: profiles.lastServerId })
-          .from(profiles)
-          .where(eq(profiles.id, recipientId))
-          .limit(1);
-        deliverySid = rp?.sid ?? 1;
+        // 코드·userId 자동 배송 — 캐릭터가 여러 서버에 있으면 조용히 마지막 접속 서버로 보내지 않고 고르게 한다(10-12 2차 검사 D3).
+        const owned = (await tx.execute(sql`
+          select server_id::int as sid from characters where user_id = ${recipientId} order by server_id
+        `)) as unknown as { sid: number }[];
+        if (owned.length > 1) throw new Error(`MULTI_SERVER:${owned.map((o) => o.sid).join('/')}`);
+        if (owned.length === 1) deliverySid = owned[0]!.sid;
+        else {
+          const [rp] = await tx
+            .select({ sid: profiles.lastServerId })
+            .from(profiles)
+            .where(eq(profiles.id, recipientId))
+            .limit(1);
+          deliverySid = rp?.sid ?? 1;
+        }
       }
       sentSid = deliverySid;
       await tx.insert(mailbox).values({
@@ -126,7 +134,7 @@ export async function sendMailToUserAction(opts: {
         adminId,
         mode: 'one',
         recipientCount: 1,
-        targetLabel: (opts.toNickname?.trim() || opts.toCode?.trim() || opts.toUserId?.trim() || '').slice(0, 200),
+        targetLabel: `${(opts.toNickname?.trim() || opts.toCode?.trim() || opts.toUserId?.trim() || '').slice(0, 190)} → ${deliverySid}서버`,
         title,
         body,
         payload,
@@ -152,6 +160,8 @@ export async function sendMailToUserAction(opts: {
     const msg = e instanceof Error ? e.message : 'UNKNOWN';
     if (msg === 'FORBIDDEN') return { status: 'error', message: '관리자 권한이 없습니다.' };
     if (msg === 'UNAUTHENTICATED') return { status: 'error', message: '로그인이 필요합니다.' };
+    if (msg.startsWith('MULTI_SERVER:'))
+      return { status: 'error', message: `수신자가 ${msg.split(':')[1]}서버에 캐릭터를 두고 있습니다. 배송 서버를 골라 주세요.` };
     if (msg.startsWith('NO_CHARACTER_ON_SERVER:'))
       return { status: 'error', message: `수신자는 ${msg.split(':')[1]}서버에 캐릭터가 없습니다. 배송 서버를 다시 고르세요.` };
     console.error('[admin.mail.send]', e);

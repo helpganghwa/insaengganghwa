@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { expeditionSlotsFor } from '@/lib/game/balance';
-import { yesterdayOpenTop } from './open-top';
+import { yesterdayOpenTop, yesterdayRaidTop } from './open-top';
 import { firstRanksFrom } from '@/lib/game/titles/first-milestones';
 
 import { sql } from 'drizzle-orm';
@@ -161,6 +161,9 @@ async function ensureEnhanceStats(userId: string, serverId: number): Promise<voi
 async function collectMetrics(userId: string, serverId: number): Promise<Metrics> {
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
+  // 레이드 기록(raid_attacks·raids)은 탈퇴 때 보존되므로 **지금 캐릭터 생성 이후**만 센다(10-12 2차 검사 B-M1) — 같은 계정으로 재가입한
+  // 캐릭터가 옛 레이드 실적과 칭호 지표를 이어받고, 탈퇴자의 랭킹 행이 되살아나던 것(월드보스 지표의 c.created_at 기준과 같다).
+  const cAt = sql`(select c.created_at from characters c where c.user_id=${u} and c.server_id=${s})`;
   await ensureEnhanceStats(userId, serverId);
 
   // ⚠ 이름 순서는 아래 배열 **순서와 1:1**이다. 중간에 쿼리를 끼워 넣고 이름을 끝에 붙이면
@@ -359,7 +362,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
           select 1 from (
             select (ra.created_at ${sql.raw(KST)})::date as d
               from raid_attacks ra join raids r on r.id = ra.raid_id and r.server_id = ${s}
-              where ra.user_id = ${u}
+              where ra.user_id = ${u} and ra.created_at >= ${cAt}
             intersect
             select b.battle_date from melee_participants mp
               join melee_battles b on b.id = mp.battle_id and b.server_id = ${s}
@@ -401,9 +404,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              -- 선봉장 = 그 레이드의 **전체 최초** 공격이 나인 레이드 수. ra.seq는 "내 n번째 공격"이라
              -- seq=1은 참여 수와 동치였다(감사 H4) — 레이드별 최초 공격자(min id)로 판정한다.
              (select count(*)::int from raids r2
-                join lateral (select a.user_id from raid_attacks a where a.raid_id=r2.id
+                join lateral (select a.user_id, a.created_at from raid_attacks a where a.raid_id=r2.id
                               order by a.id limit 1) fa on true
-                where r2.server_id=${s} and fa.user_id=${u}) as vanguard,
+                where r2.server_id=${s} and fa.user_id=${u} and fa.created_at >= ${cAt}) as vanguard,
              count(*) filter (where extract(hour from ra.created_at ${sql.raw(KST)}) < 6)::int as night,
              count(distinct ra.raid_id) filter (where r.boss_code='dragon_west')::int as r_volcano,
              count(distinct ra.raid_id) filter (where r.boss_code='slime_king')::int as r_swamp,
@@ -412,7 +415,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              count(distinct ra.raid_id) filter (where r.boss_code='stone_golem')::int as r_temple,
              count(distinct ra.raid_id) filter (where r.boss_code='gold_griffin')::int as r_kingdom
       from raid_attacks ra join raids r on r.id=ra.raid_id
-      where ra.user_id=${u} and r.server_id=${s}
+      where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt}
     `),
     // 아바타 — "생성 N회" 계열은 **누적 이력**(profile_generation_jobs, 수락분) 기준.
     // 종전 user_profiles(현재 보유) 기준은 ① cond("생성")와 불일치 ② 삭제 시 카운트 후퇴
@@ -539,7 +542,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 스트릭 2차 — 출석/레이드 현재 연속일(gaps & islands), 최근 20회 무하락, 어제 1위 4종
     // 어제 보급 1위는 서버×날짜 캐시(open-top.ts, 10-12)에서 — 판정마다 보급 로그 전체를 훑던 자리.
     async () => {
-      const openTop = await yesterdayOpenTop(serverId);
+      const [openTop, raidTop] = await Promise.all([yesterdayOpenTop(serverId), yesterdayRaidTop(serverId)]);
       return db.execute(sql`
       with cd as (select distinct kst_day::date dd from checkin_claim_logs where user_id=${u} and server_id=${s}),
            cruns as (select dd, dd - (row_number() over (order by dd))::int as g from cd),
@@ -547,7 +550,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                     where g = (select g from cruns order by dd desc limit 1)),
            rd as (select distinct (ra.created_at ${sql.raw(KST)})::date dd
                   from raid_attacks ra join raids r on r.id=ra.raid_id
-                  where ra.user_id=${u} and r.server_id=${s}),
+                  where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt}),
            rruns as (select dd, dd - (row_number() over (order by dd))::int as g from rd),
            rcur as (select count(*)::int len, max(dd) mx from rruns
                     where g = (select g from rruns order by dd desc limit 1)),
@@ -563,10 +566,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                join melee_battles mb on mb.id=mp.battle_id
                where mp.user_id=${u} and mb.server_id=${s} and mb.status='revealed'
                  and mb.battle_date = (select d from today) - 1),0) as y_melee_last,
-             coalesce((select (rk.user_id=${u}::uuid)::int from (
-               select ra.user_id, sum(ra.damage) dmg from raid_attacks ra join raids r on r.id=ra.raid_id
-               where r.server_id=${s} and (ra.created_at ${sql.raw(KST)})::date = (select d from today) - 1
-               group by 1 order by 2 desc, 1 limit 1) rk),0) as y_raid_top,
+             coalesce((${raidTop}::uuid = ${u})::int, 0) as y_raid_top,
              coalesce((${openTop}::uuid = ${u})::int, 0) as y_open_top
     `);
     },
@@ -612,20 +612,20 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     () => db.execute(sql`
       with rd as (select distinct (ra.created_at ${sql.raw(KST)})::date dd
                   from raid_attacks ra join raids r on r.id=ra.raid_id
-                  where ra.user_id=${u} and r.server_id=${s})
+                  where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt})
       select
         coalesce((select max(len) from (select count(*) len from (
             select dd - (row_number() over (order by dd))::int g from rd) r group by g) x),0)::int as raid_day_run,
         (select count(distinct ra.raid_id)::int from raid_attacks ra
            join raids r on r.id=ra.raid_id
-           where ra.user_id=${u} and r.server_id=${s} and exists(
+           where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt} and exists(
              select 1 from raid_attacks ra2
              join friend_links fl on fl.server_id=${s} and fl.status='accepted'
                and ((fl.requester_id=${u} and fl.addressee_id=ra2.user_id)
                  or (fl.addressee_id=${u} and fl.requester_id=ra2.user_id))
              where ra2.raid_id=ra.raid_id)) as fire_support_cnt,
         (select count(distinct ra.raid_id)::int from raid_attacks ra join raids r on r.id=ra.raid_id
-           where ra.user_id=${u} and r.server_id=${s}
+           where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt}
              and extract(isodow from ra.created_at ${sql.raw(KST)}) in (6,7)) as weekend_raid_cnt,
         -- 강화일은 날짜 범위로 묻는다(0219 — 로그 전체의 날짜를 뽑지 않는다).
         (select exists(

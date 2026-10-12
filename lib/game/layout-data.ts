@@ -2,7 +2,7 @@ import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
 import { resolveRepTitle } from '@/lib/game/titles/display';
-import { createCharacterAuto, recommendedServerId } from '@/lib/game/server-select';
+import { createCharacterAuto, isServerOpen, recommendedServerId } from '@/lib/game/server-select';
 import { correctServerFor } from '@/lib/game/server-guard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
@@ -79,7 +79,7 @@ const DEFAULTS: LayoutData = {
  * 프로필(닉네임·다이아) + 우편 미수령 dot + 강화완료 dot을 단일 왕복(Promise.all)으로.
  * 4s 가드 + catch — 콜드 DB 커넥션이 풀에서 hang해도 기본값으로 graceful degrade.
  */
-export async function loadLayoutData(userId: string, serverId: number): Promise<LayoutData> {
+export async function loadLayoutData(userId: string, serverId: number, options: { explicitServer?: boolean } = {}): Promise<LayoutData> {
   try {
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
     const profileP = pgGuard(
@@ -204,7 +204,9 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       if (Date.now() - last > HEAL_RETRY_MS) {
         healAttemptAt.set(healKey, Date.now());
         try {
-          const target = await recommendedServerId();
+          // 콜백이 고른 서버(초대 서버 포함)를 srv 쿠키로만 남긴 채 생성을 이쪽에 맡기는 경우가 있다(2차 검사 F5) — 쿠키가 실제로 있고
+          // 그 서버가 open이면 거기에, 아니면(쿠키 없음=기본값 1·full·closed) 추천 서버에 만든다.
+          const target = options.explicitServer && (await isServerOpen(serverId)) ? serverId : await recommendedServerId();
           await createCharacterAuto({ userId, serverId: target });
           console.warn('[layout] half-account healed — character created', { userId, serverId: target });
           if (target !== serverId) return { ...DEFAULTS, correctServerId: target };

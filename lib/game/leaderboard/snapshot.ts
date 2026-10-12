@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { and, eq, or, gt, isNull, isNotNull, inArray, sql } from 'drizzle-orm';
+import { characters } from '@/lib/db/schema/server';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -83,16 +84,20 @@ async function combatRows(serverId: number): Promise<Row[]> {
 }
 
 async function raidRows(serverId: number): Promise<Row[]> {
+  // 탈퇴 때 보존되는 레이드 기록이라 **지금 그 서버에 캐릭터가 있고, 캐릭터 생성 이후의 레이드만** 센다(10-12 2차 검사 B-M1).
+  // 종전엔 탈퇴자의 랭킹 행 16개가 매시 되살아나고, 재가입 계정이 옛 실적을 이어받았다.
   const r = await db
     .select({ userId: raidParticipants.userId, value: sql<number>`count(distinct ${raidParticipants.raidId})::int` })
     .from(raidParticipants)
     .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+    .innerJoin(characters, and(eq(characters.userId, raidParticipants.userId), eq(characters.serverId, raids.serverId)))
     .where(
       and(
         eq(raids.serverId, serverId),
         eq(raids.status, 'settled'),
         sql`${raids.phasesCleared} >= 1`,
         sql`${raidParticipants.attacksUsed} >= 1`,
+        sql`${raidParticipants.joinedAt} >= ${characters.createdAt}`,
       ),
     )
     .groupBy(raidParticipants.userId);

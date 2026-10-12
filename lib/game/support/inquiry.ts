@@ -210,6 +210,7 @@ export async function answerInquiry(input: {
       title: '문의 답변 도착',
       body: '고객센터 답변이 우편함에 도착했어요.',
       url: '/mail',
+      serverId: done.serverId,
       category: 'admin',
     });
   } catch {

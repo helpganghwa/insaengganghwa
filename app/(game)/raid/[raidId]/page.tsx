@@ -133,7 +133,8 @@ export default async function RaidDetail({
     const sp = await searchParams;
     // 개설자 전용 코드(0195)도 관전 게이트를 통과한다 — 그 코드로 온 참가는 수락 없이 즉시(scope 'host').
     const viaHost = raid.hostShareCode != null && sp.c === raid.hostShareCode;
-    if ((sp.c ?? '') !== raid.shareCode && !viaHost) redirect(`/raid-invite/${raid.shareCode}`);
+    // 코드 없이 온 비참가자는 목록으로(10-12 2차 검사 L1) — 종전엔 초대 랜딩으로 보내며 공유 코드를 URL에 실어 줘, raidId를 훑기만 해도 모든 레이드의 코드·명단을 볼 수 있었다.
+    if ((sp.c ?? '') !== raid.shareCode && !viaHost) redirect('/raid');
     const scope =
       viaHost && sp.s === 'host'
         ? ('host' as const)

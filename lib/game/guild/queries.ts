@@ -793,6 +793,7 @@ export async function getGuildMembersRich(guildId: bigint) {
           select uc.user_id as uid, uc.catalog_item_id as cid,
             (select count(*) from user_equipment o
              where o.catalog_item_id = uc.catalog_item_id and o.server_id = ${serverId}
+               and o.max_enhance_level > 0 -- 부분 인덱스(ue_server_catalog_rank_idx, 0241) 조건 — 의미는 같다(uc.max>0 이상만 센다). 없으면 플래너가 인덱스를 안 쓴다(2차 검사 F3).
                and (o.max_enhance_level > uc.max_enhance_level
                  or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
                  or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)))::int as ahead

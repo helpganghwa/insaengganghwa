@@ -253,7 +253,13 @@ export async function touchLastServer(userId: string, serverId: number): Promise
   await db
     .update(profiles)
     .set({ lastServerId: serverId })
-    .where(eq(profiles.id, userId));
+    .where(and(eq(profiles.id, userId), sql`${profiles.lastServerId} is distinct from ${serverId}`));
+}
+
+/** 그 서버가 open인가(10-12) — 자가복구가 쿠키 서버를 존중할지 판단(full·closed·없는 서버면 추천 서버로). */
+export async function isServerOpen(serverId: number): Promise<boolean> {
+  const rows = (await db.execute(sql`select 1 as ok from servers where id = ${serverId} and status = 'open' limit 1`)) as unknown as { ok: number }[];
+  return rows.length > 0;
 }
 
 

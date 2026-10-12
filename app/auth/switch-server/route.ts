@@ -31,9 +31,14 @@ export async function GET(req: Request) {
 
   await touchLastServer(userId, to).catch(() => undefined);
   // next(10-12) — 푸시 링크가 서버를 바꾼 뒤 원래 목적지로 가게. 상대 경로만(열린 리다이렉트 방지).
+  // 백슬래시도 막는다 — WHATWG URL은 `/\evil.com`을 `https://evil.com/`으로 푼다(2차 검사 F1). 최종 origin까지 대조.
   const nextRaw = url.searchParams.get('next') ?? '';
-  const next = /^\/(?!\/)[^\s]*$/.test(nextRaw) ? nextRaw : '/';
-  const res = NextResponse.redirect(new URL(next, origin));
+  let dest = new URL('/', origin);
+  if (/^\/(?![/\\])[^\s\\]*$/.test(nextRaw) && nextRaw.length <= 2048 && !nextRaw.startsWith('/auth/switch-server')) {
+    const candidate = new URL(nextRaw, origin);
+    if (candidate.origin === origin) dest = candidate;
+  }
+  const res = NextResponse.redirect(dest);
   res.cookies.set('srv', String(to), {
     httpOnly: true,
     secure: true,

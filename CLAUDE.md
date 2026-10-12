@@ -278,3 +278,10 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 - ⚠ **`revalidatePath`는 별도 리패치를 안 만들지만, 액션의 현재-페이지 재렌더가 `layout`까지 포함**해 매 액션마다 `loadLayoutData`(프로필·우편·친구요청·장비 등 병렬 쿼리)가 재실행된다. 고빈도 액션(강화·레이드)에서 누적 부하. 헤더에 실시간 반영이 꼭 필요한 값만 layout에 두고, 나머지는 클라 컨텍스트(`DiamondContext` 패턴)로 빼 layout 재렌더 시 쿼리를 피하는 것을 우선 고려.
 
 > env 재발급 시: `DATABASE_URL`=서울 풀러 6543 · `DIRECT_URL`=서울 직결 5432 · Vercel 프로젝트 리전 `icn1` · Fluid Compute ON. (Pixellab은 빌드타임 에셋 — 런타임 무관)
+
+## 2서버 코딩 규칙 (2026-10-12)
+- 새 게임 테이블은 `server_id smallint not null`(기본값 두지 말 것) + 캐릭터 단위 유니크에 server_id 포함. 조회·갱신·집계·랭킹은 항상 server_id 조건.
+- 유저 쓰기 액션은 그 서버에 캐릭터가 있는지(`NO_CHARACTER_ON_SERVER`) 확인하고, id로 받은 행은 server_id가 활성 서버와 같은지 확인한다.
+- 보상·지갑·우편·원장은 서버별, 결제·본인인증·푸시 구독·토글·publicCode·아바타 생성 캡은 계정 전역(docs/SERVER.md §1). 계정 단위 칭호는 결제 누적·초대 실적뿐.
+- 푸시: 대상은 `filterByActiveServer`(집는 단계), 서버가 정해진 링크는 `PushPayload.serverId`를 준다. 유저 노출 텍스트에 `N서버` 표기 금지.
+- 크론은 `openServerIds()` 루프 + 서버별 try/catch + `beatCron`. 탈퇴 때 보존되는 기록(레이드 등)을 집계할 땐 캐릭터 생성 이후만 센다.

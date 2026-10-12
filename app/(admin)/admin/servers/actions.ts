@@ -90,7 +90,7 @@ export async function setServerStatusAction(
     // 영구히 멈춘다. 정산이 끝난 뒤에만 닫게 한다.
     const pend = (await db.execute(sql`
       select
-        (select count(*)::int from world_bosses where server_id = ${serverId} and status <> 'settled') as bosses,
+        (select count(*)::int from world_bosses where server_id = ${serverId} and status in ('scheduled', 'active')) as bosses,
         (select count(*)::int from melee_battles where server_id = ${serverId} and status <> 'revealed') as melees,
         (select count(*)::int from conquest_battles cb where cb.server_id = ${serverId} and cb.published_at is null) as conquests
     `)) as unknown as { bosses: number; melees: number; conquests: number }[];

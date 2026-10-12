@@ -35,8 +35,9 @@ export async function GET() {
   try {
     await db.execute(sql`select 1`);
   } catch (e) {
+    console.error('[health/deep]', (e as Error).message);
     return Response.json(
-      { ok: false, db: 'down', error: (e as Error).message.slice(0, 120) },
+      { ok: false, db: 'down', error: 'db_error' }, // 원문은 로그에만(공개 응답에 DB 오류 문구 노출 금지, 10-12 2차 검사)
       { status: 503, headers: NO_STORE },
     );
   }
