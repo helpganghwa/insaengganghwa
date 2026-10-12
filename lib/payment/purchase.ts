@@ -382,7 +382,7 @@ export async function createPlayOrder(userId: string, serverId: number, productI
 
 export type CompleteResult =
   | { ok: true; already: boolean }
-  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' | 'NOT_GRANTED' | 'ORDER_MISMATCH' };
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' | 'TOKEN_USED' | 'REFUNDED' | 'PENDING' | 'DUPLICATE' | 'SERVER_CLOSED' | 'NOT_GRANTED' | 'ORDER_MISMATCH' };
 
 /**
  * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
@@ -505,6 +505,8 @@ export async function completePurchase(
   let lockedToken: string | null = null;
   let tokenConflict = false;
   let dupSkipped = false;
+  /** 닫힌 서버 주문의 지급 동결(10-12 결정 ⑤) — 닫기 전에 만든 주문이 닫힌 뒤 결제됐다. 지급 보류 + 자동 환불(중복 결제와 같은 길). */
+  let closedSkipped = false;
   let transitioned = false;
   /** 지급 보류 주문의 마일리지 적립 취소가 실패했다 — 환불 전까지 쓸 수 있는 마일리지가 남는다(트랜잭션 뒤 경보). */
   let mileageDropFailed = false;
@@ -618,8 +620,18 @@ export async function completePurchase(
         await dropMileage();
       }
     } else {
-      const g = await applyProductGrant(tx, order.userId, order.serverId, order.productCode, `order:${order.id}`);
-      if (g.skipped) {
+      // 세이브포인트 — 닫힌 서버 지갑은 walletAdd가 WALLET_SERVER_CLOSED로 던진다(동결). 그 예외만 잡아 지급 보류로 돌리고
+      // 나머지 예외는 그대로 올린다(plain try/catch는 실패 문장 뒤 트랜잭션이 aborted라 세이브포인트가 필요하다).
+      let g: Awaited<ReturnType<typeof applyProductGrant>> | null = null;
+      try {
+        g = await tx.transaction((sp) => applyProductGrant(sp, order.userId, order.serverId, order.productCode, `order:${order.id}`));
+      } catch (e) {
+        if (!(e instanceof Error && e.message.startsWith('WALLET_SERVER_CLOSED'))) throw e;
+        closedSkipped = true;
+        await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+        await dropMileage();
+      }
+      if (g?.skipped) {
         // 인생 특가 중복 결제 — 지급 차단됨(grant.ts 최종 게이트). 회수 스킵 마커 동일 적용.
         dupSkipped = true;
         await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
@@ -633,7 +645,7 @@ export async function completePurchase(
     // ⚠ 세이브포인트로 감싼다(점검 반영) — plain try/catch는 실패 문장 뒤 트랜잭션이 aborted라 COMMIT이 ROLLBACK된다.
     try {
       // 중복 결제는 곧 자동 환불되므로 후원 누적 구간을 넘겨도 보상을 보내지 않는다(재검증 B-6).
-      if (!dupSkipped) await tx.transaction((sp) => grantPatronMilestones(sp, order.userId, order.serverId));
+      if (!dupSkipped && !closedSkipped) await tx.transaction((sp) => grantPatronMilestones(sp, order.userId, order.serverId));
     } catch (e) {
       console.error(`[patron] 구간 보상 지급 실패 user=${order.userId} order=${order.id}`, e);
     }
@@ -678,8 +690,9 @@ export async function completePurchase(
     });
   }
 
-  if (dupSkipped) {
-    // 중복 결제 — 지급은 이미 막혔다. 결제분을 **즉시 자동 환불**한다(2026-09-24 감사: 종전엔 운영자 수동 환불에 기대
+  if (dupSkipped || closedSkipped) {
+    const skipLabel = closedSkipped ? '닫힌 서버 주문(지급 동결)' : '중복 결제';
+    // 중복 결제(또는 닫힌 서버 주문) — 지급은 이미 막혔다. 결제분을 **즉시 자동 환불**한다(2026-09-24 감사: 종전엔 운영자 수동 환불에 기대
     // 방치되면 결제만 성사된 채 남았고, Play는 소모하지 않으면 공유 가격 SKU가 3일 잠겼다). grant_skipped라 회수는 없고
     // 월누적·마일리지만 복원된다. 취소가 실패하면 경보(정산 크론 C단계가 30분 뒤 다시 환불하고, Play는 미소모라 3일 자동 환불도 남는다).
     let refunded = false;
@@ -689,7 +702,7 @@ export async function completePurchase(
         if (!play.googleOrderId) throw new Error('구글 주문번호 없음');
         await refundPlayOrder(play.googleOrderId, true);
       } else {
-        await cancelPortonePayment(paymentId, '중복 결제 자동 환불');
+        await cancelPortonePayment(paymentId, `${skipLabel} 자동 환불`);
       }
       cancelledAtPg = true;
       const { refundPurchase } = await import('./refund');
@@ -700,16 +713,16 @@ export async function completePurchase(
       console.error('[purchase] duplicate auto refund failed', order.provider, paymentId, e);
     }
     // 자동 환불까지 끝난 건은 조치할 것이 없다 — 경보 없이 로그만('진짜 오류만' 경보 원칙).
-    if (refunded) console.info(`[purchase] 중복 결제 자동 환불 완료 ${paymentId} (${order.productCode} · 서버 ${order.serverId})`);
+    if (refunded) console.info(`[purchase] ${skipLabel} 자동 환불 완료 ${paymentId} (${order.productCode} · 서버 ${order.serverId})`);
     else await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
       paymentId,
       orderId: order.id,
       detail: cancelledAtPg
-          ? `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — ${play ? '구글 환불' : 'PG 취소'}은 됐고 주문 마감만 지연(취소 반영 대기). ${play ? 'play-sync(환불 동기화)가' : '웹훅·정산 크론이'} 곧 마감한다 — 확인만.`
-          : `중복 결제 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. 정산 크론이 30분 뒤 다시 환불한다 — 그 뒤에도 남으면 ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불(기존 지급분은 회수되지 않으니 안심하고 환불).`,
+          ? `${skipLabel} 감지(${order.productCode} · 서버 ${order.serverId}) — ${play ? '구글 환불' : 'PG 취소'}은 됐고 주문 마감만 지연(취소 반영 대기). ${play ? 'play-sync(환불 동기화)가' : '웹훅·정산 크론이'} 곧 마감한다 — 확인만.`
+          : `${skipLabel} 감지(${order.productCode} · 서버 ${order.serverId}) — 지급은 막혔으나 자동 환불 실패. 정산 크론이 30분 뒤 다시 환불한다 — 그 뒤에도 남으면 ${play ? 'Play 콘솔' : '포트원 콘솔'}에서 환불(기존 지급분은 회수되지 않으니 안심하고 환불).`,
     });
     // 화면엔 '구매 완료'가 아니라 중복·환불을 알린다(재검증 C-4). 지급·환불 처리는 위에서 끝났다.
-    return { ok: false, code: 'DUPLICATE' };
+    return { ok: false, code: closedSkipped ? 'SERVER_CLOSED' : 'DUPLICATE' };
   }
 
   if (minorExceeded) {
@@ -754,7 +767,7 @@ export async function completePurchase(
   // 지급 보류(중복 특가) 주문은 소모하지 않는다(2026-09-24 감사) — 미확인으로 두면 구글이 3일 뒤 자동 환불하고
   // play-sync voided 동기화가 환불로 마감한다(grantSkipped라 회수 없음·월누적 복원). 종전엔 소모해 운영자 수동 환불에 기댔다.
   // 지급 보류(중복·미성년)는 위에서 이미 return했지만, 소모하면 3일 자동 환불 안전망이 사라지므로 조건에도 명시한다.
-  if (play && transitioned && !dupSkipped && !minorExceeded) {
+  if (play && transitioned && !dupSkipped && !closedSkipped && !minorExceeded) {
     try {
       await consumePlayProductPurchase(play.sku, play.token);
       await db.update(iapOrders).set({ playConsumedAt: new Date() }).where(eq(iapOrders.id, order.id));

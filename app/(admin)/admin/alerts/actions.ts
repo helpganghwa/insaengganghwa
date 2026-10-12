@@ -80,7 +80,7 @@ export async function retryAlertAction(alertId: string) {
     if (!o || (o.status !== 'pending' && o.status !== 'expired')) return { status: 'error', code: 'NOT_RETRYABLE' } as const;
     const r = await completePurchase(a.paymentId);
     // 이미 다른 처리로 끝난 결과(중복·미성년 자동 환불, 환불 확정)도 사고로서는 해소된 것이다.
-    ok = r.ok || r.code === 'DUPLICATE' || r.code === 'NOT_GRANTED' || r.code === 'MINOR_LIMIT' || r.code === 'REFUNDED';
+    ok = r.ok || r.code === 'DUPLICATE' || r.code === 'SERVER_CLOSED' || r.code === 'NOT_GRANTED' || r.code === 'MINOR_LIMIT' || r.code === 'REFUNDED';
   } else if (a.kind === 'REFUND_RECLAIM_FAILED') {
     // voided 회수 실패 경보는 키가 'voided-fail:<주문>' — 접두를 떼고, 구글 voided 확정이므로 상태 재확인 없이 회수한다.
     // 크론 경보는 키에 접두가 붙는다 — voided-fail:<주문>(구글 voided 확정이라 상태 재확인 없이), skipped-refund:<주문>(PG 취소 확인).

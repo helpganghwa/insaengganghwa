@@ -137,7 +137,7 @@ export async function GET(req: Request) {
         const r = await completePurchase(o.pid);
         if (r.ok) healed++;
         // 환불 확정·지급 보류(중복·미성년, 각자 자동 환불·경보)는 지급 실패가 아니다(경합에서 진 경우 포함).
-        else if (r.code === 'REFUNDED' || r.code === 'DUPLICATE' || r.code === 'NOT_GRANTED' || r.code === 'MINOR_LIMIT') continue;
+        else if (r.code === 'REFUNDED' || r.code === 'DUPLICATE' || r.code === 'SERVER_CLOSED' || r.code === 'NOT_GRANTED' || r.code === 'MINOR_LIMIT') continue;
         else
           await raisePaymentAlert('PAID_NOT_GRANTED', {
             paymentId: o.pid,

@@ -92,14 +92,17 @@ export async function setServerStatusAction(
       select
         (select count(*)::int from world_bosses where server_id = ${serverId} and status in ('scheduled', 'active')) as bosses,
         (select count(*)::int from melee_battles where server_id = ${serverId} and status <> 'revealed') as melees,
-        (select count(*)::int from conquest_battles cb where cb.server_id = ${serverId} and cb.published_at is null) as conquests
-    `)) as unknown as { bosses: number; melees: number; conquests: number }[];
+        (select count(*)::int from conquest_battles cb where cb.server_id = ${serverId} and cb.published_at is null) as conquests,
+        -- 진행 중 아바타 생성·문양 예치(4차 검사): 닫히면 지갑이 동결돼(결정 ⑤) 실패 환불(walletAdd)이 던져 잡·예치가 영영 안 풀린다.
+        (select count(*)::int from profile_generation_jobs where server_id = ${serverId} and status in ('queued', 'starting', 'downloading', 'ai_reviewing')) as avatar_jobs,
+        (select count(*)::int from guild_emblem_escrows where server_id = ${serverId} and status = 'pending') as emblem_escrows
+    `)) as unknown as { bosses: number; melees: number; conquests: number; avatar_jobs: number; emblem_escrows: number }[];
     const pd = pend[0];
-    if (pd && (pd.bosses > 0 || pd.melees > 0 || pd.conquests > 0)) {
+    if (pd && (pd.bosses > 0 || pd.melees > 0 || pd.conquests > 0 || pd.avatar_jobs > 0 || pd.emblem_escrows > 0)) {
       return {
         status: 'error',
         code: 'HAS_PENDING',
-        message: `정산이 끝나지 않은 콘텐츠가 있습니다(월드보스 ${pd.bosses}·대난투 ${pd.melees}·점령전 ${pd.conquests}). 정산이 끝난 뒤 닫아 주세요.`,
+        message: `정산이 끝나지 않은 콘텐츠가 있습니다(월드보스 ${pd.bosses}·대난투 ${pd.melees}·점령전 ${pd.conquests}·아바타 생성 ${pd.avatar_jobs}·문양 예치 ${pd.emblem_escrows}). 정산이 끝난 뒤 닫아 주세요.`,
       };
     }
   }
