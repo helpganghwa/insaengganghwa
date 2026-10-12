@@ -15,7 +15,7 @@ const GUARD_KEY = 'ig:srv-correct';
 const WINDOW_MS = 15_000;
 const MAX_TRIES = 2;
 
-export function ServerCorrect({ to }: { to: number }) {
+export function ServerCorrect({ to }: { to: number | 'closed' }) {
   useEffect(() => {
     // 되돌린 서버에서도 또 교정이 뜨는 비정상 상황이면 무한 왕복하지 않는다(15초 안에 2번까지만).
     try {
@@ -26,6 +26,11 @@ export function ServerCorrect({ to }: { to: number }) {
       sessionStorage.setItem(GUARD_KEY, JSON.stringify({ at: Date.now(), n }));
     } catch {
       // 저장소를 못 쓰는 환경 — 가드 없이 진행(교정 라우트는 내 캐릭터가 있는 서버로만 보낸다).
+    }
+    // 닫힌 서버에만 캐릭터가 있다(10-12) — 되돌릴 서버가 없으니 운영 종료 안내로(새 캐릭터는 거기서 본인이 고른다).
+    if (to === 'closed') {
+      window.location.replace('/server-closed');
+      return;
     }
     window.location.replace(`/auth/switch-server?to=${to}`);
   }, [to]);

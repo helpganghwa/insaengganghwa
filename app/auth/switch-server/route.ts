@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { hasCharacterOn, correctServerFor } from '@/lib/game/server-guard';
+import { CLOSED_ONLY, hasCharacterOn, correctServerFor } from '@/lib/game/server-guard';
 import { touchLastServer } from '@/lib/game/server-select';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +28,8 @@ export async function GET(req: Request) {
       ? asked
       : await correctServerFor(userId, -1);
   if (to == null) return NextResponse.redirect(new URL('/login', origin));
+  // 닫힌 서버에만 캐릭터가 있다(10-12) — `to`로 닫힌 서버를 찍어도 통과하지 않는다(hasCharacterOn이 거부). 안내 화면으로.
+  if (to === CLOSED_ONLY) return NextResponse.redirect(new URL('/server-closed', origin));
 
   await touchLastServer(userId, to).catch(() => undefined);
   // next(10-12) — 푸시 링크가 서버를 바꾼 뒤 원래 목적지로 가게. 상대 경로만(열린 리다이렉트 방지).

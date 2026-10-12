@@ -57,7 +57,8 @@ export function NewCharacterChoice({
         {pending ? '만드는 중...' : `${serverName}에서 새로 시작하기`}
       </button>
 
-      {/* 하던 서버로 돌아가기 — 있는 그대로만 보여 준다. */}
+      {/* 하던 서버로 돌아가기 — 있는 그대로만 보여 준다(없으면 구분선도 없다 — 운영 종료 안내 화면이 빈 목록으로 쓴다). */}
+      {mine.length > 0 && (
       <div className="mt-3 flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
         {mine.map((s) => (
           <a
@@ -84,6 +85,7 @@ export function NewCharacterChoice({
           </a>
         ))}
       </div>
+      )}
     </div>
   );
 }

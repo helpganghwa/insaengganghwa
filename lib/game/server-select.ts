@@ -237,13 +237,13 @@ export async function createCharacter(input: {
   });
 }
 
-/** 서버 선택 검증 — 존재 + 캐릭터 보유 시에만 통과(생성은 별도 플로우). */
+/** 서버 선택 검증 — 존재 + 캐릭터 보유 + 운영 중(closed 아님)일 때만 통과(생성은 별도 플로우). 닫힌 서버 진입 차단(10-12). */
 export async function canEnterServer(userId: string, serverId: number): Promise<boolean> {
   const [r] = await db
     .select({ uid: characters.userId })
     .from(characters)
     .innerJoin(servers, eq(servers.id, characters.serverId))
-    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId), ne(servers.status, 'closed')))
     .limit(1);
   return !!r;
 }

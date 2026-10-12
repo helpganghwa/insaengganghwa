@@ -3,7 +3,7 @@ import 'server-only';
 import { pgGuard } from '@/lib/db/guarded';
 import { resolveRepTitle } from '@/lib/game/titles/display';
 import { createCharacterAuto, isServerOpen, recommendedServerId } from '@/lib/game/server-select';
-import { correctServerFor } from '@/lib/game/server-guard';
+import { CLOSED_ONLY, correctServerFor, type ServerCorrection } from '@/lib/game/server-guard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
@@ -55,6 +55,11 @@ export interface LayoutData {
    * null = 정상이거나, 캐릭터가 아예 없는 신규(그 서버에 만드는 것이 맞다).
    */
   correctServerId: number | null;
+  /**
+   * 캐릭터가 **닫힌 서버에만** 있다(10-12 결정: 진입 차단 + 다른 서버로 안내) — 되돌릴 서버가 없어
+   * 헤더가 운영 종료 안내 화면(/server-closed)으로 보낸다. 거기서 새 서버를 본인이 고른다.
+   */
+  closedServer: boolean;
 }
 
 const DEFAULTS: LayoutData = {
@@ -73,6 +78,7 @@ const DEFAULTS: LayoutData = {
   stats: null,
   tutorialSeed: null,
   correctServerId: null,
+  closedServer: false,
 };
 
 /**
@@ -87,6 +93,8 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
                  c.representative_title_code,
                  c.tutorial_step, c.created_at as char_created_at,
+                 -- 활성 서버 상태(10-12 닫힌 서버 진입 차단) — servers PK 조회 1건이라 핫패스 비용 없음.
+                 (select s.status from servers s where s.id = ${serverId}) as srv_status,
                  g.emblem_url as guild_emblem_url,
                  z.name as executor_zone, z.region::text as executor_zone_region,
                  -- 헤더 서브라인 스탯 재료(감사 A5) — 별도 layout.stats 왕복을 스칼라 서브쿼리로
@@ -174,8 +182,26 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
           tutorial_step?: number | string | null;
           char_created_at?: string | Date | null;
           equip_stats?: unknown;
+          srv_status?: string | null;
         }
       | undefined;
+    // 닫힌 서버(10-12 결정: 진입 차단 + 다른 서버로 안내) — 쿠키가 닫힌 서버를 가리키면 캐릭터가 있어도 들어가지 않는다.
+    // 운영 중인 서버에 캐릭터가 있으면 그리로 되돌리고(헤더 ServerCorrect), 닫힌 서버에만 있으면 안내 화면으로.
+    // 캐릭터가 없는 닫힌 서버면 아래 자가복구가 알아서 추천 서버로 보낸다(isServerOpen이 false).
+    if (profileRows.length > 0 && p?.nickname != null && p.srv_status === 'closed') {
+      let correction: ServerCorrection;
+      try {
+        correction = await correctServerFor(userId, serverId);
+      } catch (ge) {
+        console.warn('[layout] server guard failed on closed server — render defaults', (ge as Error).message);
+        return DEFAULTS;
+      }
+      if (correction === CLOSED_ONLY) return { ...DEFAULTS, closedServer: true };
+      if (correction != null) {
+        console.warn('[layout] active server is closed — redirecting', { userId, serverId, correction });
+        return { ...DEFAULTS, correctServerId: correction };
+      }
+    }
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
     // 재귀는 1단으로 끝난다: 스로틀 맵이 직후 재시도를 차단하고, 성공 경로는 nickname이 채워진다.
     if (profileRows.length > 0 && p?.nickname == null) {
@@ -185,13 +211,15 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
       // 수도 없다. 이 조회는 캐릭터가 없는 드문 경로에서만 돌아 핫패스 비용이 없다.
       // 관문 조회 자체가 실패하면(풀 포화 등) **만들지 않는다** — '모르겠으니 일단 생성'이 바로
       // 막으려던 사고다. 이번 렌더는 기본값으로 내보내고 다음 요청에서 다시 판단한다.
-      let correctServerId: number | null;
+      let correctServerId: ServerCorrection;
       try {
         correctServerId = await correctServerFor(userId, serverId);
       } catch (ge) {
         console.warn('[layout] server guard failed — skip heal', (ge as Error).message);
         return DEFAULTS;
       }
+      // 닫힌 서버에만 캐릭터가 있다 — 만들지 않고 운영 종료 안내로(10-12).
+      if (correctServerId === CLOSED_ONLY) return { ...DEFAULTS, closedServer: true };
       if (correctServerId != null) {
         console.warn('[layout] wrong active server — redirecting', { userId, serverId, correctServerId });
         return { ...DEFAULTS, correctServerId };
@@ -245,6 +273,7 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
       executorZoneRegion: p?.executor_zone_region ?? null,
       repTitle,
       correctServerId: null,
+      closedServer: false,
       stats: (() => {
         // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
         let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;

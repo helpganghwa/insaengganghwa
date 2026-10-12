@@ -104,6 +104,7 @@ export default function Doc() {
       />
       <UL>
         <LI>만 19세 미만은 월 {won(MINOR_MONTHLY_LIMIT_KRW)}까지 결제할 수 있다.</LI>
+        <LI>다이아·보급 상자·장비는 서버마다 따로이며 다른 서버로 옮길 수 없다. 유료 상품은 결제할 때 접속한 서버에 지급된다.</LI>
       </UL>
 
       <H2 id="limited">한정 상품</H2>
@@ -117,7 +118,7 @@ export default function Doc() {
           {fmtInt(PREMIUM.daily.days)}일 동안 매일 {grantText(PREMIUM.daily)}를 준다.
         </LI>
         <LI>프리미엄 보상은 즉시분과 매일분 모두 우편으로 오며, 받아야 지급된다.</LI>
-        <LI>매일 지급은 접속한 날에 지급된다. 접속하지 않은 날은 그날 몫이 지급되지 않는다.</LI>
+        <LI>매일 지급은 접속한 날에 지급되며, 어느 서버로 접속해도 프리미엄을 산 서버의 우편함으로 온다. 접속하지 않은 날은 그날 몫이 지급되지 않는다.</LI>
         <LI>이용 중에는 배너에 남은 일수가 뜨고, 기간이 끝나면 다시 살 수 있다.</LI>
       </UL>
 

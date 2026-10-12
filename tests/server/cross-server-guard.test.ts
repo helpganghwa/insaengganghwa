@@ -37,9 +37,11 @@ describe.skipIf(!USER)('크로스서버 관문', () => {
   });
 
   it('캐릭터가 있는 서버는 교정하지 않고, 없는 서버는 돌아갈 곳을 알려준다', async () => {
-    const { ids, preferred } = await loadUserServers(USER);
+    const { ids, preferred, closedIds } = await loadUserServers(USER);
     expect(ids).toContain(SERVER_ID);
     expect(preferred).not.toBeNull();
+    // 닫힌 서버의 캐릭터는 운영 중인 목록(ids)과 겹치지 않는다(10-12 진입 차단).
+    expect(closedIds.filter((i) => ids.includes(i))).toHaveLength(0);
     // 정상 — 교정 불필요.
     expect(await correctServerFor(USER, SERVER_ID)).toBeNull();
     // 없는 서버 — 캐릭터가 있는 서버로 되돌린다(여기서 null이면 레이아웃이 캐릭터를 새로 만든다).

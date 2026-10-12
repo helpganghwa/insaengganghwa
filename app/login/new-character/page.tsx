@@ -44,11 +44,14 @@ export default async function NewCharacterPage({
   if (target.status !== 'open') {
     redirect(preferred != null ? `/auth/switch-server?to=${preferred}` : '/');
   }
+  // 닫힌 서버의 캐릭터는 '돌아갈 곳'이 아니다(10-12 진입 차단) — 목록에서 뺀다.
   const mine: MyServer[] = servers
-    .filter((s) => s.my && s.id !== serverId)
+    .filter((s) => s.my && s.id !== serverId && s.status !== 'closed')
     .map((s) => ({ id: s.id, name: s.name, nickname: s.my!.nickname, diamond: s.my!.diamond }))
     .sort((a, b) => (a.id === preferred ? -1 : b.id === preferred ? 1 : a.id - b.id));
-  if (mine.length === 0) redirect('/'); // 캐릭터가 아예 없는 계정 — 콜백이 알아서 만든다
+  // 돌아갈 운영 중인 서버가 없다 — 캐릭터가 아예 없으면 콜백·레이아웃이 만들고, 닫힌 서버에만 있으면
+  // 레이아웃이 운영 종료 안내로 보낸다(안내 화면은 고른 서버로 새로 시작하게 해 준다).
+  if (mine.length === 0) redirect(servers.some((s) => s.my && s.status === 'closed') ? `/server-closed?to=${serverId}` : '/');
 
   const head = mine[0]!;
 

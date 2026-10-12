@@ -12,7 +12,7 @@ import {
   touchLastServer,
   recommendedServerId,
 } from '@/lib/game/server-select';
-import { correctServerFor } from '@/lib/game/server-guard';
+import { correctServerFor, type ServerCorrection } from '@/lib/game/server-guard';
 import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getAdminStatus } from '@/lib/auth/require-admin';
@@ -139,7 +139,8 @@ export async function GET(request: NextRequest) {
               // 두고 레이아웃의 같은 관문(layout-data)에 맡긴다: 다른 서버에 캐릭터가 있으면 그리로 되돌리고,
               // 없으면 **이 서버에** 만든다. 서버 선택을 통째로 건너뛰면 쿠키 없이 1서버로 떨어져, 초대받은
               // 신규가 엉뚱한 서버에 생긴다. 마지막 서버 기록(last_server_id)은 확정된 게 없으니 건드리지 않는다.
-              let hasElsewhere: number | null = null;
+              // 닫힌 서버에만 캐릭터가 있어도(CLOSED_ONLY) "있다"로 본다 — 말없이 만들지 않고 확인 화면이 묻는다.
+              let hasElsewhere: ServerCorrection = null;
               try {
                 hasElsewhere = await correctServerFor(userId, sid);
               } catch (ge) {

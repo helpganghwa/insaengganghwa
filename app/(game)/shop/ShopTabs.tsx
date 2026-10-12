@@ -1029,7 +1029,7 @@ export function ShopTabs({
                   bg="first"
                   tall
                   title="인생 특가"
-                  desc="단 한 번, 인생 최대 혜택"
+                  desc="서버마다 한 번, 인생 최대 혜택"
                   detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
                   price={won(FIRST_SPECIAL.krw)}
                   confirming={confirm === FIRST_SPECIAL.id}
