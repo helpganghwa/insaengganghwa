@@ -154,20 +154,25 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
     case 'equipBest': {
       const mine = s.mine;
       if (!mine?.best) return s;
-      const pieces = mine.best.pieces;
+      const best = mine.best;
+      const pieces = best.pieces;
       // 내 사람 정보(명단 전투력)는 같은 식(loadoutsOf)으로 계산되므로 전투력 차이를 명단·모집 카드 합산에도 바로 반영한다(10-11 3차 낙관 감사).
-      const delta = mine.best.power - mine.loadout.power;
+      const delta = best.power - mine.loadout.power;
       const myId = me?.userId;
       const mp = s.myParty;
       const myNick = me?.person?.nickname ?? mp?.members.find((m) => m.userId === myId)?.nickname;
+      // 대표 아바타까지 바뀌는 제안이면 아바타 줄과 내 얼굴도 그 아바타로(10-12) — 서버가 같은 상태를 다시 그려 준다.
+      const hasAvatar = best.avatarChange ? best.hasAvatar : mine.loadout.hasAvatar;
+      const avatarGear = best.avatarChange ? (best.avatar?.gear ?? []) : mine.loadout.avatarGear;
+      const face = best.avatarChange ? { avatarSrc: best.avatar?.src ?? null } : {};
       return {
         ...s,
         mine: {
-          loadout: { ...mine.loadout, pieces, power: mine.best.power, weakCount: pieces.filter((x) => x.weak).length, avatarCount: pieces.filter((x) => x.av).length },
+          loadout: { ...mine.loadout, pieces, power: best.power, hasAvatar, avatarGear, weakCount: pieces.filter((x) => x.weak).length, avatarCount: pieces.filter((x) => x.av || (hasAvatar && x.weak)).length },
           best: null,
         },
-        me: me?.person ? { ...me, person: { ...me.person, combat: me.person.combat + delta } } : me,
-        myParty: mp ? { ...mp, members: mp.members.map((m) => (m.userId === myId ? { ...m, combat: m.combat + delta } : m)) } : mp,
+        me: me?.person ? { ...me, person: { ...me.person, combat: me.person.combat + delta, ...face } } : me,
+        myParty: mp ? { ...mp, members: mp.members.map((m) => (m.userId === myId ? { ...m, combat: m.combat + delta, ...face } : m)) } : mp,
         parties: mp && myNick
           ? s.parties.map((c) => (c.id === mp.partyId ? { ...c, combatSum: c.combatSum + delta, members: c.members.map((m) => (m.nickname === myNick ? { ...m, combat: m.combat + delta } : m)) } : c))
           : s.parties,
@@ -235,13 +240,36 @@ export function WorldBossDetailView({
       // 상태 1쿼리로 먼저 보고 바뀌었을 때만 전체를 다시 읽는다(10-11 3차 결정 ⑧: 종료 순간 열어 둔 탭이 일제히 24쿼리씩 읽던 것).
       bossStatusAction(d.id)
         .then((r) => {
-          if (r.status === 'success' && r.state !== d.status) router.refresh();
+          if (r.status === 'success' && (r.state !== d.status || r.weak !== d.weakKnown.length)) router.refresh();
         })
         .catch(swallow('worldBoss.detail'))
         .finally(() => setTick((v) => v + 1));
     }, active && d.leaveAt <= Date.now() ? 20_000 : ms);
     return () => clearTimeout(t);
-  }, [active, settling, d.leaveAt, d.status, d.id, router, tick]);
+  }, [active, settling, d.leaveAt, d.status, d.id, d.weakKnown.length, router, tick]);
+  // 약점이 밝혀지면 열어 둔 화면도 따라간다(10-12: 추천 조합·전투력이 공개된 약점 기준이라) — 보스가 머무는 동안 60~90초마다 상태 1쿼리, 숨은 탭은 읽지 않는다.
+  useEffect(() => {
+    if (!active) return;
+    let stopped = false;
+    let t: ReturnType<typeof setTimeout> | null = null;
+    const arm = () => {
+      if (stopped) return;
+      t = setTimeout(() => {
+        if (document.visibilityState !== 'visible') return arm();
+        bossStatusAction(d.id)
+          .then((r) => {
+            if (!stopped && r.status === 'success' && (r.state !== d.status || r.weak !== d.weakKnown.length)) router.refresh();
+          })
+          .catch(swallow('worldBoss.pulse'))
+          .finally(arm);
+      }, 60_000 + Math.random() * 30_000);
+    };
+    arm();
+    return () => {
+      stopped = true;
+      if (t) clearTimeout(t);
+    };
+  }, [active, d.id, d.status, d.weakKnown.length, router]);
   const me = d.me;
   const mp = d.myParty;
   // 초대받은 원정대(10-11, 레이드 방식)는 맨 앞 — 신청·수락 없이 '참가'로 바로 들어간다.
@@ -420,7 +448,7 @@ export function WorldBossDetailView({
           mine={d.mine}
           // me.person은 참가 전과 모집 중 내 원정대에서 채워진다(낙관 그리기용) — 참가 중이면 내 원정대 명단의 내 항목에서(10-11 사용자: 👤 노출 버그).
           avatarSrc={me?.person?.avatarSrc ?? mp?.members.find((x) => x.userId === me?.userId)?.avatarSrc ?? null}
-          onEquipBest={() => run(() => equipBestAction(d.id), { title: '추천 장비를 장착했어요' }, { t: 'equipBest' })}
+          onEquipBest={() => run(() => equipBestAction(d.id), { title: d.mine?.best?.avatarChange ? '추천 장비를 장착하고 대표 아바타를 바꿨어요' : '추천 장비를 장착했어요' }, { t: 'equipBest' })}
         />
       )}
 

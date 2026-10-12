@@ -137,8 +137,8 @@ export type WorldBossDetail = {
   weakBonus: number;
   /** 특성 코드(WORLD_BOSS_TRAITS) → 화면용. 없으면 빈 배열. */
   traits: WorldBossTraitView[];
-  /** 내 장착 상태와 제안 — 보스가 머무는 중이고 캐릭터가 있을 때만. */
-  mine: { loadout: import('./loadout').Loadout; best: { power: number; pieces: import('./loadout').LoadoutPiece[] } | null } | null;
+  /** 내 장착 상태와 제안(장비 3개 + 대표 아바타, 10-12) — 보스가 머무는 중이고 캐릭터가 있을 때만. */
+  mine: { loadout: import('./loadout').Loadout; best: WorldBossBest | null } | null;
 };
 
 /** 출발한 원정대의 전투 기록 — 재생 화면(WorldBossReplay)이 쓴다. finale은 simulate.ts의 WorldBossFinale과 같은 모양. */
@@ -170,4 +170,14 @@ export type WorldBossBattle = {
   guildEmblems?: Record<number, { url: string | null; color: string | null }>;
   /** 원정대원 얼굴 썸네일(명단 순번 → 그림·얼굴 박스) — 재생 칸에 쓴다. 없으면 이니셜. */
   avatars: Record<number, { src: string | null; box: { cx: number; cy: number; h: number } | null }>;
+};
+
+/** 추천 조합(docs/WORLD-BOSS.md §3) — 지금보다 셀 때만 내려간다. avatarChange면 대표 아바타도 avatar로 바뀐다(화면은 아바타 줄·얼굴을 낙관적으로 바꾼다). */
+export type WorldBossBest = {
+  power: number;
+  pieces: import('./loadout').LoadoutPiece[];
+  /** 조합의 아바타(보너스 없음이면 null). */
+  avatar: { id: string; src: string | null; gear: import('./loadout').AvatarGear[] } | null;
+  avatarChange: boolean;
+  hasAvatar: boolean;
 };

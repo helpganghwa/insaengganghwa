@@ -1,12 +1,12 @@
 'use server';
 
-import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
+import { activateProfile } from '@/lib/game/profile/active';
 import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
@@ -53,24 +53,11 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   const __b = await actionBlock();
   if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
 
-  // 아바타는 서버별 자산(생성비도 그 서버 지갑에서 차감) — 다른 서버 아바타를
-  // 활성 서버 캐릭터 대표로 다는 교차 설정 차단.
+  // 아바타는 서버별 자산(생성비도 그 서버 지갑에서 차감) — 다른 서버 아바타를 활성 서버 캐릭터 대표로 다는 교차 설정 차단.
+  // 규칙(유지 시작 리셋·도전 과제 마킹)은 lib/game/profile/active.ts — 월드보스 추천 장착(장비+아바타 한 번에)과 같은 함수(10-12).
   const serverId = await getActiveServerId();
-  if (!(await ownedProfileId(userId, profileId, serverId)))
+  if (!(await activateProfile(userId, serverId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
-
-  await db
-    .update(characters)
-    .set({
-      activeProfileId: profileId,
-      // 칭호 이력(0166) — 대표가 **실제로 바뀔 때만** 유지 시작 리셋(같은 아바타 재클릭은 무시).
-      // UPDATE의 우변 컬럼 참조는 변경 전 값이라 이 비교가 정확하다.
-      activeProfileSince: sql`case when ${characters.activeProfileId} is distinct from ${profileId}::uuid
-        then now() else ${characters.activeProfileSince} end`,
-    })
-    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
-  // 도전 과제(0118) — 아바타 변경 마킹(멱등·best-effort).
-  await markChallengeEvent(db, userId, serverId, 'avatar_change');
 
   revalidatePath('/me');
   revalidatePath('/me/profiles');

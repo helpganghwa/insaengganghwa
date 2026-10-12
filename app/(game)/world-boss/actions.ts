@@ -17,6 +17,7 @@ import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, ge
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
+import { activateProfile } from '@/lib/game/profile/active';
 import { db } from '@/lib/db/client';
 import { sql } from 'drizzle-orm';
 
@@ -171,9 +172,9 @@ export async function bossStatusAction(bossId: string) {
   const g = await gate();
   if ('status' in g) return g;
   if (!isId(bossId)) return err('NOT_FOUND');
-  const state = await getWorldBossStatus(bossId, g.sid).catch(() => null);
-  if (!state) return err('BOSS_NOT_FOUND');
-  return { status: 'success' as const, state };
+  const s = await getWorldBossStatus(bossId, g.sid).catch(() => null);
+  if (!s) return err('BOSS_NOT_FOUND');
+  return { status: 'success' as const, state: s.state, weak: s.weak };
 }
 
 /** 전투 다시 보기 — 저장된 전투 기록. 그 원정대원만, 같은 서버(10-11 사용자). */
@@ -192,8 +193,8 @@ export async function getBattleAction(partyId: string) {
 }
 
 /**
- * 추천 장비 장착 — 공개된 약점과 아바타 보너스까지 계산한 부위별 가장 좋은 장비로 한 번에(docs/WORLD-BOSS.md §3).
- * 장착은 게임 전체에 적용된다(탑과 같은 장착). 판정은 서버가 다시 계산하므로 클라가 보낸 값은 없다.
+ * 추천 장비 장착 — 가진 장비와 보유 아바타 전부를 후보로, 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합(장비 3개 + 대표 아바타)으로 한 번에
+ * (docs/WORLD-BOSS.md §3, 무한의 탑 자동 장착과 같은 규칙, 10-12). 장착·대표 아바타는 게임 전체에 적용된다. 판정은 서버가 다시 계산하므로 클라가 보낸 값은 없다.
  */
 export async function equipBestAction(bossId: string) {
   const g = await gate();
@@ -211,7 +212,13 @@ export async function equipBestAction(bossId: string) {
     // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
     const best = await bestLoadoutOf(g.sid, g.u, known, worldBossWeakBonus(parseWorldBossTraits(b.traits)));
     if (!best) return err('ALREADY_EQUIPPED');
-    await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid);
+    if (best.ueids.length) await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid);
+    // 대표 아바타까지 — 출발 전투력은 대표 아바타 기준(party.ts)이라 바꿔야 제안한 값이 실제가 된다. 장착이 먼저(실패하면 아바타는 그대로).
+    if (best.avatarId) {
+      await activateProfile(g.u, g.sid, best.avatarId);
+      revalidatePath('/me');
+      revalidatePath('/me/profiles');
+    }
     rev(bossId);
     return { status: 'success' as const };
   } catch (e) {

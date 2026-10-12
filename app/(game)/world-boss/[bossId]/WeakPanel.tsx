@@ -3,13 +3,15 @@
 /**
  * 약점 패널(docs/WORLD-BOSS.md §3) — 이 보스에서 맞혀서 공개된 약점(묶음은 보스 하나에 하나, 10-11)과 내 장착 상태. 누가 밝혔는지는 보이지 않는다(10-10 사용자).
  * 공개 전 약점은 아무도 모른다. "추천 장비 장착"(10-11 사용자: 약점이 없을 때도 아바타 보너스로 추천하므로 '약점에 맞춰'가 아니다)은 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합으로 바꾼다.
+ * 보유 아바타 전부가 후보라 대표 아바타까지 함께 바뀔 수 있다(10-12, 탑 자동 장착과 같은 규칙) — 그때는 링크가 '추천 장비·아바타 장착'.
  * 내 장비(10-11 사용자 T1 — 무한의 탑 '내 장비' 줄 그대로): 부위마다 한 줄(그림 · 이름+강화 · 상태 칩 · 부위 전투력) → '아바타' 줄(만들 때 입은 장비 3칸, 지금 장착과 같으면 보라 빛 + 딱지) → 합.
  * 보너스가 둘이라 칩은 아바타(+50% 보라)·약점(+100% 주황)을 따로 달고, 줄 색은 약점 > 아바타 > 없음. 표기는 전부 +%(둘은 곱이 아니라 더해진다). weakBonus는 보스 특성(치명 약점이면 2.0 = +200%).
  */
 import { useEffect, useRef } from 'react';
 
 import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
-import type { KnownWeak, Loadout, LoadoutPiece } from '@/lib/game/world-boss/loadout';
+import type { KnownWeak, LoadoutPiece } from '@/lib/game/world-boss/loadout';
+import type { WorldBossDetail } from '@/lib/game/world-boss/view-types';
 import { WEAK_SLOTS, type WeakSlot, avatarBonusOn, piecePower } from '@/lib/game/world-boss/weak';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
@@ -93,7 +95,7 @@ export function WeakPanel({
   weakKnown: KnownWeak[];
   weakTotal: number;
   weakBonus?: number;
-  mine: { loadout: Loadout; best: { power: number; pieces: LoadoutPiece[] } | null } | null;
+  mine: WorldBossDetail['mine'];
   /** 대표 아바타 정면 전신(활성 프로필). 없으면 null → 👤. */
   avatarSrc: string | null;
   onEquipBest: () => void;
@@ -142,7 +144,7 @@ export function WeakPanel({
             <span className="text-[11px] font-bold text-stone-500">내 장비</span>
             {mine.best && (
               <button type="button" onClick={onEquipBest} className="min-h-8 text-[11px] text-stone-400">
-                추천 장비 장착 <b className="font-bold text-orange-300">{formatCompactKR(mine.best.power)} ›</b>
+                {mine.best.avatarChange ? '추천 장비·아바타 장착' : '추천 장비 장착'} <b className="font-bold text-orange-300">{formatCompactKR(mine.best.power)} ›</b>
               </button>
             )}
           </div>

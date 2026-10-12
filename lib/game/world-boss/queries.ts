@@ -310,7 +310,7 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
     }
     // 내 장착 상태 — 이미 싸웠으면 바꿔도 의미가 없어 읽지 않는다.
     const l = lo?.get(userId);
-    if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces } : null };
+    if (l) mine = { loadout: l, best: best && best.power > l.power ? { power: best.power, pieces: best.pieces, avatar: best.avatar, avatarChange: best.avatarId != null, hasAvatar: best.hasAvatar } : null };
   }
 
   const total = Number(b.total);
@@ -329,11 +329,14 @@ export async function getWorldBossDetail(bossId: string, serverId: number, userI
 }
 
 /** 종료 시각 타이머용 가벼운 상태 1쿼리(10-11 3차 결정 ⑧) — 바뀐 것이 확인될 때만 화면 전체를 다시 읽는다. 예정·다른 서버면 null. */
-export async function getWorldBossStatus(bossId: string, serverId: number): Promise<WorldBossDetail['status'] | null> {
+/** 종료 시각 타이머·주기 확인용 가벼운 상태(1쿼리) — 상태 + 공개된 약점 수(약점이 밝혀지면 열어 둔 화면이 추천 조합을 다시 읽는다, 10-12). */
+export async function getWorldBossStatus(bossId: string, serverId: number): Promise<{ state: WorldBossDetail['status']; weak: number } | null> {
   if (!/^\d{1,18}$/.test(bossId)) return null;
-  const [r] = (await db.execute(sql`select status, (leave_at > now()) as alive from world_bosses where id = ${bossId}::bigint and server_id = ${serverId}`)) as unknown as { status: string; alive: boolean }[];
+  const [r] = (await db.execute(sql`
+    select b.status, (b.leave_at > now()) as alive, (select count(*)::int from world_boss_weak_reveals r where r.boss_id = b.id and r.phase = 0) as weak
+      from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId}`)) as unknown as { status: string; alive: boolean; weak: number }[];
   if (!r || r.status === 'scheduled') return null;
-  return r.status === 'left' ? 'left' : r.alive ? 'active' : 'settling';
+  return { state: r.status === 'left' ? 'left' : r.alive ? 'active' : 'settling', weak: Number(r.weak) };
 }
 
 /** 원정대 id → 보스 id(푸시 딥링크 /world-boss/party/<id> 변환용). */

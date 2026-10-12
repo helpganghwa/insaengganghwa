@@ -7,6 +7,7 @@ import { pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
+import { type BestAvatar, type BestPiece, avatarKeysOf, pickBestLoadout } from './best-loadout';
 import { WEAK_SLOTS, type WeakSlot, piecePower } from './weak';
 
 /**
@@ -74,39 +75,68 @@ export async function loadoutsOf(serverId: number, userIds: string[], known: Rea
   return out;
 }
 
+/** 추천 조합 — "추천 장비 장착"의 제안. avatarId = 바꿀 대표 아바타(지금 대표 그대로면 null), avatar = 조합의 아바타(보너스 없음이면 null). */
+export type BestLoadout = {
+  ueids: string[];
+  avatarId: string | null;
+  avatar: { id: string; src: string | null; gear: AvatarGear[] } | null;
+  hasAvatar: boolean;
+  power: number;
+  pieces: LoadoutPiece[];
+};
+
 /**
- * 가진 장비 중 공개된 약점·아바타 보너스까지 계산한 부위별 가장 좋은 장비 — "추천 장비 장착" 버튼의 제안.
- * 지금 장착과 같으면 null.
+ * 가진 장비와 보유 아바타 전부를 후보로 공개된 약점·아바타 보너스까지 계산한 가장 좋은 조합(장비 3개 + 대표 아바타) — "추천 장비 장착" 버튼의 제안.
+ * 무한의 탑 자동 장착과 같은 규칙(best-loadout.ts, 10-12). 지금 장착·대표와 같으면 null.
  */
-export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<{ ueids: string[]; power: number; pieces: LoadoutPiece[] } | null> {
-  const [rows, [av]] = await Promise.all([
+export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<BestLoadout | null> {
+  const [rows, avRows] = await Promise.all([
     db.execute(sql`
       select ue.id::text as ueid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl, ue.equipped_slot is not null as on_
         from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
        where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid`) as unknown as Promise<OwnRow[]>, // 비활성(교체된 옛) 장비도 후보 — 출발 전투력과 같은 기준(10-11 3차)
+    // 보유 아바타 전부(서버별 자산) + 지금 대표 표시. 아바타가 없는 캐릭터는 id가 null인 한 행.
     db.execute(sql`
-      select up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default
-        from characters c left join user_profiles up on up.id = c.active_profile_id
-       where c.server_id = ${serverId} and c.user_id = ${userId}::uuid`) as unknown as Promise<{ snap: unknown; is_default: boolean }[]>,
+      select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot as snap,
+             coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
+        from characters c left join user_profiles up on up.user_id = c.user_id and up.server_id = c.server_id
+       where c.server_id = ${serverId} and c.user_id = ${userId}::uuid
+       order by (up.id = c.active_profile_id) desc nulls last, up.created_at`) as unknown as Promise<{ id: string | null; south: string | null; snap: unknown; is_default: boolean; active: boolean | null }[]>,
   ]);
-  const snap = av && !av.is_default && av.snap && typeof av.snap === 'object' && typeof (av.snap as Record<string, unknown>).weaponKey === 'string' ? (av.snap as Record<string, unknown>) : null;
-  const pieces: LoadoutPiece[] = [];
-  let changed = false;
-  for (const slot of WEAK_SLOTS) {
-    let best: { r: OwnRow; v: number } | null = null;
-    for (const r of rows) {
-      if (r.slot !== slot) continue;
-      const cp = pieceCombatPower(Number(r.el), Number(r.tl));
-      const v = piecePower(cp, !!snap && snap[`${slot}Key`] === r.code, !!snap, known.has(r.code), weakBonus);
-      // 같으면 지금 장착을 유지(쓸데없이 바꾸지 않게).
-      if (!best || v > best.v || (v === best.v && r.on_ && !best.r.on_)) best = { r, v };
-    }
-    if (!best) continue;
-    if (!best.r.on_) changed = true;
-    const r = best.r;
-    pieces.push({ ueid: r.ueid, slot, code: r.code, name: r.name, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), level: Number(r.el), transcend: Number(r.tl), src: spritePath(r.code), av: !!snap && snap[`${slot}Key`] === r.code, weak: known.has(r.code) });
-  }
-  if (!changed) return null;
-  const power = Math.round(pieces.reduce((s, p) => s + piecePower(p.cp, p.av, !!snap, p.weak, weakBonus), 0));
-  return { ueids: pieces.map((p) => p.ueid), power, pieces };
+  // cp는 loadoutsOf와 같이 먼저 반올림 — 제안 전투력과 지금 전투력을 같은 자리에서 비교한다.
+  const pieces: BestPiece[] = rows.filter((r) => isSlot(r.slot)).map((r) => ({ ueid: r.ueid, slot: r.slot as WeakSlot, code: r.code, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), on: r.on_ }));
+  const customs = avRows.flatMap((r) => {
+    const keys = r.id && !r.is_default ? avatarKeysOf(r.snap) : null;
+    return r.id && keys ? [{ id: r.id, keys, active: !!r.active, south: r.south }] : [];
+  });
+  // 지금 대표가 없거나 기본 아바타면 '그대로(보너스 없음)'를 후보에 넣어 바꾸지 않는 선택지를 남긴다.
+  const cands: BestAvatar[] = customs.some((a) => a.active) ? customs : [{ id: null, keys: null, active: true }, ...customs];
+  const plan = pickBestLoadout(pieces, cands, known, weakBonus);
+  if (!plan.changed) return null;
+  const keys = plan.avatar.keys;
+  const byUeid = new Map(rows.map((r) => [r.ueid, r] as const));
+  const out: LoadoutPiece[] = WEAK_SLOTS.flatMap((slot) => {
+    const p = plan.picks[slot];
+    const r = p && byUeid.get(p.ueid);
+    return p && r ? [{ ueid: p.ueid, slot, code: p.code, name: r.name, cp: p.cp, level: Number(r.el), transcend: Number(r.tl), src: spritePath(p.code), av: !!keys && keys[slot] === p.code, weak: known.has(p.code) }] : [];
+  });
+  const chosen = keys ? customs.find((a) => a.id === plan.avatar.id) : undefined;
+  return {
+    ueids: out.filter((p) => !plan.picks[p.slot]!.on).map((p) => p.ueid),
+    avatarId: plan.avatar.active ? null : plan.avatar.id,
+    avatar:
+      chosen && keys
+        ? {
+            id: chosen.id,
+            src: chosen.south,
+            gear: WEAK_SLOTS.flatMap((slot) => {
+              const code = keys[slot];
+              return code ? [{ slot, code, src: spritePath(code), on: plan.picks[slot]?.code === code }] : [];
+            }),
+          }
+        : null,
+    hasAvatar: !!keys,
+    power: Math.round(plan.power),
+    pieces: out,
+  };
 }
