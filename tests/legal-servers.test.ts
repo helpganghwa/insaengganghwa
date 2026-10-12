@@ -18,7 +18,8 @@ describe('법률 문서 — 서버 조항', () => {
     expect(on.terms).toContain('- 서버: 캐릭터·재화·기록이 따로 관리되는');
     expect(on.terms).toContain('결제할 때 접속한 서버에 지급');
     expect(on.terms).toContain('서버마다 1회로 한정된 상품은 서버마다 따로 구매');
-    expect(on.terms).toContain('30일 전에 공지하며, 그 서버에 남아 있는 유료 재화는 다른 서버로 옮기거나 환불');
+    // 서버 종료·통합 때의 공지·환불 약속은 넣지 않는다(10-12 사용자 결정).
+    expect(on.terms).not.toContain('서버 운영을 종료');
     expect(on.terms).toContain('탈퇴하면 모든 서버의 게임 데이터는');
     expect(on.terms).toContain('시행일: 2026년 12월 1일 (이전 시행일: 2026년 10월 14일)');
   });
@@ -27,14 +28,13 @@ describe('법률 문서 — 서버 조항', () => {
     const on = legalBodies(true, '2026년 12월 1일');
     expect(on.refund).toContain('## 6. 서버와 유료 재화');
     expect(on.refund).toContain('환불은 지급된 서버의 재화를 기준으로');
-    expect(on.refund).toContain('30일 전에 공지');
+    expect(on.refund).not.toContain('서버 운영을 종료');
   });
 
   it('끄면 종전 본문 그대로다(사전 공지 없이 바뀌지 않게)', () => {
     const off = legalBodies(false, '2026년 10월 14일');
     expect(off.terms).not.toContain('- 서버: ');
     expect(off.terms).not.toContain('모든 서버의');
-    expect(off.terms).not.toContain('30일 전에 공지하며, 그 서버');
     expect(off.refund).not.toContain('서버와 유료 재화');
     expect(off.terms).toContain('시행일: 2026년 10월 14일 (이전 시행일: 2026년 9월 19일)');
   });
