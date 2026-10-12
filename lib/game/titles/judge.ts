@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { expeditionSlotsFor } from '@/lib/game/balance';
+import { yesterdayOpenTop } from './open-top';
 import { firstRanksFrom } from '@/lib/game/titles/first-milestones';
 
 import { sql } from 'drizzle-orm';
@@ -536,7 +537,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                  and c.created_at >= fl.updated_at - interval '7 days') as sprout_friends
     `),
     // 스트릭 2차 — 출석/레이드 현재 연속일(gaps & islands), 최근 20회 무하락, 어제 1위 4종
-    () => db.execute(sql`
+    // 어제 보급 1위는 서버×날짜 캐시(open-top.ts, 10-12)에서 — 판정마다 보급 로그 전체를 훑던 자리.
+    async () => {
+      const openTop = await yesterdayOpenTop(serverId);
+      return db.execute(sql`
       with cd as (select distinct kst_day::date dd from checkin_claim_logs where user_id=${u} and server_id=${s}),
            cruns as (select dd, dd - (row_number() over (order by dd))::int as g from cd),
            ccur as (select count(*)::int len, max(dd) mx from cruns
@@ -563,11 +567,9 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                select ra.user_id, sum(ra.damage) dmg from raid_attacks ra join raids r on r.id=ra.raid_id
                where r.server_id=${s} and (ra.created_at ${sql.raw(KST)})::date = (select d from today) - 1
                group by 1 order by 2 desc, 1 limit 1) rk),0) as y_raid_top,
-             coalesce((select (rk.user_id=${u}::uuid)::int from (
-               select user_id, count(*) c from supply_open_logs
-               where server_id=${s} and (created_at ${sql.raw(KST)})::date = (select d from today) - 1
-               group by 1 order by 2 desc, 1 limit 1) rk),0) as y_open_top
-    `),
+             coalesce((${openTop}::uuid = ${u})::int, 0) as y_open_top
+    `);
+    },
     // 강화 심화(판정 3차) — 일단위·연속일·심야/출퇴근·장비별 누적·순서 조건. 누적 표(0219).
     () => db.execute(enhDeepSql(u, s)),
     // 무하락 90→100(정밀) + 무단축 +50(보석 단축 이력 대조) — 누적 표(0219).

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { sql } from 'drizzle-orm';
+import { yesterdayOpenTop } from './open-top';
 
 import { db } from '@/lib/db/client';
 import { guildCapacity } from '@/lib/game/guild/balance';
@@ -271,13 +272,8 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
       return Number(r?.top) === 1;
     }
     if (code === 'open_king') {
-      const [r] = (await db.execute(sql`
-        select (rk.user_id = ${u})::int as top from (
-          select user_id, count(*) c from supply_open_logs
-          where server_id=${s} and (created_at ${sql.raw(KST)})::date = (now() ${sql.raw(KST)})::date - 1
-          group by 1 order by 2 desc, 1 limit 1) rk
-      `)) as unknown as { top: number }[];
-      return Number(r?.top) === 1;
+      // 서버×날짜 캐시(open-top.ts, 10-12) — 호출마다 보급 로그 전체를 훑던 자리.
+      return (await yesterdayOpenTop(serverId)) === userId;
     }
     return false;
   } catch {

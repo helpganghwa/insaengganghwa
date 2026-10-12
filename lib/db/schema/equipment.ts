@@ -99,6 +99,10 @@ export const userEquipment = pgTable(
     index('ue_catalog_rank_idx')
       .on(t.catalogItemId, t.maxEnhanceLevel, t.maxEnhanceReachedAt, t.userId)
       .where(sql`${t.maxEnhanceLevel} > 0`),
+    // 서버 조건이 붙은 해방 등수 쿼리(길드 화면)용 — 0241 수동 적용(concurrently).
+    index('ue_server_catalog_rank_idx')
+      .on(t.serverId, t.catalogItemId, t.maxEnhanceLevel, t.maxEnhanceReachedAt, t.userId)
+      .where(sql`${t.maxEnhanceLevel} > 0`),
     // 강화/초월 0 이상.
     check('ue_enhance_min', sql`${t.enhanceLevel} >= 0`),
     check('ue_transcend_min', sql`${t.transcendLevel} >= 0`),
