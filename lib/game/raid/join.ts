@@ -53,7 +53,7 @@ export function joinRaid(input: {
     // 동시 참가하면 그 락이 안 겹쳐 잠금 없는 activeRaidCount가 전부 통과한다 — 유저별 행을
     // 잠그는 bumpDailyOrThrow 뒤로 옮겨야 직렬화된다.
     const { concurrentCap } = await bumpDailyOrThrow(tx, userId, raid.serverId);
-    if ((await activeRaidCount(tx, userId)) >= concurrentCap) {
+    if ((await activeRaidCount(tx, userId, raid.serverId)) >= concurrentCap) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 

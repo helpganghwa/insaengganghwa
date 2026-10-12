@@ -2,7 +2,7 @@ import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
 import { resolveRepTitle } from '@/lib/game/titles/display';
-import { createCharacterAuto } from '@/lib/game/server-select';
+import { createCharacterAuto, recommendedServerId } from '@/lib/game/server-select';
 import { correctServerFor } from '@/lib/game/server-guard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
@@ -196,13 +196,18 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
         console.warn('[layout] wrong active server — redirecting', { userId, serverId, correctServerId });
         return { ...DEFAULTS, correctServerId };
       }
-      const healKey = `${userId}:${serverId}`;
+      // 어느 서버에도 캐릭터가 없는 신규(콜백의 서버 확정이 건너뛰어진 경우)는 쿠키 서버(기본 1)가 아니라
+      // **추천 서버**(0210, full·closed면 최신 open)에 만든다(10-12 2서버 조사) — 종전엔 추천·초대 서버를 무시하고
+      // 1서버에 만들었고, 1서버가 포화면 5분마다 같은 실패를 되풀이했다. 쿠키 서버와 다르면 헤더가 전환시킨다.
+      const healKey = `${userId}`;
       const last = healAttemptAt.get(healKey) ?? 0;
       if (Date.now() - last > HEAL_RETRY_MS) {
         healAttemptAt.set(healKey, Date.now());
         try {
-          await createCharacterAuto({ userId, serverId });
-          console.warn('[layout] half-account healed — character created', { userId, serverId });
+          const target = await recommendedServerId();
+          await createCharacterAuto({ userId, serverId: target });
+          console.warn('[layout] half-account healed — character created', { userId, serverId: target });
+          if (target !== serverId) return { ...DEFAULTS, correctServerId: target };
           return await loadLayoutData(userId, serverId);
         } catch (e) {
           console.warn('[layout] half-account heal failed', (e as Error).message);

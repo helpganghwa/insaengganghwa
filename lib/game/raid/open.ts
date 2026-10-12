@@ -64,13 +64,17 @@ function genShareCode(): string {
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** 동시 진행(active, 호스팅+참여 합산) — host도 participant로 등록되므로 한 쿼리. */
-export async function activeRaidCount(tx: Tx, userId: string) {
+/**
+ * 동시 진행(active, 호스팅+참여 합산) — host도 participant로 등록되므로 한 쿼리.
+ * 서버별로 센다(10-12 2서버 조사): 종전엔 전 서버 합산이라 1서버에서 상한만큼 진행 중이면 2서버의 소환·참여·수락이
+ * 전부 막혔다(일일 횟수 행은 서버별인데 이쪽만 전역이었다).
+ */
+export async function activeRaidCount(tx: Tx, userId: string, serverId: number) {
   const [{ n }] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(raidParticipants)
     .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
-    .where(and(eq(raidParticipants.userId, userId), eq(raids.status, 'active')));
+    .where(and(eq(raidParticipants.userId, userId), eq(raids.status, 'active'), eq(raids.serverId, serverId)));
   return n;
 }
 
@@ -141,10 +145,8 @@ export function openRaid(input: {
     // (일일 상한은 그 갭 락 문제를 선행 upsert로 이미 막아뒀는데 이쪽만 남아 있었다).
     // bumpDailyOrThrow가 유저별 행을 FOR UPDATE로 잠그므로, 그 뒤에서 세면 락 대기 후
     // 커밋된 값을 본다(READ COMMITTED). 검사 실패 시 증가분은 같은 트랜잭션이라 롤백된다.
-    // 잔여 — activeRaidCount는 서버 무관 전수인데 일일 행은 서버별이라, 서로 다른 서버로
-    // 동시 요청하면 직렬화되지 않는다(현재 1서버라 미발현).
     const { concurrentCap } = await bumpDailyOrThrow(tx, userId, input.serverId);
-    if ((await activeRaidCount(tx, userId)) >= concurrentCap) {
+    if ((await activeRaidCount(tx, userId, input.serverId)) >= concurrentCap) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
 

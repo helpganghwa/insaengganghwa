@@ -240,7 +240,7 @@ export function decideJoinRequest(input: {
       // (실측: pending 5건 동시 승인 → 5명 전원 참가, 상한 3 돌파). requesterUserId 기준으로
       // 유저별 행을 잠그는 bumpDailyOrThrow 뒤에서 세야 직렬화된다.
       const { concurrentCap } = await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
-      if ((await activeRaidCount(tx, requesterUserId)) >= concurrentCap) {
+      if ((await activeRaidCount(tx, requesterUserId, raid.serverId)) >= concurrentCap) {
         throw new RaidError('CONCURRENT_LIMIT');
       }
       await tx.insert(raidParticipants).values({ raidId, userId: requesterUserId });

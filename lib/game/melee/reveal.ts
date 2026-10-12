@@ -183,6 +183,53 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
   // reveal 전이가 1회라 정확히 1회 실행. 실패는 흡수(발표·우편을 막지 않는다 — 세금 1회 손실 허용).
   await accrueMeleePrizeTax(serverId, battleId).catch((e) => console.warn('[melee.reveal] prize tax failed', e));
 
+  // 우승 마일스톤(통산 우승 N회 — 포인트와 분리 유지). 우승 횟수를 원천에서 재계산해 클레임.
+  if (result.championUserId) {
+    try {
+      const [w] = (await db.execute(sql`
+        select count(*)::int as n from melee_battles
+        where server_id = ${serverId} and status = 'revealed' and champion_user_id = ${result.championUserId}::uuid
+      `)) as unknown as { n: number }[];
+      if (w && Number(w.n) > 0) await claimMilestone(result.championUserId, serverId, 'melee', Number(w.n));
+    } catch (e) {
+      console.warn('[melee.reveal] champion milestone failed', e);
+    }
+  }
+
+  // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
+  // 경계규칙 1 — 발송은 활성 서버(last_server_id) 참가자에게만(타 서버 푸시 억제).
+  const parts = await db
+    .select({ uid: meleeParticipants.userId })
+    .from(meleeParticipants)
+    .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+    .where(and(eq(meleeParticipants.battleId, battleId), eq(profiles.lastServerId, serverId)));
+  const userIds = parts.map((p) => p.uid);
+  await sendPushToUsers(userIds, {
+    title: '대난투 결과 발표',
+    body: `${podiumStr} · 내 순위 확인하기`,
+    url: '/melee',
+    serverId,
+    tag: 'melee',
+    category: 'melee',
+  }).catch((e) => console.warn('[melee.reveal] push failed', e));
+
+  // 길드 업적(길드원) + 월드 피드(전체) — 대난투 1~3위 노출(best-effort). 각 호출을 try/catch로
+  // 격리(감사 B8): 1건 throw 시 나머지 등수·함수 전체가 죽어, 멱등 reveal 재시도가 no-op이 되며
+  // 업적/피드가 영구 누락되던 문제 방지(우편·푸시는 이미 완료). 실패는 흡수.
+  for (const p of podium) {
+    if (p.rank >= 1 && p.rank <= 3) {
+      try {
+        await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
+        await logWorldEvent(serverId, 'melee_rank', { rank: p.rank }, { actorUserId: p.userId });
+      } catch (e) {
+        console.warn('[melee.reveal] achievement/feed failed', p.userId, (e as Error).message);
+      }
+    }
+  }
+
+  // 포인트 적립은 맨 뒤로(10-12 2서버 조사) — 참가자마다 별도 트랜잭션이라 서버 1 실측 약 75초. 서버를 차례로 도는 크론에서
+  // 이것이 푸시·업적·피드보다 앞에 있으면 2서버 때 함수 300초가 끊길 때 뒤 서버의 알림이 영구히 빠진다. 포인트는 실패해도
+  // 다음 틱의 recreditMissingMeleePoints·스냅샷이 채우지만, 푸시·피드는 재시도 경로가 없다.
   // 리더보드 증분(v2, 2026-07-22 개편) — 참가자 전원 포인트 적립(구간별 가변).
   // reveal이 조건부 전이로 정확히 1회라 증분이 정확. 놓친 적립은 시간별 스냅샷이 교정.
   {
@@ -215,48 +262,5 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
       }
     }
   }
-  // 우승 마일스톤(통산 우승 N회 — 포인트와 분리 유지). 우승 횟수를 원천에서 재계산해 클레임.
-  if (result.championUserId) {
-    try {
-      const [w] = (await db.execute(sql`
-        select count(*)::int as n from melee_battles
-        where server_id = ${serverId} and status = 'revealed' and champion_user_id = ${result.championUserId}::uuid
-      `)) as unknown as { n: number }[];
-      if (w && Number(w.n) > 0) await claimMilestone(result.championUserId, serverId, 'melee', Number(w.n));
-    } catch (e) {
-      console.warn('[melee.reveal] champion milestone failed', e);
-    }
-  }
-
-  // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
-  // 경계규칙 1 — 발송은 활성 서버(last_server_id) 참가자에게만(타 서버 푸시 억제).
-  const parts = await db
-    .select({ uid: meleeParticipants.userId })
-    .from(meleeParticipants)
-    .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
-    .where(and(eq(meleeParticipants.battleId, battleId), eq(profiles.lastServerId, serverId)));
-  const userIds = parts.map((p) => p.uid);
-  await sendPushToUsers(userIds, {
-    title: '대난투 결과 발표',
-    body: `${podiumStr} · 내 순위 확인하기`,
-    url: '/melee',
-    tag: 'melee',
-    category: 'melee',
-  }).catch((e) => console.warn('[melee.reveal] push failed', e));
-
-  // 길드 업적(길드원) + 월드 피드(전체) — 대난투 1~3위 노출(best-effort). 각 호출을 try/catch로
-  // 격리(감사 B8): 1건 throw 시 나머지 등수·함수 전체가 죽어, 멱등 reveal 재시도가 no-op이 되며
-  // 업적/피드가 영구 누락되던 문제 방지(우편·푸시는 이미 완료). 실패는 흡수.
-  for (const p of podium) {
-    if (p.rank >= 1 && p.rank <= 3) {
-      try {
-        await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
-        await logWorldEvent(serverId, 'melee_rank', { rank: p.rank }, { actorUserId: p.userId });
-      } catch (e) {
-        console.warn('[melee.reveal] achievement/feed failed', p.userId, (e as Error).message);
-      }
-    }
-  }
-
   return { battleId: battleId.toString(), mailed: result.mailCount };
 }

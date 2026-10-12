@@ -27,10 +27,13 @@ export async function POST(req: Request) {
     )
     .catch(() => {});
   // 활성 서버 추적(SERVER.md 경계규칙1 — 푸시 필터). 변경시에만 쓰기.
+  // 그 서버에 캐릭터가 있을 때만(10-12 2서버 조사) — 쿠키가 캐릭터 없는 서버를 가리키는 동안 last_server_id가
+  // 거기로 바뀌면 진짜 서버의 푸시가 걸러지고, 접속 집계도 오염된다(프로덕션에 그런 행 2건 있었다).
   await db
     .execute(
       sql`update profiles set last_server_id = ${serverId}
-          where id = ${userId} and last_server_id is distinct from ${serverId}`,
+          where id = ${userId} and last_server_id is distinct from ${serverId}
+            and exists (select 1 from characters c where c.user_id = ${userId} and c.server_id = ${serverId})`,
     )
     .catch(() => {});
   // 플랫폼별 일일 접속(0199) — 클라가 판정한 값을 하루 1행으로. 본문이 없거나 이상하면 건너뛴다(구버전 클라).
@@ -43,7 +46,8 @@ export async function POST(req: Request) {
     await db
       .execute(
         sql`insert into platform_daily (kst_day, server_id, user_id, platform)
-            values ((now() at time zone 'Asia/Seoul')::date, ${serverId}, ${userId}, ${platform})
+            select (now() at time zone 'Asia/Seoul')::date, ${serverId}, ${userId}, ${platform}
+            where exists (select 1 from characters c where c.user_id = ${userId} and c.server_id = ${serverId})
             on conflict (kst_day, server_id, user_id, platform) do update set last_seen_at = now()
             where platform_daily.last_seen_at < now() - interval '10 minutes'`,
       )

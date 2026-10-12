@@ -86,6 +86,22 @@ export async function setServerStatusAction(
         message: `최근 7일 접속자가 ${n}명 있습니다. 먼저 '포화'로 두고 공지한 뒤 닫아 주세요.`,
       };
     }
+    // 미정산 콘텐츠(10-12 2서버 조사) — closed면 크론 순회에서 빠지므로, 남아 있던 월드보스·발표 전 대난투·공개 전 점령전이
+    // 영구히 멈춘다. 정산이 끝난 뒤에만 닫게 한다.
+    const pend = (await db.execute(sql`
+      select
+        (select count(*)::int from world_bosses where server_id = ${serverId} and status <> 'settled') as bosses,
+        (select count(*)::int from melee_battles where server_id = ${serverId} and status <> 'revealed') as melees,
+        (select count(*)::int from conquest_battles cb where cb.server_id = ${serverId} and cb.published_at is null) as conquests
+    `)) as unknown as { bosses: number; melees: number; conquests: number }[];
+    const pd = pend[0];
+    if (pd && (pd.bosses > 0 || pd.melees > 0 || pd.conquests > 0)) {
+      return {
+        status: 'error',
+        code: 'HAS_PENDING',
+        message: `정산이 끝나지 않은 콘텐츠가 있습니다(월드보스 ${pd.bosses}·대난투 ${pd.melees}·점령전 ${pd.conquests}). 정산이 끝난 뒤 닫아 주세요.`,
+      };
+    }
   }
 
   await db.transaction(async (tx) => {

@@ -205,6 +205,7 @@ export async function equipBestAction(bossId: string) {
       knownWeakOf(bossId),
     ]);
     if (!b || b.server_id !== g.sid) return err('BOSS_NOT_FOUND');
+    if (b.status === 'scheduled') return err('BOSS_NOT_FOUND'); // 예정 보스는 없는 것처럼(운영자 소환 비노출 — 다른 액션의 lockActiveBoss와 같은 판정, 10-12)
     if (b.status !== 'active' || !b.alive) return err('BOSS_NOT_ACTIVE'); // 종료 판정은 DB 시계(정산과 같은 시계)
     const known = new Set(knownRows.map((w) => w.code));
     // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
