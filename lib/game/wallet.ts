@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { accrueSpendTax } from '@/lib/game/guild/tax';
+import { isServerClosedIn } from '@/lib/game/server-guard';
 import { recordDiamondLedger, type LedgerDb, type LedgerReason } from '@/lib/game/ledger';
 
 /** db 또는 트랜잭션 핸들 — 원자성(다른 상태 변경과의 묶음)은 호출자 트랜잭션 책임. */
@@ -18,6 +19,9 @@ export type WalletDb = LedgerDb;
  * 난 뒤에야 알게 된다. 그래서 reason은 **필수 인자**(누락 호출부는 타입 에러로 드러난다).
  * 기록은 호출자가 넘긴 dbx로 — 지갑 변경과 같은 트랜잭션이라 롤백 시 함께 사라진다.
  */
+
+/** 그 서버가 닫히지 않았을 때만 참 — 지갑 UPDATE의 WHERE에 얹는다(servers PK 1건, cost≈1). */
+const serverOpenSql = (serverId: number) => sql`exists (select 1 from servers s where s.id = ${serverId} and s.status <> 'closed')`;
 
 /** 지갑 잔액 — 캐릭터 행 없으면 0n(헤더 표시 등 읽기 전용). */
 export async function getWalletDiamond(dbx: WalletDb, userId: string, serverId: number): Promise<bigint> {
@@ -39,12 +43,16 @@ export async function walletAdd(
   ref?: string,
 ): Promise<void> {
   const amt = BigInt(amount);
+  // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — 지급도 받지 않는다(크론은 closed를 돌지 않으므로 여기 오는 건 id 경로·운영 도구뿐).
   const rows = await dbx
     .update(characters)
     .set({ diamond: sql`${characters.diamond} + ${amt}` })
-    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId), serverOpenSql(serverId)))
     .returning({ userId: characters.userId });
-  if (rows.length === 0) throw new Error(`WALLET_CHARACTER_MISSING:${userId}@s${serverId}`);
+  if (rows.length === 0) {
+    if (await isServerClosedIn(dbx, serverId)) throw new Error(`WALLET_SERVER_CLOSED:${userId}@s${serverId}`);
+    throw new Error(`WALLET_CHARACTER_MISSING:${userId}@s${serverId}`);
+  }
   await recordDiamondLedger(dbx, { userId, serverId, delta: amt, reason, ref });
 }
 
@@ -70,6 +78,7 @@ export async function walletTrySpend(
         eq(characters.userId, userId),
         eq(characters.serverId, serverId),
         sql`${characters.diamond} >= ${amt}`,
+        serverOpenSql(serverId), // 닫힌 서버는 차감도 안 된다(잔액 부족과 같은 false, 10-12 결정 ⑤)
       ),
     )
     .returning({ userId: characters.userId });

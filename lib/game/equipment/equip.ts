@@ -5,10 +5,11 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { isUniqueViolation } from '@/lib/db/errors';
 import { catalogItems, equipmentChangeLogs, userEquipment } from '@/lib/db/schema/equipment';
+import { isServerClosedIn } from '@/lib/game/server-guard';
 
 /** 장착 — SCHEMA §2.2. 슬롯당 1개(부분 UNIQUE): 같은 슬롯 기존 장착은 해제 후 교체. */
 export class EquipError extends Error {
-  constructor(public code: 'NOT_FOUND' | 'SLOT_TAKEN') {
+  constructor(public code: 'NOT_FOUND' | 'SLOT_TAKEN' | 'SERVER_CLOSED') {
     super(code);
     this.name = 'EquipError';
   }
@@ -60,6 +61,8 @@ async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint, server
     .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
     .for('update');
   if (!equip || (serverId != null && equip.serverId !== serverId)) throw new EquipError('NOT_FOUND');
+  // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — 장비 id로 닫힌 서버 장비를 찍어도 장착하지 않는다.
+  if (await isServerClosedIn(tx, equip.serverId)) throw new EquipError('SERVER_CLOSED');
 
   // 같은 슬롯 기존 장착 해제(부분 UNIQUE 충돌 방지) → 대상 장착, 단일 tx.
   const prev = await tx

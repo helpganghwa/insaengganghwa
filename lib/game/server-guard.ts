@@ -88,3 +88,13 @@ export async function correctServerFor(userId: string, activeServerId: number): 
   if (closedIds.length > 0) return CLOSED_ONLY; // 닫힌 서버에만 있다
   return null; // 신규 — 지금 서버에 만드는 것이 맞다
 }
+
+/**
+ * 트랜잭션 안에서 "그 서버가 닫혔는가" — 닫힌 서버 자산 완전 동결(2026-10-12 결정 ⑤)용.
+ * 지갑 지급·차감과 id로 대상 행을 받는 경로(강화 등록·장착·우편 단건 수령)가 **대상 행의 서버**로 확인한다
+ * (쿠키 서버가 아니다 — 쿠키는 열린 서버에 두고 닫힌 서버의 장비·우편 id를 넣는 경우를 막는다).
+ */
+export async function isServerClosedIn(dbx: Pick<typeof db, 'execute'>, serverId: number): Promise<boolean> {
+  const rows = (await dbx.execute(sql`select 1 as ok from servers where id = ${serverId} and status = 'closed' limit 1`)) as unknown as unknown[];
+  return rows.length > 0;
+}

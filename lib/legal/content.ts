@@ -37,14 +37,16 @@ export const MINOR_MONTHLY_LIMIT_KRW = 70_000;
 
 /**
  * 서버 조항(2026-10-12 사용자 결정) — 재화·데이터의 서버 귀속, 유료 상품은 결제한 서버에 지급, 서버별 1회 상품,
- * 탈퇴의 전 서버 적용(서버 종료·통합 때의 공지·환불 약속은 넣지 않는다 — 사용자 결정). **서버 2 오픈 7일 전** 개정 공지와
- * 함께 켠다: SERVER_CLAUSES_LIVE=true, SERVER_CLAUSES_EFFECTIVE_DATE=오픈일. 꺼져 있는 동안 약관·환불 안내 본문은
- * 종전 그대로다(제3조의 사전 공지 없이 본문이 바뀌지 않게). 켠·끈 본문은 legalBodies()로 미리 본다.
+ * 탈퇴의 전 서버 적용(서버 종료·통합 때의 공지·환불 약속은 넣지 않는다 — 사용자 결정). 10-12 결정 ②로 **이미 공지된
+ * 10-14 개정에 합쳐 켰다**(SERVER_CLAUSES_LIVE=true, 시행일 10-14 — 서버가 하나뿐이라 실질 변경이 없다). 플래그를 끄면
+ * 서버 조항 없는 본문으로 돌아간다. 켠·끈 본문은 legalBodies()로 미리 본다.
  */
-export const SERVER_CLAUSES_LIVE = false;
-export const SERVER_CLAUSES_EFFECTIVE_DATE = '';
+export const SERVER_CLAUSES_LIVE = true; // 10-12 사용자 결정 ②: 이미 공지된 10-14 개정에 합쳐 켠다(서버 1뿐이라 실질 변경 0).
+export const SERVER_CLAUSES_EFFECTIVE_DATE = '2026년 10월 14일';
 const PREV_TERMS_DATE = '2026년 10월 14일';
 const TERMS_DATE = SERVER_CLAUSES_LIVE ? SERVER_CLAUSES_EFFECTIVE_DATE : PREV_TERMS_DATE;
+/** 부칙의 '이전 시행일' — 10-14 개정에 합쳐 켠 경우 직전 시행일은 9-19, 그 뒤 따로 켜는 경우 10-14. */
+const prevTermsDateFor = (date: string): string => (date === '2026년 10월 14일' ? '2026년 9월 19일' : '2026년 10월 14일');
 
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth' | 'account-deletion';
 
@@ -115,7 +117,7 @@ ${S ? '7. 다이아·보급 상자·장비 등 게임 재화와 게임 데이터
 이 약관은 대한민국 법을 따르며, 분쟁은 협의로 해결하되 합의되지 않으면 관할 법원에 소를 제기할 수 있습니다.
 
 ## 부칙
-시행일: ${date} (이전 시행일: ${S ? PREV_TERMS_DATE : '2026년 9월 19일'}). 사업자정보는 본 페이지 하단에 표시합니다.
+시행일: ${date} (이전 시행일: ${S ? prevTermsDateFor(date) : '2026년 9월 19일'}). 사업자정보는 본 페이지 하단에 표시합니다.
 `;
 const TERMS = buildTerms(SERVER_CLAUSES_LIVE, TERMS_DATE);
 

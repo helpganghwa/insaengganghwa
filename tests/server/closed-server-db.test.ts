@@ -2,6 +2,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { CLOSED_ONLY, correctServerFor, hasCharacterOn, loadUserServers } from '@/lib/game/server-guard';
 import { canEnterServer, countServers, isServerClosedCached } from '@/lib/game/server-select';
+import { walletAdd, walletTrySpend } from '@/lib/game/wallet';
+import { db } from '@/lib/db/client';
 
 import { endTestDb } from '../db';
 import { inRollback, tempServer } from '../helpers/rollback';
@@ -47,6 +49,18 @@ describe.skipIf(!USER)('닫힌 서버 — 캐릭터가 있어도 운영 중인 �
       expect(us.ids).toEqual([]);
       expect(us.closedIds).toEqual([9103]);
       expect(await correctServerFor(USER, 1)).toBe(CLOSED_ONLY);
+    });
+  });
+
+  it('닫힌 서버 지갑은 지급도 차감도 되지 않는다(완전 동결, 결정 ⑤)', async () => {
+    await inRollback(async (tx) => {
+      await tempServer(tx, 9106, 'closed', USER);
+      await expect(walletAdd(db, USER, 9106, 10, 'checkin')).rejects.toThrow(/WALLET_SERVER_CLOSED/);
+      expect(await walletTrySpend(db, USER, 9106, 0, 'enhance_reduce')).toBe(false);
+      // 대조군 — 열린 임시 서버는 지급·0 차감이 된다.
+      await tempServer(tx, 9107, 'open', USER);
+      await walletAdd(db, USER, 9107, 10, 'checkin');
+      expect(await walletTrySpend(db, USER, 9107, 0, 'enhance_reduce')).toBe(true);
     });
   });
 

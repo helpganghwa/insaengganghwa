@@ -7,6 +7,7 @@ import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { mailbox, mailClaimLogs } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+import { isServerClosedIn } from '@/lib/game/server-guard';
 
 /**
  * 우편함 수령 — SCHEMA §7. 비동기 보상(레이드 정산·프로필 검토 결과 등) 지급.
@@ -23,7 +24,7 @@ export type ClaimResult = {
 };
 
 export class MailError extends Error {
-  constructor(public code: 'MAIL_NOT_FOUND') {
+  constructor(public code: 'MAIL_NOT_FOUND' | 'SERVER_CLOSED') {
     super(code);
     this.name = 'MailError';
   }
@@ -84,6 +85,8 @@ export function claimMail(input: { userId: string; serverId: number; mailId: big
       )
       .for('update');
     if (!m) throw new MailError('MAIL_NOT_FOUND'); // 이미 수령 / 만료 / 본인 아님
+    // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — 우편이 귀속된 서버가 닫혔으면 수령하지 않는다(id로 찍어도).
+    if (await isServerClosedIn(tx, m.serverId)) throw new MailError('SERVER_CLOSED');
 
     const payload = m.payload as MailPayload;
     const acc = emptyResult();

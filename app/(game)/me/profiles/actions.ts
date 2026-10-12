@@ -226,6 +226,7 @@ export async function equipSnapshotItems(
   const MSG: Record<EquipError['code'], string> = {
     NOT_FOUND: '장비를 찾을 수 없습니다.',
     SLOT_TAKEN: '같은 부위를 방금 다른 곳에서 장착했어요. 다시 시도해 주세요.',
+    SERVER_CLOSED: '운영을 종료한 서버의 장비예요.',
   };
   let equipped = 0;
   let failure: string | null = null;

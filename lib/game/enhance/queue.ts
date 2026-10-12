@@ -8,6 +8,7 @@ import { isUniqueViolation } from '@/lib/db/errors';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { baseSuccessRateBp, downRateBp, enhanceDurationMs } from '@/lib/game/balance';
+import { isServerClosedIn } from '@/lib/game/server-guard';
 
 /**
  * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원·제물 비용 없음, BALANCE §1).
@@ -15,6 +16,7 @@ import { baseSuccessRateBp, downRateBp, enhanceDurationMs } from '@/lib/game/bal
  */
 export type EnhanceErrorCode =
   | 'EQUIPMENT_NOT_FOUND'
+  | 'SERVER_CLOSED'
   | 'ALREADY_ENHANCING'
   | 'SLOT_BUSY'
   | 'JOB_NOT_FOUND'
@@ -72,6 +74,8 @@ export async function queueEnhanceInTx(
     .for('update');
 
   if (!equip) throw new EnhanceError('EQUIPMENT_NOT_FOUND');
+  // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — 장비 id로 닫힌 서버 장비를 찍어도 강화를 걸지 않는다.
+  if (await isServerClosedIn(tx, equip.serverId)) throw new EnhanceError('SERVER_CLOSED');
 
   // 한 장비 = 동시 강화 1건 (equip을 for update로 잠가 직렬화).
   const [dup] = await tx
