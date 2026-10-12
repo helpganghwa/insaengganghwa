@@ -1,7 +1,8 @@
-import { detectClientPlatform, isAppSession, usePlayBilling } from '@/lib/platform-client';
+import { detectClientPlatform, isAppSession, wantsPlayBilling } from '@/lib/platform-client';
 import { PLAY_BILLING_METHOD } from '@/lib/payment/play-sku';
 
 import { createPlayOrderAction, recoverPlayPurchaseAction, verifyPlayPurchaseAction } from './actions';
+import { swallow, swallowTo } from '@/lib/util/swallow';
 
 /**
  * 플레이스토어 앱(TWA) 안 결제 — Digital Goods API + PaymentRequest(docs/PLAYSTORE.md §3.2).
@@ -52,7 +53,7 @@ export async function digitalGoodsAvailable(host?: DigitalGoodsHost): Promise<bo
 }
 
 /**
- * 결제 경로 선택 — 사실만 모아 순수 규칙(usePlayBilling)에 넘긴다. 규칙과 근거는 그쪽 주석 참조.
+ * 결제 경로 선택 — 사실만 모아 순수 규칙(wantsPlayBilling — 훅이 아니라 순수 함수, 이름을 use로 시작하면 린트가 훅으로 본다)에 넘긴다. 규칙과 근거는 그쪽 주석 참조.
  *
  * 앱 세션 표식만으로 Play가 확정되면 프로브를 건너뛴다. 결과가 같을 뿐 아니라, 앱 안에서 프로브가
  * 실패하더라도 포트원으로 새면 안 되기 때문이다(구글 정책).
@@ -60,8 +61,8 @@ export async function digitalGoodsAvailable(host?: DigitalGoodsHost): Promise<bo
 export async function shouldUsePlayBilling(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   const appSession = isAppSession();
-  if (usePlayBilling({ appSession, hasDigitalGoods: false })) return true;
-  return usePlayBilling({ appSession, hasDigitalGoods: await digitalGoodsAvailable() });
+  if (wantsPlayBilling({ appSession, hasDigitalGoods: false })) return true;
+  return wantsPlayBilling({ appSession, hasDigitalGoods: await digitalGoodsAvailable() });
 }
 
 /** 표시 가격(콘솔 등록가) — 실패하면 null(카탈로그 KRW로 표시). 결제 시트가 어차피 실제 가격을 보여준다. */
@@ -153,7 +154,7 @@ export async function recoverPlayPurchases(): Promise<PlayRecoverSummary> {
   for (const p of purchases) {
     if (!p?.itemId || !p?.purchaseToken) continue;
     out.checked++;
-    const r = await recoverPlayPurchaseAction(p.itemId, p.purchaseToken).catch(() => null);
+    const r = await recoverPlayPurchaseAction(p.itemId, p.purchaseToken).catch(swallowTo('play.recover', null));
     if (!r) {
       out.failed++;
       reportPlayCheckout('recover', p.itemId, { code: 'NETWORK' });
@@ -195,7 +196,7 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
     reportPlayCheckout('precheck', productId, { code: 'NON_CHROME_HOST' });
     return { ok: false, reason: 'window', message: NON_CHROME_HOST_MSG };
   }
-  const r = await createPlayOrderAction(productId).catch(() => null);
+  const r = await createPlayOrderAction(productId).catch(swallowTo('play.createOrder', null));
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };
   if (r.status !== 'success') return { ok: false, reason: 'create', code: r.code };
   const { paymentId, sku, accountId, orderName, amountKrw } = r.order;
@@ -234,21 +235,21 @@ export async function runPlayCheckout(productId: string): Promise<PlayCheckoutRe
 
   const token = (response.details as { purchaseToken?: string } | undefined)?.purchaseToken ?? '';
   if (!token) {
-    await response.complete('fail').catch(() => undefined);
+    await response.complete('fail').catch(swallow('play.completeFail'));
     reportPlayCheckout('token', sku, { code: 'EMPTY' });
     return { ok: false, reason: 'window', message: '구매 토큰을 받지 못했어요. 결제가 됐다면 상점을 다시 열면 반영됩니다.' };
   }
-  const v = await verifyPlayPurchaseAction(paymentId, token).catch(() => null);
+  const v = await verifyPlayPurchaseAction(paymentId, token).catch(swallowTo('play.verify', null));
   if (!v) {
     // 전송 실패 — 구매는 성사됐을 수 있다. 시트는 성공으로 닫고(구글 쪽 구매 확정) 다음 상점 진입의 복구(recoverPlayPurchases)에 맡긴다.
-    await response.complete('success').catch(() => undefined);
+    await response.complete('success').catch(swallow('play.completeOk'));
     reportPlayCheckout('verify', sku, { code: 'NETWORK' });
     return { ok: false, reason: 'verify', code: 'NETWORK' };
   }
   // 검증 실패도 시트는 success로 닫는다(2026-09-22) — fail로 닫으면 구글이 구매를 실패로 표시하지만 소모성
   // 구매 자체는 남아 "already own"이 되고, 서버엔 토큰이 없어 손댈 수 없었다. 구매는 성사된 사실이므로
   // success로 닫고, 지급은 다음 상점 진입의 복구가 다시 시도한다(취소·환불이면 복구가 기기 소모로 잠김을 푼다).
-  await response.complete('success').catch(() => undefined);
+  await response.complete('success').catch(swallow('play.completeOk2'));
   if (v.status !== 'success') {
     reportPlayCheckout('verify', sku, { code: v.code });
     return { ok: false, reason: 'verify', code: v.code };

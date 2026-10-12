@@ -21,6 +21,11 @@ class Rollback extends Error {}
 async function inRollback(fn: (tx: Tx) => Promise<void>): Promise<void> {
   try {
     await testDb.transaction(async (tx) => {
+      // 테스트 계정이 실제로 특가를 샀더라도(스테이징 09-29) 결과가 바뀌지 않게 — 1회 마크를 tx 안에서만 치운다(롤백됨).
+      await tx.execute(sql`
+        delete from shop_purchases
+         where user_id = ${TEST_USER_ID}::uuid and server_id = ${SID} and product_id = ${FIRST_SPECIAL.id}
+      `);
       await fn(tx);
       throw new Rollback();
     });

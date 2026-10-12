@@ -216,6 +216,18 @@ export function ChatDock() {
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ChatMessageDto | null>(null);
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
+  // 유저 팝업 열기 — 아래 복원 layout effect가 쓰므로 그보다 앞에 선언한다(선언 전 접근은 컴파일러가 거부, 코드 품질 조사 10-12).
+  const openProfile = useCallback((userId: string) => {
+    setPopupFlash(null);
+    void fetch(`/api/chat/profile?uid=${userId}`, { cache: 'no-store' })
+      .then(async (res) => (res.ok ? ((await res.json()) as MiniProfile) : null))
+      .then((data) => {
+        if (data) setProfile({ userId, data });
+      })
+      .catch(() => {
+        /* 무시 — 팝업 미노출 */
+      });
+  }, []);
   // 위로 읽는 중 도착한 새 메시지 — "↓ 새 메시지" 칩. 바닥 근처로 오면 자동 해제.
   const [unseenBelow, setUnseenBelow] = useState(false);
   // 소프트 키보드가 열린 동안의 패널 기하(null=키보드 없음 → 기존 CSS 경로).
@@ -248,7 +260,10 @@ export function ChatDock() {
   const serverIdRef = useRef(1);
   // 채널 탭 미러 — 귓속말 탭 중에도 직전 채널을 유지한다(목록·폴링·버퍼는 계속 그 채널 기준).
   const tabRef = useRef<ChatTab>('all');
-  if (tab !== 'whisper') tabRef.current = tab;
+  // 페인트 전 갱신 — 렌더 중 ref 쓰기는 React Compiler가 거부한다(코드 품질 조사 10-12). 뒤에 선언된 layout effect들보다 먼저 돈다.
+  useLayoutEffect(() => {
+    if (tab !== 'whisper') tabRef.current = tab;
+  }, [tab]);
   // 헤더에서 보고 있는 탭(귓속말 포함) — 장수명 콜백이 읽는 미러(아래 effect로 동기화).
   const viewTabRef = useRef<Tab>('all');
   // 탭별 버퍼(전환 즉시 표시용) — 활성 탭은 messages 상태가 원본, 비활성 탭은 여기.
@@ -279,7 +294,9 @@ export function ChatDock() {
   const scrollRafRef = useRef(0);
   // 스크롤 중 칭호 fx 일시정지(.chat-scrolling 토글) — 리렌더 없는 직접 DOM.
   const fxPause = useScrollFxPause();
-  openRef.current = open;
+  useLayoutEffect(() => {
+    openRef.current = open;
+  }, [open]);
   // 폴링 타이머(장수명 클로저)가 읽는 미러 refs — 렌더 중 대입 대신 effect로 동기화(lint-clean).
   useEffect(() => {
     collapsedRef.current = collapsed;
@@ -1203,6 +1220,7 @@ export function ChatDock() {
   // 푸시 클릭 목적지(?chat=all|guild|whisper[&peer=publicCode]) — 채팅창을 해당 탭으로 오픈.
   // 처리 후 쿼리 제거.
   const openFromPushRef = useRef<(url: string) => void>(() => {});
+  useLayoutEffect(() => {
   openFromPushRef.current = (url: string) => {
     let chat: string | null = null;
     let peer: string | null = null;
@@ -1233,6 +1251,7 @@ export function ChatDock() {
       /* ignore */
     }
   };
+  });
 
   /**
    * 친구 목록 등 외부 화면 → 귓속말 진입. 도크가 전역(레이아웃)이라 직접 조작이 불가해
@@ -1240,12 +1259,14 @@ export function ChatDock() {
    */
   // 최신 클로저 미러 — 리스너는 마운트 1회만 건다(위 openFromPushRef와 동일 패턴).
   const openWhisperRef = useRef<(peerUserId: string) => void>(() => {});
-  openWhisperRef.current = (peerUserId: string) => {
-    switchTab('whisper');
-    setWhisperOpen({ userId: peerUserId });
-    setCollapsedUnseen(false);
-    if (!open) openPanel();
-  };
+  useLayoutEffect(() => {
+    openWhisperRef.current = (peerUserId: string) => {
+      switchTab('whisper');
+      setWhisperOpen({ userId: peerUserId });
+      setCollapsedUnseen(false);
+      if (!open) openPanel();
+    };
+  });
   useEffect(() => {
     const onOpen = (e: Event) => {
       const d = (e as CustomEvent<{ peerUserId?: string }>).detail;
@@ -1441,17 +1462,6 @@ export function ChatDock() {
 
   // 로딩 팝업 없이 — 데이터가 다 오면 그때 연다(2026-07-21 피드백 3).
   // useCallback — ChatRow(memo) prop으로 내려가므로 참조가 흔들리면 memo가 무효.
-  const openProfile = useCallback((userId: string) => {
-    setPopupFlash(null);
-    void fetch(`/api/chat/profile?uid=${userId}`, { cache: 'no-store' })
-      .then(async (res) => (res.ok ? ((await res.json()) as MiniProfile) : null))
-      .then((data) => {
-        if (data) setProfile({ userId, data });
-      })
-      .catch(() => {
-        /* 무시 — 팝업 미노출 */
-      });
-  }, []);
   const onReport = useCallback((m: ChatMessageDto) => setReportTarget(m), []);
   // 삭제 쿨다운(0177) — 전송과 같은 5초. 서버 chatDelete 리밋과 짝(클라는 안내용 카운트다운).
   const [deleteCooldown, setDeleteCooldown] = useState(0);

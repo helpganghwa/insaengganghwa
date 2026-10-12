@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+
+import { useLatest } from '@/components/useLatest';
 
 import { recentPayResultAction, ackPayNoticeAction } from '@/app/(game)/shop/actions';
 
@@ -35,8 +37,7 @@ export function usePayResumeNotice(handlers: {
   onPaid?: (r: { paymentId: string; productCode: string }) => void;
   onVerified?: () => void;
 }): void {
-  const ref = useRef(handlers);
-  ref.current = handlers;
+  const ref = useLatest(handlers); // 페인트 전 갱신 — 렌더 중 ref 쓰기는 컴파일러가 거부(코드 품질 조사 10-12)
   useEffect(() => {
     let alive = true;
     const check = () => {

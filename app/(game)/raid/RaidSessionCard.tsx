@@ -2,7 +2,7 @@
 import { profileHref } from '@/lib/game/profile/href';
 import { josa } from 'josa';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import {
@@ -336,12 +336,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // /raid/A → /raid/B 이동에서 같은 위치의 컴포넌트를 재사용하므로 ref가 살아남는다. 전송 실패로
   // 키를 쥔 채 다른 레이드로 이동해 공격하면, 서버가 그 키로 **앞 레이드의 공격 기록**을 찾아
   // 돌려주고 이번 레이드에는 공격이 들어가지 않는다(공격 기회만 사라진다). 레이드가 바뀌면 버린다.
-  const keyRaidRef = useRef(v.raidId);
-  if (keyRaidRef.current !== v.raidId) {
-    keyRaidRef.current = v.raidId;
+  // 페인트 전(useLayoutEffect)에 버린다 — 종전의 렌더 중 ref 비교는 React Compiler가 거부했다(코드 품질 조사 10-12).
+  // 사용자 클릭은 페인트 뒤에만 오므로 키를 쥔 채 다른 레이드를 공격하는 창은 없다.
+  useLayoutEffect(() => {
     gemKeyRef.current = null;
     atkKeyRef.current = null;
-  }
+  }, [v.raidId]);
   // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
   const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
   const decideReq = (requesterId: string, approve: boolean) => {

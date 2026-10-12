@@ -237,18 +237,22 @@ async function loadDashboard() {
   };
 }
 
-export default async function AdminDashboardPage() {
-  const d = await loadDashboard();
-  const asOf = new Date().toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' });
-  const bad = d.invariants.filter((i) => i.value > (i.softLimit ?? 0));
-
-  const Card = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
+/** 지표 카드 — 컴포넌트 밖에 둔다(렌더 중 컴포넌트 정의는 React Compiler가 거부, 코드 품질 조사 10-12). */
+function Card({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2.5">
       <p className="text-[11px] text-zinc-500">{label}</p>
       <p className="mt-0.5 text-lg font-bold tabular-nums">{value}</p>
       {sub ? <p className="text-[11px] text-zinc-500">{sub}</p> : null}
     </div>
   );
+}
+
+export default async function AdminDashboardPage() {
+  const d = await loadDashboard();
+  const asOf = new Date().toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' });
+  const bad = d.invariants.filter((i) => i.value > (i.softLimit ?? 0));
+
 
   return (
     <div className="mx-auto w-full max-w-[760px] space-y-5 px-4 py-6 text-zinc-100">

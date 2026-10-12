@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { usePlayBilling } from '@/lib/platform-client';
+import { wantsPlayBilling } from '@/lib/platform-client';
 import { digitalGoodsAvailable } from '@/app/(game)/shop/play-checkout';
 
 /**
@@ -8,21 +8,21 @@ import { digitalGoodsAvailable } from '@/app/(game)/shop/play-checkout';
  * 판정 근거는 둘뿐이다: Digital Goods 서비스가 실제로 열리는가, 앱 세션 표식이 있는가.
  * ig_platform 쿠키는 TWA와 크롬이 저장소를 공유해 같은 기기의 브라우저 탭·PWA로 새므로 쓰지 않는다.
  */
-describe('usePlayBilling', () => {
+describe('wantsPlayBilling', () => {
   it('Digital Goods 서비스가 실제로 열리면 Play 결제 — 앱 안이라는 확실한 증거', () => {
-    expect(usePlayBilling({ hasDigitalGoods: true })).toBe(true);
-    expect(usePlayBilling({ hasDigitalGoods: true, appSession: false })).toBe(true);
+    expect(wantsPlayBilling({ hasDigitalGoods: true })).toBe(true);
+    expect(wantsPlayBilling({ hasDigitalGoods: true, appSession: false })).toBe(true);
   });
 
   it('웹·PWA는 포트원', () => {
-    expect(usePlayBilling({ hasDigitalGoods: false })).toBe(false);
-    expect(usePlayBilling({ hasDigitalGoods: false, appSession: false })).toBe(false);
+    expect(wantsPlayBilling({ hasDigitalGoods: false })).toBe(false);
+    expect(wantsPlayBilling({ hasDigitalGoods: false, appSession: false })).toBe(false);
   });
 
   it('앱 세션 표식이 있으면 API가 없어도 Play 경로 — 커스텀탭 폴백에서 포트원이 열리면 안 된다', () => {
     // 도메인 검증 실패로 앱이 주소창 있는 커스텀탭으로 뜨는 경우. Digital Goods가 없어도
     // 포트원을 열면 구글 정책 위반이라 Play 경로로 보내 안내로 끝낸다.
-    expect(usePlayBilling({ hasDigitalGoods: false, appSession: true })).toBe(true);
+    expect(wantsPlayBilling({ hasDigitalGoods: false, appSession: true })).toBe(true);
   });
 
   // 2026-09-12 — 같은 기기에 홈 화면 PWA와 앱을 둘 다 두면 PWA에도 ig_platform 쿠키가 남고
@@ -30,7 +30,7 @@ describe('usePlayBilling', () => {
   // 정작 PWA는 Play 결제를 쓸 수 없어 아무 경로도 남지 않았다. 쿠키·standalone은 이제 안 본다.
   it('쿠키·standalone은 더 이상 판정에 쓰지 않는다 — PWA 결제가 막히면 안 된다', () => {
     const pwaWithLeakedCookie = { hasDigitalGoods: false, appSession: false };
-    expect(usePlayBilling(pwaWithLeakedCookie)).toBe(false);
+    expect(wantsPlayBilling(pwaWithLeakedCookie)).toBe(false);
   });
 });
 

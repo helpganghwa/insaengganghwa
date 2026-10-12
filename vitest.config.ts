@@ -19,5 +19,13 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     // DB 통합 테스트는 공유 prod DB 사용 — fixture cleanup 필수, 직렬 실행 권장.
     fileParallelism: false,
+    // 커버리지(코드 품질 조사 10-12): 실패 테스트가 있어도 리포트는 낸다(기본값 false라 리포트가 조용히 생략됐다).
+    coverage: {
+      provider: 'v8',
+      reportOnFailure: true,
+      include: ['app/**', 'lib/**', 'components/**'],
+      exclude: ['**/*.d.ts', 'lib/game/titles/defs.ts', 'lib/game/titles/defs.server.ts'],
+      reporter: ['text-summary', 'json-summary'],
+    },
   },
 });

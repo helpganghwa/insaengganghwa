@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
+import { swallow, swallowTo } from '@/lib/util/swallow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
           where user_id = ${userId} and server_id = ${serverId}
             and (last_seen_at is null or last_seen_at < now() - interval '110 seconds')`,
     )
-    .catch(() => {});
+    .catch(swallow("presence.lastSeen"));
   // 활성 서버 추적(SERVER.md 경계규칙1 — 푸시 필터). 변경시에만 쓰기.
   // 그 서버에 캐릭터가 있을 때만(10-12 2서버 조사) — 쿠키가 캐릭터 없는 서버를 가리키는 동안 last_server_id가
   // 거기로 바뀌면 진짜 서버의 푸시가 걸러지고, 접속 집계도 오염된다(프로덕션에 그런 행 2건 있었다).
@@ -36,13 +37,13 @@ export async function POST(req: Request) {
             and exists (select 1 from characters c join servers s on s.id = c.server_id
                          where c.user_id = ${userId} and c.server_id = ${serverId} and s.status <> 'closed')`,
     )
-    .catch(() => {});
+    .catch(swallow("presence.lastServer"));
   // 플랫폼별 일일 접속(0199) — 클라가 판정한 값을 하루 1행으로. 본문이 없거나 이상하면 건너뛴다(구버전 클라).
   // 같은 날 재핑은 10분에 한 번만 last_seen 갱신(WHERE로 무의미한 쓰기 차단).
   const platform = await req
     .json()
     .then((b: { platform?: unknown }) => (typeof b?.platform === 'string' && PLATFORMS.has(b.platform) ? b.platform : null))
-    .catch(() => null);
+    .catch(swallowTo("presence.body", null));
   if (platform) {
     await db
       .execute(
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
             on conflict (kst_day, server_id, user_id, platform) do update set last_seen_at = now()
             where platform_daily.last_seen_at < now() - interval '10 minutes'`,
       )
-      .catch(() => {});
+      .catch(swallow("presence.platformDaily"));
   }
   return new Response(null, { status: 204 });
 }

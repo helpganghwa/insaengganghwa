@@ -4,6 +4,8 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout } from '@/components/ModalLayout';
 import { memo, useMemo, useEffect, useRef, useState } from 'react';
 
+import { useLatest } from '@/components/useLatest';
+
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
@@ -191,8 +193,7 @@ export function GachaResultModal({
   const [autoRepeat, setAutoRepeat] = useState(false);
   const [autoActive, setAutoActive] = useState(false);
   const [autoN, setAutoN] = useState(1);
-  const onAgainRef = useRef(onAgain);
-  onAgainRef.current = onAgain; // 최신 onAgain(매 렌더 새 함수)을 ref로 — 효과 deps churn 방지
+  const onAgainRef = useLatest(onAgain); // 최신 onAgain(매 렌더 새 함수)을 ref로 — 효과 deps churn 방지(페인트 전 갱신)
   const prevPulling = useRef(pulling);
   useEffect(() => {
     const justFinished = prevPulling.current && !pulling;

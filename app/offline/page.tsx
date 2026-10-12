@@ -42,7 +42,9 @@ export default function OfflinePage() {
       >
         모루는 그대로 있습니다. 연결이 돌아오면 하던 강화도 그대로 이어집니다.
       </p>
-      {/* 서버 컴포넌트라 onClick을 못 쓴다 — 같은 주소로 다시 들어가는 링크가 곧 재시도다. */}
+      {/* 서버 컴포넌트라 onClick을 못 쓴다 — 같은 주소로 다시 들어가는 링크가 곧 재시도다.
+          <Link>가 아니라 <a>인 이유: 오프라인 복구는 클라 라우터 이동이 아니라 **문서 재요청**이어야 한다. */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a
         href="/"
         style={{

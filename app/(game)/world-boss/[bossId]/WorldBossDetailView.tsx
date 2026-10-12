@@ -47,6 +47,7 @@ import { InviteSheet } from './InviteSheet';
 import { LeaderChip } from './LeaderChip';
 import { WeakPanel } from './WeakPanel';
 import { WorldBossReplay } from './WorldBossReplay';
+import { swallow, swallowTo } from '@/lib/util/swallow';
 
 type ActionRes = { status: 'success' } | { status: 'error'; message: string };
 const FAIL = '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
@@ -236,7 +237,7 @@ export function WorldBossDetailView({
         .then((r) => {
           if (r.status === 'success' && r.state !== d.status) router.refresh();
         })
-        .catch(() => {})
+        .catch(swallow('worldBoss.detail'))
         .finally(() => setTick((v) => v + 1));
     }, active && d.leaveAt <= Date.now() ? 20_000 : ms);
     return () => clearTimeout(t);
@@ -260,7 +261,7 @@ export function WorldBossDetailView({
   const loadMore = () =>
     start(async () => {
       setMoreLoading(true);
-      const r = await moreDepartedAction(d.id, departed.map((p) => p.id)).catch(() => null);
+      const r = await moreDepartedAction(d.id, departed.map((p) => p.id)).catch(swallowTo('worldBoss.moreDeparted', null));
       setMoreLoading(false);
       if (!r) return showError(FAIL);
       if (r.status === 'error') return showError(r.message);
@@ -298,7 +299,7 @@ export function WorldBossDetailView({
     const key = (departKeys.current[mp.partyId] ??= crypto.randomUUID());
     setDepartAsk(false);
     start(async () => {
-      const r = await departPartyAction(d.id, mp.partyId, key).catch(() => null);
+      const r = await departPartyAction(d.id, mp.partyId, key).catch(swallowTo('worldBoss.depart', null));
       if (!r) return showError(FAIL);
       if (r.status === 'error') {
         showError(r.message);
@@ -313,7 +314,7 @@ export function WorldBossDetailView({
 
   const openBattle = (partyId: string) =>
     start(async () => {
-      const r = await getBattleAction(partyId).catch(() => null);
+      const r = await getBattleAction(partyId).catch(swallowTo('worldBoss.battle', null));
       if (!r) return showError(FAIL);
       if (r.status === 'error') return showError(r.message);
       setReplay(r.battle);

@@ -50,7 +50,7 @@ export function isStandaloneDisplay(): boolean {
  * 통째로 막혔다 — 정작 그 PWA는 Play 결제를 쓸 수 없어 아무 경로도 남지 않는다. 쿠키가 메우던
  * 진짜 구멍(앱인데 API 없음)은 세션 표식이 같은 상황을 이미 잡는다.
  */
-export function usePlayBilling(facts: {
+export function wantsPlayBilling(facts: {
   /** Digital Goods 서비스가 실제로 열렸는가(존재 여부가 아니다 — 위 주석). */
   hasDigitalGoods: boolean;
   /** 앱이 심은 표식을 이 브라우징 컨텍스트에서 직접 봤는가(세션 한정 — 쿠키와 달리 새지 않는다). */
@@ -64,7 +64,7 @@ export function usePlayBilling(facts: {
 }
 
 /**
- * 통계용 플랫폼 판정(2026-09-14, 0199) — 하트비트·클라 에러가 보낸다. 결제 판정(usePlayBilling)과는
+ * 통계용 플랫폼 판정(2026-09-14, 0199) — 하트비트·클라 에러가 보낸다. 결제 판정(wantsPlayBilling)과는
  * 별개로, 여기서는 "앱 세션이면 twa, 설치형이면 pwa, 아니면 web"만 본다. 쿠키는 새므로 보지 않는다.
  */
 export function detectClientPlatform(): 'twa' | 'pwa' | 'web' {

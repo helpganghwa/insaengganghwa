@@ -32,7 +32,7 @@ const manPath = join(outDir, 'manifest.json');
 const manifest: Record<string, { kind: string; prompt: string; files: string[] }> = existsSync(manPath) ? JSON.parse(readFileSync(manPath, 'utf8')) : {};
 const save = () => writeFileSync(manPath, JSON.stringify(manifest, null, 1));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-async function call(path: string, body: unknown): Promise<any> {
+async function call(path: string, body: unknown): Promise<unknown> {
   for (let i = 0; ; i++) {
     const r = await fetch(API + path, { method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (r.status === 429 && i < 6) { await sleep(Math.min(30_000, 2_000 * 2 ** i)); continue; }
@@ -41,7 +41,7 @@ async function call(path: string, body: unknown): Promise<any> {
     return JSON.parse(t);
   }
 }
-async function poll(jobId: string): Promise<any> {
+async function poll(jobId: string): Promise<unknown> {
   for (let i = 0; i < 120; i++) {
     await sleep(6_000);
     const r = await fetch(`${API}/background-jobs/${jobId}`, { headers: { Authorization: `Bearer ${KEY}` } });
@@ -52,7 +52,13 @@ async function poll(jobId: string): Promise<any> {
   }
   throw new Error('poll timeout');
 }
-const images = (resp: any): string[] => (resp?.images ?? (resp?.image ? [resp.image] : [])).map((x: any) => x?.base64 ?? x).filter((b: unknown): b is string => typeof b === 'string');
+const images = (resp: unknown): string[] => {
+  const r = resp as { images?: unknown; image?: unknown } | null;
+  const list = (Array.isArray(r?.images) ? r.images : r?.image ? [r.image] : []) as unknown[];
+  return list
+    .map((x) => (x && typeof x === 'object' && 'base64' in x ? (x as { base64?: unknown }).base64 : x))
+    .filter((b: unknown): b is string => typeof b === 'string');
+};
 const STYLE_REF = readFileSync('public/sprites/boss/slime_king.png').toString('base64');
 async function pro(key: string, prompt: string, w: number, h: number, noBg: boolean, styled: boolean) {
   if (!force && manifest[key]?.files?.length) return console.log(`- ${key} 이미 있음`);
@@ -61,8 +67,10 @@ async function pro(key: string, prompt: string, w: number, h: number, noBg: bool
     body.style_image = { image: { type: 'base64', base64: STYLE_REF, format: 'png' }, size: { width: 128, height: 128 } };
     body.style_options = { color_palette: false, outline: true, detail: true, shading: true };
   }
-  const r = await call('/generate-image-v2', body);
-  const imgs = images(await poll(r.background_job_id ?? r.id));
+  const r = (await call('/generate-image-v2', body)) as { background_job_id?: string; id?: string };
+  const jobId = r.background_job_id ?? r.id;
+  if (!jobId) throw new Error(`job id 없음: ${JSON.stringify(r).slice(0, 200)}`);
+  const imgs = images(await poll(jobId));
   const dir = join(outDir, key);
   mkdirSync(dir, { recursive: true });
   const files = imgs.map((b, i) => { const f = join(dir, `${i}.png`); writeFileSync(f, Buffer.from(b, 'base64')); return f; });

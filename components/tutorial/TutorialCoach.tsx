@@ -114,6 +114,16 @@ export function TutorialCoach({
   const navAtRef = useRef(0);
   const mountedRef = useRef(false);
 
+  // 로컬 단계 저장 — 아래 effect들이 쓰므로 그보다 앞에 둔다(선언 전 접근은 React Compiler가 거부, 코드 품질 조사 10-12).
+  const persist = (s: TutorialStep | null) => {
+    try {
+      if (s) localStorage.setItem(LS_STEP, s);
+      else localStorage.removeItem(LS_STEP);
+    } catch {
+      /* noop */
+    }
+  };
+
   // 서버 상태 1회 해소 — Suspense 미사용(코치 항상 마운트 → 상태 리셋 없음).
   useEffect(() => {
     let alive = true;
@@ -151,15 +161,6 @@ export function TutorialCoach({
 
   const active = started || phase === 'active';
   const effective = active ? (localStep ?? 'open') : null;
-
-  const persist = (s: TutorialStep | null) => {
-    try {
-      if (s) localStorage.setItem(LS_STEP, s);
-      else localStorage.removeItem(LS_STEP);
-    } catch {
-      /* noop */
-    }
-  };
 
   // 액션 신호 — 클라 단계 머신 전진 / 마무리 팝업(서버 통신 없음).
   useEffect(() => {

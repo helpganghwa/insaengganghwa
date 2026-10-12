@@ -10,6 +10,7 @@ import { getWorldBossMapState } from '@/lib/game/world-boss/queries';
 
 import { ChronicleReadMark } from './ChronicleReadMark';
 import { WorldMapView } from './WorldMapView';
+import { swallowTo } from '@/lib/util/swallow';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,21 +25,21 @@ export default async function WorldMapPage() {
   const [zones, residence, chronicle, replay, adjacency, perm, worldBoss] = await Promise.all([
     getWorldmapZones(serverId).catch(() => []),
     userId
-      ? getResidenceState(userId, serverId).catch(() => null)
+      ? getResidenceState(userId, serverId).catch(swallowTo('map.residence', null))
       : Promise.resolve(null),
-    getChronicle(serverId).catch(() => null),
-    getConquestReplay(serverId).catch(() => null),
+    getChronicle(serverId).catch(swallowTo('map.chronicle', null)),
+    getConquestReplay(serverId).catch(swallowTo('map.replay', null)),
     getZoneAdjacency(serverId).catch(() => []),
     // 수금 권한자(taxCollect)면 우리 길드 구역 팝업에 대리 수금 버튼(2026-09-08).
-    userId ? getGuildPermState(userId, serverId).catch(() => null) : Promise.resolve(null),
+    userId ? getGuildPermState(userId, serverId).catch(swallowTo('map.guildPerm', null)) : Promise.resolve(null),
     // 월드보스(2026-10-07) — 머무는 보스(마커·띠·시트 카드)와 떠난 지 48시간 안인 기록. 실패하면 표시만 생략.
-    getWorldBossMapState(serverId).catch(() => null),
+    getWorldBossMapState(serverId).catch(swallowTo('map.worldBoss', null)),
   ]);
   const taxOfficerGuildId =
     perm && hasGuildPerm(perm.role, perm.permissions, 'taxCollect') ? perm.guildId.toString() : null;
   // 어제 리플레이 — 연대기 로드 결과(어제 기록일)에 의존해 후속 1회(가벼움, 상세 페이지).
   const replayYesterday = chronicle?.yesterdayDay
-    ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(() => null)
+    ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(swallowTo('map.replayYesterday', null))
     : null;
 
   return (

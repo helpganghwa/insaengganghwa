@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useLatest } from '@/components/useLatest';
 import { modalHistory } from '@/lib/ui/modal-history';
 import { acquireRootBlur } from '@/lib/ui/root-blur';
 
@@ -72,13 +73,12 @@ export function ModalShell({
     if (mounted) panelRef.current?.focus();
   }, [mounted]);
   // 셸 스택 등록 — 키 핸들러의 최상단 판정 근거.
-  const shellId = useRef<symbol | null>(null);
-  // 언마운트 정리에서 최신 onClose를 쓰되, effect는 마운트/언마운트에만 돌게 한다.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  if (shellId.current === null) shellId.current = Symbol('modal-shell');
+  // 셸 id는 마운트 때 한 번만(lazy state) — 렌더 중 ref 초기화는 React Compiler가 거부한다(코드 품질 조사 10-12).
+  const [shellId] = useState(() => Symbol('modal-shell'));
+  // 언마운트 정리에서 최신 onClose를 쓰되, effect는 마운트/언마운트에만 돌게 한다(페인트 전 갱신 ref).
+  const onCloseRef = useLatest(onClose);
   useEffect(() => {
-    const id = shellId.current!;
+    const id = shellId;
     openShells.push(id);
     // 뒤 컨텐츠 흐림 — 백드롭 blur 대신 앱 셸을 흐린다(lib/ui/root-blur.ts, 앱에서 blur가 안 그려지던 문제).
     const releaseBlur = acquireRootBlur();
@@ -92,7 +92,7 @@ export function ModalShell({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // 최상단 셸만 키에 반응 — 중첩(stacked) 상태에서 아래 모달의 동시 반응 차단.
-      if (openShells[openShells.length - 1] !== shellId.current) return;
+      if (openShells[openShells.length - 1] !== shellId) return;
       if (e.key === 'Escape') {
         onClose();
         return;

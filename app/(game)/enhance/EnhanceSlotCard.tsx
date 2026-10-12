@@ -28,6 +28,7 @@ import { sounds } from '@/lib/game/sound';
 
 import { EnhanceFX, CountAnim, type FxKind } from './EnhanceFX';
 import { AutoSettingsModal, type AutoConfig } from './AutoSettingsModal';
+import { swallow, swallowTo } from '@/lib/util/swallow';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
 
@@ -488,14 +489,14 @@ export function EnhanceSlotCard({
       // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
       // 전송 실패(풀러 타임아웃·오프라인 등)로 reject되면 아래 분기에 도달 못해 attempting이
       // 고착된다 — .catch로 잡아 낙관 상태를 되돌리고 재시도 안내(doCancel과 동일 방어).
-      const r = await finalizeEnhance(activeJob.jobId).catch(() => null);
+      const r = await finalizeEnhance(activeJob.jobId).catch(swallowTo('enhance.finalize', null));
       if (!r) {
         // 응답 유실 ≠ 판정 실패(2026-07-21 공포님 제보) — 배포 스큐·모바일 복귀 직후엔
         // 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재. 순수 JSON 라우트(스큐 면역)로
         // 결과를 되찾아 정상 연출을 재생하고, 못 찾으면 상태 재동기화로 강등.
         const rec = await fetch(`/api/enhance/outcome?job=${activeJob.jobId}`, { cache: 'no-store' })
           .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number; nextJob?: NextJob | null }>) : null))
-          .catch(() => null);
+          .catch(swallowTo('enhance.refresh', null));
         if (rec?.state === 'done' && rec.outcome) {
           applyNextJob(rec.nextJob); // 게이지 즉시 리셋(옛 잡 100% 잔류 방지)
           playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
@@ -552,7 +553,7 @@ export function EnhanceSlotCard({
     startTransition(async () => {
       // 전송 실패(reject)로 아래 분기에 도달 못하면 낙관 차감이 안 되돌려져 헤더 다이아가
       // 실제보다 낮게 굳는다 — .catch로 잡아 롤백(에러 반환 케이스와 동일).
-      const r = await reduceTimeWithGems(activeJob.jobId, instantCost).catch(() => null);
+      const r = await reduceTimeWithGems(activeJob.jobId, instantCost).catch(swallowTo('enhance.reduce', null));
       if (!r) {
         setOptimisticDone(false);
         adjustDiamond(debit); // 전송 실패 롤백(실행됐다면 아래 refresh가 실차감 반영)
@@ -627,7 +628,7 @@ export function EnhanceSlotCard({
       const lore = LORE_SETS[Math.floor(Math.random() * LORE_SETS.length)]!;
       setAttempting(true);
       setAttemptingMsg(lore.attempting);
-      const r = await autoEnhanceStepAction(autoJobRef.current, autoBudgetRef.current).catch(() => null);
+      const r = await autoEnhanceStepAction(autoJobRef.current, autoBudgetRef.current).catch(swallowTo('enhance.autoStep', null));
       // ⚠ ok 스텝은 멈춤 여부와 무관하게 항상 회계 반영 — 서버는 이미 💎 차감·판정·재등록을 끝냈다.
       // (종전엔 응답 대기 중 멈춤 시 r을 버려 autoJob/게이지가 정산된 옛 잡에 남았고,
       //  재시작이 그 잡으로 나가 즉시 'gone' 종료되던 버그.)
@@ -717,7 +718,7 @@ export function EnhanceSlotCard({
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVis);
-      if (lock && !lock.released) void lock.release().catch(() => {});
+      if (lock && !lock.released) void lock.release().catch(swallow('enhance.lockRelease'));
     };
   }, [autoRunning]);
 

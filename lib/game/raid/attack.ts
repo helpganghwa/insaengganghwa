@@ -228,7 +228,7 @@ export async function gemAttackRaid(input: {
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number; totalDamage: string }> {
   const { userId, raidId } = input;
   // 레이드 대조에 실패하면 키를 버린다(아래) — 그래서 재할당 가능해야 한다.
-  let idemKey = input.idemKey;
+  const idemKey = input.idemKey;
 
   // 락 밖 — serverId 사전조회 + CP 계산(감사 S2). 게이트·결제는 락 내 재확인/수행.
   const [meta] = await db

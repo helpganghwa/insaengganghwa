@@ -6,6 +6,7 @@ import { iapOrders } from '@/lib/db/schema/payment';
 import { adminActions } from '@/lib/db/schema/ops';
 import { getPlayOrder, getPlayProductPurchase, PlayApiError } from '@/lib/payment/play-api';
 import { completePurchase } from '@/lib/payment/purchase';
+import { swallow, swallowTo } from '@/lib/util/swallow';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
   const token = g.purchaseToken ?? '';
   const googleProduct = g.lineItems?.[0]?.productId ?? null;
   // 구매 시각·유형을 함께 보여 운영자가 우리 주문 생성 시각과 대조하게 한다(다른 유저 주문에 잘못 묶기 방지, 2026-09-24 감사).
-  const p = token && order.playSku ? await getPlayProductPurchase(order.playSku, token).catch(() => null) : null;
+  const p = token && order.playSku ? await getPlayProductPurchase(order.playSku, token).catch(swallowTo('admin.playPurchase', null)) : null;
   const summary = {
     googleState: g.state ?? null, googleProduct, ourSku: order.playSku, ourStatus: order.status, amountKrw: String(order.amountKrw), hasToken: !!token,
     purchaseTime: p?.purchaseTimeMillis ? new Date(Number(p.purchaseTimeMillis)).toISOString() : null,
@@ -71,6 +72,6 @@ export async function POST(req: Request) {
     targetType: 'iap_order',
     targetId: paymentId,
     payload: { orderId, result: r, ...summary },
-  }).catch(() => undefined);
+  }).catch(swallow('admin.playComplete'));
   return Response.json({ ...r, ...summary });
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { writeLoginServerCookie } from '@/lib/auth/login-server-cookie';
+
 /**
  * 로그인 화면 서버 셀렉터(SERVER.md §3) — 서버명 칩만 노출(설명 없음), 추천 서버에 라벨.
  * **사용자가 실제로 클릭했을 때만** `login_srv` 쿠키(10분)에 기록 — OAuth 왕복 후 콜백이 읽어
@@ -37,8 +39,7 @@ export function ServerPicker({
 
   const pick = (id: number) => {
     setPicked(id);
-    const secure = location.protocol === 'https:' ? '; secure' : '';
-    document.cookie = `login_srv=${id}; path=/; max-age=600; samesite=lax${secure}`;
+    writeLoginServerCookie(id);
   };
 
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
