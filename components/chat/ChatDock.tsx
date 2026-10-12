@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { modalHistory } from '@/lib/ui/modal-history';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -57,6 +58,7 @@ import {
  *  - 패널 위/아래 기준선은 --inst-h(설치 띠지)·--gt-h를 더해 계산 — 상단 고정물이 늘면 여기부터
  *  - 소프트 키보드가 열린 동안은 이 계산을 쓰지 않고 비주얼 뷰포트에 직접 고정(아래 effect)
  *  - 라우트 이동 시 패널 자동 최소화
+ *  - 안드로이드 뒤로가기 = 패널 닫기(모달과 같은 히스토리 규칙, lib/ui/modal-history.ts, 2026-10-12)
  *
  * 외부 진입 이벤트(2026-08-07)
  *  - `ig:whisper-open` — CustomEvent<{ peerUserId: string }>. 도크가 전역(레이아웃)에 있어
@@ -481,6 +483,16 @@ export function ChatDock() {
   }, [pathname]);
 
   const visible = enabled === true && !hiddenByTutorial;
+
+  // 뒤로가기로 패널 닫기(2026-10-12) — 모달과 같은 규칙(modal-history): 열릴 때 히스토리 항목을 하나 쌓고 뒤로가기가 오면 패널만 닫는다.
+  // 종전엔 항목이 없어 뒤로가기가 화면을 이동시켰다 — 무한의 탑 전투 중 채팅을 열었다가 뒤로가기로 닫으면 주소(?v=d)가 목록으로
+  // 돌아가 결과 화면까지 닫혔다(10-02 문의: 패배 결과를 못 보고 40초 만에 재도전). 버튼으로 닫으면 항목을 되돌리고(release),
+  // 라우트 이동으로 닫히면(위 effect) 되돌리지 않는다. 안에서 여는 미니 프로필·신고 팝업(ModalShell)은 같은 스택 위에 쌓여 먼저 닫힌다.
+  useEffect(() => {
+    if (!open) return;
+    const h = modalHistory.open(() => setOpen(false));
+    return () => h.release();
+  }, [open]);
 
   // 미니바 높이 발행 — 레이아웃 main의 paddingBottom이 이 변수로 비켜섬.
   useEffect(() => {
