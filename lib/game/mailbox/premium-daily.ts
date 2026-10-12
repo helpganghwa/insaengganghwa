@@ -57,3 +57,18 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
   `)) as unknown as { id: string }[];
   return r.length > 0;
 }
+
+/**
+ * 계정이 프리미엄을 산 **모든 서버**에 그날 몫을 넣는다(10-12 사용자 결정: 접속한 서버만 주던 것을 산 서버에 매일 지급으로).
+ * 레이아웃이 응답 뒤에 부른다. 활성 창 안의 구매가 있는 서버만 고르므로 미보유면 쿼리 1번으로 끝난다.
+ */
+export async function ensurePremiumDailyMailAll(userId: string): Promise<number> {
+  const rows = (await db.execute(sql`
+    select distinct sp.server_id::int as sid from shop_purchases sp
+    where sp.user_id = ${userId}::uuid and sp.product_id = ${PREMIUM.id}
+      and (now() at time zone 'Asia/Seoul')::date <= (sp.updated_at at time zone 'Asia/Seoul')::date + (${WINDOW_DAYS})::int
+  `)) as unknown as { sid: number }[];
+  let sent = 0;
+  for (const r of rows) if (await ensurePremiumDailyMail(userId, r.sid)) sent += 1;
+  return sent;
+}

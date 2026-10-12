@@ -57,6 +57,7 @@ export async function notifyJoinRequest(input: {
       title: '길드 가입 신청',
       body: `${nickname}님이 가입을 신청했습니다.`,
       url: '/guild/join-requests',
+      serverId: input.serverId,
       // 신청이 연달아 오면 최신 1건으로 합친다 — 목록에서 한 번에 처리하면 되므로.
       tag: 'guild-join-request',
       category: 'guild_join',
@@ -86,6 +87,7 @@ export async function notifyJoinDecision(input: {
       ? `${name} 길드에 가입했습니다. 길드 화면에서 확인해 보세요.`
       : `${name} 길드 가입이 받아들여지지 않았습니다. 다른 길드에 신청할 수 있습니다.`,
     url: '/guild',
+    serverId: input.serverId,
     tag: 'guild-join-decision',
     category: 'guild',
   }).catch(() => undefined);

@@ -58,7 +58,7 @@ export function WithdrawButton() {
             }
           >
             <p className="text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              캐릭터·아이템·강화·보급 등 모든 게임 데이터가 즉시 삭제되며 복구할 수 없어요. 결제
+              모든 서버의 캐릭터·아이템·강화·보급 등 모든 게임 데이터가 즉시 삭제되며 복구할 수 없어요. 결제
               내역은 법령에 따라 보존됩니다.
             </p>
             {err && (

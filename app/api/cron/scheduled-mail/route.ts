@@ -99,6 +99,7 @@ export async function GET(req: Request) {
             title: m.title.slice(0, 60),
             body: pushExcerpt(m.body, 60),
             url: '/mail',
+            serverId: target ?? undefined,
             category: 'admin',
           });
         } catch (e) {

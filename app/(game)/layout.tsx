@@ -10,7 +10,7 @@ import { getBanStateCached } from '@/lib/game/account/ban';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { MaintenanceScreen } from './MaintenanceScreen';
 import { BanScreen } from './BanScreen';
-import { ensureDailyMail, ensurePremiumDailyMail } from '@/lib/game/mailbox';
+import { ensureDailyMail, ensurePremiumDailyMailAll } from '@/lib/game/mailbox';
 import { ensureCbtCarryover } from '@/lib/game/cbt/grant';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -105,7 +105,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   after(async () => {
     // 프리미엄 daily는 스로틀 제외 — 프리미엄 활성 상태가 하루 중 바뀔 수 있어(낮에 구매 →
     // 구매일=1일차 지급) 마크 뒤에도 매 로드 실행해야 함. 미보유 시 CTE가 비어 싼 no-op.
-    await withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch(
+    // 산 서버마다(10-12 결정) — 활성 서버에서만 주면 그날 다른 서버만 한 사람의 몫이 사라졌다.
+    await withTimeout(ensurePremiumDailyMailAll(userId), 2500, 'layout.premiumDaily').catch(
       (e) => {
         if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
       },

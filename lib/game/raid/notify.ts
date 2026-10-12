@@ -55,6 +55,7 @@ export async function notifyRaidInvite(input: {
     // 상세 페이지가 ?c= 없는 진입을 초대 랜딩으로 되돌리고, 거기서 들어가면 scope가
     // 'link'(=승인 대기)로 떨어져 초대가 요청으로 강등된다. s=invite여야 즉시 참여다.
     url: `/raid/${input.raidId}?c=${input.shareCode}&s=invite`,
+    serverId: input.serverId,
     // 같은 레이드 초대가 겹치면 최신 1건만 — 초대는 레이드당 1회지만 재발송 방어.
     tag: `raid-invite-${input.raidId}`,
     category: 'raid',

@@ -56,6 +56,7 @@ export async function activateDueBosses(serverId: number, scope?: CronScope): Pr
         title: '월드보스 출현',
         body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요.`), // 짧게(10-11 사용자 B안) — 누르면 보스 상세.
         url: `/world-boss/${b.id}`,
+        serverId,
         tag: `world-boss-${b.id}`,
         category: 'world_boss',
       }).catch((e) => console.warn('[world-boss] spawn push failed', b.id, e));

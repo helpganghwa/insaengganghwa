@@ -50,6 +50,7 @@ async function safePush(
       title,
       body,
       url,
+      serverId,
       tag: 'profile',
     });
   } catch (e) {

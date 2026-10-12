@@ -108,6 +108,7 @@ export async function GET(req: Request) {
               title,
               body,
               url: '/enhance',
+              serverId: Number(r.server_id),
               tag: 'enhance',
               category: 'enhance',
             });

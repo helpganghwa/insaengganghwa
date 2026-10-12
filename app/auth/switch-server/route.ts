@@ -30,7 +30,10 @@ export async function GET(req: Request) {
   if (to == null) return NextResponse.redirect(new URL('/login', origin));
 
   await touchLastServer(userId, to).catch(() => undefined);
-  const res = NextResponse.redirect(new URL('/', origin));
+  // next(10-12) — 푸시 링크가 서버를 바꾼 뒤 원래 목적지로 가게. 상대 경로만(열린 리다이렉트 방지).
+  const nextRaw = url.searchParams.get('next') ?? '';
+  const next = /^\/(?!\/)[^\s]*$/.test(nextRaw) ? nextRaw : '/';
+  const res = NextResponse.redirect(new URL(next, origin));
   res.cookies.set('srv', String(to), {
     httpOnly: true,
     secure: true,

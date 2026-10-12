@@ -59,7 +59,8 @@
 ## 2. 데이터 모델
 
 ```sql
-servers    (id smallint PK, name, status open|full|closed, opened_at)
+servers    (id smallint PK, name, status open|full|closed, opened_at,
+            recommended boolean — 신규 자동 배정 서버(0210, open 서버 중 1개 부분 유니크))
 characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_id,
             tutorial_step, created_at, PK(user_id, server_id),
             -- 칭호 이력·즐겨찾기(0166·0169) — 판정(judge.ts)과 ★ 섹션의 근거
@@ -79,7 +80,7 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 - **활성 서버** = `srv` 쿠키(서버 선택 화면에서 설정, httpOnly) → `getActiveServerId()`. 미설정/비정상 = 1.
 - 서버 액션·RSC는 `(userId, serverId)` 컨텍스트로 동작 — 기존 `getSessionUserId()` 옆에 serverId 헬퍼 추가, 도메인 함수는 serverId를 **명시 인자**로 받는다(크론과 시그니처 통일).
 - **크론** = 활성 서버 루프: `for (const s of openServers) await run(s.id)` — 크론 엔트리 수는 불변(서버 수와 무관).
-- **서버 선택 = 로그인 화면** — 세션 동안 서버 고정, **변경 = 로그아웃 후 재선택**(풀 아이솔레이션의 의도된 마찰). 선택은 `login_srv` 쿠키(10분)로 OAuth 왕복을 건너 콜백에서 확정. 칩은 열림·포화 서버만 눌린다(닫힘은 비활성) — 포화는 신규 생성만 막는 상태라 기존 유저는 골라 들어온다.
+- **서버 선택 = 로그인 화면** — 세션 동안 서버 고정, **변경 = 로그아웃 후 재선택**(풀 아이솔레이션의 의도된 마찰). 선택은 `login_srv` 쿠키(10분)로 OAuth 왕복을 건너 콜백에서 확정. 칩은 열림·포화 서버만 보인다(닫힘 서버는 목록에서 빠진다, F1) — 포화는 신규 생성만 막는 상태라 기존 유저는 골라 들어온다. **심사용 ID/PW 로그인(cbt 계정)은 예외**로 확인 화면 없이 고른 서버에 바로 캐릭터를 만든다(심사자가 막힘 없이 들어가야 한다 — 2026-10-12 사용자 확정, D6 범위).
 - **선택 표시는 아는 경우에만** — 로그인 전에는 그 사람이 어느 서버를 쓰던 사람인지 알 수 없다. 이 기기에서 마지막으로 쓴 서버(`srv` 쿠키)가 있으면 그 칩만 선택된 것으로 보여 주고(표시일 뿐 `login_srv`는 쓰지 않는다), 없으면 아무것도 칠하지 않는다. 고르지 않으면 콜백이 하던 서버로 복원하므로 화면과 결과가 일치한다. 초대 링크의 서버는 표시에 쓰지 않는다(기존 유저는 자기 서버로 복원되므로 틀린 표시가 된다). '추천' 라벨은 신규의 기본 서버(아래 '추천 서버')에만 붙는다.
 - **선택한 서버에 캐릭터가 없을 때**: 어느 서버에도 캐릭터가 없는 신규면 자동 닉네임으로 즉시 생성(가입과 동일 무마찰, 닉은 첫 닉변 무료 — 다른 서버에서 쓰는 자기 이름으로 바꿀 수 있다). **다른 서버에 캐릭터가 있으면 만들지 않고 확인 화면**(`/login/new-character`)으로 보낸다 — 새로 시작하기 / 하던 서버로 돌아가기(여럿이면 닉네임·지갑과 함께 나열). 캐릭터는 지울 수 없으므로 말없이 만들지 않는다. 신규가 고른 서버가 포화·닫힘이면 추천 서버로 대신 배정한다. 확인 화면의 '새로 시작하기'가 실패하면 같은 화면으로 돌아와 다시 시도하라고 알린다.
 - **배정 우선순위(콜백)**: 명시 선택(`login_srv`) > (캐릭터 0개인 신규만) 공유된 서버(`pending_server` — /s 공유·레이드 초대가 그 서버를 기록) > 마지막 접속 서버(`last_server_id`) > **추천 서버**(아래). 초대받은 서버에서 시작 = 바이럴 정합.
@@ -118,11 +119,14 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 ## 6. 신서버 오픈 (운영)
 
 - **오픈 트리거(권고)**: 1서버 점령전 포화(활성 길드가 구역 경합을 상시 채움) + DAU 임계(예: 5,000) 동시 충족. 단순 인구만으로 열지 않는다(인구 분산 = 콜드스타트 역행).
-- 오픈 절차: `bun run scripts/open-server.ts <id> <이름> <ENV>` — servers INSERT + zones 50구역·인접 간선 복제 시드(1서버 템플릿). 이후 공지/이벤트(신서버 부스트). 코드 배포 불필요.
+- 오픈 절차: `bun run scripts/open-server.ts <id> <이름> <ENV> [--status=closed] [--dry-run] [--force]` — servers INSERT + zones 50구역·인접 간선 복제 시드(1서버 템플릿). 이후 공지/이벤트(신서버 부스트). 코드 배포 불필요.
+  - `--status=closed`로 미리 만들어 숨겨 두고 공지 시각에 `/admin/servers`에서 open으로 바꾼다(기본은 바로 open이라 로그인 선택기에 즉시 뜬다). `--dry-run`은 전부 실행한 뒤 롤백해 생길 구역 id 범위를 보여 준다. 새 서버의 첫 구역 id는 50k+1이어야 하며(구역 설명 매핑), 아니면 중단한다(`--force`로 건너뜀).
+  - 서버마다 미리 있어야 하는 행은 servers·zones 50·간선 65뿐이다. cron_heartbeats·system_mode·카탈로그·공시는 전역이고, 탑 풀·역사 시대·리더보드·마일리지 지갑·칭호는 첫 사용 때 생긴다(2026-10-12 조사).
+  - **추천 서버 정책(2026-10-12 사용자 확정)**: 서버 2를 여는 날 `/admin/servers`에서 서버 2를 추천으로 지정해 신규는 서버 2로, 기존 유저는 서버 1에 그대로 둔다.
   - ⚠ **대상 env를 반드시 붙인다**: 프로덕션은 `PROD_DATABASE_URL`. 생략하면 기본값 `DIRECT_URL`(스테이징)에 서버가 생기고 성공 로그만 찍혀, 프로덕션이 열리지 않은 것을 알아채기 어렵다.
   - 실행하면 먼저 **그 DB의 현재 서버 목록**을 출력한다 — 붙은 곳이 맞는지 눈으로 확인하고 진행한다.
 - `status=full` = 신규 캐릭터 생성 제한(기존 캐릭터는 정상) · `closed` = 준비 중/통합 대비.
-  - 상태 전환은 어드민 `/admin/servers`(open·full·closed, 감사 로그 `server.set_status`). `closed`는 크론 순회에서 빠져 점령전·대난투·정산이 멈추므로 최근 7일 접속자가 있으면 거부한다.
+  - 상태 전환은 어드민 `/admin/servers`(open·full·closed, 감사 로그 `server.set_status`). `closed`는 크론 순회에서 빠져 점령전·대난투·정산이 멈추므로 최근 7일 접속자가 있거나 **정산이 끝나지 않은 콘텐츠(settled가 아닌 월드보스·revealed가 아닌 대난투·published_at이 없는 점령전)** 가 있으면 거부한다(2026-10-12).
 - **오픈 후 기존 서버 상태(정책 확정 2026-07-06)**: 신서버를 열어도 기존 서버는 **`open` 유지** —
   1서버 신규가입은 계속 가능해야 한다. 로그인 선택기는 open·full 서버를 모두 노출하고 **추천 서버**에만
   '추천' 뱃지를 붙인다(추천 서버 = 운영자가 지정한 open 서버, 없으면 최신 open — 0210, 신규 자동 배정도 같은 값). `full` 전환은 실제 포화 시에만 사용.

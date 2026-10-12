@@ -24,13 +24,20 @@ config({ path: '.env.local' });
 
 const serverId = Number(process.argv[2]);
 const name = process.argv[3];
-if (!Number.isInteger(serverId) || serverId < 2 || !name) {
-  console.error('사용: bun run scripts/open-server.ts <serverId(2+)> <이름> [ENV_NAME]');
+// 옵션(10-12 2서버 조사): --status=closed 로 미리 만들어 숨기기(공지 시각에 /admin/servers에서 open), --dry-run 은 전부
+// 실행한 뒤 롤백(무엇이 생길지 확인), --force 는 구역 id 50단위 정렬 검사를 건너뛴다.
+const flags = process.argv.slice(4).filter((a) => a.startsWith('--'));
+const positional = process.argv.slice(4).filter((a) => !a.startsWith('--'));
+const statusFlag = flags.find((f) => f.startsWith('--status='))?.slice('--status='.length) ?? 'open';
+const dryRun = flags.includes('--dry-run');
+const force = flags.includes('--force');
+if (!Number.isInteger(serverId) || serverId < 2 || !name || !['open', 'full', 'closed'].includes(statusFlag)) {
+  console.error('사용: bun run scripts/open-server.ts <serverId(2+)> <이름> [ENV_NAME] [--status=open|full|closed] [--dry-run] [--force]');
   console.error('  ENV_NAME 생략 시 DIRECT_URL(스테이징). 프로덕션은 PROD_DATABASE_URL을 명시한다.');
   process.exit(1);
 }
 
-const urlEnv = process.argv[4] ?? 'DIRECT_URL';
+const urlEnv = positional[0] ?? 'DIRECT_URL';
 const url = process.env[urlEnv];
 if (!url) {
   console.error(`${urlEnv} 미설정 — .env.local 확인`);
@@ -50,7 +57,7 @@ try {
     const [exists] = await tx`select id from servers where id = ${serverId}`;
     if (exists) throw new Error(`server ${serverId} already exists`);
 
-    await tx`insert into servers (id, name, status) values (${serverId}, ${name}, 'open')`;
+    await tx`insert into servers (id, name, status) values (${serverId}, ${name}, ${statusFlag})`;
 
     // 1서버 구역 템플릿 복제 — 새 id = 기존 max + offset.
     const tpl = await tx`
@@ -58,6 +65,8 @@ try {
     if (tpl.length === 0) throw new Error('템플릿(1서버 zones) 없음');
     const [{ next }] = await tx`select coalesce(max(id), 0) + 1 as next from zones`;
     const base = Number(next);
+    // 구역 설명(zoneLoreOf)이 50단위 매핑을 전제하므로 새 서버의 첫 구역 id는 50k+1 이어야 한다(2서버=51).
+    if (!force && (base - 1) % 50 !== 0) throw new Error(`zones 다음 id ${base}가 50단위 경계가 아니다(기대 ${Math.ceil((base - 1) / 50) * 50 + 1}). 확인 뒤 --force`);
     const idMap = new Map<number, number>();
     for (let i = 0; i < tpl.length; i++) idMap.set(tpl[i]!.id as number, base + i);
 
@@ -76,7 +85,11 @@ try {
       if (na && nb) await tx`insert into zone_adjacency (zone_a, zone_b) values (${na}, ${nb})`;
     }
 
-    console.log(`[open-server] ${name}(id=${serverId}) — zones ${tpl.length}·edges ${edges.length} 시드 완료`);
+    console.log(`[open-server] ${name}(id=${serverId}, status=${statusFlag}) — zones ${tpl.length}(id ${base}~${base + tpl.length - 1})·edges ${edges.length} ${dryRun ? '시드 확인(롤백)' : '시드 완료'}`);
+    if (dryRun) throw new Error('DRY_RUN_ROLLBACK');
+  }).catch((e: unknown) => {
+    if ((e as Error).message === 'DRY_RUN_ROLLBACK') return;
+    throw e;
   });
 } finally {
   await sql.end({ timeout: 5 });

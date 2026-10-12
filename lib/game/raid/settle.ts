@@ -132,6 +132,7 @@ export async function settleRaid(
       title: '레이드 종료',
       body: `${bossName} 레이드(${RAID_TIERS[result.tier].label})가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
       url: `/raid/${input.raidId.toString()}`,
+      serverId: result.serverId!,
       tag: `raid-${input.raidId.toString()}`,
       category: 'raid',
     }).catch((e) => console.warn('[push] raid settle send failed', e));

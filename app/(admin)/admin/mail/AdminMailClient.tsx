@@ -37,6 +37,7 @@ export function AdminMailClient({
   const [pushOn, setPushOn] = useState(true); // 앱 알림 동반 발송(admin 카테고리, 구독자만 수신)
   // 전체 발송 대상 서버(2026-08-07) — 'all'=전서버(종전 동작), 숫자=해당 서버만.
   const [targetServer, setTargetServer] = useState<'all' | number>('all');
+  const [oneServer, setOneServer] = useState<'auto' | number>('auto');
   const [scheduleAt, setScheduleAt] = useState(''); // 예약 전송(KST datetime-local) — 빈값=즉시(0123)
   const [bw, setBw] = useState('');
   const [ba, setBa] = useState('');
@@ -98,6 +99,8 @@ export function AdminMailClient({
             : toKind === 'code'
               ? { toCode: to }
               : { toUserId: to }),
+          // 배송 서버(10-12 2서버 조사) — 코드·userId는 계정 단위라 서버를 고르지 않으면 마지막 접속 서버로 간다.
+          serverId: oneServer === 'auto' ? null : oneServer,
           title,
           body,
           payload,
@@ -194,6 +197,22 @@ export function AdminMailClient({
               className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
             />
           </div>
+          {/* 배송 서버(10-12) — 지갑이 서버별이라 보상 우편은 서버를 맞춰야 한다. 자동 = 닉네임이면 그 캐릭터의 서버, 코드·userId면 마지막 접속 서버. */}
+          <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            배송 서버
+            <select
+              value={oneServer === 'auto' ? 'auto' : String(oneServer)}
+              onChange={(e) => setOneServer(e.target.value === 'auto' ? 'auto' : Number(e.target.value))}
+              className="rounded border border-zinc-300 bg-transparent px-1.5 py-0.5 text-sm dark:border-zinc-700"
+            >
+              <option value="auto">자동(닉네임=그 서버 · 코드/userId=마지막 접속 서버)</option>
+              {serverIds.map((sid) => (
+                <option key={sid} value={String(sid)}>
+                  {sid}서버
+                </option>
+              ))}
+            </select>
+          </label>
         </section>
       ) : (
         <section className="mb-3 space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">

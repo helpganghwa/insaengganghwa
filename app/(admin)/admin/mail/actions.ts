@@ -38,6 +38,8 @@ export async function sendMailToUserAction(opts: {
   /** 유저 코드(publicCode, '#' 접두 허용) — 문의 스냅샷에서 복붙 발송용(2026-07-13). */
   toCode?: string;
   toUserId?: string;
+  /** 배송 서버(10-12 2서버 조사) — 지정하면 그 서버 우편함·지갑으로. null/생략 = 닉네임이면 그 캐릭터의 서버, 코드·userId면 마지막 접속 서버. */
+  serverId?: number | null;
   title: string;
   body: string;
   payload: MailPayload;
@@ -91,9 +93,17 @@ export async function sendMailToUserAction(opts: {
     const body = (opts.body || '').slice(0, 1000);
     const payload = clampPayload(opts.payload);
     // 우편 + 감사 로그 원자 발송.
+    let sentSid: number | null = null;
     await db.transaction(async (tx) => {
-      // 닉네임 지정 시 그 캐릭터의 서버, userId 지정 시 수신자의 마지막 활성 서버.
+      // 닉네임 지정 시 그 캐릭터의 서버, userId 지정 시 수신자의 마지막 활성 서버. 운영자가 서버를 고르면 그 서버(캐릭터가 있어야 한다).
       let deliverySid = recipientServerId;
+      if (opts.serverId != null) {
+        const [has] = (await tx.execute(sql`
+          select 1 as ok from characters where user_id = ${recipientId} and server_id = ${opts.serverId} limit 1
+        `)) as unknown as { ok: number }[];
+        if (!has) throw new Error(`NO_CHARACTER_ON_SERVER:${opts.serverId}`);
+        deliverySid = opts.serverId;
+      }
       if (deliverySid == null) {
         const [rp] = await tx
           .select({ sid: profiles.lastServerId })
@@ -102,6 +112,7 @@ export async function sendMailToUserAction(opts: {
           .limit(1);
         deliverySid = rp?.sid ?? 1;
       }
+      sentSid = deliverySid;
       await tx.insert(mailbox).values({
         userId: recipientId,
         serverId: deliverySid,
@@ -128,6 +139,7 @@ export async function sendMailToUserAction(opts: {
           title: '운영자 우편 도착',
           body: (opts.title || '').slice(0, 60),
           url: '/mail',
+          serverId: sentSid ?? undefined,
           category: 'admin',
         });
       } catch {
@@ -140,6 +152,8 @@ export async function sendMailToUserAction(opts: {
     const msg = e instanceof Error ? e.message : 'UNKNOWN';
     if (msg === 'FORBIDDEN') return { status: 'error', message: '관리자 권한이 없습니다.' };
     if (msg === 'UNAUTHENTICATED') return { status: 'error', message: '로그인이 필요합니다.' };
+    if (msg.startsWith('NO_CHARACTER_ON_SERVER:'))
+      return { status: 'error', message: `수신자는 ${msg.split(':')[1]}서버에 캐릭터가 없습니다. 배송 서버를 다시 고르세요.` };
     console.error('[admin.mail.send]', e);
     return { status: 'error', message: '알 수 없는 오류' };
   }
@@ -245,6 +259,7 @@ export async function broadcastMailAction(opts: {
           title: '운영자 우편 도착',
           body: (opts.title || '').slice(0, 60),
           url: '/mail',
+          serverId: targetServerId ?? undefined,
           category: 'admin',
         });
       } catch (e) {

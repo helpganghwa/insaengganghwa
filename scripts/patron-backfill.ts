@@ -17,7 +17,9 @@ const { reachedMilestones, formatKrwMan } = await import('../lib/game/patron/mil
 const payers = (await db.execute(sql`
   select o.user_id, sum(o.amount_krw)::bigint as paid,
          (select string_agg(distinct c.nickname, '/') from characters c where c.user_id = o.user_id) as nick,
-         (select p.last_server_id from profiles p where p.id = o.user_id) as server_id,
+         -- 지급 서버 = 가장 최근 결제 주문의 서버(10-12: 운영 경로 lib/game/patron/grant.ts와 같은 기준 — 종전 last_server_id는 접속 서버라 어긋났다).
+         coalesce((select o2.server_id from iap_orders o2 where o2.user_id = o.user_id and o2.status = 'paid' order by o2.created_at desc limit 1),
+                  (select p.last_server_id from profiles p where p.id = o.user_id)) as server_id,
          (select count(*)::int from patron_milestone_grants g where g.user_id = o.user_id) as already
   from iap_orders o where o.status = 'paid' group by o.user_id order by paid desc
 `)) as unknown as { user_id: string; paid: string; nick: string | null; server_id: number | null; already: number }[];

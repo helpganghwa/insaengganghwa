@@ -39,6 +39,11 @@ export type PushPayload = {
   title: string;
   body: string;
   url?: string;
+  /**
+   * 링크가 가리키는 서버(10-12 2서버 조사) — 푸시 대상은 계정의 마지막 서버로 정하지만, 알림을 누르는 기기의 srv 쿠키는
+   * 다른 서버일 수 있다(PC는 2서버·휴대폰은 1서버). 주면 url을 `/auth/switch-server?to=N&next=url`로 감싸 그 서버로 바꾼 뒤 연다.
+   */
+  serverId?: number;
   tag?: string;
   /**
    * guild = 길드 운영 알림(승인/거절 결과, 2026-07-30). 토글 컬럼 없음 = 상시 발송(신청자 본인 대상).
@@ -256,12 +261,19 @@ export async function sendPushToSubscriptions(
   return dispatch(subs, payload);
 }
 
+/** 서버가 붙은 상대 경로를 서버 전환 경유 링크로(이미 감싼 것·절대 URL은 그대로). */
+export function withServerLink(url: string | undefined, serverId: number | undefined): string {
+  const u = url ?? '/';
+  if (!serverId || !u.startsWith('/') || u.startsWith('//') || u.startsWith('/auth/switch-server')) return u;
+  return `/auth/switch-server?to=${serverId}&next=${encodeURIComponent(u)}`;
+}
+
 async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResult> {
   if (subs.length === 0) return { ok: 0, gone: 0, failed: 0 };
   const body = JSON.stringify({
     title: payload.title,
     body: payload.body,
-    url: payload.url ?? '/',
+    url: withServerLink(payload.url, payload.serverId),
     tag: payload.tag ?? payload.category,
     category: payload.category,
     // 기본 재알림 ON — 같은 tag 묶음/연속 이벤트도 무음 교체 대신 실제 알림.

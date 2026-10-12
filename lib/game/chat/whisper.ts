@@ -298,6 +298,7 @@ export async function sendWhisperCore(peerUserId: string, raw: string): Promise<
           // 발신자별 tag — 여러 상대의 알림이 서로를 덮어쓰지 않게.
           tag: `whisper-${userId}`,
           url: sender?.code ? `/?chat=whisper&peer=${sender.code}` : '/?chat=whisper',
+          serverId,
         });
       }
     } catch {

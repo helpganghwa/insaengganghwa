@@ -46,9 +46,9 @@ export async function GET(req: Request) {
     `)) as unknown as { user_id: string; server_id: number; region: string }[];
     if (claimed.length === 0) break;
     // 유저별로 묶어 1건 — 슬롯 여러 개가 같은 5분 창에 귀환하면 진동 N번 대신 "N팀" 한 번(2026-08-30).
-    const byUser = new Map<string, { regions: string[] }>();
+    const byUser = new Map<string, { regions: string[]; serverId: number }>();
     for (const r of claimed) {
-      const e = byUser.get(r.user_id) ?? { regions: [] };
+      const e = byUser.get(r.user_id) ?? { regions: [], serverId: Number(r.server_id) };
       e.regions.push(REGION_KO[r.region] ?? r.region);
       byUser.set(r.user_id, e);
     }
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
           ? `${e.regions[0]} 파견대가 돌아왔어요 — 보상을 수령하세요!`
           : `파견대 ${e.regions.length}팀이 돌아왔어요(${[...new Set(e.regions)].join('·')}) — 보상을 수령하세요!`;
       try {
-        await sendPushToUser(userId, { title: '파견 귀환', body, url: '/expedition', tag: 'expedition', category: 'expedition' });
+        await sendPushToUser(userId, { title: '파견 귀환', body, url: '/expedition', serverId: e.serverId, tag: 'expedition', category: 'expedition' });
         sent++;
       } catch (err) {
         failed++;

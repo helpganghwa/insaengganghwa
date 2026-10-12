@@ -169,6 +169,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
           title: `💬 ${message.nickname}님이 ${channel === 'guild' ? '길드 ' : ''}채팅에서 언급했어요`,
           body: body.slice(0, 60),
           url: `/?chat=${channel}`,
+          serverId,
           tag: 'chat-mention',
           category: 'chat_mention',
         }).catch(() => null),

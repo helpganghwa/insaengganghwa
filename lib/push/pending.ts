@@ -51,6 +51,7 @@ export async function appendEnhanceReady(
         title,
         body,
         url: '/enhance',
+        serverId,
         tag: 'enhance',
         category: 'enhance',
       },

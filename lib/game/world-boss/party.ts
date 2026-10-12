@@ -97,7 +97,7 @@ function pushLaterWith(serverId: number, resolve: () => Promise<{ to: string; fr
     if (!target) return;
     const blocked = (await db.execute(sql`select 1 as x from chat_blocks where user_id = ${toUserId}::uuid and blocked_user_id = ${fromUserId}::uuid limit 1`)) as unknown as unknown[];
     if (blocked.length > 0) return;
-    await sendPushToUsers([toUserId], payload);
+    await sendPushToUsers([toUserId], { ...payload, serverId });
   });
 }
 
@@ -454,6 +454,7 @@ export async function departParty(input: { leaderUserId: string; serverId: numbe
           title: '원정대 결과',
           body: resultLine(bossName, m),
           url: `/world-boss/party/${partyId}`,
+          serverId,
           tag: `world-boss-party-${partyId}`,
           category: 'world_boss',
         }).catch(() => {}),
