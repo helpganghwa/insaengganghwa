@@ -121,9 +121,24 @@ function savePendingNav(url) {
   });
 }
 
+/** 서버 전환 경유 링크(/auth/switch-server?to=N&next=…)의 목적지 경로 — 탭 비교용(2026-10-12 2서버). */
+function destPathOf(url) {
+  try {
+    const u = new URL(url, self.location.origin);
+    if (u.pathname === '/auth/switch-server') {
+      const next = u.searchParams.get('next');
+      if (next && next.startsWith('/')) return new URL(next, self.location.origin).pathname;
+    }
+    return u.pathname;
+  } catch {
+    return url;
+  }
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
+  const destPath = destPathOf(url);
   event.waitUntil(
     (async () => {
       await savePendingNav(url);
@@ -135,7 +150,7 @@ self.addEventListener('notificationclick', (event) => {
       const target =
         clientsArr.find((c) => {
           try {
-            return new URL(c.url).pathname === url;
+            return new URL(c.url).pathname === destPath;
           } catch {
             return false;
           }
@@ -147,9 +162,10 @@ self.addEventListener('notificationclick', (event) => {
         try {
           await target.focus();
         } catch {}
+        // 같은 경로에 이미 있어도 서버 전환 링크면 지나가야 한다(쿠키가 바뀌어야 하므로) — 클라 폴백이 to와 현재 서버를 비교한다.
         let already = false;
         try {
-          already = new URL(target.url).pathname === url;
+          already = destPath === url && new URL(target.url).pathname === url;
         } catch {}
         if (already) return;
         if ('navigate' in target) {
