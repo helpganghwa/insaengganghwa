@@ -1116,8 +1116,8 @@ export function pointExtraPrice(item: PointExtraItem, boughtToday: number): numb
 // §14. 무한의 탑 (docs/TOWER.md · BALANCE.md §14) — 2026-09-29 확정
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 지금 열린 층 수(확장 시 늘린다). 10층마다 특별층. */
-export const TOWER_FLOORS = 100;
+/** 지금 열린 층 수(확장 시 늘린다 — 2026-10-12 100→110). 10층마다 특별층. */
+export const TOWER_FLOORS = 110;
 export const TOWER_SECTION = 10;
 /** 하루 도전(진 판만 차감) — KST 자정 초기화. */
 export const TOWER_DAILY_ATTEMPTS = 3;
@@ -1142,20 +1142,24 @@ export const TOWER_DMG_MAX = 1.2;
  * 1층 62 — 실서버 장비 분포 몬테카를로로 층 도달 분포를 맞춘 값(09-30). 대난투식 전투(TOWER_HP_MULT)는 승률 곡선이 완만해
  * 곡선 전체를 올렸고(60→64), 몬스터 급소를 넣으면서(같은 날) 몬스터가 세진 만큼 ÷1.035 낮췄다(64→62, 승률 곡선 동일 확인).
  * ⚠ 전투 변수(급소·광폭화·몬스터 특성·배수)를 바꾸면 이 값을 다시 맞춘다.
- * 맨 위 층(TOWER_FLOORS)만 ×1.16 — 1.45면 1위도 그 주 특별층 요구 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
+ * 맨 위 층(TOWER_FLOORS)은 ×1.16 — 1.45면 1위도 그 주 특별층 요구 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
+ * 확장으로 맨 위가 아니게 된 옛 맨 위 층(100층)도 ×1.16을 그대로 둔다(TOWER_REQ_EASED_FLOORS, 2026-10-12 사용자 확정) — 이미 넘은
+ * 사람의 벽을 소급해 올리지 않는다. 110층 확장 기준 요구치: 101층 919,996 · 109층 1,580,724 · 110층 1,833,640(1위 탑 전투력 181만).
  */
 export const TOWER_REQ_BASE = 62;
 export const TOWER_REQ_SECTION_RATIO = 2.613;
 export const TOWER_REQ_FLOOR_RATIO = 1.07;
 export const TOWER_REQ_SPECIAL_MULT = 1.45;
 export const TOWER_REQ_TOP_MULT = 1.16;
+/** ×1.16이 적용되는 층 — 지금 맨 위 층과, 확장 전 맨 위였던 100층. */
+export const TOWER_REQ_EASED_FLOORS: ReadonlySet<number> = new Set([100, TOWER_FLOORS]);
 export function towerRequirement(floor: number): number {
   const f = Math.max(1, floor);
   const k = (f - 1) % TOWER_SECTION; // 구간 안 위치 0~9(9 = 특별층)
   const start = TOWER_REQ_BASE * Math.pow(TOWER_REQ_SECTION_RATIO, Math.floor((f - 1) / TOWER_SECTION));
   const v = k < TOWER_SECTION - 1
     ? start * Math.pow(TOWER_REQ_FLOOR_RATIO, k)
-    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * (f === TOWER_FLOORS ? TOWER_REQ_TOP_MULT : TOWER_REQ_SPECIAL_MULT);
+    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * (TOWER_REQ_EASED_FLOORS.has(f) ? TOWER_REQ_TOP_MULT : TOWER_REQ_SPECIAL_MULT);
   return Math.round(v);
 }
 export function towerIsSpecial(floor: number): boolean {
@@ -1166,17 +1170,17 @@ export function towerSection(floor: number): number {
   return Math.floor((floor - 1) / TOWER_SECTION) + 1;
 }
 
-/** 구간별 첫 돌파 보상(TOWER.md §5) — 인덱스 = 구간 − 1. 📦는 3의 배수(부위당 ⅓). */
-const TOWER_NORMAL_DIA = [20, 40, 60, 100, 150, 250, 420, 700, 1050, 1500] as const;
-const TOWER_FIFTH_BOX = [6, 6, 12, 12, 18, 30, 42, 60, 120, 180] as const;
-const TOWER_SPECIAL_DIA = [200, 400, 600, 1000, 1600, 2800, 4800, 8000, 12500, 30000] as const;
-const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720] as const;
+/** 구간별 첫 돌파 보상(TOWER.md §5) — 인덱스 = 구간 − 1. 📦는 3의 배수(부위당 ⅓). 11구간(101~110층)은 10구간의 1.4배(2026-10-12 사용자 확정). */
+const TOWER_NORMAL_DIA = [20, 40, 60, 100, 150, 250, 420, 700, 1050, 1500, 2100] as const;
+const TOWER_FIFTH_BOX = [6, 6, 12, 12, 18, 30, 42, 60, 120, 180, 270] as const;
+const TOWER_SPECIAL_DIA = [200, 400, 600, 1000, 1600, 2800, 4800, 8000, 12500, 30000, 42000] as const;
+const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720, 1080] as const;
 
 export type TowerReward = { diamond: number; boxes: number };
 /**
  * 토벌(돌파한 층 재도전) 보상 — 이긴 판마다 💎. 구간 기준값 = 그 구간 일반층 첫 돌파 💎의 10분의 1(10-01 사용자 확정)이고,
  * 구간 안에서 층마다 조금씩 오른다(`TOWER_HUNT_FLOOR_FACTORS`: 첫 층 0.8 → 9번째 층 1.2, 특별층 1.3 — 구간 평균은 기준값과 거의 같다).
- * 꼭대기(100층)만 하루 3번 토벌해도 평균 585💎(더블 기대 포함 644) — 무료 유입(하루 약 454💎) 언저리. 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
+ * 100층을 하루 3번 토벌하면 평균 585💎(더블 기대 포함 644) — 무료 유입(하루 약 454💎) 언저리. 110층(11구간 기준값 210, 특별층 ×1.3)은 273💎 × 3 = 819(더블 포함 약 900). 오르기와 같은 하루 도전 횟수를 쓰고 토벌은 이겨도 1회를 쓴다(TOWER.md §5.1).
  */
 export const TOWER_HUNT_FLOOR_FACTORS = [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.3] as const;
 export function towerHuntReward(floor: number): number {
@@ -1195,7 +1199,7 @@ export function towerHuntRange(floor: number): { min: number; max: number } {
 export const TOWER_HUNT_DOUBLE_BP = 1000;
 /** 토벌 상자 확률(만분율)과 구간별 상자 수(3의 배수, 부위마다 3분의 1) — 구간 5번째 층 첫 돌파 📦의 약 4분의 1. */
 export const TOWER_HUNT_BOX_BP = 500;
-const TOWER_HUNT_BOX = [3, 3, 3, 3, 6, 9, 12, 15, 30, 45] as const;
+const TOWER_HUNT_BOX = [3, 3, 3, 3, 6, 9, 12, 15, 30, 45, 66] as const;
 export function towerHuntBox(floor: number): number {
   return TOWER_HUNT_BOX[Math.min(TOWER_HUNT_BOX.length, towerSection(Math.max(1, floor))) - 1]!;
 }

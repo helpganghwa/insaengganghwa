@@ -1014,5 +1014,115 @@
     ]
    }
   ]
+ },
+ {
+  "theme": "별빛 폐허",
+  "palette": [
+   "#1e1b3a",
+   "#3b3566",
+   "#7a6fa8",
+   "#e6d8a8"
+  ],
+  "mons": [
+   {
+    "floor": 101,
+    "name": "별가루 생쥐",
+    "desc": "털에 별가루가 묻은 남색 생쥐, 꼬리 끝이 희미하게 빛난다.",
+    "art": "small navy blue mouse with faint pale-gold star dust specks on its fur, tail tip glowing softly",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 102,
+    "name": "유성 두꺼비",
+    "desc": "등에 작은 운석 조각이 박힌 보랏빛 두꺼비.",
+    "art": "plump dusky violet toad with small dark meteorite fragments embedded on its back",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 103,
+    "name": "달조각 나방",
+    "desc": "날개가 초승달 두 개 모양으로 갈라진 은빛 나방.",
+    "art": "silver moth whose two wings are shaped like crescent moons, slender dark body",
+    "guardian": false,
+    "skills": [
+     "freeze"
+    ]
+   },
+   {
+    "floor": 104,
+    "name": "별똥별 여우",
+    "desc": "꼬리에서 긴 별똥별 꼬리가 흐르는 짙은 남색 여우.",
+    "art": "dark indigo fox with a long shooting-star tail trailing pale light behind it",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
+   },
+   {
+    "floor": 105,
+    "name": "별자리 사슴",
+    "desc": "몸에 별자리 점이 가는 선으로 이어진 검푸른 사슴, 뿔 끝마다 작은 별.",
+    "art": "deep blue stag with constellation dots joined by thin pale lines on its body, tiny stars on each antler tip",
+    "guardian": false,
+    "skills": [
+     "regen"
+    ]
+   },
+   {
+    "floor": 106,
+    "name": "운석 거북",
+    "desc": "등딱지가 식은 운석인 거북, 움푹 팬 자국마다 별빛이 고여 있다.",
+    "art": "tortoise whose shell is a cooled cratered meteorite, faint starlight pooled in the craters",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
+   },
+   {
+    "floor": 107,
+    "name": "성운 해파리",
+    "desc": "갓 안에 작은 보랏빛 성운이 소용돌이치는 반투명 해파리.",
+    "art": "translucent floating jellyfish with a small swirling violet nebula inside its bell, thin trailing tentacles",
+    "guardian": false,
+    "skills": [
+     "seal"
+    ]
+   },
+   {
+    "floor": 108,
+    "name": "별먹는 늑대",
+    "desc": "두 눈이 별인 검은 늑대, 입가에 별빛이 묻어 있다.",
+    "art": "black wolf with two bright star-shaped eyes and faint starlight smeared around its muzzle",
+    "guardian": false,
+    "skills": [
+     "drain"
+    ]
+   },
+   {
+    "floor": 109,
+    "name": "폐허의 천사상",
+    "desc": "한쪽 날개가 부서진 돌 천사상, 금 간 틈으로 별빛이 샌다.",
+    "art": "weathered stone angel statue with one broken wing, pale gold starlight leaking from cracks across its body",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
+   },
+   {
+    "floor": 110,
+    "name": "별을 삼킨 흑룡",
+    "desc": "비늘 사이로 별빛이 흐르는 검은 용, 가슴 속에 삼킨 별이 빛난다.",
+    "art": "large black dragon with pale starlight flowing between its scales, a single glowing swallowed star visible inside its chest, wings spread, majestic long body",
+    "guardian": true,
+    "skills": [
+     "death",
+     "stop",
+     "drain",
+     "reflect"
+    ]
+   }
+  ]
  }
 ]

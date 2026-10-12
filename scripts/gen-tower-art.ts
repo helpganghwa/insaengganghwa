@@ -1,6 +1,6 @@
 /**
  * 무한의 탑 몬스터·구간 배경 생성(Pixellab v2 REST, PIXELLAB_API_KEY_2) — docs/TOWER.md §9 제작 계획.
- *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~10> [--only=bg,mons] [--force]
+ *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~11> [--only=bg,mons] [--force]
  * 산출: scripts/tower-art/out/v3/sec<NN>/<key>/<i>.png(후보) + manifest.json. 이미 있으면 건너뛴다(재개형, --force로 다시).
  * 비용(호출 한 번 ≈ 26 gen, 크기에 따라 한 번에 나오는 장수만 다르다): 배경 = 고급(generate-image-v2) 400×240 1장,
  *   몬스터 = 고급 + 기준 그림(style_image = 레이드 슬라임 왕, 윤곽·세밀도·음영만 따르고 색은 구간 팔레트) 128px(수문장 160px) 한 번에 4장.
@@ -27,7 +27,7 @@ type Mon = { floor: number; name: string; desc: string; art: string; guardian: b
 type Sec = { theme: string; palette: string[]; mons: Mon[] };
 const data = JSON.parse(readFileSync('scripts/tower-art/monsters.json', 'utf8')) as Sec[];
 const S = data[sec - 1];
-if (!S) throw new Error('구간 번호 1~10');
+if (!S) throw new Error("구간 번호 1~11");
 
 // 구간별 배경 주문문(외형만) — 1단계 테마 설정의 재질·색.
 const BG: Record<number, string> = {

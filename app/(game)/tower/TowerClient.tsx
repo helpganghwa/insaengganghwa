@@ -267,7 +267,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   );
 
   const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
-  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 그 주 90층 전부를 받는다(일부만 받는 안은 10-01 롤백).
+  // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 그 주 11층부터 전부를 받는다(일부만 받는 안은 10-01 롤백).
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
   const equipped: EquippedPiece[] = items.filter((i) => i.equipped).map((i) => ({ slot: i.slot, key: i.key, cp: i.cp }));

@@ -23,10 +23,12 @@ describe('무한의 탑 수치', () => {
     // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.07)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
-    expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 맨 위 층만 낮은 벽
+    expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 옛 맨 위 층 — 확장 뒤에도 낮춘 벽 유지(10-12)
+    expect(towerRequirement(110) / towerRequirement(109)).toBeCloseTo(1.16, 2); // 지금 맨 위 층
+    expect(towerRequirement(90) / towerRequirement(89)).toBeCloseTo(1.45, 2); // 그 밖의 특별층은 표준
     for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThan(towerRequirement(f - 1));
   });
-  it('보상 합계 💎100,510 · 📦1,998, 상자는 3의 배수', () => {
+  it('보상 합계 💎161,410 · 📦3,348(100층까지 💎100,510 · 📦1,998), 상자는 3의 배수', () => {
     let d = 0, b = 0;
     for (let f = 1; f <= TOWER_FLOORS; f++) {
       const r = towerReward(f);
@@ -34,8 +36,12 @@ describe('무한의 탑 수치', () => {
       b += r.boxes;
       expect(r.boxes % 3).toBe(0);
     }
-    expect(d).toBe(100510);
-    expect(b).toBe(1998);
+    expect(d).toBe(161410);
+    expect(b).toBe(3348);
+    let d100 = 0, b100 = 0;
+    for (let f = 1; f <= 100; f++) { d100 += towerReward(f).diamond; b100 += towerReward(f).boxes; }
+    expect(d100).toBe(100510);
+    expect(b100).toBe(1998);
   });
   it('구간·특별층', () => {
     expect(towerSection(1)).toBe(1);
@@ -266,7 +272,7 @@ describe('몬스터 스킬', () => {
 });
 
 describe('층 몬스터·스킬 배치', () => {
-  it('100층 모두 이름·설명이 있고 이름이 겹치지 않는다', () => {
+  it('전 층 모두 이름·설명이 있고 이름이 겹치지 않는다', () => {
     const names = Array.from({ length: TOWER_FLOORS }, (_, i) => towerFloorInfo(i + 1));
     for (const f of names) {
       expect(f.name.length).toBeGreaterThan(0);
@@ -274,7 +280,7 @@ describe('층 몬스터·스킬 배치', () => {
     }
     expect(new Set(names.map((f) => f.name)).size).toBe(TOWER_FLOORS);
   });
-  it('1~9층은 스킬 없음, 수문장은 1~4개, 일반층은 0~1개, 즉사는 100층에만', () => {
+  it('1~9층은 스킬 없음, 수문장은 1~4개, 일반층은 0~1개, 즉사는 100·110층에만', () => {
     for (let f = 1; f <= TOWER_FLOORS; f++) {
       const sk = towerFloorSkills(f);
       if (f < 10) expect(sk).toEqual([]);
@@ -282,10 +288,11 @@ describe('층 몬스터·스킬 배치', () => {
         expect(sk.length).toBeGreaterThanOrEqual(1);
         expect(sk.length).toBeLessThanOrEqual(4);
       } else expect(sk.length).toBeLessThanOrEqual(1);
-      if (f !== 100) expect(sk).not.toContain('death');
+      if (f !== 100 && f !== 110) expect(sk).not.toContain('death');
       for (const k of sk) expect(TOWER_SKILL_INFO[k]).toBeDefined();
     }
     expect(towerFloorSkills(100)).toContain('death');
+    expect(towerFloorSkills(110)).toContain('death');
   });
 });
 

@@ -46,7 +46,7 @@ const POOL_FLOORS = Array.from({ length: TOWER_FLOORS - TOWER_SECTION }, (_, i) 
 
 /**
  * 그 주 층별 요구 장비(11층부터 — 일반 층 부위별 10개, 특별층 부위별 1개)를 보장하고 읽는다. 없으면 서버 RNG로 추첨해 insert(동시 첫 접근은
- * on conflict로 한 쪽만 남는다 — 먼저 박제된 것을 다시 읽으므로 모두 같은 풀을 본다). 층별 풀은 한 번의 insert로(90층 왕복 없이).
+ * on conflict로 한 쪽만 남는다 — 먼저 박제된 것을 다시 읽으므로 모두 같은 풀을 본다). 층별 풀은 한 번의 insert로(100층 왕복 없이).
  */
 export async function towerPools(serverId: number, at: Date = new Date()): Promise<{ week: string; pools: Map<number, SlotKeys> }> {
   const week = kstWeekStartString(at);
@@ -148,7 +148,7 @@ export async function towerBoard(userId: string, serverId: number) {
                coalesce((up.options->>'isDefault')::boolean, false) as is_default, up.created_at
         from user_profiles up where up.user_id=${userId}::uuid and up.server_id=${serverId}) a), '[]'::json) as avatars,
       coalesce((select json_agg(c order by c.id) from (select id, code, slot::text as slot, name from catalog_items where active) c), '[]'::json) as catalog,
-      -- 요구 장비는 그 주 90층 전부(일부만 보내는 안은 10-01 롤백 — 화면 안에서 돌파해 다음 구간이 열리면 그 구간 풀이 없었다).
+      -- 요구 장비는 그 주 11층부터 전부(일부만 보내는 안은 10-01 롤백 — 화면 안에서 돌파해 다음 구간이 열리면 그 구간 풀이 없었다).
       coalesce((select json_agg(p) from (select floor, weapon, armor, accessory from tower_pools
         where server_id=${serverId} and week_start=${week}::date) p), '[]'::json) as pools,
       -- 내 순위 = 랭킹 표(leaderboard_ranks, 돌파 직후 증분 반영·매시 스냅샷)에서 내 값보다 큰 행 수 + 1 — 인덱스 한 번(10-01, 종전 전 유저 조인).

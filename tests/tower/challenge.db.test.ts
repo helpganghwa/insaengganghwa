@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { towerHuntBox, towerHuntRange, towerHuntReward } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_SECTION, towerHuntBox, towerHuntRange, towerHuntReward } from '@/lib/game/balance';
 import { claimTowerRewards, challengeTower, TowerError } from '@/lib/game/tower/service';
 import { kstWeekStartString } from '@/lib/kst';
 
@@ -138,8 +138,8 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
   });
 
   it('꼭대기까지 오르면 TOP_REACHED', async () => {
-    await testDb.execute(sql`update tower_progress set best_floor=100, losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
-    await expect(challengeTower(TEST_USER_ID, S, 101, null, { idemKey: key(), rng: WIN })).rejects.toMatchObject({ code: 'TOP_REACHED' });
+    await testDb.execute(sql`update tower_progress set best_floor=${TOWER_FLOORS}, losses=0 where user_id=${TEST_USER_ID}::uuid and server_id=${S}`);
+    await expect(challengeTower(TEST_USER_ID, S, TOWER_FLOORS + 1, null, { idemKey: key(), rng: WIN })).rejects.toMatchObject({ code: 'TOP_REACHED' });
   });
 
   it('5층 보상 받기 — 💎와 보급 상자(부위마다 3분의 1)', async () => {
@@ -191,10 +191,10 @@ describe.skipIf(skip)('무한의 탑 도전·보상(DB 통합)', () => {
       expect(a - b).toBe(towerHuntBox(2) / 3);
     }
   });
-  it('이번 주 요구 장비: 11~100층 90층, 일반 층 부위별 10개·특별층 부위별 1개', async () => {
+  it(`이번 주 요구 장비: 11~${TOWER_FLOORS}층 ${TOWER_FLOORS - TOWER_SECTION}층, 일반 층 부위별 10개·특별층 부위별 1개`, async () => {
     const rows = (await testDb.execute(sql`select floor, cardinality(weapon) w, cardinality(armor) a, cardinality(accessory) c from tower_pools
       where server_id=${S} and week_start=${kstWeekStartString()}::date`)) as unknown as { floor: number; w: number; a: number; c: number }[];
-    expect(rows).toHaveLength(90);
+    expect(rows).toHaveLength(TOWER_FLOORS - TOWER_SECTION); // 주중 확장(10-12)도 첫 접근 때 빠진 층만 추첨해 채운다
     for (const r of rows) {
       const n = Number(r.floor) % 10 === 0 ? 1 : 10;
       expect([Number(r.w), Number(r.a), Number(r.c)]).toEqual([n, n, n]);
