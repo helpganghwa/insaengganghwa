@@ -136,6 +136,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
   // ⚠ 여기서 `redirect()`를 쓰지 않는다 — 이 컴포넌트는 Suspense 안에서 스트리밍되어, redirect가
   //   클라 라우터 처리로 넘어가면서 라우터 내부에서 훅 개수 예외가 난다(ServerCorrect 주석 참조).
   // 캐릭터가 닫힌 서버에만 있다(10-12) — 운영 종료 안내 화면으로(같은 문서 이동 방식).
+  if (d.signOut) return <ServerCorrect to="signout" />;
   if (d.closedServer) return <ServerCorrect to="closed" />;
   if (d.correctServerId != null) return <ServerCorrect to={d.correctServerId} />;
   return (

@@ -60,6 +60,8 @@ export interface LayoutData {
    * 헤더가 운영 종료 안내 화면(/server-closed)으로 보낸다. 거기서 새 서버를 본인이 고른다.
    */
   closedServer: boolean;
+  /** 탈퇴한 계정의 아직 유효한 토큰(3차 검사 B1) — 캐릭터를 만들지 않고 헤더가 /auth/signout으로 보낸다. */
+  signOut: boolean;
 }
 
 const DEFAULTS: LayoutData = {
@@ -79,13 +81,18 @@ const DEFAULTS: LayoutData = {
   tutorialSeed: null,
   correctServerId: null,
   closedServer: false,
+  signOut: false,
 };
 
 /**
  * 프로필(닉네임·다이아) + 우편 미수령 dot + 강화완료 dot을 단일 왕복(Promise.all)으로.
  * 4s 가드 + catch — 콜드 DB 커넥션이 풀에서 hang해도 기본값으로 graceful degrade.
  */
-export async function loadLayoutData(userId: string, serverId: number, options: { explicitServer?: boolean } = {}): Promise<LayoutData> {
+export async function loadLayoutData(
+  userId: string,
+  serverId: number,
+  options: { explicitServer?: boolean; inviteServerId?: number | null } = {},
+): Promise<LayoutData> {
   try {
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
     const profileP = pgGuard(
@@ -95,6 +102,7 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
                  c.tutorial_step, c.created_at as char_created_at,
                  -- 활성 서버 상태(10-12 닫힌 서버 진입 차단) — servers PK 조회 1건이라 핫패스 비용 없음.
                  (select s.status from servers s where s.id = ${serverId}) as srv_status,
+                 p.withdrawn_at,
                  g.emblem_url as guild_emblem_url,
                  z.name as executor_zone, z.region::text as executor_zone_region,
                  -- 헤더 서브라인 스탯 재료(감사 A5) — 별도 layout.stats 왕복을 스칼라 서브쿼리로
@@ -183,6 +191,7 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
           char_created_at?: string | Date | null;
           equip_stats?: unknown;
           srv_status?: string | null;
+          withdrawn_at?: string | Date | null;
         }
       | undefined;
     // 닫힌 서버(10-12 결정: 진입 차단 + 다른 서버로 안내) — 쿠키가 닫힌 서버를 가리키면 캐릭터가 있어도 들어가지 않는다.
@@ -205,6 +214,13 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
     // 재귀는 1단으로 끝난다: 스로틀 맵이 직후 재시도를 차단하고, 성공 경로는 nickname이 채워진다.
     if (profileRows.length > 0 && p?.nickname == null) {
+      // 탈퇴한 계정(withdrawn_at)인데 아직 유효한 토큰으로 들어왔다(다른 기기, 최대 1시간 — 3차 검사 B1) — 캐릭터를 만들면
+      // createCharacter가 withdrawn_at을 풀어 '살아 있는 탈퇴 계정'(💎500·기본 아바타)이 생긴다. 만들지 않고 로그아웃시킨다.
+      // 정식 재가입은 로그인 콜백·심사 로그인이 만든다(그 경로만 withdrawn_at을 풀어야 한다).
+      if (p?.withdrawn_at != null) {
+        console.warn('[layout] withdrawn account with live token — sign out instead of heal', { userId });
+        return { ...DEFAULTS, signOut: true };
+      }
       // ⚠ 캐릭터를 만들기 전에 **다른 서버에 이미 있는지** 먼저 본다(2026-09-21 ④).
       // 종전에는 곧바로 만들어서, srv 쿠키를 잃은 2서버 유저가 1서버에 새 캐릭터(가입 보너스·
       // 기본 아바타 포함)를 받고 "진행도가 사라졌다"로 보였다. 캐릭터를 지울 수단이 없어 되돌릴
@@ -234,7 +250,14 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
         try {
           // 콜백이 고른 서버(초대 서버 포함)를 srv 쿠키로만 남긴 채 생성을 이쪽에 맡기는 경우가 있다(2차 검사 F5) — 쿠키가 실제로 있고
           // 그 서버가 open이면 거기에, 아니면(쿠키 없음=기본값 1·full·closed) 추천 서버에 만든다.
-          const target = options.explicitServer && (await isServerOpen(serverId)) ? serverId : await recommendedServerId();
+          // 우선순위(3차 검사 B4): 쿠키가 명시한 open 서버 > 초대 링크의 open 서버(pending_server — 콜백 예외로 건너뛰어진 경우) > 추천 서버.
+          const invite = options.inviteServerId;
+          const target =
+            options.explicitServer && (await isServerOpen(serverId))
+              ? serverId
+              : invite != null && (await isServerOpen(invite))
+                ? invite
+                : await recommendedServerId();
           await createCharacterAuto({ userId, serverId: target });
           console.warn('[layout] half-account healed — character created', { userId, serverId: target });
           if (target !== serverId) return { ...DEFAULTS, correctServerId: target };
@@ -274,6 +297,7 @@ export async function loadLayoutData(userId: string, serverId: number, options: 
       repTitle,
       correctServerId: null,
       closedServer: false,
+      signOut: false,
       stats: (() => {
         // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
         let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;

@@ -3,6 +3,8 @@ import 'server-only';
 import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getBanStateCached } from '@/lib/game/account/ban';
+import { isServerClosedCached } from '@/lib/game/server-select';
+import { getActiveServerId } from '@/lib/game/servers';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 
 /**
@@ -14,7 +16,7 @@ import { getMaintenanceState } from '@/lib/game/system-mode';
  * (레이아웃은 banned/maintenance면 화면을 막지만, 서버 액션은 레이아웃을 안 거쳐 직접 POST로
  *  우회 가능 — 자원변경 액션 입구에서 이 게이트로 막는다. 감사 M2·M3.)
  */
-export async function actionBlock(): Promise<'BANNED' | 'MAINTENANCE' | null> {
+export async function actionBlock(): Promise<'BANNED' | 'MAINTENANCE' | 'SERVER_CLOSED' | null> {
   const userId = await getSessionUserId();
   if (userId) {
     // ban 캐시(15s)는 레이아웃과 공유 — lib/game/account/ban.ts getBanStateCached(2026-08-06).
@@ -33,5 +35,8 @@ export async function actionBlock(): Promise<'BANNED' | 'MAINTENANCE' | null> {
     }
     return 'MAINTENANCE';
   }
+  // 닫힌 서버(10-12 결정: 진입 차단) — 레이아웃은 화면만 /server-closed로 보내고 서버 액션 POST는 레이아웃을 거치지 않으므로
+  // (3차 검사 C1·E1), 쿠키가 닫힌 서버를 가리키는 탭의 액션은 여기서 거부한다. 20초 캐시라 핫패스 비용 없음.
+  if (await isServerClosedCached(await getActiveServerId())) return 'SERVER_CLOSED';
   return null;
 }

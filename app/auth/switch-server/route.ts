@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUserId } from '@/lib/auth/session';
 import { CLOSED_ONLY, hasCharacterOn, correctServerFor } from '@/lib/game/server-guard';
 import { touchLastServer } from '@/lib/game/server-select';
+import { safeRelativePath } from '@/lib/util/safe-path';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +35,13 @@ export async function GET(req: Request) {
   await touchLastServer(userId, to).catch(() => undefined);
   // next(10-12) — 푸시 링크가 서버를 바꾼 뒤 원래 목적지로 가게. 상대 경로만(열린 리다이렉트 방지).
   // 백슬래시도 막는다 — WHATWG URL은 `/\evil.com`을 `https://evil.com/`으로 푼다(2차 검사 F1). 최종 origin까지 대조.
-  const nextRaw = url.searchParams.get('next') ?? '';
+  // 요청한 서버(to)가 거부돼 **다른 서버**로 대신 보낼 때는 next를 버린다(3차 검사 C7) — next는 요청한 서버의 화면(레이드 id 등)이라
+  // 다른 서버에서 열면 404나 엉뚱한 서버의 것이 섞여 보인다.
+  const nextRaw = asked != null && to !== asked ? '' : (url.searchParams.get('next') ?? '');
   let dest = new URL('/', origin);
-  if (/^\/(?![/\\])[^\s\\]*$/.test(nextRaw) && nextRaw.length <= 2048 && !nextRaw.startsWith('/auth/switch-server')) {
-    const candidate = new URL(nextRaw, origin);
+  const safe = safeRelativePath(nextRaw);
+  if (safe) {
+    const candidate = new URL(safe, origin);
     if (candidate.origin === origin) dest = candidate;
   }
   const res = NextResponse.redirect(dest);

@@ -36,6 +36,10 @@ describe('닫힌 서버 진입 차단', () => {
       "if (to === CLOSED_ONLY) return NextResponse.redirect(new URL('/server-closed', origin));",
     );
     expect(read('app/login/new-character/page.tsx')).toContain("s.status !== 'closed'");
+    // 서버 액션 POST는 레이아웃을 거치지 않는다 — 공통 관문이 닫힌 서버를 거부한다(3차 검사 C1·E1).
+    expect(read('lib/game/action-gate.ts')).toContain("return 'SERVER_CLOSED'");
+    // 레이드 증분 집계도 스냅샷처럼 '이 서버 캐릭터 생성 이후'만 센다(3차 검사 A2-N1).
+    expect(read('lib/game/leaderboard/incremental.ts')).toContain('gte(raidParticipants.joinedAt, characters.createdAt)');
     const page = read('app/server-closed/page.tsx');
     expect(page).toContain('NewCharacterChoice');
     expect(page).toContain('redirect(`/auth/switch-server?to=${preferred}`)'); // 운영 중인 서버가 있으면 안내 없음

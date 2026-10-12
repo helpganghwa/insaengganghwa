@@ -256,7 +256,7 @@ export async function broadcastMailAction(opts: {
     // 앱 알림(선택) — 우편 커밋 후 best-effort. 구독 테이블 기준으로 대상 추림(80명 루프 회피).
     if (opts.push) {
       try {
-        // 서버 지정 시 활성 서버 일치자만(경계규칙 1 — 타 서버 접속자에게 미발송) + 본문 서버 표기.
+        // 서버 지정 시 활성 서버 일치자만(경계규칙 1 — 타 서버 접속자에게 미발송). 본문에 서버 표기는 하지 않는다(26-08-07).
         const ids = await db
           .select({ id: profiles.id })
           .from(profiles)

@@ -72,8 +72,28 @@ export async function listServersForUser(userId: string): Promise<ServerListItem
 
 /** 열려 있는 서버 수 — 1이면 선택 UI 자체를 숨김(SERVER.md §3). */
 export async function countServers(): Promise<number> {
-  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(servers);
+  // 닫힌 서버는 세지 않는다(3차 검사 E5) — 오픈 전에 --status=closed로 미리 만든 서버가 설정 화면의 '서버' 항목으로 드러났다.
+  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(servers).where(ne(servers.status, 'closed'));
   return r?.n ?? 1;
+}
+
+/**
+ * 활성 서버가 닫혔는가 — 서버 액션 공통 관문(action-gate)이 요청마다 부른다. 20초 모듈 캐시(system-mode와 같은 방식)라
+ * DB 왕복은 서버당 20초에 1번. 조회 실패는 '열림'으로 본다(fail-open — 관문 하나가 전 액션을 멈추지 않게).
+ */
+const closedCache = new Map<number, { closed: boolean; at: number }>();
+const CLOSED_TTL_MS = 20_000;
+export async function isServerClosedCached(serverId: number): Promise<boolean> {
+  const hit = closedCache.get(serverId);
+  if (hit && Date.now() - hit.at < CLOSED_TTL_MS) return hit.closed;
+  try {
+    const rows = (await db.execute(sql`select 1 as ok from servers where id = ${serverId} and status = 'closed' limit 1`)) as unknown as unknown[];
+    const closed = rows.length > 0;
+    closedCache.set(serverId, { closed, at: Date.now() });
+    return closed;
+  } catch {
+    return false;
+  }
 }
 
 export type CreateCharacterError =

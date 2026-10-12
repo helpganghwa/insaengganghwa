@@ -285,4 +285,4 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 - 보상·지갑·우편·원장은 서버별, 결제·본인인증·푸시 구독·토글·publicCode·아바타 생성 캡은 계정 전역(docs/SERVER.md §1). 계정 단위 칭호는 결제 누적·초대 실적뿐.
 - 푸시: 대상은 `filterByActiveServer`(집는 단계), 서버가 정해진 링크는 `PushPayload.serverId`를 준다. 유저 노출 텍스트에 `N서버` 표기 금지.
 - 크론은 `openServerIds()` 루프 + 서버별 try/catch + `beatCron`. 탈퇴 때 보존되는 기록(레이드 등)을 집계할 땐 캐릭터 생성 이후만 센다.
-- 닫힌(closed) 서버는 캐릭터가 있어도 **운영 중인 서버로 치지 않는다**: 관문 `hasCharacterOn`·`canEnterServer`·`correctServerFor`가 거부하고 레이아웃이 `/server-closed`로 보낸다. 새 진입·쓰기 경로는 이 관문을 쓰고, 서버 상태를 직접 비교하지 말 것.
+- 닫힌(closed) 서버는 캐릭터가 있어도 **운영 중인 서버로 치지 않는다**: 관문 `hasCharacterOn`·`canEnterServer`·`correctServerFor`가 거부하고, 변이 서버 액션은 `actionBlock()`이 `SERVER_CLOSED`로 막고, 레이아웃이 `/server-closed`로 보낸다. 새 진입 경로는 이 관문을, 새 변이 액션은 `actionBlock()`을 쓰고 서버 상태를 직접 비교하지 말 것.

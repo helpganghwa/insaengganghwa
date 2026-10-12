@@ -14,14 +14,14 @@
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
 | `id` | uuid PK | = `auth.users.id` FK |
-| `nickname` | text UNIQUE NOT NULL | 변경 가능(정책 후속) |
-| `diamond` | bigint NOT NULL default 0 | 단일 프리미엄 재화(=보석, BALANCE §6.1) |
 | `is_adult` | boolean default false | 본인인증 결과(§9 도메인) |
 | `identity_verified_at` | timestamptz null | KMC/PASS 완료 시각 |
 | `birth_year_hash` | text null | 해시만(원본 미저장, REGULATORY) |
-| `representative_title_code` | text null | 대표 칭호(칭호=social 도메인) |
-| `tutorial_step` | int NOT NULL default 0 | Day1 온보딩 진행(GDD §4) |
+| `last_server_id` | smallint null | 마지막 접속 서버(푸시 대상 필터, SERVER.md 경계규칙 1) |
+| `withdrawn_at` | timestamptz null | 탈퇴 시각(재가입 때 콜백이 푼다) |
 | `created_at` / `updated_at` | timestamptz default now() | |
+
+- 닉네임·다이아·대표 칭호·튜토리얼 단계는 **서버별 `characters`**(user_id, server_id)로 이관됐다(SERVER.md §2). profiles에는 계정 전역 값만 남는다.
 
 - 시즌·자가통계·천장 관련 컬럼 **없음**
 - `diamond` 변동은 항상 트랜잭션 + 감사 로그(§감사 도메인). 직접 UPDATE 금지
@@ -233,7 +233,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 
 ### 6.5 raid_daily_counts (일일 5회 한도)
 
-`user_id` · `kst_date` date · `started_count` int — PK `(user_id, kst_date)`. 동시 3개는 `raids`/`raid_participants`에서 active 카운트로 검사.
+`user_id` · `server_id` · `kst_date` date · `started_count` int — PK `(user_id, server_id, kst_date)`. 동시 5개(BALANCE §5)는 **그 서버의** `raids`/`raid_participants` active 카운트로 검사(2026-10-12 서버 조건 추가).
 
 ---
 

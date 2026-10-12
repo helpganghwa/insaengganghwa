@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
 import { checkPushSupport, isPushOptedOut, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
+import { safeRelativePath } from '@/lib/util/safe-path';
 
 /**
  * 권한이 이미 granted인 기기의 푸시 구독을 앱 로드 시 서버에 (재)동기화한다.
@@ -24,8 +25,8 @@ function resolvePushUrl(raw: string, serverId: number): { url: string; hard: boo
     const u = new URL(raw, location.origin);
     if (u.pathname === '/auth/switch-server') {
       const to = Number(u.searchParams.get('to'));
-      const next = u.searchParams.get('next') ?? '/';
-      const safeNext = next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : '/';
+      // 서버(switch-server)와 같은 규칙(lib/util/safe-path) — 종전 자체 검사는 `/\t/evil.com`을 통과시켰다(3차 검사 E8).
+      const safeNext = safeRelativePath(u.searchParams.get('next')) ?? '/';
       if (Number.isInteger(to) && to === serverId) return { url: safeNext, hard: false };
       return { url: `${u.pathname}${u.search}`, hard: true };
     }

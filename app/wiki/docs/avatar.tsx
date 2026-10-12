@@ -103,7 +103,7 @@ export default function Doc() {
           첫 변경은 무료. 그다음부터 한 번에 {fmtInt(NICKNAME_CHANGE_COST_DIAMOND)} 다이아가
           필요하다.
         </LI>
-        <LI>이름은 전 서버를 통틀어 중복 변경이 되지 않는다.</LI>
+        <LI>다른 사람이 쓰는 이름은 어느 서버에서도 쓸 수 없다. 다른 서버에서 내가 쓰는 이름은 그대로 가져올 수 있다.</LI>
       </UL>
 
       <FnList

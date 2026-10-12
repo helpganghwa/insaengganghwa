@@ -118,7 +118,7 @@ export async function createProfileJob(
     `)) as unknown as { n: number }[];
     const apexAtCreation = Number(apexRows[0]?.n ?? 0) >= 3;
     // 3. Job INSERT — UNIQUE 부분 인덱스(profile_gen_one_active_per_user)가
-    //    (유저, 서버)당 활성 큐 1건 보장. 위반 시 Postgres 23505.
+    //    계정당 활성 큐 1건 보장(전 서버 공유, SERVER.md §1). 위반 시 Postgres 23505.
     //
     // ⚠ 차감보다 **먼저** 넣는다. 원장 ref를 `job:<id>`로 남기려면 그 시점에 id가 있어야 하고,
     // 분쟁 조사는 "이 생성이 받아간 것과 되돌려준 것"을 맞춰보는 일이라 차감과 환불(4경로 전부

@@ -34,8 +34,10 @@ export async function ensureDailyMail(userId: string, serverId: number): Promise
       -- 멤버십 가드(감사 P-A4) — 해당 서버에 캐릭터가 있을 때만 grant. srv 쿠키 조작으로 비멤버
       -- 서버에 고아 보급이 적재되는 것 차단(왕복 0, 정식 흐름은 항상 멤버라 무영향).
       select ${userId}::uuid, ${serverId}, (now() at time zone 'Asia/Seoul')::date
+      -- 닫힌 서버에는 적재하지 않는다(3차 검사 B6·E1) — 들어갈 수 없는 우편함에 쌓이기만 한다.
       where exists (
-        select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}
+        select 1 from characters c join servers s on s.id = c.server_id
+         where c.user_id = ${userId}::uuid and c.server_id = ${serverId} and s.status <> 'closed'
       )
       on conflict do nothing
       returning kst_day

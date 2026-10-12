@@ -56,7 +56,7 @@ export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: strin
   youth: { title: '청소년보호정책', effectiveDate: '2026년 9월 19일' },
   // 스토어 심사 요건(2026-09-11) — Google Play는 '계정 삭제 요청' 공개 URL을 요구한다: 앱·개발자 이름,
   // 삭제 절차, 삭제·보관되는 데이터와 보관 기간을 **로그인 없이** 볼 수 있어야 한다.
-  'account-deletion': { title: '계정 삭제 안내', effectiveDate: '2026년 9월 19일' },
+  'account-deletion': { title: '계정 삭제 안내', effectiveDate: '2026년 10월 14일' },
 };
 
 const buildTerms = (S: boolean, date: string): string => `

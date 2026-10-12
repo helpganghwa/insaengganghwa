@@ -23,7 +23,7 @@ import { getExpeditionBoard, type ExpeditionBoard } from '@/lib/game/expedition/
  * 파견 서버 액션 — 모든 변이가 **최신 보드를 동봉**해 낙관적 UI가 서버 정본으로 수렴한다
  * (§11.7: router.refresh 금지 — 응답에 다음 상태를 실어 즉시 반영하는 강화 nextJob 패턴).
  */
-type Fail = { ok: false; code: ExpeditionErrorCode | 'AUTH' | 'BANNED' | 'MAINTENANCE' | 'UNKNOWN' };
+type Fail = { ok: false; code: ExpeditionErrorCode | 'AUTH' | 'BANNED' | 'MAINTENANCE' | 'SERVER_CLOSED' | 'UNKNOWN' };
 export type BoardResult = { ok: true; board: ExpeditionBoard } | Fail;
 export type ClaimActionResult = ({ ok: true; board: ExpeditionBoard } & ClaimResult) | Fail;
 

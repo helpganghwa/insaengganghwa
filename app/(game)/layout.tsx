@@ -153,7 +153,15 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   }
 
   // 헤더/네비 데이터 — 여기서 await하지 않음(Suspense 스트리밍). 두 자식이 같은 promise 공유.
-  const layoutData = getActiveServerId().then((sid) => loadLayoutData(userId, sid, { explicitServer: cookieStore.get('srv') != null }));
+  // '명시한 서버'는 값이 유효한 쿠키만(3차 검사 A1-N2) — 깨진 값은 getActiveServerId가 1로 읽으므로 '명시'로 치면 1서버에 생긴다.
+  // 초대 링크 서버(pending_server)는 콜백이 예외로 서버 확정을 건너뛴 신규의 자가복구 우선순위에 쓴다(B4).
+  const asSid = (v: string | undefined) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : null;
+  };
+  const explicitServer = asSid(cookieStore.get('srv')?.value) != null;
+  const inviteServerId = asSid(cookieStore.get('pending_server')?.value);
+  const layoutData = getActiveServerId().then((sid) => loadLayoutData(userId, sid, { explicitServer, inviteServerId }));
 
   return (
     <DiamondProvider>

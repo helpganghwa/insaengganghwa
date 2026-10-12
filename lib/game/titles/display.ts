@@ -231,7 +231,8 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
         ? sql`select distinct kst_day::date dd from checkin_claim_logs where user_id=${u} and server_id=${s}`
         : sql`select distinct (ra.created_at ${sql.raw(KST)})::date dd
               from raid_attacks ra join raids r on r.id=ra.raid_id
-              where ra.user_id=${u} and r.server_id=${s}`;
+              where ra.user_id=${u} and r.server_id=${s}
+                and ra.created_at >= (select c.created_at from characters c where c.user_id=${u} and c.server_id=${s})`;
       const [r] = (await db.execute(sql`
         with d as (${src}),
              runs as (select dd, dd - (row_number() over (order by dd))::int as g from d),

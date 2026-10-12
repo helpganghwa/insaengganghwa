@@ -5,6 +5,7 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
+import { characters } from '@/lib/db/schema/server';
 import { milestoneOf } from '@/lib/game/milestone';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { sendMilestoneMail } from '@/lib/game/milestone-mail';
@@ -154,6 +155,12 @@ export async function bumpCountMetric(userIds: string[], serverId: number, metri
       const value = await db.transaction(async (tx) => {
         await lockUser(tx, userId);
         if (await isActivelyBanned(tx, userId)) return null;
+        // 그 서버에 캐릭터가 없으면(탈퇴자가 공격해 둔 레이드의 정산 등) 세지 않는다(3차 검사 A2-N1) — 유령 랭킹 행과
+        // 캐릭터 없는 서버로 가는 이정표 우편을 막는다. 스냅샷·칭호 판정과 같은 '캐릭터 생성 이후만' 규칙.
+        const hasChar = (await tx.execute(sql`
+          select 1 from characters where user_id = ${userId}::uuid and server_id = ${serverId} limit 1
+        `)) as unknown as unknown[];
+        if (hasChar.length === 0) return null;
         // xmax=0 = 이번에 insert된 행 — 행 부재 상태의 +1은 통산 이력을 모르는 value 1이므로
         // (밴 해제 직후 등) 신규 삽입분만 원천 테이블 재계산으로 교정(락 안이라 정확).
         const [b] = (await tx.execute(sql`
@@ -247,10 +254,13 @@ async function recountCountMetric(
   metric: CountMetric,
 ): Promise<number> {
   if (metric === 'raid') {
+    // 스냅샷(leaderboard/snapshot.ts)과 같은 술어 — 탈퇴 때 보존된 옛 참가는 **이 서버 캐릭터 생성 이후**만 센다(3차 검사 A2-N1).
+    // 종전엔 이 조건이 빠져, 재가입자의 첫 정산이 옛 기록까지 다시 세어 100회 이정표(💎2,000)가 또 나갈 수 있었다.
     const [r] = await dbx
       .select({ n: sql<number>`count(distinct ${raidParticipants.raidId})::int` })
       .from(raidParticipants)
       .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+      .innerJoin(characters, and(eq(characters.userId, raidParticipants.userId), eq(characters.serverId, raids.serverId)))
       .where(
         and(
           eq(raidParticipants.userId, userId),
@@ -258,6 +268,7 @@ async function recountCountMetric(
           eq(raids.status, 'settled'),
           sql`${raids.phasesCleared} >= 1`,
           gte(raidParticipants.attacksUsed, 1),
+          gte(raidParticipants.joinedAt, characters.createdAt),
         ),
       );
     return r?.n ?? 0;

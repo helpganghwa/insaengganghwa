@@ -11,7 +11,7 @@
  *   apply-migration.ts와 같은 규약(3번째 인자 = env 이름).
  *
  * 처리(단일 트랜잭션):
- *  1) servers 행 INSERT(status=open)
+ *  1) servers 행 INSERT(status=open, --status=closed|full로 바꿀 수 있다 — closed인 동안은 운영자도 들어갈 수 없다)
  *  2) zones 50구역 시드 — 1서버 구역을 템플릿으로 복제(이름·지역·좌표), 새 id 부여
  *  3) zone_adjacency 간선 복제(id 매핑)
  *
@@ -22,12 +22,19 @@ import postgres from 'postgres';
 
 config({ path: '.env.local' });
 
-const serverId = Number(process.argv[2]);
-const name = process.argv[3];
 // 옵션(10-12 2서버 조사): --status=closed 로 미리 만들어 숨기기(공지 시각에 /admin/servers에서 open), --dry-run 은 전부
 // 실행한 뒤 롤백(무엇이 생길지 확인), --force 는 구역 id 50단위 정렬 검사를 건너뛴다.
-const flags = process.argv.slice(4).filter((a) => a.startsWith('--'));
-const positional = process.argv.slice(4).filter((a) => !a.startsWith('--'));
+// 플래그는 **어느 자리에 있어도** 플래그다(3차 검사 A1-N1) — 종전엔 argv[4]부터만 봐서 `2 --dry-run PROD_DATABASE_URL`처럼
+// 이름을 빼먹으면 이름이 '--dry-run'이 되고 드라이런은 꺼진 채 프로덕션에 서버가 open으로 생겼다.
+const args = process.argv.slice(2);
+const flags = args.filter((a) => a.startsWith('--'));
+const positional = args.filter((a) => !a.startsWith('--'));
+const serverId = Number(positional[0]);
+const name = positional[1];
+if (name && (/^[A-Z0-9_]+$/.test(name) || name.endsWith('_URL'))) {
+  console.error(`이름 자리에 env 이름이 왔다: ${name} — 사용: <serverId> <이름> [ENV_NAME] [--옵션]`);
+  process.exit(1);
+}
 const statusFlag = flags.find((f) => f.startsWith('--status='))?.slice('--status='.length) ?? 'open';
 const dryRun = flags.includes('--dry-run');
 const force = flags.includes('--force');
@@ -42,7 +49,7 @@ if (!Number.isInteger(serverId) || serverId < 2 || !name || !['open', 'full', 'c
   process.exit(1);
 }
 
-const urlEnv = positional[0] ?? 'DIRECT_URL';
+const urlEnv = positional[2] ?? 'DIRECT_URL';
 const url = process.env[urlEnv];
 if (!url) {
   console.error(`${urlEnv} 미설정 — .env.local 확인`);

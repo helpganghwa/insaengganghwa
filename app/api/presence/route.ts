@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     .execute(
       sql`update profiles set last_server_id = ${serverId}
           where id = ${userId} and last_server_id is distinct from ${serverId}
-            and exists (select 1 from characters c where c.user_id = ${userId} and c.server_id = ${serverId})`,
+            and exists (select 1 from characters c join servers s on s.id = c.server_id
+                         where c.user_id = ${userId} and c.server_id = ${serverId} and s.status <> 'closed')`,
     )
     .catch(() => {});
   // 플랫폼별 일일 접속(0199) — 클라가 판정한 값을 하루 1행으로. 본문이 없거나 이상하면 건너뛴다(구버전 클라).
@@ -47,7 +48,8 @@ export async function POST(req: Request) {
       .execute(
         sql`insert into platform_daily (kst_day, server_id, user_id, platform)
             select (now() at time zone 'Asia/Seoul')::date, ${serverId}, ${userId}, ${platform}
-            where exists (select 1 from characters c where c.user_id = ${userId} and c.server_id = ${serverId})
+            where exists (select 1 from characters c join servers s on s.id = c.server_id
+                           where c.user_id = ${userId} and c.server_id = ${serverId} and s.status <> 'closed')
             on conflict (kst_day, server_id, user_id, platform) do update set last_seen_at = now()
             where platform_daily.last_seen_at < now() - interval '10 minutes'`,
       )

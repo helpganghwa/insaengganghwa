@@ -66,10 +66,13 @@ export function doneCondSql(id: string, userId: string, serverId: number) {
       return sql`exists(select 1 from guild_members where user_id=${u} and server_id=${s} and contribution_points > 0)`;
     case 'guild_deploy':
       return sql`exists(select 1 from guild_battle_deployments where user_id=${u} and server_id=${s})`;
+    // 레이드 기록은 탈퇴 때 보존되므로 **이 서버 캐릭터 생성 이후**만 인정한다(3차 검사 A2-N3) — 재가입자가 옛 기록으로 바로 받던 것.
     case 'raid_summon':
-      return sql`exists(select 1 from raids where host_user_id=${u} and server_id=${s})`;
+      return sql`exists(select 1 from raids where host_user_id=${u} and server_id=${s}
+                        and opened_at >= (select c.created_at from characters c where c.user_id=${u} and c.server_id=${s}))`;
     case 'raid_attack':
-      return sql`exists(select 1 from raid_attacks ra join raids r on r.id=ra.raid_id where ra.user_id=${u} and r.server_id=${s})`;
+      return sql`exists(select 1 from raid_attacks ra join raids r on r.id=ra.raid_id where ra.user_id=${u} and r.server_id=${s}
+                        and ra.created_at >= (select c.created_at from characters c where c.user_id=${u} and c.server_id=${s}))`;
     case 'raid_reward':
       return sql`exists(select 1 from raid_rewards rr join raids r on r.id=rr.raid_id where rr.user_id=${u} and r.server_id=${s} and rr.claimed_at is not null)`;
     case 'melee_join':

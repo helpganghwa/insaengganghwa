@@ -24,7 +24,7 @@ export interface NicknameChangeOk {
 }
 export interface NicknameChangeErr {
   status: 'error';
-  code: 'INVALID' | 'TAKEN' | 'INSUFFICIENT_DIAMOND' | 'RATE_LIMIT' | 'UNAUTH' | 'MAINTENANCE' | 'BANNED';
+  code: 'INVALID' | 'TAKEN' | 'INSUFFICIENT_DIAMOND' | 'RATE_LIMIT' | 'UNAUTH' | 'MAINTENANCE' | 'BANNED' | 'SERVER_CLOSED';
   message: string;
 }
 
@@ -46,7 +46,12 @@ export async function changeNicknameAction(
     return {
       status: 'error',
       code: __b,
-      message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '점검 중입니다. 잠시 후 다시 시도해 주세요.',
+      message:
+        __b === 'BANNED'
+          ? '이용이 제한된 계정입니다.'
+          : __b === 'SERVER_CLOSED'
+            ? '운영을 종료한 서버예요. 다른 서버에서 이어서 즐겨 주세요.'
+            : '점검 중입니다. 잠시 후 다시 시도해 주세요.',
     };
   const serverId = await getActiveServerId();
   const next = String(raw ?? '').trim();

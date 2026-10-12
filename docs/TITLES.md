@@ -73,10 +73,10 @@ create table user_titles (
   server_id  smallint not null,
   title_code text not null,
   earned_at  timestamptz not null default now(),
-  primary key (user_id, title_code)          -- 계정 단위 소유(중복 지급 멱등)
+  primary key (user_id, server_id, title_code)  -- 서버별 소유(0152, 중복 지급 멱등)
 );
--- server_id는 어느 서버 활동으로 얻었는지 기록용. 소유·표시는 계정 단위(닉네임이 계정 단위).
-alter table profiles add column representative_title_code text;
+-- 소유·표시는 서버별(SERVER.md §1). 계정 합산으로 판정하는 조건은 후원 금액·초대 실적뿐이고, 그래도 발견·소유는 서버마다.
+-- 대표 칭호는 characters.representative_title_code(서버별).
 ```
 
 - 원장은 전 유형의 **최초 발견** 기록(§3.5). 조건부의 '활성'은 저장하지 않고 실시간 파생.

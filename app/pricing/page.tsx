@@ -57,7 +57,7 @@ export default function PricingPage() {
       </Section>
 
       {/* 인생 특가 — 서버별 1회 한정 */}
-      <Section title="인생 특가 (1회 한정)">
+      <Section title="인생 특가 (서버별 1회)">
         <Grid>
           <Item
             name="인생 특가"

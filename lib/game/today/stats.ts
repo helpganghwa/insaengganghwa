@@ -297,8 +297,10 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
       (select points from melee) melee_points,
       (select ranking_points from melee) melee_ranking_points,
-      (select count(*)::int from raids where host_user_id=${userId}::uuid and server_id=${serverId}) raid_summons,
-      (select count(*)::int from raid_attacks ra join raids rd on rd.id=ra.raid_id where ra.user_id=${userId}::uuid and rd.server_id=${serverId}) raid_attacks,
+      (select count(*)::int from raids where host_user_id=${userId}::uuid and server_id=${serverId}
+         and opened_at >= (select c.created_at from characters c where c.user_id=${userId}::uuid and c.server_id=${serverId})) raid_summons,
+      (select count(*)::int from raid_attacks ra join raids rd on rd.id=ra.raid_id where ra.user_id=${userId}::uuid and rd.server_id=${serverId}
+         and ra.created_at >= (select c.created_at from characters c where c.user_id=${userId}::uuid and c.server_id=${serverId})) raid_attacks,
       (select coalesce(sum(coalesce((rr.boxes->>'weapon')::int,0) + coalesce((rr.boxes->>'armor')::int,0) + coalesce((rr.boxes->>'accessory')::int,0)),0)::int
          from raid_rewards rr join raids rd on rd.id=rr.raid_id
          where rr.user_id=${userId}::uuid and rd.server_id=${serverId} and rr.claimed_at is not null) raid_rewards,
@@ -460,7 +462,8 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
         (select max(mp.final_rank)::int from melee_participants mp join melee_battles mb on mb.id = mp.battle_id
           where mp.user_id = ${userId}::uuid and mb.server_id = ${serverId} and mb.status = 'revealed') melee_worst,
         (select coalesce(max(rd.phases_cleared), 0)::int from raid_participants rp join raids rd on rd.id = rp.raid_id
-          where rp.user_id = ${userId}::uuid and rd.server_id = ${serverId}) best_phase
+          where rp.user_id = ${userId}::uuid and rd.server_id = ${serverId}
+            and rp.joined_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})) best_phase
     `),
   ]);
   const dailyRows = daily as unknown as { d: string; success: number; hold: number; down: number; success_ms: string; hold_ms: string; down_ms: string }[];

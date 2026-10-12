@@ -95,9 +95,9 @@ export async function GET(request: NextRequest) {
       if (userId) {
         try {
           // 대상 서버 확정(2026-07-10 R1 조정, 우선순위 사용자 확정): 명시 클릭(login_srv)
-          // > 마지막 접속(last_server_id — 기존 유저 복원) > 공유/초대 링크 의도(pending_server
-          // — 사실상 신규 유저만 여기 도달) > 추천 서버. 기존 유저는 초대 링크를 눌렀어도 자기
-          // 서버로 복원되며, 따라가려면 셀렉터에서 직접 선택한다(오배정 방지 우선).
+          // > (캐릭터가 하나도 없는 신규만) 공유/초대 링크 의도(pending_server) > 마지막 접속(last_server_id — 기존 유저 복원)
+          // > 추천 서버(SERVER.md §3). 기존 유저는 초대 링크를 눌렀어도 자기 서버로 복원되며,
+          // 따라가려면 셀렉터에서 직접 선택한다(오배정 방지 우선).
           // login_srv는 셀렉터 **클릭 시에만** 기록됨(마운트 자동 기록이 복원을 가리던 R1 수정).
           const asSid = (raw: string | undefined): number | null => {
             const n = Number(raw);

@@ -65,6 +65,7 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
 export async function ensurePremiumDailyMailAll(userId: string): Promise<number> {
   const rows = (await db.execute(sql`
     select distinct sp.server_id::int as sid from shop_purchases sp
+    join servers s on s.id = sp.server_id and s.status <> 'closed'
     where sp.user_id = ${userId}::uuid and sp.product_id = ${PREMIUM.id}
       and (now() at time zone 'Asia/Seoul')::date <= (sp.updated_at at time zone 'Asia/Seoul')::date + (${WINDOW_DAYS})::int
   `)) as unknown as { sid: number }[];
