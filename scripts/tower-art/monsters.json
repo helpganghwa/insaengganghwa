@@ -1026,25 +1026,25 @@
   "mons": [
    {
     "floor": 101,
-    "name": "해골 생쥐",
-    "desc": "뼈만 남은 작은 생쥐, 눈구멍에 푸른 불이 켜져 있다.",
-    "art": "tiny mouse skeleton with a rounded skull and small pale bones, soft blue flames glowing in its eye sockets, standing on all fours",
+    "name": "촛불 해골",
+    "desc": "머리 위에 촛불 하나를 얹고 둥둥 떠다니는 작은 해골.",
+    "art": "small floating skull with a single lit candle standing on top of its head, soft blue glow in the eye sockets, rounded shape",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 102,
-    "name": "도깨비불 슬라임",
-    "desc": "속에서 창백한 초록 불꽃이 흔들리는 반투명 슬라임.",
-    "art": "translucent dark slime blob with a pale green will-o'-wisp flame flickering inside its body",
+    "name": "떠도는 혼불",
+    "desc": "꺼질 듯 흔들리는 창백한 초록 혼불, 가운데에 작은 얼굴이 비친다.",
+    "art": "pale green floating wisp flame with a faint small face showing inside it, thin trail of light behind",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 103,
-    "name": "유령 나방",
-    "desc": "몸이 반투명한 하얀 나방, 지나간 자리에 서리가 앉는다.",
-    "art": "translucent white ghostly moth with softly glowing wings, faint frost crystals trailing behind it",
+    "name": "수의 유령",
+    "desc": "낡은 수의를 뒤집어쓴 유령, 지나간 자리마다 서리가 앉는다.",
+    "art": "ghost draped in a tattered pale burial sheet with two dark eye holes, faint frost crystals around its hem",
     "guardian": false,
     "skills": [
      "freeze"
@@ -1052,17 +1052,17 @@
    },
    {
     "floor": 104,
-    "name": "뼈 여우",
-    "desc": "갈비뼈가 드러난 잿빛 여우, 꼬리만 멀쩡하다.",
-    "art": "slender ash-grey fox with its ribcage showing as pale bone through the fur, one full fluffy tail, calm standing pose",
+    "name": "묘지기 해골",
+    "desc": "녹슨 곡괭이를 어깨에 멘 해골, 뼈마다 흙이 묻어 있다.",
+    "art": "skeleton gravedigger carrying a rusted pickaxe over its shoulder, bits of soil on its bones, rounded skull",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 105,
-    "name": "묘비 사슴",
-    "desc": "뿔이 네모난 묘비 돌로 된 사슴.",
-    "art": "dark stag whose two antlers are squared stone gravestones with faint carved marks, pale moonlit grey fur",
+    "name": "잠깬 미라",
+    "desc": "풀렸던 붕대가 다시 감기는 미라, 가슴에 금빛 부적을 달았다.",
+    "art": "mummy wrapped in loose pale bandages with a few strips unraveling, a small golden amulet on its chest",
     "guardian": false,
     "skills": [
      "regen"
@@ -1070,17 +1070,17 @@
    },
    {
     "floor": 106,
-    "name": "수의 거북",
-    "desc": "낡은 수의를 등딱지처럼 두른 거북.",
-    "art": "tortoise wrapped in a tattered pale burial shroud draped over its shell like a hooded cloak",
+    "name": "덜컹이는 관",
+    "desc": "못이 빠진 낡은 관, 뚜껑 틈으로 눈 둘이 내다본다.",
+    "art": "old wooden coffin standing upright with its lid slightly open, two glowing eyes peeking from the dark gap, a few loose nails",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 107,
-    "name": "혼불 해파리",
-    "desc": "갓 안에 혼불을 담고 떠다니는 해파리.",
-    "art": "floating jellyfish with a pale green soul flame glowing inside its translucent bell, thin wispy tentacles",
+    "name": "곡하는 망령",
+    "desc": "입을 크게 벌린 잿빛 망령, 울음이 안개처럼 번진다.",
+    "art": "grey wailing wraith with a wide open mouth and hollow eyes, lower body trailing into mist",
     "guardian": false,
     "skills": [
      "seal"
@@ -1088,9 +1088,9 @@
    },
    {
     "floor": 108,
-    "name": "망령 늑대",
-    "desc": "몸이 안개처럼 흐릿한 검은 늑대.",
-    "art": "black wolf whose body dissolves into dark mist at the edges, two pale glowing eyes",
+    "name": "창백한 흡혈귀",
+    "desc": "검은 망토를 두른 창백한 흡혈귀, 송곳니가 달빛에 빛난다.",
+    "art": "pale vampire in a long black cape with a high collar, small fangs, slicked dark hair, moonlit skin",
     "guardian": false,
     "skills": [
      "drain"
@@ -1098,9 +1098,9 @@
    },
    {
     "floor": 109,
-    "name": "묘지기 갑옷",
-    "desc": "속이 빈 채 서 있는 녹슨 갑옷, 투구 안에 불이 하나.",
-    "art": "empty rusted knight armor standing upright and holding a long spear, a single pale flame glowing inside the hollow helmet",
+    "name": "망령 기사",
+    "desc": "녹슨 갑옷만 남아 선 기사, 투구 안에 푸른 불이 둘.",
+    "art": "empty rusted knight armor standing upright and holding a long spear, two blue flames glowing inside the hollow helmet",
     "guardian": false,
     "skills": [
      "steel"
