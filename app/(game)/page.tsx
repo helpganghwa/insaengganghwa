@@ -26,7 +26,7 @@ import { RAID_MAX_PARTICIPANTS,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
   RAID_DAILY_CAP,
   TOWER_DAILY_ATTEMPTS,
-  TOWER_FLOORS,
+  towerOpenFloors,
 } from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -391,7 +391,7 @@ export default async function HomePage() {
         // 무한의 탑 — 설명은 최고 돌파 층, 배지는 오늘 남은 도전(다 오르면 배지 없음).
         const towerBest = Number(row.tower_best ?? 0);
         towerDesc = towerBest > 0 ? `${towerBest}층 돌파` : '1층부터 도전';
-        if (towerBest < TOWER_FLOORS) counts['/tower'] = Math.max(0, TOWER_DAILY_ATTEMPTS + Number(row.tower_extra ?? 0) - Number(row.tower_losses ?? 0));
+        if (towerBest < towerOpenFloors()) counts['/tower'] = Math.max(0, TOWER_DAILY_ATTEMPTS + Number(row.tower_extra ?? 0) - Number(row.tower_losses ?? 0));
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())

@@ -11,7 +11,8 @@ import { BackTitle } from '@/components/BackNav';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { POINT_EXTRA_PRICES, TOWER_FLOORS, TOWER_SECTION, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { POINT_EXTRA_PRICES, TOWER_SECTION, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { serverNow } from '@/lib/client/server-clock';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo, towerFloorTitle, towerMonFlip } from '@/lib/game/tower/floors';
 import type { TowerChallengeResult, TowerBoard } from '@/lib/game/tower/service';
@@ -133,8 +134,10 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeftBase = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const myRank = local?.myRank ?? board.myRank;
-  const next = Math.min(TOWER_FLOORS, best + 1);
-  const topped = best >= TOWER_FLOORS;
+  // 지금 열린 맨 위 층 — 서버 시각으로(11구간은 2026-10-15 00:00 KST 정각에 열린다, 추석 6종과 같은 방식).
+  const openFloors = towerOpenFloors(serverNow());
+  const next = Math.min(openFloors, best + 1);
+  const topped = best >= openFloors;
   const [picked, setPicked] = useState<number | null>(null);
   // 층 상세는 주소(?v=d)로 — 휴대폰 뒤로 가기가 홈이 아니라 목록으로 돌아오게.
   const sp = useSearchParams();
@@ -614,7 +617,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   // ── 층 목록 ─────────────────────────────────────────────
   const hero = picked ?? null;
   const heroInfo = hero ? towerFloorInfo(hero) : null;
-  const sections = Math.ceil(TOWER_FLOORS / TOWER_SECTION);
+  const sections = Math.ceil(openFloors / TOWER_SECTION);
   return (
     // 배경은 화면 자체의 배경으로(2차 피드백 3) — 종전의 760px 절대 배치 배경이 내용보다 길어 쓸데없는 스크롤을 만들었다.
     <main

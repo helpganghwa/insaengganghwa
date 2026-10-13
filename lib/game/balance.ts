@@ -1116,9 +1116,19 @@ export function pointExtraPrice(item: PointExtraItem, boughtToday: number): numb
 // §14. 무한의 탑 (docs/TOWER.md · BALANCE.md §14) — 2026-09-29 확정
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 지금 열린 층 수(확장 시 늘린다 — 2026-10-12 100→110). 10층마다 특별층. */
+/** 데이터가 준비된 층 수(확장 시 늘린다 — 2026-10-12 100→110). 지금 열린 층은 towerOpenFloors(). 10층마다 특별층. */
 export const TOWER_FLOORS = 110;
 export const TOWER_SECTION = 10;
+/**
+ * 11구간(101~110층) 개방 시각 — 2026-10-15 00:00 KST(2026-10-13 사용자 결정: 코드는 낮에 배포, 개방은 자정 자동).
+ * 추석 6종과 같은 방식 — 노출·도전·공시는 **서버 시각**으로 정각에 열리고, 크론(lib/game/tower/open.ts)은 공시 스냅샷만 뒷정리한다.
+ */
+export const TOWER_SECTION_11_OPEN_ISO = '2026-10-14T15:00:00.000Z';
+export const TOWER_SECTION_11_OPEN_MS = Date.parse(TOWER_SECTION_11_OPEN_ISO);
+/** 지금 열린 맨 위 층 — 개방 전 100, 개방 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다(클라이언트는 serverNow()를 넣는다). */
+export function towerOpenFloors(now: number | Date = Date.now()): number {
+  return (typeof now === 'number' ? now : now.getTime()) >= TOWER_SECTION_11_OPEN_MS ? TOWER_FLOORS : TOWER_FLOORS - TOWER_SECTION;
+}
 /** 하루 도전(진 판만 차감) — KST 자정 초기화. */
 export const TOWER_DAILY_ATTEMPTS = 3;
 /** 층별 요구 장비 수(부위당, 11층부터 층마다 매주) — 일반 층 10개, 특별층 1개. 1구간(1~10층)은 모든 장비. */

@@ -6,7 +6,8 @@ import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { assetUrl } from '@/lib/asset-versions';
 import { sounds } from '@/lib/game/sound';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, towerIsSpecial, towerRequirement } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_HP_MULT, towerIsSpecial, towerOpenFloors, towerRequirement } from '@/lib/game/balance';
+import { serverNow } from '@/lib/client/server-clock';
 import { TOWER_BATTLE, type TowerSkill, type TowerTurn } from '@/lib/game/tower/battle';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerResultLine, towerTurnLine, type TowerFloorInfo, towerFloorTitle } from '@/lib/game/tower/floors';
 import type { TowerBattleReward, TowerChallengeResult } from '@/lib/game/tower/service';
@@ -231,7 +232,8 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
   const cur: TowerTurn | null = shown > 0 ? turns[shown - 1]! : null;
   const prev: TowerTurn | null = shown > 1 ? turns[shown - 2]! : null;
   const win = !!result?.win;
-  const nextFloor = Math.min(TOWER_FLOORS, floor + 1);
+  const openFloors = towerOpenFloors(serverNow());
+  const nextFloor = Math.min(openFloors, floor + 1);
   const left = result?.attemptsLeft ?? 0;
   const done = !!result && ended;
   const unlocked = done || (!!result && finishedOnce);
@@ -337,7 +339,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
             <>
               <SecondaryButton onClick={onList}>목록</SecondaryButton>
               {/* 꼭대기 층을 돌파하면 다음 층 대신 탑 랭킹으로. */}
-              {floor < TOWER_FLOORS ? <PrimaryButton onClick={onNext}>{nextFloor}층으로</PrimaryButton> : <PrimaryButton onClick={() => router.push('/leaderboard?tab=tower')}>랭킹 보기</PrimaryButton>}
+              {floor < openFloors ? <PrimaryButton onClick={onNext}>{nextFloor}층으로</PrimaryButton> : <PrimaryButton onClick={() => router.push('/leaderboard?tab=tower')}>랭킹 보기</PrimaryButton>}
             </>
           ) : (
             <>

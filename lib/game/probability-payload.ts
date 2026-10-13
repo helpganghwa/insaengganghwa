@@ -15,15 +15,15 @@ import {
   TOWER_HUNT_BOX_BP,
   TOWER_HUNT_DOUBLE_BP,
   TOWER_HUNT_SPREAD,
-  TOWER_FLOORS,
   towerHuntBox,
   towerHuntRange,
+  towerOpenFloors,
 } from './balance';
 
 export type SlotCount = { slot: string; n: number };
 
 /** 공시 전문 코어 — note(기록 사유) 제외 전 항목. 값이 하나라도 바뀌면 재기록 대상. */
-export function buildProbabilityPayloadCore(slotCounts: SlotCount[]) {
+export function buildProbabilityPayloadCore(slotCounts: SlotCount[], now: number = Date.now()) {
   const enhance = Array.from({ length: 100 }, (_, lv) => ({
     level: lv,
     successBp: baseSuccessRateBp(lv),
@@ -49,11 +49,12 @@ export function buildProbabilityPayloadCore(slotCounts: SlotCount[]) {
     raid: { critRateBp: RAID_CRIT_RATE_BP, critMult: RAID_CRIT_MULT },
     // 무한의 탑 토벌(10-06 공시 추가) — 이긴 판마다 💎 범위 균등 · 두 배 · 상자.
     // 층마다 💎 범위·상자 수까지 — 공시 페이지가 보여 주는 값이 바뀌면 지문도 바뀌어 '미기록 변경'으로 잡힌다.
+    // 층 수는 '지금 열린 층'(11구간 개방 정각부터 110층) — 개방 크론이 그 순간의 전문을 스냅샷으로 남긴다(lib/game/tower/open.ts).
     towerHunt: {
       doubleBp: TOWER_HUNT_DOUBLE_BP,
       boxBp: TOWER_HUNT_BOX_BP,
       spread: TOWER_HUNT_SPREAD,
-      floors: Array.from({ length: TOWER_FLOORS }, (_, i) => ({ floor: i + 1, ...towerHuntRange(i + 1), box: towerHuntBox(i + 1) })),
+      floors: Array.from({ length: towerOpenFloors(now) }, (_, i) => ({ floor: i + 1, ...towerHuntRange(i + 1), box: towerHuntBox(i + 1) })),
     },
   };
 }

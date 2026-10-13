@@ -39,7 +39,7 @@ import {
   EXPEDITION_REGIONS,
   EXPEDITION_AS_MULT_COEF,
   EXPEDITION_AS_MULT_EXP,
-  TOWER_FLOORS,
+  towerOpenFloors,
   TOWER_HUNT_BOX_BP,
   TOWER_HUNT_DOUBLE_BP,
   TOWER_HUNT_SPREAD,
@@ -377,7 +377,7 @@ export default async function ProbabilityPage() {
         </P>
         {/* 구간 요약 — 구간 첫 층과 특별층(구간 마지막 층)의 범위. 전 층 값은 아래 접힌 표. */}
         <Table head={['구간', '첫 층 다이아', '특별층 다이아', '상자']}>
-          {Array.from({ length: TOWER_FLOORS / TOWER_SECTION }, (_, i) => {
+          {Array.from({ length: towerOpenFloors() / TOWER_SECTION }, (_, i) => {
             const first = i * TOWER_SECTION + 1;
             const last = first + TOWER_SECTION - 1;
             const a = towerHuntRange(first);
@@ -400,11 +400,11 @@ export default async function ProbabilityPage() {
         </Table>
         <details className="mt-2">
           <summary className="cursor-pointer text-[11.5px] font-semibold text-zinc-600 dark:text-zinc-300">
-            층별 전체 보기(1~{TOWER_FLOORS}층)
+            층별 전체 보기(1~{towerOpenFloors()}층)
           </summary>
           <div className="mt-1.5">
             <Table head={['층', '다이아(최소~최대)', '상자']}>
-              {Array.from({ length: TOWER_FLOORS }, (_, i) => {
+              {Array.from({ length: towerOpenFloors() }, (_, i) => {
                 const f = i + 1;
                 const r = towerHuntRange(f);
                 return (

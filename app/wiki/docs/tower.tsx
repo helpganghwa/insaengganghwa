@@ -11,6 +11,8 @@ import {
   towerRequirement,
   towerReward,
 } from '@/lib/game/balance';
+
+import { TowerOpenFloors } from './TowerOpenFloors';
 import { TOWER_BATTLE, type TowerSkill } from '@/lib/game/tower/battle';
 import { TOWER_SKILL_INFO } from '@/lib/game/tower/floors';
 
@@ -44,7 +46,9 @@ export default function Doc() {
     <>
       <H2 id="flow">진행</H2>
       <UL>
-        <LI>지금 열린 층은 1~{TOWER_FLOORS}층이다. 가장 높이 돌파한 층의 바로 다음 층에만 도전할 수 있다.</LI>
+        <LI>
+          <TowerOpenFloors /> 가장 높이 돌파한 층의 바로 다음 층에만 도전할 수 있다.
+        </LI>
         <LI>
           하루 {TOWER_DAILY_ATTEMPTS}번 도전할 수 있고, <b>이기면 횟수가 줄지 않는다</b>. 진 판만 한 번씩 줄어들며
           자정에 다시 채워진다. 단, 토벌은 이겨도 한 번 줄어든다.

@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
 import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
+import { recordTowerSection11SnapshotIfDue } from '@/lib/game/tower/open';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -113,6 +114,13 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error('[scheduled-mail] chuseok-open failed', e);
       await raiseOpsAlert('추석 6종 개방 실패', `openChuseokCatalogIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
+    }
+    // ── 무한의 탑 11구간 개방 공시 스냅샷(2026-10-13) ── 개방 정각이 지나면 한 번 기록한다(멱등). 개방 자체는 서버 시각 게이트.
+    try {
+      await recordTowerSection11SnapshotIfDue();
+    } catch (e) {
+      console.error('[scheduled-mail] tower-open snapshot failed', e);
+      await raiseOpsAlert('탑 11구간 공시 스냅샷 실패', `recordTowerSection11SnapshotIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
     }
     // ── 예약 공지 발행(0158) ── 우편과 독립 — 여기서 터져도 위 우편 발송 결과는 지킨다.
     let announcementsPublished = 0;

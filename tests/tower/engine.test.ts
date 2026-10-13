@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TOWER_FLOORS, TOWER_HP_MULT, towerHuntBox, towerHuntRange, towerHuntReward, towerIsSpecial, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_HP_MULT, TOWER_SECTION_11_OPEN_MS, towerHuntBox, towerHuntRange, towerHuntReward, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { simulateTowerBattle, TOWER_SKILL, type TowerSkill } from '@/lib/game/tower/battle';
 import { avatarMultiplier, bestLoadout, drawPool, floorRule, towerCp, type EquippedPiece, type SlotKeys } from '@/lib/game/tower/engine';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerFloorSkills } from '@/lib/game/tower/floors';
@@ -15,6 +15,12 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
+  it('11구간 개방 게이트: 2026-10-15 00:00 KST 전에는 100층, 정각부터 110층', () => {
+    expect(new Date(TOWER_SECTION_11_OPEN_MS).toISOString()).toBe('2026-10-14T15:00:00.000Z');
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1)).toBe(100);
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS)).toBe(TOWER_FLOORS);
+    expect(towerOpenFloors(new Date(TOWER_SECTION_11_OPEN_MS + 1))).toBe(TOWER_FLOORS);
+  });
   it('곡선: 1층 62, 10층 154, 100층 701,737, 오름차순·특별층이 구간의 벽', () => {
     expect(towerRequirement(1)).toBe(62);
     expect(towerRequirement(10)).toBe(154);
