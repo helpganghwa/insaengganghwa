@@ -1125,9 +1125,19 @@ export const TOWER_SECTION = 10;
  */
 export const TOWER_SECTION_11_OPEN_ISO = '2026-10-14T15:00:00.000Z';
 export const TOWER_SECTION_11_OPEN_MS = Date.parse(TOWER_SECTION_11_OPEN_ISO);
-/** 지금 열린 맨 위 층 — 개방 전 100, 개방 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다(클라이언트는 serverNow()를 넣는다). */
-export function towerOpenFloors(now: number | Date = Date.now()): number {
+/**
+ * 지금 열린 맨 위 층 — 개방 전 100, 개방 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다.
+ * 스테이징(Vercel preview)·로컬 dev는 **시각과 상관없이 전부 연다**(2026-10-13 사용자: 스테이징에서 110층까지 검수) —
+ * 레이드 무료 개설(raid/free-open.ts)과 같은 허용 목록 방식이라 VERCEL_ENV가 비어 있는 프로덕션 빌드에서 조기 개방되지 않는다.
+ * env·nodeEnv는 서버에서만 넘긴다(towerOpenFloorsNow) — 클라에는 VERCEL_ENV가 없으니 서버가 내려 준 값과 serverNow() 판정 중 큰 쪽을 쓴다.
+ */
+export function towerOpenFloors(now: number | Date = Date.now(), env?: string, nodeEnv?: string): number {
+  if (env === 'preview' || env === 'development' || nodeEnv === 'development') return TOWER_FLOORS;
   return (typeof now === 'number' ? now : now.getTime()) >= TOWER_SECTION_11_OPEN_MS ? TOWER_FLOORS : TOWER_FLOORS - TOWER_SECTION;
+}
+/** 서버에서 '지금 열린 층' — 배포 환경(VERCEL_ENV)·NODE_ENV를 넣어 판정한다. 클라이언트 컴포넌트에는 props로 내려 준다. */
+export function towerOpenFloorsNow(now: number | Date = Date.now()): number {
+  return towerOpenFloors(now, process.env.VERCEL_ENV, process.env.NODE_ENV);
 }
 /** 하루 도전(진 판만 차감) — KST 자정 초기화. */
 export const TOWER_DAILY_ATTEMPTS = 3;

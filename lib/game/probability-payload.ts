@@ -49,12 +49,13 @@ export function buildProbabilityPayloadCore(slotCounts: SlotCount[], now: number
     raid: { critRateBp: RAID_CRIT_RATE_BP, critMult: RAID_CRIT_MULT },
     // 무한의 탑 토벌(10-06 공시 추가) — 이긴 판마다 💎 범위 균등 · 두 배 · 상자.
     // 층마다 💎 범위·상자 수까지 — 공시 페이지가 보여 주는 값이 바뀌면 지문도 바뀌어 '미기록 변경'으로 잡힌다.
-    // 층 수는 '지금 열린 층'(11구간 개방 정각부터 110층) — 개방 크론이 그 순간의 전문을 스냅샷으로 남긴다(lib/game/tower/open.ts).
+    // 층 수는 '지금 열린 층'(11구간 개방 정각부터 110층, 스테이징은 바로) — 개방 크론이 그 순간의 전문을 스냅샷으로 남긴다(lib/game/tower/open.ts).
+    // NODE_ENV는 안 본다 — 로컬에서 프로덕션 DB로 스냅샷 스크립트를 돌려도 프로덕션과 같은 전문이 나오게.
     towerHunt: {
       doubleBp: TOWER_HUNT_DOUBLE_BP,
       boxBp: TOWER_HUNT_BOX_BP,
       spread: TOWER_HUNT_SPREAD,
-      floors: Array.from({ length: towerOpenFloors(now) }, (_, i) => ({ floor: i + 1, ...towerHuntRange(i + 1), box: towerHuntBox(i + 1) })),
+      floors: Array.from({ length: towerOpenFloors(now, process.env.VERCEL_ENV) }, (_, i) => ({ floor: i + 1, ...towerHuntRange(i + 1), box: towerHuntBox(i + 1) })),
     },
   };
 }

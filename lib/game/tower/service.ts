@@ -3,7 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_POOL_PER_SLOT, TOWER_SECTION, TOWER_SPECIAL_POOL_PER_SLOT, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward } from '@/lib/game/balance';
+import { TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_POOL_PER_SLOT, TOWER_SECTION, TOWER_SPECIAL_POOL_PER_SLOT, pieceCombatPower, TOWER_HUNT_BOX_BP, TOWER_HUNT_DOUBLE_BP, towerHuntBox, towerHuntRange, towerIsSpecial, towerOpenFloorsNow, towerRequirement, towerReward } from '@/lib/game/balance';
 import { walletAdd } from '@/lib/game/wallet';
 import { extrasToday } from '@/lib/game/points/spend';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
@@ -313,7 +313,7 @@ export async function challengeTower(
       if (floor < 1 || floor > best) throw new TowerError('NOT_CLEARED');
     } else {
       // 맨 위는 '지금 열린 층'(11구간은 2026-10-15 00:00 KST 서버 시각으로 열린다) — 그 전엔 100층이 꼭대기.
-      if (best >= towerOpenFloors()) throw new TowerError('TOP_REACHED');
+      if (best >= towerOpenFloorsNow()) throw new TowerError('TOP_REACHED');
       if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
     }
     const left = attemptsLeft(p.loss_day, Number(p.losses), extra);

@@ -149,8 +149,10 @@ export function TowerStage({ floor, hunt, info, me, meImg, meCp, left, total = T
  * 장비 자리에 텍스트 RPG식 기록(턴 구분 · 누가 · 변수 · 피해 변화 · 남은 HP)이 쌓이고, 끝나면 결말이 붙는다.
  * 건너뛰기 없이 끝까지 재생, 끝나면 처음부터 다시 볼 수 있다. result가 null이면 판정 대기 — 대기와 같은 무대(낙관적 전환).
  */
-export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBefore, attemptsTotal = TOWER_DAILY_ATTEMPTS, plus, avatarSouth, retrying, onList, onNext, onRetry }: {
+export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBefore, attemptsTotal = TOWER_DAILY_ATTEMPTS, plus, avatarSouth, retrying, openFloors: openFloorsServer, onList, onNext, onRetry }: {
   floor: number;
+  /** 서버가 판정한 지금 열린 맨 위 층(스테이징·로컬은 110) — 정각 판정과 합쳐 '다음 층' 버튼을 정한다. */
+  openFloors: number;
   /** 토벌 판 — 이기면 보상이 바로 지급되고, 다음 층 대신 같은 층을 다시 토벌. */
   hunt?: boolean;
   me: TowerMe;
@@ -232,7 +234,7 @@ export function TowerBattle({ floor, hunt = false, me, result, myCp, attemptsBef
   const cur: TowerTurn | null = shown > 0 ? turns[shown - 1]! : null;
   const prev: TowerTurn | null = shown > 1 ? turns[shown - 2]! : null;
   const win = !!result?.win;
-  const openFloors = towerOpenFloors(serverNow());
+  const openFloors = Math.max(openFloorsServer, towerOpenFloors(serverNow()));
   const nextFloor = Math.min(openFloors, floor + 1);
   const left = result?.attemptsLeft ?? 0;
   const done = !!result && ended;

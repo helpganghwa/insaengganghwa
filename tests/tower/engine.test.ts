@@ -20,6 +20,11 @@ describe('무한의 탑 수치', () => {
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1)).toBe(100);
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS)).toBe(TOWER_FLOORS);
     expect(towerOpenFloors(new Date(TOWER_SECTION_11_OPEN_MS + 1))).toBe(TOWER_FLOORS);
+    // 스테이징(preview)·로컬 dev는 시각과 상관없이 전부, 프로덕션·빈 env는 정각부터(허용 목록).
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, 'preview')).toBe(TOWER_FLOORS);
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, undefined, 'development')).toBe(TOWER_FLOORS);
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, 'production', 'production')).toBe(100);
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, undefined, 'production')).toBe(100);
   });
   it('곡선: 1층 62, 10층 154, 100층 701,737, 오름차순·특별층이 구간의 벽', () => {
     expect(towerRequirement(1)).toBe(62);

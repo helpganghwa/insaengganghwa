@@ -112,7 +112,7 @@ function renewText(week: string, now = Date.now()): string {
   return `${Math.max(1, mins)}분 뒤 갱신`;
 }
 
-export function TowerClient({ board }: { board: TowerBoard }) {
+export function TowerClient({ board, openFloors: openFloorsServer }: { board: TowerBoard; openFloors: number }) {
   const router = useRouter();
   // 장착은 낙관적 반영(useOptimistic) 때문에 트랜지션 안에서. 도전은 트랜지션 밖에서 자체 busy로 —
   // 트랜지션 안에서 부르면 액션이 끝나도 라우터 갱신이 붙잡혀 pending이 풀리지 않아, 돌파 뒤 다음 층 도전 버튼이 막혔다.
@@ -134,8 +134,9 @@ export function TowerClient({ board }: { board: TowerBoard }) {
   const me = useMemo(() => ({ nickname: board.nickname, guild: board.guild }), [board.nickname, board.guild]);
   const attemptsLeftBase = local ? Math.min(board.attemptsLeft, local.attemptsLeft) : board.attemptsLeft;
   const myRank = local?.myRank ?? board.myRank;
-  // 지금 열린 맨 위 층 — 서버 시각으로(11구간은 2026-10-15 00:00 KST 정각에 열린다, 추석 6종과 같은 방식).
-  const openFloors = towerOpenFloors(serverNow());
+  // 지금 열린 맨 위 층 — 서버가 내려 준 값(스테이징·로컬은 항상 110)과 서버 시각 판정(11구간은 2026-10-15 00:00 KST 정각) 중 큰 쪽.
+  // 화면을 열어 둔 채 정각을 넘겨도 열린다(추석 6종과 같은 방식).
+  const openFloors = Math.max(openFloorsServer, towerOpenFloors(serverNow()));
   const next = Math.min(openFloors, best + 1);
   const topped = best >= openFloors;
   const [picked, setPicked] = useState<number | null>(null);
@@ -406,6 +407,7 @@ export function TowerClient({ board }: { board: TowerBoard }) {
         plus={extraPlus}
         avatarSouth={img(avatar?.south)}
         retrying={busy}
+        openFloors={openFloors}
         onList={() => {
           setBattle(null);
           setPicked(null);

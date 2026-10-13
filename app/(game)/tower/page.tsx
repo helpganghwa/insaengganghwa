@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
+import { towerOpenFloorsNow } from '@/lib/game/balance';
 import { towerBoard } from '@/lib/game/tower/service';
 
 import { RefreshOnResume } from '@/components/RefreshOnResume';
@@ -21,7 +22,7 @@ export default async function TowerPage() {
   return (
     <>
       <RefreshOnResume />
-      <TowerClient board={board} />
+      <TowerClient board={board} openFloors={towerOpenFloorsNow()} />
     </>
   );
 }
