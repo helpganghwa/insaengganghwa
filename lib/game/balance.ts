@@ -1142,24 +1142,20 @@ export const TOWER_DMG_MAX = 1.2;
  * 1층 62 — 실서버 장비 분포 몬테카를로로 층 도달 분포를 맞춘 값(09-30). 대난투식 전투(TOWER_HP_MULT)는 승률 곡선이 완만해
  * 곡선 전체를 올렸고(60→64), 몬스터 급소를 넣으면서(같은 날) 몬스터가 세진 만큼 ÷1.035 낮췄다(64→62, 승률 곡선 동일 확인).
  * ⚠ 전투 변수(급소·광폭화·몬스터 특성·배수)를 바꾸면 이 값을 다시 맞춘다.
- * 맨 위 층(TOWER_FLOORS)은 ×1.16 — 1.45면 1위도 그 주 특별층 요구 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄다(TOWER.md §3).
- * 확장으로 맨 위가 아니게 된 옛 맨 위 층(100층)도 ×1.16을 그대로 둔다(TOWER_REQ_EASED_FLOORS, 2026-10-12 사용자 확정) — 이미 넘은
- * 사람의 벽을 소급해 올리지 않는다. 110층 확장 기준 요구치: 101층 919,996 · 109층 1,580,724 · 110층 1,833,640(1위 탑 전투력 181만).
+ * 수문장 층(10층 단위)은 모두 앞 층 × 1.45 — 100층·110층도 예외 없음(2026-10-13 사용자 확정: 10-12에 두었던 ×1.16 완화를 없애
+ * 모든 구간이 같은 모양이 되게 했다. 구간 안 상승 2.49배, 다음 구간 첫 층 ×1.05가 1~11구간에 똑같이 적용된다).
  */
 export const TOWER_REQ_BASE = 62;
 export const TOWER_REQ_SECTION_RATIO = 2.613;
 export const TOWER_REQ_FLOOR_RATIO = 1.07;
 export const TOWER_REQ_SPECIAL_MULT = 1.45;
-export const TOWER_REQ_TOP_MULT = 1.16;
-/** ×1.16이 적용되는 층 — 지금 맨 위 층과, 확장 전 맨 위였던 100층. */
-export const TOWER_REQ_EASED_FLOORS: ReadonlySet<number> = new Set([100, TOWER_FLOORS]);
 export function towerRequirement(floor: number): number {
   const f = Math.max(1, floor);
   const k = (f - 1) % TOWER_SECTION; // 구간 안 위치 0~9(9 = 특별층)
   const start = TOWER_REQ_BASE * Math.pow(TOWER_REQ_SECTION_RATIO, Math.floor((f - 1) / TOWER_SECTION));
   const v = k < TOWER_SECTION - 1
     ? start * Math.pow(TOWER_REQ_FLOOR_RATIO, k)
-    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * (TOWER_REQ_EASED_FLOORS.has(f) ? TOWER_REQ_TOP_MULT : TOWER_REQ_SPECIAL_MULT);
+    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * TOWER_REQ_SPECIAL_MULT;
   return Math.round(v);
 }
 export function towerIsSpecial(floor: number): boolean {

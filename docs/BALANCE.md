@@ -499,7 +499,7 @@ UI(2026-07-22 개편): /checkin 페이지 폐기 → **홈 자동 팝업**(황�
 
 ### 14.2 층 요구치(몬스터 전투력)
 
-구간 첫 층 = 62 × 2.613^(구간−1)(`TOWER_REQ_BASE`·`TOWER_REQ_SECTION_RATIO`), 구간 안 일반층 = 앞 층 × 1.07(`TOWER_REQ_FLOOR_RATIO`), 특별층 = 앞 층 × 1.45(`TOWER_REQ_SPECIAL_MULT`), 맨 위 층(110층)과 옛 맨 위 층 100층은 앞 층 × 1.16(`TOWER_REQ_TOP_MULT`·`TOWER_REQ_EASED_FLOORS`, 10-12`). 반올림.
+구간 첫 층 = 62 × 2.613^(구간−1)(`TOWER_REQ_BASE`·`TOWER_REQ_SECTION_RATIO`), 구간 안 일반층 = 앞 층 × 1.07(`TOWER_REQ_FLOOR_RATIO`), 특별층(수문장, 100·110층 포함) = 앞 층 × 1.45(`TOWER_REQ_SPECIAL_MULT`, 10-13: 맨 위 층 ×1.16 완화 폐지). 반올림.
 
 | 층 | 1 | 9 | 10 | 11 | 50 | 51 | 90 | 99 | 100 | 101 | 109 | 110 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
