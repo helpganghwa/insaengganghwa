@@ -41,6 +41,7 @@ const BG: Record<number, string> = {
   8: 'interior of a sunken temple inside a tower half flooded with murky teal water, broken stone pillars with faded coral growing on them, shafts of dim light through the water surface',
   9: 'interior of a stopped clock tower, huge bronze gears and clock mechanisms, a giant clock face seen from behind, dust in the air, wooden beams and stone walls',
   10: 'sanctuary on the very top floor of a tall round tower, curved white marble tower walls with tall arched openings showing a sea of clouds far below, a spiral staircase rising up from the floor below, white marble floor and pillars, pale gold ornaments, soft sunlight',
+  11: 'crypt hall inside a tall round stone tower, curved circular stone walls, part of a spiral stone staircase winding upward along the wall, tall narrow arched windows showing a large pale moon and a dark blue night sky outside, rows of weathered grey gravestones and two stone sarcophagi standing on the stone floor inside the hall, iron candle stands with small flames, thin low mist over the floor, a few small pale green wisp lights floating'
 };
 const PALETTE_WORDS: Record<number, string> = {
   1: 'muted desaturated palette of warm grey, taupe and dim amber candlelight',
@@ -53,6 +54,7 @@ const PALETTE_WORDS: Record<number, string> = {
   8: 'muted desaturated palette of murky teal and faded coral',
   9: 'muted desaturated palette of aged bronze, dusty brown and warm grey',
   10: 'muted palette of pearl white, pale gold and soft sky blue',
+  11: 'muted desaturated palette of dark blue grey, slate and pale mint green wisp light',
 };
 const STYLE_MON =
   'pixel art game monster sprite, full body, three-quarter view facing right, clean readable silhouette, refined elegant detailed pixel art, muted desaturated colors, no text';
@@ -63,7 +65,7 @@ const STYLE_FRIENDLY =
 // 수문장(10층마다) — 친근한 톤 대신 보스다운 위압감(09-30 90층 검수: '보스인데 포스가 없다'). 전체이용가는 유지.
 const STYLE_BOSS =
   'fearsome imposing boss monster, massive heavy build, glowing eyes, dramatic powerful silhouette, menacing stance, detailed pixel art rendering with rich texture and shading, not gory, all-ages';
-// 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀).
+// 다리 달린 몬스터만 — 뱀 등에 붙이면 다리가 생긴다(09-30 6층 돌비늘 뱀). 떠다니는 해골·혼불·유령·관(11구간)도 제외.
 const STURDY_LEGS = 'sturdy legs instead of thin spindly legs';
 const STYLE_BG = 'symmetrical composition, centered front view, pixel art game background scene, refined elegant detailed pixel art, no characters, no creatures, no text, fully filled background edge to edge, full bleed, no white or grey borders, no side margins, no vignette, no fade at the edges, scene continues to the left and right edges';
 
@@ -131,9 +133,9 @@ async function pro(key: string, prompt: string, w: number, h: number, noBg: bool
 }
 const pal = PALETTE_WORDS[sec] ?? 'muted desaturated palette';
 const tasks: Promise<void>[] = [];
-// 탑 안이라는 게 보이게(09-30 3구간 검수: '탑 느낌이 안 든다') — 둥근 벽·나선 계단·높은 창 밖 하늘. 5·10구간은 이미 탑 꼭대기라 제외.
+// 탑 안이라는 게 보이게(09-30 3구간 검수: '탑 느낌이 안 든다') — 둥근 벽·나선 계단·높은 창 밖 하늘. 5·10·11구간은 이미 탑 꼭대기라 제외.
 const TOWER_CUE = 'inside a tall round fantasy tower, curved circular stone walls, part of a spiral staircase winding upward along the wall, tall narrow arched windows showing open sky far outside';
-if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${sec === 5 || sec === 10 ? '' : `${TOWER_CUE}, `}${pal}, ${STYLE_BG}`, 400, 240, false));
+if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${sec === 5 || sec === 10 || sec === 11 ? '' : `${TOWER_CUE}, `}${pal}, ${STYLE_BG}`, 400, 240, false));
 if (only.includes('mons')) {
   // lanes줄로 나눠 동시에 lanes개씩.
   const mons = S.mons.filter((m) => !onlyFloors || onlyFloors.has(m.floor));
@@ -141,7 +143,7 @@ if (only.includes('mons')) {
     tasks.push((async () => {
       for (const m of lane) {
         const size = m.guardian ? 160 : 128;
-        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}, ${m.guardian ? STYLE_BOSS : STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly|seahorse|squid|octopus|nautilus/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
+        await pro(`f${m.floor}${tag ? `-${tag}` : ''}`, `${m.art}, ${m.guardian ? STYLE_BOSS : STYLE_FRIENDLY}${/legless|no legs|no feet|snake|serpent|eel|slime|fish|whale|jelly|seahorse|squid|octopus|nautilus|floating|wisp|ghost|wraith|coffin/i.test(m.art) ? '' : `, ${STURDY_LEGS}`}, ${pal}, ${STYLE_MON}`, size, size, true, true).catch((e) => console.error(`f${m.floor} 실패:`, (e as Error).message));
       }
     })());
   }

@@ -1054,7 +1054,7 @@
     "floor": 104,
     "name": "묘지기 해골",
     "desc": "녹슨 곡괭이를 어깨에 멘 해골, 뼈마다 흙이 묻어 있다.",
-    "art": "skeleton gravedigger carrying a rusted pickaxe over its shoulder, bits of soil on its bones, rounded skull",
+    "art": "skeleton gravedigger carrying a rusted pickaxe over its shoulder, bits of soil on its bones, rounded skull, wearing tattered dusty grey work clothes and a worn flat cap, muted desaturated colors only, no blue, no bright colors",
     "guardian": false,
     "skills": []
    },
@@ -1078,9 +1078,9 @@
    },
    {
     "floor": 107,
-    "name": "곡하는 망령",
-    "desc": "입을 크게 벌린 잿빛 망령, 울음이 안개처럼 번진다.",
-    "art": "grey wailing wraith with a wide open mouth and hollow eyes, lower body trailing into mist",
+    "name": "사슬 사령",
+    "desc": "온몸에 녹슨 사슬을 감고 떠다니는 망령, 사슬 끝마다 자물쇠가 달려 있다.",
+    "art": "floating grey wraith wrapped in heavy rusted iron chains around its body and arms, a small padlock hanging at the end of each chain, hollow glowing eyes, lower body trailing into mist, no legs",
     "guardian": false,
     "skills": [
      "seal"
@@ -1088,9 +1088,9 @@
    },
    {
     "floor": 108,
-    "name": "창백한 흡혈귀",
-    "desc": "검은 망토를 두른 창백한 흡혈귀, 송곳니가 달빛에 빛난다.",
-    "art": "pale vampire in a long black cape with a high collar, small fangs, slicked dark hair, moonlit skin",
+    "name": "굶주린 구울",
+    "desc": "등이 굽고 손톱이 긴 잿빛 구울, 움푹 꺼진 눈이 붉게 빛난다.",
+    "art": "hunched grey ghoul with long thin arms and long claws, sunken glowing red eyes, tattered rags, crouching stance, bald head",
     "guardian": false,
     "skills": [
      "drain"
@@ -1098,9 +1098,9 @@
    },
    {
     "floor": 109,
-    "name": "망령 기사",
-    "desc": "녹슨 갑옷만 남아 선 기사, 투구 안에 푸른 불이 둘.",
-    "art": "empty rusted knight armor standing upright and holding a long spear, two blue flames glowing inside the hollow helmet",
+    "name": "묘비 골렘",
+    "desc": "묘비와 무덤 흙으로 뭉쳐진 거대한 골렘, 가슴에 깨진 비석이 박혀 있다.",
+    "art": "large heavy golem built from cracked grey gravestones and packed dark grave soil, a broken tombstone embedded in its chest, patches of moss and a few small candles on its shoulders, blocky body, two small glowing eyes",
     "guardian": false,
     "skills": [
      "steel"
@@ -1109,8 +1109,8 @@
    {
     "floor": 110,
     "name": "왕들의 뼈용",
-    "desc": "옛 왕들의 뼈로 엮인 거대한 뼈 용, 머리뼈에 왕관이 여럿 걸려 있다.",
-    "art": "huge dragon skeleton made of pale ancient bones, several small golden crowns hanging on its horned skull, wings of bare bone spread wide, dark moonlit tones",
+    "desc": "옛 왕들의 뼈로 엮인 거대한 뼈 용, 갈비뼈 안에 초록 혼불이 타오르고 찢어진 왕실 망토 위로 금빛 왕관을 썼다.",
+    "art": "huge dragon skeleton made of pale ancient bones, green soul fire burning inside its ribcage, a single large golden crown on its horned skull, a torn dark red royal cape hanging from its neck bones, wings of bare bone spread wide, dark moonlit tones",
     "guardian": true,
     "skills": [
      "death",
