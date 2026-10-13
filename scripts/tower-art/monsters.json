@@ -1016,35 +1016,35 @@
   ]
  },
  {
-  "theme": "별빛 폐허",
+  "theme": "달빛 묘지",
   "palette": [
-   "#1e1b3a",
-   "#3b3566",
-   "#7a6fa8",
-   "#e6d8a8"
+   "#161a22",
+   "#2f3744",
+   "#6b7a8c",
+   "#bfe6d2"
   ],
   "mons": [
    {
     "floor": 101,
-    "name": "별가루 생쥐",
-    "desc": "털에 별가루가 묻은 남색 생쥐, 꼬리 끝이 희미하게 빛난다.",
-    "art": "small navy blue mouse with faint pale-gold star dust specks on its fur, tail tip glowing softly",
+    "name": "해골 생쥐",
+    "desc": "뼈만 남은 작은 생쥐, 눈구멍에 푸른 불이 켜져 있다.",
+    "art": "tiny mouse skeleton with a rounded skull and small pale bones, soft blue flames glowing in its eye sockets, standing on all fours",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 102,
-    "name": "유성 두꺼비",
-    "desc": "등에 작은 운석 조각이 박힌 보랏빛 두꺼비.",
-    "art": "plump dusky violet toad with small dark meteorite fragments embedded on its back",
+    "name": "도깨비불 슬라임",
+    "desc": "속에서 창백한 초록 불꽃이 흔들리는 반투명 슬라임.",
+    "art": "translucent dark slime blob with a pale green will-o'-wisp flame flickering inside its body",
     "guardian": false,
     "skills": []
    },
    {
     "floor": 103,
-    "name": "달조각 나방",
-    "desc": "날개가 초승달 두 개 모양으로 갈라진 은빛 나방.",
-    "art": "silver moth whose two wings are shaped like crescent moons, slender dark body",
+    "name": "유령 나방",
+    "desc": "몸이 반투명한 하얀 나방, 지나간 자리에 서리가 앉는다.",
+    "art": "translucent white ghostly moth with softly glowing wings, faint frost crystals trailing behind it",
     "guardian": false,
     "skills": [
      "freeze"
@@ -1052,19 +1052,17 @@
    },
    {
     "floor": 104,
-    "name": "별똥별 여우",
-    "desc": "꼬리에서 긴 별똥별 꼬리가 흐르는 짙은 남색 여우.",
-    "art": "dark indigo fox with a long shooting-star tail trailing pale light behind it",
+    "name": "뼈 여우",
+    "desc": "갈비뼈가 드러난 잿빛 여우, 꼬리만 멀쩡하다.",
+    "art": "slender ash-grey fox with its ribcage showing as pale bone through the fur, one full fluffy tail, calm standing pose",
     "guardian": false,
-    "skills": [
-     "multi"
-    ]
+    "skills": []
    },
    {
     "floor": 105,
-    "name": "별자리 사슴",
-    "desc": "몸에 별자리 점이 가는 선으로 이어진 검푸른 사슴, 뿔 끝마다 작은 별.",
-    "art": "deep blue stag with constellation dots joined by thin pale lines on its body, tiny stars on each antler tip",
+    "name": "묘비 사슴",
+    "desc": "뿔이 네모난 묘비 돌로 된 사슴.",
+    "art": "dark stag whose two antlers are squared stone gravestones with faint carved marks, pale moonlit grey fur",
     "guardian": false,
     "skills": [
      "regen"
@@ -1072,19 +1070,17 @@
    },
    {
     "floor": 106,
-    "name": "운석 거북",
-    "desc": "등딱지가 식은 운석인 거북, 움푹 팬 자국마다 별빛이 고여 있다.",
-    "art": "tortoise whose shell is a cooled cratered meteorite, faint starlight pooled in the craters",
+    "name": "수의 거북",
+    "desc": "낡은 수의를 등딱지처럼 두른 거북.",
+    "art": "tortoise wrapped in a tattered pale burial shroud draped over its shell like a hooded cloak",
     "guardian": false,
-    "skills": [
-     "steel"
-    ]
+    "skills": []
    },
    {
     "floor": 107,
-    "name": "성운 해파리",
-    "desc": "갓 안에 작은 보랏빛 성운이 소용돌이치는 반투명 해파리.",
-    "art": "translucent floating jellyfish with a small swirling violet nebula inside its bell, thin trailing tentacles",
+    "name": "혼불 해파리",
+    "desc": "갓 안에 혼불을 담고 떠다니는 해파리.",
+    "art": "floating jellyfish with a pale green soul flame glowing inside its translucent bell, thin wispy tentacles",
     "guardian": false,
     "skills": [
      "seal"
@@ -1092,9 +1088,9 @@
    },
    {
     "floor": 108,
-    "name": "별먹는 늑대",
-    "desc": "두 눈이 별인 검은 늑대, 입가에 별빛이 묻어 있다.",
-    "art": "black wolf with two bright star-shaped eyes and faint starlight smeared around its muzzle",
+    "name": "망령 늑대",
+    "desc": "몸이 안개처럼 흐릿한 검은 늑대.",
+    "art": "black wolf whose body dissolves into dark mist at the edges, two pale glowing eyes",
     "guardian": false,
     "skills": [
      "drain"
@@ -1102,25 +1098,25 @@
    },
    {
     "floor": 109,
-    "name": "폐허의 천사상",
-    "desc": "한쪽 날개가 부서진 돌 천사상, 금 간 틈으로 별빛이 샌다.",
-    "art": "weathered stone angel statue with one broken wing, pale gold starlight leaking from cracks across its body",
+    "name": "묘지기 갑옷",
+    "desc": "속이 빈 채 서 있는 녹슨 갑옷, 투구 안에 불이 하나.",
+    "art": "empty rusted knight armor standing upright and holding a long spear, a single pale flame glowing inside the hollow helmet",
     "guardian": false,
     "skills": [
-     "reflect"
+     "steel"
     ]
    },
    {
     "floor": 110,
-    "name": "별을 삼킨 흑룡",
-    "desc": "비늘 사이로 별빛이 흐르는 검은 용, 가슴 속에 삼킨 별이 빛난다.",
-    "art": "large black dragon with pale starlight flowing between its scales, a single glowing swallowed star visible inside its chest, wings spread, majestic long body",
+    "name": "왕들의 뼈용",
+    "desc": "옛 왕들의 뼈로 엮인 거대한 뼈 용, 머리뼈에 왕관이 여럿 걸려 있다.",
+    "art": "huge dragon skeleton made of pale ancient bones, several small golden crowns hanging on its horned skull, wings of bare bone spread wide, dark moonlit tones",
     "guardian": true,
     "skills": [
      "death",
-     "stop",
+     "rebirth",
      "drain",
-     "reflect"
+     "seal"
     ]
    }
   ]
