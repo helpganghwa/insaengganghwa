@@ -192,7 +192,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/tower/mon/f105.png": "48ce6faf",
   "/sprites/tower/mon/f31.png": "332673be",
   "/sprites/tower/mon/f25.png": "b22009bb",
-  "/sprites/tower/mon/f110.png": "4af7364c",
+  "/sprites/tower/mon/f110.png": "724e728b",
   "/sprites/tower/mon/f24.png": "b2c6bdd9",
   "/sprites/tower/mon/f30.png": "d852ec2b",
   "/sprites/tower/mon/f104.png": "11746cb6",
