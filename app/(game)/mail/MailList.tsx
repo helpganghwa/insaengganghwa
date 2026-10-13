@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useState, useSyncExternalStore, useTransition } from 'react';
 import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { formatClaimedAt } from '@/lib/ui/format-claimed';
 import {
   claimMailAction,
   claimAllMailAction,
@@ -119,6 +120,22 @@ function fmtRemaining(targetMs: number, nowMs: number): string {
   return `${d}일 남음`;
 }
 
+/**
+ * 분 단위 시계(2026-10-13) — 받은 시각의 상대 표시용. 서버 스냅샷은 null이라 서버 HTML과 첫 클라 렌더가 같고(하이드레이션 안전),
+ * 마운트 뒤 분이 바뀔 때마다 다시 그린다. 값은 분 단위라 같은 분 안에서는 안정적이다.
+ */
+const minuteClock = {
+  subscribe(cb: () => void) {
+    const id = setInterval(cb, 60_000);
+    return () => clearInterval(id);
+  },
+  get: () => Math.floor(Date.now() / 60_000),
+  server: (): number | null => null,
+};
+function useMinuteClock(): number | null {
+  return useSyncExternalStore(minuteClock.subscribe, minuteClock.get, minuteClock.server);
+}
+
 function hasPayload(payload: MailItem['payload']): boolean {
   if (Number(payload.diamond ?? 0) > 0) return true;
   const b = payload.boxes ?? {};
@@ -209,6 +226,7 @@ export function MailList({
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { showError, showHeaderToast } = useResourceToast();
   const nowMs = Date.now();
+  const nowMin = useMinuteClock(); // 받은 시각 표시(수령 완료 탭)
 
   // 모두 받기 합계 preview — 서버 권위 unreadAggregate 우선(전체 미수령 기준).
   // 폴백: displayItems 기반(레거시 호환, 보통 닿지 않음).
@@ -458,6 +476,12 @@ export function MailList({
                             }`}
                           >
                             {expSoon ? '오늘 만료' : `D-${expDays}`}
+                          </span>
+                        ) : null}
+                        {tab === 'done' && m.claimedAtIso && nowMin != null ? (
+                          // 받은 시각(2026-10-13 제로 #RlFLazF5) — 메타 행 오른쪽 끝. 7일까지 상대 시간, 그 뒤 yyyy.MM.dd HH:mm(lib/ui/format-claimed.ts).
+                          <span className="ml-auto shrink-0 tabular-nums">
+                            {formatClaimedAt(new Date(m.claimedAtIso).getTime(), nowMin * 60_000)}
                           </span>
                         ) : null}
                       </div>

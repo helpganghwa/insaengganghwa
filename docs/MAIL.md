@@ -99,6 +99,8 @@ v2: daily cron(`0 18 * * *` UTC = KST 03:00) 2조건 OR 삭제:
 - **`/mail` 페이지**: 미수령 / 받은 탭, [받기] / [모두 받기]. 만료 임박(<24h) 빨강.
 - **수령 모달**: 다이아·상자 아이콘 + 수량.
 
+- **받은 시각(2026-10-13, 제로 #RlFLazF5)**: 수령 완료 탭 카드의 메타 행 오른쪽 끝에 `claimed_at`을 보여 준다. 7일까지는 상대 시간(방금 · N분 전 · N시간 전 · N일 전), 그 뒤는 `yyyy.MM.dd HH:mm`(기기 시간대). 순수 함수 `lib/ui/format-claimed.ts`, 시계는 `useSyncExternalStore` 분 단위(서버 스냅샷 null → 하이드레이션 안전, 1분 갱신). 미수령 탭은 그대로(남은 기간만).
+
 ## 6. 어드민 (`/admin/mail`)
 
 - layout 가드: `is_admin = true`만. 비-admin은 404 또는 홈 redirect.
