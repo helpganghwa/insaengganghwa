@@ -6,6 +6,7 @@ import { towerOpenFloorsNow } from '@/lib/game/balance';
 import { towerBoard } from '@/lib/game/tower/service';
 
 import { RefreshOnResume } from '@/components/RefreshOnResume';
+import { ServerClockSync } from '@/components/ServerClockSync';
 
 import { TowerClient } from './TowerClient';
 
@@ -22,6 +23,8 @@ export default async function TowerPage() {
   return (
     <>
       <RefreshOnResume />
+      {/* 11구간 개방 정각 판정이 폰 시계가 아니라 서버 시각으로(serverNow) — 강화·파견 화면과 같은 동기화(10-14 검수). */}
+      <ServerClockSync nowIso={new Date().toISOString()} />
       <TowerClient board={board} openFloors={towerOpenFloorsNow()} />
     </>
   );

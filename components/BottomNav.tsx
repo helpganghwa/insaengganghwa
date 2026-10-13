@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+
+import { modalHistory } from '@/lib/ui/modal-history';
 
 // WIREFRAMES §0 — 5탭: 홈/인벤토리/강화/길드/프로필.
 // 레이드·대난투·보급·우편함·월드맵·상점은 홈 그리드 진입(BottomNav 제외).
@@ -25,6 +27,7 @@ export function BottomNav({
   hasFriendRequest = false,
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav className="sticky bottom-0 z-30 box-content grid h-14 grid-cols-5 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950">
@@ -41,7 +44,16 @@ export function BottomNav({
             // 채팅창이 열려 있으면 GNB 탭에 최소화 — ChatDock이 수신. 목적지 href를 실어
             // 같은 경로 재탭(내비 없음)만 즉시 닫고, 실제 이동은 pathname 전환과 동시에 닫는다
             // (닫힘→이동 순서로 옛 페이지가 잠깐 보이던 어지러움 제거, 2026-07-22).
-            onClick={() => window.dispatchEvent(new CustomEvent('ig:gnb-nav', { detail: item.href }))}
+            onClick={(e) => {
+              window.dispatchEvent(new CustomEvent('ig:gnb-nav', { detail: item.href }));
+              // 채팅창(또는 팝업)이 히스토리 항목을 쌓아 둔 채 다른 탭으로 가면 그 항목이 새 화면 밑에 남아
+              // 뒤로가기가 한 번 더 든다([A, 채팅, B]). 열린 항목이 있으면 그 항목 자리에 새 화면을 바꿔치기해
+              // [A, B]가 되게 한다(2026-10-14 검수 A-1). 같은 경로 재탭은 이동이 없으니 그대로(ChatDock이 닫는다).
+              if (modalHistory.hasOpen() && !active) {
+                e.preventDefault();
+                router.replace(item.href);
+              }
+            }}
             data-tut={
               item.href === '/inventory'
                 ? 'nav-inventory'

@@ -46,6 +46,7 @@ const MSG = {
   MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요.',
   BANNED: '이용이 제한된 계정이에요.',
   ALREADY_EQUIPPED: '이미 가장 좋은 조합으로 장착하고 있어요.',
+  AVATAR_GONE: '추천한 아바타가 그사이 사라졌어요. 다시 시도해 주세요.',
   UNKNOWN: '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.',
 } satisfies Record<WorldBossErrorCode, string> & Record<string, string>; // 코드가 빠지면 컴파일러가 잡는다(10-11 재검사)
 const err = makeErr(MSG);
@@ -196,6 +197,11 @@ export async function getBattleAction(partyId: string) {
  * 추천 장비 장착 — 가진 장비와 보유 아바타 전부를 후보로, 공개된 약점과 아바타 보너스까지 계산한 가장 좋은 조합(장비 3개 + 대표 아바타)으로 한 번에
  * (docs/WORLD-BOSS.md §3, 무한의 탑 자동 장착과 같은 규칙, 10-12). 장착·대표 아바타는 게임 전체에 적용된다. 판정은 서버가 다시 계산하므로 클라가 보낸 값은 없다.
  */
+/** 제안 계산과 적용 사이에 그 아바타가 반환·삭제됨 — 트랜잭션을 되돌리기 위한 신호. */
+class AvatarGoneError extends Error {
+  constructor() { super('AVATAR_GONE'); this.name = 'AvatarGoneError'; }
+}
+
 export async function equipBestAction(bossId: string) {
   const g = await gate();
   if ('status' in g) return g;
@@ -212,16 +218,20 @@ export async function equipBestAction(bossId: string) {
     // 약점 보너스는 보스 특성(치명 약점)에 따라 다르다 — 제안 계산도 같은 값으로.
     const best = await bestLoadoutOf(g.sid, g.u, known, worldBossWeakBonus(parseWorldBossTraits(b.traits)));
     if (!best) return err('ALREADY_EQUIPPED');
-    if (best.ueids.length) await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid);
-    // 대표 아바타까지 — 출발 전투력은 대표 아바타 기준(party.ts)이라 바꿔야 제안한 값이 실제가 된다. 장착이 먼저(실패하면 아바타는 그대로).
-    if (best.avatarId) {
-      await activateProfile(g.u, g.sid, best.avatarId);
+    // 장비와 대표 아바타를 **한 트랜잭션**으로 — 출발 전투력은 대표 아바타 기준(party.ts)이라 둘이 따로 커밋되면 출발과 겹칠 때
+    // 새 장비 + 옛 아바타로 계산될 수 있고, 제안 계산 뒤 아바타가 반환됐으면 장비만 바뀐 채 성공으로 알리게 된다(10-14 검수 M1·M2).
+    const avatarId = best.avatarId;
+    await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid, avatarId
+      ? async (tx) => { if (!(await activateProfile(g.u, g.sid, avatarId, tx))) throw new AvatarGoneError(); }
+      : undefined);
+    if (avatarId) {
       revalidatePath('/me');
       revalidatePath('/me/profiles');
     }
     rev(bossId);
     return { status: 'success' as const };
   } catch (e) {
+    if (e instanceof AvatarGoneError) { rev(bossId); return err('AVATAR_GONE'); }
     if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
     return fail(e, 'equipBest');
   }

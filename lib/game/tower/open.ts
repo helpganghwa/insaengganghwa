@@ -3,10 +3,12 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { TOWER_FLOORS, TOWER_SECTION, TOWER_SECTION_11_OPEN_ISO, TOWER_SECTION_11_OPEN_MS } from '@/lib/game/balance';
+import { TOWER_SECTION_11_OPEN_ISO, TOWER_SECTION_11_OPEN_MS } from '@/lib/game/balance';
 import { buildProbabilityPayloadCore } from '@/lib/game/probability-payload';
 
-const NOTE = `무한의 탑 11구간 개방(${TOWER_FLOORS - TOWER_SECTION + 1}~${TOWER_FLOORS}층 토벌 보상 추가)`;
+// 상수에서 파생하지 않고 고정 — 다음 확장(120층)에서 note가 바뀌면 중복 검사를 지나 과거 정각의 스냅샷이 또 쌓인다(10-14 검수).
+// 이 훅은 11구간 개방이 확인된 뒤 제거한다(docs/TOWER.md).
+const NOTE = '무한의 탑 11구간 개방(101~110층 토벌 보상 추가)';
 
 /**
  * 무한의 탑 11구간(101~110층) 개방 뒷정리 — 추석 6종(lib/game/chuseok/open.ts)과 같은 구조.

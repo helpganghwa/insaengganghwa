@@ -307,13 +307,15 @@ export async function challengeTower(
     // 재전송 확인 뒤에 — 주 경계를 넘겨 다시 온 같은 도전도 저장된 결과를 받는다(재검수 #2).
     if (opts.week && opts.week !== week) throw new TowerError('POOL_CHANGED');
     // 그 주 풀이 다 뽑히지 않았으면(카탈로그 시드 전·추첨 실패) 도전 자체를 막는다 — 횟수는 빼지 않는다(감사 M1).
-    if (pools.size < POOL_FLOORS.length) throw new TowerError('POOL_MISSING');
+    // 아직 열리지 않은 층(11구간 개방 전 101~110)의 풀은 보지 않는다 — 그 층 추첨이 비어도 1~100층 도전까지 막히지 않게(10-14 검수).
+    const openFloors = towerOpenFloorsNow();
+    if (POOL_FLOORS.some((f) => f <= openFloors && !pools.has(f))) throw new TowerError('POOL_MISSING');
     if (hunt) {
       // 토벌 — 이미 돌파한 층만(그 주 요구 장비·스킬 그대로). 꼭대기까지 오른 뒤에도 할 수 있다.
       if (floor < 1 || floor > best) throw new TowerError('NOT_CLEARED');
     } else {
       // 맨 위는 '지금 열린 층'(11구간은 2026-10-15 00:00 KST 서버 시각으로 열린다) — 그 전엔 100층이 꼭대기.
-      if (best >= towerOpenFloorsNow()) throw new TowerError('TOP_REACHED');
+      if (best >= openFloors) throw new TowerError('TOP_REACHED');
       if (floor !== best + 1) throw new TowerError('NOT_NEXT_FLOOR');
     }
     const left = attemptsLeft(p.loss_day, Number(p.losses), extra);

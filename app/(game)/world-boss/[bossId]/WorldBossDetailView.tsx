@@ -164,7 +164,8 @@ function applyPatch(s: WorldBossDetail, p: Patch): WorldBossDetail {
       // 대표 아바타까지 바뀌는 제안이면 아바타 줄과 내 얼굴도 그 아바타로(10-12) — 서버가 같은 상태를 다시 그려 준다.
       const hasAvatar = best.avatarChange ? best.hasAvatar : mine.loadout.hasAvatar;
       const avatarGear = best.avatarChange ? (best.avatar?.gear ?? []) : mine.loadout.avatarGear;
-      const face = best.avatarChange ? { avatarSrc: best.avatar?.src ?? null } : {};
+      // 얼굴 크롭 좌표(faceBox)는 옛 아바타 것이라 비운다(기본 크롭) — 서버 재렌더가 새 좌표를 준다(10-14 검수 L1).
+      const face = best.avatarChange ? { avatarSrc: best.avatar?.src ?? null, faceBox: null } : {};
       return {
         ...s,
         mine: {

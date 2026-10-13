@@ -29,11 +29,16 @@ export async function equipItem(userId: string, userEquipmentId: bigint): Promis
  * 여러 장비를 한 트랜잭션으로 장착(무한의 탑 자동 장착) — 부위마다 equipItem과 같은 처리, 요청·재렌더 1번.
  * 같은 부위가 두 번 오면 뒤의 것이 이긴다(앞 것을 해제하고 교체).
  */
-export async function equipItems(userId: string, userEquipmentIds: bigint[], serverId?: number): Promise<void> {
-  if (!userEquipmentIds.length) return;
+/**
+ * 여러 개 장착을 한 트랜잭션으로. `after`를 주면 같은 트랜잭션 안에서 장착 뒤에 실행한다 — 월드보스 추천 장착처럼
+ * 장비 변경과 다른 갱신(대표 아바타)을 함께 커밋하거나 함께 되돌려야 할 때(2026-10-14 검수). after가 던지면 장착도 취소된다.
+ */
+export async function equipItems(userId: string, userEquipmentIds: bigint[], serverId?: number, after?: (tx: Tx) => Promise<void>): Promise<void> {
+  if (!userEquipmentIds.length && !after) return;
   try {
     await db.transaction(async (tx) => {
       for (const id of userEquipmentIds) await equipInTx(tx, userId, id, serverId);
+      if (after) await after(tx);
     });
   } catch (e) {
     if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
@@ -41,7 +46,7 @@ export async function equipItems(userId: string, userEquipmentIds: bigint[], ser
   }
 }
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function equipItemTx(userId: string, userEquipmentId: bigint): Promise<void> {
   return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId));
