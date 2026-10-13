@@ -1027,7 +1027,7 @@
    {
     "floor": 101,
     "name": "촛불 해골",
-    "desc": "머리 위에 촛불 하나를 얹고 둥둥 떠다니는 작은 해골.",
+    "desc": "머리 위에 촛불 하나를 얹고 둥둥 떠다니는 작은 해골, 눈구멍에 푸른 빛이 돈다.",
     "art": "small floating skull with a single lit candle standing on top of its head, soft blue glow in the eye sockets, rounded shape",
     "guardian": false,
     "skills": []
@@ -1035,7 +1035,7 @@
    {
     "floor": 102,
     "name": "떠도는 혼불",
-    "desc": "꺼질 듯 흔들리는 창백한 초록 혼불, 가운데에 작은 얼굴이 비친다.",
+    "desc": "창백한 초록 혼불, 가운데에 눈을 감은 작은 얼굴이 비친다.",
     "art": "pale green floating wisp flame with a faint small face showing inside it, thin trail of light behind",
     "guardian": false,
     "skills": []
@@ -1043,7 +1043,7 @@
    {
     "floor": 103,
     "name": "수의 유령",
-    "desc": "낡은 수의를 뒤집어쓴 유령, 지나간 자리마다 서리가 앉는다.",
+    "desc": "낡은 수의를 뒤집어쓴 유령, 해진 자락이 안개처럼 흩날린다.",
     "art": "ghost draped in a tattered pale burial sheet with two dark eye holes, faint frost crystals around its hem",
     "guardian": false,
     "skills": [
@@ -1053,7 +1053,7 @@
    {
     "floor": 104,
     "name": "묘지기 해골",
-    "desc": "녹슨 곡괭이를 어깨에 멘 해골, 뼈마다 흙이 묻어 있다.",
+    "desc": "낡은 외투에 납작한 모자를 쓴 해골, 녹슨 곡괭이를 어깨에 멨다.",
     "art": "skeleton gravedigger carrying a rusted pickaxe over its shoulder, bits of soil on its bones, rounded skull, wearing tattered dusty grey work clothes and a worn flat cap, muted desaturated colors only, no blue, no bright colors",
     "guardian": false,
     "skills": []
@@ -1061,7 +1061,7 @@
    {
     "floor": 105,
     "name": "잠깬 미라",
-    "desc": "풀렸던 붕대가 다시 감기는 미라, 가슴에 금빛 부적을 달았다.",
+    "desc": "풀린 붕대 자락을 늘어뜨린 미라, 가슴에 금빛 부적을 달았다.",
     "art": "mummy wrapped in loose pale bandages with a few strips unraveling, a small golden amulet on its chest",
     "guardian": false,
     "skills": [
@@ -1071,7 +1071,7 @@
    {
     "floor": 106,
     "name": "덜컹이는 관",
-    "desc": "못이 빠진 낡은 관, 뚜껑 틈으로 눈 둘이 내다본다.",
+    "desc": "못이 삐죽 튀어나온 낡은 관, 벌어진 틈으로 빛나는 눈 둘이 내다본다.",
     "art": "old wooden coffin standing upright with its lid slightly open, two glowing eyes peeking from the dark gap, a few loose nails",
     "guardian": false,
     "skills": []
@@ -1079,7 +1079,7 @@
    {
     "floor": 107,
     "name": "사슬 사령",
-    "desc": "온몸에 녹슨 사슬을 감고 떠다니는 망령, 사슬 끝마다 자물쇠가 달려 있다.",
+    "desc": "녹슨 사슬을 몸에 감고 떠다니는 두건 쓴 망령, 사슬 끝에 자물쇠가 매달려 있다.",
     "art": "floating grey wraith wrapped in heavy rusted iron chains around its body and arms, a small padlock hanging at the end of each chain, hollow glowing eyes, lower body trailing into mist, no legs",
     "guardian": false,
     "skills": [
@@ -1099,7 +1099,7 @@
    {
     "floor": 109,
     "name": "묘비 골렘",
-    "desc": "묘비와 무덤 흙으로 뭉쳐진 거대한 골렘, 가슴에 깨진 비석이 박혀 있다.",
+    "desc": "묘비와 돌덩이로 뭉쳐진 거대한 골렘, 이끼 낀 어깨 위에 촛불이 타고 있다.",
     "art": "large heavy golem built from cracked grey gravestones and packed dark grave soil, a broken tombstone embedded in its chest, patches of moss and a few small candles on its shoulders, blocky body, two small glowing eyes",
     "guardian": false,
     "skills": [
@@ -1109,8 +1109,8 @@
    {
     "floor": 110,
     "name": "왕들의 뼈용",
-    "desc": "옛 왕들의 뼈로 엮인 거대한 뼈 용, 갈비뼈 안에 초록 혼불이 타오르고 찢어진 왕실 망토 위로 금빛 왕관을 썼다.",
-    "art": "huge dragon skeleton made of pale ancient bones, green soul fire burning inside its ribcage, a single large golden crown on its horned skull, a torn dark red royal cape hanging from its neck bones, wings of bare bone spread wide, dark moonlit tones",
+    "desc": "옛 왕들의 뼈로 엮인 거대한 뼈 용, 갈비뼈 안에 초록 혼불이 타오르고 머리뼈에 금빛 왕관을 썼다.",
+    "art": "huge dragon skeleton made of pale ancient bones, small skull compared to its massive body, long neck and long tail, green soul fire burning inside its wide ribcage, a single large golden crown on its horned skull, enormous wings of bare bone spread wide, highly detailed cracked bones with engraved patterns, no cape, no cloth, dark moonlit tones",
     "guardian": true,
     "skills": [
      "death",
