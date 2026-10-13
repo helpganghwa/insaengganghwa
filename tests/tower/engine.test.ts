@@ -15,17 +15,18 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
-  it('곡선: 1층 62, 10층 154, 100층 877,172, 오름차순·특별층이 구간의 벽', () => {
+  it('곡선: 1층 62, 10층 154, 100층 701,737, 오름차순·특별층이 구간의 벽', () => {
     expect(towerRequirement(1)).toBe(62);
     expect(towerRequirement(10)).toBe(154);
     expect(towerRequirement(50)).toBe(7201);
-    expect(towerRequirement(100)).toBe(877172);
+    expect(towerRequirement(100)).toBe(701737);
     // 특별층은 앞 층보다 가파르게(×1.45), 일반층은 완만하게(×1.07)
     expect(towerRequirement(60) / towerRequirement(59)).toBeCloseTo(1.45, 2);
     expect(towerRequirement(55) / towerRequirement(54)).toBeCloseTo(1.07, 2);
-    expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.45, 2); // 100·110층도 다른 수문장과 같은 ×1.45(10-13, 완화 폐지)
-    expect(towerRequirement(110) / towerRequirement(109)).toBeCloseTo(1.45, 2);
-    expect(towerRequirement(101) / towerRequirement(100)).toBeCloseTo(1.05, 2); // 다음 구간 첫 층은 모든 구간이 ×1.05
+    expect(towerRequirement(100) / towerRequirement(99)).toBeCloseTo(1.16, 2); // 옛 맨 위 층 — 확장 뒤에도 낮춘 벽 유지(10-12)
+    expect(towerRequirement(110) / towerRequirement(109)).toBeCloseTo(1.45, 2); // 110층은 다른 수문장과 같은 ×1.45(10-13)
+    expect(towerRequirement(101) / towerRequirement(100)).toBeCloseTo(towerRequirement(11) / towerRequirement(10), 2); // 11구간 첫 층은 다른 구간과 같은 비율(≈1.05)로 잇는다
+    expect(towerRequirement(110)).toBe(1833639); // 10-12판 맨 위 값(1,833,640)과 사실상 같다
     expect(towerRequirement(90) / towerRequirement(89)).toBeCloseTo(1.45, 2); // 그 밖의 특별층은 표준
     for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThan(towerRequirement(f - 1));
   });

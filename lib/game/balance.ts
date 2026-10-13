@@ -1142,20 +1142,33 @@ export const TOWER_DMG_MAX = 1.2;
  * 1층 62 — 실서버 장비 분포 몬테카를로로 층 도달 분포를 맞춘 값(09-30). 대난투식 전투(TOWER_HP_MULT)는 승률 곡선이 완만해
  * 곡선 전체를 올렸고(60→64), 몬스터 급소를 넣으면서(같은 날) 몬스터가 세진 만큼 ÷1.035 낮췄다(64→62, 승률 곡선 동일 확인).
  * ⚠ 전투 변수(급소·광폭화·몬스터 특성·배수)를 바꾸면 이 값을 다시 맞춘다.
- * 수문장 층(10층 단위)은 모두 앞 층 × 1.45 — 100층·110층도 예외 없음(2026-10-13 사용자 확정: 10-12에 두었던 ×1.16 완화를 없애
- * 모든 구간이 같은 모양이 되게 했다. 구간 안 상승 2.49배, 다음 구간 첫 층 ×1.05가 1~11구간에 똑같이 적용된다).
+ * 100층은 앞 층 × 1.16 — 1.45면 1위도 그 주 특별층 요구 장비 운이 따라야 넘는 벽이라, 1위가 닿을 수 있게 낮췄던 값(09-29)을
+ * 110층 확장 뒤에도 그대로 둔다(TOWER_REQ_EASED_FLOORS, 이미 넘은 사람의 벽을 소급해 올리지 않는다).
+ * 11구간(101~110층)은 완화된 100층 값에서 다른 구간과 같은 비율로 잇는다(2026-10-13 사용자 확정): 101층 = 100층 × (2.613 ÷ (1.07^8 × 1.45)) ≈ ×1.049,
+ * 그 뒤 ×1.07, 110층은 ×1.45 — 10-12판처럼 완화분이 풀려 101층이 ×1.31로 튀지 않고, 구간 안 상승이 다른 구간과 같은 2.49배가 된다.
+ * 그 결과 101층 735,996 · 109층 1,264,578 · 110층 1,833,640(10-12판과 같은 맨 위 값).
  */
 export const TOWER_REQ_BASE = 62;
 export const TOWER_REQ_SECTION_RATIO = 2.613;
 export const TOWER_REQ_FLOOR_RATIO = 1.07;
 export const TOWER_REQ_SPECIAL_MULT = 1.45;
+export const TOWER_REQ_TOP_MULT = 1.16;
+/** ×1.16이 적용되는 층 — 확장 전 맨 위였던 100층만(110층은 ×1.45, 10-13). */
+export const TOWER_REQ_EASED_FLOORS: ReadonlySet<number> = new Set([100]);
+/** 구간 첫 층 ÷ 앞 구간 수문장 — 1~10구간 곡선에 내재된 비율(≈1.049). 11구간부터는 앞 구간 수문장(완화 포함) 실제 값에 이 비율을 곱해 잇는다. */
+const TOWER_REQ_NEXT_SECTION_RATIO = TOWER_REQ_SECTION_RATIO / (Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * TOWER_REQ_SPECIAL_MULT);
+function towerSectionStart(sectionIndex: number): number {
+  // 0~9(1~10구간) = 닫힌 식. 10부터(11구간~) = 앞 구간 수문장 실제 값 × 비율(100층 완화가 그대로 이어진다).
+  if (sectionIndex < 10) return TOWER_REQ_BASE * Math.pow(TOWER_REQ_SECTION_RATIO, sectionIndex);
+  return towerRequirement(sectionIndex * TOWER_SECTION) * TOWER_REQ_NEXT_SECTION_RATIO;
+}
 export function towerRequirement(floor: number): number {
   const f = Math.max(1, floor);
   const k = (f - 1) % TOWER_SECTION; // 구간 안 위치 0~9(9 = 특별층)
-  const start = TOWER_REQ_BASE * Math.pow(TOWER_REQ_SECTION_RATIO, Math.floor((f - 1) / TOWER_SECTION));
+  const start = towerSectionStart(Math.floor((f - 1) / TOWER_SECTION));
   const v = k < TOWER_SECTION - 1
     ? start * Math.pow(TOWER_REQ_FLOOR_RATIO, k)
-    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * TOWER_REQ_SPECIAL_MULT;
+    : start * Math.pow(TOWER_REQ_FLOOR_RATIO, TOWER_SECTION - 2) * (TOWER_REQ_EASED_FLOORS.has(f) ? TOWER_REQ_TOP_MULT : TOWER_REQ_SPECIAL_MULT);
   return Math.round(v);
 }
 export function towerIsSpecial(floor: number): boolean {
