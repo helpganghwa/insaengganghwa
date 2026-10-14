@@ -248,6 +248,8 @@ export function ChatDock() {
   const [whisperOpen, setWhisperOpen] = useState<WhisperOpenTarget | null>(null);
   // 미니바 노티점 — 서버가 준 채널별 최신 id와 로컬 seen 비교.
   const [notiDot, setNotiDot] = useState(false);
+  // 패널 안 길드 탭 점 — 같은 비교를 길드 채널만 따로(귓속말 탭 점과 같은 자리, 10-14 꿈나라 #XpsWNlNf). 전체 탭은 늘 흐르는 채널이라 점을 두지 않는다.
+  const [guildDot, setGuildDot] = useState(false);
 
   const openRef = useRef(false);
   const collapsedRef = useRef(false);
@@ -402,11 +404,9 @@ export function ChatDock() {
   const recomputeDot = useCallback(() => {
     const ids = latestIdsRef.current;
     const s = seenRef.current;
-    setNotiDot(
-      (!!ids.all && ids.all !== s.all) ||
-        (!!ids.guild && ids.guild !== s.guild) ||
-        (!!ids.whisper && ids.whisper !== s.whisper),
-    );
+    const guildNew = !!ids.guild && ids.guild !== s.guild;
+    setGuildDot(guildNew);
+    setNotiDot((!!ids.all && ids.all !== s.all) || guildNew || (!!ids.whisper && ids.whisper !== s.whisper));
   }, []);
   const setSeen = useCallback(
     (ch: keyof LatestIds, id: string | null) => {
@@ -438,6 +438,7 @@ export function ChatDock() {
         /* ignore */
       }
       setNotiDot(false);
+      setGuildDot(false);
       return;
     }
     if (openRef.current) {
@@ -1688,7 +1689,7 @@ export function ChatDock() {
                     }`}
                   >
                     {tk === 'all' ? '전체' : tk === 'guild' ? '길드' : '귓속말'}
-                    {tk === 'whisper' && (whisperUnread ?? 0) > 0 ? (
+                    {(tk === 'whisper' && (whisperUnread ?? 0) > 0) || (tk === 'guild' && guildDot && tab !== 'guild') ? (
                       <span
                         aria-hidden
                         className="absolute -top-px -right-[7px] h-[5px] w-[5px] rounded-full bg-amber-500"
