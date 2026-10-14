@@ -189,7 +189,7 @@ export type TowerFloorInfo = {
  * 그림 파일은 그대로 두고 층 목록·층 화면·전투가 이 표 하나로 뒤집는다(대부분 원본이 오른쪽을 봐서, 뒤집으면
  * 내 캐릭터가 있는 왼쪽을 본다). 그림을 새로 뽑으면 이 표도 다시 본다.
  */
-const NO_FLIP = new Set([1, 2, 67, 74, 75, 78]);
+const NO_FLIP = new Set([1, 2, 67, 74, 75, 78, 103]); // 103 수의 유령 — 11구간은 10-14 사용자 결정(결정 폼 KxswoRBGQ7ZYdzLgD3iLqz), 나머지 아홉은 뒤집기
 
 const PLACEHOLDER = ['wolves', 'skeleton', 'sorcerer'] as const;
 /** 층별 그림이 나온 구간(1부터) — /sprites/tower/mon/f<층>.png · /sprites/tower/scene/sec<NN>.png. 없는 구간은 시안용 그림. */
