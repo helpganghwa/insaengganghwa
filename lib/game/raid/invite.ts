@@ -184,7 +184,8 @@ async function candidatesOnServer(
     }),
   );
 
-  // 정렬 — 접속 최신순(기록 없으면 뒤). 초대 가능한 사람이 위로 오도록 joined는 뒤로.
+  // 정렬 — 전투력 높은순(동률은 접속 최신순, 기록 없으면 뒤). 초대 가능한 사람이 위로 오도록 joined는 뒤로.
+  // 시트의 기본 정렬과 같다(10-15 Eclipse #FXt19nCy) — 시트가 고른 정렬(전투력·접속·이름)로 다시 정렬한다.
   const pick = (ids: string[]) =>
     ids
       .map((id) => byId.get(id))
@@ -192,9 +193,9 @@ async function candidatesOnServer(
       .sort(
         (a, b) =>
           Number(a.joined) - Number(b.joined) ||
+          b.combat - a.combat ||
           (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) -
-            (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0) ||
-          b.combat - a.combat,
+            (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
       );
 
   // 길드원 탭에서는 친구와 겹치는 사람을 빼지 않는다 — 두 탭 모두에서 찾을 수 있어야 한다.

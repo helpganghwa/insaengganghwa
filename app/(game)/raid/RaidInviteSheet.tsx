@@ -7,6 +7,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { LastSeen } from '@/components/LastSeen';
 import { GuildBadge } from '@/components/GuildBadge';
 import { Tabs } from '@/components/ui/Tabs';
+import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
 import { useResourceToast } from '@/components/ResourceToast';
 import { Avatar } from '@/app/(game)/friends/Avatar';
 import { fmtNum } from '@/app/(game)/guild/guild-row';
@@ -15,6 +16,44 @@ import type { InviteCandidate } from '@/lib/game/raid/invite';
 import { getRaidInviteCandidatesAction, inviteToRaidAction } from './actions';
 
 type Tab = 'friend' | 'guild';
+
+/** 정렬 — 강화 등록 팝업과 같은 방식(유저 요청 10-15 Eclipse #FXt19nCy): 기본은 전투력 높은순, 기기마다 기억한다(localStorage, 읽기·쓰기 실패는 기본값). */
+const SORTS = [
+  ['combat_desc', '전투력 높은순'],
+  ['seen', '접속순'],
+  ['name', '이름순'],
+] as const;
+type SortKey = (typeof SORTS)[number][0];
+const SORT_STORAGE_KEY = 'ig:raid-invite-sort';
+function loadSort(): SortKey {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(SORT_STORAGE_KEY) : null;
+    return SORTS.some(([k]) => k === raw) ? (raw as SortKey) : 'combat_desc';
+  } catch {
+    return 'combat_desc';
+  }
+}
+function saveSort(v: SortKey) {
+  try {
+    window.localStorage.setItem(SORT_STORAGE_KEY, v);
+  } catch {
+    /* 비공개 창 등 — 저장 못 해도 이번 시트 안에서는 적용된다 */
+  }
+}
+/** 어떤 정렬이든 이미 참여한 사람은 맨 아래(초대할 수 있는 사람이 위로). '초대함'은 제자리 —
+ * 초대를 누를 때마다 행이 옮겨 가면 연달아 초대하는 손가락 위치가 어긋난다. */
+function sortCandidates(list: InviteCandidate[], sort: SortKey): InviteCandidate[] {
+  const seen = (c: InviteCandidate) => (c.lastSeenAt ? Date.parse(c.lastSeenAt) : 0);
+  return [...list].sort(
+    (a, b) =>
+      Number(a.joined) - Number(b.joined) ||
+      (sort === 'combat_desc'
+        ? b.combat - a.combat || seen(b) - seen(a)
+        : sort === 'seen'
+          ? seen(b) - seen(a) || b.combat - a.combat
+          : a.nickname.localeCompare(b.nickname, 'ko') || b.combat - a.combat),
+  );
+}
 
 /**
  * 레이드 지목 초대 시트(A-1, 0146) — 친구/길드원 탭에서 한 명씩 초대.
@@ -37,6 +76,11 @@ export function RaidInviteSheet({
 }) {
   const { showError, showHeaderToast } = useResourceToast();
   const [tab, setTab] = useState<Tab>('friend');
+  const [sort, setSort] = useState<SortKey>(loadSort);
+  const changeSort = (v: SortKey) => {
+    setSort(v);
+    saveSort(v);
+  };
   const [data, setData] = useState<{ friends: InviteCandidate[]; guildMates: InviteCandidate[] } | null>(
     null,
   );
@@ -95,7 +139,7 @@ export function RaidInviteSheet({
     });
   };
 
-  const list = tab === 'friend' ? (data?.friends ?? []) : (data?.guildMates ?? []);
+  const list = sortCandidates(tab === 'friend' ? (data?.friends ?? []) : (data?.guildMates ?? []), sort);
 
   return (
     <ModalShell onClose={onClose} label="동료 초대">
@@ -127,15 +171,30 @@ export function RaidInviteSheet({
           </>
         }
       >
-        <Tabs
-          size="sm"
-          value={tab}
-          onChange={setTab}
-          items={[
-            { key: 'friend' as const, label: '친구', count: data?.friends.length },
-            { key: 'guild' as const, label: '길드원', count: data?.guildMates.length },
-          ]}
-        />
+        {/* 탭 + 정렬 셀렉트(강화 등록 팝업과 같은 부품·스타일). 정렬은 두 탭에 공통. */}
+        <div className="flex items-center gap-2">
+          <Tabs
+            size="sm"
+            className="min-w-0 flex-1"
+            value={tab}
+            onChange={setTab}
+            items={[
+              { key: 'friend' as const, label: '친구', count: data?.friends.length },
+              { key: 'guild' as const, label: '길드원', count: data?.guildMates.length },
+            ]}
+          />
+          <ZoomSafeSelect
+            value={sort}
+            onChange={(e) => changeSort(e.target.value as SortKey)}
+            aria-label="정렬"
+            wrapClassName="h-[30px] w-[118px] shrink-0"
+            className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+          >
+            {SORTS.map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </ZoomSafeSelect>
+        </div>
 
         {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
         <div className="mt-2 h-[44vh] overflow-y-auto">
