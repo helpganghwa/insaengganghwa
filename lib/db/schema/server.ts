@@ -13,6 +13,7 @@ import {
   integer,
   uniqueIndex,
   jsonb,
+  date,
 } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
@@ -29,6 +30,11 @@ export const servers = pgTable('servers', {
   /** 신규 유저의 기본 서버(0210) — 운영자가 한 곳만 지정. 없거나 open이 아니면 최신 open 서버. */
   recommended: boolean('recommended').notNull().default(false),
   openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * 방치 판정(markAbandonedZones)을 마지막으로 돌린 전투일(0243) — 전투일당 1회 게이트. 자정 공개 직후
+   * 한 번 판정하고 적는다. 같은 날짜면 백스톱 틱의 재호출은 건너뛴다(자정 뒤 집행관 이탈이 전날 판정을 바꾸지 않게).
+   */
+  abandonJudgedDay: date('abandon_judged_day'),
 });
 
 /**

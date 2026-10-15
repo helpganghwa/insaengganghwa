@@ -7,7 +7,7 @@ import { zones, conquestBattles, guildMembers, guildAuditLog, guildBattleDeploym
 import { worldEvents } from '@/lib/db/schema/world';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { userEquipment } from '@/lib/db/schema/equipment';
-import { characters } from '@/lib/db/schema/server';
+import { characters, servers } from '@/lib/db/schema/server';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 
 import { conquestPowerMult } from '../balance';
@@ -206,13 +206,24 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *
  * ⚠ **방금 공개한 전투일로만 호출할 것**(지나간 날짜 금지). 판정이 `zones`의 **현재** 소유·집행관과
  *  인자 날짜의 배치를 대조하므로 두 시점이 어긋나면 오작동한다 — 백필 경로에서 호출하지 않는 이유.
- *  플래그는 매 호출마다 서버 전체를 다시 계산한다(먼저 전부 해제 → 방치 구역만 설정)이라 재실행 안전.
+ *  플래그는 서버 전체를 다시 계산한다(먼저 전부 해제 → 방치 구역만 설정). 단 **전투일당 1회**(servers.abandon_judged_day,
+ *  0243) — 같은 전투일의 재호출은 건너뛴다(자정 뒤 집행관 이탈이 전날 판정으로 소급되지 않게).
  */
 export async function markAbandonedZones(
   serverId: number,
   battleDay: string,
-): Promise<{ abandoned: number }> {
+): Promise<{ abandoned: number; skipped: boolean }> {
   return db.transaction(async (tx) => {
+    // **전투일당 1회**(0243, 2026-10-15) — 판정은 zones의 **현재** 집행관을 보므로 같은 전투일에 다시 돌리면
+    // 자정 뒤에 생긴 변화(길드 탈퇴·거주지 이동·본인 배치로 집행관 공석)가 이미 끝난 전투일의 방치로
+    // 소급된다(10-14 00:19 탈퇴 → 00:20 틱에 잊힌 숲길이 전날 방치로 찍혀 인접 무관 공격 대상이 된 사고).
+    // 서버 행을 잠가 동시 틱(공개 크론 2개·백스톱)에서도 한 번만 판정한다.
+    const [srv] = await tx
+      .select({ judged: servers.abandonJudgedDay })
+      .from(servers)
+      .where(eq(servers.id, serverId))
+      .for('update');
+    if (srv?.judged === battleDay) return { abandoned: 0, skipped: true };
     // 방치 구역(소유·집행관0·공격수비배치0) + 소유 길드/구역명 캡처(연대기 재료).
     const victims = (await tx.execute(sql`
       select z.id, z.owner_guild_id::text as owner, z.name, g.name as gname
@@ -231,7 +242,8 @@ export async function markAbandonedZones(
     `)) as unknown as { id: number; owner: string; name: string; gname: string }[];
     // 전날 플래그는 전부 해제 — 배치가 붙은 구역은 보너스가 돌아온다.
     await tx.update(zones).set({ abandonedDay: null }).where(eq(zones.serverId, serverId));
-    if (victims.length === 0) return { abandoned: 0 };
+    await tx.update(servers).set({ abandonJudgedDay: battleDay }).where(eq(servers.id, serverId));
+    if (victims.length === 0) return { abandoned: 0, skipped: false };
     await tx
       .update(zones)
       .set({ abandonedDay: battleDay })
@@ -262,7 +274,7 @@ export async function markAbandonedZones(
         detail: { guildName: e.gname, zones: e.zones, battleDay },
       });
     }
-    return { abandoned: victims.length };
+    return { abandoned: victims.length, skipped: false };
   });
 }
 

@@ -117,6 +117,29 @@ describe('방치 판정의 역사 반영(0180)', () => {
     expect(Number(beta2!.tax_bonus)).toBeGreaterThan(1);
   });
 
+  it('[1회 판정] 자정 판정 뒤 집행관이 빠져도 같은 전투일에는 다시 판정하지 않는다(2026-10-14 잊힌 숲길 사고 회귀 방지)', async () => {
+    await setupScenario();
+    await revealConquest(SV, DAY);
+    const first = await markAbandonedZones(SV, DAY);
+    expect(first.skipped).toBe(false);
+    expect(first.abandoned).toBe(1); // 베타만 — 감마는 집행관이 있어 방치 아님
+
+    // 00:19 길드 탈퇴 재현 — 감마 집행관 공석. 00:20 백스톱 틱의 재호출은 건너뛰어야 한다.
+    await testDb.execute(sql`update zones set executor_user_id = null where id = ${GAMMA}`);
+    const again = await markAbandonedZones(SV, DAY);
+    expect(again.skipped).toBe(true);
+    expect(again.abandoned).toBe(0);
+    const [gamma] = (await testDb.execute(sql`select abandoned_day::text aday from zones where id = ${GAMMA}`)) as unknown as { aday: string | null }[];
+    expect(gamma!.aday).toBeNull(); // 전날 판정으로 소급되지 않음
+    const [srv] = (await testDb.execute(sql`select abandon_judged_day::text d from servers where id = ${SV}`)) as unknown as { d: string }[];
+    expect(srv!.d).toBe(DAY);
+
+    // 다음 전투일은 다시 판정된다 — 베타(배치 없음)·감마(집행관 공석) 둘 다 방치. 알파는 갓 점령(06:00 가드) 제외.
+    const next = await markAbandonedZones(SV, '2020-01-02');
+    expect(next.skipped).toBe(false);
+    expect(next.abandoned).toBe(2);
+  });
+
   it('[사전생성 경로] 이벤트 없이도 방치 예정 구역이 사실표에 잡힌다(2026-07-24 누락 버그 회귀 방지)', async () => {
     const { g1 } = await setupScenario();
 

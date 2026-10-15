@@ -3,7 +3,8 @@
  * 기다렸다가 정각에 revealConquest를 실행한다. 연대기·리플레이는 날짜 게이트(kst_day < 오늘)로 정각에
  * 열리는데 소유권·전투 결과는 자정 크론의 기동 지연(실측 16초~3분)만큼 늦어 화면이 어긋나던 문제의 해소.
  *  - 백스톱은 그대로 conquest-chronicle(00시대 5분 간격). revealConquest는 전투별 조건부 플립(published_at
- *    IS NULL)+행잠금이라 두 크론이 겹쳐도 1회만 적용되고, 방치 판정·수비 이월·연대기 생성은 백스톱이 맡는다.
+ *    IS NULL)+행잠금이라 두 크론이 겹쳐도 1회만 적용된다. 방치 판정은 공개 직후 여기서 전투일당 1회(0243),
+ *    수비 이월·연대기 생성은 백스톱이 맡는다.
  *  - 크론이 자정 이후에 떴으면 기다리지 않고 즉시 공개(현행과 같은 정확도). 창 밖(정각까지 270초 초과) 호출은 no-op.
  *  - 공개 직후 세율 재계산·월드 피드 무효화까지 같이 해, 소유권만 바뀌고 세율은 바닥값(1)인 창을 줄인다.
  * 인증: CRON_SECRET Bearer — isCronAuthorized. 하트비트는 등재하지 않는다(공개 경로의 dead-man은 백스톱 크론이 담당).
@@ -11,7 +12,7 @@
 import { revalidateTag } from 'next/cache';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
-import { revealConquest } from '@/lib/game/guild/conquest/run';
+import { revealConquest, markAbandonedZones } from '@/lib/game/guild/conquest/run';
 import { syncHistoryEras } from '@/lib/game/history/loaders';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
@@ -43,15 +44,22 @@ export async function GET(req: Request) {
   const revealAt = Date.now();
   // 전투일 = 방금 지난 KST 날짜(정각 기준 1분 전).
   const battleDay = kstDateString(new Date(revealAt - 60_000));
-  const results: { serverId: number; revealed?: number; mailed?: number; error?: string }[] = [];
+  const results: { serverId: number; revealed?: number; mailed?: number; abandoned?: number; error?: string }[] = [];
   for (const sid of await openServerIds()) {
     try {
       const rev = await revealConquest(sid, battleDay);
-      if (rev.revealed > 0) {
+      // 방치 판정은 **공개 직후 여기서 1회**(0243, 2026-10-15) — 전투일당 한 번만 돌고(servers.abandon_judged_day)
+      // 백스톱 틱의 재호출은 건너뛴다. 자정 뒤 길드 탈퇴 등으로 집행관이 빈 구역이 전날 방치로 소급되던
+      // 사고(10-14 잊힌 숲길)를 막는다. 판정이 돌았으면 플래그 변화가 있을 수 있어 세율도 다시 계산한다.
+      const ab = await markAbandonedZones(sid, battleDay).catch((e: unknown) => {
+        console.warn('[conquest-reveal] markAbandonedZones', e);
+        return { abandoned: 0, skipped: true };
+      });
+      if (rev.revealed > 0 || !ab.skipped) {
         await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-reveal] recalcTaxBonus', e));
         revalidateTag(`world-feed:s${sid}`, 'max');
       }
-      results.push({ serverId: sid, revealed: rev.revealed, mailed: rev.mailed });
+      results.push({ serverId: sid, revealed: rev.revealed, mailed: rev.mailed, abandoned: ab.abandoned });
     } catch (e) {
       console.error('[conquest-reveal] server', sid, e);
       results.push({ serverId: sid, error: (e as Error).message });

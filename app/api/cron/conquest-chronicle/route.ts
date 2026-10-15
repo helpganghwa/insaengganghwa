@@ -106,6 +106,7 @@ export async function GET(req: Request) {
           // 사전 생성이 실패한 날만 여기서 백필(LLM 생성)된다.
           const rev = await revealConquest(sid, day);
           // 공개(소유권 플립) 직후, 완전 방치(공격·수비·집행관 0) 소유 구역 중립화(B안).
+          // 통상은 conquest-reveal이 자정에 이미 판정해(0243) 여기서는 skipped로 끝난다 — 전투일당 1회.
           //
           // ⚠ **어제(kstDay)에만** 실행한다. 이 판정은 `zones`의 **현재** 소유·집행관과 인자로 받은
           // **그 날짜의** 배치를 대조하므로, 지나간 날짜로 돌리면 두 시점이 섞인다. 특히 위험한 건
