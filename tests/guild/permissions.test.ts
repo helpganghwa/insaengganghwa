@@ -27,7 +27,7 @@ describe('부길드장 권한 비트', () => {
     for (const b of bits) expect(b > 0 && (b & (b - 1)) === 0).toBe(true);
     expect(new Set(bits).size).toBe(bits.length);
     expect(GUILD_PERM_ALL).toBe(bits.reduce((m, b) => m | b, 0));
-    expect(GUILD_PERM_ALL).toBe(1023);
+    expect(GUILD_PERM_ALL).toBe(2047);
   });
 
   it('모든 권한에 라벨이 있다', () => {

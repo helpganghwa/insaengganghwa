@@ -23,7 +23,13 @@ import {
   clearExecutorAction,
   setDeployVisibilityAction,
 } from '../actions';
-import type { DeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
+import {
+  DEPLOY_VISIBILITIES,
+  DEPLOY_VISIBILITY_LABEL,
+  deployRestrictedNote,
+  deployVisibilityDesc,
+  type DeployVisibility,
+} from '@/lib/game/guild/conquest/deploy-visibility';
 import { Tabs } from '@/components/ui/Tabs';
 
 import { guildErrMsg } from '../errors-msg';
@@ -169,7 +175,7 @@ function RowAction({
 }
 
 /** 공개 범위가 '권한자만'일 때 권한 없는 길드원에게 보이는 안내(0204). */
-const RESTRICTED_NOTE = '길드 전체 배치는 길드장과 권한이 있는 부길드장만 볼 수 있습니다.';
+// 제한 안내문은 설정(RN 이상)에 따라 달라진다 — deployRestrictedNote(vis).
 
 /** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
 const STATUS_FILTERS = [
@@ -197,7 +203,7 @@ export function DeployBoard({
   canSetVisibility,
 }: {
   /**
-   * 배치 정보 공개 범위(0204)가 '권한자만'이고 내가 배치 담당자가 아닐 때 — 서버가 `members`에 **내 한 줄만** 내려보낸다.
+   * 배치 정보 공개 범위(0204 · 0244)가 'RN 이상'이고 내 직급이 못 미치며 배치 권한도 없을 때 — 서버가 `members`에 **내 한 줄만** 내려보낸다.
    * 그래서 인원·전투력 합계는 의미가 없고, 그 자리에 '내 배치'와 안내문을 보인다.
    */
   restricted: boolean;
@@ -297,7 +303,7 @@ export function DeployBoard({
         showError(guildErrMsg(r.code));
         return;
       }
-      showHeaderToast({ title: next === 'officer' ? '배치 정보를 권한자만 봅니다' : '배치 정보를 전체 길드원이 봅니다' });
+      showHeaderToast({ title: next === 'all' ? '배치 정보를 전체 길드원이 봅니다' : `배치 정보를 ${DEPLOY_VISIBILITY_LABEL[next]} 직급이 봅니다` });
     });
   };
 
@@ -821,7 +827,7 @@ export function DeployBoard({
                 ))}
               </ul>
             )}
-            {restricted ? <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{RESTRICTED_NOTE}</p> : null}
+            {restricted ? <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{deployRestrictedNote(vis)}</p> : null}
           </section>
         ) : (
           <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
@@ -846,34 +852,25 @@ export function DeployBoard({
               </ModalButton>
             }
           >
-            {/* 공개 범위 설정(0204) — 길드장만. 바꾸면 길드 기록에 남는다. */}
+            {/* 공개 범위 설정(0204 · 0244) — 길드장만. 전체 / R2 이상 / R3 이상 / R4 이상 / R5. 선택지가 다섯이라 설명 아래 한 줄로. 바꾸면 길드 기록에 남는다. */}
             {canSetVisibility ? (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11.5px] font-bold">배치 정보 공개</p>
-                  <p className="text-[10px] leading-snug text-zinc-500">
-                    {vis === 'officer' ? '권한자 외 길드원은 자기 배치만 봅니다' : '길드원 모두가 전체 배치를 봅니다'}
-                  </p>
-                </div>
-                <div role="radiogroup" aria-label="배치 정보 공개 범위" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
-                  {(
-                    [
-                      { key: 'all', label: '전체' },
-                      { key: 'officer', label: '권한자만' },
-                    ] as { key: DeployVisibility; label: string }[]
-                  ).map((o) => (
+              <div className="mb-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-900/60">
+                <p className="text-[11.5px] font-bold">배치 정보 공개</p>
+                <p className="text-[10px] leading-snug text-zinc-500">{deployVisibilityDesc(vis)}</p>
+                <div role="radiogroup" aria-label="배치 정보 공개 범위" className="mt-1.5 flex rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
+                  {DEPLOY_VISIBILITIES.map((key) => (
                     <button
-                      key={o.key}
+                      key={key}
                       type="button"
                       role="radio"
-                      aria-checked={vis === o.key}
+                      aria-checked={vis === key}
                       disabled={pending}
-                      onClick={() => changeVisibility(o.key)}
-                      className={`rounded-md px-2 py-1 text-[10.5px] font-bold transition disabled:opacity-60 ${
-                        vis === o.key ? 'bg-sky-500 text-white' : 'text-zinc-500'
+                      onClick={() => changeVisibility(key)}
+                      className={`flex-1 whitespace-nowrap rounded-md px-1 py-1 text-[10.5px] font-bold tabular-nums transition disabled:opacity-60 ${
+                        vis === key ? 'bg-sky-500 text-white' : 'text-zinc-500'
                       }`}
                     >
-                      {o.label}
+                      {DEPLOY_VISIBILITY_LABEL[key]}
                     </button>
                   ))}
                 </div>
@@ -953,7 +950,7 @@ export function DeployBoard({
                 })
               )}
             </ul>
-            {restricted ? <p className="mt-2 text-[11px] leading-snug text-zinc-400">{RESTRICTED_NOTE}</p> : null}
+            {restricted ? <p className="mt-2 text-[11px] leading-snug text-zinc-400">{deployRestrictedNote(vis)}</p> : null}
           </ModalLayout>
         </ModalShell>
       )}

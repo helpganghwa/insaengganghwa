@@ -1,6 +1,7 @@
 'use client';
 
 import { getJosaPicker } from 'josa';
+import { DEPLOY_VISIBILITY_LABEL, parseDeployVisibility } from '@/lib/game/guild/conquest/deploy-visibility';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
@@ -101,6 +102,12 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 {target}님을 {hl('부길드장', C.indigo)}으로 임명했습니다</>;
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
+    case 'set_rank': {
+      // 길드원 직급 변경(0244) — 올림/내림을 from·to로 가른다.
+      const from = Number(e.detail?.from ?? 0);
+      const to = Number(e.detail?.to ?? 0);
+      return <>{actor}님이 {target}님을 {hl(`R${to}`, C.indigo)}{to > from ? '로 올렸습니다' : '로 내렸습니다'}</>;
+    }
     // set_perm은 activity-log 쿼리에서 피드 제외(내부 설정) — 혹시 노출돼도 원시 코드 대신 문구.
     case 'set_perm':
       return <>{actor}님이 {target}님의 {hl('부길드장 권한', C.indigo)}을 변경했습니다</>;
@@ -113,7 +120,7 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'set_deploy_visibility':
       return (
         <>
-          {actor}님이 점령전 배치 정보 공개 범위를 {hl(e.detail?.visibility === 'officer' ? '권한자만' : '전체 길드원', C.indigo)}으로 바꿨습니다
+          {actor}님이 점령전 배치 정보 공개 범위를 {hl(DEPLOY_VISIBILITY_LABEL[parseDeployVisibility(String(e.detail?.visibility ?? ''))], C.indigo)}{getJosaPicker('으로')(DEPLOY_VISIBILITY_LABEL[parseDeployVisibility(String(e.detail?.visibility ?? ''))])} 바꿨습니다
         </>
       );
     case 'notice_edit':

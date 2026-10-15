@@ -9,6 +9,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 
 import { logGuildAudit } from './audit';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from './balance';
+import { GUILD_DEMOTED_RANK } from './rank';
 import { neutralizeAndDeleteGuild } from './disband';
 
 /**
@@ -105,7 +106,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
       .for('update');
     if (!leaderM || leaderM.role !== 'leader') return 'skip';
 
-    // 후계자: 활성(미접속<7일) 멤버 중 부길드장 우선 → 기여도 desc → 가입순 asc.
+    // 후계자: 활성(미접속<7일) 멤버 중 부길드장 우선 → 직급 R3→R2→R1(0244) → 기여도 desc → 가입순 asc.
     // ⚠ raw execute 행 키는 SQL 별칭 그대로(camel 자동변환 없음) — "userId" 인용 별칭 필수.
     //   (비인용 user_id 별칭을 s.userId로 읽어 undefined → 승격 UPDATE가 UNDEFINED_VALUE로
     //    매번 롤백되던 버그, 2026-07-22)
@@ -115,7 +116,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
       left join characters c on c.user_id = m.user_id and c.server_id = m.server_id
       where m.guild_id = ${leaderM.guildId} and m.user_id <> ${g.leader}
         and coalesce(c.last_seen_at, m.joined_at) >= now() - interval '${sql.raw(String(GUILD_LEADER_HANDOVER_DAYS))} days'
-      order by (m.role = 'vice') desc, m.contribution_points desc, m.joined_at asc
+      order by (m.role = 'vice') desc, m.rank desc, m.contribution_points desc, m.joined_at asc
       limit 1
       for update of m
     `)) as unknown as Successor[];
@@ -131,7 +132,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
     if (promoted.length === 0) return 'skip';
     await tx
       .update(guildMembers)
-      .set({ role: 'member' })
+      .set({ role: 'member', rank: GUILD_DEMOTED_RANK })
       .where(and(eq(guildMembers.userId, g.leader), eq(guildMembers.serverId, serverId)));
     await tx
       .update(guilds)

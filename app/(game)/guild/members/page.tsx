@@ -47,6 +47,7 @@ export default async function GuildMembersPage() {
         serverId={serverId}
         myRole={membership.role}
         canKick={hasGuildPerm(membership.role, membership.permissions, 'kick')}
+        canRank={hasGuildPerm(membership.role, membership.permissions, 'rank')}
       />
     </div>
   );

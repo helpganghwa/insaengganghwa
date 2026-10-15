@@ -48,10 +48,10 @@ export default async function DeployPage({
   // 배치용 + '세계지도' 탭용 데이터를 함께 로드(map/page와 동일 소스). 세계지도는 열람+팝업이라
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
-  // 배치 정보 공개 범위(0204) — '권한자만'이면 배치 담당자가 아닌 길드원에게는 **본인 배치만** 내려보낸다.
+  // 배치 정보 공개 범위(0204 · 0244) — 'RN 이상'이면 그 직급에 못 미치고 배치 권한도 없는 길드원에게는 **본인 배치만** 내려보낸다.
   // 화면에서 숨기는 것이 아니라 서버에서 읽지도 않는다(전원분이 RSC payload에 실리지 않게).
   const visibility = parseDeployVisibility(membership.deployVisibility);
-  const restricted = isDeployViewRestricted(visibility, membership.role, membership.permissions);
+  const restricted = isDeployViewRestricted(visibility, membership.role, membership.permissions, membership.rank);
   const [board, attackable, adjacency, wmZones, residence] = await Promise.all([
     getDeployBoard(membership.guildId, serverId, restricted ? { onlyUserId: userId } : {}),
     getAttackableZoneIds(membership.guildId, serverId),

@@ -43,12 +43,13 @@ export async function assertGuildPerm(
 export async function getGuildPermState(
   userId: string,
   serverId: number,
-): Promise<{ guildId: bigint; role: GuildRole; permissions: number } | null> {
+): Promise<{ guildId: bigint; role: GuildRole; permissions: number; rank: number } | null> {
   const [m] = await db
     .select({
       guildId: guildMembers.guildId,
       role: guildMembers.role,
       permissions: guildMembers.permissions,
+      rank: guildMembers.rank,
     })
     .from(guildMembers)
     .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
@@ -64,12 +65,13 @@ export async function getGuildPermState(
 export async function getDeployViewerState(
   userId: string,
   serverId: number,
-): Promise<{ guildId: bigint; role: GuildRole; permissions: number; deployVisibility: string } | null> {
+): Promise<{ guildId: bigint; role: GuildRole; permissions: number; rank: number; deployVisibility: string } | null> {
   const [m] = await db
     .select({
       guildId: guildMembers.guildId,
       role: guildMembers.role,
       permissions: guildMembers.permissions,
+      rank: guildMembers.rank,
       deployVisibility: guilds.deployVisibility,
     })
     .from(guildMembers)

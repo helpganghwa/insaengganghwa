@@ -13,8 +13,9 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { GUILD_MAX_VICE, GUILD_REJOIN_LOCK_HOURS } from '@/lib/game/guild/balance';
 import { GUILD_PERM_ORDER, permKeys } from '@/lib/game/guild/permissions';
+import { MEMBER_RANKS, parseMemberRank, rankLabel, type MemberRank } from '@/lib/game/guild/rank';
 
-import { setViceAction, kickMemberAction, transferLeadershipAction } from './actions';
+import { setViceAction, kickMemberAction, transferLeadershipAction, setMemberRankAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 
 type Slot = 'weapon' | 'armor' | 'accessory';
@@ -31,7 +32,9 @@ export type RichMember = {
   nickname: string;
   publicCode: string;
   role: 'leader' | 'vice' | 'member';
-  /** 부길드장 권한 비트마스크(0142) — '권한 N/9' 배지. 길드장·길드원은 의미 없음. */
+  /** 길드원 직급 R1~R3(0244) — 길드장·부길드장은 역할이 곧 R5·R4라 이 값을 보지 않는다. */
+  rank: number;
+  /** 부길드장 권한 비트마스크(0142) — '권한 N/11' 배지. 길드장·길드원은 의미 없음. */
   permissions: number;
   avatar: string | null;
   /** 마지막 접속(ISO) — 접속 상태 표시. 없으면 null. */
@@ -202,6 +205,7 @@ export function GuildMemberList({
   serverId,
   myRole = 'member',
   canKick = false,
+  canRank = false,
 }: {
   members: RichMember[];
   myUserId: string;
@@ -210,6 +214,8 @@ export function GuildMemberList({
   myRole?: RichMember['role'];
   /** kick 권한(0142) — 내보내기 항목 노출. */
   canKick?: boolean;
+  /** rank 권한(0244) — 길드원 직급(R1~R3) 선택 노출. 길드장은 항상. */
+  canRank?: boolean;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const [pending, start] = useTransition();
@@ -228,8 +234,8 @@ export function GuildMemberList({
   const isLeader = myRole === 'leader';
   const viceCount = members.filter((m) => m.role === 'vice').length;
 
-  // 직책별 그룹(길드장/부길드장/길드원) — 각 그룹 내부는 선택한 메트릭으로 정렬.
-  // 접기는 두지 않는다(사용자 결정 2026-07-30) — 전원이 항상 보인다.
+  // 직급별 그룹(R5 길드장 / R4 부길드장 / R3 / R2 / R1, 0244) — 각 그룹 내부는 선택한 메트릭으로 정렬.
+  // 접기는 두지 않는다(사용자 결정 2026-07-30) — 전원이 항상 보인다. 행 안에 직급 배지는 따로 두지 않는다(그룹이 곧 직급).
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const matched = needle
@@ -237,22 +243,32 @@ export function GuildMemberList({
       : members;
     const byMetric = (a: RichMember, b: RichMember) =>
       sortValue(b, sort) - sortValue(a, sort) || a.nickname.localeCompare(b.nickname);
-    const of = (role: RichMember['role']) => matched.filter((m) => m.role === role).sort(byMetric);
+    const of = (role: RichMember['role'], rank?: MemberRank) =>
+      matched.filter((m) => m.role === role && (rank == null || parseMemberRank(m.rank) === rank)).sort(byMetric);
     return [
-      { key: 'leader' as const, label: '길드장', rows: of('leader') },
-      { key: 'vice' as const, label: '부길드장', rows: of('vice') },
-      { key: 'member' as const, label: '길드원', rows: of('member') },
+      { key: 'leader' as const, label: 'R5 길드장', rows: of('leader') },
+      { key: 'vice' as const, label: 'R4 부길드장', rows: of('vice') },
+      { key: 'r3' as const, label: 'R3', rows: of('member', 3) },
+      { key: 'r2' as const, label: 'R2', rows: of('member', 2) },
+      { key: 'r1' as const, label: 'R1', rows: of('member', 1) },
     ];
   }, [members, sort, q]);
 
   const matchedCount = groups.reduce((n, g) => n + g.rows.length, 0);
+  // 부길드장 임명 후보 — R3 → R2 → R1 순, 그 안은 선택한 정렬(0244, 사용자 결정).
+  const promoteCandidates = useMemo(
+    () => groups.filter((g) => g.key === 'r3' || g.key === 'r2' || g.key === 'r1').flatMap((g) => g.rows),
+    [groups],
+  );
 
-  /** 관리 버튼 노출 판정 — 자신은 제외, 부길드장 대상은 길드장만, 그 외는 kick 권한만 있어도 열린다. */
+  /** 관리 버튼 노출 판정 — 자신은 제외, 부길드장 대상은 길드장만, 길드원은 kick 또는 rank 권한만 있어도 열린다. */
   const manageableBy = (m: RichMember): boolean => {
     if (m.userId === myUserId || m.role === 'leader') return false;
     if (m.role === 'vice') return isLeader;
-    return isLeader || canKick;
+    return isLeader || canKick || canRank;
   };
+  /** 직급 선택 노출 — 길드장 또는 rank 권한 부길드장, 대상은 길드원만. */
+  const canSetRankOf = (m: RichMember): boolean => m.role === 'member' && (isLeader || canRank);
 
   const run = (fn: () => Promise<{ status: string; code?: string }>, okTitle: string) => {
     start(async () => {
@@ -301,6 +317,20 @@ export function GuildMemberList({
       tone: 'danger',
       run: () => run(() => transferLeadershipAction(m.userId), '길드장 위임'),
     });
+
+  /** 직급 변경 확인(0244) — 올림·내림 문구만 다르고 본문은 같다(되돌릴 수 있는 동작, 사용자 결정 문구). */
+  const askRank = (m: RichMember, rank: MemberRank) => {
+    const cur = parseMemberRank(m.rank);
+    if (cur === rank) return;
+    const up = rank > cur;
+    setConfirm({
+      title: `${m.nickname}님을 R${rank}로 ${up ? '올릴까요?' : '내릴까요?'}`,
+      body: '직급은 언제든 다시 바꿀 수 있습니다.',
+      label: up ? `R${rank}로 올리기` : `R${rank}로 내리기`,
+      tone: 'info',
+      run: () => run(() => setMemberRankAction(m.userId, rank), `R${rank}로 ${up ? '올렸습니다' : '내렸습니다'}`),
+    });
+  };
 
   const askKick = (m: RichMember) =>
     setConfirm({
@@ -359,7 +389,7 @@ export function GuildMemberList({
                   <span className="ml-1 tabular-nums">
                     {viceCount} / {GUILD_MAX_VICE}
                   </span>
-                ) : key === 'member' ? (
+                ) : key !== 'leader' ? (
                   <span className="ml-1 tabular-nums">{rows.length}</span>
                 ) : null}
               </p>
@@ -413,11 +443,11 @@ export function GuildMemberList({
             subtitle={
               sheet.role === 'vice' ? (
                 <span className="font-bold text-sky-600 dark:text-sky-400">
-                  부길드장
+                  {rankLabel('vice', null)}
                   {isLeader ? ` · 권한 ${permKeys(sheet.permissions).length} / ${GUILD_PERM_ORDER.length}` : ''}
                 </span>
               ) : (
-                '길드원'
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">{rankLabel(sheet.role, sheet.rank)}</span>
               )
             }
             bodyPad="sm"
@@ -428,6 +458,32 @@ export function GuildMemberList({
             }
           >
             <div className="space-y-0.5">
+              {/* 직급 선택(0244) — R1/R2/R3 바로 고르기(사용자 결정). 누르면 확인 팝업이 위에 겹친다. */}
+              {canSetRankOf(sheet) ? (
+                <div className="mb-1 flex items-center justify-between gap-2 border-b border-zinc-200/60 px-3 pb-2.5 pt-1.5 dark:border-zinc-800/60">
+                  <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">직급</span>
+                  <div role="radiogroup" aria-label="직급" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
+                    {MEMBER_RANKS.map((r) => {
+                      const on = parseMemberRank(sheet.rank) === r;
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          disabled={pending}
+                          onClick={() => askRank(sheet, r)}
+                          className={`rounded-md px-2.5 py-1 text-[11px] font-bold tabular-nums transition disabled:opacity-60 ${
+                            on ? 'bg-sky-500 text-white' : 'text-zinc-500'
+                          }`}
+                        >
+                          R{r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
               {sheet.role === 'vice' && isLeader ? (
                 <Link
                   prefetch={false}
@@ -497,13 +553,11 @@ export function GuildMemberList({
               </ModalButton>
             }
           >
-            {groups.find((g) => g.key === 'member')!.rows.length === 0 ? (
+            {promoteCandidates.length === 0 ? (
               <p className="py-4 text-center text-[12px] text-zinc-400">임명할 길드원이 없어요.</p>
             ) : (
               <ul className="space-y-0.5">
-                {groups
-                  .find((g) => g.key === 'member')!
-                  .rows.map((m) => (
+                {promoteCandidates.map((m) => (
                     <li key={m.userId}>
                       <button
                         type="button"
@@ -514,7 +568,7 @@ export function GuildMemberList({
                           {m.nickname}
                         </span>
                         <span className="shrink-0 text-[10.5px] tabular-nums text-zinc-500">
-                          기여 {m.contribution.toLocaleString('ko-KR')}
+                          R{parseMemberRank(m.rank)} · 기여 {m.contribution.toLocaleString('ko-KR')}
                         </span>
                       </button>
                     </li>

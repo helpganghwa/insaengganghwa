@@ -79,7 +79,7 @@ export const guilds = pgTable('guilds', {
   openchatUrl: text('openchat_url'),
   /** 가입 방식 — 'open'(자유: 신청 즉시 가입) | 'approval'(승인: 길드장/부길드장 승인 필요). 기본=승인. */
   joinPolicy: text('join_policy').notNull().default('approval'),
-  /** 0204 — 점령전 배치 정보 공개 범위: 'all'(기본) | 'officer'(배치 담당자만 전체, 나머지는 자기 배치만). conquest/deploy-visibility.ts */
+  /** 0204 · 0244 — 점령전 배치 정보 공개 범위: 'all'(기본) | 'r2' | 'r3' | 'r4' | 'r5'(그 직급 이상만 전체, 나머지는 자기 배치만). conquest/deploy-visibility.ts */
   deployVisibility: text('deploy_visibility').notNull().default('all'),
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */
   level: integer('level').notNull().default(0),
@@ -122,6 +122,11 @@ export const guildMembers = pgTable(
      * 일반 길드원은 0. 부길드장 해제 시 0으로 초기화한다.
      */
     permissions: integer('permissions').notNull().default(0),
+    /**
+     * 길드원 직급 R1~R3(0244) — 길드원(role='member')에게만 뜻이 있다. 길드장 R5 · 부길드장 R4는 역할에서
+     * 계산한다(lib/game/guild/rank.ts rankOf). 가입 시 1, 부길드장 해제·길드장 교체로 길드원이 되면 3.
+     */
+    rank: smallint('rank').notNull().default(1),
     contributionPoints: bigint('contribution_points', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 일 3회 기부 카운터(KST 자정 리셋). */
     dailyDonationCount: integer('daily_donation_count').notNull().default(0),

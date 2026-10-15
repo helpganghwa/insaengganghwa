@@ -51,13 +51,13 @@ describe.skipIf(!USER)('배치 정보 공개 범위 설정', () => {
       .transaction(async (tx) => {
         const f = await setup(tx);
         expect(await f.vis()).toBe('all');
-        await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' });
-        expect(await f.vis()).toBe('officer');
-        await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' });
-        expect(await f.logs()).toEqual(['officer']);
+        await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'r5' });
+        expect(await f.vis()).toBe('r5');
+        await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'r5' });
+        expect(await f.logs()).toEqual(['r5']);
         await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'all' });
         expect(await f.vis()).toBe('all');
-        expect(await f.logs()).toEqual(['officer', 'all']);
+        expect(await f.logs()).toEqual(['r5', 'all']);
         throw ROLLBACK;
       })
       .catch((e) => {
@@ -69,16 +69,16 @@ describe.skipIf(!USER)('배치 정보 공개 범위 설정', () => {
     await testDb
       .transaction(async (tx) => {
         const f = await setup(tx);
-        await f.setRole('vice', 1023);
-        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_LEADER');
+        await f.setRole('vice', 2047);
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'r5' }))).toBe('NOT_LEADER');
         await f.setRole('member', 0);
-        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_LEADER');
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'r5' }))).toBe('NOT_LEADER');
         // 서버 분리 — 1서버 길드장이 다른 서버 번호로 부르면 그 서버에는 소속이 없다.
         await f.setRole('leader', 0);
-        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: 9, visibility: 'officer' }))).toBe('NOT_IN_GUILD');
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: 9, visibility: 'r5' }))).toBe('NOT_IN_GUILD');
         expect(await f.vis()).toBe('all');
         await tx.execute(sql`delete from guild_members where server_id = ${SERVER_ID} and user_id = ${USER}::uuid`);
-        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'officer' }))).toBe('NOT_IN_GUILD');
+        expect(await code(setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'r5' }))).toBe('NOT_IN_GUILD');
         throw ROLLBACK;
       })
       .catch((e) => {

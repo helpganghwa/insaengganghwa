@@ -12,6 +12,7 @@ import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { clearWorldBossOnExit } from '@/lib/game/world-boss/party';
 import { GuildError } from './errors';
 import { GUILD_PERM, GUILD_PERM_DEFAULT, hasGuildPerm, type GuildPermKey } from './permissions';
+import { GUILD_DEMOTED_RANK } from './rank';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -42,7 +43,8 @@ export function transferLeadership(input: {
     const target = await lockMember(tx, input.targetUserId, input.serverId);
     if (!target || target.guildId !== leader.guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
 
-    await tx.update(guildMembers).set({ role: 'member' }).where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)));
+    // 물러난 길드장은 길드원 R3(0244 — 부길드장 해제와 같은 규칙).
+    await tx.update(guildMembers).set({ role: 'member', rank: GUILD_DEMOTED_RANK }).where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.update(guildMembers).set({ role: 'leader' }).where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.update(guilds).set({ leaderUserId: input.targetUserId }).where(eq(guilds.id, leader.guildId));
     await logGuildAudit(tx, {
@@ -62,7 +64,15 @@ export function setViceRole(input: {
   targetUserId: string;
   makeVice: boolean;
 }): Promise<void> {
-  return db.transaction(async (tx) => {
+  return db.transaction((tx) => setViceRoleTx(tx, input));
+}
+
+/** 트랜잭션 본체 — 테스트가 바깥 트랜잭션을 넘겨 롤백한다(tests/guild/set-rank.test.ts). */
+export async function setViceRoleTx(
+  tx: Tx,
+  input: { leaderUserId: string; serverId: number; targetUserId: string; makeVice: boolean },
+): Promise<void> {
+  {
     if (input.leaderUserId === input.targetUserId) throw new GuildError('INVALID_TARGET');
     const leader = await lockMember(tx, input.leaderUserId, input.serverId);
     if (!leader) throw new GuildError('NOT_IN_GUILD');
@@ -82,12 +92,14 @@ export function setViceRole(input: {
 
     // 권한은 부길드장 자리에 붙는다(0142) — 임명 시 기본값(공지·소개·오픈채팅),
     // 해제 시 0으로 초기화. 재임명하면 이전 설정이 살아나지 않고 다시 기본값에서 시작한다.
+    // 해제된 부길드장은 길드원 R3(0244, 사용자 결정) — 임명 때는 직급 열을 건드리지 않는다(부길드장은 역할이 곧 R4).
     await tx
       .update(guildMembers)
-      .set({
-        role: input.makeVice ? 'vice' : 'member',
-        permissions: input.makeVice ? GUILD_PERM_DEFAULT : 0,
-      })
+      .set(
+        input.makeVice
+          ? { role: 'vice', permissions: GUILD_PERM_DEFAULT }
+          : { role: 'member', permissions: 0, rank: GUILD_DEMOTED_RANK },
+      )
       .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await logGuildAudit(tx, {
       serverId: input.serverId,
@@ -96,7 +108,7 @@ export function setViceRole(input: {
       action: input.makeVice ? 'set_vice' : 'unset_vice',
       targetUserId: input.targetUserId,
     });
-  });
+  }
 }
 
 /**

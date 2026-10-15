@@ -658,7 +658,7 @@ export async function getConquestBattleById(id: bigint) {
 
 /** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
 export async function getDeployBoard(guildId: bigint, gServerId: number, opts: { onlyUserId?: string } = {}) {
-  // onlyUserId — 배치 정보 공개 범위(0204)가 '권한자만'인 길드의 일반 길드원. 처음부터 **본인 행만** 읽는다:
+  // onlyUserId — 배치 정보 공개 범위(0204 · 0244)가 'RN 이상'인 길드에서 그에 못 미치는 길드원. 처음부터 **본인 행만** 읽는다:
   // 남의 배치를 읽었다가 지우는 것보다 안전하고, 길드원 전원의 장비를 읽어 전투력을 계산하는 비용도 없다.
   // 빈 문자열이 '제한 없음'으로 새면 전원이 읽힌다 — 값이 넘어왔는지만 본다(빈 값은 uuid 변환에서 실패해 닫힌 쪽으로 떨어진다).
   const onlyMe = opts.onlyUserId !== undefined ? sql`and gm.user_id = ${opts.onlyUserId}::uuid` : sql``;
@@ -675,7 +675,7 @@ export async function getDeployBoard(guildId: bigint, gServerId: number, opts: {
     left join zones dz on dz.id = d.zone_id
     left join zones ez on ez.executor_user_id = gm.user_id and ez.server_id = gm.server_id
     where gm.guild_id = ${guildId} ${onlyMe}
-    order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, c.nickname
+    order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, gm.rank desc, c.nickname
   `)) as unknown as DeployBoardMember[];
 
   const zoneRows = await db
@@ -743,7 +743,9 @@ export async function getGuildMembersRich(guildId: bigint) {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       role: guildMembers.role,
-      /** 부길드장 권한 비트마스크(0142) — 목록에서 '권한 N/9' 배지로 보여준다. */
+      /** 길드원 직급 R1~R3(0244) — 목록 그룹 · 관리 시트. */
+      rank: guildMembers.rank,
+      /** 부길드장 권한 비트마스크(0142) — 목록에서 '권한 N/11' 배지로 보여준다. */
       permissions: guildMembers.permissions,
       contribution: guildMembers.contributionPoints,
       // 오늘 기여 파생용 — 기여도는 기부가 유일한 소스라 일일 카운터×티어 XP로 정확 계산(별도 로그 불필요).
@@ -848,6 +850,7 @@ export async function getGuildMembersRich(guildId: bigint) {
       nickname: b.nickname,
       publicCode: b.publicCode,
       role: b.role,
+      rank: b.rank,
       permissions: b.permissions,
       avatar: b.avatar,
       lastSeenAt: b.lastSeenAt ? b.lastSeenAt.toISOString() : null,

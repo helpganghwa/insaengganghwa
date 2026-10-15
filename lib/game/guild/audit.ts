@@ -15,6 +15,7 @@ export type GuildAuditAction =
   | 'transfer_leadership'
   | 'set_vice'
   | 'unset_vice'
+  | 'set_rank' // 길드원 직급 변경(0244) — detail { from, to }(1~3)
   | 'disband'
   | 'set_join_policy'
   | 'set_deploy_visibility' // 점령전 배치 정보 공개 범위(0204) — detail { visibility }

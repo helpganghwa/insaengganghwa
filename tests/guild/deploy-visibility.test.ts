@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { GUILD_PERM } from '@/lib/game/guild/permissions';
 import {
+  DEPLOY_VISIBILITIES,
+  DEPLOY_VISIBILITY_LABEL,
+  deployRestrictedNote,
+  deployVisibilityDesc,
+  deployVisibilityMinRank,
   isDeployOfficer,
   isDeployViewRestricted,
   maskDeployMembers,
@@ -24,11 +29,15 @@ const m = (userId: string, over: Partial<Row> = {}): Row => ({
 });
 
 describe('배치 정보 공개 범위', () => {
-  it('설정값은 officer만 제한으로 읽고 나머지는 전부 all', () => {
-    expect(parseDeployVisibility('officer')).toBe('officer');
+  it("설정값은 all · r2 · r3 · r4 · r5 — 종전 'officer'는 r5로, 모르는 값은 all로 읽는다", () => {
+    expect(parseDeployVisibility('officer')).toBe('r5');
     expect(parseDeployVisibility('all')).toBe('all');
+    expect(parseDeployVisibility('r2')).toBe('r2');
+    expect(parseDeployVisibility('r5')).toBe('r5');
     expect(parseDeployVisibility(null)).toBe('all');
     expect(parseDeployVisibility('weird')).toBe('all');
+    expect(DEPLOY_VISIBILITIES).toEqual(['all', 'r2', 'r3', 'r4', 'r5']);
+    expect(DEPLOY_VISIBILITIES.map(deployVisibilityMinRank)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it('배치 담당자 = 길드장, 배치 해제 또는 집행관 지정 권한이 있는 부길드장', () => {
@@ -39,12 +48,40 @@ describe('배치 정보 공개 범위', () => {
     expect(isDeployOfficer('member', GUILD_PERM.deploy)).toBe(false);
   });
 
-  it("제한은 설정이 'officer'이고 담당자가 아닐 때만 걸린다", () => {
-    expect(isDeployViewRestricted('all', 'member', 0)).toBe(false);
-    expect(isDeployViewRestricted('officer', 'member', 0)).toBe(true);
-    expect(isDeployViewRestricted('officer', 'vice', GUILD_PERM.notice)).toBe(true);
-    expect(isDeployViewRestricted('officer', 'vice', GUILD_PERM.executor)).toBe(false);
-    expect(isDeployViewRestricted('officer', 'leader', 0)).toBe(false);
+  it("제한은 'RN 이상'에 직급이 못 미치고 배치 권한도 없을 때만 걸린다", () => {
+    // 전체 — 아무도 제한되지 않는다.
+    expect(isDeployViewRestricted('all', 'member', 0, 1)).toBe(false);
+    // R2 이상 — R1만 제한, R2·R3·부길드장·길드장은 통과.
+    expect(isDeployViewRestricted('r2', 'member', 0, 1)).toBe(true);
+    expect(isDeployViewRestricted('r2', 'member', 0, 2)).toBe(false);
+    expect(isDeployViewRestricted('r2', 'member', 0, 3)).toBe(false);
+    expect(isDeployViewRestricted('r2', 'vice', GUILD_PERM.notice, null)).toBe(false);
+    // R3 이상 — R1·R2 제한.
+    expect(isDeployViewRestricted('r3', 'member', 0, 2)).toBe(true);
+    expect(isDeployViewRestricted('r3', 'member', 0, 3)).toBe(false);
+    // R4 이상 — 길드원 전부 제한, 배치 권한 없는 부길드장도 R4라 통과.
+    expect(isDeployViewRestricted('r4', 'member', 0, 3)).toBe(true);
+    expect(isDeployViewRestricted('r4', 'vice', GUILD_PERM.notice, null)).toBe(false);
+    // R5 — 길드장만. 배치 권한 없는 부길드장은 제한.
+    expect(isDeployViewRestricted('r5', 'vice', GUILD_PERM.notice, null)).toBe(true);
+    expect(isDeployViewRestricted('r5', 'leader', 0, null)).toBe(false);
+    // 배치 권한(배치 해제 · 집행관)이 있는 부길드장은 설정과 무관하게 통과(사용자 결정 10-15).
+    expect(isDeployViewRestricted('r5', 'vice', GUILD_PERM.executor, null)).toBe(false);
+    expect(isDeployViewRestricted('r5', 'vice', GUILD_PERM.deploy, null)).toBe(false);
+    // 길드원은 배치 권한 비트가 있어도(부길드장 해제 뒤 잔존 등) 직급으로만 본다.
+    expect(isDeployViewRestricted('r3', 'member', GUILD_PERM.deploy, 1)).toBe(true);
+    // 직급 값이 이상하면 R1로 닫는다.
+    expect(isDeployViewRestricted('r2', 'member', 0, null)).toBe(true);
+    expect(isDeployViewRestricted('r2', 'member', 0, 9)).toBe(true);
+  });
+
+  it('선택지 라벨 · 설명 · 제한 안내 문구(사용자 확정)', () => {
+    expect(DEPLOY_VISIBILITY_LABEL).toEqual({ all: '전체', r2: 'R2 이상', r3: 'R3 이상', r4: 'R4 이상', r5: 'R5' });
+    expect(deployVisibilityDesc('all')).toBe('길드원 모두가 전체 배치를 볼 수 있습니다');
+    expect(deployVisibilityDesc('r2')).toBe('R2 이상 직급과 길드장, 배치 권한이 있는 부길드장만 전체 배치를 볼 수 있습니다');
+    expect(deployVisibilityDesc('r5')).toBe('길드장과 배치 권한이 있는 부길드장만 전체 배치를 볼 수 있습니다');
+    expect(deployRestrictedNote('r2')).toBe('길드 전체 배치는 R2 이상 직급과 길드장, 배치 권한이 있는 부길드장만 볼 수 있습니다.');
+    expect(deployRestrictedNote('r5')).toBe('길드 전체 배치는 길드장과 배치 권한이 있는 부길드장만 볼 수 있습니다.');
   });
 
   it('제한된 길드원은 본인 배치만 본다 — 같은 구역 동료도 내려가지 않는다', () => {

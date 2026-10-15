@@ -45,6 +45,8 @@ import {
   transferLeadership,
 } from '@/lib/game/guild';
 import { notifyJoinDecision, notifyJoinRequest } from '@/lib/game/guild/notify';
+import { setMemberRank } from '@/lib/game/guild/set-rank';
+import { isMemberRank } from '@/lib/game/guild/rank';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { GUILD_PERM_ORDER, hasGuildPerm, type GuildPermKey } from '@/lib/game/guild/permissions';
 import { getGuild } from '@/lib/game/guild/queries';
@@ -342,6 +344,24 @@ export async function setViceAction(targetUserId: string, makeVice: boolean) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setVice');
+  }
+}
+
+/** 길드원 직급 변경(0244) — 길드장 · '직급 관리' 권한 부길드장. 값은 1~3만. */
+export async function setMemberRankAction(targetUserId: string, rank: number) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (!isMemberRank(rank)) return { status: 'error', code: 'INVALID_RANK' } as const;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    await setMemberRank({ actorUserId: u, serverId: await getActiveServerId(), targetUserId, rank });
+    revalidatePath('/guild');
+    revalidatePath('/guild/members');
+    revalidatePath('/guild/deploy'); // 공개 범위 'RN 이상'이면 직급이 곧 열람 범위
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setMemberRank');
   }
 }
 

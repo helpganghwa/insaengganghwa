@@ -94,9 +94,10 @@ export default function Doc() {
           <DocLink slug="guild-roles" hash="perms">별도 권한</DocLink>이다.
         </LI>
         <LI>
-          길드장은 배치 현황 창에서 배치 정보 공개 범위를 정할 수 있다. &lsquo;권한자만&rsquo;으로 두면 길드장과
-          배치 해제 또는 집행관 지정 권한이 있는 부길드장만 길드 전체 배치를 보고, 그 밖의 길드원은 자기
-          배치만 본다. 기본값은 길드원 모두가 보는 &lsquo;전체&rsquo;이다.
+          길드장은 배치 현황 창에서 배치 정보 공개 범위를 전체, R2 이상, R3 이상, R4 이상, R5 중에서 정할 수 있다.
+          정한 <DocLink slug="guild-roles" hash="roles">직급</DocLink> 이상과 길드장만 길드 전체 배치를 보고, 그 밖의
+          길드원은 자기 배치만 본다. 배치 해제 또는 집행관 지정 권한이 있는 부길드장은 공개 범위와 상관없이 전체 배치를
+          본다. 기본값은 길드원 모두가 보는 &lsquo;전체&rsquo;이다.
         </LI>
       </UL>
 

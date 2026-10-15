@@ -76,7 +76,7 @@ describe.skipIf(!USER)('부길드장 권한 — 하나씩 켜고 끈다', () => 
     await testDb
       .transaction(async (tx) => {
         const f = await setup(tx);
-        const UNKNOWN = 1 << 10; // 지금은 정의되지 않은 자리
+        const UNKNOWN = 1 << 11; // 지금은 정의되지 않은 자리(1<<10은 0244 직급 관리)
         await tx.execute(sql`update guild_members set permissions = permissions | ${UNKNOWN} where user_id = ${f.VICE}::uuid and server_id = ${SERVER_ID}`);
         await setVicePermissionTx(tx, { leaderUserId: USER, serverId: SERVER_ID, targetUserId: f.VICE, key: 'notice', on: false });
         expect(await f.perms()).toBe(GUILD_PERM.taxDistribute | UNKNOWN);
