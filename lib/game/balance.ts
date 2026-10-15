@@ -1121,7 +1121,7 @@ export const TOWER_FLOORS = 110;
 export const TOWER_SECTION = 10;
 /**
  * 11구간(101~110층) 개방 시각 — 2026-10-15 00:00 KST(2026-10-13 사용자 결정: 코드는 낮에 배포, 개방은 자정 자동).
- * 추석 6종과 같은 방식 — 노출·도전·공시는 **서버 시각**으로 정각에 열리고, 크론(lib/game/tower/open.ts)은 공시 스냅샷만 뒷정리한다.
+ * 추석 6종과 같은 방식 — 노출·도전·공시는 **서버 시각**으로 정각에 열린다. 공시 스냅샷은 일회성 크론 훅이 개방 정각 뒤 기록했고(2026-10-15, id 9) 훅은 제거했다.
  */
 export const TOWER_SECTION_11_OPEN_ISO = '2026-10-14T15:00:00.000Z';
 export const TOWER_SECTION_11_OPEN_MS = Date.parse(TOWER_SECTION_11_OPEN_ISO);
