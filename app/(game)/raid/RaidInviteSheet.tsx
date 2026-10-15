@@ -147,8 +147,22 @@ export function RaidInviteSheet({
         title="동료 초대"
         subtitle={
           <>
-            현재 <b className="font-bold text-amber-500">{participants}</b> / 10명 · 초대하면 상대에게
-            알림이 갑니다
+            <span className="block">
+              현재 <b className="font-bold text-amber-500">{participants}</b> / 10명 · 초대하면 상대에게
+              알림이 갑니다
+            </span>
+            {/* 정렬 셀렉트 — 강화 등록 팝업과 같은 부품·스타일. 설명 줄이 길어 그 아래 줄에 둔다(사용자 결정 10-15). 정렬은 두 탭에 공통. */}
+            <ZoomSafeSelect
+              value={sort}
+              onChange={(e) => changeSort(e.target.value as SortKey)}
+              aria-label="정렬"
+              wrapClassName="mx-auto mt-2 h-[28px] w-[118px]"
+              className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+            >
+              {SORTS.map(([k, label]) => (
+                <option key={k} value={k}>{label}</option>
+              ))}
+            </ZoomSafeSelect>
           </>
         }
         bodyPad="sm"
@@ -171,30 +185,15 @@ export function RaidInviteSheet({
           </>
         }
       >
-        {/* 탭 + 정렬 셀렉트(강화 등록 팝업과 같은 부품·스타일). 정렬은 두 탭에 공통. */}
-        <div className="flex items-center gap-2">
-          <Tabs
-            size="sm"
-            className="min-w-0 flex-1"
-            value={tab}
-            onChange={setTab}
-            items={[
-              { key: 'friend' as const, label: '친구', count: data?.friends.length },
-              { key: 'guild' as const, label: '길드원', count: data?.guildMates.length },
-            ]}
-          />
-          <ZoomSafeSelect
-            value={sort}
-            onChange={(e) => changeSort(e.target.value as SortKey)}
-            aria-label="정렬"
-            wrapClassName="h-[30px] w-[118px] shrink-0"
-            className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
-          >
-            {SORTS.map(([k, label]) => (
-              <option key={k} value={k}>{label}</option>
-            ))}
-          </ZoomSafeSelect>
-        </div>
+        <Tabs
+          size="sm"
+          value={tab}
+          onChange={setTab}
+          items={[
+            { key: 'friend' as const, label: '친구', count: data?.friends.length },
+            { key: 'guild' as const, label: '길드원', count: data?.guildMates.length },
+          ]}
+        />
 
         {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
         <div className="mt-2 h-[44vh] overflow-y-auto">
