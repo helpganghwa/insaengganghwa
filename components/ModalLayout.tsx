@@ -166,12 +166,15 @@ export function ModalConfirmButton({
   onArm,
   disabled,
   children,
+  armedVerb = '구매',
 }: {
   grow?: number;
   onConfirm: () => void;
   onArm?: () => void | boolean;
   disabled?: boolean;
   children: React.ReactNode;
+  /** 무장 뒤 문구의 동사 — 기본 '구매', 요구 장비 다시 뽑기는 '뽑기'(10-16). */
+  armedVerb?: string;
 }) {
   return (
     <span style={{ flex: grow }} className="flex">
@@ -183,7 +186,7 @@ export function ModalConfirmButton({
         armedClassName="w-full rounded-xl bg-amber-700 py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50"
         pulseClassName="bg-amber-500"
       >
-        {(armed, left) => (armed ? `한 번 더 누르면 구매 · ${left}` : children)}
+        {(armed, left) => (armed ? `한 번 더 누르면 ${armedVerb} · ${left}` : children)}
       </ConfirmButton>
     </span>
   );

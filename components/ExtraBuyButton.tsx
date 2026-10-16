@@ -151,6 +151,8 @@ export function ExtraBuyButton({
   onResult,
   floor,
   trigger,
+  stacked = false,
+  onOpenChange,
   className = '',
   size = 'md',
 }: {
@@ -162,6 +164,9 @@ export function ExtraBuyButton({
   floor?: number;
   /** ＋ 대신 글자 버튼으로(착용 가능 장비 팝업 안의 '다시 뽑기') — 같은 구매 팝업이 열린다. className은 버튼에 붙는다. */
   trigger?: { label: string };
+  /** 다른 팝업 위에 겹쳐 열릴 때 — 아래 팝업은 호출부가 onOpenChange로 receded 처리한다. */
+  stacked?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** 재확인 직후(서버 응답 전) — 호출부가 횟수를 먼저 올린다. 인자 = 이번에 산 장 수(파견만 2 이상). */
   onOptimistic?: (qty: number) => void;
   /** 실패 시 onOptimistic을 되돌린다(같은 장 수). */
@@ -194,6 +199,7 @@ export function ExtraBuyButton({
   const close = () => {
     openRef.current = false;
     setOpen(false);
+    onOpenChange?.(false);
   };
 
   const openPopup = () => {
@@ -212,6 +218,7 @@ export function ExtraBuyButton({
     if (c) pickKind(c); // 처음엔 살 수 있는 통화를 골라 둔다(대난투 포인트 우선)
     setQty(1);
     setOpen(true);
+    onOpenChange?.(true);
     openRef.current = true;
     loadQuote(!c, settling);
   };
@@ -319,7 +326,7 @@ export function ExtraBuyButton({
         <PlusChip label={`${copy.title} 구매`} onClick={openPopup} className={className} size={size} />
       )}
       {open ? (
-        <ModalShell onClose={close} label={copy.title}>
+        <ModalShell onClose={close} label={copy.title} stacked={stacked}>
           <ModalLayout
             title={copy.title}
             subtitle={<span className="whitespace-pre-line">{copy.desc}</span>}
@@ -341,6 +348,7 @@ export function ExtraBuyButton({
                   }}
                   onConfirm={buy}
                   disabled={!quote || pending}
+                  armedVerb={item === 'tower_reroll' ? '뽑기' : '구매'}
                 >
                   {!quote ? '불러오는 중' : pending ? (item === 'tower_reroll' ? '뽑는 중' : '구매 중') : buyLabel(kind, price!, item === 'tower_reroll' ? '뽑기' : '구매')}
                 </ModalConfirmButton>

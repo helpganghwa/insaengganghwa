@@ -286,6 +286,8 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
   }
   const rerollBought = board.rerollBought + optReroll;
   const canReroll = rerollBought < POINT_EXTRA_PRICES.tower_reroll.length;
+  // 구매 팝업이 착용 가능 장비 시트 위에 겹칠 때 아래 시트를 물러나게(receded).
+  const [rerollOpen, setRerollOpen] = useState(false);
   // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 그 주 11층부터 전부를 받는다(일부만 받는 안은 10-01 롤백).
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
@@ -446,7 +448,7 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
   const popups = (
     <>
         {sheet === 'equip' ? (
-          <ModalShell onClose={() => setSheet(null)} label="착용 가능 장비">
+          <ModalShell onClose={() => setSheet(null)} label="착용 가능 장비" receded={rerollOpen}>
             <ModalLayout
               title="착용 가능 장비"
               subtitle={
@@ -490,6 +492,8 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                         }
                       }}
                       trigger={{ label: '다시 뽑기' }}
+                      stacked
+                      onOpenChange={setRerollOpen}
                       className="flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80"
                     />
                   ) : null}
