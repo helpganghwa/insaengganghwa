@@ -11,6 +11,7 @@ import { PlusChip } from '@/components/ui/PlusChip';
 import { useResourceToast } from '@/components/ResourceToast';
 import { MILEAGE_PER_MELEE_POINT, POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import type { PointKind } from '@/lib/game/points/types';
+import type { SlotKeys } from '@/lib/game/tower/engine';
 import { resyncWhenOnline } from '@/lib/client/resync';
 import { kstDateString } from '@/lib/kst';
 
@@ -20,19 +21,22 @@ const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }
   expedition: { title: '추가 파견', desc: '오늘만 쓰는 파견 칸을 열어요. 사는 즉시 새 파견지가 나오고, 새로고침에도 함께 바뀌어요.', done: '새 파견지가 나왔어요' },
   raid: { title: '오늘 레이드 +1회', desc: '소환이나 참여를 한 번 더 할 수 있고, 동시에 진행할 수 있는 레이드도 하나 늘어요.', done: '오늘 레이드 +1회' },
   tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 해요. 오르기와 토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
+  // 줄바꿈은 뜻 단위로 고정(\n) — 390 폭에서 문장 중간이 끊기지 않게(10-16 사용자 지시).
+  tower_reroll: { title: '요구 장비 다시 뽑기', desc: '이 층의 요구 장비를 나에게만 새로 뽑아요.\n지금 장비가 다시 나올 수도 있어요.', done: '요구 장비를 다시 뽑았어요' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 const amountIn = (kind: PointKind, pt: number) => (kind === 'mileage' ? pt * MILEAGE_PER_MELEE_POINT : pt);
 /** 가격 표기 — 대난투 '5pt', 마일리지 '마일리지 50'(숫자만 두면 무엇의 50인지 모른다). */
 const amountLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}포인트` : `마일리지 ${fmt(amountIn(kind, pt))}`);
-/** 구매 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). 대난투는 'N포인트로'. */
-const buyLabel = (kind: PointKind, pt: number) => (kind === 'melee' ? `${fmt(pt)}포인트로 구매` : josa(`${amountLabel(kind, pt)}#{으로} 구매`));
+/** 구매 버튼 — 마일리지 금액은 50·100·200…이라 조사를 josa로('200으로'). 대난투는 'N포인트로'. 다시 뽑기는 '뽑기'. */
+const buyLabel = (kind: PointKind, pt: number, verb = '구매') => (kind === 'melee' ? `${fmt(pt)}포인트로 ${verb}` : josa(`${amountLabel(kind, pt)}#{으로} ${verb}`));
 /** 자정 소멸 안내(사면 그날 안에 쓴다 — 보관·환불 없음, 10-06 확정). */
 const EXPIRE: Record<PointExtraItem, string> = {
   expedition: '보내지 않은 추가 파견은 자정이 지나면 사라져요',
   raid: '쓰지 않은 추가 횟수는 자정이 지나면 사라져요',
   tower: '쓰지 않은 추가 도전은 자정이 지나면 사라져요',
+  tower_reroll: '바뀐 요구 장비는 이번 주 동안 유지되고\n월요일 0시 갱신 때 사라져요. 되돌릴 수 없어요.',
 };
 
 const ERR: Record<string, string> = {
@@ -144,11 +148,20 @@ export function ExtraBuyButton({
   onBought,
   onOptimistic,
   onRollback,
+  onResult,
+  floor,
+  trigger,
   className = '',
   size = 'md',
 }: {
   item: PointExtraItem;
   onBought?: () => void;
+  /** 서버 응답(성공·재전송 모두) — 요구 장비 다시 뽑기는 새 풀을 받아 화면을 갈아 끼운다(0245). */
+  onResult?: (r: { floor?: number; pool?: SlotKeys | null; bought: number; duplicate: boolean }) => void;
+  /** 요구 장비 다시 뽑기만 — 어느 층을 뽑는지. */
+  floor?: number;
+  /** ＋ 대신 글자 버튼으로(착용 가능 장비 팝업 안의 '다시 뽑기') — 같은 구매 팝업이 열린다. className은 버튼에 붙는다. */
+  trigger?: { label: string };
   /** 재확인 직후(서버 응답 전) — 호출부가 횟수를 먼저 올린다. 인자 = 이번에 산 장 수(파견만 2 이상). */
   onOptimistic?: (qty: number) => void;
   /** 실패 시 onOptimistic을 되돌린다(같은 장 수). */
@@ -261,7 +274,7 @@ export function ExtraBuyButton({
     onOptimistic?.(usedQty);
     bumpSharedQuoteAfterBuy(item, usedQty, kind, spent);
     start(async () => {
-      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice }).catch(
+      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice, ...(floor !== undefined ? { floor } : {}) }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;
@@ -271,9 +284,13 @@ export function ExtraBuyButton({
         // 이번 낙관 반영은 되돌린다(안 되돌리면 횟수가 하나 더 올라간 채 남는다).
         if (r.duplicate) onRollback?.(usedQty);
         else onBought?.();
+        onResult?.(r);
         showHeaderToast({
           title: copy.title,
-          detail: item === 'expedition' ? `${r.qty > 1 ? `${r.qty}칸 · ` : ''}${copy.done}` : `오늘 ${r.bought}/${max}번 구매했어요`,
+          detail:
+            item === 'expedition' ? `${r.qty > 1 ? `${r.qty}칸 · ` : ''}${copy.done}`
+            : item === 'tower_reroll' ? `${copy.done} · 오늘 ${r.bought}/${max}번`
+            : `오늘 ${r.bought}/${max}번 구매했어요`,
         });
       } else {
         // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 구매) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 들어갔을 수 있다.
@@ -294,12 +311,18 @@ export function ExtraBuyButton({
 
   return (
     <>
-      <PlusChip label={`${copy.title} 구매`} onClick={openPopup} className={className} size={size} />
+      {trigger ? (
+        <button type="button" onClick={openPopup} aria-label={`${copy.title} 구매`} className={className}>
+          {trigger.label}
+        </button>
+      ) : (
+        <PlusChip label={`${copy.title} 구매`} onClick={openPopup} className={className} size={size} />
+      )}
       {open ? (
         <ModalShell onClose={close} label={copy.title}>
           <ModalLayout
             title={copy.title}
-            subtitle={copy.desc}
+            subtitle={<span className="whitespace-pre-line">{copy.desc}</span>}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={close}>
@@ -319,7 +342,7 @@ export function ExtraBuyButton({
                   onConfirm={buy}
                   disabled={!quote || pending}
                 >
-                  {!quote ? '불러오는 중' : pending ? '구매 중' : buyLabel(kind, price!)}
+                  {!quote ? '불러오는 중' : pending ? (item === 'tower_reroll' ? '뽑는 중' : '구매 중') : buyLabel(kind, price!, item === 'tower_reroll' ? '뽑기' : '구매')}
                 </ModalConfirmButton>
               </>
             }
@@ -396,7 +419,7 @@ export function ExtraBuyButton({
                   )}
                 </span>
               </p>
-              <p className="-mt-1 text-center text-[11px] text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
+              <p className="-mt-1 whitespace-pre-line text-center text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
             </div>
           </ModalLayout>
         </ModalShell>

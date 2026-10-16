@@ -1,16 +1,4 @@
-import {
-  TOWER_AVATAR_MULT,
-  TOWER_DAILY_ATTEMPTS,
-  TOWER_FLOORS,
-  TOWER_HP_MULT,
-  TOWER_POOL_PER_SLOT,
-  TOWER_SECTION,
-  TOWER_SPECIAL_POOL_PER_SLOT,
-  towerHuntBox,
-  towerHuntRange,
-  towerRequirement,
-  towerReward,
-} from '@/lib/game/balance';
+import { TOWER_AVATAR_MULT, TOWER_DAILY_ATTEMPTS, TOWER_FLOORS, TOWER_HP_MULT, TOWER_POOL_PER_SLOT, TOWER_SECTION, TOWER_SPECIAL_POOL_PER_SLOT, towerHuntBox, towerHuntRange, towerRequirement, towerReward, POINT_EXTRA_PRICES, MILEAGE_PER_MELEE_POINT } from '@/lib/game/balance';
 
 import { TowerOpenFloors } from './TowerOpenFloors';
 import { TOWER_BATTLE, type TowerSkill } from '@/lib/game/tower/battle';
@@ -72,6 +60,12 @@ export default function Doc() {
           조합으로 장착하고 아바타도 자동으로 골라 준다.
         </LI>
         <LI>탑 화면에서 착용 가능 장비를 바로 장착할 수 있다. 장착은 게임 전체에 그대로 반영된다.</LI>
+        <LI>
+          착용 가능 장비 화면의 [다시 뽑기]로 그 층의 요구 장비 세 부위를 나에게만 새로 뽑을 수 있다. 대난투 포인트나
+          마일리지로 하루 {POINT_EXTRA_PRICES.tower_reroll.length}번까지이고, 값은 그날 산 순서대로{' '}
+          {POINT_EXTRA_PRICES.tower_reroll.join(' · ')}포인트(마일리지는 {MILEAGE_PER_MELEE_POINT}배)다. 지금 요구 장비가
+          다시 나올 수도 있고 되돌릴 수 없으며, 바뀐 요구 장비는 월요일 0시 갱신 때 사라진다.
+        </LI>
       </UL>
 
       <H2 id="power">탑 전투력</H2>

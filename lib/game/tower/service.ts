@@ -118,6 +118,37 @@ export async function towerExtraLock(tx: Tx, userId: string, serverId: number): 
     where user_id=${userId}::uuid and server_id=${serverId} for update`);
 }
 
+/** 다시 뽑을 수 있는 층 — 11층부터 지금 열린 맨 위 층까지(1구간은 모든 장비라 뽑을 것이 없다). */
+export function towerRerollableFloor(floor: number, at: Date = new Date()): boolean {
+  return Number.isInteger(floor) && floor > TOWER_SECTION && floor <= towerOpenFloorsNow(at);
+}
+
+type RerollRow = { floor: number; weapon: string[]; armor: string[]; accessory: string[] };
+
+/**
+ * 요구 장비 다시 뽑기(0245, 유저 건의 — 10-15 결정) — 그 층의 3부위를 활성 카탈로그에서 새로 뽑아(지금 요구 장비 포함, 서버 공통
+ * 추첨과 같은 균등·중복 없음) **나에게만** 적용되는 행으로 박제한다. 되돌리기 없음, 같은 층을 다시 뽑으면 덮어쓴다.
+ * 월요일 0시 갱신은 week_start로 갈린다. 포인트 상점 트랜잭션(buyExtra ⑤ 적용) 안에서 부른다.
+ */
+export async function towerRerollFloor(tx: Tx, userId: string, serverId: number, floor: number, rng: Rng10k = cryptoRng10k): Promise<SlotKeys> {
+  const rows = (await tx.execute(sql`select id, code, slot::text as slot, name from catalog_items where active order by id`)) as unknown as CatalogRow[];
+  const pool = drawPool(bySlot(rows), rng, towerIsSpecial(floor) ? TOWER_SPECIAL_POOL_PER_SLOT : TOWER_POOL_PER_SLOT);
+  await tx.execute(sql`
+    insert into tower_pool_rerolls (user_id, server_id, week_start, floor, weapon, armor, accessory)
+    values (${userId}::uuid, ${serverId}, ${kstWeekStartString()}::date, ${floor}, ${textArray(pool.weapon)}, ${textArray(pool.armor)}, ${textArray(pool.accessory)})
+    on conflict (user_id, server_id, week_start, floor) do update
+      set weapon = excluded.weapon, armor = excluded.armor, accessory = excluded.accessory, created_at = now()`);
+  return pool;
+}
+
+/** 이번 주 그 층의 내 요구 장비(다시 뽑은 것) — 없으면 null. 전투 판정과 재전송 응답이 쓴다. */
+export async function towerRerollOf(tx: Tx, userId: string, serverId: number, floor: number, week: string = kstWeekStartString()): Promise<SlotKeys | null> {
+  const [r] = (await tx.execute(sql`
+    select floor, weapon, armor, accessory from tower_pool_rerolls
+    where user_id=${userId}::uuid and server_id=${serverId} and week_start=${week}::date and floor=${floor}`)) as unknown as RerollRow[];
+  return r ? { weapon: r.weapon, armor: r.armor, accessory: r.accessory } : null;
+}
+
 /**
  * 탑 화면 데이터 — 한 번의 쿼리로(진행도·보유 장비·아바타·카탈로그·이번 주 요구 장비·내 순위).
  * 종전엔 7개 쿼리를 한꺼번에 병렬로 보내 레이아웃 쿼리와 겹치면 커넥션이 몰려, 풀러 쪽에서 쿼리가 멈춘 채
@@ -135,6 +166,11 @@ export async function towerBoard(userId: string, serverId: number) {
       (select row_to_json(me) from me) as prog,
       (select coalesce(sum(count), 0)::int from point_extra_buys where user_id=${userId}::uuid and server_id=${serverId}
         and kst_date=${kstDateString()}::date and item='tower') as extra,
+      (select coalesce(sum(count), 0)::int from point_extra_buys where user_id=${userId}::uuid and server_id=${serverId}
+        and kst_date=${kstDateString()}::date and item='tower_reroll') as reroll_extra,
+      -- 이번 주 내가 다시 뽑은 층(0245) — 서버 공통 풀 위에 덮어쓴다.
+      coalesce((select json_agg(x) from (select floor, weapon, armor, accessory from tower_pool_rerolls
+        where user_id=${userId}::uuid and server_id=${serverId} and week_start=${week}::date) x), '[]'::json) as rerolls,
       (select nickname from characters where user_id=${userId}::uuid and server_id=${serverId}) as nickname,
       (select json_build_object('name', g.name, 'emblemUrl', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id
         where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1) as guild,
@@ -166,9 +202,11 @@ export async function towerBoard(userId: string, serverId: number) {
     avatars: { id: string; south: string | null; equipment_snapshot: unknown; is_default: boolean }[];
     catalog: { code: string; slot: TowerSlot; name: string }[];
     pools: { floor: number; weapon: string[]; armor: string[]; accessory: string[] }[];
+    rerolls: RerollRow[];
     my_rank: number | null;
     unclaimed: number[];
     extra: number;
+    reroll_extra: number;
   }[];
   const r = row!;
   // 그 주 첫 접근(아직 추첨 전)만 — 추첨·저장 후 다시 읽는다.
@@ -176,6 +214,9 @@ export async function towerBoard(userId: string, serverId: number) {
   const drawn = r.nickname != null && r.pools.length < POOL_FLOORS.length ? await towerPools(serverId) : null;
   const pools = drawn?.pools ?? new Map(r.pools.map((x) => [Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory }]));
   rememberPools(serverId, { week: drawn?.week ?? week, pools });
+  // 내가 다시 뽑은 층은 서버 공통 풀 위에 덮어쓴다(0245) — 캐시에는 서버 풀만 남기고 복사본에 얹는다.
+  const mine = new Map(pools);
+  for (const x of r.rerolls) mine.set(Number(x.floor), { weapon: x.weapon, armor: x.armor, accessory: x.accessory });
   const p = r.prog;
   const best = Number(p?.best_floor ?? 0);
   const items: TowerOwnedItem[] = r.owned
@@ -201,13 +242,15 @@ export async function towerBoard(userId: string, serverId: number) {
     attemptsLeft: attemptsLeft(p?.loss_day ?? null, Number(p?.losses ?? 0), Number(row?.extra ?? 0)),
     attemptsTotal: TOWER_DAILY_ATTEMPTS + Number(row?.extra ?? 0),
     extraBought: Number(row?.extra ?? 0),
+    /** 오늘 산 '요구 장비 다시 뽑기' 횟수(0245) — 착용 가능 장비 팝업의 버튼·오늘 n/3. */
+    rerollBought: Number(row?.reroll_extra ?? 0),
     lastProfileId: p?.last_profile_id ?? null,
     /** 무대 위 내 이름(대난투처럼 닉네임·길드). */
     nickname: r.nickname ?? '',
     guild: r.guild ?? null,
     items,
     avatars: av,
-    pools: Object.fromEntries(pools) as Record<number, SlotKeys>,
+    pools: Object.fromEntries(mine) as Record<number, SlotKeys>,
     myRank: best > 0 && r.my_rank != null ? Number(r.my_rank) : null,
     /** 돌파했지만 아직 받지 않은 층(오름차순). */
     unclaimed: r.unclaimed.map(Number),
@@ -343,7 +386,9 @@ export async function challengeTower(
       }
     }
     const eq: EquippedPiece[] = g!.eq.map((r) => ({ slot: r.slot, key: r.key, cp: pieceCombatPower(Number(r.level), Number(r.transcend)) }));
-    const rule = ruleFor(floor, pools);
+    // 내가 다시 뽑은 층(0245)이면 그 요구 장비로 싸운다 — 진행도 행을 잠근 뒤라 구매와 직렬화된다.
+    const mine = await towerRerollOf(tx, userId, serverId, floor, week);
+    const rule = mine ? floorRule(floor, mine) : ruleFor(floor, pools);
     const cp = towerCp(eq, rule, keys);
     const base = towerCp(eq, rule, new Set()).total;
     // 탑 전투력 0(요구 장비를 하나도 장착하지 않음) — 한 턴 만에 지고 도전만 날아가니 막는다.

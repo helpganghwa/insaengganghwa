@@ -46,8 +46,7 @@ import {
   TOWER_SECTION,
   towerHuntBox,
   towerHuntRange,
-  expeditionAsBonusBp,
-} from '@/lib/game/balance';
+  expeditionAsBonusBp, TOWER_POOL_PER_SLOT, TOWER_SPECIAL_POOL_PER_SLOT } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 
 // 정적화 시도·기각(2026-08-06 감사): revalidate=600을 넣어도 루트 generateViewport가
@@ -369,6 +368,12 @@ export default async function ProbabilityPage() {
         <P>
           세 추첨은 서로 독립입니다. 대난투 포인트·마일리지로 사는 <b>탑 추가 도전</b>은 도전 횟수만 늘리며 위 확률에는
           영향을 주지 않습니다.
+        </P>
+        <P>
+          대난투 포인트·마일리지로 사는 <b>요구 장비 다시 뽑기</b>는 그 층의 요구 장비를 부위마다 활성 카탈로그 전체에서
+          같은 확률로 다시 뽑습니다(일반 층은 부위별 {TOWER_POOL_PER_SLOT}개, 특별층은 {TOWER_SPECIAL_POOL_PER_SLOT}개, 같은 장비가 겹치지
+          않게). 지금 요구 장비가 다시 나올 수 있고, 결과는 그 주 동안 본인에게만 적용되며 되돌릴 수 없습니다. 매주 월요일 0시의
+          서버 공통 추첨과 같은 방식이고 전투 확률에는 영향을 주지 않습니다.
         </P>
         <P>
           다이아 범위는 층마다 정해진 기준값에서 ±{Math.round(TOWER_HUNT_SPREAD * 100)}%를 반올림한 값입니다. 낮은 층은

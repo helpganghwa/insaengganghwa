@@ -6,7 +6,8 @@ import { db } from '@/lib/db/client';
 import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/game/balance';
 import { expeditionExtraLock, expeditionExtraOpen } from '@/lib/game/expedition/service';
 import { raidExtraLock } from '@/lib/game/raid/open';
-import { towerExtraLock } from '@/lib/game/tower/service';
+import { towerExtraLock, towerRerollFloor, towerRerollOf, towerRerollableFloor } from '@/lib/game/tower/service';
+import type { SlotKeys } from '@/lib/game/tower/engine';
 import { kstDateString } from '@/lib/kst';
 
 import { PointShopError, costIn, extrasToday, spendPoints } from './spend';
@@ -26,9 +27,12 @@ export type ExtraBuyResult = {
   /** 다음 구매 값(대난투 포인트) — 더 못 사면 null. */
   next: number | null;
   duplicate: boolean;
+  /** 요구 장비 다시 뽑기(0245)만 — 뽑은 층과 새 요구 장비(재전송이면 그 층에 저장된 것). 화면이 바로 갈아 끼운다. */
+  floor?: number;
+  pool?: SlotKeys | null;
 };
 
-const ITEM_KO: Record<PointExtraItem, string> = { expedition: '추가 파견', raid: '오늘 레이드 +1회', tower: '탑 추가 도전' };
+const ITEM_KO: Record<PointExtraItem, string> = { expedition: '추가 파견', raid: '오늘 레이드 +1회', tower: '탑 추가 도전', tower_reroll: '탑 요구 장비 다시 뽑기' };
 
 /** boughtToday번 산 뒤 qty장을 더 살 때의 값 합(대난투 포인트). 한 장이라도 못 사면 null. */
 function priceForQty(item: PointExtraItem, boughtToday: number, qty: number): number | null {
@@ -51,7 +55,7 @@ function priceForQty(item: PointExtraItem, boughtToday: number, qty: number): nu
 export async function buyExtra(
   userId: string,
   serverId: number,
-  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number },
+  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number },
 ): Promise<ExtraBuyResult> {
   const { item, kind } = input;
   // 문자열만 — 배열(['raid'])은 hasOwn을 통과하면서 아래 분기는 빗나간다(10-06 최종 검수).
@@ -62,6 +66,9 @@ export async function buyExtra(
   const qty = input.qty === undefined ? 1 : Number(input.qty);
   if (!(Number.isInteger(qty) && qty >= 1 && qty <= POINT_EXTRA_PRICES[item].length)) throw new PointShopError('BAD_REQUEST');
   if (item !== 'expedition' && qty !== 1) throw new PointShopError('BAD_REQUEST');
+  // 요구 장비 다시 뽑기(0245)는 층이 필요하다 — 11층부터 지금 열린 맨 위 층까지. 다른 상품에 층이 와도 무시한다.
+  const floor = item === 'tower_reroll' ? Number(input.floor) : null;
+  if (item === 'tower_reroll' && (floor === null || !towerRerollableFloor(floor))) throw new PointShopError('BAD_REQUEST');
   // point_extra_buys의 slot — 파견 '다시 보내기' 시절(10-06~10-10) 칸별로 세던 자리. 지금은 셋 다 0(가격은 상품 전체 횟수로).
   const slot = 0;
   const day = kstDateString();
@@ -79,7 +86,9 @@ export async function buyExtra(
       )) as unknown as unknown[];
       if (!prev) return null;
       const bought = await extrasToday(tx, userId, serverId, item, undefined, day);
-      return { item, qty: 0, slots: [], kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true } satisfies ExtraBuyResult;
+      // 다시 뽑기의 재전송 — 그 층에 저장된 요구 장비를 돌려줘 화면이 같은 것을 보게 한다.
+      const pool = floor !== null ? await towerRerollOf(tx, userId, serverId, floor) : undefined;
+      return { item, qty: 0, slots: [], kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true, ...(floor !== null ? { floor, pool } : {}) } satisfies ExtraBuyResult;
     };
     const dup0 = await alreadyBought();
     if (dup0) return dup0;
@@ -91,6 +100,7 @@ export async function buyExtra(
       } else if (item === 'raid') {
         await raidExtraLock(tx, userId, serverId, day);
       } else {
+        // 탑 추가 도전·요구 장비 다시 뽑기 — 진행도 행을 잠가 전투 판정과 직렬화한다(다시 뽑은 요구 장비로 싸우는 판과 겹치지 않게).
         await towerExtraLock(tx, userId, serverId);
       }
     } catch (e) {
@@ -132,8 +142,11 @@ export async function buyExtra(
     if (price === null) throw new PointShopError('MAX_REACHED');
     if (input.expectedPrice !== undefined && input.expectedPrice !== price) throw new PointShopError('PRICE_CHANGED');
     const spent = costIn(kind, price);
-    const fresh = await spendPoints(tx, { userId, serverId, kind, amount: spent, note: `${ITEM_KO[item]}${qty > 1 ? ` ×${qty}` : ''}`, ref });
-    if (!fresh) return { item, qty: 0, slots: [], kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true };
+    const fresh = await spendPoints(tx, { userId, serverId, kind, amount: spent, note: `${ITEM_KO[item]}${floor !== null ? ` ${floor}층` : ''}${qty > 1 ? ` ×${qty}` : ''}`, ref });
+    if (!fresh) {
+      const pool = floor !== null ? await towerRerollOf(tx, userId, serverId, floor) : undefined;
+      return { item, qty: 0, slots: [], kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true, ...(floor !== null ? { floor, pool } : {}) };
+    }
 
     // ④ 횟수 +qty → ⑤ 적용.
     await tx.execute(sql`
@@ -141,6 +154,8 @@ export async function buyExtra(
       where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = ${item} and slot = ${slot}
     `);
     const slots = item === 'expedition' ? await expeditionExtraOpen(tx, userId, serverId, qty) : [];
-    return { item, qty, slots, kind, spent, bought: bought + qty, next: pointExtraPrice(item, bought + qty), duplicate: false };
+    // 다시 뽑기 — 그 층의 요구 장비를 새로 뽑아 나에게만 박제(0245). 결과를 응답에 실어 화면이 바로 갈아 끼운다.
+    const pool = floor !== null ? await towerRerollFloor(tx, userId, serverId, floor) : undefined;
+    return { item, qty, slots, kind, spent, bought: bought + qty, next: pointExtraPrice(item, bought + qty), duplicate: false, ...(floor !== null ? { floor, pool } : {}) };
   });
 }

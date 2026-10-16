@@ -11,7 +11,7 @@ import { BackTitle } from '@/components/BackNav';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { POINT_EXTRA_PRICES, TOWER_SECTION, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { POINT_EXTRA_PRICES, TOWER_SECTION, pointExtraPrice, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { serverNow } from '@/lib/client/server-clock';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo, towerFloorTitle, towerMonFlip } from '@/lib/game/tower/floors';
@@ -270,7 +270,22 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
     [board.items, optEquip, confirmedEquip],
   );
 
-  const pools = useMemo(() => new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys])), [board.pools]);
+  // 요구 장비 다시 뽑기(0245) — 응답으로 받은 새 풀을 바로 갈아 끼운다(서버 재렌더가 같은 값을 가져온다). 층 → 부위별.
+  const [rerolled, setRerolled] = useState<Record<number, SlotKeys>>({});
+  const pools = useMemo(() => {
+    const m = new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys]));
+    for (const [k, v] of Object.entries(rerolled)) m.set(Number(k), v);
+    return m;
+  }, [board.pools, rerolled]);
+  // 오늘 다시 뽑은 횟수 — 낙관 반영(사는 즉시 +1), 새 board(rerollBought 변화)가 오면 0으로.
+  const [optReroll, setOptReroll] = useState(0);
+  const [seenReroll, setSeenReroll] = useState(board.rerollBought);
+  if (seenReroll !== board.rerollBought) {
+    setSeenReroll(board.rerollBought);
+    setOptReroll(0);
+  }
+  const rerollBought = board.rerollBought + optReroll;
+  const canReroll = rerollBought < POINT_EXTRA_PRICES.tower_reroll.length;
   // 요구 장비는 층마다(pools: 층 → 부위별, 특별층은 부위마다 1개). 그 주 11층부터 전부를 받는다(일부만 받는 안은 10-01 롤백).
   const ruleOf = (f: number) => floorRule(f, pools.get(f) ?? null);
 
@@ -452,6 +467,34 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                 ))}
               </div>
               <PoolList board={board} items={items} slot={equipTab} rule={pRule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} disabled={equipPending} />
+              {/* 요구 장비 다시 뽑기(0245, 10-16 결정 1-2) — 11층부터, 열린 층까지. 공용 구매 팝업이 위에 겹치고, 뽑으면 이 목록이 바로 바뀐다(토스트만). */}
+              {towerSection(pf) > 1 && pf <= openFloors ? (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-950/20 px-2.5 py-2">
+                  <span className="min-w-0 leading-tight">
+                    <b className="block text-[12px]">요구 장비 다시 뽑기</b>
+                    <span className="text-[10.5px] tabular-nums text-zinc-400">
+                      오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}
+                      {canReroll ? ` · ${pointExtraPrice('tower_reroll', rerollBought)}포인트부터` : ' · 오늘은 끝'}
+                    </span>
+                  </span>
+                  {canReroll ? (
+                    <ExtraBuyButton
+                      item="tower_reroll"
+                      floor={pf}
+                      onOptimistic={() => setOptReroll((n) => n + 1)}
+                      onRollback={() => setOptReroll((n) => Math.max(0, n - 1))}
+                      onResult={(r) => {
+                        if (r.floor != null && r.pool) {
+                          const pool = r.pool;
+                          setRerolled((m) => ({ ...m, [r.floor!]: pool }));
+                        }
+                      }}
+                      trigger={{ label: '다시 뽑기' }}
+                      className="flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80"
+                    />
+                  ) : null}
+                </div>
+              ) : null}
             </ModalLayout>
           </ModalShell>
         ) : null}

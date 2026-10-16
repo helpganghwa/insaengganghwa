@@ -1099,11 +1099,15 @@ export type PointExchangePack = (typeof POINT_EXCHANGE_PACKS)[number];
  * - expedition: 오늘 다녀온 칸을 한 번 더(칸마다 하루 1회 → 1 + 산 횟수)
  * - raid: 하루 한도(RAID_DAILY_CAP)와 동시 진행 한도(RAID_MAX_CONCURRENT_PER_USER)를 함께 +1
  * - tower: 오늘 도전 +1(오르기·토벌 공통, TOWER_DAILY_ATTEMPTS에 더함)
+ * - tower_reroll: 무한의 탑 한 층의 요구 장비를 나에게만 다시 뽑기(2026-10-16, 유저 건의 — 모든 층, 3부위 동시, 즉시 교체).
+ *   값은 탑 추가 도전의 두 배부터(벽을 바꾸는 일이라 도전 한 번보다 무겁다). 몬테카를로(10-15): 포인트 잔액이 묶여 실효는 하루 1회와
+ *   같고 4주 중앙 +8층·첫 돌파 💎 1.9배·대난투 포인트 소모는 적립의 약 38%.
  */
 export const POINT_EXTRA_PRICES = {
   expedition: [5, 10, 20],
   raid: [20, 40, 80],
   tower: [5, 10],
+  tower_reroll: [10, 20, 40],
 } as const;
 export type PointExtraItem = keyof typeof POINT_EXTRA_PRICES;
 /** 오늘 n번 산 뒤 다음 값(대난투 포인트). 더 못 사면 null. */

@@ -11,7 +11,7 @@ import { endTestDb, sql, testDb } from '../db';
 
 describe('추가 횟수 가격(순수)', () => {
   it('그날 산 순서대로 1 : 2 : 4, 더 못 사면 null', () => {
-    expect(POINT_EXTRA_PRICES).toEqual({ expedition: [5, 10, 20], raid: [20, 40, 80], tower: [5, 10] });
+    expect(POINT_EXTRA_PRICES).toEqual({ expedition: [5, 10, 20], raid: [20, 40, 80], tower: [5, 10], tower_reroll: [10, 20, 40] });
     expect(pointExtraPrice('raid', 0)).toBe(20);
     expect(pointExtraPrice('raid', 2)).toBe(80);
     expect(pointExtraPrice('raid', 3)).toBeNull();
