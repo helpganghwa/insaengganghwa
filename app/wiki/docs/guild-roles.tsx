@@ -34,7 +34,7 @@ export default function Doc() {
     <>
       <H2 id="roles">직책</H2>
       <UL>
-        <LI>직급은 R5 길드장, R4 부길드장, R3, R2, R1 다섯이며 숫자가 클수록 높다. 길드장은 한 명이고 모든 권한을 가진다.</LI>
+        <LI>등급은 R5 길드장, R4 부길드장, R3, R2, R1 다섯이며 숫자가 클수록 높다. 길드장은 한 명이고 모든 권한을 가진다.</LI>
         <LI>
           부길드장은 {fmtInt(GUILD_MAX_VICE)}명까지 둘 수 있고, 부길드장의 권한은 길드장이
           설정한다.
@@ -45,7 +45,7 @@ export default function Doc() {
           R1부터 R3까지 바로 정한다. 인원 제한은 없다. 부길드장에서 해제되거나 길드장 자리를 넘긴 사람은 R3이 된다.
         </LI>
         <LI>
-          직급은 <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>를 가르는 기준일 뿐, 칭호나 세금, 레이드와는
+          등급은 <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>를 가르는 기준일 뿐, 칭호나 세금, 레이드와는
           관계가 없다.
         </LI>
       </UL>
@@ -74,8 +74,9 @@ export default function Doc() {
           <DocLink slug="conquest" hash="tax">세금</DocLink>을 걷을 수 있다.
         </LI>
         <LI>
-          <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>가 &lsquo;R2 이상&rsquo;처럼 직급으로
-          정해진 길드에서는 그 직급 이상과 길드장이 길드 전체 배치를 본다. {GUILD_PERM_META.deploy.label} 권한이나{' '}
+          <DocLink slug="conquest" hash="deploy">배치 정보 공개 범위</DocLink>가 &lsquo;등급별&rsquo;이면 각자 자기와
+          같은 등급과 아래 등급의 배치를 보고, &lsquo;R2 이상&rsquo;처럼 등급으로 정해진 길드에서는 그 등급 이상과
+          길드장이 길드 전체 배치를 본다. {GUILD_PERM_META.deploy.label} 권한이나{' '}
           {GUILD_PERM_META.executor.label} 권한이 있는 부길드장은 공개 범위와 상관없이 항상 전체 배치를 본다.
         </LI>
         <LI>
@@ -128,7 +129,7 @@ export default function Doc() {
         </LI>
         <LI>
           위임 대상은 최근 {fmtInt(GUILD_LEADER_HANDOVER_DAYS)}일 안에 접속한 길드원 중에서
-          정해진다. 부길드장이 우선이고, 그다음은 직급이 높은 순(R3, R2, R1), 같은 직급이면{' '}
+          정해진다. 부길드장이 우선이고, 그다음은 등급이 높은 순(R3, R2, R1), 같은 등급이면{' '}
           <DocLink slug="guild" hash="donate">기여도</DocLink>가 높은 순이며, 기여도도 같으면 먼저
           가입한 순이다.
         </LI>

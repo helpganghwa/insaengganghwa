@@ -26,8 +26,10 @@ import {
 import {
   DEPLOY_VISIBILITIES,
   DEPLOY_VISIBILITY_LABEL,
+  DEPLOY_VISIBILITY_NOTE,
+  DEPLOY_VISIBILITY_OPTION_DESC,
+  deployRankScopeNote,
   deployRestrictedNote,
-  deployVisibilityDesc,
   type DeployVisibility,
 } from '@/lib/game/guild/conquest/deploy-visibility';
 import { Tabs } from '@/components/ui/Tabs';
@@ -174,7 +176,7 @@ function RowAction({
   );
 }
 
-/** 공개 범위가 'RN 이상'일 때 그 직급에 못 미치고 배치 권한도 없는 길드원에게 보이는 안내(0204 · 0244). */
+/** 공개 범위가 'RN 이상'일 때 그 등급에 못 미치고 배치 권한도 없는 길드원에게 보이는 안내(0204 · 0244). */
 // 제한 안내문은 설정(RN 이상)에 따라 달라진다 — deployRestrictedNote(vis).
 
 /** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
@@ -200,14 +202,17 @@ export function DeployBoard({
   initialZoneId = null,
   restricted,
   visibility,
+  rankScope,
   canSetVisibility,
 }: {
   /**
-   * 배치 정보 공개 범위(0204 · 0244)가 'RN 이상'이고 내 직급이 못 미치며 배치 권한도 없을 때 — 서버가 `members`에 **내 한 줄만** 내려보낸다.
+   * 배치 정보 공개 범위(0204 · 0244)가 'RN 이상'이고 내 등급이 못 미치며 배치 권한도 없을 때 — 서버가 `members`에 **내 한 줄만** 내려보낸다.
    * 그래서 인원·전투력 합계는 의미가 없고, 그 자리에 '내 배치'와 안내문을 보인다.
    */
   restricted: boolean;
   visibility: DeployVisibility;
+  /** 등급별 공개(10-16)에서 내가 보는 최대 등급 — null이면 범위 없음. 서버가 그 등급 이하의 행만 내려보낸다. */
+  rankScope: number | null;
   /** 공개 범위를 바꿀 수 있는가 — 길드장만. */
   canSetVisibility: boolean;
   /** 남의 배치를 **해제**할 수 있는가(deploy 권한, 0142). 배치는 본인만 하므로 무관. */
@@ -291,11 +296,21 @@ export function DeployBoard({
   const patch = (userId: string, p: Partial<Member>) =>
     setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, ...p } : m)));
 
-  // 공개 범위 변경(길드장) — 낙관 반영 후 실패하면 되돌린다.
-  const changeVisibility = (next: DeployVisibility) => {
-    if (next === vis) return;
+  // 공개 범위 설정 팝업(길드장, 10-16 사용자 결정) — 배치 현황 팝업 위에 겹쳐 뜨고 [저장]으로 확정한다.
+  // 고르는 동안은 서버에 보내지 않는다(종전엔 칸을 누르면 바로 저장됐다). 닫기·뒤로가기는 변경을 버린다.
+  const [visOpen, setVisOpen] = useState(false);
+  const [visDraft, setVisDraft] = useState<DeployVisibility>(visibility);
+  const openVisibility = () => {
+    setVisDraft(vis);
+    setVisOpen(true);
+  };
+  // 저장 — 낙관 반영(팝업을 닫고 현재 값을 바꾼 뒤) 후 실패하면 되돌린다.
+  const saveVisibility = () => {
+    const next = visDraft;
+    if (next === vis || pending) return;
     const prev = vis;
     setVis(next);
+    setVisOpen(false);
     start(async () => {
       const r = await setDeployVisibilityAction(next).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       if (r.status !== 'success') {
@@ -303,12 +318,7 @@ export function DeployBoard({
         showError(guildErrMsg(r.code));
         return;
       }
-      showHeaderToast({
-        title:
-          next === 'all' ? '배치 정보를 전체 길드원이 봅니다'
-          : next === 'r5' ? '배치 정보를 길드장과 배치 권한이 있는 부길드장만 봅니다'
-          : `배치 정보를 ${DEPLOY_VISIBILITY_LABEL[next]} 직급이 봅니다`,
-      });
+      showHeaderToast({ title: '배치 정보 공개 저장' });
     });
   };
 
@@ -832,7 +842,11 @@ export function DeployBoard({
                 ))}
               </ul>
             )}
-            {restricted ? <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{deployRestrictedNote(vis)}</p> : null}
+            {restricted ? (
+              <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{deployRestrictedNote(vis)}</p>
+            ) : rankScope != null ? (
+              <p className="mt-2.5 text-[11px] leading-snug text-zinc-400">{deployRankScopeNote(rankScope)}</p>
+            ) : null}
           </section>
         ) : (
           <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
@@ -843,13 +857,17 @@ export function DeployBoard({
 
       {/* 배치 현황 팝업 — 누가 어디에 있고 누가 비어 있는지. 행을 누르면 그 구역으로 간다. */}
       {statusOpen && (
-        <ModalShell onClose={() => setStatusOpen(false)} label={restricted ? '내 배치' : '길드원 배치 현황'}>
+        <ModalShell
+          onClose={() => setStatusOpen(false)}
+          label={restricted ? '내 배치' : '길드원 배치 현황'}
+          receded={visOpen}
+        >
           <ModalLayout
             title={restricted ? '내 배치' : '배치 현황'}
             subtitle={
               restricted
                 ? undefined
-                : `길드원 ${members.length}명 · 공격 ${attackCount} · 수비 ${defendCount} · 미배치 ${idleCount}`
+                : `${rankScope != null ? '같은 등급과 아래 등급' : '길드원'} ${members.length}명 · 공격 ${attackCount} · 수비 ${defendCount} · 미배치 ${idleCount}`
             }
             footer={
               <ModalButton tone="neutral" onClick={() => setStatusOpen(false)}>
@@ -857,29 +875,25 @@ export function DeployBoard({
               </ModalButton>
             }
           >
-            {/* 공개 범위 설정(0204 · 0244) — 길드장만. 전체 / R2 이상 / R3 이상 / R4 이상 / R5. 선택지가 다섯이라 설명 아래 한 줄로. 바꾸면 길드 기록에 남는다. */}
+            {/* 공개 범위(0204 · 0244 · 10-16) — 길드장만. 현재 값 한 줄, 누르면 설정 팝업이 위에 겹친다(바로 저장하지 않는다). */}
             {canSetVisibility ? (
-              <div className="mb-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <p className="text-[11.5px] font-bold">배치 정보 공개</p>
-                <p className="text-[10px] leading-snug text-zinc-500">{deployVisibilityDesc(vis)}</p>
-                <div role="radiogroup" aria-label="배치 정보 공개 범위" className="mt-1.5 flex rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
-                  {DEPLOY_VISIBILITIES.map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      role="radio"
-                      aria-checked={vis === key}
-                      disabled={pending}
-                      onClick={() => changeVisibility(key)}
-                      className={`flex-1 whitespace-nowrap rounded-md px-1 py-1 text-[10.5px] font-bold tabular-nums transition disabled:opacity-60 ${
-                        vis === key ? 'bg-sky-500 text-white' : 'text-zinc-500'
-                      }`}
-                    >
-                      {DEPLOY_VISIBILITY_LABEL[key]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={openVisibility}
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-left transition active:opacity-70 dark:border-zinc-800 dark:bg-zinc-900/60"
+              >
+                <span className="text-[11.5px] text-zinc-500">
+                  배치 정보 공개 ·{' '}
+                  <span className="font-bold text-zinc-800 dark:text-zinc-100">{DEPLOY_VISIBILITY_LABEL[vis]}</span>
+                </span>
+                <span className="shrink-0 text-[11.5px] font-bold text-sky-500">변경 ›</span>
+              </button>
+            ) : null}
+            {/* 등급별 공개에서 범위가 걸린 사람 — 목록이 내 등급 이하만이라는 것을 맨 위에서 알린다. */}
+            {rankScope != null ? (
+              <p className="mb-2 text-[11px] leading-snug text-zinc-400">
+                {deployRankScopeNote(rankScope)} 전체 배치는 길드장과 배치 권한이 있는 부길드장이 볼 수 있습니다.
+              </p>
             ) : null}
             {restricted ? null : (
               <Tabs
@@ -956,6 +970,60 @@ export function DeployBoard({
               )}
             </ul>
             {restricted ? <p className="mt-2 text-[11px] leading-snug text-zinc-400">{deployRestrictedNote(vis)}</p> : null}
+          </ModalLayout>
+        </ModalShell>
+      )}
+
+      {/* 공개 범위 설정 팝업(10-16) — 배치 현황 팝업 위에 겹친다. 세로 라디오 + 한 줄 설명, 아래에 공통 규칙, [저장]으로 확정(바뀐 게 없으면 비활성). */}
+      {visOpen && (
+        <ModalShell stacked label="배치 정보 공개" onClose={() => setVisOpen(false)} onSubmit={saveVisibility}>
+          <ModalLayout
+            title="배치 정보 공개"
+            subtitle="길드원이 배치 현황을 어디까지 보는지"
+            footer={
+              <>
+                <ModalButton tone="neutral" onClick={() => setVisOpen(false)}>
+                  닫기
+                </ModalButton>
+                <ModalButton tone="info" onClick={saveVisibility} disabled={visDraft === vis || pending}>
+                  저장
+                </ModalButton>
+              </>
+            }
+          >
+            <div role="radiogroup" aria-label="배치 정보 공개 범위" className="space-y-0.5">
+              {DEPLOY_VISIBILITIES.map((key) => {
+                const on = visDraft === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setVisDraft(key)}
+                    className={`flex w-full items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition ${
+                      on ? 'border-sky-500/40 bg-sky-500/10' : 'border-transparent'
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
+                        on ? 'border-sky-500' : 'border-zinc-400 dark:border-zinc-600'
+                      }`}
+                    >
+                      {on ? <span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> : null}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[12.5px] font-bold leading-tight">{DEPLOY_VISIBILITY_LABEL[key]}</span>
+                      <span className="block text-[10.5px] leading-snug text-zinc-500">
+                        {DEPLOY_VISIBILITY_OPTION_DESC[key]}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 px-0.5 text-[10.5px] leading-snug text-zinc-400">{DEPLOY_VISIBILITY_NOTE}</p>
           </ModalLayout>
         </ModalShell>
       )}

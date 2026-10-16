@@ -103,7 +103,7 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
     case 'set_rank': {
-      // 길드원 직급 변경(0244) — 올림·내림 구분 없이 '변경'(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로').
+      // 길드원 등급 변경(0244) — 올림·내림 구분 없이 '변경'(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로').
       const to = `R${Number(e.detail?.to ?? 0)}`;
       return <>{actor}님이 {target}님을 {hl(to, C.indigo)}{getJosaPicker('으로')(to)} 변경했습니다</>;
     }

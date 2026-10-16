@@ -32,4 +32,24 @@ describe.skipIf(!process.env.TEST_USER_ID)('배치 보드 — 본인 행만 읽�
     // 구역 목록(픽커)은 제한과 무관하다 — 배치하려면 필요하다.
     expect(mine.zones.length).toBe(full.zones.length);
   }, 30_000);
+
+  it('maxRank를 주면 그 등급 이하의 행만 읽힌다 — 길드장(5)은 빠지고, 전투력도 남은 행만', async () => {
+    const [g] = (await testDb.execute(sql`
+      select gm.guild_id::text as gid, count(*)::int as n
+        from guild_members gm
+        join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
+       where gm.server_id = ${SERVER_ID}
+       group by gm.guild_id having count(*) >= 2 and bool_or(gm.role = 'leader') order by count(*) desc limit 1
+    `)) as unknown as { gid: string; n: number }[];
+    if (!g) return;
+
+    const full = await getDeployBoard(BigInt(g.gid), SERVER_ID);
+    const scoped = await getDeployBoard(BigInt(g.gid), SERVER_ID, { maxRank: 3 });
+    const rankOfRow = (m: { mrole: string; mrank: number | null }) =>
+      m.mrole === 'leader' ? 5 : m.mrole === 'vice' ? 4 : (m.mrank ?? 1);
+    expect(scoped.members.every((m) => rankOfRow(m) <= 3)).toBe(true);
+    expect(scoped.members.some((m) => m.mrole === 'leader')).toBe(false);
+    expect(scoped.members.length).toBe(full.members.filter((m) => rankOfRow(m) <= 3).length);
+    expect(Object.keys(scoped.combat).sort()).toEqual(scoped.members.map((m) => m.uid).sort());
+  }, 30_000);
 });

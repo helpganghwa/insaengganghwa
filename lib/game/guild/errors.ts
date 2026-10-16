@@ -38,7 +38,7 @@ export type GuildErrorCode =
   | 'NO_PERMISSION' // 길드 소속이지만 그 권한이 없음(0142 — 부길드장 권한 개인별)
   | 'NO_JOIN_REQUEST' // 승인/거절 대상 가입 신청 없음
   | 'VICE_LIMIT' // 부길드장 임명 상한(5명) 초과
-  | 'INVALID_RANK' // 길드원 직급 값이 1~3이 아님(0244)
+  | 'INVALID_RANK' // 길드원 등급 값이 1~3이 아님(0244)
   | 'EMBLEM_INVALID' // 문양 선택 위반(모양/톤/메인 키워드 필수 + 서브 선택 = 키워드 1~2)
   | 'EMBLEM_MAX' // 보관 문양 최대(5개) 초과 — 삭제 후 생성
   | 'EMBLEM_MIN' // 최소 1개 유지(마지막 문양 삭제 불가)

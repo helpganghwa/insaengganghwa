@@ -44,7 +44,7 @@ const MAP: Record<string, string> = {
   FORBIDDEN: '권한이 없습니다.',
   NO_JOIN_REQUEST: '처리할 가입 신청이 없습니다.',
   VICE_LIMIT: '부길드장은 최대 5명까지 임명할 수 있습니다.',
-  INVALID_RANK: '직급 값이 올바르지 않습니다.',
+  INVALID_RANK: '등급 값이 올바르지 않습니다.',
   EMBLEM_INVALID: '문양은 모양·색상 각 1개, 키워드 1~2개를 선택하세요.',
   EMBLEM_MAX: '문양은 최대 5개까지 보관할 수 있어요. 하나를 삭제한 뒤 생성하세요.',
   EMBLEM_MIN: '문양은 최소 1개는 남겨야 해요.',

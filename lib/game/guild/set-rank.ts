@@ -13,8 +13,8 @@ import { isMemberRank, type MemberRank } from './rank';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * 길드원 직급 변경(0244) — 길드장, 그리고 '직급 관리' 권한을 받은 부길드장.
- * 대상은 길드원(role='member')만 — 부길드장·길드장은 역할이 곧 직급이라 여기서 다루지 않는다.
+ * 길드원 등급 변경(0244) — 길드장, 그리고 '등급 관리' 권한을 받은 부길드장.
+ * 대상은 길드원(role='member')만 — 부길드장·길드장은 역할이 곧 등급이라 여기서 다루지 않는다.
  * 값이 그대로면 기록도 남기지 않는다. 길드 기록(set_rank)에 남고 푸시는 보내지 않는다(사용자 결정).
  */
 export async function setMemberRank(input: {

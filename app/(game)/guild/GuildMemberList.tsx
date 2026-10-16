@@ -33,7 +33,7 @@ export type RichMember = {
   nickname: string;
   publicCode: string;
   role: 'leader' | 'vice' | 'member';
-  /** 길드원 직급 R1~R3(0244) — 길드장·부길드장은 역할이 곧 R5·R4라 이 값을 보지 않는다. */
+  /** 길드원 등급 R1~R3(0244) — 길드장·부길드장은 역할이 곧 R5·R4라 이 값을 보지 않는다. */
   rank: number;
   /** 부길드장 권한 비트마스크(0142) — '권한 N/11' 배지. 길드장·길드원은 의미 없음. */
   permissions: number;
@@ -215,7 +215,7 @@ export function GuildMemberList({
   myRole?: RichMember['role'];
   /** kick 권한(0142) — 내보내기 항목 노출. */
   canKick?: boolean;
-  /** rank 권한(0244) — 길드원 직급(R1~R3) 선택 노출. 길드장은 항상. */
+  /** rank 권한(0244) — 길드원 등급(R1~R3) 선택 노출. 길드장은 항상. */
   canRank?: boolean;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
@@ -235,7 +235,7 @@ export function GuildMemberList({
   const isLeader = myRole === 'leader';
   const viceCount = members.filter((m) => m.role === 'vice').length;
 
-  // 직급 변경 낙관 반영(0244, 10-16 검수) — 확정 즉시 새 그룹으로 옮기고, 실패하면 되돌린다. 서버 재렌더로 members가 새로 오면 비운다.
+  // 등급 변경 낙관 반영(0244, 10-16 검수) — 확정 즉시 새 그룹으로 옮기고, 실패하면 되돌린다. 서버 재렌더로 members가 새로 오면 비운다.
   const [optRank, setOptRank] = useState<Record<string, MemberRank>>({});
   const [seenMembers, setSeenMembers] = useState(members);
   if (seenMembers !== members) {
@@ -243,8 +243,8 @@ export function GuildMemberList({
     setOptRank({});
   }
   const rankOfMember = (m: RichMember): MemberRank => optRank[m.userId] ?? parseMemberRank(m.rank);
-  // 직급별 그룹(R5 길드장 / R4 부길드장 / R3 / R2 / R1, 0244) — 각 그룹 내부는 선택한 메트릭으로 정렬.
-  // 접기는 두지 않는다(사용자 결정 2026-07-30) — 전원이 항상 보인다. 행 안에 직급 배지는 따로 두지 않는다(그룹이 곧 직급).
+  // 등급별 그룹(R5 길드장 / R4 부길드장 / R3 / R2 / R1, 0244) — 각 그룹 내부는 선택한 메트릭으로 정렬.
+  // 접기는 두지 않는다(사용자 결정 2026-07-30) — 전원이 항상 보인다. 행 안에 등급 배지는 따로 두지 않는다(그룹이 곧 등급).
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const matched = needle
@@ -277,7 +277,7 @@ export function GuildMemberList({
     if (m.role === 'vice') return isLeader;
     return isLeader || canKick || canRank;
   };
-  /** 직급 선택 노출 — 길드장 또는 rank 권한 부길드장, 대상은 길드원만. */
+  /** 등급 선택 노출 — 길드장 또는 rank 권한 부길드장, 대상은 길드원만. */
   const canSetRankOf = (m: RichMember): boolean => m.role === 'member' && (isLeader || canRank);
 
   const run = (fn: () => Promise<{ status: string; code?: string }>, okTitle: string, onFail?: () => void) => {
@@ -329,17 +329,17 @@ export function GuildMemberList({
       run: () => run(() => transferLeadershipAction(m.userId), '길드장 위임'),
     });
 
-  /** 직급 변경 확인(0244) — 올림·내림 구분 없이 '변경'으로 통일, 토스트에 닉네임(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로'). */
+  /** 등급 변경 확인(0244) — 올림·내림 구분 없이 '변경'으로 통일, 토스트에 닉네임(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로'). */
   const askRank = (m: RichMember, rank: MemberRank) => {
     const cur = rankOfMember(m);
     if (cur === rank) return;
     setConfirm({
       title: josa(`${m.nickname}님을 R${rank}#{으로} 변경할까요?`),
-      body: '직급은 언제든 다시 바꿀 수 있습니다.',
+      body: '등급은 언제든 다시 바꿀 수 있습니다.',
       label: josa(`R${rank}#{으로} 변경`),
       tone: 'info',
       run: () => {
-        // 낙관 반영 — 시트가 닫히는 순간 새 그룹에 보이고, 실패하면 원래 직급으로 되돌린다.
+        // 낙관 반영 — 시트가 닫히는 순간 새 그룹에 보이고, 실패하면 원래 등급으로 되돌린다.
         setOptRank((o) => ({ ...o, [m.userId]: rank }));
         run(
           () => setMemberRankAction(m.userId, rank),
@@ -476,11 +476,11 @@ export function GuildMemberList({
             }
           >
             <div className="space-y-0.5">
-              {/* 직급 선택(0244) — R1/R2/R3 바로 고르기(사용자 결정). 누르면 확인 팝업이 위에 겹친다. */}
+              {/* 등급 선택(0244) — R1/R2/R3 바로 고르기(사용자 결정). 누르면 확인 팝업이 위에 겹친다. */}
               {canSetRankOf(sheet) ? (
                 <div className="mb-1 flex items-center justify-between gap-2 border-b border-zinc-200/60 px-3 pb-2.5 pt-1.5 dark:border-zinc-800/60">
-                  <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">직급</span>
-                  <div role="radiogroup" aria-label="직급" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
+                  <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">등급</span>
+                  <div role="radiogroup" aria-label="등급" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
                     {MEMBER_RANKS.map((r) => {
                       const on = rankOfMember(sheet) === r;
                       return (

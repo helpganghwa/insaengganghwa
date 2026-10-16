@@ -106,7 +106,7 @@ async function handover(serverId: number, g: GuildRow): Promise<'handed' | 'no_s
       .for('update');
     if (!leaderM || leaderM.role !== 'leader') return 'skip';
 
-    // 후계자: 활성(미접속<7일) 멤버 중 부길드장 우선 → 직급 R3→R2→R1(0244) → 기여도 desc → 가입순 asc.
+    // 후계자: 활성(미접속<7일) 멤버 중 부길드장 우선 → 등급 R3→R2→R1(0244) → 기여도 desc → 가입순 asc.
     // ⚠ raw execute 행 키는 SQL 별칭 그대로(camel 자동변환 없음) — "userId" 인용 별칭 필수.
     //   (비인용 user_id 별칭을 s.userId로 읽어 undefined → 승격 UPDATE가 UNDEFINED_VALUE로
     //    매번 롤백되던 버그, 2026-07-22)

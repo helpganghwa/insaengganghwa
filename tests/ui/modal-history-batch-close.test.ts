@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createModalHistory, type HistoryHost } from '@/lib/ui/modal-history';
 
 /**
- * 한 번에 여러 팝업을 닫을 때 히스토리 항목이 남던 버그(2026-10-16, 길드 직급 변경 사용자 제보).
+ * 한 번에 여러 팝업을 닫을 때 히스토리 항목이 남던 버그(2026-10-16, 길드 등급 변경 사용자 제보).
  * 시트(아래) + 확인 팝업(위)을 확정으로 함께 닫으면, 아래 시트는 "위에 남이 있다"며 되돌리지 않고 위 팝업은 한 칸만
  * 되돌려 시트 항목이 남았다 — 변경을 n번 하면 뒤로가기가 n번 삼켜졌다.
  */

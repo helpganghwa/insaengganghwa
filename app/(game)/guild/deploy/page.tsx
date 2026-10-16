@@ -14,7 +14,12 @@ import {
 } from '@/lib/game/guild';
 import { getDeployViewerState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
-import { isDeployViewRestricted, parseDeployVisibility, toDeployMemberProps } from '@/lib/game/guild/conquest/deploy-visibility';
+import {
+  deployViewMaxRank,
+  isDeployViewRestricted,
+  parseDeployVisibility,
+  toDeployMemberProps,
+} from '@/lib/game/guild/conquest/deploy-visibility';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
 import { DeployTerritoryTabs } from './DeployTerritoryTabs';
@@ -48,19 +53,25 @@ export default async function DeployPage({
   // 배치용 + '세계지도' 탭용 데이터를 함께 로드(map/page와 동일 소스). 세계지도는 열람+팝업이라
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
-  // 배치 정보 공개 범위(0204 · 0244) — 'RN 이상'이면 그 직급에 못 미치고 배치 권한도 없는 길드원에게는 **본인 배치만** 내려보낸다.
+  // 배치 정보 공개 범위(0204 · 0244) — 'RN 이상'이면 그 등급에 못 미치고 배치 권한도 없는 길드원에게는 **본인 배치만** 내려보낸다.
   // 화면에서 숨기는 것이 아니라 서버에서 읽지도 않는다(전원분이 RSC payload에 실리지 않게).
   const visibility = parseDeployVisibility(membership.deployVisibility);
   const restricted = isDeployViewRestricted(visibility, membership.role, membership.permissions, membership.rank);
+  // 등급별 공개(10-16) — 내 등급 이하의 행만 읽는다(지도 라벨·전투력 합계도 그 행들로만). null이면 범위 없음.
+  const rankScope = deployViewMaxRank(visibility, membership.role, membership.permissions, membership.rank);
   const [board, attackable, adjacency, wmZones, residence] = await Promise.all([
-    getDeployBoard(membership.guildId, serverId, restricted ? { onlyUserId: userId } : {}),
+    getDeployBoard(
+      membership.guildId,
+      serverId,
+      restricted ? { onlyUserId: userId } : rankScope != null ? { maxRank: rankScope } : {},
+    ),
     getAttackableZoneIds(membership.guildId, serverId),
     getZoneAdjacency(serverId),
     getWorldmapZones(serverId).catch(() => []),
     getResidenceState(userId, serverId).catch(() => null),
   ]);
   // 클라이언트로 넘길 멤버 목록 — 조립은 순수 함수에 맡긴다(제한 시 본인 외 정보가 섞이지 않는지 테스트로 고정).
-  const memberProps = toDeployMemberProps(board.members, board.combat, userId, restricted);
+  const memberProps = toDeployMemberProps(board.members, board.combat, userId, restricted, rankScope);
 
   return (
     <>
@@ -72,7 +83,7 @@ export default async function DeployPage({
         <DeployBoard
           // 제한 여부가 바뀌면 새로 마운트한다 — 보드는 members를 자체 state로 들고 있어, 열어 둔 화면에서 설정·권한이
           // 바뀐 뒤 재렌더되면 옛 목록 위에 새 규칙이 얹혀 '길드원 1명'·엉뚱한 '내 배치' 라벨 같은 거짓 표시가 난다.
-          key={restricted ? 'restricted' : 'full'}
+          key={restricted ? 'restricted' : rankScope != null ? `rank${rankScope}` : 'full'}
           initialZoneId={zoneParam}
           canDeploy={canDeploy}
           canExecutor={canExecutor}
@@ -84,6 +95,7 @@ export default async function DeployPage({
           adjacency={adjacency}
           restricted={restricted}
           visibility={visibility}
+          rankScope={rankScope}
           canSetVisibility={membership.role === 'leader'}
           members={memberProps}
           zones={board.zones.map((z) => ({

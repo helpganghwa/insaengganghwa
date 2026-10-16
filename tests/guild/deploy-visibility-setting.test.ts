@@ -58,12 +58,12 @@ describe.skipIf(!USER)('배치 정보 공개 범위 설정', () => {
         await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: 'all' });
         expect(await f.vis()).toBe('all');
         expect(await f.logs()).toEqual(['r5', 'all']);
-        // 직급 단계(0244) r2·r3·r4도 그대로 저장된다.
-        for (const v of ['r2', 'r3', 'r4'] as const) {
+        // 등급 단계(0244) r2·r3·r4와 등급별(10-16) rank도 그대로 저장된다(텍스트 열, 제약 없음).
+        for (const v of ['r2', 'r3', 'r4', 'rank'] as const) {
           await setDeployVisibilityTx(tx, { userId: USER, serverId: SERVER_ID, visibility: v });
           expect(await f.vis()).toBe(v);
         }
-        expect(await f.logs()).toEqual(['r5', 'all', 'r2', 'r3', 'r4']);
+        expect(await f.logs()).toEqual(['r5', 'all', 'r2', 'r3', 'r4', 'rank']);
         throw ROLLBACK;
       })
       .catch((e) => {

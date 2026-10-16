@@ -347,7 +347,7 @@ export async function setViceAction(targetUserId: string, makeVice: boolean) {
   }
 }
 
-/** 길드원 직급 변경(0244) — 길드장 · '직급 관리' 권한 부길드장. 값은 1~3만. */
+/** 길드원 등급 변경(0244) — 길드장 · '등급 관리' 권한 부길드장. 값은 1~3만. */
 export async function setMemberRankAction(targetUserId: string, rank: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
@@ -358,7 +358,7 @@ export async function setMemberRankAction(targetUserId: string, rank: number) {
     await setMemberRank({ actorUserId: u, serverId: await getActiveServerId(), targetUserId, rank });
     revalidatePath('/guild');
     revalidatePath('/guild/members');
-    revalidatePath('/guild/deploy'); // 공개 범위 'RN 이상'이면 직급이 곧 열람 범위
+    revalidatePath('/guild/deploy'); // 공개 범위 'RN 이상'이면 등급이 곧 열람 범위
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setMemberRank');

@@ -267,7 +267,7 @@ export function GuildHome({
           <p className="font-bold">⚠ 길드장 {lhDays}일째 미접속</p>
           <p className="mt-0.5 leading-relaxed">
             {handoverImminent
-              ? '자동 위임 대상입니다. 곧 활성 길드원 중 부길드장, 직급, 기여도 순으로 길드장이 위임됩니다.'
+              ? '자동 위임 대상입니다. 곧 활성 길드원 중 부길드장, 등급, 기여도 순으로 길드장이 위임됩니다.'
               : `${leaderHandover.handoverDays}일 미접속 시 활성 길드원에게 길드장이 자동 위임됩니다.`}
           </p>
         </div>
