@@ -90,6 +90,14 @@ describe.skipIf(!U)('요구 장비 다시 뽑기 — DB 통합', () => {
     expect(Number(ch!.mp)).toBe(200 - 70);
   });
 
+  it('화면이 본 주가 지금 주와 다르면 WEEK_CHANGED, 같으면 통과', async () => {
+    expect(await code(buyExtra(U, S, { item: 'tower_reroll', kind: 'melee', key: key(), floor: 25, week: '2000-01-03' }))).toBe('WEEK_CHANGED');
+    expect(await rowOf(25)).toBeNull();
+    const r = await buyExtra(U, S, { item: 'tower_reroll', kind: 'melee', key: key(), floor: 25, week });
+    expect(r.duplicate).toBe(false);
+    expect(await rowOf(25)).not.toBeNull();
+  });
+
   it('층이 없거나 범위 밖이면 BAD_REQUEST · 다른 상품에 온 층은 무시', async () => {
     expect(await code(buyExtra(U, S, { item: 'tower_reroll', kind: 'melee', key: key() }))).toBe('BAD_REQUEST');
     expect(await code(buyExtra(U, S, { item: 'tower_reroll', kind: 'melee', key: key(), floor: 5 }))).toBe('BAD_REQUEST');
