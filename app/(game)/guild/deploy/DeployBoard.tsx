@@ -303,7 +303,12 @@ export function DeployBoard({
         showError(guildErrMsg(r.code));
         return;
       }
-      showHeaderToast({ title: next === 'all' ? '배치 정보를 전체 길드원이 봅니다' : `배치 정보를 ${DEPLOY_VISIBILITY_LABEL[next]} 직급이 봅니다` });
+      showHeaderToast({
+        title:
+          next === 'all' ? '배치 정보를 전체 길드원이 봅니다'
+          : next === 'r5' ? '배치 정보를 길드장과 배치 권한이 있는 부길드장만 봅니다'
+          : `배치 정보를 ${DEPLOY_VISIBILITY_LABEL[next]} 직급이 봅니다`,
+      });
     });
   };
 

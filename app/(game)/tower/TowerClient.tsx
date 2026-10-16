@@ -468,7 +468,7 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
               footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
             >
               {/* 상단 고정(10-16 피드백) — 다시 뽑기 상자와 부위 탭은 목록을 내려도 붙어 있다. 본문 패딩(p-2)을 음수 마진으로 덮어 틈이 없게. */}
-              <div className="sticky -top-2 z-10 -mx-2 -mt-2 bg-white px-2 pt-2 pb-1 dark:bg-zinc-900">
+              <div className="sticky top-0 z-10 -mx-2 -mt-2 bg-white px-2 pt-2 pb-1 dark:bg-zinc-900">
               {/* 요구 장비 다시 뽑기(0245, 10-16 결정 1-2) — 목록 위에 두어 열자마자 보인다(목록 아래는 찾기 어렵다는 피드백 10-16).
                   11층부터, 열린 층까지. 공용 구매 팝업이 위에 겹치고, 뽑으면 아래 목록이 바로 바뀐다(토스트만). 오늘 다 쓰면 버튼만 흐리게. */}
               {towerSection(pf) > 1 && pf <= openFloors ? (
@@ -477,6 +477,16 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                     <b className="block text-[12px]">요구 장비 다시 뽑기</b>
                     <span className="text-[10.5px] tabular-nums text-zinc-400">오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}</span>
                   </span>
+                  {!canReroll ? (
+                    // 오늘 다 씀 — 구매 팝업을 열었다 닫지 않고 토스트만(검수 10-16).
+                    <button
+                      type="button"
+                      onClick={() => showHeaderToast({ title: '오늘은 더 뽑을 수 없어요' })}
+                      className="flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 opacity-50 active:opacity-40"
+                    >
+                      다시 뽑기
+                    </button>
+                  ) : (
                   <ExtraBuyButton
                     item="tower_reroll"
                     floor={pf}
@@ -492,8 +502,9 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                     trigger={{ label: '다시 뽑기' }}
                     stacked
                     onOpenChange={setRerollOpen}
-                    className={`flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80 ${canReroll ? '' : 'opacity-50'}`}
+                    className="flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80"
                   />
+                  )}
                 </div>
               ) : null}
               <div className="grid grid-cols-3 gap-1">

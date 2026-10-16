@@ -435,7 +435,7 @@ export function ExtraBuyButton({
                   )}
                 </span>
               </p>
-              <p className="-mt-1 whitespace-pre-line text-center text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">{EXPIRE[item]}</p>
+              <p className={`-mt-1 whitespace-pre-line text-center text-[11px] text-zinc-500 dark:text-zinc-400 ${item === 'tower_reroll' ? 'leading-relaxed' : ''}`}>{EXPIRE[item]}</p>
             </div>
           </ModalLayout>
         </ModalShell>

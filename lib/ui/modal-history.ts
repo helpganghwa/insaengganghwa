@@ -109,6 +109,8 @@ export function createModalHistory(host: HistoryHost) {
     /** 모달을 열며 항목을 쌓는다. 뒤로가기가 오면 **맨 위 모달만** 닫힌다. */
     open(onClose: () => void): ModalHistoryHandle {
       install();
+      // 열린 모달이 없으면 덮인 채 떠난 항목도 있을 수 없다 — 라우트가 두 번 바뀐 뒤 남은 잔존 수가 다음 모달을 과하게 되돌리지 않게(검수 10-16).
+      if (stack.length === 0) pendingBack = 0;
       const entry: Entry = { close: onClose, href: host.href(), popped: false };
       stack.push(entry);
       host.pushState({ [MODAL_HISTORY_KEY]: true });
