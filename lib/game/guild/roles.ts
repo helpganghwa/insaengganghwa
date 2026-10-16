@@ -35,7 +35,15 @@ export function transferLeadership(input: {
   serverId: number;
   targetUserId: string;
 }): Promise<void> {
-  return db.transaction(async (tx) => {
+  return db.transaction((tx) => transferLeadershipTx(tx, input));
+}
+
+/** 트랜잭션 본체 — 테스트가 바깥 트랜잭션을 넘겨 롤백한다(tests/guild/set-rank.test.ts). */
+export async function transferLeadershipTx(
+  tx: Tx,
+  input: { leaderUserId: string; serverId: number; targetUserId: string },
+): Promise<void> {
+  {
     if (input.leaderUserId === input.targetUserId) throw new GuildError('INVALID_TARGET');
     const leader = await lockMember(tx, input.leaderUserId, input.serverId);
     if (!leader) throw new GuildError('NOT_IN_GUILD');
@@ -54,7 +62,7 @@ export function transferLeadership(input: {
       action: 'transfer_leadership',
       targetUserId: input.targetUserId,
     });
-  });
+  }
 }
 
 /** 부길드장 임명/해제 — GUILD §4. 길드장만. 대상은 길드장 불가. */

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { GuildError } from '@/lib/game/guild/errors';
 import { GUILD_PERM } from '@/lib/game/guild/permissions';
-import { setViceRoleTx } from '@/lib/game/guild/roles';
+import { setViceRoleTx, transferLeadershipTx } from '@/lib/game/guild/roles';
 import { setMemberRankTx } from '@/lib/game/guild/set-rank';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -93,6 +93,27 @@ describe.skipIf(!USER)('길드원 직급 변경', () => {
         // 길드원은 권한 비트가 있어도 못 바꾼다.
         await tx.execute(sql`update guild_members set permissions = ${GUILD_PERM.rank} where user_id = ${f.MEMBER}::uuid and server_id = ${SERVER_ID}`);
         expect(await code(setMemberRankTx(tx, { actorUserId: f.MEMBER, serverId: SERVER_ID, targetUserId: f.MEMBER, rank: 3 }))).toBe('INVALID_TARGET');
+        throw ROLLBACK;
+      })
+      .catch((e) => {
+        if (e !== ROLLBACK) throw e;
+      });
+  });
+
+  it('길드장 자리를 넘기면 물러난 길드장은 R3 길드원이 된다 · 다른 길드 대상은 TARGET_NOT_IN_GUILD · 다른 서버는 NOT_IN_GUILD', async () => {
+    await testDb
+      .transaction(async (tx) => {
+        const f = await setup(tx);
+        await transferLeadershipTx(tx, { leaderUserId: USER, serverId: SERVER_ID, targetUserId: f.MEMBER });
+        expect(await f.rankOf(USER)).toEqual({ rank: 3, role: 'member' });
+        expect((await f.rankOf(f.MEMBER)).role).toBe('leader');
+        // 새 길드장이 물러난 길드장을 R1로 내릴 수 있다(이제 길드원).
+        await setMemberRankTx(tx, { actorUserId: f.MEMBER, serverId: SERVER_ID, targetUserId: USER, rank: 1 });
+        expect((await f.rankOf(USER)).rank).toBe(1);
+        // 길드 밖 사람(길드 행 삭제) · 다른 서버.
+        await tx.execute(sql`delete from guild_members where user_id = ${f.VICE}::uuid and server_id = ${SERVER_ID}`);
+        expect(await code(setMemberRankTx(tx, { actorUserId: f.MEMBER, serverId: SERVER_ID, targetUserId: f.VICE, rank: 2 }))).toBe('TARGET_NOT_IN_GUILD');
+        expect(await code(setMemberRankTx(tx, { actorUserId: f.MEMBER, serverId: 9, targetUserId: USER, rank: 2 }))).toBe('NOT_IN_GUILD');
         throw ROLLBACK;
       })
       .catch((e) => {

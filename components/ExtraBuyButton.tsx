@@ -41,6 +41,7 @@ const EXPIRE: Record<PointExtraItem, string> = {
 
 const ERR: Record<string, string> = {
   PRICE_CHANGED: '가격이 바뀌었어요. 다시 확인해 주세요',
+  WEEK_CHANGED: '요구 장비가 새로 갱신됐어요. 화면을 새로고침해 주세요',
   MAX_REACHED: '오늘은 더 구매할 수 없어요',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
@@ -119,7 +120,7 @@ const cachedQuote = (item: PointExtraItem): QuoteEntry | undefined => {
 // 슬롯이면 같은 키로 다시 보낸다(서버가 같은 구매로 알아보고 두 번 받지 않는다). 견적의 '오늘 산 횟수'가 달라졌으면 그
 // 구매는 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 두고, 오래된 키(10분)·어제 키는 버린다.
 const UNSETTLED_TTL_MS = 10 * 60_000;
-type Unsettled = { key: string; bought: number; qty: number; day: string; at: number };
+type Unsettled = { key: string; bought: number; qty: number; day: string; at: number; floor?: number };
 const unsettledKey: Partial<Record<PointExtraItem, Unsettled>> = {};
 const unsettledOf = (item: PointExtraItem): Unsettled | null => {
   const u = unsettledKey[item];
@@ -150,6 +151,7 @@ export function ExtraBuyButton({
   onRollback,
   onResult,
   floor,
+  week,
   trigger,
   stacked = false,
   onOpenChange,
@@ -160,8 +162,9 @@ export function ExtraBuyButton({
   onBought?: () => void;
   /** 서버 응답(성공·재전송 모두) — 요구 장비 다시 뽑기는 새 풀을 받아 화면을 갈아 끼운다(0245). */
   onResult?: (r: { floor?: number; pool?: SlotKeys | null; bought: number; duplicate: boolean }) => void;
-  /** 요구 장비 다시 뽑기만 — 어느 층을 뽑는지. */
+  /** 요구 장비 다시 뽑기만 — 어느 층을 뽑는지, 화면이 본 주(월요일 갱신 주 시작일). 주가 바뀌었으면 서버가 WEEK_CHANGED로 돌려보낸다. */
   floor?: number;
+  week?: string;
   /** ＋ 대신 글자 버튼으로(착용 가능 장비 팝업 안의 '다시 뽑기') — 같은 구매 팝업이 열린다. className은 버튼에 붙는다. */
   trigger?: { label: string };
   /** 다른 팝업 위에 겹쳐 열릴 때 — 아래 팝업은 호출부가 onOpenChange로 receded 처리한다. */
@@ -276,14 +279,15 @@ export function ExtraBuyButton({
     const before = sharedQuote[item];
     // 결과를 모르는 채 끝난 같은 번째·같은 장 수 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
     const prev = unsettledOf(item);
-    const key = prev && prev.bought === quote.bought && prev.qty === usedQty ? prev.key : newKey();
-    const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: Date.now() };
+    // 다시 뽑기는 층까지 같아야 같은 구매다(검수 10-16) — 다른 층에 옛 키를 다시 쓰면 서버가 앞선 구매로 알아보고 그 층은 뽑지 않는다.
+    const key = prev && prev.bought === quote.bought && prev.qty === usedQty && prev.floor === floor ? prev.key : newKey();
+    const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: Date.now(), floor };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
     onOptimistic?.(usedQty);
     bumpSharedQuoteAfterBuy(item, usedQty, kind, spent);
     start(async () => {
-      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice, ...(floor !== undefined ? { floor } : {}) }).catch(
+      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice, ...(floor !== undefined ? { floor, week } : {}) }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;

@@ -33,7 +33,8 @@ export class PointShopError extends Error {
       | 'BAD_REQUEST'
       | 'SLOT_LOCKED'
       | 'SLOT_BUSY'
-      | 'PRICE_CHANGED',
+      | 'PRICE_CHANGED'
+      | 'WEEK_CHANGED', // 다시 뽑기 — 화면이 본 주(월요일 갱신)와 지금 주가 다름(0245)
   ) {
     super(code);
   }

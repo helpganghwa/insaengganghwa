@@ -8,7 +8,7 @@ import { expeditionExtraLock, expeditionExtraOpen } from '@/lib/game/expedition/
 import { raidExtraLock } from '@/lib/game/raid/open';
 import { towerExtraLock, towerRerollFloor, towerRerollOf, towerRerollableFloor } from '@/lib/game/tower/service';
 import type { SlotKeys } from '@/lib/game/tower/engine';
-import { kstDateString } from '@/lib/kst';
+import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
 import { PointShopError, costIn, extrasToday, spendPoints } from './spend';
 import type { PointKind } from './types';
@@ -55,7 +55,7 @@ function priceForQty(item: PointExtraItem, boughtToday: number, qty: number): nu
 export async function buyExtra(
   userId: string,
   serverId: number,
-  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number },
+  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number; week?: string },
 ): Promise<ExtraBuyResult> {
   const { item, kind } = input;
   // 문자열만 — 배열(['raid'])은 hasOwn을 통과하면서 아래 분기는 빗나간다(10-06 최종 검수).
@@ -69,6 +69,8 @@ export async function buyExtra(
   // 요구 장비 다시 뽑기(0245)는 층이 필요하다 — 11층부터 지금 열린 맨 위 층까지. 다른 상품에 층이 와도 무시한다.
   const floor = item === 'tower_reroll' ? Number(input.floor) : null;
   if (item === 'tower_reroll' && (floor === null || !towerRerollableFloor(floor))) throw new PointShopError('BAD_REQUEST');
+  // 화면이 본 주와 다르면(월요일 0시를 넘긴 옛 화면) 사지 않는다 — 보지도 않은 새 주 풀을 바꾸게 되므로(검수 10-16).
+  if (item === 'tower_reroll' && input.week !== undefined && input.week !== kstWeekStartString()) throw new PointShopError('WEEK_CHANGED');
   // point_extra_buys의 slot — 파견 '다시 보내기' 시절(10-06~10-10) 칸별로 세던 자리. 지금은 셋 다 0(가격은 상품 전체 횟수로).
   const slot = 0;
   const day = kstDateString();

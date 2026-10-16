@@ -133,6 +133,8 @@ type RerollRow = { floor: number; weapon: string[]; armor: string[]; accessory: 
 export async function towerRerollFloor(tx: Tx, userId: string, serverId: number, floor: number, rng: Rng10k = cryptoRng10k): Promise<SlotKeys> {
   const rows = (await tx.execute(sql`select id, code, slot::text as slot, name from catalog_items where active order by id`)) as unknown as CatalogRow[];
   const pool = drawPool(bySlot(rows), rng, towerIsSpecial(floor) ? TOWER_SPECIAL_POOL_PER_SLOT : TOWER_POOL_PER_SLOT);
+  // 카탈로그가 비어 한 부위라도 못 뽑으면 박제하지 않는다 — 포인트까지 같이 롤백(그 층이 한 주 내내 ×0이 되는 사고 방지, 검수 10-16).
+  if (TOWER_SLOTS.some((s) => pool[s].length === 0)) throw new TowerError('POOL_MISSING');
   await tx.execute(sql`
     insert into tower_pool_rerolls (user_id, server_id, week_start, floor, weapon, armor, accessory)
     values (${userId}::uuid, ${serverId}, ${kstWeekStartString()}::date, ${floor}, ${textArray(pool.weapon)}, ${textArray(pool.armor)}, ${textArray(pool.accessory)})

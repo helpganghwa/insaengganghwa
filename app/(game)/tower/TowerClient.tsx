@@ -272,6 +272,12 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
 
   // 요구 장비 다시 뽑기(0245) — 응답으로 받은 새 풀을 바로 갈아 끼운다(서버 재렌더가 같은 값을 가져온다). 층 → 부위별.
   const [rerolled, setRerolled] = useState<Record<number, SlotKeys>>({});
+  // 주가 바뀌면(월요일 0시, 서버 재렌더로 board.week 변화) 지난주에 뽑은 덮어쓰기를 버린다 — 서버는 새 주 풀로 판정한다(검수 10-16).
+  const [seenWeek, setSeenWeek] = useState(board.week);
+  if (seenWeek !== board.week) {
+    setSeenWeek(board.week);
+    setRerolled({});
+  }
   const pools = useMemo(() => {
     const m = new Map(Object.entries(board.pools).map(([k, v]) => [Number(k), v as SlotKeys]));
     for (const [k, v] of Object.entries(rerolled)) m.set(Number(k), v);
@@ -474,6 +480,7 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                   <ExtraBuyButton
                     item="tower_reroll"
                     floor={pf}
+                    week={board.week}
                     onOptimistic={() => setOptReroll((n) => n + 1)}
                     onRollback={() => setOptReroll((n) => Math.max(0, n - 1))}
                     onResult={(r) => {

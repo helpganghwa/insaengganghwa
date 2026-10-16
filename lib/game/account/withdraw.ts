@@ -157,6 +157,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from tower_battles where user_id = ${uid}`);
     await tx.execute(sql`delete from tower_claims where user_id = ${uid}`);
     await tx.execute(sql`delete from tower_progress where user_id = ${uid}`);
+    await tx.execute(sql`delete from tower_pool_rerolls where user_id = ${uid}`); // 0245 내가 다시 뽑은 요구 장비 — profiles는 마킹만이라 cascade가 안 돈다
     await tx.execute(sql`delete from title_legacy_locks where user_id = ${uid}`);
     await tx.execute(sql`delete from enhance_equip_stats where user_id = ${uid}`);
     await tx.execute(sql`delete from gem_time_reductions where user_id = ${uid}`);
