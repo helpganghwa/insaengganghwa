@@ -420,7 +420,7 @@ create table milestone_firsts (
 - `user_id` · `server_id` · `kst_date` date · `item`(expedition | raid | tower) · `slot` smallint(파견 칸, 나머지는 0) · `count` — PK (user_id, server_id, kst_date, item, slot). `count` = 그날 산 추가 횟수. 다음 구매 가격과 각 콘텐츠의 하루 한도(레이드 하루·동시, 탑 남은 도전, 파견 칸별 출발)가 오늘 행을 더해 판정한다. 날짜가 바뀌면 새 행이라 따로 초기화하지 않는다. 탈퇴 시 삭제.
 
 ### 15.2 characters.avatar_slot_bonus
-- 아바타 보관함 늘린 칸(서버별). 한도 = 100 + 이 값(최대 200), 💎1,000에 10칸씩.
+- 아바타 보관함 늘린 칸(서버별). 한도 = 100 + 이 값(최대 300), 10칸씩 — 200칸 미만 💎1,000 · 200칸부터 💎1,500(2026-10-16). 칭호 환영술사의 판정 원천(300칸).
 
 ### 15.3 포인트 잔액 제약 (0227)
 - `characters.melee_points >= 0`(`characters_melee_points_nonneg`) · `mileage_wallets.balance >= 0`(`mileage_wallets_balance_nonneg`). 차감은 조건부(잔액 ≥ 금액)·회수는 있는 만큼만이라 코드가 음수를 만들지 않는다 — 제약은 수동 SQL·소급 스크립트·새 코드의 실수를 그 자리에서 실패시키는 마지막 안전장치.

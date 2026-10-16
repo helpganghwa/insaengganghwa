@@ -12,14 +12,15 @@ import { ModalButton, ModalConfirmButton, ModalLayout } from '@/components/Modal
 import { PlusChip } from '@/components/ui/PlusChip';
 import { resyncWhenOnline } from '@/lib/client/resync';
 import { useResourceToast } from '@/components/ResourceToast';
-import { PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_STEP } from '@/lib/game/balance';
+import { PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND_TIER2, PROFILE_SLOT_STEP, PROFILE_SLOT_TIER2_FROM, profileSlotCost } from '@/lib/game/balance';
 
 import { expandAvatarSlotsAction } from './actions';
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 
 /**
- * 아바타 관리 제목 오른쪽 "N / 한도 ＋"(2026-10-06 확정 시안 B — ＋는 늘 보임, 최대 200칸이면 숨김).
+ * 아바타 관리 제목 오른쪽 "N / 한도 ＋"(2026-10-06 확정 시안 B — ＋는 늘 보임, 최대 PROFILE_MAX칸이면 숨김).
+ * 가격은 지금 한도 기준 구간(profileSlotCost, 10-16) — 팝업·차감·부족 팝업 모두 같은 값을 쓴다.
  * ＋ → 공용 팝업(ModalShell+ModalLayout) → 헤더 토스트. 다이아가 모자라면 공용 '다이아 부족' 팝업(막지 않음).
  * 다이아는 낙관적으로 먼저 깎고(실패 시 되돌림), 한도는 서버 액션의 재렌더로 바뀐다(그 전까지 낙관 표시).
  */
@@ -45,19 +46,22 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
   const shown = Math.max(limit, optimistic ?? 0);
   const canExpand = shown < PROFILE_MAX;
   const next = Math.min(PROFILE_MAX, shown + PROFILE_SLOT_STEP);
+  const cost = profileSlotCost(shown);
 
   const expand = () => {
     if (pending || busy.current) return;
-    if (!gate.ensure(PROFILE_SLOT_COST_DIAMOND)) {
+    if (!gate.ensure(cost)) {
       setOpen(false);
       return;
     }
+    // 이 구매의 가격을 붙잡아 둔다 — 응답 전에 한도 표시가 바뀌어도 되돌림은 깎은 만큼만.
+    const paid = cost;
     busy.current = true;
     setOpen(false);
     const prev = unsettled.current;
     const key = prev && prev.limit === limit && Date.now() - prev.at < 10 * 60_000 ? prev.key : crypto.randomUUID().replace(/-/g, '');
     const before = optimistic;
-    optimisticAdjust(-BigInt(PROFILE_SLOT_COST_DIAMOND));
+    optimisticAdjust(-BigInt(paid));
     setOptimistic(next);
     start(async () => {
       const r = await expandAvatarSlotsAction(key).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
@@ -71,11 +75,11 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
       }
       const unknown = r.code === 'NETWORK' || r.code === 'UNKNOWN';
       unsettled.current = unknown ? { key, limit, at: Date.now() } : null;
-      optimisticAdjust(BigInt(PROFILE_SLOT_COST_DIAMOND));
+      optimisticAdjust(BigInt(paid));
       setOptimistic(before); // 직전 표시값으로(앞선 구매의 낙관값을 지우지 않게)
       // 결과를 모르면 화면을 서버 값으로 다시 맞춘다 — 서버에서는 늘렸을 수 있다.
       if (unknown) resyncWhenOnline('route', () => router.refresh());
-      if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(PROFILE_SLOT_COST_DIAMOND);
+      if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(paid);
       else if (r.code === 'SLOT_MAX') showError(`보관함은 최대 ${PROFILE_MAX}칸까지 늘릴 수 있어요`);
       else if (r.code === 'RATE_LIMITED') showError('요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.');
       else if (r.code === 'MAINTENANCE') showError('서버 점검 중입니다. 잠시 후 다시 시도해 주세요.');
@@ -109,7 +113,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
                 <ModalConfirmButton
                   onArm={() => {
                     if (pending) return false;
-                    if (!gate.ensure(PROFILE_SLOT_COST_DIAMOND)) {
+                    if (!gate.ensure(cost)) {
                       setOpen(false);
                       return false;
                     }
@@ -117,7 +121,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
                   onConfirm={expand}
                   disabled={pending}
                 >
-                  {josa(`💎${fmt(PROFILE_SLOT_COST_DIAMOND)}#{으로} 늘리기`)}
+                  {josa(`💎${fmt(cost)}#{으로} 늘리기`)}
                 </ModalConfirmButton>
               </>
             }
@@ -125,7 +129,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
             <div className="flex items-end justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/60">
               <div>
                 <p className="text-[10.5px] font-semibold text-zinc-500 dark:text-zinc-400">가격</p>
-                <p className="text-[22px] font-extrabold tabular-nums text-amber-600 dark:text-amber-300">💎{fmt(PROFILE_SLOT_COST_DIAMOND)}</p>
+                <p className="text-[22px] font-extrabold tabular-nums text-amber-600 dark:text-amber-300">💎{fmt(cost)}</p>
               </div>
               <p className="text-right text-[11.5px] leading-[1.5] text-zinc-500 dark:text-zinc-400">
                 보관함
@@ -135,6 +139,14 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
                 </b>
               </p>
             </div>
+            {/* 구간 안내 — 200칸부터 비싸진다는 것을 미리. 300칸에 닿으면 칭호가 있다는 것은 칭호 화면이 말한다. */}
+            {shown < PROFILE_SLOT_TIER2_FROM ? (
+              <p className="mt-2 text-[10.5px] text-zinc-400">
+                {fmt(PROFILE_SLOT_TIER2_FROM)}칸부터는 {PROFILE_SLOT_STEP}칸에 💎{fmt(PROFILE_SLOT_COST_DIAMOND_TIER2)}, 최대 {fmt(PROFILE_MAX)}칸까지 늘릴 수 있어요.
+              </p>
+            ) : (
+              <p className="mt-2 text-[10.5px] text-zinc-400">최대 {fmt(PROFILE_MAX)}칸까지 늘릴 수 있어요.</p>
+            )}
           </ModalLayout>
         </ModalShell>
       ) : null}

@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_STEP, profileSlotLimit } from '@/lib/game/balance';
+import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_STEP, profileSlotCost, profileSlotLimit } from '@/lib/game/balance';
 import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
 
 export class AvatarSlotError extends Error {
@@ -24,7 +24,7 @@ export async function avatarSlotLimit(userId: string, serverId: number): Promise
 }
 
 /**
- * 아바타 보관함 늘리기(2026-10-06) — 💎1,000에 10칸, 최대 PROFILE_MAX칸. 서버별.
+ * 아바타 보관함 늘리기(2026-10-06, 10-16 상한 300·구간 가격) — 10칸에 💎1,000, 200칸부터는 💎1,500(profileSlotCost — 잠근 행의 **지금 한도** 기준), 최대 PROFILE_MAX칸. 서버별.
  * 칸 증가(상한 조건부 UPDATE)와 다이아 차감(조건부)을 한 트랜잭션에서 — 어느 쪽이든 실패하면 통째로 되돌린다.
  * 조건부 UPDATE가 행을 잠그므로 연타·동시 요청도 상한을 넘지 못한다.
  */
@@ -47,9 +47,11 @@ export async function expandAvatarSlots(
     const [prev] = (await tx.execute(sql`select 1 from diamond_ledger where user_id = ${userId}::uuid and reason = 'avatar_slot' and ref = ${ref} limit 1`)) as unknown as unknown[];
     // 잔액을 함께 돌려준다 — 재전송 판정이어도 화면의 💎가 서버 값에 정확히 맞게.
     if (prev) return { limit: profileSlotLimit(locked.bonus), duplicate: true, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
+    // 가격은 늘리기 **전** 한도로 정한다 — 190→200은 1,000, 200→210부터 1,500.
+    const cost = profileSlotCost(profileSlotLimit(locked.bonus));
     const rows = await tx
       .update(characters)
-      // 10칸씩 늘리되 최대 200칸까지만 — 옛 기능(07-20)이 남긴 10의 배수가 아닌 값도 마지막 구매에서 200에 맞춘다.
+      // 10칸씩 늘리되 최대 300칸까지만 — 10의 배수가 아닌 값이 있어도 마지막 구매에서 300에 맞춘다(prod 10-16 실측: 0 또는 100뿐).
       .set({ avatarSlotBonus: sql`least(${characters.avatarSlotBonus} + ${PROFILE_SLOT_STEP}, ${PROFILE_MAX - PROFILE_BASE_SLOTS})` })
       .where(
         and(
@@ -60,7 +62,7 @@ export async function expandAvatarSlots(
       )
       .returning({ bonus: characters.avatarSlotBonus });
     if (rows.length === 0) throw new AvatarSlotError('SLOT_MAX');
-    const paid = await walletTrySpend(tx, userId, serverId, PROFILE_SLOT_COST_DIAMOND, 'avatar_slot', ref);
+    const paid = await walletTrySpend(tx, userId, serverId, cost, 'avatar_slot', ref);
     if (!paid) throw new AvatarSlotError('INSUFFICIENT_DIAMOND');
     return { limit: profileSlotLimit(rows[0]!.bonus), duplicate: false, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
   });

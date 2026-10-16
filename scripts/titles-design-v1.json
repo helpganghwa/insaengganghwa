@@ -222,6 +222,9 @@
     "avatar_1000": {
       "fx": "pearl"
     },
+    "avatar_slot_300": {
+      "fx": "mirage"
+    },
     "galaxy": {
       "fx": "milkyway"
     },

@@ -3,6 +3,11 @@ import {
   PROFILE_FIRST_GEN_DIAMOND,
   PROFILE_GENERATION_DIAMOND,
   PROFILE_BASE_SLOTS,
+  PROFILE_MAX,
+  PROFILE_SLOT_COST_DIAMOND,
+  PROFILE_SLOT_COST_DIAMOND_TIER2,
+  PROFILE_SLOT_STEP,
+  PROFILE_SLOT_TIER2_FROM,
 } from '@/lib/game/balance';
 
 import type { WikiDocMeta } from '../registry';
@@ -87,7 +92,10 @@ export default function Doc() {
       <H2 id="manage">대표 설정</H2>
       <UL>
         <LI>
-          아바타는 서버마다 기본 {fmtInt(PROFILE_BASE_SLOTS)}개까지 보유할 수 있다. 아바타 관리의 ＋로 다이아를 써서 더 늘릴 수 있다.
+          아바타는 서버마다 기본 {fmtInt(PROFILE_BASE_SLOTS)}개까지 보유할 수 있다. 아바타 관리의 ＋로 {fmtInt(PROFILE_SLOT_STEP)}칸씩
+          늘릴 수 있으며, {fmtInt(PROFILE_SLOT_TIER2_FROM)}칸 미만일 때는 다이아 {fmtInt(PROFILE_SLOT_COST_DIAMOND)}개,
+          {fmtInt(PROFILE_SLOT_TIER2_FROM)}칸부터는 {fmtInt(PROFILE_SLOT_COST_DIAMOND_TIER2)}개가 든다. 최대{' '}
+          {fmtInt(PROFILE_MAX)}칸까지 늘릴 수 있다.
         </LI>
         <LI>아바타는 언제든 바꿀 수 있다.</LI>
         <LI>대표 아바타는 헤더 썸네일과 프로필, 공유 카드, 채팅 미니 프로필 등에 표시된다.</LI>

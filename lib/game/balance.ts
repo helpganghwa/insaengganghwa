@@ -532,17 +532,26 @@ export function profileGenPrice(hasCustomAvatar: boolean): number {
 }
 
 /**
- * 아바타 보관함(2026-10-06 확정) — 서버별 기본 100칸, 💎1,000에 10칸씩 늘려 최대 200칸.
+ * 아바타 보관함(2026-10-06 확정, 2026-10-16 상한 300칸·구간 가격) — 서버별 기본 100칸, 10칸씩 늘려 최대 300칸.
+ * 가격은 **지금 한도** 기준: 200칸 미만이면 💎1,000, 200칸 이상(200→300 구간)이면 💎1,500(사용자 확정 10-16).
  * 보관 한도 = PROFILE_BASE_SLOTS + characters.avatar_slot_bonus(구매로 늘린 칸). 초과 시 생성 차단.
  * PROFILE_MAX는 절대 상한(늘린 뒤에도 넘을 수 없는 값 — 순서 편집 등의 입력 검증에도 쓴다).
+ * 300칸에 닿으면 칭호 '환영술사'(avatar_slot_300 — titles/judge.ts, 기준은 보유 수가 아니라 한도).
  */
 export const PROFILE_BASE_SLOTS = 100;
-export const PROFILE_MAX = 200;
+export const PROFILE_MAX = 300;
 export const PROFILE_SLOT_STEP = 10;
+/** 이 한도부터는 비싼 구간. */
+export const PROFILE_SLOT_TIER2_FROM = 200;
 export const PROFILE_SLOT_COST_DIAMOND = 1_000;
+export const PROFILE_SLOT_COST_DIAMOND_TIER2 = 1_500;
 /** 지금 보관 한도(늘린 칸 반영, 최대 PROFILE_MAX). */
 export function profileSlotLimit(bonus: number): number {
   return Math.min(PROFILE_MAX, PROFILE_BASE_SLOTS + Math.max(0, Math.floor(bonus)));
+}
+/** 지금 한도(limit)에서 10칸 더 늘리는 값 — 200칸 미만 💎1,000 · 200칸 이상 💎1,500. */
+export function profileSlotCost(limit: number): number {
+  return limit >= PROFILE_SLOT_TIER2_FROM ? PROFILE_SLOT_COST_DIAMOND_TIER2 : PROFILE_SLOT_COST_DIAMOND;
 }
 
 /**

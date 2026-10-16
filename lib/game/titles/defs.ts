@@ -1151,6 +1151,17 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "avatar_slot_300",
+  kind: "permanent",
+  label: "환영술사",
+  hidden: false,
+  cat: "아바타",
+  style: {
+   fx: "mirage",
+   glow: true
+  }
+ },
+ {
   code: "full_course",
   kind: "permanent",
   label: "알찬 하루",

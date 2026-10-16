@@ -285,7 +285,7 @@ const FX_OG: Record<string, string> = {
   royalflow: '#e5c07b', staticazure: '#6ea8e0', verdantflow: '#7fce8a', trailflow: '#8fc98a', nightstar: '#aab8f0', milkyway: '#c8d8f0',
   pentaflow: '#e5c07b', bloodpulse: '#e05252', flame: '#f0a860', staticember: '#f0a860', staticgold: '#e5c07b',
   neon: '#8beaf8', aurora: '#7ec8c8', moonlight: '#cfd8e8', duskfade: '#f0a860', frostedge: '#bfe3ff',
-  yinyang: '#f5d76e', silk: '#d88ca0', breath: '#b9c2cc', obsidian: '#8a84a0', pearl: '#e0d8f0',
+  yinyang: '#f5d76e', silk: '#d88ca0', breath: '#b9c2cc', obsidian: '#8a84a0', pearl: '#e0d8f0', mirage: '#b8a6ec',
   inkwash: '#b8bec8', candle: '#f0c890', firstlight: '#e8cf9a', jade: '#8fd4ae', rimlight: '#f0e2b0',
   sparkstatic: '#ffe066', slimeflow: '#8fce6e', duststatic: '#d0a878', ashstatic: '#b8aec8', abyssglow: '#9a7bd4',
   // 무한의 탑 층 도달(2026-10-01)

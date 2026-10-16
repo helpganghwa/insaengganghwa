@@ -639,6 +639,12 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "어려움"
  },
  {
+  code: "avatar_slot_300",
+  cat: "아바타",
+  cond: "아바타 보관함 300칸",
+  diff: "어려움"
+ },
+ {
   code: "full_course",
   cat: "조합",
   cond: "하루에 강화 수령·보급 개봉·레이드·대난투 전부 참여",

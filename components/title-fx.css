@@ -329,6 +329,16 @@
 @keyframes dlx-lr{0%,35%{background-position:120% 0}100%{background-position:-30% 0}}
 @keyframes dlx-rl{0%,35%{background-position:-30% 0}100%{background-position:120% 0}}
 
+/* 환영술사(2026-10-16, 아바타 보관함 300칸) — 환영: 연보라·청록이 흐르는 본체 위로 **잔상 두 겹**이 좌우로 떨어져 나갔다
+   사라진다(::before/::after = data-t 글자 복제, dragonlux 패턴). 본체는 숨 쉬듯 옅어졌다 돌아온다. 칭호는 9~10px로 작게 쓰이므로
+   잔상은 흐림 대신 **뚜렷한 색 + 넉넉한 이동(.55em)** 으로 읽히게 한다. 정적 모드·reduced-motion은 잔상이 기본 opacity 0이라 본체만 남는다. */
+.ttag .fx-mirage{position:relative;display:inline-block;white-space:nowrap;background:linear-gradient(90deg,#b8a6ec,#8fd8e6,#f0e8ff,#8fd8e6,#b8a6ec);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 7s linear infinite,mirage-breath 5.2s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(170,150,235,.4))}
+.ttag .fx-mirage::before,.ttag .fx-mirage::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;color:#d8c8ff;opacity:0;pointer-events:none;text-shadow:0 0 .3em rgba(216,200,255,.8);animation:mirage-ghost 5.2s ease-in-out infinite}
+.ttag .fx-mirage::after{color:#9ff0ff;text-shadow:0 0 .3em rgba(159,240,255,.8);animation-name:mirage-ghost2}
+@keyframes mirage-breath{0%,100%{opacity:1}50%{opacity:.78}}
+@keyframes mirage-ghost{0%,8%,100%{opacity:0;transform:translateX(0)}30%{opacity:.7;transform:translateX(-.3em)}56%{opacity:.28;transform:translateX(-.55em)}70%{opacity:0;transform:translateX(-.7em)}}
+@keyframes mirage-ghost2{0%,8%,100%{opacity:0;transform:translateX(0)}30%{opacity:.62;transform:translateX(.3em)}56%{opacity:.25;transform:translateX(.55em)}70%{opacity:0;transform:translateX(.7em)}}
+
 /* 월드보스 칭호 11종(2026-10-11 사용자 고르기 폼 확정) — 잿불 팔레트(불씨 주황 #f97316 · 달군 쇠 #ff5a1f · 재 #b9b0a8). 기존 flow/flowy/pulsebr/brfade 키프레임 재사용, 파티클은 재의 재앙(불씨)·잿불 원정대(잿빛 깃털)만. */
 .ttag .fx-pyreglow{background:linear-gradient(90deg,#ff9d4d,#ff5a1f,#ffe0b0,#ff5a1f,#ff9d4d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,pulsebr 2.8s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(255,120,40,.55))}
 .ttag .fx-pyrevert{background:linear-gradient(0deg,#ff9d4d,#ff5a1f,#ffe0b0,#ff5a1f,#ff9d4d);background-size:100% 300%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flowy 6s linear infinite}

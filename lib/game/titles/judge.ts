@@ -466,6 +466,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
                then extract(day from now() - active_profile_since)::int else 0 end
                from characters where user_id=${u} and server_id=${s}),0) as avatar_days,
              coalesce((select guild_donation_count from characters where user_id=${u} and server_id=${s}),0) as donate_cnt,
+             -- 아바타 보관함 늘린 칸(0 또는 10의 배수) — 환영술사(300칸 한도, 10-16)는 보유 수가 아니라 **한도** 기준.
+             coalesce((select avatar_slot_bonus from characters where user_id=${u} and server_id=${s}),0) as slot_bonus,
              coalesce((select jsonb_array_length(executor_zone_history) from characters where user_id=${u} and server_id=${s}),0) as exec_zones
     `),
     // 랭킹(판정 2차) — 리더보드 카운터 기준 지표별 내 값·순위. 행 없는 지표는 TS에서 9999 처리.
@@ -775,7 +777,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     r_volcano: n(ra.r_volcano), r_swamp: n(ra.r_swamp), r_orc: n(ra.r_orc), r_fallen: n(ra.r_fallen),
     r_temple: n(ra.r_temple), r_kingdom: n(ra.r_kingdom),
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
-    av_owned: n(av.owned), av_first3: n(av.first3),
+    av_owned: n(av.owned), av_first3: n(av.first3), av_slot_bonus: n(mi.slot_bonus),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
     liberated: n(mi.liberated), champions: n(mi.champions), lib_weapons: n(mi.lib_weapons), first100_days: n(mi.first100_days),
     catalog_total: n(mi.catalog_total),
@@ -982,6 +984,8 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   rebirth: (m) => m.av_cnt >= 100,
   avatar_1000: (m) => m.av_cnt >= 1000,
   avatar_50: (m) => m.av_owned >= 50, // 유일한 "보유" 기준 — cond가 '50개 보유'
+  // 보관함 한도 300칸(10-16) — 기본 100 + 늘린 칸. 300은 고정값: 상한이 더 올라가도 이 칭호의 조건은 그대로.
+  avatar_slot_300: (m) => 100 + m.av_slot_bonus >= 300,
 
   two_mirrors: (m) => m.av_genders >= 2,
   same_combo: (m) => m.av_combo >= 10,

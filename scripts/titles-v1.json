@@ -945,6 +945,15 @@
     "diff": "어려움"
   },
   {
+    "code": "avatar_slot_300",
+    "cat": "아바타",
+    "kind": "영구",
+    "label": "환영술사",
+    "cond": "아바타 보관함 300칸",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
     "code": "full_course",
     "cat": "조합",
     "kind": "영구",
