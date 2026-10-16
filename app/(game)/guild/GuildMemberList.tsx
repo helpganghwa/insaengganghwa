@@ -14,6 +14,7 @@ import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { GUILD_MAX_VICE, GUILD_REJOIN_LOCK_HOURS } from '@/lib/game/guild/balance';
 import { GUILD_PERM_ORDER, permKeys } from '@/lib/game/guild/permissions';
 import { MEMBER_RANKS, parseMemberRank, rankLabel, type MemberRank } from '@/lib/game/guild/rank';
+import { josa } from 'josa';
 
 import { setViceAction, kickMemberAction, transferLeadershipAction, setMemberRankAction } from './actions';
 import { guildErrMsg } from './errors-msg';
@@ -318,17 +319,16 @@ export function GuildMemberList({
       run: () => run(() => transferLeadershipAction(m.userId), '길드장 위임'),
     });
 
-  /** 직급 변경 확인(0244) — 올림·내림 문구만 다르고 본문은 같다(되돌릴 수 있는 동작, 사용자 결정 문구). */
+  /** 직급 변경 확인(0244) — 올림·내림 구분 없이 '변경'으로 통일, 토스트에 닉네임(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로'). */
   const askRank = (m: RichMember, rank: MemberRank) => {
     const cur = parseMemberRank(m.rank);
     if (cur === rank) return;
-    const up = rank > cur;
     setConfirm({
-      title: `${m.nickname}님을 R${rank}로 ${up ? '올릴까요?' : '내릴까요?'}`,
+      title: josa(`${m.nickname}님을 R${rank}#{으로} 변경할까요?`),
       body: '직급은 언제든 다시 바꿀 수 있습니다.',
-      label: up ? `R${rank}로 올리기` : `R${rank}로 내리기`,
+      label: josa(`R${rank}#{으로} 변경`),
       tone: 'info',
-      run: () => run(() => setMemberRankAction(m.userId, rank), `R${rank}로 ${up ? '올렸습니다' : '내렸습니다'}`),
+      run: () => run(() => setMemberRankAction(m.userId, rank), josa(`${m.nickname}님을 R${rank}#{으로} 변경했습니다`)),
     });
   };
 

@@ -103,10 +103,9 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
     case 'set_rank': {
-      // 길드원 직급 변경(0244) — 올림/내림을 from·to로 가른다.
-      const from = Number(e.detail?.from ?? 0);
-      const to = Number(e.detail?.to ?? 0);
-      return <>{actor}님이 {target}님을 {hl(`R${to}`, C.indigo)}{to > from ? '로 올렸습니다' : '로 내렸습니다'}</>;
+      // 길드원 직급 변경(0244) — 올림·내림 구분 없이 '변경'(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로').
+      const to = `R${Number(e.detail?.to ?? 0)}`;
+      return <>{actor}님이 {target}님을 {hl(to, C.indigo)}{getJosaPicker('으로')(to)} 변경했습니다</>;
     }
     // set_perm은 activity-log 쿼리에서 피드 제외(내부 설정) — 혹시 노출돼도 원시 코드 대신 문구.
     case 'set_perm':

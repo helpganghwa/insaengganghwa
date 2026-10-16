@@ -29,7 +29,8 @@ export type HistoryHost = {
   /** 해시를 뺀 현재 주소 — 라우트가 바뀌었는지 판단하는 유일한 근거. */
   href(): string;
   pushState(state: unknown): void;
-  back(): void;
+  /** n칸 되돌리기(기본 1) — 한 번의 popstate만 난다(history.go(-n)). */
+  back(n?: number): void;
   /** popstate 구독 — 핸들러는 **그 이벤트 자체**를 받는다(순서 무관 판정의 근거, `verdictFor`). */
   onPop(handler: (ev: unknown) => void): void;
 };
@@ -48,6 +49,14 @@ export function createModalHistory(host: HistoryHost) {
   const stack: Entry[] = [];
   let selfBackAt = 0;
   let installed = false;
+  /**
+   * 위에 다른 모달이 남아 있어 되돌리지 못한 채 떠난 항목 수(같은 라우트) — **한 번에 여러 팝업을 닫는 흐름**의 함정(2026-10-16).
+   * 시트 위에 확인 팝업을 띄우고 확정하면 둘이 같은 커밋에 언마운트되는데, 아래 시트의 release는 "위에 남이 있다"며
+   * 되돌리지 않고, 위 확인 팝업의 release는 자기 한 칸만 되돌린다 → 시트 항목이 히스토리에 남아 뒤로가기가 한 번
+   * 삼켜진다(길드 직급 변경을 여러 번 하면 그 수만큼 쌓였다 — 사용자 제보). 그래서 덮인 채 떠난 수를 세어 두고,
+   * 맨 위가 떠날 때(버튼이든 뒤로가기든) 그만큼 함께 되돌린다.
+   */
+  let pendingBack = 0;
   /**
    * 마지막으로 판정을 내린 popstate와 그 결론 — **리스너 순서 의존을 없애는 장치**(2026-09-13).
    *
@@ -86,6 +95,13 @@ export function createModalHistory(host: HistoryHost) {
       if (!top) return;
       top.popped = true;
       top.close();
+      // 맨 위가 뒤로가기로 닫혔는데 그 아래에 덮인 채 떠난 항목이 남아 있다 — 지금 그만큼 더 되돌린다(이 popstate는 우리가 삼킨다).
+      if (pendingBack > 0 && host.href() === top.href) {
+        const n = pendingBack;
+        pendingBack = 0;
+        selfBackAt = Date.now();
+        host.back(n);
+      }
     });
   }
 
@@ -102,12 +118,20 @@ export function createModalHistory(host: HistoryHost) {
           const i = stack.indexOf(entry);
           if (i >= 0) stack.splice(i, 1);
           // 라우트가 바뀌어 언마운트됐다 — 내 항목은 새 라우트 아래로 묻혔다. 여기서 되돌리면
-          // 방금 떠난 화면으로 튕긴다(튜토리얼 완료 CTA·다이아 충전 유도 동선).
-          if (host.href() !== entry.href) return;
-          // 내 위에 다른 모달이 남아 있다 — 되돌리면 남의 항목을 지운다.
-          if (i !== stack.length) return;
+          // 방금 떠난 화면으로 튕긴다(튜토리얼 완료 CTA·다이아 충전 유도 동선). 덮인 채 떠난 항목도 함께 묻혔다.
+          if (host.href() !== entry.href) {
+            pendingBack = 0;
+            return;
+          }
+          // 내 위에 다른 모달이 남아 있다 — 지금 되돌리면 남의 항목을 지운다. 세어 두고 맨 위가 떠날 때 함께 되돌린다.
+          if (i !== stack.length) {
+            pendingBack += 1;
+            return;
+          }
+          const n = 1 + pendingBack;
+          pendingBack = 0;
           selfBackAt = Date.now();
-          host.back();
+          host.back(n);
         },
       };
     },
@@ -148,8 +172,9 @@ const browserHost: HistoryHost = {
   pushState(state) {
     window.history.pushState(state, '');
   },
-  back() {
-    window.history.back();
+  back(n = 1) {
+    if (n <= 1) window.history.back();
+    else window.history.go(-n);
   },
   onPop(handler) {
     window.addEventListener('popstate', (ev) => handler(ev));
