@@ -339,6 +339,8 @@ export function ExtraBuyButton({
                 <ModalConfirmButton
                   // 통화·장 수를 바꾸거나 가격이 새로 고쳐지면 3초 재확인을 처음부터(무장한 채 다른 값으로 사지 않게).
                   key={`${kind}-${qty}-${price ?? 0}`}
+                  // 다시 뽑기는 닫기와 같은 크기(10-16 피드백) — 추가 횟수는 종전대로 2:1.
+                  grow={item === 'tower_reroll' ? 1 : 2}
                   onArm={() => {
                     if (!quote?.price || pending) return false;
                     if (!enough(kind)) {

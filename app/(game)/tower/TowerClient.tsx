@@ -461,6 +461,35 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
               maxBodyClass="max-h-[58vh]"
               footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
             >
+              {/* 요구 장비 다시 뽑기(0245, 10-16 결정 1-2) — 목록 위에 두어 열자마자 보인다(목록 아래는 찾기 어렵다는 피드백 10-16).
+                  11층부터, 열린 층까지. 공용 구매 팝업이 위에 겹치고, 뽑으면 아래 목록이 바로 바뀐다(토스트만). 오늘 다 쓰면 버튼만 흐리게. */}
+              {towerSection(pf) > 1 && pf <= openFloors ? (
+                <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-950/20 px-2.5 py-2">
+                  <span className="min-w-0 leading-tight">
+                    <b className="block text-[12px]">요구 장비 다시 뽑기</b>
+                    <span className="text-[10.5px] tabular-nums text-zinc-400">
+                      오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}
+                      {canReroll ? ` · ${pointExtraPrice('tower_reroll', rerollBought)}포인트부터` : ''}
+                    </span>
+                  </span>
+                  <ExtraBuyButton
+                    item="tower_reroll"
+                    floor={pf}
+                    onOptimistic={() => setOptReroll((n) => n + 1)}
+                    onRollback={() => setOptReroll((n) => Math.max(0, n - 1))}
+                    onResult={(r) => {
+                      if (r.floor != null && r.pool) {
+                        const pool = r.pool;
+                        setRerolled((m) => ({ ...m, [r.floor!]: pool }));
+                      }
+                    }}
+                    trigger={{ label: '다시 뽑기' }}
+                    stacked
+                    onOpenChange={setRerollOpen}
+                    className={`flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80 ${canReroll ? '' : 'opacity-50'}`}
+                  />
+                </div>
+              ) : null}
               <div className="grid grid-cols-3 gap-1">
                 {TOWER_SLOTS.map((s) => (
                   <button key={s} type="button" onClick={() => setEquipTab(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${equipTab === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : pCounts.bySlot[s].owned === 0 ? 'border-zinc-800 text-red-300' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>
@@ -469,36 +498,6 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                 ))}
               </div>
               <PoolList board={board} items={items} slot={equipTab} rule={pRule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} disabled={equipPending} />
-              {/* 요구 장비 다시 뽑기(0245, 10-16 결정 1-2) — 11층부터, 열린 층까지. 공용 구매 팝업이 위에 겹치고, 뽑으면 이 목록이 바로 바뀐다(토스트만). */}
-              {towerSection(pf) > 1 && pf <= openFloors ? (
-                <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-950/20 px-2.5 py-2">
-                  <span className="min-w-0 leading-tight">
-                    <b className="block text-[12px]">요구 장비 다시 뽑기</b>
-                    <span className="text-[10.5px] tabular-nums text-zinc-400">
-                      오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}
-                      {canReroll ? ` · ${pointExtraPrice('tower_reroll', rerollBought)}포인트부터` : ' · 오늘은 끝'}
-                    </span>
-                  </span>
-                  {canReroll ? (
-                    <ExtraBuyButton
-                      item="tower_reroll"
-                      floor={pf}
-                      onOptimistic={() => setOptReroll((n) => n + 1)}
-                      onRollback={() => setOptReroll((n) => Math.max(0, n - 1))}
-                      onResult={(r) => {
-                        if (r.floor != null && r.pool) {
-                          const pool = r.pool;
-                          setRerolled((m) => ({ ...m, [r.floor!]: pool }));
-                        }
-                      }}
-                      trigger={{ label: '다시 뽑기' }}
-                      stacked
-                      onOpenChange={setRerollOpen}
-                      className="flex-none rounded-lg bg-gradient-to-b from-amber-500 to-amber-600 px-3 py-1.5 text-[12px] font-extrabold text-stone-900 active:opacity-80"
-                    />
-                  ) : null}
-                </div>
-              ) : null}
             </ModalLayout>
           </ModalShell>
         ) : null}
