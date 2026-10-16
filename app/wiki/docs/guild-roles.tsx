@@ -128,8 +128,8 @@ export default function Doc() {
         </LI>
         <LI>
           위임 대상은 최근 {fmtInt(GUILD_LEADER_HANDOVER_DAYS)}일 안에 접속한 길드원 중에서
-          정해진다. 부길드장이 우선이고, 그다음은{' '}
-          <DocLink slug="guild" hash="donate">기여도</DocLink>가 높은 순이며, 기여도가 같으면 먼저
+          정해진다. 부길드장이 우선이고, 그다음은 직급이 높은 순(R3, R2, R1), 같은 직급이면{' '}
+          <DocLink slug="guild" hash="donate">기여도</DocLink>가 높은 순이며, 기여도도 같으면 먼저
           가입한 순이다.
         </LI>
         <LI>길드장이 오래 자리를 비울 예정이면 미리 위임해 두는 것이 좋다.</LI>
