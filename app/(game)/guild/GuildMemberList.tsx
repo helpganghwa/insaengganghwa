@@ -235,6 +235,14 @@ export function GuildMemberList({
   const isLeader = myRole === 'leader';
   const viceCount = members.filter((m) => m.role === 'vice').length;
 
+  // 직급 변경 낙관 반영(0244, 10-16 검수) — 확정 즉시 새 그룹으로 옮기고, 실패하면 되돌린다. 서버 재렌더로 members가 새로 오면 비운다.
+  const [optRank, setOptRank] = useState<Record<string, MemberRank>>({});
+  const [seenMembers, setSeenMembers] = useState(members);
+  if (seenMembers !== members) {
+    setSeenMembers(members);
+    setOptRank({});
+  }
+  const rankOfMember = (m: RichMember): MemberRank => optRank[m.userId] ?? parseMemberRank(m.rank);
   // 직급별 그룹(R5 길드장 / R4 부길드장 / R3 / R2 / R1, 0244) — 각 그룹 내부는 선택한 메트릭으로 정렬.
   // 접기는 두지 않는다(사용자 결정 2026-07-30) — 전원이 항상 보인다. 행 안에 직급 배지는 따로 두지 않는다(그룹이 곧 직급).
   const groups = useMemo(() => {
@@ -245,7 +253,7 @@ export function GuildMemberList({
     const byMetric = (a: RichMember, b: RichMember) =>
       sortValue(b, sort) - sortValue(a, sort) || a.nickname.localeCompare(b.nickname);
     const of = (role: RichMember['role'], rank?: MemberRank) =>
-      matched.filter((m) => m.role === role && (rank == null || parseMemberRank(m.rank) === rank)).sort(byMetric);
+      matched.filter((m) => m.role === role && (rank == null || rankOfMember(m) === rank)).sort(byMetric);
     return [
       { key: 'leader' as const, label: 'R5 길드장', rows: of('leader') },
       { key: 'vice' as const, label: 'R4 부길드장', rows: of('vice') },
@@ -253,7 +261,8 @@ export function GuildMemberList({
       { key: 'r2' as const, label: 'R2', rows: of('member', 2) },
       { key: 'r1' as const, label: 'R1', rows: of('member', 1) },
     ];
-  }, [members, sort, q]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members, sort, q, optRank]);
 
   const matchedCount = groups.reduce((n, g) => n + g.rows.length, 0);
   // 부길드장 임명 후보 — R3 → R2 → R1 순, 그 안은 선택한 정렬(0244, 사용자 결정).
@@ -271,10 +280,11 @@ export function GuildMemberList({
   /** 직급 선택 노출 — 길드장 또는 rank 권한 부길드장, 대상은 길드원만. */
   const canSetRankOf = (m: RichMember): boolean => m.role === 'member' && (isLeader || canRank);
 
-  const run = (fn: () => Promise<{ status: string; code?: string }>, okTitle: string) => {
+  const run = (fn: () => Promise<{ status: string; code?: string }>, okTitle: string, onFail?: () => void) => {
     start(async () => {
       const r = await fn().catch(() => null);
       if (!r || r.status !== 'success') {
+        onFail?.();
         showError(r?.code ? guildErrMsg(r.code) : '전송에 실패했어요. 다시 시도해 주세요.');
         return;
       }
@@ -321,14 +331,22 @@ export function GuildMemberList({
 
   /** 직급 변경 확인(0244) — 올림·내림 구분 없이 '변경'으로 통일, 토스트에 닉네임(10-16 사용자 피드백). 조사는 josa('R3으로'·'R2로'). */
   const askRank = (m: RichMember, rank: MemberRank) => {
-    const cur = parseMemberRank(m.rank);
+    const cur = rankOfMember(m);
     if (cur === rank) return;
     setConfirm({
       title: josa(`${m.nickname}님을 R${rank}#{으로} 변경할까요?`),
       body: '직급은 언제든 다시 바꿀 수 있습니다.',
       label: josa(`R${rank}#{으로} 변경`),
       tone: 'info',
-      run: () => run(() => setMemberRankAction(m.userId, rank), josa(`${m.nickname}님을 R${rank}#{으로} 변경했습니다`)),
+      run: () => {
+        // 낙관 반영 — 시트가 닫히는 순간 새 그룹에 보이고, 실패하면 원래 직급으로 되돌린다.
+        setOptRank((o) => ({ ...o, [m.userId]: rank }));
+        run(
+          () => setMemberRankAction(m.userId, rank),
+          josa(`${m.nickname}님을 R${rank}#{으로} 변경했습니다`),
+          () => setOptRank((o) => ({ ...o, [m.userId]: cur })),
+        );
+      },
     });
   };
 
@@ -447,7 +465,7 @@ export function GuildMemberList({
                   {isLeader ? ` · 권한 ${permKeys(sheet.permissions).length} / ${GUILD_PERM_ORDER.length}` : ''}
                 </span>
               ) : (
-                <span className="font-bold text-zinc-600 dark:text-zinc-300">{rankLabel(sheet.role, sheet.rank)}</span>
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">{rankLabel(sheet.role, rankOfMember(sheet))}</span>
               )
             }
             bodyPad="sm"
@@ -464,7 +482,7 @@ export function GuildMemberList({
                   <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">직급</span>
                   <div role="radiogroup" aria-label="직급" className="flex shrink-0 rounded-lg bg-zinc-200 p-0.5 dark:bg-zinc-800">
                     {MEMBER_RANKS.map((r) => {
-                      const on = parseMemberRank(sheet.rank) === r;
+                      const on = rankOfMember(sheet) === r;
                       return (
                         <button
                           key={r}
@@ -568,7 +586,7 @@ export function GuildMemberList({
                           {m.nickname}
                         </span>
                         <span className="shrink-0 text-[10.5px] tabular-nums text-zinc-500">
-                          R{parseMemberRank(m.rank)} · 기여 {m.contribution.toLocaleString('ko-KR')}
+                          R{rankOfMember(m)} · 기여 {m.contribution.toLocaleString('ko-KR')}
                         </span>
                       </button>
                     </li>
