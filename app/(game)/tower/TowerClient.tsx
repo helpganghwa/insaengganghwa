@@ -11,7 +11,7 @@ import { BackTitle } from '@/components/BackNav';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { POINT_EXTRA_PRICES, TOWER_SECTION, pointExtraPrice, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { POINT_EXTRA_PRICES, TOWER_SECTION, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { serverNow } from '@/lib/client/server-clock';
 import { floorRule, towerCp, TOWER_SLOTS, type EquippedPiece, type SlotKeys, type TowerSlot } from '@/lib/game/tower/engine';
 import { towerFloorInfo, towerFloorTitle, towerMonFlip } from '@/lib/game/tower/floors';
@@ -461,16 +461,15 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
               maxBodyClass="max-h-[58vh]"
               footer={<ModalButton tone="neutral" onClick={() => setSheet(null)}>닫기</ModalButton>}
             >
+              {/* 상단 고정(10-16 피드백) — 다시 뽑기 상자와 부위 탭은 목록을 내려도 붙어 있다. 본문 패딩(p-2)을 음수 마진으로 덮어 틈이 없게. */}
+              <div className="sticky -top-2 z-10 -mx-2 -mt-2 bg-white px-2 pt-2 pb-1 dark:bg-zinc-900">
               {/* 요구 장비 다시 뽑기(0245, 10-16 결정 1-2) — 목록 위에 두어 열자마자 보인다(목록 아래는 찾기 어렵다는 피드백 10-16).
                   11층부터, 열린 층까지. 공용 구매 팝업이 위에 겹치고, 뽑으면 아래 목록이 바로 바뀐다(토스트만). 오늘 다 쓰면 버튼만 흐리게. */}
               {towerSection(pf) > 1 && pf <= openFloors ? (
                 <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-950/20 px-2.5 py-2">
                   <span className="min-w-0 leading-tight">
                     <b className="block text-[12px]">요구 장비 다시 뽑기</b>
-                    <span className="text-[10.5px] tabular-nums text-zinc-400">
-                      오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}
-                      {canReroll ? ` · ${pointExtraPrice('tower_reroll', rerollBought)}포인트부터` : ''}
-                    </span>
+                    <span className="text-[10.5px] tabular-nums text-zinc-400">오늘 {rerollBought}/{POINT_EXTRA_PRICES.tower_reroll.length}</span>
                   </span>
                   <ExtraBuyButton
                     item="tower_reroll"
@@ -496,6 +495,7 @@ export function TowerClient({ board, openFloors: openFloorsServer }: { board: To
                     {SLOT_KO[s]} {pCounts.bySlot[s].owned}/{pCounts.bySlot[s].total}
                   </button>
                 ))}
+              </div>
               </div>
               <PoolList board={board} items={items} slot={equipTab} rule={pRule} avatarKeys={new Set(avatar?.keys ?? [])} onEquip={(id) => doEquip([id])} disabled={equipPending} />
             </ModalLayout>

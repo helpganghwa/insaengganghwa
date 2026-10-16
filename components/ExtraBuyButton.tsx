@@ -187,6 +187,8 @@ export function ExtraBuyButton({
   // 팝업이 열려 있는 동안만 견적 응답을 반영한다(닫은 뒤 늦게 온 답이 토스트를 띄우지 않게).
   const openRef = useRef(false);
   const copy = COPY[item];
+  // 다시 뽑기는 층을 정확히('102층의…', 10-16 피드백) — 줄바꿈은 COPY와 같은 자리.
+  const desc = item === 'tower_reroll' && floor ? `${floor}층의 요구 장비를 나에게만 새로 뽑아요.\n지금 장비가 다시 나올 수도 있어요.` : copy.desc;
   const fetchQuote = (fresh = false) => fetchSharedQuote(item, fresh);
   useEffect(() => {
     // ＋가 그려질 때 — 받아 둔 값이 없거나 오래됐을 때만 미리 받는다(팝업을 빈 칸 없이 바로 열기 위해).
@@ -329,7 +331,7 @@ export function ExtraBuyButton({
         <ModalShell onClose={close} label={copy.title} stacked={stacked}>
           <ModalLayout
             title={copy.title}
-            subtitle={<span className="whitespace-pre-line">{copy.desc}</span>}
+            subtitle={<span className="whitespace-pre-line">{desc}</span>}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={close}>
