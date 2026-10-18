@@ -329,17 +329,16 @@
 @keyframes dlx-lr{0%,35%{background-position:120% 0}100%{background-position:-30% 0}}
 @keyframes dlx-rl{0%,35%{background-position:-30% 0}100%{background-position:120% 0}}
 
-/* 환영술사(2026-10-16, 아바타 보관함 300칸) — 환영: 보라·청록·흰빛이 흐르는 본체 옆으로 **옅은 잔상 두 겹**(보라 왼쪽·청록 오른쪽)이
+/* 환영술사(2026-10-16, 아바타 보관함 300칸) — 환영: 보라·청록·흰빛이 흐르는 본체 옆으로 **잔상 두 겹**(보라 왼쪽·청록 오른쪽)이
    번갈아 떨어져 나갔다 사라진다(::before/::after = data-t 글자 복제, dragonlux 패턴). 반 주기 어긋난 두 잔상이라 언제 봐도 한쪽에는
-   잔상이 있다(첫판은 5초에 1.5초만 보여 헤더 9px에서 놓쳤다 — 사용자 제보). 잔상은 본체 위에 겹치지 않게 처음부터 비켜 시작하고
-   (WebKit은 겹치면 글자가 뭉개질 만큼 밝다), 세기는 "너무 강하다"는 제보로 불투명도 .55→.32·이동 .9em→.6em·주기 2.6→3.6s로 낮췄다.
-   정적 모드·reduced-motion은 본체만. */
-.ttag .fx-mirage{position:relative;display:inline-block;white-space:nowrap;background:linear-gradient(90deg,#a99af0,#8fd8e6,#e6eeff,#8fd8e6,#a99af0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite,mirage-breath 3.6s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(170,150,235,.4))}
-.ttag .fx-mirage::before,.ttag .fx-mirage::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;color:#d8ccff;opacity:0;pointer-events:none;text-shadow:0 0 .15em rgba(200,180,255,.3);animation:mirage-ghost 3.6s ease-in-out infinite}
-.ttag .fx-mirage::after{color:#a8ecf7;text-shadow:0 0 .15em rgba(160,240,255,.3);animation-name:mirage-ghost2;animation-delay:-1.8s}
+   잔상이 있다. 잔상은 본체 위에 겹치지 않게 처음부터 비켜 시작한다(WebKit은 겹치면 글자가 뭉개질 만큼 밝다).
+   세기는 사용자가 미리보기 슬라이더로 확정(10-18): 잔상 불투명도 .5 · 이동 .25em · 주기 1.6s. 정적 모드·reduced-motion은 본체만. */
+.ttag .fx-mirage{position:relative;display:inline-block;white-space:nowrap;background:linear-gradient(90deg,#a99af0,#8fd8e6,#e6eeff,#8fd8e6,#a99af0);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite,mirage-breath 1.6s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(170,150,235,.4))}
+.ttag .fx-mirage::before,.ttag .fx-mirage::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;color:#d8ccff;opacity:0;pointer-events:none;text-shadow:0 0 .15em rgba(200,180,255,.3);animation:mirage-ghost 1.6s ease-in-out infinite}
+.ttag .fx-mirage::after{color:#a8ecf7;text-shadow:0 0 .15em rgba(160,240,255,.3);animation-name:mirage-ghost2;animation-delay:-.8s}
 @keyframes mirage-breath{0%,100%{opacity:1}50%{opacity:.9}}
-@keyframes mirage-ghost{0%{opacity:0;transform:translateX(-.14em)}35%{opacity:.32;transform:translateX(-.3em)}75%{opacity:.13;transform:translateX(-.48em)}100%{opacity:0;transform:translateX(-.6em)}}
-@keyframes mirage-ghost2{0%{opacity:0;transform:translateX(.14em)}35%{opacity:.3;transform:translateX(.3em)}75%{opacity:.12;transform:translateX(.48em)}100%{opacity:0;transform:translateX(.6em)}}
+@keyframes mirage-ghost{0%{opacity:0;transform:translateX(-.0575em)}35%{opacity:.5;transform:translateX(-.125em)}75%{opacity:.2;transform:translateX(-.2em)}100%{opacity:0;transform:translateX(-.25em)}}
+@keyframes mirage-ghost2{0%{opacity:0;transform:translateX(.0575em)}35%{opacity:.47;transform:translateX(.125em)}75%{opacity:.19;transform:translateX(.2em)}100%{opacity:0;transform:translateX(.25em)}}
 
 /* 월드보스 칭호 11종(2026-10-11 사용자 고르기 폼 확정) — 잿불 팔레트(불씨 주황 #f97316 · 달군 쇠 #ff5a1f · 재 #b9b0a8). 기존 flow/flowy/pulsebr/brfade 키프레임 재사용, 파티클은 재의 재앙(불씨)·잿불 원정대(잿빛 깃털)만. */
 .ttag .fx-pyreglow{background:linear-gradient(90deg,#ff9d4d,#ff5a1f,#ffe0b0,#ff5a1f,#ff9d4d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite,pulsebr 2.8s ease-in-out infinite;filter:drop-shadow(0 0 3px rgba(255,120,40,.55))}
