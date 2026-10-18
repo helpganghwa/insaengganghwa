@@ -5250,6 +5250,486 @@ export const TITLE_SECRETS: TitleSecret[] = [
   }
  },
  {
+  code: "solo_temple_frostguard_garb",
+  cat: "아이템 발동",
+  cond: "설산 파수의 갑주를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_frostguard_garb"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_astrologer_starmap_coat",
+  cat: "아이템 발동",
+  cond: "성좌의 망토를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "astrologer_starmap_coat"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_commander_feather_epaulets",
+  cat: "아이템 발동",
+  cond: "푸른 깃 견장을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "commander_feather_epaulets"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_phantom_half_mask",
+  cat: "아이템 발동",
+  cond: "상아 반가면을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "phantom_half_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_valkyrie_winged_circlet",
+  cat: "아이템 발동",
+  cond: "발키리의 날개 서클릿을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "valkyrie_winged_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_paladin_winged_helm",
+  cat: "아이템 발동",
+  cond: "백은 날개 투구를 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "paladin_winged_helm"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_frost_kite_shield",
+  cat: "아이템 발동",
+  cond: "빙정 방패를 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "frost_kite_shield"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_kingdom_masque_saber",
+  cat: "아이템 발동",
+  cond: "무도회의 한 수를 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_saber"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_kingdom_coronation_mace",
+  cat: "아이템 발동",
+  cond: "왕을 짊어진 대검을 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_coronation_mace"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_sword",
+  cat: "아이템 발동",
+  cond: "동트는 맹세를 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_sword"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_volcano_dancer_daggers",
+  cat: "아이템 발동",
+  cond: "춤추는 쌍불꽃을 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dancer_daggers"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_orc_shaman_staff",
+  cat: "아이템 발동",
+  cond: "묻지 않는 지팡이를 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_shaman_staff"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_cuirass",
+  cat: "아이템 발동",
+  cond: "여명의 벽을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_cuirass"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_volcano_dancer_cape",
+  cat: "아이템 발동",
+  cond: "불길 케이프를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "volcano_dancer_cape"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_marsh_angler_cape",
+  cat: "아이템 발동",
+  cond: "도롱이를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_angler_cape"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_kingdom_masque_mask",
+  cat: "아이템 발동",
+  cond: "이름을 가린 가면을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_masque_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_kingdom_regalia_crown",
+  cat: "아이템 발동",
+  cond: "별이 박힌 왕관을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_regalia_crown"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_ring",
+  cat: "아이템 발동",
+  cond: "새벽지기의 표식을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "kingdom_dawnguard_ring"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_marsh_angler_creel",
+  cat: "아이템 발동",
+  cond: "반딧불 통발을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "marsh_angler_creel"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_temple_faux_halo",
+  cat: "아이템 발동",
+  cond: "철사로 띄운 후광을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "temple_faux_halo"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_orc_ancestor_mask",
+  cat: "아이템 발동",
+  cond: "조상의 얼굴을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "orc_ancestor_mask"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_fallen_gilded_ruin_plate",
+  cat: "아이템 발동",
+  cond: "도금이 벗겨진 갑주를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "fallen_gilded_ruin_plate"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_general_beastmaster_hide",
+  cat: "아이템 발동",
+  cond: "냄새를 덮는 가죽옷을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "general_beastmaster_hide"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_general_imp_wings",
+  cat: "아이템 발동",
+  cond: "한 뼘짜리 마왕 날개를 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "general_imp_wings"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_chuseok_moon_wand",
+  cat: "아이템 발동",
+  cond: "달그림자 완드를 +100 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_moon_wand"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "solo_chuseok_jade_hanbok",
+  cat: "아이템 발동",
+  cond: "금박 꽃단 한복을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_jade_hanbok"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_chuseok_rabbit_suit",
+  cat: "아이템 발동",
+  cond: "토끼 인형 옷을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_rabbit_suit"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_chuseok_rabbit_ears",
+  cat: "아이템 발동",
+  cond: "접힌 토끼 귀 머리띠를 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "chuseok_rabbit_ears"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_pestle",
+  cat: "아이템 발동",
+  cond: "보름달 떡메를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_rabbit_pestle"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_ears",
+  cat: "아이템 발동",
+  cond: "접힌 토끼 귀 머리띠를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_rabbit_ears"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_chuseok_moon_wand",
+  cat: "아이템 발동",
+  cond: "달그림자 완드를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_moon_wand"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_suit",
+  cat: "아이템 발동",
+  cond: "토끼 인형 옷을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "chuseok_rabbit_suit"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_volcano_flame_blade",
+  cat: "아이템 발동",
+  cond: "놓을 곳 없는 화염검을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_flame_blade"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_volcano_dancer_daggers",
+  cat: "아이템 발동",
+  cond: "춤추는 쌍불꽃을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_dancer_daggers"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_ivory_flintlock_pistol",
+  cat: "아이템 발동",
+  cond: "상아빛 한 발을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "ivory_flintlock_pistol"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_angel_star_wand",
+  cat: "아이템 발동",
+  cond: "유성의 지팡이를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "angel_star_wand"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_temple_faux_robe",
+  cat: "아이템 발동",
+  cond: "자칭 훈장 사제복을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "temple_faux_robe"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_crimson_gothic_dress",
+  cat: "아이템 발동",
+  cond: "진홍 레이스 드레스를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "crimson_gothic_dress"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_volcano_ashglass_goggles",
+  cat: "아이템 발동",
+  cond: "재를 막는 눈을 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "volcano_ashglass_goggles"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_general_imp_wings",
+  cat: "아이템 발동",
+  cond: "한 뼘짜리 마왕 날개를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "general_imp_wings"
+   ],
+   min: 300
+  }
+ },
+ {
   code: "first_enh500_1",
   cat: "기록",
   cond: "서버에서 처음으로 +500 도달",

@@ -4743,6 +4743,366 @@
     "diff": "중간"
   },
   {
+    "code": "solo_temple_frostguard_garb",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "설산 파수꾼",
+    "cond": "설산 파수의 갑주를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_astrologer_starmap_coat",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "꿈꾸는 성좌",
+    "cond": "성좌의 망토를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_commander_feather_epaulets",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "푸른 깃의 지휘관",
+    "cond": "푸른 깃 견장을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_phantom_half_mask",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "반쪽 얼굴",
+    "cond": "상아 반가면을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_valkyrie_winged_circlet",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "발키리의 관",
+    "cond": "발키리의 날개 서클릿을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_paladin_winged_helm",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "흰 깃 투구",
+    "cond": "백은 날개 투구를 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_frost_kite_shield",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "얼음 방벽",
+    "cond": "빙정 방패를 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_masque_saber",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "리본 검사",
+    "cond": "무도회의 한 수를 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_coronation_mace",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "왕의 무게",
+    "cond": "왕을 짊어진 대검을 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_dawnguard_sword",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "맹세한 기사",
+    "cond": "동트는 맹세를 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_volcano_dancer_daggers",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "불꽃 춤꾼",
+    "cond": "춤추는 쌍불꽃을 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_orc_shaman_staff",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "해골 주술사",
+    "cond": "묻지 않는 지팡이를 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_dawnguard_cuirass",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "태양의 방패병",
+    "cond": "여명의 벽을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_volcano_dancer_cape",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "불꽃 자락",
+    "cond": "불길 케이프를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_marsh_angler_cape",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "빗속의 어부",
+    "cond": "도롱이를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_masque_mask",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "가면 속 누군가",
+    "cond": "이름을 가린 가면을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_regalia_crown",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "별의 왕",
+    "cond": "별이 박힌 왕관을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_kingdom_dawnguard_ring",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "새벽지기",
+    "cond": "새벽지기의 표식을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_marsh_angler_creel",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "밤낚시꾼",
+    "cond": "반딧불 통발을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_temple_faux_halo",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "가짜 천사",
+    "cond": "철사로 띄운 후광을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_orc_ancestor_mask",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "탈 쓴 전사",
+    "cond": "조상의 얼굴을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_fallen_gilded_ruin_plate",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "빛바랜 영광",
+    "cond": "도금이 벗겨진 갑주를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_general_beastmaster_hide",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "짐승 조련사",
+    "cond": "냄새를 덮는 가죽옷을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_general_imp_wings",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "한 뼘 마왕",
+    "cond": "한 뼘짜리 마왕 날개를 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_chuseok_moon_wand",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "달토끼 마법사",
+    "cond": "달그림자 완드를 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_chuseok_jade_hanbok",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "고운 꽃단",
+    "cond": "금박 꽃단 한복을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_chuseok_rabbit_suit",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "인형 탈 속 사람",
+    "cond": "토끼 인형 옷을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_chuseok_rabbit_ears",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "귀 접힌 토끼",
+    "cond": "접힌 토끼 귀 머리띠를 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "peak300_chuseok_rabbit_pestle",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "떡방아 명인",
+    "cond": "보름달 떡메를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_chuseok_rabbit_ears",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "달나라 토끼",
+    "cond": "접힌 토끼 귀 머리띠를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_chuseok_moon_wand",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "월광의 주인",
+    "cond": "달그림자 완드를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_chuseok_rabbit_suit",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "토끼 그 자체",
+    "cond": "토끼 인형 옷을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_volcano_flame_blade",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "불길의 끝",
+    "cond": "놓을 곳 없는 화염검을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_volcano_dancer_daggers",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "쌍불꽃 춤사위",
+    "cond": "춤추는 쌍불꽃을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_ivory_flintlock_pistol",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "상아의 명사수",
+    "cond": "상아빛 한 발을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_angel_star_wand",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "별을 떨군 자",
+    "cond": "유성의 지팡이를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_temple_faux_robe",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "진짜가 된 성자",
+    "cond": "자칭 훈장 사제복을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_crimson_gothic_dress",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "진홍의 여왕",
+    "cond": "진홍 레이스 드레스를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_volcano_ashglass_goggles",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "잿빛 시야",
+    "cond": "재를 막는 눈을 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_general_imp_wings",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "마왕 강림",
+    "cond": "한 뼘짜리 마왕 날개를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
     "code": "first_enh500_1",
     "cat": "기록",
     "kind": "영구",

@@ -5626,6 +5626,428 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "solo_temple_frostguard_garb",
+  kind: "permanent",
+  label: "설산 파수꾼",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#60a5fa"
+  }
+ },
+ {
+  code: "solo_astrologer_starmap_coat",
+  kind: "permanent",
+  label: "꿈꾸는 성좌",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_commander_feather_epaulets",
+  kind: "permanent",
+  label: "푸른 깃의 지휘관",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_phantom_half_mask",
+  kind: "permanent",
+  label: "반쪽 얼굴",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_valkyrie_winged_circlet",
+  kind: "permanent",
+  label: "발키리의 관",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "solo_paladin_winged_helm",
+  kind: "permanent",
+  label: "흰 깃 투구",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "solo_frost_kite_shield",
+  kind: "permanent",
+  label: "얼음 방벽",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#60a5fa"
+  }
+ },
+ {
+  code: "solo_kingdom_masque_saber",
+  kind: "permanent",
+  label: "리본 검사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "solo_kingdom_coronation_mace",
+  kind: "permanent",
+  label: "왕의 무게",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_sword",
+  kind: "permanent",
+  label: "맹세한 기사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "solo_volcano_dancer_daggers",
+  kind: "permanent",
+  label: "불꽃 춤꾼",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "solo_orc_shaman_staff",
+  kind: "permanent",
+  label: "해골 주술사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_cuirass",
+  kind: "permanent",
+  label: "태양의 방패병",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "solo_volcano_dancer_cape",
+  kind: "permanent",
+  label: "불꽃 자락",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#ef4444"
+  }
+ },
+ {
+  code: "solo_marsh_angler_cape",
+  kind: "permanent",
+  label: "빗속의 어부",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "solo_kingdom_masque_mask",
+  kind: "permanent",
+  label: "가면 속 누군가",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_kingdom_regalia_crown",
+  kind: "permanent",
+  label: "별의 왕",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#fbbf24"
+  }
+ },
+ {
+  code: "solo_kingdom_dawnguard_ring",
+  kind: "permanent",
+  label: "새벽지기",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_marsh_angler_creel",
+  kind: "permanent",
+  label: "밤낚시꾼",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#22c55e"
+  }
+ },
+ {
+  code: "solo_temple_faux_halo",
+  kind: "permanent",
+  label: "가짜 천사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "solo_orc_ancestor_mask",
+  kind: "permanent",
+  label: "탈 쓴 전사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#f97316"
+  }
+ },
+ {
+  code: "solo_fallen_gilded_ruin_plate",
+  kind: "permanent",
+  label: "빛바랜 영광",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_general_beastmaster_hide",
+  kind: "permanent",
+  label: "짐승 조련사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_general_imp_wings",
+  kind: "permanent",
+  label: "한 뼘 마왕",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#c084fc"
+  }
+ },
+ {
+  code: "solo_chuseok_moon_wand",
+  kind: "permanent",
+  label: "달토끼 마법사",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_chuseok_jade_hanbok",
+  kind: "permanent",
+  label: "고운 꽃단",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_chuseok_rabbit_suit",
+  kind: "permanent",
+  label: "인형 탈 속 사람",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "solo_chuseok_rabbit_ears",
+  kind: "permanent",
+  label: "귀 접힌 토끼",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   color: "#a5b4fc"
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_pestle",
+  kind: "permanent",
+  label: "떡방아 명인",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "honeyflow",
+   pt: "dust",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_ears",
+  kind: "permanent",
+  label: "달나라 토끼",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "moonlight",
+   pt: "stardust",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_chuseok_moon_wand",
+  kind: "permanent",
+  label: "월광의 주인",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "lunarflow",
+   pt: "stardust",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_chuseok_rabbit_suit",
+  kind: "permanent",
+  label: "토끼 그 자체",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "silverglow",
+   pt: "feather",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_volcano_flame_blade",
+  kind: "permanent",
+  label: "불길의 끝",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "flame",
+   pt: "ember",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_volcano_dancer_daggers",
+  kind: "permanent",
+  label: "쌍불꽃 춤사위",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "cinderflow",
+   pt: "pember",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_ivory_flintlock_pistol",
+  kind: "permanent",
+  label: "상아의 명사수",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "chrome",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_angel_star_wand",
+  kind: "permanent",
+  label: "별을 떨군 자",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "starwave",
+   pt: "pstar",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_temple_faux_robe",
+  kind: "permanent",
+  label: "진짜가 된 성자",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "candle",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_crimson_gothic_dress",
+  kind: "permanent",
+  label: "진홍의 여왕",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "crimsonflow",
+   pt: "petal",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_volcano_ashglass_goggles",
+  kind: "permanent",
+  label: "잿빛 시야",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "ashstatic",
+   pt: "dust",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_general_imp_wings",
+  kind: "permanent",
+  label: "마왕 강림",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "bloodpulse",
+   pt: "abyss",
+   glow: true
+  }
+ },
+ {
   code: "first_enh500_1",
   kind: "permanent",
   label: "일기당천",

@@ -11,8 +11,8 @@ const SETS = ['set_thunder_knight', 'set_star_navigator', 'set_ash_scythe', 'set
 const RULES = ['star_sea', 'binge_500', 'fatalist', 'lunchbox', 'drifter_100'];
 
 describe('칭호 추가 0908 — 정의', () => {
-  it('총 559종(10-11 월드보스 11종 · 10-16 환영술사 포함), 라벨 중복 없음(최초 이정표 금·은·동은 같은 이름)', () => {
-    expect(TITLE_DEFS).toHaveLength(559);
+  it('총 599종(10-11 월드보스 11종 · 10-16 환영술사 · 10-18 장비 40종 포함), 라벨 중복 없음(최초 이정표 금·은·동은 같은 이름)', () => {
+    expect(TITLE_DEFS).toHaveLength(599);
     const labels = TITLE_DEFS.filter((t) => !/^first_[a-z0-9]+_[23]$/.test(t.code)).map((t) => t.label);
     expect(new Set(labels).size).toBe(labels.length);
   });
