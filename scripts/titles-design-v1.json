@@ -598,50 +598,40 @@
       "fx": "ashgoldvault"
     },
     "peak300_chuseok_rabbit_pestle": {
-      "fx": "honeyflow",
-      "pt": "dust"
+      "fx": "honeyflow"
     },
     "peak300_chuseok_rabbit_ears": {
-      "fx": "moonlight",
-      "pt": "stardust"
+      "fx": "moonlight"
     },
     "peak300_chuseok_moon_wand": {
-      "fx": "lunarflow",
-      "pt": "stardust"
+      "fx": "lunarflow"
     },
     "peak300_chuseok_rabbit_suit": {
-      "fx": "silverglow",
-      "pt": "feather"
+      "fx": "silverglow"
     },
     "peak300_volcano_flame_blade": {
-      "fx": "flame",
-      "pt": "ember"
+      "fx": "flame"
     },
     "peak300_volcano_dancer_daggers": {
-      "fx": "cinderflow",
-      "pt": "pember"
+      "fx": "cinderflow"
     },
     "peak300_ivory_flintlock_pistol": {
       "fx": "chrome"
     },
     "peak300_angel_star_wand": {
-      "fx": "starwave",
-      "pt": "pstar"
+      "fx": "starwave"
     },
     "peak300_temple_faux_robe": {
       "fx": "candle"
     },
     "peak300_crimson_gothic_dress": {
-      "fx": "crimsonflow",
-      "pt": "petal"
+      "fx": "crimsonflow"
     },
     "peak300_volcano_ashglass_goggles": {
-      "fx": "ashstatic",
-      "pt": "dust"
+      "fx": "ashstatic"
     },
     "peak300_general_imp_wings": {
-      "fx": "bloodpulse",
-      "pt": "abyss"
+      "fx": "bloodpulse"
     },
     "solo_volcano_dancer_cape": {
       "color": "#ef4444"

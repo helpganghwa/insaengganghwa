@@ -5913,7 +5913,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "honeyflow",
-   pt: "dust",
    glow: true
   }
  },
@@ -5925,7 +5924,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "moonlight",
-   pt: "stardust",
    glow: true
   }
  },
@@ -5937,7 +5935,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "lunarflow",
-   pt: "stardust",
    glow: true
   }
  },
@@ -5949,7 +5946,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "silverglow",
-   pt: "feather",
    glow: true
   }
  },
@@ -5961,7 +5957,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "flame",
-   pt: "ember",
    glow: true
   }
  },
@@ -5973,7 +5968,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "cinderflow",
-   pt: "pember",
    glow: true
   }
  },
@@ -5996,7 +5990,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "starwave",
-   pt: "pstar",
    glow: true
   }
  },
@@ -6019,7 +6012,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "crimsonflow",
-   pt: "petal",
    glow: true
   }
  },
@@ -6031,7 +6023,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "ashstatic",
-   pt: "dust",
    glow: true
   }
  },
@@ -6043,7 +6034,6 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "bloodpulse",
-   pt: "abyss",
    glow: true
   }
  },
