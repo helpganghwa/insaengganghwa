@@ -6023,7 +6023,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "ashstatic",
+   fx: "mistdrift",
    glow: true
   }
  },
