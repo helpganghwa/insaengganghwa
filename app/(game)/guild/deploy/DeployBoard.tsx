@@ -789,7 +789,11 @@ export function DeployBoard({
             )}
 
             {execHere.length === 0 && deployedHere.length === 0 ? (
-              restricted ? null : <p className="mt-2.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
+              restricted ? null : (
+                <p className="mt-2.5 text-[11px] text-zinc-400">
+                  {rankScope != null ? '보이는 등급에는 배치된 길드원이 없습니다.' : '아직 아무도 배치되지 않았습니다.'}
+                </p>
+              )
             ) : (
               <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-900">
                 {execHere.map((m) => (

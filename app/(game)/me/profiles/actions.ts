@@ -262,8 +262,8 @@ export async function reorderProfiles(ids: string[]): Promise<ActionState> {
   return { status: 'ok' };
 }
 
-/** 아바타 보관함 늘리기(2026-10-06) — 💎1,000에 10칸, 최대 200칸, 서버별. */
-export async function expandAvatarSlotsAction(key: string): Promise<
+/** 아바타 보관함 늘리기(2026-10-06) — 10칸씩, 200칸 미만 💎1,000 · 200칸부터 💎1,500, 최대 300칸, 서버별. */
+export async function expandAvatarSlotsAction(key: string, expectedCost?: number): Promise<
   { status: 'ok'; limit: number; diamondBalance: string } | { status: 'error'; code: string }
 > {
   const userId = await getSessionUserId();
@@ -272,7 +272,8 @@ export async function expandAvatarSlotsAction(key: string): Promise<
   const __b = await actionBlock();
   if (__b) return { status: 'error', code: __b };
   try {
-    const r = await expandAvatarSlots(userId, await getActiveServerId(), key);
+    if (expectedCost !== undefined && !Number.isSafeInteger(expectedCost)) return { status: 'error', code: 'BAD_REQUEST' };
+    const r = await expandAvatarSlots(userId, await getActiveServerId(), key, expectedCost);
     revalidatePath('/me/profiles');
     revalidatePath('/me');
     return { status: 'ok', limit: r.limit, diamondBalance: r.diamondBalance };

@@ -5990,6 +5990,7 @@ export const TITLE_DEFS: TitleDef[] = [
   cat: "아이템 발동",
   style: {
    fx: "starwave",
+   split: true,
    glow: true
   }
  },

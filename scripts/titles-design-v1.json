@@ -619,7 +619,8 @@
       "fx": "chrome"
     },
     "peak300_angel_star_wand": {
-      "fx": "starwave"
+      "fx": "starwave",
+      "split": true
     },
     "peak300_temple_faux_robe": {
       "fx": "candle"

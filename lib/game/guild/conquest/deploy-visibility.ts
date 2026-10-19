@@ -51,7 +51,7 @@ export const DEPLOY_VISIBILITY_OPTION_DESC: Record<DeployVisibility, string> = {
 
 /** 설정 팝업 아래 공통 규칙 한 단락 — 선택지마다 되풀이하지 않고 한 번만 적는다. */
 export const DEPLOY_VISIBILITY_NOTE =
-  '길드장과 배치 권한이 있는 부길드장은 설정과 상관없이 전체를 봅니다. 범위 밖 길드원은 자기 배치만 봅니다. 저장하면 바로 적용되고 길드 기록에 남습니다.';
+  '길드장과 배치 권한이 있는 부길드장은 설정과 상관없이 전체를 봅니다. R2 이상처럼 등급을 정하면 그 아래 길드원은 자기 배치만 봅니다. 저장하면 바로 적용되고 길드 기록에 남습니다.';
 
 /** 제한된 길드원(자기 배치만)에게 보이는 안내문(구역 시트 · 내 배치 팝업). */
 export function deployRestrictedNote(v: DeployVisibility): string {

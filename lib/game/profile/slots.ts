@@ -8,7 +8,7 @@ import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_STEP, profileSlotCost, pr
 import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
 
 export class AvatarSlotError extends Error {
-  constructor(public code: 'SLOT_MAX' | 'INSUFFICIENT_DIAMOND' | 'NO_CHARACTER' | 'BAD_REQUEST') {
+  constructor(public code: 'SLOT_MAX' | 'INSUFFICIENT_DIAMOND' | 'NO_CHARACTER' | 'BAD_REQUEST' | 'PRICE_CHANGED') {
     super(code);
   }
 }
@@ -32,6 +32,8 @@ export async function expandAvatarSlots(
   userId: string,
   serverId: number,
   key: string,
+  /** 화면이 보여 준 가격 — 다른 기기에서 늘려 구간이 바뀌었으면 확인한 금액과 다르게 깎이지 않게 막는다(검수 10-19). 없으면 검사하지 않는다. */
+  expectedCost?: number,
 ): Promise<{ limit: number; duplicate: boolean; diamondBalance: string }> {
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(key)) throw new AvatarSlotError('BAD_REQUEST');
   const ref = `slot:${userId}:${key}`;
@@ -49,6 +51,7 @@ export async function expandAvatarSlots(
     if (prev) return { limit: profileSlotLimit(locked.bonus), duplicate: true, diamondBalance: (await getWalletDiamond(tx, userId, serverId)).toString() };
     // 가격은 늘리기 **전** 한도로 정한다 — 190→200은 1,000, 200→210부터 1,500.
     const cost = profileSlotCost(profileSlotLimit(locked.bonus));
+    if (expectedCost !== undefined && expectedCost !== cost) throw new AvatarSlotError('PRICE_CHANGED');
     const rows = await tx
       .update(characters)
       // 10칸씩 늘리되 최대 300칸까지만 — 10의 배수가 아닌 값이 있어도 마지막 구매에서 300에 맞춘다(prod 10-16 실측: 0 또는 100뿐).

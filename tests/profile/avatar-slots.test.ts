@@ -76,6 +76,14 @@ describe.skipIf(!U)('아바타 보관함 늘리기 — DB 통합(스테이징 �
     expect(c).toEqual({ b: 110, d: 500 });
   });
 
+  it('화면이 본 가격과 서버 가격이 다르면 PRICE_CHANGED — 칸·다이아 그대로', async () => {
+    await testDb.execute(sql`update characters set avatar_slot_bonus=100, diamond=3000 where user_id=${U}::uuid and server_id=${S}`);
+    await expect(expandAvatarSlots(U, S, key(), 1000)).rejects.toMatchObject({ code: 'PRICE_CHANGED' });
+    const [c] = (await testDb.execute(sql`select avatar_slot_bonus as b, diamond::int as d from characters where user_id=${U}::uuid and server_id=${S}`)) as unknown as { b: number; d: number }[];
+    expect(c).toEqual({ b: 100, d: 3000 });
+    expect((await expandAvatarSlots(U, S, key(), 1500)).limit).toBe(210);
+  });
+
   it('190→200은 아직 💎1,000(가격 경계는 늘리기 전 한도)', async () => {
     await testDb.execute(sql`update characters set avatar_slot_bonus=90, diamond=1000 where user_id=${U}::uuid and server_id=${S}`);
     expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 200, duplicate: false, diamondBalance: '0' });

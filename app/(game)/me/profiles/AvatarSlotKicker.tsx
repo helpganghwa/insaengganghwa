@@ -64,7 +64,7 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
     optimisticAdjust(-BigInt(paid));
     setOptimistic(next);
     start(async () => {
-      const r = await expandAvatarSlotsAction(key).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
+      const r = await expandAvatarSlotsAction(key, paid).catch(() => ({ status: 'error', code: 'NETWORK' }) as const);
       busy.current = false;
       if (r.status === 'ok') {
         unsettled.current = null;
@@ -78,8 +78,9 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
       optimisticAdjust(BigInt(paid));
       setOptimistic(before); // 직전 표시값으로(앞선 구매의 낙관값을 지우지 않게)
       // 결과를 모르면 화면을 서버 값으로 다시 맞춘다 — 서버에서는 늘렸을 수 있다.
-      if (unknown) resyncWhenOnline('route', () => router.refresh());
-      if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(paid);
+      if (unknown || r.code === 'PRICE_CHANGED') resyncWhenOnline('route', () => router.refresh());
+      if (r.code === 'PRICE_CHANGED') showError('보관함 가격이 바뀌었어요. 새 가격을 확인해 주세요.');
+      else if (r.code === 'INSUFFICIENT_DIAMOND') gate.open(paid);
       else if (r.code === 'SLOT_MAX') showError(`보관함은 최대 ${PROFILE_MAX}칸까지 늘릴 수 있어요`);
       else if (r.code === 'RATE_LIMITED') showError('요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.');
       else if (r.code === 'MAINTENANCE') showError('서버 점검 중입니다. 잠시 후 다시 시도해 주세요.');
