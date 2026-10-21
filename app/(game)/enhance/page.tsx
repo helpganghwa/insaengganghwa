@@ -15,6 +15,7 @@ import { type EnhanceCandidate } from './EnhanceSlotPicker';
 import { RefreshOnResume } from '@/components/RefreshOnResume';
 
 import { SlotLane } from './SlotLane';
+import { PresetFab } from './PresetFab';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 
 const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
@@ -126,7 +127,7 @@ export default async function EnhancePage() {
   const hasRunningJob = jobs.length > 0 && tutorialDone;
 
   return (
-    <div className="space-y-5 px-4 py-4">
+    <div className={`space-y-5 px-4 pt-4 ${tutorialDone ? 'pb-20' : 'pb-4'}`}>
       {/* iOS PWA 복귀 시 서버 상태 강제 동기화 — 유령 등록/스테일 슬롯 해소(2026-07-06). */}
       <RefreshOnResume />
       <ServerClockSync nowIso={new Date().toISOString()} />
@@ -164,6 +165,8 @@ export default async function EnhancePage() {
           })}
         </section>
       ))}
+      {/* 강화 프리셋(10-21, 소서 #492) — 튜토리얼 뒤에만. 플로팅 버튼이 마지막 카드를 가리지 않게 아래 여백. */}
+      {tutorialDone ? <PresetFab /> : null}
       <div className="pt-1 pb-2 text-center">
         <Link prefetch={false}
           href="/probability#enhance"
