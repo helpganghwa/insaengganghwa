@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { LANE_KEYS, planPreset, presetDisplayName, type EnhancePreset, type RunningLanes } from '@/lib/game/enhance/preset-plan';
 
-import { PresetModal, type PresetOpen } from './PresetModal';
+import { PresetModal, prefetchPresets, type PresetOpen } from './PresetModal';
 
 export type PresetSummary = { presets: EnhancePreset[]; running: RunningLanes };
 
@@ -22,6 +22,11 @@ export function PresetBar({ initial }: { initial: PresetSummary }) {
     setSummary(initial);
   }
   const [open, setOpen] = useState<PresetOpen | null>(null);
+  // 팝업은 데이터가 있어야 그리므로, 줄이 뜨고 조금 뒤 한 번 미리 읽어 둔다(신선한 캐시가 있으면 생략).
+  useEffect(() => {
+    const t = setTimeout(() => void prefetchPresets(initial.running), 600);
+    return () => clearTimeout(t);
+  }, [initial]);
   return (
     <>
       <div className="sticky top-0 z-20 flex h-10 shrink-0 items-center gap-1.5 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -55,7 +60,12 @@ export function PresetBar({ initial }: { initial: PresetSummary }) {
         </button>
       </div>
       {open ? (
-        <PresetModal open={open} onClose={() => setOpen(null)} onData={(d) => setSummary({ presets: d.presets, running: d.running })} />
+        <PresetModal
+          open={open}
+          serverRunning={initial.running}
+          onClose={() => setOpen(null)}
+          onData={(d) => setSummary({ presets: d.presets, running: d.running })}
+        />
       ) : null}
     </>
   );

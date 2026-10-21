@@ -12,7 +12,6 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import {
   LANE_KEYS,
-  PRESET_COUNT,
   PRESET_NAME_MAX,
   SLOT_LABEL,
   laneNoOfLaneKey,
@@ -43,10 +42,38 @@ import {
 export type PresetOpen = { step: 'list' } | { step: 'edit' | 'confirm'; presetNo: number };
 type Step = 'list' | 'edit' | 'confirm';
 
-/** 마지막으로 읽은 데이터 — 다시 열 때 이걸로 먼저 그리고 뒤에서 새로 읽는다(적용 뒤에는 비운다). */
-let cached: PresetData | null = null;
-function setCached(v: PresetData | null) {
-  cached = v;
+/**
+ * 마지막으로 읽은 데이터 — 팝업은 **데이터가 있을 때만** 그린다(뼈대 → 실제로 바뀌며 생기던 자리 이동 방지, 10-21 피드백).
+ * 진입 줄이 뜰 때 한 번 미리 읽어 두고, 열 때 캐시가 신선하면(60초 안 · 지금 올라간 칸이 서버 렌더와 같음) 그대로 쓴다.
+ * 적용 뒤에는 비운다.
+ */
+let cached: { data: PresetData; at: number } | null = null;
+let prefetching: Promise<void> | null = null;
+const CACHE_TTL_MS = 60_000;
+function setCached(data: PresetData | null) {
+  cached = data ? { data, at: Date.now() } : null;
+}
+function sameRunning(a: RunningLanes, b: RunningLanes): boolean {
+  return LANE_KEYS.every((k) => (a[k]?.equipmentId ?? '') === (b[k]?.equipmentId ?? '') && (a[k]?.jobId ?? '') === (b[k]?.jobId ?? ''));
+}
+/** 신선한 캐시(없으면 null). serverRunning = 강화 페이지가 마지막으로 그린 '지금 올라간 칸'. */
+export function freshPresetCache(serverRunning: RunningLanes): PresetData | null {
+  if (!cached || Date.now() - cached.at > CACHE_TTL_MS || !sameRunning(cached.data.running, serverRunning)) return null;
+  return cached.data;
+}
+/** 진입 줄이 뜰 때 한 번 미리 읽어 둔다 — 이미 신선하면 아무것도 안 한다. 실패는 조용히(열 때 다시 읽는다). */
+export function prefetchPresets(serverRunning: RunningLanes): Promise<void> {
+  if (freshPresetCache(serverRunning)) return Promise.resolve();
+  if (prefetching) return prefetching;
+  prefetching = loadEnhancePresetsAction()
+    .then((r) => {
+      if (r.status === 'success') setCached({ presets: r.presets, equipment: r.equipment, running: r.running });
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      prefetching = null;
+    });
+  return prefetching;
 }
 
 const ROW = 'flex w-full items-center gap-2 px-1 py-2 text-left';
@@ -63,10 +90,20 @@ const hasItemLane = (p: EnhancePreset) => LANE_KEYS.some((k) => p.lanes[k]?.kind
  * 모든 편집은 낙관적으로 먼저 그리고 서버에 보낸다(실패하면 서버 상태로 되돌림). 적용도 확인 뒤 바로 닫고
  * 토스트를 띄운 다음 서버 결과를 기다린다 — 슬롯 교체와 같이 바뀌는 칸의 강화를 취소(찬 게이지 초기화)하고 등록.
  */
-export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClose: () => void; onData?: (d: PresetData) => void }) {
+export function PresetModal({
+  open,
+  serverRunning,
+  onClose,
+  onData,
+}: {
+  open: PresetOpen;
+  /** 강화 페이지가 마지막으로 그린 '지금 올라간 칸' — 캐시 신선도 판정에 쓴다. */
+  serverRunning: RunningLanes;
+  onClose: () => void;
+  onData?: (d: PresetData) => void;
+}) {
   const { showError, showHeaderToast } = useResourceToast();
-  const [data, setDataState] = useState<PresetData | null>(() => cached);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [data, setDataState] = useState<PresetData | null>(() => freshPresetCache(serverRunning));
   const [step, setStep] = useState<Step>(open.step);
   const [cur, setCur] = useState<number>(open.step === 'list' ? 1 : open.presetNo);
   /** 확인 단계에서 '돌아가기'가 갈 곳 — 칩으로 바로 왔으면 목록, 편집에서 왔으면 편집. */
@@ -98,15 +135,21 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
     }
   }
 
-  // 열릴 때 한 번 읽는다 — 강화 페이지 렌더에는 얹지 않는다. 캐시가 있으면 그걸 먼저 보이고 조용히 갱신.
+  // 신선한 캐시가 없으면 읽은 뒤에 그린다(그 전엔 아무것도 안 그림). 미리 읽는 중이면 그 결과를 기다린다. 실패하면 닫는다.
   useEffect(() => {
+    if (data) return;
     let alive = true;
-    // 마이크로태스크로 한 박자 미룸 — 효과 본문에서 상태를 바로 바꾸지 않는다(react-hooks/set-state-in-effect).
-    Promise.resolve()
-      .then(refresh)
-      .then((ok) => {
-        if (alive && !ok && !cached) setLoadFailed(true);
-      });
+    (async () => {
+      await prefetchPresets(serverRunning);
+      if (!alive) return;
+      const hit = freshPresetCache(serverRunning);
+      if (hit) {
+        setData(hit);
+        return;
+      }
+      const ok = await refresh();
+      if (alive && !ok) onClose();
+    })();
     return () => {
       alive = false;
     };
@@ -116,10 +159,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
     if (editingName) nameInputRef.current?.focus();
   }, [editingName]);
 
-  const presets = useMemo(
-    () => data?.presets ?? Array.from({ length: PRESET_COUNT }, (_, i) => ({ presetNo: i + 1, name: '', lanes: {} as PresetLanes })),
-    [data],
-  );
+  const presets = useMemo(() => data?.presets ?? [], [data]);
   const running: RunningLanes = useMemo(() => data?.running ?? {}, [data]);
   const preset: EnhancePreset | null = presets.find((p) => p.presetNo === cur) ?? null;
   const equipById = useMemo(() => {
@@ -242,7 +282,6 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
     const pl = plans.get(p.presetNo);
     const changed = pl?.changed ?? 0;
     const active = hasItemLane(p) && changed === 0;
-    const ready = !!data;
     return (
       <div
         key={p.presetNo}
@@ -252,14 +291,13 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
           <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-zinc-900 dark:text-zinc-100">{presetDisplayName(p)}</span>
           <button
             type="button"
-            disabled={!ready}
             onClick={() => goConfirm(p.presetNo, 'list')}
             className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white transition active:scale-[0.97] disabled:opacity-40"
           >
             적용
           </button>
         </div>
-        <button type="button" disabled={!ready} onClick={() => goEdit(p.presetNo)} className="mt-2 flex w-full items-center gap-1.5 text-left">
+        <button type="button" onClick={() => goEdit(p.presetNo)} className="mt-2 flex w-full items-center gap-1.5 text-left">
           {LANE_KEYS.map((k) => {
             const st = p.lanes[k];
             const ch = changedKeysOf(pl, k);
@@ -317,7 +355,6 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
       <button
         key={key}
         type="button"
-        disabled={!data}
         onClick={() => setPicking(key)}
         className={`${ROW} transition active:bg-zinc-50 disabled:opacity-60 dark:active:bg-zinc-800/60 ${first ? '' : DIVIDER}`}
       >
@@ -333,63 +370,74 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
     );
   }
 
-  // ── 확인 단계 한 줄(바뀌는 칸만): 전 → 후 ──
+  // ── 확인 단계 한 줄: 6칸 전부, 전 → 후. 안 바뀌는 칸은 흐리게 '그대로'(10-21 피드백: 늘 6칸이 보이게) ──
   function changeRow(key: LaneKey, first: boolean) {
     const p = plan?.lanes.find((x) => x.key === key);
+    const st: PresetLaneState = preset?.lanes[key] ?? { kind: 'keep' };
     const { eq: nowEq, text: nowText } = nowOf(key);
     const moved = movedKeys.has(key);
-    const next = p && (p.action === 'queue' || p.action === 'swap') ? (equipById.get(p.equipmentId) ?? null) : null;
-    const nextText = next ? `${next.name} +${next.enhanceLevel}` : moved || p?.action === 'clear' ? '비어 있음' : nowText;
-    const note = p?.action === 'swap' || p?.action === 'clear' ? `${nowText} 취소` : moved ? `${nowText} → 다른 칸으로` : '등록';
-    const thumbOf = (e: PresetEquipment | null, dim: boolean) => (
-      <span className={`${THUMB} bg-white dark:bg-black/40 ${dim ? 'border-zinc-200 opacity-60 dark:border-zinc-700' : 'border-amber-400/70'}`}>
-        {e ? sprite(e, 32) : <span className="text-[12px] text-zinc-400">－</span>}
-      </span>
-    );
+    const changed = changedKeys.has(key);
+    const thumbOf = (e: PresetEquipment | null, tone: 'dim' | 'next' | 'same' | 'keep' | 'empty') => {
+      if (tone === 'keep') return <span className={`${THUMB} border-dashed border-zinc-300 text-[14px] text-zinc-400 dark:border-zinc-700 dark:text-zinc-500`}>⟳</span>;
+      if (tone === 'empty') return <span className={`${THUMB} border-dashed border-red-200 text-[14px] text-red-400/80 dark:border-red-900/70`}>－</span>;
+      const b = tone === 'dim' ? 'border-zinc-200 opacity-60 dark:border-zinc-700' : tone === 'next' ? 'border-amber-400/70' : 'border-zinc-200 dark:border-zinc-700';
+      return (
+        <span className={`${THUMB} bg-white dark:bg-black/40 ${b}`}>
+          {e ? sprite(e, 32) : <span className="text-[12px] text-zinc-400">－</span>}
+        </span>
+      );
+    };
+    let next: React.ReactNode;
+    let nextText: string;
+    let note: string;
+    if (changed) {
+      const nextEq = p && (p.action === 'queue' || p.action === 'swap') ? (equipById.get(p.equipmentId) ?? null) : null;
+      next = thumbOf(nextEq, 'next');
+      nextText = nextEq ? `${nextEq.name} +${nextEq.enhanceLevel}` : '비어 있음';
+      note = p?.action === 'swap' || p?.action === 'clear' ? `${nowText} 취소` : moved ? `${nowText} → 다른 칸으로` : '등록';
+    } else if (st.kind === 'item') {
+      next = thumbOf(nowEq, 'same');
+      nextText = nowText;
+      note = '그대로';
+    } else {
+      next = thumbOf(null, st.kind);
+      nextText = st.kind === 'keep' ? nowText : '비어 있음';
+      note = '그대로';
+    }
     return (
-      <div key={key} className={`${ROW} ${first ? '' : DIVIDER}`}>
+      <div key={key} className={`${ROW} ${first ? '' : DIVIDER} ${changed ? '' : 'opacity-50'}`}>
         <span className={LABEL}>{laneLabel(key)}</span>
-        {thumbOf(nowEq, true)}
+        {thumbOf(nowEq, 'dim')}
         <span className="text-zinc-400 dark:text-zinc-600">→</span>
-        {thumbOf(next, false)}
+        {next}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">{nextText}</span>
-          <span className="block truncate text-[10px] text-zinc-400 dark:text-zinc-600">{note}</span>
+          <span className={`block truncate text-[10px] ${changed ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-400 dark:text-zinc-600'}`}>{note}</span>
         </span>
       </div>
     );
   }
 
-  const skeletonRows = LANE_KEYS.map((k, i) => (
-    <div key={k} className={`${ROW} animate-pulse ${i === 0 ? '' : DIVIDER}`}>
-      <span className="h-1.5 w-1.5 shrink-0" />
-      <span className={LABEL}>{laneLabel(k)}</span>
-      <span className={`${THUMB} border-zinc-100 dark:border-zinc-800`} />
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="h-2.5 w-24 rounded bg-zinc-100 dark:bg-zinc-800" />
-        <span className="h-2 w-16 rounded bg-zinc-100 dark:bg-zinc-800" />
-      </span>
-    </div>
-  ));
-  const failedBody = <div className="px-1 py-10 text-center text-[12px] text-zinc-500">프리셋을 불러오지 못했어요.</div>;
-
   const name = preset ? presetDisplayName(preset) : '';
   const changed = plan?.changed ?? 0;
   const nameProblem = editingName ? presetNameProblem(nameDraft) : null;
 
-  if (step === 'confirm' && preset) {
+  // 데이터가 올 때까지는 아무것도 그리지 않는다(자리 이동 없이 완성된 팝업만 보이게).
+  if (!data || !preset) return null;
+
+  if (step === 'confirm') {
     const resetCount = plan ? plan.lanes.filter((p) => p.action === 'swap' || p.action === 'clear').length + plan.extraCancels.length : 0;
-    const changedList = LANE_KEYS.filter((k) => changedKeys.has(k));
     const back = () => setStep(backTo);
-    // 바뀌는 칸이 없으면 적용 대신 상황 안내 — 빈 세트는 편집으로 보내고, 이미 올라간 세트는 그렇다고만.
-    if (data && changed === 0) {
+    // 바뀌는 칸이 없으면 적용 대신 상황 안내 — 빈 세트는 편집으로 보내고, 이미 올라간 세트는 그렇다고만. 6칸은 그대로 보여 준다.
+    if (changed === 0) {
       const empty = !hasItemLane(preset);
       return (
         <ModalShell onClose={back} label={`${name} 적용`}>
           <ModalLayout
             title={josa(empty ? `${name}#{은} 비어 있어요` : `${name}#{은} 이미 올라가 있어요`)}
             subtitle={empty ? '편집에서 칸에 장비를 넣어 주세요' : '지금 슬롯과 같아서 바뀌는 칸이 없어요'}
-            bare
+            bodyPad="sm"
+            maxBodyClass="max-h-[58vh]"
             footer={
               empty ? (
                 <>
@@ -407,7 +455,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
               )
             }
           >
-            {null}
+            {LANE_KEYS.map((k, i) => changeRow(k, i === 0))}
           </ModalLayout>
         </ModalShell>
       );
@@ -424,19 +472,19 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
               <ModalButton tone="ghost" onClick={back}>
                 돌아가기
               </ModalButton>
-              <ModalButton tone="primary" onClick={apply} disabled={!data}>
+              <ModalButton tone="primary" onClick={apply}>
                 적용
               </ModalButton>
             </>
           }
         >
-          {!data ? (loadFailed ? failedBody : skeletonRows.slice(0, 3)) : changedList.map((k, i) => changeRow(k, i === 0))}
+          {LANE_KEYS.map((k, i) => changeRow(k, i === 0))}
         </ModalLayout>
       </ModalShell>
     );
   }
 
-  if (step === 'edit' && preset) {
+  if (step === 'edit') {
     const back = () => {
       setEditingName(false);
       setStep('list');
@@ -449,7 +497,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
             subtitle={
               <button
                 type="button"
-                disabled={!data || editingName}
+                disabled={editingName}
                 onClick={() => {
                   setNameDraft(preset.name);
                   setEditingName(true);
@@ -466,7 +514,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
                 <ModalButton tone="ghost" onClick={back}>
                   돌아가기
                 </ModalButton>
-                <ModalButton tone="primary" onClick={() => goConfirm(preset.presetNo, 'edit')} disabled={!data}>
+                <ModalButton tone="primary" onClick={() => goConfirm(preset.presetNo, 'edit')}>
                   적용
                 </ModalButton>
               </>
@@ -503,23 +551,17 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
                 </p>
               </div>
             ) : null}
-            {!data ? (
-              loadFailed ? failedBody : skeletonRows
-            ) : (
-              <>
-                {LANE_KEYS.map((k, i) => laneRow(k, i === 0))}
-                <button
-                  type="button"
-                  onClick={fillFromCurrent}
-                  className={`${DIVIDER} mt-1 w-full py-2 text-center text-[11px] font-semibold text-zinc-500 transition active:text-zinc-800 dark:active:text-zinc-200`}
-                >
-                  강화 중인 장비로 채우기
-                </button>
-              </>
-            )}
+            {LANE_KEYS.map((k, i) => laneRow(k, i === 0))}
+            <button
+              type="button"
+              onClick={fillFromCurrent}
+              className={`${DIVIDER} mt-1 w-full py-2 text-center text-[11px] font-semibold text-zinc-500 transition active:text-zinc-800 dark:active:text-zinc-200`}
+            >
+              강화 중인 장비로 채우기
+            </button>
           </ModalLayout>
         </ModalShell>
-        {picking && data ? (
+        {picking ? (
           <PresetLanePicker
             laneKey={picking}
             presetName={name}
@@ -545,7 +587,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
           </ModalButton>
         }
       >
-        {loadFailed && !data ? failedBody : <div className="space-y-2 p-1">{presets.map(setCard)}</div>}
+        <div className="space-y-2 p-1">{presets.map(setCard)}</div>
       </ModalLayout>
     </ModalShell>
   );
