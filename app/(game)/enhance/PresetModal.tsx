@@ -475,12 +475,12 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
             {editingName ? (
               <div className="px-1 pt-1 pb-2">
                 <div className="flex items-center gap-2">
-                  {/* 닉네임과 같은 규칙(한글·영문·숫자 2~8자, 예약어 불가). IME 합성 여유로 maxLength는 2배, 실제 한도는 presetNameProblem. */}
+                  {/* 한글·영문·숫자 1~8자(비속어는 서버가 거름). IME 합성 여유로 maxLength는 2배, 실제 한도는 presetNameProblem. */}
                   <ZoomSafeInput
                     ref={nameInputRef}
                     value={nameDraft}
                     maxLength={PRESET_NAME_MAX * 2}
-                    placeholder={`2~${PRESET_NAME_MAX}자 (한글·영문·숫자)`}
+                    placeholder={`1~${PRESET_NAME_MAX}자 (한글·영문·숫자)`}
                     onChange={(e) => setNameDraft(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.nativeEvent.isComposing && nameProblem === null) commitName();

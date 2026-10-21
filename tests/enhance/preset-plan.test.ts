@@ -72,17 +72,12 @@ describe('이름', () => {
   });
 });
 
-describe('presetNameProblem — 닉네임 규칙(중복 검사 제외)', () => {
-  it('허용: 2~8자 한글·영문·숫자, 빈 이름(기본으로 되돌림)', () => {
-    for (const ok of ['밤세트', 'Night1', '12345678', '  보스용  ', '', '   ']) expect(presetNameProblem(ok)).toBeNull();
+describe('presetNameProblem — 한글·영문·숫자 1~8자, 공백·기호 불가(비속어는 서버)', () => {
+  it('허용: 1~8자 한글·영문·숫자, 빈 이름(기본으로 되돌림)', () => {
+    for (const ok of ['밤', '밤세트', 'Night1', '12345678', '  보스용  ', '운영자세트', 'Admin1', '', '   ']) expect(presetNameProblem(ok)).toBeNull();
   });
-  it('거부: 1자·9자·공백·기호·예약어', () => {
-    expect(presetNameProblem('밤')).toMatch(/최소 2자/);
+  it('거부: 9자·공백·기호·이모지·자모', () => {
     expect(presetNameProblem('아홉글자짜리이름임')).toMatch(/최대 8자/);
-    expect(presetNameProblem('밤 세트')).toMatch(/한글·영문·숫자/);
-    expect(presetNameProblem('세트!')).toMatch(/한글·영문·숫자/);
-    expect(presetNameProblem('운영자세트')).toMatch(/사용할 수 없는 단어/);
-    expect(presetNameProblem('Admin1')).toMatch(/사용할 수 없는 단어/);
-    expect(presetNameProblem('밤')).not.toContain('닉네임');
+    for (const bad of ['밤 세트', '세트!', '세트😀', 'ㅂㅅ']) expect(presetNameProblem(bad)).toMatch(/한글·영문·숫자/);
   });
 });

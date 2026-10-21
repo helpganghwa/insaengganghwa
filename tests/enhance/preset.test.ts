@@ -80,13 +80,15 @@ describe.skipIf(skip)('강화 프리셋 — DB 통합', () => {
     expect(p.lanes['weapon:2']).toEqual({ kind: 'item', equipmentId: w.toString() });
   });
 
-  it('renamePreset — 닉네임 규칙(한글·영문·숫자 2~8자, 예약어 불가), 빈 이름은 기본으로', async () => {
+  it('renamePreset — 한글·영문·숫자 1~8자, 비속어 불가, 빈 이름은 기본으로', async () => {
     const p = await renamePreset(TEST_USER_ID, SERVER_ID, 2, '  밤세트A1 ');
     expect(p.name).toBe('밤세트A1');
     expect((await getEnhancePresets(TEST_USER_ID, SERVER_ID))[1]!.name).toBe('밤세트A1');
-    for (const bad of ['밤 세트', '밤', '아홉글자짜리이름임', '운영자세트', 'admin1', '세트!']) {
+    expect((await renamePreset(TEST_USER_ID, SERVER_ID, 2, '밤')).name).toBe('밤');
+    for (const bad of ['밤 세트', '아홉글자짜리이름임', '세트!']) {
       await expect(renamePreset(TEST_USER_ID, SERVER_ID, 2, bad)).rejects.toMatchObject({ code: 'BAD_NAME' });
     }
+    await expect(renamePreset(TEST_USER_ID, SERVER_ID, 2, '씨발세트')).rejects.toMatchObject({ code: 'PROFANITY' });
     expect((await renamePreset(TEST_USER_ID, SERVER_ID, 2, '   ')).name).toBe('');
   });
 
