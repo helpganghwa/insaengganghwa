@@ -81,7 +81,7 @@ export function PresetLanePicker({
         title={`${SLOT_LABEL[slot]} ${laneNoOfLaneKey(laneKey)}칸에 올릴 장비`}
         subtitle={
           <span className="inline-flex items-center gap-1.5">
-            {presetName} · 유지·비우기도 고를 수 있어요
+            {presetName}
             <ZoomSafeSelect
               value={sort}
               onChange={(e) => {
@@ -116,7 +116,6 @@ export function PresetLanePicker({
           >
             <span className="text-xl leading-none text-zinc-400">⟳</span>
             <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-300">현재 장비 유지</span>
-            <span className="text-[9px] text-zinc-400 dark:text-zinc-600">적용 때 그대로</span>
           </button>
           <button
             type="button"
@@ -125,7 +124,6 @@ export function PresetLanePicker({
           >
             <span className="text-xl leading-none text-red-400/80">－</span>
             <span className="text-[10px] font-semibold text-red-500 dark:text-red-300/90">비우기</span>
-            <span className="text-[9px] text-zinc-400 dark:text-zinc-600">강화 취소</span>
           </button>
           {sorted.map((c) => {
             const on = c.id === selectedId;
