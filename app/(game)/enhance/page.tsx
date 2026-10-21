@@ -15,7 +15,9 @@ import { type EnhanceCandidate } from './EnhanceSlotPicker';
 import { RefreshOnResume } from '@/components/RefreshOnResume';
 
 import { SlotLane } from './SlotLane';
-import { PresetFab } from './PresetFab';
+import { PresetBar } from './PresetBar';
+import { getEnhancePresets } from '@/lib/game/enhance';
+import { laneKeyOf, type RunningLanes } from '@/lib/game/enhance/preset-plan';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 
 const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
@@ -91,12 +93,15 @@ export default async function EnhancePage() {
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<EnhRow[]>,
       liberatedItemRanks(userId, serverId),
+      // 프리셋 진입 줄(이름·칸)용 3행 — 실패해도 페이지는 그린다(표가 없는 환경 포함).
+      getEnhancePresets(userId, serverId).catch(() => []),
     ]),
     3500,
     'enhance.page',
   ).catch(() => null);
   const row = _r?.[0]?.[0] ?? null;
   const libRanks = _r?.[1] ?? new Map<number, number>();
+  const presets = _r?.[2] ?? [];
   const jobs = row?.jobs ?? [];
   const candidatesRaw = row?.candidates ?? [];
 
@@ -125,9 +130,15 @@ export default async function EnhancePage() {
   // 단, 튜토리얼 진행 중엔 억제 — 마무리 팝업이 알림/설치를 따로 안내(충돌 방지).
   const tutorialDone = (row?.tutorial_step ?? TUTORIAL_DONE) === TUTORIAL_DONE;
   const hasRunningJob = jobs.length > 0 && tutorialDone;
+  // 프리셋 진입 줄이 쓰는 '지금 올라간 것' — 위 jobs를 그대로 쓴다(추가 조회 없음).
+  const running: RunningLanes = {};
+  for (const j of jobs) running[laneKeyOf(j.slot, j.slotLane as 1 | 2)] = { equipmentId: j.equipmentInstanceId, jobId: j.jobId };
 
   return (
-    <div className={`space-y-5 px-4 pt-4 ${tutorialDone ? 'pb-20' : 'pb-4'}`}>
+    <>
+    {/* 강화 프리셋 진입 줄(10-21, 소서 #492) — 헤더 아래 고정, 튜토리얼 뒤에만. */}
+    {tutorialDone && presets.length > 0 ? <PresetBar initial={{ presets, running }} /> : null}
+    <div className="space-y-5 px-4 pt-4 pb-4">
       {/* iOS PWA 복귀 시 서버 상태 강제 동기화 — 유령 등록/스테일 슬롯 해소(2026-07-06). */}
       <RefreshOnResume />
       <ServerClockSync nowIso={new Date().toISOString()} />
@@ -165,8 +176,6 @@ export default async function EnhancePage() {
           })}
         </section>
       ))}
-      {/* 강화 프리셋(10-21, 소서 #492) — 튜토리얼 뒤에만. 플로팅 버튼이 마지막 카드를 가리지 않게 아래 여백. */}
-      {tutorialDone ? <PresetFab /> : null}
       <div className="pt-1 pb-2 text-center">
         <Link prefetch={false}
           href="/probability#enhance"
@@ -176,5 +185,6 @@ export default async function EnhancePage() {
         </Link>
       </div>
     </div>
+    </>
   );
 }
