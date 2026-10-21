@@ -1342,5 +1342,101 @@
   "chuseok_binyeo_b": {
     "key": "key3",
     "objectId": "3496a44d-1883-4ab7-8b84-e72b6e6608e8"
+  },
+  "hw_smith_tongs_a": {
+    "key": "key3",
+    "objectId": "6138c3de-7674-403f-b1f6-0ed569dda900"
+  },
+  "hw_smith_tongs_b": {
+    "key": "key3",
+    "objectId": "de69b961-84e9-47ce-9fc7-8784283e1d7c"
+  },
+  "hw_smith_apron_a": {
+    "key": "key3",
+    "objectId": "6f0b955e-7794-44a1-81f9-510cbbca289e"
+  },
+  "hw_smith_apron_b": {
+    "key": "key3",
+    "objectId": "0f490567-7545-4726-b8a3-b0bde8af398f"
+  },
+  "hw_smith_belt_a": {
+    "key": "key3",
+    "objectId": "aac6d20d-ccfa-4127-bb5c-db2e033cfb4d"
+  },
+  "hw_smith_belt_b": {
+    "key": "key3",
+    "objectId": "40ae919e-a30e-46bd-8ad6-75601011a1f8"
+  },
+  "hw_bride_candelabra_a": {
+    "key": "key3",
+    "objectId": "04aeb25f-94a4-4cbb-9854-69ff1a26aa51"
+  },
+  "hw_bride_candelabra_b": {
+    "key": "key3",
+    "objectId": "ab676ffc-8a8d-4b3a-9909-fa9cd2bb837a"
+  },
+  "hw_bride_dress_a": {
+    "key": "key3",
+    "objectId": "726225f7-b7a8-4bab-afd8-aa79d491029d"
+  },
+  "hw_bride_dress_b": {
+    "key": "key3",
+    "objectId": "335fbb78-4cdd-485c-8e3d-a44d19def095"
+  },
+  "hw_bride_veil_a": {
+    "key": "key3",
+    "objectId": "ebb55805-f22c-45a4-99dc-3d7e39eeeaee"
+  },
+  "hw_bride_veil_b": {
+    "key": "key3",
+    "objectId": "c98fbf76-14a4-4bdc-af12-bcd1b156f042"
+  },
+  "hw_frank_wrench_a": {
+    "key": "key3",
+    "objectId": "663b10fa-f585-46a3-ba89-459b75a850ab"
+  },
+  "hw_frank_wrench_b": {
+    "key": "key3",
+    "objectId": "0f823efe-e070-4709-804e-ac96eef8584b"
+  },
+  "hw_frank_jacket_a": {
+    "key": "key3",
+    "objectId": "b6f99d04-fd5d-4012-8698-f694ef30464d"
+  },
+  "hw_frank_jacket_b": {
+    "key": "key3",
+    "objectId": "0bad2363-0c68-4647-87ae-2caee3faa2ec"
+  },
+  "hw_frank_choker_a": {
+    "key": "key3",
+    "objectId": "349fd33e-d32f-43c3-839b-9e71e3f3d34b"
+  },
+  "hw_frank_choker_b": {
+    "key": "key3",
+    "objectId": "41634d46-a09d-45e5-bca0-810419b6a1a5"
+  },
+  "hw_maid_duster_a": {
+    "key": "key3",
+    "objectId": "6d00eb5c-1cd0-4b8d-bced-47ed0f316e64"
+  },
+  "hw_maid_dress_a": {
+    "key": "key3",
+    "objectId": "7118b7a7-3328-46a9-8178-9581759bc2f8"
+  },
+  "hw_maid_duster_b": {
+    "key": "key3",
+    "objectId": "7b98e1c6-784b-44ab-9124-8f95a7d9af23"
+  },
+  "hw_maid_dress_b": {
+    "key": "key3",
+    "objectId": "56fa1207-5b7a-41ef-8fd3-5a28f37cb2ee"
+  },
+  "hw_maid_cap_a": {
+    "key": "key3",
+    "objectId": "57b4a1fb-48d0-462c-ac3a-1167e1edc2eb"
+  },
+  "hw_maid_cap_b": {
+    "key": "key3",
+    "objectId": "84d585aa-a72e-4d37-a8de-e74e058b21ad"
   }
 }
