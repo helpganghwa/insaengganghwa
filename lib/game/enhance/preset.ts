@@ -12,6 +12,7 @@ import {
   laneKeyOf,
   laneNoOfLaneKey,
   normalizePresetName,
+  presetNameProblem,
   planPreset,
   slotOfLaneKey,
   type EnhancePreset,
@@ -28,7 +29,7 @@ import { EnhanceError, queueEnhanceInTx } from './queue';
  * 한 트랜잭션·전부 아니면 전무 — 칸 하나가 실패하면(장비 없음 등) 아무 칸도 바뀌지 않는다. 취소된 뒤 등록이
  * 실패해 칸만 비는 결과를 막으려는 선택(10-21).
  */
-export type PresetErrorCode = 'BAD_PRESET' | 'BAD_LANE' | 'EQUIPMENT_NOT_FOUND' | 'SLOT_MISMATCH' | 'NOTHING_TO_APPLY';
+export type PresetErrorCode = 'BAD_PRESET' | 'BAD_LANE' | 'BAD_NAME' | 'EQUIPMENT_NOT_FOUND' | 'SLOT_MISMATCH' | 'NOTHING_TO_APPLY';
 export class PresetError extends Error {
   constructor(public code: PresetErrorCode) {
     super(code);
@@ -161,6 +162,7 @@ export async function setPresetLane(
 
 export async function renamePreset(userId: string, serverId: number, presetNo: number, raw: string): Promise<EnhancePreset> {
   assertPresetNo(presetNo);
+  if (presetNameProblem(raw) !== null) throw new PresetError('BAD_NAME');
   const name = normalizePresetName(raw);
   return upsert(userId, serverId, presetNo, () => ({ name }));
 }

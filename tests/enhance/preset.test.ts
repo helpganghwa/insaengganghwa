@@ -80,10 +80,14 @@ describe.skipIf(skip)('강화 프리셋 — DB 통합', () => {
     expect(p.lanes['weapon:2']).toEqual({ kind: 'item', equipmentId: w.toString() });
   });
 
-  it('renamePreset — 8자 절단·공백 정리', async () => {
-    const p = await renamePreset(TEST_USER_ID, SERVER_ID, 2, '  밤에 올리는 고강 세트 ');
-    expect(p.name).toBe('밤에 올리는 고'); // 공백 포함 8자
-    expect((await getEnhancePresets(TEST_USER_ID, SERVER_ID))[1]!.name).toBe('밤에 올리는 고');
+  it('renamePreset — 닉네임 규칙(한글·영문·숫자 2~8자, 예약어 불가), 빈 이름은 기본으로', async () => {
+    const p = await renamePreset(TEST_USER_ID, SERVER_ID, 2, '  밤세트A1 ');
+    expect(p.name).toBe('밤세트A1');
+    expect((await getEnhancePresets(TEST_USER_ID, SERVER_ID))[1]!.name).toBe('밤세트A1');
+    for (const bad of ['밤 세트', '밤', '아홉글자짜리이름임', '운영자세트', 'admin1', '세트!']) {
+      await expect(renamePreset(TEST_USER_ID, SERVER_ID, 2, bad)).rejects.toMatchObject({ code: 'BAD_NAME' });
+    }
+    expect((await renamePreset(TEST_USER_ID, SERVER_ID, 2, '   ')).name).toBe('');
   });
 
   it('applyPreset — 바뀌는 칸이 없으면 NOTHING_TO_APPLY', async () => {

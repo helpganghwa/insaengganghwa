@@ -3,6 +3,7 @@
  * DB 접근은 preset.ts(server-only). 클라 팝업이 편집 중에도 바뀌는 칸 수를 바로 보여 주려고 분리했다(10-21).
  */
 import type { Slot } from '@/lib/db/schema/equipment';
+import { validateNickname } from '@/lib/game/nickname';
 
 export const PRESET_COUNT = 3;
 /** 이름 글자 수 상한(코드포인트 기준) — 세그먼트 한 칸에 들어가는 길이. */
@@ -66,6 +67,16 @@ export function presetDisplayName(p: Pick<EnhancePreset, 'presetNo' | 'name'>): 
 export function normalizePresetName(raw: string): string {
   // 제어 문자(줄바꿈·탭·서식 문자)는 지운다 — 탭 라벨 한 줄에 들어가야 한다.
   return Array.from(raw.replace(/[\p{Cc}\p{Cf}]/gu, '').trim()).slice(0, PRESET_NAME_MAX).join('');
+}
+/**
+ * 이름 규칙(10-21 결정) — 닉네임과 같다(중복 검사만 제외): 한글·영문·숫자 2~8자, 공백·기호 불가, 예약어 불가.
+ * 빈 이름은 '기본 이름(프리셋 N)으로 되돌림'이라 허용. 문제가 없으면 null, 있으면 유저에게 보일 한 줄.
+ */
+export function presetNameProblem(raw: string): string | null {
+  const t = raw.trim();
+  if (t.length === 0) return null;
+  const v = validateNickname(t);
+  return v.ok ? null : v.reason.replace('닉네임은', '이름은').replace('닉네임', '이름');
 }
 
 /**

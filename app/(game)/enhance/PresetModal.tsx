@@ -19,6 +19,7 @@ import {
   normalizePresetName,
   planPreset,
   presetDisplayName,
+  presetNameProblem,
   slotOfLaneKey,
   type EnhancePreset,
   type LaneKey,
@@ -190,7 +191,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
   }
 
   function commitName() {
-    if (!preset) return;
+    if (!preset || presetNameProblem(nameDraft) !== null) return;
     setEditingName(false);
     const name = normalizePresetName(nameDraft);
     if (name === preset.name) return;
@@ -251,13 +252,11 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
           <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-zinc-900 dark:text-zinc-100">{presetDisplayName(p)}</span>
           <button
             type="button"
-            disabled={!ready || changed === 0}
+            disabled={!ready}
             onClick={() => goConfirm(p.presetNo, 'list')}
-            className={`shrink-0 rounded-md px-2.5 py-1 text-[11px] font-bold transition active:scale-[0.97] ${
-              changed > 0 ? 'bg-amber-600 text-white' : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800'
-            }`}
+            className="shrink-0 rounded-md bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white transition active:scale-[0.97] disabled:opacity-40"
           >
-            {changed > 0 ? `적용 · ${changed}칸` : active ? '지금 이대로' : '적용'}
+            적용
           </button>
         </div>
         <button type="button" disabled={!ready} onClick={() => goEdit(p.presetNo)} className="mt-2 flex w-full items-center gap-1.5 text-left">
@@ -376,13 +375,43 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
 
   const name = preset ? presetDisplayName(preset) : '';
   const changed = plan?.changed ?? 0;
-  // 칩으로 바로 왔는데 바뀌는 칸이 없으면(이미 올라간 세트·빈 세트) 편집으로.
-  const effStep: Step = step === 'confirm' && data && changed === 0 ? 'edit' : step;
+  const nameProblem = editingName ? presetNameProblem(nameDraft) : null;
 
-  if (effStep === 'confirm' && preset) {
+  if (step === 'confirm' && preset) {
     const resetCount = plan ? plan.lanes.filter((p) => p.action === 'swap' || p.action === 'clear').length + plan.extraCancels.length : 0;
     const changedList = LANE_KEYS.filter((k) => changedKeys.has(k));
     const back = () => setStep(backTo);
+    // 바뀌는 칸이 없으면 적용 대신 상황 안내 — 빈 세트는 편집으로 보내고, 이미 올라간 세트는 그렇다고만.
+    if (data && changed === 0) {
+      const empty = !hasItemLane(preset);
+      return (
+        <ModalShell onClose={back} label={`${name} 적용`}>
+          <ModalLayout
+            title={josa(empty ? `${name}#{은} 비어 있어요` : `${name}#{은} 이미 올라가 있어요`)}
+            subtitle={empty ? '편집에서 칸에 장비를 넣어 주세요' : '지금 슬롯과 같아서 바뀌는 칸이 없어요'}
+            bare
+            footer={
+              empty ? (
+                <>
+                  <ModalButton tone="ghost" onClick={back}>
+                    돌아가기
+                  </ModalButton>
+                  <ModalButton tone="primary" onClick={() => goEdit(preset.presetNo)}>
+                    편집
+                  </ModalButton>
+                </>
+              ) : (
+                <ModalButton tone="ghost" onClick={back}>
+                  확인
+                </ModalButton>
+              )
+            }
+          >
+            {null}
+          </ModalLayout>
+        </ModalShell>
+      );
+    }
     return (
       <ModalShell onClose={back} label={`${name} 적용 확인`}>
         <ModalLayout
@@ -407,7 +436,7 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
     );
   }
 
-  if (effStep === 'edit' && preset) {
+  if (step === 'edit' && preset) {
     const back = () => {
       setEditingName(false);
       setStep('list');
@@ -437,30 +466,41 @@ export function PresetModal({ open, onClose, onData }: { open: PresetOpen; onClo
                 <ModalButton tone="ghost" onClick={back}>
                   돌아가기
                 </ModalButton>
-                <ModalButton tone="primary" onClick={() => goConfirm(preset.presetNo, 'edit')} disabled={!data || changed === 0}>
-                  {changed > 0 ? `적용 · ${changed}칸` : '적용'}
+                <ModalButton tone="primary" onClick={() => goConfirm(preset.presetNo, 'edit')} disabled={!data}>
+                  적용
                 </ModalButton>
               </>
             }
           >
             {editingName ? (
-              <div className="flex items-center gap-2 px-1 pt-1 pb-2">
-                <ZoomSafeInput
-                  ref={nameInputRef}
-                  value={nameDraft}
-                  maxLength={PRESET_NAME_MAX}
-                  placeholder={`프리셋 ${preset.presetNo}`}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) commitName();
-                    if (e.key === 'Escape') setEditingName(false);
-                  }}
-                  wrapClassName="h-9 flex-1"
-                  className="h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-zinc-900 dark:border-zinc-700 dark:bg-black/40 dark:text-zinc-100"
-                />
-                <button type="button" onClick={commitName} className="h-9 shrink-0 rounded-md bg-amber-500 px-3 text-[12px] font-extrabold text-black">
-                  확인
-                </button>
+              <div className="px-1 pt-1 pb-2">
+                <div className="flex items-center gap-2">
+                  {/* 닉네임과 같은 규칙(한글·영문·숫자 2~8자, 예약어 불가). IME 합성 여유로 maxLength는 2배, 실제 한도는 presetNameProblem. */}
+                  <ZoomSafeInput
+                    ref={nameInputRef}
+                    value={nameDraft}
+                    maxLength={PRESET_NAME_MAX * 2}
+                    placeholder={`2~${PRESET_NAME_MAX}자 (한글·영문·숫자)`}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing && nameProblem === null) commitName();
+                      if (e.key === 'Escape') setEditingName(false);
+                    }}
+                    wrapClassName="h-9 flex-1"
+                    className="h-9 w-full rounded-md border border-zinc-300 bg-white px-2 text-zinc-900 dark:border-zinc-700 dark:bg-black/40 dark:text-zinc-100"
+                  />
+                  <button
+                    type="button"
+                    disabled={nameProblem !== null}
+                    onClick={commitName}
+                    className="h-9 shrink-0 rounded-md bg-amber-500 px-3 text-[12px] font-extrabold text-black disabled:opacity-40"
+                  >
+                    확인
+                  </button>
+                </div>
+                <p className={`mt-1 truncate text-[10px] ${nameProblem ? 'text-red-500 dark:text-red-300/90' : 'text-zinc-400 dark:text-zinc-600'}`}>
+                  {nameProblem ?? (nameDraft.trim() ? `${Array.from(nameDraft.trim()).length} / ${PRESET_NAME_MAX}자` : `비워 두면 프리셋 ${preset.presetNo}`)}
+                </p>
               </div>
             ) : null}
             {!data ? (

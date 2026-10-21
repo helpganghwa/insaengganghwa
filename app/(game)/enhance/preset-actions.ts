@@ -22,7 +22,7 @@ import {
   setPresetLane,
   type ApplyPresetResult,
 } from '@/lib/game/enhance';
-import { LANE_KEYS, PRESET_COUNT, type EnhancePreset, type LaneKey, type PresetLaneState, type RunningLanes } from '@/lib/game/enhance/preset-plan';
+import { LANE_KEYS, PRESET_COUNT, presetNameProblem, type EnhancePreset, type LaneKey, type PresetLaneState, type RunningLanes } from '@/lib/game/enhance/preset-plan';
 
 /**
  * 강화 프리셋 서버 액션(10-21, 소서 #492). 읽기(load)는 팝업을 열 때만 — 강화 페이지 렌더에는 얹지 않는다.
@@ -35,6 +35,7 @@ const MSG: Record<string, string> = {
   BANNED: '이용이 제한된 계정입니다.',
   BAD_PRESET: '프리셋을 찾을 수 없어요.',
   BAD_LANE: '칸 정보가 올바르지 않아요.',
+  BAD_NAME: '이름은 한글·영문·숫자 2~8자예요.',
   EQUIPMENT_NOT_FOUND: '장비를 찾을 수 없습니다.',
   SLOT_MISMATCH: '이 칸에는 다른 부위 장비를 올릴 수 없어요.',
   NOTHING_TO_APPLY: '바뀌는 칸이 없어요.',
@@ -155,8 +156,11 @@ export async function renamePresetAction(presetNo: number, name: string): Promis
   if ('code' in g) return err(g.code);
   const no = parsePresetNo(presetNo);
   if (no === null) return err('BAD_PRESET');
+  const raw = typeof name === 'string' ? name : '';
+  const problem = presetNameProblem(raw);
+  if (problem !== null) return { status: 'error', code: 'BAD_NAME', message: problem };
   try {
-    return { status: 'success', preset: await renamePreset(g.userId, g.serverId, no, typeof name === 'string' ? name : '') };
+    return { status: 'success', preset: await renamePreset(g.userId, g.serverId, no, raw) };
   } catch (e) {
     return err(toCode(e));
   }

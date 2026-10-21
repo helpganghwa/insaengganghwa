@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizePresetName, planPreset, presetDisplayName, type PresetLanes, type RunningLanes } from '@/lib/game/enhance/preset-plan';
+import { normalizePresetName, planPreset, presetDisplayName, presetNameProblem, type PresetLanes, type RunningLanes } from '@/lib/game/enhance/preset-plan';
 
 /** 프리셋 적용 계획(순수) — 10-21 결정: keep 그대로 · empty 취소 · item 같은 장비면 그대로, 아니면 취소+등록 · 다른 칸의 같은 장비는 옮겨 온다. */
 describe('planPreset', () => {
@@ -69,5 +69,20 @@ describe('이름', () => {
   it('presetDisplayName — 빈 이름은 프리셋 N', () => {
     expect(presetDisplayName({ presetNo: 2, name: '' })).toBe('프리셋 2');
     expect(presetDisplayName({ presetNo: 2, name: ' 낮 ' })).toBe('낮');
+  });
+});
+
+describe('presetNameProblem — 닉네임 규칙(중복 검사 제외)', () => {
+  it('허용: 2~8자 한글·영문·숫자, 빈 이름(기본으로 되돌림)', () => {
+    for (const ok of ['밤세트', 'Night1', '12345678', '  보스용  ', '', '   ']) expect(presetNameProblem(ok)).toBeNull();
+  });
+  it('거부: 1자·9자·공백·기호·예약어', () => {
+    expect(presetNameProblem('밤')).toMatch(/최소 2자/);
+    expect(presetNameProblem('아홉글자짜리이름임')).toMatch(/최대 8자/);
+    expect(presetNameProblem('밤 세트')).toMatch(/한글·영문·숫자/);
+    expect(presetNameProblem('세트!')).toMatch(/한글·영문·숫자/);
+    expect(presetNameProblem('운영자세트')).toMatch(/사용할 수 없는 단어/);
+    expect(presetNameProblem('Admin1')).toMatch(/사용할 수 없는 단어/);
+    expect(presetNameProblem('밤')).not.toContain('닉네임');
   });
 });
