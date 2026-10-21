@@ -15,7 +15,8 @@ import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
  * 친구 — 검색→요청→수락(친구 선물 없음). 방향 1행 저장(requester→addressee).
  * 친구 = status='accepted' & (requester or addressee = 나). 받은 요청 = pending & addressee=나.
  */
-export const FRIEND_CAP = 30;
+/** 친구 상한 — 30→50(2026-10-21, 글라시안 #488 요청·30명 도달 7명). 위키·탭 안내는 이 값을 읽는다. */
+export const FRIEND_CAP = 50;
 import { FRIEND_REAPPLY_COOLDOWN_HOURS } from '@/lib/game/balance';
 
 export class FriendError extends Error {
@@ -279,7 +280,7 @@ export async function sendRequest(
   // 대상 **과 발신자** 둘 다 그 서버에 캐릭터가 있어야 한다. 대상만 보던 종전 코드는 활성 서버
   // 쿠키를 바꾸면 내 캐릭터가 없는 서버에서도 요청이 나가, 받는 쪽에 **끌 수 없는 빨간 점**이
   // 남았다(배지는 friend_links만 세고 목록은 characters 조인이라 화면에 안 보임). 수락되면
-  // 상대의 30칸 중 한 칸이 보이지 않게 소진된다(2026-09-21 ③, 채팅·귓속말과 같은 가드).
+  // 상대의 FRIEND_CAP칸 중 한 칸이 보이지 않게 소진된다(2026-09-21 ③, 채팅·귓속말과 같은 가드).
   const both = (await db.execute(
     sql`select user_id::text as uid from characters
          where server_id = ${serverId} and user_id in (${meId}::uuid, ${targetId}::uuid)`,
