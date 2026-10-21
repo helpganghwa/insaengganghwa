@@ -100,18 +100,21 @@ async function upsert(
   userId: string,
   serverId: number,
   presetNo: number,
-  patch: { name?: string; lanes?: PresetLanes },
+  /** 잠근 현재 값에서 다음 값을 만든다 — 읽기와 쓰기를 같은 트랜잭션 안에 둬야 빠른 연속 저장(칸 두 개를 잇달아 고름)이 서로를 덮어쓰지 않는다. */
+  mutate: (cur: EnhancePreset) => { name?: string; lanes?: PresetLanes },
 ): Promise<EnhancePreset> {
-  // 읽고-합쳐-쓰기 — jsonb 부분 갱신을 SQL 파라미터로 보내지 않는다(문자열 이중 인코딩 함정, 09-09). 한 유저의
-  // 프리셋 편집은 직렬이라 for update로 충분하다.
+  // 읽고-합쳐-쓰기 — jsonb 부분 갱신을 SQL 파라미터로 보내지 않는다(문자열 이중 인코딩 함정, 09-09).
+  // for update로 행을 잠근 뒤 그 값에서 다음 값을 만들므로 같은 프리셋의 연속 저장이 직렬화된다.
   return db.transaction(async (tx) => {
-    const [cur] = await tx
+    const [row] = await tx
       .select({ name: enhancePresets.name, lanes: enhancePresets.lanes })
       .from(enhancePresets)
       .where(and(eq(enhancePresets.userId, userId), eq(enhancePresets.serverId, serverId), eq(enhancePresets.presetNo, presetNo)))
       .for('update');
-    const name = patch.name ?? cur?.name ?? '';
-    const lanes = patch.lanes ?? sanitizeLanes(cur?.lanes);
+    const cur: EnhancePreset = row ? { presetNo, name: row.name, lanes: sanitizeLanes(row.lanes) } : emptyPreset(presetNo);
+    const patch = mutate(cur);
+    const name = patch.name ?? cur.name;
+    const lanes = patch.lanes ?? cur.lanes;
     await tx
       .insert(enhancePresets)
       .values({ userId, serverId, presetNo, name, lanes, updatedAt: new Date() })
@@ -141,23 +144,25 @@ export async function setPresetLane(
     if (!row) throw new PresetError('EQUIPMENT_NOT_FOUND');
     if (row.slot !== slotOfLaneKey(key)) throw new PresetError('SLOT_MISMATCH');
   }
-  const cur = await getOne(userId, serverId, presetNo, db);
-  const lanes: PresetLanes = { ...cur.lanes };
-  if (state.kind === 'item') {
-    // 같은 장비는 한 칸에만 — 다른 칸에 있던 지정은 지운다(고르면 옮겨 오는 셈, 클라 낙관 갱신과 같은 규칙).
-    for (const k of LANE_KEYS) {
-      const v = lanes[k];
-      if (k !== key && v?.kind === 'item' && v.equipmentId === state.equipmentId) delete lanes[k];
+  return upsert(userId, serverId, presetNo, (cur) => {
+    const lanes: PresetLanes = { ...cur.lanes };
+    if (state.kind === 'item') {
+      // 같은 장비는 한 칸에만 — 다른 칸에 있던 지정은 지운다(고르면 옮겨 오는 셈, 클라 낙관 갱신과 같은 규칙).
+      for (const k of LANE_KEYS) {
+        const v = lanes[k];
+        if (k !== key && v?.kind === 'item' && v.equipmentId === state.equipmentId) delete lanes[k];
+      }
     }
-  }
-  if (state.kind === 'keep') delete lanes[key];
-  else lanes[key] = state;
-  return upsert(userId, serverId, presetNo, { lanes });
+    if (state.kind === 'keep') delete lanes[key];
+    else lanes[key] = state;
+    return { lanes };
+  });
 }
 
 export async function renamePreset(userId: string, serverId: number, presetNo: number, raw: string): Promise<EnhancePreset> {
   assertPresetNo(presetNo);
-  return upsert(userId, serverId, presetNo, { name: normalizePresetName(raw) });
+  const name = normalizePresetName(raw);
+  return upsert(userId, serverId, presetNo, () => ({ name }));
 }
 
 /** 지금 배치를 그대로 담는다 — 강화 중인 칸은 그 장비, 비어 있는 칸은 '비우기'(적용하면 지금 배치가 그대로 재현된다). */
@@ -169,7 +174,7 @@ export async function fillPresetFromCurrent(userId: string, serverId: number, pr
     const now = running[key];
     lanes[key] = now ? { kind: 'item', equipmentId: now.equipmentId } : { kind: 'empty' };
   }
-  return upsert(userId, serverId, presetNo, { lanes });
+  return upsert(userId, serverId, presetNo, () => ({ lanes }));
 }
 
 export type ApplyPresetResult = {

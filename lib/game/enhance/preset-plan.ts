@@ -64,7 +64,8 @@ export function presetDisplayName(p: Pick<EnhancePreset, 'presetNo' | 'name'>): 
 }
 /** 이름 정리 — 앞뒤 공백 제거, 코드포인트 PRESET_NAME_MAX까지. */
 export function normalizePresetName(raw: string): string {
-  return Array.from(raw.trim()).slice(0, PRESET_NAME_MAX).join('');
+  // 제어 문자(줄바꿈·탭·서식 문자)는 지운다 — 탭 라벨 한 줄에 들어가야 한다.
+  return Array.from(raw.replace(/[\p{Cc}\p{Cf}]/gu, '').trim()).slice(0, PRESET_NAME_MAX).join('');
 }
 
 /**

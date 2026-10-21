@@ -64,6 +64,7 @@ describe('이름', () => {
     expect(normalizePresetName('  밤 세트  ')).toBe('밤 세트');
     expect(normalizePresetName('가나다라마바사아자차')).toBe('가나다라마바사아');
     expect(normalizePresetName('😀😀😀😀😀😀😀😀😀')).toBe('😀😀😀😀😀😀😀😀');
+    expect(normalizePresetName('밤\n세트\t')).toBe('밤세트');
   });
   it('presetDisplayName — 빈 이름은 프리셋 N', () => {
     expect(presetDisplayName({ presetNo: 2, name: '' })).toBe('프리셋 2');
