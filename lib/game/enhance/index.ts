@@ -15,3 +15,5 @@ export { reduceEnhanceTime } from './reduceTime';
 export type { ReduceTimeInput, ReduceTimeResult } from './reduceTime';
 export { cancelEnhance } from './cancel';
 export { swapEnhance } from './swap';
+export { getEnhancePresets, loadRunningLanes, setPresetLane, renamePreset, fillPresetFromCurrent, applyPreset, PresetError } from './preset';
+export type { PresetErrorCode, ApplyPresetResult } from './preset';

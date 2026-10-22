@@ -17,6 +17,8 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  jsonb,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -132,3 +134,24 @@ export const gemTimeReductions = pgTable(
 
 export type EnhancementJob = typeof enhancementJobs.$inferSelect;
 export type EnhancementLog = typeof enhancementLogs.$inferSelect;
+
+/**
+ * §3.4 enhance_presets — 강화 프리셋(0246, 유저 건의 소서 #492). 서버마다 3개, 전부 무료.
+ * lanes = {"weapon:1": {kind:'item', equipmentId} | {kind:'keep'} | {kind:'empty'}, …} — 키가 없으면 keep.
+ * 상태 타입·적용 계획은 lib/game/enhance/preset-plan.ts(순수), DB 접근은 preset.ts.
+ */
+export const enhancePresets = pgTable(
+  'enhance_presets',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    presetNo: smallint('preset_no').notNull(),
+    /** 빈 문자열이면 화면은 '프리셋 N'. 코드포인트 8자까지(normalizePresetName). */
+    name: text('name').notNull().default(''),
+    lanes: jsonb('lanes').$type<Record<string, unknown>>().notNull().default({}),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.presetNo] })],
+);

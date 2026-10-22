@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { ConfirmButton } from '@/components/ui/ConfirmButton';
 
@@ -53,19 +53,23 @@ export function ModalLayout({
    * ② 시각 보정: 거기서 조금 더 올린다 — 시각적 중심은 기하학적 중심보다 위에 있다.
    * 화면을 거의 채우는 팝업은 보정하면 잘리므로 건드리지 않는다.
    */
+  const measure = useCallback(() => {
+    const total = rootRef.current?.offsetHeight ?? 0;
+    const vh = window.innerHeight;
+    if (total === 0 || total > vh * 0.86) {
+      setOffsetY(0);
+      return;
+    }
+    const balance = ((footRef.current?.offsetHeight ?? 0) - (headRef.current?.offsetHeight ?? 0)) / 2;
+    const optical = Math.min(20, vh * 0.03);
+    setOffsetY(Math.round(balance - optical));
+  }, []);
+  // 내용이 바뀌는 렌더마다 **그리기 전에** 다시 잰다 — 같은 팝업 안에서 단계가 바뀔 때(목록 → 적용 확인 등)
+  // ResizeObserver는 그린 뒤에 와서 옛 위치로 한 프레임 보였다가 옮겨지는 '움찔'이 있었다(2026-10-22 제보).
   useLayoutEffect(() => {
-    const measure = () => {
-      const total = rootRef.current?.offsetHeight ?? 0;
-      const vh = window.innerHeight;
-      if (total === 0 || total > vh * 0.86) {
-        setOffsetY(0);
-        return;
-      }
-      const balance = ((footRef.current?.offsetHeight ?? 0) - (headRef.current?.offsetHeight ?? 0)) / 2;
-      const optical = Math.min(20, vh * 0.03);
-      setOffsetY(Math.round(balance - optical));
-    };
     measure();
+  });
+  useLayoutEffect(() => {
     const ro = new ResizeObserver(measure);
     if (rootRef.current) ro.observe(rootRef.current);
     window.addEventListener('resize', measure);
@@ -73,7 +77,7 @@ export function ModalLayout({
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, []);
+  }, [measure]);
 
   return (
     // 셸 패널은 폭을 지정하지 않으므로 여기서 못 박는다 — w-full만 두면 flex 안에서

@@ -140,6 +140,19 @@
 
 ---
 
+### 3.4 enhance_presets (강화 프리셋, 0246)
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| user_id | uuid | profiles FK cascade |
+| server_id | smallint | 서버별 |
+| preset_no | smallint | 1~3(check) |
+| name | text | '' = 화면에서 '프리셋 N' · 코드포인트 8자 |
+| lanes | jsonb | `{"weapon:1": {"kind":"item","equipmentId":"<user_equipment.id>"} \| {"kind":"keep"} \| {"kind":"empty"}, …}` — 키 없음 = keep |
+| updated_at | timestamptz | |
+
+PK (user_id, server_id, preset_no). 행이 없으면 빈 프리셋. 적용은 `applyPreset`이 한 트랜잭션으로 enhancement_jobs를 잠그고 취소(running→cancelled)→`queueEnhanceInTx`(preferredLane = 그 칸). 상태 타입·계획 계산은 `lib/game/enhance/preset-plan.ts`.
+
 ## 4. 초월 (자동·무RNG)
 
 박스로 같은 카탈로그 중복 획득 시 `user_equipment.transcend_progress` 누적 → 임계(선형 T→T+1 =

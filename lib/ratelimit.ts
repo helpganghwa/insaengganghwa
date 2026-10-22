@@ -19,6 +19,7 @@ export type RlBucket =
   | 'enhance'
   | 'chuseok'
   | 'enhanceCancel'
+  | 'enhancePreset'
   | 'expedition'
   | 'tower'
   | 'gacha'
@@ -54,6 +55,8 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   // 막혔음(2026-07-13 CBT 피드백). 정상 상한 = 6슬롯 취소→재등록→재취소 회전까지
   // 여유 있게 30초 15회 — 루프 버그는 여전히 감속(분당 30 vs 정상 최대 ~12).
   enhanceCancel: [15, '30 s'],
+  // 프리셋 적용 — 한 번에 최대 6칸을 취소·등록하므로 취소 버킷보다 더 드물게(정상은 하루 몇 번).
+  enhancePreset: [6, '30 s'],
   gacha: [15, '10 s'],
   inventory: [40, '10 s'],
   raid: [30, '10 s'],

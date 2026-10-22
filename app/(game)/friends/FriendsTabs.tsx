@@ -45,7 +45,7 @@ const ERR: Record<string, string> = {
   ALREADY_FRIEND: '이미 친구입니다',
   ALREADY_REQUESTED: '이미 요청했습니다',
   REAPPLY_COOLDOWN: '거절된 요청은 24시간 뒤에 다시 보낼 수 있어요',
-  CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
+  CAP_REACHED: '친구가 가득 찼습니다 (최대 50)', // 숫자는 FRIEND_CAP과 같이 바꾼다(server-only 모듈이라 여기서 못 읽음)
   PEER_CAP_REACHED: '상대의 친구 목록이 가득 찼어요',
   NO_CHARACTER_ON_SERVER: '다른 서버의 유저예요',
   BLOCKED_BY_ME: '차단한 유저예요. 차단을 해제한 뒤 요청할 수 있어요',
