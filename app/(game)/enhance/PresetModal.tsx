@@ -106,8 +106,8 @@ export function PresetModal({
   const [data, setDataState] = useState<PresetData | null>(() => freshPresetCache(serverRunning));
   const [step, setStep] = useState<Step>(open.step);
   const [cur, setCur] = useState<number>(open.step === 'list' ? 1 : open.presetNo);
-  /** 확인 단계에서 '돌아가기'가 갈 곳 — 칩으로 바로 왔으면 목록, 편집에서 왔으면 편집. */
-  const [backTo, setBackTo] = useState<'list' | 'edit'>('list');
+  /** 확인 단계의 두 번째 버튼 — 칩으로 바로 왔으면 '닫기'(팝업 종료), 목록·편집에서 왔으면 '돌아가기'. */
+  const [backTo, setBackTo] = useState<'close' | 'list' | 'edit'>(open.step === 'confirm' ? 'close' : 'list');
   const [picking, setPicking] = useState<LaneKey | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -427,7 +427,8 @@ export function PresetModal({
 
   if (step === 'confirm') {
     const resetCount = plan ? plan.lanes.filter((p) => p.action === 'swap' || p.action === 'clear').length + plan.extraCancels.length : 0;
-    const back = () => setStep(backTo);
+    const back = backTo === 'close' ? onClose : () => setStep(backTo);
+    const backLabel = backTo === 'close' ? '닫기' : '돌아가기';
     // 바뀌는 칸이 없으면 적용 대신 상황 안내 — 빈 세트는 편집으로 보내고, 이미 올라간 세트는 그렇다고만. 6칸은 그대로 보여 준다.
     if (changed === 0) {
       const empty = !hasItemLane(preset);
@@ -442,7 +443,7 @@ export function PresetModal({
               empty ? (
                 <>
                   <ModalButton tone="ghost" onClick={back}>
-                    돌아가기
+                    {backLabel}
                   </ModalButton>
                   <ModalButton tone="primary" onClick={() => goEdit(preset.presetNo)}>
                     편집
@@ -470,7 +471,7 @@ export function PresetModal({
           footer={
             <>
               <ModalButton tone="ghost" onClick={back}>
-                돌아가기
+                {backLabel}
               </ModalButton>
               <ModalButton tone="primary" onClick={apply}>
                 적용

@@ -30,7 +30,9 @@ export function PresetBar({ initial }: { initial: PresetSummary }) {
   return (
     <>
       <div className="sticky top-0 z-20 flex h-10 shrink-0 items-center gap-1.5 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        <span className="mr-0.5 shrink-0 text-[11px] font-semibold text-zinc-500">프리셋</span>
+        <button type="button" onClick={() => setOpen({ step: 'list' })} className="mr-0.5 shrink-0 text-[11px] font-semibold text-zinc-500">
+          프리셋
+        </button>
         {summary.presets.map((p) => {
           const hasItem = LANE_KEYS.some((k) => p.lanes[k]?.kind === 'item');
           const active = hasItem && planPreset(p.lanes, summary.running).changed === 0;
