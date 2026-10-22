@@ -23,10 +23,12 @@ export function PresetBar({ initial }: { initial: PresetSummary }) {
   }
   const [open, setOpen] = useState<PresetOpen | null>(null);
   // 팝업은 데이터가 있어야 그리므로, 줄이 뜨고 조금 뒤 한 번 미리 읽어 둔다(신선한 캐시가 있으면 생략).
+  // 마운트 때 한 번만 — 강화 동작마다 서버가 다시 그릴 때는 읽지 않는다(핫패스에 조회를 더 얹지 않으려고, 열 때 새로 읽는다).
   useEffect(() => {
     const t = setTimeout(() => void prefetchPresets(initial.running), 600);
     return () => clearTimeout(t);
-  }, [initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 1회
+  }, []);
   return (
     <>
       <div className="sticky top-0 z-20 flex h-10 shrink-0 items-center gap-1.5 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
