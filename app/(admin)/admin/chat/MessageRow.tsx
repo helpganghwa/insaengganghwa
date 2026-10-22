@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ServerBadge } from '../ServerBadge';
 import { MessageActions } from './AdminChatActions';
 import type { AdminChatRow, AdminIdentity } from './queries';
-import { fmtKst, isMuted } from './shared';
+import { fmtKst, fmtMuteUntil, isMuted } from './shared';
 
 /**
  * 메시지 행 — 일반·길드·귓속말 공통 표기 규칙.
@@ -48,12 +48,24 @@ export function ChatMessageRow({ row, showGuild = true }: { row: AdminChatRow; s
         {row.reports > 0 ? (
           <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {row.reports}</span>
         ) : null}
+        {row.reporters.length > 0 ? (
+          <span className="text-[10px] text-zinc-400">신고자 {row.reporters.join(', ')}</span>
+        ) : null}
         {row.hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
         {row.deletedAt ? <span className="text-[10px] font-bold text-zinc-400">본인삭제</span> : null}
-        {isMuted(row.mutedUntil) ? <span className="text-[10px] text-amber-400">채팅금지중</span> : null}
-        <span className="ml-auto">
-          <MessageActions messageId={String(row.id)} hidden={Boolean(row.hiddenAt)} userId={row.userId} />
-        </span>
+        {row.warnedAt ? <span className="text-[10px] text-amber-300">경고 발송 {fmtKst(row.warnedAt)}</span> : null}
+        {isMuted(row.mutedUntil) ? (
+          <span className="text-[10px] text-amber-400">채팅금지중 {fmtMuteUntil(row.mutedUntil!)}</span>
+        ) : null}
+        <MessageActions
+          messageId={String(row.id)}
+          hidden={Boolean(row.hiddenAt)}
+          userId={row.userId}
+          body={row.body}
+          createdAtIso={new Date(row.createdAt).toISOString()}
+          warnedAtIso={row.warnedAt ? new Date(row.warnedAt).toISOString() : null}
+          mutedUntilIso={isMuted(row.mutedUntil) ? row.mutedUntil!.toISOString() : null}
+        />
       </div>
       <p className="mt-1 break-words text-zinc-200">{row.body}</p>
     </div>
@@ -70,6 +82,8 @@ export function WhisperMessageRow({
   deletedAt = null,
   serverId,
   reports,
+  reporters = [],
+  warnedAt = null,
   identities,
   threadHref,
 }: {
@@ -82,6 +96,8 @@ export function WhisperMessageRow({
   deletedAt?: Date | null;
   serverId: number;
   reports: number;
+  reporters?: string[];
+  warnedAt?: Date | null;
   identities: Map<string, AdminIdentity>;
   /** 스레드 밖(신고 목록)에서 렌더될 때만 — 앞뒤 맥락을 보려면 대화로 들어갈 수 있어야 한다. */
   threadHref?: string;
@@ -99,10 +115,12 @@ export function WhisperMessageRow({
         {reports > 0 ? (
           <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {reports}</span>
         ) : null}
+        {reporters.length > 0 ? <span className="text-[10px] text-zinc-400">신고자 {reporters.join(', ')}</span> : null}
         {hiddenAt ? <span className="text-[10px] font-bold text-red-400">숨김</span> : null}
         {deletedAt ? <span className="text-[10px] font-bold text-zinc-400">본인삭제</span> : null}
+        {warnedAt ? <span className="text-[10px] text-amber-300">경고 발송 {fmtKst(warnedAt)}</span> : null}
         {isMuted(from?.mutedUntil ?? null) ? (
-          <span className="text-[10px] text-amber-400">채팅금지중</span>
+          <span className="text-[10px] text-amber-400">채팅금지중 {fmtMuteUntil(from!.mutedUntil!)}</span>
         ) : null}
         {threadHref ? (
           <Link
@@ -113,14 +131,16 @@ export function WhisperMessageRow({
             스레드
           </Link>
         ) : null}
-        <span className="ml-auto">
-          <MessageActions
-            messageId={String(id)}
-            hidden={Boolean(hiddenAt)}
-            userId={fromUserId}
-            kind="whisper"
-          />
-        </span>
+        <MessageActions
+          messageId={String(id)}
+          hidden={Boolean(hiddenAt)}
+          userId={fromUserId}
+          kind="whisper"
+          body={body}
+          createdAtIso={new Date(createdAt).toISOString()}
+          warnedAtIso={warnedAt ? new Date(warnedAt).toISOString() : null}
+          mutedUntilIso={isMuted(from?.mutedUntil ?? null) ? from!.mutedUntil!.toISOString() : null}
+        />
       </div>
       <p className="mt-1 break-words text-zinc-200">{body}</p>
     </div>

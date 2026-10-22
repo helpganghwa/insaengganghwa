@@ -173,6 +173,8 @@ async function ReportedWhispers({
               deletedAt={m.deletedAt}
               serverId={m.serverId}
               reports={m.reports}
+              reporters={m.reporters}
+              warnedAt={m.warnedAt}
               identities={identityByServer.get(m.serverId) ?? NO_IDENTITIES}
               // 스레드는 (서버, 유저쌍)으로 열린다 — 신고 필터를 끄지 않으면 여기로 다시 돌아온다.
               threadHref={chatHref(params, {
@@ -300,6 +302,8 @@ async function WhisperThread({
               deletedAt={m.deletedAt}
               serverId={m.serverId}
               reports={m.reports}
+              reporters={m.reporters}
+              warnedAt={m.warnedAt}
               identities={identities}
             />
           ))}

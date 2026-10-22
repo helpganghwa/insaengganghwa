@@ -99,6 +99,11 @@ export function isMuted(until: Date | null | undefined): boolean {
   return !!until && until.getTime() > Date.now();
 }
 
+/** 금지 해제 시각 표기 — 10년 넘게 남았으면 '영구'(36500일 규약), 아니면 KST 시각. */
+export function fmtMuteUntil(until: Date): string {
+  return until.getTime() - Date.now() > 3650 * 86400_000 ? '영구' : `${fmtKst(until)}까지`;
+}
+
 /** KST 표기(CLAUDE §3.8) — DB는 UTC timestamptz, 변환은 표시 직전에만. */
 export function fmtKst(d: Date | null): string {
   if (!d) return '-';

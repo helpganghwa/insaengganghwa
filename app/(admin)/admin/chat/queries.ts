@@ -9,6 +9,26 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 
 /**
+ * 신고자 닉네임 목록(접수순) — 메시지가 쓰인 서버의 캐릭터 이름. 탈퇴·캐릭터 없음은 '(탈퇴)'.
+ * 검수자가 "누가 신고했나"를 봐야 집단 허위 신고(같은 길드가 몰려 숨김)를 가려낼 수 있다(2026-10-22 요청).
+ * 유저에게 가는 우편엔 절대 싣지 않는다 — 어드민 화면 전용.
+ */
+function reportersSql(table: 'chat_reports' | 'whisper_reports', messageId: SQL, serverId: SQL): SQL<string[]> {
+  return sql<string[]>`(
+    select coalesce(json_agg(coalesce(c.nickname, '(탈퇴)') order by r.created_at), '[]'::json)
+    from ${sql.raw(table)} r
+    left join characters c on c.user_id = r.reporter_user_id and c.server_id = ${serverId}
+    where r.message_id = ${messageId})`;
+}
+
+/** 마지막 경고 우편 발송 시각 — chat.warn 로그 기준. 경고는 화면에 흔적이 없어 이게 없으면 중복 발송한다. */
+function warnedAtSql(targetType: 'chat_message' | 'whisper_message', messageId: SQL): SQL<Date | null> {
+  return sql<Date | null>`(
+    select max(a.created_at) from admin_actions a
+    where a.action = 'chat.warn' and a.target_type = ${targetType} and a.target_id = ${messageId}::text)`;
+}
+
+/**
  * 채팅 검수 조회 — 어드민 전용. 일반 채팅 서비스 경로(lib/game/chat/*)와 의도적으로 분리한다.
  * 서비스 경로는 "유저가 볼 수 있는 것"(숨김 제외·나가기 반영·캐시)을 돌려주지만, 검수는
  * **원본 전부**(숨김 포함, whisper_reads의 나가기/읽음 포인터 무시)를 봐야 하기 때문.
@@ -34,6 +54,10 @@ export interface AdminChatRow {
   publicCode: string | null;
   mutedUntil: Date | null;
   reports: number;
+  /** 신고자 닉네임(접수순) — 어드민 표시 전용. */
+  reporters: string[];
+  /** 마지막 경고 우편 발송 시각(없으면 null). */
+  warnedAt: Date | null;
 }
 
 /**
@@ -86,6 +110,8 @@ export async function listChannelMessages(opts: {
       publicCode: profiles.publicCode,
       mutedUntil: profiles.chatMutedUntil,
       reports: reportCount,
+      reporters: reportersSql('chat_reports', sql`${chatMessages.id}`, sql`${chatMessages.serverId}`),
+      warnedAt: warnedAtSql('chat_message', sql`${chatMessages.id}`),
     })
     .from(chatMessages)
     // 닉네임은 해당 서버 캐릭터 기준(계정이 아니라 서버별 이름).
@@ -382,6 +408,8 @@ export interface AdminWhisperRow {
   deletedAt: Date | null;
   createdAt: Date;
   reports: number;
+  reporters: string[];
+  warnedAt: Date | null;
 }
 
 /**
@@ -407,6 +435,8 @@ export async function listWhisperThread(opts: {
       createdAt: whisperMessages.createdAt,
       // 귓속말은 자동 숨김 임계가 없다 — 신고는 이 숫자로만 드러나고 처리는 검수자 판단.
       reports: sql<number>`(select count(*)::int from whisper_reports r where r.message_id = ${whisperMessages.id})`,
+      reporters: reportersSql('whisper_reports', sql`${whisperMessages.id}`, sql`${whisperMessages.serverId}`),
+      warnedAt: warnedAtSql('whisper_message', sql`${whisperMessages.id}`),
     })
     .from(whisperMessages)
     .where(
@@ -450,6 +480,8 @@ export async function listReportedWhispers(opts: {
       deletedAt: whisperMessages.deletedAt,
       createdAt: whisperMessages.createdAt,
       reports: reportCount,
+      reporters: reportersSql('whisper_reports', sql`${whisperMessages.id}`, sql`${whisperMessages.serverId}`),
+      warnedAt: warnedAtSql('whisper_message', sql`${whisperMessages.id}`),
     })
     .from(whisperMessages)
     .where(and(...conds))
