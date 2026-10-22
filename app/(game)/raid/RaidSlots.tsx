@@ -6,7 +6,7 @@ import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   RAID_TIERS,
@@ -28,6 +28,13 @@ import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
 import { DEFAULT_RAID_OPEN_PREFS, type RaidOpenPrefs } from '@/lib/game/raid/open-prefs';
+
+/** 참여 가능한 레이드 세그먼트 키 — 주소 ?seg= 값과 같다(all은 주소에 안 적는다). */
+type OpenSeg = 'all' | 'invite' | 'guild' | 'friend';
+const OPEN_SEGS: readonly OpenSeg[] = ['all', 'invite', 'guild', 'friend'];
+function isOpenSeg(v: string | null): v is OpenSeg {
+  return v !== null && (OPEN_SEGS as readonly string[]).includes(v);
+}
 
 /**
  * 슬롯 셀 — 활성 레이드와 정산 대기(미수령 보상)를 한 목록에서 표현(grow 패턴).
@@ -342,8 +349,17 @@ export function RaidSlots({
 }) {
   const router = useRouter();
   const { showError } = useResourceToast();
-  // 참여 가능한 레이드 세그먼트(전체/초대/길드/친구) — 화면 안 상태(기본 전체).
-  const [seg, setSeg] = useState<'all' | 'invite' | 'guild' | 'friend'>('all');
+  // 참여 가능한 레이드 세그먼트(전체/초대/길드/친구) — 고른 탭은 주소(?seg=)에 적어 둔다(2026-10-22, 유저 문의).
+  // 화면 안 state만으로는 상세에 들어갔다 뒤로 오면 목록이 다시 그려지며 전체로 돌아갔다. replaceState라
+  // 탭 전환이 기록을 쌓지 않고, 상세의 뒤로가기(router.back)가 ?seg= 그대로의 목록으로 돌아온다.
+  // 다른 화면에서 /raid로 새로 들어오면 주소에 seg가 없어 전체에서 시작한다(이전과 같음).
+  const sp = useSearchParams();
+  const segParam = sp.get('seg');
+  const [seg, setSeg] = useState<OpenSeg>(isOpenSeg(segParam) ? segParam : 'all');
+  const changeSeg = (k: OpenSeg) => {
+    setSeg(k);
+    window.history.replaceState(null, '', k === 'all' ? '/raid' : `/raid?seg=${k}`);
+  };
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
@@ -543,7 +559,7 @@ export function RaidSlots({
           <Tabs
             size="sm"
             value={seg}
-            onChange={setSeg}
+            onChange={changeSeg}
             items={[
               { key: 'all', label: `전체 ${openRaids.length}` },
               { key: 'invite', label: `초대 ${openRaids.filter((f) => f.via === 'invite').length}` },
