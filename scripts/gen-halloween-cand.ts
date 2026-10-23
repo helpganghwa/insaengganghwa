@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
-  tone: 'bright' | 'dark';
+  tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1;
+  batch: 1 | 2;
 };
 
 const TAIL_BRIGHT: Record<Slot, string> = {
@@ -50,11 +50,22 @@ const TAIL_DARK: Record<Slot, string> = {
   accessory: 'a beautiful clean fantasy anime RPG gacha-game item, elegant and stylish, a single isolated object on a plain flat empty background, pixel art',
 };
 
+// 2차 분장 세트 — 할로윈 축제 분장 옷 느낌(귀엽고 장난스럽게), 고딕 금지 꼬리표는 뺀다.
+const TAIL_COSTUME: Record<Slot, string> = {
+  weapon: 'a beautiful clean fantasy anime RPG gacha-game Halloween costume weapon, cute and festive, a single isolated object on a plain flat empty background, large, pixel art',
+  armor: 'a beautiful clean fantasy anime RPG gacha-game Halloween costume outfit, cute and festive, shown as the worn outfit on its own with no head and no neck, a slim full-length figure, a single isolated object on a plain flat empty background, pixel art',
+  accessory: 'a beautiful clean fantasy anime RPG gacha-game Halloween costume item, cute and festive, a single isolated object on a plain flat empty background, pixel art',
+};
+
 export const SET_NAME: Record<HalloweenCand['set'], string> = {
   smith: '대장장이',
   bride: '유령 신부',
   frank: '프랑켄슈타인',
   maid: '유령 저택 메이드',
+  smith2: '대장장이(2차)',
+  ghost: '유령 분장',
+  orc: '오크 분장',
+  skeleton: '해골 분장',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -228,10 +239,91 @@ export const CANDIDATES: HalloweenCand[] = [
     art:
       'a white ruffled lace maid headband with two trailing black ribbons and a tiny silver spider charm, dainty and eerie',
   },
+  // ══ 2차(10-23): 대장장이(유머) · 유령 분장 · 오크 분장 · 해골 분장 — 세트마다 1안씩 12장 ══
+  {
+    key: 'hw2_smith_hammer', nameKo: '말하는 담금망치', set: 'smith2', slot: 'weapon', tone: 'bright', batch: 2,
+    concept: '망치 머리에 투덜대는 얼굴(부릅뜬 눈·팔자 콧수염·벌린 입), 머리 끝이 달아올라 있음',
+    art:
+      'a sturdy blacksmith forging hammer whose dark iron head has a grumpy cartoon face: big glaring eyes, bushy eyebrows, a thick curled mustache and an open shouting mouth, ' +
+      'one end of the head glowing orange-hot with tiny sparks, a worn wooden handle wrapped in leather, funny and charming, clearly a hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw2_smith_apron', nameKo: '손때 묻은 가죽 앞치마', set: 'smith2', slot: 'armor', tone: 'bright', batch: 2,
+    concept: '평범한 갈색 가죽 앞치마, 소매 걷은 셔츠',
+    art:
+      'a plain blacksmith work outfit: a simple brown leather apron over a cream linen shirt with the sleeves rolled up, ' +
+      'a plain leather belt, dark trousers and sturdy boots, simple and tidy',
+  },
+  {
+    key: 'hw2_smith_scarf', nameKo: '불똥 막이 두건', set: 'smith2', slot: 'accessory', tone: 'bright', batch: 2,
+    concept: '뒤로 묶은 천 두건, 기운 자국',
+    art:
+      'a blacksmith cloth headscarf: a rust-red cotton bandana tied at the back with two short trailing ends, a small sewn patch on the side, simple and neat',
+  },
+  {
+    key: 'hw2_ghost_basket', nameKo: '사탕 가득 호박 바구니', set: 'ghost', slot: 'weapon', tone: 'costume', batch: 2,
+    concept: '호박 얼굴 바구니에 포장 사탕이 넘침, 긴 손잡이',
+    art:
+      'a trick-or-treat jack-o-lantern bucket with a cute carved smiling face, overflowing with colorful wrapped candies and lollipops, hanging from a long curved handle, ' +
+      'cute and festive, clearly a weapon held by the handle, no text, large, diagonal',
+  },
+  {
+    key: 'hw2_ghost_sheet', nameKo: '바닥에 끌리는 홑청 망토', set: 'ghost', slot: 'armor', tone: 'costume', batch: 2,
+    concept: '흰 천을 뒤집어쓴 유령 분장, 물결치는 밑단, 주황 리본 사탕 주머니',
+    art:
+      'a ghost costume: a long flowing white sheet robe with a wavy ragged hem trailing on the ground, loose wide sleeves, ' +
+      'a small orange ribbon bow and a little candy pouch at the waist, soft and cute',
+  },
+  {
+    key: 'hw2_ghost_mask', nameKo: '눈구멍 뚫린 유령 가면', set: 'ghost', slot: 'accessory', tone: 'costume', batch: 2,
+    concept: '둥근 눈구멍 두 개를 뚫은 흰 천 두건 가면',
+    art:
+      'a white cloth ghost hood mask with two round black eye holes and a small round mouth hole, soft fabric folds, a tiny orange bow on top, cute and spooky',
+  },
+  {
+    key: 'hw2_orc_club', nameKo: '호박 매단 가시 몽둥이', set: 'orc', slot: 'weapon', tone: 'costume', batch: 2,
+    concept: '쇠 가시 박힌 커다란 나무 몽둥이, 끈으로 묶은 작은 호박등',
+    art:
+      'a huge crude wooden club studded with iron spikes, a small carved jack-o-lantern tied to it with rope, orange and purple cloth strips wrapped around the grip, ' +
+      'bold and playful, clearly a club weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw2_orc_vest', nameKo: '누덕누덕 털가죽 조끼', set: 'orc', slot: 'armor', tone: 'costume', batch: 2,
+    concept: '털 달린 가죽 조끼, 한쪽 어깨 가죽 갑판, 주황·보라 줄무늬 바지',
+    art:
+      'an orc costume: a shaggy fur-trimmed patchwork leather vest, a single crude leather shoulder plate with bone studs, a rope belt with a big tusk buckle, ' +
+      'orange and purple striped baggy trousers and fur boots, rugged and playful',
+  },
+  {
+    key: 'hw2_orc_mask', nameKo: '엄니 달린 오크 가면', set: 'orc', slot: 'accessory', tone: 'costume', batch: 2,
+    concept: '초록 오크 반가면, 큰 아래 엄니, 뾰족 귀',
+    art:
+      'a green orc half-mask with two big upward tusks, a heavy brow, and long pointed green ears on a headband, painted orange tribal stripes, bold and funny',
+  },
+  {
+    key: 'hw2_skel_bone', nameKo: '리본 묶은 뼈다귀 곤봉', set: 'skeleton', slot: 'weapon', tone: 'costume', batch: 2,
+    concept: '커다란 흰 뼈다귀, 손잡이에 보라 리본',
+    art:
+      'a giant white bone club shaped like a big cartoon femur, a purple ribbon bow tied around the grip, small orange candy charms hanging from the bow, ' +
+      'playful and spooky, clearly a club weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw2_skel_suit', nameKo: '뼈 무늬 쫄쫄이 옷', set: 'skeleton', slot: 'armor', tone: 'costume', batch: 2,
+    concept: '검은 전신 옷에 흰 갈비뼈·팔다리뼈 무늬, 짧은 보라 망토',
+    art:
+      'a skeleton costume: a black full-body suit printed with white ribs, spine and arm and leg bones, a short purple cape over the shoulders, ' +
+      'black gloves with white finger bones, playful and spooky',
+  },
+  {
+    key: 'hw2_skel_mask', nameKo: '꽃 얹은 해골 반가면', set: 'skeleton', slot: 'accessory', tone: 'costume', batch: 2,
+    concept: '하얀 해골 반가면, 이마에 주황 꽃 한 송이',
+    art:
+      'a white skull half-mask with big round black eye sockets and a little stitched grin, a single orange flower tucked at the brow, cute and spooky',
+  },
 ];
 
 export function promptOf(c: HalloweenCand): string {
-  const tail = (c.tone === 'bright' ? TAIL_BRIGHT : TAIL_DARK)[c.slot];
+  const tail = (c.tone === 'bright' ? TAIL_BRIGHT : c.tone === 'costume' ? TAIL_COSTUME : TAIL_DARK)[c.slot];
   return `${c.art}, ${tail}`;
 }
 
@@ -341,7 +433,9 @@ async function genOne(c: HalloweenCand, key: string): Promise<'ok' | 'skip' | 'f
 
 async function main(): Promise<void> {
   const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',').filter(Boolean);
-  const list = only ? CANDIDATES.filter((c) => only.includes(c.key)) : CANDIDATES;
+  const batchArg = Number(process.argv.find((a) => a.startsWith('--batch='))?.slice(8) ?? 0);
+  const pool = batchArg ? CANDIDATES.filter((c) => c.batch === batchArg) : CANDIDATES;
+  const list = only ? pool.filter((c) => only.includes(c.key)) : pool;
   if (process.argv.includes('--dry')) {
     for (const c of list) console.log(`[${SET_NAME[c.set]}/${c.slot}] ${c.key} ${c.nameKo}\n  ${promptOf(c)}\n`);
     return;

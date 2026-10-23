@@ -1438,5 +1438,53 @@
   "hw_maid_cap_b": {
     "key": "key3",
     "objectId": "84d585aa-a72e-4d37-a8de-e74e058b21ad"
+  },
+  "hw2_ghost_basket": {
+    "key": "key3",
+    "objectId": "570fa1fd-6b11-46a1-aefd-ab9275e4b94b"
+  },
+  "hw2_smith_hammer": {
+    "key": "key3",
+    "objectId": "5717098a-11c0-465a-b57c-d17e8b1b0933"
+  },
+  "hw2_smith_scarf": {
+    "key": "key3",
+    "objectId": "0aa98675-ff0c-46d5-a5cb-b6087a08f1a4"
+  },
+  "hw2_smith_apron": {
+    "key": "key3",
+    "objectId": "92c38e2a-6452-4ef5-bc11-a905827f6d15"
+  },
+  "hw2_ghost_sheet": {
+    "key": "key3",
+    "objectId": "0d751af3-2656-4add-a88a-70014d77fd6f"
+  },
+  "hw2_ghost_mask": {
+    "key": "key3",
+    "objectId": "e287ca94-3b7e-4605-b680-bda2dbb1b542"
+  },
+  "hw2_orc_club": {
+    "key": "key3",
+    "objectId": "c72a537a-c1a7-44fc-bbf8-049c61354c48"
+  },
+  "hw2_orc_vest": {
+    "key": "key3",
+    "objectId": "f4e6dadd-6ae0-4750-bc0e-21a44a6b3f60"
+  },
+  "hw2_orc_mask": {
+    "key": "key3",
+    "objectId": "de044465-1005-42d5-a8dd-5f7409a183e3"
+  },
+  "hw2_skel_bone": {
+    "key": "key3",
+    "objectId": "6aafc685-e62f-40fa-a269-05879380001d"
+  },
+  "hw2_skel_suit": {
+    "key": "key3",
+    "objectId": "98a84873-9646-4ccd-a255-0e09dc0d5eee"
+  },
+  "hw2_skel_mask": {
+    "key": "key3",
+    "objectId": "f9b8524a-a293-47c2-8ac0-e545f8666816"
   }
 }
