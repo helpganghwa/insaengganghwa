@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -200,6 +200,11 @@ export default async function RaidPage() {
     ).map((r) => r.raidId.toString()),
   );
 
+  // 친구/길드 목록 상한(2026-10-23 핫픽스, 진주 문의) — 종전 정렬 없는 limit 20은 만료 이른 순으로 잘려,
+  // 큰 길드가 하루 20건 넘게 소환하면 **가장 최근 소환한 레이드가 길드원에게 안 보였다**(Winners 21건째).
+  // 최근 소환이 위로 오게 정렬하고, 친구 50·길드원 수를 넘도록 넉넉히 잡는다(만석 제외라 실제 행은 그보다 적다).
+  const RAID_LIST_LIMIT = 60;
+
   // 친구가 소환한 레이드 — 친구 공개·활성·미만료, 내가 이미 참여 중인 건 제외.
   const friendIds = await withTimeout(getFriendIds(userId, serverId), 3500, 'raid.friendIds').catch(
     () => [] as string[],
@@ -238,7 +243,8 @@ export default async function RaidPage() {
             inArray(raids.hostUserId, friendIds),
           ),
         )
-        .limit(20),
+        .orderBy(desc(raids.openedAt))
+        .limit(RAID_LIST_LIMIT),
       3500,
       'raid.friendRaids',
     ).catch(() => [] as never[]);
@@ -274,7 +280,8 @@ export default async function RaidPage() {
         left join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
         where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
           and (select count(*) from raid_participants rp2 where rp2.raid_id = r.id) < ${RAID_MAX_PARTICIPANTS}
-        limit 20
+        order by r.opened_at desc
+        limit ${RAID_LIST_LIMIT}
       `),
       3500,
       'raid.guildRaids',
