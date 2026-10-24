@@ -147,9 +147,8 @@ async function rankByValue(
 ): Promise<MyRankSnap> {
   // ne(userId)는 논리적으로 잉여(자기 값은 자기보다 클 수 없음) — 제거하면 value_idx
   // index-only 스캔이 가능해 힙 방문이 사라진다(리뷰 2026-07-07).
-  // 알려진 한계: myValue가 live 재계산 값(getMyRanksAfter)이고 하락 직후 증분 훅이
-  // 실패(best-effort)하면 내 낡은 상위 행이 count에 포함돼 순위가 1 나쁘게 보일 수 있다 —
-  // 다음 훅/시간별 크론이 교정하는 드문 표시 오차로, 핫패스 index-only를 유지하는 쪽을 택함.
+  // 여기 myValue는 내 보드 행 값 그대로라 자기 자신이 count에 들어갈 일이 없다. 실시간 재계산 값으로
+  // 순위를 내는 getMyRanksAfter는 낡은 내 행을 따로 빼 준다(2026-10-24).
   const [c] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(leaderboardRanks)
@@ -322,6 +321,9 @@ export async function getMyRanksAfter(userId: string, serverId: number): Promise
 
   // 3메트릭 순위 count를 VALUES 조인 단일 쿼리로 — 병렬 3왕복→1(2026-08-20).
   // metric은 text 컬럼이라 캐스팅 없이 (server_id, metric, value) 인덱스 count 유지.
+  // 내 보드 행은 응답 뒤 사후처리(after → refreshEnhanceMetrics)에서야 갱신되므로, 하락 직후엔
+  // 낡은 상위 값인 '나 자신'이 count에 들어가 순위가 항상 1 나쁘게 보였다(10-24 또랑또랑 문의:
+  // 실패 후 #15→#16). 내 행 값이 새 값보다 크면 1을 뺀다 — 내 행은 PK 단건 조회라 index-only count 유지.
   const wanted: [LeaderboardMetric, number][] = [];
   if (myMax > 0) wanted.push(['max', myMax]);
   if (mySum > 0) wanted.push(['sum', mySum]);
@@ -338,7 +340,10 @@ export async function getMyRanksAfter(userId: string, serverId: number): Promise
       db.execute(sql`
         select m.metric, m.val,
                (select count(*) from leaderboard_ranks o
-                 where o.server_id = ${serverId} and o.metric = m.metric and o.value > m.val)::int as ahead
+                 where o.server_id = ${serverId} and o.metric = m.metric and o.value > m.val)::int
+               - coalesce((select 1 from leaderboard_ranks me
+                 where me.server_id = ${serverId} and me.metric = m.metric
+                   and me.user_id = ${userId}::uuid and me.value > m.val), 0) as ahead
         from (values ${valuesSql}) as m(metric, val)
       `),
       TIMEOUT_MS,
