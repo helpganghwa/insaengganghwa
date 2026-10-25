@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3 | 4 | 5;
+  batch: 1 | 2 | 3 | 4 | 5 | 6;
   /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
   tailAs?: Slot;
 };
@@ -78,6 +78,8 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   vampire: '뱀파이어 백작',
   smith5: '대장장이(5차 · 명장, 특색·디테일)',
   vampire2: '꼬마 뱀파이어 분장',
+  smith6: '대장장이 장신구(6차 · 고글 대체)',
+  household: '유령 저택 하인(메이드·집사 통합)',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -541,6 +543,54 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '머리띠 양쪽에 작은 박쥐 날개, 가운데 빨간 보석',
     art:
       'a cute headband with two small black bat wings perked up on both sides and a little red heart gem in the middle, soft plush look, cute and festive',
+  },
+  // ══ 6차(10-26): 대장장이 장신구 교체(보안경이 '재를 막는 눈'과 겹침) A 가죽 장갑·C 이마띠 + 메이드·집사 통합 세트 '유령 저택 하인'(귀여운 코스튬) ══
+  {
+    key: 'hw6_smith_gloves', nameKo: '불똥 앉은 가죽 장갑', set: 'smith6', slot: 'accessory', tone: 'bright', batch: 6,
+    concept: '두꺼운 가죽 작업 장갑 한 켤레, 불똥 자국, 손목 놋쇠 버클',
+    art:
+      "a pair of thick brown leather blacksmith work gloves with long cuffs, small dark ember burn marks scattered on the fingers, brass buckles and stitched reinforcement patches at the wrists, " +
+      'sturdy and finely crafted',
+  },
+  {
+    key: 'hw6_smith_band', nameKo: '인장 박은 가죽 이마띠', set: 'smith6', slot: 'accessory', tone: 'bright', batch: 6,
+    concept: '땀받이 가죽 이마띠, 가운데 망치·모루 인장 놋쇠 판',
+    art:
+      'a dark brown leather sweatband headband tied at the back with two short leather cords, a polished brass plate in the front stamped with a hammer-and-anvil seal, ' +
+      'fine stitching along the edges, sturdy and finely crafted',
+  },
+  {
+    key: 'hw6_house_tray', nameKo: '사탕 숨긴 은쟁반', set: 'household', slot: 'weapon', tone: 'costume', batch: 6,
+    concept: '클로시를 덮은 은 쟁반, 뚜껑이 살짝 들려 안에 사탕과 작은 호박이 보임',
+    art:
+      'a shiny silver serving tray with a domed silver cloche lid lifted slightly open, wrapped candies and a tiny jack-o-lantern peeking out from inside, ' +
+      'a little black bat-wing knob on top of the lid, cute and festive, clearly a held tray weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw6_house_dress', nameKo: '유령 저택 하인복(메이드)', set: 'household', slot: 'armor', tone: 'costume', batch: 6,
+    concept: '여성 장착판 — 검정 메이드 원피스, 흰 프릴 앞치마(가장자리 주황), 작은 박쥐 무늬',
+    art:
+      'a cute Halloween maid costume: a short-sleeved black dress with puffed sleeves, a white frilly apron trimmed in orange with tiny bat prints, ' +
+      'a purple ribbon at the waist, white frilled socks and black strap shoes, cute and festive',
+  },
+  {
+    key: 'hw6_house_suit', nameKo: '유령 저택 하인복(집사)', set: 'household', slot: 'armor', tone: 'costume', batch: 6,
+    concept: '남성 장착판 — 짧은 검정 연미복, 주황 안감, 보라 조끼, 흰 장갑',
+    art:
+      "a cute Halloween butler costume: a short black tailcoat with an orange lining, a purple waistcoat with little pumpkin buttons, a white shirt, " +
+      'white gloves, black trousers and polished shoes, cute and festive, a boy\'s outfit',
+  },
+  {
+    key: 'hw6_house_keys', nameKo: '해골 열쇠 꾸러미', set: 'household', slot: 'accessory', tone: 'costume', batch: 6,
+    concept: '허리에 거는 저택 열쇠 꾸러미, 해골·박쥐·호박 모양 열쇠',
+    art:
+      'a big ring of antique mansion keys to hang at the waist, keys with little skull, bat and pumpkin shaped bows, a small brass tag, cute and spooky',
+  },
+  {
+    key: 'hw6_house_tie', nameKo: '호박 단추 리본 타이', set: 'household', slot: 'accessory', tone: 'costume', batch: 6,
+    concept: '메이드·집사 공용 목 리본 — 검정 리본 타이, 가운데 작은 호박 단추, 흰 레이스 깃',
+    art:
+      'a black satin ribbon bow tie on a small white lace collar, a tiny orange pumpkin button in the center of the bow, short ribbon tails, cute and festive',
   },
 ];
 

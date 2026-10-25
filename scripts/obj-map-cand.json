@@ -1606,5 +1606,33 @@
   "hw5_vamp_headband": {
     "key": "key3",
     "objectId": "7b1dde3d-154f-45be-b62a-a58c06d13c06"
+  },
+  "hw6_smith_gloves": {
+    "key": "key3",
+    "objectId": "683b9892-b0f9-4238-997d-c56353217a4b"
+  },
+  "hw6_smith_band": {
+    "key": "key3",
+    "objectId": "fbac2cff-658a-4e0f-845c-4634261c4a13"
+  },
+  "hw6_house_tray": {
+    "key": "key3",
+    "objectId": "1d3f20ff-bd69-41a8-98ff-76f1e97aa5cd"
+  },
+  "hw6_house_dress": {
+    "key": "key3",
+    "objectId": "704b7f40-dd38-47e2-908f-52fdec1c98ae"
+  },
+  "hw6_house_suit": {
+    "key": "key3",
+    "objectId": "85cf86d8-ecff-4443-bb33-9b303fa76c48"
+  },
+  "hw6_house_keys": {
+    "key": "key3",
+    "objectId": "83d5d38f-82e5-4b3a-9985-674f51ffeebb"
+  },
+  "hw6_house_tie": {
+    "key": "key3",
+    "objectId": "8b0ff5cf-6eef-4a17-860c-4fd433995ec4"
   }
 }
