@@ -1582,5 +1582,29 @@
   "hw4_vamp_brooch": {
     "key": "key3",
     "objectId": "f75ab0e4-1f85-4c7c-b819-6f6459c30266"
+  },
+  "hw5_smith_goggles": {
+    "key": "key3",
+    "objectId": "2611a9f1-dfa1-4689-a0f4-e07d92a50f8d"
+  },
+  "hw5_smith_apron": {
+    "key": "key3",
+    "objectId": "2a9c1dd3-b6ce-46ce-bc7a-d39acc2af8d6"
+  },
+  "hw5_smith_hammer": {
+    "key": "key3",
+    "objectId": "593ad844-8b33-4de0-98f5-56b47f6628d1"
+  },
+  "hw5_vamp_cape": {
+    "key": "key3",
+    "objectId": "05444601-a09a-42f9-b02d-728bb7af0662"
+  },
+  "hw5_vamp_wand": {
+    "key": "key3",
+    "objectId": "f9a036c8-9ab8-4fa5-94de-e9a73ed81ac7"
+  },
+  "hw5_vamp_headband": {
+    "key": "key3",
+    "objectId": "7b1dde3d-154f-45be-b62a-a58c06d13c06"
   }
 }

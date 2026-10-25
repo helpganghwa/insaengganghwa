@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3 | 4;
+  batch: 1 | 2 | 3 | 4 | 5;
   /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
   tailAs?: Slot;
 };
@@ -76,6 +76,8 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   butler: '유령 저택 집사',
   smith4: '대장장이(4차 · 명장의 대장간)',
   vampire: '뱀파이어 백작',
+  smith5: '대장장이(5차 · 명장, 특색·디테일)',
+  vampire2: '꼬마 뱀파이어 분장',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -496,6 +498,49 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '높은 깃에 다는 루비 브로치, 은 세공',
     art:
       'an ornate silver collar brooch set with a large deep red ruby, delicate filigree bat-wing scrolls on both sides, a short silver chain hanging below, refined and aristocratic',
+  },
+  // ══ 5차(10-26): 4차 피드백 — 대장장이 무기·장신구는 더 특색 있게, 앞치마는 더 디테일하게 / 뱀파이어는 귀여운 할로윈 코스튬으로 ══
+  {
+    key: 'hw5_smith_hammer', nameKo: '인장 새긴 명장 망치', set: 'smith5', slot: 'weapon', tone: 'bright', batch: 5,
+    concept: '머리 옆면에 망치와 모루 인장, 한쪽 면이 달궈져 빛남, 자루에 놋쇠 명장 패',
+    art:
+      "a master blacksmith's forging hammer with a broad dark steel head engraved on its side with a hammer-and-anvil seal, one striking face still glowing orange from the forge, " +
+      'a long ash-wood handle wrapped in braided leather, a small brass master tag hanging from a cord at the end, distinctive and finely crafted, clearly a hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw5_smith_apron', nameKo: '연장 꽂힌 장인 앞치마', set: 'smith5', slot: 'armor', tone: 'bright', batch: 5, tailAs: 'accessory',
+    concept: '앞치마만(몸 없이). 덧댄 가죽, 박음질 무늬, 망치·모루 문양, 연장 주머니 여럿, 놋쇠 리벳',
+    art:
+      "a richly detailed brown leather master blacksmith's apron on its own, from chest to knees, layered patched leather panels with decorative stitching and brass rivets, " +
+      'an embossed hammer-and-anvil emblem on the chest, several front pockets holding small tongs, a chisel, a file and a folding ruler, crossed leather straps with brass buckles, ' +
+      'darkened scorch marks along the hem, finely crafted',
+  },
+  {
+    key: 'hw5_smith_goggles', nameKo: '겹렌즈 장인 보안경', set: 'smith5', slot: 'accessory', tone: 'bright', batch: 5,
+    concept: '놋쇠 보안경에 접었다 펴는 확대 렌즈가 여러 겹, 호박색 렌즈',
+    art:
+      'a pair of round brass master craftsman goggles on a leather strap, deep amber lenses with extra small magnifying lenses on swing-down brass arms stacked over one eye, ' +
+      'tiny gears and rivets on the rims, distinctive and finely crafted',
+  },
+  {
+    key: 'hw5_vamp_wand', nameKo: '박쥐 날개 하트 사탕봉', set: 'vampire2', slot: 'weapon', tone: 'costume', batch: 5,
+    concept: '빨간 하트 막대사탕에 작은 박쥐 날개, 줄무늬 막대',
+    art:
+      'a cute red heart-shaped lollipop wand with little black bat wings on both sides, a tiny pair of fangs drawn on the heart, a black and red striped stick with a ribbon bow, ' +
+      'cute and festive, clearly a wand weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw5_vamp_cape', nameKo: '헐렁한 꼬마 백작 망토', set: 'vampire2', slot: 'armor', tone: 'costume', batch: 5,
+    concept: '몸보다 큰 높은 깃 망토(빨간 안감, 작은 박쥐 무늬), 귀여운 미니 연미복',
+    art:
+      'a cute little vampire costume: an oversized black cape with a tall pointed collar and a bright red lining dotted with tiny bat prints, ' +
+      'a short black tailcoat with a red bow at the neck, puffy shorts, striped stockings and little buckled shoes, cute and festive',
+  },
+  {
+    key: 'hw5_vamp_headband', nameKo: '쫑긋 박쥐 날개 머리띠', set: 'vampire2', slot: 'accessory', tone: 'costume', batch: 5,
+    concept: '머리띠 양쪽에 작은 박쥐 날개, 가운데 빨간 보석',
+    art:
+      'a cute headband with two small black bat wings perked up on both sides and a little red heart gem in the middle, soft plush look, cute and festive',
   },
 ];
 
