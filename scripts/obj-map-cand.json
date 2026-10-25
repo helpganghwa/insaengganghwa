@@ -1558,5 +1558,29 @@
   "hw3_butler_tie": {
     "key": "key3",
     "objectId": "e9ad57ae-22af-41e8-a561-992fbabaf524"
+  },
+  "hw4_smith_goggles": {
+    "key": "key3",
+    "objectId": "ff432923-c109-4ba5-b0a8-ba23966e70f8"
+  },
+  "hw4_smith_hammer": {
+    "key": "key3",
+    "objectId": "3c682b50-0256-4eb5-a244-9958a418be06"
+  },
+  "hw4_smith_apron": {
+    "key": "key3",
+    "objectId": "b1c6e000-dea7-495a-9ca6-78b1c8b60de4"
+  },
+  "hw4_vamp_cane": {
+    "key": "key3",
+    "objectId": "2e9a57af-9a21-41e4-a810-a479a48df5b5"
+  },
+  "hw4_vamp_coat": {
+    "key": "key3",
+    "objectId": "f6ac0b1f-d6f4-4394-818e-e93d4b819b04"
+  },
+  "hw4_vamp_brooch": {
+    "key": "key3",
+    "objectId": "f75ab0e4-1f85-4c7c-b819-6f6459c30266"
   }
 }

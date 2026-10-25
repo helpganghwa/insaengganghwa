@@ -30,13 +30,15 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3;
+  batch: 1 | 2 | 3 | 4;
+  /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
+  tailAs?: Slot;
 };
 
 const TAIL_BRIGHT: Record<Slot, string> = {
@@ -72,6 +74,8 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   fallen: '타락천사 분장',
   smith3: '대장장이(3차 · 호박 대장간)',
   butler: '유령 저택 집사',
+  smith4: '대장장이(4차 · 명장의 대장간)',
+  vampire: '뱀파이어 백작',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -451,10 +455,52 @@ export const CANDIDATES: HalloweenCand[] = [
     art:
       'a black satin bow tie shaped like a pair of small bat wings, a round silver brooch with a tiny pale blue gem in the center, refined and charming',
   },
+  // ══ 4차(10-26): 대장장이 정통(명장의 대장간, 할로윈 컨셉 제외) + 뱀파이어 백작 — 세트마다 1안씩 6장 ══
+  // 앞치마는 그림에 앞치마만(몸·셔츠 없이) 그리고, 리넨 셔츠는 착용 묘사·로어에서 더한다(10-26 사용자 지시).
+  {
+    key: 'hw4_smith_hammer', nameKo: '명장의 단조 망치', set: 'smith4', slot: 'weapon', tone: 'bright', batch: 4,
+    concept: '손때 묻은 단조 망치, 자루에 가죽 감기와 놋쇠 띠, 전투 망치보다 작고 단정',
+    art:
+      "a master blacksmith's forging hammer: a compact well-worn dark steel head with one flat face and one rounded peen, a polished ash-wood handle wrapped in brown leather " +
+      'with two thin brass bands, finely crafted and dignified, clearly a hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw4_smith_apron', nameKo: '명장의 가죽 앞치마', set: 'smith4', slot: 'armor', tone: 'bright', batch: 4, tailAs: 'accessory',
+    concept: '두꺼운 가죽 앞치마만(몸 없이). 리넨 셔츠는 착용 묘사에서 더한다',
+    art:
+      "a thick brown leather master blacksmith's apron laid out flat on its own, from chest to knees, neat stitched edges, brass buckles on the neck strap and waist ties, " +
+      'two tool pockets on the front holding a small chisel and a file, a few dark scorch marks, finely crafted and dignified',
+  },
+  {
+    key: 'hw4_smith_goggles', nameKo: '호박빛 놋쇠 보안경', set: 'smith4', slot: 'accessory', tone: 'bright', batch: 4,
+    concept: '이마에 올려 쓰는 놋쇠 보안경, 짙은 호박색 렌즈',
+    art:
+      "a pair of round brass blacksmith goggles on a thick leather strap, deep amber-tinted lenses, small rivets and side vents on the brass rims, finely crafted and dignified",
+  },
+  {
+    key: 'hw4_vamp_cane', nameKo: '박쥐 은장 지팡이', set: 'vampire', slot: 'weapon', tone: 'dark', batch: 4,
+    concept: '검은 지팡이, 손잡이에 날개 편 은 박쥐 장식, 붉은 보석',
+    art:
+      "a vampire count's elegant walking cane of glossy black wood, the silver handle shaped like a bat with spread wings holding a deep red ruby, " +
+      'a silver tip, refined and aristocratic, clearly a cane weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw4_vamp_coat', nameKo: '진홍 안감 백작 연미복', set: 'vampire', slot: 'armor', tone: 'dark', batch: 4,
+    concept: '진홍 안감의 검은 망토와 연미복, 높은 깃',
+    art:
+      "a vampire count's outfit: a black tailcoat with a deep crimson silk lining, a long black cape with a tall stand-up collar lined in crimson, " +
+      'a black brocade waistcoat with silver buttons, a white ruffled cravat, sharp black trousers and polished boots, refined and aristocratic',
+  },
+  {
+    key: 'hw4_vamp_brooch', nameKo: '핏빛 루비 깃 장식', set: 'vampire', slot: 'accessory', tone: 'dark', batch: 4,
+    concept: '높은 깃에 다는 루비 브로치, 은 세공',
+    art:
+      'an ornate silver collar brooch set with a large deep red ruby, delicate filigree bat-wing scrolls on both sides, a short silver chain hanging below, refined and aristocratic',
+  },
 ];
 
 export function promptOf(c: HalloweenCand): string {
-  const tail = (c.tone === 'bright' ? TAIL_BRIGHT : c.tone === 'costume' ? TAIL_COSTUME : TAIL_DARK)[c.slot];
+  const tail = (c.tone === 'bright' ? TAIL_BRIGHT : c.tone === 'costume' ? TAIL_COSTUME : TAIL_DARK)[c.tailAs ?? c.slot];
   return `${c.art}, ${tail}`;
 }
 
