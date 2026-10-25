@@ -8,6 +8,7 @@ import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
 import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 import { CHUSEOK_ITEM_CODES, CHUSEOK_START_ISO } from '@/lib/game/chuseok/config';
+import { HALLOWEEN_ITEM_CODES, HALLOWEEN_START_ISO } from '@/lib/game/halloween/config';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { sendMilestoneMail } from '@/lib/game/milestone-mail';
@@ -78,7 +79,12 @@ export async function openSupplyBoxes(input: {
           eq(catalogItems.slot, slot),
           // 한가위 6종은 DB 플래그(크론이 00:02~00:07에 켠다)가 아니라 **DB 시각**으로 정각에 풀에 든다(2026-09-23).
           // 확률 공시(getActiveCatalog)와 같은 판정이어야 공시-추첨이 어긋나지 않는다(§33).
-          or(eq(catalogItems.active, true), and(inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]), sql`now() >= ${CHUSEOK_START_ISO}::timestamptz`)),
+          // 할로윈 6종(2026-10)도 같은 방식.
+          or(
+            eq(catalogItems.active, true),
+            and(inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]), sql`now() >= ${CHUSEOK_START_ISO}::timestamptz`),
+            and(inArray(catalogItems.code, [...HALLOWEEN_ITEM_CODES]), sql`now() >= ${HALLOWEEN_START_ISO}::timestamptz`),
+          ),
         ),
       )
       .orderBy(catalogItems.id); // 균등분포 불변 + 순서 고정(테스트 RNG 인덱스 재현·결과 안정).

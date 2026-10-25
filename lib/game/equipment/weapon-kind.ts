@@ -31,6 +31,9 @@ const BY_KEY: Record<string, WeaponKind> = {
   // ── 한가위(2026-09, catalog-v6) ──
   chuseok_moon_wand: { noun: 'magic wand (a short rod topped with a glowing moon disc)' },
   chuseok_rabbit_pestle: { noun: 'wooden mallet (a large rice-cake pounding hammer, a squared wooden head crosswise on a long handle)' },
+  // ── 할로윈(2026-10, catalog-v7 임시) ──
+  halloween_smith_hammer: { noun: 'blacksmith hammer (a short one-handed forging hammer)' },
+  halloween_ghost_basket: { noun: 'candy basket (a carved pumpkin basket held by its handle)' },
   // ── 한손검·도 ──
   kingdom_ribbon_rapier: { noun: 'rapier (a slender one-handed sword)' },
   vampire_blood_rapier: { noun: 'rapier (a slender one-handed sword)' },

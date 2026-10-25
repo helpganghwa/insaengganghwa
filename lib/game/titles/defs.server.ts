@@ -5072,6 +5072,42 @@ export const TITLE_SECRETS: TitleSecret[] = [
   diff: "한정"
  },
  {
+  code: "halloween26_candy1",
+  cat: "할로윈",
+  cond: "2026 할로윈 사탕 40,000개 모으기",
+  diff: "한정"
+ },
+ {
+  code: "halloween26_candy2",
+  cat: "할로윈",
+  cond: "2026 할로윈 사탕 100,000개 모으기",
+  diff: "한정"
+ },
+ {
+  code: "halloween26_candy3",
+  cat: "할로윈",
+  cond: "2026 할로윈 사탕 150,000개 모으기",
+  diff: "한정"
+ },
+ {
+  code: "halloween26_rank3",
+  cat: "할로윈",
+  cond: "2026 할로윈 강화 대회 아무 장비 3등 안",
+  diff: "한정"
+ },
+ {
+  code: "halloween26_rank2",
+  cat: "할로윈",
+  cond: "2026 할로윈 강화 대회 아무 장비 2등 안",
+  diff: "한정"
+ },
+ {
+  code: "halloween26_rank1",
+  cat: "할로윈",
+  cond: "2026 할로윈 강화 대회 아무 장비 1등",
+  diff: "한정"
+ },
+ {
   code: "set_moon_miller",
   cat: "아이템 발동",
   cond: "보름달 떡메 + 토끼 인형 옷 + 접힌 토끼 귀 머리띠를 +30 이상으로 장착",

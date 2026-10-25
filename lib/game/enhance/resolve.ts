@@ -9,6 +9,7 @@ import {
   levelAfterFail, enhanceReadyGraceMs } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { accrueSongpyeon } from '@/lib/game/chuseok/songpyeon';
+import { accrueCandy } from '@/lib/game/halloween/candy';
 import { recordError } from '@/lib/ops/record-error';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
@@ -253,6 +254,17 @@ export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
       // 무음 실패 방지(2026-09-23 감사) — 어드민 오류 화면에서 보이게. 수동 적립 근거(job·level·at)는 위 로그.
       try {
         await recordError({ kind: 'chuseok-accrue', message: `job=${String(r.jobId)} user=${userId} server=${serverId} level=${toLevel} ${(e as Error)?.message ?? ''}` });
+      } catch {
+        // 기록 실패는 무시.
+      }
+    }
+    // 할로윈 사탕(2026-10, lib/game/halloween) — 송편과 같은 적립식(성공·mega마다 도달 단계만큼). 기간 밖이면 0(쿼리 없음).
+    try {
+      await accrueCandy({ userId, serverId, jobId: r.jobId, level: toLevel, at: postAt });
+    } catch (e) {
+      console.error(`[enhance.resolve] 사탕 적립 실패 job=${String(r.jobId)} user=${userId} server=${serverId} level=${toLevel} at=${postAt.toISOString()}`, e);
+      try {
+        await recordError({ kind: 'halloween-accrue', message: `job=${String(r.jobId)} user=${userId} server=${serverId} level=${toLevel} ${(e as Error)?.message ?? ''}` });
       } catch {
         // 기록 실패는 무시.
       }

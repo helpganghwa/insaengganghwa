@@ -11,6 +11,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from '../lib/db/schema';
 import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
 import { CHUSEOK_ITEM_KEYS } from '../lib/game/equipment/catalog-v6';
+import { HALLOWEEN_ITEM_KEYS } from '../lib/game/equipment/catalog-v7';
 
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
@@ -29,7 +30,8 @@ async function main() {
   let n = 0;
   // 한가위 6종(2026-09)은 **꺼진 채로** 넣는다 — 확률 공시 24시간 뒤(9/24 00:00 KST)에 크론(lib/game/chuseok/open.ts)이
   // 켠다. 기존 행의 active는 어느 쪽이든 건드리지 않는다(운영 관리).
-  const inactiveAtSeed = new Set(CHUSEOK_ITEM_KEYS);
+  // 할로윈 6종(2026-10)도 같은 방식 — 10/28 00:00 KST에 lib/game/halloween/open.ts가 켠다.
+  const inactiveAtSeed = new Set([...CHUSEOK_ITEM_KEYS, ...HALLOWEEN_ITEM_KEYS]);
   for (const c of CATALOG_ITEMS) {
     await db
       .insert(schema.catalogItems)

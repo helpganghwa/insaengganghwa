@@ -18,6 +18,7 @@ export type RlBucket =
   | 'worldBossPush' // 월드보스 신청·초대 푸시 쿨다운(10-11) — 키는 (원정대, 상대) 조합
   | 'enhance'
   | 'chuseok'
+  | 'halloween'
   | 'enhanceCancel'
   | 'enhancePreset'
   | 'expedition'
@@ -66,6 +67,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   // 도전 과제 수령 — 일회성 31건 유계라 느슨하게(연속 연타 = 정상 사용, 2026-07-15 CBT).
   challenge: [40, '10 s'],
   chuseok: [30, '10 s'],
+  halloween: [30, '10 s'],
   battlepass: [20, '10 s'],
   friend: [20, '10 s'], // 검색·요청·수락 스팸 방어
   guild: [20, '10 s'], // 기부·배치·가입·문양생성 자동화 방어

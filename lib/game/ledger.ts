@@ -33,6 +33,10 @@ export type LedgerReason =
   | 'chuseok_ladder'
   /** 한가위 송편 교환(다이아 상품) — ref=ex:<uuid>. */
   | 'chuseok_exchange'
+  /** 할로윈 사탕 도달 보상(2026-10) — ref=step:<n>. */
+  | 'halloween_ladder'
+  /** 할로윈 사탕 교환(다이아 상품) — ref=ex:<uuid>. */
+  | 'halloween_exchange'
   /** 상점 무료 수령(일일/주간/월간). */
   | 'shop_free'
   /** 결제 상품 지급 — ref=주문 id. */

@@ -5491,6 +5491,72 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "halloween26_candy1",
+  kind: "permanent",
+  label: "(임시) 달콤한 밤",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_candy2",
+  kind: "permanent",
+  label: "(임시) 사탕 사냥꾼",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_candy3",
+  kind: "permanent",
+  label: "(임시) 사탕 대왕",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank3",
+  kind: "permanent",
+  label: "(임시) 유령 기사",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank2",
+  kind: "permanent",
+  label: "(임시) 흡혈 백작",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank1",
+  kind: "permanent",
+  label: "(임시) 밤의 군주",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   color: "#98aaff",
+   glow: true
+  }
+ },
+ {
   code: "set_moon_miller",
   kind: "permanent",
   label: "달의 방아꾼",
