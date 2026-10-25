@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2;
+  batch: 1 | 2 | 3;
 };
 
 const TAIL_BRIGHT: Record<Slot, string> = {
@@ -66,6 +66,12 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   ghost: '유령 분장',
   orc: '오크 분장',
   skeleton: '해골 분장',
+  slime: '슬라임 분장',
+  golem: '골렘 분장',
+  dragon: '꼬마 용 분장',
+  fallen: '타락천사 분장',
+  smith3: '대장장이(3차 · 호박 대장간)',
+  butler: '유령 저택 집사',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -319,6 +325,131 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '하얀 해골 반가면, 이마에 주황 꽃 한 송이',
     art:
       'a white skull half-mask with big round black eye sockets and a little stitched grin, a single orange flower tucked at the brow, cute and spooky',
+  },
+  // ══ 3차(10-25): 세계관 분장 4세트(슬라임·골렘·꼬마 용·타락천사) + 대장장이 새 스타일(호박 대장간) + 메이드의 남성판(유령 저택 집사) — 세트마다 1안씩 18장 ══
+  {
+    key: 'hw3_slime_wand', nameKo: '말랑 슬라임 막대사탕', set: 'slime', slot: 'weapon', tone: 'costume', batch: 3,
+    concept: '막대 끝에 초록 젤리 슬라임이 붙은 막대사탕 지팡이',
+    art:
+      'a long candy-striped lollipop staff topped with a round glossy green jelly slime with a cute smiling face, the slime drooping slightly over a swirled orange and purple lollipop, ' +
+      'small slime droplets, cute and festive, clearly a staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_slime_poncho', nameKo: '줄줄 흐르는 점액 판초', set: 'slime', slot: 'armor', tone: 'costume', batch: 3,
+    concept: '초록 점액이 흘러내리는 판초, 밑단에 사탕 포장지',
+    art:
+      'a slime costume: a glossy translucent green jelly poncho dripping down in soft rounded drips, colorful wrapped candies stuck along the hem, ' +
+      'over an orange shirt, purple shorts and green boots, cute and bouncy',
+  },
+  {
+    key: 'hw3_slime_crown', nameKo: '왕관 쓴 슬라임 머리띠', set: 'slime', slot: 'accessory', tone: 'costume', batch: 3,
+    concept: '머리 위에 얹는 작은 슬라임, 슬라임이 금관을 쓴 모양',
+    art:
+      'a headband with a small round glossy green jelly slime on top wearing a tiny tilted golden crown, the slime with a cute sleepy face, ' +
+      'cute and funny',
+  },
+  {
+    key: 'hw3_golem_fist', nameKo: '균열 새는 돌주먹', set: 'golem', slot: 'weapon', tone: 'costume', batch: 3,
+    concept: '푸른 균열이 새는 커다란 돌주먹 장갑',
+    art:
+      'a huge stone gauntlet fist made of chunky grey carved stone blocks, glowing cyan-blue light leaking from the cracks between the stones, ' +
+      'a small carved pumpkin face on the back of the hand, sturdy and playful, clearly a gauntlet weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_golem_armor', nameKo: '돌무더기 상자 갑옷', set: 'golem', slot: 'armor', tone: 'costume', batch: 3,
+    concept: '돌 조각을 이어 붙인 네모난 갑옷, 틈마다 푸른빛',
+    art:
+      'a golem costume: a boxy armor made of square grey stone slabs fitted together, soft cyan-blue light glowing in every seam, ' +
+      'chunky stone shoulder blocks, stone-block boots, an orange sash at the waist, sturdy and cute',
+  },
+  {
+    key: 'hw3_golem_helm', nameKo: '눈빛 새는 돌 투구', set: 'golem', slot: 'accessory', tone: 'costume', batch: 3,
+    concept: '잭오랜턴처럼 눈과 입을 파낸 돌 투구, 안에서 푸른 불빛',
+    art:
+      'a round grey stone helmet carved like a jack-o-lantern with triangle eyes and a jagged grin, cyan-blue light glowing from inside the carved holes, ' +
+      'a little moss on top, playful and spooky',
+  },
+  {
+    key: 'hw3_dragon_staff', nameKo: '불씨 뱉는 용머리 지팡이', set: 'dragon', slot: 'weapon', tone: 'costume', batch: 3,
+    concept: '입에서 작은 불꽃이 나오는 용머리 지팡이',
+    art:
+      'a wooden staff topped with a cute carved baby dragon head with big round eyes, a small orange flame puffing from its open mouth, ' +
+      'a red scarf tied below the head, cute and festive, clearly a staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_dragon_cloak', nameKo: '꼬리 달린 비늘 후드 망토', set: 'dragon', slot: 'armor', tone: 'costume', batch: 3,
+    concept: '잿빛 비늘 무늬 후드 망토, 등에 천 날개, 엉덩이에 꼬리',
+    art:
+      'a baby dragon costume: an ash-grey cloak printed with scale patterns, small stitched fabric wings on the back, a plush dragon tail at the back, ' +
+      'over a warm orange tunic and dark boots, cute and cozy',
+  },
+  {
+    key: 'hw3_dragon_horns', nameKo: '동글 뿔 비늘 귀 머리띠', set: 'dragon', slot: 'accessory', tone: 'costume', batch: 3,
+    concept: '둥글고 짧은 용 뿔과 비늘 귀가 달린 머리띠',
+    art:
+      'a headband with two short round stubby dragon horns and two small finned scale ears, ash-grey and orange, soft plush look, cute and festive',
+  },
+  {
+    key: 'hw3_fallen_staff', nameKo: '깨진 후광 깃털 지팡이', set: 'fallen', slot: 'weapon', tone: 'costume', batch: 3,
+    concept: '부러진 후광을 엮은 검은 깃털 지팡이',
+    art:
+      'a slender staff of black feathers bound together, topped with a broken golden halo ring tied on with ribbon, a few loose black feathers drifting, ' +
+      'elegant and eerie, clearly a staff weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_fallen_robe', nameKo: '검은 깃털 숄 흰 로브', set: 'fallen', slot: 'armor', tone: 'costume', batch: 3,
+    concept: '검은 깃털 숄을 두른 해진 흰 로브',
+    art:
+      'a fallen angel costume: a long white robe with softly frayed hem and sleeves, a fluffy black feather shawl over the shoulders, ' +
+      'a thin gold cord belt, elegant and eerie',
+  },
+  {
+    key: 'hw3_fallen_halo', nameKo: '금 간 후광 머리띠', set: 'fallen', slot: 'accessory', tone: 'costume', batch: 3,
+    concept: '철사로 세운 금이 간 후광 머리띠',
+    art:
+      'a headband with a cracked golden halo held up on a thin wire above it, the halo slightly tilted with a chipped gap, a small black feather at the side, ' +
+      'elegant and eerie',
+  },
+  {
+    key: 'hw3_smith_pumpkin', nameKo: '호박등 단조망치', set: 'smith3', slot: 'weapon', tone: 'costume', batch: 3,
+    concept: '망치 머리가 속을 파낸 호박, 안에서 대장간 불빛이 이글거림',
+    art:
+      'a blacksmith forging hammer whose head is a carved jack-o-lantern banded with riveted black iron straps, glowing orange forge fire inside the carved eyes and grin, ' +
+      'a dark wooden handle, embers drifting, festive and fiery, clearly a hammer weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_smith_coat', nameKo: '불티 수놓은 대장간 작업복', set: 'smith3', slot: 'armor', tone: 'costume', batch: 3,
+    concept: '그을린 검정 작업복, 주황 불티 자수, 보라 앞치마',
+    art:
+      'a festive blacksmith outfit: a soot-black work coat with orange ember embroidery, a deep purple leather apron with pumpkin-shaped brass rivets, ' +
+      'rolled sleeves, thick gloves tucked in the belt, sturdy boots, warm and festive',
+  },
+  {
+    key: 'hw3_smith_goggles', nameKo: '호박빛 용접 고글', set: 'smith3', slot: 'accessory', tone: 'costume', batch: 3,
+    concept: '둥근 주황 렌즈 고글, 렌즈에 호박 얼굴 무늬',
+    art:
+      'a pair of round brass blacksmith goggles on a leather strap, glowing orange lenses with a faint jack-o-lantern face pattern, small rivets, ' +
+      'festive and charming',
+  },
+  {
+    key: 'hw3_butler_cane', nameKo: '유령불 집사 지팡이', set: 'butler', slot: 'weapon', tone: 'dark', batch: 3,
+    concept: '검은 지팡이 끝에 작은 은 랜턴, 안에 푸른 유령불',
+    art:
+      'an elegant black butler cane with a polished silver handle, a tiny ornate silver lantern hanging from the top holding a pale blue ghost flame, ' +
+      'refined and eerie, clearly a cane weapon, no text, large, diagonal',
+  },
+  {
+    key: 'hw3_butler_suit', nameKo: '거미줄 레이스 연미복', set: 'butler', slot: 'armor', tone: 'dark', batch: 3,
+    concept: '검은 연미복, 회색 조끼, 거미줄 레이스 크라바트, 흰 장갑',
+    art:
+      "a haunted mansion butler outfit: a black tailcoat with long tails, a charcoal waistcoat with silver buttons, a white cobweb-lace cravat, " +
+      'white gloves, sharp black trousers and polished shoes, refined and eerie, a man\'s outfit',
+  },
+  {
+    key: 'hw3_butler_tie', nameKo: '박쥐 날개 나비넥타이', set: 'butler', slot: 'accessory', tone: 'dark', batch: 3,
+    concept: '박쥐 날개 모양 검은 나비넥타이, 가운데 은 브로치',
+    art:
+      'a black satin bow tie shaped like a pair of small bat wings, a round silver brooch with a tiny pale blue gem in the center, refined and charming',
   },
 ];
 

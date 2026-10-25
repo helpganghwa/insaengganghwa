@@ -1486,5 +1486,77 @@
   "hw2_skel_mask": {
     "key": "key3",
     "objectId": "f9b8524a-a293-47c2-8ac0-e545f8666816"
+  },
+  "hw3_slime_wand": {
+    "key": "key3",
+    "objectId": "9142c24e-2f31-4f77-8eaf-273a8097bcc3"
+  },
+  "hw3_slime_crown": {
+    "key": "key3",
+    "objectId": "358aac5d-234e-4de6-a74a-bbfd15eea6ea"
+  },
+  "hw3_slime_poncho": {
+    "key": "key3",
+    "objectId": "8167c1e7-83f6-412c-8b22-084936b385d6"
+  },
+  "hw3_golem_fist": {
+    "key": "key3",
+    "objectId": "df0351bc-b2d8-42d3-aaf9-61a9f2b2a563"
+  },
+  "hw3_golem_armor": {
+    "key": "key3",
+    "objectId": "6f244606-6700-4a1e-bbb9-1037c7b47fe6"
+  },
+  "hw3_golem_helm": {
+    "key": "key3",
+    "objectId": "be556e9b-ca34-4bd6-b409-ff833d65e1d6"
+  },
+  "hw3_dragon_staff": {
+    "key": "key3",
+    "objectId": "e34ed2f9-1b66-479d-85ce-bcb85ed64c26"
+  },
+  "hw3_dragon_cloak": {
+    "key": "key3",
+    "objectId": "96ee5997-158d-4cae-9934-bbb2e2090e0f"
+  },
+  "hw3_dragon_horns": {
+    "key": "key3",
+    "objectId": "025ed80d-396e-4187-bf8b-b08d919a1c45"
+  },
+  "hw3_fallen_staff": {
+    "key": "key3",
+    "objectId": "38223b11-5146-4030-b382-83d787fa48bd"
+  },
+  "hw3_fallen_robe": {
+    "key": "key3",
+    "objectId": "c5df2129-ef70-4835-95f2-07417a429216"
+  },
+  "hw3_fallen_halo": {
+    "key": "key3",
+    "objectId": "af46a7ae-83f6-4854-bcd8-ffa3964b1a95"
+  },
+  "hw3_smith_pumpkin": {
+    "key": "key3",
+    "objectId": "baf9cd9a-9a9d-4a21-bcca-85fd0ddd5bf0"
+  },
+  "hw3_smith_coat": {
+    "key": "key3",
+    "objectId": "cbe07e25-5511-4dc6-9346-b07f1667107d"
+  },
+  "hw3_smith_goggles": {
+    "key": "key3",
+    "objectId": "bf25a605-3e51-42c9-87fb-d23cf4436fe7"
+  },
+  "hw3_butler_cane": {
+    "key": "key3",
+    "objectId": "5dcfe751-95ee-40bd-9d48-bc2bf33a3339"
+  },
+  "hw3_butler_suit": {
+    "key": "key3",
+    "objectId": "f8782cf7-a7b6-4bf5-bbf3-e4638ea5c6d5"
+  },
+  "hw3_butler_tie": {
+    "key": "key3",
+    "objectId": "e9ad57ae-22af-41e8-a561-992fbabaf524"
   }
 }
