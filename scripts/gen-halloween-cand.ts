@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household' | 'smith7' | 'vampire3' | 'candy';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3 | 4 | 5 | 6;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
   tailAs?: Slot;
 };
@@ -80,6 +80,9 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   vampire2: '꼬마 뱀파이어 분장',
   smith6: '대장장이 장신구(6차 · 고글 대체)',
   household: '유령 저택 하인(메이드·집사 통합)',
+  smith7: '대장장이(7차 · 5차 앞치마 확정, 무기·장신구 다시)',
+  vampire3: '꼬마 뱀파이어 분장(7차 · 다른 종류)',
+  candy: '사탕 세트(7차)',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -591,6 +594,103 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '메이드·집사 공용 목 리본 — 검정 리본 타이, 가운데 작은 호박 단추, 흰 레이스 깃',
     art:
       'a black satin ribbon bow tie on a small white lace collar, a tiny orange pumpkin button in the center of the bow, short ribbon tails, cute and festive',
+  },
+  // ══ 7차(2026-10-26) — 대장장이 무기·장신구 다시(5차 앞치마 확정), 꼬마 뱀파이어 다른 종류, 사탕 세트 ══
+  {
+    key: 'hw7_smith_bellows', nameKo: '풀무 단 단조망치', set: 'smith7', slot: 'weapon', tone: 'bright', batch: 7,
+    concept: '자루에 작은 가죽 풀무, 놋쇠 주둥이가 망치 머리를 향함, 한쪽 면이 달궈져 불씨',
+    art:
+      "a master blacksmith's forging hammer with a small leather hand bellows mounted along the handle, its brass nozzle pointing at the hammer head, one face of the steel head glowing orange-hot with tiny embers, a dark wood handle wrapped in leather with polished brass bands, finely crafted, large, diagonal",
+  },
+  {
+    key: 'hw7_smith_starhammer', nameKo: '별쇠 모루망치', set: 'smith7', slot: 'weapon', tone: 'bright', batch: 7,
+    concept: '망치 머리가 작은 모루 모양, 별빛 반점이 박힌 검은 운석 쇠, 놋쇠 고리',
+    art:
+      'a heavy blacksmith hammer whose head is shaped like a small anvil, forged from dark meteoric iron speckled with tiny glittering star-like flecks, a faint cool blue sheen along the edges, a polished brass collar, a leather-wrapped dark wood handle, finely crafted, large, diagonal',
+  },
+  {
+    key: 'hw7_smith_kerchief', nameKo: '장인의 두건', set: 'smith7', slot: 'accessory', tone: 'bright', batch: 7,
+    concept: '녹슨 붉은빛 면 두건, 앞단에 가죽 띠·놋쇠 리벳·망치 모루 배지, 작은 불똥 자국',
+    art:
+      "a blacksmith's head kerchief: a dark rust-red cotton scarf tied at the back with two short tails, a brown leather band sewn along the front edge with brass rivets and a small embossed hammer-and-anvil badge, a few tiny ember burn marks, finely crafted",
+  },
+  {
+    key: 'hw7_smith_brooch', nameKo: '모루 브로치', set: 'smith7', slot: 'accessory', tone: 'bright', batch: 7,
+    concept: '작은 모루 모양 브로치, 놋쇠·검은 강철, 망치 각인, 가운데 호박빛 보석',
+    art:
+      "an ornate brooch shaped like a small blacksmith's anvil, polished brass and dark steel, a tiny crossed hammer engraved on its face, a small amber stone set in the center, fine filigree edges, finely crafted",
+  },
+  {
+    key: 'hw7_vamp_parasol', nameKo: '레이스 박쥐 양산', set: 'vampire3', slot: 'weapon', tone: 'costume', batch: 7,
+    concept: '검은 레이스 양산, 캐노피에 작은 빨간 박쥐 무늬, 박쥐 모양 손잡이, 와인빛 리본',
+    art:
+      'a cute small black lace parasol, opened, with scalloped lace edges and tiny red bat silhouettes on the canopy, a curved handle shaped like a little bat with spread wings, a wine-red ribbon tied below the canopy, clearly a held parasol weapon, diagonal',
+  },
+  {
+    key: 'hw7_vamp_rosecane', nameKo: '핏빛 장미 지팡이', set: 'vampire3', slot: 'weapon', tone: 'costume', batch: 7,
+    concept: '짧은 검은 지팡이 끝에 큰 진홍 장미, 장미 아래 은 박쥐 날개 잎',
+    art:
+      'a short black walking cane topped with a large deep-red rose made of glossy enamel, small silver bat-wing shaped leaves under the rose, a silver tip at the bottom, diagonal',
+  },
+  {
+    key: 'hw7_vamp_vest', nameKo: '꼬마 백작 조끼 세트', set: 'vampire3', slot: 'armor', tone: 'costume', batch: 7,
+    concept: '와인빛 벨벳 조끼(박쥐 은단추), 흰 프릴 셔츠, 멜빵 반바지, 무릎 양말',
+    art:
+      "a cute little count costume: a wine-red velvet waistcoat with small bat-shaped silver buttons over a white frilly jabot shirt, short black shorts with suspenders, black knee socks and shiny buckled shoes, a boy's outfit",
+  },
+  {
+    key: 'hw7_vamp_dress', nameKo: '높은 깃 망토 원피스', set: 'vampire3', slot: 'armor', tone: 'costume', batch: 7,
+    concept: '검정·와인 프릴 원피스, 높게 선 깃, 짧은 케이프, 박쥐 단추, 줄무늬 스타킹',
+    art:
+      'a cute little vampire costume dress: a black and wine-red frilled dress with a tall stand-up collar, a short attached capelet, bat-shaped buttons down the front, black lace trim, striped stockings and black ribbon shoes',
+  },
+  {
+    key: 'hw7_vamp_tophat', nameKo: '박쥐 리본 미니 실크햇', set: 'vampire3', slot: 'accessory', tone: 'costume', batch: 7,
+    concept: '작은 검은 실크햇, 와인빛 띠, 박쥐 모양 리본, 가운데 빨간 보석',
+    art:
+      'a tiny black silk top hat, a wine-red satin band and a ribbon bow shaped like a bat, a small red gem at the center of the bow',
+  },
+  {
+    key: 'hw7_vamp_fang', nameKo: '은 송곳니 펜던트', set: 'vampire3', slot: 'accessory', tone: 'costume', batch: 7,
+    concept: '귀여운 송곳니 한 쌍 모양 은 펜던트, 사이에 작은 빨간 보석 방울, 가는 은 사슬',
+    art:
+      'a small silver pendant shaped like a pair of cute vampire fangs, a tiny red gem drop hanging between them, on a fine silver chain',
+  },
+  {
+    key: 'hw7_candy_scythe', nameKo: '줄무늬 사탕 낫', set: 'candy', slot: 'weapon', tone: 'costume', batch: 7,
+    concept: '빨강·흰 줄무늬 지팡이 사탕을 휘어 만든 낫, 반짝이는 사탕 광택, 민트 리본',
+    art:
+      'a playful scythe made from a giant red-and-white striped candy cane bent into a long curved blade, glossy hard-candy shine, a mint-green ribbon bow at the joint, diagonal',
+  },
+  {
+    key: 'hw7_candy_lolly', nameKo: '소용돌이 막대사탕 지팡이', set: 'candy', slot: 'weapon', tone: 'costume', batch: 7,
+    concept: '분홍·민트·레몬 소용돌이 큰 막대사탕, 줄무늬 손잡이, 셀로판 포장과 리본',
+    art:
+      'a long staff topped with a giant glossy swirl lollipop in pastel pink, mint and lemon spirals, a striped candy-stick handle, a sheer cellophane wrap tied with a ribbon around the lollipop, diagonal',
+  },
+  {
+    key: 'hw7_candy_dress', nameKo: '사탕 포장 리본 드레스', set: 'candy', slot: 'armor', tone: 'costume', batch: 7,
+    concept: '반짝이는 분홍 원피스, 어깨·허리에 비튼 셀로판 포장 장식, 줄무늬 띠, 흰 프릴 속치마',
+    art:
+      'a cute candy costume dress shaped like wrapped sweets: a glossy pastel pink dress with twisted cellophane-wrapper puffs at the shoulders and hips, sparkly translucent ribbon trims, a wide candy-striped sash, a white frilly petticoat, pastel shoes',
+  },
+  {
+    key: 'hw7_candy_coat', nameKo: '젤리빈 단추 코트', set: 'candy', slot: 'armor', tone: 'costume', batch: 7,
+    concept: '짧은 민트 코트, 물결 깃, 색색 젤리빈 단추, 줄무늬 소맷단, 사탕 모양 주머니',
+    art:
+      'a cute short pastel mint coat with a scalloped collar, round glossy jellybean buttons in many colors, candy-striped cuffs and hem, little wrapped-candy shaped pockets, white tights and pastel shoes',
+  },
+  {
+    key: 'hw7_candy_pin', nameKo: '눈깔사탕 머리핀', set: 'candy', slot: 'accessory', tone: 'costume', batch: 7,
+    concept: '큰 동그란 소용돌이 사탕을 단 머리핀 한 쌍, 양옆에 비튼 포장 끝',
+    art:
+      'a pair of cute hair clips topped with big round glossy hard candies with colorful swirl patterns, tiny twisted wrapper ends on both sides like real wrapped candy',
+  },
+  {
+    key: 'hw7_candy_necklace', nameKo: '알사탕 구슬 목걸이', set: 'candy', slot: 'accessory', tone: 'costume', batch: 7,
+    concept: '분홍·민트·레몬·라벤더 알사탕을 꿴 목걸이, 가운데 소용돌이 사탕 펜던트, 리본 고리',
+    art:
+      'a cute necklace strung with round glossy hard candies in pastel pink, mint, lemon and lavender, a larger swirl candy pendant in the center, a small satin ribbon clasp',
   },
 ];
 

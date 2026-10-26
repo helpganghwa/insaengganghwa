@@ -1634,5 +1634,69 @@
   "hw6_house_tie": {
     "key": "key3",
     "objectId": "8b0ff5cf-6eef-4a17-860c-4fd433995ec4"
+  },
+  "hw7_smith_bellows": {
+    "key": "key3",
+    "objectId": "7f7cec25-2ebc-41ac-80d6-c93aa646a3ff"
+  },
+  "hw7_smith_starhammer": {
+    "key": "key3",
+    "objectId": "ba7bf238-2f62-4ab4-ad5e-5f24b3bbf6cf"
+  },
+  "hw7_smith_kerchief": {
+    "key": "key3",
+    "objectId": "c9af77cd-63a9-4b24-a681-d6a72b01f3b7"
+  },
+  "hw7_smith_brooch": {
+    "key": "key3",
+    "objectId": "eda1b184-805f-493a-bc22-6f221819ea6f"
+  },
+  "hw7_vamp_parasol": {
+    "key": "key3",
+    "objectId": "4291ee66-c375-4c3f-a6b7-299353d802e4"
+  },
+  "hw7_vamp_rosecane": {
+    "key": "key3",
+    "objectId": "6a06d130-7dae-4aeb-a8d2-a58f4d779e54"
+  },
+  "hw7_vamp_vest": {
+    "key": "key3",
+    "objectId": "1865d878-0099-4eb2-a940-764a99a4a329"
+  },
+  "hw7_vamp_dress": {
+    "key": "key3",
+    "objectId": "a5da436c-1187-4fe9-86e7-508e6041c72c"
+  },
+  "hw7_vamp_tophat": {
+    "key": "key3",
+    "objectId": "48728591-485d-4bcf-941a-abf9357508a9"
+  },
+  "hw7_vamp_fang": {
+    "key": "key3",
+    "objectId": "64669174-72f6-41c1-b902-dcdaa93390bf"
+  },
+  "hw7_candy_scythe": {
+    "key": "key3",
+    "objectId": "3f6a87e0-d86d-472b-b81b-5556ec22216c"
+  },
+  "hw7_candy_lolly": {
+    "key": "key3",
+    "objectId": "dc49a60b-5b45-4885-9193-86430483f166"
+  },
+  "hw7_candy_dress": {
+    "key": "key3",
+    "objectId": "c09a273a-4e84-457a-b4fa-e1ac67298f25"
+  },
+  "hw7_candy_coat": {
+    "key": "key3",
+    "objectId": "c6d50b5c-c63e-4273-bfa3-0f8f7220bce3"
+  },
+  "hw7_candy_pin": {
+    "key": "key3",
+    "objectId": "15ffcc11-53e3-4656-b9a8-cef50ed4990e"
+  },
+  "hw7_candy_necklace": {
+    "key": "key3",
+    "objectId": "2effdcbc-d170-41bd-8da7-0bd861127419"
   }
 }
