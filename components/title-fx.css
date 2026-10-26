@@ -418,3 +418,28 @@
 .ttag .fx-hwnosferatu .t::after{animation:none;clip-path:none;opacity:1}
 .ttag .fx-hwpumpkin .t{animation:none}
 .ttag .fx-hwpumpkin .t::before{animation:none;opacity:1}}
+
+/* ===== 할로윈 2026 사탕 사다리 칭호 '별사탕'(2단계·끝 15만, 2026-10-26 확정, 시안 아티팩트 CavTrT67AJtbzb3p3kJQMG 8차) =====
+   글자마다 분홍·노랑·민트 사탕 광택. 하얀 별사탕 알갱이가 글자 윗선 높이의 왼쪽 바깥에서 톡 튀어 나와 별 → 사 → 탕을 콩콩 밟고
+   오른쪽 바깥 같은 높이에 내려앉으며 사라짐. 착지마다 그 글자가 톡 튀고 같은 색 설탕 가루가 퍼지며 알갱이도 그 글자 색으로 바뀜.
+   4초 움직이고 1초 쉼(한 주기 5초). 가로는 착지 사이 일정 속도(.kq), 세로는 오를 땐 감속·내릴 땐 가속(::before)으로 나눠 매끄러운 포물선.
+   착지 시각 .88·1.76·2.64s = 글자 튐 지연 .8·1.68·2.56s(TitleTag는 설탕 가루 지연 .86·1.74·2.62s).
+   위치(17·50·83%)는 한글 세 글자 폭 기준, 세로 위치는 줄 높이 1.55 기준 — 줄 높이를 고정하고 음수 여백으로 줄 높이에 주는 영향을 1em로 되돌림. */
+.ttag .fx-hwstarcandy{position:relative;display:inline-block;white-space:nowrap;line-height:1.55;margin-block:-.275em}
+.ttag .fx-hwstarcandy .t{position:relative;display:inline-block}
+.ttag .fx-hwstarcandy .t b{position:relative;display:inline-block;font-weight:inherit;background:linear-gradient(180deg,#fff 0%,var(--l1) 22%,var(--l2) 60%,var(--l3) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;transform-origin:50% 100%;filter:drop-shadow(0 .035em 0 rgba(70,20,50,.55)) drop-shadow(0 0 .04em var(--l2));animation:hwScHop 5s cubic-bezier(.33,0,.3,1) infinite;animation-delay:var(--dl)}
+.ttag .fx-hwstarcandy .t b:nth-child(1){--l1:#ffc4de;--l2:#ff8fc0;--l3:#e9609f;--dl:.8s}
+.ttag .fx-hwstarcandy .t b:nth-child(2){--l1:#fff0a6;--l2:#ffd256;--l3:#eaa92a;--dl:1.68s}
+.ttag .fx-hwstarcandy .t b:nth-child(3){--l1:#c4f6e2;--l2:#7fe3bd;--l3:#3fbf92;--dl:2.56s}
+.ttag .fx-hwstarcandy>i{position:absolute;pointer-events:none;opacity:0;animation-iteration-count:infinite}
+.ttag .fx-hwstarcandy>i.kq{top:.2em;width:max(5px,.36em);height:max(5px,.36em);margin:calc(max(5px,.36em) / -2) 0 0 calc(max(5px,.36em) / -2);animation:hwScX 5s linear infinite}
+.ttag .fx-hwstarcandy>i.kq::before{content:"";position:absolute;inset:0;clip-path:polygon(50% 0%,62% 22%,85% 15%,80% 39%,100% 50%,80% 61%,85% 85%,62% 78%,50% 100%,38% 78%,15% 85%,20% 61%,0% 50%,20% 39%,15% 15%,38% 22%);background:radial-gradient(circle at 38% 34%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 55%),#fff4fa;animation:hwScY 5s linear infinite,hwScCol 5s linear infinite}
+.ttag .fx-hwstarcandy>i.bu{top:.22em;width:max(2px,.12em);height:max(2px,.12em);margin:calc(max(2px,.12em) / -2) 0 0 calc(max(2px,.12em) / -2);border-radius:50%;background:var(--tc);box-shadow:-.45em -.1em 0 var(--tc),.45em -.12em 0 var(--tc),-.3em -.38em 0 #fff,.32em -.36em 0 #fff,0 -.5em 0 var(--tc),-.5em .12em 0 #fff,.5em .1em 0 #fff;animation:hwScBurst 5s ease-out infinite}
+@keyframes hwScHop{0%,23.2%,80%,100%{transform:translateY(0) scale(1,1)}1.6%{transform:translateY(.03em) scale(1.12,.84)}8.8%{transform:translateY(-.22em) scale(.95,1.07)}15.2%{transform:translateY(0) scale(1.08,.9)}19.2%{transform:translateY(-.03em) scale(.99,1.02)}}
+@keyframes hwScX{0%{opacity:0;left:-16%}2.4%{opacity:1}17.6%{left:17%}35.2%{left:50%}52.8%{left:83%}70.4%{opacity:1;left:116%}74.4%,80%,100%{opacity:0;left:116%}}
+@keyframes hwScY{0%{transform:translateY(0) rotate(0) scale(.3);animation-timing-function:cubic-bezier(.22,.6,.45,1)}3.2%{transform:translateY(-.3em) rotate(30deg) scale(1);animation-timing-function:cubic-bezier(.22,.6,.45,1)}8.8%{transform:translateY(-.62em) rotate(90deg) scale(1);animation-timing-function:cubic-bezier(.55,0,.78,.4)}17.6%{transform:translateY(0) rotate(180deg) scale(1.2,.78);animation-timing-function:cubic-bezier(.22,.6,.45,1)}26.4%{transform:translateY(-.62em) rotate(270deg) scale(1);animation-timing-function:cubic-bezier(.55,0,.78,.4)}35.2%{transform:translateY(0) rotate(360deg) scale(1.2,.78);animation-timing-function:cubic-bezier(.22,.6,.45,1)}44%{transform:translateY(-.62em) rotate(450deg) scale(1);animation-timing-function:cubic-bezier(.55,0,.78,.4)}52.8%{transform:translateY(0) rotate(540deg) scale(1.2,.78);animation-timing-function:cubic-bezier(.22,.6,.45,1)}61.6%{transform:translateY(-.62em) rotate(630deg) scale(1);animation-timing-function:cubic-bezier(.55,0,.78,.4)}70.4%{transform:translateY(0) rotate(720deg) scale(1.15,.82)}74.4%,80%,100%{transform:translateY(0) rotate(740deg) scale(.3)}}
+@keyframes hwScBurst{0%,80%,100%{opacity:0;transform:scale(.2)}1.2%{opacity:1;transform:scale(.5)}7.2%{opacity:.8;transform:scale(1)}12%,79.2%{opacity:0;transform:scale(1.25) translateY(.08em)}}
+@keyframes hwScCol{0%,17.2%{background-color:#fff4fa}18%,34.8%{background-color:#ff8fc0}35.6%,52.4%{background-color:#ffd256}53.2%,80%,100%{background-color:#7fe3bd}}
+/* 정적 모드·동작 줄이기 — 사탕 광택 글자만 */
+.ttag-still .fx-hwstarcandy>i{display:none}
+@media (prefers-reduced-motion: reduce){.ttag .fx-hwstarcandy>i{display:none}.ttag .fx-hwstarcandy .t b{animation:none}}

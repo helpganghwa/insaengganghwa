@@ -4647,7 +4647,7 @@
     "code": "halloween26_candy3",
     "cat": "할로윈",
     "kind": "영구",
-    "label": "(임시) 사탕 대왕",
+    "label": "별사탕",
     "cond": "2026 할로윈 사탕 150,000개 모으기",
     "hidden": false,
     "diff": "한정"

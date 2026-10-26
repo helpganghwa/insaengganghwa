@@ -5515,11 +5515,11 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "halloween26_candy3",
   kind: "permanent",
-  label: "(임시) 사탕 대왕",
+  label: "별사탕",
   hidden: false,
   cat: "할로윈",
   style: {
-   color: "#98aaff",
+   fx: "hwstarcandy",
    glow: true
   }
  },

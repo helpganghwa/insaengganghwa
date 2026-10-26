@@ -83,10 +83,10 @@ function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
 }
 
 /**
- * 할로윈 2026 대회 순위 칭호(2026-10-26 확정) — 글자 복제 층(.t data-t)과 핏방울·불꽃 조각이 필요한 전용 구조.
+ * 할로윈 2026 칭호(2026-10-26 확정: 대회 순위 3종 + 사탕 사다리 별사탕) — 글자 복제 층(.t data-t)과 핏방울·불꽃·별사탕 조각이 필요한 전용 구조.
  * 위치(%)는 Geist 대문자 획 위치에 맞춘 값(title-fx.css 주석) — 라벨을 바꾸면 다시 재야 한다.
  */
-const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin']);
+const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin', 'hwstarcandy']);
 /** 마녀불 불꽃 — U 양끝·I 두 개 윗끝. --f=일렁임 위상, --g=보랏빛 경계가 그 자리를 지나는 시점에 맞춘 지연. */
 const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
   [10.7, 0, -0.011],
@@ -94,17 +94,35 @@ const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
   [50.5, -0.55, -7.757],
   [77.7, -1.1, -7.582],
 ];
+/** 별사탕(사탕 사다리 끝 칭호) — 착지(별·사·탕) 순간 퍼지는 설탕 가루: 위치·지연(착지 직전)·그 글자 색. */
+const STAR_CANDY_BURSTS: [left: number, delay: number, color: string][] = [
+  [17, 0.86, '#ffb3d4'],
+  [50, 1.74, '#ffe08a'],
+  [83, 2.62, '#9ff0cf'],
+];
 function HalloweenRankLabel({ fx, label }: { fx: string; label: string }) {
   return (
     <span className={`fx fx-${fx}`} data-t={label}>
       <span className="t" data-t={label}>
-        {label}
+        {fx === 'hwstarcandy' ? [...label].map((ch, i) => <b key={i}>{ch}</b>) : label}
       </span>
       {fx === 'hwnosferatu' ? (
         <>
           <i className="drop" aria-hidden />
           <i className="drop f" aria-hidden />
           <i className="drop n" aria-hidden />
+        </>
+      ) : fx === 'hwstarcandy' ? (
+        <>
+          <i className="kq" aria-hidden />
+          {STAR_CANDY_BURSTS.map(([left, delay, color]) => (
+            <i
+              key={left}
+              className="bu"
+              style={{ left: `${left}%`, animationDelay: `${delay}s`, '--tc': color } as React.CSSProperties}
+              aria-hidden
+            />
+          ))}
         </>
       ) : fx === 'hwpumpkin' ? (
         PUMPKIN_FLAMES.map(([left, f, g]) => {
