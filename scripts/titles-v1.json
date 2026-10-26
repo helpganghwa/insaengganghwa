@@ -4629,17 +4629,8 @@
     "code": "halloween26_candy1",
     "cat": "할로윈",
     "kind": "영구",
-    "label": "(임시) 달콤한 밤",
-    "cond": "2026 할로윈 사탕 40,000개 모으기",
-    "hidden": false,
-    "diff": "한정"
-  },
-  {
-    "code": "halloween26_candy2",
-    "cat": "할로윈",
-    "kind": "영구",
-    "label": "(임시) 사탕 사냥꾼",
-    "cond": "2026 할로윈 사탕 100,000개 모으기",
+    "label": "시월의 마녀",
+    "cond": "2026 할로윈 사탕 60,000개 모으기",
     "hidden": false,
     "diff": "한정"
   },

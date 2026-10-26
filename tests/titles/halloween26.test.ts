@@ -6,14 +6,15 @@ import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
 import { EVENT_HOOK_CODES, PENDING_CODES } from '@/lib/game/titles/pending';
 
 /**
- * 2026 할로윈 칭호 6종 — 사탕 도달(4만·10만·15만) 3 + 강화 대회 순위(6종 공통) 3.
- * 이름·이펙트는 임시(2026-10-25) — 확정되면 이름 단언을 더한다. 지급 경로는 이벤트 훅(수령·정산).
+ * 2026 할로윈 칭호 5종 — 사탕 도달(6만 시월의 마녀·15만 별사탕) 2 + 강화 대회 순위(6종 공통) 3(PUMPKIN KING·NOSFERATU·PHANTOM).
+ * 이름·이펙트 확정 2026-10-26. 지급 경로는 이벤트 훅(수령·정산).
  */
 describe('할로윈 2026 칭호', () => {
   const codes = [...CANDY_LADDER_TITLES, ...HALLOWEEN_RANK_TITLES];
 
-  it('6종이 영구·공개·한정으로 정의되고, 판정 밖 이벤트 훅 칭호로 등록돼 있다', () => {
-    expect(codes).toHaveLength(6);
+  it('5종이 영구·공개·한정으로 정의되고, 판정 밖 이벤트 훅 칭호로 등록돼 있다', () => {
+    expect(codes).toHaveLength(5);
+    expect(codes.map((c) => TITLE_BY_CODE.get(c)?.label)).toEqual(['시월의 마녀', '별사탕', 'PUMPKIN KING', 'NOSFERATU', 'PHANTOM']);
     for (const code of codes) {
       const d = TITLE_BY_CODE.get(code);
       expect(d, code).toBeDefined();

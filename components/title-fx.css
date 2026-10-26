@@ -443,3 +443,14 @@
 /* 정적 모드·동작 줄이기 — 사탕 광택 글자만 */
 .ttag-still .fx-hwstarcandy>i{display:none}
 @media (prefers-reduced-motion: reduce){.ttag .fx-hwstarcandy>i{display:none}.ttag .fx-hwstarcandy .t b{animation:none}}
+
+/* ===== 할로윈 2026 사탕 사다리 칭호 '시월의 마녀'(1단계·6만, 2026-10-26 확정, 시안 아티팩트 4ycgLyknipcGT6FpGcF7En 18차) =====
+   '대륙의 주인'처럼 가운데 '의'는 회백 단색(#b8bcc6), '시월'은 호박 주황·'마녀'는 보라로 채도 높게(위 밝고 아래 짙은 정적 색).
+   빛줄기가 '시월' → 0.5초 뒤 '마녀' 위를 한 번씩 스침(4초). 정적 모드·동작 줄이기는 색만. */
+.ttag .fx-hwwitch{position:relative;display:inline-block;white-space:nowrap;font-weight:700}
+.ttag .fx-hwwitch .t{position:relative;display:inline-block}
+.ttag .fx-hwwitch .w1,.ttag .fx-hwwitch .w2{background-image:linear-gradient(105deg,transparent 0%,transparent 42%,rgba(255,255,255,.95) 50%,transparent 58%,transparent 100%),var(--wg);background-size:300% 100%,100% 100%;background-position:100% 0,0 0;-webkit-background-clip:text;background-clip:text;color:transparent;animation:hwWiSheen 4s ease-in-out infinite}
+.ttag .fx-hwwitch .w1{--wg:linear-gradient(180deg,#ffd9a0 0%,#ff9a1a 45%,#e86400 100%)}
+.ttag .fx-hwwitch .w2{--wg:linear-gradient(180deg,#e6cfff 0%,#a35cff 45%,#7426ec 100%);animation-delay:.5s}
+.ttag .fx-hwwitch .ui{color:#b8bcc6}
+@keyframes hwWiSheen{0%,20%{background-position:100% 0,0 0}50%,100%{background-position:0% 0,0 0}}

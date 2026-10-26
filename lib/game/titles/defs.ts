@@ -5493,22 +5493,11 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "halloween26_candy1",
   kind: "permanent",
-  label: "(임시) 달콤한 밤",
+  label: "시월의 마녀",
   hidden: false,
   cat: "할로윈",
   style: {
-   color: "#98aaff",
-   glow: true
-  }
- },
- {
-  code: "halloween26_candy2",
-  kind: "permanent",
-  label: "(임시) 사탕 사냥꾼",
-  hidden: false,
-  cat: "할로윈",
-  style: {
-   color: "#98aaff",
+   fx: "hwwitch",
    glow: true
   }
  },

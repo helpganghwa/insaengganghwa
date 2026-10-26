@@ -83,10 +83,10 @@ function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
 }
 
 /**
- * 할로윈 2026 칭호(2026-10-26 확정: 대회 순위 3종 + 사탕 사다리 별사탕) — 글자 복제 층(.t data-t)과 핏방울·불꽃·별사탕 조각이 필요한 전용 구조.
+ * 할로윈 2026 칭호(2026-10-26 확정: 대회 순위 3종 + 사탕 사다리 시월의 마녀·별사탕) — 글자 복제 층(.t data-t)과 핏방울·불꽃·별사탕 조각이 필요한 전용 구조.
  * 위치(%)는 Geist 대문자 획 위치에 맞춘 값(title-fx.css 주석) — 라벨을 바꾸면 다시 재야 한다.
  */
-const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin', 'hwstarcandy']);
+const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin', 'hwstarcandy', 'hwwitch']);
 /** 마녀불 불꽃 — U 양끝·I 두 개 윗끝. --f=일렁임 위상, --g=보랏빛 경계가 그 자리를 지나는 시점에 맞춘 지연. */
 const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
   [10.7, 0, -0.011],
@@ -100,11 +100,30 @@ const STAR_CANDY_BURSTS: [left: number, delay: number, color: string][] = [
   [50, 1.74, '#ffe08a'],
   [83, 2.62, '#9ff0cf'],
 ];
+/** 시월의 마녀 — '의 '를 경계로 앞(.w1)·가운데(.ui)·뒤(.w2) 세 조각. */
+function WitchWords({ label }: { label: string }) {
+  const i = label.indexOf('의 ');
+  if (i < 0) return <span className="w1">{label}</span>;
+  return (
+    <>
+      <span className="w1">{label.slice(0, i)}</span>
+      <span className="ui">{'의\u00a0'}</span>
+      <span className="w2">{label.slice(i + 2)}</span>
+    </>
+  );
+}
 function HalloweenRankLabel({ fx, label }: { fx: string; label: string }) {
   return (
     <span className={`fx fx-${fx}`} data-t={label}>
       <span className="t" data-t={label}>
-        {fx === 'hwstarcandy' ? [...label].map((ch, i) => <b key={i}>{ch}</b>) : label}
+        {fx === 'hwstarcandy' ? (
+          [...label].map((ch, i) => <b key={i}>{ch}</b>)
+        ) : fx === 'hwwitch' ? (
+          // 시월의 마녀 — '대륙의 주인'처럼 '의'를 가운데 두고 두 단어만 색(앞=호박 주황, 뒤=보라). 라벨이 바뀌면 통째로 앞 단어 색.
+          <WitchWords label={label} />
+        ) : (
+          label
+        )}
       </span>
       {fx === 'hwnosferatu' ? (
         <>

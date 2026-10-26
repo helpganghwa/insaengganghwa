@@ -5,7 +5,7 @@
  * 사탕 규칙(2026-10-20 사용자 확정):
  *  - 기간 중 **모든 아이템**의 강화 성공(mega 포함)마다 **도달 단계 = 사탕**(추석 송편과 같은 적립식). 상한 없음.
  *  - 도달 보상(사다리)은 **누적 총량** 기준 — 교환에 써도 줄지 않는다. 각 단계는 한 번만 받는다.
- *    끝 15만·9단계, 단계 사탕의 10%를 💎·0.3%를 📦로. 4만·10만·15만 단계는 칭호도 준다.
+ *    끝 15만·9단계, 단계 사탕의 10%를 💎·0.3%를 📦로. 6만·15만 단계는 칭호도 준다(2026-10-26: 칭호 3 → 2, 4만·10만은 칭호 없이 💎·📦만).
  *  - 교환은 **사용 가능 사탕**(누적 − 교환에 쓴)을 쓴다. 추석과 같은 비율·한도 없음(2026-10-23 확정).
  *  - 적립은 대회 마감까지, 수령·교환은 결과 마감(11/6 23:59)까지. 그 뒤 남은 사탕은 소멸(화면에 안내).
  *
@@ -49,9 +49,9 @@ export const CANDY_LADDER: readonly { step: number; at: number; diamond: number;
   { step: 3, at: 7_000, diamond: 700, boxes: 21 },
   { step: 4, at: 15_000, diamond: 1_500, boxes: 45 },
   { step: 5, at: 25_000, diamond: 2_500, boxes: 75 },
-  { step: 6, at: 40_000, diamond: 4_000, boxes: 120, title: 'halloween26_candy1' },
-  { step: 7, at: 60_000, diamond: 6_000, boxes: 180 },
-  { step: 8, at: 100_000, diamond: 10_000, boxes: 300, title: 'halloween26_candy2' },
+  { step: 6, at: 40_000, diamond: 4_000, boxes: 120 },
+  { step: 7, at: 60_000, diamond: 6_000, boxes: 180, title: 'halloween26_candy1' },
+  { step: 8, at: 100_000, diamond: 10_000, boxes: 300 },
   { step: 9, at: 150_000, diamond: 15_000, boxes: 450, title: 'halloween26_candy3' },
 ];
 

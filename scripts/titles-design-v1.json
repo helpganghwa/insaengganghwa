@@ -537,6 +537,7 @@
       ],
       "plainColor": "#b8bcc6"
     },
+    "halloween26_candy1": { "fx": "hwwitch" },
     "halloween26_candy3": { "fx": "hwstarcandy" },
     "halloween26_rank3": { "fx": "hwphantom" },
     "halloween26_rank2": { "fx": "hwnosferatu" },

@@ -5074,13 +5074,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "halloween26_candy1",
   cat: "할로윈",
-  cond: "2026 할로윈 사탕 40,000개 모으기",
-  diff: "한정"
- },
- {
-  code: "halloween26_candy2",
-  cat: "할로윈",
-  cond: "2026 할로윈 사탕 100,000개 모으기",
+  cond: "2026 할로윈 사탕 60,000개 모으기",
   diff: "한정"
  },
  {

@@ -62,10 +62,9 @@ describe('사탕 규칙(순수)', () => {
     }
     expect(CANDY_LADDER.reduce((a, l) => a + l.diamond, 0)).toBe(40_100);
     expect(CANDY_LADDER.reduce((a, l) => a + l.boxes, 0)).toBe(1_203);
-    // 칭호는 4만·10만·15만 단계.
+    // 칭호는 6만·15만 단계(2026-10-26 확정).
     expect(CANDY_LADDER.filter((l) => l.title).map((l) => [l.at, l.title])).toEqual([
-      [40000, 'halloween26_candy1'],
-      [100000, 'halloween26_candy2'],
+      [60000, 'halloween26_candy1'],
       [150000, 'halloween26_candy3'],
     ]);
     expect(CANDY_EXCHANGE.box).toEqual({ candy: 300, boxes: 3 });
@@ -134,25 +133,26 @@ describe.skipIf(skip)('사탕 통합(롤백 tx)', () => {
     });
   });
 
-  it('칭호 단계: 정확히 4만이면 6단계(💎4,000·📦120)와 칭호를 함께 받고, 15만에서 9단계 칭호까지', async () => {
+  it('칭호 단계: 4만(6단계)은 칭호 없이, 정확히 6만이면 7단계(💎6,000·📦180)와 칭호를 함께 받고, 15만에서 9단계 칭호까지', async () => {
     await inRollback(async (tx) => {
       const job = `t-${Date.now()}`;
-      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: job, level: 40_000, at: IN }, tx);
+      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: job, level: 60_000, at: IN }, tx);
       const before = await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID);
-      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 6, IN, tx)).toEqual({ ok: true, step: 6, diamond: 4_000, boxes: 120, title: 'halloween26_candy1' });
-      expect(await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID)).toBe(before + 4_000n);
-      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 7, IN, tx)).toEqual({ ok: false, reason: 'NOT_REACHED' });
+      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 6, IN, tx)).toEqual({ ok: true, step: 6, diamond: 4_000, boxes: 120, title: null });
+      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 7, IN, tx)).toEqual({ ok: true, step: 7, diamond: 6_000, boxes: 180, title: 'halloween26_candy1' });
+      expect(await getWalletDiamond(tx, TEST_USER_ID, SERVER_ID)).toBe(before + 10_000n);
+      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 8, IN, tx)).toEqual({ ok: false, reason: 'NOT_REACHED' });
       const titles = async () =>
         ((await tx.execute(sql`
           select title_code from user_titles
            where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID} and title_code like 'halloween26_%' order by title_code
         `)) as unknown as { title_code: string }[]).map((r) => r.title_code);
       expect(await titles()).toEqual(['halloween26_candy1']);
-      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: `${job}-b`, level: 110_000, at: IN }, tx);
-      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 8, IN, tx)).toEqual({ ok: true, step: 8, diamond: 10_000, boxes: 300, title: 'halloween26_candy2' });
+      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: `${job}-b`, level: 90_000, at: IN }, tx);
+      expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 8, IN, tx)).toEqual({ ok: true, step: 8, diamond: 10_000, boxes: 300, title: null });
       expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 9, AFTER, tx)).toEqual({ ok: true, step: 9, diamond: 15_000, boxes: 450, title: 'halloween26_candy3' });
       expect(await claimCandyStep(TEST_USER_ID, SERVER_ID, 9, AFTER, tx)).toEqual({ ok: false, reason: 'ALREADY' });
-      expect(await titles()).toEqual(['halloween26_candy1', 'halloween26_candy2', 'halloween26_candy3']);
+      expect(await titles()).toEqual(['halloween26_candy1', 'halloween26_candy3']);
     });
   });
 

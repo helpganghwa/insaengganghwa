@@ -157,7 +157,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
                 <span className="truncate">
                   💎{n(l.diamond)} · 📦{l.boxes}
                 </span>
-                {/* 4만·10만·15만 단계는 한정 칭호도 함께(2026-10-20 확정). */}
+                {/* 6만·15만 단계는 한정 칭호도 함께(2026-10-26 확정: 6만 시월의 마녀 · 15만 별사탕). */}
                 {l.title ? <span className="shrink-0 rounded border border-purple-400/50 px-1 text-[9.5px] font-bold text-purple-300">칭호</span> : null}
               </span>
               <span className="flex w-[68px] justify-end text-[10.5px]">

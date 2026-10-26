@@ -291,7 +291,7 @@ const FX_OG: Record<string, string> = {
   // 무한의 탑 층 도달(2026-10-01)
   starwave: '#ffc62e', dragonlux: '#bfe3ff',
   // 할로윈 2026 대회 순위(2026-10-26)
-  hwphantom: '#e6ebf3', hwnosferatu: '#e01f43', hwpumpkin: '#f39a2e', hwstarcandy: '#ff8fc0',
+  hwphantom: '#e6ebf3', hwnosferatu: '#e01f43', hwpumpkin: '#f39a2e', hwstarcandy: '#ff8fc0', hwwitch: '#a35cff',
   // 월드보스(2026-10-11) — 잿불 팔레트 강등색
   pyreglow: '#ff9d4d', pyrevert: '#ff9d4d', ashdrift: '#b9b0a8', allianceflow: '#ff9d4d', ashgoldvault: '#e5c07b',
   // 길드 칭호(2026-09-01)

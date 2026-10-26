@@ -142,7 +142,7 @@ export async function claimCandyStep(userId: string, serverId: number, step: num
     if (ins.length === 0) return { ok: false as const, reason: 'ALREADY' as const };
     await walletAdd(tx, userId, serverId, def.diamond, 'halloween_ladder', `step:${def.step}`);
     await grantBoxes(tx, userId, serverId, def.boxes);
-    // 칭호 단계(4만·10만·15만) — 같은 트랜잭션에서 지급(user_titles PK 멱등, 2026-10-20 확정: 칭호를 도달 보상으로).
+    // 칭호 단계(6만·15만) — 같은 트랜잭션에서 지급(user_titles PK 멱등, 2026-10-20 확정: 칭호를 도달 보상으로).
     if (def.title) {
       await tx.execute(sql`
         insert into user_titles (user_id, server_id, title_code)
