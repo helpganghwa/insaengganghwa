@@ -32,6 +32,12 @@ export const WORN: Record<string, string> = {
     "a little vampire count costume: a long black cape lined in crimson with tiny bat prints, a very tall stand-up collar and scalloped bat-wing edges at the shoulders, worn over a black velvet jacket with gold piping and gold buttons, a dark waistcoat, a white jabot cravat with a red bow, puffy black bloomer shorts, red-and-black striped stockings and black buckled shoes",
   hw7_vamp_tophat:
     'a small grey-black silk top hat worn tilted on the head, with a crimson satin band and a little purple-and-red bat-wing brooch with a red gem pinned at the side',
+  hw2_smith_hammer:
+    'a big blacksmith sledgehammer with a heavy dark iron head that has a grumpy face with bushy curled eyebrows, a curled mustache and an open shouting mouth, one striking end glowing red-hot orange with flying sparks, a thick wooden handle wrapped in brown leather with iron bands',
+  hw5_smith_apron:
+    "a long worn brown leather blacksmith's apron with crossed shoulder straps and brass buckles, an anvil emblem stamped on the bib, a wide front pocket holding tongs, chisels and a file, stitched patches and a scorched darker hem, worn over a rolled-sleeve linen work shirt, dark trousers and sturdy leather boots",
+  hw7_smith_kerchief:
+    'a rust-red cloth kerchief tied snugly over the head with knotted tails hanging at the back, a riveted brown leather band around the forehead stamped with a small crossed-hammers emblem',
 };
 
 type Combo = { gender: 'male' | 'female'; weapon: string; armor: string; accessory: string };
@@ -43,7 +49,15 @@ export const COMBOS1: Combo[] = [
   { gender: 'female', ...VAMP },
   { gender: 'female', ...VAMP },
 ];
-const SETS: Record<number, Combo[]> = { 1: COMBOS1 };
+const SMITH: Omit<Combo, 'gender'> = { weapon: 'hw2_smith_hammer', armor: 'hw5_smith_apron', accessory: 'hw7_smith_kerchief' };
+/** 2차(10-27) — 대장장이 세트 완성형, 남녀 2회씩. */
+export const COMBOS2: Combo[] = [
+  { gender: 'male', ...SMITH },
+  { gender: 'male', ...SMITH },
+  { gender: 'female', ...SMITH },
+  { gender: 'female', ...SMITH },
+];
+const SETS: Record<number, Combo[]> = { 1: COMBOS1, 2: COMBOS2 };
 export const COMBOS: Combo[] = SETS[SET] ?? COMBOS1;
 
 /** 쓰이는 후보만 이 프로세스의 카탈로그·스프라이트 표에 더한다(파일·DB 변경 없음). */
