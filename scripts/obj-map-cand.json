@@ -1698,5 +1698,33 @@
   "hw7_candy_necklace": {
     "key": "key3",
     "objectId": "2effdcbc-d170-41bd-8da7-0bd861127419"
+  },
+  "hw8_smith_crystal": {
+    "key": "key3",
+    "objectId": "22c9353d-b40a-43b5-87d3-f3f10840cfe4"
+  },
+  "hw8_smith_heirloom": {
+    "key": "key3",
+    "objectId": "78557dcb-5e66-4e63-a6f8-c4836d3d1a21"
+  },
+  "hw8_smith_bat": {
+    "key": "key3",
+    "objectId": "90ab47cb-4237-4a62-84e7-57b5f2443d2c"
+  },
+  "hw8_smith_gear": {
+    "key": "key3",
+    "objectId": "62f9855d-38b5-4ee0-a631-ed9ca45c35af"
+  },
+  "hw8_cat_wand": {
+    "key": "key3",
+    "objectId": "f3a0c1c4-a556-40cb-a38b-90b750b5949c"
+  },
+  "hw8_cat_suit": {
+    "key": "key3",
+    "objectId": "3ec3521c-78b9-4da2-b1e4-ee25dc6626e6"
+  },
+  "hw8_cat_collar": {
+    "key": "key3",
+    "objectId": "d2433585-0ccb-4116-b21e-06ef025241f8"
   }
 }

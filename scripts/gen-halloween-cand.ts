@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household' | 'smith7' | 'vampire3' | 'candy';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household' | 'smith7' | 'vampire3' | 'candy' | 'smith8' | 'cat';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
   tailAs?: Slot;
 };
@@ -83,6 +83,8 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   smith7: '대장장이(7차 · 5차 앞치마 확정, 무기·장신구 다시)',
   vampire3: '꼬마 뱀파이어 분장(7차 · 다른 종류)',
   candy: '사탕 세트(7차)',
+  smith8: '대장장이 망치(8차 · 여러 컨셉)',
+  cat: '검은 고양이 분장(8차 · 남녀 공용)',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -691,6 +693,48 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '분홍·민트·레몬·라벤더 알사탕을 꿴 목걸이, 가운데 소용돌이 사탕 펜던트, 리본 고리',
     art:
       'a cute necklace strung with round glossy hard candies in pastel pink, mint, lemon and lavender, a larger swirl candy pendant in the center, a small satin ribbon clasp',
+  },  // ══ 8차(2026-10-27) — 대장장이 망치 여러 컨셉, 검은 고양이 분장(남녀 공용) ══
+  {
+    key: 'hw8_smith_heirloom', nameKo: '금 상감 가보 망치', set: 'smith8', slot: 'weapon', tone: 'bright', batch: 8,
+    concept: '짙은 강철 머리에 금 상감 무늬, 자루 끝 모루 모양 금 장식, 호두나무 자루·땋은 가죽',
+    art:
+      "a master blacksmith's heirloom forging hammer, a dark steel head inlaid with flowing gold filigree patterns, a small anvil-shaped gold pommel at the end of the handle, a polished walnut handle with a braided leather grip and brass bands, elegant and finely crafted, large, diagonal",
+  },
+  {
+    key: 'hw8_smith_crystal', nameKo: '수정 쐐기 망치', set: 'smith8', slot: 'weapon', tone: 'bright', batch: 8,
+    concept: '강철 머리에 은은히 빛나는 푸른 수정 쐐기, 새김 무늬, 놋쇠 고리 자루',
+    art:
+      'a blacksmith hammer with a clear pale-blue crystal wedge set into the steel head, the crystal softly glowing, engraved steel cheeks, a leather-wrapped dark wood handle with brass rings, finely crafted, large, diagonal',
+  },
+  {
+    key: 'hw8_smith_bat', nameKo: '박쥐 날개 쇠망치', set: 'smith8', slot: 'weapon', tone: 'bright', batch: 8,
+    concept: '머리 양옆에 연철 박쥐 날개, 가운데 호박빛 리벳, 가죽 감은 자루',
+    art:
+      'a blacksmith hammer with small wrought-iron bat wings forged onto both sides of the head, a tiny orange-glowing pumpkin-shaped rivet in the center, a leather-wrapped dark wood handle with brass bands, playful Halloween style, finely crafted, large, diagonal',
+  },
+  {
+    key: 'hw8_smith_gear', nameKo: '톱니바퀴 장인 망치', set: 'smith8', slot: 'weapon', tone: 'bright', batch: 8,
+    concept: '머리에 놋쇠 톱니바퀴와 작은 압력계, 자루를 감은 구리관, 놋쇠 리벳 손잡이',
+    art:
+      "an inventor blacksmith's hammer with a brass gear wheel and a small pressure dial mounted on the steel head, copper pipes curling along the handle, a leather grip with brass rivets, finely crafted, large, diagonal",
+  },
+  {
+    key: 'hw8_cat_wand', nameKo: '털실 방울 고양이 지팡이', set: 'cat', slot: 'weapon', tone: 'costume', batch: 8,
+    concept: '짧은 검은 지팡이 끝에 노란 눈 고양이 머리, 보라 털실 방울과 금방울',
+    art:
+      'a cute short black wand topped with a little black cat head with big yellow eyes and pointy ears, a fluffy purple yarn pompom and a small golden bell hanging below, diagonal',
+  },
+  {
+    key: 'hw8_cat_suit', nameKo: '검은 고양이 후드 점프수트', set: 'cat', slot: 'armor', tone: 'costume', batch: 8,
+    concept: '남녀 공용 — 고양이 귀 후드 점프수트, 흰 가슴털, 발바닥 소맷단, 꼬리, 고양이 발 슬리퍼',
+    art:
+      'a cute unisex black cat costume: a soft black hooded jumpsuit with little cat ears on the hood, a white fluffy chest patch, pink paw-print pads on the cuffs, a long curled black tail at the back, black paw slippers',
+  },
+  {
+    key: 'hw8_cat_collar', nameKo: '금방울 리본 목걸이', set: 'cat', slot: 'accessory', tone: 'costume', batch: 8,
+    concept: '빨간 벨벳 리본 초커, 가운데 반짝이는 금방울, 작은 보라 리본',
+    art:
+      'a cute red velvet ribbon choker with a shiny golden bell in the center and a small purple bow',
   },
 ];
 
