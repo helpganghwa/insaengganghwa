@@ -889,6 +889,7 @@ export async function getDistributeMembers(guildId: bigint) {
     .select({
       userId: guildMembers.userId,
       role: guildMembers.role,
+      rank: guildMembers.rank,
       nickname: characters.nickname,
       contribution: guildMembers.contributionPoints,
       dailyDonationCount: guildMembers.dailyDonationCount,
@@ -909,6 +910,8 @@ export async function getDistributeMembers(guildId: bigint) {
       userId: r.userId,
       nickname: r.nickname ?? '플레이어',
       role: r.role,
+      // 길드원 등급(R1~R3) — 분배 화면에서 등급별로 나눠 줄 때 보이게(10-26 베르 #LtsIfpJb 건의).
+      rank: r.rank,
       contribution: Number(r.contribution),
       todayDonation: GUILD_DONATION_TIERS.slice(0, donatedToday).reduce((n, t) => n + t.xp, 0),
     };
