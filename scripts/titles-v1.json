@@ -4656,7 +4656,7 @@
     "code": "halloween26_rank3",
     "cat": "할로윈",
     "kind": "영구",
-    "label": "(임시) 유령 기사",
+    "label": "PHANTOM",
     "cond": "2026 할로윈 강화 대회 아무 장비 3등 안",
     "hidden": false,
     "diff": "한정"
@@ -4665,7 +4665,7 @@
     "code": "halloween26_rank2",
     "cat": "할로윈",
     "kind": "영구",
-    "label": "(임시) 흡혈 백작",
+    "label": "NOSFERATU",
     "cond": "2026 할로윈 강화 대회 아무 장비 2등 안",
     "hidden": false,
     "diff": "한정"
@@ -4674,7 +4674,7 @@
     "code": "halloween26_rank1",
     "cat": "할로윈",
     "kind": "영구",
-    "label": "(임시) 밤의 군주",
+    "label": "PUMPKIN KING",
     "cond": "2026 할로윈 강화 대회 아무 장비 1등",
     "hidden": false,
     "diff": "한정"

@@ -5526,33 +5526,33 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "halloween26_rank3",
   kind: "permanent",
-  label: "(임시) 유령 기사",
+  label: "PHANTOM",
   hidden: false,
   cat: "할로윈",
   style: {
-   color: "#98aaff",
+   fx: "hwphantom",
    glow: true
   }
  },
  {
   code: "halloween26_rank2",
   kind: "permanent",
-  label: "(임시) 흡혈 백작",
+  label: "NOSFERATU",
   hidden: false,
   cat: "할로윈",
   style: {
-   color: "#98aaff",
+   fx: "hwnosferatu",
    glow: true
   }
  },
  {
   code: "halloween26_rank1",
   kind: "permanent",
-  label: "(임시) 밤의 군주",
+  label: "PUMPKIN KING",
   hidden: false,
   cat: "할로윈",
   style: {
-   color: "#98aaff",
+   fx: "hwpumpkin",
    glow: true
   }
  },

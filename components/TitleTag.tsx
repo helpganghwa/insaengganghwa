@@ -82,6 +82,40 @@ function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
   );
 }
 
+/**
+ * 할로윈 2026 대회 순위 칭호(2026-10-26 확정) — 글자 복제 층(.t data-t)과 핏방울·불꽃 조각이 필요한 전용 구조.
+ * 위치(%)는 Geist 대문자 획 위치에 맞춘 값(title-fx.css 주석) — 라벨을 바꾸면 다시 재야 한다.
+ */
+const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin']);
+/** 마녀불 불꽃 — U 양끝·I 두 개 윗끝. --f=일렁임 위상, --g=보랏빛 경계가 그 자리를 지나는 시점에 맞춘 지연. */
+const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
+  [10.7, 0, -0.011],
+  [16, -0.8, -7.978],
+  [50.5, -0.55, -7.757],
+  [77.7, -1.1, -7.582],
+];
+function HalloweenRankLabel({ fx, label }: { fx: string; label: string }) {
+  return (
+    <span className={`fx fx-${fx}`} data-t={label}>
+      <span className="t" data-t={label}>
+        {label}
+      </span>
+      {fx === 'hwnosferatu' ? (
+        <>
+          <i className="drop" aria-hidden />
+          <i className="drop f" aria-hidden />
+          <i className="drop n" aria-hidden />
+        </>
+      ) : fx === 'hwpumpkin' ? (
+        PUMPKIN_FLAMES.map(([left, f, g]) => {
+          const st = { left: `${left}%`, '--f': `${f}s`, '--g': `${g}s` } as React.CSSProperties;
+          return [<i key={`h${left}`} className="hb" style={st} aria-hidden />, <i key={`f${left}`} className="fl" style={st} aria-hidden />];
+        })
+      ) : null}
+    </span>
+  );
+}
+
 /** 글자 단위 분리(style.split) — 문자별 애니메이션(후원 상위 2단계 '호흡'). 공백은 nbsp로 폭 유지. */
 function SplitLabel({ label }: { label: string }) {
   return (
@@ -197,6 +231,8 @@ export function TitleTag({
       {def.style.alt ? <span className="hj" aria-hidden>{def.style.alt}</span> : null}
       <i className="orb" aria-hidden />
     </span>
+  ) : def.style.fx && HW_RANK_FX.has(def.style.fx) ? (
+    <HalloweenRankLabel fx={def.style.fx} label={label} />
   ) : def.style.fx ? (
     // data-t — 글자 복제 층(::before/::after content:attr)이 필요한 fx(백룡학살자 광택)용. 다른 fx엔 영향 없음.
     <span className={`fx fx-${def.style.fx}`} data-t={label}>
