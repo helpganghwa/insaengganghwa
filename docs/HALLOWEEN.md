@@ -68,7 +68,7 @@
 | halloween_vamp_tophat | 장신구 | 박쥐 미니 실크햇 | hw7_vamp_tophat |
 
 슬롯당 42 → 44종(아이템당 약 2.38% → 약 2.27%). 아틀라스 ROWS 12(144칸).
-스테이징 DB에는 임시 시절 행(halloween_ghost_basket·sheet·mask)이 남아 있다 — 스테이징 반영 때 정리하고(보유 행이 있으면 먼저) 새 코드를 시드한다.
+스테이징 DB의 임시 시절 행(halloween_ghost_basket·sheet·mask)은 2026-10-27 정리했고(참조 0건 확인 뒤 삭제) 확정 6종을 시드했다. 프로덕션에는 임시 행이 들어간 적이 없다.
 
 ## 5. 칭호 5종 — 2026-10-26 확정
 
