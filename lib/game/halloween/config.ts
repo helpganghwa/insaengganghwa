@@ -97,7 +97,7 @@ export const HALLOWEEN_CONTEST_ITEMS: readonly { code: string; titles: readonly 
 ];
 /** 6종 코드(카탈로그 key = DB code). 보급 풀·활성 카탈로그의 시각 게이트가 쓴다. */
 export const HALLOWEEN_ITEM_CODES: readonly string[] = HALLOWEEN_CONTEST_ITEMS.map((i) => i.code);
-/** 6종이 열렸는가 — **서버 시각** 기준(추석과 같은 이유: 크론 의존이면 00:02~00:07에 열려 사탕·배너와 어긋난다). */
+/** 6종이 열렸는가 — **서버 시각** 기준(추석과 같은 이유: 크론 의존이면 12:02~12:07에 열려 사탕·배너와 어긋난다). */
 export function halloweenItemsOpen(now: number | Date = Date.now()): boolean {
   return (typeof now === 'number' ? now : now.getTime()) >= HALLOWEEN_START_MS;
 }

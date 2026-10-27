@@ -15,7 +15,7 @@ import { CHUSEOK_RANK_REWARDS } from '@/lib/game/chuseok/config';
 import { HALLOWEEN_ITEM_KEYS } from '@/lib/game/equipment/catalog-v7';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
-/** 할로윈 강화 대회 — 순수 규칙(2026-10-20 확정: 보상표는 추석 그대로, 칭호는 6종 공통 3개). */
+/** 할로윈 강화 대회 — 순수 규칙(2026-10-20 확정: 보상표는 추석 그대로, 칭호 3종을 아이템마다 다른 순서로, 2026-10-27). */
 describe('할로윈 대회 규칙', () => {
   it('보상표는 추석과 같다', () => {
     expect(HALLOWEEN_RANK_REWARDS).toEqual(CHUSEOK_RANK_REWARDS);
@@ -26,7 +26,7 @@ describe('할로윈 대회 규칙', () => {
     expect(nextRewardTierEnd(1)).toBeNull();
   });
 
-  it('칭호는 6종 공통: 도달한 등수 이하 전부, 4등 밖은 없음', () => {
+  it('칭호는 아이템별 순서로 도달한 등수 이하 전부, 4등 밖은 없음', () => {
     const [PK, NF, PH] = ['halloween26_rank1', 'halloween26_rank2', 'halloween26_rank3'];
     expect(contestTitlesFor('halloween_smith_hammer', 1)).toEqual([PK, NF, PH]);
     expect(contestTitlesFor('halloween_smith_apron', 1)).toEqual([NF, PH, PK]);

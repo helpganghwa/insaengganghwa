@@ -16,7 +16,7 @@ import { HALLOWEEN_START_ISO, HALLOWEEN_START_MS } from './config';
  * 켜는 순서 = 게임산업법 §33 절차(docs/HALLOWEEN.md): 확률 변경 공지는 운영자가 시작 24시간 전에 내고, 여기서
  *  ① catalog_items.active=true → ② 'catalog' 캐시 무효화(확률 공시·보급 풀이 같은 순간 바뀐다) →
  *  ③ probability_snapshots에 공시 전문 기록(활성 수 반영 뒤). 멱등 — 켤 것이 없으면 아무것도 안 한다.
- * 예약 발행 크론(5분 주기)이 매번 부르므로 플래그는 00:02~00:07에 켜진다. **노출·추첨은 플래그가 아니라 서버 시각**
+ * 예약 발행 크론(5분 주기)이 매번 부르므로 플래그는 12:02~12:07에 켜진다. **노출·추첨은 플래그가 아니라 서버 시각**
  * (getActiveCatalog·supply/open.ts의 halloweenItemsOpen/now() 게이트)으로 정각에 열리므로(2026-09-23), 여기서는 DB 플래그와
  * 공시 스냅샷(effective_at = 시작 정각)을 기록하는 뒷정리만 한다.
  */

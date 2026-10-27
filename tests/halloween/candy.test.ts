@@ -15,7 +15,7 @@ import { getWalletDiamond, type WalletDb } from '@/lib/game/wallet';
 import { endTestDb, sql, testDb } from '../db';
 
 /**
- * 할로윈 사탕(2026-09-22 확정 규칙) — 순수 규칙 + DB 통합(롤백 tx, 커밋 0).
+ * 할로윈 사탕(2026-10-20 확정 규칙) — 순수 규칙 + DB 통합(롤백 tx, 커밋 0).
  * 통합 케이스는 테스트 계정(TEST_USER_ID)의 1서버 캐릭터를 쓰고, 모든 변경은 트랜잭션 롤백으로 사라진다.
  */
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';

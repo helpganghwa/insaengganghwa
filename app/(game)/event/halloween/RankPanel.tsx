@@ -168,7 +168,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         )}
       </ol>
       {board.phase === 'claim' ? (
-        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상은 우편함으로 보냈고, 칭호는 바로 드렸어요.' : '10월 1일에 순위 보상은 우편으로, 칭호는 바로 드려요.'}</p>
+        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상은 우편함으로 보냈고, 칭호는 바로 드렸어요.' : '11월 4일 오후에 순위 보상은 우편으로, 칭호는 바로 드려요.'}</p>
       ) : null}
 
       {/* 내 자리 — 목록을 스크롤해도 화면 아래(채팅 미니바 위)에 붙는다 */}

@@ -121,7 +121,7 @@ async function loadRowsUncached(serverId: number, cutoffMs: number): Promise<Map
 
 /**
  * 현황판용 참가 행 캐시(2026-09-23 동적 감사 권고) — 요청마다 user_equipment 전체 스캔 + lateral 2개(약 120ms)를 돌리면
- * 00:00 직후·마감 직전 동시 요청에서 풀(max 8)이 밀려 4초 타임아웃을 넘긴다. 유저와 무관한 서버별 목록이라 20초로 캐시하고,
+ * 12:00 직후·마감 직전 동시 요청에서 풀(max 8)이 밀려 4초 타임아웃을 넘긴다. 유저와 무관한 서버별 목록이라 20초로 캐시하고,
  * 대회 중엔 cutoff를 20초 버킷으로 내려 키를 고정한다(화면은 최대 20초 늦게 반영). 정산은 loadRowsUncached로 정확한 값을 쓴다.
  */
 const BOARD_BUCKET_MS = 20_000;
@@ -251,7 +251,7 @@ export type SettleResult =
   | { ok: false; reason: 'NOT_ENDED' };
 
 /**
- * 정산(어드민, 10/1) — 마감 시각 기준 최종 순위를 한 트랜잭션으로 확정: 결과 표 insert(순위 PK) →
+ * 정산(어드민, 11/4 오후) — 마감 시각 기준 최종 순위를 한 트랜잭션으로 확정: 결과 표 insert(순위 PK) →
  * 순위별 우편(💎·📦 3슬롯 균등) → 칭호(도달 등수 이하 전부, user_titles PK 멱등). 이미 정산된 서버는 already.
  * 정지·탈퇴 계정은 loadRows가 걸러 아래 순위가 승계된다(사용자 확정).
  */
