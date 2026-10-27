@@ -49,7 +49,7 @@ export const CATALOG_V7: CatalogItem[] = [
     tone: '위트',
     lore: '가장자리에 레이스를 겹겹이 두른 검은 양산이다. 천에는 빨간 박쥐가 군데군데 날고, 굽은 손잡이에도 작은 박쥐 날개가 달렸다. 해를 가리는 양산인데, 정작 이 양산을 든 꼬마들은 해가 져야 집을 나선다.',
     art: 'a cute small black lace parasol, opened, with scalloped lace edges and tiny red bat silhouettes on the canopy, a slender black shaft with a pointed silver tip, a curved handle shaped like a little bat with spread wings, clearly a held parasol weapon, diagonal',
-    wornDesc: 'a black lace parasol with a scalloped canopy of layered black and grey lace printed with small crimson bat silhouettes, a pointed silver finial on top, a slender black shaft and a curved black crook handle with a tiny bat-wing ornament',
+    wornDesc: 'a black lace parasol held open overhead, with a scalloped canopy of layered black and grey lace printed with small crimson bat silhouettes, a pointed silver finial on top, a slender black shaft and a curved black crook handle with a tiny bat-wing ornament',
   },
   {
     key: 'halloween_vamp_cape',
