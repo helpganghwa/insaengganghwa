@@ -108,6 +108,8 @@
 4. `git push origin HEAD:master` → Vercel Ready → `/api/health`의 dpl 전환 확인(인스턴트 롤백 이력이 있으면 자동 승격이 안 되니 `vercel promote`).
 5. 확인: `/event/halloween` → 홈으로 redirect, 홈에 배너 없음, `/probability` 42종(2.38%), `/sprites/halloween/*.png?v=` 200, `/admin/halloween` 열림, Production env에 `HALLOWEEN_START_ISO` 없음.
 
+**배포 기록(2026-10-28)**: 00:03 0247 적용(schema_migrations 기록) → 00:04 시드(6행 active=false, 활성 42/42/42, 기존 이름 불변) → 00:04 master push(8af97362→f40ec77d) → 00:06 프로덕션 반영(dpl_GR5sLsiye3ankmmVdNw4Z4ACzfQU, githubCommitSha f40ec77d). 확인: `/probability` 2.38%(42종)·할로윈 이름 없음, 채택 자산 200, 후보 자산(.vercelignore) 404, `/event/halloween`·`/admin/halloween` 미로그인 307, Production env `HALLOWEEN_START_ISO` 없음(Preview만).
+
 **12:00~12:10**
 - 정각: `/probability` 슬롯당 44종(약 2.27%), 홈 배너·`/event/halloween` 노출, 보급 개봉에서 6종 등장(`supply_open_logs` 조인), 강화 수령 시 `halloween_candy_ledger`에 `job:` 행, `client_errors`/`recordError`의 `halloween-accrue` 0건.
 - 12:07까지(크론 `scheduled-mail` 2-57/5분): `catalog_items`의 할로윈 6행 active=true, `probability_snapshots` 최신 행 effective_at=10/28 12:00·note '할로윈 6종 개방', 운영 경보 '할로윈 6종 개방 실패' 없음.
