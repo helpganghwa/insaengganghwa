@@ -61,6 +61,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
   const [busyStep, setBusyStep] = useState<number | null>(null);
   const [modal, setModal] = useState<CandyExchangeKind | null>(null);
   const [itemModal, setItemModal] = useState<string | null>(null);
+  const [itemBusy, setItemBusy] = useState(false);
   const { showError, showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
 
@@ -71,9 +72,11 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       ? '대회가 시작되면 강화에 성공할 때마다 사탕이 쌓여요.'
       : ov.phase === 'accrue'
         ? `강화에 성공하면 도달한 단계만큼 사탕이 쌓여요. ${HALLOWEEN_ACCRUE_END_LABEL}까지 쌓을 수 있어요.`
-        : ov.phase === 'ended'
-          ? '사탕 교환 기간이 끝났어요.'
-          : null;
+        : ov.phase === 'claim'
+          ? `사탕 적립은 ${HALLOWEEN_ACCRUE_END_LABEL}에 끝났어요. 받기와 교환은 ${HALLOWEEN_CLAIM_END_DAY}까지 할 수 있어요.`
+          : ov.phase === 'ended'
+            ? '사탕 교환 기간이 끝났어요.'
+            : null;
 
   // 낙관 갱신(2026-09-22 사용자 요청) — 받음 표시·다이아·토스트를 먼저 반영하고 실패하면 되돌린다.
   // 서버가 '이미 받음'이라 하면 받음 표시는 맞지만 다이아는 이미 들어와 있으니 낙관 증가분만 되돌린다(2026-09-23 감사).
@@ -132,9 +135,10 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
   // 장비 교환 — 사탕 차감만 낙관 갱신하고, 장비 상태(초월·진행도·교환 가능 개수)는 서버 응답으로 맞춘다.
   const exchangeItem = (code: string, count: number) => {
     const it = ov.items.find((i) => i.code === code);
-    if (!it) return;
+    if (!it || itemBusy) return;
     const cost = CANDY_ITEM_EXCHANGE.candy * count;
     setItemModal(null);
+    setItemBusy(true); // 응답 전 연타 방지 — 교환 가능 개수는 서버 응답으로만 갱신되므로 그동안 버튼을 잠근다.
     setOv((o) => ({ ...o, spent: o.spent + cost, available: o.available - cost }));
     showHeaderToast({ title: `${it.name} ${n(count)}개 교환!`, detail: `사탕 ${n(cost)} 사용` });
     const rollback = (message: string) => {
@@ -155,9 +159,10 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           items: o.items.map((x) => (x.code === code ? r.item : x)),
         }));
         if (r.transcended > 0) showHeaderToast({ title: `${it.name} T${r.item.level} 초월!`, detail: `초월 ${r.transcended}단계 상승` });
-        else if (r.acquired) showHeaderToast({ title: `${it.name} 획득!`, detail: '보관함에서 확인할 수 있어요' });
+        else if (r.acquired) showHeaderToast({ title: `${it.name} 획득!`, detail: '인벤토리에서 확인할 수 있어요' });
       })
-      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
+      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'))
+      .finally(() => setItemBusy(false));
   };
 
   return (
@@ -248,7 +253,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
         ).map((x) => {
           const need = CANDY_EXCHANGE[x.kind].candy - ov.available;
           // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
-          const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? `사탕 ${n(need)}개 더 모으면 교환할 수 있어요` : x.sub;
+          const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? (ov.phase === 'claim' ? `사탕 ${n(need)}개 모자라요` : `사탕 ${n(need)}개 더 모으면 교환할 수 있어요`) : x.sub;
           return (
             <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
               <b className="text-[13px]">{x.title}</b>
@@ -269,12 +274,13 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       {/* 장비 교환(2026-10-27) — 6종 각 1개 = 사탕 100. 교환 뒤 초월 단계가 내 최고 초월을 넘지 못한다(allowedItemCopies). */}
       <p className="mb-0.5 mt-4 text-[12.5px] font-bold">할로윈 장비 교환</p>
       <p className="mb-1.5 text-[10.5px] text-zinc-500">
-        1개에 사탕 {n(CANDY_ITEM_EXCHANGE.candy)} · 보급에서 뽑은 것과 같아요(없으면 획득, 있으면 초월 진행) · 내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지만
+        1개에 사탕 {n(CANDY_ITEM_EXCHANGE.candy)} · 보급 상자에서 나온 것처럼 들어가요(없으면 새로 얻고, 있으면 초월이 진행돼요)
+        {ov.maxTranscend > 0 ? <> · 내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지 올릴 수 있어요</> : <> · 없는 장비를 1개씩 받을 수 있어요(다른 장비 초월이 오르면 더 받을 수 있어요)</>}
       </p>
       <ul className="flex flex-col gap-1.5">
         {ov.items.map((it) => {
           const canPay = ov.available >= CANDY_ITEM_EXCHANGE.candy;
-          const why = !open ? '기간 종료' : it.allowed === 0 ? '내 최고 초월 단계에 도달했어요' : !canPay ? `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 더 모으면 교환할 수 있어요` : null;
+          const why = !open ? (ov.phase === 'before' ? '시작 전' : '기간 종료') : it.allowed === 0 ? '내 최고 초월 단계예요 · 다른 장비 초월이 오르면 더 받을 수 있어요' : !canPay ? (ov.phase === 'claim' ? `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 모자라요` : `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 더 모으면 교환할 수 있어요`) : null;
           return (
             <li key={it.code} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
               <ItemImg code={it.code} size={36} />
@@ -286,7 +292,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
               </div>
               <button
                 type="button"
-                disabled={!open || it.allowed === 0 || !canPay}
+                disabled={!open || it.allowed === 0 || !canPay || itemBusy}
                 onClick={() => setItemModal(it.code)}
                 className="rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
               >

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { assetUrl } from '@/lib/asset-versions';
-import { HALLOWEEN_ACCRUE_END_LABEL, HALLOWEEN_ACCRUE_END_MS } from '@/lib/game/halloween/config';
+import { HALLOWEEN_ACCRUE_END_LABEL, HALLOWEEN_ACCRUE_END_MS, HALLOWEEN_CLAIM_END_LABEL } from '@/lib/game/halloween/config';
 import { fmtLeft } from '@/lib/game/halloween/countdown';
 import { serverNow } from '@/lib/client/server-clock';
 
@@ -41,7 +41,7 @@ export function HalloweenBanner({ claimable, phase }: { claimable: number; phase
             {hot ? '사탕 보상을 받을 수 있어요' : '할로윈 강화 이벤트'}
           </div>
           <div className="truncate text-[10.5px] text-amber-100/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            {hot ? `할로윈 강화 이벤트 · 받을 보상 ${claimable}개` : '할로윈 장비 6종, 장비마다 10등까지 보상'}
+            {hot ? `할로윈 강화 이벤트 · 받을 보상 ${claimable}개` : phase === 'claim' ? `남은 사탕은 ${HALLOWEEN_CLAIM_END_LABEL}까지 바꿀 수 있어요` : '할로윈 장비 6종, 장비마다 10등까지 보상'}
           </div>
         </div>
         <span className="shrink-0 rounded-lg bg-black/40 px-2 py-1 font-mono text-[10.5px] font-extrabold tabular-nums text-amber-200">{right}</span>

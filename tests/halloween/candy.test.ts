@@ -232,4 +232,43 @@ describe.skipIf(skip)('사탕 통합(롤백 tx)', () => {
       expect(led!.ex).toBe(-100);
     });
   });
+
+  it('장비 교환: 상한 경계 — 다른 장비를 T2로 두면 미보유 장비는 정확히 1+1+2개까지, 자동 초월·초월 로그 반영, 한 개 더는 CAP', async () => {
+    await inRollback(async (tx) => {
+      // 롤백 tx 안에서 상태를 만든다: 할로윈 6종 보유 행을 비우고, 실크햇을 T2로 넣어 "내 최고 초월"을 최소 2로 만든다.
+      await tx.execute(sql`
+        delete from user_equipment where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
+          and catalog_item_id in (select id from catalog_items where code like 'halloween_%')
+      `);
+      await tx.execute(sql`
+        insert into user_equipment (user_id, server_id, catalog_item_id, transcend_level, max_transcend_level)
+        select ${TEST_USER_ID}::uuid, ${SERVER_ID}, id, 2, 2 from catalog_items where code = 'halloween_vamp_tophat'
+      `);
+      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: `t-${Date.now()}-cap`, level: 30_000, at: IN }, tx);
+      const o = await getCandyOverview(TEST_USER_ID, SERVER_ID, IN, tx);
+      const maxT = o.maxTranscend;
+      expect(maxT).toBeGreaterThanOrEqual(2);
+      const hammer = o.items.find((i) => i.code === 'halloween_smith_hammer')!;
+      expect(hammer.owned).toBe(false);
+      expect(hammer.allowed).toBe(allowedItemCopies(maxT, null));
+      if (hammer.allowed > 99 || hammer.allowed * 100 > 30_000) return; // 테스트 계정의 최고 초월이 너무 높으면 경계 검증은 건너뛴다.
+      const r = await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', hammer.allowed, IN, tx);
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.acquired).toBe(true);
+      expect(r.item.level).toBe(maxT);
+      expect(r.item.progress).toBe(0);
+      expect(r.item.allowed).toBe(0);
+      expect(r.transcended).toBe(maxT);
+      const [lg] = (await tx.execute(sql`
+        select count(*)::int as c from transcend_logs tl join catalog_items ci on ci.id = tl.catalog_item_id
+         where tl.user_id = ${TEST_USER_ID}::uuid and tl.server_id = ${SERVER_ID} and ci.code = 'halloween_smith_hammer'
+      `)) as unknown as { c: number }[];
+      expect(lg!.c).toBe(maxT);
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 1, IN, tx)).toEqual({ ok: false, reason: 'CAP' });
+      // 실크햇(T2·진행 0)은 maxT까지 Σ(3..maxT)개, maxT가 2면 0개.
+      const hat = (await getCandyOverview(TEST_USER_ID, SERVER_ID, IN, tx)).items.find((i) => i.code === 'halloween_vamp_tophat')!;
+      expect(hat.allowed).toBe(allowedItemCopies(maxT, { level: 2, progress: 0 }));
+    });
+  });
 });

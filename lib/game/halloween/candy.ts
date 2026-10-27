@@ -19,7 +19,7 @@ import {
   type CandyExchangeKind,
 } from './config';
 import { CANDY_ITEM_EXCHANGE, allowedItemCopies, type ItemTranscendState } from './item-exchange';
-import { afterPicksApplied, applyCatalogPicks, type OpenResult } from '@/lib/game/supply/open';
+import { afterPicksApplied, applyCatalogPicks } from '@/lib/game/supply/open';
 
 /**
  * 할로윈 사탕 — 강화 성공 적립·도달 보상 수령(칭호 단계 포함)·교환(lib/game/halloween/config.ts의 규칙). 추석 송편과 같은 뼈대.
@@ -110,8 +110,11 @@ async function loadItemStates(userId: string, serverId: number, dbx: Dbx): Promi
   return { maxTranscend, items };
 }
 
-/** 화면용 요약 — 지갑 1행 + 수령 목록 1쿼리. */
-export async function getCandyOverview(userId: string, serverId: number, at = new Date(), dbx: DbLike = db): Promise<CandyOverview> {
+/**
+ * 화면용 요약 — 지갑 1행 + 수령 목록 1쿼리 + 장비 상태 1쿼리.
+ * `withItems: false`면 장비 상태를 건너뛴다(홈 배너처럼 받을 보상 수만 필요한 핫패스 — items는 빈 배열, maxTranscend 0).
+ */
+export async function getCandyOverview(userId: string, serverId: number, at = new Date(), dbx: DbLike = db, withItems = true): Promise<CandyOverview> {
   const [row] = (await dbx.execute(sql`
     select coalesce(w.total, 0)::text as total, coalesce(w.spent, 0)::text as spent,
            coalesce((select json_agg(step order by step) from halloween_candy_claims c
@@ -124,7 +127,7 @@ export async function getCandyOverview(userId: string, serverId: number, at = ne
   const claimed = (row?.claimed ?? []).map(Number);
   const claimedSet = new Set(claimed);
   const claimable = CANDY_LADDER.filter((l) => total >= l.at && !claimedSet.has(l.step)).length;
-  const { maxTranscend, items } = await loadItemStates(userId, serverId, dbx);
+  const { maxTranscend, items } = withItems ? await loadItemStates(userId, serverId, dbx) : { maxTranscend: 0, items: [] as CandyItemState[] };
   return {
     phase: halloweenPhase(at),
     total,
@@ -141,7 +144,7 @@ export async function getCandyOverview(userId: string, serverId: number, at = ne
 
 /** 홈 배너용 — 받을 수 있는 단계가 있는지만(가벼운 1쿼리). */
 export async function countClaimableCandy(userId: string, serverId: number): Promise<number> {
-  const o = await getCandyOverview(userId, serverId);
+  const o = await getCandyOverview(userId, serverId, new Date(), db, false);
   return o.phase === 'accrue' || o.phase === 'claim' ? o.claimable : 0;
 }
 
@@ -273,7 +276,12 @@ export async function exchangeCandyForItem(
     if (available < cost) return { ok: false as const, reason: 'INSUFFICIENT' as const };
     const [ci] = (await tx.execute(sql`select id, name from catalog_items where code = ${code} limit 1`)) as unknown as { id: number; name: string }[];
     if (!ci) return { ok: false as const, reason: 'BAD_ITEM' as const };
-    // 상한은 반영 직전 상태로 다시 계산(화면 값은 참고일 뿐). 장비 행은 applyCatalogPicks가 잠근다.
+    // 보급 개봉과 직렬화 — 개봉은 상자 행을 먼저 잠그므로 여기서도 이 유저의 상자 행을 잠근다(잠금 순서: 사탕 → 상자 → 장비,
+    // 상자 교환·수령도 같은 순서). 안 잠그면 상한 계산과 반영 사이에 개봉이 끼어 상한을 넘기거나, 미보유 장비를 개봉이 먼저
+    // 만들어 교환분이 conflict로 사라질 수 있다(2026-10-27 리뷰).
+    await tx.execute(sql`select slot from user_supply_boxes where user_id = ${userId}::uuid and server_id = ${serverId} for update`);
+    // 상한은 반영 직전 상태로 다시 계산(화면 값은 참고일 뿐). 이 장비 행도 먼저 잠근다(applyCatalogPicks가 다시 잠가도 같은 tx라 무해).
+    await tx.execute(sql`select id from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId} and catalog_item_id = ${ci.id} for update`);
     const before = await loadItemStates(userId, serverId, tx);
     const st = before.items.find((i) => i.code === code);
     if (!st || count > st.allowed) return { ok: false as const, reason: 'CAP' as const };
@@ -304,7 +312,7 @@ export async function exchangeCandyForItem(
   });
   if (!done.ok) return done;
   // 테스트의 롤백 트랜잭션 안에서는(dbx가 tx) 사후 처리를 돌리지 않는다 — 커밋되지 않은 상태로 랭킹·우편이 새어 나가면 안 된다.
-  if (dbx === db) await afterPicksApplied(userId, serverId, done.results as OpenResult[]);
+  if (dbx === db) await afterPicksApplied(userId, serverId, done.results);
   const { results: _r, ...rest } = done;
   return rest;
 }

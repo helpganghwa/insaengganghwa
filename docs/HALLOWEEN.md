@@ -34,7 +34,7 @@
 - 칭호는 도달 보상 수령 트랜잭션에서 함께 지급(user_titles PK 멱등).
 - 교환 = 추석과 같음(2026-10-23 확정): 📦3 = 300사탕, 💎100 = 400사탕, 한도 없음.
 - 원장 사유: `halloween_ladder`(ref `step:<n>`), `halloween_exchange`(ref `ex:<uuid>`).
-- **장비 교환(2026-10-27 확정)**: 할로윈 6종을 사탕 **100개에 1개**(상자 1개 교환과 같은 값)씩 받는다. 받는 처리는 보급 개봉과 똑같다(`applyCatalogPicks`·`afterPicksApplied`를 공유 — 미보유 획득 T0, 보유 시 진행도 +1·자동 초월·초월 로그·이정표·랭킹 갱신). 강화 단계는 건드리지 않아 대회 순위와 무관.
+- **장비 교환(2026-10-27 확정)**: 할로윈 6종을 사탕 **100개에 1개**(상자 1개 교환과 같은 값)씩 받는다. 받는 처리는 보급 개봉과 똑같다(`applyCatalogPicks`·`afterPicksApplied`를 공유 — 미보유 획득 T0, 보유 시 진행도 +1·자동 초월·초월 로그·이정표·랭킹 갱신). 강화 단계는 건드리지 않는다. 다만 순위에는 하한이 없어(rank.ts) 교환으로 처음 받은 장비도 보급으로 받은 것과 똑같이 +0 참가자로 순위에 들어간다(마감 전 획득분).
   - 상한: 교환 뒤 그 장비의 초월 단계가 **내가 가진 장비 중 최고 초월(같은 서버)**을 넘을 수 없다(`allowedItemCopies`: 미보유 = 획득 1 + 그 단계까지 채우는 개수, 보유 = 지금 단계·진행도에서 그 단계까지). 내 최고가 T0이면 미보유 장비만 1개. 서버가 반영 직전에 다시 계산한다.
   - 정본 `lib/game/halloween/item-exchange.ts`(순수)·`exchangeCandyForItem`(candy.ts)·액션 `exchangeCandyItemAction`. 원장 note `<이름> N개 교환`, ref `ex:<uuid>`.
 
@@ -77,7 +77,7 @@
 ## 6. 화면
 
 - `/event/halloween` — 세그먼트 강화 순위 | 사탕 교환(`?tab=candy`). 시작 전엔 홈으로.
-- 홈 배너: 대회 문구 ↔ 받을 보상이 있으면 사탕 문구. 배경 그림·사탕 아이콘은 임시(그라데이션·SVG).
+- 홈 배너: 대회 문구 ↔ 받을 보상이 있으면 사탕 문구. 배경은 `public/sprites/halloween/banner-contest.png`(호박밭)·`banner-candy.png`(사탕 바구니), 사탕 아이콘 `candy.png`(2026-10-27 확정, pixflux 후보는 `public/sprites/halloween-ui/`).
 
 ## 7. 보류·미정
 

@@ -5074,31 +5074,31 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "halloween26_candy1",
   cat: "할로윈",
-  cond: "2026 할로윈 사탕 60,000개 모으기",
+  cond: "2026 할로윈 사탕 60,000개 모아 도달 보상 받기",
   diff: "한정"
  },
  {
   code: "halloween26_candy3",
   cat: "할로윈",
-  cond: "2026 할로윈 사탕 150,000개 모으기",
+  cond: "2026 할로윈 사탕 150,000개 모아 도달 보상 받기",
   diff: "한정"
  },
  {
   code: "halloween26_rank3",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
+  cond: "2026 할로윈 강화 대회 3등 안 (장비마다 등수별 칭호가 다름)",
   diff: "한정"
  },
  {
   code: "halloween26_rank2",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
+  cond: "2026 할로윈 강화 대회 3등 안 (장비마다 등수별 칭호가 다름)",
   diff: "한정"
  },
  {
   code: "halloween26_rank1",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
+  cond: "2026 할로윈 강화 대회 3등 안 (장비마다 등수별 칭호가 다름)",
   diff: "한정"
  },
  {

@@ -162,13 +162,13 @@ export function RankPanel({ board }: { board: ContestBoard }) {
       {/* 1~10등 */}
       <ol className="overflow-hidden rounded-xl bg-zinc-900">
         {item.rows.length === 0 ? (
-          <li className="rounded-xl border border-zinc-800 px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 강화하면 순위에 올라요.</li>
+          <li className="rounded-xl border border-zinc-800 px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 가지면 순위에 올라요.</li>
         ) : (
           item.rows.map((r) => <Row key={r.rank} r={r} item={item} />)
         )}
       </ol>
       {board.phase === 'claim' ? (
-        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상은 우편함으로 보냈고, 칭호는 바로 드렸어요.' : '11월 4일 오후에 순위 보상은 우편으로, 칭호는 바로 드려요.'}</p>
+        <p className="mt-2 text-[11px] text-zinc-500">{board.settled ? '순위 보상은 우편함으로 보냈고, 칭호는 바로 드렸어요.' : '11월 4일 오후 정산 때 순위 보상은 우편으로 보내고, 칭호는 그때 바로 드려요.'}</p>
       ) : null}
 
       {/* 내 자리 — 목록을 스크롤해도 화면 아래(채팅 미니바 위)에 붙는다 */}
@@ -193,7 +193,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
             </div>
           ) : (
             <div className="flex items-center rounded-xl border border-zinc-700 bg-[#0c0c0e] px-3 py-2.5 shadow-[0_6px_20px_rgba(0,0,0,0.55)]">
-              <b className="text-[13px] font-medium text-zinc-400">아직 이 장비가 없어요</b>
+              <b className="text-[13px] font-medium text-zinc-400">아직 이 장비가 없어요 · 보급이나 사탕 교환으로 받을 수 있어요</b>
             </div>
           )}
         </div>
@@ -211,7 +211,7 @@ function RewardSheet({ item, onClose }: { item: BoardItem; onClose: () => void }
     <ModalShell onClose={onClose} label="순위별 보상">
       <ModalLayout
         title="순위별 보상"
-        subtitle={`${item.name} 순위 보상이에요. 장비마다 칭호 순서가 달라요. 1등을 하면 2, 3등 칭호까지, 2등을 하면 3등 칭호까지 함께 드려요.`}
+        subtitle={`${item.name} 순위 보상이에요. 장비마다 칭호 순서가 달라요. 1등을 하면 2, 3등 칭호까지, 2등을 하면 3등 칭호까지 함께 드려요. 같은 칭호는 한 번만 받아요.`}
         bodyPad="sm"
         footer={
           <ModalButton tone="neutral" onClick={onClose}>
