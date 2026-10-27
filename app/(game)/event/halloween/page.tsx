@@ -26,7 +26,7 @@ export default async function HalloweenEventPage({
 }) {
   const userId = await getSessionUserId();
   if (!userId) return null;
-  // 시작 전(10/28 00:00 KST 이전)엔 홈으로 — 배포 직후 URL로 들어와도 빈 화면이 새지 않게(2026-09-23 점검).
+  // 시작 전(10/29 00:00 KST 이전)엔 홈으로 — 배포 직후 URL로 들어와도 빈 화면이 새지 않게(2026-09-23 점검).
   // 스테이징은 HALLOWEEN_START_ISO를 앞당겨 두므로 영향 없음.
   if (halloweenPhase() === 'before') redirect('/');
   const initial = parseTab((await searchParams).tab);

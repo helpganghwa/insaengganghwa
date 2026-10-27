@@ -12,7 +12,7 @@ import { HALLOWEEN_START_ISO, HALLOWEEN_START_MS } from './config';
 /**
  * 할로윈 6종 자동 개방(추석 2026-09-22 결정과 같은 방식).
  *
- * seed-catalog가 active=false로 넣어 둔 6종을 시작 시각(HALLOWEEN_START_ISO, 10/28 00:00 KST)이 지나면 켠다.
+ * seed-catalog가 active=false로 넣어 둔 6종을 시작 시각(HALLOWEEN_START_ISO, 10/29 00:00 KST)이 지나면 켠다.
  * 켜는 순서 = 게임산업법 §33 절차(docs/HALLOWEEN.md): 확률 변경 공지는 운영자가 시작 24시간 전에 내고, 여기서
  *  ① catalog_items.active=true → ② 'catalog' 캐시 무효화(확률 공시·보급 풀이 같은 순간 바뀐다) →
  *  ③ probability_snapshots에 공시 전문 기록(활성 수 반영 뒤). 멱등 — 켤 것이 없으면 아무것도 안 한다.
