@@ -85,16 +85,15 @@ const PH = 'halloween26_rank3';
 
 /**
  * 대회 대상 6종(카탈로그 v7). 순위는 아이템별·서버별로 따로 매긴다.
- * ⚠ 2026-10-25 현재 **임시(더미) 6종** — 세트 확정 뒤 code·이름·그림을 바꾼다(lib/game/equipment/catalog-v7.ts).
  */
 export const HALLOWEEN_CONTEST_ITEMS: readonly { code: string; titles: readonly [string, string, string] }[] = [
   // titles = [1등, 2등, 3등] 칭호 — 3종의 여섯 가지 순서를 아이템마다 하나씩(2026-10-27 확정). 각 칭호가 1·2·3등에 두 번씩.
   { code: 'halloween_smith_hammer', titles: [PK, NF, PH] },
   { code: 'halloween_smith_apron', titles: [NF, PH, PK] },
   { code: 'halloween_smith_scarf', titles: [PH, PK, NF] },
-  { code: 'halloween_ghost_basket', titles: [PK, PH, NF] },
-  { code: 'halloween_ghost_sheet', titles: [NF, PK, PH] },
-  { code: 'halloween_ghost_mask', titles: [PH, NF, PK] },
+  { code: 'halloween_vamp_parasol', titles: [PK, PH, NF] },
+  { code: 'halloween_vamp_cape', titles: [NF, PK, PH] },
+  { code: 'halloween_vamp_tophat', titles: [PH, NF, PK] },
 ];
 /** 6종 코드(카탈로그 key = DB code). 보급 풀·활성 카탈로그의 시각 게이트가 쓴다. */
 export const HALLOWEEN_ITEM_CODES: readonly string[] = HALLOWEEN_CONTEST_ITEMS.map((i) => i.code);

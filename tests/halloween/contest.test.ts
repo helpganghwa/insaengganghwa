@@ -31,7 +31,7 @@ describe('할로윈 대회 규칙', () => {
     expect(contestTitlesFor('halloween_smith_hammer', 1)).toEqual([PK, NF, PH]);
     expect(contestTitlesFor('halloween_smith_apron', 1)).toEqual([NF, PH, PK]);
     expect(contestTitlesFor('halloween_smith_apron', 2)).toEqual([PH, PK]);
-    expect(contestTitlesFor('halloween_ghost_mask', 3)).toEqual([PK]);
+    expect(contestTitlesFor('halloween_vamp_tophat', 3)).toEqual([PK]);
     expect(contestTitlesFor('halloween_smith_hammer', 4)).toEqual([]);
     expect(contestTitlesFor('halloween_smith_hammer', 0)).toEqual([]);
     expect(contestTitlesFor('nope', 1)).toEqual([]);

@@ -51,20 +51,21 @@
 | 장신구 2 | PHANTOM | NOSFERATU | PUMPKIN KING |
 - 정산 함수 `settleContest`(우편 발신 '할로윈 강화 대회'). 어드민 정산 화면은 정산 시점에 붙인다(추석은 정산 뒤 제거).
 
-## 4. 아이템 6종 — ⚠ 임시(2026-10-25)
+## 4. 아이템 6종 — 2026-10-27 확정
 
-`lib/game/equipment/catalog-v7.ts`. 스테이징 검증용으로 2차 후보(대장장이·유령 분장) 그림·이름을 넣었다. 세트가 확정되면 code·이름·로어·그림과 `HALLOWEEN_CONTEST_ITEMS`를 함께 바꾸고, 스테이징 DB의 임시 행은 지운다(보유 행이 있으면 먼저 정리).
+`lib/game/equipment/catalog-v7.ts`. 그림·해방 애니는 `scripts/gen-halloween-cand.ts` 후보에서 왔다(`scripts/catalog-v3-codemap.json`으로 code에 연결 → `build-item-anim`·`build-sprite-atlas`). 이름·로어·애니는 리뷰 아티팩트에서 확정.
 
-| code | 부위 | 이름(임시) |
-|---|---|---|
-| halloween_smith_hammer | 무기 | 말하는 담금망치 |
-| halloween_smith_apron | 방어구 | 손때 묻은 가죽 앞치마 |
-| halloween_smith_scarf | 장신구 | 불똥 막이 두건 |
-| halloween_ghost_basket | 무기 | 사탕 가득 호박 바구니 |
-| halloween_ghost_sheet | 방어구 | 바닥에 끌리는 홑청 망토 |
-| halloween_ghost_mask | 장신구 | 눈구멍 뚫린 유령 가면 |
+| code | 부위 | 이름 | 후보 |
+|---|---|---|---|
+| halloween_smith_hammer | 무기 | 말하는 담금망치 | hw2_smith_hammer |
+| halloween_smith_apron | 방어구 | 장인의 앞치마 | hw5_smith_apron |
+| halloween_smith_scarf | 장신구 | 장인의 두건 | hw9_smith_kerchief |
+| halloween_vamp_parasol | 무기 | 레이스 박쥐 양산 | hw9_vamp_parasol |
+| halloween_vamp_cape | 방어구 | 박쥐 백작 망토 | hw5_vamp_cape |
+| halloween_vamp_tophat | 장신구 | 박쥐 미니 실크햇 | hw7_vamp_tophat |
 
 슬롯당 42 → 44종(아이템당 약 2.38% → 약 2.27%). 아틀라스 ROWS 12(144칸).
+스테이징 DB에는 임시 시절 행(halloween_ghost_basket·sheet·mask)이 남아 있다 — 스테이징 반영 때 정리하고(보유 행이 있으면 먼저) 새 코드를 시드한다.
 
 ## 5. 칭호 5종 — 2026-10-26 확정
 

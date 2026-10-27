@@ -258,5 +258,29 @@
   "chuseok_rabbit_ears_v4": {
     "code": "chuseok_rabbit_ears",
     "slot": "accessory"
+  },
+  "hw2_smith_hammer": {
+    "code": "halloween_smith_hammer",
+    "slot": "weapon"
+  },
+  "hw5_smith_apron": {
+    "code": "halloween_smith_apron",
+    "slot": "armor"
+  },
+  "hw9_smith_kerchief": {
+    "code": "halloween_smith_scarf",
+    "slot": "accessory"
+  },
+  "hw9_vamp_parasol": {
+    "code": "halloween_vamp_parasol",
+    "slot": "weapon"
+  },
+  "hw5_vamp_cape": {
+    "code": "halloween_vamp_cape",
+    "slot": "armor"
+  },
+  "hw7_vamp_tophat": {
+    "code": "halloween_vamp_tophat",
+    "slot": "accessory"
   }
 }
