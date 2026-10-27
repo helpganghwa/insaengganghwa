@@ -18,7 +18,7 @@ export type HalloweenTab = 'rank' | 'candy';
 
 /**
  * 할로윈 강화 이벤트 페이지 — 헤더 오른쪽에 초 단위 남은 시간(홈 배너와 같은 형식), 세그먼트 두 개(순위 | 사탕).
- * 전환은 상태만 바꾼다(무왕복). 마감 뒤에는 '11/3 23:59 확정'.
+ * 전환은 상태만 바꾼다(무왕복). 마감 뒤에는 '11/4 11:59 확정'.
  */
 export function HalloweenEventClient({ initialTab, candy, board }: { initialTab: HalloweenTab; candy: CandyOverview; board: ContestBoard }) {
   const [tab, setTab] = useState<HalloweenTab>(initialTab);

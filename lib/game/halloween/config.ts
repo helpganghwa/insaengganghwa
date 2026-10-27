@@ -7,26 +7,27 @@
  *  - 도달 보상(사다리)은 **누적 총량** 기준 — 교환에 써도 줄지 않는다. 각 단계는 한 번만 받는다.
  *    끝 15만·9단계, 단계 사탕의 10%를 💎·0.3%를 📦로. 6만·15만 단계는 칭호도 준다(2026-10-26: 칭호 3 → 2, 4만·10만은 칭호 없이 💎·📦만).
  *  - 교환은 **사용 가능 사탕**(누적 − 교환에 쓴)을 쓴다. 추석과 같은 비율·한도 없음(2026-10-23 확정).
- *  - 적립은 대회 마감까지, 수령·교환은 결과 마감(11/6 23:59)까지. 그 뒤 남은 사탕은 소멸(화면에 안내).
+ *  - 적립은 대회 마감까지, 수령·교환은 결과 마감(11/7 11:59)까지. 그 뒤 남은 사탕은 소멸(화면에 안내).
  *
  * 시작 시각은 서버에서 env `HALLOWEEN_START_ISO`로 앞당길 수 있다(스테이징 검증용 — 프로덕션엔 두지 않는다).
  * 클라 번들에서는 env가 비어 상수로 떨어지지만, 국면 판정은 서버가 넘긴 값(overview.phase)을 쓰므로 무관.
  */
-export const HALLOWEEN_START_ISO = process.env.HALLOWEEN_START_ISO || '2026-10-29T00:00:00+09:00';
+export const HALLOWEEN_START_ISO = process.env.HALLOWEEN_START_ISO || '2026-10-28T12:00:00+09:00';
 /** 대회·적립 마감(이 시각 이후의 강화 성공은 사탕이 되지 않는다). */
-export const HALLOWEEN_ACCRUE_END_ISO = '2026-11-03T23:59:59.999+09:00';
+export const HALLOWEEN_ACCRUE_END_ISO = '2026-11-04T11:59:59.999+09:00';
 /** 결과 노출·도달 보상 수령·교환 마감. */
-export const HALLOWEEN_CLAIM_END_ISO = '2026-11-06T23:59:59.999+09:00';
+export const HALLOWEEN_CLAIM_END_ISO = '2026-11-07T11:59:59.999+09:00';
 
 export const HALLOWEEN_START_MS = Date.parse(HALLOWEEN_START_ISO);
 export const HALLOWEEN_ACCRUE_END_MS = Date.parse(HALLOWEEN_ACCRUE_END_ISO);
 export const HALLOWEEN_CLAIM_END_MS = Date.parse(HALLOWEEN_CLAIM_END_ISO);
 
 /** 화면 표기용 날짜(헤더·배너). */
-export const HALLOWEEN_START_LABEL = '10/29 00:00';
-export const HALLOWEEN_ACCRUE_END_LABEL = '11/3 23:59';
-export const HALLOWEEN_CLAIM_END_LABEL = '11/6 23:59';
-export const HALLOWEEN_CLAIM_END_DAY = '11/6';
+export const HALLOWEEN_START_LABEL = '10/28 12:00';
+export const HALLOWEEN_ACCRUE_END_LABEL = '11/4 11:59';
+export const HALLOWEEN_CLAIM_END_LABEL = '11/7 11:59';
+/** 교환 마감 안내(정오 마감이라 날짜만 쓰면 하루 종일로 읽힌다 — 시각까지). */
+export const HALLOWEEN_CLAIM_END_DAY = HALLOWEEN_CLAIM_END_LABEL;
 
 export type HalloweenPhase = 'before' | 'accrue' | 'claim' | 'ended';
 

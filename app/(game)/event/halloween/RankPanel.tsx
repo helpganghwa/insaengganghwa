@@ -111,7 +111,7 @@ function nextLineFor(item: BoardItem, live: boolean): string | null {
 /**
  * 강화 순위 세그먼트 — 장비 칩 6개(그림 + 내 등수) → 장비 머리글(그림·이름·[보상 보기]) →
  * 1~10등(대난투식 행: 메달·배경 아바타·길드 마크·칭호·단계·도달 시각, 2026-09-23) → 화면 아래 고정된 내 자리 줄.
- * 보상표는 공통 팝업. 마감 뒤에는 정산 결과(확정)를 그대로 보여 준다(11/6까지).
+ * 보상표는 공통 팝업. 마감 뒤에는 정산 결과(확정)를 그대로 보여 준다(11/7 11:59까지).
  */
 export function RankPanel({ board }: { board: ContestBoard }) {
   const [sel, setSel] = useState(board.items[0]?.code ?? '');

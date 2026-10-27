@@ -8,7 +8,7 @@ import type { CatalogItem } from './catalog';
  *   lib/game/halloween/config.ts의 HALLOWEEN_CONTEST_ITEMS도 함께 고친다(프로덕션 시드 전에).
  * 지역은 '일반'(파견 시너지·필터·위키 문구를 건드리지 않는다). 등급·성능 없음(GDD §3.1).
  *
- * ⚠ DB 행은 seed-catalog가 active=false로 넣고, 10/29 00:00(KST)에 예약 발행 크론(lib/game/halloween/open.ts)이 켠다 —
+ * ⚠ DB 행은 seed-catalog가 active=false로 넣고, 10/28 12:00(KST)에 예약 발행 크론(lib/game/halloween/open.ts)이 켠다 —
  *   확률 공시(§33)는 그 24시간 전에 나간다. 노출·추첨은 서버 시각 게이트(halloweenItemsOpen).
  */
 export const CATALOG_V7: CatalogItem[] = [
@@ -74,5 +74,5 @@ export const CATALOG_V7: CatalogItem[] = [
   },
 ];
 
-/** 할로윈 6종의 code — seed-catalog는 이 code를 active=false로 넣고, 개방(10/29 00:00)은 lib/game/halloween/open.ts가 한다. */
+/** 할로윈 6종의 code — seed-catalog는 이 code를 active=false로 넣고, 개방(10/28 12:00)은 lib/game/halloween/open.ts가 한다. */
 export const HALLOWEEN_ITEM_KEYS: readonly string[] = CATALOG_V7.map((c) => c.key);
