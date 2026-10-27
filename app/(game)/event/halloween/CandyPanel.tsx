@@ -13,6 +13,7 @@ import {
   HALLOWEEN_CLAIM_END_DAY,
   CANDY_EXCHANGE_MAX_PER_ACTION,
   CANDY_LADDER,
+  nextCandyStep,
   type CandyExchangeKind,
 } from '@/lib/game/halloween/config';
 import type { CandyItemState, CandyOverview } from '@/lib/game/halloween/candy';
@@ -169,21 +170,40 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
 
   return (
     <div className="mt-3">
-      {/* 누적 · 사용 가능 */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5 rounded-xl border border-amber-500/50 bg-zinc-900 px-3 py-2.5">
-        <div className="flex flex-col">
-          <span className="text-[10.5px] text-zinc-400">누적 사탕</span>
-          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-amber-200">
-            <CandyIcon size={28} /> {n(ov.total)}
-          </b>
+      {/* 누적 · 사용 가능 — 큰 사탕 아이콘 + 글로우 숫자 + 다음 단계 진행 바(2026-10-27 UI 시안 4). */}
+      <div className="relative overflow-hidden rounded-xl border border-amber-500/40 bg-gradient-to-br from-[#2a1b08] via-[#1a1424] to-[#1a1424] px-3 py-3">
+        <div aria-hidden className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-amber-500/15 blur-2xl" />
+        <div className="relative flex items-center gap-3">
+          <span className="drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+            <CandyIcon size={48} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10.5px] text-zinc-400">누적 사탕</div>
+            <b className="block font-mono text-[26px] leading-none tabular-nums text-amber-200" style={{ textShadow: '0 0 14px rgba(251,191,36,0.45)' }}>
+              {n(ov.total)}
+            </b>
+          </div>
+          <div className="text-right">
+            <div className="text-[10.5px] text-zinc-400">사용 가능</div>
+            <b className="font-mono text-[18px] tabular-nums text-emerald-300">{n(ov.available)}</b>
+          </div>
         </div>
-        <span className="h-9 w-px bg-zinc-800" />
-        <div className="flex flex-col">
-          <span className="text-[10.5px] text-zinc-400">사용 가능</span>
-          <b className="flex items-center gap-1.5 text-[20px] font-mono tabular-nums text-emerald-300">
-            <CandyIcon size={28} /> {n(ov.available)}
-          </b>
-        </div>
+        {(() => {
+          const nxt = nextCandyStep(ov.total);
+          const prevAt = nxt ? (CANDY_LADDER.filter((l) => l.at < nxt.at).at(-1)?.at ?? 0) : CANDY_LADDER[CANDY_LADDER.length - 1]!.at;
+          const pct = nxt ? Math.max(0, Math.min(100, ((ov.total - prevAt) / (nxt.at - prevAt)) * 100)) : 100;
+          return (
+            <div className="relative mt-3">
+              <div className="flex justify-between text-[10px] text-zinc-400">
+                <span>{nxt ? `다음 단계 ${n(nxt.at)}까지` : '모든 단계 도달'}</span>
+                <span className="font-mono tabular-nums text-amber-200">{nxt ? `${n(nxt.remain)}개 남음` : `${n(prevAt)} 달성`}</span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/40">
+                <div className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-amber-200 shadow-[0_0_8px_rgba(251,191,36,0.6)] transition-[width] duration-500" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
       {closedText ? <p className="mt-2 text-[11px] text-zinc-500">{closedText}</p> : null}
 
@@ -191,7 +211,8 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       <p className="mb-1.5 mt-4 text-[12.5px] font-bold">
         도달 보상
       </p>
-      <ol className="relative ml-2 flex flex-col gap-1.5 border-l-2 border-zinc-800 pl-[18px]">
+      {/* "사탕 길"(2026-10-27 UI 시안 5) — 주황→보라 트랙, 노드는 잭오랜턴 그림(받음=초록 링, 받기=앰버 링·글로우, 미도달=흐림). */}
+      <ol className="relative ml-3 flex flex-col gap-1.5 border-l-[3px] pl-[18px]" style={{ borderImage: 'linear-gradient(to bottom, #f97316, #f59e0b 50%, #7c3aed) 1' }}>
         {CANDY_LADDER.map((l) => {
           const done = claimedSet.has(l.step);
           const ready = !done && ov.total >= l.at && open;
@@ -205,10 +226,15 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           return (
             <li key={l.step} className={`relative -ml-2 grid h-10 grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-lg border pl-2 pr-1.5 ${rowCls}`}>
               <span
-                className={`absolute -left-[23px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-zinc-950 ${
-                  done ? 'bg-emerald-500' : ready ? 'bg-amber-400 shadow-[0_0_0_3px_rgba(245,158,11,0.3)]' : 'bg-zinc-700'
+                aria-hidden
+                className={`absolute top-1/2 -translate-y-1/2 overflow-hidden rounded-full ${
+                  done ? 'ring-2 ring-emerald-400/70' : ready ? 'ring-2 ring-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]' : 'opacity-35 grayscale'
                 }`}
-              />
+                style={{ left: l.title ? -26 : -23, width: l.title ? 26 : 20, height: l.title ? 26 : 20 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={assetUrl('/sprites/halloween/pumpkin-node.png')} alt="" draggable={false} className="h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
+              </span>
               <span className={`font-mono text-[13px] tabular-nums ${ready ? 'font-bold text-amber-200' : ''}`}>{n(l.at)}</span>
               <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-400">
                 <span className="truncate">
@@ -257,7 +283,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           // 버튼이 왜 눌리지 않는지 그 자리에서 알린다(2026-09-23 UX 점검): 부족분 또는 기간 종료.
           const sub = !open ? `${x.sub} · 기간 종료` : need > 0 ? (ov.phase === 'claim' ? `사탕 ${n(need)}개 모자라요` : `사탕 ${n(need)}개 더 모으면 교환할 수 있어요`) : x.sub;
           return (
-            <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5">
+            <div key={x.kind} className="flex flex-col gap-1.5 rounded-xl border border-violet-300/15 bg-[#1a1424] px-3 py-2.5">
               <b className="text-[13px]">{x.title}</b>
               <span className={`min-h-[30px] break-keep text-[10.5px] leading-snug [overflow-wrap:anywhere] ${open && need > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>{sub}</span>
               <button
@@ -273,17 +299,34 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
         })}
       </div>
 
-      {/* 장비 교환(2026-10-27) — 6종 각 1개 = 사탕 100. 교환 뒤 초월 단계가 내 최고 초월을 넘지 못한다(allowedItemCopies). */}
-      <p className="mb-0.5 mt-4 text-[12.5px] font-bold">할로윈 장비 교환</p>
+      {/* 장비 교환(2026-10-27) — 6종 각 1개 = 사탕 100. 교환 뒤 초월 단계가 내 최고 초월을 넘지 못한다(allowedItemCopies).
+          뒤에 사탕 바구니 그림을 흐리게 깔고(UI 시안 3), 세트별 두 묶음으로(시안 7). */}
+      <div className="relative -mx-4 mt-4 overflow-hidden px-4 pb-2 pt-1">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={assetUrl('/sprites/halloween/banner-candy.png')} alt="" aria-hidden draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.14]" style={{ imageRendering: 'pixelated' }} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0f0b16] via-transparent to-[#0f0b16]" />
+        <div className="relative">
+      <p className="mb-0.5 text-[12.5px] font-bold">할로윈 장비 교환</p>
       <p className="mb-1.5 text-[10.5px] text-zinc-500">
         {ov.maxTranscend > 0 ? <>내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지 올릴 수 있어요</> : <>없는 장비를 1개씩 받을 수 있어요(다른 장비 초월이 오르면 더 받을 수 있어요)</>}
       </p>
-      <ul className="flex flex-col gap-1.5">
-        {ov.items.map((it) => {
+      {(
+        [
+          { key: 'smith', label: '대장장이 세트', dot: 'bg-orange-400', text: 'text-orange-300', ring: 'border-orange-500/25' },
+          { key: 'vamp', label: '꼬마 뱀파이어 세트', dot: 'bg-fuchsia-400', text: 'text-fuchsia-300', ring: 'border-fuchsia-500/25' },
+        ] as const
+      ).map((g) => (
+        <div key={g.key}>
+          <p className={`mb-1 mt-2 flex items-center gap-1.5 text-[10.5px] font-bold ${g.text}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${g.dot}`} />
+            {g.label}
+          </p>
+          <ul className={`flex flex-col gap-1.5 rounded-xl border p-1.5 ${g.ring}`}>
+        {ov.items.filter((it) => it.code.startsWith(`halloween_${g.key}_`)).map((it) => {
           const canPay = ov.available >= CANDY_ITEM_EXCHANGE.candy;
           const why = !open ? (ov.phase === 'before' ? '시작 전' : '기간 종료') : it.allowed === 0 ? '내 최고 초월 단계예요 · 다른 장비 초월이 오르면 더 받을 수 있어요' : !canPay ? (ov.phase === 'claim' ? `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 모자라요` : `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 더 모으면 교환할 수 있어요`) : null;
           return (
-            <li key={it.code} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
+            <li key={it.code} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-xl border border-violet-300/15 bg-[#1a1424]/90 px-2.5 py-2">
               <ItemImg code={it.code} size={36} />
               <div className="min-w-0">
                 {/* 이름 오른쪽에 보유 상태(미보유 / T13 · 진행 7/14), 아래 줄에 가격 · 교환 가능 개수(2026-10-27 사용자 요청 배치). */}
@@ -310,7 +353,11 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
             </li>
           );
         })}
-      </ul>
+          </ul>
+        </div>
+      ))}
+        </div>
+      </div>
       <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 {HALLOWEEN_CLAIM_END_DAY}까지 교환할 수 있어요. 그 뒤 남은 사탕은 사라져요.</p>
 
       {modal ? (

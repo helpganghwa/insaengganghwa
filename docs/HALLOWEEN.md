@@ -76,7 +76,7 @@
 
 ## 6. 화면
 
-- `/event/halloween` — 세그먼트 강화 순위 | 사탕 교환(`?tab=candy`). 시작 전엔 홈으로.
+- `/event/halloween` — 세그먼트 강화 순위 | 사탕 교환(`?tab=candy`). 시작 전엔 홈으로. 2026-10-27 UI: 페이지 밤보라 톤(#0f0b16·카드 #1a1424), 헤더 뒤 호박밭 그림, 남은 시간 칩(대회 주황·결과 보라), 사탕 카드 진행 바, 사다리 '사탕 길'(호박 노드 `pumpkin-node.png`), 장비 교환 세트별 묶음 + 사탕 바구니 배경.
 - 홈 배너: 대회 문구 ↔ 받을 보상이 있으면 사탕 문구. 배경은 `public/sprites/halloween/banner-contest.png`(호박밭)·`banner-candy.png`(사탕 바구니), 사탕 아이콘 `candy.png`(2026-10-27 확정, pixflux 후보는 `public/sprites/halloween-ui/`).
 
 ## 7. 보류·미정

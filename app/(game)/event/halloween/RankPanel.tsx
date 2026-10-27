@@ -56,7 +56,7 @@ function Row({ r, item }: { r: BoardRow; item: BoardItem }) {
   return (
     <li
       data-me={r.me ? '' : undefined}
-      className={`relative flex h-[56px] items-center overflow-hidden border-x border-b px-3 first:rounded-t-xl first:border-t last:rounded-b-xl [&:has(+[data-me])]:border-b-0 ${r.me ? 'border-t border-amber-400' : 'border-zinc-800'}`}
+      className={`relative flex h-[56px] items-center overflow-hidden border-x border-b px-3 first:rounded-t-xl first:border-t last:rounded-b-xl [&:has(+[data-me])]:border-b-0 ${r.me ? 'border-t border-amber-400' : 'border-violet-300/15'}`}
     >
       {r.avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
@@ -137,7 +137,7 @@ export function RankPanel({ board }: { board: ContestBoard }) {
               onClick={() => setSel(it.code)}
               aria-pressed={on}
               aria-label={it.name}
-              className={`flex flex-col items-center gap-px rounded-[10px] border pb-1 pt-[5px] ${on ? 'border-amber-500 bg-[#241c0c]' : 'border-zinc-800 bg-zinc-900'}`}
+              className={`flex flex-col items-center gap-px rounded-[10px] border pb-1 pt-[5px] ${on ? 'border-amber-500 bg-[#241c0c]' : 'border-violet-300/15 bg-[#1a1424]'}`}
             >
               <ItemImg code={it.code} size={40} />
               <em className={`text-[10.5px] not-italic tabular-nums ${on ? 'font-bold text-amber-300' : 'text-zinc-400'}`}>
@@ -160,9 +160,9 @@ export function RankPanel({ board }: { board: ContestBoard }) {
       </div>
 
       {/* 1~10등 */}
-      <ol className="overflow-hidden rounded-xl bg-zinc-900">
+      <ol className="overflow-hidden rounded-xl bg-[#1a1424]">
         {item.rows.length === 0 ? (
-          <li className="rounded-xl border border-zinc-800 px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 가지면 순위에 올라요.</li>
+          <li className="rounded-xl border border-violet-300/15 px-3 py-6 text-center text-[12px] text-zinc-500">아직 아무도 없어요. 이 장비를 가지면 순위에 올라요.</li>
         ) : (
           item.rows.map((r) => <Row key={r.rank} r={r} item={item} />)
         )}
