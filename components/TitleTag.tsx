@@ -89,8 +89,8 @@ function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
 const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin', 'hwstarcandy', 'hwwitch']);
 /** 마녀불 불꽃 — U 양끝·I 두 개 윗끝. --f=일렁임 위상, --g=보랏빛 경계가 그 자리를 지나는 시점에 맞춘 지연. */
 const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
-  // g = 글자의 보라 물결(hwPkSweep, 주기 44%→60% = 3.52s~4.80s, 왼→오)이 그 x를 지나는 순간에 점화되도록 한 지연(2026-10-27).
-  // 음수 지연 = 8s 주기에서 그만큼 뒤처짐: -(8 - 1.28 × x/100). 깜빡임(f)은 서로 어긋나게.
+  // g = 글자의 보라 물결(hwPkSweep, 주기 44%→60% = 3.52s~4.80s, 왼→오)이 그 x를 지난 **직후**에 촛불이 반응하도록 한 지연(2026-10-27).
+  // 음수 지연 = 8s 주기에서 그만큼 뒤처짐: -(8 - 1.28 × x/100). 키프레임 쪽에서 0.15s 더 늦게 시작한다(글자 먼저, 촛불이 따라감). 깜빡임(f)은 서로 어긋나게.
   [10.7, 0, -7.863],
   [16, -0.8, -7.795],
   [50.5, -0.55, -7.354],
