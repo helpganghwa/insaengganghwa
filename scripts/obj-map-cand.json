@@ -1726,5 +1726,13 @@
   "hw8_cat_collar": {
     "key": "key3",
     "objectId": "d2433585-0ccb-4116-b21e-06ef025241f8"
+  },
+  "hw9_vamp_parasol": {
+    "key": "key3",
+    "objectId": "7556c67d-72fe-492d-b1b5-59dc94e251fc"
+  },
+  "hw9_smith_kerchief": {
+    "key": "key3",
+    "objectId": "8a6707ab-0a53-440d-b32c-4349980d4cb1"
   }
 }

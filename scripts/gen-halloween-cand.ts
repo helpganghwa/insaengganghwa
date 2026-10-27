@@ -30,13 +30,13 @@ type Slot = 'weapon' | 'armor' | 'accessory';
 export type HalloweenCand = {
   key: string;
   nameKo: string;
-  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household' | 'smith7' | 'vampire3' | 'candy' | 'smith8' | 'cat';
+  set: 'smith' | 'bride' | 'frank' | 'maid' | 'smith2' | 'ghost' | 'orc' | 'skeleton' | 'slime' | 'golem' | 'dragon' | 'fallen' | 'smith3' | 'butler' | 'smith4' | 'vampire' | 'smith5' | 'vampire2' | 'smith6' | 'household' | 'smith7' | 'vampire3' | 'candy' | 'smith8' | 'cat' | 'final9';
   slot: Slot;
   /** 밝은 세트는 items-v2 꼬리표(not gothic), 어두운 세트는 할로윈 꼬리표. */
   tone: 'bright' | 'dark' | 'costume';
   concept: string;
   art: string;
-  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  batch: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   /** 꼬리표만 다른 부위 것을 쓴다 — 4차 앞치마처럼 방어구를 몸 없이 물건 하나로 그릴 때(accessory 꼬리표). */
   tailAs?: Slot;
 };
@@ -85,6 +85,7 @@ export const SET_NAME: Record<HalloweenCand['set'], string> = {
   candy: '사탕 세트(7차)',
   smith8: '대장장이 망치(8차 · 여러 컨셉)',
   cat: '검은 고양이 분장(8차 · 남녀 공용)',
+  final9: '확정 세트 다듬기(9차 · 두건 장식 없이, 양산 리본 없이)',
 };
 
 export const CANDIDATES: HalloweenCand[] = [
@@ -735,6 +736,19 @@ export const CANDIDATES: HalloweenCand[] = [
     concept: '빨간 벨벳 리본 초커, 가운데 반짝이는 금방울, 작은 보라 리본',
     art:
       'a cute red velvet ribbon choker with a shiny golden bell in the center and a small purple bow',
+  },
+  // ── 9차(10-27) — 확정 세트 다듬기: 7차 두건·양산을 장식/리본 없이 다시 ──
+  {
+    key: 'hw9_smith_kerchief', nameKo: '장인의 두건', set: 'final9', slot: 'accessory', tone: 'bright', batch: 9,
+    concept: '7차 두건을 장식 없이 — 녹슨 붉은빛 면 두건만, 뒤로 묶은 짧은 끝 두 가닥',
+    art:
+      "a plain blacksmith's head kerchief: a simple dark rust-red cotton scarf tied at the back with two short tails, soft natural cloth folds, finely crafted",
+  },
+  {
+    key: 'hw9_vamp_parasol', nameKo: '레이스 박쥐 양산', set: 'final9', slot: 'weapon', tone: 'costume', batch: 9,
+    concept: '7차 양산을 리본 없이 — 검은 레이스 캐노피, 빨간 박쥐 무늬, 박쥐 손잡이',
+    art:
+      'a cute small black lace parasol, opened, with scalloped lace edges and tiny red bat silhouettes on the canopy, a slender black shaft with a pointed silver tip, a curved handle shaped like a little bat with spread wings, clearly a held parasol weapon, diagonal',
   },
 ];
 
