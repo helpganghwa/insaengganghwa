@@ -6,6 +6,7 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
+import { TitleTag } from '@/components/TitleTag';
 import {
   CANDY_EXCHANGE,
   HALLOWEEN_ACCRUE_END_LABEL,
@@ -14,11 +15,13 @@ import {
   CANDY_LADDER,
   type CandyExchangeKind,
 } from '@/lib/game/halloween/config';
-import type { CandyOverview } from '@/lib/game/halloween/candy';
+import type { CandyItemState, CandyOverview } from '@/lib/game/halloween/candy';
+import { CANDY_ITEM_EXCHANGE, simulateItemCopies } from '@/lib/game/halloween/item-exchange';
+import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
 import { assetUrl } from '@/lib/asset-versions';
 
-import { claimCandyStepAction, exchangeCandyAction } from './actions';
+import { claimCandyStepAction, exchangeCandyAction, exchangeCandyItemAction } from './actions';
 
 const n = (v: number) => v.toLocaleString('ko-KR');
 
@@ -38,8 +41,18 @@ function CandyIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function ItemImg({ code, size }: { code: string; size: number }) {
+  const src = spritePath(code);
+  if (!src) return <span style={{ width: size, height: size }} className="grid place-items-center text-lg">🎁</span>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={assetUrl(src)} alt="" aria-hidden width={size} height={size} draggable={false} className="flex-none" style={{ imageRendering: 'pixelated' }} />;
+}
+
+/** 초월 상태 한 줄 — 미보유 / T{n} · 진행 p/need. */
+const tLabel = (it: Pick<CandyItemState, 'owned' | 'level' | 'progress'>) => (it.owned ? `T${it.level} · 진행 ${it.progress}/${it.level + 1}` : '미보유');
+
 /**
- * 사탕 세그먼트 — 누적·사용 가능 한 카드 → 도달 보상(세로 트랙) → 교환(상자·다이아 별도 버튼 + 수량 팝업).
+ * 사탕 세그먼트 — 누적·사용 가능 한 카드 → 도달 보상(세로 트랙) → 교환(상자·다이아 별도 버튼 + 수량 팝업) → 장비 교환(6종, 2026-10-27).
  * 수령·교환은 낙관 갱신(즉시 반영, 실패 시 롤백 — ALREADY는 서버 값으로 맞춤).
  */
 export function CandyPanel({ initial }: { initial: CandyOverview }) {
@@ -47,6 +60,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
   const [pending, startTransition] = useTransition();
   const [busyStep, setBusyStep] = useState<number | null>(null);
   const [modal, setModal] = useState<CandyExchangeKind | null>(null);
+  const [itemModal, setItemModal] = useState<string | null>(null);
   const { showError, showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
 
@@ -115,6 +129,37 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
   };
 
+  // 장비 교환 — 사탕 차감만 낙관 갱신하고, 장비 상태(초월·진행도·교환 가능 개수)는 서버 응답으로 맞춘다.
+  const exchangeItem = (code: string, count: number) => {
+    const it = ov.items.find((i) => i.code === code);
+    if (!it) return;
+    const cost = CANDY_ITEM_EXCHANGE.candy * count;
+    setItemModal(null);
+    setOv((o) => ({ ...o, spent: o.spent + cost, available: o.available - cost }));
+    showHeaderToast({ title: `${it.name} ${n(count)}개 교환!`, detail: `사탕 ${n(cost)} 사용` });
+    const rollback = (message: string) => {
+      setOv((o) => ({ ...o, spent: o.spent - cost, available: o.available + cost }));
+      showError(message);
+    };
+    exchangeCandyItemAction(code, count)
+      .then((r) => {
+        if (r.status !== 'success') {
+          rollback(r.message);
+          return;
+        }
+        setOv((o) => ({
+          ...o,
+          available: r.available,
+          spent: o.total - r.available,
+          maxTranscend: r.maxTranscend,
+          items: o.items.map((x) => (x.code === code ? r.item : x)),
+        }));
+        if (r.transcended > 0) showHeaderToast({ title: `${it.name} T${r.item.level} 초월!`, detail: `초월 ${r.transcended}단계 상승` });
+        else if (r.acquired) showHeaderToast({ title: `${it.name} 획득!`, detail: '보관함에서 확인할 수 있어요' });
+      })
+      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
+  };
+
   return (
     <div className="mt-3">
       {/* 누적 · 사용 가능 */}
@@ -162,8 +207,12 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
                 <span className="truncate">
                   💎{n(l.diamond)} · 📦{l.boxes}
                 </span>
-                {/* 6만·15만 단계는 한정 칭호도 함께(2026-10-26 확정: 6만 시월의 마녀 · 15만 별사탕). */}
-                {l.title ? <span className="shrink-0 rounded border border-purple-400/50 px-1 text-[9.5px] font-bold text-purple-300">칭호</span> : null}
+                {/* 6만·15만 단계는 한정 칭호도 함께(2026-10-26 확정: 6만 시월의 마녀 · 15만 별사탕) — 순위 보상표처럼 실제 칭호로 미리보기(2026-10-27). */}
+                {l.title ? (
+                  <span className="shrink-0 text-[11px]">
+                    <TitleTag code={l.title} />
+                  </span>
+                ) : null}
               </span>
               <span className="flex w-[68px] justify-end text-[10.5px]">
                 {done ? (
@@ -216,10 +265,50 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           );
         })}
       </div>
+
+      {/* 장비 교환(2026-10-27) — 6종 각 1개 = 사탕 100. 교환 뒤 초월 단계가 내 최고 초월을 넘지 못한다(allowedItemCopies). */}
+      <p className="mb-0.5 mt-4 text-[12.5px] font-bold">할로윈 장비 교환</p>
+      <p className="mb-1.5 text-[10.5px] text-zinc-500">
+        1개에 사탕 {n(CANDY_ITEM_EXCHANGE.candy)} · 보급에서 뽑은 것과 같아요(없으면 획득, 있으면 초월 진행) · 내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지만
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {ov.items.map((it) => {
+          const canPay = ov.available >= CANDY_ITEM_EXCHANGE.candy;
+          const why = !open ? '기간 종료' : it.allowed === 0 ? '내 최고 초월 단계에 도달했어요' : !canPay ? `사탕 ${n(CANDY_ITEM_EXCHANGE.candy - ov.available)}개 더 모으면 교환할 수 있어요` : null;
+          return (
+            <li key={it.code} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
+              <ItemImg code={it.code} size={36} />
+              <div className="min-w-0">
+                <b className="block truncate text-[12.5px]">{it.name}</b>
+                <span className={`block truncate text-[10.5px] ${why && open && it.allowed > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>
+                  {why ?? `${tLabel(it)} · 교환 가능 ${n(it.allowed)}개`}
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={!open || it.allowed === 0 || !canPay}
+                onClick={() => setItemModal(it.code)}
+                className="rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
+              >
+                교환
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 {HALLOWEEN_CLAIM_END_DAY}까지 교환할 수 있어요. 그 뒤 남은 사탕은 사라져요.</p>
 
       {modal ? (
         <ExchangeModal kind={modal} available={ov.available} onClose={() => setModal(null)} onSubmit={(count) => exchange(modal, count)} />
+      ) : null}
+      {itemModal ? (
+        <ItemExchangeModal
+          item={ov.items.find((i) => i.code === itemModal)!}
+          maxTranscend={ov.maxTranscend}
+          available={ov.available}
+          onClose={() => setItemModal(null)}
+          onSubmit={(count) => exchangeItem(itemModal, count)}
+        />
       ) : null}
     </div>
   );
@@ -287,6 +376,85 @@ function ExchangeModal({
           <dd className="text-right font-mono tabular-nums">{n(cost)}</dd>
           <dt className="text-zinc-400">교환 뒤 사용 가능</dt>
           <dd className={`text-right font-mono tabular-nums ${available - cost < 0 ? 'text-red-400' : ''}`}>{n(available - cost)}</dd>
+        </dl>
+      </ModalLayout>
+    </ModalShell>
+  );
+}
+
+/** 장비 교환 수량 팝업 — 상한 = min(교환 가능 개수, 사탕으로 살 수 있는 개수, 99). 교환 뒤 초월 상태를 미리 보여 준다. */
+function ItemExchangeModal({
+  item,
+  maxTranscend,
+  available,
+  onClose,
+  onSubmit,
+}: {
+  item: CandyItemState;
+  maxTranscend: number;
+  available: number;
+  onClose: () => void;
+  onSubmit: (count: number) => void;
+}) {
+  const price = CANDY_ITEM_EXCHANGE.candy;
+  const max = Math.max(1, Math.min(CANDY_EXCHANGE_MAX_PER_ACTION, item.allowed, Math.floor(available / price)));
+  const [count, setCount] = useState(1);
+  const cost = price * count;
+  const after = simulateItemCopies(item.owned ? { level: item.level, progress: item.progress } : null, count);
+  const submit = () => {
+    if (cost > available || count > item.allowed) return;
+    onSubmit(count);
+  };
+  const step = (d: number) => setCount((c) => Math.min(max, Math.max(1, c + d)));
+  const stepBtn = 'grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold text-zinc-100 disabled:opacity-40';
+  const edgeBtn = 'h-8 rounded-lg bg-zinc-800 px-2.5 text-[11px] font-bold text-zinc-300 active:opacity-80 disabled:opacity-40';
+  return (
+    <ModalShell onClose={onClose} onSubmit={submit} label="장비 교환">
+      <ModalLayout
+        title={`${item.name} 교환`}
+        subtitle={`1개에 사탕 ${n(price)} · 내 최고 초월 T${maxTranscend}까지 교환할 수 있어요`}
+        footer={
+          <>
+            <ModalButton tone="neutral" onClick={onClose}>
+              취소
+            </ModalButton>
+            <ModalButton tone="primary" onClick={submit} disabled={cost > available || count > item.allowed}>
+              {`${n(cost)} 사탕으로 교환`}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="flex items-center gap-2.5 pt-1">
+          <ItemImg code={item.code} size={44} />
+          <div className="min-w-0 text-[11.5px] text-zinc-400">
+            <div>지금 {tLabel(item)}</div>
+            <div>교환 뒤 <b className="text-amber-200">T{after.level} · 진행 {after.progress}/{after.level + 1}</b>{after.transcended > 0 ? ` (초월 +${after.transcended})` : after.acquired ? ' (획득)' : ''}</div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-3 pb-0.5 pt-2.5">
+          <button type="button" onClick={() => setCount(1)} disabled={count <= 1} className={edgeBtn}>
+            최소
+          </button>
+          <button type="button" aria-label="하나 줄이기" onClick={() => step(-1)} disabled={count <= 1} className={stepBtn}>
+            −
+          </button>
+          <b className="min-w-[28px] text-center font-mono text-[22px] tabular-nums text-amber-200">{count}</b>
+          <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className={stepBtn}>
+            +
+          </button>
+          <button type="button" onClick={() => setCount(max)} disabled={count >= max} className={edgeBtn}>
+            최대
+          </button>
+        </div>
+        <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 text-[12px]">
+          <dt className="text-zinc-400">받는 것</dt>
+          <dd className="text-right font-bold">{item.name} ×{count}</dd>
+          <dt className="text-zinc-400">필요한 사탕</dt>
+          <dd className="text-right font-mono tabular-nums">{n(cost)}</dd>
+          <dt className="text-zinc-400">교환 뒤 사용 가능</dt>
+          <dd className={`text-right font-mono tabular-nums ${available - cost < 0 ? 'text-red-400' : ''}`}>{n(available - cost)}</dd>
+          <dt className="text-zinc-400">이 장비 교환 가능</dt>
+          <dd className="text-right font-mono tabular-nums">{n(item.allowed)}개</dd>
         </dl>
       </ModalLayout>
     </ModalShell>

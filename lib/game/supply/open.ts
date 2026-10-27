@@ -20,6 +20,9 @@ import { refreshEnhanceMetrics } from '@/lib/game/leaderboard/incremental';
  *  - 미보유 → 획득(+0/T0)
  *  - 보유 → transcend_progress +1 → 임계(선형 T→T+1 = T+1) 도달 시 **자동 초월**(다중 가능)
  * count 차감 + 레코드 갱신 + (자동초월 로그) + 열기 로그 = 단일 트랜잭션(CLAUDE §3.3).
+ *
+ * 획득·초월 반영(applyCatalogPicks)과 사후 처리(afterPicksApplied)는 할로윈 장비 교환(lib/game/halloween/candy.ts)도
+ * 같이 쓴다(2026-10-27) — 뽑기만 다르고 "받는 처리"는 보급과 똑같아야 한다.
  */
 export type SupplyErrorCode = 'NO_BOX' | 'NO_CATALOG';
 export class SupplyError extends Error {
@@ -41,215 +44,164 @@ export type OpenResult = {
   transcendProgress: number;
 };
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 function rngU32(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]!;
 }
 
-export async function openSupplyBoxes(input: {
-  userId: string;
-  serverId: number;
-  slot: Slot;
-  count?: number;
-  /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). pool은 id 오름차순 고정이라 인덱스 재현 가능. */
-  rng?: () => number;
-}): Promise<OpenResult[]> {
-  const { userId, serverId, slot } = input;
-  const n = Math.max(1, Math.floor(input.count ?? 1));
-  const rng = input.rng ?? rngU32;
+/**
+ * 뽑힌 카탈로그 id 목록을 유저 장비에 반영 — 신규 획득·진행도·자동 초월·초월 로그(트랜잭션 안, 호출부가 tx를 연다).
+ * 같은 아이템이 여러 번 들어오면 순서대로 연쇄 반영. 걸린 카탈로그의 보유 행만 FOR UPDATE로 잠근다.
+ */
+export async function applyCatalogPicks(tx: Tx, p: { userId: string; serverId: number; picks: number[] }): Promise<OpenResult[]> {
+  const { userId, serverId, picks } = p;
+  if (picks.length === 0) return [];
+  const uniqueIds = [...new Set(picks)];
 
-  const opened = await db.transaction(async (tx) => {
-    const [box] = await tx
-      .select({ count: userSupplyBoxes.count })
-      .from(userSupplyBoxes)
-      .where(
-        and(
-          eq(userSupplyBoxes.userId, userId),
-          eq(userSupplyBoxes.serverId, serverId),
-          eq(userSupplyBoxes.slot, slot),
-        ),
-      )
-      .for('update');
-    if (!box || box.count < BigInt(n)) throw new SupplyError('NO_BOX');
+  // ── N+1 제거(감사 C, 2026-08-20) — 종전엔 개봉 1개마다 잠금 조회+쓰기+로그가 돌아
+  // 10연이 트랜잭션 안 32~34왕복(커밋까지 풀러 슬롯 점유)이었다. 뽑기·초월 연쇄는 순수
+  // 계산이므로: ① 걸린 카탈로그만 IN 일괄 잠금(1) ② JS로 뽑기 순서 그대로 시뮬레이션
+  // ③ 신규 INSERT·기존 UPDATE(VALUES 조인)·로그를 다중행 1문씩.
 
-    const pool = await tx
-      .select({ id: catalogItems.id })
-      .from(catalogItems)
-      .where(
-        and(
-          eq(catalogItems.slot, slot),
-          // 한가위 6종은 DB 플래그(크론이 00:02~00:07에 켠다)가 아니라 **DB 시각**으로 정각에 풀에 든다(2026-09-23).
-          // 확률 공시(getActiveCatalog)와 같은 판정이어야 공시-추첨이 어긋나지 않는다(§33).
-          // 할로윈 6종(2026-10)도 같은 방식.
-          or(
-            eq(catalogItems.active, true),
-            and(inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]), sql`now() >= ${CHUSEOK_START_ISO}::timestamptz`),
-            and(inArray(catalogItems.code, [...HALLOWEEN_ITEM_CODES]), sql`now() >= ${HALLOWEEN_START_ISO}::timestamptz`),
-          ),
-        ),
-      )
-      .orderBy(catalogItems.id); // 균등분포 불변 + 순서 고정(테스트 RNG 인덱스 재현·결과 안정).
-    if (pool.length === 0) throw new SupplyError('NO_CATALOG');
+  // ① 걸린 카탈로그의 보유 레코드만 일괄 잠금 조회.
+  const existingRows = await tx
+    .select({
+      id: userEquipment.id,
+      catalogItemId: userEquipment.catalogItemId,
+      transcendLevel: userEquipment.transcendLevel,
+      transcendProgress: userEquipment.transcendProgress,
+      maxTranscendLevel: userEquipment.maxTranscendLevel,
+    })
+    .from(userEquipment)
+    .where(
+      and(
+        eq(userEquipment.userId, userId),
+        eq(userEquipment.serverId, serverId),
+        sql`${userEquipment.catalogItemId} in (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`,
+      ),
+    )
+    .for('update');
 
-    // ── N+1 제거(감사 C, 2026-08-20) — 종전엔 개봉 1개마다 잠금 조회+쓰기+로그가 돌아
-    // 10연이 트랜잭션 안 32~34왕복(커밋까지 풀러 슬롯 점유)이었다. 뽑기·초월 연쇄는 순수
-    // 계산이므로: ① 뽑기 전부 확정 ② 걸린 카탈로그만 IN 일괄 잠금(1) ③ JS로 뽑기 순서
-    // 그대로 시뮬레이션 ④ 신규 INSERT·기존 UPDATE(VALUES 조인)·로그 2종을 다중행 1문씩.
-    // 동시 개봉 경합은 위 박스 행 FOR UPDATE가 유저·슬롯 단위로 직렬화한다(신규 행 경합 불가).
-
-    // ① 뽑기 확정 — 슬롯 내 균등(BALANCE §4.2). rng 호출 순서 유지(테스트 재현성).
-    const picks: number[] = [];
-    for (let i = 0; i < n; i++) picks.push(pool[rng() % pool.length]!.id);
-    const uniqueIds = [...new Set(picks)];
-
-    // ② 걸린 카탈로그의 보유 레코드만 일괄 잠금 조회.
-    const existingRows = await tx
-      .select({
-        id: userEquipment.id,
-        catalogItemId: userEquipment.catalogItemId,
-        transcendLevel: userEquipment.transcendLevel,
-        transcendProgress: userEquipment.transcendProgress,
-        maxTranscendLevel: userEquipment.maxTranscendLevel,
-      })
-      .from(userEquipment)
-      .where(
-        and(
-          eq(userEquipment.userId, userId),
-          eq(userEquipment.serverId, serverId),
-          sql`${userEquipment.catalogItemId} in (${sql.join(uniqueIds.map((id) => sql`${id}`), sql`, `)})`,
-        ),
-      )
-      .for('update');
-
-    // ③ 뽑기 순서대로 시뮬레이션 — 같은 아이템 반복 획득의 진행도·초월 연쇄를 순차 반영.
-    type ItemState = {
-      dbId: (typeof existingRows)[number]['id'] | null; // null=이 배치에서 신규(INSERT 후 채움)
-      isNew: boolean;
-      level: number;
-      progress: number;
-      prevMaxLevel: number; // DB의 max_transcend_level(신규는 0)
-      logs: { fromT: number }[];
-    };
-    const states = new Map<number, ItemState>();
-    for (const r of existingRows) {
-      states.set(r.catalogItemId, {
-        dbId: r.id,
-        isNew: false,
-        level: r.transcendLevel,
-        progress: r.transcendProgress,
-        prevMaxLevel: r.maxTranscendLevel,
-        logs: [],
-      });
-    }
-
-    const results: OpenResult[] = [];
-    for (const catalogItemId of picks) {
-      let st = states.get(catalogItemId);
-      if (!st) {
-        // 최초 획득 — 도감 해금(+0/T0). 같은 배치의 재획득은 아래 중복 분기로 이어진다.
-        st = { dbId: null, isNew: true, level: 0, progress: 0, prevMaxLevel: 0, logs: [] };
-        states.set(catalogItemId, st);
-        results.push({ catalogItemId, isNew: true, transcended: 0, transcendLevel: 0, transcendProgress: 0 });
-        continue;
-      }
-      // 중복 — 초월 진행도 +1 후 임계 도달분 자동 초월(선형 T→T+1 = T+1개).
-      let transcended = 0;
-      st.progress += 1;
-      while (st.progress >= transcendFodderForStep(st.level + 1)) {
-        st.progress -= transcendFodderForStep(st.level + 1);
-        st.logs.push({ fromT: st.level });
-        st.level += 1;
-        transcended += 1;
-      }
-      results.push({
-        catalogItemId,
-        isNew: false,
-        transcended,
-        transcendLevel: st.level,
-        transcendProgress: st.progress,
-      });
-    }
-
-    // ④-a 신규 다중행 INSERT — 배치 내 재획득으로 진행/초월이 붙었을 수 있어 최종 상태로 삽입.
-    const newStates = [...states.entries()].filter(([, s]) => s.isNew);
-    if (newStates.length > 0) {
-      const inserted = await tx
-        .insert(userEquipment)
-        .values(
-          newStates.map(([catalogItemId, s]) => ({
-            userId,
-            serverId,
-            catalogItemId,
-            transcendLevel: s.level,
-            transcendProgress: s.progress,
-            ...(s.level > 0 ? { maxTranscendLevel: s.level, maxTranscendReachedAt: sql`now()` } : {}),
-          })),
-        )
-        // 박스 락 직렬화로 경합은 실질 불가 — 방어적 무시(종전과 동일).
-        .onConflictDoNothing()
-        .returning({ id: userEquipment.id, catalogItemId: userEquipment.catalogItemId });
-      for (const r of inserted) {
-        const s = states.get(r.catalogItemId);
-        if (s) s.dbId = r.id;
-      }
-    }
-
-    // ④-b 기존 다중행 UPDATE — VALUES 조인 1문. raisedMax는 greatest/case로 행별 판정.
-    const updated = [...states.entries()].filter(([, s]) => !s.isNew);
-    if (updated.length > 0) {
-      const valuesSql = sql.join(
-        updated.map(([, s]) => sql`(${s.dbId}::bigint, ${s.progress}::int, ${s.level}::int)`),
-        sql`, `,
-      );
-      await tx.execute(sql`
-        update user_equipment ue
-        set transcend_progress = v.progress,
-            transcend_level = v.level,
-            max_transcend_level = greatest(ue.max_transcend_level, v.level),
-            max_transcend_reached_at = case
-              when v.level > ue.max_transcend_level then now()
-              else ue.max_transcend_reached_at
-            end
-        from (values ${valuesSql}) as v(id, progress, level)
-        where ue.id = v.id
-      `);
-    }
-
-    // ④-c 자동 초월 감사 로그 — 다중행 1문(있을 때만). dbId 미확보(이론상 conflict 스킵)는
-    // 로그만 건너뛴다 — 본 상태는 위에서 반영됐고, 종전 코드도 이 경합에선 진행을 잃었다.
-    const logRows = [...states.entries()].flatMap(([catalogItemId, s]) => {
-      const dbId = s.dbId;
-      if (dbId == null) return [];
-      return s.logs.map(({ fromT }) => ({
-        userId,
-        serverId,
-        userEquipmentId: dbId,
-        catalogItemId,
-        fromT,
-        toT: fromT + 1,
-        fodderCount: transcendFodderForStep(fromT + 1),
-      }));
+  // ② 뽑기 순서대로 시뮬레이션 — 같은 아이템 반복 획득의 진행도·초월 연쇄를 순차 반영.
+  type ItemState = {
+    dbId: (typeof existingRows)[number]['id'] | null; // null=이 배치에서 신규(INSERT 후 채움)
+    isNew: boolean;
+    level: number;
+    progress: number;
+    prevMaxLevel: number; // DB의 max_transcend_level(신규는 0)
+    logs: { fromT: number }[];
+  };
+  const states = new Map<number, ItemState>();
+  for (const r of existingRows) {
+    states.set(r.catalogItemId, {
+      dbId: r.id,
+      isNew: false,
+      level: r.transcendLevel,
+      progress: r.transcendProgress,
+      prevMaxLevel: r.maxTranscendLevel,
+      logs: [],
     });
-    if (logRows.length > 0) await tx.insert(transcendLogs).values(logRows);
+  }
 
-    // ④-d 열기 로그 — 뽑기 순서대로 다중행 1문.
-    await tx.insert(supplyOpenLogs).values(
-      results.map((r) => ({ userId, serverId, slot, catalogItemId: r.catalogItemId, isNew: r.isNew })),
+  const results: OpenResult[] = [];
+  for (const catalogItemId of picks) {
+    let st = states.get(catalogItemId);
+    if (!st) {
+      // 최초 획득 — 도감 해금(+0/T0). 같은 배치의 재획득은 아래 중복 분기로 이어진다.
+      st = { dbId: null, isNew: true, level: 0, progress: 0, prevMaxLevel: 0, logs: [] };
+      states.set(catalogItemId, st);
+      results.push({ catalogItemId, isNew: true, transcended: 0, transcendLevel: 0, transcendProgress: 0 });
+      continue;
+    }
+    // 중복 — 초월 진행도 +1 후 임계 도달분 자동 초월(선형 T→T+1 = T+1개).
+    let transcended = 0;
+    st.progress += 1;
+    while (st.progress >= transcendFodderForStep(st.level + 1)) {
+      st.progress -= transcendFodderForStep(st.level + 1);
+      st.logs.push({ fromT: st.level });
+      st.level += 1;
+      transcended += 1;
+    }
+    results.push({
+      catalogItemId,
+      isNew: false,
+      transcended,
+      transcendLevel: st.level,
+      transcendProgress: st.progress,
+    });
+  }
+
+  // ③-a 신규 다중행 INSERT — 배치 내 재획득으로 진행/초월이 붙었을 수 있어 최종 상태로 삽입.
+  const newStates = [...states.entries()].filter(([, s]) => s.isNew);
+  if (newStates.length > 0) {
+    const inserted = await tx
+      .insert(userEquipment)
+      .values(
+        newStates.map(([catalogItemId, s]) => ({
+          userId,
+          serverId,
+          catalogItemId,
+          transcendLevel: s.level,
+          transcendProgress: s.progress,
+          ...(s.level > 0 ? { maxTranscendLevel: s.level, maxTranscendReachedAt: sql`now()` } : {}),
+        })),
+      )
+      // 박스 락 직렬화로 경합은 실질 불가 — 방어적 무시(종전과 동일).
+      .onConflictDoNothing()
+      .returning({ id: userEquipment.id, catalogItemId: userEquipment.catalogItemId });
+    for (const r of inserted) {
+      const s = states.get(r.catalogItemId);
+      if (s) s.dbId = r.id;
+    }
+  }
+
+  // ③-b 기존 다중행 UPDATE — VALUES 조인 1문. raisedMax는 greatest/case로 행별 판정.
+  const updated = [...states.entries()].filter(([, s]) => !s.isNew);
+  if (updated.length > 0) {
+    const valuesSql = sql.join(
+      updated.map(([, s]) => sql`(${s.dbId}::bigint, ${s.progress}::int, ${s.level}::int)`),
+      sql`, `,
     );
+    await tx.execute(sql`
+      update user_equipment ue
+      set transcend_progress = v.progress,
+          transcend_level = v.level,
+          max_transcend_level = greatest(ue.max_transcend_level, v.level),
+          max_transcend_reached_at = case
+            when v.level > ue.max_transcend_level then now()
+            else ue.max_transcend_reached_at
+          end
+      from (values ${valuesSql}) as v(id, progress, level)
+      where ue.id = v.id
+    `);
+  }
 
-    await tx
-      .update(userSupplyBoxes)
-      .set({ count: sql`${userSupplyBoxes.count} - ${BigInt(n)}` })
-      .where(
-        and(
-          eq(userSupplyBoxes.userId, userId),
-          eq(userSupplyBoxes.serverId, serverId),
-          eq(userSupplyBoxes.slot, slot),
-        ),
-      );
-
-    return results;
+  // ③-c 자동 초월 감사 로그 — 다중행 1문(있을 때만). dbId 미확보(이론상 conflict 스킵)는
+  // 로그만 건너뛴다 — 본 상태는 위에서 반영됐고, 종전 코드도 이 경합에선 진행을 잃었다.
+  const logRows = [...states.entries()].flatMap(([catalogItemId, s]) => {
+    const dbId = s.dbId;
+    if (dbId == null) return [];
+    return s.logs.map(({ fromT }) => ({
+      userId,
+      serverId,
+      userEquipmentId: dbId,
+      catalogItemId,
+      fromT,
+      toT: fromT + 1,
+      fodderCount: transcendFodderForStep(fromT + 1),
+    }));
   });
+  if (logRows.length > 0) await tx.insert(transcendLogs).values(logRows);
 
+  return results;
+}
+
+/**
+ * 반영 뒤 사후 처리(트랜잭션 밖, best-effort) — 개인 최고 초월 신기록 업적·월드 피드·이정표 보상 우편, 리더보드 증분 갱신.
+ * 실패는 개봉·교환 자체를 막지 않는다.
+ */
+export async function afterPicksApplied(userId: string, serverId: number, opened: OpenResult[]): Promise<void> {
   // 길드/월드 업적 — **유저 개인 최고 초월 기록 갱신 시 1회**(2026-07-12 피드백).
   // 이전 방식(아이템별 색 등급 경계 11·21·31… 돌파마다 기록)은 106종이 비슷한 시기에
   // T11을 넘으며 피드가 도배됐다. 이제 "그 유저가 처음 밟는 초월 수치"만 기록:
@@ -319,6 +271,80 @@ export async function openSupplyBoxes(input: {
   } catch {
     // cron 백스톱.
   }
+}
+
+export async function openSupplyBoxes(input: {
+  userId: string;
+  serverId: number;
+  slot: Slot;
+  count?: number;
+  /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). pool은 id 오름차순 고정이라 인덱스 재현 가능. */
+  rng?: () => number;
+}): Promise<OpenResult[]> {
+  const { userId, serverId, slot } = input;
+  const n = Math.max(1, Math.floor(input.count ?? 1));
+  const rng = input.rng ?? rngU32;
+
+  const opened = await db.transaction(async (tx) => {
+    const [box] = await tx
+      .select({ count: userSupplyBoxes.count })
+      .from(userSupplyBoxes)
+      .where(
+        and(
+          eq(userSupplyBoxes.userId, userId),
+          eq(userSupplyBoxes.serverId, serverId),
+          eq(userSupplyBoxes.slot, slot),
+        ),
+      )
+      .for('update');
+    if (!box || box.count < BigInt(n)) throw new SupplyError('NO_BOX');
+
+    const pool = await tx
+      .select({ id: catalogItems.id })
+      .from(catalogItems)
+      .where(
+        and(
+          eq(catalogItems.slot, slot),
+          // 한가위 6종은 DB 플래그(크론이 00:02~00:07에 켠다)가 아니라 **DB 시각**으로 정각에 풀에 든다(2026-09-23).
+          // 확률 공시(getActiveCatalog)와 같은 판정이어야 공시-추첨이 어긋나지 않는다(§33).
+          // 할로윈 6종(2026-10, 12:02~12:07 크론)도 같은 방식.
+          or(
+            eq(catalogItems.active, true),
+            and(inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]), sql`now() >= ${CHUSEOK_START_ISO}::timestamptz`),
+            and(inArray(catalogItems.code, [...HALLOWEEN_ITEM_CODES]), sql`now() >= ${HALLOWEEN_START_ISO}::timestamptz`),
+          ),
+        ),
+      )
+      .orderBy(catalogItems.id); // 균등분포 불변 + 순서 고정(테스트 RNG 인덱스 재현·결과 안정).
+    if (pool.length === 0) throw new SupplyError('NO_CATALOG');
+
+    // 뽑기 확정 — 슬롯 내 균등(BALANCE §4.2). rng 호출 순서 유지(테스트 재현성).
+    // 동시 개봉 경합은 위 박스 행 FOR UPDATE가 유저·슬롯 단위로 직렬화한다(신규 행 경합 불가).
+    const picks: number[] = [];
+    for (let i = 0; i < n; i++) picks.push(pool[rng() % pool.length]!.id);
+
+    const results = await applyCatalogPicks(tx, { userId, serverId, picks });
+
+    // 열기 로그 — 뽑기 순서대로 다중행 1문.
+    await tx.insert(supplyOpenLogs).values(
+      results.map((r) => ({ userId, serverId, slot, catalogItemId: r.catalogItemId, isNew: r.isNew })),
+    );
+
+    await tx
+      .update(userSupplyBoxes)
+      .set({ count: sql`${userSupplyBoxes.count} - ${BigInt(n)}` })
+      .where(
+        and(
+          eq(userSupplyBoxes.userId, userId),
+          eq(userSupplyBoxes.serverId, serverId),
+          eq(userSupplyBoxes.slot, slot),
+        ),
+      );
+
+    return results;
+  });
+
+  await afterPicksApplied(userId, serverId, opened);
 
   return opened;
 }

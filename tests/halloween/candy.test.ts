@@ -9,7 +9,8 @@ import {
   halloweenPhase,
   nextCandyStep,
 } from '@/lib/game/halloween/config';
-import { accrueCandy, claimCandyStep, exchangeCandy, getCandyOverview } from '@/lib/game/halloween/candy';
+import { accrueCandy, claimCandyStep, exchangeCandy, exchangeCandyForItem, getCandyOverview } from '@/lib/game/halloween/candy';
+import { allowedItemCopies } from '@/lib/game/halloween/item-exchange';
 import { getWalletDiamond, type WalletDb } from '@/lib/game/wallet';
 
 import { endTestDb, sql, testDb } from '../db';
@@ -182,6 +183,53 @@ describe.skipIf(skip)('사탕 통합(롤백 tx)', () => {
       `)) as unknown as { earn: number; spent: number }[];
       expect(led.earn).toBe(1_000);
       expect(led.spent).toBe(800);
+    });
+  });
+
+  it('장비 교환: 사탕 100에 1개, 미보유 → 획득(T0), 상한(내 최고 초월) 초과·사탕 부족·잘못된 코드·기간 종료 거절', async () => {
+    await inRollback(async (tx) => {
+      await accrueCandy({ userId: TEST_USER_ID, serverId: SERVER_ID, jobId: `t-${Date.now()}-item`, level: 1_000, at: IN }, tx);
+      const o = await getCandyOverview(TEST_USER_ID, SERVER_ID, IN, tx);
+      expect(o.items.map((i) => i.code)).toEqual([
+        'halloween_smith_hammer', 'halloween_smith_apron', 'halloween_smith_scarf', 'halloween_vamp_parasol', 'halloween_vamp_cape', 'halloween_vamp_tophat',
+      ]);
+      for (const it of o.items) expect(it.allowed).toBe(allowedItemCopies(o.maxTranscend, it.owned ? { level: it.level, progress: it.progress } : null));
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'nope', 1, IN, tx)).toEqual({ ok: false, reason: 'BAD_ITEM' });
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 0, IN, tx)).toEqual({ ok: false, reason: 'BAD_COUNT' });
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 1, new Date(HALLOWEEN_CLAIM_END_MS + 1), tx)).toEqual({ ok: false, reason: 'CLOSED' });
+      // 사탕 부족이 상한보다 먼저 걸린다(1,000 사탕 = 10개).
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 11, IN, tx)).toEqual({ ok: false, reason: 'INSUFFICIENT' });
+      const target = o.items.find((i) => !i.owned) ?? o.items[0]!;
+      if (target.allowed === 0) {
+        expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, target.code, 1, IN, tx)).toEqual({ ok: false, reason: 'CAP' });
+        return;
+      }
+      const r = await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, target.code, 1, IN, tx);
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      expect(r.cost).toBe(100);
+      expect(r.available).toBe(900);
+      expect(r.item.owned).toBe(true);
+      expect(r.acquired).toBe(!target.owned);
+      expect(r.item.allowed).toBe(target.allowed - 1);
+      const [row] = (await tx.execute(sql`
+        select ue.transcend_level::int as level, ue.transcend_progress::int as progress from user_equipment ue
+          join catalog_items ci on ci.id = ue.catalog_item_id
+         where ue.user_id = ${TEST_USER_ID}::uuid and ue.server_id = ${SERVER_ID} and ci.code = ${target.code}
+      `)) as unknown as { level: number; progress: number }[];
+      expect(row).toBeDefined();
+      expect(row!.level).toBe(r.item.level);
+      expect(row!.progress).toBe(r.item.progress);
+      // 상한을 넘기는 개수는 거절, 상한까지는 허용(사탕이 있으면).
+      if (r.item.allowed + 1 <= 9) expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, target.code, r.item.allowed + 1, IN, tx)).toEqual({ ok: false, reason: 'CAP' });
+      const o2 = await getCandyOverview(TEST_USER_ID, SERVER_ID, IN, tx);
+      expect(o2.available).toBe(900);
+      expect(o2.total).toBe(1_000);
+      const [led] = (await tx.execute(sql`
+        select coalesce(sum(delta) filter (where kind = 'exchange'), 0)::int as ex from halloween_candy_ledger
+         where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
+      `)) as unknown as { ex: number }[];
+      expect(led!.ex).toBe(-100);
     });
   });
 });
