@@ -62,11 +62,11 @@ function shift(fr: Buffer, sx: number, sy: number): Buffer {
  * 원본 스프라이트 경로 — 레거시 seed 배치는 sprites/pool/<id>.png 한곳이지만,
  * V4 확장분은 슬롯별(sprites/<slot>/<key>.png)에 있다. 있는 쪽을 쓴다.
  */
-function basePath(pid: string): string {
+export function basePath(pid: string): string {
   const pool = join(ROOT, 'public/sprites/pool', `${pid}.png`);
   if (existsSync(pool)) return pool;
   // weapon-cand = 교체 후보(미채택). 채택 시 weapon/으로 옮겨지면 위 경로로 잡힌다.
-  for (const slot of ['weapon', 'armor', 'accessory', 'weapon-cand']) {
+  for (const slot of ['weapon', 'armor', 'accessory', 'weapon-cand', 'halloween-cand']) {
     const p = join(ROOT, 'public/sprites', slot, `${pid}.png`);
     if (existsSync(p)) return p;
   }
