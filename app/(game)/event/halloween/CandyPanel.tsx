@@ -274,8 +274,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       {/* 장비 교환(2026-10-27) — 6종 각 1개 = 사탕 100. 교환 뒤 초월 단계가 내 최고 초월을 넘지 못한다(allowedItemCopies). */}
       <p className="mb-0.5 mt-4 text-[12.5px] font-bold">할로윈 장비 교환</p>
       <p className="mb-1.5 text-[10.5px] text-zinc-500">
-        1개에 사탕 {n(CANDY_ITEM_EXCHANGE.candy)} · 보급 상자에서 나온 것처럼 들어가요(없으면 새로 얻고, 있으면 초월이 진행돼요)
-        {ov.maxTranscend > 0 ? <> · 내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지 올릴 수 있어요</> : <> · 없는 장비를 1개씩 받을 수 있어요(다른 장비 초월이 오르면 더 받을 수 있어요)</>}
+        {ov.maxTranscend > 0 ? <>내 최고 초월 <b className="text-zinc-300">T{ov.maxTranscend}</b>까지 올릴 수 있어요</> : <>없는 장비를 1개씩 받을 수 있어요(다른 장비 초월이 오르면 더 받을 수 있어요)</>}
       </p>
       <ul className="flex flex-col gap-1.5">
         {ov.items.map((it) => {
@@ -285,9 +284,17 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
             <li key={it.code} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-2.5 py-2">
               <ItemImg code={it.code} size={36} />
               <div className="min-w-0">
-                <b className="block truncate text-[12.5px]">{it.name}</b>
-                <span className={`block truncate text-[10.5px] ${why && open && it.allowed > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>
-                  {why ?? `${tLabel(it)} · 교환 가능 ${n(it.allowed)}개`}
+                {/* 이름 오른쪽에 보유 상태(미보유 / T13 · 진행 7/14), 아래 줄에 가격 · 교환 가능 개수(2026-10-27 사용자 요청 배치). */}
+                <div className="flex items-baseline justify-between gap-2">
+                  <b className="truncate text-[12.5px]">{it.name}</b>
+                  <span className="shrink-0 text-[10.5px] tabular-nums text-zinc-400">{tLabel(it)}</span>
+                </div>
+                <span className={`flex items-center gap-1 truncate text-[10.5px] ${why && open && it.allowed > 0 ? 'text-amber-300/80' : 'text-zinc-500'}`}>
+                  {why ?? (
+                    <>
+                      <CandyIcon size={12} /> {n(CANDY_ITEM_EXCHANGE.candy)} · 교환 가능 {n(it.allowed)}개
+                    </>
+                  )}
                 </span>
               </div>
               <button
