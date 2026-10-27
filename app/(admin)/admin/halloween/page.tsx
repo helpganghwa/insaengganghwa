@@ -8,7 +8,7 @@ import { SettleButton } from './SettleButton';
 
 export const dynamic = 'force-dynamic';
 
-const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }) : '-');
+const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-');
 const kst = (iso: string) => new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /**
@@ -59,7 +59,7 @@ export default async function AdminHalloweenPage() {
                         <span className="w-5 text-zinc-500">{r.rank}</span>
                         <span className="min-w-0 flex-1 truncate">{r.nickname}</span>
                         <span className="font-mono">+{r.level}</span>
-                        <span className="w-[112px] text-right text-[10.5px] text-zinc-500">{fmt(r.reachedAt)}</span>
+                        <span className="w-[128px] whitespace-nowrap text-right text-[10.5px] tabular-nums text-zinc-500">{fmt(r.reachedAt)}</span>
                       </li>
                     ))}
                   </ol>
