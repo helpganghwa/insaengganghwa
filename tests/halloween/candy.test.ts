@@ -196,6 +196,7 @@ describe.skipIf(skip)('사탕 통합(롤백 tx)', () => {
       for (const it of o.items) expect(it.allowed).toBe(allowedItemCopies(o.maxTranscend, it.owned ? { level: it.level, progress: it.progress } : null));
       expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'nope', 1, IN, tx)).toEqual({ ok: false, reason: 'BAD_ITEM' });
       expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 0, IN, tx)).toEqual({ ok: false, reason: 'BAD_COUNT' });
+      expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 10_001, IN, tx)).toEqual({ ok: false, reason: 'BAD_COUNT' });
       expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 1, new Date(HALLOWEEN_CLAIM_END_MS + 1), tx)).toEqual({ ok: false, reason: 'CLOSED' });
       // 사탕 부족이 상한보다 먼저 걸린다(1,000 사탕 = 10개).
       expect(await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', 11, IN, tx)).toEqual({ ok: false, reason: 'INSUFFICIENT' });
@@ -251,7 +252,7 @@ describe.skipIf(skip)('사탕 통합(롤백 tx)', () => {
       const hammer = o.items.find((i) => i.code === 'halloween_smith_hammer')!;
       expect(hammer.owned).toBe(false);
       expect(hammer.allowed).toBe(allowedItemCopies(maxT, null));
-      if (hammer.allowed > 99 || hammer.allowed * 100 > 30_000) return; // 테스트 계정의 최고 초월이 너무 높으면 경계 검증은 건너뛴다.
+      if (hammer.allowed * 100 > 30_000) return; // 테스트 계정의 최고 초월이 너무 높아 사탕이 모자라면 경계 검증은 건너뛴다.
       const r = await exchangeCandyForItem(TEST_USER_ID, SERVER_ID, 'halloween_smith_hammer', hammer.allowed, IN, tx);
       expect(r.ok).toBe(true);
       if (!r.ok) return;

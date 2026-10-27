@@ -264,7 +264,7 @@ export async function exchangeCandyForItem(
 ): Promise<ExchangeItemResult> {
   const phase = halloweenPhase(at);
   if (phase !== 'accrue' && phase !== 'claim') return { ok: false, reason: 'CLOSED' };
-  if (!Number.isInteger(count) || count < 1 || count > CANDY_EXCHANGE_MAX_PER_ACTION) return { ok: false, reason: 'BAD_COUNT' };
+  if (!Number.isInteger(count) || count < 1 || count > CANDY_ITEM_EXCHANGE.maxPerAction) return { ok: false, reason: 'BAD_COUNT' };
   if (!HALLOWEEN_CONTEST_ITEMS.some((i) => i.code === code)) return { ok: false, reason: 'BAD_ITEM' };
   const cost = CANDY_ITEM_EXCHANGE.candy * count;
   const done = await dbx.transaction(async (tx) => {

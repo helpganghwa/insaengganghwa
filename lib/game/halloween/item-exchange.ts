@@ -7,7 +7,11 @@ import { transcendFodderForStep } from '@/lib/game/balance';
  *  - 수량 제한: 교환 뒤 그 장비의 초월 단계가 **내가 가진 장비 중 가장 높은 초월 단계(같은 서버)**를 넘을 수 없다.
  *    미보유면 획득 1개 + 그 단계까지 채우는 개수. 내 최고가 T0이면 미보유 장비만 1개.
  */
-export const CANDY_ITEM_EXCHANGE = { candy: 100 } as const;
+export const CANDY_ITEM_EXCHANGE = {
+  candy: 100,
+  /** 한 번에 교환할 수 있는 최대 개수 — 상한(allowedItemCopies)까지 한 번에 받을 수 있게 넉넉히(실수 방지용 안전핀). 실제 상한은 allowed. */
+  maxPerAction: 10_000,
+} as const;
 
 export type ItemTranscendState = { level: number; progress: number };
 

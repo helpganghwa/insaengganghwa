@@ -410,15 +410,22 @@ function ItemExchangeModal({
   onSubmit: (count: number) => void;
 }) {
   const price = CANDY_ITEM_EXCHANGE.candy;
-  const max = Math.max(1, Math.min(CANDY_EXCHANGE_MAX_PER_ACTION, item.allowed, Math.floor(available / price)));
+  // 상한까지 한 번에(2026-10-27 사용자 요청) — 교환 가능 개수와 사탕으로 살 수 있는 개수 중 작은 값. 숫자 입력도 받는다.
+  const max = Math.max(1, Math.min(CANDY_ITEM_EXCHANGE.maxPerAction, item.allowed, Math.floor(available / price)));
   const [count, setCount] = useState(1);
+  const [typed, setTyped] = useState('1');
+  const setBoth = (c: number) => {
+    const v = Math.min(max, Math.max(1, Math.floor(c)));
+    setCount(v);
+    setTyped(String(v));
+  };
   const cost = price * count;
   const after = simulateItemCopies(item.owned ? { level: item.level, progress: item.progress } : null, count);
   const submit = () => {
     if (cost > available || count > item.allowed) return;
     onSubmit(count);
   };
-  const step = (d: number) => setCount((c) => Math.min(max, Math.max(1, c + d)));
+  const step = (d: number) => setBoth(count + d);
   const stepBtn = 'grid h-8 w-8 place-items-center rounded-lg bg-zinc-800 text-[16px] font-extrabold text-zinc-100 disabled:opacity-40';
   const edgeBtn = 'h-8 rounded-lg bg-zinc-800 px-2.5 text-[11px] font-bold text-zinc-300 active:opacity-80 disabled:opacity-40';
   return (
@@ -445,23 +452,38 @@ function ItemExchangeModal({
           </div>
         </div>
         <div className="flex items-center justify-center gap-3 pb-0.5 pt-2.5">
-          <button type="button" onClick={() => setCount(1)} disabled={count <= 1} className={edgeBtn}>
+          <button type="button" onClick={() => setBoth(1)} disabled={count <= 1} className={edgeBtn}>
             최소
           </button>
           <button type="button" aria-label="하나 줄이기" onClick={() => step(-1)} disabled={count <= 1} className={stepBtn}>
             −
           </button>
-          <b className="min-w-[28px] text-center font-mono text-[22px] tabular-nums text-amber-200">{count}</b>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            aria-label="교환 개수"
+            value={typed}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              setTyped(raw);
+              const v = Number(raw);
+              if (raw !== '' && Number.isFinite(v)) setCount(Math.min(max, Math.max(1, v)));
+            }}
+            onBlur={() => setBoth(Number(typed) || 1)}
+            className="h-9 w-[72px] rounded-lg border border-zinc-700 bg-zinc-950 text-center font-mono text-[20px] font-extrabold tabular-nums text-amber-200 outline-none focus:border-amber-500"
+          />
           <button type="button" aria-label="하나 늘리기" onClick={() => step(1)} disabled={count >= max} className={stepBtn}>
             +
           </button>
-          <button type="button" onClick={() => setCount(max)} disabled={count >= max} className={edgeBtn}>
+          <button type="button" onClick={() => setBoth(max)} disabled={count >= max} className={edgeBtn}>
             최대
           </button>
         </div>
+        <p className="mt-1 text-center text-[10.5px] text-zinc-500">한 번에 {n(max)}개까지</p>
         <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 text-[12px]">
           <dt className="text-zinc-400">받는 것</dt>
-          <dd className="text-right font-bold">{item.name} ×{count}</dd>
+          <dd className="text-right font-bold">{item.name} ×{n(count)}</dd>
           <dt className="text-zinc-400">필요한 사탕</dt>
           <dd className="text-right font-mono tabular-nums">{n(cost)}</dd>
           <dt className="text-zinc-400">교환 뒤 사용 가능</dt>
