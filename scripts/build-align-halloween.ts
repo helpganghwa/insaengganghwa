@@ -32,7 +32,7 @@ const body = tpl.slice(tpl.indexOf('<style>'), tpl.lastIndexOf('</script>') + '<
   .replace(/\$\{CELL \* 1\.6\}/g, String(CELL * 1.6))
   .replace(/\$\{CELL\}/g, String(CELL))
   .replace('const ITEMS=${JSON.stringify(items)};', `const ITEMS=${JSON.stringify(items).replace(/</g, '\\u003c')};`)
-  .replace("const LSK='align3';", "const LSK='align-halloween-v1';")
+  .replace("const LSK='align3';", "const LSK='align-halloween-v2';")
   .replace("img.src='sprites/anim3/'+it.id+'.webp?ts='+Date.now();", 'img.src=it.src;')
   .replace("o.textContent=(it.slot[0].toUpperCase())+' · '+it.name+' ('+it.id+')';", "o.textContent={weapon:'무기',armor:'방어구',accessory:'장신구'}[it.slot]+' · '+it.name;")
   .replace('$(\'#slot\').textContent=it.slot;', "$('#slot').textContent={weapon:'무기',armor:'방어구',accessory:'장신구'}[it.slot];")
