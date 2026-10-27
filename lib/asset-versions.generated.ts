@@ -263,7 +263,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/chuseok/banner-contest.png": "fb9402c0",
   "/sprites/chuseok/songpyeon.png": "263d6dbb",
   "/sprites/halloween/candy.png": "b8fec916",
-  "/sprites/halloween/pumpkin-node.png": "cf4cd621",
+  "/sprites/halloween/pumpkin-node.png": "7050ee81",
   "/sprites/halloween/banner-contest.png": "0952b7e3",
   "/sprites/halloween/banner-candy.png": "0cdeceb7",
   "/og/og-8.png": "a7340279",

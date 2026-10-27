@@ -93,3 +93,29 @@
 | 10/30 20:00 | 호박 등불이 켜졌습니다 | 대장간 문 앞에 잭오랜턴이 불을 밝혔습니다. 망치를 들면 사탕이 쌓입니다. |
 | 10/31 20:00 | 트릭 오어 트릿 | 할로윈 밤입니다. 문을 두드릴 필요는 없습니다. 보급은 이미 우편함에 와 있습니다. |
 | 11/1 20:00 | 마지막 사탕 봉지 | 호박 등불이 꺼지기 전에, 남은 사탕을 챙겨 가세요. 대회는 11월 4일 낮 12시 전까지입니다. |
+
+## 9. 운영 절차 — 배포·개방·롤백 (2026-10-27)
+
+**배포(10/28 12:00 전)**
+1. `git fetch` 뒤 master가 feat/halloween의 조상인지 확인 → `bun run typecheck && bun run build` → `git status` 변경 0(빌드가 아틀라스·asset-versions를 다시 만든다).
+2. 0247 적용: `bun run scripts/apply-migration.ts lib/db/manual/0247_halloween_candy.sql PROD_DATABASE_URL`(멱등, 새 표만 만들어 코드보다 먼저 적용해도 무해). `/admin/halloween`은 국면과 상관없이 결과 표를 읽으므로 **배포 전에** 적용한다.
+3. 시드(프로덕션은 명령 앞에만 붙인다 — export 금지, 같은 셸의 테스트가 프로덕션을 향한다):
+   `DIRECT_URL="$(grep '^PROD_DATABASE_URL=' .env.local | cut -d= -f2- | tr -d '"')" bun run scripts/seed-catalog.ts`
+   실행 전 "프로덕션의 활성 code 중 CATALOG_ITEMS에 없는 것"이 0건인지 조회하고, 로그에 `[catalog] 비활성 전환`이 없어야 한다. 결과: 할로윈 6행 active=false, 슬롯별 활성 42/42/42.
+4. `git push origin HEAD:master` → Vercel Ready → `/api/health`의 dpl 전환 확인(인스턴트 롤백 이력이 있으면 자동 승격이 안 되니 `vercel promote`).
+5. 확인: `/event/halloween` → 홈으로 redirect, 홈에 배너 없음, `/probability` 42종(2.38%), `/sprites/halloween/*.png?v=` 200, `/admin/halloween` 열림, Production env에 `HALLOWEEN_START_ISO` 없음.
+
+**12:00~12:10**
+- 정각: `/probability` 슬롯당 44종(약 2.27%), 홈 배너·`/event/halloween` 노출, 보급 개봉에서 6종 등장(`supply_open_logs` 조인), 강화 수령 시 `halloween_candy_ledger`에 `job:` 행, `client_errors`/`recordError`의 `halloween-accrue` 0건.
+- 12:07까지(크론 `scheduled-mail` 2-57/5분): `catalog_items`의 할로윈 6행 active=true, `probability_snapshots` 최신 행 effective_at=10/28 12:00·note '할로윈 6종 개방', 운영 경보 '할로윈 6종 개방 실패' 없음.
+
+**크론 개방이 실패했을 때(수동)** — 노출·추첨은 서버 시각으로 이미 열려 있으니 기록·플래그 정리만 한다.
+1. `update catalog_items set active = true where active = false and code like 'halloween_%'`
+2. 관리자 탭 콘솔에서 `await fetch('/api/admin/revalidate?tag=catalog', { method: 'POST' })`
+3. 공시 스냅샷: `DIRECT_URL="<PROD>" bun run scripts/record-probability-snapshot.ts`로 44/44/44 확인 뒤 `--confirm --note="할로윈 6종 개방"`, effective_at은 SQL로 12:00으로 보정.
+
+**롤백**
+- 12:00 전: 코드만 되돌리면 된다(6종은 꺼져 있고 0247 표는 무해).
+- 12:00 뒤: 옛 코드는 active=true인 6종을 풀에 넣지만 그림·이름이 없어 깨진다 → `update catalog_items set active=false where code like 'halloween_%'` + catalog revalidate. 롤백 중엔 사탕이 쌓이지 않고 소급되지 않는다. 새 코드가 살아 있는 동안은 플래그로 숨길 수 없다(시각 판정) — 긴급 시 Production env `HALLOWEEN_START_ISO`를 먼 미래로 두고 재배포(검증되지 않은 수단).
+- 배포 직후 열려 있던 옛 탭은 아틀라스 좌표가 어긋나 장비 그림이 엉뚱하게 보일 수 있다(새로고침으로 해결, 추석 때와 같은 구조).
+

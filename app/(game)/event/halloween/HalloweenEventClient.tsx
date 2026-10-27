@@ -41,7 +41,7 @@ export function HalloweenEventClient({ initialTab, candy, board }: { initialTab:
   const chip = live
     ? 'border-orange-400/50 bg-orange-500/25 text-amber-100 shadow-[0_0_12px_rgba(249,115,22,.35)]'
     : 'border-violet-400/50 bg-violet-500/25 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,.35)]';
-  const right = <span className={`rounded-lg border px-2 py-1 font-mono text-[11px] font-extrabold tabular-nums backdrop-blur-sm ${chip}`}>{rightText}</span>;
+  const right = <span className={`inline-block min-w-[104px] rounded-lg border px-2 py-1 text-center font-mono text-[11px] font-extrabold tabular-nums backdrop-blur-sm ${chip}`}>{rightText}</span>;
   // 사탕 탭에 받을 도달 보상 수를 붉은 배지로(2026-09-23 UX 점검) — 순위 탭에 있다가 놓치지 않게. 기간 밖엔 없음.
   const claimable = candy.phase === 'accrue' || candy.phase === 'claim' ? candy.claimable : 0;
   const tabs = [
@@ -50,7 +50,8 @@ export function HalloweenEventClient({ initialTab, candy, board }: { initialTab:
   ];
   return (
     // 이벤트 페이지만 밤보라 톤(2026-10-27 UI 시안 2) — 카드·테두리 색은 각 패널에서 같은 팔레트를 쓴다.
-    <div className="min-h-[70dvh] bg-[#0f0b16] pb-4">
+    // flex-1: main이 flex-col이라 내용이 짧아도 밤보라 배경이 화면 끝까지 간다. 하단 여백은 채팅 미니바 높이(--chat-dock-h)만큼 더한다.
+    <div className="flex-1 bg-[#0f0b16] pb-[calc(24px+var(--chat-dock-h,0px))]">
       {/* 헤더 뒤에 호박밭 그림(홈 배너와 같은 그림) + 아래로 녹는 그라데이션(시안 1). */}
       <div className="relative isolate overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
