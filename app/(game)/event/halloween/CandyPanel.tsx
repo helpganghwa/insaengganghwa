@@ -16,7 +16,7 @@ import {
   type CandyExchangeKind,
 } from '@/lib/game/halloween/config';
 import type { CandyItemState, CandyOverview } from '@/lib/game/halloween/candy';
-import { CANDY_ITEM_EXCHANGE, simulateItemCopies } from '@/lib/game/halloween/item-exchange';
+import { CANDY_ITEM_EXCHANGE, allowedItemCopies, simulateItemCopies } from '@/lib/game/halloween/item-exchange';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -61,7 +61,6 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
   const [busyStep, setBusyStep] = useState<number | null>(null);
   const [modal, setModal] = useState<CandyExchangeKind | null>(null);
   const [itemModal, setItemModal] = useState<string | null>(null);
-  const [itemBusy, setItemBusy] = useState(false);
   const { showError, showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamondActions();
 
@@ -132,17 +131,22 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
   };
 
-  // 장비 교환 — 사탕 차감만 낙관 갱신하고, 장비 상태(초월·진행도·교환 가능 개수)는 서버 응답으로 맞춘다.
+  // 장비 교환 — 낙관 갱신(2026-10-27 사용자 요청): 사탕 차감과 장비 상태(초월·진행도·교환 가능 개수)를 순수 규칙(simulateItemCopies)으로
+  // 먼저 반영하고 토스트도 바로 띄운다. 서버 응답이 오면 그 값으로 맞추고, 실패하면 스냅샷으로 되돌린다(.catch 필수).
   const exchangeItem = (code: string, count: number) => {
     const it = ov.items.find((i) => i.code === code);
-    if (!it || itemBusy) return;
+    if (!it) return;
     const cost = CANDY_ITEM_EXCHANGE.candy * count;
+    const prevItems = ov.items;
+    const sim = simulateItemCopies(it.owned ? { level: it.level, progress: it.progress } : null, count);
+    const next: CandyItemState = { ...it, owned: true, level: sim.level, progress: sim.progress, allowed: allowedItemCopies(ov.maxTranscend, { level: sim.level, progress: sim.progress }) };
     setItemModal(null);
-    setItemBusy(true); // 응답 전 연타 방지 — 교환 가능 개수는 서버 응답으로만 갱신되므로 그동안 버튼을 잠근다.
-    setOv((o) => ({ ...o, spent: o.spent + cost, available: o.available - cost }));
-    showHeaderToast({ title: `${it.name} ${n(count)}개 교환!`, detail: `사탕 ${n(cost)} 사용` });
+    setOv((o) => ({ ...o, spent: o.spent + cost, available: o.available - cost, items: o.items.map((x) => (x.code === code ? next : x)) }));
+    if (sim.transcended > 0) showHeaderToast({ title: `${it.name} T${sim.level} 초월!`, detail: `초월 ${sim.transcended}단계 상승 · 사탕 ${n(cost)} 사용` });
+    else if (sim.acquired) showHeaderToast({ title: `${it.name} 획득!`, detail: `인벤토리에서 확인할 수 있어요 · 사탕 ${n(cost)} 사용` });
+    else showHeaderToast({ title: `${it.name} ${n(count)}개 교환!`, detail: `초월 진행 ${sim.progress}/${sim.level + 1} · 사탕 ${n(cost)} 사용` });
     const rollback = (message: string) => {
-      setOv((o) => ({ ...o, spent: o.spent - cost, available: o.available + cost }));
+      setOv((o) => ({ ...o, spent: o.spent - cost, available: o.available + cost, items: prevItems }));
       showError(message);
     };
     exchangeCandyItemAction(code, count)
@@ -151,6 +155,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           rollback(r.message);
           return;
         }
+        // 서버 값으로 정합(동시 개봉 등으로 미리보기와 다를 수 있다).
         setOv((o) => ({
           ...o,
           available: r.available,
@@ -158,11 +163,8 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
           maxTranscend: r.maxTranscend,
           items: o.items.map((x) => (x.code === code ? r.item : x)),
         }));
-        if (r.transcended > 0) showHeaderToast({ title: `${it.name} T${r.item.level} 초월!`, detail: `초월 ${r.transcended}단계 상승` });
-        else if (r.acquired) showHeaderToast({ title: `${it.name} 획득!`, detail: '인벤토리에서 확인할 수 있어요' });
       })
-      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'))
-      .finally(() => setItemBusy(false));
+      .catch(() => rollback('지금은 교환할 수 없어요. 잠시 후 다시 시도해 주세요.'));
   };
 
   return (
@@ -299,7 +301,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
               </div>
               <button
                 type="button"
-                disabled={!open || it.allowed === 0 || !canPay || itemBusy}
+                disabled={!open || it.allowed === 0 || !canPay}
                 onClick={() => setItemModal(it.code)}
                 className="rounded-md bg-amber-600 px-3 py-1.5 text-[11px] font-extrabold text-white transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
               >
