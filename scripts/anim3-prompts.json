@@ -95,7 +95,7 @@
     "hw2_smith_hammer": "망치·찌푸린 얼굴은 고정, 달군 끝만 숨 쉬듯 밝아졌다 어두워지고 작은 불똥 몇 개가 날렸다 사라짐",
     "hw5_smith_apron": "정지한 앞치마, 허리에 늘어진 가죽 끈만 아주 살짝 흔들림, 몸판·주머니 연장·덧댄 천은 그대로, 빛 효과 없음",
     "hw9_smith_kerchief": "두건은 고정, 빛·반짝임 없음, 뒤로 묶은 매듭 끝 두 가닥만 가벼운 바람에 살랑임",
-    "hw9_vamp_parasol": "양산은 캐노피·레이스·자루·손잡이 모두 완전히 정지, 빛·반짝임 없음, 캐노피의 작은 빨간 박쥐들만 날개를 파닥임",
+    "hw9_vamp_parasol": "캐노피의 빨간 박쥐들과 손잡이 박쥐 장식만 날개를 크게 위아래로 퍼덕임, 나머지는 완전 정지, 색·빛 변화·번쩍임 없음",
     "hw5_vamp_cape": "정지한 옷, 진홍 안감 검은 망토 자락만 부드러운 바람에 살짝 흔들림, 깃·재킷·반바지·줄무늬 양말은 그대로, 빛 효과 없음",
     "hw7_vamp_tophat": "모자는 고정, 띠의 작은 박쥐 브로치만 날개를 천천히 한 번 퍼덕이고 가운데 붉은 보석이 은은하게 반짝임"
   },
@@ -192,7 +192,7 @@
     "hw2_smith_hammer": "the hammer stays completely fixed and motionless; the grumpy iron face stays still; only the red-hot glowing end of the hammer head pulses brighter and dimmer like breathing, and a few tiny orange sparks drift off it and fade",
     "hw5_smith_apron": "static leather apron; only the long leather side ties hanging at the waist sway very slightly; the apron body, the bib, the pocket tools and the patches stay perfectly still; no sparkles, no light effects",
     "hw9_smith_kerchief": "the kerchief stays fixed; no glow, no sparkle; only the two short knotted tails at the back flutter gently as if in a light breeze",
-    "hw9_vamp_parasol": "the parasol stays completely fixed and motionless; the canopy, the lace edges, the shaft and the handle do not move at all; no glow, no sparkle; only the small red bats on the canopy flap their tiny wings up and down",
+    "hw9_vamp_parasol": "the small red bats printed on the canopy and the little bat ornament on the handle flap their wings up and down with wide wingbeats; everything else is perfectly still; the colors and lighting of the parasol never change, no brightening, no flashing, no glow",
     "hw5_vamp_cape": "static costume; only the long black cape with its crimson lining sways slightly at the hem as if in a soft breeze; the tall collar, the jacket, the bloomers and the striped stockings stay perfectly still; no light effects",
     "hw7_vamp_tophat": "the top hat stays completely fixed; only the little bat brooch on the band slowly flaps its tiny wings once and the red gem at its center glints softly"
   },
