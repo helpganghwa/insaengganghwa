@@ -16,20 +16,25 @@ import {
 } from '@/lib/game/halloween/config';
 import type { CandyOverview } from '@/lib/game/halloween/candy';
 
+import { assetUrl } from '@/lib/asset-versions';
+
 import { claimCandyStepAction, exchangeCandyAction } from './actions';
 
 const n = (v: number) => v.toLocaleString('ko-KR');
 
 function CandyIcon({ size = 16 }: { size?: number }) {
-  // 사탕 그림은 아직 없어(2026-10-25 임시) 포장 사탕을 SVG로 — 주황 몸통·보라 줄무늬·양쪽 포장 매듭.
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="inline-block shrink-0 align-[-0.15em]" shapeRendering="crispEdges">
-      <path d="M1 5h3v6H1zM12 5h3v6h-3z" fill="#a78bfa" />
-      <path d="M2 6h2v4H2zM12 6h2v4h-2z" fill="#7c3aed" />
-      <rect x="4" y="4" width="8" height="8" rx="3" fill="#f97316" />
-      <path d="M6 4h2v8H6z" fill="#7c3aed" opacity="0.85" />
-      <path d="M5 5h2v1H5z" fill="#fed7aa" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={assetUrl('/sprites/halloween/candy.png')}
+      alt=""
+      aria-hidden
+      width={size}
+      height={size}
+      draggable={false}
+      className="inline-block shrink-0 align-[-0.15em]"
+      style={{ imageRendering: 'pixelated' }}
+    />
   );
 }
 

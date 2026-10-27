@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { assetUrl } from '@/lib/asset-versions';
 import { HALLOWEEN_ACCRUE_END_LABEL, HALLOWEEN_ACCRUE_END_MS } from '@/lib/game/halloween/config';
 import { fmtLeft } from '@/lib/game/halloween/countdown';
 import { serverNow } from '@/lib/client/server-clock';
 
 /**
- * 홈 §1 — 할로윈 배너(캐러셀 슬라이드). 평소엔 대회(초 단위 남은 시간), 받을 도달 보상이 있으면
- * 사탕 문구·배경으로 바뀌고 사탕 세그먼트로 간다. 추석 배너(ChuseokBanner)와 같은 틀.
+ * 홈 §1 — 할로윈 배너(캐러셀 슬라이드). 평소엔 대회(호박밭 배경, 초 단위 남은 시간), 받을 도달 보상이 있으면
+ * 사탕 문구·배경(사탕 바구니)으로 바뀌고 사탕 세그먼트로 간다. 추석 배너(ChuseokBanner)와 같은 틀.
  * 프레임리스(h-full) — 테두리/라운드는 carousel outer가 제공.
  */
 export function HalloweenBanner({ claimable, phase }: { claimable: number; phase: 'accrue' | 'claim' }) {
@@ -25,13 +26,14 @@ export function HalloweenBanner({ claimable, phase }: { claimable: number; phase
   }, []);
   const hot = claimable > 0;
   const href = hot ? '/event/halloween?tab=candy' : '/event/halloween';
-  // 배경 그림은 아직 없어(2026-10-25 임시) 그라데이션으로 — 평소 밤하늘 보라, 받을 보상이 있으면 호박 주황.
-  const bg = hot ? 'bg-gradient-to-r from-orange-700 via-amber-700 to-purple-900' : 'bg-gradient-to-r from-purple-950 via-indigo-950 to-orange-900';
+  // 배경(2026-10-27 확정, pixflux 384×128): 평소 호박밭 밤 풍경, 받을 보상이 있으면 사탕이 넘치는 호박 바구니.
+  const bg = hot ? '/sprites/halloween/banner-candy.png' : '/sprites/halloween/banner-contest.png';
   const right =
     hot ? '받기' : phase === 'accrue' ? (now === null ? '' : fmtLeft(HALLOWEEN_ACCRUE_END_MS - now)) : `${HALLOWEEN_ACCRUE_END_LABEL} 확정`;
   return (
     <Link prefetch={false} href={href} className="relative flex h-full w-full min-w-0 items-center isolate overflow-hidden transition active:scale-[0.99]">
-      <div aria-hidden className={`absolute inset-0 ${bg}`} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={assetUrl(bg)} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
       <div className="relative z-10 flex w-full items-center gap-2 px-3.5">
         <div className="min-w-0 flex-1">
