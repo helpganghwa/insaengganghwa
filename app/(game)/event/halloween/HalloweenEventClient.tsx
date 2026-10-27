@@ -35,10 +35,12 @@ export function HalloweenEventClient({ initialTab, candy, board }: { initialTab:
       clearInterval(id);
     };
   }, [live]);
+  // 페이지를 연 채 마감이 지나면 서버 국면(prop)은 그대로라 '00:00:00 남음'에 멈춘다 — 클라 시계로 0 이하면 확정 표기로 넘긴다(2026-10-27 최종 검수).
+  const over = live && now !== null && HALLOWEEN_ACCRUE_END_MS - now <= 0;
   const rightText =
-    board.phase === 'before' ? `${HALLOWEEN_START_LABEL} 시작` : live ? (now === null ? ' ' : `${fmtLeft(HALLOWEEN_ACCRUE_END_MS - now)} 남음`) : `${HALLOWEEN_ACCRUE_END_LABEL} 확정`;
+    board.phase === 'before' ? `${HALLOWEEN_START_LABEL} 시작` : live && !over ? (now === null ? ' ' : `${fmtLeft(HALLOWEEN_ACCRUE_END_MS - now)} 남음`) : `${HALLOWEEN_ACCRUE_END_LABEL} 확정`;
   // 남은 시간 칩 — 대회 중엔 주황 유리, 결과 기간엔 보라(2026-10-27 UI 시안 9).
-  const chip = live
+  const chip = live && !over
     ? 'border-orange-400/50 bg-orange-500/25 text-amber-100 shadow-[0_0_12px_rgba(249,115,22,.35)]'
     : 'border-violet-400/50 bg-violet-500/25 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,.35)]';
   const right = <span className={`inline-block min-w-[104px] rounded-lg border px-2 py-1 text-center font-mono text-[11px] font-extrabold tabular-nums backdrop-blur-sm ${chip}`}>{rightText}</span>;

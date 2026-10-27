@@ -262,6 +262,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
                     type="button"
                     disabled={busyStep !== null || pending}
                     onClick={() => claim(l.step)}
+                    aria-label={`${n(l.at)} 도달 보상 받기`}
                     className="rounded-md bg-amber-500 px-3 py-1 text-[11px] font-extrabold text-zinc-950 transition active:scale-[0.97] disabled:opacity-60"
                   >
                     받기
@@ -282,8 +283,8 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       <div className="grid grid-cols-2 gap-2">
         {(
           [
-            { kind: 'box' as const, title: `📦 상자 ${CANDY_EXCHANGE.box.boxes}개`, sub: `사탕 ${n(CANDY_EXCHANGE.box.candy)}` },
-            { kind: 'diamond' as const, title: `💎 ${CANDY_EXCHANGE.diamond.diamond}`, sub: `사탕 ${n(CANDY_EXCHANGE.diamond.candy)}` },
+            { kind: 'box' as const, title: `📦 상자 ${CANDY_EXCHANGE.box.boxes}개`, label: `보급 상자 ${CANDY_EXCHANGE.box.boxes}개 교환`, sub: `사탕 ${n(CANDY_EXCHANGE.box.candy)}` },
+            { kind: 'diamond' as const, title: `💎 ${CANDY_EXCHANGE.diamond.diamond}`, label: `다이아 ${CANDY_EXCHANGE.diamond.diamond} 교환`, sub: `사탕 ${n(CANDY_EXCHANGE.diamond.candy)}` },
           ] as const
         ).map((x) => {
           const need = CANDY_EXCHANGE[x.kind].candy - ov.available;
@@ -300,6 +301,7 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
                 type="button"
                 disabled={!open || ov.available < CANDY_EXCHANGE[x.kind].candy}
                 onClick={() => setModal(x.kind)}
+                aria-label={x.label}
                 className="mt-auto rounded-md bg-amber-500 py-1.5 text-[11px] font-extrabold text-zinc-950 transition active:scale-[0.97] disabled:bg-zinc-700 disabled:text-zinc-400"
               >
                 교환
@@ -369,7 +371,8 @@ export function CandyPanel({ initial }: { initial: CandyOverview }) {
       ))}
         </div>
       </div>
-      <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 {HALLOWEEN_CLAIM_END_DAY}까지 교환할 수 있어요. 그 뒤 남은 사탕은 사라져요.</p>
+      {/* 종료 뒤엔 위 '기간이 끝났어요' 안내와 겹쳐 숨긴다(2026-10-27 최종 검수). */}
+      {ov.phase !== 'ended' ? <p className="mt-3 text-[11px] text-zinc-500">대회가 끝난 뒤 {HALLOWEEN_CLAIM_END_DAY}까지 교환할 수 있어요. 그 뒤 남은 사탕은 사라져요.</p> : null}
 
       {modal ? (
         <ExchangeModal kind={modal} available={ov.available} onClose={() => setModal(null)} onSubmit={(count) => exchange(modal, count)} />
@@ -491,7 +494,7 @@ function ItemExchangeModal({
     <ModalShell onClose={onClose} onSubmit={submit} label="장비 교환">
       <ModalLayout
         title={`${item.name} 교환`}
-        subtitle={`1개에 사탕 ${n(price)} · 내 최고 초월 T${maxTranscend}까지 교환할 수 있어요`}
+        subtitle={maxTranscend > 0 ? `1개에 사탕 ${n(price)} · 내 최고 초월 T${maxTranscend}까지 교환할 수 있어요` : `1개에 사탕 ${n(price)} · 없는 장비를 1개 받을 수 있어요`}
         footer={
           <>
             <ModalButton tone="neutral" onClick={onClose}>

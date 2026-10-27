@@ -29,7 +29,7 @@ export function HalloweenBanner({ claimable, phase }: { claimable: number; phase
   // 배경(2026-10-27 확정, pixflux 384×128): 평소 호박밭 밤 풍경, 받을 보상이 있으면 사탕이 넘치는 호박 바구니.
   const bg = hot ? '/sprites/halloween/banner-candy.png' : '/sprites/halloween/banner-contest.png';
   const right =
-    hot ? '받기' : phase === 'accrue' ? (now === null ? '' : fmtLeft(HALLOWEEN_ACCRUE_END_MS - now)) : `${HALLOWEEN_ACCRUE_END_LABEL} 확정`;
+    hot ? '받기' : phase === 'accrue' && !(now !== null && HALLOWEEN_ACCRUE_END_MS - now <= 0) ? (now === null ? '' : fmtLeft(HALLOWEEN_ACCRUE_END_MS - now)) : `${HALLOWEEN_ACCRUE_END_LABEL} 확정`;
   return (
     <Link prefetch={false} href={href} className="relative flex h-full w-full min-w-0 items-center isolate overflow-hidden transition active:scale-[0.99]">
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -294,7 +294,7 @@ export async function exchangeCandyForItem(
       insert into halloween_candy_ledger (user_id, server_id, kind, delta, note, ref, created_at)
       values (${userId}::uuid, ${serverId}, 'exchange', ${-cost}, ${`${ci.name} ${count}개 교환`}, ${ref}, ${at.toISOString()})
     `);
-    const results = await applyCatalogPicks(tx, { userId, serverId, picks: Array.from({ length: count }, () => Number(ci.id)) });
+    const results = await applyCatalogPicks(tx, { userId, serverId, picks: Array.from({ length: count }, () => Number(ci.id)), strict: true });
     const after = await loadItemStates(userId, serverId, tx);
     const item = after.items.find((i) => i.code === code)!;
     return {

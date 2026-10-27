@@ -54,7 +54,16 @@ function rngU32(): number {
  * 뽑힌 카탈로그 id 목록을 유저 장비에 반영 — 신규 획득·진행도·자동 초월·초월 로그(트랜잭션 안, 호출부가 tx를 연다).
  * 같은 아이템이 여러 번 들어오면 순서대로 연쇄 반영. 걸린 카탈로그의 보유 행만 FOR UPDATE로 잠근다.
  */
-export async function applyCatalogPicks(tx: Tx, p: { userId: string; serverId: number; picks: number[] }): Promise<OpenResult[]> {
+export async function applyCatalogPicks(
+  tx: Tx,
+  p: {
+    userId: string;
+    serverId: number;
+    picks: number[];
+    /** 신규 행 insert가 conflict로 빠지면 throw(호출부 롤백) — 사탕 장비 교환처럼 "지불은 됐는데 장비가 안 들어오는" 창을 막는다(2026-10-27 최종 검수). 보급 개봉은 상자 잠금으로 직렬화돼 종전처럼 무시. */
+    strict?: boolean;
+  },
+): Promise<OpenResult[]> {
   const { userId, serverId, picks } = p;
   if (picks.length === 0) return [];
   const uniqueIds = [...new Set(picks)];
@@ -154,6 +163,7 @@ export async function applyCatalogPicks(tx: Tx, p: { userId: string; serverId: n
       const s = states.get(r.catalogItemId);
       if (s) s.dbId = r.id;
     }
+    if (p.strict && inserted.length !== newStates.length) throw new Error('EQUIPMENT_INSERT_CONFLICT');
   }
 
   // ③-b 기존 다중행 UPDATE — VALUES 조인 1문. raisedMax는 greatest/case로 행별 판정.
