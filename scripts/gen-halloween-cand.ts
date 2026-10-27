@@ -516,7 +516,7 @@ export const CANDIDATES: HalloweenCand[] = [
       'a long ash-wood handle wrapped in braided leather, a small brass master tag hanging from a cord at the end, distinctive and finely crafted, clearly a hammer weapon, no text, large, diagonal',
   },
   {
-    key: 'hw5_smith_apron', nameKo: '연장 꽂힌 장인 앞치마', set: 'smith5', slot: 'armor', tone: 'bright', batch: 5, tailAs: 'accessory',
+    key: 'hw5_smith_apron', nameKo: '장인의 앞치마', set: 'smith5', slot: 'armor', tone: 'bright', batch: 5, tailAs: 'accessory',
     concept: '앞치마만(몸 없이). 덧댄 가죽, 박음질 무늬, 망치·모루 문양, 연장 주머니 여럿, 놋쇠 리벳',
     art:
       "a richly detailed brown leather master blacksmith's apron on its own, from chest to knees, layered patched leather panels with decorative stitching and brass rivets, " +
@@ -538,7 +538,7 @@ export const CANDIDATES: HalloweenCand[] = [
       'cute and festive, clearly a wand weapon, no text, large, diagonal',
   },
   {
-    key: 'hw5_vamp_cape', nameKo: '헐렁한 꼬마 백작 망토', set: 'vampire2', slot: 'armor', tone: 'costume', batch: 5,
+    key: 'hw5_vamp_cape', nameKo: '박쥐 백작 망토', set: 'vampire2', slot: 'armor', tone: 'costume', batch: 5,
     concept: '몸보다 큰 높은 깃 망토(빨간 안감, 작은 박쥐 무늬), 귀여운 미니 연미복',
     art:
       'a cute little vampire costume: an oversized black cape with a tall pointed collar and a bright red lining dotted with tiny bat prints, ' +
@@ -648,7 +648,7 @@ export const CANDIDATES: HalloweenCand[] = [
       'a cute little vampire costume dress: a black and wine-red frilled dress with a tall stand-up collar, a short attached capelet, bat-shaped buttons down the front, black lace trim, striped stockings and black ribbon shoes',
   },
   {
-    key: 'hw7_vamp_tophat', nameKo: '박쥐 리본 미니 실크햇', set: 'vampire3', slot: 'accessory', tone: 'costume', batch: 7,
+    key: 'hw7_vamp_tophat', nameKo: '박쥐 미니 실크햇', set: 'vampire3', slot: 'accessory', tone: 'costume', batch: 7,
     concept: '작은 검은 실크햇, 와인빛 띠, 박쥐 모양 리본, 가운데 빨간 보석',
     art:
       'a tiny black silk top hat, a wine-red satin band and a ribbon bow shaped like a bat, a small red gem at the center of the bow',

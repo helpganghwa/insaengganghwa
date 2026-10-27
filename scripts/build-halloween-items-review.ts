@@ -141,7 +141,7 @@ pre.sum{white-space:pre-wrap;background:var(--paper);border:1px solid var(--line
 <div class="foot"><div class="st">리젝·수정 카드 <b id="cnt">0</b> / 6 · 리젝 <b id="redo">0</b></div><button class="copy" id="copy" type="button">요약 복사</button></div>
 <script>
 (function(){
-  var KEY='halloween-items-review-v1';
+  var KEY='halloween-items-review-v2';
   var cards=Array.prototype.slice.call(document.querySelectorAll('.card'));
   function startAnims(){cards.forEach(function(c){var a=c.querySelector('.anim');if(!a)return;var n=parseInt(a.getAttribute('data-frames'),10)||1;var i=0;setInterval(function(){i=(i+1)%n;a.style.backgroundPosition=(i*100/(n-1||1))+'% 0';},110);a.style.backgroundSize=(n*100)+'% 100%';});}
   function pickOf(c){var r=c.querySelector('[name=lore_pick]:checked');return r?r.value:'A'}
