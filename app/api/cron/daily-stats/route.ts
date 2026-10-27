@@ -30,17 +30,30 @@ export async function GET(req: Request) {
                    row_number() over (partition by metric order by value desc)::int as rnk
             from leaderboard_ranks
             where server_id = ${serverId} and metric in ('combat', 'max', 'sum', 'raid')
+          ),
+          -- 이 크론은 자정 1~2분 뒤에 돈다. 그 사이 수령한 강화는 기준선에 먼저 들어가면서 '오늘의 강화'
+          -- 성공·하락 횟수(자정부터 셈)에도 세어져, 합산의 '어제와 비교'가 그만큼 어긋났다(2026-10-27 문의 #1MizQ9lS).
+          -- 합산은 자정 이후 강화 로그의 단계 변화를 빼서 자정 시점 값으로 되짚는다(전투력·최고 강화는 되짚을 수 없어 그대로).
+          -- 유저마다 (user_id, created_at) 인덱스로 찾는다 — 서버·시각 조건만으로 훑으면 12초(10-27 실측), 이 형태는 수 ms.
+          since_midnight as (
+            select e.user_id, sum(e.to_level - e.from_level)::bigint d
+            from (select distinct user_id from lr) u
+            join enhancement_logs e
+              on e.user_id = u.user_id and e.server_id = ${serverId}
+             and e.created_at >= ((now() at time zone 'Asia/Seoul')::date::timestamp at time zone 'Asia/Seoul')
+            group by e.user_id
           )
           insert into user_daily_stats (user_id, server_id, kst_day, combat, max_enhance, sum_enhance, combat_rank, max_rank, sum_rank, raid_rank)
           select user_id, ${serverId}, (now() at time zone 'Asia/Seoul')::date,
                  coalesce(max(case when metric = 'combat' then value end), 0),
                  coalesce(max(case when metric = 'max' then value end), 0),
-                 coalesce(max(case when metric = 'sum' then value end), 0),
+                 greatest(coalesce(max(case when metric = 'sum' then value end), 0) - coalesce(max(sm.d), 0), 0),
                  max(case when metric = 'combat' then rnk end),
                  max(case when metric = 'max' then rnk end),
                  max(case when metric = 'sum' then rnk end),
                  max(case when metric = 'raid' then rnk end)
           from lr
+          left join since_midnight sm using (user_id)
           group by user_id
           on conflict do nothing
           returning user_id
