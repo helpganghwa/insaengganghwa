@@ -199,19 +199,19 @@ export function RankPanel({ board }: { board: ContestBoard }) {
         </div>
       ) : null}
 
-      {sheet ? <RewardSheet onClose={() => setSheet(false)} /> : null}
+      {sheet ? <RewardSheet item={item} onClose={() => setSheet(false)} /> : null}
     </div>
   );
 }
 
 /** 순위별 보상 팝업 — 공통 팝업(헤더 · 표 카드 · 닫기). 내 순위 표시 없음, 칭호는 실제 이름으로(2026-09-23). */
-function RewardSheet({ onClose }: { onClose: () => void }) {
+function RewardSheet({ item, onClose }: { item: BoardItem; onClose: () => void }) {
   const tierLabel = (t: { from: number; to: number }) => (t.from === t.to ? `${t.from}등` : `${t.from}~${t.to}등`);
   return (
     <ModalShell onClose={onClose} label="순위별 보상">
       <ModalLayout
         title="순위별 보상"
-        subtitle="장비 6종마다 따로 드려요. 칭호는 6종 공통이라 1등을 하면 2, 3등 칭호까지, 2등을 하면 3등 칭호까지 함께 드려요."
+        subtitle={`${item.name} 순위 보상이에요. 장비마다 칭호 순서가 달라요. 1등을 하면 2, 3등 칭호까지, 2등을 하면 3등 칭호까지 함께 드려요.`}
         bodyPad="sm"
         footer={
           <ModalButton tone="neutral" onClick={onClose}>
@@ -233,8 +233,8 @@ function RewardSheet({ onClose }: { onClose: () => void }) {
             <tbody>
               {HALLOWEEN_RANK_REWARDS.map((t) => {
                 const td = 'whitespace-nowrap border-b border-zinc-800 px-1.5 py-[7px]';
-                // 그 등수의 칭호(6종 공통). 아래 등수 칭호까지 함께 받는 규칙은 부제에.
-                const titleCode = t.from <= 3 ? contestTitlesFor(t.from)[0] : null;
+                // 이 장비에서 그 등수의 칭호(순서는 장비마다 다름). 아래 등수 칭호까지 함께 받는 규칙은 부제에.
+                const titleCode = t.from <= 3 ? contestTitlesFor(item.code, t.from)[0] : null;
                 return (
                   <tr key={t.from}>
                     <td className={td}>{tierLabel(t)}</td>

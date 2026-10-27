@@ -77,19 +77,24 @@ export function nextCandyStep(total: number): { at: number; remain: number } | n
 }
 
 // ── 할로윈 강화 대회(순위) ──────────────────────────────────────────────
+/** 순위 칭호 3종 — PUMPKIN KING · NOSFERATU · PHANTOM. */
+const PK = 'halloween26_rank1';
+const NF = 'halloween26_rank2';
+const PH = 'halloween26_rank3';
+
 /**
  * 대회 대상 6종(카탈로그 v7). 순위는 아이템별·서버별로 따로 매긴다.
  * ⚠ 2026-10-25 현재 **임시(더미) 6종** — 세트 확정 뒤 code·이름·그림을 바꾼다(lib/game/equipment/catalog-v7.ts).
  */
-export const HALLOWEEN_CONTEST_ITEMS: readonly { code: string }[] = [
-  { code: 'halloween_smith_hammer' },
-  { code: 'halloween_smith_apron' },
-  { code: 'halloween_smith_scarf' },
-  { code: 'halloween_ghost_basket' },
-  { code: 'halloween_ghost_sheet' },
-  { code: 'halloween_ghost_mask' },
+export const HALLOWEEN_CONTEST_ITEMS: readonly { code: string; titles: readonly [string, string, string] }[] = [
+  // titles = [1등, 2등, 3등] 칭호 — 3종의 여섯 가지 순서를 아이템마다 하나씩(2026-10-27 확정). 각 칭호가 1·2·3등에 두 번씩.
+  { code: 'halloween_smith_hammer', titles: [PK, NF, PH] },
+  { code: 'halloween_smith_apron', titles: [NF, PH, PK] },
+  { code: 'halloween_smith_scarf', titles: [PH, PK, NF] },
+  { code: 'halloween_ghost_basket', titles: [PK, PH, NF] },
+  { code: 'halloween_ghost_sheet', titles: [NF, PK, PH] },
+  { code: 'halloween_ghost_mask', titles: [PH, NF, PK] },
 ];
-
 /** 6종 코드(카탈로그 key = DB code). 보급 풀·활성 카탈로그의 시각 게이트가 쓴다. */
 export const HALLOWEEN_ITEM_CODES: readonly string[] = HALLOWEEN_CONTEST_ITEMS.map((i) => i.code);
 /** 6종이 열렸는가 — **서버 시각** 기준(추석과 같은 이유: 크론 의존이면 00:02~00:07에 열려 사탕·배너와 어긋난다). */
@@ -121,16 +126,14 @@ export function nextRewardTierEnd(rank: number): number | null {
   return HALLOWEEN_RANK_REWARDS[idx - 1]?.to ?? null;
 }
 
-/** 순위 칭호 코드 — 6종 공통(2026-10-20 확정). rank1 = 1등. */
-export const HALLOWEEN_RANK_TITLES: readonly string[] = ['halloween26_rank1', 'halloween26_rank2', 'halloween26_rank3'];
-
+/** 순위 칭호 코드 3종(지급 경로 = 대회 정산). 코드의 숫자는 이름일 뿐, 등수와의 짝은 아이템마다 다르다. */
+export const HALLOWEEN_RANK_TITLES: readonly string[] = [PK, NF, PH];
 /**
- * 순위 → 칭호. 6종 공통 3개, 도달한 등수 이하 전부(1등이면 셋, 2등이면 둘, 3등이면 하나). 4등 밖은 없음.
- * 여러 아이템에서 입상해도 같은 칭호라 중복 지급은 없다(user_titles PK).
+ * 아이템·순위 → 칭호. 그 아이템의 칭호 순서에서 도달한 등수 이하 전부(1등이면 셋, 2등이면 2·3등 칭호, 3등이면 3등 칭호).
+ * 누적 규칙은 추석과 같고(2026-10-27 유지 확정), 순서만 아이템마다 다르다. 같은 칭호 중복 지급은 없다(user_titles PK).
  */
-export function contestTitlesFor(rank: number): string[] {
+export function contestTitlesFor(code: string, rank: number): string[] {
   if (rank < 1 || rank > 3) return [];
-  const out: string[] = [];
-  for (let t = rank; t <= 3; t++) out.push(`halloween26_rank${t}`);
-  return out;
+  const item = HALLOWEEN_CONTEST_ITEMS.find((i) => i.code === code);
+  return item ? item.titles.slice(rank - 1) : [];
 }

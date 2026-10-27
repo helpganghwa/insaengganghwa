@@ -5086,19 +5086,19 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "halloween26_rank3",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 아무 장비 3등 안",
+  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
   diff: "한정"
  },
  {
   code: "halloween26_rank2",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 아무 장비 2등 안",
+  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
   diff: "한정"
  },
  {
   code: "halloween26_rank1",
   cat: "할로윈",
-  cond: "2026 할로윈 강화 대회 아무 장비 1등",
+  cond: "2026 할로윈 강화 대회 입상 (장비마다 칭호 순서가 다름)",
   diff: "한정"
  },
  {

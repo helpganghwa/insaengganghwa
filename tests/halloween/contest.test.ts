@@ -27,12 +27,20 @@ describe('할로윈 대회 규칙', () => {
   });
 
   it('칭호는 6종 공통: 도달한 등수 이하 전부, 4등 밖은 없음', () => {
-    expect(contestTitlesFor(1)).toEqual(['halloween26_rank1', 'halloween26_rank2', 'halloween26_rank3']);
-    expect(contestTitlesFor(2)).toEqual(['halloween26_rank2', 'halloween26_rank3']);
-    expect(contestTitlesFor(3)).toEqual(['halloween26_rank3']);
-    expect(contestTitlesFor(4)).toEqual([]);
-    expect(contestTitlesFor(0)).toEqual([]);
-    expect([...HALLOWEEN_RANK_TITLES].sort()).toEqual(contestTitlesFor(1).sort());
+    const [PK, NF, PH] = ['halloween26_rank1', 'halloween26_rank2', 'halloween26_rank3'];
+    expect(contestTitlesFor('halloween_smith_hammer', 1)).toEqual([PK, NF, PH]);
+    expect(contestTitlesFor('halloween_smith_apron', 1)).toEqual([NF, PH, PK]);
+    expect(contestTitlesFor('halloween_smith_apron', 2)).toEqual([PH, PK]);
+    expect(contestTitlesFor('halloween_ghost_mask', 3)).toEqual([PK]);
+    expect(contestTitlesFor('halloween_smith_hammer', 4)).toEqual([]);
+    expect(contestTitlesFor('halloween_smith_hammer', 0)).toEqual([]);
+    expect(contestTitlesFor('nope', 1)).toEqual([]);
+    // 1등은 어느 장비든 3종 모두.
+    for (const it of HALLOWEEN_CONTEST_ITEMS) expect([...contestTitlesFor(it.code, 1)].sort()).toEqual([...HALLOWEEN_RANK_TITLES].sort());
+    // 여섯 가지 순서가 모두 다르고, 각 칭호가 1·2·3등에 두 번씩.
+    expect(new Set(HALLOWEEN_CONTEST_ITEMS.map((i) => i.titles.join())).size).toBe(6);
+    for (const code of HALLOWEEN_RANK_TITLES) for (let pos = 0; pos < 3; pos++)
+      expect(HALLOWEEN_CONTEST_ITEMS.filter((i) => i.titles[pos] === code).length).toBe(2);
   });
 
   it('대회 대상 6종 = 카탈로그 7차 편성, 슬롯당 2종, 전부 카탈로그에 있다', () => {

@@ -270,7 +270,7 @@ export async function settleContest(serverId: number, adminId: string, at = Date
       for (const r of ranked) {
         const reward = rankRewardFor(r.rank);
         if (!reward) continue;
-        const titles = contestTitlesFor(r.rank);
+        const titles = contestTitlesFor(item.code, r.rank);
         await tx.execute(sql`
           insert into halloween_contest_results (server_id, catalog_code, rank, user_id, level, reached_at, diamond, boxes, titles, settled_by)
           values (${serverId}, ${item.code}, ${r.rank}, ${r.userId}::uuid, ${r.level}, ${r.reachedAt == null ? null : new Date(r.reachedAt).toISOString()}::timestamptz,

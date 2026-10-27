@@ -38,7 +38,17 @@
 ## 3. 강화 대회
 
 - 순위 규칙·보상표·정산 방식은 추석과 같다(아이템별·서버별, 마감 시각 단계 → 먼저 도달 순, 1등 💎30,000·📦600 … 6~10등 💎3,000·📦60).
-- 칭호는 6종 공통 3개(`halloween26_rank1~3`, 1등이면 셋·2등이면 둘·3등이면 하나). 여러 장비에서 입상해도 같은 칭호라 중복 없음.
+- 칭호는 3종(PUMPKIN KING `halloween26_rank1` · NOSFERATU `rank2` · PHANTOM `rank3`)을 아이템마다 다른 순서로 1·2·3등에 건다(2026-10-27 확정, 여섯 가지 순서를 하나씩 → 각 칭호가 1·2·3등에 두 번씩). 정본은 `HALLOWEEN_CONTEST_ITEMS[].titles`.
+- 누적 규칙은 추석과 같다: 1등이면 그 아이템의 세 칭호 모두, 2등이면 2·3등 칭호, 3등이면 3등 칭호. 같은 칭호는 한 번만(user_titles PK).
+
+| 아이템 | 1등 | 2등 | 3등 |
+|---|---|---|---|
+| 무기 1 | PUMPKIN KING | NOSFERATU | PHANTOM |
+| 방어구 1 | NOSFERATU | PHANTOM | PUMPKIN KING |
+| 장신구 1 | PHANTOM | PUMPKIN KING | NOSFERATU |
+| 무기 2 | PUMPKIN KING | PHANTOM | NOSFERATU |
+| 방어구 2 | NOSFERATU | PUMPKIN KING | PHANTOM |
+| 장신구 2 | PHANTOM | NOSFERATU | PUMPKIN KING |
 - 정산 함수 `settleContest`(우편 발신 '할로윈 강화 대회'). 어드민 정산 화면은 정산 시점에 붙인다(추석은 정산 뒤 제거).
 
 ## 4. 아이템 6종 — ⚠ 임시(2026-10-25)
@@ -56,9 +66,9 @@
 
 슬롯당 42 → 44종(아이템당 약 2.38% → 약 2.27%). 아틀라스 ROWS 12(144칸).
 
-## 5. 칭호 6종 — ⚠ 이름·이펙트 임시
+## 5. 칭호 5종 — 2026-10-26 확정
 
-라벨은 시안 후보 1열에 "(임시)"를 붙였고 이펙트는 기본 발광뿐이다. 이름·전용 이펙트 확정 뒤 `scripts/titles-v1.json`(+ titles-design-v1.json special) 수정 → `bun run scripts/gen-title-defs.ts`.
+순위 PUMPKIN KING · NOSFERATU · PHANTOM(§3 순서표), 사다리 6만 시월의 마녀 · 15만 별사탕. 전용 이펙트는 `components/title-fx.css`(hwpumpkin · hwnosferatu · hwphantom · hwwitch · hwstarcandy).
 
 ## 6. 화면
 
