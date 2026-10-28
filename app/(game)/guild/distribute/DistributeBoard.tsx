@@ -7,7 +7,7 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
-import { rankLabel } from '@/lib/game/guild/rank';
+import { parseMemberRank, type MemberRank } from '@/lib/game/guild/rank';
 
 import { distributeTaxManualAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
@@ -17,7 +17,7 @@ export type DistributeMember = {
   userId: string;
   nickname: string;
   role: Role;
-  /** 길드원 등급(1~3, 길드장·부길드장은 무시) — 배지는 rankLabel로 R5 길드장 · R4 부길드장 · R1~R3. */
+  /** 길드원 등급(1~3, 길드장·부길드장은 무시) — 배지는 badgeOf로 길드장 · 부길드장 · R1~R3. */
   rank: number;
   /** 누적 기여도(= 길드 XP 기여). */
   contribution: number;
@@ -25,12 +25,19 @@ export type DistributeMember = {
   todayDonation: number;
 };
 
-// 등급 배지(10-26 건의) — 길드원도 R1~R3을 보여 등급별로 나눠 주기 쉽게. 라벨은 구성원 목록과 같은 rankLabel.
-const ROLE_BADGE_CLS: Record<Role, string> = {
-  leader: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
-  vice: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
-  member: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+// 등급 배지(10-26 건의) — 길드원도 R1~R3을 보여 등급별로 나눠 주기 쉽게. 길드장·부길드장은 이름만(R5·R4 생략,
+// 2026-10-28 결정), R1~R3은 서로 살짝 다른 색으로 한눈에 구분(R3 보라 · R2 초록 · R1 회색).
+const RANK_BADGE_CLS: Record<MemberRank, string> = {
+  3: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  2: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  1: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
 };
+function badgeOf(role: Role, rank: number): { label: string; cls: string } {
+  if (role === 'leader') return { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' };
+  if (role === 'vice') return { label: '부길드장', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' };
+  const r = parseMemberRank(rank);
+  return { label: `R${r}`, cls: RANK_BADGE_CLS[r] };
+}
 
 /** 배분 방식 — 고르면 전원 💎·📦가 자동으로 채워진다. */
 type Mode = 'equal' | 'contribution' | 'today' | 'manual';
@@ -192,7 +199,7 @@ export function DistributeBoard({
       {/* 분배 목록 — 💎·📦를 그 자리에서 입력. */}
       <ul className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
         {visible.map((m) => {
-          const badge = { label: rankLabel(m.role, m.rank), cls: ROLE_BADGE_CLS[m.role] };
+          const badge = badgeOf(m.role, m.rank);
           const sh = shareOf(m.userId);
           return (
             <li key={m.userId} className="flex items-center gap-2 border-b border-zinc-100 py-2 last:border-b-0 dark:border-zinc-900">
@@ -310,7 +317,7 @@ export function DistributeBoard({
                   <li key={p.userId} className="flex items-center justify-between gap-2 text-[12.5px]">
                     <span className="truncate text-zinc-600 dark:text-zinc-300">
                       {m.nickname}
-                      <span className="ml-1 text-[10px] font-bold text-zinc-400">{rankLabel(m.role, m.rank)}</span>
+                      <span className={`ml-1 rounded-full px-1.5 py-0 text-[9px] font-bold ${badgeOf(m.role, m.rank).cls}`}>{badgeOf(m.role, m.rank).label}</span>
                       {p.userId === myUserId ? <span className="ml-1 text-[10px] font-bold text-amber-500">나</span> : null}
                     </span>
                     <span className="shrink-0 font-mono font-bold tabular-nums">{pair(p.amount, p.boxes)}</span>
