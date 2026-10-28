@@ -262,6 +262,10 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/chuseok/banner-songpyeon.png": "3c415b72",
   "/sprites/chuseok/banner-contest.png": "fb9402c0",
   "/sprites/chuseok/songpyeon.png": "263d6dbb",
+  "/sprites/halloween/candy.png": "b8fec916",
+  "/sprites/halloween/pumpkin-node.png": "7050ee81",
+  "/sprites/halloween/banner-contest.png": "0952b7e3",
+  "/sprites/halloween/banner-candy.png": "0cdeceb7",
   "/og/og-8.png": "a7340279",
   "/og/og-6.png": "7496bf44",
   "/og/og-7.png": "f2f0644d",
@@ -276,5 +280,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "bde7ad86",
   "/og/og-3.png": "f9e55cce",
   "/og/og-2.png": "cf937c31",
-  "/sprites/atlas.webp": "9a6f6b99"
+  "/sprites/atlas.webp": "c076364b"
 };

@@ -82,6 +82,80 @@ function BladeLabel({ fx, ko, hj }: { fx: string; ko: string; hj: string }) {
   );
 }
 
+/**
+ * 할로윈 2026 칭호(2026-10-26 확정: 대회 순위 3종 + 사탕 사다리 시월의 마녀·별사탕) — 글자 복제 층(.t data-t)과 핏방울·불꽃·별사탕 조각이 필요한 전용 구조.
+ * 위치(%)는 Geist 대문자 획 위치에 맞춘 값(title-fx.css 주석) — 라벨을 바꾸면 다시 재야 한다.
+ */
+const HW_RANK_FX = new Set(['hwphantom', 'hwnosferatu', 'hwpumpkin', 'hwstarcandy', 'hwwitch']);
+/** 마녀불 불꽃 — U 양끝·I 두 개 윗끝. --f=일렁임 위상, --g=보랏빛 경계가 그 자리를 지나는 시점에 맞춘 지연. */
+const PUMPKIN_FLAMES: [left: number, f: number, g: number][] = [
+  // g = 글자의 보라 경계가 그 x를 지나는 시각에 촛불을 맞춘 지연(2026-10-27 정밀 보정). 경계는 마스크(300%·불투명 47%) 구조상
+  // 주기 48%(x=0)→56%(x=W)에 글자를 지나므로 촛불 x(비율 f)에는 0.64s × f 만큼 늦게 도착한다 → 음수 지연 -(8 - 0.64f).
+  // 키프레임(hwPkGrow)은 x=0 기준 경계 통과 0.12s 뒤부터 반응한다(글자 먼저, 촛불이 따라감). 깜빡임(f)은 서로 어긋나게.
+  [10.7, 0, -7.932],
+  [16, -0.8, -7.898],
+  [50.5, -0.55, -7.677],
+  [77.7, -1.1, -7.503],
+];
+/** 별사탕(사탕 사다리 끝 칭호) — 착지(별·사·탕) 순간 퍼지는 설탕 가루: 위치·지연(착지 직전)·그 글자 색. */
+const STAR_CANDY_BURSTS: [left: number, delay: number, color: string][] = [
+  [17, 0.86, '#ffb3d4'],
+  [50, 1.74, '#ffe08a'],
+  [83, 2.62, '#9ff0cf'],
+];
+/** 시월의 마녀 — '의 '를 경계로 앞(.w1)·가운데(.ui)·뒤(.w2) 세 조각. */
+function WitchWords({ label }: { label: string }) {
+  const i = label.indexOf('의 ');
+  if (i < 0) return <span className="w1">{label}</span>;
+  return (
+    <>
+      <span className="w1">{label.slice(0, i)}</span>
+      <span className="ui">{'의\u00a0'}</span>
+      <span className="w2">{label.slice(i + 2)}</span>
+    </>
+  );
+}
+function HalloweenRankLabel({ fx, label }: { fx: string; label: string }) {
+  return (
+    <span className={`fx fx-${fx}`} data-t={label}>
+      <span className="t" data-t={label}>
+        {fx === 'hwstarcandy' ? (
+          [...label].map((ch, i) => <b key={i}>{ch}</b>)
+        ) : fx === 'hwwitch' ? (
+          // 시월의 마녀 — '대륙의 주인'처럼 '의'를 가운데 두고 두 단어만 색(앞=호박 주황, 뒤=보라). 라벨이 바뀌면 통째로 앞 단어 색.
+          <WitchWords label={label} />
+        ) : (
+          label
+        )}
+      </span>
+      {fx === 'hwnosferatu' ? (
+        <>
+          <i className="drop" aria-hidden />
+          <i className="drop f" aria-hidden />
+          <i className="drop n" aria-hidden />
+        </>
+      ) : fx === 'hwstarcandy' ? (
+        <>
+          <i className="kq" aria-hidden />
+          {STAR_CANDY_BURSTS.map(([left, delay, color]) => (
+            <i
+              key={left}
+              className="bu"
+              style={{ left: `${left}%`, animationDelay: `${delay}s`, '--tc': color } as React.CSSProperties}
+              aria-hidden
+            />
+          ))}
+        </>
+      ) : fx === 'hwpumpkin' ? (
+        PUMPKIN_FLAMES.map(([left, f, g]) => {
+          const st = { left: `${left}%`, '--f': `${f}s`, '--g': `${g}s` } as React.CSSProperties;
+          return [<i key={`h${left}`} className="hb" style={st} aria-hidden />, <i key={`f${left}`} className="fl" style={st} aria-hidden />];
+        })
+      ) : null}
+    </span>
+  );
+}
+
 /** 글자 단위 분리(style.split) — 문자별 애니메이션(후원 상위 2단계 '호흡'). 공백은 nbsp로 폭 유지. */
 function SplitLabel({ label }: { label: string }) {
   return (
@@ -197,6 +271,8 @@ export function TitleTag({
       {def.style.alt ? <span className="hj" aria-hidden>{def.style.alt}</span> : null}
       <i className="orb" aria-hidden />
     </span>
+  ) : def.style.fx && HW_RANK_FX.has(def.style.fx) ? (
+    <HalloweenRankLabel fx={def.style.fx} label={label} />
   ) : def.style.fx ? (
     // data-t — 글자 복제 층(::before/::after content:attr)이 필요한 fx(백룡학살자 광택)용. 다른 fx엔 영향 없음.
     <span className={`fx fx-${def.style.fx}`} data-t={label}>

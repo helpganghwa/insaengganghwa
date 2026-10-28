@@ -31,10 +31,14 @@ const BY_KEY: Record<string, WeaponKind> = {
   // ── 한가위(2026-09, catalog-v6) ──
   chuseok_moon_wand: { noun: 'magic wand (a short rod topped with a glowing moon disc)' },
   chuseok_rabbit_pestle: { noun: 'wooden mallet (a large rice-cake pounding hammer, a squared wooden head crosswise on a long handle)' },
+  // ── 할로윈(2026-10, catalog-v7 임시) ──
+  halloween_smith_hammer: { noun: 'blacksmith sledgehammer (a big forging hammer)' },
+  halloween_vamp_parasol: { noun: 'lace parasol (held by its curved bat handle)' },
   // ── 한손검·도 ──
   kingdom_ribbon_rapier: { noun: 'rapier (a slender one-handed sword)' },
   vampire_blood_rapier: { noun: 'rapier (a slender one-handed sword)' },
-  kingdom_masque_saber: { noun: 'saber (a curved one-handed sword)' },
+  // 실물은 곧은 가는 날(스프라이트·wornDesc) — 'saber(curved)'가 곡도를 유도해 휘어진 검으로 나왔다(2026-10-27 제보). 형태를 명사 안에 긍정형으로.
+  kingdom_masque_saber: { noun: 'straight dress sword (a slim one-handed ceremonial sword with a perfectly straight blade)' },
   kingdom_winged_coronation_sword: { noun: 'longsword' },
   kingdom_dawnguard_sword: { noun: 'longsword' },
   angel_duskwing_sword: { noun: 'longsword' },

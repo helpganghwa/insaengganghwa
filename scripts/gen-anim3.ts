@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { fixOne } from './fix-anim';
+import { basePath, fixOne } from './fix-anim';
 import { stripFloorLine } from './strip-floor-line';
 import { labelFromMap, scriptKeyFor } from './pixellab-script-key';
 
@@ -151,6 +151,9 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
     if (fi > 0) {
       process.stderr.write(`· resume ${pid} (raw ${fi}프레임 재사용 — 재발주 없음)\n`);
     } else {
+      // 후처리가 원본 스프라이트를 못 찾으면 프로세스가 죽어 진행 중인 다른 발주까지 결과를 잃는다
+      // (2026-10-27 할로윈 4종 재결제). 결제 전에 먼저 확인한다.
+      try { basePath(pid); } catch (e) { fail.push(`${pid}(${(e as Error).message})`); return; }
       const TOK = tokenFor(pid);
       const jobId = await postAnim(oid, action, TOK, pid);
       if (!jobId) { fail.push(`${pid}(POST)`); return; }

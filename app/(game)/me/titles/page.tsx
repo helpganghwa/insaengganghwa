@@ -5,6 +5,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { chuseokPhase } from '@/lib/game/chuseok/config';
+import { halloweenPhase } from '@/lib/game/halloween/config';
 import { getActiveServerId } from '@/lib/game/servers';
 import { kstDateString } from '@/lib/kst';
 import { TITLE_DEFS } from '@/lib/game/titles/defs';
@@ -105,9 +106,14 @@ export default async function TitlesPage() {
   // 이벤트 훅 등으로 이미 보유한 분은 그대로 보인다(isHiddenPendingTitle 주석).
   // 한가위 순위 칭호 6종은 대회 시작(9/24 00:00 KST) 전엔 이름도 감춘다 — 코드는 하루 먼저 배포되므로
   // 배포 직후 목록에 새 칭호가 새지 않게(2026-09-23 점검). 시작 뒤엔 다른 칭호와 같은 원칙(이름 공개·조건 비공개).
+  // 할로윈 칭호 5종(2026-10)도 같은 방식 — 10/28 12:00 KST 전엔 감춘다.
   const chuseokBefore = chuseokPhase() === 'before';
+  const halloweenBefore = halloweenPhase() === 'before';
   const rows: TitleRow[] = TITLE_DEFS.filter(
-    (d) => !isHiddenPendingTitle(d.code, ledger.has(d.code)) && !(chuseokBefore && d.code.startsWith('chuseok26_') && !ledger.has(d.code)),
+    (d) =>
+      !isHiddenPendingTitle(d.code, ledger.has(d.code)) &&
+      !(chuseokBefore && d.code.startsWith('chuseok26_') && !ledger.has(d.code)) &&
+      !(halloweenBefore && d.code.startsWith('halloween26_') && !ledger.has(d.code)),
   ).map((d) => {
     const earnedAt = ledger.get(d.code) ?? null;
     const discovered = earnedAt !== null;

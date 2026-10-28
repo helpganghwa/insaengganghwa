@@ -6,6 +6,7 @@ import { eq, inArray, or } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { CHUSEOK_ITEM_CODES, chuseokItemsOpen } from '@/lib/game/chuseok/config';
+import { HALLOWEEN_ITEM_CODES, halloweenItemsOpen } from '@/lib/game/halloween/config';
 
 export type CatalogItem = { id: number; code: string; name: string; slot: Slot };
 
@@ -25,9 +26,9 @@ const getActiveCatalogCached = unstable_cache(
         active: catalogItems.active,
       })
       .from(catalogItems)
-      // 한가위 6종은 비활성이어도 캐시에 싣는다 — 노출 여부는 아래에서 **서버 시각**으로 판정(2026-09-23).
+      // 한가위·할로윈 6종은 비활성이어도 캐시에 싣는다 — 노출 여부는 아래에서 **서버 시각**으로 판정(2026-09-23).
       // 캐시(최대 10분)에 시각 판정을 넣으면 자정 직전 캐시가 자정 뒤까지 옛 목록을 내보낸다.
-      .where(or(eq(catalogItems.active, true), inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES]))),
+      .where(or(eq(catalogItems.active, true), inArray(catalogItems.code, [...CHUSEOK_ITEM_CODES, ...HALLOWEEN_ITEM_CODES]))),
   ['active-catalog-v2'],
   // 강제 무효화: POST /api/admin/revalidate?tag=catalog — 카탈로그 전환 스크립트 후 필수
   // (안 쏘면 확률 공시가 최대 10분 구 데이터 = §33 공시-판정 불일치 창).
@@ -35,13 +36,15 @@ const getActiveCatalogCached = unstable_cache(
 );
 
 const CHUSEOK_CODE_SET = new Set(CHUSEOK_ITEM_CODES);
+const HALLOWEEN_CODE_SET = new Set(HALLOWEEN_ITEM_CODES);
 
-/** 지금 노출·추첨 대상인 카탈로그 — 활성 행 + 한가위 6종(시작 시각 이후). 보급 풀(supply/open.ts)과 같은 판정. */
+/** 지금 노출·추첨 대상인 카탈로그 — 활성 행 + 한가위·할로윈 6종(각 시작 시각 이후). 보급 풀(supply/open.ts)과 같은 판정. */
 export async function getActiveCatalog(): Promise<CatalogItem[]> {
   const rows = await getActiveCatalogCached();
   const open = chuseokItemsOpen();
+  const hwOpen = halloweenItemsOpen();
   return rows
-    .filter((r) => r.active || (open && CHUSEOK_CODE_SET.has(r.code)))
+    .filter((r) => r.active || (open && CHUSEOK_CODE_SET.has(r.code)) || (hwOpen && HALLOWEEN_CODE_SET.has(r.code)))
     .map(({ id, code, name, slot }) => ({ id, code, name, slot }));
 }
 

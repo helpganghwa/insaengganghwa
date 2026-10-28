@@ -18,7 +18,7 @@ const CELL = 256; // 3차 소스가 256 네이티브 — 셀도 256으로(다운
 const GUTTER = 8;
 const STRIDE = CELL + GUTTER;
 const COLS = 12;
-const ROWS = 11; // 132셀 — 126종(슬롯당 42, 2026-09 한가위 6종 추가) 수용. 추가 편성 시 확장.
+const ROWS = 12; // 144셀 — 132종(슬롯당 44, 2026-09 한가위·2026-10 할로윈 6종씩 추가) 수용. 추가 편성 시 확장.
 
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');

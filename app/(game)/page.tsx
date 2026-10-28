@@ -19,6 +19,8 @@ import { getChallengeStatus } from '@/lib/game/challenges/status';
 import { getTodayTicker } from '@/lib/game/today/stats';
 import { chuseokPhase } from '@/lib/game/chuseok/config';
 import { countClaimableSongpyeon } from '@/lib/game/chuseok/songpyeon';
+import { halloweenPhase } from '@/lib/game/halloween/config';
+import { countClaimableCandy } from '@/lib/game/halloween/candy';
 import { TodayTicker } from './TodayTicker';
 import { CHALLENGES, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 import { RAID_MAX_PARTICIPANTS,
@@ -35,6 +37,7 @@ import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { ChuseokBanner } from './ChuseokBanner';
+import { HalloweenBanner } from './HalloweenBanner';
 import { WorldBossHomeBanner, type WorldBossHomeBannerData } from './WorldBossHomeBanner';
 import { WORLD_BOSS_BANNER_COOKIE, parseClosedBossIds } from '@/lib/game/world-boss/home-banner';
 import { worldBossName } from '@/lib/game/world-boss/bosses';
@@ -446,7 +449,10 @@ export default async function HomePage() {
   // 한가위(2026-09, lib/game/chuseok) — 대회·수령 기간에만 배너. 받을 도달 보상이 있으면 송편 문구로.
   const chuseokPh = chuseokPhase();
   const chuseokOn = chuseokPh === 'accrue' || chuseokPh === 'claim';
-  const [worldFeed, announcements, tutState, chgStatus, todayStats, chuseokClaimable] = userId
+  // 할로윈(2026-10, lib/game/halloween) — 추석과 같은 방식.
+  const halloweenPh = halloweenPhase();
+  const halloweenOn = halloweenPh === 'accrue' || halloweenPh === 'claim';
+  const [worldFeed, announcements, tutState, chgStatus, todayStats, chuseokClaimable, halloweenClaimable] = userId
     ? await Promise.all([
         withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
         // 요약(최신 1건만 본문) — 목록 본문 ~45KB를 상세 열람 시 lazy로(감사 C 오버패칭).
@@ -464,8 +470,10 @@ export default async function HomePage() {
         withTimeout(getTodayTicker(userId, serverId), 2000, 'home.today').catch(() => null),
         // 한가위 송편 — 기간 밖이면 쿼리 0. 실패 시 0(대회 문구로 폴백).
         chuseokOn ? withTimeout(countClaimableSongpyeon(userId, serverId), 1500, 'home.chuseok').catch(() => 0) : Promise.resolve(0),
+        // 할로윈 사탕 — 기간 밖이면 쿼리 0. 실패 시 0(대회 문구로 폴백).
+        halloweenOn ? withTimeout(countClaimableCandy(userId, serverId), 1500, 'home.halloween').catch(() => 0) : Promise.resolve(0),
       ])
-    : [[], [], { phase: 'done' as const, step: null }, null, null, 0];
+    : [[], [], { phase: 'done' as const, step: null }, null, null, 0, 0];
   const tutorialActive = tutState.phase !== 'done';
   // 공지 투표 — poll 있는 공지에 한해 내 투표만 로드(집계는 유저 비노출). poll 없으면 쿼리 0.
   const pollAnnIds = announcements.filter((a) => a.poll).map((a) => BigInt(a.id));
@@ -546,6 +554,7 @@ export default async function HomePage() {
       {/* 월드보스 출현 배너 — 보스가 머무는 동안 캐러셀 위(10-11 사용자: 홈에서 바로 들어갈 입구). */}
       {worldBossBanner && <WorldBossHomeBanner b={worldBossBanner} />}
       <HomeBannerCarousel>
+        {userId && halloweenOn ? <HalloweenBanner claimable={halloweenClaimable} phase={halloweenPh} /> : null}
         {userId && chuseokOn ? <ChuseokBanner claimable={chuseokClaimable} phase={chuseokPh} /> : null}
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
         {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}

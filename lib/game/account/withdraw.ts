@@ -69,6 +69,10 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   chuseok_songpyeon: '추석 송편 지갑(0213) — 원장 캐시, 이벤트 종료 뒤 일괄 정리. 순위·수령은 withdrawn_at으로 이미 제외',
   chuseok_songpyeon_ledger: '추석 송편 원장(0213) — 강화 성공 적립·교환 감사 기록, 이벤트 종료 뒤 일괄 정리',
   chuseok_songpyeon_claims: '추석 송편 도달 보상 수령 기록(0213) — 재가입 재수령 방지(이벤트 한정)',
+  halloween_contest_results: '할로윈 강화 대회 정산 결과(0247) — 확정 순위 기록, 탈퇴자는 화면에 "(탈퇴)"로 표시',
+  halloween_candy: '할로윈 사탕 지갑(0247) — 원장 캐시, 이벤트 종료 뒤 일괄 정리. 순위·수령은 withdrawn_at으로 이미 제외',
+  halloween_candy_ledger: '할로윈 사탕 원장(0247) — 강화 성공 적립·교환 감사 기록, 이벤트 종료 뒤 일괄 정리',
+  halloween_candy_claims: '할로윈 사탕 도달 보상 수령 기록(0247) — 재가입 재수령 방지(이벤트 한정)',
 };
 
 export async function withdrawAccount(userId: string): Promise<void> {
@@ -130,6 +134,7 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from guild_join_requests where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_join_rejections where user_id = ${uid}`); // 0179 거절 기록(FK cascade지만 명시)
     await tx.execute(sql`delete from avatar_return_requests where user_id = ${uid}`); // 0183 아바타 반환 요청(FK cascade지만 명시)
+    await tx.execute(sql`delete from enhance_presets where user_id = ${uid}`); // 0246 강화 프리셋(FK cascade지만 명시)
     await tx.execute(sql`delete from guild_battle_deployments where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_leave_log where user_id = ${uid}`);
     await tx.execute(sql`delete from guild_members where user_id = ${uid}`);

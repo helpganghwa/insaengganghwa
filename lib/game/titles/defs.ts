@@ -5491,6 +5491,61 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "halloween26_candy1",
+  kind: "permanent",
+  label: "시월의 마녀",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   fx: "hwwitch",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_candy3",
+  kind: "permanent",
+  label: "별사탕",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   fx: "hwstarcandy",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank3",
+  kind: "permanent",
+  label: "PHANTOM",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   fx: "hwphantom",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank2",
+  kind: "permanent",
+  label: "NOSFERATU",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   fx: "hwnosferatu",
+   glow: true
+  }
+ },
+ {
+  code: "halloween26_rank1",
+  kind: "permanent",
+  label: "PUMPKIN KING",
+  hidden: false,
+  cat: "할로윈",
+  style: {
+   fx: "hwpumpkin",
+   glow: true
+  }
+ },
+ {
   code: "set_moon_miller",
   kind: "permanent",
   label: "달의 방아꾼",

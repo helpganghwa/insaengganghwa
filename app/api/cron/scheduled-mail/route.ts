@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
 import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
+import { openHalloweenCatalogIfDue } from '@/lib/game/halloween/open';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -113,6 +114,13 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error('[scheduled-mail] chuseok-open failed', e);
       await raiseOpsAlert('추석 6종 개방 실패', `openChuseokCatalogIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
+    }
+    // ── 할로윈 6종 자동 개방(2026-10) ── 추석과 같은 방식(멱등).
+    try {
+      await openHalloweenCatalogIfDue();
+    } catch (e) {
+      console.error('[scheduled-mail] halloween-open failed', e);
+      await raiseOpsAlert('할로윈 6종 개방 실패', `openHalloweenCatalogIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
     }
     // ── 예약 공지 발행(0158) ── 우편과 독립 — 여기서 터져도 위 우편 발송 결과는 지킨다.
     let announcementsPublished = 0;

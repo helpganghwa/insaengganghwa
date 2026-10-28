@@ -11,3 +11,7 @@ public/sprites/anim3
 public/align-anim3.html
 public/item-review.html
 public/simulation
+# 할로윈 2026 후보·리뷰 자산(2026-10-27) — 채택본은 weapon/armor/accessory·itemanim·sprites/halloween에 있고 이 셋은 스크립트 리뷰용(런타임 참조 0)
+public/sprites/halloween-cand
+public/sprites/halloween-ui
+public/sprites/anim3-alt
