@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react';
 
-import { loadAtlasImage } from '@/lib/game/equipment/sprite-atlas';
+import { autoReloadOnce } from '@/lib/auto-reload';
+import { ATLAS_URL, loadAtlasImage } from '@/lib/game/equipment/sprite-atlas';
 
 /**
- * Sprite atlas(public/sprites/atlas.webp) **1장** prefetch — 첫 페인트 비차단(idle 슬롯).
+ * Sprite atlas(public/sprites/atlas-<hash>.webp) **1장** prefetch — 첫 페인트 비차단(idle 슬롯).
  * 150 PNG 개별 prefetch는 atlas로 통합돼 사라짐. 첫 atlas 디코드 후 모든 sprite
  * 즉시 렌더 가능(메모리 공유).
  *
@@ -19,6 +20,21 @@ const idle: IdleCb =
     : (cb, opts) => setTimeout(cb, opts?.timeout ?? 1500);
 
 let warmed = false;
+
+/**
+ * atlas 로드 실패가 **404**면 이 JS가 옛 배포 것(옛 해시 파일명)이라는 뜻 — 새 배포가 나간 뒤에도 열려
+ * 있던 탭. 그림이 빈 채로 VersionUpdateToast 폴링(5분)을 기다리지 않고 바로 1회 새로고침한다(쿨다운 공통).
+ * 네트워크 오류·일시 장애(404 아님)는 제외 — 오프라인에서 새로고침해 봐야 오프라인 화면만 뜬다.
+ */
+async function reloadIfAtlasGone() {
+  if (process.env.NODE_ENV !== 'production') return;
+  try {
+    const r = await fetch(ATLAS_URL, { method: 'HEAD', cache: 'no-store' });
+    if (r.status === 404) autoReloadOnce();
+  } catch {
+    /* 네트워크 — 다음 마운트에서 다시 시도한다. */
+  }
+}
 
 // 강화 결과 FX 캐릭터 9장 — 첫 결과 시 깜빡임 방지(new Image()로 디코드 캐시).
 const FX_CHAR_FILES = [
@@ -51,6 +67,7 @@ export function SpritePreloader() {
         () => {
           loadAtlasImage().catch(() => {
             warmed = false;
+            void reloadIfAtlasGone();
           });
         },
         { timeout: 5000 },

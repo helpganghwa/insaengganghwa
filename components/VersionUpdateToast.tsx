@@ -14,16 +14,15 @@
 import { useEffect } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { UPDATED_FLAG_KEY, autoReloadOnce } from '@/lib/auto-reload';
 
 // 5분(2026-08-06, 감사 후 60초→5분) — 배포 감지는 긴급성이 낮고, 전 유저 상시 루프라
 // 주기가 곧 함수 호출량. /api/health가 CDN 30초 캐시를 얹어 origin 부하는 추가로 상수화.
 const POLL_INTERVAL_MS = 300_000;
 // 포그라운드 복귀 재확인 스로틀 — 앱 전환을 빠르게 오가는 유저의 연타 방지(채팅 폴링과 동일 패턴).
 const VISIBILITY_THROTTLE_MS = 30_000;
-const UPDATED_FLAG = 'ig:auto-updated';
-const RELOAD_TS = 'ig:last-auto-reload';
-// 롤링 배포 중 인스턴스별 dpl이 엇갈리면(핑퐁) 무한 새로고침 위험 → 브라우저당 쿨다운 1회.
-const RELOAD_COOLDOWN_MS = 10 * 60_000;
+// 쿨다운(10분)·플래그·새로고침 자체는 lib/auto-reload 공통 규칙 — 롤링 배포 중 인스턴스별 dpl이
+// 엇갈리면(핑퐁) 무한 새로고침 위험이라 브라우저당 쿨다운 1회. atlas 404 새로고침(SpritePreloader)과 공유.
 
 export function VersionUpdateToast() {
   const { showHeaderToast } = useResourceToast();
@@ -33,8 +32,8 @@ export function VersionUpdateToast() {
     if (typeof window === 'undefined') return;
     // 저장소 접근 throw가 게임 레이아웃 전체를 에러 경계로 보낸다(아래 effect엔 이미 가드가 있다).
     try {
-      if (sessionStorage.getItem(UPDATED_FLAG)) {
-        sessionStorage.removeItem(UPDATED_FLAG);
+      if (sessionStorage.getItem(UPDATED_FLAG_KEY)) {
+        sessionStorage.removeItem(UPDATED_FLAG_KEY);
         showHeaderToast({ title: '✨ 새 버전으로 자동 업데이트 되었어요 ✨' });
       }
     } catch {
@@ -65,12 +64,8 @@ export function VersionUpdateToast() {
           // 덮어쓰면 쿨다운 안에 나온 두 번째 배포(2026-09-01 10:29→10:32 연속 배포)가 영영 적용되지
           // 않고 재접속을 기다린다. 기준을 유지하면 다음 폴링(5분)에 쿨다운이 끝난 뒤 정상 새로고침되고,
           // 핑퐁이 나더라도 새로고침은 10분당 최대 1회로 상한이 그대로다.
-          const last = Number(localStorage.getItem(RELOAD_TS) ?? '0');
-          if (Date.now() - last < RELOAD_COOLDOWN_MS) return;
+          if (!autoReloadOnce()) return;
           reloaded = true;
-          localStorage.setItem(RELOAD_TS, String(Date.now()));
-          sessionStorage.setItem(UPDATED_FLAG, '1'); // 새로고침 후 토스트용
-          window.location.reload();
         }
       } catch {
         // 네트워크 실패 — 다음 사이클 재시도

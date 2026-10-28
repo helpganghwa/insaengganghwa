@@ -115,7 +115,7 @@
 1. art/컨셉 작성(§2·§5) → **오브젝트 생성(정적)** → **사용자 확인** ⛔게이트
 2. 정적 통과 시에만 → ① 해방 애니(§7, animate_object + 2D 리센터) ② nameKo·lore 작성(§6)
 3. 리뷰 HTML(`sprites-test-review.html`)의 `SETS`에 세트 추가 → 한 페이지에서 90종 리뷰
-4. 확정 후 인게임 반영: 정적 idle을 `public/sprites/<slot>/<key>.png`로, 애니 프레임을 해방 렌더 경로로 → `bun run build:atlas` → `build:asset-versions` → `seed:catalog` → `verify:sprites`
+4. 확정 후 인게임 반영: 정적 idle을 `public/sprites/<slot>/<key>.png`로, 애니 프레임을 해방 렌더 경로로 → `bun run build:atlas` → `build:asset-versions`(해시 파일명 사본 `public/sprites/atlas-<hash>.webp`도 함께 만들어지니 같이 커밋, 옛 사본은 자동 삭제) → `seed:catalog` → `verify:sprites`
 5. ⚠ 세트 교체 시 DB의 옛 code는 seed가 자동 비활성화 안 함 → 별도 정리 필요.
 
 - **key**: `<지역>_<세트컨셉>_<부위>` snake_case, 전역 unique = 스프라이트 파일명.
