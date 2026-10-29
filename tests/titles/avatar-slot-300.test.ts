@@ -14,6 +14,6 @@ describe('환영술사(avatar_slot_300)', () => {
   it('200칸 칭호는 없고(사용자 결정), 이름·코드는 유일하다', () => {
     expect(TITLE_DEFS.filter((t) => t.code.startsWith('avatar_slot_')).map((t) => t.code)).toEqual(['avatar_slot_300']);
     expect(TITLE_DEFS.filter((t) => t.label === '환영술사')).toHaveLength(1);
-    expect(TITLE_DEFS.length).toBe(604);
+    expect(TITLE_DEFS.length).toBe(614);
   });
 });

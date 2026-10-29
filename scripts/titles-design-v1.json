@@ -537,11 +537,21 @@
       ],
       "plainColor": "#b8bcc6"
     },
-    "halloween26_candy1": { "fx": "hwwitch" },
-    "halloween26_candy3": { "fx": "hwstarcandy" },
-    "halloween26_rank3": { "fx": "hwphantom" },
-    "halloween26_rank2": { "fx": "hwnosferatu" },
-    "halloween26_rank1": { "fx": "hwpumpkin" },
+    "halloween26_candy1": {
+      "fx": "hwwitch"
+    },
+    "halloween26_candy3": {
+      "fx": "hwstarcandy"
+    },
+    "halloween26_rank3": {
+      "fx": "hwphantom"
+    },
+    "halloween26_rank2": {
+      "fx": "hwnosferatu"
+    },
+    "halloween26_rank1": {
+      "fx": "hwpumpkin"
+    },
     "tower_revive": {
       "fx": "lunarflow"
     },
@@ -641,6 +651,36 @@
     },
     "solo_volcano_dancer_cape": {
       "color": "#ef4444"
+    },
+    "set_hw_smith": {
+      "fx": "forgeshine"
+    },
+    "set_hw_vamp": {
+      "fx": "nightstar"
+    },
+    "set_hw_dragon_forge": {
+      "fx": "dragonlux"
+    },
+    "set_hw_reaper_count": {
+      "fx": "abyssglow"
+    },
+    "set_hw_witch_guest": {
+      "fx": "candle"
+    },
+    "solo_hw_hammer": {
+      "fx": "steelshine"
+    },
+    "solo_hw_parasol": {
+      "fx": "duskfade"
+    },
+    "solo_hw_cape": {
+      "fx": "crimsonflow"
+    },
+    "peak300_hw_hammer": {
+      "fx": "blazegold"
+    },
+    "peak300_hw_cape": {
+      "fx": "bloodpulse"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

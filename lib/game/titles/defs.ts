@@ -6449,6 +6449,108 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "ashgoldvault"
   }
+ },
+ {
+  code: "set_hw_smith",
+  kind: "permanent",
+  label: "모루의 계승자",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "forgeshine"
+  }
+ },
+ {
+  code: "set_hw_vamp",
+  kind: "permanent",
+  label: "박쥐 날개 대공",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "nightstar"
+  }
+ },
+ {
+  code: "set_hw_dragon_forge",
+  kind: "permanent",
+  label: "흑룡의 대장간",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "dragonlux"
+  }
+ },
+ {
+  code: "set_hw_reaper_count",
+  kind: "permanent",
+  label: "혼불의 백작",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "abyssglow"
+  }
+ },
+ {
+  code: "set_hw_witch_guest",
+  kind: "permanent",
+  label: "마녀의 귀빈",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "candle"
+  }
+ },
+ {
+  code: "solo_hw_hammer",
+  kind: "permanent",
+  label: "담금질 명장",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "steelshine"
+  }
+ },
+ {
+  code: "solo_hw_parasol",
+  kind: "permanent",
+  label: "그늘의 귀공자",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "duskfade"
+  }
+ },
+ {
+  code: "solo_hw_cape",
+  kind: "permanent",
+  label: "어린 백작",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "crimsonflow"
+  }
+ },
+ {
+  code: "peak300_hw_hammer",
+  kind: "permanent",
+  label: "모루 위의 전설",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "blazegold",
+   glow: true
+  }
+ },
+ {
+  code: "peak300_hw_cape",
+  kind: "permanent",
+  label: "박쥐 군주",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "bloodpulse",
+   glow: true
+  }
  }
 ] as const;
 

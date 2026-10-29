@@ -5434,5 +5434,95 @@
     "cond": "소속 길드가 월드보스 전리품을 5번 이상 받은 동안",
     "hidden": false,
     "diff": "중간"
+  },
+  {
+    "code": "set_hw_smith",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "모루의 계승자",
+    "cond": "말하는 담금망치 + 장인의 앞치마 + 장인의 두건을 +30 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "set_hw_vamp",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "박쥐 날개 대공",
+    "cond": "레이스 박쥐 양산 + 박쥐 백작 망토 + 박쥐 미니 실크햇을 +30 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "set_hw_dragon_forge",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "흑룡의 대장간",
+    "cond": "말하는 담금망치 + 흑룡의 비늘갑 + 화룡의 뿔관을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "set_hw_reaper_count",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "혼불의 백작",
+    "cond": "혼불낫 + 박쥐 백작 망토 + 재가 흐르는 모래시계를 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "set_hw_witch_guest",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "마녀의 귀빈",
+    "cond": "마녀의 등불 + 호박등 드레스 + 박쥐 미니 실크햇을 +50 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_hw_hammer",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "담금질 명장",
+    "cond": "말하는 담금망치를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_hw_parasol",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "그늘의 귀공자",
+    "cond": "레이스 박쥐 양산을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_hw_cape",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "어린 백작",
+    "cond": "박쥐 백작 망토를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "peak300_hw_hammer",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "모루 위의 전설",
+    "cond": "말하는 담금망치를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "peak300_hw_cape",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "박쥐 군주",
+    "cond": "박쥐 백작 망토를 +300 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
   }
 ]

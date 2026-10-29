@@ -5950,6 +5950,136 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "월드보스",
   cond: "소속 길드가 월드보스 전리품을 5번 이상 받은 동안",
   diff: "중간"
+ },
+ {
+  code: "set_hw_smith",
+  cat: "아이템 발동",
+  cond: "말하는 담금망치 + 장인의 앞치마 + 장인의 두건을 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_smith_hammer",
+    "halloween_smith_apron",
+    "halloween_smith_scarf"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_hw_vamp",
+  cat: "아이템 발동",
+  cond: "레이스 박쥐 양산 + 박쥐 백작 망토 + 박쥐 미니 실크햇을 +30 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_vamp_parasol",
+    "halloween_vamp_cape",
+    "halloween_vamp_tophat"
+   ],
+   min: 30
+  }
+ },
+ {
+  code: "set_hw_dragon_forge",
+  cat: "아이템 발동",
+  cond: "말하는 담금망치 + 흑룡의 비늘갑 + 화룡의 뿔관을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_smith_hammer",
+    "dragonknight_scale_armor",
+    "volcano_dragonhorn_circlet"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_hw_reaper_count",
+  cat: "아이템 발동",
+  cond: "혼불낫 + 박쥐 백작 망토 + 재가 흐르는 모래시계를 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "reaper_soul_scythe",
+    "halloween_vamp_cape",
+    "volcano_ember_hourglass"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "set_hw_witch_guest",
+  cat: "아이템 발동",
+  cond: "마녀의 등불 + 호박등 드레스 + 박쥐 미니 실크햇을 +50 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "pumpkin_witch_staff",
+    "pumpkin_witch_dress",
+    "halloween_vamp_tophat"
+   ],
+   min: 50
+  }
+ },
+ {
+  code: "solo_hw_hammer",
+  cat: "아이템 발동",
+  cond: "말하는 담금망치를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_smith_hammer"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_hw_parasol",
+  cat: "아이템 발동",
+  cond: "레이스 박쥐 양산을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_vamp_parasol"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_hw_cape",
+  cat: "아이템 발동",
+  cond: "박쥐 백작 망토를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_vamp_cape"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "peak300_hw_hammer",
+  cat: "아이템 발동",
+  cond: "말하는 담금망치를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "halloween_smith_hammer"
+   ],
+   min: 300
+  }
+ },
+ {
+  code: "peak300_hw_cape",
+  cat: "아이템 발동",
+  cond: "박쥐 백작 망토를 +300 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "halloween_vamp_cape"
+   ],
+   min: 300
+  }
  }
 ] as const;
 
