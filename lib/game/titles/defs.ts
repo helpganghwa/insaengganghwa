@@ -6467,7 +6467,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "nightstar"
+   fx: "veilflow"
   }
  },
  {
@@ -6477,7 +6477,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "dragonlux"
+   fx: "blazecrimson"
   }
  },
  {
@@ -6527,7 +6527,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "crimsonflow"
+   fx: "roseflow"
   }
  },
  {
@@ -6537,7 +6537,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "blazegold",
+   fx: "blaze",
    glow: true
   }
  },
@@ -6548,7 +6548,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "bloodpulse",
+   fx: "abyssglow",
    glow: true
   }
  }

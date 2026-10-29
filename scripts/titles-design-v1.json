@@ -656,10 +656,10 @@
       "fx": "forgeshine"
     },
     "set_hw_vamp": {
-      "fx": "nightstar"
+      "fx": "veilflow"
     },
     "set_hw_dragon_forge": {
-      "fx": "dragonlux"
+      "fx": "blazecrimson"
     },
     "set_hw_reaper_count": {
       "fx": "abyssglow"
@@ -674,13 +674,13 @@
       "fx": "duskfade"
     },
     "solo_hw_cape": {
-      "fx": "crimsonflow"
+      "fx": "roseflow"
     },
     "peak300_hw_hammer": {
-      "fx": "blazegold"
+      "fx": "blaze"
     },
     "peak300_hw_cape": {
-      "fx": "bloodpulse"
+      "fx": "abyssglow"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",
