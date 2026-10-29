@@ -12,7 +12,7 @@ import {
   EXPEDITION_DURATION_MS,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
   EXPEDITION_REFRESH_FREE_PER_DAY,
-  EXPEDITION_SLOTS,
+  EXPEDITION_EXTRA_SLOT_BASE,
   isExtraExpeditionSlot,
 } from '@/lib/game/balance';
 import {
@@ -44,7 +44,7 @@ const LEGACY_DIFFICULTY = 'normal';
  *  - 슬롯당 활성(offer|running) 1행 — expeditions_one_active
  *  - 파견 중 아바타는 1곳 — expeditions_avatar_busy(23505 → AVATAR_BUSY)
  *  - 보상은 오퍼 롤로 사전 확정, 시작 시 배율 스냅샷(final_reward), 수령은 지급+대성공 판정만
- *  - 추가 파견 칸(slot > EXPEDITION_SLOTS, 2026-10-10)은 구매가 오퍼를 만들고 그날 안에만 보낼 수 있다 — 어제 산 미출발 오퍼는
+ *  - 추가 파견 칸(slot > EXPEDITION_EXTRA_SLOT_BASE, 2026-10-10)은 구매가 오퍼를 만들고 그날 안에만 보낼 수 있다 — 어제 산 미출발 오퍼는
  *    진입·새로고침 때 치운다(dropStaleExtraOffers). 진행 중인 추가 파견은 수령까지 남는다(닫힌 칸의 진행분과 같은 처리).
  */
 
@@ -121,20 +121,20 @@ export async function expeditionExtraLock(tx: Tx, userId: string, serverId: numb
 
 /**
  * 추가 파견 적용(2026-10-10) — qty개의 추가 칸을 열고 칸마다 새 파견지를 바로 굴린다(보관 상태 없음). 구매 횟수는 호출부가 먼저 올린다.
- * 칸 번호 = 해금 칸 뒤(EXPEDITION_SLOTS+1부터) 비어 있는 가장 작은 번호 — 어제 산 칸의 진행 중 파견이 그 번호를 쥐고 있거나(수령까지 유지),
+ * 칸 번호 = 추가 칸 구역(EXPEDITION_EXTRA_SLOT_BASE+1부터) 비어 있는 가장 작은 번호 — 어제 산 칸의 진행 중 파견이 그 번호를 쥐고 있거나(수령까지 유지),
  * 오늘 이미 보낸 추가 칸은 하루 1회라 다시 쓸 수 없어서다. 반환 = 연 칸 번호들.
  */
 export async function expeditionExtraOpen(tx: Tx, userId: string, serverId: number, qty: number, rng: Rng10k = cryptoRng10k): Promise<number[]> {
   const taken = (await tx.execute(sql`
     select slot from expeditions
-    where user_id = ${userId}::uuid and server_id = ${serverId} and slot > ${EXPEDITION_SLOTS}
+    where user_id = ${userId}::uuid and server_id = ${serverId} and slot > ${EXPEDITION_EXTRA_SLOT_BASE}
       and (status in ('offer', 'running')
            or (started_at is not null and (started_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date
                and started_at >= ${EXPEDITION_DAILY_LIMIT_SINCE_ISO}::timestamptz))
   `)) as unknown as { slot: number }[];
   const used = new Set(taken.map((r) => Number(r.slot)));
   const opened: number[] = [];
-  let slot = EXPEDITION_SLOTS + 1;
+  let slot = EXPEDITION_EXTRA_SLOT_BASE + 1;
   for (let i = 0; i < qty; i++) {
     while (used.has(slot)) slot++;
     used.add(slot);
@@ -155,7 +155,7 @@ export async function expeditionExtraOpen(tx: Tx, userId: string, serverId: numb
 async function dropStaleExtraOffers(tx: Tx, userId: string, serverId: number, today: string): Promise<void> {
   await tx.execute(sql`
     delete from expeditions
-    where user_id = ${userId}::uuid and server_id = ${serverId} and slot > ${EXPEDITION_SLOTS} and status = 'offer'
+    where user_id = ${userId}::uuid and server_id = ${serverId} and slot > ${EXPEDITION_EXTRA_SLOT_BASE} and status = 'offer'
       and (rolled_at at time zone 'Asia/Seoul')::date <> ${today}::date
   `);
 }
@@ -453,7 +453,7 @@ export function claimExpedition(
     if (!row) throw new ExpeditionError('NOT_RUNNING');
     if (!row.ready) throw new ExpeditionError('NOT_READY');
 
-    const crit = rng() < critBp(await enhanceSumOf(tx, userId, serverId)); // 기본 5% + 합산 1,000당 1%p(상한 +20%p)
+    const crit = rng() < critBp(await enhanceSumOf(tx, userId, serverId)); // 기본 5% + 합산 1,000당 1%p(상한 +30%p)
     // 구행(시간 타입 시절)의 final_reward에 남은 xp 필드는 지급 대상이 아니다 — 상자·다이아만 읽는다.
     const reward = crit ? applyCrit(row.final_reward) : row.final_reward;
 

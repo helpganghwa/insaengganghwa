@@ -17,7 +17,7 @@ export type ExtraBuyResult = {
   item: PointExtraItem;
   /** 이번에 산 장 수(파견만 2장 이상 가능). 같은 키의 재전송이면 0. */
   qty: number;
-  /** 파견만 — 이번에 연 추가 칸 번호(EXPEDITION_SLOTS+1부터, 비어 있는 번호). 재전송이면 빈 배열. */
+  /** 파견만 — 이번에 연 추가 칸 번호(EXPEDITION_EXTRA_SLOT_BASE+1부터, 비어 있는 번호). 재전송이면 빈 배열. */
   slots: number[];
   kind: PointKind;
   /** 이번에 낸 양(고른 통화 단위, qty장 합). */

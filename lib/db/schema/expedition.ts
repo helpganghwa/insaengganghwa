@@ -49,7 +49,7 @@ export const expeditions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /** 미션 슬롯 1..3 — 해금 상태는 expedition_state.slots 참조. */
+    /** 미션 슬롯 — 해금 칸 1..EXPEDITION_SLOTS(합산 강화로 파생 판정), 추가 파견 칸은 EXPEDITION_EXTRA_SLOT_BASE+1(11)부터(0248이 옛 6~8번을 +5 renumber). */
     slot: smallint('slot').notNull(),
     region: zoneRegionEnum('region').notNull(),
     difficulty: expeditionDifficultyEnum('difficulty').notNull(),

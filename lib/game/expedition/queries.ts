@@ -9,6 +9,7 @@ import {
   EXPEDITION_REFRESH_FREE_PER_DAY,
   EXPEDITION_SLOT_UNLOCKS,
   EXPEDITION_SLOTS,
+  EXPEDITION_EXTRA_SLOT_BASE,
   type ExpeditionRegion,
   EXPEDITION_DAILY_LIMIT_SINCE_ISO,
 } from '@/lib/game/balance';
@@ -19,7 +20,7 @@ export type ExpeditionBoardSlot = {
   slot: number;
   /** done = 오늘 출발·수령 완료(슬롯당 하루 1회) — 수령한 카드를 자정까지 그대로 보여준다. */
   state: 'locked' | 'offer' | 'running' | 'done';
-  /** 추가 파견 칸(10-10, slot > EXPEDITION_SLOTS) — 포인트로 산 오늘만 쓰는 칸. 열린 칸 뒤·잠긴 칸 앞에 놓인다. 번호는 화면에 안 보인다. */
+  /** 추가 파견 칸(10-10, slot > EXPEDITION_EXTRA_SLOT_BASE) — 포인트로 산 오늘만 쓰는 칸. 열린 칸 뒤·잠긴 칸 앞에 놓인다. 번호는 화면에 안 보인다. */
   extra?: boolean;
   /** 오늘(KST) 출발했는지 — 헤더 '오늘 N/M'(보낸 기준). done은 항상 true. */
   startedToday?: boolean;
@@ -235,7 +236,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     if (card) opened.push(card);
   }
   // 추가 파견 칸(10-10) — 오늘 산 오퍼·진행 중(어제 산 것도 수령까지)·오늘 완료. 열린 칸 뒤, 잠긴 칸 앞.
-  const extraSlots = [...new Set([...active, ...doneRows].map((r) => Number(r.slot)).filter((n) => n > EXPEDITION_SLOTS))].sort((a, b) => a - b);
+  const extraSlots = [...new Set([...active, ...doneRows].map((r) => Number(r.slot)).filter((n) => n > EXPEDITION_EXTRA_SLOT_BASE))].sort((a, b) => a - b);
   const extras = extraSlots.map((slot) => cardOf(slot, true)).filter((c): c is ExpeditionBoardSlot => c !== null);
   const slots: ExpeditionBoardSlot[] = [...opened, ...extras, ...locked];
 

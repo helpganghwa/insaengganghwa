@@ -114,17 +114,19 @@ describe('expedition engine — 시너지·배율', () => {
     expect('xp' in applyMultiplier(legacy, 0)).toBe(false);
     expect('xp' in applyCrit(legacy)).toBe(false);
   });
-  it('대성공 확률 — 기본 5% + 합산 1,000당 1%p(상한 20%p), 레벨 항 없음', () => {
+  it('대성공 확률 — 기본 5% + 합산 1,000당 1%p(상한 30%p, 2026-10-29 A안), 레벨 항 없음', () => {
     expect(critBp(0)).toBe(500);
     expect(critBp()).toBe(500);
     expect(critBp(1000)).toBe(600);
     expect(critBp(12439)).toBe(500 + 1243);
-    expect(critBp(100000)).toBe(500 + 2000); // 총 상한 25%
+    expect(critBp(24882)).toBe(500 + 2488); // 20k 이상도 계속 오른다(종전 상한 +20%p에서 멈추던 구간)
+    expect(critBp(30000)).toBe(500 + 3000);
+    expect(critBp(100000)).toBe(500 + 3000); // 총 상한 35%
   });
 });
 
 describe('expedition engine — 슬롯', () => {
-  it('실효 슬롯 = 합산 강화 문턱(0/3k/6k/9k) · 상한 4', () => {
+  it('실효 슬롯 = 합산 강화 문턱(0/3k/6k/9k/12k/15k) · 상한 6', () => {
     expect(effectiveSlots(0)).toBe(1); // 1칸은 처음부터
     expect(effectiveSlots(2999)).toBe(1);
     expect(effectiveSlots(3000)).toBe(2);
@@ -133,7 +135,9 @@ describe('expedition engine — 슬롯', () => {
     expect(effectiveSlots(9000)).toBe(4);
     expect(effectiveSlots(11999)).toBe(4);
     expect(effectiveSlots(12000)).toBe(5);
-    expect(effectiveSlots(999999)).toBe(5);
+    expect(effectiveSlots(14999)).toBe(5);
+    expect(effectiveSlots(15000)).toBe(6); // 2026-10-29 6칸
+    expect(effectiveSlots(999999)).toBe(6);
   });
   it('상수 참조 무결(엔진↔밸런스)', () => {
     expect(EXPEDITION_HOURS).toBe(8);

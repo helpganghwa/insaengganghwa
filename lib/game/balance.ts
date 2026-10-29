@@ -889,13 +889,16 @@ export const FIRST_MILESTONES: readonly { key: string; metric: FirstMilestoneMet
 /* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
 /* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
 
-/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09 추가. */
-export const EXPEDITION_SLOTS = 5;
+/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09, 6칸째는 2026-10-29 추가. */
+export const EXPEDITION_SLOTS = 6;
 /**
- * 추가 파견 칸(2026-10-10, POINT-SHOP §6) — 대난투 포인트·마일리지로 산 '오늘만 쓰는' 칸. 해금 칸(1~EXPEDITION_SLOTS) 뒤 번호(6부터)를
- * 쓰며, 번호는 산 순서가 아니라 그때 비어 있는 가장 작은 번호(어제 산 칸의 진행 중 파견이 번호를 쥐고 있을 수 있다). 화면에는 번호 대신 '추가 파견'.
+ * 추가 파견 칸(2026-10-10, POINT-SHOP §6) — 대난투 포인트·마일리지로 산 '오늘만 쓰는' 칸. 번호는 해금 칸과 분리된 구역
+ * **EXPEDITION_EXTRA_SLOT_BASE+1(=11)부터**, 산 순서가 아니라 그때 비어 있는 가장 작은 번호(어제 산 칸의 진행 중 파견이 번호를 쥐고 있을 수 있다).
+ * 화면에는 번호 대신 '추가 파견'. 2026-10-29 6칸 추가 때 "해금 칸 바로 뒤(6부터)"에서 분리 — 해금 칸이 늘 때마다 번호가 겹치지 않게
+ * 10까지는 해금 칸 예약 구역으로 비워 둔다. 옛 6~8번 추가 칸 행은 0248이 +5 renumber(코드보다 먼저 적용).
  */
-export const isExtraExpeditionSlot = (slot: number): boolean => slot > EXPEDITION_SLOTS;
+export const EXPEDITION_EXTRA_SLOT_BASE = 10;
+export const isExtraExpeditionSlot = (slot: number): boolean => slot > EXPEDITION_EXTRA_SLOT_BASE;
 
 /** 파견지 6종 — zones.region 코드 재사용(전부 즉시 개방, 게이트 없음). */
 export type ExpeditionRegion = 'swamp' | 'orc' | 'kingdom' | 'temple' | 'volcano' | 'angel';
@@ -928,6 +931,8 @@ export const EXPEDITION_DAILY_LIMIT_SINCE_ISO = '2026-09-01T01:29:30.000Z';
  * 2026-09-09 5칸(12k) 추가 — 상위권 "앞서나간 보상" 요청. 4칸 도달자가 2명(15.9k·15.4k)뿐이고 3위가 8.1k라 12k는 그 둘만
  * 즉시 열리고 다음 사람은 합산을 갑절 올려야 닿는다. 파견 다이아는 그들 경제의 0.5% 미만이라 실질 증분은 상자 하루 ≈28개.
  * 다이아 해금·시간 단축은 계속 없음 — 3,000 간격 유지.
+ * 2026-10-29 6칸(15k) 추가 — 지인(24.9k) 반복 요청(9/8·10/17·10/23)과 9/9 답변 약속분. 12k 도달자가 2명(24.9k·14.5k)이라 15k는 즉시 1명,
+ * 그다음(10.8k)은 한참 뒤. "3천마다 무한 해금"은 지인 속도(월 +5.4k)면 17일마다 1칸이라 기각 — 7칸(20k)은 다음 경제 점검 때.
  */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
   { slot: 1, enhanceSum: 0 },
@@ -935,6 +940,7 @@ export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: numbe
   { slot: 3, enhanceSum: 6_000 },
   { slot: 4, enhanceSum: 9_000 },
   { slot: 5, enhanceSum: 12_000 },
+  { slot: 6, enhanceSum: 15_000 },
 ] as const;
 /** 합산 강화 → 열린 슬롯 수(0~EXPEDITION_SLOTS). */
 export function expeditionSlotsFor(enhanceSum: number): number {
@@ -981,11 +987,11 @@ export function expeditionAsBonusBp(avatarSum: number): number {
 /** 대성공 — **수령 시** 기본 5% 확률로 확정 보상 수량 2배. */
 export const EXPEDITION_CRIT_BP = 500;
 /**
- * 계정 합산 강화 → 대성공 가산: 합산 1,000당 +1%p(= 합산/10 bp), 상한 +20%p(합산 20,000).
+ * 계정 합산 강화 → 대성공 가산: 합산 1,000당 +1%p(= 합산/10 bp), 상한 +30%p(합산 30,000 — 2026-10-29 A안: +20%p에서 상향. 20k 이상만 영향(당시 지인 1명 25%→29.9%), 기울기 유지라 중위권 유입 변화 0).
  * 강화가 파견의 질(대성공)로도 이어지는 매출 연결 축. 총 상한 = 5% + 20%p = 25%.
  * 파견 레벨(레벨당 +0.1%p)은 2026-09-03 간소화로 폐지 — 성장축은 합산 강화 하나.
  */
-export const EXPEDITION_CRIT_SUM_BP_MAX = 2000;
+export const EXPEDITION_CRIT_SUM_BP_MAX = 3000;
 export function expeditionCritBp(enhanceSum: number): number {
   const sum = Math.min(EXPEDITION_CRIT_SUM_BP_MAX, Math.floor(Math.max(0, enhanceSum) / 10));
   return EXPEDITION_CRIT_BP + sum;
