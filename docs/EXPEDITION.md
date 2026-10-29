@@ -148,3 +148,17 @@ create table user_vouchers (
 
 - **자동 수령**: 완료 후 미수령이 하루 30건 안팎(평균 16시간 방치). 완료 시 크론이 자동 수령하고 다음 접속에 귀환 팝업을 띄우면 하루 "보내기 1탭"만 남는다. 수령 순간·푸시 동선이 바뀌는 큰 변경이라 단일 8h 전환 후 실측을 보고 결정.
 - 새로고침 무료 횟수·유료 단가는 낚시 대상이 줄어든 뒤(시간 타입 폐지) 1주 실측으로 재조정.
+
+## 10. 배포 메모 — 6칸·추가 칸 번호 이동(2026-10-29, 0248)
+
+1. 실서버에 `0248_expedition_extra_slot_renumber.sql`을 **코드보다 먼저** 적용하고 곧바로 master 배포를 이어 간다.
+2. SQL 적용 뒤·새 코드가 뜨기 전 사이에 누군가 추가 파견을 사면, 옛 코드가 비어 있는 6번에 추가 칸을 만든다. 새 코드는 6번을 정규 칸으로 읽으므로 그 칸이 사라져 보인다. 배포가 Ready 된 직후 아래로 확인하고, 행이 있으면 16번 이후로 옮긴다(11~15번과 겹치지 않게).
+
+```sql
+-- 확인: 배포 시각(<READY_UTC>) 이전에 만들어진 6~10번 행 = 옛 코드가 만든 추가 칸
+select user_id, server_id, slot, status, rolled_at from expeditions
+where slot between 6 and 10 and rolled_at < '<READY_UTC>'::timestamptz;
+-- 있으면
+update expeditions set slot = slot + 10
+where slot between 6 and 10 and rolled_at < '<READY_UTC>'::timestamptz;
+```
