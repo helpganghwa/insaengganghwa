@@ -1,10 +1,12 @@
 'use client';
 
+import { getJosaPicker } from 'josa';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { TitleTag } from '@/components/TitleTag';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { TITLE_BY_CODE, TITLE_DEFS, type TitleDef } from '@/lib/game/titles/defs';
 import {
   claimTitleRewardsAction,
@@ -12,6 +14,7 @@ import {
   toggleFavoriteTitleAction,
 } from '@/lib/game/titles/actions';
 import { TITLE_DISCOVERY_DIAMOND, titleMilestoneBoxes } from '@/lib/game/balance';
+import { TITLE_SEARCH_MAX, normalizeTitleQuery, splitTitleMatch, titleNameMatches } from '@/lib/game/titles/search';
 import type { TitleRewardSummary } from '@/lib/game/titles/rewards';
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -72,6 +75,9 @@ const groupOf = (cat: string): string => CAT_GROUP[cat] ?? cat;
 /** 즐겨찾기 상한 — 서버(actions.ts FAVORITE_CAP)와 동일. */
 const FAVORITE_CAP = 10;
 
+/** 빈 결과 문구의 조사 — 동적 값 뒤 조사는 josa 패키지로(자체 받침 판정 금지). */
+const gwa = getJosaPicker('과');
+
 export function TitlesClient({
   rows,
   representative,
@@ -101,6 +107,11 @@ export function TitlesClient({
   const [found, setFound] = useState<Tri>(null); // a=발견 b=미발견
   const [act, setAct] = useState<Tri>(null); // a=활성 b=비활성
   const [favOnly, setFavOnly] = useState(false);
+  // 칭호 이름 검색(2026-10-29, 꿈나라 #XpsWNlNf 건의 · 시안 1 상시 입력창 확정) — **이름만** 본다(조건 문장·분류는
+  // 범위 밖, 사용자 확정). 띄어쓰기·대소문자 무시, 필터 토글과 AND. 이름은 공개 defs라 서버 호출 없음(search.ts).
+  const [q, setQ] = useState('');
+  const qTrim = q.trim();
+  const nq = normalizeTitleQuery(qTrim);
   const [sel, setSel] = useState<string | null>(null); // 팝업 대상 code
   // 새 칭호(0187) — 서버는 이 화면을 렌더한 뒤 전부 확인 처리하므로, 여기서는 이번 방문 동안의 표시만 관리.
   // 행을 탭하면 그 칭호의 NEW를 지운다(개별 확인 느낌). 새로고침하면 서버 기준으로 전부 사라진다.
@@ -138,9 +149,13 @@ export function TitlesClient({
     return r.activeNow ? 'active' : 'inactive';
   };
 
+  // 검색 대상 라벨 — {구역} 자리는 집행관 구역명(없으면 빈칸). 목록에 보이는 글자를 기준으로 찾는다.
+  const searchLabel = (d: TitleDef) => d.label.replace('{구역}', executorZone ?? '').trim();
+
   const passesFilters = (d: TitleDef): boolean => {
     const r = byCode.get(d.code);
     if (!r) return false;
+    if (nq && !titleNameMatches(searchLabel(d), nq)) return false;
     const isCond = d.kind === 'conditional';
     if (kind && (kind === 'a') !== isCond) return false;
     if (found && (found === 'a') !== r.discovered) return false;
@@ -160,9 +175,10 @@ export function TitlesClient({
     // ★ 섹션은 **중복 표시**(2026-08-21 피드백) — 즐겨찾기해도 원 카테고리 섹션에 그대로 남고
     // ★ 섹션에 한 번 더 노출된다(호이스트 아님). 발견분만 — 즐겨찾기 후 미발견이 된 코드(운영
     // 회수 등)가 잠금 행으로 최상단에 박히는 것 방지(적대 검수 2).
-    const favList = sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
+    // 검색 중엔 ★·새로 얻은 칭호 모아보기를 접는다 — 같은 칭호가 두 번 보이지 않게(시안 1 확정). 지우면 돌아온다.
+    const favList = nq ? [] : sortRows(visible.filter((d) => favSet.has(d.code) && byCode.get(d.code)?.discovered));
     // 새로 얻은 칭호(0187) — ★처럼 최상단 중복 표시(원 분류에도 남음). 필터는 그대로 적용.
-    const newList = sortRows(visible.filter((d) => newSet.has(d.code) && byCode.get(d.code)?.discovered));
+    const newList = nq ? [] : sortRows(visible.filter((d) => newSet.has(d.code) && byCode.get(d.code)?.discovered));
     const byGroup = new Map<string, TitleDef[]>();
     for (const d of visible) {
       const g = groupOf(d.cat);
@@ -175,11 +191,15 @@ export function TitlesClient({
       // 진행도는 필터와 무관한 실측(그 대분류 전체 기준) — 필터로 줄어든 숫자는 진행도가 아니다.
       const all = TITLE_DEFS.filter((d) => groupOf(d.cat) === g && byCode.has(d.code));
       const disc = all.filter((d) => byCode.get(d.code)!.discovered).length;
-      return { key: g, label: g, progress: `${disc}/${all.length}`, items: sortRows(byGroup.get(g)!) };
+      const items = sortRows(byGroup.get(g)!);
+      // 검색 중엔 진행도 대신 그 분류에 남은 수 — 검색어로 줄어든 숫자는 진행도가 아니다.
+      return { key: g, label: g, progress: nq ? `${items.length}개` : `${disc}/${all.length}`, items };
     });
     return { favList, newList, cats };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byCode, kind, found, act, favOnly, favSet, rep, newSet]);
+  }, [byCode, kind, found, act, favOnly, favSet, rep, newSet, nq, executorZone]);
+  // 입력창 옆 일치 수 — 필터와 AND된 뒤 실제로 목록에 남은 행 수.
+  const matchCount = groups.cats.reduce((a, g) => a + g.items.length, 0);
 
   const toggle = (code: string) => {
     const next = rep === code ? null : code;
@@ -250,6 +270,20 @@ export function TitlesClient({
   const selRow = sel ? byCode.get(sel) : null;
   const selDef = sel ? TITLE_BY_CODE.get(sel) : null;
 
+  // 미발견 행 라벨 — 검색 중엔 일치한 글자만 한 단계 밝게(시안 1 확정). 발견 행은 고유 연출이 있어 글자색을 손대지 않는다.
+  const lockedLabel = (d: TitleDef) => {
+    const text = d.label.replace('{구역}', '').trim();
+    const m = nq ? splitTitleMatch(text, qTrim) : null;
+    if (!m) return text;
+    return (
+      <>
+        {m[0]}
+        <span className="text-zinc-300">{m[1]}</span>
+        {m[2]}
+      </>
+    );
+  };
+
   const renderRow = (d: TitleDef) => {
     const r = byCode.get(d.code)!;
     const st = stateOf(d.code);
@@ -272,7 +306,7 @@ export function TitlesClient({
             {r.discovered ? (
               <TitleTag code={d.code} executorZone={executorZone} executorZoneRegion={executorZoneRegion} className="text-[13px]" />
             ) : (
-              <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{d.label.replace('{구역}', '').trim()}</span>
+              <span className="whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">{lockedLabel(d)}</span>
             )}
           </span>
           {st === 'rep' && (
@@ -377,6 +411,35 @@ export function TitlesClient({
           </div>
         )}
 
+        {/* 칭호 이름 검색(시안 1 상시 노출) — 대표 줄 아래·필터 위. 앱 공통 검색창 틀(ZoomSafeInput, iOS 확대 방지).
+            ✕는 검색어가 있을 때만, 오른쪽 숫자는 필터와 AND된 뒤 목록에 남은 수. 상단 고정부 높이 변화는 ResizeObserver가 따라간다. */}
+        <div className="flex items-center gap-2 px-4 pt-2">
+          <div className="relative min-w-0 flex-1">
+            <ZoomSafeInput
+              value={q}
+              onChange={(e) => setQ(e.target.value.slice(0, TITLE_SEARCH_MAX))}
+              placeholder="칭호 이름 검색"
+              aria-label="칭호 이름 검색"
+              maxLength={TITLE_SEARCH_MAX}
+              autoComplete="off"
+              enterKeyHint="search"
+              wrapClassName="h-9 w-full"
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 pr-10 text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-500"
+            />
+            {qTrim !== '' && (
+              <button
+                type="button"
+                aria-label="검색어 지우기"
+                onClick={() => setQ('')}
+                className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-[12px] text-zinc-500"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {qTrim !== '' && <span className="shrink-0 font-mono text-[11px] text-zinc-400">{matchCount}개</span>}
+        </div>
+
         {/* 필터 — 토글 세그먼트 3조(해제=전체) + ★ 즐겨찾기(AND 조합).
             하단 보더 없음 — 바로 아래 섹션 헤더의 상단 보더와 만나 2px로 보이던 것 제거(피드백). */}
         <div className="flex flex-wrap gap-1.5 px-4 py-2">
@@ -421,9 +484,11 @@ export function TitlesClient({
         ))}
         {groups.favList.length === 0 && groups.cats.length === 0 && (
           <p className="px-4 py-10 text-center text-[12px] text-zinc-500">
-            {favOnly && favs.length === 0
-              ? '즐겨찾기한 칭호가 없어요 — 목록에서 ☆을 눌러 담아 보세요.'
-              : '조건에 맞는 칭호가 없어요.'}
+            {qTrim !== ''
+              ? `‘${qTrim}’${gwa(qTrim)} 일치하는 칭호가 없어요.`
+              : favOnly && favs.length === 0
+                ? '즐겨찾기한 칭호가 없어요 — 목록에서 ☆을 눌러 담아 보세요.'
+                : '조건에 맞는 칭호가 없어요.'}
           </p>
         )}
       </div>
