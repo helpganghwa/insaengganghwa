@@ -42,6 +42,8 @@ export type ExpeditionBoardSlot = {
   avatarSouth?: string | null;
   /** running — 배율 적용 전 기본 보상(오퍼 시점 롤). 수령 팝업의 '기본 × 배율' 표시용. */
   baseReward?: ExpeditionReward;
+  /** running — 귀환 전 취소 가능 여부(#505). 어제 산 추가 파견 칸은 취소하면 칸이 사라져 막는다. 귀환 여부는 화면 시계로 따로 본다. */
+  cancellable?: boolean;
 };
 
 export type ExpeditionAvatar = {
@@ -219,6 +221,7 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
       avatarId: row.avatar_profile_id,
       avatarFace: row.avatar_profile_id ? (faceById.get(row.avatar_profile_id) ?? null) : null,
       avatarSouth: row.avatar_profile_id ? (southById.get(row.avatar_profile_id) ?? null) : null,
+      cancellable: !(extra && !row.rolled_today),
     };
   };
 

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  cancelExpedition,
   claimExpedition,
   ensureOffers,
   refreshOffer,
@@ -9,7 +10,7 @@ import {
 import type { Rng10k } from '@/lib/game/expedition/engine';
 
 import { endTestDb, sql, testDb } from '../db';
-import { EXPEDITION_DAILY_LIMIT_SINCE_ISO } from '@/lib/game/balance';
+import { EXPEDITION_DAILY_LIMIT_SINCE_ISO, EXPEDITION_EXTRA_SLOT_BASE } from '@/lib/game/balance';
 
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';
 const skip = !TEST_USER_ID;
@@ -231,6 +232,69 @@ describe.skipIf(skip)('파견 — DB 통합', () => {
     expect(await offerCount()).toBe(2);
     await startExpedition(uid, SID, 1, avatarId);
     await expect(startExpedition(uid, SID, 2, avatarId)).rejects.toMatchObject({ code: 'AVATAR_BUSY' });
+  });
+
+  it('취소(#505) — 보내기 전으로 되돌림: 파견지·기본 보상 유지, 아바타 해제, 같은 날 다시 보내기 가능, 취소 기록 1줄', async () => {
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    const [before] = (await testDb.execute(sql`
+      select id::text, region::text, reward::text, rolled_at::text from expeditions where user_id = ${uid}::uuid and slot = 1 and status = 'offer'
+    `)) as unknown as { id: string; region: string; reward: string; rolled_at: string }[];
+    await startExpedition(uid, SID, 1, avatarId);
+    await cancelExpedition(uid, SID, 1);
+    const [after] = (await testDb.execute(sql`
+      select id::text, status::text, region::text, reward::text, rolled_at::text, avatar_profile_id, started_at, complete_at, final_reward, push_sent
+      from expeditions where user_id = ${uid}::uuid and slot = 1 and status in ('offer','running')
+    `)) as unknown as Record<string, unknown>[];
+    expect(after).toMatchObject({ id: before!.id, status: 'offer', region: before!.region, reward: before!.reward, rolled_at: before!.rolled_at });
+    expect(after!.avatar_profile_id).toBeNull();
+    expect(after!.started_at).toBeNull();
+    expect(after!.complete_at).toBeNull();
+    expect(after!.final_reward).toBeNull();
+    expect(after!.push_sent).toBe(false);
+    // 취소 기록 — 출발 시각 없이(오늘 횟수에 안 잡힘) 남아 '첫 파견 보내기' 과제를 지킨다.
+    const tomb = (await testDb.execute(sql`
+      select started_at from expeditions where user_id = ${uid}::uuid and slot = 1 and status = 'cancelled'
+    `)) as unknown as { started_at: unknown }[];
+    expect(tomb).toHaveLength(1);
+    expect(tomb[0]!.started_at).toBeNull();
+    // 같은 날 같은 칸 다시 보내기 — DAILY_LIMIT 아님, 시간은 처음부터.
+    const again = await startExpedition(uid, SID, 1, avatarId);
+    expect(Date.parse(again.completeAtIso) - Date.now()).toBeGreaterThan(7.9 * 3_600_000);
+    // 다시 보낸 뒤엔 하루 1회 그대로 — 수령 후 또 보낼 수 없다.
+    await testDb.execute(sql`update expeditions set complete_at = now() - interval '1 second' where user_id = ${uid}::uuid and slot = 1 and status = 'running'`);
+    await claimExpedition(uid, SID, 1, () => 9999);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    await expect(startExpedition(uid, SID, 1, avatarId)).rejects.toMatchObject({ code: 'DAILY_LIMIT' });
+  });
+
+  it('취소(#505) — 귀환 뒤에는 불가(NOT_RUNNING), 보상 유지', async () => {
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    await startExpedition(uid, SID, 1, avatarId);
+    await testDb.execute(sql`update expeditions set complete_at = now() - interval '1 second' where user_id = ${uid}::uuid and slot = 1 and status = 'running'`);
+    await expect(cancelExpedition(uid, SID, 1)).rejects.toMatchObject({ code: 'NOT_RUNNING' });
+    const [r] = (await testDb.execute(sql`select status::text from expeditions where user_id = ${uid}::uuid and slot = 1 and status in ('offer','running')`)) as unknown as { status: string }[];
+    expect(r?.status).toBe('running');
+  });
+
+  it('취소(#505) — 어제 연 추가 파견 칸은 NOT_CANCELLABLE', async () => {
+    const slot = EXPEDITION_EXTRA_SLOT_BASE + 1;
+    await testDb.execute(sql`
+      insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward, status, rolled_at, avatar_profile_id, started_at, complete_at, final_reward)
+      values (${uid}::uuid, ${SID}, ${slot}, 'swamp', 'normal', 28800000, '{"kind":"dia","diamond":150}'::jsonb, 'running',
+              now() - interval '1 day', ${avatarId}::uuid, now() - interval '20 hours', now() + interval '1 hour', '{"kind":"dia","diamond":150}'::jsonb)
+    `);
+    await expect(cancelExpedition(uid, SID, slot)).rejects.toMatchObject({ code: 'NOT_CANCELLABLE' });
+  });
+
+  it('취소(#505) — 합산 강화 하락으로 닫힌 칸은 cancelled로 끝(오퍼 없음), 아바타 해제', async () => {
+    await setEnhanceSum(8000);
+    await ensureOffers(uid, SID, DIA_OFFER_RNG());
+    await startExpedition(uid, SID, 2, avatarId);
+    await setEnhanceSum(0);
+    await cancelExpedition(uid, SID, 2);
+    const rows = (await testDb.execute(sql`select status::text from expeditions where user_id = ${uid}::uuid and slot = 2`)) as unknown as { status: string }[];
+    expect(rows.map((r) => r.status)).toEqual(['cancelled']);
+    await startExpedition(uid, SID, 1, avatarId); // 아바타가 풀려 다른 칸에 보낼 수 있다
   });
 
 });

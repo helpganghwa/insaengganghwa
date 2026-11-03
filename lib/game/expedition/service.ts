@@ -56,6 +56,7 @@ export type ExpeditionErrorCode =
   | 'AVATAR_BUSY'
   | 'SLOT_LOCKED'
   | 'DAILY_LIMIT'
+  | 'NOT_CANCELLABLE'
   | 'INSUFFICIENT_DIAMOND';
 export class ExpeditionError extends Error {
   constructor(public code: ExpeditionErrorCode) {
@@ -411,16 +412,43 @@ export function startExpedition(
 }
 
 /**
- * 취소 — running → cancelled. 보상 없음·일일 횟수 미반환(사용자 확정).
- * 완료(귀환) 후에는 취소 불가(적대 검수 5) — 확정 보상을 실수로 태우는
- * 자해 경로 차단(UI는 이미 숨기지만 클라 시계 오차·직접 호출 방어).
+ * 취소(#505, 2026-11-03) — 진행 중 파견을 **보내기 전(offer)으로 되돌린다**. 보상 없음.
+ *  - 같은 행을 offer로: 파견지·기본 보상(reward)·rolled_at 유지, 아바타·배율·확정 보상·출발/귀환 시각·푸시 표식 초기화.
+ *    출발 시각(started_at)을 지우므로 그 칸의 오늘 보낼 기회가 되살아난다(slotsUsedUp·헤더 N은 started_at 기준).
+ *    다시 보내면 시간이 처음부터 시작하고 배율은 그때 아바타로 다시 계산한다 — 취소로 얻는 것이 없다.
+ *  - 파견지는 새로 뽑지 않는다(취소가 공짜 새로고침이 되지 않게). 어제 굴린 오퍼면 이어지는 ensureOffers가 자정 규칙대로 새로 굴린다.
+ *  - 취소 기록 한 줄(status cancelled, started_at 없음)을 따로 남긴다 — '첫 파견 보내기' 과제(시작 이력 인정)가 취소로 풀리지 않게.
+ *  - 귀환(complete_at ≤ now) 뒤에는 불가(확정 보상을 실수로 태우는 길 차단). 어제 산 추가 파견 칸은 불가 — offer로 돌아가면 그 칸이 치워져 사라진다.
+ *  - 합산 강화 하락으로 닫힌 칸은 새로 보낼 수 없으므로 offer로 두지 않고 cancelled로 끝낸다(아바타만 돌아온다).
  */
 export function cancelExpedition(userId: string, serverId: number, slot: number): Promise<void> {
   return db.transaction(async (tx) => {
-    const res = (await tx.execute(sql`
-      update expeditions set status = 'cancelled'
+    await lockState(tx, userId, serverId); // 유저×서버 직렬화(시작·수령·새로고침과 경합 방지)
+    const [row] = (await tx.execute(sql`
+      select id::text, (rolled_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date as rolled_today
+      from expeditions
       where user_id = ${userId}::uuid and server_id = ${serverId} and slot = ${slot}
         and status = 'running' and complete_at > now()
+      for update
+    `)) as unknown as { id: string; rolled_today: boolean }[];
+    if (!row) throw new ExpeditionError('NOT_RUNNING');
+    const extra = isExtraExpeditionSlot(slot);
+    if (extra && !row.rolled_today) throw new ExpeditionError('NOT_CANCELLABLE');
+    const closed = !extra && slot > effectiveSlots(await enhanceSumOf(tx, userId, serverId));
+    if (closed) {
+      await tx.execute(sql`update expeditions set status = 'cancelled' where id = ${BigInt(row.id)} and status = 'running'`);
+      return;
+    }
+    await tx.execute(sql`
+      insert into expeditions (user_id, server_id, slot, region, difficulty, duration_ms, reward, status, rolled_at, avatar_profile_id, synergy_bp, req_bonus_bp, final_reward)
+      select user_id, server_id, slot, region, difficulty, duration_ms, reward, 'cancelled', rolled_at, avatar_profile_id, synergy_bp, req_bonus_bp, final_reward
+      from expeditions where id = ${BigInt(row.id)}
+    `);
+    const res = (await tx.execute(sql`
+      update expeditions
+      set status = 'offer', avatar_profile_id = null, synergy_bp = 0, level_bonus_bp = 0, req_bonus_bp = 0,
+          final_reward = null, started_at = null, complete_at = null, reduced_ms = 0, push_sent = false
+      where id = ${BigInt(row.id)} and status = 'running'
       returning id
     `)) as unknown as unknown[];
     if (res.length === 0) throw new ExpeditionError('NOT_RUNNING');

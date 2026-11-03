@@ -32,6 +32,7 @@ import type { ExpeditionAvatar, ExpeditionBoard, ExpeditionBoardSlot } from '@/l
 import type { ExpeditionReward } from '@/lib/game/expedition/engine';
 
 import {
+  cancelExpeditionAction,
   claimExpeditionAction,
   expeditionBoardAction,
   refreshAllOffersAction,
@@ -88,6 +89,23 @@ function weightedSumOf(equipment: ExpeditionAvatar['equipment'], mission: Expedi
   return expeditionWeightedSum(equipment.map((e) => ({ level: e.level, region: e.region })), mission);
 }
 
+/**
+ * 칸 정렬(#505, 2026-11-03) — 할 일이 있는 칸이 위로: 귀환 완료(받기) → 파견 대기 → 파견 중(귀환 빠른 순) → 오늘 완료 → 잠김.
+ * 같은 묶음 안은 칸 번호 순(추가 파견 칸은 11번부터라 자연히 뒤). 보내거나 받는 순간 낙관 보드가 바뀌어 칸이 바로 제자리로 옮겨 간다.
+ */
+function sortSlots(slots: ExpeditionBoardSlot[], now: number): ExpeditionBoardSlot[] {
+  const rank = (s: ExpeditionBoardSlot) => {
+    if (s.state === 'running') return s.completeAtIso && Date.parse(s.completeAtIso) <= now ? 0 : 2;
+    if (s.state === 'offer') return 1;
+    if (s.state === 'done') return 3;
+    return 4;
+  };
+  const at = (s: ExpeditionBoardSlot) => (s.completeAtIso ? Date.parse(s.completeAtIso) : 0);
+  // 자리 카드(추가 파견 직후, 음수 번호)는 산 순서대로 대기 묶음 끝에 — 번호 대신 절댓값 + 큰 수로 뒤에 둔다.
+  const num = (s: ExpeditionBoardSlot) => (s.slot < 0 ? 1000 - s.slot : s.slot);
+  return [...slots].sort((a, b) => rank(a) - rank(b) || (rank(a) === 2 ? at(a) - at(b) : 0) || num(a) - num(b));
+}
+
 type ClaimPopup = { crit: boolean; reward: ExpeditionReward; baseReward?: ExpeditionReward; region: ExpeditionRegion; avatarSouth: string | null; bonusText: string | null };
 
 export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
@@ -97,6 +115,23 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
   const assignFor = assignSlot === null ? null : (board.slots.find((x) => x.slot === assignSlot) ?? null);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [claimPopup, setClaimPopup] = useState<ClaimPopup | null>(null);
+  /** 파견 취소 팝업(#505) — 파견 중 카드를 누르면 연다. */
+  const [cancelSlot, setCancelSlot] = useState<number | null>(null);
+  const cancelFor = cancelSlot === null ? null : (board.slots.find((x) => x.slot === cancelSlot && x.state === 'running') ?? null);
+  // 정렬 기준 시각 — 파견 중 칸이 귀환하는 순간 맨 위(받기) 묶음으로 올라가도록, 다음 귀환 시각에 맞춰 한 번씩만 갱신한다(매초 리렌더 없음).
+  const [sortNow, setSortNow] = useState(() => serverNow());
+  useEffect(() => {
+    const now = serverNow();
+    const next = board.slots
+      .filter((x) => x.state === 'running' && x.completeAtIso)
+      .map((x) => Date.parse(x.completeAtIso!))
+      .filter((t) => t > now)
+      .sort((a, b) => a - b)[0];
+    if (next === undefined) return;
+    const t = setTimeout(() => setSortNow(serverNow()), Math.min(next - now + 50, 2_147_000_000));
+    return () => clearTimeout(t);
+  }, [board.slots]);
+  const orderedSlots = sortSlots(board.slots, sortNow);
   const [, startTransition] = useTransition();
   const { optimisticAdjust } = useDiamondActions();
   const gate = useDiamondGate();
@@ -112,6 +147,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
         INSUFFICIENT_DIAMOND: '다이아가 부족해요',
         NOT_READY: '아직 귀환하지 않았어요',
         DAILY_LIMIT: '이 슬롯은 오늘 보낼 수 있는 횟수를 다 썼어요',
+        NOT_RUNNING: '이미 귀환한 파견이에요',
+        NOT_CANCELLABLE: '어제 연 추가 파견은 취소할 수 없어요',
         BANNED: '이용이 제한된 계정입니다',
         MAINTENANCE: '서버 점검 중이에요. 잠시 후 다시 시도해 주세요',
         AUTH: '로그인이 필요해요',
@@ -248,6 +285,28 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     });
   };
 
+  /**
+   * 취소(#505) — 낙관: 그 칸을 보내기 전(파견 대기, 같은 파견지·기본 보상)으로, 아바타 잠금 해제, 오늘 출발분이면 헤더 N을 하나 내린다.
+   * 어제 굴린 파견지는 서버가 자정 규칙대로 새로 굴려 응답 보드로 바뀐다. 실패하면 run()이 서버 보드로 되돌린다.
+   */
+  const doCancel = (s: ExpeditionBoardSlot) => {
+    setCancelSlot(null);
+    run(
+      s.slot,
+      (b) => ({
+        ...b,
+        slots: b.slots.map((x) =>
+          x.slot === s.slot
+            ? { slot: x.slot, extra: x.extra, state: 'offer' as const, region: x.region, hours: x.hours, reward: x.baseReward ?? x.reward }
+            : x,
+        ),
+        avatars: b.avatars.map((a) => (a.id === s.avatarId ? { ...a, busy: false } : a)),
+        startsToday: s.startedToday ? Math.max(0, b.startsToday - 1) : b.startsToday,
+      }),
+      () => cancelExpeditionAction(s.slot),
+    );
+  };
+
   const selectedAv = selectedAvatar ? board.avatars.find((a) => a.id === selectedAvatar) ?? null : null;
   const previewBp = assignFor?.region && selectedAv ? enhanceBonusOf(weightedSumOf(selectedAv.equipment, assignFor.region)) : 0;
 
@@ -294,10 +353,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       toast.showHeaderToast({ title: canBuyExtra ? '위쪽 ＋를 누르면 추가 파견을 열 수 있어요' : '내일 다시 보낼 수 있어요' });
       return;
     }
-    // 파견 중 카드는 정보만(취소 기능 없음, 2026-08-28) — 귀환 완료면 수령, 아니면 남은 시간 토스트.
+    // 파견 중 카드 — 귀환 완료면 수령, 아니면 취소 팝업(#505). 어제 연 추가 파견 칸은 취소할 수 없어 남은 시간만 안내.
     const remain = s.completeAtIso ? Date.parse(s.completeAtIso) - nowMs() : 0;
     if (remain <= 0) doClaim(s);
-    else toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)} 남음` });
+    else if (s.cancellable === false) toast.showHeaderToast({ title: `파견 완료까지 ${fmtRemain(remain)} 남음` });
+    else setCancelSlot(s.slot);
   };
 
   // 페이지 타이틀 우측(2026-08-31) — 오늘 파견 N/M(보낸 기준: 오늘 KST 출발 슬롯) · 오늘 수령한 💎/📦 합계.
@@ -364,7 +424,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       </div>
 
       {/* 슬롯 — 카드 전체가 탭 대상 */}
-      {board.slots.map((s) => (
+      {orderedSlots.map((s) => (
         <SlotCard key={s.slot} s={s} pending={pendingSlot === s.slot} refreshing={refreshing} enhanceSum={board.enhanceSum} canBuyExtra={canBuyExtra} onTap={() => onCardTap(s)} />
       ))}
 
@@ -556,6 +616,67 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       ) : null}
 
       {/* 수령 팝업(C3, 2026-08-28) — 부위별 상자 칸 + 💎 칸 + XP 칸이 순서대로 튀어나오며 숫자가 올라간다. 대성공은 서버 판정이라 응답 후 표시 */}
+      {/* 파견 취소(#505) — 파견 중 카드 탭. 팝업이 확인 단계라 [파견 취소] 한 번에 처리한다. 귀환 시각이 지나면 버튼을 막는다(서버도 거절). */}
+      {cancelFor?.region ? (
+        <ModalShell onClose={() => setCancelSlot(null)} label="파견 취소">
+          <Ticker>
+            {(now) => {
+              const remain = cancelFor.completeAtIso ? Date.parse(cancelFor.completeAtIso) - (now + clockOffsetMs()) : 0;
+              const done = remain <= 0;
+              return (
+                <ModalLayout
+                  title="파견 취소"
+                  subtitle={
+                    <>
+                      <span style={{ color: REGION_UI[cancelFor.region!].color }}>{REGION_UI[cancelFor.region!].label}</span> ·{' '}
+                      <span className="tabular-nums">{done ? '귀환 완료' : `귀환까지 ${fmtRemain(remain).replace(/ \d+초$/, '')}`}</span>
+                    </>
+                  }
+                  bodyPad="sm"
+                  footer={
+                    <>
+                      <ModalButton tone="ghost" onClick={() => setCancelSlot(null)}>
+                        닫기
+                      </ModalButton>
+                      <ModalButton tone="danger" disabled={done || pendingSlot === cancelFor.slot} onClick={() => doCancel(cancelFor)}>
+                        파견 취소
+                      </ModalButton>
+                    </>
+                  }
+                >
+                  {/* 팝업 미니 카드(배정 팝업과 같은 compact) — 남은 시간은 부제에 있어 상태줄은 짧게. */}
+                  <CardBody
+                    region={cancelFor.region!}
+                    monTier={monTierOf(cancelFor.baseReward ?? cancelFor.reward)}
+                    avatarSouth={cancelFor.avatarSouth ?? null}
+                    reward={cancelFor.reward}
+                    status="파견 중"
+                    bonusText={`×${(1 + (cancelFor.reqBonusBp ?? 0) / 10000).toFixed(2)}`}
+                    progress={Math.min(0.999, Math.max(0, 1 - remain / Math.max(1, (cancelFor.hours ?? EXPEDITION_HOURS) * 3_600_000)))}
+                    compact
+                    hideHeader
+                  />
+                  <div className="mt-2.5 space-y-1.5 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-[12px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                    <p>취소하면 아바타가 바로 돌아오고, 이 칸은 보내기 전 상태로 돌아가요.</p>
+                    {/* 어제 보낸 파견은 offer로 돌아가면 자정 규칙대로 파견지가 새로 정해진다(서버 ensureOffers). */}
+                    {cancelFor.startedToday ? (
+                      <p>
+                        파견지와 기본 보상은 그대로예요. 다시 보내면 <b className="text-zinc-900 dark:text-zinc-50">{cancelFor.hours ?? EXPEDITION_HOURS}시간부터 새로</b> 시작해요.
+                      </p>
+                    ) : (
+                      <p>어제 보낸 파견이라 취소하면 이 칸의 파견지가 새로 정해져요.</p>
+                    )}
+                    <p className="text-zinc-500 dark:text-zinc-400">
+                      {cancelFor.startedToday ? '취소한 파견은 보상이 없고, 오늘 보낼 기회는 다시 생겨요.' : '취소한 파견은 보상이 없어요.'}
+                    </p>
+                  </div>
+                </ModalLayout>
+              );
+            }}
+          </Ticker>
+        </ModalShell>
+      ) : null}
+
       {claimPopup ? (
         <ModalShell onClose={() => setClaimPopup(null)} label="파견 귀환">
           <ModalLayout
