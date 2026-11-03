@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
-import { useEffect, useState, useTransition } from 'react';
+import { Fragment, useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,7 +18,9 @@ import {
 import { TierChip } from './TierChip';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
-import { useResourceToast } from '@/components/ResourceToast';
+import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import * as haptic from '@/lib/game/haptic';
+import { sounds } from '@/lib/game/sound';
 import { Tabs } from '@/components/ui/Tabs';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -26,7 +28,7 @@ import { useServerClock } from '@/lib/client/use-server-clock';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { openRaidAction } from './actions';
+import { claimAllRaidRewardsAction, openRaidAction } from './actions';
 import { DEFAULT_RAID_OPEN_PREFS, type RaidOpenPrefs } from '@/lib/game/raid/open-prefs';
 
 /** 참여 가능한 레이드 세그먼트 키 — 주소 ?seg= 값과 같다(all은 주소에 안 적는다). */
@@ -322,8 +324,8 @@ function Countdown({ iso, nowIso }: { iso: string; nowIso: string }) {
 }
 
 export function RaidSlots({
-  cells: cellsIn,
-  slots: slotsIn,
+  cells: cellsAll,
+  cap: capIn,
   dailyUsed,
   dailyCap: dailyCapIn,
   extraLeft = 0,
@@ -333,7 +335,8 @@ export function RaidSlots({
   nowIso,
 }: {
   cells: RaidSlotCell[];
-  slots: number;
+  /** 동시 진행 한도(오늘 산 +1회 포함). 칸 수 = 한도와 셀 수 중 큰 쪽(정산 안 한 채 새로 연 경우 넘칠 수 있다). */
+  cap: number;
   dailyUsed: number;
   dailyCap: number;
   /** 오늘 더 살 수 있는 '오늘 레이드 +1회' 수 — 0보다 크면 ＋를 보인다(10-06). */
@@ -348,7 +351,7 @@ export function RaidSlots({
   nowIso: string;
 }) {
   const router = useRouter();
-  const { showError } = useResourceToast();
+  const { showError, showHeaderToast } = useResourceToast();
   // 참여 가능한 레이드 세그먼트(전체/초대/길드/친구) — 고른 탭은 주소(?seg=)에 적어 둔다(2026-10-22, 유저 문의).
   // 화면 안 state만으로는 상세에 들어갔다 뒤로 오면 목록이 다시 그려지며 전체로 돌아갔다. replaceState라
   // 탭 전환이 기록을 쌓지 않고, 상세의 뒤로가기(router.back)가 ?seg= 그대로의 목록으로 돌아온다.
@@ -381,8 +384,52 @@ export function RaidSlots({
     setSeenCap(dailyCapIn);
     setOptExtra(0);
   }
+  // 보상 모두 받기(#545) — 누르는 즉시 정산 대기 칸을 지우고(낙관), 실패하면 되돌린다. 성공 뒤엔 실제로 받은
+  // 레이드만 남겨 둬서, 그 사이 정산 전이라 빠진 칸은 서버 재렌더로 다시 보인다.
+  const [claimedIds, setClaimedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [claimingAll, setClaimingAll] = useState(false);
+  const cellsIn = claimedIds.size ? cellsAll.filter((c) => !(c.kind === 'pending_claim' && claimedIds.has(c.raidId))) : cellsAll;
+  const pendingCells = cellsIn.filter((c): c is Extract<RaidSlotCell, { kind: 'pending_claim' }> => c.kind === 'pending_claim');
+  const pendingBoxes = { weapon: 0, armor: 0, accessory: 0 };
+  for (const c of pendingCells) {
+    pendingBoxes.weapon += c.boxes.weapon;
+    pendingBoxes.armor += c.boxes.armor;
+    pendingBoxes.accessory += c.boxes.accessory;
+  }
+  const firstPendingIdx = cellsIn.findIndex((c) => c.kind === 'pending_claim');
+  const claimAll = () => {
+    if (claimingAll || pendingCells.length === 0) return;
+    const ids = pendingCells.map((c) => c.raidId);
+    setClaimingAll(true);
+    setClaimedIds((prev) => new Set([...prev, ...ids]));
+    sounds.rewardClaim();
+    haptic.success();
+    void (async () => {
+      const r = await claimAllRaidRewardsAction().catch(
+        () => ({ status: 'error', message: '수령이 전송되지 않았어요. 다시 시도해 주세요.', code: 'NETWORK' }) as const,
+      );
+      setClaimingAll(false);
+      if (r.status !== 'success') {
+        setClaimedIds((prev) => new Set([...prev].filter((id) => !ids.includes(id))));
+        showError(r.message);
+        return;
+      }
+      const got = new Set(r.result.raidIds);
+      setClaimedIds((prev) => new Set([...prev].filter((id) => !ids.includes(id) || got.has(id))));
+      const rewards: HeaderReward[] = (
+        [
+          ['⚔️', r.result.boxes.weapon],
+          ['🛡️', r.result.boxes.armor],
+          ['💍', r.result.boxes.accessory],
+        ] as const
+      )
+        .filter(([, n]) => n > 0)
+        .map(([icon, amount]) => ({ icon, amount }));
+      if (rewards.length > 0) showHeaderToast({ title: '레이드 모두 받기', rewards });
+    })();
+  };
   const dailyCap = dailyCapIn + optExtra;
-  const slots = slotsIn + optExtra;
+  const slots = Math.max(capIn, cellsIn.length) + optExtra;
   const exhausted = dailyUsed >= dailyCap;
 
   // 소환 컨펌 3초 카운트다운(만료 자동 해제). 초기값은 arm 시 핸들러에서 set(effect 내 직접 setState 회피).
@@ -436,8 +483,24 @@ export function RaidSlots({
         {free && !exhausted ? <span className="ml-1.5 font-semibold text-sky-500">· 오늘 첫 소환 무료</span> : null}
       </p>
       <div className="space-y-2">
-        {cells.map((s, i) =>
-          s ? (
+        {cells.map((s, i) => (
+          <Fragment key={s ? s.raidId : `e${i}`}>
+          {i === firstPendingIdx ? (
+            <div className="flex items-center justify-between gap-2 px-1 pt-1">
+              <span className="text-[11px] font-semibold text-amber-300">
+                정산 대기 <span className="font-mono">{pendingCells.length}</span>건 · ⚔️{pendingBoxes.weapon} 🛡️{pendingBoxes.armor} 💍{pendingBoxes.accessory}
+              </span>
+              <button
+                type="button"
+                disabled={claimingAll}
+                onClick={claimAll}
+                className="shrink-0 rounded-lg bg-amber-500 px-3 py-1 text-[11px] font-bold text-amber-950 transition active:scale-95 disabled:opacity-60"
+              >
+                모두 받기
+              </button>
+            </div>
+          ) : null}
+          {s ? (
             s.kind === 'pending_claim' ? (
               <Link prefetch={false}
                 key={s.raidId}
@@ -547,8 +610,9 @@ export function RaidSlots({
             >
               <span className="text-base">＋</span> {exhausted ? '오늘 한도 소진' : '레이드 소환'}
             </button>
-          ),
-        )}
+          )}
+          </Fragment>
+        ))}
       </div>
 
       {/* 참여 가능한 레이드 — 세그먼트 전체/초대/길드/친구(유저 요청 10-01). 같은 레이드는 page가 중복을 없애고

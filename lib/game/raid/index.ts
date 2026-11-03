@@ -14,6 +14,6 @@ export {
 export type { JoinScope, JoinRequestState } from './join-request';
 export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';
 export { settleRaid } from './settle';
-export { claimRaidReward } from './claim';
-export type { ClaimRaidResult } from './claim';
+export { claimRaidReward, claimAllRaidRewards } from './claim';
+export type { ClaimRaidResult, ClaimAllRaidResult } from './claim';
 export { raidPhasesCleared, phaseDropOutcome, milestoneDropOutcome, aggregatePhaseDrops } from './drops';

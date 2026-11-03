@@ -182,9 +182,8 @@ export default async function RaidPage() {
     };
   });
   const cells: RaidSlotCell[] = [...activeCells, ...pendingCells];
-  // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
+  // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출 — 칸 수는 RaidSlots가 max(한도, 셀 수)로 센다.
   const concurrentCap = RAID_MAX_CONCURRENT_PER_USER + raidExtra;
-  const slotCount = Math.max(concurrentCap, cells.length);
 
   // 내가 보낸 참가 요청(pending) — 목록에 '요청중' 배지 표시용(2026-07-27 피드백 5).
   const myPendingReqIds = new Set(
@@ -355,7 +354,7 @@ export default async function RaidPage() {
     <div className="px-4 py-4">
       <RaidSlots
         cells={cells}
-        slots={slotCount}
+        cap={concurrentCap}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP + raidExtra}
         // ＋는 남은 횟수와 상관없이 오늘 더 살 수 있으면 늘 보인다(10-06).

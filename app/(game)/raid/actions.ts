@@ -18,6 +18,7 @@ import {
   gemAttackRaid,
   settleRaid,
   claimRaidReward,
+  claimAllRaidRewards,
   RaidError,
   type RaidBoss,
   type RaidShareMode,
@@ -216,6 +217,24 @@ export async function claimRaidRewardAction(raidId: string) {
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
     console.error('[raid.claim]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 보상 모두 받기(#545) — 활성 서버의 정산 대기 보상 전부. 받을 것이 없으면 빈 결과(오류 아님). */
+export async function claimAllRaidRewardsAction() {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
+  try {
+    const r = await claimAllRaidRewards({ userId: u, serverId: await getActiveServerId() });
+    rev();
+    for (const id of r.raidIds) revalidatePath(`/raid/${id}`);
+    return { status: 'success' as const, result: r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.claimAll]', e);
     return err('UNKNOWN');
   }
 }
