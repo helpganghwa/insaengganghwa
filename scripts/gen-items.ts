@@ -18,7 +18,7 @@ import { scriptKeyFor, scriptKeyLabel } from './pixellab-script-key';
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
-// GEN_KEY=1|2|3 → 그 키(PIXELLAB_API_KEY·_2·_3), 기본은 두 번째 키. 추석 아이템은 GEN_KEY=3(2026-09-19).
+// GEN_KEY=1|2|3|4 → 그 키(PIXELLAB_API_KEY·_2·_3·_4), 기본은 두 번째 키. 추석 아이템은 GEN_KEY=3(2026-09-19).
 const KEY_LABEL = scriptKeyLabel('key2');
 const { key: KEY, envName: KEY_ENV } = scriptKeyFor(KEY_LABEL);
 const ROOT = process.cwd();

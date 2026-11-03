@@ -1,6 +1,6 @@
 import { pixellabBalances } from '@/lib/game/profile/pixellab-balance';
 
-/** Pixellab 키 3개의 남은 생성 횟수·충전 잔액·다음 리셋 — 서버에서만 조회(키는 브라우저로 가지 않는다). */
+/** Pixellab 키별 남은 생성 횟수·충전 잔액·다음 리셋 — 서버에서만 조회(키는 브라우저로 가지 않는다). */
 export async function PixellabUsage() {
   const rows = await pixellabBalances();
   return (

@@ -17,6 +17,7 @@ const E1 = env({ PIXELLAB_API_KEY: 'k1' });
 const E12 = env({ PIXELLAB_API_KEY: 'k1', PIXELLAB_API_KEY_2: 'k2' });
 const E123 = env({ PIXELLAB_API_KEY: 'k1', PIXELLAB_API_KEY_2: 'k2', PIXELLAB_API_KEY_3: 'k3' });
 const E13 = env({ PIXELLAB_API_KEY: 'k1', PIXELLAB_API_KEY_3: 'k3' });
+const E1234 = env({ PIXELLAB_API_KEY: 'k1', PIXELLAB_API_KEY_2: 'k2', PIXELLAB_API_KEY_3: 'k3', PIXELLAB_API_KEY_4: 'k4' });
 
 describe('Pixellab 키 풀', () => {
   it('설정된 키만 풀에 든다(빈 문자열은 미설정)', () => {
@@ -24,6 +25,7 @@ describe('Pixellab 키 풀', () => {
     expect(configuredPixellabKeyIdxs(E12)).toEqual([1, 2]);
     expect(configuredPixellabKeyIdxs(E123)).toEqual([1, 2, 3]);
     expect(configuredPixellabKeyIdxs(E13)).toEqual([1, 3]);
+    expect(configuredPixellabKeyIdxs(E1234)).toEqual([1, 2, 3, 4]);
     expect(configuredPixellabKeyIdxs(env({ PIXELLAB_API_KEY: 'k1', PIXELLAB_API_KEY_2: ' ' }))).toEqual([1]);
     expect(configuredPixellabKeyIdxs(env({ PIXELLAB_API_KEY_2: 'k2' }))).toEqual([]);
   });
@@ -31,12 +33,14 @@ describe('Pixellab 키 풀', () => {
   it('동시 생성 상한 = 키당 상한 × 키 수', () => {
     expect(profileGenConcurrency(E12)).toBe(PROFILE_GEN_PER_KEY * 2);
     expect(profileGenConcurrency(E123)).toBe(PROFILE_GEN_PER_KEY * 3);
+    expect(profileGenConcurrency(E1234)).toBe(PROFILE_GEN_PER_KEY * 4);
     expect(pixellabKeyCount(env({}))).toBe(1);
   });
 
   it('라운드로빈은 설정된 키 사이를 돈다', () => {
     expect([0, 1, 2, 3, 4, 5].map((s) => pickPixellabKeyIdx(s, E123))).toEqual([1, 2, 3, 1, 2, 3]);
     expect([0, 1, 2, 3].map((s) => pickPixellabKeyIdx(s, E13))).toEqual([1, 3, 1, 3]);
+    expect([0, 1, 2, 3, 4].map((s) => pickPixellabKeyIdx(s, E1234))).toEqual([1, 2, 3, 4, 1]);
     expect([0, 1, 2].map((s) => pickPixellabKeyIdx(BigInt(s), E1))).toEqual([1, 1, 1]);
   });
 
@@ -51,16 +55,19 @@ describe('Pixellab 키 풀', () => {
 
   it('키 조회는 인덱스 그대로, 빠진 키는 key1 폴백', () => {
     expect(pixellabKeyByIdx(3, E123)).toBe('k3');
+    expect(pixellabKeyByIdx(4, E1234)).toBe('k4');
+    expect(pixellabKeyByIdx(4, E123)).toBe('k1');
     expect(pixellabKeyByIdx(2, E12)).toBe('k2');
     expect(pixellabKeyByIdx(3, E12)).toBe('k1');
     expect(() => pixellabKeyByIdx(1, env({}))).toThrow('PIXELLAB_API_KEY missing');
   });
 
-  it('잡 options의 키 번호 — 1~3만 인정, 레거시·이상값은 1', () => {
+  it('잡 options의 키 번호 — 1~4만 인정, 레거시·이상값은 1', () => {
     expect(keyIdxFromOptions({ pixellabKeyIdx: 3 })).toBe(3);
     expect(keyIdxFromOptions({ pixellabKeyIdx: 2 })).toBe(2);
     expect(keyIdxFromOptions({})).toBe(1);
     expect(keyIdxFromOptions(null)).toBe(1);
-    expect(keyIdxFromOptions({ pixellabKeyIdx: 4 })).toBe(1);
+    expect(keyIdxFromOptions({ pixellabKeyIdx: 4 })).toBe(4);
+    expect(keyIdxFromOptions({ pixellabKeyIdx: 5 })).toBe(1);
   });
 });

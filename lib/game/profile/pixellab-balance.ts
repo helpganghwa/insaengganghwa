@@ -8,7 +8,7 @@ import { PIXELLAB_KEY_IDXS, pixellabKeyIfSet } from './pixellab-keys';
  * Pixellab 키별 잔여 사용량(관리자 아바타 생성 검수 페이지) — GET /v2/balance는 계정 정보 조회라 생성 비용이 없다.
  * 응답: 구독 생성 횟수(남은/총)와 충전 잔액(USD). 리셋 날짜는 API가 주지 않아 키별 월 결제일을 여기 둔다(각 계정 Billing 기준).
  */
-export const PIXELLAB_RESET_DAY: Record<number, number> = { 1: 15, 2: 26, 3: 19 };
+export const PIXELLAB_RESET_DAY: Record<number, number> = { 1: 15, 2: 26, 3: 19, 4: 3 };
 
 export type PixellabBalance = {
   idx: number;
@@ -42,7 +42,7 @@ export function nextResetKst(day: number, now: Date = new Date()): { date: strin
 let cache: { at: number; v: PixellabBalance[] } | null = null;
 const TTL_MS = 60_000;
 
-/** 세 키의 잔여 사용량 — 1분 캐시(페이지를 여러 번 열어도 요청이 쌓이지 않게), 키마다 5초 타임아웃. */
+/** 키별 잔여 사용량 — 1분 캐시(페이지를 여러 번 열어도 요청이 쌓이지 않게), 키마다 5초 타임아웃. */
 export async function pixellabBalances(): Promise<PixellabBalance[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.v;
   const v = await Promise.all(

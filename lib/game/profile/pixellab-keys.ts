@@ -1,5 +1,5 @@
 import 'server-only';
-// 아바타·문양 생성 Pixellab 키 풀 — key1(PIXELLAB_API_KEY) + key2(PIXELLAB_API_KEY_2) + key3(PIXELLAB_API_KEY_3), 2·3은 선택.
+// 아바타·문양 생성 Pixellab 키 풀 — key1(PIXELLAB_API_KEY) + key2~4(PIXELLAB_API_KEY_2·_3·_4), 2~4는 선택(2026-11-03 key4 추가).
 // 여러 Tier-3 구독을 나눠 써 처리량↑·레이트리밋 여유.
 // ⚠️ 캐릭터는 "생성한 키"로만 조회/다운로드 가능(계정 귀속) → 잡 options.pixellabKeyIdx에
 //    생성 시 키 인덱스를 기록하고, 폴링·다운로드·지급은 반드시 같은 키로 한다.
@@ -15,8 +15,9 @@ const KEY_ENV: Record<number, string> = {
   1: 'PIXELLAB_API_KEY',
   2: 'PIXELLAB_API_KEY_2',
   3: 'PIXELLAB_API_KEY_3',
+  4: 'PIXELLAB_API_KEY_4',
 };
-export const PIXELLAB_KEY_IDXS = [1, 2, 3] as const;
+export const PIXELLAB_KEY_IDXS = [1, 2, 3, 4] as const;
 
 function envKey(idx: number, env: NodeJS.ProcessEnv): string | undefined {
   const name = KEY_ENV[idx];
@@ -78,12 +79,12 @@ export function keyIdxFromOptions(options: unknown): number {
   return typeof idx === 'number' && (PIXELLAB_KEY_IDXS as readonly number[]).includes(idx) ? idx : 1;
 }
 
-/** 활성 Pixellab 키 수(1~3). key1이 없어도 1 — 발주 쪽이 'missing'으로 먼저 막는다. */
+/** 활성 Pixellab 키 수(1~4). key1이 없어도 1 — 발주 쪽이 'missing'으로 먼저 막는다. */
 export function pixellabKeyCount(env: NodeJS.ProcessEnv = process.env): number {
   return Math.max(1, configuredPixellabKeyIdxs(env).length);
 }
 
-/** 서버 전체 아바타 동시 생성 상한 = 키당 상한 × 활성 키 수(키 3개면 4×3=12). */
+/** 서버 전체 아바타 동시 생성 상한 = 키당 상한 × 활성 키 수(키 4개면 4×4=16). */
 export function profileGenConcurrency(env: NodeJS.ProcessEnv = process.env): number {
   return PROFILE_GEN_PER_KEY * pixellabKeyCount(env);
 }
