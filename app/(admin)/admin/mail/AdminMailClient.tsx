@@ -266,6 +266,9 @@ export function AdminMailClient({
           placeholder="본문 (선택)"
           className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
         />
+        <p className="text-[10px] text-zinc-500">
+          링크 표기: [설문 참여하기](https://forms.gle/...) · forms.gle·docs.google.com/forms·ganghwa.app만 링크로 보여요.
+        </p>
       </section>
 
       {/* 첨부 */}

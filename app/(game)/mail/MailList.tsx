@@ -8,6 +8,7 @@ import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatClaimedAt } from '@/lib/ui/format-claimed';
+import { parseMailBody } from '@/lib/ui/mail-links';
 import {
   claimMailAction,
   claimAllMailAction,
@@ -488,7 +489,7 @@ export function MailList({
                       <div className="mt-0.5 text-sm font-semibold">{m.title}</div>
                       {m.body ? (
                         <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                          {m.body}
+                          {m.type === 'admin' ? <MailBodyText body={m.body} /> : m.body}
                         </p>
                       ) : null}
                     </div>
@@ -542,5 +543,28 @@ export function MailList({
         </button>
       ) : null}
     </div>
+  );
+}
+
+/** 운영 우편 본문 — 허용 주소의 `[글자](주소)`만 링크(lib/ui/mail-links.ts), 확인 없이 새 창. */
+function MailBodyText({ body }: { body: string }) {
+  return (
+    <>
+      {parseMailBody(body).map((p, i) =>
+        p.kind === 'link' ? (
+          <a
+            key={i}
+            href={p.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-sky-600 underline underline-offset-2 dark:text-sky-400"
+          >
+            {p.label}
+          </a>
+        ) : (
+          <span key={i}>{p.text}</span>
+        ),
+      )}
+    </>
   );
 }

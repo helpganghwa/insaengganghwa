@@ -19,6 +19,7 @@ import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
 import { openHalloweenCatalogIfDue } from '@/lib/game/halloween/open';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
+import { mailBodyPlain } from '@/lib/ui/mail-links';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export const maxDuration = 120;
 
 /** 본문 → 푸시용 발췌: 문장 단위로 누적해 max자 이내(첫 문장이 max를 넘으면 잘라 '…'). */
 function pushExcerpt(body: string, max: number): string {
-  const plain = body.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+  const plain = mailBodyPlain(body).replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
   const sentences = plain.match(/[^.!?]+[.!?]?/g) ?? [plain];
   let out = '';
   for (const raw of sentences) {
