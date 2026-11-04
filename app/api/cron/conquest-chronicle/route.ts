@@ -18,6 +18,7 @@ import { revealConquest, carryOverDefenders, markAbandonedZones } from '@/lib/ga
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
+import { grantConquestSoloTitles } from '@/lib/game/titles/event-grants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,6 +128,8 @@ export async function GET(req: Request) {
           await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
           // 공개(소유권 플립)·방치 판정 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
           if (rev.revealed > 0 || abandoned.abandoned > 0) revalidateTag(`world-feed:s${sid}`, 'max');
+          // 백스톱이 공개를 가져간 경우의 단신 활약 칭호(2026-11-04) — 공개 뒤에만. 실패는 로그(소급 스크립트로 메움).
+          if (rev.revealed > 0) await grantConquestSoloTitles(sid, day).catch((e: unknown) => console.warn('[conquest-chronicle] 단신 활약 칭호', sid, e));
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           // 이월은 **당일 실행에서만**(전수 감사 2026-08-21) — 백필 날짜에 돌면 carryDay=과거+1의
           // 배치 행이 새로 생겨 영구 잔존·연대기 재생성 오염. neutralize와 동일 게이트.

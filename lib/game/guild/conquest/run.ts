@@ -12,7 +12,6 @@ import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat
 
 import { conquestPowerMult } from '../balance';
 import { simulateConquest, type ConquestFinale, type ConquestUnit } from './simulate';
-import { grantConquestSoloTitles } from '@/lib/game/titles/event-grants';
 
 /**
  * 점령전 정산 — GUILD §5.8⑧. **KST 23:00 cron**. 그날(오늘 KST) 전투를 결정론 정산.
@@ -482,15 +481,6 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     }
   }
 
-
-  // 단신 활약 칭호(2026-11-04, 숨김 — 혈혈단신·최후의 보루) — 공개가 끝난 뒤에만(결과 선노출 방지). best-effort.
-  if (out.revealed > 0) {
-    try {
-      await grantConquestSoloTitles(serverId, battleDay);
-    } catch (e) {
-      console.warn('[conquest.reveal] 단신 활약 칭호 지급 실패', e);
-    }
-  }
 
   return out;
 }

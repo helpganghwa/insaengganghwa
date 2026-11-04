@@ -52,11 +52,19 @@ try {
   const days = await sql<{ server_id: number; d: string }[]>`
     select distinct server_id::int, battle_kst_day::text as d from conquest_battles
      where published_at is not null order by 1, 2`;
+  // 점령전도 강화와 같은 기준 — 탈퇴하지 않았고, 그 전투일이 지금 캐릭터 생성일 이후인 사람만.
+  const chars = new Map(
+    (await sql<{ k: string; d: string }[]>`
+      select c.user_id::text || '|' || c.server_id as k, (c.created_at at time zone 'Asia/Seoul')::date::text as d
+        from characters c join profiles p on p.id = c.user_id and p.withdrawn_at is null`).map((r) => [r.k, r.d] as const),
+  );
   const cq: Row[] = [];
   const seen = new Set<string>();
   for (const { server_id, d } of days) {
     const s = await aggregateConquestDay(d, server_id);
     for (const f of s.soloFeats) {
+      const born = chars.get(`${f.userId}|${server_id}`);
+      if (!born || d < born) continue;
       const code = soloFeatTitle(f.kind);
       const k = `${f.userId}|${server_id}|${code}`;
       if (!seen.has(k)) cq.push({ user_id: f.userId, server_id, code });
@@ -86,7 +94,10 @@ try {
     });
     console.log(`적용 ${todo.length}건`);
   }
+} catch (e) {
+  console.error('[backfill-titles-u17] 실패', e);
+  process.exitCode = 1;
 } finally {
   await sql.end();
-  process.exit(0);
+  process.exit(process.exitCode ?? 0);
 }

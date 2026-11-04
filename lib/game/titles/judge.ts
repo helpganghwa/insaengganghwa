@@ -739,15 +739,20 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         console.warn('[titles] 월드보스 조회 실패 — 월드보스 칭호 0으로 판정', (e as Error).message);
         return [];
       }),
-    // 점령전 연대기(2026-11-04, 숨김 3종) — 본문·제목에 내 이름 마커({u|닉|public_code})가 오른 편 수. 마커는 닉네임이 바뀌어도
+    // 점령전 연대기(2026-11-04, 숨김 3종) — 본문·제목에 내 이름 마커({u|닉|public_code})가 오른 **편 수**(한 편에 여러 번 나와도 1). 마커는 닉네임이 바뀌어도
     // 그대로인 public_code로 찾는다. 23시에 미리 쓰는 그날 연대기는 자정 공개 전이라 **어제까지(kst_day < 오늘)** 만 센다(결과 선노출 방지).
     () => db.execute(sql`
       select count(*) filter (where position('|' || p.public_code || '}' in wc.today_text) > 0)::int as chron_n,
              count(*) filter (where position('|' || p.public_code || '}' in wc.headline) > 0)::int as chron_head
         from profiles p
+        join characters c on c.user_id = p.id and c.server_id=${s}
         join world_chronicle wc on wc.server_id=${s} and wc.kst_day < (now() ${sql.raw(KST)})::date
+         and wc.kst_day >= (c.created_at ${sql.raw(KST)})::date -- 재가입 캐릭터는 옛 계정 시절 연대기를 세지 않는다(public_code는 탈퇴 뒤에도 남음)
        where p.id=${u}
-    `),
+    `).catch((e: unknown) => {
+      console.warn('[titles] 연대기 조회 실패 — 연대기 칭호 0으로 판정', (e as Error).message);
+      return [];
+    }),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.

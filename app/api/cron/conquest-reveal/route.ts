@@ -17,6 +17,7 @@ import { syncHistoryEras } from '@/lib/game/history/loaders';
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString, msUntilNextKstMidnight } from '@/lib/kst';
+import { grantConquestSoloTitles } from '@/lib/game/titles/event-grants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,12 @@ export async function GET(req: Request) {
   //  - 아무도 공개하지 못한 경우도 있다: 같은 정각에 도는 conquest-chronicle(00:00 틱)이 먼저
   //    플립을 가져가면 두 틱 모두 revealed=0이다. 그때 요약이 통째로 빠지지 않도록 **앞 틱(57분)**
   //    이 맡는다. 뒤 틱이 플립을 이긴 드문 경우에만 두 번 불린다(결과는 같고 마지막 저장이 남는다).
+  // 단신 활약 칭호(2026-11-04, 숨김 — 혈혈단신·최후의 보루) — 모든 서버의 공개·방치 판정·세율이 끝난 **뒤에** 준다(집계가
+  // 무거워 정각 공개를 밀지 않게). 직접 공개한 서버만. 실패하면 다음 틱에서 다시 돌지 않으니 로그를 보고 scripts/backfill-titles-u17.ts로 메운다.
+  for (const r of results) {
+    if (r.error || !r.revealed) continue;
+    await grantConquestSoloTitles(r.serverId, battleDay).catch((e: unknown) => console.warn('[conquest-reveal] 단신 활약 칭호', r.serverId, e));
+  }
   const isPrimaryTick = new Date(firedAt).getUTCMinutes() === 57;
   for (const r of results) {
     if (r.error) continue;

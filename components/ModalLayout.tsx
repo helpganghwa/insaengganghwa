@@ -171,8 +171,11 @@ export function ModalConfirmButton({
   disabled,
   children,
   armedVerb = '구매',
+  tone = 'primary',
 }: {
   grow?: number;
+  /** 색 — 기본 결제(주황). 되돌릴 수 없는 취소류는 danger(빨강, 2026-11-04 파견 취소). */
+  tone?: 'primary' | 'danger';
   onConfirm: () => void;
   onArm?: () => void | boolean;
   disabled?: boolean;
@@ -186,9 +189,9 @@ export function ModalConfirmButton({
         onConfirm={onConfirm}
         onArm={onArm}
         disabled={disabled}
-        className="w-full rounded-xl bg-amber-600 py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50"
-        armedClassName="w-full rounded-xl bg-amber-700 py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50"
-        pulseClassName="bg-amber-500"
+        className={`w-full rounded-xl ${tone === 'danger' ? 'bg-red-600' : 'bg-amber-600'} py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50`}
+        armedClassName={`w-full rounded-xl ${tone === 'danger' ? 'bg-red-700' : 'bg-amber-700'} py-2.5 text-[13px] font-bold text-white transition active:opacity-90 disabled:opacity-50`}
+        pulseClassName={tone === 'danger' ? 'bg-red-500' : 'bg-amber-500'}
       >
         {(armed, left) => (armed ? `한 번 더 누르면 ${armedVerb} · ${left}` : children)}
       </ConfirmButton>

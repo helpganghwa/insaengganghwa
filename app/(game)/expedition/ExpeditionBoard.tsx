@@ -6,7 +6,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { clockOffsetMs, serverNow } from '@/lib/client/server-clock';
-import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { ModalLayout, ModalButton, ModalConfirmButton } from '@/components/ModalLayout';
 import { Ticker } from '@/components/Ticker';
 import { BackTitle } from '@/components/BackNav';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
@@ -130,7 +130,8 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
     if (next === undefined) return;
     const t = setTimeout(() => setSortNow(serverNow()), Math.min(next - now + 50, 2_147_000_000));
     return () => clearTimeout(t);
-  }, [board.slots]);
+    // sortNow도 의존 — 귀환 한 번으로 타이머가 끝난 뒤 다음 귀환 시각의 타이머를 다시 건다(11-04 검수: 첫 귀환만 재정렬되던 것).
+  }, [board.slots, sortNow]);
   const orderedSlots = sortSlots(board.slots, sortNow);
   const [, startTransition] = useTransition();
   const { optimisticAdjust } = useDiamondActions();
@@ -167,13 +168,19 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
       undo?: () => void,
     ) => {
       setPendingSlot(slot);
-      setBoard(optimistic);
+      // 낙관 직전 보드 — 실패 시 먼저 되돌린다(재조회까지 실패하면 낙관 표시가 그대로 남던 것, 11-04 검수).
+      let prev: ExpeditionBoard | null = null;
+      setBoard((cur) => {
+        prev = cur;
+        return optimistic(cur);
+      });
       startTransition(async () => {
         // 거부(reject)도 흡수 — 안 그러면 아래 롤백이 통째로 건너뛰어져 낙관 표시가 틀린 채 남는다(2026-09-12).
         const r: Awaited<ReturnType<typeof act>> = await act().catch(() => ({ ok: false, code: 'NETWORK' }));
         if (r.ok && r.board) setBoard(r.board);
         else {
           undo?.();
+          if (prev) setBoard(prev);
           if (!r.ok && r.code) showError(r.code);
           // ⚠ 재조회도 흡수한다 — 이 분기가 겨냥한 상황(전송 실패)에서는 재조회도 같이 거부되고,
           // 그러면 아래 setPendingSlot(null)이 건너뛰어져 **슬롯이 잠긴 채 남는다**(7차 검수).
@@ -638,9 +645,10 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                       <ModalButton tone="ghost" onClick={() => setCancelSlot(null)}>
                         닫기
                       </ModalButton>
-                      <ModalButton tone="danger" disabled={done || pendingSlot === cancelFor.slot} onClick={() => doCancel(cancelFor)}>
+                      {/* 3초 재확인(11-04 사용자) — 첫 탭 무장, 3초 안에 다시 탭하면 취소. */}
+                      <ModalConfirmButton tone="danger" grow={1} armedVerb="취소" disabled={done || pendingSlot === cancelFor.slot} onConfirm={() => doCancel(cancelFor)}>
                         파견 취소
-                      </ModalButton>
+                      </ModalConfirmButton>
                     </>
                   }
                 >
@@ -657,11 +665,11 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                     hideHeader
                   />
                   <div className="mt-2.5 space-y-1.5 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-[12px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-                    <p>취소하면 아바타가 바로 돌아오고, 이 칸은 보내기 전 상태로 돌아가요.</p>
+                    <p>취소하면 아바타가 바로 돌아오고, 슬롯은 보내기 전 상태로 돌아가요.</p>
                     {/* 어제 보낸 파견은 offer로 돌아가면 자정 규칙대로 파견지가 새로 정해진다(서버 ensureOffers). */}
                     {cancelFor.startedToday ? (
                       <p>
-                        파견지와 기본 보상은 그대로예요. 다시 보내면 <b className="text-zinc-900 dark:text-zinc-50">{cancelFor.hours ?? EXPEDITION_HOURS}시간부터 새로</b> 시작해요.
+                        취소해도 파견지와 보상은 변하지 않아요. 다시 보내면 <b className="text-zinc-900 dark:text-zinc-50">{cancelFor.hours ?? EXPEDITION_HOURS}시간부터 새로</b> 시작해요.
                       </p>
                     ) : (
                       <p>어제 보낸 파견이라 취소하면 이 칸의 파견지가 새로 정해져요.</p>

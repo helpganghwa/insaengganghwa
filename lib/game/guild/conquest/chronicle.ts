@@ -43,6 +43,10 @@ const GEN_DEADLINE_MS = 225_000;
 const GEN_MIN_ATTEMPT_MS = 45_000;
 
 /** 그날 점령전 요약 — AI 입력용 구조화 신호(점령/방어/최초점령/영토순위/개인 활약). */
+/** 단신 활약 칭호 기준(2026-11-04) — 혈혈단신: 혼자 들어가 뚫은 수비 수 · 최후의 보루: 혼자 막아 낸 공격 수. */
+export const SOLO_TAKE_MIN_DEFENDERS = 5;
+export const SOLO_HOLD_MIN_ATTACKERS = 9;
+
 export type ConquestDaySummary = {
   kstDay: string;
   battleCount: number;
@@ -93,7 +97,7 @@ export type ConquestDaySummary = {
   /**
    * 단신 활약(2026-11-04, 숨김 칭호 혈혈단신·최후의 보루) — 길드에서 **혼자** 들어가 수비 5명 이상을 뚫고 점령(take),
    * 길드에서 혼자 수비해 공격 9명 이상을 막아 냄(hold). 인원은 열세 판정과 같은 로스터 기준(집행관 자동 방어 포함).
-   * 자르지 않은 전체 목록이고 연대기 사실표에는 쓰지 않는다 — 칭호 지급(conquest/solo-titles.ts) 전용.
+   * 자르지 않은 전체 목록이고 연대기 사실표에는 쓰지 않는다 — 칭호 지급(titles/event-grants.ts) 전용.
    */
   soloFeats: { userId: string; kind: 'take' | 'hold'; zone: string }[];
   /**
@@ -197,10 +201,6 @@ const regionKo = (r: string): string => REGION_META[r as Region]?.label ?? r;
 const REGION_KO_VALUES = Object.values(REGION_META).map((m) => m.label);
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
-/** 단신 활약 칭호 기준(2026-11-04) — 혈혈단신: 혼자 들어가 뚫은 수비 수 · 최후의 보루: 혼자 막아 낸 공격 수. */
-export const SOLO_TAKE_MIN_DEFENDERS = 5;
-export const SOLO_HOLD_MIN_ATTACKERS = 9;
-
 export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
   const wn = await winnerNameFragments();
   const battles = (await db.execute(sql`
