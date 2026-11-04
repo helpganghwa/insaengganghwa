@@ -646,7 +646,7 @@ export function ExpeditionBoardView({ initial }: { initial: ExpeditionBoard }) {
                         닫기
                       </ModalButton>
                       {/* 3초 재확인(11-04 사용자) — 첫 탭 무장, 3초 안에 다시 탭하면 취소. */}
-                      <ModalConfirmButton tone="danger" grow={1} armedVerb="취소" disabled={done || pendingSlot === cancelFor.slot} onConfirm={() => doCancel(cancelFor)}>
+                      <ModalConfirmButton tone="danger" grow={2} armedVerb="취소" disabled={done || pendingSlot === cancelFor.slot} onConfirm={() => doCancel(cancelFor)}>
                         파견 취소
                       </ModalConfirmButton>
                     </>

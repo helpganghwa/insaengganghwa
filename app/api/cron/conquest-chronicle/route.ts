@@ -18,7 +18,7 @@ import { revealConquest, carryOverDefenders, markAbandonedZones } from '@/lib/ga
 import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
-import { grantConquestSoloTitles } from '@/lib/game/titles/event-grants';
+import { grantConquestSoloTitles } from '@/lib/game/titles/conquest-grants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

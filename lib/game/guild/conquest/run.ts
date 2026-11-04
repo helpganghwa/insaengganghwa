@@ -481,6 +481,5 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     }
   }
 
-
   return out;
 }

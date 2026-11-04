@@ -39,6 +39,6 @@ export const EVENT_HOOK_CODES = new Set<string>([
   // 할로윈(2026-10) — 순위 칭호는 정산(lib/game/halloween/contest.ts settleContest), 사탕 칭호는 도달 보상 수령(candy.ts claimCandyStep)이 지급.
   'halloween26_rank1', 'halloween26_rank2', 'halloween26_rank3', 'halloween26_candy1', 'halloween26_candy3',
   // 소규모 업데이트 17(2026-11-04, 숨김) — 강화 순간 3종은 강화 수령(enhance/resolve.ts applyEnhancePostEffects),
-  // 점령전 단신 2종은 결과 공개(guild/conquest/run.ts revealConquest)가 지급(titles/event-grants.ts). 연대기 3종은 judge 판정.
+  // 점령전 단신 2종은 결과 공개 뒤 공개 크론(conquest-reveal·conquest-chronicle)이 지급(titles/conquest-grants.ts). 연대기 3종은 judge 판정.
   'enh_needle', 'enh_404', 'enh_midnight', 'cq_solo_take', 'cq_solo_hold',
 ]);
