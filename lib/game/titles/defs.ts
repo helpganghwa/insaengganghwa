@@ -23,6 +23,8 @@ export type TitleStyle = {
   prefix?: { text: string; color: string };
   /** 부분 적용 — 이 조각들에만 fx, 나머지 글자는 plainColor 단색(길드 1위 불꽃: '의' 제외). */
   fxOnly?: string[];
+  /** 조각별 fx(fxOnly와 같은 순서) — 단어마다 다른 색(역사의 주인공). 없으면 모든 조각이 style.fx. */
+  fxOnlyFx?: string[];
   plainColor?: string;
   /** 두 겹 라벨 — 빛(달)이 지나는 자리만 이 글자(한자)로 바뀐다(한가위 달 칭호). */
   alt?: string;
@@ -6550,6 +6552,100 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "abyssglow",
    glow: true
+  }
+ },
+ {
+  code: "chron_10",
+  kind: "permanent",
+  label: "낯익은 이름",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   color: "#d8c39b"
+  }
+ },
+ {
+  code: "chron_head",
+  kind: "permanent",
+  label: "헤드라인",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   fx: "neonember",
+   glow: true
+  }
+ },
+ {
+  code: "chron_20",
+  kind: "permanent",
+  label: "역사의 주인공",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   fx: "chronheroa",
+   fxOnly: [
+    "역사",
+    "주인공"
+   ],
+   fxOnlyFx: [
+    "chronheroa",
+    "chronherob"
+   ],
+   plainColor: "#b8bcc6",
+   glow: true
+  }
+ },
+ {
+  code: "cq_solo_take",
+  kind: "permanent",
+  label: "혈혈단신",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   fx: "redsweep",
+   glow: true
+  }
+ },
+ {
+  code: "cq_solo_hold",
+  kind: "permanent",
+  label: "최후의 보루",
+  hidden: true,
+  cat: "점령전",
+  style: {
+   fx: "bastioncrack",
+   glow: true
+  }
+ },
+ {
+  code: "enh_needle",
+  kind: "permanent",
+  label: "바늘구멍",
+  hidden: true,
+  cat: "강화",
+  style: {
+   color: "#f4f4f6"
+  }
+ },
+ {
+  code: "enh_404",
+  kind: "permanent",
+  label: "찾을 수 없음",
+  hidden: true,
+  cat: "강화",
+  style: {
+   fx: "glitch404",
+   glow: true
+  }
+ },
+ {
+  code: "enh_midnight",
+  kind: "permanent",
+  label: "신데렐라",
+  hidden: true,
+  cat: "강화",
+  style: {
+   fx: "glassflow"
   }
  }
 ] as const;

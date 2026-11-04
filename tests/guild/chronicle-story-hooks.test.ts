@@ -25,6 +25,7 @@ const day: ConquestDaySummary = {
   feats: [],
   underdogDefenses: [{ zone: '모닥불 평원', region: '오크 부락', owner: 'Winners', defenders: 1, attackers: [{ guild: '로제', n: 6 }], attackerTotal: 6 }],
   underdogCaptures: [{ zone: '얼음 여울', region: '잊힌 신전', winner: '로제', from: '레지스탕스', attackers: 1, defenders: 2 }],
+  soloFeats: [],
   crowds: [{ zone: '감시 망루', region: '오크 부락', owner: 'Winners', defenders: 1, attackers: [{ guild: '로제', n: 6 }], total: 7, held: false }],
 };
 

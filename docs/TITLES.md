@@ -249,3 +249,24 @@ type TitleDef = {
 - 기존 세트와 한 부위를 바꾼 조합: 흑룡의 대장간(용의 후예 세트의 방어구·장신구 + 담금망치), 혼불의 백작(명부의 사자 세트의 무기·장신구 + 백작 망토), 마녀의 귀빈(진짜 마녀 세트의 무기·방어구 + 실크햇). 장비 칭호 문법상 부위당 하나씩 최대 3개라 "6종 전부" 칭호는 없다.
 - 이펙트는 예시 페이지(지정 + 대안 2)에서 사용자가 확정(10-29): 박쥐 날개 대공 veilflow·흑룡의 대장간 blazecrimson·어린 백작 roseflow·모루 위의 전설 blaze·박쥐 군주 abyssglow로 변경, 나머지 5종은 지정대로.
 - 이름은 장비 로어와 기존 칭호의 결(…의 주인·…명인·…군주)에서. 8자 이내·기존 이름과 중복 없음은 `tests/titles/halloween26-items.test.ts`가 지킨다. 이펙트는 `special` 고정(기존 fx 재사용, 새 CSS 없음).
+
+## 숨김 칭호 8종 (2026-11-04, 소규모 업데이트 17)
+
+후보 검토지(아티팩트 FcUFEAE71LQrpE2tybBwgN)·이펙트 시안(WncNtCfXor2SUUVz2NK1ic)으로 확정. 장비 칭호 없이, 그 사람만의 장면으로 받는 칭호. **전부 숨김**(조건 비공개). 정의 614 → **622종**.
+
+| 코드 | 이름 | 조건 | 판정 | 연출 |
+|---|---|---|---|---|
+| `chron_10` | 낯익은 이름 | 점령전 연대기 본문에 이름 10번 | judge `chron_n` | 세피아 단색 `#d8c39b` |
+| `chron_head` | 헤드라인 | 연대기 제목에 이름 | judge `chron_head` | `neonember` 주황 네온(후광 약하게, 7초에 한 번 지직) |
+| `chron_20` | 역사의 주인공 | 연대기 본문에 이름 20번 | judge `chron_n` | 대륙의 주인식 불꽃을 단어마다: 역사=`chronheroa`(진홍)·주인공=`chronherob`(금), '의' 회백, 묶음 전체 명조(`fxw-chronheroa`) — `fxOnlyFx`(조각별 fx) 도입 |
+| `cq_solo_take` | 혈혈단신 | 길드에서 혼자 공격해 수비 5명 이상을 뚫고 점령 | 결과 공개 훅 | `redsweep` 진홍 + 흰 빛 한 줄 |
+| `cq_solo_hold` | 최후의 보루 | 길드에서 혼자 수비해 공격 9명 이상을 막아 냄 | 결과 공개 훅 | `bastioncrack` 돌 각인 + 틈 사이 불빛(data-t) |
+| `enh_needle` | 바늘구멍 | 성공률 0.5% 이하인 강화에서 성공·대성공 | 강화 수령 훅 | 하얀 단색 `#f4f4f6` |
+| `enh_404` | 찾을 수 없음 | 강화 단계가 정확히 +404가 됨(오르든 내리든) | 강화 수령 훅 | `glitch404` 글리치(data-t) |
+| `enh_midnight` | 신데렐라 | KST 자정 정각 1초 안(00:00:00.000~.999)에 강화 결과 수령 | 강화 수령 훅 | `glassflow` 유리빛 흐름(후광 없음) |
+
+- 연대기: `{u|닉|public_code}` 마커를 `public_code`로 센다(닉네임 변경 무관). 23시에 미리 쓰는 그날 연대기는 자정 공개 전이라 **kst_day < 오늘**만 센다. 지난 연대기까지 세므로 소급 불필요(칭호 화면 진입 시 판정).
+- 점령전: `aggregateConquestDay().soloFeats`(열세 판정과 같은 로스터, 집행관 자동 방어 포함, 자르지 않은 전체). `revealConquest`가 공개를 마친 뒤 `grantConquestSoloTitles`로 지급 — 결과 선노출 방지. 기준 상수 `SOLO_TAKE_MIN_DEFENDERS=5`·`SOLO_HOLD_MIN_ATTACKERS=9`(chronicle.ts).
+- 강화: `applyEnhancePostEffects` → `grantEnhanceMomentTitles`(규칙은 순수 모듈 `titles/moment-rules.ts`). 시각은 판정 시각(resolvedAt).
+- 소급: `scripts/backfill-titles-u17.ts --db=prod [--confirm]`(강화 3종·점령전 2종, 지금 캐릭터 생성 이후 기록만). 11-04 prod 드라이런 52건(바늘구멍 21·신데렐라 17·찾을 수 없음 1·혈혈단신 7·최후의 보루 6). 연대기 3종 예상: 10회 8명·20회 1명·제목 6명.
+- 뺀 후보: 한 끗 차이(+X99 하락 10회 — 기존 9의 저주 조건의 부분집합), 1차 13종(고강화·전투력·합산·길드 업적) 전부, 2차 리젝 5종(총동원령·기승전결·널뛰기·파견 취소·아바타 반환).

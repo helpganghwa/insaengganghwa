@@ -251,10 +251,11 @@ export function TitleTag({
   const label = def.label;
   const inner = def.style.fx && def.style.fxOnly?.length ? (
     // 부분 적용(2026-09-03 길드 1위 불꽃) — fxOnly 조각만 fx, 나머지('의' 등)는 plainColor 단색.
-    <span>
-      {splitByFxOnly(label, def.style.fxOnly).map((seg, i) =>
+    // fxOnlyFx — 조각마다 다른 fx(2026-11-04 역사의 주인공: 역사=진홍 불꽃·주인공=금 불꽃). 바깥 fxw-<fx>는 묶음 전체 서체용.
+    <span className={`fxw-${def.style.fx}`}>
+      {splitByFxOnly(label, def.style.fxOnly).map((seg, i, all) =>
         seg.fx ? (
-          <span key={i} className={`fx fx-${def.style.fx}`}>{seg.text}</span>
+          <span key={i} className={`fx fx-${def.style.fxOnlyFx?.[all.slice(0, i).filter((x) => x.fx).length] ?? def.style.fx}`}>{seg.text}</span>
         ) : (
           <span key={i} style={{ color: def.style.plainColor ?? '#b8bcc6' }}>{seg.text.replace(/ /g, '\u00a0')}</span>
         ),

@@ -6080,6 +6080,54 @@ export const TITLE_SECRETS: TitleSecret[] = [
    ],
    min: 300
   }
+ },
+ {
+  code: "chron_10",
+  cat: "점령전",
+  cond: "점령전 연대기 본문에 이름이 10번 오름",
+  diff: "어려움"
+ },
+ {
+  code: "chron_head",
+  cat: "점령전",
+  cond: "점령전 연대기 제목에 이름이 오름",
+  diff: "어려움"
+ },
+ {
+  code: "chron_20",
+  cat: "점령전",
+  cond: "점령전 연대기 본문에 이름이 20번 오름",
+  diff: "어려움"
+ },
+ {
+  code: "cq_solo_take",
+  cat: "점령전",
+  cond: "점령전에서 길드에서 혼자 공격해 수비 5명 이상을 뚫고 점령",
+  diff: "어려움"
+ },
+ {
+  code: "cq_solo_hold",
+  cat: "점령전",
+  cond: "점령전에서 길드에서 혼자 수비해 공격 9명 이상을 막아 냄",
+  diff: "어려움"
+ },
+ {
+  code: "enh_needle",
+  cat: "강화",
+  cond: "성공률 0.5% 이하인 강화에서 성공",
+  diff: "어려움"
+ },
+ {
+  code: "enh_404",
+  cat: "강화",
+  cond: "강화 단계가 정확히 +404가 됨",
+  diff: "어려움"
+ },
+ {
+  code: "enh_midnight",
+  cat: "강화",
+  cond: "자정 정각(00:00:00, 1초 안)에 강화 결과 수령",
+  diff: "중간"
  }
 ] as const;
 

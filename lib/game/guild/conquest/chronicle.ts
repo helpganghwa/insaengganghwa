@@ -91,6 +91,12 @@ export type ConquestDaySummary = {
    */
   underdogCaptures: { zone: string; region: string; winner: string; from: string | null; attackers: number; defenders: number }[];
   /**
+   * 단신 활약(2026-11-04, 숨김 칭호 혈혈단신·최후의 보루) — 길드에서 **혼자** 들어가 수비 5명 이상을 뚫고 점령(take),
+   * 길드에서 혼자 수비해 공격 9명 이상을 막아 냄(hold). 인원은 열세 판정과 같은 로스터 기준(집행관 자동 방어 포함).
+   * 자르지 않은 전체 목록이고 연대기 사실표에는 쓰지 않는다 — 칭호 지급(conquest/solo-titles.ts) 전용.
+   */
+  soloFeats: { userId: string; kind: 'take' | 'hold'; zone: string }[];
+  /**
    * 사람이 몰린 전투(2026-09-10) — finale 로스터 CROWD_MIN명 이상인 구역 중 **가장 많이 몰린 한 곳만**(사용자 확정:
    * 여러 곳이면 최고 인원 한 곳만 언급). 그날 큰 싸움의 규모를 서술할 재료다.
    * 셋이 일곱을 막아낸 날의 그 숫자를 연대기가 볼 수 없어 추가했다(09-09 그을린 고목).
@@ -191,6 +197,10 @@ const regionKo = (r: string): string => REGION_META[r as Region]?.label ?? r;
 const REGION_KO_VALUES = Object.values(REGION_META).map((m) => m.label);
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
+/** 단신 활약 칭호 기준(2026-11-04) — 혈혈단신: 혼자 들어가 뚫은 수비 수 · 최후의 보루: 혼자 막아 낸 공격 수. */
+export const SOLO_TAKE_MIN_DEFENDERS = 5;
+export const SOLO_HOLD_MIN_ATTACKERS = 9;
+
 export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
   const wn = await winnerNameFragments();
   const battles = (await db.execute(sql`
@@ -310,6 +320,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const crowds: ConquestDaySummary['crowds'] = [];
   const underdogDefenses: ConquestDaySummary['underdogDefenses'] = [];
   const underdogCaptures: ConquestDaySummary['underdogCaptures'] = [];
+  const soloFeats: ConquestDaySummary['soloFeats'] = [];
   /**
    * 극적 활약 판정 재료(2026-09-13) — 사람별로 그날 전투를 훑어 모은다.
    *  solo  = 자기 **길드가 혼자**인데 상대를 전원 쓰러뜨리고 본인 생존(단독 전멸)
@@ -404,6 +415,15 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         if (won > 0 && won < defenders) {
           underdogCaptures.push({ zone: b.zone, region, winner: b.winner, from: owner, attackers: won, defenders });
         }
+      }
+      // 단신 활약 — 칭호 기준(혈혈단신 수비 5명 이상 · 최후의 보루 공격 9명 이상). 그 길드의 로스터가 딱 한 사람일 때만.
+      if (isCapture && b.winner && defenders >= SOLO_TAKE_MIN_DEFENDERS) {
+        const mine = roster.filter((r) => r.guildName === b.winner);
+        if (mine.length === 1) soloFeats.push({ userId: mine[0]!.userId, kind: 'take', zone: b.zone });
+      }
+      if (!isCapture && owner && defenders === 1 && attackerTotal >= SOLO_HOLD_MIN_ATTACKERS) {
+        const me = roster.find((r) => r.guildName === owner);
+        if (me) soloFeats.push({ userId: me.userId, kind: 'hold', zone: b.zone });
       }
     }
     if (roster.length >= CROWD_MIN) {
@@ -691,6 +711,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
           a.zone.localeCompare(b.zone, 'ko'),
       )
       .slice(0, 2),
+    soloFeats,
   };
 }
 

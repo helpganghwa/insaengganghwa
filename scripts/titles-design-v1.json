@@ -681,6 +681,39 @@
     },
     "peak300_hw_cape": {
       "fx": "abyssglow"
+    },
+    "chron_10": {
+      "color": "#d8c39b"
+    },
+    "chron_head": {
+      "fx": "neonember"
+    },
+    "chron_20": {
+      "fx": "chronheroa",
+      "fxOnly": [
+        "역사",
+        "주인공"
+      ],
+      "fxOnlyFx": [
+        "chronheroa",
+        "chronherob"
+      ],
+      "plainColor": "#b8bcc6"
+    },
+    "cq_solo_take": {
+      "fx": "redsweep"
+    },
+    "cq_solo_hold": {
+      "fx": "bastioncrack"
+    },
+    "enh_needle": {
+      "color": "#f4f4f6"
+    },
+    "enh_404": {
+      "fx": "glitch404"
+    },
+    "enh_midnight": {
+      "fx": "glassflow"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

@@ -279,6 +279,8 @@ async function verifyHeavyConditional(code: string, userId: string, serverId: nu
 
 /** OG(정적 렌더)용 — 이펙트 클래스 대신 대표색 1개로 강등. */
 const FX_OG: Record<string, string> = {
+  // 소규모 업데이트 17 숨김 칭호(2026-11-04)
+  neonember: '#ffb066', chronheroa: '#e0453a', chronherob: '#f0b830', redsweep: '#d9574a', bastioncrack: '#cfc7ba', glitch404: '#a3a9b2', glassflow: '#bfe3ff',
   goldflow: '#e5c07b', goldglow: '#e5c07b', goldleaf: '#e0b860', goldsoft: '#e5c07b', imperial: '#e5c07b',
   emberflow: '#ff9d4d', crimsonflow: '#e05252', violetflow: '#b98ef0', violetglow: '#c9a2f0',
   steelshine: '#c8ccd8', chrome: '#c8d2dc', emboss: '#d4dae4', silverglow: '#c8ccd8',

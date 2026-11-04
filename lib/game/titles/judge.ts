@@ -170,7 +170,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx] = await runLimited([
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx, chron] = await runLimited([
     // 강화 횟수·시간대 — 누적 표(0219). 정의는 enhance_stats_next.
     () => db.execute(enhCountsSql(u, s)),
     // 같은 결과 최장 연속 — 누적 표(0219).
@@ -739,6 +739,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
         console.warn('[titles] 월드보스 조회 실패 — 월드보스 칭호 0으로 판정', (e as Error).message);
         return [];
       }),
+    // 점령전 연대기(2026-11-04, 숨김 3종) — 본문·제목에 내 이름 마커({u|닉|public_code})가 오른 편 수. 마커는 닉네임이 바뀌어도
+    // 그대로인 public_code로 찾는다. 23시에 미리 쓰는 그날 연대기는 자정 공개 전이라 **어제까지(kst_day < 오늘)** 만 센다(결과 선노출 방지).
+    () => db.execute(sql`
+      select count(*) filter (where position('|' || p.public_code || '}' in wc.today_text) > 0)::int as chron_n,
+             count(*) filter (where position('|' || p.public_code || '}' in wc.headline) > 0)::int as chron_head
+        from profiles p
+        join world_chronicle wc on wc.server_id=${s} and wc.kst_day < (now() ${sql.raw(KST)})::date
+       where p.id=${u}
+    `),
   ], 5);
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
@@ -750,7 +759,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
     e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped), tw = g(tower),
-    lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx);
+    lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx), ch = g(chron);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999 };
   let combatValue = 0;
@@ -790,6 +799,8 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     // 월드보스(2026-10-11)
     wb_departs: n(wb.wb_departs), wb_leads: n(wb.wb_leads), wb_reveals: n(wb.wb_reveals), wb_lucky: n(wb.wb_lucky),
     wb_alliance: n(wb.wb_alliance), wb_last: n(wb.wb_last), wb_shield: n(wb.wb_shield), wb_merc: n(wb.wb_merc), wb_kind_ember: n(wb.wb_kind_ember),
+    // 점령전 연대기(2026-11-04)
+    chron_n: n(ch.chron_n), chron_head: n(ch.chron_head),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
@@ -831,6 +842,10 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
 
 /** 지표 기반 규칙 — code → 술어. PENDING·아이템 발동·집행관은 여기 없음. */
 const RULES: Record<string, (m: Metrics) => boolean> = {
+  // 소규모 업데이트 17(2026-11-04, 숨김) — 연대기 3종. 강화 3종·점령전 2종은 이벤트 훅(pending.ts EVENT_HOOK_CODES).
+  chron_10: (m) => m.chron_n >= 10,
+  chron_20: (m) => m.chron_n >= 20,
+  chron_head: (m) => m.chron_head >= 1,
   // 2026-09-08 추가(칭호 개편 2차 검토 결과 — 지표형 5종)
   star_sea: (m) => m.t_total >= 10_000,
   binge_500: (m) => m.supply_day >= 500,

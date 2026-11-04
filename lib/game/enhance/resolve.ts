@@ -10,6 +10,7 @@ import {
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { accrueSongpyeon } from '@/lib/game/chuseok/songpyeon';
 import { accrueCandy } from '@/lib/game/halloween/candy';
+import { grantEnhanceMomentTitles } from '@/lib/game/titles/event-grants';
 import { recordError } from '@/lib/ops/record-error';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
@@ -230,6 +231,13 @@ export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
     } catch {
       // cron 백스톱.
     }
+  }
+
+  // 순간 칭호(2026-11-04, 숨김) — 0.5% 이하 성공 · 정확히 +404 · 자정 정각 1초 안 수령. 시각은 판정 시각(resolvedAt).
+  try {
+    await grantEnhanceMomentTitles({ userId, serverId, outcome, fromLevel, toLevel, effectiveRateBp: r.effectiveRateBp, resolvedAt: postAt });
+  } catch (e) {
+    console.warn('[enhance.resolve] 순간 칭호 지급 실패', e);
   }
 
   // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.

@@ -454,3 +454,30 @@
 .ttag .fx-hwwitch .w2{--wg:linear-gradient(180deg,#e6cfff 0%,#a35cff 45%,#7426ec 100%);animation-delay:.5s}
 .ttag .fx-hwwitch .ui{color:#b8bcc6}
 @keyframes hwWiSheen{0%,20%{background-position:100% 0,0 0}50%,100%{background-position:0% 0,0 0}}
+
+/* ===== 소규모 업데이트 17 숨김 칭호 8종(2026-11-04, 시안 아티팩트 WncNtCfXor2SUUVz2NK1ic) =====
+   낯익은 이름(세피아 단색)·바늘구멍(하얀 단색)은 special color만이라 여기 없다. */
+/* 헤드라인 — 따뜻한 주황 네온관, 후광은 약하게, 7초에 한 번 지직. */
+.ttag .fx-neonember{color:#ffe2bf;text-shadow:0 0 1px #fff4e2,0 0 2px rgba(255,154,60,.85),0 0 4px rgba(255,120,40,.4);animation:t17neon 7s steps(1,end) infinite}
+@keyframes t17neon{0%,93%,100%{opacity:1}94%{opacity:.35}95%{opacity:1}96.5%{opacity:.5}97.5%{opacity:1}}
+/* 역사의 주인공 — '대륙의 주인'과 같은 불꽃 구조를 단어마다 다른 색으로(역사=진홍, 주인공=금), 묶음 전체 명조. '의'는 plainColor 회백. */
+.ttag .fxw-chronheroa{font-family:var(--font-serif-kr),"Apple Myungjo","Nanum Myeongjo",serif;font-weight:700}
+.ttag .fx-chronheroa,.ttag .fx-chronherob{background-size:100% 220%;background-position:0 100%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700;animation:blazey 1.15s ease-in-out infinite alternate,flick2 1.7s ease-in-out infinite}
+.ttag .fx-chronheroa{background-image:linear-gradient(0deg,#3a0612 0%,#8a1a2a 22%,#d0453a 46%,#f4b04c 66%,#fde4a0 82%,#fffbe8 100%)}
+.ttag .fx-chronherob{background-image:linear-gradient(0deg,#4a2c04 0%,#a8731a 22%,#f0b830 46%,#ffd970 66%,#fff0c0 82%,#ffffff 100%)}
+/* 혈혈단신 — 진홍 위로 흰 빛 한 줄(4.5초). 쉬는 자리(150%)에서 빛줄기는 글자 밖 — 정적 모드에선 진홍만. */
+.ttag .fx-redsweep{background:linear-gradient(100deg,#d9574a 42%,#ffd7cf 50%,#d9574a 58%);background-size:250% 100%;background-position:150% 0;-webkit-background-clip:text;background-clip:text;color:transparent;animation:t17sweep 4.5s linear infinite}
+@keyframes t17sweep{0%,55%{background-position:150% 0}85%,100%{background-position:-50% 0}}
+/* 최후의 보루 — 돌에 새긴 글자, 5초마다 틈 사이로 불빛이 새어 나왔다 잦아듦(data-t 복제 층 + 사선 마스크). */
+.ttag .fx-bastioncrack{position:relative;display:inline-block;white-space:nowrap;color:#cfc7ba;text-shadow:0 1px 0 rgba(255,255,255,.18),0 -1px 1px rgba(0,0,0,.95)}
+.ttag .fx-bastioncrack::after{content:attr(data-t);position:absolute;inset:0;white-space:nowrap;color:#ffb347;text-shadow:0 0 3px rgba(255,170,60,.8);-webkit-mask-image:repeating-linear-gradient(62deg,transparent 0 .3em,#000 .3em .38em);mask-image:repeating-linear-gradient(62deg,transparent 0 .3em,#000 .3em .38em);opacity:0;pointer-events:none;animation:t17crack 5s ease-in-out infinite}
+@keyframes t17crack{0%,48%,100%{opacity:0}64%{opacity:1}82%{opacity:.15}}
+/* 찾을 수 없음 — 회색 글자가 4초에 한 번 빨강·하늘색으로 어긋남(글리치). */
+.ttag .fx-glitch404{position:relative;display:inline-block;white-space:nowrap;color:#a3a9b2}
+.ttag .fx-glitch404::before,.ttag .fx-glitch404::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;opacity:0;pointer-events:none}
+.ttag .fx-glitch404::before{color:#ff5a6e;animation:t17glA 4s steps(1,end) infinite}
+.ttag .fx-glitch404::after{color:#5ae0ff;animation:t17glB 4s steps(1,end) infinite}
+@keyframes t17glA{0%,84%,100%{opacity:0;transform:none}85%{opacity:.8;transform:translate(-1.5px,0);clip-path:inset(0 0 55% 0)}88%{opacity:.8;transform:translate(1px,0);clip-path:inset(50% 0 0 0)}91%{opacity:0}}
+@keyframes t17glB{0%,84%,100%{opacity:0;transform:none}85%{opacity:.8;transform:translate(1.5px,0);clip-path:inset(45% 0 0 0)}88%{opacity:.8;transform:translate(-1px,0);clip-path:inset(0 0 60% 0)}91%{opacity:0}}
+/* 신데렐라 — 유리빛 흐름만(후광 없음). */
+.ttag .fx-glassflow{background:linear-gradient(90deg,#bfe3ff,#ffffff,#9fc6f0,#e6f4ff,#bfe3ff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
