@@ -32,7 +32,7 @@ const CRITERIA: Record<LeaderboardMetric, string> = {
   raid: '처치에 성공한 레이드에 참여한 횟수예요.',
   melee: '대난투 순위로 얻는 랭킹 포인트에요. 최근 성적일수록 크게 반영돼요.',
   tower: '무한의 탑에서 가장 높이 오른 층이에요. 같은 층이면 먼저 오른 사람이 앞서요.',
-  titles: '발견한 칭호의 개수예요. 칭호 화면을 열면 새로 얻은 칭호가 반영돼요.',
+  titles: '발견한 칭호의 개수예요.',
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
