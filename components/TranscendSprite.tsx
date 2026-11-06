@@ -588,18 +588,24 @@ function TranscendCanvas({
     };
 
     let lastDraw = 0;
+    let drawnOnce = false;
+    // 흐림이 걸리는 앱 셸 안의 캔버스인가(2026-11-06 업데이트 18). 팝업은 body 포털이라 셸 밖이다 — 팝업 안 캔버스
+    // (장비 상세·보급 결과·자랑·강화 슬롯 고르기·프리셋·교체 고르기)는 흐림 중에도 계속 돌아야 한다.
+    const inBlurredShell = () => !!canvas.closest('[data-app-shell]');
     const loop = (ts: number) => {
       if (stopped || !visible) return;
-      // 팝업 뒤 흐림 아래에서는 멈춘다(2026-11-06 업데이트 18) — 흐린 정지 화면이면 충분하고, 매 프레임 전체 블러 재계산을 막는다.
-      // 다시 도는 건 아래 subscribeRootBlur(닫힘)가 맡는다.
-      if (isRootBlurred()) {
+      // 팝업 뒤 흐림 아래(셸 안)에서는 멈춘다(2026-11-06 업데이트 18) — 흐린 정지 화면이면 충분하고, 매 프레임 전체 블러
+      // 재계산을 막는다. 단 한 장도 안 그린 캔버스는 빈 칸이 되지 않게 먼저 한 장 그린다. 다시 도는 건 아래
+      // subscribeRootBlur(닫힘)가 맡는다.
+      if (drawnOnce && isRootBlurred() && inBlurredShell()) {
         raf = 0;
         return;
       }
-      if (ts - lastDraw >= TRANSCEND_TUNING.fpsIntervalMs) {
+      if (!drawnOnce || ts - lastDraw >= TRANSCEND_TUNING.fpsIntervalMs) {
         lastDraw = ts;
         drawTs = ts;
         draw((ts / TRANSCEND_TUNING.animPeriodMs) % 1);
+        drawnOnce = true;
       }
       raf = requestAnimationFrame(loop);
     };
