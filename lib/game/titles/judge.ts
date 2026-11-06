@@ -1531,6 +1531,12 @@ async function activeConditionalsCached(userId: string, serverId: number): Promi
 
 /** /me 진입 판정 스로틀 — 서버당 1시간. 이보다 잦으면 프로필 허브가 지표 수집(수십 쿼리)을 매번 떠안는다. */
 const BADGE_JUDGE_INTERVAL_MS = 60 * 60_000;
+/**
+ * 선점 임대 시간(2026-11-06 업데이트 18) — 선점은 titles_judged_at을 "임대가 이만큼 뒤에 끝나는" 과거 시각으로 둔다.
+ * 판정이 끝나면 discoverTitles가 진짜 시각(now)으로 바꾸고, 2.5s 경주에서 잘려 끝을 못 보면 1분 뒤 다음 진입이 다시 시도한다
+ * (종전엔 다음 /me 진입이 곧바로 다시 시도했다 — 1시간 막히지 않게).
+ */
+const BADGE_JUDGE_LEASE_MS = 60_000;
 
 /**
  * 새 칭호 배지용 판정(2026-09-03, 0187) — 판정의 기본 시점은 칭호 페이지 진입이지만, 그러면 판정으로
@@ -1540,29 +1546,49 @@ const BADGE_JUDGE_INTERVAL_MS = 60 * 60_000;
  *
  * 스로틀 확인과 선점을 한 문장으로(2026-11-06 업데이트 18) — 종전엔 select로 시각만 보고 판정 **끝에** 갱신해서,
  * 판정(수십 쿼리, 최대 수 초)이 도는 동안 다른 인스턴스·탭의 /me 진입이 모두 같은 판정을 겹쳐 돌렸다. 이제
- * 1시간이 지났을 때만 titles_judged_at을 지금으로 바꾸는 UPDATE가 선점이 되어(행 잠금으로 직렬화) 한 번만 돈다.
- * 판정이 실패하면 선점을 되돌려 다음 진입이 다시 시도한다(종전처럼). 왕복 수는 같다(select 1 → update 1).
+ * 1시간이 지났을 때만 titles_judged_at을 임대 시각으로 바꾸는 UPDATE가 선점이 되어 한 번만 돈다.
+ *  - 잠금 대기 없음: 선점은 `for update skip locked` — 다른 쓰기가 캐릭터 행을 잡고 있어도 /me가 기다리지 않는다
+ *    (종전 select와 같음). 그때는 같은 문장의 잠금 없는 읽기로 종전처럼 판단해 선점 없이 판정한다.
+ *  - 임대: 선점 시각은 BADGE_JUDGE_LEASE_MS 뒤 만료 — 판정이 잘리면 곧 다시 시도된다. 성공하면 discoverTitles가 now로 바꾼다.
+ *  - 판정이 실패하면 선점을 되돌려 다음 진입이 바로 다시 시도한다(종전처럼).
  */
 export async function maybeJudgeTitlesForBadge(userId: string, serverId: number, timeoutMs = 2500): Promise<void> {
   try {
     const [row] = (await db.execute(sql`
-      with prev as (
+      with cur as (
         select titles_judged_at from characters where user_id=${userId}::uuid and server_id=${serverId}
+      ),
+      lockable as (
+        select user_id, server_id from characters
+        where user_id=${userId}::uuid and server_id=${serverId}
+          and (titles_judged_at is null or titles_judged_at < now() - make_interval(secs => ${BADGE_JUDGE_INTERVAL_MS / 1000}))
+        for update skip locked
+      ),
+      claim as (
+        update characters c
+           set titles_judged_at = now() - make_interval(secs => ${(BADGE_JUDGE_INTERVAL_MS - BADGE_JUDGE_LEASE_MS) / 1000})
+          from lockable l
+         where c.user_id = l.user_id and c.server_id = l.server_id
+        -- 텍스트로 돌려받는다 — Date로 받으면 마이크로초가 잘려 아래 되돌리기의 같음 비교가 영영 안 맞는다.
+        returning c.titles_judged_at::text as claimed
       )
-      update characters set titles_judged_at = now()
-      where user_id=${userId}::uuid and server_id=${serverId}
-        and (titles_judged_at is null or titles_judged_at < now() - make_interval(secs => ${BADGE_JUDGE_INTERVAL_MS / 1000}))
-      -- 텍스트로 돌려받는다 — Date로 받으면 마이크로초가 잘려 아래 되돌리기의 같음 비교가 영영 안 맞는다.
-      returning titles_judged_at::text as claimed, (select titles_judged_at::text from prev) as prev
-    `)) as unknown as { claimed: string; prev: string | null }[];
+      select exists(select 1 from cur) as has_char,
+             (select titles_judged_at::text from cur) as prev,
+             (select claimed from claim) as claimed,
+             (select titles_judged_at is null or titles_judged_at < now() - make_interval(secs => ${BADGE_JUDGE_INTERVAL_MS / 1000}) from cur) as due
+    `)) as unknown as { has_char: boolean; prev: string | null; claimed: string | null; due: boolean | null }[];
     // 캐릭터 없음(서버 미가입)이거나 1시간 안에 판정했다(다른 인스턴스가 방금 선점한 경우 포함) — 판정 대상 아님.
-    if (!row) return;
+    if (!row?.has_char || !row.due) return;
+    const claimed = row.claimed;
+    const prev = row.prev;
+    // claimed가 없는데 due = 행이 다른 쓰기에 잠겨 선점을 건너뛰었다 — 종전처럼 선점 없이 판정한다.
     const judging = discoverTitles(userId, serverId).catch(async (e: unknown) => {
       console.warn('[titles] badge judge failed', (e as Error).message);
+      if (claimed == null) return;
       // 선점 되돌리기 — 그새 다른 판정(칭호 화면)이 시각을 바꿨으면 건드리지 않는다.
       await db
-        .execute(sql`update characters set titles_judged_at = ${row.prev}::timestamptz
-          where user_id=${userId}::uuid and server_id=${serverId} and titles_judged_at = ${row.claimed}::timestamptz`)
+        .execute(sql`update characters set titles_judged_at = ${prev}::timestamptz
+          where user_id=${userId}::uuid and server_id=${serverId} and titles_judged_at = ${claimed}::timestamptz`)
         .catch(() => undefined);
     });
     await Promise.race([judging, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]);
