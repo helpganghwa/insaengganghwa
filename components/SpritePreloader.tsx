@@ -3,15 +3,24 @@
 import { useEffect } from 'react';
 
 import { autoReloadOnce } from '@/lib/auto-reload';
-import { ATLAS_URL, loadAtlasImage } from '@/lib/game/equipment/sprite-atlas';
+import { ATLAS_SMALL_URL, loadAtlasImage } from '@/lib/game/equipment/sprite-atlas';
 
 /**
  * Sprite atlas(public/sprites/atlas-<hash>.webp) **1장** prefetch — 첫 페인트 비차단(idle 슬롯).
  * 150 PNG 개별 prefetch는 atlas로 통합돼 사라짐. 첫 atlas 디코드 후 모든 sprite
  * 즉시 렌더 가능(메모리 공유).
  *
- * loadAtlasImage()는 모듈 전역 캐시 Promise — TranscendSprite와 동일 인스턴스 공유.
+ * 2026-11-06 업데이트 18: 미리 받는 것은 **반 해상도 atlas(셀 128)** — 목록·카드처럼 작게 그리는 곳(대부분)이 쓴다.
+ * 원본(셀 256, 디코드 약 40MB)은 큰 표시·해방 캔버스가 실제로 그릴 때 받는다(loadAtlasImage, 모듈 전역 캐시).
  */
+function preloadSmallAtlas(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = ATLAS_SMALL_URL;
+  });
+}
 type IdleCb = (cb: () => void, opts?: { timeout?: number }) => unknown;
 const idle: IdleCb =
   typeof window !== 'undefined' &&
@@ -29,7 +38,7 @@ let warmed = false;
 async function reloadIfAtlasGone() {
   if (process.env.NODE_ENV !== 'production') return;
   try {
-    const r = await fetch(ATLAS_URL, { method: 'HEAD', cache: 'no-store' });
+    const r = await fetch(ATLAS_SMALL_URL, { method: 'HEAD', cache: 'no-store' });
     if (r.status === 404) autoReloadOnce();
   } catch {
     /* 네트워크 — 다음 마운트에서 다시 시도한다. */
@@ -65,10 +74,12 @@ export function SpritePreloader() {
       warmed = true;
       idle(
         () => {
-          loadAtlasImage().catch(() => {
+          preloadSmallAtlas().catch(() => {
             warmed = false;
             void reloadIfAtlasGone();
           });
+          // 2배 넘는 기기(3배 폰 등)는 49~72px 표시에 원본을 쓴다(atlasImageFor) — 종전처럼 원본도 미리 받아 빈 칸을 막는다.
+          if (window.devicePixelRatio > 2) loadAtlasImage().catch(() => {});
         },
         { timeout: 5000 },
       );

@@ -31,6 +31,9 @@ const ATLAS = atlas as AtlasMeta;
 // 경로가 바뀌면 엣지도 브라우저도 새로 받는다. 해시가 없으면(스크립트 미실행) 원본 경로로 폴백.
 const ATLAS_HASH = ASSET_VERSIONS['/sprites/atlas.webp'];
 export const ATLAS_URL = ATLAS_HASH ? `/sprites/atlas-${ATLAS_HASH}.webp` : '/sprites/atlas.webp';
+/** 반 해상도 atlas(셀 128, 같은 배치 ÷ 2, 2026-11-06 업데이트 18) — 같은 해시 파일명 방식. */
+const ATLAS_SMALL_HASH = ASSET_VERSIONS['/sprites/atlas-128.webp'];
+export const ATLAS_SMALL_URL = ATLAS_SMALL_HASH ? `/sprites/atlas-128-${ATLAS_SMALL_HASH}.webp` : ATLAS_URL;
 export const ATLAS_SIZE = ATLAS.size;
 export const ATLAS_CELL = ATLAS.cell;
 /** atlas에 포함된 모든 code 리스트 — 로딩 오버레이 등의 풀로 사용. */
@@ -42,8 +45,28 @@ export function atlasCoord(code: string): AtlasCoord | null {
 }
 
 /**
+ * 반 해상도 atlas로 충분한 기기 픽셀 상한(2026-11-06 업데이트 18) — 셀 128을 최대 1.125배까지만 늘려 그린다.
+ * 표시 크기 × 기기 배율(DPR)이 이 값 이하면 128 atlas, 넘으면 원본(256).
+ */
+const SMALL_MAX_DEVICE_PX = 144;
+
+/**
+ * 표시 크기(px)에 맞는 atlas 이미지 값(background-image/mask-image) — 크기만으로 정해 서버·클라 결과가 같다.
+ *  - 36px 이하: 4배 기기에서도 144 이하 → 128 atlas.
+ *  - 37~72px: 기기 배율별 선택(-webkit-image-set, Chrome·Safari·Firefox 지원) — 크기 × 배율이 144 이하인 배율만 128(예: 48px은 3배까지, 64px은 2배까지).
+ *  - 73px 이상: 원본.
+ * 배경 크기·위치는 CSS px로 같으니(128 atlas = 같은 배치 ÷ 2) 그림 주소만 바뀐다. 캔버스(TranscendSprite)는 원본 그대로.
+ */
+export function atlasImageFor(size: number): string {
+  if (size * 4 <= SMALL_MAX_DEVICE_PX) return `url(${ATLAS_SMALL_URL})`;
+  if (size * 2 > SMALL_MAX_DEVICE_PX) return `url(${ATLAS_URL})`;
+  const opts = [1, 2, 3, 4].map((r) => `url(${size * r <= SMALL_MAX_DEVICE_PX ? ATLAS_SMALL_URL : ATLAS_URL}) ${r}x`);
+  return `-webkit-image-set(${opts.join(', ')})`;
+}
+
+/**
  * CSS background-* 속성 객체 — `<div style={atlasBgStyle(code, size)} />` 형태로 사용.
- * size = 렌더 픽셀 크기(정사각). atlas는 비례 스케일.
+ * size = 렌더 픽셀 크기(정사각). atlas는 비례 스케일. 그림은 크기에 맞는 atlas(atlasImageFor).
  */
 export function atlasBgStyle(code: string, size: number): React.CSSProperties | null {
   const c = atlasCoord(code);
@@ -52,7 +75,7 @@ export function atlasBgStyle(code: string, size: number): React.CSSProperties | 
   return {
     width: size,
     height: size,
-    backgroundImage: `url(${ATLAS_URL})`,
+    backgroundImage: atlasImageFor(size),
     backgroundSize: `${ATLAS_SIZE.w * scale}px ${ATLAS_SIZE.h * scale}px`,
     backgroundPosition: `${-c.x * scale}px ${-c.y * scale}px`,
     backgroundRepeat: 'no-repeat',
@@ -69,7 +92,8 @@ export function atlasMaskStyle(code: string, size: number): React.CSSProperties 
   const c = atlasCoord(code);
   if (!c) return null;
   const scale = size / ATLAS_CELL;
-  const maskImage = `url(${ATLAS_URL})`;
+  // 마스크는 image-set 지원이 들쭉날쭉해 단일 주소로 — 4배 기기에서도 144 이하인 크기만 128 atlas(도감 40px 칸은 3배까지 120).
+  const maskImage = `url(${size * 3 <= SMALL_MAX_DEVICE_PX ? ATLAS_SMALL_URL : ATLAS_URL})`;
   const maskSize = `${ATLAS_SIZE.w * scale}px ${ATLAS_SIZE.h * scale}px`;
   const maskPosition = `${-c.x * scale}px ${-c.y * scale}px`;
   return {
