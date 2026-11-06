@@ -5,7 +5,7 @@ export const meta: WikiDocMeta = {
   slug: 'ranking',
   cat: '경쟁',
   title: '랭킹',
-  summary: '다섯 지표로 서버 안에서 순위를 겨룬다.',
+  summary: '일곱 지표로 서버 안에서 순위를 겨룬다.',
   sections: [
     { id: 'metric', label: '지표' },
     { id: 'rank', label: '순위' },
@@ -19,7 +19,7 @@ export default function Doc() {
     <>
       <H2 id="metric">지표</H2>
       <UL>
-        <LI>최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 · 무한의 탑 여섯 가지.</LI>
+        <LI>최고 강화 · 합산 강화 · 전투력 · 레이드 · 대난투 · 무한의 탑 · 칭호 일곱 가지.</LI>
         <LI>강화 계열 세 지표는 장착 여부와 상관없이 보유한 장비 전체를 본다.</LI>
       </UL>
       <Tbl
@@ -66,6 +66,12 @@ export default function Doc() {
               <DocLink slug="tower">무한의 탑</DocLink>에서 가장 높이 돌파한 층(같은 층이면 먼저 오른 사람이 앞선다)
             </>,
           ],
+          [
+            '칭호',
+            <>
+              발견한 <DocLink slug="titles">칭호</DocLink>의 개수
+            </>,
+          ],
         ]}
       />
 
@@ -81,7 +87,7 @@ export default function Doc() {
           강화 결과를 받거나 <DocLink slug="supply" hash="open">상자를 열면</DocLink> 강화 계열 세
           지표의 값이 다시 계산된다.
         </LI>
-        <LI>레이드는 정산될 때, 대난투는 결과가 발표될 때, 무한의 탑은 층을 돌파할 때 반영된다.</LI>
+        <LI>레이드는 정산될 때, 대난투는 결과가 발표될 때, 무한의 탑은 층을 돌파할 때, 칭호는 새 칭호를 발견할 때 반영된다.</LI>
         <LI>순위 목록은 바로 바뀌지 않고 일정 시간마다 갱신된다.</LI>
         <LI>대난투 포인트는 오래된 성적일수록 반영 비중이 줄어든다.</LI>
       </UL>

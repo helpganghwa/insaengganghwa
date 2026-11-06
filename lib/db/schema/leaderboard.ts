@@ -41,7 +41,7 @@ export const leaderboardRanks = pgTable(
   'leaderboard_ranks',
   {
     serverId: smallint('server_id').notNull(),
-    /** max|sum|combat|raid|melee|tower */
+    /** max|sum|combat|raid|melee|tower|titles(2026-11-06 발견 칭호 수) */
     metric: text('metric').notNull(),
     userId: uuid('user_id').notNull(),
     value: bigint('value', { mode: 'number' }).notNull(),
