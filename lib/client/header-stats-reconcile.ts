@@ -38,3 +38,20 @@ export function reconcileHeaderBase(
   const refresh = remain.some((p) => !p.refreshed);
   return { stats, pending: refresh ? remain.map((p) => ({ ...p, refreshed: true })) : remain, refresh };
 }
+
+/** 하단 네비 강화 완료 점 덮어쓰기(수령 응답 값 + 그 값을 읽은 DB 시각). */
+export type EnhanceDotOverride = { value: boolean; seenAtMs: number | null };
+
+/**
+ * 새 셸 렌더가 왔을 때 덮어쓰기를 풀지(2026-11-06 업데이트 18) — 셸 점이 덮어쓴 값보다 나중에 읽혔을 때만 푼다.
+ * 셸 asOf를 모르면(실패 기본값) 유지, 덮어쓴 값의 시각을 모르면(복구 경로가 refresh를 동반) 푼다.
+ */
+export function releaseDotOverride(
+  o: EnhanceDotOverride | null,
+  shellAsOfMs: number | null,
+): EnhanceDotOverride | null {
+  if (!o) return o;
+  if (shellAsOfMs == null) return o;
+  if (o.seenAtMs != null && shellAsOfMs < o.seenAtMs) return o;
+  return null;
+}

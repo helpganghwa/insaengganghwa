@@ -495,13 +495,15 @@ export function EnhanceSlotCard({
         // 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재. 순수 JSON 라우트(스큐 면역)로
         // 결과를 되찾아 정상 연출을 재생하고, 못 찾으면 상태 재동기화로 강등.
         const rec = await fetch(`/api/enhance/outcome?job=${activeJob.jobId}`, { cache: 'no-store' })
-          .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number; nextJob?: NextJob | null }>) : null))
+          .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number; nextJob?: NextJob | null; enhanceReady?: boolean | null; seenAtMs?: number | null }>) : null))
           .catch(swallowTo('enhance.refresh', null));
         if (rec?.state === 'done' && rec.outcome) {
           applyNextJob(rec.nextJob); // 게이지 즉시 리셋(옛 잡 100% 잔류 방지)
-          // 응답을 잃은 수령도 헤더 스탯은 같은 델타로 맞춘다(2026-11-06 — 정상 응답 경로와 같은 반영).
-          // 커밋 시각을 모르는 경로라 null → 한 번 새로 받아 서버 값으로 맞춘다(드문 복구 경로).
-          applyEnhanceDelta({ fromLevel: Number(rec.fromLevel), toLevel: Number(rec.toLevel), transcendLevel: activeJob.transcendLevel }, null);
+          // 응답을 잃은 수령도 헤더 스탯·하단 네비 점을 정상 응답 경로와 같이 맞춘다(2026-11-06 업데이트 18).
+          // 복구 라우트가 정산 커밋 뒤에 읽은 DB 시각(seenAtMs)을 준다 — 없으면(옛 배포 응답 등) null → 한 번 새로 받는다.
+          const seenAt = typeof rec.seenAtMs === 'number' ? rec.seenAtMs : null;
+          applyEnhanceDelta({ fromLevel: Number(rec.fromLevel), toLevel: Number(rec.toLevel), transcendLevel: activeJob.transcendLevel }, seenAt);
+          if (typeof rec.enhanceReady === 'boolean' && seenAt != null) setEnhanceDot(rec.enhanceReady, seenAt);
           markRouterCacheStale();
           playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
           return;
@@ -537,7 +539,8 @@ export function EnhanceSlotCard({
         { fromLevel: Number(r.result.fromLevel), toLevel: Number(r.result.toLevel), transcendLevel: activeJob.transcendLevel },
         r.claimSeenAtMs,
       );
-      if (r.enhanceReady != null) setEnhanceDot(r.enhanceReady);
+      // 점 값과 claimSeenAtMs는 같은 문장에서 읽힌다 — 둘 다 null(조회 실패)이면 위 applyEnhanceDelta가 이미 refresh한다.
+      if (r.enhanceReady != null) setEnhanceDot(r.enhanceReady, r.claimSeenAtMs);
       markRouterCacheStale(); // 뒤로 가기로 돌아간 화면이 수령 전 캐시를 보이지 않게(RouterCacheGuard)
       // 재등록 실패(MAX 등) — 슬롯이 비었으니 서버 상태로 다시 그린다(종전 revalidatePath 재렌더와 같은 시점).
       if (!r.nextJob) router.refresh();

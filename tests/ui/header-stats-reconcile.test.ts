@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addEnhanceDelta, reconcileHeaderBase, type PendingDelta } from '@/lib/client/header-stats-reconcile';
+import { addEnhanceDelta, reconcileHeaderBase, releaseDotOverride, type PendingDelta } from '@/lib/client/header-stats-reconcile';
 
 // 헤더 스탯 셸 값 ↔ 수동 수령 델타 선후 정리(2026-11-06 업데이트 18).
 const base = { combat: 1000, maxEnhance: 10, sumEnhance: 20 };
@@ -55,5 +55,25 @@ describe('reconcileHeaderBase', () => {
     const second = reconcileHeaderBase(fresh, 300, first.pending);
     expect(second.stats).toEqual(fresh);
     expect(second.pending).toEqual([]);
+  });
+});
+
+describe('releaseDotOverride', () => {
+  const o = { value: false, seenAtMs: 200 };
+  it('덮어쓴 값보다 나중에 읽힌 셸이면 푼다', () => {
+    expect(releaseDotOverride(o, 250)).toBeNull();
+    expect(releaseDotOverride(o, 200)).toBeNull();
+  });
+  it('수령 전에 읽힌 늦은 셸 렌더면 유지(틀린 점으로 돌아가지 않음)', () => {
+    expect(releaseDotOverride(o, 150)).toBe(o);
+  });
+  it('셸 시각을 모르면(실패 기본값) 유지', () => {
+    expect(releaseDotOverride(o, null)).toBe(o);
+  });
+  it('덮어쓴 값의 시각을 모르면 새 셸에서 푼다', () => {
+    expect(releaseDotOverride({ value: true, seenAtMs: null }, 100)).toBeNull();
+  });
+  it('덮어쓰기가 없으면 그대로', () => {
+    expect(releaseDotOverride(null, 100)).toBeNull();
   });
 });

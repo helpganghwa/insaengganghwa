@@ -15,8 +15,10 @@ export const dynamic = 'force-dynamic';
  * 복구 경로 자체가 실패한다(이 라우트가 존재하는 이유).
  *
  * 응답: { state: 'pending' }   — 잡이 아직 running(액션이 실행 안 됨 — 재시도 안전)
- *       { state: 'done', outcome, fromLevel, toLevel, nextJob } — 판정 완료(로그에서 복구).
+ *       { state: 'done', outcome, fromLevel, toLevel, nextJob, enhanceReady, seenAtMs } — 판정 완료(로그에서 복구).
  *         nextJob = 자동 재등록된 다음 잡(있으면) — 클라가 게이지를 즉시 리셋하는 데 사용.
+ *         enhanceReady = 하단 네비 강화 완료 점(수령 액션과 같은 술어, 2026-11-06 업데이트 18).
+ *         seenAtMs = 이 값을 읽은 DB 시각(정산 커밋 뒤) — 헤더 스탯·점을 늦게 온 옛 셸 값과 가르는 기준.
  *       { state: 'gone' }      — 취소됐거나 로그 매칭 실패(재동기화 권장)
  */
 export async function GET(req: Request) {
@@ -26,11 +28,11 @@ export async function GET(req: Request) {
   if (!/^\d+$/.test(raw)) return NextResponse.json({ error: 'bad_job' }, { status: 400 });
 
   const rows = (await db.execute(sql`
-    select j.status::text as status, j.user_equipment_id::text as ueid, j.from_level, j.started_at
+    select j.status::text as status, j.user_equipment_id::text as ueid, j.from_level, j.started_at, j.server_id
     from enhancement_jobs j
     where j.id = ${raw}::bigint and j.user_id = ${userId}::uuid
     limit 1
-  `)) as unknown as { status: string; ueid: string; from_level: number; started_at: string }[];
+  `)) as unknown as { status: string; ueid: string; from_level: number; started_at: string; server_id: number }[];
   const job = rows[0];
   if (!job) return NextResponse.json({ state: 'gone' });
   if (job.status === 'running') return NextResponse.json({ state: 'pending' });
@@ -50,26 +52,41 @@ export async function GET(req: Request) {
 
   // 자동 재등록된 다음 잡(있으면) — 같은 장비의 현재 running 잡. 클라가 이 정보로 게이지를
   // 즉시 리셋(응답 유실 후 옛 잡 100% 잔류·재수령 방지, 2026-07-23 Eclipse 제보 근본 수정).
+  // 같은 문장에 강화 완료 점(수령 액션 getMyRanksBeforeAfter와 같은 술어)과 읽은 DB 시각을 편승(2026-11-06 업데이트 18) —
+  // 응답을 잃은 수령도 하단 네비 점을 맞춘다. 다음 잡이 없어도 한 행이 나오도록 left join lateral.
   const nextRows = (await db.execute(sql`
-    select j.id::text as job_id, j.from_level, j.target_level, j.base_rate_bp, j.down_rate_bp,
-           j.started_at, j.complete_at
-    from enhancement_jobs j
-    where j.user_id = ${userId}::uuid and j.user_equipment_id = ${job.ueid}::bigint
-      and j.status = 'running'
-    order by j.started_at desc limit 1
+    select n.job_id, n.from_level, n.target_level, n.base_rate_bp, n.down_rate_bp, n.started_at, n.complete_at,
+           exists(select 1 from enhancement_jobs ej
+                   where ej.user_id = ${userId}::uuid and ej.server_id = ${job.server_id}
+                     and ej.status = 'running' and ej.complete_at <= now()) as enh_ready,
+           (extract(epoch from clock_timestamp()) * 1000)::float8 as seen_at_ms
+    from (select 1) one
+    left join lateral (
+      select j.id::text as job_id, j.from_level, j.target_level, j.base_rate_bp, j.down_rate_bp,
+             j.started_at, j.complete_at
+      from enhancement_jobs j
+      where j.user_id = ${userId}::uuid and j.user_equipment_id = ${job.ueid}::bigint
+        and j.status = 'running'
+      order by j.started_at desc limit 1
+    ) n on true
   `)) as unknown as {
-    job_id: string;
+    job_id: string | null;
     from_level: number;
     target_level: number;
     base_rate_bp: number;
     down_rate_bp: number | null;
     started_at: string;
     complete_at: string;
+    enh_ready: boolean | null;
+    seen_at_ms: number | string | null;
   }[];
-  const nx = nextRows[0];
+  const row = nextRows[0];
+  const nx = row?.job_id != null ? row : undefined;
+  const enhanceReady = typeof row?.enh_ready === 'boolean' ? row.enh_ready : null;
+  const seenAtMs = row?.seen_at_ms != null && Number.isFinite(Number(row.seen_at_ms)) ? Number(row.seen_at_ms) : null;
   const nextJob = nx
     ? {
-        jobId: nx.job_id,
+        jobId: String(nx.job_id),
         fromLevel: nx.from_level,
         targetLevel: nx.target_level,
         baseRateBp: nx.base_rate_bp,
@@ -87,5 +104,7 @@ export async function GET(req: Request) {
     fromLevel: log.from_level,
     toLevel: log.to_level,
     nextJob,
+    enhanceReady,
+    seenAtMs,
   });
 }

@@ -23,23 +23,27 @@ type Props = {
   hasCompletedEnhance?: boolean;
   /** /me 탭 알림 dot — 친구 받은 요청 1건 이상. */
   hasFriendRequest?: boolean;
-  /** 셸 데이터 생성 시각 — 바뀌면(새 서버 렌더) 강화 점 덮어쓰기를 해제한다(HeaderStatsContext.setEnhanceDot). */
+  /** 셸 데이터 생성 시각 — 바뀌면(새 서버 렌더) 강화 점 덮어쓰기 해제를 검토한다(HeaderStatsContext.releaseEnhanceDot). */
   renderedAt?: number;
+  /** 셸 점을 읽은 문장의 DB 시작 시각(ms) — 덮어쓴 값보다 나중에 읽힌 셸일 때만 해제한다. null=모름(유지). */
+  shellAsOfMs?: number | null;
 };
 
 export function BottomNav({
   hasCompletedEnhance = false,
   hasFriendRequest = false,
   renderedAt,
+  shellAsOfMs = null,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   // 강화 완료 점 — 수동 수령 응답이 덮어쓴 값이 있으면 그것, 새 셸 렌더가 오면 다시 셸 값(2026-11-06 업데이트 18).
   const dotOverride = useEnhanceDotOverride();
-  const { setEnhanceDot } = useHeaderStatsActions();
+  const { releaseEnhanceDot } = useHeaderStatsActions();
   useEffect(() => {
-    if (renderedAt != null) setEnhanceDot(null);
-  }, [renderedAt, setEnhanceDot]);
+    // 수령 전에 읽힌 셸 렌더가 늦게 와도 틀린 점으로 돌아가지 않게 — 셸이 덮어쓴 값보다 나중에 읽혔을 때만 해제.
+    if (renderedAt != null) releaseEnhanceDot(shellAsOfMs);
+  }, [renderedAt, shellAsOfMs, releaseEnhanceDot]);
   const enhanceDot = dotOverride ?? hasCompletedEnhance;
 
   return (

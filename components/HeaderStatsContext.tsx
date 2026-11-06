@@ -7,7 +7,9 @@ import {
   addEnhanceDelta,
   MAX_PENDING_DELTAS,
   reconcileHeaderBase,
+  releaseDotOverride,
   type EnhanceDelta,
+  type EnhanceDotOverride,
   type HeaderStats,
   type PendingDelta,
 } from '@/lib/client/header-stats-reconcile';
@@ -40,18 +42,25 @@ type HeaderStatsActions = {
   applyEnhanceDelta: (d: EnhanceDelta, seenAtMs?: number | null) => void;
   /**
    * 하단 네비 강화 완료 점 덮어쓰기(2026-11-06 업데이트 18) — 수동 수령이 페이지 재렌더 없이 서버가 돌려준 값
-   * (enhanceReady)으로 점을 맞춘다. null = 덮어쓰기 해제(셸 값 사용). 새 셸 렌더가 오면 BottomNav가 해제한다.
+   * (enhanceReady)으로 점을 맞춘다. null = 덮어쓰기 해제(셸 값 사용). seenAtMs = 그 값을 읽은 DB 시각.
    */
-  setEnhanceDot: (v: boolean | null) => void;
+  setEnhanceDot: (v: boolean | null, seenAtMs?: number | null) => void;
+  /**
+   * 새 셸 렌더 도착 — 셸 점이 덮어쓴 값보다 나중에 읽혔을 때만 덮어쓰기를 해제한다. 수령 전에 읽힌 셸 렌더가 늦게
+   * 도착하면(asOf < seenAt) 덮어쓴 값을 유지해 틀린 점으로 돌아가지 않는다. asOf를 모르면(셸 실패 기본값) 유지.
+   */
+  releaseEnhanceDot: (shellAsOfMs: number | null) => void;
 };
+
+type DotOverride = EnhanceDotOverride;
 
 const ValueCtx = createContext<HeaderStats | null>(null);
 const ActionsCtx = createContext<HeaderStatsActions | null>(null);
-const EnhanceDotCtx = createContext<boolean | null>(null);
+const EnhanceDotCtx = createContext<DotOverride | null>(null);
 
 export function HeaderStatsProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<HeaderStats | null>(null);
-  const [enhanceDot, setEnhanceDot] = useState<boolean | null>(null);
+  const [enhanceDot, setEnhanceDot] = useState<DotOverride | null>(null);
   const router = useRouter();
   /**
    * 셸 값과 선후를 아직 확정하지 못한 수동 수령 델타(2026-11-06 업데이트 18). 셸 값(asOf)이 seenAt 이후에 읽혔으면 이미
@@ -87,7 +96,8 @@ export function HeaderStatsProvider({ children }: { children: ReactNode }) {
         // 셸 값이 아직 없으면(null) 그대로 둔다 — 도착하는 setBase가 asOf로 판정해 얹거나 버린다.
         setStats((s) => (s ? addEnhanceDelta(s, d) : s));
       },
-      setEnhanceDot: (v) => setEnhanceDot(v),
+      setEnhanceDot: (v, seenAtMs) => setEnhanceDot(v == null ? null : { value: v, seenAtMs: seenAtMs ?? null }),
+      releaseEnhanceDot: (shellAsOfMs) => setEnhanceDot((o) => releaseDotOverride(o, shellAsOfMs)),
     }),
     [router],
   );
@@ -102,11 +112,16 @@ export function HeaderStatsProvider({ children }: { children: ReactNode }) {
 
 /** 강화 완료 점 덮어쓰기 값 — null이면 셸(layout) 값을 쓴다. */
 export function useEnhanceDotOverride(): boolean | null {
-  return useContext(EnhanceDotCtx);
+  return useContext(EnhanceDotCtx)?.value ?? null;
 }
 
 /** 액션만 — 영구 안정(스탯 변동에 리렌더 안 됨). Provider 밖에선 no-op(비게임 레이아웃 안전). */
-const NOOP_ACTIONS: HeaderStatsActions = { setBase: () => {}, applyEnhanceDelta: () => {}, setEnhanceDot: () => {} };
+const NOOP_ACTIONS: HeaderStatsActions = {
+  setBase: () => {},
+  applyEnhanceDelta: () => {},
+  setEnhanceDot: () => {},
+  releaseEnhanceDot: () => {},
+};
 export function useHeaderStatsActions(): HeaderStatsActions {
   return useContext(ActionsCtx) ?? NOOP_ACTIONS;
 }

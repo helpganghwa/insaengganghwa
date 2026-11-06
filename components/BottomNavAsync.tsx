@@ -10,6 +10,7 @@ export async function BottomNavAsync({ dataPromise }: { dataPromise: Promise<Lay
       hasCompletedEnhance={d.hasCompletedEnhance}
       hasFriendRequest={d.hasFriendRequest}
       renderedAt={d.renderedAt}
+      shellAsOfMs={d.statsAsOfMs}
     />
   );
 }
