@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { and, eq } from 'drizzle-orm';
 
@@ -6,6 +6,9 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles } from '@/lib/db/schema/melee';
+import { getBanStateCached } from '@/lib/game/account/ban';
+import { getMaintenanceState } from '@/lib/game/system-mode';
+import { ensureDailyGrants } from '@/lib/game/mailbox/daily-ensure';
 import { getActiveServerId } from '@/lib/game/servers';
 import { kstDateString } from '@/lib/kst';
 import { memoryRateLimited } from '@/lib/memory-ratelimit';
@@ -28,6 +31,16 @@ export async function GET() {
     return NextResponse.json({ status: 'error' }, { status: 429 });
   }
   const serverId = await getActiveServerId();
+  // 일일 지급 보장(2026-11-06 업데이트 18) — 종전 router.refresh 폴링은 레이아웃을 다시 그려 그 after()가 일일 보급·프리미엄
+  // 몫을 챙겼다(발표 대기 화면을 KST 자정 넘겨 열어 둔 경우 포함). 같은 멱등 지급을 같은 인스턴스 스로틀로 응답 뒤에 시도한다.
+  // 레이아웃처럼 정지·점검이면 하지 않는다(둘 다 캐시 — 요청 쿠키 없이 userId로만 판정).
+  after(async () => {
+    const banned = await getBanStateCached(userId).then((s) => s.banned).catch(() => true);
+    if (banned) return;
+    const maint = await getMaintenanceState().catch(() => null);
+    if (maint?.active) return;
+    await ensureDailyGrants(userId, serverId, { kind: 'daily-mark' });
+  });
   try {
     const [b] = await withTimeout(
       db

@@ -7,11 +7,10 @@ import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getBanStateCached } from '@/lib/game/account/ban';
-import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { MaintenanceScreen } from './MaintenanceScreen';
 import { BanScreen } from './BanScreen';
-import { ensureDailyMail, ensurePremiumDailyMailAll } from '@/lib/game/mailbox';
-import { ensureCbtCarryover } from '@/lib/game/cbt/grant';
+import { ensureDailyGrants } from '@/lib/game/mailbox/daily-ensure';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
 import {
@@ -44,24 +43,11 @@ import { HeaderStatsProvider } from '@/components/HeaderStatsContext';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
 import { InstallStrip } from '@/components/install/InstallStrip';
-import { kstDateString } from '@/lib/kst';
 
 // 걸린 렌더의 상한(2026-07-31) — 풀 포화 시 postgres.js가 쿼리를 **기한 없이 큐에 세워**
 // 페이지 스트림이 안 끝나고 300s에 강제 종료되던 것(7일 128건)을 60s로 단축. 근본 원인
 // (풀러 포화)의 완충일 뿐이며, 해소는 Supabase Pool Size 상향 + 핫패스 쿼리 통합이 맡는다.
 export const maxDuration = 60;
-
-// 일일 보급(보급·CBT이월)의 유저·서버·KST일 단위 성공 마크 — 매 페이지 로드마다 나가던
-// 응답 후 쓰기를 하루 1회(인스턴스당)로 줄인다(자정 herd 완화). 에러 없이 끝난 경우에만
-// 마크(부분 실패는 다음 로드에서 재시도). 멱등이라 인스턴스 교체로 재실행돼도 안전.
-// ⚠ 프리미엄 daily는 이 스로틀 대상이 아님 — 하루 중 구매로 상태가 바뀌는 유일한 ensure.
-//   대신 셸 데이터의 premiumDue(오늘 몫 남음, 지급 원장 기준)로 거른다(2026-11-06 업데이트 18).
-const dailyEnsured = new Map<string, number>();
-function pruneDailyEnsured() {
-  if (dailyEnsured.size < 10_000) return;
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  for (const [k, at] of dailyEnsured) if (at < cutoff) dailyEnsured.delete(k);
-}
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -102,41 +88,16 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 비차단.
   //  after()로 응답 후 보장 실행 — bare non-await는 Fluid가 응답 후 인스턴스 회수 시 INSERT가
   //  끊겨 그날 보급이 누락될 수 있음(referral 패턴과 통일). 멱등이라 재진입 시 안전.
+  // 일일 보급·CBT 이월(유저·서버·KST일 인스턴스 마크)을 먼저, 프리미엄 오늘 몫은 셸 쿼리의 premiumDue로 거른다
+  // (2026-11-06 업데이트 18 — lib/game/mailbox/daily-ensure.ts 공용 실행기. 셸 데이터 실패는 판정 불가로 보고 시도).
+  // 수동 강화 수령·대난투 상태 라우트도 같은 실행기를 부른다(레이아웃 재렌더가 줄어 자정 넘긴 세션의 지급 기회 보전).
   const dailySid = await getActiveServerId();
-  const ensureKey = `${userId}:${dailySid}:${kstDateString()}`;
-  const throttled = dailyEnsured.has(ensureKey);
-  after(async () => {
-    // 프리미엄 daily는 인스턴스 스로틀 제외 — 프리미엄 활성 상태가 하루 중 바뀔 수 있어(낮에 구매 →
-    // 구매일=1일차 지급) 마크로 하루를 막으면 안 된다. 대신 셸 쿼리가 함께 읽은 premiumDue(활성 창 안인데
-    // 오늘 지급 원장 행이 없는 서버가 있는가)가 참일 때만 지급을 시도한다(2026-11-06 업데이트 18 — 렌더마다
-    // 돌던 확인 쿼리 제거). 판정을 못 했으면(null: 셸 로드 실패·기본값) 종전처럼 돌린다 — 누락보다 쿼리 1개가 낫다.
-    // 산 서버마다(10-12 결정) — 활성 서버에서만 주면 그날 다른 서버만 한 사람의 몫이 사라졌다.
-    const premiumDue = (await layoutData).premiumDue;
-    if (premiumDue !== false) {
-      await withTimeout(ensurePremiumDailyMailAll(userId), 2500, 'layout.premiumDaily').catch(
-        (e) => {
-          if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
-        },
-      );
-    }
-    if (throttled) return;
-    let allOk = true;
-    await withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
-      allOk = false;
-      if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
-    });
-    // CBT 보상 이월 — 실운영에서 1회 지급(멱등). CBT/스냅샷 전엔 테이블이 비어 no-op.
-    await withTimeout(ensureCbtCarryover(userId, dailySid), 3000, 'layout.cbtCarryover').catch(
-      (e) => {
-        allOk = false;
-        if (!(e instanceof DbTimeoutError)) console.warn('[layout] cbtCarryover error', e);
-      },
-    );
-    if (allOk) {
-      pruneDailyEnsured();
-      dailyEnsured.set(ensureKey, Date.now());
-    }
-  });
+  after(() =>
+    ensureDailyGrants(userId, dailySid, {
+      kind: 'due',
+      due: () => layoutData.then((d) => d.premiumDue),
+    }),
+  );
 
   // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).
   // 쿠키는 **요청 스코프에서 먼저 읽는다**(cookies()를 after() 안에서 호출하면 Next가 throw).

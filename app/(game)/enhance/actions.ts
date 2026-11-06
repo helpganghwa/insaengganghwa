@@ -23,6 +23,7 @@ import {
   type ResolveResult,
 } from '@/lib/game/enhance';
 import { getMyRanksBeforeAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
+import { ensureDailyGrants } from '@/lib/game/mailbox/daily-ensure';
 import { GEM_TO_MS } from '@/lib/game/balance';
 
 /**
@@ -189,6 +190,9 @@ export async function finalizeEnhance(jobId: string): Promise<
     // 리더보드·세금·도감·업적 사후처리 — 전부 best-effort(주석·cron 백스톱 동일)인데 응답을
     // 막고 있던 최대 16왕복을 응답 뒤로(2026-08-20 감사). 이정표 유실 로깅은 함수 안에 유지.
     after(() => applyEnhancePostEffects(r));
+    // 일일 지급 보장(2026-11-06 업데이트 18) — 종전엔 수령마다 revalidatePath가 레이아웃을 다시 그려 그 after()가 일일 보급·
+    // 프리미엄 몫을 챙겼다. 재렌더가 없어졌으니 같은 멱등 지급을 같은 인스턴스 스로틀로 여기서 시도한다(KST 자정 넘긴 세션).
+    after(() => ensureDailyGrants(userId, serverId, { kind: 'daily-mark' }));
     // 페이지 재렌더 없음(2026-11-06 업데이트 18) — 종전 revalidatePath('/enhance'·'/inventory')는 무효화한 경로와 상관없이
     // **보고 있는 화면 + 레이아웃**을 다시 그려 응답에 실었다(수령 1회당 페이지 3 + 레이아웃 쿼리). 화면이 쓰던 값은 전부
     // 이 응답으로 클라가 직접 반영한다(자동 강화와 같은 방식): 게이지=nextJob, 헤더 스탯=from/to 델타(applyEnhanceDelta),
