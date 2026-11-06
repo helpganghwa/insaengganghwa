@@ -14,6 +14,9 @@ export type PendingDelta = { seenAtMs: number; d: EnhanceDelta; refreshed: boole
 /** 셸 값과 아직 비교하지 못한 델타 상한 — 셸이 오래 안 와도 무한히 쌓이지 않게. */
 export const MAX_PENDING_DELTAS = 50;
 
+/** 수령 커밋 뒤 seenAt을 읽기까지(재등록·순위 문장) 걸릴 수 있는 시간 여유 — 이 안의 셸 값은 수령 포함 여부를 모른다. */
+export const AMBIGUOUS_MS = 2000;
+
 export function addEnhanceDelta(s: HeaderStats, { fromLevel, toLevel, transcendLevel }: EnhanceDelta): HeaderStats {
   const combatDelta = pieceCombatPower(toLevel, transcendLevel) - pieceCombatPower(fromLevel, transcendLevel);
   return {
@@ -34,7 +37,11 @@ export function reconcileHeaderBase(
 ): { stats: HeaderStats | null; pending: PendingDelta[]; refresh: boolean } {
   const remain = asOfMs != null ? pending.filter((p) => p.seenAtMs > asOfMs) : [...pending];
   if (!next || remain.length === 0) return { stats: next, pending: remain, refresh: false };
-  const stats = remain.reduce((s, p) => addEnhanceDelta(s, p.d), next);
+  // 애매한 구간(셸 문장이 수령 커밋 직후 ~ seenAt 사이에 시작했을 수 있음, AMBIGUOUS_MS 안)은 델타를 얹지 않는다 —
+  // 셸 값에 이미 들어 있으면 두 번 더해져 잠깐 부풀어 보이므로(적대 검수 r5). 셸 값을 그대로 보이고 한 번 새로 받는다
+  // (최악이 '수령 직전 값이 잠깐'이라 종전 화면과 같은 쪽으로 틀린다).
+  const definite = asOfMs == null ? remain : remain.filter((p) => asOfMs < p.seenAtMs - AMBIGUOUS_MS);
+  const stats = definite.reduce((s, p) => addEnhanceDelta(s, p.d), next);
   const refresh = remain.some((p) => !p.refreshed);
   return { stats, pending: refresh ? remain.map((p) => ({ ...p, refreshed: true })) : remain, refresh };
 }
