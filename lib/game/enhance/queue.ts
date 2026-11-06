@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
@@ -8,7 +8,6 @@ import { isUniqueViolation } from '@/lib/db/errors';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { baseSuccessRateBp, downRateBp, enhanceDurationMs } from '@/lib/game/balance';
-import { isServerClosedIn } from '@/lib/game/server-guard';
 
 /**
  * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원·제물 비용 없음, BALANCE §1).
@@ -60,6 +59,12 @@ export async function queueEnhanceInTx(
 ): Promise<QueueEnhanceResult> {
   const { userId, userEquipmentId, preferredLane } = input;
 
+  // 등록 전 확인을 두 문장으로(2026-11-06 업데이트 18 — 종전 select 4개).
+  //  ① 장비 FOR UPDATE + 서버 닫힘 여부(스칼라 서브쿼리). 잠금 대상은 종전과 같다(FROM의 user_equipment·catalog_items,
+  //     서브쿼리는 잠그지 않는다). 서버 상태는 장비 잠금과 무관한 값이라 같은 문장에서 읽어도 의미가 같다.
+  //  ② 잠금을 **잡은 뒤** 중복 running·lane 사용 현황을 한 문장으로. ①에 합치면 안 된다 — 같은 장비를 동시에 등록하는
+  //     상대가 잠금을 풀고 커밋한 running 행은 ①의 스냅샷(잠금 대기 전)에 안 보여 중복 검사를 지나친다.
+  //     ②는 잠금 뒤 새 스냅샷이라 종전 select 2개와 같은 것을 본다.
   const [equip] = await tx
     .select({
       id: userEquipment.id,
@@ -67,6 +72,8 @@ export async function queueEnhanceInTx(
       catalogItemId: userEquipment.catalogItemId,
       enhanceLevel: userEquipment.enhanceLevel,
       slot: catalogItems.slot,
+      // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — isServerClosedIn과 같은 술어.
+      serverClosed: sql<boolean>`exists(select 1 from servers s where s.id = ${userEquipment.serverId} and s.status = 'closed')`,
     })
     .from(userEquipment)
     .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
@@ -75,38 +82,29 @@ export async function queueEnhanceInTx(
 
   if (!equip) throw new EnhanceError('EQUIPMENT_NOT_FOUND');
   // 닫힌 서버 자산 완전 동결(10-12 결정 ⑤) — 장비 id로 닫힌 서버 장비를 찍어도 강화를 걸지 않는다.
-  if (await isServerClosedIn(tx, equip.serverId)) throw new EnhanceError('SERVER_CLOSED');
-
-  // 한 장비 = 동시 강화 1건 (equip을 for update로 잠가 직렬화).
-  const [dup] = await tx
-    .select({ id: enhancementJobs.id })
-    .from(enhancementJobs)
-    .where(
-      and(
-        eq(enhancementJobs.userEquipmentId, userEquipmentId),
-        eq(enhancementJobs.status, 'running'),
-      ),
-    )
-    .limit(1);
-  if (dup) throw new EnhanceError('ALREADY_ENHANCING');
+  if (equip.serverClosed === true) throw new EnhanceError('SERVER_CLOSED');
 
   const fromLevel = equip.enhanceLevel;
   const targetLevel = fromLevel + 1;
   const slot = equip.slot;
 
+  // 한 장비 = 동시 강화 1건(equip을 for update로 잠가 직렬화) + 부위당 2 lane 사용 현황.
+  const [busy] = (await tx.execute(sql`
+    select exists(select 1 from enhancement_jobs
+                   where user_equipment_id = ${userEquipmentId} and status = 'running') as dup,
+           coalesce(array(select slot_lane::int from enhancement_jobs
+                   where user_id = ${userId}::uuid and server_id = ${equip.serverId}
+                     and slot = ${slot}::slot and status = 'running'), '{}'::int[]) as lanes
+  `)) as unknown as { dup: boolean; lanes: number[] | string }[];
+  if (busy?.dup === true) throw new EnhanceError('ALREADY_ENHANCING');
+
   // 부위당 2 lane — 빈 lane(1|2) 할당, 둘 다 차면 SLOT_BUSY.
-  const running = await tx
-    .select({ slotLane: enhancementJobs.slotLane })
-    .from(enhancementJobs)
-    .where(
-      and(
-        eq(enhancementJobs.userId, userId),
-        eq(enhancementJobs.serverId, equip.serverId),
-        eq(enhancementJobs.slot, slot),
-        eq(enhancementJobs.status, 'running'),
-      ),
-    );
-  const used = new Set(running.map((r) => r.slotLane));
+  const lanesRaw = busy?.lanes ?? [];
+  // int[]는 postgres.js가 배열로 파싱하지만, 문자열('{1,2}')로 오는 경우도 방어한다.
+  const lanes = Array.isArray(lanesRaw)
+    ? lanesRaw.map(Number)
+    : String(lanesRaw).replace(/[{}]/g, '').split(',').filter(Boolean).map(Number);
+  const used = new Set(lanes);
   // 선호 lane 우선(비어 있을 때만) → 폴백은 기존 빈-lane 순서. 다른 탭 레이스로 선호 lane이
   // 선점됐으면 남은 lane으로 자연 폴백(SLOT_BUSY는 둘 다 찼을 때만).
   const slotLane =
