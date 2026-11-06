@@ -1,0 +1,23 @@
+-- 0252a (2026-11-06 업데이트 18) — enhancement_jobs 진행 중 잡 전용 부분 인덱스(complete_at) where status = 'running' 생성.
+-- 옛 전체 인덱스 ej_status_complete_idx(status, complete_at)의 삭제는 0252b로 따로 둔다(플랜 확인 뒤에만).
+-- enhancement_jobs는 끝난 잡이 쌓이는 표다(프로덕션 약 480만 행). ej_status_complete_idx는 끝난 잡까지 전부 담아
+-- 수령마다(running → completed) status가 바뀌어 인덱스에 새 항목이 생겼다. 이 인덱스를 앞 컬럼(status)으로 쓰는 런타임 쿼리는
+-- 전부 status = 'running'이다(2026-11-06 전수 확인):
+--   · 푸시 크론(push-enhance-ready): running + push_sent=false + complete_at — 부분 인덱스 ej_push_ready_idx가 따로 있다
+--   · 관리자 대시보드: count(*) where status = 'running'
+--   · 셸·홈의 강화 완료 점: user_id로 찾는다(ej_user_slot_lane_running_uq)
+-- ⚠ ej_user_status_idx(user_id, status)는 바꾸지 않는다 — running이 아닌 조회가 쓴다(도전과제 첫 강화 exists, 튜토리얼 강화 횟수,
+--   관리자 취소 잡 목록·보상 처리, 탈퇴·테스트 데이터 삭제의 user_id 조건).
+--
+-- 적용(프로덕션·스테이징 각각) — CONCURRENTLY는 트랜잭션 안에서 못 돌린다. apply-migration.ts(트랜잭션)를 쓰지 말고, 트랜잭션 풀러가
+-- 아닌 연결(세션 풀러 5432 또는 직결)로 이 파일 하나만 단독 실행한다. 실패하면 멈추도록 ON_ERROR_STOP:
+--   psql -v ON_ERROR_STOP=1 "<세션 풀러/직결 연결 문자열>" -f lib/db/manual/0252a_ej_running_complete_idx.sql
+--
+-- 적용 뒤 검증(필수) — CONCURRENTLY는 중간에 실패하면 INVALID 인덱스를 남기고, `if not exists` 때문에 다시 실행해도 고쳐지지 않는다:
+--   select c.relname, i.indisvalid, i.indisready from pg_index i join pg_class c on c.oid = i.indexrelid
+--    where c.relname = 'ej_running_complete_idx';
+--   → indisvalid = true 여야 한다. false(INVALID)면:
+--     drop index concurrently if exists public.ej_running_complete_idx;   -- 그 뒤 이 파일을 다시 실행
+-- 그다음 플랜 확인(EXPLAIN select count(*) from enhancement_jobs where status = 'running';이 새 인덱스를 타는지) → 0252b.
+create index concurrently if not exists ej_running_complete_idx
+  on public.enhancement_jobs (complete_at) where status = 'running';

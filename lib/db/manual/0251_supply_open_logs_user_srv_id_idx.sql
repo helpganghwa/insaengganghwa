@@ -7,7 +7,14 @@
 -- supply_open_logs는 append-only라 가시성 맵이 잘 서서 index-only 효과가 크다. 도전과제(challenges/status.ts)의 슬롯별 exists도 탄다.
 -- supply_open_logs_user_created_idx는 그대로 둔다 — 오늘 보급 수(today/stats.ts, created_at 범위)와 탈퇴 삭제가 쓴다.
 --
--- 프로덕션에는 따로 적용한다. CONCURRENTLY는 트랜잭션 안에서 못 돌린다 — apply-migration.ts(트랜잭션) 대신 단독 실행할 것(0224·0241·0242와 같다).
---   예: psql "$PROD_DATABASE_URL" -f lib/db/manual/0251_supply_open_logs_user_srv_id_idx.sql
+-- 적용(프로덕션·스테이징 각각) — CONCURRENTLY는 트랜잭션 안에서 못 돌린다. apply-migration.ts(트랜잭션)를 쓰지 말고, 트랜잭션 풀러가
+-- 아닌 연결(세션 풀러 5432 또는 직결)로 이 파일 하나만 단독 실행한다(0224·0241·0242와 같다). 실패하면 멈추도록 ON_ERROR_STOP:
+--   psql -v ON_ERROR_STOP=1 "<세션 풀러/직결 연결 문자열>" -f lib/db/manual/0251_supply_open_logs_user_srv_id_idx.sql
+--
+-- 적용 뒤 검증(필수) — CONCURRENTLY는 중간에 실패하면 INVALID 인덱스를 남기고, `if not exists` 때문에 다시 실행해도 고쳐지지 않는다:
+--   select c.relname, i.indisvalid, i.indisready from pg_index i join pg_class c on c.oid = i.indexrelid
+--    where c.relname = 'supply_open_logs_user_srv_id_idx';
+--   → indisvalid = true 여야 한다. false(INVALID)면:
+--     drop index concurrently if exists public.supply_open_logs_user_srv_id_idx;   -- 그 뒤 이 파일을 다시 실행
 create index concurrently if not exists supply_open_logs_user_srv_id_idx
   on public.supply_open_logs (user_id, server_id, id) include (created_at, catalog_item_id, slot);
