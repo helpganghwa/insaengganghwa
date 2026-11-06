@@ -16,7 +16,7 @@ import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**. 읽기는 사전계산 스냅샷(leaderboard_ranks,
  * cron이 N분마다 재계산)에서 — 유저 수와 무관하게 인덱스 조회. 무거운 전 유저 집계는 snapshot.ts(cron).
  */
-export type LeaderboardMetric = 'max' | 'sum' | 'combat' | 'raid' | 'melee' | 'tower';
+export type LeaderboardMetric = 'max' | 'sum' | 'combat' | 'raid' | 'melee' | 'tower' | 'titles';
 export type LeaderboardEntry = {
   userId: string;
   nickname: string;
@@ -161,7 +161,7 @@ async function rankByValue(
     );
   return { value: myValue, rank: (c?.n ?? 0) + 1 };
 }
-export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower'];
+export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee', 'tower', 'titles'];
 
 /**
  * 6개 지표를 한 번에 — 랭킹 화면의 탭 전환을 무왕복으로 만들기 위한 페이로드.

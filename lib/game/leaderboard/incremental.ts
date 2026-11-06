@@ -13,6 +13,7 @@ import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { meleeDecayedPointsSumSql } from '@/lib/game/melee/points';
 import { towerRankValueSql } from '@/lib/game/tower/rank-value';
+import { titleCountSql } from '@/lib/game/leaderboard/title-count';
 import { recordFirstMilestones } from '@/lib/game/titles/first-milestones';
 
 /**
@@ -246,6 +247,27 @@ export async function refreshTowerMetric(userId: string, serverId: number): Prom
   }
 }
 
+/**
+ * 칭호 개수(업데이트 18) — 칭호를 발견해 원장에 새 행이 생긴 직후(discoverTitles) 호출. 원장에서 다시 세므로
+ * 순서가 뒤바뀌어도 최종값이 맞다. 0개면 행 제거. 다른 지급 경로(이벤트 훅 등)는 시간별 재계산이 맞춘다.
+ */
+export async function refreshTitlesMetric(userId: string, serverId: number): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await lockUser(tx, userId);
+      if (await isActivelyBanned(tx, userId)) return;
+      const [r] = (await tx.execute(sql`
+        select ${titleCountSql(sql`${userId}::uuid`, sql`${serverId}`)} as v
+      `)) as unknown as { v: number }[];
+      const v = Number(r?.v ?? 0);
+      if (v > 0) await upsertValue(tx, userId, serverId, 'titles', v);
+      else await tx.execute(sql`delete from leaderboard_ranks where server_id = ${serverId} and metric = 'titles' and user_id = ${userId}::uuid`);
+    });
+  } catch (e) {
+    console.warn('[lb.titles]', userId, e);
+  }
+}
+
 /** 카운트 메트릭 원천 재계산 — 스냅샷과 동일 술어(유저 1명 스코프). */
 async function recountCountMetric(
   dbx: Dbx,
@@ -310,4 +332,5 @@ export async function restoreUserBoards(userId: string, serverId: number): Promi
   if (raidCnt > 0) await upsertValue(db, userId, serverId, 'raid', raidCnt);
   if (meleeCnt > 0) await upsertValue(db, userId, serverId, 'melee', meleeCnt);
   await refreshTowerMetric(userId, serverId);
+  await refreshTitlesMetric(userId, serverId);
 }

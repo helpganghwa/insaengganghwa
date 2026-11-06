@@ -14,6 +14,7 @@ const METRICS: { metric: LeaderboardMetric; label: string }[] = [
   { metric: 'raid', label: '레이드 처치' },
   { metric: 'melee', label: '대난투' }, // 2026-07-22 개편 — 값=누적 포인트
   { metric: 'tower', label: '무한의 탑' }, // 값=층·도달 시각 합성값(표시는 층)
+  { metric: 'titles', label: '칭호' }, // 업데이트 18 — 값=발견한 칭호 개수
 ];
 
 type Deck = (typeof METRICS)[number] & { top: Awaited<ReturnType<typeof getRankingTop>> };

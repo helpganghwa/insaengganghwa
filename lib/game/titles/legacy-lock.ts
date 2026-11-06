@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 /**
  * 조건이 강화된 영구형 칭호 — 옛 기준으로 얻은 보유자는 title_legacy_locks(0223)에 잠겨, 새 조건을 한 번
  * 채우기 전까지 발견만 된 채 비활성(목록 '비활성', 대표 장착 불가, 대표여도 표시 안 함).
- * 오관왕 → 육관왕(랭킹 6종, 2026-09-29).
+ * 오관왕 → 육관왕(랭킹 6종, 2026-09-29) → 칠관왕(랭킹 7종, 2026-11-06 업데이트 18 — 0249로 다시 잠금).
  */
 export const LEGACY_LOCKABLE: ReadonlySet<string> = new Set(['pentagon']);
 

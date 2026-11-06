@@ -714,6 +714,9 @@
     },
     "enh_midnight": {
       "fx": "glassflow"
+    },
+    "rank_titles": {
+      "fx": "blazerose"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

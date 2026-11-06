@@ -22,6 +22,7 @@ const LABEL: Record<LeaderboardMetric, string> = {
   raid: '레이드 처치',
   melee: '대난투', // 2026-07-22 개편 — 값=감쇠 랭킹 포인트(반감기 14일)
   tower: '무한의 탑',
+  titles: '칭호',
 };
 // 탭별 산정 기준 캡션 — 내 순위 카드 아래 상시 표시(A안, 2026-07-22).
 const CRITERIA: Record<LeaderboardMetric, string> = {
@@ -31,6 +32,7 @@ const CRITERIA: Record<LeaderboardMetric, string> = {
   raid: '처치에 성공한 레이드에 참여한 횟수예요.',
   melee: '대난투 순위로 얻는 랭킹 포인트에요. 최근 성적일수록 크게 반영돼요.',
   tower: '무한의 탑에서 가장 높이 오른 층이에요. 같은 층이면 먼저 오른 사람이 앞서요.',
+  titles: '발견한 칭호의 개수예요. 칭호 화면을 열면 새로 얻은 칭호가 반영돼요.',
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
@@ -40,6 +42,7 @@ const BG: Record<LeaderboardMetric, string> = {
   raid: '/sprites/hof-bg.png?v=3',
   melee: '/sprites/hof-bg.png?v=3',
   tower: '/sprites/hof-bg.png?v=3',
+  titles: '/sprites/hof-bg.png?v=3',
 };
 // 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출. 탑은 합성값(rank-value.ts)에서 층만 꺼내 'N층'.
 function fmt(v: number, metric: LeaderboardMetric): string {

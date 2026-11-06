@@ -1176,7 +1176,7 @@ export const TITLE_DEFS: TitleDef[] = [
  {
   code: "pentagon",
   kind: "permanent",
-  label: "육관왕",
+  label: "칠관왕",
   hidden: true,
   cat: "조합",
   style: {
@@ -6252,6 +6252,17 @@ export const TITLE_DEFS: TitleDef[] = [
     "주인"
    ],
    plainColor: "#b8bcc6",
+   glow: true
+  }
+ },
+ {
+  code: "rank_titles",
+  kind: "conditional",
+  label: "명불허전",
+  hidden: false,
+  cat: "랭킹 1위",
+  style: {
+   fx: "blazerose",
    glow: true
   }
  },

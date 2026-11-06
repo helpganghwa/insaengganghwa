@@ -13,6 +13,7 @@ import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
 import { claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { towerRankValueSql } from '@/lib/game/tower/rank-value';
+import { titleCountsByServerSql } from '@/lib/game/leaderboard/title-count';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import type { LeaderboardMetric } from './queries';
 
@@ -136,6 +137,14 @@ async function towerRows(serverId: number): Promise<Row[]> {
   return (r as unknown as { user_id: string; value: string }[]).map((x) => ({ userId: x.user_id, value: Number(x.value) }));
 }
 
+/** titles = 발견한 칭호 개수(업데이트 18, 2026-11-06) — 칭호 화면 목록에 있는 코드만(title-count.ts). 0개는 미등재. */
+async function titlesRows(serverId: number): Promise<Row[]> {
+  const r = await db.execute(titleCountsByServerSql(serverId));
+  return (r as unknown as { user_id: string; value: number }[])
+    .filter((x) => Number(x.value) > 0)
+    .map((x) => ({ userId: x.user_id, value: Number(x.value) }));
+}
+
 /** 현재 활성 정지 계정 id 집합 — bannedAt 있고 banUntil이 없거나 아직 안 지남(ban.ts와 동일 판정). */
 async function activeBannedIds(): Promise<Set<string>> {
   const rows = await db
@@ -154,11 +163,12 @@ const ROWS_FN: Record<LeaderboardMetric, (sid: number) => Promise<Row[]>> = {
   raid: raidRows,
   melee: meleeRows,
   tower: towerRows,
+  titles: titlesRows,
 };
 const METRICS = Object.keys(ROWS_FN) as LeaderboardMetric[];
 
 /**
- * 한 서버의 메트릭 스냅샷 재계산·적재(기본 5종, metrics로 부분 지정 — combat은 무거워 cron에서
+ * 한 서버의 메트릭 스냅샷 재계산·적재(기본 전 지표, metrics로 부분 지정 — combat은 무거워 cron에서
  * 저빈도 tick에만). 메트릭별로 (server,metric) 전 행을 단일 트랜잭션 내 delete+insert로 원자 교체.
  */
 export async function rebuildLeaderboardSnapshot(

@@ -41,6 +41,7 @@ export { PENDING_CODES, EVENT_HOOK_CODES, isOwnerOnlyCode } from './pending';
 import { isOwnerOnlyCode, PENDING_CODES } from './pending';
 import { guildCollectiveCodes } from './guild-facts';
 import { LEGACY_LOCKABLE, legacyLockedTitles } from './legacy-lock';
+import { refreshTitlesMetric } from '@/lib/game/leaderboard/incremental';
 
 /**
  * 이 칭호를 목록·분모에서 감출지 — 판정이 없는데 아직 보유하지도 않은 것.
@@ -766,7 +767,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped), tw = g(tower),
     lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx), ch = g(chron);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
-  const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999 };
+  const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999, titles: 9999 };
   let combatValue = 0;
   for (const r of ranks as unknown as { metric: string; value: unknown; pos: unknown }[]) {
     pos[r.metric] = n(r.pos);
@@ -813,7 +814,7 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
     avatar_days: n(mi.avatar_days), donate_cnt: n(mi.donate_cnt), exec_zones: n(mi.exec_zones),
     aging_cnt: n(e.aging_cnt), carefree_cnt: n(e.carefree_cnt),
     // ── 판정 2차 ──
-    p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!, p_tower: pos.tower!,
+    p_max: pos.max!, p_sum: pos.sum!, p_combat: pos.combat!, p_raid: pos.raid!, p_melee: pos.melee!, p_tower: pos.tower!, p_titles: pos.titles!,
     v_combat: combatValue,
     dia: n(wa.dia), dia_rank: n(wa.dia_rank) || 9999, pay_rank: n(wa.pay_rank) || 9999, has_pay: n(wa.has_pay),
     in_guild: (gx.gdays ?? null) === null ? 0 : 1, gdays: n(gx.gdays), founder: n(gx.founder),
@@ -1027,8 +1028,9 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   monday: (m) => m.monday_down >= 10,
   evening_life: (m) => m.evening >= 100,
   // ── 판정 2차: 랭킹 순간·기록 ──
-  // 랭킹 6종(2026-09-29 무한의 탑 추가) 모두 10위 이내.
-  pentagon: (m) => m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10 && m.p_tower <= 10,
+  // 랭킹 7종(2026-09-29 무한의 탑, 2026-11-06 칭호 추가 — 육관왕→칠관왕) 모두 10위 이내.
+  pentagon: (m) =>
+    m.p_max <= 10 && m.p_sum <= 10 && m.p_combat <= 10 && m.p_raid <= 10 && m.p_melee <= 10 && m.p_tower <= 10 && m.p_titles <= 10,
   // new_record — 판정이 아니라 이벤트 훅: rank-leader 크론(world/event.ts)이 max 1위
   // **교체**를 관측한 순간 지급(첫 관측 시드는 제외 — 오픈 직후 남발 방지). EVENT_HOOK_CODES.
   // 재화·전투력 순간값 — 판정 시점(칭호 화면 진입 등)에 그 값이면 발견. 훅 보강은 후속.
@@ -1151,7 +1153,8 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (mm.p_raid === 1) out.add('rank_raid');
   if (mm.p_melee === 1) out.add('rank_melee');
   if (mm.p_tower === 1) out.add('rank_tower');
-  const allPos = [mm.p_max, mm.p_sum, mm.p_combat, mm.p_raid, mm.p_melee, mm.p_tower];
+  if (mm.p_titles === 1) out.add('rank_titles');
+  const allPos = [mm.p_max, mm.p_sum, mm.p_combat, mm.p_raid, mm.p_melee, mm.p_tower, mm.p_titles];
   if (allPos.some((p) => p === 2)) out.add('throne_shadow');
   if (allPos.every((p) => p! >= 2 && p! <= 3)) out.add('uncrowned');
   if (mm.days <= 30 && mm.p_combat <= 100) out.add('rising_star');
@@ -1264,6 +1267,9 @@ export async function discoverTitles(
     `)) as unknown as { title_code: string }[];
     inserted.push(...rows.map((r) => r.title_code));
   }
+  // 칭호 랭킹(업데이트 18) — 새로 발견한 게 있을 때만 내 값을 다시 센다(best-effort, 내부에서 오류를 삼킨다).
+  if (inserted.length) await refreshTitlesMetric(userId, serverId);
+
   // 판정 시각(0187) — /me 진입 스로틀(maybeJudgeTitlesForBadge)이 이 값을 본다. 실패해도 판정 결과엔 영향 없음.
   await db
     .execute(sql`update characters set titles_judged_at = now() where user_id=${userId}::uuid and server_id=${serverId}`)

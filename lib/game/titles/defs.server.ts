@@ -653,7 +653,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "pentagon",
   cat: "조합",
-  cond: "랭킹 6종 모두 10위 이내에 드는 순간",
+  cond: "랭킹 7종 모두 10위 이내에 드는 순간",
   diff: "어려움"
  },
  {
@@ -2979,7 +2979,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "uncrowned",
   cat: "조건부",
-  cond: "랭킹 6종 모두 2~3위(1위는 없이)인 동안",
+  cond: "랭킹 7종 모두 2~3위(1위는 없이)인 동안",
   diff: "어려움"
  },
  {
@@ -5835,6 +5835,12 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "rank_tower",
   cat: "랭킹 1위",
   cond: "무한의 탑 랭킹 1위인 동안",
+  diff: "어려움"
+ },
+ {
+  code: "rank_titles",
+  cat: "랭킹 1위",
+  cond: "칭호 랭킹 1위인 동안",
   diff: "어려움"
  },
  {
