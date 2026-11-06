@@ -1,15 +1,17 @@
 'use client';
 
 import { Children, type ReactNode } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
 
-import { SnapCarousel } from '@/components/ui/SnapCarousel';
+import 'swiper/css';
+import 'swiper/css/pagination';
 
 /**
  * 메인 홈 배너 carousel — DailySupplyCard / BattlePassBanner 등을 한 슬롯에 묶음.
  *
  * - 자동 슬라이드 X(사용자 액션 방해 회피). 사용자가 좌우 스와이프할 때만 전환.
- * - 자식 1개면 carousel 미적용(단독 표시).
- * - 2026-11-06 업데이트 18: swiper → SnapCarousel(CSS scroll-snap + 점, 넘기기·점 동작 동일).
+ * - 자식 1개면 carousel 미적용(단독 표시) → swiper UI overhead 회피.
  * - children은 RSC 또는 client 자유.
  */
 export function HomeBannerCarousel({ children }: { children: ReactNode }) {
@@ -24,7 +26,19 @@ export function HomeBannerCarousel({ children }: { children: ReactNode }) {
   }
   return (
     <div className={outerClass}>
-      <SnapCarousel slides={slides} className="h-full" slideClassName="h-full" />
+      <Swiper
+        modules={[Pagination]}
+        pagination={{ clickable: true }}
+        spaceBetween={0}
+        slidesPerView={1}
+        className="home-banner-swiper h-full"
+      >
+        {slides.map((slide, i) => (
+          <SwiperSlide key={i} className="h-full">
+            {slide}
+          </SwiperSlide>
+        ))}
+      </Swiper>
     </div>
   );
 }

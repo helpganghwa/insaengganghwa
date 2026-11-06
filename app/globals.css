@@ -373,37 +373,26 @@ html {
 @keyframes tdc-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .tdc-sym, .tdc-bar { animation: none; } }
 
-/* 배너 캐러셀(components/ui/SnapCarousel, 2026-11-06 업데이트 18 — swiper 대체). 스크롤바는 숨기고 한 장씩 스냅.
-   점은 종전 swiper 페이지네이션 값 그대로 — 우하단(bottom 4px·right 8px), 5px 원, 간격 2px, 흰 45% / 활성 amber-300. */
-.snap-track {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+/* swiper 페이지네이션 — 홈 배너 carousel용 dot. outer h-16 안 우하단에 작게. */
+.home-banner-swiper {
+  width: 100% !important;
+  max-width: 100% !important;
 }
-.snap-track::-webkit-scrollbar { display: none; }
-.snap-slide { scroll-snap-align: start; scroll-snap-stop: always; }
-.snap-dots {
-  position: absolute;
-  bottom: 4px;
-  right: 8px;
-  z-index: 10;
+.home-banner-swiper .swiper-pagination {
+  bottom: 4px !important;
+  right: 8px !important;
+  left: auto !important;
+  width: auto !important;
   text-align: right;
-  transform: translate3d(0, 0, 0);
 }
-.snap-dot {
-  display: inline-block;
+.home-banner-swiper .swiper-pagination-bullet {
   width: 5px;
   height: 5px;
-  margin: 0 2px;
-  border-radius: 50%;
+  margin: 0 2px !important;
   background-color: rgb(255 255 255); /* white */
   opacity: 0.45;
-  cursor: pointer;
 }
-.snap-dot-active {
+.home-banner-swiper .swiper-pagination-bullet-active {
   background-color: rgb(252 211 77); /* amber-300 */
   opacity: 1;
 }
