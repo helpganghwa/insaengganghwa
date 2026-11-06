@@ -664,11 +664,16 @@ export function HistoryPlayer({
 
   // ?day= 딥링크 — 첫 렌더 뒤 그날부터 시대 흐름.
   // PC 재생 화면에서만(2026-11-06 업데이트 18) — 모바일은 재생 트리가 없어 보이지 않는 재생(하루씩 fetch·글자 찍기)만 돌던 것을 막는다.
+  // 한 번만(2026-11-06 업데이트 18 보완) — 창 폭이 768px을 오가도(PC→모바일→PC) 딥링크 재생을 처음부터 다시 시작하지 않는다.
+  const deepLinkedRef = useRef(false);
   useEffect(() => {
-    if (!startDay || !isPc) return;
+    if (!startDay || !isPc || deepLinkedRef.current) return;
     const k = days.findIndex((d) => d.kstDay === startDay);
     if (k < 0) return;
-    const id = setTimeout(() => flowRef.current(k), 0);
+    const id = setTimeout(() => {
+      deepLinkedRef.current = true;
+      flowRef.current(k);
+    }, 0);
     return () => clearTimeout(id);
   }, [startDay, days, isPc]);
 
@@ -737,6 +742,18 @@ export function HistoryPlayer({
     setDetail(null);
     setOwners(index.owners);
   };
+
+  // PC 폭 → 모바일 폭으로 줄면 재생을 멈춘다(2026-11-06 업데이트 18) — 재생 화면이 사라진 뒤에도 하루씩 받아 오고 글자를
+  // 찍는 보이지 않는 재생이 남지 않게. 다시 넓히면 처음 화면(정지)에서 고른다.
+  const goToIdleRef = useRef(goToIdle);
+  useEffect(() => {
+    goToIdleRef.current = goToIdle;
+  });
+  const wasPcRef = useRef(false);
+  useEffect(() => {
+    if (wasPcRef.current && !isPc) goToIdleRef.current();
+    wasPcRef.current = isPc;
+  }, [isPc]);
 
   const cur = days[idx]!;
   const edgeLines = useMemo(
