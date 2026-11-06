@@ -291,15 +291,16 @@ export async function getMyRanks(userId: string, serverId: number): Promise<MyRa
   return { max: all.max, sum: all.sum, combat: all.combat };
 }
 
-/** 프로필 상세용 — 레이드 처치·대난투·무한의 탑 본인 순위(탑 값은 층·도달 시각 합성값, rank-value.ts). */
-export type MyCountRanks = { raid: MyRankSnap; melee: MyRankSnap; tower: MyRankSnap };
+/** 프로필 상세용 — 레이드 처치·대난투·무한의 탑·칭호 본인 순위(탑 값은 층·도달 시각 합성값, rank-value.ts). */
+export type MyCountRanks = { raid: MyRankSnap; melee: MyRankSnap; tower: MyRankSnap; titles: MyRankSnap };
 export async function getMyCountRanks(userId: string, serverId: number): Promise<MyCountRanks> {
-  const [raid, melee, tower] = await Promise.all([
+  const [raid, melee, tower, titles] = await Promise.all([
     safeMyRank('raid', serverId, userId),
     safeMyRank('melee', serverId, userId),
     safeMyRank('tower', serverId, userId),
+    safeMyRank('titles', serverId, userId),
   ]);
-  return { raid, melee, tower };
+  return { raid, melee, tower, titles };
 }
 
 /**

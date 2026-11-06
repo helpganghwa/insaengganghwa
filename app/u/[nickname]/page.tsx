@@ -274,25 +274,19 @@ async function KpiRowWithRanks({
     getMyCountRanks(userId, serverId),
   ]);
   return (
-    <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard label="전투력" value={fmtFull(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
-      <KpiCard label="최고" value={fmtFull(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
-      <KpiCard label="합산" value={fmtFull(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
-      <KpiCard
-        label="레이드"
-        value={fmtFull(counts.raid?.value ?? 0)}
-        rank={rankBadgeStreamed(counts.raid?.rank)}
-      />
-      <KpiCard
-        label="대난투"
-        value={fmtFull(counts.melee?.value ?? 0)}
-        rank={rankBadgeStreamed(counts.melee?.rank)}
-      />
+    // 위 줄 강화 3칸(넓게) · 아래 줄 활동 4칸(2026-11-06 칭호 추가, 사용자 확정 C) — 12열 그리드로 3·4를 빈칸 없이.
+    <section className="-mt-3 grid grid-cols-12 gap-1.5">
+      <KpiCard wide label="전투력" value={fmtFull(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
+      <KpiCard wide label="최고" value={fmtFull(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
+      <KpiCard wide label="합산" value={fmtFull(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
+      <KpiCard label="레이드" value={fmtFull(counts.raid?.value ?? 0)} rank={rankBadgeStreamed(counts.raid?.rank)} />
+      <KpiCard label="대난투" value={fmtFull(counts.melee?.value ?? 0)} rank={rankBadgeStreamed(counts.melee?.rank)} />
       <KpiCard
         label="무한의 탑"
         value={counts.tower ? `${towerFloorFromRankValue(counts.tower.value)}층` : '—'}
         rank={rankBadgeStreamed(counts.tower?.rank)}
       />
+      <KpiCard label="칭호" value={fmtFull(counts.titles?.value ?? 0)} rank={rankBadgeStreamed(counts.titles?.rank)} />
     </section>
   );
 }
@@ -307,19 +301,20 @@ function KpiRowFallback({
   maxEnhance: number;
 }) {
   return (
-    <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard label="전투력" value={fmtFull(total)} rank="—" />
-      <KpiCard label="최고" value={fmtFull(maxEnhance)} rank="—" />
-      <KpiCard label="합산" value={fmtFull(sumEnhance)} rank="—" />
+    <section className="-mt-3 grid grid-cols-12 gap-1.5">
+      <KpiCard wide label="전투력" value={fmtFull(total)} rank="—" />
+      <KpiCard wide label="최고" value={fmtFull(maxEnhance)} rank="—" />
+      <KpiCard wide label="합산" value={fmtFull(sumEnhance)} rank="—" />
       <KpiCard label="레이드" value="—" rank="—" />
       <KpiCard label="대난투" value="—" rank="—" />
       <KpiCard label="무한의 탑" value="—" rank="—" />
+      <KpiCard label="칭호" value="—" rank="—" />
     </section>
   );
 }
 
 function fmtFull(n: number): string {
-  // 3칸 2줄(2026-09-30)로 카드 폭이 110px쯤 되어 축약 없이 전부 보여 준다(10-01) — 전투력 8자리도 숫자 폰트 12px로 들어간다.
+  // 위 줄 3칸(카드 폭 ≈115px)에 강화 계열·아래 줄 4칸(≈85px)에 활동 계열(11-06) — 큰 숫자인 전투력은 넓은 위 줄이라 축약 없이 들어간다.
   return n.toLocaleString('ko-KR');
 }
 
@@ -615,13 +610,18 @@ function KpiCard({
   label,
   value,
   rank,
+  wide = false,
 }: {
   label: string;
   value: string;
   rank: React.ReactNode;
+  /** 위 줄 강화 3칸(12열 중 4칸) — 아니면 아래 줄 활동 4칸(12열 중 3칸). */
+  wide?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
+    <div
+      className={`${wide ? 'col-span-4' : 'col-span-3'} min-w-0 rounded-lg border border-zinc-800 bg-zinc-900/85 px-1 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur`}
+    >
       <div className="truncate text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
         {label}
       </div>
