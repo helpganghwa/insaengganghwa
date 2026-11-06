@@ -74,15 +74,38 @@ export function MeleeCountdown({
     if (!shouldPoll) return;
     let stopped = false;
     let refreshedAt = 0;
+    /** 429 등으로 쉬는 동안(이 시각 전) 폴링을 건너뛴다(2026-11-06 업데이트 18). */
+    let pausedUntil = 0;
+    let backoffMs = 30_000;
     // 지터(10~15초) — 발표 시각(10:00)에 전 서버 유저의 폴링이 동시에 살아나는 herd 방지.
     // 백그라운드 탭은 스킵(복귀하면 다음 틱이 잡는다).
     const delay = 10_000 + Math.random() * 5_000;
     const t = setInterval(() => {
-      if (stopped || document.hidden) return;
+      if (stopped || document.hidden || Date.now() < pausedUntil) return;
       fetch('/api/melee/status', { cache: 'no-store' })
-        .then((res) => (res.ok ? (res.json() as Promise<{ hasBattle?: boolean; revealed?: boolean; participantCount?: number | null }>) : null))
-        .then((st) => {
-          if (stopped || !st) return; // 실패는 다음 틱이 다시 본다
+        .then(async (res) => {
+          if (stopped) return;
+          if (res.status === 401) {
+            // 세션 만료 — 종전 router.refresh 폴링처럼 서버 렌더가 로그인으로 보낸다. 한 번만 하고 폴링을 멈춘다.
+            stopped = true;
+            clearInterval(t);
+            router.refresh();
+            return;
+          }
+          if (res.status === 429) {
+            // 요청 제한 — 점점 길게 쉰다(최대 2분). 화면은 그대로, 쉬는 동안 바뀐 것은 다음 성공 폴링이 잡는다.
+            pausedUntil = Date.now() + backoffMs;
+            backoffMs = Math.min(backoffMs * 2, 120_000);
+            return;
+          }
+          if (!res.ok) {
+            // 상태 조회 실패(5xx 등) — 종전 폴링과 같이 이번 틱은 화면을 통째로 새로 받는다(변화를 놓치지 않게).
+            router.refresh();
+            return;
+          }
+          backoffMs = 30_000;
+          const st = (await res.json()) as { hasBattle?: boolean; revealed?: boolean; participantCount?: number | null };
+          if (stopped || !st) return;
           const changed =
             st.revealed === true ||
             st.hasBattle !== hasBattle ||
@@ -93,6 +116,7 @@ export function MeleeCountdown({
           refreshedAt = Date.now();
           router.refresh();
         })
+        // 네트워크 실패 — 다음 틱이 다시 본다(종전 refresh도 오프라인이면 실패했다).
         .catch(() => {});
     }, delay);
     return () => {
