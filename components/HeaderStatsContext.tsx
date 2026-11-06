@@ -11,7 +11,8 @@ import { pieceCombatPower } from '@/lib/game/balance';
  * 스탯이 세션 끝까지 멈춰 보였다. 스텝 응답의 레벨 변화(from→to)와 아이템 초월 수치만으로
  * 서버와 동일한 순수 공식(pieceCombatPower)을 클라에서 적용 — 추가 서버 왕복 0으로 실시간.
  *  - combat += P(to,t) − P(from,t) / sum += to−from / max = max(max, to) (max_enhance_level은 단조 증가)
- * 수동 강화·세션 종료 refresh 시 layout의 서버 권위값이 setBase로 재동기(드리프트 교정).
+ * 세션 종료 refresh·다른 액션의 재렌더 시 layout의 서버 권위값이 setBase로 재동기(드리프트 교정).
+ * 수동 강화 수령도 2026-11-06(업데이트 18)부터 재렌더 없이 같은 델타로 반영한다.
  *
  * 값/액션 2분할(2026-08-07 렌더 감사) — 이전엔 자동강화 스텝마다 applyEnhanceDelta 호출이
  * 새 value 객체를 만들어 **강화 카드 6개가 자기 델타로 자기를 리렌더**하는 루프였다.
@@ -23,13 +24,20 @@ type HeaderStatsActions = {
   setBase: (next: HeaderStats | null) => void;
   /** 강화 결과 1건 반영 — 서버와 동일 공식의 정확 델타(표시 전용, 권위는 서버). */
   applyEnhanceDelta: (d: { fromLevel: number; toLevel: number; transcendLevel: number }) => void;
+  /**
+   * 하단 네비 강화 완료 점 덮어쓰기(2026-11-06 업데이트 18) — 수동 수령이 페이지 재렌더 없이 서버가 돌려준 값
+   * (enhanceReady)으로 점을 맞춘다. null = 덮어쓰기 해제(셸 값 사용). 새 셸 렌더가 오면 BottomNav가 해제한다.
+   */
+  setEnhanceDot: (v: boolean | null) => void;
 };
 
 const ValueCtx = createContext<HeaderStats | null>(null);
 const ActionsCtx = createContext<HeaderStatsActions | null>(null);
+const EnhanceDotCtx = createContext<boolean | null>(null);
 
 export function HeaderStatsProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<HeaderStats | null>(null);
+  const [enhanceDot, setEnhanceDot] = useState<boolean | null>(null);
   // 함수형 업데이트만 사용 — 영구 안정.
   const actions = useMemo<HeaderStatsActions>(
     () => ({
@@ -46,18 +54,26 @@ export function HeaderStatsProvider({ children }: { children: ReactNode }) {
           };
         });
       },
+      setEnhanceDot: (v) => setEnhanceDot(v),
     }),
     [],
   );
   return (
     <ActionsCtx.Provider value={actions}>
-      <ValueCtx.Provider value={stats}>{children}</ValueCtx.Provider>
+      <EnhanceDotCtx.Provider value={enhanceDot}>
+        <ValueCtx.Provider value={stats}>{children}</ValueCtx.Provider>
+      </EnhanceDotCtx.Provider>
     </ActionsCtx.Provider>
   );
 }
 
+/** 강화 완료 점 덮어쓰기 값 — null이면 셸(layout) 값을 쓴다. */
+export function useEnhanceDotOverride(): boolean | null {
+  return useContext(EnhanceDotCtx);
+}
+
 /** 액션만 — 영구 안정(스탯 변동에 리렌더 안 됨). Provider 밖에선 no-op(비게임 레이아웃 안전). */
-const NOOP_ACTIONS: HeaderStatsActions = { setBase: () => {}, applyEnhanceDelta: () => {} };
+const NOOP_ACTIONS: HeaderStatsActions = { setBase: () => {}, applyEnhanceDelta: () => {}, setEnhanceDot: () => {} };
 export function useHeaderStatsActions(): HeaderStatsActions {
   return useContext(ActionsCtx) ?? NOOP_ACTIONS;
 }

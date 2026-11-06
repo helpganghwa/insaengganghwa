@@ -25,6 +25,9 @@ const PAYLOAD = JSON.stringify({
   boxes: { weapon: PER_SLOT, armor: PER_SLOT, accessory: PER_SLOT },
 });
 const WINDOW_DAYS = PREMIUM.daily.days - 1; // 구매일 포함 30일 → +29까지 활성
+/** 레이아웃의 '오늘 몫 남음' 판정(premium_due)이 같은 활성 창·상품을 쓰도록 내보낸다(2026-11-06 업데이트 18). */
+export const PREMIUM_DAILY_WINDOW_DAYS = WINDOW_DAYS;
+export const PREMIUM_PRODUCT_ID = PREMIUM.id;
 
 export async function ensurePremiumDailyMail(userId: string, serverId: number): Promise<boolean> {
   const r = (await db.execute(sql`
@@ -61,6 +64,9 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
 /**
  * 계정이 프리미엄을 산 **모든 서버**에 그날 몫을 넣는다(10-12 사용자 결정: 접속한 서버만 주던 것을 산 서버에 매일 지급으로).
  * 레이아웃이 응답 뒤에 부른다. 활성 창 안의 구매가 있는 서버만 고르므로 미보유면 쿼리 1번으로 끝난다.
+ * 렌더마다 부르지 않는다(2026-11-06 업데이트 18) — 레이아웃 프로필 쿼리의 premium_due(활성 창 안인데 오늘
+ * premium_daily_grants 행이 없는 서버가 있는가)가 참이거나 그 판정을 못 했을 때만 부른다. 지급 원장 자체가
+ * 표식이라 인스턴스·구매 시각과 무관하게 정확하다(낮에 사면 그 직후 렌더에서 참이 된다).
  */
 export async function ensurePremiumDailyMailAll(userId: string): Promise<number> {
   const rows = (await db.execute(sql`

@@ -159,19 +159,182 @@ async function ensureEnhanceStats(userId: string, serverId: number): Promise<voi
   await db.execute(sql`select enhance_stats_rebuild(${userId}::uuid, ${serverId}::smallint)`);
 }
 
-async function collectMetrics(userId: string, serverId: number): Promise<Metrics> {
+/**
+ * 판정 출발점 한 문장(2026-11-06 업데이트 18) — 캐릭터 존재·강화 누적 행 준비 여부·보유 칭호를 함께 읽는다.
+ * 종전엔 캐릭터 확인과 누적 행 확인이 따로 1왕복씩이었고, 보유 칭호는 읽지 않았다(아래 건너뛰기에 쓴다).
+ */
+async function loadJudgeBase(
+  userId: string,
+  serverId: number,
+): Promise<{ hasCharacter: boolean; statsReady: boolean; owned: Set<string> }> {
+  const [row] = (await db.execute(sql`
+    select exists(select 1 from characters where user_id=${userId}::uuid and server_id=${serverId}) as has_char,
+           coalesce((select ready from enhance_stats where user_id=${userId}::uuid and server_id=${serverId}), false) as ready,
+           coalesce(array(select title_code from user_titles where user_id=${userId}::uuid and server_id=${serverId}), '{}'::text[]) as owned
+  `)) as unknown as { has_char: boolean; ready: boolean; owned: string[] | string | null }[];
+  const raw = row?.owned ?? [];
+  // text[]는 postgres.js가 배열로 파싱하지만, 문자열('{a,b}')로 오는 경우도 방어한다.
+  const owned = Array.isArray(raw) ? raw : String(raw).replace(/[{}"]/g, '').split(',').filter(Boolean);
+  return { hasCharacter: row?.has_char === true, statsReady: row?.ready === true, owned: new Set(owned) };
+}
+
+/**
+ * 지표 쿼리 이름 — collectMetrics의 쿼리 배열·구조분해와 **같은 순서**(tests/titles/judge-skip.test.ts가 소스로 대조한다).
+ */
+export const METRIC_QUERY_NAMES = [
+  'enh', 'streaks', 'levels', 'supply', 'transcend', 'daily', 'social', 'money', 'lg', 'gh', 'f3', 'melee', 'raid',
+  'avatar', 'misc', 'ranks', 'wallet', 'guildx', 'chatx', 'social2', 'streak2', 'enh3', 'flawless', 'supply3', 'melee3',
+  'cross3', 'conquest', 'exped', 'tower', 'firsts', 'wbx', 'chron',
+] as const;
+type MetricQueryName = (typeof METRIC_QUERY_NAMES)[number];
+
+/**
+ * 건너뛸 수 있는 지표 쿼리(2026-11-06 업데이트 18) — 쿼리 → 그 쿼리의 값을 읽는 **영구 칭호(RULES) 전부**와 빈 행의 컬럼.
+ *
+ * 지표 쿼리 대부분은 한 번 얻으면 끝인 영구 칭호에만 쓰인다. 그런데 기록이 가장 많아 쿼리가 가장 비싼 오래된 유저도
+ * 매번 전부 다시 셌다. 이 표의 칭호를 **모두 이미 보유**했으면 그 쿼리는 돌리지 않고 같은 컬럼의 0 행으로 채운다
+ * (돌려도 이미 가진 칭호의 insert는 on conflict로 사라지므로 결과가 같다).
+ *
+ * ⚠ 여기 없는 쿼리는 절대 건너뛰지 않는다 — 조건부 칭호(activeConditionals)·랭킹·잠금 해제 판정이 읽는 쿼리
+ *   (misc·ranks·wallet·guildx·streak2·gh)와, 칭호를 새로 붙이거나 RULES가 읽는 지표를 바꾸면 이 표도 함께 고쳐야 한다.
+ *   tests/titles/judge-skip.test.ts가 RULES 소스의 지표 이름 → 쿼리를 소스에서 다시 찾아 이 표와 대조한다(빠진 칭호·잘못된 쿼리를 잡는다).
+ */
+export const SKIPPABLE_QUERIES: Readonly<Partial<Record<MetricQueryName, { feeds: readonly string[]; cols: readonly string[] }>>> = {
+  enh: {
+    feeds: ['lunchbox', 'enhance_1000', 'enhance_10000', 'enhance_5000', 'enhance_50000', 'lucky_hammer', 'down_curse', 'curse_of_9',
+      'cliff_edge', 'crown_touch', 'five_min', 'aging', 'carefree', 'owl', 'early_bird', 'weekend', 'friday', 'monday', 'evening_life', 'first_bitter'],
+    cols: ['total', 'ok', 'mega', 'down', 'down9', 'cliff', 'crown', 'owl', 'early', 'weekend', 'friday', 'monday_down', 'evening', 'lunch',
+      'five_min_cnt', 'aging_cnt', 'carefree_cnt'],
+  },
+  streaks: {
+    feeds: ['win_streak', 'down_streak', 'down_10', 'hold_streak', 'hold_20', 'hold_50', 'double_joy', 'card_shark', 'mega_streak_7'],
+    cols: ['win_run', 'down_run', 'hold_run', 'mega_run'],
+  },
+  levels: {
+    feeds: ['enhance_100', 'enhance_150', 'enhance_200', 'transcend_deep', 'eclipse', 'codex_120', 'flawless_all', 'sword_and_pen', 'late_bloomer'],
+    cols: ['max_lv', 'max_t', 'codex', 'lv100_cnt', 'has100'],
+  },
+  supply: {
+    feeds: ['binge_500', 'supply_binge', 'supply_5000', 'supply_10000', 'supply_30000', 'morning_ration', 'midnight_snack'],
+    cols: ['total', 'day_max', 'morning', 'midnight'],
+  },
+  transcend: {
+    feeds: ['star_sea', 'transcend_300', 'transcend_1000', 'galaxy', 'meteor_shower', 'star_rain'],
+    cols: ['total', 'day_max'],
+  },
+  daily: {
+    feeds: ['checkin_30', 'checkin_100', 'checkin_365', 'longevity', 'mail_1000', 'big_eater', 'fast_courier'],
+    cols: ['checkin', 'mail', 'mail_day', 'mail_fast'],
+  },
+  social: { feeds: ['friends_30', 'invite_1', 'invite_5', 'invite_20', 'invite_50'], cols: ['friends', 'invites'] },
+  money: {
+    feeds: ['time_gold', 'pay_first', 'pay_5', 'pay_20', 'pay_50', 'pay_200', 'pay_500', 'pay_1000'],
+    cols: ['pay_sum', 'pay_cnt', 'reduced_ms'],
+  },
+  lg: {
+    feeds: ['billionaire', 'dust_to_mountain', 'all_in', 'bottomless', 'dragon_hoard'],
+    cols: ['dia_gained', 'dia_free', 'spend_day_max', 'led_peak10'],
+  },
+  f3: { feeds: ['david', 'triathlon'], cols: ['david', 'triathlon'] },
+  melee: {
+    feeds: ['melee_first_win', 'melee_30_win', 'melee_top10', 'melee_podium', 'melee_podium_50', 'melee_30', 'iron_man', 'melee_comet',
+      'melee_last', 'kong_line', 'paper_thin', 'king_return'],
+    cols: ['joins', 'wins', 'second', 'podium', 'top10', 'last_place', 'second_last', 'comet', 'win_gap7'],
+  },
+  raid: {
+    feeds: ['raid_strike', 'raid_strike_20m', 'raid_365', 'raid_1000', 'vanguard', 'night_watch', 'raid_volcano', 'raid_swamp', 'raid_orc',
+      'raid_fallen', 'raid_temple', 'raid_kingdom', 'continent_sweep'],
+    cols: ['joins', 'max_dmg', 'vanguard', 'night', 'r_volcano', 'r_swamp', 'r_orc', 'r_fallen', 'r_temple', 'r_kingdom'],
+  },
+  avatar: {
+    feeds: ['initiation', 'rebirth', 'avatar_1000', 'avatar_50', 'two_mirrors', 'same_combo', 'disguise'],
+    cols: ['cnt', 'genders', 'combo_max', 'combos', 'owned', 'first3'],
+  },
+  chatx: { feeds: ['chat_1000', 'chat_10000', 'night_talk', 'mention_100'], cols: ['chats', 'night_chats', 'mentions_got'] },
+  social2: {
+    feeds: ['welcome_crowd', 'school_founder', 'sprout_scout', 'surpassed', 'old_friend', 'sprout_keeper'],
+    cols: ['ref_50', 'ref_over', 'ref_100', 'ref_champ', 'old_friends', 'sprout_friends'],
+  },
+  enh3: {
+    feeds: ['reincarnation', 'phoenix', 'fire_play', 'perpetual', 'seven_falls', 'one_well', 'insomnia', 'all_nighter', 'commuter',
+      'beginner_mind', 'lightning'],
+    cols: ['enh_day_max', 'enh_day_run', 'night_day_max', 'insomnia_days', 'commuter_days', 'eq_max_cnt', 'seven_falls_ok', 'reinc_ok',
+      'lightning_cnt', 'beginner_ok', 'phoenix_ok'],
+  },
+  flawless: { feeds: ['flawless_100', 'pure_way'], cols: ['flawless_ok', 'pure_ok'] },
+  supply3: { feeds: ['fatalist', 'same_pull', 'three_meals'], cols: ['same_pull_ok', 'same_pull5_ok', 'meals_days'] },
+  melee3: { feeds: ['melee_3streak', 'month_war', 'sprint'], cols: ['melee_day_run', 'melee_win_run', 'sprint_run'] },
+  cross3: {
+    feeds: ['raid_100days', 'full_course', 'fire_support', 'day_100_party', 'weekend_raid'],
+    cols: ['raid_day_run', 'fire_support_cnt', 'weekend_raid_cnt', 'fullcourse_ok', 'day100_ok'],
+  },
+  conquest: {
+    feeds: ['siege_30', 'assault_100', 'ram', 'wall', 'guardian_100', 'iron_wall', 'tax_collector', 'cq_defend_300', 'cq_tax_100'],
+    cols: ['cq_attack', 'cq_attack_win', 'cq_defend_win', 'cq_tax'],
+  },
+  exped: {
+    feeds: ['exp_first', 'exp_50', 'exp_200', 'exp_500', 'exp_all_regions', 'exp_crit_10', 'exp_crit_30', 'exp_four_slots'],
+    cols: ['exp_claims', 'exp_regions', 'exp_crit', 'exp_enh_sum'],
+  },
+  tower: {
+    feeds: ['tower_revive', 'tower_resonance', 'tower_flawless', 'tower_bare', 'tower_grit', 'tower_f10', 'tower_f60', 'tower_f100'],
+    cols: ['tw_revive_wins', 'tw_reso_wins', 'tw_flawless_day', 'tw_bare_best', 'tw_grit', 'tw_best'],
+  },
+  // 최초 이정표는 행이 순위 목록이라 빈 결과(0행 = 순위 없음)가 중립이다.
+  firsts: {
+    feeds: ['first_enh500_1', 'first_enh500_2', 'first_enh500_3', 'first_sum20k_1', 'first_sum20k_2', 'first_sum20k_3', 'first_t30_1',
+      'first_t30_2', 'first_t30_3', 'first_combat10m_1', 'first_combat10m_2', 'first_combat10m_3'],
+    cols: [],
+  },
+  wbx: {
+    feeds: ['wb_first', 'wb_50', 'wb_lead_10', 'wb_reveal', 'wb_lucky', 'wb_alliance', 'wb_last', 'wb_shield', 'wb_merc', 'wb_kind_ember_phoenix'],
+    cols: ['wb_departs', 'wb_leads', 'wb_reveals', 'wb_lucky', 'wb_alliance', 'wb_last', 'wb_shield', 'wb_merc', 'wb_kind_ember'],
+  },
+  chron: { feeds: ['chron_10', 'chron_20', 'chron_head'], cols: ['chron_n', 'chron_head'] },
+};
+
+/** 같은 컬럼의 0 행(firsts처럼 컬럼이 없으면 0행). */
+function neutralRows(name: MetricQueryName): Record<string, number>[] {
+  const cols = SKIPPABLE_QUERIES[name]?.cols ?? [];
+  return cols.length ? [Object.fromEntries(cols.map((c) => [c, 0]))] : [];
+}
+
+/**
+ * 보유 칭호로 건너뛸 쿼리 — 먹이는 영구 칭호를 **모두** 가졌을 때만. 잠긴 옛 보유(LEGACY_LOCKABLE)는 새 조건을 다시 채워야
+ * 풀리므로 보유로 치지 않는다(지금은 칠관왕 하나이고 랭킹 쿼리라 원래 건너뛰지 않는다 — 방어용).
+ */
+function skippableFor(owned: ReadonlySet<string>): Set<MetricQueryName> {
+  const out = new Set<MetricQueryName>();
+  for (const name of METRIC_QUERY_NAMES) {
+    const q = SKIPPABLE_QUERIES[name];
+    if (q && q.feeds.every((c) => owned.has(c) && !LEGACY_LOCKABLE.has(c))) out.add(name);
+  }
+  return out;
+}
+/** 조건부 활성만 필요할 때(대표 장착 검증) — 영구 칭호용 쿼리를 전부 건너뛴다. activeConditionals는 이 쿼리들의 값을 읽지 않는다. */
+const ALL_SKIPPABLE: ReadonlySet<MetricQueryName> = new Set(
+  METRIC_QUERY_NAMES.filter((n) => SKIPPABLE_QUERIES[n] != null),
+);
+
+async function collectMetrics(
+  userId: string,
+  serverId: number,
+  opts: { skip?: ReadonlySet<MetricQueryName>; statsReady?: boolean } = {},
+): Promise<Metrics> {
+  const skip = opts.skip ?? new Set<MetricQueryName>();
   const u = sql`${userId}::uuid`;
   const s = sql`${serverId}`;
   // 레이드 기록(raid_attacks·raids)은 탈퇴 때 보존되므로 **지금 캐릭터 생성 이후**만 센다(10-12 2차 검사 B-M1) — 같은 계정으로 재가입한
   // 캐릭터가 옛 레이드 실적과 칭호 지표를 이어받고, 탈퇴자의 랭킹 행이 되살아나던 것(월드보스 지표의 c.created_at 기준과 같다).
   const cAt = sql`(select c.created_at from characters c where c.user_id=${u} and c.server_id=${s})`;
-  await ensureEnhanceStats(userId, serverId);
+  // 판정 출발점(loadJudgeBase)이 이미 ready를 읽었으면 다시 묻지 않는다.
+  if (!opts.statsReady) await ensureEnhanceStats(userId, serverId);
 
   // ⚠ 이름 순서는 아래 배열 **순서와 1:1**이다. 중간에 쿼리를 끼워 넣고 이름을 끝에 붙이면
   //   그 뒤 전부가 밀려 엉뚱한 결과를 읽는다 — 2026-08-19에 lg·gh·f3가 그렇게 어긋나
   //   순위·다이아·길드·채팅·스트릭 지표가 통째로 오판정됐다(랭킹 1위인데 칭호 비활성,
   //   다이아 90만인데 '빈털터리' 활성). 아래 assertMetricShape가 재발을 잡는다.
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx, chron] = await runLimited([
+  const thunks: (() => Promise<unknown>)[] = [
     // 강화 횟수·시간대 — 누적 표(0219). 정의는 enhance_stats_next.
     () => db.execute(enhCountsSql(u, s)),
     // 같은 결과 최장 연속 — 누적 표(0219).
@@ -404,10 +567,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              coalesce(max(ra.damage),0)::bigint as max_dmg,
              -- 선봉장 = 그 레이드의 **전체 최초** 공격이 나인 레이드 수. ra.seq는 "내 n번째 공격"이라
              -- seq=1은 참여 수와 동치였다(감사 H4) — 레이드별 최초 공격자(min id)로 판정한다.
-             (select count(*)::int from raids r2
-                join lateral (select a.user_id, a.created_at from raid_attacks a where a.raid_id=r2.id
+             -- 내가 공격한 레이드에서만 출발한다(2026-11-06 업데이트 18) — 종전엔 서버의 레이드 **전부**에 lateral 조회를
+             -- 돌렸다(프로덕션 수천 건). 뜻은 같다: 첫 공격이 나이고 그 시각이 cAt 이후면 그 레이드는 반드시 내 공격 집합에 있다.
+             (select count(*)::int
+                from (select distinct ra3.raid_id from raid_attacks ra3
+                       where ra3.user_id=${u} and ra3.created_at >= ${cAt}) mine
+                join raids r2 on r2.id = mine.raid_id and r2.server_id=${s}
+                join lateral (select a.user_id, a.created_at from raid_attacks a where a.raid_id=mine.raid_id
                               order by a.id limit 1) fa on true
-                where r2.server_id=${s} and fa.user_id=${u} and fa.created_at >= ${cAt}) as vanguard,
+                where fa.user_id=${u} and fa.created_at >= ${cAt}) as vanguard,
              count(*) filter (where extract(hour from ra.created_at ${sql.raw(KST)}) < 6)::int as night,
              count(distinct ra.raid_id) filter (where r.boss_code='dragon_west')::int as r_volcano,
              count(distinct ra.raid_id) filter (where r.boss_code='slime_king')::int as r_swamp,
@@ -754,7 +922,18 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
       console.warn('[titles] 연대기 조회 실패 — 연대기 칭호 0으로 판정', (e as Error).message);
       return [];
     }),
-  ], 5);
+  ];
+  if (thunks.length !== METRIC_QUERY_NAMES.length) {
+    throw new Error(`[titles] 지표 쿼리 ${thunks.length}개 ≠ 이름 ${METRIC_QUERY_NAMES.length}개 — METRIC_QUERY_NAMES를 쿼리 배열과 맞출 것`);
+  }
+  // 보유 칭호로 건너뛰는 쿼리는 같은 컬럼의 0 행으로 채운다(SKIPPABLE_QUERIES 주석).
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx, chron] = await runLimited(
+    thunks.map((t, i) => {
+      const name = METRIC_QUERY_NAMES[i]!;
+      return skip.has(name) ? async () => neutralRows(name) : t;
+    }),
+    5,
+  );
 
   // 자리 어긋남 재발 방지 — 각 결과가 **제 쿼리인지** 대표 컬럼으로 확인한다.
   // 순서가 밀리면 값이 조용히 0/9999가 되어 칭호가 말없이 오판정된다(2026-08-19 사고).
@@ -1140,7 +1319,8 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   if (zone.length) out.add('zone_executor');
 
   // 해방(보유 수 기반)
-  const mm = m ?? (await collectMetrics(userId, serverId));
+  // 지표를 넘겨받지 않았으면(대표 장착 검증) 조건부가 읽는 쿼리만 돌린다 — 영구 칭호용 쿼리는 여기서 쓰이지 않는다(2026-11-06).
+  const mm = m ?? (await collectMetrics(userId, serverId, { skip: ALL_SKIPPABLE }));
   if (mm.liberated >= 3) out.add('lib_holder');
   if (mm.liberated >= 10) out.add('lib_ten');
   if (mm.champions >= 5) out.add('champ_5');
@@ -1196,6 +1376,28 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
 }
 
 /**
+ * 지금 조건을 채운 칭호(원장 기록 없음) — discoverTitles의 판정부(2026-11-06 업데이트 18에 분리).
+ * skipOwned(기본 true): 먹이는 영구 칭호를 모두 보유한 지표 쿼리는 건너뛴다(SKIPPABLE_QUERIES). 그 칭호들은 이미
+ * 원장에 있으므로 achieved에서 빠져도 insert 결과·새 발견·활성 목록이 같다. false면 종전처럼 전부 센다(대조용).
+ */
+export async function computeAchievedTitles(
+  userId: string,
+  serverId: number,
+  opts: { skipOwned?: boolean } = {},
+): Promise<{ hasCharacter: boolean; achieved: Set<string>; active: Set<string>; skipped: MetricQueryName[] }> {
+  const base = await loadJudgeBase(userId, serverId);
+  if (!base.hasCharacter) return { hasCharacter: false, achieved: new Set(), active: new Set(), skipped: [] };
+  if (!base.statsReady) await db.execute(sql`select enhance_stats_rebuild(${userId}::uuid, ${serverId}::smallint)`);
+  const skip = opts.skipOwned === false ? new Set<MetricQueryName>() : skippableFor(base.owned);
+  const m = await collectMetrics(userId, serverId, { skip, statsReady: true });
+  const achieved = new Set<string>();
+  for (const [code, rule] of Object.entries(RULES)) if (rule(m)) achieved.add(code);
+  const active = await activeConditionals(userId, serverId, m);
+  for (const code of active) achieved.add(code);
+  return { hasCharacter: true, achieved, active, skipped: [...skip] };
+}
+
+/**
  * 발견 판정 + 원장 기록(멱등). 칭호 화면 진입 등 lazy 시점에 호출.
  * 반환: 이번에 새로 발견된 code 목록.
  */
@@ -1210,23 +1412,16 @@ export async function discoverTitles(
   const ck = `${userId}:${serverId}`;
   const hit = judgeCache.get(ck);
   if (hit && Date.now() - hit.at < JUDGE_TTL_MS) return hit.result;
+  const { hasCharacter, achieved, active } = await computeAchievedTitles(userId, serverId);
   // 캐릭터 존재 가드(칭호 감사 4-e) — srv 쿠키 변조 등으로 캐릭터 없는 서버 번호가 오면
   // 판정도 원장 기록도 하지 않는다(checkin claim.ts의 서버 가드와 동일 원칙).
-  const ch = (await db.execute(sql`
-    select 1 from characters where user_id=${userId}::uuid and server_id=${serverId} limit 1
-  `)) as unknown as unknown[];
-  if (!ch.length) {
+  if (!hasCharacter) {
     const empty = { found: [], active: new Set<string>() };
     // 빈 결과는 5초만 캐시 — 콜백 실패 후 자가복구로 캐릭터가 방금 생기는 레이스에서
     // 첫 발견을 30초나 막지 않게(적대 검수 5). at을 과거로 밀어 TTL을 앞당긴다.
     judgeCache.set(ck, { at: Date.now() - (JUDGE_TTL_MS - 5_000), result: empty });
     return empty;
   }
-  const m = await collectMetrics(userId, serverId);
-  const achieved = new Set<string>();
-  for (const [code, rule] of Object.entries(RULES)) if (rule(m)) achieved.add(code);
-  const active = await activeConditionals(userId, serverId, m);
-  for (const code of active) achieved.add(code);
 
   // 조건이 강화된 칭호의 옛 보유자 잠금(0223) — 새 조건을 채웠으면 푼다. 표 미적용이어도 판정은 계속.
   const unlock = [...achieved].filter((c) => LEGACY_LOCKABLE.has(c));
@@ -1341,20 +1536,36 @@ const BADGE_JUDGE_INTERVAL_MS = 60 * 60_000;
  * 새 칭호 배지용 판정(2026-09-03, 0187) — 판정의 기본 시점은 칭호 페이지 진입이지만, 그러면 판정으로
  * 발견한 칭호는 늘 "보는 순간 확인됨"이 되어 /me 메뉴 배지가 뜰 일이 없다. 프로필 진입 때도 이따금
  * 판정해 배지가 먼저 보이게 한다. 1시간 스로틀(characters.titles_judged_at) + 타임아웃 + 실패 무시 —
- * 배지는 부가 정보라 /me 렌더를 늦추거나 깨뜨리면 안 된다.
+ * 배지는 부가 정보라 /me 렌더를 늦추거나 깨뜨리면 안 된다. 칭호 화면(discoverTitles 직접 호출)은 스로틀 없이 늘 새로 판정한다.
+ *
+ * 스로틀 확인과 선점을 한 문장으로(2026-11-06 업데이트 18) — 종전엔 select로 시각만 보고 판정 **끝에** 갱신해서,
+ * 판정(수십 쿼리, 최대 수 초)이 도는 동안 다른 인스턴스·탭의 /me 진입이 모두 같은 판정을 겹쳐 돌렸다. 이제
+ * 1시간이 지났을 때만 titles_judged_at을 지금으로 바꾸는 UPDATE가 선점이 되어(행 잠금으로 직렬화) 한 번만 돈다.
+ * 판정이 실패하면 선점을 되돌려 다음 진입이 다시 시도한다(종전처럼). 왕복 수는 같다(select 1 → update 1).
  */
 export async function maybeJudgeTitlesForBadge(userId: string, serverId: number, timeoutMs = 2500): Promise<void> {
   try {
     const [row] = (await db.execute(sql`
-      select titles_judged_at from characters where user_id=${userId}::uuid and server_id=${serverId} limit 1
-    `)) as unknown as { titles_judged_at: Date | null }[];
-    if (!row) return; // 캐릭터 없음(서버 미가입) — 판정 대상 아님
-    const last = row.titles_judged_at ? new Date(row.titles_judged_at).getTime() : 0;
-    if (Date.now() - last < BADGE_JUDGE_INTERVAL_MS) return;
-    await Promise.race([
-      discoverTitles(userId, serverId),
-      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
-    ]);
+      with prev as (
+        select titles_judged_at from characters where user_id=${userId}::uuid and server_id=${serverId}
+      )
+      update characters set titles_judged_at = now()
+      where user_id=${userId}::uuid and server_id=${serverId}
+        and (titles_judged_at is null or titles_judged_at < now() - make_interval(secs => ${BADGE_JUDGE_INTERVAL_MS / 1000}))
+      -- 텍스트로 돌려받는다 — Date로 받으면 마이크로초가 잘려 아래 되돌리기의 같음 비교가 영영 안 맞는다.
+      returning titles_judged_at::text as claimed, (select titles_judged_at::text from prev) as prev
+    `)) as unknown as { claimed: string; prev: string | null }[];
+    // 캐릭터 없음(서버 미가입)이거나 1시간 안에 판정했다(다른 인스턴스가 방금 선점한 경우 포함) — 판정 대상 아님.
+    if (!row) return;
+    const judging = discoverTitles(userId, serverId).catch(async (e: unknown) => {
+      console.warn('[titles] badge judge failed', (e as Error).message);
+      // 선점 되돌리기 — 그새 다른 판정(칭호 화면)이 시각을 바꿨으면 건드리지 않는다.
+      await db
+        .execute(sql`update characters set titles_judged_at = ${row.prev}::timestamptz
+          where user_id=${userId}::uuid and server_id=${serverId} and titles_judged_at = ${row.claimed}::timestamptz`)
+        .catch(() => undefined);
+    });
+    await Promise.race([judging, new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]);
   } catch (e) {
     console.warn('[titles] badge judge skipped', (e as Error).message);
   }

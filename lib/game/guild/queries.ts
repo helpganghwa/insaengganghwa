@@ -779,9 +779,15 @@ export async function getGuildMembersRich(guildId: bigint) {
   const ids = base.map((b) => b.userId);
   // 길드는 서버 종속 → 전 멤버 동일 serverId. 장비를 그 서버로 스코프(멀티서버 유저 타서버 장비 합산 방지).
   const serverId = base[0]?.serverId;
-  const eqRows =
+  // 해방 등수(강화랭킹 1~3위) — 길드 전 멤버의 '장착' 아이템에 붙이는 후광. 사전계산 스냅샷(codex_champions)에서
+  //   멤버 전원 1쿼리로 읽고, 장착 여부는 아래 eqRows에서 거른다(2026-11-06 업데이트 18 성능 정리). 종전엔 장착 장비마다
+  //   같은 아이템의 앞선 사람 수를 상관 서브쿼리로 끝까지 세서(길드원 30명이면 90회) 프로덕션 DB 누적 1위 비용이었다.
+  //   강화·인벤·/me의 liberatedItemRanks와 같은 원천이라 화면끼리 등수가 어긋나지 않는다(정지 계정 제외도 같다).
+  //   장비 조회와 서로 독립이라 함께 보낸다. 타임아웃·실패 시 빈 맵(후광만 생략, 페이지 영향 X).
+  const libRank = new Map<string, Map<number, number>>();
+  const [eqRows] = await Promise.all([
     ids.length && serverId != null
-      ? await db
+      ? db
           .select({
             uid: userEquipment.userId,
             cid: userEquipment.catalogItemId,
@@ -794,41 +800,28 @@ export async function getGuildMembersRich(guildId: bigint) {
           .from(userEquipment)
           .innerJoin(catalogItems, eq(catalogItems.id, userEquipment.catalogItemId))
           .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids)))
-      : [];
-
-  // 해방 등수(강화랭킹 1~3위) — 길드 전 멤버의 '장착' 아이템에 대해 1쿼리 배치(N+1 금지).
-  //   ahead = 같은 catalog_item에서 자신보다 상위(레벨↑ / 동률·먼저달성 / 동률·동시각·user_id↓) 수.
-  //   ahead<3 → 해방(rank=ahead+1). 타임아웃 시 빈 맵(후광만 생략, 페이지 영향 X). cf. liberatedItemRanks.
-  const libRank = new Map<string, Map<number, number>>();
-  if (ids.length && serverId != null) {
-    try {
-      const libRows = (await withTimeout(
-        db.execute(sql`
-          select uc.user_id as uid, uc.catalog_item_id as cid,
-            (select count(*) from user_equipment o
-             where o.catalog_item_id = uc.catalog_item_id and o.server_id = ${serverId}
-               and o.max_enhance_level > 0 -- 부분 인덱스(ue_server_catalog_rank_idx, 0241) 조건 — 의미는 같다(uc.max>0 이상만 센다). 없으면 플래너가 인덱스를 안 쓴다(2차 검사 F3).
-               and (o.max_enhance_level > uc.max_enhance_level
-                 or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
-                 or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)))::int as ahead
-          from user_equipment uc
-          where uc.server_id = ${serverId} and uc.equipped_slot is not null and uc.max_enhance_level > 0
-            and uc.user_id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
-        `),
-        3000,
-        'guildLiberatedRanks',
-      )) as unknown as { uid: string; cid: number; ahead: number }[];
-      for (const r of libRows) {
-        const ahead = Number(r.ahead);
-        if (ahead < 3) {
-          const mm = libRank.get(r.uid) ?? libRank.set(r.uid, new Map()).get(r.uid)!;
-          mm.set(Number(r.cid), ahead + 1);
-        }
-      }
-    } catch {
-      // 빈 맵 유지 — 후광만 생략.
-    }
-  }
+      : Promise.resolve([]),
+    ids.length && serverId != null
+      ? withTimeout(
+          db.execute(sql`
+            select cc.user_id::text as uid, cc.catalog_item_id as cid, cc.rank
+            from codex_champions cc
+            where cc.server_id = ${serverId} and cc.user_id = any(${`{${ids.join(',')}}`}::uuid[])
+          `),
+          3000,
+          'guildLiberatedRanks',
+        )
+          .then((rows) => {
+            for (const r of rows as unknown as { uid: string; cid: number; rank: number }[]) {
+              const mm = libRank.get(r.uid) ?? libRank.set(r.uid, new Map()).get(r.uid)!;
+              mm.set(Number(r.cid), Number(r.rank));
+            }
+          })
+          .catch(() => {
+            // 빈 맵 유지 — 후광만 생략.
+          })
+      : Promise.resolve(),
+  ]);
 
   // uid별 보유 묶기 → 전투력/최고/합산/장착 3종.
   const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();

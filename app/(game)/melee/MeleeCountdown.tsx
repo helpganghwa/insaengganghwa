@@ -66,17 +66,40 @@ export function MeleeCountdown({
   // ⚠ deps에 now(1초 클럭)를 넣으면 안 됨 — 매초 cleanup→재설정되어 타이머가 영원히 안
   // 터진다(2026-08-06 감사에서 발견: 발표 후 화면이 수동 새로고침 전까지 갇혀 있었음).
   // boolean으로 접어 전이 시에만 effect가 돌게 한다.
+  // 폴링은 상태 JSON(/api/melee/status, 1쿼리)으로(2026-11-06 업데이트 18) — 종전엔 틱마다 router.refresh로
+  // 페이지·레이아웃 전체(회차 수·역대 우승자 포함)를 다시 그렸다. 이제 발표됐거나 배틀 행이 새로 생겼을(또는 참가
+  // 수가 바뀌었을) 때만 한 번 refresh한다 — 화면이 보여 주는 값(라벨·참가 수)이 바뀌는 경우와 같다.
   const shouldPoll = now >= revealAt || (!hasBattle && now >= runAt);
   useEffect(() => {
     if (!shouldPoll) return;
+    let stopped = false;
+    let refreshedAt = 0;
     // 지터(10~15초) — 발표 시각(10:00)에 전 서버 유저의 폴링이 동시에 살아나는 herd 방지.
     // 백그라운드 탭은 스킵(복귀하면 다음 틱이 잡는다).
     const delay = 10_000 + Math.random() * 5_000;
     const t = setInterval(() => {
-      if (!document.hidden) router.refresh();
+      if (stopped || document.hidden) return;
+      fetch('/api/melee/status', { cache: 'no-store' })
+        .then((res) => (res.ok ? (res.json() as Promise<{ hasBattle?: boolean; revealed?: boolean; participantCount?: number | null }>) : null))
+        .then((st) => {
+          if (stopped || !st) return; // 실패는 다음 틱이 다시 본다
+          const changed =
+            st.revealed === true ||
+            st.hasBattle !== hasBattle ||
+            (st.hasBattle === true && (st.participantCount ?? null) !== participantCount);
+          // 새 서버 렌더가 도착하면 props(hasBattle·참가 수)가 바뀌어 이 effect가 새 값으로 다시 돈다(또는 결과 화면으로 넘어간다).
+          // 도착이 늦는 동안 같은 변화로 refresh가 겹치지 않게 20초 간격을 둔다 — 그래도 안 바뀌면 종전처럼 다시 refresh.
+          if (!changed || Date.now() - refreshedAt < 20_000) return;
+          refreshedAt = Date.now();
+          router.refresh();
+        })
+        .catch(() => {});
     }, delay);
-    return () => clearInterval(t);
-  }, [shouldPoll, router]);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [shouldPoll, router, hasBattle, participantCount]);
 
   // 난투·전달은 같은 1시간 카운트다운(10:00 발표 기준), 라벨만 9:45 경계로 변경.
   let label: string;

@@ -118,6 +118,10 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // 정적 자산/이미지/Next 내부 제외 — 나머지 모든 요청 세션 갱신.
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // 크론·헬스체크·결제 웹훅도 제외(2026-11-06 업데이트 18) — 세션을 쓰지 않고(크론은 CRON_SECRET, 웹훅은 서명) 스테이징 게이트도
+    // 원래 통과시키는 경로(STAGING_OPEN)라 프록시를 거칠 이유가 없다. 매분 크론·5분 버전 확인마다 붙던 프록시 호출이 빠진다.
+    // ⚠ sw.js·*.json·*.m4a는 넣지 않는다 — 스테이징 게이트가 막는 경로(미배포 스프라이트 메타가 키 없이 새지 않게)이고,
+    //   sw.js는 위키 호스트 가드가 본 도메인으로 돌려보내야 위키 별칭에 서비스워커가 깔리지 않는다.
+    '/((?!_next/static|_next/image|favicon.ico|api/cron/|api/health(?:/|$)|api/webhooks/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

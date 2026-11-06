@@ -7,7 +7,6 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { userEquipment } from '@/lib/db/schema/equipment';
 import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
@@ -284,11 +283,37 @@ export async function getRankingTop(
 
 export type MyRanks = { max: MyRankSnap; sum: MyRankSnap; combat: MyRankSnap };
 
-/** 강화 직전 — 스냅샷의 본인 3 메트릭 순위. myRanksAll 단일 쿼리 재사용(6왕복→1, 2026-08-20).
- *  의미 동일: 값=내 스냅샷 행, 순위=count(value>내값)+1, 행 없으면 null. */
+/** 강화 토스트·프로필이 쓰는 3지표만(2026-11-06 업데이트 18) — 종전엔 7지표 전부의 앞선 사람 수를 세고 3개만 썼다. */
+const ENHANCE_METRICS = sql`('max','sum','combat')`;
+const EMPTY_RANKS = (): MyRanks => ({ max: null, sum: null, combat: null });
+function ranksFromRows(rows: { metric: string; value: string | number; ahead: number | string }[]): MyRanks {
+  const out = EMPTY_RANKS();
+  for (const r of rows) {
+    if (r.metric !== 'max' && r.metric !== 'sum' && r.metric !== 'combat') continue;
+    out[r.metric] = { value: Number(r.value), rank: Number(r.ahead ?? 0) + 1 };
+  }
+  return out;
+}
+
+/** 강화 직전 — 스냅샷의 본인 3 메트릭 순위. 단일 쿼리(6왕복→1, 2026-08-20; 3지표만, 2026-11-06).
+ *  의미 동일: 값=내 스냅샷 행, 순위=count(value>내값)+1, 행 없으면 null. 타임아웃·실패는 전부 null. */
 export async function getMyRanks(userId: string, serverId: number): Promise<MyRanks> {
-  const all = await safeMyRanksAll(serverId, userId);
-  return { max: all.max, sum: all.sum, combat: all.combat };
+  try {
+    const rows = (await withTimeout(
+      db.execute(sql`
+        select me.metric::text as metric, me.value as value,
+               (select count(*) from leaderboard_ranks o
+                 where o.server_id = ${serverId} and o.metric = me.metric and o.value > me.value)::int as ahead
+        from leaderboard_ranks me
+        where me.server_id = ${serverId} and me.user_id = ${userId}::uuid and me.metric in ${ENHANCE_METRICS}
+      `),
+      TIMEOUT_MS,
+      'leaderboard.mine3',
+    )) as unknown as { metric: string; value: string | number; ahead: number }[];
+    return ranksFromRows(rows);
+  } catch {
+    return EMPTY_RANKS();
+  }
 }
 
 /** 프로필 상세용 — 레이드 처치·대난투·무한의 탑·칭호 본인 순위(탑 값은 층·도달 시각 합성값, rank-value.ts). */
@@ -304,18 +329,63 @@ export async function getMyCountRanks(userId: string, serverId: number): Promise
 }
 
 /**
- * 강화 직후 — 본인의 새 stat은 DB에서 직접 read(내 장비만), 순위는 스냅샷에 count(value>내값)+1.
+ * 강화 수령 토스트의 직전·직후 순위를 **정산 뒤 두 문장**으로(2026-11-06 업데이트 18 — 종전 직전 1 + 직후 2 = 3왕복).
+ *
+ * 직전(before) = 스냅샷의 내 행 값·순위. 보드 행은 응답 뒤 사후처리(after → refreshEnhanceMetrics)에서야 바뀌므로
+ * 정산 직후에 읽어도 값이 같다 — 그래서 내 장비 조회와 한 문장에 싣는다. 경합(앞선 수령의 사후처리가 막 끝남)
+ * 정확도도 종전과 같다(종전에도 정산 직전 읽기와 그 사후처리 사이가 열려 있었다).
+ *
+ * 직후(after) = 본인의 새 stat은 DB에서 직접 read(내 장비만), 순위는 스냅샷에 count(value>내값)+1.
  * 본인 값은 실시간, 타 유저는 스냅샷 시점 — 강화 직후 순위 변동 즉시 반영(스냅샷 전체 리스트 불필요).
+ * 전투력 산식은 JS 하나(combatPowerFromOwned)라 장비를 읽은 뒤 두 번째 문장에서 센다(SQL 이중화 금지).
+ *
+ * 실패는 토스트만 생략(null) — 종전엔 장비 조회 실패가 던져져 이미 정산된 수령이 UNKNOWN으로 보였다.
+ *
+ * enhanceReady — 같은 첫 문장에 '완료 시점이 지난 진행 중 잡이 남았는가'(셸의 강화 완료 점과 같은 술어)를 편승한다.
+ * 수동 수령이 페이지 재렌더 없이 하단 네비 점을 끄고 켜는 데 쓴다(2026-11-06 업데이트 18). 실패하면 null(점은 그대로).
  */
-export async function getMyRanksAfter(userId: string, serverId: number): Promise<MyRanks> {
-  const eqRows = await db
-    .select({
-      catalogItemId: userEquipment.catalogItemId,
-      enhanceLevel: userEquipment.enhanceLevel,
-      transcendLevel: userEquipment.transcendLevel,
-    })
-    .from(userEquipment)
-    .where(and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId)));
+export async function getMyRanksBeforeAfter(
+  userId: string,
+  serverId: number,
+): Promise<{ before: MyRanks; after: MyRanks; enhanceReady: boolean | null }> {
+  const before = EMPTY_RANKS();
+  const out = EMPTY_RANKS();
+  let enhanceReady: boolean | null = null;
+  let eqRows: { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[];
+  try {
+    const [row] = (await withTimeout(
+      db.execute(sql`
+        select
+          coalesce((select jsonb_agg(jsonb_build_array(ue.catalog_item_id, ue.enhance_level, ue.transcend_level))
+                      from user_equipment ue
+                     where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}), '[]'::jsonb) as eq,
+          coalesce((select jsonb_agg(jsonb_build_object('metric', me.metric, 'value', me.value,
+                      'ahead', (select count(*) from leaderboard_ranks o
+                                 where o.server_id = ${serverId} and o.metric = me.metric and o.value > me.value)))
+                      from leaderboard_ranks me
+                     where me.server_id = ${serverId} and me.user_id = ${userId}::uuid
+                       and me.metric in ${ENHANCE_METRICS}), '[]'::jsonb) as before,
+          exists(select 1 from enhancement_jobs ej
+                  where ej.user_id = ${userId}::uuid and ej.server_id = ${serverId}
+                    and ej.status = 'running' and ej.complete_at <= now()) as enh_ready
+      `),
+      TIMEOUT_MS,
+      'leaderboard.beforeAfter',
+    )) as unknown as { eq: unknown; before: unknown; enh_ready: boolean | null }[];
+    const parse = <T,>(v: unknown): T[] => {
+      const x = typeof v === 'string' ? (JSON.parse(v) as unknown) : v;
+      return Array.isArray(x) ? (x as T[]) : [];
+    };
+    Object.assign(before, ranksFromRows(parse<{ metric: string; value: number; ahead: number }>(row?.before)));
+    enhanceReady = typeof row?.enh_ready === 'boolean' ? row.enh_ready : null;
+    eqRows = parse<[number, number, number]>(row?.eq).map(([c, e, t]) => ({
+      catalogItemId: Number(c),
+      enhanceLevel: Number(e),
+      transcendLevel: Number(t),
+    }));
+  } catch {
+    return { before, after: out, enhanceReady };
+  }
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
   const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
   const myCombat = Math.round(combatPowerFromOwned(eqRows));
@@ -329,8 +399,7 @@ export async function getMyRanksAfter(userId: string, serverId: number): Promise
   if (myMax > 0) wanted.push(['max', myMax]);
   if (mySum > 0) wanted.push(['sum', mySum]);
   if (eqRows.length > 0) wanted.push(['combat', myCombat]);
-  const out: MyRanks = { max: null, sum: null, combat: null };
-  if (wanted.length === 0) return out;
+  if (wanted.length === 0) return { before, after: out, enhanceReady };
 
   try {
     const valuesSql = sql.join(
@@ -357,5 +426,5 @@ export async function getMyRanksAfter(userId: string, serverId: number): Promise
   } catch {
     // 기존 per-metric catch(null)와 동일한 강등 — 토스트만 생략된다.
   }
-  return out;
+  return { before, after: out, enhanceReady };
 }

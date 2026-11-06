@@ -39,6 +39,7 @@ import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
 import { DiamondResync } from '@/components/DiamondResync';
+import { RouterCacheGuard } from '@/components/RouterCacheGuard';
 import { HeaderStatsProvider } from '@/components/HeaderStatsContext';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
@@ -54,6 +55,7 @@ export const maxDuration = 60;
 // 응답 후 쓰기를 하루 1회(인스턴스당)로 줄인다(자정 herd 완화). 에러 없이 끝난 경우에만
 // 마크(부분 실패는 다음 로드에서 재시도). 멱등이라 인스턴스 교체로 재실행돼도 안전.
 // ⚠ 프리미엄 daily는 이 스로틀 대상이 아님 — 하루 중 구매로 상태가 바뀌는 유일한 ensure.
+//   대신 셸 데이터의 premiumDue(오늘 몫 남음, 지급 원장 기준)로 거른다(2026-11-06 업데이트 18).
 const dailyEnsured = new Map<string, number>();
 function pruneDailyEnsured() {
   if (dailyEnsured.size < 10_000) return;
@@ -104,14 +106,19 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const ensureKey = `${userId}:${dailySid}:${kstDateString()}`;
   const throttled = dailyEnsured.has(ensureKey);
   after(async () => {
-    // 프리미엄 daily는 스로틀 제외 — 프리미엄 활성 상태가 하루 중 바뀔 수 있어(낮에 구매 →
-    // 구매일=1일차 지급) 마크 뒤에도 매 로드 실행해야 함. 미보유 시 CTE가 비어 싼 no-op.
+    // 프리미엄 daily는 인스턴스 스로틀 제외 — 프리미엄 활성 상태가 하루 중 바뀔 수 있어(낮에 구매 →
+    // 구매일=1일차 지급) 마크로 하루를 막으면 안 된다. 대신 셸 쿼리가 함께 읽은 premiumDue(활성 창 안인데
+    // 오늘 지급 원장 행이 없는 서버가 있는가)가 참일 때만 지급을 시도한다(2026-11-06 업데이트 18 — 렌더마다
+    // 돌던 확인 쿼리 제거). 판정을 못 했으면(null: 셸 로드 실패·기본값) 종전처럼 돌린다 — 누락보다 쿼리 1개가 낫다.
     // 산 서버마다(10-12 결정) — 활성 서버에서만 주면 그날 다른 서버만 한 사람의 몫이 사라졌다.
-    await withTimeout(ensurePremiumDailyMailAll(userId), 2500, 'layout.premiumDaily').catch(
-      (e) => {
-        if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
-      },
-    );
+    const premiumDue = (await layoutData).premiumDue;
+    if (premiumDue !== false) {
+      await withTimeout(ensurePremiumDailyMailAll(userId), 2500, 'layout.premiumDaily').catch(
+        (e) => {
+          if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
+        },
+      );
+    }
     if (throttled) return;
     let allOk = true;
     await withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
@@ -167,6 +174,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     <DiamondProvider>
       {/* 복귀 잔액 동기화 — PC웹·PWA 컨텍스트 간 다이아 어긋남 해소(2026-08-22). */}
       <DiamondResync />
+      {/* 뒤로/앞으로 가기 캐시 보정 — 재렌더 없이 상태를 바꾼 액션(강화 수령) 뒤 기록 이동 시 한 번 refresh(2026-11-06). */}
+      <RouterCacheGuard />
     <HeaderStatsProvider>
       {/* 앱 셸 — fixed inset-0로 시각 뷰포트에 정확히 고정(안드 크롬 h-dvh+중첩스크롤
           높이 모호성 제거). 가로는 max-w-390 + mx-auto(width:auto)로 중앙 — w-full(width:100%)을
