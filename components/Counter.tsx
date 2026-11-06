@@ -1,40 +1,21 @@
 /**
- * 자릿수 슬롯 카운터 — motion useSpring으로 각 자릿수가 부드럽게 회전.
- * value 변경 시 자릿수별로 스프링 trans. 47 → 48이면 1의 자리만 7→8로 굴러감.
+ * 자릿수 슬롯 카운터 — 자릿수마다 숫자 띠를 세로로 굴린다. 47 → 48이면 1의 자리만 7→8로 굴러감.
+ *
+ * 2026-11-06 업데이트 18 — motion(useSpring·motion.span 자릿수×10) 대신 **CSS transition** 하나로 굴린다. 강화 화면 전용
+ * 라이브러리 묶음이 빠지고, 결과 연출 동안 JS가 프레임마다 값을 계산하지 않는다(합성기 transform).
+ *  - 움직임은 종전 스프링(stiffness 100·damping 10·mass 1 — motion 기본값)의 해를 그대로 샘플링한 `linear()` 이징이다
+ *    (Counter.css). 넘침(약 16%)·되돌아옴·정착 시간(약 1.25초)이 같다. linear() 미지원 브라우저는 넘침 있는 cubic-bezier.
+ *  - 띠에는 시작·목표 사이 정수(+넘침 여유)를 위→아래 오름차순으로 깐다. 값 v가 보일 때 띠 위치 = -(v - 띠 첫 정수) × 높이.
+ *    종전 셀 배치(숫자 d가 (d - v) × 높이)와 같은 그림이다.
  */
 'use client';
 
-import { type MotionValue, motion, useSpring, useTransform } from 'motion/react';
 import type React from 'react';
-import { useEffect } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import './Counter.css';
 
 type PlaceValue = number | '.';
-
-interface NumberProps {
-  mv: MotionValue<number>;
-  number: number;
-  height: number;
-}
-
-function NumberCell({ mv, number, height }: NumberProps) {
-  const y = useTransform(mv, (latest) => {
-    const placeValue = latest % 10;
-    const offset = (10 + number - placeValue) % 10;
-    let memo = offset * height;
-    if (offset > 5) {
-      memo -= 10 * height;
-    }
-    return memo;
-  });
-
-  return (
-    <motion.span className="counter-number" style={{ y }}>
-      {number}
-    </motion.span>
-  );
-}
 
 function normalizeNearInteger(num: number): number {
   const nearest = Math.round(num);
@@ -47,6 +28,10 @@ function getValueRoundedToPlace(value: number, place: number): number {
   return Math.floor(normalizeNearInteger(scaled));
 }
 
+const mod10 = (k: number) => ((k % 10) + 10) % 10;
+/** 값 v가 보이는 띠 위치(띠 첫 정수 lo, 칸 높이 h). */
+const stripY = (v: number, lo: number, h: number) => `translate3d(0, ${-(v - lo) * h}px, 0)`;
+
 interface DigitProps {
   place: PlaceValue;
   value: number;
@@ -54,14 +39,32 @@ interface DigitProps {
   digitStyle?: React.CSSProperties;
 }
 
+/** 굴림 한 번 — from에서 to로. 같은 값이면 정지. */
+type Roll = { from: number; to: number };
+
 function Digit({ place, value, height, digitStyle }: DigitProps) {
   // hook은 조건 분기보다 위에서 무조건 호출 (rules-of-hooks). '.'이면 값은 미사용.
-  const valueRoundedToPlace = place === '.' ? 0 : getValueRoundedToPlace(value, place);
-  const animatedValue = useSpring(valueRoundedToPlace);
+  const target = place === '.' ? 0 : getValueRoundedToPlace(value, place);
+  const [roll, setRoll] = useState<Roll>({ from: target, to: target });
+  // 값이 바뀌면 직전 목표에서 새 목표로 굴린다(렌더 중 파생 갱신 — 같은 렌더에서 띠 범위가 맞춰진다).
+  if (roll.to !== target) setRoll({ from: roll.to, to: target });
+  const stripRef = useRef<HTMLSpanElement>(null);
 
-  useEffect(() => {
-    animatedValue.set(valueRoundedToPlace);
-  }, [animatedValue, valueRoundedToPlace]);
+  // 띠 범위 — 시작·목표 사이 + 스프링 넘침 여유(이동 칸 수의 17% + 1칸).
+  const pad = Math.ceil(Math.abs(roll.to - roll.from) * 0.17) + 1;
+  const lo = Math.min(roll.from, roll.to) - pad;
+  const hi = Math.max(roll.from, roll.to) + pad;
+
+  useLayoutEffect(() => {
+    const el = stripRef.current;
+    if (!el || roll.from === roll.to) return;
+    // 시작 위치에 전환 없이 놓고(렌더가 이미 from 위치로 그림) 한 번 확정한 뒤, 목표로 전환을 건다.
+    el.style.transition = 'none';
+    el.style.transform = stripY(roll.from, lo, height);
+    void el.getBoundingClientRect();
+    el.style.transition = '';
+    el.style.transform = stripY(roll.to, lo, height);
+  }, [roll, lo, height]);
 
   if (place === '.') {
     return (
@@ -73,9 +76,13 @@ function Digit({ place, value, height, digitStyle }: DigitProps) {
 
   return (
     <span className="counter-digit" style={{ height, ...digitStyle }}>
-      {Array.from({ length: 10 }, (_, i) => (
-        <NumberCell key={i} mv={animatedValue} number={i} height={height} />
-      ))}
+      <span ref={stripRef} className="counter-strip" style={{ transform: stripY(roll.from, lo, height) }}>
+        {Array.from({ length: hi - lo + 1 }, (_, i) => (
+          <span key={lo + i} className="counter-number" style={{ height }}>
+            {mod10(lo + i)}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
