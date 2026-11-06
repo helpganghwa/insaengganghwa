@@ -53,6 +53,8 @@ export async function grantEquipmentTitles(userId: string, serverId: number): Pr
       insert into user_titles (user_id, server_id, title_code)
       select ${userId}::uuid, ${serverId}, unnest(array[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[])
       where exists (select 1 from characters where user_id = ${userId}::uuid and server_id = ${serverId})
+        -- 닫힌 서버 자산 동결(10-12 결정 ⑤) — 닫힌 서버 장비를 해제하는 요청이 와도 그 서버 원장에 새로 적지 않는다.
+        and not exists (select 1 from servers where id = ${serverId} and status = 'closed')
       on conflict (user_id, server_id, title_code) do nothing
       returning title_code
     `)) as unknown as { title_code: string }[];

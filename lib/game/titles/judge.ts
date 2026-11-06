@@ -20,7 +20,6 @@ import {
   enhancedOnDaySql,
   first100DaysSql,
 } from './enhance-metrics';
-import { TITLE_SECRETS } from './defs.server';
 
 /**
  * 칭호 판정 엔진 — 상태 파생(도전과제 status.ts 철학, TITLES.md §2).
