@@ -39,6 +39,7 @@ import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
 import { DiamondResync } from '@/components/DiamondResync';
+import { RouterCacheGuard } from '@/components/RouterCacheGuard';
 import { HeaderStatsProvider } from '@/components/HeaderStatsContext';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
@@ -173,6 +174,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     <DiamondProvider>
       {/* 복귀 잔액 동기화 — PC웹·PWA 컨텍스트 간 다이아 어긋남 해소(2026-08-22). */}
       <DiamondResync />
+      {/* 뒤로/앞으로 가기 캐시 보정 — 재렌더 없이 상태를 바꾼 액션(강화 수령) 뒤 기록 이동 시 한 번 refresh(2026-11-06). */}
+      <RouterCacheGuard />
     <HeaderStatsProvider>
       {/* 앱 셸 — fixed inset-0로 시각 뷰포트에 정확히 고정(안드 크롬 h-dvh+중첩스크롤
           높이 모호성 제거). 가로는 max-w-390 + mx-auto(width:auto)로 중앙 — w-full(width:100%)을

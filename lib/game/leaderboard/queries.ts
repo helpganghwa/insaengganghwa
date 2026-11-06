@@ -340,13 +340,17 @@ export async function getMyCountRanks(userId: string, serverId: number): Promise
  * 전투력 산식은 JS 하나(combatPowerFromOwned)라 장비를 읽은 뒤 두 번째 문장에서 센다(SQL 이중화 금지).
  *
  * 실패는 토스트만 생략(null) — 종전엔 장비 조회 실패가 던져져 이미 정산된 수령이 UNKNOWN으로 보였다.
+ *
+ * enhanceReady — 같은 첫 문장에 '완료 시점이 지난 진행 중 잡이 남았는가'(셸의 강화 완료 점과 같은 술어)를 편승한다.
+ * 수동 수령이 페이지 재렌더 없이 하단 네비 점을 끄고 켜는 데 쓴다(2026-11-06 업데이트 18). 실패하면 null(점은 그대로).
  */
 export async function getMyRanksBeforeAfter(
   userId: string,
   serverId: number,
-): Promise<{ before: MyRanks; after: MyRanks }> {
+): Promise<{ before: MyRanks; after: MyRanks; enhanceReady: boolean | null }> {
   const before = EMPTY_RANKS();
   const out = EMPTY_RANKS();
+  let enhanceReady: boolean | null = null;
   let eqRows: { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[];
   try {
     const [row] = (await withTimeout(
@@ -360,23 +364,27 @@ export async function getMyRanksBeforeAfter(
                                  where o.server_id = ${serverId} and o.metric = me.metric and o.value > me.value)))
                       from leaderboard_ranks me
                      where me.server_id = ${serverId} and me.user_id = ${userId}::uuid
-                       and me.metric in ${ENHANCE_METRICS}), '[]'::jsonb) as before
+                       and me.metric in ${ENHANCE_METRICS}), '[]'::jsonb) as before,
+          exists(select 1 from enhancement_jobs ej
+                  where ej.user_id = ${userId}::uuid and ej.server_id = ${serverId}
+                    and ej.status = 'running' and ej.complete_at <= now()) as enh_ready
       `),
       TIMEOUT_MS,
       'leaderboard.beforeAfter',
-    )) as unknown as { eq: unknown; before: unknown }[];
+    )) as unknown as { eq: unknown; before: unknown; enh_ready: boolean | null }[];
     const parse = <T,>(v: unknown): T[] => {
       const x = typeof v === 'string' ? (JSON.parse(v) as unknown) : v;
       return Array.isArray(x) ? (x as T[]) : [];
     };
     Object.assign(before, ranksFromRows(parse<{ metric: string; value: number; ahead: number }>(row?.before)));
+    enhanceReady = typeof row?.enh_ready === 'boolean' ? row.enh_ready : null;
     eqRows = parse<[number, number, number]>(row?.eq).map(([c, e, t]) => ({
       catalogItemId: Number(c),
       enhanceLevel: Number(e),
       transcendLevel: Number(t),
     }));
   } catch {
-    return { before, after: out };
+    return { before, after: out, enhanceReady };
   }
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
   const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
@@ -391,7 +399,7 @@ export async function getMyRanksBeforeAfter(
   if (myMax > 0) wanted.push(['max', myMax]);
   if (mySum > 0) wanted.push(['sum', mySum]);
   if (eqRows.length > 0) wanted.push(['combat', myCombat]);
-  if (wanted.length === 0) return { before, after: out };
+  if (wanted.length === 0) return { before, after: out, enhanceReady };
 
   try {
     const valuesSql = sql.join(
@@ -418,5 +426,5 @@ export async function getMyRanksBeforeAfter(
   } catch {
     // 기존 per-metric catch(null)와 동일한 강등 — 토스트만 생략된다.
   }
-  return { before, after: out };
+  return { before, after: out, enhanceReady };
 }

@@ -21,6 +21,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
+import { markRouterCacheStale } from '@/lib/client/router-cache-stale';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { useHeaderStatsActions } from '@/components/HeaderStatsContext';
@@ -225,7 +226,7 @@ export function EnhanceSlotCard({
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const gate = useDiamondGate(); // 다이아 부족 → 충전 유도 팝업(단축·자동 공용)
-  const { applyEnhanceDelta } = useHeaderStatsActions();
+  const { applyEnhanceDelta, setEnhanceDot } = useHeaderStatsActions();
   const [pending, startTransition] = useTransition();
   // 매초 리렌더 제거(2026-08-20 감사 B) — 초 단위 표시(게이지·확률·남은시간·단축비용·경과)는
   // 전부 Ticker 자식으로 격리하고, 카드 본체는 '최대 확률 도달' 전이(timeUp) 1회만 리렌더한다.
@@ -448,9 +449,8 @@ export function EnhanceSlotCard({
         setFlashFromLevel(null);
         setFlashToLevel(null);
         endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-        // router.refresh() 제거(2026-07-23) — finalizeEnhance의 revalidatePath가 이미 헤더(layout)
-        // ·레벨·전투력을 응답으로 갱신하고, 게이지는 applyNextJob이 반영. 별도 GET RSC refetch는
-        // 중복이라 수령 1회당 페이지 렌더가 2→1로 줄어든다(실측 검증).
+        // router.refresh() 제거(2026-07-23) — 게이지는 applyNextJob이 반영. 헤더 스탯·강화 점도 응답값으로
+        // 반영하므로(2026-11-06 업데이트 18, 재렌더 0회) 별도 GET RSC refetch는 필요 없다.
       }, 3900);
     } else {
       setFlash(oc);
@@ -472,7 +472,7 @@ export function EnhanceSlotCard({
         setFlashFromLevel(null);
         setFlashToLevel(null);
         endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-        // router.refresh() 제거(2026-07-23, 위 mega 분기와 동일 근거) — revalidatePath 중복 제거.
+        // router.refresh() 제거(2026-07-23, 위 mega 분기와 동일 근거).
       }, 2500);
     }
   };
@@ -499,6 +499,9 @@ export function EnhanceSlotCard({
           .catch(swallowTo('enhance.refresh', null));
         if (rec?.state === 'done' && rec.outcome) {
           applyNextJob(rec.nextJob); // 게이지 즉시 리셋(옛 잡 100% 잔류 방지)
+          // 응답을 잃은 수령도 헤더 스탯은 같은 델타로 맞춘다(2026-11-06 — 정상 응답 경로와 같은 반영).
+          applyEnhanceDelta({ fromLevel: Number(rec.fromLevel), toLevel: Number(rec.toLevel), transcendLevel: activeJob.transcendLevel });
+          markRouterCacheStale();
           playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
           return;
         }
@@ -526,6 +529,13 @@ export function EnhanceSlotCard({
       // 이 슬롯 오버레이 시작 신호(begin) → 종료 setTimeout에서 end → 모든 슬롯 0이면 토스트.
       showRanking(r.ranksBefore, r.ranksAfter);
       applyNextJob(r.nextJob); // 게이지 즉시 리셋 — router.refresh 지연과 무관하게 새 잡 반영
+      // 재렌더 없는 수령(2026-11-06 업데이트 18) — 종전엔 액션의 revalidatePath가 화면·레이아웃을 다시 그려 헤더 스탯·
+      // 하단 네비 점을 맞췄다. 이제 응답값으로 직접 반영한다(자동 강화와 같은 방식, 다이아는 수령으로 바뀌지 않는다).
+      applyEnhanceDelta({ fromLevel: Number(r.result.fromLevel), toLevel: Number(r.result.toLevel), transcendLevel: activeJob.transcendLevel });
+      if (r.enhanceReady != null) setEnhanceDot(r.enhanceReady);
+      markRouterCacheStale(); // 뒤로 가기로 돌아간 화면이 수령 전 캐시를 보이지 않게(RouterCacheGuard)
+      // 재등록 실패(MAX 등) — 슬롯이 비었으니 서버 상태로 다시 그린다(종전 revalidatePath 재렌더와 같은 시점).
+      if (!r.nextJob) router.refresh();
       playResult(r.result.outcome as Outcome, Number(r.result.fromLevel), Number(r.result.toLevel), lore);
     });
   };

@@ -137,6 +137,8 @@ export async function finalizeEnhance(jobId: string): Promise<
       nextJob: NextJobDto | null;
       ranksBefore: MyRanks;
       ranksAfter: MyRanks;
+      /** 정산·재등록 뒤 완료 시점이 지난 진행 중 잡이 남았는가 — 하단 네비 강화 점(null=조회 실패, 점 그대로). */
+      enhanceReady: boolean | null;
     }
   | ErrorState
 > {
@@ -178,16 +180,18 @@ export async function finalizeEnhance(jobId: string): Promise<
     // 토스트 순위 직전·직후를 정산 뒤 두 문장으로(2026-11-06 업데이트 18 — 종전 직전 1 + 직후 2 = 3왕복).
     // 직전은 스냅샷 내 행이라 정산 뒤에 읽어도 같다(보드 행은 응답 뒤 사후처리에서야 바뀐다).
     // 직후는 본인 장비를 직접 재계산하므로 사후처리(applyEnhancePostEffects)보다 먼저 읽어도 무관.
-    const { before: ranksBefore, after: ranksAfter } = await getMyRanksBeforeAfter(userId, serverId);
+    const { before: ranksBefore, after: ranksAfter, enhanceReady } = await getMyRanksBeforeAfter(userId, serverId);
     // 묶음 알림에서 이미 처리된 잡 제거 — best-effort·응답 결과 무관이라 after()로 응답 후 실행
     // (핫패스에서 UPDATE+DELETE 2왕복 제거, 2026-07-27). 다음 cron이 빈 묶음 발송 안 함.
     after(() => cleanupPushPendingJob(userId, jobId));
     // 리더보드·세금·도감·업적 사후처리 — 전부 best-effort(주석·cron 백스톱 동일)인데 응답을
     // 막고 있던 최대 16왕복을 응답 뒤로(2026-08-20 감사). 이정표 유실 로깅은 함수 안에 유지.
     after(() => applyEnhancePostEffects(r));
-    // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
-    revalidatePath('/enhance');
-    revalidatePath('/inventory');
+    // 페이지 재렌더 없음(2026-11-06 업데이트 18) — 종전 revalidatePath('/enhance'·'/inventory')는 무효화한 경로와 상관없이
+    // **보고 있는 화면 + 레이아웃**을 다시 그려 응답에 실었다(수령 1회당 페이지 3 + 레이아웃 쿼리). 화면이 쓰던 값은 전부
+    // 이 응답으로 클라가 직접 반영한다(자동 강화와 같은 방식): 게이지=nextJob, 헤더 스탯=from/to 델타(applyEnhanceDelta),
+    // 하단 네비 강화 점=enhanceReady. 다이아는 수령으로 바뀌지 않는다. 재등록 실패(nextJob null)만 클라가 refresh로
+    // 슬롯을 비운다. 다른 화면은 동적 렌더라 이동하면 새로 받고, 뒤로 가기 캐시는 RouterCacheGuard가 한 번 새로 받는다.
     return {
       status: 'success',
       result: {
@@ -200,6 +204,7 @@ export async function finalizeEnhance(jobId: string): Promise<
       nextJob,
       ranksBefore,
       ranksAfter,
+      enhanceReady,
     };
   } catch (e) {
     if (e instanceof EnhanceError) return err(e.code);

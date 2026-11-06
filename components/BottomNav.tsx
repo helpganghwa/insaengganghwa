@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+
+import { useEnhanceDotOverride, useHeaderStatsActions } from '@/components/HeaderStatsContext';
 
 import { modalHistory } from '@/lib/ui/modal-history';
 
@@ -20,14 +23,24 @@ type Props = {
   hasCompletedEnhance?: boolean;
   /** /me 탭 알림 dot — 친구 받은 요청 1건 이상. */
   hasFriendRequest?: boolean;
+  /** 셸 데이터 생성 시각 — 바뀌면(새 서버 렌더) 강화 점 덮어쓰기를 해제한다(HeaderStatsContext.setEnhanceDot). */
+  renderedAt?: number;
 };
 
 export function BottomNav({
   hasCompletedEnhance = false,
   hasFriendRequest = false,
+  renderedAt,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  // 강화 완료 점 — 수동 수령 응답이 덮어쓴 값이 있으면 그것, 새 셸 렌더가 오면 다시 셸 값(2026-11-06 업데이트 18).
+  const dotOverride = useEnhanceDotOverride();
+  const { setEnhanceDot } = useHeaderStatsActions();
+  useEffect(() => {
+    if (renderedAt != null) setEnhanceDot(null);
+  }, [renderedAt, setEnhanceDot]);
+  const enhanceDot = dotOverride ?? hasCompletedEnhance;
 
   return (
     <nav className="sticky bottom-0 z-30 box-content grid h-14 grid-cols-5 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950">
@@ -35,7 +48,7 @@ export function BottomNav({
         const active =
           item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
         const dot =
-          (item.href === '/enhance' && hasCompletedEnhance) ||
+          (item.href === '/enhance' && enhanceDot) ||
           (item.href === '/me' && hasFriendRequest);
         return (
           <Link prefetch={false}
