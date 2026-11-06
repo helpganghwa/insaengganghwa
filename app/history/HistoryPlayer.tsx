@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import dynamic from 'next/dynamic';
 
 import { EmblemChain, GuildInline } from '@/components/EmblemChain';
 import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
@@ -14,7 +15,27 @@ import type {
   HistoryGuildMeta,
   HistoryIndex,
 } from '@/lib/game/history/types';
-import { HistoryRace } from './HistoryRace';
+import type { HistoryRaceProps } from './HistoryRace';
+
+/** 판도 막대(echarts) — PC 재생 화면에서만 쓰여 따로 받는다(2026-11-06 업데이트 18). 받는 동안은 같은 높이의 빈 칸. */
+const HistoryRace = dynamic<HistoryRaceProps>(() => import('./HistoryRace').then((m) => m.HistoryRace), {
+  ssr: false,
+  loading: () => null,
+});
+
+/**
+ * PC 폭(md, 768px 이상)인가(2026-11-06 업데이트 18) — 재생 화면은 PC 전용이라 모바일에서는 그 트리(지도 이미지·판도 차트·
+ * 딥링크 자동 재생)를 아예 만들지 않는다. 서버·하이드레이션은 false(모바일 대체 화면 + PC 자리 틀)로 같게 그리고, 마운트 뒤 판정한다.
+ */
+const PC_QUERY = '(min-width: 768px)';
+function subscribePc(cb: () => void) {
+  const mq = window.matchMedia(PC_QUERY);
+  mq.addEventListener('change', cb);
+  return () => mq.removeEventListener('change', cb);
+}
+function useIsPc(): boolean {
+  return useSyncExternalStore(subscribePc, () => window.matchMedia(PC_QUERY).matches, () => false);
+}
 
 /**
  * 대륙의 역사 — 시대(章) 중심 재생(2026-09-18, 시안 4 A안 '장 재생').
@@ -277,6 +298,7 @@ export function HistoryPlayer({
 }) {
   const { days, zones, edges, serverId, story, ownersByDay, guildsById, nameAliases } = index;
   const n = days.length;
+  const isPc = useIsPc();
   const eras = story.eras;
   const [phase, setPhase] = useState<Phase>('idle');
   const [stageSize, setStageSize] = useState(STAGE_PX);
@@ -641,13 +663,14 @@ export function HistoryPlayer({
   }, [phase]);
 
   // ?day= 딥링크 — 첫 렌더 뒤 그날부터 시대 흐름.
+  // PC 재생 화면에서만(2026-11-06 업데이트 18) — 모바일은 재생 트리가 없어 보이지 않는 재생(하루씩 fetch·글자 찍기)만 돌던 것을 막는다.
   useEffect(() => {
-    if (!startDay) return;
+    if (!startDay || !isPc) return;
     const k = days.findIndex((d) => d.kstDay === startDay);
     if (k < 0) return;
     const id = setTimeout(() => flowRef.current(k), 0);
     return () => clearTimeout(id);
-  }, [startDay, days]);
+  }, [startDay, days, isPc]);
 
   const togglePause = useCallback(() => {
     if (phase === 'idle' || phase === 'end') {
@@ -804,6 +827,14 @@ export function HistoryPlayer({
     <>
       {/* 모바일(2026-09-18): 재생은 PC 전용 — 지도·글·판도를 한 화면에 두는 구성이라 좁은 화면에선 읽을 수 없다. 대신 안내와 장 목차·요약. */}
       <MobileFallback days={days} eras={eras} share={share} meta={meta} guildColor={guildColor} />
+      {/* PC 재생 화면은 PC 폭에서만 만든다(2026-11-06 업데이트 18). 판정 전(서버·하이드레이션)에는 같은 큰 틀만 그려 둔다. */}
+      {!isPc ? (
+        <div className="hidden md:contents">
+          <main className="mx-auto w-full max-w-[1400px] px-3 pt-3 pb-28 md:h-full md:min-h-0 md:px-5 md:pt-4 md:pb-24">
+            <div className={`rounded-2xl border md:h-full ${PAPER.border} ${PAPER.card}`} />
+          </main>
+        </div>
+      ) : (
       <div className="hidden md:contents">
         <main className="mx-auto w-full max-w-[1400px] px-3 pt-3 pb-28 md:h-full md:min-h-0 md:px-5 md:pt-4 md:pb-24">
           {/* 큰 틀 하나를 3등분 — 지도 | 글 | 순위·시대. 각 칸이 자기 안에서 스크롤하고 페이지는 스크롤하지 않는다. 조작·시대 띠는 하단 플로팅. */}
@@ -1406,6 +1437,7 @@ export function HistoryPlayer({
           </div>
         </main>
       </div>
+      )}
     </>
   );
 }
@@ -1740,7 +1772,9 @@ function RacePanel({
 }) {
   if (share.length === 0)
     return <div className={`text-[12px] ${PAPER.muted}`}>아직 세워진 깃발이 없습니다</div>;
+  // 차트 청크를 받는 동안에도 자리를 지킨다(지연 로드 — 높이 고정, 2026-11-06 업데이트 18).
   return (
+    <div style={{ minHeight: tall ? 300 : 240 }}>
     <HistoryRace
       height={tall ? 300 : 240}
       onFocus={onFocus}
@@ -1753,6 +1787,7 @@ function RacePanel({
         emblems: guildEmblem(g),
       }))}
     />
+    </div>
   );
 }
 

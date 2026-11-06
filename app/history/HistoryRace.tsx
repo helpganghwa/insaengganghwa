@@ -68,19 +68,21 @@ const UPDATE_MS = 1000;
  *    카테고리를 새로 배치해 막대가 튀고, replaceMerge로 시리즈를 갈아 끼우면 애니메이션이 아예 끊긴다.
  *  - 값·순위 갱신은 선형 UPDATE_MS. 라벨 숫자는 valueAnimation으로 함께 굴러간다.
  */
-export function HistoryRace({
-  rows,
-  height = 260,
-  onFocus,
-  focusKey = null,
-}: {
+export type HistoryRaceProps = {
   rows: RaceRow[];
   height?: number;
   /** 막대·이름에 올린 길드(이름) — 지도가 그 길드 구역을 밝힌다(2026-09-18). 벗어나면 null. */
   onFocus?: (name: string | null) => void;
   /** 밖(지도 표식·글 속 이름)에서 호버한 길드의 행 키 — 이 막대만 밝히고 나머지는 흐리게. */
   focusKey?: string | null;
-}) {
+};
+
+export function HistoryRace({
+  rows,
+  height = 260,
+  onFocus,
+  focusKey = null,
+}: HistoryRaceProps) {
   const ref = useRef<HTMLDivElement>(null);
   const focusRef = useRef(onFocus);
   useEffect(() => {
