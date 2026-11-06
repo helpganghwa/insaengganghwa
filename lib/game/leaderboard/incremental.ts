@@ -314,11 +314,33 @@ async function recountCountMetric(
  * 노출되던 최대 1h 창 폐쇄(2026-07-07 전수감사 C-묶음). lockUser로 증분 훅과 직렬화.
  */
 export async function removeUserFromBoards(userId: string): Promise<void> {
-  await db.transaction(async (tx) => {
+  const vacated = await db.transaction(async (tx) => {
     await lockUser(tx, userId);
     await tx.execute(sql`delete from leaderboard_ranks where user_id = ${userId}::uuid`);
-    await tx.execute(sql`delete from codex_champions where user_id = ${userId}::uuid`);
+    return (await tx.execute(sql`
+      delete from codex_champions where user_id = ${userId}::uuid
+      returning server_id, catalog_item_id
+    `)) as unknown as { server_id: number; catalog_item_id: number }[];
   });
+  // 비운 자리를 바로 다음 사람으로 채운다(2026-11-06 업데이트 18) — 길드원 목록 후광도 이제 codex_champions에서 읽으므로,
+  // 종전처럼 즉시 반영되려면 그 아이템 파티션을 다시 계산해야 한다(밴 제외 술어 포함). 드물고 아이템 수만큼만.
+  await rebuildChampionItems(vacated.map((r) => [Number(r.server_id), Number(r.catalog_item_id)]));
+}
+
+/** 아이템 파티션별 codex_champions 재계산 — 실패는 시간별 전체 재계산이 교정(로그만). */
+async function rebuildChampionItems(items: [number, number][]): Promise<void> {
+  if (items.length === 0) return;
+  // snapshot.ts가 이 모듈을 import하므로(claimMilestone) 순환을 피해 지연 로드.
+  const { rebuildCodexChampionsForItem } = await import('./snapshot');
+  const seen = new Set<string>();
+  for (const [sid, cid] of items) {
+    const k = `${sid}:${cid}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    await rebuildCodexChampionsForItem(sid, cid).catch((e) =>
+      console.warn('[boards] codex champion rebuild failed', sid, cid, (e as Error).message),
+    );
+  }
 }
 
 /**
@@ -333,4 +355,20 @@ export async function restoreUserBoards(userId: string, serverId: number): Promi
   if (meleeCnt > 0) await upsertValue(db, userId, serverId, 'melee', meleeCnt);
   await refreshTowerMetric(userId, serverId);
   await refreshTitlesMetric(userId, serverId);
+  // 해방 등수 복원(2026-11-06 업데이트 18) — 정지 해제된 유저가 상위 3 안에 드는 아이템만 파티션 재계산(길드원 후광 즉시 반영).
+  // 앞선 사람 수는 스냅샷과 같은 정렬·밴 제외 술어로 센다.
+  const champItems = (await db.execute(sql`
+    select uc.catalog_item_id as cid
+    from user_equipment uc
+    where uc.user_id = ${userId}::uuid and uc.server_id = ${serverId} and uc.max_enhance_level > 0
+      and (select count(*) from user_equipment o
+            where o.catalog_item_id = uc.catalog_item_id and o.server_id = ${serverId}
+              and o.max_enhance_level > 0
+              and (o.max_enhance_level > uc.max_enhance_level
+                or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
+                or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id))
+              and not exists (select 1 from profiles p where p.id = o.user_id and p.banned_at is not null
+                                and (p.ban_until is null or p.ban_until > now()))) < 3
+  `)) as unknown as { cid: number }[];
+  await rebuildChampionItems(champItems.map((r) => [serverId, Number(r.cid)]));
 }
