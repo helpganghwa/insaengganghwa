@@ -4,19 +4,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { TodayTicker as TickerData } from '@/lib/game/today/stats';
+import { isRootBlurred, subscribeRootBlur } from '@/lib/ui/root-blur';
 
 /**
- * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄 무한 흐름.
- *
- * 구동: **CSS 키프레임 translate3d 0 → -50%**(2026-11-06 업데이트 18). 종전 rAF 루프는 홈이 보이는 동안 메인 스레드를
- * 초당 60번 깨워 저사양 기기의 idle·배터리를 잡아먹었다. 이제 합성기가 돌리고 JS는 폭을 잴 때만 일한다.
- *  - 트랙 = 같은 절반 2개(각 절반 = 사본 M개, 컨테이너를 덮는 수). -50% = 정확히 절반 1개라 반복 이음새가 없다.
- *  - 속도 20px/s(저자극, 사용자 확정) — 절반 폭(px) ÷ 20 = 한 바퀴 시간. 폰트 로드·리사이즈 때 다시 잰다.
- *  - 뷰포트 밖(IntersectionObserver)은 data-paused로, 팝업 뒤 흐림은 globals.css 규칙으로 멈춘다(숨긴 탭은 브라우저가 멈춤).
- *  - prefers-reduced-motion이면 정적.
- *  - 2026-07-16에 iOS에서 반복 경계마다 깜빡임이 있어 rAF로 바꿨던 이력이 있다. 그때 키프레임은 translateX(2D)라
- *    레이어가 경계마다 다시 그려졌다 — 지금은 translate3d + will-change + backface-visibility로 레이어를 고정한다.
- * 지표는 증감 있는 것만 + 강화 통계 상시. 탭 → /today.
+ * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄 무한 흐름, **rAF 직접 구동**(2026-07-16 확정):
+ * CSS 반복 애니메이션은 iOS에서 반복 경계마다 레이어 재래스터(깜빡임) — rAF는 연속 위치
+ * 계산 + 모듈로 랩이라 경계 자체가 없음. 최적화:
+ *  - 프레임당 setState 0(ref로 transform 직접 갱신, React 리렌더 없음)
+ *  - 문서 숨김·뷰포트 밖(IntersectionObserver)에서 정지, prefers-reduced-motion이면 정적
+ * 속도 20px/s(저자극, 사용자 확정). 지표는 증감 있는 것만 + 강화 통계 상시. 탭 → /today.
  */
 const SCROLL_PX_PER_S = 20;
 
@@ -66,11 +62,10 @@ export function TodayTicker({ data }: { data: TickerData }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLSpanElement>(null);
+  const halfWRef = useRef(0); // 절반(사본 그룹) 폭 — rAF 랩 기준. state 아님(리렌더 방지).
   const [perHalf, setPerHalf] = useState(1);
-  /** 한 바퀴(절반 1개 이동) 시간(초) — 재기 전(SSR·첫 렌더)은 null = 정지(종전에도 마운트 뒤에 흘렀다). */
-  const [durS, setDurS] = useState<number | null>(null);
 
-  // 측정 — 사본 수(절반이 컨테이너를 덮도록)와 절반 폭 → 한 바퀴 시간. 폰트 로드·리사이즈 재측정.
+  // 측정 — 사본 수(절반이 컨테이너를 덮도록)와 절반 폭. 폰트 로드·리사이즈 재측정.
   useEffect(() => {
     const measure = () => {
       const w = copyRef.current?.getBoundingClientRect().width ?? 0;
@@ -78,7 +73,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
       if (w > 0 && c > 0) {
         const m = Math.max(1, Math.ceil(c / w));
         setPerHalf(m);
-        setDurS((w * m) / SCROLL_PX_PER_S);
+        halfWRef.current = w * m;
       }
     };
     measure();
@@ -87,18 +82,53 @@ export function TodayTicker({ data }: { data: TickerData }) {
     return () => window.removeEventListener('resize', measure);
   }, [line]);
 
-  // 뷰포트 밖이면 멈춘다 — 리렌더 없이 속성만 바꾼다.
+  // rAF 루프 — 연속 위치(x)로 transform 직접 갱신. 경계 없음(모듈로 랩).
   useEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return; // 정적 유지
+    let raf = 0;
+    let last: number | null = null;
+    let x = 0;
+    let active = true;
+    let inView = true;
+
+    const step = (t: number) => {
+      if (!active || !inView) return; // 정지 상태 — visibility/observer가 재개
+      // 팝업 뒤 흐림 아래(앱 셸 안)는 정지(2026-11-06 업데이트 18) — 닫힘 구독이 재개. 셸 밖(팝업 포털)이면 계속 흐른다.
+      if (isRootBlurred() && wrapRef.current?.closest('[data-app-shell]')) return;
+      if (last != null) {
+        x -= (SCROLL_PX_PER_S * (t - last)) / 1000;
+        const hw = halfWRef.current;
+        if (hw > 0 && x <= -hw) x += hw; // 이음새 없는 랩 — 절반 폭만큼 복귀
+        if (trackRef.current) trackRef.current.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`;
+      }
+      last = t;
+      raf = requestAnimationFrame(step);
+    };
+    const start = () => {
+      last = null; // dt 리셋 — 재개 시 점프 방지
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(step);
+    };
+    const onVisibility = () => {
+      active = !document.hidden;
+      if (active && inView) start();
+    };
     const io = new IntersectionObserver(([e]) => {
-      const t = trackRef.current;
-      if (!t) return;
-      if (e?.isIntersecting ?? true) t.removeAttribute('data-paused');
-      else t.setAttribute('data-paused', '');
+      inView = e?.isIntersecting ?? true;
+      if (active && inView) start();
     });
-    io.observe(wrap);
-    return () => io.disconnect();
+    if (wrapRef.current) io.observe(wrapRef.current);
+    document.addEventListener('visibilitychange', onVisibility);
+    const offBlur = subscribeRootBlur((blurred) => {
+      if (!blurred && active && inView) start();
+    });
+    start();
+    return () => {
+      offBlur();
+      cancelAnimationFrame(raf);
+      document.removeEventListener('visibilitychange', onVisibility);
+      io.disconnect();
+    };
   }, []);
 
   const half = (withRef: boolean) => (
@@ -122,10 +152,8 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <div ref={wrapRef} className="min-w-0 flex-1 overflow-hidden">
         <div
           ref={trackRef}
-          className={`today-ticker-track flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-700 dark:text-zinc-200${
-            durS != null ? ' today-ticker-run' : ''
-          }`}
-          style={durS != null ? { animationDuration: `${durS.toFixed(3)}s` } : undefined}
+          className="flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-700 dark:text-zinc-200"
+          style={{ willChange: 'transform' }}
         >
           {half(true)}
           {half(false)}
