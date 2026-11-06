@@ -79,8 +79,12 @@ export const enhancementJobs = pgTable(
     uniqueIndex('ej_equipment_running_uq')
       .on(t.userEquipmentId)
       .where(sql`${t.status} = 'running'`),
-    // 완료 도달(push-enhance-ready) 스캔 — running 중 complete_at 지난 잡.
-    index('ej_status_complete_idx').on(t.status, t.completeAt),
+    // 완료 도달 스캔 — running 중 complete_at 지난 잡. 진행 중 잡만 담는 부분 인덱스(0252, 2026-11-06 업데이트 18 —
+    // 종전 ej_status_complete_idx(status, complete_at)는 끝난 잡까지 담아 수령마다 새 항목이 생겼다).
+    index('ej_running_complete_idx')
+      .on(t.completeAt)
+      .where(sql`${t.status} = 'running'`),
+    // running이 아닌 조회(도전과제·튜토리얼·관리자 취소 목록·탈퇴 삭제)도 쓰므로 전체 인덱스로 둔다(0252 주석).
     index('ej_user_status_idx').on(t.userId, t.status),
   ],
 );
