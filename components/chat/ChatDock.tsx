@@ -6,7 +6,7 @@ import { modalHistory } from '@/lib/ui/modal-history';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { supabaseBrowser } from '@/lib/supabase-browser';
+import { subscribeBroadcast } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
@@ -863,26 +863,12 @@ export function ChatDock() {
   // 길드·귓속말 토픽은 여기 없다 — 둘 다 열림/닫힘 공통 상시 구독으로 분리했다(아래 두 effect).
   useEffect(() => {
     if (enabled !== true || worldChannel === null || !open) return;
-    const sb = supabaseBrowser();
-    if (!sb) return;
-    const ch = sb
-      .channel(worldChannel)
-      .on('broadcast', { event: 'new' }, ({ payload }) =>
-        routeIncoming('all', payload as ChatMessageDto),
-      )
-      .on('broadcast', { event: 'sys' }, ({ payload }) =>
-        routeIncoming('all', sysToMsg(payload as WorldEventEntry)),
-      )
-      .on('broadcast', { event: 'hide' }, ({ payload }) =>
-        removeMessage((payload as { id: string }).id),
-      )
-      .on('broadcast', { event: 'delete' }, ({ payload }) =>
-        markDeleted((payload as { id: string }).id),
-      )
-      .subscribe();
-    return () => {
-      void sb.removeChannel(ch);
-    };
+    return subscribeBroadcast(worldChannel, {
+      new: (payload) => routeIncoming('all', payload as ChatMessageDto),
+      sys: (payload) => routeIncoming('all', sysToMsg(payload as WorldEventEntry)),
+      hide: (payload) => removeMessage((payload as { id: string }).id),
+      delete: (payload) => markDeleted((payload as { id: string }).id),
+    });
   }, [enabled, worldChannel, open, routeIncoming, removeMessage, markDeleted]);
 
   /**
@@ -901,11 +887,8 @@ export function ChatDock() {
    */
   useEffect(() => {
     if (enabled !== true || !guildTopic) return;
-    const sb = supabaseBrowser();
-    if (!sb) return;
-    const ch = sb
-      .channel(guildTopic)
-      .on('broadcast', { event: 'new' }, ({ payload }) => {
+    return subscribeBroadcast(guildTopic, {
+      new: (payload) => {
         const m = payload as ChatMessageDto;
         // 서버 latestIds.guild와 같은 id 공간(chat_messages.id) — 폴링을 기다리지 않고 앞당긴다.
         // 열림 중에도 갱신해야 아래 routeIncoming의 확인 처리(setSeen)와 짝이 맞는다. 안 맞으면
@@ -919,17 +902,10 @@ export function ChatDock() {
         // 내 발신분은 점 대상 아님(다른 기기에서 보낸 내 메시지가 수신되는 경우). 여기서 seen까지
         // 전진시키지는 않는다 — 앞서 도착한 남의 메시지를 '본 것'으로 삼켜 점을 끄면 알림 유실이다.
         if (m.userId !== meRef.current) recomputeDot();
-      })
-      .on('broadcast', { event: 'hide' }, ({ payload }) =>
-        removeMessage((payload as { id: string }).id),
-      )
-      .on('broadcast', { event: 'delete' }, ({ payload }) =>
-        markDeleted((payload as { id: string }).id),
-      )
-      .subscribe();
-    return () => {
-      void sb.removeChannel(ch);
-    };
+      },
+      hide: (payload) => removeMessage((payload as { id: string }).id),
+      delete: (payload) => markDeleted((payload as { id: string }).id),
+    });
   }, [enabled, guildTopic, routeIncoming, recomputeDot, removeMessage, markDeleted]);
 
   /**
@@ -946,11 +922,8 @@ export function ChatDock() {
    */
   useEffect(() => {
     if (enabled !== true || !whisperTopic) return;
-    const sb = supabaseBrowser();
-    if (!sb) return;
-    const ch = sb
-      .channel(whisperTopic)
-      .on('broadcast', { event: 'new' }, ({ payload }) => {
+    return subscribeBroadcast(whisperTopic, {
+      new: (payload) => {
         const m = payload as WhisperMessageDto;
         // 패널이 열려 있으면 기존 sink 경로가 우선 — 지금 그 스레드를 보고 있으면 즉시 소비한다
         // (WhisperPane 미마운트 = 닫힘·다른 탭이면 sink가 없어 false).
@@ -963,15 +936,10 @@ export function ChatDock() {
         // 소비했으면 그 자리에서 확인 처리(점 억제) — 채널 탭의 routeIncoming과 같은 규칙.
         if (consumed) setSeen('whisper', m.id);
         else recomputeDot();
-      })
+      },
       // 본인 삭제(0177) — 열린 스레드가 있으면 자리표시로 교체(닫힘·다른 탭이면 다음 조회가 반영).
-      .on('broadcast', { event: 'delete' }, ({ payload }) =>
-        whisperDeleteSinkRef.current?.((payload as { id: string }).id),
-      )
-      .subscribe();
-    return () => {
-      void sb.removeChannel(ch);
-    };
+      delete: (payload) => whisperDeleteSinkRef.current?.((payload as { id: string }).id),
+    });
   }, [enabled, whisperTopic, recomputeDot, setSeen]);
 
   // 미니바 준실시간(2026-08-06 확정) — **닫힘(비접힘) 동안만** 코얼레싱 미니 토픽 구독.
@@ -982,20 +950,10 @@ export function ChatDock() {
     // enabled 가드 — 킬스위치(채팅 OFF)가 내려가면 미니 연결도 함께 끊는다(리뷰 지적:
     // Realtime 과부하 시 킬스위치로 연결을 떨어뜨리는 시나리오의 반쪽 방지).
     if (enabled !== true || miniChannel === null || open || collapsed) return;
-    const sb = supabaseBrowser();
-    if (!sb) return;
-    const ch = sb
-      .channel(miniChannel)
-      .on('broadcast', { event: 'new' }, ({ payload }) =>
-        routeIncoming('all', payload as ChatMessageDto),
-      )
-      .on('broadcast', { event: 'delete' }, ({ payload }) =>
-        markDeleted((payload as { id: string }).id),
-      )
-      .subscribe();
-    return () => {
-      void sb.removeChannel(ch);
-    };
+    return subscribeBroadcast(miniChannel, {
+      new: (payload) => routeIncoming('all', payload as ChatMessageDto),
+      delete: (payload) => markDeleted((payload as { id: string }).id),
+    });
   }, [enabled, miniChannel, open, collapsed, routeIncoming, markDeleted]);
 
   // 길드 탈퇴/해산 감지 — 길드 버퍼 잔존 제거.
