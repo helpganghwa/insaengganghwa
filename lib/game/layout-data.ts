@@ -6,6 +6,7 @@ import { createCharacterAuto, isServerOpen, recommendedServerId } from '@/lib/ga
 import { CLOSED_ONLY, correctServerFor, type ServerCorrection } from '@/lib/game/server-guard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
+import { PREMIUM_DAILY_WINDOW_DAYS, PREMIUM_PRODUCT_ID } from '@/lib/game/mailbox/premium-daily';
 
 // 반쪽 계정 자가복구 — 콜백의 createCharacterAuto가 실패하면 profiles만 있고 characters가
 // 없는 계정이 생기고, 콜백은 재실행되지 않아 유저 스스로 복구할 방법이 없다(재로그인뿐).
@@ -62,6 +63,17 @@ export interface LayoutData {
   closedServer: boolean;
   /** 탈퇴한 계정의 아직 유효한 토큰(3차 검사 B1) — 캐릭터를 만들지 않고 헤더가 /auth/signout으로 보낸다. */
   signOut: boolean;
+  /**
+   * 성장 프리미엄 오늘 몫이 남았는가(2026-11-06 업데이트 18) — 활성 창 안의 구매가 있는데 그 서버에 오늘
+   * premium_daily_grants 행이 없다. 레이아웃 after()가 이 값이 true이거나 null(판정 실패·기본값)일 때만
+   * ensurePremiumDailyMailAll을 부른다 — 렌더마다 돌던 확인 쿼리를 없애되, 모르면 종전처럼 돌려 누락을 막는다.
+   */
+  premiumDue: boolean | null;
+  /**
+   * 이 셸 데이터를 만든 시각(ms) — 헤더 점의 클라 오버라이드(강화 수령 응답으로 끈 강화 완료 점)를
+   * 새 서버 렌더가 도착하면 해제하는 기준(HeaderStatsContext). 같은 값이 다시 와도 렌더마다 바뀐다.
+   */
+  renderedAt: number;
 }
 
 const DEFAULTS: LayoutData = {
@@ -82,11 +94,16 @@ const DEFAULTS: LayoutData = {
   correctServerId: null,
   closedServer: false,
   signOut: false,
+  premiumDue: null,
+  renderedAt: 0,
 };
 
 /**
- * 프로필(닉네임·다이아) + 우편 미수령 dot + 강화완료 dot을 단일 왕복(Promise.all)으로.
+ * 프로필(닉네임·다이아) + 우편 미수령·강화 완료·친구 요청 dot + 프리미엄 오늘 몫을 **한 문장**으로.
  * 4s 가드 + catch — 콜드 DB 커넥션이 풀에서 hang해도 기본값으로 graceful degrade.
+ * (2026-11-06 업데이트 18) 종전엔 점 3개를 따로 pgGuard로 병렬 실행해 화면 이동 한 번이 풀러 트랜잭션 4개를
+ * 동시에 썼다. 지금은 프로필 단행 쿼리의 스칼라 서브쿼리로 편승한다. 실패 의미는 같다 — 종전에도 Promise.all
+ * 하나가 실패하면 통째로 DEFAULTS였다.
  */
 export async function loadLayoutData(
   userId: string,
@@ -110,7 +127,33 @@ export async function loadLayoutData(
                  -- (SQL 이중화 금지 — 채팅 프로필 팝업과 동일 소스·동일 산식).
                  (select coalesce(jsonb_agg(jsonb_build_array(ue.enhance_level, ue.transcend_level, ue.max_enhance_level)), '[]'::jsonb)
                     from user_equipment ue
-                   where ue.user_id = p.id and ue.server_id = ${serverId}) as equip_stats
+                   where ue.user_id = p.id and ue.server_id = ${serverId}) as equip_stats,
+                 -- 헤더·하단 네비 점 3종(2026-11-06 업데이트 18) — 따로 돌던 쿼리 3개를 편승. 조건은 종전 그대로.
+                 exists(select 1 from mailbox mb
+                         where mb.user_id = p.id and mb.server_id = ${serverId}
+                           and mb.claimed_at is null
+                           and (mb.expires_at is null or mb.expires_at > now())) as has_mail,
+                 -- count(*) > 0 → exists(첫 행에서 멈춤). running 잡은 부분 인덱스(ej_user_slot_lane_running_uq)를 탄다.
+                 exists(select 1 from enhancement_jobs ej
+                         where ej.user_id = p.id and ej.server_id = ${serverId}
+                           and ej.status = 'running' and ej.complete_at <= now()) as has_enh,
+                 -- 친구 받은 요청 — 차단 관계 제외. 요청 목록(getRequests)이 같은 기준으로 거르므로, 배지만 세면
+                 -- "점은 켜지는데 목록은 빈" 유령 배지가 된다(2026-08-12 전수 재검수).
+                 exists(select 1 from friend_links f
+                         where f.addressee_id = p.id and f.server_id = ${serverId} and f.status = 'pending'
+                           and not exists (select 1 from chat_blocks b
+                             where (b.user_id = p.id and b.blocked_user_id = f.requester_id)
+                                or (b.user_id = f.requester_id and b.blocked_user_id = p.id))) as has_freq,
+                 -- 성장 프리미엄 오늘 몫 남음 — ensurePremiumDailyMailAll(premium-daily.ts)과 같은 활성 창·닫힌 서버 제외.
+                 -- 산 서버 중 하나라도 오늘 지급 원장 행이 없으면 참 → 레이아웃 after()가 그때만 지급을 시도한다.
+                 exists(select 1 from shop_purchases sp
+                          join servers sv on sv.id = sp.server_id and sv.status <> 'closed'
+                         where sp.user_id = p.id and sp.product_id = ${PREMIUM_PRODUCT_ID}
+                           and (now() at time zone 'Asia/Seoul')::date
+                               <= (sp.updated_at at time zone 'Asia/Seoul')::date + (${PREMIUM_DAILY_WINDOW_DAYS})::int
+                           and not exists (select 1 from premium_daily_grants pg
+                             where pg.user_id = sp.user_id and pg.server_id = sp.server_id
+                               and pg.kst_day = (now() at time zone 'Asia/Seoul')::date)) as premium_due
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
@@ -139,43 +182,7 @@ export async function loadLayoutData(
       // 장식(칭호) 검증 실패가 배치 전체를 reject시켜 헤더가 통째로 DEFAULTS(닉 '플레이어'·
       // 다이아 0)로 강등되면 안 된다 — 칭호만 조용히 숨긴다(칭호 감사 5-a).
       .catch(() => null);
-    const [profileRows, mailRows, enhRows, friendReqRows, repTitle] = await Promise.all([
-      profileP,
-      pgGuard(
-        (sql) => sql`
-          select 1 from mailbox
-          where user_id = ${userId}::uuid
-            and server_id = ${serverId}
-            and claimed_at is null
-            and (expires_at is null or expires_at > now())
-          limit 1`,
-        4000,
-        'layout.mail',
-      ),
-      pgGuard(
-        (sql) => sql`
-          select count(*)::int as n from enhancement_jobs
-          where user_id = ${userId}::uuid and server_id = ${serverId}
-            and status = 'running' and complete_at <= now()`,
-        4000,
-        'layout.enhance',
-      ),
-      // 친구 받은 요청 존재 여부.
-      pgGuard(
-        (sql) => sql`
-          select 1 from friend_links f
-          where f.addressee_id = ${userId}::uuid and f.server_id = ${serverId} and f.status = 'pending'
-            -- 차단 관계 제외 — 요청 목록(getRequests)이 같은 기준으로 거르므로, 배지만 세면
-            -- "점은 켜지는데 목록은 빈" 유령 배지가 된다(2026-08-12 전수 재검수).
-            and not exists (select 1 from chat_blocks b
-              where (b.user_id = ${userId}::uuid and b.blocked_user_id = f.requester_id)
-                 or (b.user_id = f.requester_id and b.blocked_user_id = ${userId}::uuid))
-          limit 1`,
-        4000,
-        'layout.friendreq',
-      ),
-      repTitleP,
-    ]);
+    const [profileRows, repTitle] = await Promise.all([profileP, repTitleP]);
     const p = profileRows[0] as
       | {
           nickname?: string;
@@ -192,6 +199,10 @@ export async function loadLayoutData(
           equip_stats?: unknown;
           srv_status?: string | null;
           withdrawn_at?: string | Date | null;
+          has_mail?: boolean;
+          has_enh?: boolean;
+          has_freq?: boolean;
+          premium_due?: boolean;
         }
       | undefined;
     // 닫힌 서버(10-12 결정: 진입 차단 + 다른 서버로 안내) — 쿠키가 닫힌 서버를 가리키면 캐릭터가 있어도 들어가지 않는다.
@@ -286,9 +297,9 @@ export async function loadLayoutData(
       nickname: p?.nickname ?? '플레이어',
       nicknameChangedCount: Number(p?.nickname_changed_count ?? 0),
       diamond: p?.diamond != null ? BigInt(p.diamond as string) : 0n,
-      hasUnreadMail: mailRows.length > 0,
-      hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
-      hasFriendRequest: friendReqRows.length > 0,
+      hasUnreadMail: p?.has_mail === true,
+      hasCompletedEnhance: p?.has_enh === true,
+      hasFriendRequest: p?.has_freq === true,
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
       profileFaceBox: faceBox,
       guildEmblemUrl: p?.guild_emblem_url ?? null,
@@ -298,6 +309,9 @@ export async function loadLayoutData(
       correctServerId: null,
       closedServer: false,
       signOut: false,
+      // 프로필 행이 없으면(계정 행 부재) 판정 못 함 → null(레이아웃이 종전처럼 지급 확인을 돌린다).
+      premiumDue: p ? p.premium_due === true : null,
+      renderedAt: Date.now(),
       stats: (() => {
         // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
         let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;
