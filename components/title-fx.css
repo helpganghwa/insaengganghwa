@@ -32,12 +32,15 @@
 @keyframes twk{0%,100%{text-shadow:-3px -1px 3px rgba(245,215,110,.9),3px 1px 2px rgba(245,215,110,.2)}50%{text-shadow:3px -1px 3px rgba(245,215,110,.9),-3px 1px 2px rgba(245,215,110,.2)}}
 .fx-starlight{color:#f0e6c8;animation:stl 2.6s ease-in-out infinite}
 @keyframes stl{0%,100%{text-shadow:-2px -1px 3px rgba(245,215,110,.5),2px 1px 2px rgba(140,160,255,.3)}50%{text-shadow:2px -1px 3px rgba(140,160,255,.5),-2px 1px 2px rgba(245,215,110,.3)}}
-@keyframes flow{to{background-position:-300% 0}}
-@keyframes flow4{to{background-position:-400% 0}}
+/* 흐름(flow·flow4·flowy·flowp) — 느린(5~9초) 선형 그라데이션 이동은 90단계(steps)로 끊어 페인트를 초당 10~18회로 줄인다
+   (2026-11-06 업데이트 18). 60fps 매 프레임 글자 페인트+필터 재계산 대비 1/3~1/6. 9px 헤더에서 한 단계 이동은 약 1~2px라
+   흐름이 그대로 읽힌다. 키프레임 안의 timing-function이라 호출부 animation 축약(linear)과 무관하게 이 구간에만 걸린다. */
+@keyframes flow{from{animation-timing-function:steps(90,end)}to{background-position:-300% 0}}
+@keyframes flow4{from{animation-timing-function:steps(90,end)}to{background-position:-400% 0}}
 /* 펄스 공용 — text-shadow 반경 대신 brightness(합성기 합성)로: 모바일 끊김 제거 */
 @keyframes pulsebr{0%,100%{filter:brightness(.9)}50%{filter:brightness(1.22)}}
 /* 세로 흐름 — flow의 상하판(주기 그라데이션·300%라 무결점 순환) */
-@keyframes flowy{to{background-position:0 -300%}}
+@keyframes flowy{from{animation-timing-function:steps(90,end)}to{background-position:0 -300%}}
 /* 두근 — transform은 합성기 합성. inline엔 transform이 안 먹혀 클래스에 inline-block 필수 */
 @keyframes hbeat{0%,52%,100%{transform:scale(1)}60%{transform:scale(1.055)}68%{transform:scale(1)}76%{transform:scale(1.04)}84%{transform:scale(1)}}
 @keyframes brfade{0%,100%{opacity:.6}50%{opacity:1}}
@@ -115,7 +118,7 @@
 .fx-patron3{background-image:linear-gradient(115deg,#e9c96a,#fff3c4,#c9a23e,#ffe9a8,#e9c96a);animation:flowp 7s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 2px rgba(245,215,110,.4))}
 .fx-patron4{background-image:linear-gradient(115deg,#e8b04a,#ffe0a0,#c0801a,#ffd890,#e8b04a);animation:flowp 6s linear infinite;filter:drop-shadow(0 1px 0 #8a6a1a) drop-shadow(0 2px 0 #5c4612) drop-shadow(0 0 3px rgba(232,176,74,.5))}
 .fx-patron5{background-image:linear-gradient(115deg,#f05a3a,#ffb090,#c0301a,#ffc0a0,#f05a3a);animation:flowp 5s linear infinite,pulsebr 3.2s ease-in-out infinite;filter:drop-shadow(0 1px 0 #6b2008) drop-shadow(0 2px 0 #3a1004) drop-shadow(0 3px 1px rgba(0,0,0,.4)) drop-shadow(0 0 4px rgba(240,90,58,.6))}
-@keyframes flowp{to{background-position:-250% 0}}
+@keyframes flowp{from{animation-timing-function:steps(90,end)}to{background-position:-250% 0}}
 /* 6·7: 글자 단위 호흡(split) — 홀·짝 글자가 번갈아 부풀며 발광. 색은 단계 변수 */
 .fx-patron6,.fx-patron7{color:var(--jc)}
 .fx-patron6{--jc:#f05a3a;--jh:#ffd0b0;--jg:rgba(255,120,60,.9);--ex:#5a1a08}

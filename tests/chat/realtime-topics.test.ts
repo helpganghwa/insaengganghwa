@@ -14,7 +14,8 @@ const RECENT = readFileSync(new URL('../../app/api/chat/recent/route.ts', import
 describe('채팅 실시간 토픽', () => {
   it('클라는 토픽을 조립하지 않는다 — 구독은 전부 서버가 내려준 값으로', () => {
     expect(DOCK).not.toMatch(/`chat(-mini)?:s\$\{/);
-    const subs = [...DOCK.matchAll(/\.channel\(([^)]*)\)/g)].map((m) => m[1]!.trim());
+    // 구독은 subscribeBroadcast(토픽, 핸들러)로만 한다(2026-11-06 업데이트 18 — realtime-js 지연 로드).
+    const subs = [...DOCK.matchAll(/subscribeBroadcast\(([^,)]*),/g)].map((m) => m[1]!.trim());
     expect(subs.sort()).toEqual(['guildTopic', 'miniChannel', 'whisperTopic', 'worldChannel']);
   });
 

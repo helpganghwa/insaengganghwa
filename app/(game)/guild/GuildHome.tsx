@@ -29,6 +29,7 @@ import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { type RichMember } from './GuildMemberList';
 import { GuildLogFeed } from './GuildLogFeed';
+import { useNowMinuteMs } from '@/lib/client/use-now-minute';
 import { GuildNoticeBlock, GuildOpenchatButton } from './GuildInfoBlocks';
 
 // 길드 홈 메뉴 그리드(홈 패턴) — 각 타일 클릭 시 상세로 이동. 길드 관리는 임원만 노출.
@@ -134,10 +135,12 @@ export function GuildHome({
   // 이전엔 4초 뒤 1회뿐이라 실제 소요(10~40초)를 못 따라가 거의 항상 헛방이었다(2026-08-06).
   // 시작한 지 4분 넘은 pending은 굳은 것으로 본다(함수가 잘려 catch가 못 돈 경우).
   // 생성 예산(150초)보다 넉넉히 잡아야 정상 생성 중에 '실패'로 뒤집히지 않는다.
+  // 현재 시각은 분 단위 시계(2026-11-06 업데이트 18) — 렌더 중 Date.now()는 컴파일러 자동 메모를 끈다. 4분 기준이라 분 단위로 충분하다.
+  const nowMs = useNowMinuteMs();
   const emblemStale =
     guild.emblemStatus === 'pending' &&
     guild.emblemPendingAt !== null &&
-    Date.now() - guild.emblemPendingAt > 240_000;
+    nowMs - guild.emblemPendingAt > 240_000;
 
   // 폴링 횟수를 state로 둔다 — ref는 렌더를 안 깨워 '소진 후 실패 표시'로 못 넘어간다.
   const [emblemPolls, setEmblemPolls] = useState(0);

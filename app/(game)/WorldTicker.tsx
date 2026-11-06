@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import type { WorldEventEntry } from '@/lib/game/world/event';
+import { isRootBlurred } from '@/lib/ui/root-blur';
+
 import { worldEventMessage } from './world-message';
 
 const ROW = 24; // 한 줄 높이(px) = h-6
@@ -24,6 +26,9 @@ export function WorldTicker({ entries }: { entries: WorldEventEntry[] }) {
     if (n <= 1) return;
     let settle: ReturnType<typeof setTimeout>;
     const id = setInterval(() => {
+      // 탭이 숨겨졌거나 팝업 뒤 흐림 아래면 이번 칸은 건너뛴다(2026-11-06 업데이트 18) — 보이지 않는 슬라이드가
+      // 렌더·전환을 일으키고, 흐림 아래에서는 전체 화면 블러를 다시 계산하게 만든다. 닫히면 다음 주기부터 이어진다.
+      if (document.hidden || isRootBlurred()) return;
       setAnim(true); // 트랙 한 칸 위로
       settle = setTimeout(() => {
         setStart((s) => (s + 1) % n);

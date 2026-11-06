@@ -25,5 +25,6 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
       </main>
     );
   }
-  return <HistoryPlayer index={index} mapSrc={assetUrl('/sprites/guild/worldmap.png')} startDay={startDay} />;
+  // 지도는 같은 그림의 무손실 WebP(2026-11-06 업데이트 18 — 626KB → 539KB, 픽셀 동일).
+  return <HistoryPlayer index={index} mapSrc={assetUrl('/sprites/guild/worldmap.webp')} startDay={startDay} />;
 }

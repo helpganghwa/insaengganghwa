@@ -23,6 +23,10 @@ const ROWS = 12; // 144셀 — 132종(슬롯당 44, 2026-09 한가위·2026-10 �
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');
 const OUT_JSON = join(PUB, 'sprites', 'atlas.json');
+// 작은 표시용 반 해상도 atlas(2026-11-06 업데이트 18) — 같은 배치를 정확히 1/2로(셀 128·여백 4·stride 132, 좌표 = 원본 ÷ 2).
+// 표시 크기 72px 이하(기기 픽셀 기준 ≤ 144)는 이걸 쓴다(sprite-atlas.ts atlasBgStyle). 디코드 메모리 약 40MB → 10MB.
+// 축소는 최근접(nearest) — 화면도 image-rendering: pixelated(최근접)로 그리므로, 2배 축소 지점에서 원본 atlas를 그린 것과 같은 표본을 고른다.
+const OUT_WEBP_SMALL = join(PUB, 'sprites', 'atlas-128.webp');
 
 const codes = Object.keys(SPRITE_MANIFEST).sort();
 if (codes.length > COLS * ROWS) {
@@ -72,6 +76,14 @@ const base = sharp({
 const buf = await base.composite(composite).webp({ lossless: true, effort: 6 }).toBuffer();
 writeFileSync(OUT_WEBP, buf);
 console.log(`✓ ${OUT_WEBP} (${(buf.length / 1024).toFixed(1)} KiB)`);
+
+const full = await sharp(buf).raw().toBuffer({ resolveWithObject: true });
+const small = await sharp(full.data, { raw: full.info })
+  .resize(atlasW / 2, atlasH / 2, { kernel: 'nearest', fastShrinkOnLoad: false })
+  .webp({ lossless: true, effort: 6 })
+  .toBuffer();
+writeFileSync(OUT_WEBP_SMALL, small);
+console.log(`✓ ${OUT_WEBP_SMALL} (${(small.length / 1024).toFixed(1)} KiB)`);
 
 const atlas = { size: { w: atlasW, h: atlasH }, cell: CELL, items };
 writeFileSync(OUT_JSON, JSON.stringify(atlas));

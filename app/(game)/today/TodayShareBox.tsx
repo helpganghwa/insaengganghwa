@@ -5,7 +5,6 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { toPng } from 'html-to-image';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -106,6 +105,8 @@ export function TodayShareBox({
     setSaving(true);
     try {
       const dark = document.documentElement.classList.contains('dark');
+      // html-to-image는 저장을 누를 때만 받는다(2026-11-06 업데이트 18 — /today 첫 로드에서 제외).
+      const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
         backgroundColor: dark ? '#09090b' : '#ffffff',
