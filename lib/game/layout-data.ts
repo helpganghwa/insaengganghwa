@@ -74,6 +74,11 @@ export interface LayoutData {
    * 새 서버 렌더가 도착하면 해제하는 기준(HeaderStatsContext). 같은 값이 다시 와도 렌더마다 바뀐다.
    */
   renderedAt: number;
+  /**
+   * 헤더 스탯을 읽은 문장의 DB 시작 시각(ms, 2026-11-06 업데이트 18) — 이보다 늦게 커밋 확인된 강화 수령 델타는 이 셸 값에
+   * 아직 없을 수 있다(HeaderStatsContext가 델타를 다시 얹고 한 번 새로 받는다). null=모름.
+   */
+  statsAsOfMs: number | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -96,6 +101,7 @@ const DEFAULTS: LayoutData = {
   signOut: false,
   premiumDue: null,
   renderedAt: 0,
+  statsAsOfMs: null,
 };
 
 /**
@@ -153,7 +159,9 @@ export async function loadLayoutData(
                                <= (sp.updated_at at time zone 'Asia/Seoul')::date + (${PREMIUM_DAILY_WINDOW_DAYS})::int
                            and not exists (select 1 from premium_daily_grants pg
                              where pg.user_id = sp.user_id and pg.server_id = sp.server_id
-                               and pg.kst_day = (now() at time zone 'Asia/Seoul')::date)) as premium_due
+                               and pg.kst_day = (now() at time zone 'Asia/Seoul')::date)) as premium_due,
+                 -- 이 문장(=헤더 스탯 스냅샷)의 시작 시각(2026-11-06 업데이트 18) — 강화 수령 델타와 선후 비교용.
+                 (extract(epoch from statement_timestamp()) * 1000)::float8 as stats_as_of_ms
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
@@ -203,6 +211,7 @@ export async function loadLayoutData(
           has_enh?: boolean;
           has_freq?: boolean;
           premium_due?: boolean;
+          stats_as_of_ms?: number | string | null;
         }
       | undefined;
     // 닫힌 서버(10-12 결정: 진입 차단 + 다른 서버로 안내) — 쿠키가 닫힌 서버를 가리키면 캐릭터가 있어도 들어가지 않는다.
@@ -312,6 +321,8 @@ export async function loadLayoutData(
       // 프로필 행이 없으면(계정 행 부재) 판정 못 함 → null(레이아웃이 종전처럼 지급 확인을 돌린다).
       premiumDue: p ? p.premium_due === true : null,
       renderedAt: Date.now(),
+      statsAsOfMs:
+        p?.stats_as_of_ms != null && Number.isFinite(Number(p.stats_as_of_ms)) ? Number(p.stats_as_of_ms) : null,
       stats: (() => {
         // equip_stats(jsonb) — [[enhance, transcend, maxEnhance], ...]. 문자열 방어 파싱.
         let raw = p?.equip_stats as [number, number, number][] | string | null | undefined;

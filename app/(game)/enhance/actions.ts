@@ -139,6 +139,8 @@ export async function finalizeEnhance(jobId: string): Promise<
       ranksAfter: MyRanks;
       /** 정산·재등록 뒤 완료 시점이 지난 진행 중 잡이 남았는가 — 하단 네비 강화 점(null=조회 실패, 점 그대로). */
       enhanceReady: boolean | null;
+      /** 정산 커밋 뒤 DB 시각(ms) — 헤더 스탯 델타를 늦게 온 옛 셸 값과 가르는 기준(HeaderStatsContext). null=모름(클라가 refresh). */
+      claimSeenAtMs: number | null;
     }
   | ErrorState
 > {
@@ -180,7 +182,7 @@ export async function finalizeEnhance(jobId: string): Promise<
     // 토스트 순위 직전·직후를 정산 뒤 두 문장으로(2026-11-06 업데이트 18 — 종전 직전 1 + 직후 2 = 3왕복).
     // 직전은 스냅샷 내 행이라 정산 뒤에 읽어도 같다(보드 행은 응답 뒤 사후처리에서야 바뀐다).
     // 직후는 본인 장비를 직접 재계산하므로 사후처리(applyEnhancePostEffects)보다 먼저 읽어도 무관.
-    const { before: ranksBefore, after: ranksAfter, enhanceReady } = await getMyRanksBeforeAfter(userId, serverId);
+    const { before: ranksBefore, after: ranksAfter, enhanceReady, seenAtMs: claimSeenAtMs } = await getMyRanksBeforeAfter(userId, serverId);
     // 묶음 알림에서 이미 처리된 잡 제거 — best-effort·응답 결과 무관이라 after()로 응답 후 실행
     // (핫패스에서 UPDATE+DELETE 2왕복 제거, 2026-07-27). 다음 cron이 빈 묶음 발송 안 함.
     after(() => cleanupPushPendingJob(userId, jobId));
@@ -205,6 +207,7 @@ export async function finalizeEnhance(jobId: string): Promise<
       ranksBefore,
       ranksAfter,
       enhanceReady,
+      claimSeenAtMs,
     };
   } catch (e) {
     if (e instanceof EnhanceError) return err(e.code);

@@ -1,8 +1,16 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { pieceCombatPower } from '@/lib/game/balance';
+import {
+  addEnhanceDelta,
+  MAX_PENDING_DELTAS,
+  reconcileHeaderBase,
+  type EnhanceDelta,
+  type HeaderStats,
+  type PendingDelta,
+} from '@/lib/client/header-stats-reconcile';
 
 /**
  * 헤더 서브라인(전투력·최고강화·합산강화)의 클라이언트 낙관 갱신 컨텍스트 — DiamondContext 패턴.
@@ -18,12 +26,18 @@ import { pieceCombatPower } from '@/lib/game/balance';
  * 새 value 객체를 만들어 **강화 카드 6개가 자기 델타로 자기를 리렌더**하는 루프였다.
  * 카드가 쓰는 건 액션뿐 — 액션 컨텍스트는 영구 불변이라 이 루프가 사라진다.
  */
-export type HeaderStats = { combat: number; maxEnhance: number; sumEnhance: number };
+export type { HeaderStats } from '@/lib/client/header-stats-reconcile';
 
 type HeaderStatsActions = {
-  setBase: (next: HeaderStats | null) => void;
-  /** 강화 결과 1건 반영 — 서버와 동일 공식의 정확 델타(표시 전용, 권위는 서버). */
-  applyEnhanceDelta: (d: { fromLevel: number; toLevel: number; transcendLevel: number }) => void;
+  /** 셸(layout) 서버값 — asOfMs는 그 값을 읽은 문장의 DB 시작 시각(없으면 null). */
+  setBase: (next: HeaderStats | null, asOfMs?: number | null) => void;
+  /**
+   * 강화 결과 1건 반영 — 서버와 동일 공식의 정확 델타(표시 전용, 권위는 서버).
+   * seenAtMs(수동 수령, 2026-11-06 업데이트 18): 정산 커밋 뒤 DB 시각. 넘기면 셸 값이 아직 없거나(null) 나중에 도착한 셸 값이
+   * 이 시각보다 먼저 읽힌 것이면 델타를 다시 얹고 한 번 새로 받아(router.refresh) 낡은 값으로 끝나지 않게 한다.
+   * null = 시각을 모름 → 곧바로 한 번 새로 받는다(종전 revalidatePath 재렌더와 같은 결과). 생략(자동 강화) = 종전 동작.
+   */
+  applyEnhanceDelta: (d: EnhanceDelta, seenAtMs?: number | null) => void;
   /**
    * 하단 네비 강화 완료 점 덮어쓰기(2026-11-06 업데이트 18) — 수동 수령이 페이지 재렌더 없이 서버가 돌려준 값
    * (enhanceReady)으로 점을 맞춘다. null = 덮어쓰기 해제(셸 값 사용). 새 셸 렌더가 오면 BottomNav가 해제한다.
@@ -38,25 +52,44 @@ const EnhanceDotCtx = createContext<boolean | null>(null);
 export function HeaderStatsProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<HeaderStats | null>(null);
   const [enhanceDot, setEnhanceDot] = useState<boolean | null>(null);
-  // 함수형 업데이트만 사용 — 영구 안정.
+  const router = useRouter();
+  /**
+   * 셸 값과 선후를 아직 확정하지 못한 수동 수령 델타(2026-11-06 업데이트 18). 셸 값(asOf)이 seenAt 이후에 읽혔으면 이미
+   * 들어 있으니 버리고, 아니면(또는 asOf를 모르면) 셸 값 위에 다시 얹은 채 한 번 새로 받는다 — 새 렌더는 정산 뒤라 지워진다.
+   * refreshed: 이 델타 때문에 이미 새로 받기를 요청했는가(셸이 실패해도 무한 refresh 하지 않게).
+   */
+  const pendingRef = useRef<PendingDelta[]>([]);
+  // 함수형 업데이트만 사용 — 영구 안정(router는 앱 라우터에서 안정 객체).
   const actions = useMemo<HeaderStatsActions>(
     () => ({
-      setBase: (next) => setStats(next),
-      applyEnhanceDelta: ({ fromLevel, toLevel, transcendLevel }) => {
-        setStats((s) => {
-          if (!s) return s; // base 미도착 — 다음 서버값이 이미 반영된 상태로 도착
-          const combatDelta =
-            pieceCombatPower(toLevel, transcendLevel) - pieceCombatPower(fromLevel, transcendLevel);
-          return {
-            combat: s.combat + combatDelta,
-            maxEnhance: Math.max(s.maxEnhance, toLevel),
-            sumEnhance: s.sumEnhance + (toLevel - fromLevel),
-          };
-        });
+      setBase: (next, asOfMs) => {
+        // 셸 값이 수령 커밋 뒤에 읽혔으면 그 델타는 버리고, 먼저 읽혔을 수 있으면 다시 얹고 한 번 새로 받는다.
+        const r = reconcileHeaderBase(next, asOfMs ?? null, pendingRef.current);
+        pendingRef.current = r.pending;
+        setStats(r.stats);
+        if (r.refresh) router.refresh();
+      },
+      applyEnhanceDelta: (d, seenAtMs) => {
+        if (seenAtMs === undefined) {
+          // 자동 강화 스텝(종전 동작) — base 미도착이면 다음 서버값이 이미 반영된 상태로 도착.
+          setStats((s) => (s ? addEnhanceDelta(s, d) : s));
+          return;
+        }
+        if (seenAtMs === null) {
+          // 커밋 시각을 모른다 — 지금 값에 얹고 곧바로 한 번 새로 받는다(새 렌더는 정산 뒤라 정확).
+          setStats((s) => (s ? addEnhanceDelta(s, d) : s));
+          router.refresh();
+          return;
+        }
+        const list = pendingRef.current;
+        list.push({ seenAtMs, d, refreshed: false });
+        if (list.length > MAX_PENDING_DELTAS) list.splice(0, list.length - MAX_PENDING_DELTAS);
+        // 셸 값이 아직 없으면(null) 그대로 둔다 — 도착하는 setBase가 asOf로 판정해 얹거나 버린다.
+        setStats((s) => (s ? addEnhanceDelta(s, d) : s));
       },
       setEnhanceDot: (v) => setEnhanceDot(v),
     }),
-    [],
+    [router],
   );
   return (
     <ActionsCtx.Provider value={actions}>
@@ -79,12 +112,13 @@ export function useHeaderStatsActions(): HeaderStatsActions {
 }
 
 /** layout 서버값 도착 시 base 동기화 — DiamondInitializer와 동일 패턴. */
-export function HeaderStatsInitializer({ stats }: { stats: HeaderStats | null }) {
+export function HeaderStatsInitializer({ stats, asOfMs = null }: { stats: HeaderStats | null; asOfMs?: number | null }) {
   const { setBase } = useHeaderStatsActions();
   useEffect(() => {
-    setBase(stats);
+    setBase(stats, asOfMs);
+    // asOfMs 포함(2026-11-06 업데이트 18) — 같은 값이라도 새 셸 렌더면 대기 중인 수령 델타를 정리해야 한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats?.combat, stats?.maxEnhance, stats?.sumEnhance]);
+  }, [stats?.combat, stats?.maxEnhance, stats?.sumEnhance, asOfMs]);
   return null;
 }
 

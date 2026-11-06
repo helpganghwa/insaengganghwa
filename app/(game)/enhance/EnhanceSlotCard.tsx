@@ -500,7 +500,8 @@ export function EnhanceSlotCard({
         if (rec?.state === 'done' && rec.outcome) {
           applyNextJob(rec.nextJob); // 게이지 즉시 리셋(옛 잡 100% 잔류 방지)
           // 응답을 잃은 수령도 헤더 스탯은 같은 델타로 맞춘다(2026-11-06 — 정상 응답 경로와 같은 반영).
-          applyEnhanceDelta({ fromLevel: Number(rec.fromLevel), toLevel: Number(rec.toLevel), transcendLevel: activeJob.transcendLevel });
+          // 커밋 시각을 모르는 경로라 null → 한 번 새로 받아 서버 값으로 맞춘다(드문 복구 경로).
+          applyEnhanceDelta({ fromLevel: Number(rec.fromLevel), toLevel: Number(rec.toLevel), transcendLevel: activeJob.transcendLevel }, null);
           markRouterCacheStale();
           playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
           return;
@@ -531,7 +532,11 @@ export function EnhanceSlotCard({
       applyNextJob(r.nextJob); // 게이지 즉시 리셋 — router.refresh 지연과 무관하게 새 잡 반영
       // 재렌더 없는 수령(2026-11-06 업데이트 18) — 종전엔 액션의 revalidatePath가 화면·레이아웃을 다시 그려 헤더 스탯·
       // 하단 네비 점을 맞췄다. 이제 응답값으로 직접 반영한다(자동 강화와 같은 방식, 다이아는 수령으로 바뀌지 않는다).
-      applyEnhanceDelta({ fromLevel: Number(r.result.fromLevel), toLevel: Number(r.result.toLevel), transcendLevel: activeJob.transcendLevel });
+      // claimSeenAtMs — 셸 값이 아직 없거나 수령 전에 읽힌 셸 값이 늦게 와도 낡은 값으로 끝나지 않게(HeaderStatsContext).
+      applyEnhanceDelta(
+        { fromLevel: Number(r.result.fromLevel), toLevel: Number(r.result.toLevel), transcendLevel: activeJob.transcendLevel },
+        r.claimSeenAtMs,
+      );
       if (r.enhanceReady != null) setEnhanceDot(r.enhanceReady);
       markRouterCacheStale(); // 뒤로 가기로 돌아간 화면이 수령 전 캐시를 보이지 않게(RouterCacheGuard)
       // 재등록 실패(MAX 등) — 슬롯이 비었으니 서버 상태로 다시 그린다(종전 revalidatePath 재렌더와 같은 시점).

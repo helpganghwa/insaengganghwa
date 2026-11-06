@@ -142,7 +142,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
   return (
     <>
       <DiamondInitializer diamond={d.diamond} />
-      <HeaderStatsInitializer stats={d.stats} />
+      <HeaderStatsInitializer stats={d.stats} asOfMs={d.statsAsOfMs} />
       <AppHeaderShell
         nickname={d.nickname}
         nicknameChangedCount={d.nicknameChangedCount}

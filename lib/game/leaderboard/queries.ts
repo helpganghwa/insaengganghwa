@@ -347,10 +347,13 @@ export async function getMyCountRanks(userId: string, serverId: number): Promise
 export async function getMyRanksBeforeAfter(
   userId: string,
   serverId: number,
-): Promise<{ before: MyRanks; after: MyRanks; enhanceReady: boolean | null }> {
+): Promise<{ before: MyRanks; after: MyRanks; enhanceReady: boolean | null; seenAtMs: number | null }> {
   const before = EMPTY_RANKS();
   const out = EMPTY_RANKS();
   let enhanceReady: boolean | null = null;
+  // 이 문장을 읽은 DB 시각(ms, 2026-11-06 업데이트 18) — 정산 커밋 뒤라 이 시각 이후에 시작한 셸 렌더는 정산을 본다.
+  // 헤더 스탯 델타가 늦게 도착한 옛 셸 값에 덮이지 않게 하는 기준(HeaderStatsContext). null=조회 실패.
+  let seenAtMs: number | null = null;
   let eqRows: { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[];
   try {
     const [row] = (await withTimeout(
@@ -367,24 +370,26 @@ export async function getMyRanksBeforeAfter(
                        and me.metric in ${ENHANCE_METRICS}), '[]'::jsonb) as before,
           exists(select 1 from enhancement_jobs ej
                   where ej.user_id = ${userId}::uuid and ej.server_id = ${serverId}
-                    and ej.status = 'running' and ej.complete_at <= now()) as enh_ready
+                    and ej.status = 'running' and ej.complete_at <= now()) as enh_ready,
+          (extract(epoch from clock_timestamp()) * 1000)::float8 as seen_at_ms
       `),
       TIMEOUT_MS,
       'leaderboard.beforeAfter',
-    )) as unknown as { eq: unknown; before: unknown; enh_ready: boolean | null }[];
+    )) as unknown as { eq: unknown; before: unknown; enh_ready: boolean | null; seen_at_ms: number | string | null }[];
     const parse = <T,>(v: unknown): T[] => {
       const x = typeof v === 'string' ? (JSON.parse(v) as unknown) : v;
       return Array.isArray(x) ? (x as T[]) : [];
     };
     Object.assign(before, ranksFromRows(parse<{ metric: string; value: number; ahead: number }>(row?.before)));
     enhanceReady = typeof row?.enh_ready === 'boolean' ? row.enh_ready : null;
+    seenAtMs = row?.seen_at_ms != null && Number.isFinite(Number(row.seen_at_ms)) ? Number(row.seen_at_ms) : null;
     eqRows = parse<[number, number, number]>(row?.eq).map(([c, e, t]) => ({
       catalogItemId: Number(c),
       enhanceLevel: Number(e),
       transcendLevel: Number(t),
     }));
   } catch {
-    return { before, after: out, enhanceReady };
+    return { before, after: out, enhanceReady, seenAtMs };
   }
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
   const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
@@ -399,7 +404,7 @@ export async function getMyRanksBeforeAfter(
   if (myMax > 0) wanted.push(['max', myMax]);
   if (mySum > 0) wanted.push(['sum', mySum]);
   if (eqRows.length > 0) wanted.push(['combat', myCombat]);
-  if (wanted.length === 0) return { before, after: out, enhanceReady };
+  if (wanted.length === 0) return { before, after: out, enhanceReady, seenAtMs };
 
   try {
     const valuesSql = sql.join(
@@ -426,5 +431,5 @@ export async function getMyRanksBeforeAfter(
   } catch {
     // 기존 per-metric catch(null)와 동일한 강등 — 토스트만 생략된다.
   }
-  return { before, after: out, enhanceReady };
+  return { before, after: out, enhanceReady, seenAtMs };
 }
