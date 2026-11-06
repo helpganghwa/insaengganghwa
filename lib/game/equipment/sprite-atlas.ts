@@ -45,21 +45,23 @@ export function atlasCoord(code: string): AtlasCoord | null {
 }
 
 /**
- * 반 해상도 atlas로 충분한 기기 픽셀 상한(2026-11-06 업데이트 18) — 셀 128을 최대 1.125배까지만 늘려 그린다.
- * 표시 크기 × 기기 배율(DPR)이 이 값 이하면 128 atlas, 넘으면 원본(256).
+ * 반 해상도 atlas로 충분한 기기 픽셀 상한(2026-11-06 업데이트 18) — 셀 128을 **늘려 그리지 않는다**(1배 이하만).
+ * 표시 크기 × 기기 배율(DPR)이 이 값 이하면 128 atlas, 넘으면 원본(256). 늘려 그리면 종전보다 흐려 보일 수 있어 128로 둔다.
  */
-const SMALL_MAX_DEVICE_PX = 144;
+const SMALL_MAX_DEVICE_PX = 128;
 
 /**
  * 표시 크기(px)에 맞는 atlas 이미지 값(background-image/mask-image) — 크기만으로 정해 서버·클라 결과가 같다.
- *  - 36px 이하: 4배 기기에서도 144 이하 → 128 atlas.
- *  - 37~72px: 기기 배율별 선택(-webkit-image-set, Chrome·Safari·Firefox 지원) — 크기 × 배율이 144 이하인 배율만 128(예: 48px은 3배까지, 64px은 2배까지).
- *  - 73px 이상: 원본.
+ *  - 32px 이하: 4배 기기에서도 128 이하 → 128 atlas.
+ *  - 33~128px: 기기 배율별 선택(-webkit-image-set, Chrome·Safari·Firefox 지원) — 크기 × 배율이 128 이하인 배율만 128 atlas
+ *    (예: 40px은 3배까지, 48·64px은 2배까지, 65~128px은 1배만). 브라우저는 배율 이상인 첫 후보를 고르므로(2.6배 → 3x)
+ *    고른 후보의 배율 r에서 기기 픽셀은 크기 × r 이하 — 늘려 그리는 일이 없다.
+ *  - 129px 이상: 원본.
  * 배경 크기·위치는 CSS px로 같으니(128 atlas = 같은 배치 ÷ 2) 그림 주소만 바뀐다. 캔버스(TranscendSprite)는 원본 그대로.
  */
 export function atlasImageFor(size: number): string {
   if (size * 4 <= SMALL_MAX_DEVICE_PX) return `url(${ATLAS_SMALL_URL})`;
-  if (size * 2 > SMALL_MAX_DEVICE_PX) return `url(${ATLAS_URL})`;
+  if (size > SMALL_MAX_DEVICE_PX) return `url(${ATLAS_URL})`;
   const opts = [1, 2, 3, 4].map((r) => `url(${size * r <= SMALL_MAX_DEVICE_PX ? ATLAS_SMALL_URL : ATLAS_URL}) ${r}x`);
   return `-webkit-image-set(${opts.join(', ')})`;
 }
@@ -92,8 +94,8 @@ export function atlasMaskStyle(code: string, size: number): React.CSSProperties 
   const c = atlasCoord(code);
   if (!c) return null;
   const scale = size / ATLAS_CELL;
-  // 마스크는 image-set 지원이 들쭉날쭉해 단일 주소로 — 4배 기기에서도 144 이하인 크기만 128 atlas(도감 40px 칸은 3배까지 120).
-  const maskImage = `url(${size * 3 <= SMALL_MAX_DEVICE_PX ? ATLAS_SMALL_URL : ATLAS_URL})`;
+  // 마스크는 image-set 지원이 들쭉날쭉해 단일 주소로 — 4배 기기에서도 128 이하인 크기(32px 이하)만 128 atlas, 나머지는 원본.
+  const maskImage = `url(${size * 4 <= SMALL_MAX_DEVICE_PX ? ATLAS_SMALL_URL : ATLAS_URL})`;
   const maskSize = `${ATLAS_SIZE.w * scale}px ${ATLAS_SIZE.h * scale}px`;
   const maskPosition = `${-c.x * scale}px ${-c.y * scale}px`;
   return {

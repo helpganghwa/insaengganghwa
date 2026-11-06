@@ -11,7 +11,7 @@ import { ATLAS_SMALL_URL, loadAtlasImage } from '@/lib/game/equipment/sprite-atl
  * 즉시 렌더 가능(메모리 공유).
  *
  * 2026-11-06 업데이트 18: 미리 받는 것은 **반 해상도 atlas(셀 128)** — 목록·카드처럼 작게 그리는 곳(대부분)이 쓴다.
- * 원본(셀 256, 디코드 약 40MB)은 큰 표시·해방 캔버스가 실제로 그릴 때 받는다(loadAtlasImage, 모듈 전역 캐시).
+ * 원본(셀 256)도 종전처럼 이어서 미리 받는다(loadAtlasImage, 모듈 전역 캐시) — 기기 픽셀 128 넘는 표시·해방 캔버스가 쓴다.
  */
 function preloadSmallAtlas(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -78,8 +78,9 @@ export function SpritePreloader() {
             warmed = false;
             void reloadIfAtlasGone();
           });
-          // 2배 넘는 기기(3배 폰 등)는 49~72px 표시에 원본을 쓴다(atlasImageFor) — 종전처럼 원본도 미리 받아 빈 칸을 막는다.
-          if (window.devicePixelRatio > 2) loadAtlasImage().catch(() => {});
+          // 원본도 종전처럼 미리 받는다 — 기기 픽셀 128 넘는 표시(2배 기기 65px+, 3배 기기 43px+ 등)는 원본을 쓰므로(atlasImageFor)
+          // 처음 그릴 때 빈 칸이 생기지 않게(2026-11-06 업데이트 18 보완: 배율 조건 없이).
+          loadAtlasImage().catch(() => {});
         },
         { timeout: 5000 },
       );
