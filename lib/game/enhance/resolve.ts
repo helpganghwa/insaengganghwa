@@ -217,7 +217,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
 /**
  * 강화 정산 사후처리 — 전부 best-effort(실패해도 강화 결과 불변, cron 백스톱).
  * 호출: 서버 액션이 응답 후 after(() => applyEnhancePostEffects(r))로. 순서 의존 없음.
- * 토스트 순위(getMyRanksAfter)는 본인 장비를 직접 재계산하므로 이 지연과 무관하다.
+ * 토스트 순위(getMyRanksBeforeAfter)는 본인 장비를 직접 재계산하므로 이 지연과 무관하다.
  */
 export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
   const { userId, serverId, catalogItemId, fromLevel, toLevel, outcome } = r;
