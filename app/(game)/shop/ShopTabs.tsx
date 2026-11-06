@@ -23,11 +23,7 @@ import { verifyIdentityAction } from '../me/settings/identity-actions';
 
 import { claimFreeAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { exchangeAction } from './point-actions';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination } from 'swiper/modules';
-
-import 'swiper/css';
-import 'swiper/css/pagination';
+import { SnapCarousel } from '@/components/ui/SnapCarousel';
 
 import { payFailBody, payFailTitle, runCheckout } from './checkout';
 import { recoverPlayPurchases, runPlayCheckout, shouldUsePlayBilling } from './play-checkout';
@@ -1064,17 +1060,8 @@ export function ShopTabs({
             ].filter(Boolean);
             if (banners.length === 1) return banners[0];
             return (
-              <Swiper
-                modules={[Pagination]}
-                pagination={{ clickable: true }}
-                spaceBetween={8}
-                slidesPerView={1}
-                className="home-banner-swiper"
-              >
-                {banners.map((b, i) => (
-                  <SwiperSlide key={i}>{b}</SwiperSlide>
-                ))}
-              </Swiper>
+              // 한 장씩 넘기는 배너(2026-11-06 업데이트 18 — swiper 대체, 간격 8px 동일).
+              <SnapCarousel slides={banners} gap={8} />
             );
           })()}
         </ul>
