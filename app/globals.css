@@ -459,11 +459,17 @@ html {
 
 /* 오늘의 인생강화 티커 — 무한 흐름(뉴스 티커). 동일한 절반 2개(각 절반 = 사본 M개)를
    이어붙이고 정확히 -50%(= 절반 1개 폭) 이동 — 이동량이 상수라 픽셀 측정 오차가
-   루프 이음새에 관여하지 않음(측정 기반 px 이동은 매 바퀴 미세 점프, 2026-07-16). */
+   루프 이음새에 관여하지 않음(측정 기반 px 이동은 매 바퀴 미세 점프, 2026-07-16).
+   합성기 구동(2026-11-06 업데이트 18) — 길이(animation-duration)는 TodayTicker가 절반 폭 ÷ 20px/s로 인라인 지정.
+   translate3d + will-change + backface-visibility로 레이어를 고정해 반복 경계에서 다시 그리지 않게 한다(iOS 깜빡임 이력). */
 @keyframes today-ticker-flow {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
 }
+.today-ticker-track { will-change: transform; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.today-ticker-run { animation-name: today-ticker-flow; animation-timing-function: linear; animation-iteration-count: infinite; }
+.today-ticker-track[data-paused] { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .today-ticker-run { animation: none; } }
 
 /* PC 컬럼 경계(2026-08-22 사용자 요청) — 넓은 화면에서 390px 콘텐츠 기둥과 좌우 여백의
    구분감. box-shadow라 레이아웃 무영향 — 모바일(뷰포트=390)에선 화면 밖이라 보이지 않는다.
@@ -486,10 +492,11 @@ html.ig-modal-open [data-app-shell] .wb-alt-b, html.ig-modal-open [data-app-shel
 html.ig-modal-open [data-app-shell] .wb-zone-label::after { animation-play-state: paused; }
 /* 같은 이유로 칭호 이펙트(헤더·채팅·랭킹 — 글자·의사요소·파티클 전부)와 홈의 반복 장식도 멈춘다(2026-11-06 업데이트 18).
    흐린 정지 화면이 되고 팝업이 닫히면 그 자리에서 이어진다. 칭호 fx는 인라인 animation 축약을 쓰는 것이 있어 !important.
-   rAF 루프(초월 캔버스·홈 티커)와 월드 소식 티커는 lib/ui/root-blur.ts의 isRootBlurred·subscribeRootBlur로 멈춘다. */
+   홈 티커(.today-ticker-track)도 여기서 멈춘다. rAF 루프(초월 캔버스)와 월드 소식 티커는 lib/ui/root-blur.ts의 isRootBlurred·subscribeRootBlur로 멈춘다. */
 html.ig-modal-open [data-app-shell] .ttag, html.ig-modal-open [data-app-shell] .ttag::before, html.ig-modal-open [data-app-shell] .ttag::after,
 html.ig-modal-open [data-app-shell] .ttag *, html.ig-modal-open [data-app-shell] .ttag *::before, html.ig-modal-open [data-app-shell] .ttag *::after,
-html.ig-modal-open [data-app-shell] .animate-pulse, html.ig-modal-open [data-app-shell] .animate-ping { animation-play-state: paused !important; }
+html.ig-modal-open [data-app-shell] .animate-pulse, html.ig-modal-open [data-app-shell] .animate-ping,
+html.ig-modal-open [data-app-shell] .today-ticker-track { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) { [data-app-shell] { transition: none; } }
 
 /* ── 월드보스 그림·무대(components/WorldBossSprite·WorldBossBackdrop) ─────────────────────
