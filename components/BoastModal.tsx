@@ -20,6 +20,8 @@ const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app').re
   '',
 );
 
+/** OG 이미지 캐시 우회 토큰 — 팝업을 열 때마다 새 값(useMemo [open]). 모듈 함수로 둬 컴포넌트 본문에 Math.random()이 없게 한다(React Compiler 자동 메모 유지, 2026-11-06 업데이트 18). */
+const ogCacheBuster = () => Math.random().toString(36).slice(2, 10);
 const SLOT_LABEL = { weapon: '무기', armor: '방어구', accessory: '장신구' } as const;
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
@@ -125,7 +127,7 @@ export function BoastModal({
   const imageUrl = useMemo(() => {
     if (!open || typeof window === 'undefined') return '';
     const origin = window.location.origin;
-    const v = Math.random().toString(36).slice(2, 10); // 카톡 캐시 우회(매 공유 다른 OG).
+    const v = ogCacheBuster(); // 카톡 캐시 우회(매 공유 다른 OG).
     const params = new URLSearchParams({ v, s: String(serverId) });
     return `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
   }, [open, publicCode, serverId]);

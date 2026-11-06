@@ -7,6 +7,7 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useNowMinuteMs } from '@/lib/client/use-now-minute';
 import { formatClaimedAt } from '@/lib/ui/format-claimed';
 import { parseMailBody } from '@/lib/ui/mail-links';
 import {
@@ -226,7 +227,8 @@ export function MailList({
   const [displayItems, setOptimisticItems] = useOptimistic(combinedBase);
   const { optimisticAdjust: adjustDiamond } = useDiamondActions();
   const { showError, showHeaderToast } = useResourceToast();
-  const nowMs = Date.now();
+  // 만료 남은 시간 — 분 단위 시계(2026-11-06 업데이트 18). 렌더 중 Date.now()는 컴파일러 자동 메모를 끈다.
+  const nowMs = useNowMinuteMs();
   const nowMin = useMinuteClock(); // 받은 시각 표시(수령 완료 탭)
 
   // 모두 받기 합계 preview — 서버 권위 unreadAggregate 우선(전체 미수령 기준).

@@ -70,6 +70,12 @@ const EX_PART_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } 
 // 같은 상품을 다시 누르면 같은 키로 보낸다(서버가 같은 교환으로 알아보고 두 번 받지 않는다). 잔액이 바뀌었으면 새 키.
 // 오래된 키(10분)는 버린다 — 잔액이 우연히 같은 값으로 돌아온 한참 뒤의 교환이 옛 요청의 재전송으로 처리되지 않게.
 const unsettledExchange = new Map<string, { key: string; balance: number; at: number }>();
+/** 잔액이 그대로인 동안(10분 이내)은 결과를 모르는 앞선 교환의 키를 다시 쓰고, 아니면 새 키(2026-11-06 업데이트 18).
+ *  모듈 함수로 둔 이유 — 컴포넌트 본문의 Date.now()·randomUUID는 React Compiler가 컴포넌트 전체 자동 메모를 포기하게 만든다. */
+function exchangeKey(id: string, balance: number): string {
+  const prev = unsettledExchange.get(id);
+  return prev && prev.balance === balance && Date.now() - prev.at < 10 * 60_000 ? prev.key : crypto.randomUUID().replace(/-/g, '');
+}
 
 function PointExchange({
   kind,
@@ -113,8 +119,7 @@ function PointExchange({
     }
     busy.current = true;
     const id = `${kind}-${target}-${pack}`;
-    const prev = unsettledExchange.get(id);
-    const key = prev && prev.balance === balance && Date.now() - prev.at < 10 * 60_000 ? prev.key : crypto.randomUUID().replace(/-/g, '');
+    const key = exchangeKey(id, balance);
     onSpend(cost);
     if (target === 'diamond') optimisticAdjust(BigInt(pack * POINT_EXCHANGE_DIAMOND));
     startEx(async () => {

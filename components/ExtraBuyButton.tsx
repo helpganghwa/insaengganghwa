@@ -132,6 +132,8 @@ const unsettledOf = (item: PointExtraItem): Unsettled | null => {
   return u;
 };
 const newKey = () => crypto.randomUUID().replace(/-/g, '');
+/** 지금 시각 — 핸들러에서만 부른다. 컴포넌트 본문에 Date.now()를 직접 쓰면 React Compiler가 컴포넌트 전체 자동 메모를 포기한다(2026-11-06 업데이트 18). */
+const nowMs = () => Date.now();
 /** 결과를 알 수 없는 실패(응답이 끊겼거나 서버 오류) — 서버에서는 이미 샀을 수 있다. */
 const uncertain = (code: string) => code === 'NETWORK' || code === 'UNKNOWN';
 
@@ -210,7 +212,7 @@ export function ExtraBuyButton({
   const openPopup = () => {
     const entry = cachedQuote(item);
     // 오래된 '오늘은 더 못 삼'은 믿지 않는다 — 그때는 새로 받아 판단한다.
-    const expired = !!entry && entry.q.price === null && Date.now() - entry.at > QUOTE_FRESH_MS;
+    const expired = !!entry && entry.q.price === null && nowMs() - entry.at > QUOTE_FRESH_MS;
     // 결과를 모르는 구매가 남아 있으면 받아 둔 견적으로 열지 않는다 — 같은 키를 다시 쓸지는 서버의 새 '산 횟수'로
     // 정해야 한다(옛 횟수로 열면 이미 들어간 구매를 한 번 더 '산 것'처럼 보여 주게 된다).
     const settling = unsettledOf(item) !== null;
@@ -281,7 +283,7 @@ export function ExtraBuyButton({
     const prev = unsettledOf(item);
     // 다시 뽑기는 층까지 같아야 같은 구매다(검수 10-16) — 다른 층에 옛 키를 다시 쓰면 서버가 앞선 구매로 알아보고 그 층은 뽑지 않는다.
     const key = prev && prev.bought === quote.bought && prev.qty === usedQty && prev.floor === floor ? prev.key : newKey();
-    const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: Date.now(), floor };
+    const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: nowMs(), floor };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
     onOptimistic?.(usedQty);

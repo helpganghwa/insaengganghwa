@@ -6,6 +6,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { MarkdownView } from '@/components/MarkdownView';
 import { assetUrl } from '@/lib/asset-versions';
+import { useNowMinuteMs } from '@/lib/client/use-now-minute';
 import {
   ANNOUNCEMENT_CATEGORY_LABEL,
   ANNOUNCEMENT_CATEGORY_CLS as CAT_CLS,
@@ -94,7 +95,9 @@ function Poll({
   voteFor: (q: number) => string | undefined;
   onVote: (optionId: string, q: number) => void;
 }) {
-  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < Date.now();
+  // 마감 판정은 분 단위 시계로(2026-11-06 업데이트 18) — 렌더 중 Date.now()는 컴파일러 자동 메모를 끈다.
+  const nowMs = useNowMinuteMs();
+  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < nowMs;
   const voted = poll.options.some((o) => voteFor(o.q ?? 1) != null);
   return (
     <div className="mt-4 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
@@ -133,6 +136,7 @@ function BodyWithPoll({
   onVote: (optionId: string, q: number) => void;
 }) {
   const poll = a.poll;
+  const nowMs = useNowMinuteMs(); // 마감 판정(위 Poll과 같은 시계) — 훅이라 이른 return보다 위.
   if (!poll) return <MarkdownView source={a.body} />;
 
   // 마커 파싱 — 텍스트 조각과 선택지 번호를 순서대로.
@@ -157,7 +161,7 @@ function BodyWithPoll({
     );
   }
 
-  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < Date.now();
+  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < nowMs;
   const voted = poll.options.some((o) => voteFor(o.q ?? 1) != null);
   // 마커에 안 쓰인 잔여 선택지는 본문 뒤에 이어 붙임(마커 실수 방지).
   const leftovers = poll.options.filter((_, i) => !used.has(i + 1));
