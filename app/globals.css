@@ -365,6 +365,14 @@ html {
 }
 
 
+/* /today 차트 첫 표시(app/(game)/today/svg-chart, 2026-11-06 업데이트 18 — echarts 대체) — 점은 왼쪽부터 차례로 커지고
+   (지연은 인라인), 막대는 아래에서 자란다(echarts 막대 cubicInOut 400ms). */
+.tdc-sym { transform-box: fill-box; transform-origin: center; animation: tdc-pop 300ms cubic-bezier(0.215, 0.61, 0.355, 1) both; }
+.tdc-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: tdc-grow 400ms cubic-bezier(0.645, 0.045, 0.355, 1) both; }
+@keyframes tdc-pop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes tdc-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .tdc-sym, .tdc-bar { animation: none; } }
+
 /* 배너 캐러셀(components/ui/SnapCarousel, 2026-11-06 업데이트 18 — swiper 대체). 스크롤바는 숨기고 한 장씩 스냅.
    점은 종전 swiper 페이지네이션 값 그대로 — 우하단(bottom 4px·right 8px), 5px 원, 간격 2px, 흰 45% / 활성 amber-300. */
 .snap-track {
